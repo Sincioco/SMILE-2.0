@@ -28,7 +28,7 @@ if errorlevel 1 exit /b %errorlevel%
 
 copy /y "%SMILE_ROOT%\artifacts\runtime\Smile.NativeRuntime.lib" "%SMILE_ROOT%\artifacts\compiler\Smile.NativeRuntime.lib" >nul
 
-msbuild "%SMILE_ROOT%\SMILE.sln" /m /p:Configuration=Release /p:Platform=x64 /v:minimal
+msbuild "%SMILE_ROOT%\SMILE 2.0.sln" /m /p:Configuration=Release /p:Platform=x64 /v:minimal
 if errorlevel 1 exit /b %errorlevel%
 
 if not exist "%SMILE_ROOT%\artifacts\vsix" mkdir "%SMILE_ROOT%\artifacts\vsix"

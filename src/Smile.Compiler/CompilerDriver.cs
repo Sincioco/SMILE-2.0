@@ -119,7 +119,7 @@ internal sealed class CompilerDriver
             var directory = new DirectoryInfo(start);
             while (directory != null)
             {
-                if (File.Exists(Path.Combine(directory.FullName, "SMILE.sln")))
+                if (File.Exists(Path.Combine(directory.FullName, "SMILE 2.0.sln")))
                     return directory.FullName;
                 directory = directory.Parent;
             }

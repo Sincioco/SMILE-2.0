@@ -11,7 +11,7 @@ This repository contains one shared language implementation (`Smile.Language`), 
 
 ## Build
 
-Run `scripts\build.cmd` from a Developer Command Prompt or a normal command prompt. Generated files are placed under `artifacts`.
+Run `scripts\build.cmd` from a Developer Command Prompt or a normal command prompt. The script builds `SMILE 2.0.sln`, and generated files are placed under `artifacts`.
 
 Build outputs:
 
