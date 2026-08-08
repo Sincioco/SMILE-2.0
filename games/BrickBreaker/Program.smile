@@ -1,0 +1,355 @@
+' SMILE 2.0 Brick Breaker - all arcade rules live in SMILE source.
+CONST CanvasWidth = 960
+CONST CanvasHeight = 540
+CONST BrickRows = 7
+CONST BrickColumns = 12
+CONST BrickWidth = 64
+CONST BrickHeight = 22
+CONST BrickGap = 6
+CONST BrickStartX = 63
+CONST BrickStartY = 72
+CONST PaddleWidth = 100
+CONST PaddleHeight = 16
+CONST PaddleY = 500
+CONST BallRadius = 7
+CONST MaximumLevel = 3
+
+DIM Bricks[BrickColumns, BrickRows]
+
+PaddleX = 430
+BallX = 480
+BallY = 490
+BallVX = 4
+BallVY = -5
+Score = 0
+Lives = 3
+Level = 1
+HighScore = 0
+RemainingBricks = 0
+State = 0
+Launched = FALSE
+Key = KEY_NONE
+Row = 0
+Column = 0
+HitBrick = FALSE
+ReadyMessage = 0
+
+LOAD HighScore FROM "HighScore" DEFAULT 0
+
+FUNCTION BrickColor(RowValue)
+    SELECT CASE RowValue
+        CASE 0
+            RETURN RGB(245, 55, 65)
+        CASE 1
+            RETURN RGB(250, 135, 35)
+        CASE 2
+            RETURN RGB(250, 220, 45)
+        CASE 3
+            RETURN RGB(65, 220, 90)
+        CASE 4
+            RETURN RGB(40, 215, 235)
+        CASE 5
+            RETURN RGB(65, 110, 245)
+        CASE ELSE
+            RETURN RGB(220, 65, 235)
+    END SELECT
+END FUNCTION
+
+FUNCTION RowPoints(RowValue)
+    RETURN 70 - RowValue * 10
+END FUNCTION
+
+SUB BuildLevel()
+    RemainingBricks = BrickRows * BrickColumns
+    FOR Row = 0 TO BrickRows - 1
+        FOR Column = 0 TO BrickColumns - 1
+            Bricks[Column, Row] = 1
+        END FOR
+    END FOR
+END SUB
+
+SUB ResetBall()
+    PaddleX = (CanvasWidth - PaddleWidth) / 2
+    BallX = PaddleX + PaddleWidth / 2
+    BallY = PaddleY - BallRadius - 2
+    BallVX = 3 + Level
+    BallVY = -(4 + Level)
+    Launched = FALSE
+END SUB
+
+SUB StartGame()
+    Score = 0
+    Lives = 3
+    Level = 1
+    ReadyMessage = 0
+    State = 1
+    CALL BuildLevel()
+    CALL ResetBall()
+END SUB
+
+SUB UpdateHighScore()
+    IF Score > HighScore THEN
+        HighScore = Score
+        SAVE HighScore TO "HighScore"
+    END IF
+END SUB
+
+SUB LoseLife()
+    Lives = Lives - 1
+    PLAY SOUND "Assets\LoseLife.wav"
+    IF Lives <= 0 THEN
+        CALL UpdateHighScore()
+        State = 2
+        PLAY SOUND "Assets\GameOver.wav"
+    ELSE
+        ReadyMessage = 1
+        CALL ResetBall()
+    END IF
+END SUB
+
+SUB AdvanceLevel()
+    IF Level >= MaximumLevel THEN
+        CALL UpdateHighScore()
+        State = 3
+        PLAY SOUND "Assets\LevelClear.wav"
+    ELSE
+        Level = Level + 1
+        ReadyMessage = 2
+        PLAY SOUND "Assets\LevelClear.wav"
+        CALL BuildLevel()
+        CALL ResetBall()
+    END IF
+END SUB
+
+SUB MovePaddle()
+    IF KEY_HELD(KEY_A) = TRUE OR KEY_HELD(KEY_LEFT) = TRUE THEN
+        PaddleX = MAX(10, PaddleX - 7)
+    END IF
+    IF KEY_HELD(KEY_D) = TRUE OR KEY_HELD(KEY_RIGHT) = TRUE THEN
+        PaddleX = MIN(CanvasWidth - PaddleWidth - 10, PaddleX + 7)
+    END IF
+
+    IF Launched = FALSE THEN
+        BallX = PaddleX + PaddleWidth / 2
+        BallY = PaddleY - BallRadius - 2
+    END IF
+END SUB
+
+SUB BounceFromPaddle()
+    PaddleContact = BallX - (PaddleX + PaddleWidth / 2)
+    BallVX = PaddleContact / 11
+    IF BallVX = 0 THEN
+        BallVX = 1
+    END IF
+    BallVX = MAX(-9, MIN(9, BallVX))
+    BallVY = -ABS(BallVY)
+    BallY = PaddleY - BallRadius - 1
+    PLAY SOUND "Assets\Paddle.wav"
+END SUB
+
+SUB HitBricks()
+    HitBrick = FALSE
+    FOR Row = 0 TO BrickRows - 1
+        FOR Column = 0 TO BrickColumns - 1
+            IF HitBrick = FALSE AND Bricks[Column, Row] = 1 THEN
+                BrickX = BrickStartX + Column * (BrickWidth + BrickGap)
+                BrickY = BrickStartY + Row * (BrickHeight + BrickGap)
+                IF BallX + BallRadius >= BrickX AND BallX - BallRadius <= BrickX + BrickWidth THEN
+                    IF BallY + BallRadius >= BrickY AND BallY - BallRadius <= BrickY + BrickHeight THEN
+                        Bricks[Column, Row] = 0
+                        RemainingBricks = RemainingBricks - 1
+                        Score = Score + RowPoints(Row)
+                        CALL UpdateHighScore()
+
+                        OverlapLeft = BallX + BallRadius - BrickX
+                        OverlapRight = BrickX + BrickWidth - (BallX - BallRadius)
+                        OverlapTop = BallY + BallRadius - BrickY
+                        OverlapBottom = BrickY + BrickHeight - (BallY - BallRadius)
+                        HorizontalOverlap = MIN(OverlapLeft, OverlapRight)
+                        VerticalOverlap = MIN(OverlapTop, OverlapBottom)
+                        IF HorizontalOverlap < VerticalOverlap THEN
+                            BallVX = -BallVX
+                        ELSE
+                            BallVY = -BallVY
+                        END IF
+
+                        HitBrick = TRUE
+                        PLAY SOUND "Assets\Brick.wav"
+                    END IF
+                END IF
+            END IF
+        END FOR
+    END FOR
+
+    IF RemainingBricks = 0 THEN
+        CALL AdvanceLevel()
+    END IF
+END SUB
+
+SUB MoveBall()
+    BallX = BallX + BallVX
+    BallY = BallY + BallVY
+
+    IF BallX - BallRadius <= 8 THEN
+        BallX = 8 + BallRadius
+        BallVX = ABS(BallVX)
+        PLAY SOUND "Assets\Wall.wav"
+    ELSE IF BallX + BallRadius >= CanvasWidth - 8 THEN
+        BallX = CanvasWidth - 8 - BallRadius
+        BallVX = -ABS(BallVX)
+        PLAY SOUND "Assets\Wall.wav"
+    END IF
+
+    IF BallY - BallRadius <= 44 THEN
+        BallY = 44 + BallRadius
+        BallVY = ABS(BallVY)
+        PLAY SOUND "Assets\Wall.wav"
+    END IF
+
+    IF BallVY > 0 AND BallY + BallRadius >= PaddleY AND BallY - BallRadius <= PaddleY + PaddleHeight THEN
+        IF BallX + BallRadius >= PaddleX AND BallX - BallRadius <= PaddleX + PaddleWidth THEN
+            CALL BounceFromPaddle()
+        END IF
+    END IF
+
+    CALL HitBricks()
+
+    IF BallY - BallRadius > CanvasHeight THEN
+        CALL LoseLife()
+    END IF
+END SUB
+
+SUB DrawBrick(BlockX, BlockY, BlockColor)
+    FILL ROUNDED RECTANGLE BlockX, BlockY, BrickWidth, BrickHeight, 4, BlockColor
+    DRAW LINE BlockX + 5, BlockY + 4, BlockX + BrickWidth - 5, BlockY + 4, WHITE
+    DRAW RECTANGLE BlockX, BlockY, BrickWidth, BrickHeight, RGB(15, 20, 32)
+END SUB
+
+SUB DrawPlayfield()
+    CLEAR RGB(7, 10, 18)
+    FILL RECTANGLE 8, 44, CanvasWidth - 16, CanvasHeight - 52, BLACK
+    DRAW RECTANGLE 8, 44, CanvasWidth - 16, CanvasHeight - 52, RGB(55, 70, 95)
+
+    DRAW TEXT "SCORE" AT 24, 12 SIZE 15 COLOR LIGHT_GRAY
+    DRAW NUMBER Score AT 90, 8 SIZE 24 COLOR YELLOW
+    DRAW TEXT "HIGH" AT 285, 12 SIZE 15 COLOR LIGHT_GRAY
+    DRAW NUMBER HighScore AT 345, 8 SIZE 24 COLOR CYAN
+    DRAW TEXT "LEVEL" AT 555, 12 SIZE 15 COLOR LIGHT_GRAY
+    DRAW NUMBER Level AT 625, 8 SIZE 24 COLOR LIGHT_GREEN
+    DRAW TEXT "LIVES" AT 750, 12 SIZE 15 COLOR LIGHT_GRAY
+    DRAW NUMBER Lives AT 820, 8 SIZE 24 COLOR WHITE
+
+    FOR Row = 0 TO BrickRows - 1
+        FOR Column = 0 TO BrickColumns - 1
+            IF Bricks[Column, Row] = 1 THEN
+                CALL DrawBrick(BrickStartX + Column * (BrickWidth + BrickGap), BrickStartY + Row * (BrickHeight + BrickGap), BrickColor(Row))
+            END IF
+        END FOR
+    END FOR
+
+    FILL ROUNDED RECTANGLE PaddleX, PaddleY, PaddleWidth, PaddleHeight, 6, RGB(225, 235, 250)
+    DRAW LINE PaddleX + 8, PaddleY + 3, PaddleX + PaddleWidth - 8, PaddleY + 3, WHITE
+    FILL CIRCLE BallX, BallY, BallRadius, WHITE
+
+    IF Launched = FALSE THEN
+        FILL ROUNDED RECTANGLE 270, 345, 420, 105, 18, RGB(14, 22, 38)
+        DRAW ROUNDED RECTANGLE 270, 345, 420, 105, 18, CYAN
+        IF ReadyMessage = 1 THEN
+            IF Lives = 1 THEN
+                DRAW TEXT "READY - ONE LIFE LEFT" AT 480, 365 SIZE 24 COLOR YELLOW CENTERED
+            ELSE
+                DRAW TEXT "READY - TWO LIVES LEFT" AT 480, 365 SIZE 24 COLOR YELLOW CENTERED
+            END IF
+        ELSE IF ReadyMessage = 2 THEN
+            DRAW TEXT "LEVEL READY" AT 480, 365 SIZE 27 COLOR LIGHT_GREEN CENTERED
+        ELSE
+            DRAW TEXT "READY" AT 480, 365 SIZE 29 COLOR YELLOW CENTERED
+        END IF
+        DRAW TEXT "SPACE OR ENTER TO LAUNCH" AT 480, 408 SIZE 20 COLOR WHITE CENTERED
+    END IF
+END SUB
+
+SUB DrawTitle()
+    CLEAR RGB(7, 10, 18)
+    DRAW TEXT "BRICK BREAKER" AT 480, 80 SIZE 54 COLOR WHITE CENTERED
+    FOR Row = 0 TO BrickRows - 1
+        CALL DrawBrick(235 + Row * 70, 175, BrickColor(Row))
+    END FOR
+    FILL ROUNDED RECTANGLE 390, 275, 180, 18, 6, RGB(225, 235, 250)
+    FILL CIRCLE 480, 250, BallRadius, WHITE
+    DRAW TEXT "PRESS ENTER TO START" AT 480, 335 SIZE 28 COLOR YELLOW CENTERED
+    DRAW TEXT "A / D OR ARROWS TO MOVE" AT 480, 380 SIZE 18 COLOR WHITE CENTERED
+    DRAW TEXT "SPACE OR ENTER TO LAUNCH" AT 480, 410 SIZE 18 COLOR LIGHT_GRAY CENTERED
+    DRAW TEXT "ESCAPE TO EXIT" AT 480, 445 SIZE 18 COLOR LIGHT_GRAY CENTERED
+    DRAW TEXT "HIGH SCORE" AT 430, 485 SIZE 18 COLOR CYAN
+    DRAW NUMBER HighScore AT 555, 478 SIZE 28 COLOR YELLOW
+END SUB
+
+SUB DrawGameOver()
+    FILL ROUNDED RECTANGLE 220, 145, 520, 275, 22, RGB(18, 23, 38)
+    DRAW ROUNDED RECTANGLE 220, 145, 520, 275, 22, RED
+    DRAW TEXT "GAME OVER" AT 480, 185 SIZE 48 COLOR RED CENTERED
+    DRAW TEXT "FINAL SCORE" AT 380, 255 SIZE 20 COLOR LIGHT_GRAY
+    DRAW NUMBER Score AT 545, 245 SIZE 38 COLOR YELLOW
+    DRAW TEXT "ENTER TO RETRY" AT 480, 335 SIZE 24 COLOR WHITE CENTERED
+    DRAW TEXT "ESCAPE TO EXIT" AT 480, 375 SIZE 18 COLOR LIGHT_GRAY CENTERED
+END SUB
+
+SUB DrawVictory()
+    FILL ROUNDED RECTANGLE 190, 130, 580, 305, 22, RGB(18, 28, 36)
+    DRAW ROUNDED RECTANGLE 190, 130, 580, 305, 22, LIGHT_GREEN
+    DRAW TEXT "YOU CLEARED ALL 3 LEVELS!" AT 480, 175 SIZE 35 COLOR LIGHT_GREEN CENTERED
+    DRAW TEXT "CHAMPION SCORE" AT 390, 255 SIZE 20 COLOR LIGHT_GRAY
+    DRAW NUMBER Score AT 565, 245 SIZE 38 COLOR YELLOW
+    DRAW TEXT "ENTER TO PLAY AGAIN" AT 480, 340 SIZE 24 COLOR WHITE CENTERED
+    DRAW TEXT "ESCAPE TO EXIT" AT 480, 382 SIZE 18 COLOR LIGHT_GRAY CENTERED
+END SUB
+
+GAME WINDOW "SMILE 2.0 Brick Breaker"
+
+DO
+    GET KEY Key
+
+    IF Key = KEY_ESCAPE THEN
+        END PROGRAM
+    END IF
+
+    IF State = 0 THEN
+        IF Key = KEY_ENTER OR Key = KEY_SPACE THEN
+            CALL StartGame()
+        END IF
+        CALL DrawTitle()
+    ELSE IF State = 1 THEN
+        CALL MovePaddle()
+        IF Launched = FALSE THEN
+            IF Key = KEY_SPACE OR Key = KEY_ENTER THEN
+                Launched = TRUE
+                ReadyMessage = 0
+            END IF
+        ELSE
+            CALL MoveBall()
+        END IF
+        CALL DrawPlayfield()
+        IF State = 2 THEN
+            CALL DrawGameOver()
+        ELSE IF State = 3 THEN
+            CALL DrawVictory()
+        END IF
+    ELSE
+        IF Key = KEY_ENTER OR Key = KEY_SPACE THEN
+            CALL StartGame()
+        END IF
+        CALL DrawPlayfield()
+        IF State = 2 THEN
+            CALL DrawGameOver()
+        ELSE
+            CALL DrawVictory()
+        END IF
+    END IF
+
+    SHOW SCREEN
+    WAIT 8 MILLISECONDS
+LOOP UNTIL GAME_CLOSED() = TRUE
+
+STOP SOUND
+END PROGRAM

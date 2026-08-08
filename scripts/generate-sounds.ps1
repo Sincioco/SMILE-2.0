@@ -65,3 +65,9 @@ New-SmileTone -RelativePath 'games\PaddleBall\Assets\Paddle.wav' -Frequency 720 
 New-SmileTone -RelativePath 'games\PaddleBall\Assets\Wall.wav' -Frequency 440 -DurationMilliseconds 50
 New-SmileTone -RelativePath 'games\PaddleBall\Assets\Score.wav' -Frequency 920 -DurationMilliseconds 160
 New-SmileTone -RelativePath 'games\PaddleBall\Assets\GameOver.wav' -Frequency 210 -DurationMilliseconds 420
+New-SmileTone -RelativePath 'games\BrickBreaker\Assets\Paddle.wav' -Frequency 680 -DurationMilliseconds 60
+New-SmileTone -RelativePath 'games\BrickBreaker\Assets\Wall.wav' -Frequency 410 -DurationMilliseconds 45
+New-SmileTone -RelativePath 'games\BrickBreaker\Assets\Brick.wav' -Frequency 840 -DurationMilliseconds 70
+New-SmileTone -RelativePath 'games\BrickBreaker\Assets\LoseLife.wav' -Frequency 260 -DurationMilliseconds 240
+New-SmileTone -RelativePath 'games\BrickBreaker\Assets\LevelClear.wav' -Frequency 1040 -DurationMilliseconds 320
+New-SmileTone -RelativePath 'games\BrickBreaker\Assets\GameOver.wav' -Frequency 170 -DurationMilliseconds 450
