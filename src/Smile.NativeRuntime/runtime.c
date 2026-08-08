@@ -6,6 +6,7 @@
 #include <knownfolders.h>
 #include <shlobj.h>
 #include <limits.h>
+#include "graphics/graphics_common.h"
 #include "graphics/graphics_diagnostics.h"
 #include "timing/frame_clock_win32.h"
 
@@ -25,9 +26,6 @@
 #define SMILE_KEY_2 18
 
 static HWND smile_window;
-static HDC smile_back_dc;
-static HBITMAP smile_back_bitmap;
-static HGDIOBJ smile_old_bitmap;
 static long long smile_logical_width = 960;
 static long long smile_logical_height = 540;
 static long long smile_closed;
@@ -43,7 +41,6 @@ static const WCHAR smile_window_class[] = L"SMILE20GameWindow";
 static SmileFrameClock smile_frame_clock;
 
 static void smile_pump_messages(void);
-static void smile_present_to_dc(HDC destination);
 static void smile_toggle_fullscreen(void);
 
 static void smile_zero_memory(void* memory, SIZE_T length)
@@ -299,19 +296,6 @@ static int smile_integer(long long value)
     return (int)value;
 }
 
-static void smile_cleanup_graphics(void)
-{
-    if (smile_back_dc != 0 && smile_old_bitmap != 0)
-        SelectObject(smile_back_dc, smile_old_bitmap);
-    if (smile_back_bitmap != 0)
-        DeleteObject(smile_back_bitmap);
-    if (smile_back_dc != 0)
-        DeleteDC(smile_back_dc);
-    smile_back_dc = 0;
-    smile_back_bitmap = 0;
-    smile_old_bitmap = 0;
-}
-
 static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
 {
     switch (message)
@@ -322,11 +306,12 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
         {
             PAINTSTRUCT paint;
             HDC dc = BeginPaint(window, &paint);
-            smile_present_to_dc(dc);
+            smile_graphics_repaint(dc);
             EndPaint(window, &paint);
             return 0;
         }
         case WM_SIZE:
+            smile_graphics_resize(LOWORD(lparam), HIWORD(lparam));
             InvalidateRect(window, 0, FALSE);
             return 0;
         case WM_DPICHANGED:
@@ -335,6 +320,7 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
             SetWindowPos(window, 0, suggested->left, suggested->top,
                 suggested->right - suggested->left, suggested->bottom - suggested->top,
                 SWP_NOACTIVATE | SWP_NOZORDER);
+            smile_graphics_on_dpi_changed(HIWORD(wparam));
             return 0;
         }
         case WM_SYSKEYDOWN:
@@ -372,37 +358,12 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
             smile_window = 0;
             smile_closed = 1;
             smile_zero_memory(smile_held, sizeof(smile_held));
-            smile_cleanup_graphics();
+            smile_graphics_shutdown();
             smile_graphics_diagnostics_shutdown();
             PostQuitMessage(0);
             return 0;
     }
     return DefWindowProcW(window, message, wparam, lparam);
-}
-
-static int smile_create_back_buffer(long long width, long long height)
-{
-    BITMAPINFO bitmap_info;
-    HDC screen;
-    void* bits;
-    smile_zero_memory(&bitmap_info, sizeof(bitmap_info));
-    bitmap_info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    bitmap_info.bmiHeader.biWidth = smile_integer(width);
-    bitmap_info.bmiHeader.biHeight = -smile_integer(height);
-    bitmap_info.bmiHeader.biPlanes = 1;
-    bitmap_info.bmiHeader.biBitCount = 32;
-    bitmap_info.bmiHeader.biCompression = BI_RGB;
-    screen = GetDC(0);
-    smile_back_dc = CreateCompatibleDC(screen);
-    smile_back_bitmap = CreateDIBSection(screen, &bitmap_info, DIB_RGB_COLORS, &bits, 0, 0);
-    ReleaseDC(0, screen);
-    if (smile_back_dc == 0 || smile_back_bitmap == 0)
-    {
-        smile_cleanup_graphics();
-        return 0;
-    }
-    smile_old_bitmap = SelectObject(smile_back_dc, smile_back_bitmap);
-    return 1;
 }
 
 void smile_game_open(const char* title, long long title_length, long long width, long long height)
@@ -437,11 +398,6 @@ void smile_game_open(const char* title, long long title_length, long long width,
     window_class.lpszClassName = smile_window_class;
     RegisterClassExW(&window_class);
 
-    if (!smile_create_back_buffer(width, height))
-    {
-        smile_closed = 1;
-        return;
-    }
     wide_title = smile_utf8_to_wide(title, title_length);
     dpi = GetDpiForSystem();
     rectangle.left = 0;
@@ -457,7 +413,12 @@ void smile_game_open(const char* title, long long title_length, long long width,
     if (smile_window == 0)
     {
         smile_closed = 1;
-        smile_cleanup_graphics();
+        return;
+    }
+    if (!smile_graphics_initialize(smile_window, width, height, 1, 0, 0))
+    {
+        DestroyWindow(smile_window);
+        smile_closed = 1;
         return;
     }
     ShowWindow(smile_window, SW_SHOW);
@@ -479,89 +440,24 @@ static void smile_pump_messages(void)
     }
 }
 
-static void smile_present_to_dc(HDC destination)
-{
-    RECT client;
-    int client_width;
-    int client_height;
-    int destination_width;
-    int destination_height;
-    int destination_x;
-    int destination_y;
-    if (destination == 0 || smile_window == 0 || smile_back_dc == 0)
-        return;
-    GetClientRect(smile_window, &client);
-    client_width = client.right - client.left;
-    client_height = client.bottom - client.top;
-    if (client_width <= 0 || client_height <= 0)
-        return;
-    if ((long long)client_width * smile_logical_height <= (long long)client_height * smile_logical_width)
-    {
-        destination_width = client_width;
-        destination_height = (int)((long long)client_width * smile_logical_height / smile_logical_width);
-    }
-    else
-    {
-        destination_height = client_height;
-        destination_width = (int)((long long)client_height * smile_logical_width / smile_logical_height);
-    }
-    destination_x = (client_width - destination_width) / 2;
-    destination_y = (client_height - destination_height) / 2;
-    if (destination_x > 0)
-    {
-        PatBlt(destination, 0, 0, destination_x, client_height, BLACKNESS);
-        PatBlt(destination, destination_x + destination_width, 0,
-            client_width - destination_x - destination_width, client_height, BLACKNESS);
-    }
-    if (destination_y > 0)
-    {
-        PatBlt(destination, 0, 0, client_width, destination_y, BLACKNESS);
-        PatBlt(destination, 0, destination_y + destination_height,
-            client_width, client_height - destination_y - destination_height, BLACKNESS);
-    }
-    SetStretchBltMode(destination, COLORONCOLOR);
-    StretchBlt(destination, destination_x, destination_y, destination_width, destination_height,
-        smile_back_dc, 0, 0, smile_integer(smile_logical_width), smile_integer(smile_logical_height), SRCCOPY);
-}
-
 void smile_show_screen(void)
 {
-    HDC destination;
     int diagnostics_ready;
     smile_frame_clock_begin_present(&smile_frame_clock);
     smile_pump_messages();
     if (smile_window == 0)
         return;
-    destination = GetDC(smile_window);
-    smile_present_to_dc(destination);
-    ReleaseDC(smile_window, destination);
+    smile_graphics_present();
     diagnostics_ready = smile_frame_clock_end_present(&smile_frame_clock);
     if (diagnostics_ready && smile_graphics_diagnostics_enabled())
     {
         DEVMODEW mode;
         MONITORINFOEXW monitor;
-        RECT client;
+        SmileGraphicsBackendDiagnostics backend_diagnostics;
         SmileGraphicsDiagnosticsSnapshot snapshot;
-        int client_width;
-        int client_height;
-        int viewport_width;
-        int viewport_height;
         smile_zero_memory(&snapshot, sizeof(snapshot));
-        GetClientRect(smile_window, &client);
-        client_width = client.right - client.left;
-        client_height = client.bottom - client.top;
-        if ((long long)client_width * smile_logical_height <= (long long)client_height * smile_logical_width)
-        {
-            viewport_width = client_width;
-            viewport_height = smile_logical_width != 0
-                ? (int)((long long)client_width * smile_logical_height / smile_logical_width) : 0;
-        }
-        else
-        {
-            viewport_height = client_height;
-            viewport_width = smile_logical_height != 0
-                ? (int)((long long)client_height * smile_logical_width / smile_logical_height) : 0;
-        }
+        smile_zero_memory(&backend_diagnostics, sizeof(backend_diagnostics));
+        smile_graphics_get_diagnostics(&backend_diagnostics);
         smile_zero_memory(&monitor, sizeof(monitor));
         monitor.cbSize = sizeof(monitor);
         smile_zero_memory(&mode, sizeof(mode));
@@ -569,21 +465,21 @@ void smile_show_screen(void)
         if (GetMonitorInfoW(MonitorFromWindow(smile_window, MONITOR_DEFAULTTONEAREST), (MONITORINFO*)&monitor))
             EnumDisplaySettingsW(monitor.szDevice, ENUM_CURRENT_SETTINGS, &mode);
         snapshot.requested_backend = "GDI";
-        snapshot.selected_backend = "GDI";
+        snapshot.selected_backend = smile_graphics_backend_name();
         snapshot.fallback_reason = "None";
         snapshot.logical_width = smile_logical_width;
         snapshot.logical_height = smile_logical_height;
-        snapshot.physical_width = client_width;
-        snapshot.physical_height = client_height;
-        snapshot.viewport_x = (double)(client_width - viewport_width) / 2.0;
-        snapshot.viewport_y = (double)(client_height - viewport_height) / 2.0;
-        snapshot.viewport_width = (double)viewport_width;
-        snapshot.viewport_height = (double)viewport_height;
-        snapshot.scale = smile_logical_width != 0 ? (double)viewport_width / (double)smile_logical_width : 0.0;
+        snapshot.physical_width = backend_diagnostics.physical_width;
+        snapshot.physical_height = backend_diagnostics.physical_height;
+        snapshot.viewport_x = backend_diagnostics.viewport_x;
+        snapshot.viewport_y = backend_diagnostics.viewport_y;
+        snapshot.viewport_width = backend_diagnostics.viewport_width;
+        snapshot.viewport_height = backend_diagnostics.viewport_height;
+        snapshot.scale = backend_diagnostics.scale;
         snapshot.refresh_rate = mode.dmDisplayFrequency > 1 ? (int)mode.dmDisplayFrequency : 0;
         snapshot.vsync_enabled = 1;
-        snapshot.pacing_mode = "Legacy GDI presentation (unsynchronized)";
-        snapshot.device_removal_reason = "None";
+        snapshot.pacing_mode = backend_diagnostics.pacing_mode;
+        snapshot.device_removal_reason = backend_diagnostics.device_removal_reason;
         snapshot.frame_metrics = *smile_frame_clock_metrics(&smile_frame_clock);
         smile_graphics_diagnostics_log(&snapshot);
     }
@@ -631,138 +527,45 @@ static void smile_toggle_fullscreen(void)
             SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOOWNERZORDER | SWP_SHOWWINDOW);
         smile_fullscreen = 0;
     }
-    InvalidateRect(smile_window, 0, FALSE);
+    smile_graphics_on_fullscreen_changed(smile_fullscreen);
 }
 
 void smile_game_clear(long long color)
 {
-    RECT rectangle;
-    HBRUSH brush;
-    if (smile_back_dc == 0)
-        return;
-    rectangle.left = 0;
-    rectangle.top = 0;
-    rectangle.right = smile_integer(smile_logical_width);
-    rectangle.bottom = smile_integer(smile_logical_height);
-    brush = CreateSolidBrush((COLORREF)color);
-    FillRect(smile_back_dc, &rectangle, brush);
-    DeleteObject(brush);
-}
-
-static void smile_rectangle(long long x, long long y, long long width, long long height, long long radius, long long color, int fill, int rounded)
-{
-    HGDIOBJ old_pen;
-    HGDIOBJ old_brush;
-    HPEN pen = CreatePen(PS_SOLID, 1, (COLORREF)color);
-    HBRUSH brush = CreateSolidBrush((COLORREF)color);
-    if (smile_back_dc == 0)
-    {
-        DeleteObject(pen);
-        DeleteObject(brush);
-        return;
-    }
-    old_pen = SelectObject(smile_back_dc, fill ? GetStockObject(NULL_PEN) : pen);
-    old_brush = SelectObject(smile_back_dc, fill ? brush : GetStockObject(NULL_BRUSH));
-    if (rounded)
-        RoundRect(smile_back_dc, smile_integer(x), smile_integer(y), smile_integer(x + width), smile_integer(y + height), smile_integer(radius * 2), smile_integer(radius * 2));
-    else
-        Rectangle(smile_back_dc, smile_integer(x), smile_integer(y), smile_integer(x + width), smile_integer(y + height));
-    SelectObject(smile_back_dc, old_brush);
-    SelectObject(smile_back_dc, old_pen);
-    DeleteObject(brush);
-    DeleteObject(pen);
+    smile_graphics_clear(color);
 }
 
 void smile_fill_rectangle(long long x, long long y, long long width, long long height, long long color)
-{ smile_rectangle(x, y, width, height, 0, color, 1, 0); }
+{ smile_graphics_fill_rectangle(x, y, width, height, color); }
 
 void smile_draw_rectangle(long long x, long long y, long long width, long long height, long long color)
-{ smile_rectangle(x, y, width, height, 0, color, 0, 0); }
+{ smile_graphics_draw_rectangle(x, y, width, height, color); }
 
 void smile_fill_rounded_rectangle(long long x, long long y, long long width, long long height, long long radius, long long color)
-{ smile_rectangle(x, y, width, height, radius, color, 1, 1); }
+{ smile_graphics_fill_rounded_rectangle(x, y, width, height, radius, color); }
 
 void smile_draw_rounded_rectangle(long long x, long long y, long long width, long long height, long long radius, long long color)
-{ smile_rectangle(x, y, width, height, radius, color, 0, 1); }
-
-static void smile_circle(long long x, long long y, long long radius, long long color, int fill)
-{
-    HGDIOBJ old_pen;
-    HGDIOBJ old_brush;
-    HPEN pen = CreatePen(PS_SOLID, 1, (COLORREF)color);
-    HBRUSH brush = CreateSolidBrush((COLORREF)color);
-    if (smile_back_dc == 0)
-    {
-        DeleteObject(pen);
-        DeleteObject(brush);
-        return;
-    }
-    old_pen = SelectObject(smile_back_dc, fill ? GetStockObject(NULL_PEN) : pen);
-    old_brush = SelectObject(smile_back_dc, fill ? brush : GetStockObject(NULL_BRUSH));
-    Ellipse(smile_back_dc, smile_integer(x - radius), smile_integer(y - radius), smile_integer(x + radius), smile_integer(y + radius));
-    SelectObject(smile_back_dc, old_brush);
-    SelectObject(smile_back_dc, old_pen);
-    DeleteObject(brush);
-    DeleteObject(pen);
-}
+{ smile_graphics_draw_rounded_rectangle(x, y, width, height, radius, color); }
 
 void smile_fill_circle(long long x, long long y, long long radius, long long color)
-{ smile_circle(x, y, radius, color, 1); }
+{ smile_graphics_fill_circle(x, y, radius, color); }
 
 void smile_draw_circle(long long x, long long y, long long radius, long long color)
-{ smile_circle(x, y, radius, color, 0); }
+{ smile_graphics_draw_circle(x, y, radius, color); }
 
 void smile_draw_line(long long x1, long long y1, long long x2, long long y2, long long color)
 {
-    HGDIOBJ old_pen;
-    HPEN pen;
-    if (smile_back_dc == 0)
-        return;
-    pen = CreatePen(PS_SOLID, 1, (COLORREF)color);
-    old_pen = SelectObject(smile_back_dc, pen);
-    MoveToEx(smile_back_dc, smile_integer(x1), smile_integer(y1), 0);
-    LineTo(smile_back_dc, smile_integer(x2), smile_integer(y2));
-    SelectObject(smile_back_dc, old_pen);
-    DeleteObject(pen);
-}
-
-static void smile_draw_wide(const WCHAR* text, int length, long long x, long long y, long long size, long long color, long long centered)
-{
-    HFONT font;
-    HGDIOBJ old_font;
-    if (smile_back_dc == 0 || text == 0 || length <= 0)
-        return;
-    font = CreateFontW(-smile_integer(size), 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, L"Consolas");
-    old_font = SelectObject(smile_back_dc, font);
-    SetBkMode(smile_back_dc, TRANSPARENT);
-    SetTextColor(smile_back_dc, (COLORREF)color);
-    SetTextAlign(smile_back_dc, (UINT)((centered != 0 ? TA_CENTER : TA_LEFT) | TA_TOP));
-    TextOutW(smile_back_dc, smile_integer(x), smile_integer(y), text, length);
-    SelectObject(smile_back_dc, old_font);
-    DeleteObject(font);
+    smile_graphics_draw_line(x1, y1, x2, y2, color);
 }
 
 void smile_draw_text(const char* text, long long length, long long x, long long y, long long size, long long color, long long centered)
 {
-    WCHAR* wide = smile_utf8_to_wide(text, length);
-    if (wide != 0)
-    {
-        smile_draw_wide(wide, lstrlenW(wide), x, y, size, color, centered);
-        HeapFree(GetProcessHeap(), 0, wide);
-    }
+    smile_graphics_draw_text(text, length, x, y, size, color, centered);
 }
 
 void smile_draw_number(long long value, long long x, long long y, long long size, long long color)
 {
-    WCHAR buffer[32];
-    char narrow[32];
-    int index;
-    int length = smile_format_number(value, narrow, (int)sizeof(narrow));
-    for (index = 0; index < length; index++)
-        buffer[index] = (WCHAR)(unsigned char)narrow[index];
-    buffer[length] = 0;
-    smile_draw_wide(buffer, length, x, y, size, color, 0);
+    smile_graphics_draw_number(value, x, y, size, color);
 }
 
 static int smile_is_absolute_path(const WCHAR* path)
