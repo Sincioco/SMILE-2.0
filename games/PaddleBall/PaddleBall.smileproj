@@ -1,0 +1,11 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>PaddleBall</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" />
+    <Asset Include="Assets\**\*" />
+  </ItemGroup>
+</SmileProject>

@@ -61,3 +61,7 @@ New-SmileTone -RelativePath 'games\FallingBlocks\Assets\Move.wav' -Frequency 420
 New-SmileTone -RelativePath 'games\FallingBlocks\Assets\Rotate.wav' -Frequency 620 -DurationMilliseconds 70
 New-SmileTone -RelativePath 'games\FallingBlocks\Assets\LineClear.wav' -Frequency 920 -DurationMilliseconds 180
 New-SmileTone -RelativePath 'games\FallingBlocks\Assets\GameOver.wav' -Frequency 150 -DurationMilliseconds 400
+New-SmileTone -RelativePath 'games\PaddleBall\Assets\Paddle.wav' -Frequency 720 -DurationMilliseconds 65
+New-SmileTone -RelativePath 'games\PaddleBall\Assets\Wall.wav' -Frequency 440 -DurationMilliseconds 50
+New-SmileTone -RelativePath 'games\PaddleBall\Assets\Score.wav' -Frequency 920 -DurationMilliseconds 160
+New-SmileTone -RelativePath 'games\PaddleBall\Assets\GameOver.wav' -Frequency 210 -DurationMilliseconds 420

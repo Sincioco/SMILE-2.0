@@ -1,0 +1,294 @@
+' SMILE 2.0 Paddle Ball - one-player AI and local two-player modes.
+CONST CanvasWidth = 960
+CONST CanvasHeight = 540
+CONST PaddleWidth = 16
+CONST PaddleHeight = 100
+CONST PaddleMargin = 40
+CONST BallRadius = 9
+CONST WinningScore = 7
+
+LeftY = 220
+RightY = 220
+BallX = 480
+BallY = 270
+BallVX = 5
+BallVY = 3
+LeftScore = 0
+RightScore = 0
+Rally = 0
+BestRally = 0
+Mode = 1
+State = 0
+Key = KEY_NONE
+ServeTime = 0
+ServeSide = 0
+ServeVertical = 0
+Dash = 0
+
+LOAD BestRally FROM "BestRally" DEFAULT 0
+
+SUB ResetBall()
+    BallX = CanvasWidth / 2
+    BallY = CanvasHeight / 2
+    RANDOM ServeSide FROM 0 TO 1
+    IF ServeSide = 0 THEN
+        BallVX = -5
+    ELSE
+        BallVX = 5
+    END IF
+    RANDOM ServeVertical FROM -3 TO 3
+    IF ServeVertical = 0 THEN
+        ServeVertical = 2
+    END IF
+    BallVY = ServeVertical
+    Rally = 0
+    ServeTime = TIMER() + 650
+END SUB
+
+SUB ResetMatch()
+    LeftY = (CanvasHeight - PaddleHeight) / 2
+    RightY = (CanvasHeight - PaddleHeight) / 2
+    LeftScore = 0
+    RightScore = 0
+    CALL ResetBall()
+    State = 1
+END SUB
+
+SUB RecordRally()
+    Rally = Rally + 1
+    IF Mode = 1 AND Rally > BestRally THEN
+        BestRally = Rally
+        SAVE BestRally TO "BestRally"
+    END IF
+END SUB
+
+SUB BounceFromPaddle(PaddleY, DirectionSign)
+    Contact = BallY - (PaddleY + PaddleHeight / 2)
+    BallVY = Contact / 8
+    IF BallVY = 0 THEN
+        IF Contact < 0 THEN
+            BallVY = -1
+        ELSE
+            BallVY = 1
+        END IF
+    END IF
+    HorizontalSpeed = MIN(10, 5 + Rally / 4)
+    BallVX = HorizontalSpeed * DirectionSign
+    CALL RecordRally()
+    PLAY SOUND "Assets\Paddle.wav"
+END SUB
+
+SUB FinishMatch()
+    State = 2
+    PLAY SOUND "Assets\GameOver.wav"
+END SUB
+
+SUB AwardPoint(PlayerNumber)
+    IF PlayerNumber = 1 THEN
+        LeftScore = LeftScore + 1
+    ELSE
+        RightScore = RightScore + 1
+    END IF
+    PLAY SOUND "Assets\Score.wav"
+    IF LeftScore >= WinningScore OR RightScore >= WinningScore THEN
+        CALL FinishMatch()
+    ELSE
+        CALL ResetBall()
+    END IF
+END SUB
+
+SUB UpdatePaddles()
+    IF KEY_HELD(KEY_W) = TRUE THEN
+        LeftY = MAX(12, LeftY - 6)
+    END IF
+    IF KEY_HELD(KEY_S) = TRUE THEN
+        LeftY = MIN(CanvasHeight - PaddleHeight - 12, LeftY + 6)
+    END IF
+
+    IF Mode = 2 THEN
+        IF KEY_HELD(KEY_UP) = TRUE THEN
+            RightY = MAX(12, RightY - 6)
+        END IF
+        IF KEY_HELD(KEY_DOWN) = TRUE THEN
+            RightY = MIN(CanvasHeight - PaddleHeight - 12, RightY + 6)
+        END IF
+    ELSE
+        AIY = RightY + PaddleHeight / 2
+        IF BallVX > 0 THEN
+            IF BallY < AIY - 14 THEN
+                RightY = MAX(12, RightY - 4)
+            ELSE IF BallY > AIY + 14 THEN
+                RightY = MIN(CanvasHeight - PaddleHeight - 12, RightY + 4)
+            END IF
+        ELSE
+            IF AIY < CanvasHeight / 2 - 10 THEN
+                RightY = RightY + 2
+            ELSE IF AIY > CanvasHeight / 2 + 10 THEN
+                RightY = RightY - 2
+            END IF
+        END IF
+    END IF
+END SUB
+
+SUB UpdateBall()
+    IF TIMER() >= ServeTime THEN
+        BallX = BallX + BallVX
+        BallY = BallY + BallVY
+
+        IF BallY - BallRadius <= 8 THEN
+            BallY = 8 + BallRadius
+            BallVY = ABS(BallVY)
+            PLAY SOUND "Assets\Wall.wav"
+        ELSE IF BallY + BallRadius >= CanvasHeight - 8 THEN
+            BallY = CanvasHeight - 8 - BallRadius
+            BallVY = -ABS(BallVY)
+            PLAY SOUND "Assets\Wall.wav"
+        END IF
+
+        IF BallVX < 0 AND BallX - BallRadius <= PaddleMargin + PaddleWidth AND BallX - BallRadius >= PaddleMargin THEN
+            IF BallY + BallRadius >= LeftY AND BallY - BallRadius <= LeftY + PaddleHeight THEN
+                BallX = PaddleMargin + PaddleWidth + BallRadius
+                CALL BounceFromPaddle(LeftY, 1)
+            END IF
+        END IF
+
+        IF BallVX > 0 AND BallX + BallRadius >= CanvasWidth - PaddleMargin - PaddleWidth AND BallX + BallRadius <= CanvasWidth - PaddleMargin THEN
+            IF BallY + BallRadius >= RightY AND BallY - BallRadius <= RightY + PaddleHeight THEN
+                BallX = CanvasWidth - PaddleMargin - PaddleWidth - BallRadius
+                CALL BounceFromPaddle(RightY, -1)
+            END IF
+        END IF
+
+        IF BallX < -BallRadius THEN
+            CALL AwardPoint(2)
+        ELSE IF BallX > CanvasWidth + BallRadius THEN
+            CALL AwardPoint(1)
+        END IF
+    END IF
+END SUB
+
+SUB DrawField()
+    CLEAR BLACK
+    FILL RECTANGLE 8, 8, CanvasWidth - 16, CanvasHeight - 16, RGB(5, 8, 14)
+    DRAW RECTANGLE 8, 8, CanvasWidth - 16, CanvasHeight - 16, RGB(55, 70, 90)
+
+    FOR Dash = 0 TO 14
+        FILL RECTANGLE 476, 18 + Dash * 36, 8, 20, RGB(100, 110, 125)
+    END FOR
+
+    FILL ROUNDED RECTANGLE PaddleMargin, LeftY, PaddleWidth, PaddleHeight, 5, WHITE
+    FILL ROUNDED RECTANGLE CanvasWidth - PaddleMargin - PaddleWidth, RightY, PaddleWidth, PaddleHeight, 5, WHITE
+    FILL CIRCLE BallX, BallY, BallRadius, WHITE
+
+    DRAW NUMBER LeftScore AT 350, 35 SIZE 68 COLOR WHITE
+    DRAW NUMBER RightScore AT 555, 35 SIZE 68 COLOR WHITE
+    IF Mode = 1 THEN
+        DRAW TEXT "YOU" AT 355, 112 SIZE 16 COLOR CYAN
+        DRAW TEXT "COMPUTER" AT 540, 112 SIZE 16 COLOR MAGENTA
+        DRAW TEXT "RALLY" AT 40, 25 SIZE 15 COLOR LIGHT_GRAY
+        DRAW NUMBER Rally AT 40, 48 SIZE 24 COLOR YELLOW
+        DRAW TEXT "BEST" AT 820, 25 SIZE 15 COLOR LIGHT_GRAY
+        DRAW NUMBER BestRally AT 820, 48 SIZE 24 COLOR CYAN
+    ELSE
+        DRAW TEXT "PLAYER 1" AT 320, 112 SIZE 16 COLOR CYAN
+        DRAW TEXT "PLAYER 2" AT 540, 112 SIZE 16 COLOR MAGENTA
+    END IF
+
+    IF TIMER() < ServeTime THEN
+        DRAW TEXT "READY" AT 480, 240 SIZE 26 COLOR YELLOW CENTERED
+    END IF
+END SUB
+
+SUB DrawTitle()
+    CLEAR BLACK
+    DRAW LINE 480, 45, 480, 495, RGB(70, 80, 95)
+    FILL ROUNDED RECTANGLE 110, 180, 18, 130, 5, WHITE
+    FILL ROUNDED RECTANGLE 832, 230, 18, 130, 5, WHITE
+    FILL CIRCLE 480, 205, 12, WHITE
+    DRAW TEXT "PADDLE BALL" AT 480, 85 SIZE 54 COLOR WHITE CENTERED
+    DRAW TEXT "1 - ONE PLAYER" AT 480, 300 SIZE 28 COLOR CYAN CENTERED
+    DRAW TEXT "2 - TWO PLAYERS" AT 480, 345 SIZE 28 COLOR MAGENTA CENTERED
+    DRAW TEXT "W / S    AND    UP / DOWN" AT 480, 405 SIZE 18 COLOR LIGHT_GRAY CENTERED
+    DRAW TEXT "ESCAPE - EXIT" AT 480, 450 SIZE 18 COLOR LIGHT_GRAY CENTERED
+    DRAW TEXT "BEST ONE-PLAYER RALLY" AT 480, 475 SIZE 16 COLOR LIGHT_GRAY CENTERED
+    DRAW NUMBER BestRally AT 455, 500 SIZE 24 COLOR YELLOW
+END SUB
+
+SUB DrawResult()
+    FILL ROUNDED RECTANGLE 210, 145, 540, 275, 22, RGB(16, 22, 36)
+    DRAW ROUNDED RECTANGLE 210, 145, 540, 275, 22, CYAN
+
+    IF Mode = 1 THEN
+        IF LeftScore > RightScore THEN
+            DRAW TEXT "YOU WIN!" AT 480, 190 SIZE 48 COLOR LIGHT_GREEN CENTERED
+        ELSE
+            DRAW TEXT "COMPUTER WINS" AT 480, 190 SIZE 44 COLOR MAGENTA CENTERED
+        END IF
+    ELSE
+        IF LeftScore > RightScore THEN
+            DRAW TEXT "PLAYER 1 WINS" AT 480, 190 SIZE 44 COLOR CYAN CENTERED
+        ELSE
+            DRAW TEXT "PLAYER 2 WINS" AT 480, 190 SIZE 44 COLOR MAGENTA CENTERED
+        END IF
+    END IF
+
+    DRAW NUMBER LeftScore AT 375, 260 SIZE 52 COLOR WHITE
+    DRAW TEXT "-" AT 480, 265 SIZE 42 COLOR LIGHT_GRAY CENTERED
+    DRAW NUMBER RightScore AT 555, 260 SIZE 52 COLOR WHITE
+    DRAW TEXT "ENTER - REMATCH" AT 480, 345 SIZE 22 COLOR WHITE CENTERED
+    DRAW TEXT "ESCAPE - TITLE" AT 480, 382 SIZE 18 COLOR LIGHT_GRAY CENTERED
+END SUB
+
+GAME WINDOW "SMILE 2.0 Paddle Ball"
+
+DO
+    GET KEY Key
+
+    IF State = 0 THEN
+        IF Key = KEY_1 THEN
+            Mode = 1
+            CALL ResetMatch()
+        ELSE IF Key = KEY_2 THEN
+            Mode = 2
+            CALL ResetMatch()
+        ELSE IF Key = KEY_ESCAPE THEN
+            END PROGRAM
+        END IF
+        CALL DrawTitle()
+    ELSE IF State = 1 THEN
+        IF Key = KEY_ESCAPE THEN
+            State = 0
+        ELSE
+            CALL UpdatePaddles()
+            CALL UpdateBall()
+        END IF
+        IF State = 0 THEN
+            CALL DrawTitle()
+        ELSE
+            CALL DrawField()
+            IF State = 2 THEN
+                CALL DrawResult()
+            END IF
+        END IF
+    ELSE
+        IF Key = KEY_ENTER THEN
+            CALL ResetMatch()
+        ELSE IF Key = KEY_ESCAPE THEN
+            State = 0
+        END IF
+        IF State = 0 THEN
+            CALL DrawTitle()
+        ELSE
+            CALL DrawField()
+            IF State = 2 THEN
+                CALL DrawResult()
+            END IF
+        END IF
+    END IF
+
+    SHOW SCREEN
+    WAIT 8 MILLISECONDS
+LOOP UNTIL GAME_CLOSED() = TRUE
+
+STOP SOUND
+END PROGRAM
