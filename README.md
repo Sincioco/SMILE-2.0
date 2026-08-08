@@ -71,11 +71,13 @@ The executables are self-contained native game programs with respect to SMILE: n
 
 ## Visual Studio 2026
 
-Build and launch the extension installer with:
+Build and automatically replace the installed extension with:
 
 ```text
 scripts\install-vsix.cmd
 ```
+
+The script targets Visual Studio Enterprise, rebuilds the VSIX, uninstalls the existing `Smile.VisualStudio.2.0` extension when present, and force-installs the newly built package. Visual Studio may close during the refresh, so save open work before running it. Detailed installer logs are written under `artifacts\temp`.
 
 After Visual Studio restarts, use **File > New > Project** and search for `SMILE`. Two templates are installed:
 

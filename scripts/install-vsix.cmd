@@ -3,6 +3,7 @@ setlocal
 
 for %%I in ("%~dp0..") do set "SMILE_ROOT=%%~fI"
 set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+set "SMILE_EXTENSION_ID=Smile.VisualStudio.2.0"
 
 call "%~dp0build.cmd"
 if errorlevel 1 exit /b %errorlevel%
@@ -12,10 +13,16 @@ if not exist "%VSWHERE%" (
     exit /b 2
 )
 
-for /f "usebackq delims=" %%I in (`"%VSWHERE%" -latest -products * -property installationPath`) do set "SMILE_VS=%%I"
+for /f "usebackq delims=" %%I in (`"%VSWHERE%" -latest -products Microsoft.VisualStudio.Product.Enterprise -requires Microsoft.VisualStudio.Component.CoreEditor -property installationPath`) do set "SMILE_VS=%%I"
+for /f "usebackq delims=" %%I in (`"%VSWHERE%" -latest -products Microsoft.VisualStudio.Product.Enterprise -requires Microsoft.VisualStudio.Component.CoreEditor -property instanceId`) do set "SMILE_VS_INSTANCE=%%I"
 
 if not defined SMILE_VS (
-    echo error: Visual Studio was not found.
+    echo error: Visual Studio Enterprise was not found.
+    exit /b 2
+)
+
+if not defined SMILE_VS_INSTANCE (
+    echo error: Visual Studio Enterprise was not found.
     exit /b 2
 )
 
@@ -27,7 +34,27 @@ if not exist "%VSIX_INSTALLER%" (
     exit /b 2
 )
 
-start "" "%VSIX_INSTALLER%" "%SMILE_VSIX%"
-echo Launched the Visual Studio extension installer for:
+if not exist "%SMILE_VSIX%" (
+    echo error: The newly built SMILE VSIX was not found.
+    exit /b 2
+)
+
+if not exist "%SMILE_ROOT%\artifacts\temp" mkdir "%SMILE_ROOT%\artifacts\temp"
+
+echo Refreshing %SMILE_EXTENSION_ID% in Visual Studio instance %SMILE_VS_INSTANCE%.
+echo Visual Studio may close automatically. Save open work before running this script.
+
+"%VSIX_INSTALLER%" /quiet /shutdownprocesses /instanceIds:%SMILE_VS_INSTANCE% /uninstall:%SMILE_EXTENSION_ID% /logFile:"%SMILE_ROOT%\artifacts\temp\vsix-uninstall.log"
+if errorlevel 1 echo Existing SMILE extension was not installed or could not be removed; continuing with forced installation.
+
+"%VSIX_INSTALLER%" /quiet /shutdownprocesses /force /instanceIds:%SMILE_VS_INSTANCE% /logFile:"%SMILE_ROOT%\artifacts\temp\vsix-install.log" "%SMILE_VSIX%"
+if errorlevel 1 (
+    echo error: The new SMILE extension could not be installed.
+    echo See "%SMILE_ROOT%\artifacts\temp\vsix-install.log" for details.
+    exit /b 2
+)
+
+echo Installed the newly built SMILE extension automatically:
 echo %SMILE_VSIX%
+echo Restart Visual Studio to load the refreshed extension.
 exit /b 0
