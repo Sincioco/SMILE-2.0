@@ -1,0 +1,8 @@
+' Noninteractive save, reload, and corrupt-value fallback smoke coverage.
+LOAD Before FROM "SmokeValue" DEFAULT 123
+PRINT Before
+SavedValue = 456
+SAVE SavedValue TO "SmokeValue"
+LOAD After FROM "SmokeValue" DEFAULT 123
+PRINT After
+END PROGRAM

@@ -75,6 +75,29 @@ if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\games\RuntimeBasics.exe"
 if errorlevel 1 exit /b %errorlevel%
 
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\ConsoleSnake.smile" -o "%SMILE_ROOT%\artifacts\games\ConsoleSnake.exe"
+if errorlevel 1 exit /b %errorlevel%
+echo Console Snake regression compiled successfully.
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\StorageBasics.smile" -o "%SMILE_ROOT%\artifacts\games\StorageBasics.exe"
+if errorlevel 1 exit /b %errorlevel%
+set "SMILE_STORAGE_DIR=%LOCALAPPDATA%\SMILE 2.0\Games\StorageBasics"
+if not exist "%SMILE_STORAGE_DIR%" mkdir "%SMILE_STORAGE_DIR%"
+> "%SMILE_STORAGE_DIR%\SmokeValue.txt" echo corrupt-value
+"%SMILE_ROOT%\artifacts\games\StorageBasics.exe" > "%SMILE_ROOT%\artifacts\temp\StorageBasics.out"
+if errorlevel 1 exit /b %errorlevel%
+findstr /x /c:"123" "%SMILE_ROOT%\artifacts\temp\StorageBasics.out" >nul
+if errorlevel 1 (
+    echo Storage smoke test failed: corrupt value did not use the default.
+    exit /b 1
+)
+findstr /x /c:"456" "%SMILE_ROOT%\artifacts\temp\StorageBasics.out" >nul
+if errorlevel 1 (
+    echo Storage smoke test failed: saved value did not reload.
+    exit /b 1
+)
+echo Storage default, save, and reload tests passed.
+
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\GraphicsBasics.smile" -o "%SMILE_ROOT%\artifacts\games\GraphicsBasics.exe"
 if errorlevel 1 exit /b %errorlevel%
 if not exist "%SMILE_ROOT%\artifacts\games\Assets" mkdir "%SMILE_ROOT%\artifacts\games\Assets"
@@ -118,6 +141,9 @@ if errorlevel 1 exit /b %errorlevel%
 xcopy "%SMILE_ROOT%\games\BrickBreaker\Assets" "%SMILE_ROOT%\artifacts\games\BrickBreaker\Assets" /E /I /Y >nul
 if errorlevel 1 exit /b %errorlevel%
 echo Brick Breaker compiled successfully: %SMILE_ROOT%\artifacts\games\BrickBreaker\BrickBreaker.exe
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\verify-artifacts.ps1"
+if errorlevel 1 exit /b %errorlevel%
 
 echo Manual gameplay is still required for graphical games.
 exit /b 0
