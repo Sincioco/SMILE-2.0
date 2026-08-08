@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable">
+  <Extern href="stdidcmd.h" />
+  <Extern href="vsshlids.h" />
+
+  <Commands package="guidSmilePackage">
+    <Groups>
+      <Group guid="guidSmileCommandSet" id="SmileCommandGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS" />
+      </Group>
+    </Groups>
+    <Buttons>
+      <Button guid="guidSmileCommandSet" id="BuildSmileFileCommand" priority="0x0100" type="Button">
+        <Parent guid="guidSmileCommandSet" id="SmileCommandGroup" />
+        <Strings>
+          <ButtonText>Build SMILE File</ButtonText>
+        </Strings>
+      </Button>
+    </Buttons>
+  </Commands>
+
+  <Symbols>
+    <GuidSymbol name="guidSmilePackage" value="{9266C94D-1AC8-43D8-8804-8A59094AA1C4}" />
+    <GuidSymbol name="guidSmileCommandSet" value="{C2D95DD7-3995-4F84-A78B-E67E88C5A31F}">
+      <IDSymbol name="SmileCommandGroup" value="0x1020" />
+      <IDSymbol name="BuildSmileFileCommand" value="0x0100" />
+    </GuidSymbol>
+  </Symbols>
+</CommandTable>

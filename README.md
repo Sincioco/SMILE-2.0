@@ -13,6 +13,11 @@ This repository contains one shared language implementation (`Smile.Language`), 
 
 Run `scripts\build.cmd` from a Developer Command Prompt or a normal command prompt. Generated files are placed under `artifacts`.
 
+Build outputs:
+
+- `artifacts\compiler\smilec.exe`
+- `artifacts\vsix\Smile.VisualStudio.vsix`
+
 ## Compile
 
 ```text
@@ -23,3 +28,9 @@ artifacts\compiler\smilec.exe examples\Snake.smile -o artifacts\games\Snake.exe
 Use `--keep-temp` to retain generated MASM assembly and object files under `artifacts\temp`.
 
 Run `scripts\smoke-test.cmd` to build the toolchain, compile and run Hello and the language basics example, and compile Snake. Snake gameplay remains a hands-on check.
+
+## Visual Studio extension
+
+Run `scripts\install-vsix.cmd` to rebuild the project and launch Visual Studio's extension installer for the generated VSIX.
+
+The extension associates `.smile` files with the SMILE content type, highlights tokens produced by `Smile.Language`, reports the same syntax and semantic diagnostics as the command-line compiler, and adds **Tools > Build SMILE File**. The build command saves the active file and invokes the compiler bundled inside the VSIX.

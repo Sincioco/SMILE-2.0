@@ -1,7 +1,8 @@
 @echo off
 setlocal
 
-set "SMILE_ROOT=%~dp0.."
+for %%I in ("%~dp0..") do set "SMILE_ROOT=%%~fI"
+set "SMILE_ROOT_SLASH=%SMILE_ROOT:\=/%/"
 set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
 
 if not exist "%VSWHERE%" (
@@ -19,7 +20,7 @@ if not defined SMILE_VS (
 call "%SMILE_VS%\VC\Auxiliary\Build\vcvars64.bat" >nul
 if errorlevel 1 exit /b %errorlevel%
 
-msbuild "%SMILE_ROOT%\SMILE.sln" /m /p:Configuration=Release /p:Platform=x64 /v:minimal
+msbuild "%SMILE_ROOT%\src\Smile.NativeRuntime\Smile.NativeRuntime.vcxproj" /m /p:Configuration=Release /p:Platform=x64 /p:SolutionDir="%SMILE_ROOT_SLASH%" /v:minimal
 if errorlevel 1 exit /b %errorlevel%
 
 dotnet publish "%SMILE_ROOT%\src\Smile.Compiler\Smile.Compiler.csproj" -c Release -r win-x64 --self-contained false -o "%SMILE_ROOT%\artifacts\compiler"
@@ -27,5 +28,13 @@ if errorlevel 1 exit /b %errorlevel%
 
 copy /y "%SMILE_ROOT%\artifacts\runtime\Smile.NativeRuntime.lib" "%SMILE_ROOT%\artifacts\compiler\Smile.NativeRuntime.lib" >nul
 
+msbuild "%SMILE_ROOT%\SMILE.sln" /m /p:Configuration=Release /p:Platform=x64 /v:minimal
+if errorlevel 1 exit /b %errorlevel%
+
+if not exist "%SMILE_ROOT%\artifacts\vsix" mkdir "%SMILE_ROOT%\artifacts\vsix"
+copy /y "%SMILE_ROOT%\src\Smile.VisualStudio\bin\Release\net472\Smile.VisualStudio.vsix" "%SMILE_ROOT%\artifacts\vsix\Smile.VisualStudio.vsix" >nul
+if errorlevel 1 exit /b %errorlevel%
+
 echo Compiler: %SMILE_ROOT%\artifacts\compiler\smilec.exe
+echo VSIX: %SMILE_ROOT%\artifacts\vsix\Smile.VisualStudio.vsix
 exit /b 0
