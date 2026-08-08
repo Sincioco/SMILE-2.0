@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Xml.Linq;
+using Smile.Language;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Imaging.Interop;
@@ -155,6 +156,8 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     public string ProjectKind { get; private set; } = "Console";
     public string StartupFile { get; private set; } = "Program.smile";
     public string OutputName { get; private set; } = "Program";
+    public SmileGraphicsBackend GraphicsBackend { get; private set; } = SmileGraphicsBackend.Auto;
+    public bool VSync { get; private set; } = true;
     public IReadOnlyList<string> AssetIncludes { get; private set; } = Array.Empty<string>();
 
     public string GetOutputPath(string configuration) =>
@@ -182,8 +185,9 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
 
         var outputPath = GetOutputPath(configuration);
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-        pane.OutputStringThreadSafe($"> \"{compilerPath}\" \"{sourcePath}\" -o \"{outputPath}\"\r\n");
-        var result = ThreadHelper.JoinableTaskFactory.Run(() => SmileBuildService.RunAsync(compilerPath, sourcePath, outputPath));
+        pane.OutputStringThreadSafe($"> \"{compilerPath}\" \"{sourcePath}\" -o \"{outputPath}\" --graphics {GraphicsBackend} --vsync {VSync.ToString().ToLowerInvariant()}\r\n");
+        var result = ThreadHelper.JoinableTaskFactory.Run(() => SmileBuildService.RunAsync(
+            compilerPath, sourcePath, outputPath, GraphicsBackend, VSync));
         if (!string.IsNullOrEmpty(result.Output))
             pane.OutputStringThreadSafe(SmileBuildService.NormalizeOutput(result.Output));
         SmileBuildService.ReportDiagnostics(result.Output);
@@ -274,6 +278,9 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         ProjectKind = Value(properties, "ProjectKind", "Console");
         StartupFile = Value(properties, "StartupFile", "Program.smile");
         OutputName = Value(properties, "OutputName", ProjectName);
+        var graphicsOptions = SmileProjectGraphicsOptions.Parse(properties);
+        GraphicsBackend = graphicsOptions.GraphicsBackend;
+        VSync = graphicsOptions.VSync;
         AssetIncludes = root.Elements().Where(element => element.Name.LocalName == "ItemGroup")
             .SelectMany(element => element.Elements().Where(item => item.Name.LocalName == "Asset"))
             .Select(item => (string?)item.Attribute("Include") ?? string.Empty)

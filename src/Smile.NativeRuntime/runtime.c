@@ -39,6 +39,8 @@ static DWORD smile_windowed_ex_style;
 static WINDOWPLACEMENT smile_windowed_placement = { sizeof(WINDOWPLACEMENT) };
 static const WCHAR smile_window_class[] = L"SMILE20GameWindow";
 static SmileFrameClock smile_frame_clock;
+static SmileGraphicsBackendKind smile_requested_graphics_backend = SMILE_GRAPHICS_BACKEND_AUTO;
+static int smile_vsync_enabled = 1;
 
 static void smile_pump_messages(void);
 static void smile_toggle_fullscreen(void);
@@ -366,16 +368,26 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
     return DefWindowProcW(window, message, wparam, lparam);
 }
 
+void smile_graphics_configure(long long backend, long long vsync)
+{
+    if (smile_window != 0)
+        return;
+    if (backend >= SMILE_GRAPHICS_BACKEND_AUTO && backend <= SMILE_GRAPHICS_BACKEND_DIRECTX)
+        smile_requested_graphics_backend = (SmileGraphicsBackendKind)backend;
+    else
+        smile_requested_graphics_backend = SMILE_GRAPHICS_BACKEND_AUTO;
+    smile_vsync_enabled = vsync != 0;
+}
+
 void smile_game_open(const char* title, long long title_length, long long width, long long height)
 {
     WNDCLASSEXW window_class;
     RECT rectangle;
-    SmileGraphicsBackendKind requested_backend = SMILE_GRAPHICS_BACKEND_GDI;
+    SmileGraphicsBackendKind requested_backend = smile_requested_graphics_backend;
     DWORD style = WS_OVERLAPPEDWINDOW;
     HINSTANCE instance = GetModuleHandleW(0);
     WCHAR* wide_title;
-    char backend_option[32];
-    char graphics_error[256];
+    char graphics_error[768];
     UINT dpi;
     if (smile_window != 0)
         return;
@@ -389,11 +401,7 @@ void smile_game_open(const char* title, long long title_length, long long width,
     smile_zero_memory(smile_held, sizeof(smile_held));
     smile_frame_clock_initialize(&smile_frame_clock);
     smile_graphics_diagnostics_initialize();
-    smile_zero_memory(backend_option, sizeof(backend_option));
     smile_zero_memory(graphics_error, sizeof(graphics_error));
-    if (GetEnvironmentVariableA("SMILE_GRAPHICS_BACKEND", backend_option,
-        (DWORD)sizeof(backend_option)) != 0 && lstrcmpiA(backend_option, "DirectX") == 0)
-        requested_backend = SMILE_GRAPHICS_BACKEND_DIRECTX;
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
     smile_zero_memory(&window_class, sizeof(window_class));
@@ -423,7 +431,7 @@ void smile_game_open(const char* title, long long title_length, long long width,
         smile_closed = 1;
         return;
     }
-    if (!smile_graphics_initialize(smile_window, width, height, requested_backend, 1,
+    if (!smile_graphics_initialize(smile_window, width, height, requested_backend, smile_vsync_enabled,
         graphics_error, (int)sizeof(graphics_error)))
     {
         if (graphics_error[0] != 0)
@@ -488,7 +496,7 @@ void smile_show_screen(void)
         snapshot.viewport_height = backend_diagnostics.viewport_height;
         snapshot.scale = backend_diagnostics.scale;
         snapshot.refresh_rate = mode.dmDisplayFrequency > 1 ? (int)mode.dmDisplayFrequency : 0;
-        snapshot.vsync_enabled = 1;
+        snapshot.vsync_enabled = smile_vsync_enabled;
         snapshot.pacing_mode = backend_diagnostics.pacing_mode;
         snapshot.device_removal_reason = backend_diagnostics.device_removal_reason;
         snapshot.frame_metrics = *smile_frame_clock_metrics(&smile_frame_clock);

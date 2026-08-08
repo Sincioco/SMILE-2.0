@@ -4,6 +4,7 @@
 #include <d2d1_1.h>
 #include <dwrite.h>
 #include <dxgi1_3.h>
+#include <dxgi1_5.h>
 #include "graphics_common.h"
 #include "graphics_directx.h"
 
@@ -40,6 +41,7 @@ struct SmileDirectXState
     int physical_width;
     int physical_height;
     int vsync_enabled;
+    int tearing_supported;
     int minimized;
     int frame_active;
     int viewport_clip_active;
@@ -90,6 +92,23 @@ static void smile_directx_append_hex(char* destination, int capacity, HRESULT re
     smile_directx_append(destination, capacity, text);
 }
 
+static const char* smile_directx_hresult_name(HRESULT result)
+{
+    switch (result)
+    {
+        case DXGI_ERROR_DEVICE_HUNG: return "DXGI_ERROR_DEVICE_HUNG";
+        case DXGI_ERROR_DEVICE_REMOVED: return "DXGI_ERROR_DEVICE_REMOVED";
+        case DXGI_ERROR_DEVICE_RESET: return "DXGI_ERROR_DEVICE_RESET";
+        case DXGI_ERROR_DRIVER_INTERNAL_ERROR: return "DXGI_ERROR_DRIVER_INTERNAL_ERROR";
+        case DXGI_ERROR_INVALID_CALL: return "DXGI_ERROR_INVALID_CALL";
+        case DXGI_ERROR_NOT_CURRENTLY_AVAILABLE: return "DXGI_ERROR_NOT_CURRENTLY_AVAILABLE";
+        case DXGI_ERROR_UNSUPPORTED: return "DXGI_ERROR_UNSUPPORTED";
+        case E_INVALIDARG: return "E_INVALIDARG";
+        case E_OUTOFMEMORY: return "E_OUTOFMEMORY";
+        default: return "Unknown HRESULT";
+    }
+}
+
 static void smile_directx_set_error(SmileDirectXState* state, char* error, int error_capacity,
     const char* stage, HRESULT result)
 {
@@ -100,6 +119,12 @@ static void smile_directx_set_error(SmileDirectXState* state, char* error, int e
         (int)sizeof(state->device_removal_reason), " failed with ");
     smile_directx_append_hex(state->device_removal_reason,
         (int)sizeof(state->device_removal_reason), result);
+    smile_directx_append(state->device_removal_reason,
+        (int)sizeof(state->device_removal_reason), " (");
+    smile_directx_append(state->device_removal_reason,
+        (int)sizeof(state->device_removal_reason), smile_directx_hresult_name(result));
+    smile_directx_append(state->device_removal_reason,
+        (int)sizeof(state->device_removal_reason), ")");
     if (error != 0 && error_capacity > 0)
         lstrcpynA(error, state->device_removal_reason, error_capacity);
 }
@@ -403,6 +428,20 @@ static HRESULT smile_directx_find_factory(SmileDirectXState* state)
     return result;
 }
 
+static void smile_directx_detect_tearing(SmileDirectXState* state)
+{
+    IDXGIFactory5* factory5 = 0;
+    BOOL supported = FALSE;
+    if (SUCCEEDED(state->factory->QueryInterface(__uuidof(IDXGIFactory5),
+        reinterpret_cast<void**>(&factory5))))
+    {
+        if (SUCCEEDED(factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING,
+            &supported, sizeof(supported))))
+            state->tearing_supported = supported != FALSE;
+        factory5->Release();
+    }
+}
+
 static HRESULT smile_directx_create_swap_chain(SmileDirectXState* state, int width, int height)
 {
     DXGI_SWAP_CHAIN_DESC1 description;
@@ -418,11 +457,13 @@ static HRESULT smile_directx_create_swap_chain(SmileDirectXState* state, int wid
     description.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     description.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
     description.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+    if (!state->vsync_enabled && state->tearing_supported)
+        description.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
     result = state->factory->CreateSwapChainForHwnd(state->device, state->window,
         &description, 0, 0, &state->swap_chain);
     if (FAILED(result))
     {
-        description.Flags = 0;
+        description.Flags &= ~DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
         result = state->factory->CreateSwapChainForHwnd(state->device, state->window,
             &description, 0, 0, &state->swap_chain);
     }
@@ -496,6 +537,7 @@ static int smile_directx_initialize(SmileGraphicsBackend* backend, void* native_
         smile_directx_shutdown_resources(state);
         return 0;
     }
+    smile_directx_detect_tearing(state);
     result = smile_directx_create_swap_chain(state, width, height);
     if (FAILED(result))
     {
@@ -803,7 +845,8 @@ static int smile_directx_present(SmileGraphicsBackend* backend)
             return 0;
         }
     }
-    result = state->swap_chain->Present(state->vsync_enabled ? 1 : 0, 0);
+    result = state->swap_chain->Present(state->vsync_enabled ? 1 : 0,
+        !state->vsync_enabled && state->tearing_supported ? DXGI_PRESENT_ALLOW_TEARING : 0);
     if (result == DXGI_ERROR_DEVICE_REMOVED || result == DXGI_ERROR_DEVICE_RESET)
     {
         HRESULT reason = state->device != 0 ? state->device->GetDeviceRemovedReason() : result;
@@ -859,8 +902,10 @@ static void smile_directx_get_diagnostics(const SmileGraphicsBackend* backend,
     diagnostics->viewport_width = state->viewport.width;
     diagnostics->viewport_height = state->viewport.height;
     diagnostics->scale = state->viewport.scale;
-    diagnostics->pacing_mode = state->frame_latency_waitable != 0
-        ? "DXGI frame-latency waitable object" : "DXGI synchronized presentation";
+    diagnostics->pacing_mode = !state->vsync_enabled && state->tearing_supported
+        ? "DXGI low-latency tearing presentation"
+        : state->frame_latency_waitable != 0
+            ? "DXGI frame-latency waitable object" : "DXGI synchronized presentation";
     diagnostics->device_removal_reason = state->device_removal_reason[0] != 0
         ? state->device_removal_reason : "None";
 }

@@ -59,6 +59,7 @@ This report tracks the controlled implementation of the approved Direct2D milest
 
 ### Phase 6 - DirectWrite text and numbers
 
+- Commit: `dff11e4`
 - Added a shared DirectWrite factory and bounded final-resolution Consolas Bold text-format cache.
 - Converted SMILE UTF-8 text to Unicode and created a fresh text layout for each distinct string draw.
 - Measured centered text using final-resolution layout metrics and routed numbers through the same text path.
@@ -66,8 +67,19 @@ This report tracks the controlled implementation of the approved Direct2D milest
 - Kept DirectWrite factory and formats device-independent while retaining Direct2D target-dependent recreation on resize.
 - Validation: complete smoke suite passed in 45.7 seconds; live title, centered labels, dynamic scores, and the game-over panel rendered correctly; fullscreen text remained sharp at 1920x1080; twenty consecutive fullscreen transitions completed with 18 GDI objects, 40 USER objects, and 62.4 MB working set.
 
+### Phase 7 - Project selection and fallback
+
+- Added shared `.smileproj` parsing for `<GraphicsBackend>Auto|GDI|DirectX</GraphicsBackend>` and `<VSync>true|false</VSync>`, with required defaults and clear invalid-value diagnostics.
+- Passed project settings from the Visual Studio project system through `smilec` into a stable native `smile_graphics_configure` call emitted before game startup.
+- Added simple `--graphics` and `--vsync` CLI overrides without introducing a new command framework.
+- Made `Auto` try DirectX first, release partial DirectX state after failure, retain the failure reason, and continue through GDI; explicit DirectX never falls back, and explicit GDI never initializes DirectX.
+- Added legal VSync-off behavior by detecting DXGI tearing support and applying swap-chain and present flags only when supported.
+- Added eleven managed project-option tests and fifteen native selection/fallback checks to the smoke suite.
+- Added explicit Auto/VSync defaults to the four bundled game projects and the Visual Studio game template.
+- Validation: complete smoke suite passed in 45.1 seconds with both new test executables; default Auto selected DirectX with no fallback; explicit GDI reported GDI pacing; explicit DirectX with VSync off reported legal low-latency tearing presentation; an invalid CLI backend returned `SML5007`; live DirectX title, gameplay controls, and fullscreen rendering passed for Snake, Falling Blocks, and Brick Breaker with no device-removal reason.
+
 ## Known limitations at this stage
 
 - The only selectable backend remains GDI.
 - DirectX remains a developer-only override until backend selection and fallback are implemented.
-- Automatic backend selection and project-level graphics properties remain pending until Phase 7.
+- PaddleBall still uses fixed per-loop movement and `WAIT 8 MILLISECONDS`; elapsed-time-aware timing is the next isolated phase.

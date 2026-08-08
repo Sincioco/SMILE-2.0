@@ -6,6 +6,12 @@ set "SMILE_ROOT=%~dp0.."
 call "%SMILE_ROOT%\scripts\build.cmd"
 if errorlevel 1 exit /b %errorlevel%
 
+dotnet run --project "%SMILE_ROOT%\src\Smile.Tests\Smile.Tests.csproj" -c Release --no-restore
+if errorlevel 1 exit /b %errorlevel%
+
+"%SMILE_ROOT%\artifacts\tests\Smile.NativeGraphicsTests.exe"
+if errorlevel 1 exit /b %errorlevel%
+
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Hello.smile" -o "%SMILE_ROOT%\artifacts\games\Hello.exe"
 if errorlevel 1 exit /b %errorlevel%
 

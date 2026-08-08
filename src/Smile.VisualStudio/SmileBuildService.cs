@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Smile.Language;
 
 namespace Smile.VisualStudio;
 
@@ -62,11 +63,15 @@ internal static class SmileBuildService
         return null;
     }
 
-    public static async Task<CompilerResult> RunAsync(string compilerPath, string sourcePath, string? outputPath)
+    public static async Task<CompilerResult> RunAsync(string compilerPath, string sourcePath,
+        string? outputPath, SmileGraphicsBackend graphicsBackend = SmileGraphicsBackend.Auto,
+        bool vSync = true)
     {
         var arguments = new StringBuilder().Append(Quote(sourcePath));
         if (!string.IsNullOrWhiteSpace(outputPath))
             arguments.Append(" -o ").Append(Quote(outputPath!));
+        arguments.Append(" --graphics ").Append(graphicsBackend.ToString());
+        arguments.Append(" --vsync ").Append(vSync ? "true" : "false");
 
         var startInfo = new ProcessStartInfo(compilerPath)
         {

@@ -3,6 +3,8 @@
     <ProjectKind>Game</ProjectKind>
     <StartupFile>Program.smile</StartupFile>
     <OutputName>Snake</OutputName>
+    <GraphicsBackend>Auto</GraphicsBackend>
+    <VSync>true</VSync>
   </PropertyGroup>
   <ItemGroup>
     <SmileSource Include="Program.smile" />

@@ -4,8 +4,56 @@
 
 static SmileGraphicsBackend smile_active_backend;
 static int smile_frame_started;
-static const char* smile_requested_backend_name = "GDI";
+static const char* smile_requested_backend_name = "Auto";
 static const char* smile_fallback_reason = "None";
+static char smile_fallback_reason_buffer[512];
+
+static void smile_graphics_copy_text(char* destination, int capacity, const char* source)
+{
+    int index = 0;
+    if (destination == 0 || capacity <= 0)
+        return;
+    while (source != 0 && source[index] != 0 && index + 1 < capacity)
+    {
+        destination[index] = source[index];
+        index++;
+    }
+    destination[index] = 0;
+}
+
+static void smile_graphics_append_text(char* destination, int capacity, const char* source)
+{
+    int index = 0;
+    while (index < capacity && destination[index] != 0)
+        index++;
+    if (index >= capacity)
+        return;
+    while (source != 0 && *source != 0 && index + 1 < capacity)
+        destination[index++] = *source++;
+    destination[index] = 0;
+}
+
+static void smile_graphics_clear_backend(void)
+{
+    smile_active_backend.operations = 0;
+    smile_active_backend.state = 0;
+}
+
+static int smile_graphics_try_backend(SmileGraphicsBackendKind backend_kind,
+    void* native_window, long long logical_width, long long logical_height,
+    int vsync_enabled, char* error, int error_capacity)
+{
+    if (backend_kind == SMILE_GRAPHICS_BACKEND_DIRECTX)
+        smile_graphics_directx_create(&smile_active_backend);
+    else
+        smile_graphics_gdi_create(&smile_active_backend);
+    if (smile_active_backend.operations->initialize(&smile_active_backend, native_window,
+        logical_width, logical_height, vsync_enabled, error, error_capacity))
+        return 1;
+    smile_active_backend.operations->shutdown(&smile_active_backend);
+    smile_graphics_clear_backend();
+    return 0;
+}
 
 void smile_graphics_calculate_viewport(long long logical_width, long long logical_height,
     int physical_width, int physical_height, SmileGraphicsViewport* viewport)
@@ -67,23 +115,67 @@ int smile_graphics_initialize(void* native_window, long long logical_width,
     long long logical_height, SmileGraphicsBackendKind requested_backend,
     int vsync_enabled, char* error, int error_capacity)
 {
+    char directx_error[512];
+    smile_fallback_reason_buffer[0] = 0;
+    smile_fallback_reason = "None";
+    if (requested_backend == SMILE_GRAPHICS_BACKEND_AUTO)
+    {
+        smile_requested_backend_name = "Auto";
+        directx_error[0] = 0;
+        if (smile_graphics_try_backend(SMILE_GRAPHICS_BACKEND_DIRECTX, native_window,
+            logical_width, logical_height, vsync_enabled, directx_error,
+            (int)sizeof(directx_error)))
+        {
+            smile_frame_started = 0;
+            return 1;
+        }
+        smile_graphics_copy_text(smile_fallback_reason_buffer,
+            (int)sizeof(smile_fallback_reason_buffer),
+            directx_error[0] != 0 ? directx_error : "DirectX initialization failed without details.");
+        smile_fallback_reason = smile_fallback_reason_buffer;
+        if (smile_graphics_try_backend(SMILE_GRAPHICS_BACKEND_GDI, native_window,
+            logical_width, logical_height, vsync_enabled, error, error_capacity))
+        {
+            smile_frame_started = 0;
+            return 1;
+        }
+        if (error != 0 && error_capacity > 0)
+        {
+            char gdi_error[256];
+            smile_graphics_copy_text(gdi_error, (int)sizeof(gdi_error), error);
+            smile_graphics_copy_text(error, error_capacity, "DirectX initialization failed: ");
+            smile_graphics_append_text(error, error_capacity, smile_fallback_reason_buffer);
+            smile_graphics_append_text(error, error_capacity, "\r\nGDI fallback failed: ");
+            smile_graphics_append_text(error, error_capacity,
+                gdi_error[0] != 0 ? gdi_error : "No details were provided.");
+        }
+        return 0;
+    }
     if (requested_backend == SMILE_GRAPHICS_BACKEND_DIRECTX)
     {
         smile_requested_backend_name = "DirectX";
-        smile_graphics_directx_create(&smile_active_backend);
+        if (!smile_graphics_try_backend(SMILE_GRAPHICS_BACKEND_DIRECTX, native_window,
+            logical_width, logical_height, vsync_enabled, error, error_capacity))
+        {
+            if (error != 0 && error_capacity > 0)
+            {
+                char directx_detail[512];
+                smile_graphics_copy_text(directx_detail, (int)sizeof(directx_detail), error);
+                smile_graphics_copy_text(error, error_capacity,
+                    "SMILE could not start the DirectX graphics backend.\r\n");
+                smile_graphics_append_text(error, error_capacity, directx_detail);
+                smile_graphics_append_text(error, error_capacity,
+                    "\r\nTry <GraphicsBackend>GDI</GraphicsBackend> or update the graphics driver.");
+            }
+            return 0;
+        }
     }
     else
     {
-        smile_requested_backend_name = requested_backend == SMILE_GRAPHICS_BACKEND_AUTO ? "Auto" : "GDI";
-        smile_graphics_gdi_create(&smile_active_backend);
-    }
-    smile_fallback_reason = "None";
-    if (!smile_active_backend.operations->initialize(&smile_active_backend, native_window,
-        logical_width, logical_height, vsync_enabled, error, error_capacity))
-    {
-        smile_active_backend.operations = 0;
-        smile_active_backend.state = 0;
-        return 0;
+        smile_requested_backend_name = "GDI";
+        if (!smile_graphics_try_backend(SMILE_GRAPHICS_BACKEND_GDI, native_window,
+            logical_width, logical_height, vsync_enabled, error, error_capacity))
+            return 0;
     }
     smile_frame_started = 0;
     return 1;
@@ -195,8 +287,7 @@ void smile_graphics_shutdown(void)
 {
     if (smile_graphics_available())
         smile_active_backend.operations->shutdown(&smile_active_backend);
-    smile_active_backend.operations = 0;
-    smile_active_backend.state = 0;
+    smile_graphics_clear_backend();
     smile_frame_started = 0;
 }
 

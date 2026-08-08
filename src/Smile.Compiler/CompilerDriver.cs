@@ -6,9 +6,12 @@ internal sealed class CompilerDriver
 {
     public int Run(string[] args)
     {
-        if (!TryParseArguments(args, out var sourcePath, out var outputPath, out var keepTemp))
+        if (!TryParseArguments(args, out var sourcePath, out var outputPath, out var keepTemp,
+            out var graphicsBackend, out var vSync, out var argumentError))
         {
-            Console.Error.WriteLine("Usage: smilec <source.smile> [-o <output.exe>] [--keep-temp]");
+            if (!string.IsNullOrWhiteSpace(argumentError))
+                Console.Error.WriteLine($"error SML5007: {argumentError}");
+            Console.Error.WriteLine("Usage: smilec <source.smile> [-o <output.exe>] [--keep-temp] [--graphics auto|gdi|directx] [--vsync true|false]");
             return 2;
         }
 
@@ -49,7 +52,7 @@ internal sealed class CompilerDriver
                 return 2;
             }
 
-            File.WriteAllText(assemblyPath, new MasmEmitter(analysis).Emit());
+            File.WriteAllText(assemblyPath, new MasmEmitter(analysis, graphicsBackend, vSync).Emit());
             var isGame = analysis.SyntaxTree.Root.Statements.Any(statement => statement is GameWindowStatementSyntax);
             var result = new NativeToolchain().AssembleAndLink(assemblyPath, objectPath, outputPath, runtimePath, isGame);
             if (!result.Success)
@@ -82,11 +85,16 @@ internal sealed class CompilerDriver
         }
     }
 
-    private static bool TryParseArguments(string[] args, out string? sourcePath, out string? outputPath, out bool keepTemp)
+    private static bool TryParseArguments(string[] args, out string? sourcePath, out string? outputPath,
+        out bool keepTemp, out SmileGraphicsBackend graphicsBackend, out bool vSync,
+        out string? error)
     {
         sourcePath = null;
         outputPath = null;
         keepTemp = false;
+        graphicsBackend = SmileGraphicsBackend.Auto;
+        vSync = true;
+        error = null;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -100,12 +108,30 @@ internal sealed class CompilerDriver
                     return false;
                 outputPath = args[i];
             }
+            else if (string.Equals(args[i], "--graphics", StringComparison.OrdinalIgnoreCase))
+            {
+                if (++i >= args.Length || !Enum.TryParse(args[i], true, out graphicsBackend) ||
+                    !Enum.IsDefined(graphicsBackend))
+                {
+                    error = "--graphics must be Auto, GDI, or DirectX.";
+                    return false;
+                }
+            }
+            else if (string.Equals(args[i], "--vsync", StringComparison.OrdinalIgnoreCase))
+            {
+                if (++i >= args.Length || !bool.TryParse(args[i], out vSync))
+                {
+                    error = "--vsync must be true or false.";
+                    return false;
+                }
+            }
             else if (sourcePath == null)
             {
                 sourcePath = args[i];
             }
             else
             {
+                error = $"Unexpected argument '{args[i]}'.";
                 return false;
             }
         }

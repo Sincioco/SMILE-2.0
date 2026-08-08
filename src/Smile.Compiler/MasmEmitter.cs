@@ -7,6 +7,8 @@ namespace Smile.Compiler;
 internal sealed class MasmEmitter
 {
     private readonly SmileAnalysisResult _analysis;
+    private readonly SmileGraphicsBackend _graphicsBackend;
+    private readonly bool _vSync;
     private readonly StringBuilder _builder = new();
     private readonly Dictionary<VariableSymbol, string> _symbolLabels = new();
     private readonly Dictionary<string, string> _routineLabels = new(StringComparer.OrdinalIgnoreCase);
@@ -23,7 +25,13 @@ internal sealed class MasmEmitter
     private bool _usesGameClosed;
     private bool _usesKeyHeld;
 
-    public MasmEmitter(SmileAnalysisResult analysis) => _analysis = analysis;
+    public MasmEmitter(SmileAnalysisResult analysis, SmileGraphicsBackend graphicsBackend,
+        bool vSync)
+    {
+        _analysis = analysis;
+        _graphicsBackend = graphicsBackend;
+        _vSync = vSync;
+    }
 
     public string Emit()
     {
@@ -44,6 +52,7 @@ internal sealed class MasmEmitter
         if (_usesGameClosed) Line("EXTERN smile_game_closed:PROC");
         if (_usesKeyHeld) Line("EXTERN smile_key_held:PROC");
         Line("EXTERN smile_game_open:PROC");
+        Line("EXTERN smile_graphics_configure:PROC");
         Line("EXTERN smile_game_clear:PROC");
         Line("EXTERN smile_fill_rectangle:PROC");
         Line("EXTERN smile_draw_rectangle:PROC");
@@ -77,6 +86,9 @@ internal sealed class MasmEmitter
         Line(".code");
         Line("main PROC");
         Line("    sub rsp, 104");
+        Line($"    mov rcx, {(int)_graphicsBackend}");
+        Line($"    mov rdx, {(_vSync ? 1 : 0)}");
+        Line("    call smile_graphics_configure");
         EmitStatements(_analysis.SyntaxTree.Root.Statements);
         Line("    xor eax, eax");
         Line("    add rsp, 104");
