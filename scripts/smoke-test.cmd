@@ -97,5 +97,13 @@ xcopy "%SMILE_ROOT%\games\Snake\Assets" "%SMILE_ROOT%\artifacts\games\Snake\Asse
 if errorlevel 1 exit /b %errorlevel%
 
 echo Snake compiled successfully: %SMILE_ROOT%\artifacts\games\Snake\Snake.exe
-echo Manual gameplay is still required.
+
+if not exist "%SMILE_ROOT%\artifacts\games\FallingBlocks" mkdir "%SMILE_ROOT%\artifacts\games\FallingBlocks"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\FallingBlocks\Program.smile" -o "%SMILE_ROOT%\artifacts\games\FallingBlocks\FallingBlocks.exe"
+if errorlevel 1 exit /b %errorlevel%
+xcopy "%SMILE_ROOT%\games\FallingBlocks\Assets" "%SMILE_ROOT%\artifacts\games\FallingBlocks\Assets" /E /I /Y >nul
+if errorlevel 1 exit /b %errorlevel%
+echo Falling Blocks compiled successfully: %SMILE_ROOT%\artifacts\games\FallingBlocks\FallingBlocks.exe
+
+echo Manual gameplay is still required for graphical games.
 exit /b 0

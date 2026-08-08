@@ -1,0 +1,406 @@
+' SMILE 2.0 Falling Blocks - all puzzle rules live in SMILE.
+CONST CanvasWidth = 960
+CONST CanvasHeight = 540
+CONST BoardWidth = 10
+CONST BoardHeight = 20
+CONST CellSize = 22
+CONST BoardX = 320
+CONST BoardY = 50
+
+DIM Board[BoardWidth, BoardHeight]
+DIM ShapeX[7, 4]
+DIM ShapeY[7, 4]
+
+' Seven four-cell shapes in a 4 by 4 rotation box.
+ShapeX[0, 0] = 0
+ShapeY[0, 0] = 1
+ShapeX[0, 1] = 1
+ShapeY[0, 1] = 1
+ShapeX[0, 2] = 2
+ShapeY[0, 2] = 1
+ShapeX[0, 3] = 3
+ShapeY[0, 3] = 1
+
+ShapeX[1, 0] = 1
+ShapeY[1, 0] = 1
+ShapeX[1, 1] = 2
+ShapeY[1, 1] = 1
+ShapeX[1, 2] = 1
+ShapeY[1, 2] = 2
+ShapeX[1, 3] = 2
+ShapeY[1, 3] = 2
+
+ShapeX[2, 0] = 1
+ShapeY[2, 0] = 0
+ShapeX[2, 1] = 0
+ShapeY[2, 1] = 1
+ShapeX[2, 2] = 1
+ShapeY[2, 2] = 1
+ShapeX[2, 3] = 2
+ShapeY[2, 3] = 1
+
+ShapeX[3, 0] = 1
+ShapeY[3, 0] = 0
+ShapeX[3, 1] = 2
+ShapeY[3, 1] = 0
+ShapeX[3, 2] = 0
+ShapeY[3, 2] = 1
+ShapeX[3, 3] = 1
+ShapeY[3, 3] = 1
+
+ShapeX[4, 0] = 0
+ShapeY[4, 0] = 0
+ShapeX[4, 1] = 1
+ShapeY[4, 1] = 0
+ShapeX[4, 2] = 1
+ShapeY[4, 2] = 1
+ShapeX[4, 3] = 2
+ShapeY[4, 3] = 1
+
+ShapeX[5, 0] = 0
+ShapeY[5, 0] = 0
+ShapeX[5, 1] = 0
+ShapeY[5, 1] = 1
+ShapeX[5, 2] = 1
+ShapeY[5, 2] = 1
+ShapeX[5, 3] = 2
+ShapeY[5, 3] = 1
+
+ShapeX[6, 0] = 2
+ShapeY[6, 0] = 0
+ShapeX[6, 1] = 0
+ShapeY[6, 1] = 1
+ShapeX[6, 2] = 1
+ShapeY[6, 2] = 1
+ShapeX[6, 3] = 2
+ShapeY[6, 3] = 1
+
+CurrentPiece = 1
+NextPiece = 1
+PieceX = 3
+PieceY = -1
+Rotation = 0
+Score = 0
+Lines = 0
+Level = 1
+FallDelay = 700
+NextFallTime = 0
+State = 0
+Key = KEY_NONE
+Row = 0
+Column = 0
+Cell = 0
+Cleared = 0
+FullRow = FALSE
+
+LOAD HighScore FROM "HighScore" DEFAULT 0
+
+FUNCTION BlockX(PieceValue, RotationValue, CellValue)
+    CalcX = ShapeX[PieceValue - 1, CellValue]
+    CalcY = ShapeY[PieceValue - 1, CellValue]
+    FOR Turn = 1 TO RotationValue
+        RotatedX = 3 - CalcY
+        CalcY = CalcX
+        CalcX = RotatedX
+    END FOR
+    RETURN CalcX
+END FUNCTION
+
+FUNCTION BlockY(PieceValue, RotationValue, CellValue)
+    CalcX = ShapeX[PieceValue - 1, CellValue]
+    CalcY = ShapeY[PieceValue - 1, CellValue]
+    FOR Turn = 1 TO RotationValue
+        RotatedX = 3 - CalcY
+        CalcY = CalcX
+        CalcX = RotatedX
+    END FOR
+    RETURN CalcY
+END FUNCTION
+
+FUNCTION PieceColor(PieceValue)
+    SELECT CASE PieceValue
+        CASE 1
+            RETURN RGB(35, 220, 235)
+        CASE 2
+            RETURN RGB(245, 215, 45)
+        CASE 3
+            RETURN RGB(180, 70, 235)
+        CASE 4
+            RETURN RGB(70, 220, 95)
+        CASE 5
+            RETURN RGB(240, 65, 70)
+        CASE 6
+            RETURN RGB(55, 105, 235)
+        CASE ELSE
+            RETURN RGB(245, 145, 35)
+    END SELECT
+END FUNCTION
+
+FUNCTION CanMove(OffsetX, OffsetY, TestRotation)
+    FOR TestCell = 0 TO 3
+        TestX = PieceX + OffsetX + BlockX(CurrentPiece, TestRotation, TestCell)
+        TestY = PieceY + OffsetY + BlockY(CurrentPiece, TestRotation, TestCell)
+        IF TestX < 0 OR TestX >= BoardWidth OR TestY >= BoardHeight THEN
+            RETURN FALSE
+        END IF
+        IF TestY >= 0 THEN
+            IF Board[TestX, TestY] <> 0 THEN
+                RETURN FALSE
+            END IF
+        END IF
+    END FOR
+    RETURN TRUE
+END FUNCTION
+
+SUB EndGame()
+    State = 2
+    IF Score > HighScore THEN
+        HighScore = Score
+        SAVE HighScore TO "HighScore"
+    END IF
+    PLAY SOUND "Assets\GameOver.wav"
+END SUB
+
+SUB SpawnPiece()
+    CurrentPiece = NextPiece
+    RANDOM NextPiece FROM 1 TO 7
+    PieceX = 3
+    PieceY = -1
+    Rotation = 0
+    NextFallTime = TIMER() + FallDelay
+    IF CanMove(0, 0, Rotation) = FALSE THEN
+        CALL EndGame()
+    END IF
+END SUB
+
+SUB ClearRows()
+    Cleared = 0
+    Row = BoardHeight - 1
+    DO
+        FullRow = TRUE
+        FOR Column = 0 TO BoardWidth - 1
+            IF Board[Column, Row] = 0 THEN
+                FullRow = FALSE
+            END IF
+        END FOR
+
+        IF FullRow = TRUE THEN
+            Cleared = Cleared + 1
+            FOR CopyRow = Row DOWN TO 1
+                FOR Column = 0 TO BoardWidth - 1
+                    Board[Column, CopyRow] = Board[Column, CopyRow - 1]
+                END FOR
+            END FOR
+            FOR Column = 0 TO BoardWidth - 1
+                Board[Column, 0] = 0
+            END FOR
+        ELSE
+            Row = Row - 1
+        END IF
+    LOOP UNTIL Row < 0
+
+    IF Cleared > 0 THEN
+        SELECT CASE Cleared
+            CASE 1
+                Score = Score + 100 * Level
+            CASE 2
+                Score = Score + 300 * Level
+            CASE 3
+                Score = Score + 500 * Level
+            CASE ELSE
+                Score = Score + 800 * Level
+        END SELECT
+        Lines = Lines + Cleared
+        Level = Lines / 10 + 1
+        FallDelay = MAX(80, 700 - (Level - 1) * 60)
+        PLAY SOUND "Assets\LineClear.wav"
+    END IF
+END SUB
+
+SUB LockPiece()
+    FOR Cell = 0 TO 3
+        LockX = PieceX + BlockX(CurrentPiece, Rotation, Cell)
+        LockY = PieceY + BlockY(CurrentPiece, Rotation, Cell)
+        IF LockY < 0 THEN
+            CALL EndGame()
+        ELSE
+            Board[LockX, LockY] = CurrentPiece
+        END IF
+    END FOR
+    IF State = 1 THEN
+        CALL ClearRows()
+        CALL SpawnPiece()
+    END IF
+END SUB
+
+SUB ResetGame()
+    FOR Row = 0 TO BoardHeight - 1
+        FOR Column = 0 TO BoardWidth - 1
+            Board[Column, Row] = 0
+        END FOR
+    END FOR
+    Score = 0
+    Lines = 0
+    Level = 1
+    FallDelay = 700
+    RANDOM NextPiece FROM 1 TO 7
+    State = 1
+    CALL SpawnPiece()
+END SUB
+
+SUB DrawBlock(PixelX, PixelY, BlockSize, BlockColor)
+    FILL RECTANGLE PixelX + 1, PixelY + 1, BlockSize - 2, BlockSize - 2, BlockColor
+    DRAW RECTANGLE PixelX + 1, PixelY + 1, BlockSize - 2, BlockSize - 2, RGB(245, 245, 255)
+END SUB
+
+SUB DrawGame()
+    CLEAR RGB(8, 12, 22)
+    DRAW TEXT "FALLING" AT 175, 62 SIZE 36 COLOR CYAN CENTERED
+    DRAW TEXT "BLOCKS" AT 175, 102 SIZE 36 COLOR MAGENTA CENTERED
+    DRAW TEXT "NEXT" AT 175, 175 SIZE 20 COLOR LIGHT_GRAY CENTERED
+
+    FOR Cell = 0 TO 3
+        CALL DrawBlock(125 + BlockX(NextPiece, 0, Cell) * 18, 205 + BlockY(NextPiece, 0, Cell) * 18, 18, PieceColor(NextPiece))
+    END FOR
+
+    DRAW TEXT "A / D   MOVE" AT 175, 340 SIZE 15 COLOR WHITE CENTERED
+    DRAW TEXT "W / UP  ROTATE" AT 175, 365 SIZE 15 COLOR WHITE CENTERED
+    DRAW TEXT "S / DOWN  DROP" AT 175, 390 SIZE 15 COLOR WHITE CENTERED
+    DRAW TEXT "SPACE  HARD DROP" AT 175, 415 SIZE 15 COLOR WHITE CENTERED
+    DRAW TEXT "ESCAPE  EXIT" AT 175, 455 SIZE 15 COLOR LIGHT_GRAY CENTERED
+
+    FILL RECTANGLE BoardX, BoardY, BoardWidth * CellSize, BoardHeight * CellSize, BLACK
+    DRAW RECTANGLE BoardX, BoardY, BoardWidth * CellSize, BoardHeight * CellSize, RGB(80, 90, 115)
+
+    FOR Row = 0 TO BoardHeight - 1
+        FOR Column = 0 TO BoardWidth - 1
+            DRAW RECTANGLE BoardX + Column * CellSize, BoardY + Row * CellSize, CellSize, CellSize, RGB(24, 30, 45)
+            IF Board[Column, Row] <> 0 THEN
+                CALL DrawBlock(BoardX + Column * CellSize, BoardY + Row * CellSize, CellSize, PieceColor(Board[Column, Row]))
+            END IF
+        END FOR
+    END FOR
+
+    IF State = 1 THEN
+        FOR Cell = 0 TO 3
+            ActiveX = PieceX + BlockX(CurrentPiece, Rotation, Cell)
+            ActiveY = PieceY + BlockY(CurrentPiece, Rotation, Cell)
+            IF ActiveY >= 0 THEN
+                CALL DrawBlock(BoardX + ActiveX * CellSize, BoardY + ActiveY * CellSize, CellSize, PieceColor(CurrentPiece))
+            END IF
+        END FOR
+    END IF
+
+    DRAW TEXT "SCORE" AT 610, 75 SIZE 20 COLOR LIGHT_GRAY
+    DRAW NUMBER Score AT 610, 102 SIZE 34 COLOR YELLOW
+    DRAW TEXT "HIGH SCORE" AT 610, 175 SIZE 20 COLOR LIGHT_GRAY
+    DRAW NUMBER HighScore AT 610, 202 SIZE 34 COLOR CYAN
+    DRAW TEXT "LEVEL" AT 610, 285 SIZE 20 COLOR LIGHT_GRAY
+    DRAW NUMBER Level AT 610, 312 SIZE 34 COLOR LIGHT_GREEN
+    DRAW TEXT "LINES" AT 610, 385 SIZE 20 COLOR LIGHT_GRAY
+    DRAW NUMBER Lines AT 610, 412 SIZE 34 COLOR WHITE
+END SUB
+
+SUB DrawTitle()
+    CLEAR RGB(8, 12, 22)
+    DRAW TEXT "FALLING BLOCKS" AT 480, 125 SIZE 54 COLOR CYAN CENTERED
+    CALL DrawBlock(386, 210, 30, RGB(35, 220, 235))
+    CALL DrawBlock(416, 210, 30, RGB(245, 215, 45))
+    CALL DrawBlock(446, 210, 30, RGB(180, 70, 235))
+    CALL DrawBlock(476, 210, 30, RGB(70, 220, 95))
+    CALL DrawBlock(506, 210, 30, RGB(240, 65, 70))
+    CALL DrawBlock(536, 210, 30, RGB(55, 105, 235))
+    DRAW TEXT "PRESS ENTER TO START" AT 480, 315 SIZE 28 COLOR YELLOW CENTERED
+    DRAW TEXT "STACK PIECES AND CLEAR COMPLETE ROWS" AT 480, 365 SIZE 18 COLOR WHITE CENTERED
+    DRAW TEXT "ESCAPE TO EXIT" AT 480, 410 SIZE 18 COLOR LIGHT_GRAY CENTERED
+    DRAW TEXT "HIGH SCORE" AT 480, 455 SIZE 18 COLOR LIGHT_GRAY CENTERED
+    DRAW NUMBER HighScore AT 455, 480 SIZE 30 COLOR CYAN
+END SUB
+
+SUB DrawGameOver()
+    FILL ROUNDED RECTANGLE 245, 145, 470, 270, 22, RGB(17, 24, 42)
+    DRAW ROUNDED RECTANGLE 245, 145, 470, 270, 22, RED
+    DRAW TEXT "GAME OVER" AT 480, 190 SIZE 48 COLOR RED CENTERED
+    DRAW TEXT "SCORE" AT 380, 260 SIZE 20 COLOR LIGHT_GRAY
+    DRAW NUMBER Score AT 520, 250 SIZE 36 COLOR YELLOW
+    DRAW TEXT "ENTER TO RETRY" AT 480, 335 SIZE 24 COLOR WHITE CENTERED
+    DRAW TEXT "ESCAPE TO EXIT" AT 480, 375 SIZE 18 COLOR LIGHT_GRAY CENTERED
+END SUB
+
+GAME WINDOW "SMILE 2.0 Falling Blocks"
+
+DO
+    GET KEY Key
+    IF Key = KEY_ESCAPE THEN
+        END PROGRAM
+    END IF
+
+    IF State = 0 THEN
+        IF Key = KEY_ENTER THEN
+            CALL ResetGame()
+        END IF
+        CALL DrawTitle()
+    ELSE IF State = 1 THEN
+        IF Key = KEY_A OR Key = KEY_LEFT THEN
+            IF CanMove(-1, 0, Rotation) = TRUE THEN
+                PieceX = PieceX - 1
+                PLAY SOUND "Assets\Move.wav"
+            END IF
+        ELSE IF Key = KEY_D OR Key = KEY_RIGHT THEN
+            IF CanMove(1, 0, Rotation) = TRUE THEN
+                PieceX = PieceX + 1
+                PLAY SOUND "Assets\Move.wav"
+            END IF
+        ELSE IF Key = KEY_W OR Key = KEY_UP THEN
+            NewRotation = (Rotation + 1) MOD 4
+            IF CanMove(0, 0, NewRotation) = TRUE THEN
+                Rotation = NewRotation
+                PLAY SOUND "Assets\Rotate.wav"
+            END IF
+        ELSE IF Key = KEY_S OR Key = KEY_DOWN THEN
+            IF CanMove(0, 1, Rotation) = TRUE THEN
+                PieceY = PieceY + 1
+            ELSE
+                CALL LockPiece()
+            END IF
+            NextFallTime = TIMER() + FallDelay
+        ELSE IF Key = KEY_SPACE THEN
+            DO
+                IF CanMove(0, 1, Rotation) = TRUE THEN
+                    PieceY = PieceY + 1
+                ELSE
+                    EXIT DO
+                END IF
+            LOOP
+            CALL LockPiece()
+        END IF
+
+        IF State = 1 AND TIMER() >= NextFallTime THEN
+            IF CanMove(0, 1, Rotation) = TRUE THEN
+                PieceY = PieceY + 1
+            ELSE
+                CALL LockPiece()
+            END IF
+            NextFallTime = TIMER() + FallDelay
+        END IF
+
+        CALL DrawGame()
+        IF State = 2 THEN
+            CALL DrawGameOver()
+        END IF
+    ELSE
+        IF Key = KEY_ENTER THEN
+            CALL ResetGame()
+        END IF
+        CALL DrawGame()
+        IF State = 2 THEN
+            CALL DrawGameOver()
+        END IF
+    END IF
+
+    SHOW SCREEN
+    WAIT 8 MILLISECONDS
+LOOP UNTIL GAME_CLOSED() = TRUE
+
+STOP SOUND
+END PROGRAM
