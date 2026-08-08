@@ -1,0 +1,8 @@
+Key = NONE
+Value = 0
+
+CLEAR SCREEN
+GET KEY Key
+RANDOM Value FROM 1 TO 3
+PRINT "Random: "; Value
+WAIT 1 MILLISECONDS

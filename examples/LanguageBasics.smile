@@ -1,0 +1,31 @@
+Value = 2
+Total = 0
+Done = FALSE
+
+DIM Values[3]
+Values[0] = Value
+Values[1] = Value + 1
+Values[2] = Values[1] + 1
+
+FOR I = 0 TO 2
+    Total = Total + Values[I]
+END FOR
+
+IF Total = 9 THEN
+    PRINT "IF OK"
+ELSE
+    PRINT "IF FAILED"
+END IF
+
+DO
+    Value = Value - 1
+LOOP UNTIL Value = 0
+
+FOR I = 2 DOWN TO 0
+    PRINT Values[I];
+END FOR
+
+PRINT
+Done = NOT Done
+PRINT "Total: "; Total
+PRINT "Done: "; Done

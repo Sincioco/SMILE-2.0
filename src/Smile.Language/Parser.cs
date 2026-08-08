@@ -405,5 +405,10 @@ internal sealed class Parser
     }
 
     private static bool IsLineEnd(SyntaxKind kind) => kind == SyntaxKind.NewLineToken || kind == SyntaxKind.EndOfFileToken;
-    private static string Display(SyntaxToken token) => token.Kind == SyntaxKind.EndOfFileToken ? "end of file" : token.Text;
+    private static string Display(SyntaxToken token) => token.Kind switch
+    {
+        SyntaxKind.EndOfFileToken => "end of file",
+        SyntaxKind.NewLineToken => "newline",
+        _ => token.Text
+    };
 }

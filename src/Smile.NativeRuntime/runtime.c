@@ -54,8 +54,55 @@ void smile_print_newline(void)
     smile_print_text(newline, 2);
 }
 
+static long long smile_map_key(WCHAR character, WORD virtual_key)
+{
+    if (character == L'w' || character == L'W' || virtual_key == 'W')
+        return 1;
+    if (character == L'a' || character == L'A' || virtual_key == 'A')
+        return 2;
+    if (character == L's' || character == L'S' || virtual_key == 'S')
+        return 3;
+    if (character == L'd' || character == L'D' || virtual_key == 'D')
+        return 4;
+    return 0;
+}
+
 long long smile_get_key(void)
 {
+    HANDLE input = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD file_type = GetFileType(input);
+
+    if (file_type == FILE_TYPE_CHAR)
+    {
+        INPUT_RECORD record;
+        DWORD available;
+        DWORD read;
+        while (PeekConsoleInputW(input, &record, 1, &available) && available != 0)
+        {
+            if (!ReadConsoleInputW(input, &record, 1, &read) || read == 0)
+                break;
+            if (record.EventType == KEY_EVENT && record.Event.KeyEvent.bKeyDown)
+            {
+                long long key = smile_map_key(
+                    record.Event.KeyEvent.uChar.UnicodeChar,
+                    record.Event.KeyEvent.wVirtualKeyCode);
+                if (key != 0)
+                    return key;
+            }
+        }
+    }
+    else if (file_type == FILE_TYPE_PIPE)
+    {
+        DWORD available;
+        if (PeekNamedPipe(input, 0, 0, 0, &available, 0) && available != 0)
+        {
+            char character;
+            DWORD read;
+            if (ReadFile(input, &character, 1, &read, 0) && read == 1)
+                return smile_map_key((WCHAR)(unsigned char)character, 0);
+        }
+    }
+
     if ((GetAsyncKeyState('W') & 0x8000) != 0)
         return 1;
     if ((GetAsyncKeyState('A') & 0x8000) != 0)
