@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <d3d11.h>
 #include <d2d1_1.h>
+#include <dwrite.h>
 #include <dxgi1_3.h>
 #include "graphics_common.h"
 #include "graphics_directx.h"
@@ -10,6 +11,12 @@ struct SmileDirectXBrushCacheEntry
 {
     unsigned long color;
     ID2D1SolidColorBrush* handle;
+};
+
+struct SmileDirectXTextFormatCacheEntry
+{
+    int size;
+    IDWriteTextFormat* handle;
 };
 
 struct SmileDirectXState
@@ -25,6 +32,7 @@ struct SmileDirectXState
     ID2D1Device* d2d_device;
     ID2D1DeviceContext* d2d_context;
     ID2D1Bitmap1* d2d_target;
+    IDWriteFactory* dwrite_factory;
     HANDLE frame_latency_waitable;
     UINT swap_chain_flags;
     long long logical_width;
@@ -38,6 +46,8 @@ struct SmileDirectXState
     SmileGraphicsViewport viewport;
     SmileDirectXBrushCacheEntry brushes[64];
     unsigned int next_brush;
+    SmileDirectXTextFormatCacheEntry text_formats[64];
+    unsigned int next_text_format;
     char device_removal_reason[160];
 };
 
@@ -138,6 +148,92 @@ static ID2D1SolidColorBrush* smile_directx_brush(SmileDirectXState* state, long 
     return state->brushes[index].handle;
 }
 
+static void smile_directx_release_text_formats(SmileDirectXState* state)
+{
+    int index;
+    for (index = 0; index < (int)(sizeof(state->text_formats) / sizeof(state->text_formats[0])); index++)
+    {
+        smile_directx_release(state->text_formats[index].handle);
+        state->text_formats[index].size = 0;
+    }
+    state->next_text_format = 0;
+}
+
+static IDWriteTextFormat* smile_directx_text_format(SmileDirectXState* state, int size)
+{
+    unsigned int index;
+    HRESULT result;
+    if (size < 1)
+        size = 1;
+    for (index = 0; index < (unsigned int)(sizeof(state->text_formats) / sizeof(state->text_formats[0])); index++)
+    {
+        if (state->text_formats[index].handle != 0 && state->text_formats[index].size == size)
+            return state->text_formats[index].handle;
+    }
+    index = state->next_text_format++ %
+        (unsigned int)(sizeof(state->text_formats) / sizeof(state->text_formats[0]));
+    smile_directx_release(state->text_formats[index].handle);
+    result = state->dwrite_factory->CreateTextFormat(L"Consolas", 0,
+        DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
+        (FLOAT)size, L"en-us", &state->text_formats[index].handle);
+    if (FAILED(result))
+    {
+        smile_directx_set_error(state, 0, 0, "DirectWrite text-format creation", result);
+        return 0;
+    }
+    state->text_formats[index].handle->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
+    state->text_formats[index].handle->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
+    state->text_formats[index].handle->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
+    state->text_formats[index].size = size;
+    return state->text_formats[index].handle;
+}
+
+static WCHAR* smile_directx_utf8_to_wide(const char* text, long long length, int* wide_length)
+{
+    int count;
+    WCHAR* result;
+    *wide_length = 0;
+    if (text == 0 || length < 0 || length > INT_MAX)
+        return 0;
+    count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text, (int)length, 0, 0);
+    if (count <= 0)
+        return 0;
+    result = static_cast<WCHAR*>(HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY,
+        (SIZE_T)(count + 1) * sizeof(WCHAR)));
+    if (result == 0)
+        return 0;
+    if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text, (int)length, result, count) != count)
+    {
+        HeapFree(GetProcessHeap(), 0, result);
+        return 0;
+    }
+    result[count] = 0;
+    *wide_length = count;
+    return result;
+}
+
+static int smile_directx_format_number(long long value, WCHAR* buffer, int capacity)
+{
+    WCHAR temporary[32];
+    int count = 0;
+    int output = 0;
+    unsigned long long magnitude;
+    if (capacity <= 0)
+        return 0;
+    magnitude = value < 0 ? (unsigned long long)(-(value + 1)) + 1ULL : (unsigned long long)value;
+    do
+    {
+        temporary[count++] = (WCHAR)(L'0' + (magnitude % 10));
+        magnitude /= 10;
+    }
+    while (magnitude != 0 && count < (int)(sizeof(temporary) / sizeof(temporary[0])));
+    if (value < 0 && output < capacity)
+        buffer[output++] = L'-';
+    while (count > 0 && output < capacity)
+        buffer[output++] = temporary[--count];
+    return output;
+}
+
 static void smile_directx_current_client(const SmileDirectXState* state, int* width, int* height)
 {
     RECT client;
@@ -205,8 +301,17 @@ static HRESULT smile_directx_create_d2d_device(SmileDirectXState* state)
             &state->d2d_context);
     smile_directx_release(dxgi_device);
     if (SUCCEEDED(result))
+    {
         state->d2d_context->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+        state->d2d_context->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
+    }
     return result;
+}
+
+static HRESULT smile_directx_create_dwrite_factory(SmileDirectXState* state)
+{
+    return DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory),
+        reinterpret_cast<IUnknown**>(&state->dwrite_factory));
 }
 
 static HRESULT smile_directx_create_d2d_target(SmileDirectXState* state)
@@ -338,6 +443,8 @@ static HRESULT smile_directx_create_swap_chain(SmileDirectXState* state, int wid
 static void smile_directx_shutdown_resources(SmileDirectXState* state)
 {
     smile_directx_release_render_target(state);
+    smile_directx_release_text_formats(state);
+    smile_directx_release(state->dwrite_factory);
     smile_directx_release(state->d2d_context);
     smile_directx_release(state->d2d_device);
     smile_directx_release(state->d2d_factory);
@@ -410,6 +517,14 @@ static int smile_directx_initialize(SmileGraphicsBackend* backend, void* native_
     {
         smile_directx_set_error(state, error, error_capacity,
             "Direct2D device creation", result);
+        smile_directx_shutdown_resources(state);
+        return 0;
+    }
+    result = smile_directx_create_dwrite_factory(state);
+    if (FAILED(result))
+    {
+        smile_directx_set_error(state, error, error_capacity,
+            "DirectWrite factory creation", result);
         smile_directx_shutdown_resources(state);
         return 0;
     }
@@ -604,11 +719,61 @@ static void smile_directx_draw_line(SmileGraphicsBackend* backend, long long x1,
 static void smile_directx_draw_text(SmileGraphicsBackend* backend, const char* text,
     long long length, long long x, long long y, long long size, long long color,
     long long centered)
-{ (void)backend; (void)text; (void)length; (void)x; (void)y; (void)size; (void)color; (void)centered; }
+{
+    SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
+    WCHAR* wide;
+    int wide_length;
+    int physical_size;
+    IDWriteTextFormat* format;
+    IDWriteTextLayout* layout = 0;
+    ID2D1SolidColorBrush* brush;
+    DWRITE_TEXT_METRICS metrics;
+    D2D1_POINT_2F origin;
+    HRESULT result;
+    if (!state->frame_active || text == 0 || length <= 0)
+        return;
+    wide = smile_directx_utf8_to_wide(text, length, &wide_length);
+    if (wide == 0 || wide_length <= 0)
+        return;
+    physical_size = smile_graphics_round_pixel(
+        smile_graphics_map_size(&state->viewport, (double)size));
+    if (physical_size < 1)
+        physical_size = 1;
+    format = smile_directx_text_format(state, physical_size);
+    brush = smile_directx_brush(state, color);
+    if (format == 0 || brush == 0)
+    {
+        HeapFree(GetProcessHeap(), 0, wide);
+        return;
+    }
+    result = state->dwrite_factory->CreateTextLayout(wide, (UINT32)wide_length, format,
+        (FLOAT)state->physical_width * 2.0f, (FLOAT)physical_size * 3.0f, &layout);
+    HeapFree(GetProcessHeap(), 0, wide);
+    if (FAILED(result))
+    {
+        smile_directx_set_error(state, 0, 0, "DirectWrite text-layout creation", result);
+        return;
+    }
+    origin.x = (FLOAT)smile_graphics_map_x(&state->viewport, (double)x);
+    origin.y = (FLOAT)smile_graphics_map_y(&state->viewport, (double)y);
+    if (centered != 0 && SUCCEEDED(layout->GetMetrics(&metrics)))
+        origin.x -= metrics.widthIncludingTrailingWhitespace * 0.5f;
+    state->d2d_context->DrawTextLayout(origin, layout, brush, D2D1_DRAW_TEXT_OPTIONS_NONE);
+    layout->Release();
+}
 
 static void smile_directx_draw_number(SmileGraphicsBackend* backend, long long value,
     long long x, long long y, long long size, long long color)
-{ (void)backend; (void)value; (void)x; (void)y; (void)size; (void)color; }
+{
+    WCHAR buffer[32];
+    char narrow[32];
+    int index;
+    int length = smile_directx_format_number(value, buffer,
+        (int)(sizeof(buffer) / sizeof(buffer[0])));
+    for (index = 0; index < length; index++)
+        narrow[index] = (char)buffer[index];
+    smile_directx_draw_text(backend, narrow, length, x, y, size, color, 0);
+}
 
 static int smile_directx_present(SmileGraphicsBackend* backend)
 {

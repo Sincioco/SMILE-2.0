@@ -48,6 +48,7 @@ This report tracks the controlled implementation of the approved Direct2D milest
 
 ### Phase 5 - Direct2D geometry
 
+- Commit: `2527cf9`
 - Added a Direct2D 1.1 factory, device, device context, and DXGI-surface bitmap target on the Direct3D device.
 - Added bounded solid-color brush caching and deterministic target-dependent cleanup.
 - Implemented clear, filled and outlined rectangles, rounded rectangles, circles, and lines using the shared physical-resolution viewport mapping.
@@ -56,8 +57,17 @@ This report tracks the controlled implementation of the approved Direct2D milest
 - Text and numbers intentionally remain absent until the DirectWrite phase.
 - Validation: complete smoke suite passed in 43.8 seconds; the live DirectX title and gameplay geometry were inspected successfully; twenty consecutive fullscreen transitions preserved rendering; the process reported 18 GDI objects, 42 USER objects, 58.27 MB working set, and no device-removal reason after the transition test.
 
+### Phase 6 - DirectWrite text and numbers
+
+- Added a shared DirectWrite factory and bounded final-resolution Consolas Bold text-format cache.
+- Converted SMILE UTF-8 text to Unicode and created a fresh text layout for each distinct string draw.
+- Measured centered text using final-resolution layout metrics and routed numbers through the same text path.
+- Selected grayscale DirectWrite text antialiasing for stable results on the DXGI surface.
+- Kept DirectWrite factory and formats device-independent while retaining Direct2D target-dependent recreation on resize.
+- Validation: complete smoke suite passed in 45.7 seconds; live title, centered labels, dynamic scores, and the game-over panel rendered correctly; fullscreen text remained sharp at 1920x1080; twenty consecutive fullscreen transitions completed with 18 GDI objects, 40 USER objects, and 62.4 MB working set.
+
 ## Known limitations at this stage
 
 - The only selectable backend remains GDI.
 - DirectX remains a developer-only override until backend selection and fallback are implemented.
-- DirectWrite text and number rendering is not initialized until Phase 6.
+- Automatic backend selection and project-level graphics properties remain pending until Phase 7.
