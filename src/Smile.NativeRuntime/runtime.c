@@ -501,7 +501,18 @@ static void smile_present_to_dc(HDC destination)
     }
     destination_x = (client_width - destination_width) / 2;
     destination_y = (client_height - destination_height) / 2;
-    PatBlt(destination, 0, 0, client_width, client_height, BLACKNESS);
+    if (destination_x > 0)
+    {
+        PatBlt(destination, 0, 0, destination_x, client_height, BLACKNESS);
+        PatBlt(destination, destination_x + destination_width, 0,
+            client_width - destination_x - destination_width, client_height, BLACKNESS);
+    }
+    if (destination_y > 0)
+    {
+        PatBlt(destination, 0, 0, client_width, destination_y, BLACKNESS);
+        PatBlt(destination, 0, destination_y + destination_height,
+            client_width, client_height - destination_y - destination_height, BLACKNESS);
+    }
     SetStretchBltMode(destination, COLORONCOLOR);
     StretchBlt(destination, destination_x, destination_y, destination_width, destination_height,
         smile_back_dc, 0, 0, smile_integer(smile_logical_width), smile_integer(smile_logical_height), SRCCOPY);
