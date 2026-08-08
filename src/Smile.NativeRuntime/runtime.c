@@ -370,9 +370,12 @@ void smile_game_open(const char* title, long long title_length, long long width,
 {
     WNDCLASSEXW window_class;
     RECT rectangle;
+    SmileGraphicsBackendKind requested_backend = SMILE_GRAPHICS_BACKEND_GDI;
     DWORD style = WS_OVERLAPPEDWINDOW;
     HINSTANCE instance = GetModuleHandleW(0);
     WCHAR* wide_title;
+    char backend_option[32];
+    char graphics_error[256];
     UINT dpi;
     if (smile_window != 0)
         return;
@@ -386,6 +389,11 @@ void smile_game_open(const char* title, long long title_length, long long width,
     smile_zero_memory(smile_held, sizeof(smile_held));
     smile_frame_clock_initialize(&smile_frame_clock);
     smile_graphics_diagnostics_initialize();
+    smile_zero_memory(backend_option, sizeof(backend_option));
+    smile_zero_memory(graphics_error, sizeof(graphics_error));
+    if (GetEnvironmentVariableA("SMILE_GRAPHICS_BACKEND", backend_option,
+        (DWORD)sizeof(backend_option)) != 0 && lstrcmpiA(backend_option, "DirectX") == 0)
+        requested_backend = SMILE_GRAPHICS_BACKEND_DIRECTX;
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
     smile_zero_memory(&window_class, sizeof(window_class));
@@ -415,8 +423,11 @@ void smile_game_open(const char* title, long long title_length, long long width,
         smile_closed = 1;
         return;
     }
-    if (!smile_graphics_initialize(smile_window, width, height, 1, 0, 0))
+    if (!smile_graphics_initialize(smile_window, width, height, requested_backend, 1,
+        graphics_error, (int)sizeof(graphics_error)))
     {
+        if (graphics_error[0] != 0)
+            MessageBoxA(smile_window, graphics_error, "SMILE 2.0 graphics initialization", MB_OK | MB_ICONERROR);
         DestroyWindow(smile_window);
         smile_closed = 1;
         return;
@@ -464,9 +475,9 @@ void smile_show_screen(void)
         mode.dmSize = sizeof(mode);
         if (GetMonitorInfoW(MonitorFromWindow(smile_window, MONITOR_DEFAULTTONEAREST), (MONITORINFO*)&monitor))
             EnumDisplaySettingsW(monitor.szDevice, ENUM_CURRENT_SETTINGS, &mode);
-        snapshot.requested_backend = "GDI";
-        snapshot.selected_backend = smile_graphics_backend_name();
-        snapshot.fallback_reason = "None";
+        snapshot.requested_backend = backend_diagnostics.requested_backend;
+        snapshot.selected_backend = backend_diagnostics.selected_backend;
+        snapshot.fallback_reason = backend_diagnostics.fallback_reason;
         snapshot.logical_width = smile_logical_width;
         snapshot.logical_height = smile_logical_height;
         snapshot.physical_width = backend_diagnostics.physical_width;

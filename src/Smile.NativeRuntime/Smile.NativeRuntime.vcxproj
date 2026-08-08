@@ -63,6 +63,7 @@
   <ItemGroup>
     <ClCompile Include="graphics\graphics_common.c" />
     <ClCompile Include="graphics\graphics_diagnostics.c" />
+    <ClCompile Include="graphics\graphics_directx.cpp" />
     <ClCompile Include="graphics\graphics_gdi.c" />
     <ClCompile Include="runtime.c" />
     <ClCompile Include="timing\frame_clock_win32.c" />
@@ -71,6 +72,7 @@
     <ClInclude Include="graphics\graphics_backend.h" />
     <ClInclude Include="graphics\graphics_common.h" />
     <ClInclude Include="graphics\graphics_diagnostics.h" />
+    <ClInclude Include="graphics\graphics_directx.h" />
     <ClInclude Include="graphics\graphics_gdi.h" />
     <ClInclude Include="timing\frame_clock_win32.h" />
   </ItemGroup>

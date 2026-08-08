@@ -1,8 +1,11 @@
 #include "graphics_common.h"
+#include "graphics_directx.h"
 #include "graphics_gdi.h"
 
 static SmileGraphicsBackend smile_active_backend;
 static int smile_frame_started;
+static const char* smile_requested_backend_name = "GDI";
+static const char* smile_fallback_reason = "None";
 
 void smile_graphics_calculate_viewport(long long logical_width, long long logical_height,
     int physical_width, int physical_height, SmileGraphicsViewport* viewport)
@@ -61,9 +64,20 @@ static void smile_graphics_ensure_frame(void)
 }
 
 int smile_graphics_initialize(void* native_window, long long logical_width,
-    long long logical_height, int vsync_enabled, char* error, int error_capacity)
+    long long logical_height, SmileGraphicsBackendKind requested_backend,
+    int vsync_enabled, char* error, int error_capacity)
 {
-    smile_graphics_gdi_create(&smile_active_backend);
+    if (requested_backend == SMILE_GRAPHICS_BACKEND_DIRECTX)
+    {
+        smile_requested_backend_name = "DirectX";
+        smile_graphics_directx_create(&smile_active_backend);
+    }
+    else
+    {
+        smile_requested_backend_name = requested_backend == SMILE_GRAPHICS_BACKEND_AUTO ? "Auto" : "GDI";
+        smile_graphics_gdi_create(&smile_active_backend);
+    }
+    smile_fallback_reason = "None";
     if (!smile_active_backend.operations->initialize(&smile_active_backend, native_window,
         logical_width, logical_height, vsync_enabled, error, error_capacity))
     {
@@ -208,4 +222,7 @@ void smile_graphics_get_diagnostics(SmileGraphicsBackendDiagnostics* diagnostics
     diagnostics->device_removal_reason = "None";
     if (smile_graphics_available())
         smile_active_backend.operations->get_diagnostics(&smile_active_backend, diagnostics);
+    diagnostics->requested_backend = smile_requested_backend_name;
+    diagnostics->selected_backend = smile_graphics_backend_name();
+    diagnostics->fallback_reason = smile_fallback_reason;
 }

@@ -12,6 +12,10 @@ typedef struct SmileGraphicsViewport
     double scale;
 } SmileGraphicsViewport;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void smile_graphics_calculate_viewport(long long logical_width, long long logical_height,
     int physical_width, int physical_height, SmileGraphicsViewport* viewport);
 double smile_graphics_map_x(const SmileGraphicsViewport* viewport, double logical_x);
@@ -20,7 +24,8 @@ double smile_graphics_map_size(const SmileGraphicsViewport* viewport, double log
 int smile_graphics_round_pixel(double value);
 
 int smile_graphics_initialize(void* native_window, long long logical_width,
-    long long logical_height, int vsync_enabled, char* error, int error_capacity);
+    long long logical_height, SmileGraphicsBackendKind requested_backend,
+    int vsync_enabled, char* error, int error_capacity);
 void smile_graphics_resize(int physical_width, int physical_height);
 void smile_graphics_begin_frame(void);
 void smile_graphics_clear(long long color);
@@ -41,5 +46,9 @@ void smile_graphics_on_dpi_changed(unsigned int dpi);
 void smile_graphics_shutdown(void);
 const char* smile_graphics_backend_name(void);
 void smile_graphics_get_diagnostics(SmileGraphicsBackendDiagnostics* diagnostics);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

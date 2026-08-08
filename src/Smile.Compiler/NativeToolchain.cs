@@ -18,7 +18,7 @@ internal sealed class NativeToolchain
             $"call {Quote(vcvars)} >nul && " +
             $"ml64.exe /nologo /c /Fo{Quote(objectPath)} {Quote(assemblyPath)} && " +
             $"link.exe /nologo /subsystem:{(isGame ? "windows" : "console")} /entry:main /machine:x64 /out:{Quote(outputPath)} " +
-            $"{Quote(objectPath)} {Quote(runtimePath)} kernel32.lib user32.lib gdi32.lib dwmapi.lib winmm.lib shell32.lib ole32.lib";
+            $"{Quote(objectPath)} {Quote(runtimePath)} kernel32.lib user32.lib gdi32.lib dwmapi.lib d3d11.lib dxgi.lib winmm.lib shell32.lib ole32.lib";
 
         return RunCommandPrompt(command);
     }

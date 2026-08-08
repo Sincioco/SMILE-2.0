@@ -3,8 +3,18 @@
 
 typedef struct SmileGraphicsBackend SmileGraphicsBackend;
 
+typedef enum SmileGraphicsBackendKind
+{
+    SMILE_GRAPHICS_BACKEND_AUTO = 0,
+    SMILE_GRAPHICS_BACKEND_GDI = 1,
+    SMILE_GRAPHICS_BACKEND_DIRECTX = 2
+} SmileGraphicsBackendKind;
+
 typedef struct SmileGraphicsBackendDiagnostics
 {
+    const char* requested_backend;
+    const char* selected_backend;
+    const char* fallback_reason;
     int physical_width;
     int physical_height;
     double viewport_x;
