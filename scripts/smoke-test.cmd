@@ -52,10 +52,43 @@ for %%C in (SML3012 SML3006 SML3017 SML3016 SML3018 SML3019 SML3021) do (
 )
 echo Invalid structured language diagnostics passed.
 
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\diagnostics\InvalidGameLanguage.smile" > "%SMILE_ROOT%\artifacts\temp\InvalidGameLanguage.log" 2>&1
+if not errorlevel 1 (
+    echo Invalid game language smoke test failed: compilation unexpectedly succeeded.
+    exit /b 1
+)
+if errorlevel 2 (
+    echo Invalid game language smoke test failed: compiler returned infrastructure error.
+    exit /b 1
+)
+for %%C in (SML3022 SML3023 SML3024 SML3025) do (
+    findstr /c:"%%C" "%SMILE_ROOT%\artifacts\temp\InvalidGameLanguage.log" >nul
+    if errorlevel 1 (
+        echo Invalid game language smoke test failed: missing %%C.
+        exit /b 1
+    )
+)
+echo Invalid game language diagnostics passed.
+
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\RuntimeBasics.smile" -o "%SMILE_ROOT%\artifacts\games\RuntimeBasics.exe"
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\games\RuntimeBasics.exe"
 if errorlevel 1 exit /b %errorlevel%
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\GraphicsBasics.smile" -o "%SMILE_ROOT%\artifacts\games\GraphicsBasics.exe"
+if errorlevel 1 exit /b %errorlevel%
+if not exist "%SMILE_ROOT%\artifacts\games\Assets" mkdir "%SMILE_ROOT%\artifacts\games\Assets"
+copy /y "%SMILE_ROOT%\examples\Assets\Graphics.wav" "%SMILE_ROOT%\artifacts\games\Assets\Graphics.wav" >nul
+if errorlevel 1 exit /b %errorlevel%
+if not exist "%SMILE_ROOT%\artifacts\games\GraphicsBasics.exe" (
+    echo GraphicsBasics native executable is missing.
+    exit /b 1
+)
+if not exist "%SMILE_ROOT%\artifacts\games\Assets\Graphics.wav" (
+    echo GraphicsBasics sound asset is missing.
+    exit /b 1
+)
+echo GraphicsBasics compiled with its sound asset.
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Snake.smile" -o "%SMILE_ROOT%\artifacts\games\Snake.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%

@@ -1,0 +1,10 @@
+' Exercises shared semantic diagnostics for invalid game-language use.
+CLEAR RED
+DRAW CIRCLE 100, 100, 20, WHITE
+PLAY SOUND ""
+LOAD SavedValue FROM "" DEFAULT 0
+SAVE SavedValue TO ""
+
+DO
+    GAME WINDOW "Nested" SIZE 0 BY 540
+LOOP UNTIL TRUE

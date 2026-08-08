@@ -63,7 +63,7 @@ internal sealed class Parser
             case SyntaxKind.DoKeyword: return ParseDoStatement();
             case SyntaxKind.PrintKeyword: return ParsePrintStatement();
             case SyntaxKind.GetKeyword: return ParseGetKeyStatement();
-            case SyntaxKind.ClearKeyword: return ParseClearScreenStatement();
+            case SyntaxKind.ClearKeyword: return ParseClearStatement();
             case SyntaxKind.WaitKeyword: return ParseWaitStatement();
             case SyntaxKind.RandomKeyword: return ParseRandomStatement();
             case SyntaxKind.SubKeyword:
@@ -73,6 +73,14 @@ internal sealed class Parser
             case SyntaxKind.SelectKeyword: return ParseSelectStatement();
             case SyntaxKind.ExitKeyword: return ParseExitStatement();
             case SyntaxKind.EndKeyword when Peek(1).Kind == SyntaxKind.ProgramKeyword: return ParseEndProgramStatement();
+            case SyntaxKind.GameKeyword: return ParseGameWindowStatement();
+            case SyntaxKind.FillKeyword: return ParseGraphicsStatement(isFill: true);
+            case SyntaxKind.DrawKeyword: return ParseGraphicsStatement(isFill: false);
+            case SyntaxKind.ShowKeyword: return ParseShowScreenStatement();
+            case SyntaxKind.PlayKeyword: return ParseSoundStatement(isStop: false);
+            case SyntaxKind.StopKeyword: return ParseSoundStatement(isStop: true);
+            case SyntaxKind.LoadKeyword: return ParseLoadStatement();
+            case SyntaxKind.SaveKeyword: return ParseSaveStatement();
             case SyntaxKind.IdentifierToken:
             case SyntaxKind.KeyKeyword: return ParseAssignmentStatement();
             default:
@@ -160,12 +168,183 @@ internal sealed class Parser
         return new GetKeyStatementSyntax(get, key, identifier);
     }
 
-    private ClearScreenStatementSyntax ParseClearScreenStatement()
+    private StatementSyntax ParseClearStatement()
     {
         var clear = MatchToken(SyntaxKind.ClearKeyword);
-        var screen = MatchToken(SyntaxKind.ScreenKeyword);
+        if (Current.Kind != SyntaxKind.ScreenKeyword)
+        {
+            var color = ParseExpression();
+            ConsumeLineEnd();
+            return new ClearColorStatementSyntax(clear, color);
+        }
+        var screen = NextToken();
         ConsumeLineEnd();
         return new ClearScreenStatementSyntax(clear, screen);
+    }
+
+    private GameWindowStatementSyntax ParseGameWindowStatement()
+    {
+        var game = MatchToken(SyntaxKind.GameKeyword);
+        MatchToken(SyntaxKind.WindowKeyword);
+        var title = MatchToken(SyntaxKind.StringToken);
+        ExpressionSyntax? width = null;
+        ExpressionSyntax? height = null;
+        var end = title.Span.End;
+        if (Current.Kind == SyntaxKind.SizeKeyword)
+        {
+            NextToken();
+            width = ParseExpression();
+            MatchToken(SyntaxKind.ByKeyword);
+            height = ParseExpression();
+            end = height.Span.End;
+        }
+        ConsumeLineEnd();
+        return new GameWindowStatementSyntax(game, title, width, height, end);
+    }
+
+    private GraphicsStatementSyntax ParseGraphicsStatement(bool isFill)
+    {
+        var keyword = NextToken();
+        var rounded = false;
+        if (Current.Kind == SyntaxKind.RoundedKeyword)
+        {
+            rounded = true;
+            NextToken();
+        }
+
+        GraphicsOperation operation;
+        IReadOnlyList<ExpressionSyntax> arguments;
+        SyntaxToken? text = null;
+        var centered = false;
+        var end = keyword.Span.End;
+
+        if (Current.Kind == SyntaxKind.RectangleKeyword)
+        {
+            NextToken();
+            operation = rounded
+                ? (isFill ? GraphicsOperation.FillRoundedRectangle : GraphicsOperation.DrawRoundedRectangle)
+                : (isFill ? GraphicsOperation.FillRectangle : GraphicsOperation.DrawRectangle);
+            arguments = ParseFixedArguments(rounded ? 6 : 5);
+            end = arguments.Count == 0 ? keyword.Span.End : arguments[arguments.Count - 1].Span.End;
+        }
+        else if (Current.Kind == SyntaxKind.CircleKeyword)
+        {
+            NextToken();
+            operation = isFill ? GraphicsOperation.FillCircle : GraphicsOperation.DrawCircle;
+            arguments = ParseFixedArguments(4);
+            end = arguments.Count == 0 ? keyword.Span.End : arguments[arguments.Count - 1].Span.End;
+        }
+        else if (!isFill && Current.Kind == SyntaxKind.LineKeyword)
+        {
+            NextToken();
+            operation = GraphicsOperation.DrawLine;
+            arguments = ParseFixedArguments(5);
+            end = arguments.Count == 0 ? keyword.Span.End : arguments[arguments.Count - 1].Span.End;
+        }
+        else if (!isFill && Current.Kind == SyntaxKind.TextKeyword)
+        {
+            NextToken();
+            operation = GraphicsOperation.DrawText;
+            text = MatchToken(SyntaxKind.StringToken);
+            MatchToken(SyntaxKind.AtKeyword);
+            var values = new List<ExpressionSyntax>();
+            values.Add(ParseExpression());
+            MatchToken(SyntaxKind.CommaToken);
+            values.Add(ParseExpression());
+            MatchToken(SyntaxKind.SizeKeyword);
+            values.Add(ParseExpression());
+            MatchToken(SyntaxKind.ColorKeyword);
+            values.Add(ParseExpression());
+            if (Current.Kind == SyntaxKind.CenteredKeyword)
+            {
+                centered = true;
+                end = NextToken().Span.End;
+            }
+            else
+            {
+                end = values[values.Count - 1].Span.End;
+            }
+            arguments = values;
+        }
+        else if (!isFill && Current.Kind == SyntaxKind.NumberKeyword)
+        {
+            NextToken();
+            operation = GraphicsOperation.DrawNumber;
+            var values = new List<ExpressionSyntax> { ParseExpression() };
+            MatchToken(SyntaxKind.AtKeyword);
+            values.Add(ParseExpression());
+            MatchToken(SyntaxKind.CommaToken);
+            values.Add(ParseExpression());
+            MatchToken(SyntaxKind.SizeKeyword);
+            values.Add(ParseExpression());
+            MatchToken(SyntaxKind.ColorKeyword);
+            values.Add(ParseExpression());
+            arguments = values;
+            end = values[values.Count - 1].Span.End;
+        }
+        else
+        {
+            var expected = isFill ? "RECTANGLE, ROUNDED RECTANGLE, or CIRCLE" : "a drawing primitive";
+            _diagnostics.Report("SML2001", Current.Span, $"Expected {expected}, found '{Display(Current)}'.");
+            arguments = Array.Empty<ExpressionSyntax>();
+            operation = isFill ? GraphicsOperation.FillRectangle : GraphicsOperation.DrawRectangle;
+            SynchronizeLine();
+            return new GraphicsStatementSyntax(keyword, operation, arguments, null, false, end);
+        }
+
+        ConsumeLineEnd();
+        return new GraphicsStatementSyntax(keyword, operation, arguments, text, centered, end);
+    }
+
+    private IReadOnlyList<ExpressionSyntax> ParseFixedArguments(int count)
+    {
+        var arguments = new List<ExpressionSyntax>();
+        for (var index = 0; index < count; index++)
+        {
+            if (index != 0)
+                MatchToken(SyntaxKind.CommaToken);
+            arguments.Add(ParseExpression());
+        }
+        return arguments;
+    }
+
+    private ShowScreenStatementSyntax ParseShowScreenStatement()
+    {
+        var show = MatchToken(SyntaxKind.ShowKeyword);
+        var screen = MatchToken(SyntaxKind.ScreenKeyword);
+        ConsumeLineEnd();
+        return new ShowScreenStatementSyntax(show, screen);
+    }
+
+    private SoundStatementSyntax ParseSoundStatement(bool isStop)
+    {
+        var keyword = MatchToken(isStop ? SyntaxKind.StopKeyword : SyntaxKind.PlayKeyword);
+        var sound = MatchToken(SyntaxKind.SoundKeyword);
+        var path = isStop ? null : MatchToken(SyntaxKind.StringToken);
+        ConsumeLineEnd();
+        return new SoundStatementSyntax(keyword, sound, path);
+    }
+
+    private LoadStatementSyntax ParseLoadStatement()
+    {
+        var load = MatchToken(SyntaxKind.LoadKeyword);
+        var identifier = MatchIdentifier();
+        MatchToken(SyntaxKind.FromKeyword);
+        var key = MatchToken(SyntaxKind.StringToken);
+        MatchToken(SyntaxKind.DefaultKeyword);
+        var defaultValue = ParseExpression();
+        ConsumeLineEnd();
+        return new LoadStatementSyntax(load, identifier, key, defaultValue);
+    }
+
+    private SaveStatementSyntax ParseSaveStatement()
+    {
+        var save = MatchToken(SyntaxKind.SaveKeyword);
+        var identifier = MatchIdentifier();
+        MatchToken(SyntaxKind.ToKeyword);
+        var key = MatchToken(SyntaxKind.StringToken);
+        ConsumeLineEnd();
+        return new SaveStatementSyntax(save, identifier, key);
     }
 
     private WaitStatementSyntax ParseWaitStatement()

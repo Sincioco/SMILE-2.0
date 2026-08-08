@@ -4,7 +4,7 @@ namespace Smile.Compiler;
 
 internal sealed class NativeToolchain
 {
-    public ToolchainResult AssembleAndLink(string assemblyPath, string objectPath, string outputPath, string runtimePath)
+    public ToolchainResult AssembleAndLink(string assemblyPath, string objectPath, string outputPath, string runtimePath, bool isGame)
     {
         var installationPath = FindVisualStudio();
         if (installationPath == null)
@@ -17,8 +17,8 @@ internal sealed class NativeToolchain
         var command =
             $"call {Quote(vcvars)} >nul && " +
             $"ml64.exe /nologo /c /Fo{Quote(objectPath)} {Quote(assemblyPath)} && " +
-            $"link.exe /nologo /subsystem:console /entry:main /machine:x64 /out:{Quote(outputPath)} " +
-            $"{Quote(objectPath)} {Quote(runtimePath)} kernel32.lib user32.lib";
+            $"link.exe /nologo /subsystem:{(isGame ? "windows" : "console")} /entry:main /machine:x64 /out:{Quote(outputPath)} " +
+            $"{Quote(objectPath)} {Quote(runtimePath)} kernel32.lib user32.lib gdi32.lib winmm.lib shell32.lib ole32.lib";
 
         return RunCommandPrompt(command);
     }

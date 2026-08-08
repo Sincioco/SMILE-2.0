@@ -11,6 +11,7 @@ internal sealed class MasmEmitter
     private readonly Dictionary<VariableSymbol, string> _symbolLabels = new();
     private readonly Dictionary<string, string> _routineLabels = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<LiteralExpressionSyntax, TextLiteral> _textLiterals = new();
+    private readonly Dictionary<SyntaxToken, TextLiteral> _gameTextLiterals = new();
     private readonly Dictionary<ForStatementSyntax, string> _forLimits = new();
     private readonly Dictionary<SelectStatementSyntax, string> _selectValues = new();
     private readonly Stack<string> _forExitLabels = new();
@@ -42,6 +43,22 @@ internal sealed class MasmEmitter
         if (_usesTimer) Line("EXTERN smile_timer:PROC");
         if (_usesGameClosed) Line("EXTERN smile_game_closed:PROC");
         if (_usesKeyHeld) Line("EXTERN smile_key_held:PROC");
+        Line("EXTERN smile_game_open:PROC");
+        Line("EXTERN smile_game_clear:PROC");
+        Line("EXTERN smile_fill_rectangle:PROC");
+        Line("EXTERN smile_draw_rectangle:PROC");
+        Line("EXTERN smile_fill_rounded_rectangle:PROC");
+        Line("EXTERN smile_draw_rounded_rectangle:PROC");
+        Line("EXTERN smile_fill_circle:PROC");
+        Line("EXTERN smile_draw_circle:PROC");
+        Line("EXTERN smile_draw_line:PROC");
+        Line("EXTERN smile_draw_text:PROC");
+        Line("EXTERN smile_draw_number:PROC");
+        Line("EXTERN smile_show_screen:PROC");
+        Line("EXTERN smile_play_sound:PROC");
+        Line("EXTERN smile_stop_sound:PROC");
+        Line("EXTERN smile_load_value:PROC");
+        Line("EXTERN smile_save_value:PROC");
         Line();
         Line(".data");
         EmitStorage(_analysis.SemanticModel.Symbols.Values);
@@ -53,14 +70,16 @@ internal sealed class MasmEmitter
             Line($"{value} QWORD 0");
         foreach (var literal in _textLiterals.Values)
             Line($"{literal.Label} BYTE {FormatBytes(literal.Bytes)}");
+        foreach (var literal in _gameTextLiterals.Values)
+            Line($"{literal.Label} BYTE {FormatBytes(literal.Bytes)}");
 
         Line();
         Line(".code");
         Line("main PROC");
-        Line("    sub rsp, 40");
+        Line("    sub rsp, 104");
         EmitStatements(_analysis.SyntaxTree.Root.Statements);
         Line("    xor eax, eax");
-        Line("    add rsp, 40");
+        Line("    add rsp, 104");
         Line("    ret");
         Line("main ENDP");
 
@@ -150,8 +169,38 @@ internal sealed class MasmEmitter
                         Collect(clause.Statements);
                     }
                     break;
+                case GameWindowStatementSyntax gameWindow:
+                    CollectTextToken(gameWindow.Title);
+                    CollectExpression(gameWindow.Width);
+                    CollectExpression(gameWindow.Height);
+                    break;
+                case ClearColorStatementSyntax clearColor:
+                    CollectExpression(clearColor.Color);
+                    break;
+                case GraphicsStatementSyntax graphics:
+                    if (graphics.Text != null)
+                        CollectTextToken(graphics.Text);
+                    foreach (var argument in graphics.Arguments)
+                        CollectExpression(argument);
+                    break;
+                case SoundStatementSyntax sound when sound.Path != null:
+                    CollectTextToken(sound.Path);
+                    break;
+                case LoadStatementSyntax load:
+                    CollectTextToken(load.Key);
+                    CollectExpression(load.DefaultValue);
+                    break;
+                case SaveStatementSyntax save:
+                    CollectTextToken(save.Key);
+                    break;
             }
         }
+    }
+
+    private void CollectTextToken(SyntaxToken token)
+    {
+        if (!_gameTextLiterals.ContainsKey(token))
+            _gameTextLiterals[token] = new TextLiteral($"game_text_{_gameTextLiterals.Count}", Encoding.UTF8.GetBytes(token.Value as string ?? string.Empty));
     }
 
     private void CollectExpression(ExpressionSyntax? expression)
@@ -211,12 +260,12 @@ internal sealed class MasmEmitter
         _returnLabel = NewLabel("routine_return");
         Line();
         Line($"{_routineLabels[routine.Name]} PROC");
-        Line("    sub rsp, 40");
+        Line("    sub rsp, 104");
         EmitStatements(routine.Declaration.Statements);
         if (!routine.IsFunction)
             Line("    xor eax, eax");
         Line($"{_returnLabel}:");
-        Line("    add rsp, 40");
+        Line("    add rsp, 104");
         Line("    ret");
         Line($"{_routineLabels[routine.Name]} ENDP");
         _returnLabel = null;
@@ -293,7 +342,110 @@ internal sealed class MasmEmitter
                 Line("    xor ecx, ecx");
                 Line("    call ExitProcess");
                 break;
+            case GameWindowStatementSyntax gameWindow:
+                EmitTextArgument(gameWindow.Title);
+                if (gameWindow.Width != null) EmitExpression(gameWindow.Width); else Line("    mov rax, 960");
+                Line("    push rax");
+                if (gameWindow.Height != null) EmitExpression(gameWindow.Height); else Line("    mov rax, 540");
+                Line("    push rax");
+                EmitNativeCall("smile_game_open", 4);
+                break;
+            case ClearColorStatementSyntax clearColor:
+                EmitExpression(clearColor.Color);
+                Line("    push rax");
+                EmitNativeCall("smile_game_clear", 1);
+                break;
+            case GraphicsStatementSyntax graphics:
+                EmitGraphics(graphics);
+                break;
+            case ShowScreenStatementSyntax:
+                Line("    call smile_show_screen");
+                break;
+            case SoundStatementSyntax sound:
+                if (sound.IsStop)
+                    Line("    call smile_stop_sound");
+                else
+                {
+                    EmitTextArgument(sound.Path!);
+                    EmitNativeCall("smile_play_sound", 2);
+                }
+                break;
+            case LoadStatementSyntax load:
+                EmitTextArgument(load.Key);
+                EmitExpression(load.DefaultValue);
+                Line("    push rax");
+                EmitNativeCall("smile_load_value", 3);
+                Line($"    mov QWORD PTR [{Label(load.Identifier.Text)}], rax");
+                break;
+            case SaveStatementSyntax save:
+                EmitTextArgument(save.Key);
+                var saved = Resolve(save.Identifier.Text);
+                Line(saved.IsConstant
+                    ? $"    mov rax, {saved.ConstantValue.ToString(CultureInfo.InvariantCulture)}"
+                    : $"    mov rax, QWORD PTR [{_symbolLabels[saved]}]");
+                Line("    push rax");
+                EmitNativeCall("smile_save_value", 3);
+                break;
         }
+    }
+
+    private void EmitGraphics(GraphicsStatementSyntax statement)
+    {
+        if (statement.Operation == GraphicsOperation.DrawText)
+            EmitTextArgument(statement.Text!);
+        foreach (var argument in statement.Arguments)
+        {
+            EmitExpression(argument);
+            Line("    push rax");
+        }
+        if (statement.Operation == GraphicsOperation.DrawText)
+        {
+            Line($"    mov rax, {(statement.Centered ? 1 : 0)}");
+            Line("    push rax");
+        }
+        var name = statement.Operation switch
+        {
+            GraphicsOperation.FillRectangle => "smile_fill_rectangle",
+            GraphicsOperation.DrawRectangle => "smile_draw_rectangle",
+            GraphicsOperation.FillRoundedRectangle => "smile_fill_rounded_rectangle",
+            GraphicsOperation.DrawRoundedRectangle => "smile_draw_rounded_rectangle",
+            GraphicsOperation.FillCircle => "smile_fill_circle",
+            GraphicsOperation.DrawCircle => "smile_draw_circle",
+            GraphicsOperation.DrawLine => "smile_draw_line",
+            GraphicsOperation.DrawText => "smile_draw_text",
+            GraphicsOperation.DrawNumber => "smile_draw_number",
+            _ => throw new InvalidOperationException("Unknown graphics operation.")
+        };
+        EmitNativeCall(name, statement.Arguments.Count + (statement.Operation == GraphicsOperation.DrawText ? 3 : 0));
+    }
+
+    private void EmitTextArgument(SyntaxToken token)
+    {
+        var text = _gameTextLiterals[token];
+        Line($"    lea rax, {text.Label}");
+        Line("    push rax");
+        Line($"    mov rax, {text.Bytes.Length.ToString(CultureInfo.InvariantCulture)}");
+        Line("    push rax");
+    }
+
+    private void EmitNativeCall(string name, int argumentCount)
+    {
+        for (var index = argumentCount - 1; index >= 0; index--)
+        {
+            Line("    pop rax");
+            switch (index)
+            {
+                case 0: Line("    mov rcx, rax"); break;
+                case 1: Line("    mov rdx, rax"); break;
+                case 2: Line("    mov r8, rax"); break;
+                case 3: Line("    mov r9, rax"); break;
+                // The remaining arguments are still below RSP while values are popped.
+                // Account for that temporary expression stack so the value lands in the
+                // final Windows x64 outgoing-argument slot after all pops complete.
+                default: Line($"    mov QWORD PTR [rsp+{index * 16}], rax"); break;
+            }
+        }
+        Line($"    call {name}");
     }
 
     private void EmitAssignment(AssignmentStatementSyntax assignment)

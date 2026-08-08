@@ -50,7 +50,8 @@ internal sealed class CompilerDriver
             }
 
             File.WriteAllText(assemblyPath, new MasmEmitter(analysis).Emit());
-            var result = new NativeToolchain().AssembleAndLink(assemblyPath, objectPath, outputPath, runtimePath);
+            var isGame = analysis.SyntaxTree.Root.Statements.Any(statement => statement is GameWindowStatementSyntax);
+            var result = new NativeToolchain().AssembleAndLink(assemblyPath, objectPath, outputPath, runtimePath, isGame);
             if (!result.Success)
             {
                 Console.Error.WriteLine($"{sourcePath}(1,1): error SML5003: Native toolchain failed.");

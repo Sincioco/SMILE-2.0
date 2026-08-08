@@ -106,12 +106,16 @@ internal sealed class SemanticAnalyzer
     private RoutineSymbol? _currentRoutine;
     private int _forDepth;
     private int _doDepth;
+    private bool _hasGameWindow;
+    private int _gameWindowCount;
 
     public SemanticAnalyzer(SourceText source) => _diagnostics = new DiagnosticBag(source);
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.ToArray();
 
     public SemanticModel Analyze(CompilationUnitSyntax root)
     {
+        foreach (var statement in root.Statements)
+            _hasGameWindow |= statement is GameWindowStatementSyntax;
         CollectRoutineDeclarations(root.Statements);
         CollectFirstDeclarations(root.Statements, _globalFirstDeclarations, skipRoutines: true);
         AnalyzeStatements(root.Statements, topLevel: true);
@@ -228,6 +232,9 @@ internal sealed class SemanticAnalyzer
                 case RandomStatementSyntax random:
                     RecordFirst(declarations, random.Identifier);
                     break;
+                case LoadStatementSyntax load:
+                    RecordFirst(declarations, load.Identifier);
+                    break;
                 case ForStatementSyntax forStatement:
                     RecordFirst(declarations, forStatement.Identifier);
                     CollectFirstDeclarations(forStatement.Statements, declarations, skipRoutines);
@@ -312,7 +319,62 @@ internal sealed class SemanticAnalyzer
             case SelectStatementSyntax select: AnalyzeSelect(select); break;
             case ExitStatementSyntax exit: AnalyzeExit(exit); break;
             case EndProgramStatementSyntax: break;
+            case GameWindowStatementSyntax gameWindow: AnalyzeGameWindow(gameWindow, topLevel); break;
+            case ClearColorStatementSyntax clearColor:
+                RequireGameWindow(clearColor.Span, "CLEAR color");
+                RequireType(clearColor.Color, SmileType.Number, "SML3023", "CLEAR color must be NUMBER.");
+                break;
+            case GraphicsStatementSyntax graphics:
+                RequireGameWindow(graphics.Span, "drawing statement");
+                foreach (var argument in graphics.Arguments)
+                    RequireType(argument, SmileType.Number, "SML3023", "Drawing arguments must be NUMBER values.");
+                break;
+            case ShowScreenStatementSyntax show:
+                RequireGameWindow(show.Span, "SHOW SCREEN");
+                break;
+            case SoundStatementSyntax sound:
+                RequireGameWindow(sound.Span, sound.IsStop ? "STOP SOUND" : "PLAY SOUND");
+                if (!sound.IsStop && string.IsNullOrWhiteSpace(sound.Path?.Value as string))
+                    _diagnostics.Report("SML3024", sound.Span, "PLAY SOUND requires a non-empty WAV path literal.");
+                break;
+            case LoadStatementSyntax load:
+                RequireType(load.DefaultValue, SmileType.Number, "SML3025", "LOAD DEFAULT must be NUMBER.");
+                EnsureNumberTarget(load.Identifier, "LOAD");
+                ValidateStorageKey(load.Key);
+                break;
+            case SaveStatementSyntax save:
+                if (!TryResolve(save.Identifier.Text, save.Identifier, out var saved) || saved.IsArray || saved.Type != SmileType.Number)
+                    _diagnostics.Report("SML3025", save.Identifier.Span, "SAVE value must be a NUMBER variable or constant.");
+                ValidateStorageKey(save.Key);
+                break;
         }
+    }
+
+    private void AnalyzeGameWindow(GameWindowStatementSyntax statement, bool topLevel)
+    {
+        _gameWindowCount++;
+        if (!topLevel || _currentRoutine != null)
+            _diagnostics.Report("SML3022", statement.GameKeyword.Span, "GAME WINDOW must be a top-level statement.");
+        if (_gameWindowCount > 1)
+            _diagnostics.Report("SML3022", statement.GameKeyword.Span, "Only one GAME WINDOW is allowed.");
+        if (statement.Width == null || statement.Height == null)
+            return;
+        if (!TryEvaluateConstant(statement.Width, out var width, out var widthType) || widthType != SmileType.Number || width <= 0)
+            _diagnostics.Report("SML3023", statement.Width.Span, "GAME WINDOW width must be a positive compile-time NUMBER.");
+        if (!TryEvaluateConstant(statement.Height, out var height, out var heightType) || heightType != SmileType.Number || height <= 0)
+            _diagnostics.Report("SML3023", statement.Height.Span, "GAME WINDOW height must be a positive compile-time NUMBER.");
+    }
+
+    private void RequireGameWindow(TextSpan span, string statementName)
+    {
+        if (!_hasGameWindow)
+            _diagnostics.Report("SML3023", span, $"{statementName} requires a GAME WINDOW statement.");
+    }
+
+    private void ValidateStorageKey(SyntaxToken key)
+    {
+        if (string.IsNullOrWhiteSpace(key.Value as string))
+            _diagnostics.Report("SML3025", key.Span, "Storage key must be a non-empty text literal.");
     }
 
     private void AnalyzeConstant(ConstStatementSyntax constant, bool topLevel)
@@ -615,6 +677,8 @@ internal sealed class SemanticAnalyzer
             _diagnostics.Report("SML3021", identifier.Span, $"Unknown built-in function '{identifier.Text}'.");
             return SmileType.Error;
         }
+        if (identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword && !_hasGameWindow)
+            _diagnostics.Report("SML3023", identifier.Span, $"Built-in '{identifier.Text}' requires GAME WINDOW.");
         if (arguments.Count != expected)
             _diagnostics.Report("SML3016", identifier.Span, $"Built-in '{identifier.Text}' expects {expected} argument(s), found {arguments.Count}.");
         foreach (var argument in arguments)
