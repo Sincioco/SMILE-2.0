@@ -8,6 +8,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Xml.Linq;
 using Microsoft.VisualStudio;
+using Microsoft.VisualStudio.Imaging;
+using Microsoft.VisualStudio.Imaging.Interop;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -387,6 +389,16 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             pvar = true;
         else if (propid == (int)__VSHPROPID4.VSHPROPID_AlwaysBuildOnDebugLaunch)
             pvar = true;
+        else if (propid == (int)__VSHPROPID8.VSHPROPID_SupportsIconMonikers)
+            pvar = true;
+        else if (propid == (int)__VSHPROPID8.VSHPROPID_IconMonikerId ||
+                 propid == (int)__VSHPROPID8.VSHPROPID_OpenFolderIconMonikerId)
+        {
+            var openFolder = propid == (int)__VSHPROPID8.VSHPROPID_OpenFolderIconMonikerId;
+            if (!TryGetIcon(item, openFolder, out var icon))
+                return VSConstants.E_NOTIMPL;
+            pvar = icon.Id;
+        }
         else
             return VSConstants.E_NOTIMPL;
         return VSConstants.S_OK;
@@ -417,9 +429,33 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             };
         else if (propid == (int)__VSHPROPID.VSHPROPID_CmdUIGuid)
             pguid = new Guid(SmileProjectFactory.SmileProjectTypeGuidString);
+        else if (propid == (int)__VSHPROPID8.VSHPROPID_IconMonikerGuid ||
+                 propid == (int)__VSHPROPID8.VSHPROPID_OpenFolderIconMonikerGuid)
+        {
+            var openFolder = propid == (int)__VSHPROPID8.VSHPROPID_OpenFolderIconMonikerGuid;
+            if (!TryGetIcon(item, openFolder, out var icon))
+                return VSConstants.E_NOTIMPL;
+            pguid = icon.Guid;
+        }
         else
             return VSConstants.E_NOTIMPL;
         return VSConstants.S_OK;
+    }
+
+    private static bool TryGetIcon(ProjectItem item, bool openFolder, out ImageMoniker icon)
+    {
+        if (item.Kind == ItemKind.Project)
+            icon = KnownMonikers.Application;
+        else if (item.Kind == ItemKind.Folder)
+            icon = openFolder ? KnownMonikers.FolderOpened : KnownMonikers.FolderClosed;
+        else if (item.Path.EndsWith(".smile", StringComparison.OrdinalIgnoreCase))
+            icon = KnownMonikers.Code;
+        else
+        {
+            icon = default;
+            return false;
+        }
+        return true;
     }
 
     public int SetSite(Microsoft.VisualStudio.OLE.Interop.IServiceProvider psp)
@@ -475,30 +511,40 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
 
     public int QueryStatusCommand(uint itemid, ref Guid pguidCmdGroup, uint cCmds, OLECMD[] prgCmds, IntPtr pCmdText)
     {
-        if (pguidCmdGroup != VSConstants.GUID_VSStandardCommandSet97 || Item(itemid)?.Kind != ItemKind.File)
+        if (Item(itemid)?.Kind != ItemKind.File)
             return CommandNotSupported;
+        var supported = false;
         for (var index = 0; index < Math.Min((int)cCmds, prgCmds.Length); index++)
         {
-            if (IsOpenCommand(prgCmds[index].cmdID))
+            if (IsOpenCommand(pguidCmdGroup, prgCmds[index].cmdID))
+            {
                 prgCmds[index].cmdf = (uint)(OLECMDF.OLECMDF_SUPPORTED | OLECMDF.OLECMDF_ENABLED);
+                supported = true;
+            }
         }
-        return VSConstants.S_OK;
+        return supported ? VSConstants.S_OK : CommandNotSupported;
     }
 
     public int ExecCommand(uint itemid, ref Guid pguidCmdGroup, uint nCmdID, uint nCmdexecopt, IntPtr pvaIn, IntPtr pvaOut)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        if (pguidCmdGroup != VSConstants.GUID_VSStandardCommandSet97 || !IsOpenCommand(nCmdID))
+        if (Item(itemid)?.Kind != ItemKind.File || !IsOpenCommand(pguidCmdGroup, nCmdID))
             return CommandNotSupported;
         var logicalView = VSConstants.LOGVIEWID_Primary;
         return OpenItem(itemid, ref logicalView, IntPtr.Zero, out _);
     }
 
-    private static bool IsOpenCommand(uint commandId) =>
-        commandId == (uint)VSConstants.VSStd97CmdID.Open ||
-        commandId == (uint)VSConstants.VSStd97CmdID.OpenProjectItem ||
-        commandId == (uint)VSConstants.VSStd97CmdID.OpenWith ||
-        commandId == (uint)VSConstants.VSStd97CmdID.ViewCode;
+    private static bool IsOpenCommand(Guid commandGroup, uint commandId)
+    {
+        if (commandGroup == VSConstants.GUID_VsUIHierarchyWindowCmds)
+            return commandId == (uint)VSConstants.VsUIHierarchyWindowCmdIds.UIHWCMDID_DoubleClick ||
+                   commandId == (uint)VSConstants.VsUIHierarchyWindowCmdIds.UIHWCMDID_EnterKey;
+        if (commandGroup != VSConstants.GUID_VSStandardCommandSet97)
+            return false;
+        return commandId == (uint)VSConstants.VSStd97CmdID.Open ||
+               commandId == (uint)VSConstants.VSStd97CmdID.OpenProjectItem ||
+               commandId == (uint)VSConstants.VSStd97CmdID.ViewCode;
+    }
 
     public int IsDocumentInProject(string pszMkDocument, out int pfFound, VSDOCUMENTPRIORITY[] pdwPriority, out uint pitemid)
     {
@@ -522,17 +568,33 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         ThreadHelper.ThrowIfNotOnUIThread();
         ppWindowFrame = null!;
         var item = Item(itemid);
-        if (item == null || item.Kind != ItemKind.File || _site == null)
+        if (item == null || item.Kind != ItemKind.File)
             return VSConstants.E_INVALIDARG;
-        var openDocument = Package.GetGlobalService(typeof(SVsUIShellOpenDocument)) as IVsUIShellOpenDocument;
-        if (openDocument == null)
-            return VSConstants.E_FAIL;
-        var logicalView = rguidLogicalView == Guid.Empty ? VSConstants.LOGVIEWID_Primary : rguidLogicalView;
-        var result = openDocument.OpenStandardEditor((uint)__VSOSEFLAGS.OSE_ChooseBestStdEditor, item.Path, ref logicalView,
-            null, this, itemid, punkDocDataExisting, _site, out ppWindowFrame);
-        if (result == VSConstants.S_OK)
-            ppWindowFrame.Show();
-        return result;
+
+        // The lightweight SMILE hierarchy deliberately has no project-specific editor.
+        // Open through Visual Studio's built-in text editor instead. MEF still assigns the
+        // .smile content type, so the shared classifier, diagnostics, and semantic services
+        // remain active while the source stays visible in the SMILE project hierarchy.
+        try
+        {
+            VsShellUtilities.OpenAsMiscellaneousFile(_package, item.Path, item.Caption,
+                VSConstants.GUID_TextEditorFactory, null!, VSConstants.LOGVIEWID_TextView);
+            if (VsShellUtilities.IsDocumentOpen(_package, item.Path, Guid.Empty,
+                    out _, out _, out ppWindowFrame))
+            {
+                ppWindowFrame.Show();
+            }
+
+            // OpenAsMiscellaneousFile has already opened and activated the document. The
+            // running document table can lag that operation briefly, so a missing frame here
+            // is not an editor failure and must not surface a false error dialog to the user.
+            return VSConstants.S_OK;
+        }
+        catch (Exception exception)
+        {
+            ActivityLog.LogError(nameof(SmileProject), exception.ToString());
+            return Marshal.GetHRForException(exception);
+        }
     }
 
     public int GetItemContext(uint itemid, out Microsoft.VisualStudio.OLE.Interop.IServiceProvider ppSP)

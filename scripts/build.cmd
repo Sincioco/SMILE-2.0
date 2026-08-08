@@ -20,7 +20,7 @@ if not defined SMILE_VS (
 call "%SMILE_VS%\VC\Auxiliary\Build\vcvars64.bat" >nul
 if errorlevel 1 exit /b %errorlevel%
 
-msbuild "%SMILE_ROOT%\src\Smile.NativeRuntime\Smile.NativeRuntime.vcxproj" /m /p:Configuration=Release /p:Platform=x64 /p:SolutionDir="%SMILE_ROOT_SLASH%" /v:minimal
+msbuild "%SMILE_ROOT%\src\Smile.NativeRuntime\Smile.NativeRuntime.vcxproj" /m /nr:false /p:Configuration=Release /p:Platform=x64 /p:SolutionDir="%SMILE_ROOT_SLASH%" /v:minimal
 if errorlevel 1 exit /b %errorlevel%
 
 dotnet publish "%SMILE_ROOT%\src\Smile.Compiler\Smile.Compiler.csproj" -c Release -r win-x64 --self-contained false -o "%SMILE_ROOT%\artifacts\compiler"
@@ -28,7 +28,7 @@ if errorlevel 1 exit /b %errorlevel%
 
 copy /y "%SMILE_ROOT%\artifacts\runtime\Smile.NativeRuntime.lib" "%SMILE_ROOT%\artifacts\compiler\Smile.NativeRuntime.lib" >nul
 
-msbuild "%SMILE_ROOT%\SMILE 2.0.sln" /m /p:Configuration=Release /p:Platform=x64 /v:minimal
+msbuild "%SMILE_ROOT%\SMILE 2.0.sln" /m /nr:false /p:Configuration=Release /p:Platform=x64 /v:minimal
 if errorlevel 1 exit /b %errorlevel%
 
 if not exist "%SMILE_ROOT%\artifacts\vsix" mkdir "%SMILE_ROOT%\artifacts\vsix"
