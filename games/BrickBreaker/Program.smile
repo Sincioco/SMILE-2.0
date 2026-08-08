@@ -13,14 +13,22 @@ CONST PaddleHeight = 16
 CONST PaddleY = 500
 CONST BallRadius = 7
 CONST MaximumLevel = 3
+CONST SubpixelsPerPixel = 1000
+CONST SimulationStep = 8
+CONST MaxCatchUpSteps = 6
+CONST BallSpeedUnit = 60000
+CONST PaddleSpeed = 420000
 
 DIM Bricks[BrickColumns, BrickRows]
 
 PaddleX = 430
 BallX = 480
 BallY = 490
-BallVX = 4
-BallVY = -5
+PaddleXSub = PaddleX * SubpixelsPerPixel
+BallXSub = BallX * SubpixelsPerPixel
+BallYSub = BallY * SubpixelsPerPixel
+BallVX = 4 * BallSpeedUnit
+BallVY = -5 * BallSpeedUnit
 Score = 0
 Lives = 3
 Level = 1
@@ -33,6 +41,11 @@ Row = 0
 Column = 0
 HitBrick = FALSE
 ReadyMessage = 0
+LastFrameTime = TIMER()
+FrameTime = LastFrameTime
+Elapsed = 0
+Accumulator = 0
+CatchUpSteps = 0
 
 LOAD HighScore FROM "HighScore" DEFAULT 0
 
@@ -72,8 +85,11 @@ SUB ResetBall()
     PaddleX = (CanvasWidth - PaddleWidth) / 2
     BallX = PaddleX + PaddleWidth / 2
     BallY = PaddleY - BallRadius - 2
-    BallVX = 3 + Level
-    BallVY = -(4 + Level)
+    PaddleXSub = PaddleX * SubpixelsPerPixel
+    BallXSub = BallX * SubpixelsPerPixel
+    BallYSub = BallY * SubpixelsPerPixel
+    BallVX = (3 + Level) * BallSpeedUnit
+    BallVY = -(4 + Level) * BallSpeedUnit
     Launched = FALSE
 END SUB
 
@@ -85,6 +101,7 @@ SUB StartGame()
     State = 1
     CALL BuildLevel()
     CALL ResetBall()
+    Accumulator = 0
 END SUB
 
 SUB UpdateHighScore()
@@ -122,28 +139,36 @@ SUB AdvanceLevel()
 END SUB
 
 SUB MovePaddle()
+    PaddleStep = PaddleSpeed * SimulationStep / 1000
+    MinimumPaddleSub = 10 * SubpixelsPerPixel
+    MaximumPaddleSub = (CanvasWidth - PaddleWidth - 10) * SubpixelsPerPixel
     IF KEY_HELD(KEY_A) = TRUE OR KEY_HELD(KEY_LEFT) = TRUE THEN
-        PaddleX = MAX(10, PaddleX - 7)
+        PaddleXSub = MAX(MinimumPaddleSub, PaddleXSub - PaddleStep)
     END IF
     IF KEY_HELD(KEY_D) = TRUE OR KEY_HELD(KEY_RIGHT) = TRUE THEN
-        PaddleX = MIN(CanvasWidth - PaddleWidth - 10, PaddleX + 7)
+        PaddleXSub = MIN(MaximumPaddleSub, PaddleXSub + PaddleStep)
     END IF
+    PaddleX = PaddleXSub / SubpixelsPerPixel
 
     IF Launched = FALSE THEN
         BallX = PaddleX + PaddleWidth / 2
         BallY = PaddleY - BallRadius - 2
+        BallXSub = BallX * SubpixelsPerPixel
+        BallYSub = BallY * SubpixelsPerPixel
     END IF
 END SUB
 
 SUB BounceFromPaddle()
     PaddleContact = BallX - (PaddleX + PaddleWidth / 2)
-    BallVX = PaddleContact / 11
-    IF BallVX = 0 THEN
-        BallVX = 1
+    HorizontalVelocity = PaddleContact / 11
+    IF HorizontalVelocity = 0 THEN
+        HorizontalVelocity = 1
     END IF
-    BallVX = MAX(-9, MIN(9, BallVX))
+    HorizontalVelocity = MAX(-9, MIN(9, HorizontalVelocity))
+    BallVX = HorizontalVelocity * BallSpeedUnit
     BallVY = -ABS(BallVY)
     BallY = PaddleY - BallRadius - 1
+    BallYSub = BallY * SubpixelsPerPixel
     PLAY SOUND "Assets\Paddle.wav"
 END SUB
 
@@ -187,21 +212,26 @@ SUB HitBricks()
 END SUB
 
 SUB MoveBall()
-    BallX = BallX + BallVX
-    BallY = BallY + BallVY
+    BallXSub = BallXSub + BallVX * SimulationStep / 1000
+    BallYSub = BallYSub + BallVY * SimulationStep / 1000
+    BallX = BallXSub / SubpixelsPerPixel
+    BallY = BallYSub / SubpixelsPerPixel
 
     IF BallX - BallRadius <= 8 THEN
         BallX = 8 + BallRadius
+        BallXSub = BallX * SubpixelsPerPixel
         BallVX = ABS(BallVX)
         PLAY SOUND "Assets\Wall.wav"
     ELSE IF BallX + BallRadius >= CanvasWidth - 8 THEN
         BallX = CanvasWidth - 8 - BallRadius
+        BallXSub = BallX * SubpixelsPerPixel
         BallVX = -ABS(BallVX)
         PLAY SOUND "Assets\Wall.wav"
     END IF
 
     IF BallY - BallRadius <= 44 THEN
         BallY = 44 + BallRadius
+        BallYSub = BallY * SubpixelsPerPixel
         BallVY = ABS(BallVY)
         PLAY SOUND "Assets\Wall.wav"
     END IF
@@ -308,6 +338,9 @@ END SUB
 GAME WINDOW "SMILE 2.0 Brick Breaker"
 
 DO
+    FrameTime = TIMER()
+    Elapsed = MAX(0, MIN(50, FrameTime - LastFrameTime))
+    LastFrameTime = FrameTime
     GET KEY Key
 
     IF Key = KEY_ESCAPE THEN
@@ -320,15 +353,24 @@ DO
         END IF
         CALL DrawTitle()
     ELSE IF State = 1 THEN
-        CALL MovePaddle()
         IF Launched = FALSE THEN
             IF Key = KEY_SPACE OR Key = KEY_ENTER THEN
                 Launched = TRUE
                 ReadyMessage = 0
             END IF
-        ELSE
-            CALL MoveBall()
         END IF
+        Accumulator = MIN(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
+        CatchUpSteps = 0
+        DO
+            IF Accumulator >= SimulationStep THEN
+                CALL MovePaddle()
+                IF Launched = TRUE THEN
+                    CALL MoveBall()
+                END IF
+                Accumulator = Accumulator - SimulationStep
+                CatchUpSteps = CatchUpSteps + 1
+            END IF
+        LOOP UNTIL Accumulator < SimulationStep OR CatchUpSteps >= MaxCatchUpSteps OR State <> 1
         CALL DrawPlayfield()
         IF State = 2 THEN
             CALL DrawGameOver()
@@ -348,7 +390,6 @@ DO
     END IF
 
     SHOW SCREEN
-    WAIT 8 MILLISECONDS
 LOOP UNTIL GAME_CLOSED() = TRUE
 
 STOP SOUND

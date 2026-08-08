@@ -6,13 +6,24 @@ CONST PaddleHeight = 100
 CONST PaddleMargin = 40
 CONST BallRadius = 9
 CONST WinningScore = 7
+CONST SubpixelsPerPixel = 1000
+CONST SimulationStep = 8
+CONST MaxCatchUpSteps = 6
+CONST BallSpeedUnit = 60000
+CONST PlayerPaddleSpeed = 360000
+CONST ComputerPaddleSpeed = 240000
+CONST ComputerCenterSpeed = 120000
 
 LeftY = 220
 RightY = 220
 BallX = 480
 BallY = 270
-BallVX = 5
-BallVY = 3
+LeftYSub = LeftY * SubpixelsPerPixel
+RightYSub = RightY * SubpixelsPerPixel
+BallXSub = BallX * SubpixelsPerPixel
+BallYSub = BallY * SubpixelsPerPixel
+BallVX = 5 * BallSpeedUnit
+BallVY = 3 * BallSpeedUnit
 LeftScore = 0
 RightScore = 0
 Rally = 0
@@ -24,23 +35,30 @@ ServeTime = 0
 ServeSide = 0
 ServeVertical = 0
 Dash = 0
+LastFrameTime = TIMER()
+FrameTime = LastFrameTime
+Elapsed = 0
+Accumulator = 0
+CatchUpSteps = 0
 
 LOAD BestRally FROM "BestRally" DEFAULT 0
 
 SUB ResetBall()
     BallX = CanvasWidth / 2
     BallY = CanvasHeight / 2
+    BallXSub = BallX * SubpixelsPerPixel
+    BallYSub = BallY * SubpixelsPerPixel
     RANDOM ServeSide FROM 0 TO 1
     IF ServeSide = 0 THEN
-        BallVX = -5
+        BallVX = -5 * BallSpeedUnit
     ELSE
-        BallVX = 5
+        BallVX = 5 * BallSpeedUnit
     END IF
     RANDOM ServeVertical FROM -3 TO 3
     IF ServeVertical = 0 THEN
         ServeVertical = 2
     END IF
-    BallVY = ServeVertical
+    BallVY = ServeVertical * BallSpeedUnit
     Rally = 0
     ServeTime = TIMER() + 650
 END SUB
@@ -48,9 +66,12 @@ END SUB
 SUB ResetMatch()
     LeftY = (CanvasHeight - PaddleHeight) / 2
     RightY = (CanvasHeight - PaddleHeight) / 2
+    LeftYSub = LeftY * SubpixelsPerPixel
+    RightYSub = RightY * SubpixelsPerPixel
     LeftScore = 0
     RightScore = 0
     CALL ResetBall()
+    Accumulator = 0
     State = 1
 END SUB
 
@@ -64,16 +85,17 @@ END SUB
 
 SUB BounceFromPaddle(PaddleY, DirectionSign)
     Contact = BallY - (PaddleY + PaddleHeight / 2)
-    BallVY = Contact / 8
-    IF BallVY = 0 THEN
+    VerticalSpeed = Contact / 8
+    IF VerticalSpeed = 0 THEN
         IF Contact < 0 THEN
-            BallVY = -1
+            VerticalSpeed = -1
         ELSE
-            BallVY = 1
+            VerticalSpeed = 1
         END IF
     END IF
     HorizontalSpeed = MIN(10, 5 + Rally / 4)
-    BallVX = HorizontalSpeed * DirectionSign
+    BallVX = HorizontalSpeed * BallSpeedUnit * DirectionSign
+    BallVY = VerticalSpeed * BallSpeedUnit
     CALL RecordRally()
     PLAY SOUND "Assets\Paddle.wav"
 END SUB
@@ -98,49 +120,61 @@ SUB AwardPoint(PlayerNumber)
 END SUB
 
 SUB UpdatePaddles()
+    PlayerStep = PlayerPaddleSpeed * SimulationStep / 1000
+    ComputerStep = ComputerPaddleSpeed * SimulationStep / 1000
+    CenterStep = ComputerCenterSpeed * SimulationStep / 1000
+    MinimumPaddleSub = 12 * SubpixelsPerPixel
+    MaximumPaddleSub = (CanvasHeight - PaddleHeight - 12) * SubpixelsPerPixel
+
     IF KEY_HELD(KEY_W) = TRUE THEN
-        LeftY = MAX(12, LeftY - 6)
+        LeftYSub = MAX(MinimumPaddleSub, LeftYSub - PlayerStep)
     END IF
     IF KEY_HELD(KEY_S) = TRUE THEN
-        LeftY = MIN(CanvasHeight - PaddleHeight - 12, LeftY + 6)
+        LeftYSub = MIN(MaximumPaddleSub, LeftYSub + PlayerStep)
     END IF
+    LeftY = LeftYSub / SubpixelsPerPixel
 
     IF Mode = 2 THEN
         IF KEY_HELD(KEY_UP) = TRUE THEN
-            RightY = MAX(12, RightY - 6)
+            RightYSub = MAX(MinimumPaddleSub, RightYSub - PlayerStep)
         END IF
         IF KEY_HELD(KEY_DOWN) = TRUE THEN
-            RightY = MIN(CanvasHeight - PaddleHeight - 12, RightY + 6)
+            RightYSub = MIN(MaximumPaddleSub, RightYSub + PlayerStep)
         END IF
     ELSE
         AIY = RightY + PaddleHeight / 2
         IF BallVX > 0 THEN
             IF BallY < AIY - 14 THEN
-                RightY = MAX(12, RightY - 4)
+                RightYSub = MAX(MinimumPaddleSub, RightYSub - ComputerStep)
             ELSE IF BallY > AIY + 14 THEN
-                RightY = MIN(CanvasHeight - PaddleHeight - 12, RightY + 4)
+                RightYSub = MIN(MaximumPaddleSub, RightYSub + ComputerStep)
             END IF
         ELSE
             IF AIY < CanvasHeight / 2 - 10 THEN
-                RightY = RightY + 2
+                RightYSub = MIN(MaximumPaddleSub, RightYSub + CenterStep)
             ELSE IF AIY > CanvasHeight / 2 + 10 THEN
-                RightY = RightY - 2
+                RightYSub = MAX(MinimumPaddleSub, RightYSub - CenterStep)
             END IF
         END IF
     END IF
+    RightY = RightYSub / SubpixelsPerPixel
 END SUB
 
 SUB UpdateBall()
     IF TIMER() >= ServeTime THEN
-        BallX = BallX + BallVX
-        BallY = BallY + BallVY
+        BallXSub = BallXSub + BallVX * SimulationStep / 1000
+        BallYSub = BallYSub + BallVY * SimulationStep / 1000
+        BallX = BallXSub / SubpixelsPerPixel
+        BallY = BallYSub / SubpixelsPerPixel
 
         IF BallY - BallRadius <= 8 THEN
             BallY = 8 + BallRadius
+            BallYSub = BallY * SubpixelsPerPixel
             BallVY = ABS(BallVY)
             PLAY SOUND "Assets\Wall.wav"
         ELSE IF BallY + BallRadius >= CanvasHeight - 8 THEN
             BallY = CanvasHeight - 8 - BallRadius
+            BallYSub = BallY * SubpixelsPerPixel
             BallVY = -ABS(BallVY)
             PLAY SOUND "Assets\Wall.wav"
         END IF
@@ -148,6 +182,7 @@ SUB UpdateBall()
         IF BallVX < 0 AND BallX - BallRadius <= PaddleMargin + PaddleWidth AND BallX - BallRadius >= PaddleMargin THEN
             IF BallY + BallRadius >= LeftY AND BallY - BallRadius <= LeftY + PaddleHeight THEN
                 BallX = PaddleMargin + PaddleWidth + BallRadius
+                BallXSub = BallX * SubpixelsPerPixel
                 CALL BounceFromPaddle(LeftY, 1)
             END IF
         END IF
@@ -155,6 +190,7 @@ SUB UpdateBall()
         IF BallVX > 0 AND BallX + BallRadius >= CanvasWidth - PaddleMargin - PaddleWidth AND BallX + BallRadius <= CanvasWidth - PaddleMargin THEN
             IF BallY + BallRadius >= RightY AND BallY - BallRadius <= RightY + PaddleHeight THEN
                 BallX = CanvasWidth - PaddleMargin - PaddleWidth - BallRadius
+                BallXSub = BallX * SubpixelsPerPixel
                 CALL BounceFromPaddle(RightY, -1)
             END IF
         END IF
@@ -242,6 +278,9 @@ END SUB
 GAME WINDOW "SMILE 2.0 Paddle Ball"
 
 DO
+    FrameTime = TIMER()
+    Elapsed = MAX(0, MIN(50, FrameTime - LastFrameTime))
+    LastFrameTime = FrameTime
     GET KEY Key
 
     IF State = 0 THEN
@@ -258,9 +297,18 @@ DO
     ELSE IF State = 1 THEN
         IF Key = KEY_ESCAPE THEN
             State = 0
+            Accumulator = 0
         ELSE
-            CALL UpdatePaddles()
-            CALL UpdateBall()
+            Accumulator = MIN(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
+            CatchUpSteps = 0
+            DO
+                IF Accumulator >= SimulationStep THEN
+                    CALL UpdatePaddles()
+                    CALL UpdateBall()
+                    Accumulator = Accumulator - SimulationStep
+                    CatchUpSteps = CatchUpSteps + 1
+                END IF
+            LOOP UNTIL Accumulator < SimulationStep OR CatchUpSteps >= MaxCatchUpSteps OR State <> 1
         END IF
         IF State = 0 THEN
             CALL DrawTitle()
@@ -287,7 +335,6 @@ DO
     END IF
 
     SHOW SCREEN
-    WAIT 8 MILLISECONDS
 LOOP UNTIL GAME_CLOSED() = TRUE
 
 STOP SOUND

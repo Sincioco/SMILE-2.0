@@ -69,6 +69,7 @@ This report tracks the controlled implementation of the approved Direct2D milest
 
 ### Phase 7 - Project selection and fallback
 
+- Commit: `85350e3`
 - Added shared `.smileproj` parsing for `<GraphicsBackend>Auto|GDI|DirectX</GraphicsBackend>` and `<VSync>true|false</VSync>`, with required defaults and clear invalid-value diagnostics.
 - Passed project settings from the Visual Studio project system through `smilec` into a stable native `smile_graphics_configure` call emitted before game startup.
 - Added simple `--graphics` and `--vsync` CLI overrides without introducing a new command framework.
@@ -78,8 +79,17 @@ This report tracks the controlled implementation of the approved Direct2D milest
 - Added explicit Auto/VSync defaults to the four bundled game projects and the Visual Studio game template.
 - Validation: complete smoke suite passed in 45.1 seconds with both new test executables; default Auto selected DirectX with no fallback; explicit GDI reported GDI pacing; explicit DirectX with VSync off reported legal low-latency tearing presentation; an invalid CLI backend returned `SML5007`; live DirectX title, gameplay controls, and fullscreen rendering passed for Snake, Falling Blocks, and Brick Breaker with no device-removal reason.
 
+### Phase 8 - Refresh-independent game timing
+
+- Converted Paddle Ball and Brick Breaker ball and paddle movement from per-loop increments to 1,000-unit fixed-point subpixel state.
+- Added an 8 ms fixed simulation step, a 50 ms elapsed-time clamp, and a maximum of six catch-up steps per rendered frame.
+- Converted Paddle Ball's player paddle to 360 pixels/second, chasing AI to 240 pixels/second, centering AI to 120 pixels/second, and initial ball velocity to approximately 300 by 180 pixels/second. These values preserve the old intended feel at roughly 60 updates/second while remaining stable at other refresh rates.
+- Converted Brick Breaker's paddle to 420 pixels/second and its level-one initial ball velocity to approximately 240 by 300 pixels/second, with the existing level-based increases and paddle-contact rules preserved.
+- Synchronized subpixel state whenever collision resolution snaps a ball or paddle to a logical boundary.
+- Removed loop-delay pacing from all four bundled games. Snake and Falling Blocks already use `TIMER()` deadlines for gameplay movement, so removing their redundant waits changes presentation/input cadence without changing their scheduled movement speed.
+- Added automated fixed-point speed-consistency and elapsed-clamp checks for simulated frame sequences.
+- Validation: complete smoke suite passed in 47.9 seconds with 15 managed timing/project checks and 15 native backend-selection checks; live Direct2D gameplay passed for all four games, including Paddle Ball scoring, a Brick Breaker brick hit, Snake direction changes, Falling Blocks rotation and hard drop, and fullscreen checks for both ball games. All four diagnostics logs reported DirectX, VSync, the DXGI frame-latency waitable object, and no device-removal reason.
+
 ## Known limitations at this stage
 
-- The only selectable backend remains GDI.
-- DirectX remains a developer-only override until backend selection and fallback are implemented.
-- PaddleBall still uses fixed per-loop movement and `WAIT 8 MILLISECONDS`; elapsed-time-aware timing is the next isolated phase.
+- Extended visual, resize, resource-lifetime, and long-run validation remains for the final hardening phase.
