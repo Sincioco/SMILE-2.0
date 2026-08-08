@@ -1,0 +1,14 @@
+.vs/
+**/bin/
+**/obj/
+artifacts/
+*.user
+*.suo
+*.asm
+*.obj
+*.pdb
+*.exe
+*.lib
+*.vsix
+*.vsixmanifest.user
+
