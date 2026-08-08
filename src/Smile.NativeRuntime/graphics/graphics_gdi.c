@@ -443,6 +443,51 @@ static void smile_gdi_draw_circle(SmileGraphicsBackend* backend, long long x, lo
     long long radius, long long color)
 { smile_gdi_circle(backend, x, y, radius, color, 0); }
 
+static void smile_gdi_quadrilateral(SmileGraphicsBackend* backend,
+    long long x1, long long y1, long long x2, long long y2,
+    long long x3, long long y3, long long x4, long long y4,
+    long long color, int fill)
+{
+    SmileGdiState* state = (SmileGdiState*)backend->state;
+    POINT points[4];
+    HGDIOBJ old_pen;
+    HGDIOBJ old_brush;
+    HPEN pen;
+    HBRUSH brush;
+    if (state->back_dc == 0)
+        return;
+    points[0].x = smile_graphics_round_pixel(smile_graphics_map_x(&state->viewport, (double)x1));
+    points[0].y = smile_graphics_round_pixel(smile_graphics_map_y(&state->viewport, (double)y1));
+    points[1].x = smile_graphics_round_pixel(smile_graphics_map_x(&state->viewport, (double)x2));
+    points[1].y = smile_graphics_round_pixel(smile_graphics_map_y(&state->viewport, (double)y2));
+    points[2].x = smile_graphics_round_pixel(smile_graphics_map_x(&state->viewport, (double)x3));
+    points[2].y = smile_graphics_round_pixel(smile_graphics_map_y(&state->viewport, (double)y3));
+    points[3].x = smile_graphics_round_pixel(smile_graphics_map_x(&state->viewport, (double)x4));
+    points[3].y = smile_graphics_round_pixel(smile_graphics_map_y(&state->viewport, (double)y4));
+    pen = smile_gdi_pen(state, (COLORREF)color,
+        smile_gdi_positive_pixel(smile_graphics_map_size(&state->viewport, 1.0)));
+    brush = smile_gdi_brush(state, (COLORREF)color);
+    old_pen = SelectObject(state->back_dc, fill ? GetStockObject(NULL_PEN) : pen);
+    old_brush = SelectObject(state->back_dc, fill ? brush : GetStockObject(NULL_BRUSH));
+    Polygon(state->back_dc, points, 4);
+    SelectObject(state->back_dc, old_brush);
+    SelectObject(state->back_dc, old_pen);
+}
+
+static void smile_gdi_fill_quadrilateral(SmileGraphicsBackend* backend,
+    long long x1, long long y1, long long x2, long long y2,
+    long long x3, long long y3, long long x4, long long y4, long long color)
+{
+    smile_gdi_quadrilateral(backend, x1, y1, x2, y2, x3, y3, x4, y4, color, 1);
+}
+
+static void smile_gdi_draw_quadrilateral(SmileGraphicsBackend* backend,
+    long long x1, long long y1, long long x2, long long y2,
+    long long x3, long long y3, long long x4, long long y4, long long color)
+{
+    smile_gdi_quadrilateral(backend, x1, y1, x2, y2, x3, y3, x4, y4, color, 0);
+}
+
 static void smile_gdi_draw_line(SmileGraphicsBackend* backend, long long x1, long long y1,
     long long x2, long long y2, long long color)
 {
@@ -593,6 +638,8 @@ static const SmileGraphicsBackendVTable smile_gdi_operations =
     smile_gdi_draw_rounded_rectangle,
     smile_gdi_fill_circle,
     smile_gdi_draw_circle,
+    smile_gdi_fill_quadrilateral,
+    smile_gdi_draw_quadrilateral,
     smile_gdi_draw_line,
     smile_gdi_draw_text,
     smile_gdi_draw_number,

@@ -24,6 +24,7 @@
 #define SMILE_KEY_SPACE 16
 #define SMILE_KEY_1 17
 #define SMILE_KEY_2 18
+#define SMILE_KEY_OTHER 19
 
 static HWND smile_window;
 static long long smile_logical_width = 960;
@@ -125,7 +126,7 @@ static long long smile_map_key(WCHAR character, WORD virtual_key)
     if (virtual_key == VK_SPACE) return SMILE_KEY_SPACE;
     if (virtual_key == '1') return SMILE_KEY_1;
     if (virtual_key == '2') return SMILE_KEY_2;
-    return SMILE_KEY_NONE;
+    return character != 0 || virtual_key != 0 ? SMILE_KEY_OTHER : SMILE_KEY_NONE;
 }
 
 static int smile_key_virtual(long long key)
@@ -571,6 +572,18 @@ void smile_fill_circle(long long x, long long y, long long radius, long long col
 
 void smile_draw_circle(long long x, long long y, long long radius, long long color)
 { smile_graphics_draw_circle(x, y, radius, color); }
+
+void smile_fill_quadrilateral(long long x1, long long y1, long long x2, long long y2,
+    long long x3, long long y3, long long x4, long long y4, long long color)
+{
+    smile_graphics_fill_quadrilateral(x1, y1, x2, y2, x3, y3, x4, y4, color);
+}
+
+void smile_draw_quadrilateral(long long x1, long long y1, long long x2, long long y2,
+    long long x3, long long y3, long long x4, long long y4, long long color)
+{
+    smile_graphics_draw_quadrilateral(x1, y1, x2, y2, x3, y3, x4, y4, color);
+}
 
 void smile_draw_line(long long x1, long long y1, long long x2, long long y2, long long color)
 {

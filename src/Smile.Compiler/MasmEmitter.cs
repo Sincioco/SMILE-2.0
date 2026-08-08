@@ -60,6 +60,8 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_draw_rounded_rectangle:PROC");
         Line("EXTERN smile_fill_circle:PROC");
         Line("EXTERN smile_draw_circle:PROC");
+        Line("EXTERN smile_fill_quadrilateral:PROC");
+        Line("EXTERN smile_draw_quadrilateral:PROC");
         Line("EXTERN smile_draw_line:PROC");
         Line("EXTERN smile_draw_text:PROC");
         Line("EXTERN smile_draw_number:PROC");
@@ -423,6 +425,8 @@ internal sealed class MasmEmitter
             GraphicsOperation.DrawRoundedRectangle => "smile_draw_rounded_rectangle",
             GraphicsOperation.FillCircle => "smile_fill_circle",
             GraphicsOperation.DrawCircle => "smile_draw_circle",
+            GraphicsOperation.FillQuadrilateral => "smile_fill_quadrilateral",
+            GraphicsOperation.DrawQuadrilateral => "smile_draw_quadrilateral",
             GraphicsOperation.DrawLine => "smile_draw_line",
             GraphicsOperation.DrawText => "smile_draw_text",
             GraphicsOperation.DrawNumber => "smile_draw_number",

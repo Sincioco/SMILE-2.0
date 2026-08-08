@@ -42,6 +42,8 @@ public enum GraphicsOperation
     DrawRoundedRectangle,
     FillCircle,
     DrawCircle,
+    FillQuadrilateral,
+    DrawQuadrilateral,
     DrawLine,
     DrawText,
     DrawNumber

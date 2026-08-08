@@ -32,6 +32,35 @@ Run("VSync false parses", () => Equal(false,
 Run("Unknown VSync reports a clear diagnostic", () => Throws(
     () => Parse("<PropertyGroup><VSync>sometimes</VSync></PropertyGroup>"),
     "Unknown VSync value 'sometimes'. Expected true or false."));
+Run("Filled quadrilateral analyzes without errors", () => Equal(false,
+    Analyze("GAME WINDOW \"Quad\"\nFILL QUADRILATERAL 0, 0, 20, 0, 20, 20, 0, 20, WHITE\n").HasErrors));
+Run("Outlined quadrilateral analyzes without errors", () => Equal(false,
+    Analyze("GAME WINDOW \"Quad\"\nDRAW QUADRILATERAL 0, 0, 20, 0, 20, 20, 0, 20, WHITE\n").HasErrors));
+Run("Filled quadrilateral records its shared syntax operation", () => Equal(GraphicsOperation.FillQuadrilateral,
+    Analyze("GAME WINDOW \"Quad\"\nFILL QUADRILATERAL 0, 0, 20, 0, 20, 20, 0, 20, WHITE\n")
+        .SyntaxTree.Root.Statements.OfType<GraphicsStatementSyntax>().Single().Operation));
+Run("Outlined quadrilateral records its shared syntax operation", () => Equal(GraphicsOperation.DrawQuadrilateral,
+    Analyze("GAME WINDOW \"Quad\"\nDRAW QUADRILATERAL 0, 0, 20, 0, 20, 20, 0, 20, WHITE\n")
+        .SyntaxTree.Root.Statements.OfType<GraphicsStatementSyntax>().Single().Operation));
+Run("Too few quadrilateral arguments report a parser error", () => Equal(true,
+    HasDiagnostic(Analyze("GAME WINDOW \"Quad\"\nFILL QUADRILATERAL 0, 0, 20\n"), "SML2001")));
+Run("Too many quadrilateral arguments report a parser error", () => Equal(true,
+    HasDiagnostic(Analyze("GAME WINDOW \"Quad\"\nDRAW QUADRILATERAL 0, 0, 20, 0, 20, 20, 0, 20, WHITE, 99\n"), "SML2001")));
+Run("Quadrilateral arguments must be numbers", () => Equal(true,
+    HasDiagnostic(Analyze("GAME WINDOW \"Quad\"\nFILL QUADRILATERAL TRUE, 0, 20, 0, 20, 20, 0, 20, WHITE\n"), "SML3023")));
+Run("KEY_OTHER is the shared built-in number constant 19", () =>
+{
+    Equal(SyntaxKind.KeyOtherKeyword, SyntaxFacts.GetKeywordKind("key_other"));
+    Equal(19L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyOtherKeyword));
+});
+Run("Existing key constants retain their values", () =>
+{
+    Equal(1L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyWKeyword));
+    Equal(14L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyEnterKeyword));
+    Equal(18L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.Key2Keyword));
+});
+Run("Existing graphics statements remain valid", () => Equal(false,
+    Analyze("GAME WINDOW \"Existing\"\nFILL RECTANGLE 1, 2, 3, 4, RED\nDRAW CIRCLE 10, 10, 4, WHITE\nDRAW LINE 0, 0, 20, 20, BLUE\n").HasErrors));
 Run("Fixed-step ball speed is identical at 60, 100, 120, and 144 Hz", () =>
 {
     var sixtyHz = Enumerable.Repeat(16, 20).Concat(Enumerable.Repeat(17, 40));
@@ -58,11 +87,16 @@ if (failures.Count != 0)
     return 1;
 }
 
-Console.WriteLine("15 SMILE project and timing tests passed.");
+Console.WriteLine("25 SMILE language, project, and timing tests passed.");
 return 0;
 
 SmileProjectGraphicsOptions Parse(string xml) =>
     SmileProjectGraphicsOptions.Parse(XElement.Parse(xml));
+
+SmileAnalysisResult Analyze(string source) => SmileLanguage.Analyze(source);
+
+bool HasDiagnostic(SmileAnalysisResult analysis, string code) =>
+    analysis.Diagnostics.Any(diagnostic => diagnostic.Code == code);
 
 void Run(string name, Action test)
 {

@@ -67,7 +67,7 @@ if errorlevel 2 (
     echo Invalid game language smoke test failed: compiler returned infrastructure error.
     exit /b 1
 )
-for %%C in (SML3022 SML3023 SML3024 SML3025) do (
+for %%C in (SML2001 SML3022 SML3023 SML3024 SML3025) do (
     findstr /c:"%%C" "%SMILE_ROOT%\artifacts\temp\InvalidGameLanguage.log" >nul
     if errorlevel 1 (
         echo Invalid game language smoke test failed: missing %%C.

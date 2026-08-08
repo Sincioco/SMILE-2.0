@@ -752,6 +752,73 @@ static void smile_directx_draw_circle(SmileGraphicsBackend* backend, long long x
         state->d2d_context->DrawEllipse(circle, brush, smile_directx_stroke_width(state));
 }
 
+static void smile_directx_quadrilateral(SmileGraphicsBackend* backend,
+    long long x1, long long y1, long long x2, long long y2,
+    long long x3, long long y3, long long x4, long long y4,
+    long long color, int fill)
+{
+    SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
+    ID2D1SolidColorBrush* brush;
+    ID2D1PathGeometry* geometry = 0;
+    ID2D1GeometrySink* sink = 0;
+    HRESULT result;
+    if (!state->frame_active || state->d2d_factory == 0 || state->d2d_context == 0)
+        return;
+    brush = smile_directx_brush(state, color);
+    if (brush == 0)
+        return;
+    result = state->d2d_factory->CreatePathGeometry(&geometry);
+    if (FAILED(result))
+    {
+        smile_directx_set_error(state, 0, 0, "Direct2D quadrilateral geometry creation", result);
+        return;
+    }
+    result = geometry->Open(&sink);
+    if (FAILED(result))
+    {
+        smile_directx_set_error(state, 0, 0, "Direct2D quadrilateral geometry open", result);
+        smile_directx_release(geometry);
+        return;
+    }
+    sink->BeginFigure(D2D1::Point2F(
+        (FLOAT)smile_graphics_map_x(&state->viewport, (double)x1),
+        (FLOAT)smile_graphics_map_y(&state->viewport, (double)y1)),
+        fill ? D2D1_FIGURE_BEGIN_FILLED : D2D1_FIGURE_BEGIN_HOLLOW);
+    sink->AddLine(D2D1::Point2F(
+        (FLOAT)smile_graphics_map_x(&state->viewport, (double)x2),
+        (FLOAT)smile_graphics_map_y(&state->viewport, (double)y2)));
+    sink->AddLine(D2D1::Point2F(
+        (FLOAT)smile_graphics_map_x(&state->viewport, (double)x3),
+        (FLOAT)smile_graphics_map_y(&state->viewport, (double)y3)));
+    sink->AddLine(D2D1::Point2F(
+        (FLOAT)smile_graphics_map_x(&state->viewport, (double)x4),
+        (FLOAT)smile_graphics_map_y(&state->viewport, (double)y4)));
+    sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+    result = sink->Close();
+    if (FAILED(result))
+        smile_directx_set_error(state, 0, 0, "Direct2D quadrilateral geometry close", result);
+    else if (fill)
+        state->d2d_context->FillGeometry(geometry, brush);
+    else
+        state->d2d_context->DrawGeometry(geometry, brush, smile_directx_stroke_width(state));
+    smile_directx_release(sink);
+    smile_directx_release(geometry);
+}
+
+static void smile_directx_fill_quadrilateral(SmileGraphicsBackend* backend,
+    long long x1, long long y1, long long x2, long long y2,
+    long long x3, long long y3, long long x4, long long y4, long long color)
+{
+    smile_directx_quadrilateral(backend, x1, y1, x2, y2, x3, y3, x4, y4, color, 1);
+}
+
+static void smile_directx_draw_quadrilateral(SmileGraphicsBackend* backend,
+    long long x1, long long y1, long long x2, long long y2,
+    long long x3, long long y3, long long x4, long long y4, long long color)
+{
+    smile_directx_quadrilateral(backend, x1, y1, x2, y2, x3, y3, x4, y4, color, 0);
+}
+
 static void smile_directx_draw_line(SmileGraphicsBackend* backend, long long x1,
     long long y1, long long x2, long long y2, long long color)
 {
@@ -926,6 +993,8 @@ static const SmileGraphicsBackendVTable smile_directx_operations =
     smile_directx_draw_rounded_rectangle,
     smile_directx_fill_circle,
     smile_directx_draw_circle,
+    smile_directx_fill_quadrilateral,
+    smile_directx_draw_quadrilateral,
     smile_directx_draw_line,
     smile_directx_draw_text,
     smile_directx_draw_number,

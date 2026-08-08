@@ -46,6 +46,12 @@ typedef struct SmileGraphicsBackendVTable
         long long radius, long long color);
     void (*draw_circle)(SmileGraphicsBackend* backend, long long x, long long y,
         long long radius, long long color);
+    void (*fill_quadrilateral)(SmileGraphicsBackend* backend,
+        long long x1, long long y1, long long x2, long long y2,
+        long long x3, long long y3, long long x4, long long y4, long long color);
+    void (*draw_quadrilateral)(SmileGraphicsBackend* backend,
+        long long x1, long long y1, long long x2, long long y2,
+        long long x3, long long y3, long long x4, long long y4, long long color);
     void (*draw_line)(SmileGraphicsBackend* backend, long long x1, long long y1,
         long long x2, long long y2, long long color);
     void (*draw_text)(SmileGraphicsBackend* backend, const char* text, long long length,

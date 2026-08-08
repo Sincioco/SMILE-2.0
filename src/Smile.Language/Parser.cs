@@ -234,6 +234,13 @@ internal sealed class Parser
             arguments = ParseFixedArguments(4);
             end = arguments.Count == 0 ? keyword.Span.End : arguments[arguments.Count - 1].Span.End;
         }
+        else if (Current.Kind == SyntaxKind.QuadrilateralKeyword)
+        {
+            NextToken();
+            operation = isFill ? GraphicsOperation.FillQuadrilateral : GraphicsOperation.DrawQuadrilateral;
+            arguments = ParseFixedArguments(9);
+            end = arguments.Count == 0 ? keyword.Span.End : arguments[arguments.Count - 1].Span.End;
+        }
         else if (!isFill && Current.Kind == SyntaxKind.LineKeyword)
         {
             NextToken();
@@ -284,7 +291,7 @@ internal sealed class Parser
         }
         else
         {
-            var expected = isFill ? "RECTANGLE, ROUNDED RECTANGLE, or CIRCLE" : "a drawing primitive";
+            var expected = isFill ? "RECTANGLE, ROUNDED RECTANGLE, CIRCLE, or QUADRILATERAL" : "a drawing primitive";
             _diagnostics.Report("SML2001", Current.Span, $"Expected {expected}, found '{Display(Current)}'.");
             arguments = Array.Empty<ExpressionSyntax>();
             operation = isFill ? GraphicsOperation.FillRectangle : GraphicsOperation.DrawRectangle;

@@ -45,6 +45,8 @@ DO
     GET KEY Key
     CLEAR RGB(12, 18, 30)
     FILL ROUNDED RECTANGLE 380, 450, 200, 22, 7, LIGHT_BLUE
+    FILL QUADRILATERAL 0, 0, 240, 80, 240, 460, 0, 540, DARK_GREEN
+    DRAW QUADRILATERAL 0, 0, 240, 80, 240, 460, 0, 540, LIGHT_GREEN
     DRAW CIRCLE 480, 300, 12, WHITE
     DRAW LINE 40, 40, 920, 40, DARK_GRAY
     DRAW TEXT "SCORE" AT 40, 15 SIZE 18 COLOR CYAN
@@ -58,8 +60,8 @@ STOP SOUND
 END PROGRAM
 ```
 
-Drawing statements support filled or outlined rectangles, rounded rectangles, and circles, plus lines, literal text, and numbers. `SHOW SCREEN` presents the logical canvas. `PLAY SOUND` is asynchronous and missing files are safe. `LOAD` and `SAVE` persist integer values in storage isolated by executable name.
+Drawing statements support filled or outlined rectangles, rounded rectangles, circles, and arbitrary four-corner quadrilaterals, plus lines, literal text, and numbers. Quadrilaterals take four perimeter-ordered `(X, Y)` points followed by a color. `SHOW SCREEN` presents the logical canvas. `PLAY SOUND` is asynchronous and missing files are safe. `LOAD` and `SAVE` persist integer values in storage isolated by executable name.
 
-Named input constants include `KEY_W`, `KEY_A`, `KEY_S`, `KEY_D`, the four arrows, `KEY_ENTER`, `KEY_ESCAPE`, `KEY_SPACE`, `KEY_1`, `KEY_2`, and `KEY_NONE`. Named colors include the standard red/green/blue/cyan/magenta/yellow set plus orange, gray, dark variants, light variants, black, and white.
+Named input constants include `KEY_W`, `KEY_A`, `KEY_S`, `KEY_D`, the four arrows, `KEY_ENTER`, `KEY_ESCAPE`, `KEY_SPACE`, `KEY_1`, `KEY_2`, `KEY_OTHER`, and `KEY_NONE`. `GET KEY` returns `KEY_OTHER` (value `19`) for an otherwise unnamed ordinary key event; `KEY_HELD(KEY_OTHER)` is always false. Named colors include the standard red/green/blue/cyan/magenta/yellow set plus orange, gray, dark variants, light variants, black, and white.
 
 The executable examples are the most precise usage guide: `LanguageBasics.smile`, `StructuredLanguageBasics.smile`, `GraphicsBasics.smile`, and the four projects under `games`.

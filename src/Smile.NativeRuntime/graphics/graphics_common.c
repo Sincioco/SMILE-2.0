@@ -235,6 +235,22 @@ void smile_graphics_draw_circle(long long x, long long y, long long radius, long
     if (smile_graphics_available()) smile_active_backend.operations->draw_circle(&smile_active_backend, x, y, radius, color);
 }
 
+void smile_graphics_fill_quadrilateral(long long x1, long long y1, long long x2, long long y2,
+    long long x3, long long y3, long long x4, long long y4, long long color)
+{
+    smile_graphics_ensure_frame();
+    if (smile_graphics_available()) smile_active_backend.operations->fill_quadrilateral(
+        &smile_active_backend, x1, y1, x2, y2, x3, y3, x4, y4, color);
+}
+
+void smile_graphics_draw_quadrilateral(long long x1, long long y1, long long x2, long long y2,
+    long long x3, long long y3, long long x4, long long y4, long long color)
+{
+    smile_graphics_ensure_frame();
+    if (smile_graphics_available()) smile_active_backend.operations->draw_quadrilateral(
+        &smile_active_backend, x1, y1, x2, y2, x3, y3, x4, y4, color);
+}
+
 void smile_graphics_draw_line(long long x1, long long y1, long long x2, long long y2, long long color)
 {
     smile_graphics_ensure_frame();

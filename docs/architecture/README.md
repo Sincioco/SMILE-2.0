@@ -26,7 +26,7 @@ The native backend emits MASM x64 and links `Smile.NativeRuntime.lib`. Console p
 - asynchronous WAV playback relative to the executable;
 - per-executable integer persistence under local application data.
 
-The compiler emits one stable graphics configuration call before game startup and routes every existing drawing export through the active `SmileGraphicsBackend` vtable. Backend implementations own their render targets and caches; windowing, input, audio, persistence, and language-level game logic remain outside the graphics modules.
+The compiler emits one stable graphics configuration call before game startup and routes every drawing export—including filled and outlined quadrilaterals—through the active `SmileGraphicsBackend` vtable. DirectX builds quadrilaterals with short-lived Direct2D path geometry; GDI maps the same four logical points into its physical back buffer and uses `Polygon`. Backend implementations own their render targets and caches; windowing, input, audio, persistence, and language-level game logic remain outside the graphics modules.
 
 The runtime does not contain Snake, falling-block, paddle, brick, score, level, or win/loss rules. Those remain in the corresponding files under `games`.
 
