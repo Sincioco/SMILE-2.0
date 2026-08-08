@@ -21,8 +21,18 @@ This report tracks the controlled implementation of the approved Direct2D milest
 - Kept Windows handles and GDI types out of the common backend interface.
 - Validation: complete smoke suite passed in 44.7 seconds; PaddleBall title, gameplay, and a fullscreen round trip were inspected successfully through GDI.
 
+### Phase 3 - Physical-resolution GDI
+
+- Replaced the logical-size final DIB with a physical client-size back buffer that is recreated on resize.
+- Added reusable uniform viewport, coordinate, size, and deterministic pixel-rounding calculations.
+- Mapped every GDI primitive, number, text position, and font size before rasterization.
+- Replaced final `StretchBlt` enlargement with a 1:1 `BitBlt`.
+- Added bounded brush, pen, and font caches with deterministic shutdown and resize cleanup.
+- Selected `CLEARTYPE_NATURAL_QUALITY`, with ClearType and antialiased font-creation fallbacks.
+- Added best-effort composition pacing through `DwmFlush` when VSync is requested and DWM composition is available. Set `SMILE_GDI_DWM_FLUSH=0` to disable it for comparison.
+- Validation: complete smoke suite passed in 46.7 seconds; fullscreen text and geometry were inspected at 1920x1080; GDI/USER counts remained stable at 34/35 across 20 fullscreen toggles; diagnostics reported `GDI DwmFlush best effort`.
+
 ## Known limitations at this stage
 
 - The only selectable backend remains GDI.
-- The GDI backend intentionally retains its logical-size DIB and stretched presentation until Phase 3.
 - DirectX, Direct2D, and DirectWrite are not initialized until Phases 4-6.

@@ -3,6 +3,22 @@
 
 #include "graphics_backend.h"
 
+typedef struct SmileGraphicsViewport
+{
+    double x;
+    double y;
+    double width;
+    double height;
+    double scale;
+} SmileGraphicsViewport;
+
+void smile_graphics_calculate_viewport(long long logical_width, long long logical_height,
+    int physical_width, int physical_height, SmileGraphicsViewport* viewport);
+double smile_graphics_map_x(const SmileGraphicsViewport* viewport, double logical_x);
+double smile_graphics_map_y(const SmileGraphicsViewport* viewport, double logical_y);
+double smile_graphics_map_size(const SmileGraphicsViewport* viewport, double logical_size);
+int smile_graphics_round_pixel(double value);
+
 int smile_graphics_initialize(void* native_window, long long logical_width,
     long long logical_height, int vsync_enabled, char* error, int error_capacity);
 void smile_graphics_resize(int physical_width, int physical_height);

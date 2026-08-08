@@ -4,6 +4,49 @@
 static SmileGraphicsBackend smile_active_backend;
 static int smile_frame_started;
 
+void smile_graphics_calculate_viewport(long long logical_width, long long logical_height,
+    int physical_width, int physical_height, SmileGraphicsViewport* viewport)
+{
+    double scale_x;
+    double scale_y;
+    if (viewport == 0)
+        return;
+    viewport->x = 0.0;
+    viewport->y = 0.0;
+    viewport->width = 0.0;
+    viewport->height = 0.0;
+    viewport->scale = 0.0;
+    if (logical_width <= 0 || logical_height <= 0 || physical_width <= 0 || physical_height <= 0)
+        return;
+    scale_x = (double)physical_width / (double)logical_width;
+    scale_y = (double)physical_height / (double)logical_height;
+    viewport->scale = scale_x < scale_y ? scale_x : scale_y;
+    viewport->width = (double)logical_width * viewport->scale;
+    viewport->height = (double)logical_height * viewport->scale;
+    viewport->x = ((double)physical_width - viewport->width) / 2.0;
+    viewport->y = ((double)physical_height - viewport->height) / 2.0;
+}
+
+double smile_graphics_map_x(const SmileGraphicsViewport* viewport, double logical_x)
+{
+    return viewport == 0 ? 0.0 : viewport->x + logical_x * viewport->scale;
+}
+
+double smile_graphics_map_y(const SmileGraphicsViewport* viewport, double logical_y)
+{
+    return viewport == 0 ? 0.0 : viewport->y + logical_y * viewport->scale;
+}
+
+double smile_graphics_map_size(const SmileGraphicsViewport* viewport, double logical_size)
+{
+    return viewport == 0 ? 0.0 : logical_size * viewport->scale;
+}
+
+int smile_graphics_round_pixel(double value)
+{
+    return value >= 0.0 ? (int)(value + 0.5) : (int)(value - 0.5);
+}
+
 static int smile_graphics_available(void)
 {
     return smile_active_backend.operations != 0;

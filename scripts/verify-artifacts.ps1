@@ -112,9 +112,13 @@ finally {
 Write-Host 'VSIX compiler, shared-language, and project-template payload verified.'
 
 $scaleCases = @(
+    @{ Width = 960; Height = 540; ExpectedWidth = 960; ExpectedHeight = 540; X = 0; Y = 0 },
+    @{ Width = 1280; Height = 720; ExpectedWidth = 1280; ExpectedHeight = 720; X = 0; Y = 0 },
     @{ Width = 1920; Height = 1080; ExpectedWidth = 1920; ExpectedHeight = 1080; X = 0; Y = 0 },
-    @{ Width = 3840; Height = 2160; ExpectedWidth = 3840; ExpectedHeight = 2160; X = 0; Y = 0 },
-    @{ Width = 1920; Height = 1200; ExpectedWidth = 1920; ExpectedHeight = 1080; X = 0; Y = 60 }
+    @{ Width = 1920; Height = 1200; ExpectedWidth = 1920; ExpectedHeight = 1080; X = 0; Y = 60 },
+    @{ Width = 2560; Height = 1440; ExpectedWidth = 2560; ExpectedHeight = 1440; X = 0; Y = 0 },
+    @{ Width = 3440; Height = 1440; ExpectedWidth = 2560; ExpectedHeight = 1440; X = 440; Y = 0 },
+    @{ Width = 3840; Height = 2160; ExpectedWidth = 3840; ExpectedHeight = 2160; X = 0; Y = 0 }
 )
 foreach ($case in $scaleCases) {
     if ($case.Width * 540 -le $case.Height * 960) {
@@ -130,5 +134,12 @@ foreach ($case in $scaleCases) {
     if ($width -ne $case.ExpectedWidth -or $height -ne $case.ExpectedHeight -or $x -ne $case.X -or $y -ne $case.Y) {
         throw "Scaling check failed for $($case.Width)x$($case.Height)."
     }
+    $scale = [math]::Min($case.Width / 960.0, $case.Height / 540.0)
+    $mappedRadiusX = 9 * $scale
+    $mappedRadiusY = 9 * $scale
+    $mappedTextSize = 16 * $scale
+    if ([math]::Abs($mappedRadiusX - $mappedRadiusY) -gt 0.000001 -or $mappedTextSize -le 0) {
+        throw "Uniform coordinate or text-size mapping failed for $($case.Width)x$($case.Height)."
+    }
 }
-Write-Host '960x540 scale math verified for 1080p, 4K, and letterboxed clients.'
+Write-Host 'Viewport, uniform coordinate mapping, and text scaling verified for seven required output sizes.'
