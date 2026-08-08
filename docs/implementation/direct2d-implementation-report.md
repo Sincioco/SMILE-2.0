@@ -15,6 +15,7 @@ This report tracks the controlled implementation of the approved Direct2D milest
 
 ### Phase 2 - Backend abstraction
 
+- Commit: `048942e`
 - Added a backend-neutral vtable covering initialization, resize, frame start, every current primitive, text, numbers, presentation, fullscreen, DPI, shutdown, name, and diagnostics.
 - Moved existing GDI drawing and presentation behavior into `graphics_gdi.c`.
 - Kept the compiler-facing `smile_*` exports as thin routing functions.
@@ -23,6 +24,7 @@ This report tracks the controlled implementation of the approved Direct2D milest
 
 ### Phase 3 - Physical-resolution GDI
 
+- Commit: `26c684d`
 - Replaced the logical-size final DIB with a physical client-size back buffer that is recreated on resize.
 - Added reusable uniform viewport, coordinate, size, and deterministic pixel-rounding calculations.
 - Mapped every GDI primitive, number, text position, and font size before rasterization.
@@ -34,6 +36,7 @@ This report tracks the controlled implementation of the approved Direct2D milest
 
 ### Phase 4 - DirectX device and swap chain
 
+- Commit: `333bff9`
 - Added a C++ DirectX backend behind the existing C-compatible backend interface.
 - Added Direct3D 11 hardware-device creation with BGRA support and debug-layer fallback.
 - Added a two-buffer `DXGI_SWAP_EFFECT_FLIP_DISCARD` swap chain for the HWND.
@@ -43,7 +46,18 @@ This report tracks the controlled implementation of the approved Direct2D milest
 - Added device-removal diagnostics for present and resize failures.
 - Validation: complete smoke suite passed in 45.9 seconds; a DirectX black-frame build survived ten Alt+Enter toggles; diagnostics reported DirectX selection, VSync, 120 Hz output, and the frame-latency waitable pacing path.
 
+### Phase 5 - Direct2D geometry
+
+- Added a Direct2D 1.1 factory, device, device context, and DXGI-surface bitmap target on the Direct3D device.
+- Added bounded solid-color brush caching and deterministic target-dependent cleanup.
+- Implemented clear, filled and outlined rectangles, rounded rectangles, circles, and lines using the shared physical-resolution viewport mapping.
+- Kept letterbox regions black and clipped drawing to the calculated logical viewport.
+- Added Direct2D target recreation after resize and `D2DERR_RECREATE_TARGET`.
+- Text and numbers intentionally remain absent until the DirectWrite phase.
+- Validation: complete smoke suite passed in 43.8 seconds; the live DirectX title and gameplay geometry were inspected successfully; twenty consecutive fullscreen transitions preserved rendering; the process reported 18 GDI objects, 42 USER objects, 58.27 MB working set, and no device-removal reason after the transition test.
+
 ## Known limitations at this stage
 
 - The only selectable backend remains GDI.
-- DirectX, Direct2D, and DirectWrite are not initialized until Phases 4-6.
+- DirectX remains a developer-only override until backend selection and fallback are implemented.
+- DirectWrite text and number rendering is not initialized until Phase 6.

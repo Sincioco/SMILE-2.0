@@ -1,9 +1,16 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <d3d11.h>
+#include <d2d1_1.h>
 #include <dxgi1_3.h>
 #include "graphics_common.h"
 #include "graphics_directx.h"
+
+struct SmileDirectXBrushCacheEntry
+{
+    unsigned long color;
+    ID2D1SolidColorBrush* handle;
+};
 
 struct SmileDirectXState
 {
@@ -14,6 +21,10 @@ struct SmileDirectXState
     IDXGISwapChain1* swap_chain;
     IDXGISwapChain2* swap_chain2;
     ID3D11RenderTargetView* render_target;
+    ID2D1Factory1* d2d_factory;
+    ID2D1Device* d2d_device;
+    ID2D1DeviceContext* d2d_context;
+    ID2D1Bitmap1* d2d_target;
     HANDLE frame_latency_waitable;
     UINT swap_chain_flags;
     long long logical_width;
@@ -22,7 +33,11 @@ struct SmileDirectXState
     int physical_height;
     int vsync_enabled;
     int minimized;
+    int frame_active;
+    int viewport_clip_active;
     SmileGraphicsViewport viewport;
+    SmileDirectXBrushCacheEntry brushes[64];
+    unsigned int next_brush;
     char device_removal_reason[160];
 };
 
@@ -79,6 +94,50 @@ static void smile_directx_set_error(SmileDirectXState* state, char* error, int e
         lstrcpynA(error, state->device_removal_reason, error_capacity);
 }
 
+static D2D1_COLOR_F smile_directx_color(long long color)
+{
+    D2D1_COLOR_F converted;
+    converted.r = (FLOAT)(color & 255LL) / 255.0f;
+    converted.g = (FLOAT)((color >> 8) & 255LL) / 255.0f;
+    converted.b = (FLOAT)((color >> 16) & 255LL) / 255.0f;
+    converted.a = 1.0f;
+    return converted;
+}
+
+static void smile_directx_release_brushes(SmileDirectXState* state)
+{
+    int index;
+    for (index = 0; index < (int)(sizeof(state->brushes) / sizeof(state->brushes[0])); index++)
+    {
+        smile_directx_release(state->brushes[index].handle);
+        state->brushes[index].color = 0;
+    }
+    state->next_brush = 0;
+}
+
+static ID2D1SolidColorBrush* smile_directx_brush(SmileDirectXState* state, long long color)
+{
+    unsigned long key = (unsigned long)color & 0x00FFFFFFUL;
+    unsigned int index;
+    HRESULT result;
+    for (index = 0; index < (unsigned int)(sizeof(state->brushes) / sizeof(state->brushes[0])); index++)
+    {
+        if (state->brushes[index].handle != 0 && state->brushes[index].color == key)
+            return state->brushes[index].handle;
+    }
+    index = state->next_brush++ % (unsigned int)(sizeof(state->brushes) / sizeof(state->brushes[0]));
+    smile_directx_release(state->brushes[index].handle);
+    result = state->d2d_context->CreateSolidColorBrush(smile_directx_color(color),
+        &state->brushes[index].handle);
+    if (FAILED(result))
+    {
+        smile_directx_set_error(state, 0, 0, "Direct2D brush creation", result);
+        return 0;
+    }
+    state->brushes[index].color = key;
+    return state->brushes[index].handle;
+}
+
 static void smile_directx_current_client(const SmileDirectXState* state, int* width, int* height)
 {
     RECT client;
@@ -91,6 +150,18 @@ static void smile_directx_current_client(const SmileDirectXState* state, int* wi
 
 static void smile_directx_release_render_target(SmileDirectXState* state)
 {
+    if (state->d2d_context != 0 && state->frame_active)
+    {
+        if (state->viewport_clip_active)
+            state->d2d_context->PopAxisAlignedClip();
+        state->viewport_clip_active = 0;
+        state->d2d_context->EndDraw();
+        state->frame_active = 0;
+    }
+    if (state->d2d_context != 0)
+        state->d2d_context->SetTarget(0);
+    smile_directx_release(state->d2d_target);
+    smile_directx_release_brushes(state);
     if (state->context != 0)
         state->context->OMSetRenderTargets(0, 0, 0);
     smile_directx_release(state->render_target);
@@ -109,6 +180,55 @@ static HRESULT smile_directx_create_render_target(SmileDirectXState* state)
     if (FAILED(result))
         return result;
     state->context->OMSetRenderTargets(1, &state->render_target, 0);
+    return S_OK;
+}
+
+static HRESULT smile_directx_create_d2d_device(SmileDirectXState* state)
+{
+    D2D1_FACTORY_OPTIONS options;
+    IDXGIDevice* dxgi_device = 0;
+    HRESULT result;
+    smile_directx_zero_memory(&options, sizeof(options));
+#ifndef NDEBUG
+    options.debugLevel = D2D1_DEBUG_LEVEL_INFORMATION;
+#endif
+    result = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED,
+        __uuidof(ID2D1Factory1), &options, reinterpret_cast<void**>(&state->d2d_factory));
+    if (FAILED(result))
+        return result;
+    result = state->device->QueryInterface(__uuidof(IDXGIDevice),
+        reinterpret_cast<void**>(&dxgi_device));
+    if (SUCCEEDED(result))
+        result = state->d2d_factory->CreateDevice(dxgi_device, &state->d2d_device);
+    if (SUCCEEDED(result))
+        result = state->d2d_device->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE,
+            &state->d2d_context);
+    smile_directx_release(dxgi_device);
+    if (SUCCEEDED(result))
+        state->d2d_context->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+    return result;
+}
+
+static HRESULT smile_directx_create_d2d_target(SmileDirectXState* state)
+{
+    IDXGISurface* surface = 0;
+    D2D1_BITMAP_PROPERTIES1 properties;
+    HRESULT result = state->swap_chain->GetBuffer(0, __uuidof(IDXGISurface),
+        reinterpret_cast<void**>(&surface));
+    if (FAILED(result))
+        return result;
+    smile_directx_zero_memory(&properties, sizeof(properties));
+    properties.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    properties.pixelFormat.alphaMode = D2D1_ALPHA_MODE_IGNORE;
+    properties.dpiX = 96.0f;
+    properties.dpiY = 96.0f;
+    properties.bitmapOptions = D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW;
+    result = state->d2d_context->CreateBitmapFromDxgiSurface(surface, &properties,
+        &state->d2d_target);
+    surface->Release();
+    if (FAILED(result))
+        return result;
+    state->d2d_context->SetTarget(state->d2d_target);
     return S_OK;
 }
 
@@ -218,6 +338,9 @@ static HRESULT smile_directx_create_swap_chain(SmileDirectXState* state, int wid
 static void smile_directx_shutdown_resources(SmileDirectXState* state)
 {
     smile_directx_release_render_target(state);
+    smile_directx_release(state->d2d_context);
+    smile_directx_release(state->d2d_device);
+    smile_directx_release(state->d2d_factory);
     if (state->frame_latency_waitable != 0)
         CloseHandle(state->frame_latency_waitable);
     state->frame_latency_waitable = 0;
@@ -282,6 +405,22 @@ static int smile_directx_initialize(SmileGraphicsBackend* backend, void* native_
         smile_directx_shutdown_resources(state);
         return 0;
     }
+    result = smile_directx_create_d2d_device(state);
+    if (FAILED(result))
+    {
+        smile_directx_set_error(state, error, error_capacity,
+            "Direct2D device creation", result);
+        smile_directx_shutdown_resources(state);
+        return 0;
+    }
+    result = smile_directx_create_d2d_target(state);
+    if (FAILED(result))
+    {
+        smile_directx_set_error(state, error, error_capacity,
+            "Direct2D target creation", result);
+        smile_directx_shutdown_resources(state);
+        return 0;
+    }
     smile_directx_set_output_size(state, width, height);
     state->device_removal_reason[0] = 0;
     return 1;
@@ -316,61 +455,151 @@ static void smile_directx_resize(SmileGraphicsBackend* backend, int physical_wid
         smile_directx_set_error(state, 0, 0, "Direct3D render-target recreation", result);
         return;
     }
+    result = smile_directx_create_d2d_target(state);
+    if (FAILED(result))
+    {
+        smile_directx_set_error(state, 0, 0, "Direct2D target recreation", result);
+        return;
+    }
     smile_directx_set_output_size(state, physical_width, physical_height);
 }
 
 static void smile_directx_begin_frame(SmileGraphicsBackend* backend)
 {
     SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
-    static const FLOAT black[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    D2D1_RECT_F viewport;
     if (state->frame_latency_waitable != 0)
         WaitForSingleObjectEx(state->frame_latency_waitable, 100, FALSE);
-    if (!state->minimized && state->context != 0 && state->render_target != 0)
-    {
-        state->context->OMSetRenderTargets(1, &state->render_target, 0);
-        state->context->ClearRenderTargetView(state->render_target, black);
-    }
+    if (state->minimized || state->d2d_context == 0 || state->d2d_target == 0)
+        return;
+    state->d2d_context->BeginDraw();
+    state->frame_active = 1;
+    state->d2d_context->Clear(D2D1::ColorF(D2D1::ColorF::Black));
+    viewport.left = (FLOAT)state->viewport.x;
+    viewport.top = (FLOAT)state->viewport.y;
+    viewport.right = (FLOAT)(state->viewport.x + state->viewport.width);
+    viewport.bottom = (FLOAT)(state->viewport.y + state->viewport.height);
+    state->d2d_context->PushAxisAlignedClip(viewport, D2D1_ANTIALIAS_MODE_ALIASED);
+    state->viewport_clip_active = 1;
 }
 
 static void smile_directx_clear(SmileGraphicsBackend* backend, long long color)
 {
     SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
-    FLOAT converted[4];
-    converted[0] = (FLOAT)(color & 255LL) / 255.0f;
-    converted[1] = (FLOAT)((color >> 8) & 255LL) / 255.0f;
-    converted[2] = (FLOAT)((color >> 16) & 255LL) / 255.0f;
-    converted[3] = 1.0f;
-    if (!state->minimized && state->context != 0 && state->render_target != 0)
-        state->context->ClearRenderTargetView(state->render_target, converted);
+    ID2D1SolidColorBrush* brush = smile_directx_brush(state, color);
+    D2D1_RECT_F viewport;
+    if (!state->frame_active || brush == 0)
+        return;
+    viewport.left = (FLOAT)state->viewport.x;
+    viewport.top = (FLOAT)state->viewport.y;
+    viewport.right = (FLOAT)(state->viewport.x + state->viewport.width);
+    viewport.bottom = (FLOAT)(state->viewport.y + state->viewport.height);
+    state->d2d_context->FillRectangle(viewport, brush);
+}
+
+static D2D1_RECT_F smile_directx_rectangle(const SmileDirectXState* state,
+    long long x, long long y, long long width, long long height)
+{
+    D2D1_RECT_F rectangle;
+    rectangle.left = (FLOAT)smile_graphics_map_x(&state->viewport, (double)x);
+    rectangle.top = (FLOAT)smile_graphics_map_y(&state->viewport, (double)y);
+    rectangle.right = (FLOAT)smile_graphics_map_x(&state->viewport, (double)(x + width));
+    rectangle.bottom = (FLOAT)smile_graphics_map_y(&state->viewport, (double)(y + height));
+    return rectangle;
+}
+
+static FLOAT smile_directx_stroke_width(const SmileDirectXState* state)
+{
+    FLOAT width = (FLOAT)smile_graphics_map_size(&state->viewport, 1.0);
+    return width < 1.0f ? 1.0f : width;
 }
 
 static void smile_directx_fill_rectangle(SmileGraphicsBackend* backend, long long x,
     long long y, long long width, long long height, long long color)
-{ (void)backend; (void)x; (void)y; (void)width; (void)height; (void)color; }
+{
+    SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
+    ID2D1SolidColorBrush* brush = smile_directx_brush(state, color);
+    D2D1_RECT_F rectangle = smile_directx_rectangle(state, x, y, width, height);
+    if (state->frame_active && brush != 0)
+        state->d2d_context->FillRectangle(rectangle, brush);
+}
 
 static void smile_directx_draw_rectangle(SmileGraphicsBackend* backend, long long x,
     long long y, long long width, long long height, long long color)
-{ (void)backend; (void)x; (void)y; (void)width; (void)height; (void)color; }
+{
+    SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
+    ID2D1SolidColorBrush* brush = smile_directx_brush(state, color);
+    D2D1_RECT_F rectangle = smile_directx_rectangle(state, x, y, width, height);
+    if (state->frame_active && brush != 0)
+        state->d2d_context->DrawRectangle(rectangle, brush, smile_directx_stroke_width(state));
+}
 
 static void smile_directx_fill_rounded_rectangle(SmileGraphicsBackend* backend, long long x,
     long long y, long long width, long long height, long long radius, long long color)
-{ (void)backend; (void)x; (void)y; (void)width; (void)height; (void)radius; (void)color; }
+{
+    SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
+    ID2D1SolidColorBrush* brush = smile_directx_brush(state, color);
+    D2D1_ROUNDED_RECT rounded;
+    rounded.rect = smile_directx_rectangle(state, x, y, width, height);
+    rounded.radiusX = rounded.radiusY = (FLOAT)smile_graphics_map_size(&state->viewport, (double)radius);
+    if (state->frame_active && brush != 0)
+        state->d2d_context->FillRoundedRectangle(rounded, brush);
+}
 
 static void smile_directx_draw_rounded_rectangle(SmileGraphicsBackend* backend, long long x,
     long long y, long long width, long long height, long long radius, long long color)
-{ (void)backend; (void)x; (void)y; (void)width; (void)height; (void)radius; (void)color; }
+{
+    SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
+    ID2D1SolidColorBrush* brush = smile_directx_brush(state, color);
+    D2D1_ROUNDED_RECT rounded;
+    rounded.rect = smile_directx_rectangle(state, x, y, width, height);
+    rounded.radiusX = rounded.radiusY = (FLOAT)smile_graphics_map_size(&state->viewport, (double)radius);
+    if (state->frame_active && brush != 0)
+        state->d2d_context->DrawRoundedRectangle(rounded, brush, smile_directx_stroke_width(state));
+}
 
 static void smile_directx_fill_circle(SmileGraphicsBackend* backend, long long x,
     long long y, long long radius, long long color)
-{ (void)backend; (void)x; (void)y; (void)radius; (void)color; }
+{
+    SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
+    ID2D1SolidColorBrush* brush = smile_directx_brush(state, color);
+    D2D1_ELLIPSE circle = D2D1::Ellipse(
+        D2D1::Point2F((FLOAT)smile_graphics_map_x(&state->viewport, (double)x),
+            (FLOAT)smile_graphics_map_y(&state->viewport, (double)y)),
+        (FLOAT)smile_graphics_map_size(&state->viewport, (double)radius),
+        (FLOAT)smile_graphics_map_size(&state->viewport, (double)radius));
+    if (state->frame_active && brush != 0)
+        state->d2d_context->FillEllipse(circle, brush);
+}
 
 static void smile_directx_draw_circle(SmileGraphicsBackend* backend, long long x,
     long long y, long long radius, long long color)
-{ (void)backend; (void)x; (void)y; (void)radius; (void)color; }
+{
+    SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
+    ID2D1SolidColorBrush* brush = smile_directx_brush(state, color);
+    D2D1_ELLIPSE circle = D2D1::Ellipse(
+        D2D1::Point2F((FLOAT)smile_graphics_map_x(&state->viewport, (double)x),
+            (FLOAT)smile_graphics_map_y(&state->viewport, (double)y)),
+        (FLOAT)smile_graphics_map_size(&state->viewport, (double)radius),
+        (FLOAT)smile_graphics_map_size(&state->viewport, (double)radius));
+    if (state->frame_active && brush != 0)
+        state->d2d_context->DrawEllipse(circle, brush, smile_directx_stroke_width(state));
+}
 
 static void smile_directx_draw_line(SmileGraphicsBackend* backend, long long x1,
     long long y1, long long x2, long long y2, long long color)
-{ (void)backend; (void)x1; (void)y1; (void)x2; (void)y2; (void)color; }
+{
+    SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
+    ID2D1SolidColorBrush* brush = smile_directx_brush(state, color);
+    D2D1_POINT_2F start = D2D1::Point2F(
+        (FLOAT)smile_graphics_map_x(&state->viewport, (double)x1),
+        (FLOAT)smile_graphics_map_y(&state->viewport, (double)y1));
+    D2D1_POINT_2F end = D2D1::Point2F(
+        (FLOAT)smile_graphics_map_x(&state->viewport, (double)x2),
+        (FLOAT)smile_graphics_map_y(&state->viewport, (double)y2));
+    if (state->frame_active && brush != 0)
+        state->d2d_context->DrawLine(start, end, brush, smile_directx_stroke_width(state));
+}
 
 static void smile_directx_draw_text(SmileGraphicsBackend* backend, const char* text,
     long long length, long long x, long long y, long long size, long long color,
@@ -387,6 +616,28 @@ static int smile_directx_present(SmileGraphicsBackend* backend)
     HRESULT result;
     if (state->minimized || state->swap_chain == 0)
         return 1;
+    if (state->frame_active)
+    {
+        if (state->viewport_clip_active)
+            state->d2d_context->PopAxisAlignedClip();
+        state->viewport_clip_active = 0;
+        result = state->d2d_context->EndDraw();
+        state->frame_active = 0;
+        if (result == D2DERR_RECREATE_TARGET)
+        {
+            smile_directx_set_error(state, 0, 0, "Direct2D target recreation", result);
+            smile_directx_release_render_target(state);
+            if (SUCCEEDED(smile_directx_create_render_target(state)) &&
+                SUCCEEDED(smile_directx_create_d2d_target(state)))
+                state->device_removal_reason[0] = 0;
+            return 0;
+        }
+        if (FAILED(result))
+        {
+            smile_directx_set_error(state, 0, 0, "Direct2D EndDraw", result);
+            return 0;
+        }
+    }
     result = state->swap_chain->Present(state->vsync_enabled ? 1 : 0, 0);
     if (result == DXGI_ERROR_DEVICE_REMOVED || result == DXGI_ERROR_DEVICE_RESET)
     {
