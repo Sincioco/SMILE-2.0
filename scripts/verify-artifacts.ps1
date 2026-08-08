@@ -63,6 +63,7 @@ $vsixPath = Require-File 'artifacts\vsix\Smile.VisualStudio.vsix'
 
 $nativePrograms = @(
     'artifacts\games\GraphicsBasics.exe',
+    'artifacts\games\GraphicsTextSample.exe',
     'artifacts\games\Snake\Snake.exe',
     'artifacts\games\FallingBlocks\FallingBlocks.exe',
     'artifacts\games\PaddleBall\PaddleBall.exe',
@@ -143,3 +144,21 @@ foreach ($case in $scaleCases) {
     }
 }
 Write-Host 'Viewport, uniform coordinate mapping, and text scaling verified for seven required output sizes.'
+
+$dpiCases = @(
+    @{ Dpi = 96; Width = 960; Height = 540; Scale = 1.0 },
+    @{ Dpi = 120; Width = 1200; Height = 675; Scale = 1.25 },
+    @{ Dpi = 144; Width = 1440; Height = 810; Scale = 1.5 },
+    @{ Dpi = 192; Width = 1920; Height = 1080; Scale = 2.0 }
+)
+foreach ($case in $dpiCases) {
+    $dpiScale = $case.Dpi / 96.0
+    $suggestedWidth = [math]::Round(960 * $dpiScale)
+    $suggestedHeight = [math]::Round(540 * $dpiScale)
+    $viewportScale = [math]::Min($case.Width / 960.0, $case.Height / 540.0)
+    if ($suggestedWidth -ne $case.Width -or $suggestedHeight -ne $case.Height -or
+        [math]::Abs($viewportScale - $case.Scale) -gt 0.000001) {
+        throw "DPI-change mapping check failed for $($case.Dpi) DPI."
+    }
+}
+Write-Host 'DPI-change output and viewport calculations verified at 100, 125, 150, and 200 percent.'

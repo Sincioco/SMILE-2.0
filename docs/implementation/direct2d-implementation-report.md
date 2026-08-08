@@ -1,6 +1,6 @@
 # Dual Graphics Backends Implementation Report
 
-Status: In progress
+Status: Complete
 
 This report tracks the controlled implementation of the approved Direct2D milestone. Public SMILE drawing syntax and the existing native graphics export names remain unchanged.
 
@@ -81,6 +81,7 @@ This report tracks the controlled implementation of the approved Direct2D milest
 
 ### Phase 8 - Refresh-independent game timing
 
+- Commit: `47fa8a2`
 - Converted Paddle Ball and Brick Breaker ball and paddle movement from per-loop increments to 1,000-unit fixed-point subpixel state.
 - Added an 8 ms fixed simulation step, a 50 ms elapsed-time clamp, and a maximum of six catch-up steps per rendered frame.
 - Converted Paddle Ball's player paddle to 360 pixels/second, chasing AI to 240 pixels/second, centering AI to 120 pixels/second, and initial ball velocity to approximately 300 by 180 pixels/second. These values preserve the old intended feel at roughly 60 updates/second while remaining stable at other refresh rates.
@@ -90,6 +91,42 @@ This report tracks the controlled implementation of the approved Direct2D milest
 - Added automated fixed-point speed-consistency and elapsed-clamp checks for simulated frame sequences.
 - Validation: complete smoke suite passed in 47.9 seconds with 15 managed timing/project checks and 15 native backend-selection checks; live Direct2D gameplay passed for all four games, including Paddle Ball scoring, a Brick Breaker brick hit, Snake direction changes, Falling Blocks rotation and hard drop, and fullscreen checks for both ball games. All four diagnostics logs reported DirectX, VSync, the DXGI frame-latency waitable object, and no device-removal reason.
 
-## Known limitations at this stage
+### Phase 9 - Hardening and documentation
 
-- Extended visual, resize, resource-lifetime, and long-run validation remains for the final hardening phase.
+- Added the required text-comparison sample with uppercase, lowercase, digits, punctuation, and representative game labels, and made the smoke suite compile and verify it as a native x64 GUI executable.
+- Added automated DPI-change calculations for 96, 120, 144, and 192 DPI, complementing the seven required output-size viewport cases.
+- Expanded fixed-step simulation coverage to exact one-second 60, 100, 120, and 144 Hz frame sequences; ball speed remained identical in every case.
+- Updated the public README and architecture guide with backend selection, fallback, VSync, frame pacing, physical-resolution rendering, compiler overrides, and diagnostics.
+- Added a reusable manual checklist covering both backends, display modes, text, resize, monitor movement, fullscreen stress, lifetime/resource checks, and all four games.
+- Made the native Debug runtime use the compiler-compatible static CRT so a generated SMILE executable can link while retaining the Direct3D and Direct2D debug-layer requests.
+- The lifetime run exposed a transient `D2DERR_WRONG_STATE` after minimize/restore. Centralized Direct2D frame closure, ended active frames before resize/minimize, prevented nested `BeginDraw`, invalidated the common frame state on resize/fullscreen/DPI changes, and added native frame-invalidation regression checks. The corrected Release and Debug builds then completed minimize/restore and rapid fullscreen stress without another graphics error.
+- Visual validation: the complete text sample remained centered, unclipped, and sharp through both DirectWrite and physical-resolution GDI in windowed mode and at 1920 x 1080 fullscreen. DirectX reported the frame-latency waitable object; GDI reported `DwmFlush` best-effort pacing.
+- Transition validation: each backend completed 100 fullscreen round trips plus additional plateau cycles. After the frame-state correction, DirectX completed another 100-round-trip run with zero graphics errors, an unchanged 19 GDI objects, and 41 to 43 USER objects before settling at 40 during the lifetime run. GDI stabilized at 21 GDI and 30 USER objects in the isolated text-sample transition test. Both remained windowed, responsive, and visually correct afterward.
+- Window validation: active Paddle Ball gameplay survived keyboard-driven live resize, minimize/restore, movement between both attached 1920 x 1080 displays, and a fullscreen round trip after the monitor move for both backends. Both displays reported 96 DPI.
+- Debug validation: the Debug native runtime rebuilt, linked into an explicit DirectX text-sample executable, rendered correctly, survived a fullscreen round trip, and reported no device-removal reason.
+- Lifetime validation: Paddle Ball ran for 31.9 minutes through DirectX and 33.0 minutes through GDI, with repeated active rematches. DirectX held 19 GDI objects, moved from 41 to 40 USER objects, changed from 62.96 to 64.84 MB working set and 65.23 to 66.70 MB private memory, and reduced its handle count from 797 to 777. GDI warmed its bounded caches from 34 to 44 GDI objects in the first ten minutes and remained at 44 through completion, moved from 37 to 35 USER objects, changed from 24.27 to 26.11 MB working set and 6.04 to 6.46 MB private memory, and reduced handles from 342 to 316. Both logs contained zero graphics errors. With both processes foregrounded in the same active-game state, the completed DirectX run measured 115.3 FPS versus 113.0 FPS for a fresh comparison process, showing no progressive frame-time degradation.
+- Final game validation: the corrected Auto/DirectX build passed Snake direction changes, Falling Blocks rotation and hard drop, a scored Brick Breaker hit, and Paddle Ball gameplay; every game log selected DirectX and contained zero graphics errors.
+- Final automated validation: the complete Release smoke suite passed in 47.8 seconds with 15 managed project/timing tests, 19 native selection/frame-invalidation checks, every console/runtime/diagnostic/storage regression, both graphical samples and all four games compiled as native x64 GUI executables, seven output-size viewport cases, and four DPI-scale calculation cases.
+
+## Files changed
+
+- Runtime architecture: `src/Smile.NativeRuntime` now contains the backend-neutral router, GDI and DirectX implementations, diagnostics, and QPC frame clock; its project links the Windows DirectX, DirectWrite, DWM, GDI, audio, and shell libraries.
+- Compiler/project integration: `src/Smile.Language`, `src/Smile.Compiler`, and `src/Smile.VisualStudio` parse and carry backend/VSync settings without adding public SMILE syntax.
+- Games: the four `.smileproj` files declare safe defaults; Paddle Ball and Brick Breaker use fixed-point fixed-step movement; Snake and Falling Blocks retain their timer deadlines without redundant loop delays.
+- Tests and examples: managed project/timing tests, native selection/fallback tests, artifact viewport/DPI checks, the required graphics text sample, and the expanded smoke suite.
+- Documentation: baseline and implementation reports, public README, architecture guide, and manual test checklist.
+
+## Architectural decisions
+
+- Existing `smile_*` graphics exports and the logical canvas contract remain stable. The compiler emits only one backend configuration call before game startup.
+- `Auto` tries DirectX and falls back to GDI with the exact DirectX initialization failure retained for diagnostics. Explicit backend choices never silently select another backend.
+- DirectX uses D3D11 BGRA resources, a two-buffer DXGI flip-discard swap chain, maximum frame latency one, Direct2D geometry, and DirectWrite text. GDI remains a maintained physical-resolution backend with bounded object caches and one-to-one presentation.
+- Both backends share the uniform viewport calculations, draw at physical client resolution, and react to resize, DPI change, and borderless Alt+Enter without exposing those details to SMILE programs.
+- Ball-game simulation is separated from presentation cadence through an 8 ms fixed step, fixed-point subpixel state, a 50 ms elapsed clamp, and a six-step catch-up limit.
+
+## Approved deviations and validation boundaries
+
+- At the user's request, the refresh-independent fixed-step treatment was extended from Paddle Ball to Brick Breaker because both have fast ball/paddle movement. Snake and Falling Blocks were inspected and needed only removal of redundant waits because their movement was already scheduled by `TIMER()` deadlines.
+- The plan's suggested file layout was followed by responsibility rather than by a wholesale runtime rewrite: existing Win32 window/input/audio/persistence code remains in `runtime.c`, while graphics and timing are separated into dedicated modules.
+- Automated calculations cover 2560 x 1440, 3440 x 1440, 3840 x 2160, and 125/150/200 percent DPI. Live hardware validation is limited to the two attached 1920 x 1080, 96-DPI displays, which exposed 120 Hz and 60 Hz paths; higher physical resolutions, alternate DPI scales, and 100/144 Hz modes were not claimed as live passes.
+- The Debug build requests Direct3D and Direct2D debug layers and falls back if the optional Direct3D SDK layer is absent. No debugger-based COM live-object report was available in this unattended run, so fullscreen plateau counts, working set/handle measurements, deterministic shutdown code, and device-removal diagnostics provide the leak evidence.

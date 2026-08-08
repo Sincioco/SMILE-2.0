@@ -185,6 +185,7 @@ void smile_graphics_resize(int physical_width, int physical_height)
 {
     if (smile_graphics_available())
         smile_active_backend.operations->resize(&smile_active_backend, physical_width, physical_height);
+    smile_frame_started = 0;
 }
 
 void smile_graphics_begin_frame(void)
@@ -275,12 +276,14 @@ void smile_graphics_on_fullscreen_changed(int fullscreen)
 {
     if (smile_graphics_available())
         smile_active_backend.operations->on_fullscreen_changed(&smile_active_backend, fullscreen);
+    smile_frame_started = 0;
 }
 
 void smile_graphics_on_dpi_changed(unsigned int dpi)
 {
     if (smile_graphics_available())
         smile_active_backend.operations->on_dpi_changed(&smile_active_backend, dpi);
+    smile_frame_started = 0;
 }
 
 void smile_graphics_shutdown(void)

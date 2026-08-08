@@ -32,12 +32,16 @@ Run("VSync false parses", () => Equal(false,
 Run("Unknown VSync reports a clear diagnostic", () => Throws(
     () => Parse("<PropertyGroup><VSync>sometimes</VSync></PropertyGroup>"),
     "Unknown VSync value 'sometimes'. Expected true or false."));
-Run("Fixed-step ball speed is identical at 60-ish and 125 Hz", () =>
+Run("Fixed-step ball speed is identical at 60, 100, 120, and 144 Hz", () =>
 {
-    var sixtyHz = Enumerable.Repeat(16, 62).Concat(new[] { 8 });
-    var oneTwentyFiveHz = Enumerable.Repeat(8, 125);
+    var sixtyHz = Enumerable.Repeat(16, 20).Concat(Enumerable.Repeat(17, 40));
+    var oneHundredHz = Enumerable.Repeat(10, 100);
+    var oneTwentyHz = Enumerable.Repeat(8, 80).Concat(Enumerable.Repeat(9, 40));
+    var oneFortyFourHz = Enumerable.Repeat(6, 8).Concat(Enumerable.Repeat(7, 136));
     Equal(300000L, SimulateFixedPoint(sixtyHz, 300000));
-    Equal(300000L, SimulateFixedPoint(oneTwentyFiveHz, 300000));
+    Equal(300000L, SimulateFixedPoint(oneHundredHz, 300000));
+    Equal(300000L, SimulateFixedPoint(oneTwentyHz, 300000));
+    Equal(300000L, SimulateFixedPoint(oneFortyFourHz, 300000));
 });
 Run("PaddleBall player paddle moves 360 pixels per second", () =>
     Equal(360000L, SimulateFixedPoint(Enumerable.Repeat(8, 125), 360000)));

@@ -42,7 +42,7 @@ Run the complete noninteractive regression and artifact verification suite with:
 scripts\smoke-test.cmd
 ```
 
-The smoke suite builds the solution, runs console examples, checks invalid-program diagnostics, exercises save/reload and corrupt-value fallback, compiles all four games, copies their assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Graphical gameplay remains a hands-on acceptance step.
+The smoke suite builds the solution, runs console examples, checks invalid-program diagnostics, exercises save/reload and corrupt-value fallback, compiles the required graphics text sample and all four games, copies their assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Graphical gameplay remains a hands-on acceptance step.
 
 ## Compile loose files
 
@@ -55,6 +55,35 @@ artifacts\compiler\smilec.exe games\Snake\Program.smile -o artifacts\games\Snake
 ```
 
 Use `--keep-temp` to retain generated MASM assembly and object files under `artifacts\temp`. Copy any `Assets` directory beside the resulting executable before running a program that uses sounds.
+
+## Graphics backends and frame pacing
+
+Game projects use a backend-neutral drawing API. `Auto` is the default: it tries the DirectX 11, Direct2D, and DirectWrite backend first and falls back to the physical-resolution GDI backend when DirectX initialization is unavailable. Both backends preserve the program's logical canvas, render shapes and text at the current output resolution, keep one uniform scale, and handle resizing, per-monitor DPI changes, and Alt+Enter automatically.
+
+The game project template includes these optional `.smileproj` settings:
+
+```xml
+<GraphicsBackend>Auto</GraphicsBackend>
+<VSync>true</VSync>
+```
+
+`GraphicsBackend` accepts `Auto`, `DirectX`, or `GDI`; `VSync` accepts `true` or `false`. Missing values default to `Auto` and `true`. The command-line compiler can override a project or loose-file build with `--graphics auto|directx|gdi` and `--vsync true|false`:
+
+```text
+artifacts\compiler\smilec.exe examples\GraphicsTextSample.smile -o artifacts\games\Text-GDI.exe --graphics gdi
+artifacts\compiler\smilec.exe examples\GraphicsTextSample.smile -o artifacts\games\Text-DirectX.exe --graphics directx --vsync true
+```
+
+VSync remains the normal setting. With DirectX and VSync off, SMILE uses tearing presentation only when Windows and the display path report support. GDI VSync is best-effort composition pacing through `DwmFlush`.
+
+Graphics diagnostics are disabled by default. For a temporary diagnostic run in PowerShell:
+
+```powershell
+$env:SMILE_GRAPHICS_DIAGNOSTICS = "1"
+.\artifacts\games\PaddleBall\PaddleBall.exe
+```
+
+The runtime writes `%TEMP%\SMILE-graphics-diagnostics-<process-id>.log` with the requested and selected backend, fallback reason, output and viewport sizes, refresh rate, pacing mode, FPS/frame/present measurements, and any DirectX device-removal reason. Set `SMILE_GDI_DWM_FLUSH=0` only when comparing GDI pacing behavior.
 
 ## Build and run the games
 

@@ -119,6 +119,14 @@ if not exist "%SMILE_ROOT%\artifacts\games\Assets\Graphics.wav" (
 )
 echo GraphicsBasics compiled with its sound asset.
 
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\GraphicsTextSample.smile" -o "%SMILE_ROOT%\artifacts\games\GraphicsTextSample.exe"
+if errorlevel 1 exit /b %errorlevel%
+if not exist "%SMILE_ROOT%\artifacts\games\GraphicsTextSample.exe" (
+    echo GraphicsTextSample native executable is missing.
+    exit /b 1
+)
+echo Required graphics text sample compiled successfully.
+
 if not exist "%SMILE_ROOT%\artifacts\games\Snake" mkdir "%SMILE_ROOT%\artifacts\games\Snake"
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\Snake\Program.smile" -o "%SMILE_ROOT%\artifacts\games\Snake\Snake.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%

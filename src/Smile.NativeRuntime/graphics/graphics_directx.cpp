@@ -269,16 +269,22 @@ static void smile_directx_current_client(const SmileDirectXState* state, int* wi
     *height = client.bottom - client.top;
 }
 
+static HRESULT smile_directx_end_frame(SmileDirectXState* state)
+{
+    HRESULT result = S_OK;
+    if (state->d2d_context == 0 || !state->frame_active)
+        return result;
+    if (state->viewport_clip_active)
+        state->d2d_context->PopAxisAlignedClip();
+    state->viewport_clip_active = 0;
+    result = state->d2d_context->EndDraw();
+    state->frame_active = 0;
+    return result;
+}
+
 static void smile_directx_release_render_target(SmileDirectXState* state)
 {
-    if (state->d2d_context != 0 && state->frame_active)
-    {
-        if (state->viewport_clip_active)
-            state->d2d_context->PopAxisAlignedClip();
-        state->viewport_clip_active = 0;
-        state->d2d_context->EndDraw();
-        state->frame_active = 0;
-    }
+    smile_directx_end_frame(state);
     if (state->d2d_context != 0)
         state->d2d_context->SetTarget(0);
     smile_directx_release(state->d2d_target);
@@ -587,6 +593,9 @@ static void smile_directx_resize(SmileGraphicsBackend* backend, int physical_wid
 {
     SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
     HRESULT result;
+    result = smile_directx_end_frame(state);
+    if (FAILED(result) && result != D2DERR_RECREATE_TARGET)
+        smile_directx_set_error(state, 0, 0, "Direct2D resize EndDraw", result);
     if (physical_width <= 0 || physical_height <= 0)
     {
         state->minimized = 1;
@@ -627,7 +636,7 @@ static void smile_directx_begin_frame(SmileGraphicsBackend* backend)
     D2D1_RECT_F viewport;
     if (state->frame_latency_waitable != 0)
         WaitForSingleObjectEx(state->frame_latency_waitable, 100, FALSE);
-    if (state->minimized || state->d2d_context == 0 || state->d2d_target == 0)
+    if (state->frame_active || state->minimized || state->d2d_context == 0 || state->d2d_target == 0)
         return;
     state->d2d_context->BeginDraw();
     state->frame_active = 1;
@@ -821,30 +830,25 @@ static int smile_directx_present(SmileGraphicsBackend* backend)
 {
     SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
     HRESULT result;
-    if (state->minimized || state->swap_chain == 0)
+    if (state->swap_chain == 0)
         return 1;
-    if (state->frame_active)
+    result = smile_directx_end_frame(state);
+    if (result == D2DERR_RECREATE_TARGET)
     {
-        if (state->viewport_clip_active)
-            state->d2d_context->PopAxisAlignedClip();
-        state->viewport_clip_active = 0;
-        result = state->d2d_context->EndDraw();
-        state->frame_active = 0;
-        if (result == D2DERR_RECREATE_TARGET)
-        {
-            smile_directx_set_error(state, 0, 0, "Direct2D target recreation", result);
-            smile_directx_release_render_target(state);
-            if (SUCCEEDED(smile_directx_create_render_target(state)) &&
-                SUCCEEDED(smile_directx_create_d2d_target(state)))
-                state->device_removal_reason[0] = 0;
-            return 0;
-        }
-        if (FAILED(result))
-        {
-            smile_directx_set_error(state, 0, 0, "Direct2D EndDraw", result);
-            return 0;
-        }
+        smile_directx_set_error(state, 0, 0, "Direct2D target recreation", result);
+        smile_directx_release_render_target(state);
+        if (SUCCEEDED(smile_directx_create_render_target(state)) &&
+            SUCCEEDED(smile_directx_create_d2d_target(state)))
+            state->device_removal_reason[0] = 0;
+        return 0;
     }
+    if (FAILED(result))
+    {
+        smile_directx_set_error(state, 0, 0, "Direct2D EndDraw", result);
+        return 0;
+    }
+    if (state->minimized)
+        return 1;
     result = state->swap_chain->Present(state->vsync_enabled ? 1 : 0,
         !state->vsync_enabled && state->tearing_supported ? DXGI_PRESENT_ALLOW_TEARING : 0);
     if (result == DXGI_ERROR_DEVICE_REMOVED || result == DXGI_ERROR_DEVICE_RESET)

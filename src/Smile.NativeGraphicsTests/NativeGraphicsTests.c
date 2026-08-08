@@ -9,12 +9,13 @@ typedef struct MockState
     const char* name;
     int initialize_count;
     int shutdown_count;
+    int begin_count;
     int should_fail;
     const char* failure;
 } MockState;
 
-static MockState directx_state = { "DirectX", 0, 0, 0, "DXGI swap-chain creation failed with 0x887A0004 (DXGI_ERROR_UNSUPPORTED)" };
-static MockState gdi_state = { "GDI", 0, 0, 0, "GDI physical back-buffer creation failed." };
+static MockState directx_state = { "DirectX", 0, 0, 0, 0, "DXGI swap-chain creation failed with 0x887A0004 (DXGI_ERROR_UNSUPPORTED)" };
+static MockState gdi_state = { "GDI", 0, 0, 0, 0, "GDI physical back-buffer creation failed." };
 static int failures;
 
 static void copy_text(char* destination, int capacity, const char* source)
@@ -52,7 +53,8 @@ static void mock_diagnostics(const SmileGraphicsBackend* backend,
 { (void)backend; diagnostics->pacing_mode = "Mock"; diagnostics->device_removal_reason = "None"; }
 static void mock_resize(SmileGraphicsBackend* backend, int width, int height)
 { (void)backend; (void)width; (void)height; }
-static void mock_begin(SmileGraphicsBackend* backend) { (void)backend; }
+static void mock_begin(SmileGraphicsBackend* backend)
+{ ((MockState*)backend->state)->begin_count++; }
 static void mock_clear(SmileGraphicsBackend* backend, long long color) { (void)backend; (void)color; }
 static void mock_rectangle(SmileGraphicsBackend* backend, long long x, long long y,
     long long width, long long height, long long color)
@@ -99,6 +101,7 @@ static void reset_mocks(void)
     smile_graphics_shutdown();
     directx_state.initialize_count = directx_state.shutdown_count = directx_state.should_fail = 0;
     gdi_state.initialize_count = gdi_state.shutdown_count = gdi_state.should_fail = 0;
+    directx_state.begin_count = gdi_state.begin_count = 0;
 }
 
 static void check(int condition, const char* message)
@@ -169,11 +172,26 @@ int main(void)
         "Dual-backend failure reports both causes");
 
     reset_mocks();
+    error[0] = 0;
+    check(smile_graphics_initialize(0, 960, 540, SMILE_GRAPHICS_BACKEND_DIRECTX, 1,
+        error, (int)sizeof(error)), "DirectX initializes for frame invalidation tests");
+    smile_graphics_begin_frame();
+    smile_graphics_resize(1280, 720);
+    smile_graphics_begin_frame();
+    check(directx_state.begin_count == 2, "Resize starts a fresh backend frame");
+    smile_graphics_on_fullscreen_changed(1);
+    smile_graphics_begin_frame();
+    check(directx_state.begin_count == 3, "Fullscreen change starts a fresh backend frame");
+    smile_graphics_on_dpi_changed(144);
+    smile_graphics_begin_frame();
+    check(directx_state.begin_count == 4, "DPI change starts a fresh backend frame");
+
+    reset_mocks();
     if (failures != 0)
     {
         fprintf(stderr, "%d native graphics selection test(s) failed.\n", failures);
         return 1;
     }
-    printf("15 native graphics selection checks passed.\n");
+    printf("19 native graphics selection and frame-invalidation checks passed.\n");
     return 0;
 }

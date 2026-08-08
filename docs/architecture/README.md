@@ -14,12 +14,19 @@ SMILE 2.0 uses one deliberately direct native pipeline:
 
 The native backend emits MASM x64 and links `Smile.NativeRuntime.lib`. Console programs use the console subsystem. Programs containing `GAME WINDOW` use the Windows GUI subsystem and the generic Win32 runtime for:
 
-- a 960-by-540 default logical back buffer;
-- double-buffered GDI drawing and aspect-preserving presentation;
+- a backend-neutral graphics interface that preserves the compiler-facing C ABI;
+- `Auto`, `DirectX`, and `GDI` selection, with DirectX-first fallback in `Auto`;
+- Direct3D 11 and a two-buffer flip-model DXGI swap chain for DirectX presentation;
+- Direct2D final-resolution shapes and DirectWrite final-resolution text;
+- a physical-output-size GDI DIB, bounded GDI resource caches, and one-to-one presentation;
+- a 960-by-540 default logical canvas with uniform aspect-preserving viewport mapping;
+- QPC frame measurements, VSync-default frame pacing, and opt-in diagnostic logs;
 - per-monitor DPI handling and Alt+Enter full-screen transitions;
 - queued pressed keys, simultaneous held-key state, and focus-loss clearing;
 - asynchronous WAV playback relative to the executable;
 - per-executable integer persistence under local application data.
+
+The compiler emits one stable graphics configuration call before game startup and routes every existing drawing export through the active `SmileGraphicsBackend` vtable. Backend implementations own their render targets and caches; windowing, input, audio, persistence, and language-level game logic remain outside the graphics modules.
 
 The runtime does not contain Snake, falling-block, paddle, brick, score, level, or win/loss rules. Those remain in the corresponding files under `games`.
 
