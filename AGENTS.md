@@ -37,7 +37,7 @@ Never create a compiler-only parser, extension-only parser, duplicate keyword ta
 
 ## Games prove the language
 
-Snake, Falling Blocks, Paddle Ball, and Brick Breaker must be implemented in `.smile` source.
+Snake, Falling Blocks, Paddle Ball, Brick Breaker, and Dungeon Star I must be implemented in `.smile` source.
 
 The native runtime may provide only generic services:
 

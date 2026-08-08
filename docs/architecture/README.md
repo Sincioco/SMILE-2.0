@@ -31,6 +31,6 @@ The compiler emits one stable graphics configuration call before game startup an
 
 Music-bearing generated programs reference a dedicated C-compatible MediaPlayer object and link `WindowsApp.lib` plus the static C/C++ support libraries required by the custom `/entry:main` pipeline. Games without music do not pull that object from `Smile.NativeRuntime.lib`. The MediaPlayer state is allocated lazily, owns no nontrivial global constructor, catches every C++ exception at the C ABI, and is shut down explicitly before each generated process exit.
 
-The runtime does not contain Snake, falling-block, paddle, brick, score, level, or win/loss rules. Those remain in the corresponding files under `games`.
+The runtime does not contain Snake, falling-block, paddle, brick, dungeon, score, level, projection, generation, pathfinding, or win/loss rules. Those remain in the corresponding files under `games`. Dungeon Star I's pseudo-3D projection is composed entirely from the same generic quadrilateral, line, rectangle, text, input, timing, and audio services available to every SMILE program.
 
 The Visual Studio extension embeds the same compiler/runtime payload and registers a minimal `.smileproj` project factory. Its console and game templates build to `bin\Debug` or `bin\Release`, copy declared assets, populate the SMILE Output pane and Error List, and launch the resulting executable for F5 or Ctrl+F5.

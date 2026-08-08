@@ -81,3 +81,14 @@ Approve all recommended decisions.
 15.) Can you also create a simple breakout type game similar to this:  https://cdn.mos.cms.futurecdn.net/aU7ujAsKWede8NTLPX3NNA.jpg.  You can come up with the proper/appropriate SMILE 2.0 name for this game.
 
 16.) If you have no further questions or don't need me to make any more decisions, proceed with the creation of markdown files for CODEX to implement the SMILE 2.0 language changes/updates and the games as described above.
+
+
+Direct 2D Support and GDI Enhancements
+--------------------------------------
+
+17.) It's time for SMILE 2.0 to have Direct X support.  Read and follow the instructions in "D:\SMILE 2.0\requirements\Sin\2026-08-08 2058 - Direct2D Support\SMILE 2.0 - Dual Graphics Backends, Frame Pacing, and Resolution-Independent Rendering Plan.md".
+
+MP3 Support
+-----------
+18.) Codex is currently implementing Direct2D and GDI enhancements.  Let's go with your recommendations.  Assuming the work to support MP3 playback will not conflict with that, create me the markdown file for CODEX to implement MP3 playback in SMILE 2.0 with LOOP support, etc.
+19.) Also, could you modify the Tetris / Falling Blocks game, so it plays this MP3 file in the background while the game is being played: "D:\SMILE 2.0\games\FallingBlocks\Assets\Background.mp3".  But only while the player is alive.  Don't play it on the title screen or game over screen.  You can provide a separate markdown file for this or roll it into the #18 markdown file.  Up to you.

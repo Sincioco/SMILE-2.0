@@ -169,6 +169,26 @@ xcopy "%SMILE_ROOT%\games\BrickBreaker\Assets" "%SMILE_ROOT%\artifacts\games\Bri
 if errorlevel 1 exit /b %errorlevel%
 echo Brick Breaker compiled successfully: %SMILE_ROOT%\artifacts\games\BrickBreaker\BrickBreaker.exe
 
+if not exist "%SMILE_ROOT%\artifacts\games\DungeonStarI" mkdir "%SMILE_ROOT%\artifacts\games\DungeonStarI"
+if not exist "%SMILE_ROOT%\games\DungeonStarI\Assets\Background.mp3" (
+    echo Dungeon Star I background music source asset is missing.
+    exit /b 1
+)
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\DungeonStarI\Program.smile" -o "%SMILE_ROOT%\artifacts\games\DungeonStarI\DungeonStarI.exe" --keep-temp
+if errorlevel 1 exit /b %errorlevel%
+xcopy "%SMILE_ROOT%\games\DungeonStarI\Assets" "%SMILE_ROOT%\artifacts\games\DungeonStarI\Assets" /E /I /Y >nul
+if errorlevel 1 exit /b %errorlevel%
+if not exist "%SMILE_ROOT%\artifacts\games\DungeonStarI\Assets\Background.mp3" (
+    echo Dungeon Star I background music output asset is missing.
+    exit /b 1
+)
+fc /b "%SMILE_ROOT%\games\DungeonStarI\Assets\Background.mp3" "%SMILE_ROOT%\artifacts\games\DungeonStarI\Assets\Background.mp3" >nul
+if errorlevel 1 (
+    echo Dungeon Star I background music output does not match its project asset.
+    exit /b 1
+)
+echo Dungeon Star I compiled successfully: %SMILE_ROOT%\artifacts\games\DungeonStarI\DungeonStarI.exe
+
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\verify-artifacts.ps1"
 if errorlevel 1 exit /b %errorlevel%
 

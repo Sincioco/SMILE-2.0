@@ -1,0 +1,26 @@
+"Create the first real SMILE native compiler and use it to compile a simple Snake game into Snake.exe."
+
+Give me the markdown files I need to implement this Snake game using the SMILE 2.0 language we designed above.
+
+Tell Codex it can create the GitHub repo and store the files using the information below:
+
+Git Hub Project:  SMILE 2.0
+Local Folder:  D:\SMILE 2.0
+
+Tell Codex it has my full permission to create/manipulate my repo so it can create/manipulate the SMILE 2.0 repository and create/manipulate files in my local machines.  Basically, CODEX has my full permission.
+
+And tell Codex to use my preferred method of development which is KISS:
+
+KISS (Keep It Simple Stupid) - The simpler the better.  Avoid over-engineering.  Avoid unnecessary complexity.  Avoid unnecessary features.  Avoid unnecessary bells and whistles.  Avoid unnecessary abstractions.  Avoid unnecessary patterns.  Avoid unnecessary frameworks.  Avoid unnecessary libraries.  Avoid unnecessary dependencies.  Avoid unnecessary code.  Avoid unnecessary files.  Avoid unnecessary folders.  Avoid unnecessary classes.  Avoid unnecessary methods.  Avoid unnecessary variables.
+
+And tell Codex to create the necessary folder structure also so we can add more language syntax and features, as well as a place for Sin (me) to create my own .txt files for requirements.
+
+We want to focus on Velocity.  This project must be done today.  Do not do anything that could slow us down, such as unnecessary tests or CI.  Tests the happy path and at the absolute minimum so we can focus on velocity.  We also want to maximize Codex quota usage, if there is a better way to organize files or architect the project better, etc. do that for the sole purpose of maximizing Codex quota.
+
+
+Phantasy Star I Dungeon
+-----------------------
+1.) Read the 2 markdown files located at "D:\SMILE 2.0\requirements\Sin\2026-08-09 0117 - Day 2 - Phantasy Star I Dungeon" and implement them.
+2.) If there are any issues implementing it, the instructions in "2026-08-09 - Dungeon Star I Codex Implementation Instructions.md" takes precedence over the instructions found in "2026-08-09 - SMILE 2.0 - Windows MediaPlayer MP3 Support, FallingBlocks, and Automatic Focus Muting Codex Instructions.md".
+3.) The only mandatory is to implement the "2026-08-09 - Dungeon Star I Codex Implementation Instructions.md", but if you can implement "2026-08-09 - SMILE 2.0 - Windows MediaPlayer MP3 Support, FallingBlocks, and Automatic Focus Muting Codex Instructions.md" that would be great as well.
+4.) Commit all unstaged files to the repo and push when you have done your smoke testing and include a detailed summary of the work done in the commit message.

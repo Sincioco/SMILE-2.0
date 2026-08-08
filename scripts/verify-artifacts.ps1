@@ -77,7 +77,8 @@ $nativePrograms = @(
     'artifacts\games\Snake\Snake.exe',
     'artifacts\games\FallingBlocks\FallingBlocks.exe',
     'artifacts\games\PaddleBall\PaddleBall.exe',
-    'artifacts\games\BrickBreaker\BrickBreaker.exe'
+    'artifacts\games\BrickBreaker\BrickBreaker.exe',
+    'artifacts\games\DungeonStarI\DungeonStarI.exe'
 )
 foreach ($program in $nativePrograms) {
     Assert-NativeGuiX64 $program
@@ -95,6 +96,7 @@ foreach ($game in $assetSets.Keys) {
     }
 }
 Assert-AssetCopy 'games\FallingBlocks\Assets\Background.mp3' 'artifacts\games\FallingBlocks\Assets\Background.mp3'
+Assert-AssetCopy 'games\DungeonStarI\Assets\Background.mp3' 'artifacts\games\DungeonStarI\Assets\Background.mp3'
 Write-Host 'Game asset copies verified.'
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
