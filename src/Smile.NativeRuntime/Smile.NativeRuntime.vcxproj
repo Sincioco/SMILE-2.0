@@ -61,7 +61,13 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="graphics\graphics_diagnostics.c" />
     <ClCompile Include="runtime.c" />
+    <ClCompile Include="timing\frame_clock_win32.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="graphics\graphics_diagnostics.h" />
+    <ClInclude Include="timing\frame_clock_win32.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

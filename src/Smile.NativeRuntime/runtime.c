@@ -6,6 +6,8 @@
 #include <knownfolders.h>
 #include <shlobj.h>
 #include <limits.h>
+#include "graphics/graphics_diagnostics.h"
+#include "timing/frame_clock_win32.h"
 
 #define SMILE_KEY_NONE 0
 #define SMILE_KEY_W 1
@@ -38,6 +40,7 @@ static DWORD smile_windowed_style;
 static DWORD smile_windowed_ex_style;
 static WINDOWPLACEMENT smile_windowed_placement = { sizeof(WINDOWPLACEMENT) };
 static const WCHAR smile_window_class[] = L"SMILE20GameWindow";
+static SmileFrameClock smile_frame_clock;
 
 static void smile_pump_messages(void);
 static void smile_present_to_dc(HDC destination);
@@ -268,7 +271,7 @@ long long smile_random(long long minimum, long long maximum)
 
 long long smile_timer(void)
 {
-    return (long long)GetTickCount64();
+    return smile_monotonic_milliseconds();
 }
 
 static WCHAR* smile_utf8_to_wide(const char* text, long long length)
@@ -370,6 +373,7 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
             smile_closed = 1;
             smile_zero_memory(smile_held, sizeof(smile_held));
             smile_cleanup_graphics();
+            smile_graphics_diagnostics_shutdown();
             PostQuitMessage(0);
             return 0;
     }
@@ -419,6 +423,8 @@ void smile_game_open(const char* title, long long title_length, long long width,
     smile_key_head = 0;
     smile_key_tail = 0;
     smile_zero_memory(smile_held, sizeof(smile_held));
+    smile_frame_clock_initialize(&smile_frame_clock);
+    smile_graphics_diagnostics_initialize();
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
     smile_zero_memory(&window_class, sizeof(window_class));
@@ -521,12 +527,66 @@ static void smile_present_to_dc(HDC destination)
 void smile_show_screen(void)
 {
     HDC destination;
+    int diagnostics_ready;
+    smile_frame_clock_begin_present(&smile_frame_clock);
     smile_pump_messages();
     if (smile_window == 0)
         return;
     destination = GetDC(smile_window);
     smile_present_to_dc(destination);
     ReleaseDC(smile_window, destination);
+    diagnostics_ready = smile_frame_clock_end_present(&smile_frame_clock);
+    if (diagnostics_ready && smile_graphics_diagnostics_enabled())
+    {
+        DEVMODEW mode;
+        MONITORINFOEXW monitor;
+        RECT client;
+        SmileGraphicsDiagnosticsSnapshot snapshot;
+        int client_width;
+        int client_height;
+        int viewport_width;
+        int viewport_height;
+        smile_zero_memory(&snapshot, sizeof(snapshot));
+        GetClientRect(smile_window, &client);
+        client_width = client.right - client.left;
+        client_height = client.bottom - client.top;
+        if ((long long)client_width * smile_logical_height <= (long long)client_height * smile_logical_width)
+        {
+            viewport_width = client_width;
+            viewport_height = smile_logical_width != 0
+                ? (int)((long long)client_width * smile_logical_height / smile_logical_width) : 0;
+        }
+        else
+        {
+            viewport_height = client_height;
+            viewport_width = smile_logical_height != 0
+                ? (int)((long long)client_height * smile_logical_width / smile_logical_height) : 0;
+        }
+        smile_zero_memory(&monitor, sizeof(monitor));
+        monitor.cbSize = sizeof(monitor);
+        smile_zero_memory(&mode, sizeof(mode));
+        mode.dmSize = sizeof(mode);
+        if (GetMonitorInfoW(MonitorFromWindow(smile_window, MONITOR_DEFAULTTONEAREST), (MONITORINFO*)&monitor))
+            EnumDisplaySettingsW(monitor.szDevice, ENUM_CURRENT_SETTINGS, &mode);
+        snapshot.requested_backend = "GDI";
+        snapshot.selected_backend = "GDI";
+        snapshot.fallback_reason = "None";
+        snapshot.logical_width = smile_logical_width;
+        snapshot.logical_height = smile_logical_height;
+        snapshot.physical_width = client_width;
+        snapshot.physical_height = client_height;
+        snapshot.viewport_x = (double)(client_width - viewport_width) / 2.0;
+        snapshot.viewport_y = (double)(client_height - viewport_height) / 2.0;
+        snapshot.viewport_width = (double)viewport_width;
+        snapshot.viewport_height = (double)viewport_height;
+        snapshot.scale = smile_logical_width != 0 ? (double)viewport_width / (double)smile_logical_width : 0.0;
+        snapshot.refresh_rate = mode.dmDisplayFrequency > 1 ? (int)mode.dmDisplayFrequency : 0;
+        snapshot.vsync_enabled = 1;
+        snapshot.pacing_mode = "Legacy GDI presentation (unsynchronized)";
+        snapshot.device_removal_reason = "None";
+        snapshot.frame_metrics = *smile_frame_clock_metrics(&smile_frame_clock);
+        smile_graphics_diagnostics_log(&snapshot);
+    }
 }
 
 long long smile_game_closed(void)
