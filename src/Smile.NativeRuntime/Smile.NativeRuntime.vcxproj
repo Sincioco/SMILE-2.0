@@ -67,6 +67,13 @@
     <ClCompile Include="graphics\graphics_directx.cpp" />
     <ClCompile Include="graphics\graphics_gdi.c" />
     <ClCompile Include="runtime.c" />
+    <ClCompile Include="audio\audio_focus_state.c" />
+    <ClCompile Include="audio\music_mediaplayer.cpp">
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <PreprocessorDefinitions>_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="timing\frame_clock_win32.c" />
   </ItemGroup>
   <ItemGroup>
@@ -76,6 +83,10 @@
     <ClInclude Include="graphics\graphics_directx.h" />
     <ClInclude Include="graphics\graphics_gdi.h" />
     <ClInclude Include="timing\frame_clock_win32.h" />
+    <ClInclude Include="audio\asset_path.h" />
+    <ClInclude Include="audio\audio_focus.h" />
+    <ClInclude Include="audio\audio_focus_state.h" />
+    <ClInclude Include="audio\music_mediaplayer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

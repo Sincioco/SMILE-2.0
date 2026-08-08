@@ -9,6 +9,9 @@
 #include "graphics/graphics_common.h"
 #include "graphics/graphics_diagnostics.h"
 #include "timing/frame_clock_win32.h"
+#include "audio/asset_path.h"
+#include "audio/audio_focus.h"
+#include "audio/audio_focus_state.h"
 
 #define SMILE_KEY_NONE 0
 #define SMILE_KEY_W 1
@@ -42,9 +45,12 @@ static const WCHAR smile_window_class[] = L"SMILE20GameWindow";
 static SmileFrameClock smile_frame_clock;
 static SmileGraphicsBackendKind smile_requested_graphics_backend = SMILE_GRAPHICS_BACKEND_AUTO;
 static int smile_vsync_enabled = 1;
+static SmileAudioFocusState smile_audio_focus = { 1, 1, 0, 1 };
+static SmileMusicActivationCallback smile_music_activation_callback;
 
 static void smile_pump_messages(void);
 static void smile_toggle_fullscreen(void);
+static void smile_update_game_audio_active(void);
 
 static void smile_zero_memory(void* memory, SIZE_T length)
 {
@@ -292,6 +298,27 @@ static WCHAR* smile_utf8_to_wide(const char* text, long long length)
     return result;
 }
 
+void smile_audio_register_music_activation_callback(SmileMusicActivationCallback callback)
+{
+    smile_music_activation_callback = callback;
+}
+
+long long smile_audio_is_active(void)
+{
+    return smile_audio_focus_accepts_sound(&smile_audio_focus);
+}
+
+static void smile_update_game_audio_active(void)
+{
+    int transition = smile_audio_focus_update(&smile_audio_focus);
+    if (transition == 0)
+        return;
+    if (transition < 0)
+        PlaySoundW(0, 0, 0);
+    if (smile_music_activation_callback != 0)
+        smile_music_activation_callback(smile_audio_focus.effective_active ? 1 : 0);
+}
+
 static int smile_integer(long long value)
 {
     if (value < INT_MIN) return INT_MIN;
@@ -314,8 +341,18 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
             return 0;
         }
         case WM_SIZE:
+            smile_audio_focus.minimized = wparam == SIZE_MINIMIZED;
+            smile_update_game_audio_active();
             smile_graphics_resize(LOWORD(lparam), HIWORD(lparam));
             InvalidateRect(window, 0, FALSE);
+            return 0;
+        case WM_ACTIVATEAPP:
+            smile_audio_focus.app_active = wparam != FALSE;
+            smile_update_game_audio_active();
+            return 0;
+        case WM_ACTIVATE:
+            smile_audio_focus.window_active = LOWORD(wparam) != WA_INACTIVE;
+            smile_update_game_audio_active();
             return 0;
         case WM_DPICHANGED:
         {
@@ -358,6 +395,8 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
             DestroyWindow(window);
             return 0;
         case WM_DESTROY:
+            smile_audio_focus.window_active = 0;
+            smile_update_game_audio_active();
             smile_window = 0;
             smile_closed = 1;
             smile_zero_memory(smile_held, sizeof(smile_held));
@@ -400,6 +439,7 @@ void smile_game_open(const char* title, long long title_length, long long width,
     smile_key_head = 0;
     smile_key_tail = 0;
     smile_zero_memory(smile_held, sizeof(smile_held));
+    smile_audio_focus_initialize(&smile_audio_focus);
     smile_frame_clock_initialize(&smile_frame_clock);
     smile_graphics_diagnostics_initialize();
     smile_zero_memory(graphics_error, sizeof(graphics_error));
@@ -613,29 +653,60 @@ static void smile_append(WCHAR* destination, int capacity, const WCHAR* source)
     destination[index] = 0;
 }
 
-void smile_play_sound(const char* path, long long length)
+int smile_resolve_asset_path_utf8(const char* path, long long length, WCHAR* resolved_path, int capacity)
 {
-    WCHAR full_path[2048];
     WCHAR* wide = smile_utf8_to_wide(path, length);
     WCHAR* slash;
-    if (wide == 0)
-        return;
-    full_path[0] = 0;
+    int base_length;
+    int path_length;
+    if (resolved_path == 0 || capacity <= 0 || wide == 0)
+        return 0;
+    resolved_path[0] = 0;
     if (smile_is_absolute_path(wide))
     {
-        smile_append(full_path, (int)(sizeof(full_path) / sizeof(full_path[0])), wide);
+        if (lstrlenW(wide) >= capacity)
+        {
+            HeapFree(GetProcessHeap(), 0, wide);
+            return 0;
+        }
+        smile_append(resolved_path, capacity, wide);
     }
     else
     {
-        GetModuleFileNameW(0, full_path, (DWORD)(sizeof(full_path) / sizeof(full_path[0])));
-        slash = full_path + lstrlenW(full_path);
-        while (slash > full_path && slash[-1] != L'\\' && slash[-1] != L'/')
+        DWORD copied = GetModuleFileNameW(0, resolved_path, (DWORD)capacity);
+        if (copied == 0 || copied >= (DWORD)capacity)
+        {
+            HeapFree(GetProcessHeap(), 0, wide);
+            resolved_path[0] = 0;
+            return 0;
+        }
+        slash = resolved_path + lstrlenW(resolved_path);
+        while (slash > resolved_path && slash[-1] != L'\\' && slash[-1] != L'/')
             --slash;
         *slash = 0;
-        smile_append(full_path, (int)(sizeof(full_path) / sizeof(full_path[0])), wide);
+        base_length = lstrlenW(resolved_path);
+        path_length = lstrlenW(wide);
+        if (base_length + path_length >= capacity)
+        {
+            HeapFree(GetProcessHeap(), 0, wide);
+            resolved_path[0] = 0;
+            return 0;
+        }
+        smile_append(resolved_path, capacity, wide);
     }
-    PlaySoundW(full_path, 0, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
     HeapFree(GetProcessHeap(), 0, wide);
+    return 1;
+}
+
+void smile_play_sound(const char* path, long long length)
+{
+    WCHAR full_path[2048];
+    if (!smile_audio_focus_accepts_sound(&smile_audio_focus))
+        return;
+    if (!smile_resolve_asset_path_utf8(path, length, full_path,
+        (int)(sizeof(full_path) / sizeof(full_path[0]))))
+        return;
+    PlaySoundW(full_path, 0, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
 }
 
 void smile_stop_sound(void)

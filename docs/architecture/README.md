@@ -23,10 +23,13 @@ The native backend emits MASM x64 and links `Smile.NativeRuntime.lib`. Console p
 - QPC frame measurements, VSync-default frame pacing, and opt-in diagnostic logs;
 - per-monitor DPI handling and Alt+Enter full-screen transitions;
 - queued pressed keys, simultaneous held-key state, and focus-loss clearing;
-- asynchronous WAV playback relative to the executable;
+- asynchronous WAV effects and C++/WinRT `Windows.Media.Playback.MediaPlayer` MP3 music relative to the executable;
+- application, window-activation, and minimization tracking that silences both audio channels while the game is inactive without changing system volume;
 - per-executable integer persistence under local application data.
 
 The compiler emits one stable graphics configuration call before game startup and routes every drawing export—including filled and outlined quadrilaterals—through the active `SmileGraphicsBackend` vtable. DirectX builds quadrilaterals with short-lived Direct2D path geometry; GDI maps the same four logical points into its physical back buffer and uses `Polygon`. Backend implementations own their render targets and caches; windowing, input, audio, persistence, and language-level game logic remain outside the graphics modules.
+
+Music-bearing generated programs reference a dedicated C-compatible MediaPlayer object and link `WindowsApp.lib` plus the static C/C++ support libraries required by the custom `/entry:main` pipeline. Games without music do not pull that object from `Smile.NativeRuntime.lib`. The MediaPlayer state is allocated lazily, owns no nontrivial global constructor, catches every C++ exception at the C ABI, and is shut down explicitly before each generated process exit.
 
 The runtime does not contain Snake, falling-block, paddle, brick, score, level, or win/loss rules. Those remain in the corresponding files under `games`.
 

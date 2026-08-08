@@ -100,6 +100,39 @@ public sealed class SoundStatementSyntax : StatementSyntax
     public override TextSpan Span => TextSpan.FromBounds(Keyword.Span.Start, Path?.Span.End ?? SoundKeyword.Span.End);
 }
 
+public enum MusicOperation
+{
+    Play,
+    Pause,
+    Resume,
+    Stop,
+    SetVolume
+}
+
+public sealed class MusicStatementSyntax : StatementSyntax
+{
+    public MusicStatementSyntax(SyntaxToken keyword, SyntaxToken musicKeyword, MusicOperation operation,
+        SyntaxToken? path, SyntaxToken? loopKeyword, ExpressionSyntax? volume)
+    {
+        Keyword = keyword;
+        MusicKeyword = musicKeyword;
+        Operation = operation;
+        Path = path;
+        LoopKeyword = loopKeyword;
+        Volume = volume;
+    }
+
+    public SyntaxToken Keyword { get; }
+    public SyntaxToken MusicKeyword { get; }
+    public MusicOperation Operation { get; }
+    public SyntaxToken? Path { get; }
+    public SyntaxToken? LoopKeyword { get; }
+    public ExpressionSyntax? Volume { get; }
+    public bool Loop => LoopKeyword != null;
+    public override TextSpan Span => TextSpan.FromBounds(Keyword.Span.Start,
+        Volume?.Span.End ?? LoopKeyword?.Span.End ?? Path?.Span.End ?? MusicKeyword.Span.End);
+}
+
 public sealed class LoadStatementSyntax : StatementSyntax
 {
     public LoadStatementSyntax(SyntaxToken loadKeyword, SyntaxToken identifier, SyntaxToken key, ExpressionSyntax defaultValue)

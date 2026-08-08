@@ -47,6 +47,7 @@ The native runtime may provide only generic services:
 - keyboard input;
 - timing;
 - WAV playback;
+- MP3 background-music playback and automatic focus muting;
 - simple integer persistence.
 
 Do not add game-specific native helpers.

@@ -337,6 +337,20 @@ internal sealed class SemanticAnalyzer
                 if (!sound.IsStop && string.IsNullOrWhiteSpace(sound.Path?.Value as string))
                     _diagnostics.Report("SML3024", sound.Span, "PLAY SOUND requires a non-empty WAV path literal.");
                 break;
+            case MusicStatementSyntax music:
+                RequireGameWindow(music.Span, music.Operation switch
+                {
+                    MusicOperation.Play => "PLAY MUSIC",
+                    MusicOperation.Pause => "PAUSE MUSIC",
+                    MusicOperation.Resume => "RESUME MUSIC",
+                    MusicOperation.Stop => "STOP MUSIC",
+                    _ => "MUSIC VOLUME"
+                });
+                if (music.Operation == MusicOperation.Play && string.IsNullOrWhiteSpace(music.Path?.Value as string))
+                    _diagnostics.Report("SML3026", music.Span, "PLAY MUSIC requires a non-empty music path literal.");
+                if (music.Operation == MusicOperation.SetVolume && music.Volume != null)
+                    RequireType(music.Volume, SmileType.Number, "SML3026", "MUSIC VOLUME requires a NUMBER value.");
+                break;
             case LoadStatementSyntax load:
                 RequireType(load.DefaultValue, SmileType.Number, "SML3025", "LOAD DEFAULT must be NUMBER.");
                 EnsureNumberTarget(load.Identifier, "LOAD");

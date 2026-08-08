@@ -67,7 +67,7 @@ if errorlevel 2 (
     echo Invalid game language smoke test failed: compiler returned infrastructure error.
     exit /b 1
 )
-for %%C in (SML2001 SML3022 SML3023 SML3024 SML3025) do (
+for %%C in (SML2001 SML3022 SML3023 SML3024 SML3025 SML3026) do (
     findstr /c:"%%C" "%SMILE_ROOT%\artifacts\temp\InvalidGameLanguage.log" >nul
     if errorlevel 1 (
         echo Invalid game language smoke test failed: missing %%C.
@@ -136,10 +136,23 @@ if errorlevel 1 exit /b %errorlevel%
 echo Snake compiled successfully: %SMILE_ROOT%\artifacts\games\Snake\Snake.exe
 
 if not exist "%SMILE_ROOT%\artifacts\games\FallingBlocks" mkdir "%SMILE_ROOT%\artifacts\games\FallingBlocks"
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\FallingBlocks\Program.smile" -o "%SMILE_ROOT%\artifacts\games\FallingBlocks\FallingBlocks.exe"
+if not exist "%SMILE_ROOT%\games\FallingBlocks\Assets\Background.mp3" (
+    echo Falling Blocks background music source asset is missing.
+    exit /b 1
+)
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\FallingBlocks\Program.smile" -o "%SMILE_ROOT%\artifacts\games\FallingBlocks\FallingBlocks.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%
 xcopy "%SMILE_ROOT%\games\FallingBlocks\Assets" "%SMILE_ROOT%\artifacts\games\FallingBlocks\Assets" /E /I /Y >nul
 if errorlevel 1 exit /b %errorlevel%
+if not exist "%SMILE_ROOT%\artifacts\games\FallingBlocks\Assets\Background.mp3" (
+    echo Falling Blocks background music output asset is missing.
+    exit /b 1
+)
+fc /b "%SMILE_ROOT%\games\FallingBlocks\Assets\Background.mp3" "%SMILE_ROOT%\artifacts\games\FallingBlocks\Assets\Background.mp3" >nul
+if errorlevel 1 (
+    echo Falling Blocks background music output does not match its project asset.
+    exit /b 1
+)
 echo Falling Blocks compiled successfully: %SMILE_ROOT%\artifacts\games\FallingBlocks\FallingBlocks.exe
 
 if not exist "%SMILE_ROOT%\artifacts\games\PaddleBall" mkdir "%SMILE_ROOT%\artifacts\games\PaddleBall"

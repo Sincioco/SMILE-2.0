@@ -77,8 +77,13 @@ internal sealed class Parser
             case SyntaxKind.FillKeyword: return ParseGraphicsStatement(isFill: true);
             case SyntaxKind.DrawKeyword: return ParseGraphicsStatement(isFill: false);
             case SyntaxKind.ShowKeyword: return ParseShowScreenStatement();
+            case SyntaxKind.PlayKeyword when Peek(1).Kind == SyntaxKind.MusicKeyword: return ParseMusicStatement(MusicOperation.Play);
             case SyntaxKind.PlayKeyword: return ParseSoundStatement(isStop: false);
+            case SyntaxKind.PauseKeyword: return ParseMusicStatement(MusicOperation.Pause);
+            case SyntaxKind.ResumeKeyword: return ParseMusicStatement(MusicOperation.Resume);
+            case SyntaxKind.StopKeyword when Peek(1).Kind == SyntaxKind.MusicKeyword: return ParseMusicStatement(MusicOperation.Stop);
             case SyntaxKind.StopKeyword: return ParseSoundStatement(isStop: true);
+            case SyntaxKind.MusicKeyword: return ParseMusicStatement(MusicOperation.SetVolume);
             case SyntaxKind.LoadKeyword: return ParseLoadStatement();
             case SyntaxKind.SaveKeyword: return ParseSaveStatement();
             case SyntaxKind.IdentifierToken:
@@ -330,6 +335,45 @@ internal sealed class Parser
         var path = isStop ? null : MatchToken(SyntaxKind.StringToken);
         ConsumeLineEnd();
         return new SoundStatementSyntax(keyword, sound, path);
+    }
+
+    private MusicStatementSyntax ParseMusicStatement(MusicOperation operation)
+    {
+        SyntaxToken keyword;
+        SyntaxToken music;
+        SyntaxToken? path = null;
+        SyntaxToken? loop = null;
+        ExpressionSyntax? volume = null;
+
+        if (operation == MusicOperation.SetVolume)
+        {
+            keyword = MatchToken(SyntaxKind.MusicKeyword);
+            music = keyword;
+            MatchToken(SyntaxKind.VolumeKeyword);
+            volume = ParseExpression();
+        }
+        else
+        {
+            var keywordKind = operation switch
+            {
+                MusicOperation.Play => SyntaxKind.PlayKeyword,
+                MusicOperation.Pause => SyntaxKind.PauseKeyword,
+                MusicOperation.Resume => SyntaxKind.ResumeKeyword,
+                MusicOperation.Stop => SyntaxKind.StopKeyword,
+                _ => throw new InvalidOperationException("Unknown music operation.")
+            };
+            keyword = MatchToken(keywordKind);
+            music = MatchToken(SyntaxKind.MusicKeyword);
+            if (operation == MusicOperation.Play)
+            {
+                path = MatchToken(SyntaxKind.StringToken);
+                if (Current.Kind == SyntaxKind.LoopKeyword)
+                    loop = NextToken();
+            }
+        }
+
+        ConsumeLineEnd();
+        return new MusicStatementSyntax(keyword, music, operation, path, loop, volume);
     }
 
     private LoadStatementSyntax ParseLoadStatement()

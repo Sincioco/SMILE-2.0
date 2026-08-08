@@ -61,6 +61,59 @@ Run("Existing key constants retain their values", () =>
 });
 Run("Existing graphics statements remain valid", () => Equal(false,
     Analyze("GAME WINDOW \"Existing\"\nFILL RECTANGLE 1, 2, 3, 4, RED\nDRAW CIRCLE 10, 10, 4, WHITE\nDRAW LINE 0, 0, 20, 20, BLUE\n").HasErrors));
+Run("Music keywords are shared and case-insensitive", () =>
+{
+    Equal(SyntaxKind.MusicKeyword, SyntaxFacts.GetKeywordKind("music"));
+    Equal(SyntaxKind.PauseKeyword, SyntaxFacts.GetKeywordKind("PaUsE"));
+    Equal(SyntaxKind.ResumeKeyword, SyntaxFacts.GetKeywordKind("resume"));
+    Equal(SyntaxKind.VolumeKeyword, SyntaxFacts.GetKeywordKind("VOLUME"));
+    Equal(true, SyntaxFacts.IsKeyword(SyntaxKind.MusicKeyword));
+});
+Run("PLAY MUSIC analyzes as non-looping playback", () =>
+{
+    var music = Music(Analyze("GAME WINDOW \"Music\"\nPLAY MUSIC \"Assets\\Background.mp3\"\n"));
+    Equal(MusicOperation.Play, music.Operation);
+    Equal(false, music.Loop);
+});
+Run("PLAY MUSIC LOOP records looping playback", () => Equal(true,
+    Music(Analyze("GAME WINDOW \"Music\"\nPLAY MUSIC \"Assets\\Background.mp3\" LOOP\n")).Loop));
+Run("PAUSE MUSIC records the shared operation", () => Equal(MusicOperation.Pause,
+    Music(Analyze("GAME WINDOW \"Music\"\nPAUSE MUSIC\n")).Operation));
+Run("RESUME MUSIC records the shared operation", () => Equal(MusicOperation.Resume,
+    Music(Analyze("GAME WINDOW \"Music\"\nRESUME MUSIC\n")).Operation));
+Run("STOP MUSIC records the shared operation", () => Equal(MusicOperation.Stop,
+    Music(Analyze("GAME WINDOW \"Music\"\nSTOP MUSIC\n")).Operation));
+Run("MUSIC VOLUME accepts numeric expressions", () => Equal(false,
+    Analyze("GAME WINDOW \"Music\"\nMUSIC VOLUME 25 + 25\n").HasErrors));
+Run("Existing PLAY SOUND and STOP SOUND remain shared sound syntax", () =>
+{
+    var analysis = Analyze("GAME WINDOW \"Sound\"\nPLAY SOUND \"Assets\\Effect.wav\"\nSTOP SOUND\n");
+    Equal(false, analysis.HasErrors);
+    Equal(2, analysis.SyntaxTree.Root.Statements.OfType<SoundStatementSyntax>().Count());
+});
+Run("Every music operation requires GAME WINDOW", () =>
+{
+    var analysis = Analyze("PLAY MUSIC \"Assets\\Background.mp3\"\nPAUSE MUSIC\nRESUME MUSIC\nSTOP MUSIC\nMUSIC VOLUME 50\n");
+    Equal(5, analysis.Diagnostics.Count(diagnostic => diagnostic.Code == "SML3023"));
+});
+Run("PLAY MUSIC rejects an empty path", () => Equal(true,
+    HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nPLAY MUSIC \"\"\n"), "SML3026")));
+Run("MUSIC VOLUME requires a number", () => Equal(true,
+    HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nMUSIC VOLUME \"loud\"\n"), "SML3026")));
+Run("PLAY MUSIC without a path reports a parser diagnostic", () => Equal(true,
+    HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nPLAY MUSIC\n"), "SML2001")));
+Run("PLAY MUSIC rejects a repeated LOOP", () => Equal(true,
+    HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nPLAY MUSIC \"Assets\\Background.mp3\" LOOP LOOP\n"), "SML2001")));
+Run("PAUSE SOUND is not accepted as music syntax", () => Equal(true,
+    HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nPAUSE SOUND\n"), "SML2001")));
+Run("MUSIC requires the VOLUME subcommand", () => Equal(true,
+    HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nMUSIC 75\n"), "SML2001")));
+Run("MUSIC VOLUME without a value reports a parser diagnostic", () => Equal(true,
+    HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nMUSIC VOLUME\n"), "SML2001")));
+Run("RESUME SOUND is not accepted as music syntax", () => Equal(true,
+    HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nRESUME SOUND\n"), "SML2001")));
+Run("Bare STOP remains malformed", () => Equal(true,
+    HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nSTOP\n"), "SML2001")));
 Run("Fixed-step ball speed is identical at 60, 100, 120, and 144 Hz", () =>
 {
     var sixtyHz = Enumerable.Repeat(16, 20).Concat(Enumerable.Repeat(17, 40));
@@ -87,13 +140,16 @@ if (failures.Count != 0)
     return 1;
 }
 
-Console.WriteLine("25 SMILE language, project, and timing tests passed.");
+Console.WriteLine("43 SMILE language, project, and timing tests passed.");
 return 0;
 
 SmileProjectGraphicsOptions Parse(string xml) =>
     SmileProjectGraphicsOptions.Parse(XElement.Parse(xml));
 
 SmileAnalysisResult Analyze(string source) => SmileLanguage.Analyze(source);
+
+MusicStatementSyntax Music(SmileAnalysisResult analysis) =>
+    analysis.SyntaxTree.Root.Statements.OfType<MusicStatementSyntax>().Single();
 
 bool HasDiagnostic(SmileAnalysisResult analysis, string code) =>
     analysis.Diagnostics.Any(diagnostic => diagnostic.Code == code);

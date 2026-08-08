@@ -24,6 +24,7 @@ internal sealed class MasmEmitter
     private bool _usesTimer;
     private bool _usesGameClosed;
     private bool _usesKeyHeld;
+    private bool _usesMusic;
 
     public MasmEmitter(SmileAnalysisResult analysis, SmileGraphicsBackend graphicsBackend,
         bool vSync)
@@ -32,6 +33,8 @@ internal sealed class MasmEmitter
         _graphicsBackend = graphicsBackend;
         _vSync = vSync;
     }
+
+    public bool UsesMusic => _usesMusic;
 
     public string Emit()
     {
@@ -68,6 +71,15 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_show_screen:PROC");
         Line("EXTERN smile_play_sound:PROC");
         Line("EXTERN smile_stop_sound:PROC");
+        if (_usesMusic)
+        {
+            Line("EXTERN smile_music_play:PROC");
+            Line("EXTERN smile_music_pause:PROC");
+            Line("EXTERN smile_music_resume:PROC");
+            Line("EXTERN smile_music_stop:PROC");
+            Line("EXTERN smile_music_set_volume:PROC");
+            Line("EXTERN smile_music_shutdown:PROC");
+        }
         Line("EXTERN smile_load_value:PROC");
         Line("EXTERN smile_save_value:PROC");
         Line();
@@ -92,6 +104,7 @@ internal sealed class MasmEmitter
         Line($"    mov rdx, {(_vSync ? 1 : 0)}");
         Line("    call smile_graphics_configure");
         EmitStatements(_analysis.SyntaxTree.Root.Statements);
+        if (_usesMusic) Line("    call smile_music_shutdown");
         Line("    xor eax, eax");
         Line("    add rsp, 104");
         Line("    ret");
@@ -199,6 +212,12 @@ internal sealed class MasmEmitter
                     break;
                 case SoundStatementSyntax sound when sound.Path != null:
                     CollectTextToken(sound.Path);
+                    break;
+                case MusicStatementSyntax music:
+                    _usesMusic = true;
+                    if (music.Path != null)
+                        CollectTextToken(music.Path);
+                    CollectExpression(music.Volume);
                     break;
                 case LoadStatementSyntax load:
                     CollectTextToken(load.Key);
@@ -353,6 +372,7 @@ internal sealed class MasmEmitter
                 Line($"    jmp {(exit.TargetKeyword.Kind == SyntaxKind.ForKeyword ? _forExitLabels.Peek() : _doExitLabels.Peek())}");
                 break;
             case EndProgramStatementSyntax:
+                if (_usesMusic) Line("    call smile_music_shutdown");
                 Line("    xor ecx, ecx");
                 Line("    call ExitProcess");
                 break;
@@ -384,6 +404,9 @@ internal sealed class MasmEmitter
                     EmitNativeCall("smile_play_sound", 2);
                 }
                 break;
+            case MusicStatementSyntax music:
+                EmitMusic(music);
+                break;
             case LoadStatementSyntax load:
                 EmitTextArgument(load.Key);
                 EmitExpression(load.DefaultValue);
@@ -399,6 +422,33 @@ internal sealed class MasmEmitter
                     : $"    mov rax, QWORD PTR [{_symbolLabels[saved]}]");
                 Line("    push rax");
                 EmitNativeCall("smile_save_value", 3);
+                break;
+        }
+    }
+
+    private void EmitMusic(MusicStatementSyntax statement)
+    {
+        switch (statement.Operation)
+        {
+            case MusicOperation.Play:
+                EmitTextArgument(statement.Path!);
+                Line($"    mov rax, {(statement.Loop ? 1 : 0)}");
+                Line("    push rax");
+                EmitNativeCall("smile_music_play", 3);
+                break;
+            case MusicOperation.Pause:
+                Line("    call smile_music_pause");
+                break;
+            case MusicOperation.Resume:
+                Line("    call smile_music_resume");
+                break;
+            case MusicOperation.Stop:
+                Line("    call smile_music_stop");
+                break;
+            case MusicOperation.SetVolume:
+                EmitExpression(statement.Volume!);
+                Line("    mov rcx, rax");
+                Line("    call smile_music_set_volume");
                 break;
         }
     }

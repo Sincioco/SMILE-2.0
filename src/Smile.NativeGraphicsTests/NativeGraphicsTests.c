@@ -3,6 +3,7 @@
 #include "graphics_common.h"
 #include "graphics_directx.h"
 #include "graphics_gdi.h"
+#include "audio_focus_state.h"
 
 typedef struct MockState
 {
@@ -138,6 +139,7 @@ int main(void)
 {
     char error[768];
     SmileGraphicsBackendDiagnostics diagnostics;
+    SmileAudioFocusState audio_focus;
 
     reset_mocks();
     error[0] = 0;
@@ -217,12 +219,54 @@ int main(void)
     smile_graphics_begin_frame();
     check(directx_state.begin_count == 4, "DPI change starts a fresh backend frame");
 
+    smile_audio_focus_initialize(&audio_focus);
+    check(smile_audio_focus_accepts_sound(&audio_focus) != 0,
+        "Active application window accepts WAV requests");
+    audio_focus.app_active = 0;
+    check(smile_audio_focus_update(&audio_focus) == -1 &&
+        !smile_audio_focus_accepts_sound(&audio_focus),
+        "Application deactivation signals immediate audio muting");
+    check(smile_audio_focus_update(&audio_focus) == 0,
+        "Repeated inactive state is idempotent");
+    audio_focus.app_active = 1;
+    check(smile_audio_focus_update(&audio_focus) == 1 &&
+        smile_audio_focus_accepts_sound(&audio_focus),
+        "Application reactivation accepts new WAV requests");
+    audio_focus.window_active = 0;
+    check(smile_audio_focus_update(&audio_focus) == -1,
+        "Inactive top-level window mutes audio");
+    audio_focus.app_active = 0;
+    smile_audio_focus_update(&audio_focus);
+    audio_focus.app_active = 1;
+    check(smile_audio_focus_update(&audio_focus) == 0 &&
+        !smile_audio_focus_accepts_sound(&audio_focus),
+        "Application activation cannot override an inactive window");
+    audio_focus.window_active = 1;
+    check(smile_audio_focus_update(&audio_focus) == 1,
+        "Active top-level window restores audio when other conditions allow it");
+    audio_focus.minimized = 1;
+    check(smile_audio_focus_update(&audio_focus) == -1 &&
+        !smile_audio_focus_accepts_sound(&audio_focus),
+        "Minimized windows reject WAV requests");
+    audio_focus.minimized = 0;
+    check(smile_audio_focus_update(&audio_focus) == 1 &&
+        smile_audio_focus_accepts_sound(&audio_focus),
+        "Restored windows accept WAV requests");
+    check(smile_audio_effective_volume(1, 50) == 0.5,
+        "Active music uses the exact requested volume");
+    check(smile_audio_effective_volume(0, 50) == 0.0 &&
+        smile_audio_effective_volume(1, 50) == 0.5,
+        "Focus muting restores volume without cumulative drift");
+    check(smile_audio_effective_volume(1, -5) == 0.0 &&
+        smile_audio_effective_volume(1, 150) == 1.0,
+        "Music volume clamps safely to zero through one hundred percent");
+
     reset_mocks();
     if (failures != 0)
     {
         fprintf(stderr, "%d native graphics selection test(s) failed.\n", failures);
         return 1;
     }
-    printf("23 native graphics selection, quadrilateral-routing, and frame-invalidation checks passed.\n");
+    printf("35 native graphics and audio-focus checks passed.\n");
     return 0;
 }

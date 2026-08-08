@@ -58,6 +58,16 @@ function Assert-WaveCopy {
     }
 }
 
+function Assert-AssetCopy {
+    param([string]$SourceRelative, [string]$OutputRelative)
+
+    $source = Require-File $SourceRelative
+    $output = Require-File $OutputRelative
+    if ((Get-FileHash -LiteralPath $source).Hash -ne (Get-FileHash -LiteralPath $output).Hash) {
+        throw "$OutputRelative does not match its project asset."
+    }
+}
+
 Require-File 'artifacts\compiler\smilec.exe' | Out-Null
 $vsixPath = Require-File 'artifacts\vsix\Smile.VisualStudio.vsix'
 
@@ -84,6 +94,7 @@ foreach ($game in $assetSets.Keys) {
         Assert-WaveCopy $game $asset
     }
 }
+Assert-AssetCopy 'games\FallingBlocks\Assets\Background.mp3' 'artifacts\games\FallingBlocks\Assets\Background.mp3'
 Write-Host 'Game asset copies verified.'
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem

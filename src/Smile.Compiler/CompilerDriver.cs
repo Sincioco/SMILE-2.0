@@ -52,9 +52,11 @@ internal sealed class CompilerDriver
                 return 2;
             }
 
-            File.WriteAllText(assemblyPath, new MasmEmitter(analysis, graphicsBackend, vSync).Emit());
+            var emitter = new MasmEmitter(analysis, graphicsBackend, vSync);
+            File.WriteAllText(assemblyPath, emitter.Emit());
             var isGame = analysis.SyntaxTree.Root.Statements.Any(statement => statement is GameWindowStatementSyntax);
-            var result = new NativeToolchain().AssembleAndLink(assemblyPath, objectPath, outputPath, runtimePath, isGame);
+            var result = new NativeToolchain().AssembleAndLink(assemblyPath, objectPath, outputPath, runtimePath,
+                isGame, emitter.UsesMusic);
             if (!result.Success)
             {
                 Console.Error.WriteLine($"{sourcePath}(1,1): error SML5003: Native toolchain failed.");

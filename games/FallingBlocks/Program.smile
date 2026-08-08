@@ -154,6 +154,7 @@ END FUNCTION
 
 SUB EndGame()
     State = 2
+    STOP MUSIC
     IF Score > HighScore THEN
         HighScore = Score
         SAVE HighScore TO "HighScore"
@@ -245,6 +246,7 @@ SUB ResetGame()
     FallDelay = 700
     RANDOM NextPiece FROM 1 TO 7
     State = 1
+    PLAY MUSIC "Assets\Background.mp3" LOOP
     CALL SpawnPiece()
 END SUB
 
@@ -332,6 +334,8 @@ GAME WINDOW "SMILE 2.0 Falling Blocks"
 DO
     GET KEY Key
     IF Key = KEY_ESCAPE THEN
+        STOP MUSIC
+        STOP SOUND
         END PROGRAM
     END IF
 
@@ -401,5 +405,6 @@ DO
     SHOW SCREEN
 LOOP UNTIL GAME_CLOSED() = TRUE
 
+STOP MUSIC
 STOP SOUND
 END PROGRAM

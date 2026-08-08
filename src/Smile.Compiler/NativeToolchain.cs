@@ -4,7 +4,8 @@ namespace Smile.Compiler;
 
 internal sealed class NativeToolchain
 {
-    public ToolchainResult AssembleAndLink(string assemblyPath, string objectPath, string outputPath, string runtimePath, bool isGame)
+    public ToolchainResult AssembleAndLink(string assemblyPath, string objectPath, string outputPath,
+        string runtimePath, bool isGame, bool usesMusic)
     {
         var installationPath = FindVisualStudio();
         if (installationPath == null)
@@ -14,11 +15,12 @@ internal sealed class NativeToolchain
         if (!File.Exists(vcvars))
             return new ToolchainResult(false, $"vcvars64.bat was not found under {installationPath}.");
 
+        var musicLibraries = usesMusic ? " msvcrt.lib msvcprt.lib vcruntime.lib ucrt.lib" : string.Empty;
         var command =
             $"call {Quote(vcvars)} >nul && " +
             $"ml64.exe /nologo /c /Fo{Quote(objectPath)} {Quote(assemblyPath)} && " +
             $"link.exe /nologo /subsystem:{(isGame ? "windows" : "console")} /entry:main /machine:x64 /out:{Quote(outputPath)} " +
-            $"{Quote(objectPath)} {Quote(runtimePath)} kernel32.lib user32.lib gdi32.lib dwmapi.lib d3d11.lib dxgi.lib d2d1.lib dwrite.lib winmm.lib shell32.lib ole32.lib";
+            $"{Quote(objectPath)} {Quote(runtimePath)} kernel32.lib user32.lib gdi32.lib dwmapi.lib d3d11.lib dxgi.lib d2d1.lib dwrite.lib winmm.lib shell32.lib ole32.lib windowsapp.lib{musicLibraries}";
 
         return RunCommandPrompt(command);
     }

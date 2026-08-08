@@ -40,7 +40,7 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\Smile.NativeRuntime\graphics;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\Smile.NativeRuntime\graphics;$(ProjectDir)..\Smile.NativeRuntime\audio;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -49,6 +49,7 @@
   <ItemGroup>
     <ClCompile Include="NativeGraphicsTests.c" />
     <ClCompile Include="..\Smile.NativeRuntime\graphics\graphics_common.c" />
+    <ClCompile Include="..\Smile.NativeRuntime\audio\audio_focus_state.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
