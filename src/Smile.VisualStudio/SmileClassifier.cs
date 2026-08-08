@@ -89,7 +89,8 @@ internal sealed class SmileClassifier : IClassifier
             SyntaxKind.CommentToken => TokenClassification.Comment,
             SyntaxKind.NumberToken => TokenClassification.Number,
             SyntaxKind.IdentifierToken => TokenClassification.Identifier,
-            SyntaxKind.PlusToken or SyntaxKind.MinusToken or SyntaxKind.EqualsToken or SyntaxKind.NotEqualsToken or
+            SyntaxKind.PlusToken or SyntaxKind.MinusToken or SyntaxKind.StarToken or SyntaxKind.SlashToken or SyntaxKind.CommaToken or
+                SyntaxKind.EqualsToken or SyntaxKind.NotEqualsToken or
                 SyntaxKind.LessToken or SyntaxKind.GreaterToken or SyntaxKind.LessOrEqualsToken or SyntaxKind.GreaterOrEqualsToken or
                 SyntaxKind.OpenParenthesisToken or SyntaxKind.CloseParenthesisToken or SyntaxKind.OpenBracketToken or
                 SyntaxKind.CloseBracketToken or SyntaxKind.SemicolonToken => TokenClassification.Operator,

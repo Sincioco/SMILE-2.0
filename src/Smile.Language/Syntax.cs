@@ -15,6 +15,9 @@ public enum SyntaxKind
 
     PlusToken,
     MinusToken,
+    StarToken,
+    SlashToken,
+    CommaToken,
     EqualsToken,
     NotEqualsToken,
     LessToken,
@@ -52,6 +55,23 @@ public enum SyntaxKind
     AndKeyword,
     OrKeyword,
     NotKeyword,
+    ConstKeyword,
+    ModKeyword,
+    SubKeyword,
+    CallKeyword,
+    FunctionKeyword,
+    ReturnKeyword,
+    SelectKeyword,
+    CaseKeyword,
+    ExitKeyword,
+    ProgramKeyword,
+    TimerKeyword,
+    RgbKeyword,
+    AbsKeyword,
+    MinKeyword,
+    MaxKeyword,
+    GameClosedKeyword,
+    KeyHeldKeyword,
     NoneKeyword,
     WKeyword,
     AKeyword,
@@ -60,6 +80,38 @@ public enum SyntaxKind
     UpKeyword,
     LeftKeyword,
     RightKeyword,
+    KeyNoneKeyword,
+    KeyWKeyword,
+    KeyAKeyword,
+    KeySKeyword,
+    KeyDKeyword,
+    KeyUpKeyword,
+    KeyDownKeyword,
+    KeyLeftKeyword,
+    KeyRightKeyword,
+    KeyEnterKeyword,
+    KeyEscapeKeyword,
+    KeySpaceKeyword,
+    Key1Keyword,
+    Key2Keyword,
+    BlackKeyword,
+    WhiteKeyword,
+    RedKeyword,
+    GreenKeyword,
+    BlueKeyword,
+    CyanKeyword,
+    MagentaKeyword,
+    YellowKeyword,
+    OrangeKeyword,
+    GrayKeyword,
+    DarkRedKeyword,
+    DarkGreenKeyword,
+    DarkBlueKeyword,
+    DarkGrayKeyword,
+    LightRedKeyword,
+    LightGreenKeyword,
+    LightBlueKeyword,
+    LightGrayKeyword,
 }
 
 public static class SyntaxFacts
@@ -91,6 +143,23 @@ public static class SyntaxFacts
         ["AND"] = SyntaxKind.AndKeyword,
         ["OR"] = SyntaxKind.OrKeyword,
         ["NOT"] = SyntaxKind.NotKeyword,
+        ["CONST"] = SyntaxKind.ConstKeyword,
+        ["MOD"] = SyntaxKind.ModKeyword,
+        ["SUB"] = SyntaxKind.SubKeyword,
+        ["CALL"] = SyntaxKind.CallKeyword,
+        ["FUNCTION"] = SyntaxKind.FunctionKeyword,
+        ["RETURN"] = SyntaxKind.ReturnKeyword,
+        ["SELECT"] = SyntaxKind.SelectKeyword,
+        ["CASE"] = SyntaxKind.CaseKeyword,
+        ["EXIT"] = SyntaxKind.ExitKeyword,
+        ["PROGRAM"] = SyntaxKind.ProgramKeyword,
+        ["TIMER"] = SyntaxKind.TimerKeyword,
+        ["RGB"] = SyntaxKind.RgbKeyword,
+        ["ABS"] = SyntaxKind.AbsKeyword,
+        ["MIN"] = SyntaxKind.MinKeyword,
+        ["MAX"] = SyntaxKind.MaxKeyword,
+        ["GAME_CLOSED"] = SyntaxKind.GameClosedKeyword,
+        ["KEY_HELD"] = SyntaxKind.KeyHeldKeyword,
         ["NONE"] = SyntaxKind.NoneKeyword,
         ["W"] = SyntaxKind.WKeyword,
         ["A"] = SyntaxKind.AKeyword,
@@ -99,16 +168,51 @@ public static class SyntaxFacts
         ["UP"] = SyntaxKind.UpKeyword,
         ["LEFT"] = SyntaxKind.LeftKeyword,
         ["RIGHT"] = SyntaxKind.RightKeyword,
+        ["KEY_NONE"] = SyntaxKind.KeyNoneKeyword,
+        ["KEY_W"] = SyntaxKind.KeyWKeyword,
+        ["KEY_A"] = SyntaxKind.KeyAKeyword,
+        ["KEY_S"] = SyntaxKind.KeySKeyword,
+        ["KEY_D"] = SyntaxKind.KeyDKeyword,
+        ["KEY_UP"] = SyntaxKind.KeyUpKeyword,
+        ["KEY_DOWN"] = SyntaxKind.KeyDownKeyword,
+        ["KEY_LEFT"] = SyntaxKind.KeyLeftKeyword,
+        ["KEY_RIGHT"] = SyntaxKind.KeyRightKeyword,
+        ["KEY_ENTER"] = SyntaxKind.KeyEnterKeyword,
+        ["KEY_ESCAPE"] = SyntaxKind.KeyEscapeKeyword,
+        ["KEY_SPACE"] = SyntaxKind.KeySpaceKeyword,
+        ["KEY_1"] = SyntaxKind.Key1Keyword,
+        ["KEY_2"] = SyntaxKind.Key2Keyword,
+        ["BLACK"] = SyntaxKind.BlackKeyword,
+        ["WHITE"] = SyntaxKind.WhiteKeyword,
+        ["RED"] = SyntaxKind.RedKeyword,
+        ["GREEN"] = SyntaxKind.GreenKeyword,
+        ["BLUE"] = SyntaxKind.BlueKeyword,
+        ["CYAN"] = SyntaxKind.CyanKeyword,
+        ["MAGENTA"] = SyntaxKind.MagentaKeyword,
+        ["YELLOW"] = SyntaxKind.YellowKeyword,
+        ["ORANGE"] = SyntaxKind.OrangeKeyword,
+        ["GRAY"] = SyntaxKind.GrayKeyword,
+        ["DARK_RED"] = SyntaxKind.DarkRedKeyword,
+        ["DARK_GREEN"] = SyntaxKind.DarkGreenKeyword,
+        ["DARK_BLUE"] = SyntaxKind.DarkBlueKeyword,
+        ["DARK_GRAY"] = SyntaxKind.DarkGrayKeyword,
+        ["LIGHT_RED"] = SyntaxKind.LightRedKeyword,
+        ["LIGHT_GREEN"] = SyntaxKind.LightGreenKeyword,
+        ["LIGHT_BLUE"] = SyntaxKind.LightBlueKeyword,
+        ["LIGHT_GRAY"] = SyntaxKind.LightGrayKeyword,
     };
 
     public static SyntaxKind GetKeywordKind(string text) =>
         Keywords.TryGetValue(text, out var kind) ? kind : SyntaxKind.IdentifierToken;
 
     public static bool IsKeyword(SyntaxKind kind) =>
-        kind >= SyntaxKind.DimKeyword && kind <= SyntaxKind.NotKeyword;
+        kind >= SyntaxKind.DimKeyword && kind <= SyntaxKind.KeyHeldKeyword;
 
     public static bool IsBuiltInConstant(SyntaxKind kind) =>
-        kind >= SyntaxKind.NoneKeyword && kind <= SyntaxKind.RightKeyword || kind == SyntaxKind.DownKeyword;
+        kind >= SyntaxKind.NoneKeyword && kind <= SyntaxKind.LightGrayKeyword || kind == SyntaxKind.DownKeyword;
+
+    public static bool IsBuiltInFunction(SyntaxKind kind) =>
+        kind >= SyntaxKind.TimerKeyword && kind <= SyntaxKind.KeyHeldKeyword;
 
     public static string GetText(SyntaxKind kind)
     {
@@ -121,6 +225,9 @@ public static class SyntaxFacts
             SyntaxKind.StringToken => "text literal",
             SyntaxKind.PlusToken => "+",
             SyntaxKind.MinusToken => "-",
+            SyntaxKind.StarToken => "*",
+            SyntaxKind.SlashToken => "/",
+            SyntaxKind.CommaToken => ",",
             SyntaxKind.EqualsToken => "=",
             SyntaxKind.NotEqualsToken => "<>",
             SyntaxKind.LessToken => "<",
@@ -138,12 +245,13 @@ public static class SyntaxFacts
     }
 
     public static int GetUnaryPrecedence(SyntaxKind kind) =>
-        kind == SyntaxKind.MinusToken || kind == SyntaxKind.NotKeyword ? 7 : 0;
+        kind == SyntaxKind.MinusToken || kind == SyntaxKind.NotKeyword ? 8 : 0;
 
     public static int GetBinaryPrecedence(SyntaxKind kind)
     {
         return kind switch
         {
+            SyntaxKind.StarToken or SyntaxKind.SlashToken or SyntaxKind.ModKeyword => 7,
             SyntaxKind.PlusToken or SyntaxKind.MinusToken => 6,
             SyntaxKind.LessToken or SyntaxKind.GreaterToken or SyntaxKind.LessOrEqualsToken or SyntaxKind.GreaterOrEqualsToken => 5,
             SyntaxKind.EqualsToken or SyntaxKind.NotEqualsToken => 4,
@@ -166,6 +274,38 @@ public static class SyntaxFacts
             SyntaxKind.DownKeyword => 11,
             SyntaxKind.LeftKeyword => 12,
             SyntaxKind.RightKeyword => 13,
+            SyntaxKind.KeyNoneKeyword => 0,
+            SyntaxKind.KeyWKeyword => 1,
+            SyntaxKind.KeyAKeyword => 2,
+            SyntaxKind.KeySKeyword => 3,
+            SyntaxKind.KeyDKeyword => 4,
+            SyntaxKind.KeyUpKeyword => 10,
+            SyntaxKind.KeyDownKeyword => 11,
+            SyntaxKind.KeyLeftKeyword => 12,
+            SyntaxKind.KeyRightKeyword => 13,
+            SyntaxKind.KeyEnterKeyword => 14,
+            SyntaxKind.KeyEscapeKeyword => 15,
+            SyntaxKind.KeySpaceKeyword => 16,
+            SyntaxKind.Key1Keyword => 17,
+            SyntaxKind.Key2Keyword => 18,
+            SyntaxKind.BlackKeyword => 0x000000,
+            SyntaxKind.WhiteKeyword => 0xFFFFFF,
+            SyntaxKind.RedKeyword => 0x0000FF,
+            SyntaxKind.GreenKeyword => 0x00FF00,
+            SyntaxKind.BlueKeyword => 0xFF0000,
+            SyntaxKind.CyanKeyword => 0xFFFF00,
+            SyntaxKind.MagentaKeyword => 0xFF00FF,
+            SyntaxKind.YellowKeyword => 0x00FFFF,
+            SyntaxKind.OrangeKeyword => 0x0080FF,
+            SyntaxKind.GrayKeyword => 0x808080,
+            SyntaxKind.DarkRedKeyword => 0x000080,
+            SyntaxKind.DarkGreenKeyword => 0x008000,
+            SyntaxKind.DarkBlueKeyword => 0x800000,
+            SyntaxKind.DarkGrayKeyword => 0x404040,
+            SyntaxKind.LightRedKeyword => 0x8080FF,
+            SyntaxKind.LightGreenKeyword => 0x80FF80,
+            SyntaxKind.LightBlueKeyword => 0xFF8080,
+            SyntaxKind.LightGrayKeyword => 0xC0C0C0,
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
     }
@@ -213,19 +353,19 @@ public abstract class ExpressionSyntax : SyntaxNode { }
 
 public sealed class AssignmentTargetSyntax : SyntaxNode
 {
-    public AssignmentTargetSyntax(SyntaxToken identifier, SyntaxToken? openBracket, ExpressionSyntax? index, SyntaxToken? closeBracket)
+    public AssignmentTargetSyntax(SyntaxToken identifier, SyntaxToken? openBracket, IReadOnlyList<ExpressionSyntax> indices, SyntaxToken? closeBracket)
     {
         Identifier = identifier;
         OpenBracket = openBracket;
-        Index = index;
+        Indices = indices;
         CloseBracket = closeBracket;
     }
 
     public SyntaxToken Identifier { get; }
     public SyntaxToken? OpenBracket { get; }
-    public ExpressionSyntax? Index { get; }
+    public IReadOnlyList<ExpressionSyntax> Indices { get; }
     public SyntaxToken? CloseBracket { get; }
-    public bool IsArrayElement => Index != null;
+    public bool IsArrayElement => Indices.Count != 0;
     public override TextSpan Span => TextSpan.FromBounds(Identifier.Span.Start, CloseBracket?.Span.End ?? Identifier.Span.End);
 }
 
@@ -246,19 +386,19 @@ public sealed class AssignmentStatementSyntax : StatementSyntax
 
 public sealed class DimStatementSyntax : StatementSyntax
 {
-    public DimStatementSyntax(SyntaxToken dimKeyword, SyntaxToken identifier, SyntaxToken openBracket, SyntaxToken size, SyntaxToken closeBracket)
+    public DimStatementSyntax(SyntaxToken dimKeyword, SyntaxToken identifier, SyntaxToken openBracket, IReadOnlyList<ExpressionSyntax> sizes, SyntaxToken closeBracket)
     {
         DimKeyword = dimKeyword;
         Identifier = identifier;
         OpenBracket = openBracket;
-        Size = size;
+        Sizes = sizes;
         CloseBracket = closeBracket;
     }
 
     public SyntaxToken DimKeyword { get; }
     public SyntaxToken Identifier { get; }
     public SyntaxToken OpenBracket { get; }
-    public SyntaxToken Size { get; }
+    public IReadOnlyList<ExpressionSyntax> Sizes { get; }
     public SyntaxToken CloseBracket { get; }
     public override TextSpan Span => TextSpan.FromBounds(DimKeyword.Span.Start, CloseBracket.Span.End);
 }
@@ -399,21 +539,6 @@ public sealed class ForStatementSyntax : StatementSyntax
     public override TextSpan Span => TextSpan.FromBounds(ForKeyword.Span.Start, FinalForKeyword.Span.End);
 }
 
-public sealed class DoUntilStatementSyntax : StatementSyntax
-{
-    public DoUntilStatementSyntax(SyntaxToken doKeyword, IReadOnlyList<StatementSyntax> statements, ExpressionSyntax condition)
-    {
-        DoKeyword = doKeyword;
-        Statements = statements;
-        Condition = condition;
-    }
-
-    public SyntaxToken DoKeyword { get; }
-    public IReadOnlyList<StatementSyntax> Statements { get; }
-    public ExpressionSyntax Condition { get; }
-    public override TextSpan Span => TextSpan.FromBounds(DoKeyword.Span.Start, Condition.Span.End);
-}
-
 public sealed class LiteralExpressionSyntax : ExpressionSyntax
 {
     public LiteralExpressionSyntax(SyntaxToken literalToken, object value)
@@ -436,15 +561,15 @@ public sealed class NameExpressionSyntax : ExpressionSyntax
 
 public sealed class ArrayAccessExpressionSyntax : ExpressionSyntax
 {
-    public ArrayAccessExpressionSyntax(SyntaxToken identifier, ExpressionSyntax index, SyntaxToken closeBracket)
+    public ArrayAccessExpressionSyntax(SyntaxToken identifier, IReadOnlyList<ExpressionSyntax> indices, SyntaxToken closeBracket)
     {
         Identifier = identifier;
-        Index = index;
+        Indices = indices;
         CloseBracket = closeBracket;
     }
 
     public SyntaxToken Identifier { get; }
-    public ExpressionSyntax Index { get; }
+    public IReadOnlyList<ExpressionSyntax> Indices { get; }
     public SyntaxToken CloseBracket { get; }
     public override TextSpan Span => TextSpan.FromBounds(Identifier.Span.Start, CloseBracket.Span.End);
 }

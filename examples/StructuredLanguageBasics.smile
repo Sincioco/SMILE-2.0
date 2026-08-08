@@ -1,0 +1,57 @@
+' Structured language and native backend smoke coverage.
+CONST BoardWidth = 10
+CONST BoardHeight = 4 * 5
+CONST MaximumCells = BoardWidth * BoardHeight
+
+DIM Board[BoardWidth, BoardHeight]
+
+SUB StoreCell(Column, Row, Value)
+    Adjusted = MAX(0, Value)
+    Board[Column, Row] = Adjusted
+END SUB
+
+FUNCTION IsEven(Value)
+    IF Value MOD 2 = 0 THEN
+        RETURN TRUE
+    ELSE
+        RETURN FALSE
+    END IF
+END FUNCTION
+
+CALL StoreCell(2, 3, 12)
+
+Selected = 0
+SELECT CASE Board[2, 3] / 3
+    CASE 4
+        Selected = 40
+    CASE ELSE
+        Selected = -1
+END SELECT
+
+Counter = 0
+DO
+    Counter = Counter + 1
+    EXIT DO
+LOOP
+
+FOR Index = 0 TO 9
+    IF Index = 2 THEN
+        EXIT FOR
+    END IF
+END FOR
+
+IF IsEven(Board[2, 3]) = TRUE THEN
+    PRINT "EVEN"
+END IF
+
+PRINT Board[2, 3]
+PRINT Selected
+PRINT Counter
+PRINT Index
+PRINT MaximumCells
+PRINT ABS(-5)
+PRINT MIN(7, 3)
+PRINT RGB(40, 220, 30)
+PRINT KEY_LEFT
+PRINT LIGHT_BLUE
+END PROGRAM

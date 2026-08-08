@@ -8,19 +8,29 @@ internal sealed class MasmEmitter
 {
     private readonly SmileAnalysisResult _analysis;
     private readonly StringBuilder _builder = new();
-    private readonly Dictionary<string, string> _symbolLabels = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<VariableSymbol, string> _symbolLabels = new();
+    private readonly Dictionary<string, string> _routineLabels = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<LiteralExpressionSyntax, TextLiteral> _textLiterals = new();
     private readonly Dictionary<ForStatementSyntax, string> _forLimits = new();
+    private readonly Dictionary<SelectStatementSyntax, string> _selectValues = new();
+    private readonly Stack<string> _forExitLabels = new();
+    private readonly Stack<string> _doExitLabels = new();
+    private RoutineSymbol? _currentRoutine;
+    private string? _returnLabel;
     private int _labelId;
+    private bool _usesTimer;
+    private bool _usesGameClosed;
+    private bool _usesKeyHeld;
 
     public MasmEmitter(SmileAnalysisResult analysis) => _analysis = analysis;
 
     public string Emit()
     {
         Collect(_analysis.SyntaxTree.Root.Statements);
-        AssignSymbolLabels();
+        AssignLabels();
 
         Line("option casemap:none");
+        Line("EXTERN ExitProcess:PROC");
         Line("EXTERN smile_print_text:PROC");
         Line("EXTERN smile_print_number:PROC");
         Line("EXTERN smile_print_boolean:PROC");
@@ -29,18 +39,18 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_clear_screen:PROC");
         Line("EXTERN smile_wait:PROC");
         Line("EXTERN smile_random:PROC");
+        if (_usesTimer) Line("EXTERN smile_timer:PROC");
+        if (_usesGameClosed) Line("EXTERN smile_game_closed:PROC");
+        if (_usesKeyHeld) Line("EXTERN smile_key_held:PROC");
         Line();
         Line(".data");
-        foreach (var pair in _analysis.SemanticModel.Symbols)
-        {
-            var symbol = pair.Value;
-            var label = _symbolLabels[pair.Key];
-            Line(symbol.IsArray
-                ? $"{label} QWORD {symbol.ArraySize.ToString(CultureInfo.InvariantCulture)} DUP(0)"
-                : $"{label} QWORD 0");
-        }
+        EmitStorage(_analysis.SemanticModel.Symbols.Values);
+        foreach (var routine in _analysis.SemanticModel.Routines.Values)
+            EmitStorage(routine.LocalSymbols.Values);
         foreach (var limit in _forLimits.Values)
             Line($"{limit} QWORD 0");
+        foreach (var value in _selectValues.Values)
+            Line($"{value} QWORD 0");
         foreach (var literal in _textLiterals.Values)
             Line($"{literal.Label} BYTE {FormatBytes(literal.Bytes)}");
 
@@ -53,8 +63,25 @@ internal sealed class MasmEmitter
         Line("    add rsp, 40");
         Line("    ret");
         Line("main ENDP");
+
+        foreach (var routine in _analysis.SemanticModel.Routines.Values)
+            EmitRoutine(routine);
+
         Line("END");
         return _builder.ToString();
+    }
+
+    private void EmitStorage(IEnumerable<VariableSymbol> symbols)
+    {
+        foreach (var symbol in symbols)
+        {
+            if (symbol.IsConstant)
+                continue;
+            var label = _symbolLabels[symbol];
+            Line(symbol.IsArray
+                ? $"{label} QWORD {symbol.ArraySize.ToString(CultureInfo.InvariantCulture)} DUP(0)"
+                : $"{label} QWORD 0");
+        }
     }
 
     private void Collect(IReadOnlyList<StatementSyntax> statements)
@@ -63,9 +90,17 @@ internal sealed class MasmEmitter
         {
             switch (statement)
             {
+                case ConstStatementSyntax constant:
+                    CollectExpression(constant.Expression);
+                    break;
                 case AssignmentStatementSyntax assignment:
-                    CollectExpression(assignment.Target.Index);
+                    foreach (var index in assignment.Target.Indices)
+                        CollectExpression(index);
                     CollectExpression(assignment.Expression);
+                    break;
+                case DimStatementSyntax dim:
+                    foreach (var size in dim.Sizes)
+                        CollectExpression(size);
                     break;
                 case PrintStatementSyntax print:
                     foreach (var item in print.Items)
@@ -92,9 +127,28 @@ internal sealed class MasmEmitter
                     _forLimits[forStatement] = $"for_limit_{_forLimits.Count}";
                     Collect(forStatement.Statements);
                     break;
-                case DoUntilStatementSyntax doUntil:
-                    Collect(doUntil.Statements);
-                    CollectExpression(doUntil.Condition);
+                case DoStatementSyntax doStatement:
+                    Collect(doStatement.Statements);
+                    CollectExpression(doStatement.UntilCondition);
+                    break;
+                case RoutineDeclarationSyntax routine:
+                    Collect(routine.Statements);
+                    break;
+                case CallStatementSyntax call:
+                    foreach (var argument in call.Arguments)
+                        CollectExpression(argument);
+                    break;
+                case ReturnStatementSyntax returnStatement:
+                    CollectExpression(returnStatement.Expression);
+                    break;
+                case SelectStatementSyntax select:
+                    CollectExpression(select.Expression);
+                    _selectValues[select] = $"select_value_{_selectValues.Count}";
+                    foreach (var clause in select.Cases)
+                    {
+                        CollectExpression(clause.Value);
+                        Collect(clause.Statements);
+                    }
                     break;
             }
         }
@@ -109,7 +163,8 @@ internal sealed class MasmEmitter
                     _textLiterals[literal] = new TextLiteral($"text_{_textLiterals.Count}", Encoding.UTF8.GetBytes(text));
                 break;
             case ArrayAccessExpressionSyntax array:
-                CollectExpression(array.Index);
+                foreach (var index in array.Indices)
+                    CollectExpression(index);
                 break;
             case ParenthesizedExpressionSyntax parenthesized:
                 CollectExpression(parenthesized.Expression);
@@ -121,14 +176,51 @@ internal sealed class MasmEmitter
                 CollectExpression(binary.Left);
                 CollectExpression(binary.Right);
                 break;
+            case CallExpressionSyntax call:
+                _usesTimer |= call.Identifier.Kind == SyntaxKind.TimerKeyword;
+                _usesGameClosed |= call.Identifier.Kind == SyntaxKind.GameClosedKeyword;
+                _usesKeyHeld |= call.Identifier.Kind == SyntaxKind.KeyHeldKeyword;
+                foreach (var argument in call.Arguments)
+                    CollectExpression(argument);
+                break;
         }
     }
 
-    private void AssignSymbolLabels()
+    private void AssignLabels()
     {
         var id = 0;
-        foreach (var pair in _analysis.SemanticModel.Symbols)
-            _symbolLabels[pair.Key] = (pair.Value.IsArray ? "array_" : "variable_") + id++;
+        foreach (var symbol in _analysis.SemanticModel.Symbols.Values)
+        {
+            if (!symbol.IsConstant)
+                _symbolLabels[symbol] = (symbol.IsArray ? "array_" : "variable_") + id++;
+        }
+        foreach (var routine in _analysis.SemanticModel.Routines.Values)
+        {
+            _routineLabels[routine.Name] = "routine_" + _routineLabels.Count;
+            foreach (var symbol in routine.LocalSymbols.Values)
+            {
+                if (!symbol.IsConstant)
+                    _symbolLabels[symbol] = (symbol.IsArray ? "local_array_" : "local_") + id++;
+            }
+        }
+    }
+
+    private void EmitRoutine(RoutineSymbol routine)
+    {
+        _currentRoutine = routine;
+        _returnLabel = NewLabel("routine_return");
+        Line();
+        Line($"{_routineLabels[routine.Name]} PROC");
+        Line("    sub rsp, 40");
+        EmitStatements(routine.Declaration.Statements);
+        if (!routine.IsFunction)
+            Line("    xor eax, eax");
+        Line($"{_returnLabel}:");
+        Line("    add rsp, 40");
+        Line("    ret");
+        Line($"{_routineLabels[routine.Name]} ENDP");
+        _returnLabel = null;
+        _currentRoutine = null;
     }
 
     private void EmitStatements(IReadOnlyList<StatementSyntax> statements)
@@ -141,10 +233,12 @@ internal sealed class MasmEmitter
     {
         switch (statement)
         {
+            case ConstStatementSyntax:
+            case DimStatementSyntax:
+            case RoutineDeclarationSyntax:
+                break;
             case AssignmentStatementSyntax assignment:
                 EmitAssignment(assignment);
-                break;
-            case DimStatementSyntax:
                 break;
             case PrintStatementSyntax print:
                 EmitPrint(print);
@@ -176,8 +270,28 @@ internal sealed class MasmEmitter
             case ForStatementSyntax forStatement:
                 EmitFor(forStatement);
                 break;
-            case DoUntilStatementSyntax doUntil:
-                EmitDoUntil(doUntil);
+            case DoStatementSyntax doStatement:
+                EmitDo(doStatement);
+                break;
+            case CallStatementSyntax call:
+                EmitRoutineCall(call.Identifier.Text, call.Arguments);
+                break;
+            case ReturnStatementSyntax returnStatement:
+                if (returnStatement.Expression != null)
+                    EmitExpression(returnStatement.Expression);
+                else
+                    Line("    xor eax, eax");
+                Line($"    jmp {_returnLabel}");
+                break;
+            case SelectStatementSyntax select:
+                EmitSelect(select);
+                break;
+            case ExitStatementSyntax exit:
+                Line($"    jmp {(exit.TargetKeyword.Kind == SyntaxKind.ForKeyword ? _forExitLabels.Peek() : _doExitLabels.Peek())}");
+                break;
+            case EndProgramStatementSyntax:
+                Line("    xor ecx, ecx");
+                Line("    call ExitProcess");
                 break;
         }
     }
@@ -190,13 +304,26 @@ internal sealed class MasmEmitter
             Line($"    mov QWORD PTR [{Label(assignment.Target.Identifier.Text)}], rax");
             return;
         }
-
         Line("    push rax");
-        EmitExpression(assignment.Target.Index!);
+        var symbol = Resolve(assignment.Target.Identifier.Text);
+        EmitArrayIndex(assignment.Target.Indices, symbol);
         Line("    mov rcx, rax");
         Line("    pop rax");
-        Line($"    lea rdx, {Label(assignment.Target.Identifier.Text)}");
+        Line($"    lea rdx, {_symbolLabels[symbol]}");
         Line("    mov QWORD PTR [rdx+rcx*8], rax");
+    }
+
+    private void EmitArrayIndex(IReadOnlyList<ExpressionSyntax> indices, VariableSymbol symbol)
+    {
+        EmitExpression(indices[0]);
+        if (indices.Count == 1)
+            return;
+        Line("    push rax");
+        EmitExpression(indices[1]);
+        Line("    mov rcx, rax");
+        Line("    pop rax");
+        Line($"    imul rax, {symbol.ArrayDimensions[1].ToString(CultureInfo.InvariantCulture)}");
+        Line("    add rax, rcx");
     }
 
     private void EmitPrint(PrintStatementSyntax print)
@@ -211,14 +338,12 @@ internal sealed class MasmEmitter
                 Line("    call smile_print_text");
                 continue;
             }
-
             EmitExpression(item);
             Line("    mov rcx, rax");
             Line(_analysis.SemanticModel.GetType(item) == SmileType.Boolean
                 ? "    call smile_print_boolean"
                 : "    call smile_print_number");
         }
-
         if (!print.SuppressNewLine)
             Line("    call smile_print_newline");
     }
@@ -246,7 +371,6 @@ internal sealed class MasmEmitter
         var endLabel = NewLabel("for_end");
         var counterLabel = Label(statement.Identifier.Text);
         var limitLabel = _forLimits[statement];
-
         EmitExpression(statement.LowerBound);
         Line($"    mov QWORD PTR [{counterLabel}], rax");
         EmitExpression(statement.UpperBound);
@@ -255,22 +379,60 @@ internal sealed class MasmEmitter
         Line($"    mov rax, QWORD PTR [{counterLabel}]");
         Line($"    cmp rax, QWORD PTR [{limitLabel}]");
         Line(statement.IsDescending ? $"    jl {endLabel}" : $"    jg {endLabel}");
+        _forExitLabels.Push(endLabel);
         EmitStatements(statement.Statements);
-        Line(statement.IsDescending
-            ? $"    dec QWORD PTR [{counterLabel}]"
-            : $"    inc QWORD PTR [{counterLabel}]");
+        _forExitLabels.Pop();
+        Line(statement.IsDescending ? $"    dec QWORD PTR [{counterLabel}]" : $"    inc QWORD PTR [{counterLabel}]");
         Line($"    jmp {startLabel}");
         Line($"{endLabel}:");
     }
 
-    private void EmitDoUntil(DoUntilStatementSyntax statement)
+    private void EmitDo(DoStatementSyntax statement)
     {
         var startLabel = NewLabel("do_start");
+        var endLabel = NewLabel("do_end");
         Line($"{startLabel}:");
+        _doExitLabels.Push(endLabel);
         EmitStatements(statement.Statements);
-        EmitExpression(statement.Condition);
-        Line("    cmp rax, 0");
-        Line($"    je {startLabel}");
+        _doExitLabels.Pop();
+        if (statement.UntilCondition == null)
+        {
+            Line($"    jmp {startLabel}");
+        }
+        else
+        {
+            EmitExpression(statement.UntilCondition);
+            Line("    cmp rax, 0");
+            Line($"    je {startLabel}");
+        }
+        Line($"{endLabel}:");
+    }
+
+    private void EmitSelect(SelectStatementSyntax statement)
+    {
+        var endLabel = NewLabel("select_end");
+        var valueLabel = _selectValues[statement];
+        EmitExpression(statement.Expression);
+        Line($"    mov QWORD PTR [{valueLabel}], rax");
+        SelectCaseClauseSyntax? elseClause = null;
+        foreach (var clause in statement.Cases)
+        {
+            if (clause.IsElse)
+            {
+                elseClause = clause;
+                continue;
+            }
+            var nextLabel = NewLabel("case_next");
+            EmitExpression(clause.Value!);
+            Line($"    cmp QWORD PTR [{valueLabel}], rax");
+            Line($"    jne {nextLabel}");
+            EmitStatements(clause.Statements);
+            Line($"    jmp {endLabel}");
+            Line($"{nextLabel}:");
+        }
+        if (elseClause != null)
+            EmitStatements(elseClause.Statements);
+        Line($"{endLabel}:");
     }
 
     private void EmitExpression(ExpressionSyntax expression)
@@ -284,11 +446,15 @@ internal sealed class MasmEmitter
                 Line($"    mov rax, {number.ToString(CultureInfo.InvariantCulture)}");
                 break;
             case NameExpressionSyntax name:
-                Line($"    mov rax, QWORD PTR [{Label(name.Identifier.Text)}]");
+                var symbol = Resolve(name.Identifier.Text);
+                Line(symbol.IsConstant
+                    ? $"    mov rax, {symbol.ConstantValue.ToString(CultureInfo.InvariantCulture)}"
+                    : $"    mov rax, QWORD PTR [{_symbolLabels[symbol]}]");
                 break;
             case ArrayAccessExpressionSyntax array:
-                EmitExpression(array.Index);
-                Line($"    lea rdx, {Label(array.Identifier.Text)}");
+                var arraySymbol = Resolve(array.Identifier.Text);
+                EmitArrayIndex(array.Indices, arraySymbol);
+                Line($"    lea rdx, {_symbolLabels[arraySymbol]}");
                 Line("    mov rax, QWORD PTR [rdx+rax*8]");
                 break;
             case ParenthesizedExpressionSyntax parenthesized:
@@ -301,10 +467,85 @@ internal sealed class MasmEmitter
             case BinaryExpressionSyntax binary:
                 EmitBinary(binary);
                 break;
+            case CallExpressionSyntax call:
+                EmitCallExpression(call);
+                break;
             default:
                 Line("    xor rax, rax");
                 break;
         }
+    }
+
+    private void EmitCallExpression(CallExpressionSyntax call)
+    {
+        switch (call.Identifier.Kind)
+        {
+            case SyntaxKind.AbsKeyword:
+                EmitExpression(call.Arguments[0]);
+                var positive = NewLabel("abs_positive");
+                Line("    cmp rax, 0");
+                Line($"    jge {positive}");
+                Line("    neg rax");
+                Line($"{positive}:");
+                break;
+            case SyntaxKind.MinKeyword:
+            case SyntaxKind.MaxKeyword:
+                EmitExpression(call.Arguments[0]);
+                Line("    push rax");
+                EmitExpression(call.Arguments[1]);
+                Line("    mov rcx, rax");
+                Line("    pop rax");
+                Line("    cmp rax, rcx");
+                Line(call.Identifier.Kind == SyntaxKind.MinKeyword ? "    cmovg rax, rcx" : "    cmovl rax, rcx");
+                break;
+            case SyntaxKind.RgbKeyword:
+                EmitExpression(call.Arguments[0]);
+                Line("    push rax");
+                EmitExpression(call.Arguments[1]);
+                Line("    push rax");
+                EmitExpression(call.Arguments[2]);
+                Line("    mov rdx, rax");
+                Line("    pop rcx");
+                Line("    pop rax");
+                Line("    and rax, 255");
+                Line("    and rcx, 255");
+                Line("    shl rcx, 8");
+                Line("    and rdx, 255");
+                Line("    shl rdx, 16");
+                Line("    or rax, rcx");
+                Line("    or rax, rdx");
+                break;
+            case SyntaxKind.TimerKeyword:
+                Line("    call smile_timer");
+                break;
+            case SyntaxKind.GameClosedKeyword:
+                Line("    call smile_game_closed");
+                break;
+            case SyntaxKind.KeyHeldKeyword:
+                EmitExpression(call.Arguments[0]);
+                Line("    mov rcx, rax");
+                Line("    call smile_key_held");
+                break;
+            default:
+                EmitRoutineCall(call.Identifier.Text, call.Arguments);
+                break;
+        }
+    }
+
+    private void EmitRoutineCall(string name, IReadOnlyList<ExpressionSyntax> arguments)
+    {
+        var routine = _analysis.SemanticModel.Routines[name];
+        foreach (var argument in arguments)
+        {
+            EmitExpression(argument);
+            Line("    push rax");
+        }
+        for (var index = arguments.Count - 1; index >= 0; index--)
+        {
+            Line("    pop rax");
+            Line($"    mov QWORD PTR [{_symbolLabels[routine.Parameters[index]]}], rax");
+        }
+        Line($"    call {_routineLabels[name]}");
     }
 
     private void EmitBinary(BinaryExpressionSyntax binary)
@@ -314,39 +555,28 @@ internal sealed class MasmEmitter
         EmitExpression(binary.Right);
         Line("    mov rcx, rax");
         Line("    pop rax");
-
         switch (binary.OperatorToken.Kind)
         {
-            case SyntaxKind.PlusToken:
-                Line("    add rax, rcx");
+            case SyntaxKind.PlusToken: Line("    add rax, rcx"); break;
+            case SyntaxKind.MinusToken: Line("    sub rax, rcx"); break;
+            case SyntaxKind.StarToken: Line("    imul rax, rcx"); break;
+            case SyntaxKind.SlashToken:
+                Line("    cqo");
+                Line("    idiv rcx");
                 break;
-            case SyntaxKind.MinusToken:
-                Line("    sub rax, rcx");
+            case SyntaxKind.ModKeyword:
+                Line("    cqo");
+                Line("    idiv rcx");
+                Line("    mov rax, rdx");
                 break;
-            case SyntaxKind.AndKeyword:
-                Line("    and rax, rcx");
-                break;
-            case SyntaxKind.OrKeyword:
-                Line("    or rax, rcx");
-                break;
-            case SyntaxKind.EqualsToken:
-                EmitComparison("sete");
-                break;
-            case SyntaxKind.NotEqualsToken:
-                EmitComparison("setne");
-                break;
-            case SyntaxKind.LessToken:
-                EmitComparison("setl");
-                break;
-            case SyntaxKind.GreaterToken:
-                EmitComparison("setg");
-                break;
-            case SyntaxKind.LessOrEqualsToken:
-                EmitComparison("setle");
-                break;
-            case SyntaxKind.GreaterOrEqualsToken:
-                EmitComparison("setge");
-                break;
+            case SyntaxKind.AndKeyword: Line("    and rax, rcx"); break;
+            case SyntaxKind.OrKeyword: Line("    or rax, rcx"); break;
+            case SyntaxKind.EqualsToken: EmitComparison("sete"); break;
+            case SyntaxKind.NotEqualsToken: EmitComparison("setne"); break;
+            case SyntaxKind.LessToken: EmitComparison("setl"); break;
+            case SyntaxKind.GreaterToken: EmitComparison("setg"); break;
+            case SyntaxKind.LessOrEqualsToken: EmitComparison("setle"); break;
+            case SyntaxKind.GreaterOrEqualsToken: EmitComparison("setge"); break;
         }
     }
 
@@ -357,16 +587,20 @@ internal sealed class MasmEmitter
         Line("    movzx rax, al");
     }
 
-    private string Label(string name) => _symbolLabels[name];
+    private VariableSymbol Resolve(string name)
+    {
+        if (_analysis.SemanticModel.TryResolveVariable(name, _currentRoutine?.Name, out var symbol))
+            return symbol;
+        throw new InvalidOperationException($"Unresolved symbol '{name}'.");
+    }
+
+    private string Label(string name) => _symbolLabels[Resolve(name)];
     private string NewLabel(string prefix) => prefix + "_" + _labelId++;
     private void Line(string text = "") => _builder.AppendLine(text);
 
-    private static string FormatBytes(byte[] bytes)
-    {
-        if (bytes.Length == 0)
-            return "0";
-        return string.Join(",", bytes.Select(value => $"0{value:X2}h"));
-    }
+    private static string FormatBytes(byte[] bytes) => bytes.Length == 0
+        ? "0"
+        : string.Join(",", bytes.Select(value => $"0{value:X2}h"));
 
     private sealed class TextLiteral
     {

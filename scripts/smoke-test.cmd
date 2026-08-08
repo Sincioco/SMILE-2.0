@@ -21,6 +21,37 @@ if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\games\LanguageBasics.exe"
 if errorlevel 1 exit /b %errorlevel%
 
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\StructuredLanguageBasics.smile" -o "%SMILE_ROOT%\artifacts\games\StructuredLanguageBasics.exe"
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\games\StructuredLanguageBasics.exe" > "%SMILE_ROOT%\artifacts\temp\StructuredLanguageBasics.out"
+if errorlevel 1 exit /b %errorlevel%
+for %%V in ("EVEN" "12" "40" "1" "2" "200" "5" "3" "2022440" "16744576") do (
+    findstr /x /c:%%V "%SMILE_ROOT%\artifacts\temp\StructuredLanguageBasics.out" >nul
+    if errorlevel 1 (
+        echo Structured language smoke test failed: missing %%V.
+        exit /b 1
+    )
+)
+echo Structured language smoke test passed.
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\diagnostics\InvalidStructuredLanguage.smile" > "%SMILE_ROOT%\artifacts\temp\InvalidStructuredLanguage.log" 2>&1
+if not errorlevel 1 (
+    echo Invalid structured language smoke test failed: compilation unexpectedly succeeded.
+    exit /b 1
+)
+if errorlevel 2 (
+    echo Invalid structured language smoke test failed: compiler returned infrastructure error.
+    exit /b 1
+)
+for %%C in (SML3012 SML3006 SML3017 SML3016 SML3018 SML3019 SML3021) do (
+    findstr /c:"%%C" "%SMILE_ROOT%\artifacts\temp\InvalidStructuredLanguage.log" >nul
+    if errorlevel 1 (
+        echo Invalid structured language smoke test failed: missing %%C.
+        exit /b 1
+    )
+)
+echo Invalid structured language diagnostics passed.
+
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\RuntimeBasics.smile" -o "%SMILE_ROOT%\artifacts\games\RuntimeBasics.exe"
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\games\RuntimeBasics.exe"

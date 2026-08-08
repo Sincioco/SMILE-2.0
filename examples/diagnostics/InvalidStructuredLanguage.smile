@@ -1,0 +1,23 @@
+CONST Locked = 1
+Locked = 2
+
+DIM Broken[0, 4]
+
+SUB NeedsTwo(First, Second)
+END SUB
+
+FUNCTION MissingReturn(Value)
+    Value = Value + 1
+END FUNCTION
+
+CALL NeedsTwo(1)
+EXIT FOR
+
+SELECT CASE Locked
+    CASE 1
+        PRINT "ONE"
+    CASE 1
+        PRINT "DUPLICATE"
+END SELECT
+
+Result = UNKNOWN_BUILTIN(1)

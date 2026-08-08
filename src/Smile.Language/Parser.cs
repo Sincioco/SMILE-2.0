@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Smile.Language;
@@ -14,7 +15,6 @@ internal sealed class Parser
         _allTokens = tokens;
         _diagnostics = new DiagnosticBag(source);
         _diagnostics.AddRange(lexerDiagnostics);
-
         foreach (var token in tokens)
         {
             if (token.Kind != SyntaxKind.CommentToken && token.Kind != SyntaxKind.BadToken)
@@ -28,14 +28,13 @@ internal sealed class Parser
     public CompilationUnitSyntax ParseCompilationUnit()
     {
         var statements = ParseStatementsUntil();
-        var endOfFile = MatchToken(SyntaxKind.EndOfFileToken);
-        return new CompilationUnitSyntax(statements, endOfFile);
+        return new CompilationUnitSyntax(statements, MatchToken(SyntaxKind.EndOfFileToken));
     }
 
-    private IReadOnlyList<StatementSyntax> ParseStatementsUntil(params SyntaxKind[] boundaries)
+    private IReadOnlyList<StatementSyntax> ParseStatementsUntil(Func<bool>? isBoundary = null)
     {
         var statements = new List<StatementSyntax>();
-        while (Current.Kind != SyntaxKind.EndOfFileToken && !IsBoundary(Current.Kind, boundaries))
+        while (Current.Kind != SyntaxKind.EndOfFileToken && !(isBoundary?.Invoke() ?? false))
         {
             if (Current.Kind == SyntaxKind.NewLineToken)
             {
@@ -47,11 +46,9 @@ internal sealed class Parser
             var statement = ParseStatement();
             if (statement != null)
                 statements.Add(statement);
-
             if (_position == start)
                 NextToken();
         }
-
         return statements;
     }
 
@@ -59,27 +56,25 @@ internal sealed class Parser
     {
         switch (Current.Kind)
         {
-            case SyntaxKind.DimKeyword:
-                return ParseDimStatement();
-            case SyntaxKind.IfKeyword:
-                return ParseIfStatement();
-            case SyntaxKind.ForKeyword:
-                return ParseForStatement();
-            case SyntaxKind.DoKeyword:
-                return ParseDoUntilStatement();
-            case SyntaxKind.PrintKeyword:
-                return ParsePrintStatement();
-            case SyntaxKind.GetKeyword:
-                return ParseGetKeyStatement();
-            case SyntaxKind.ClearKeyword:
-                return ParseClearScreenStatement();
-            case SyntaxKind.WaitKeyword:
-                return ParseWaitStatement();
-            case SyntaxKind.RandomKeyword:
-                return ParseRandomStatement();
+            case SyntaxKind.ConstKeyword: return ParseConstStatement();
+            case SyntaxKind.DimKeyword: return ParseDimStatement();
+            case SyntaxKind.IfKeyword: return ParseIfStatement();
+            case SyntaxKind.ForKeyword: return ParseForStatement();
+            case SyntaxKind.DoKeyword: return ParseDoStatement();
+            case SyntaxKind.PrintKeyword: return ParsePrintStatement();
+            case SyntaxKind.GetKeyword: return ParseGetKeyStatement();
+            case SyntaxKind.ClearKeyword: return ParseClearScreenStatement();
+            case SyntaxKind.WaitKeyword: return ParseWaitStatement();
+            case SyntaxKind.RandomKeyword: return ParseRandomStatement();
+            case SyntaxKind.SubKeyword:
+            case SyntaxKind.FunctionKeyword: return ParseRoutineDeclaration();
+            case SyntaxKind.CallKeyword: return ParseCallStatement();
+            case SyntaxKind.ReturnKeyword: return ParseReturnStatement();
+            case SyntaxKind.SelectKeyword: return ParseSelectStatement();
+            case SyntaxKind.ExitKeyword: return ParseExitStatement();
+            case SyntaxKind.EndKeyword when Peek(1).Kind == SyntaxKind.ProgramKeyword: return ParseEndProgramStatement();
             case SyntaxKind.IdentifierToken:
-            case SyntaxKind.KeyKeyword:
-                return ParseAssignmentStatement();
+            case SyntaxKind.KeyKeyword: return ParseAssignmentStatement();
             default:
                 _diagnostics.Report("SML2002", Current.Span, $"Unexpected token '{Display(Current)}' at the start of a statement.");
                 SynchronizeLine();
@@ -87,31 +82,41 @@ internal sealed class Parser
         }
     }
 
+    private ConstStatementSyntax ParseConstStatement()
+    {
+        var keyword = MatchToken(SyntaxKind.ConstKeyword);
+        var identifier = MatchIdentifier();
+        var equals = MatchToken(SyntaxKind.EqualsToken);
+        var expression = ParseExpression();
+        ConsumeLineEnd();
+        return new ConstStatementSyntax(keyword, identifier, equals, expression);
+    }
+
     private DimStatementSyntax ParseDimStatement()
     {
-        var dim = MatchToken(SyntaxKind.DimKeyword);
+        var keyword = MatchToken(SyntaxKind.DimKeyword);
         var identifier = MatchIdentifier();
         var open = MatchToken(SyntaxKind.OpenBracketToken);
-        var size = MatchToken(SyntaxKind.NumberToken);
+        var sizes = ParseExpressionList(SyntaxKind.CloseBracketToken);
         var close = MatchToken(SyntaxKind.CloseBracketToken);
         ConsumeLineEnd();
-        return new DimStatementSyntax(dim, identifier, open, size, close);
+        return new DimStatementSyntax(keyword, identifier, open, sizes, close);
     }
 
     private AssignmentStatementSyntax ParseAssignmentStatement()
     {
         var identifier = MatchIdentifier();
         SyntaxToken? open = null;
-        ExpressionSyntax? index = null;
         SyntaxToken? close = null;
+        IReadOnlyList<ExpressionSyntax> indices = Array.Empty<ExpressionSyntax>();
         if (Current.Kind == SyntaxKind.OpenBracketToken)
         {
             open = NextToken();
-            index = ParseExpression();
+            indices = ParseExpressionList(SyntaxKind.CloseBracketToken);
             close = MatchToken(SyntaxKind.CloseBracketToken);
         }
 
-        var target = new AssignmentTargetSyntax(identifier, open, index, close);
+        var target = new AssignmentTargetSyntax(identifier, open, indices, close);
         var equals = MatchToken(SyntaxKind.EqualsToken);
         var expression = ParseExpression();
         ConsumeLineEnd();
@@ -124,7 +129,6 @@ internal sealed class Parser
         var items = new List<ExpressionSyntax>();
         var suppressNewLine = false;
         var end = print.Span.End;
-
         if (!IsLineEnd(Current.Kind))
         {
             while (true)
@@ -132,10 +136,8 @@ internal sealed class Parser
                 var item = ParseExpression();
                 items.Add(item);
                 end = item.Span.End;
-
                 if (Current.Kind != SyntaxKind.SemicolonToken)
                     break;
-
                 var semicolon = NextToken();
                 end = semicolon.Span.End;
                 if (IsLineEnd(Current.Kind))
@@ -145,7 +147,6 @@ internal sealed class Parser
                 }
             }
         }
-
         ConsumeLineEnd();
         return new PrintStatementSyntax(print, items, suppressNewLine, end);
     }
@@ -190,16 +191,15 @@ internal sealed class Parser
 
     private IfStatementSyntax ParseIfStatement()
     {
-        var ifKeyword = MatchToken(SyntaxKind.IfKeyword);
+        var keyword = MatchToken(SyntaxKind.IfKeyword);
         var clauses = new List<IfClauseSyntax>();
-
         var condition = ParseExpression();
         MatchToken(SyntaxKind.ThenKeyword);
         ConsumeLineEnd();
-        var statements = ParseStatementsUntil(SyntaxKind.ElseKeyword, SyntaxKind.EndKeyword);
+        var statements = ParseStatementsUntil(() => Current.Kind == SyntaxKind.ElseKeyword || IsEndPair(SyntaxKind.IfKeyword));
         clauses.Add(new IfClauseSyntax(condition, statements));
 
-        var elseStatements = (IReadOnlyList<StatementSyntax>)new List<StatementSyntax>();
+        IReadOnlyList<StatementSyntax> elseStatements = Array.Empty<StatementSyntax>();
         while (Current.Kind == SyntaxKind.ElseKeyword && Peek(1).Kind == SyntaxKind.IfKeyword)
         {
             NextToken();
@@ -207,7 +207,7 @@ internal sealed class Parser
             condition = ParseExpression();
             MatchToken(SyntaxKind.ThenKeyword);
             ConsumeLineEnd();
-            statements = ParseStatementsUntil(SyntaxKind.ElseKeyword, SyntaxKind.EndKeyword);
+            statements = ParseStatementsUntil(() => Current.Kind == SyntaxKind.ElseKeyword || IsEndPair(SyntaxKind.IfKeyword));
             clauses.Add(new IfClauseSyntax(condition, statements));
         }
 
@@ -215,18 +215,18 @@ internal sealed class Parser
         {
             NextToken();
             ConsumeLineEnd();
-            elseStatements = ParseStatementsUntil(SyntaxKind.EndKeyword);
+            elseStatements = ParseStatementsUntil(() => IsEndPair(SyntaxKind.IfKeyword));
         }
 
-        var endKeyword = MatchToken(SyntaxKind.EndKeyword);
+        var end = MatchToken(SyntaxKind.EndKeyword);
         var finalIf = MatchToken(SyntaxKind.IfKeyword);
         ConsumeLineEnd();
-        return new IfStatementSyntax(ifKeyword, clauses, elseStatements, endKeyword, finalIf);
+        return new IfStatementSyntax(keyword, clauses, elseStatements, end, finalIf);
     }
 
     private ForStatementSyntax ParseForStatement()
     {
-        var forKeyword = MatchToken(SyntaxKind.ForKeyword);
+        var keyword = MatchToken(SyntaxKind.ForKeyword);
         var identifier = MatchIdentifier();
         MatchToken(SyntaxKind.EqualsToken);
         var lower = ParseExpression();
@@ -236,27 +236,138 @@ internal sealed class Parser
             descending = true;
             NextToken();
         }
-
         MatchToken(SyntaxKind.ToKeyword);
         var upper = ParseExpression();
         ConsumeLineEnd();
-        var statements = ParseStatementsUntil(SyntaxKind.EndKeyword);
+        var statements = ParseStatementsUntil(() => IsEndPair(SyntaxKind.ForKeyword));
         MatchToken(SyntaxKind.EndKeyword);
         var finalFor = MatchToken(SyntaxKind.ForKeyword);
         ConsumeLineEnd();
-        return new ForStatementSyntax(forKeyword, identifier, lower, descending, upper, statements, finalFor);
+        return new ForStatementSyntax(keyword, identifier, lower, descending, upper, statements, finalFor);
     }
 
-    private DoUntilStatementSyntax ParseDoUntilStatement()
+    private DoStatementSyntax ParseDoStatement()
     {
-        var doKeyword = MatchToken(SyntaxKind.DoKeyword);
+        var keyword = MatchToken(SyntaxKind.DoKeyword);
         ConsumeLineEnd();
-        var statements = ParseStatementsUntil(SyntaxKind.LoopKeyword);
-        MatchToken(SyntaxKind.LoopKeyword);
-        MatchToken(SyntaxKind.UntilKeyword);
-        var condition = ParseExpression();
+        var statements = ParseStatementsUntil(() => Current.Kind == SyntaxKind.LoopKeyword);
+        var loop = MatchToken(SyntaxKind.LoopKeyword);
+        ExpressionSyntax? condition = null;
+        if (Current.Kind == SyntaxKind.UntilKeyword)
+        {
+            NextToken();
+            condition = ParseExpression();
+        }
         ConsumeLineEnd();
-        return new DoUntilStatementSyntax(doKeyword, statements, condition);
+        return new DoStatementSyntax(keyword, statements, loop, condition);
+    }
+
+    private RoutineDeclarationSyntax ParseRoutineDeclaration()
+    {
+        var keyword = NextToken();
+        var identifier = MatchIdentifier();
+        var parameters = new List<SyntaxToken>();
+        if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+        {
+            NextToken();
+            if (Current.Kind != SyntaxKind.CloseParenthesisToken)
+            {
+                while (true)
+                {
+                    parameters.Add(MatchIdentifier());
+                    if (Current.Kind != SyntaxKind.CommaToken)
+                        break;
+                    NextToken();
+                }
+            }
+            MatchToken(SyntaxKind.CloseParenthesisToken);
+        }
+        ConsumeLineEnd();
+        var statements = ParseStatementsUntil(() => IsEndPair(keyword.Kind));
+        var end = MatchToken(SyntaxKind.EndKeyword);
+        var final = MatchToken(keyword.Kind);
+        ConsumeLineEnd();
+        return new RoutineDeclarationSyntax(keyword, identifier, parameters, statements, end, final);
+    }
+
+    private CallStatementSyntax ParseCallStatement()
+    {
+        var call = MatchToken(SyntaxKind.CallKeyword);
+        var identifier = MatchIdentifier();
+        MatchToken(SyntaxKind.OpenParenthesisToken);
+        var arguments = ParseExpressionList(SyntaxKind.CloseParenthesisToken);
+        var close = MatchToken(SyntaxKind.CloseParenthesisToken);
+        ConsumeLineEnd();
+        return new CallStatementSyntax(call, identifier, arguments, close);
+    }
+
+    private ReturnStatementSyntax ParseReturnStatement()
+    {
+        var keyword = MatchToken(SyntaxKind.ReturnKeyword);
+        var expression = IsLineEnd(Current.Kind) ? null : ParseExpression();
+        ConsumeLineEnd();
+        return new ReturnStatementSyntax(keyword, expression);
+    }
+
+    private SelectStatementSyntax ParseSelectStatement()
+    {
+        var select = MatchToken(SyntaxKind.SelectKeyword);
+        MatchToken(SyntaxKind.CaseKeyword);
+        var expression = ParseExpression();
+        ConsumeLineEnd();
+        var cases = new List<SelectCaseClauseSyntax>();
+        while (Current.Kind == SyntaxKind.CaseKeyword)
+        {
+            var caseKeyword = NextToken();
+            var isElse = Current.Kind == SyntaxKind.ElseKeyword;
+            ExpressionSyntax? value = null;
+            if (isElse)
+                NextToken();
+            else
+                value = ParseExpression();
+            ConsumeLineEnd();
+            var statements = ParseStatementsUntil(() => Current.Kind == SyntaxKind.CaseKeyword || IsEndPair(SyntaxKind.SelectKeyword));
+            cases.Add(new SelectCaseClauseSyntax(caseKeyword, value, isElse, statements));
+        }
+        var end = MatchToken(SyntaxKind.EndKeyword);
+        var finalSelect = MatchToken(SyntaxKind.SelectKeyword);
+        ConsumeLineEnd();
+        return new SelectStatementSyntax(select, expression, cases, end, finalSelect);
+    }
+
+    private ExitStatementSyntax ParseExitStatement()
+    {
+        var exit = MatchToken(SyntaxKind.ExitKeyword);
+        SyntaxToken target;
+        if (Current.Kind == SyntaxKind.ForKeyword || Current.Kind == SyntaxKind.DoKeyword)
+            target = NextToken();
+        else
+            target = MatchToken(SyntaxKind.DoKeyword);
+        ConsumeLineEnd();
+        return new ExitStatementSyntax(exit, target);
+    }
+
+    private EndProgramStatementSyntax ParseEndProgramStatement()
+    {
+        var end = MatchToken(SyntaxKind.EndKeyword);
+        var program = MatchToken(SyntaxKind.ProgramKeyword);
+        ConsumeLineEnd();
+        return new EndProgramStatementSyntax(end, program);
+    }
+
+    private IReadOnlyList<ExpressionSyntax> ParseExpressionList(SyntaxKind closingKind)
+    {
+        var expressions = new List<ExpressionSyntax>();
+        if (Current.Kind == closingKind)
+            return expressions;
+        while (true)
+        {
+            expressions.Add(ParseExpression());
+            if (Current.Kind != SyntaxKind.CommaToken)
+                break;
+            NextToken();
+        }
+        return expressions;
     }
 
     private ExpressionSyntax ParseExpression(int parentPrecedence = 0)
@@ -266,8 +377,7 @@ internal sealed class Parser
         if (unaryPrecedence != 0 && unaryPrecedence >= parentPrecedence)
         {
             var operatorToken = NextToken();
-            var operand = ParseExpression(unaryPrecedence);
-            left = new UnaryExpressionSyntax(operatorToken, operand);
+            left = new UnaryExpressionSyntax(operatorToken, ParseExpression(unaryPrecedence));
         }
         else
         {
@@ -279,12 +389,9 @@ internal sealed class Parser
             var precedence = SyntaxFacts.GetBinaryPrecedence(Current.Kind);
             if (precedence == 0 || precedence <= parentPrecedence)
                 break;
-
             var operatorToken = NextToken();
-            var right = ParseExpression(precedence);
-            left = new BinaryExpressionSyntax(left, operatorToken, right);
+            left = new BinaryExpressionSyntax(left, operatorToken, ParseExpression(precedence));
         }
-
         return left;
     }
 
@@ -294,51 +401,50 @@ internal sealed class Parser
         {
             var open = NextToken();
             var expression = ParseExpression();
-            var close = MatchToken(SyntaxKind.CloseParenthesisToken);
-            return new ParenthesizedExpressionSyntax(open, expression, close);
+            return new ParenthesizedExpressionSyntax(open, expression, MatchToken(SyntaxKind.CloseParenthesisToken));
         }
-
         if (Current.Kind == SyntaxKind.TrueKeyword || Current.Kind == SyntaxKind.FalseKeyword)
         {
             var token = NextToken();
             return new LiteralExpressionSyntax(token, token.Kind == SyntaxKind.TrueKeyword);
         }
-
         if (SyntaxFacts.IsBuiltInConstant(Current.Kind))
         {
             var token = NextToken();
             return new LiteralExpressionSyntax(token, SyntaxFacts.GetBuiltInConstantValue(token.Kind));
         }
-
         if (Current.Kind == SyntaxKind.NumberToken)
         {
             var token = NextToken();
             return new LiteralExpressionSyntax(token, token.Value ?? 0L);
         }
-
         if (Current.Kind == SyntaxKind.StringToken)
         {
             var token = NextToken();
             return new LiteralExpressionSyntax(token, token.Value ?? string.Empty);
         }
-
-        if (Current.Kind == SyntaxKind.IdentifierToken || Current.Kind == SyntaxKind.KeyKeyword)
+        if (Current.Kind == SyntaxKind.IdentifierToken || Current.Kind == SyntaxKind.KeyKeyword || SyntaxFacts.IsBuiltInFunction(Current.Kind))
         {
             var identifier = NextToken();
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                NextToken();
+                var arguments = ParseExpressionList(SyntaxKind.CloseParenthesisToken);
+                return new CallExpressionSyntax(identifier, arguments, MatchToken(SyntaxKind.CloseParenthesisToken));
+            }
             if (Current.Kind == SyntaxKind.OpenBracketToken)
             {
                 NextToken();
-                var index = ParseExpression();
-                var close = MatchToken(SyntaxKind.CloseBracketToken);
-                return new ArrayAccessExpressionSyntax(identifier, index, close);
+                var indices = ParseExpressionList(SyntaxKind.CloseBracketToken);
+                return new ArrayAccessExpressionSyntax(identifier, indices, MatchToken(SyntaxKind.CloseBracketToken));
             }
-
             return new NameExpressionSyntax(identifier);
         }
-
         var missing = MatchToken(SyntaxKind.NumberToken);
         return new LiteralExpressionSyntax(missing, 0L);
     }
+
+    private bool IsEndPair(SyntaxKind finalKind) => Current.Kind == SyntaxKind.EndKeyword && Peek(1).Kind == finalKind;
 
     private void ConsumeLineEnd()
     {
@@ -347,10 +453,8 @@ internal sealed class Parser
             NextToken();
             return;
         }
-
         if (Current.Kind == SyntaxKind.EndOfFileToken)
             return;
-
         _diagnostics.Report("SML2001", Current.Span, $"Expected newline, found '{Display(Current)}'.");
         SynchronizeLine();
     }
@@ -374,7 +478,6 @@ internal sealed class Parser
     {
         if (Current.Kind == kind)
             return NextToken();
-
         _diagnostics.Report("SML2001", Current.Span, $"Expected {SyntaxFacts.GetText(kind)}, found '{Display(Current)}'.");
         return new SyntaxToken(kind, Current.Position, string.Empty);
     }
@@ -393,17 +496,6 @@ internal sealed class Parser
     }
 
     private SyntaxToken Current => Peek(0);
-
-    private static bool IsBoundary(SyntaxKind kind, SyntaxKind[] boundaries)
-    {
-        foreach (var boundary in boundaries)
-        {
-            if (kind == boundary)
-                return true;
-        }
-        return false;
-    }
-
     private static bool IsLineEnd(SyntaxKind kind) => kind == SyntaxKind.NewLineToken || kind == SyntaxKind.EndOfFileToken;
     private static string Display(SyntaxToken token) => token.Kind switch
     {

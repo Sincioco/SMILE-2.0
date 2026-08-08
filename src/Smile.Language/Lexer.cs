@@ -98,6 +98,15 @@ internal sealed class Lexer
             case '-':
                 _position++;
                 return Token(SyntaxKind.MinusToken, start);
+            case '*':
+                _position++;
+                return Token(SyntaxKind.StarToken, start);
+            case '/':
+                _position++;
+                return Token(SyntaxKind.SlashToken, start);
+            case ',':
+                _position++;
+                return Token(SyntaxKind.CommaToken, start);
             case '=':
                 _position++;
                 return Token(SyntaxKind.EqualsToken, start);
