@@ -24,6 +24,12 @@
       <Private>true</Private>
       <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup</IncludeOutputGroupsInVSIX>
     </ProjectReference>
+    <ProjectReference Include="Templates\Smile.ProjectTemplates.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <IncludeOutputGroupsInVSIX>TemplateProjectOutputGroup</IncludeOutputGroupsInVSIX>
+      <VSIXSubPath>ProjectTemplates</VSIXSubPath>
+      <GlobalPropertiesToRemove>DeployExtension;VSSDKTargetPlatformRegRootSuffix</GlobalPropertiesToRemove>
+    </ProjectReference>
   </ItemGroup>
 
   <ItemGroup>

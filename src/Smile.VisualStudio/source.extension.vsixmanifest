@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
-    <Identity Id="Smile.VisualStudio.2.0" Version="1.0.0" Language="en-US" Publisher="Sin" />
+    <Identity Id="Smile.VisualStudio.2.0" Version="2.0.0" Language="en-US" Publisher="Sin" />
     <DisplayName>SMILE 2.0 Language Support</DisplayName>
-    <Description xml:space="preserve">Shared-parser syntax highlighting, diagnostics, and native compilation for SMILE 2.0.</Description>
+    <Description xml:space="preserve">SMILE 2.0 language services, native compiler, project system, and console/game project templates for Visual Studio 2026.</Description>
   </Metadata>
   <Installation>
     <InstallationTarget Id="Microsoft.VisualStudio.Enterprise" Version="[17.0,)">
@@ -17,5 +17,6 @@
   <Assets>
     <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%|" />
     <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
+    <Asset Type="Microsoft.VisualStudio.ProjectTemplate" d:Source="File" Path="ProjectTemplates" />
   </Assets>
 </PackageManifest>

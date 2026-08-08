@@ -13,6 +13,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Smile.NativeRuntime", "src\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Smile.VisualStudio", "src\Smile.VisualStudio\Smile.VisualStudio.csproj", "{294757EE-25DD-4181-BECA-C6E1F90684DD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Smile.ProjectTemplates", "src\Smile.VisualStudio\Templates\Smile.ProjectTemplates.csproj", "{9D73ECDF-04AF-46EA-BAE1-4800461A5CB2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,6 +71,18 @@ Global
 		{294757EE-25DD-4181-BECA-C6E1F90684DD}.Release|x64.Build.0 = Release|Any CPU
 		{294757EE-25DD-4181-BECA-C6E1F90684DD}.Release|x86.ActiveCfg = Release|Any CPU
 		{294757EE-25DD-4181-BECA-C6E1F90684DD}.Release|x86.Build.0 = Release|Any CPU
+		{9D73ECDF-04AF-46EA-BAE1-4800461A5CB2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9D73ECDF-04AF-46EA-BAE1-4800461A5CB2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9D73ECDF-04AF-46EA-BAE1-4800461A5CB2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9D73ECDF-04AF-46EA-BAE1-4800461A5CB2}.Debug|x64.Build.0 = Debug|Any CPU
+		{9D73ECDF-04AF-46EA-BAE1-4800461A5CB2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9D73ECDF-04AF-46EA-BAE1-4800461A5CB2}.Debug|x86.Build.0 = Debug|Any CPU
+		{9D73ECDF-04AF-46EA-BAE1-4800461A5CB2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9D73ECDF-04AF-46EA-BAE1-4800461A5CB2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9D73ECDF-04AF-46EA-BAE1-4800461A5CB2}.Release|x64.ActiveCfg = Release|Any CPU
+		{9D73ECDF-04AF-46EA-BAE1-4800461A5CB2}.Release|x64.Build.0 = Release|Any CPU
+		{9D73ECDF-04AF-46EA-BAE1-4800461A5CB2}.Release|x86.ActiveCfg = Release|Any CPU
+		{9D73ECDF-04AF-46EA-BAE1-4800461A5CB2}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -78,5 +92,6 @@ Global
 		{1EB046D2-A02C-4D0B-A7A1-15359C4DC625} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{B5C87054-853F-4AD2-9A57-9A69A11C9B51} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{294757EE-25DD-4181-BECA-C6E1F90684DD} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{9D73ECDF-04AF-46EA-BAE1-4800461A5CB2} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

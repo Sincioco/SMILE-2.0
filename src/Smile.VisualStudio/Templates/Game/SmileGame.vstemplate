@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<VSTemplate Version="3.0.0" Type="Project" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005">
+  <TemplateData>
+    <Name>SMILE 2.0 Game Application</Name>
+    <Description>A graphical native Windows x64 game written in SMILE 2.0.</Description>
+    <ProjectType>Smile</ProjectType>
+    <LanguageTag>SMILE</LanguageTag>
+    <PlatformTag>Windows</PlatformTag>
+    <ProjectTypeTag>Games</ProjectTypeTag>
+    <SortOrder>110</SortOrder>
+    <DefaultName>SmileGame</DefaultName>
+    <CreateNewFolder>true</CreateNewFolder>
+    <ProvideDefaultName>true</ProvideDefaultName>
+  </TemplateData>
+  <TemplateContent>
+    <Project File="SmileGame.smileproj" ReplaceParameters="true">
+      <ProjectItem ReplaceParameters="true" TargetFileName="Program.smile">Program.smile</ProjectItem>
+    </Project>
+  </TemplateContent>
+</VSTemplate>

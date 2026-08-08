@@ -11,6 +11,9 @@ namespace Smile.VisualStudio;
 [ProvideMenuResource("Menus.ctmenu", 1)]
 [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string, PackageAutoLoadFlags.BackgroundLoad)]
 [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExists_string, PackageAutoLoadFlags.BackgroundLoad)]
+[ProvideProjectFactory(typeof(SmileProjectFactory), "SMILE 2.0", "SMILE Project Files (*.smileproj);*.smileproj",
+    "smileproj", "smileproj", "LegacyProjectTemplates", LanguageVsTemplate = "Smile",
+    NewProjectRequireNewFolderVsTemplate = true)]
 [Guid(PackageGuidString)]
 public sealed class SmilePackage : AsyncPackage
 {
@@ -18,6 +21,9 @@ public sealed class SmilePackage : AsyncPackage
 
     protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
     {
+        await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+        SmileBuildService.Initialize(this);
+        RegisterProjectFactory(new SmileProjectFactory(this));
         await BuildSmileFileCommand.InitializeAsync(this);
     }
 }

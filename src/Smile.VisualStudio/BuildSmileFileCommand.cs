@@ -1,9 +1,6 @@
 using System;
 using System.ComponentModel.Design;
-using System.Diagnostics;
 using System.IO;
-using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 using EnvDTE;
 using EnvDTE80;
@@ -17,8 +14,6 @@ internal sealed class BuildSmileFileCommand
 {
     private const int CommandId = 0x0100;
     private static readonly Guid CommandSet = new("c2d95dd7-3995-4f84-a78b-e67e88c5a31f");
-    private static readonly Guid OutputPaneGuid = new("9315bdd2-9105-4c2b-82c1-5d28bdf89588");
-
     private readonly AsyncPackage _package;
 
     private BuildSmileFileCommand(AsyncPackage package, OleMenuCommandService commandService)
@@ -57,7 +52,7 @@ internal sealed class BuildSmileFileCommand
 
         var sourcePath = document.FullName;
         document.Save();
-        var compilerPath = FindCompiler(sourcePath);
+        var compilerPath = SmileBuildService.FindCompiler(sourcePath);
         if (compilerPath == null)
         {
             pane.OutputStringThreadSafe("smilec.exe was not found in the extension or repository artifacts.\r\n");
@@ -65,79 +60,17 @@ internal sealed class BuildSmileFileCommand
         }
 
         pane.OutputStringThreadSafe($"> \"{compilerPath}\" \"{sourcePath}\"\r\n");
-        var result = await RunCompilerAsync(compilerPath, sourcePath);
+        var result = await SmileBuildService.RunAsync(compilerPath, sourcePath, null);
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         if (!string.IsNullOrEmpty(result.Output))
-            pane.OutputStringThreadSafe(result.Output.Replace("\n", "\r\n"));
+            pane.OutputStringThreadSafe(SmileBuildService.NormalizeOutput(result.Output));
+        SmileBuildService.ReportDiagnostics(result.Output);
         pane.OutputStringThreadSafe($"smilec exit code: {result.ExitCode}\r\n");
     }
 
     private async Task<IVsOutputWindowPane> GetOutputPaneAsync()
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-        var service = await _package.GetServiceAsync(typeof(SVsOutputWindow));
-        if (service is not IVsOutputWindow outputWindow)
-            throw new InvalidOperationException("Visual Studio Output window service is unavailable.");
-        var paneGuid = OutputPaneGuid;
-        outputWindow.CreatePane(ref paneGuid, "SMILE 2.0", 1, 1);
-        outputWindow.GetPane(ref paneGuid, out var pane);
-        return pane ?? throw new InvalidOperationException("Could not create the SMILE 2.0 Output pane.");
-    }
-
-    private static string? FindCompiler(string sourcePath)
-    {
-        var extensionDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
-        var bundled = Path.Combine(extensionDirectory, "Compiler", "smilec.exe");
-        if (File.Exists(bundled))
-            return bundled;
-
-        var directory = new DirectoryInfo(Path.GetDirectoryName(sourcePath)!);
-        while (directory != null)
-        {
-            var candidate = Path.Combine(directory.FullName, "artifacts", "compiler", "smilec.exe");
-            if (File.Exists(candidate))
-                return candidate;
-            directory = directory.Parent;
-        }
-
-        return null;
-    }
-
-    private static async Task<CompilerResult> RunCompilerAsync(string compilerPath, string sourcePath)
-    {
-        var startInfo = new ProcessStartInfo(compilerPath)
-        {
-            Arguments = Quote(sourcePath),
-            WorkingDirectory = Path.GetDirectoryName(sourcePath),
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        };
-
-        using var process = System.Diagnostics.Process.Start(startInfo);
-        if (process == null)
-            return new CompilerResult(2, "Could not start smilec.exe.\n");
-
-        var standardOutput = process.StandardOutput.ReadToEndAsync();
-        var standardError = process.StandardError.ReadToEndAsync();
-        await Task.Run(() => process.WaitForExit()).ConfigureAwait(false);
-        var output = new StringBuilder();
-        output.Append(await standardOutput.ConfigureAwait(false));
-        output.Append(await standardError.ConfigureAwait(false));
-        return new CompilerResult(process.ExitCode, output.ToString());
-    }
-
-    private static string Quote(string value) => "\"" + value + "\"";
-
-    private sealed class CompilerResult
-    {
-        public CompilerResult(int exitCode, string output)
-        {
-            ExitCode = exitCode;
-            Output = output;
-        }
-
-        public int ExitCode { get; }
-        public string Output { get; }
+        return SmileBuildService.GetOutputPane();
     }
 }
