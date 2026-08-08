@@ -35,6 +35,7 @@ static int smile_key_head;
 static int smile_key_tail;
 static int smile_fullscreen;
 static DWORD smile_windowed_style;
+static DWORD smile_windowed_ex_style;
 static WINDOWPLACEMENT smile_windowed_placement = { sizeof(WINDOWPLACEMENT) };
 static const WCHAR smile_window_class[] = L"SMILE20GameWindow";
 
@@ -526,28 +527,37 @@ long long smile_game_closed(void)
 static void smile_toggle_fullscreen(void)
 {
     MONITORINFO monitor;
+    DWORD fullscreen_style;
+    DWORD fullscreen_ex_style;
     if (smile_window == 0)
         return;
     if (!smile_fullscreen)
     {
         smile_windowed_style = (DWORD)GetWindowLongPtrW(smile_window, GWL_STYLE);
+        smile_windowed_ex_style = (DWORD)GetWindowLongPtrW(smile_window, GWL_EXSTYLE);
         smile_windowed_placement.length = sizeof(smile_windowed_placement);
         GetWindowPlacement(smile_window, &smile_windowed_placement);
         smile_zero_memory(&monitor, sizeof(monitor));
         monitor.cbSize = sizeof(monitor);
         GetMonitorInfoW(MonitorFromWindow(smile_window, MONITOR_DEFAULTTONEAREST), &monitor);
-        SetWindowLongPtrW(smile_window, GWL_STYLE, (LONG_PTR)((smile_windowed_style & ~WS_OVERLAPPEDWINDOW) | WS_POPUP));
-        SetWindowPos(smile_window, HWND_TOP, monitor.rcMonitor.left, monitor.rcMonitor.top,
+        fullscreen_style = (smile_windowed_style &
+            ~(WS_CAPTION | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX)) | WS_POPUP;
+        fullscreen_ex_style = smile_windowed_ex_style &
+            ~(WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
+        SetWindowLongPtrW(smile_window, GWL_STYLE, (LONG_PTR)fullscreen_style);
+        SetWindowLongPtrW(smile_window, GWL_EXSTYLE, (LONG_PTR)fullscreen_ex_style);
+        SetWindowPos(smile_window, HWND_TOPMOST, monitor.rcMonitor.left, monitor.rcMonitor.top,
             monitor.rcMonitor.right - monitor.rcMonitor.left, monitor.rcMonitor.bottom - monitor.rcMonitor.top,
-            SWP_FRAMECHANGED | SWP_NOOWNERZORDER);
+            SWP_FRAMECHANGED | SWP_NOOWNERZORDER | SWP_SHOWWINDOW);
         smile_fullscreen = 1;
     }
     else
     {
         SetWindowLongPtrW(smile_window, GWL_STYLE, (LONG_PTR)smile_windowed_style);
+        SetWindowLongPtrW(smile_window, GWL_EXSTYLE, (LONG_PTR)smile_windowed_ex_style);
         SetWindowPlacement(smile_window, &smile_windowed_placement);
-        SetWindowPos(smile_window, 0, 0, 0, 0, 0,
-            SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER);
+        SetWindowPos(smile_window, HWND_NOTOPMOST, 0, 0, 0, 0,
+            SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOOWNERZORDER | SWP_SHOWWINDOW);
         smile_fullscreen = 0;
     }
     InvalidateRect(smile_window, 0, FALSE);
