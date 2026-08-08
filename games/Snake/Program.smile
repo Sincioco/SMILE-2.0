@@ -1,0 +1,229 @@
+' SMILE 2.0 Snake - every game rule in SMILE source.
+CONST CanvasWidth = 960
+CONST CanvasHeight = 540
+CONST FieldX = 20
+CONST FieldY = 30
+CONST FieldWidth = 700
+CONST FieldHeight = 480
+CONST GridWidth = 35
+CONST GridHeight = 24
+CONST CellSize = 20
+CONST StartDelay = 100
+CONST MinimumDelay = 45
+
+DIM SnakeX[840]
+DIM SnakeY[840]
+
+Length = 0
+Direction = KEY_RIGHT
+NextDirection = KEY_RIGHT
+FoodX = 0
+FoodY = 0
+Score = 0
+MoveDelay = StartDelay
+NextMoveTime = 0
+State = 0
+Key = KEY_NONE
+I = 0
+TailX = 0
+TailY = 0
+FoodValid = FALSE
+Collision = FALSE
+
+LOAD HighScore FROM "HighScore" DEFAULT 0
+
+SUB SpawnFood()
+    FoodValid = FALSE
+    DO
+        RANDOM FoodX FROM 0 TO GridWidth - 1
+        RANDOM FoodY FROM 0 TO GridHeight - 1
+        FoodValid = TRUE
+        FOR I = 0 TO Length - 1
+            IF FoodX = SnakeX[I] AND FoodY = SnakeY[I] THEN
+                FoodValid = FALSE
+            END IF
+        END FOR
+    LOOP UNTIL FoodValid = TRUE
+END SUB
+
+SUB ResetGame()
+    Length = 5
+    Direction = KEY_RIGHT
+    NextDirection = KEY_RIGHT
+    Score = 0
+    MoveDelay = StartDelay
+    SnakeX[0] = 17
+    SnakeY[0] = 12
+    SnakeX[1] = 16
+    SnakeY[1] = 12
+    SnakeX[2] = 15
+    SnakeY[2] = 12
+    SnakeX[3] = 14
+    SnakeY[3] = 12
+    SnakeX[4] = 13
+    SnakeY[4] = 12
+    CALL SpawnFood()
+    NextMoveTime = TIMER() + StartDelay
+    State = 1
+    PLAY SOUND "Assets\Start.wav"
+END SUB
+
+SUB EndRound()
+    State = 2
+    IF Score > HighScore THEN
+        HighScore = Score
+        SAVE HighScore TO "HighScore"
+    END IF
+    PLAY SOUND "Assets\GameOver.wav"
+END SUB
+
+SUB MoveSnake()
+    Direction = NextDirection
+    TailX = SnakeX[Length - 1]
+    TailY = SnakeY[Length - 1]
+
+    FOR I = Length - 1 DOWN TO 1
+        SnakeX[I] = SnakeX[I - 1]
+        SnakeY[I] = SnakeY[I - 1]
+    END FOR
+
+    IF Direction = KEY_UP THEN
+        SnakeY[0] = SnakeY[0] - 1
+    ELSE IF Direction = KEY_DOWN THEN
+        SnakeY[0] = SnakeY[0] + 1
+    ELSE IF Direction = KEY_LEFT THEN
+        SnakeX[0] = SnakeX[0] - 1
+    ELSE IF Direction = KEY_RIGHT THEN
+        SnakeX[0] = SnakeX[0] + 1
+    END IF
+
+    Collision = FALSE
+    IF SnakeX[0] < 0 OR SnakeX[0] >= GridWidth OR SnakeY[0] < 0 OR SnakeY[0] >= GridHeight THEN
+        Collision = TRUE
+    END IF
+
+    FOR I = 1 TO Length - 1
+        IF SnakeX[0] = SnakeX[I] AND SnakeY[0] = SnakeY[I] THEN
+            Collision = TRUE
+        END IF
+    END FOR
+
+    IF Collision = TRUE THEN
+        CALL EndRound()
+    ELSE IF SnakeX[0] = FoodX AND SnakeY[0] = FoodY THEN
+        SnakeX[Length] = TailX
+        SnakeY[Length] = TailY
+        Length = Length + 1
+        Score = Score + 10
+        MoveDelay = MAX(MinimumDelay, StartDelay - (Score / 50) * 4)
+        PLAY SOUND "Assets\Eat.wav"
+        CALL SpawnFood()
+    END IF
+
+    NextMoveTime = TIMER() + MoveDelay
+END SUB
+
+SUB DrawBoard()
+    CLEAR RGB(10, 18, 35)
+    FILL RECTANGLE FieldX, FieldY, FieldWidth, FieldHeight, BLACK
+    DRAW RECTANGLE FieldX, FieldY, FieldWidth, FieldHeight, RGB(40, 70, 95)
+
+    FOR I = 0 TO Length - 1
+        IF SnakeX[I] >= 0 AND SnakeX[I] < GridWidth AND SnakeY[I] >= 0 AND SnakeY[I] < GridHeight THEN
+            FILL RECTANGLE FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, RGB(60, 230, 75)
+            DRAW RECTANGLE FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, RGB(20, 105, 35)
+        END IF
+    END FOR
+
+    FILL RECTANGLE FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, RGB(245, 45, 55)
+    DRAW RECTANGLE FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, RGB(120, 15, 25)
+
+    DRAW TEXT "SMILE SNAKE" AT 835, 55 SIZE 27 COLOR LIGHT_GREEN CENTERED
+    DRAW TEXT "SCORE" AT 755, 115 SIZE 20 COLOR LIGHT_GRAY
+    DRAW NUMBER Score AT 755, 142 SIZE 34 COLOR YELLOW
+    DRAW TEXT "HIGH SCORE" AT 755, 205 SIZE 20 COLOR LIGHT_GRAY
+    DRAW NUMBER HighScore AT 755, 232 SIZE 34 COLOR CYAN
+    DRAW TEXT "WASD / ARROWS" AT 835, 330 SIZE 16 COLOR WHITE CENTERED
+    DRAW TEXT "MOVE THE SNAKE" AT 835, 355 SIZE 16 COLOR LIGHT_GRAY CENTERED
+    DRAW TEXT "ALT+ENTER" AT 835, 415 SIZE 16 COLOR WHITE CENTERED
+    DRAW TEXT "FULL SCREEN" AT 835, 440 SIZE 16 COLOR LIGHT_GRAY CENTERED
+    DRAW TEXT "ESCAPE EXITS" AT 835, 490 SIZE 16 COLOR LIGHT_GRAY CENTERED
+END SUB
+
+SUB DrawTitle()
+    CLEAR RGB(10, 18, 35)
+    FILL RECTANGLE FieldX, FieldY, FieldWidth, FieldHeight, BLACK
+    DRAW RECTANGLE FieldX, FieldY, FieldWidth, FieldHeight, RGB(40, 70, 95)
+    FILL RECTANGLE 260, 255, 80, 18, RGB(60, 230, 75)
+    DRAW RECTANGLE 260, 255, 80, 18, RGB(20, 105, 35)
+    FILL RECTANGLE 360, 257, 14, 14, RGB(245, 45, 55)
+    DRAW TEXT "SMILE SNAKE" AT 370, 140 SIZE 54 COLOR LIGHT_GREEN CENTERED
+    DRAW TEXT "A NATIVE GAME WRITTEN IN SMILE" AT 370, 215 SIZE 19 COLOR LIGHT_GRAY CENTERED
+    DRAW TEXT "PRESS ENTER TO START" AT 370, 335 SIZE 28 COLOR YELLOW CENTERED
+    DRAW TEXT "WASD OR ARROW KEYS TO MOVE" AT 370, 385 SIZE 18 COLOR WHITE CENTERED
+    DRAW TEXT "ESCAPE TO EXIT" AT 370, 415 SIZE 18 COLOR LIGHT_GRAY CENTERED
+    DRAW TEXT "HIGH SCORE" AT 835, 165 SIZE 20 COLOR LIGHT_GRAY CENTERED
+    DRAW NUMBER HighScore AT 805, 205 SIZE 38 COLOR CYAN
+END SUB
+
+SUB DrawGameOver()
+    FILL ROUNDED RECTANGLE 145, 135, 590, 285, 22, RGB(16, 25, 45)
+    DRAW ROUNDED RECTANGLE 145, 135, 590, 285, 22, RGB(245, 45, 55)
+    DRAW TEXT "GAME OVER" AT 440, 185 SIZE 50 COLOR RED CENTERED
+    DRAW TEXT "FINAL SCORE" AT 330, 255 SIZE 22 COLOR LIGHT_GRAY CENTERED
+    DRAW NUMBER Score AT 530, 247 SIZE 38 COLOR YELLOW
+    DRAW TEXT "HIGH SCORE" AT 330, 305 SIZE 22 COLOR LIGHT_GRAY CENTERED
+    DRAW NUMBER HighScore AT 530, 297 SIZE 38 COLOR CYAN
+    DRAW TEXT "ENTER TO RETRY" AT 440, 360 SIZE 24 COLOR WHITE CENTERED
+    DRAW TEXT "ESCAPE TO EXIT" AT 440, 392 SIZE 18 COLOR LIGHT_GRAY CENTERED
+END SUB
+
+GAME WINDOW "SMILE 2.0 Snake"
+
+DO
+    GET KEY Key
+
+    IF Key = KEY_ESCAPE THEN
+        END PROGRAM
+    END IF
+
+    IF State = 0 THEN
+        IF Key = KEY_ENTER THEN
+            CALL ResetGame()
+        END IF
+        CALL DrawTitle()
+    ELSE IF State = 1 THEN
+        IF (Key = KEY_W OR Key = KEY_UP) AND Direction <> KEY_DOWN THEN
+            NextDirection = KEY_UP
+        ELSE IF (Key = KEY_S OR Key = KEY_DOWN) AND Direction <> KEY_UP THEN
+            NextDirection = KEY_DOWN
+        ELSE IF (Key = KEY_A OR Key = KEY_LEFT) AND Direction <> KEY_RIGHT THEN
+            NextDirection = KEY_LEFT
+        ELSE IF (Key = KEY_D OR Key = KEY_RIGHT) AND Direction <> KEY_LEFT THEN
+            NextDirection = KEY_RIGHT
+        END IF
+
+        IF TIMER() >= NextMoveTime THEN
+            CALL MoveSnake()
+        END IF
+
+        CALL DrawBoard()
+        IF State = 2 THEN
+            CALL DrawGameOver()
+        END IF
+    ELSE
+        IF Key = KEY_ENTER THEN
+            CALL ResetGame()
+        END IF
+        CALL DrawBoard()
+        IF State = 2 THEN
+            CALL DrawGameOver()
+        END IF
+    END IF
+
+    SHOW SCREEN
+    WAIT 8 MILLISECONDS
+LOOP UNTIL GAME_CLOSED() = TRUE
+
+STOP SOUND
+END PROGRAM

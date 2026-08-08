@@ -54,3 +54,6 @@ function New-SmileTone {
 }
 
 New-SmileTone -RelativePath 'examples\Assets\Graphics.wav' -Frequency 660 -DurationMilliseconds 140
+New-SmileTone -RelativePath 'games\Snake\Assets\Eat.wav' -Frequency 880 -DurationMilliseconds 90
+New-SmileTone -RelativePath 'games\Snake\Assets\GameOver.wav' -Frequency 180 -DurationMilliseconds 360
+New-SmileTone -RelativePath 'games\Snake\Assets\Start.wav' -Frequency 523 -DurationMilliseconds 140

@@ -90,9 +90,12 @@ if not exist "%SMILE_ROOT%\artifacts\games\Assets\Graphics.wav" (
 )
 echo GraphicsBasics compiled with its sound asset.
 
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Snake.smile" -o "%SMILE_ROOT%\artifacts\games\Snake.exe" --keep-temp
+if not exist "%SMILE_ROOT%\artifacts\games\Snake" mkdir "%SMILE_ROOT%\artifacts\games\Snake"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\Snake\Program.smile" -o "%SMILE_ROOT%\artifacts\games\Snake\Snake.exe" --keep-temp
+if errorlevel 1 exit /b %errorlevel%
+xcopy "%SMILE_ROOT%\games\Snake\Assets" "%SMILE_ROOT%\artifacts\games\Snake\Assets" /E /I /Y >nul
 if errorlevel 1 exit /b %errorlevel%
 
-echo Snake compiled successfully: %SMILE_ROOT%\artifacts\games\Snake.exe
+echo Snake compiled successfully: %SMILE_ROOT%\artifacts\games\Snake\Snake.exe
 echo Manual gameplay is still required.
 exit /b 0
