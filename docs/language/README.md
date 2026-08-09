@@ -2,6 +2,8 @@
 
 `src\Smile.Language` is the sole authority for SMILE source text, tokens, keyword facts, syntax, diagnostics, symbols, types, and semantic analysis. Both `smilec` and the Visual Studio extension consume the same `SmileLanguage.Analyze` result.
 
+SMILE evolves only when current syntax cannot express a requirement clearly. New general-purpose features prefer readable, established BASIC wording; the smallest beginner-friendly C#-inspired concept is used only when BASIC has no suitable precedent. The language avoids aliases, multiple spellings, clever punctuation, and game-specific statements. Syntax, diagnostics, examples, and documentation change proportionally through the shared authority.
+
 SMILE is case-insensitive and line-oriented. An apostrophe starts a comment. Values are signed 64-bit numbers, booleans, or text literals; runtime game state is normally stored in numeric variables and fixed arrays.
 
 ## Structured example
@@ -76,7 +78,18 @@ STOP MUSIC
 MUSIC VOLUME 50
 ```
 
-Music paths are resolved relative to the generated executable. `MUSIC VOLUME` accepts a numeric expression; the native runtime clamps the requested level to 0 through 100. MP3 playback uses the Windows `Windows.Media.Playback.MediaPlayer` API through C++/WinRT and Windows Media Foundation, independently of the selected graphics backend. No third-party decoder is bundled. When a SMILE game is inactive or minimized, music continues silently at effective volume zero, new WAV effects are suppressed, and a playing WAV is stopped. Reactivation restores the exact requested music volume without restarting or resuming music. Windows installations missing required media components fail playback safely without terminating the game.
+Music paths are resolved relative to the generated executable. `MUSIC VOLUME` accepts a numeric expression; the native runtime clamps the requested level to 0 through 100. MP3 playback uses the Windows `Windows.Media.Playback.MediaPlayer` API through C++/WinRT and Windows Media Foundation, independently of the selected graphics backend. No third-party decoder is bundled. Windows installations missing required media components fail playback safely without terminating the game.
+
+### Automatic focus behavior
+
+Every `GAME WINDOW` program inherits the same native focus behavior without adding SMILE activation code:
+
+- loss of application activation, top-level window activation, or minimization immediately silences that game's audio;
+- MP3 playback continues silently at effective volume zero, preserving both playback position and the exact requested `MUSIC VOLUME`;
+- restoring an active, non-minimized window reapplies the requested volume without restarting playback or resuming a track paused or stopped by the program;
+- the current asynchronous WAV effect stops on focus loss, and new `PLAY SOUND` requests are suppressed while inactive rather than queued for later;
+- Windows master volume and other applications are never changed;
+- DirectX and GDI follow the identical shared runtime policy.
 
 Named input constants include `KEY_W`, `KEY_A`, `KEY_S`, `KEY_D`, the four arrows, `KEY_ENTER`, `KEY_ESCAPE`, `KEY_SPACE`, `KEY_1`, `KEY_2`, `KEY_OTHER`, and `KEY_NONE`. `GET KEY` returns `KEY_OTHER` (value `19`) for an otherwise unnamed ordinary key event; `KEY_HELD(KEY_OTHER)` is always false. Named colors include the standard red/green/blue/cyan/magenta/yellow set plus orange, gray, dark variants, light variants, black, and white.
 

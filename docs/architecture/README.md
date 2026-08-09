@@ -12,6 +12,8 @@ SMILE 2.0 uses one deliberately direct native pipeline:
 
 `src\Smile.Language` owns tokenization, keyword and built-in facts, parsing, syntax nodes, diagnostics, symbols, types, and semantic analysis. `smilec` and the Visual Studio extension both call `SmileLanguage.Analyze`; there is no editor-only parser or duplicate semantic implementation.
 
+Language evolution follows one permanent hierarchy: use existing syntax when it stays clear; otherwise prefer an established BASIC idea; use the smallest beginner-friendly C#-inspired concept only when BASIC has no suitable precedent. Additions remain general-purpose, avoid aliases and clever punctuation, and receive only proportional diagnostics, tests, examples, and documentation through the shared language authority.
+
 The native backend emits MASM x64 and links `Smile.NativeRuntime.lib`. Console programs use the console subsystem. Programs containing `GAME WINDOW` use the Windows GUI subsystem and the generic Win32 runtime for:
 
 - a backend-neutral graphics interface that preserves the compiler-facing C ABI;
@@ -30,6 +32,12 @@ The native backend emits MASM x64 and links `Smile.NativeRuntime.lib`. Console p
 The compiler emits one stable graphics configuration call before game startup and routes every drawing export—including filled and outlined quadrilaterals—through the active `SmileGraphicsBackend` vtable. DirectX builds quadrilaterals with short-lived Direct2D path geometry; GDI maps the same four logical points into its physical back buffer and uses `Polygon`. Backend implementations own their render targets and caches; windowing, input, audio, persistence, and language-level game logic remain outside the graphics modules.
 
 Music-bearing generated programs reference a dedicated C-compatible MediaPlayer object and link `WindowsApp.lib` plus the static C/C++ support libraries required by the custom `/entry:main` pipeline. Games without music do not pull that object from `Smile.NativeRuntime.lib`. The MediaPlayer state is allocated lazily, owns no nontrivial global constructor, catches every C++ exception at the C ABI, and is shut down explicitly before each generated process exit.
+
+## Shared audio-focus contract
+
+The Win32 window procedure owns one focus state above both graphics backends. Audio is active only while the application is active, its top-level game window is active, and the window is not minimized. An inactive transition stops the current `PlaySoundW` effect and suppresses later WAV requests. The MediaPlayer remains at its current playback position with effective volume zero while its requested volume is retained. Reactivation reapplies that volume only; it does not restart playback or resume a track paused or stopped by SMILE source. Suppressed WAV effects are not queued for replay.
+
+This process-local policy is inherited by every `GAME WINDOW` program and requires no game-specific activation code. It never changes Windows master volume or another process, and DirectX and GDI behave identically because focus and audio remain outside their backend implementations.
 
 The runtime does not contain Snake, falling-block, paddle, brick, dungeon, score, level, projection, generation, pathfinding, or win/loss rules. Those remain in the corresponding files under `games`. Dungeon Star I's pseudo-3D projection is composed entirely from the same generic quadrilateral, line, rectangle, text, input, timing, and audio services available to every SMILE program.
 

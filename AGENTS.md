@@ -20,6 +20,20 @@ Use KISS: Keep It Simple, Stupid.
 - Do not add CI, GitHub Actions, a large automated test suite, cross-platform support, a package manager, or speculative infrastructure.
 - Do not stop after planning or scaffolding. Continue through implementation, build, native compilation, execution, debugging, validation, commit, and push.
 
+### Permanent validation rule
+
+Assume the happy path and use the lightest focused evidence that reasonably proves the current milestone. Prefer targeted language or native checks, the normal smoke suite, one brief manual launch, and one short interaction with changed behavior.
+
+Do not run long soaks, large seed sweeps, exhaustive playthroughs, broad hardware matrices, speculative benchmarks, or repeated stress cycles by default. Longer or broader testing is allowed only to investigate a known bug, crash, hang, leak, timing defect, performance regression, benchmark, intermittent failure, or problem that requires sustained execution. Before invoking that exception, record:
+
+```text
+Known problem being investigated:
+Why the longer test is necessary:
+Stop condition:
+```
+
+Do not turn a one-time investigation into a permanent regression burden unless Sin explicitly approves it.
+
 ## One authoritative language implementation
 
 `src/Smile.Language` remains the single source of truth for:
@@ -34,6 +48,14 @@ Use KISS: Keep It Simple, Stupid.
 The compiler and Visual Studio extension must consume this shared implementation.
 
 Never create a compiler-only parser, extension-only parser, duplicate keyword table, duplicate syntax rules, or duplicate semantic rules.
+
+When SMILE needs to evolve:
+
+1. First use current SMILE syntax when it remains clear.
+2. If a new feature is justified, prefer an established, readable BASIC precedent.
+3. Use the smallest beginner-friendly C#-inspired concept only when BASIC has no suitable precedent.
+4. Avoid aliases, multiple spellings, and clever punctuation when readable words are clearer.
+5. Keep every addition general-purpose and add only proportional diagnostics, tests, examples, and documentation.
 
 ## Games prove the language
 
@@ -51,6 +73,29 @@ The native runtime may provide only generic services:
 - simple integer persistence.
 
 Do not add game-specific native helpers.
+
+## Default game-audio focus contract
+
+Every program containing `GAME WINDOW` automatically inherits shared native audio focus behavior. Do not duplicate activation handling in `.smile` games.
+
+- Losing application activation, top-level window activation, or becoming minimized immediately silences that game's audio.
+- MP3 playback continues at effective volume zero while the exact requested `MUSIC VOLUME` remains remembered.
+- Restoring an active, non-minimized window reapplies that volume without restarting or resuming a manually paused or stopped track.
+- The current asynchronous WAV effect stops on focus loss; new `PLAY SOUND` requests are suppressed while inactive and are not replayed later.
+- The runtime never changes Windows master volume or another application's volume.
+- DirectX and GDI use the same shared focus policy.
+
+## Multi-Markdown delivery
+
+When a task produces two or more Markdown requirement, specification, handoff, or instruction files:
+
+- keep each Markdown file individually usable;
+- package all of them in one ZIP archive;
+- include companion sample, configuration, or map files;
+- include a `START HERE` file describing purpose and reading order;
+- preserve intended repository-relative paths under `Repository-Files` where useful.
+
+This is an artifact-delivery rule, not a SMILE language feature.
 
 ## Public commit-message policy
 

@@ -1,3 +1,5 @@
+' GAME WINDOW programs automatically silence music and sounds while inactive or minimized.
+' The shared runtime restores requested music volume; no per-game focus handler is needed.
 GAME WINDOW "My SMILE Game"
 
 DO

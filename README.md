@@ -4,6 +4,14 @@ SMILE 2.0 is a small, structured BASIC-style language that compiles directly to 
 
 The repository has one language authority: `src\Smile.Language`. The command-line compiler and Visual Studio extension use the same lexer, parser, syntax model, diagnostics, symbols, types, and semantic model. Game rules remain in `.smile` source; the C runtime provides only generic Windows graphics, input, sound, timing, and storage services.
 
+## Development governance
+
+Language evolution starts by asking whether current SMILE syntax can express the requirement clearly. When a new general-purpose feature is justified, SMILE uses a recognizable BASIC precedent first and the smallest beginner-friendly C#-inspired concept only when BASIC has no suitable precedent. New rules are implemented once in `src\Smile.Language`; game-specific statements and native helpers are not added.
+
+Validation assumes the happy path and uses the lightest focused evidence that reasonably proves a milestone: proportional targeted checks, the normal smoke suite, and brief manual interaction where needed. Long soaks, large seed sweeps, exhaustive playthroughs, stress campaigns, or benchmarks are reserved for a stated known bug, crash, hang, leak, timing defect, performance problem, intermittent failure, or formal benchmark, with a defined stop condition.
+
+When project work produces two or more Markdown requirement, specification, handoff, or instruction files, each remains individually usable and the complete set is also delivered in one ZIP with a `START HERE` file and any companion samples, configuration, or maps under useful repository-relative paths.
+
 ## Included games
 
 - `games\Snake` — graphical Snake with score, progressive speed, and a persistent high score.
@@ -13,6 +21,12 @@ The repository has one language authority: `src\Smile.Language`. The command-lin
 - `games\DungeonStarI` — an original three-floor pseudo-3D dungeon exploration sample with random rooms, doors, stairs, attract mode, and green, blue, and red floor palettes.
 
 All games use a logical 960-by-540 canvas. Window resizing preserves the 16:9 aspect ratio with letterboxing, and Alt+Enter toggles borderless full screen.
+
+## Automatic game-audio focus
+
+Every program containing `GAME WINDOW` automatically inherits one shared audio-focus policy; games do not need activation handlers. Losing application or top-level window activation, or minimizing the window, immediately stops the current asynchronous WAV effect, suppresses new WAV requests, and changes MP3 music to effective volume zero. The requested `MUSIC VOLUME` and playback position remain intact. Returning to an active, non-minimized window reapplies the exact requested volume without restarting the track or resuming music that the program paused or stopped. Suppressed effects are not replayed.
+
+This policy is identical for DirectX and GDI and affects only the SMILE process. It never changes Windows master volume or another application's audio.
 
 ## Prerequisites
 
@@ -116,6 +130,8 @@ After Visual Studio restarts, use **File > New > Project** and search for `SMILE
 - **SMILE 2.0 Game Application**
 
 Both create a `.smileproj` with `Debug` and `Release` configurations. A game project also owns an `Assets` folder. **Build > Build Solution** (`Ctrl+Shift+B`) compiles the startup file into `bin\Debug` or `bin\Release` and copies declared assets. `F5` and `Ctrl+F5` build and run the native executable. Compiler failures appear in both the SMILE Output pane and Error List with the same diagnostic code, message, line, and column used by the editor and command-line compiler.
+
+The game template documents that automatic focus muting is inherited from the shared runtime; new games should use normal `PLAY SOUND` and `PLAY MUSIC` statements without per-game focus code.
 
 Loose `.smile` files remain supported: open one and use **Tools > Build SMILE File**.
 
