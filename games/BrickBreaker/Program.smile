@@ -18,6 +18,14 @@ CONST SimulationStep = 8
 CONST MaxCatchUpSteps = 6
 CONST BallSpeedUnit = 60000
 CONST PaddleSpeed = 420000
+CONST DemoPaddleSpeed = 620000
+CONST TitleDemoDelay = 5000
+CONST DemoMinimumPlayTime = 30000
+CONST DemoMaximumPlayTime = 45000
+CONST DemoTerminalDuration = 5000
+CONST TitleInputArmDelay = 250
+CONST DemoLaunchDelay = 600
+CONST DemoStallTime = 6000
 
 DIM Bricks[BrickColumns, BrickRows]
 
@@ -46,6 +54,14 @@ FrameTime = LastFrameTime
 Elapsed = 0
 Accumulator = 0
 CatchUpSteps = 0
+DemoMode = FALSE
+TitleStartedAt = 0
+TitleAcceptInputAt = 0
+DemoStartedAt = 0
+DemoTerminalStartedAt = 0
+DemoLaunchAt = 0
+DemoLastBrickAt = 0
+DemoBouncePattern = 0
 
 LOAD HighScore FROM "HighScore" DEFAULT 0
 
@@ -93,7 +109,13 @@ SUB ResetBall()
     Launched = FALSE
 END SUB
 
-SUB StartGame()
+SUB DrainPendingKeys()
+    FOR DrainIndex = 1 TO 64
+        GET KEY DrainedKey
+    END FOR
+END SUB
+
+SUB ResetMatch()
     Score = 0
     Lives = 3
     Level = 1
@@ -104,49 +126,131 @@ SUB StartGame()
     Accumulator = 0
 END SUB
 
+SUB EnterTitle()
+    DemoMode = FALSE
+    State = 0
+    Launched = FALSE
+    ReadyMessage = 0
+    Accumulator = 0
+    Key = KEY_NONE
+    CALL DrainPendingKeys()
+    TitleStartedAt = TIMER()
+    TitleAcceptInputAt = TitleStartedAt + TitleInputArmDelay
+END SUB
+
+SUB StartGame()
+    DemoMode = FALSE
+    CALL ResetMatch()
+END SUB
+
+SUB StartDemo()
+    DemoMode = TRUE
+    CALL ResetMatch()
+    DemoStartedAt = TIMER()
+    DemoTerminalStartedAt = 0
+    DemoLaunchAt = DemoStartedAt + DemoLaunchDelay
+    DemoLastBrickAt = DemoStartedAt
+    DemoBouncePattern = 0
+END SUB
+
 SUB UpdateHighScore()
-    IF Score > HighScore THEN
+    IF DemoMode = FALSE AND Score > HighScore THEN
         HighScore = Score
         SAVE HighScore TO "HighScore"
     END IF
 END SUB
 
 SUB LoseLife()
+    IF DemoMode = TRUE AND TIMER() - DemoStartedAt < DemoMinimumPlayTime THEN
+        ReadyMessage = 1
+        CALL ResetBall()
+        DemoLaunchAt = TIMER() + DemoLaunchDelay
+        DemoLastBrickAt = TIMER()
+        RETURN
+    END IF
+
     Lives = Lives - 1
     PLAY SOUND "Assets\LoseLife.wav"
     IF Lives <= 0 THEN
         CALL UpdateHighScore()
         State = 2
+        IF DemoMode = TRUE THEN
+            DemoTerminalStartedAt = TIMER()
+        END IF
         PLAY SOUND "Assets\GameOver.wav"
     ELSE
         ReadyMessage = 1
         CALL ResetBall()
+        IF DemoMode = TRUE THEN
+            DemoLaunchAt = TIMER() + DemoLaunchDelay
+            DemoLastBrickAt = TIMER()
+        END IF
     END IF
 END SUB
 
 SUB AdvanceLevel()
     IF Level >= MaximumLevel THEN
-        CALL UpdateHighScore()
-        State = 3
-        PLAY SOUND "Assets\LevelClear.wav"
+        IF DemoMode = TRUE AND TIMER() - DemoStartedAt < DemoMinimumPlayTime THEN
+            Level = 1
+            ReadyMessage = 2
+            PLAY SOUND "Assets\LevelClear.wav"
+            CALL BuildLevel()
+            CALL ResetBall()
+            DemoLaunchAt = TIMER() + DemoLaunchDelay
+            DemoLastBrickAt = TIMER()
+        ELSE
+            CALL UpdateHighScore()
+            State = 3
+            IF DemoMode = TRUE THEN
+                DemoTerminalStartedAt = TIMER()
+            END IF
+            PLAY SOUND "Assets\LevelClear.wav"
+        END IF
     ELSE
         Level = Level + 1
         ReadyMessage = 2
         PLAY SOUND "Assets\LevelClear.wav"
         CALL BuildLevel()
         CALL ResetBall()
+        IF DemoMode = TRUE THEN
+            DemoLaunchAt = TIMER() + DemoLaunchDelay
+            DemoLastBrickAt = TIMER()
+        END IF
     END IF
 END SUB
 
 SUB MovePaddle()
-    PaddleStep = PaddleSpeed * SimulationStep / 1000
     MinimumPaddleSub = 10 * SubpixelsPerPixel
     MaximumPaddleSub = (CanvasWidth - PaddleWidth - 10) * SubpixelsPerPixel
-    IF KEY_HELD(KEY_A) = TRUE OR KEY_HELD(KEY_LEFT) = TRUE THEN
-        PaddleXSub = MAX(MinimumPaddleSub, PaddleXSub - PaddleStep)
-    END IF
-    IF KEY_HELD(KEY_D) = TRUE OR KEY_HELD(KEY_RIGHT) = TRUE THEN
-        PaddleXSub = MIN(MaximumPaddleSub, PaddleXSub + PaddleStep)
+    IF DemoMode = TRUE THEN
+        PaddleStep = DemoPaddleSpeed * SimulationStep / 1000
+        IF BallVY > 0 THEN
+            DemoTargetX = BallX + (PaddleY - BallY) * BallVX / BallVY
+            FOR Reflection = 1 TO 8
+                IF DemoTargetX < 15 THEN
+                    DemoTargetX = 15 + (15 - DemoTargetX)
+                ELSE IF DemoTargetX > CanvasWidth - 15 THEN
+                    DemoTargetX = CanvasWidth - 15 - (DemoTargetX - (CanvasWidth - 15))
+                END IF
+            END FOR
+            DemoTargetX = MAX(15, MIN(CanvasWidth - 15, DemoTargetX))
+        ELSE
+            DemoTargetX = CanvasWidth / 2
+        END IF
+        DemoPaddleCenter = PaddleX + PaddleWidth / 2
+        IF DemoTargetX < DemoPaddleCenter - 8 THEN
+            PaddleXSub = MAX(MinimumPaddleSub, PaddleXSub - PaddleStep)
+        ELSE IF DemoTargetX > DemoPaddleCenter + 8 THEN
+            PaddleXSub = MIN(MaximumPaddleSub, PaddleXSub + PaddleStep)
+        END IF
+    ELSE
+        PaddleStep = PaddleSpeed * SimulationStep / 1000
+        IF KEY_HELD(KEY_A) = TRUE OR KEY_HELD(KEY_LEFT) = TRUE THEN
+            PaddleXSub = MAX(MinimumPaddleSub, PaddleXSub - PaddleStep)
+        END IF
+        IF KEY_HELD(KEY_D) = TRUE OR KEY_HELD(KEY_RIGHT) = TRUE THEN
+            PaddleXSub = MIN(MaximumPaddleSub, PaddleXSub + PaddleStep)
+        END IF
     END IF
     PaddleX = PaddleXSub / SubpixelsPerPixel
 
@@ -159,12 +263,30 @@ SUB MovePaddle()
 END SUB
 
 SUB BounceFromPaddle()
-    PaddleContact = BallX - (PaddleX + PaddleWidth / 2)
-    HorizontalVelocity = PaddleContact / 11
-    IF HorizontalVelocity = 0 THEN
-        HorizontalVelocity = 1
+    IF DemoMode = TRUE THEN
+        SELECT CASE DemoBouncePattern
+            CASE 0
+                HorizontalVelocity = -7
+            CASE 1
+                HorizontalVelocity = 5
+            CASE 2
+                HorizontalVelocity = -4
+            CASE 3
+                HorizontalVelocity = 8
+            CASE 4
+                HorizontalVelocity = -6
+            CASE ELSE
+                HorizontalVelocity = 3
+        END SELECT
+        DemoBouncePattern = (DemoBouncePattern + 1) MOD 6
+    ELSE
+        PaddleContact = BallX - (PaddleX + PaddleWidth / 2)
+        HorizontalVelocity = PaddleContact / 11
+        IF HorizontalVelocity = 0 THEN
+            HorizontalVelocity = 1
+        END IF
+        HorizontalVelocity = MAX(-9, MIN(9, HorizontalVelocity))
     END IF
-    HorizontalVelocity = MAX(-9, MIN(9, HorizontalVelocity))
     BallVX = HorizontalVelocity * BallSpeedUnit
     BallVY = -ABS(BallVY)
     BallY = PaddleY - BallRadius - 1
@@ -184,6 +306,9 @@ SUB HitBricks()
                         Bricks[Column, Row] = 0
                         RemainingBricks = RemainingBricks - 1
                         Score = Score + RowPoints(Row)
+                        IF DemoMode = TRUE THEN
+                            DemoLastBrickAt = TIMER()
+                        END IF
                         CALL UpdateHighScore()
 
                         OverlapLeft = BallX + BallRadius - BrickX
@@ -209,6 +334,17 @@ SUB HitBricks()
     IF RemainingBricks = 0 THEN
         CALL AdvanceLevel()
     END IF
+END SUB
+
+SUB BreakDemoStall()
+    IF DemoBouncePattern MOD 2 = 0 THEN
+        BallVX = 7 * BallSpeedUnit
+    ELSE
+        BallVX = -6 * BallSpeedUnit
+    END IF
+    BallVY = -ABS(BallVY)
+    DemoBouncePattern = (DemoBouncePattern + 1) MOD 6
+    DemoLastBrickAt = TIMER()
 END SUB
 
 SUB MoveBall()
@@ -264,6 +400,12 @@ SUB DrawPlayfield()
     DRAW NUMBER Score AT 90, 8 SIZE 24 COLOR YELLOW
     DRAW TEXT "HIGH" AT 285, 12 SIZE 15 COLOR LIGHT_GRAY
     DRAW NUMBER HighScore AT 345, 8 SIZE 24 COLOR CYAN
+    IF DemoMode = TRUE AND State = 1 THEN
+        FILL ROUNDED RECTANGLE 405, 3, 140, 38, 6, RGB(14, 22, 38)
+        DRAW ROUNDED RECTANGLE 405, 3, 140, 38, 6, CYAN
+        DRAW TEXT "DEMO" AT 475, 5 SIZE 15 COLOR YELLOW CENTERED
+        DRAW TEXT "ANY KEY RETURNS" AT 475, 25 SIZE 8 COLOR WHITE CENTERED
+    END IF
     DRAW TEXT "LEVEL" AT 555, 12 SIZE 15 COLOR LIGHT_GRAY
     DRAW NUMBER Level AT 625, 8 SIZE 24 COLOR LIGHT_GREEN
     DRAW TEXT "LIVES" AT 750, 12 SIZE 15 COLOR LIGHT_GRAY
@@ -295,7 +437,11 @@ SUB DrawPlayfield()
         ELSE
             DRAW TEXT "READY" AT 480, 365 SIZE 29 COLOR YELLOW CENTERED
         END IF
-        DRAW TEXT "SPACE OR ENTER TO LAUNCH" AT 480, 408 SIZE 20 COLOR WHITE CENTERED
+        IF DemoMode = TRUE THEN
+            DRAW TEXT "AUTO LAUNCHING" AT 480, 408 SIZE 20 COLOR WHITE CENTERED
+        ELSE
+            DRAW TEXT "SPACE OR ENTER TO LAUNCH" AT 480, 408 SIZE 20 COLOR WHITE CENTERED
+        END IF
     END IF
 END SUB
 
@@ -318,24 +464,42 @@ END SUB
 SUB DrawGameOver()
     FILL ROUNDED RECTANGLE 220, 145, 520, 275, 22, RGB(18, 23, 38)
     DRAW ROUNDED RECTANGLE 220, 145, 520, 275, 22, RED
-    DRAW TEXT "GAME OVER" AT 480, 185 SIZE 48 COLOR RED CENTERED
+    IF DemoMode = TRUE THEN
+        DRAW TEXT "DEMO OVER" AT 480, 185 SIZE 48 COLOR YELLOW CENTERED
+    ELSE
+        DRAW TEXT "GAME OVER" AT 480, 185 SIZE 48 COLOR RED CENTERED
+    END IF
     DRAW TEXT "FINAL SCORE" AT 380, 255 SIZE 20 COLOR LIGHT_GRAY
     DRAW NUMBER Score AT 545, 245 SIZE 38 COLOR YELLOW
-    DRAW TEXT "ENTER TO RETRY" AT 480, 335 SIZE 24 COLOR WHITE CENTERED
-    DRAW TEXT "ESCAPE TO EXIT" AT 480, 375 SIZE 18 COLOR LIGHT_GRAY CENTERED
+    IF DemoMode = TRUE THEN
+        DRAW TEXT "RETURNING TO TITLE" AT 480, 345 SIZE 22 COLOR WHITE CENTERED
+    ELSE
+        DRAW TEXT "ENTER TO RETRY" AT 480, 335 SIZE 24 COLOR WHITE CENTERED
+        DRAW TEXT "ESCAPE TO EXIT" AT 480, 375 SIZE 18 COLOR LIGHT_GRAY CENTERED
+    END IF
 END SUB
 
 SUB DrawVictory()
     FILL ROUNDED RECTANGLE 190, 130, 580, 305, 22, RGB(18, 28, 36)
     DRAW ROUNDED RECTANGLE 190, 130, 580, 305, 22, LIGHT_GREEN
-    DRAW TEXT "YOU CLEARED ALL 3 LEVELS!" AT 480, 175 SIZE 35 COLOR LIGHT_GREEN CENTERED
+    IF DemoMode = TRUE THEN
+        DRAW TEXT "DEMO COMPLETE" AT 480, 175 SIZE 42 COLOR LIGHT_GREEN CENTERED
+    ELSE
+        DRAW TEXT "YOU CLEARED ALL 3 LEVELS!" AT 480, 175 SIZE 35 COLOR LIGHT_GREEN CENTERED
+    END IF
     DRAW TEXT "CHAMPION SCORE" AT 390, 255 SIZE 20 COLOR LIGHT_GRAY
     DRAW NUMBER Score AT 565, 245 SIZE 38 COLOR YELLOW
-    DRAW TEXT "ENTER TO PLAY AGAIN" AT 480, 340 SIZE 24 COLOR WHITE CENTERED
-    DRAW TEXT "ESCAPE TO EXIT" AT 480, 382 SIZE 18 COLOR LIGHT_GRAY CENTERED
+    IF DemoMode = TRUE THEN
+        DRAW TEXT "RETURNING TO TITLE" AT 480, 350 SIZE 22 COLOR WHITE CENTERED
+    ELSE
+        DRAW TEXT "ENTER TO PLAY AGAIN" AT 480, 340 SIZE 24 COLOR WHITE CENTERED
+        DRAW TEXT "ESCAPE TO EXIT" AT 480, 382 SIZE 18 COLOR LIGHT_GRAY CENTERED
+    END IF
 END SUB
 
 GAME WINDOW "SMILE 2.0 Brick Breaker"
+
+CALL EnterTitle()
 
 DO
     FrameTime = TIMER()
@@ -343,34 +507,64 @@ DO
     LastFrameTime = FrameTime
     GET KEY Key
 
-    IF Key = KEY_ESCAPE THEN
+    IF DemoMode = TRUE AND Key <> KEY_NONE THEN
+        CALL EnterTitle()
+        Key = KEY_NONE
+    END IF
+
+    IF State = 0 THEN
+        IF Key <> KEY_NONE AND FrameTime >= TitleAcceptInputAt THEN
+            TitleStartedAt = FrameTime
+            IF Key = KEY_ESCAPE THEN
+                END PROGRAM
+            ELSE IF Key = KEY_ENTER OR Key = KEY_SPACE THEN
+                CALL StartGame()
+            END IF
+        END IF
+        IF State = 0 AND FrameTime - TitleStartedAt >= TitleDemoDelay THEN
+            CALL StartDemo()
+        END IF
+    ELSE IF DemoMode = FALSE AND Key = KEY_ESCAPE THEN
         END PROGRAM
     END IF
 
     IF State = 0 THEN
-        IF Key = KEY_ENTER OR Key = KEY_SPACE THEN
-            CALL StartGame()
-        END IF
         CALL DrawTitle()
     ELSE IF State = 1 THEN
-        IF Launched = FALSE THEN
+        IF DemoMode = TRUE THEN
+            IF Launched = FALSE AND FrameTime >= DemoLaunchAt THEN
+                Launched = TRUE
+                ReadyMessage = 0
+            END IF
+            IF Launched = TRUE AND FrameTime - DemoLastBrickAt >= DemoStallTime THEN
+                CALL BreakDemoStall()
+            END IF
+            IF FrameTime - DemoStartedAt >= DemoMaximumPlayTime THEN
+                State = 2
+                DemoTerminalStartedAt = FrameTime
+                PLAY SOUND "Assets\GameOver.wav"
+            END IF
+        ELSE IF Launched = FALSE THEN
             IF Key = KEY_SPACE OR Key = KEY_ENTER THEN
                 Launched = TRUE
                 ReadyMessage = 0
             END IF
         END IF
-        Accumulator = MIN(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
-        CatchUpSteps = 0
-        DO
-            IF Accumulator >= SimulationStep THEN
-                CALL MovePaddle()
-                IF Launched = TRUE THEN
-                    CALL MoveBall()
+
+        IF State = 1 THEN
+            Accumulator = MIN(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
+            CatchUpSteps = 0
+            DO
+                IF Accumulator >= SimulationStep THEN
+                    CALL MovePaddle()
+                    IF Launched = TRUE THEN
+                        CALL MoveBall()
+                    END IF
+                    Accumulator = Accumulator - SimulationStep
+                    CatchUpSteps = CatchUpSteps + 1
                 END IF
-                Accumulator = Accumulator - SimulationStep
-                CatchUpSteps = CatchUpSteps + 1
-            END IF
-        LOOP UNTIL Accumulator < SimulationStep OR CatchUpSteps >= MaxCatchUpSteps OR State <> 1
+            LOOP UNTIL Accumulator < SimulationStep OR CatchUpSteps >= MaxCatchUpSteps OR State <> 1
+        END IF
         CALL DrawPlayfield()
         IF State = 2 THEN
             CALL DrawGameOver()
@@ -378,14 +572,26 @@ DO
             CALL DrawVictory()
         END IF
     ELSE
-        IF Key = KEY_ENTER OR Key = KEY_SPACE THEN
+        IF DemoMode = TRUE THEN
+            IF DemoTerminalStartedAt = 0 THEN
+                DemoTerminalStartedAt = FrameTime
+            END IF
+            IF FrameTime - DemoTerminalStartedAt >= DemoTerminalDuration THEN
+                CALL EnterTitle()
+            END IF
+        ELSE IF Key = KEY_ENTER OR Key = KEY_SPACE THEN
             CALL StartGame()
         END IF
-        CALL DrawPlayfield()
-        IF State = 2 THEN
-            CALL DrawGameOver()
+
+        IF State = 0 THEN
+            CALL DrawTitle()
         ELSE
-            CALL DrawVictory()
+            CALL DrawPlayfield()
+            IF State = 2 THEN
+                CALL DrawGameOver()
+            ELSE
+                CALL DrawVictory()
+            END IF
         END IF
     END IF
 
