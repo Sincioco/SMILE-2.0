@@ -107,9 +107,8 @@ internal sealed class MasmEmitter
         Line("    call smile_graphics_configure");
         EmitStatements(_analysis.SyntaxTree.Root.Statements);
         if (_usesMusic) Line("    call smile_music_shutdown");
-        Line("    xor eax, eax");
-        Line("    add rsp, 104");
-        Line("    ret");
+        Line("    xor ecx, ecx");
+        Line("    call ExitProcess");
         Line("main ENDP");
 
         foreach (var routine in _analysis.SemanticModel.Routines.Values)

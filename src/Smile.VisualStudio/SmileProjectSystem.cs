@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -222,17 +221,30 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         }
     }
 
-    public bool Launch(string configuration)
+    public bool Launch(string configuration, uint launchFlags)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         var outputPath = GetOutputPath(configuration);
         if (!File.Exists(outputPath) && !Build(configuration, null))
             return false;
-        Process.Start(new ProcessStartInfo(outputPath)
+
+        var debugger = Package.GetGlobalService(typeof(SVsShellDebugger)) as IVsDebugger4;
+        if (debugger == null)
+            return false;
+
+        var targets = new[]
         {
-            UseShellExecute = true,
-            WorkingDirectory = Path.GetDirectoryName(outputPath)
-        });
+            new VsDebugTargetInfo4
+            {
+                dlo = (uint)DEBUG_LAUNCH_OPERATION.DLO_CreateProcess,
+                LaunchFlags = launchFlags,
+                bstrExe = outputPath,
+                bstrCurDir = Path.GetDirectoryName(outputPath),
+                guidLaunchDebugEngine = VSConstants.DebugEnginesGuids.NativeOnly_guid,
+                project = this
+            }
+        };
+        debugger.LaunchDebugTargets4(1, targets, new VsDebugTargetProcessInfo[1]);
         return true;
     }
 
@@ -780,7 +792,7 @@ internal sealed class SmileProjectConfiguration : IVsProjectCfg2, IVsBuildablePr
     public int QueryDebugLaunch(uint grfLaunch, out int pfCanLaunch)
     { pfCanLaunch = File.Exists(_project.GetOutputPath(_name)) || File.Exists(Path.Combine(_project.ProjectDirectory, _project.StartupFile)) ? 1 : 0; return VSConstants.S_OK; }
     public int DebugLaunch(uint grfLaunch)
-    { ThreadHelper.ThrowIfNotOnUIThread(); return _project.Launch(_name) ? VSConstants.S_OK : VSConstants.E_FAIL; }
+    { ThreadHelper.ThrowIfNotOnUIThread(); return _project.Launch(_name, grfLaunch) ? VSConstants.S_OK : VSConstants.E_FAIL; }
 
     private int RunBuild(IVsOutputWindowPane pane, bool clean)
     {
