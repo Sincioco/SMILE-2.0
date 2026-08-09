@@ -71,3 +71,10 @@ New-SmileTone -RelativePath 'games\BrickBreaker\Assets\Brick.wav' -Frequency 840
 New-SmileTone -RelativePath 'games\BrickBreaker\Assets\LoseLife.wav' -Frequency 260 -DurationMilliseconds 240
 New-SmileTone -RelativePath 'games\BrickBreaker\Assets\LevelClear.wav' -Frequency 1040 -DurationMilliseconds 320
 New-SmileTone -RelativePath 'games\BrickBreaker\Assets\GameOver.wav' -Frequency 170 -DurationMilliseconds 450
+New-SmileTone -RelativePath 'games\MazeMuncher\Assets\Pellet.wav' -Frequency 760 -DurationMilliseconds 35
+New-SmileTone -RelativePath 'games\MazeMuncher\Assets\Power.wav' -Frequency 240 -DurationMilliseconds 220
+New-SmileTone -RelativePath 'games\MazeMuncher\Assets\EnemyEaten.wav' -Frequency 1120 -DurationMilliseconds 140
+New-SmileTone -RelativePath 'games\MazeMuncher\Assets\PlayerCaught.wav' -Frequency 160 -DurationMilliseconds 400
+New-SmileTone -RelativePath 'games\MazeMuncher\Assets\Start.wav' -Frequency 520 -DurationMilliseconds 180
+New-SmileTone -RelativePath 'games\MazeMuncher\Assets\LevelClear.wav' -Frequency 960 -DurationMilliseconds 360
+New-SmileTone -RelativePath 'games\MazeMuncher\Assets\GameOver.wav' -Frequency 120 -DurationMilliseconds 500

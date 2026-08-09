@@ -19,7 +19,6 @@ CONST DemoPaddleAcceleration = 2400000
 CONST TitleDemoDelay = 5000
 CONST DemoMinimumPlayTime = 30000
 CONST DemoMaximumPlayTime = 45000
-CONST DemoTerminalDuration = 5000
 CONST TitleInputArmDelay = 250
 
 LeftY = 220
@@ -51,7 +50,6 @@ CatchUpSteps = 0
 TitleStartedAt = 0
 TitleAcceptInputAt = 0
 DemoStartedAt = 0
-DemoTerminalStartedAt = 0
 DrainedKey = KEY_NONE
 DrainIndex = 0
 DemoLeftVelocity = 0
@@ -119,7 +117,6 @@ SUB StartDemo()
     Mode = 3
     CALL ResetMatch()
     DemoStartedAt = TIMER()
-    DemoTerminalStartedAt = 0
 END SUB
 
 SUB RecordRally()
@@ -148,10 +145,11 @@ SUB BounceFromPaddle(PaddleY, DirectionSign)
 END SUB
 
 SUB FinishMatch()
-    State = 2
     IF Mode = 3 THEN
-        DemoTerminalStartedAt = TIMER()
+        CALL EnterTitle()
+        RETURN
     END IF
+    State = 2
     PLAY SOUND "Assets\GameOver.wav"
 END SUB
 
@@ -370,9 +368,7 @@ SUB DrawResult()
     FILL ROUNDED RECTANGLE 210, 145, 540, 275, 22, RGB(16, 22, 36)
     DRAW ROUNDED RECTANGLE 210, 145, 540, 275, 22, CYAN
 
-    IF Mode = 3 THEN
-        DRAW TEXT "DEMO OVER" AT 480, 190 SIZE 48 COLOR YELLOW CENTERED
-    ELSE IF Mode = 1 THEN
+    IF Mode = 1 THEN
         IF LeftScore > RightScore THEN
             DRAW TEXT "YOU WIN!" AT 480, 190 SIZE 48 COLOR LIGHT_GREEN CENTERED
         ELSE
@@ -389,12 +385,8 @@ SUB DrawResult()
     DRAW NUMBER LeftScore AT 375, 260 SIZE 52 COLOR WHITE
     DRAW TEXT "-" AT 480, 265 SIZE 42 COLOR LIGHT_GRAY CENTERED
     DRAW NUMBER RightScore AT 555, 260 SIZE 52 COLOR WHITE
-    IF Mode = 3 THEN
-        DRAW TEXT "RETURNING TO TITLE" AT 480, 355 SIZE 20 COLOR LIGHT_GRAY CENTERED
-    ELSE
-        DRAW TEXT "ENTER - REMATCH" AT 480, 345 SIZE 22 COLOR WHITE CENTERED
-        DRAW TEXT "ESCAPE - TITLE" AT 480, 382 SIZE 18 COLOR LIGHT_GRAY CENTERED
-    END IF
+    DRAW TEXT "ENTER - REMATCH" AT 480, 345 SIZE 22 COLOR WHITE CENTERED
+    DRAW TEXT "ESCAPE - TITLE" AT 480, 382 SIZE 18 COLOR LIGHT_GRAY CENTERED
 END SUB
 
 GAME WINDOW "SMILE 2.0 Paddle Ball"
@@ -432,9 +424,7 @@ DO
             CALL EnterTitle()
         ELSE
             IF Mode = 3 AND FrameTime - DemoStartedAt >= DemoMaximumPlayTime THEN
-                State = 2
-                DemoTerminalStartedAt = FrameTime
-                PLAY SOUND "Assets\GameOver.wav"
+                CALL EnterTitle()
             END IF
             Accumulator = MIN(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
             CatchUpSteps = 0
@@ -456,14 +446,7 @@ DO
             END IF
         END IF
     ELSE
-        IF Mode = 3 THEN
-            IF DemoTerminalStartedAt = 0 THEN
-                DemoTerminalStartedAt = FrameTime
-            END IF
-            IF FrameTime - DemoTerminalStartedAt >= DemoTerminalDuration THEN
-                CALL EnterTitle()
-            END IF
-        ELSE IF Key = KEY_ENTER THEN
+        IF Key = KEY_ENTER THEN
             CALL ResetMatch()
         ELSE IF Key = KEY_ESCAPE THEN
             CALL EnterTitle()

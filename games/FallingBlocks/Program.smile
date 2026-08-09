@@ -9,7 +9,6 @@ CONST BoardY = 50
 CONST TitleDemoDelay = 5000
 CONST DemoMinimumPlayTime = 30000
 CONST DemoMaximumPlayTime = 45000
-CONST DemoTerminalDuration = 5000
 CONST TitleInputArmDelay = 250
 CONST DemoActionInterval = 180
 CONST DemoPieceStartDelay = 350
@@ -111,7 +110,6 @@ DemoMode = FALSE
 TitleStartedAt = 0
 TitleAcceptInputAt = 0
 DemoStartedAt = 0
-DemoTerminalStartedAt = 0
 NextDemoActionAt = 0
 PlannedRotation = 0
 PlannedX = 3
@@ -381,14 +379,15 @@ SUB EndGame()
         CALL SpawnPiece()
         RETURN
     END IF
+    IF DemoMode = TRUE THEN
+        CALL EnterTitle()
+        RETURN
+    END IF
     State = 2
     STOP MUSIC
     IF DemoMode = FALSE AND Score > HighScore THEN
         HighScore = Score
         SAVE HighScore TO "HighScore"
-    END IF
-    IF DemoMode = TRUE THEN
-        DemoTerminalStartedAt = TIMER()
     END IF
     PLAY SOUND "Assets\GameOver.wav"
 END SUB
@@ -548,7 +547,6 @@ END SUB
 SUB StartDemo()
     DemoMode = TRUE
     DemoStartedAt = TIMER()
-    DemoTerminalStartedAt = 0
     DemoPieceSequence = 0
     DemoUseNaturalFall = TRUE
     CALL ResetPlay()
@@ -663,19 +661,11 @@ END SUB
 SUB DrawGameOver()
     FILL ROUNDED RECTANGLE 245, 145, 470, 270, 22, RGB(17, 24, 42)
     DRAW ROUNDED RECTANGLE 245, 145, 470, 270, 22, RED
-    IF DemoMode = TRUE THEN
-        DRAW TEXT "DEMO OVER" AT 480, 190 SIZE 48 COLOR YELLOW CENTERED
-    ELSE
-        DRAW TEXT "GAME OVER" AT 480, 190 SIZE 48 COLOR RED CENTERED
-    END IF
+    DRAW TEXT "GAME OVER" AT 480, 190 SIZE 48 COLOR RED CENTERED
     DRAW TEXT "SCORE" AT 380, 260 SIZE 20 COLOR LIGHT_GRAY
     DRAW NUMBER Score AT 520, 250 SIZE 36 COLOR YELLOW
-    IF DemoMode = TRUE THEN
-        DRAW TEXT "RETURNING TO TITLE" AT 480, 350 SIZE 22 COLOR WHITE CENTERED
-    ELSE
-        DRAW TEXT "ENTER TO RETRY" AT 480, 335 SIZE 24 COLOR WHITE CENTERED
-        DRAW TEXT "ESCAPE TO EXIT" AT 480, 375 SIZE 18 COLOR LIGHT_GRAY CENTERED
-    END IF
+    DRAW TEXT "ENTER TO RETRY" AT 480, 335 SIZE 24 COLOR WHITE CENTERED
+    DRAW TEXT "ESCAPE TO EXIT" AT 480, 375 SIZE 18 COLOR LIGHT_GRAY CENTERED
 END SUB
 
 GAME WINDOW "SMILE 2.0 Falling Blocks"
@@ -713,7 +703,7 @@ DO
         CALL DrawTitle()
     ELSE IF State = 1 THEN
         IF DemoMode = TRUE AND TIMER() - DemoStartedAt >= DemoMaximumPlayTime THEN
-            CALL EndGame()
+            CALL EnterTitle()
         END IF
 
         IF State = 1 AND ClearPhase > 0 THEN
@@ -772,14 +762,7 @@ DO
             CALL DrawGameOver()
         END IF
     ELSE
-        IF DemoMode = TRUE THEN
-            IF DemoTerminalStartedAt = 0 THEN
-                DemoTerminalStartedAt = TIMER()
-            END IF
-            IF TIMER() - DemoTerminalStartedAt >= DemoTerminalDuration THEN
-                CALL EnterTitle()
-            END IF
-        ELSE IF Key = KEY_ENTER THEN
+        IF Key = KEY_ENTER THEN
             CALL ResetGame()
         END IF
 

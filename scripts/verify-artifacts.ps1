@@ -79,6 +79,8 @@ $nativePrograms = @(
     'artifacts\games\FallingBlocks\FallingBlocks.exe',
     'artifacts\games\PaddleBall\PaddleBall.exe',
     'artifacts\games\BrickBreaker\BrickBreaker.exe',
+    'artifacts\games\MazeMuncher\MazeMuncher.exe',
+    'artifacts\games\MazeMuncher\MazeMuncher-NoDemo.exe',
     'artifacts\games\DungeonStarI\DungeonStarI.exe'
 )
 foreach ($program in $nativePrograms) {
@@ -90,6 +92,7 @@ $assetSets = @{
     FallingBlocks = @('GameOver.wav', 'LineClear.wav', 'Move.wav', 'Rotate.wav')
     PaddleBall = @('GameOver.wav', 'Paddle.wav', 'Score.wav', 'Wall.wav')
     BrickBreaker = @('Brick.wav', 'GameOver.wav', 'LevelClear.wav', 'LoseLife.wav', 'Paddle.wav', 'Wall.wav')
+    MazeMuncher = @('EnemyEaten.wav', 'GameOver.wav', 'LevelClear.wav', 'Pellet.wav', 'PlayerCaught.wav', 'Power.wav', 'Start.wav')
 }
 foreach ($game in $assetSets.Keys) {
     foreach ($asset in $assetSets[$game]) {
@@ -98,9 +101,11 @@ foreach ($game in $assetSets.Keys) {
 }
 Assert-AssetCopy 'games\FallingBlocks\Assets\Background.mp3' 'artifacts\games\FallingBlocks\Assets\Background.mp3'
 Assert-AssetCopy 'games\DungeonStarI\Assets\Background.mp3' 'artifacts\games\DungeonStarI\Assets\Background.mp3'
+Assert-AssetCopy 'games\MazeMuncher\Assets\Background.mp3' 'artifacts\games\MazeMuncher\Assets\Background.mp3'
 foreach ($map in @('default.map', 'sample-loops.map', 'sample-switchbacks.map')) {
     Assert-AssetCopy "games\DungeonStarI\Maps\$map" "artifacts\games\DungeonStarI\Maps\$map"
 }
+Assert-AssetCopy 'games\MazeMuncher\Maps\default.map' 'artifacts\games\MazeMuncher\Maps\default.map'
 Write-Host 'Game asset copies verified.'
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem

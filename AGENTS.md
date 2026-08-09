@@ -59,7 +59,7 @@ When SMILE needs to evolve:
 
 ## Games prove the language
 
-Snake, Falling Blocks, Paddle Ball, Brick Breaker, and Dungeon Star I must be implemented in `.smile` source.
+Snake, Falling Blocks, Paddle Ball, Brick Breaker, Dungeon Star I, and Maze Muncher must be implemented in `.smile` source.
 
 The native runtime may provide only generic services:
 
@@ -73,6 +73,24 @@ The native runtime may provide only generic services:
 - simple integer persistence.
 
 Do not add game-specific native helpers.
+
+### Student no-demo source rule
+
+Whenever a game includes an attract or demo mode, the same game folder must also include `Program-NoDemo.smile` as a complete playable teaching version.
+
+- Keep `Program.smile` as the normal demo-enabled startup source unless Sin directs otherwise.
+- Remove demo lifecycle, demo AI, demo-only timers and safety rules, demo UI, automatic title launch, terminal return, and demo cancellation from `Program-NoDemo.smile`; do not merely disable them with a flag.
+- Preserve the user game rules, controls, rendering, scoring, persistence, levels, and assets in both versions.
+- Include both files in the game project and compile both in repository validation.
+- Document how a student can switch the project startup file to the no-demo source.
+
+### Attract-mode return rule
+
+Every attract/demo mode, including those in future games, must return directly to the title screen when its time limit expires or its natural demo run ends.
+
+- Do not show `DEMO OVER`, demo victory, demo game-over, rematch, retry, or other terminal overlays between the demo and title screen.
+- Keep normal player game-over, victory, retry, and rematch screens unchanged.
+- Continue to let any user input cancel an active demo and return directly to the title screen.
 
 ## Default game-audio focus contract
 

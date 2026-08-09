@@ -22,7 +22,6 @@ CONST DemoPaddleSpeed = 620000
 CONST TitleDemoDelay = 5000
 CONST DemoMinimumPlayTime = 30000
 CONST DemoMaximumPlayTime = 45000
-CONST DemoTerminalDuration = 5000
 CONST TitleInputArmDelay = 250
 CONST DemoLaunchDelay = 600
 CONST DemoStallTime = 6000
@@ -58,7 +57,6 @@ DemoMode = FALSE
 TitleStartedAt = 0
 TitleAcceptInputAt = 0
 DemoStartedAt = 0
-DemoTerminalStartedAt = 0
 DemoLaunchAt = 0
 DemoLastBrickAt = 0
 DemoBouncePattern = 0
@@ -147,7 +145,6 @@ SUB StartDemo()
     DemoMode = TRUE
     CALL ResetMatch()
     DemoStartedAt = TIMER()
-    DemoTerminalStartedAt = 0
     DemoLaunchAt = DemoStartedAt + DemoLaunchDelay
     DemoLastBrickAt = DemoStartedAt
     DemoBouncePattern = 0
@@ -169,14 +166,16 @@ SUB LoseLife()
         RETURN
     END IF
 
+    IF DemoMode = TRUE THEN
+        CALL EnterTitle()
+        RETURN
+    END IF
+
     Lives = Lives - 1
     PLAY SOUND "Assets\LoseLife.wav"
     IF Lives <= 0 THEN
         CALL UpdateHighScore()
         State = 2
-        IF DemoMode = TRUE THEN
-            DemoTerminalStartedAt = TIMER()
-        END IF
         PLAY SOUND "Assets\GameOver.wav"
     ELSE
         ReadyMessage = 1
@@ -198,12 +197,11 @@ SUB AdvanceLevel()
             CALL ResetBall()
             DemoLaunchAt = TIMER() + DemoLaunchDelay
             DemoLastBrickAt = TIMER()
+        ELSE IF DemoMode = TRUE THEN
+            CALL EnterTitle()
         ELSE
             CALL UpdateHighScore()
             State = 3
-            IF DemoMode = TRUE THEN
-                DemoTerminalStartedAt = TIMER()
-            END IF
             PLAY SOUND "Assets\LevelClear.wav"
         END IF
     ELSE
@@ -464,37 +462,21 @@ END SUB
 SUB DrawGameOver()
     FILL ROUNDED RECTANGLE 220, 145, 520, 275, 22, RGB(18, 23, 38)
     DRAW ROUNDED RECTANGLE 220, 145, 520, 275, 22, RED
-    IF DemoMode = TRUE THEN
-        DRAW TEXT "DEMO OVER" AT 480, 185 SIZE 48 COLOR YELLOW CENTERED
-    ELSE
-        DRAW TEXT "GAME OVER" AT 480, 185 SIZE 48 COLOR RED CENTERED
-    END IF
+    DRAW TEXT "GAME OVER" AT 480, 185 SIZE 48 COLOR RED CENTERED
     DRAW TEXT "FINAL SCORE" AT 380, 255 SIZE 20 COLOR LIGHT_GRAY
     DRAW NUMBER Score AT 545, 245 SIZE 38 COLOR YELLOW
-    IF DemoMode = TRUE THEN
-        DRAW TEXT "RETURNING TO TITLE" AT 480, 345 SIZE 22 COLOR WHITE CENTERED
-    ELSE
-        DRAW TEXT "ENTER TO RETRY" AT 480, 335 SIZE 24 COLOR WHITE CENTERED
-        DRAW TEXT "ESCAPE TO EXIT" AT 480, 375 SIZE 18 COLOR LIGHT_GRAY CENTERED
-    END IF
+    DRAW TEXT "ENTER TO RETRY" AT 480, 335 SIZE 24 COLOR WHITE CENTERED
+    DRAW TEXT "ESCAPE TO EXIT" AT 480, 375 SIZE 18 COLOR LIGHT_GRAY CENTERED
 END SUB
 
 SUB DrawVictory()
     FILL ROUNDED RECTANGLE 190, 130, 580, 305, 22, RGB(18, 28, 36)
     DRAW ROUNDED RECTANGLE 190, 130, 580, 305, 22, LIGHT_GREEN
-    IF DemoMode = TRUE THEN
-        DRAW TEXT "DEMO COMPLETE" AT 480, 175 SIZE 42 COLOR LIGHT_GREEN CENTERED
-    ELSE
-        DRAW TEXT "YOU CLEARED ALL 3 LEVELS!" AT 480, 175 SIZE 35 COLOR LIGHT_GREEN CENTERED
-    END IF
+    DRAW TEXT "YOU CLEARED ALL 3 LEVELS!" AT 480, 175 SIZE 35 COLOR LIGHT_GREEN CENTERED
     DRAW TEXT "CHAMPION SCORE" AT 390, 255 SIZE 20 COLOR LIGHT_GRAY
     DRAW NUMBER Score AT 565, 245 SIZE 38 COLOR YELLOW
-    IF DemoMode = TRUE THEN
-        DRAW TEXT "RETURNING TO TITLE" AT 480, 350 SIZE 22 COLOR WHITE CENTERED
-    ELSE
-        DRAW TEXT "ENTER TO PLAY AGAIN" AT 480, 340 SIZE 24 COLOR WHITE CENTERED
-        DRAW TEXT "ESCAPE TO EXIT" AT 480, 382 SIZE 18 COLOR LIGHT_GRAY CENTERED
-    END IF
+    DRAW TEXT "ENTER TO PLAY AGAIN" AT 480, 340 SIZE 24 COLOR WHITE CENTERED
+    DRAW TEXT "ESCAPE TO EXIT" AT 480, 382 SIZE 18 COLOR LIGHT_GRAY CENTERED
 END SUB
 
 GAME WINDOW "SMILE 2.0 Brick Breaker"
@@ -540,9 +522,7 @@ DO
                 CALL BreakDemoStall()
             END IF
             IF FrameTime - DemoStartedAt >= DemoMaximumPlayTime THEN
-                State = 2
-                DemoTerminalStartedAt = FrameTime
-                PLAY SOUND "Assets\GameOver.wav"
+                CALL EnterTitle()
             END IF
         ELSE IF Launched = FALSE THEN
             IF Key = KEY_SPACE OR Key = KEY_ENTER THEN
@@ -572,14 +552,7 @@ DO
             CALL DrawVictory()
         END IF
     ELSE
-        IF DemoMode = TRUE THEN
-            IF DemoTerminalStartedAt = 0 THEN
-                DemoTerminalStartedAt = FrameTime
-            END IF
-            IF FrameTime - DemoTerminalStartedAt >= DemoTerminalDuration THEN
-                CALL EnterTitle()
-            END IF
-        ELSE IF Key = KEY_ENTER OR Key = KEY_SPACE THEN
+        IF Key = KEY_ENTER OR Key = KEY_SPACE THEN
             CALL StartGame()
         END IF
 

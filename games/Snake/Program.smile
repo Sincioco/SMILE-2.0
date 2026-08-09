@@ -13,7 +13,6 @@ CONST MinimumDelay = 45
 CONST TitleDemoDelay = 5000
 CONST DemoMinimumPlayTime = 30000
 CONST DemoMaximumPlayTime = 45000
-CONST DemoTerminalDuration = 5000
 CONST TitleInputArmDelay = 250
 
 DIM SnakeX[840]
@@ -47,7 +46,6 @@ DemoMode = FALSE
 TitleStartedAt = 0
 TitleAcceptInputAt = 0
 DemoStartedAt = 0
-DemoTerminalStartedAt = 0
 DemoHasSafeMove = FALSE
 SimulatedHeadX = 0
 SimulatedHeadY = 0
@@ -108,13 +106,14 @@ SUB EndRound()
         CALL RecoverDemo()
         RETURN
     END IF
+    IF DemoMode = TRUE THEN
+        CALL EnterTitle()
+        RETURN
+    END IF
     State = 2
     IF DemoMode = FALSE AND Score > HighScore THEN
         HighScore = Score
         SAVE HighScore TO "HighScore"
-    END IF
-    IF DemoMode = TRUE THEN
-        DemoTerminalStartedAt = TIMER()
     END IF
     PLAY SOUND "Assets\GameOver.wav"
 END SUB
@@ -445,21 +444,13 @@ END SUB
 SUB DrawGameOver()
     FILL ROUNDED RECTANGLE 145, 135, 590, 285, 22, RGB(16, 25, 45)
     DRAW ROUNDED RECTANGLE 145, 135, 590, 285, 22, RGB(245, 45, 55)
-    IF DemoMode = TRUE THEN
-        DRAW TEXT "DEMO OVER" AT 440, 185 SIZE 50 COLOR YELLOW CENTERED
-    ELSE
-        DRAW TEXT "GAME OVER" AT 440, 185 SIZE 50 COLOR RED CENTERED
-    END IF
+    DRAW TEXT "GAME OVER" AT 440, 185 SIZE 50 COLOR RED CENTERED
     DRAW TEXT "FINAL SCORE" AT 330, 255 SIZE 22 COLOR LIGHT_GRAY CENTERED
     DRAW NUMBER Score AT 530, 247 SIZE 38 COLOR YELLOW
     DRAW TEXT "HIGH SCORE" AT 330, 305 SIZE 22 COLOR LIGHT_GRAY CENTERED
     DRAW NUMBER HighScore AT 530, 297 SIZE 38 COLOR CYAN
-    IF DemoMode = TRUE THEN
-        DRAW TEXT "RETURNING TO TITLE" AT 440, 370 SIZE 22 COLOR WHITE CENTERED
-    ELSE
-        DRAW TEXT "ENTER TO RETRY" AT 440, 360 SIZE 24 COLOR WHITE CENTERED
-        DRAW TEXT "ESCAPE TO EXIT" AT 440, 392 SIZE 18 COLOR LIGHT_GRAY CENTERED
-    END IF
+    DRAW TEXT "ENTER TO RETRY" AT 440, 360 SIZE 24 COLOR WHITE CENTERED
+    DRAW TEXT "ESCAPE TO EXIT" AT 440, 392 SIZE 18 COLOR LIGHT_GRAY CENTERED
 END SUB
 
 SUB DrainPendingKeys()
@@ -486,7 +477,6 @@ END SUB
 SUB StartDemo()
     DemoMode = TRUE
     DemoStartedAt = TIMER()
-    DemoTerminalStartedAt = 0
     CALL ResetPlay()
 END SUB
 
@@ -521,7 +511,7 @@ DO
         END IF
 
         IF DemoMode = TRUE AND TIMER() - DemoStartedAt >= DemoMaximumPlayTime THEN
-            CALL EndRound()
+            CALL EnterTitle()
         END IF
 
         IF State = 1 AND DemoMode = FALSE THEN
@@ -554,19 +544,10 @@ DO
             CALL DrawGameOver()
         END IF
     ELSE
-        IF DemoMode = TRUE THEN
-            IF DemoTerminalStartedAt = 0 THEN
-                DemoTerminalStartedAt = TIMER()
-            END IF
-            IF TIMER() - DemoTerminalStartedAt >= DemoTerminalDuration THEN
-                CALL EnterTitle()
-            END IF
-        ELSE
-            IF Key = KEY_ESCAPE THEN
-                END PROGRAM
-            ELSE IF Key = KEY_ENTER THEN
-                CALL ResetGame()
-            END IF
+        IF Key = KEY_ESCAPE THEN
+            END PROGRAM
+        ELSE IF Key = KEY_ENTER THEN
+            CALL ResetGame()
         END IF
 
         IF State = 0 THEN

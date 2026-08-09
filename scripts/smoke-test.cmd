@@ -205,6 +205,35 @@ xcopy "%SMILE_ROOT%\games\BrickBreaker\Assets" "%SMILE_ROOT%\artifacts\games\Bri
 if errorlevel 1 exit /b %errorlevel%
 echo Brick Breaker compiled successfully: %SMILE_ROOT%\artifacts\games\BrickBreaker\BrickBreaker.exe
 
+if not exist "%SMILE_ROOT%\artifacts\games\MazeMuncher" mkdir "%SMILE_ROOT%\artifacts\games\MazeMuncher"
+if not exist "%SMILE_ROOT%\games\MazeMuncher\Assets\Background.mp3" (
+    echo Maze Muncher background music source asset is missing.
+    exit /b 1
+)
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\MazeMuncher\Program.smile" -o "%SMILE_ROOT%\artifacts\games\MazeMuncher\MazeMuncher.exe" --keep-temp
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\MazeMuncher\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\MazeMuncher\MazeMuncher-NoDemo.exe" --keep-temp
+if errorlevel 1 exit /b %errorlevel%
+xcopy "%SMILE_ROOT%\games\MazeMuncher\Assets" "%SMILE_ROOT%\artifacts\games\MazeMuncher\Assets" /E /I /Y >nul
+if errorlevel 1 exit /b %errorlevel%
+xcopy "%SMILE_ROOT%\games\MazeMuncher\Maps" "%SMILE_ROOT%\artifacts\games\MazeMuncher\Maps" /E /I /Y >nul
+if errorlevel 1 exit /b %errorlevel%
+if not exist "%SMILE_ROOT%\artifacts\games\MazeMuncher\Assets\Background.mp3" (
+    echo Maze Muncher background music output asset is missing.
+    exit /b 1
+)
+fc /b "%SMILE_ROOT%\games\MazeMuncher\Assets\Background.mp3" "%SMILE_ROOT%\artifacts\games\MazeMuncher\Assets\Background.mp3" >nul
+if errorlevel 1 (
+    echo Maze Muncher background music output does not match its project asset.
+    exit /b 1
+)
+fc /b "%SMILE_ROOT%\games\MazeMuncher\Maps\default.map" "%SMILE_ROOT%\artifacts\games\MazeMuncher\Maps\default.map" >nul
+if errorlevel 1 (
+    echo Maze Muncher output map does not match its project asset.
+    exit /b 1
+)
+echo Maze Muncher demo and no-demo versions compiled successfully.
+
 if not exist "%SMILE_ROOT%\artifacts\games\DungeonStarI" mkdir "%SMILE_ROOT%\artifacts\games\DungeonStarI"
 if not exist "%SMILE_ROOT%\games\DungeonStarI\Assets\Background.mp3" (
     echo Dungeon Star I background music source asset is missing.

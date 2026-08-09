@@ -1,6 +1,6 @@
 # SMILE 2.0
 
-SMILE 2.0 is a small, structured BASIC-style language that compiles directly to native Windows x64 executables. It includes a MASM-based native compiler, a Win32 game runtime, Visual Studio 2026 language and project support, console examples, and five complete games written in SMILE.
+SMILE 2.0 is a small, structured BASIC-style language that compiles directly to native Windows x64 executables. It includes a MASM-based native compiler, a Win32 game runtime, Visual Studio 2026 language and project support, console examples, and six complete games written in SMILE.
 
 The repository has one language authority: `src\Smile.Language`. The command-line compiler and Visual Studio extension use the same lexer, parser, syntax model, diagnostics, symbols, types, and semantic model. Game rules remain in `.smile` source; the C runtime provides only generic Windows graphics, input, sound, timing, and storage services.
 
@@ -12,6 +12,10 @@ Validation assumes the happy path and uses the lightest focused evidence that re
 
 When project work produces two or more Markdown requirement, specification, handoff, or instruction files, each remains individually usable and the complete set is also delivered in one ZIP with a `START HERE` file and any companion samples, configuration, or maps under useful repository-relative paths.
 
+Every game with an attract/demo mode also ships a complete `Program-NoDemo.smile` teaching version. The no-demo source preserves normal gameplay while removing demo AI, lifecycle, timers, safety rules, UI, and cancellation code instead of hiding those systems behind a flag.
+
+Attract demos always return directly to the title screen when their run ends or expires. Demo-only game-over, victory, retry, and rematch screens are not shown; normal player terminal screens remain part of the game.
+
 ## Included games
 
 - `games\Snake` — graphical Snake with score, progressive speed, and a persistent high score.
@@ -19,8 +23,9 @@ When project work produces two or more Markdown requirement, specification, hand
 - `games\PaddleBall` — one-player AI and local two-player paddle modes with a persistent best rally.
 - `games\BrickBreaker` — a 7-by-12 colored brick field, three lives, three levels, row scoring, and a persistent high score.
 - `games\DungeonStarI` — an original three-floor pseudo-3D dungeon with student-editable external maps, validated pipe-style random generation, a blue map-selection title, doors, stairs, attract mode, and green, blue, and red floor palettes.
+- `games\MazeMuncher` — an original neon maze chase with pellets, power mode, four geometric enemies, wrap tunnels, levels, a persistent high score, demo and no-demo teaching sources, and an attract demo.
 
-All games use a logical 960-by-540 canvas. Window resizing preserves the 16:9 aspect ratio with letterboxing, and Alt+Enter toggles borderless full screen.
+All games use a logical 960-by-540 canvas. A 16:9 output such as 1920-by-1080 fills the complete screen without letterboxing; other aspect ratios use centered letterboxing to preserve geometry. Alt+Enter toggles borderless full screen.
 
 ## Automatic game-audio focus
 
@@ -57,7 +62,7 @@ Run the complete noninteractive regression and artifact verification suite with:
 scripts\smoke-test.cmd
 ```
 
-The smoke suite builds the solution, runs console examples, checks invalid-program diagnostics, exercises save/reload and corrupt-value fallback, validates Dungeon Star I's supplied maps, compiles the required graphics text sample and all five games, copies and hashes their assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Graphical gameplay and audible playback remain hands-on acceptance steps.
+The smoke suite builds the solution, runs console examples, checks invalid-program diagnostics, exercises save/reload and corrupt-value fallback, validates Dungeon Star I's supplied maps, compiles the required graphics text sample and all six games, copies and hashes their assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Graphical gameplay and audible playback remain hands-on acceptance steps.
 
 ## Compile loose files
 
@@ -110,6 +115,7 @@ artifacts\games\FallingBlocks\FallingBlocks.exe
 artifacts\games\PaddleBall\PaddleBall.exe
 artifacts\games\BrickBreaker\BrickBreaker.exe
 artifacts\games\DungeonStarI\DungeonStarI.exe
+artifacts\games\MazeMuncher\MazeMuncher.exe
 ```
 
 The executables are self-contained native game programs with respect to SMILE: neither `smilec.exe` nor Visual Studio is needed to run them. They use normal Windows system libraries; a music-bearing executable also uses the Microsoft Visual C++ runtime installed by Visual Studio or the supported Visual C++ Redistributable.

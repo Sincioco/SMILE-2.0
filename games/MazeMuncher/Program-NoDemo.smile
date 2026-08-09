@@ -1,0 +1,977 @@
+' SMILE 2.0 Maze Muncher - student edition without attract/demo code.
+CONST CanvasWidth = 960
+CONST CanvasHeight = 540
+CONST MazeWidth = 31
+CONST MazeHeight = 21
+CONST CellCount = MazeWidth * MazeHeight
+CONST CellSize = 22
+CONST MazeLeft = 30
+CONST MazeTop = 56
+CONST MapFileCapacity = 4096
+CONST SubpixelsPerPixel = 1000
+CONST CellTravelSub = CellSize * SubpixelsPerPixel
+CONST SimulationStep = 8
+CONST MaxCatchUpSteps = 6
+CONST PlayerSpeed = 110000
+CONST EnemySpeed = 92000
+CONST FrightenedSpeed = 65000
+CONST WallCurveRadius = 7
+CONST PowerDuration = 7000
+CONST TILE_CORRIDOR = 0
+CONST TILE_WALL = 1
+CONST TILE_GATE = 2
+CONST TILE_TUNNEL = 3
+
+DIM Tiles[CellCount]
+DIM StartingPellets[CellCount]
+DIM Pellets[CellCount]
+DIM MapFileBytes[MapFileCapacity]
+DIM DirectionX[4]
+DIM DirectionY[4]
+DIM EnemyStartX[4]
+DIM EnemyStartY[4]
+DIM EnemySeen[4]
+DIM EnemyFromX[4]
+DIM EnemyFromY[4]
+DIM EnemyToX[4]
+DIM EnemyToY[4]
+DIM EnemyProgress[4]
+DIM EnemyDirection[4]
+DIM EnemyReleased[4]
+DIM EnemyReleaseAt[4]
+DIM EnemyEaten[4]
+DIM EnemyPixelX[4]
+DIM EnemyPixelY[4]
+DIM EnemyPreviousX[4]
+DIM EnemyPreviousY[4]
+DIM EnemyVisits[4, CellCount]
+DIM BFSQueue[CellCount]
+DIM BFSVisited[CellCount]
+
+DirectionX[0] = 0
+DirectionY[0] = -1
+DirectionX[1] = 1
+DirectionY[1] = 0
+DirectionX[2] = 0
+DirectionY[2] = 1
+DirectionX[3] = -1
+DirectionY[3] = 0
+
+State = 0
+Key = KEY_NONE
+LastFrameTime = TIMER()
+FrameTime = LastFrameTime
+Elapsed = 0
+Accumulator = 0
+CatchUpSteps = 0
+Score = 0
+HighScore = 0
+Lives = 3
+Level = 1
+PelletCount = 0
+PlayerStartX = 15
+PlayerStartY = 17
+PlayerFromX = PlayerStartX
+PlayerFromY = PlayerStartY
+PlayerToX = PlayerStartX
+PlayerToY = PlayerStartY
+PlayerProgress = 0
+PlayerDirection = 1
+RequestedDirection = 1
+PlayerPixelX = 0
+PlayerPixelY = 0
+PowerUntil = 0
+PowerCombo = 0
+PauseUntil = 0
+PauseAction = 0
+MapFileLength = 0
+MapValid = FALSE
+MapFallbackUsed = FALSE
+ParsedRow = 0
+ParsedColumn = 0
+PlayerStartCount = 0
+EnemyStartCount = 0
+TunnelCount = 0
+ParsedPelletCount = 0
+
+LOAD HighScore FROM "HighScore" DEFAULT 0
+
+FUNCTION CellIndex(XValue, YValue)
+    RETURN YValue * MazeWidth + XValue
+END FUNCTION
+
+FUNCTION OppositeDirection(DirectionValue)
+    RETURN (DirectionValue + 2) MOD 4
+END FUNCTION
+
+FUNCTION CellCenterX(XValue)
+    RETURN MazeLeft + XValue * CellSize + CellSize / 2
+END FUNCTION
+
+FUNCTION CellCenterY(YValue)
+    RETURN MazeTop + YValue * CellSize + CellSize / 2
+END FUNCTION
+
+FUNCTION PlayerCellOpen(XValue, YValue)
+    IF XValue < 0 OR XValue >= MazeWidth OR YValue < 0 OR YValue >= MazeHeight THEN
+        RETURN FALSE
+    END IF
+    TileValue = Tiles[CellIndex(XValue, YValue)]
+    RETURN TileValue <> TILE_WALL AND TileValue <> TILE_GATE
+END FUNCTION
+
+FUNCTION EnemyCellOpen(XValue, YValue)
+    IF XValue < 0 OR XValue >= MazeWidth OR YValue < 0 OR YValue >= MazeHeight THEN
+        RETURN FALSE
+    END IF
+    RETURN Tiles[CellIndex(XValue, YValue)] <> TILE_WALL
+END FUNCTION
+
+FUNCTION NextCellX(XValue, YValue, DirectionValue)
+    CandidateX = XValue + DirectionX[DirectionValue]
+    IF YValue = 10 AND XValue = 0 AND DirectionValue = 3 THEN
+        RETURN MazeWidth - 1
+    END IF
+    IF YValue = 10 AND XValue = MazeWidth - 1 AND DirectionValue = 1 THEN
+        RETURN 0
+    END IF
+    RETURN CandidateX
+END FUNCTION
+
+FUNCTION NextCellY(XValue, YValue, DirectionValue)
+    RETURN YValue + DirectionY[DirectionValue]
+END FUNCTION
+
+FUNCTION CanPlayerMove(XValue, YValue, DirectionValue)
+    IF DirectionValue < 0 OR DirectionValue > 3 THEN
+        RETURN FALSE
+    END IF
+    TestX = NextCellX(XValue, YValue, DirectionValue)
+    TestY = NextCellY(XValue, YValue, DirectionValue)
+    RETURN PlayerCellOpen(TestX, TestY)
+END FUNCTION
+
+FUNCTION CanEnemyMove(XValue, YValue, DirectionValue)
+    IF DirectionValue < 0 OR DirectionValue > 3 THEN
+        RETURN FALSE
+    END IF
+    TestX = NextCellX(XValue, YValue, DirectionValue)
+    TestY = NextCellY(XValue, YValue, DirectionValue)
+    RETURN EnemyCellOpen(TestX, TestY)
+END FUNCTION
+
+SUB ClearMapArrays()
+    FOR ClearIndex = 0 TO CellCount - 1
+        Tiles[ClearIndex] = TILE_WALL
+        StartingPellets[ClearIndex] = 0
+        Pellets[ClearIndex] = 0
+    END FOR
+    FOR ClearEnemy = 0 TO 3
+        EnemySeen[ClearEnemy] = 0
+        EnemyStartX[ClearEnemy] = 13 + ClearEnemy
+        EnemyStartY[ClearEnemy] = 9
+    END FOR
+END SUB
+
+SUB ParseMapByte(ByteValue, XValue, YValue)
+    ParsedIndex = CellIndex(XValue, YValue)
+    Tiles[ParsedIndex] = TILE_CORRIDOR
+    StartingPellets[ParsedIndex] = 0
+    IF ByteValue = 35 THEN
+        Tiles[ParsedIndex] = TILE_WALL
+    ELSE IF ByteValue = 46 THEN
+        StartingPellets[ParsedIndex] = 1
+        ParsedPelletCount = ParsedPelletCount + 1
+    ELSE IF ByteValue = 111 THEN
+        StartingPellets[ParsedIndex] = 2
+        ParsedPelletCount = ParsedPelletCount + 1
+    ELSE IF ByteValue = 45 THEN
+        Tiles[ParsedIndex] = TILE_CORRIDOR
+    ELSE IF ByteValue = 80 THEN
+        PlayerStartX = XValue
+        PlayerStartY = YValue
+        PlayerStartCount = PlayerStartCount + 1
+    ELSE IF ByteValue >= 49 AND ByteValue <= 52 THEN
+        ParsedEnemy = ByteValue - 49
+        EnemyStartX[ParsedEnemy] = XValue
+        EnemyStartY[ParsedEnemy] = YValue
+        EnemySeen[ParsedEnemy] = EnemySeen[ParsedEnemy] + 1
+        EnemyStartCount = EnemyStartCount + 1
+    ELSE IF ByteValue = 61 THEN
+        Tiles[ParsedIndex] = TILE_GATE
+    ELSE IF ByteValue = 84 THEN
+        Tiles[ParsedIndex] = TILE_TUNNEL
+        TunnelCount = TunnelCount + 1
+    ELSE
+        MapValid = FALSE
+    END IF
+END SUB
+
+SUB ValidatePelletReachability()
+    IF MapValid = FALSE THEN
+        RETURN
+    END IF
+    FOR VisitIndex = 0 TO CellCount - 1
+        BFSVisited[VisitIndex] = 0
+    END FOR
+    QueueHead = 0
+    QueueTail = 0
+    StartIndex = CellIndex(PlayerStartX, PlayerStartY)
+    BFSQueue[QueueTail] = StartIndex
+    QueueTail = QueueTail + 1
+    BFSVisited[StartIndex] = 1
+    DO
+        IF QueueHead < QueueTail THEN
+            VisitCell = BFSQueue[QueueHead]
+            QueueHead = QueueHead + 1
+            VisitX = VisitCell MOD MazeWidth
+            VisitY = VisitCell / MazeWidth
+            FOR VisitDirection = 0 TO 3
+                VisitNextX = NextCellX(VisitX, VisitY, VisitDirection)
+                VisitNextY = NextCellY(VisitX, VisitY, VisitDirection)
+                IF PlayerCellOpen(VisitNextX, VisitNextY) = TRUE THEN
+                    VisitNext = CellIndex(VisitNextX, VisitNextY)
+                    IF BFSVisited[VisitNext] = 0 THEN
+                        BFSVisited[VisitNext] = 1
+                        BFSQueue[QueueTail] = VisitNext
+                        QueueTail = QueueTail + 1
+                    END IF
+                END IF
+            END FOR
+        END IF
+    LOOP UNTIL QueueHead >= QueueTail
+    FOR VisitIndex = 0 TO CellCount - 1
+        IF StartingPellets[VisitIndex] > 0 AND BFSVisited[VisitIndex] = 0 THEN
+            MapValid = FALSE
+        END IF
+    END FOR
+END SUB
+
+SUB ParseLoadedMap()
+    CALL ClearMapArrays()
+    MapValid = MapFileLength > 0
+    ParsedRow = 0
+    ParsedColumn = 0
+    PlayerStartCount = 0
+    EnemyStartCount = 0
+    TunnelCount = 0
+    ParsedPelletCount = 0
+    FOR ByteIndex = 0 TO MapFileLength - 1
+        MapByte = MapFileBytes[ByteIndex]
+        IF MapByte = 13 THEN
+            MapByte = 13
+        ELSE IF MapByte = 10 THEN
+            IF ParsedColumn <> MazeWidth THEN
+                MapValid = FALSE
+            END IF
+            ParsedRow = ParsedRow + 1
+            ParsedColumn = 0
+        ELSE
+            IF ParsedRow >= MazeHeight OR ParsedColumn >= MazeWidth THEN
+                MapValid = FALSE
+            ELSE
+                CALL ParseMapByte(MapByte, ParsedColumn, ParsedRow)
+            END IF
+            ParsedColumn = ParsedColumn + 1
+        END IF
+    END FOR
+    IF ParsedColumn > 0 THEN
+        IF ParsedColumn <> MazeWidth THEN
+            MapValid = FALSE
+        END IF
+        ParsedRow = ParsedRow + 1
+    END IF
+    IF ParsedRow <> MazeHeight OR PlayerStartCount <> 1 OR EnemyStartCount <> 4 OR TunnelCount <> 2 OR ParsedPelletCount <= 0 THEN
+        MapValid = FALSE
+    END IF
+    FOR ParsedEnemy = 0 TO 3
+        IF EnemySeen[ParsedEnemy] <> 1 THEN
+            MapValid = FALSE
+        END IF
+    END FOR
+    CALL ValidatePelletReachability()
+END SUB
+
+SUB BuildFallbackMap()
+    CALL ClearMapArrays()
+    FOR FallbackY = 0 TO MazeHeight - 1
+        FOR FallbackX = 0 TO MazeWidth - 1
+            FallbackIndex = CellIndex(FallbackX, FallbackY)
+            IF FallbackX = 0 OR FallbackX = MazeWidth - 1 OR FallbackY = 0 OR FallbackY = MazeHeight - 1 THEN
+                Tiles[FallbackIndex] = TILE_WALL
+            ELSE
+                Tiles[FallbackIndex] = TILE_CORRIDOR
+                StartingPellets[FallbackIndex] = 1
+            END IF
+        END FOR
+    END FOR
+    Tiles[CellIndex(0, 10)] = TILE_TUNNEL
+    Tiles[CellIndex(MazeWidth - 1, 10)] = TILE_TUNNEL
+    StartingPellets[CellIndex(0, 10)] = 0
+    StartingPellets[CellIndex(MazeWidth - 1, 10)] = 0
+    StartingPellets[CellIndex(1, 1)] = 2
+    StartingPellets[CellIndex(MazeWidth - 2, 1)] = 2
+    StartingPellets[CellIndex(1, MazeHeight - 2)] = 2
+    StartingPellets[CellIndex(MazeWidth - 2, MazeHeight - 2)] = 2
+    PlayerStartX = 15
+    PlayerStartY = 17
+    StartingPellets[CellIndex(PlayerStartX, PlayerStartY)] = 0
+    FOR FallbackEnemy = 0 TO 3
+        EnemyStartX[FallbackEnemy] = 12 + FallbackEnemy * 2
+        EnemyStartY[FallbackEnemy] = 9
+        StartingPellets[CellIndex(EnemyStartX[FallbackEnemy], EnemyStartY[FallbackEnemy])] = 0
+    END FOR
+    Tiles[CellIndex(15, 8)] = TILE_GATE
+    StartingPellets[CellIndex(15, 8)] = 0
+    MapFallbackUsed = TRUE
+END SUB
+
+SUB LoadMaze()
+    LOAD TEXT FILE "Maps\default.map" INTO MapFileBytes COUNT MapFileLength
+    CALL ParseLoadedMap()
+    IF MapValid = FALSE THEN
+        CALL BuildFallbackMap()
+    END IF
+END SUB
+
+SUB CopyStartingPellets()
+    PelletCount = 0
+    FOR PelletIndex = 0 TO CellCount - 1
+        Pellets[PelletIndex] = StartingPellets[PelletIndex]
+        IF Pellets[PelletIndex] > 0 THEN
+            PelletCount = PelletCount + 1
+        END IF
+    END FOR
+END SUB
+
+SUB EnterTitle()
+    State = 0
+    Accumulator = 0
+    Key = KEY_NONE
+    STOP MUSIC
+    STOP SOUND
+END SUB
+
+SUB ResetCharacters()
+    PlayerFromX = PlayerStartX
+    PlayerFromY = PlayerStartY
+    PlayerToX = PlayerStartX
+    PlayerToY = PlayerStartY
+    PlayerProgress = 0
+    PlayerDirection = 1
+    RequestedDirection = 1
+    PowerUntil = 0
+    PowerCombo = 0
+    FOR ResetEnemy = 0 TO 3
+        EnemyFromX[ResetEnemy] = EnemyStartX[ResetEnemy]
+        EnemyFromY[ResetEnemy] = EnemyStartY[ResetEnemy]
+        EnemyToX[ResetEnemy] = EnemyStartX[ResetEnemy]
+        EnemyToY[ResetEnemy] = EnemyStartY[ResetEnemy]
+        EnemyProgress[ResetEnemy] = 0
+        EnemyDirection[ResetEnemy] = ResetEnemy MOD 4
+        EnemyReleased[ResetEnemy] = 0
+        EnemyReleaseAt[ResetEnemy] = TIMER() + 500 + ResetEnemy * 900
+        EnemyEaten[ResetEnemy] = 0
+        EnemyPreviousX[ResetEnemy] = EnemyStartX[ResetEnemy]
+        EnemyPreviousY[ResetEnemy] = EnemyStartY[ResetEnemy]
+        FOR ResetVisit = 0 TO CellCount - 1
+            EnemyVisits[ResetEnemy, ResetVisit] = 0
+        END FOR
+    END FOR
+END SUB
+
+SUB StartMatch()
+    Score = 0
+    Lives = 3
+    Level = 1
+    CALL CopyStartingPellets()
+    CALL ResetCharacters()
+    State = 1
+    Accumulator = 0
+    PLAY SOUND "Assets\Start.wav"
+    MUSIC VOLUME 38
+    PLAY MUSIC "Assets\Background.mp3" LOOP
+END SUB
+
+SUB AddScore(Points)
+    Score = Score + Points
+    IF Score > HighScore THEN
+        HighScore = Score
+        SAVE HighScore TO "HighScore"
+    END IF
+END SUB
+
+SUB ReverseEnemies()
+    FOR ReverseEnemy = 0 TO 3
+        IF EnemyReleased[ReverseEnemy] = 1 AND EnemyEaten[ReverseEnemy] = 0 THEN
+            EnemyDirection[ReverseEnemy] = OppositeDirection(EnemyDirection[ReverseEnemy])
+            IF EnemyProgress[ReverseEnemy] > 0 THEN
+                SwapX = EnemyFromX[ReverseEnemy]
+                SwapY = EnemyFromY[ReverseEnemy]
+                EnemyFromX[ReverseEnemy] = EnemyToX[ReverseEnemy]
+                EnemyFromY[ReverseEnemy] = EnemyToY[ReverseEnemy]
+                EnemyToX[ReverseEnemy] = SwapX
+                EnemyToY[ReverseEnemy] = SwapY
+                EnemyProgress[ReverseEnemy] = CellTravelSub - EnemyProgress[ReverseEnemy]
+            END IF
+        END IF
+    END FOR
+END SUB
+
+SUB ProcessPlayerCell()
+    PlayerCell = CellIndex(PlayerFromX, PlayerFromY)
+    PelletValue = Pellets[PlayerCell]
+    IF PelletValue = 1 THEN
+        Pellets[PlayerCell] = 0
+        PelletCount = PelletCount - 1
+        CALL AddScore(10)
+        PLAY SOUND "Assets\Pellet.wav"
+    ELSE IF PelletValue = 2 THEN
+        Pellets[PlayerCell] = 0
+        PelletCount = PelletCount - 1
+        CALL AddScore(50)
+        PowerCombo = 0
+        CurrentPowerDuration = MAX(3500, PowerDuration - (Level - 1) * 350)
+        PowerUntil = TIMER() + CurrentPowerDuration
+        CALL ReverseEnemies()
+        PLAY SOUND "Assets\Power.wav"
+    END IF
+    IF PelletCount <= 0 AND State = 1 THEN
+        State = 3
+        PauseAction = 2
+        PauseUntil = TIMER() + 900
+        STOP MUSIC
+        PLAY SOUND "Assets\LevelClear.wav"
+    END IF
+END SUB
+
+SUB UpdatePlayer()
+    IF PlayerProgress = 0 THEN
+        IF CanPlayerMove(PlayerFromX, PlayerFromY, RequestedDirection) = TRUE THEN
+            PlayerDirection = RequestedDirection
+        END IF
+        IF CanPlayerMove(PlayerFromX, PlayerFromY, PlayerDirection) = TRUE THEN
+            PlayerToX = NextCellX(PlayerFromX, PlayerFromY, PlayerDirection)
+            PlayerToY = NextCellY(PlayerFromX, PlayerFromY, PlayerDirection)
+        ELSE
+            PlayerToX = PlayerFromX
+            PlayerToY = PlayerFromY
+            RETURN
+        END IF
+    END IF
+    PlayerProgress = PlayerProgress + PlayerSpeed * SimulationStep / 1000
+    IF PlayerProgress >= CellTravelSub THEN
+        PlayerFromX = PlayerToX
+        PlayerFromY = PlayerToY
+        PlayerProgress = 0
+        CALL ProcessPlayerCell()
+    END IF
+END SUB
+
+SUB ChooseEnemyDirection(EnemyNumber)
+    LegalCount = 0
+    FOR LegalDirection = 0 TO 3
+        IF CanEnemyMove(EnemyFromX[EnemyNumber], EnemyFromY[EnemyNumber], LegalDirection) = TRUE THEN
+            LegalCount = LegalCount + 1
+        END IF
+    END FOR
+    TargetX = PlayerFromX
+    TargetY = PlayerFromY
+    IF EnemyEaten[EnemyNumber] = 1 THEN
+        TargetX = EnemyStartX[EnemyNumber]
+        TargetY = EnemyStartY[EnemyNumber]
+    ELSE IF EnemyNumber = 1 THEN
+        TargetX = PlayerFromX + DirectionX[PlayerDirection] * 3
+        TargetY = PlayerFromY + DirectionY[PlayerDirection] * 3
+    ELSE IF EnemyNumber = 2 THEN
+        TargetX = PlayerFromX + DirectionX[PlayerDirection] * 2 + DirectionY[PlayerDirection] * 2
+        TargetY = PlayerFromY + DirectionY[PlayerDirection] * 2 - DirectionX[PlayerDirection] * 2
+    ELSE IF EnemyNumber = 3 AND (TIMER() / 6000) MOD 2 = 1 THEN
+        TargetX = MazeWidth - 2
+        TargetY = MazeHeight - 2
+    END IF
+    TargetX = MAX(0, MIN(MazeWidth - 1, TargetX))
+    TargetY = MAX(0, MIN(MazeHeight - 1, TargetY))
+    ReverseDirection = OppositeDirection(EnemyDirection[EnemyNumber])
+    BestEnemyDirection = -1
+    BestEnemyScore = 99999
+    FOR CandidateDirection = 0 TO 3
+        CandidateAllowed = CanEnemyMove(EnemyFromX[EnemyNumber], EnemyFromY[EnemyNumber], CandidateDirection)
+        IF CandidateDirection = ReverseDirection AND LegalCount > 1 AND EnemyEaten[EnemyNumber] = 0 THEN
+            CandidateAllowed = FALSE
+        END IF
+        IF CandidateAllowed = TRUE THEN
+            CandidateX = NextCellX(EnemyFromX[EnemyNumber], EnemyFromY[EnemyNumber], CandidateDirection)
+            CandidateY = NextCellY(EnemyFromX[EnemyNumber], EnemyFromY[EnemyNumber], CandidateDirection)
+            IF CandidateX = EnemyPreviousX[EnemyNumber] AND CandidateY = EnemyPreviousY[EnemyNumber] AND LegalCount > 1 THEN
+                CandidateAllowed = FALSE
+            END IF
+        END IF
+        IF CandidateAllowed = TRUE THEN
+            CandidateX = NextCellX(EnemyFromX[EnemyNumber], EnemyFromY[EnemyNumber], CandidateDirection)
+            CandidateY = NextCellY(EnemyFromX[EnemyNumber], EnemyFromY[EnemyNumber], CandidateDirection)
+            CandidateVisit = EnemyVisits[EnemyNumber, CellIndex(CandidateX, CandidateY)]
+            CandidateScore = (ABS(CandidateX - TargetX) + ABS(CandidateY - TargetY)) * 10
+            IF EnemyEaten[EnemyNumber] = 0 THEN
+                CandidateScore = CandidateScore + MIN(60, CandidateVisit * 7) + ((CandidateDirection + EnemyNumber) MOD 4)
+            END IF
+            IF TIMER() < PowerUntil AND EnemyEaten[EnemyNumber] = 0 THEN
+                CandidateScore = -(ABS(CandidateX - PlayerFromX) + ABS(CandidateY - PlayerFromY)) * 10 + MIN(60, CandidateVisit * 7)
+            END IF
+            IF CandidateScore < BestEnemyScore THEN
+                BestEnemyScore = CandidateScore
+                BestEnemyDirection = CandidateDirection
+            END IF
+        END IF
+    END FOR
+    IF BestEnemyDirection >= 0 THEN
+        EnemyDirection[EnemyNumber] = BestEnemyDirection
+    END IF
+END SUB
+
+SUB UpdateEnemies()
+    FOR MoveEnemy = 0 TO 3
+        IF EnemyReleased[MoveEnemy] = 0 AND TIMER() >= EnemyReleaseAt[MoveEnemy] THEN
+            EnemyReleased[MoveEnemy] = 1
+        END IF
+        IF EnemyReleased[MoveEnemy] = 1 THEN
+            IF EnemyProgress[MoveEnemy] = 0 THEN
+                IF EnemyEaten[MoveEnemy] = 1 AND EnemyFromX[MoveEnemy] = EnemyStartX[MoveEnemy] AND EnemyFromY[MoveEnemy] = EnemyStartY[MoveEnemy] THEN
+                    EnemyEaten[MoveEnemy] = 0
+                    EnemyReleased[MoveEnemy] = 0
+                    EnemyReleaseAt[MoveEnemy] = TIMER() + 1200
+                ELSE
+                    CALL ChooseEnemyDirection(MoveEnemy)
+                    EnemyToX[MoveEnemy] = NextCellX(EnemyFromX[MoveEnemy], EnemyFromY[MoveEnemy], EnemyDirection[MoveEnemy])
+                    EnemyToY[MoveEnemy] = NextCellY(EnemyFromX[MoveEnemy], EnemyFromY[MoveEnemy], EnemyDirection[MoveEnemy])
+                END IF
+            END IF
+            IF EnemyReleased[MoveEnemy] = 1 THEN
+                CurrentEnemySpeed = EnemySpeed + MIN(26000, (Level - 1) * 5000)
+                IF TIMER() < PowerUntil AND EnemyEaten[MoveEnemy] = 0 THEN
+                    CurrentEnemySpeed = FrightenedSpeed
+                ELSE IF EnemyEaten[MoveEnemy] = 1 THEN
+                    CurrentEnemySpeed = 150000
+                END IF
+                EnemyProgress[MoveEnemy] = EnemyProgress[MoveEnemy] + CurrentEnemySpeed * SimulationStep / 1000
+                IF EnemyProgress[MoveEnemy] >= CellTravelSub THEN
+                    EnemyPreviousX[MoveEnemy] = EnemyFromX[MoveEnemy]
+                    EnemyPreviousY[MoveEnemy] = EnemyFromY[MoveEnemy]
+                    EnemyFromX[MoveEnemy] = EnemyToX[MoveEnemy]
+                    EnemyFromY[MoveEnemy] = EnemyToY[MoveEnemy]
+                    EnemyVisitIndex = CellIndex(EnemyFromX[MoveEnemy], EnemyFromY[MoveEnemy])
+                    EnemyVisits[MoveEnemy, EnemyVisitIndex] = EnemyVisits[MoveEnemy, EnemyVisitIndex] + 1
+                    EnemyProgress[MoveEnemy] = 0
+                END IF
+            END IF
+        END IF
+    END FOR
+END SUB
+
+SUB UpdateRenderPositions()
+    PlayerPixelX = CellCenterX(PlayerFromX)
+    PlayerPixelY = CellCenterY(PlayerFromY)
+    IF PlayerProgress > 0 THEN
+        IF PlayerFromX = 0 AND PlayerToX = MazeWidth - 1 AND PlayerDirection = 3 THEN
+            PlayerPixelX = CellCenterX(0) - PlayerProgress / SubpixelsPerPixel
+        ELSE IF PlayerFromX = MazeWidth - 1 AND PlayerToX = 0 AND PlayerDirection = 1 THEN
+            PlayerPixelX = CellCenterX(MazeWidth - 1) + PlayerProgress / SubpixelsPerPixel
+        ELSE
+            PlayerPixelX = CellCenterX(PlayerFromX) + (CellCenterX(PlayerToX) - CellCenterX(PlayerFromX)) * PlayerProgress / CellTravelSub
+            PlayerPixelY = CellCenterY(PlayerFromY) + (CellCenterY(PlayerToY) - CellCenterY(PlayerFromY)) * PlayerProgress / CellTravelSub
+        END IF
+    END IF
+    FOR RenderEnemy = 0 TO 3
+        EnemyPixelX[RenderEnemy] = CellCenterX(EnemyFromX[RenderEnemy])
+        EnemyPixelY[RenderEnemy] = CellCenterY(EnemyFromY[RenderEnemy])
+        IF EnemyProgress[RenderEnemy] > 0 THEN
+            IF EnemyFromX[RenderEnemy] = 0 AND EnemyToX[RenderEnemy] = MazeWidth - 1 AND EnemyDirection[RenderEnemy] = 3 THEN
+                EnemyPixelX[RenderEnemy] = CellCenterX(0) - EnemyProgress[RenderEnemy] / SubpixelsPerPixel
+            ELSE IF EnemyFromX[RenderEnemy] = MazeWidth - 1 AND EnemyToX[RenderEnemy] = 0 AND EnemyDirection[RenderEnemy] = 1 THEN
+                EnemyPixelX[RenderEnemy] = CellCenterX(MazeWidth - 1) + EnemyProgress[RenderEnemy] / SubpixelsPerPixel
+            ELSE
+                EnemyPixelX[RenderEnemy] = CellCenterX(EnemyFromX[RenderEnemy]) + (CellCenterX(EnemyToX[RenderEnemy]) - CellCenterX(EnemyFromX[RenderEnemy])) * EnemyProgress[RenderEnemy] / CellTravelSub
+                EnemyPixelY[RenderEnemy] = CellCenterY(EnemyFromY[RenderEnemy]) + (CellCenterY(EnemyToY[RenderEnemy]) - CellCenterY(EnemyFromY[RenderEnemy])) * EnemyProgress[RenderEnemy] / CellTravelSub
+            END IF
+        END IF
+    END FOR
+END SUB
+
+SUB FinishGame()
+    STOP MUSIC
+    State = 2
+    PLAY SOUND "Assets\GameOver.wav"
+END SUB
+
+SUB PlayerCaught()
+    STOP MUSIC
+    PLAY SOUND "Assets\PlayerCaught.wav"
+    Lives = Lives - 1
+    IF Lives <= 0 THEN
+        CALL FinishGame()
+    ELSE
+        State = 3
+        PauseAction = 1
+        PauseUntil = TIMER() + 900
+    END IF
+END SUB
+
+SUB CheckCollisions()
+    IF State <> 1 THEN
+        RETURN
+    END IF
+    FOR CollisionEnemy = 0 TO 3
+        IF EnemyReleased[CollisionEnemy] = 1 THEN
+            CollisionX = ABS(PlayerPixelX - EnemyPixelX[CollisionEnemy])
+            CollisionY = ABS(PlayerPixelY - EnemyPixelY[CollisionEnemy])
+            IF CollisionX <= 13 AND CollisionY <= 13 THEN
+                IF TIMER() < PowerUntil AND EnemyEaten[CollisionEnemy] = 0 THEN
+                    EnemyEaten[CollisionEnemy] = 1
+                    PowerCombo = PowerCombo + 1
+                    EnemyPoints = 200
+                    IF PowerCombo = 2 THEN
+                        EnemyPoints = 400
+                    ELSE IF PowerCombo = 3 THEN
+                        EnemyPoints = 800
+                    ELSE IF PowerCombo >= 4 THEN
+                        EnemyPoints = 1600
+                    END IF
+                    CALL AddScore(EnemyPoints)
+                    PLAY SOUND "Assets\EnemyEaten.wav"
+                ELSE IF EnemyEaten[CollisionEnemy] = 0 THEN
+                    CALL PlayerCaught()
+                END IF
+            END IF
+        END IF
+    END FOR
+END SUB
+
+FUNCTION EnemyColor(EnemyNumber)
+    IF EnemyNumber = 0 THEN
+        RETURN RGB(255, 70, 105)
+    ELSE IF EnemyNumber = 1 THEN
+        RETURN RGB(255, 145, 55)
+    ELSE IF EnemyNumber = 2 THEN
+        RETURN RGB(80, 220, 255)
+    END IF
+    RETURN RGB(190, 105, 255)
+END FUNCTION
+
+FUNCTION IsWallTile(XValue, YValue)
+    IF XValue < 0 OR XValue >= MazeWidth OR YValue < 0 OR YValue >= MazeHeight THEN
+        RETURN FALSE
+    END IF
+    RETURN Tiles[CellIndex(XValue, YValue)] = TILE_WALL
+END FUNCTION
+
+SUB DrawNeonHorizontal(StartX, EndX, CenterY)
+    DRAW LINE StartX, CenterY - 3, EndX, CenterY - 3, RGB(1, 8, 38)
+    DRAW LINE StartX, CenterY + 3, EndX, CenterY + 3, RGB(1, 8, 38)
+    DRAW LINE StartX, CenterY - 2, EndX, CenterY - 2, RGB(3, 24, 112)
+    DRAW LINE StartX, CenterY + 2, EndX, CenterY + 2, RGB(3, 24, 112)
+    DRAW LINE StartX, CenterY - 1, EndX, CenterY - 1, RGB(12, 62, 225)
+    DRAW LINE StartX, CenterY + 1, EndX, CenterY + 1, RGB(12, 62, 225)
+    DRAW LINE StartX, CenterY, EndX, CenterY, RGB(70, 135, 255)
+END SUB
+
+SUB DrawNeonVertical(CenterX, StartY, EndY)
+    DRAW LINE CenterX - 3, StartY, CenterX - 3, EndY, RGB(1, 8, 38)
+    DRAW LINE CenterX + 3, StartY, CenterX + 3, EndY, RGB(1, 8, 38)
+    DRAW LINE CenterX - 2, StartY, CenterX - 2, EndY, RGB(3, 24, 112)
+    DRAW LINE CenterX + 2, StartY, CenterX + 2, EndY, RGB(3, 24, 112)
+    DRAW LINE CenterX - 1, StartY, CenterX - 1, EndY, RGB(12, 62, 225)
+    DRAW LINE CenterX + 1, StartY, CenterX + 1, EndY, RGB(12, 62, 225)
+    DRAW LINE CenterX, StartY, CenterX, EndY, RGB(70, 135, 255)
+END SUB
+
+SUB DrawNeonCorner(CenterX, CenterY, StartAngle, SweepAngle)
+    DRAW ARC CenterX, CenterY, WallCurveRadius + 3, StartAngle, SweepAngle, RGB(1, 8, 38)
+    DRAW ARC CenterX, CenterY, WallCurveRadius - 3, StartAngle, SweepAngle, RGB(1, 8, 38)
+    DRAW ARC CenterX, CenterY, WallCurveRadius + 2, StartAngle, SweepAngle, RGB(3, 24, 112)
+    DRAW ARC CenterX, CenterY, WallCurveRadius - 2, StartAngle, SweepAngle, RGB(3, 24, 112)
+    DRAW ARC CenterX, CenterY, WallCurveRadius + 1, StartAngle, SweepAngle, RGB(12, 62, 225)
+    DRAW ARC CenterX, CenterY, WallCurveRadius - 1, StartAngle, SweepAngle, RGB(12, 62, 225)
+    DRAW ARC CenterX, CenterY, WallCurveRadius, StartAngle, SweepAngle, RGB(70, 135, 255)
+END SUB
+
+SUB DrawPlayer()
+    FILL CIRCLE PlayerPixelX, PlayerPixelY, 9, YELLOW
+    IF (TIMER() / 120) MOD 2 = 0 THEN
+        IF PlayerDirection = 0 THEN
+            FILL QUADRILATERAL PlayerPixelX, PlayerPixelY, PlayerPixelX - 6, PlayerPixelY - 11, PlayerPixelX + 6, PlayerPixelY - 11, PlayerPixelX, PlayerPixelY, BLACK
+        ELSE IF PlayerDirection = 1 THEN
+            FILL QUADRILATERAL PlayerPixelX, PlayerPixelY, PlayerPixelX + 11, PlayerPixelY - 6, PlayerPixelX + 11, PlayerPixelY + 6, PlayerPixelX, PlayerPixelY, BLACK
+        ELSE IF PlayerDirection = 2 THEN
+            FILL QUADRILATERAL PlayerPixelX, PlayerPixelY, PlayerPixelX - 6, PlayerPixelY + 11, PlayerPixelX + 6, PlayerPixelY + 11, PlayerPixelX, PlayerPixelY, BLACK
+        ELSE
+            FILL QUADRILATERAL PlayerPixelX, PlayerPixelY, PlayerPixelX - 11, PlayerPixelY - 6, PlayerPixelX - 11, PlayerPixelY + 6, PlayerPixelX, PlayerPixelY, BLACK
+        END IF
+    END IF
+END SUB
+
+SUB DrawEnemy(EnemyNumber)
+    DrawEnemyColor = EnemyColor(EnemyNumber)
+    IF TIMER() < PowerUntil AND EnemyEaten[EnemyNumber] = 0 THEN
+        DrawEnemyColor = RGB(55, 105, 190)
+        IF PowerUntil - TIMER() < 1800 AND (TIMER() / 180) MOD 2 = 0 THEN
+            DrawEnemyColor = RGB(190, 220, 255)
+        END IF
+    ELSE IF EnemyEaten[EnemyNumber] = 1 THEN
+        DrawEnemyColor = RGB(55, 60, 75)
+    END IF
+    FILL CIRCLE EnemyPixelX[EnemyNumber], EnemyPixelY[EnemyNumber] - 4, 9, DrawEnemyColor
+    FILL ROUNDED RECTANGLE EnemyPixelX[EnemyNumber] - 9, EnemyPixelY[EnemyNumber] - 4, 18, 13, 4, DrawEnemyColor
+    FILL QUADRILATERAL EnemyPixelX[EnemyNumber] - 9, EnemyPixelY[EnemyNumber] + 6, EnemyPixelX[EnemyNumber] - 5, EnemyPixelY[EnemyNumber] + 11, EnemyPixelX[EnemyNumber], EnemyPixelY[EnemyNumber] + 6, EnemyPixelX[EnemyNumber] - 9, EnemyPixelY[EnemyNumber] + 6, DrawEnemyColor
+    FILL QUADRILATERAL EnemyPixelX[EnemyNumber], EnemyPixelY[EnemyNumber] + 6, EnemyPixelX[EnemyNumber] + 5, EnemyPixelY[EnemyNumber] + 11, EnemyPixelX[EnemyNumber] + 9, EnemyPixelY[EnemyNumber] + 6, EnemyPixelX[EnemyNumber], EnemyPixelY[EnemyNumber] + 6, DrawEnemyColor
+    FILL CIRCLE EnemyPixelX[EnemyNumber] - 4, EnemyPixelY[EnemyNumber] - 5, 2, WHITE
+    FILL CIRCLE EnemyPixelX[EnemyNumber] + 4, EnemyPixelY[EnemyNumber] - 5, 2, WHITE
+END SUB
+
+SUB DrawMaze()
+    CLEAR BLACK
+    FOR DrawY = 0 TO MazeHeight - 1
+        FOR DrawX = 0 TO MazeWidth - 1
+            DrawIndex = CellIndex(DrawX, DrawY)
+            DrawCellX = MazeLeft + DrawX * CellSize
+            DrawCellY = MazeTop + DrawY * CellSize
+            IF Tiles[DrawIndex] = TILE_WALL THEN
+                WallTopOpen = IsWallTile(DrawX, DrawY - 1) = FALSE
+                WallRightOpen = IsWallTile(DrawX + 1, DrawY) = FALSE
+                WallBottomOpen = IsWallTile(DrawX, DrawY + 1) = FALSE
+                WallLeftOpen = IsWallTile(DrawX - 1, DrawY) = FALSE
+                WallTopLeft = IsWallTile(DrawX - 1, DrawY - 1)
+                WallTopRight = IsWallTile(DrawX + 1, DrawY - 1)
+                WallBottomLeft = IsWallTile(DrawX - 1, DrawY + 1)
+                WallBottomRight = IsWallTile(DrawX + 1, DrawY + 1)
+
+                IF WallTopOpen = TRUE THEN
+                    WallLineStart = DrawCellX
+                    WallLineEnd = DrawCellX + CellSize
+                    IF WallLeftOpen = TRUE OR WallTopLeft = TRUE THEN
+                        WallLineStart = WallLineStart + WallCurveRadius
+                    END IF
+                    IF WallRightOpen = TRUE OR WallTopRight = TRUE THEN
+                        WallLineEnd = WallLineEnd - WallCurveRadius
+                    END IF
+                    CALL DrawNeonHorizontal(WallLineStart, WallLineEnd, DrawCellY)
+                END IF
+                IF WallBottomOpen = TRUE THEN
+                    WallLineStart = DrawCellX
+                    WallLineEnd = DrawCellX + CellSize
+                    IF WallLeftOpen = TRUE OR WallBottomLeft = TRUE THEN
+                        WallLineStart = WallLineStart + WallCurveRadius
+                    END IF
+                    IF WallRightOpen = TRUE OR WallBottomRight = TRUE THEN
+                        WallLineEnd = WallLineEnd - WallCurveRadius
+                    END IF
+                    CALL DrawNeonHorizontal(WallLineStart, WallLineEnd, DrawCellY + CellSize)
+                END IF
+                IF WallLeftOpen = TRUE THEN
+                    WallLineStart = DrawCellY
+                    WallLineEnd = DrawCellY + CellSize
+                    IF WallTopOpen = TRUE OR WallTopLeft = TRUE THEN
+                        WallLineStart = WallLineStart + WallCurveRadius
+                    END IF
+                    IF WallBottomOpen = TRUE OR WallBottomLeft = TRUE THEN
+                        WallLineEnd = WallLineEnd - WallCurveRadius
+                    END IF
+                    CALL DrawNeonVertical(DrawCellX, WallLineStart, WallLineEnd)
+                END IF
+                IF WallRightOpen = TRUE THEN
+                    WallLineStart = DrawCellY
+                    WallLineEnd = DrawCellY + CellSize
+                    IF WallTopOpen = TRUE OR WallTopRight = TRUE THEN
+                        WallLineStart = WallLineStart + WallCurveRadius
+                    END IF
+                    IF WallBottomOpen = TRUE OR WallBottomRight = TRUE THEN
+                        WallLineEnd = WallLineEnd - WallCurveRadius
+                    END IF
+                    CALL DrawNeonVertical(DrawCellX + CellSize, WallLineStart, WallLineEnd)
+                END IF
+
+                IF WallTopOpen = TRUE AND WallLeftOpen = TRUE THEN
+                    CALL DrawNeonCorner(DrawCellX + WallCurveRadius, DrawCellY + WallCurveRadius, 180, 90)
+                END IF
+                IF WallTopOpen = TRUE AND WallRightOpen = TRUE THEN
+                    CALL DrawNeonCorner(DrawCellX + CellSize - WallCurveRadius, DrawCellY + WallCurveRadius, 270, 90)
+                END IF
+                IF WallBottomOpen = TRUE AND WallRightOpen = TRUE THEN
+                    CALL DrawNeonCorner(DrawCellX + CellSize - WallCurveRadius, DrawCellY + CellSize - WallCurveRadius, 0, 90)
+                END IF
+                IF WallBottomOpen = TRUE AND WallLeftOpen = TRUE THEN
+                    CALL DrawNeonCorner(DrawCellX + WallCurveRadius, DrawCellY + CellSize - WallCurveRadius, 90, 90)
+                END IF
+            ELSE
+                IF IsWallTile(DrawX, DrawY - 1) = TRUE AND IsWallTile(DrawX - 1, DrawY) = TRUE AND IsWallTile(DrawX - 1, DrawY - 1) = TRUE THEN
+                    CALL DrawNeonCorner(DrawCellX + WallCurveRadius, DrawCellY + WallCurveRadius, 180, 90)
+                END IF
+                IF IsWallTile(DrawX, DrawY - 1) = TRUE AND IsWallTile(DrawX + 1, DrawY) = TRUE AND IsWallTile(DrawX + 1, DrawY - 1) = TRUE THEN
+                    CALL DrawNeonCorner(DrawCellX + CellSize - WallCurveRadius, DrawCellY + WallCurveRadius, 270, 90)
+                END IF
+                IF IsWallTile(DrawX, DrawY + 1) = TRUE AND IsWallTile(DrawX + 1, DrawY) = TRUE AND IsWallTile(DrawX + 1, DrawY + 1) = TRUE THEN
+                    CALL DrawNeonCorner(DrawCellX + CellSize - WallCurveRadius, DrawCellY + CellSize - WallCurveRadius, 0, 90)
+                END IF
+                IF IsWallTile(DrawX, DrawY + 1) = TRUE AND IsWallTile(DrawX - 1, DrawY) = TRUE AND IsWallTile(DrawX - 1, DrawY + 1) = TRUE THEN
+                    CALL DrawNeonCorner(DrawCellX + WallCurveRadius, DrawCellY + CellSize - WallCurveRadius, 90, 90)
+                END IF
+                IF Tiles[DrawIndex] = TILE_GATE THEN
+                    DRAW LINE DrawCellX + 3, DrawCellY + CellSize / 2, DrawCellX + CellSize - 3, DrawCellY + CellSize / 2, MAGENTA
+                END IF
+            END IF
+            IF Pellets[DrawIndex] = 1 THEN
+                FILL CIRCLE DrawCellX + CellSize / 2, DrawCellY + CellSize / 2, 2, RGB(255, 205, 145)
+            ELSE IF Pellets[DrawIndex] = 2 THEN
+                FILL CIRCLE DrawCellX + CellSize / 2, DrawCellY + CellSize / 2, 6, RGB(255, 235, 175)
+            END IF
+        END FOR
+    END FOR
+    CALL DrawPlayer()
+    FOR DrawEnemyIndex = 0 TO 3
+        CALL DrawEnemy(DrawEnemyIndex)
+    END FOR
+
+    DRAW TEXT "MAZE" AT 850, 55 SIZE 26 COLOR CYAN CENTERED
+    DRAW TEXT "MUNCHER" AT 850, 82 SIZE 26 COLOR YELLOW CENTERED
+    DRAW TEXT "SCORE" AT 775, 130 SIZE 15 COLOR LIGHT_GRAY
+    DRAW NUMBER Score AT 775, 152 SIZE 28 COLOR WHITE
+    DRAW TEXT "HIGH" AT 775, 205 SIZE 15 COLOR LIGHT_GRAY
+    DRAW NUMBER HighScore AT 775, 227 SIZE 25 COLOR CYAN
+    DRAW TEXT "LIVES" AT 775, 280 SIZE 15 COLOR LIGHT_GRAY
+    DRAW NUMBER Lives AT 775, 302 SIZE 25 COLOR YELLOW
+    DRAW TEXT "LEVEL" AT 775, 352 SIZE 15 COLOR LIGHT_GRAY
+    DRAW NUMBER Level AT 775, 374 SIZE 25 COLOR MAGENTA
+    IF TIMER() < PowerUntil THEN
+        DRAW TEXT "POWER" AT 775, 425 SIZE 16 COLOR LIGHT_BLUE
+        DRAW NUMBER MAX(0, (PowerUntil - TIMER()) / 1000) AT 870, 425 SIZE 20 COLOR WHITE
+    END IF
+    IF MapFallbackUsed = TRUE THEN
+        DRAW TEXT "SAFE MAP" AT 850, 520 SIZE 12 COLOR YELLOW CENTERED
+    END IF
+END SUB
+
+SUB DrawTitle()
+    CLEAR BLACK
+    DRAW ROUNDED RECTANGLE 145, 65, 670, 410, 28, RGB(35, 105, 255)
+    DRAW ROUNDED RECTANGLE 154, 74, 652, 392, 24, RGB(45, 225, 255)
+    FILL CIRCLE 245, 180, 34, YELLOW
+    FILL QUADRILATERAL 245, 180, 284, 158, 284, 202, 245, 180, BLACK
+    FOR TitleEnemy = 0 TO 3
+        TitleEnemyX = 430 + TitleEnemy * 72
+        TitleEnemyColor = EnemyColor(TitleEnemy)
+        FILL CIRCLE TitleEnemyX, 176, 24, TitleEnemyColor
+        FILL ROUNDED RECTANGLE TitleEnemyX - 24, 176, 48, 35, 9, TitleEnemyColor
+        FILL CIRCLE TitleEnemyX - 9, 174, 5, WHITE
+        FILL CIRCLE TitleEnemyX + 9, 174, 5, WHITE
+    END FOR
+    DRAW TEXT "MAZE MUNCHER" AT 480, 105 SIZE 48 COLOR YELLOW CENTERED
+    DRAW TEXT "ENTER OR SPACE TO START" AT 480, 285 SIZE 24 COLOR WHITE CENTERED
+    DRAW TEXT "ARROWS OR W A S D" AT 480, 330 SIZE 19 COLOR CYAN CENTERED
+    DRAW TEXT "EAT EVERY PELLET" AT 480, 370 SIZE 17 COLOR YELLOW CENTERED
+    DRAW TEXT "ESCAPE TO EXIT" AT 480, 410 SIZE 17 COLOR LIGHT_GRAY CENTERED
+    DRAW TEXT "HIGH SCORE" AT 425, 440 SIZE 15 COLOR LIGHT_GRAY
+    DRAW NUMBER HighScore AT 535, 438 SIZE 22 COLOR CYAN
+    IF MapFallbackUsed = TRUE THEN
+        DRAW TEXT "DEFAULT MAP INVALID - SAFE MAP ACTIVE" AT 480, 500 SIZE 13 COLOR YELLOW CENTERED
+    END IF
+END SUB
+
+SUB DrawTerminal()
+    FILL ROUNDED RECTANGLE 195, 150, 570, 250, 22, RGB(10, 18, 38)
+    DRAW ROUNDED RECTANGLE 195, 150, 570, 250, 22, CYAN
+    DRAW TEXT "GAME OVER" AT 480, 195 SIZE 45 COLOR MAGENTA CENTERED
+    DRAW TEXT "SCORE" AT 405, 260 SIZE 18 COLOR LIGHT_GRAY
+    DRAW NUMBER Score AT 510, 254 SIZE 30 COLOR WHITE
+    DRAW TEXT "ENTER OR SPACE TO RETRY" AT 480, 325 SIZE 20 COLOR WHITE CENTERED
+    DRAW TEXT "ESCAPE TO TITLE" AT 480, 365 SIZE 16 COLOR LIGHT_GRAY CENTERED
+END SUB
+
+GAME WINDOW "SMILE 2.0 Maze Muncher"
+
+CALL LoadMaze()
+CALL EnterTitle()
+
+DO
+    FrameTime = TIMER()
+    Elapsed = MAX(0, MIN(50, FrameTime - LastFrameTime))
+    LastFrameTime = FrameTime
+    GET KEY Key
+
+    IF State = 0 THEN
+        IF Key = KEY_ENTER OR Key = KEY_SPACE THEN
+            CALL StartMatch()
+        ELSE IF Key = KEY_ESCAPE THEN
+            END PROGRAM
+        END IF
+    ELSE IF State = 1 THEN
+        IF Key = KEY_ESCAPE THEN
+            CALL EnterTitle()
+        ELSE IF Key = KEY_UP OR Key = KEY_W THEN
+            RequestedDirection = 0
+        ELSE IF Key = KEY_RIGHT OR Key = KEY_D THEN
+            RequestedDirection = 1
+        ELSE IF Key = KEY_DOWN OR Key = KEY_S THEN
+            RequestedDirection = 2
+        ELSE IF Key = KEY_LEFT OR Key = KEY_A THEN
+            RequestedDirection = 3
+        END IF
+        IF State = 1 THEN
+            Accumulator = MIN(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
+            CatchUpSteps = 0
+            DO
+                IF Accumulator >= SimulationStep THEN
+                    CALL UpdatePlayer()
+                    IF State = 1 THEN
+                        CALL UpdateEnemies()
+                        CALL UpdateRenderPositions()
+                        CALL CheckCollisions()
+                    END IF
+                    Accumulator = Accumulator - SimulationStep
+                    CatchUpSteps = CatchUpSteps + 1
+                END IF
+            LOOP UNTIL Accumulator < SimulationStep OR CatchUpSteps >= MaxCatchUpSteps OR State <> 1
+        END IF
+    ELSE IF State = 3 THEN
+        IF FrameTime >= PauseUntil THEN
+            IF PauseAction = 1 THEN
+                CALL ResetCharacters()
+                State = 1
+            ELSE
+                Level = Level + 1
+                CALL CopyStartingPellets()
+                CALL ResetCharacters()
+                State = 1
+            END IF
+            MUSIC VOLUME 38
+            PLAY MUSIC "Assets\Background.mp3" LOOP
+            Accumulator = 0
+        END IF
+    ELSE
+        IF Key = KEY_ENTER OR Key = KEY_SPACE THEN
+            CALL StartMatch()
+        ELSE IF Key = KEY_ESCAPE THEN
+            CALL EnterTitle()
+        END IF
+    END IF
+
+    IF State = 0 THEN
+        CALL DrawTitle()
+    ELSE
+        CALL UpdateRenderPositions()
+        CALL DrawMaze()
+        IF State = 2 THEN
+            CALL DrawTerminal()
+        ELSE IF State = 3 THEN
+            IF PauseAction = 1 THEN
+                DRAW TEXT "CAUGHT!" AT 371, 270 SIZE 28 COLOR MAGENTA CENTERED
+            ELSE
+                DRAW TEXT "MAZE CLEARED!" AT 371, 270 SIZE 28 COLOR YELLOW CENTERED
+            END IF
+        END IF
+    END IF
+
+    SHOW SCREEN
+LOOP UNTIL GAME_CLOSED() = TRUE
+
+STOP SOUND
+STOP MUSIC
+END PROGRAM
