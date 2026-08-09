@@ -99,10 +99,16 @@ This is an artifact-delivery rule, not a SMILE language feature.
 
 ## Public commit-message policy
 
-Every nontrivial commit must use a meaningful subject and a detailed body:
+Every Codex-created commit subject must begin exactly with:
 
 ```text
-feat(graphics): add native game-window drawing support
+Sin and Codex:
+```
+
+Follow that prefix with a meaningful subject, and give every nontrivial commit a detailed body:
+
+```text
+Sin and Codex: feat(graphics): add native game-window drawing support
 
 Summary:
 - User-visible or architectural result.
