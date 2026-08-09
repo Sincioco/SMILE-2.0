@@ -284,6 +284,24 @@ for %%M in (default.map sample-loops.map sample-switchbacks.map) do (
 )
 echo Dungeon Star I demo and no-demo versions compiled successfully.
 
+if not exist "%SMILE_ROOT%\artifacts\games\DungeonStarII" mkdir "%SMILE_ROOT%\artifacts\games\DungeonStarII"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\validate-raycasting-maps.ps1"
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\DungeonStarII\Program.smile" -o "%SMILE_ROOT%\artifacts\games\DungeonStarII\DungeonStarII.exe" --keep-temp
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\DungeonStarII\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\DungeonStarII\DungeonStarII-NoDemo.exe"
+if errorlevel 1 exit /b %errorlevel%
+xcopy "%SMILE_ROOT%\games\DungeonStarII\Maps" "%SMILE_ROOT%\artifacts\games\DungeonStarII\Maps" /E /I /Y >nul
+if errorlevel 1 exit /b %errorlevel%
+for %%M in (default.map custom.map) do (
+    fc /b "%SMILE_ROOT%\games\DungeonStarII\Maps\%%M" "%SMILE_ROOT%\artifacts\games\DungeonStarII\Maps\%%M" >nul
+    if errorlevel 1 (
+        echo Dungeon Star II output map %%M does not match its project asset.
+        exit /b 1
+    )
+)
+echo Dungeon Star II demo and no-demo versions compiled successfully.
+
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\verify-artifacts.ps1"
 if errorlevel 1 exit /b %errorlevel%
 

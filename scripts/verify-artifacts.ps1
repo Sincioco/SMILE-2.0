@@ -88,7 +88,9 @@ $nativePrograms = @(
     'artifacts\games\StarSquadron\StarSquadron.exe',
     'artifacts\games\StarSquadron\StarSquadron-NoDemo.exe',
     'artifacts\games\DungeonStarI\DungeonStarI.exe',
-    'artifacts\games\DungeonStarI\DungeonStarI-NoDemo.exe'
+    'artifacts\games\DungeonStarI\DungeonStarI-NoDemo.exe',
+    'artifacts\games\DungeonStarII\DungeonStarII.exe',
+    'artifacts\games\DungeonStarII\DungeonStarII-NoDemo.exe'
 )
 foreach ($program in $nativePrograms) {
     Assert-NativeGuiX64 $program
@@ -112,6 +114,9 @@ Assert-AssetCopy 'games\DungeonStarI\Assets\Background.mp3' 'artifacts\games\Dun
 Assert-AssetCopy 'games\MazeMuncher\Assets\Background.mp3' 'artifacts\games\MazeMuncher\Assets\Background.mp3'
 foreach ($map in @('default.map', 'sample-loops.map', 'sample-switchbacks.map')) {
     Assert-AssetCopy "games\DungeonStarI\Maps\$map" "artifacts\games\DungeonStarI\Maps\$map"
+}
+foreach ($map in @('default.map', 'custom.map')) {
+    Assert-AssetCopy "games\DungeonStarII\Maps\$map" "artifacts\games\DungeonStarII\Maps\$map"
 }
 Assert-AssetCopy 'games\MazeMuncher\Maps\default.map' 'artifacts\games\MazeMuncher\Maps\default.map'
 Write-Host 'Game asset copies verified.'

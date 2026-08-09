@@ -75,3 +75,6 @@ Wolfenstein 3D - Raycasting Demo
 23.) Just like in Dungeon Star I, you can randomize a dungeon map if none is provided, but generate a default.map file that the game loads by default so the user can customize it.
 24.) You are free to evolve the SMILE 2.0 language as you see fit as long as it is grounded in the BASIC language, or if that is not possible, use C# as the next language inspiration.
 25.) Can you sprinkle some comments in the code to help the student understand how the raycasting works, but keep it simple and not over-engineered.  The goal is to help the student understand how raycasting works, not to create a fully featured game engine.
+26.) If possible to make the .map file somewhat compatible to Dungeon Star I (even if partially) that would be great so that students can build on the foundation of the .map file from Dungeon Star I and evolve it into a Wolfenstein 3D map.  But if that is not possible, then just make it a new .map file format for Wolfenstein 3D.
+27.) Be sure to provide instructions so the student has a clear understanding of how to create their own .map files for Wolfenstein 3D, and how to load them into the game.
+28.) Oh and provide an option on the Title screen so the student can load their own .map file from the Title screen.

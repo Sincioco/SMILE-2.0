@@ -96,7 +96,7 @@ LOAD TEXT FILE "Maps\default.map" INTO FileBytes COUNT FileByteCount
 
 The path must be a non-empty literal, the destination must be a one-dimensional numeric array, and `COUNT` must name a writable numeric variable. The runtime zero-fills the complete destination, reads UTF-8 bytes, skips an optional UTF-8 BOM, copies at most the array capacity as values from 0 through 255, and stores the copied byte count. Missing, inaccessible, empty, or unreadable files safely produce count zero. Existing integer persistence keeps its distinct `LOAD Value FROM "Key" DEFAULT 0` form.
 
-Dungeon Star I provides the complete game-side example: three literal-path loaders feed one bounded byte parser in `games\DungeonStarI\Program.smile`. The language/runtime only delivers bytes; ordered floor headers, map symbols, dimensions, doors, stairs, topology, and fallback behavior remain ordinary SMILE source.
+Dungeon Star I provides the complete multi-floor game-side example: three literal-path loaders feed one bounded byte parser in `games\DungeonStarI\Program.smile`. Dungeon Star II uses the same generic statement for compatible one-floor room maps in `games\DungeonStarII\Program.smile`. The language/runtime only delivers bytes; ordered floor headers, map symbols, dimensions, doors, stairs, topology, and fallback behavior remain ordinary SMILE source.
 
 Background-music syntax is:
 
@@ -124,4 +124,4 @@ Every `GAME WINDOW` program inherits the same native focus behavior without addi
 
 Named input constants include `KEY_W`, `KEY_A`, `KEY_S`, `KEY_D`, the four arrows, `KEY_ENTER`, `KEY_ESCAPE`, `KEY_SPACE`, `KEY_1`, `KEY_2`, `KEY_OTHER`, and `KEY_NONE`. `GET KEY` returns `KEY_OTHER` (value `19`) for an otherwise unnamed ordinary key event; `KEY_HELD(KEY_OTHER)` is always false. Named colors include the standard red/green/blue/cyan/magenta/yellow set plus orange, gray, dark variants, light variants, black, and white.
 
-The executable examples are the most precise usage guide: `LanguageBasics.smile`, `StructuredLanguageBasics.smile`, `GraphicsBasics.smile`, and the seven projects under `games`. These include Dungeon Star I's external-map parser and quadrilateral-based pseudo-3D renderer, Maze Muncher's arc-composed neon maze, and Star Squadron's full-width formation shooter. Each demo game also includes a reduced `Program-NoDemo.smile` teaching source.
+The executable examples are the most precise usage guide: `LanguageBasics.smile`, `StructuredLanguageBasics.smile`, `GraphicsBasics.smile`, and the eight projects under `games`. These include Dungeon Star I's external-map parser and quadrilateral-based pseudo-3D renderer, Dungeon Star II's fixed-point DDA raycaster, Maze Muncher's arc-composed neon maze, and Star Squadron's full-width formation shooter. Each demo game also includes a reduced `Program-NoDemo.smile` teaching source.
