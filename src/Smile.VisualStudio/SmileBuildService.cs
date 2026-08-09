@@ -65,13 +65,15 @@ internal static class SmileBuildService
 
     public static async Task<CompilerResult> RunAsync(string compilerPath, string sourcePath,
         string? outputPath, SmileGraphicsBackend graphicsBackend = SmileGraphicsBackend.Auto,
-        bool vSync = true)
+        bool vSync = true, bool emitDebugInformation = false)
     {
         var arguments = new StringBuilder().Append(Quote(sourcePath));
         if (!string.IsNullOrWhiteSpace(outputPath))
             arguments.Append(" -o ").Append(Quote(outputPath!));
         arguments.Append(" --graphics ").Append(graphicsBackend.ToString());
         arguments.Append(" --vsync ").Append(vSync ? "true" : "false");
+        if (emitDebugInformation)
+            arguments.Append(" --debug");
 
         var startInfo = new ProcessStartInfo(compilerPath)
         {

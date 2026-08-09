@@ -1,4 +1,5 @@
 using Smile.Language;
+using System.Text;
 
 namespace Smile.Compiler;
 
@@ -6,12 +7,12 @@ internal sealed class CompilerDriver
 {
     public int Run(string[] args)
     {
-        if (!TryParseArguments(args, out var sourcePath, out var outputPath, out var keepTemp,
-            out var graphicsBackend, out var vSync, out var argumentError))
+        if (!TryParseArguments(args, out var sourcePath, out var outputPath, out var keepTemp, out var emitDebugInformation,
+             out var graphicsBackend, out var vSync, out var argumentError))
         {
             if (!string.IsNullOrWhiteSpace(argumentError))
                 Console.Error.WriteLine($"error SML5007: {argumentError}");
-            Console.Error.WriteLine("Usage: smilec <source.smile> [-o <output.exe>] [--keep-temp] [--graphics auto|gdi|directx] [--vsync true|false]");
+            Console.Error.WriteLine("Usage: smilec <source.smile> [-o <output.exe>] [--keep-temp] [--debug] [--graphics auto|gdi|directx] [--vsync true|false]");
             return 2;
         }
 
@@ -44,6 +45,8 @@ internal sealed class CompilerDriver
             var baseName = Path.GetFileNameWithoutExtension(outputPath);
             var assemblyPath = Path.Combine(tempDirectory, baseName + ".asm");
             var objectPath = Path.Combine(tempDirectory, baseName + ".obj");
+            var debugSourcePath = Path.Combine(tempDirectory, baseName + ".debug.c");
+            var debugObjectPath = Path.Combine(tempDirectory, baseName + ".debug.obj");
             var runtimePath = FindRuntimeLibrary(repositoryRoot);
 
             if (runtimePath == null)
@@ -52,11 +55,14 @@ internal sealed class CompilerDriver
                 return 2;
             }
 
-            var emitter = new MasmEmitter(analysis, graphicsBackend, vSync);
+            var emitter = new MasmEmitter(analysis, graphicsBackend, vSync, emitDebugInformation);
             File.WriteAllText(assemblyPath, emitter.Emit());
+            if (emitDebugInformation)
+                File.WriteAllText(debugSourcePath, BuildDebugSource(sourcePath, emitter.DebugLines));
             var isGame = analysis.SyntaxTree.Root.Statements.Any(statement => statement is GameWindowStatementSyntax);
             var result = new NativeToolchain().AssembleAndLink(assemblyPath, objectPath, outputPath, runtimePath,
-                isGame, emitter.UsesMusic);
+                isGame, emitter.UsesMusic, emitDebugInformation ? debugSourcePath : null,
+                emitDebugInformation ? debugObjectPath : null);
             if (!result.Success)
             {
                 Console.Error.WriteLine($"{sourcePath}(1,1): error SML5003: Native toolchain failed.");
@@ -69,6 +75,8 @@ internal sealed class CompilerDriver
             {
                 TryDelete(assemblyPath);
                 TryDelete(objectPath);
+                TryDelete(debugSourcePath);
+                TryDelete(debugObjectPath);
             }
 
             Console.WriteLine($"Compiled {sourcePath}");
@@ -77,6 +85,11 @@ internal sealed class CompilerDriver
             {
                 Console.WriteLine($"Assembly: {assemblyPath}");
                 Console.WriteLine($"Object: {objectPath}");
+                if (emitDebugInformation)
+                {
+                    Console.WriteLine($"Debug source map: {debugSourcePath}");
+                    Console.WriteLine($"Debug object: {debugObjectPath}");
+                }
             }
             return 0;
         }
@@ -88,12 +101,13 @@ internal sealed class CompilerDriver
     }
 
     private static bool TryParseArguments(string[] args, out string? sourcePath, out string? outputPath,
-        out bool keepTemp, out SmileGraphicsBackend graphicsBackend, out bool vSync,
+        out bool keepTemp, out bool emitDebugInformation, out SmileGraphicsBackend graphicsBackend, out bool vSync,
         out string? error)
     {
         sourcePath = null;
         outputPath = null;
         keepTemp = false;
+        emitDebugInformation = false;
         graphicsBackend = SmileGraphicsBackend.Auto;
         vSync = true;
         error = null;
@@ -103,6 +117,10 @@ internal sealed class CompilerDriver
             if (string.Equals(args[i], "--keep-temp", StringComparison.OrdinalIgnoreCase))
             {
                 keepTemp = true;
+            }
+            else if (string.Equals(args[i], "--debug", StringComparison.OrdinalIgnoreCase))
+            {
+                emitDebugInformation = true;
             }
             else if (string.Equals(args[i], "-o", StringComparison.OrdinalIgnoreCase))
             {
@@ -139,6 +157,19 @@ internal sealed class CompilerDriver
         }
 
         return sourcePath != null;
+    }
+
+    private static string BuildDebugSource(string sourcePath, IEnumerable<int> lines)
+    {
+        var escapedPath = sourcePath.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        var builder = new StringBuilder("static volatile unsigned char smile_debug_counter;\n");
+        foreach (var line in lines)
+        {
+            builder.Append("#line ").Append(line).Append(" \"").Append(escapedPath).Append("\"\n")
+                .Append("__declspec(noinline) void smile_debug_line_").Append(line)
+                .Append("(void) { smile_debug_counter++; }\n");
+        }
+        return builder.ToString();
     }
 
     private static string FindRepositoryRoot()

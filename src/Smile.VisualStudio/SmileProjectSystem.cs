@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Xml.Linq;
+using EnvDTE;
 using Smile.Language;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Imaging;
@@ -137,6 +138,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     private readonly SmilePackage _package;
     private readonly Dictionary<uint, ProjectItem> _items = new();
     private readonly Dictionary<uint, IVsHierarchyEvents> _events = new();
+    private readonly Dictionary<string, string> _editorPaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly Guid _projectGuid;
     private uint _nextEventCookie = 1;
     private Microsoft.VisualStudio.OLE.Interop.IServiceProvider? _site;
@@ -182,11 +184,13 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             return false;
         }
 
+        var emitDebugInformation = NormalizeConfiguration(configuration) == "Debug";
+        var compilerSourcePath = GetCompilerSourcePath(sourcePath, emitDebugInformation);
         var outputPath = GetOutputPath(configuration);
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-        pane.OutputStringThreadSafe($"> \"{compilerPath}\" \"{sourcePath}\" -o \"{outputPath}\" --graphics {GraphicsBackend} --vsync {VSync.ToString().ToLowerInvariant()}\r\n");
+        pane.OutputStringThreadSafe($"> \"{compilerPath}\" \"{compilerSourcePath}\" -o \"{outputPath}\" --graphics {GraphicsBackend} --vsync {VSync.ToString().ToLowerInvariant()}{(emitDebugInformation ? " --debug" : string.Empty)}\r\n");
         var result = ThreadHelper.JoinableTaskFactory.Run(() => SmileBuildService.RunAsync(
-            compilerPath, sourcePath, outputPath, GraphicsBackend, VSync));
+            compilerPath, compilerSourcePath, outputPath, GraphicsBackend, VSync, emitDebugInformation));
         if (!string.IsNullOrEmpty(result.Output))
             pane.OutputStringThreadSafe(SmileBuildService.NormalizeOutput(result.Output));
         SmileBuildService.ReportDiagnostics(result.Output);
@@ -219,6 +223,39 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             pane.OutputStringThreadSafe($"Could not clean {directory}: {exception.Message}\r\n");
             return false;
         }
+    }
+
+    private string GetCompilerSourcePath(string projectSourcePath, bool emitDebugInformation)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (!emitDebugInformation)
+            return projectSourcePath;
+
+        var fullProjectPath = Path.GetFullPath(projectSourcePath);
+        if (_editorPaths.TryGetValue(fullProjectPath, out var editorPath) && File.Exists(editorPath))
+            return editorPath;
+
+        try
+        {
+            var dte = Package.GetGlobalService(typeof(SDTE)) as DTE;
+            var document = dte?.ActiveDocument;
+            var activePath = document?.FullName;
+            if (activePath != null &&
+                activePath.EndsWith(".smile", StringComparison.OrdinalIgnoreCase) &&
+                File.Exists(activePath))
+            {
+                document!.Save();
+                activePath = Path.GetFullPath(activePath);
+                _editorPaths[fullProjectPath] = activePath;
+                return activePath;
+            }
+        }
+        catch (Exception exception)
+        {
+            ActivityLog.LogWarning(nameof(SmileProject), $"Could not resolve the active SMILE editor path: {exception.Message}");
+        }
+
+        return projectSourcePath;
     }
 
     public bool Launch(string configuration, uint launchFlags)
@@ -590,23 +627,25 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         if (item == null || item.Kind != ItemKind.File)
             return VSConstants.E_INVALIDARG;
 
-        // The lightweight SMILE hierarchy deliberately has no project-specific editor.
-        // Open through Visual Studio's built-in text editor instead. MEF still assigns the
-        // .smile content type, so the shared classifier, diagnostics, and semantic services
-        // remain active while the source stays visible in the SMILE project hierarchy.
+        // The built-in editor creates a temporary moniker for this lightweight
+        // hierarchy. Remember that exact path so Debug symbols match the document
+        // where Visual Studio places the breakpoint.
         try
         {
             VsShellUtilities.OpenAsMiscellaneousFile(_package, item.Path, item.Caption,
                 VSConstants.GUID_TextEditorFactory, null!, VSConstants.LOGVIEWID_TextView);
+
+            var dte = Package.GetGlobalService(typeof(SDTE)) as DTE;
+            var editorPath = dte?.ActiveDocument?.FullName;
+            if (!string.IsNullOrWhiteSpace(editorPath) && File.Exists(editorPath))
+                _editorPaths[Path.GetFullPath(item.Path)] = Path.GetFullPath(editorPath);
+
             if (VsShellUtilities.IsDocumentOpen(_package, item.Path, Guid.Empty,
                     out _, out _, out ppWindowFrame))
             {
                 ppWindowFrame.Show();
             }
 
-            // OpenAsMiscellaneousFile has already opened and activated the document. The
-            // running document table can lag that operation briefly, so a missing frame here
-            // is not an editor failure and must not surface a false error dialog to the user.
             return VSConstants.S_OK;
         }
         catch (Exception exception)

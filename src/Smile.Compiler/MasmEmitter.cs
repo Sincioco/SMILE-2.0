@@ -9,6 +9,7 @@ internal sealed class MasmEmitter
     private readonly SmileAnalysisResult _analysis;
     private readonly SmileGraphicsBackend _graphicsBackend;
     private readonly bool _vSync;
+    private readonly bool _emitDebugInformation;
     private readonly StringBuilder _builder = new();
     private readonly Dictionary<VariableSymbol, string> _symbolLabels = new();
     private readonly Dictionary<string, string> _routineLabels = new(StringComparer.OrdinalIgnoreCase);
@@ -18,6 +19,7 @@ internal sealed class MasmEmitter
     private readonly Dictionary<SelectStatementSyntax, string> _selectValues = new();
     private readonly Stack<string> _forExitLabels = new();
     private readonly Stack<string> _doExitLabels = new();
+    private readonly SortedSet<int> _debugLines = new();
     private RoutineSymbol? _currentRoutine;
     private string? _returnLabel;
     private int _labelId;
@@ -27,14 +29,16 @@ internal sealed class MasmEmitter
     private bool _usesMusic;
 
     public MasmEmitter(SmileAnalysisResult analysis, SmileGraphicsBackend graphicsBackend,
-        bool vSync)
+        bool vSync, bool emitDebugInformation)
     {
         _analysis = analysis;
         _graphicsBackend = graphicsBackend;
         _vSync = vSync;
+        _emitDebugInformation = emitDebugInformation;
     }
 
     public bool UsesMusic => _usesMusic;
+    public IEnumerable<int> DebugLines => _debugLines;
 
     public string Emit()
     {
@@ -84,6 +88,8 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_load_value:PROC");
         Line("EXTERN smile_load_text_file:PROC");
         Line("EXTERN smile_save_value:PROC");
+        foreach (var line in _debugLines)
+            Line($"EXTERN smile_debug_line_{line}:PROC");
         Line();
         Line(".data");
         EmitStorage(_analysis.SemanticModel.Symbols.Values);
@@ -135,6 +141,12 @@ internal sealed class MasmEmitter
     {
         foreach (var statement in statements)
         {
+            if (_emitDebugInformation && IsExecutable(statement))
+            {
+                _analysis.SyntaxTree.Source.GetLineColumn(statement.Span.Start, out var line, out _);
+                _debugLines.Add(line);
+            }
+
             switch (statement)
             {
                 case ConstStatementSyntax constant:
@@ -317,6 +329,12 @@ internal sealed class MasmEmitter
 
     private void EmitStatement(StatementSyntax statement)
     {
+        if (_emitDebugInformation && IsExecutable(statement))
+        {
+            _analysis.SyntaxTree.Source.GetLineColumn(statement.Span.Start, out var line, out _);
+            Line($"    call smile_debug_line_{line}");
+        }
+
         switch (statement)
         {
             case ConstStatementSyntax:
@@ -830,6 +848,9 @@ internal sealed class MasmEmitter
     private string Label(string name) => _symbolLabels[Resolve(name)];
     private string NewLabel(string prefix) => prefix + "_" + _labelId++;
     private void Line(string text = "") => _builder.AppendLine(text);
+
+    private static bool IsExecutable(StatementSyntax statement) =>
+        statement is not ConstStatementSyntax and not DimStatementSyntax and not RoutineDeclarationSyntax;
 
     private static string FormatBytes(byte[] bytes) => bytes.Length == 0
         ? "0"
