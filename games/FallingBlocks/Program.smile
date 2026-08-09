@@ -11,13 +11,20 @@ CONST DemoMinimumPlayTime = 30000
 CONST DemoMaximumPlayTime = 45000
 CONST DemoTerminalDuration = 5000
 CONST TitleInputArmDelay = 250
-CONST DemoActionInterval = 60
+CONST DemoActionInterval = 180
+CONST DemoPieceStartDelay = 350
+CONST DemoDropPause = 500
 CONST DemoFallDelay = 180
+CONST RowClearFlashDuration = 140
+CONST TetrisFlashDuration = 220
+CONST RowCollapseDuration = 140
+CONST TetrisCollapseDuration = 180
 
 DIM Board[BoardWidth, BoardHeight]
 DIM ShapeX[7, 4]
 DIM ShapeY[7, 4]
 DIM CandidateHeights[BoardWidth]
+DIM ClearingRows[BoardHeight]
 
 ' Seven four-cell shapes in a 4 by 4 rotation box.
 ShapeX[0, 0] = 0
@@ -114,6 +121,11 @@ CandidateDropY = 0
 DemoPlanAligned = FALSE
 DemoPieceSequence = 0
 DemoUseNaturalFall = TRUE
+ClearPhase = 0
+ClearPhaseStartedAt = 0
+ClearFlashDuration = 0
+ClearCollapseDuration = 0
+PendingClearCount = 0
 
 LOAD HighScore FROM "HighScore" DEFAULT 0
 
@@ -176,10 +188,13 @@ END FUNCTION
 
 SUB ClearBoard()
     FOR ClearY = 0 TO BoardHeight - 1
+        ClearingRows[ClearY] = 0
         FOR ClearX = 0 TO BoardWidth - 1
             Board[ClearX, ClearY] = 0
         END FOR
     END FOR
+    ClearPhase = 0
+    PendingClearCount = 0
 END SUB
 
 FUNCTION CandidateCanFit(PositionX, PositionY)
@@ -300,7 +315,7 @@ SUB PlanDemoPiece()
             END IF
         END FOR
     END FOR
-    NextDemoActionAt = TIMER() + DemoActionInterval
+    NextDemoActionAt = TIMER() + DemoPieceStartDelay
 END SUB
 
 SUB ExecuteDemoPlan()
@@ -337,14 +352,20 @@ SUB ExecuteDemoPlan()
                 NextFallTime = TIMER() + DemoFallDelay
             END IF
         ELSE
-            DO
-                IF CanMove(0, 1, Rotation) = TRUE THEN
-                    PieceY = PieceY + 1
-                ELSE
-                    EXIT DO
-                END IF
-            LOOP
-            CALL LockPiece()
+            IF DemoPlanAligned = FALSE THEN
+                DemoPlanAligned = TRUE
+                NextDemoActionAt = TIMER() + DemoDropPause
+                RETURN
+            ELSE
+                DO
+                    IF CanMove(0, 1, Rotation) = TRUE THEN
+                        PieceY = PieceY + 1
+                    ELSE
+                        EXIT DO
+                    END IF
+                LOOP
+                CALL LockPiece()
+            END IF
         END IF
     END IF
     NextDemoActionAt = TIMER() + DemoActionInterval
@@ -385,39 +406,59 @@ SUB SpawnPiece()
     END IF
     IF State = 1 AND DemoMode = TRUE THEN
         DemoPieceSequence = DemoPieceSequence + 1
-        DemoUseNaturalFall = DemoPieceSequence MOD 5 <> 0
+        DemoUseNaturalFall = DemoPieceSequence MOD 4 = 0
         CALL PlanDemoPiece()
     END IF
 END SUB
 
-SUB ClearRows()
-    Cleared = 0
-    Row = BoardHeight - 1
-    DO
+SUB BeginRowClear()
+    PendingClearCount = 0
+    FOR Row = 0 TO BoardHeight - 1
+        ClearingRows[Row] = 0
         FullRow = TRUE
         FOR Column = 0 TO BoardWidth - 1
             IF Board[Column, Row] = 0 THEN
                 FullRow = FALSE
             END IF
         END FOR
-
         IF FullRow = TRUE THEN
-            Cleared = Cleared + 1
-            FOR CopyRow = Row DOWN TO 1
-                FOR Column = 0 TO BoardWidth - 1
-                    Board[Column, CopyRow] = Board[Column, CopyRow - 1]
-                END FOR
-            END FOR
-            FOR Column = 0 TO BoardWidth - 1
-                Board[Column, 0] = 0
-            END FOR
-        ELSE
-            Row = Row - 1
+            ClearingRows[Row] = 1
+            PendingClearCount = PendingClearCount + 1
         END IF
-    LOOP UNTIL Row < 0
+    END FOR
 
-    IF Cleared > 0 THEN
-        SELECT CASE Cleared
+    IF PendingClearCount > 0 THEN
+        ClearPhase = 1
+        ClearPhaseStartedAt = TIMER()
+        IF PendingClearCount >= 4 THEN
+            ClearFlashDuration = TetrisFlashDuration
+            ClearCollapseDuration = TetrisCollapseDuration
+            PLAY SOUND "Assets\Tetris.wav"
+        ELSE
+            ClearFlashDuration = RowClearFlashDuration
+            ClearCollapseDuration = RowCollapseDuration
+            PLAY SOUND "Assets\LineClear.wav"
+        END IF
+    END IF
+END SUB
+
+SUB CompleteRowClear()
+    WriteRow = BoardHeight - 1
+    FOR ReadRow = BoardHeight - 1 DOWN TO 0
+        IF ClearingRows[ReadRow] = 0 THEN
+            FOR Column = 0 TO BoardWidth - 1
+                Board[Column, WriteRow] = Board[Column, ReadRow]
+            END FOR
+            WriteRow = WriteRow - 1
+        END IF
+    END FOR
+    FOR ClearY = WriteRow DOWN TO 0
+        FOR Column = 0 TO BoardWidth - 1
+            Board[Column, ClearY] = 0
+        END FOR
+    END FOR
+
+    SELECT CASE PendingClearCount
             CASE 1
                 Score = Score + 100 * Level
             CASE 2
@@ -426,15 +467,29 @@ SUB ClearRows()
                 Score = Score + 500 * Level
             CASE ELSE
                 Score = Score + 800 * Level
-        END SELECT
-        Lines = Lines + Cleared
-        Level = Lines / 10 + 1
-        IF DemoMode = TRUE THEN
-            FallDelay = DemoFallDelay
-        ELSE
-            FallDelay = MAX(80, 700 - (Level - 1) * 60)
-        END IF
-        PLAY SOUND "Assets\LineClear.wav"
+    END SELECT
+    Lines = Lines + PendingClearCount
+    Level = Lines / 10 + 1
+    IF DemoMode = TRUE THEN
+        FallDelay = DemoFallDelay
+    ELSE
+        FallDelay = MAX(80, 700 - (Level - 1) * 60)
+    END IF
+
+    FOR Row = 0 TO BoardHeight - 1
+        ClearingRows[Row] = 0
+    END FOR
+    ClearPhase = 0
+    PendingClearCount = 0
+    CALL SpawnPiece()
+END SUB
+
+SUB UpdateRowClear()
+    IF ClearPhase = 1 AND TIMER() - ClearPhaseStartedAt >= ClearFlashDuration THEN
+        ClearPhase = 2
+        ClearPhaseStartedAt = TIMER()
+    ELSE IF ClearPhase = 2 AND TIMER() - ClearPhaseStartedAt >= ClearCollapseDuration THEN
+        CALL CompleteRowClear()
     END IF
 END SUB
 
@@ -450,8 +505,10 @@ SUB LockPiece()
         END IF
     END FOR
     IF State = 1 THEN
-        CALL ClearRows()
-        CALL SpawnPiece()
+        CALL BeginRowClear()
+        IF ClearPhase = 0 THEN
+            CALL SpawnPiece()
+        END IF
     END IF
 END SUB
 
@@ -526,13 +583,41 @@ SUB DrawGame()
     FOR Row = 0 TO BoardHeight - 1
         FOR Column = 0 TO BoardWidth - 1
             DRAW RECTANGLE BoardX + Column * CellSize, BoardY + Row * CellSize, CellSize, CellSize, RGB(24, 30, 45)
-            IF Board[Column, Row] <> 0 THEN
-                CALL DrawBlock(BoardX + Column * CellSize, BoardY + Row * CellSize, CellSize, PieceColor(Board[Column, Row]))
+            IF Board[Column, Row] <> 0 AND ClearPhase <> 2 THEN
+                IF ClearPhase = 1 AND ClearingRows[Row] = 1 THEN
+                    IF PendingClearCount >= 4 THEN
+                        CALL DrawBlock(BoardX + Column * CellSize, BoardY + Row * CellSize, CellSize, YELLOW)
+                    ELSE
+                        CALL DrawBlock(BoardX + Column * CellSize, BoardY + Row * CellSize, CellSize, WHITE)
+                    END IF
+                ELSE
+                    CALL DrawBlock(BoardX + Column * CellSize, BoardY + Row * CellSize, CellSize, PieceColor(Board[Column, Row]))
+                END IF
             END IF
         END FOR
     END FOR
 
-    IF State = 1 THEN
+    IF ClearPhase = 2 THEN
+        CollapseElapsed = MIN(ClearCollapseDuration, TIMER() - ClearPhaseStartedAt)
+        FOR Row = 0 TO BoardHeight - 1
+            IF ClearingRows[Row] = 0 THEN
+                DropRows = 0
+                FOR CheckRow = 0 TO BoardHeight - 1
+                    IF CheckRow > Row AND ClearingRows[CheckRow] = 1 THEN
+                        DropRows = DropRows + 1
+                    END IF
+                END FOR
+                AnimatedDrop = DropRows * CellSize * CollapseElapsed / ClearCollapseDuration
+                FOR Column = 0 TO BoardWidth - 1
+                    IF Board[Column, Row] <> 0 THEN
+                        CALL DrawBlock(BoardX + Column * CellSize, BoardY + Row * CellSize + AnimatedDrop, CellSize, PieceColor(Board[Column, Row]))
+                    END IF
+                END FOR
+            END IF
+        END FOR
+    END IF
+
+    IF State = 1 AND ClearPhase = 0 THEN
         FOR Cell = 0 TO 3
             ActiveX = PieceX + BlockX(CurrentPiece, Rotation, Cell)
             ActiveY = PieceY + BlockY(CurrentPiece, Rotation, Cell)
@@ -631,7 +716,9 @@ DO
             CALL EndGame()
         END IF
 
-        IF State = 1 THEN
+        IF State = 1 AND ClearPhase > 0 THEN
+            CALL UpdateRowClear()
+        ELSE IF State = 1 THEN
             IF DemoMode = TRUE THEN
                 CALL ExecuteDemoPlan()
             ELSE
