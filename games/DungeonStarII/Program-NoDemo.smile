@@ -1245,7 +1245,7 @@ END SUB
 
 CALL InitializeWallPalettes()
 
-GAME WINDOW "Dungeon Star II - Raycasting Walkaround" SIZE 960 BY 540
+GAME WINDOW "SMILE 2.0 Raycasting Demo" SIZE 960 BY 540
 
 CALL EnterTitle()
 LastFrameTime = TIMER()

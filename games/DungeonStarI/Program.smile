@@ -1641,7 +1641,7 @@ END SUB
 ' Native game entry and continuous VSync-paced loop
 ' -----------------------------------------------------------------------------
 
-GAME WINDOW "Dungeon Star I"
+GAME WINDOW "SMILE 2.0 Dungeon Star I"
 
 CALL EnterTitle()
 
