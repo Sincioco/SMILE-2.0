@@ -703,19 +703,12 @@ internal sealed class SemanticAnalyzer
 
     private SmileType AnalyzeBuiltInCall(SyntaxToken identifier, IReadOnlyList<ExpressionSyntax> arguments)
     {
-        var expected = identifier.Kind switch
-        {
-            SyntaxKind.TimerKeyword or SyntaxKind.GameClosedKeyword => 0,
-            SyntaxKind.AbsKeyword or SyntaxKind.KeyHeldKeyword => 1,
-            SyntaxKind.MinKeyword or SyntaxKind.MaxKeyword => 2,
-            SyntaxKind.RgbKeyword => 3,
-            _ => -1
-        };
-        if (expected < 0)
+        if (!SyntaxFacts.IsBuiltInFunction(identifier.Kind))
         {
             _diagnostics.Report("SML3021", identifier.Span, $"Unknown built-in function '{identifier.Text}'.");
             return SmileType.Error;
         }
+        var expected = SyntaxFacts.GetBuiltInFunctionParameters(identifier.Kind).Count;
         if (identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword && !_hasGameWindow)
             _diagnostics.Report("SML3023", identifier.Span, $"Built-in '{identifier.Text}' requires GAME WINDOW.");
         if (arguments.Count != expected)

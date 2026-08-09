@@ -148,6 +148,12 @@ public enum SyntaxKind
 
 public static class SyntaxFacts
 {
+    private static readonly IReadOnlyList<string> NoParameters = Array.Empty<string>();
+    private static readonly IReadOnlyList<string> ValueParameter = new[] { "value" };
+    private static readonly IReadOnlyList<string> KeyParameter = new[] { "key" };
+    private static readonly IReadOnlyList<string> TwoValueParameters = new[] { "first", "second" };
+    private static readonly IReadOnlyList<string> ColorParameters = new[] { "red", "green", "blue" };
+
     private static readonly Dictionary<string, SyntaxKind> Keywords = new(StringComparer.OrdinalIgnoreCase)
     {
         ["DIM"] = SyntaxKind.DimKeyword,
@@ -269,6 +275,8 @@ public static class SyntaxFacts
     public static SyntaxKind GetKeywordKind(string text) =>
         Keywords.TryGetValue(text, out var kind) ? kind : SyntaxKind.IdentifierToken;
 
+    public static IReadOnlyList<string> GetKeywordTexts() => new List<string>(Keywords.Keys);
+
     public static bool IsKeyword(SyntaxKind kind) =>
         kind >= SyntaxKind.DimKeyword && kind <= SyntaxKind.DefaultKeyword;
 
@@ -277,6 +285,19 @@ public static class SyntaxFacts
 
     public static bool IsBuiltInFunction(SyntaxKind kind) =>
         kind >= SyntaxKind.TimerKeyword && kind <= SyntaxKind.KeyHeldKeyword;
+
+    public static IReadOnlyList<string> GetBuiltInFunctionParameters(SyntaxKind kind)
+    {
+        return kind switch
+        {
+            SyntaxKind.TimerKeyword or SyntaxKind.GameClosedKeyword => NoParameters,
+            SyntaxKind.AbsKeyword => ValueParameter,
+            SyntaxKind.KeyHeldKeyword => KeyParameter,
+            SyntaxKind.MinKeyword or SyntaxKind.MaxKeyword => TwoValueParameters,
+            SyntaxKind.RgbKeyword => ColorParameters,
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Not a built-in SMILE function.")
+        };
+    }
 
     public static string GetText(SyntaxKind kind)
     {

@@ -158,6 +158,29 @@ Run("LOAD TEXT FILE rejects a two-dimensional destination", () => Equal(true,
     HasDiagnostic(Analyze("DIM Bytes[4, 4]\nLOAD TEXT FILE \"sample.txt\" INTO Bytes COUNT ByteCount\n"), "SML3027")));
 Run("Existing persistence LOAD syntax remains valid", () => Equal(false,
     Analyze("LOAD HighScore FROM \"HighScore\" DEFAULT 0\n").HasErrors));
+Run("Completion catalog uses shared keywords and built-in signatures", () =>
+{
+    var completions = SmileCompletionService.GetCompletions(Analyze("PRI"), 3);
+    Equal(SmileCompletionKind.Keyword,
+        completions.Single(completion => completion.DisplayText == "PRINT").Kind);
+    var rgb = completions.Single(completion => completion.DisplayText == "RGB");
+    Equal(SmileCompletionKind.BuiltInFunction, rgb.Kind);
+    Equal("Built-in function RGB(red, green, blue)", rgb.Description);
+    Equal(true, completions.Any(completion => completion.DisplayText == "GAME_CLOSED"));
+    Equal(true, completions.Any(completion => completion.DisplayText == "KEY_ENTER"));
+    Equal(false, completions.Any(completion => completion.DisplayText == "PRI"));
+});
+Run("Completion catalog includes visible variables arrays and routines", () =>
+{
+    const string source = "Score = 1\nDIM Board[4, 5]\nSUB Move(PlayerX)\nStep = 2\nPRINT PlayerX\nEND SUB\nSUB Other()\nHidden = 3\nEND SUB\n";
+    var completions = SmileCompletionService.GetCompletions(Analyze(source), source.IndexOf("PRINT", StringComparison.Ordinal));
+    Equal(true, completions.Any(completion => completion.DisplayText == "Score"));
+    Equal("NUMBER array Board[4, 5]", completions.Single(completion => completion.DisplayText == "Board").Description);
+    Equal(true, completions.Any(completion => completion.DisplayText == "PlayerX"));
+    Equal(true, completions.Any(completion => completion.DisplayText == "Step"));
+    Equal(false, completions.Any(completion => completion.DisplayText == "Hidden"));
+    Equal("SUB Move(PlayerX)", completions.Single(completion => completion.DisplayText == "Move").Description);
+});
 Run("Fixed-step ball speed is identical at 60, 100, 120, and 144 Hz", () =>
 {
     var sixtyHz = Enumerable.Repeat(16, 20).Concat(Enumerable.Repeat(17, 40));
@@ -184,7 +207,7 @@ if (failures.Count != 0)
     return 1;
 }
 
-Console.WriteLine("59 SMILE language, project, and timing tests passed.");
+Console.WriteLine("61 SMILE language, project, completion, and timing tests passed.");
 return 0;
 
 SmileProjectGraphicsOptions Parse(string xml) =>
