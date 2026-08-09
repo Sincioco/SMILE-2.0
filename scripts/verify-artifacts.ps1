@@ -76,12 +76,17 @@ $nativePrograms = @(
     'artifacts\games\ArcBasics.exe',
     'artifacts\games\GraphicsTextSample.exe',
     'artifacts\games\Snake\Snake.exe',
+    'artifacts\games\Snake\Snake-NoDemo.exe',
     'artifacts\games\FallingBlocks\FallingBlocks.exe',
+    'artifacts\games\FallingBlocks\FallingBlocks-NoDemo.exe',
     'artifacts\games\PaddleBall\PaddleBall.exe',
+    'artifacts\games\PaddleBall\PaddleBall-NoDemo.exe',
     'artifacts\games\BrickBreaker\BrickBreaker.exe',
+    'artifacts\games\BrickBreaker\BrickBreaker-NoDemo.exe',
     'artifacts\games\MazeMuncher\MazeMuncher.exe',
     'artifacts\games\MazeMuncher\MazeMuncher-NoDemo.exe',
-    'artifacts\games\DungeonStarI\DungeonStarI.exe'
+    'artifacts\games\DungeonStarI\DungeonStarI.exe',
+    'artifacts\games\DungeonStarI\DungeonStarI-NoDemo.exe'
 )
 foreach ($program in $nativePrograms) {
     Assert-NativeGuiX64 $program

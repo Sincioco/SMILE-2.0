@@ -14,6 +14,8 @@ When project work produces two or more Markdown requirement, specification, hand
 
 Every game with an attract/demo mode also ships a complete `Program-NoDemo.smile` teaching version. The no-demo source preserves normal gameplay while removing demo AI, lifecycle, timers, safety rules, UI, and cancellation code instead of hiding those systems behind a flag.
 
+To build a teaching edition in Visual Studio, change that game's `<StartupFile>` in its `.smileproj` from `Program.smile` to `Program-NoDemo.smile`. Both sources remain declared in the project so students can compare them directly.
+
 Attract demos always return directly to the title screen when their run ends or expires. Demo-only game-over, victory, retry, and rematch screens are not shown; normal player terminal screens remain part of the game.
 
 ## Included games

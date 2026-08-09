@@ -166,10 +166,12 @@ echo Required graphics text sample compiled successfully.
 if not exist "%SMILE_ROOT%\artifacts\games\Snake" mkdir "%SMILE_ROOT%\artifacts\games\Snake"
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\Snake\Program.smile" -o "%SMILE_ROOT%\artifacts\games\Snake\Snake.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\Snake\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\Snake\Snake-NoDemo.exe"
+if errorlevel 1 exit /b %errorlevel%
 xcopy "%SMILE_ROOT%\games\Snake\Assets" "%SMILE_ROOT%\artifacts\games\Snake\Assets" /E /I /Y >nul
 if errorlevel 1 exit /b %errorlevel%
 
-echo Snake compiled successfully: %SMILE_ROOT%\artifacts\games\Snake\Snake.exe
+echo Snake demo and no-demo versions compiled successfully.
 
 if not exist "%SMILE_ROOT%\artifacts\games\FallingBlocks" mkdir "%SMILE_ROOT%\artifacts\games\FallingBlocks"
 if not exist "%SMILE_ROOT%\games\FallingBlocks\Assets\Background.mp3" (
@@ -177,6 +179,8 @@ if not exist "%SMILE_ROOT%\games\FallingBlocks\Assets\Background.mp3" (
     exit /b 1
 )
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\FallingBlocks\Program.smile" -o "%SMILE_ROOT%\artifacts\games\FallingBlocks\FallingBlocks.exe" --keep-temp
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\FallingBlocks\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\FallingBlocks\FallingBlocks-NoDemo.exe"
 if errorlevel 1 exit /b %errorlevel%
 xcopy "%SMILE_ROOT%\games\FallingBlocks\Assets" "%SMILE_ROOT%\artifacts\games\FallingBlocks\Assets" /E /I /Y >nul
 if errorlevel 1 exit /b %errorlevel%
@@ -189,21 +193,25 @@ if errorlevel 1 (
     echo Falling Blocks background music output does not match its project asset.
     exit /b 1
 )
-echo Falling Blocks compiled successfully: %SMILE_ROOT%\artifacts\games\FallingBlocks\FallingBlocks.exe
+echo Falling Blocks demo and no-demo versions compiled successfully.
 
 if not exist "%SMILE_ROOT%\artifacts\games\PaddleBall" mkdir "%SMILE_ROOT%\artifacts\games\PaddleBall"
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\PaddleBall\Program.smile" -o "%SMILE_ROOT%\artifacts\games\PaddleBall\PaddleBall.exe"
 if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\PaddleBall\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\PaddleBall\PaddleBall-NoDemo.exe"
+if errorlevel 1 exit /b %errorlevel%
 xcopy "%SMILE_ROOT%\games\PaddleBall\Assets" "%SMILE_ROOT%\artifacts\games\PaddleBall\Assets" /E /I /Y >nul
 if errorlevel 1 exit /b %errorlevel%
-echo Paddle Ball compiled successfully: %SMILE_ROOT%\artifacts\games\PaddleBall\PaddleBall.exe
+echo Paddle Ball demo and no-demo versions compiled successfully.
 
 if not exist "%SMILE_ROOT%\artifacts\games\BrickBreaker" mkdir "%SMILE_ROOT%\artifacts\games\BrickBreaker"
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\BrickBreaker\Program.smile" -o "%SMILE_ROOT%\artifacts\games\BrickBreaker\BrickBreaker.exe"
 if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\BrickBreaker\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\BrickBreaker\BrickBreaker-NoDemo.exe"
+if errorlevel 1 exit /b %errorlevel%
 xcopy "%SMILE_ROOT%\games\BrickBreaker\Assets" "%SMILE_ROOT%\artifacts\games\BrickBreaker\Assets" /E /I /Y >nul
 if errorlevel 1 exit /b %errorlevel%
-echo Brick Breaker compiled successfully: %SMILE_ROOT%\artifacts\games\BrickBreaker\BrickBreaker.exe
+echo Brick Breaker demo and no-demo versions compiled successfully.
 
 if not exist "%SMILE_ROOT%\artifacts\games\MazeMuncher" mkdir "%SMILE_ROOT%\artifacts\games\MazeMuncher"
 if not exist "%SMILE_ROOT%\games\MazeMuncher\Assets\Background.mp3" (
@@ -243,6 +251,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\valida
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\DungeonStarI\Program.smile" -o "%SMILE_ROOT%\artifacts\games\DungeonStarI\DungeonStarI.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\DungeonStarI\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\DungeonStarI\DungeonStarI-NoDemo.exe"
+if errorlevel 1 exit /b %errorlevel%
 xcopy "%SMILE_ROOT%\games\DungeonStarI\Assets" "%SMILE_ROOT%\artifacts\games\DungeonStarI\Assets" /E /I /Y >nul
 if errorlevel 1 exit /b %errorlevel%
 xcopy "%SMILE_ROOT%\games\DungeonStarI\Maps" "%SMILE_ROOT%\artifacts\games\DungeonStarI\Maps" /E /I /Y >nul
@@ -263,7 +273,7 @@ for %%M in (default.map sample-loops.map sample-switchbacks.map) do (
         exit /b 1
     )
 )
-echo Dungeon Star I compiled successfully: %SMILE_ROOT%\artifacts\games\DungeonStarI\DungeonStarI.exe
+echo Dungeon Star I demo and no-demo versions compiled successfully.
 
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\verify-artifacts.ps1"
 if errorlevel 1 exit /b %errorlevel%

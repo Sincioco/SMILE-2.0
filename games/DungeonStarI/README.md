@@ -2,6 +2,8 @@
 
 Dungeon Star I is an original first-person, grid-based dungeon exploration game written entirely in SMILE 2.0 source. It demonstrates student-editable external maps, random pipe-style generation, closed and open doors, reciprocal stairs across three floors, palette-swapped pseudo-3D rendering, time-based movement and transitions, a self-playing attract mode, user-idle handling, and MP3 background music.
 
+`Program.smile` is the normal demo-enabled source. `Program-NoDemo.smile` is the complete playable student edition with the attract state, route planner, timers, cancellation, and demo UI removed. To make the student edition the Visual Studio startup source, change `<StartupFile>` in `DungeonStarI.smileproj` to `Program-NoDemo.smile`.
+
 ## Build
 
 From the repository root:

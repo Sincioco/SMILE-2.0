@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <SmileSource Include="Program.smile" />
+    <SmileSource Include="Program-NoDemo.smile" />
     <Asset Include="Assets\**\*" />
     <Asset Include="Maps\**\*" />
   </ItemGroup>
