@@ -4,12 +4,20 @@ CONST CanvasHeight = 540
 CONST BoardWidth = 10
 CONST BoardHeight = 20
 CONST CellSize = 22
-CONST BoardX = 320
+CONST BoardX = 370
 CONST BoardY = 50
+CONST TitleDemoDelay = 5000
+CONST DemoMinimumPlayTime = 30000
+CONST DemoMaximumPlayTime = 45000
+CONST DemoTerminalDuration = 5000
+CONST TitleInputArmDelay = 250
+CONST DemoActionInterval = 60
+CONST DemoFallDelay = 180
 
 DIM Board[BoardWidth, BoardHeight]
 DIM ShapeX[7, 4]
 DIM ShapeY[7, 4]
+DIM CandidateHeights[BoardWidth]
 
 ' Seven four-cell shapes in a 4 by 4 rotation box.
 ShapeX[0, 0] = 0
@@ -92,6 +100,20 @@ Column = 0
 Cell = 0
 Cleared = 0
 FullRow = FALSE
+DemoMode = FALSE
+TitleStartedAt = 0
+TitleAcceptInputAt = 0
+DemoStartedAt = 0
+DemoTerminalStartedAt = 0
+NextDemoActionAt = 0
+PlannedRotation = 0
+PlannedX = 3
+CandidateRotation = 0
+CandidateXPosition = 0
+CandidateDropY = 0
+DemoPlanAligned = FALSE
+DemoPieceSequence = 0
+DemoUseNaturalFall = TRUE
 
 LOAD HighScore FROM "HighScore" DEFAULT 0
 
@@ -152,12 +174,200 @@ FUNCTION CanMove(OffsetX, OffsetY, TestRotation)
     RETURN TRUE
 END FUNCTION
 
+SUB ClearBoard()
+    FOR ClearY = 0 TO BoardHeight - 1
+        FOR ClearX = 0 TO BoardWidth - 1
+            Board[ClearX, ClearY] = 0
+        END FOR
+    END FOR
+END SUB
+
+FUNCTION CandidateCanFit(PositionX, PositionY)
+    FOR CandidateCell = 0 TO 3
+        CandidateBlockX = PositionX + BlockX(CurrentPiece, CandidateRotation, CandidateCell)
+        CandidateBlockY = PositionY + BlockY(CurrentPiece, CandidateRotation, CandidateCell)
+        IF CandidateBlockX < 0 OR CandidateBlockX >= BoardWidth OR CandidateBlockY >= BoardHeight THEN
+            RETURN FALSE
+        END IF
+        IF CandidateBlockY >= 0 AND Board[CandidateBlockX, CandidateBlockY] <> 0 THEN
+            RETURN FALSE
+        END IF
+    END FOR
+    RETURN TRUE
+END FUNCTION
+
+FUNCTION FindDropY(PositionX)
+    DropTestY = -4
+    IF CandidateCanFit(PositionX, DropTestY) = FALSE THEN
+        RETURN -99
+    END IF
+    DO
+        IF CandidateCanFit(PositionX, DropTestY + 1) = TRUE THEN
+            DropTestY = DropTestY + 1
+        ELSE
+            EXIT DO
+        END IF
+    LOOP
+    RETURN DropTestY
+END FUNCTION
+
+FUNCTION CandidateCellFilled(TestColumn, TestRow)
+    IF Board[TestColumn, TestRow] <> 0 THEN
+        RETURN TRUE
+    END IF
+    FOR CandidateCell = 0 TO 3
+        CandidateBlockX = CandidateXPosition + BlockX(CurrentPiece, CandidateRotation, CandidateCell)
+        CandidateBlockY = CandidateDropY + BlockY(CurrentPiece, CandidateRotation, CandidateCell)
+        IF CandidateBlockX = TestColumn AND CandidateBlockY = TestRow THEN
+            RETURN TRUE
+        END IF
+    END FOR
+    RETURN FALSE
+END FUNCTION
+
+FUNCTION EvaluateCandidate()
+    CompletedCandidateRows = 0
+    CandidateHoles = 0
+    CandidateMaximumHeight = 0
+    CandidateAggregateHeight = 0
+    CandidateBumpiness = 0
+
+    FOR EvaluateRow = 0 TO BoardHeight - 1
+        CandidateRowFull = TRUE
+        FOR EvaluateColumn = 0 TO BoardWidth - 1
+            IF CandidateCellFilled(EvaluateColumn, EvaluateRow) = FALSE THEN
+                CandidateRowFull = FALSE
+            END IF
+        END FOR
+        IF CandidateRowFull = TRUE THEN
+            CompletedCandidateRows = CompletedCandidateRows + 1
+        END IF
+    END FOR
+
+    FOR EvaluateColumn = 0 TO BoardWidth - 1
+        CandidateSeenBlock = FALSE
+        CandidateHeight = 0
+        FOR EvaluateRow = 0 TO BoardHeight - 1
+            IF CandidateCellFilled(EvaluateColumn, EvaluateRow) = TRUE THEN
+                IF CandidateSeenBlock = FALSE THEN
+                    CandidateSeenBlock = TRUE
+                    CandidateHeight = BoardHeight - EvaluateRow
+                END IF
+            ELSE IF CandidateSeenBlock = TRUE THEN
+                CandidateHoles = CandidateHoles + 1
+            END IF
+        END FOR
+        CandidateHeights[EvaluateColumn] = CandidateHeight
+        CandidateAggregateHeight = CandidateAggregateHeight + CandidateHeight
+        CandidateMaximumHeight = MAX(CandidateMaximumHeight, CandidateHeight)
+    END FOR
+
+    FOR EvaluateColumn = 0 TO BoardWidth - 2
+        CandidateBumpiness = CandidateBumpiness + ABS(CandidateHeights[EvaluateColumn] - CandidateHeights[EvaluateColumn + 1])
+    END FOR
+
+    CandidateCenterPenalty = ABS((CandidateXPosition + 2) * 2 - BoardWidth)
+    RETURN CompletedCandidateRows * 10000 - CandidateHoles * 800 - CandidateMaximumHeight * 80 - CandidateAggregateHeight * 10 - CandidateBumpiness * 20 - CandidateCenterPenalty * 2
+END FUNCTION
+
+SUB PlanDemoPiece()
+    BestCandidateScore = -999999999
+    PlannedRotation = 0
+    PlannedX = PieceX
+    DemoPlanAligned = FALSE
+
+    FOR PlanRotation = 0 TO 3
+        CandidateRotation = PlanRotation
+        FOR PlanX = -3 TO BoardWidth - 1
+            PlanDropY = FindDropY(PlanX)
+            CandidateAboveTop = FALSE
+            IF PlanDropY > -99 THEN
+                FOR PlanCell = 0 TO 3
+                    IF PlanDropY + BlockY(CurrentPiece, PlanRotation, PlanCell) < 0 THEN
+                        CandidateAboveTop = TRUE
+                    END IF
+                END FOR
+                IF CandidateAboveTop = FALSE THEN
+                    CandidateXPosition = PlanX
+                    CandidateDropY = PlanDropY
+                    CandidateScore = EvaluateCandidate()
+                    IF CandidateScore > BestCandidateScore THEN
+                        BestCandidateScore = CandidateScore
+                        PlannedRotation = PlanRotation
+                        PlannedX = PlanX
+                    END IF
+                END IF
+            END IF
+        END FOR
+    END FOR
+    NextDemoActionAt = TIMER() + DemoActionInterval
+END SUB
+
+SUB ExecuteDemoPlan()
+    IF TIMER() < NextDemoActionAt OR State <> 1 THEN
+        RETURN
+    END IF
+
+    IF Rotation <> PlannedRotation THEN
+        NewRotation = (Rotation + 1) MOD 4
+        IF CanMove(0, 0, NewRotation) = TRUE THEN
+            Rotation = NewRotation
+            PLAY SOUND "Assets\Rotate.wav"
+        ELSE
+            CALL PlanDemoPiece()
+        END IF
+    ELSE IF PieceX < PlannedX THEN
+        IF CanMove(1, 0, Rotation) = TRUE THEN
+            PieceX = PieceX + 1
+            PLAY SOUND "Assets\Move.wav"
+        ELSE
+            CALL PlanDemoPiece()
+        END IF
+    ELSE IF PieceX > PlannedX THEN
+        IF CanMove(-1, 0, Rotation) = TRUE THEN
+            PieceX = PieceX - 1
+            PLAY SOUND "Assets\Move.wav"
+        ELSE
+            CALL PlanDemoPiece()
+        END IF
+    ELSE
+        IF DemoUseNaturalFall = TRUE THEN
+            IF DemoPlanAligned = FALSE THEN
+                DemoPlanAligned = TRUE
+                NextFallTime = TIMER() + DemoFallDelay
+            END IF
+        ELSE
+            DO
+                IF CanMove(0, 1, Rotation) = TRUE THEN
+                    PieceY = PieceY + 1
+                ELSE
+                    EXIT DO
+                END IF
+            LOOP
+            CALL LockPiece()
+        END IF
+    END IF
+    NextDemoActionAt = TIMER() + DemoActionInterval
+END SUB
+
 SUB EndGame()
+    IF DemoMode = TRUE AND TIMER() - DemoStartedAt < DemoMinimumPlayTime THEN
+        CALL ClearBoard()
+        Lines = 0
+        Level = 1
+        FallDelay = DemoFallDelay
+        State = 1
+        CALL SpawnPiece()
+        RETURN
+    END IF
     State = 2
     STOP MUSIC
-    IF Score > HighScore THEN
+    IF DemoMode = FALSE AND Score > HighScore THEN
         HighScore = Score
         SAVE HighScore TO "HighScore"
+    END IF
+    IF DemoMode = TRUE THEN
+        DemoTerminalStartedAt = TIMER()
     END IF
     PLAY SOUND "Assets\GameOver.wav"
 END SUB
@@ -171,6 +381,12 @@ SUB SpawnPiece()
     NextFallTime = TIMER() + FallDelay
     IF CanMove(0, 0, Rotation) = FALSE THEN
         CALL EndGame()
+        RETURN
+    END IF
+    IF State = 1 AND DemoMode = TRUE THEN
+        DemoPieceSequence = DemoPieceSequence + 1
+        DemoUseNaturalFall = DemoPieceSequence MOD 5 <> 0
+        CALL PlanDemoPiece()
     END IF
 END SUB
 
@@ -213,7 +429,11 @@ SUB ClearRows()
         END SELECT
         Lines = Lines + Cleared
         Level = Lines / 10 + 1
-        FallDelay = MAX(80, 700 - (Level - 1) * 60)
+        IF DemoMode = TRUE THEN
+            FallDelay = DemoFallDelay
+        ELSE
+            FallDelay = MAX(80, 700 - (Level - 1) * 60)
+        END IF
         PLAY SOUND "Assets\LineClear.wav"
     END IF
 END SUB
@@ -224,6 +444,7 @@ SUB LockPiece()
         LockY = PieceY + BlockY(CurrentPiece, Rotation, Cell)
         IF LockY < 0 THEN
             CALL EndGame()
+            RETURN
         ELSE
             Board[LockX, LockY] = CurrentPiece
         END IF
@@ -234,12 +455,8 @@ SUB LockPiece()
     END IF
 END SUB
 
-SUB ResetGame()
-    FOR Row = 0 TO BoardHeight - 1
-        FOR Column = 0 TO BoardWidth - 1
-            Board[Column, Row] = 0
-        END FOR
-    END FOR
+SUB ResetPlay()
+    CALL ClearBoard()
     Score = 0
     Lines = 0
     Level = 1
@@ -248,6 +465,38 @@ SUB ResetGame()
     State = 1
     PLAY MUSIC "Assets\Background.mp3" LOOP
     CALL SpawnPiece()
+END SUB
+
+SUB DrainPendingKeys()
+    FOR DrainIndex = 1 TO 64
+        GET KEY DrainedKey
+    END FOR
+END SUB
+
+SUB EnterTitle()
+    STOP MUSIC
+    DemoMode = FALSE
+    State = 0
+    Key = KEY_NONE
+    CALL DrainPendingKeys()
+    TitleStartedAt = TIMER()
+    TitleAcceptInputAt = TitleStartedAt + TitleInputArmDelay
+END SUB
+
+SUB ResetGame()
+    DemoMode = FALSE
+    CALL ResetPlay()
+END SUB
+
+SUB StartDemo()
+    DemoMode = TRUE
+    DemoStartedAt = TIMER()
+    DemoTerminalStartedAt = 0
+    DemoPieceSequence = 0
+    DemoUseNaturalFall = TRUE
+    CALL ResetPlay()
+    FallDelay = DemoFallDelay
+    NextFallTime = TIMER() + FallDelay
 END SUB
 
 SUB DrawBlock(PixelX, PixelY, BlockSize, BlockColor)
@@ -301,6 +550,13 @@ SUB DrawGame()
     DRAW NUMBER Level AT 610, 312 SIZE 34 COLOR LIGHT_GREEN
     DRAW TEXT "LINES" AT 610, 385 SIZE 20 COLOR LIGHT_GRAY
     DRAW NUMBER Lines AT 610, 412 SIZE 34 COLOR WHITE
+
+    IF DemoMode = TRUE AND State = 1 THEN
+        FILL ROUNDED RECTANGLE 620, 460, 290, 58, 8, RGB(17, 24, 42)
+        DRAW ROUNDED RECTANGLE 620, 460, 290, 58, 8, CYAN
+        DRAW TEXT "DEMO" AT 765, 468 SIZE 18 COLOR YELLOW CENTERED
+        DRAW TEXT "PRESS ANY KEY TO RETURN" AT 765, 494 SIZE 11 COLOR WHITE CENTERED
+    END IF
 END SUB
 
 SUB DrawTitle()
@@ -322,70 +578,106 @@ END SUB
 SUB DrawGameOver()
     FILL ROUNDED RECTANGLE 245, 145, 470, 270, 22, RGB(17, 24, 42)
     DRAW ROUNDED RECTANGLE 245, 145, 470, 270, 22, RED
-    DRAW TEXT "GAME OVER" AT 480, 190 SIZE 48 COLOR RED CENTERED
+    IF DemoMode = TRUE THEN
+        DRAW TEXT "DEMO OVER" AT 480, 190 SIZE 48 COLOR YELLOW CENTERED
+    ELSE
+        DRAW TEXT "GAME OVER" AT 480, 190 SIZE 48 COLOR RED CENTERED
+    END IF
     DRAW TEXT "SCORE" AT 380, 260 SIZE 20 COLOR LIGHT_GRAY
     DRAW NUMBER Score AT 520, 250 SIZE 36 COLOR YELLOW
-    DRAW TEXT "ENTER TO RETRY" AT 480, 335 SIZE 24 COLOR WHITE CENTERED
-    DRAW TEXT "ESCAPE TO EXIT" AT 480, 375 SIZE 18 COLOR LIGHT_GRAY CENTERED
+    IF DemoMode = TRUE THEN
+        DRAW TEXT "RETURNING TO TITLE" AT 480, 350 SIZE 22 COLOR WHITE CENTERED
+    ELSE
+        DRAW TEXT "ENTER TO RETRY" AT 480, 335 SIZE 24 COLOR WHITE CENTERED
+        DRAW TEXT "ESCAPE TO EXIT" AT 480, 375 SIZE 18 COLOR LIGHT_GRAY CENTERED
+    END IF
 END SUB
 
 GAME WINDOW "SMILE 2.0 Falling Blocks"
 
+CALL EnterTitle()
+
 DO
     GET KEY Key
-    IF Key = KEY_ESCAPE THEN
+
+    IF DemoMode = TRUE AND Key <> KEY_NONE THEN
+        CALL EnterTitle()
+        Key = KEY_NONE
+    END IF
+
+    IF State = 0 THEN
+        IF Key <> KEY_NONE AND TIMER() >= TitleAcceptInputAt THEN
+            TitleStartedAt = TIMER()
+            IF Key = KEY_ESCAPE THEN
+                STOP SOUND
+                END PROGRAM
+            ELSE IF Key = KEY_ENTER THEN
+                CALL ResetGame()
+            END IF
+        END IF
+        IF State = 0 AND TIMER() - TitleStartedAt >= TitleDemoDelay THEN
+            CALL StartDemo()
+        END IF
+    ELSE IF DemoMode = FALSE AND Key = KEY_ESCAPE THEN
         STOP MUSIC
         STOP SOUND
         END PROGRAM
     END IF
 
     IF State = 0 THEN
-        IF Key = KEY_ENTER THEN
-            CALL ResetGame()
-        END IF
         CALL DrawTitle()
     ELSE IF State = 1 THEN
-        IF Key = KEY_A OR Key = KEY_LEFT THEN
-            IF CanMove(-1, 0, Rotation) = TRUE THEN
-                PieceX = PieceX - 1
-                PLAY SOUND "Assets\Move.wav"
-            END IF
-        ELSE IF Key = KEY_D OR Key = KEY_RIGHT THEN
-            IF CanMove(1, 0, Rotation) = TRUE THEN
-                PieceX = PieceX + 1
-                PLAY SOUND "Assets\Move.wav"
-            END IF
-        ELSE IF Key = KEY_W OR Key = KEY_UP THEN
-            NewRotation = (Rotation + 1) MOD 4
-            IF CanMove(0, 0, NewRotation) = TRUE THEN
-                Rotation = NewRotation
-                PLAY SOUND "Assets\Rotate.wav"
-            END IF
-        ELSE IF Key = KEY_S OR Key = KEY_DOWN THEN
-            IF CanMove(0, 1, Rotation) = TRUE THEN
-                PieceY = PieceY + 1
+        IF DemoMode = TRUE AND TIMER() - DemoStartedAt >= DemoMaximumPlayTime THEN
+            CALL EndGame()
+        END IF
+
+        IF State = 1 THEN
+            IF DemoMode = TRUE THEN
+                CALL ExecuteDemoPlan()
             ELSE
-                CALL LockPiece()
+                IF Key = KEY_A OR Key = KEY_LEFT THEN
+                    IF CanMove(-1, 0, Rotation) = TRUE THEN
+                        PieceX = PieceX - 1
+                        PLAY SOUND "Assets\Move.wav"
+                    END IF
+                ELSE IF Key = KEY_D OR Key = KEY_RIGHT THEN
+                    IF CanMove(1, 0, Rotation) = TRUE THEN
+                        PieceX = PieceX + 1
+                        PLAY SOUND "Assets\Move.wav"
+                    END IF
+                ELSE IF Key = KEY_W OR Key = KEY_UP THEN
+                    NewRotation = (Rotation + 1) MOD 4
+                    IF CanMove(0, 0, NewRotation) = TRUE THEN
+                        Rotation = NewRotation
+                        PLAY SOUND "Assets\Rotate.wav"
+                    END IF
+                ELSE IF Key = KEY_S OR Key = KEY_DOWN THEN
+                    IF CanMove(0, 1, Rotation) = TRUE THEN
+                        PieceY = PieceY + 1
+                    ELSE
+                        CALL LockPiece()
+                    END IF
+                    NextFallTime = TIMER() + FallDelay
+                ELSE IF Key = KEY_SPACE THEN
+                    DO
+                        IF CanMove(0, 1, Rotation) = TRUE THEN
+                            PieceY = PieceY + 1
+                        ELSE
+                            EXIT DO
+                        END IF
+                    LOOP
+                    CALL LockPiece()
+                END IF
             END IF
-            NextFallTime = TIMER() + FallDelay
-        ELSE IF Key = KEY_SPACE THEN
-            DO
+
+            IF State = 1 AND TIMER() >= NextFallTime AND (DemoMode = FALSE OR DemoPlanAligned = TRUE) THEN
                 IF CanMove(0, 1, Rotation) = TRUE THEN
                     PieceY = PieceY + 1
                 ELSE
-                    EXIT DO
+                    CALL LockPiece()
                 END IF
-            LOOP
-            CALL LockPiece()
-        END IF
-
-        IF State = 1 AND TIMER() >= NextFallTime THEN
-            IF CanMove(0, 1, Rotation) = TRUE THEN
-                PieceY = PieceY + 1
-            ELSE
-                CALL LockPiece()
+                NextFallTime = TIMER() + FallDelay
             END IF
-            NextFallTime = TIMER() + FallDelay
         END IF
 
         CALL DrawGame()
@@ -393,12 +685,24 @@ DO
             CALL DrawGameOver()
         END IF
     ELSE
-        IF Key = KEY_ENTER THEN
+        IF DemoMode = TRUE THEN
+            IF DemoTerminalStartedAt = 0 THEN
+                DemoTerminalStartedAt = TIMER()
+            END IF
+            IF TIMER() - DemoTerminalStartedAt >= DemoTerminalDuration THEN
+                CALL EnterTitle()
+            END IF
+        ELSE IF Key = KEY_ENTER THEN
             CALL ResetGame()
         END IF
-        CALL DrawGame()
-        IF State = 2 THEN
-            CALL DrawGameOver()
+
+        IF State = 0 THEN
+            CALL DrawTitle()
+        ELSE
+            CALL DrawGame()
+            IF State = 2 THEN
+                CALL DrawGameOver()
+            END IF
         END IF
     END IF
 
