@@ -114,6 +114,32 @@ Run("RESUME SOUND is not accepted as music syntax", () => Equal(true,
     HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nRESUME SOUND\n"), "SML2001")));
 Run("Bare STOP remains malformed", () => Equal(true,
     HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nSTOP\n"), "SML2001")));
+Run("LOAD TEXT FILE keywords are shared and case-insensitive", () =>
+{
+    Equal(SyntaxKind.FileKeyword, SyntaxFacts.GetKeywordKind("file"));
+    Equal(SyntaxKind.IntoKeyword, SyntaxFacts.GetKeywordKind("InTo"));
+    Equal(SyntaxKind.CountKeyword, SyntaxFacts.GetKeywordKind("COUNT"));
+});
+Run("LOAD TEXT FILE analyzes for a one-dimensional array", () => Equal(false,
+    Analyze("DIM Bytes[8]\nLOAD TEXT FILE \"sample.txt\" INTO Bytes COUNT ByteCount\n").HasErrors));
+Run("LOAD TEXT FILE records its shared syntax", () =>
+{
+    var load = Analyze("DIM Bytes[8]\nLOAD TEXT FILE \"sample.txt\" INTO Bytes COUNT ByteCount\n")
+        .SyntaxTree.Root.Statements.OfType<TextFileLoadStatementSyntax>().Single();
+    Equal("sample.txt", load.Path.Value as string);
+    Equal("Bytes", load.Destination.Text);
+    Equal("ByteCount", load.CountIdentifier.Text);
+});
+Run("LOAD TEXT FILE rejects an empty path", () => Equal(true,
+    HasDiagnostic(Analyze("DIM Bytes[8]\nLOAD TEXT FILE \"\" INTO Bytes COUNT ByteCount\n"), "SML3027")));
+Run("LOAD TEXT FILE rejects an unknown destination", () => Equal(true,
+    HasDiagnostic(Analyze("LOAD TEXT FILE \"sample.txt\" INTO Bytes COUNT ByteCount\n"), "SML3027")));
+Run("LOAD TEXT FILE rejects a scalar destination", () => Equal(true,
+    HasDiagnostic(Analyze("Bytes = 0\nLOAD TEXT FILE \"sample.txt\" INTO Bytes COUNT ByteCount\n"), "SML3027")));
+Run("LOAD TEXT FILE rejects a two-dimensional destination", () => Equal(true,
+    HasDiagnostic(Analyze("DIM Bytes[4, 4]\nLOAD TEXT FILE \"sample.txt\" INTO Bytes COUNT ByteCount\n"), "SML3027")));
+Run("Existing persistence LOAD syntax remains valid", () => Equal(false,
+    Analyze("LOAD HighScore FROM \"HighScore\" DEFAULT 0\n").HasErrors));
 Run("Fixed-step ball speed is identical at 60, 100, 120, and 144 Hz", () =>
 {
     var sixtyHz = Enumerable.Repeat(16, 20).Concat(Enumerable.Repeat(17, 40));
@@ -140,7 +166,7 @@ if (failures.Count != 0)
     return 1;
 }
 
-Console.WriteLine("43 SMILE language, project, and timing tests passed.");
+Console.WriteLine("51 SMILE language, project, and timing tests passed.");
 return 0;
 
 SmileProjectGraphicsOptions Parse(string xml) =>

@@ -1,0 +1,12 @@
+' LOAD TEXT FILE reads executable-relative UTF-8 bytes into a bounded numeric array.
+DIM Bytes[5]
+
+LOAD TEXT FILE "TextFileLoadFixture.txt" INTO Bytes COUNT ByteCount
+PRINT ByteCount
+PRINT Bytes[0]
+PRINT Bytes[4]
+
+LOAD TEXT FILE "MissingTextFile.txt" INTO Bytes COUNT ByteCount
+PRINT ByteCount
+PRINT Bytes[0]
+PRINT Bytes[4]

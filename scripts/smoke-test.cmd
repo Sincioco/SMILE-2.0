@@ -104,6 +104,34 @@ if errorlevel 1 (
 )
 echo Storage default, save, and reload tests passed.
 
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\TextFileLoadBasics.smile" -o "%SMILE_ROOT%\artifacts\games\TextFileLoadBasics.exe"
+if errorlevel 1 exit /b %errorlevel%
+powershell -NoProfile -Command "[IO.File]::WriteAllBytes('%SMILE_ROOT%\artifacts\games\TextFileLoadFixture.txt', [byte[]](0xEF,0xBB,0xBF,65,66,67,68,69,70))"
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\games\TextFileLoadBasics.exe" > "%SMILE_ROOT%\artifacts\temp\TextFileLoadBasics.out"
+if errorlevel 1 exit /b %errorlevel%
+findstr /x /c:"5" "%SMILE_ROOT%\artifacts\temp\TextFileLoadBasics.out" >nul
+if errorlevel 1 (
+    echo Text-file loading smoke test failed: capacity truncation count was not five.
+    exit /b 1
+)
+findstr /x /c:"65" "%SMILE_ROOT%\artifacts\temp\TextFileLoadBasics.out" >nul
+if errorlevel 1 (
+    echo Text-file loading smoke test failed: UTF-8 BOM was not skipped.
+    exit /b 1
+)
+findstr /x /c:"69" "%SMILE_ROOT%\artifacts\temp\TextFileLoadBasics.out" >nul
+if errorlevel 1 (
+    echo Text-file loading smoke test failed: bounded bytes were not copied.
+    exit /b 1
+)
+for /f %%Z in ('findstr /x /c:"0" "%SMILE_ROOT%\artifacts\temp\TextFileLoadBasics.out" ^| find /c /v ""') do set "SMILE_ZERO_LINES=%%Z"
+if not "%SMILE_ZERO_LINES%"=="3" (
+    echo Text-file loading smoke test failed: missing-file count or zero-fill was incorrect.
+    exit /b 1
+)
+echo Text-file BOM, truncation, missing-file, and zero-fill tests passed.
+
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\GraphicsBasics.smile" -o "%SMILE_ROOT%\artifacts\games\GraphicsBasics.exe"
 if errorlevel 1 exit /b %errorlevel%
 if not exist "%SMILE_ROOT%\artifacts\games\Assets" mkdir "%SMILE_ROOT%\artifacts\games\Assets"

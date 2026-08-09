@@ -81,6 +81,7 @@ internal sealed class MasmEmitter
             Line("EXTERN smile_music_shutdown:PROC");
         }
         Line("EXTERN smile_load_value:PROC");
+        Line("EXTERN smile_load_text_file:PROC");
         Line("EXTERN smile_save_value:PROC");
         Line();
         Line(".data");
@@ -222,6 +223,9 @@ internal sealed class MasmEmitter
                 case LoadStatementSyntax load:
                     CollectTextToken(load.Key);
                     CollectExpression(load.DefaultValue);
+                    break;
+                case TextFileLoadStatementSyntax textFileLoad:
+                    CollectTextToken(textFileLoad.Path);
                     break;
                 case SaveStatementSyntax save:
                     CollectTextToken(save.Key);
@@ -413,6 +417,16 @@ internal sealed class MasmEmitter
                 Line("    push rax");
                 EmitNativeCall("smile_load_value", 3);
                 Line($"    mov QWORD PTR [{Label(load.Identifier.Text)}], rax");
+                break;
+            case TextFileLoadStatementSyntax textFileLoad:
+                EmitTextArgument(textFileLoad.Path);
+                var destination = Resolve(textFileLoad.Destination.Text);
+                Line($"    lea rax, {_symbolLabels[destination]}");
+                Line("    push rax");
+                Line($"    mov rax, {destination.ArraySize.ToString(CultureInfo.InvariantCulture)}");
+                Line("    push rax");
+                EmitNativeCall("smile_load_text_file", 4);
+                Line($"    mov QWORD PTR [{Label(textFileLoad.CountIdentifier.Text)}], rax");
                 break;
             case SaveStatementSyntax save:
                 EmitTextArgument(save.Key);

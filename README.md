@@ -145,6 +145,7 @@ Implemented syntax includes:
 - `SUB`, `FUNCTION`, `CALL`, `RETURN`, and up to four scalar parameters;
 - `PRINT`, `GET KEY`, `KEY_HELD`, `WAIT`, `RANDOM`, `TIMER`, `ABS`, `MIN`, `MAX`, and `RGB`;
 - `GAME WINDOW`, double-buffered rectangles, rounded rectangles, circles, lines, quadrilaterals, text, and numbers, `SHOW SCREEN`, asynchronous WAV effects, MP3 background music, and integer persistence through `LOAD` and `SAVE`;
+- bounded executable-relative UTF-8 input through `LOAD TEXT FILE "path" INTO Array COUNT Variable`, including BOM skipping, zero-fill, and safe missing-file behavior;
 - named keyboard constants, including `KEY_OTHER` for unnamed ordinary key events, and named color constants used by the examples and games.
 
 See `docs\language\README.md` and `examples\StructuredLanguageBasics.smile` for concrete syntax.

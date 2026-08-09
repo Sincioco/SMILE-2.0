@@ -235,6 +235,9 @@ internal sealed class SemanticAnalyzer
                 case LoadStatementSyntax load:
                     RecordFirst(declarations, load.Identifier);
                     break;
+                case TextFileLoadStatementSyntax textFileLoad:
+                    RecordFirst(declarations, textFileLoad.CountIdentifier);
+                    break;
                 case ForStatementSyntax forStatement:
                     RecordFirst(declarations, forStatement.Identifier);
                     CollectFirstDeclarations(forStatement.Statements, declarations, skipRoutines);
@@ -356,6 +359,9 @@ internal sealed class SemanticAnalyzer
                 EnsureNumberTarget(load.Identifier, "LOAD");
                 ValidateStorageKey(load.Key);
                 break;
+            case TextFileLoadStatementSyntax textFileLoad:
+                AnalyzeTextFileLoad(textFileLoad);
+                break;
             case SaveStatementSyntax save:
                 if (!TryResolve(save.Identifier.Text, save.Identifier, out var saved) || saved.IsArray || saved.Type != SmileType.Number)
                     _diagnostics.Report("SML3025", save.Identifier.Span, "SAVE value must be a NUMBER variable or constant.");
@@ -389,6 +395,25 @@ internal sealed class SemanticAnalyzer
     {
         if (string.IsNullOrWhiteSpace(key.Value as string))
             _diagnostics.Report("SML3025", key.Span, "Storage key must be a non-empty text literal.");
+    }
+
+    private void AnalyzeTextFileLoad(TextFileLoadStatementSyntax statement)
+    {
+        if (string.IsNullOrWhiteSpace(statement.Path.Value as string))
+            _diagnostics.Report("SML3027", statement.Path.Span, "LOAD TEXT FILE requires a non-empty path literal.");
+
+        if (!TryResolveExisting(statement.Destination.Text, out var destination))
+        {
+            _diagnostics.Report("SML3027", statement.Destination.Span,
+                $"LOAD TEXT FILE destination '{statement.Destination.Text}' must be a declared one-dimensional NUMBER array.");
+        }
+        else if (!destination.IsArray || destination.ArrayRank != 1 || destination.Type != SmileType.Number)
+        {
+            _diagnostics.Report("SML3027", statement.Destination.Span,
+                $"LOAD TEXT FILE destination '{statement.Destination.Text}' must be a one-dimensional NUMBER array.");
+        }
+
+        EnsureNumberTarget(statement.CountIdentifier, "LOAD TEXT FILE COUNT");
     }
 
     private void AnalyzeConstant(ConstStatementSyntax constant, bool topLevel)

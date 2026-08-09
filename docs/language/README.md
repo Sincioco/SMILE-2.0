@@ -67,6 +67,15 @@ END PROGRAM
 
 Drawing statements support filled or outlined rectangles, rounded rectangles, circles, and arbitrary four-corner quadrilaterals, plus lines, literal text, and numbers. Quadrilaterals take four perimeter-ordered `(X, Y)` points followed by a color. `SHOW SCREEN` presents the logical canvas. `PLAY SOUND` starts an asynchronous WAV effect and missing files are safe. `LOAD` and `SAVE` persist integer values in storage isolated by executable name.
 
+Generic executable-relative text input uses:
+
+```smile
+DIM FileBytes[8192]
+LOAD TEXT FILE "Maps\default.map" INTO FileBytes COUNT FileByteCount
+```
+
+The path must be a non-empty literal, the destination must be a one-dimensional numeric array, and `COUNT` must name a writable numeric variable. The runtime zero-fills the complete destination, reads UTF-8 bytes, skips an optional UTF-8 BOM, copies at most the array capacity as values from 0 through 255, and stores the copied byte count. Missing, inaccessible, empty, or unreadable files safely produce count zero. Existing integer persistence keeps its distinct `LOAD Value FROM "Key" DEFAULT 0` form.
+
 Background-music syntax is:
 
 ```smile

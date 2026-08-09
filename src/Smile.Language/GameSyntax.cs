@@ -150,6 +150,33 @@ public sealed class LoadStatementSyntax : StatementSyntax
     public override TextSpan Span => TextSpan.FromBounds(LoadKeyword.Span.Start, DefaultValue.Span.End);
 }
 
+public sealed class TextFileLoadStatementSyntax : StatementSyntax
+{
+    public TextFileLoadStatementSyntax(SyntaxToken loadKeyword, SyntaxToken textKeyword, SyntaxToken fileKeyword,
+        SyntaxToken path, SyntaxToken intoKeyword, SyntaxToken destination, SyntaxToken countKeyword,
+        SyntaxToken countIdentifier)
+    {
+        LoadKeyword = loadKeyword;
+        TextKeyword = textKeyword;
+        FileKeyword = fileKeyword;
+        Path = path;
+        IntoKeyword = intoKeyword;
+        Destination = destination;
+        CountKeyword = countKeyword;
+        CountIdentifier = countIdentifier;
+    }
+
+    public SyntaxToken LoadKeyword { get; }
+    public SyntaxToken TextKeyword { get; }
+    public SyntaxToken FileKeyword { get; }
+    public SyntaxToken Path { get; }
+    public SyntaxToken IntoKeyword { get; }
+    public SyntaxToken Destination { get; }
+    public SyntaxToken CountKeyword { get; }
+    public SyntaxToken CountIdentifier { get; }
+    public override TextSpan Span => TextSpan.FromBounds(LoadKeyword.Span.Start, CountIdentifier.Span.End);
+}
+
 public sealed class SaveStatementSyntax : StatementSyntax
 {
     public SaveStatementSyntax(SyntaxToken saveKeyword, SyntaxToken identifier, SyntaxToken key)

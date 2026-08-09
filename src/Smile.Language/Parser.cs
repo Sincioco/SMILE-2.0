@@ -84,6 +84,7 @@ internal sealed class Parser
             case SyntaxKind.StopKeyword when Peek(1).Kind == SyntaxKind.MusicKeyword: return ParseMusicStatement(MusicOperation.Stop);
             case SyntaxKind.StopKeyword: return ParseSoundStatement(isStop: true);
             case SyntaxKind.MusicKeyword: return ParseMusicStatement(MusicOperation.SetVolume);
+            case SyntaxKind.LoadKeyword when Peek(1).Kind == SyntaxKind.TextKeyword: return ParseTextFileLoadStatement();
             case SyntaxKind.LoadKeyword: return ParseLoadStatement();
             case SyntaxKind.SaveKeyword: return ParseSaveStatement();
             case SyntaxKind.IdentifierToken:
@@ -386,6 +387,20 @@ internal sealed class Parser
         var defaultValue = ParseExpression();
         ConsumeLineEnd();
         return new LoadStatementSyntax(load, identifier, key, defaultValue);
+    }
+
+    private TextFileLoadStatementSyntax ParseTextFileLoadStatement()
+    {
+        var load = MatchToken(SyntaxKind.LoadKeyword);
+        var text = MatchToken(SyntaxKind.TextKeyword);
+        var file = MatchToken(SyntaxKind.FileKeyword);
+        var path = MatchToken(SyntaxKind.StringToken);
+        var into = MatchToken(SyntaxKind.IntoKeyword);
+        var destination = MatchIdentifier();
+        var count = MatchToken(SyntaxKind.CountKeyword);
+        var countIdentifier = MatchIdentifier();
+        ConsumeLineEnd();
+        return new TextFileLoadStatementSyntax(load, text, file, path, into, destination, count, countIdentifier);
     }
 
     private SaveStatementSyntax ParseSaveStatement()

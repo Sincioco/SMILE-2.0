@@ -698,6 +698,59 @@ int smile_resolve_asset_path_utf8(const char* path, long long length, WCHAR* res
     return 1;
 }
 
+long long smile_load_text_file(const char* path, long long length, long long* destination, long long capacity)
+{
+    WCHAR full_path[2048];
+    HANDLE file;
+    unsigned char buffer[4096];
+    DWORD read = 0;
+    long long copied = 0;
+    int failed = 0;
+
+    if (destination == 0 || capacity <= 0)
+        return 0;
+    smile_zero_memory(destination, (SIZE_T)capacity * sizeof(long long));
+    if (path == 0 || length <= 0 || !smile_resolve_asset_path_utf8(path, length, full_path,
+        (int)(sizeof(full_path) / sizeof(full_path[0]))))
+        return 0;
+
+    file = CreateFileW(full_path, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    if (file == INVALID_HANDLE_VALUE)
+        return 0;
+
+    if (!ReadFile(file, buffer, 3, &read, 0))
+        failed = 1;
+    else
+    {
+        DWORD start = read == 3 && buffer[0] == 0xEF && buffer[1] == 0xBB && buffer[2] == 0xBF ? 3 : 0;
+        DWORD byte_index;
+        for (byte_index = start; byte_index < read && copied < capacity; ++byte_index)
+            destination[copied++] = (long long)buffer[byte_index];
+    }
+
+    while (!failed && copied < capacity)
+    {
+        if (!ReadFile(file, buffer, (DWORD)sizeof(buffer), &read, 0))
+        {
+            failed = 1;
+            break;
+        }
+        if (read == 0)
+            break;
+        {
+            DWORD byte_index;
+            for (byte_index = 0; byte_index < read && copied < capacity; ++byte_index)
+                destination[copied++] = (long long)buffer[byte_index];
+        }
+    }
+
+    CloseHandle(file);
+    if (!failed)
+        return copied;
+    smile_zero_memory(destination, (SIZE_T)capacity * sizeof(long long));
+    return 0;
+}
+
 void smile_play_sound(const char* path, long long length)
 {
     WCHAR full_path[2048];
