@@ -242,6 +242,15 @@ if errorlevel 1 (
 )
 echo Maze Muncher demo and no-demo versions compiled successfully.
 
+if not exist "%SMILE_ROOT%\artifacts\games\StarSquadron" mkdir "%SMILE_ROOT%\artifacts\games\StarSquadron"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\StarSquadron\Program.smile" -o "%SMILE_ROOT%\artifacts\games\StarSquadron\StarSquadron.exe" --keep-temp
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\StarSquadron\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\StarSquadron\StarSquadron-NoDemo.exe"
+if errorlevel 1 exit /b %errorlevel%
+xcopy "%SMILE_ROOT%\games\StarSquadron\Assets" "%SMILE_ROOT%\artifacts\games\StarSquadron\Assets" /E /I /Y >nul
+if errorlevel 1 exit /b %errorlevel%
+echo Star Squadron demo and no-demo versions compiled successfully.
+
 if not exist "%SMILE_ROOT%\artifacts\games\DungeonStarI" mkdir "%SMILE_ROOT%\artifacts\games\DungeonStarI"
 if not exist "%SMILE_ROOT%\games\DungeonStarI\Assets\Background.mp3" (
     echo Dungeon Star I background music source asset is missing.

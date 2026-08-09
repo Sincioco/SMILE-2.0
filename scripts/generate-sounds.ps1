@@ -78,3 +78,11 @@ New-SmileTone -RelativePath 'games\MazeMuncher\Assets\PlayerCaught.wav' -Frequen
 New-SmileTone -RelativePath 'games\MazeMuncher\Assets\Start.wav' -Frequency 520 -DurationMilliseconds 180
 New-SmileTone -RelativePath 'games\MazeMuncher\Assets\LevelClear.wav' -Frequency 960 -DurationMilliseconds 360
 New-SmileTone -RelativePath 'games\MazeMuncher\Assets\GameOver.wav' -Frequency 120 -DurationMilliseconds 500
+New-SmileTone -RelativePath 'games\StarSquadron\Assets\PlayerShot.wav' -Frequency 1050 -DurationMilliseconds 55
+New-SmileTone -RelativePath 'games\StarSquadron\Assets\EnemyShot.wav' -Frequency 420 -DurationMilliseconds 80
+New-SmileTone -RelativePath 'games\StarSquadron\Assets\EnemyHit.wav' -Frequency 760 -DurationMilliseconds 120
+New-SmileTone -RelativePath 'games\StarSquadron\Assets\PlayerHit.wav' -Frequency 140 -DurationMilliseconds 380
+New-SmileTone -RelativePath 'games\StarSquadron\Assets\Dive.wav' -Frequency 300 -DurationMilliseconds 180
+New-SmileTone -RelativePath 'games\StarSquadron\Assets\StageClear.wav' -Frequency 980 -DurationMilliseconds 380
+New-SmileTone -RelativePath 'games\StarSquadron\Assets\Start.wav' -Frequency 600 -DurationMilliseconds 200
+New-SmileTone -RelativePath 'games\StarSquadron\Assets\GameOver.wav' -Frequency 110 -DurationMilliseconds 520

@@ -1,0 +1,724 @@
+' SMILE 2.0 Star Squadron - original wide-screen arcade shooter.
+CONST CanvasWidth = 960
+CONST CanvasHeight = 540
+CONST StarCount = 72
+CONST EnemyColumns = 10
+CONST EnemyRows = 4
+CONST EnemyCount = EnemyColumns * EnemyRows
+CONST PlayerShotCount = 3
+CONST EnemyShotCount = 16
+CONST SubpixelsPerPixel = 1000
+CONST SimulationStep = 8
+CONST MaxCatchUpSteps = 6
+CONST PlayerSpeed = 480000
+CONST DemoPlayerSpeed = 250000
+CONST DemoDecisionInterval = 350
+CONST PlayerShotSpeed = 620000
+CONST EnemyReturnSpeed = 260000
+CONST STATE_TITLE = 0
+CONST STATE_READY = 1
+CONST STATE_LIVE = 2
+CONST STATE_PLAYER_HIT = 3
+CONST STATE_STAGE_CLEAR = 4
+CONST STATE_GAME_OVER = 5
+CONST ENEMY_FORMATION = 1
+CONST ENEMY_DIVING = 2
+CONST ENEMY_RETURNING = 3
+CONST TitleDemoDelay = 5000
+CONST DemoMinimumPlayTime = 30000
+CONST DemoMaximumPlayTime = 45000
+CONST TitleInputArmDelay = 250
+
+DIM StarX[StarCount]
+DIM StarYSub[StarCount]
+DIM StarTier[StarCount]
+DIM EnemyAlive[EnemyCount]
+DIM EnemyType[EnemyCount]
+DIM EnemyState[EnemyCount]
+DIM EnemyHomeX[EnemyCount]
+DIM EnemyHomeY[EnemyCount]
+DIM EnemyXSub[EnemyCount]
+DIM EnemyYSub[EnemyCount]
+DIM EnemyHP[EnemyCount]
+DIM EnemyDiveDirection[EnemyCount]
+DIM EnemyDiveProgress[EnemyCount]
+DIM PlayerShotAlive[PlayerShotCount]
+DIM PlayerShotX[PlayerShotCount]
+DIM PlayerShotYSub[PlayerShotCount]
+DIM EnemyShotAlive[EnemyShotCount]
+DIM EnemyShotX[EnemyShotCount]
+DIM EnemyShotYSub[EnemyShotCount]
+
+State = STATE_TITLE
+DemoMode = FALSE
+Key = KEY_NONE
+Score = 0
+HighScore = 0
+Lives = 3
+Stage = 1
+RemainingEnemies = 0
+PlayerX = CanvasWidth / 2
+PlayerXSub = PlayerX * SubpixelsPerPixel
+PlayerY = 492
+MuzzleUntil = 0
+StateUntil = 0
+FormationOffsetSub = 0
+FormationDirection = 1
+NextDiveAt = 0
+NextEnemyShotAt = 0
+NextPlayerShotAt = 0
+EnemyHitX = -100
+EnemyHitY = -100
+EnemyHitUntil = 0
+LastFrameTime = TIMER()
+FrameTime = LastFrameTime
+Elapsed = 0
+Accumulator = 0
+CatchUpSteps = 0
+TitleStartedAt = 0
+TitleAcceptInputAt = 0
+DemoStartedAt = 0
+NextDemoDecisionAt = 0
+DemoTargetX = CanvasWidth / 2
+DemoShouldFire = FALSE
+DemoAimIndex = 0
+DrainedKey = KEY_NONE
+
+LOAD HighScore FROM "HighScore" DEFAULT 0
+
+SUB InitializeStars()
+    FOR StarIndex = 0 TO StarCount - 1
+        RANDOM NewStarX FROM 2 TO CanvasWidth - 3
+        RANDOM NewStarY FROM 0 TO CanvasHeight * SubpixelsPerPixel
+        StarX[StarIndex] = NewStarX
+        StarYSub[StarIndex] = NewStarY
+        StarTier[StarIndex] = StarIndex MOD 3
+    END FOR
+END SUB
+
+SUB UpdateStars(ElapsedMilliseconds)
+    FOR StarIndex = 0 TO StarCount - 1
+        StarSpeed = 28000 + StarTier[StarIndex] * 26000
+        StarYSub[StarIndex] = StarYSub[StarIndex] + StarSpeed * ElapsedMilliseconds / 1000
+        IF StarYSub[StarIndex] >= CanvasHeight * SubpixelsPerPixel THEN
+            StarYSub[StarIndex] = 0
+            RANDOM NewStarX FROM 2 TO CanvasWidth - 3
+            StarX[StarIndex] = NewStarX
+        END IF
+    END FOR
+END SUB
+
+SUB ResetProjectiles()
+    FOR ShotIndex = 0 TO PlayerShotCount - 1
+        PlayerShotAlive[ShotIndex] = 0
+    END FOR
+    FOR ShotIndex = 0 TO EnemyShotCount - 1
+        EnemyShotAlive[ShotIndex] = 0
+    END FOR
+END SUB
+
+SUB ResetPlayer()
+    PlayerX = CanvasWidth / 2
+    PlayerXSub = PlayerX * SubpixelsPerPixel
+    MuzzleUntil = 0
+END SUB
+
+SUB BuildStage()
+    RemainingEnemies = EnemyCount
+    FormationOffsetSub = 0
+    FormationDirection = 1
+    FOR EnemyIndex = 0 TO EnemyCount - 1
+        EnemyRow = EnemyIndex / EnemyColumns
+        EnemyColumn = EnemyIndex MOD EnemyColumns
+        EnemyAlive[EnemyIndex] = 1
+        EnemyType[EnemyIndex] = EnemyRow MOD 3
+        EnemyState[EnemyIndex] = ENEMY_FORMATION
+        EnemyHomeX[EnemyIndex] = 102 + EnemyColumn * 84
+        EnemyHomeY[EnemyIndex] = 92 + EnemyRow * 54
+        EnemyXSub[EnemyIndex] = EnemyHomeX[EnemyIndex] * SubpixelsPerPixel
+        EnemyYSub[EnemyIndex] = EnemyHomeY[EnemyIndex] * SubpixelsPerPixel
+        EnemyDiveDirection[EnemyIndex] = 1
+        EnemyDiveProgress[EnemyIndex] = 0
+        IF EnemyRow = 0 THEN
+            EnemyHP[EnemyIndex] = 2
+        ELSE
+            EnemyHP[EnemyIndex] = 1
+        END IF
+    END FOR
+    CALL ResetProjectiles()
+    CALL ResetPlayer()
+    NextDiveAt = TIMER() + MAX(900, 2200 - Stage * 100)
+    NextEnemyShotAt = TIMER() + MAX(650, 1500 - Stage * 70)
+    State = STATE_READY
+    StateUntil = TIMER() + 900
+    Accumulator = 0
+END SUB
+
+SUB DrainPendingKeys()
+    FOR DrainIndex = 1 TO 64
+        GET KEY DrainedKey
+    END FOR
+END SUB
+
+SUB EnterTitle()
+    DemoMode = FALSE
+    State = STATE_TITLE
+    Key = KEY_NONE
+    Accumulator = 0
+    STOP SOUND
+    CALL DrainPendingKeys()
+    TitleStartedAt = TIMER()
+    TitleAcceptInputAt = TitleStartedAt + TitleInputArmDelay
+END SUB
+
+SUB StartMatch(DemoValue)
+    DemoMode = DemoValue = 1
+    Score = 0
+    Lives = 3
+    Stage = 1
+    IF DemoMode = TRUE THEN
+        DemoStartedAt = TIMER()
+        NextDemoDecisionAt = DemoStartedAt
+        DemoAimIndex = -1
+    END IF
+    CALL BuildStage()
+    PLAY SOUND "Assets\Start.wav"
+END SUB
+
+SUB StartDemo()
+    CALL StartMatch(1)
+END SUB
+
+FUNCTION EnemyColor(EnemyNumber)
+    IF EnemyType[EnemyNumber] = 0 THEN
+        RETURN RGB(65, 225, 255)
+    ELSE IF EnemyType[EnemyNumber] = 1 THEN
+        RETURN RGB(255, 120, 55)
+    END IF
+    RETURN RGB(225, 75, 255)
+END FUNCTION
+
+SUB FirePlayerShot()
+    IF TIMER() < NextPlayerShotAt OR State <> STATE_LIVE THEN
+        RETURN
+    END IF
+    FOR FireSlot = 0 TO PlayerShotCount - 1
+        IF PlayerShotAlive[FireSlot] = 0 THEN
+            PlayerShotAlive[FireSlot] = 1
+            PlayerShotX[FireSlot] = PlayerX
+            PlayerShotYSub[FireSlot] = (PlayerY - 18) * SubpixelsPerPixel
+            NextPlayerShotAt = TIMER() + 170
+            MuzzleUntil = TIMER() + 70
+            PLAY SOUND "Assets\PlayerShot.wav"
+            RETURN
+        END IF
+    END FOR
+END SUB
+
+SUB FireEnemyShot(EnemyNumber)
+    FOR FireSlot = 0 TO EnemyShotCount - 1
+        IF EnemyShotAlive[FireSlot] = 0 THEN
+            EnemyShotAlive[FireSlot] = 1
+            EnemyShotX[FireSlot] = EnemyXSub[EnemyNumber] / SubpixelsPerPixel
+            EnemyShotYSub[FireSlot] = EnemyYSub[EnemyNumber] + 14 * SubpixelsPerPixel
+            PLAY SOUND "Assets\EnemyShot.wav"
+            RETURN
+        END IF
+    END FOR
+END SUB
+
+SUB AddScore(Points)
+    Score = Score + Points
+    IF DemoMode = FALSE AND Score > HighScore THEN
+        HighScore = Score
+        SAVE HighScore TO "HighScore"
+    END IF
+END SUB
+
+SUB DestroyEnemy(EnemyNumber)
+    WasDiving = EnemyState[EnemyNumber] = ENEMY_DIVING
+    EnemyAlive[EnemyNumber] = 0
+    EnemyHitX = EnemyXSub[EnemyNumber] / SubpixelsPerPixel
+    EnemyHitY = EnemyYSub[EnemyNumber] / SubpixelsPerPixel
+    EnemyHitUntil = TIMER() + 170
+    RemainingEnemies = RemainingEnemies - 1
+    IF WasDiving = TRUE THEN
+        CALL AddScore(150 + EnemyType[EnemyNumber] * 50)
+    ELSE
+        CALL AddScore(75 + EnemyType[EnemyNumber] * 25)
+    END IF
+    PLAY SOUND "Assets\EnemyHit.wav"
+    IF RemainingEnemies <= 0 THEN
+        State = STATE_STAGE_CLEAR
+        StateUntil = TIMER() + 1400
+        PLAY SOUND "Assets\StageClear.wav"
+    END IF
+END SUB
+
+SUB HitPlayer()
+    IF State <> STATE_LIVE THEN
+        RETURN
+    END IF
+    Lives = Lives - 1
+    IF DemoMode = TRUE AND TIMER() - DemoStartedAt < DemoMinimumPlayTime AND Lives <= 0 THEN
+        Lives = 1
+    END IF
+    State = STATE_PLAYER_HIT
+    StateUntil = TIMER() + 850
+    PLAY SOUND "Assets\PlayerHit.wav"
+END SUB
+
+SUB UpdateFormation()
+    FormationSpeed = (30000 + Stage * 1800) * SimulationStep / 1000
+    FormationOffsetSub = FormationOffsetSub + FormationSpeed * FormationDirection
+    IF FormationOffsetSub > 42000 THEN
+        FormationOffsetSub = 42000
+        FormationDirection = -1
+    ELSE IF FormationOffsetSub < -42000 THEN
+        FormationOffsetSub = -42000
+        FormationDirection = 1
+    END IF
+    FOR EnemyIndex = 0 TO EnemyCount - 1
+        IF EnemyAlive[EnemyIndex] = 1 AND EnemyState[EnemyIndex] = ENEMY_FORMATION THEN
+            EnemyXSub[EnemyIndex] = EnemyHomeX[EnemyIndex] * SubpixelsPerPixel + FormationOffsetSub
+            EnemyYSub[EnemyIndex] = EnemyHomeY[EnemyIndex] * SubpixelsPerPixel
+        END IF
+    END FOR
+END SUB
+
+SUB StartDive(EnemyNumber)
+    EnemyState[EnemyNumber] = ENEMY_DIVING
+    EnemyDiveProgress[EnemyNumber] = 0
+    IF EnemyXSub[EnemyNumber] / SubpixelsPerPixel < PlayerX THEN
+        EnemyDiveDirection[EnemyNumber] = 1
+    ELSE
+        EnemyDiveDirection[EnemyNumber] = -1
+    END IF
+    PLAY SOUND "Assets\Dive.wav"
+END SUB
+
+SUB ChooseDive()
+    IF TIMER() < NextDiveAt OR State <> STATE_LIVE THEN
+        RETURN
+    END IF
+    RANDOM DiveStart FROM 0 TO EnemyCount - 1
+    FOR DiveTry = 0 TO EnemyCount - 1
+        DiveChoice = (DiveStart + DiveTry) MOD EnemyCount
+        IF EnemyAlive[DiveChoice] = 1 AND EnemyState[DiveChoice] = ENEMY_FORMATION THEN
+            CALL StartDive(DiveChoice)
+            NextDiveAt = TIMER() + MAX(650, 2100 - Stage * 120)
+            RETURN
+        END IF
+    END FOR
+END SUB
+
+SUB ChooseEnemyShot()
+    IF TIMER() < NextEnemyShotAt OR State <> STATE_LIVE THEN
+        RETURN
+    END IF
+    RANDOM ShotStart FROM 0 TO EnemyCount - 1
+    FOR ShotTry = 0 TO EnemyCount - 1
+        ShotChoice = (ShotStart + ShotTry) MOD EnemyCount
+        IF EnemyAlive[ShotChoice] = 1 THEN
+            CALL FireEnemyShot(ShotChoice)
+            NextEnemyShotAt = TIMER() + MAX(500, 1400 - Stage * 80)
+            RETURN
+        END IF
+    END FOR
+END SUB
+
+SUB UpdateEnemies()
+    CALL UpdateFormation()
+    CALL ChooseDive()
+    CALL ChooseEnemyShot()
+    FOR EnemyIndex = 0 TO EnemyCount - 1
+        IF EnemyAlive[EnemyIndex] = 1 THEN
+            IF EnemyState[EnemyIndex] = ENEMY_DIVING THEN
+                EnemyDiveProgress[EnemyIndex] = EnemyDiveProgress[EnemyIndex] + SimulationStep
+                IF EnemyDiveProgress[EnemyIndex] < 420 THEN
+                    EnemyXSub[EnemyIndex] = EnemyXSub[EnemyIndex] + EnemyDiveDirection[EnemyIndex] * 125000 * SimulationStep / 1000
+                    EnemyYSub[EnemyIndex] = EnemyYSub[EnemyIndex] + 155000 * SimulationStep / 1000
+                ELSE IF EnemyDiveProgress[EnemyIndex] < 1050 THEN
+                    IF EnemyXSub[EnemyIndex] / SubpixelsPerPixel < PlayerX - 8 THEN
+                        EnemyXSub[EnemyIndex] = EnemyXSub[EnemyIndex] + 95000 * SimulationStep / 1000
+                    ELSE IF EnemyXSub[EnemyIndex] / SubpixelsPerPixel > PlayerX + 8 THEN
+                        EnemyXSub[EnemyIndex] = EnemyXSub[EnemyIndex] - 95000 * SimulationStep / 1000
+                    END IF
+                    EnemyYSub[EnemyIndex] = EnemyYSub[EnemyIndex] + 235000 * SimulationStep / 1000
+                ELSE
+                    EnemyYSub[EnemyIndex] = EnemyYSub[EnemyIndex] + 315000 * SimulationStep / 1000
+                END IF
+                IF ABS(EnemyXSub[EnemyIndex] / SubpixelsPerPixel - PlayerX) < 19 AND ABS(EnemyYSub[EnemyIndex] / SubpixelsPerPixel - PlayerY) < 18 THEN
+                    CALL HitPlayer()
+                END IF
+                IF EnemyYSub[EnemyIndex] / SubpixelsPerPixel > CanvasHeight + 30 THEN
+                    EnemyState[EnemyIndex] = ENEMY_RETURNING
+                    EnemyYSub[EnemyIndex] = -25 * SubpixelsPerPixel
+                END IF
+            ELSE IF EnemyState[EnemyIndex] = ENEMY_RETURNING THEN
+                ReturnTargetX = EnemyHomeX[EnemyIndex] * SubpixelsPerPixel + FormationOffsetSub
+                ReturnTargetY = EnemyHomeY[EnemyIndex] * SubpixelsPerPixel
+                ReturnStep = EnemyReturnSpeed * SimulationStep / 1000
+                IF EnemyXSub[EnemyIndex] < ReturnTargetX THEN
+                    EnemyXSub[EnemyIndex] = MIN(ReturnTargetX, EnemyXSub[EnemyIndex] + ReturnStep)
+                ELSE
+                    EnemyXSub[EnemyIndex] = MAX(ReturnTargetX, EnemyXSub[EnemyIndex] - ReturnStep)
+                END IF
+                EnemyYSub[EnemyIndex] = MIN(ReturnTargetY, EnemyYSub[EnemyIndex] + ReturnStep)
+                IF ABS(EnemyXSub[EnemyIndex] - ReturnTargetX) < 2000 AND ABS(EnemyYSub[EnemyIndex] - ReturnTargetY) < 2000 THEN
+                    EnemyState[EnemyIndex] = ENEMY_FORMATION
+                END IF
+            END IF
+        END IF
+    END FOR
+END SUB
+
+SUB UpdateProjectiles()
+    FOR ShotIndex = 0 TO PlayerShotCount - 1
+        IF PlayerShotAlive[ShotIndex] = 1 THEN
+            PlayerShotYSub[ShotIndex] = PlayerShotYSub[ShotIndex] - PlayerShotSpeed * SimulationStep / 1000
+            IF PlayerShotYSub[ShotIndex] < 42000 THEN
+                PlayerShotAlive[ShotIndex] = 0
+            ELSE
+                FOR EnemyIndex = 0 TO EnemyCount - 1
+                    IF PlayerShotAlive[ShotIndex] = 1 AND EnemyAlive[EnemyIndex] = 1 THEN
+                        IF ABS(PlayerShotX[ShotIndex] - EnemyXSub[EnemyIndex] / SubpixelsPerPixel) < 17 AND ABS(PlayerShotYSub[ShotIndex] / SubpixelsPerPixel - EnemyYSub[EnemyIndex] / SubpixelsPerPixel) < 15 THEN
+                            PlayerShotAlive[ShotIndex] = 0
+                            EnemyHP[EnemyIndex] = EnemyHP[EnemyIndex] - 1
+                            IF EnemyHP[EnemyIndex] <= 0 THEN
+                                CALL DestroyEnemy(EnemyIndex)
+                            ELSE
+                                EnemyHitX = EnemyXSub[EnemyIndex] / SubpixelsPerPixel
+                                EnemyHitY = EnemyYSub[EnemyIndex] / SubpixelsPerPixel
+                                EnemyHitUntil = TIMER() + 100
+                                PLAY SOUND "Assets\EnemyHit.wav"
+                            END IF
+                        END IF
+                    END IF
+                END FOR
+            END IF
+        END IF
+    END FOR
+
+    EnemyShotSpeed = 225000 + Stage * 12000
+    FOR ShotIndex = 0 TO EnemyShotCount - 1
+        IF EnemyShotAlive[ShotIndex] = 1 THEN
+            EnemyShotYSub[ShotIndex] = EnemyShotYSub[ShotIndex] + EnemyShotSpeed * SimulationStep / 1000
+            IF EnemyShotYSub[ShotIndex] > CanvasHeight * SubpixelsPerPixel THEN
+                EnemyShotAlive[ShotIndex] = 0
+            ELSE IF ABS(EnemyShotX[ShotIndex] - PlayerX) < 14 AND ABS(EnemyShotYSub[ShotIndex] / SubpixelsPerPixel - PlayerY) < 16 THEN
+                EnemyShotAlive[ShotIndex] = 0
+                CALL HitPlayer()
+            END IF
+        END IF
+    END FOR
+END SUB
+
+SUB PlanDemoPlayer()
+    IF TIMER() < NextDemoDecisionAt THEN
+        RETURN
+    END IF
+    NextDemoDecisionAt = TIMER() + DemoDecisionInterval
+    DemoShouldFire = FALSE
+    DemoDangerFound = FALSE
+
+    FOR DangerIndex = 0 TO EnemyShotCount - 1
+        IF EnemyShotAlive[DangerIndex] = 1 AND EnemyShotYSub[DangerIndex] / SubpixelsPerPixel > 300 THEN
+            IF ABS(EnemyShotX[DangerIndex] - PlayerX) < 75 THEN
+                IF EnemyShotX[DangerIndex] < PlayerX THEN
+                    DemoTargetX = PlayerX + 125
+                ELSE
+                    DemoTargetX = PlayerX - 125
+                END IF
+                DemoDangerFound = TRUE
+            END IF
+        END IF
+    END FOR
+    FOR DangerIndex = 0 TO EnemyCount - 1
+        IF EnemyAlive[DangerIndex] = 1 AND EnemyState[DangerIndex] = ENEMY_DIVING AND EnemyYSub[DangerIndex] / SubpixelsPerPixel > 285 THEN
+            IF ABS(EnemyXSub[DangerIndex] / SubpixelsPerPixel - PlayerX) < 85 THEN
+                IF EnemyXSub[DangerIndex] / SubpixelsPerPixel < PlayerX THEN
+                    DemoTargetX = PlayerX + 145
+                ELSE
+                    DemoTargetX = PlayerX - 145
+                END IF
+                DemoDangerFound = TRUE
+            END IF
+        END IF
+    END FOR
+
+    IF DemoDangerFound = FALSE THEN
+        IF DemoAimIndex < 0 OR EnemyAlive[DemoAimIndex] = 0 THEN
+            DemoAimIndex = -1
+            DemoBestDistance = CanvasWidth * 2
+            FOR AimTry = 0 TO EnemyCount - 1
+                IF EnemyAlive[AimTry] = 1 THEN
+                    DemoAimDistance = ABS(EnemyXSub[AimTry] / SubpixelsPerPixel - PlayerX)
+                    IF DemoAimDistance < DemoBestDistance THEN
+                        DemoBestDistance = DemoAimDistance
+                        DemoAimIndex = AimTry
+                    END IF
+                END IF
+            END FOR
+        END IF
+        IF DemoAimIndex >= 0 THEN
+            DemoTargetX = EnemyXSub[DemoAimIndex] / SubpixelsPerPixel
+            IF ABS(DemoTargetX - PlayerX) < 34 THEN
+                DemoShouldFire = TRUE
+            END IF
+        END IF
+    END IF
+    DemoTargetX = MAX(28, MIN(CanvasWidth - 28, DemoTargetX))
+END SUB
+
+SUB UpdatePlayer()
+    PlayerStep = PlayerSpeed * SimulationStep / 1000
+    IF DemoMode = TRUE THEN
+        PlayerStep = DemoPlayerSpeed * SimulationStep / 1000
+        CALL PlanDemoPlayer()
+        IF PlayerX < DemoTargetX - 10 THEN
+            PlayerXSub = MIN((CanvasWidth - 25) * SubpixelsPerPixel, PlayerXSub + PlayerStep)
+        ELSE IF PlayerX > DemoTargetX + 10 THEN
+            PlayerXSub = MAX(25 * SubpixelsPerPixel, PlayerXSub - PlayerStep)
+        END IF
+        IF DemoShouldFire = TRUE THEN
+            CALL FirePlayerShot()
+        END IF
+    ELSE
+        IF KEY_HELD(KEY_A) = TRUE OR KEY_HELD(KEY_LEFT) = TRUE THEN
+            PlayerXSub = MAX(25 * SubpixelsPerPixel, PlayerXSub - PlayerStep)
+        END IF
+        IF KEY_HELD(KEY_D) = TRUE OR KEY_HELD(KEY_RIGHT) = TRUE THEN
+            PlayerXSub = MIN((CanvasWidth - 25) * SubpixelsPerPixel, PlayerXSub + PlayerStep)
+        END IF
+        IF Key = KEY_SPACE THEN
+            CALL FirePlayerShot()
+        END IF
+    END IF
+    PlayerX = PlayerXSub / SubpixelsPerPixel
+END SUB
+
+SUB UpdateLiveStep()
+    CALL UpdatePlayer()
+    CALL UpdateEnemies()
+    CALL UpdateProjectiles()
+END SUB
+
+SUB DrawStars()
+    CLEAR RGB(2, 4, 14)
+    FOR StarIndex = 0 TO StarCount - 1
+        StarY = StarYSub[StarIndex] / SubpixelsPerPixel
+        IF StarTier[StarIndex] = 0 THEN
+            FILL RECTANGLE StarX[StarIndex], StarY, 1, 1, RGB(75, 90, 125)
+        ELSE IF StarTier[StarIndex] = 1 THEN
+            FILL RECTANGLE StarX[StarIndex], StarY, 2, 2, RGB(150, 180, 225)
+        ELSE
+            FILL RECTANGLE StarX[StarIndex], StarY, 2, 3, WHITE
+        END IF
+    END FOR
+END SUB
+
+SUB DrawPlayer()
+    IF State = STATE_PLAYER_HIT THEN
+        ExplosionSize = 10 + (StateUntil - TIMER()) / 30
+        DRAW LINE PlayerX - ExplosionSize, PlayerY - ExplosionSize, PlayerX + ExplosionSize, PlayerY + ExplosionSize, ORANGE
+        DRAW LINE PlayerX + ExplosionSize, PlayerY - ExplosionSize, PlayerX - ExplosionSize, PlayerY + ExplosionSize, YELLOW
+        DRAW CIRCLE PlayerX, PlayerY, MAX(6, ExplosionSize / 2), RED
+        RETURN
+    END IF
+    FILL QUADRILATERAL PlayerX, PlayerY - 18, PlayerX - 22, PlayerY + 14, PlayerX, PlayerY + 7, PlayerX + 22, PlayerY + 14, RGB(70, 215, 255)
+    FILL QUADRILATERAL PlayerX, PlayerY - 13, PlayerX - 8, PlayerY + 12, PlayerX, PlayerY + 7, PlayerX + 8, PlayerY + 12, WHITE
+    FILL CIRCLE PlayerX, PlayerY + 5, 4, RGB(255, 95, 220)
+    IF TIMER() < MuzzleUntil THEN
+        FILL QUADRILATERAL PlayerX, PlayerY - 28, PlayerX - 4, PlayerY - 18, PlayerX, PlayerY - 20, PlayerX + 4, PlayerY - 18, YELLOW
+    END IF
+END SUB
+
+SUB DrawEnemy(EnemyNumber)
+    EnemyDrawX = EnemyXSub[EnemyNumber] / SubpixelsPerPixel
+    EnemyDrawY = EnemyYSub[EnemyNumber] / SubpixelsPerPixel
+    EnemyDrawColor = EnemyColor(EnemyNumber)
+    IF EnemyType[EnemyNumber] = 0 THEN
+        FILL QUADRILATERAL EnemyDrawX, EnemyDrawY - 12, EnemyDrawX - 18, EnemyDrawY + 8, EnemyDrawX, EnemyDrawY + 4, EnemyDrawX + 18, EnemyDrawY + 8, EnemyDrawColor
+        FILL CIRCLE EnemyDrawX, EnemyDrawY, 5, WHITE
+    ELSE IF EnemyType[EnemyNumber] = 1 THEN
+        FILL QUADRILATERAL EnemyDrawX, EnemyDrawY - 14, EnemyDrawX - 15, EnemyDrawY, EnemyDrawX, EnemyDrawY + 14, EnemyDrawX + 15, EnemyDrawY, EnemyDrawColor
+        DRAW LINE EnemyDrawX - 20, EnemyDrawY - 5, EnemyDrawX + 20, EnemyDrawY - 5, YELLOW
+    ELSE
+        FILL ROUNDED RECTANGLE EnemyDrawX - 15, EnemyDrawY - 10, 30, 20, 6, EnemyDrawColor
+        FILL CIRCLE EnemyDrawX - 8, EnemyDrawY + 9, 5, RGB(80, 215, 255)
+        FILL CIRCLE EnemyDrawX + 8, EnemyDrawY + 9, 5, RGB(80, 215, 255)
+        IF EnemyHP[EnemyNumber] > 1 THEN
+            DRAW CIRCLE EnemyDrawX, EnemyDrawY, 8, WHITE
+        END IF
+    END IF
+END SUB
+
+SUB DrawGame()
+    CALL DrawStars()
+    FILL RECTANGLE 0, 0, CanvasWidth, 42, RGB(6, 10, 25)
+    DRAW LINE 0, 42, CanvasWidth, 42, RGB(45, 95, 145)
+    DRAW TEXT "SCORE" AT 18, 10 SIZE 14 COLOR LIGHT_GRAY
+    DRAW NUMBER Score AT 84, 5 SIZE 24 COLOR YELLOW
+    DRAW TEXT "HIGH" AT 320, 10 SIZE 14 COLOR LIGHT_GRAY
+    DRAW NUMBER HighScore AT 378, 5 SIZE 24 COLOR CYAN
+    DRAW TEXT "STAGE" AT 625, 10 SIZE 14 COLOR LIGHT_GRAY
+    DRAW NUMBER Stage AT 695, 5 SIZE 24 COLOR MAGENTA
+    DRAW TEXT "LIVES" AT 805, 10 SIZE 14 COLOR LIGHT_GRAY
+    DRAW NUMBER Lives AT 875, 5 SIZE 24 COLOR WHITE
+    IF DemoMode = TRUE THEN
+        FILL ROUNDED RECTANGLE 445, 5, 105, 30, 6, RGB(15, 24, 48)
+        DRAW ROUNDED RECTANGLE 445, 5, 105, 30, 6, CYAN
+        DRAW TEXT "DEMO" AT 497, 10 SIZE 14 COLOR YELLOW CENTERED
+    END IF
+
+    FOR EnemyIndex = 0 TO EnemyCount - 1
+        IF EnemyAlive[EnemyIndex] = 1 THEN
+            CALL DrawEnemy(EnemyIndex)
+        END IF
+    END FOR
+    FOR ShotIndex = 0 TO PlayerShotCount - 1
+        IF PlayerShotAlive[ShotIndex] = 1 THEN
+            FILL RECTANGLE PlayerShotX[ShotIndex] - 2, PlayerShotYSub[ShotIndex] / SubpixelsPerPixel - 8, 4, 12, YELLOW
+        END IF
+    END FOR
+    FOR ShotIndex = 0 TO EnemyShotCount - 1
+        IF EnemyShotAlive[ShotIndex] = 1 THEN
+            FILL CIRCLE EnemyShotX[ShotIndex], EnemyShotYSub[ShotIndex] / SubpixelsPerPixel, 4, ORANGE
+            DRAW LINE EnemyShotX[ShotIndex], EnemyShotYSub[ShotIndex] / SubpixelsPerPixel - 7, EnemyShotX[ShotIndex], EnemyShotYSub[ShotIndex] / SubpixelsPerPixel + 7, RED
+        END IF
+    END FOR
+    IF TIMER() < EnemyHitUntil THEN
+        DRAW LINE EnemyHitX - 12, EnemyHitY - 12, EnemyHitX + 12, EnemyHitY + 12, YELLOW
+        DRAW LINE EnemyHitX + 12, EnemyHitY - 12, EnemyHitX - 12, EnemyHitY + 12, WHITE
+    END IF
+    CALL DrawPlayer()
+
+    IF State = STATE_READY THEN
+        DRAW TEXT "READY" AT 480, 300 SIZE 36 COLOR YELLOW CENTERED
+    ELSE IF State = STATE_STAGE_CLEAR THEN
+        FILL ROUNDED RECTANGLE 325, 238, 310, 78, 14, RGB(10, 24, 46)
+        DRAW ROUNDED RECTANGLE 325, 238, 310, 78, 14, LIGHT_GREEN
+        DRAW TEXT "STAGE CLEAR" AT 480, 255 SIZE 34 COLOR LIGHT_GREEN CENTERED
+    ELSE IF State = STATE_GAME_OVER THEN
+        FILL ROUNDED RECTANGLE 280, 205, 400, 155, 18, RGB(28, 8, 18)
+        DRAW ROUNDED RECTANGLE 280, 205, 400, 155, 18, RED
+        DRAW TEXT "GAME OVER" AT 480, 230 SIZE 42 COLOR RED CENTERED
+        DRAW TEXT "ENTER OR SPACE TO RETRY" AT 480, 300 SIZE 18 COLOR WHITE CENTERED
+        DRAW TEXT "ESCAPE RETURNS TO TITLE" AT 480, 330 SIZE 14 COLOR LIGHT_GRAY CENTERED
+    END IF
+END SUB
+
+SUB DrawTitle()
+    CALL DrawStars()
+    FILL QUADRILATERAL 480, 68, 180, 175, 480, 138, 780, 175, RGB(16, 55, 105)
+    DRAW LINE 120, 185, 840, 185, RGB(80, 165, 245)
+    DRAW TEXT "STAR SQUADRON" AT 480, 72 SIZE 58 COLOR CYAN CENTERED
+    DRAW TEXT "DEFEND THE WIDE SKY" AT 480, 145 SIZE 19 COLOR MAGENTA CENTERED
+    FILL QUADRILATERAL 480, 226, 430, 270, 480, 256, 530, 270, RGB(70, 215, 255)
+    FILL CIRCLE 480, 252, 7, WHITE
+    DRAW TEXT "ENTER OR SPACE TO START" AT 480, 320 SIZE 28 COLOR YELLOW CENTERED
+    DRAW TEXT "A / D OR ARROWS TO MOVE" AT 480, 365 SIZE 18 COLOR WHITE CENTERED
+    DRAW TEXT "SPACE TO FIRE" AT 480, 395 SIZE 18 COLOR LIGHT_GRAY CENTERED
+    IF (TIMER() / 500) MOD 2 = 0 THEN
+        DRAW TEXT "DEMO STARTS AUTOMATICALLY" AT 480, 435 SIZE 15 COLOR CYAN CENTERED
+    END IF
+    DRAW TEXT "ESCAPE TO EXIT    ALT+ENTER FULL SCREEN" AT 480, 475 SIZE 14 COLOR LIGHT_GRAY CENTERED
+    DRAW TEXT "HIGH SCORE" AT 410, 510 SIZE 14 COLOR LIGHT_GRAY
+    DRAW NUMBER HighScore AT 535, 503 SIZE 24 COLOR YELLOW
+END SUB
+
+SUB UpdateTitle()
+    IF Key <> KEY_NONE AND TIMER() >= TitleAcceptInputAt THEN
+        TitleStartedAt = TIMER()
+        IF Key = KEY_ESCAPE THEN
+            END PROGRAM
+        ELSE IF Key = KEY_ENTER OR Key = KEY_SPACE THEN
+            CALL StartMatch(0)
+        END IF
+    END IF
+    IF State = STATE_TITLE AND TIMER() - TitleStartedAt >= TitleDemoDelay THEN
+        CALL StartDemo()
+    END IF
+END SUB
+
+GAME WINDOW "SMILE 2.0 Star Squadron"
+
+CALL InitializeStars()
+CALL EnterTitle()
+
+DO
+    FrameTime = TIMER()
+    Elapsed = MAX(0, MIN(50, FrameTime - LastFrameTime))
+    LastFrameTime = FrameTime
+    GET KEY Key
+    CALL UpdateStars(Elapsed)
+
+    IF DemoMode = TRUE AND Key <> KEY_NONE THEN
+        CALL EnterTitle()
+        Key = KEY_NONE
+    END IF
+    IF DemoMode = TRUE AND State <> STATE_TITLE AND FrameTime - DemoStartedAt >= DemoMaximumPlayTime THEN
+        CALL EnterTitle()
+    END IF
+
+    IF State = STATE_TITLE THEN
+        CALL UpdateTitle()
+        IF State = STATE_TITLE THEN
+            CALL DrawTitle()
+        ELSE
+            CALL DrawGame()
+        END IF
+    ELSE
+        IF DemoMode = FALSE AND Key = KEY_ESCAPE THEN
+            CALL EnterTitle()
+        END IF
+
+        IF State = STATE_READY AND FrameTime >= StateUntil THEN
+            State = STATE_LIVE
+        ELSE IF State = STATE_PLAYER_HIT AND FrameTime >= StateUntil THEN
+            IF Lives > 0 THEN
+                CALL ResetPlayer()
+                State = STATE_READY
+                StateUntil = FrameTime + 700
+            ELSE IF DemoMode = TRUE THEN
+                CALL EnterTitle()
+            ELSE
+                State = STATE_GAME_OVER
+                PLAY SOUND "Assets\GameOver.wav"
+            END IF
+        ELSE IF State = STATE_STAGE_CLEAR AND FrameTime >= StateUntil THEN
+            Stage = Stage + 1
+            CALL BuildStage()
+        ELSE IF State = STATE_GAME_OVER THEN
+            IF Key = KEY_ENTER OR Key = KEY_SPACE THEN
+                CALL StartMatch(0)
+            ELSE IF Key = KEY_ESCAPE THEN
+                CALL EnterTitle()
+            END IF
+        END IF
+
+        IF State = STATE_LIVE THEN
+            Accumulator = MIN(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
+            CatchUpSteps = 0
+            DO
+                IF Accumulator >= SimulationStep AND State = STATE_LIVE THEN
+                    CALL UpdateLiveStep()
+                    Accumulator = Accumulator - SimulationStep
+                    CatchUpSteps = CatchUpSteps + 1
+                END IF
+            LOOP UNTIL Accumulator < SimulationStep OR CatchUpSteps >= MaxCatchUpSteps OR State <> STATE_LIVE
+        END IF
+
+        IF State = STATE_TITLE THEN
+            CALL DrawTitle()
+        ELSE
+            CALL DrawGame()
+        END IF
+    END IF
+
+    SHOW SCREEN
+LOOP UNTIL GAME_CLOSED() = TRUE
+
+STOP SOUND
+END PROGRAM

@@ -1,6 +1,6 @@
 # SMILE 2.0
 
-SMILE 2.0 is a small, structured BASIC-style language that compiles directly to native Windows x64 executables. It includes a MASM-based native compiler, a Win32 game runtime, Visual Studio 2026 language and project support, console examples, and six complete games written in SMILE.
+SMILE 2.0 is a small, structured BASIC-style language that compiles directly to native Windows x64 executables. It includes a MASM-based native compiler, a Win32 game runtime, Visual Studio 2026 language and project support, console examples, and seven complete games written in SMILE.
 
 The repository has one language authority: `src\Smile.Language`. The command-line compiler and Visual Studio extension use the same lexer, parser, syntax model, diagnostics, symbols, types, and semantic model. Game rules remain in `.smile` source; the C runtime provides only generic Windows graphics, input, sound, timing, and storage services.
 
@@ -26,6 +26,7 @@ Attract demos always return directly to the title screen when their run ends or 
 - `games\BrickBreaker` — a 7-by-12 colored brick field, three lives, three levels, row scoring, and a persistent high score.
 - `games\DungeonStarI` — an original three-floor pseudo-3D dungeon with student-editable external maps, validated pipe-style random generation, a blue map-selection title, doors, stairs, attract mode, and green, blue, and red floor palettes.
 - `games\MazeMuncher` — an original neon maze chase with pellets, power mode, four geometric enemies, wrap tunnels, levels, a persistent high score, demo and no-demo teaching sources, and an attract demo.
+- `games\StarSquadron` — an original full-width fixed-screen space shooter with a multi-speed starfield, formation enemies, diving attacks, escalating stages, demo and no-demo teaching sources, and a persistent high score.
 
 All games use a logical 960-by-540 canvas. A 16:9 output such as 1920-by-1080 fills the complete screen without letterboxing; other aspect ratios use centered letterboxing to preserve geometry. Alt+Enter toggles borderless full screen.
 
@@ -64,7 +65,7 @@ Run the complete noninteractive regression and artifact verification suite with:
 scripts\smoke-test.cmd
 ```
 
-The smoke suite builds the solution, runs console examples, checks invalid-program diagnostics, exercises save/reload and corrupt-value fallback, validates Dungeon Star I's supplied maps, compiles the required graphics text sample and all six games, copies and hashes their assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Graphical gameplay and audible playback remain hands-on acceptance steps.
+The smoke suite builds the solution, runs console examples, checks invalid-program diagnostics, exercises save/reload and corrupt-value fallback, validates Dungeon Star I's supplied maps, compiles the required graphics text sample and both teaching variants of all seven games, copies and hashes their assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Graphical gameplay and audible playback remain hands-on acceptance steps.
 
 ## Compile loose files
 
@@ -118,6 +119,7 @@ artifacts\games\PaddleBall\PaddleBall.exe
 artifacts\games\BrickBreaker\BrickBreaker.exe
 artifacts\games\DungeonStarI\DungeonStarI.exe
 artifacts\games\MazeMuncher\MazeMuncher.exe
+artifacts\games\StarSquadron\StarSquadron.exe
 ```
 
 The executables are self-contained native game programs with respect to SMILE: neither `smilec.exe` nor Visual Studio is needed to run them. They use normal Windows system libraries; a music-bearing executable also uses the Microsoft Visual C++ runtime installed by Visual Studio or the supported Visual C++ Redistributable.

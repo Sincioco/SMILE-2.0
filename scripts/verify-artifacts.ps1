@@ -85,6 +85,8 @@ $nativePrograms = @(
     'artifacts\games\BrickBreaker\BrickBreaker-NoDemo.exe',
     'artifacts\games\MazeMuncher\MazeMuncher.exe',
     'artifacts\games\MazeMuncher\MazeMuncher-NoDemo.exe',
+    'artifacts\games\StarSquadron\StarSquadron.exe',
+    'artifacts\games\StarSquadron\StarSquadron-NoDemo.exe',
     'artifacts\games\DungeonStarI\DungeonStarI.exe',
     'artifacts\games\DungeonStarI\DungeonStarI-NoDemo.exe'
 )
@@ -98,6 +100,7 @@ $assetSets = @{
     PaddleBall = @('GameOver.wav', 'Paddle.wav', 'Score.wav', 'Wall.wav')
     BrickBreaker = @('Brick.wav', 'GameOver.wav', 'LevelClear.wav', 'LoseLife.wav', 'Paddle.wav', 'Wall.wav')
     MazeMuncher = @('EnemyEaten.wav', 'GameOver.wav', 'LevelClear.wav', 'Pellet.wav', 'PlayerCaught.wav', 'Power.wav', 'Start.wav')
+    StarSquadron = @('Dive.wav', 'EnemyHit.wav', 'EnemyShot.wav', 'GameOver.wav', 'PlayerHit.wav', 'PlayerShot.wav', 'StageClear.wav', 'Start.wav')
 }
 foreach ($game in $assetSets.Keys) {
     foreach ($asset in $assetSets[$game]) {
