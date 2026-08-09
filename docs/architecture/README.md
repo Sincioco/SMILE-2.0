@@ -44,4 +44,6 @@ This process-local policy is inherited by every `GAME WINDOW` program and requir
 
 The runtime does not contain Snake, falling-block, paddle, brick, dungeon, score, level, projection, generation, map-format, pathfinding, or win/loss rules. Those remain in the corresponding files under `games`. Dungeon Star I parses its external map bytes, validates topology, generates pipe graphs, plans its demo, and composes its pseudo-3D projection entirely in `Program.smile`, using only the same generic file, quadrilateral, line, rectangle, text, input, timing, and audio services available to every SMILE program.
 
+The seven complete game projects are Snake, Falling Blocks, Paddle Ball, Brick Breaker, Dungeon Star I, Maze Muncher, and Star Squadron. Each game keeps its rules and render composition in `.smile` source. Every game with an attract demo also includes a genuine `Program-NoDemo.smile` teaching edition without demo or AI implementation code.
+
 The Visual Studio extension embeds the same compiler/runtime payload and registers a minimal `.smileproj` project factory. Its console and game templates build to `bin\Debug` or `bin\Release`, copy declared assets, populate the SMILE Output pane and Error List, and launch the resulting executable for F5 or Ctrl+F5.
