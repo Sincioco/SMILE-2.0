@@ -24,3 +24,54 @@ Phantasy Star I Dungeon
 2.) If there are any issues implementing it, the instructions in "2026-08-09 - Dungeon Star I Codex Implementation Instructions.md" takes precedence over the instructions found in "2026-08-09 - SMILE 2.0 - Windows MediaPlayer MP3 Support, FallingBlocks, and Automatic Focus Muting Codex Instructions.md".
 3.) The only mandatory is to implement the "2026-08-09 - Dungeon Star I Codex Implementation Instructions.md", but if you can implement "2026-08-09 - SMILE 2.0 - Windows MediaPlayer MP3 Support, FallingBlocks, and Automatic Focus Muting Codex Instructions.md" that would be great as well.
 4.) Commit all unstaged files to the repo and push when you have done your smoke testing and include a detailed summary of the work done in the commit message.
+
+
+Can you help me create markdown file(s) so that the I can instruct CODEX to implement the items below:
+
+Phantasy Star I Dungeon - Adjustments
+-------------------------------------
+5.) I think the Phantasy Star I Dungeon implementation looks good.  Can you provide 3 sample maps as text files so that the student can learn how it is implemented?  And also provide an option to load a map from the title screen.  Can you call one of the sample maps default.map and let that be the one that game loads by default.  Keep the ability to randomize maps internally, but just load the default.map so the student can customize it.  In the abscence of any map, such as if they are deleted, let the game randomize its own maps.
+6.) Can you change the randomization logic so that it's not 100% truly random.  We want the player to walk on long corridors where they cannot turn left or right for at least 5-10 paces.  We also only want the user to be able to turn left only, right only, or left and right, or left, right and straight.  Doors should appear at least 5-10 paces of any intersections or turns.  We also want the player to start already in the dungeon so the screen should already have left and right walls.  The dungeon is not an open dungeon.  The user should feel like they are travelling in a pipe or tube while in the dungeon.  So there shouldn't be open spaces.  At any point in time, you can only appear to go straight, left or right, and obviously you can walk backwards or turn around.
+7.) Can you adjust the Title screen so it uses the Blue palette and after only 5 seconds of inactivity, it should automatically start the game the demo mode.
+
+BrickBreaker - Demo Mode
+------------------------
+8.) Can you give BrickBreaker a demo mode just like what you did in Dungeon Star I?  Title waits for 5 seconds.  Then enters demo mode.  You can control the player's paddle in demo mode.  Play for 30-60 seconds.  Try to prevent dying so we can actually see the game working for at least 30 seconds before we see game over.  While in demo mode, game over only lasts for 5 seconds.  Then it goes back to the Title screen.
+
+FallingBlocks Demo Mode
+-----------------------
+9.) Can you give FallingBlocks a demo mode?  Title waits for 5 seconds.  Then enters demo mode.  The AI becomes the player in demo mode.  Play for 30-60 seconds.  Try to prevent dying so we can actually see the game working for at least 30 seconds before we see game over.  While in demo mode, game over only lasts for 5 seconds.  Then it goes back to the Title screen.
+
+Snake - Demo Mode
+-----------------
+10.) Can you give FallingBlocks a demo mode?  Title waits for 5 seconds.  Then enters demo mode.  The AI becomes the player in demo mode.  Play for 30-60 seconds.  Try to prevent dying so we can actually see the game working for at least 30 seconds before we see game over.  While in demo mode, game over only lasts for 5 seconds.  Then it goes back to the Title screen.
+
+PaddleBall - Demo Mode
+--------------
+11.) Can you give PaddleBall a demo mode?  Title waits for 5 seconds.  Then enters demo mode.  Both paddle is now controlled by an AI in demo mode.  Play for 30-60 seconds.  Try to prevent dying so we can actually see the game working for at least 30 seconds before we see game over.  While in demo mode, game over only lasts for 5 seconds.  Then it goes back to the Title screen.
+
+Pac-Man Game with Demo Mode
+---------------------------
+12.) Can you create a new Pack-Man game using SMILE 2.0 language that looks like this:
+https://cemeterygames.com/wp-content/uploads/2010/05/pac_man.jpg
+13.) Be sure to include a demo mode in Pack-Man just like the other games.  Title waits for 5 seconds.  Then enters demo mode.  The AI becomes the player in demo mode.  Play for 30-60 seconds.  Try to prevent dying so we can actually see the game working for at least 30 seconds before we see game over.  While in demo mode, game over only lasts for 5 seconds.  Then it goes back to the Title screen.
+
+Galaga with Demo Mode
+---------------------
+14.) Can you create a new Galaga game using SMILE 2.0 language that looks like this:
+https://static.wikia.nocookie.net/namco/images/e/ef/Galaga_Screenshot.png/revision/latest?cb=20240611015625
+15.) Make SMILE 2.0's version take up the width (and height) of the screen so the game is not letterboxed (no black on its left or right).
+16.) Add sounds, and make the game exciting.
+17.) Add a demo mode in Galaga just like the other games.  Title waits for 5 seconds.  Then enters demo mode.  The AI becomes the player in demo mode.  Play for 30-60 seconds.  Try to prevent dying so we can actually see the game working for at least 30 seconds before we see game over.  While in demo mode, game over only lasts for 5 seconds.  Then it goes back to the Title screen.
+
+18.) Can you also make it a default SMILE 2.0 game behavior so that if the game loses focus or is no longer the active window, all volume of that game is muted until the game regains focus or becomes the active window again.  This should be a default behavior for all SMILE 2.0 games.
+19.) The Dungeon Star I and the FallingBlocks game already implemented it.  I'd like it to be a SMILE 2.0 default behavior, not a game-specific behavior.
+
+Wolfenstein 3D - Raycasting Demo
+--------------------------------
+20.) Give me the markdown file(s) for "Stage 2 — Raycasting walkaround".
+21.) The dungeon design should be similar to Wolfenstein 3D (so it's not like Dungeon Star I were everything is like in a narrow tube).
+22.) Include a demo mode.
+23.) Just like in Dungeon Star I, you can randomize a dungeon map if none is provided, but generate a default.map file that the game loads by default so the user can customize it.
+24.) You are free to evolve the SMILE 2.0 language as you see fit as long as it is grounded in the BASIC language, or if that is not possible, use C# as the next language inspiration.
+25.) Can you sprinkle some comments in the code to help the student understand how the raycasting works, but keep it simple and not over-engineered.  The goal is to help the student understand how raycasting works, not to create a fully featured game engine.

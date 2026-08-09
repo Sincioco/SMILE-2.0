@@ -1,0 +1,87 @@
+[
+  {
+    "path": "Codex-Instructions/00 - START HERE - SMILE 2.0 Arcade Expansion Mission.md",
+    "bytes": 5229,
+    "sha256": "bdb455b154e203ba0a55cc4014fb17cac80ef3ee57a57abc0dc176be935783d1"
+  },
+  {
+    "path": "Codex-Instructions/01 - Permanent Governance Addendum - Language Evolution Velocity Testing Audio Focus and ZIP Delivery.md",
+    "bytes": 6106,
+    "sha256": "c5dc6b56fcd7075e8a7bbee8c45f07e69b6172856f0a2abd3aaabff44175ceba"
+  },
+  {
+    "path": "Codex-Instructions/02 - Dungeon Star I - Student Maps Pipe Generation Blue Title and Five-Second Demo.md",
+    "bytes": 12224,
+    "sha256": "32d9bb2e340e4983428fec19f9b09cb93941f50f5ade92016b137e7ec8b7bb06"
+  },
+  {
+    "path": "Codex-Instructions/03 - Dungeon Star I Map Authoring Guide.md",
+    "bytes": 6179,
+    "sha256": "16cee04f3ddf1da13a1a8390def6f9095a2715dffac69c3d14f746b39e1552aa"
+  },
+  {
+    "path": "Codex-Instructions/04 - Shared Arcade Demo Mode Contract.md",
+    "bytes": 4724,
+    "sha256": "f2344953e28e6abefdf0a28066609bfdafae46f39336413e187e46ba24f3ee00"
+  },
+  {
+    "path": "Codex-Instructions/05 - Brick Breaker Demo Mode.md",
+    "bytes": 4301,
+    "sha256": "a981e1487b748fd23eb12b6719c5894f98a7295defdd6018183cea1d551939ad"
+  },
+  {
+    "path": "Codex-Instructions/06 - Falling Blocks Demo Mode.md",
+    "bytes": 4277,
+    "sha256": "d8a53e8b1bd274944d197463902b23714ed5d874a8a4ff103c992d87446ee792"
+  },
+  {
+    "path": "Codex-Instructions/07 - Snake Demo Mode.md",
+    "bytes": 3485,
+    "sha256": "510616367ed5d093dc5aa1cbfadb3e006479591cb3bcfe70c4343073b57bc606"
+  },
+  {
+    "path": "Codex-Instructions/08 - Paddle Ball Demo Mode.md",
+    "bytes": 3422,
+    "sha256": "4879d226064de112d1a56385fcbaf70db4b0dd97ce39c89f3933282a520bd043"
+  },
+  {
+    "path": "Codex-Instructions/09 - Pac-Man-Style Maze Muncher Game with Demo Mode.md",
+    "bytes": 9110,
+    "sha256": "b5ed99b59acb51f76696c0fde0af60001457f77c84f6da5c835761ecf95b453a"
+  },
+  {
+    "path": "Codex-Instructions/10 - Galaga-Style Star Squadron Game with Demo Mode.md",
+    "bytes": 8295,
+    "sha256": "454b4c6da7bd94fd202806c5ebf4c923388783bfb3f04901058fb83a3715d548"
+  },
+  {
+    "path": "Codex-Instructions/11 - Definition of Done Commit Sequence and Fast Validation.md",
+    "bytes": 7831,
+    "sha256": "ef76ba5be2dc9e5aca5d07176b91a744ea2c7d9f9990004f08e042ce95286aa2"
+  },
+  {
+    "path": "README.md",
+    "bytes": 893,
+    "sha256": "30610ba56532d0163a8a23ef4a1a7a3844fbcb398e4363f2b97fd95ab3757c4a"
+  },
+  {
+    "path": "Repository-Files/games/DungeonStarI/MAP_AUTHORING.md",
+    "bytes": 6179,
+    "sha256": "16cee04f3ddf1da13a1a8390def6f9095a2715dffac69c3d14f746b39e1552aa"
+  },
+  {
+    "path": "Repository-Files/games/DungeonStarI/Maps/default.map",
+    "bytes": 3133,
+    "sha256": "3b4f28e4f7546ae0519f126f7736766661e9aa6521dc05e9b881cb48142b477e"
+  },
+  {
+    "path": "Repository-Files/games/DungeonStarI/Maps/sample-loops.map",
+    "bytes": 3144,
+    "sha256": "1fe57a5f3cb71ba6a813fe17c433ed059f7476833a33a237115e3153ecbe09f5"
+  },
+  {
+    "path": "Repository-Files/games/DungeonStarI/Maps/sample-switchbacks.map",
+    "bytes": 3146,
+    "sha256": "59ddf8468d654023a1efc0e7f6a0f84ca546d4b16094385fbaac02a1f787b5bf"
+  }
+]
