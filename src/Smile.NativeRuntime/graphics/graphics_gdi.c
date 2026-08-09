@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <dwmapi.h>
 #include <limits.h>
+#include <math.h>
 #include "graphics_common.h"
 #include "graphics_gdi.h"
 
@@ -443,6 +444,65 @@ static void smile_gdi_draw_circle(SmileGraphicsBackend* backend, long long x, lo
     long long radius, long long color)
 { smile_gdi_circle(backend, x, y, radius, color, 0); }
 
+static void smile_gdi_draw_arc(SmileGraphicsBackend* backend, long long center_x,
+    long long center_y, long long radius, long long start_angle,
+    long long sweep_angle, long long color)
+{
+    const double degrees_to_radians = 3.14159265358979323846 / 180.0;
+    SmileGdiState* state = (SmileGdiState*)backend->state;
+    HGDIOBJ old_pen;
+    HGDIOBJ old_brush;
+    HPEN pen;
+    long long normalized_start;
+    long long clamped_sweep;
+    double physical_center_x;
+    double physical_center_y;
+    double physical_radius;
+    double start_radians;
+    double end_radians;
+    int previous_direction;
+
+    if (state->back_dc == 0 || radius <= 0 || sweep_angle == 0)
+        return;
+    if (sweep_angle >= 360 || sweep_angle <= -360)
+    {
+        smile_gdi_draw_circle(backend, center_x, center_y, radius, color);
+        return;
+    }
+
+    normalized_start = start_angle % 360;
+    if (normalized_start < 0)
+        normalized_start += 360;
+    clamped_sweep = sweep_angle;
+    physical_center_x = smile_graphics_map_x(&state->viewport, (double)center_x);
+    physical_center_y = smile_graphics_map_y(&state->viewport, (double)center_y);
+    physical_radius = smile_graphics_map_size(&state->viewport, (double)radius);
+    if (physical_radius <= 0.0)
+        return;
+    start_radians = (double)normalized_start * degrees_to_radians;
+    end_radians = (double)(normalized_start + clamped_sweep) * degrees_to_radians;
+
+    pen = smile_gdi_pen(state, (COLORREF)color,
+        smile_gdi_positive_pixel(smile_graphics_map_size(&state->viewport, 1.0)));
+    old_pen = SelectObject(state->back_dc, pen);
+    old_brush = SelectObject(state->back_dc, GetStockObject(NULL_BRUSH));
+    previous_direction = SetArcDirection(state->back_dc,
+        clamped_sweep > 0 ? AD_CLOCKWISE : AD_COUNTERCLOCKWISE);
+    Arc(state->back_dc,
+        smile_graphics_round_pixel(physical_center_x - physical_radius),
+        smile_graphics_round_pixel(physical_center_y - physical_radius),
+        smile_graphics_round_pixel(physical_center_x + physical_radius),
+        smile_graphics_round_pixel(physical_center_y + physical_radius),
+        smile_graphics_round_pixel(physical_center_x + cos(start_radians) * physical_radius),
+        smile_graphics_round_pixel(physical_center_y + sin(start_radians) * physical_radius),
+        smile_graphics_round_pixel(physical_center_x + cos(end_radians) * physical_radius),
+        smile_graphics_round_pixel(physical_center_y + sin(end_radians) * physical_radius));
+    if (previous_direction != 0)
+        SetArcDirection(state->back_dc, previous_direction);
+    SelectObject(state->back_dc, old_brush);
+    SelectObject(state->back_dc, old_pen);
+}
+
 static void smile_gdi_quadrilateral(SmileGraphicsBackend* backend,
     long long x1, long long y1, long long x2, long long y2,
     long long x3, long long y3, long long x4, long long y4,
@@ -638,6 +698,7 @@ static const SmileGraphicsBackendVTable smile_gdi_operations =
     smile_gdi_draw_rounded_rectangle,
     smile_gdi_fill_circle,
     smile_gdi_draw_circle,
+    smile_gdi_draw_arc,
     smile_gdi_fill_quadrilateral,
     smile_gdi_draw_quadrilateral,
     smile_gdi_draw_line,

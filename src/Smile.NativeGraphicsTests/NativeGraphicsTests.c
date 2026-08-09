@@ -15,6 +15,8 @@ typedef struct MockState
     int draw_quad_count;
     int should_fail;
     const char* failure;
+    int draw_arc_count;
+    long long arc_values[6];
 } MockState;
 
 static MockState directx_state = { "DirectX", 0, 0, 0, 0, 0, 0, "DXGI swap-chain creation failed with 0x887A0004 (DXGI_ERROR_UNSUPPORTED)" };
@@ -68,6 +70,18 @@ static void mock_rounded(SmileGraphicsBackend* backend, long long x, long long y
 static void mock_circle(SmileGraphicsBackend* backend, long long x, long long y,
     long long radius, long long color)
 { (void)backend; (void)x; (void)y; (void)radius; (void)color; }
+static void mock_arc(SmileGraphicsBackend* backend, long long center_x, long long center_y,
+    long long radius, long long start_angle, long long sweep_angle, long long color)
+{
+    MockState* state = (MockState*)backend->state;
+    state->draw_arc_count++;
+    state->arc_values[0] = center_x;
+    state->arc_values[1] = center_y;
+    state->arc_values[2] = radius;
+    state->arc_values[3] = start_angle;
+    state->arc_values[4] = sweep_angle;
+    state->arc_values[5] = color;
+}
 static void mock_fill_quadrilateral(SmileGraphicsBackend* backend,
     long long x1, long long y1, long long x2, long long y2,
     long long x3, long long y3, long long x4, long long y4, long long color)
@@ -105,7 +119,7 @@ static const SmileGraphicsBackendVTable mock_operations =
 {
     mock_initialize, mock_resize, mock_begin, mock_clear,
     mock_rectangle, mock_rectangle, mock_rounded, mock_rounded,
-    mock_circle, mock_circle, mock_fill_quadrilateral, mock_draw_quadrilateral,
+    mock_circle, mock_circle, mock_arc, mock_fill_quadrilateral, mock_draw_quadrilateral,
     mock_line, mock_text, mock_number,
     mock_present, mock_context, mock_flag, mock_dpi, mock_shutdown,
     mock_name, mock_diagnostics
@@ -124,6 +138,9 @@ static void reset_mocks(void)
     directx_state.begin_count = gdi_state.begin_count = 0;
     directx_state.fill_quad_count = directx_state.draw_quad_count = 0;
     gdi_state.fill_quad_count = gdi_state.draw_quad_count = 0;
+    directx_state.draw_arc_count = gdi_state.draw_arc_count = 0;
+    memset(directx_state.arc_values, 0, sizeof(directx_state.arc_values));
+    memset(gdi_state.arc_values, 0, sizeof(gdi_state.arc_values));
 }
 
 static void check(int condition, const char* message)
@@ -207,6 +224,18 @@ int main(void)
     reset_mocks();
     error[0] = 0;
     check(smile_graphics_initialize(0, 960, 540, SMILE_GRAPHICS_BACKEND_DIRECTX, 1,
+        error, (int)sizeof(error)), "DirectX initializes for arc routing tests");
+    smile_graphics_draw_arc(101, 202, 33, -90, 270, 0x123456);
+    check(directx_state.draw_arc_count == 1, "Arc reaches the active backend");
+    check(directx_state.arc_values[0] == 101 && directx_state.arc_values[1] == 202 &&
+        directx_state.arc_values[2] == 33 && directx_state.arc_values[3] == -90 &&
+        directx_state.arc_values[4] == 270 && directx_state.arc_values[5] == 0x123456,
+        "Arc forwards all six values in order");
+    check(directx_state.begin_count == 1, "Arc drawing begins one shared frame");
+
+    reset_mocks();
+    error[0] = 0;
+    check(smile_graphics_initialize(0, 960, 540, SMILE_GRAPHICS_BACKEND_DIRECTX, 1,
         error, (int)sizeof(error)), "DirectX initializes for frame invalidation tests");
     smile_graphics_begin_frame();
     smile_graphics_resize(1280, 720);
@@ -267,6 +296,6 @@ int main(void)
         fprintf(stderr, "%d native graphics selection test(s) failed.\n", failures);
         return 1;
     }
-    printf("35 native graphics and audio-focus checks passed.\n");
+    printf("39 native graphics and audio-focus checks passed.\n");
     return 0;
 }

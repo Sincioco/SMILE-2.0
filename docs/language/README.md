@@ -52,6 +52,7 @@ DO
     FILL QUADRILATERAL 0, 0, 240, 80, 240, 460, 0, 540, DARK_GREEN
     DRAW QUADRILATERAL 0, 0, 240, 80, 240, 460, 0, 540, LIGHT_GREEN
     DRAW CIRCLE 480, 300, 12, WHITE
+    DRAW ARC 480, 300, 40, 180, 90, LIGHT_BLUE
     DRAW LINE 40, 40, 920, 40, DARK_GRAY
     DRAW TEXT "SCORE" AT 40, 15 SIZE 18 COLOR CYAN
     DRAW NUMBER HighScore AT 130, 10 SIZE 28 COLOR YELLOW
@@ -65,7 +66,26 @@ STOP SOUND
 END PROGRAM
 ```
 
-Drawing statements support filled or outlined rectangles, rounded rectangles, circles, and arbitrary four-corner quadrilaterals, plus lines, literal text, and numbers. Quadrilaterals take four perimeter-ordered `(X, Y)` points followed by a color. `SHOW SCREEN` presents the logical canvas. `PLAY SOUND` starts an asynchronous WAV effect and missing files are safe. `LOAD` and `SAVE` persist integer values in storage isolated by executable name.
+Drawing statements support filled or outlined rectangles, rounded rectangles, circles, and arbitrary four-corner quadrilaterals, plus outlined arcs, lines, literal text, and numbers. Quadrilaterals take four perimeter-ordered `(X, Y)` points followed by a color. `SHOW SCREEN` presents the logical canvas. `PLAY SOUND` starts an asynchronous WAV effect and missing files are safe. `LOAD` and `SAVE` persist integer values in storage isolated by executable name.
+
+### Arc drawing
+
+```smile
+DRAW ARC CenterX, CenterY, Radius, StartAngle, SweepAngle, Color
+```
+
+`DRAW ARC` draws only the curved outline using the normal one-logical-pixel graphics stroke. It does not fill a pie slice, draw a chord, or connect either endpoint to the center. `FILL ARC` is not part of the language.
+
+Angles are integer degrees in screen coordinates:
+
+| Angle | Direction |
+|---:|---|
+| `0` | right |
+| `90` | down |
+| `180` | left |
+| `270` | up |
+
+Positive sweeps move clockwise and negative sweeps move counterclockwise. Start angles normalize to `0` through `359`. A zero sweep or non-positive radius draws nothing; an absolute sweep of at least `360` draws one complete circle. `examples\ArcBasics.smile` demonstrates four joined rounded corners, both sweep directions, a long arc, and a complete circle.
 
 Generic executable-relative text input uses:
 

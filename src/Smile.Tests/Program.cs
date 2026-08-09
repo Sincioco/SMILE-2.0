@@ -48,6 +48,24 @@ Run("Too many quadrilateral arguments report a parser error", () => Equal(true,
     HasDiagnostic(Analyze("GAME WINDOW \"Quad\"\nDRAW QUADRILATERAL 0, 0, 20, 0, 20, 20, 0, 20, WHITE, 99\n"), "SML2001")));
 Run("Quadrilateral arguments must be numbers", () => Equal(true,
     HasDiagnostic(Analyze("GAME WINDOW \"Quad\"\nFILL QUADRILATERAL TRUE, 0, 20, 0, 20, 20, 0, 20, WHITE\n"), "SML3023")));
+Run("ARC is a shared case-insensitive keyword", () => Equal(SyntaxKind.ArcKeyword,
+    SyntaxFacts.GetKeywordKind("arc")));
+Run("DRAW ARC analyzes without errors", () => Equal(false,
+    Analyze("GAME WINDOW \"Arc\"\nDRAW ARC 200, 200, 50, 0, 90, BLUE\n").HasErrors));
+Run("DRAW ARC records its shared syntax operation", () => Equal(GraphicsOperation.DrawArc,
+    Analyze("GAME WINDOW \"Arc\"\nDRAW ARC 200, 200, 50, 0, 90, BLUE\n")
+        .SyntaxTree.Root.Statements.OfType<GraphicsStatementSyntax>().Single().Operation));
+Run("DRAW ARC records exactly six arguments", () => Equal(6,
+    Analyze("GAME WINDOW \"Arc\"\nDRAW ARC 200, 200, 50, 0, 90, BLUE\n")
+        .SyntaxTree.Root.Statements.OfType<GraphicsStatementSyntax>().Single().Arguments.Count));
+Run("Too few arc arguments report a parser error", () => Equal(true,
+    HasDiagnostic(Analyze("GAME WINDOW \"Arc\"\nDRAW ARC 200, 200, 50\n"), "SML2001")));
+Run("Too many arc arguments report a parser error", () => Equal(true,
+    HasDiagnostic(Analyze("GAME WINDOW \"Arc\"\nDRAW ARC 200, 200, 50, 0, 90, BLUE, 99\n"), "SML2001")));
+Run("DRAW ARC arguments must be numbers", () => Equal(true,
+    HasDiagnostic(Analyze("GAME WINDOW \"Arc\"\nDRAW ARC TRUE, 200, 50, 0, 90, BLUE\n"), "SML3023")));
+Run("FILL ARC is rejected", () => Equal(true,
+    HasDiagnostic(Analyze("GAME WINDOW \"Arc\"\nFILL ARC 200, 200, 50, 0, 90, BLUE\n"), "SML2001")));
 Run("KEY_OTHER is the shared built-in number constant 19", () =>
 {
     Equal(SyntaxKind.KeyOtherKeyword, SyntaxFacts.GetKeywordKind("key_other"));
@@ -166,7 +184,7 @@ if (failures.Count != 0)
     return 1;
 }
 
-Console.WriteLine("51 SMILE language, project, and timing tests passed.");
+Console.WriteLine("59 SMILE language, project, and timing tests passed.");
 return 0;
 
 SmileProjectGraphicsOptions Parse(string xml) =>

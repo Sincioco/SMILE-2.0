@@ -147,6 +147,14 @@ if not exist "%SMILE_ROOT%\artifacts\games\Assets\Graphics.wav" (
 )
 echo GraphicsBasics compiled with its sound asset.
 
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\ArcBasics.smile" -o "%SMILE_ROOT%\artifacts\games\ArcBasics.exe"
+if errorlevel 1 exit /b %errorlevel%
+if not exist "%SMILE_ROOT%\artifacts\games\ArcBasics.exe" (
+    echo ArcBasics native executable is missing.
+    exit /b 1
+)
+echo ArcBasics compiled successfully.
+
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\GraphicsTextSample.smile" -o "%SMILE_ROOT%\artifacts\games\GraphicsTextSample.exe"
 if errorlevel 1 exit /b %errorlevel%
 if not exist "%SMILE_ROOT%\artifacts\games\GraphicsTextSample.exe" (

@@ -73,6 +73,7 @@ $vsixPath = Require-File 'artifacts\vsix\Smile.VisualStudio.vsix'
 
 $nativePrograms = @(
     'artifacts\games\GraphicsBasics.exe',
+    'artifacts\games\ArcBasics.exe',
     'artifacts\games\GraphicsTextSample.exe',
     'artifacts\games\Snake\Snake.exe',
     'artifacts\games\FallingBlocks\FallingBlocks.exe',

@@ -144,11 +144,13 @@ Implemented syntax includes:
 - multiline `IF`/`ELSE IF`/`ELSE`, ascending and descending `FOR`, `DO`/`LOOP UNTIL`, `EXIT FOR`, `EXIT DO`, and `SELECT CASE`;
 - `SUB`, `FUNCTION`, `CALL`, `RETURN`, and up to four scalar parameters;
 - `PRINT`, `GET KEY`, `KEY_HELD`, `WAIT`, `RANDOM`, `TIMER`, `ABS`, `MIN`, `MAX`, and `RGB`;
-- `GAME WINDOW`, double-buffered rectangles, rounded rectangles, circles, lines, quadrilaterals, text, and numbers, `SHOW SCREEN`, asynchronous WAV effects, MP3 background music, and integer persistence through `LOAD` and `SAVE`;
+- `GAME WINDOW`, double-buffered rectangles, rounded rectangles, circles, arcs, lines, quadrilaterals, text, and numbers, `SHOW SCREEN`, asynchronous WAV effects, MP3 background music, and integer persistence through `LOAD` and `SAVE`;
 - bounded executable-relative UTF-8 input through `LOAD TEXT FILE "path" INTO Array COUNT Variable`, including BOM skipping, zero-fill, and safe missing-file behavior;
 - named keyboard constants, including `KEY_OTHER` for unnamed ordinary key events, and named color constants used by the examples and games.
 
 See `docs\language\README.md` and `examples\StructuredLanguageBasics.smile` for concrete syntax.
+
+Arc outlines use `DRAW ARC CenterX, CenterY, Radius, StartAngle, SweepAngle, Color`. Angles are integer screen degrees (`0` right, `90` down, `180` left, `270` up); positive sweeps move clockwise and negative sweeps move counterclockwise. Arcs use the normal outline stroke and do not add a fill, chord, or radial lines.
 
 ## Current limitations
 

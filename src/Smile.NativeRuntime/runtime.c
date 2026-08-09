@@ -613,6 +613,10 @@ void smile_fill_circle(long long x, long long y, long long radius, long long col
 void smile_draw_circle(long long x, long long y, long long radius, long long color)
 { smile_graphics_draw_circle(x, y, radius, color); }
 
+void smile_draw_arc(long long center_x, long long center_y, long long radius,
+    long long start_angle, long long sweep_angle, long long color)
+{ smile_graphics_draw_arc(center_x, center_y, radius, start_angle, sweep_angle, color); }
+
 void smile_fill_quadrilateral(long long x1, long long y1, long long x2, long long y2,
     long long x3, long long y3, long long x4, long long y4, long long color)
 {

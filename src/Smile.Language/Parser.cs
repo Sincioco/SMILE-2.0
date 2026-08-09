@@ -240,6 +240,13 @@ internal sealed class Parser
             arguments = ParseFixedArguments(4);
             end = arguments.Count == 0 ? keyword.Span.End : arguments[arguments.Count - 1].Span.End;
         }
+        else if (!isFill && Current.Kind == SyntaxKind.ArcKeyword)
+        {
+            NextToken();
+            operation = GraphicsOperation.DrawArc;
+            arguments = ParseFixedArguments(6);
+            end = arguments.Count == 0 ? keyword.Span.End : arguments[arguments.Count - 1].Span.End;
+        }
         else if (Current.Kind == SyntaxKind.QuadrilateralKeyword)
         {
             NextToken();

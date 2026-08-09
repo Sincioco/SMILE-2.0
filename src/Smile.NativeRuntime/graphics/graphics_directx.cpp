@@ -5,6 +5,7 @@
 #include <dwrite.h>
 #include <dxgi1_3.h>
 #include <dxgi1_5.h>
+#include <math.h>
 #include "graphics_common.h"
 #include "graphics_directx.h"
 
@@ -752,6 +753,89 @@ static void smile_directx_draw_circle(SmileGraphicsBackend* backend, long long x
         state->d2d_context->DrawEllipse(circle, brush, smile_directx_stroke_width(state));
 }
 
+static void smile_directx_draw_arc(SmileGraphicsBackend* backend, long long center_x,
+    long long center_y, long long radius, long long start_angle,
+    long long sweep_angle, long long color)
+{
+    const double degrees_to_radians = 3.14159265358979323846 / 180.0;
+    SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
+    ID2D1SolidColorBrush* brush;
+    ID2D1PathGeometry* geometry = 0;
+    ID2D1GeometrySink* sink = 0;
+    D2D1_ARC_SEGMENT segment;
+    D2D1_POINT_2F start_point;
+    long long normalized_start;
+    long long clamped_sweep;
+    long long sweep_magnitude;
+    double physical_center_x;
+    double physical_center_y;
+    double physical_radius;
+    double start_radians;
+    double end_radians;
+    HRESULT result;
+
+    if (radius <= 0 || sweep_angle == 0 || !state->frame_active ||
+        state->d2d_factory == 0 || state->d2d_context == 0)
+        return;
+    if (sweep_angle >= 360 || sweep_angle <= -360)
+    {
+        smile_directx_draw_circle(backend, center_x, center_y, radius, color);
+        return;
+    }
+
+    normalized_start = start_angle % 360;
+    if (normalized_start < 0)
+        normalized_start += 360;
+    clamped_sweep = sweep_angle;
+    sweep_magnitude = clamped_sweep < 0 ? -clamped_sweep : clamped_sweep;
+    physical_center_x = smile_graphics_map_x(&state->viewport, (double)center_x);
+    physical_center_y = smile_graphics_map_y(&state->viewport, (double)center_y);
+    physical_radius = smile_graphics_map_size(&state->viewport, (double)radius);
+    if (physical_radius <= 0.0)
+        return;
+    start_radians = (double)normalized_start * degrees_to_radians;
+    end_radians = (double)(normalized_start + clamped_sweep) * degrees_to_radians;
+    start_point = D2D1::Point2F(
+        (FLOAT)(physical_center_x + cos(start_radians) * physical_radius),
+        (FLOAT)(physical_center_y + sin(start_radians) * physical_radius));
+
+    brush = smile_directx_brush(state, color);
+    if (brush == 0)
+        return;
+    result = state->d2d_factory->CreatePathGeometry(&geometry);
+    if (FAILED(result))
+    {
+        smile_directx_set_error(state, 0, 0, "Direct2D arc geometry creation", result);
+        return;
+    }
+    result = geometry->Open(&sink);
+    if (FAILED(result))
+    {
+        smile_directx_set_error(state, 0, 0, "Direct2D arc geometry open", result);
+        smile_directx_release(geometry);
+        return;
+    }
+
+    segment.point = D2D1::Point2F(
+        (FLOAT)(physical_center_x + cos(end_radians) * physical_radius),
+        (FLOAT)(physical_center_y + sin(end_radians) * physical_radius));
+    segment.size = D2D1::SizeF((FLOAT)physical_radius, (FLOAT)physical_radius);
+    segment.rotationAngle = 0.0f;
+    segment.sweepDirection = clamped_sweep > 0
+        ? D2D1_SWEEP_DIRECTION_CLOCKWISE : D2D1_SWEEP_DIRECTION_COUNTER_CLOCKWISE;
+    segment.arcSize = sweep_magnitude <= 180 ? D2D1_ARC_SIZE_SMALL : D2D1_ARC_SIZE_LARGE;
+    sink->BeginFigure(start_point, D2D1_FIGURE_BEGIN_HOLLOW);
+    sink->AddArc(segment);
+    sink->EndFigure(D2D1_FIGURE_END_OPEN);
+    result = sink->Close();
+    if (FAILED(result))
+        smile_directx_set_error(state, 0, 0, "Direct2D arc geometry close", result);
+    else
+        state->d2d_context->DrawGeometry(geometry, brush, smile_directx_stroke_width(state));
+    smile_directx_release(sink);
+    smile_directx_release(geometry);
+}
+
 static void smile_directx_quadrilateral(SmileGraphicsBackend* backend,
     long long x1, long long y1, long long x2, long long y2,
     long long x3, long long y3, long long x4, long long y4,
@@ -993,6 +1077,7 @@ static const SmileGraphicsBackendVTable smile_directx_operations =
     smile_directx_draw_rounded_rectangle,
     smile_directx_fill_circle,
     smile_directx_draw_circle,
+    smile_directx_draw_arc,
     smile_directx_fill_quadrilateral,
     smile_directx_draw_quadrilateral,
     smile_directx_draw_line,
