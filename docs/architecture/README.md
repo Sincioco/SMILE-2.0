@@ -27,6 +27,7 @@ The native backend emits MASM x64 and links `Smile.NativeRuntime.lib`. Console p
 - queued pressed keys, simultaneous held-key state, and focus-loss clearing;
 - asynchronous WAV effects and C++/WinRT `Windows.Media.Playback.MediaPlayer` MP3 music relative to the executable;
 - application, window-activation, and minimization tracking that silences both audio channels while the game is inactive without changing system volume;
+- bounded executable-relative file-byte loading with zero-fill and safe missing-file behavior;
 - per-executable integer persistence under local application data.
 
 The compiler emits one stable graphics configuration call before game startup and routes every drawing export—including filled and outlined quadrilaterals—through the active `SmileGraphicsBackend` vtable. DirectX builds quadrilaterals with short-lived Direct2D path geometry; GDI maps the same four logical points into its physical back buffer and uses `Polygon`. Backend implementations own their render targets and caches; windowing, input, audio, persistence, and language-level game logic remain outside the graphics modules.
@@ -39,6 +40,6 @@ The Win32 window procedure owns one focus state above both graphics backends. Au
 
 This process-local policy is inherited by every `GAME WINDOW` program and requires no game-specific activation code. It never changes Windows master volume or another process, and DirectX and GDI behave identically because focus and audio remain outside their backend implementations.
 
-The runtime does not contain Snake, falling-block, paddle, brick, dungeon, score, level, projection, generation, pathfinding, or win/loss rules. Those remain in the corresponding files under `games`. Dungeon Star I's pseudo-3D projection is composed entirely from the same generic quadrilateral, line, rectangle, text, input, timing, and audio services available to every SMILE program.
+The runtime does not contain Snake, falling-block, paddle, brick, dungeon, score, level, projection, generation, map-format, pathfinding, or win/loss rules. Those remain in the corresponding files under `games`. Dungeon Star I parses its external map bytes, validates topology, generates pipe graphs, plans its demo, and composes its pseudo-3D projection entirely in `Program.smile`, using only the same generic file, quadrilateral, line, rectangle, text, input, timing, and audio services available to every SMILE program.
 
 The Visual Studio extension embeds the same compiler/runtime payload and registers a minimal `.smileproj` project factory. Its console and game templates build to `bin\Debug` or `bin\Release`, copy declared assets, populate the SMILE Output pane and Error List, and launch the resulting executable for F5 or Ctrl+F5.

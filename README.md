@@ -18,7 +18,7 @@ When project work produces two or more Markdown requirement, specification, hand
 - `games\FallingBlocks` — a seven-piece falling-block puzzle with rotation, row clearing, levels, and a persistent high score.
 - `games\PaddleBall` — one-player AI and local two-player paddle modes with a persistent best rally.
 - `games\BrickBreaker` — a 7-by-12 colored brick field, three lives, three levels, row scoring, and a persistent high score.
-- `games\DungeonStarI` — an original three-floor pseudo-3D dungeon exploration sample with random rooms, doors, stairs, attract mode, and green, blue, and red floor palettes.
+- `games\DungeonStarI` — an original three-floor pseudo-3D dungeon with student-editable external maps, validated pipe-style random generation, a blue map-selection title, doors, stairs, attract mode, and green, blue, and red floor palettes.
 
 All games use a logical 960-by-540 canvas. Window resizing preserves the 16:9 aspect ratio with letterboxing, and Alt+Enter toggles borderless full screen.
 
@@ -57,7 +57,7 @@ Run the complete noninteractive regression and artifact verification suite with:
 scripts\smoke-test.cmd
 ```
 
-The smoke suite builds the solution, runs console examples, checks invalid-program diagnostics, exercises save/reload and corrupt-value fallback, compiles the required graphics text sample and all five games, copies and hashes their assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Graphical gameplay and audible playback remain hands-on acceptance steps.
+The smoke suite builds the solution, runs console examples, checks invalid-program diagnostics, exercises save/reload and corrupt-value fallback, validates Dungeon Star I's supplied maps, compiles the required graphics text sample and all five games, copies and hashes their assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Graphical gameplay and audible playback remain hands-on acceptance steps.
 
 ## Compile loose files
 
@@ -69,7 +69,7 @@ artifacts\compiler\smilec.exe examples\GraphicsBasics.smile -o artifacts\games\G
 artifacts\compiler\smilec.exe games\Snake\Program.smile -o artifacts\games\Snake\Snake.exe
 ```
 
-Use `--keep-temp` to retain generated MASM assembly and object files under `artifacts\temp`. Copy any `Assets` directory beside the resulting executable before running a program that uses sound effects or music.
+Use `--keep-temp` to retain generated MASM assembly and object files under `artifacts\temp`. Copy declared asset trees beside a loose-file executable before running it; Dungeon Star I needs both its `Assets` and editable `Maps` directories.
 
 ## Graphics backends and frame pacing
 

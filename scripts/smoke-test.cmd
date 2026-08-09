@@ -202,9 +202,13 @@ if not exist "%SMILE_ROOT%\games\DungeonStarI\Assets\Background.mp3" (
     echo Dungeon Star I background music source asset is missing.
     exit /b 1
 )
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\validate-dungeon-maps.ps1"
+if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\DungeonStarI\Program.smile" -o "%SMILE_ROOT%\artifacts\games\DungeonStarI\DungeonStarI.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%
 xcopy "%SMILE_ROOT%\games\DungeonStarI\Assets" "%SMILE_ROOT%\artifacts\games\DungeonStarI\Assets" /E /I /Y >nul
+if errorlevel 1 exit /b %errorlevel%
+xcopy "%SMILE_ROOT%\games\DungeonStarI\Maps" "%SMILE_ROOT%\artifacts\games\DungeonStarI\Maps" /E /I /Y >nul
 if errorlevel 1 exit /b %errorlevel%
 if not exist "%SMILE_ROOT%\artifacts\games\DungeonStarI\Assets\Background.mp3" (
     echo Dungeon Star I background music output asset is missing.
@@ -214,6 +218,13 @@ fc /b "%SMILE_ROOT%\games\DungeonStarI\Assets\Background.mp3" "%SMILE_ROOT%\arti
 if errorlevel 1 (
     echo Dungeon Star I background music output does not match its project asset.
     exit /b 1
+)
+for %%M in (default.map sample-loops.map sample-switchbacks.map) do (
+    fc /b "%SMILE_ROOT%\games\DungeonStarI\Maps\%%M" "%SMILE_ROOT%\artifacts\games\DungeonStarI\Maps\%%M" >nul
+    if errorlevel 1 (
+        echo Dungeon Star I output map %%M does not match its project asset.
+        exit /b 1
+    )
 )
 echo Dungeon Star I compiled successfully: %SMILE_ROOT%\artifacts\games\DungeonStarI\DungeonStarI.exe
 

@@ -76,6 +76,8 @@ LOAD TEXT FILE "Maps\default.map" INTO FileBytes COUNT FileByteCount
 
 The path must be a non-empty literal, the destination must be a one-dimensional numeric array, and `COUNT` must name a writable numeric variable. The runtime zero-fills the complete destination, reads UTF-8 bytes, skips an optional UTF-8 BOM, copies at most the array capacity as values from 0 through 255, and stores the copied byte count. Missing, inaccessible, empty, or unreadable files safely produce count zero. Existing integer persistence keeps its distinct `LOAD Value FROM "Key" DEFAULT 0` form.
 
+Dungeon Star I provides the complete game-side example: three literal-path loaders feed one bounded byte parser in `games\DungeonStarI\Program.smile`. The language/runtime only delivers bytes; ordered floor headers, map symbols, dimensions, doors, stairs, topology, and fallback behavior remain ordinary SMILE source.
+
 Background-music syntax is:
 
 ```smile
@@ -102,4 +104,4 @@ Every `GAME WINDOW` program inherits the same native focus behavior without addi
 
 Named input constants include `KEY_W`, `KEY_A`, `KEY_S`, `KEY_D`, the four arrows, `KEY_ENTER`, `KEY_ESCAPE`, `KEY_SPACE`, `KEY_1`, `KEY_2`, `KEY_OTHER`, and `KEY_NONE`. `GET KEY` returns `KEY_OTHER` (value `19`) for an otherwise unnamed ordinary key event; `KEY_HELD(KEY_OTHER)` is always false. Named colors include the standard red/green/blue/cyan/magenta/yellow set plus orange, gray, dark variants, light variants, black, and white.
 
-The executable examples are the most precise usage guide: `LanguageBasics.smile`, `StructuredLanguageBasics.smile`, `GraphicsBasics.smile`, and the five projects under `games`, including Dungeon Star I's quadrilateral-based pseudo-3D renderer.
+The executable examples are the most precise usage guide: `LanguageBasics.smile`, `StructuredLanguageBasics.smile`, `GraphicsBasics.smile`, and the five projects under `games`, including Dungeon Star I's external-map parser and quadrilateral-based pseudo-3D renderer.

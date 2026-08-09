@@ -97,6 +97,9 @@ foreach ($game in $assetSets.Keys) {
 }
 Assert-AssetCopy 'games\FallingBlocks\Assets\Background.mp3' 'artifacts\games\FallingBlocks\Assets\Background.mp3'
 Assert-AssetCopy 'games\DungeonStarI\Assets\Background.mp3' 'artifacts\games\DungeonStarI\Assets\Background.mp3'
+foreach ($map in @('default.map', 'sample-loops.map', 'sample-switchbacks.map')) {
+    Assert-AssetCopy "games\DungeonStarI\Maps\$map" "artifacts\games\DungeonStarI\Maps\$map"
+}
 Write-Host 'Game asset copies verified.'
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
