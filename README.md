@@ -1,6 +1,6 @@
 # SMILE 2.0
 
-SMILE 2.0 is a small, structured BASIC-style language that compiles directly to native Windows x64 executables. It includes a MASM-based native compiler, a Win32 game runtime, Visual Studio 2026 language and project support, console examples, and ten complete games written in SMILE.
+SMILE 2.0 is a small, structured BASIC-style language with a complete native Windows x64 target and an initial browser target. It includes a MASM-based native compiler, a Win32 game runtime, Canvas 2D Web publication, Visual Studio 2026 language and project support, console examples, and ten complete games written in SMILE. Windows x64 remains the default target; Snake is the first game validated for Web.
 
 The repository has one language authority: `src\Smile.Language`. The command-line compiler and Visual Studio extension use the same lexer, parser, syntax model, diagnostics, symbols, types, and semantic model. Game rules remain in `.smile` source; the C runtime provides only generic Windows graphics, input, sound, timing, and storage services.
 
@@ -82,6 +82,14 @@ artifacts\compiler\smilec.exe games\Snake\Program.smile -o artifacts\games\Snake
 
 Use `--keep-temp` to retain generated MASM assembly and object files under `artifacts\temp`. Copy declared asset trees beside a loose-file executable before running it; Dungeon Star I and Platform Quest need both their `Assets` and editable `Maps` directories, while Dungeon Star II needs its editable `Maps` directory.
 
+Select the initial static browser target explicitly with `--target web` and an output directory:
+
+```text
+artifacts\compiler\smilec.exe games\Snake\Program.smile --target web --output-dir artifacts\web\Snake
+```
+
+That command writes `index.html`, `smile-runtime.js`, `game.js`, and `smile.css`. Copy the project's declared `Assets` tree beside those files when compiling a loose file. Web output is plain HTML, CSS, and JavaScript using Canvas 2D; it has no native runtime, MASM/linker, npm, framework, or machine-local-path dependency. Native commands continue to default to `windows-x64`, and the explicit native spelling is `--target windows-x64`.
+
 ## Graphics backends and frame pacing
 
 Game projects use a backend-neutral drawing API. `Auto` is the default: it tries the DirectX 11, Direct2D, and DirectWrite backend first and falls back to the physical-resolution GDI backend when DirectX initialization is unavailable. Both backends preserve the program's logical canvas, render shapes and text at the current output resolution, keep one uniform scale, and handle resizing, per-monitor DPI changes, and Alt+Enter automatically.
@@ -145,7 +153,14 @@ After Visual Studio restarts, use **File > New > Project** and search for `SMILE
 - **SMILE 2.0 Console Application**
 - **SMILE 2.0 Game Application**
 
-Both create a `.smileproj` with `Debug` and `Release` configurations. A game project also owns an `Assets` folder. **Build > Build Solution** (`Ctrl+Shift+B`) compiles the startup file into `bin\Debug` or `bin\Release` and copies declared assets. `F5` and `Ctrl+F5` build and run the native executable. Compiler failures appear in both the SMILE Output pane and Error List with the same diagnostic code, message, line, and column used by the editor and command-line compiler.
+Both create a `.smileproj` with `Debug` and `Release` configurations. A game project also owns an `Assets` folder. The platform selector exposes `x64` first and `Web` beside it:
+
+- `Debug|x64` and `Release|x64` preserve the existing native output at `bin\Debug\Game.exe` or `bin\Release\Game.exe`.
+- `Debug|Web` and `Release|Web` publish the same startup `.smile` source to `bin\Debug\Web` or `bin\Release\Web`, including declared assets.
+
+With `Web` selected, **Build > Build Solution** is the publish operation. `F5` or `Ctrl+F5` always republishes the latest saved source and assets, starts/reuses the VSIX's loopback-only static server, and opens a cache-busted `http://127.0.0.1:<port>/` URL in the default browser. Switch back to `x64` for native launch and source-level debugging. Compiler failures appear in both the SMILE Output pane and Error List with the same diagnostic code, message, line, and column used by the editor and command-line compiler.
+
+The published Web directory is ready for a separate static-host upload; the VSIX does not upload to GitHub Pages, Azure, Cloudflare, Netlify, or another remote service.
 
 The game template documents that automatic focus muting is inherited from the shared runtime; new games should use normal `PLAY SOUND` and `PLAY MUSIC` statements without per-game focus code.
 
@@ -170,7 +185,10 @@ Arc outlines use `DRAW ARC CenterX, CenterY, Radius, StartAngle, SweepAngle, Col
 
 ## Current limitations
 
-- The target is Windows x64 only and the native backend requires the Visual Studio MASM/link toolchain when compiling.
+- Windows x64 is the complete/default target and requires the Visual Studio MASM/link toolchain when compiling. The initial Web backend currently supports the shared language and runtime subset used by Snake `Program.smile` and `Program-NoDemo.smile`; other valid statements receive an explicit `SML5101` Web-target diagnostic until implemented.
+- Web NUMBER values use JavaScript safe integers. Unsafe literals fail Web compilation, and unsafe runtime arithmetic stops with a visible error rather than silently losing precision.
+- Web uses Canvas 2D, browser keyboard/audio APIs, and `localStorage`. Browser autoplay policy may suppress effects before the first key or click, without stopping the game. MP3 music, `KEY_HELD`, console `PRINT`, `WAIT`, `SELECT CASE`, `EXIT`, additional drawing primitives beyond Snake's subset, and `LOAD TEXT FILE` are not yet implemented for Web.
+- Browser `.smile` breakpoints are not yet supported. Windows x64 `.smile` breakpoints, IntelliSense, normal file opening, and native F5 remain supported.
 - Numeric storage is signed 64-bit integer only; there is no floating-point type, user-defined type, dynamic collection, module system, or package manager.
 - Arrays are fixed at compile time and support at most two dimensions.
 - Routines accept at most four scalar parameters. Text is currently used as a literal-oriented console/graphics/audio surface rather than a general mutable string type.

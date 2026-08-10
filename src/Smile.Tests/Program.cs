@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Smile.Compiler;
 using Smile.Language;
 
 var failures = new List<string>();
@@ -198,6 +199,50 @@ Run("Brick Breaker paddle moves 420 pixels per second", () =>
     Equal(420000L, SimulateFixedPoint(Enumerable.Repeat(8, 125), 420000)));
 Run("Elapsed clamping bounds catch-up after a long stall", () =>
     Equal(14400L, SimulateFixedPoint(new[] { 500 }, 300000)));
+Run("Compiler target defaults to Windows x64", () =>
+{
+    Equal(true, CompilerOptions.TryParse(new[] { "Program.smile" }, out var options, out _));
+    Equal(SmileCompilationTarget.WindowsX64, options.Target);
+});
+Run("Web compiler target is case-insensitive", () =>
+{
+    Equal(true, CompilerOptions.TryParse(new[] { "Program.smile", "--target", "WeB", "--output-dir", "Web" }, out var options, out _));
+    Equal(SmileCompilationTarget.Web, options.Target);
+    Equal("Web", options.OutputDirectory);
+});
+Run("Web output rejects native output options", () => Equal(false,
+    CompilerOptions.TryParse(new[] { "Program.smile", "--target", "web", "--output-dir", "Web", "-o", "Program.exe" }, out _, out _)));
+Run("Web emitter lowers integer division arrays routines booleans and frame yield", () =>
+{
+    const string source = "DIM Values[2]\nSUB SetValue(Index)\nValues[Index] = 9 / 2\nEND SUB\nGAME WINDOW \"Test\" SIZE 320 BY 180\nCALL SetValue(0)\nIF Values[0] = 4 THEN\nSHOW SCREEN\nEND IF\nEND PROGRAM\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var javascript = new WebEmitter(analysis).Emit();
+    Equal(true, javascript.Contains("smile.div(9, 2)"));
+    Equal(true, javascript.Contains("smile.set("));
+    Equal(true, javascript.Contains("await smile.showScreen()"));
+});
+Run("Web emitter reports unsupported valid statements", () =>
+{
+    var analysis = Analyze("PRINT 1\n");
+    Equal(false, analysis.HasErrors);
+    Throws(() => new WebEmitter(analysis).Emit(), "Web target does not yet support PRINT.");
+});
+Run("Web output writer creates deterministic static files", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "smile-web-output-test-" + Guid.NewGuid().ToString("N"));
+    try
+    {
+        var analysis = Analyze("GAME WINDOW \"Test\"\nSHOW SCREEN\nEND PROGRAM\n");
+        WebOutputWriter.Write(directory, new WebEmitter(analysis));
+        foreach (var name in new[] { "index.html", "smile-runtime.js", "game.js", "smile.css" })
+            Equal(true, File.Exists(Path.Combine(directory, name)));
+    }
+    finally
+    {
+        if (Directory.Exists(directory)) Directory.Delete(directory, true);
+    }
+});
 
 if (failures.Count != 0)
 {
@@ -207,7 +252,7 @@ if (failures.Count != 0)
     return 1;
 }
 
-Console.WriteLine("61 SMILE language, project, completion, and timing tests passed.");
+Console.WriteLine("67 SMILE language, compiler, project, completion, and timing tests passed.");
 return 0;
 
 SmileProjectGraphicsOptions Parse(string xml) =>

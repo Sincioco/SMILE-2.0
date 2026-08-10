@@ -1,0 +1,135 @@
+namespace Smile.Compiler;
+
+internal enum SmileCompilationTarget
+{
+    WindowsX64,
+    Web
+}
+
+internal sealed class CompilerOptions
+{
+    public string? SourcePath { get; private set; }
+    public string? OutputPath { get; private set; }
+    public string? OutputDirectory { get; private set; }
+    public SmileCompilationTarget Target { get; private set; } = SmileCompilationTarget.WindowsX64;
+    public bool KeepTemp { get; private set; }
+    public bool EmitDebugInformation { get; private set; }
+    public Smile.Language.SmileGraphicsBackend GraphicsBackend { get; private set; } = Smile.Language.SmileGraphicsBackend.Auto;
+    public bool VSync { get; private set; } = true;
+
+    public static bool TryParse(string[] args, out CompilerOptions options, out string? error)
+    {
+        options = new CompilerOptions();
+        error = null;
+        var targetSpecified = false;
+        var graphicsSpecified = false;
+        var vSyncSpecified = false;
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            if (string.Equals(args[i], "--target", StringComparison.OrdinalIgnoreCase))
+            {
+                if (++i >= args.Length || targetSpecified)
+                {
+                    error = "--target requires one value.";
+                    return false;
+                }
+                targetSpecified = true;
+                if (string.Equals(args[i], "windows-x64", StringComparison.OrdinalIgnoreCase))
+                    options.Target = SmileCompilationTarget.WindowsX64;
+                else if (string.Equals(args[i], "web", StringComparison.OrdinalIgnoreCase))
+                    options.Target = SmileCompilationTarget.Web;
+                else
+                {
+                    error = "--target must be windows-x64 or web.";
+                    return false;
+                }
+            }
+            else if (string.Equals(args[i], "--output-dir", StringComparison.OrdinalIgnoreCase))
+            {
+                if (++i >= args.Length || options.OutputDirectory != null)
+                {
+                    error = "--output-dir requires one directory.";
+                    return false;
+                }
+                options.OutputDirectory = args[i];
+            }
+            else if (string.Equals(args[i], "--keep-temp", StringComparison.OrdinalIgnoreCase))
+            {
+                options.KeepTemp = true;
+            }
+            else if (string.Equals(args[i], "--debug", StringComparison.OrdinalIgnoreCase))
+            {
+                options.EmitDebugInformation = true;
+            }
+            else if (string.Equals(args[i], "-o", StringComparison.OrdinalIgnoreCase))
+            {
+                if (++i >= args.Length || options.OutputPath != null)
+                {
+                    error = "-o requires one output file.";
+                    return false;
+                }
+                options.OutputPath = args[i];
+            }
+            else if (string.Equals(args[i], "--graphics", StringComparison.OrdinalIgnoreCase))
+            {
+                graphicsSpecified = true;
+                if (++i >= args.Length || !Enum.TryParse(args[i], true, out Smile.Language.SmileGraphicsBackend backend) ||
+                    !Enum.IsDefined(backend))
+                {
+                    error = "--graphics must be Auto, GDI, or DirectX.";
+                    return false;
+                }
+                options.GraphicsBackend = backend;
+            }
+            else if (string.Equals(args[i], "--vsync", StringComparison.OrdinalIgnoreCase))
+            {
+                vSyncSpecified = true;
+                if (++i >= args.Length || !bool.TryParse(args[i], out var vSync))
+                {
+                    error = "--vsync must be true or false.";
+                    return false;
+                }
+                options.VSync = vSync;
+            }
+            else if (options.SourcePath == null)
+            {
+                options.SourcePath = args[i];
+            }
+            else
+            {
+                error = $"Unexpected argument '{args[i]}'.";
+                return false;
+            }
+        }
+
+        if (options.SourcePath == null)
+            return false;
+
+        if (options.Target == SmileCompilationTarget.Web)
+        {
+            if (options.OutputDirectory == null)
+            {
+                error = "The Web target requires --output-dir <directory>.";
+                return false;
+            }
+            if (options.OutputPath != null)
+            {
+                error = "The Web target uses --output-dir and cannot be combined with -o.";
+                return false;
+            }
+            if (options.KeepTemp || options.EmitDebugInformation || graphicsSpecified || vSyncSpecified)
+            {
+                error = "--keep-temp, --debug, --graphics, and --vsync are available only for the windows-x64 target.";
+                return false;
+            }
+        }
+        else if (options.OutputDirectory != null)
+        {
+            error = "The windows-x64 target uses -o and cannot be combined with --output-dir.";
+            return false;
+        }
+
+        return true;
+    }
+}

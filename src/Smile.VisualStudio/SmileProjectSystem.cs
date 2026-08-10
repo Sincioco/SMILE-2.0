@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -163,7 +164,10 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     public string GetOutputPath(string configuration) =>
         Path.Combine(ProjectDirectory, "bin", NormalizeConfiguration(configuration), SafeFileName(OutputName) + ".exe");
 
-    public bool Build(string configuration, IVsOutputWindowPane? pane)
+    public string GetWebOutputDirectory(string configuration) =>
+        Path.Combine(ProjectDirectory, "bin", NormalizeConfiguration(configuration), "Web");
+
+    public bool Build(string configuration, string platform, IVsOutputWindowPane? pane)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         pane ??= SmileBuildService.GetOutputPane();
@@ -186,12 +190,28 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             return false;
         }
 
-        var emitDebugInformation = NormalizeConfiguration(configuration) == "Debug";
-        var outputPath = GetOutputPath(configuration);
-        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-        pane.OutputStringThreadSafe($"> \"{compilerPath}\" \"{sourcePath}\" -o \"{outputPath}\" --graphics {GraphicsBackend} --vsync {VSync.ToString().ToLowerInvariant()}{(emitDebugInformation ? " --debug" : string.Empty)}\r\n");
-        var result = ThreadHelper.JoinableTaskFactory.Run(() => SmileBuildService.RunAsync(
-            compilerPath, sourcePath, outputPath, GraphicsBackend, VSync, emitDebugInformation));
+        SmileBuildService.CompilerResult result;
+        string outputPath;
+        if (IsWeb(platform))
+        {
+            var outputDirectory = GetWebOutputDirectory(configuration);
+            if (Directory.Exists(outputDirectory))
+                Directory.Delete(outputDirectory, true);
+            Directory.CreateDirectory(outputDirectory);
+            pane.OutputStringThreadSafe($"> \"{compilerPath}\" \"{sourcePath}\" --target web --output-dir \"{outputDirectory}\"\r\n");
+            result = ThreadHelper.JoinableTaskFactory.Run(() =>
+                SmileBuildService.RunWebAsync(compilerPath, sourcePath, outputDirectory));
+            outputPath = Path.Combine(outputDirectory, "index.html");
+        }
+        else
+        {
+            var emitDebugInformation = NormalizeConfiguration(configuration) == "Debug";
+            outputPath = GetOutputPath(configuration);
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+            pane.OutputStringThreadSafe($"> \"{compilerPath}\" \"{sourcePath}\" -o \"{outputPath}\" --graphics {GraphicsBackend} --vsync {VSync.ToString().ToLowerInvariant()}{(emitDebugInformation ? " --debug" : string.Empty)}\r\n");
+            result = ThreadHelper.JoinableTaskFactory.Run(() => SmileBuildService.RunAsync(
+                compilerPath, sourcePath, outputPath, GraphicsBackend, VSync, emitDebugInformation));
+        }
         if (!string.IsNullOrEmpty(result.Output))
             pane.OutputStringThreadSafe(SmileBuildService.NormalizeOutput(result.Output));
         SmileBuildService.ReportDiagnostics(result.Output);
@@ -202,8 +222,11 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             return false;
         }
 
-        CopyAssets(Path.GetDirectoryName(outputPath)!);
-        pane.OutputStringThreadSafe($"SMILE build succeeded: {outputPath}\r\n");
+        var assetOutput = IsWeb(platform) ? GetWebOutputDirectory(configuration) : Path.GetDirectoryName(outputPath)!;
+        CopyAssets(assetOutput);
+        pane.OutputStringThreadSafe(IsWeb(platform)
+            ? $"SMILE web publish succeeded: {outputPath}\r\n"
+            : $"SMILE build succeeded: {outputPath}\r\n");
         return true;
     }
 
@@ -234,30 +257,51 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         return true;
     }
 
-    public bool Clean(string configuration, IVsOutputWindowPane? pane)
+    public bool Clean(string configuration, string platform, IVsOutputWindowPane? pane)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         pane ??= SmileBuildService.GetOutputPane();
-        var directory = Path.Combine(ProjectDirectory, "bin", NormalizeConfiguration(configuration));
+        var target = IsWeb(platform) ? GetWebOutputDirectory(configuration) : GetOutputPath(configuration);
         try
         {
-            if (Directory.Exists(directory))
-                Directory.Delete(directory, true);
-            pane.OutputStringThreadSafe($"Cleaned {directory}\r\n");
+            if (IsWeb(platform))
+            {
+                if (Directory.Exists(target))
+                    Directory.Delete(target, true);
+            }
+            else
+            {
+                if (File.Exists(target))
+                    File.Delete(target);
+                var pdb = Path.ChangeExtension(target, ".pdb");
+                if (File.Exists(pdb))
+                    File.Delete(pdb);
+            }
+            pane.OutputStringThreadSafe($"Cleaned {target}\r\n");
             return true;
         }
         catch (Exception exception)
         {
-            pane.OutputStringThreadSafe($"Could not clean {directory}: {exception.Message}\r\n");
+            pane.OutputStringThreadSafe($"Could not clean {target}: {exception.Message}\r\n");
             return false;
         }
     }
 
-    public bool Launch(string configuration, uint launchFlags)
+    public bool Launch(string configuration, string platform, uint launchFlags)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
+        if (IsWeb(platform))
+        {
+            // Always republish on Web launch so F5/Ctrl+F5 reflects the latest saved source and assets.
+            if (!Build(configuration, platform, null))
+                return false;
+            var url = SmileWebServer.Start(GetWebOutputDirectory(configuration));
+            System.Diagnostics.Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            return true;
+        }
+
         var outputPath = GetOutputPath(configuration);
-        if (!File.Exists(outputPath) && !Build(configuration, null))
+        if (!File.Exists(outputPath) && !Build(configuration, platform, null))
             return false;
 
         var debugger = Package.GetGlobalService(typeof(SVsShellDebugger)) as IVsDebugger4;
@@ -385,6 +429,8 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
 
     private static string NormalizeConfiguration(string value) =>
         value.StartsWith("Release", StringComparison.OrdinalIgnoreCase) ? "Release" : "Debug";
+
+    private static bool IsWeb(string platform) => platform.Equals("Web", StringComparison.OrdinalIgnoreCase);
 
     private static string SafeFileName(string value)
     {
@@ -765,17 +811,18 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
 
 internal sealed class SmileConfigurationProvider : IVsCfgProvider2, IVsProjectCfgProvider
 {
+    private static readonly string[] ConfigurationNames = { "Debug", "Release" };
+    private static readonly string[] PlatformNames = { "x64", "Web" };
     private readonly SmileProject _project;
     private readonly Dictionary<string, SmileProjectConfiguration> _configurations;
 
     public SmileConfigurationProvider(SmileProject project)
     {
         _project = project;
-        _configurations = new Dictionary<string, SmileProjectConfiguration>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Debug"] = new SmileProjectConfiguration(this, project, "Debug"),
-            ["Release"] = new SmileProjectConfiguration(this, project, "Release")
-        };
+        _configurations = new Dictionary<string, SmileProjectConfiguration>(StringComparer.OrdinalIgnoreCase);
+        foreach (var platform in PlatformNames)
+        foreach (var configuration in ConfigurationNames)
+            _configurations[$"{configuration}|{platform}"] = new SmileProjectConfiguration(this, project, configuration, platform);
     }
 
     public int GetCfgs(uint celt, IVsCfg[] rgpcfg, uint[] pcActual, uint[] prgfFlags)
@@ -788,32 +835,36 @@ internal sealed class SmileConfigurationProvider : IVsCfgProvider2, IVsProjectCf
 
     public int GetCfgNames(uint celt, string[] rgbstr, uint[] pcActual)
     {
-        var names = _configurations.Keys.ToArray();
+        var names = ConfigurationNames;
         if (pcActual != null && pcActual.Length != 0) pcActual[0] = (uint)names.Length;
         for (var index = 0; index < Math.Min((int)celt, names.Length); index++) rgbstr[index] = names[index];
         return VSConstants.S_OK;
     }
 
-    public int GetPlatformNames(uint celt, string[] rgbstr, uint[] pcActual) => OneName("x64", celt, rgbstr, pcActual);
-    public int GetSupportedPlatformNames(uint celt, string[] rgbstr, uint[] pcActual) => OneName("x64", celt, rgbstr, pcActual);
+    public int GetPlatformNames(uint celt, string[] rgbstr, uint[] pcActual) => Names(PlatformNames, celt, rgbstr, pcActual);
+    public int GetSupportedPlatformNames(uint celt, string[] rgbstr, uint[] pcActual) => Names(PlatformNames, celt, rgbstr, pcActual);
 
     public int GetCfgOfName(string pszCfgName, string pszPlatformName, out IVsCfg ppCfg)
     {
-        _configurations.TryGetValue(pszCfgName, out var configuration);
+        var platform = string.IsNullOrWhiteSpace(pszPlatformName) || pszPlatformName.Equals("Default", StringComparison.OrdinalIgnoreCase)
+            ? "x64"
+            : pszPlatformName;
+        _configurations.TryGetValue($"{pszCfgName}|{platform}", out var configuration);
         ppCfg = configuration!;
         return configuration == null ? VSConstants.E_INVALIDARG : VSConstants.S_OK;
     }
 
     public int OpenProjectCfg(string pszProjectCfgCanonicalName, out IVsProjectCfg ppIVsProjectCfg)
     {
-        var name = pszProjectCfgCanonicalName.Split('|')[0];
-        _configurations.TryGetValue(name, out var configuration);
+        var parts = pszProjectCfgCanonicalName.Split('|');
+        var platform = parts.Length > 1 ? parts[1] : "x64";
+        _configurations.TryGetValue($"{parts[0]}|{platform}", out var configuration);
         ppIVsProjectCfg = configuration!;
         return configuration == null ? VSConstants.E_INVALIDARG : VSConstants.S_OK;
     }
 
     public int get_UsesIndependentConfigurations(out int pfUsesIndependentConfigurations)
-    { pfUsesIndependentConfigurations = 0; return VSConstants.S_OK; }
+    { pfUsesIndependentConfigurations = 1; return VSConstants.S_OK; }
     public int GetCfgProviderProperty(int propid, out object pvar) { pvar = false; return VSConstants.S_OK; }
     public int AdviseCfgProviderEvents(IVsCfgProviderEvents pCPE, out uint pdwCookie) { pdwCookie = 0; return VSConstants.S_OK; }
     public int UnadviseCfgProviderEvents(uint dwCookie) => VSConstants.S_OK;
@@ -823,10 +874,10 @@ internal sealed class SmileConfigurationProvider : IVsCfgProvider2, IVsProjectCf
     public int AddCfgsOfPlatformName(string pszPlatformName, string pszClonePlatformName) => VSConstants.E_NOTIMPL;
     public int DeleteCfgsOfPlatformName(string pszPlatformName) => VSConstants.E_NOTIMPL;
 
-    private static int OneName(string value, uint celt, string[] values, uint[] actual)
+    private static int Names(string[] names, uint celt, string[] values, uint[] actual)
     {
-        if (actual != null && actual.Length != 0) actual[0] = 1;
-        if (celt != 0 && values != null && values.Length != 0) values[0] = value;
+        if (actual != null && actual.Length != 0) actual[0] = (uint)names.Length;
+        for (var index = 0; index < Math.Min((int)celt, names.Length); index++) values[index] = names[index];
         return VSConstants.S_OK;
     }
 }
@@ -835,18 +886,19 @@ internal sealed class SmileProjectConfiguration : IVsProjectCfg2, IVsBuildablePr
 {
     private readonly SmileConfigurationProvider _provider;
     private readonly SmileProject _project;
-    private readonly string _name;
+    private readonly string _configuration;
+    private readonly string _platform;
     private readonly Dictionary<uint, IVsBuildStatusCallback> _callbacks = new();
     private uint _nextCookie = 1;
     private bool _building;
 
-    public SmileProjectConfiguration(SmileConfigurationProvider provider, SmileProject project, string name)
-    { _provider = provider; _project = project; _name = name; }
+    public SmileProjectConfiguration(SmileConfigurationProvider provider, SmileProject project, string configuration, string platform)
+    { _provider = provider; _project = project; _configuration = configuration; _platform = platform; }
 
-    public int get_DisplayName(out string pbstrDisplayName) { pbstrDisplayName = _name; return VSConstants.S_OK; }
+    public int get_DisplayName(out string pbstrDisplayName) { pbstrDisplayName = _configuration; return VSConstants.S_OK; }
     public int get_IsDebugOnly(out int pfIsDebugOnly) { pfIsDebugOnly = 0; return VSConstants.S_OK; }
     public int get_IsReleaseOnly(out int pfIsReleaseOnly) { pfIsReleaseOnly = 0; return VSConstants.S_OK; }
-    public int get_CanonicalName(out string pbstrCanonicalName) { pbstrCanonicalName = _name + "|x64"; return VSConstants.S_OK; }
+    public int get_CanonicalName(out string pbstrCanonicalName) { pbstrCanonicalName = _configuration + "|" + _platform; return VSConstants.S_OK; }
     public int get_Platform(out Guid pguidPlatform) { pguidPlatform = Guid.Empty; return VSConstants.S_OK; }
     public int get_IsPackaged(out int pfIsPackaged) { pfIsPackaged = 0; return VSConstants.S_OK; }
     public int get_IsSpecifyingOutputSupported(out int pfIsSpecifyingOutputSupported) { pfIsSpecifyingOutputSupported = 0; return VSConstants.S_OK; }
@@ -895,9 +947,15 @@ internal sealed class SmileProjectConfiguration : IVsProjectCfg2, IVsBuildablePr
     public int UnadviseBuildStatusCallback(uint dwCookie) { _callbacks.Remove(dwCookie); return VSConstants.S_OK; }
 
     public int QueryDebugLaunch(uint grfLaunch, out int pfCanLaunch)
-    { pfCanLaunch = File.Exists(_project.GetOutputPath(_name)) || File.Exists(Path.Combine(_project.ProjectDirectory, _project.StartupFile)) ? 1 : 0; return VSConstants.S_OK; }
+    {
+        var output = _platform.Equals("Web", StringComparison.OrdinalIgnoreCase)
+            ? Path.Combine(_project.GetWebOutputDirectory(_configuration), "index.html")
+            : _project.GetOutputPath(_configuration);
+        pfCanLaunch = File.Exists(output) || File.Exists(Path.Combine(_project.ProjectDirectory, _project.StartupFile)) ? 1 : 0;
+        return VSConstants.S_OK;
+    }
     public int DebugLaunch(uint grfLaunch)
-    { ThreadHelper.ThrowIfNotOnUIThread(); return _project.Launch(_name, grfLaunch) ? VSConstants.S_OK : VSConstants.E_FAIL; }
+    { ThreadHelper.ThrowIfNotOnUIThread(); return _project.Launch(_configuration, _platform, grfLaunch) ? VSConstants.S_OK : VSConstants.E_FAIL; }
 
     private int RunBuild(IVsOutputWindowPane pane, bool clean)
     {
@@ -905,7 +963,9 @@ internal sealed class SmileProjectConfiguration : IVsProjectCfg2, IVsBuildablePr
         _building = true;
         var continueBuild = 1;
         foreach (var callback in _callbacks.Values) callback.BuildBegin(ref continueBuild);
-        var success = continueBuild != 0 && (clean ? _project.Clean(_name, pane) : _project.Build(_name, pane));
+        var success = continueBuild != 0 && (clean
+            ? _project.Clean(_configuration, _platform, pane)
+            : _project.Build(_configuration, _platform, pane));
         _building = false;
         foreach (var callback in _callbacks.Values) callback.BuildEnd(success ? 1 : 0);
         return success ? VSConstants.S_OK : VSConstants.E_FAIL;

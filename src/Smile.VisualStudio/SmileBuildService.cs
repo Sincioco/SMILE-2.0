@@ -75,9 +75,21 @@ internal static class SmileBuildService
         if (emitDebugInformation)
             arguments.Append(" --debug");
 
+        return await RunCompilerAsync(compilerPath, sourcePath, arguments.ToString()).ConfigureAwait(false);
+    }
+
+    public static Task<CompilerResult> RunWebAsync(string compilerPath, string sourcePath, string outputDirectory)
+    {
+        var arguments = new StringBuilder().Append(Quote(sourcePath))
+            .Append(" --target web --output-dir ").Append(Quote(outputDirectory));
+        return RunCompilerAsync(compilerPath, sourcePath, arguments.ToString());
+    }
+
+    private static async Task<CompilerResult> RunCompilerAsync(string compilerPath, string sourcePath, string arguments)
+    {
         var startInfo = new ProcessStartInfo(compilerPath)
         {
-            Arguments = arguments.ToString(),
+            Arguments = arguments,
             WorkingDirectory = Path.GetDirectoryName(sourcePath),
             UseShellExecute = false,
             RedirectStandardOutput = true,

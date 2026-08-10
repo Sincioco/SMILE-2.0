@@ -7,21 +7,20 @@ internal sealed class CompilerDriver
 {
     public int Run(string[] args)
     {
-        if (!TryParseArguments(args, out var sourcePath, out var outputPath, out var keepTemp, out var emitDebugInformation,
-             out var graphicsBackend, out var vSync, out var argumentError))
+        if (!CompilerOptions.TryParse(args, out var options, out var argumentError))
         {
             if (!string.IsNullOrWhiteSpace(argumentError))
                 Console.Error.WriteLine($"error SML5007: {argumentError}");
-            Console.Error.WriteLine("Usage: smilec <source.smile> [-o <output.exe>] [--keep-temp] [--debug] [--graphics auto|gdi|directx] [--vsync true|false]");
+            Console.Error.WriteLine("Usage: smilec <source.smile> [--target windows-x64 -o <output.exe>] [--target web --output-dir <directory>] [--keep-temp] [--debug] [--graphics auto|gdi|directx] [--vsync true|false]");
             return 2;
         }
 
         try
         {
-            sourcePath = Path.GetFullPath(sourcePath!);
-            outputPath = outputPath == null
+            var sourcePath = Path.GetFullPath(options.SourcePath!);
+            var outputPath = options.OutputPath == null
                 ? Path.ChangeExtension(sourcePath, ".exe")
-                : Path.GetFullPath(outputPath);
+                : Path.GetFullPath(options.OutputPath);
 
             if (!File.Exists(sourcePath))
             {
@@ -36,6 +35,24 @@ internal sealed class CompilerDriver
 
             if (analysis.HasErrors)
                 return 1;
+
+            if (options.Target == SmileCompilationTarget.Web)
+            {
+                var outputDirectory = Path.GetFullPath(options.OutputDirectory!);
+                try
+                {
+                    WebOutputWriter.Write(outputDirectory, new WebEmitter(analysis));
+                }
+                catch (WebTargetException exception)
+                {
+                    PrintWebDiagnostic(analysis.SyntaxTree.Source, exception);
+                    return 1;
+                }
+
+                Console.WriteLine($"Compiled {sourcePath} for Web");
+                Console.WriteLine($"Output: {outputDirectory}");
+                return 0;
+            }
 
             var repositoryRoot = FindRepositoryRoot();
             var tempDirectory = Path.Combine(repositoryRoot, "artifacts", "temp");
@@ -55,14 +72,14 @@ internal sealed class CompilerDriver
                 return 2;
             }
 
-            var emitter = new MasmEmitter(analysis, graphicsBackend, vSync, emitDebugInformation);
+            var emitter = new MasmEmitter(analysis, options.GraphicsBackend, options.VSync, options.EmitDebugInformation);
             File.WriteAllText(assemblyPath, emitter.Emit());
-            if (emitDebugInformation)
+            if (options.EmitDebugInformation)
                 File.WriteAllText(debugSourcePath, BuildDebugSource(sourcePath, emitter.DebugLines));
             var isGame = analysis.SyntaxTree.Root.Statements.Any(statement => statement is GameWindowStatementSyntax);
             var result = new NativeToolchain().AssembleAndLink(assemblyPath, objectPath, outputPath, runtimePath,
-                isGame, emitter.UsesMusic, emitDebugInformation ? debugSourcePath : null,
-                emitDebugInformation ? debugObjectPath : null);
+                isGame, emitter.UsesMusic, options.EmitDebugInformation ? debugSourcePath : null,
+                options.EmitDebugInformation ? debugObjectPath : null);
             if (!result.Success)
             {
                 Console.Error.WriteLine($"{sourcePath}(1,1): error SML5003: Native toolchain failed.");
@@ -71,7 +88,7 @@ internal sealed class CompilerDriver
                 return 2;
             }
 
-            if (!keepTemp)
+            if (!options.KeepTemp)
             {
                 TryDelete(assemblyPath);
                 TryDelete(objectPath);
@@ -81,11 +98,11 @@ internal sealed class CompilerDriver
 
             Console.WriteLine($"Compiled {sourcePath}");
             Console.WriteLine($"Output: {outputPath}");
-            if (keepTemp)
+            if (options.KeepTemp)
             {
                 Console.WriteLine($"Assembly: {assemblyPath}");
                 Console.WriteLine($"Object: {objectPath}");
-                if (emitDebugInformation)
+                if (options.EmitDebugInformation)
                 {
                     Console.WriteLine($"Debug source map: {debugSourcePath}");
                     Console.WriteLine($"Debug object: {debugObjectPath}");
@@ -98,65 +115,6 @@ internal sealed class CompilerDriver
             Console.Error.WriteLine($"error SML5004: {exception.Message}");
             return 2;
         }
-    }
-
-    private static bool TryParseArguments(string[] args, out string? sourcePath, out string? outputPath,
-        out bool keepTemp, out bool emitDebugInformation, out SmileGraphicsBackend graphicsBackend, out bool vSync,
-        out string? error)
-    {
-        sourcePath = null;
-        outputPath = null;
-        keepTemp = false;
-        emitDebugInformation = false;
-        graphicsBackend = SmileGraphicsBackend.Auto;
-        vSync = true;
-        error = null;
-
-        for (var i = 0; i < args.Length; i++)
-        {
-            if (string.Equals(args[i], "--keep-temp", StringComparison.OrdinalIgnoreCase))
-            {
-                keepTemp = true;
-            }
-            else if (string.Equals(args[i], "--debug", StringComparison.OrdinalIgnoreCase))
-            {
-                emitDebugInformation = true;
-            }
-            else if (string.Equals(args[i], "-o", StringComparison.OrdinalIgnoreCase))
-            {
-                if (++i >= args.Length || outputPath != null)
-                    return false;
-                outputPath = args[i];
-            }
-            else if (string.Equals(args[i], "--graphics", StringComparison.OrdinalIgnoreCase))
-            {
-                if (++i >= args.Length || !Enum.TryParse(args[i], true, out graphicsBackend) ||
-                    !Enum.IsDefined(graphicsBackend))
-                {
-                    error = "--graphics must be Auto, GDI, or DirectX.";
-                    return false;
-                }
-            }
-            else if (string.Equals(args[i], "--vsync", StringComparison.OrdinalIgnoreCase))
-            {
-                if (++i >= args.Length || !bool.TryParse(args[i], out vSync))
-                {
-                    error = "--vsync must be true or false.";
-                    return false;
-                }
-            }
-            else if (sourcePath == null)
-            {
-                sourcePath = args[i];
-            }
-            else
-            {
-                error = $"Unexpected argument '{args[i]}'.";
-                return false;
-            }
-        }
-
-        return sourcePath != null;
     }
 
     private static string BuildDebugSource(string sourcePath, IEnumerable<int> lines)
@@ -209,6 +167,13 @@ internal sealed class CompilerDriver
         var path = string.IsNullOrEmpty(diagnostic.FilePath) ? "<source>" : diagnostic.FilePath;
         var severity = diagnostic.Severity == DiagnosticSeverity.Error ? "error" : "warning";
         Console.Error.WriteLine($"{path}({diagnostic.Line},{diagnostic.Column}): {severity} {diagnostic.Code}: {diagnostic.Message}");
+    }
+
+    private static void PrintWebDiagnostic(SourceText source, WebTargetException exception)
+    {
+        source.GetLineColumn(exception.Span.Start, out var line, out var column);
+        var path = string.IsNullOrEmpty(source.FilePath) ? "<source>" : source.FilePath;
+        Console.Error.WriteLine($"{path}({line},{column}): error {exception.Code}: {exception.Message}");
     }
 
     private static void TryDelete(string path)

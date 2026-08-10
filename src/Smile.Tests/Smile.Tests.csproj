@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Smile.Compiler\Smile.Compiler.csproj" />
     <ProjectReference Include="..\Smile.Language\Smile.Language.csproj" />
   </ItemGroup>
 </Project>
