@@ -13,6 +13,8 @@ internal sealed class WebEmitter
     private readonly StringBuilder _builder = new();
     private readonly Dictionary<VariableSymbol, string> _variableNames = new();
     private readonly Dictionary<RoutineSymbol, string> _routineNames = new();
+    private readonly Stack<string> _forExitLabels = new();
+    private readonly Stack<string> _doExitLabels = new();
     private RoutineSymbol? _currentRoutine;
     private int _indent;
     private int _temporaryId;
@@ -83,7 +85,7 @@ internal sealed class WebEmitter
     {
         _currentRoutine = routine;
         var parameters = string.Join(", ", routine.Parameters.Select(parameter => _variableNames[parameter]));
-        Line($"function {_routineNames[routine]}({parameters}) {{");
+        Line($"async function {_routineNames[routine]}({parameters}) {{");
         _indent++;
         foreach (var local in routine.LocalSymbols.Values
                      .Where(local => !routine.Parameters.Contains(local))
@@ -143,10 +145,16 @@ internal sealed class WebEmitter
                 EmitDo(doStatement, topLevel);
                 return;
             case CallStatementSyntax call:
-                Line($"{Routine(call.Identifier)}({Arguments(call.Arguments)});");
+                Line($"await {Routine(call.Identifier)}({Arguments(call.Arguments)});");
                 return;
             case ReturnStatementSyntax returnStatement:
                 Line(returnStatement.Expression == null ? "return;" : $"return {Expression(returnStatement.Expression)};");
+                return;
+            case SelectStatementSyntax select:
+                EmitSelect(select, topLevel);
+                return;
+            case ExitStatementSyntax exit:
+                EmitExit(exit);
                 return;
             case EndProgramStatementSyntax:
                 Line("smile.endProgram();");
@@ -161,39 +169,32 @@ internal sealed class WebEmitter
                 EmitGraphics(graphics);
                 return;
             case ShowScreenStatementSyntax show:
-                if (!topLevel || _currentRoutine != null)
-                    Unsupported(show, "SHOW SCREEN inside a routine");
                 Line("await smile.showScreen();");
                 return;
             case SoundStatementSyntax sound:
                 EmitSound(sound);
                 return;
+            case MusicStatementSyntax music:
+                EmitMusic(music);
+                return;
             case LoadStatementSyntax load:
                 Line($"{Variable(load.Identifier)} = smile.loadInt({Json(load.Key.Value as string ?? string.Empty)}, {Expression(load.DefaultValue)});");
+                return;
+            case TextFileLoadStatementSyntax textFileLoad:
+                EmitTextFileLoad(textFileLoad);
                 return;
             case SaveStatementSyntax save:
                 Line($"smile.saveInt({Json(save.Key.Value as string ?? string.Empty)}, {Variable(save.Identifier)});");
                 return;
-            case PrintStatementSyntax:
-                Unsupported(statement, "PRINT");
+            case PrintStatementSyntax print:
+                var items = string.Join(", ", print.Items.Select(PrintItem));
+                Line($"smile.print([{items}], {(print.SuppressNewLine ? "true" : "false")});");
                 return;
             case ClearScreenStatementSyntax:
-                Unsupported(statement, "CLEAR SCREEN");
+                Line("smile.clearScreen();");
                 return;
-            case WaitStatementSyntax:
-                Unsupported(statement, "WAIT");
-                return;
-            case SelectStatementSyntax:
-                Unsupported(statement, "SELECT CASE");
-                return;
-            case ExitStatementSyntax:
-                Unsupported(statement, "EXIT FOR/DO");
-                return;
-            case MusicStatementSyntax:
-                Unsupported(statement, "music playback");
-                return;
-            case TextFileLoadStatementSyntax:
-                Unsupported(statement, "LOAD TEXT FILE");
+            case WaitStatementSyntax wait:
+                Line($"await smile.wait({Expression(wait.Duration)});");
                 return;
             default:
                 Unsupported(statement, statement.GetType().Name);
@@ -239,26 +240,65 @@ internal sealed class WebEmitter
     {
         var counter = Variable(statement.Identifier);
         var limit = Temporary("limit");
+        var label = Temporary("for");
         Line($"{counter} = smile.safe({Expression(statement.LowerBound)});");
         Line($"const {limit} = smile.safe({Expression(statement.UpperBound)});");
         var comparison = statement.IsDescending ? ">=" : "<=";
         var step = statement.IsDescending ? "-1" : "1";
-        Line($"for (; {counter} {comparison} {limit}; {counter} = smile.add({counter}, {step})) {{");
+        Line($"{label}: for (; {counter} {comparison} {limit}; {counter} = smile.add({counter}, {step})) {{");
         _indent++;
+        _forExitLabels.Push(label);
         EmitStatements(statement.Statements, topLevel);
+        _forExitLabels.Pop();
         _indent--;
         Line("}");
     }
 
     private void EmitDo(DoStatementSyntax statement, bool topLevel)
     {
-        if (statement.UntilCondition == null)
-            Unsupported(statement, "DO without LOOP UNTIL");
-        Line("do {");
+        var label = Temporary("do");
+        Line(statement.UntilCondition == null ? $"{label}: while (true) {{" : $"{label}: do {{");
         _indent++;
+        _doExitLabels.Push(label);
         EmitStatements(statement.Statements, topLevel);
+        _doExitLabels.Pop();
         _indent--;
-        Line($"}} while (!smile.isTrue({Expression(statement.UntilCondition!)}));");
+        Line(statement.UntilCondition == null
+            ? "}"
+            : $"}} while (!smile.isTrue({Expression(statement.UntilCondition)}));");
+    }
+
+    private void EmitSelect(SelectStatementSyntax statement, bool topLevel)
+    {
+        var selected = Temporary("select");
+        Line($"const {selected} = smile.safe({Expression(statement.Expression)});");
+        var emittedCondition = false;
+        var elseClause = statement.Cases.FirstOrDefault(clause => clause.IsElse);
+        foreach (var clause in statement.Cases.Where(clause => !clause.IsElse))
+        {
+            Line($"{(emittedCondition ? "else if" : "if")} ({selected} === {Expression(clause.Value!)}) {{");
+            _indent++;
+            EmitStatements(clause.Statements, topLevel);
+            _indent--;
+            Line("}");
+            emittedCondition = true;
+        }
+        if (elseClause != null)
+        {
+            Line(emittedCondition ? "else {" : "{");
+            _indent++;
+            EmitStatements(elseClause.Statements, topLevel);
+            _indent--;
+            Line("}");
+        }
+    }
+
+    private void EmitExit(ExitStatementSyntax statement)
+    {
+        var labels = statement.TargetKeyword.Kind == SyntaxKind.ForKeyword ? _forExitLabels : _doExitLabels;
+        if (labels.Count == 0)
+            Unsupported(statement, $"EXIT {statement.TargetKeyword.Text}");
+        Line($"break {labels.Peek()};");
     }
 
     private void EmitGameWindow(GameWindowStatementSyntax statement)
@@ -286,6 +326,24 @@ internal sealed class WebEmitter
             case GraphicsOperation.DrawRoundedRectangle:
                 Line($"smile.drawRoundedRectangle({arguments});");
                 return;
+            case GraphicsOperation.FillCircle:
+                Line($"smile.fillCircle({arguments});");
+                return;
+            case GraphicsOperation.DrawCircle:
+                Line($"smile.drawCircle({arguments});");
+                return;
+            case GraphicsOperation.DrawArc:
+                Line($"smile.drawArc({arguments});");
+                return;
+            case GraphicsOperation.FillQuadrilateral:
+                Line($"smile.fillQuadrilateral({arguments});");
+                return;
+            case GraphicsOperation.DrawQuadrilateral:
+                Line($"smile.drawQuadrilateral({arguments});");
+                return;
+            case GraphicsOperation.DrawLine:
+                Line($"smile.drawLine({arguments});");
+                return;
             case GraphicsOperation.DrawText:
                 Line($"smile.drawText({Json(statement.Text?.Value as string ?? string.Empty)}, {arguments}, {(statement.Centered ? "true" : "false")});");
                 return;
@@ -307,6 +365,39 @@ internal sealed class WebEmitter
         }
         var path = (statement.Path?.Value as string ?? string.Empty).Replace('\\', '/');
         Line($"smile.playSound({Json(path)});");
+    }
+
+    private void EmitMusic(MusicStatementSyntax statement)
+    {
+        switch (statement.Operation)
+        {
+            case MusicOperation.Play:
+                var path = (statement.Path?.Value as string ?? string.Empty).Replace('\\', '/');
+                Line($"smile.playMusic({Json(path)}, {(statement.Loop ? "true" : "false")});");
+                return;
+            case MusicOperation.Pause:
+                Line("smile.pauseMusic();");
+                return;
+            case MusicOperation.Resume:
+                Line("smile.resumeMusic();");
+                return;
+            case MusicOperation.Stop:
+                Line("smile.stopMusic();");
+                return;
+            case MusicOperation.SetVolume:
+                Line($"smile.setMusicVolume({Expression(statement.Volume!)});");
+                return;
+            default:
+                Unsupported(statement, statement.Operation.ToString());
+                return;
+        }
+    }
+
+    private void EmitTextFileLoad(TextFileLoadStatementSyntax statement)
+    {
+        var path = (statement.Path.Value as string ?? string.Empty).Replace('\\', '/');
+        var destination = _variableNames[ResolveVariable(statement.Destination)];
+        Line($"{Variable(statement.CountIdentifier)} = await smile.loadTextFile({Json(path)}, {destination});");
     }
 
     private string Expression(ExpressionSyntax expression)
@@ -379,12 +470,17 @@ internal sealed class WebEmitter
             SyntaxKind.MaxKeyword => $"smile.max({arguments})",
             SyntaxKind.RgbKeyword => $"smile.rgb({arguments})",
             SyntaxKind.GameClosedKeyword => "smile.gameClosed()",
-            SyntaxKind.KeyHeldKeyword => throw UnsupportedExpression(call, "KEY_HELD"),
-            _ => $"{Routine(call.Identifier)}({arguments})"
+            SyntaxKind.KeyHeldKeyword => $"smile.keyHeld({arguments})",
+            _ => $"await {Routine(call.Identifier)}({arguments})"
         };
     }
 
     private string Arguments(IEnumerable<ExpressionSyntax> arguments) => string.Join(", ", arguments.Select(Expression));
+
+    private string PrintItem(ExpressionSyntax expression) =>
+        _analysis.SemanticModel.GetType(expression) == SmileType.Boolean
+            ? $"smile.booleanText({Expression(expression)})"
+            : Expression(expression);
 
     private string Variable(SyntaxToken identifier) => _variableNames[ResolveVariable(identifier)];
 

@@ -1,8 +1,9 @@
 <Solution>
   <Configurations>
-    <Platform Name="Default" />
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+    <Platform Name="Windows 64-bit .exe" />
+    <Platform Name="Web" />
   </Configurations>
-  <Project Path="StarSquadron.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="faede105-216c-ded3-e58a-dfe747413daa">
-    <Platform Project="?" />
-  </Project>
+  <Project Path="StarSquadron.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="faede105-216c-ded3-e58a-dfe747413daa" />
 </Solution>

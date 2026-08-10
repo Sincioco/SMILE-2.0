@@ -1,8 +1,9 @@
 <Solution>
   <Configurations>
-    <Platform Name="Default" />
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+    <Platform Name="Windows 64-bit .exe" />
+    <Platform Name="Web" />
   </Configurations>
-  <Project Path="DungeonStarI.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="8d96fc1b-6f01-1fd5-9dc7-1a7abc3d201b">
-    <Platform Project="?" />
-  </Project>
+  <Project Path="DungeonStarI.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="8d96fc1b-6f01-1fd5-9dc7-1a7abc3d201b" />
 </Solution>

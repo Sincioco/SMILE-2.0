@@ -1,6 +1,6 @@
 # SMILE 2.0
 
-SMILE 2.0 is a small, structured BASIC-style language with a complete native Windows x64 target and an initial browser target. It includes a MASM-based native compiler, a Win32 game runtime, Canvas 2D Web publication, Visual Studio 2026 language and project support, console examples, and ten complete games written in SMILE. Windows x64 remains the default target; Snake is the first game validated for Web.
+SMILE 2.0 is a small, structured BASIC-style language with a complete native Windows x64 target and a browser target. It includes a MASM-based native compiler, a Win32 game runtime, Canvas 2D Web publication, Visual Studio 2026 language and project support, console examples, and ten complete games written in SMILE. Windows x64 remains the default target, and every included SMILE project exposes both native and Web publication.
 
 The repository has one language authority: `src\Smile.Language`. The command-line compiler and Visual Studio extension use the same lexer, parser, syntax model, diagnostics, symbols, types, and semantic model. Game rules remain in `.smile` source; the C runtime provides only generic Windows graphics, input, sound, timing, and storage services.
 
@@ -82,13 +82,13 @@ artifacts\compiler\smilec.exe games\Snake\Program.smile -o artifacts\games\Snake
 
 Use `--keep-temp` to retain generated MASM assembly and object files under `artifacts\temp`. Copy declared asset trees beside a loose-file executable before running it; Dungeon Star I and Platform Quest need both their `Assets` and editable `Maps` directories, while Dungeon Star II needs its editable `Maps` directory.
 
-Select the initial static browser target explicitly with `--target web` and an output directory:
+Select the static browser target explicitly with `--target web` and an output directory:
 
 ```text
-artifacts\compiler\smilec.exe games\Snake\Program.smile --target web --output-dir artifacts\web\Snake
+artifacts\compiler\smilec.exe games\PaddleBall\Program.smile --target web --output-dir artifacts\web\PaddleBall
 ```
 
-That command writes `index.html`, `smile-runtime.js`, `game.js`, and `smile.css`. Copy the project's declared `Assets` tree beside those files when compiling a loose file. Web output is plain HTML, CSS, and JavaScript using Canvas 2D; it has no native runtime, MASM/linker, npm, framework, or machine-local-path dependency. Native commands continue to default to `windows-x64`, and the explicit native spelling is `--target windows-x64`.
+That command writes `index.html`, `smile-runtime.js`, `game.js`, and `smile.css`. Copy the project's declared `Assets` and `Maps` trees beside those files when compiling a loose file. Web output is plain HTML, CSS, and JavaScript using Canvas 2D; it has no native runtime, MASM/linker, npm, framework, or machine-local-path dependency. Native commands continue to default to `windows-x64`, and the explicit native spelling is `--target windows-x64`.
 
 ## Graphics backends and frame pacing
 
@@ -153,12 +153,12 @@ After Visual Studio restarts, use **File > New > Project** and search for `SMILE
 - **SMILE 2.0 Console Application**
 - **SMILE 2.0 Game Application**
 
-Both create a `.smileproj` with `Debug` and `Release` configurations. A game project also owns an `Assets` folder. The platform selector exposes `x64` first and `Web` beside it:
+Both create a `.smileproj` with `Debug` and `Release` configurations. A game project also owns an `Assets` folder. Every included solution and newly created project exposes `Windows 64-bit .exe` first and `Web` beside it in the platform selector:
 
-- `Debug|x64` and `Release|x64` preserve the existing native output at `bin\Debug\Game.exe` or `bin\Release\Game.exe`.
+- `Debug|Windows 64-bit .exe` and `Release|Windows 64-bit .exe` preserve the existing native output at `bin\Debug\Game.exe` or `bin\Release\Game.exe`.
 - `Debug|Web` and `Release|Web` publish the same startup `.smile` source to `bin\Debug\Web` or `bin\Release\Web`, including declared assets.
 
-With `Web` selected, **Build > Build Solution** is the publish operation. `F5` or `Ctrl+F5` always republishes the latest saved source and assets, starts/reuses the VSIX's loopback-only static server, and opens a cache-busted `http://127.0.0.1:<port>/` URL in the default browser. Switch back to `x64` for native launch and source-level debugging. Compiler failures appear in both the SMILE Output pane and Error List with the same diagnostic code, message, line, and column used by the editor and command-line compiler.
+With `Web` selected, **Build > Build Solution** is the publish operation. `F5` or `Ctrl+F5` always republishes the latest saved source and assets, starts/reuses the VSIX's loopback-only static server, and opens a cache-busted `http://127.0.0.1:<port>/` URL in the default browser. Switch back to `Windows 64-bit .exe` for native launch and source-level debugging. Compiler failures appear in both the SMILE Output pane and Error List with the same diagnostic code, message, line, and column used by the editor and command-line compiler.
 
 The published Web directory is ready for a separate static-host upload; the VSIX does not upload to GitHub Pages, Azure, Cloudflare, Netlify, or another remote service.
 
@@ -185,9 +185,9 @@ Arc outlines use `DRAW ARC CenterX, CenterY, Radius, StartAngle, SweepAngle, Col
 
 ## Current limitations
 
-- Windows x64 is the complete/default target and requires the Visual Studio MASM/link toolchain when compiling. The initial Web backend currently supports the shared language and runtime subset used by Snake `Program.smile` and `Program-NoDemo.smile`; other valid statements receive an explicit `SML5101` Web-target diagnostic until implemented.
+- Windows x64 is the complete/default target and requires the Visual Studio MASM/link toolchain when compiling. Web publication supports the shared language and generic runtime surface used by all ten included games and their no-demo teaching variants.
 - Web NUMBER values use JavaScript safe integers. Unsafe literals fail Web compilation, and unsafe runtime arithmetic stops with a visible error rather than silently losing precision.
-- Web uses Canvas 2D, browser keyboard/audio APIs, and `localStorage`. Browser autoplay policy may suppress effects before the first key or click, without stopping the game. MP3 music, `KEY_HELD`, console `PRINT`, `WAIT`, `SELECT CASE`, `EXIT`, additional drawing primitives beyond Snake's subset, and `LOAD TEXT FILE` are not yet implemented for Web.
+- Web uses Canvas 2D, browser keyboard/audio APIs, `fetch` for declared text/map assets, and `localStorage`. Browser autoplay policy may defer WAV or MP3 playback until the first key or click without stopping the program.
 - Browser `.smile` breakpoints are not yet supported. Windows x64 `.smile` breakpoints, IntelliSense, normal file opening, and native F5 remain supported.
 - Numeric storage is signed 64-bit integer only; there is no floating-point type, user-defined type, dynamic collection, module system, or package manager.
 - Arrays are fixed at compile time and support at most two dimensions.

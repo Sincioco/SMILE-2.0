@@ -29,6 +29,7 @@ internal static class WebOutputWriter
         <body>
           <main id="smile-shell">
             <canvas id="smile-canvas" width="960" height="540" tabindex="0" aria-label="{{WebUtility.HtmlEncode(title)}}"></canvas>
+            <pre id="smile-console" hidden aria-live="polite"></pre>
             <pre id="smile-error" hidden></pre>
           </main>
           <script src="smile-runtime.js"></script>
@@ -45,6 +46,7 @@ internal static class WebOutputWriter
         #smile-shell { position: relative; width: 100vw; height: 100vh; display: grid; place-items: center; background: #05070c; }
         #smile-canvas { display: block; max-width: 100vw; max-height: 100vh; width: auto; height: auto; aspect-ratio: 16 / 9; background: #000; outline: none; }
         #smile-canvas:focus-visible { box-shadow: inset 0 0 0 2px #46e6ff; }
+        #smile-console { width: min(72rem, 100vw); height: 100vh; margin: 0; padding: 1rem; overflow: auto; color: #f2f4f8; background: #05070c; font: 16px/1.4 Consolas, monospace; white-space: pre-wrap; }
         #smile-error { position: absolute; left: 1rem; right: 1rem; bottom: 1rem; max-height: 35vh; overflow: auto; margin: 0; padding: 1rem; color: #fff; background: #761b25; border: 1px solid #ff8794; white-space: pre-wrap; }
         """;
 
@@ -60,8 +62,10 @@ internal static class WebOutputWriter
             const visible = canvas.getContext("2d", { alpha: false });
             const backCanvas = document.createElement("canvas");
             const back = backCanvas.getContext("2d", { alpha: false });
+            const consoleOutput = document.getElementById("smile-console");
             const errorPanel = document.getElementById("smile-error");
             const keys = [];
+            const heldKeys = new Set();
             const memoryStorage = new Map();
             let logicalWidth = 960;
             let logicalHeight = 540;
@@ -69,6 +73,11 @@ internal static class WebOutputWriter
             let active = true;
             let userInteracted = false;
             let currentSound = null;
+            let currentMusic = null;
+            let musicVolume = 100;
+            let musicRequested = false;
+            let musicPaused = false;
+            let consoleText = "";
             let storageNamespace = "smile2:web";
 
             function safe(value) {
@@ -97,6 +106,7 @@ internal static class WebOutputWriter
             }
 
             function isTrue(value) { return safe(value) !== 0; }
+            function booleanText(value) { return isTrue(value) ? "TRUE" : "FALSE"; }
             function abs(value) { return safe(Math.abs(safe(value))); }
             function min(left, right) { [left, right] = operands(left, right); return Math.min(left, right); }
             function max(left, right) { [left, right] = operands(left, right); return Math.max(left, right); }
@@ -157,6 +167,8 @@ internal static class WebOutputWriter
                 canvas.style.aspectRatio = `${logicalWidth} / ${logicalHeight}`;
                 document.title = title;
                 canvas.setAttribute("aria-label", title);
+                canvas.hidden = false;
+                consoleOutput.hidden = true;
                 storageNamespace = `smile2:${title}`;
                 visible.imageSmoothingEnabled = false;
                 back.imageSmoothingEnabled = false;
@@ -214,6 +226,65 @@ internal static class WebOutputWriter
                 back.stroke();
             }
 
+            function circlePath(x, y, radius) {
+                back.beginPath();
+                back.arc(safe(x), safe(y), Math.max(0, safe(radius)), 0, Math.PI * 2);
+            }
+
+            function fillCircle(x, y, radius, fillColor) {
+                circlePath(x, y, radius);
+                back.fillStyle = color(fillColor);
+                back.fill();
+            }
+
+            function drawCircle(x, y, radius, strokeColor) {
+                circlePath(x, y, radius);
+                back.strokeStyle = color(strokeColor);
+                back.lineWidth = 1;
+                back.stroke();
+            }
+
+            function drawArc(x, y, radius, startAngle, sweepAngle, strokeColor) {
+                const start = safe(startAngle) * Math.PI / 180;
+                const end = safe(startAngle + sweepAngle) * Math.PI / 180;
+                back.beginPath();
+                back.arc(safe(x), safe(y), Math.max(0, safe(radius)), start, end, safe(sweepAngle) < 0);
+                back.strokeStyle = color(strokeColor);
+                back.lineWidth = 1;
+                back.stroke();
+            }
+
+            function quadrilateralPath(x1, y1, x2, y2, x3, y3, x4, y4) {
+                back.beginPath();
+                back.moveTo(safe(x1), safe(y1));
+                back.lineTo(safe(x2), safe(y2));
+                back.lineTo(safe(x3), safe(y3));
+                back.lineTo(safe(x4), safe(y4));
+                back.closePath();
+            }
+
+            function fillQuadrilateral(x1, y1, x2, y2, x3, y3, x4, y4, fillColor) {
+                quadrilateralPath(x1, y1, x2, y2, x3, y3, x4, y4);
+                back.fillStyle = color(fillColor);
+                back.fill();
+            }
+
+            function drawQuadrilateral(x1, y1, x2, y2, x3, y3, x4, y4, strokeColor) {
+                quadrilateralPath(x1, y1, x2, y2, x3, y3, x4, y4);
+                back.strokeStyle = color(strokeColor);
+                back.lineWidth = 1;
+                back.stroke();
+            }
+
+            function drawLine(x1, y1, x2, y2, strokeColor) {
+                back.beginPath();
+                back.moveTo(safe(x1) + 0.5, safe(y1) + 0.5);
+                back.lineTo(safe(x2) + 0.5, safe(y2) + 0.5);
+                back.strokeStyle = color(strokeColor);
+                back.lineWidth = 1;
+                back.stroke();
+            }
+
             function textStyle(size, textColor, centered) {
                 back.font = `${safe(size)}px "Segoe UI", Arial, sans-serif`;
                 back.fillStyle = color(textColor);
@@ -229,6 +300,25 @@ internal static class WebOutputWriter
             function drawNumber(value, x, y, size, textColor, centered) {
                 textStyle(size, textColor, centered);
                 back.fillText(String(safe(value)), safe(x), safe(y));
+            }
+
+            function print(items, suppressNewLine) {
+                canvas.hidden = true;
+                consoleOutput.hidden = false;
+                consoleText += items.map(item => String(item)).join("");
+                if (!suppressNewLine) consoleText += "\n";
+                consoleOutput.textContent = consoleText;
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            }
+
+            function clearScreen() {
+                consoleText = "";
+                consoleOutput.textContent = "";
+            }
+
+            function wait(duration) {
+                duration = safe(duration);
+                return new Promise(resolve => setTimeout(resolve, Math.max(0, duration)));
             }
 
             function showScreen() {
@@ -272,6 +362,8 @@ internal static class WebOutputWriter
 
             window.addEventListener("keydown", event => {
                 userInteracted = true;
+                heldKeys.add(mapKey(event));
+                syncMusic();
                 if (event.altKey && event.code === "Enter") {
                     event.preventDefault();
                     void toggleFullScreen();
@@ -283,18 +375,22 @@ internal static class WebOutputWriter
                 if (keys.length > 256) keys.shift();
             });
 
-            canvas.addEventListener("click", () => { userInteracted = true; canvas.focus(); });
+            window.addEventListener("keyup", event => { heldKeys.delete(mapKey(event)); });
+
+            canvas.addEventListener("click", () => { userInteracted = true; canvas.focus(); syncMusic(); });
             window.addEventListener("resize", resizeCanvas);
             document.addEventListener("fullscreenchange", resizeCanvas);
-            window.addEventListener("focus", () => { active = !document.hidden; });
-            window.addEventListener("blur", () => { active = false; keys.length = 0; stopSound(); });
+            window.addEventListener("focus", () => { active = !document.hidden; syncMusic(); });
+            window.addEventListener("blur", () => { active = false; keys.length = 0; heldKeys.clear(); stopSound(); syncMusic(); });
             document.addEventListener("visibilitychange", () => {
                 active = !document.hidden && document.hasFocus();
-                if (!active) { keys.length = 0; stopSound(); }
+                if (!active) { keys.length = 0; heldKeys.clear(); stopSound(); }
+                syncMusic();
             });
-            window.addEventListener("pagehide", () => { closed = true; stopSound(); });
+            window.addEventListener("pagehide", () => { closed = true; stopSound(); stopMusic(); });
 
             function getKey() { return keys.length === 0 ? 0 : keys.shift(); }
+            function keyHeld(key) { return heldKeys.has(safe(key)) ? 1 : 0; }
 
             function stopSound() {
                 if (!currentSound) return;
@@ -313,6 +409,74 @@ internal static class WebOutputWriter
                     const playback = sound.play();
                     if (playback) playback.catch(() => { if (currentSound === sound) currentSound = null; });
                 } catch (_) { currentSound = null; }
+            }
+
+            function syncMusic() {
+                if (!currentMusic) return;
+                currentMusic.volume = active ? Math.max(0, Math.min(100, musicVolume)) / 100 : 0;
+                if (!musicRequested || musicPaused) {
+                    currentMusic.pause();
+                    return;
+                }
+                if (!userInteracted) return;
+                const playback = currentMusic.play();
+                if (playback) playback.catch(() => { });
+            }
+
+            function playMusic(path, loop) {
+                stopMusic();
+                try {
+                    currentMusic = new Audio(String(path).replaceAll("\\", "/"));
+                    currentMusic.loop = Boolean(loop);
+                    musicRequested = true;
+                    musicPaused = false;
+                    syncMusic();
+                } catch (_) {
+                    currentMusic = null;
+                    musicRequested = false;
+                }
+            }
+
+            function pauseMusic() {
+                musicPaused = true;
+                if (currentMusic) currentMusic.pause();
+            }
+
+            function resumeMusic() {
+                musicPaused = false;
+                syncMusic();
+            }
+
+            function stopMusic() {
+                musicRequested = false;
+                musicPaused = false;
+                if (!currentMusic) return;
+                currentMusic.pause();
+                currentMusic.currentTime = 0;
+                currentMusic = null;
+            }
+
+            function setMusicVolume(volume) {
+                musicVolume = Math.max(0, Math.min(100, safe(volume)));
+                syncMusic();
+            }
+
+            async function loadTextFile(path, target) {
+                if (!target || !Array.isArray(target.data)) throw new Error("LOAD TEXT FILE requires a one-dimensional array.");
+                target.data.fill(0);
+                try {
+                    const response = await fetch(String(path).replaceAll("\\", "/"), { cache: "no-store" });
+                    if (!response.ok) return 0;
+                    const bytes = new Uint8Array(await response.arrayBuffer());
+                    let source = 0;
+                    if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) source = 3;
+                    const count = Math.min(target.data.length, bytes.length - source);
+                    for (let index = 0; index < count; index += 1) target.data[index] = bytes[source + index];
+                    return safe(count);
+                } catch (_) {
+                    target.data.fill(0);
+                    return 0;
+                }
             }
 
             function storageKey(key) { return `${storageNamespace}:${key}`; }
@@ -336,11 +500,12 @@ internal static class WebOutputWriter
             }
 
             function gameClosed() { return closed ? 1 : 0; }
-            function endProgram() { closed = true; stopSound(); throw STOP; }
+            function endProgram() { closed = true; stopSound(); stopMusic(); throw STOP; }
 
             function finish() {
                 closed = true;
                 stopSound();
+                stopMusic();
                 window.__smileWeb.status = "stopped";
             }
 
@@ -348,6 +513,7 @@ internal static class WebOutputWriter
                 if (error === STOP) { finish(); return; }
                 closed = true;
                 stopSound();
+                stopMusic();
                 window.__smileWeb.status = "error";
                 const message = error && error.stack ? error.stack : String(error);
                 console.error(error);
@@ -361,10 +527,13 @@ internal static class WebOutputWriter
             }
 
             return {
-                safe, add, sub, mul, div, mod, neg, isTrue, abs, min, max, timer, rgb, random,
+                safe, add, sub, mul, div, mod, neg, isTrue, booleanText, abs, min, max, timer, rgb, random,
                 array, get, set, gameWindow, clear, fillRectangle, drawRectangle,
-                fillRoundedRectangle, drawRoundedRectangle, drawText, drawNumber, showScreen,
-                getKey, playSound, stopSound, loadInt, saveInt, gameClosed, endProgram, run
+                fillRoundedRectangle, drawRoundedRectangle, fillCircle, drawCircle, drawArc,
+                fillQuadrilateral, drawQuadrilateral, drawLine, drawText, drawNumber, showScreen,
+                print, clearScreen, wait, getKey, keyHeld, playSound, stopSound,
+                playMusic, pauseMusic, resumeMusic, stopMusic, setMusicVolume, loadTextFile,
+                loadInt, saveInt, gameClosed, endProgram, run
             };
         })();
         """;

@@ -811,8 +811,9 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
 
 internal sealed class SmileConfigurationProvider : IVsCfgProvider2, IVsProjectCfgProvider
 {
+    private const string NativePlatformName = "Windows 64-bit .exe";
     private static readonly string[] ConfigurationNames = { "Debug", "Release" };
-    private static readonly string[] PlatformNames = { "x64", "Web" };
+    private static readonly string[] PlatformNames = { NativePlatformName, "Web" };
     private readonly SmileProject _project;
     private readonly Dictionary<string, SmileProjectConfiguration> _configurations;
 
@@ -846,9 +847,7 @@ internal sealed class SmileConfigurationProvider : IVsCfgProvider2, IVsProjectCf
 
     public int GetCfgOfName(string pszCfgName, string pszPlatformName, out IVsCfg ppCfg)
     {
-        var platform = string.IsNullOrWhiteSpace(pszPlatformName) || pszPlatformName.Equals("Default", StringComparison.OrdinalIgnoreCase)
-            ? "x64"
-            : pszPlatformName;
+        var platform = NormalizePlatform(pszPlatformName);
         _configurations.TryGetValue($"{pszCfgName}|{platform}", out var configuration);
         ppCfg = configuration!;
         return configuration == null ? VSConstants.E_INVALIDARG : VSConstants.S_OK;
@@ -857,7 +856,7 @@ internal sealed class SmileConfigurationProvider : IVsCfgProvider2, IVsProjectCf
     public int OpenProjectCfg(string pszProjectCfgCanonicalName, out IVsProjectCfg ppIVsProjectCfg)
     {
         var parts = pszProjectCfgCanonicalName.Split('|');
-        var platform = parts.Length > 1 ? parts[1] : "x64";
+        var platform = NormalizePlatform(parts.Length > 1 ? parts[1] : null);
         _configurations.TryGetValue($"{parts[0]}|{platform}", out var configuration);
         ppIVsProjectCfg = configuration!;
         return configuration == null ? VSConstants.E_INVALIDARG : VSConstants.S_OK;
@@ -873,6 +872,14 @@ internal sealed class SmileConfigurationProvider : IVsCfgProvider2, IVsProjectCf
     public int RenameCfgsOfCfgName(string pszOldName, string pszNewName) => VSConstants.E_NOTIMPL;
     public int AddCfgsOfPlatformName(string pszPlatformName, string pszClonePlatformName) => VSConstants.E_NOTIMPL;
     public int DeleteCfgsOfPlatformName(string pszPlatformName) => VSConstants.E_NOTIMPL;
+
+    private static string NormalizePlatform(string? platform) =>
+        string.IsNullOrWhiteSpace(platform) ||
+        string.Equals(platform, "Default", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(platform, "x64", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(platform, "windows-x64", StringComparison.OrdinalIgnoreCase)
+            ? NativePlatformName
+            : platform!;
 
     private static int Names(string[] names, uint celt, string[] values, uint[] actual)
     {

@@ -222,11 +222,27 @@ Run("Web emitter lowers integer division arrays routines booleans and frame yiel
     Equal(true, javascript.Contains("smile.set("));
     Equal(true, javascript.Contains("await smile.showScreen()"));
 });
-Run("Web emitter reports unsupported valid statements", () =>
+Run("Web emitter lowers console output waits and screen clearing", () =>
 {
-    var analysis = Analyze("PRINT 1\n");
+    var analysis = Analyze("PRINT TRUE; 42\nWAIT 1 MILLISECONDS\nCLEAR SCREEN\n");
     Equal(false, analysis.HasErrors);
-    Throws(() => new WebEmitter(analysis).Emit(), "Web target does not yet support PRINT.");
+    var javascript = new WebEmitter(analysis).Emit();
+    Equal(true, javascript.Contains("smile.print([smile.booleanText(1), 42]"));
+    Equal(true, javascript.Contains("await smile.wait(1)"));
+    Equal(true, javascript.Contains("smile.clearScreen()"));
+});
+Run("Web emitter lowers the complete shared game surface", () =>
+{
+    const string source = "DIM Bytes[8]\nGAME WINDOW \"Test\"\nSUB DrawFrame()\nFILL CIRCLE 10, 10, 4, WHITE\nDRAW LINE 0, 0, 10, 10, WHITE\nSHOW SCREEN\nEND SUB\nCALL DrawFrame()\nIF KEY_HELD(KEY_W) THEN\nPLAY SOUND \"Assets\\Effect.wav\"\nEND IF\nLOAD TEXT FILE \"Maps\\test.map\" INTO Bytes COUNT ByteCount\nPLAY MUSIC \"Assets\\Music.mp3\" LOOP\nMUSIC VOLUME 50\nPAUSE MUSIC\nRESUME MUSIC\nSTOP MUSIC\nFOR Index = 0 TO 2\nEXIT FOR\nEND FOR\nDO\nEXIT DO\nLOOP\nSELECT CASE ByteCount\nCASE 0\nByteCount = 1\nCASE ELSE\nByteCount = 2\nEND SELECT\nEND PROGRAM\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var javascript = new WebEmitter(analysis).Emit();
+    Equal(true, javascript.Contains("async function"));
+    Equal(true, javascript.Contains("await smile.loadTextFile"));
+    Equal(true, javascript.Contains("smile.keyHeld"));
+    Equal(true, javascript.Contains("smile.fillCircle"));
+    Equal(true, javascript.Contains("smile.playMusic"));
+    Equal(true, javascript.Contains("break t_"));
 });
 Run("Web output writer creates deterministic static files", () =>
 {
@@ -252,7 +268,7 @@ if (failures.Count != 0)
     return 1;
 }
 
-Console.WriteLine("67 SMILE language, compiler, project, completion, and timing tests passed.");
+Console.WriteLine("68 SMILE language, compiler, project, completion, and timing tests passed.");
 return 0;
 
 SmileProjectGraphicsOptions Parse(string xml) =>
