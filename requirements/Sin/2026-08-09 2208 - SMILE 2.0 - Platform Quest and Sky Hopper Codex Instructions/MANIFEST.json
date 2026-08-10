@@ -1,0 +1,52 @@
+[
+  {
+    "path": "Codex-Instructions/00 - START HERE - Platform Quest and Sky Hopper Mission.md",
+    "bytes": 4474,
+    "sha256": "a9f9415d67fd78e9f77228cdd471449aa25d3ac5004da3d484b82d48ca3305d8"
+  },
+  {
+    "path": "Codex-Instructions/01 - Shared Architecture Demo NoDemo Audio and Originality Rules.md",
+    "bytes": 5434,
+    "sha256": "b996cd7159adb812e8af10c1df477115e55f021ffec852d7e1cb1de21d05cd6e"
+  },
+  {
+    "path": "Codex-Instructions/02 - Platform Quest Mario-Style Platformer Specification.md",
+    "bytes": 9457,
+    "sha256": "19f042a0a5385f7cfc4a6f26a6a1cf7059ba3edb791c0d523d2dd30b9b404bb3"
+  },
+  {
+    "path": "Codex-Instructions/03 - Platform Quest Map Format Random Fallback and Student Guide.md",
+    "bytes": 2248,
+    "sha256": "712f38cf8b18ad84e46d26c3011a9a644624205d6ebaa3db584e18db415edf76"
+  },
+  {
+    "path": "Codex-Instructions/04 - Sky Hopper Flappy-Style Game Specification.md",
+    "bytes": 5743,
+    "sha256": "89df666ae36cf4daeb4940ee12fab44fb179e9d7ec391cd05a875811404707a5"
+  },
+  {
+    "path": "Codex-Instructions/05 - Integration Commit Plan Validation and Definition of Done.md",
+    "bytes": 5449,
+    "sha256": "d2cbd663a06e02f58326540d71642467104f0b13470490b13229bd46aa82c6a4"
+  },
+  {
+    "path": "README.md",
+    "bytes": 750,
+    "sha256": "1a7b02ea8b48868dd3cb291263fdf2117f7110197e146954d8bfdbcd57398901"
+  },
+  {
+    "path": "Repository-Files/games/PlatformQuest/MAP_AUTHORING.md",
+    "bytes": 3764,
+    "sha256": "00d6791d258518523a7969ccb2fffd0eed25174d4642c3e7feb5da8d412e7934"
+  },
+  {
+    "path": "Repository-Files/games/PlatformQuest/Maps/custom.map",
+    "bytes": 1948,
+    "sha256": "64ea08f157313421be0c0e26b0568fadad3934a31dea92c1e986713bb3860c4a"
+  },
+  {
+    "path": "Repository-Files/games/PlatformQuest/Maps/default.map",
+    "bytes": 1956,
+    "sha256": "b0cd513ea2e26b81b34c73103b14b60fa467244ff32e6714c5231e6418930670"
+  }
+]
