@@ -53,6 +53,93 @@ function New-SmileTone {
     }
 }
 
+function New-SmileMelody {
+    param(
+        [Parameter(Mandatory = $true)][string]$RelativePath,
+        [Parameter(Mandatory = $true)][double[]]$Frequencies,
+        [Parameter(Mandatory = $true)][int[]]$DurationsMilliseconds,
+        [int]$RepeatCount = 1
+    )
+
+    if ($Frequencies.Count -ne $DurationsMilliseconds.Count -or $Frequencies.Count -eq 0) {
+        throw 'Melody frequencies and durations must be non-empty and have matching lengths.'
+    }
+
+    $sampleRate = 22050
+    $totalMilliseconds = ($DurationsMilliseconds | Measure-Object -Sum).Sum * $RepeatCount
+    $sampleCount = [Math]::Max(1, [int]($sampleRate * $totalMilliseconds / 1000))
+    $outputPath = Join-Path $root $RelativePath
+    [System.IO.Directory]::CreateDirectory((Split-Path -Parent $outputPath)) | Out-Null
+
+    $stream = [System.IO.File]::Create($outputPath)
+    try {
+        $writer = [System.IO.BinaryWriter]::new($stream)
+        try {
+            $dataLength = $sampleCount * 2
+            $writer.Write([Text.Encoding]::ASCII.GetBytes('RIFF'))
+            $writer.Write(36 + $dataLength)
+            $writer.Write([Text.Encoding]::ASCII.GetBytes('WAVE'))
+            $writer.Write([Text.Encoding]::ASCII.GetBytes('fmt '))
+            $writer.Write(16)
+            $writer.Write([int16]1)
+            $writer.Write([int16]1)
+            $writer.Write($sampleRate)
+            $writer.Write($sampleRate * 2)
+            $writer.Write([int16]2)
+            $writer.Write([int16]16)
+            $writer.Write([Text.Encoding]::ASCII.GetBytes('data'))
+            $writer.Write($dataLength)
+
+            for ($repeat = 0; $repeat -lt $RepeatCount; $repeat++) {
+                for ($note = 0; $note -lt $Frequencies.Count; $note++) {
+                    $frequency = $Frequencies[$note]
+                    $noteSamples = [Math]::Max(1, [int]($sampleRate * $DurationsMilliseconds[$note] / 1000))
+                    for ($index = 0; $index -lt $noteSamples; $index++) {
+                        $time = $index / $sampleRate
+                        $attack = [Math]::Min(1.0, $index / ($sampleRate * 0.008))
+                        $release = [Math]::Min(1.0, ($noteSamples - $index) / ($sampleRate * 0.025))
+                        $envelope = $attack * $release
+                        if ($frequency -le 0) {
+                            $sample = [int16]0
+                        }
+                        else {
+                            $fundamental = [Math]::Sin(2 * [Math]::PI * $frequency * $time)
+                            $harmonic = 0.22 * [Math]::Sin(4 * [Math]::PI * $frequency * $time)
+                            $sample = [int16](5600 * $envelope * ($fundamental + $harmonic))
+                        }
+                        $writer.Write($sample)
+                    }
+                }
+            }
+        }
+        finally {
+            $writer.Dispose()
+        }
+    }
+    finally {
+        $stream.Dispose()
+    }
+}
+
+function Convert-SmileMusicToMp3 {
+    param(
+        [Parameter(Mandatory = $true)][string]$WaveRelativePath,
+        [Parameter(Mandatory = $true)][string]$Mp3RelativePath
+    )
+
+    $ffmpeg = Get-Command ffmpeg -ErrorAction SilentlyContinue
+    if ($null -eq $ffmpeg) {
+        Write-Warning "FFmpeg is unavailable; keeping any committed $Mp3RelativePath asset."
+        return
+    }
+    $wavePath = Join-Path $root $WaveRelativePath
+    $mp3Path = Join-Path $root $Mp3RelativePath
+    & $ffmpeg.Source -y -hide_banner -loglevel error -i $wavePath -map_metadata -1 -id3v2_version 0 -codec:a libmp3lame -b:a 128k -write_xing 0 $mp3Path
+    if ($LASTEXITCODE -ne 0) {
+        throw "FFmpeg could not encode $Mp3RelativePath."
+    }
+}
+
 New-SmileTone -RelativePath 'examples\Assets\Graphics.wav' -Frequency 660 -DurationMilliseconds 140
 New-SmileTone -RelativePath 'games\Snake\Assets\Eat.wav' -Frequency 880 -DurationMilliseconds 90
 New-SmileTone -RelativePath 'games\Snake\Assets\GameOver.wav' -Frequency 180 -DurationMilliseconds 360
@@ -86,3 +173,16 @@ New-SmileTone -RelativePath 'games\StarSquadron\Assets\Dive.wav' -Frequency 300 
 New-SmileTone -RelativePath 'games\StarSquadron\Assets\StageClear.wav' -Frequency 980 -DurationMilliseconds 380
 New-SmileTone -RelativePath 'games\StarSquadron\Assets\Start.wav' -Frequency 600 -DurationMilliseconds 200
 New-SmileTone -RelativePath 'games\StarSquadron\Assets\GameOver.wav' -Frequency 110 -DurationMilliseconds 520
+New-SmileTone -RelativePath 'games\PlatformQuest\Assets\Start.wav' -Frequency 587 -DurationMilliseconds 170
+New-SmileTone -RelativePath 'games\PlatformQuest\Assets\Jump.wav' -Frequency 740 -DurationMilliseconds 90
+New-SmileTone -RelativePath 'games\PlatformQuest\Assets\Coin.wav' -Frequency 988 -DurationMilliseconds 105
+New-SmileTone -RelativePath 'games\PlatformQuest\Assets\Block.wav' -Frequency 330 -DurationMilliseconds 120
+New-SmileTone -RelativePath 'games\PlatformQuest\Assets\Stomp.wav' -Frequency 220 -DurationMilliseconds 150
+New-SmileTone -RelativePath 'games\PlatformQuest\Assets\Hurt.wav' -Frequency 145 -DurationMilliseconds 310
+New-SmileTone -RelativePath 'games\PlatformQuest\Assets\Goal.wav' -Frequency 1175 -DurationMilliseconds 420
+New-SmileTone -RelativePath 'games\PlatformQuest\Assets\GameOver.wav' -Frequency 105 -DurationMilliseconds 520
+
+$platformQuestNotes = @(523.25, 659.25, 783.99, 1046.50, 880.00, 783.99, 659.25, 587.33, 698.46, 880.00, 987.77, 783.99, 659.25, 587.33, 523.25, 0)
+$platformQuestDurations = @(250, 250, 250, 500, 250, 250, 250, 500, 250, 250, 250, 500, 250, 250, 500, 500)
+New-SmileMelody -RelativePath 'games\PlatformQuest\Assets\Background.wav' -Frequencies $platformQuestNotes -DurationsMilliseconds $platformQuestDurations -RepeatCount 2
+Convert-SmileMusicToMp3 -WaveRelativePath 'games\PlatformQuest\Assets\Background.wav' -Mp3RelativePath 'games\PlatformQuest\Assets\Background.mp3'

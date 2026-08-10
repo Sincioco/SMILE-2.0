@@ -90,7 +90,9 @@ $nativePrograms = @(
     'artifacts\games\DungeonStarI\DungeonStarI.exe',
     'artifacts\games\DungeonStarI\DungeonStarI-NoDemo.exe',
     'artifacts\games\DungeonStarII\DungeonStarII.exe',
-    'artifacts\games\DungeonStarII\DungeonStarII-NoDemo.exe'
+    'artifacts\games\DungeonStarII\DungeonStarII-NoDemo.exe',
+    'artifacts\games\PlatformQuest\PlatformQuest.exe',
+    'artifacts\games\PlatformQuest\PlatformQuest-NoDemo.exe'
 )
 foreach ($program in $nativePrograms) {
     Assert-NativeGuiX64 $program
@@ -103,6 +105,7 @@ $assetSets = @{
     BrickBreaker = @('Brick.wav', 'GameOver.wav', 'LevelClear.wav', 'LoseLife.wav', 'Paddle.wav', 'Wall.wav')
     MazeMuncher = @('EnemyEaten.wav', 'GameOver.wav', 'LevelClear.wav', 'Pellet.wav', 'PlayerCaught.wav', 'Power.wav', 'Start.wav')
     StarSquadron = @('Dive.wav', 'EnemyHit.wav', 'EnemyShot.wav', 'GameOver.wav', 'PlayerHit.wav', 'PlayerShot.wav', 'StageClear.wav', 'Start.wav')
+    PlatformQuest = @('Background.wav', 'Block.wav', 'Coin.wav', 'GameOver.wav', 'Goal.wav', 'Hurt.wav', 'Jump.wav', 'Start.wav', 'Stomp.wav')
 }
 foreach ($game in $assetSets.Keys) {
     foreach ($asset in $assetSets[$game]) {
@@ -112,11 +115,13 @@ foreach ($game in $assetSets.Keys) {
 Assert-AssetCopy 'games\FallingBlocks\Assets\Background.mp3' 'artifacts\games\FallingBlocks\Assets\Background.mp3'
 Assert-AssetCopy 'games\DungeonStarI\Assets\Background.mp3' 'artifacts\games\DungeonStarI\Assets\Background.mp3'
 Assert-AssetCopy 'games\MazeMuncher\Assets\Background.mp3' 'artifacts\games\MazeMuncher\Assets\Background.mp3'
+Assert-AssetCopy 'games\PlatformQuest\Assets\Background.mp3' 'artifacts\games\PlatformQuest\Assets\Background.mp3'
 foreach ($map in @('default.map', 'sample-loops.map', 'sample-switchbacks.map')) {
     Assert-AssetCopy "games\DungeonStarI\Maps\$map" "artifacts\games\DungeonStarI\Maps\$map"
 }
 foreach ($map in @('default.map', 'custom.map')) {
     Assert-AssetCopy "games\DungeonStarII\Maps\$map" "artifacts\games\DungeonStarII\Maps\$map"
+    Assert-AssetCopy "games\PlatformQuest\Maps\$map" "artifacts\games\PlatformQuest\Maps\$map"
 }
 Assert-AssetCopy 'games\MazeMuncher\Maps\default.map' 'artifacts\games\MazeMuncher\Maps\default.map'
 Write-Host 'Game asset copies verified.'

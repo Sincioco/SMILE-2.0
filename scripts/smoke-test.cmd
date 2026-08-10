@@ -302,6 +302,37 @@ for %%M in (default.map custom.map) do (
 )
 echo Dungeon Star II demo and no-demo versions compiled successfully.
 
+if not exist "%SMILE_ROOT%\artifacts\games\PlatformQuest" mkdir "%SMILE_ROOT%\artifacts\games\PlatformQuest"
+if not exist "%SMILE_ROOT%\games\PlatformQuest\Assets\Background.mp3" (
+    echo Platform Quest background music source asset is missing.
+    exit /b 1
+)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\validate-platform-quest-maps.ps1"
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\PlatformQuest\Program.smile" -o "%SMILE_ROOT%\artifacts\games\PlatformQuest\PlatformQuest.exe" --keep-temp
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\PlatformQuest\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\PlatformQuest\PlatformQuest-NoDemo.exe"
+if errorlevel 1 exit /b %errorlevel%
+xcopy "%SMILE_ROOT%\games\PlatformQuest\Assets" "%SMILE_ROOT%\artifacts\games\PlatformQuest\Assets" /E /I /Y >nul
+if errorlevel 1 exit /b %errorlevel%
+xcopy "%SMILE_ROOT%\games\PlatformQuest\Maps" "%SMILE_ROOT%\artifacts\games\PlatformQuest\Maps" /E /I /Y >nul
+if errorlevel 1 exit /b %errorlevel%
+for %%A in (Background.mp3 Background.wav Start.wav Jump.wav Coin.wav Block.wav Stomp.wav Hurt.wav Goal.wav GameOver.wav) do (
+    fc /b "%SMILE_ROOT%\games\PlatformQuest\Assets\%%A" "%SMILE_ROOT%\artifacts\games\PlatformQuest\Assets\%%A" >nul
+    if errorlevel 1 (
+        echo Platform Quest output asset %%A does not match its project asset.
+        exit /b 1
+    )
+)
+for %%M in (default.map custom.map) do (
+    fc /b "%SMILE_ROOT%\games\PlatformQuest\Maps\%%M" "%SMILE_ROOT%\artifacts\games\PlatformQuest\Maps\%%M" >nul
+    if errorlevel 1 (
+        echo Platform Quest output map %%M does not match its project asset.
+        exit /b 1
+    )
+)
+echo Platform Quest demo and no-demo versions compiled successfully.
+
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\verify-artifacts.ps1"
 if errorlevel 1 exit /b %errorlevel%
 

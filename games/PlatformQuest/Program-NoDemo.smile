@@ -1,0 +1,996 @@
+' SMILE 2.0 Platform Quest - complete player-focused teaching edition.
+CONST CanvasWidth = 960
+CONST CanvasHeight = 540
+CONST HudHeight = 60
+CONST TileSize = 32
+CONST MapWidth = 120
+CONST MapHeight = 15
+CONST MapCellCount = MapWidth * MapHeight
+CONST MapFileCapacity = 4096
+CONST SubpixelsPerPixel = 1000
+CONST SimulationStep = 8
+CONST MaxCatchUpSteps = 6
+CONST PlayerWidth = 22
+CONST PlayerHeight = 28
+CONST EnemyWidth = 26
+CONST EnemyHeight = 22
+CONST MaximumEnemies = 32
+CONST RunAcceleration = 1500000
+CONST RunFriction = 1800000
+CONST MaximumRunSpeed = 260000
+CONST Gravity = 1450000
+CONST JumpVelocity = -520000
+CONST ShortJumpVelocity = -190000
+CONST MaximumFallSpeed = 720000
+CONST EnemySpeed = 65000
+CONST JumpBufferDuration = 140
+CONST CoyoteDuration = 120
+CONST TitleInputArmDelay = 250
+CONST STATE_TITLE = 0
+CONST STATE_PLAY = 1
+CONST STATE_GAME_OVER = 2
+CONST STATE_VICTORY = 3
+CONST TILE_EMPTY = 0
+CONST TILE_SOLID = 1
+CONST TILE_BREAKABLE = 2
+CONST TILE_BONUS = 3
+CONST TILE_ONE_WAY = 4
+CONST TILE_COIN = 5
+CONST TILE_SPIKE = 6
+CONST TILE_GOAL = 7
+CONST TILE_USED = 8
+
+DIM Tiles[MapCellCount]
+DIM MapFileBytes[MapFileCapacity]
+DIM EnemyActive[MaximumEnemies]
+DIM EnemyXSub[MaximumEnemies]
+DIM EnemyYSub[MaximumEnemies]
+DIM EnemyDirection[MaximumEnemies]
+
+State = STATE_TITLE
+SelectedMap = 0
+Key = KEY_NONE
+Score = 0
+HighScore = 0
+Coins = 0
+Lives = 3
+PlayerXSub = 0
+PlayerYSub = 0
+PlayerVX = 0
+PlayerVY = 0
+PlayerFacing = 1
+OnGround = FALSE
+StartTileX = 3
+StartTileY = 13
+CheckpointXSub = 0
+CheckpointYSub = 0
+CheckpointTile = 0
+CameraX = 0
+EnemyCount = 0
+MapFileLength = 0
+MapValid = FALSE
+MapFallbackUsed = FALSE
+FallbackMessageUntil = 0
+StartCount = 0
+GoalCount = 0
+GoalTileX = 116
+GoalTileY = 13
+JumpBufferUntil = 0
+CoyoteUntil = 0
+InvulnerableUntil = 0
+ParticleX = 0
+ParticleY = 0
+ParticlesUntil = 0
+PreviousPlayerBottom = 0
+LastFrameTime = TIMER()
+FrameTime = LastFrameTime
+Elapsed = 0
+Accumulator = 0
+CatchUpSteps = 0
+TitleAcceptInputAt = 0
+DrainedKey = KEY_NONE
+
+LOAD HighScore FROM "HighScore" DEFAULT 0
+
+FUNCTION CellIndex(XValue, YValue)
+    RETURN YValue * MapWidth + XValue
+END FUNCTION
+
+FUNCTION IsInsideMap(XValue, YValue)
+    RETURN XValue >= 0 AND XValue < MapWidth AND YValue >= 0 AND YValue < MapHeight
+END FUNCTION
+
+FUNCTION TileAt(XValue, YValue)
+    IF XValue < 0 OR XValue >= MapWidth OR YValue >= MapHeight THEN
+        RETURN TILE_SOLID
+    END IF
+    IF YValue < 0 THEN
+        RETURN TILE_EMPTY
+    END IF
+    RETURN Tiles[CellIndex(XValue, YValue)]
+END FUNCTION
+
+FUNCTION IsSolidTile(TileValue)
+    RETURN TileValue = TILE_SOLID OR TileValue = TILE_BREAKABLE OR TileValue = TILE_BONUS OR TileValue = TILE_USED
+END FUNCTION
+
+FUNCTION SupportsActor(TileValue)
+    RETURN IsSolidTile(TileValue) = TRUE OR TileValue = TILE_ONE_WAY
+END FUNCTION
+
+FUNCTION PlayerOverlaps(BX, BTop, BW, BH)
+    OverlapPlayerX = PlayerXSub / SubpixelsPerPixel
+    OverlapPlayerY = PlayerYSub / SubpixelsPerPixel
+    RETURN OverlapPlayerX < BX + BW AND OverlapPlayerX + PlayerWidth > BX AND OverlapPlayerY < BTop + BH AND OverlapPlayerY + PlayerHeight > BTop
+END FUNCTION
+
+FUNCTION HeaderByteMatches(Position, ByteValue)
+    IF Position = 1 THEN
+        RETURN ByteValue = 91
+    ELSE IF Position = 2 THEN
+        RETURN ByteValue = 76
+    ELSE IF Position = 3 THEN
+        RETURN ByteValue = 69
+    ELSE IF Position = 4 THEN
+        RETURN ByteValue = 86
+    ELSE IF Position = 5 THEN
+        RETURN ByteValue = 69
+    ELSE IF Position = 6 THEN
+        RETURN ByteValue = 76
+    ELSE IF Position = 7 THEN
+        RETURN ByteValue = 32
+    ELSE IF Position = 8 THEN
+        RETURN ByteValue = 49
+    ELSE IF Position = 9 THEN
+        RETURN ByteValue = 93
+    END IF
+    RETURN FALSE
+END FUNCTION
+
+SUB ClearLevel()
+    FOR ClearIndex = 0 TO MapCellCount - 1
+        Tiles[ClearIndex] = TILE_EMPTY
+    END FOR
+    FOR ClearEnemy = 0 TO MaximumEnemies - 1
+        EnemyActive[ClearEnemy] = 0
+        EnemyXSub[ClearEnemy] = 0
+        EnemyYSub[ClearEnemy] = 0
+        EnemyDirection[ClearEnemy] = 1
+    END FOR
+    EnemyCount = 0
+    StartCount = 0
+    GoalCount = 0
+    StartTileX = 3
+    StartTileY = 13
+    GoalTileX = 116
+    GoalTileY = 13
+END SUB
+
+SUB SetTile(XValue, YValue, TileValue)
+    IF IsInsideMap(XValue, YValue) = TRUE THEN
+        Tiles[CellIndex(XValue, YValue)] = TileValue
+    END IF
+END SUB
+
+SUB SpawnEnemy(TileX, TileY)
+    IF EnemyCount >= MaximumEnemies THEN
+        MapValid = FALSE
+        RETURN
+    END IF
+    EnemyActive[EnemyCount] = 1
+    EnemyXSub[EnemyCount] = (TileX * TileSize + 3) * SubpixelsPerPixel
+    EnemyYSub[EnemyCount] = (TileY * TileSize + TileSize - EnemyHeight) * SubpixelsPerPixel
+    IF EnemyCount MOD 2 = 0 THEN
+        EnemyDirection[EnemyCount] = -1
+    ELSE
+        EnemyDirection[EnemyCount] = 1
+    END IF
+    EnemyCount = EnemyCount + 1
+END SUB
+
+SUB ParseMapCell(ByteValue, XValue, YValue)
+    ParsedTile = TILE_EMPTY
+    IF ByteValue = 46 THEN
+        ParsedTile = TILE_EMPTY
+    ELSE IF ByteValue = 35 THEN
+        ParsedTile = TILE_SOLID
+    ELSE IF ByteValue = 66 THEN
+        ParsedTile = TILE_BREAKABLE
+    ELSE IF ByteValue = 63 THEN
+        ParsedTile = TILE_BONUS
+    ELSE IF ByteValue = 61 THEN
+        ParsedTile = TILE_ONE_WAY
+    ELSE IF ByteValue = 67 THEN
+        ParsedTile = TILE_COIN
+    ELSE IF ByteValue = 94 THEN
+        ParsedTile = TILE_SPIKE
+    ELSE IF ByteValue = 83 THEN
+        StartCount = StartCount + 1
+        StartTileX = XValue
+        StartTileY = YValue
+    ELSE IF ByteValue = 71 THEN
+        ParsedTile = TILE_GOAL
+        GoalCount = GoalCount + 1
+        GoalTileX = XValue
+        GoalTileY = YValue
+    ELSE IF ByteValue = 69 THEN
+        CALL SpawnEnemy(XValue, YValue)
+    ELSE
+        MapValid = FALSE
+    END IF
+    CALL SetTile(XValue, YValue, ParsedTile)
+END SUB
+
+SUB ValidateCurrentMap()
+    IF StartCount <> 1 OR GoalCount <> 1 THEN
+        MapValid = FALSE
+    END IF
+    IF SupportsActor(TileAt(StartTileX, StartTileY + 1)) = FALSE THEN
+        MapValid = FALSE
+    END IF
+    IF SupportsActor(TileAt(GoalTileX, GoalTileY + 1)) = FALSE THEN
+        MapValid = FALSE
+    END IF
+    FOR ValidateY = 0 TO MapHeight - 1
+        FOR ValidateX = 0 TO MapWidth - 1
+            ValidateTile = TileAt(ValidateX, ValidateY)
+            IF ValidateTile = TILE_SPIKE AND SupportsActor(TileAt(ValidateX, ValidateY + 1)) = FALSE THEN
+                MapValid = FALSE
+            END IF
+        END FOR
+    END FOR
+    FOR ValidateEnemy = 0 TO EnemyCount - 1
+        ValidateEnemyX = EnemyXSub[ValidateEnemy] / SubpixelsPerPixel / TileSize
+        ValidateEnemyY = EnemyYSub[ValidateEnemy] / SubpixelsPerPixel / TileSize
+        IF SupportsActor(TileAt(ValidateEnemyX, ValidateEnemyY + 1)) = FALSE THEN
+            MapValid = FALSE
+        END IF
+    END FOR
+    BottomGap = 0
+    FOR ValidateX = 0 TO MapWidth - 1
+        IF SupportsActor(TileAt(ValidateX, MapHeight - 1)) = TRUE THEN
+            BottomGap = 0
+        ELSE
+            BottomGap = BottomGap + 1
+            IF BottomGap > 3 THEN
+                MapValid = FALSE
+            END IF
+        END IF
+    END FOR
+END SUB
+
+SUB ParseLoadedMap()
+    CALL ClearLevel()
+    MapValid = MapFileLength > 0
+    HeaderFound = FALSE
+    HeaderMatch = 0
+    MapRow = 0
+    MapColumn = 0
+    LineLength = 0
+    CommentLine = FALSE
+    FOR ByteIndex = 0 TO MapFileLength - 1
+        MapByte = MapFileBytes[ByteIndex]
+        IF MapByte = 13 THEN
+            MapByte = 13
+        ELSE IF MapByte = 10 THEN
+            IF CommentLine = FALSE AND LineLength > 0 THEN
+                IF HeaderFound = FALSE THEN
+                    IF HeaderMatch = 9 AND LineLength = 9 THEN
+                        HeaderFound = TRUE
+                    ELSE
+                        MapValid = FALSE
+                    END IF
+                ELSE
+                    IF MapColumn <> MapWidth THEN
+                        MapValid = FALSE
+                    END IF
+                    MapRow = MapRow + 1
+                    MapColumn = 0
+                END IF
+            END IF
+            LineLength = 0
+            CommentLine = FALSE
+        ELSE
+            IF LineLength = 0 AND MapByte = 59 THEN
+                CommentLine = TRUE
+            END IF
+            IF CommentLine = FALSE THEN
+                LineLength = LineLength + 1
+                IF HeaderFound = FALSE THEN
+                    IF HeaderByteMatches(LineLength, MapByte) = TRUE THEN
+                        HeaderMatch = HeaderMatch + 1
+                    ELSE
+                        MapValid = FALSE
+                    END IF
+                ELSE
+                    IF MapRow >= MapHeight OR MapColumn >= MapWidth THEN
+                        MapValid = FALSE
+                    ELSE
+                        CALL ParseMapCell(MapByte, MapColumn, MapRow)
+                    END IF
+                    MapColumn = MapColumn + 1
+                END IF
+            END IF
+        END IF
+    END FOR
+    IF CommentLine = FALSE AND LineLength > 0 THEN
+        IF HeaderFound = FALSE THEN
+            IF HeaderMatch = 9 AND LineLength = 9 THEN
+                HeaderFound = TRUE
+            ELSE
+                MapValid = FALSE
+            END IF
+        ELSE
+            IF MapColumn <> MapWidth THEN
+                MapValid = FALSE
+            END IF
+            MapRow = MapRow + 1
+        END IF
+    END IF
+    IF HeaderFound = FALSE OR MapRow <> MapHeight THEN
+        MapValid = FALSE
+    END IF
+    CALL ValidateCurrentMap()
+END SUB
+
+SUB BuildSafeFallback()
+    CALL ClearLevel()
+    FOR GroundX = 0 TO MapWidth - 1
+        CALL SetTile(GroundX, MapHeight - 1, TILE_SOLID)
+    END FOR
+    StartCount = 1
+    GoalCount = 1
+    StartTileX = 3
+    StartTileY = 13
+    GoalTileX = 116
+    GoalTileY = 13
+    CALL SetTile(GoalTileX, GoalTileY, TILE_GOAL)
+    FOR Feature = 1 TO 10
+        FeatureX = Feature * 10
+        IF Feature MOD 5 = 0 THEN
+            CALL SetTile(FeatureX + 4, 14, TILE_EMPTY)
+            CALL SetTile(FeatureX + 5, 14, TILE_EMPTY)
+            CALL SetTile(FeatureX + 3, 11, TILE_ONE_WAY)
+            CALL SetTile(FeatureX + 4, 11, TILE_ONE_WAY)
+            CALL SetTile(FeatureX + 5, 11, TILE_ONE_WAY)
+            CALL SetTile(FeatureX + 6, 11, TILE_ONE_WAY)
+        ELSE IF Feature MOD 4 = 0 THEN
+            CALL SetTile(FeatureX + 5, 13, TILE_SPIKE)
+        ELSE IF Feature MOD 3 = 0 THEN
+            CALL SetTile(FeatureX + 4, 12, TILE_BREAKABLE)
+            CALL SetTile(FeatureX + 5, 12, TILE_BONUS)
+        ELSE IF Feature MOD 2 = 0 THEN
+            CALL SpawnEnemy(FeatureX + 5, 13)
+        ELSE
+            CALL SetTile(FeatureX + 3, 12, TILE_COIN)
+            CALL SetTile(FeatureX + 5, 11, TILE_COIN)
+            CALL SetTile(FeatureX + 7, 12, TILE_COIN)
+        END IF
+    END FOR
+    MapValid = TRUE
+END SUB
+
+' Random levels choose only known-safe ten-column feature chunks.
+SUB BuildRandomLevel()
+    CALL ClearLevel()
+    FOR GroundX = 0 TO MapWidth - 1
+        CALL SetTile(GroundX, MapHeight - 1, TILE_SOLID)
+    END FOR
+    StartCount = 1
+    GoalCount = 1
+    StartTileX = 3
+    StartTileY = 13
+    GoalTileX = 116
+    GoalTileY = 13
+    CALL SetTile(GoalTileX, GoalTileY, TILE_GOAL)
+    FOR ChunkIndex = 1 TO 10
+        ChunkStart = ChunkIndex * 10
+        RANDOM ChunkPattern FROM 0 TO 5
+        IF ChunkPattern = 0 THEN
+            CALL SetTile(ChunkStart + 3, 12, TILE_COIN)
+            CALL SetTile(ChunkStart + 5, 11, TILE_COIN)
+            CALL SetTile(ChunkStart + 7, 12, TILE_COIN)
+        ELSE IF ChunkPattern = 1 THEN
+            CALL SetTile(ChunkStart + 4, 14, TILE_EMPTY)
+            CALL SetTile(ChunkStart + 5, 14, TILE_EMPTY)
+            CALL SetTile(ChunkStart + 3, 11, TILE_ONE_WAY)
+            CALL SetTile(ChunkStart + 4, 11, TILE_ONE_WAY)
+            CALL SetTile(ChunkStart + 5, 11, TILE_ONE_WAY)
+            CALL SetTile(ChunkStart + 6, 11, TILE_ONE_WAY)
+        ELSE IF ChunkPattern = 2 THEN
+            CALL SetTile(ChunkStart + 4, 13, TILE_SOLID)
+            CALL SetTile(ChunkStart + 5, 12, TILE_BREAKABLE)
+            CALL SetTile(ChunkStart + 6, 12, TILE_BONUS)
+        ELSE IF ChunkPattern = 3 THEN
+            FOR PlatformX = 3 TO 7
+                CALL SetTile(ChunkStart + PlatformX, 10, TILE_ONE_WAY)
+            END FOR
+            CALL SetTile(ChunkStart + 4, 9, TILE_COIN)
+            CALL SetTile(ChunkStart + 6, 9, TILE_COIN)
+        ELSE IF ChunkPattern = 4 THEN
+            CALL SetTile(ChunkStart + 5, 13, TILE_SPIKE)
+            CALL SetTile(ChunkStart + 6, 13, TILE_SPIKE)
+        ELSE
+            CALL SpawnEnemy(ChunkStart + 5, 13)
+            CALL SetTile(ChunkStart + 7, 12, TILE_COIN)
+        END IF
+    END FOR
+    MapValid = TRUE
+    CALL ValidateCurrentMap()
+    IF MapValid = FALSE THEN
+        CALL BuildSafeFallback()
+    END IF
+END SUB
+
+SUB BuildSelectedLevel()
+    MapFallbackUsed = FALSE
+    IF SelectedMap = 0 THEN
+        LOAD TEXT FILE "Maps\default.map" INTO MapFileBytes COUNT MapFileLength
+        CALL ParseLoadedMap()
+    ELSE IF SelectedMap = 1 THEN
+        LOAD TEXT FILE "Maps\custom.map" INTO MapFileBytes COUNT MapFileLength
+        CALL ParseLoadedMap()
+    ELSE
+        CALL BuildRandomLevel()
+        RETURN
+    END IF
+    IF MapValid = FALSE THEN
+        CALL BuildRandomLevel()
+        MapFallbackUsed = TRUE
+        FallbackMessageUntil = TIMER() + 3500
+    END IF
+END SUB
+
+SUB DrainPendingKeys()
+    FOR DrainIndex = 1 TO 64
+        GET KEY DrainedKey
+    END FOR
+END SUB
+
+SUB EnterTitle()
+    State = STATE_TITLE
+    Accumulator = 0
+    Key = KEY_NONE
+    STOP MUSIC
+    STOP SOUND
+    CALL DrainPendingKeys()
+    TitleAcceptInputAt = TIMER() + TitleInputArmDelay
+END SUB
+
+SUB ResetPlayer()
+    PlayerXSub = (StartTileX * TileSize + 5) * SubpixelsPerPixel
+    PlayerYSub = (StartTileY * TileSize + TileSize - PlayerHeight) * SubpixelsPerPixel
+    IF CheckpointXSub > 0 THEN
+        PlayerXSub = CheckpointXSub
+        PlayerYSub = CheckpointYSub
+    END IF
+    PlayerVX = 0
+    PlayerVY = 0
+    OnGround = FALSE
+    CoyoteUntil = 0
+    JumpBufferUntil = 0
+    InvulnerableUntil = TIMER() + 1000
+END SUB
+
+SUB StartMatch()
+    CALL BuildSelectedLevel()
+    Score = 0
+    Coins = 0
+    Lives = 3
+    CameraX = 0
+    CheckpointXSub = 0
+    CheckpointYSub = 0
+    CheckpointTile = StartTileX
+    CALL ResetPlayer()
+    State = STATE_PLAY
+    Accumulator = 0
+    PLAY SOUND "Assets\Start.wav"
+    MUSIC VOLUME 34
+    PLAY MUSIC "Assets\Background.mp3" LOOP
+END SUB
+
+SUB AddScore(Points)
+    Score = Score + Points
+    IF Score > HighScore THEN
+        HighScore = Score
+        SAVE HighScore TO "HighScore"
+    END IF
+END SUB
+
+SUB HitBlock(TileX, TileY)
+    HitTile = TileAt(TileX, TileY)
+    IF HitTile = TILE_BREAKABLE THEN
+        CALL SetTile(TileX, TileY, TILE_EMPTY)
+        CALL AddScore(50)
+        ParticleX = TileX * TileSize + TileSize / 2
+        ParticleY = TileY * TileSize + TileSize / 2
+        ParticlesUntil = TIMER() + 420
+        PLAY SOUND "Assets\Block.wav"
+    ELSE IF HitTile = TILE_BONUS THEN
+        CALL SetTile(TileX, TileY, TILE_USED)
+        Coins = Coins + 1
+        CALL AddScore(100)
+        PLAY SOUND "Assets\Coin.wav"
+    END IF
+END SUB
+
+SUB UpdatePlayerControls()
+    MoveInput = 0
+    IF KEY_HELD(KEY_A) = TRUE OR KEY_HELD(KEY_LEFT) = TRUE THEN
+        MoveInput = MoveInput - 1
+    END IF
+    IF KEY_HELD(KEY_D) = TRUE OR KEY_HELD(KEY_RIGHT) = TRUE THEN
+        MoveInput = MoveInput + 1
+    END IF
+    IF MoveInput < 0 THEN
+        PlayerVX = MAX(-MaximumRunSpeed, PlayerVX - RunAcceleration * SimulationStep / 1000)
+        PlayerFacing = -1
+    ELSE IF MoveInput > 0 THEN
+        PlayerVX = MIN(MaximumRunSpeed, PlayerVX + RunAcceleration * SimulationStep / 1000)
+        PlayerFacing = 1
+    ELSE IF PlayerVX > 0 THEN
+        PlayerVX = MAX(0, PlayerVX - RunFriction * SimulationStep / 1000)
+    ELSE IF PlayerVX < 0 THEN
+        PlayerVX = MIN(0, PlayerVX + RunFriction * SimulationStep / 1000)
+    END IF
+
+    JumpHeld = KEY_HELD(KEY_SPACE) = TRUE OR KEY_HELD(KEY_W) = TRUE OR KEY_HELD(KEY_UP) = TRUE
+    JumpPressed = Key = KEY_SPACE OR Key = KEY_W OR Key = KEY_UP
+    IF JumpPressed = TRUE THEN
+        JumpBufferUntil = TIMER() + JumpBufferDuration
+    END IF
+    IF OnGround = TRUE THEN
+        CoyoteUntil = TIMER() + CoyoteDuration
+    END IF
+    IF JumpBufferUntil >= TIMER() AND CoyoteUntil >= TIMER() THEN
+        PlayerVY = JumpVelocity
+        OnGround = FALSE
+        CoyoteUntil = 0
+        JumpBufferUntil = 0
+        PLAY SOUND "Assets\Jump.wav"
+    END IF
+    IF JumpHeld = FALSE AND PlayerVY < ShortJumpVelocity THEN
+        PlayerVY = ShortJumpVelocity
+    END IF
+END SUB
+
+' Horizontal and vertical collision are resolved separately for predictable tiles.
+SUB MovePlayerHorizontal()
+    PlayerXSub = PlayerXSub + PlayerVX * SimulationStep / 1000
+    PlayerX = PlayerXSub / SubpixelsPerPixel
+    PlayerY = PlayerYSub / SubpixelsPerPixel
+    TopTile = (PlayerY + 2) / TileSize
+    BottomTile = (PlayerY + PlayerHeight - 2) / TileSize
+    IF PlayerVX > 0 THEN
+        CollisionTileX = (PlayerX + PlayerWidth - 1) / TileSize
+        FOR CollisionTileY = TopTile TO BottomTile
+            IF IsSolidTile(TileAt(CollisionTileX, CollisionTileY)) = TRUE THEN
+                PlayerXSub = (CollisionTileX * TileSize - PlayerWidth) * SubpixelsPerPixel
+                PlayerVX = 0
+            END IF
+        END FOR
+    ELSE IF PlayerVX < 0 THEN
+        CollisionTileX = PlayerX / TileSize
+        FOR CollisionTileY = TopTile TO BottomTile
+            IF IsSolidTile(TileAt(CollisionTileX, CollisionTileY)) = TRUE THEN
+                PlayerXSub = ((CollisionTileX + 1) * TileSize) * SubpixelsPerPixel
+                PlayerVX = 0
+            END IF
+        END FOR
+    END IF
+END SUB
+
+' One-way tiles catch only a falling player whose previous feet were above them.
+SUB MovePlayerVertical()
+    PreviousPlayerBottom = PlayerYSub / SubpixelsPerPixel + PlayerHeight
+    PlayerVY = MIN(MaximumFallSpeed, PlayerVY + Gravity * SimulationStep / 1000)
+    PlayerYSub = PlayerYSub + PlayerVY * SimulationStep / 1000
+    PlayerX = PlayerXSub / SubpixelsPerPixel
+    PlayerY = PlayerYSub / SubpixelsPerPixel
+    LeftTile = (PlayerX + 2) / TileSize
+    RightTile = (PlayerX + PlayerWidth - 3) / TileSize
+    OnGround = FALSE
+    IF PlayerVY >= 0 THEN
+        CollisionTileY = (PlayerY + PlayerHeight - 1) / TileSize
+        LandingTop = -1
+        FOR CollisionTileX = LeftTile TO RightTile
+            LandingTile = TileAt(CollisionTileX, CollisionTileY)
+            LandingCandidate = IsSolidTile(LandingTile) = TRUE
+            IF LandingTile = TILE_ONE_WAY AND PreviousPlayerBottom <= CollisionTileY * TileSize THEN
+                LandingCandidate = TRUE
+            END IF
+            IF LandingCandidate = TRUE THEN
+                IF LandingTop < 0 OR CollisionTileY * TileSize < LandingTop THEN
+                    LandingTop = CollisionTileY * TileSize
+                END IF
+            END IF
+        END FOR
+        IF LandingTop >= 0 THEN
+            PlayerYSub = (LandingTop - PlayerHeight) * SubpixelsPerPixel
+            PlayerVY = 0
+            OnGround = TRUE
+            CoyoteUntil = TIMER() + CoyoteDuration
+        END IF
+    ELSE
+        CollisionTileY = PlayerY / TileSize
+        CeilingBottom = -1
+        FOR CollisionTileX = LeftTile TO RightTile
+            CeilingTile = TileAt(CollisionTileX, CollisionTileY)
+            IF IsSolidTile(CeilingTile) = TRUE THEN
+                CeilingBottom = (CollisionTileY + 1) * TileSize
+                CALL HitBlock(CollisionTileX, CollisionTileY)
+            END IF
+        END FOR
+        IF CeilingBottom >= 0 THEN
+            PlayerYSub = CeilingBottom * SubpixelsPerPixel
+            PlayerVY = 0
+        END IF
+    END IF
+    IF PlayerYSub < 0 THEN
+        PlayerYSub = 0
+        PlayerVY = MAX(0, PlayerVY)
+    END IF
+END SUB
+
+SUB UpdateEnemies()
+    FOR EnemyIndex = 0 TO EnemyCount - 1
+        IF EnemyActive[EnemyIndex] = 1 THEN
+            EnemyX = EnemyXSub[EnemyIndex] / SubpixelsPerPixel
+            EnemyY = EnemyYSub[EnemyIndex] / SubpixelsPerPixel
+            EnemyStep = EnemyDirection[EnemyIndex] * EnemySpeed * SimulationStep / 1000
+            CandidateEnemyX = (EnemyXSub[EnemyIndex] + EnemyStep) / SubpixelsPerPixel
+            IF EnemyDirection[EnemyIndex] > 0 THEN
+                EnemyFrontX = CandidateEnemyX + EnemyWidth
+            ELSE
+                EnemyFrontX = CandidateEnemyX - 1
+            END IF
+            EnemyMidTileY = (EnemyY + EnemyHeight / 2) / TileSize
+            EnemyFootTileY = (EnemyY + EnemyHeight + 2) / TileSize
+            EnemyFrontTileX = EnemyFrontX / TileSize
+            IF IsSolidTile(TileAt(EnemyFrontTileX, EnemyMidTileY)) = TRUE OR SupportsActor(TileAt(EnemyFrontTileX, EnemyFootTileY)) = FALSE THEN
+                EnemyDirection[EnemyIndex] = -EnemyDirection[EnemyIndex]
+            ELSE
+                EnemyXSub[EnemyIndex] = EnemyXSub[EnemyIndex] + EnemyStep
+            END IF
+        END IF
+    END FOR
+END SUB
+
+SUB HurtPlayer()
+    Lives = Lives - 1
+    PLAY SOUND "Assets\Hurt.wav"
+    IF Lives <= 0 THEN
+        State = STATE_GAME_OVER
+        STOP MUSIC
+        PLAY SOUND "Assets\GameOver.wav"
+    ELSE
+        CALL ResetPlayer()
+    END IF
+END SUB
+
+SUB CheckEnemiesAndHazards()
+    PlayerX = PlayerXSub / SubpixelsPerPixel
+    PlayerY = PlayerYSub / SubpixelsPerPixel
+    FOR EnemyIndex = 0 TO EnemyCount - 1
+        IF State = STATE_PLAY AND EnemyActive[EnemyIndex] = 1 THEN
+            EnemyX = EnemyXSub[EnemyIndex] / SubpixelsPerPixel
+            EnemyY = EnemyYSub[EnemyIndex] / SubpixelsPerPixel
+            IF PlayerOverlaps(EnemyX, EnemyY, EnemyWidth, EnemyHeight) = TRUE THEN
+                IF PlayerVY > 0 AND PreviousPlayerBottom <= EnemyY + 8 THEN
+                    EnemyActive[EnemyIndex] = 0
+                    PlayerVY = -300000
+                    CALL AddScore(200)
+                    PLAY SOUND "Assets\Stomp.wav"
+                ELSE IF TIMER() >= InvulnerableUntil THEN
+                    CALL HurtPlayer()
+                END IF
+            END IF
+        END IF
+    END FOR
+    LeftTile = MAX(0, PlayerX / TileSize)
+    RightTile = MIN(MapWidth - 1, (PlayerX + PlayerWidth - 1) / TileSize)
+    TopTile = MAX(0, PlayerY / TileSize)
+    BottomTile = MIN(MapHeight - 1, (PlayerY + PlayerHeight - 1) / TileSize)
+    FOR HazardY = TopTile TO BottomTile
+        FOR HazardX = LeftTile TO RightTile
+            IF TileAt(HazardX, HazardY) = TILE_SPIKE AND TIMER() >= InvulnerableUntil THEN
+                CALL HurtPlayer()
+            END IF
+        END FOR
+    END FOR
+    IF PlayerY > MapHeight * TileSize + 40 AND State = STATE_PLAY THEN
+        CALL HurtPlayer()
+    END IF
+END SUB
+
+SUB CollectItemsAndGoal()
+    PlayerX = PlayerXSub / SubpixelsPerPixel
+    PlayerY = PlayerYSub / SubpixelsPerPixel
+    LeftTile = MAX(0, PlayerX / TileSize)
+    RightTile = MIN(MapWidth - 1, (PlayerX + PlayerWidth - 1) / TileSize)
+    TopTile = MAX(0, PlayerY / TileSize)
+    BottomTile = MIN(MapHeight - 1, (PlayerY + PlayerHeight - 1) / TileSize)
+    FOR ItemY = TopTile TO BottomTile
+        FOR ItemX = LeftTile TO RightTile
+            ItemTile = TileAt(ItemX, ItemY)
+            IF ItemTile = TILE_COIN THEN
+                CALL SetTile(ItemX, ItemY, TILE_EMPTY)
+                Coins = Coins + 1
+                CALL AddScore(100)
+                PLAY SOUND "Assets\Coin.wav"
+            ELSE IF ItemTile = TILE_GOAL THEN
+                CALL AddScore(1000 + Lives * 250)
+                State = STATE_VICTORY
+                STOP MUSIC
+                PLAY SOUND "Assets\Goal.wav"
+            END IF
+        END FOR
+    END FOR
+END SUB
+
+SUB UpdateCameraAndCheckpoint()
+    PlayerX = PlayerXSub / SubpixelsPerPixel
+    CameraTarget = PlayerX - CanvasWidth * 40 / 100
+    CameraX = MAX(0, MIN(MapWidth * TileSize - CanvasWidth, CameraTarget))
+    IF OnGround = TRUE THEN
+        CurrentPlayerTile = PlayerX / TileSize
+        IF CurrentPlayerTile >= CheckpointTile + 20 THEN
+            CheckpointTile = CurrentPlayerTile
+            CheckpointXSub = PlayerXSub
+            CheckpointYSub = PlayerYSub
+        END IF
+    END IF
+END SUB
+
+SUB UpdatePlayStep()
+    CALL UpdatePlayerControls()
+    CALL MovePlayerHorizontal()
+    CALL MovePlayerVertical()
+    CALL UpdateEnemies()
+    CALL CheckEnemiesAndHazards()
+    IF State = STATE_PLAY THEN
+        CALL CollectItemsAndGoal()
+        CALL UpdateCameraAndCheckpoint()
+    END IF
+END SUB
+
+SUB DrawBackground()
+    CLEAR RGB(105, 202, 238)
+    FILL RECTANGLE 0, 195, CanvasWidth, 345, RGB(139, 219, 230)
+    CloudShift = (CameraX / 5) MOD 520
+    FOR CloudIndex = -1 TO 2
+        CloudX = CloudIndex * 520 + 170 - CloudShift
+        FILL CIRCLE CloudX, 128, 34, WHITE
+        FILL CIRCLE CloudX + 38, 118, 45, WHITE
+        FILL CIRCLE CloudX + 83, 132, 31, WHITE
+        DRAW ARC CloudX + 38, 132, 62, 180, 180, LIGHT_BLUE
+    END FOR
+    HillShift = (CameraX / 3) MOD 760
+    FOR HillIndex = -1 TO 2
+        HillX = HillIndex * 760 - HillShift
+        FILL QUADRILATERAL HillX, 508, HillX + 210, 255, HillX + 430, 508, HillX + 210, 450, RGB(72, 158, 120)
+        FILL QUADRILATERAL HillX + 300, 508, HillX + 510, 310, HillX + 720, 508, HillX + 510, 455, RGB(58, 137, 110)
+    END FOR
+END SUB
+
+SUB DrawTile(TileX, TileY, TileValue)
+    ScreenX = TileX * TileSize - CameraX
+    ScreenY = HudHeight + TileY * TileSize
+    IF TileValue = TILE_SOLID THEN
+        FILL RECTANGLE ScreenX, ScreenY, TileSize, TileSize, RGB(66, 92, 112)
+        DRAW RECTANGLE ScreenX, ScreenY, TileSize, TileSize, RGB(126, 175, 178)
+        DRAW LINE ScreenX + 4, ScreenY + 7, ScreenX + 27, ScreenY + 7, LIGHT_GRAY
+    ELSE IF TileValue = TILE_BREAKABLE THEN
+        FILL ROUNDED RECTANGLE ScreenX + 1, ScreenY + 1, 30, 30, 5, RGB(193, 106, 62)
+        DRAW LINE ScreenX + 4, ScreenY + 16, ScreenX + 28, ScreenY + 16, RGB(255, 188, 104)
+        DRAW RECTANGLE ScreenX + 1, ScreenY + 1, 30, 30, RGB(98, 54, 54)
+    ELSE IF TileValue = TILE_BONUS THEN
+        FILL ROUNDED RECTANGLE ScreenX + 1, ScreenY + 1, 30, 30, 7, RGB(248, 185, 64)
+        DRAW CIRCLE ScreenX + 16, ScreenY + 16, 8, WHITE
+        DRAW ARC ScreenX + 16, ScreenY + 16, 5, 200, 220, RGB(90, 55, 80)
+    ELSE IF TileValue = TILE_USED THEN
+        FILL ROUNDED RECTANGLE ScreenX + 1, ScreenY + 1, 30, 30, 5, RGB(120, 105, 95)
+        DRAW RECTANGLE ScreenX + 5, ScreenY + 5, 22, 22, RGB(175, 155, 125)
+    ELSE IF TileValue = TILE_ONE_WAY THEN
+        FILL ROUNDED RECTANGLE ScreenX, ScreenY + 8, TileSize, 10, 4, RGB(74, 75, 145)
+        DRAW LINE ScreenX + 3, ScreenY + 10, ScreenX + 29, ScreenY + 10, LIGHT_BLUE
+    ELSE IF TileValue = TILE_COIN THEN
+        CoinRadius = 7 + (TIMER() / 160) MOD 3
+        FILL CIRCLE ScreenX + 16, ScreenY + 16, CoinRadius, RGB(255, 212, 54)
+        DRAW ARC ScreenX + 16, ScreenY + 16, CoinRadius - 2, 0, 360, WHITE
+    ELSE IF TileValue = TILE_SPIKE THEN
+        FILL QUADRILATERAL ScreenX + 2, ScreenY + 31, ScreenX + 10, ScreenY + 6, ScreenX + 18, ScreenY + 31, ScreenX + 10, ScreenY + 25, RGB(208, 70, 86)
+        FILL QUADRILATERAL ScreenX + 14, ScreenY + 31, ScreenX + 23, ScreenY + 4, ScreenX + 31, ScreenY + 31, ScreenX + 23, ScreenY + 24, RGB(232, 100, 92)
+    ELSE IF TileValue = TILE_GOAL THEN
+        Glow = 90 + (TIMER() / 12) MOD 120
+        FILL ROUNDED RECTANGLE ScreenX + 3, ScreenY - 28, 26, 60, 11, RGB(62, Glow, 190)
+        DRAW ROUNDED RECTANGLE ScreenX + 7, ScreenY - 23, 18, 52, 8, YELLOW
+        DRAW ARC ScreenX + 16, ScreenY, 9, 0, 360, WHITE
+    END IF
+END SUB
+
+SUB DrawExplorer()
+    DrawPlayerX = PlayerXSub / SubpixelsPerPixel - CameraX
+    DrawPlayerY = HudHeight + PlayerYSub / SubpixelsPerPixel
+    ExplorerColor = RGB(24, 160, 166)
+    IF TIMER() < InvulnerableUntil AND (TIMER() / 90) MOD 2 = 0 THEN
+        ExplorerColor = WHITE
+    END IF
+    FILL ROUNDED RECTANGLE DrawPlayerX + 3, DrawPlayerY + 7, 17, 21, 6, ExplorerColor
+    FILL CIRCLE DrawPlayerX + 11, DrawPlayerY + 7, 8, RGB(238, 184, 132)
+    FILL ROUNDED RECTANGLE DrawPlayerX, DrawPlayerY + 1, 22, 7, 3, RGB(80, 54, 112)
+    DRAW LINE DrawPlayerX + 6, DrawPlayerY + 8, DrawPlayerX + 17, DrawPlayerY + 8, LIGHT_BLUE
+    IF PlayerFacing > 0 THEN
+        FILL CIRCLE DrawPlayerX + 15, DrawPlayerY + 6, 2, WHITE
+    ELSE
+        FILL CIRCLE DrawPlayerX + 7, DrawPlayerY + 6, 2, WHITE
+    END IF
+END SUB
+
+SUB DrawEnemies()
+    FOR EnemyIndex = 0 TO EnemyCount - 1
+        IF EnemyActive[EnemyIndex] = 1 THEN
+            DrawEnemyX = EnemyXSub[EnemyIndex] / SubpixelsPerPixel - CameraX
+            DrawEnemyY = HudHeight + EnemyYSub[EnemyIndex] / SubpixelsPerPixel
+            IF DrawEnemyX > -EnemyWidth AND DrawEnemyX < CanvasWidth THEN
+                FILL ROUNDED RECTANGLE DrawEnemyX, DrawEnemyY + 5, EnemyWidth, EnemyHeight - 5, 9, RGB(174, 72, 168)
+                DRAW ARC DrawEnemyX + EnemyWidth / 2, DrawEnemyY + 13, 12, 180, 180, RGB(246, 136, 210)
+                FILL CIRCLE DrawEnemyX + 8, DrawEnemyY + 10, 3, WHITE
+                FILL CIRCLE DrawEnemyX + 18, DrawEnemyY + 10, 3, WHITE
+            END IF
+        END IF
+    END FOR
+END SUB
+
+SUB DrawParticles()
+    IF TIMER() < ParticlesUntil THEN
+        ParticleAge = 420 - (ParticlesUntil - TIMER())
+        ParticleScreenX = ParticleX - CameraX
+        ParticleScreenY = HudHeight + ParticleY
+        FILL RECTANGLE ParticleScreenX - 13 - ParticleAge / 30, ParticleScreenY - ParticleAge / 18, 7, 7, ORANGE
+        FILL RECTANGLE ParticleScreenX + 7 + ParticleAge / 35, ParticleScreenY - ParticleAge / 20, 7, 7, YELLOW
+        FILL RECTANGLE ParticleScreenX - 10, ParticleScreenY + ParticleAge / 28, 6, 6, RGB(180, 85, 55)
+        FILL RECTANGLE ParticleScreenX + 7, ParticleScreenY + ParticleAge / 32, 6, 6, RGB(220, 120, 62)
+    END IF
+END SUB
+
+' CameraX converts fixed world positions into the visible screen coordinates.
+SUB DrawWorld()
+    CALL DrawBackground()
+    FirstTileX = MAX(0, CameraX / TileSize - 1)
+    LastTileX = MIN(MapWidth - 1, (CameraX + CanvasWidth) / TileSize + 1)
+    FOR DrawY = 0 TO MapHeight - 1
+        FOR DrawX = FirstTileX TO LastTileX
+            DrawValue = TileAt(DrawX, DrawY)
+            IF DrawValue <> TILE_EMPTY THEN
+                CALL DrawTile(DrawX, DrawY, DrawValue)
+            END IF
+        END FOR
+    END FOR
+    CALL DrawEnemies()
+    CALL DrawExplorer()
+    CALL DrawParticles()
+    FILL RECTANGLE 0, 0, CanvasWidth, HudHeight, RGB(18, 32, 52)
+    DRAW TEXT "SCORE" AT 22, 9 SIZE 14 COLOR LIGHT_GRAY
+    DRAW NUMBER Score AT 22, 27 SIZE 24 COLOR YELLOW
+    DRAW TEXT "COINS" AT 210, 9 SIZE 14 COLOR LIGHT_GRAY
+    DRAW NUMBER Coins AT 210, 27 SIZE 24 COLOR ORANGE
+    DRAW TEXT "LIVES" AT 400, 9 SIZE 14 COLOR LIGHT_GRAY
+    DRAW NUMBER Lives AT 400, 27 SIZE 24 COLOR WHITE
+    DRAW TEXT "HIGH" AT 575, 9 SIZE 14 COLOR LIGHT_GRAY
+    DRAW NUMBER HighScore AT 575, 27 SIZE 24 COLOR CYAN
+    DRAW TEXT "PLATFORM QUEST" AT 755, 17 SIZE 24 COLOR LIGHT_GREEN
+    IF MapFallbackUsed = TRUE AND TIMER() < FallbackMessageUntil THEN
+        FILL ROUNDED RECTANGLE 290, 72, 380, 35, 8, RGB(30, 35, 60)
+        DRAW TEXT "MAP INVALID - SAFE RANDOM LEVEL" AT 480, 80 SIZE 16 COLOR YELLOW CENTERED
+    END IF
+END SUB
+
+SUB DrawTitle()
+    CLEAR RGB(31, 83, 128)
+    FILL RECTANGLE 0, 330, CanvasWidth, 210, RGB(48, 132, 106)
+    FILL QUADRILATERAL 0, 330, 210, 170, 420, 330, 210, 300, RGB(66, 155, 130)
+    FILL QUADRILATERAL 430, 330, 670, 135, 960, 330, 690, 300, RGB(55, 142, 120)
+    DRAW ARC 480, 185, 94, 200, 140, RGB(255, 214, 74)
+    DRAW TEXT "PLATFORM QUEST" AT 480, 55 SIZE 52 COLOR WHITE CENTERED
+    DRAW TEXT "AN ORIGINAL SIDE-SCROLLING ADVENTURE" AT 480, 118 SIZE 17 COLOR LIGHT_BLUE CENTERED
+    FILL ROUNDED RECTANGLE 285, 175, 390, 245, 18, RGB(17, 34, 58)
+    DRAW TEXT "CHOOSE A LEVEL" AT 480, 195 SIZE 20 COLOR YELLOW CENTERED
+    IF SelectedMap = 0 THEN
+        DRAW TEXT ">  DEFAULT.MAP  <" AT 480, 245 SIZE 25 COLOR CYAN CENTERED
+    ELSE
+        DRAW TEXT "DEFAULT.MAP" AT 480, 245 SIZE 22 COLOR LIGHT_GRAY CENTERED
+    END IF
+    IF SelectedMap = 1 THEN
+        DRAW TEXT ">  CUSTOM.MAP  <" AT 480, 290 SIZE 25 COLOR CYAN CENTERED
+    ELSE
+        DRAW TEXT "CUSTOM.MAP" AT 480, 290 SIZE 22 COLOR LIGHT_GRAY CENTERED
+    END IF
+    IF SelectedMap = 2 THEN
+        DRAW TEXT ">  RANDOM LEVEL  <" AT 480, 335 SIZE 25 COLOR CYAN CENTERED
+    ELSE
+        DRAW TEXT "RANDOM LEVEL" AT 480, 335 SIZE 22 COLOR LIGHT_GRAY CENTERED
+    END IF
+    DRAW TEXT "UP / DOWN TO SELECT    ENTER OR SPACE TO START" AT 480, 375 SIZE 15 COLOR WHITE CENTERED
+    DRAW TEXT "A / D OR ARROWS RUN    W / UP / SPACE JUMP" AT 480, 450 SIZE 16 COLOR WHITE CENTERED
+    DRAW TEXT "ESCAPE EXITS    ALT+ENTER FULL SCREEN" AT 480, 482 SIZE 14 COLOR LIGHT_GRAY CENTERED
+    DRAW TEXT "HIGH SCORE" AT 410, 510 SIZE 14 COLOR LIGHT_GRAY
+    DRAW NUMBER HighScore AT 535, 503 SIZE 24 COLOR YELLOW
+END SUB
+
+SUB DrawTerminal()
+    FILL ROUNDED RECTANGLE 210, 145, 540, 260, 22, RGB(17, 27, 48)
+    IF State = STATE_VICTORY THEN
+        DRAW ROUNDED RECTANGLE 210, 145, 540, 260, 22, YELLOW
+        DRAW TEXT "GATE REACHED!" AT 480, 185 SIZE 42 COLOR YELLOW CENTERED
+        DRAW TEXT "THE EXPEDITION IS COMPLETE" AT 480, 240 SIZE 18 COLOR LIGHT_GREEN CENTERED
+    ELSE
+        DRAW ROUNDED RECTANGLE 210, 145, 540, 260, 22, RED
+        DRAW TEXT "EXPEDITION OVER" AT 480, 185 SIZE 40 COLOR RED CENTERED
+        DRAW TEXT "TRY A NEW ROUTE" AT 480, 240 SIZE 18 COLOR LIGHT_BLUE CENTERED
+    END IF
+    DRAW TEXT "SCORE" AT 405, 278 SIZE 17 COLOR LIGHT_GRAY
+    DRAW NUMBER Score AT 520, 269 SIZE 30 COLOR WHITE
+    DRAW TEXT "ENTER OR SPACE TO RETRY" AT 480, 335 SIZE 20 COLOR WHITE CENTERED
+    DRAW TEXT "ESCAPE TO TITLE" AT 480, 372 SIZE 16 COLOR LIGHT_GRAY CENTERED
+END SUB
+
+GAME WINDOW "SMILE 2.0 Platform Quest"
+
+CALL EnterTitle()
+
+DO
+    FrameTime = TIMER()
+    Elapsed = MAX(0, MIN(50, FrameTime - LastFrameTime))
+    LastFrameTime = FrameTime
+    GET KEY Key
+
+    IF State = STATE_TITLE THEN
+        IF Key <> KEY_NONE AND FrameTime >= TitleAcceptInputAt THEN
+            IF Key = KEY_UP OR Key = KEY_W THEN
+                SelectedMap = (SelectedMap + 2) MOD 3
+            ELSE IF Key = KEY_DOWN OR Key = KEY_S THEN
+                SelectedMap = (SelectedMap + 1) MOD 3
+            ELSE IF Key = KEY_ENTER OR Key = KEY_SPACE THEN
+                CALL StartMatch()
+            ELSE IF Key = KEY_ESCAPE THEN
+                END PROGRAM
+            END IF
+        END IF
+    ELSE IF State = STATE_PLAY THEN
+        IF Key = KEY_ESCAPE THEN
+            CALL EnterTitle()
+        ELSE
+            Accumulator = MIN(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
+            CatchUpSteps = 0
+            DO
+                IF Accumulator >= SimulationStep AND State = STATE_PLAY THEN
+                    CALL UpdatePlayStep()
+                    Accumulator = Accumulator - SimulationStep
+                    CatchUpSteps = CatchUpSteps + 1
+                END IF
+            LOOP UNTIL Accumulator < SimulationStep OR CatchUpSteps >= MaxCatchUpSteps OR State <> STATE_PLAY
+        END IF
+    ELSE
+        IF Key = KEY_ENTER OR Key = KEY_SPACE THEN
+            CALL StartMatch()
+        ELSE IF Key = KEY_ESCAPE THEN
+            CALL EnterTitle()
+        END IF
+    END IF
+
+    IF State = STATE_TITLE THEN
+        CALL DrawTitle()
+    ELSE
+        CALL DrawWorld()
+        IF State = STATE_GAME_OVER OR State = STATE_VICTORY THEN
+            CALL DrawTerminal()
+        END IF
+    END IF
+
+    SHOW SCREEN
+LOOP UNTIL GAME_CLOSED() = TRUE
+
+STOP SOUND
+STOP MUSIC
+END PROGRAM
