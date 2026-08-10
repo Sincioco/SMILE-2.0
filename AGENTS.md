@@ -59,7 +59,7 @@ When SMILE needs to evolve:
 
 ## Games prove the language
 
-Snake, Falling Blocks, Paddle Ball, Brick Breaker, Dungeon Star I, Dungeon Star II, Maze Muncher, and Star Squadron must be implemented in `.smile` source.
+Snake, Falling Blocks, Paddle Ball, Brick Breaker, Dungeon Star I, Dungeon Star II, Maze Muncher, Star Squadron, Platform Quest, and Sky Hopper must be implemented in `.smile` source.
 
 The native runtime may provide only generic services:
 

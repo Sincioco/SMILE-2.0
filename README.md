@@ -1,6 +1,6 @@
 # SMILE 2.0
 
-SMILE 2.0 is a small, structured BASIC-style language that compiles directly to native Windows x64 executables. It includes a MASM-based native compiler, a Win32 game runtime, Visual Studio 2026 language and project support, console examples, and eight complete games written in SMILE.
+SMILE 2.0 is a small, structured BASIC-style language that compiles directly to native Windows x64 executables. It includes a MASM-based native compiler, a Win32 game runtime, Visual Studio 2026 language and project support, console examples, and ten complete games written in SMILE.
 
 The repository has one language authority: `src\Smile.Language`. The command-line compiler and Visual Studio extension use the same lexer, parser, syntax model, diagnostics, symbols, types, and semantic model. Game rules remain in `.smile` source; the C runtime provides only generic Windows graphics, input, sound, timing, and storage services.
 
@@ -28,6 +28,8 @@ Attract demos always return directly to the title screen when their run ends or 
 - `games\DungeonStarII` — an original continuous fixed-point raycasting walkaround with editable room-and-corridor maps, DDA projection, colorful stable wall materials, rising doors, collision and wall sliding, random generation, and demo/no-demo teaching sources.
 - `games\MazeMuncher` — an original neon maze chase with pellets, power mode, four geometric enemies, wrap tunnels, levels, a persistent high score, demo and no-demo teaching sources, and an attract demo.
 - `games\StarSquadron` — an original full-width fixed-screen space shooter with a multi-speed starfield, formation enemies, diving attacks, escalating stages, demo and no-demo teaching sources, and a persistent high score.
+- `games\PlatformQuest` — an original side-scrolling platform adventure with fixed-step run/jump physics, tile collision, enemies, blocks, coins, hazards, a camera, editable 120-by-15 maps, safe random chunks, and demo/no-demo teaching sources.
+- `games\SkyHopper` — an original one-button obstacle-flight game with fixed-step flap/gravity physics, recycled purple-and-gold sky gates, safe procedural gaps, increasing difficulty, and demo/no-demo teaching sources.
 
 All games use a logical 960-by-540 canvas. A 16:9 output such as 1920-by-1080 fills the complete screen without letterboxing; other aspect ratios use centered letterboxing to preserve geometry. Alt+Enter toggles borderless full screen.
 
@@ -66,7 +68,7 @@ Run the complete noninteractive regression and artifact verification suite with:
 scripts\smoke-test.cmd
 ```
 
-The smoke suite builds the solution, runs console examples, checks invalid-program diagnostics, exercises save/reload and corrupt-value fallback, validates the supplied Dungeon Star I and Dungeon Star II maps, compiles the required graphics text sample and both teaching variants of all eight games, copies and hashes their assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Graphical gameplay and audible playback remain hands-on acceptance steps.
+The smoke suite builds the solution, runs console examples, checks invalid-program diagnostics, exercises save/reload and corrupt-value fallback, validates the supplied Dungeon Star I, Dungeon Star II, and Platform Quest maps, compiles the required graphics text sample and both teaching variants of all ten games, copies and hashes their assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Graphical gameplay and audible playback remain hands-on acceptance steps.
 
 ## Compile loose files
 
@@ -78,7 +80,7 @@ artifacts\compiler\smilec.exe examples\GraphicsBasics.smile -o artifacts\games\G
 artifacts\compiler\smilec.exe games\Snake\Program.smile -o artifacts\games\Snake\Snake.exe
 ```
 
-Use `--keep-temp` to retain generated MASM assembly and object files under `artifacts\temp`. Copy declared asset trees beside a loose-file executable before running it; Dungeon Star I needs both its `Assets` and editable `Maps` directories, while Dungeon Star II needs its editable `Maps` directory.
+Use `--keep-temp` to retain generated MASM assembly and object files under `artifacts\temp`. Copy declared asset trees beside a loose-file executable before running it; Dungeon Star I and Platform Quest need both their `Assets` and editable `Maps` directories, while Dungeon Star II needs its editable `Maps` directory.
 
 ## Graphics backends and frame pacing
 
@@ -122,6 +124,8 @@ artifacts\games\DungeonStarI\DungeonStarI.exe
 artifacts\games\DungeonStarII\DungeonStarII.exe
 artifacts\games\MazeMuncher\MazeMuncher.exe
 artifacts\games\StarSquadron\StarSquadron.exe
+artifacts\games\PlatformQuest\PlatformQuest.exe
+artifacts\games\SkyHopper\SkyHopper.exe
 ```
 
 The executables are self-contained native game programs with respect to SMILE: neither `smilec.exe` nor Visual Studio is needed to run them. They use normal Windows system libraries; a music-bearing executable also uses the Microsoft Visual C++ runtime installed by Visual Studio or the supported Visual C++ Redistributable.
@@ -177,4 +181,4 @@ Arc outlines use `DRAW ARC CenterX, CenterY, Radius, StartAngle, SweepAngle, Col
 
 ## Asset provenance
 
-All committed WAV files are original deterministic tones generated by `scripts\generate-sounds.ps1`. `games\FallingBlocks\Assets\Background.mp3` and `games\DungeonStarI\Assets\Background.mp3` are the exact music files supplied by the repository owner for their milestones. The games use runtime-drawn geometric art and system fonts. No third-party audio library or MP3 decoder is bundled.
+All committed WAV files are original deterministic tones or melodies generated by `scripts\generate-sounds.ps1`. Platform Quest and Sky Hopper retain their generated `Background.wav` sources and use locally encoded MP3 copies of the same original compositions through the existing MediaPlayer channel. `games\FallingBlocks\Assets\Background.mp3` and `games\DungeonStarI\Assets\Background.mp3` are the exact music files supplied by the repository owner for their milestones. The games use runtime-drawn geometric art and system fonts. No third-party audio library or MP3 decoder is bundled.
