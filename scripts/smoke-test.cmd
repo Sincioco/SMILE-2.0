@@ -333,6 +333,26 @@ for %%M in (default.map custom.map) do (
 )
 echo Platform Quest demo and no-demo versions compiled successfully.
 
+if not exist "%SMILE_ROOT%\artifacts\games\SkyHopper" mkdir "%SMILE_ROOT%\artifacts\games\SkyHopper"
+if not exist "%SMILE_ROOT%\games\SkyHopper\Assets\Background.mp3" (
+    echo Sky Hopper background music source asset is missing.
+    exit /b 1
+)
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\SkyHopper\Program.smile" -o "%SMILE_ROOT%\artifacts\games\SkyHopper\SkyHopper.exe" --keep-temp
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\SkyHopper\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\SkyHopper\SkyHopper-NoDemo.exe"
+if errorlevel 1 exit /b %errorlevel%
+xcopy "%SMILE_ROOT%\games\SkyHopper\Assets" "%SMILE_ROOT%\artifacts\games\SkyHopper\Assets" /E /I /Y >nul
+if errorlevel 1 exit /b %errorlevel%
+for %%A in (Background.mp3 Background.wav Start.wav Flap.wav Score.wav Hit.wav GameOver.wav) do (
+    fc /b "%SMILE_ROOT%\games\SkyHopper\Assets\%%A" "%SMILE_ROOT%\artifacts\games\SkyHopper\Assets\%%A" >nul
+    if errorlevel 1 (
+        echo Sky Hopper output asset %%A does not match its project asset.
+        exit /b 1
+    )
+)
+echo Sky Hopper demo and no-demo versions compiled successfully.
+
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\verify-artifacts.ps1"
 if errorlevel 1 exit /b %errorlevel%
 

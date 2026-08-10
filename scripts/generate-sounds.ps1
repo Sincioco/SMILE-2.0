@@ -186,3 +186,14 @@ $platformQuestNotes = @(523.25, 659.25, 783.99, 1046.50, 880.00, 783.99, 659.25,
 $platformQuestDurations = @(250, 250, 250, 500, 250, 250, 250, 500, 250, 250, 250, 500, 250, 250, 500, 500)
 New-SmileMelody -RelativePath 'games\PlatformQuest\Assets\Background.wav' -Frequencies $platformQuestNotes -DurationsMilliseconds $platformQuestDurations -RepeatCount 2
 Convert-SmileMusicToMp3 -WaveRelativePath 'games\PlatformQuest\Assets\Background.wav' -Mp3RelativePath 'games\PlatformQuest\Assets\Background.mp3'
+
+New-SmileTone -RelativePath 'games\SkyHopper\Assets\Start.wav' -Frequency 660 -DurationMilliseconds 160
+New-SmileTone -RelativePath 'games\SkyHopper\Assets\Flap.wav' -Frequency 830 -DurationMilliseconds 75
+New-SmileTone -RelativePath 'games\SkyHopper\Assets\Score.wav' -Frequency 1110 -DurationMilliseconds 110
+New-SmileTone -RelativePath 'games\SkyHopper\Assets\Hit.wav' -Frequency 175 -DurationMilliseconds 260
+New-SmileTone -RelativePath 'games\SkyHopper\Assets\GameOver.wav' -Frequency 95 -DurationMilliseconds 480
+
+$skyHopperNotes = @(659.25, 783.99, 987.77, 880.00, 783.99, 659.25, 587.33, 659.25, 880.00, 1046.50, 987.77, 783.99, 698.46, 783.99, 659.25, 0)
+$skyHopperDurations = @(250, 250, 500, 250, 250, 500, 250, 250, 250, 500, 250, 250, 250, 250, 500, 500)
+New-SmileMelody -RelativePath 'games\SkyHopper\Assets\Background.wav' -Frequencies $skyHopperNotes -DurationsMilliseconds $skyHopperDurations -RepeatCount 2
+Convert-SmileMusicToMp3 -WaveRelativePath 'games\SkyHopper\Assets\Background.wav' -Mp3RelativePath 'games\SkyHopper\Assets\Background.mp3'

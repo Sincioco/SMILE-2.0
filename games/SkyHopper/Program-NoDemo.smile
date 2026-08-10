@@ -1,0 +1,322 @@
+' SMILE 2.0 Sky Hopper - complete player-focused teaching edition.
+CONST CanvasWidth = 960
+CONST CanvasHeight = 540
+CONST HudHeight = 58
+CONST GroundY = 500
+CONST SubpixelsPerPixel = 1000
+CONST SimulationStep = 8
+CONST MaxCatchUpSteps = 6
+CONST BirdX = 250
+CONST BirdHalfWidth = 13
+CONST BirdHalfHeight = 11
+CONST Gravity = 1150000
+CONST FlapVelocity = -390000
+CONST MaximumFallSpeed = 650000
+CONST GateCount = 5
+CONST GateWidth = 88
+CONST InitialGateSpacing = 300
+CONST InitialGapHeight = 190
+CONST MinimumGapHeight = 150
+CONST BaseGateSpeed = 150000
+CONST MaximumGateSpeed = 250000
+CONST TitleInputArmDelay = 250
+CONST STATE_TITLE = 0
+CONST STATE_PLAY = 1
+CONST STATE_GAME_OVER = 2
+
+DIM GateXSub[GateCount]
+DIM GateGapCenter[GateCount]
+DIM GatePassed[GateCount]
+
+State = STATE_TITLE
+Key = KEY_NONE
+Score = 0
+HighScore = 0
+BirdYSub = 270 * SubpixelsPerPixel
+BirdVelocity = 0
+GateSpeed = BaseGateSpeed
+GapHeight = InitialGapHeight
+LastFrameTime = TIMER()
+FrameTime = LastFrameTime
+Elapsed = 0
+Accumulator = 0
+CatchUpSteps = 0
+TitleAcceptInputAt = 0
+DrainedKey = KEY_NONE
+
+LOAD HighScore FROM "HighScore" DEFAULT 0
+
+SUB DrainPendingKeys()
+    FOR DrainIndex = 1 TO 64
+        GET KEY DrainedKey
+    END FOR
+END SUB
+
+SUB EnterTitle()
+    State = STATE_TITLE
+    Accumulator = 0
+    Key = KEY_NONE
+    STOP MUSIC
+    STOP SOUND
+    CALL DrainPendingKeys()
+    TitleAcceptInputAt = TIMER() + TitleInputArmDelay
+END SUB
+
+SUB SetSafeGap(GateIndex, PreviousCenter)
+    RANDOM GapChange FROM -65 TO 65
+    NewGapCenter = PreviousCenter + GapChange
+    MinimumCenter = HudHeight + GapHeight / 2 + 28
+    MaximumCenter = GroundY - GapHeight / 2 - 28
+    GateGapCenter[GateIndex] = MAX(MinimumCenter, MIN(MaximumCenter, NewGapCenter))
+END SUB
+
+' Gates are initialized with generous spacing and safe vertical transitions.
+SUB ResetGates()
+    PreviousCenter = 270
+    FOR GateIndex = 0 TO GateCount - 1
+        GateXSub[GateIndex] = (720 + GateIndex * InitialGateSpacing) * SubpixelsPerPixel
+        CALL SetSafeGap(GateIndex, PreviousCenter)
+        PreviousCenter = GateGapCenter[GateIndex]
+        GatePassed[GateIndex] = 0
+    END FOR
+END SUB
+
+SUB ResetBird()
+    BirdYSub = 270 * SubpixelsPerPixel
+    BirdVelocity = 0
+END SUB
+
+SUB StartRun()
+    Score = 0
+    GateSpeed = BaseGateSpeed
+    GapHeight = InitialGapHeight
+    CALL ResetBird()
+    CALL ResetGates()
+    State = STATE_PLAY
+    Accumulator = 0
+    PLAY SOUND "Assets\Start.wav"
+    MUSIC VOLUME 30
+    PLAY MUSIC "Assets\Background.mp3" LOOP
+END SUB
+
+SUB AddPoint()
+    Score = Score + 1
+    IF Score > HighScore THEN
+        HighScore = Score
+        SAVE HighScore TO "HighScore"
+    END IF
+    GateSpeed = MIN(MaximumGateSpeed, BaseGateSpeed + Score * 4500)
+    GapHeight = MAX(MinimumGapHeight, InitialGapHeight - Score * 2)
+    PLAY SOUND "Assets\Score.wav"
+END SUB
+
+SUB FlapBird()
+    BirdVelocity = FlapVelocity
+    PLAY SOUND "Assets\Flap.wav"
+END SUB
+
+SUB RecycleGate(GateIndex)
+    RightmostX = 0
+    RightmostCenter = 270
+    FOR SearchGate = 0 TO GateCount - 1
+        SearchX = GateXSub[SearchGate] / SubpixelsPerPixel
+        IF SearchX > RightmostX THEN
+            RightmostX = SearchX
+            RightmostCenter = GateGapCenter[SearchGate]
+        END IF
+    END FOR
+    RANDOM SpacingChange FROM -24 TO 30
+    GateXSub[GateIndex] = (RightmostX + InitialGateSpacing + SpacingChange) * SubpixelsPerPixel
+    CALL SetSafeGap(GateIndex, RightmostCenter)
+    GatePassed[GateIndex] = 0
+END SUB
+
+' Fixed-step gravity keeps flight independent from monitor refresh rate.
+SUB UpdateFlightStep()
+    BirdVelocity = MIN(MaximumFallSpeed, BirdVelocity + Gravity * SimulationStep / 1000)
+    BirdYSub = BirdYSub + BirdVelocity * SimulationStep / 1000
+    FOR GateIndex = 0 TO GateCount - 1
+        GateXSub[GateIndex] = GateXSub[GateIndex] - GateSpeed * SimulationStep / 1000
+        GateX = GateXSub[GateIndex] / SubpixelsPerPixel
+        IF GatePassed[GateIndex] = 0 AND GateX + GateWidth < BirdX THEN
+            GatePassed[GateIndex] = 1
+            CALL AddPoint()
+        END IF
+        IF GateX + GateWidth < -10 THEN
+            CALL RecycleGate(GateIndex)
+        END IF
+    END FOR
+    CALL CheckCollision()
+END SUB
+
+SUB CheckCollision()
+    BirdY = BirdYSub / SubpixelsPerPixel
+    CollisionFound = BirdY - BirdHalfHeight <= HudHeight OR BirdY + BirdHalfHeight >= GroundY
+    FOR GateIndex = 0 TO GateCount - 1
+        GateX = GateXSub[GateIndex] / SubpixelsPerPixel
+        IF BirdX + BirdHalfWidth > GateX AND BirdX - BirdHalfWidth < GateX + GateWidth THEN
+            GapTop = GateGapCenter[GateIndex] - GapHeight / 2
+            GapBottom = GateGapCenter[GateIndex] + GapHeight / 2
+            IF BirdY - BirdHalfHeight < GapTop OR BirdY + BirdHalfHeight > GapBottom THEN
+                CollisionFound = TRUE
+            END IF
+        END IF
+    END FOR
+    IF CollisionFound = TRUE THEN
+        State = STATE_GAME_OVER
+        STOP MUSIC
+        PLAY SOUND "Assets\Hit.wav"
+    END IF
+END SUB
+
+SUB DrawSky()
+    CLEAR RGB(101, 190, 239)
+    FILL RECTANGLE 0, 215, CanvasWidth, GroundY - 215, RGB(146, 214, 235)
+    CloudShift = (TIMER() / 45) MOD 500
+    FOR CloudIndex = -1 TO 2
+        CloudX = CloudIndex * 500 + 150 - CloudShift
+        FILL CIRCLE CloudX, 125, 30, WHITE
+        FILL CIRCLE CloudX + 35, 112, 42, WHITE
+        FILL CIRCLE CloudX + 78, 127, 29, WHITE
+        DRAW ARC CloudX + 37, 130, 58, 180, 180, LIGHT_BLUE
+    END FOR
+    HillShift = (TIMER() / 80) MOD 680
+    FOR HillIndex = -1 TO 2
+        HillX = HillIndex * 680 - HillShift
+        FILL QUADRILATERAL HillX, GroundY, HillX + 180, 315, HillX + 360, GroundY, HillX + 180, 455, RGB(83, 160, 135)
+        FILL QUADRILATERAL HillX + 300, GroundY, HillX + 480, 350, HillX + 660, GroundY, HillX + 480, 465, RGB(68, 145, 128)
+    END FOR
+    FILL RECTANGLE 0, GroundY, CanvasWidth, CanvasHeight - GroundY, RGB(83, 105, 92)
+    DRAW LINE 0, GroundY, CanvasWidth, GroundY, RGB(246, 202, 82)
+END SUB
+
+' Recycled obstacles are original purple sky gates with gold energy edges.
+SUB DrawGate(GateIndex)
+    GateX = GateXSub[GateIndex] / SubpixelsPerPixel
+    IF GateX > -GateWidth AND GateX < CanvasWidth THEN
+        GapTop = GateGapCenter[GateIndex] - GapHeight / 2
+        GapBottom = GateGapCenter[GateIndex] + GapHeight / 2
+        TopHeight = GapTop - HudHeight
+        BottomHeight = GroundY - GapBottom
+        FILL ROUNDED RECTANGLE GateX, HudHeight - 14, GateWidth, TopHeight + 14, 14, RGB(82, 64, 144)
+        FILL ROUNDED RECTANGLE GateX, GapBottom, GateWidth, BottomHeight + 14, 14, RGB(82, 64, 144)
+        DRAW RECTANGLE GateX + 9, HudHeight, GateWidth - 18, MAX(1, TopHeight - 2), RGB(139, 112, 196)
+        DRAW RECTANGLE GateX + 9, GapBottom + 2, GateWidth - 18, MAX(1, BottomHeight - 2), RGB(139, 112, 196)
+        FILL ROUNDED RECTANGLE GateX - 8, GapTop - 15, GateWidth + 16, 18, 7, RGB(228, 177, 67)
+        FILL ROUNDED RECTANGLE GateX - 8, GapBottom - 3, GateWidth + 16, 18, 7, RGB(228, 177, 67)
+        DRAW LINE GateX + 7, GapTop - 8, GateX + GateWidth - 7, GapTop - 8, WHITE
+        DRAW LINE GateX + 7, GapBottom + 6, GateX + GateWidth - 7, GapBottom + 6, WHITE
+    END IF
+END SUB
+
+SUB DrawSkyling()
+    BirdY = BirdYSub / SubpixelsPerPixel
+    WingLift = (TIMER() / 90) MOD 3
+    FILL CIRCLE BirdX, BirdY, 16, RGB(34, 174, 187)
+    FILL QUADRILATERAL BirdX - 8, BirdY + 2, BirdX - 27, BirdY + 10 - WingLift * 5, BirdX - 13, BirdY + 13, BirdX + 1, BirdY + 6, RGB(79, 220, 210)
+    DRAW ARC BirdX - 10, BirdY + 4, 15, 195, 125, WHITE
+    FILL QUADRILATERAL BirdX + 13, BirdY - 3, BirdX + 27, BirdY + 2, BirdX + 13, BirdY + 7, BirdX + 16, BirdY + 2, RGB(246, 180, 62)
+    FILL CIRCLE BirdX + 6, BirdY - 6, 5, WHITE
+    FILL CIRCLE BirdX + 7, BirdY - 6, 2, RGB(26, 39, 63)
+END SUB
+
+SUB DrawPlayfield()
+    CALL DrawSky()
+    FOR GateIndex = 0 TO GateCount - 1
+        CALL DrawGate(GateIndex)
+    END FOR
+    CALL DrawSkyling()
+    FILL RECTANGLE 0, 0, CanvasWidth, HudHeight, RGB(26, 44, 78)
+    DRAW TEXT "SCORE" AT 24, 8 SIZE 14 COLOR LIGHT_GRAY
+    DRAW NUMBER Score AT 24, 26 SIZE 25 COLOR YELLOW
+    DRAW TEXT "HIGH" AT 190, 8 SIZE 14 COLOR LIGHT_GRAY
+    DRAW NUMBER HighScore AT 190, 26 SIZE 25 COLOR CYAN
+    DRAW TEXT "SKY HOPPER" AT 720, 14 SIZE 27 COLOR WHITE
+    DRAW TEXT "SPACE / W / UP TO FLAP" AT 720, 40 SIZE 11 COLOR LIGHT_BLUE
+END SUB
+
+SUB DrawTitle()
+    CALL DrawSky()
+    DRAW TEXT "SKY HOPPER" AT 480, 70 SIZE 58 COLOR WHITE CENTERED
+    DRAW TEXT "AN ORIGINAL ONE-BUTTON SKY ADVENTURE" AT 480, 138 SIZE 18 COLOR LIGHT_BLUE CENTERED
+    FILL CIRCLE 480, 225, 38, RGB(34, 174, 187)
+    FILL QUADRILATERAL 458, 228, 420, 250, 455, 255, 483, 238, RGB(79, 220, 210)
+    DRAW ARC 455, 234, 29, 195, 120, WHITE
+    FILL QUADRILATERAL 512, 217, 545, 228, 512, 239, 520, 228, RGB(246, 180, 62)
+    FILL CIRCLE 495, 210, 8, WHITE
+    FILL CIRCLE 497, 210, 3, RGB(26, 39, 63)
+    FILL ROUNDED RECTANGLE 255, 300, 450, 150, 18, RGB(24, 43, 76)
+    DRAW TEXT "ENTER OR SPACE TO START" AT 480, 325 SIZE 27 COLOR YELLOW CENTERED
+    DRAW TEXT "SPACE / W / UP TO FLAP" AT 480, 373 SIZE 19 COLOR WHITE CENTERED
+    DRAW TEXT "ESCAPE TO EXIT    ALT+ENTER FULL SCREEN" AT 480, 412 SIZE 14 COLOR LIGHT_GRAY CENTERED
+    DRAW TEXT "HIGH SCORE" AT 410, 468 SIZE 15 COLOR LIGHT_GRAY
+    DRAW NUMBER HighScore AT 535, 460 SIZE 27 COLOR CYAN
+END SUB
+
+SUB DrawGameOver()
+    FILL ROUNDED RECTANGLE 220, 145, 520, 250, 22, RGB(23, 31, 58)
+    DRAW ROUNDED RECTANGLE 220, 145, 520, 250, 22, RGB(240, 97, 116)
+    DRAW TEXT "FLIGHT ENDED" AT 480, 182 SIZE 43 COLOR RED CENTERED
+    DRAW TEXT "SCORE" AT 400, 250 SIZE 18 COLOR LIGHT_GRAY
+    DRAW NUMBER Score AT 520, 240 SIZE 34 COLOR YELLOW
+    DRAW TEXT "ENTER OR SPACE TO RETRY" AT 480, 320 SIZE 21 COLOR WHITE CENTERED
+    DRAW TEXT "ESCAPE TO TITLE" AT 480, 360 SIZE 16 COLOR LIGHT_GRAY CENTERED
+END SUB
+
+GAME WINDOW "SMILE 2.0 Sky Hopper"
+
+CALL EnterTitle()
+
+DO
+    FrameTime = TIMER()
+    Elapsed = MAX(0, MIN(50, FrameTime - LastFrameTime))
+    LastFrameTime = FrameTime
+    GET KEY Key
+
+    IF State = STATE_TITLE THEN
+        IF Key <> KEY_NONE AND FrameTime >= TitleAcceptInputAt THEN
+            IF Key = KEY_ENTER OR Key = KEY_SPACE THEN
+                CALL StartRun()
+            ELSE IF Key = KEY_ESCAPE THEN
+                END PROGRAM
+            END IF
+        END IF
+    ELSE IF State = STATE_PLAY THEN
+        IF Key = KEY_ESCAPE THEN
+            CALL EnterTitle()
+        ELSE
+            IF Key = KEY_SPACE OR Key = KEY_W OR Key = KEY_UP THEN
+                CALL FlapBird()
+            END IF
+            Accumulator = MIN(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
+            CatchUpSteps = 0
+            DO
+                IF Accumulator >= SimulationStep AND State = STATE_PLAY THEN
+                    CALL UpdateFlightStep()
+                    Accumulator = Accumulator - SimulationStep
+                    CatchUpSteps = CatchUpSteps + 1
+                END IF
+            LOOP UNTIL Accumulator < SimulationStep OR CatchUpSteps >= MaxCatchUpSteps OR State <> STATE_PLAY
+        END IF
+    ELSE
+        IF Key = KEY_ENTER OR Key = KEY_SPACE THEN
+            CALL StartRun()
+        ELSE IF Key = KEY_ESCAPE THEN
+            CALL EnterTitle()
+        END IF
+    END IF
+
+    IF State = STATE_TITLE THEN
+        CALL DrawTitle()
+    ELSE
+        CALL DrawPlayfield()
+        IF State = STATE_GAME_OVER THEN
+            CALL DrawGameOver()
+        END IF
+    END IF
+    SHOW SCREEN
+LOOP UNTIL GAME_CLOSED() = TRUE
+
+STOP SOUND
+STOP MUSIC
+END PROGRAM
