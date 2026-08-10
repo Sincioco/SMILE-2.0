@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Xml.Linq;
+using EnvDTE;
 using Smile.Language;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Imaging;
@@ -130,7 +131,7 @@ internal sealed class SmileProjectFactory : IVsProjectFactory, IDisposable
     }
 }
 
-internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvider, IPersistFileFormat
+internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvider, IPersistFileFormat, IVsPersistHierarchyItem2
 {
     private const int CommandNotSupported = unchecked((int)0x80040100);
 
@@ -170,6 +171,9 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         pane.Activate();
 
         var sourcePath = Path.GetFullPath(Path.Combine(ProjectDirectory, StartupFile));
+        if (!SaveOpenStartupDocument(sourcePath, pane))
+            return false;
+
         var compilerPath = SmileBuildService.FindCompiler(ProjectDirectory);
         if (!File.Exists(sourcePath))
         {
@@ -200,6 +204,33 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
 
         CopyAssets(Path.GetDirectoryName(outputPath)!);
         pane.OutputStringThreadSafe($"SMILE build succeeded: {outputPath}\r\n");
+        return true;
+    }
+
+    private static bool SaveOpenStartupDocument(string sourcePath, IVsOutputWindowPane pane)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var dte = Package.GetGlobalService(typeof(SDTE)) as DTE;
+        if (dte == null)
+            return true;
+
+        try
+        {
+            foreach (Document document in dte.Documents)
+            {
+                if (!string.Equals(document.FullName, sourcePath, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                document.Save();
+                return true;
+            }
+        }
+        catch (Exception exception)
+        {
+            pane.OutputStringThreadSafe($"Could not save the startup file before building: {exception.Message}\r\n");
+            return false;
+        }
+
         return true;
     }
 
@@ -671,6 +702,51 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     { ppszFilename = ProjectPath; pnFormatIndex = 0; return VSConstants.S_OK; }
     public int GetFormatList(out string ppszFormatList)
     { ppszFormatList = "SMILE Project Files (*.smileproj)\n*.smileproj\n"; return VSConstants.S_OK; }
+
+    public int IsItemDirty(uint itemid, IntPtr punkDocData, out int pfDirty)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        pfDirty = 0;
+        if (Item(itemid)?.Kind != ItemKind.File || punkDocData == IntPtr.Zero)
+            return VSConstants.E_INVALIDARG;
+
+        try
+        {
+            return (Marshal.GetObjectForIUnknown(punkDocData) as IVsPersistDocData)?.IsDocDataDirty(out pfDirty)
+                ?? VSConstants.E_NOINTERFACE;
+        }
+        catch (Exception exception)
+        {
+            return Marshal.GetHRForException(exception);
+        }
+    }
+
+    public int SaveItem(VSSAVEFLAGS dwSave, string pszSilentSaveAsName, uint itemid, IntPtr punkDocData, out int pfCanceled)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        pfCanceled = 0;
+        if (Item(itemid)?.Kind != ItemKind.File || punkDocData == IntPtr.Zero)
+            return VSConstants.E_INVALIDARG;
+
+        try
+        {
+            var persistDocData = Marshal.GetObjectForIUnknown(punkDocData) as IVsPersistDocData;
+            return persistDocData?.SaveDocData(dwSave, out _, out pfCanceled) ?? VSConstants.E_NOINTERFACE;
+        }
+        catch (Exception exception)
+        {
+            return Marshal.GetHRForException(exception);
+        }
+    }
+
+    public int IsItemReloadable(uint itemid, out int pfReloadable)
+    {
+        pfReloadable = 0;
+        return VSConstants.S_OK;
+    }
+
+    public int ReloadItem(uint itemid, uint dwReserved) => VSConstants.E_NOTIMPL;
+    public int IgnoreItemFileChanges(uint itemid, int fIgnore) => VSConstants.S_OK;
 
     private sealed class ProjectItem
     {
