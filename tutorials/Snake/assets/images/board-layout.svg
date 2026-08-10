@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 820" role="img" aria-labelledby="t d">
+<title id="t">Snake board layout</title><desc id="d">A 700 by 480 pixel play field made from a 35 by 24 grid, with a separate side panel.</desc>
+<defs>
+  <marker id="arrowYellow" viewBox="0 0 10 10" markerWidth="8" markerHeight="8" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#ffd21f"/></marker>
+  <marker id="arrowYellowStart" viewBox="0 0 10 10" markerWidth="8" markerHeight="8" refX="1" refY="5" orient="auto"><path d="M10,0 L0,5 L10,10 z" fill="#ffd21f"/></marker>
+</defs>
+<rect x="10" y="10" width="1380" height="800" rx="34" fill="#071321"/>
+<rect x="125" y="125" width="860" height="580" fill="#02070d" stroke="#4b7396" stroke-width="4"/>
+<rect x="1045" y="125" width="280" height="580" rx="26" fill="#122643" stroke="#22c7c7" stroke-width="3"/>
+<line x1="142" y1="82" x2="968" y2="82" stroke="#ffd21f" stroke-width="5" marker-start="url(#arrowYellowStart)" marker-end="url(#arrowYellow)"/>
+<text x="555" y="50" text-anchor="middle" fill="#ffd21f" font-family="Segoe UI, Arial" font-size="29" font-weight="800">FieldWidth = 700 pixels</text>
+<line x1="78" y1="144" x2="78" y2="686" stroke="#ffd21f" stroke-width="5" marker-start="url(#arrowYellowStart)" marker-end="url(#arrowYellow)"/>
+<g transform="translate(47 415) rotate(-90)"><text x="0" y="0" text-anchor="middle" fill="#ffd21f" font-family="Segoe UI, Arial" font-size="27" font-weight="800">FieldHeight = 480 pixels</text></g>
+<text x="555" y="382" text-anchor="middle" fill="#50ed7a" font-family="Segoe UI, Arial" font-size="56" font-weight="900">35 × 24 GAME GRID</text>
+<text x="555" y="438" text-anchor="middle" fill="#aac9e6" font-family="Segoe UI, Arial" font-size="29">Each square is 20 × 20 pixels</text>
+<text x="1185" y="220" text-anchor="middle" fill="#50ed7a" font-family="Segoe UI, Arial" font-size="42" font-weight="900">SIDE PANEL</text>
+<text x="1185" y="302" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="29">Score</text>
+<text x="1185" y="369" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="29">High score</text>
+<text x="1185" y="436" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="29">Controls</text>
+<text x="700" y="775" text-anchor="middle" fill="#67a8ff" font-family="Segoe UI, Arial" font-size="28" font-weight="800">CanvasWidth = 960  |  CanvasHeight = 540</text>
+</svg>

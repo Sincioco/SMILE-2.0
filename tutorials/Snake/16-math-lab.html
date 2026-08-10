@@ -1,0 +1,79 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="Interactive child-friendly exploration of coordinates, speed progression, integer division, and timers." name="description"/>
+<title>Math Lab | SMILE 2.0 Snake Visual Tutorial</title>
+<link href="assets/images/smile-2-logo.png" rel="icon" type="image/png"/>
+<link href="assets/css/tutorial.css" rel="stylesheet"/>
+<script defer="" src="assets/js/tutorial.js"></script>
+</head>
+<body data-topic-id="math" data-topic-total="20">
+<a class="skip-link" href="#main-content">Skip to the lesson</a>
+<div aria-hidden="true" class="nav-scrim"></div>
+<div class="site-shell">
+<aside aria-label="Tutorial topics" class="sidebar">
+<div class="brand-block">
+<a aria-label="Return to tutorial home" href="index.html"><img alt="SMILE 2.0 logo" class="brand-logo" src="assets/images/smile-2-logo.png"/></a>
+<p class="brand-kicker">SMILE 2.0 by Sin</p>
+<p class="brand-title">Snake Visual Tutorial</p>
+</div>
+<nav aria-label="Table of contents" class="nav-area">
+<section class="nav-group"><h2 class="nav-group-title">Start Here</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="home" href="index.html"><span class="nav-number">⌂</span><span>Home</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="ready" href="01-get-ready.html"><span class="nav-number">01</span><span>Get Ready</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="meet" href="02-meet-the-game.html"><span class="nav-number">02</span><span>Meet the Game</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Think Like a Programmer</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="grid" href="03-grid-coordinates.html"><span class="nav-number">03</span><span>Grid &amp; Coordinates</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="memory" href="04-arrays-memory.html"><span class="nav-number">04</span><span>Arrays &amp; Memory</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="loop" href="05-game-loop-states.html"><span class="nav-number">05</span><span>Game Loop &amp; States</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Build Snake</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="cp1" href="06-checkpoint-1-board-plan.html"><span class="nav-number">06</span><span>Checkpoint 1: Board Plan</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp2" href="07-checkpoint-2-game-memory.html"><span class="nav-number">07</span><span>Checkpoint 2: Game Memory</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp3" href="08-checkpoint-3-spawn-food.html"><span class="nav-number">08</span><span>Checkpoint 3: Spawn Food</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp4" href="09-checkpoint-4-starting-snake.html"><span class="nav-number">09</span><span>Checkpoint 4: Starting Snake</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp5" href="10-checkpoint-5-rounds.html"><span class="nav-number">10</span><span>Checkpoint 5: Round Lifecycle</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp6" href="11-checkpoint-6-movement.html"><span class="nav-number">11</span><span>Checkpoint 6: Movement &amp; Rules</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp7" href="12-checkpoint-7-draw-board.html"><span class="nav-number">12</span><span>Checkpoint 7: Draw the Board</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp8" href="13-checkpoint-8-screens.html"><span class="nav-number">13</span><span>Checkpoint 8: Title &amp; Game Over</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp9" href="14-checkpoint-9-main-loop.html"><span class="nav-number">14</span><span>Checkpoint 9: Main Loop</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Master It</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="trace" href="15-trace-and-debug.html"><span class="nav-number">15</span><span>Trace &amp; Debug</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a aria-current="page" class="nav-link active" data-topic-id="math" href="16-math-lab.html"><span class="nav-number">16</span><span>Math Lab</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="syntax" href="17-smile-syntax-guide.html"><span class="nav-number">17</span><span>SMILE Syntax Guide</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="challenges" href="18-challenges.html"><span class="nav-number">18</span><span>Make It Yours</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="source" href="19-complete-source.html"><span class="nav-number">19</span><span>Complete Source</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="finish" href="20-graduation.html"><span class="nav-number">20</span><span>Graduation</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section>
+<div class="sidebar-progress"><span class="progress-label">0 of 20 topics completed</span><div class="progress-track"><div class="progress-fill"></div></div></div>
+</nav>
+</aside>
+<div class="main-column">
+<header class="top-header">
+<button aria-label="Open table of contents" class="mobile-menu-button" data-open-nav="" type="button">☰</button>
+<div class="header-left"><span class="header-course">SMILE 2.0 &mdash; Snake Visual Tutorial</span><p class="header-topic">Math Lab</p></div>
+<div class="header-actions"><a class="header-button" href="index.html">Home</a><a class="header-button" href="19-complete-source.html">Full source</a></div>
+</header>
+<main class="content-wrap" id="main-content">
+<article class="lesson">
+<section class="lesson-hero">
+<p class="eyebrow">Math lab</p>
+<h1>The Mathematics Behind Snake</h1>
+<p class="lead">Game math describes position, time, size, and change. Use the interactive explorers to see the formulas work.</p>
+<div class="topic-meta"><span class="meta-pill">Coordinate conversion</span><span class="meta-pill">Integer division</span><span class="meta-pill">Movement timing</span></div>
+</section>
+<h2>Interactive coordinate explorer</h2>
+<div class="lab-panel" data-coordinate-lab=""><div class="lab-row"><strong>Grid X</strong><input data-x-input="" max="34" min="0" type="range" value="17"/><span class="lab-value">X = <span data-x-value="">17</span></span></div><div class="lab-row"><strong>Grid Y</strong><input data-y-input="" max="23" min="0" type="range" value="12"/><span class="lab-value">Y = <span data-y-value="">12</span></span></div><div class="lab-result">Snake drawing position: Pixel X = <span data-pixel-x="">362</span>, Pixel Y = <span data-pixel-y="">272</span>.</div></div>
+<figure class="figure-card">
+<a class="figure-link" href="assets/images/pixel-formula.svg" rel="noopener" target="_blank" title="Open the high-resolution illustration">
+<img alt="Grid to pixel formula diagram" src="assets/images/pixel-formula.svg"/>
+</a>
+<figcaption>The explorer uses the same FieldX, FieldY, CellSize, and +2 inner margin as DrawBoard. Click the illustration to open its high-resolution version.</figcaption>
+</figure>
+<h2>Interactive speed explorer</h2>
+<div class="lab-panel" data-speed-lab=""><div class="lab-row"><strong>Score</strong><input max="900" min="0" step="10" type="range" value="250"/><span class="lab-value"><span data-score="">250</span> points</span></div><div class="table-wrap"><table><thead><tr><th>Step</th><th>Result</th></tr></thead><tbody><tr><td>Integer band: Score / 50</td><td data-band="">5</td></tr><tr><td>MAX(45, 100 &minus; band &times; 4)</td><td data-delay="">80 milliseconds</td></tr></tbody></table></div></div>
+<figure class="figure-card">
+<a class="figure-link" href="assets/images/speed-chart.svg" rel="noopener" target="_blank" title="Open the high-resolution illustration">
+<img alt="Snake speed progression chart" src="assets/images/speed-chart.svg"/>
+</a>
+<figcaption>The step shape comes from integer division: the delay changes only when the score crosses another multiple of 50. Click the illustration to open its high-resolution version.</figcaption>
+</figure>
+<h2>Scheduling instead of sleeping</h2>
+<p>The game does not pause the whole window. It checks whether <code>TIMER()</code> has reached <code>NextMoveTime</code>.</p>
+<div class="table-wrap"><table><thead><tr><th>Current clock</th><th>NextMoveTime</th><th>Decision</th></tr></thead><tbody><tr><td>6,075</td><td>6,100</td><td>Do not move yet.</td></tr><tr><td>6,105</td><td>6,100</td><td>Move now, then schedule the next time.</td></tr></tbody></table></div>
+<details class="quiz"><summary>At score 49, what is Score / 50 in whole-number math?</summary><p><strong>0.</strong> At score 50 it becomes 1, which starts the next speed band.</p></details>
+<section aria-labelledby="reinforce-title" class="reinforcement-panel">
+<p class="reinforcement-kicker">Repetition builds memory</p>
+<h2 id="reinforce-title">Reinforce what you learned</h2>
+<div class="reinforcement-grid">
+<article><h3>Say it again</h3><p>The speed formula changes in score bands because SMILE division is whole-number division.</p></article>
+<article><h3>Recall it</h3><p>At a score of 49, what is <code>Score / 50</code>?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>0.</strong> At 50 it becomes 1, so the next speed band begins.</p></details></article>
+</div>
+</section><nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="15-trace-and-debug.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Trace &amp; Debug</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="17-smile-syntax-guide.html"><span><small>Next topic</small><strong>SMILE Syntax Guide</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
+</article>
+</main>
+<footer class="site-footer">
+<div class="footer-line">SMILE 2.0 (SinBASIC). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div>
+<div class="footer-line"><a href="https://github.com/Sincioco" rel="noopener" target="_blank">github.com/Sincioco</a> | <a href="https://facebook.com/louiery.sincioco" rel="noopener" target="_blank">facebook.com/louiery.sincioco</a> | <a href="https://linkedin.com/in/louierysincioco" rel="noopener" target="_blank">linkedin.com/in/louierysincioco</a> | <a href="https://youtube.com/@TheSincioco" rel="noopener" target="_blank">youtube.com/@TheSincioco</a> | <a href="https://tiktok.com/@sincioco" rel="noopener" target="_blank">tiktok.com/@sincioco</a></div>
+</footer>
+</div>
+</div>
+</body>
+</html>

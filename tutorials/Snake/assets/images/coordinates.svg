@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 650" role="img" aria-labelledby="t d">
+<title id="t">Grid coordinates</title><desc id="d">X grows to the right and Y grows downward on a game screen.</desc>
+<defs><marker id="a" markerWidth="11" markerHeight="11" refX="9" refY="5.5" orient="auto"><path d="M0,0 L11,5.5 L0,11 z" fill="#5aa6ff"/></marker></defs>
+<rect x="10" y="10" width="980" height="630" rx="30" fill="#071321"/>
+<text x="500" y="65" text-anchor="middle" fill="#50ed7a" font-family="Segoe UI, Arial" font-size="38" font-weight="900">A GAME BOARD IS GRAPH PAPER</text>
+<g stroke="#17304a" stroke-width="2">
+<line x1="140" y1="120" x2="140" y2="540"/><line x1="210" y1="120" x2="210" y2="540"/><line x1="280" y1="120" x2="280" y2="540"/><line x1="350" y1="120" x2="350" y2="540"/><line x1="420" y1="120" x2="420" y2="540"/><line x1="490" y1="120" x2="490" y2="540"/><line x1="560" y1="120" x2="560" y2="540"/><line x1="630" y1="120" x2="630" y2="540"/><line x1="700" y1="120" x2="700" y2="540"/><line x1="770" y1="120" x2="770" y2="540"/><line x1="840" y1="120" x2="840" y2="540"/><line x1="140" y1="120" x2="840" y2="120"/><line x1="140" y1="190" x2="840" y2="190"/><line x1="140" y1="260" x2="840" y2="260"/><line x1="140" y1="330" x2="840" y2="330"/><line x1="140" y1="400" x2="840" y2="400"/><line x1="140" y1="470" x2="840" y2="470"/><line x1="140" y1="540" x2="840" y2="540"/>
+</g>
+<rect x="350" y="260" width="64" height="64" rx="10" fill="#2ed164" stroke="#87f5a7" stroke-width="4"/>
+<circle cx="377" cy="286" r="6" fill="#071321"/><circle cx="396" cy="286" r="6" fill="#071321"/>
+<text x="382" y="345" text-anchor="middle" fill="#50ed7a" font-family="Segoe UI, Arial" font-size="23" font-weight="800">HEAD (3,2)</text>
+<rect x="630" y="400" width="42" height="42" rx="8" fill="#f23f55" stroke="#ff8795" stroke-width="4"/>
+<text x="651" y="466" text-anchor="middle" fill="#ff8c9a" font-family="Segoe UI, Arial" font-size="22" font-weight="800">FOOD (7,4)</text>
+<line x1="140" y1="580" x2="850" y2="580" stroke="#5aa6ff" stroke-width="5" marker-end="url(#a)"/>
+<text x="500" y="620" text-anchor="middle" fill="#90c5ff" font-family="Segoe UI, Arial" font-size="25" font-weight="800">X grows to the right</text>
+<line x1="885" y1="120" x2="885" y2="550" stroke="#5aa6ff" stroke-width="5" marker-end="url(#a)"/>
+<g transform="translate(930 335) rotate(90)"><text x="0" y="0" text-anchor="middle" fill="#90c5ff" font-family="Segoe UI, Arial" font-size="25" font-weight="800">Y grows downward</text></g>
+<text x="130" y="108" text-anchor="end" fill="#a9bed2" font-family="Segoe UI, Arial" font-size="22">(0,0)</text>
+</svg>

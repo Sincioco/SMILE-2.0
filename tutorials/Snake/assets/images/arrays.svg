@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 480" role="img" aria-labelledby="t d">
+<title id="t">Matching SnakeX and SnakeY arrays</title><desc id="d">Five array indices store the X and Y coordinate pairs for the starting snake.</desc>
+<rect x="10" y="10" width="1300" height="460" rx="30" fill="#071321"/>
+<text x="660" y="65" text-anchor="middle" fill="#50ed7a" font-family="Segoe UI, Arial" font-size="38" font-weight="900">TWO ARRAYS TRAVEL TOGETHER</text>
+<text x="660" y="102" text-anchor="middle" fill="#a9c6df" font-family="Segoe UI, Arial" font-size="23">SnakeX[index] and SnakeY[index] describe one body segment.</text>
+
+<g transform="translate(80 145)">
+  <rect width="205" height="238" rx="20" fill="#12375a" stroke="#5aa6ff" stroke-width="4"/>
+  <text x="102" y="42" text-anchor="middle" fill="#9fc4e6" font-family="Segoe UI, Arial" font-size="21" font-weight="800">INDEX 0</text>
+  <rect x="37" y="64" width="131" height="56" rx="12" fill="#2ed164"/>
+  <text x="102" y="101" text-anchor="middle" fill="#06170c" font-family="Consolas, monospace" font-size="25" font-weight="900">X = 17</text>
+  <rect x="37" y="133" width="131" height="56" rx="12" fill="#1e8f4c"/>
+  <text x="102" y="170" text-anchor="middle" fill="#fff" font-family="Consolas, monospace" font-size="25" font-weight="900">Y = 12</text>
+  <text x="102" y="222" text-anchor="middle" fill="#ffd21f" font-family="Segoe UI, Arial" font-size="22" font-weight="900">HEAD</text>
+</g>
+<g transform="translate(325 145)">
+  <rect width="205" height="238" rx="20" fill="#10263f" stroke="#284b68" stroke-width="4"/>
+  <text x="102" y="42" text-anchor="middle" fill="#9fc4e6" font-family="Segoe UI, Arial" font-size="21" font-weight="800">INDEX 1</text>
+  <rect x="37" y="64" width="131" height="56" rx="12" fill="#2ed164"/>
+  <text x="102" y="101" text-anchor="middle" fill="#06170c" font-family="Consolas, monospace" font-size="25" font-weight="900">X = 16</text>
+  <rect x="37" y="133" width="131" height="56" rx="12" fill="#1e8f4c"/>
+  <text x="102" y="170" text-anchor="middle" fill="#fff" font-family="Consolas, monospace" font-size="25" font-weight="900">Y = 12</text>
+  
+</g>
+<g transform="translate(570 145)">
+  <rect width="205" height="238" rx="20" fill="#10263f" stroke="#284b68" stroke-width="4"/>
+  <text x="102" y="42" text-anchor="middle" fill="#9fc4e6" font-family="Segoe UI, Arial" font-size="21" font-weight="800">INDEX 2</text>
+  <rect x="37" y="64" width="131" height="56" rx="12" fill="#2ed164"/>
+  <text x="102" y="101" text-anchor="middle" fill="#06170c" font-family="Consolas, monospace" font-size="25" font-weight="900">X = 15</text>
+  <rect x="37" y="133" width="131" height="56" rx="12" fill="#1e8f4c"/>
+  <text x="102" y="170" text-anchor="middle" fill="#fff" font-family="Consolas, monospace" font-size="25" font-weight="900">Y = 12</text>
+  
+</g>
+<g transform="translate(815 145)">
+  <rect width="205" height="238" rx="20" fill="#10263f" stroke="#284b68" stroke-width="4"/>
+  <text x="102" y="42" text-anchor="middle" fill="#9fc4e6" font-family="Segoe UI, Arial" font-size="21" font-weight="800">INDEX 3</text>
+  <rect x="37" y="64" width="131" height="56" rx="12" fill="#2ed164"/>
+  <text x="102" y="101" text-anchor="middle" fill="#06170c" font-family="Consolas, monospace" font-size="25" font-weight="900">X = 14</text>
+  <rect x="37" y="133" width="131" height="56" rx="12" fill="#1e8f4c"/>
+  <text x="102" y="170" text-anchor="middle" fill="#fff" font-family="Consolas, monospace" font-size="25" font-weight="900">Y = 12</text>
+  
+</g>
+<g transform="translate(1060 145)">
+  <rect width="205" height="238" rx="20" fill="#10263f" stroke="#284b68" stroke-width="4"/>
+  <text x="102" y="42" text-anchor="middle" fill="#9fc4e6" font-family="Segoe UI, Arial" font-size="21" font-weight="800">INDEX 4</text>
+  <rect x="37" y="64" width="131" height="56" rx="12" fill="#2ed164"/>
+  <text x="102" y="101" text-anchor="middle" fill="#06170c" font-family="Consolas, monospace" font-size="25" font-weight="900">X = 13</text>
+  <rect x="37" y="133" width="131" height="56" rx="12" fill="#1e8f4c"/>
+  <text x="102" y="170" text-anchor="middle" fill="#fff" font-family="Consolas, monospace" font-size="25" font-weight="900">Y = 12</text>
+  
+</g>
+<text x="660" y="432" text-anchor="middle" fill="#d7e7f5" font-family="Segoe UI, Arial" font-size="23">Read each vertical pair together: X and Y at the same index belong to the same segment.</text>
+</svg>

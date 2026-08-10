@@ -1,0 +1,102 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="Checkpoint 7: paste the gameplay drawing routine and understand grid-to-pixel rendering." name="description"/>
+<title>Checkpoint 7: Draw the Board | SMILE 2.0 Snake Visual Tutorial</title>
+<link href="assets/images/smile-2-logo.png" rel="icon" type="image/png"/>
+<link href="assets/css/tutorial.css" rel="stylesheet"/>
+<script defer="" src="assets/js/tutorial.js"></script>
+</head>
+<body data-topic-id="cp7" data-topic-total="20">
+<a class="skip-link" href="#main-content">Skip to the lesson</a>
+<div aria-hidden="true" class="nav-scrim"></div>
+<div class="site-shell">
+<aside aria-label="Tutorial topics" class="sidebar">
+<div class="brand-block">
+<a aria-label="Return to tutorial home" href="index.html"><img alt="SMILE 2.0 logo" class="brand-logo" src="assets/images/smile-2-logo.png"/></a>
+<p class="brand-kicker">SMILE 2.0 by Sin</p>
+<p class="brand-title">Snake Visual Tutorial</p>
+</div>
+<nav aria-label="Table of contents" class="nav-area">
+<section class="nav-group"><h2 class="nav-group-title">Start Here</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="home" href="index.html"><span class="nav-number">⌂</span><span>Home</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="ready" href="01-get-ready.html"><span class="nav-number">01</span><span>Get Ready</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="meet" href="02-meet-the-game.html"><span class="nav-number">02</span><span>Meet the Game</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Think Like a Programmer</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="grid" href="03-grid-coordinates.html"><span class="nav-number">03</span><span>Grid &amp; Coordinates</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="memory" href="04-arrays-memory.html"><span class="nav-number">04</span><span>Arrays &amp; Memory</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="loop" href="05-game-loop-states.html"><span class="nav-number">05</span><span>Game Loop &amp; States</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Build Snake</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="cp1" href="06-checkpoint-1-board-plan.html"><span class="nav-number">06</span><span>Checkpoint 1: Board Plan</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp2" href="07-checkpoint-2-game-memory.html"><span class="nav-number">07</span><span>Checkpoint 2: Game Memory</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp3" href="08-checkpoint-3-spawn-food.html"><span class="nav-number">08</span><span>Checkpoint 3: Spawn Food</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp4" href="09-checkpoint-4-starting-snake.html"><span class="nav-number">09</span><span>Checkpoint 4: Starting Snake</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp5" href="10-checkpoint-5-rounds.html"><span class="nav-number">10</span><span>Checkpoint 5: Round Lifecycle</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp6" href="11-checkpoint-6-movement.html"><span class="nav-number">11</span><span>Checkpoint 6: Movement &amp; Rules</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a aria-current="page" class="nav-link active" data-topic-id="cp7" href="12-checkpoint-7-draw-board.html"><span class="nav-number">12</span><span>Checkpoint 7: Draw the Board</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp8" href="13-checkpoint-8-screens.html"><span class="nav-number">13</span><span>Checkpoint 8: Title &amp; Game Over</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp9" href="14-checkpoint-9-main-loop.html"><span class="nav-number">14</span><span>Checkpoint 9: Main Loop</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Master It</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="trace" href="15-trace-and-debug.html"><span class="nav-number">15</span><span>Trace &amp; Debug</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="math" href="16-math-lab.html"><span class="nav-number">16</span><span>Math Lab</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="syntax" href="17-smile-syntax-guide.html"><span class="nav-number">17</span><span>SMILE Syntax Guide</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="challenges" href="18-challenges.html"><span class="nav-number">18</span><span>Make It Yours</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="source" href="19-complete-source.html"><span class="nav-number">19</span><span>Complete Source</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="finish" href="20-graduation.html"><span class="nav-number">20</span><span>Graduation</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section>
+<div class="sidebar-progress"><span class="progress-label">0 of 20 topics completed</span><div class="progress-track"><div class="progress-fill"></div></div></div>
+</nav>
+</aside>
+<div class="main-column">
+<header class="top-header">
+<button aria-label="Open table of contents" class="mobile-menu-button" data-open-nav="" type="button">☰</button>
+<div class="header-left"><span class="header-course">SMILE 2.0 &mdash; Snake Visual Tutorial</span><p class="header-topic">Checkpoint 7: Draw the Board</p></div>
+<div class="header-actions"><a class="header-button" href="index.html">Home</a><a class="header-button" href="19-complete-source.html">Full source</a></div>
+</header>
+<main class="content-wrap" id="main-content">
+<article class="lesson">
+<section class="lesson-hero">
+<p class="eyebrow">Paste checkpoint 7</p>
+<h1>Turn Game Data Into Pictures</h1>
+<p class="lead">Drawing does not change the rules. It shows the player what the current variables mean.</p>
+<div class="topic-meta"><span class="meta-pill">CLEAR</span><span class="meta-pill">Rectangles</span><span class="meta-pill">Text and numbers</span><span class="meta-pill">RGB colors</span></div>
+</section>
+<div class="step-heading"><span class="step-badge">7</span><div><h2>Paste the DrawBoard routine</h2><p>This is the complete gameplay renderer.</p></div></div>
+<div class="code-panel">
+<div class="code-toolbar"><span class="code-label">Checkpoint 7 &mdash; exact official code</span><button class="copy-code" type="button">Copy code</button></div>
+<pre><code class="language-smile" data-source-start="129">SUB DrawBoard()
+    CLEAR RGB(10, 18, 35)
+    FILL RECTANGLE FieldX, FieldY, FieldWidth, FieldHeight, BLACK
+    DRAW RECTANGLE FieldX, FieldY, FieldWidth, FieldHeight, RGB(40, 70, 95)
+
+    FOR I = 0 TO Length - 1
+        IF SnakeX[I] &gt;= 0 AND SnakeX[I] &lt; GridWidth AND SnakeY[I] &gt;= 0 AND SnakeY[I] &lt; GridHeight THEN
+            FILL RECTANGLE FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, RGB(60, 230, 75)
+            DRAW RECTANGLE FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, RGB(20, 105, 35)
+        END IF
+    END FOR
+
+    FILL RECTANGLE FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, RGB(245, 45, 55)
+    DRAW RECTANGLE FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, RGB(120, 15, 25)
+
+    DRAW TEXT "SMILE SNAKE" AT 835, 55 SIZE 27 COLOR LIGHT_GREEN CENTERED
+    DRAW TEXT "SCORE" AT 755, 115 SIZE 20 COLOR LIGHT_GRAY
+    DRAW NUMBER Score AT 755, 142 SIZE 34 COLOR YELLOW
+    DRAW TEXT "HIGH SCORE" AT 755, 205 SIZE 20 COLOR LIGHT_GRAY
+    DRAW NUMBER HighScore AT 755, 232 SIZE 34 COLOR CYAN
+    DRAW TEXT "WASD / ARROWS" AT 835, 330 SIZE 16 COLOR WHITE CENTERED
+    DRAW TEXT "MOVE THE SNAKE" AT 835, 355 SIZE 16 COLOR LIGHT_GRAY CENTERED
+    DRAW TEXT "ALT+ENTER" AT 835, 415 SIZE 16 COLOR WHITE CENTERED
+    DRAW TEXT "FULL SCREEN" AT 835, 440 SIZE 16 COLOR LIGHT_GRAY CENTERED
+    DRAW TEXT "ESCAPE EXITS" AT 835, 490 SIZE 16 COLOR LIGHT_GRAY CENTERED
+END SUB</code></pre>
+</div><figure class="figure-card">
+<a class="figure-link" href="assets/images/snake-gameplay-framed.png" rel="noopener" target="_blank" title="Open the high-resolution illustration">
+<img alt="Snake gameplay screen" src="assets/images/snake-gameplay-framed.png"/>
+</a>
+<figcaption>The source-faithful gameplay illustration shows the field and side panel produced by these commands. Click the illustration to open its high-resolution version.</figcaption>
+</figure>
+<h2>Draw one segment from its grid coordinate</h2>
+<div class="code-panel">
+<div class="code-toolbar"><span class="code-label">The segment position formula</span><button class="copy-code" type="button">Copy code</button></div>
+<pre><code class="language-smile" data-source-start="136">            FILL RECTANGLE FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, RGB(60, 230, 75)</code></pre>
+</div>
+<div class="card-grid"><article class="card accent-green"><h3>Why 16 &times; 16?</h3><p>Each cell is 20 &times; 20. A 16-pixel segment with a 2-pixel margin on every side creates visible gaps.</p></article><article class="card accent-red"><h3>Why food is 14 &times; 14</h3><p>A 3-pixel margin makes the red food slightly smaller than a snake segment.</p></article></div>
+<div class="table-wrap"><table><thead><tr><th>Statement</th><th>Visible result</th><th>Simple example / usage</th></tr></thead><tbody><tr><td><span class="syntax">CLEAR Color</span></td><td>Paint the full logical canvas.</td><td><code>CLEAR RGB(10, 18, 35)</code> <a class="source-line-link" href="19-complete-source.html#source-line-130">line 130</a></td></tr><tr><td><span class="syntax">FILL RECTANGLE ...</span></td><td>Draw a solid rectangle.</td><td><code>FILL RECTANGLE FieldX, FieldY, FieldWidth, FieldHeight, BLACK</code> <a class="source-line-link" href="19-complete-source.html#source-line-131">line 131</a></td></tr><tr><td><span class="syntax">DRAW RECTANGLE ...</span></td><td>Draw only the outline.</td><td><code>DRAW RECTANGLE FieldX, FieldY, FieldWidth, FieldHeight, RGB(40, 70, 95)</code> <a class="source-line-link" href="19-complete-source.html#source-line-132">line 132</a></td></tr><tr><td><span class="syntax">DRAW TEXT ...</span></td><td>Draw literal words.</td><td><code>DRAW TEXT "SCORE" AT 755, 115 SIZE 20 COLOR LIGHT_GRAY</code> <a class="source-line-link" href="19-complete-source.html#source-line-145">line 145</a></td></tr><tr><td><span class="syntax">DRAW NUMBER ...</span></td><td>Draw a changing numeric value.</td><td><code>DRAW NUMBER Score AT 755, 142 SIZE 34 COLOR YELLOW</code> <a class="source-line-link" href="19-complete-source.html#source-line-146">line 146</a></td></tr><tr><td><span class="syntax">CENTERED</span></td><td>Treat the given X as the horizontal center.</td><td><code>DRAW TEXT "SMILE SNAKE" AT 835, 55 SIZE 27 COLOR LIGHT_GREEN CENTERED</code> <a class="source-line-link" href="19-complete-source.html#source-line-144">line 144</a></td></tr><tr><td><span class="syntax">RGB(r,g,b)</span></td><td>Build a color from red, green, and blue amounts from 0 to 255.</td><td><code>RGB(60, 230, 75)</code> <a class="source-line-link" href="19-complete-source.html#source-line-136">line 136</a></td></tr></tbody></table></div>
+<details class="quiz"><summary>Does DrawBoard change the score or snake position?</summary><p><strong>No.</strong> It reads the current data and turns it into a picture. The rules live in update routines such as MoveSnake.</p></details>
+<section aria-labelledby="reinforce-title" class="reinforcement-panel">
+<p class="reinforcement-kicker">Repetition builds memory</p>
+<h2 id="reinforce-title">Reinforce what you learned</h2>
+<div class="reinforcement-grid">
+<article><h3>Say it again</h3><p>Drawing reads game data; it does not change movement, score, or collision rules.</p></article>
+<article><h3>Recall it</h3><p>Which formula turns a segment&rsquo;s grid X into its drawing X?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>FieldX + SnakeX[I] &times; CellSize + 2.</strong> You first met the same math in Grid &amp; Coordinates.</p></details></article>
+</div>
+</section><nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="11-checkpoint-6-movement.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Checkpoint 6: Movement &amp; Rules</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="13-checkpoint-8-screens.html"><span><small>Next topic</small><strong>Checkpoint 8: Title &amp; Game Over</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
+</article>
+</main>
+<footer class="site-footer">
+<div class="footer-line">SMILE 2.0 (SinBASIC). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div>
+<div class="footer-line"><a href="https://github.com/Sincioco" rel="noopener" target="_blank">github.com/Sincioco</a> | <a href="https://facebook.com/louiery.sincioco" rel="noopener" target="_blank">facebook.com/louiery.sincioco</a> | <a href="https://linkedin.com/in/louierysincioco" rel="noopener" target="_blank">linkedin.com/in/louierysincioco</a> | <a href="https://youtube.com/@TheSincioco" rel="noopener" target="_blank">youtube.com/@TheSincioco</a> | <a href="https://tiktok.com/@sincioco" rel="noopener" target="_blank">tiktok.com/@sincioco</a></div>
+</footer>
+</div>
+</div>
+</body>
+</html>

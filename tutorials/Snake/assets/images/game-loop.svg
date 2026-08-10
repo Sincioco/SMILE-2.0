@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1480 650" role="img" aria-labelledby="t d">
+<title id="t">The Snake game loop</title><desc id="d">Input, update, check, draw, and show screen repeat until the game window closes.</desc>
+<defs>
+  <marker id="yellowArrow" viewBox="0 0 10 10" markerWidth="8" markerHeight="8" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#ffd21f"/></marker>
+  <marker id="blueArrow" viewBox="0 0 10 10" markerWidth="8" markerHeight="8" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5aa6ff"/></marker>
+</defs>
+<rect x="10" y="10" width="1460" height="630" rx="32" fill="#071321"/>
+<text x="740" y="70" text-anchor="middle" fill="#50ed7a" font-family="Segoe UI, Arial" font-size="42" font-weight="900">THE MAIN GAME LOOP REPEATS THIS CYCLE</text>
+
+<g transform="translate(55 150)">
+  <rect width="230" height="235" rx="28" fill="#2863d8" stroke="#e5f0fa" stroke-width="3"/>
+  <text x="115" y="72" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="29" font-weight="900">GET KEY</text>
+  <text x="115" y="126" text-anchor="middle" fill="#e7f0fa" font-family="Segoe UI, Arial" font-size="20"><tspan x="115" dy="0">Read player</tspan><tspan x="115" dy="30">input</tspan></text>
+</g>
+<g transform="translate(340 150)">
+  <rect width="230" height="235" rx="28" fill="#168944" stroke="#e5f0fa" stroke-width="3"/>
+  <text x="115" y="72" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="29" font-weight="900">UPDATE</text>
+  <text x="115" y="126" text-anchor="middle" fill="#e7f0fa" font-family="Segoe UI, Arial" font-size="20"><tspan x="115" dy="0">Move when</tspan><tspan x="115" dy="30">time is ready</tspan></text>
+</g>
+<g transform="translate(625 150)">
+  <rect width="230" height="235" rx="28" fill="#bb5507" stroke="#e5f0fa" stroke-width="3"/>
+  <text x="115" y="72" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="29" font-weight="900">CHECK</text>
+  <text x="115" y="126" text-anchor="middle" fill="#e7f0fa" font-family="Segoe UI, Arial" font-size="20"><tspan x="115" dy="0">Walls, body,</tspan><tspan x="115" dy="30">and food</tspan></text>
+</g>
+<g transform="translate(910 150)">
+  <rect width="230" height="235" rx="28" fill="#7b35df" stroke="#e5f0fa" stroke-width="3"/>
+  <text x="115" y="72" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="29" font-weight="900">DRAW</text>
+  <text x="115" y="126" text-anchor="middle" fill="#e7f0fa" font-family="Segoe UI, Arial" font-size="20"><tspan x="115" dy="0">Build the</tspan><tspan x="115" dy="30">next picture</tspan></text>
+</g>
+<g transform="translate(1195 150)">
+  <rect width="230" height="235" rx="28" fill="#bd123c" stroke="#e5f0fa" stroke-width="3"/>
+  <text x="115" y="72" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="29" font-weight="900">SHOW SCREEN</text>
+  <text x="115" y="126" text-anchor="middle" fill="#e7f0fa" font-family="Segoe UI, Arial" font-size="20"><tspan x="115" dy="0">Present one</tspan><tspan x="115" dy="30">complete frame</tspan></text>
+</g>
+<g stroke="#ffd21f" stroke-width="7" fill="none" marker-end="url(#yellowArrow)">
+  <line x1="285" y1="268" x2="330" y2="268"/>
+  <line x1="570" y1="268" x2="615" y2="268"/>
+  <line x1="855" y1="268" x2="900" y2="268"/>
+  <line x1="1140" y1="268" x2="1185" y2="268"/>
+</g>
+<path d="M 1310 408 C 1310 540, 170 540, 170 396" fill="none" stroke="#5aa6ff" stroke-width="7" stroke-linecap="round" marker-end="url(#blueArrow)"/>
+<text x="740" y="595" text-anchor="middle" fill="#80b9ff" font-family="Segoe UI, Arial" font-size="30" font-weight="900">Repeat until the window closes</text>
+</svg>

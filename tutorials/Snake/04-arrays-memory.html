@@ -1,0 +1,79 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="Arrays, indices, variables, Boolean flags, and persistent high-score storage." name="description"/>
+<title>Arrays &amp; Memory | SMILE 2.0 Snake Visual Tutorial</title>
+<link href="assets/images/smile-2-logo.png" rel="icon" type="image/png"/>
+<link href="assets/css/tutorial.css" rel="stylesheet"/>
+<script defer="" src="assets/js/tutorial.js"></script>
+</head>
+<body data-topic-id="memory" data-topic-total="20">
+<a class="skip-link" href="#main-content">Skip to the lesson</a>
+<div aria-hidden="true" class="nav-scrim"></div>
+<div class="site-shell">
+<aside aria-label="Tutorial topics" class="sidebar">
+<div class="brand-block">
+<a aria-label="Return to tutorial home" href="index.html"><img alt="SMILE 2.0 logo" class="brand-logo" src="assets/images/smile-2-logo.png"/></a>
+<p class="brand-kicker">SMILE 2.0 by Sin</p>
+<p class="brand-title">Snake Visual Tutorial</p>
+</div>
+<nav aria-label="Table of contents" class="nav-area">
+<section class="nav-group"><h2 class="nav-group-title">Start Here</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="home" href="index.html"><span class="nav-number">⌂</span><span>Home</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="ready" href="01-get-ready.html"><span class="nav-number">01</span><span>Get Ready</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="meet" href="02-meet-the-game.html"><span class="nav-number">02</span><span>Meet the Game</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Think Like a Programmer</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="grid" href="03-grid-coordinates.html"><span class="nav-number">03</span><span>Grid &amp; Coordinates</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a aria-current="page" class="nav-link active" data-topic-id="memory" href="04-arrays-memory.html"><span class="nav-number">04</span><span>Arrays &amp; Memory</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="loop" href="05-game-loop-states.html"><span class="nav-number">05</span><span>Game Loop &amp; States</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Build Snake</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="cp1" href="06-checkpoint-1-board-plan.html"><span class="nav-number">06</span><span>Checkpoint 1: Board Plan</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp2" href="07-checkpoint-2-game-memory.html"><span class="nav-number">07</span><span>Checkpoint 2: Game Memory</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp3" href="08-checkpoint-3-spawn-food.html"><span class="nav-number">08</span><span>Checkpoint 3: Spawn Food</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp4" href="09-checkpoint-4-starting-snake.html"><span class="nav-number">09</span><span>Checkpoint 4: Starting Snake</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp5" href="10-checkpoint-5-rounds.html"><span class="nav-number">10</span><span>Checkpoint 5: Round Lifecycle</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp6" href="11-checkpoint-6-movement.html"><span class="nav-number">11</span><span>Checkpoint 6: Movement &amp; Rules</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp7" href="12-checkpoint-7-draw-board.html"><span class="nav-number">12</span><span>Checkpoint 7: Draw the Board</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp8" href="13-checkpoint-8-screens.html"><span class="nav-number">13</span><span>Checkpoint 8: Title &amp; Game Over</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp9" href="14-checkpoint-9-main-loop.html"><span class="nav-number">14</span><span>Checkpoint 9: Main Loop</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Master It</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="trace" href="15-trace-and-debug.html"><span class="nav-number">15</span><span>Trace &amp; Debug</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="math" href="16-math-lab.html"><span class="nav-number">16</span><span>Math Lab</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="syntax" href="17-smile-syntax-guide.html"><span class="nav-number">17</span><span>SMILE Syntax Guide</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="challenges" href="18-challenges.html"><span class="nav-number">18</span><span>Make It Yours</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="source" href="19-complete-source.html"><span class="nav-number">19</span><span>Complete Source</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="finish" href="20-graduation.html"><span class="nav-number">20</span><span>Graduation</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section>
+<div class="sidebar-progress"><span class="progress-label">0 of 20 topics completed</span><div class="progress-track"><div class="progress-fill"></div></div></div>
+</nav>
+</aside>
+<div class="main-column">
+<header class="top-header">
+<button aria-label="Open table of contents" class="mobile-menu-button" data-open-nav="" type="button">☰</button>
+<div class="header-left"><span class="header-course">SMILE 2.0 &mdash; Snake Visual Tutorial</span><p class="header-topic">Arrays &amp; Memory</p></div>
+<div class="header-actions"><a class="header-button" href="index.html">Home</a><a class="header-button" href="19-complete-source.html">Full source</a></div>
+</header>
+<main class="content-wrap" id="main-content">
+<article class="lesson">
+<section class="lesson-hero">
+<p class="eyebrow">Think like the computer</p>
+<h1>Arrays &amp; Game Memory</h1>
+<p class="lead">Pictures are only the display. The real game is the information stored in variables and array slots.</p>
+<div class="topic-meta"><span class="meta-pill">SnakeX[]</span><span class="meta-pill">SnakeY[]</span><span class="meta-pill">Booleans</span><span class="meta-pill">HighScore</span></div>
+</section>
+<h2>Store the body as matching coordinate lists</h2>
+<figure class="figure-card">
+<a class="figure-link" href="assets/images/arrays.svg" rel="noopener" target="_blank" title="Open the high-resolution illustration">
+<img alt="Five cards showing the starting SnakeX and SnakeY coordinate pairs" src="assets/images/arrays.svg"/>
+</a>
+<figcaption>Index 0 is the head. The X and Y at the same index always belong together. Click the illustration to open its high-resolution version.</figcaption>
+</figure>
+<p><code>SnakeX[0]</code> and <code>SnakeY[0]</code> describe the head. Index 1 is the next segment, index 2 is the next, and so on. The variable <code>Length</code> tells the program how many slots are active.</p>
+<div class="card-grid">
+<article class="card accent-green"><h3>Array</h3><p>A numbered collection of storage slots. <code>SnakeX[840]</code> reserves slots numbered 0 through 839.</p></article>
+<article class="card accent-blue"><h3>Index</h3><p>The number inside brackets. It selects one slot, such as <code>SnakeY[4]</code>.</p></article>
+</div>
+<h2>Variables remember changing facts</h2>
+<div class="table-wrap"><table><thead><tr><th>Variable</th><th>Question it answers</th></tr></thead><tbody><tr><td><code>Length</code></td><td>How many snake segments are active?</td></tr><tr><td><code>Direction</code></td><td>Which direction is being used for the current move?</td></tr><tr><td><code>NextDirection</code></td><td>Which safe direction did the player request next?</td></tr><tr><td><code>FoodX</code>, <code>FoodY</code></td><td>Which grid square contains food?</td></tr><tr><td><code>Score</code></td><td>How many points has the player earned?</td></tr><tr><td><code>FoodValid</code>, <code>Collision</code></td><td>Are these yes/no facts TRUE or FALSE?</td></tr><tr><td><code>State</code></td><td>Are we on the title, playing, or game-over screen?</td></tr></tbody></table></div>
+<aside class="callout think"><h3>Assignment versus comparison</h3><p>On a normal line, <code>Score = 0</code> means &ldquo;store zero in Score.&rdquo; Inside an <code>IF</code> condition, <code>Score = HighScore</code> asks whether the values are equal. Context tells the equals sign which job it has.</p></aside><figure class="figure-card">
+<a class="figure-link" href="assets/images/storage.svg" rel="noopener" target="_blank" title="Open the high-resolution illustration">
+<img alt="Diagram showing HighScore moving between game memory and persistent storage" src="assets/images/storage.svg"/>
+</a>
+<figcaption>SAVE writes the number for a future run; LOAD restores it or uses DEFAULT 0. Click the illustration to open its high-resolution version.</figcaption>
+</figure>
+<section aria-labelledby="reinforce-title" class="reinforcement-panel">
+<p class="reinforcement-kicker">Repetition builds memory</p>
+<h2 id="reinforce-title">Reinforce what you learned</h2>
+<div class="reinforcement-grid">
+<article><h3>Say it again</h3><p><code>SnakeX[I]</code> and <code>SnakeY[I]</code> are a matching pair: together they locate segment <code>I</code>.</p></article>
+<article><h3>Recall it</h3><p>Which array index always represents the snake&rsquo;s head?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>Index 0.</strong> Checkpoint 4 places the starting head in <code>SnakeX[0]</code> and <code>SnakeY[0]</code>.</p></details></article>
+</div>
+</section><nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="03-grid-coordinates.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Grid &amp; Coordinates</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="05-game-loop-states.html"><span><small>Next topic</small><strong>Game Loop &amp; States</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
+</article>
+</main>
+<footer class="site-footer">
+<div class="footer-line">SMILE 2.0 (SinBASIC). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div>
+<div class="footer-line"><a href="https://github.com/Sincioco" rel="noopener" target="_blank">github.com/Sincioco</a> | <a href="https://facebook.com/louiery.sincioco" rel="noopener" target="_blank">facebook.com/louiery.sincioco</a> | <a href="https://linkedin.com/in/louierysincioco" rel="noopener" target="_blank">linkedin.com/in/louierysincioco</a> | <a href="https://youtube.com/@TheSincioco" rel="noopener" target="_blank">youtube.com/@TheSincioco</a> | <a href="https://tiktok.com/@sincioco" rel="noopener" target="_blank">tiktok.com/@sincioco</a></div>
+</footer>
+</div>
+</div>
+</body>
+</html>

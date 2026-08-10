@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 590" role="img" aria-labelledby="t d">
+<title id="t">Convert a grid coordinate into pixels</title><desc id="d">Field position plus grid coordinate times cell size plus an inner margin gives the drawing pixel.</desc>
+<defs><marker id="a" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#5aa6ff"/></marker></defs>
+<rect x="10" y="10" width="1060" height="570" rx="32" fill="#071321"/>
+<text x="540" y="65" text-anchor="middle" fill="#50ed7a" font-family="Segoe UI, Arial" font-size="38" font-weight="900">TURN A GRID SQUARE INTO A SCREEN POSITION</text>
+<rect x="80" y="125" width="590" height="350" fill="#02070d" stroke="#4d7598" stroke-width="4"/>
+<g stroke="#17324c" stroke-width="2"><line x1="80" y1="125" x2="80" y2="475"/><line x1="150" y1="125" x2="150" y2="475"/><line x1="220" y1="125" x2="220" y2="475"/><line x1="290" y1="125" x2="290" y2="475"/><line x1="360" y1="125" x2="360" y2="475"/><line x1="430" y1="125" x2="430" y2="475"/><line x1="500" y1="125" x2="500" y2="475"/><line x1="570" y1="125" x2="570" y2="475"/><line x1="640" y1="125" x2="640" y2="475"/><line x1="80" y1="125" x2="670" y2="125"/><line x1="80" y1="195" x2="670" y2="195"/><line x1="80" y1="265" x2="670" y2="265"/><line x1="80" y1="335" x2="670" y2="335"/><line x1="80" y1="405" x2="670" y2="405"/><line x1="80" y1="475" x2="670" y2="475"/></g>
+<rect x="432" y="337" width="56" height="56" rx="8" fill="#2ed164" stroke="#8cf5aa" stroke-width="4"/>
+<line x1="80" y1="505" x2="430" y2="505" stroke="#5aa6ff" stroke-width="5" marker-end="url(#a)"/>
+<text x="255" y="542" text-anchor="middle" fill="#9ac9ff" font-family="Segoe UI, Arial" font-size="22" font-weight="800">FieldX + X × CellSize</text>
+<line x1="710" y1="125" x2="710" y2="335" stroke="#5aa6ff" stroke-width="5" marker-end="url(#a)"/>
+<g transform="translate(752 235) rotate(90)"><text x="0" y="0" text-anchor="middle" fill="#9ac9ff" font-family="Segoe UI, Arial" font-size="22" font-weight="800">FieldY + Y × CellSize</text></g>
+<rect x="800" y="170" width="205" height="230" rx="20" fill="#102944" stroke="#2d567b" stroke-width="3"/>
+<text x="902" y="220" text-anchor="middle" fill="#ffd21f" font-family="Segoe UI, Arial" font-size="25" font-weight="900">EXAMPLE</text>
+<text x="902" y="274" text-anchor="middle" fill="#fff" font-family="Consolas, monospace" font-size="21">X = 17</text><text x="902" y="310" text-anchor="middle" fill="#fff" font-family="Consolas, monospace" font-size="21">Y = 12</text><text x="902" y="354" text-anchor="middle" fill="#50ed7a" font-family="Consolas, monospace" font-size="21">Pixel X = 362</text><text x="902" y="390" text-anchor="middle" fill="#50ed7a" font-family="Consolas, monospace" font-size="21">Pixel Y = 272</text>
+<text x="540" y="568" text-anchor="middle" fill="#b8cee2" font-family="Segoe UI, Arial" font-size="20">The final +2 leaves a tiny border inside the 20 × 20 cell.</text>
+</svg>

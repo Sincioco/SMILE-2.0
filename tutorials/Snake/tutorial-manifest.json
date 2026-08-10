@@ -1,0 +1,24 @@
+{
+  "product": "SMILE 2.0 (SinBASIC)",
+  "tutorial": "Snake Visual Tutorial",
+  "tutorialPath": "<SMILE-2.0-root>\\tutorials\\Snake",
+  "gamePath": "<SMILE-2.0-root>\\games\\Snake",
+  "relativeGamePath": "../../games/Snake",
+  "entryPoint": "index.html",
+  "topicCount": 20,
+  "sourceFile": "games/Snake/Program-NoDemo.smile",
+  "sourceBlobSha": "2cd9c8d07d53aa1c108a54738a4f109920a663d8",
+  "language": "HTML, CSS, pure JavaScript",
+  "copyrightYear": 2026,
+  "author": "Louiery R. Sincioco (Sin)",
+  "version": "1.1",
+  "features": [
+    "portable repository-relative paths",
+    "persistent sidebar scroll position",
+    "canonical source line numbers without copying gutters",
+    "clickable full-source map",
+    "syntax examples linked to real Snake source",
+    "repetition and reinforcement prompts",
+    "two-line muted hyperlink footer"
+  ]
+}

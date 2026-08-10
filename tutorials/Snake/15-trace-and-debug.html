@@ -1,0 +1,67 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="Step-by-step frame tracing, testing checklist, and symptom-to-code debugging map." name="description"/>
+<title>Trace &amp; Debug | SMILE 2.0 Snake Visual Tutorial</title>
+<link href="assets/images/smile-2-logo.png" rel="icon" type="image/png"/>
+<link href="assets/css/tutorial.css" rel="stylesheet"/>
+<script defer="" src="assets/js/tutorial.js"></script>
+</head>
+<body data-topic-id="trace" data-topic-total="20">
+<a class="skip-link" href="#main-content">Skip to the lesson</a>
+<div aria-hidden="true" class="nav-scrim"></div>
+<div class="site-shell">
+<aside aria-label="Tutorial topics" class="sidebar">
+<div class="brand-block">
+<a aria-label="Return to tutorial home" href="index.html"><img alt="SMILE 2.0 logo" class="brand-logo" src="assets/images/smile-2-logo.png"/></a>
+<p class="brand-kicker">SMILE 2.0 by Sin</p>
+<p class="brand-title">Snake Visual Tutorial</p>
+</div>
+<nav aria-label="Table of contents" class="nav-area">
+<section class="nav-group"><h2 class="nav-group-title">Start Here</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="home" href="index.html"><span class="nav-number">⌂</span><span>Home</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="ready" href="01-get-ready.html"><span class="nav-number">01</span><span>Get Ready</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="meet" href="02-meet-the-game.html"><span class="nav-number">02</span><span>Meet the Game</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Think Like a Programmer</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="grid" href="03-grid-coordinates.html"><span class="nav-number">03</span><span>Grid &amp; Coordinates</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="memory" href="04-arrays-memory.html"><span class="nav-number">04</span><span>Arrays &amp; Memory</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="loop" href="05-game-loop-states.html"><span class="nav-number">05</span><span>Game Loop &amp; States</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Build Snake</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="cp1" href="06-checkpoint-1-board-plan.html"><span class="nav-number">06</span><span>Checkpoint 1: Board Plan</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp2" href="07-checkpoint-2-game-memory.html"><span class="nav-number">07</span><span>Checkpoint 2: Game Memory</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp3" href="08-checkpoint-3-spawn-food.html"><span class="nav-number">08</span><span>Checkpoint 3: Spawn Food</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp4" href="09-checkpoint-4-starting-snake.html"><span class="nav-number">09</span><span>Checkpoint 4: Starting Snake</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp5" href="10-checkpoint-5-rounds.html"><span class="nav-number">10</span><span>Checkpoint 5: Round Lifecycle</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp6" href="11-checkpoint-6-movement.html"><span class="nav-number">11</span><span>Checkpoint 6: Movement &amp; Rules</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp7" href="12-checkpoint-7-draw-board.html"><span class="nav-number">12</span><span>Checkpoint 7: Draw the Board</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp8" href="13-checkpoint-8-screens.html"><span class="nav-number">13</span><span>Checkpoint 8: Title &amp; Game Over</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp9" href="14-checkpoint-9-main-loop.html"><span class="nav-number">14</span><span>Checkpoint 9: Main Loop</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Master It</h2><ul class="nav-list"><li><a aria-current="page" class="nav-link active" data-topic-id="trace" href="15-trace-and-debug.html"><span class="nav-number">15</span><span>Trace &amp; Debug</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="math" href="16-math-lab.html"><span class="nav-number">16</span><span>Math Lab</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="syntax" href="17-smile-syntax-guide.html"><span class="nav-number">17</span><span>SMILE Syntax Guide</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="challenges" href="18-challenges.html"><span class="nav-number">18</span><span>Make It Yours</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="source" href="19-complete-source.html"><span class="nav-number">19</span><span>Complete Source</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="finish" href="20-graduation.html"><span class="nav-number">20</span><span>Graduation</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section>
+<div class="sidebar-progress"><span class="progress-label">0 of 20 topics completed</span><div class="progress-track"><div class="progress-fill"></div></div></div>
+</nav>
+</aside>
+<div class="main-column">
+<header class="top-header">
+<button aria-label="Open table of contents" class="mobile-menu-button" data-open-nav="" type="button">☰</button>
+<div class="header-left"><span class="header-course">SMILE 2.0 &mdash; Snake Visual Tutorial</span><p class="header-topic">Trace &amp; Debug</p></div>
+<div class="header-actions"><a class="header-button" href="index.html">Home</a><a class="header-button" href="19-complete-source.html">Full source</a></div>
+</header>
+<main class="content-wrap" id="main-content">
+<article class="lesson">
+<section class="lesson-hero">
+<p class="eyebrow">Deep understanding</p>
+<h1>Trace One Frame and Debug Methodically</h1>
+<p class="lead">Professional programmers follow the data in order and inspect the small stage that owns the problem.</p>
+<div class="topic-meta"><span class="meta-pill">Input</span><span class="meta-pill">State</span><span class="meta-pill">Direction</span><span class="meta-pill">Time</span><span class="meta-pill">Update</span><span class="meta-pill">Rules</span><span class="meta-pill">Draw</span></div>
+</section>
+<h2>Trace one complete frame</h2>
+<div class="table-wrap"><table><thead><tr><th>Moment</th><th>Question</th><th>What Snake does</th></tr></thead><tbody><tr><td>1. Input</td><td>Did the player press a key?</td><td><code>GET KEY Key</code></td></tr><tr><td>2. State</td><td>Which screen are we in?</td><td>Choose the State 0, 1, or 2 branch.</td></tr><tr><td>3. Direction</td><td>Is the requested turn safe?</td><td>Update NextDirection only when it is not opposite.</td></tr><tr><td>4. Time</td><td>Is it time for another move?</td><td>Compare TIMER() with NextMoveTime.</td></tr><tr><td>5. Update</td><td>Where does each segment go?</td><td>CALL MoveSnake().</td></tr><tr><td>6. Rules</td><td>Wall, body, or food?</td><td>End the round or grow and score.</td></tr><tr><td>7. Draw</td><td>What does the current data look like?</td><td>Draw title, board, and perhaps the result panel.</td></tr><tr><td>8. Present</td><td>Can the player see it?</td><td>SHOW SCREEN.</td></tr></tbody></table></div>
+<aside class="callout think"><h3>Example trace</h3><p>Before: head (17,12), moving right, food (18,12), score 0. The body shifts; head X becomes 18. Head and food match, so Length becomes 6, Score becomes 10, Eat.wav plays, new food spawns, and the next move is scheduled.</p></aside>
+<h2>Test checklist</h2>
+<div class="card-grid"><article class="card"><ul class="check-list"><li>Title screen appears</li><li>Enter begins a round</li><li>WASD and arrows turn</li><li>Opposite direction is rejected</li><li>Food never appears in the body</li><li>Eating grows by one and adds 10</li></ul></article><article class="card"><ul class="check-list"><li>Walls and body collision end the round</li><li>Game-over panel appears</li><li>Enter retries</li><li>High score saves and reloads</li><li>Sounds play from Assets</li><li>Escape exits; Alt+Enter toggles full screen</li></ul></article></div>
+<h2>Bug-to-owner map</h2>
+<div class="table-wrap"><table><thead><tr><th>Symptom</th><th>First place to inspect</th></tr></thead><tbody><tr><td>Snake turns backward into itself</td><td>Main-loop direction conditions</td></tr><tr><td>Body becomes copies of the head</td><td>The DOWN TO body-shift loop</td></tr><tr><td>Food appears under the body</td><td>SpawnFood overlap test</td></tr><tr><td>Snake draws in the wrong place</td><td>Grid-to-pixel formulas in DrawBoard</td></tr><tr><td>Score changes but display does not</td><td>DRAW NUMBER Score and SHOW SCREEN</td></tr><tr><td>Game over occurs too early</td><td>Wall and self-collision conditions</td></tr><tr><td>Sound is silent</td><td>Asset path, copied Assets folder, and application focus</td></tr></tbody></table></div>
+<aside class="callout warning"><h3>Controlled bug experiment</h3><p>After saving a good copy, temporarily change the body-shift loop from <code>DOWN TO</code> to <code>TO</code>. Predict the result, observe it, then restore the correct line. Controlled experiments turn bugs into lessons.</p></aside>
+<section aria-labelledby="reinforce-title" class="reinforcement-panel">
+<p class="reinforcement-kicker">Repetition builds memory</p>
+<h2 id="reinforce-title">Reinforce what you learned</h2>
+<div class="reinforcement-grid">
+<article><h3>Say it again</h3><p>Debugging means following values in the same order the game uses them and testing one assumption at a time.</p></article>
+<article><h3>Recall it</h3><p>If food appears under the snake, which routine should you inspect first?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>SpawnFood.</strong> Re-read full source lines 34&ndash;46 and trace FoodValid through the loop.</p></details></article>
+</div>
+</section><nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="14-checkpoint-9-main-loop.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Checkpoint 9: Main Loop</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="16-math-lab.html"><span><small>Next topic</small><strong>Math Lab</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
+</article>
+</main>
+<footer class="site-footer">
+<div class="footer-line">SMILE 2.0 (SinBASIC). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div>
+<div class="footer-line"><a href="https://github.com/Sincioco" rel="noopener" target="_blank">github.com/Sincioco</a> | <a href="https://facebook.com/louiery.sincioco" rel="noopener" target="_blank">facebook.com/louiery.sincioco</a> | <a href="https://linkedin.com/in/louierysincioco" rel="noopener" target="_blank">linkedin.com/in/louierysincioco</a> | <a href="https://youtube.com/@TheSincioco" rel="noopener" target="_blank">youtube.com/@TheSincioco</a> | <a href="https://tiktok.com/@sincioco" rel="noopener" target="_blank">tiktok.com/@sincioco</a></div>
+</footer>
+</div>
+</div>
+</body>
+</html>
