@@ -1,0 +1,74 @@
+{
+  "package": "SMILE 2.0 Reusable Components - Phase 1 Multi-File Compilation",
+  "date": "2026-08-11",
+  "repository": "Sincioco/SMILE-2.0",
+  "baseline_commit_inspected": "d87ffbe677fb52fe1c9b2cbcdc3a5ec42b10da41",
+  "phase": "Phase 1 - True Multi-File Compilation",
+  "files": [
+    {
+      "path": "00 - START HERE - Phase 1 Multi-File Compilation.md",
+      "sha256": "f3c745cf02713ee43e6a6ecdf9f05934da444ebc064e5fa110cf964a9623bd90",
+      "bytes": 5971
+    },
+    {
+      "path": "01 - Permanent Reusable Components and RPG Architecture Contract.md",
+      "sha256": "0d7a0f7a6e1985509e8c4afb253f405ab5e619536f7200f5b1f85058fc742606",
+      "bytes": 10735
+    },
+    {
+      "path": "02 - Phase 1 Multi-File Compilation Formal Specification.md",
+      "sha256": "7c96fec80435530cff3925525c1e9fa2449b3adaa6b4055b8164cf62c1159adb",
+      "bytes": 18307
+    },
+    {
+      "path": "03 - Autonomous Single-Agent Codex Implementation Instructions.md",
+      "sha256": "6c6d59d3db7356b55ec6cf15df8b2f4423c847da997d5465ef55f032dbe2c1d1",
+      "bytes": 13576
+    },
+    {
+      "path": "04 - Windows Web Visual Studio Acceptance and Regression Matrix.md",
+      "sha256": "f198ea37e73e05fb4e1cd804702e890183eae84220916eb0b5477c1651783a70",
+      "bytes": 10011
+    },
+    {
+      "path": "05 - Completion Report Commit Push and Next-Phase Gate.md",
+      "sha256": "4f9730ed7302f1a34a2723c9b012baeb6c5d196ba2044c164cddc9b9296e5ac9",
+      "bytes": 4289
+    },
+    {
+      "path": "README.md",
+      "sha256": "b81d583cba77e50a1205ce8396e36738f17eb2aa70d536fccf818339cb615a8f",
+      "bytes": 539
+    },
+    {
+      "path": "Repository-Files/examples/MultiFileBasics/Drawing.smile",
+      "sha256": "04f1ff8c12754ef42c1ecba7cdbf0af7db569b9358491e51007d18c6df348983",
+      "bytes": 958
+    },
+    {
+      "path": "Repository-Files/examples/MultiFileBasics/GameState.smile",
+      "sha256": "20f347b752b41c7024f3b4f0275bc288861e20e901c70684b4990da4480eec92",
+      "bytes": 1227
+    },
+    {
+      "path": "Repository-Files/examples/MultiFileBasics/MultiFileBasics.slnx",
+      "sha256": "a27c3904062417edd85800c08858bdbb13e88f2f472c1004784c2f711e93c7f4",
+      "bytes": 274
+    },
+    {
+      "path": "Repository-Files/examples/MultiFileBasics/MultiFileBasics.smileproj",
+      "sha256": "a10b82f83801f8fd3fe3cc8a9784c203b3aa2e057460ad0b8aa0aaff0019f293",
+      "bytes": 472
+    },
+    {
+      "path": "Repository-Files/examples/MultiFileBasics/Program.smile",
+      "sha256": "e8ff3f651700ac1cad966260324344c51c356ed2433649aa297ee9f99b2e5f62",
+      "bytes": 598
+    },
+    {
+      "path": "Repository-Files/examples/MultiFileBasics/README.md",
+      "sha256": "25c7dbeb714e0977d0a944caa6ebbb9aae45333b036ba65847382fc264ebfe35",
+      "bytes": 1245
+    }
+  ]
+}

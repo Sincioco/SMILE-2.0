@@ -163,6 +163,15 @@ if not exist "%SMILE_ROOT%\artifacts\games\GraphicsTextSample.exe" (
 )
 echo Required graphics text sample compiled successfully.
 
+if not exist "%SMILE_ROOT%\artifacts\games\MultiFileBasics" mkdir "%SMILE_ROOT%\artifacts\games\MultiFileBasics"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\MultiFileBasics\Program.smile" --source "%SMILE_ROOT%\examples\MultiFileBasics\GameState.smile" --source "%SMILE_ROOT%\examples\MultiFileBasics\Drawing.smile" -o "%SMILE_ROOT%\artifacts\games\MultiFileBasics\MultiFileBasics.exe" --debug
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\MultiFileBasics\Program.smile" --source "%SMILE_ROOT%\examples\MultiFileBasics\GameState.smile" --source "%SMILE_ROOT%\examples\MultiFileBasics\Drawing.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\MultiFileBasics"
+if errorlevel 1 exit /b %errorlevel%
+node --check "%SMILE_ROOT%\artifacts\web\MultiFileBasics\game.js"
+if errorlevel 1 exit /b %errorlevel%
+echo MultiFileBasics native debug and Web versions compiled successfully.
+
 if not exist "%SMILE_ROOT%\artifacts\games\Snake" mkdir "%SMILE_ROOT%\artifacts\games\Snake"
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\Snake\Program.smile" -o "%SMILE_ROOT%\artifacts\games\Snake\Snake.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%
@@ -352,6 +361,18 @@ for %%A in (Background.mp3 Background.wav Start.wav Flap.wav Score.wav Hit.wav G
     )
 )
 echo Sky Hopper demo and no-demo versions compiled successfully.
+
+for %%G in (Snake FallingBlocks PaddleBall BrickBreaker DungeonStarI DungeonStarII MazeMuncher StarSquadron PlatformQuest SkyHopper) do (
+    "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\%%G\Program.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\%%G"
+    if errorlevel 1 exit /b 1
+    node --check "%SMILE_ROOT%\artifacts\web\%%G\game.js"
+    if errorlevel 1 exit /b 1
+    "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\%%G\Program-NoDemo.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\%%G-NoDemo"
+    if errorlevel 1 exit /b 1
+    node --check "%SMILE_ROOT%\artifacts\web\%%G-NoDemo\game.js"
+    if errorlevel 1 exit /b 1
+)
+echo All ten game demo and no-demo Web versions compiled successfully.
 
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\verify-artifacts.ps1"
 if errorlevel 1 exit /b %errorlevel%

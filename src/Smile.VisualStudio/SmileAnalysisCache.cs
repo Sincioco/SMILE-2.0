@@ -22,11 +22,12 @@ internal sealed class SmileAnalysisCache
         _buffer = buffer;
         _filePath = filePath;
         _snapshot = buffer.CurrentSnapshot;
-        _analysis = SmileLanguage.Analyze(_snapshot.GetText(), filePath);
+        _analysis = SmileProjectWorkspace.Analyze(filePath, _snapshot.GetText());
         _buffer.Changed += BufferChanged;
     }
 
     public event EventHandler? AnalysisChanged;
+    public string FilePath => _filePath;
 
     public bool TryGet(ITextSnapshot snapshot, out SmileAnalysisResult analysis)
     {
@@ -52,7 +53,7 @@ internal sealed class SmileAnalysisCache
         {
             await Task.Delay(250, cancellationToken).ConfigureAwait(false);
             var text = snapshot.GetText();
-            var analysis = await Task.Run(() => SmileLanguage.Analyze(text, _filePath), cancellationToken).ConfigureAwait(false);
+            var analysis = await Task.Run(() => SmileProjectWorkspace.Analyze(_filePath, text), cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
 
             if (!ReferenceEquals(snapshot, _buffer.CurrentSnapshot))

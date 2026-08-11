@@ -4,6 +4,24 @@ using Smile.Language;
 
 namespace Smile.Compiler;
 
+internal sealed class MasmDebugSite
+{
+    public MasmDebugSite(int id, SourceText source, StatementSyntax statement)
+    {
+        Id = id;
+        Source = source;
+        Statement = statement;
+        source.GetLineColumn(statement.Span.Start, out var line, out _);
+        Line = line;
+    }
+
+    public int Id { get; }
+    public SourceText Source { get; }
+    public StatementSyntax Statement { get; }
+    public int Line { get; }
+    public string HelperName => $"smile_debug_site_{Id}";
+}
+
 internal sealed class MasmEmitter
 {
     private readonly SmileAnalysisResult _analysis;
@@ -19,7 +37,9 @@ internal sealed class MasmEmitter
     private readonly Dictionary<SelectStatementSyntax, string> _selectValues = new();
     private readonly Stack<string> _forExitLabels = new();
     private readonly Stack<string> _doExitLabels = new();
-    private readonly SortedSet<int> _debugLines = new();
+    private readonly List<MasmDebugSite> _debugSites = new();
+    private readonly Dictionary<StatementSyntax, MasmDebugSite> _debugSitesByStatement = new();
+    private SourceText _currentSource = null!;
     private RoutineSymbol? _currentRoutine;
     private string? _returnLabel;
     private int _labelId;
@@ -38,11 +58,15 @@ internal sealed class MasmEmitter
     }
 
     public bool UsesMusic => _usesMusic;
-    public IEnumerable<int> DebugLines => _debugLines;
+    public IReadOnlyList<MasmDebugSite> DebugSites => _debugSites;
 
     public string Emit()
     {
-        Collect(_analysis.SyntaxTree.Root.Statements);
+        foreach (var tree in _analysis.SyntaxTrees)
+        {
+            _currentSource = tree.Source;
+            Collect(tree.Root.Statements);
+        }
         AssignLabels();
 
         Line("option casemap:none");
@@ -88,8 +112,8 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_load_value:PROC");
         Line("EXTERN smile_load_text_file:PROC");
         Line("EXTERN smile_save_value:PROC");
-        foreach (var line in _debugLines)
-            Line($"EXTERN smile_debug_line_{line}:PROC");
+        foreach (var site in _debugSites)
+            Line($"EXTERN {site.HelperName}:PROC");
         Line();
         Line(".data");
         EmitStorage(_analysis.SemanticModel.Symbols.Values);
@@ -111,6 +135,7 @@ internal sealed class MasmEmitter
         Line($"    mov rcx, {(int)_graphicsBackend}");
         Line($"    mov rdx, {(_vSync ? 1 : 0)}");
         Line("    call smile_graphics_configure");
+        _currentSource = _analysis.SyntaxTree.Source;
         EmitStatements(_analysis.SyntaxTree.Root.Statements);
         if (_usesMusic) Line("    call smile_music_shutdown");
         Line("    xor ecx, ecx");
@@ -143,8 +168,9 @@ internal sealed class MasmEmitter
         {
             if (_emitDebugInformation && IsExecutable(statement))
             {
-                _analysis.SyntaxTree.Source.GetLineColumn(statement.Span.Start, out var line, out _);
-                _debugLines.Add(line);
+                var site = new MasmDebugSite(_debugSites.Count, _currentSource, statement);
+                _debugSites.Add(site);
+                _debugSitesByStatement[statement] = site;
             }
 
             switch (statement)
@@ -305,6 +331,7 @@ internal sealed class MasmEmitter
 
     private void EmitRoutine(RoutineSymbol routine)
     {
+        _currentSource = routine.Source;
         _currentRoutine = routine;
         _returnLabel = NewLabel("routine_return");
         Line();
@@ -331,8 +358,7 @@ internal sealed class MasmEmitter
     {
         if (_emitDebugInformation && IsExecutable(statement))
         {
-            _analysis.SyntaxTree.Source.GetLineColumn(statement.Span.Start, out var line, out _);
-            Line($"    call smile_debug_line_{line}");
+            Line($"    call {_debugSitesByStatement[statement].HelperName}");
         }
 
         switch (statement)

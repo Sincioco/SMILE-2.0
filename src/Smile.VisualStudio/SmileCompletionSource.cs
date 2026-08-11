@@ -73,9 +73,11 @@ internal sealed class SmileCompletionSource : IAsyncCompletionSource
         cancellationToken.ThrowIfCancellationRequested();
         var snapshot = triggerLocation.Snapshot;
         if (!_cache.TryGet(snapshot, out var analysis))
-            analysis = SmileLanguage.Analyze(snapshot.GetText(), _filePath);
+            analysis = SmileProjectWorkspace.Analyze(_filePath, snapshot.GetText());
 
-        var completions = SmileCompletionService.GetCompletions(analysis, triggerLocation.Position);
+        var completions = analysis.TryGetSyntaxTree(_filePath, out var syntaxTree)
+            ? SmileCompletionService.GetCompletions(analysis, syntaxTree, triggerLocation.Position)
+            : SmileCompletionService.GetCompletions(analysis, triggerLocation.Position);
         var items = ImmutableArray.CreateBuilder<CompletionItem>(completions.Count);
         foreach (var completion in completions)
         {

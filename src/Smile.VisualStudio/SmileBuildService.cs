@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
@@ -65,9 +66,10 @@ internal static class SmileBuildService
 
     public static async Task<CompilerResult> RunAsync(string compilerPath, string sourcePath,
         string? outputPath, SmileGraphicsBackend graphicsBackend = SmileGraphicsBackend.Auto,
-        bool vSync = true, bool emitDebugInformation = false)
+        bool vSync = true, bool emitDebugInformation = false, IReadOnlyList<string>? supportSourcePaths = null)
     {
         var arguments = new StringBuilder().Append(Quote(sourcePath));
+        AppendSupportSources(arguments, supportSourcePaths);
         if (!string.IsNullOrWhiteSpace(outputPath))
             arguments.Append(" -o ").Append(Quote(outputPath!));
         arguments.Append(" --graphics ").Append(graphicsBackend.ToString());
@@ -78,11 +80,28 @@ internal static class SmileBuildService
         return await RunCompilerAsync(compilerPath, sourcePath, arguments.ToString()).ConfigureAwait(false);
     }
 
-    public static Task<CompilerResult> RunWebAsync(string compilerPath, string sourcePath, string outputDirectory)
+    public static Task<CompilerResult> RunWebAsync(string compilerPath, string sourcePath, string outputDirectory,
+        IReadOnlyList<string>? supportSourcePaths = null)
     {
-        var arguments = new StringBuilder().Append(Quote(sourcePath))
-            .Append(" --target web --output-dir ").Append(Quote(outputDirectory));
+        var arguments = new StringBuilder().Append(Quote(sourcePath));
+        AppendSupportSources(arguments, supportSourcePaths);
+        arguments.Append(" --target web --output-dir ").Append(Quote(outputDirectory));
         return RunCompilerAsync(compilerPath, sourcePath, arguments.ToString());
+    }
+
+    internal static string FormatSupportArguments(IReadOnlyList<string>? supportSourcePaths)
+    {
+        var arguments = new StringBuilder();
+        AppendSupportSources(arguments, supportSourcePaths);
+        return arguments.ToString();
+    }
+
+    private static void AppendSupportSources(StringBuilder arguments, IReadOnlyList<string>? supportSourcePaths)
+    {
+        if (supportSourcePaths == null)
+            return;
+        foreach (var sourcePath in supportSourcePaths)
+            arguments.Append(" --source ").Append(Quote(sourcePath));
     }
 
     private static async Task<CompilerResult> RunCompilerAsync(string compilerPath, string sourcePath, string arguments)

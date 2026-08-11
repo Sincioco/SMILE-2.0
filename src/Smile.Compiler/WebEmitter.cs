@@ -15,6 +15,7 @@ internal sealed class WebEmitter
     private readonly Dictionary<RoutineSymbol, string> _routineNames = new();
     private readonly Stack<string> _forExitLabels = new();
     private readonly Stack<string> _doExitLabels = new();
+    private SourceText _currentSource;
     private RoutineSymbol? _currentRoutine;
     private int _indent;
     private int _temporaryId;
@@ -22,6 +23,7 @@ internal sealed class WebEmitter
     public WebEmitter(SmileAnalysisResult analysis)
     {
         _analysis = analysis;
+        _currentSource = analysis.SyntaxTree.Source;
         AssignNames();
         var gameWindow = analysis.SyntaxTree.Root.Statements.OfType<GameWindowStatementSyntax>().FirstOrDefault();
         Title = gameWindow?.Title.Value as string ?? "SMILE 2.0 Web Program";
@@ -35,7 +37,7 @@ internal sealed class WebEmitter
         Line();
         EmitGlobalDeclarations();
 
-        foreach (var routine in _analysis.SemanticModel.Routines.Values.OrderBy(item => item.Declaration.Span.Start))
+        foreach (var routine in OrderedRoutines())
         {
             EmitRoutine(routine);
             Line();
@@ -43,6 +45,7 @@ internal sealed class WebEmitter
 
         Line("async function smileMain() {");
         _indent++;
+        _currentSource = _analysis.SyntaxTree.Source;
         EmitStatements(_analysis.SyntaxTree.Root.Statements, topLevel: true);
         _indent--;
         Line("}");
@@ -54,11 +57,11 @@ internal sealed class WebEmitter
     private void AssignNames()
     {
         var id = 0;
-        foreach (var symbol in _analysis.SemanticModel.Symbols.Values.OrderBy(item => item.DeclarationSpan.Start))
+        foreach (var symbol in OrderedSymbols())
             _variableNames[symbol] = $"g_{id++}_{Sanitize(symbol.Name)}";
 
         id = 0;
-        foreach (var routine in _analysis.SemanticModel.Routines.Values.OrderBy(item => item.Declaration.Span.Start))
+        foreach (var routine in OrderedRoutines())
         {
             _routineNames[routine] = $"r_{id++}_{Sanitize(routine.Name)}";
             var localId = 0;
@@ -72,7 +75,7 @@ internal sealed class WebEmitter
 
     private void EmitGlobalDeclarations()
     {
-        foreach (var symbol in _analysis.SemanticModel.Symbols.Values.OrderBy(item => item.DeclarationSpan.Start))
+        foreach (var symbol in OrderedSymbols())
         {
             var keyword = symbol.IsConstant ? "const" : "let";
             Line($"{keyword} {_variableNames[symbol]} = {InitialValue(symbol)};");
@@ -83,6 +86,7 @@ internal sealed class WebEmitter
 
     private void EmitRoutine(RoutineSymbol routine)
     {
+        _currentSource = routine.Source;
         _currentRoutine = routine;
         var parameters = string.Join(", ", routine.Parameters.Select(parameter => _variableNames[parameter]));
         Line($"async function {_routineNames[routine]}({parameters}) {{");
@@ -406,7 +410,7 @@ internal sealed class WebEmitter
         {
             case LiteralExpressionSyntax literal when literal.Value is long number:
                 if (number is > MaxSafeInteger or < -MaxSafeInteger)
-                    throw new WebTargetException("SML5102", literal.Span, "Web target NUMBER literals must be within JavaScript's safe integer range.");
+                    throw new WebTargetException(_currentSource, "SML5102", literal.Span, "Web target NUMBER literals must be within JavaScript's safe integer range.");
                 return number.ToString(CultureInfo.InvariantCulture);
             case LiteralExpressionSyntax literal when literal.Value is bool boolean:
                 return boolean ? "1" : "0";
@@ -488,21 +492,27 @@ internal sealed class WebEmitter
     {
         if (_analysis.SemanticModel.TryResolveVariable(identifier.Text, _currentRoutine?.Name, out var symbol))
             return symbol;
-        throw new WebTargetException("SML5101", identifier.Span, $"Web target could not resolve variable '{identifier.Text}'.");
+        throw new WebTargetException(_currentSource, "SML5101", identifier.Span, $"Web target could not resolve variable '{identifier.Text}'.");
     }
 
     private string Routine(SyntaxToken identifier)
     {
         if (_analysis.SemanticModel.TryGetRoutine(identifier.Text, out var routine))
             return _routineNames[routine];
-        throw new WebTargetException("SML5101", identifier.Span, $"Web target could not resolve routine '{identifier.Text}'.");
+        throw new WebTargetException(_currentSource, "SML5101", identifier.Span, $"Web target could not resolve routine '{identifier.Text}'.");
     }
 
     private void Unsupported(SyntaxNode node, string feature) =>
-        throw new WebTargetException("SML5101", node.Span, $"Web target does not yet support {feature}.");
+        throw new WebTargetException(_currentSource, "SML5101", node.Span, $"Web target does not yet support {feature}.");
 
     private WebTargetException UnsupportedExpression(SyntaxNode node, string feature) =>
-        new("SML5101", node.Span, $"Web target does not yet support expression '{feature}'.");
+        new(_currentSource, "SML5101", node.Span, $"Web target does not yet support expression '{feature}'.");
+
+    private IOrderedEnumerable<VariableSymbol> OrderedSymbols() =>
+        _analysis.SemanticModel.Symbols.Values.OrderBy(item => item.SourceOrdinal).ThenBy(item => item.DeclarationSpan.Start);
+
+    private IOrderedEnumerable<RoutineSymbol> OrderedRoutines() =>
+        _analysis.SemanticModel.Routines.Values.OrderBy(item => item.SourceOrdinal).ThenBy(item => item.Declaration.Span.Start);
 
     private string Temporary(string purpose) => $"t_{_temporaryId++}_{purpose}";
 
@@ -521,12 +531,14 @@ internal sealed class WebEmitter
 
 internal sealed class WebTargetException : Exception
 {
-    public WebTargetException(string code, TextSpan span, string message) : base(message)
+    public WebTargetException(SourceText source, string code, TextSpan span, string message) : base(message)
     {
+        SourceText = source;
         Code = code;
         Span = span;
     }
 
+    public SourceText SourceText { get; }
     public string Code { get; }
     public TextSpan Span { get; }
 }

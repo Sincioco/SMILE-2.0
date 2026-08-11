@@ -18,6 +18,24 @@ public readonly struct TextSpan
     public static TextSpan FromBounds(int start, int end) => new(start, Math.Max(0, end - start));
 }
 
+public sealed class SourceLocation
+{
+    public SourceLocation(SourceText source, TextSpan span)
+    {
+        Source = source ?? throw new ArgumentNullException(nameof(source));
+        Span = span;
+        source.GetLineColumn(span.Start, out var line, out var column);
+        Line = line;
+        Column = column;
+    }
+
+    public SourceText Source { get; }
+    public TextSpan Span { get; }
+    public string FilePath => Source.FilePath;
+    public int Line { get; }
+    public int Column { get; }
+}
+
 public sealed class SourceText
 {
     private readonly int[] _lineStarts;

@@ -1,6 +1,6 @@
 # SMILE 2.0
 
-SMILE 2.0 is a small, structured BASIC-style language with a complete native Windows x64 target and a browser target. It includes a MASM-based native compiler, a Win32 game runtime, Canvas 2D Web publication, Visual Studio 2026 language and project support, console examples, and ten complete games written in SMILE. Windows x64 remains the default target, and every included SMILE project exposes both native and Web publication.
+SMILE 2.0 is a small, structured BASIC-style language with a complete native Windows x64 target and a browser target. It includes true multi-file compilation, a MASM-based native compiler, a Win32 game runtime, Canvas 2D Web publication, Visual Studio 2026 language and project support, console examples, and ten complete games written in SMILE. Windows x64 remains the default target, and every included SMILE project exposes both native and Web publication.
 
 The repository has one language authority: `src\Smile.Language`. The command-line compiler and Visual Studio extension use the same lexer, parser, syntax model, diagnostics, symbols, types, and semantic model. Game rules remain in `.smile` source; the C runtime provides only generic Windows graphics, input, sound, timing, and storage services.
 
@@ -14,7 +14,7 @@ When project work produces two or more Markdown requirement, specification, hand
 
 Every game with an attract/demo mode also ships a complete `Program-NoDemo.smile` teaching version. The no-demo source preserves normal gameplay while removing demo AI, lifecycle, timers, safety rules, UI, and cancellation code instead of hiding those systems behind a flag.
 
-To build a teaching edition in Visual Studio, change that game's `<StartupFile>` in its `.smileproj` from `Program.smile` to `Program-NoDemo.smile`. Both sources remain declared in the project so students can compare them directly.
+To build a teaching edition in Visual Studio, change that game's `<StartupFile>` in its `.smileproj` from `Program.smile` to `Program-NoDemo.smile`. Both sources remain declared with `StartupOnly="true"`, so students can compare them directly while only the selected complete program enters the compilation.
 
 Attract demos always return directly to the title screen when their run ends or expires. Demo-only game-over, victory, retry, and rematch screens are not shown; normal player terminal screens remain part of the game.
 
@@ -68,11 +68,11 @@ Run the complete noninteractive regression and artifact verification suite with:
 scripts\smoke-test.cmd
 ```
 
-The smoke suite builds the solution, runs console examples, checks invalid-program diagnostics, exercises save/reload and corrupt-value fallback, validates the supplied Dungeon Star I, Dungeon Star II, and Platform Quest maps, compiles the required graphics text sample and both teaching variants of all ten games, copies and hashes their assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Graphical gameplay and audible playback remain hands-on acceptance steps.
+The smoke suite builds the solution, runs console examples, checks invalid-program diagnostics, exercises save/reload and corrupt-value fallback, validates the supplied Dungeon Star I, Dungeon Star II, and Platform Quest maps, compiles the multi-file sample and both teaching variants of all ten games for Windows and Web, copies and hashes game assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Graphical gameplay and audible playback remain hands-on acceptance steps.
 
 ## Compile loose files
 
-The compiler accepts one `.smile` source file and an optional output path:
+The compiler accepts one startup `.smile` source file and an optional output path:
 
 ```text
 artifacts\compiler\smilec.exe examples\Hello.smile
@@ -80,12 +80,24 @@ artifacts\compiler\smilec.exe examples\GraphicsBasics.smile -o artifacts\games\G
 artifacts\compiler\smilec.exe games\Snake\Program.smile -o artifacts\games\Snake\Snake.exe
 ```
 
+Add each declaration-only support file with a repeatable `--source` option. The files are parsed independently and share one case-insensitive semantic model; only the startup file may contain executable top-level statements, `GAME WINDOW`, or `END PROGRAM`:
+
+```text
+artifacts\compiler\smilec.exe examples\MultiFileBasics\Program.smile ^
+  --source examples\MultiFileBasics\GameState.smile ^
+  --source examples\MultiFileBasics\Drawing.smile ^
+  -o artifacts\games\MultiFileBasics\MultiFileBasics.exe
+```
+
+`examples\MultiFileBasics` is the small teaching example: `Program.smile` owns startup and the loop, while `GameState.smile` and `Drawing.smile` contribute shared declarations and routines.
+
 Use `--keep-temp` to retain generated MASM assembly and object files under `artifacts\temp`. Copy declared asset trees beside a loose-file executable before running it; Dungeon Star I and Platform Quest need both their `Assets` and editable `Maps` directories, while Dungeon Star II needs its editable `Maps` directory.
 
 Select the static browser target explicitly with `--target web` and an output directory:
 
 ```text
 artifacts\compiler\smilec.exe games\PaddleBall\Program.smile --target web --output-dir artifacts\web\PaddleBall
+artifacts\compiler\smilec.exe examples\MultiFileBasics\Program.smile --source examples\MultiFileBasics\GameState.smile --source examples\MultiFileBasics\Drawing.smile --target web --output-dir artifacts\web\MultiFileBasics
 ```
 
 That command writes `index.html`, `smile-runtime.js`, `game.js`, and `smile.css`. Copy the project's declared `Assets` and `Maps` trees beside those files when compiling a loose file. Web output is plain HTML, CSS, and JavaScript using Canvas 2D; it has no native runtime, MASM/linker, npm, framework, or machine-local-path dependency. Native commands continue to default to `windows-x64`, and the explicit native spelling is `--target windows-x64`.
@@ -156,9 +168,9 @@ After Visual Studio restarts, use **File > New > Project** and search for `SMILE
 Both create a `.smileproj` with `Debug` and `Release` configurations. A game project also owns an `Assets` folder. Every included solution and newly created project exposes `Windows 64-bit .exe` first and `Web` beside it in the platform selector:
 
 - `Debug|Windows 64-bit .exe` and `Release|Windows 64-bit .exe` preserve the existing native output at `bin\Debug\Game.exe` or `bin\Release\Game.exe`.
-- `Debug|Web` and `Release|Web` publish the same startup `.smile` source to `bin\Debug\Web` or `bin\Release\Web`, including declared assets.
+- `Debug|Web` and `Release|Web` publish the same selected startup/support source set to `bin\Debug\Web` or `bin\Release\Web`, including declared assets.
 
-With `Web` selected, **Build > Build Solution** is the publish operation. `F5` or `Ctrl+F5` always republishes the latest saved source and assets, starts/reuses the VSIX's loopback-only static server, and opens a cache-busted `http://127.0.0.1:<port>/` URL in the default browser. Switch back to `Windows 64-bit .exe` for native launch and source-level debugging. Compiler failures appear in both the SMILE Output pane and Error List with the same diagnostic code, message, line, and column used by the editor and command-line compiler.
+With `Web` selected, **Build > Build Solution** is the publish operation. `F5` or `Ctrl+F5` saves every open participating source, republishes the selected startup/support source set and assets, starts/reuses the VSIX's loopback-only static server, and opens a cache-busted `http://127.0.0.1:<port>/` URL in the default browser. Switch back to `Windows 64-bit .exe` for native launch and source-level debugging, including breakpoints in support-file routines. Project-aware completion includes compilation-wide globals and routines, while diagnostics and squiggles remain attached to their owning physical files. Compiler failures appear in both the SMILE Output pane and Error List with the same diagnostic code, message, file, line, and column used by the editor and command-line compiler.
 
 The published Web directory is ready for a separate static-host upload; the VSIX does not upload to GitHub Pages, Azure, Cloudflare, Netlify, or another remote service.
 

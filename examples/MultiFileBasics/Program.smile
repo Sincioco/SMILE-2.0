@@ -1,0 +1,29 @@
+' MultiFileBasics startup source.
+' This file owns the window, input, and main game loop.
+
+GAME WINDOW "SMILE 2.0 Multi-File Basics" SIZE 960 BY 540
+
+FrameCount = 0
+Key = KEY_NONE
+
+CALL ResetSharedState()
+
+DO
+    GET KEY Key
+
+    IF Key = KEY_LEFT OR KEY_HELD(KEY_LEFT) = TRUE THEN
+        CALL MoveMarker(-5)
+    ELSE IF Key = KEY_RIGHT OR KEY_HELD(KEY_RIGHT) = TRUE THEN
+        CALL MoveMarker(5)
+    END IF
+
+    CALL UpdatePulse()
+    FrameCount = FrameCount + 1
+
+    CLEAR RGB(7, 12, 28)
+    CALL DrawSharedScene()
+    SHOW SCREEN
+    WAIT 16 MILLISECONDS
+LOOP UNTIL GAME_CLOSED() = TRUE
+
+END PROGRAM

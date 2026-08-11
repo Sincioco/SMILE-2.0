@@ -34,9 +34,21 @@ public static class SmileCompletionService
     private static readonly IReadOnlyList<SmileCompletion> LanguageCompletions = CreateLanguageCompletions();
 
     public static IReadOnlyList<SmileCompletion> GetCompletions(SmileAnalysisResult analysis, int position)
+        => GetCompletions(analysis, analysis?.SyntaxTree ?? throw new ArgumentNullException(nameof(analysis)), position);
+
+    public static IReadOnlyList<SmileCompletion> GetCompletions(SmileAnalysisResult analysis, string filePath, int position)
     {
         if (analysis == null)
             throw new ArgumentNullException(nameof(analysis));
+        return GetCompletions(analysis, analysis.GetSyntaxTree(filePath), position);
+    }
+
+    public static IReadOnlyList<SmileCompletion> GetCompletions(SmileAnalysisResult analysis, SyntaxTree syntaxTree, int position)
+    {
+        if (analysis == null)
+            throw new ArgumentNullException(nameof(analysis));
+        if (syntaxTree == null)
+            throw new ArgumentNullException(nameof(syntaxTree));
 
         var completions = new Dictionary<string, SmileCompletion>(StringComparer.OrdinalIgnoreCase);
         foreach (var completion in LanguageCompletions)
@@ -44,17 +56,18 @@ public static class SmileCompletionService
 
         foreach (var symbol in analysis.SemanticModel.Symbols.Values)
         {
-            if (!IsDeclarationBeingTyped(symbol, position))
+            if (!IsDeclarationBeingTyped(symbol, syntaxTree.Source, position))
                 completions[symbol.Name] = VariableCompletion(symbol);
         }
 
         var currentRoutine = analysis.SemanticModel.Routines.Values.FirstOrDefault(routine =>
+            ReferenceEquals(routine.Source, syntaxTree.Source) &&
             routine.Declaration.Span.Start <= position && position <= routine.Declaration.Span.End);
         if (currentRoutine != null)
         {
             foreach (var symbol in currentRoutine.LocalSymbols.Values)
             {
-                if (!IsDeclarationBeingTyped(symbol, position))
+                if (!IsDeclarationBeingTyped(symbol, syntaxTree.Source, position))
                     completions[symbol.Name] = VariableCompletion(symbol);
             }
         }
@@ -108,6 +121,7 @@ public static class SmileCompletionService
         return new SmileCompletion(symbol.Name, $"{type} {noun} {symbol.Name}", SmileCompletionKind.Variable);
     }
 
-    private static bool IsDeclarationBeingTyped(VariableSymbol symbol, int position) =>
+    private static bool IsDeclarationBeingTyped(VariableSymbol symbol, SourceText source, int position) =>
+        ReferenceEquals(symbol.Source, source) &&
         symbol.DeclarationSpan.Start <= position && position <= symbol.DeclarationSpan.End;
 }

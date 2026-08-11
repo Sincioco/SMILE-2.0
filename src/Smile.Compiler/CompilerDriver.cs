@@ -11,7 +11,7 @@ internal sealed class CompilerDriver
         {
             if (!string.IsNullOrWhiteSpace(argumentError))
                 Console.Error.WriteLine($"error SML5007: {argumentError}");
-            Console.Error.WriteLine("Usage: smilec <source.smile> [--target windows-x64 -o <output.exe>] [--target web --output-dir <directory>] [--keep-temp] [--debug] [--graphics auto|gdi|directx] [--vsync true|false]");
+            Console.Error.WriteLine("Usage: smilec <startup.smile> [--source <support.smile>]... [--target windows-x64 -o <output.exe>] [--target web --output-dir <directory>] [--keep-temp] [--debug] [--graphics auto|gdi|directx] [--vsync true|false]");
             return 2;
         }
 
@@ -28,8 +28,27 @@ internal sealed class CompilerDriver
                 return 2;
             }
 
-            var source = File.ReadAllText(sourcePath);
-            var analysis = SmileLanguage.Analyze(source, sourcePath);
+            var sourcePaths = new List<string> { sourcePath };
+            var normalizedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { sourcePath };
+            foreach (var supportOption in options.SourcePaths)
+            {
+                var supportPath = Path.GetFullPath(supportOption);
+                if (!normalizedPaths.Add(supportPath))
+                {
+                    Console.Error.WriteLine($"{supportPath}(1,1): error SML5008: Duplicate SMILE source path.");
+                    return 2;
+                }
+                if (!File.Exists(supportPath))
+                {
+                    Console.Error.WriteLine($"{supportPath}(1,1): error SML5001: Support source file was not found.");
+                    return 2;
+                }
+                sourcePaths.Add(supportPath);
+            }
+
+            var documents = sourcePaths.Select((path, index) =>
+                new SmileSourceDocument(File.ReadAllText(path), path, isStartup: index == 0)).ToArray();
+            var analysis = SmileLanguage.Analyze(documents);
             foreach (var diagnostic in analysis.Diagnostics)
                 PrintDiagnostic(diagnostic);
 
@@ -45,7 +64,7 @@ internal sealed class CompilerDriver
                 }
                 catch (WebTargetException exception)
                 {
-                    PrintWebDiagnostic(analysis.SyntaxTree.Source, exception);
+                    PrintWebDiagnostic(exception.SourceText, exception);
                     return 1;
                 }
 
@@ -75,7 +94,7 @@ internal sealed class CompilerDriver
             var emitter = new MasmEmitter(analysis, options.GraphicsBackend, options.VSync, options.EmitDebugInformation);
             File.WriteAllText(assemblyPath, emitter.Emit());
             if (options.EmitDebugInformation)
-                File.WriteAllText(debugSourcePath, BuildDebugSource(sourcePath, emitter.DebugLines));
+                File.WriteAllText(debugSourcePath, BuildDebugSource(emitter.DebugSites));
             var isGame = analysis.SyntaxTree.Root.Statements.Any(statement => statement is GameWindowStatementSyntax);
             var result = new NativeToolchain().AssembleAndLink(assemblyPath, objectPath, outputPath, runtimePath,
                 isGame, emitter.UsesMusic, options.EmitDebugInformation ? debugSourcePath : null,
@@ -117,14 +136,14 @@ internal sealed class CompilerDriver
         }
     }
 
-    private static string BuildDebugSource(string sourcePath, IEnumerable<int> lines)
+    internal static string BuildDebugSource(IEnumerable<MasmDebugSite> sites)
     {
-        var escapedPath = sourcePath.Replace("\\", "\\\\").Replace("\"", "\\\"");
         var builder = new StringBuilder("static volatile unsigned char smile_debug_counter;\n");
-        foreach (var line in lines)
+        foreach (var site in sites)
         {
-            builder.Append("#line ").Append(line).Append(" \"").Append(escapedPath).Append("\"\n")
-                .Append("__declspec(noinline) void smile_debug_line_").Append(line)
+            var escapedPath = site.Source.FilePath.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            builder.Append("#line ").Append(site.Line).Append(" \"").Append(escapedPath).Append("\"\n")
+                .Append("__declspec(noinline) void ").Append(site.HelperName)
                 .Append("(void) { smile_debug_counter++; }\n");
         }
         return builder.ToString();

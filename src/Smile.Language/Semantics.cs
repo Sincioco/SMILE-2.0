@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Smile.Language;
 
@@ -13,12 +14,15 @@ public enum SmileType
 
 public sealed class VariableSymbol
 {
-    internal VariableSymbol(string name, SmileType type, IReadOnlyList<int> dimensions, TextSpan declarationSpan,
+    internal VariableSymbol(string name, SmileType type, IReadOnlyList<int> dimensions, SourceText source,
+        int sourceOrdinal, TextSpan declarationSpan,
         bool isConstant = false, long constantValue = 0, string? routineName = null)
     {
         Name = name;
         Type = type;
         ArrayDimensions = dimensions;
+        Source = source;
+        SourceOrdinal = sourceOrdinal;
         DeclarationSpan = declarationSpan;
         IsConstant = isConstant;
         ConstantValue = constantValue;
@@ -38,18 +42,24 @@ public sealed class VariableSymbol
     public bool IsConstant { get; }
     public long ConstantValue { get; }
     public string? RoutineName { get; }
+    public SourceText Source { get; }
+    public int SourceOrdinal { get; }
     public TextSpan DeclarationSpan { get; }
+    public SourceLocation DeclarationLocation => new(Source, DeclarationSpan);
 }
 
 public sealed class RoutineSymbol
 {
-    internal RoutineSymbol(RoutineDeclarationSyntax declaration, IReadOnlyList<VariableSymbol> parameters, SmileType returnType)
+    internal RoutineSymbol(RoutineDeclarationSyntax declaration, IReadOnlyList<VariableSymbol> parameters,
+        SmileType returnType, SourceText source, int sourceOrdinal)
     {
         Declaration = declaration;
         Name = declaration.Identifier.Text;
         IsFunction = declaration.IsFunction;
         Parameters = parameters;
         ReturnType = returnType;
+        Source = source;
+        SourceOrdinal = sourceOrdinal;
         Locals = new Dictionary<string, VariableSymbol>(StringComparer.OrdinalIgnoreCase);
         FirstDeclarations = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         foreach (var parameter in parameters)
@@ -62,6 +72,9 @@ public sealed class RoutineSymbol
     public SmileType ReturnType { get; }
     public IReadOnlyDictionary<string, VariableSymbol> LocalSymbols => Locals;
     public RoutineDeclarationSyntax Declaration { get; }
+    public SourceText Source { get; }
+    public int SourceOrdinal { get; }
+    public SourceLocation DeclarationLocation => new(Source, Declaration.Identifier.Span);
     internal Dictionary<string, VariableSymbol> Locals { get; }
     internal Dictionary<string, int> FirstDeclarations { get; }
 }
@@ -98,54 +111,80 @@ public sealed class SemanticModel
 
 internal sealed class SemanticAnalyzer
 {
-    private readonly DiagnosticBag _diagnostics;
+    private readonly IReadOnlyList<SyntaxTree> _syntaxTrees;
+    private readonly SyntaxTree _startupTree;
+    private readonly Dictionary<SourceText, int> _sourceOrdinals = new();
+    private readonly DiagnosticBag _diagnostics = new();
     private readonly Dictionary<string, VariableSymbol> _symbols = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, RoutineSymbol> _routines = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, int> _globalFirstDeclarations = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _implicitGlobals = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<ExpressionSyntax, SmileType> _expressionTypes = new();
+    private SourceText _currentSource = null!;
+    private int _currentSourceOrdinal;
     private RoutineSymbol? _currentRoutine;
     private int _forDepth;
     private int _doDepth;
     private bool _hasGameWindow;
     private int _gameWindowCount;
 
-    public SemanticAnalyzer(SourceText source) => _diagnostics = new DiagnosticBag(source);
+    public SemanticAnalyzer(IReadOnlyList<SyntaxTree> syntaxTrees, SyntaxTree startupTree)
+    {
+        _syntaxTrees = syntaxTrees;
+        _startupTree = startupTree;
+        for (var index = 0; index < syntaxTrees.Count; index++)
+            _sourceOrdinals[syntaxTrees[index].Source] = index;
+    }
+
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.ToArray();
 
-    public SemanticModel Analyze(CompilationUnitSyntax root)
+    public SemanticModel Analyze()
     {
-        foreach (var statement in root.Statements)
+        foreach (var statement in _startupTree.Root.Statements)
             _hasGameWindow |= statement is GameWindowStatementSyntax;
-        CollectRoutineDeclarations(root.Statements);
-        CollectFirstDeclarations(root.Statements, _globalFirstDeclarations, skipRoutines: true);
-        AnalyzeStatements(root.Statements, topLevel: true);
 
-        foreach (var routine in _routines.Values)
+        foreach (var tree in _syntaxTrees)
+            CollectRoutineDeclarations(tree);
+        CollectGlobalDeclarations();
+        CollectFirstDeclarations(_startupTree.Root.Statements, _globalFirstDeclarations, skipRoutines: true);
+
+        foreach (var tree in _syntaxTrees)
         {
+            SetCurrentSource(tree.Source);
+            if (tree.IsStartup)
+                AnalyzeStatements(tree.Root.Statements, topLevel: true);
+            else
+                AnalyzeSupportTopLevel(tree.Root.Statements);
+        }
+
+        foreach (var routine in _routines.Values.OrderBy(routine => routine.SourceOrdinal).ThenBy(routine => routine.Declaration.Span.Start))
+        {
+            SetCurrentSource(routine.Source);
             _currentRoutine = routine;
             CollectFirstDeclarations(routine.Declaration.Statements, routine.FirstDeclarations, skipRoutines: false);
             AnalyzeStatements(routine.Declaration.Statements, topLevel: false);
             if (routine.IsFunction && !StatementsAlwaysReturn(routine.Declaration.Statements))
-                _diagnostics.Report("SML3017", routine.Declaration.Identifier.Span, $"FUNCTION '{routine.Name}' does not return a value on every path.");
+                Report("SML3017", routine.Declaration.Identifier.Span, $"FUNCTION '{routine.Name}' does not return a value on every path.");
         }
         _currentRoutine = null;
         return new SemanticModel(_symbols, _routines, _expressionTypes);
     }
 
-    private void CollectRoutineDeclarations(IReadOnlyList<StatementSyntax> statements)
+    private void CollectRoutineDeclarations(SyntaxTree tree)
     {
-        foreach (var statement in statements)
+        SetCurrentSource(tree.Source);
+        foreach (var statement in tree.Root.Statements)
         {
             if (statement is not RoutineDeclarationSyntax declaration)
                 continue;
             var name = declaration.Identifier.Text;
             if (_routines.ContainsKey(name))
             {
-                _diagnostics.Report("SML3015", declaration.Identifier.Span, $"Routine '{name}' is already declared.");
+                Report("SML3015", declaration.Identifier.Span, $"Routine '{name}' is already declared.");
                 continue;
             }
             if (declaration.Parameters.Count > 4)
-                _diagnostics.Report("SML3016", declaration.Identifier.Span, $"Routine '{name}' accepts at most four parameters.");
+                Report("SML3016", declaration.Identifier.Span, $"Routine '{name}' accepts at most four parameters.");
 
             var parameters = new List<VariableSymbol>();
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -153,15 +192,182 @@ internal sealed class SemanticAnalyzer
             {
                 if (!names.Add(parameter.Text))
                 {
-                    _diagnostics.Report("SML3005", parameter.Span, $"Parameter '{parameter.Text}' is already declared.");
+                    Report("SML3005", parameter.Span, $"Parameter '{parameter.Text}' is already declared.");
                     continue;
                 }
-                parameters.Add(new VariableSymbol(parameter.Text, SmileType.Number, Array.Empty<int>(), parameter.Span, routineName: name));
+                parameters.Add(new VariableSymbol(parameter.Text, SmileType.Number, Array.Empty<int>(),
+                    _currentSource, _currentSourceOrdinal, parameter.Span, routineName: name));
             }
             var returnType = declaration.IsFunction ? InferRoutineReturnType(declaration.Statements) : SmileType.Error;
-            _routines[name] = new RoutineSymbol(declaration, parameters, returnType);
+            _routines[name] = new RoutineSymbol(declaration, parameters, returnType, _currentSource, _currentSourceOrdinal);
         }
     }
+
+    private void CollectGlobalDeclarations()
+    {
+        foreach (var tree in _syntaxTrees)
+        {
+            SetCurrentSource(tree.Source);
+            foreach (var statement in tree.Root.Statements)
+            {
+                switch (statement)
+                {
+                    case ConstStatementSyntax constant:
+                        DeclareTopLevelConstant(constant);
+                        break;
+                    case DimStatementSyntax dim:
+                        DeclareTopLevelArray(dim);
+                        break;
+                    default:
+                        if (tree.IsStartup)
+                            CollectImplicitGlobals(statement);
+                        break;
+                }
+            }
+        }
+    }
+
+    private void DeclareTopLevelConstant(ConstStatementSyntax constant)
+    {
+        if (_symbols.ContainsKey(constant.Identifier.Text))
+        {
+            Report("SML3005", constant.Identifier.Span, $"'{constant.Identifier.Text}' is already declared in the compilation.");
+            return;
+        }
+        if (!TryEvaluateConstant(constant.Expression, out var value, out var type))
+        {
+            Report("SML3013", constant.Expression.Span, "CONST initializer must be a compile-time scalar expression.");
+            return;
+        }
+        _symbols[constant.Identifier.Text] = new VariableSymbol(constant.Identifier.Text, type, Array.Empty<int>(),
+            _currentSource, _currentSourceOrdinal, constant.Identifier.Span, isConstant: true, constantValue: value);
+        _expressionTypes[constant.Expression] = type;
+    }
+
+    private void DeclareTopLevelArray(DimStatementSyntax dim)
+    {
+        if (_symbols.ContainsKey(dim.Identifier.Text))
+        {
+            Report("SML3005", dim.Identifier.Span, $"'{dim.Identifier.Text}' is already declared in the compilation.");
+            return;
+        }
+        if (!TryGetArrayDimensions(dim, out var dimensions))
+            return;
+        _symbols[dim.Identifier.Text] = new VariableSymbol(dim.Identifier.Text, SmileType.Number, dimensions,
+            _currentSource, _currentSourceOrdinal, dim.Identifier.Span);
+    }
+
+    private void CollectImplicitGlobals(StatementSyntax statement)
+    {
+        switch (statement)
+        {
+            case AssignmentStatementSyntax assignment when !assignment.Target.IsArrayElement:
+                DeclareImplicitGlobal(assignment.Target.Identifier, InferImplicitGlobalType(assignment.Expression));
+                break;
+            case GetKeyStatementSyntax getKey:
+                DeclareImplicitGlobal(getKey.Identifier, SmileType.Number);
+                break;
+            case RandomStatementSyntax random:
+                DeclareImplicitGlobal(random.Identifier, SmileType.Number);
+                break;
+            case LoadStatementSyntax load:
+                DeclareImplicitGlobal(load.Identifier, SmileType.Number);
+                break;
+            case TextFileLoadStatementSyntax textFileLoad:
+                DeclareImplicitGlobal(textFileLoad.CountIdentifier, SmileType.Number);
+                break;
+            case ForStatementSyntax forStatement:
+                DeclareImplicitGlobal(forStatement.Identifier, SmileType.Number);
+                foreach (var child in forStatement.Statements)
+                    CollectImplicitGlobals(child);
+                break;
+            case IfStatementSyntax ifStatement:
+                foreach (var clause in ifStatement.Clauses)
+                    foreach (var child in clause.Statements)
+                        CollectImplicitGlobals(child);
+                foreach (var child in ifStatement.ElseStatements)
+                    CollectImplicitGlobals(child);
+                break;
+            case DoStatementSyntax doStatement:
+                foreach (var child in doStatement.Statements)
+                    CollectImplicitGlobals(child);
+                break;
+            case SelectStatementSyntax select:
+                foreach (var clause in select.Cases)
+                    foreach (var child in clause.Statements)
+                        CollectImplicitGlobals(child);
+                break;
+        }
+    }
+
+    private void DeclareImplicitGlobal(SyntaxToken identifier, SmileType type)
+    {
+        if (_symbols.ContainsKey(identifier.Text) || type is SmileType.Text or SmileType.Error)
+            return;
+        _symbols[identifier.Text] = new VariableSymbol(identifier.Text, type, Array.Empty<int>(),
+            _currentSource, _currentSourceOrdinal, identifier.Span);
+        _implicitGlobals.Add(identifier.Text);
+    }
+
+    private SmileType InferImplicitGlobalType(ExpressionSyntax expression)
+    {
+        switch (expression)
+        {
+            case LiteralExpressionSyntax literal:
+                return literal.Value is bool ? SmileType.Boolean : literal.Value is string ? SmileType.Text : SmileType.Number;
+            case NameExpressionSyntax name when _symbols.TryGetValue(name.Identifier.Text, out var symbol):
+                return symbol.Type;
+            case ArrayAccessExpressionSyntax:
+                return SmileType.Number;
+            case ParenthesizedExpressionSyntax parenthesized:
+                return InferImplicitGlobalType(parenthesized.Expression);
+            case UnaryExpressionSyntax unary:
+                return unary.OperatorToken.Kind == SyntaxKind.NotKeyword ? SmileType.Boolean : SmileType.Number;
+            case BinaryExpressionSyntax binary when binary.OperatorToken.Kind is SyntaxKind.EqualsToken or SyntaxKind.NotEqualsToken or
+                SyntaxKind.LessToken or SyntaxKind.GreaterToken or SyntaxKind.LessOrEqualsToken or SyntaxKind.GreaterOrEqualsToken or
+                SyntaxKind.AndKeyword or SyntaxKind.OrKeyword:
+                return SmileType.Boolean;
+            case CallExpressionSyntax call when SyntaxFacts.IsBuiltInFunction(call.Identifier.Kind):
+                return call.Identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword
+                    ? SmileType.Boolean
+                    : SmileType.Number;
+            case CallExpressionSyntax call when _routines.TryGetValue(call.Identifier.Text, out var routine):
+                return routine.ReturnType;
+            default:
+                return SmileType.Number;
+        }
+    }
+
+    private void AnalyzeSupportTopLevel(IReadOnlyList<StatementSyntax> statements)
+    {
+        foreach (var statement in statements)
+        {
+            if (statement is RoutineDeclarationSyntax)
+                continue;
+            if (statement is ConstStatementSyntax or DimStatementSyntax)
+            {
+                AnalyzeStatement(statement, topLevel: true);
+                continue;
+            }
+
+            var message = statement switch
+            {
+                GameWindowStatementSyntax => "GAME WINDOW is allowed only in the selected startup source.",
+                EndProgramStatementSyntax => "END PROGRAM is allowed only in the selected startup source.",
+                _ => "Executable top-level statements are not allowed in a support source; move the statement to the selected startup source or into a routine."
+            };
+            Report("SML3028", statement.Span, message);
+        }
+    }
+
+    private void SetCurrentSource(SourceText source)
+    {
+        _currentSource = source;
+        _currentSourceOrdinal = _sourceOrdinals[source];
+    }
+
+    private void Report(string code, TextSpan span, string message) =>
+        _diagnostics.Report(_currentSource, code, span, message);
 
     private static SmileType InferRoutineReturnType(IReadOnlyList<StatementSyntax> statements)
     {
@@ -271,7 +477,7 @@ internal sealed class SemanticAnalyzer
             if (statement is RoutineDeclarationSyntax routine)
             {
                 if (!topLevel)
-                    _diagnostics.Report("SML3020", routine.Keyword.Span, "Routines cannot be nested.");
+                    Report("SML3020", routine.Keyword.Span, "Routines cannot be nested.");
                 continue;
             }
             AnalyzeStatement(statement, topLevel);
@@ -284,7 +490,7 @@ internal sealed class SemanticAnalyzer
         {
             case ConstStatementSyntax constant: AnalyzeConstant(constant, topLevel); break;
             case AssignmentStatementSyntax assignment: AnalyzeAssignment(assignment); break;
-            case DimStatementSyntax dim: AnalyzeDim(dim); break;
+            case DimStatementSyntax dim: AnalyzeDim(dim, topLevel); break;
             case PrintStatementSyntax print: AnalyzePrint(print); break;
             case GetKeyStatementSyntax getKey: EnsureNumberTarget(getKey.Identifier, "GET KEY"); break;
             case ClearScreenStatementSyntax: break;
@@ -338,7 +544,7 @@ internal sealed class SemanticAnalyzer
             case SoundStatementSyntax sound:
                 RequireGameWindow(sound.Span, sound.IsStop ? "STOP SOUND" : "PLAY SOUND");
                 if (!sound.IsStop && string.IsNullOrWhiteSpace(sound.Path?.Value as string))
-                    _diagnostics.Report("SML3024", sound.Span, "PLAY SOUND requires a non-empty WAV path literal.");
+                    Report("SML3024", sound.Span, "PLAY SOUND requires a non-empty WAV path literal.");
                 break;
             case MusicStatementSyntax music:
                 RequireGameWindow(music.Span, music.Operation switch
@@ -350,7 +556,7 @@ internal sealed class SemanticAnalyzer
                     _ => "MUSIC VOLUME"
                 });
                 if (music.Operation == MusicOperation.Play && string.IsNullOrWhiteSpace(music.Path?.Value as string))
-                    _diagnostics.Report("SML3026", music.Span, "PLAY MUSIC requires a non-empty music path literal.");
+                    Report("SML3026", music.Span, "PLAY MUSIC requires a non-empty music path literal.");
                 if (music.Operation == MusicOperation.SetVolume && music.Volume != null)
                     RequireType(music.Volume, SmileType.Number, "SML3026", "MUSIC VOLUME requires a NUMBER value.");
                 break;
@@ -364,7 +570,7 @@ internal sealed class SemanticAnalyzer
                 break;
             case SaveStatementSyntax save:
                 if (!TryResolve(save.Identifier.Text, save.Identifier, out var saved) || saved.IsArray || saved.Type != SmileType.Number)
-                    _diagnostics.Report("SML3025", save.Identifier.Span, "SAVE value must be a NUMBER variable or constant.");
+                    Report("SML3025", save.Identifier.Span, "SAVE value must be a NUMBER variable or constant.");
                 ValidateStorageKey(save.Key);
                 break;
         }
@@ -374,42 +580,42 @@ internal sealed class SemanticAnalyzer
     {
         _gameWindowCount++;
         if (!topLevel || _currentRoutine != null)
-            _diagnostics.Report("SML3022", statement.GameKeyword.Span, "GAME WINDOW must be a top-level statement.");
+            Report("SML3022", statement.GameKeyword.Span, "GAME WINDOW must be a top-level statement.");
         if (_gameWindowCount > 1)
-            _diagnostics.Report("SML3022", statement.GameKeyword.Span, "Only one GAME WINDOW is allowed.");
+            Report("SML3022", statement.GameKeyword.Span, "Only one GAME WINDOW is allowed.");
         if (statement.Width == null || statement.Height == null)
             return;
         if (!TryEvaluateConstant(statement.Width, out var width, out var widthType) || widthType != SmileType.Number || width <= 0)
-            _diagnostics.Report("SML3023", statement.Width.Span, "GAME WINDOW width must be a positive compile-time NUMBER.");
+            Report("SML3023", statement.Width.Span, "GAME WINDOW width must be a positive compile-time NUMBER.");
         if (!TryEvaluateConstant(statement.Height, out var height, out var heightType) || heightType != SmileType.Number || height <= 0)
-            _diagnostics.Report("SML3023", statement.Height.Span, "GAME WINDOW height must be a positive compile-time NUMBER.");
+            Report("SML3023", statement.Height.Span, "GAME WINDOW height must be a positive compile-time NUMBER.");
     }
 
     private void RequireGameWindow(TextSpan span, string statementName)
     {
         if (!_hasGameWindow)
-            _diagnostics.Report("SML3023", span, $"{statementName} requires a GAME WINDOW statement.");
+            Report("SML3023", span, $"{statementName} requires a GAME WINDOW statement.");
     }
 
     private void ValidateStorageKey(SyntaxToken key)
     {
         if (string.IsNullOrWhiteSpace(key.Value as string))
-            _diagnostics.Report("SML3025", key.Span, "Storage key must be a non-empty text literal.");
+            Report("SML3025", key.Span, "Storage key must be a non-empty text literal.");
     }
 
     private void AnalyzeTextFileLoad(TextFileLoadStatementSyntax statement)
     {
         if (string.IsNullOrWhiteSpace(statement.Path.Value as string))
-            _diagnostics.Report("SML3027", statement.Path.Span, "LOAD TEXT FILE requires a non-empty path literal.");
+            Report("SML3027", statement.Path.Span, "LOAD TEXT FILE requires a non-empty path literal.");
 
         if (!TryResolveExisting(statement.Destination.Text, out var destination))
         {
-            _diagnostics.Report("SML3027", statement.Destination.Span,
+            Report("SML3027", statement.Destination.Span,
                 $"LOAD TEXT FILE destination '{statement.Destination.Text}' must be a declared one-dimensional NUMBER array.");
         }
         else if (!destination.IsArray || destination.ArrayRank != 1 || destination.Type != SmileType.Number)
         {
-            _diagnostics.Report("SML3027", statement.Destination.Span,
+            Report("SML3027", statement.Destination.Span,
                 $"LOAD TEXT FILE destination '{statement.Destination.Text}' must be a one-dimensional NUMBER array.");
         }
 
@@ -420,22 +626,10 @@ internal sealed class SemanticAnalyzer
     {
         if (!topLevel || _currentRoutine != null)
         {
-            _diagnostics.Report("SML3013", constant.ConstKeyword.Span, "CONST declarations must be top-level.");
+            Report("SML3013", constant.ConstKeyword.Span, "CONST declarations must be top-level.");
             return;
         }
-        if (_symbols.ContainsKey(constant.Identifier.Text))
-        {
-            _diagnostics.Report("SML3005", constant.Identifier.Span, $"'{constant.Identifier.Text}' is already declared.");
-            return;
-        }
-        if (!TryEvaluateConstant(constant.Expression, out var value, out var type))
-        {
-            _diagnostics.Report("SML3013", constant.Expression.Span, "CONST initializer must be a compile-time scalar expression.");
-            return;
-        }
-        _symbols[constant.Identifier.Text] = new VariableSymbol(constant.Identifier.Text, type, Array.Empty<int>(),
-            constant.Identifier.Span, isConstant: true, constantValue: value);
-        _expressionTypes[constant.Expression] = type;
+        // Compilation-wide top-level constants were registered before any body is bound.
     }
 
     private void AnalyzeAssignment(AssignmentStatementSyntax assignment)
@@ -450,13 +644,13 @@ internal sealed class SemanticAnalyzer
                 return;
             if (!array.IsArray)
             {
-                _diagnostics.Report("SML3009", assignment.Target.Identifier.Span, $"'{name}' is not an array.");
+                Report("SML3009", assignment.Target.Identifier.Span, $"'{name}' is not an array.");
                 return;
             }
             if (assignment.Target.Indices.Count != array.ArrayRank)
-                _diagnostics.Report("SML3014", assignment.Target.Span, $"Array '{name}' requires {array.ArrayRank} index value(s).");
+                Report("SML3014", assignment.Target.Span, $"Array '{name}' requires {array.ArrayRank} index value(s).");
             if (valueType != SmileType.Error && valueType != SmileType.Number)
-                _diagnostics.Report("SML3003", assignment.Expression.Span, "Array elements require NUMBER values.");
+                Report("SML3003", assignment.Expression.Span, "Array elements require NUMBER values.");
             return;
         }
 
@@ -464,22 +658,22 @@ internal sealed class SemanticAnalyzer
         {
             if (existing.IsConstant)
             {
-                _diagnostics.Report("SML3012", assignment.Target.Identifier.Span, $"Constant '{name}' cannot be assigned.");
+                Report("SML3012", assignment.Target.Identifier.Span, $"Constant '{name}' cannot be assigned.");
                 return;
             }
             if (existing.IsArray)
             {
-                _diagnostics.Report("SML3009", assignment.Target.Identifier.Span, $"Array '{name}' requires an index.");
+                Report("SML3009", assignment.Target.Identifier.Span, $"Array '{name}' requires an index.");
                 return;
             }
             if (valueType != SmileType.Error && existing.Type != valueType)
-                _diagnostics.Report("SML3003", assignment.Expression.Span, $"Cannot assign {TypeName(valueType)} to {TypeName(existing.Type)} variable '{name}'.");
+                Report("SML3003", assignment.Expression.Span, $"Cannot assign {TypeName(valueType)} to {TypeName(existing.Type)} variable '{name}'.");
             return;
         }
 
         if (valueType == SmileType.Text)
         {
-            _diagnostics.Report("SML3010", assignment.Expression.Span, "General-purpose TEXT variables are not supported.");
+            Report("SML3010", assignment.Expression.Span, "General-purpose TEXT variables are not supported.");
             return;
         }
         if (valueType == SmileType.Error)
@@ -487,33 +681,48 @@ internal sealed class SemanticAnalyzer
         DeclareVariable(name, valueType, Array.Empty<int>(), assignment.Target.Identifier.Span);
     }
 
-    private void AnalyzeDim(DimStatementSyntax dim)
+    private void AnalyzeDim(DimStatementSyntax dim, bool topLevel)
     {
+        if (topLevel && _currentRoutine == null)
+            return;
         if (TryResolveExisting(dim.Identifier.Text, out _))
         {
-            _diagnostics.Report("SML3005", dim.Identifier.Span, $"'{dim.Identifier.Text}' is already declared.");
+            Report("SML3005", dim.Identifier.Span, $"'{dim.Identifier.Text}' is already declared.");
             return;
         }
+        if (TryGetArrayDimensions(dim, out var dimensions))
+            DeclareVariable(dim.Identifier.Text, SmileType.Number, dimensions, dim.Identifier.Span);
+    }
+
+    private bool TryGetArrayDimensions(DimStatementSyntax dim, out IReadOnlyList<int> dimensions)
+    {
+        var result = new List<int>();
+        var valid = true;
         if (dim.Sizes.Count is < 1 or > 2)
         {
-            _diagnostics.Report("SML3014", dim.Span, "Arrays require one or two dimensions.");
-            return;
+            Report("SML3014", dim.Span, "Arrays require one or two dimensions.");
+            dimensions = result;
+            return false;
         }
-        var dimensions = new List<int>();
         long total = 1;
         foreach (var sizeExpression in dim.Sizes)
         {
             if (!TryEvaluateConstant(sizeExpression, out var value, out var type) || type != SmileType.Number || value <= 0 || value > int.MaxValue)
             {
-                _diagnostics.Report("SML3006", sizeExpression.Span, "Array dimension must be a positive compile-time NUMBER expression.");
+                Report("SML3006", sizeExpression.Span, "Array dimension must be a positive compile-time NUMBER expression.");
                 value = 1;
+                valid = false;
             }
             total *= value;
             if (total > int.MaxValue)
-                _diagnostics.Report("SML3006", dim.Span, "Total array storage exceeds the supported size.");
-            dimensions.Add((int)Math.Min(value, int.MaxValue));
+            {
+                Report("SML3006", dim.Span, "Total array storage exceeds the supported size.");
+                valid = false;
+            }
+            result.Add((int)Math.Min(value, int.MaxValue));
         }
-        DeclareVariable(dim.Identifier.Text, SmileType.Number, dimensions, dim.Identifier.Span);
+        dimensions = result;
+        return valid;
     }
 
     private void AnalyzePrint(PrintStatementSyntax print)
@@ -522,7 +731,7 @@ internal sealed class SemanticAnalyzer
         {
             var type = AnalyzeExpression(item);
             if (type is not (SmileType.Error or SmileType.Text or SmileType.Number or SmileType.Boolean))
-                _diagnostics.Report("SML3011", item.Span, "Invalid PRINT item.");
+                Report("SML3011", item.Span, "Invalid PRINT item.");
         }
     }
 
@@ -530,24 +739,24 @@ internal sealed class SemanticAnalyzer
     {
         if (_currentRoutine == null)
         {
-            _diagnostics.Report("SML3020", statement.ReturnKeyword.Span, "RETURN is only valid inside a SUB or FUNCTION.");
+            Report("SML3020", statement.ReturnKeyword.Span, "RETURN is only valid inside a SUB or FUNCTION.");
             return;
         }
         if (_currentRoutine.IsFunction)
         {
             if (statement.Expression == null)
             {
-                _diagnostics.Report("SML3020", statement.ReturnKeyword.Span, "FUNCTION RETURN requires a value.");
+                Report("SML3020", statement.ReturnKeyword.Span, "FUNCTION RETURN requires a value.");
                 return;
             }
             var type = AnalyzeExpression(statement.Expression);
             if (type != SmileType.Error && type != _currentRoutine.ReturnType)
-                _diagnostics.Report("SML3003", statement.Expression.Span, $"FUNCTION '{_currentRoutine.Name}' must return {TypeName(_currentRoutine.ReturnType)}.");
+                Report("SML3003", statement.Expression.Span, $"FUNCTION '{_currentRoutine.Name}' must return {TypeName(_currentRoutine.ReturnType)}.");
         }
         else if (statement.Expression != null)
         {
             AnalyzeExpression(statement.Expression);
-            _diagnostics.Report("SML3020", statement.Expression.Span, "SUB RETURN cannot include a value.");
+            Report("SML3020", statement.Expression.Span, "SUB RETURN cannot include a value.");
         }
     }
 
@@ -555,7 +764,7 @@ internal sealed class SemanticAnalyzer
     {
         var selectorType = AnalyzeExpression(select.Expression);
         if (selectorType is not (SmileType.Number or SmileType.Boolean or SmileType.Error))
-            _diagnostics.Report("SML3003", select.Expression.Span, "SELECT CASE expression must be NUMBER or BOOLEAN.");
+            Report("SML3003", select.Expression.Span, "SELECT CASE expression must be NUMBER or BOOLEAN.");
         var values = new HashSet<long>();
         var sawElse = false;
         foreach (var clause in select.Cases)
@@ -563,18 +772,18 @@ internal sealed class SemanticAnalyzer
             if (clause.IsElse)
             {
                 if (sawElse)
-                    _diagnostics.Report("SML3019", clause.CaseKeyword.Span, "SELECT CASE contains more than one CASE ELSE.");
+                    Report("SML3019", clause.CaseKeyword.Span, "SELECT CASE contains more than one CASE ELSE.");
                 sawElse = true;
             }
             else if (clause.Value != null)
             {
                 var caseType = AnalyzeExpression(clause.Value);
                 if (caseType != SmileType.Error && selectorType != SmileType.Error && caseType != selectorType)
-                    _diagnostics.Report("SML3003", clause.Value.Span, "CASE value type must match SELECT CASE.");
+                    Report("SML3003", clause.Value.Span, "CASE value type must match SELECT CASE.");
                 if (!TryEvaluateConstant(clause.Value, out var value, out _))
-                    _diagnostics.Report("SML3013", clause.Value.Span, "CASE value must be a compile-time scalar expression.");
+                    Report("SML3013", clause.Value.Span, "CASE value must be a compile-time scalar expression.");
                 else if (!values.Add(value))
-                    _diagnostics.Report("SML3019", clause.Value.Span, $"Duplicate CASE value '{value}'.");
+                    Report("SML3019", clause.Value.Span, $"Duplicate CASE value '{value}'.");
             }
             AnalyzeStatements(clause.Statements, false);
         }
@@ -584,7 +793,7 @@ internal sealed class SemanticAnalyzer
     {
         var valid = exit.TargetKeyword.Kind == SyntaxKind.ForKeyword ? _forDepth > 0 : _doDepth > 0;
         if (!valid)
-            _diagnostics.Report("SML3018", exit.Span, $"EXIT {SyntaxFacts.GetText(exit.TargetKeyword.Kind)} is not inside a matching loop.");
+            Report("SML3018", exit.Span, $"EXIT {SyntaxFacts.GetText(exit.TargetKeyword.Kind)} is not inside a matching loop.");
     }
 
     private void EnsureNumberTarget(SyntaxToken identifier, string statementName)
@@ -595,22 +804,30 @@ internal sealed class SemanticAnalyzer
             return;
         }
         if (symbol.IsConstant || symbol.IsArray || symbol.Type != SmileType.Number)
-            _diagnostics.Report("SML3008", identifier.Span, $"{statementName} target '{identifier.Text}' must be a writable NUMBER variable.");
+            Report("SML3008", identifier.Span, $"{statementName} target '{identifier.Text}' must be a writable NUMBER variable.");
     }
 
     private void DeclareVariable(string name, SmileType type, IReadOnlyList<int> dimensions, TextSpan span)
     {
-        if (_currentRoutine == null || _symbols.ContainsKey(name))
-            _symbols[name] = new VariableSymbol(name, type, dimensions, span);
+        if (_currentRoutine == null)
+        {
+            if (!_symbols.ContainsKey(name))
+                _symbols[name] = new VariableSymbol(name, type, dimensions, _currentSource, _currentSourceOrdinal, span);
+        }
+        else if (_symbols.ContainsKey(name))
+        {
+            return;
+        }
         else
-            _currentRoutine.Locals[name] = new VariableSymbol(name, type, dimensions, span, routineName: _currentRoutine.Name);
+            _currentRoutine.Locals[name] = new VariableSymbol(name, type, dimensions,
+                _currentSource, _currentSourceOrdinal, span, routineName: _currentRoutine.Name);
     }
 
     private SmileType RequireType(ExpressionSyntax expression, SmileType requiredType, string code, string message)
     {
         var type = AnalyzeExpression(expression);
         if (type != SmileType.Error && type != requiredType)
-            _diagnostics.Report(code, expression.Span, message);
+            Report(code, expression.Span, message);
         return type;
     }
 
@@ -629,7 +846,7 @@ internal sealed class SemanticAnalyzer
                     result = SmileType.Error;
                 else if (symbol.IsArray)
                 {
-                    _diagnostics.Report("SML3009", name.Span, $"Array '{name.Identifier.Text}' requires an index.");
+                    Report("SML3009", name.Span, $"Array '{name.Identifier.Text}' requires an index.");
                     result = SmileType.Error;
                 }
                 else
@@ -642,13 +859,13 @@ internal sealed class SemanticAnalyzer
                     result = SmileType.Error;
                 else if (!arraySymbol.IsArray)
                 {
-                    _diagnostics.Report("SML3009", array.Identifier.Span, $"'{array.Identifier.Text}' is not an array.");
+                    Report("SML3009", array.Identifier.Span, $"'{array.Identifier.Text}' is not an array.");
                     result = SmileType.Error;
                 }
                 else
                 {
                     if (array.Indices.Count != arraySymbol.ArrayRank)
-                        _diagnostics.Report("SML3014", array.Span, $"Array '{array.Identifier.Text}' requires {arraySymbol.ArrayRank} index value(s).");
+                        Report("SML3014", array.Span, $"Array '{array.Identifier.Text}' requires {arraySymbol.ArrayRank} index value(s).");
                     result = SmileType.Number;
                 }
                 break;
@@ -678,7 +895,7 @@ internal sealed class SemanticAnalyzer
         {
             var type = AnalyzeExpression(argument);
             if (type == SmileType.Text)
-                _diagnostics.Report("SML3003", argument.Span, "Routine arguments must be scalar NUMBER or BOOLEAN values.");
+                Report("SML3003", argument.Span, "Routine arguments must be scalar NUMBER or BOOLEAN values.");
         }
 
         if (SyntaxFacts.IsBuiltInFunction(identifier.Kind))
@@ -686,18 +903,18 @@ internal sealed class SemanticAnalyzer
 
         if (!_routines.TryGetValue(identifier.Text, out var routine))
         {
-            _diagnostics.Report("SML3021", identifier.Span, $"Unknown routine or built-in function '{identifier.Text}'.");
+            Report("SML3021", identifier.Span, $"Unknown routine or built-in function '{identifier.Text}'.");
             return SmileType.Error;
         }
         if (routine.Parameters.Count != arguments.Count)
-            _diagnostics.Report("SML3016", identifier.Span, $"Routine '{routine.Name}' expects {routine.Parameters.Count} argument(s), found {arguments.Count}.");
+            Report("SML3016", identifier.Span, $"Routine '{routine.Name}' expects {routine.Parameters.Count} argument(s), found {arguments.Count}.");
         if (requireFunction && !routine.IsFunction)
         {
-            _diagnostics.Report("SML3020", identifier.Span, $"SUB '{routine.Name}' cannot be used as an expression.");
+            Report("SML3020", identifier.Span, $"SUB '{routine.Name}' cannot be used as an expression.");
             return SmileType.Error;
         }
         if (!requireFunction && routine.IsFunction)
-            _diagnostics.Report("SML3020", identifier.Span, $"FUNCTION '{routine.Name}' must be used in an expression.");
+            Report("SML3020", identifier.Span, $"FUNCTION '{routine.Name}' must be used in an expression.");
         return routine.IsFunction ? routine.ReturnType : SmileType.Error;
     }
 
@@ -705,14 +922,14 @@ internal sealed class SemanticAnalyzer
     {
         if (!SyntaxFacts.IsBuiltInFunction(identifier.Kind))
         {
-            _diagnostics.Report("SML3021", identifier.Span, $"Unknown built-in function '{identifier.Text}'.");
+            Report("SML3021", identifier.Span, $"Unknown built-in function '{identifier.Text}'.");
             return SmileType.Error;
         }
         var expected = SyntaxFacts.GetBuiltInFunctionParameters(identifier.Kind).Count;
         if (identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword && !_hasGameWindow)
-            _diagnostics.Report("SML3023", identifier.Span, $"Built-in '{identifier.Text}' requires GAME WINDOW.");
+            Report("SML3023", identifier.Span, $"Built-in '{identifier.Text}' requires GAME WINDOW.");
         if (arguments.Count != expected)
-            _diagnostics.Report("SML3016", identifier.Span, $"Built-in '{identifier.Text}' expects {expected} argument(s), found {arguments.Count}.");
+            Report("SML3016", identifier.Span, $"Built-in '{identifier.Text}' expects {expected} argument(s), found {arguments.Count}.");
         foreach (var argument in arguments)
             RequireType(argument, SmileType.Number, "SML3003", $"Built-in '{identifier.Text}' requires NUMBER arguments.");
         return identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword ? SmileType.Boolean : SmileType.Number;
@@ -724,7 +941,7 @@ internal sealed class SemanticAnalyzer
         var required = unary.OperatorToken.Kind == SyntaxKind.NotKeyword ? SmileType.Boolean : SmileType.Number;
         if (operandType != SmileType.Error && operandType != required)
         {
-            _diagnostics.Report("SML3003", unary.Span, $"Operator '{unary.OperatorToken.Text}' requires {TypeName(required)}.");
+            Report("SML3003", unary.Span, $"Operator '{unary.OperatorToken.Text}' requires {TypeName(required)}.");
             return SmileType.Error;
         }
         return operandType == SmileType.Error ? SmileType.Error : required;
@@ -753,7 +970,7 @@ internal sealed class SemanticAnalyzer
             case SyntaxKind.NotEqualsToken:
                 if (leftType != rightType || leftType == SmileType.Text)
                 {
-                    _diagnostics.Report("SML3003", binary.Span, "Equality operands must have the same NUMBER or BOOLEAN type.");
+                    Report("SML3003", binary.Span, "Equality operands must have the same NUMBER or BOOLEAN type.");
                     return SmileType.Error;
                 }
                 return SmileType.Boolean;
@@ -770,7 +987,7 @@ internal sealed class SemanticAnalyzer
     {
         if (leftType != required || rightType != required)
         {
-            _diagnostics.Report("SML3003", binary.Span, $"Operator '{binary.OperatorToken.Text}' requires {TypeName(required)} operands.");
+            Report("SML3003", binary.Span, $"Operator '{binary.OperatorToken.Text}' requires {TypeName(required)} operands.");
             return SmileType.Error;
         }
         return result;
@@ -786,12 +1003,22 @@ internal sealed class SemanticAnalyzer
     private bool TryResolve(string name, SyntaxToken token, out VariableSymbol symbol)
     {
         if (TryResolveExisting(name, out symbol))
+        {
+            if (_currentRoutine == null && ReferenceEquals(_currentSource, _startupTree.Source) &&
+                _implicitGlobals.Contains(name) && _globalFirstDeclarations.TryGetValue(name, out var firstPosition) &&
+                token.Position < firstPosition)
+            {
+                Report("SML3002", token.Span, $"Variable '{name}' is used before its first assignment.");
+                symbol = null!;
+                return false;
+            }
             return true;
+        }
         var declarations = _currentRoutine?.FirstDeclarations ?? _globalFirstDeclarations;
         if (declarations.TryGetValue(name, out var position) && position > token.Position)
-            _diagnostics.Report("SML3002", token.Span, $"Variable '{name}' is used before its first assignment.");
+            Report("SML3002", token.Span, $"Variable '{name}' is used before its first assignment.");
         else
-            _diagnostics.Report("SML3001", token.Span, $"Unknown identifier '{name}'.");
+            Report("SML3001", token.Span, $"Unknown identifier '{name}'.");
         symbol = null!;
         return false;
     }

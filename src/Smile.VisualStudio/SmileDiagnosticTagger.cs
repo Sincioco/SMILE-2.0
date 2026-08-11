@@ -47,6 +47,8 @@ internal sealed class SmileDiagnosticTagger : ITagger<ErrorTag>
         var snapshot = spans[0].Snapshot;
         foreach (var diagnostic in analysis.Diagnostics)
         {
+            if (!string.Equals(diagnostic.FilePath, _cache.FilePath, StringComparison.OrdinalIgnoreCase))
+                continue;
             if (diagnostic.Span.Start > snapshot.Length)
                 continue;
 

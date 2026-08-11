@@ -1,0 +1,47 @@
+' MultiFileBasics support source.
+' This file owns shared constants, the fixed state array, and update/query routines.
+
+CONST STATE_X = 0
+CONST STATE_Y = 1
+CONST STATE_PULSE = 2
+CONST STATE_PULSE_DIRECTION = 3
+
+CONST MinimumMarkerX = 90
+CONST MaximumMarkerX = 870
+
+DIM SharedState[4]
+
+SUB ResetSharedState()
+    SharedState[STATE_X] = 480
+    SharedState[STATE_Y] = 300
+    SharedState[STATE_PULSE] = 0
+    SharedState[STATE_PULSE_DIRECTION] = 1
+END SUB
+
+SUB MoveMarker(Amount)
+    SharedState[STATE_X] = MAX(MinimumMarkerX, MIN(MaximumMarkerX, SharedState[STATE_X] + Amount))
+END SUB
+
+SUB UpdatePulse()
+    SharedState[STATE_PULSE] = SharedState[STATE_PULSE] + SharedState[STATE_PULSE_DIRECTION]
+
+    IF SharedState[STATE_PULSE] >= 40 THEN
+        SharedState[STATE_PULSE] = 40
+        SharedState[STATE_PULSE_DIRECTION] = -1
+    ELSE IF SharedState[STATE_PULSE] <= 0 THEN
+        SharedState[STATE_PULSE] = 0
+        SharedState[STATE_PULSE_DIRECTION] = 1
+    END IF
+END SUB
+
+FUNCTION MarkerX()
+    RETURN SharedState[STATE_X]
+END FUNCTION
+
+FUNCTION MarkerY()
+    RETURN SharedState[STATE_Y]
+END FUNCTION
+
+FUNCTION MarkerPulse()
+    RETURN SharedState[STATE_PULSE]
+END FUNCTION

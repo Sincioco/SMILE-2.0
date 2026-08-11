@@ -8,7 +8,10 @@ internal enum SmileCompilationTarget
 
 internal sealed class CompilerOptions
 {
+    private readonly List<string> _sourcePaths = new();
+
     public string? SourcePath { get; private set; }
+    public IReadOnlyList<string> SourcePaths => _sourcePaths;
     public string? OutputPath { get; private set; }
     public string? OutputDirectory { get; private set; }
     public SmileCompilationTarget Target { get; private set; } = SmileCompilationTarget.WindowsX64;
@@ -61,6 +64,15 @@ internal sealed class CompilerOptions
             else if (string.Equals(args[i], "--debug", StringComparison.OrdinalIgnoreCase))
             {
                 options.EmitDebugInformation = true;
+            }
+            else if (string.Equals(args[i], "--source", StringComparison.OrdinalIgnoreCase))
+            {
+                if (++i >= args.Length || string.IsNullOrWhiteSpace(args[i]))
+                {
+                    error = "--source requires one .smile source path.";
+                    return false;
+                }
+                options._sourcePaths.Add(args[i]);
             }
             else if (string.Equals(args[i], "-o", StringComparison.OrdinalIgnoreCase))
             {

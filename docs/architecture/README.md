@@ -3,14 +3,14 @@
 SMILE 2.0 uses one deliberately direct native pipeline:
 
 ```text
-.smile source
+startup .smile + support .smile sources
     -> Smile.Language analysis
     -> Smile.Compiler MASM emitter
     -> ml64.exe and link.exe
     -> native Windows x64 .exe
 ```
 
-`src\Smile.Language` owns tokenization, keyword and built-in facts, parsing, syntax nodes, diagnostics, symbols, types, and semantic analysis. `smilec` and the Visual Studio extension both call `SmileLanguage.Analyze`; there is no editor-only parser or duplicate semantic implementation.
+`src\Smile.Language` owns source documents, tokenization, keyword and built-in facts, parsing, syntax nodes, diagnostics, symbols, types, and semantic analysis. Each physical source becomes its own syntax tree; one selected startup tree and its support trees bind through a single compilation-wide semantic model. `smilec` and the Visual Studio extension both call `SmileLanguage.Analyze`; there is no editor-only parser or duplicate semantic implementation.
 
 Language evolution follows one permanent hierarchy: use existing syntax when it stays clear; otherwise prefer an established BASIC idea; use the smallest beginner-friendly C#-inspired concept only when BASIC has no suitable precedent. Additions remain general-purpose, avoid aliases and clever punctuation, and receive only proportional diagnostics, tests, examples, and documentation through the shared language authority.
 
@@ -46,4 +46,4 @@ The runtime does not contain Snake, falling-block, paddle, brick, dungeon, platf
 
 The ten complete game projects are Snake, Falling Blocks, Paddle Ball, Brick Breaker, Dungeon Star I, Dungeon Star II, Maze Muncher, Star Squadron, Platform Quest, and Sky Hopper. Each game keeps its rules and render composition in `.smile` source. Every game with an attract demo also includes a genuine `Program-NoDemo.smile` teaching edition without demo or AI implementation code.
 
-The Visual Studio extension embeds the same compiler/runtime payload and registers a minimal `.smileproj` project factory. Its console and game templates build to `bin\Debug` or `bin\Release`, copy declared assets, populate the SMILE Output pane and Error List, and launch the resulting executable for F5 or Ctrl+F5.
+The Visual Studio extension embeds the same compiler/runtime payload and registers a minimal `.smileproj` project factory. One shared source-set parser applies `<StartupFile>` and `StartupOnly="true"` consistently, saves all open participating files, and passes repeated `--source` arguments for both Windows and Web. The editor analyzes the same project source set for completion and source-filtered diagnostics. Debug builds emit unique source-aware native helpers and real multi-file `#line` mappings so Windows breakpoints can bind in startup and support files. Console and game templates build to `bin\Debug` or `bin\Release`, copy declared assets, populate the SMILE Output pane and Error List, and launch the resulting executable for F5 or Ctrl+F5.

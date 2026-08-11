@@ -156,6 +156,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     public string ProjectName => Path.GetFileNameWithoutExtension(ProjectPath);
     public string ProjectKind { get; private set; } = "Console";
     public string StartupFile { get; private set; } = "Program.smile";
+    public SmileProjectSourceSet SourceSet { get; private set; } = null!;
     public string OutputName { get; private set; } = "Program";
     public SmileGraphicsBackend GraphicsBackend { get; private set; } = SmileGraphicsBackend.Auto;
     public bool VSync { get; private set; } = true;
@@ -174,8 +175,20 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         pane.Clear();
         pane.Activate();
 
-        var sourcePath = Path.GetFullPath(Path.Combine(ProjectDirectory, StartupFile));
-        if (!SaveOpenStartupDocument(sourcePath, pane))
+        try
+        {
+            SourceSet.ValidateFiles();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            pane.OutputStringThreadSafe(exception.Message + "\r\n");
+            return false;
+        }
+
+        var sourcePath = SourceSet.StartupSource.FullPath;
+        var supportSourcePaths = SourceSet.SupportSources.Select(source => source.FullPath).ToArray();
+        var participatingSourcePaths = SourceSet.CompilationSources.Select(source => source.FullPath).ToArray();
+        if (!SaveOpenSourceDocuments(participatingSourcePaths, pane))
             return false;
 
         var compilerPath = SmileBuildService.FindCompiler(ProjectDirectory);
@@ -198,9 +211,9 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             if (Directory.Exists(outputDirectory))
                 Directory.Delete(outputDirectory, true);
             Directory.CreateDirectory(outputDirectory);
-            pane.OutputStringThreadSafe($"> \"{compilerPath}\" \"{sourcePath}\" --target web --output-dir \"{outputDirectory}\"\r\n");
+            pane.OutputStringThreadSafe($"> \"{compilerPath}\" \"{sourcePath}\"{SmileBuildService.FormatSupportArguments(supportSourcePaths)} --target web --output-dir \"{outputDirectory}\"\r\n");
             result = ThreadHelper.JoinableTaskFactory.Run(() =>
-                SmileBuildService.RunWebAsync(compilerPath, sourcePath, outputDirectory));
+                SmileBuildService.RunWebAsync(compilerPath, sourcePath, outputDirectory, supportSourcePaths));
             outputPath = Path.Combine(outputDirectory, "index.html");
         }
         else
@@ -208,9 +221,9 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             var emitDebugInformation = NormalizeConfiguration(configuration) == "Debug";
             outputPath = GetOutputPath(configuration);
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-            pane.OutputStringThreadSafe($"> \"{compilerPath}\" \"{sourcePath}\" -o \"{outputPath}\" --graphics {GraphicsBackend} --vsync {VSync.ToString().ToLowerInvariant()}{(emitDebugInformation ? " --debug" : string.Empty)}\r\n");
+            pane.OutputStringThreadSafe($"> \"{compilerPath}\" \"{sourcePath}\"{SmileBuildService.FormatSupportArguments(supportSourcePaths)} -o \"{outputPath}\" --graphics {GraphicsBackend} --vsync {VSync.ToString().ToLowerInvariant()}{(emitDebugInformation ? " --debug" : string.Empty)}\r\n");
             result = ThreadHelper.JoinableTaskFactory.Run(() => SmileBuildService.RunAsync(
-                compilerPath, sourcePath, outputPath, GraphicsBackend, VSync, emitDebugInformation));
+                compilerPath, sourcePath, outputPath, GraphicsBackend, VSync, emitDebugInformation, supportSourcePaths));
         }
         if (!string.IsNullOrEmpty(result.Output))
             pane.OutputStringThreadSafe(SmileBuildService.NormalizeOutput(result.Output));
@@ -230,7 +243,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         return true;
     }
 
-    private static bool SaveOpenStartupDocument(string sourcePath, IVsOutputWindowPane pane)
+    private static bool SaveOpenSourceDocuments(IReadOnlyCollection<string> sourcePaths, IVsOutputWindowPane pane)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         var dte = Package.GetGlobalService(typeof(SDTE)) as DTE;
@@ -241,16 +254,15 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         {
             foreach (Document document in dte.Documents)
             {
-                if (!string.Equals(document.FullName, sourcePath, StringComparison.OrdinalIgnoreCase))
+                if (!sourcePaths.Contains(document.FullName, StringComparer.OrdinalIgnoreCase))
                     continue;
 
                 document.Save();
-                return true;
             }
         }
         catch (Exception exception)
         {
-            pane.OutputStringThreadSafe($"Could not save the startup file before building: {exception.Message}\r\n");
+            pane.OutputStringThreadSafe($"Could not save all participating SMILE sources before building: {exception.Message}\r\n");
             return false;
         }
 
@@ -364,7 +376,8 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
 
         var properties = root.Elements().FirstOrDefault(element => element.Name.LocalName == "PropertyGroup");
         ProjectKind = Value(properties, "ProjectKind", "Console");
-        StartupFile = Value(properties, "StartupFile", "Program.smile");
+        SourceSet = SmileProjectSourceSet.Load(ProjectPath);
+        StartupFile = SourceSet.StartupFile;
         OutputName = Value(properties, "OutputName", ProjectName);
         var graphicsOptions = SmileProjectGraphicsOptions.Parse(properties);
         GraphicsBackend = graphicsOptions.GraphicsBackend;
@@ -376,6 +389,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             .ToArray();
 
         BuildHierarchy(root);
+        SmileProjectWorkspace.Register(SourceSet);
         _configurationProvider = new SmileConfigurationProvider(this);
     }
 
@@ -386,15 +400,8 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         _items[rootNode.Id] = rootNode;
         uint nextId = 1;
 
-        var sources = root.Elements().Where(element => element.Name.LocalName == "ItemGroup")
-            .SelectMany(element => element.Elements().Where(item => item.Name.LocalName == "SmileSource"))
-            .Select(item => (string?)item.Attribute("Include") ?? string.Empty)
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .ToArray();
-        if (sources.Length == 0)
-            sources = new[] { StartupFile };
-        foreach (var source in sources)
-            AddNode(rootNode, ref nextId, Path.GetFileName(source), Path.GetFullPath(Path.Combine(ProjectDirectory, source)), ItemKind.File);
+        foreach (var source in SourceSet.Items)
+            AddNode(rootNode, ref nextId, Path.GetFileName(source.Include), source.FullPath, ItemKind.File);
 
         if (ProjectKind.Equals("Game", StringComparison.OrdinalIgnoreCase) || AssetIncludes.Count != 0)
         {
@@ -568,7 +575,12 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     }
 
     public int QueryClose(out int pfCanClose) { pfCanClose = 1; return VSConstants.S_OK; }
-    public int Close() { _events.Clear(); return VSConstants.S_OK; }
+    public int Close()
+    {
+        SmileProjectWorkspace.Unregister(ProjectPath);
+        _events.Clear();
+        return VSConstants.S_OK;
+    }
     public int SetGuidProperty(uint itemid, int propid, ref Guid rguid) => VSConstants.E_NOTIMPL;
     public int SetProperty(uint itemid, int propid, object var) => VSConstants.E_NOTIMPL;
     public int GetNestedHierarchy(uint itemid, ref Guid iidHierarchyNested, out IntPtr ppHierarchyNested, out uint pitemidNested)

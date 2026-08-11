@@ -2,13 +2,13 @@
   <PropertyGroup>
     <ProjectKind>Game</ProjectKind>
     <StartupFile>Program.smile</StartupFile>
-    <OutputName>FallingBlocks</OutputName>
+    <OutputName>MultiFileBasics</OutputName>
     <GraphicsBackend>Auto</GraphicsBackend>
     <VSync>true</VSync>
   </PropertyGroup>
   <ItemGroup>
     <SmileSource Include="Program.smile" StartupOnly="true" />
-    <SmileSource Include="Program-NoDemo.smile" StartupOnly="true" />
-    <Asset Include="Assets\**\*" />
+    <SmileSource Include="GameState.smile" />
+    <SmileSource Include="Drawing.smile" />
   </ItemGroup>
 </SmileProject>

@@ -58,7 +58,10 @@ internal sealed class SmileClassifier : IClassifier
         if (!_cache.TryGet(span.Snapshot, out var analysis))
             return result;
 
-        foreach (var token in analysis.Tokens)
+        var syntaxTree = analysis.TryGetSyntaxTree(_cache.FilePath, out var activeTree)
+            ? activeTree
+            : analysis.SyntaxTree;
+        foreach (var token in syntaxTree.Tokens)
         {
             var classification = Classify(token.Kind);
             if (classification == null || token.Span.Length == 0 || token.Span.Start >= span.Snapshot.Length)

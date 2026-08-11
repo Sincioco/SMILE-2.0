@@ -5,6 +5,6 @@
     <OutputName>$safeprojectname$</OutputName>
   </PropertyGroup>
   <ItemGroup>
-    <SmileSource Include="Program.smile" />
+    <SmileSource Include="Program.smile" StartupOnly="true" />
   </ItemGroup>
 </SmileProject>

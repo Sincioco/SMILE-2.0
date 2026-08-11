@@ -259,6 +259,197 @@ Run("Web output writer creates deterministic static files", () =>
         if (Directory.Exists(directory)) Directory.Delete(directory, true);
     }
 });
+Run("Single-source API remains a one-document startup compilation", () =>
+{
+    var analysis = SmileLanguage.Analyze("PRINT 1\n", "Single.smile");
+    Equal(1, analysis.SyntaxTrees.Count);
+    Equal(true, ReferenceEquals(analysis.SyntaxTree, analysis.SyntaxTrees[0]));
+    Equal(true, analysis.SyntaxTree.IsStartup);
+});
+Run("Multi-source API requires at least one document", () => ThrowsContains(
+    () => SmileLanguage.Analyze(Array.Empty<SmileSourceDocument>()),
+    "requires at least one source document"));
+Run("Multi-source API requires exactly one startup document", () => ThrowsContains(
+    () => SmileLanguage.Analyze(new[]
+    {
+        new SmileSourceDocument("PRINT 1\n", "One.smile", true),
+        new SmileSourceDocument("PRINT 2\n", "Two.smile", true)
+    }),
+    "requires exactly one startup source; found 2"));
+Run("Multi-source API rejects duplicate normalized paths", () => ThrowsContains(
+    () => SmileLanguage.Analyze(new[]
+    {
+        new SmileSourceDocument("PRINT 1\n", "Duplicate.smile", true),
+        new SmileSourceDocument("SUB Work()\nEND SUB\n", ".\\Duplicate.smile")
+    }),
+    "Duplicate SMILE source path"));
+Run("Multi-source analysis exposes distinct physical syntax trees", () =>
+{
+    var analysis = Multi(
+        ("Program.smile", true, "CALL Work()\n"),
+        ("Support.smile", false, "SUB Work()\nPRINT 1\nEND SUB\n"));
+    Equal(2, analysis.SyntaxTrees.Count);
+    Equal("Program.smile", Path.GetFileName(analysis.SyntaxTree.Source.FilePath));
+    Equal("Support.smile", Path.GetFileName(analysis.SyntaxTrees[1].Source.FilePath));
+});
+Run("Cross-file routines declarations arrays and startup globals bind together", () =>
+{
+    var analysis = Multi(
+        ("Program.smile", true, "Score = 7\nCALL ResetState()\nPRINT StateValue()\n"),
+        ("GameState.smile", false, "CONST BaseValue = 3\nDIM State[2]\nSUB ResetState()\nState[0] = BaseValue\nCALL AdvanceState()\nEND SUB\n"),
+        ("Drawing.smile", false, "SUB AdvanceState()\nState[0] = State[0] + Score\nEND SUB\nFUNCTION StateValue()\nRETURN State[0]\nEND FUNCTION\n"));
+    Equal(false, analysis.HasErrors);
+    Equal(true, analysis.SemanticModel.Symbols.ContainsKey("Score"));
+    Equal(true, analysis.SemanticModel.Symbols.ContainsKey("State"));
+    Equal(true, analysis.SemanticModel.Routines.ContainsKey("AdvanceState"));
+});
+Run("Cross-file routine visibility does not depend on support source order", () => Equal(false,
+    Multi(
+        ("Program.smile", true, "CALL First()\n"),
+        ("Later.smile", false, "SUB First()\nCALL Second()\nEND SUB\n"),
+        ("Earlier.smile", false, "SUB Second()\nEND SUB\n")).HasErrors));
+Run("Support executable top-level statements report their physical file", () =>
+{
+    var analysis = Multi(
+        ("Program.smile", true, "PRINT 1\n"),
+        ("Support.smile", false, "\nScore = 1\n"));
+    var diagnostic = analysis.Diagnostics.Single(item => item.Code == "SML3028");
+    Equal("Support.smile", Path.GetFileName(diagnostic.FilePath));
+    Equal(2, diagnostic.Line);
+});
+Run("Support GAME WINDOW is rejected in the support file", () =>
+{
+    var diagnostic = Multi(
+        ("Program.smile", true, "PRINT 1\n"),
+        ("Support.smile", false, "GAME WINDOW \"Wrong\"\n"))
+        .Diagnostics.Single(item => item.Code == "SML3028");
+    Equal(true, diagnostic.Message.Contains("GAME WINDOW"));
+    Equal("Support.smile", Path.GetFileName(diagnostic.FilePath));
+});
+Run("Support END PROGRAM is rejected in the support file", () =>
+{
+    var diagnostic = Multi(
+        ("Program.smile", true, "PRINT 1\n"),
+        ("Support.smile", false, "END PROGRAM\n"))
+        .Diagnostics.Single(item => item.Code == "SML3028");
+    Equal(true, diagnostic.Message.Contains("END PROGRAM"));
+});
+Run("Duplicate globals across files report the later file", () =>
+{
+    var diagnostic = Multi(
+        ("Program.smile", true, "PRINT Shared\n"),
+        ("First.smile", false, "CONST Shared = 1\n"),
+        ("Second.smile", false, "DIM shared[2]\n"))
+        .Diagnostics.Single(item => item.Code == "SML3005");
+    Equal("Second.smile", Path.GetFileName(diagnostic.FilePath));
+});
+Run("Duplicate routines across files report the later file", () =>
+{
+    var diagnostic = Multi(
+        ("Program.smile", true, "CALL Work()\n"),
+        ("First.smile", false, "SUB Work()\nEND SUB\n"),
+        ("Second.smile", false, "SUB work()\nEND SUB\n"))
+        .Diagnostics.Single(item => item.Code == "SML3015");
+    Equal("Second.smile", Path.GetFileName(diagnostic.FilePath));
+});
+Run("Parser diagnostics retain support-file line and column", () =>
+{
+    var diagnostic = Multi(
+        ("Program.smile", true, "PRINT 1\n"),
+        ("Broken.smile", false, "SUB Work()\n\nPRINT (\nEND SUB\n"))
+        .Diagnostics.First(item => item.Code.StartsWith("SML2", StringComparison.Ordinal));
+    Equal("Broken.smile", Path.GetFileName(diagnostic.FilePath));
+    Equal(3, diagnostic.Line);
+});
+Run("Cross-file completion uses the active support file scope", () =>
+{
+    const string support = "SUB Move(Amount)\nLocalStep = 1\nPRINT Amount\nEND SUB\n";
+    var analysis = Multi(
+        ("Program.smile", true, "Score = 1\nCALL Move(2)\n"),
+        ("Support.smile", false, support));
+    var completions = SmileCompletionService.GetCompletions(
+        analysis, analysis.GetSyntaxTree(Path.GetFullPath("Support.smile")), support.IndexOf("PRINT", StringComparison.Ordinal));
+    Equal(true, completions.Any(item => item.DisplayText == "Score"));
+    Equal(true, completions.Any(item => item.DisplayText == "Amount"));
+    Equal(true, completions.Any(item => item.DisplayText == "LocalStep"));
+});
+Run("Compiler options accept repeated support sources", () =>
+{
+    Equal(true, CompilerOptions.TryParse(new[]
+    {
+        "Program.smile", "--source", "GameState.smile", "--source", "Drawing.smile", "-o", "Game.exe"
+    }, out var options, out _));
+    Equal(2, options.SourcePaths.Count);
+    Equal("Drawing.smile", options.SourcePaths[1]);
+});
+Run("Project source selection honors StartupOnly and project order", () =>
+{
+    var sourceSet = ProjectSources("""
+        <SmileProject><PropertyGroup><StartupFile>Program-NoDemo.smile</StartupFile></PropertyGroup><ItemGroup>
+        <SmileSource Include="Program.smile" StartupOnly="TRUE" />
+        <SmileSource Include="GameState.smile" />
+        <SmileSource Include="Program-NoDemo.smile" StartupOnly="true" />
+        <SmileSource Include="Drawing.smile" />
+        </ItemGroup></SmileProject>
+        """);
+    Equal("Program-NoDemo.smile", sourceSet.StartupSource.Include);
+    Equal(3, sourceSet.CompilationSources.Count);
+    Equal("GameState.smile", sourceSet.SupportSources[0].Include);
+    Equal("Drawing.smile", sourceSet.SupportSources[1].Include);
+    Equal(false, sourceSet.Items.Single(item => item.Include == "GameState.smile").StartupOnly);
+});
+Run("Invalid StartupOnly values report a clear project error", () => Throws(
+    () => ProjectSources("<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"sometimes\" /></ItemGroup></SmileProject>"),
+    "Unknown StartupOnly value 'sometimes'. Expected true or false."));
+Run("Project source parsing rejects duplicate paths", () => Throws(
+    () => ProjectSources("<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" /><SmileSource Include=\".\\Program.smile\" /></ItemGroup></SmileProject>"),
+    "Duplicate SmileSource path '.\\Program.smile'."));
+Run("Project source parsing requires the selected startup item", () => Throws(
+    () => ProjectSources("<SmileProject><PropertyGroup><StartupFile>Other.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" /></ItemGroup></SmileProject>"),
+    "StartupFile 'Other.smile' is not listed as a SmileSource."));
+Run("Multi-file debug sites are unique and retain real source paths", () =>
+{
+    var analysis = Multi(
+        ("Program.smile", true, "Score = 1\nCALL Work()\n"),
+        ("Support.smile", false, "SUB Work()\nScore = Score + 1\nEND SUB\n"));
+    var emitter = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, true);
+    var assembly = emitter.Emit();
+    var lineTwoSites = emitter.DebugSites.Where(site => site.Line == 2).ToArray();
+    Equal(2, lineTwoSites.Length);
+    Equal(false, lineTwoSites[0].HelperName == lineTwoSites[1].HelperName);
+    Equal(false, lineTwoSites[0].Source.FilePath == lineTwoSites[1].Source.FilePath);
+    var debugSource = CompilerDriver.BuildDebugSource(lineTwoSites);
+    Equal(true, debugSource.Contains(Path.GetFullPath("Program.smile").Replace("\\", "\\\\")));
+    Equal(true, debugSource.Contains(Path.GetFullPath("Support.smile").Replace("\\", "\\\\")));
+    Equal(true, assembly.Contains(lineTwoSites[0].HelperName));
+});
+Run("Web target failures retain the support source path", () =>
+{
+    var analysis = Multi(
+        ("Program.smile", true, "PRINT HugeValue()\n"),
+        ("Support.smile", false, "FUNCTION HugeValue()\nRETURN 9007199254740992\nEND FUNCTION\n"));
+    try
+    {
+        _ = new WebEmitter(analysis).Emit();
+        throw new InvalidOperationException("Expected a Web target diagnostic.");
+    }
+    catch (WebTargetException exception)
+    {
+        Equal("Support.smile", Path.GetFileName(exception.SourceText.FilePath));
+        Equal("SML5102", exception.Code);
+    }
+});
+Run("Web emitter emits support routines but only startup top-level execution", () =>
+{
+    var analysis = Multi(
+        ("Program.smile", true, "Score = 1\nCALL AddOne()\nPRINT Score\n"),
+        ("Support.smile", false, "SUB AddOne()\nScore = Score + 1\nEND SUB\n"));
+    Equal(false, analysis.HasErrors);
+    var javascript = new WebEmitter(analysis).Emit();
+    Equal(true, javascript.Contains("async function r_0_addone"));
+    Equal(true, javascript.Contains("await r_0_addone()"));
+    Equal(1, javascript.Split(new[] { "smile.print" }, StringSplitOptions.None).Length - 1);
+});
 
 if (failures.Count != 0)
 {
@@ -268,13 +459,20 @@ if (failures.Count != 0)
     return 1;
 }
 
-Console.WriteLine("68 SMILE language, compiler, project, completion, and timing tests passed.");
+Console.WriteLine("90 SMILE language, compiler, project, completion, and timing tests passed.");
 return 0;
 
 SmileProjectGraphicsOptions Parse(string xml) =>
     SmileProjectGraphicsOptions.Parse(XElement.Parse(xml));
 
 SmileAnalysisResult Analyze(string source) => SmileLanguage.Analyze(source);
+
+SmileAnalysisResult Multi(params (string Path, bool Startup, string Text)[] sources) =>
+    SmileLanguage.Analyze(sources.Select(source =>
+        new SmileSourceDocument(source.Text, source.Path, source.Startup)).ToArray());
+
+SmileProjectSourceSet ProjectSources(string xml) =>
+    SmileProjectSourceSet.Parse(Path.GetFullPath("Test.smileproj"), xml);
 
 MusicStatementSyntax Music(SmileAnalysisResult analysis) =>
     analysis.SyntaxTree.Root.Statements.OfType<MusicStatementSyntax>().Single();
@@ -314,6 +512,22 @@ void Throws(Action action, string expectedMessage)
             $"Expected diagnostic '{expectedMessage}', found '{exception.Message}'.");
     }
     throw new InvalidOperationException($"Expected diagnostic '{expectedMessage}', but no exception was thrown.");
+}
+
+void ThrowsContains(Action action, string expectedText)
+{
+    try
+    {
+        action();
+    }
+    catch (Exception exception)
+    {
+        if (exception.Message.Contains(expectedText, StringComparison.Ordinal))
+            return;
+        throw new InvalidOperationException(
+            $"Expected diagnostic containing '{expectedText}', found '{exception.Message}'.");
+    }
+    throw new InvalidOperationException($"Expected diagnostic containing '{expectedText}', but no exception was thrown.");
 }
 
 long SimulateFixedPoint(IEnumerable<int> frameTimes, int velocitySubpixelsPerSecond)
