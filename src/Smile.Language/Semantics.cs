@@ -119,6 +119,11 @@ internal sealed class SemanticAnalyzer
     private readonly Dictionary<string, RoutineSymbol> _routines = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, int> _globalFirstDeclarations = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _implicitGlobals = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<SyntaxToken> _acceptedProjectDeclarations = new();
+    private readonly HashSet<SyntaxToken> _rejectedProjectDeclarations = new();
+    private readonly Dictionary<string, ConstantDeclaration> _constantDeclarations = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ConstantResolutionState> _constantStates = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<string> _constantResolutionStack = new();
     private readonly Dictionary<ExpressionSyntax, SmileType> _expressionTypes = new();
     private SourceText _currentSource = null!;
     private int _currentSourceOrdinal;
@@ -143,6 +148,7 @@ internal sealed class SemanticAnalyzer
         foreach (var statement in _startupTree.Root.Statements)
             _hasGameWindow |= statement is GameWindowStatementSyntax;
 
+        InventoryProjectDeclarations();
         foreach (var tree in _syntaxTrees)
             CollectRoutineDeclarations(tree);
         CollectGlobalDeclarations();
@@ -170,6 +176,112 @@ internal sealed class SemanticAnalyzer
         return new SemanticModel(_symbols, _routines, _expressionTypes);
     }
 
+    private void InventoryProjectDeclarations()
+    {
+        var candidates = new List<ProjectDeclarationCandidate>();
+        foreach (var tree in _syntaxTrees)
+        {
+            var sourceOrdinal = _sourceOrdinals[tree.Source];
+            foreach (var statement in tree.Root.Statements)
+            {
+                switch (statement)
+                {
+                    case ConstStatementSyntax constant:
+                        candidates.Add(new ProjectDeclarationCandidate(constant.Identifier, ProjectDeclarationKind.Constant,
+                            tree.Source, sourceOrdinal));
+                        break;
+                    case DimStatementSyntax dim:
+                        candidates.Add(new ProjectDeclarationCandidate(dim.Identifier, ProjectDeclarationKind.Array,
+                            tree.Source, sourceOrdinal));
+                        break;
+                    case RoutineDeclarationSyntax routine:
+                        candidates.Add(new ProjectDeclarationCandidate(routine.Identifier, ProjectDeclarationKind.Routine,
+                            tree.Source, sourceOrdinal));
+                        break;
+                    default:
+                        if (tree.IsStartup)
+                            CollectImplicitDeclarationCandidates(statement, tree.Source, sourceOrdinal, candidates);
+                        break;
+                }
+            }
+        }
+
+        var declarations = new Dictionary<string, ProjectDeclarationCandidate>(StringComparer.OrdinalIgnoreCase);
+        foreach (var candidate in candidates.OrderBy(candidate => candidate.SourceOrdinal)
+                     .ThenBy(candidate => candidate.Identifier.Position))
+        {
+            var name = candidate.Identifier.Text;
+            if (!declarations.TryGetValue(name, out var existing))
+            {
+                declarations[name] = candidate;
+                _acceptedProjectDeclarations.Add(candidate.Identifier);
+                continue;
+            }
+
+            if (candidate.Kind == ProjectDeclarationKind.ImplicitGlobal &&
+                existing.Kind == ProjectDeclarationKind.ImplicitGlobal)
+                continue;
+            if (candidate.Kind == ProjectDeclarationKind.ImplicitGlobal &&
+                existing.Kind is ProjectDeclarationKind.Constant or ProjectDeclarationKind.Array)
+                continue;
+
+            _rejectedProjectDeclarations.Add(candidate.Identifier);
+            var code = candidate.Kind == ProjectDeclarationKind.Routine && existing.Kind == ProjectDeclarationKind.Routine
+                ? "SML3015" : "SML3005";
+            var message = code == "SML3015"
+                ? $"Routine '{name}' is already declared."
+                : $"Project-level name '{name}' is already declared as {DeclarationKindName(existing.Kind)}.";
+            _diagnostics.Report(candidate.Source, code, candidate.Identifier.Span, message);
+        }
+    }
+
+    private static void CollectImplicitDeclarationCandidates(StatementSyntax statement, SourceText source, int sourceOrdinal,
+        List<ProjectDeclarationCandidate> candidates)
+    {
+        void Add(SyntaxToken identifier) => candidates.Add(new ProjectDeclarationCandidate(
+            identifier, ProjectDeclarationKind.ImplicitGlobal, source, sourceOrdinal));
+
+        switch (statement)
+        {
+            case AssignmentStatementSyntax assignment when !assignment.Target.IsArrayElement:
+                Add(assignment.Target.Identifier);
+                break;
+            case GetKeyStatementSyntax getKey:
+                Add(getKey.Identifier);
+                break;
+            case RandomStatementSyntax random:
+                Add(random.Identifier);
+                break;
+            case LoadStatementSyntax load:
+                Add(load.Identifier);
+                break;
+            case TextFileLoadStatementSyntax textFileLoad:
+                Add(textFileLoad.CountIdentifier);
+                break;
+            case ForStatementSyntax forStatement:
+                Add(forStatement.Identifier);
+                foreach (var child in forStatement.Statements)
+                    CollectImplicitDeclarationCandidates(child, source, sourceOrdinal, candidates);
+                break;
+            case IfStatementSyntax ifStatement:
+                foreach (var clause in ifStatement.Clauses)
+                    foreach (var child in clause.Statements)
+                        CollectImplicitDeclarationCandidates(child, source, sourceOrdinal, candidates);
+                foreach (var child in ifStatement.ElseStatements)
+                    CollectImplicitDeclarationCandidates(child, source, sourceOrdinal, candidates);
+                break;
+            case DoStatementSyntax doStatement:
+                foreach (var child in doStatement.Statements)
+                    CollectImplicitDeclarationCandidates(child, source, sourceOrdinal, candidates);
+                break;
+            case SelectStatementSyntax select:
+                foreach (var clause in select.Cases)
+                    foreach (var child in clause.Statements)
+                        CollectImplicitDeclarationCandidates(child, source, sourceOrdinal, candidates);
+                break;
+        }
+    }
+
     private void CollectRoutineDeclarations(SyntaxTree tree)
     {
         SetCurrentSource(tree.Source);
@@ -177,12 +289,9 @@ internal sealed class SemanticAnalyzer
         {
             if (statement is not RoutineDeclarationSyntax declaration)
                 continue;
-            var name = declaration.Identifier.Text;
-            if (_routines.ContainsKey(name))
-            {
-                Report("SML3015", declaration.Identifier.Span, $"Routine '{name}' is already declared.");
+            if (!_acceptedProjectDeclarations.Contains(declaration.Identifier))
                 continue;
-            }
+            var name = declaration.Identifier.Text;
             if (declaration.Parameters.Count > 4)
                 Report("SML3016", declaration.Identifier.Span, $"Routine '{name}' accepts at most four parameters.");
 
@@ -207,15 +316,27 @@ internal sealed class SemanticAnalyzer
     {
         foreach (var tree in _syntaxTrees)
         {
+            foreach (var constant in tree.Root.Statements.OfType<ConstStatementSyntax>())
+            {
+                if (_acceptedProjectDeclarations.Contains(constant.Identifier))
+                    _constantDeclarations[constant.Identifier.Text] = new ConstantDeclaration(
+                        constant, tree.Source, _sourceOrdinals[tree.Source]);
+            }
+        }
+
+        foreach (var constant in _constantDeclarations.Values
+                     .OrderBy(constant => constant.SourceOrdinal)
+                     .ThenBy(constant => constant.Statement.Identifier.Position))
+            ResolveConstant(constant.Statement.Identifier.Text);
+
+        foreach (var tree in _syntaxTrees)
+        {
             SetCurrentSource(tree.Source);
             foreach (var statement in tree.Root.Statements)
             {
                 switch (statement)
                 {
-                    case ConstStatementSyntax constant:
-                        DeclareTopLevelConstant(constant);
-                        break;
-                    case DimStatementSyntax dim:
+                    case DimStatementSyntax dim when _acceptedProjectDeclarations.Contains(dim.Identifier):
                         DeclareTopLevelArray(dim);
                         break;
                     default:
@@ -227,21 +348,49 @@ internal sealed class SemanticAnalyzer
         }
     }
 
-    private void DeclareTopLevelConstant(ConstStatementSyntax constant)
+    private bool ResolveConstant(string name)
     {
-        if (_symbols.ContainsKey(constant.Identifier.Text))
+        if (_constantStates.TryGetValue(name, out var state))
         {
-            Report("SML3005", constant.Identifier.Span, $"'{constant.Identifier.Text}' is already declared in the compilation.");
-            return;
+            if (state == ConstantResolutionState.Resolved)
+                return true;
+            if (state == ConstantResolutionState.Failed)
+                return false;
+
+            var cycleStart = _constantResolutionStack.FindIndex(item =>
+                string.Equals(item, name, StringComparison.OrdinalIgnoreCase));
+            var cycle = _constantResolutionStack.Skip(Math.Max(0, cycleStart)).Concat(new[] { name }).ToArray();
+            foreach (var cycleName in cycle)
+                _constantStates[cycleName] = ConstantResolutionState.Failed;
+            var declaration = _constantDeclarations[name];
+            _diagnostics.Report(declaration.Source, "SML3029", declaration.Statement.Identifier.Span,
+                $"Circular constant dependency detected: {string.Join(" -> ", cycle)}.");
+            return false;
         }
-        if (!TryEvaluateConstant(constant.Expression, out var value, out var type))
+
+        if (!_constantDeclarations.TryGetValue(name, out var constant))
+            return false;
+        _constantStates[name] = ConstantResolutionState.Resolving;
+        _constantResolutionStack.Add(name);
+        var resolved = TryEvaluateConstant(constant.Statement.Expression, out var value, out var type);
+        _constantResolutionStack.RemoveAt(_constantResolutionStack.Count - 1);
+
+        if (_constantStates.TryGetValue(name, out state) && state == ConstantResolutionState.Failed)
+            return false;
+        if (!resolved)
         {
-            Report("SML3013", constant.Expression.Span, "CONST initializer must be a compile-time scalar expression.");
-            return;
+            _constantStates[name] = ConstantResolutionState.Failed;
+            _diagnostics.Report(constant.Source, "SML3013", constant.Statement.Expression.Span,
+                "CONST initializer must be a compile-time scalar expression.");
+            return false;
         }
-        _symbols[constant.Identifier.Text] = new VariableSymbol(constant.Identifier.Text, type, Array.Empty<int>(),
-            _currentSource, _currentSourceOrdinal, constant.Identifier.Span, isConstant: true, constantValue: value);
-        _expressionTypes[constant.Expression] = type;
+
+        _symbols[name] = new VariableSymbol(constant.Statement.Identifier.Text, type, Array.Empty<int>(),
+            constant.Source, constant.SourceOrdinal, constant.Statement.Identifier.Span,
+            isConstant: true, constantValue: value);
+        _expressionTypes[constant.Statement.Expression] = type;
+        _constantStates[name] = ConstantResolutionState.Resolved;
+        return true;
     }
 
     private void DeclareTopLevelArray(DimStatementSyntax dim)
@@ -302,6 +451,8 @@ internal sealed class SemanticAnalyzer
 
     private void DeclareImplicitGlobal(SyntaxToken identifier, SmileType type)
     {
+        if (!_acceptedProjectDeclarations.Contains(identifier))
+            return;
         if (_symbols.ContainsKey(identifier.Text) || type is SmileType.Text or SmileType.Error)
             return;
         _symbols[identifier.Text] = new VariableSymbol(identifier.Text, type, Array.Empty<int>(),
@@ -654,6 +805,9 @@ internal sealed class SemanticAnalyzer
             return;
         }
 
+        if (_currentRoutine == null && _rejectedProjectDeclarations.Contains(assignment.Target.Identifier))
+            return;
+
         if (TryResolveExisting(name, out var existing))
         {
             if (existing.IsConstant)
@@ -798,6 +952,8 @@ internal sealed class SemanticAnalyzer
 
     private void EnsureNumberTarget(SyntaxToken identifier, string statementName)
     {
+        if (_currentRoutine == null && _rejectedProjectDeclarations.Contains(identifier))
+            return;
         if (!TryResolveExisting(identifier.Text, out var symbol))
         {
             DeclareVariable(identifier.Text, SmileType.Number, Array.Empty<int>(), identifier.Span);
@@ -1031,7 +1187,13 @@ internal sealed class SemanticAnalyzer
                 value = number; type = SmileType.Number; return true;
             case LiteralExpressionSyntax literal when literal.Value is bool boolean:
                 value = boolean ? 1 : 0; type = SmileType.Boolean; return true;
-            case NameExpressionSyntax name when _symbols.TryGetValue(name.Identifier.Text, out var symbol) && symbol.IsConstant:
+            case NameExpressionSyntax name:
+                if (!_symbols.TryGetValue(name.Identifier.Text, out var symbol) || !symbol.IsConstant)
+                {
+                    if (!ResolveConstant(name.Identifier.Text) ||
+                        !_symbols.TryGetValue(name.Identifier.Text, out symbol) || !symbol.IsConstant)
+                        break;
+                }
                 value = symbol.ConstantValue; type = symbol.Type; return true;
             case ParenthesizedExpressionSyntax parenthesized:
                 return TryEvaluateConstant(parenthesized.Expression, out value, out type);
@@ -1144,6 +1306,39 @@ internal sealed class SemanticAnalyzer
         }
         return false;
     }
+
+    private static string DeclarationKindName(ProjectDeclarationKind kind) => kind switch
+    {
+        ProjectDeclarationKind.Constant => "CONST",
+        ProjectDeclarationKind.Array => "DIM",
+        ProjectDeclarationKind.Routine => "routine",
+        _ => "implicit startup global"
+    };
+
+    private sealed class ProjectDeclarationCandidate
+    {
+        public ProjectDeclarationCandidate(SyntaxToken identifier, ProjectDeclarationKind kind, SourceText source,
+            int sourceOrdinal)
+        { Identifier = identifier; Kind = kind; Source = source; SourceOrdinal = sourceOrdinal; }
+
+        public SyntaxToken Identifier { get; }
+        public ProjectDeclarationKind Kind { get; }
+        public SourceText Source { get; }
+        public int SourceOrdinal { get; }
+    }
+
+    private sealed class ConstantDeclaration
+    {
+        public ConstantDeclaration(ConstStatementSyntax statement, SourceText source, int sourceOrdinal)
+        { Statement = statement; Source = source; SourceOrdinal = sourceOrdinal; }
+
+        public ConstStatementSyntax Statement { get; }
+        public SourceText Source { get; }
+        public int SourceOrdinal { get; }
+    }
+
+    private enum ProjectDeclarationKind { Constant, Array, Routine, ImplicitGlobal }
+    private enum ConstantResolutionState { Resolving, Resolved, Failed }
 
     private static string TypeName(SmileType type) => type.ToString().ToUpperInvariant();
 }

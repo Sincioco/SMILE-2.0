@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk" TreatAsLocalProperty="DeployExtension">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <VsTemplateLanguage>Smile</VsTemplateLanguage>
+    <VSSDKBuildToolsAutoSetup>true</VSSDKBuildToolsAutoSetup>
+    <CreateVsixContainer>false</CreateVsixContainer>
+    <GeneratePkgDefFile>false</GeneratePkgDefFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="18.5.40034" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <VSTemplate Include="SmileSource.vstemplate" />
+    <None Include="NewSource.smile" />
+  </ItemGroup>
+</Project>

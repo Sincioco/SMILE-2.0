@@ -19,7 +19,7 @@ internal sealed class SmileDiagnosticTaggerProvider : ITaggerProvider
 
     public ITagger<T>? CreateTagger<T>(ITextBuffer buffer) where T : ITag =>
         buffer.Properties.GetOrCreateSingletonProperty(() =>
-            new SmileDiagnosticTagger(buffer, GetFilePath(buffer))) as ITagger<T>;
+            new SmileDiagnosticTagger(buffer, GetFilePath(buffer), TextDocumentFactory)) as ITagger<T>;
 
     private string GetFilePath(ITextBuffer buffer) =>
         TextDocumentFactory.TryGetTextDocument(buffer, out var document) ? document.FilePath : string.Empty;
@@ -30,10 +30,10 @@ internal sealed class SmileDiagnosticTagger : ITagger<ErrorTag>
     private readonly ITextBuffer _buffer;
     private readonly SmileAnalysisCache _cache;
 
-    public SmileDiagnosticTagger(ITextBuffer buffer, string filePath)
+    public SmileDiagnosticTagger(ITextBuffer buffer, string filePath, ITextDocumentFactoryService textDocumentFactory)
     {
         _buffer = buffer;
-        _cache = buffer.Properties.GetOrCreateSingletonProperty(() => new SmileAnalysisCache(buffer, filePath));
+        _cache = buffer.Properties.GetOrCreateSingletonProperty(() => new SmileAnalysisCache(buffer, filePath, textDocumentFactory));
         _cache.AnalysisChanged += AnalysisChanged;
     }
 

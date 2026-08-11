@@ -1,0 +1,8 @@
+<SmileProject Version="1.0">
+  <PropertyGroup><ProjectKind>Console</ProjectKind><StartupFile>Program.smile</StartupFile><OutputName>CircularConstants</OutputName></PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <SmileSource Include="First.smile" />
+    <SmileSource Include="Second.smile" />
+  </ItemGroup>
+</SmileProject>

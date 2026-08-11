@@ -3,6 +3,7 @@ using Smile.Compiler;
 using Smile.Language;
 
 var failures = new List<string>();
+var passed = 0;
 
 Run("Missing GraphicsBackend defaults to Auto", () =>
 {
@@ -308,6 +309,174 @@ Run("Cross-file routine visibility does not depend on support source order", () 
         ("Program.smile", true, "CALL First()\n"),
         ("Later.smile", false, "SUB First()\nCALL Second()\nEND SUB\n"),
         ("Earlier.smile", false, "SUB Second()\nEND SUB\n")).HasErrors));
+Run("Cross-file constants and array dimensions are source-order independent", () =>
+{
+    var analysis = Multi(
+        ("Program.smile", true, "DIM StartupValues[MaximumValues]\nCALL InitializeArrays()\nPRINT MaximumValues\n"),
+        ("Arrays.smile", false, "DIM SharedValues[MaximumValues]\nSUB InitializeArrays()\nSharedValues[0] = MaximumValues\nEND SUB\n"),
+        ("Derived.smile", false, "CONST MaximumValues = BaseValues + ExtraValues\n"),
+        ("Base.smile", false, "CONST BaseValues = 4\nCONST ExtraValues = 4\n"));
+    Equal(false, analysis.HasErrors);
+    Equal(8L, analysis.SemanticModel.Symbols["MaximumValues"].ConstantValue);
+    Equal(8, analysis.SemanticModel.Symbols["StartupValues"].ArrayDimensions[0]);
+    Equal(8, analysis.SemanticModel.Symbols["SharedValues"].ArrayDimensions[0]);
+});
+Run("Reversing support declaration order preserves constant and array results", () =>
+{
+    var analysis = Multi(
+        ("Program.smile", true, "DIM StartupValues[MaximumValues]\nPRINT MaximumValues\n"),
+        ("Base.smile", false, "CONST BaseValues = 3\nCONST ExtraValues = 1\n"),
+        ("Derived.smile", false, "CONST MaximumValues = BaseValues + ExtraValues\n"),
+        ("Arrays.smile", false, "DIM SharedValues[MaximumValues]\n"));
+    Equal(false, analysis.HasErrors);
+    Equal(4L, analysis.SemanticModel.Symbols["MaximumValues"].ConstantValue);
+    Equal(4, analysis.SemanticModel.Symbols["SharedValues"].ArrayDimensions[0]);
+});
+Run("Circular constants report one deterministic physical-file diagnostic", () =>
+{
+    var diagnostic = Multi(
+        ("Program.smile", true, "PRINT FirstValue\n"),
+        ("First.smile", false, "CONST FirstValue = SecondValue + 1\n"),
+        ("Second.smile", false, "CONST SecondValue = FirstValue + 1\n"))
+        .Diagnostics.Single(item => item.Code == "SML3029");
+    Equal("First.smile", Path.GetFileName(diagnostic.FilePath));
+    Equal(true, diagnostic.Message.Contains("FirstValue -> SecondValue -> FirstValue", StringComparison.Ordinal));
+});
+Run("CONST and routine names share one case-insensitive project namespace", () =>
+{
+    var diagnostic = Multi(
+        ("Program.smile", true, "PRINT SharedName\n"),
+        ("Value.smile", false, "CONST SharedName = 1\n"),
+        ("Routine.smile", false, "SUB sharedname()\nEND SUB\n"))
+        .Diagnostics.Single(item => item.Code == "SML3005");
+    Equal("Routine.smile", Path.GetFileName(diagnostic.FilePath));
+});
+Run("DIM and routine names share one case-insensitive project namespace", () =>
+{
+    var diagnostic = Multi(
+        ("Program.smile", true, "DIM Inventory[4]\n"),
+        ("Routine.smile", false, "FUNCTION inventory()\nRETURN 1\nEND FUNCTION\n"))
+        .Diagnostics.Single(item => item.Code == "SML3005");
+    Equal("Routine.smile", Path.GetFileName(diagnostic.FilePath));
+});
+Run("Implicit startup globals share the project routine namespace", () =>
+{
+    var diagnostic = Multi(
+        ("Program.smile", true, "Score = 1\nPRINT Score\n"),
+        ("Routine.smile", false, "FUNCTION score()\nRETURN 1\nEND FUNCTION\n"))
+        .Diagnostics.Single(item => item.Code == "SML3005");
+    Equal("Routine.smile", Path.GetFileName(diagnostic.FilePath));
+});
+Run("Game hierarchy projection includes startup alternate support and assets exactly once", () =>
+{
+    var projectPath = Path.GetFullPath("examples/SourceVisibilityBasics/SourceVisibilityBasics.smileproj");
+    var sourceSet = SmileProjectSourceSet.Load(projectPath);
+    var projection = SmileProjectHierarchyProjection.Create(sourceSet, "Game", new[] { "Assets\\**\\*" });
+    Equal("Program.smile|Program-NoDemo.smile|Helpers.smile|Assets|Readme.txt",
+        string.Join("|", projection.Select(item => item.Caption)));
+    foreach (var source in sourceSet.Items)
+        Equal(1, projection.Count(item => item.Kind == SmileProjectHierarchyItemKind.Source &&
+            string.Equals(item.FullPath, source.FullPath, StringComparison.OrdinalIgnoreCase)));
+    Equal(projection.Count, projection.Select(item => item.Key).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+});
+Run("Console hierarchy projection contains every support source without an Assets node", () =>
+{
+    var sourceSet = ProjectSources("""
+        <SmileProject><PropertyGroup><ProjectKind>Console</ProjectKind><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup>
+        <SmileSource Include="Program.smile" StartupOnly="true" />
+        <SmileSource Include="Second.smile" />
+        <SmileSource Include="Third.smile" />
+        </ItemGroup></SmileProject>
+        """);
+    var projection = SmileProjectHierarchyProjection.Create(sourceSet, "Console", Array.Empty<string>());
+    Equal("Program.smile|Second.smile|Third.smile", string.Join("|", projection.Select(item => item.Caption)));
+});
+Run("Hierarchy mutation preserves existing IDs and remove re-add keeps the physical source", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileHierarchyTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var projectPath = Path.Combine(directory, "Visibility.smileproj");
+        var programPath = Path.Combine(directory, "Program.smile");
+        var supportPath = Path.Combine(directory, "Support.smile");
+        var dynamicPath = Path.Combine(directory, "Dynamic.smile");
+        File.WriteAllText(programPath, "END PROGRAM\n");
+        File.WriteAllText(supportPath, "CONST Existing = 1\n");
+        File.WriteAllText(dynamicPath, "CONST Dynamic = 2\n");
+        File.WriteAllText(projectPath, "<SmileProject><PropertyGroup><ProjectKind>Console</ProjectKind><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /><SmileSource Include=\"Support.smile\" /></ItemGroup></SmileProject>");
+        var identities = new SmileProjectHierarchyIdentityMap();
+        var initial = SmileProjectHierarchyProjection.Create(SmileProjectSourceSet.Load(projectPath), "Console", Array.Empty<string>());
+        var initialIds = identities.Apply(initial);
+        var addedSet = SmileProjectFileEditor.AddSource(projectPath, dynamicPath);
+        var blankLinesAfterAdd = File.ReadAllLines(projectPath).Count(string.IsNullOrWhiteSpace);
+        var added = SmileProjectHierarchyProjection.Create(addedSet, "Console", Array.Empty<string>());
+        var addedIds = identities.Apply(added);
+        foreach (var item in initial)
+            Equal(initialIds[item.Key], addedIds[item.Key]);
+        var dynamicItem = added.Single(item => string.Equals(item.FullPath, dynamicPath, StringComparison.OrdinalIgnoreCase));
+        Equal(true, addedIds[dynamicItem.Key] is > 0 and < 0xfffffffd);
+        var removedSet = SmileProjectFileEditor.RemoveSource(projectPath, dynamicPath);
+        Equal(false, SmileProjectHierarchyProjection.Create(removedSet, "Console", Array.Empty<string>())
+            .Any(item => string.Equals(item.FullPath, dynamicPath, StringComparison.OrdinalIgnoreCase)));
+        Equal(true, File.Exists(dynamicPath));
+        var readdedSet = SmileProjectFileEditor.AddSource(projectPath, dynamicPath);
+        var readded = SmileProjectHierarchyProjection.Create(readdedSet, "Console", Array.Empty<string>());
+        Equal(1, readded.Count(item => string.Equals(item.FullPath, dynamicPath, StringComparison.OrdinalIgnoreCase)));
+        Equal(addedIds[dynamicItem.Key], identities.Apply(readded)[dynamicItem.Key]);
+        var finalBlankLines = File.ReadAllLines(projectPath).Count(string.IsNullOrWhiteSpace);
+        Equal(blankLinesAfterAdd, finalBlankLines);
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
+});
+Run("One physical source can be owned by multiple SMILE projects", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileOwnershipTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var sharedPath = Path.Combine(directory, "Shared.smile");
+        File.WriteAllText(sharedPath, "CONST Shared = 1\n");
+        File.WriteAllText(Path.Combine(directory, "One.smile"), "PRINT Shared\n");
+        File.WriteAllText(Path.Combine(directory, "Two.smile"), "PRINT Shared\n");
+        var onePath = Path.Combine(directory, "One.smileproj");
+        var twoPath = Path.Combine(directory, "Two.smileproj");
+        File.WriteAllText(onePath, "<SmileProject><PropertyGroup><StartupFile>One.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"One.smile\" StartupOnly=\"true\" /><SmileSource Include=\"Shared.smile\" /></ItemGroup></SmileProject>");
+        File.WriteAllText(twoPath, "<SmileProject><PropertyGroup><StartupFile>Two.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Two.smile\" StartupOnly=\"true\" /><SmileSource Include=\"Shared.smile\" /></ItemGroup></SmileProject>");
+        var ownership = new SmileProjectOwnershipIndex();
+        ownership.Register(SmileProjectSourceSet.Load(onePath));
+        ownership.Register(SmileProjectSourceSet.Load(twoPath));
+        Equal(2, ownership.GetOwners(sharedPath).Count);
+        Equal(true, ownership.Contains(onePath, sharedPath));
+        Equal(true, ownership.Contains(twoPath, sharedPath));
+        ownership.Unregister(onePath);
+        Equal(1, ownership.GetOwners(sharedPath).Count);
+        Equal(true, ownership.Contains(twoPath, sharedPath));
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
+});
+Run("Disposing an open-buffer registration releases its text and invalidation callback", () =>
+{
+    var registry = new SmileOpenBufferRegistry();
+    var filePath = Path.Combine(Path.GetTempPath(), "SmileBuffer-" + Guid.NewGuid().ToString("N") + ".smile");
+    var invalidations = 0;
+    var registration = registry.Register(filePath, "PRINT 1\n", () => invalidations++);
+    Equal(1, registry.OpenBufferCount);
+    Equal(1, registry.GetInvalidationCount(filePath));
+    foreach (var callback in registry.GetInvalidations(new[] { filePath }))
+        callback();
+    Equal(1, invalidations);
+    registration.Dispose();
+    Equal(0, registry.OpenBufferCount);
+    Equal(0, registry.GetInvalidationCount(filePath));
+    Equal(0, registry.GetInvalidations(new[] { filePath }).Count);
+});
 Run("Support executable top-level statements report their physical file", () =>
 {
     var analysis = Multi(
@@ -523,7 +692,7 @@ if (failures.Count != 0)
     return 1;
 }
 
-Console.WriteLine("94 SMILE language, compiler, project, completion, and timing tests passed.");
+Console.WriteLine($"{passed} SMILE language, compiler, project, completion, and timing tests passed.");
 return 0;
 
 SmileProjectGraphicsOptions Parse(string xml) =>
@@ -549,6 +718,7 @@ void Run(string name, Action test)
     try
     {
         test();
+        passed++;
     }
     catch (Exception exception)
     {

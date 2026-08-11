@@ -1,0 +1,8 @@
+DIM SharedValues[MaximumValues]
+
+SUB InitializeArrays()
+    FOR Index = 0 TO MaximumValues - 1
+        SharedValues[Index] = Index
+        StartupValues[Index] = MaximumValues - Index
+    END FOR
+END SUB

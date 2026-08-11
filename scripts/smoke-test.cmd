@@ -172,6 +172,60 @@ node --check "%SMILE_ROOT%\artifacts\web\MultiFileBasics\game.js"
 if errorlevel 1 exit /b %errorlevel%
 echo MultiFileBasics native debug and Web versions compiled successfully.
 
+if not exist "%SMILE_ROOT%\artifacts\games\MultiFileDeclarationHardening" mkdir "%SMILE_ROOT%\artifacts\games\MultiFileDeclarationHardening"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\MultiFileDeclarationHardening\Program.smile" --source "%SMILE_ROOT%\examples\MultiFileDeclarationHardening\Arrays.smile" --source "%SMILE_ROOT%\examples\MultiFileDeclarationHardening\Derived.smile" --source "%SMILE_ROOT%\examples\MultiFileDeclarationHardening\Base.smile" -o "%SMILE_ROOT%\artifacts\games\MultiFileDeclarationHardening\MultiFileDeclarationHardening.exe"
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\games\MultiFileDeclarationHardening\MultiFileDeclarationHardening.exe" > "%SMILE_ROOT%\artifacts\temp\MultiFileDeclarationHardening.out"
+if errorlevel 1 exit /b %errorlevel%
+findstr /x /c:"8" "%SMILE_ROOT%\artifacts\temp\MultiFileDeclarationHardening.out" >nul
+if errorlevel 1 (
+    echo Multi-file declaration hardening native output is missing 8.
+    exit /b 1
+)
+findstr /x /c:"7" "%SMILE_ROOT%\artifacts\temp\MultiFileDeclarationHardening.out" >nul
+if errorlevel 1 (
+    echo Multi-file declaration hardening native output is missing 7.
+    exit /b 1
+)
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\MultiFileDeclarationHardening\Program.smile" --source "%SMILE_ROOT%\examples\MultiFileDeclarationHardening\Base.smile" --source "%SMILE_ROOT%\examples\MultiFileDeclarationHardening\Derived.smile" --source "%SMILE_ROOT%\examples\MultiFileDeclarationHardening\Arrays.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\MultiFileDeclarationHardening"
+if errorlevel 1 exit /b %errorlevel%
+node --check "%SMILE_ROOT%\artifacts\web\MultiFileDeclarationHardening\game.js"
+if errorlevel 1 exit /b %errorlevel%
+echo Multi-file constants and array dimensions compiled in both source orders and targets.
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\diagnostics\MultiFileCircularConstants\Program.smile" --source "%SMILE_ROOT%\examples\diagnostics\MultiFileCircularConstants\First.smile" --source "%SMILE_ROOT%\examples\diagnostics\MultiFileCircularConstants\Second.smile" > "%SMILE_ROOT%\artifacts\temp\MultiFileCircularConstants.log" 2>&1
+if not errorlevel 1 (
+    echo Circular constants smoke test failed: compilation unexpectedly succeeded.
+    exit /b 1
+)
+if errorlevel 2 exit /b 1
+findstr /c:"SML3029" /c:"Circular constant dependency" "%SMILE_ROOT%\artifacts\temp\MultiFileCircularConstants.log" >nul
+if errorlevel 1 (
+    echo Circular constants smoke test failed: missing circular-dependency diagnostic.
+    exit /b 1
+)
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\diagnostics\MultiFileNameCollision\Program.smile" --source "%SMILE_ROOT%\examples\diagnostics\MultiFileNameCollision\Value.smile" --source "%SMILE_ROOT%\examples\diagnostics\MultiFileNameCollision\Routine.smile" > "%SMILE_ROOT%\artifacts\temp\MultiFileNameCollision.log" 2>&1
+if not errorlevel 1 (
+    echo Project namespace smoke test failed: compilation unexpectedly succeeded.
+    exit /b 1
+)
+if errorlevel 2 exit /b 1
+findstr /c:"SML3005" "%SMILE_ROOT%\artifacts\temp\MultiFileNameCollision.log" >nul
+if errorlevel 1 (
+    echo Project namespace smoke test failed: missing collision diagnostic.
+    exit /b 1
+)
+echo Circular constants and project-level name collisions failed with the intended diagnostics.
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\SourceVisibilityBasics\Program.smile" --source "%SMILE_ROOT%\examples\SourceVisibilityBasics\Helpers.smile" -o "%SMILE_ROOT%\artifacts\games\SourceVisibilityBasics.exe"
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\SourceVisibilityBasics\Program.smile" --source "%SMILE_ROOT%\examples\SourceVisibilityBasics\Helpers.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\SourceVisibilityBasics"
+if errorlevel 1 exit /b %errorlevel%
+node --check "%SMILE_ROOT%\artifacts\web\SourceVisibilityBasics\game.js"
+if errorlevel 1 exit /b %errorlevel%
+echo Source visibility fixture compiled for native and Web.
+
 if not exist "%SMILE_ROOT%\artifacts\games\Snake" mkdir "%SMILE_ROOT%\artifacts\games\Snake"
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\Snake\Program.smile" -o "%SMILE_ROOT%\artifacts\games\Snake\Snake.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%

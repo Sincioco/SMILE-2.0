@@ -22,7 +22,7 @@ internal sealed class SmileClassifierProvider : IClassifierProvider
 
     public IClassifier GetClassifier(ITextBuffer textBuffer) =>
         textBuffer.Properties.GetOrCreateSingletonProperty(() =>
-            new SmileClassifier(textBuffer, ClassificationRegistry, GetFilePath(textBuffer)));
+            new SmileClassifier(textBuffer, ClassificationRegistry, GetFilePath(textBuffer), TextDocumentFactory));
 
     private string GetFilePath(ITextBuffer buffer) =>
         TextDocumentFactory.TryGetTextDocument(buffer, out var document) ? document.FilePath : string.Empty;
@@ -34,10 +34,11 @@ internal sealed class SmileClassifier : IClassifier
     private readonly SmileAnalysisCache _cache;
     private readonly Dictionary<TokenClassification, IClassificationType> _classifications;
 
-    public SmileClassifier(ITextBuffer buffer, IClassificationTypeRegistryService registry, string filePath)
+    public SmileClassifier(ITextBuffer buffer, IClassificationTypeRegistryService registry, string filePath,
+        ITextDocumentFactoryService textDocumentFactory)
     {
         _buffer = buffer;
-        _cache = buffer.Properties.GetOrCreateSingletonProperty(() => new SmileAnalysisCache(buffer, filePath));
+        _cache = buffer.Properties.GetOrCreateSingletonProperty(() => new SmileAnalysisCache(buffer, filePath, textDocumentFactory));
         _cache.AnalysisChanged += AnalysisChanged;
         _classifications = new Dictionary<TokenClassification, IClassificationType>
         {

@@ -9,39 +9,54 @@ namespace Smile.VisualStudio;
 internal static class SmileProjectWorkspace
 {
     private static readonly object Gate = new();
-    private static readonly Dictionary<string, SmileProjectSourceSet> Projects =
-        new(StringComparer.OrdinalIgnoreCase);
-    private static readonly Dictionary<string, SmileProjectSourceSet> Sources =
-        new(StringComparer.OrdinalIgnoreCase);
-    private static readonly Dictionary<string, string> OpenBuffers =
-        new(StringComparer.OrdinalIgnoreCase);
-    private static readonly Dictionary<string, List<Action>> BufferInvalidations =
-        new(StringComparer.OrdinalIgnoreCase);
+    private static readonly SmileProjectOwnershipIndex Ownership = new();
+    private static readonly SmileOpenBufferRegistry OpenBuffers = new();
 
     public static void Register(SmileProjectSourceSet sourceSet)
     {
+        string[] affected;
         lock (Gate)
-        {
-            UnregisterCore(sourceSet.ProjectPath);
-            Projects[sourceSet.ProjectPath] = sourceSet;
-            foreach (var source in sourceSet.Items)
-                Sources[source.FullPath] = sourceSet;
-        }
-        Invalidate(sourceSet.Items.Select(source => source.FullPath));
+            affected = Ownership.Register(sourceSet).ToArray();
+        Invalidate(affected);
     }
 
     public static void Unregister(string projectPath)
     {
+        string[] affected;
         lock (Gate)
-            UnregisterCore(Path.GetFullPath(projectPath));
+            affected = Ownership.Unregister(Path.GetFullPath(projectPath)).ToArray();
+        Invalidate(affected);
     }
 
-    public static SmileAnalysisResult Analyze(string filePath, string currentText)
+    public static bool Contains(string projectPath, string sourcePath)
+    {
+        var normalizedProject = Path.GetFullPath(projectPath);
+        var normalizedSource = Path.GetFullPath(sourcePath);
+        lock (Gate)
+            return Ownership.Contains(normalizedProject, normalizedSource);
+    }
+
+    public static IReadOnlyList<string> GetProjectPaths(string sourcePath)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath))
+            return Array.Empty<string>();
+        var normalizedPath = Path.GetFullPath(sourcePath);
+        lock (Gate)
+            return Ownership.GetOwners(normalizedPath).Select(owner => owner.ProjectPath).ToArray();
+    }
+
+    public static SmileAnalysisResult Analyze(string filePath, string currentText, string? projectPath = null)
     {
         var normalizedPath = string.IsNullOrWhiteSpace(filePath) ? string.Empty : Path.GetFullPath(filePath);
-        SmileProjectSourceSet? sourceSet;
+        SmileProjectSourceSet? sourceSet = null;
         lock (Gate)
-            Sources.TryGetValue(normalizedPath, out sourceSet);
+        {
+            var owners = Ownership.GetOwners(normalizedPath);
+            if (!string.IsNullOrWhiteSpace(projectPath))
+                sourceSet = owners.FirstOrDefault(owner => string.Equals(owner.ProjectPath,
+                    Path.GetFullPath(projectPath), StringComparison.OrdinalIgnoreCase));
+            sourceSet ??= owners.FirstOrDefault();
+        }
 
         if (sourceSet == null)
             return SmileLanguage.Analyze(currentText, filePath);
@@ -51,8 +66,7 @@ internal static class SmileProjectWorkspace
         foreach (var source in compilationSources)
         {
             string? text;
-            lock (Gate)
-                OpenBuffers.TryGetValue(source.FullPath, out text);
+            text = OpenBuffers.TryGetText(source.FullPath, out var openText) ? openText : null;
             if (string.Equals(source.FullPath, normalizedPath, StringComparison.OrdinalIgnoreCase))
                 text = currentText;
 
@@ -75,28 +89,27 @@ internal static class SmileProjectWorkspace
         return SmileLanguage.Analyze(documents);
     }
 
-    public static void RegisterBuffer(string filePath, string currentText, Action invalidate)
+    public static IDisposable RegisterBuffer(string filePath, string currentText, Action invalidate)
     {
+        if (string.IsNullOrWhiteSpace(filePath))
+            return EmptyRegistration.Instance;
         var normalizedPath = Path.GetFullPath(filePath);
-        lock (Gate)
-        {
-            OpenBuffers[normalizedPath] = currentText;
-            if (!BufferInvalidations.TryGetValue(normalizedPath, out var callbacks))
-                BufferInvalidations[normalizedPath] = callbacks = new List<Action>();
-            if (!callbacks.Contains(invalidate))
-                callbacks.Add(invalidate);
-        }
+        return OpenBuffers.Register(normalizedPath, currentText, invalidate);
     }
 
     public static void UpdateBuffer(string filePath, string currentText)
     {
+        if (string.IsNullOrWhiteSpace(filePath))
+            return;
         var normalizedPath = Path.GetFullPath(filePath);
         string[] affected;
         lock (Gate)
         {
-            OpenBuffers[normalizedPath] = currentText;
-            affected = Sources.TryGetValue(normalizedPath, out var sourceSet)
-                ? sourceSet.Items.Select(source => source.FullPath).ToArray()
+            OpenBuffers.Update(normalizedPath, currentText);
+            var owners = Ownership.GetOwners(normalizedPath);
+            affected = owners.Count != 0
+                ? owners.SelectMany(owner => owner.Items).Select(source => source.FullPath)
+                    .Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
                 : new[] { normalizedPath };
         }
         Invalidate(affected);
@@ -105,23 +118,14 @@ internal static class SmileProjectWorkspace
     private static void Invalidate(IEnumerable<string> sourcePaths)
     {
         Action[] callbacks;
-        lock (Gate)
-            callbacks = sourcePaths.Distinct(StringComparer.OrdinalIgnoreCase)
-                .Where(path => BufferInvalidations.ContainsKey(path))
-                .SelectMany(path => BufferInvalidations[path]).Distinct().ToArray();
+        callbacks = OpenBuffers.GetInvalidations(sourcePaths).ToArray();
         foreach (var callback in callbacks)
             callback();
     }
 
-    private static void UnregisterCore(string projectPath)
+    private sealed class EmptyRegistration : IDisposable
     {
-        if (!Projects.TryGetValue(projectPath, out var existing))
-            return;
-        Projects.Remove(projectPath);
-        foreach (var source in existing.Items)
-        {
-            if (Sources.TryGetValue(source.FullPath, out var owner) && ReferenceEquals(owner, existing))
-                Sources.Remove(source.FullPath);
-        }
+        public static readonly EmptyRegistration Instance = new();
+        public void Dispose() { }
     }
 }

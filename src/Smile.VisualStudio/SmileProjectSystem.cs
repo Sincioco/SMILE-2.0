@@ -15,7 +15,6 @@ using Microsoft.VisualStudio.Imaging.Interop;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
-using Microsoft.VisualBasic;
 using System.Windows.Forms;
 
 namespace Smile.VisualStudio;
@@ -141,9 +140,9 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     private readonly SmilePackage _package;
     private readonly Dictionary<uint, ProjectItem> _items = new();
     private readonly Dictionary<uint, IVsHierarchyEvents> _events = new();
+    private readonly SmileProjectHierarchyIdentityMap _hierarchyIds = new();
     private readonly Guid _projectGuid;
     private uint _nextEventCookie = 1;
-    private uint _nextItemId = 1;
     private uint _contextCommandItemId = VSConstants.VSITEMID_ROOT;
     private Microsoft.VisualStudio.OLE.Interop.IServiceProvider? _site;
     private SmileConfigurationProvider? _configurationProvider;
@@ -260,8 +259,8 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             {
                 if (!sourcePaths.Contains(document.FullName, StringComparer.OrdinalIgnoreCase))
                     continue;
-
-                document.Save();
+                if (!document.Saved)
+                    document.Save();
             }
         }
         catch (Exception exception)
@@ -403,57 +402,32 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
 
     private void BuildHierarchy(XElement root)
     {
-        var reusableIds = _items.Values
-            .Where(item => item.Kind != ItemKind.Project)
-            .ToDictionary(HierarchyKey, item => item.Id, StringComparer.OrdinalIgnoreCase);
+        if (ProjectKind.Equals("Game", StringComparison.OrdinalIgnoreCase) || AssetIncludes.Count != 0)
+            Directory.CreateDirectory(Path.Combine(ProjectDirectory, "Assets"));
+
+        var projection = SmileProjectHierarchyProjection.Create(SourceSet, ProjectKind, AssetIncludes);
+        var ids = _hierarchyIds.Apply(projection);
         _items.Clear();
         var rootNode = new ProjectItem(VSConstants.VSITEMID_ROOT, ProjectName, ProjectPath, ItemKind.Project, 0);
         _items[rootNode.Id] = rootNode;
-
-        foreach (var source in SourceSet.Items.Where(source =>
-                     source.StartupOnly ||
-                     string.Equals(source.FullPath, SourceSet.StartupSource.FullPath, StringComparison.OrdinalIgnoreCase)))
-            AddNode(rootNode, reusableIds, Path.GetFileName(source.Include), source.FullPath, ItemKind.File);
-
-        if (ProjectKind.Equals("Game", StringComparison.OrdinalIgnoreCase) || AssetIncludes.Count != 0)
+        var parents = new Dictionary<string, ProjectItem>(StringComparer.OrdinalIgnoreCase);
+        foreach (var projected in projection)
         {
-            var assetsPath = Path.Combine(ProjectDirectory, "Assets");
-            Directory.CreateDirectory(assetsPath);
-            var assets = AddNode(rootNode, reusableIds, "Assets", assetsPath, ItemKind.Folder);
-            AddDirectoryChildren(assets, assetsPath, reusableIds);
+            var parent = projected.ParentPath == null ? rootNode : parents[projected.ParentPath];
+            var kind = projected.Kind == SmileProjectHierarchyItemKind.Folder ? ItemKind.Folder : ItemKind.File;
+            var node = AddNode(parent, ids[projected.Key], projected.Caption, projected.FullPath, kind);
+            if (projected.Kind == SmileProjectHierarchyItemKind.Folder)
+                parents[projected.FullPath] = node;
         }
-
-        foreach (var source in SourceSet.Items.Where(source =>
-                     !source.StartupOnly &&
-                     !string.Equals(source.FullPath, SourceSet.StartupSource.FullPath, StringComparison.OrdinalIgnoreCase)))
-            AddNode(rootNode, reusableIds, Path.GetFileName(source.Include), source.FullPath, ItemKind.File);
     }
 
-    private ProjectItem AddNode(ProjectItem parent, IDictionary<string, uint> reusableIds, string caption, string path, ItemKind kind)
+    private ProjectItem AddNode(ProjectItem parent, uint id, string caption, string path, ItemKind kind)
     {
-        var key = HierarchyKey(kind, path);
-        var id = reusableIds.TryGetValue(key, out var existingId) ? existingId : _nextItemId++;
-        reusableIds.Remove(key);
         var node = new ProjectItem(id, caption, path, kind, parent.Id);
         parent.Children.Add(node.Id);
         _items[node.Id] = node;
         return node;
     }
-
-    private void AddDirectoryChildren(ProjectItem parent, string directory, IDictionary<string, uint> reusableIds)
-    {
-        foreach (var childDirectory in Directory.EnumerateDirectories(directory).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
-        {
-            var child = AddNode(parent, reusableIds, Path.GetFileName(childDirectory), childDirectory, ItemKind.Folder);
-            AddDirectoryChildren(child, childDirectory, reusableIds);
-        }
-        foreach (var file in Directory.EnumerateFiles(directory).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
-            AddNode(parent, reusableIds, Path.GetFileName(file), file, ItemKind.File);
-    }
-
-    private static string HierarchyKey(ProjectItem item) => HierarchyKey(item.Kind, item.Path);
-
-    private static string HierarchyKey(ItemKind kind, string path) => kind + "|" + Path.GetFullPath(path);
 
     private static string Value(XElement? group, string name, string fallback) =>
         group?.Elements().FirstOrDefault(element => element.Name.LocalName == name)?.Value.Trim() is { Length: > 0 } value ? value : fallback;
@@ -738,9 +712,9 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             return VSConstants.E_FAIL;
         var menuId = item.Kind switch
         {
-            ItemKind.Project => VsMenus.IDM_VS_CTXT_PROJNODE,
-            ItemKind.Folder => VsMenus.IDM_VS_CTXT_FOLDERNODE,
-            _ => VsMenus.IDM_VS_CTXT_ITEMNODE
+            ItemKind.Project => SmileProjectCommands.ProjectContextMenu,
+            ItemKind.Folder => SmileProjectCommands.FolderContextMenu,
+            _ => SmileProjectCommands.SourceContextMenu
         };
         var x = Cursor.Position.X;
         var y = Cursor.Position.Y;
@@ -759,7 +733,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         }
 
         var points = new[] { new POINTS { x = checked((short)x), y = checked((short)y) } };
-        var menuGroup = VsMenus.guidSHLMainMenu;
+        var menuGroup = SmileProjectCommands.CommandSet;
         var previousItemId = _contextCommandItemId;
         _contextCommandItemId = item.Id;
         try
@@ -779,7 +753,8 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         var invisible = supported | (uint)OLECMDF.OLECMDF_INVISIBLE;
         if (item.Kind == ItemKind.Project)
             return commandId is SmileProjectCommands.Build or SmileProjectCommands.Rebuild or SmileProjectCommands.Clean or
-                SmileProjectCommands.AddNewSource or SmileProjectCommands.AddExistingSource or SmileProjectCommands.OpenProjectFolder
+                SmileProjectCommands.AddNewSource or SmileProjectCommands.AddExistingSource or
+                SmileProjectCommands.EditProjectFile or SmileProjectCommands.OpenProjectFolder
                 ? enabled : invisible;
         if (item.Kind == ItemKind.Folder)
             return commandId == SmileProjectCommands.OpenFolder ? enabled : invisible;
@@ -801,6 +776,8 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         ThreadHelper.ThrowIfNotOnUIThread();
         if (commandId == SmileProjectCommands.OpenProjectFolder)
             return OpenFolder(ProjectDirectory);
+        if (commandId == SmileProjectCommands.EditProjectFile)
+            return EditProjectFile();
         if (commandId == SmileProjectCommands.OpenContainingFolder)
             return OpenFolder(Path.GetDirectoryName(item.Path)!);
         if (commandId == SmileProjectCommands.OpenFolder)
@@ -828,34 +805,16 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     private int AddNewSource()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        var name = Interaction.InputBox("Enter a name for the new support source file.",
-            "Add New SMILE Source", "NewSource.smile").Trim();
-        if (string.IsNullOrEmpty(name))
+        if (!SmileSourceNameDialog.TryShow(out var enteredName))
             return VSConstants.S_OK;
-        if (string.IsNullOrEmpty(Path.GetExtension(name)))
-            name += ".smile";
-        if (!string.Equals(name, Path.GetFileName(name), StringComparison.Ordinal) ||
-            !string.Equals(Path.GetExtension(name), ".smile", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("Enter a file name ending in .smile without a directory path.");
+        var name = ValidateNewSourceName(enteredName);
         var sourcePath = Path.Combine(ProjectDirectory, name);
         if (File.Exists(sourcePath))
             throw new IOException($"A file named '{name}' already exists.");
 
-        File.WriteAllText(sourcePath, "' Support declarations and routines for this project." + Environment.NewLine,
+        File.WriteAllText(sourcePath, "' SMILE 2.0 support source." + Environment.NewLine,
             new UTF8Encoding(false));
-        try
-        {
-            SmileProjectFileEditor.AddSource(ProjectPath, sourcePath);
-        }
-        catch
-        {
-            File.Delete(sourcePath);
-            throw;
-        }
-        var previousItems = ReadProject(captureHierarchy: true)!;
-        var result = OpenPath(sourcePath);
-        NotifyHierarchyChanged(previousItems);
-        return result;
+        return AddSourceAndOpen(sourcePath, deletePhysicalFileOnRollback: true);
     }
 
     private int AddExistingSource()
@@ -863,7 +822,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         ThreadHelper.ThrowIfNotOnUIThread();
         using var dialog = new OpenFileDialog
         {
-            Title = "Add Existing SMILE Source",
+            Title = "Add Existing SMILE 2.0 Source Code",
             Filter = "SMILE source files (*.smile)|*.smile",
             InitialDirectory = ProjectDirectory,
             Multiselect = false,
@@ -884,20 +843,78 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             File.Copy(selectedPath, sourcePath);
             copied = true;
         }
+        return AddSourceAndOpen(sourcePath, copied);
+    }
+
+    private int AddSourceAndOpen(string sourcePath, bool deletePhysicalFileOnRollback)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var included = false;
         try
         {
             SmileProjectFileEditor.AddSource(ProjectPath, sourcePath);
+            included = true;
+            var previousItems = ReadProject(captureHierarchy: true)!;
+            ValidateAddedSource(sourcePath);
+            NotifyHierarchyChanged(previousItems);
+            var result = OpenPath(sourcePath);
+            if (ErrorHandler.Failed(result))
+                Marshal.ThrowExceptionForHR(result);
+            return result;
         }
         catch
         {
-            if (copied && File.Exists(sourcePath))
+            if (included)
+            {
+                try
+                {
+                    SmileProjectFileEditor.RemoveSource(ProjectPath, sourcePath);
+                    NotifyHierarchyChanged(ReadProject(captureHierarchy: true)!);
+                }
+                catch (Exception rollbackException)
+                {
+                    ActivityLog.LogError(nameof(SmileProject), $"Could not roll back source inclusion: {rollbackException}");
+                }
+            }
+            if (deletePhysicalFileOnRollback && File.Exists(sourcePath))
                 File.Delete(sourcePath);
             throw;
         }
-        var previousItems = ReadProject(captureHierarchy: true)!;
-        var result = OpenPath(sourcePath);
-        NotifyHierarchyChanged(previousItems);
-        return result;
+    }
+
+    private void ValidateAddedSource(string sourcePath)
+    {
+        var normalizedPath = Path.GetFullPath(sourcePath);
+        if (!File.Exists(normalizedPath))
+            throw new IOException($"The new SMILE source was not created: {normalizedPath}");
+        if (SourceSet.Items.Count(source =>
+                string.Equals(source.FullPath, normalizedPath, StringComparison.OrdinalIgnoreCase)) != 1)
+            throw new InvalidDataException("The project must contain exactly one normalized entry for the new SMILE source.");
+        if (_items.Values.Count(item => item.Kind == ItemKind.File &&
+                string.Equals(item.Path, normalizedPath, StringComparison.OrdinalIgnoreCase)) != 1)
+            throw new InvalidDataException("The new SMILE source was not projected into the Solution Explorer hierarchy.");
+        if (!SmileProjectWorkspace.Contains(ProjectPath, normalizedPath))
+            throw new InvalidDataException("The new SMILE source was not registered with the project workspace.");
+    }
+
+    private static string ValidateNewSourceName(string enteredName)
+    {
+        var name = enteredName.Trim();
+        if (string.IsNullOrEmpty(Path.GetExtension(name)))
+            name += ".smile";
+        if (string.IsNullOrWhiteSpace(name) ||
+            !string.Equals(name, Path.GetFileName(name), StringComparison.Ordinal) ||
+            !string.Equals(Path.GetExtension(name), ".smile", StringComparison.OrdinalIgnoreCase) ||
+            name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
+            name.EndsWith(".", StringComparison.Ordinal) || name.EndsWith(" ", StringComparison.Ordinal))
+            throw new InvalidDataException("Enter a valid Windows file name ending in .smile without a directory path.");
+
+        var stem = Path.GetFileNameWithoutExtension(name);
+        var reserved = new[] { "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+            "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9" };
+        if (reserved.Contains(stem, StringComparer.OrdinalIgnoreCase))
+            throw new InvalidDataException($"'{name}' is a reserved Windows file name.");
+        return name;
     }
 
     private int ExecuteBuildCommand(uint commandId)
@@ -928,6 +945,16 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         return OpenItem(itemId, ref logicalView, IntPtr.Zero, out _);
     }
 
+    private int EditProjectFile()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var dte = Package.GetGlobalService(typeof(SDTE)) as DTE;
+        if (dte == null)
+            return VSConstants.E_FAIL;
+        dte.ItemOperations.OpenFile(ProjectPath, EnvDTE.Constants.vsViewKindTextView);
+        return VSConstants.S_OK;
+    }
+
     private static int OpenFolder(string path)
     {
         System.Diagnostics.Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
@@ -947,14 +974,34 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     private void NotifyHierarchyChanged(IReadOnlyDictionary<uint, ProjectItem> previousItems)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
+        var removedItems = previousItems.Values
+            .Where(item => item.Kind != ItemKind.Project && !_items.ContainsKey(item.Id))
+            .OrderByDescending(item => item.Id)
+            .ToArray();
+        var addedItems = _items.Values
+            .Where(item => item.Kind != ItemKind.Project && !previousItems.ContainsKey(item.Id))
+            .OrderBy(item => item.Id)
+            .ToArray();
+        var affectedParents = previousItems.Values.Concat(_items.Values)
+            .Where(item => item.Kind != ItemKind.File)
+            .Select(item => item.Id)
+            .Distinct()
+            .Where(id =>
+            {
+                var oldChildren = previousItems.TryGetValue(id, out var oldParent)
+                    ? oldParent.Children : new List<uint>();
+                var newChildren = _items.TryGetValue(id, out var newParent)
+                    ? newParent.Children : new List<uint>();
+                return !oldChildren.SequenceEqual(newChildren);
+            })
+            .ToArray();
+
         foreach (var sink in _events.Values.ToArray())
         {
-            foreach (var removed in previousItems.Values
-                         .Where(item => item.Kind != ItemKind.Project && !_items.ContainsKey(item.Id))
-                         .OrderByDescending(item => item.Id))
+            foreach (var removed in removedItems)
                 sink.OnItemDeleted(removed.Id);
 
-            foreach (var added in _items.Values.Where(item => item.Kind != ItemKind.Project && !previousItems.ContainsKey(item.Id)))
+            foreach (var added in addedItems)
             {
                 var parent = _items[added.ParentId];
                 var index = parent.Children.IndexOf(added.Id);
@@ -967,14 +1014,29 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
                     sink.OnPropertyChanged(previousSibling, (int)__VSHPROPID.VSHPROPID_NextVisibleSibling, 0);
                 }
                 sink.OnItemAdded(parent.Id, previousSibling, added.Id);
-                sink.OnItemsAppended(parent.Id);
-                sink.OnInvalidateItems(parent.Id);
+            }
+
+            foreach (var parentId in affectedParents.Where(_items.ContainsKey))
+            {
+                var parent = _items[parentId];
+                sink.OnPropertyChanged(parent.Id, (int)__VSHPROPID.VSHPROPID_FirstChild, 0);
+                sink.OnPropertyChanged(parent.Id, (int)__VSHPROPID.VSHPROPID_FirstVisibleChild, 0);
+                foreach (var childId in parent.Children)
+                {
+                    sink.OnPropertyChanged(childId, (int)__VSHPROPID.VSHPROPID_Parent, 0);
+                    sink.OnPropertyChanged(childId, (int)__VSHPROPID.VSHPROPID_NextSibling, 0);
+                    sink.OnPropertyChanged(childId, (int)__VSHPROPID.VSHPROPID_NextVisibleSibling, 0);
+                }
+                // Invalidating the project root after OnItemAdded clears Visual Studio's child cache.
+                // Nested folders may still be invalidated safely when their physical contents change.
+                if (parent.Id != VSConstants.VSITEMID_ROOT)
+                    sink.OnInvalidateItems(parent.Id);
             }
 
             foreach (var existing in _items.Values.Where(item => previousItems.ContainsKey(item.Id)))
                 sink.OnPropertyChanged(existing.Id, (int)__VSHPROPID.VSHPROPID_Caption, 0);
-            sink.OnInvalidateItems(VSConstants.VSITEMID_ROOT);
         }
+
     }
 
     private void ShowMessage(string message, OLEMSGICON icon) =>
@@ -1145,6 +1207,71 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     }
 
     private enum ItemKind { Project, Folder, File }
+}
+
+internal static class SmileSourceNameDialog
+{
+    public static bool TryShow(out string fileName)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        using var dialog = new Form
+        {
+            Text = "New SMILE 2.0 Source Code",
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            StartPosition = FormStartPosition.CenterParent,
+            MaximizeBox = false,
+            MinimizeBox = false,
+            ShowInTaskbar = false,
+            ClientSize = new System.Drawing.Size(420, 122)
+        };
+        var prompt = new Label
+        {
+            AutoSize = true,
+            Left = 12,
+            Top = 14,
+            Text = "Enter a name for the new support source file."
+        };
+        var input = new TextBox
+        {
+            Left = 12,
+            Top = 40,
+            Width = 396,
+            Text = "NewSource.smile"
+        };
+        var ok = new Button
+        {
+            Text = "OK",
+            DialogResult = DialogResult.OK,
+            Left = 252,
+            Top = 80,
+            Width = 75
+        };
+        var cancel = new Button
+        {
+            Text = "Cancel",
+            DialogResult = DialogResult.Cancel,
+            Left = 333,
+            Top = 80,
+            Width = 75
+        };
+        dialog.Controls.AddRange(new Control[] { prompt, input, ok, cancel });
+        dialog.AcceptButton = ok;
+        dialog.CancelButton = cancel;
+        dialog.Shown += (_, _) => { input.Focus(); input.SelectAll(); };
+
+        var shell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
+        var result = shell != null && ErrorHandler.Succeeded(shell.GetDialogOwnerHwnd(out var owner)) && owner != IntPtr.Zero
+            ? dialog.ShowDialog(new DialogOwner(owner))
+            : dialog.ShowDialog();
+        fileName = result == DialogResult.OK ? input.Text : string.Empty;
+        return result == DialogResult.OK;
+    }
+
+    private sealed class DialogOwner : IWin32Window
+    {
+        public DialogOwner(IntPtr handle) => Handle = handle;
+        public IntPtr Handle { get; }
+    }
 }
 
 internal sealed class SmileConfigurationProvider : IVsCfgProvider2, IVsProjectCfgProvider

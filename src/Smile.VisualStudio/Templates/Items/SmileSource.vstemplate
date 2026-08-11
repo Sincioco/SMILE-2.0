@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<VSTemplate Version="3.0.0" Type="Item" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005">
+  <TemplateData>
+    <Name>SMILE 2.0 Source Code</Name>
+    <Description>A standalone SMILE 2.0 source-code file with syntax highlighting, IntelliSense, and diagnostics.</Description>
+    <ProjectType>General</ProjectType>
+    <LanguageTag>SMILE</LanguageTag>
+    <PlatformTag>Windows</PlatformTag>
+    <SortOrder>100</SortOrder>
+    <DefaultName>NewSource.smile</DefaultName>
+    <ProvideDefaultName>true</ProvideDefaultName>
+  </TemplateData>
+  <TemplateContent>
+    <ProjectItem ReplaceParameters="false" TargetFileName="$fileinputname$.smile">NewSource.smile</ProjectItem>
+  </TemplateContent>
+</VSTemplate>

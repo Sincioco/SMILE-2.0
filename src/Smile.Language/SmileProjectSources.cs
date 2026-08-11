@@ -153,9 +153,9 @@ public static class SmileProjectFileEditor
             context.Root.Add(itemGroup);
         }
         if (existingSources.Length == 0)
-            itemGroup.Add(new XElement(context.Root.Name.Namespace + "SmileSource",
+            AppendItem(itemGroup, new XElement(context.Root.Name.Namespace + "SmileSource",
                 new XAttribute("Include", StartupValue(context.Root))));
-        itemGroup.Add(new XElement(context.Root.Name.Namespace + "SmileSource", new XAttribute("Include", include)));
+        AppendItem(itemGroup, new XElement(context.Root.Name.Namespace + "SmileSource", new XAttribute("Include", include)));
         return Save(context);
     }
 
@@ -202,7 +202,10 @@ public static class SmileProjectFileEditor
         var startupPath = Path.GetFullPath(Path.Combine(context.ProjectDirectory, StartupValue(context.Root)));
         if (string.Equals(fullSourcePath, startupPath, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("The selected startup source cannot be removed from the project.");
-        FindSource(context, fullSourcePath).Remove();
+        var source = FindSource(context, fullSourcePath);
+        if (source.PreviousNode is XText indentation && string.IsNullOrWhiteSpace(indentation.Value))
+            indentation.Remove();
+        source.Remove();
         return Save(context);
     }
 
@@ -217,6 +220,9 @@ public static class SmileProjectFileEditor
 
     private static SmileProjectSourceSet Save(ProjectContext context)
     {
+        while (context.Document.LastNode is XText trailingWhitespace &&
+               string.IsNullOrWhiteSpace(trailingWhitespace.Value))
+            trailingWhitespace.Remove();
         File.WriteAllText(context.ProjectPath, context.Document.ToString() + Environment.NewLine,
             new System.Text.UTF8Encoding(false));
         return SmileProjectSourceSet.Load(context.ProjectPath);
@@ -225,6 +231,15 @@ public static class SmileProjectFileEditor
     private static IEnumerable<XElement> SourceElements(XElement root) =>
         root.Elements().Where(element => element.Name.LocalName == "ItemGroup")
             .SelectMany(element => element.Elements().Where(item => item.Name.LocalName == "SmileSource"));
+
+    private static void AppendItem(XElement itemGroup, XElement item)
+    {
+        var trailingWhitespace = itemGroup.Nodes().LastOrDefault() as XText;
+        if (trailingWhitespace != null && string.IsNullOrWhiteSpace(trailingWhitespace.Value))
+            trailingWhitespace.AddBeforeSelf(new XText(Environment.NewLine + "    "), item);
+        else
+            itemGroup.Add(new XText(Environment.NewLine + "    "), item, new XText(Environment.NewLine + "  "));
+    }
 
     private static XElement FindSource(ProjectContext context, string sourcePath) =>
         SourceElements(context.Root).FirstOrDefault(element => SameInclude(context.ProjectDirectory, element, sourcePath))

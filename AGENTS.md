@@ -9,6 +9,9 @@ These instructions apply to the entire SMILE 2.0 repository.
 - Local repository: `D:\SMILE 2.0`
 - Public GitHub repository: `Sincioco/SMILE-2.0`
 - Sin authorizes Codex to create, edit, rename, move, delete, build, run, commit, and push files belonging to this repository.
+- Windows native compilation and execution is priority 1.
+- Web compilation and execution is priority 2.
+- Both targets consume the same shared language, semantic model, and compiler front end.
 
 ## KISS and velocity
 
@@ -49,6 +52,8 @@ The compiler and Visual Studio extension must consume this shared implementation
 
 Never create a compiler-only parser, extension-only parser, duplicate keyword table, duplicate syntax rules, or duplicate semantic rules.
 
+Language evolution may migrate all ten legacy games together when a shared language improvement requires it. Reusable game and application components belong in SMILE source rather than game-specific native helpers.
+
 When SMILE needs to evolve:
 
 1. First use current SMILE syntax when it remains clear.
@@ -61,7 +66,7 @@ When SMILE needs to evolve:
 
 Snake, Falling Blocks, Paddle Ball, Brick Breaker, Dungeon Star I, Dungeon Star II, Maze Muncher, Star Squadron, Platform Quest, and Sky Hopper must be implemented in `.smile` source.
 
-The native runtime may provide only generic services:
+The native and Web runtimes may provide only generic services shared by SMILE programs:
 
 - window creation;
 - graphics primitives;
@@ -71,6 +76,14 @@ The native runtime may provide only generic services:
 - WAV playback;
 - MP3 background-music playback and automatic focus muting;
 - simple integer persistence.
+
+The following future generic runtime services are approved when their milestone begins:
+
+- image and sprite primitives;
+- persistent data blocks;
+- multiple simultaneous sound-effect channels.
+
+The future reusable SMILE component `Smile.RPG.Abilities` is approved. RPG terminology uses **Magic Points (MP)** rather than Technique Points (TP).
 
 Do not add game-specific native helpers.
 

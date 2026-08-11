@@ -20,8 +20,8 @@
   <ItemGroup>
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Design" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
-    <Reference Include="Microsoft.VisualBasic" />
     <ProjectReference Include="..\Smile.Language\Smile.Language.csproj">
       <Private>true</Private>
       <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup</IncludeOutputGroupsInVSIX>
@@ -30,6 +30,12 @@
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <IncludeOutputGroupsInVSIX>TemplateProjectOutputGroup</IncludeOutputGroupsInVSIX>
       <VSIXSubPath>ProjectTemplates</VSIXSubPath>
+      <GlobalPropertiesToRemove>DeployExtension;VSSDKTargetPlatformRegRootSuffix</GlobalPropertiesToRemove>
+    </ProjectReference>
+    <ProjectReference Include="Templates\Items\Smile.ItemTemplates.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <IncludeOutputGroupsInVSIX>TemplateProjectOutputGroup</IncludeOutputGroupsInVSIX>
+      <VSIXSubPath>ItemTemplates</VSIXSubPath>
       <GlobalPropertiesToRemove>DeployExtension;VSSDKTargetPlatformRegRootSuffix</GlobalPropertiesToRemove>
     </ProjectReference>
   </ItemGroup>

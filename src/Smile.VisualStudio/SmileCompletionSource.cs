@@ -24,7 +24,7 @@ internal sealed class SmileCompletionSourceProvider : IAsyncCompletionSourceProv
 
     public IAsyncCompletionSource GetOrCreate(ITextView textView) =>
         textView.Properties.GetOrCreateSingletonProperty(() =>
-            new SmileCompletionSource(textView.TextBuffer, GetFilePath(textView.TextBuffer)));
+            new SmileCompletionSource(textView.TextBuffer, GetFilePath(textView.TextBuffer), TextDocumentFactory));
 
     private string GetFilePath(ITextBuffer buffer) =>
         TextDocumentFactory.TryGetTextDocument(buffer, out var document) ? document.FilePath : string.Empty;
@@ -37,10 +37,10 @@ internal sealed class SmileCompletionSource : IAsyncCompletionSource
     private readonly ConcurrentDictionary<string, string> _descriptions =
         new(StringComparer.OrdinalIgnoreCase);
 
-    public SmileCompletionSource(ITextBuffer buffer, string filePath)
+    public SmileCompletionSource(ITextBuffer buffer, string filePath, ITextDocumentFactoryService textDocumentFactory)
     {
         _filePath = filePath;
-        _cache = buffer.Properties.GetOrCreateSingletonProperty(() => new SmileAnalysisCache(buffer, filePath));
+        _cache = buffer.Properties.GetOrCreateSingletonProperty(() => new SmileAnalysisCache(buffer, filePath, textDocumentFactory));
     }
 
     public CompletionStartData InitializeCompletion(
@@ -73,7 +73,7 @@ internal sealed class SmileCompletionSource : IAsyncCompletionSource
         cancellationToken.ThrowIfCancellationRequested();
         var snapshot = triggerLocation.Snapshot;
         if (!_cache.TryGet(snapshot, out var analysis))
-            analysis = SmileProjectWorkspace.Analyze(_filePath, snapshot.GetText());
+            analysis = SmileProjectWorkspace.Analyze(_filePath, snapshot.GetText(), _cache.ProjectPath);
 
         var completions = analysis.TryGetSyntaxTree(_filePath, out var syntaxTree)
             ? SmileCompletionService.GetCompletions(analysis, syntaxTree, triggerLocation.Position)

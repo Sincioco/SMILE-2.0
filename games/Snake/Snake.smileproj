@@ -10,5 +10,6 @@
     <SmileSource Include="Program.smile" StartupOnly="true" />
     <SmileSource Include="Program-NoDemo.smile" StartupOnly="true" />
     <Asset Include="Assets\**\*" />
+    <SmileSource Include="aaa.smile" />
   </ItemGroup>
 </SmileProject>

@@ -1,0 +1,3 @@
+SUB sharedname()
+    PRINT 1
+END SUB
