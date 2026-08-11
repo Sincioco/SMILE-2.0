@@ -1,0 +1,10 @@
+94baa09baddcf0e1e8c4ae56fdfe442c058d25d4d644423aa9f53f0e68c2db79  00 - START HERE - Phase 1 Defect Corrections and Hardening.md
+0d69e8a3e0a71beb2145f25446c021cc7a69d626f594d736e6ac0b054b19ae31  01 - Phase 1 Report Findings and Corrective Scope.md
+5d3fb403b5fe029373b902d1937e46d428f36e57201aa186e3aac030c3fcafc7  02 - Native SMILE Source Stepping Correction.md
+72ab3c931b29a5343d25641f30a0425a114792428f04d2a6872e8607605a089d  03 - Visual Studio Project Context Menus Add Source and Startup UI.md
+fa661c4f6ab48ebe6dc9ddac3d3895f86cfa751e8c7b4f1a37ee8c5fcb829a97  04 - Multi-File Workspace and Project State Hardening.md
+e6449abe13e2f3f3ef87f62ed2bff187ff29a2ff6595b64da91682e6e13ed667  05 - Autonomous Single-Agent Codex Execution Instructions.md
+63b5d38269353e10bfddeb8083de40e5fd8e26bf944be6e3203520dabc63e6d5  06 - Acceptance Regression Commit Push and Final Report.md
+cfb8560da5459ab61c56cde78423b78a32bf7ed95b5fafd1829435b8418286c3  Evidence/Source Not Available after F10.png
+0c96d127f883cc91731cc69ffee76c54aceadd02b917614c50fade75d48afd12  MANIFEST.json
+98760c4829f1386cc17518f7a26aa0e66e22d465334b31dc75004af8bff33825  README - How to Hand This Package to Codex.md

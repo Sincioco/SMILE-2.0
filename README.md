@@ -14,7 +14,7 @@ When project work produces two or more Markdown requirement, specification, hand
 
 Every game with an attract/demo mode also ships a complete `Program-NoDemo.smile` teaching version. The no-demo source preserves normal gameplay while removing demo AI, lifecycle, timers, safety rules, UI, and cancellation code instead of hiding those systems behind a flag.
 
-To build a teaching edition in Visual Studio, change that game's `<StartupFile>` in its `.smileproj` from `Program.smile` to `Program-NoDemo.smile`. Both sources remain declared with `StartupOnly="true"`, so students can compare them directly while only the selected complete program enters the compilation.
+To build a teaching edition in Visual Studio, right-click `Program-NoDemo.smile` in Solution Explorer and choose **Set as Startup**. Both complete programs remain declared with `StartupOnly="true"`, and the selected file gains a `(Startup)` suffix while only that complete program enters the compilation. The XML remains available for automation, but normal switching no longer requires hand-editing it.
 
 Attract demos always return directly to the title screen when their run ends or expires. Demo-only game-over, victory, retry, and rematch screens are not shown; normal player terminal screens remain part of the game.
 
@@ -172,6 +172,12 @@ Both create a `.smileproj` with `Debug` and `Release` configurations. A game pro
 
 With `Web` selected, **Build > Build Solution** is the publish operation. `F5` or `Ctrl+F5` saves every open participating source, republishes the selected startup/support source set and assets, starts/reuses the VSIX's loopback-only static server, and opens a cache-busted `http://127.0.0.1:<port>/` URL in the default browser. Switch back to `Windows 64-bit .exe` for native launch and source-level debugging, including breakpoints in support-file routines. Project-aware completion includes compilation-wide globals and routines, while diagnostics and squiggles remain attached to their owning physical files. Compiler failures appear in both the SMILE Output pane and Error List with the same diagnostic code, message, file, line, and column used by the editor and command-line compiler.
 
+Solution Explorer supplies the routine project workflow directly. Right-click the project to **Build**, **Rebuild**, **Clean**, add a new or existing `.smile` support source, or open the project folder. Right-click a SMILE source to set it as startup, change an unselected `StartupOnly` file into an ordinary support source, remove it from the project without deleting the physical file, or open its containing folder. Asset folders expose only practical folder commands and do not advertise source actions. Project mutations refresh the hierarchy, shared editor workspace, and next native or Web F5 immediately.
+
+The editor keeps snapshots for every open SMILE buffer in a project. An unsaved declaration change in one file therefore refreshes completion and diagnostics in the other open files after the normal short debounce. Opening an unselected `StartupOnly` program analyzes it as the hypothetical startup with the ordinary support files and excludes the currently selected complete program.
+
+Debug native builds classify the generated MASM implementation as non-user code and expose the unique source-mapped SMILE statement helpers as user code. Breakpoints bind to physical startup and support files, and F10 moves between SMILE statements and across routine returns without opening generated C, MASM, disassembly, or **Source Not Available** pages.
+
 The published Web directory is ready for a separate static-host upload; the VSIX does not upload to GitHub Pages, Azure, Cloudflare, Netlify, or another remote service.
 
 The game template documents that automatic focus muting is inherited from the shared runtime; new games should use normal `PLAY SOUND` and `PLAY MUSIC` statements without per-game focus code.
@@ -204,7 +210,7 @@ Arc outlines use `DRAW ARC CenterX, CenterY, Radius, StartAngle, SweepAngle, Col
 - Numeric storage is signed 64-bit integer only; there is no floating-point type, user-defined type, dynamic collection, module system, or package manager.
 - Arrays are fixed at compile time and support at most two dimensions.
 - Routines accept at most four scalar parameters. Text is currently used as a literal-oriented console/graphics/audio surface rather than a general mutable string type.
-- The Visual Studio project system intentionally covers the core single-startup-file console/game workflow; it is not an MSBuild SDK or a general multi-target project system.
+- The Visual Studio project system intentionally remains a focused `.smileproj` system rather than an MSBuild SDK or general-purpose project system. It supports one selected startup program, ordinary support sources, alternate `StartupOnly` programs, declared assets, native/Web configurations, and the corresponding Solution Explorer mutations.
 - `PLAY SOUND` supports one asynchronous WAV effect at a time. `PLAY MUSIC` supports one MP3 background track through `Windows.Media.Playback.MediaPlayer`; there are no playlists, seeking, or multiple music channels.
 - Windows editions without the required optional media components may decline MP3 playback, but the game continues without crashing.
 - Music-bearing native executables require the current Microsoft Visual C++ Redistributable; non-music output does not acquire that additional dependency.

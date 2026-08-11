@@ -13,6 +13,10 @@ internal static class SmileProjectWorkspace
         new(StringComparer.OrdinalIgnoreCase);
     private static readonly Dictionary<string, SmileProjectSourceSet> Sources =
         new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, string> OpenBuffers =
+        new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, List<Action>> BufferInvalidations =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public static void Register(SmileProjectSourceSet sourceSet)
     {
@@ -20,9 +24,10 @@ internal static class SmileProjectWorkspace
         {
             UnregisterCore(sourceSet.ProjectPath);
             Projects[sourceSet.ProjectPath] = sourceSet;
-            foreach (var source in sourceSet.CompilationSources)
+            foreach (var source in sourceSet.Items)
                 Sources[source.FullPath] = sourceSet;
         }
+        Invalidate(sourceSet.Items.Select(source => source.FullPath));
     }
 
     public static void Unregister(string projectPath)
@@ -41,24 +46,71 @@ internal static class SmileProjectWorkspace
         if (sourceSet == null)
             return SmileLanguage.Analyze(currentText, filePath);
 
-        try
+        IReadOnlyList<SmileProjectSourceItem> compilationSources = sourceSet.GetCompilationSourcesFor(normalizedPath);
+        var documents = new List<SmileSourceDocument>(compilationSources.Count);
+        foreach (var source in compilationSources)
         {
-            var documents = sourceSet.CompilationSources.Select(source => new SmileSourceDocument(
-                string.Equals(source.FullPath, normalizedPath, StringComparison.OrdinalIgnoreCase)
-                    ? currentText
-                    : File.ReadAllText(source.FullPath),
-                source.FullPath,
-                source.IsStartup)).ToArray();
-            return SmileLanguage.Analyze(documents);
+            string? text;
+            lock (Gate)
+                OpenBuffers.TryGetValue(source.FullPath, out text);
+            if (string.Equals(source.FullPath, normalizedPath, StringComparison.OrdinalIgnoreCase))
+                text = currentText;
+
+            var missing = false;
+            if (text == null)
+            {
+                try
+                {
+                    text = File.ReadAllText(source.FullPath);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                    text = string.Empty;
+                    missing = true;
+                }
+            }
+            documents.Add(new SmileSourceDocument(text, source.FullPath,
+                string.Equals(source.FullPath, compilationSources[0].FullPath, StringComparison.OrdinalIgnoreCase), missing));
         }
-        catch (IOException)
+        return SmileLanguage.Analyze(documents);
+    }
+
+    public static void RegisterBuffer(string filePath, string currentText, Action invalidate)
+    {
+        var normalizedPath = Path.GetFullPath(filePath);
+        lock (Gate)
         {
-            return SmileLanguage.Analyze(currentText, filePath);
+            OpenBuffers[normalizedPath] = currentText;
+            if (!BufferInvalidations.TryGetValue(normalizedPath, out var callbacks))
+                BufferInvalidations[normalizedPath] = callbacks = new List<Action>();
+            if (!callbacks.Contains(invalidate))
+                callbacks.Add(invalidate);
         }
-        catch (UnauthorizedAccessException)
+    }
+
+    public static void UpdateBuffer(string filePath, string currentText)
+    {
+        var normalizedPath = Path.GetFullPath(filePath);
+        string[] affected;
+        lock (Gate)
         {
-            return SmileLanguage.Analyze(currentText, filePath);
+            OpenBuffers[normalizedPath] = currentText;
+            affected = Sources.TryGetValue(normalizedPath, out var sourceSet)
+                ? sourceSet.Items.Select(source => source.FullPath).ToArray()
+                : new[] { normalizedPath };
         }
+        Invalidate(affected);
+    }
+
+    private static void Invalidate(IEnumerable<string> sourcePaths)
+    {
+        Action[] callbacks;
+        lock (Gate)
+            callbacks = sourcePaths.Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(path => BufferInvalidations.ContainsKey(path))
+                .SelectMany(path => BufferInvalidations[path]).Distinct().ToArray();
+        foreach (var callback in callbacks)
+            callback();
     }
 
     private static void UnregisterCore(string projectPath)
@@ -66,7 +118,7 @@ internal static class SmileProjectWorkspace
         if (!Projects.TryGetValue(projectPath, out var existing))
             return;
         Projects.Remove(projectPath);
-        foreach (var source in existing.CompilationSources)
+        foreach (var source in existing.Items)
         {
             if (Sources.TryGetValue(source.FullPath, out var owner) && ReferenceEquals(owner, existing))
                 Sources.Remove(source.FullPath);

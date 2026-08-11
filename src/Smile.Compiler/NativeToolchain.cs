@@ -19,7 +19,7 @@ internal sealed class NativeToolchain
         var musicLibraries = usesMusic ? " msvcrt.lib msvcprt.lib vcruntime.lib" : string.Empty;
         var debugCompile = debugSourcePath == null || debugObjectPath == null
             ? string.Empty
-            : $"cl.exe /nologo /c /TC /Od /Z7 /GS- /Fo{Quote(debugObjectPath)} {Quote(debugSourcePath)} && ";
+            : $"cl.exe /nologo /c /TC /Od /Z7 /JMC /GS- /Fo{Quote(debugObjectPath)} {Quote(debugSourcePath)} && ";
         var debugObject = debugObjectPath == null ? string.Empty : " " + Quote(debugObjectPath);
         var debugLink = debugObjectPath == null
             ? string.Empty

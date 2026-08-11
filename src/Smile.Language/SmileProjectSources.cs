@@ -45,6 +45,17 @@ public sealed class SmileProjectSourceSet
     public IReadOnlyList<SmileProjectSourceItem> CompilationSources { get; }
     public IReadOnlyList<SmileProjectSourceItem> SupportSources { get; }
 
+    public IReadOnlyList<SmileProjectSourceItem> GetCompilationSourcesFor(string filePath)
+    {
+        var normalizedPath = Path.GetFullPath(filePath);
+        var active = Items.FirstOrDefault(item =>
+            string.Equals(item.FullPath, normalizedPath, StringComparison.OrdinalIgnoreCase));
+        if (active == null || !active.StartupOnly || active.IsStartup)
+            return CompilationSources;
+
+        return new[] { active }.Concat(Items.Where(item => item.IsSupport)).ToArray();
+    }
+
     public static SmileProjectSourceSet Load(string projectPath)
     {
         var fullPath = Path.GetFullPath(projectPath);
@@ -78,6 +89,8 @@ public sealed class SmileProjectSourceSet
             var include = ((string?)element.Attribute("Include") ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(include))
                 throw new InvalidDataException("SmileSource Include must name a .smile source file.");
+            if (!string.Equals(Path.GetExtension(include), ".smile", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException($"SmileSource Include must name a .smile source file: '{include}'.");
 
             var startupOnly = false;
             var startupOnlyText = (string?)element.Attribute("StartupOnly");
@@ -119,5 +132,139 @@ public sealed class SmileProjectSourceSet
         source = CompilationSources.FirstOrDefault(item =>
             string.Equals(item.FullPath, normalizedPath, StringComparison.OrdinalIgnoreCase))!;
         return source != null;
+    }
+}
+
+public static class SmileProjectFileEditor
+{
+    public static SmileProjectSourceSet AddSource(string projectPath, string sourcePath)
+    {
+        var context = Load(projectPath);
+        var include = RelativeSourceInclude(context.ProjectDirectory, sourcePath);
+        var existingSources = SourceElements(context.Root).ToArray();
+        if (existingSources.Any(element => SameInclude(context.ProjectDirectory, element, sourcePath)))
+            throw new InvalidDataException($"SMILE source '{include}' is already included in the project.");
+
+        var itemGroup = context.Root.Elements().FirstOrDefault(element =>
+            element.Name.LocalName == "ItemGroup" && element.Elements().Any(item => item.Name.LocalName == "SmileSource"));
+        if (itemGroup == null)
+        {
+            itemGroup = new XElement(context.Root.Name.Namespace + "ItemGroup");
+            context.Root.Add(itemGroup);
+        }
+        if (existingSources.Length == 0)
+            itemGroup.Add(new XElement(context.Root.Name.Namespace + "SmileSource",
+                new XAttribute("Include", StartupValue(context.Root))));
+        itemGroup.Add(new XElement(context.Root.Name.Namespace + "SmileSource", new XAttribute("Include", include)));
+        return Save(context);
+    }
+
+    public static SmileProjectSourceSet SetStartup(string projectPath, string sourcePath)
+    {
+        var context = Load(projectPath);
+        var selected = FindSource(context, sourcePath);
+        var oldStartup = Path.GetFullPath(Path.Combine(context.ProjectDirectory, StartupValue(context.Root)));
+        selected.SetAttributeValue("StartupOnly", "true");
+        var oldStartupElement = SourceElements(context.Root).FirstOrDefault(element => SameInclude(context.ProjectDirectory, element, oldStartup));
+        oldStartupElement?.SetAttributeValue("StartupOnly", "true");
+
+        var propertyGroup = context.Root.Elements().FirstOrDefault(element => element.Name.LocalName == "PropertyGroup");
+        if (propertyGroup == null)
+        {
+            propertyGroup = new XElement(context.Root.Name.Namespace + "PropertyGroup");
+            context.Root.AddFirst(propertyGroup);
+        }
+        var startup = propertyGroup.Elements().FirstOrDefault(element => element.Name.LocalName == "StartupFile");
+        if (startup == null)
+        {
+            startup = new XElement(context.Root.Name.Namespace + "StartupFile");
+            propertyGroup.Add(startup);
+        }
+        startup.Value = RelativeSourceInclude(context.ProjectDirectory, sourcePath);
+        return Save(context);
+    }
+
+    public static SmileProjectSourceSet IncludeAsSupport(string projectPath, string sourcePath)
+    {
+        var context = Load(projectPath);
+        var fullSourcePath = Path.GetFullPath(sourcePath);
+        var startupPath = Path.GetFullPath(Path.Combine(context.ProjectDirectory, StartupValue(context.Root)));
+        if (string.Equals(fullSourcePath, startupPath, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("The selected startup source cannot be included as a support source.");
+        FindSource(context, fullSourcePath).SetAttributeValue("StartupOnly", null);
+        return Save(context);
+    }
+
+    public static SmileProjectSourceSet RemoveSource(string projectPath, string sourcePath)
+    {
+        var context = Load(projectPath);
+        var fullSourcePath = Path.GetFullPath(sourcePath);
+        var startupPath = Path.GetFullPath(Path.Combine(context.ProjectDirectory, StartupValue(context.Root)));
+        if (string.Equals(fullSourcePath, startupPath, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("The selected startup source cannot be removed from the project.");
+        FindSource(context, fullSourcePath).Remove();
+        return Save(context);
+    }
+
+    private static ProjectContext Load(string projectPath)
+    {
+        var fullProjectPath = Path.GetFullPath(projectPath);
+        var document = XDocument.Load(fullProjectPath, LoadOptions.PreserveWhitespace);
+        if (document.Root == null || document.Root.Name.LocalName != "SmileProject")
+            throw new InvalidDataException("A .smileproj file must have a SmileProject root element.");
+        return new ProjectContext(fullProjectPath, Path.GetDirectoryName(fullProjectPath)!, document, document.Root);
+    }
+
+    private static SmileProjectSourceSet Save(ProjectContext context)
+    {
+        File.WriteAllText(context.ProjectPath, context.Document.ToString() + Environment.NewLine,
+            new System.Text.UTF8Encoding(false));
+        return SmileProjectSourceSet.Load(context.ProjectPath);
+    }
+
+    private static IEnumerable<XElement> SourceElements(XElement root) =>
+        root.Elements().Where(element => element.Name.LocalName == "ItemGroup")
+            .SelectMany(element => element.Elements().Where(item => item.Name.LocalName == "SmileSource"));
+
+    private static XElement FindSource(ProjectContext context, string sourcePath) =>
+        SourceElements(context.Root).FirstOrDefault(element => SameInclude(context.ProjectDirectory, element, sourcePath))
+        ?? throw new InvalidDataException($"SMILE source '{sourcePath}' is not included in the project.");
+
+    private static bool SameInclude(string projectDirectory, XElement element, string sourcePath)
+    {
+        var include = ((string?)element.Attribute("Include") ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(include))
+            return false;
+        return string.Equals(Path.GetFullPath(Path.Combine(projectDirectory, include)), Path.GetFullPath(sourcePath),
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string StartupValue(XElement root)
+    {
+        var value = root.Elements().FirstOrDefault(element => element.Name.LocalName == "PropertyGroup")?
+            .Elements().FirstOrDefault(element => element.Name.LocalName == "StartupFile")?.Value.Trim();
+        return string.IsNullOrWhiteSpace(value) ? "Program.smile" : value!;
+    }
+
+    private static string RelativeSourceInclude(string projectDirectory, string sourcePath)
+    {
+        var fullDirectory = Path.GetFullPath(projectDirectory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            + Path.DirectorySeparatorChar;
+        var fullSourcePath = Path.GetFullPath(sourcePath);
+        if (!string.Equals(Path.GetExtension(fullSourcePath), ".smile", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Only .smile source files can be included in a SMILE project.");
+        if (!fullSourcePath.StartsWith(fullDirectory, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("SMILE project source files must be inside the project directory.");
+        return fullSourcePath.Substring(fullDirectory.Length).Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+    }
+
+    private sealed class ProjectContext
+    {
+        public ProjectContext(string projectPath, string projectDirectory, XDocument document, XElement root)
+        { ProjectPath = projectPath; ProjectDirectory = projectDirectory; Document = document; Root = root; }
+        public string ProjectPath { get; }
+        public string ProjectDirectory { get; }
+        public XDocument Document { get; }
+        public XElement Root { get; }
     }
 }

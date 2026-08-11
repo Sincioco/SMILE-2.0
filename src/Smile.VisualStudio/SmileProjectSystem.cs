@@ -15,6 +15,8 @@ using Microsoft.VisualStudio.Imaging.Interop;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualBasic;
+using System.Windows.Forms;
 
 namespace Smile.VisualStudio;
 
@@ -132,7 +134,7 @@ internal sealed class SmileProjectFactory : IVsProjectFactory, IDisposable
     }
 }
 
-internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvider, IPersistFileFormat, IVsPersistHierarchyItem2
+internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvider, IPersistFileFormat, IVsPersistHierarchyItem2, IOleCommandTarget
 {
     private const int CommandNotSupported = unchecked((int)0x80040100);
 
@@ -141,6 +143,8 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     private readonly Dictionary<uint, IVsHierarchyEvents> _events = new();
     private readonly Guid _projectGuid;
     private uint _nextEventCookie = 1;
+    private uint _nextItemId = 1;
+    private uint _contextCommandItemId = VSConstants.VSITEMID_ROOT;
     private Microsoft.VisualStudio.OLE.Interop.IServiceProvider? _site;
     private SmileConfigurationProvider? _configurationProvider;
 
@@ -313,7 +317,8 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         }
 
         var outputPath = GetOutputPath(configuration);
-        if (!File.Exists(outputPath) && !Build(configuration, platform, null))
+        // Native F5 must never launch an executable built from a previous source set.
+        if (!Build(configuration, platform, null))
             return false;
 
         var debugger = Package.GetGlobalService(typeof(SVsShellDebugger)) as IVsDebugger4;
@@ -367,8 +372,10 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         }
     }
 
-    private void ReadProject()
+    private IReadOnlyDictionary<uint, ProjectItem>? ReadProject(bool captureHierarchy = false)
     {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var previousItems = captureHierarchy ? new Dictionary<uint, ProjectItem>(_items) : null;
         var document = XDocument.Load(ProjectPath, LoadOptions.SetLineInfo);
         var root = document.Root;
         if (root == null || root.Name.LocalName != "SmileProject")
@@ -390,46 +397,63 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
 
         BuildHierarchy(root);
         SmileProjectWorkspace.Register(SourceSet);
-        _configurationProvider = new SmileConfigurationProvider(this);
+        _configurationProvider ??= new SmileConfigurationProvider(this);
+        return previousItems;
     }
 
     private void BuildHierarchy(XElement root)
     {
+        var reusableIds = _items.Values
+            .Where(item => item.Kind != ItemKind.Project)
+            .ToDictionary(HierarchyKey, item => item.Id, StringComparer.OrdinalIgnoreCase);
         _items.Clear();
         var rootNode = new ProjectItem(VSConstants.VSITEMID_ROOT, ProjectName, ProjectPath, ItemKind.Project, 0);
         _items[rootNode.Id] = rootNode;
-        uint nextId = 1;
 
-        foreach (var source in SourceSet.Items)
-            AddNode(rootNode, ref nextId, Path.GetFileName(source.Include), source.FullPath, ItemKind.File);
+        foreach (var source in SourceSet.Items.Where(source =>
+                     source.StartupOnly ||
+                     string.Equals(source.FullPath, SourceSet.StartupSource.FullPath, StringComparison.OrdinalIgnoreCase)))
+            AddNode(rootNode, reusableIds, Path.GetFileName(source.Include), source.FullPath, ItemKind.File);
 
         if (ProjectKind.Equals("Game", StringComparison.OrdinalIgnoreCase) || AssetIncludes.Count != 0)
         {
             var assetsPath = Path.Combine(ProjectDirectory, "Assets");
             Directory.CreateDirectory(assetsPath);
-            var assets = AddNode(rootNode, ref nextId, "Assets", assetsPath, ItemKind.Folder);
-            AddDirectoryChildren(assets, assetsPath, ref nextId);
+            var assets = AddNode(rootNode, reusableIds, "Assets", assetsPath, ItemKind.Folder);
+            AddDirectoryChildren(assets, assetsPath, reusableIds);
         }
+
+        foreach (var source in SourceSet.Items.Where(source =>
+                     !source.StartupOnly &&
+                     !string.Equals(source.FullPath, SourceSet.StartupSource.FullPath, StringComparison.OrdinalIgnoreCase)))
+            AddNode(rootNode, reusableIds, Path.GetFileName(source.Include), source.FullPath, ItemKind.File);
     }
 
-    private ProjectItem AddNode(ProjectItem parent, ref uint nextId, string caption, string path, ItemKind kind)
+    private ProjectItem AddNode(ProjectItem parent, IDictionary<string, uint> reusableIds, string caption, string path, ItemKind kind)
     {
-        var node = new ProjectItem(nextId++, caption, path, kind, parent.Id);
+        var key = HierarchyKey(kind, path);
+        var id = reusableIds.TryGetValue(key, out var existingId) ? existingId : _nextItemId++;
+        reusableIds.Remove(key);
+        var node = new ProjectItem(id, caption, path, kind, parent.Id);
         parent.Children.Add(node.Id);
         _items[node.Id] = node;
         return node;
     }
 
-    private void AddDirectoryChildren(ProjectItem parent, string directory, ref uint nextId)
+    private void AddDirectoryChildren(ProjectItem parent, string directory, IDictionary<string, uint> reusableIds)
     {
         foreach (var childDirectory in Directory.EnumerateDirectories(directory).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
         {
-            var child = AddNode(parent, ref nextId, Path.GetFileName(childDirectory), childDirectory, ItemKind.Folder);
-            AddDirectoryChildren(child, childDirectory, ref nextId);
+            var child = AddNode(parent, reusableIds, Path.GetFileName(childDirectory), childDirectory, ItemKind.Folder);
+            AddDirectoryChildren(child, childDirectory, reusableIds);
         }
         foreach (var file in Directory.EnumerateFiles(directory).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
-            AddNode(parent, ref nextId, Path.GetFileName(file), file, ItemKind.File);
+            AddNode(parent, reusableIds, Path.GetFileName(file), file, ItemKind.File);
     }
+
+    private static string HierarchyKey(ProjectItem item) => HierarchyKey(item.Kind, item.Path);
+
+    private static string HierarchyKey(ItemKind kind, string path) => kind + "|" + Path.GetFullPath(path);
 
     private static string Value(XElement? group, string name, string fallback) =>
         group?.Elements().FirstOrDefault(element => element.Name.LocalName == name)?.Value.Trim() is { Length: > 0 } value ? value : fallback;
@@ -467,7 +491,9 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             pvar = NextSibling(item);
         else if (propid == (int)__VSHPROPID.VSHPROPID_Parent)
             pvar = item.Kind == ItemKind.Project ? VSConstants.VSITEMID_NIL : item.ParentId;
-        else if (propid == (int)__VSHPROPID.VSHPROPID_Caption || propid == (int)__VSHPROPID.VSHPROPID_Name)
+        else if (propid == (int)__VSHPROPID.VSHPROPID_Caption)
+            pvar = IsSelectedStartup(item) ? item.Caption + " (Startup)" : item.Caption;
+        else if (propid == (int)__VSHPROPID.VSHPROPID_Name)
             pvar = item.Caption;
         else if (propid == (int)__VSHPROPID.VSHPROPID_SaveName)
             pvar = item.Path;
@@ -620,6 +646,26 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
 
     public int QueryStatusCommand(uint itemid, ref Guid pguidCmdGroup, uint cCmds, OLECMD[] prgCmds, IntPtr pCmdText)
     {
+        var item = Item(itemid);
+        if (pguidCmdGroup == VSConstants.GUID_VsUIHierarchyWindowCmds && item != null)
+        {
+            var rightClickSupported = false;
+            for (var index = 0; index < Math.Min((int)cCmds, prgCmds.Length); index++)
+            {
+                if (prgCmds[index].cmdID != (uint)VSConstants.VsUIHierarchyWindowCmdIds.UIHWCMDID_RightClick)
+                    continue;
+                prgCmds[index].cmdf = (uint)(OLECMDF.OLECMDF_SUPPORTED | OLECMDF.OLECMDF_ENABLED);
+                rightClickSupported = true;
+            }
+            if (rightClickSupported)
+                return VSConstants.S_OK;
+        }
+        if (pguidCmdGroup == SmileProjectCommands.CommandSet && item != null)
+        {
+            for (var index = 0; index < Math.Min((int)cCmds, prgCmds.Length); index++)
+                prgCmds[index].cmdf = CommandStatus(item, prgCmds[index].cmdID);
+            return VSConstants.S_OK;
+        }
         if (Item(itemid)?.Kind != ItemKind.File)
             return CommandNotSupported;
         var supported = false;
@@ -637,6 +683,23 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     public int ExecCommand(uint itemid, ref Guid pguidCmdGroup, uint nCmdID, uint nCmdexecopt, IntPtr pvaIn, IntPtr pvaOut)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
+        var item = Item(itemid);
+        if (pguidCmdGroup == VSConstants.GUID_VsUIHierarchyWindowCmds &&
+            nCmdID == (uint)VSConstants.VsUIHierarchyWindowCmdIds.UIHWCMDID_RightClick && item != null)
+            return ShowContextMenu(item, pvaIn);
+        if (pguidCmdGroup == SmileProjectCommands.CommandSet && item != null)
+        {
+            try
+            {
+                return ExecuteProjectCommand(item, nCmdID);
+            }
+            catch (Exception exception)
+            {
+                ShowMessage(exception.Message, OLEMSGICON.OLEMSGICON_CRITICAL);
+                ActivityLog.LogError(nameof(SmileProject), exception.ToString());
+                return VSConstants.S_OK;
+            }
+        }
         if (Item(itemid)?.Kind != ItemKind.File || !IsOpenCommand(pguidCmdGroup, nCmdID))
             return CommandNotSupported;
         var logicalView = VSConstants.LOGVIEWID_Primary;
@@ -654,6 +717,269 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
                commandId == (uint)VSConstants.VSStd97CmdID.OpenProjectItem ||
                commandId == (uint)VSConstants.VSStd97CmdID.ViewCode;
     }
+
+    public int QueryStatus(ref Guid pguidCmdGroup, uint cCmds, OLECMD[] prgCmds, IntPtr pCmdText)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        return QueryStatusCommand(_contextCommandItemId, ref pguidCmdGroup, cCmds, prgCmds, pCmdText);
+    }
+
+    public int Exec(ref Guid pguidCmdGroup, uint nCmdID, uint nCmdexecopt, IntPtr pvaIn, IntPtr pvaOut)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        return ExecCommand(_contextCommandItemId, ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
+    }
+
+    private int ShowContextMenu(ProjectItem item, IntPtr pointerToVariant)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var shell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
+        if (shell == null)
+            return VSConstants.E_FAIL;
+        var menuId = item.Kind switch
+        {
+            ItemKind.Project => VsMenus.IDM_VS_CTXT_PROJNODE,
+            ItemKind.Folder => VsMenus.IDM_VS_CTXT_FOLDERNODE,
+            _ => VsMenus.IDM_VS_CTXT_ITEMNODE
+        };
+        var x = Cursor.Position.X;
+        var y = Cursor.Position.Y;
+        if (pointerToVariant != IntPtr.Zero)
+        {
+            try
+            {
+                var packed = Convert.ToUInt32(Marshal.GetObjectForNativeVariant(pointerToVariant));
+                x = unchecked((short)(packed & 0xffff));
+                y = unchecked((short)(packed >> 16));
+            }
+            catch (Exception exception) when (exception is InvalidCastException or FormatException or OverflowException)
+            {
+                ActivityLog.LogWarning(nameof(SmileProject), $"Visual Studio supplied invalid context-menu coordinates: {exception.Message}");
+            }
+        }
+
+        var points = new[] { new POINTS { x = checked((short)x), y = checked((short)y) } };
+        var menuGroup = VsMenus.guidSHLMainMenu;
+        var previousItemId = _contextCommandItemId;
+        _contextCommandItemId = item.Id;
+        try
+        {
+            return shell.ShowContextMenu(0, ref menuGroup, menuId, points, this);
+        }
+        finally
+        {
+            _contextCommandItemId = previousItemId;
+        }
+    }
+
+    private uint CommandStatus(ProjectItem item, uint commandId)
+    {
+        var supported = (uint)OLECMDF.OLECMDF_SUPPORTED;
+        var enabled = supported | (uint)OLECMDF.OLECMDF_ENABLED;
+        var invisible = supported | (uint)OLECMDF.OLECMDF_INVISIBLE;
+        if (item.Kind == ItemKind.Project)
+            return commandId is SmileProjectCommands.Build or SmileProjectCommands.Rebuild or SmileProjectCommands.Clean or
+                SmileProjectCommands.AddNewSource or SmileProjectCommands.AddExistingSource or SmileProjectCommands.OpenProjectFolder
+                ? enabled : invisible;
+        if (item.Kind == ItemKind.Folder)
+            return commandId == SmileProjectCommands.OpenFolder ? enabled : invisible;
+        if (commandId == SmileProjectCommands.OpenContainingFolder)
+            return enabled;
+        if (!TryGetSource(item, out var source))
+            return invisible;
+        if (commandId == SmileProjectCommands.SetStartupSource)
+            return source.IsStartup ? supported : enabled;
+        if (commandId == SmileProjectCommands.IncludeSupportSource)
+            return source.IsStartup || source.IsSupport ? supported : enabled;
+        if (commandId == SmileProjectCommands.RemoveSource)
+            return source.IsStartup ? supported : enabled;
+        return invisible;
+    }
+
+    private int ExecuteProjectCommand(ProjectItem item, uint commandId)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (commandId == SmileProjectCommands.OpenProjectFolder)
+            return OpenFolder(ProjectDirectory);
+        if (commandId == SmileProjectCommands.OpenContainingFolder)
+            return OpenFolder(Path.GetDirectoryName(item.Path)!);
+        if (commandId == SmileProjectCommands.OpenFolder)
+            return OpenFolder(item.Path);
+        if (commandId == SmileProjectCommands.AddNewSource)
+            return AddNewSource();
+        if (commandId == SmileProjectCommands.AddExistingSource)
+            return AddExistingSource();
+        if (commandId is SmileProjectCommands.Build or SmileProjectCommands.Rebuild or SmileProjectCommands.Clean)
+            return ExecuteBuildCommand(commandId);
+        if (!TryGetSource(item, out _))
+            return CommandNotSupported;
+        if (commandId == SmileProjectCommands.SetStartupSource)
+            SmileProjectFileEditor.SetStartup(ProjectPath, item.Path);
+        else if (commandId == SmileProjectCommands.IncludeSupportSource)
+            SmileProjectFileEditor.IncludeAsSupport(ProjectPath, item.Path);
+        else if (commandId == SmileProjectCommands.RemoveSource)
+            SmileProjectFileEditor.RemoveSource(ProjectPath, item.Path);
+        else
+            return CommandNotSupported;
+        NotifyHierarchyChanged(ReadProject(captureHierarchy: true)!);
+        return VSConstants.S_OK;
+    }
+
+    private int AddNewSource()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var name = Interaction.InputBox("Enter a name for the new support source file.",
+            "Add New SMILE Source", "NewSource.smile").Trim();
+        if (string.IsNullOrEmpty(name))
+            return VSConstants.S_OK;
+        if (string.IsNullOrEmpty(Path.GetExtension(name)))
+            name += ".smile";
+        if (!string.Equals(name, Path.GetFileName(name), StringComparison.Ordinal) ||
+            !string.Equals(Path.GetExtension(name), ".smile", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Enter a file name ending in .smile without a directory path.");
+        var sourcePath = Path.Combine(ProjectDirectory, name);
+        if (File.Exists(sourcePath))
+            throw new IOException($"A file named '{name}' already exists.");
+
+        File.WriteAllText(sourcePath, "' Support declarations and routines for this project." + Environment.NewLine,
+            new UTF8Encoding(false));
+        try
+        {
+            SmileProjectFileEditor.AddSource(ProjectPath, sourcePath);
+        }
+        catch
+        {
+            File.Delete(sourcePath);
+            throw;
+        }
+        var previousItems = ReadProject(captureHierarchy: true)!;
+        var result = OpenPath(sourcePath);
+        NotifyHierarchyChanged(previousItems);
+        return result;
+    }
+
+    private int AddExistingSource()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        using var dialog = new OpenFileDialog
+        {
+            Title = "Add Existing SMILE Source",
+            Filter = "SMILE source files (*.smile)|*.smile",
+            InitialDirectory = ProjectDirectory,
+            Multiselect = false,
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog() != DialogResult.OK)
+            return VSConstants.S_OK;
+
+        var selectedPath = Path.GetFullPath(dialog.FileName);
+        var projectPrefix = ProjectDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var sourcePath = selectedPath;
+        var copied = false;
+        if (!selectedPath.StartsWith(projectPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            sourcePath = Path.Combine(ProjectDirectory, Path.GetFileName(selectedPath));
+            if (File.Exists(sourcePath))
+                throw new IOException($"A project file named '{Path.GetFileName(sourcePath)}' already exists.");
+            File.Copy(selectedPath, sourcePath);
+            copied = true;
+        }
+        try
+        {
+            SmileProjectFileEditor.AddSource(ProjectPath, sourcePath);
+        }
+        catch
+        {
+            if (copied && File.Exists(sourcePath))
+                File.Delete(sourcePath);
+            throw;
+        }
+        var previousItems = ReadProject(captureHierarchy: true)!;
+        var result = OpenPath(sourcePath);
+        NotifyHierarchyChanged(previousItems);
+        return result;
+    }
+
+    private int ExecuteBuildCommand(uint commandId)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var dte = Package.GetGlobalService(typeof(SDTE)) as DTE;
+        var active = dte?.Solution?.SolutionBuild?.ActiveConfiguration;
+        var configuration = active?.Name ?? "Debug";
+        var platform = active?.SolutionContexts?.Count > 0
+            ? active.SolutionContexts.Item(1).PlatformName
+            : "Windows 64-bit .exe";
+        var pane = SmileBuildService.GetOutputPane();
+        var success = commandId switch
+        {
+            SmileProjectCommands.Clean => Clean(configuration, platform, pane),
+            SmileProjectCommands.Rebuild => Clean(configuration, platform, pane) && Build(configuration, platform, pane),
+            _ => Build(configuration, platform, pane)
+        };
+        return success ? VSConstants.S_OK : VSConstants.E_FAIL;
+    }
+
+    private int OpenPath(string path)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (ParseCanonicalName(path, out var itemId) != VSConstants.S_OK)
+            return VSConstants.E_FAIL;
+        var logicalView = VSConstants.LOGVIEWID_Primary;
+        return OpenItem(itemId, ref logicalView, IntPtr.Zero, out _);
+    }
+
+    private static int OpenFolder(string path)
+    {
+        System.Diagnostics.Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+        return VSConstants.S_OK;
+    }
+
+    private bool TryGetSource(ProjectItem item, out SmileProjectSourceItem source)
+    {
+        source = SourceSet.Items.FirstOrDefault(candidate =>
+            string.Equals(candidate.FullPath, item.Path, StringComparison.OrdinalIgnoreCase))!;
+        return source != null;
+    }
+
+    private bool IsSelectedStartup(ProjectItem item) =>
+        item.Kind == ItemKind.File && string.Equals(item.Path, SourceSet.StartupSource.FullPath, StringComparison.OrdinalIgnoreCase);
+
+    private void NotifyHierarchyChanged(IReadOnlyDictionary<uint, ProjectItem> previousItems)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        foreach (var sink in _events.Values.ToArray())
+        {
+            foreach (var removed in previousItems.Values
+                         .Where(item => item.Kind != ItemKind.Project && !_items.ContainsKey(item.Id))
+                         .OrderByDescending(item => item.Id))
+                sink.OnItemDeleted(removed.Id);
+
+            foreach (var added in _items.Values.Where(item => item.Kind != ItemKind.Project && !previousItems.ContainsKey(item.Id)))
+            {
+                var parent = _items[added.ParentId];
+                var index = parent.Children.IndexOf(added.Id);
+                var previousSibling = index <= 0 ? VSConstants.VSITEMID_NIL : parent.Children[index - 1];
+                sink.OnPropertyChanged(parent.Id, (int)__VSHPROPID.VSHPROPID_FirstChild, 0);
+                sink.OnPropertyChanged(parent.Id, (int)__VSHPROPID.VSHPROPID_FirstVisibleChild, 0);
+                if (previousSibling != VSConstants.VSITEMID_NIL)
+                {
+                    sink.OnPropertyChanged(previousSibling, (int)__VSHPROPID.VSHPROPID_NextSibling, 0);
+                    sink.OnPropertyChanged(previousSibling, (int)__VSHPROPID.VSHPROPID_NextVisibleSibling, 0);
+                }
+                sink.OnItemAdded(parent.Id, previousSibling, added.Id);
+                sink.OnItemsAppended(parent.Id);
+                sink.OnInvalidateItems(parent.Id);
+            }
+
+            foreach (var existing in _items.Values.Where(item => previousItems.ContainsKey(item.Id)))
+                sink.OnPropertyChanged(existing.Id, (int)__VSHPROPID.VSHPROPID_Caption, 0);
+            sink.OnInvalidateItems(VSConstants.VSITEMID_ROOT);
+        }
+    }
+
+    private void ShowMessage(string message, OLEMSGICON icon) =>
+        VsShellUtilities.ShowMessageBox(_package, message, "SMILE 2.0", icon,
+            OLEMSGBUTTON.OLEMSGBUTTON_OK, OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 
     public int IsDocumentInProject(string pszMkDocument, out int pfFound, VSDOCUMENTPRIORITY[] pdwPriority, out uint pitemid)
     {
@@ -753,7 +1079,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     public int IsDirty(out int pfIsDirty) { pfIsDirty = 0; return VSConstants.S_OK; }
     public int InitNew(uint nFormatIndex) => VSConstants.S_OK;
     public int Load(string pszFilename, uint grfMode, int fReadOnly)
-    { ProjectPath = Path.GetFullPath(pszFilename); ReadProject(); return VSConstants.S_OK; }
+    { ThreadHelper.ThrowIfNotOnUIThread(); ProjectPath = Path.GetFullPath(pszFilename); ReadProject(); return VSConstants.S_OK; }
     public int Save(string pszFilename, int fRemember, uint nFormatIndex) => VSConstants.S_OK;
     public int SaveCompleted(string pszFilename) => VSConstants.S_OK;
     public int GetCurFile(out string ppszFilename, out uint pnFormatIndex)

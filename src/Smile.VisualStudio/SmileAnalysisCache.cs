@@ -22,6 +22,7 @@ internal sealed class SmileAnalysisCache
         _buffer = buffer;
         _filePath = filePath;
         _snapshot = buffer.CurrentSnapshot;
+        SmileProjectWorkspace.RegisterBuffer(filePath, _snapshot.GetText(), Invalidate);
         _analysis = SmileProjectWorkspace.Analyze(filePath, _snapshot.GetText());
         _buffer.Changed += BufferChanged;
     }
@@ -40,11 +41,17 @@ internal sealed class SmileAnalysisCache
 
     private void BufferChanged(object sender, TextContentChangedEventArgs e)
     {
+        SmileProjectWorkspace.UpdateBuffer(_filePath, e.After.GetText());
+    }
+
+    private void Invalidate()
+    {
+        var snapshot = _buffer.CurrentSnapshot;
         var cancellation = new CancellationTokenSource();
         var previous = Interlocked.Exchange(ref _pendingAnalysis, cancellation);
         previous?.Cancel();
         previous?.Dispose();
-        _ = AnalyzeAfterDelayAsync(e.After, cancellation.Token);
+        _ = AnalyzeAfterDelayAsync(snapshot, cancellation.Token);
     }
 
     private async Task AnalyzeAfterDelayAsync(ITextSnapshot snapshot, CancellationToken cancellationToken)

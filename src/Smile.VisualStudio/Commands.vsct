@@ -8,6 +8,15 @@
       <Group guid="guidSmileCommandSet" id="SmileCommandGroup" priority="0x0600">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS" />
       </Group>
+      <Group guid="guidSmileProjectCommandSet" id="SmileProjectContextGroup" priority="0x0200">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_PROJNODE" />
+      </Group>
+      <Group guid="guidSmileProjectCommandSet" id="SmileSourceContextGroup" priority="0x0200">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_ITEMNODE" />
+      </Group>
+      <Group guid="guidSmileProjectCommandSet" id="SmileFolderContextGroup" priority="0x0200">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_FOLDERNODE" />
+      </Group>
     </Groups>
     <Buttons>
       <Button guid="guidSmileCommandSet" id="BuildSmileFileCommand" priority="0x0100" type="Button">
@@ -15,6 +24,53 @@
         <Strings>
           <ButtonText>Build SMILE File</ButtonText>
         </Strings>
+      </Button>
+      <Button guid="guidSmileProjectCommandSet" id="BuildProjectCommand" priority="0x0100" type="Button">
+        <Parent guid="guidSmileProjectCommandSet" id="SmileProjectContextGroup" />
+        <Strings><ButtonText>Build</ButtonText></Strings>
+      </Button>
+      <Button guid="guidSmileProjectCommandSet" id="RebuildProjectCommand" priority="0x0110" type="Button">
+        <Parent guid="guidSmileProjectCommandSet" id="SmileProjectContextGroup" />
+        <Strings><ButtonText>Rebuild</ButtonText></Strings>
+      </Button>
+      <Button guid="guidSmileProjectCommandSet" id="CleanProjectCommand" priority="0x0120" type="Button">
+        <Parent guid="guidSmileProjectCommandSet" id="SmileProjectContextGroup" />
+        <Strings><ButtonText>Clean</ButtonText></Strings>
+      </Button>
+      <Button guid="guidSmileProjectCommandSet" id="AddNewSourceCommand" priority="0x0200" type="Button">
+        <Parent guid="guidSmileProjectCommandSet" id="SmileProjectContextGroup" />
+        <Strings><ButtonText>Add New SMILE Source...</ButtonText></Strings>
+      </Button>
+      <Button guid="guidSmileProjectCommandSet" id="AddExistingSourceCommand" priority="0x0210" type="Button">
+        <Parent guid="guidSmileProjectCommandSet" id="SmileProjectContextGroup" />
+        <Strings><ButtonText>Add Existing SMILE Source...</ButtonText></Strings>
+      </Button>
+      <Button guid="guidSmileProjectCommandSet" id="OpenProjectFolderCommand" priority="0x0300" type="Button">
+        <Parent guid="guidSmileProjectCommandSet" id="SmileProjectContextGroup" />
+        <Strings><ButtonText>Open Project Folder</ButtonText></Strings>
+      </Button>
+      <Button guid="guidSmileProjectCommandSet" id="SetStartupSourceCommand" priority="0x0100" type="Button">
+        <Parent guid="guidSmileProjectCommandSet" id="SmileSourceContextGroup" />
+        <CommandFlag>DynamicVisibility</CommandFlag><CommandFlag>DefaultInvisible</CommandFlag>
+        <Strings><ButtonText>Set as Startup</ButtonText></Strings>
+      </Button>
+      <Button guid="guidSmileProjectCommandSet" id="IncludeSupportSourceCommand" priority="0x0110" type="Button">
+        <Parent guid="guidSmileProjectCommandSet" id="SmileSourceContextGroup" />
+        <CommandFlag>DynamicVisibility</CommandFlag><CommandFlag>DefaultInvisible</CommandFlag>
+        <Strings><ButtonText>Include as Support Source</ButtonText></Strings>
+      </Button>
+      <Button guid="guidSmileProjectCommandSet" id="RemoveSourceCommand" priority="0x0120" type="Button">
+        <Parent guid="guidSmileProjectCommandSet" id="SmileSourceContextGroup" />
+        <CommandFlag>DynamicVisibility</CommandFlag><CommandFlag>DefaultInvisible</CommandFlag>
+        <Strings><ButtonText>Remove from Project</ButtonText></Strings>
+      </Button>
+      <Button guid="guidSmileProjectCommandSet" id="OpenContainingFolderCommand" priority="0x0200" type="Button">
+        <Parent guid="guidSmileProjectCommandSet" id="SmileSourceContextGroup" />
+        <Strings><ButtonText>Open Containing Folder</ButtonText></Strings>
+      </Button>
+      <Button guid="guidSmileProjectCommandSet" id="OpenFolderCommand" priority="0x0100" type="Button">
+        <Parent guid="guidSmileProjectCommandSet" id="SmileFolderContextGroup" />
+        <Strings><ButtonText>Open Folder</ButtonText></Strings>
       </Button>
     </Buttons>
   </Commands>
@@ -24,6 +80,22 @@
     <GuidSymbol name="guidSmileCommandSet" value="{C2D95DD7-3995-4F84-A78B-E67E88C5A31F}">
       <IDSymbol name="SmileCommandGroup" value="0x1020" />
       <IDSymbol name="BuildSmileFileCommand" value="0x0100" />
+    </GuidSymbol>
+    <GuidSymbol name="guidSmileProjectCommandSet" value="{4FBC4E72-6B0F-40D8-B758-BF8932926D5D}">
+      <IDSymbol name="SmileProjectContextGroup" value="0x2000" />
+      <IDSymbol name="SmileSourceContextGroup" value="0x2010" />
+      <IDSymbol name="SmileFolderContextGroup" value="0x2020" />
+      <IDSymbol name="BuildProjectCommand" value="0x2100" />
+      <IDSymbol name="RebuildProjectCommand" value="0x2101" />
+      <IDSymbol name="CleanProjectCommand" value="0x2102" />
+      <IDSymbol name="AddNewSourceCommand" value="0x2103" />
+      <IDSymbol name="AddExistingSourceCommand" value="0x2104" />
+      <IDSymbol name="OpenProjectFolderCommand" value="0x2105" />
+      <IDSymbol name="SetStartupSourceCommand" value="0x2110" />
+      <IDSymbol name="IncludeSupportSourceCommand" value="0x2111" />
+      <IDSymbol name="RemoveSourceCommand" value="0x2112" />
+      <IDSymbol name="OpenContainingFolderCommand" value="0x2113" />
+      <IDSymbol name="OpenFolderCommand" value="0x2120" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>

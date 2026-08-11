@@ -23,16 +23,18 @@ public sealed class SyntaxTree
 
 public sealed class SmileSourceDocument
 {
-    public SmileSourceDocument(string text, string? filePath = null, bool isStartup = false)
+    public SmileSourceDocument(string text, string? filePath = null, bool isStartup = false, bool isMissing = false)
     {
         Text = text ?? string.Empty;
         FilePath = NormalizePath(filePath);
         IsStartup = isStartup;
+        IsMissing = isMissing;
     }
 
     public string Text { get; }
     public string FilePath { get; }
     public bool IsStartup { get; }
+    public bool IsMissing { get; }
 
     internal static string NormalizePath(string? filePath)
     {
@@ -136,6 +138,9 @@ public static class SmileLanguage
             var tree = new SyntaxTree(source, root, tokens, document.IsStartup);
             syntaxTrees.Add(tree);
             parserDiagnostics.AddRange(parser.Diagnostics);
+            if (document.IsMissing)
+                parserDiagnostics.Add(new Diagnostic("SML0001", DiagnosticSeverity.Error,
+                    $"Project source file was not found: {document.FilePath}", source, new TextSpan(0, 0)));
         }
 
         var startupTree = syntaxTrees.Single(tree => tree.IsStartup);

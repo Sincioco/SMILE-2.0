@@ -1,0 +1,61 @@
+{
+  "package": "SMILE 2.0 - Phase 1 Defect Corrections and Hardening - Codex Instructions",
+  "created_utc": "2026-08-11T14:32:14.784905+00:00",
+  "purpose": "Phase 1 defect corrections and hardening for native source stepping, Visual Studio project UI, and multi-file workspace state.",
+  "required_reading_order": [
+    "00 - START HERE - Phase 1 Defect Corrections and Hardening.md",
+    "01 - Phase 1 Report Findings and Corrective Scope.md",
+    "02 - Native SMILE Source Stepping Correction.md",
+    "03 - Visual Studio Project Context Menus Add Source and Startup UI.md",
+    "04 - Multi-File Workspace and Project State Hardening.md",
+    "05 - Autonomous Single-Agent Codex Execution Instructions.md",
+    "06 - Acceptance Regression Commit Push and Final Report.md"
+  ],
+  "files": [
+    {
+      "path": "00 - START HERE - Phase 1 Defect Corrections and Hardening.md",
+      "bytes": 5418,
+      "sha256": "94baa09baddcf0e1e8c4ae56fdfe442c058d25d4d644423aa9f53f0e68c2db79"
+    },
+    {
+      "path": "01 - Phase 1 Report Findings and Corrective Scope.md",
+      "bytes": 6117,
+      "sha256": "0d69e8a3e0a71beb2145f25446c021cc7a69d626f594d736e6ac0b054b19ae31"
+    },
+    {
+      "path": "02 - Native SMILE Source Stepping Correction.md",
+      "bytes": 6836,
+      "sha256": "5d3fb403b5fe029373b902d1937e46d428f36e57201aa186e3aac030c3fcafc7"
+    },
+    {
+      "path": "03 - Visual Studio Project Context Menus Add Source and Startup UI.md",
+      "bytes": 7363,
+      "sha256": "72ab3c931b29a5343d25641f30a0425a114792428f04d2a6872e8607605a089d"
+    },
+    {
+      "path": "04 - Multi-File Workspace and Project State Hardening.md",
+      "bytes": 4692,
+      "sha256": "fa661c4f6ab48ebe6dc9ddac3d3895f86cfa751e8c7b4f1a37ee8c5fcb829a97"
+    },
+    {
+      "path": "05 - Autonomous Single-Agent Codex Execution Instructions.md",
+      "bytes": 4758,
+      "sha256": "e6449abe13e2f3f3ef87f62ed2bff187ff29a2ff6595b64da91682e6e13ed667"
+    },
+    {
+      "path": "06 - Acceptance Regression Commit Push and Final Report.md",
+      "bytes": 4795,
+      "sha256": "63b5d38269353e10bfddeb8083de40e5fd8e26bf944be6e3203520dabc63e6d5"
+    },
+    {
+      "path": "Evidence/Source Not Available after F10.png",
+      "bytes": 17685,
+      "sha256": "cfb8560da5459ab61c56cde78423b78a32bf7ed95b5fafd1829435b8418286c3"
+    },
+    {
+      "path": "README - How to Hand This Package to Codex.md",
+      "bytes": 1097,
+      "sha256": "98760c4829f1386cc17518f7a26aa0e66e22d465334b31dc75004af8bff33825"
+    }
+  ]
+}

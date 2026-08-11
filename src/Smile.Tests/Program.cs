@@ -398,6 +398,70 @@ Run("Project source selection honors StartupOnly and project order", () =>
     Equal("Drawing.smile", sourceSet.SupportSources[1].Include);
     Equal(false, sourceSet.Items.Single(item => item.Include == "GameState.smile").StartupOnly);
 });
+Run("Alternate startup analysis excludes the selected complete program", () =>
+{
+    var sourceSet = ProjectSources("""
+        <SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup>
+        <SmileSource Include="Program.smile" StartupOnly="true" />
+        <SmileSource Include="GameState.smile" />
+        <SmileSource Include="Program-NoDemo.smile" StartupOnly="true" />
+        </ItemGroup></SmileProject>
+        """);
+    var alternate = sourceSet.GetCompilationSourcesFor(Path.GetFullPath("Program-NoDemo.smile"));
+    Equal(2, alternate.Count);
+    Equal("Program-NoDemo.smile", alternate[0].Include);
+    Equal("GameState.smile", alternate[1].Include);
+    Equal(false, alternate.Any(source => source.Include == "Program.smile"));
+});
+Run("Project sources reject non-SMILE includes", () => Throws(
+    () => ProjectSources("<SmileProject><PropertyGroup><StartupFile>Program.txt</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.txt\" /></ItemGroup></SmileProject>"),
+    "SmileSource Include must name a .smile source file: 'Program.txt'."));
+Run("Missing project documents report a clear physical-file diagnostic", () =>
+{
+    var missingPath = Path.GetFullPath("Missing.smile");
+    var analysis = SmileLanguage.Analyze(new[] { new SmileSourceDocument(string.Empty, missingPath, true, true) });
+    Equal(true, HasDiagnostic(analysis, "SML0001"));
+    Equal(missingPath, analysis.Diagnostics.Single(diagnostic => diagnostic.Code == "SML0001").FilePath);
+});
+Run("Project file mutations preserve properties assets and physical files", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileProjectTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var projectPath = Path.Combine(directory, "Test.smileproj");
+        var programPath = Path.Combine(directory, "Program.smile");
+        var alternatePath = Path.Combine(directory, "Alternate.smile");
+        var supportPath = Path.Combine(directory, "Support.smile");
+        File.WriteAllText(programPath, "END PROGRAM\n");
+        File.WriteAllText(alternatePath, "END PROGRAM\n");
+        File.WriteAllText(supportPath, "CONST Value = 1\n");
+        File.WriteAllText(projectPath, """
+            <SmileProject Version="1.0">
+              <PropertyGroup><StartupFile>Program.smile</StartupFile><OutputName>Kept</OutputName></PropertyGroup>
+              <ItemGroup><SmileSource Include="Program.smile" StartupOnly="true" /><SmileSource Include="Alternate.smile" StartupOnly="true" /></ItemGroup>
+              <ItemGroup><Asset Include="Assets\**\*" /></ItemGroup>
+            </SmileProject>
+            """);
+
+        var added = SmileProjectFileEditor.AddSource(projectPath, supportPath);
+        Equal(true, added.Items.Any(source => source.Include == "Support.smile"));
+        var alternate = SmileProjectFileEditor.SetStartup(projectPath, alternatePath);
+        Equal("Alternate.smile", alternate.StartupFile);
+        var support = SmileProjectFileEditor.IncludeAsSupport(projectPath, programPath);
+        Equal(true, support.Items.Single(source => source.Include == "Program.smile").IsSupport);
+        var removed = SmileProjectFileEditor.RemoveSource(projectPath, supportPath);
+        Equal(false, removed.Items.Any(source => source.Include == "Support.smile"));
+        Equal(true, File.Exists(supportPath));
+        var saved = File.ReadAllText(projectPath);
+        Equal(true, saved.Contains("<OutputName>Kept</OutputName>"));
+        Equal(true, saved.Contains("<Asset Include=\"Assets\\**\\*\""));
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
+});
 Run("Invalid StartupOnly values report a clear project error", () => Throws(
     () => ProjectSources("<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"sometimes\" /></ItemGroup></SmileProject>"),
     "Unknown StartupOnly value 'sometimes'. Expected true or false."));
@@ -459,7 +523,7 @@ if (failures.Count != 0)
     return 1;
 }
 
-Console.WriteLine("90 SMILE language, compiler, project, completion, and timing tests passed.");
+Console.WriteLine("94 SMILE language, compiler, project, completion, and timing tests passed.");
 return 0;
 
 SmileProjectGraphicsOptions Parse(string xml) =>
