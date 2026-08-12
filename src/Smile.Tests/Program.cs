@@ -485,6 +485,41 @@ Run("Hierarchy mutation preserves existing IDs and remove re-add keeps the physi
         Directory.Delete(directory, true);
     }
 });
+Run("Included missing sources stay projected while untracked files remain excluded", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileMissingHierarchyTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var programPath = Path.Combine(directory, "Program.smile");
+        var missingPath = Path.Combine(directory, "Missing.smile");
+        var untrackedPath = Path.Combine(directory, "Untracked.smile");
+        File.WriteAllText(programPath, "END PROGRAM\n");
+        File.WriteAllText(untrackedPath, "CONST Untracked = 1\n");
+        var projectPath = Path.Combine(directory, "Missing.smileproj");
+        File.WriteAllText(projectPath, "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /><SmileSource Include=\"Missing.smile\" /></ItemGroup></SmileProject>");
+
+        var sourceSet = SmileProjectSourceSet.Load(projectPath);
+        var missingProjection = SmileProjectHierarchyProjection.Create(sourceSet, "Console", Array.Empty<string>());
+        Equal(2, missingProjection.Count);
+        Equal(false, missingProjection.Single(item => string.Equals(item.FullPath, missingPath,
+            StringComparison.OrdinalIgnoreCase)).Exists);
+        Equal(false, missingProjection.Any(item => string.Equals(item.FullPath, untrackedPath,
+            StringComparison.OrdinalIgnoreCase)));
+        ThrowsContains(sourceSet.ValidateFiles, "Support source file was not found");
+
+        File.WriteAllText(missingPath, "CONST Restored = 1\n");
+        var restoredProjection = SmileProjectHierarchyProjection.Create(
+            SmileProjectSourceSet.Load(projectPath), "Console", Array.Empty<string>());
+        Equal(true, restoredProjection.Single(item => string.Equals(item.FullPath, missingPath,
+            StringComparison.OrdinalIgnoreCase)).Exists);
+        SmileProjectSourceSet.Load(projectPath).ValidateFiles();
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
+});
 Run("One physical source can be owned by multiple SMILE projects", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "SmileOwnershipTests-" + Guid.NewGuid().ToString("N"));

@@ -226,6 +226,14 @@ node --check "%SMILE_ROOT%\artifacts\web\SourceVisibilityBasics\game.js"
 if errorlevel 1 exit /b %errorlevel%
 echo Source visibility fixture compiled for native and Web.
 
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\LiveRefreshBasics\Program.smile" --source "%SMILE_ROOT%\examples\LiveRefreshBasics\Helpers.smile" -o "%SMILE_ROOT%\artifacts\games\LiveRefreshBasics.exe"
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\LiveRefreshBasics\Program.smile" --source "%SMILE_ROOT%\examples\LiveRefreshBasics\Helpers.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\LiveRefreshBasics"
+if errorlevel 1 exit /b %errorlevel%
+node --check "%SMILE_ROOT%\artifacts\web\LiveRefreshBasics\game.js"
+if errorlevel 1 exit /b %errorlevel%
+echo Live refresh fixture compiled for native and Web.
+
 if not exist "%SMILE_ROOT%\artifacts\games\Snake" mkdir "%SMILE_ROOT%\artifacts\games\Snake"
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\Snake\Program.smile" -o "%SMILE_ROOT%\artifacts\games\Snake\Snake.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%

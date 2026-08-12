@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
+using System.Xml;
 using System.Xml.Linq;
 using EnvDTE;
 using Smile.Language;
@@ -146,6 +147,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     private uint _contextCommandItemId = VSConstants.VSITEMID_ROOT;
     private Microsoft.VisualStudio.OLE.Interop.IServiceProvider? _site;
     private SmileConfigurationProvider? _configurationProvider;
+    private SmileProjectRefreshCoordinator? _refreshCoordinator;
 
     public SmileProject(SmilePackage package, string projectPath)
     {
@@ -174,6 +176,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     public bool Build(string configuration, string platform, IVsOutputWindowPane? pane)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
+        _refreshCoordinator?.Refresh(SmileProjectRefreshReason.BuildValidation);
         pane ??= SmileBuildService.GetOutputPane();
         pane.Clear();
         pane.Activate();
@@ -371,62 +374,97 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         }
     }
 
-    private IReadOnlyDictionary<uint, ProjectItem>? ReadProject(bool captureHierarchy = false)
+    private void ReadProject()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        var previousItems = captureHierarchy ? new Dictionary<uint, ProjectItem>(_items) : null;
-        var document = XDocument.Load(ProjectPath, LoadOptions.SetLineInfo);
+        var projectXml = File.ReadAllText(ProjectPath);
+        var document = XDocument.Parse(projectXml, LoadOptions.SetLineInfo);
         var root = document.Root;
         if (root == null || root.Name.LocalName != "SmileProject")
             throw new InvalidDataException("A .smileproj file must have a SmileProject root element.");
 
         var properties = root.Elements().FirstOrDefault(element => element.Name.LocalName == "PropertyGroup");
-        ProjectKind = Value(properties, "ProjectKind", "Console");
-        SourceSet = SmileProjectSourceSet.Load(ProjectPath);
-        StartupFile = SourceSet.StartupFile;
-        OutputName = Value(properties, "OutputName", ProjectName);
+        var projectKind = Value(properties, "ProjectKind", "Console");
+        var sourceSet = SmileProjectSourceSet.Parse(ProjectPath, projectXml);
+        var outputName = Value(properties, "OutputName", ProjectName);
         var graphicsOptions = SmileProjectGraphicsOptions.Parse(properties);
-        GraphicsBackend = graphicsOptions.GraphicsBackend;
-        VSync = graphicsOptions.VSync;
-        AssetIncludes = root.Elements().Where(element => element.Name.LocalName == "ItemGroup")
+        var assetIncludes = root.Elements().Where(element => element.Name.LocalName == "ItemGroup")
             .SelectMany(element => element.Elements().Where(item => item.Name.LocalName == "Asset"))
             .Select(item => (string?)item.Attribute("Include") ?? string.Empty)
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .ToArray();
 
-        BuildHierarchy(root);
+        if (projectKind.Equals("Game", StringComparison.OrdinalIgnoreCase) || assetIncludes.Length != 0)
+            Directory.CreateDirectory(Path.Combine(ProjectDirectory, "Assets"));
+        var projection = SmileProjectHierarchyProjection.Create(sourceSet, projectKind, assetIncludes);
+        var hierarchy = CreateHierarchy(projection, sourceSet);
+
+        ProjectKind = projectKind;
+        SourceSet = sourceSet;
+        StartupFile = sourceSet.StartupFile;
+        OutputName = outputName;
+        GraphicsBackend = graphicsOptions.GraphicsBackend;
+        VSync = graphicsOptions.VSync;
+        AssetIncludes = assetIncludes;
+        _items.Clear();
+        foreach (var item in hierarchy)
+            _items.Add(item.Key, item.Value);
         SmileProjectWorkspace.Register(SourceSet);
         _configurationProvider ??= new SmileConfigurationProvider(this);
-        return previousItems;
     }
 
-    private void BuildHierarchy(XElement root)
+    private Dictionary<uint, ProjectItem> CreateHierarchy(
+        IReadOnlyList<SmileProjectHierarchyItem> projection, SmileProjectSourceSet sourceSet)
     {
-        if (ProjectKind.Equals("Game", StringComparison.OrdinalIgnoreCase) || AssetIncludes.Count != 0)
-            Directory.CreateDirectory(Path.Combine(ProjectDirectory, "Assets"));
-
-        var projection = SmileProjectHierarchyProjection.Create(SourceSet, ProjectKind, AssetIncludes);
         var ids = _hierarchyIds.Apply(projection);
-        _items.Clear();
-        var rootNode = new ProjectItem(VSConstants.VSITEMID_ROOT, ProjectName, ProjectPath, ItemKind.Project, 0);
-        _items[rootNode.Id] = rootNode;
+        var items = new Dictionary<uint, ProjectItem>();
+        var rootNode = new ProjectItem(VSConstants.VSITEMID_ROOT, ProjectName, ProjectPath,
+            ItemKind.Project, 0, isSource: false, isStartup: false, exists: true);
+        items[rootNode.Id] = rootNode;
         var parents = new Dictionary<string, ProjectItem>(StringComparer.OrdinalIgnoreCase);
         foreach (var projected in projection)
         {
             var parent = projected.ParentPath == null ? rootNode : parents[projected.ParentPath];
             var kind = projected.Kind == SmileProjectHierarchyItemKind.Folder ? ItemKind.Folder : ItemKind.File;
-            var node = AddNode(parent, ids[projected.Key], projected.Caption, projected.FullPath, kind);
+            var source = projected.Kind == SmileProjectHierarchyItemKind.Source
+                ? sourceSet.Items.Single(item => string.Equals(item.FullPath, projected.FullPath, StringComparison.OrdinalIgnoreCase))
+                : null;
+            var node = AddNode(items, parent, ids[projected.Key], projected.Caption, projected.FullPath, kind,
+                source != null, source?.IsStartup == true, projected.Exists);
             if (projected.Kind == SmileProjectHierarchyItemKind.Folder)
                 parents[projected.FullPath] = node;
         }
+        return items;
     }
 
-    private ProjectItem AddNode(ProjectItem parent, uint id, string caption, string path, ItemKind kind)
+    private static ProjectItem AddNode(Dictionary<uint, ProjectItem> items, ProjectItem parent,
+        uint id, string caption, string path, ItemKind kind, bool isSource, bool isStartup, bool exists)
     {
-        var node = new ProjectItem(id, caption, path, kind, parent.Id);
+        var node = new ProjectItem(id, caption, path, kind, parent.Id, isSource, isStartup, exists);
         parent.Children.Add(node.Id);
-        _items[node.Id] = node;
+        items[node.Id] = node;
         return node;
+    }
+
+    internal bool TryRefreshFromDisk(SmileProjectRefreshReason reason, out Exception? error)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var previousItems = new Dictionary<uint, ProjectItem>(_items);
+        try
+        {
+            ReadProject();
+            NotifyHierarchyChanged(previousItems);
+            ActivityLog.LogInformation(nameof(SmileProject),
+                $"Refreshed '{ProjectPath}' for {reason}; hierarchy items={_items.Count - 1}, sources={SourceSet.Items.Count}.");
+            error = null;
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or
+                                           InvalidDataException or XmlException)
+        {
+            error = exception;
+            return false;
+        }
     }
 
     private static string Value(XElement? group, string name, string fallback) =>
@@ -466,9 +504,9 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         else if (propid == (int)__VSHPROPID.VSHPROPID_Parent)
             pvar = BoxHierarchyItemId(item.Kind == ItemKind.Project ? VSConstants.VSITEMID_NIL : item.ParentId);
         else if (propid == (int)__VSHPROPID.VSHPROPID_Caption)
-            pvar = IsSelectedStartup(item) ? item.Caption + " (Startup)" : item.Caption;
+            pvar = item.DisplayCaption;
         else if (propid == (int)__VSHPROPID.VSHPROPID_Name)
-            pvar = item.Caption;
+            pvar = item.DisplayCaption;
         else if (propid == (int)__VSHPROPID.VSHPROPID_SaveName)
             pvar = item.Path;
         else if (propid == (int)__VSHPROPID.VSHPROPID_Expandable)
@@ -550,7 +588,9 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
 
     private static bool TryGetIcon(ProjectItem item, bool openFolder, out ImageMoniker icon)
     {
-        if (item.Kind == ItemKind.Project)
+        if (item.IsSource && !item.Exists)
+            icon = KnownMonikers.StatusError;
+        else if (item.Kind == ItemKind.Project)
             icon = KnownMonikers.Application;
         else if (item.Kind == ItemKind.Folder)
             icon = openFolder ? KnownMonikers.FolderOpened : KnownMonikers.FolderClosed;
@@ -579,6 +619,9 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     public int QueryClose(out int pfCanClose) { pfCanClose = 1; return VSConstants.S_OK; }
     public int Close()
     {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        _refreshCoordinator?.Dispose();
+        _refreshCoordinator = null;
         SmileProjectWorkspace.Unregister(ProjectPath);
         _events.Clear();
         return VSConstants.S_OK;
@@ -756,7 +799,8 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         if (item.Kind == ItemKind.Project)
             return commandId is SmileProjectCommands.Build or SmileProjectCommands.Rebuild or SmileProjectCommands.Clean or
                 SmileProjectCommands.AddNewSource or SmileProjectCommands.AddExistingSource or
-                SmileProjectCommands.EditProjectFile or SmileProjectCommands.OpenProjectFolder
+                SmileProjectCommands.EditProjectFile or SmileProjectCommands.OpenProjectFolder or
+                SmileProjectCommands.RefreshProject
                 ? enabled : invisible;
         if (item.Kind == ItemKind.Folder)
             return commandId == SmileProjectCommands.OpenFolder ? enabled : invisible;
@@ -765,7 +809,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         if (!TryGetSource(item, out var source))
             return invisible;
         if (commandId == SmileProjectCommands.SetStartupSource)
-            return source.IsStartup ? supported : enabled;
+            return source.IsStartup || !item.Exists ? supported : enabled;
         if (commandId == SmileProjectCommands.IncludeSupportSource)
             return source.IsStartup || source.IsSupport ? supported : enabled;
         if (commandId == SmileProjectCommands.RemoveSource)
@@ -780,6 +824,11 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             return OpenFolder(ProjectDirectory);
         if (commandId == SmileProjectCommands.EditProjectFile)
             return EditProjectFile();
+        if (commandId == SmileProjectCommands.RefreshProject)
+        {
+            _refreshCoordinator!.Refresh(SmileProjectRefreshReason.ManualRefresh);
+            return VSConstants.S_OK;
+        }
         if (commandId == SmileProjectCommands.OpenContainingFolder)
             return OpenFolder(Path.GetDirectoryName(item.Path)!);
         if (commandId == SmileProjectCommands.OpenFolder)
@@ -792,15 +841,27 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             return ExecuteBuildCommand(commandId);
         if (!TryGetSource(item, out _))
             return CommandNotSupported;
+        var reason = SmileProjectRefreshReason.SupportStateChanged;
         if (commandId == SmileProjectCommands.SetStartupSource)
+        {
+            if (!item.Exists)
+                throw new FileNotFoundException($"The selected SMILE source is missing: {item.Path}", item.Path);
             SmileProjectFileEditor.SetStartup(ProjectPath, item.Path);
+            reason = SmileProjectRefreshReason.StartupChanged;
+        }
         else if (commandId == SmileProjectCommands.IncludeSupportSource)
             SmileProjectFileEditor.IncludeAsSupport(ProjectPath, item.Path);
         else if (commandId == SmileProjectCommands.RemoveSource)
+        {
+            EnsureProjectDocumentRemovalAllowed(item.Path);
             SmileProjectFileEditor.RemoveSource(ProjectPath, item.Path);
+            reason = SmileProjectRefreshReason.SourceRemovedByCommand;
+        }
         else
             return CommandNotSupported;
-        NotifyHierarchyChanged(ReadProject(captureHierarchy: true)!);
+        _refreshCoordinator!.Refresh(reason);
+        if (commandId == SmileProjectCommands.RemoveSource)
+            NotifyProjectDocumentRemoved(item.Path);
         return VSConstants.S_OK;
     }
 
@@ -854,11 +915,12 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         var included = false;
         try
         {
+            EnsureProjectDocumentAdditionAllowed(sourcePath);
             SmileProjectFileEditor.AddSource(ProjectPath, sourcePath);
             included = true;
-            var previousItems = ReadProject(captureHierarchy: true)!;
+            _refreshCoordinator!.Refresh(SmileProjectRefreshReason.SourceAddedByCommand, revealPath: sourcePath);
             ValidateAddedSource(sourcePath);
-            NotifyHierarchyChanged(previousItems);
+            NotifyProjectDocumentAdded(sourcePath);
             var result = OpenPath(sourcePath);
             if (ErrorHandler.Failed(result))
                 Marshal.ThrowExceptionForHR(result);
@@ -871,7 +933,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
                 try
                 {
                     SmileProjectFileEditor.RemoveSource(ProjectPath, sourcePath);
-                    NotifyHierarchyChanged(ReadProject(captureHierarchy: true)!);
+                    _refreshCoordinator!.Refresh(SmileProjectRefreshReason.SourceRemovedByCommand);
                 }
                 catch (Exception rollbackException)
                 {
@@ -895,8 +957,26 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         if (_items.Values.Count(item => item.Kind == ItemKind.File &&
                 string.Equals(item.Path, normalizedPath, StringComparison.OrdinalIgnoreCase)) != 1)
             throw new InvalidDataException("The new SMILE source was not projected into the Solution Explorer hierarchy.");
+        if (!HierarchyTraversalReaches(normalizedPath))
+            throw new InvalidDataException("Visual Studio hierarchy traversal could not reach the new SMILE source.");
         if (!SmileProjectWorkspace.Contains(ProjectPath, normalizedPath))
             throw new InvalidDataException("The new SMILE source was not registered with the project workspace.");
+    }
+
+    private bool HierarchyTraversalReaches(string sourcePath)
+    {
+        var reached = new HashSet<uint>();
+        var rootChildren = _items[VSConstants.VSITEMID_ROOT].Children;
+        var itemId = rootChildren.Count == 0 ? VSConstants.VSITEMID_NIL : rootChildren[0];
+        while (itemId != VSConstants.VSITEMID_NIL)
+        {
+            if (!reached.Add(itemId) || !_items.TryGetValue(itemId, out var item))
+                return false;
+            if (string.Equals(item.Path, sourcePath, StringComparison.OrdinalIgnoreCase))
+                return true;
+            itemId = NextSibling(item);
+        }
+        return false;
     }
 
     private static string ValidateNewSourceName(string enteredName)
@@ -963,6 +1043,94 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         return VSConstants.S_OK;
     }
 
+    private static IVsTrackProjectDocuments2? GetProjectDocumentTracker()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        return Package.GetGlobalService(typeof(SVsTrackProjectDocuments)) as IVsTrackProjectDocuments2;
+    }
+
+    private void EnsureProjectDocumentAdditionAllowed(string sourcePath)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var tracker = GetProjectDocumentTracker();
+        if (tracker == null)
+            return;
+        var summary = new VSQUERYADDFILERESULTS[1];
+        var results = new VSQUERYADDFILERESULTS[1];
+        var result = tracker.OnQueryAddFiles(this, 1, new[] { sourcePath },
+            new[] { VSQUERYADDFILEFLAGS.VSQUERYADDFILEFLAGS_NoFlags }, summary, results);
+        if (ErrorHandler.Failed(result) ||
+            summary[0] != VSQUERYADDFILERESULTS.VSQUERYADDFILERESULTS_AddOK ||
+            results[0] != VSQUERYADDFILERESULTS.VSQUERYADDFILERESULTS_AddOK)
+            throw new OperationCanceledException("Visual Studio canceled adding the SMILE source to the project.");
+    }
+
+    private void NotifyProjectDocumentAdded(string sourcePath)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        GetProjectDocumentTracker()?.OnAfterAddFilesEx(this, 1, new[] { sourcePath },
+            new[] { VSADDFILEFLAGS.VSADDFILEFLAGS_NoFlags });
+    }
+
+    private void EnsureProjectDocumentRemovalAllowed(string sourcePath)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var tracker = GetProjectDocumentTracker();
+        if (tracker == null)
+            return;
+        var summary = new VSQUERYREMOVEFILERESULTS[1];
+        var results = new VSQUERYREMOVEFILERESULTS[1];
+        var result = tracker.OnQueryRemoveFiles(this, 1, new[] { sourcePath },
+            new[] { VSQUERYREMOVEFILEFLAGS.VSQUERYREMOVEFILEFLAGS_NoFlags }, summary, results);
+        if (ErrorHandler.Failed(result) ||
+            summary[0] != VSQUERYREMOVEFILERESULTS.VSQUERYREMOVEFILERESULTS_RemoveOK ||
+            results[0] != VSQUERYREMOVEFILERESULTS.VSQUERYREMOVEFILERESULTS_RemoveOK)
+            throw new OperationCanceledException("Visual Studio canceled removing the SMILE source from the project.");
+    }
+
+    private void NotifyProjectDocumentRemoved(string sourcePath)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        GetProjectDocumentTracker()?.OnAfterRemoveFiles(this, 1, new[] { sourcePath },
+            new[] { VSREMOVEFILEFLAGS.VSREMOVEFILEFLAGS_NoFlags });
+    }
+
+    internal void RevealPath(string path)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var normalizedPath = Path.GetFullPath(path);
+        var item = _items.Values.FirstOrDefault(candidate =>
+            string.Equals(candidate.Path, normalizedPath, StringComparison.OrdinalIgnoreCase));
+        RefreshSolutionExplorer(item?.Id);
+    }
+
+    private void RefreshSolutionExplorer(uint? selectItemId = null)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try
+        {
+            var shell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
+            if (shell == null)
+                return;
+            var solutionExplorer = new Guid(ToolWindowGuids80.SolutionExplorer);
+            if (ErrorHandler.Failed(shell.FindToolWindow((uint)__VSFINDTOOLWIN.FTW_fForceCreate,
+                    ref solutionExplorer, out var frame)) || frame == null ||
+                ErrorHandler.Failed(frame.GetProperty((int)__VSFPROPID.VSFPROPID_DocView, out var view)) ||
+                view is not IVsUIHierarchyWindow hierarchyWindow)
+                return;
+
+            hierarchyWindow.ExpandItem(this, VSConstants.VSITEMID_ROOT, EXPANDFLAGS.EXPF_ExpandFolder);
+            if (selectItemId.HasValue)
+                hierarchyWindow.ExpandItem(this, selectItemId.Value,
+                    EXPANDFLAGS.EXPF_ExpandParentsToShowItem | EXPANDFLAGS.EXPF_SelectItem);
+        }
+        catch (Exception exception)
+        {
+            ActivityLog.LogWarning(nameof(SmileProject),
+                $"Could not refresh the Solution Explorer view for '{ProjectPath}': {exception}");
+        }
+    }
+
     private bool TryGetSource(ProjectItem item, out SmileProjectSourceItem source)
     {
         source = SourceSet.Items.FirstOrDefault(candidate =>
@@ -970,19 +1138,18 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         return source != null;
     }
 
-    private bool IsSelectedStartup(ProjectItem item) =>
-        item.Kind == ItemKind.File && string.Equals(item.Path, SourceSet.StartupSource.FullPath, StringComparison.OrdinalIgnoreCase);
-
     private void NotifyHierarchyChanged(IReadOnlyDictionary<uint, ProjectItem> previousItems)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        var removedItems = previousItems.Values
-            .Where(item => item.Kind != ItemKind.Project && !_items.ContainsKey(item.Id))
-            .OrderByDescending(item => item.Id)
+        var removedItems = HierarchyOrder(previousItems)
+            .Where(item => !_items.ContainsKey(item.Id))
+            .Reverse()
             .ToArray();
-        var addedItems = _items.Values
-            .Where(item => item.Kind != ItemKind.Project && !previousItems.ContainsKey(item.Id))
-            .OrderBy(item => item.Id)
+        var addedItems = HierarchyOrder(_items)
+            .Where(item => !previousItems.ContainsKey(item.Id))
+            .ToArray();
+        var propertyChanges = _items.Values
+            .Where(item => previousItems.TryGetValue(item.Id, out var oldItem) && !item.SameProperties(oldItem))
             .ToArray();
         var affectedParents = previousItems.Values.Concat(_items.Values)
             .Where(item => item.Kind != ItemKind.File)
@@ -1029,16 +1196,41 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
                     sink.OnPropertyChanged(childId, (int)__VSHPROPID.VSHPROPID_NextSibling, 0);
                     sink.OnPropertyChanged(childId, (int)__VSHPROPID.VSHPROPID_NextVisibleSibling, 0);
                 }
-                // Invalidating the project root after OnItemAdded clears Visual Studio's child cache.
-                // Nested folders may still be invalidated safely when their physical contents change.
-                if (parent.Id != VSConstants.VSITEMID_ROOT)
-                    sink.OnInvalidateItems(parent.Id);
+                sink.OnInvalidateItems(parent.Id);
             }
 
-            foreach (var existing in _items.Values.Where(item => previousItems.ContainsKey(item.Id)))
-                sink.OnPropertyChanged(existing.Id, (int)__VSHPROPID.VSHPROPID_Caption, 0);
+            foreach (var changed in propertyChanges)
+            {
+                sink.OnPropertyChanged(changed.Id, (int)__VSHPROPID.VSHPROPID_Caption, 0);
+                sink.OnPropertyChanged(changed.Id, (int)__VSHPROPID.VSHPROPID_Name, 0);
+                sink.OnPropertyChanged(changed.Id, (int)__VSHPROPID8.VSHPROPID_IconMonikerGuid, 0);
+                sink.OnPropertyChanged(changed.Id, (int)__VSHPROPID8.VSHPROPID_IconMonikerId, 0);
+            }
         }
 
+        if (removedItems.Length != 0 || addedItems.Length != 0 ||
+            propertyChanges.Length != 0 || affectedParents.Length != 0)
+            RefreshSolutionExplorer();
+    }
+
+    private static IReadOnlyList<ProjectItem> HierarchyOrder(IReadOnlyDictionary<uint, ProjectItem> items)
+    {
+        var result = new List<ProjectItem>();
+        if (!items.TryGetValue(VSConstants.VSITEMID_ROOT, out var root))
+            return result;
+        AddChildren(root);
+        return result;
+
+        void AddChildren(ProjectItem parent)
+        {
+            foreach (var childId in parent.Children)
+            {
+                if (!items.TryGetValue(childId, out var child))
+                    continue;
+                result.Add(child);
+                AddChildren(child);
+            }
+        }
     }
 
     private void ShowMessage(string message, OLEMSGICON icon) =>
@@ -1069,6 +1261,11 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         var item = Item(itemid);
         if (item == null || item.Kind != ItemKind.File)
             return VSConstants.E_INVALIDARG;
+        if (item.IsSource && !item.Exists)
+        {
+            ShowMessage($"The included SMILE source file was not found: {item.Path}", OLEMSGICON.OLEMSGICON_WARNING);
+            return VSConstants.S_OK;
+        }
 
         try
         {
@@ -1143,7 +1340,15 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     public int IsDirty(out int pfIsDirty) { pfIsDirty = 0; return VSConstants.S_OK; }
     public int InitNew(uint nFormatIndex) => VSConstants.S_OK;
     public int Load(string pszFilename, uint grfMode, int fReadOnly)
-    { ThreadHelper.ThrowIfNotOnUIThread(); ProjectPath = Path.GetFullPath(pszFilename); ReadProject(); return VSConstants.S_OK; }
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        ProjectPath = Path.GetFullPath(pszFilename);
+        ReadProject();
+        _refreshCoordinator?.Dispose();
+        _refreshCoordinator = new SmileProjectRefreshCoordinator(_package, this);
+        _refreshCoordinator.Start();
+        return VSConstants.S_OK;
+    }
     public int Save(string pszFilename, int fRemember, uint nFormatIndex) => VSConstants.S_OK;
     public int SaveCompleted(string pszFilename) => VSConstants.S_OK;
     public int GetCurFile(out string ppszFilename, out uint pnFormatIndex)
@@ -1198,14 +1403,35 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
 
     private sealed class ProjectItem
     {
-        public ProjectItem(uint id, string caption, string path, ItemKind kind, uint parentId)
-        { Id = id; Caption = caption; Path = path; Kind = kind; ParentId = parentId; }
+        public ProjectItem(uint id, string caption, string path, ItemKind kind, uint parentId,
+            bool isSource, bool isStartup, bool exists)
+        {
+            Id = id;
+            Caption = caption;
+            Path = path;
+            Kind = kind;
+            ParentId = parentId;
+            IsSource = isSource;
+            IsStartup = isStartup;
+            Exists = exists;
+        }
         public uint Id { get; }
         public string Caption { get; }
         public string Path { get; }
         public ItemKind Kind { get; }
         public uint ParentId { get; }
+        public bool IsSource { get; }
+        public bool IsStartup { get; }
+        public bool Exists { get; }
+        public string DisplayCaption => Caption + (IsStartup ? " (Startup)" : string.Empty) +
+                                        (IsSource && !Exists ? " (Missing)" : string.Empty);
         public List<uint> Children { get; } = new();
+
+        public bool SameProperties(ProjectItem other) =>
+            string.Equals(Caption, other.Caption, StringComparison.Ordinal) &&
+            string.Equals(Path, other.Path, StringComparison.OrdinalIgnoreCase) &&
+            Kind == other.Kind && ParentId == other.ParentId && IsSource == other.IsSource &&
+            IsStartup == other.IsStartup && Exists == other.Exists;
     }
 
     private enum ItemKind { Project, Folder, File }

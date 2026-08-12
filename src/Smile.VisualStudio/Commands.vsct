@@ -76,6 +76,10 @@
         <Parent guid="guidSmileProjectCommandSet" id="SmileProjectUtilityGroup" />
         <Strings><ButtonText>Open Project Folder</ButtonText></Strings>
       </Button>
+      <Button guid="guidSmileProjectCommandSet" id="RefreshProjectCommand" priority="0x0320" type="Button">
+        <Parent guid="guidSmileProjectCommandSet" id="SmileProjectUtilityGroup" />
+        <Strings><ButtonText>Refresh SMILE 2.0 Project</ButtonText></Strings>
+      </Button>
       <Button guid="guidSmileProjectCommandSet" id="SetStartupSourceCommand" priority="0x0100" type="Button">
         <Parent guid="guidSmileProjectCommandSet" id="SmileSourceActionGroup" />
         <CommandFlag>DynamicVisibility</CommandFlag><CommandFlag>DefaultInvisible</CommandFlag>
@@ -125,6 +129,7 @@
       <IDSymbol name="AddExistingSourceCommand" value="0x2104" />
       <IDSymbol name="OpenProjectFolderCommand" value="0x2105" />
       <IDSymbol name="EditProjectFileCommand" value="0x2106" />
+      <IDSymbol name="RefreshProjectCommand" value="0x2107" />
       <IDSymbol name="SetStartupSourceCommand" value="0x2110" />
       <IDSymbol name="IncludeSupportSourceCommand" value="0x2111" />
       <IDSymbol name="RemoveSourceCommand" value="0x2112" />

@@ -21,6 +21,7 @@ public sealed class SmileProjectSourceItem
     public bool StartupOnly { get; }
     public bool IsStartup { get; }
     public bool IsSupport => !IsStartup && !StartupOnly;
+    public bool Exists => File.Exists(FullPath);
 }
 
 public sealed class SmileProjectSourceSet
@@ -116,7 +117,7 @@ public sealed class SmileProjectSourceSet
 
     public void ValidateFiles()
     {
-        foreach (var source in CompilationSources)
+        foreach (var source in Items)
         {
             if (!File.Exists(source.FullPath))
             {

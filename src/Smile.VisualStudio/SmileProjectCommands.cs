@@ -15,6 +15,7 @@ internal static class SmileProjectCommands
     public const uint AddExistingSource = 0x2104;
     public const uint OpenProjectFolder = 0x2105;
     public const uint EditProjectFile = 0x2106;
+    public const uint RefreshProject = 0x2107;
     public const uint SetStartupSource = 0x2110;
     public const uint IncludeSupportSource = 0x2111;
     public const uint RemoveSource = 0x2112;

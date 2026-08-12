@@ -22,6 +22,9 @@ public sealed class SmileProjectHierarchyItem
         ParentPath = parentPath == null ? null : Path.GetFullPath(parentPath);
         Kind = kind;
         Key = kind + "|" + FullPath;
+        Exists = kind == SmileProjectHierarchyItemKind.Folder
+            ? Directory.Exists(FullPath)
+            : File.Exists(FullPath);
     }
 
     public string Caption { get; }
@@ -29,6 +32,7 @@ public sealed class SmileProjectHierarchyItem
     public string? ParentPath { get; }
     public SmileProjectHierarchyItemKind Kind { get; }
     public string Key { get; }
+    public bool Exists { get; }
 }
 
 public static class SmileProjectHierarchyProjection
