@@ -460,11 +460,11 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             return VSConstants.E_INVALIDARG;
 
         if (propid == (int)__VSHPROPID.VSHPROPID_FirstChild || propid == (int)__VSHPROPID.VSHPROPID_FirstVisibleChild)
-            pvar = item.Children.Count == 0 ? VSConstants.VSITEMID_NIL : item.Children[0];
+            pvar = BoxHierarchyItemId(item.Children.Count == 0 ? VSConstants.VSITEMID_NIL : item.Children[0]);
         else if (propid == (int)__VSHPROPID.VSHPROPID_NextSibling || propid == (int)__VSHPROPID.VSHPROPID_NextVisibleSibling)
-            pvar = NextSibling(item);
+            pvar = BoxHierarchyItemId(NextSibling(item));
         else if (propid == (int)__VSHPROPID.VSHPROPID_Parent)
-            pvar = item.Kind == ItemKind.Project ? VSConstants.VSITEMID_NIL : item.ParentId;
+            pvar = BoxHierarchyItemId(item.Kind == ItemKind.Project ? VSConstants.VSITEMID_NIL : item.ParentId);
         else if (propid == (int)__VSHPROPID.VSHPROPID_Caption)
             pvar = IsSelectedStartup(item) ? item.Caption + " (Startup)" : item.Caption;
         else if (propid == (int)__VSHPROPID.VSHPROPID_Name)
@@ -507,6 +507,8 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             return VSConstants.E_NOTIMPL;
         return VSConstants.S_OK;
     }
+
+    private static int BoxHierarchyItemId(uint itemId) => unchecked((int)itemId);
 
     private uint NextSibling(ProjectItem item)
     {

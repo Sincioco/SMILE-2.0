@@ -11,5 +11,7 @@
     <SmileSource Include="Program-NoDemo.smile" StartupOnly="true" />
     <Asset Include="Assets\**\*" />
     <SmileSource Include="aaa.smile" />
+    <SmileSource Include="fasdfadsfadsf.smile" />
+    <SmileSource Include="abc.smile" />
   </ItemGroup>
 </SmileProject>

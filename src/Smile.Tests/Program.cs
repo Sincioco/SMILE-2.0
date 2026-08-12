@@ -391,6 +391,55 @@ Run("Console hierarchy projection contains every support source without an Asset
     var projection = SmileProjectHierarchyProjection.Create(sourceSet, "Console", Array.Empty<string>());
     Equal("Program.smile|Second.smile|Third.smile", string.Join("|", projection.Select(item => item.Caption)));
 });
+Run("Root hierarchy traversal reaches every source once without missing IDs cycles or Assets ordering gaps", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileHierarchyTraversalTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(Path.Combine(directory, "Assets"));
+    try
+    {
+        foreach (var name in new[] { "Program.smile", "BeforeAssets.smile", "AfterAssets.smile" })
+            File.WriteAllText(Path.Combine(directory, name), "END PROGRAM\n");
+        File.WriteAllText(Path.Combine(directory, "Assets", "Readme.txt"), "asset\n");
+        var projectPath = Path.Combine(directory, "Traversal.smileproj");
+        File.WriteAllText(projectPath, """
+            <SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup>
+            <SmileSource Include="Program.smile" StartupOnly="true" />
+            <SmileSource Include="BeforeAssets.smile" />
+            <Asset Include="Assets\**\*" />
+            <SmileSource Include="AfterAssets.smile" />
+            </ItemGroup></SmileProject>
+            """);
+
+        var sourceSet = SmileProjectSourceSet.Load(projectPath);
+        var projection = SmileProjectHierarchyProjection.Create(sourceSet, "Game", new[] { "Assets\\**\\*" });
+        var ids = new SmileProjectHierarchyIdentityMap().Apply(projection);
+        var rootItems = projection.Where(item => item.ParentPath == null).ToArray();
+        var nextById = rootItems.Select((item, index) => new
+            {
+                Id = ids[item.Key],
+                Next = index + 1 < rootItems.Length ? ids[rootItems[index + 1].Key] : uint.MaxValue
+            })
+            .ToDictionary(item => item.Id, item => item.Next);
+        var reached = new List<uint>();
+        for (var itemId = ids[rootItems[0].Key]; itemId != uint.MaxValue; itemId = nextById[itemId])
+        {
+            Equal(false, reached.Contains(itemId));
+            reached.Add(itemId);
+        }
+
+        Equal(rootItems.Length, reached.Count);
+        Equal(rootItems.Length, reached.Distinct().Count());
+        foreach (var source in sourceSet.Items)
+            Equal(1, rootItems.Count(item => item.Kind == SmileProjectHierarchyItemKind.Source &&
+                string.Equals(item.FullPath, source.FullPath, StringComparison.OrdinalIgnoreCase)));
+        Equal("Program.smile|BeforeAssets.smile|AfterAssets.smile|Assets",
+            string.Join("|", rootItems.Select(item => item.Caption)));
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
+});
 Run("Hierarchy mutation preserves existing IDs and remove re-add keeps the physical source", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "SmileHierarchyTests-" + Guid.NewGuid().ToString("N"));
@@ -412,10 +461,12 @@ Run("Hierarchy mutation preserves existing IDs and remove re-add keeps the physi
         var blankLinesAfterAdd = File.ReadAllLines(projectPath).Count(string.IsNullOrWhiteSpace);
         var added = SmileProjectHierarchyProjection.Create(addedSet, "Console", Array.Empty<string>());
         var addedIds = identities.Apply(added);
+        Equal(initial.Count + 1, added.Count);
         foreach (var item in initial)
             Equal(initialIds[item.Key], addedIds[item.Key]);
         var dynamicItem = added.Single(item => string.Equals(item.FullPath, dynamicPath, StringComparison.OrdinalIgnoreCase));
         Equal(true, addedIds[dynamicItem.Key] is > 0 and < 0xfffffffd);
+        ThrowsContains(() => SmileProjectFileEditor.AddSource(projectPath, dynamicPath), "already included in the project");
         var removedSet = SmileProjectFileEditor.RemoveSource(projectPath, dynamicPath);
         Equal(false, SmileProjectHierarchyProjection.Create(removedSet, "Console", Array.Empty<string>())
             .Any(item => string.Equals(item.FullPath, dynamicPath, StringComparison.OrdinalIgnoreCase)));
@@ -424,6 +475,8 @@ Run("Hierarchy mutation preserves existing IDs and remove re-add keeps the physi
         var readded = SmileProjectHierarchyProjection.Create(readdedSet, "Console", Array.Empty<string>());
         Equal(1, readded.Count(item => string.Equals(item.FullPath, dynamicPath, StringComparison.OrdinalIgnoreCase)));
         Equal(addedIds[dynamicItem.Key], identities.Apply(readded)[dynamicItem.Key]);
+        var reloaded = SmileProjectHierarchyProjection.Create(SmileProjectSourceSet.Load(projectPath), "Console", Array.Empty<string>());
+        Equal(string.Join("|", readded.Select(item => item.Key)), string.Join("|", reloaded.Select(item => item.Key)));
         var finalBlankLines = File.ReadAllLines(projectPath).Count(string.IsNullOrWhiteSpace);
         Equal(blankLinesAfterAdd, finalBlankLines);
     }
