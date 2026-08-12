@@ -146,6 +146,8 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     private uint _nextEventCookie = 1;
     private uint _contextCommandItemId = VSConstants.VSITEMID_ROOT;
     private Microsoft.VisualStudio.OLE.Interop.IServiceProvider? _site;
+    private IVsHierarchy? _parentHierarchy;
+    private uint _parentHierarchyItemId = VSConstants.VSITEMID_NIL;
     private SmileConfigurationProvider? _configurationProvider;
     private SmileProjectRefreshCoordinator? _refreshCoordinator;
 
@@ -503,6 +505,14 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             pvar = BoxHierarchyItemId(NextSibling(item));
         else if (propid == (int)__VSHPROPID.VSHPROPID_Parent)
             pvar = BoxHierarchyItemId(item.Kind == ItemKind.Project ? VSConstants.VSITEMID_NIL : item.ParentId);
+        else if (itemid == VSConstants.VSITEMID_ROOT &&
+                 propid == (int)__VSHPROPID.VSHPROPID_ParentHierarchy &&
+                 _parentHierarchy != null)
+            pvar = _parentHierarchy;
+        else if (itemid == VSConstants.VSITEMID_ROOT &&
+                 propid == (int)__VSHPROPID.VSHPROPID_ParentHierarchyItemid &&
+                 _parentHierarchyItemId != VSConstants.VSITEMID_NIL)
+            pvar = BoxHierarchyItemId(_parentHierarchyItemId);
         else if (propid == (int)__VSHPROPID.VSHPROPID_Caption)
             pvar = item.DisplayCaption;
         else if (propid == (int)__VSHPROPID.VSHPROPID_Name)
@@ -624,10 +634,66 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         _refreshCoordinator = null;
         SmileProjectWorkspace.Unregister(ProjectPath);
         _events.Clear();
+        _parentHierarchy = null;
+        _parentHierarchyItemId = VSConstants.VSITEMID_NIL;
         return VSConstants.S_OK;
     }
     public int SetGuidProperty(uint itemid, int propid, ref Guid rguid) => VSConstants.E_NOTIMPL;
-    public int SetProperty(uint itemid, int propid, object var) => VSConstants.E_NOTIMPL;
+    public int SetProperty(uint itemid, int propid, object var)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (itemid != VSConstants.VSITEMID_ROOT)
+            return VSConstants.E_INVALIDARG;
+
+        if (propid == (int)__VSHPROPID.VSHPROPID_ParentHierarchy)
+        {
+            if (var == null)
+            {
+                _parentHierarchy = null;
+                return VSConstants.S_OK;
+            }
+
+            if (var is IVsHierarchy hierarchy)
+            {
+                _parentHierarchy = hierarchy;
+                return VSConstants.S_OK;
+            }
+
+            return VSConstants.E_INVALIDARG;
+        }
+
+        if (propid == (int)__VSHPROPID.VSHPROPID_ParentHierarchyItemid)
+        {
+            if (!TryUnboxHierarchyItemId(var, out var parentItemId))
+                return VSConstants.E_INVALIDARG;
+            _parentHierarchyItemId = parentItemId;
+            return VSConstants.S_OK;
+        }
+
+        return VSConstants.E_NOTIMPL;
+    }
+
+    private static bool TryUnboxHierarchyItemId(object value, out uint itemId)
+    {
+        switch (value)
+        {
+            case uint unsigned:
+                itemId = unsigned;
+                return true;
+            case int signed:
+                itemId = unchecked((uint)signed);
+                return true;
+            case UIntPtr unsignedPointer:
+                itemId = unchecked((uint)unsignedPointer.ToUInt64());
+                return true;
+            case IntPtr signedPointer:
+                itemId = unchecked((uint)signedPointer.ToInt64());
+                return true;
+            default:
+                itemId = VSConstants.VSITEMID_NIL;
+                return false;
+        }
+    }
     public int GetNestedHierarchy(uint itemid, ref Guid iidHierarchyNested, out IntPtr ppHierarchyNested, out uint pitemidNested)
     { ppHierarchyNested = IntPtr.Zero; pitemidNested = VSConstants.VSITEMID_NIL; return VSConstants.E_NOTIMPL; }
     public int Unused0() => VSConstants.E_NOTIMPL;
