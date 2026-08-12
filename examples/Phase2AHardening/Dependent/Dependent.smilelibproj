@@ -1,0 +1,12 @@
+<SmileProject>
+  <PropertyGroup>
+    <ProjectKind>Library</ProjectKind>
+    <LibraryName>Example.Phase2A.Dependent</LibraryName>
+    <Version>1.0.0</Version>
+    <OutputName>Example.Phase2A.Dependent</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Dependent.smile" />
+    <SmileProjectReference Include="..\Base\Base.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

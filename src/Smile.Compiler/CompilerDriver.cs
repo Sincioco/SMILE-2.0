@@ -117,6 +117,11 @@ internal sealed class CompilerDriver
             }
             return 0;
         }
+        catch (SmileProjectDiagnosticException exception)
+        {
+            Console.Error.WriteLine($"error {exception.Code}: {exception.Message}");
+            return 2;
+        }
         catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException ||
                                           exception is ArgumentException || exception is InvalidDataException)
         {
@@ -192,11 +197,17 @@ internal sealed class CompilerDriver
         }
         var documents = sourcePaths.Select((path, index) =>
             new SmileSourceDocument(File.ReadAllText(path), path, isStartup: index == 0)).ToList();
-        var cacheRoot = Path.Combine(Path.GetDirectoryName(sourcePath)!, "obj", "Smile", "Libraries");
-        foreach (var libraryOption in options.LibraryPaths)
-            documents.AddRange(SmileLibraryPackage.Read(Path.GetFullPath(libraryOption), cacheRoot).Sources);
+        documents.AddRange(LoadLooseLibraries(sourcePath, options.LibraryPaths));
         return new CompilationInput(sourcePath, documents, SmileCompilationKind.Program,
             Path.ChangeExtension(sourcePath, ".exe"), project: null);
+    }
+
+    internal static IReadOnlyList<SmileSourceDocument> LoadLooseLibraries(string sourcePath,
+        IEnumerable<string> libraryPaths)
+    {
+        var fullSourcePath = Path.GetFullPath(sourcePath);
+        var cacheRoot = Path.Combine(Path.GetDirectoryName(fullSourcePath)!, "obj", "Smile", "Libraries");
+        return SmileLibraryProviderResolver.LoadPackages(libraryPaths.Select(Path.GetFullPath), cacheRoot).Sources;
     }
 
     private sealed class CompilationInput

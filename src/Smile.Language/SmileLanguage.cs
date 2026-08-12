@@ -187,4 +187,25 @@ public static class SmileLanguage
         return new SmileAnalysisResult(syntaxTrees.ToArray(), primaryTree,
             moduleProcessing.BoundTrees, boundStartupTree, compilationKind, semanticModel, orderedDiagnostics);
     }
+
+    public static SmileAnalysisResult AnalyzeWithProjectDiagnostic(IReadOnlyList<SmileSourceDocument> sources,
+        SmileCompilationKind compilationKind, SmileProjectDiagnostic projectDiagnostic)
+    {
+        if (projectDiagnostic == null) throw new ArgumentNullException(nameof(projectDiagnostic));
+        var analysis = Analyze(sources, compilationKind);
+        var source = analysis.SyntaxTrees.FirstOrDefault(tree => string.Equals(tree.Source.FilePath,
+                         projectDiagnostic.FilePath, StringComparison.OrdinalIgnoreCase))?.Source
+                     ?? analysis.SyntaxTree.Source;
+        var diagnostics = analysis.Diagnostics.Concat(new[]
+        {
+            new Diagnostic(projectDiagnostic.Code, DiagnosticSeverity.Error, projectDiagnostic.Message,
+                source, new TextSpan(0, 0))
+        }).OrderBy(diagnostic => diagnostic.FilePath, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(diagnostic => diagnostic.Span.Start)
+            .ThenBy(diagnostic => diagnostic.Code, StringComparer.Ordinal)
+            .ToArray();
+        return new SmileAnalysisResult(analysis.SyntaxTrees, analysis.SyntaxTree,
+            analysis.BoundSyntaxTrees, analysis.BoundSyntaxTree, analysis.CompilationKind,
+            analysis.SemanticModel, diagnostics);
+    }
 }

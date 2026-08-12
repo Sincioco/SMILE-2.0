@@ -87,8 +87,14 @@ internal static class SmileProjectWorkspace
                 !sourceSet.IsLibrary && string.Equals(source.FullPath, compilationSources[0].FullPath,
                     StringComparison.OrdinalIgnoreCase), missing, sourceSet.ProjectPath));
         }
-        var projectCompilation = SmileProjectCompilation.Load(sourceSet.ProjectPath,
+        var loadResult = SmileProjectCompilation.TryLoad(sourceSet.ProjectPath,
             openText: path => OpenBuffers.TryGetText(path, out var text) ? text : null);
+        if (!loadResult.Succeeded)
+            return SmileLanguage.AnalyzeWithProjectDiagnostic(documents,
+                sourceSet.IsLibrary ? SmileCompilationKind.Library : SmileCompilationKind.Program,
+                loadResult.Diagnostic!);
+
+        var projectCompilation = loadResult.Compilation!;
         var rootPaths = new HashSet<string>(sourceSet.Items.Select(item => item.FullPath), StringComparer.OrdinalIgnoreCase);
         documents.AddRange(projectCompilation.Sources.Where(source => !rootPaths.Contains(source.FilePath)));
         return SmileLanguage.Analyze(documents, sourceSet.IsLibrary ? SmileCompilationKind.Library : SmileCompilationKind.Program);

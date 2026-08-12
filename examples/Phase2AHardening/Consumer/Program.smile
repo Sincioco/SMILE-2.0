@@ -1,0 +1,3 @@
+IMPORT Example.Phase2A.Dependent AS Dependent
+PRINT Dependent.Quadruple(3)
+END PROGRAM

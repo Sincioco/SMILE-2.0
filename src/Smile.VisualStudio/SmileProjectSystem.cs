@@ -197,17 +197,21 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         pane.Clear();
         pane.Activate();
 
+        SmileProjectBuildGraph graph;
         try
         {
-            SourceSet.ValidateFiles();
+            graph = SmileProjectBuildGraph.Load(ProjectPath);
+            foreach (var project in graph.BuildOrder)
+                project.ValidateFiles();
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
+        catch (Exception exception) when (SmileProjectDiagnostic.TryCreate(exception, ProjectPath, out _))
         {
-            pane.OutputStringThreadSafe(exception.Message + "\r\n");
+            SmileProjectDiagnostic.TryCreate(exception, ProjectPath, out var diagnostic);
+            pane.OutputStringThreadSafe($"{diagnostic.Code}: {diagnostic.Message}\r\n");
             return false;
         }
 
-        var participatingSourcePaths = SourceSet.CompilationSources.Select(source => source.FullPath).ToArray();
+        var participatingSourcePaths = graph.PhysicalCompilationSourcePaths;
         if (!SaveOpenSourceDocuments(participatingSourcePaths, pane))
             return false;
 
@@ -1489,7 +1493,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     public int GetCurFile(out string ppszFilename, out uint pnFormatIndex)
     { ppszFilename = ProjectPath; pnFormatIndex = 0; return VSConstants.S_OK; }
     public int GetFormatList(out string ppszFormatList)
-    { ppszFormatList = "SMILE Project Files (*.smileproj)\n*.smileproj\n"; return VSConstants.S_OK; }
+    { ppszFormatList = "SMILE Project Files (*.smileproj;*.smilelibproj)\n*.smileproj;*.smilelibproj\n"; return VSConstants.S_OK; }
 
     public int IsItemDirty(uint itemid, IntPtr punkDocData, out int pfDirty)
     {

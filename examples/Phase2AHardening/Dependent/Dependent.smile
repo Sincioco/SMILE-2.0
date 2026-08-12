@@ -1,0 +1,7 @@
+MODULE Example.Phase2A.Dependent
+IMPORT Example.Phase2A.Base AS Base
+PUBLIC FUNCTION Quadruple(Value)
+RETURN Base.Double(Base.Double(Value))
+END FUNCTION
+PRIVATE CONST Hidden = 9
+END MODULE

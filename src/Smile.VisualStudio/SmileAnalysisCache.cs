@@ -35,7 +35,7 @@ internal sealed class SmileAnalysisCache : IDisposable
         _textDocumentFactory = textDocumentFactory;
         _snapshot = buffer.CurrentSnapshot;
         _workspaceRegistration = SmileProjectWorkspace.RegisterBuffer(filePath, _snapshot.GetText(), Invalidate);
-        _analysis = SmileProjectWorkspace.Analyze(filePath, _snapshot.GetText(), _projectPath);
+        _analysis = AnalyzeSafely(_snapshot.GetText());
         _buffer.Changed += BufferChanged;
         _textDocumentFactory.TextDocumentDisposed += TextDocumentDisposed;
     }
@@ -76,7 +76,7 @@ internal sealed class SmileAnalysisCache : IDisposable
         {
             await Task.Delay(250, cancellationToken).ConfigureAwait(false);
             var text = snapshot.GetText();
-            var analysis = await Task.Run(() => SmileProjectWorkspace.Analyze(_filePath, text, _projectPath), cancellationToken).ConfigureAwait(false);
+            var analysis = await Task.Run(() => AnalyzeSafely(text), cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
 
             if (!ReferenceEquals(snapshot, _buffer.CurrentSnapshot))
@@ -92,6 +92,23 @@ internal sealed class SmileAnalysisCache : IDisposable
         }
         catch (OperationCanceledException)
         {
+        }
+    }
+
+    private SmileAnalysisResult AnalyzeSafely(string text)
+    {
+        try
+        {
+            return SmileProjectWorkspace.Analyze(_filePath, text, _projectPath);
+        }
+        catch (Exception exception)
+        {
+            ActivityLog.LogError(nameof(SmileAnalysisCache), exception.ToString());
+            var sources = new[] { new SmileSourceDocument(text, _filePath, isStartup: true) };
+            return SmileLanguage.AnalyzeWithProjectDiagnostic(sources, SmileCompilationKind.Program,
+                new SmileProjectDiagnostic("SML3299",
+                    "SMILE editor analysis recovered from an unexpected project/reference failure. " + exception.Message,
+                    _filePath));
         }
     }
 
