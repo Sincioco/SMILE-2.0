@@ -17,7 +17,7 @@ internal static class SmileWebServer
     private static string? _root;
     private static int _port;
 
-    public static string Start(string outputDirectory)
+    public static string Start(string outputDirectory, string applicationName)
     {
         var root = Path.GetFullPath(outputDirectory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         lock (Gate)
@@ -33,7 +33,8 @@ internal static class SmileWebServer
                 _ = Task.Run(() => ListenAsync(_listener, root, _cancellation.Token));
             }
 
-            return $"http://127.0.0.1:{_port}/?v={DateTime.UtcNow.Ticks}";
+            var encodedName = Uri.EscapeDataString(applicationName);
+            return $"http://127.0.0.1:{_port}/?game={encodedName}&v={DateTime.UtcNow.Ticks}";
         }
     }
 

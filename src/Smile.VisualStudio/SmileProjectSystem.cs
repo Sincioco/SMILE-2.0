@@ -315,7 +315,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             // Always republish on Web launch so F5/Ctrl+F5 reflects the latest saved source and assets.
             if (!Build(configuration, platform, null))
                 return false;
-            var url = SmileWebServer.Start(GetWebOutputDirectory(configuration));
+            var url = SmileWebServer.Start(GetWebOutputDirectory(configuration), OutputName);
             System.Diagnostics.Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
             return true;
         }
