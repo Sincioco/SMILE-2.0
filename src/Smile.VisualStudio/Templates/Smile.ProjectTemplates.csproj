@@ -16,9 +16,12 @@
   <ItemGroup>
     <VSTemplate Include="Console\SmileConsole.vstemplate" />
     <VSTemplate Include="Game\SmileGame.vstemplate" />
+    <VSTemplate Include="Library\SmileLibrary.vstemplate" />
     <None Include="Console\SmileConsole.smileproj" />
     <None Include="Console\Program.smile" />
     <None Include="Game\SmileGame.smileproj" />
     <None Include="Game\Program.smile" />
+    <None Include="Library\SmileLibrary.smilelibproj" />
+    <None Include="Library\Module.smile" />
   </ItemGroup>
 </Project>

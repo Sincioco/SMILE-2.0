@@ -19,6 +19,8 @@ public sealed class VariableSymbol
         bool isConstant = false, long constantValue = 0, string? routineName = null)
     {
         Name = name;
+        SemanticName = name;
+        RuntimeIdentity = name;
         Type = type;
         ArrayDimensions = dimensions;
         Source = source;
@@ -33,7 +35,12 @@ public sealed class VariableSymbol
         ArraySize = dimensions.Count == 0 ? 0 : total;
     }
 
-    public string Name { get; }
+    public string Name { get; private set; }
+    public string SemanticName { get; }
+    public string RuntimeIdentity { get; private set; }
+    public string? ModuleName { get; private set; }
+    public ModuleVisibility Visibility { get; private set; } = ModuleVisibility.Public;
+    public string ProviderIdentity { get; private set; } = string.Empty;
     public SmileType Type { get; }
     public bool IsArray => ArrayDimensions.Count != 0;
     public int ArraySize { get; }
@@ -46,6 +53,16 @@ public sealed class VariableSymbol
     public int SourceOrdinal { get; }
     public TextSpan DeclarationSpan { get; }
     public SourceLocation DeclarationLocation => new(Source, DeclarationSpan);
+
+    internal void ApplyModuleIdentity(string name, string moduleName, ModuleVisibility visibility,
+        string providerIdentity, string runtimeIdentity)
+    {
+        Name = name;
+        ModuleName = moduleName;
+        Visibility = visibility;
+        ProviderIdentity = providerIdentity;
+        RuntimeIdentity = runtimeIdentity;
+    }
 }
 
 public sealed class RoutineSymbol
@@ -55,6 +72,8 @@ public sealed class RoutineSymbol
     {
         Declaration = declaration;
         Name = declaration.Identifier.Text;
+        SemanticName = Name;
+        RuntimeIdentity = Name;
         IsFunction = declaration.IsFunction;
         Parameters = parameters;
         ReturnType = returnType;
@@ -66,7 +85,12 @@ public sealed class RoutineSymbol
             Locals[parameter.Name] = parameter;
     }
 
-    public string Name { get; }
+    public string Name { get; private set; }
+    public string SemanticName { get; }
+    public string RuntimeIdentity { get; private set; }
+    public string? ModuleName { get; private set; }
+    public ModuleVisibility Visibility { get; private set; } = ModuleVisibility.Public;
+    public string ProviderIdentity { get; private set; } = string.Empty;
     public bool IsFunction { get; }
     public IReadOnlyList<VariableSymbol> Parameters { get; }
     public SmileType ReturnType { get; }
@@ -77,6 +101,16 @@ public sealed class RoutineSymbol
     public SourceLocation DeclarationLocation => new(Source, Declaration.Identifier.Span);
     internal Dictionary<string, VariableSymbol> Locals { get; }
     internal Dictionary<string, int> FirstDeclarations { get; }
+
+    internal void ApplyModuleIdentity(string name, string moduleName, ModuleVisibility visibility,
+        string providerIdentity, string runtimeIdentity)
+    {
+        Name = name;
+        ModuleName = moduleName;
+        Visibility = visibility;
+        ProviderIdentity = providerIdentity;
+        RuntimeIdentity = runtimeIdentity;
+    }
 }
 
 public sealed class SemanticModel
@@ -84,6 +118,10 @@ public sealed class SemanticModel
     private readonly Dictionary<string, VariableSymbol> _symbols;
     private readonly Dictionary<string, RoutineSymbol> _routines;
     private readonly Dictionary<ExpressionSyntax, SmileType> _expressionTypes;
+    private IReadOnlyDictionary<string, ModuleSymbol> _modules =
+        new Dictionary<string, ModuleSymbol>(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyDictionary<SourceText, IReadOnlyDictionary<string, ModuleSymbol>> _imports =
+        new Dictionary<SourceText, IReadOnlyDictionary<string, ModuleSymbol>>();
 
     internal SemanticModel(Dictionary<string, VariableSymbol> symbols, Dictionary<string, RoutineSymbol> routines,
         Dictionary<ExpressionSyntax, SmileType> expressionTypes)
@@ -95,18 +133,37 @@ public sealed class SemanticModel
 
     public IReadOnlyDictionary<string, VariableSymbol> Symbols => _symbols;
     public IReadOnlyDictionary<string, RoutineSymbol> Routines => _routines;
+    public IReadOnlyDictionary<string, ModuleSymbol> Modules => _modules;
     public bool TryGetSymbol(string name, out VariableSymbol symbol) => _symbols.TryGetValue(name, out symbol!);
     public bool TryGetRoutine(string name, out RoutineSymbol routine) => _routines.TryGetValue(name, out routine!);
 
     public bool TryResolveVariable(string name, string? routineName, out VariableSymbol symbol)
     {
-        if (routineName != null && _routines.TryGetValue(routineName, out var routine) && routine.Locals.TryGetValue(name, out symbol!))
-            return true;
+        if (routineName != null)
+        {
+            var routine = _routines.Values.FirstOrDefault(candidate =>
+                string.Equals(candidate.Name, routineName, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(candidate.SemanticName, routineName, StringComparison.OrdinalIgnoreCase));
+            if (routine != null && routine.Locals.TryGetValue(name, out symbol!))
+                return true;
+        }
         return _symbols.TryGetValue(name, out symbol!);
     }
 
     public SmileType GetType(ExpressionSyntax expression) =>
         _expressionTypes.TryGetValue(expression, out var type) ? type : SmileType.Error;
+
+    public IReadOnlyDictionary<string, ModuleSymbol> GetImports(SourceText source) =>
+        _imports.TryGetValue(source, out var imports)
+            ? imports
+            : new Dictionary<string, ModuleSymbol>(StringComparer.OrdinalIgnoreCase);
+
+    internal void SetModules(IReadOnlyDictionary<string, ModuleSymbol> modules,
+        IReadOnlyDictionary<SourceText, IReadOnlyDictionary<string, ModuleSymbol>> imports)
+    {
+        _modules = modules;
+        _imports = imports;
+    }
 }
 
 internal sealed class SemanticAnalyzer

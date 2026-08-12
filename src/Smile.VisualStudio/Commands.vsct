@@ -17,6 +17,14 @@
         <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_FOLDERNODE" />
         <Strings><ButtonText>SMILE 2.0 Folder</ButtonText></Strings>
       </Menu>
+      <Menu guid="guidSmileProjectCommandSet" id="SmileReferencesContextMenu" priority="0x0100" type="Context">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_FOLDERNODE" />
+        <Strings><ButtonText>SMILE 2.0 References</ButtonText></Strings>
+      </Menu>
+      <Menu guid="guidSmileProjectCommandSet" id="SmileReferenceContextMenu" priority="0x0100" type="Context">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_ITEMNODE" />
+        <Strings><ButtonText>SMILE 2.0 Reference</ButtonText></Strings>
+      </Menu>
     </Menus>
     <Groups>
       <Group guid="guidSmileCommandSet" id="SmileCommandGroup" priority="0x0600">
@@ -39,6 +47,12 @@
       </Group>
       <Group guid="guidSmileProjectCommandSet" id="SmileFolderContextGroup" priority="0x0200">
         <Parent guid="guidSmileProjectCommandSet" id="SmileFolderContextMenu" />
+      </Group>
+      <Group guid="guidSmileProjectCommandSet" id="SmileReferencesContextGroup" priority="0x0100">
+        <Parent guid="guidSmileProjectCommandSet" id="SmileReferencesContextMenu" />
+      </Group>
+      <Group guid="guidSmileProjectCommandSet" id="SmileReferenceContextGroup" priority="0x0100">
+        <Parent guid="guidSmileProjectCommandSet" id="SmileReferenceContextMenu" />
       </Group>
     </Groups>
     <Buttons>
@@ -67,6 +81,14 @@
       <Button guid="guidSmileProjectCommandSet" id="AddExistingSourceCommand" priority="0x0210" type="Button">
         <Parent guid="guidSmileProjectCommandSet" id="SmileProjectSourceGroup" />
         <Strings><ButtonText>Add Existing SMILE 2.0 Source Code...</ButtonText></Strings>
+      </Button>
+      <Button guid="guidSmileProjectCommandSet" id="AddReferenceProjectCommand" priority="0x0220" type="Button">
+        <Parent guid="guidSmileProjectCommandSet" id="SmileProjectSourceGroup" />
+        <Strings><ButtonText>Add SMILE 2.0 Library Reference...</ButtonText></Strings>
+      </Button>
+      <Button guid="guidSmileProjectCommandSet" id="RemoveReferenceCommand" priority="0x0100" type="Button">
+        <Parent guid="guidSmileProjectCommandSet" id="SmileReferenceContextGroup" />
+        <Strings><ButtonText>Remove Reference</ButtonText></Strings>
       </Button>
       <Button guid="guidSmileProjectCommandSet" id="EditProjectFileCommand" priority="0x0300" type="Button">
         <Parent guid="guidSmileProjectCommandSet" id="SmileProjectUtilityGroup" />
@@ -116,12 +138,16 @@
       <IDSymbol name="SmileProjectContextMenu" value="0x2000" />
       <IDSymbol name="SmileSourceContextMenu" value="0x2010" />
       <IDSymbol name="SmileFolderContextMenu" value="0x2020" />
+      <IDSymbol name="SmileReferencesContextMenu" value="0x2021" />
+      <IDSymbol name="SmileReferenceContextMenu" value="0x2022" />
       <IDSymbol name="SmileProjectBuildGroup" value="0x2030" />
       <IDSymbol name="SmileProjectSourceGroup" value="0x2040" />
       <IDSymbol name="SmileProjectUtilityGroup" value="0x2050" />
       <IDSymbol name="SmileSourceActionGroup" value="0x2060" />
       <IDSymbol name="SmileSourceUtilityGroup" value="0x2070" />
       <IDSymbol name="SmileFolderContextGroup" value="0x2080" />
+      <IDSymbol name="SmileReferencesContextGroup" value="0x2081" />
+      <IDSymbol name="SmileReferenceContextGroup" value="0x2082" />
       <IDSymbol name="BuildProjectCommand" value="0x2100" />
       <IDSymbol name="RebuildProjectCommand" value="0x2101" />
       <IDSymbol name="CleanProjectCommand" value="0x2102" />
@@ -130,6 +156,8 @@
       <IDSymbol name="OpenProjectFolderCommand" value="0x2105" />
       <IDSymbol name="EditProjectFileCommand" value="0x2106" />
       <IDSymbol name="RefreshProjectCommand" value="0x2107" />
+      <IDSymbol name="AddReferenceProjectCommand" value="0x2108" />
+      <IDSymbol name="RemoveReferenceCommand" value="0x2109" />
       <IDSymbol name="SetStartupSourceCommand" value="0x2110" />
       <IDSymbol name="IncludeSupportSourceCommand" value="0x2111" />
       <IDSymbol name="RemoveSourceCommand" value="0x2112" />

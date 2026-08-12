@@ -30,7 +30,7 @@ internal sealed class MasmEmitter
     private readonly bool _emitDebugInformation;
     private readonly StringBuilder _builder = new();
     private readonly Dictionary<VariableSymbol, string> _symbolLabels = new();
-    private readonly Dictionary<string, string> _routineLabels = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<RoutineSymbol, string> _routineLabels = new();
     private readonly Dictionary<LiteralExpressionSyntax, TextLiteral> _textLiterals = new();
     private readonly Dictionary<SyntaxToken, TextLiteral> _gameTextLiterals = new();
     private readonly Dictionary<ForStatementSyntax, string> _forLimits = new();
@@ -62,7 +62,7 @@ internal sealed class MasmEmitter
 
     public string Emit()
     {
-        foreach (var tree in _analysis.SyntaxTrees)
+        foreach (var tree in _analysis.BoundSyntaxTrees)
         {
             _currentSource = tree.Source;
             Collect(tree.Root.Statements);
@@ -135,8 +135,8 @@ internal sealed class MasmEmitter
         Line($"    mov rcx, {(int)_graphicsBackend}");
         Line($"    mov rdx, {(_vSync ? 1 : 0)}");
         Line("    call smile_graphics_configure");
-        _currentSource = _analysis.SyntaxTree.Source;
-        EmitStatements(_analysis.SyntaxTree.Root.Statements);
+        _currentSource = _analysis.BoundSyntaxTree.Source;
+        EmitStatements(_analysis.BoundSyntaxTree.Root.Statements);
         if (_usesMusic) Line("    call smile_music_shutdown");
         Line("    xor ecx, ecx");
         Line("    call ExitProcess");
@@ -320,7 +320,7 @@ internal sealed class MasmEmitter
         }
         foreach (var routine in _analysis.SemanticModel.Routines.Values)
         {
-            _routineLabels[routine.Name] = "routine_" + _routineLabels.Count;
+            _routineLabels[routine] = "routine_" + _routineLabels.Count;
             foreach (var symbol in routine.LocalSymbols.Values)
             {
                 if (!symbol.IsConstant)
@@ -335,7 +335,7 @@ internal sealed class MasmEmitter
         _currentRoutine = routine;
         _returnLabel = NewLabel("routine_return");
         Line();
-        Line($"{_routineLabels[routine.Name]} PROC");
+        Line($"{_routineLabels[routine]} PROC");
         Line("    sub rsp, 104");
         EmitStatements(routine.Declaration.Statements);
         if (!routine.IsFunction)
@@ -343,7 +343,7 @@ internal sealed class MasmEmitter
         Line($"{_returnLabel}:");
         Line("    add rsp, 104");
         Line("    ret");
-        Line($"{_routineLabels[routine.Name]} ENDP");
+        Line($"{_routineLabels[routine]} ENDP");
         _returnLabel = null;
         _currentRoutine = null;
     }
@@ -811,7 +811,8 @@ internal sealed class MasmEmitter
 
     private void EmitRoutineCall(string name, IReadOnlyList<ExpressionSyntax> arguments)
     {
-        var routine = _analysis.SemanticModel.Routines[name];
+        if (!_analysis.SemanticModel.TryGetRoutine(name, out var routine))
+            throw new InvalidOperationException($"Unresolved routine '{name}'.");
         foreach (var argument in arguments)
         {
             EmitExpression(argument);
@@ -822,7 +823,7 @@ internal sealed class MasmEmitter
             Line("    pop rax");
             Line($"    mov QWORD PTR [{_symbolLabels[routine.Parameters[index]]}], rax");
         }
-        Line($"    call {_routineLabels[name]}");
+        Line($"    call {_routineLabels[routine]}");
     }
 
     private void EmitBinary(BinaryExpressionSyntax binary)

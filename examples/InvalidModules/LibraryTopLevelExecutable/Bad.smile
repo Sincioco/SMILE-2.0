@@ -1,0 +1,3 @@
+MODULE Example.Bad
+PRINT 1
+END MODULE

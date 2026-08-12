@@ -140,7 +140,8 @@ internal sealed class SmileAnalysisCache : IDisposable
                 out var hierarchy, out _, out documentData, out _);
             if (ErrorHandler.Failed(result) || hierarchy == null ||
                 ErrorHandler.Failed(hierarchy.GetCanonicalName(VSConstants.VSITEMID_ROOT, out var projectPath)) ||
-                !string.Equals(Path.GetExtension(projectPath), ".smileproj", StringComparison.OrdinalIgnoreCase))
+                !(string.Equals(Path.GetExtension(projectPath), ".smileproj", StringComparison.OrdinalIgnoreCase) ||
+                  string.Equals(Path.GetExtension(projectPath), ".smilelibproj", StringComparison.OrdinalIgnoreCase)))
                 return null;
             return Path.GetFullPath(projectPath);
         }

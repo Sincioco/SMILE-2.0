@@ -1,0 +1,13 @@
+MODULE Smile.Math.Extras
+
+PUBLIC CONST VERSION_MAJOR = 1
+
+PUBLIC FUNCTION Clamp(Value, MinimumValue, MaximumValue)
+    RETURN MAX(MinimumValue, MIN(MaximumValue, Value))
+END FUNCTION
+
+PRIVATE FUNCTION Identity(Value)
+    RETURN Value
+END FUNCTION
+
+END MODULE

@@ -3,15 +3,20 @@ namespace Smile.Compiler;
 internal enum SmileCompilationTarget
 {
     WindowsX64,
-    Web
+    Web,
+    Library
 }
 
 internal sealed class CompilerOptions
 {
     private readonly List<string> _sourcePaths = new();
+    private readonly List<string> _libraryPaths = new();
 
     public string? SourcePath { get; private set; }
     public IReadOnlyList<string> SourcePaths => _sourcePaths;
+    public IReadOnlyList<string> LibraryPaths => _libraryPaths;
+    public string? ProjectPath { get; private set; }
+    public string Configuration { get; private set; } = "Debug";
     public string? OutputPath { get; private set; }
     public string? OutputDirectory { get; private set; }
     public SmileCompilationTarget Target { get; private set; } = SmileCompilationTarget.WindowsX64;
@@ -42,9 +47,11 @@ internal sealed class CompilerOptions
                     options.Target = SmileCompilationTarget.WindowsX64;
                 else if (string.Equals(args[i], "web", StringComparison.OrdinalIgnoreCase))
                     options.Target = SmileCompilationTarget.Web;
+                else if (string.Equals(args[i], "library", StringComparison.OrdinalIgnoreCase))
+                    options.Target = SmileCompilationTarget.Library;
                 else
                 {
-                    error = "--target must be windows-x64 or web.";
+                    error = "--target must be windows-x64, web, or library.";
                     return false;
                 }
             }
@@ -73,6 +80,33 @@ internal sealed class CompilerOptions
                     return false;
                 }
                 options._sourcePaths.Add(args[i]);
+            }
+            else if (string.Equals(args[i], "--library", StringComparison.OrdinalIgnoreCase))
+            {
+                if (++i >= args.Length || string.IsNullOrWhiteSpace(args[i]))
+                {
+                    error = "--library requires one .smilelib package path.";
+                    return false;
+                }
+                options._libraryPaths.Add(args[i]);
+            }
+            else if (string.Equals(args[i], "--project", StringComparison.OrdinalIgnoreCase))
+            {
+                if (++i >= args.Length || options.ProjectPath != null || string.IsNullOrWhiteSpace(args[i]))
+                {
+                    error = "--project requires one .smileproj or .smilelibproj path.";
+                    return false;
+                }
+                options.ProjectPath = args[i];
+            }
+            else if (string.Equals(args[i], "--configuration", StringComparison.OrdinalIgnoreCase))
+            {
+                if (++i >= args.Length || string.IsNullOrWhiteSpace(args[i]))
+                {
+                    error = "--configuration requires one value.";
+                    return false;
+                }
+                options.Configuration = args[i];
             }
             else if (string.Equals(args[i], "-o", StringComparison.OrdinalIgnoreCase))
             {
@@ -115,8 +149,36 @@ internal sealed class CompilerOptions
             }
         }
 
-        if (options.SourcePath == null)
+        if (options.SourcePath == null && options.ProjectPath == null)
+        {
+            error = "A startup .smile file or --project is required.";
             return false;
+        }
+        if (options.SourcePath != null && options.ProjectPath != null)
+        {
+            error = "A startup source and --project cannot be combined.";
+            return false;
+        }
+        if (options.ProjectPath != null && (options._sourcePaths.Count != 0 || options._libraryPaths.Count != 0))
+        {
+            error = "--project reads sources and references from the project and cannot be combined with --source or --library.";
+            return false;
+        }
+
+        if (options.Target == SmileCompilationTarget.Library)
+        {
+            if (options.ProjectPath == null)
+            {
+                error = "The library target requires --project <library.smilelibproj>.";
+                return false;
+            }
+            if (options.OutputDirectory != null || options.KeepTemp || options.EmitDebugInformation || graphicsSpecified || vSyncSpecified)
+            {
+                error = "The library target supports -o and --configuration only.";
+                return false;
+            }
+            return true;
+        }
 
         if (options.Target == SmileCompilationTarget.Web)
         {

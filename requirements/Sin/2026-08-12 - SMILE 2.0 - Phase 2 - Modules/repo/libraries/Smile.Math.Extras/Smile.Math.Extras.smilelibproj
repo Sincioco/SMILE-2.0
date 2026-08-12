@@ -1,0 +1,12 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Library</ProjectKind>
+    <LibraryName>Smile.Math.Extras</LibraryName>
+    <Version>1.0.0</Version>
+    <OutputName>Smile.Math.Extras</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Clamp.smile" />
+    <SmileSource Include="Range.smile" />
+  </ItemGroup>
+</SmileProject>

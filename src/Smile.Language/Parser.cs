@@ -56,6 +56,10 @@ internal sealed class Parser
     {
         switch (Current.Kind)
         {
+            case SyntaxKind.ModuleKeyword: return ParseModuleDeclaration();
+            case SyntaxKind.ImportKeyword: return ParseImportStatement();
+            case SyntaxKind.PublicKeyword:
+            case SyntaxKind.PrivateKeyword: return ParseVisibilityDeclaration();
             case SyntaxKind.ConstKeyword: return ParseConstStatement();
             case SyntaxKind.DimKeyword: return ParseDimStatement();
             case SyntaxKind.IfKeyword: return ParseIfStatement();
@@ -96,6 +100,62 @@ internal sealed class Parser
         }
     }
 
+    private ModuleDeclarationSyntax ParseModuleDeclaration()
+    {
+        var module = MatchToken(SyntaxKind.ModuleKeyword);
+        var name = ParseDottedName();
+        ConsumeLineEnd();
+        var statements = ParseStatementsUntil(() => IsEndPair(SyntaxKind.ModuleKeyword));
+        var end = MatchToken(SyntaxKind.EndKeyword);
+        var finalModule = MatchToken(SyntaxKind.ModuleKeyword);
+        ConsumeLineEnd();
+        return new ModuleDeclarationSyntax(module, name, statements, end, finalModule);
+    }
+
+    private ImportStatementSyntax ParseImportStatement()
+    {
+        var import = MatchToken(SyntaxKind.ImportKeyword);
+        var moduleName = ParseDottedName();
+        var asKeyword = MatchToken(SyntaxKind.AsKeyword);
+        var alias = MatchIdentifier();
+        ConsumeLineEnd();
+        return new ImportStatementSyntax(import, moduleName, asKeyword, alias);
+    }
+
+    private DottedNameSyntax ParseDottedName()
+    {
+        var identifiers = new List<SyntaxToken> { MatchIdentifier() };
+        var dots = new List<SyntaxToken>();
+        while (Current.Kind == SyntaxKind.DotToken)
+        {
+            dots.Add(NextToken());
+            identifiers.Add(MatchIdentifier());
+        }
+        return new DottedNameSyntax(identifiers, dots);
+    }
+
+    private VisibilityDeclarationSyntax ParseVisibilityDeclaration()
+    {
+        var visibility = NextToken();
+        if (Current.Kind is not (SyntaxKind.ConstKeyword or SyntaxKind.DimKeyword or
+            SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword))
+        {
+            _diagnostics.Report("SML2003", Current.Span,
+                "PUBLIC or PRIVATE must modify a module CONST, DIM, SUB, or FUNCTION declaration.");
+        }
+        var declaration = ParseStatement();
+        if (declaration == null)
+        {
+            var missing = new SyntaxToken(SyntaxKind.NumberToken, Current.Position, string.Empty, 0L);
+            declaration = new ConstStatementSyntax(
+                new SyntaxToken(SyntaxKind.ConstKeyword, Current.Position, string.Empty),
+                new SyntaxToken(SyntaxKind.IdentifierToken, Current.Position, string.Empty),
+                new SyntaxToken(SyntaxKind.EqualsToken, Current.Position, string.Empty),
+                new LiteralExpressionSyntax(missing, 0L));
+        }
+        return new VisibilityDeclarationSyntax(visibility, declaration);
+    }
+
     private ConstStatementSyntax ParseConstStatement()
     {
         var keyword = MatchToken(SyntaxKind.ConstKeyword);
@@ -119,7 +179,16 @@ internal sealed class Parser
 
     private AssignmentStatementSyntax ParseAssignmentStatement()
     {
-        var identifier = MatchIdentifier();
+        var first = MatchIdentifier();
+        SyntaxToken? qualifier = null;
+        SyntaxToken? dot = null;
+        var identifier = first;
+        if (Current.Kind == SyntaxKind.DotToken)
+        {
+            qualifier = first;
+            dot = NextToken();
+            identifier = MatchIdentifier();
+        }
         SyntaxToken? open = null;
         SyntaxToken? close = null;
         IReadOnlyList<ExpressionSyntax> indices = Array.Empty<ExpressionSyntax>();
@@ -130,7 +199,7 @@ internal sealed class Parser
             close = MatchToken(SyntaxKind.CloseBracketToken);
         }
 
-        var target = new AssignmentTargetSyntax(identifier, open, indices, close);
+        var target = new AssignmentTargetSyntax(identifier, open, indices, close, qualifier, dot);
         var equals = MatchToken(SyntaxKind.EqualsToken);
         var expression = ParseExpression();
         ConsumeLineEnd();
@@ -542,10 +611,20 @@ internal sealed class Parser
         return new RoutineDeclarationSyntax(keyword, identifier, parameters, statements, end, final);
     }
 
-    private CallStatementSyntax ParseCallStatement()
+    private StatementSyntax ParseCallStatement()
     {
         var call = MatchToken(SyntaxKind.CallKeyword);
         var identifier = MatchIdentifier();
+        if (Current.Kind == SyntaxKind.DotToken)
+        {
+            var dot = NextToken();
+            var member = MatchIdentifier();
+            MatchToken(SyntaxKind.OpenParenthesisToken);
+            var qualifiedArguments = ParseExpressionList(SyntaxKind.CloseParenthesisToken);
+            var qualifiedClose = MatchToken(SyntaxKind.CloseParenthesisToken);
+            ConsumeLineEnd();
+            return new QualifiedCallStatementSyntax(call, identifier, dot, member, qualifiedArguments, qualifiedClose);
+        }
         MatchToken(SyntaxKind.OpenParenthesisToken);
         var arguments = ParseExpressionList(SyntaxKind.CloseParenthesisToken);
         var close = MatchToken(SyntaxKind.CloseParenthesisToken);
@@ -678,6 +757,26 @@ internal sealed class Parser
         if (Current.Kind == SyntaxKind.IdentifierToken || Current.Kind == SyntaxKind.KeyKeyword || SyntaxFacts.IsBuiltInFunction(Current.Kind))
         {
             var identifier = NextToken();
+            if (Current.Kind == SyntaxKind.DotToken)
+            {
+                var dot = NextToken();
+                var member = MatchIdentifier();
+                if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+                {
+                    NextToken();
+                    var qualifiedArguments = ParseExpressionList(SyntaxKind.CloseParenthesisToken);
+                    return new QualifiedCallExpressionSyntax(identifier, dot, member, qualifiedArguments,
+                        MatchToken(SyntaxKind.CloseParenthesisToken));
+                }
+                if (Current.Kind == SyntaxKind.OpenBracketToken)
+                {
+                    NextToken();
+                    var qualifiedIndices = ParseExpressionList(SyntaxKind.CloseBracketToken);
+                    return new QualifiedArrayAccessExpressionSyntax(identifier, dot, member, qualifiedIndices,
+                        MatchToken(SyntaxKind.CloseBracketToken));
+                }
+                return new QualifiedNameExpressionSyntax(identifier, dot, member);
+            }
             if (Current.Kind == SyntaxKind.OpenParenthesisToken)
             {
                 NextToken();

@@ -1,0 +1,8 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Windows 64-bit .exe" />
+    <Platform Name="Web" />
+  </Configurations>
+  <Project Path="LibraryConsumer.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="fe076fb0-6aa2-43b3-b30e-28c42926ae07" />
+  <Project Path="..\..\libraries\Smile.Math.Extras\Smile.Math.Extras.smilelibproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="19eff33c-32bc-467a-9464-3c527b195d92" />
+</Solution>

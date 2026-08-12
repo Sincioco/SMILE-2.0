@@ -103,7 +103,8 @@ internal sealed class SmileCompletionSource : IAsyncCompletionSource
         trigger.Reason is CompletionTriggerReason.Invoke or
             CompletionTriggerReason.InvokeAndCommitIfUnique or
             CompletionTriggerReason.InvokeMatchingType ||
-        trigger.Reason == CompletionTriggerReason.Insertion && IsIdentifierStart(trigger.Character);
+        trigger.Reason == CompletionTriggerReason.Insertion &&
+        (IsIdentifierStart(trigger.Character) || trigger.Character == '.');
 
     internal static bool IsIdentifierPart(char value) => char.IsLetterOrDigit(value) || value == '_';
 

@@ -39,7 +39,9 @@ internal sealed class SmileProjectFactory : IVsProjectFactory, IDisposable
 
     public int CanCreateProject(string pszFilename, uint grfCreateFlags, out int pfCanCreate)
     {
-        pfCanCreate = string.Equals(Path.GetExtension(pszFilename), ".smileproj", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+        var extension = Path.GetExtension(pszFilename);
+        pfCanCreate = string.Equals(extension, ".smileproj", StringComparison.OrdinalIgnoreCase) ||
+                      string.Equals(extension, ".smilelibproj", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         return VSConstants.S_OK;
     }
 
@@ -109,18 +111,21 @@ internal sealed class SmileProjectFactory : IVsProjectFactory, IDisposable
             if (source.EndsWith(".vstemplate", StringComparison.OrdinalIgnoreCase))
                 continue;
             var relative = source.Substring(templateDirectory.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var projectExtension = Path.GetExtension(templateProject);
             var destinationName = string.Equals(source, Path.GetFullPath(templateProject), StringComparison.OrdinalIgnoreCase)
-                ? projectName + ".smileproj"
+                ? projectName + projectExtension
                 : relative;
             var destination = Path.Combine(destinationDirectory, destinationName);
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
             if (File.Exists(destination) && !overwrite)
                 throw new IOException($"Project template destination already exists: {destination}");
 
-            if (source.EndsWith(".smile", StringComparison.OrdinalIgnoreCase) || source.EndsWith(".smileproj", StringComparison.OrdinalIgnoreCase))
+            if (source.EndsWith(".smile", StringComparison.OrdinalIgnoreCase) ||
+                source.EndsWith(".smileproj", StringComparison.OrdinalIgnoreCase) ||
+                source.EndsWith(".smilelibproj", StringComparison.OrdinalIgnoreCase))
             {
                 var text = File.ReadAllText(source)
-                    .Replace("$safeprojectname$", projectName)
+                    .Replace("$safeprojectname$", SafeModuleName(projectName))
                     .Replace("$projectname$", projectName);
                 File.WriteAllText(destination, text, new UTF8Encoding(false));
             }
@@ -130,7 +135,15 @@ internal sealed class SmileProjectFactory : IVsProjectFactory, IDisposable
             }
         }
 
-        return Path.Combine(destinationDirectory, projectName + ".smileproj");
+        return Path.Combine(destinationDirectory, projectName + Path.GetExtension(templateProject));
+    }
+
+    private static string SafeModuleName(string value)
+    {
+        var result = new string(value.Select(character => char.IsLetterOrDigit(character) || character == '_'
+            ? character : '_').ToArray());
+        if (string.IsNullOrEmpty(result)) result = "SmileLibrary";
+        return char.IsDigit(result[0]) ? "_" + result : result;
     }
 }
 
@@ -170,6 +183,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     public IReadOnlyList<string> AssetIncludes { get; private set; } = Array.Empty<string>();
 
     public string GetOutputPath(string configuration) =>
+        SourceSet.IsLibrary ? SourceSet.GetLibraryOutputPath(configuration) :
         Path.Combine(ProjectDirectory, "bin", NormalizeConfiguration(configuration), SafeFileName(OutputName) + ".exe");
 
     public string GetWebOutputDirectory(string configuration) =>
@@ -187,24 +201,17 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         {
             SourceSet.ValidateFiles();
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
         {
             pane.OutputStringThreadSafe(exception.Message + "\r\n");
             return false;
         }
 
-        var sourcePath = SourceSet.StartupSource.FullPath;
-        var supportSourcePaths = SourceSet.SupportSources.Select(source => source.FullPath).ToArray();
         var participatingSourcePaths = SourceSet.CompilationSources.Select(source => source.FullPath).ToArray();
         if (!SaveOpenSourceDocuments(participatingSourcePaths, pane))
             return false;
 
         var compilerPath = SmileBuildService.FindCompiler(ProjectDirectory);
-        if (!File.Exists(sourcePath))
-        {
-            pane.OutputStringThreadSafe($"Startup file was not found: {sourcePath}\r\n");
-            return false;
-        }
         if (compilerPath == null)
         {
             pane.OutputStringThreadSafe("smilec.exe was not found in the extension or repository artifacts.\r\n");
@@ -213,15 +220,24 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
 
         SmileBuildService.CompilerResult result;
         string outputPath;
-        if (IsWeb(platform))
+        if (SourceSet.IsLibrary)
+        {
+            outputPath = GetOutputPath(configuration);
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+            pane.OutputStringThreadSafe($"> \"{compilerPath}\" --project \"{ProjectPath}\" --target library -o \"{outputPath}\" --configuration \"{NormalizeConfiguration(configuration)}\"\r\n");
+            result = ThreadHelper.JoinableTaskFactory.Run(() => SmileBuildService.RunProjectAsync(
+                compilerPath, ProjectPath, "library", outputPath, NormalizeConfiguration(configuration)));
+        }
+        else if (IsWeb(platform))
         {
             var outputDirectory = GetWebOutputDirectory(configuration);
             if (Directory.Exists(outputDirectory))
                 Directory.Delete(outputDirectory, true);
             Directory.CreateDirectory(outputDirectory);
-            pane.OutputStringThreadSafe($"> \"{compilerPath}\" \"{sourcePath}\"{SmileBuildService.FormatSupportArguments(supportSourcePaths)} --target web --output-dir \"{outputDirectory}\"\r\n");
+            pane.OutputStringThreadSafe($"> \"{compilerPath}\" --project \"{ProjectPath}\" --target web --output-dir \"{outputDirectory}\" --configuration \"{NormalizeConfiguration(configuration)}\"\r\n");
             result = ThreadHelper.JoinableTaskFactory.Run(() =>
-                SmileBuildService.RunWebAsync(compilerPath, sourcePath, outputDirectory, supportSourcePaths));
+                SmileBuildService.RunProjectAsync(compilerPath, ProjectPath, "web", outputDirectory,
+                    NormalizeConfiguration(configuration)));
             outputPath = Path.Combine(outputDirectory, "index.html");
         }
         else
@@ -229,9 +245,10 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             var emitDebugInformation = NormalizeConfiguration(configuration) == "Debug";
             outputPath = GetOutputPath(configuration);
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-            pane.OutputStringThreadSafe($"> \"{compilerPath}\" \"{sourcePath}\"{SmileBuildService.FormatSupportArguments(supportSourcePaths)} -o \"{outputPath}\" --graphics {GraphicsBackend} --vsync {VSync.ToString().ToLowerInvariant()}{(emitDebugInformation ? " --debug" : string.Empty)}\r\n");
-            result = ThreadHelper.JoinableTaskFactory.Run(() => SmileBuildService.RunAsync(
-                compilerPath, sourcePath, outputPath, GraphicsBackend, VSync, emitDebugInformation, supportSourcePaths));
+            pane.OutputStringThreadSafe($"> \"{compilerPath}\" --project \"{ProjectPath}\" --target windows-x64 -o \"{outputPath}\" --configuration \"{NormalizeConfiguration(configuration)}\" --graphics {GraphicsBackend} --vsync {VSync.ToString().ToLowerInvariant()}{(emitDebugInformation ? " --debug" : string.Empty)}\r\n");
+            result = ThreadHelper.JoinableTaskFactory.Run(() => SmileBuildService.RunProjectAsync(
+                compilerPath, ProjectPath, "windows-x64", outputPath, NormalizeConfiguration(configuration),
+                GraphicsBackend, VSync, emitDebugInformation));
         }
         if (!string.IsNullOrEmpty(result.Output))
             pane.OutputStringThreadSafe(SmileBuildService.NormalizeOutput(result.Output));
@@ -244,8 +261,10 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         }
 
         var assetOutput = IsWeb(platform) ? GetWebOutputDirectory(configuration) : Path.GetDirectoryName(outputPath)!;
-        CopyAssets(assetOutput);
-        pane.OutputStringThreadSafe(IsWeb(platform)
+        if (!SourceSet.IsLibrary) CopyAssets(assetOutput);
+        pane.OutputStringThreadSafe(SourceSet.IsLibrary
+            ? $"SMILE library build succeeded: {outputPath}\r\n"
+            : IsWeb(platform)
             ? $"SMILE web publish succeeded: {outputPath}\r\n"
             : $"SMILE build succeeded: {outputPath}\r\n");
         return true;
@@ -310,6 +329,13 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     public bool Launch(string configuration, string platform, uint launchFlags)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
+        if (SourceSet.IsLibrary)
+        {
+            var pane = SmileBuildService.GetOutputPane();
+            pane.OutputStringThreadSafe("SMILE 2.0 library projects build reusable packages and cannot be launched.\r\n");
+            pane.Activate();
+            return false;
+        }
         if (IsWeb(platform))
         {
             // Always republish on Web launch so F5/Ctrl+F5 reflects the latest saved source and assets.
@@ -386,9 +412,9 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             throw new InvalidDataException("A .smileproj file must have a SmileProject root element.");
 
         var properties = root.Elements().FirstOrDefault(element => element.Name.LocalName == "PropertyGroup");
-        var projectKind = Value(properties, "ProjectKind", "Console");
         var sourceSet = SmileProjectSourceSet.Parse(ProjectPath, projectXml);
-        var outputName = Value(properties, "OutputName", ProjectName);
+        var projectKind = sourceSet.ProjectKind.ToString();
+        var outputName = sourceSet.OutputName;
         var graphicsOptions = SmileProjectGraphicsOptions.Parse(properties);
         var assetIncludes = root.Elements().Where(element => element.Name.LocalName == "ItemGroup")
             .SelectMany(element => element.Elements().Where(item => item.Name.LocalName == "Asset"))
@@ -427,13 +453,19 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         foreach (var projected in projection)
         {
             var parent = projected.ParentPath == null ? rootNode : parents[projected.ParentPath];
-            var kind = projected.Kind == SmileProjectHierarchyItemKind.Folder ? ItemKind.Folder : ItemKind.File;
+            var kind = projected.Kind switch
+            {
+                SmileProjectHierarchyItemKind.Folder => ItemKind.Folder,
+                SmileProjectHierarchyItemKind.References => ItemKind.References,
+                SmileProjectHierarchyItemKind.Reference => ItemKind.Reference,
+                _ => ItemKind.File
+            };
             var source = projected.Kind == SmileProjectHierarchyItemKind.Source
                 ? sourceSet.Items.Single(item => string.Equals(item.FullPath, projected.FullPath, StringComparison.OrdinalIgnoreCase))
                 : null;
             var node = AddNode(items, parent, ids[projected.Key], projected.Caption, projected.FullPath, kind,
                 source != null, source?.IsStartup == true, projected.Exists);
-            if (projected.Kind == SmileProjectHierarchyItemKind.Folder)
+            if (projected.Kind is SmileProjectHierarchyItemKind.Folder or SmileProjectHierarchyItemKind.References)
                 parents[projected.FullPath] = node;
         }
         return items;
@@ -520,7 +552,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         else if (propid == (int)__VSHPROPID.VSHPROPID_SaveName)
             pvar = item.Path;
         else if (propid == (int)__VSHPROPID.VSHPROPID_Expandable)
-            pvar = item.Kind != ItemKind.File;
+            pvar = item.Kind is ItemKind.Project or ItemKind.Folder or ItemKind.References;
         else if (propid == (int)__VSHPROPID.VSHPROPID_ExpandByDefault)
             pvar = item.Kind == ItemKind.Project;
         else if (propid == (int)__VSHPROPID.VSHPROPID_ProjectDir)
@@ -578,7 +610,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             pguid = item.Kind switch
             {
                 ItemKind.Project => new Guid(SmileProjectFactory.SmileProjectTypeGuidString),
-                ItemKind.Folder => VSConstants.GUID_ItemType_PhysicalFolder,
+                ItemKind.Folder or ItemKind.References => VSConstants.GUID_ItemType_PhysicalFolder,
                 _ => VSConstants.GUID_ItemType_PhysicalFile
             };
         else if (propid == (int)__VSHPROPID.VSHPROPID_CmdUIGuid)
@@ -598,12 +630,16 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
 
     private static bool TryGetIcon(ProjectItem item, bool openFolder, out ImageMoniker icon)
     {
-        if (item.IsSource && !item.Exists)
+        if ((item.IsSource || item.Kind == ItemKind.Reference) && !item.Exists)
             icon = KnownMonikers.StatusError;
         else if (item.Kind == ItemKind.Project)
             icon = KnownMonikers.Application;
         else if (item.Kind == ItemKind.Folder)
             icon = openFolder ? KnownMonikers.FolderOpened : KnownMonikers.FolderClosed;
+        else if (item.Kind == ItemKind.References)
+            icon = KnownMonikers.Reference;
+        else if (item.Kind == ItemKind.Reference)
+            icon = KnownMonikers.Library;
         else if (item.Path.EndsWith(".smile", StringComparison.OrdinalIgnoreCase))
             icon = KnownMonikers.Code;
         else
@@ -825,6 +861,8 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         {
             ItemKind.Project => SmileProjectCommands.ProjectContextMenu,
             ItemKind.Folder => SmileProjectCommands.FolderContextMenu,
+            ItemKind.References => SmileProjectCommands.ReferencesContextMenu,
+            ItemKind.Reference => SmileProjectCommands.ReferenceContextMenu,
             _ => SmileProjectCommands.SourceContextMenu
         };
         var x = Cursor.Position.X;
@@ -866,7 +904,12 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             return commandId is SmileProjectCommands.Build or SmileProjectCommands.Rebuild or SmileProjectCommands.Clean or
                 SmileProjectCommands.AddNewSource or SmileProjectCommands.AddExistingSource or
                 SmileProjectCommands.EditProjectFile or SmileProjectCommands.OpenProjectFolder or
-                SmileProjectCommands.RefreshProject
+                SmileProjectCommands.RefreshProject or SmileProjectCommands.AddReference
+                ? enabled : invisible;
+        if (item.Kind == ItemKind.References)
+            return commandId == SmileProjectCommands.AddReference ? enabled : invisible;
+        if (item.Kind == ItemKind.Reference)
+            return commandId is SmileProjectCommands.RemoveReference or SmileProjectCommands.OpenContainingFolder
                 ? enabled : invisible;
         if (item.Kind == ItemKind.Folder)
             return commandId == SmileProjectCommands.OpenFolder ? enabled : invisible;
@@ -875,7 +918,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         if (!TryGetSource(item, out var source))
             return invisible;
         if (commandId == SmileProjectCommands.SetStartupSource)
-            return source.IsStartup || !item.Exists ? supported : enabled;
+            return SourceSet.IsLibrary ? invisible : source.IsStartup || !item.Exists ? supported : enabled;
         if (commandId == SmileProjectCommands.IncludeSupportSource)
             return source.IsStartup || source.IsSupport ? supported : enabled;
         if (commandId == SmileProjectCommands.RemoveSource)
@@ -903,6 +946,14 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             return AddNewSource();
         if (commandId == SmileProjectCommands.AddExistingSource)
             return AddExistingSource();
+        if (commandId == SmileProjectCommands.AddReference)
+            return AddReference();
+        if (commandId == SmileProjectCommands.RemoveReference && item.Kind == ItemKind.Reference)
+        {
+            SmileProjectFileEditor.RemoveReference(ProjectPath, item.Path);
+            _refreshCoordinator!.Refresh(SmileProjectRefreshReason.ReferenceChanged);
+            return VSConstants.S_OK;
+        }
         if (commandId is SmileProjectCommands.Build or SmileProjectCommands.Rebuild or SmileProjectCommands.Clean)
             return ExecuteBuildCommand(commandId);
         if (!TryGetSource(item, out _))
@@ -944,6 +995,24 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         File.WriteAllText(sourcePath, "' SMILE 2.0 support source." + Environment.NewLine,
             new UTF8Encoding(false));
         return AddSourceAndOpen(sourcePath, deletePhysicalFileOnRollback: true);
+    }
+
+    private int AddReference()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        using var dialog = new OpenFileDialog
+        {
+            Title = "Add SMILE 2.0 Library Reference",
+            Filter = "SMILE libraries (*.smilelibproj;*.smilelib)|*.smilelibproj;*.smilelib",
+            InitialDirectory = ProjectDirectory,
+            Multiselect = false,
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog() != DialogResult.OK)
+            return VSConstants.S_OK;
+        SmileProjectFileEditor.AddReference(ProjectPath, dialog.FileName);
+        _refreshCoordinator!.Refresh(SmileProjectRefreshReason.ReferenceChanged, revealPath: dialog.FileName);
+        return VSConstants.S_OK;
     }
 
     private int AddExistingSource()
@@ -1500,7 +1569,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             IsStartup == other.IsStartup && Exists == other.Exists;
     }
 
-    private enum ItemKind { Project, Folder, File }
+    private enum ItemKind { Project, Folder, File, References, Reference }
 }
 
 internal static class SmileSourceNameDialog
@@ -1714,6 +1783,11 @@ internal sealed class SmileProjectConfiguration : IVsProjectCfg2, IVsBuildablePr
 
     public int QueryDebugLaunch(uint grfLaunch, out int pfCanLaunch)
     {
+        if (_project.SourceSet.IsLibrary)
+        {
+            pfCanLaunch = 0;
+            return VSConstants.S_OK;
+        }
         var output = _platform.Equals("Web", StringComparison.OrdinalIgnoreCase)
             ? Path.Combine(_project.GetWebOutputDirectory(_configuration), "index.html")
             : _project.GetOutputPath(_configuration);

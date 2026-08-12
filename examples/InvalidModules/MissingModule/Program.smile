@@ -1,0 +1,2 @@
+IMPORT Missing.Tools AS Missing
+PRINT Missing.Value

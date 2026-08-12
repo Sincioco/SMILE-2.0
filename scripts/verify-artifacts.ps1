@@ -70,6 +70,12 @@ function Assert-AssetCopy {
 
 Require-File 'artifacts\compiler\smilec.exe' | Out-Null
 $vsixPath = Require-File 'artifacts\vsix\Smile.VisualStudio.vsix'
+Require-File 'artifacts\libraries\Smile.Math.Extras.smilelib' | Out-Null
+Require-File 'artifacts\games\LibraryConsumer.exe' | Out-Null
+Require-File 'artifacts\games\LibraryPackageConsumer.exe' | Out-Null
+Require-File 'artifacts\games\LocalModuleBasics.exe' | Out-Null
+Require-File 'artifacts\web\LibraryConsumer\game.js' | Out-Null
+Require-File 'artifacts\web\LocalModuleBasics\game.js' | Out-Null
 
 $nativePrograms = @(
     'artifacts\games\GraphicsBasics.exe',
@@ -144,11 +150,32 @@ try {
         'ProjectTemplates/Smile/1033/SmileConsole/SmileConsole.vstemplate',
         'ProjectTemplates/Smile/1033/SmileGame/SmileGame.smileproj',
         'ProjectTemplates/Smile/1033/SmileGame/SmileGame.vstemplate'
+        'ProjectTemplates/Smile/1033/SmileLibrary/SmileLibrary.smilelibproj'
+        'ProjectTemplates/Smile/1033/SmileLibrary/SmileLibrary.vstemplate'
+        'ProjectTemplates/Smile/1033/SmileLibrary/Module.smile'
     )
     foreach ($entry in $requiredEntries) {
         if ($entries -notcontains $entry) {
             throw "VSIX entry is missing: $entry"
         }
+    }
+
+    $pkgdefEntry = $archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -eq 'Smile.VisualStudio.pkgdef' }
+    if ($null -eq $pkgdefEntry) {
+        throw 'VSIX project-factory registration is missing.'
+    }
+    $pkgdefReader = [System.IO.StreamReader]::new($pkgdefEntry.Open())
+    try {
+        $pkgdef = $pkgdefReader.ReadToEnd()
+    }
+    finally {
+        $pkgdefReader.Dispose()
+    }
+    if ($pkgdef -notmatch '"DefaultProjectExtension"="smileproj"') {
+        throw 'VSIX project factory does not use .smileproj as its default extension.'
+    }
+    if ($pkgdef -notmatch '"PossibleProjectExtensions"="smileproj;smilelibproj"') {
+        throw 'VSIX project factory does not register .smilelibproj as a possible extension.'
     }
 }
 finally {

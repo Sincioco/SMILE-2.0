@@ -62,7 +62,7 @@ internal static class SmileProjectWorkspace
             return SmileLanguage.Analyze(currentText, filePath);
 
         IReadOnlyList<SmileProjectSourceItem> compilationSources = sourceSet.GetCompilationSourcesFor(normalizedPath);
-        var documents = new List<SmileSourceDocument>(compilationSources.Count);
+        var documents = new List<SmileSourceDocument>();
         foreach (var source in compilationSources)
         {
             string? text;
@@ -84,9 +84,14 @@ internal static class SmileProjectWorkspace
                 }
             }
             documents.Add(new SmileSourceDocument(text, source.FullPath,
-                string.Equals(source.FullPath, compilationSources[0].FullPath, StringComparison.OrdinalIgnoreCase), missing));
+                !sourceSet.IsLibrary && string.Equals(source.FullPath, compilationSources[0].FullPath,
+                    StringComparison.OrdinalIgnoreCase), missing, sourceSet.ProjectPath));
         }
-        return SmileLanguage.Analyze(documents);
+        var projectCompilation = SmileProjectCompilation.Load(sourceSet.ProjectPath,
+            openText: path => OpenBuffers.TryGetText(path, out var text) ? text : null);
+        var rootPaths = new HashSet<string>(sourceSet.Items.Select(item => item.FullPath), StringComparer.OrdinalIgnoreCase);
+        documents.AddRange(projectCompilation.Sources.Where(source => !rootPaths.Contains(source.FilePath)));
+        return SmileLanguage.Analyze(documents, sourceSet.IsLibrary ? SmileCompilationKind.Library : SmileCompilationKind.Program);
     }
 
     public static IDisposable RegisterBuffer(string filePath, string currentText, Action invalidate)
@@ -106,11 +111,8 @@ internal static class SmileProjectWorkspace
         lock (Gate)
         {
             OpenBuffers.Update(normalizedPath, currentText);
-            var owners = Ownership.GetOwners(normalizedPath);
-            affected = owners.Count != 0
-                ? owners.SelectMany(owner => owner.Items).Select(source => source.FullPath)
-                    .Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
-                : new[] { normalizedPath };
+            affected = Ownership.GetRegisteredSourcePaths().Concat(new[] { normalizedPath })
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         }
         Invalidate(affected);
     }

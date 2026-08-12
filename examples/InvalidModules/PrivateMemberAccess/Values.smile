@@ -1,0 +1,3 @@
+MODULE Example.Values
+PRIVATE CONST Secret = 1
+END MODULE

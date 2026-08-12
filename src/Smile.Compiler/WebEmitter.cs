@@ -23,9 +23,9 @@ internal sealed class WebEmitter
     public WebEmitter(SmileAnalysisResult analysis)
     {
         _analysis = analysis;
-        _currentSource = analysis.SyntaxTree.Source;
+        _currentSource = analysis.BoundSyntaxTree.Source;
         AssignNames();
-        var gameWindow = analysis.SyntaxTree.Root.Statements.OfType<GameWindowStatementSyntax>().FirstOrDefault();
+        var gameWindow = analysis.BoundSyntaxTree.Root.Statements.OfType<GameWindowStatementSyntax>().FirstOrDefault();
         Title = gameWindow?.Title.Value as string ?? "SMILE 2.0 Web Program";
     }
 
@@ -45,8 +45,8 @@ internal sealed class WebEmitter
 
         Line("async function smileMain() {");
         _indent++;
-        _currentSource = _analysis.SyntaxTree.Source;
-        EmitStatements(_analysis.SyntaxTree.Root.Statements, topLevel: true);
+        _currentSource = _analysis.BoundSyntaxTree.Source;
+        EmitStatements(_analysis.BoundSyntaxTree.Root.Statements, topLevel: true);
         _indent--;
         Line("}");
         Line();

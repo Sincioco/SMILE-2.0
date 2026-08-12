@@ -1,0 +1,10 @@
+IMPORT Smile.Math.Extras AS Math
+
+ClampedValue = Math.Clamp(150, 0, 100)
+InsideRange = Math.IsBetween(5, 1, 10)
+
+PRINT ClampedValue
+PRINT InsideRange
+PRINT Math.VERSION_MAJOR
+
+END PROGRAM

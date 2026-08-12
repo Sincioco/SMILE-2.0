@@ -2,6 +2,17 @@
 
 `src\Smile.Language` is the sole authority for SMILE source documents, tokens, keyword facts, syntax, diagnostics, symbols, types, and semantic analysis. Both `smilec` and the Visual Studio extension consume the same `SmileLanguage.Analyze` result, whether a compilation contains one source file or several.
 
+## Modules and imports
+
+`MODULE dotted.name` ... `END MODULE` declares a module. Declarations are private unless prefixed with `PUBLIC`; `PRIVATE` is available when explicit intent helps. A physical source imports a module with `IMPORT dotted.name AS Alias`, then accesses exported constants, arrays, functions, and subroutines as `Alias.Member`. Imports are scoped to that physical source. One module may span files from one provider, while duplicate providers, import cycles, private access, unknown members, and module access to consumer globals are diagnosed by the shared binder.
+
+```smile
+IMPORT Smile.Math.Extras AS Math
+PRINT Math.Clamp(150, 0, 100)
+```
+
+Library compilation requires every source to declare a module. Application projects may also contain local module sources without packaging them.
+
 SMILE evolves only when current syntax cannot express a requirement clearly. New general-purpose features prefer readable, established BASIC wording; the smallest beginner-friendly C#-inspired concept is used only when BASIC has no suitable precedent. The language avoids aliases, multiple spellings, clever punctuation, and game-specific statements. Syntax, diagnostics, examples, and documentation change proportionally through the shared authority.
 
 SMILE is case-insensitive and line-oriented. An apostrophe starts a comment. Values are signed 64-bit numbers, booleans, or text literals; runtime game state is normally stored in numeric variables and fixed arrays.

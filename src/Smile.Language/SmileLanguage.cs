@@ -7,34 +7,40 @@ namespace Smile.Language;
 
 public sealed class SyntaxTree
 {
-    internal SyntaxTree(SourceText source, CompilationUnitSyntax root, IReadOnlyList<SyntaxToken> tokens, bool isStartup)
+    internal SyntaxTree(SourceText source, CompilationUnitSyntax root, IReadOnlyList<SyntaxToken> tokens, bool isStartup,
+        string? providerIdentity = null)
     {
         Source = source;
         Root = root;
         Tokens = tokens;
         IsStartup = isStartup;
+        ProviderIdentity = providerIdentity ?? string.Empty;
     }
 
     public SourceText Source { get; }
     public CompilationUnitSyntax Root { get; }
     public IReadOnlyList<SyntaxToken> Tokens { get; }
     public bool IsStartup { get; }
+    public string ProviderIdentity { get; }
 }
 
 public sealed class SmileSourceDocument
 {
-    public SmileSourceDocument(string text, string? filePath = null, bool isStartup = false, bool isMissing = false)
+    public SmileSourceDocument(string text, string? filePath = null, bool isStartup = false, bool isMissing = false,
+        string? providerIdentity = null)
     {
         Text = text ?? string.Empty;
         FilePath = NormalizePath(filePath);
         IsStartup = isStartup;
         IsMissing = isMissing;
+        ProviderIdentity = providerIdentity ?? string.Empty;
     }
 
     public string Text { get; }
     public string FilePath { get; }
     public bool IsStartup { get; }
     public bool IsMissing { get; }
+    public string ProviderIdentity { get; }
 
     internal static string NormalizePath(string? filePath)
     {
@@ -55,11 +61,15 @@ public sealed class SmileAnalysisResult
 {
     private readonly Dictionary<string, SyntaxTree> _syntaxTreesByPath;
 
-    internal SmileAnalysisResult(IReadOnlyList<SyntaxTree> syntaxTrees, SyntaxTree startupSyntaxTree,
-        SemanticModel semanticModel, IReadOnlyList<Diagnostic> diagnostics)
+    internal SmileAnalysisResult(IReadOnlyList<SyntaxTree> syntaxTrees, SyntaxTree primarySyntaxTree,
+        IReadOnlyList<SyntaxTree> boundSyntaxTrees, SyntaxTree boundPrimarySyntaxTree,
+        SmileCompilationKind compilationKind, SemanticModel semanticModel, IReadOnlyList<Diagnostic> diagnostics)
     {
         SyntaxTrees = syntaxTrees;
-        SyntaxTree = startupSyntaxTree;
+        SyntaxTree = primarySyntaxTree;
+        BoundSyntaxTrees = boundSyntaxTrees;
+        BoundSyntaxTree = boundPrimarySyntaxTree;
+        CompilationKind = compilationKind;
         SemanticModel = semanticModel;
         Diagnostics = diagnostics;
         _syntaxTreesByPath = new Dictionary<string, SyntaxTree>(StringComparer.OrdinalIgnoreCase);
@@ -72,6 +82,9 @@ public sealed class SmileAnalysisResult
 
     public SyntaxTree SyntaxTree { get; }
     public IReadOnlyList<SyntaxTree> SyntaxTrees { get; }
+    public IReadOnlyList<SyntaxTree> BoundSyntaxTrees { get; }
+    public SyntaxTree BoundSyntaxTree { get; }
+    public SmileCompilationKind CompilationKind { get; }
     public SemanticModel SemanticModel { get; }
     public IReadOnlyList<Diagnostic> Diagnostics { get; }
     public IReadOnlyList<SyntaxToken> Tokens => SyntaxTree.Tokens;
@@ -109,6 +122,9 @@ public static class SmileLanguage
         => Analyze(new[] { new SmileSourceDocument(sourceText, filePath, isStartup: true) });
 
     public static SmileAnalysisResult Analyze(IReadOnlyList<SmileSourceDocument> sources)
+        => Analyze(sources, SmileCompilationKind.Program);
+
+    public static SmileAnalysisResult Analyze(IReadOnlyList<SmileSourceDocument> sources, SmileCompilationKind compilationKind)
     {
         if (sources == null)
             throw new ArgumentNullException(nameof(sources));
@@ -116,8 +132,11 @@ public static class SmileLanguage
             throw new ArgumentException("A SMILE compilation requires at least one source document.", nameof(sources));
 
         var startupCount = sources.Count(source => source != null && source.IsStartup);
-        if (startupCount != 1)
-            throw new ArgumentException($"A SMILE compilation requires exactly one startup source; found {startupCount}.", nameof(sources));
+        var requiredStartupCount = compilationKind == SmileCompilationKind.Program ? 1 : 0;
+        if (startupCount != requiredStartupCount)
+            throw new ArgumentException(compilationKind == SmileCompilationKind.Program
+                ? $"A SMILE compilation requires exactly one startup source; found {startupCount}."
+                : $"A library SMILE compilation requires no startup sources; found {startupCount}.", nameof(sources));
 
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var syntaxTrees = new List<SyntaxTree>(sources.Count);
@@ -135,7 +154,7 @@ public static class SmileLanguage
             var tokens = lexer.Lex();
             var parser = new Parser(source, tokens, lexer.Diagnostics);
             var root = parser.ParseCompilationUnit();
-            var tree = new SyntaxTree(source, root, tokens, document.IsStartup);
+            var tree = new SyntaxTree(source, root, tokens, document.IsStartup, document.ProviderIdentity);
             syntaxTrees.Add(tree);
             parserDiagnostics.AddRange(parser.Diagnostics);
             if (document.IsMissing)
@@ -143,22 +162,29 @@ public static class SmileLanguage
                     $"Project source file was not found: {document.FilePath}", source, new TextSpan(0, 0)));
         }
 
-        var startupTree = syntaxTrees.Single(tree => tree.IsStartup);
-        var semanticAnalyzer = new SemanticAnalyzer(syntaxTrees, startupTree);
+        var moduleProcessing = new ModuleProcessor(syntaxTrees, compilationKind).Process();
+        var boundStartupTree = moduleProcessing.BoundTrees.Single(tree => tree.IsStartup);
+        var semanticAnalyzer = new SemanticAnalyzer(moduleProcessing.BoundTrees, boundStartupTree);
         var semanticModel = semanticAnalyzer.Analyze();
+        moduleProcessing.Link(semanticModel);
 
         var diagnostics = new List<Diagnostic>();
         diagnostics.AddRange(parserDiagnostics);
+        diagnostics.AddRange(moduleProcessing.Diagnostics);
         diagnostics.AddRange(semanticAnalyzer.Diagnostics);
 
         var sourceOrder = syntaxTrees.Select((tree, index) => new { tree.Source, index })
             .ToDictionary(item => item.Source, item => item.index);
         var orderedDiagnostics = diagnostics
-            .OrderBy(diagnostic => sourceOrder[diagnostic.Source])
+            .OrderBy(diagnostic => sourceOrder.TryGetValue(diagnostic.Source, out var ordinal) ? ordinal : -1)
             .ThenBy(diagnostic => diagnostic.Span.Start)
             .ThenBy(diagnostic => diagnostic.Code, StringComparer.Ordinal)
             .ToArray();
 
-        return new SmileAnalysisResult(syntaxTrees.ToArray(), startupTree, semanticModel, orderedDiagnostics);
+        var primaryTree = compilationKind == SmileCompilationKind.Program
+            ? syntaxTrees.Single(tree => tree.IsStartup)
+            : syntaxTrees[0];
+        return new SmileAnalysisResult(syntaxTrees.ToArray(), primaryTree,
+            moduleProcessing.BoundTrees, boundStartupTree, compilationKind, semanticModel, orderedDiagnostics);
     }
 }

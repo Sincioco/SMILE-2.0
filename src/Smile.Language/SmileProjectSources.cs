@@ -6,6 +6,35 @@ using System.Xml.Linq;
 
 namespace Smile.Language;
 
+public enum SmileProjectKind
+{
+    Console,
+    Game,
+    Library
+}
+
+public enum SmileProjectReferenceKind
+{
+    Project,
+    Package
+}
+
+public sealed class SmileProjectReferenceItem
+{
+    internal SmileProjectReferenceItem(string include, string fullPath, SmileProjectReferenceKind kind)
+    {
+        Include = include;
+        FullPath = fullPath;
+        Kind = kind;
+    }
+
+    public string Include { get; }
+    public string FullPath { get; }
+    public SmileProjectReferenceKind Kind { get; }
+    public bool Exists => File.Exists(FullPath);
+    public string DisplayName => Path.GetFileNameWithoutExtension(FullPath);
+}
+
 public sealed class SmileProjectSourceItem
 {
     internal SmileProjectSourceItem(string include, string fullPath, bool startupOnly, bool isStartup)
@@ -26,28 +55,43 @@ public sealed class SmileProjectSourceItem
 
 public sealed class SmileProjectSourceSet
 {
-    private SmileProjectSourceSet(string projectPath, string startupFile,
-        IReadOnlyList<SmileProjectSourceItem> items, IReadOnlyList<SmileProjectSourceItem> compilationSources)
+    private SmileProjectSourceSet(string projectPath, SmileProjectKind projectKind, string startupFile,
+        string libraryName, string version, string outputName,
+        IReadOnlyList<SmileProjectSourceItem> items, IReadOnlyList<SmileProjectSourceItem> compilationSources,
+        IReadOnlyList<SmileProjectReferenceItem> references)
     {
         ProjectPath = projectPath;
         ProjectDirectory = Path.GetDirectoryName(projectPath) ?? Environment.CurrentDirectory;
         StartupFile = startupFile;
+        ProjectKind = projectKind;
+        LibraryName = libraryName;
+        Version = version;
+        OutputName = outputName;
         Items = items;
         CompilationSources = compilationSources;
-        StartupSource = compilationSources[0];
-        SupportSources = compilationSources.Skip(1).ToArray();
+        StartupSource = projectKind == SmileProjectKind.Library ? null : compilationSources[0];
+        SupportSources = projectKind == SmileProjectKind.Library ? compilationSources : compilationSources.Skip(1).ToArray();
+        References = references;
     }
 
     public string ProjectPath { get; }
     public string ProjectDirectory { get; }
     public string StartupFile { get; }
-    public SmileProjectSourceItem StartupSource { get; }
+    public SmileProjectKind ProjectKind { get; }
+    public string LibraryName { get; }
+    public string Version { get; }
+    public string OutputName { get; }
+    public bool IsLibrary => ProjectKind == SmileProjectKind.Library;
+    public SmileProjectSourceItem? StartupSource { get; }
     public IReadOnlyList<SmileProjectSourceItem> Items { get; }
     public IReadOnlyList<SmileProjectSourceItem> CompilationSources { get; }
     public IReadOnlyList<SmileProjectSourceItem> SupportSources { get; }
+    public IReadOnlyList<SmileProjectReferenceItem> References { get; }
 
     public IReadOnlyList<SmileProjectSourceItem> GetCompilationSourcesFor(string filePath)
     {
+        if (IsLibrary)
+            return CompilationSources;
         var normalizedPath = Path.GetFullPath(filePath);
         var active = Items.FirstOrDefault(item =>
             string.Equals(item.FullPath, normalizedPath, StringComparison.OrdinalIgnoreCase));
@@ -68,20 +112,53 @@ public sealed class SmileProjectSourceSet
         var fullProjectPath = Path.GetFullPath(projectPath);
         var root = XDocument.Parse(xml, LoadOptions.SetLineInfo).Root;
         if (root == null || root.Name.LocalName != "SmileProject")
-            throw new InvalidDataException("A .smileproj file must have a SmileProject root element.");
+            throw new InvalidDataException("A SMILE project file must have a SmileProject root element.");
 
         var projectDirectory = Path.GetDirectoryName(fullProjectPath) ?? Environment.CurrentDirectory;
         var properties = root.Elements().FirstOrDefault(element => element.Name.LocalName == "PropertyGroup");
+        var kindText = properties?.Elements().FirstOrDefault(element => element.Name.LocalName == "ProjectKind")?.Value.Trim();
+        if (string.IsNullOrWhiteSpace(kindText))
+            kindText = string.Equals(Path.GetExtension(fullProjectPath), ".smilelibproj", StringComparison.OrdinalIgnoreCase)
+                ? "Library" : "Console";
+        if (!Enum.TryParse(kindText, true, out SmileProjectKind projectKind) ||
+            !Enum.IsDefined(typeof(SmileProjectKind), projectKind))
+            throw new InvalidDataException($"Unknown ProjectKind '{kindText}'. Expected Console, Game, or Library.");
+        if (string.Equals(Path.GetExtension(fullProjectPath), ".smilelibproj", StringComparison.OrdinalIgnoreCase) &&
+            projectKind != SmileProjectKind.Library)
+            throw new InvalidDataException("A .smilelibproj must declare ProjectKind Library.");
+
+        var libraryName = properties?.Elements().FirstOrDefault(element => element.Name.LocalName == "LibraryName")?.Value.Trim() ?? string.Empty;
+        var version = properties?.Elements().FirstOrDefault(element => element.Name.LocalName == "Version")?.Value.Trim() ?? string.Empty;
+        var outputName = properties?.Elements().FirstOrDefault(element => element.Name.LocalName == "OutputName")?.Value.Trim();
+        if (projectKind == SmileProjectKind.Library)
+        {
+            if (string.IsNullOrWhiteSpace(libraryName))
+                throw new InvalidDataException("LibraryName is required for a SMILE library project.");
+            if (!System.Text.RegularExpressions.Regex.IsMatch(version, @"^\d+\.\d+\.\d+$"))
+                throw new InvalidDataException("Library Version is required and must use major.minor.patch.");
+            if (string.IsNullOrWhiteSpace(outputName))
+                outputName = libraryName;
+        }
+        else if (string.IsNullOrWhiteSpace(outputName))
+        {
+            outputName = Path.GetFileNameWithoutExtension(fullProjectPath);
+        }
+
         var startupFile = properties?.Elements().FirstOrDefault(element => element.Name.LocalName == "StartupFile")?.Value.Trim();
-        if (string.IsNullOrWhiteSpace(startupFile))
+        if (projectKind != SmileProjectKind.Library && string.IsNullOrWhiteSpace(startupFile))
             startupFile = "Program.smile";
-        var startupPath = Path.GetFullPath(Path.Combine(projectDirectory, startupFile!));
+        if (projectKind == SmileProjectKind.Library && !string.IsNullOrWhiteSpace(startupFile))
+            throw new InvalidDataException("SMILE library projects do not have a StartupFile.");
+        var startupPath = projectKind == SmileProjectKind.Library ? string.Empty :
+            Path.GetFullPath(Path.Combine(projectDirectory, startupFile!));
 
         var sourceElements = root.Elements().Where(element => element.Name.LocalName == "ItemGroup")
             .SelectMany(element => element.Elements().Where(item => item.Name.LocalName == "SmileSource"))
             .ToArray();
-        if (sourceElements.Length == 0)
+        if (sourceElements.Length == 0 && projectKind != SmileProjectKind.Library)
             sourceElements = new[] { new XElement("SmileSource", new XAttribute("Include", startupFile!)) };
+        if (sourceElements.Length == 0)
+            throw new InvalidDataException("A SMILE library project requires at least one SmileSource.");
 
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var entries = new List<(string Include, string FullPath, bool StartupOnly)>();
@@ -104,15 +181,47 @@ public sealed class SmileProjectSourceSet
             entries.Add((include, sourcePath, startupOnly));
         }
 
-        if (!paths.Contains(startupPath))
+        if (projectKind != SmileProjectKind.Library && !paths.Contains(startupPath))
             throw new InvalidDataException($"StartupFile '{startupFile}' is not listed as a SmileSource.");
 
         var items = entries.Select(entry => new SmileProjectSourceItem(
             entry.Include, entry.FullPath, entry.StartupOnly,
-            string.Equals(entry.FullPath, startupPath, StringComparison.OrdinalIgnoreCase))).ToArray();
-        var startup = items.Single(item => item.IsStartup);
-        var compilationSources = new[] { startup }.Concat(items.Where(item => item.IsSupport)).ToArray();
-        return new SmileProjectSourceSet(fullProjectPath, startupFile!, items, compilationSources);
+            projectKind != SmileProjectKind.Library && string.Equals(entry.FullPath, startupPath, StringComparison.OrdinalIgnoreCase))).ToArray();
+        var compilationSources = projectKind == SmileProjectKind.Library
+            ? items
+            : new[] { items.Single(item => item.IsStartup) }.Concat(items.Where(item => item.IsSupport)).ToArray();
+
+        var references = new List<SmileProjectReferenceItem>();
+        var referencePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var element in root.Elements().Where(element => element.Name.LocalName == "ItemGroup").SelectMany(element => element.Elements()))
+        {
+            SmileProjectReferenceKind referenceKind;
+            string expectedExtension;
+            if (element.Name.LocalName == "SmileProjectReference")
+            {
+                referenceKind = SmileProjectReferenceKind.Project;
+                expectedExtension = ".smilelibproj";
+            }
+            else if (element.Name.LocalName == "SmileLibraryReference")
+            {
+                referenceKind = SmileProjectReferenceKind.Package;
+                expectedExtension = ".smilelib";
+            }
+            else
+            {
+                continue;
+            }
+            var include = ((string?)element.Attribute("Include") ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(include) || !string.Equals(Path.GetExtension(include), expectedExtension, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException($"{element.Name.LocalName} Include must name a {expectedExtension} file.");
+            var referencePath = Path.GetFullPath(Path.Combine(projectDirectory, include));
+            if (!referencePaths.Add(referencePath))
+                throw new InvalidDataException($"Duplicate SMILE library reference '{include}'.");
+            references.Add(new SmileProjectReferenceItem(include, referencePath, referenceKind));
+        }
+
+        return new SmileProjectSourceSet(fullProjectPath, projectKind, startupFile ?? string.Empty,
+            libraryName, version, outputName!, items, compilationSources, references);
     }
 
     public void ValidateFiles()
@@ -121,11 +230,24 @@ public sealed class SmileProjectSourceSet
         {
             if (!File.Exists(source.FullPath))
             {
-                var role = source.IsStartup ? "Startup" : "Support";
+                var role = IsLibrary ? "Library" : source.IsStartup ? "Startup" : "Support";
                 throw new FileNotFoundException($"{role} source file was not found: {source.FullPath}", source.FullPath);
             }
         }
     }
+
+    public void ValidateReferences()
+    {
+        foreach (var reference in References)
+        {
+            if (!reference.Exists)
+                throw new FileNotFoundException($"Referenced SMILE {reference.Kind.ToString().ToLowerInvariant()} was not found: {reference.FullPath}", reference.FullPath);
+        }
+    }
+
+    public string GetLibraryOutputPath(string configuration) => Path.Combine(ProjectDirectory, "bin",
+        configuration.StartsWith("Release", StringComparison.OrdinalIgnoreCase) ? "Release" : "Debug",
+        OutputName + ".smilelib");
 
     public bool TryGetCompilationSource(string filePath, out SmileProjectSourceItem source)
     {
@@ -210,6 +332,44 @@ public static class SmileProjectFileEditor
         return Save(context);
     }
 
+    public static SmileProjectSourceSet AddReference(string projectPath, string referencePath)
+    {
+        var context = Load(projectPath);
+        var fullReferencePath = Path.GetFullPath(referencePath);
+        var extension = Path.GetExtension(fullReferencePath);
+        var elementName = string.Equals(extension, ".smilelibproj", StringComparison.OrdinalIgnoreCase)
+            ? "SmileProjectReference"
+            : string.Equals(extension, ".smilelib", StringComparison.OrdinalIgnoreCase)
+                ? "SmileLibraryReference"
+                : throw new InvalidDataException("SMILE library references must be .smilelibproj or .smilelib files.");
+        var existing = ReferenceElements(context.Root).ToArray();
+        if (existing.Any(element => SameInclude(context.ProjectDirectory, element, fullReferencePath)))
+            throw new InvalidDataException($"SMILE library reference '{Path.GetFileName(fullReferencePath)}' is already included in the project.");
+        var itemGroup = context.Root.Elements().FirstOrDefault(element => element.Name.LocalName == "ItemGroup" &&
+            element.Elements().Any(item => item.Name.LocalName is "SmileProjectReference" or "SmileLibraryReference"));
+        if (itemGroup == null)
+        {
+            itemGroup = new XElement(context.Root.Name.Namespace + "ItemGroup");
+            context.Root.Add(itemGroup);
+        }
+        var include = RelativePath(context.ProjectDirectory, fullReferencePath)
+            .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+        AppendItem(itemGroup, new XElement(context.Root.Name.Namespace + elementName, new XAttribute("Include", include)));
+        return Save(context);
+    }
+
+    public static SmileProjectSourceSet RemoveReference(string projectPath, string referencePath)
+    {
+        var context = Load(projectPath);
+        var reference = ReferenceElements(context.Root).FirstOrDefault(element =>
+            SameInclude(context.ProjectDirectory, element, referencePath))
+            ?? throw new InvalidDataException($"SMILE library reference '{referencePath}' is not included in the project.");
+        if (reference.PreviousNode is XText indentation && string.IsNullOrWhiteSpace(indentation.Value))
+            indentation.Remove();
+        reference.Remove();
+        return Save(context);
+    }
+
     private static ProjectContext Load(string projectPath)
     {
         var fullProjectPath = Path.GetFullPath(projectPath);
@@ -232,6 +392,11 @@ public static class SmileProjectFileEditor
     private static IEnumerable<XElement> SourceElements(XElement root) =>
         root.Elements().Where(element => element.Name.LocalName == "ItemGroup")
             .SelectMany(element => element.Elements().Where(item => item.Name.LocalName == "SmileSource"));
+
+    private static IEnumerable<XElement> ReferenceElements(XElement root) =>
+        root.Elements().Where(element => element.Name.LocalName == "ItemGroup")
+            .SelectMany(element => element.Elements().Where(item =>
+                item.Name.LocalName is "SmileProjectReference" or "SmileLibraryReference"));
 
     private static void AppendItem(XElement itemGroup, XElement item)
     {
@@ -272,6 +437,17 @@ public static class SmileProjectFileEditor
         if (!fullSourcePath.StartsWith(fullDirectory, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("SMILE project source files must be inside the project directory.");
         return fullSourcePath.Substring(fullDirectory.Length).Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+    }
+
+    private static string RelativePath(string directoryPath, string filePath)
+    {
+        var directoryUri = new Uri(Path.GetFullPath(directoryPath).TrimEnd(
+            Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar);
+        var fileUri = new Uri(Path.GetFullPath(filePath));
+        if (!string.Equals(directoryUri.Scheme, fileUri.Scheme, StringComparison.OrdinalIgnoreCase))
+            return filePath;
+        return Uri.UnescapeDataString(directoryUri.MakeRelativeUri(fileUri).ToString())
+            .Replace('/', Path.DirectorySeparatorChar);
     }
 
     private sealed class ProjectContext

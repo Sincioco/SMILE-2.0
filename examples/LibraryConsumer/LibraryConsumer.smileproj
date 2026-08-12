@@ -1,0 +1,13 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Console</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>LibraryConsumer</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+  </ItemGroup>
+  <ItemGroup>
+    <SmileProjectReference Include="..\..\libraries\Smile.Math.Extras\Smile.Math.Extras.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

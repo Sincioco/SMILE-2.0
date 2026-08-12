@@ -1,0 +1,11 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Library</ProjectKind>
+    <LibraryName>$projectname$</LibraryName>
+    <Version>1.0.0</Version>
+    <OutputName>$projectname$</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Module.smile" />
+  </ItemGroup>
+</SmileProject>

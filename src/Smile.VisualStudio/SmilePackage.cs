@@ -11,8 +11,8 @@ namespace Smile.VisualStudio;
 [ProvideMenuResource("Menus.ctmenu", 1)]
 [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string, PackageAutoLoadFlags.BackgroundLoad)]
 [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExists_string, PackageAutoLoadFlags.BackgroundLoad)]
-[ProvideProjectFactory(typeof(SmileProjectFactory), "SMILE 2.0", "SMILE Project Files (*.smileproj);*.smileproj",
-    "smileproj", "smileproj", "LegacyProjectTemplates", LanguageVsTemplate = "Smile",
+[ProvideProjectFactory(typeof(SmileProjectFactory), "SMILE 2.0", "SMILE Project Files (*.smileproj;*.smilelibproj);*.smileproj;*.smilelibproj",
+    "smileproj", "smileproj;smilelibproj", "LegacyProjectTemplates", LanguageVsTemplate = "Smile",
     NewProjectRequireNewFolderVsTemplate = true)]
 [Guid(PackageGuidString)]
 public sealed class SmilePackage : AsyncPackage

@@ -50,6 +50,8 @@ Do not turn a one-time investigation into a permanent regression burden unless S
 
 The compiler and Visual Studio extension must consume this shared implementation.
 
+Phase 2 modules and libraries are also shared-language responsibilities. Keep `MODULE`, `IMPORT`, visibility, qualified access, provider identity, package validation, and project dependency graphs in `src\Smile.Language`; do not create compiler-only or editor-only semantics. `.smileproj` applications and `.smilelibproj` libraries use the same project model. `.smilelib` output must remain deterministic and target-neutral.
+
 Never create a compiler-only parser, extension-only parser, duplicate keyword table, duplicate syntax rules, or duplicate semantic rules.
 
 Language evolution may migrate all ten legacy games together when a shared language improvement requires it. Reusable game and application components belong in SMILE source rather than game-specific native helpers.

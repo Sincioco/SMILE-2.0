@@ -140,6 +140,9 @@ internal sealed class Lexer
             case ';':
                 _position++;
                 return Token(SyntaxKind.SemicolonToken, start);
+            case '.':
+                _position++;
+                return Token(SyntaxKind.DotToken, start);
         }
 
         _position++;

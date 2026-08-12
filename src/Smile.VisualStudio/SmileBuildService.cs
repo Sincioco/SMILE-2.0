@@ -89,6 +89,26 @@ internal static class SmileBuildService
         return RunCompilerAsync(compilerPath, sourcePath, arguments.ToString());
     }
 
+    public static Task<CompilerResult> RunProjectAsync(string compilerPath, string projectPath, string target,
+        string outputPath, string configuration, SmileGraphicsBackend graphicsBackend = SmileGraphicsBackend.Auto,
+        bool vSync = true, bool emitDebugInformation = false)
+    {
+        var arguments = new StringBuilder("--project ").Append(Quote(projectPath))
+            .Append(" --target ").Append(target)
+            .Append(" --configuration ").Append(Quote(configuration));
+        if (string.Equals(target, "web", StringComparison.OrdinalIgnoreCase))
+            arguments.Append(" --output-dir ").Append(Quote(outputPath));
+        else
+            arguments.Append(" -o ").Append(Quote(outputPath));
+        if (string.Equals(target, "windows-x64", StringComparison.OrdinalIgnoreCase))
+        {
+            arguments.Append(" --graphics ").Append(graphicsBackend.ToString());
+            arguments.Append(" --vsync ").Append(vSync ? "true" : "false");
+            if (emitDebugInformation) arguments.Append(" --debug");
+        }
+        return RunCompilerAsync(compilerPath, projectPath, arguments.ToString());
+    }
+
     internal static string FormatSupportArguments(IReadOnlyList<string>? supportSourcePaths)
     {
         var arguments = new StringBuilder();

@@ -372,7 +372,7 @@ Run("Game hierarchy projection includes startup alternate support and assets exa
     var projectPath = Path.GetFullPath("examples/SourceVisibilityBasics/SourceVisibilityBasics.smileproj");
     var sourceSet = SmileProjectSourceSet.Load(projectPath);
     var projection = SmileProjectHierarchyProjection.Create(sourceSet, "Game", new[] { "Assets\\**\\*" });
-    Equal("Program.smile|Program-NoDemo.smile|Helpers.smile|Assets|Readme.txt",
+    Equal("References|Program.smile|Program-NoDemo.smile|Helpers.smile|Assets|Readme.txt",
         string.Join("|", projection.Select(item => item.Caption)));
     foreach (var source in sourceSet.Items)
         Equal(1, projection.Count(item => item.Kind == SmileProjectHierarchyItemKind.Source &&
@@ -389,7 +389,7 @@ Run("Console hierarchy projection contains every support source without an Asset
         </ItemGroup></SmileProject>
         """);
     var projection = SmileProjectHierarchyProjection.Create(sourceSet, "Console", Array.Empty<string>());
-    Equal("Program.smile|Second.smile|Third.smile", string.Join("|", projection.Select(item => item.Caption)));
+    Equal("References|Program.smile|Second.smile|Third.smile", string.Join("|", projection.Select(item => item.Caption)));
 });
 Run("Root hierarchy traversal reaches every source once without missing IDs cycles or Assets ordering gaps", () =>
 {
@@ -432,7 +432,7 @@ Run("Root hierarchy traversal reaches every source once without missing IDs cycl
         foreach (var source in sourceSet.Items)
             Equal(1, rootItems.Count(item => item.Kind == SmileProjectHierarchyItemKind.Source &&
                 string.Equals(item.FullPath, source.FullPath, StringComparison.OrdinalIgnoreCase)));
-        Equal("Program.smile|BeforeAssets.smile|AfterAssets.smile|Assets",
+        Equal("References|Program.smile|BeforeAssets.smile|AfterAssets.smile|Assets",
             string.Join("|", rootItems.Select(item => item.Caption)));
     }
     finally
@@ -501,7 +501,7 @@ Run("Included missing sources stay projected while untracked files remain exclud
 
         var sourceSet = SmileProjectSourceSet.Load(projectPath);
         var missingProjection = SmileProjectHierarchyProjection.Create(sourceSet, "Console", Array.Empty<string>());
-        Equal(2, missingProjection.Count);
+        Equal(3, missingProjection.Count);
         Equal(false, missingProjection.Single(item => string.Equals(item.FullPath, missingPath,
             StringComparison.OrdinalIgnoreCase)).Exists);
         Equal(false, missingProjection.Any(item => string.Equals(item.FullPath, untrackedPath,
@@ -649,7 +649,7 @@ Run("Project source selection honors StartupOnly and project order", () =>
         <SmileSource Include="Drawing.smile" />
         </ItemGroup></SmileProject>
         """);
-    Equal("Program-NoDemo.smile", sourceSet.StartupSource.Include);
+    Equal("Program-NoDemo.smile", sourceSet.StartupSource!.Include);
     Equal(3, sourceSet.CompilationSources.Count);
     Equal("GameState.smile", sourceSet.SupportSources[0].Include);
     Equal("Drawing.smile", sourceSet.SupportSources[1].Include);
@@ -770,6 +770,189 @@ Run("Web emitter emits support routines but only startup top-level execution", (
     Equal(true, javascript.Contains("async function r_0_addone"));
     Equal(true, javascript.Contains("await r_0_addone()"));
     Equal(1, javascript.Split(new[] { "smile.print" }, StringSplitOptions.None).Length - 1);
+});
+Run("Local modules import public members through a qualified alias", () =>
+{
+    var analysis = Multi(
+        ("Program.smile", true, "IMPORT Example.Math AS Math\nPRINT Math.Double(21)\nEND PROGRAM\n"),
+        ("Math.smile", false, "MODULE Example.Math\nPUBLIC FUNCTION Double(Value)\nRETURN Value * 2\nEND FUNCTION\nPRIVATE CONST Secret = 9\nEND MODULE\n"));
+    Equal(false, analysis.HasErrors);
+    Equal(true, analysis.SemanticModel.Modules.ContainsKey("Example.Math"));
+    Equal(true, new WebEmitter(analysis).Emit().Contains("await r_"));
+    Equal(true, new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit().Contains("call smile_"));
+});
+Run("Private module members are rejected across import boundaries", () =>
+{
+    var analysis = Multi(
+        ("Program.smile", true, "IMPORT Example.Math AS Math\nPRINT Math.Secret\n"),
+        ("Math.smile", false, "MODULE Example.Math\nPRIVATE CONST Secret = 9\nEND MODULE\n"));
+    Equal(true, HasDiagnostic(analysis, "SML3105"));
+});
+Run("Missing modules aliases members and import cycles have stable diagnostics", () =>
+{
+    Equal(true, HasDiagnostic(Multi(("Program.smile", true, "IMPORT Missing.Module AS Missing\n")), "SML3102"));
+    Equal(true, HasDiagnostic(Multi(
+        ("Program.smile", true, "IMPORT Example.Math AS Math\nPRINT Math.Unknown\n"),
+        ("Math.smile", false, "MODULE Example.Math\nPUBLIC CONST Value = 1\nEND MODULE\n")), "SML3103"));
+    Equal(true, HasDiagnostic(Multi(
+        ("Program.smile", true, "IMPORT Example.Alpha AS Alpha\n"),
+        ("A.smile", false, "MODULE Example.Alpha\nIMPORT Example.Beta AS Beta\nPUBLIC CONST AValue = 1\nEND MODULE\n"),
+        ("B.smile", false, "MODULE Example.Beta\nIMPORT Example.Alpha AS Alpha\nPUBLIC CONST BValue = 1\nEND MODULE\n")), "SML3108"));
+});
+Run("Alias dot completion exposes only public module members", () =>
+{
+    var text = "IMPORT Example.Math AS Math\nPRINT Math.";
+    var analysis = Multi(
+        ("Program.smile", true, text),
+        ("Math.smile", false, "MODULE Example.Math\nPUBLIC FUNCTION Double(Value)\nRETURN Value * 2\nEND FUNCTION\nPRIVATE CONST Secret = 9\nEND MODULE\n"));
+    var completions = SmileCompletionService.GetCompletions(analysis, text.Length);
+    Equal(true, completions.Any(item => item.DisplayText == "Double"));
+    Equal(false, completions.Any(item => item.DisplayText == "Secret"));
+});
+Run("Library projects have no startup and support project and package references", () =>
+{
+    var library = ProjectSources("<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Tools</LibraryName><Version>1.2.3</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Module.smile\" /><SmileLibraryReference Include=\"Tools.smilelib\" /></ItemGroup></SmileProject>");
+    Equal(true, library.IsLibrary);
+    Equal(true, library.StartupSource == null);
+    Equal(1, library.References.Count);
+    Equal(SmileProjectReferenceKind.Package, library.References[0].Kind);
+});
+Run("Reference editing refresh projection immediately and never deletes the target", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileReferenceTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var project = Path.Combine(directory, "App.smileproj");
+        var package = Path.Combine(directory, "Tools.smilelib");
+        File.WriteAllText(Path.Combine(directory, "Program.smile"), "END PROGRAM\n");
+        File.WriteAllText(package, "fixture");
+        File.WriteAllText(project, "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" /></ItemGroup></SmileProject>");
+        var added = SmileProjectFileEditor.AddReference(project, package);
+        Equal(1, added.References.Count);
+        Equal(1, SmileProjectHierarchyProjection.Create(added, "Console", Array.Empty<string>())
+            .Count(item => item.Kind == SmileProjectHierarchyItemKind.Reference));
+        var removed = SmileProjectFileEditor.RemoveReference(project, package);
+        Equal(0, removed.References.Count);
+        Equal(true, File.Exists(package));
+    }
+    finally { Directory.Delete(directory, true); }
+});
+Run("Library packages are deterministic and reload through authoritative analysis", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmilePackageTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var projectPath = Path.Combine(directory, "Tools.smilelibproj");
+        var sourcePath = Path.Combine(directory, "Tools.smile");
+        File.WriteAllText(sourcePath, "MODULE Example.Tools\nPUBLIC FUNCTION Double(Value)\nRETURN Value * 2\nEND FUNCTION\nPRIVATE CONST Hidden = 1\nEND MODULE\n");
+        File.WriteAllText(projectPath, "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Tools</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Tools.smile\" /></ItemGroup></SmileProject>");
+        var compilation = SmileProjectCompilation.Load(projectPath);
+        var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library);
+        Equal(false, analysis.HasErrors);
+        var first = Path.Combine(directory, "first.smilelib");
+        var second = Path.Combine(directory, "second.smilelib");
+        SmileLibraryPackage.Write(first, compilation.Graph.Root, analysis);
+        SmileLibraryPackage.Write(second, compilation.Graph.Root, analysis);
+        Equal(true, File.ReadAllBytes(first).SequenceEqual(File.ReadAllBytes(second)));
+        var loaded = SmileLibraryPackage.Read(first, Path.Combine(directory, "obj"));
+        Equal("Example.Tools", loaded.Identity.Name);
+        Equal(1, loaded.Sources.Count);
+        using (var archive = System.IO.Compression.ZipFile.OpenRead(first))
+        {
+            Equal(true, archive.GetEntry("manifest.json") != null);
+            var apiEntry = archive.GetEntry("api/public-symbols.json")!;
+            using var reader = new StreamReader(apiEntry.Open());
+            var api = reader.ReadToEnd();
+            Equal(true, api.Contains("Double", StringComparison.Ordinal));
+            Equal(false, api.Contains("Hidden", StringComparison.Ordinal));
+        }
+        File.WriteAllText(sourcePath, "MODULE Example.Tools\nPUBLIC FUNCTION Triple(Value)\nRETURN Value * 3\nEND FUNCTION\nEND MODULE\n");
+        var changedCompilation = SmileProjectCompilation.Load(projectPath);
+        var changedAnalysis = SmileLanguage.Analyze(changedCompilation.Sources, SmileCompilationKind.Library);
+        SmileLibraryPackage.Write(first, changedCompilation.Graph.Root, changedAnalysis);
+        var changed = SmileLibraryPackage.Read(first, Path.Combine(directory, "obj"));
+        Equal(false, loaded.PackageHash == changed.PackageHash);
+        Equal(false, loaded.ExtractionDirectory == changed.ExtractionDirectory);
+    }
+    finally { Directory.Delete(directory, true); }
+});
+Run("Project reference cycles are diagnosed with the dependency path", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileGraphTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        File.WriteAllText(Path.Combine(directory, "A.smile"), "MODULE A\nEND MODULE\n");
+        File.WriteAllText(Path.Combine(directory, "B.smile"), "MODULE B\nEND MODULE\n");
+        File.WriteAllText(Path.Combine(directory, "A.smilelibproj"), "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>A</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"A.smile\" /><SmileProjectReference Include=\"B.smilelibproj\" /></ItemGroup></SmileProject>");
+        File.WriteAllText(Path.Combine(directory, "B.smilelibproj"), "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>B</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"B.smile\" /><SmileProjectReference Include=\"A.smilelibproj\" /></ItemGroup></SmileProject>");
+        ThrowsContains(() => SmileProjectBuildGraph.Load(Path.Combine(directory, "A.smilelibproj")), "A.smilelibproj -> B.smilelibproj -> A.smilelibproj");
+    }
+    finally { Directory.Delete(directory, true); }
+});
+Run("Private is the module default and modules cannot capture consumer globals", () =>
+{
+    var privateAnalysis = Multi(
+        ("Program.smile", true, "IMPORT Example.Values AS Values\nPRINT Values.Hidden\n"),
+        ("Values.smile", false, "MODULE Example.Values\nCONST Hidden = 1\nEND MODULE\n"));
+    Equal(true, HasDiagnostic(privateAnalysis, "SML3105"));
+    var captureAnalysis = Multi(
+        ("Program.smile", true, "IMPORT Example.Values AS Values\nScore = 10\nPRINT Values.ReadScore()\n"),
+        ("Values.smile", false, "MODULE Example.Values\nPUBLIC FUNCTION ReadScore()\nRETURN Score\nEND FUNCTION\nEND MODULE\n"));
+    Equal(true, HasDiagnostic(captureAnalysis, "SML3110"));
+});
+Run("Duplicate module providers are rejected independently of source names", () =>
+{
+    var analysis = SmileLanguage.Analyze(new[]
+    {
+        new SmileSourceDocument("IMPORT Shared.Tools AS Tools\n", "Program.smile", true),
+        new SmileSourceDocument("MODULE Shared.Tools\nPUBLIC CONST First = 1\nEND MODULE\n", "First.smile", providerIdentity: "First.smilelib"),
+        new SmileSourceDocument("MODULE Shared.Tools\nPUBLIC CONST Second = 2\nEND MODULE\n", "Second.smile", providerIdentity: "Second.smilelib")
+    });
+    Equal(true, HasDiagnostic(analysis, "SML3107"));
+});
+Run("Malformed and unsafe packages are rejected before extraction", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileUnsafePackageTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var malformed = Path.Combine(directory, "Malformed.smilelib");
+        File.WriteAllText(malformed, "not a zip");
+        ThrowsContains(() => SmileLibraryPackage.ReadIdentity(malformed), "Central Directory");
+        var unsafePackage = Path.Combine(directory, "Unsafe.smilelib");
+        using (var archive = System.IO.Compression.ZipFile.Open(unsafePackage, System.IO.Compression.ZipArchiveMode.Create))
+        {
+            using var writer = new StreamWriter(archive.CreateEntry("src/../escape.smile").Open());
+            writer.Write("MODULE Escape\nEND MODULE\n");
+        }
+        ThrowsContains(() => SmileLibraryPackage.Read(unsafePackage, Path.Combine(directory, "cache")), "Unsafe SMILE library archive path");
+    }
+    finally { Directory.Delete(directory, true); }
+});
+Run("Project-reference debug sites retain the real library source path", () =>
+{
+    var projectPath = Path.GetFullPath("examples/LibraryConsumer/LibraryConsumer.smileproj");
+    var compilation = SmileProjectCompilation.Load(projectPath);
+    var analysis = SmileLanguage.Analyze(compilation.Sources, compilation.CompilationKind);
+    Equal(false, analysis.HasErrors);
+    var emitter = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, true);
+    _ = emitter.Emit();
+    Equal(true, emitter.DebugSites.Any(site => Path.GetFileName(site.Source.FilePath) == "Clamp.smile"));
+});
+Run("Identical member names in different modules receive distinct emitter identities", () =>
+{
+    var analysis = Multi(
+        ("Program.smile", true, "IMPORT Example.Alpha AS Alpha\nIMPORT Example.Beta AS Beta\nPRINT Alpha.Value()\nPRINT Beta.Value()\n"),
+        ("Alpha.smile", false, "MODULE Example.Alpha\nPUBLIC FUNCTION Value()\nRETURN 1\nEND FUNCTION\nEND MODULE\n"),
+        ("Beta.smile", false, "MODULE Example.Beta\nPUBLIC FUNCTION Value()\nRETURN 2\nEND FUNCTION\nEND MODULE\n"));
+    Equal(false, analysis.HasErrors);
+    var assembly = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
+    Equal(2, analysis.SemanticModel.Routines.Values.Count(routine => routine.Name == "Value"));
+    Equal(true, assembly.Contains("call smile_", StringComparison.Ordinal));
+    Equal(true, new WebEmitter(analysis).Emit().Split(new[] { "async function r_" }, StringSplitOptions.None).Length >= 3);
 });
 
 if (failures.Count != 0)

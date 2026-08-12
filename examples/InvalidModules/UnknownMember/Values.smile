@@ -1,0 +1,3 @@
+MODULE Example.Values
+PUBLIC CONST Known = 1
+END MODULE

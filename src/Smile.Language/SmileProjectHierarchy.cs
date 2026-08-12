@@ -9,7 +9,9 @@ public enum SmileProjectHierarchyItemKind
 {
     Source,
     Folder,
-    Asset
+    Asset,
+    References,
+    Reference
 }
 
 public sealed class SmileProjectHierarchyItem
@@ -22,9 +24,11 @@ public sealed class SmileProjectHierarchyItem
         ParentPath = parentPath == null ? null : Path.GetFullPath(parentPath);
         Kind = kind;
         Key = kind + "|" + FullPath;
-        Exists = kind == SmileProjectHierarchyItemKind.Folder
+        Exists = kind == SmileProjectHierarchyItemKind.References || kind == SmileProjectHierarchyItemKind.Folder
             ? Directory.Exists(FullPath)
             : File.Exists(FullPath);
+        if (kind == SmileProjectHierarchyItemKind.References)
+            Exists = true;
     }
 
     public string Caption { get; }
@@ -46,6 +50,40 @@ public static class SmileProjectHierarchyProjection
         var result = new List<SmileProjectHierarchyItem>();
         var sourcePaths = new HashSet<string>(
             sourceSet.Items.Select(source => source.FullPath), StringComparer.OrdinalIgnoreCase);
+
+        var referencesPath = sourceSet.ProjectPath + ".references";
+        result.Add(new SmileProjectHierarchyItem("References", referencesPath, null,
+            SmileProjectHierarchyItemKind.References));
+        foreach (var reference in sourceSet.References)
+        {
+            var caption = reference.DisplayName;
+            if (reference.Exists)
+            {
+                try
+                {
+                    if (reference.Kind == SmileProjectReferenceKind.Project)
+                    {
+                        var referenced = SmileProjectSourceSet.Load(reference.FullPath);
+                        caption = referenced.LibraryName + " (" + referenced.Version + ")";
+                    }
+                    else
+                    {
+                        var identity = SmileLibraryPackage.ReadIdentity(reference.FullPath);
+                        caption = identity.Name + " (" + identity.Version + ")";
+                    }
+                }
+                catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException)
+                {
+                    caption += " (invalid)";
+                }
+            }
+            else
+            {
+                caption += " (missing)";
+            }
+            result.Add(new SmileProjectHierarchyItem(caption, reference.FullPath, referencesPath,
+                SmileProjectHierarchyItemKind.Reference));
+        }
 
         foreach (var source in sourceSet.Items.Select((item, index) => new { Item = item, Index = index })
                      .OrderBy(source => source.Item.IsStartup ? 0 : source.Item.StartupOnly ? 1 : 2)

@@ -29,6 +29,7 @@ public enum SyntaxKind
     OpenBracketToken,
     CloseBracketToken,
     SemicolonToken,
+    DotToken,
 
     DimKeyword,
     IfKeyword,
@@ -103,6 +104,11 @@ public enum SyntaxKind
     CountKeyword,
     SaveKeyword,
     DefaultKeyword,
+    ModuleKeyword,
+    ImportKeyword,
+    AsKeyword,
+    PublicKeyword,
+    PrivateKeyword,
     NoneKeyword,
     WKeyword,
     AKeyword,
@@ -229,6 +235,11 @@ public static class SyntaxFacts
         ["COUNT"] = SyntaxKind.CountKeyword,
         ["SAVE"] = SyntaxKind.SaveKeyword,
         ["DEFAULT"] = SyntaxKind.DefaultKeyword,
+        ["MODULE"] = SyntaxKind.ModuleKeyword,
+        ["IMPORT"] = SyntaxKind.ImportKeyword,
+        ["AS"] = SyntaxKind.AsKeyword,
+        ["PUBLIC"] = SyntaxKind.PublicKeyword,
+        ["PRIVATE"] = SyntaxKind.PrivateKeyword,
         ["NONE"] = SyntaxKind.NoneKeyword,
         ["W"] = SyntaxKind.WKeyword,
         ["A"] = SyntaxKind.AKeyword,
@@ -278,7 +289,7 @@ public static class SyntaxFacts
     public static IReadOnlyList<string> GetKeywordTexts() => new List<string>(Keywords.Keys);
 
     public static bool IsKeyword(SyntaxKind kind) =>
-        kind >= SyntaxKind.DimKeyword && kind <= SyntaxKind.DefaultKeyword;
+        kind >= SyntaxKind.DimKeyword && kind <= SyntaxKind.PrivateKeyword;
 
     public static bool IsBuiltInConstant(SyntaxKind kind) =>
         kind >= SyntaxKind.NoneKeyword && kind <= SyntaxKind.LightGrayKeyword || kind == SyntaxKind.DownKeyword;
@@ -324,6 +335,7 @@ public static class SyntaxFacts
             SyntaxKind.OpenBracketToken => "[",
             SyntaxKind.CloseBracketToken => "]",
             SyntaxKind.SemicolonToken => ";",
+            SyntaxKind.DotToken => ".",
             _ when IsKeyword(kind) || IsBuiltInConstant(kind) => kind.ToString().Replace("Keyword", string.Empty).ToUpperInvariant(),
             _ => kind.ToString()
         };
@@ -399,19 +411,22 @@ public static class SyntaxFacts
 
 public sealed class SyntaxToken
 {
-    public SyntaxToken(SyntaxKind kind, int position, string text, object? value = null)
+    private readonly int _spanLength;
+
+    public SyntaxToken(SyntaxKind kind, int position, string text, object? value = null, int? spanLength = null)
     {
         Kind = kind;
         Position = position;
         Text = text;
         Value = value;
+        _spanLength = spanLength ?? text.Length;
     }
 
     public SyntaxKind Kind { get; }
     public int Position { get; }
     public string Text { get; }
     public object? Value { get; }
-    public TextSpan Span => new(Position, Text.Length);
+    public TextSpan Span => new(Position, _spanLength);
 }
 
 public abstract class SyntaxNode
@@ -439,20 +454,26 @@ public abstract class ExpressionSyntax : SyntaxNode { }
 
 public sealed class AssignmentTargetSyntax : SyntaxNode
 {
-    public AssignmentTargetSyntax(SyntaxToken identifier, SyntaxToken? openBracket, IReadOnlyList<ExpressionSyntax> indices, SyntaxToken? closeBracket)
+    public AssignmentTargetSyntax(SyntaxToken identifier, SyntaxToken? openBracket, IReadOnlyList<ExpressionSyntax> indices, SyntaxToken? closeBracket,
+        SyntaxToken? qualifier = null, SyntaxToken? dotToken = null)
     {
         Identifier = identifier;
         OpenBracket = openBracket;
         Indices = indices;
         CloseBracket = closeBracket;
+        Qualifier = qualifier;
+        DotToken = dotToken;
     }
 
+    public SyntaxToken? Qualifier { get; }
+    public SyntaxToken? DotToken { get; }
     public SyntaxToken Identifier { get; }
     public SyntaxToken? OpenBracket { get; }
     public IReadOnlyList<ExpressionSyntax> Indices { get; }
     public SyntaxToken? CloseBracket { get; }
     public bool IsArrayElement => Indices.Count != 0;
-    public override TextSpan Span => TextSpan.FromBounds(Identifier.Span.Start, CloseBracket?.Span.End ?? Identifier.Span.End);
+    public bool IsQualified => Qualifier != null;
+    public override TextSpan Span => TextSpan.FromBounds(Qualifier?.Span.Start ?? Identifier.Span.Start, CloseBracket?.Span.End ?? Identifier.Span.End);
 }
 
 public sealed class AssignmentStatementSyntax : StatementSyntax

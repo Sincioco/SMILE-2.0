@@ -1,6 +1,6 @@
 # SMILE 2.0
 
-SMILE 2.0 is a small, structured BASIC-style language with a complete native Windows x64 target and a browser target. It includes true multi-file compilation, a MASM-based native compiler, a Win32 game runtime, Canvas 2D Web publication, Visual Studio 2026 language and project support, console examples, and ten complete games written in SMILE. Windows x64 remains the default target, and every included SMILE project exposes both native and Web publication.
+SMILE 2.0 is a small, structured BASIC-style language with a complete native Windows x64 target and a browser target. It includes modules, reusable target-neutral libraries, true multi-file compilation, a MASM-based native compiler, a Win32 game runtime, Canvas 2D Web publication, Visual Studio 2026 language and project support, console examples, and ten complete games written in SMILE. Windows x64 remains the default target, and every included application project exposes both native and Web publication.
 
 The repository has one language authority: `src\Smile.Language`. The command-line compiler and Visual Studio extension use the same lexer, parser, syntax model, diagnostics, symbols, types, and semantic model. Game rules remain in `.smile` source; the C runtime provides only generic Windows graphics, input, sound, timing, and storage services.
 
@@ -79,6 +79,16 @@ artifacts\compiler\smilec.exe examples\Hello.smile
 artifacts\compiler\smilec.exe examples\GraphicsBasics.smile -o artifacts\games\GraphicsBasics.exe
 artifacts\compiler\smilec.exe games\Snake\Program.smile -o artifacts\games\Snake\Snake.exe
 ```
+
+Build and consume a reusable library project:
+
+```bat
+artifacts\compiler\smilec.exe --project libraries\Smile.Math.Extras\Smile.Math.Extras.smilelibproj --target library --configuration Release
+artifacts\compiler\smilec.exe --project examples\LibraryConsumer\LibraryConsumer.smileproj --target windows-x64 -o artifacts\games\LibraryConsumer.exe
+artifacts\compiler\smilec.exe --project examples\LibraryConsumer\LibraryConsumer.smileproj --target web --output-dir artifacts\web\LibraryConsumer
+```
+
+Loose-file builds can add a built package with repeated `--library <path.smilelib>`. Project builds read `<SmileProjectReference>` and `<SmileLibraryReference>` items, build project dependencies in deterministic order, reject cycles, and keep unchanged referenced packages up to date.
 
 Add each declaration-only support file with a repeatable `--source` option. The files are parsed independently and share one case-insensitive semantic model; only the startup file may contain executable top-level statements, `GAME WINDOW`, or `END PROGRAM`:
 
@@ -160,7 +170,7 @@ scripts\install-vsix.cmd
 
 The script targets Visual Studio Enterprise, rebuilds the VSIX, uninstalls the existing `Smile.VisualStudio.2.0` extension when present, and force-installs the newly built package. Visual Studio may close during the refresh, so save open work before running it. Detailed installer logs are written under `artifacts\temp`.
 
-After Visual Studio restarts, use **File > New > Project** and search for `SMILE`. Two templates are installed:
+After Visual Studio restarts, use **File > New > Project** and search for `SMILE`. Three templates are installed: console, game, and **SMILE 2.0 Library**.
 
 - **SMILE 2.0 Console Application**
 - **SMILE 2.0 Game Application**
@@ -172,7 +182,7 @@ Both create a `.smileproj` with `Debug` and `Release` configurations. A game pro
 
 With `Web` selected, **Build > Build Solution** is the publish operation. `F5` or `Ctrl+F5` saves every open participating source, republishes the selected startup/support source set and assets, starts/reuses the VSIX's loopback-only static server, and opens a cache-busted `http://127.0.0.1:<port>/?game=<output-name>&v=<cache-token>` URL in the default browser. Switch back to `Windows 64-bit .exe` for native launch and source-level debugging, including breakpoints in support-file routines. Project-aware completion includes compilation-wide globals and routines, while diagnostics and squiggles remain attached to their owning physical files. Compiler failures appear in both the SMILE Output pane and Error List with the same diagnostic code, message, file, line, and column used by the editor and command-line compiler.
 
-Solution Explorer supplies the routine project workflow directly. Right-click the project to **Build**, **Rebuild**, **Clean**, add a new or existing `.smile` support source, or open the project folder. Right-click a SMILE source to set it as startup, change an unselected `StartupOnly` file into an ordinary support source, remove it from the project without deleting the physical file, or open its containing folder. Asset folders expose only practical folder commands and do not advertise source actions. Project mutations refresh the hierarchy, shared editor workspace, and next native or Web F5 immediately.
+Solution Explorer supplies the routine project workflow directly. Every project has a References node. Right-click the project to **Build**, **Rebuild**, **Clean**, add a source, add a `.smilelibproj` or `.smilelib` reference, or open the project folder; remove a reference from its own context menu without deleting its target. Library projects build `.smilelib` packages and are intentionally non-runnable. Reference and source mutations refresh the hierarchy and shared editor workspace immediately. `IMPORT` completion offers modules, and `Alias.` completion exposes public members only.
 
 The editor keeps snapshots for every open SMILE buffer in a project. An unsaved declaration change in one file therefore refreshes completion and diagnostics in the other open files after the normal short debounce. Opening an unselected `StartupOnly` program analyzes it as the hypothetical startup with the ordinary support files and excludes the currently selected complete program.
 
@@ -207,10 +217,10 @@ Arc outlines use `DRAW ARC CenterX, CenterY, Radius, StartAngle, SweepAngle, Col
 - Web NUMBER values use JavaScript safe integers. Unsafe literals fail Web compilation, and unsafe runtime arithmetic stops with a visible error rather than silently losing precision.
 - Web uses Canvas 2D, browser keyboard/audio APIs, `fetch` for declared text/map assets, and `localStorage`. Browser autoplay policy may defer WAV or MP3 playback until the first key or click without stopping the program.
 - Browser `.smile` breakpoints are not yet supported. Windows x64 `.smile` breakpoints, IntelliSense, normal file opening, and native F5 remain supported.
-- Numeric storage is signed 64-bit integer only; there is no floating-point type, user-defined type, dynamic collection, module system, or package manager.
+- Numeric storage is signed 64-bit integer only; there is no floating-point type, user-defined `TYPE`, dynamic collection, or general mutable `TEXT`.
 - Arrays are fixed at compile time and support at most two dimensions.
 - Routines accept at most four scalar parameters. Text is currently used as a literal-oriented console/graphics/audio surface rather than a general mutable string type.
-- The Visual Studio project system intentionally remains a focused `.smileproj` system rather than an MSBuild SDK or general-purpose project system. It supports one selected startup program, ordinary support sources, alternate `StartupOnly` programs, declared assets, native/Web configurations, and the corresponding Solution Explorer mutations.
+- The Visual Studio project system intentionally remains focused rather than becoming an MSBuild SDK. Application `.smileproj` and library `.smilelibproj` files share one project model, including sources and project/package references.
 - `PLAY SOUND` supports one asynchronous WAV effect at a time. `PLAY MUSIC` supports one MP3 background track through `Windows.Media.Playback.MediaPlayer`; there are no playlists, seeking, or multiple music channels.
 - Windows editions without the required optional media components may decline MP3 playback, but the game continues without crashing.
 - Music-bearing native executables require the current Microsoft Visual C++ Redistributable; non-music output does not acquire that additional dependency.

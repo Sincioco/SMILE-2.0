@@ -22,6 +22,60 @@ if not "%SMILE_HELLO%"=="Hello World" (
 )
 echo Hello smoke test passed.
 
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\libraries\Smile.Math.Extras\Smile.Math.Extras.smilelibproj" --target library --configuration Release -o "%SMILE_ROOT%\artifacts\libraries\Smile.Math.Extras.smilelib"
+if errorlevel 1 exit /b %errorlevel%
+copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.Math.Extras.smilelib" "%SMILE_ROOT%\artifacts\temp\Smile.Math.Extras.first.smilelib" >nul
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\libraries\Smile.Math.Extras\Smile.Math.Extras.smilelibproj" --target library --configuration Release -o "%SMILE_ROOT%\artifacts\libraries\Smile.Math.Extras.smilelib"
+if errorlevel 1 exit /b %errorlevel%
+fc /b "%SMILE_ROOT%\artifacts\temp\Smile.Math.Extras.first.smilelib" "%SMILE_ROOT%\artifacts\libraries\Smile.Math.Extras.smilelib" >nul
+if errorlevel 1 (
+    echo SMILE library deterministic package test failed.
+    exit /b 1
+)
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\LibraryConsumer\LibraryConsumer.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\LibraryConsumer.exe" --debug
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\games\LibraryConsumer.exe" > "%SMILE_ROOT%\artifacts\temp\LibraryConsumer.out"
+if errorlevel 1 exit /b %errorlevel%
+for %%V in ("100" "TRUE" "1") do (
+    findstr /x /c:%%V "%SMILE_ROOT%\artifacts\temp\LibraryConsumer.out" >nul
+    if errorlevel 1 exit /b 1
+)
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\LibraryConsumer\LibraryConsumer.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\LibraryConsumer"
+if errorlevel 1 exit /b %errorlevel%
+node --check "%SMILE_ROOT%\artifacts\web\LibraryConsumer\game.js"
+if errorlevel 1 exit /b %errorlevel%
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\LibraryConsumer\Program.smile" --library "%SMILE_ROOT%\artifacts\libraries\Smile.Math.Extras.smilelib" -o "%SMILE_ROOT%\artifacts\games\LibraryPackageConsumer.exe"
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\LocalModuleBasics\LocalModuleBasics.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\LocalModuleBasics.exe"
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\games\LocalModuleBasics.exe" | findstr /x /c:"42" >nul
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\LocalModuleBasics\LocalModuleBasics.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\LocalModuleBasics"
+if errorlevel 1 exit /b %errorlevel%
+node --check "%SMILE_ROOT%\artifacts\web\LocalModuleBasics\game.js"
+if errorlevel 1 exit /b %errorlevel%
+echo Phase 2 library project, package reference, local module, native, Web, and deterministic package tests passed.
+
+for %%F in (MissingModule UnknownMember PrivateMemberAccess DuplicateAlias ModuleImportCycle) do (
+    "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\InvalidModules\%%F\%%F.smileproj" -o "%SMILE_ROOT%\artifacts\temp\%%F.exe" > "%SMILE_ROOT%\artifacts\temp\%%F.log" 2>&1
+    if not errorlevel 1 (
+        echo Invalid module fixture %%F unexpectedly succeeded.
+        exit /b 1
+    )
+    if errorlevel 2 (
+        echo Invalid module fixture %%F returned an infrastructure error.
+        exit /b 1
+    )
+)
+findstr /c:"SML3102" "%SMILE_ROOT%\artifacts\temp\MissingModule.log" >nul || exit /b 1
+findstr /c:"SML3103" "%SMILE_ROOT%\artifacts\temp\UnknownMember.log" >nul || exit /b 1
+findstr /c:"SML3105" "%SMILE_ROOT%\artifacts\temp\PrivateMemberAccess.log" >nul || exit /b 1
+findstr /c:"SML3106" "%SMILE_ROOT%\artifacts\temp\DuplicateAlias.log" >nul || exit /b 1
+findstr /c:"SML3108" "%SMILE_ROOT%\artifacts\temp\ModuleImportCycle.log" >nul || exit /b 1
+echo Phase 2 invalid module diagnostics passed.
+
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\LanguageBasics.smile" -o "%SMILE_ROOT%\artifacts\games\LanguageBasics.exe"
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\games\LanguageBasics.exe"

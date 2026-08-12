@@ -14,6 +14,7 @@ internal enum SmileProjectRefreshReason
     SourceRemovedByCommand,
     StartupChanged,
     SupportStateChanged,
+    ReferenceChanged,
     ProjectFileChangedExternally,
     IncludedSourceChanged,
     IncludedSourceCreated,

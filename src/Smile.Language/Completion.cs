@@ -12,7 +12,8 @@ public enum SmileCompletionKind
     Variable,
     Array,
     Subroutine,
-    Function
+    Function,
+    Module
 }
 
 public sealed class SmileCompletion
@@ -50,13 +51,25 @@ public static class SmileCompletionService
         if (syntaxTree == null)
             throw new ArgumentNullException(nameof(syntaxTree));
 
+        var qualifiedAlias = AliasBeforeDot(syntaxTree.Source.Text, position);
+        if (qualifiedAlias != null && analysis.SemanticModel.GetImports(syntaxTree.Source)
+            .TryGetValue(qualifiedAlias, out var importedModule))
+        {
+            return importedModule.PublicMembers.OrderBy(member => member.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(MemberCompletion).ToArray();
+        }
+
         var completions = new Dictionary<string, SmileCompletion>(StringComparer.OrdinalIgnoreCase);
         foreach (var completion in LanguageCompletions)
             completions[completion.DisplayText] = completion;
 
+        var currentModule = analysis.SemanticModel.Modules.Values.FirstOrDefault(module =>
+            module.SyntaxTrees.Any(tree => ReferenceEquals(tree.Source, syntaxTree.Source)));
         foreach (var symbol in analysis.SemanticModel.Symbols.Values)
         {
-            if (!IsDeclarationBeingTyped(symbol, syntaxTree.Source, position))
+            if ((symbol.ModuleName == null || string.Equals(symbol.ModuleName, currentModule?.Name,
+                    StringComparison.OrdinalIgnoreCase)) &&
+                !IsDeclarationBeingTyped(symbol, syntaxTree.Source, position))
                 completions[symbol.Name] = VariableCompletion(symbol);
         }
 
@@ -72,7 +85,9 @@ public static class SmileCompletionService
             }
         }
 
-        foreach (var routine in analysis.SemanticModel.Routines.Values)
+        foreach (var routine in analysis.SemanticModel.Routines.Values.Where(routine =>
+                     routine.ModuleName == null || string.Equals(routine.ModuleName, currentModule?.Name,
+                         StringComparison.OrdinalIgnoreCase)))
         {
             var kind = routine.IsFunction ? SmileCompletionKind.Function : SmileCompletionKind.Subroutine;
             var keyword = routine.IsFunction ? "FUNCTION" : "SUB";
@@ -81,6 +96,19 @@ public static class SmileCompletionService
                 routine.Name,
                 $"{keyword} {routine.Name}({parameters})",
                 kind);
+        }
+
+        foreach (var import in analysis.SemanticModel.GetImports(syntaxTree.Source))
+            completions[import.Key] = new SmileCompletion(import.Key,
+                $"Import alias for module {import.Value.Name} from {import.Value.ProviderIdentity}", SmileCompletionKind.Module);
+
+        if (IsAfterImport(syntaxTree.Source.Text, position))
+        {
+            completions.Clear();
+            foreach (var module in analysis.SemanticModel.Modules.Values)
+                completions[module.Name] = new SmileCompletion(module.Name,
+                    $"SMILE module from {module.ProviderIdentity}", SmileCompletionKind.Module);
+            completions["AS"] = new SmileCompletion("AS", "Required import alias keyword", SmileCompletionKind.Keyword);
         }
 
         return completions.Values.OrderBy(completion => completion.DisplayText, StringComparer.OrdinalIgnoreCase).ToArray();
@@ -115,10 +143,49 @@ public static class SmileCompletionService
         if (symbol.IsArray)
         {
             var dimensions = string.Join(", ", symbol.ArrayDimensions);
-            return new SmileCompletion(symbol.Name, $"{type} array {symbol.Name}[{dimensions}]", SmileCompletionKind.Array);
+            return new SmileCompletion(symbol.Name, DescribeProvider(symbol, $"{type} array {symbol.Name}[{dimensions}]"), SmileCompletionKind.Array);
         }
         var noun = symbol.IsConstant ? "constant" : "variable";
-        return new SmileCompletion(symbol.Name, $"{type} {noun} {symbol.Name}", SmileCompletionKind.Variable);
+        return new SmileCompletion(symbol.Name, DescribeProvider(symbol, $"{type} {noun} {symbol.Name}"), SmileCompletionKind.Variable);
+    }
+
+    private static SmileCompletion MemberCompletion(SmileModuleMember member)
+    {
+        if (member.Routine != null)
+        {
+            var parameters = string.Join(", ", member.Routine.Parameters.Select(parameter => parameter.Name));
+            var keyword = member.Routine.IsFunction ? "FUNCTION" : "SUB";
+            return new SmileCompletion(member.Name,
+                $"{keyword} {member.Name}({parameters}) from module {member.Routine.ModuleName} ({member.Routine.ProviderIdentity})",
+                member.Routine.IsFunction ? SmileCompletionKind.Function : SmileCompletionKind.Subroutine);
+        }
+        if (member.Variable != null)
+            return VariableCompletion(member.Variable);
+        return new SmileCompletion(member.Name, $"Public module member {member.Name}", SmileCompletionKind.Variable);
+    }
+
+    private static string DescribeProvider(VariableSymbol symbol, string description) => symbol.ModuleName == null
+        ? description
+        : $"{description} from module {symbol.ModuleName} ({symbol.ProviderIdentity})";
+
+    private static string? AliasBeforeDot(string text, int position)
+    {
+        var index = Math.Min(position, text.Length) - 1;
+        while (index >= 0 && char.IsWhiteSpace(text[index])) index--;
+        while (index >= 0 && (char.IsLetterOrDigit(text[index]) || text[index] == '_')) index--;
+        if (index < 0 || text[index] != '.')
+            return null;
+        var end = index--;
+        while (index >= 0 && (char.IsLetterOrDigit(text[index]) || text[index] == '_')) index--;
+        return end == index + 1 ? null : text.Substring(index + 1, end - index - 1);
+    }
+
+    private static bool IsAfterImport(string text, int position)
+    {
+        var start = Math.Min(position, text.Length);
+        while (start > 0 && text[start - 1] is not ('\r' or '\n')) start--;
+        return text.Substring(start, Math.Min(position, text.Length) - start)
+            .TrimStart().StartsWith("IMPORT ", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsDeclarationBeingTyped(VariableSymbol symbol, SourceText source, int position) =>

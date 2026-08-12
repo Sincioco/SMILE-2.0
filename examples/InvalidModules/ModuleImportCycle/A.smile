@@ -1,0 +1,4 @@
+MODULE Example.Alpha
+IMPORT Example.Beta AS Beta
+PUBLIC CONST ValueA = 1
+END MODULE

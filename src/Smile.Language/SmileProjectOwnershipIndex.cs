@@ -59,4 +59,7 @@ public sealed class SmileProjectOwnershipIndex
             ? owners.Values.OrderBy(owner => owner.ProjectPath, StringComparer.OrdinalIgnoreCase).ToArray()
             : Array.Empty<SmileProjectSourceSet>();
     }
+
+    public IReadOnlyList<string> GetRegisteredSourcePaths() =>
+        _sources.Keys.OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray();
 }
