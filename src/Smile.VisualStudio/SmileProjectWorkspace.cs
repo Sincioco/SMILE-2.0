@@ -97,7 +97,9 @@ internal static class SmileProjectWorkspace
         var projectCompilation = loadResult.Compilation!;
         var rootPaths = new HashSet<string>(sourceSet.Items.Select(item => item.FullPath), StringComparer.OrdinalIgnoreCase);
         documents.AddRange(projectCompilation.Sources.Where(source => !rootPaths.Contains(source.FilePath)));
-        return SmileLanguage.Analyze(documents, sourceSet.IsLibrary ? SmileCompilationKind.Library : SmileCompilationKind.Program);
+        return SmileLanguage.Analyze(documents,
+            sourceSet.IsLibrary ? SmileCompilationKind.Library : SmileCompilationKind.Program,
+            projectCompilation.DependencyContext);
     }
 
     public static IDisposable RegisterBuffer(string filePath, string currentText, Action invalidate)

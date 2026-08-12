@@ -12,6 +12,112 @@ public enum SmileCompilationKind
     Library
 }
 
+public enum SmileProviderKind
+{
+    Project,
+    Package,
+    Loose
+}
+
+public sealed class SmileProviderDescriptor
+{
+    internal SmileProviderDescriptor(string identity, SmileProviderKind kind, string name, string version,
+        string path)
+    {
+        Identity = SmileCompilationDependencyContext.Normalize(identity);
+        Kind = kind;
+        Name = name;
+        Version = version;
+        Path = path;
+    }
+
+    public string Identity { get; }
+    public SmileProviderKind Kind { get; }
+    public string Name { get; }
+    public string Version { get; }
+    public string Path { get; }
+
+    internal string Describe() => Kind == SmileProviderKind.Loose
+        ? "loose source root"
+        : string.IsNullOrWhiteSpace(Name)
+            ? $"project '{Path}'"
+            : $"library '{Name}' {Version} at '{Path}'";
+}
+
+public sealed class SmileCompilationDependencyContext
+{
+    private readonly Dictionary<string, SmileProviderDescriptor> _providers =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, HashSet<string>> _directAccess =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly bool _allowAll;
+
+    private SmileCompilationDependencyContext(bool allowAll) => _allowAll = allowAll;
+
+    public static SmileCompilationDependencyContext Unrestricted { get; } = new(allowAll: true);
+
+    public bool CanAccess(string sourceProvider, string targetProvider)
+    {
+        if (_allowAll)
+            return true;
+        var source = Normalize(sourceProvider);
+        var target = Normalize(targetProvider);
+        return string.Equals(source, target, StringComparison.OrdinalIgnoreCase) ||
+               (_directAccess.TryGetValue(source, out var accessible) && accessible.Contains(target));
+    }
+
+    public string DescribeInaccessibleImport(string moduleName, string sourceProvider, string targetProvider)
+    {
+        var source = Descriptor(sourceProvider).Describe();
+        var target = Descriptor(targetProvider).Describe();
+        return $"Module '{moduleName}' is provided by {target}, but {source} does not declare that provider as a direct reference.";
+    }
+
+    internal static SmileCompilationDependencyContext Create() => new(allowAll: false);
+
+    internal void AddProvider(string identity, SmileProviderKind kind, string name, string version, string path)
+    {
+        var normalized = Normalize(identity);
+        _providers[normalized] = new SmileProviderDescriptor(normalized, kind, name, version, path);
+        if (!_directAccess.ContainsKey(normalized))
+            _directAccess.Add(normalized, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+    }
+
+    internal void AddDirectAccess(string sourceProvider, string targetProvider)
+    {
+        var source = Normalize(sourceProvider);
+        if (!_directAccess.TryGetValue(source, out var accessible))
+        {
+            accessible = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            _directAccess.Add(source, accessible);
+        }
+        accessible.Add(Normalize(targetProvider));
+    }
+
+    internal SmileCompilationDependencyContext Copy()
+    {
+        var copy = Create();
+        foreach (var provider in _providers.Values)
+            copy.AddProvider(provider.Identity, provider.Kind, provider.Name, provider.Version, provider.Path);
+        foreach (var edge in _directAccess)
+            foreach (var target in edge.Value)
+                copy.AddDirectAccess(edge.Key, target);
+        return copy;
+    }
+
+    internal static string Normalize(string? providerIdentity) =>
+        string.IsNullOrWhiteSpace(providerIdentity) ? "<local>" : providerIdentity!;
+
+    private SmileProviderDescriptor Descriptor(string identity)
+    {
+        var normalized = Normalize(identity);
+        if (_providers.TryGetValue(normalized, out var provider))
+            return provider;
+        return new SmileProviderDescriptor(normalized, SmileProviderKind.Project, string.Empty, string.Empty,
+            normalized);
+    }
+}
+
 public enum SmileModuleMemberKind
 {
     Constant,
@@ -118,16 +224,19 @@ internal sealed class ModuleProcessor
 {
     private readonly IReadOnlyList<SyntaxTree> _trees;
     private readonly SmileCompilationKind _kind;
+    private readonly SmileCompilationDependencyContext _dependencyContext;
     private readonly DiagnosticBag _diagnostics = new();
     private readonly Dictionary<string, ModuleSymbol> _modules = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<SourceText, ModuleSymbol> _moduleBySource = new();
     private readonly Dictionary<SourceText, Dictionary<string, ModuleSymbol>> _imports = new();
     private readonly Dictionary<SourceText, List<ImportStatementSyntax>> _importSyntax = new();
 
-    public ModuleProcessor(IReadOnlyList<SyntaxTree> trees, SmileCompilationKind kind)
+    public ModuleProcessor(IReadOnlyList<SyntaxTree> trees, SmileCompilationKind kind,
+        SmileCompilationDependencyContext dependencyContext)
     {
         _trees = trees;
         _kind = kind;
+        _dependencyContext = dependencyContext;
     }
 
     public ModuleProcessingResult Process()
@@ -291,6 +400,13 @@ internal sealed class ModuleProcessor
                 {
                     Report(tree.Source, "SML3102", import.ModuleName.Span,
                         $"Imported module '{import.ModuleName.Name}' was not found.");
+                    continue;
+                }
+                if (!_dependencyContext.CanAccess(tree.ProviderIdentity, imported.ProviderIdentity))
+                {
+                    Report(tree.Source, "SML3208", import.ModuleName.Span,
+                        _dependencyContext.DescribeInaccessibleImport(import.ModuleName.Name,
+                            tree.ProviderIdentity, imported.ProviderIdentity));
                     continue;
                 }
                 if (_moduleBySource.TryGetValue(tree.Source, out var current) &&

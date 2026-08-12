@@ -196,6 +196,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         pane ??= SmileBuildService.GetOutputPane();
         pane.Clear();
         pane.Activate();
+        SmileBuildService.ReportDiagnostics(string.Empty);
 
         SmileProjectBuildGraph graph;
         try
@@ -207,7 +208,9 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         catch (Exception exception) when (SmileProjectDiagnostic.TryCreate(exception, ProjectPath, out _))
         {
             SmileProjectDiagnostic.TryCreate(exception, ProjectPath, out var diagnostic);
-            pane.OutputStringThreadSafe($"{diagnostic.Code}: {diagnostic.Message}\r\n");
+            var output = diagnostic.FormatCompiler();
+            pane.OutputStringThreadSafe(output + "\r\n");
+            SmileBuildService.ReportDiagnostics(output);
             return false;
         }
 

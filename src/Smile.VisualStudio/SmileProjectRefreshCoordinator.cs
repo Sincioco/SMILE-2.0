@@ -39,6 +39,7 @@ internal sealed class SmileProjectRefreshCoordinator : IDisposable
     private readonly CancellationTokenSource _cancellation = new();
     private HashSet<string> _includedSources = new(StringComparer.OrdinalIgnoreCase);
     private HashSet<string> _referencePaths = new(StringComparer.OrdinalIgnoreCase);
+    private HashSet<string> _lastKnownParticipatingPaths = new(StringComparer.OrdinalIgnoreCase);
     private List<FileSystemWatcher> _additionalWatchers = new();
     private SmileProjectRefreshReason _pendingReason;
     private int _readRetries;
@@ -115,13 +116,15 @@ internal sealed class SmileProjectRefreshCoordinator : IDisposable
 
         lock (_gate)
         {
-            if (_disposed || (!_includedSources.Contains(path) && !_referencePaths.Contains(path)))
+            if (_disposed)
                 return;
-            if (_referencePaths.Contains(path))
+            if (IsReferencePathOrAncestor(path))
             {
                 Queue(SmileProjectRefreshReason.ReferenceChanged);
                 return;
             }
+            if (!_includedSources.Contains(path))
+                return;
         }
 
         Queue(e.ChangeType switch
@@ -147,8 +150,8 @@ internal sealed class SmileProjectRefreshCoordinator : IDisposable
         {
             if (_disposed)
                 return;
-            var referenceChanged = (oldPath != null && _referencePaths.Contains(oldPath)) ||
-                                   (newPath != null && _referencePaths.Contains(newPath));
+            var referenceChanged = (oldPath != null && IsReferencePathOrAncestor(oldPath)) ||
+                                   (newPath != null && IsReferencePathOrAncestor(newPath));
             if (referenceChanged)
             {
                 Queue(SmileProjectRefreshReason.ReferenceChanged);
@@ -225,22 +228,18 @@ internal sealed class SmileProjectRefreshCoordinator : IDisposable
         var sources = new HashSet<string>(
             _project.SourceSet.Items.Select(source => Path.GetFullPath(source.FullPath)),
             StringComparer.OrdinalIgnoreCase);
-        var references = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        try
-        {
-            var graph = SmileProjectBuildGraph.Load(_project.ProjectPath);
-            references.UnionWith(graph.ParticipatingPaths.Where(path =>
-                !string.Equals(path, _project.ProjectPath, StringComparison.OrdinalIgnoreCase) &&
-                !sources.Contains(path)));
-        }
-        catch (Exception exception) when (SmileProjectDiagnostic.TryCreate(exception, _project.ProjectPath, out _))
-        {
-            references.UnionWith(_project.SourceSet.References.Select(reference => reference.FullPath));
-        }
+        var discovery = SmileProjectParticipationDiscovery.Discover(_project.ProjectPath);
+        var references = new HashSet<string>(discovery.Paths.Where(path =>
+            !string.Equals(path, _project.ProjectPath, StringComparison.OrdinalIgnoreCase) &&
+            !sources.Contains(path)), StringComparer.OrdinalIgnoreCase);
+        if (discovery.Diagnostic == null)
+            _lastKnownParticipatingPaths = new HashSet<string>(references, StringComparer.OrdinalIgnoreCase);
+        else
+            references.UnionWith(_lastKnownParticipatingPaths);
 
         var watchedPaths = sources.Concat(references).ToArray();
         var projectDirectory = Path.GetFullPath(_project.ProjectDirectory);
-        var additionalDirectories = watchedPaths.Select(Path.GetDirectoryName)
+        var additionalDirectories = watchedPaths.Select(FindExistingDirectory)
             .Where(directory => !string.IsNullOrWhiteSpace(directory))
             .Select(directory => Path.GetFullPath(directory!))
             .Where(directory => !string.Equals(directory, projectDirectory, StringComparison.OrdinalIgnoreCase) &&
@@ -284,6 +283,24 @@ internal sealed class SmileProjectRefreshCoordinator : IDisposable
         watcher.Renamed += OnRenamed;
         watcher.Error += OnWatcherError;
         return watcher;
+    }
+
+    private bool IsReferencePathOrAncestor(string path)
+    {
+        if (_referencePaths.Contains(path))
+            return true;
+        var prefix = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
+                     Path.DirectorySeparatorChar;
+        return _referencePaths.Any(reference => reference.StartsWith(prefix,
+            StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string? FindExistingDirectory(string path)
+    {
+        var directory = Path.GetDirectoryName(path);
+        while (!string.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
+            directory = Path.GetDirectoryName(directory);
+        return directory;
     }
 
     private void DisposeWatcher(FileSystemWatcher watcher)
@@ -345,6 +362,7 @@ internal sealed class SmileProjectRefreshCoordinator : IDisposable
             _disposed = true;
             _includedSources.Clear();
             _referencePaths.Clear();
+            _lastKnownParticipatingPaths.Clear();
             additionalWatchers = _additionalWatchers;
             _additionalWatchers = new List<FileSystemWatcher>();
         }

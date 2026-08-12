@@ -904,11 +904,13 @@ Run("Dependent packages load with an explicitly supplied base package", () =>
             "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Dependent</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Dependent.smile\" /><SmileProjectReference Include=\"..\\Base\\Base.smilelibproj\" /></ItemGroup></SmileProject>");
 
         var baseCompilation = SmileProjectCompilation.Load(baseProjectPath);
-        var baseAnalysis = SmileLanguage.Analyze(baseCompilation.Sources, SmileCompilationKind.Library);
+        var baseAnalysis = SmileLanguage.Analyze(baseCompilation.Sources, SmileCompilationKind.Library,
+            baseCompilation.DependencyContext);
         var basePackagePath = Path.Combine(baseDirectory, "Base.smilelib");
         SmileLibraryPackage.Write(basePackagePath, baseCompilation.Graph.Root, baseAnalysis);
         var dependentCompilation = SmileProjectCompilation.Load(dependentProjectPath);
-        var dependentAnalysis = SmileLanguage.Analyze(dependentCompilation.Sources, SmileCompilationKind.Library);
+        var dependentAnalysis = SmileLanguage.Analyze(dependentCompilation.Sources, SmileCompilationKind.Library,
+            dependentCompilation.DependencyContext);
         var dependentPackagePath = Path.Combine(dependentDirectory, "Dependent.smilelib");
         SmileLibraryPackage.Write(dependentPackagePath, dependentCompilation.Graph.Root, dependentAnalysis);
 
@@ -919,18 +921,41 @@ Run("Dependent packages load with an explicitly supplied base package", () =>
             "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" /><SmileLibraryReference Include=\"..\\Base\\Base.smilelib\" /><SmileLibraryReference Include=\"..\\Dependent\\Dependent.smilelib\" /></ItemGroup></SmileProject>");
 
         var consumerCompilation = SmileProjectCompilation.Load(consumerProjectPath, Path.Combine(directory, "cache"));
-        var consumerAnalysis = SmileLanguage.Analyze(consumerCompilation.Sources, SmileCompilationKind.Program);
+        var consumerAnalysis = SmileLanguage.Analyze(consumerCompilation.Sources, SmileCompilationKind.Program,
+            consumerCompilation.DependencyContext);
         Equal(false, consumerAnalysis.HasErrors);
+        Equal(true, new WebEmitter(consumerAnalysis).Emit().Contains("async function r_", StringComparison.Ordinal));
+        Equal(true, new MasmEmitter(consumerAnalysis, SmileGraphicsBackend.Auto, true, false).Emit()
+            .Contains("call smile_", StringComparison.Ordinal));
 
         var completionSources = consumerCompilation.Sources.Select(source => source.IsStartup
             ? new SmileSourceDocument("IMPORT Example.Dependent AS Dependent\nPRINT Dependent.",
                 source.FilePath, true, providerIdentity: source.ProviderIdentity)
             : source).ToArray();
-        var completionAnalysis = SmileLanguage.Analyze(completionSources, SmileCompilationKind.Program);
+        var completionAnalysis = SmileLanguage.Analyze(completionSources, SmileCompilationKind.Program,
+            consumerCompilation.DependencyContext);
         var completions = SmileCompletionService.GetCompletions(completionAnalysis,
             completionSources.Single(source => source.IsStartup).Text.Length);
         Equal(true, completions.Any(item => item.DisplayText == "Quadruple"));
         Equal(false, completions.Any(item => item.DisplayText == "Hidden"));
+
+        var undeclaredPackage = Path.Combine(dependentDirectory, "Undeclared.smilelib");
+        File.Copy(dependentPackagePath, undeclaredPackage);
+        RewriteManifest(undeclaredPackage, manifest => manifest.Replace(
+            "    {\"name\": \"Example.Base\", \"version\": \"1.0.0\"}", string.Empty,
+            StringComparison.Ordinal));
+        var undeclared = ThrowsProjectDiagnostic(() => SmileLibraryProviderResolver.LoadPackages(
+            new[] { basePackagePath, undeclaredPackage }, Path.Combine(directory, "undeclared-cache")), "SML3207");
+        Equal(true, undeclared.Message.Contains("SML3208", StringComparison.Ordinal));
+        Equal(true, undeclared.Message.Contains("Example.Base", StringComparison.Ordinal));
+
+        var looseResolution = CompilerDriver.LoadLooseLibraryResolution(
+            Path.Combine(consumerDirectory, "Program.smile"), new[] { dependentPackagePath, basePackagePath });
+        var looseRoot = new SmileSourceDocument(
+            "IMPORT Example.Base AS Base\nPRINT Base.Double(2)\nEND PROGRAM\n",
+            Path.Combine(consumerDirectory, "Loose.smile"), true);
+        Equal(false, SmileLanguage.Analyze(new[] { looseRoot }.Concat(looseResolution.Sources).ToArray(),
+            SmileCompilationKind.Program, looseResolution.CreateLooseRootContext()).HasErrors);
 
         using (var archive = System.IO.Compression.ZipFile.OpenRead(dependentPackagePath))
         {
@@ -1057,6 +1082,263 @@ Run("Dependent packages load with an explicitly supplied base package", () =>
             new[] { cyclicBasePackage, dependentPackagePath }, Path.Combine(directory, "cycle-cache")), "SML3205");
         Equal(true, cycle.Message.Contains("Example.Base", StringComparison.Ordinal));
         Equal(true, cycle.Message.Contains("Example.Dependent", StringComparison.Ordinal));
+    }
+    finally { Directory.Delete(directory, true); }
+});
+Run("Direct provider boundaries reject ambient and transitive project imports", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileBoundaryTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var baseDirectory = Path.Combine(directory, "Base");
+        var dependentDirectory = Path.Combine(directory, "Dependent");
+        var appDirectory = Path.Combine(directory, "App");
+        Directory.CreateDirectory(baseDirectory);
+        Directory.CreateDirectory(dependentDirectory);
+        Directory.CreateDirectory(appDirectory);
+        var baseProject = Path.Combine(baseDirectory, "Base.smilelibproj");
+        var dependentProject = Path.Combine(dependentDirectory, "Dependent.smilelibproj");
+        var dependentSource = Path.Combine(dependentDirectory, "Dependent.smile");
+        var appProject = Path.Combine(appDirectory, "App.smileproj");
+        var programSource = Path.Combine(appDirectory, "Program.smile");
+        File.WriteAllText(Path.Combine(baseDirectory, "Base.smile"),
+            "MODULE Example.Base\nPUBLIC FUNCTION Double(Value)\nRETURN Value * 2\nEND FUNCTION\nEND MODULE\n");
+        File.WriteAllText(baseProject,
+            "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Base</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Base.smile\" /></ItemGroup></SmileProject>");
+        File.WriteAllText(dependentSource,
+            "MODULE Example.Dependent\nIMPORT Example.Base AS Base\nPUBLIC FUNCTION Quadruple(Value)\nRETURN Base.Double(Base.Double(Value))\nEND FUNCTION\nEND MODULE\n");
+        var dependentWithoutReference =
+            "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Dependent</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Dependent.smile\" /></ItemGroup></SmileProject>";
+        var dependentWithReference = dependentWithoutReference.Replace("</ItemGroup>",
+            "<SmileProjectReference Include=\"..\\Base\\Base.smilelibproj\" /></ItemGroup>", StringComparison.Ordinal);
+        File.WriteAllText(dependentProject, dependentWithoutReference);
+        File.WriteAllText(programSource,
+            "IMPORT Example.Dependent AS Dependent\nPRINT Dependent.Quadruple(3)\nEND PROGRAM\n");
+        File.WriteAllText(appProject,
+            "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" /><SmileProjectReference Include=\"..\\Base\\Base.smilelibproj\" /><SmileProjectReference Include=\"..\\Dependent\\Dependent.smilelibproj\" /></ItemGroup></SmileProject>");
+
+        var ambientCompilation = SmileProjectCompilation.Load(appProject);
+        var ambientAnalysis = SmileLanguage.Analyze(ambientCompilation.Sources, SmileCompilationKind.Program,
+            ambientCompilation.DependencyContext);
+        var ambientDiagnostic = ambientAnalysis.Diagnostics.Single(diagnostic => diagnostic.Code == "SML3208");
+        Equal(dependentSource, ambientDiagnostic.FilePath);
+        Equal(2, ambientDiagnostic.Line);
+        Equal(8, ambientDiagnostic.Column);
+        Equal(true, ambientDiagnostic.Message.Contains(dependentProject, StringComparison.OrdinalIgnoreCase));
+        Equal(true, ambientDiagnostic.Message.Contains(baseProject, StringComparison.OrdinalIgnoreCase));
+        var previousError = Console.Error;
+        var boundaryOutput = new StringWriter();
+        try
+        {
+            Console.SetError(boundaryOutput);
+            Equal(1, new CompilerDriver().Run(new[] { "--project", appProject, "--target", "web",
+                "--output-dir", Path.Combine(directory, "invalid-web") }));
+        }
+        finally
+        {
+            Console.SetError(previousError);
+        }
+        Equal(true, boundaryOutput.ToString().Contains(
+            $"{dependentSource}(2,8): error SML3208: {ambientDiagnostic.Message}", StringComparison.Ordinal));
+
+        File.WriteAllText(dependentProject, dependentWithReference);
+        File.WriteAllText(appProject,
+            "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" /><SmileProjectReference Include=\"..\\Dependent\\Dependent.smilelibproj\" /></ItemGroup></SmileProject>");
+        var validCompilation = SmileProjectCompilation.Load(appProject);
+        var validAnalysis = SmileLanguage.Analyze(validCompilation.Sources, SmileCompilationKind.Program,
+            validCompilation.DependencyContext);
+        Equal(false, validAnalysis.HasErrors);
+        Equal(true, new WebEmitter(validAnalysis).Emit().Contains("async function r_", StringComparison.Ordinal));
+        Equal(true, new MasmEmitter(validAnalysis, SmileGraphicsBackend.Auto, true, false).Emit()
+            .Contains("call smile_", StringComparison.Ordinal));
+
+        File.WriteAllText(programSource, "IMPORT Example.Base AS Base\nEND PROGRAM\n");
+        var transitiveCompilation = SmileProjectCompilation.Load(appProject);
+        var transitiveAnalysis = SmileLanguage.Analyze(transitiveCompilation.Sources, SmileCompilationKind.Program,
+            transitiveCompilation.DependencyContext);
+        var transitiveDiagnostic = transitiveAnalysis.Diagnostics.Single(diagnostic => diagnostic.Code == "SML3208");
+        Equal(programSource, transitiveDiagnostic.FilePath);
+        Equal(1, transitiveDiagnostic.Line);
+        Equal(8, transitiveDiagnostic.Column);
+
+        File.WriteAllText(programSource, "IMPORT ");
+        var completionCompilation = SmileProjectCompilation.Load(appProject);
+        var completionAnalysis = SmileLanguage.Analyze(completionCompilation.Sources, SmileCompilationKind.Program,
+            completionCompilation.DependencyContext);
+        var completions = SmileCompletionService.GetCompletions(completionAnalysis, programSource, 7);
+        Equal(true, completions.Any(item => item.DisplayText == "Example.Dependent"));
+        Equal(false, completions.Any(item => item.DisplayText == "Example.Base"));
+
+        File.WriteAllText(appProject,
+            "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" /><SmileProjectReference Include=\"..\\Dependent\\Dependent.smilelibproj\" /><SmileProjectReference Include=\"..\\Base\\Base.smilelibproj\" /></ItemGroup></SmileProject>");
+        var directCompletion = SmileProjectCompilation.Load(appProject);
+        var directCompletionAnalysis = SmileLanguage.Analyze(directCompletion.Sources, SmileCompilationKind.Program,
+            directCompletion.DependencyContext);
+        Equal(true, SmileCompletionService.GetCompletions(directCompletionAnalysis, programSource, 7)
+            .Any(item => item.DisplayText == "Example.Base"));
+        File.WriteAllText(appProject,
+            "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" /><SmileProjectReference Include=\"..\\Dependent\\Dependent.smilelibproj\" /></ItemGroup></SmileProject>");
+        var removedCompletion = SmileProjectCompilation.Load(appProject);
+        var removedCompletionAnalysis = SmileLanguage.Analyze(removedCompletion.Sources,
+            SmileCompilationKind.Program, removedCompletion.DependencyContext);
+        Equal(false, SmileCompletionService.GetCompletions(removedCompletionAnalysis, programSource, 7)
+            .Any(item => item.DisplayText == "Example.Base"));
+    }
+    finally { Directory.Delete(directory, true); }
+});
+Run("Library output fingerprints reject stale and foreign packages without timestamps", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileFingerprintTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var projectPath = Path.Combine(directory, "Tools.smilelibproj");
+        var sourcePath = Path.Combine(directory, "Tools.smile");
+        var outputPath = Path.Combine(directory, "Tools.smilelib");
+        var projectXml = "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Tools</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Tools.smile\" /></ItemGroup></SmileProject>";
+        File.WriteAllText(sourcePath, "MODULE Example.Tools\nPUBLIC CONST Value = 1\nEND MODULE\n");
+        File.WriteAllText(projectPath, projectXml);
+        var compilation = SmileProjectCompilation.Load(projectPath);
+        var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library,
+            compilation.DependencyContext);
+        SmileLibraryPackage.Write(outputPath, compilation.Graph.Root, analysis);
+        Equal(false, CompilerDriver.NeedsLibraryBuild(compilation.Graph.Root, outputPath, analysis));
+
+        File.WriteAllText(sourcePath, "MODULE Example.Tools\nPUBLIC CONST Value = 2\nEND MODULE\n");
+        File.SetLastWriteTimeUtc(sourcePath, new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        var changedCompilation = SmileProjectCompilation.Load(projectPath);
+        var changedAnalysis = SmileLanguage.Analyze(changedCompilation.Sources, SmileCompilationKind.Library,
+            changedCompilation.DependencyContext);
+        Equal(true, CompilerDriver.NeedsLibraryBuild(changedCompilation.Graph.Root, outputPath, changedAnalysis));
+        SmileLibraryPackage.Write(outputPath, changedCompilation.Graph.Root, changedAnalysis);
+        var deterministicCopy = Path.Combine(directory, "Tools-copy.smilelib");
+        SmileLibraryPackage.Write(deterministicCopy, changedCompilation.Graph.Root, changedAnalysis);
+        Equal(true, File.ReadAllBytes(outputPath).SequenceEqual(File.ReadAllBytes(deterministicCopy)));
+        var tamperedApi = Path.Combine(directory, "Tools-tampered-api.smilelib");
+        File.Copy(outputPath, tamperedApi);
+        RewritePackageTextEntry(tamperedApi, "api/public-symbols.json", api =>
+            api.Replace("Value", "Changed", StringComparison.Ordinal));
+        Equal(true, CompilerDriver.NeedsLibraryBuild(changedCompilation.Graph.Root, tamperedApi,
+            changedAnalysis));
+
+        var foreignProjectPath = Path.Combine(directory, "Foreign.smilelibproj");
+        var foreignSourcePath = Path.Combine(directory, "Foreign.smile");
+        var foreignPackage = Path.Combine(directory, "Foreign.smilelib");
+        File.WriteAllText(foreignSourcePath, "MODULE Example.Foreign\nPUBLIC CONST Value = 9\nEND MODULE\n");
+        File.WriteAllText(foreignProjectPath,
+            "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Foreign</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Foreign.smile\" /></ItemGroup></SmileProject>");
+        var foreignCompilation = SmileProjectCompilation.Load(foreignProjectPath);
+        var foreignAnalysis = SmileLanguage.Analyze(foreignCompilation.Sources, SmileCompilationKind.Library,
+            foreignCompilation.DependencyContext);
+        SmileLibraryPackage.Write(foreignPackage, foreignCompilation.Graph.Root, foreignAnalysis);
+        File.Copy(foreignPackage, outputPath, true);
+        Equal(true, CompilerDriver.NeedsLibraryBuild(changedCompilation.Graph.Root, outputPath, changedAnalysis));
+
+        File.WriteAllText(projectPath, projectXml.Replace("<Version>1.0.0</Version>",
+            "<Version>2.0.0</Version>", StringComparison.Ordinal));
+        var versionCompilation = SmileProjectCompilation.Load(projectPath);
+        var versionAnalysis = SmileLanguage.Analyze(versionCompilation.Sources, SmileCompilationKind.Library,
+            versionCompilation.DependencyContext);
+        Equal(true, CompilerDriver.NeedsLibraryBuild(versionCompilation.Graph.Root, deterministicCopy,
+            versionAnalysis));
+
+        File.WriteAllText(projectPath, projectXml.Replace("</ItemGroup>",
+            "<SmileProjectReference Include=\"Foreign.smilelibproj\" /></ItemGroup>", StringComparison.Ordinal));
+        var referenceCompilation = SmileProjectCompilation.Load(projectPath);
+        var referenceAnalysis = SmileLanguage.Analyze(referenceCompilation.Sources, SmileCompilationKind.Library,
+            referenceCompilation.DependencyContext);
+        SmileLibraryPackage.Write(outputPath, referenceCompilation.Graph.Root, referenceAnalysis);
+        Equal(false, CompilerDriver.NeedsLibraryBuild(referenceCompilation.Graph.Root, outputPath,
+            referenceAnalysis));
+        File.WriteAllText(foreignProjectPath, File.ReadAllText(foreignProjectPath).Replace(
+            "<Version>1.0.0</Version>", "<Version>2.0.0</Version>", StringComparison.Ordinal));
+        var dependencyVersionCompilation = SmileProjectCompilation.Load(projectPath);
+        var dependencyVersionAnalysis = SmileLanguage.Analyze(dependencyVersionCompilation.Sources,
+            SmileCompilationKind.Library, dependencyVersionCompilation.DependencyContext);
+        Equal(true, CompilerDriver.NeedsLibraryBuild(dependencyVersionCompilation.Graph.Root, outputPath,
+            dependencyVersionAnalysis));
+    }
+    finally { Directory.Delete(directory, true); }
+});
+Run("Tolerant participation discovery retains missing transitive reference paths", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileRecoveryTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var rootProject = Path.Combine(directory, "App.smileproj");
+        var middleProject = Path.Combine(directory, "Middle.smilelibproj");
+        var leafProject = Path.Combine(directory, "Leaf.smilelibproj");
+        var packagePath = Path.Combine(directory, "Restored.smilelib");
+        File.WriteAllText(Path.Combine(directory, "Program.smile"), "END PROGRAM\n");
+        File.WriteAllText(Path.Combine(directory, "Middle.smile"), "MODULE Middle\nEND MODULE\n");
+        File.WriteAllText(rootProject,
+            "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" /><SmileProjectReference Include=\"Middle.smilelibproj\" /></ItemGroup></SmileProject>");
+        File.WriteAllText(middleProject,
+            "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Middle</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Middle.smile\" /><SmileProjectReference Include=\"Leaf.smilelibproj\" /></ItemGroup></SmileProject>");
+        var missingLeaf = SmileProjectParticipationDiscovery.Discover(rootProject);
+        Equal("SML3200", missingLeaf.Diagnostic!.Code);
+        Equal(true, missingLeaf.Paths.Contains(leafProject, StringComparer.OrdinalIgnoreCase));
+
+        File.WriteAllText(Path.Combine(directory, "Leaf.smile"), "MODULE Leaf\nEND MODULE\n");
+        File.WriteAllText(leafProject,
+            "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Leaf</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Leaf.smile\" /><SmileLibraryReference Include=\"Restored.smilelib\" /></ItemGroup></SmileProject>");
+        var missingPackage = SmileProjectParticipationDiscovery.Discover(rootProject);
+        Equal("SML3200", missingPackage.Diagnostic!.Code);
+        Equal(true, missingPackage.Paths.Contains(packagePath, StringComparer.OrdinalIgnoreCase));
+        File.WriteAllText(packagePath, "restored watcher fixture");
+        Equal(true, SmileProjectParticipationDiscovery.Discover(rootProject).Diagnostic == null);
+    }
+    finally { Directory.Delete(directory, true); }
+});
+Run("Project diagnostics retain shared path formatting and compiler exit code one", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileDiagnosticTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var projectPath = Path.Combine(directory, "App.smileproj");
+        var sourcePath = Path.Combine(directory, "Program.smile");
+        var missingPath = Path.Combine(directory, "Missing.smilelibproj");
+        File.WriteAllText(sourcePath, "END PROGRAM\n");
+        File.WriteAllText(projectPath,
+            "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" /><SmileProjectReference Include=\"Missing.smilelibproj\" /></ItemGroup></SmileProject>");
+        var diagnostic = SmileProjectCompilation.TryLoad(projectPath).Diagnostic!;
+        Equal($"{missingPath}(1,1): error SML3200: {diagnostic.Message}", diagnostic.FormatCompiler());
+        var safe = SmileLanguage.AnalyzeWithProjectDiagnostic(new[]
+        {
+            new SmileSourceDocument("END PROGRAM\n", sourcePath, true)
+        }, SmileCompilationKind.Program, diagnostic);
+        var editorDiagnostic = safe.Diagnostics.Single(item => item.Code == "SML3200");
+        Equal(missingPath, editorDiagnostic.FilePath);
+        Equal(1, editorDiagnostic.Line);
+        Equal(1, editorDiagnostic.Column);
+
+        var previousError = Console.Error;
+        var captured = new StringWriter();
+        try
+        {
+            Console.SetError(captured);
+            Equal(1, new CompilerDriver().Run(new[] { "--project", projectPath, "--target", "web",
+                "--output-dir", Path.Combine(directory, "web") }));
+        }
+        finally
+        {
+            Console.SetError(previousError);
+        }
+        Equal(true, captured.ToString().Contains(diagnostic.FormatCompiler(), StringComparison.Ordinal));
+        var usageOutput = new StringWriter();
+        try
+        {
+            Console.SetError(usageOutput);
+            Equal(2, new CompilerDriver().Run(Array.Empty<string>()));
+        }
+        finally
+        {
+            Console.SetError(previousError);
+        }
+        Equal(true, usageOutput.ToString().Contains("Usage: smilec", StringComparison.Ordinal));
     }
     finally { Directory.Delete(directory, true); }
 });
@@ -1237,16 +1519,19 @@ SmileProjectDiagnosticException ThrowsProjectDiagnostic(Action action, string ex
 }
 
 void RewriteManifest(string packagePath, Func<string, string> rewrite)
+    => RewritePackageTextEntry(packagePath, "manifest.json", rewrite);
+
+void RewritePackageTextEntry(string packagePath, string entryName, Func<string, string> rewrite)
 {
     using var archive = System.IO.Compression.ZipFile.Open(packagePath,
         System.IO.Compression.ZipArchiveMode.Update);
-    var entry = archive.GetEntry("manifest.json")!;
-    string manifest;
+    var entry = archive.GetEntry(entryName)!;
+    string text;
     using (var reader = new StreamReader(entry.Open()))
-        manifest = reader.ReadToEnd();
+        text = reader.ReadToEnd();
     entry.Delete();
-    using var writer = new StreamWriter(archive.CreateEntry("manifest.json").Open());
-    writer.Write(rewrite(manifest));
+    using var writer = new StreamWriter(archive.CreateEntry(entryName).Open());
+    writer.Write(rewrite(text));
 }
 
 long SimulateFixedPoint(IEnumerable<int> frameTimes, int velocitySubpixelsPerSecond)

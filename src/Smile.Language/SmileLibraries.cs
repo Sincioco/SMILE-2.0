@@ -59,6 +59,10 @@ public sealed class SmileProjectDiagnostic
     public string Code { get; }
     public string Message { get; }
     public string FilePath { get; }
+    public int Line => 1;
+    public int Column => 1;
+    public string FormatCompiler() =>
+        $"{(string.IsNullOrWhiteSpace(FilePath) ? "<project>" : FilePath)}({Line},{Column}): error {Code}: {Message}";
 
     public static bool TryCreate(Exception exception, string fallbackPath, out SmileProjectDiagnostic diagnostic)
     {
@@ -127,6 +131,52 @@ public sealed class SmileLibraryLoadResult
     internal string PublicApiMetadata { get; }
 }
 
+public sealed class SmileLibraryBuildFingerprint
+{
+    internal SmileLibraryBuildFingerprint(int formatVersion, string name, string version,
+        IReadOnlyList<string> modules, IReadOnlyDictionary<string, string> sourceHashes,
+        IReadOnlyList<SmileLibraryDependency> dependencies, string publicApiHash)
+    {
+        FormatVersion = formatVersion;
+        Name = name;
+        Version = version;
+        Modules = modules;
+        SourceHashes = sourceHashes;
+        Dependencies = dependencies;
+        PublicApiHash = publicApiHash;
+    }
+
+    public int FormatVersion { get; }
+    public string Name { get; }
+    public string Version { get; }
+    public IReadOnlyList<string> Modules { get; }
+    public IReadOnlyDictionary<string, string> SourceHashes { get; }
+    public IReadOnlyList<SmileLibraryDependency> Dependencies { get; }
+    public string PublicApiHash { get; }
+
+    public bool Matches(SmileLibraryBuildFingerprint other)
+    {
+        if (other == null || FormatVersion != other.FormatVersion ||
+            !string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(Version, other.Version, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(PublicApiHash, other.PublicApiHash, StringComparison.OrdinalIgnoreCase) ||
+            !Modules.OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                .SequenceEqual(other.Modules.OrderBy(item => item, StringComparer.OrdinalIgnoreCase),
+                    StringComparer.OrdinalIgnoreCase) ||
+            SourceHashes.Count != other.SourceHashes.Count)
+            return false;
+        foreach (var source in SourceHashes)
+            if (!other.SourceHashes.TryGetValue(source.Key, out var hash) ||
+                !string.Equals(source.Value, hash, StringComparison.OrdinalIgnoreCase))
+                return false;
+        var dependencies = Dependencies.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(item => item.Name + "\0" + item.Version);
+        var otherDependencies = other.Dependencies.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(item => item.Name + "\0" + item.Version);
+        return dependencies.SequenceEqual(otherDependencies, StringComparer.OrdinalIgnoreCase);
+    }
+}
+
 public static class SmileLibraryPackage
 {
     private static readonly DateTimeOffset DeterministicTimestamp =
@@ -190,6 +240,80 @@ public static class SmileLibraryPackage
             ?? throw new InvalidDataException("SMILE library package is missing manifest.json.");
         using var stream = manifest.Open();
         return ParseIdentity(ReadManifest(stream));
+    }
+
+    public static SmileLibraryBuildFingerprint ReadBuildFingerprint(string packagePath)
+    {
+        using var archive = ZipFile.OpenRead(Path.GetFullPath(packagePath));
+        ValidateEntries(archive);
+        var manifestEntry = archive.GetEntry("manifest.json")
+            ?? throw new InvalidDataException("SMILE library package is missing manifest.json.");
+        PackageManifest manifest;
+        using (var stream = manifestEntry.Open())
+            manifest = ReadManifest(stream);
+        var identity = ParseIdentity(manifest);
+        var sources = RequiredValues(manifest.Sources, "sources");
+        var declaredHashes = manifest.SourceHashes
+            ?? throw new InvalidDataException("SMILE library manifest is missing sourceHashes.");
+        var verifiedHashes = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var source in sources)
+        {
+            ValidateEntryName(source);
+            if (!source.StartsWith("src/", StringComparison.Ordinal))
+                throw new InvalidDataException($"SMILE library source entry is outside src/: {source}");
+            var entry = archive.GetEntry(source)
+                ?? throw new InvalidDataException($"SMILE library declared source is missing: {source}");
+            var actualHash = Hash(ReadAllBytes(entry));
+            if (!declaredHashes.TryGetValue(source, out var declaredHash) ||
+                !string.Equals(actualHash, declaredHash, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException($"SMILE library source hash is invalid: {source}");
+            verifiedHashes.Add(source, actualHash);
+        }
+        var allowed = new HashSet<string>(sources, StringComparer.Ordinal)
+        {
+            "manifest.json", "api/public-symbols.json"
+        };
+        foreach (var entry in archive.Entries)
+            if (!allowed.Contains(entry.FullName))
+                throw new InvalidDataException($"Unexpected executable or package payload entry: {entry.FullName}");
+        var apiEntry = archive.GetEntry("api/public-symbols.json")
+            ?? throw new InvalidDataException("SMILE library package is missing api/public-symbols.json.");
+        var publicApiHash = Hash(ReadAllBytes(apiEntry));
+        return new SmileLibraryBuildFingerprint(manifest.FormatVersion, identity.Name, identity.Version,
+            identity.Modules, verifiedHashes, identity.Dependencies, publicApiHash);
+    }
+
+    public static SmileLibraryBuildFingerprint CreateBuildFingerprint(SmileProjectSourceSet project,
+        SmileAnalysisResult analysis)
+    {
+        if (project == null) throw new ArgumentNullException(nameof(project));
+        if (analysis == null) throw new ArgumentNullException(nameof(analysis));
+        var modules = analysis.SemanticModel.Modules.Values
+            .Where(module => string.Equals(module.ProviderIdentity, project.ProjectPath,
+                StringComparison.OrdinalIgnoreCase))
+            .OrderBy(module => module.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+        var hashes = project.Items.ToDictionary(item => "src/" + Normalize(item.Include),
+            item => Hash(Encoding.UTF8.GetBytes(NormalizeText(File.ReadAllText(item.FullPath)))),
+            StringComparer.Ordinal);
+        return new SmileLibraryBuildFingerprint(1, project.LibraryName, project.Version,
+            modules.Select(module => module.Name).ToArray(), hashes, GetDependencies(project),
+            Hash(Encoding.UTF8.GetBytes(BuildPublicApi(modules))));
+    }
+
+    public static bool IsCurrentProjectBuild(string packagePath, SmileProjectSourceSet project,
+        SmileAnalysisResult analysis)
+    {
+        if (!File.Exists(packagePath))
+            return false;
+        try
+        {
+            return ReadBuildFingerprint(packagePath).Matches(CreateBuildFingerprint(project, analysis));
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or
+                                           UnauthorizedAccessException or SmileProjectDiagnosticException)
+        {
+            return false;
+        }
     }
 
     public static SmileLibraryLoadResult Read(string packagePath, string cacheRoot)
@@ -538,14 +662,25 @@ public sealed class SmileLibraryProvider
 public sealed class SmileLibraryResolution
 {
     internal SmileLibraryResolution(IReadOnlyList<SmileLibraryProvider> providers,
-        IReadOnlyList<SmileSourceDocument> sources)
+        IReadOnlyList<SmileSourceDocument> sources, SmileCompilationDependencyContext dependencyContext)
     {
         Providers = providers;
         Sources = sources;
+        DependencyContext = dependencyContext;
     }
 
     public IReadOnlyList<SmileLibraryProvider> Providers { get; }
     public IReadOnlyList<SmileSourceDocument> Sources { get; }
+    public SmileCompilationDependencyContext DependencyContext { get; }
+
+    public SmileCompilationDependencyContext CreateLooseRootContext()
+    {
+        var context = DependencyContext.Copy();
+        context.AddProvider("<local>", SmileProviderKind.Loose, string.Empty, string.Empty, "<loose>");
+        foreach (var provider in Providers)
+            context.AddDirectAccess("<local>", provider.ProviderPath);
+        return context;
+    }
 }
 
 public static class SmileLibraryProviderResolver
@@ -638,12 +773,13 @@ public static class SmileLibraryProviderResolver
         if (sources.Length == 0 && order.Count != 0)
             throw new SmileProjectDiagnosticException("SML3207",
                 $"Library provider '{order[0].ProviderPath}' contains no source documents.", order[0].ProviderPath);
+        var dependencyContext = CreateDependencyContext(order, byName);
         if (sources.Length != 0)
         {
-            var analysis = SmileLanguage.Analyze(sources, SmileCompilationKind.Library);
+            var analysis = SmileLanguage.Analyze(sources, SmileCompilationKind.Library, dependencyContext);
             ValidatePackages(order, analysis);
         }
-        return new SmileLibraryResolution(order, sources);
+        return new SmileLibraryResolution(order, sources, dependencyContext);
 
         void Visit(SmileLibraryProvider provider)
         {
@@ -671,6 +807,21 @@ public static class SmileLibraryProviderResolver
             state[provider.Identity.Name] = 2;
             order.Add(provider);
         }
+    }
+
+    private static SmileCompilationDependencyContext CreateDependencyContext(
+        IReadOnlyList<SmileLibraryProvider> providers,
+        IReadOnlyDictionary<string, SmileLibraryProvider> providersByName)
+    {
+        var context = SmileCompilationDependencyContext.Create();
+        foreach (var provider in providers)
+            context.AddProvider(provider.ProviderPath,
+                provider.Kind == SmileLibraryProviderKind.Project ? SmileProviderKind.Project : SmileProviderKind.Package,
+                provider.Identity.Name, provider.Identity.Version, provider.ProviderPath);
+        foreach (var provider in providers)
+            foreach (var dependency in provider.DeclaredDependencies)
+                context.AddDirectAccess(provider.ProviderPath, providersByName[dependency.Name].ProviderPath);
+        return context;
     }
 
     internal static SmileLibraryLoadResult ReadPackage(string packagePath, string cacheRoot)
@@ -803,21 +954,97 @@ public sealed class SmileProjectBuildGraph
     }
 }
 
+public sealed class SmileProjectParticipationDiscoveryResult
+{
+    internal SmileProjectParticipationDiscoveryResult(IReadOnlyList<string> paths,
+        SmileProjectDiagnostic? diagnostic)
+    {
+        Paths = paths;
+        Diagnostic = diagnostic;
+    }
+
+    public IReadOnlyList<string> Paths { get; }
+    public SmileProjectDiagnostic? Diagnostic { get; }
+}
+
+public static class SmileProjectParticipationDiscovery
+{
+    public static SmileProjectParticipationDiscoveryResult Discover(string projectPath)
+    {
+        var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var visitedProjects = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        SmileProjectDiagnostic? firstDiagnostic = null;
+        VisitProject(Path.GetFullPath(projectPath), referencingProject: null);
+        return new SmileProjectParticipationDiscoveryResult(
+            paths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray(), firstDiagnostic);
+
+        void Record(SmileProjectDiagnostic diagnostic)
+        {
+            firstDiagnostic ??= diagnostic;
+        }
+
+        void VisitProject(string path, string? referencingProject)
+        {
+            paths.Add(path);
+            if (!visitedProjects.Add(path))
+                return;
+            if (!File.Exists(path))
+            {
+                Record(new SmileProjectDiagnostic("SML3200", referencingProject == null
+                    ? $"SMILE project was not found: {path}"
+                    : $"SMILE project '{referencingProject}' references missing library project '{path}'.", path));
+                return;
+            }
+
+            SmileProjectSourceSet project;
+            try
+            {
+                project = SmileProjectSourceSet.Load(path);
+            }
+            catch (Exception exception) when (SmileProjectDiagnostic.TryCreate(exception, path, out _))
+            {
+                SmileProjectDiagnostic.TryCreate(exception, path, out var diagnostic);
+                Record(diagnostic);
+                return;
+            }
+
+            foreach (var item in project.Items)
+                paths.Add(item.FullPath);
+            foreach (var reference in project.References)
+            {
+                paths.Add(reference.FullPath);
+                if (reference.Kind == SmileProjectReferenceKind.Project)
+                {
+                    VisitProject(reference.FullPath, project.ProjectPath);
+                    continue;
+                }
+                if (!File.Exists(reference.FullPath))
+                    Record(new SmileProjectDiagnostic("SML3200",
+                        $"SMILE project '{project.ProjectPath}' references missing library package " +
+                        $"'{reference.FullPath}'.", reference.FullPath));
+            }
+        }
+    }
+}
+
 public sealed class SmileProjectCompilation
 {
     private SmileProjectCompilation(SmileProjectBuildGraph graph, IReadOnlyList<SmileSourceDocument> sources,
-        IReadOnlyList<SmileLibraryLoadResult> packages, IReadOnlyList<SmileLibraryProvider> providers)
+        IReadOnlyList<SmileLibraryLoadResult> packages, IReadOnlyList<SmileLibraryProvider> providers,
+        SmileCompilationDependencyContext dependencyContext)
     {
         Graph = graph;
         Sources = sources;
         Packages = packages;
         Providers = providers;
+        DependencyContext = dependencyContext;
     }
 
     public SmileProjectBuildGraph Graph { get; }
     public IReadOnlyList<SmileSourceDocument> Sources { get; }
     public IReadOnlyList<SmileLibraryLoadResult> Packages { get; }
     public IReadOnlyList<SmileLibraryProvider> Providers { get; }
+    public SmileCompilationDependencyContext DependencyContext { get; }
     public SmileCompilationKind CompilationKind => Graph.Root.IsLibrary ? SmileCompilationKind.Library : SmileCompilationKind.Program;
 
     public static SmileProjectCompilation Load(string projectPath, string? cacheRoot = null,
@@ -878,12 +1105,27 @@ public sealed class SmileProjectCompilation
         providers.AddRange(packagesByPath.Values.Select(SmileLibraryProvider.FromPackage));
         var resolution = SmileLibraryProviderResolver.Resolve(providers);
 
+        var dependencyContext = resolution.DependencyContext;
+        if (!graph.Root.IsLibrary)
+        {
+            dependencyContext = dependencyContext.Copy();
+            dependencyContext.AddProvider(graph.Root.ProjectPath, SmileProviderKind.Project,
+                string.Empty, string.Empty, graph.Root.ProjectPath);
+            foreach (var reference in graph.Root.References)
+            {
+                var providerPath = reference.Kind == SmileProjectReferenceKind.Project
+                    ? reference.FullPath
+                    : packagesByPath[reference.FullPath].ProviderPath;
+                dependencyContext.AddDirectAccess(graph.Root.ProjectPath, providerPath);
+            }
+        }
+
         IReadOnlyList<SmileSourceDocument> sources = graph.Root.IsLibrary
             ? resolution.Sources
             : projectSources[graph.Root.ProjectPath].Concat(resolution.Sources).ToArray();
         var packages = resolution.Providers.Where(provider => provider.Kind == SmileLibraryProviderKind.Package)
             .Select(provider => provider.Package!).ToArray();
-        return new SmileProjectCompilation(graph, sources, packages, resolution.Providers);
+        return new SmileProjectCompilation(graph, sources, packages, resolution.Providers, dependencyContext);
     }
 
     public static SmileProjectCompilationLoadResult TryLoad(string projectPath, string? cacheRoot = null,

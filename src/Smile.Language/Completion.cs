@@ -105,7 +105,9 @@ public static class SmileCompletionService
         if (IsAfterImport(syntaxTree.Source.Text, position))
         {
             completions.Clear();
-            foreach (var module in analysis.SemanticModel.Modules.Values)
+            foreach (var module in analysis.SemanticModel.Modules.Values.Where(module =>
+                         analysis.DependencyContext.CanAccess(syntaxTree.ProviderIdentity,
+                             module.ProviderIdentity)))
                 completions[module.Name] = new SmileCompletion(module.Name,
                     $"SMILE module from {module.ProviderIdentity}", SmileCompletionKind.Module);
             completions["AS"] = new SmileCompletion("AS", "Required import alias keyword", SmileCompletionKind.Keyword);

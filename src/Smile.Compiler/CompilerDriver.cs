@@ -19,12 +19,15 @@ internal sealed class CompilerDriver
         {
             var input = options.ProjectPath != null ? LoadProject(options) : LoadLoose(options);
             var sourcePath = input.DisplayPath;
-            var analysis = SmileLanguage.Analyze(input.Sources, input.CompilationKind);
+            var analysis = SmileLanguage.Analyze(input.Sources, input.CompilationKind, input.DependencyContext);
             foreach (var diagnostic in analysis.Diagnostics)
                 PrintDiagnostic(diagnostic);
 
             if (analysis.HasErrors)
                 return 1;
+
+            if (input.Project != null)
+                BuildProjectDependencies(input.Project.ProjectPath, options.Configuration);
 
             if (options.Target == SmileCompilationTarget.Library)
             {
@@ -119,11 +122,18 @@ internal sealed class CompilerDriver
         }
         catch (SmileProjectDiagnosticException exception)
         {
-            Console.Error.WriteLine($"error {exception.Code}: {exception.Message}");
-            return 2;
+            Console.Error.WriteLine(exception.Diagnostic.FormatCompiler());
+            return 1;
+        }
+        catch (InvalidDataException exception)
+        {
+            var path = options.ProjectPath ?? options.SourcePath ?? "<project>";
+            Console.Error.WriteLine(new SmileProjectDiagnostic("SML3206", exception.Message,
+                Path.GetFullPath(path)).FormatCompiler());
+            return 1;
         }
         catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException ||
-                                          exception is ArgumentException || exception is InvalidDataException)
+                                          exception is ArgumentException)
         {
             Console.Error.WriteLine($"error SML5004: {exception.Message}");
             return 2;
@@ -133,25 +143,6 @@ internal sealed class CompilerDriver
     private static CompilationInput LoadProject(CompilerOptions options)
     {
         var projectPath = Path.GetFullPath(options.ProjectPath!);
-        var graph = SmileProjectBuildGraph.Load(projectPath);
-        foreach (var dependency in graph.BuildOrder.Where(project => project.IsLibrary &&
-                     !string.Equals(project.ProjectPath, graph.Root.ProjectPath, StringComparison.OrdinalIgnoreCase)))
-        {
-            var dependencyOutput = dependency.GetLibraryOutputPath(options.Configuration);
-            if (!NeedsLibraryBuild(dependency, dependencyOutput, options.Configuration))
-            {
-                Console.WriteLine($"Dependency is up to date: {dependencyOutput}");
-                continue;
-            }
-            var dependencyCompilation = SmileProjectCompilation.Load(dependency.ProjectPath);
-            var dependencyAnalysis = SmileLanguage.Analyze(dependencyCompilation.Sources, SmileCompilationKind.Library);
-            foreach (var diagnostic in dependencyAnalysis.Diagnostics) PrintDiagnostic(diagnostic);
-            if (dependencyAnalysis.HasErrors)
-                throw new InvalidDataException($"Referenced library project failed: {dependency.ProjectPath}");
-            SmileLibraryPackage.Write(dependencyOutput, dependency, dependencyAnalysis);
-            Console.WriteLine($"Built dependency: {dependencyOutput}");
-        }
-
         var compilation = SmileProjectCompilation.Load(projectPath);
         var project = compilation.Graph.Root;
         if (project.IsLibrary && options.Target != SmileCompilationTarget.Library)
@@ -161,23 +152,36 @@ internal sealed class CompilerDriver
         var configuration = options.Configuration.StartsWith("Release", StringComparison.OrdinalIgnoreCase) ? "Release" : "Debug";
         var defaultOutput = Path.Combine(project.ProjectDirectory, "bin", configuration, project.OutputName + ".exe");
         return new CompilationInput(project.ProjectPath, compilation.Sources, compilation.CompilationKind,
-            defaultOutput, project);
+            defaultOutput, project, compilation.DependencyContext);
     }
 
-    private static bool NeedsLibraryBuild(SmileProjectSourceSet project, string outputPath, string configuration)
+    private static void BuildProjectDependencies(string projectPath, string configuration)
     {
-        if (!File.Exists(outputPath)) return true;
-        try { _ = SmileLibraryPackage.ReadIdentity(outputPath); }
-        catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException)
-        { return true; }
-        var outputTime = File.GetLastWriteTimeUtc(outputPath);
-        var inputs = new List<string> { project.ProjectPath };
-        inputs.AddRange(project.Items.Select(item => item.FullPath));
-        inputs.AddRange(project.References.Select(reference => reference.Kind == SmileProjectReferenceKind.Project
-            ? SmileProjectSourceSet.Load(reference.FullPath).GetLibraryOutputPath(configuration)
-            : reference.FullPath));
-        return inputs.Any(path => !File.Exists(path) || File.GetLastWriteTimeUtc(path) > outputTime);
+        var graph = SmileProjectBuildGraph.Load(projectPath);
+        foreach (var dependency in graph.BuildOrder.Where(project => project.IsLibrary &&
+                     !string.Equals(project.ProjectPath, graph.Root.ProjectPath, StringComparison.OrdinalIgnoreCase)))
+        {
+            var dependencyOutput = dependency.GetLibraryOutputPath(configuration);
+            var dependencyCompilation = SmileProjectCompilation.Load(dependency.ProjectPath);
+            var dependencyAnalysis = SmileLanguage.Analyze(dependencyCompilation.Sources,
+                SmileCompilationKind.Library, dependencyCompilation.DependencyContext);
+            foreach (var diagnostic in dependencyAnalysis.Diagnostics) PrintDiagnostic(diagnostic);
+            if (dependencyAnalysis.HasErrors)
+                throw new SmileProjectDiagnosticException("SML3207",
+                    $"Referenced library project failed authoritative analysis: {dependency.ProjectPath}",
+                    dependency.ProjectPath);
+            if (!NeedsLibraryBuild(dependency, dependencyOutput, dependencyAnalysis))
+            {
+                Console.WriteLine($"Dependency is up to date: {dependencyOutput}");
+                continue;
+            }
+            SmileLibraryPackage.Write(dependencyOutput, dependency, dependencyAnalysis);
+            Console.WriteLine($"Built dependency: {dependencyOutput}");
+        }
     }
+
+    internal static bool NeedsLibraryBuild(SmileProjectSourceSet project, string outputPath,
+        SmileAnalysisResult analysis) => !SmileLibraryPackage.IsCurrentProjectBuild(outputPath, project, analysis);
 
     private static CompilationInput LoadLoose(CompilerOptions options)
     {
@@ -197,35 +201,42 @@ internal sealed class CompilerDriver
         }
         var documents = sourcePaths.Select((path, index) =>
             new SmileSourceDocument(File.ReadAllText(path), path, isStartup: index == 0)).ToList();
-        documents.AddRange(LoadLooseLibraries(sourcePath, options.LibraryPaths));
+        var libraryResolution = LoadLooseLibraryResolution(sourcePath, options.LibraryPaths);
+        documents.AddRange(libraryResolution.Sources);
         return new CompilationInput(sourcePath, documents, SmileCompilationKind.Program,
-            Path.ChangeExtension(sourcePath, ".exe"), project: null);
+            Path.ChangeExtension(sourcePath, ".exe"), project: null, libraryResolution.CreateLooseRootContext());
     }
 
     internal static IReadOnlyList<SmileSourceDocument> LoadLooseLibraries(string sourcePath,
+        IEnumerable<string> libraryPaths) => LoadLooseLibraryResolution(sourcePath, libraryPaths).Sources;
+
+    internal static SmileLibraryResolution LoadLooseLibraryResolution(string sourcePath,
         IEnumerable<string> libraryPaths)
     {
         var fullSourcePath = Path.GetFullPath(sourcePath);
         var cacheRoot = Path.Combine(Path.GetDirectoryName(fullSourcePath)!, "obj", "Smile", "Libraries");
-        return SmileLibraryProviderResolver.LoadPackages(libraryPaths.Select(Path.GetFullPath), cacheRoot).Sources;
+        return SmileLibraryProviderResolver.LoadPackages(libraryPaths.Select(Path.GetFullPath), cacheRoot);
     }
 
     private sealed class CompilationInput
     {
         public CompilationInput(string displayPath, IReadOnlyList<SmileSourceDocument> sources,
-            SmileCompilationKind compilationKind, string defaultNativeOutputPath, SmileProjectSourceSet? project)
+            SmileCompilationKind compilationKind, string defaultNativeOutputPath, SmileProjectSourceSet? project,
+            SmileCompilationDependencyContext dependencyContext)
         {
             DisplayPath = displayPath;
             Sources = sources;
             CompilationKind = compilationKind;
             DefaultNativeOutputPath = defaultNativeOutputPath;
             Project = project;
+            DependencyContext = dependencyContext;
         }
         public string DisplayPath { get; }
         public IReadOnlyList<SmileSourceDocument> Sources { get; }
         public SmileCompilationKind CompilationKind { get; }
         public string DefaultNativeOutputPath { get; }
         public SmileProjectSourceSet? Project { get; }
+        public SmileCompilationDependencyContext DependencyContext { get; }
     }
 
     internal static string BuildDebugSource(IEnumerable<MasmDebugSite> sites)

@@ -88,7 +88,7 @@ artifacts\compiler\smilec.exe --project examples\LibraryConsumer\LibraryConsumer
 artifacts\compiler\smilec.exe --project examples\LibraryConsumer\LibraryConsumer.smileproj --target web --output-dir artifacts\web\LibraryConsumer
 ```
 
-Loose-file builds can add a built package with repeated `--library <path.smilelib>`. Project builds read `<SmileProjectReference>` and `<SmileLibraryReference>` items, build project dependencies in deterministic order, reject cycles, and keep unchanged referenced packages up to date.
+Loose-file builds can add a built package with repeated `--library <path.smilelib>`. Project builds read `<SmileProjectReference>` and `<SmileLibraryReference>` items, build project dependencies in deterministic order, reject cycles, and reuse a referenced project package only when its identity, modules, normalized source hashes, and direct dependency identities match the current library project. Imports follow direct provider boundaries: application and library-project sources see only their own modules and direct references, package sources see only exact manifest dependencies, and loose roots see every package supplied directly with `--library`.
 
 Add each declaration-only support file with a repeatable `--source` option. The files are parsed independently and share one case-insensitive semantic model; only the startup file may contain executable top-level statements, `GAME WINDOW`, or `END PROGRAM`:
 
