@@ -17,6 +17,11 @@ typedef struct MockState
     const char* failure;
     int draw_arc_count;
     long long arc_values[6];
+    int draw_image_count;
+    long long image_values[11];
+    int push_clip_count;
+    int pop_clip_count;
+    int text_measure_count;
 } MockState;
 
 static MockState directx_state = { "DirectX", 0, 0, 0, 0, 0, 0, "DXGI swap-chain creation failed with 0x887A0004 (DXGI_ERROR_UNSUPPORTED)" };
@@ -107,6 +112,40 @@ static void mock_text(SmileGraphicsBackend* backend, const char* text, long long
 static void mock_number(SmileGraphicsBackend* backend, long long value, long long x,
     long long y, long long size, long long color)
 { (void)backend; (void)value; (void)x; (void)y; (void)size; (void)color; }
+static void mock_image(SmileGraphicsBackend* backend, void* image,
+    long long source_x, long long source_y, long long source_width, long long source_height,
+    long long destination_x, long long destination_y, long long destination_width, long long destination_height,
+    long long opacity, long long filter, long long flip)
+{
+    MockState* state = (MockState*)backend->state;
+    state->draw_image_count++;
+    state->image_values[0] = source_x; state->image_values[1] = source_y;
+    state->image_values[2] = source_width; state->image_values[3] = source_height;
+    state->image_values[4] = destination_x; state->image_values[5] = destination_y;
+    state->image_values[6] = destination_width; state->image_values[7] = destination_height;
+    state->image_values[8] = opacity; state->image_values[9] = filter; state->image_values[10] = flip;
+    (void)image;
+}
+static void mock_push_clip(SmileGraphicsBackend* backend, long long x, long long y,
+    long long width, long long height)
+{
+    ((MockState*)backend->state)->push_clip_count++;
+    (void)x; (void)y; (void)width; (void)height;
+}
+static void mock_pop_clip(SmileGraphicsBackend* backend)
+{ ((MockState*)backend->state)->pop_clip_count++; }
+static long long mock_text_width(SmileGraphicsBackend* backend, const char* text, long long length, long long size)
+{
+    ((MockState*)backend->state)->text_measure_count++;
+    (void)text;
+    return length * size;
+}
+static long long mock_text_height(SmileGraphicsBackend* backend, const char* text, long long length, long long size)
+{
+    ((MockState*)backend->state)->text_measure_count++;
+    (void)text; (void)length;
+    return size + 2;
+}
 static int mock_present(SmileGraphicsBackend* backend) { (void)backend; return 1; }
 static void mock_context(SmileGraphicsBackend* backend, void* context)
 { (void)backend; (void)context; }
@@ -120,7 +159,8 @@ static const SmileGraphicsBackendVTable mock_operations =
     mock_initialize, mock_resize, mock_begin, mock_clear,
     mock_rectangle, mock_rectangle, mock_rounded, mock_rounded,
     mock_circle, mock_circle, mock_arc, mock_fill_quadrilateral, mock_draw_quadrilateral,
-    mock_line, mock_text, mock_number,
+    mock_line, mock_text, mock_number, mock_image, mock_push_clip, mock_pop_clip,
+    mock_text_width, mock_text_height,
     mock_present, mock_context, mock_flag, mock_dpi, mock_shutdown,
     mock_name, mock_diagnostics
 };
@@ -139,8 +179,14 @@ static void reset_mocks(void)
     directx_state.fill_quad_count = directx_state.draw_quad_count = 0;
     gdi_state.fill_quad_count = gdi_state.draw_quad_count = 0;
     directx_state.draw_arc_count = gdi_state.draw_arc_count = 0;
+    directx_state.draw_image_count = gdi_state.draw_image_count = 0;
+    directx_state.push_clip_count = gdi_state.push_clip_count = 0;
+    directx_state.pop_clip_count = gdi_state.pop_clip_count = 0;
+    directx_state.text_measure_count = gdi_state.text_measure_count = 0;
     memset(directx_state.arc_values, 0, sizeof(directx_state.arc_values));
     memset(gdi_state.arc_values, 0, sizeof(gdi_state.arc_values));
+    memset(directx_state.image_values, 0, sizeof(directx_state.image_values));
+    memset(gdi_state.image_values, 0, sizeof(gdi_state.image_values));
 }
 
 static void check(int condition, const char* message)
@@ -232,6 +278,23 @@ int main(void)
         directx_state.arc_values[4] == 270 && directx_state.arc_values[5] == 0x123456,
         "Arc forwards all six values in order");
     check(directx_state.begin_count == 1, "Arc drawing begins one shared frame");
+
+    smile_graphics_draw_image((void*)1, 11, 12, 513, 257, 101, 102, 777, 333, 64, 1, 3);
+    check(directx_state.draw_image_count == 1, "IMAGE drawing reaches the active backend");
+    check(directx_state.image_values[0] == 11 && directx_state.image_values[2] == 513 &&
+        directx_state.image_values[4] == 101 && directx_state.image_values[6] == 777 &&
+        directx_state.image_values[8] == 64 && directx_state.image_values[9] == 1 &&
+        directx_state.image_values[10] == 3,
+        "IMAGE drawing preserves source/destination rectangles opacity filter and flip");
+    smile_graphics_push_clip(5, 6, 700, 400);
+    smile_graphics_push_clip(20, 30, 100, 80);
+    smile_graphics_pop_clip();
+    smile_graphics_pop_clip();
+    check(directx_state.push_clip_count == 2 && directx_state.pop_clip_count == 2,
+        "nested clip operations remain balanced at the backend boundary");
+    check(smile_graphics_text_width("SMILE", 5, 20) == 100 &&
+        smile_graphics_text_height("SMILE", 5, 20) == 22 && directx_state.text_measure_count == 2,
+        "TEXT_WIDTH and TEXT_HEIGHT route through the selected backend");
 
     reset_mocks();
     error[0] = 0;

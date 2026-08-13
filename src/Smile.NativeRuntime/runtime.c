@@ -8,11 +8,13 @@
 #include <limits.h>
 #include <stdint.h>
 #include "graphics/graphics_common.h"
+#include "graphics/image_resource.h"
 #include "graphics/graphics_diagnostics.h"
 #include "timing/frame_clock_win32.h"
 #include "audio/asset_path.h"
 #include "audio/audio_focus.h"
 #include "audio/audio_focus_state.h"
+#include "audio/sfx_channels.h"
 
 #define SMILE_KEY_NONE 0
 #define SMILE_KEY_W 1
@@ -53,6 +55,8 @@ static void smile_pump_messages(void);
 static void smile_toggle_fullscreen(void);
 static void smile_update_game_audio_active(void);
 void smile_print_text(const char* text, long long length);
+int smile_resolve_asset_path_utf8(const char* path, long long length, WCHAR* resolved_path, int capacity);
+void smile_play_sound_channel(const char* path, long long length, long long channel);
 
 static void smile_zero_memory(void* memory, SIZE_T length)
 {
@@ -559,7 +563,7 @@ static void smile_update_game_audio_active(void)
     if (transition == 0)
         return;
     if (transition < 0)
-        PlaySoundW(0, 0, 0);
+        smile_sfx_stop_all();
     if (smile_music_activation_callback != 0)
         smile_music_activation_callback(smile_audio_focus.effective_active ? 1 : 0);
 }
@@ -896,6 +900,133 @@ void smile_draw_number(long long value, long long x, long long y, long long size
     smile_graphics_draw_number(value, x, y, size, color);
 }
 
+void* smile_image_retain(void* value)
+{
+    return smile_image_resource_retain((SmileImageResource*)value);
+}
+
+void smile_image_release(void* value)
+{
+    smile_image_resource_release((SmileImageResource*)value);
+}
+
+void smile_image_move_assign(void** target, void* owned_value)
+{
+    void* previous;
+    if (target == 0)
+    {
+        smile_image_release(owned_value);
+        return;
+    }
+    previous = *target;
+    *target = owned_value;
+    smile_image_release(previous);
+}
+
+void smile_image_clear(void** target)
+{
+    smile_image_move_assign(target, 0);
+}
+
+void smile_load_image_value(void** target, void* owned_path)
+{
+    SmileText* path = (SmileText*)owned_path;
+    WCHAR full_path[2048];
+    SmileImageResource* image = 0;
+    if (smile_resolve_asset_path_utf8(smile_text_bytes(path), smile_text_length(path), full_path,
+        (int)(sizeof(full_path) / sizeof(full_path[0]))))
+        image = smile_image_resource_load(full_path);
+    smile_text_release(path);
+    if (image == 0)
+    {
+        MessageBoxA(smile_window, "LOAD IMAGE could not decode the requested PNG asset.",
+            "SMILE 2.0 image runtime", MB_OK | MB_ICONERROR);
+        ExitProcess(2);
+    }
+    smile_image_move_assign(target, image);
+}
+
+long long smile_image_width_value(void* owned_image)
+{
+    long long value = smile_image_resource_width((SmileImageResource*)owned_image);
+    smile_image_release(owned_image);
+    return value;
+}
+
+long long smile_image_height_value(void* owned_image)
+{
+    long long value = smile_image_resource_height((SmileImageResource*)owned_image);
+    smile_image_release(owned_image);
+    return value;
+}
+
+long long smile_image_loaded_value(void* owned_image)
+{
+    long long value = owned_image != 0;
+    smile_image_release(owned_image);
+    return value;
+}
+
+void smile_draw_image_value(void* owned_image, long long source_x, long long source_y,
+    long long source_width, long long source_height, long long destination_x, long long destination_y,
+    long long destination_width, long long destination_height, long long opacity, long long filter,
+    long long flip, long long anchor_x, long long anchor_y)
+{
+    SmileImageResource* image = (SmileImageResource*)owned_image;
+    long long image_width = smile_image_resource_width(image);
+    long long image_height = smile_image_resource_height(image);
+    if (source_width < 0) source_width = image_width;
+    if (source_height < 0) source_height = image_height;
+    if (destination_width < 0) destination_width = source_width;
+    if (destination_height < 0) destination_height = source_height;
+    if (image == 0 || source_x < 0 || source_y < 0 || source_width <= 0 || source_height <= 0 ||
+        source_x > image_width - source_width || source_y > image_height - source_height ||
+        destination_width <= 0 || destination_height <= 0 || opacity < 0 || opacity > 100 ||
+        filter < 0 || filter > 1 || flip < 0 || flip > 3)
+    {
+        smile_image_release(image);
+        MessageBoxA(smile_window, "DRAW IMAGE received an invalid handle, rectangle, opacity, filter, or flip.",
+            "SMILE 2.0 image runtime", MB_OK | MB_ICONERROR);
+        ExitProcess(2);
+    }
+    smile_graphics_draw_image(image, source_x, source_y, source_width, source_height,
+        destination_x - anchor_x, destination_y - anchor_y, destination_width, destination_height,
+        opacity, filter, flip);
+    smile_image_release(image);
+}
+
+void smile_clip_push(long long x, long long y, long long width, long long height)
+{
+    if (width <= 0 || height <= 0)
+    {
+        MessageBoxA(smile_window, "CLIP RECTANGLE width and height must be positive.",
+            "SMILE 2.0 graphics runtime", MB_OK | MB_ICONERROR);
+        ExitProcess(2);
+    }
+    smile_graphics_push_clip(x, y, width, height);
+}
+
+void smile_clip_pop(void)
+{
+    smile_graphics_pop_clip();
+}
+
+long long smile_text_width_value(void* owned_text, long long size)
+{
+    SmileText* text = (SmileText*)owned_text;
+    long long result = size <= 0 ? 0 : smile_graphics_text_width(smile_text_bytes(text), smile_text_length(text), size);
+    smile_text_release(text);
+    return result;
+}
+
+long long smile_text_height_value(void* owned_text, long long size)
+{
+    SmileText* text = (SmileText*)owned_text;
+    long long result = size <= 0 ? 0 : smile_graphics_text_height(smile_text_bytes(text), smile_text_length(text), size);
+    smile_text_release(text);
+    return result;
+}
+
 static int smile_is_absolute_path(const WCHAR* path)
 {
     return path != 0 && ((path[0] != 0 && path[1] == L':') || (path[0] == L'\\' && path[1] == L'\\'));
@@ -1009,18 +1140,40 @@ long long smile_load_text_file(const char* path, long long length, long long* de
 
 void smile_play_sound(const char* path, long long length)
 {
+    smile_play_sound_channel(path, length, 0);
+}
+
+void smile_play_sound_channel(const char* path, long long length, long long channel)
+{
     WCHAR full_path[2048];
+    if (channel < 0 || channel >= 16)
+    {
+        MessageBoxA(smile_window, "Sound channel must be from 0 through 15.",
+            "SMILE 2.0 audio runtime", MB_OK | MB_ICONERROR);
+        ExitProcess(2);
+    }
     if (!smile_audio_focus_accepts_sound(&smile_audio_focus))
         return;
     if (!smile_resolve_asset_path_utf8(path, length, full_path,
         (int)(sizeof(full_path) / sizeof(full_path[0]))))
         return;
-    PlaySoundW(full_path, 0, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+    smile_sfx_play(full_path, (int)channel);
 }
 
 void smile_stop_sound(void)
 {
-    PlaySoundW(0, 0, 0);
+    smile_sfx_stop_all();
+}
+
+void smile_stop_sound_channel(long long channel)
+{
+    if (channel < 0 || channel >= 16)
+    {
+        MessageBoxA(smile_window, "Sound channel must be from 0 through 15.",
+            "SMILE 2.0 audio runtime", MB_OK | MB_ICONERROR);
+        ExitProcess(2);
+    }
+    smile_sfx_stop((int)channel);
 }
 
 static void smile_sanitize(WCHAR* destination, int capacity, const WCHAR* source)
@@ -1132,4 +1285,112 @@ void smile_save_value(const char* key, long long key_length, long long value)
     length = smile_format_number(value, buffer, (int)sizeof(buffer));
     WriteFile(file, buffer, (DWORD)length, &written, 0);
     CloseHandle(file);
+}
+
+static int smile_storage_data_path(const char* key, long long key_length, WCHAR* path, int capacity)
+{
+    int length;
+    if (!smile_storage_path(key, key_length, path, capacity)) return 0;
+    length = lstrlenW(path);
+    if (length < 4 || length + 1 >= capacity) return 0;
+    path[length - 3] = L'b';
+    path[length - 2] = L'i';
+    path[length - 1] = L'n';
+    return 1;
+}
+
+long long smile_load_data_value(void* owned_key, long long* destination, long long capacity)
+{
+    SmileText* key = (SmileText*)owned_key;
+    WCHAR path[2048];
+    HANDLE file = INVALID_HANDLE_VALUE;
+    LARGE_INTEGER size;
+    unsigned char buffer[4096];
+    DWORD read;
+    long long copied = 0;
+    if (destination == 0 || capacity < 0 || capacity > 1024 * 1024)
+        goto fail;
+    smile_zero_memory(destination, (SIZE_T)capacity * sizeof(long long));
+    if (!smile_storage_data_path(smile_text_bytes(key), smile_text_length(key), path,
+        (int)(sizeof(path) / sizeof(path[0])))) goto fail;
+    file = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    if (file == INVALID_HANDLE_VALUE)
+    {
+        smile_text_release(key);
+        return 0;
+    }
+    if (!GetFileSizeEx(file, &size) || size.QuadPart < 0 || size.QuadPart > 1024 * 1024 || size.QuadPart > capacity)
+        goto fail;
+    while (copied < size.QuadPart)
+    {
+        DWORD request = (DWORD)((size.QuadPart - copied) < (long long)sizeof(buffer)
+            ? size.QuadPart - copied : sizeof(buffer));
+        DWORD index;
+        if (!ReadFile(file, buffer, request, &read, 0) || read != request) goto fail;
+        for (index = 0; index < read; ++index) destination[copied++] = buffer[index];
+    }
+    CloseHandle(file);
+    smile_text_release(key);
+    return copied;
+
+fail:
+    if (file != INVALID_HANDLE_VALUE) CloseHandle(file);
+    if (destination != 0 && capacity > 0 && capacity <= 1024 * 1024)
+        smile_zero_memory(destination, (SIZE_T)capacity * sizeof(long long));
+    smile_text_release(key);
+    MessageBoxA(smile_window, "LOAD DATA encountered an invalid destination, corrupt block, or oversized block.",
+        "SMILE 2.0 persistent data", MB_OK | MB_ICONERROR);
+    ExitProcess(2);
+}
+
+void smile_save_data_value(const long long* source, long long capacity, long long count, void* owned_key)
+{
+    SmileText* key = (SmileText*)owned_key;
+    WCHAR path[2048];
+    WCHAR temporary[2056];
+    HANDLE file = INVALID_HANDLE_VALUE;
+    unsigned char buffer[4096];
+    long long copied = 0;
+    DWORD written;
+    int valid = source != 0 && capacity >= 0 && capacity <= 1024 * 1024 && count >= 0 &&
+        count <= capacity && count <= 1024 * 1024;
+    while (valid && copied < count)
+    {
+        long long value = source[copied++];
+        if (value < 0 || value > 255) valid = 0;
+    }
+    if (!valid || !smile_storage_data_path(smile_text_bytes(key), smile_text_length(key), path,
+        (int)(sizeof(path) / sizeof(path[0])))) goto fail;
+    lstrcpynW(temporary, path, (int)(sizeof(temporary) / sizeof(temporary[0])));
+    smile_append(temporary, (int)(sizeof(temporary) / sizeof(temporary[0])), L".tmp");
+    file = CreateFileW(temporary, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+    if (file == INVALID_HANDLE_VALUE) goto fail;
+    copied = 0;
+    while (copied < count)
+    {
+        DWORD chunk = (DWORD)((count - copied) < (long long)sizeof(buffer) ? count - copied : sizeof(buffer));
+        DWORD index;
+        for (index = 0; index < chunk; ++index) buffer[index] = (unsigned char)source[copied + index];
+        if (!WriteFile(file, buffer, chunk, &written, 0) || written != chunk) goto fail;
+        copied += chunk;
+    }
+    FlushFileBuffers(file);
+    CloseHandle(file);
+    file = INVALID_HANDLE_VALUE;
+    if (!MoveFileExW(temporary, path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) goto fail;
+    smile_text_release(key);
+    return;
+
+fail:
+    if (file != INVALID_HANDLE_VALUE) CloseHandle(file);
+    smile_text_release(key);
+    MessageBoxA(smile_window, "SAVE DATA received invalid bytes/count or could not atomically store the block.",
+        "SMILE 2.0 persistent data", MB_OK | MB_ICONERROR);
+    ExitProcess(2);
+}
+
+void smile_media_shutdown(void)
+{
+    smile_sfx_shutdown();
+    smile_image_resource_shutdown();
 }

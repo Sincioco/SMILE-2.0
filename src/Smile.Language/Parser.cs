@@ -80,7 +80,9 @@ internal sealed class Parser
             case SyntaxKind.ExitKeyword: return ParseExitStatement();
             case SyntaxKind.EndKeyword when Peek(1).Kind == SyntaxKind.ProgramKeyword: return ParseEndProgramStatement();
             case SyntaxKind.GameKeyword: return ParseGameWindowStatement();
+            case SyntaxKind.ClipKeyword when Peek(1).Kind == SyntaxKind.RectangleKeyword: return ParseClipRectangleStatement();
             case SyntaxKind.FillKeyword: return ParseGraphicsStatement(isFill: true);
+            case SyntaxKind.DrawKeyword when Peek(1).Kind == SyntaxKind.ImageKeyword: return ParseDrawImageStatement();
             case SyntaxKind.DrawKeyword: return ParseGraphicsStatement(isFill: false);
             case SyntaxKind.ShowKeyword: return ParseShowScreenStatement();
             case SyntaxKind.PlayKeyword when Peek(1).Kind == SyntaxKind.MusicKeyword: return ParseMusicStatement(MusicOperation.Play);
@@ -90,11 +92,16 @@ internal sealed class Parser
             case SyntaxKind.StopKeyword when Peek(1).Kind == SyntaxKind.MusicKeyword: return ParseMusicStatement(MusicOperation.Stop);
             case SyntaxKind.StopKeyword: return ParseSoundStatement(isStop: true);
             case SyntaxKind.MusicKeyword: return ParseMusicStatement(MusicOperation.SetVolume);
+            case SyntaxKind.LoadKeyword when Peek(1).Kind == SyntaxKind.ImageKeyword: return ParseImageLoadStatement(isUnload: false);
+            case SyntaxKind.UnloadKeyword when Peek(1).Kind == SyntaxKind.ImageKeyword: return ParseImageLoadStatement(isUnload: true);
+            case SyntaxKind.LoadKeyword when Peek(1).Kind == SyntaxKind.DataKeyword: return ParseDataLoadStatement();
             case SyntaxKind.LoadKeyword when Peek(1).Kind == SyntaxKind.TextKeyword: return ParseTextFileLoadStatement();
             case SyntaxKind.LoadKeyword: return ParseLoadStatement();
+            case SyntaxKind.SaveKeyword when Peek(1).Kind == SyntaxKind.DataKeyword: return ParseDataSaveStatement();
             case SyntaxKind.SaveKeyword: return ParseSaveStatement();
             case SyntaxKind.IdentifierToken:
             case SyntaxKind.KeyKeyword: return ParseAssignmentStatement();
+            case var kind when IsContextualIdentifier(kind): return ParseAssignmentStatement();
             default:
                 _diagnostics.Report("SML2002", Current.Span, $"Unexpected token '{Display(Current)}' at the start of a statement.");
                 SynchronizeLine();
@@ -199,7 +206,7 @@ internal sealed class Parser
                 NextToken();
                 continue;
             }
-            if (Current.Kind != SyntaxKind.IdentifierToken && Current.Kind != SyntaxKind.KeyKeyword)
+            if (!IsIdentifierLike(Current.Kind))
             {
                 _diagnostics.Report("SML3403", Current.Span,
                     "TYPE fields must use 'Name AS Type' and cannot be arrays, declarations, or initializers.");
@@ -260,6 +267,15 @@ internal sealed class Parser
 
     private AssignmentStatementSyntax ParseAssignmentStatement()
     {
+        var target = ParseAssignmentTarget();
+        var equals = MatchToken(SyntaxKind.EqualsToken);
+        var expression = ParseExpression();
+        ConsumeLineEnd();
+        return new AssignmentStatementSyntax(target, equals, expression);
+    }
+
+    private AssignmentTargetSyntax ParseAssignmentTarget()
+    {
         var first = MatchIdentifier();
         SyntaxToken? qualifier = null;
         SyntaxToken? dot = null;
@@ -288,11 +304,7 @@ internal sealed class Parser
             fields.Add(MatchIdentifier());
         }
 
-        var target = new AssignmentTargetSyntax(identifier, open, indices, close, qualifier, dot, fieldDots, fields);
-        var equals = MatchToken(SyntaxKind.EqualsToken);
-        var expression = ParseExpression();
-        ConsumeLineEnd();
-        return new AssignmentStatementSyntax(target, equals, expression);
+        return new AssignmentTargetSyntax(identifier, open, indices, close, qualifier, dot, fieldDots, fields);
     }
 
     private PrintStatementSyntax ParsePrintStatement()
@@ -474,6 +486,117 @@ internal sealed class Parser
         return new GraphicsStatementSyntax(keyword, operation, arguments, textExpression, centered, end);
     }
 
+    private DrawImageStatementSyntax ParseDrawImageStatement()
+    {
+        var draw = MatchToken(SyntaxKind.DrawKeyword);
+        var imageKeyword = MatchToken(SyntaxKind.ImageKeyword);
+        var image = ParseExpression();
+        ExpressionSyntax? sourceX = null;
+        ExpressionSyntax? sourceY = null;
+        ExpressionSyntax? sourceWidth = null;
+        ExpressionSyntax? sourceHeight = null;
+        if (Current.Kind == SyntaxKind.FromKeyword)
+        {
+            NextToken();
+            sourceX = ParseExpression();
+            MatchToken(SyntaxKind.CommaToken);
+            sourceY = ParseExpression();
+            MatchToken(SyntaxKind.SizeKeyword);
+            sourceWidth = ParseExpression();
+            MatchToken(SyntaxKind.ByKeyword);
+            sourceHeight = ParseExpression();
+        }
+        MatchToken(SyntaxKind.AtKeyword);
+        var destinationX = ParseExpression();
+        MatchToken(SyntaxKind.CommaToken);
+        var destinationY = ParseExpression();
+        ExpressionSyntax? destinationWidth = null;
+        ExpressionSyntax? destinationHeight = null;
+        if (Current.Kind == SyntaxKind.SizeKeyword)
+        {
+            NextToken();
+            destinationWidth = ParseExpression();
+            MatchToken(SyntaxKind.ByKeyword);
+            destinationHeight = ParseExpression();
+        }
+
+        ExpressionSyntax? opacity = null;
+        ExpressionSyntax? anchorX = null;
+        ExpressionSyntax? anchorY = null;
+        var filter = ImageFilter.Smooth;
+        var flip = ImageFlip.None;
+        var end = destinationHeight?.Span.End ?? destinationY.Span.End;
+        while (!IsLineEnd(Current.Kind))
+        {
+            if (Current.Kind == SyntaxKind.OpacityKeyword)
+            {
+                NextToken();
+                opacity = ParseExpression();
+                end = opacity.Span.End;
+            }
+            else if (Current.Kind == SyntaxKind.AnchorKeyword)
+            {
+                NextToken();
+                anchorX = ParseExpression();
+                MatchToken(SyntaxKind.CommaToken);
+                anchorY = ParseExpression();
+                end = anchorY.Span.End;
+            }
+            else if (Current.Kind == SyntaxKind.FilterKeyword)
+            {
+                NextToken();
+                SyntaxToken filterToken;
+                if (Current.Kind == SyntaxKind.PixelKeyword)
+                {
+                    filter = ImageFilter.Pixel;
+                    filterToken = NextToken();
+                }
+                else
+                    filterToken = MatchToken(SyntaxKind.SmoothKeyword);
+                end = filterToken.Span.End;
+            }
+            else if (Current.Kind == SyntaxKind.FlipKeyword)
+            {
+                NextToken();
+                flip = Current.Kind switch
+                {
+                    SyntaxKind.HorizontalKeyword => ImageFlip.Horizontal,
+                    SyntaxKind.VerticalKeyword => ImageFlip.Vertical,
+                    SyntaxKind.BothKeyword => ImageFlip.Horizontal | ImageFlip.Vertical,
+                    _ => ImageFlip.None
+                };
+                if (flip == ImageFlip.None)
+                    end = MatchToken(SyntaxKind.HorizontalKeyword).Span.End;
+                else
+                    end = NextToken().Span.End;
+            }
+            else
+            {
+                _diagnostics.Report("SML3503", Current.Span,
+                    $"Unexpected DRAW IMAGE modifier '{Display(Current)}'.");
+                SynchronizeLine();
+                break;
+            }
+        }
+        ConsumeLineEnd();
+        return new DrawImageStatementSyntax(draw, imageKeyword, image, sourceX, sourceY, sourceWidth,
+            sourceHeight, destinationX, destinationY, destinationWidth, destinationHeight, opacity,
+            filter, flip, anchorX, anchorY, end);
+    }
+
+    private ClipRectangleStatementSyntax ParseClipRectangleStatement()
+    {
+        var clip = MatchToken(SyntaxKind.ClipKeyword);
+        MatchToken(SyntaxKind.RectangleKeyword);
+        var arguments = ParseFixedArguments(4);
+        ConsumeLineEnd();
+        var statements = ParseStatementsUntil(() => IsEndPair(SyntaxKind.ClipKeyword));
+        var end = MatchToken(SyntaxKind.EndKeyword);
+        var finalClip = MatchToken(SyntaxKind.ClipKeyword);
+        ConsumeLineEnd();
+        return new ClipRectangleStatementSyntax(clip, arguments, statements, end, finalClip);
+    }
+
     private IReadOnlyList<ExpressionSyntax> ParseFixedArguments(int count)
     {
         var arguments = new List<ExpressionSyntax>();
@@ -499,8 +622,15 @@ internal sealed class Parser
         var keyword = MatchToken(isStop ? SyntaxKind.StopKeyword : SyntaxKind.PlayKeyword);
         var sound = MatchToken(SyntaxKind.SoundKeyword);
         var path = isStop ? null : MatchToken(SyntaxKind.StringToken);
+        ExpressionSyntax? channel = null;
+        if (Current.Kind == SyntaxKind.OnKeyword)
+        {
+            NextToken();
+            MatchToken(SyntaxKind.ChannelKeyword);
+            channel = ParseExpression();
+        }
         ConsumeLineEnd();
-        return new SoundStatementSyntax(keyword, sound, path);
+        return new SoundStatementSyntax(keyword, sound, path, channel);
     }
 
     private MusicStatementSyntax ParseMusicStatement(MusicOperation operation)
@@ -552,6 +682,47 @@ internal sealed class Parser
         var defaultValue = ParseExpression();
         ConsumeLineEnd();
         return new LoadStatementSyntax(load, identifier, key, defaultValue);
+    }
+
+    private ImageLoadStatementSyntax ParseImageLoadStatement(bool isUnload)
+    {
+        var keyword = MatchToken(isUnload ? SyntaxKind.UnloadKeyword : SyntaxKind.LoadKeyword);
+        var image = MatchToken(SyntaxKind.ImageKeyword);
+        var target = ParseAssignmentTarget();
+        ExpressionSyntax? path = null;
+        if (!isUnload)
+        {
+            MatchToken(SyntaxKind.FromKeyword);
+            path = ParseExpression();
+        }
+        ConsumeLineEnd();
+        return new ImageLoadStatementSyntax(keyword, image, target, path);
+    }
+
+    private DataLoadStatementSyntax ParseDataLoadStatement()
+    {
+        var load = MatchToken(SyntaxKind.LoadKeyword);
+        var data = MatchToken(SyntaxKind.DataKeyword);
+        var key = ParseExpression();
+        MatchToken(SyntaxKind.IntoKeyword);
+        var destination = MatchIdentifier();
+        MatchToken(SyntaxKind.CountKeyword);
+        var countTarget = ParseAssignmentTarget();
+        ConsumeLineEnd();
+        return new DataLoadStatementSyntax(load, data, key, destination, countTarget);
+    }
+
+    private DataSaveStatementSyntax ParseDataSaveStatement()
+    {
+        var save = MatchToken(SyntaxKind.SaveKeyword);
+        var data = MatchToken(SyntaxKind.DataKeyword);
+        var source = MatchIdentifier();
+        MatchToken(SyntaxKind.CountKeyword);
+        var count = ParseExpression();
+        MatchToken(SyntaxKind.ToKeyword);
+        var key = ParseExpression();
+        ConsumeLineEnd();
+        return new DataSaveStatementSyntax(save, data, source, count, key);
     }
 
     private TextFileLoadStatementSyntax ParseTextFileLoadStatement()
@@ -861,7 +1032,7 @@ internal sealed class Parser
             var token = NextToken();
             return new LiteralExpressionSyntax(token, token.Value ?? string.Empty);
         }
-        if (Current.Kind == SyntaxKind.IdentifierToken || Current.Kind == SyntaxKind.KeyKeyword || SyntaxFacts.IsBuiltInFunction(Current.Kind))
+        if (IsIdentifierLike(Current.Kind) || SyntaxFacts.IsBuiltInFunction(Current.Kind))
         {
             var identifier = NextToken();
             if (Current.Kind == SyntaxKind.DotToken)
@@ -955,14 +1126,20 @@ internal sealed class Parser
 
     private SyntaxToken MatchIdentifier()
     {
-        if (Current.Kind == SyntaxKind.IdentifierToken || Current.Kind == SyntaxKind.KeyKeyword)
+        if (IsIdentifierLike(Current.Kind))
             return NextToken();
         return MatchToken(SyntaxKind.IdentifierToken);
     }
 
+    private static bool IsContextualIdentifier(SyntaxKind kind) =>
+        kind >= SyntaxKind.UnloadKeyword && kind <= SyntaxKind.ChannelKeyword;
+
+    private static bool IsIdentifierLike(SyntaxKind kind) =>
+        kind is SyntaxKind.IdentifierToken or SyntaxKind.KeyKeyword || IsContextualIdentifier(kind);
+
     private SyntaxToken MatchTypeToken()
     {
-        if (Current.Kind is SyntaxKind.NumberKeyword or SyntaxKind.BooleanKeyword or SyntaxKind.TextKeyword or
+        if (Current.Kind is SyntaxKind.NumberKeyword or SyntaxKind.BooleanKeyword or SyntaxKind.TextKeyword or SyntaxKind.ImageKeyword or
             SyntaxKind.IdentifierToken)
         {
             var first = NextToken();
@@ -980,8 +1157,8 @@ internal sealed class Parser
 
     private SyntaxToken MatchDottedIdentifier()
     {
-        if (Current.Kind is SyntaxKind.IdentifierToken or SyntaxKind.KeyKeyword or SyntaxKind.TextKeyword or
-            SyntaxKind.NumberKeyword or SyntaxKind.BooleanKeyword)
+        if (IsIdentifierLike(Current.Kind) || Current.Kind is SyntaxKind.TextKeyword or
+            SyntaxKind.NumberKeyword or SyntaxKind.BooleanKeyword or SyntaxKind.ImageKeyword)
             return NextToken();
         return MatchToken(SyntaxKind.IdentifierToken);
     }

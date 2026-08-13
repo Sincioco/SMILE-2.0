@@ -76,11 +76,14 @@ Require-File 'artifacts\games\LibraryPackageConsumer.exe' | Out-Null
 Require-File 'artifacts\games\LocalModuleBasics.exe' | Out-Null
 Require-File 'artifacts\web\LibraryConsumer\game.js' | Out-Null
 Require-File 'artifacts\web\LocalModuleBasics\game.js' | Out-Null
+Require-File 'artifacts\web\Phase4VisualSlice\game.js' | Out-Null
 
 $nativePrograms = @(
     'artifacts\games\GraphicsBasics.exe',
     'artifacts\games\ArcBasics.exe',
     'artifacts\games\GraphicsTextSample.exe',
+    'artifacts\games\Phase4VisualSlice-DirectX\Phase4VisualSlice.exe',
+    'artifacts\games\Phase4VisualSlice-GDI\Phase4VisualSlice.exe',
     'artifacts\games\Snake\Snake.exe',
     'artifacts\games\Snake\Snake-NoDemo.exe',
     'artifacts\games\FallingBlocks\FallingBlocks.exe',
@@ -126,6 +129,12 @@ Assert-AssetCopy 'games\DungeonStarI\Assets\Background.mp3' 'artifacts\games\Dun
 Assert-AssetCopy 'games\MazeMuncher\Assets\Background.mp3' 'artifacts\games\MazeMuncher\Assets\Background.mp3'
 Assert-AssetCopy 'games\PlatformQuest\Assets\Background.mp3' 'artifacts\games\PlatformQuest\Assets\Background.mp3'
 Assert-AssetCopy 'games\SkyHopper\Assets\Background.mp3' 'artifacts\games\SkyHopper\Assets\Background.mp3'
+foreach ($asset in @('Background.png', 'CharacterSheet.png', 'Foreground.png', 'PixelProof.png',
+    'ToneOne.wav', 'ToneTwo.wav', 'Music.wav')) {
+    Assert-AssetCopy "examples\Phase4VisualSlice\Assets\$asset" "artifacts\games\Phase4VisualSlice-DirectX\Assets\$asset"
+    Assert-AssetCopy "examples\Phase4VisualSlice\Assets\$asset" "artifacts\games\Phase4VisualSlice-GDI\Assets\$asset"
+    Assert-AssetCopy "examples\Phase4VisualSlice\Assets\$asset" "artifacts\web\Phase4VisualSlice\Assets\$asset"
+}
 foreach ($map in @('default.map', 'sample-loops.map', 'sample-switchbacks.map')) {
     Assert-AssetCopy "games\DungeonStarI\Maps\$map" "artifacts\games\DungeonStarI\Maps\$map"
 }
@@ -177,11 +186,26 @@ try {
     if ($pkgdef -notmatch '"PossibleProjectExtensions"="smileproj;smilelibproj"') {
         throw 'VSIX project factory does not register .smilelibproj as a possible extension.'
     }
+    $manifestEntry = $archive.GetEntry('extension.vsixmanifest')
+    $manifestReader = [System.IO.StreamReader]::new($manifestEntry.Open())
+    try { $vsixManifest = $manifestReader.ReadToEnd() }
+    finally { $manifestReader.Dispose() }
+    if ($vsixManifest -notmatch 'Version="2\.0\.24"') {
+        throw 'VSIX identity version is not 2.0.24.'
+    }
 }
 finally {
     $archive.Dispose()
 }
 Write-Host 'VSIX compiler, shared-language, and project-template payload verified.'
+$visualStudioDll = Require-File 'src\Smile.VisualStudio\bin\Release\net472\Smile.VisualStudio.dll'
+$versionInfo = [Diagnostics.FileVersionInfo]::GetVersionInfo($visualStudioDll)
+$assemblyVersion = [Reflection.AssemblyName]::GetAssemblyName($visualStudioDll).Version.ToString()
+if ($versionInfo.FileVersion -ne '2.0.24.0' -or $versionInfo.ProductVersion -notlike '2.0.24*' -or
+    $assemblyVersion -ne '2.0.24.0') {
+    throw "Visual Studio DLL versions differ: file=$($versionInfo.FileVersion), product=$($versionInfo.ProductVersion), assembly=$assemblyVersion."
+}
+Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.24.'
 
 $scaleCases = @(
     @{ Width = 960; Height = 540; ExpectedWidth = 960; ExpectedHeight = 540; X = 0; Y = 0 },

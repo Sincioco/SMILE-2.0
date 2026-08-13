@@ -1,0 +1,3 @@
+GAME WINDOW "Invalid"
+DIM Value AS NUMBER
+DRAW IMAGE Value AT 0, 0

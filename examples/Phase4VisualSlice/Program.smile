@@ -1,0 +1,141 @@
+OPTION EXPLICIT
+
+GAME WINDOW "SMILE 2.0 Phase 4 - High Resolution 2D" SIZE 960 BY 540
+
+TYPE AnimationState
+    FirstFrame AS NUMBER
+    FrameCount AS NUMBER
+    Row AS NUMBER
+    FrameMilliseconds AS NUMBER
+END TYPE
+
+TYPE MediaAssets
+    Background AS IMAGE
+    CharacterSheet AS IMAGE
+    Foreground AS IMAGE
+    PixelProof AS IMAGE
+END TYPE
+
+DIM Media AS MediaAssets
+DIM SharedSheet AS IMAGE
+DIM States[2] AS AnimationState
+DIM SavedBytes[8]
+DIM LoadedBytes[8]
+DIM LoadedCount AS NUMBER
+DIM State AS NUMBER
+DIM Frame AS NUMBER
+DIM StateStarted AS NUMBER
+DIM LastFrameTime AS NUMBER
+DIM Caption AS TEXT
+DIM CaptionWidth AS NUMBER
+DIM CaptionHeight AS NUMBER
+
+States[0].FirstFrame = 0
+States[0].FrameCount = 4
+States[0].Row = 0
+States[0].FrameMilliseconds = 150
+States[1].FirstFrame = 0
+States[1].FrameCount = 4
+States[1].Row = 1
+States[1].FrameMilliseconds = 90
+
+LOAD IMAGE Media.Background FROM "Assets\Background.png"
+LOAD IMAGE Media.CharacterSheet FROM "Assets\CharacterSheet.png"
+LOAD IMAGE SharedSheet FROM "Assets\CharacterSheet.png"
+LOAD IMAGE Media.Foreground FROM "Assets\Foreground.png"
+LOAD IMAGE Media.PixelProof FROM "Assets\PixelProof.png"
+
+IF IMAGE_WIDTH(Media.Background) <> 2304 OR IMAGE_HEIGHT(Media.Background) <> 1296 THEN
+    END PROGRAM
+END IF
+IF IMAGE_WIDTH(Media.PixelProof) <> 37 OR IMAGE_HEIGHT(Media.PixelProof) <> 53 THEN
+    END PROGRAM
+END IF
+UNLOAD IMAGE SharedSheet
+IF IMAGE_LOADED(Media.CharacterSheet) = FALSE THEN
+    END PROGRAM
+END IF
+
+SavedBytes[0] = 83
+SavedBytes[1] = 77
+SavedBytes[2] = 73
+SavedBytes[3] = 76
+SavedBytes[4] = 69
+SavedBytes[5] = 50
+SavedBytes[6] = 48
+SavedBytes[7] = 52
+SAVE DATA SavedBytes COUNT 8 TO "Phase4VisualSlice"
+LOAD DATA "Phase4VisualSlice" INTO LoadedBytes COUNT LoadedCount
+
+PLAY MUSIC "Assets\Music.wav" LOOP
+MUSIC VOLUME 18
+PLAY SOUND "Assets\ToneOne.wav" ON CHANNEL 1
+PLAY SOUND "Assets\ToneTwo.wav" ON CHANNEL 2
+
+State = 1
+Frame = 0
+StateStarted = TIMER()
+LastFrameTime = StateStarted
+Caption = "ACTION - ALPHA, FLIP, CLIP, LAYERS"
+
+DO
+    IF TIMER() - StateStarted >= 2600 THEN
+        IF State = 0 THEN
+            State = 1
+            Caption = "ACTION - ALPHA, FLIP, CLIP, LAYERS"
+            PLAY SOUND "Assets\ToneTwo.wav" ON CHANNEL 2
+        ELSE
+            State = 0
+            Caption = "IDLE - SMOOTH HIGH-RESOLUTION PNG"
+            PLAY SOUND "Assets\ToneOne.wav" ON CHANNEL 1
+        END IF
+        Frame = 0
+        StateStarted = TIMER()
+        LastFrameTime = StateStarted
+    END IF
+
+    IF TIMER() - LastFrameTime >= States[State].FrameMilliseconds THEN
+        Frame = Frame + 1
+        IF Frame >= States[State].FrameCount THEN
+            Frame = 0
+        END IF
+        LastFrameTime = TIMER()
+    END IF
+
+    CaptionWidth = TEXT_WIDTH(Caption, 25)
+    CaptionHeight = TEXT_HEIGHT(Caption, 25)
+
+    CLEAR RGB(7, 10, 24)
+    DRAW IMAGE Media.Background AT 0, 0 SIZE 960 BY 540 FILTER SMOOTH
+
+    CLIP RECTANGLE 255, 80, 450, 405
+        IF State = 0 THEN
+            DRAW IMAGE Media.CharacterSheet FROM Frame * 512, States[State].Row * 512 SIZE 512 BY 512 AT 480, 474 SIZE 330 BY 330 ANCHOR 165, 330 FILTER SMOOTH
+        ELSE
+            DRAW IMAGE Media.CharacterSheet FROM Frame * 512, States[State].Row * 512 SIZE 512 BY 512 AT 480, 474 SIZE 330 BY 330 ANCHOR 165, 330 FILTER SMOOTH FLIP HORIZONTAL
+        END IF
+
+        CLIP RECTANGLE 560, 105, 118, 118
+            DRAW IMAGE Media.Foreground FROM 1160, 115 SIZE 420 BY 420 AT 545, 90 SIZE 150 BY 150 OPACITY 72 ANCHOR 0, 0 FILTER SMOOTH
+        END CLIP
+    END CLIP
+
+    DRAW IMAGE Media.Foreground AT 0, 0 SIZE 960 BY 540 OPACITY 62 FILTER SMOOTH
+    DRAW IMAGE Media.PixelProof AT 30, 388 SIZE 148 BY 106 FILTER PIXEL
+
+    FILL RECTANGLE 480 - CaptionWidth / 2 - 18, 19, CaptionWidth + 36, CaptionHeight + 18, RGB(10, 15, 36)
+    DRAW TEXT Caption AT 480, 27 SIZE 25 COLOR WHITE CENTERED
+    DRAW TEXT "PIXEL FILTER OPT-IN" AT 104, 504 SIZE 15 COLOR CYAN CENTERED
+
+    SHOW SCREEN
+    WAIT 8 MILLISECONDS
+LOOP UNTIL GAME_CLOSED() = TRUE
+
+STOP SOUND
+STOP MUSIC
+UNLOAD IMAGE Media.PixelProof
+UNLOAD IMAGE Media.Foreground
+UNLOAD IMAGE Media.CharacterSheet
+UNLOAD IMAGE Media.Background
+
+END PROGRAM

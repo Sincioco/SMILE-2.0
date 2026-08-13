@@ -10,7 +10,7 @@ function fail(message) {
 }
 
 const args = process.argv.slice(2);
-if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>]");
+if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media]");
 
 const webDirectory = path.resolve(args.shift());
 let expectedPath = null;
@@ -18,8 +18,13 @@ let nativeOutputPath = null;
 let expectedDrawText = null;
 let maximumFrames = 3;
 let timeoutMilliseconds = 5000;
+let verifyPhase4Media = false;
 while (args.length !== 0) {
     const option = args.shift();
+    if (option === "--phase4-media") {
+        verifyPhase4Media = true;
+        continue;
+    }
     const value = args.shift();
     if (value === undefined) fail(`missing value for ${option}`);
     if (option === "--expected") expectedPath = path.resolve(value);
@@ -42,6 +47,14 @@ const windowListeners = new Map();
 const documentListeners = new Map();
 const storage = new Map();
 let requestedFrames = 0;
+let imageConstructions = 0;
+let audioConstructions = 0;
+let audioPlays = 0;
+let audioPauses = 0;
+let clipCalls = 0;
+let measurementCalls = 0;
+let negativeScaleCalls = 0;
+const imageDraws = [];
 
 function addListener(target, type, listener) {
     if (!target.has(type)) target.set(type, []);
@@ -50,19 +63,32 @@ function addListener(target, type, listener) {
 function dispatch(target, type, event = {}) {
     for (const listener of target.get(type) || []) listener({ type, ...event });
 }
-function context2d() {
+function context2d(name) {
     const noop = () => {};
-    return {
+    const context = {
         beginPath: noop, closePath: noop, moveTo: noop, lineTo: noop, quadraticCurveTo: noop,
-        arc: noop, fill: noop, stroke: noop, fillRect: noop, strokeRect: noop, clearRect: noop,
-        drawImage: noop,
+        arc: noop, rect: noop,
+        clip: () => { clipCalls += 1; }, save: noop, restore: noop, translate: noop,
+        scale: (x, y) => { if (x < 0 || y < 0) negativeScaleCalls += 1; },
+        fill: noop, stroke: noop, fillRect: noop, strokeRect: noop, clearRect: noop,
+        drawImage: (resource, ...values) => {
+            if (name === "back" && resource && typeof resource.src === "string") {
+                imageDraws.push({ source: resource.src, values, smoothing: context.imageSmoothingEnabled,
+                    alpha: context.globalAlpha });
+            }
+        },
+        measureText: value => {
+            measurementCalls += 1;
+            return { width: String(value).length * 8, actualBoundingBoxAscent: 12, actualBoundingBoxDescent: 4 };
+        },
         fillText: value => drawnText.push(String(value)),
         fillStyle: "", strokeStyle: "", lineWidth: 1, font: "", textAlign: "left",
-        textBaseline: "top", imageSmoothingEnabled: false
+        textBaseline: "top", imageSmoothingEnabled: false, globalAlpha: 1
     };
+    return context;
 }
-function canvas() {
-    const drawing = context2d();
+function canvas(name = "offscreen") {
+    const drawing = context2d(name);
     return {
         width: 0, height: 0, hidden: true, style: {},
         getContext: () => drawing,
@@ -70,7 +96,7 @@ function canvas() {
     };
 }
 
-const visibleCanvas = canvas();
+const visibleCanvas = canvas("visible");
 const consoleElement = { hidden: true, textContent: "", scrollTop: 0, scrollHeight: 0 };
 const errorElement = { hidden: true, textContent: "" };
 const shellElement = { requestFullscreen: async () => {} };
@@ -85,7 +111,7 @@ const host = {
     document: {
         title: "", hidden: false, fullscreenElement: null,
         getElementById: id => elements.get(id) || null,
-        createElement: tag => tag === "canvas" ? canvas() : {},
+        createElement: tag => tag === "canvas" ? canvas("back") : {},
         addEventListener: (type, listener) => addListener(documentListeners, type, listener),
         hasFocus: () => true,
         exitFullscreen: async () => {}
@@ -96,12 +122,27 @@ const host = {
     },
     performance: { now: () => Date.now() },
     Audio: class {
-        constructor() { this.loop = false; this.volume = 1; this.currentTime = 0; }
+        constructor(source) { audioConstructions += 1; this.src = source || ""; this.loop = false; this.volume = 1; this.currentTime = 0; }
         addEventListener() {}
-        play() { return Promise.resolve(); }
-        pause() {}
+        play() { audioPlays += 1; return Promise.resolve(); }
+        pause() { audioPauses += 1; }
+    },
+    Image: class {
+        constructor() { imageConstructions += 1; this.naturalWidth = this.width = 1920; this.naturalHeight = this.height = 1080; }
+        set src(value) {
+            this._src = value;
+            const normalized = String(value).replace(/\\/g, "/");
+            if (normalized.endsWith("/Background.png")) { this.naturalWidth = this.width = 2304; this.naturalHeight = this.height = 1296; }
+            else if (normalized.endsWith("/CharacterSheet.png")) { this.naturalWidth = this.width = 2048; this.naturalHeight = this.height = 1024; }
+            else if (normalized.endsWith("/Foreground.png")) { this.naturalWidth = this.width = 1920; this.naturalHeight = this.height = 1080; }
+            else if (normalized.endsWith("/PixelProof.png")) { this.naturalWidth = this.width = 37; this.naturalHeight = this.height = 53; }
+            setImmediate(() => { if (this.onload) this.onload(); });
+        }
+        get src() { return this._src; }
     },
     fetch: async () => ({ ok: false, arrayBuffer: async () => new ArrayBuffer(0) }),
+    btoa: value => Buffer.from(value, "binary").toString("base64"),
+    atob: value => Buffer.from(value, "base64").toString("binary"),
     setTimeout, clearTimeout, setImmediate, Promise, Map, Set, Uint8Array, ArrayBuffer,
     innerWidth: 1280, innerHeight: 720,
     addEventListener: (type, listener) => addListener(windowListeners, type, listener),
@@ -120,6 +161,12 @@ const context = vm.createContext(host);
 try {
     vm.runInContext(fs.readFileSync(runtimePath, "utf8"), context, { filename: runtimePath });
     vm.runInContext(fs.readFileSync(gamePath, "utf8"), context, { filename: gamePath });
+    if (verifyPhase4Media) {
+        dispatch(windowListeners, "keydown", {
+            code: "KeyX", repeat: false, ctrlKey: false, altKey: false, metaKey: false,
+            preventDefault: () => {}
+        });
+    }
 } catch (error) {
     fail(error && error.stack ? error.stack : String(error));
 }
@@ -161,9 +208,33 @@ const started = Date.now();
     }
     if (expectedDrawText !== null && !drawnText.includes(expectedDrawText))
         fail(`DRAW TEXT did not contain ${JSON.stringify(expectedDrawText)}; recorded ${JSON.stringify(drawnText)}`);
+    if (verifyPhase4Media) {
+        if (imageConstructions !== 4) fail(`Phase 4 image cache expected 4 decodes, found ${imageConstructions}`);
+        if (imageDraws.length < 5) fail(`Phase 4 expected image draws, found ${imageDraws.length}`);
+        const firstFrame = imageDraws.slice(0, 5).map(draw => path.basename(draw.source));
+        const expectedOrder = ["Background.png", "CharacterSheet.png", "Foreground.png", "Foreground.png", "PixelProof.png"];
+        if (firstFrame.join("|") !== expectedOrder.join("|"))
+            fail(`Phase 4 painter order differed: ${firstFrame.join(", ")}`);
+        if (!imageDraws.some(draw => draw.values.length === 8))
+            fail("Phase 4 explicit source/destination rectangle was not recorded");
+        if (!imageDraws.some(draw => draw.smoothing) || !imageDraws.some(draw => !draw.smoothing))
+            fail("Phase 4 smooth and pixel filters were not both recorded");
+        if (!imageDraws.some(draw => draw.alpha > 0 && draw.alpha < 1))
+            fail("Phase 4 opacity was not recorded");
+        if (negativeScaleCalls < 1) fail("Phase 4 horizontal flip was not recorded");
+        if (clipCalls < 2) fail(`Phase 4 nested clips expected at least 2 clips, found ${clipCalls}`);
+        if (measurementCalls < 2) fail("Phase 4 text measurement was not recorded");
+        if (![...storage.keys()].some(key => key.includes("data:Phase4VisualSlice")))
+            fail("Phase 4 persistent DATA storage was not recorded");
+        if (audioConstructions < 3 || audioPlays < 3)
+            fail("Phase 4 music and overlapping SFX were not recorded");
+        if (audioPauses < 3)
+            fail("Phase 4 page-hide audio shutdown did not stop music and SFX channels");
+    }
 
     process.stdout.write(`Web execution passed: ${webDirectory}`);
     if (expectedPath !== null || nativeOutputPath !== null) process.stdout.write(" (exact console parity)");
     if (expectedDrawText !== null) process.stdout.write(" (dynamic DRAW TEXT parity)");
+    if (verifyPhase4Media) process.stdout.write(" (Phase 4 media/cache/clip/data/audio parity)");
     process.stdout.write("\n");
 })().catch(error => fail(error && error.stack ? error.stack : String(error)));

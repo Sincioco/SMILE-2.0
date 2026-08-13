@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Windows 64-bit .exe" />
+    <Platform Name="Web" />
+  </Configurations>
+  <Project Path="Phase4VisualSlice.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="35f5e4e7-d602-e20f-417b-77a3f33d9b13" />
+</Solution>

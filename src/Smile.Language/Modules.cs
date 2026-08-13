@@ -630,27 +630,7 @@ internal sealed class ModuleProcessor
             }
             case AssignmentStatementSyntax assignment:
             {
-                var importedQualifier = assignment.Target.IsQualified &&
-                    _imports.TryGetValue(tree.Source, out var aliases) && aliases.ContainsKey(assignment.Target.Qualifier!.Text);
-                var identifier = importedQualifier
-                    ? QualifiedToken(tree, assignment.Target.Qualifier!, assignment.Target.Identifier,
-                        member => member.Kind is SmileModuleMemberKind.Constant or SmileModuleMemberKind.Variable or SmileModuleMemberKind.Array)
-                    : ReferenceToken(assignment.Target.IsQualified ? assignment.Target.Qualifier! : assignment.Target.Identifier,
-                        tree, module, locals);
-                var fields = importedQualifier
-                    ? assignment.Target.Fields
-                    : assignment.Target.IsQualified
-                        ? new[] { assignment.Target.Identifier }.Concat(assignment.Target.Fields).ToArray()
-                        : assignment.Target.Fields;
-                var fieldDots = importedQualifier
-                    ? assignment.Target.FieldDots
-                    : assignment.Target.IsQualified
-                        ? new[] { assignment.Target.DotToken! }.Concat(assignment.Target.FieldDots).ToArray()
-                        : assignment.Target.FieldDots;
-                var target = new AssignmentTargetSyntax(identifier, assignment.Target.OpenBracket,
-                    assignment.Target.Indices.Select(item => LowerExpression(item, tree, module, locals)).ToArray(),
-                    assignment.Target.CloseBracket, fieldDots: fieldDots, fields: fields);
-                return new AssignmentStatementSyntax(target, assignment.EqualsToken,
+                return new AssignmentStatementSyntax(LowerTarget(assignment.Target, tree, module, locals), assignment.EqualsToken,
                     LowerExpression(assignment.Expression, tree, module, locals));
             }
             case PrintStatementSyntax print:
@@ -714,6 +694,29 @@ internal sealed class ModuleProcessor
                     graphics.Arguments.Select(item => LowerExpression(item, tree, module, locals)).ToArray(),
                     graphics.TextExpression == null ? null : LowerExpression(graphics.TextExpression, tree, module, locals),
                     graphics.Centered, graphics.Span.End);
+            case DrawImageStatementSyntax image:
+                return new DrawImageStatementSyntax(image.DrawKeyword, image.ImageKeyword,
+                    LowerExpression(image.Image, tree, module, locals),
+                    LowerOptional(image.SourceX, tree, module, locals), LowerOptional(image.SourceY, tree, module, locals),
+                    LowerOptional(image.SourceWidth, tree, module, locals), LowerOptional(image.SourceHeight, tree, module, locals),
+                    LowerExpression(image.DestinationX, tree, module, locals),
+                    LowerExpression(image.DestinationY, tree, module, locals),
+                    LowerOptional(image.DestinationWidth, tree, module, locals),
+                    LowerOptional(image.DestinationHeight, tree, module, locals),
+                    LowerOptional(image.Opacity, tree, module, locals), image.Filter, image.Flip,
+                    LowerOptional(image.AnchorX, tree, module, locals), LowerOptional(image.AnchorY, tree, module, locals),
+                    image.Span.End);
+            case ImageLoadStatementSyntax image:
+                return new ImageLoadStatementSyntax(image.Keyword, image.ImageKeyword,
+                    LowerTarget(image.Target, tree, module, locals), LowerOptional(image.Path, tree, module, locals));
+            case ClipRectangleStatementSyntax clip:
+                return new ClipRectangleStatementSyntax(clip.ClipKeyword,
+                    clip.Arguments.Select(item => LowerExpression(item, tree, module, locals)).ToArray(),
+                    clip.Statements.Select(item => LowerStatement(item, tree, module, locals)).ToArray(),
+                    clip.EndKeyword, clip.FinalClipKeyword);
+            case SoundStatementSyntax sound:
+                return new SoundStatementSyntax(sound.Keyword, sound.SoundKeyword, sound.Path,
+                    LowerOptional(sound.Channel, tree, module, locals));
             case MusicStatementSyntax music:
                 return new MusicStatementSyntax(music.Keyword, music.MusicKeyword, music.Operation, music.Path,
                     music.LoopKeyword, music.Volume == null ? null : LowerExpression(music.Volume, tree, module, locals));
@@ -724,11 +727,41 @@ internal sealed class ModuleProcessor
                 return new TextFileLoadStatementSyntax(load.LoadKeyword, load.TextKeyword, load.FileKeyword, load.Path,
                     load.IntoKeyword, ReferenceToken(load.Destination, tree, module, locals), load.CountKeyword,
                     ReferenceToken(load.CountIdentifier, tree, module, locals));
+            case DataLoadStatementSyntax load:
+                return new DataLoadStatementSyntax(load.LoadKeyword, load.DataKeyword,
+                    LowerExpression(load.Key, tree, module, locals),
+                    ReferenceToken(load.Destination, tree, module, locals),
+                    LowerTarget(load.CountTarget, tree, module, locals));
+            case DataSaveStatementSyntax save:
+                return new DataSaveStatementSyntax(save.SaveKeyword, save.DataKeyword,
+                    ReferenceToken(save.Source, tree, module, locals),
+                    LowerExpression(save.Count, tree, module, locals), LowerExpression(save.Key, tree, module, locals));
             case SaveStatementSyntax save:
                 return new SaveStatementSyntax(save.SaveKeyword, ReferenceToken(save.Identifier, tree, module, locals), save.Key);
             default:
                 return statement;
         }
+    }
+
+    private ExpressionSyntax? LowerOptional(ExpressionSyntax? expression, SyntaxTree tree, ModuleSymbol? module,
+        HashSet<string>? locals) => expression == null ? null : LowerExpression(expression, tree, module, locals);
+
+    private AssignmentTargetSyntax LowerTarget(AssignmentTargetSyntax target, SyntaxTree tree, ModuleSymbol? module,
+        HashSet<string>? locals)
+    {
+        var importedQualifier = target.IsQualified && _imports.TryGetValue(tree.Source, out var aliases) &&
+            aliases.ContainsKey(target.Qualifier!.Text);
+        var identifier = importedQualifier
+            ? QualifiedToken(tree, target.Qualifier!, target.Identifier,
+                member => member.Kind is SmileModuleMemberKind.Constant or SmileModuleMemberKind.Variable or SmileModuleMemberKind.Array)
+            : ReferenceToken(target.IsQualified ? target.Qualifier! : target.Identifier, tree, module, locals);
+        var fields = importedQualifier ? target.Fields : target.IsQualified
+            ? new[] { target.Identifier }.Concat(target.Fields).ToArray() : target.Fields;
+        var fieldDots = importedQualifier ? target.FieldDots : target.IsQualified
+            ? new[] { target.DotToken! }.Concat(target.FieldDots).ToArray() : target.FieldDots;
+        return new AssignmentTargetSyntax(identifier, target.OpenBracket,
+            target.Indices.Select(item => LowerExpression(item, tree, module, locals)).ToArray(), target.CloseBracket,
+            fieldDots: fieldDots, fields: fields);
     }
 
     private ExpressionSyntax LowerExpression(ExpressionSyntax expression, SyntaxTree tree, ModuleSymbol? module,
@@ -791,7 +824,7 @@ internal sealed class ModuleProcessor
 
     private SyntaxToken? LowerTypeToken(SyntaxToken? token, SyntaxTree tree, ModuleSymbol? module)
     {
-        if (token == null || token.Kind is SyntaxKind.NumberKeyword or SyntaxKind.BooleanKeyword or SyntaxKind.TextKeyword)
+        if (token == null || token.Kind is SyntaxKind.NumberKeyword or SyntaxKind.BooleanKeyword or SyntaxKind.TextKeyword or SyntaxKind.ImageKeyword)
             return token;
         if (string.IsNullOrWhiteSpace(token.Text))
             return token;
@@ -918,6 +951,7 @@ internal sealed class ModuleProcessor
                     case TextFileLoadStatementSyntax load: Add(load.CountIdentifier); break;
                     case ForStatementSyntax loop: Add(loop.Identifier); Collect(loop.Statements); break;
                     case DoStatementSyntax loop: Collect(loop.Statements); break;
+                    case ClipRectangleStatementSyntax clip: Collect(clip.Statements); break;
                     case IfStatementSyntax conditional:
                         foreach (var clause in conditional.Clauses) Collect(clause.Statements);
                         Collect(conditional.ElseStatements); break;

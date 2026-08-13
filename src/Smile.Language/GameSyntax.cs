@@ -72,6 +72,146 @@ public sealed class GraphicsStatementSyntax : StatementSyntax
     public override TextSpan Span => TextSpan.FromBounds(Keyword.Span.Start, _end);
 }
 
+public enum ImageFilter
+{
+    Smooth,
+    Pixel
+}
+
+[System.Flags]
+public enum ImageFlip
+{
+    None = 0,
+    Horizontal = 1,
+    Vertical = 2
+}
+
+public sealed class DrawImageStatementSyntax : StatementSyntax
+{
+    public DrawImageStatementSyntax(SyntaxToken drawKeyword, SyntaxToken imageKeyword, ExpressionSyntax image,
+        ExpressionSyntax? sourceX, ExpressionSyntax? sourceY, ExpressionSyntax? sourceWidth, ExpressionSyntax? sourceHeight,
+        ExpressionSyntax destinationX, ExpressionSyntax destinationY, ExpressionSyntax? destinationWidth,
+        ExpressionSyntax? destinationHeight, ExpressionSyntax? opacity, ImageFilter filter, ImageFlip flip,
+        ExpressionSyntax? anchorX, ExpressionSyntax? anchorY, int end)
+    {
+        DrawKeyword = drawKeyword;
+        ImageKeyword = imageKeyword;
+        Image = image;
+        SourceX = sourceX;
+        SourceY = sourceY;
+        SourceWidth = sourceWidth;
+        SourceHeight = sourceHeight;
+        DestinationX = destinationX;
+        DestinationY = destinationY;
+        DestinationWidth = destinationWidth;
+        DestinationHeight = destinationHeight;
+        Opacity = opacity;
+        Filter = filter;
+        Flip = flip;
+        AnchorX = anchorX;
+        AnchorY = anchorY;
+        _end = end;
+    }
+
+    private readonly int _end;
+    public SyntaxToken DrawKeyword { get; }
+    public SyntaxToken ImageKeyword { get; }
+    public ExpressionSyntax Image { get; }
+    public ExpressionSyntax? SourceX { get; }
+    public ExpressionSyntax? SourceY { get; }
+    public ExpressionSyntax? SourceWidth { get; }
+    public ExpressionSyntax? SourceHeight { get; }
+    public ExpressionSyntax DestinationX { get; }
+    public ExpressionSyntax DestinationY { get; }
+    public ExpressionSyntax? DestinationWidth { get; }
+    public ExpressionSyntax? DestinationHeight { get; }
+    public ExpressionSyntax? Opacity { get; }
+    public ImageFilter Filter { get; }
+    public ImageFlip Flip { get; }
+    public ExpressionSyntax? AnchorX { get; }
+    public ExpressionSyntax? AnchorY { get; }
+    public override TextSpan Span => TextSpan.FromBounds(DrawKeyword.Span.Start, _end);
+}
+
+public sealed class ImageLoadStatementSyntax : StatementSyntax
+{
+    public ImageLoadStatementSyntax(SyntaxToken keyword, SyntaxToken imageKeyword,
+        AssignmentTargetSyntax target, ExpressionSyntax? path)
+    {
+        Keyword = keyword;
+        ImageKeyword = imageKeyword;
+        Target = target;
+        Path = path;
+    }
+
+    public SyntaxToken Keyword { get; }
+    public SyntaxToken ImageKeyword { get; }
+    public AssignmentTargetSyntax Target { get; }
+    public ExpressionSyntax? Path { get; }
+    public bool IsUnload => Keyword.Kind == SyntaxKind.UnloadKeyword;
+    public override TextSpan Span => TextSpan.FromBounds(Keyword.Span.Start, Path?.Span.End ?? Target.Span.End);
+}
+
+public sealed class ClipRectangleStatementSyntax : StatementSyntax
+{
+    public ClipRectangleStatementSyntax(SyntaxToken clipKeyword, IReadOnlyList<ExpressionSyntax> arguments,
+        IReadOnlyList<StatementSyntax> statements, SyntaxToken endKeyword, SyntaxToken finalClipKeyword)
+    {
+        ClipKeyword = clipKeyword;
+        Arguments = arguments;
+        Statements = statements;
+        EndKeyword = endKeyword;
+        FinalClipKeyword = finalClipKeyword;
+    }
+
+    public SyntaxToken ClipKeyword { get; }
+    public IReadOnlyList<ExpressionSyntax> Arguments { get; }
+    public IReadOnlyList<StatementSyntax> Statements { get; }
+    public SyntaxToken EndKeyword { get; }
+    public SyntaxToken FinalClipKeyword { get; }
+    public override TextSpan Span => TextSpan.FromBounds(ClipKeyword.Span.Start, FinalClipKeyword.Span.End);
+}
+
+public sealed class DataLoadStatementSyntax : StatementSyntax
+{
+    public DataLoadStatementSyntax(SyntaxToken loadKeyword, SyntaxToken dataKeyword, ExpressionSyntax key,
+        SyntaxToken destination, AssignmentTargetSyntax countTarget)
+    {
+        LoadKeyword = loadKeyword;
+        DataKeyword = dataKeyword;
+        Key = key;
+        Destination = destination;
+        CountTarget = countTarget;
+    }
+
+    public SyntaxToken LoadKeyword { get; }
+    public SyntaxToken DataKeyword { get; }
+    public ExpressionSyntax Key { get; }
+    public SyntaxToken Destination { get; }
+    public AssignmentTargetSyntax CountTarget { get; }
+    public override TextSpan Span => TextSpan.FromBounds(LoadKeyword.Span.Start, CountTarget.Span.End);
+}
+
+public sealed class DataSaveStatementSyntax : StatementSyntax
+{
+    public DataSaveStatementSyntax(SyntaxToken saveKeyword, SyntaxToken dataKeyword, SyntaxToken source,
+        ExpressionSyntax count, ExpressionSyntax key)
+    {
+        SaveKeyword = saveKeyword;
+        DataKeyword = dataKeyword;
+        Source = source;
+        Count = count;
+        Key = key;
+    }
+
+    public SyntaxToken SaveKeyword { get; }
+    public SyntaxToken DataKeyword { get; }
+    public SyntaxToken Source { get; }
+    public ExpressionSyntax Count { get; }
+    public ExpressionSyntax Key { get; }
+    public override TextSpan Span => TextSpan.FromBounds(SaveKeyword.Span.Start, Key.Span.End);
+}
+
 public sealed class ShowScreenStatementSyntax : StatementSyntax
 {
     public ShowScreenStatementSyntax(SyntaxToken showKeyword, SyntaxToken screenKeyword)
@@ -87,18 +227,21 @@ public sealed class ShowScreenStatementSyntax : StatementSyntax
 
 public sealed class SoundStatementSyntax : StatementSyntax
 {
-    public SoundStatementSyntax(SyntaxToken keyword, SyntaxToken soundKeyword, SyntaxToken? path)
+    public SoundStatementSyntax(SyntaxToken keyword, SyntaxToken soundKeyword, SyntaxToken? path,
+        ExpressionSyntax? channel)
     {
         Keyword = keyword;
         SoundKeyword = soundKeyword;
         Path = path;
+        Channel = channel;
     }
 
     public SyntaxToken Keyword { get; }
     public SyntaxToken SoundKeyword { get; }
     public SyntaxToken? Path { get; }
+    public ExpressionSyntax? Channel { get; }
     public bool IsStop => Keyword.Kind == SyntaxKind.StopKeyword;
-    public override TextSpan Span => TextSpan.FromBounds(Keyword.Span.Start, Path?.Span.End ?? SoundKeyword.Span.End);
+    public override TextSpan Span => TextSpan.FromBounds(Keyword.Span.Start, Channel?.Span.End ?? Path?.Span.End ?? SoundKeyword.Span.End);
 }
 
 public enum MusicOperation

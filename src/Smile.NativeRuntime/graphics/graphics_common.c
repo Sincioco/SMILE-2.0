@@ -279,6 +279,39 @@ void smile_graphics_draw_number(long long value, long long x, long long y, long 
     if (smile_graphics_available()) smile_active_backend.operations->draw_number(&smile_active_backend, value, x, y, size, color);
 }
 
+void smile_graphics_draw_image(void* image, long long source_x, long long source_y,
+    long long source_width, long long source_height, long long destination_x, long long destination_y,
+    long long destination_width, long long destination_height, long long opacity, long long filter, long long flip)
+{
+    smile_graphics_ensure_frame();
+    if (smile_graphics_available()) smile_active_backend.operations->draw_image(&smile_active_backend, image,
+        source_x, source_y, source_width, source_height, destination_x, destination_y,
+        destination_width, destination_height, opacity, filter, flip);
+}
+
+void smile_graphics_push_clip(long long x, long long y, long long width, long long height)
+{
+    smile_graphics_ensure_frame();
+    if (smile_graphics_available()) smile_active_backend.operations->push_clip(&smile_active_backend, x, y, width, height);
+}
+
+void smile_graphics_pop_clip(void)
+{
+    if (smile_graphics_available()) smile_active_backend.operations->pop_clip(&smile_active_backend);
+}
+
+long long smile_graphics_text_width(const char* text, long long length, long long size)
+{
+    smile_graphics_ensure_frame();
+    return smile_graphics_available() ? smile_active_backend.operations->text_width(&smile_active_backend, text, length, size) : 0;
+}
+
+long long smile_graphics_text_height(const char* text, long long length, long long size)
+{
+    smile_graphics_ensure_frame();
+    return smile_graphics_available() ? smile_active_backend.operations->text_height(&smile_active_backend, text, length, size) : 0;
+}
+
 int smile_graphics_present(void)
 {
     int result;

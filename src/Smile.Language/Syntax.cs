@@ -73,6 +73,11 @@ public enum SyntaxKind
     MaxKeyword,
     GameClosedKeyword,
     KeyHeldKeyword,
+    ImageWidthKeyword,
+    ImageHeightKeyword,
+    ImageLoadedKeyword,
+    TextWidthKeyword,
+    TextHeightKeyword,
     GameKeyword,
     WindowKeyword,
     SizeKeyword,
@@ -115,6 +120,21 @@ public enum SyntaxKind
     ByRefKeyword,
     ByValKeyword,
     TypeKeyword,
+    ImageKeyword,
+    UnloadKeyword,
+    ClipKeyword,
+    DataKeyword,
+    OpacityKeyword,
+    AnchorKeyword,
+    FlipKeyword,
+    HorizontalKeyword,
+    VerticalKeyword,
+    BothKeyword,
+    FilterKeyword,
+    SmoothKeyword,
+    PixelKeyword,
+    OnKeyword,
+    ChannelKeyword,
     NoneKeyword,
     WKeyword,
     AKeyword,
@@ -156,6 +176,8 @@ public enum SyntaxKind
     LightGreenKeyword,
     LightBlueKeyword,
     LightGrayKeyword,
+    SoundChannelCountKeyword,
+    DataBlockMaxBytesKeyword,
 }
 
 public static class SyntaxFacts
@@ -165,6 +187,8 @@ public static class SyntaxFacts
     private static readonly IReadOnlyList<string> KeyParameter = new[] { "key" };
     private static readonly IReadOnlyList<string> TwoValueParameters = new[] { "first", "second" };
     private static readonly IReadOnlyList<string> ColorParameters = new[] { "red", "green", "blue" };
+    private static readonly IReadOnlyList<string> ImageParameter = new[] { "image" };
+    private static readonly IReadOnlyList<string> TextSizeParameters = new[] { "text", "size" };
 
     private static readonly Dictionary<string, SyntaxKind> Keywords = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -210,6 +234,11 @@ public static class SyntaxFacts
         ["MAX"] = SyntaxKind.MaxKeyword,
         ["GAME_CLOSED"] = SyntaxKind.GameClosedKeyword,
         ["KEY_HELD"] = SyntaxKind.KeyHeldKeyword,
+        ["IMAGE_WIDTH"] = SyntaxKind.ImageWidthKeyword,
+        ["IMAGE_HEIGHT"] = SyntaxKind.ImageHeightKeyword,
+        ["IMAGE_LOADED"] = SyntaxKind.ImageLoadedKeyword,
+        ["TEXT_WIDTH"] = SyntaxKind.TextWidthKeyword,
+        ["TEXT_HEIGHT"] = SyntaxKind.TextHeightKeyword,
         ["GAME"] = SyntaxKind.GameKeyword,
         ["WINDOW"] = SyntaxKind.WindowKeyword,
         ["SIZE"] = SyntaxKind.SizeKeyword,
@@ -252,6 +281,21 @@ public static class SyntaxFacts
         ["BYREF"] = SyntaxKind.ByRefKeyword,
         ["BYVAL"] = SyntaxKind.ByValKeyword,
         ["TYPE"] = SyntaxKind.TypeKeyword,
+        ["IMAGE"] = SyntaxKind.ImageKeyword,
+        ["UNLOAD"] = SyntaxKind.UnloadKeyword,
+        ["CLIP"] = SyntaxKind.ClipKeyword,
+        ["DATA"] = SyntaxKind.DataKeyword,
+        ["OPACITY"] = SyntaxKind.OpacityKeyword,
+        ["ANCHOR"] = SyntaxKind.AnchorKeyword,
+        ["FLIP"] = SyntaxKind.FlipKeyword,
+        ["HORIZONTAL"] = SyntaxKind.HorizontalKeyword,
+        ["VERTICAL"] = SyntaxKind.VerticalKeyword,
+        ["BOTH"] = SyntaxKind.BothKeyword,
+        ["FILTER"] = SyntaxKind.FilterKeyword,
+        ["SMOOTH"] = SyntaxKind.SmoothKeyword,
+        ["PIXEL"] = SyntaxKind.PixelKeyword,
+        ["ON"] = SyntaxKind.OnKeyword,
+        ["CHANNEL"] = SyntaxKind.ChannelKeyword,
         ["NONE"] = SyntaxKind.NoneKeyword,
         ["W"] = SyntaxKind.WKeyword,
         ["A"] = SyntaxKind.AKeyword,
@@ -293,6 +337,8 @@ public static class SyntaxFacts
         ["LIGHT_GREEN"] = SyntaxKind.LightGreenKeyword,
         ["LIGHT_BLUE"] = SyntaxKind.LightBlueKeyword,
         ["LIGHT_GRAY"] = SyntaxKind.LightGrayKeyword,
+        ["SOUND_CHANNEL_COUNT"] = SyntaxKind.SoundChannelCountKeyword,
+        ["DATA_BLOCK_MAX_BYTES"] = SyntaxKind.DataBlockMaxBytesKeyword,
     };
 
     public static SyntaxKind GetKeywordKind(string text) =>
@@ -301,13 +347,14 @@ public static class SyntaxFacts
     public static IReadOnlyList<string> GetKeywordTexts() => new List<string>(Keywords.Keys);
 
     public static bool IsKeyword(SyntaxKind kind) =>
-        kind >= SyntaxKind.DimKeyword && kind <= SyntaxKind.TypeKeyword;
+        (kind >= SyntaxKind.DimKeyword && kind <= SyntaxKind.TypeKeyword) ||
+        (kind >= SyntaxKind.ImageKeyword && kind <= SyntaxKind.ChannelKeyword);
 
     public static bool IsBuiltInConstant(SyntaxKind kind) =>
-        kind >= SyntaxKind.NoneKeyword && kind <= SyntaxKind.LightGrayKeyword || kind == SyntaxKind.DownKeyword;
+        kind >= SyntaxKind.NoneKeyword && kind <= SyntaxKind.DataBlockMaxBytesKeyword || kind == SyntaxKind.DownKeyword;
 
     public static bool IsBuiltInFunction(SyntaxKind kind) =>
-        kind >= SyntaxKind.TimerKeyword && kind <= SyntaxKind.KeyHeldKeyword;
+        kind >= SyntaxKind.TimerKeyword && kind <= SyntaxKind.TextHeightKeyword;
 
     public static IReadOnlyList<string> GetBuiltInFunctionParameters(SyntaxKind kind)
     {
@@ -316,6 +363,8 @@ public static class SyntaxFacts
             SyntaxKind.TimerKeyword or SyntaxKind.GameClosedKeyword => NoParameters,
             SyntaxKind.AbsKeyword => ValueParameter,
             SyntaxKind.KeyHeldKeyword => KeyParameter,
+            SyntaxKind.ImageWidthKeyword or SyntaxKind.ImageHeightKeyword or SyntaxKind.ImageLoadedKeyword => ImageParameter,
+            SyntaxKind.TextWidthKeyword or SyntaxKind.TextHeightKeyword => TextSizeParameters,
             SyntaxKind.MinKeyword or SyntaxKind.MaxKeyword => TwoValueParameters,
             SyntaxKind.RgbKeyword => ColorParameters,
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Not a built-in SMILE function.")
@@ -416,6 +465,8 @@ public static class SyntaxFacts
             SyntaxKind.LightGreenKeyword => 0x80FF80,
             SyntaxKind.LightBlueKeyword => 0xFF8080,
             SyntaxKind.LightGrayKeyword => 0xC0C0C0,
+            SyntaxKind.SoundChannelCountKeyword => 16,
+            SyntaxKind.DataBlockMaxBytesKeyword => 1024 * 1024,
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
     }

@@ -5,6 +5,8 @@
 #include <math.h>
 #include "graphics_common.h"
 #include "graphics_gdi.h"
+#include "graphics_gdi_image.h"
+#include "image_resource.h"
 
 #define SMILE_GDI_BRUSH_CACHE_SIZE 32
 #define SMILE_GDI_PEN_CACHE_SIZE 64
@@ -614,6 +616,80 @@ static void smile_gdi_draw_number(SmileGraphicsBackend* backend, long long value
     smile_gdi_draw_wide(state, buffer, length, x, y, size, color, 0);
 }
 
+static void smile_gdi_draw_image(SmileGraphicsBackend* backend, void* image_value,
+    long long source_x, long long source_y, long long source_width, long long source_height,
+    long long destination_x, long long destination_y, long long destination_width, long long destination_height,
+    long long opacity, long long filter, long long flip)
+{
+    SmileGdiState* state = (SmileGdiState*)backend->state;
+    int left = smile_graphics_round_pixel(smile_graphics_map_x(&state->viewport, (double)destination_x));
+    int top = smile_graphics_round_pixel(smile_graphics_map_y(&state->viewport, (double)destination_y));
+    int width = smile_gdi_positive_pixel(smile_graphics_map_size(&state->viewport, (double)destination_width));
+    int height = smile_gdi_positive_pixel(smile_graphics_map_size(&state->viewport, (double)destination_height));
+    if (state->back_dc == 0 || image_value == 0) return;
+    smile_gdi_draw_image_resource(state->back_dc, (SmileImageResource*)image_value,
+        smile_gdi_integer(source_x), smile_gdi_integer(source_y), smile_gdi_integer(source_width),
+        smile_gdi_integer(source_height), left, top, width, height,
+        smile_gdi_integer(opacity), smile_gdi_integer(filter), smile_gdi_integer(flip));
+}
+
+static void smile_gdi_push_clip(SmileGraphicsBackend* backend, long long x, long long y,
+    long long width, long long height)
+{
+    SmileGdiState* state = (SmileGdiState*)backend->state;
+    int left = smile_graphics_round_pixel(smile_graphics_map_x(&state->viewport, (double)x));
+    int top = smile_graphics_round_pixel(smile_graphics_map_y(&state->viewport, (double)y));
+    int right = smile_graphics_round_pixel(smile_graphics_map_x(&state->viewport, (double)(x + width)));
+    int bottom = smile_graphics_round_pixel(smile_graphics_map_y(&state->viewport, (double)(y + height)));
+    if (state->back_dc == 0) return;
+    SaveDC(state->back_dc);
+    IntersectClipRect(state->back_dc, left, top, right, bottom);
+}
+
+static void smile_gdi_pop_clip(SmileGraphicsBackend* backend)
+{
+    SmileGdiState* state = (SmileGdiState*)backend->state;
+    if (state->back_dc != 0) RestoreDC(state->back_dc, -1);
+}
+
+static void smile_gdi_measure_text(SmileGdiState* state, const char* text, long long length,
+    long long size, SIZE* measured)
+{
+    WCHAR* wide = smile_gdi_utf8_to_wide(text, length);
+    HFONT font;
+    HGDIOBJ previous;
+    int physical_size = smile_gdi_positive_pixel(smile_graphics_map_size(&state->viewport, (double)size));
+    measured->cx = 0;
+    measured->cy = physical_size;
+    if (state->back_dc == 0 || wide == 0) return;
+    font = smile_gdi_font(state, physical_size);
+    previous = SelectObject(state->back_dc, font);
+    if (lstrlenW(wide) != 0) GetTextExtentPoint32W(state->back_dc, wide, lstrlenW(wide), measured);
+    else
+    {
+        TEXTMETRICW metrics;
+        if (GetTextMetricsW(state->back_dc, &metrics)) measured->cy = metrics.tmHeight;
+    }
+    SelectObject(state->back_dc, previous);
+    HeapFree(GetProcessHeap(), 0, wide);
+}
+
+static long long smile_gdi_text_width(SmileGraphicsBackend* backend, const char* text, long long length, long long size)
+{
+    SmileGdiState* state = (SmileGdiState*)backend->state;
+    SIZE measured;
+    smile_gdi_measure_text(state, text, length, size, &measured);
+    return state->viewport.scale > 0.0 ? (long long)ceil((double)measured.cx / state->viewport.scale) : 0;
+}
+
+static long long smile_gdi_text_height(SmileGraphicsBackend* backend, const char* text, long long length, long long size)
+{
+    SmileGdiState* state = (SmileGdiState*)backend->state;
+    SIZE measured;
+    smile_gdi_measure_text(state, text, length, size, &measured);
+    return state->viewport.scale > 0.0 ? (long long)ceil((double)measured.cy / state->viewport.scale) : 0;
+}
+
 static int smile_gdi_present(SmileGraphicsBackend* backend)
 {
     SmileGdiState* state = (SmileGdiState*)backend->state;
@@ -661,6 +737,7 @@ static void smile_gdi_shutdown(SmileGraphicsBackend* backend)
     SmileGdiState* state = (SmileGdiState*)backend->state;
     smile_gdi_release_buffer(state);
     smile_gdi_release_cache(state);
+    smile_gdi_image_shutdown();
     state->window = 0;
 }
 
@@ -704,6 +781,11 @@ static const SmileGraphicsBackendVTable smile_gdi_operations =
     smile_gdi_draw_line,
     smile_gdi_draw_text,
     smile_gdi_draw_number,
+    smile_gdi_draw_image,
+    smile_gdi_push_clip,
+    smile_gdi_pop_clip,
+    smile_gdi_text_width,
+    smile_gdi_text_height,
     smile_gdi_present,
     smile_gdi_repaint,
     smile_gdi_on_fullscreen_changed,

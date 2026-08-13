@@ -1,0 +1,3 @@
+DIM First AS IMAGE
+DIM Second AS IMAGE
+PRINT First = Second

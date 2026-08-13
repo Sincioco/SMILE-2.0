@@ -1,0 +1,3 @@
+DIM Bytes AS NUMBER
+DIM ByteCount AS NUMBER
+LOAD DATA "slot" INTO Bytes COUNT ByteCount

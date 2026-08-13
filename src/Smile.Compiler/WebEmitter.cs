@@ -49,7 +49,16 @@ internal sealed class WebEmitter
         Line("async function smileMain() {");
         _indent++;
         _currentSource = _analysis.BoundSyntaxTree.Source;
+        Line("try {");
+        _indent++;
         EmitStatements(_analysis.BoundSyntaxTree.Root.Statements, topLevel: true);
+        _indent--;
+        Line("} finally {");
+        _indent++;
+        foreach (var symbol in OrderedSymbols().Where(symbol => !symbol.IsConstant && symbol.Type.RequiresCleanup))
+            EmitRelease(symbol);
+        _indent--;
+        Line("}");
         _indent--;
         Line("}");
         Line();
@@ -96,6 +105,13 @@ internal sealed class WebEmitter
                 $"{Json(FieldKey(field))}: {CloneValue(field.Type, $"value[{Json(FieldKey(field))}]")}"));
             Line($"function {name}_default() {{ return {{ {defaults} }}; }}");
             Line($"function {name}_clone(value) {{ return {{ {copies} }}; }}");
+            var clears = string.Join(" ", type.Fields.Where(field => field.Type.RequiresCleanup).Select(field =>
+                field.Type is RecordTypeSymbol nested
+                    ? $"{_recordNames[nested]}_clear(value[{Json(FieldKey(field))}]);"
+                    : field.Type == SmileType.Image
+                        ? $"smile.imageRelease(value[{Json(FieldKey(field))}]); value[{Json(FieldKey(field))}] = null;"
+                        : string.Empty));
+            Line($"function {name}_clear(value) {{ if (!value) return; {clears} }}");
         }
         if (_recordNames.Count != 0)
             Line();
@@ -125,7 +141,17 @@ internal sealed class WebEmitter
         {
             Line($"let {_variableNames[local]} = {InitialValue(local)};");
         }
+        Line("try {");
+        _indent++;
         EmitStatements(routine.Declaration.Statements, topLevel: false);
+        _indent--;
+        Line("} finally {");
+        _indent++;
+        foreach (var local in routine.LocalSymbols.Values.Where(local => local.Type.RequiresCleanup &&
+                     local.ParameterMode != ParameterPassingMode.ByRef))
+            EmitRelease(local);
+        _indent--;
+        Line("}");
         _indent--;
         Line("}");
         _currentRoutine = null;
@@ -204,6 +230,15 @@ internal sealed class WebEmitter
             case GraphicsStatementSyntax graphics:
                 EmitGraphics(graphics);
                 return;
+            case DrawImageStatementSyntax image:
+                EmitDrawImage(image);
+                return;
+            case ImageLoadStatementSyntax image:
+                EmitImageLoad(image);
+                return;
+            case ClipRectangleStatementSyntax clip:
+                EmitClip(clip, topLevel);
+                return;
             case ShowScreenStatementSyntax show:
                 Line("await smile.showScreen();");
                 return;
@@ -219,6 +254,13 @@ internal sealed class WebEmitter
                 return;
             case TextFileLoadStatementSyntax textFileLoad:
                 EmitTextFileLoad(textFileLoad);
+                return;
+            case DataLoadStatementSyntax dataLoad:
+                Line(WriteTarget(dataLoad.CountTarget,
+                    $"smile.loadData({Expression(dataLoad.Key)}, {_variableNames[ResolveVariable(dataLoad.Destination)]})") + ";");
+                return;
+            case DataSaveStatementSyntax dataSave:
+                Line($"smile.saveData({_variableNames[ResolveVariable(dataSave.Source)]}, {Expression(dataSave.Count)}, {Expression(dataSave.Key)});");
                 return;
             case SaveStatementSyntax save:
                 Line($"smile.saveInt({Json(save.Key.Value as string ?? string.Empty)}, {ReadVariable(save.Identifier)});");
@@ -242,9 +284,23 @@ internal sealed class WebEmitter
     private void EmitAssignment(AssignmentStatementSyntax assignment)
     {
         var value = Expression(assignment.Expression);
+        var targetType = TargetType(assignment.Target);
+        if (targetType == SmileType.Image)
+        {
+            Line(WriteTarget(assignment.Target,
+                $"smile.imageAssign({ReadTarget(assignment.Target)}, {value})") + ";");
+            return;
+        }
+        if (targetType is RecordTypeSymbol record && record.RequiresCleanup)
+        {
+            var temporary = Temporary("record");
+            Line($"const {temporary} = {CloneValue(targetType, value)};");
+            Line($"{_recordNames[record]}_clear({ReadTarget(assignment.Target)});");
+            Line(WriteTarget(assignment.Target, temporary) + ";");
+            return;
+        }
         if (assignment.Target.Fields.Count != 0)
         {
-            var targetType = TargetType(assignment.Target);
             Line($"{TargetLocation(assignment.Target)} = {StoreValue(targetType, value)};");
             return;
         }
@@ -405,15 +461,59 @@ internal sealed class WebEmitter
         }
     }
 
+    private void EmitDrawImage(DrawImageStatementSyntax image)
+    {
+        var values = new[]
+        {
+            Expression(image.Image), ImageValue(image.SourceX, "0"), ImageValue(image.SourceY, "0"),
+            ImageValue(image.SourceWidth, "-1"), ImageValue(image.SourceHeight, "-1"),
+            Expression(image.DestinationX), Expression(image.DestinationY),
+            ImageValue(image.DestinationWidth, "-1"), ImageValue(image.DestinationHeight, "-1"),
+            ImageValue(image.Opacity, "100"), ((int)image.Filter).ToString(CultureInfo.InvariantCulture),
+            ((int)image.Flip).ToString(CultureInfo.InvariantCulture), ImageValue(image.AnchorX, "0"),
+            ImageValue(image.AnchorY, "0")
+        };
+        Line($"smile.drawImage({string.Join(", ", values)});");
+    }
+
+    private string ImageValue(ExpressionSyntax? expression, string fallback) =>
+        expression == null ? fallback : Expression(expression);
+
+    private void EmitImageLoad(ImageLoadStatementSyntax image)
+    {
+        if (image.IsUnload)
+        {
+            Line(WriteTarget(image.Target, $"smile.imageMoveAssign({ReadTarget(image.Target)}, null)") + ";");
+            return;
+        }
+        var loaded = Temporary("image");
+        Line($"const {loaded} = await smile.loadImage({Expression(image.Path!)});");
+        Line(WriteTarget(image.Target, $"smile.imageMoveAssign({ReadTarget(image.Target)}, {loaded})") + ";");
+    }
+
+    private void EmitClip(ClipRectangleStatementSyntax clip, bool topLevel)
+    {
+        Line($"smile.pushClip({Arguments(clip.Arguments)});");
+        Line("try {");
+        _indent++;
+        EmitStatements(clip.Statements, topLevel);
+        _indent--;
+        Line("} finally {");
+        _indent++;
+        Line("smile.popClip();");
+        _indent--;
+        Line("}");
+    }
+
     private void EmitSound(SoundStatementSyntax statement)
     {
         if (statement.IsStop)
         {
-            Line("smile.stopSound();");
+            Line(statement.Channel == null ? "smile.stopSound();" : $"smile.stopSound({Expression(statement.Channel)});");
             return;
         }
         var path = (statement.Path?.Value as string ?? string.Empty).Replace('\\', '/');
-        Line($"smile.playSound({Json(path)});");
+        Line($"await smile.playSound({Json(path)}, {(statement.Channel == null ? "0" : Expression(statement.Channel))});");
     }
 
     private void EmitMusic(MusicStatementSyntax statement)
@@ -525,6 +625,11 @@ internal sealed class WebEmitter
             SyntaxKind.RgbKeyword => $"smile.rgb({arguments})",
             SyntaxKind.GameClosedKeyword => "smile.isTrue(smile.gameClosed())",
             SyntaxKind.KeyHeldKeyword => $"smile.isTrue(smile.keyHeld({arguments}))",
+            SyntaxKind.ImageWidthKeyword => $"smile.imageWidth({arguments})",
+            SyntaxKind.ImageHeightKeyword => $"smile.imageHeight({arguments})",
+            SyntaxKind.ImageLoadedKeyword => $"smile.imageLoaded({arguments})",
+            SyntaxKind.TextWidthKeyword => $"smile.textWidth({arguments})",
+            SyntaxKind.TextHeightKeyword => $"smile.textHeight({arguments})",
             _ => $"await {Routine(call.Identifier)}({RoutineArguments(call.Identifier, call.Arguments)})"
         };
     }
@@ -563,6 +668,8 @@ internal sealed class WebEmitter
             var value = Expression(argument);
             if (parameter.Type is RecordTypeSymbol)
                 return CloneValue(parameter.Type, value);
+            if (parameter.Type == SmileType.Image)
+                return $"smile.imageRetain({value})";
             return !parameter.HasDeclaredType && parameter.Type == SmileType.Number &&
                    _analysis.SemanticModel.GetType(argument) == SmileType.Boolean
                 ? $"(smile.isTrue({value}) ? 1 : 0)"
@@ -597,17 +704,60 @@ internal sealed class WebEmitter
 
     private string DefaultValue(SmileType type) => type is RecordTypeSymbol record
         ? $"{_recordNames[record]}_default()"
+        : type == SmileType.Image
+        ? "null"
         : type == SmileType.Text
         ? "\"\""
         : type == SmileType.Boolean ? "false" : "0";
 
     private string CloneValue(SmileType type, string value) => type is RecordTypeSymbol record
         ? $"{_recordNames[record]}_clone({value})"
+        : type == SmileType.Image
+        ? $"smile.imageRetain({value})"
         : value;
 
     private string StoreValue(SmileType type, string value) => type == SmileType.Number
         ? $"smile.safe({value})"
         : CloneValue(type, value);
+
+    private string ReadTarget(AssignmentTargetSyntax target) => TargetLocation(target);
+
+    private string WriteTarget(AssignmentTargetSyntax target, string value)
+    {
+        if (target.Fields.Count != 0)
+            return $"{TargetLocation(target)} = {value}";
+        var symbol = ResolveVariable(target.Identifier);
+        if (!target.IsArrayElement)
+            return WriteVariable(symbol, value);
+        return $"smile.set({_variableNames[symbol]}, [{Arguments(target.Indices)}], {value})";
+    }
+
+    private void EmitRelease(VariableSymbol symbol)
+    {
+        if (symbol.Type == SmileType.Text)
+            return;
+        var name = _variableNames[symbol];
+        if (symbol.IsArray)
+        {
+            if (symbol.Type == SmileType.Image)
+            {
+                Line($"for (const value of {name}.data) smile.imageRelease(value);");
+                Line($"{name}.data.fill(null);");
+            }
+            else if (symbol.Type is RecordTypeSymbol record)
+                Line($"for (const value of {name}.data) {_recordNames[record]}_clear(value);");
+            return;
+        }
+        var value = ReadVariable(symbol);
+        if (symbol.Type == SmileType.Image)
+        {
+            Line($"smile.imageRelease({value});");
+            if (symbol.ParameterMode != ParameterPassingMode.ByRef)
+                Line($"{name} = null;");
+        }
+        else if (symbol.Type is RecordTypeSymbol record)
+            Line($"{_recordNames[record]}_clear({value});");
+    }
 
     private SmileType TargetType(AssignmentTargetSyntax target)
     {

@@ -8,6 +8,7 @@
 #include <math.h>
 #include "graphics_common.h"
 #include "graphics_directx.h"
+#include "image_resource.h"
 
 struct SmileDirectXBrushCacheEntry
 {
@@ -490,6 +491,7 @@ static HRESULT smile_directx_create_swap_chain(SmileDirectXState* state, int wid
 
 static void smile_directx_shutdown_resources(SmileDirectXState* state)
 {
+    smile_image_resource_release_backend_resources();
     smile_directx_release_render_target(state);
     smile_directx_release_text_formats(state);
     smile_directx_release(state->dwrite_factory);
@@ -977,6 +979,95 @@ static void smile_directx_draw_number(SmileGraphicsBackend* backend, long long v
     smile_directx_draw_text(backend, narrow, length, x, y, size, color, 0);
 }
 
+static void smile_directx_draw_image(SmileGraphicsBackend* backend, void* image_value,
+    long long source_x, long long source_y, long long source_width, long long source_height,
+    long long destination_x, long long destination_y, long long destination_width, long long destination_height,
+    long long opacity, long long filter, long long flip)
+{
+    SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
+    SmileImageResource* image = static_cast<SmileImageResource*>(image_value);
+    ID2D1Bitmap1* bitmap = static_cast<ID2D1Bitmap1*>(smile_image_resource_d2d_bitmap(image, state->d2d_context));
+    D2D1_RECT_F source = D2D1::RectF((FLOAT)source_x, (FLOAT)source_y,
+        (FLOAT)(source_x + source_width), (FLOAT)(source_y + source_height));
+    D2D1_RECT_F destination = D2D1::RectF(
+        (FLOAT)smile_graphics_map_x(&state->viewport, (double)destination_x),
+        (FLOAT)smile_graphics_map_y(&state->viewport, (double)destination_y),
+        (FLOAT)smile_graphics_map_x(&state->viewport, (double)(destination_x + destination_width)),
+        (FLOAT)smile_graphics_map_y(&state->viewport, (double)(destination_y + destination_height)));
+    D2D1_MATRIX_3X2_F previous;
+    if (!state->frame_active || bitmap == 0) return;
+    state->d2d_context->GetTransform(&previous);
+    if ((flip & 3) != 0)
+    {
+        D2D1_POINT_2F center = D2D1::Point2F((destination.left + destination.right) * 0.5f,
+            (destination.top + destination.bottom) * 0.5f);
+        D2D1_MATRIX_3X2_F transform = D2D1::Matrix3x2F::Scale(
+            (flip & 1) != 0 ? -1.0f : 1.0f, (flip & 2) != 0 ? -1.0f : 1.0f, center) * previous;
+        state->d2d_context->SetTransform(transform);
+    }
+    state->d2d_context->DrawBitmap(bitmap, destination, (FLOAT)opacity / 100.0f,
+        filter == 1 ? D2D1_INTERPOLATION_MODE_NEAREST_NEIGHBOR : D2D1_INTERPOLATION_MODE_HIGH_QUALITY_CUBIC,
+        source);
+    state->d2d_context->SetTransform(previous);
+}
+
+static void smile_directx_push_clip(SmileGraphicsBackend* backend, long long x, long long y,
+    long long width, long long height)
+{
+    SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
+    if (!state->frame_active) return;
+    state->d2d_context->PushAxisAlignedClip(D2D1::RectF(
+        (FLOAT)smile_graphics_map_x(&state->viewport, (double)x),
+        (FLOAT)smile_graphics_map_y(&state->viewport, (double)y),
+        (FLOAT)smile_graphics_map_x(&state->viewport, (double)(x + width)),
+        (FLOAT)smile_graphics_map_y(&state->viewport, (double)(y + height))), D2D1_ANTIALIAS_MODE_ALIASED);
+}
+
+static void smile_directx_pop_clip(SmileGraphicsBackend* backend)
+{
+    SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
+    if (state->frame_active) state->d2d_context->PopAxisAlignedClip();
+}
+
+static void smile_directx_measure_text(SmileDirectXState* state, const char* text, long long length,
+    long long size, DWRITE_TEXT_METRICS* metrics)
+{
+    WCHAR* wide;
+    int wide_length;
+    int physical_size;
+    IDWriteTextFormat* format;
+    IDWriteTextLayout* layout = 0;
+    ZeroMemory(metrics, sizeof(*metrics));
+    wide = smile_directx_utf8_to_wide(text, length, &wide_length);
+    if (wide == 0) return;
+    physical_size = smile_graphics_round_pixel(smile_graphics_map_size(&state->viewport, (double)size));
+    if (physical_size < 1) physical_size = 1;
+    format = smile_directx_text_format(state, physical_size);
+    if (format != 0 && SUCCEEDED(state->dwrite_factory->CreateTextLayout(wide, (UINT32)wide_length, format,
+        (FLOAT)state->physical_width * 4.0f, (FLOAT)physical_size * 4.0f, &layout)))
+    {
+        layout->GetMetrics(metrics);
+        layout->Release();
+    }
+    HeapFree(GetProcessHeap(), 0, wide);
+}
+
+static long long smile_directx_text_width(SmileGraphicsBackend* backend, const char* text, long long length, long long size)
+{
+    SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
+    DWRITE_TEXT_METRICS metrics;
+    smile_directx_measure_text(state, text, length, size, &metrics);
+    return state->viewport.scale > 0.0 ? (long long)ceil(metrics.widthIncludingTrailingWhitespace / state->viewport.scale) : 0;
+}
+
+static long long smile_directx_text_height(SmileGraphicsBackend* backend, const char* text, long long length, long long size)
+{
+    SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
+    DWRITE_TEXT_METRICS metrics;
+    smile_directx_measure_text(state, text, length, size, &metrics);
+    return state->viewport.scale > 0.0 ? (long long)ceil(metrics.height / state->viewport.scale) : 0;
+}
+
 static int smile_directx_present(SmileGraphicsBackend* backend)
 {
     SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
@@ -1083,6 +1174,11 @@ static const SmileGraphicsBackendVTable smile_directx_operations =
     smile_directx_draw_line,
     smile_directx_draw_text,
     smile_directx_draw_number,
+    smile_directx_draw_image,
+    smile_directx_push_clip,
+    smile_directx_pop_clip,
+    smile_directx_text_width,
+    smile_directx_text_height,
     smile_directx_present,
     smile_directx_repaint,
     smile_directx_on_fullscreen_changed,

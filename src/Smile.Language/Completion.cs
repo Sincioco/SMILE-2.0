@@ -77,8 +77,10 @@ public static class SmileCompletionService
         if (afterAs)
         {
             var types = new Dictionary<string, SmileCompletion>(StringComparer.OrdinalIgnoreCase);
-            foreach (var name in new[] { "BOOLEAN", "NUMBER", "TEXT" })
-                types[name] = new SmileCompletion(name, $"SMILE built-in type {name}", SmileCompletionKind.Type);
+            foreach (var name in new[] { "BOOLEAN", "IMAGE", "NUMBER", "TEXT" })
+                types[name] = new SmileCompletion(name, name == "IMAGE"
+                    ? "SMILE opaque loaded 2D image resource"
+                    : $"SMILE built-in type {name}", SmileCompletionKind.Type);
             var availableTypes = currentModule == null
                 ? analysis.SemanticModel.Types.Values.Where(type => type.ModuleName == null)
                 : currentModule.Types.Values.Where(member => member.Type != null).Select(member => member.Type!);

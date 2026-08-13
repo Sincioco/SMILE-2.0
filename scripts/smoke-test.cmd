@@ -68,7 +68,7 @@ copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib" "%SMILE_RO
 if errorlevel 1 exit /b %errorlevel%
 fc /b "%SMILE_ROOT%\artifacts\temp\Smile.Text.Extras.first.smilelib" "%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib" >nul
 if errorlevel 1 exit /b 1
-powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib'); try { $manifest=[IO.StreamReader]::new($zip.GetEntry('manifest.json').Open()).ReadToEnd(); $api=[IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open()).ReadToEnd(); if (!$manifest.Contains('formatVersion') -or !$manifest.Contains(': 3') -or !$api.Contains('ByRef') -or !$api.Contains('returnType') -or !$api.Contains('TEXT')) { exit 1 } } finally { $zip.Dispose() }"
+powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib'); try { $manifest=[IO.StreamReader]::new($zip.GetEntry('manifest.json').Open()).ReadToEnd(); $api=[IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open()).ReadToEnd(); if (!$manifest.Contains('formatVersion') -or !$manifest.Contains(': 4') -or !$api.Contains('ByRef') -or !$api.Contains('returnType') -or !$api.Contains('TEXT')) { exit 1 } } finally { $zip.Dispose() }"
 if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3ABasics\Phase3ABasics.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase3ABasics.exe" --debug
@@ -144,7 +144,7 @@ copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.Data.Models.smilelib" "%SMILE_RO
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\libraries\Smile.Data.Models\Smile.Data.Models.smilelibproj" --target library --configuration Release -o "%SMILE_ROOT%\artifacts\libraries\Smile.Data.Models.smilelib"
 if errorlevel 1 exit /b %errorlevel%
 fc /b "%SMILE_ROOT%\artifacts\temp\Smile.Data.Models.first.smilelib" "%SMILE_ROOT%\artifacts\libraries\Smile.Data.Models.smilelib" >nul || exit /b 1
-powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.Data.Models.smilelib'); try { $manifest=[IO.StreamReader]::new($zip.GetEntry('manifest.json').Open()).ReadToEnd(); $api=[IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open()).ReadToEnd(); if (!$manifest.Contains(': 3') -or !$api.Contains('Smile.Data.Models::Actor') -or !$api.Contains('\"fields\"') -or $api.Contains('InternalTag')) { exit 1 } } finally { $zip.Dispose() }"
+powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.Data.Models.smilelib'); try { $manifest=[IO.StreamReader]::new($zip.GetEntry('manifest.json').Open()).ReadToEnd(); $api=[IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open()).ReadToEnd(); if (!$manifest.Contains(': 4') -or !$api.Contains('Smile.Data.Models::Actor') -or !$api.Contains('\"fields\"') -or $api.Contains('InternalTag')) { exit 1 } } finally { $zip.Dispose() }"
 if errorlevel 1 exit /b 1
 
 for %%P in (Phase3BRecords.smileproj Phase3BRecords.Package.smileproj) do (
@@ -227,6 +227,36 @@ if errorlevel 2 exit /b 1
 findstr /c:"SML3401" "%SMILE_ROOT%\artifacts\temp\ModuleCapture.log" >nul || exit /b 1
 findstr /c:"Alias.Type" "%SMILE_ROOT%\artifacts\temp\ModuleCapture.log" >nul || exit /b 1
 echo Phase 3B.1 Web field identity, module type boundaries, provider metadata, and completion tests passed.
+
+if not exist "%SMILE_ROOT%\artifacts\games\Phase4VisualSlice-DirectX" mkdir "%SMILE_ROOT%\artifacts\games\Phase4VisualSlice-DirectX"
+if not exist "%SMILE_ROOT%\artifacts\games\Phase4VisualSlice-GDI" mkdir "%SMILE_ROOT%\artifacts\games\Phase4VisualSlice-GDI"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase4VisualSlice\Phase4VisualSlice.smileproj" --target windows-x64 --configuration Release --graphics DirectX -o "%SMILE_ROOT%\artifacts\games\Phase4VisualSlice-DirectX\Phase4VisualSlice.exe" --debug
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase4VisualSlice\Phase4VisualSlice.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\Phase4VisualSlice-GDI\Phase4VisualSlice.exe"
+if errorlevel 1 exit /b 1
+xcopy "%SMILE_ROOT%\examples\Phase4VisualSlice\Assets" "%SMILE_ROOT%\artifacts\games\Phase4VisualSlice-DirectX\Assets" /E /I /Y >nul
+if errorlevel 1 exit /b 1
+xcopy "%SMILE_ROOT%\examples\Phase4VisualSlice\Assets" "%SMILE_ROOT%\artifacts\games\Phase4VisualSlice-GDI\Assets" /E /I /Y >nul
+if errorlevel 1 exit /b 1
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase4VisualSlice\Phase4VisualSlice.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\Phase4VisualSlice"
+if errorlevel 1 exit /b 1
+xcopy "%SMILE_ROOT%\examples\Phase4VisualSlice\Assets" "%SMILE_ROOT%\artifacts\web\Phase4VisualSlice\Assets" /E /I /Y >nul
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\Phase4VisualSlice\game.js"
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase4VisualSlice" --frames 6 --timeout 10000 --phase4-media
+if errorlevel 1 exit /b 1
+
+for %%P in (InvalidImageTarget:SML3500 InvalidDrawImage:SML3501 InvalidImageModifier:SML3503 InvalidClip:SML3504 InvalidTextMeasure:SML3505 InvalidData:SML3506 InvalidChannel:SML3507 InvalidImageOperator:SML3509) do (
+    for /f "tokens=1,2 delims=:" %%F in ("%%P") do (
+        "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\InvalidPhase4\%%F.smile" > "%SMILE_ROOT%\artifacts\temp\%%F.log" 2>&1
+        if not errorlevel 1 exit /b 1
+        if errorlevel 2 exit /b 1
+        findstr /c:"%%G" "%SMILE_ROOT%\artifacts\temp\%%F.log" >nul || exit /b 1
+    )
+)
+echo Phase 4 IMAGE, high-resolution drawing, clip, data, SFX, diagnostics, native, and Web tests passed.
 
 for %%P in (OptionExplicitLate:SML3300 OptionExplicitUndeclared:SML3303 ScalarDimWithoutAs:SML3302 UnknownBuiltInType:SML3401 NumberToTextAssignment:SML3304 TextToBooleanAssignment:SML3304 MixedTextAddition:SML3308 TextRelationalComparison:SML3308 InvalidByRefLiteral:SML3305 InvalidByRefConstant:SML3305 WrongArgumentType:SML3304 WrongReturnType:SML3304 InconsistentLegacyReturnTypes:SML3309 DuplicateLocal:SML3306 UseBeforeLocalDeclaration:SML3307) do (
     for /f "tokens=1,2 delims=:" %%F in ("%%P") do (

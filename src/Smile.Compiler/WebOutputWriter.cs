@@ -67,12 +67,15 @@ internal static class WebOutputWriter
             const keys = [];
             const heldKeys = new Set();
             const memoryStorage = new Map();
+            const imageCache = new Map();
+            const sfxCache = new Map();
+            const sfxChannels = new Array(16).fill(null);
             let logicalWidth = 960;
             let logicalHeight = 540;
             let closed = false;
             let active = true;
             let userInteracted = false;
-            let currentSound = null;
+            let audioContext = null;
             let currentMusic = null;
             let musicVolume = 100;
             let musicRequested = false;
@@ -311,6 +314,130 @@ internal static class WebOutputWriter
                 back.fillText(String(safe(value)), safe(x), safe(y));
             }
 
+            function logicalPath(value) { return String(value).replaceAll("\\", "/").replace(/^\.\//, ""); }
+
+            async function loadImage(path) {
+                const logical = logicalPath(path);
+                if (!logical) throw new Error("LOAD IMAGE path must not be empty.");
+                let entry = imageCache.get(logical);
+                if (!entry) {
+                    entry = { logical, refs: 0, resource: null, width: 0, height: 0, promise: null };
+                    entry.promise = new Promise((resolve, reject) => {
+                        const resource = new Image();
+                        resource.onload = () => {
+                            entry.resource = resource;
+                            entry.width = safe(resource.naturalWidth || resource.width);
+                            entry.height = safe(resource.naturalHeight || resource.height);
+                            if (entry.width <= 0 || entry.height <= 0) reject(new Error(`LOAD IMAGE decoded invalid dimensions: ${logical}`));
+                            else resolve(entry);
+                        };
+                        resource.onerror = () => reject(new Error(`LOAD IMAGE failed: ${logical}`));
+                        resource.src = logical;
+                    }).catch(error => { if (entry.refs === 0) imageCache.delete(logical); throw error; });
+                    imageCache.set(logical, entry);
+                }
+                await entry.promise;
+                entry.refs += 1;
+                return { entry };
+            }
+
+            function imageRetain(handle) {
+                if (handle && handle.entry) handle.entry.refs += 1;
+                return handle;
+            }
+
+            function imageRelease(handle) {
+                if (!handle || !handle.entry) return;
+                const entry = handle.entry;
+                entry.refs -= 1;
+                if (entry.refs <= 0) {
+                    entry.refs = 0;
+                    imageCache.delete(entry.logical);
+                    if (entry.resource && typeof entry.resource.close === "function") entry.resource.close();
+                }
+            }
+
+            function imageAssign(previous, value) {
+                imageRetain(value);
+                imageRelease(previous);
+                return value;
+            }
+
+            function imageMoveAssign(previous, ownedValue) {
+                imageRelease(previous);
+                return ownedValue;
+            }
+
+            function imageLoaded(handle) { return Boolean(handle && handle.entry && handle.entry.resource); }
+            function imageWidth(handle) { return imageLoaded(handle) ? safe(handle.entry.width) : 0; }
+            function imageHeight(handle) { return imageLoaded(handle) ? safe(handle.entry.height) : 0; }
+
+            function drawImage(handle, sourceX, sourceY, sourceWidth, sourceHeight, destinationX, destinationY,
+                destinationWidth, destinationHeight, opacity, filter, flip, anchorX, anchorY) {
+                if (!imageLoaded(handle)) throw new Error("DRAW IMAGE requires a loaded IMAGE.");
+                const entry = handle.entry;
+                sourceX = safe(sourceX); sourceY = safe(sourceY);
+                sourceWidth = safe(sourceWidth); sourceHeight = safe(sourceHeight);
+                destinationX = safe(destinationX); destinationY = safe(destinationY);
+                destinationWidth = safe(destinationWidth); destinationHeight = safe(destinationHeight);
+                opacity = safe(opacity); filter = safe(filter); flip = safe(flip);
+                anchorX = safe(anchorX); anchorY = safe(anchorY);
+                if (sourceWidth < 0) sourceWidth = entry.width;
+                if (sourceHeight < 0) sourceHeight = entry.height;
+                if (destinationWidth < 0) destinationWidth = sourceWidth;
+                if (destinationHeight < 0) destinationHeight = sourceHeight;
+                if (sourceX < 0 || sourceY < 0 || sourceWidth <= 0 || sourceHeight <= 0 ||
+                    sourceX + sourceWidth > entry.width || sourceY + sourceHeight > entry.height)
+                    throw new Error("DRAW IMAGE source rectangle is outside the image.");
+                if (destinationWidth <= 0 || destinationHeight <= 0 || opacity < 0 || opacity > 100 ||
+                    (filter !== 0 && filter !== 1) || (flip & ~3) !== 0)
+                    throw new Error("DRAW IMAGE destination, opacity, filter, or flip is invalid.");
+                const left = destinationX - anchorX;
+                const top = destinationY - anchorY;
+                const flipX = (flip & 1) !== 0;
+                const flipY = (flip & 2) !== 0;
+                back.save();
+                back.globalAlpha = opacity / 100;
+                back.imageSmoothingEnabled = filter === 0;
+                if (flipX || flipY) {
+                    back.translate(left + (flipX ? destinationWidth : 0), top + (flipY ? destinationHeight : 0));
+                    back.scale(flipX ? -1 : 1, flipY ? -1 : 1);
+                    back.drawImage(entry.resource, sourceX, sourceY, sourceWidth, sourceHeight,
+                        0, 0, destinationWidth, destinationHeight);
+                } else {
+                    back.drawImage(entry.resource, sourceX, sourceY, sourceWidth, sourceHeight,
+                        left, top, destinationWidth, destinationHeight);
+                }
+                back.restore();
+            }
+
+            function pushClip(x, y, width, height) {
+                x = safe(x); y = safe(y); width = safe(width); height = safe(height);
+                if (width <= 0 || height <= 0) throw new Error("CLIP RECTANGLE width and height must be positive.");
+                back.save();
+                back.beginPath();
+                back.rect(x, y, width, height);
+                back.clip();
+            }
+
+            function popClip() { back.restore(); }
+
+            function textWidth(text, size) {
+                size = safe(size);
+                if (size <= 0) return 0;
+                textStyle(size, 0, false);
+                return safe(Math.ceil(back.measureText(String(text)).width));
+            }
+
+            function textHeight(text, size) {
+                size = safe(size);
+                if (size <= 0) return 0;
+                textStyle(size, 0, false);
+                const metrics = back.measureText(String(text));
+                const height = (metrics.actualBoundingBoxAscent || 0) + (metrics.actualBoundingBoxDescent || 0);
+                return safe(Math.ceil(height > 0 ? height : safe(size)));
+            }
+
             function print(items, suppressNewLine) {
                 canvas.hidden = true;
                 consoleOutput.hidden = false;
@@ -401,23 +528,65 @@ internal static class WebOutputWriter
             function getKey() { return keys.length === 0 ? 0 : keys.shift(); }
             function keyHeld(key) { return heldKeys.has(safe(key)) ? 1 : 0; }
 
-            function stopSound() {
-                if (!currentSound) return;
-                currentSound.pause();
-                currentSound.currentTime = 0;
-                currentSound = null;
+            function checkedChannel(channel) {
+                channel = safe(channel);
+                if (channel < 0 || channel >= 16) throw new Error("Sound channel must be from 0 through 15.");
+                return channel;
             }
 
-            function playSound(path) {
-                stopSound();
+            function stopSound(channel = null) {
+                const first = channel === null ? 0 : checkedChannel(channel);
+                const last = channel === null ? 15 : first;
+                for (let index = first; index <= last; index += 1) {
+                    const voice = sfxChannels[index];
+                    if (!voice) continue;
+                    try {
+                        if (voice.stop) voice.stop();
+                        else { voice.pause(); voice.currentTime = 0; }
+                    } catch (_) { }
+                    sfxChannels[index] = null;
+                }
+            }
+
+            async function loadSfx(path) {
+                const logical = logicalPath(path);
+                let pending = sfxCache.get(logical);
+                if (pending) return pending;
+                pending = (async () => {
+                    const AudioContextType = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioContextType) return { logical, buffer: null };
+                    if (!audioContext) audioContext = new AudioContextType();
+                    const response = await fetch(logical);
+                    if (!response.ok) throw new Error(`PLAY SOUND failed: ${logical}`);
+                    const bytes = await response.arrayBuffer();
+                    const buffer = await audioContext.decodeAudioData(bytes.slice(0));
+                    return { logical, buffer };
+                })();
+                sfxCache.set(logical, pending);
+                try { return await pending; }
+                catch (error) { sfxCache.delete(logical); throw error; }
+            }
+
+            async function playSound(path, channel = 0) {
+                channel = checkedChannel(channel);
+                stopSound(channel);
                 if (!active || !userInteracted) return;
-                try {
-                    const sound = new Audio(String(path).replaceAll("\\", "/"));
-                    currentSound = sound;
-                    sound.addEventListener("ended", () => { if (currentSound === sound) currentSound = null; });
-                    const playback = sound.play();
-                    if (playback) playback.catch(() => { if (currentSound === sound) currentSound = null; });
-                } catch (_) { currentSound = null; }
+                const cached = await loadSfx(path);
+                if (cached.buffer && audioContext) {
+                    if (audioContext.state === "suspended") await audioContext.resume();
+                    const source = audioContext.createBufferSource();
+                    source.buffer = cached.buffer;
+                    source.connect(audioContext.destination);
+                    source.onended = () => { if (sfxChannels[channel] === source) sfxChannels[channel] = null; };
+                    sfxChannels[channel] = source;
+                    source.start();
+                    return;
+                }
+                const sound = new Audio(cached.logical);
+                sfxChannels[channel] = sound;
+                sound.addEventListener("ended", () => { if (sfxChannels[channel] === sound) sfxChannels[channel] = null; });
+                const playback = sound.play();
+                if (playback) playback.catch(() => { if (sfxChannels[channel] === sound) sfxChannels[channel] = null; });
             }
 
             function syncMusic() {
@@ -508,6 +677,51 @@ internal static class WebOutputWriter
                 try { localStorage.setItem(fullKey, text); } catch (_) { }
             }
 
+            function encodeBytes(values) {
+                let binary = "";
+                for (let index = 0; index < values.length; index += 1) binary += String.fromCharCode(values[index]);
+                return btoa(binary);
+            }
+
+            function decodeBytes(text) {
+                const binary = atob(text);
+                return Array.from(binary, character => character.charCodeAt(0));
+            }
+
+            function saveData(target, count, key) {
+                if (!target || !Array.isArray(target.data) || target.dimensions.length !== 1)
+                    throw new Error("SAVE DATA source must be a one-dimensional NUMBER array.");
+                count = safe(count);
+                if (count < 0 || count > target.data.length || count > 1024 * 1024)
+                    throw new Error("SAVE DATA COUNT is outside the buffer or DATA_BLOCK_MAX_BYTES.");
+                const bytes = target.data.slice(0, count).map(value => {
+                    value = safe(value);
+                    if (value < 0 || value > 255) throw new Error("SAVE DATA values must be bytes from 0 through 255.");
+                    return value;
+                });
+                const fullKey = storageKey(`data:${String(key)}`);
+                const text = encodeBytes(bytes);
+                memoryStorage.set(fullKey, text);
+                localStorage.setItem(fullKey, text);
+            }
+
+            function loadData(key, target) {
+                if (!target || !Array.isArray(target.data) || target.dimensions.length !== 1)
+                    throw new Error("LOAD DATA destination must be a one-dimensional NUMBER array.");
+                target.data.fill(0);
+                const fullKey = storageKey(`data:${String(key)}`);
+                let text = memoryStorage.has(fullKey) ? memoryStorage.get(fullKey) : null;
+                text = localStorage.getItem(fullKey) ?? text;
+                if (text === null) return 0;
+                let bytes;
+                try { bytes = decodeBytes(text); }
+                catch (_) { throw new Error("LOAD DATA encountered corrupt persistent data."); }
+                if (bytes.length > 1024 * 1024 || bytes.length > target.data.length)
+                    throw new Error("LOAD DATA block exceeds the destination capacity.");
+                for (let index = 0; index < bytes.length; index += 1) target.data[index] = bytes[index];
+                return safe(bytes.length);
+            }
+
             function gameClosed() { return closed ? 1 : 0; }
             function endProgram() { closed = true; stopSound(); stopMusic(); throw STOP; }
 
@@ -539,10 +753,12 @@ internal static class WebOutputWriter
                 safe, add, sub, mul, div, mod, neg, isTrue, booleanText, abs, min, max, timer, rgb, random,
                 array, get, set, ref, refArray, invalidRef, gameWindow, clear, fillRectangle, drawRectangle,
                 fillRoundedRectangle, drawRoundedRectangle, fillCircle, drawCircle, drawArc,
-                fillQuadrilateral, drawQuadrilateral, drawLine, drawText, drawNumber, showScreen,
+                fillQuadrilateral, drawQuadrilateral, drawLine, drawText, drawNumber, loadImage, imageRetain,
+                imageRelease, imageAssign, imageMoveAssign, imageLoaded, imageWidth, imageHeight, drawImage,
+                pushClip, popClip, textWidth, textHeight, showScreen,
                 print, clearScreen, wait, getKey, keyHeld, playSound, stopSound,
                 playMusic, pauseMusic, resumeMusic, stopMusic, setMusicVolume, loadTextFile,
-                loadInt, saveInt, gameClosed, endProgram, run
+                loadInt, saveInt, loadData, saveData, gameClosed, endProgram, run
             };
         })();
         """;

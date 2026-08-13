@@ -10,6 +10,7 @@ public enum SmileTypeKind
     Number,
     Boolean,
     Text,
+    Image,
     Record
 }
 
@@ -22,6 +23,7 @@ public class SmileType
         SemanticName = name;
         RuntimeIdentity = name;
         ContainsOwnedText = kind == SmileTypeKind.Text;
+        ContainsOwnedImage = kind == SmileTypeKind.Image;
     }
 
     protected SmileType(string name, SourceText source, int sourceOrdinal, TextSpan declarationSpan)
@@ -39,6 +41,7 @@ public class SmileType
     public static SmileType Number { get; } = new(SmileTypeKind.Number, "NUMBER");
     public static SmileType Boolean { get; } = new(SmileTypeKind.Boolean, "BOOLEAN");
     public static SmileType Text { get; } = new(SmileTypeKind.Text, "TEXT");
+    public static SmileType Image { get; } = new(SmileTypeKind.Image, "IMAGE");
 
     public SmileTypeKind Kind { get; }
     public string Name { get; protected set; }
@@ -55,6 +58,8 @@ public class SmileType
     public virtual int Size { get; internal set; } = 8;
     public virtual int Alignment { get; internal set; } = 8;
     public virtual bool ContainsOwnedText { get; internal set; }
+    public virtual bool ContainsOwnedImage { get; internal set; }
+    public bool RequiresCleanup => ContainsOwnedText || ContainsOwnedImage;
     public override string ToString() => Name;
 }
 
@@ -95,6 +100,7 @@ public sealed class RecordTypeSymbol : SmileType
     public IReadOnlyList<RecordFieldSymbol> Fields => _fields;
     public override int Size { get; internal set; } = 8;
     public override bool ContainsOwnedText { get; internal set; }
+    public override bool ContainsOwnedImage { get; internal set; }
     public bool TryGetField(string name, out RecordFieldSymbol field) => _fieldsByName.TryGetValue(name, out field!);
 
     internal bool AddField(RecordFieldSymbol field)
@@ -434,6 +440,7 @@ internal sealed class SemanticAnalyzer
         stack.Add(record);
         long offset = 0;
         var containsText = false;
+        var containsImage = false;
         foreach (var field in record.Fields)
         {
             if (field.Type is RecordTypeSymbol nested)
@@ -448,12 +455,14 @@ internal sealed class SemanticAnalyzer
             field.Offset = (int)aligned;
             offset = field.Offset + Math.Max(8, field.Type.Size);
             containsText |= field.Type.ContainsOwnedText;
+            containsImage |= field.Type.ContainsOwnedImage;
         }
         stack.RemoveAt(stack.Count - 1);
         states[record] = 2;
         record.Alignment = 8;
         record.Size = (int)Math.Min(int.MaxValue & ~7, Align(Math.Max(offset, 8), record.Alignment));
         record.ContainsOwnedText = containsText;
+        record.ContainsOwnedImage = containsImage;
     }
 
     private static int Align(int value, int alignment) => (value + alignment - 1) / alignment * alignment;
@@ -806,7 +815,7 @@ internal sealed class SemanticAnalyzer
                 InferImplicitGlobalType(binary.Left) == SmileType.Text && InferImplicitGlobalType(binary.Right) == SmileType.Text:
                 return SmileType.Text;
             case CallExpressionSyntax call when SyntaxFacts.IsBuiltInFunction(call.Identifier.Kind):
-                return call.Identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword
+                return call.Identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword or SyntaxKind.ImageLoadedKeyword
                     ? SmileType.Boolean
                     : SmileType.Number;
             case CallExpressionSyntax call when _routines.TryGetValue(call.Identifier.Text, out var routine):
@@ -924,7 +933,7 @@ internal sealed class SemanticAnalyzer
                     InferLegacyExpressionType(binary.Left, routine, locals) == SmileType.Text &&
                     InferLegacyExpressionType(binary.Right, routine, locals) == SmileType.Text) return SmileType.Text;
                 return SmileType.Number;
-            case CallExpressionSyntax call when call.Identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword:
+            case CallExpressionSyntax call when call.Identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword or SyntaxKind.ImageLoadedKeyword:
                 return SmileType.Boolean;
             case CallExpressionSyntax call when _routines.TryGetValue(call.Identifier.Text, out var called):
                 return called.ReturnType;
@@ -951,6 +960,8 @@ internal sealed class SemanticAnalyzer
                 foreach (var child in EnumerateStatements(forStatement.Statements)) yield return child;
             else if (statement is DoStatementSyntax doStatement)
                 foreach (var child in EnumerateStatements(doStatement.Statements)) yield return child;
+            else if (statement is ClipRectangleStatementSyntax clip)
+                foreach (var child in EnumerateStatements(clip.Statements)) yield return child;
             else if (statement is SelectStatementSyntax select)
                 foreach (var clause in select.Cases)
                     foreach (var child in EnumerateStatements(clause.Statements)) yield return child;
@@ -1086,6 +1097,25 @@ internal sealed class SemanticAnalyzer
                 if (graphics.Operation == GraphicsOperation.DrawText && graphics.TextExpression != null)
                     RequireType(graphics.TextExpression, SmileType.Text, "SML3304", "DRAW TEXT requires a TEXT expression.");
                 break;
+            case DrawImageStatementSyntax image:
+                RequireGameWindow(image.Span, "DRAW IMAGE");
+                RequireType(image.Image, SmileType.Image, "SML3501", "DRAW IMAGE requires an IMAGE expression.");
+                foreach (var argument in ImageArguments(image))
+                    RequireType(argument, SmileType.Number, "SML3503", "DRAW IMAGE rectangle, opacity, and anchor values must be NUMBER.");
+                break;
+            case ImageLoadStatementSyntax image:
+                var targetType = ResolveWritableTargetType(image.Target);
+                if (targetType != SmileType.Error && targetType != SmileType.Image)
+                    Report("SML3500", image.Target.Span, $"{(image.IsUnload ? "UNLOAD" : "LOAD")} IMAGE target must be IMAGE.");
+                if (!image.IsUnload && image.Path != null)
+                    RequireType(image.Path, SmileType.Text, "SML3500", "LOAD IMAGE path must be TEXT.");
+                break;
+            case ClipRectangleStatementSyntax clip:
+                RequireGameWindow(clip.Span, "CLIP RECTANGLE");
+                foreach (var argument in clip.Arguments)
+                    RequireType(argument, SmileType.Number, "SML3504", "CLIP RECTANGLE arguments must be NUMBER.");
+                AnalyzeStatements(clip.Statements, false);
+                break;
             case ShowScreenStatementSyntax show:
                 RequireGameWindow(show.Span, "SHOW SCREEN");
                 break;
@@ -1093,6 +1123,13 @@ internal sealed class SemanticAnalyzer
                 RequireGameWindow(sound.Span, sound.IsStop ? "STOP SOUND" : "PLAY SOUND");
                 if (!sound.IsStop && string.IsNullOrWhiteSpace(sound.Path?.Value as string))
                     Report("SML3024", sound.Span, "PLAY SOUND requires a non-empty WAV path literal.");
+                if (sound.Channel != null)
+                {
+                    RequireType(sound.Channel, SmileType.Number, "SML3507", "Sound channel must be NUMBER.");
+                    if (TryEvaluateConstant(sound.Channel, out var channel, out var channelType) &&
+                        channelType == SmileType.Number && channel is long channelNumber && (channelNumber < 0 || channelNumber >= 16))
+                        Report("SML3507", sound.Channel.Span, "Sound channel must be from 0 through 15.");
+                }
                 break;
             case MusicStatementSyntax music:
                 RequireGameWindow(music.Span, music.Operation switch
@@ -1116,12 +1153,57 @@ internal sealed class SemanticAnalyzer
             case TextFileLoadStatementSyntax textFileLoad:
                 AnalyzeTextFileLoad(textFileLoad);
                 break;
+            case DataLoadStatementSyntax loadData:
+                AnalyzeDataLoad(loadData);
+                break;
+            case DataSaveStatementSyntax saveData:
+                AnalyzeDataSave(saveData);
+                break;
             case SaveStatementSyntax save:
                 if (!TryResolve(save.Identifier.Text, save.Identifier, out var saved) || saved.IsArray || saved.Type != SmileType.Number)
                     Report("SML3025", save.Identifier.Span, "SAVE value must be a NUMBER variable or constant.");
                 ValidateStorageKey(save.Key);
                 break;
         }
+    }
+
+    private static IEnumerable<ExpressionSyntax> ImageArguments(DrawImageStatementSyntax image)
+    {
+        foreach (var argument in new ExpressionSyntax?[] { image.SourceX, image.SourceY, image.SourceWidth,
+                     image.SourceHeight, image.DestinationX, image.DestinationY, image.DestinationWidth,
+                     image.DestinationHeight, image.Opacity, image.AnchorX, image.AnchorY })
+            if (argument != null)
+                yield return argument;
+    }
+
+    private SmileType ResolveWritableTargetType(AssignmentTargetSyntax target)
+    {
+        var type = ResolveTargetRootType(target);
+        foreach (var field in target.Fields)
+            type = BindField(type, field, target.Span, expression: null);
+        return type;
+    }
+
+    private void AnalyzeDataLoad(DataLoadStatementSyntax statement)
+    {
+        RequireType(statement.Key, SmileType.Text, "SML3506", "LOAD DATA key must be TEXT.");
+        if (!TryResolveExisting(statement.Destination.Text, out var destination) || !destination.IsArray ||
+            destination.ArrayRank != 1 || destination.Type != SmileType.Number)
+            Report("SML3506", statement.Destination.Span,
+                "LOAD DATA destination must be a fixed one-dimensional NUMBER array.");
+        var countType = ResolveWritableTargetType(statement.CountTarget);
+        if (countType != SmileType.Error && countType != SmileType.Number)
+            Report("SML3506", statement.CountTarget.Span, "LOAD DATA COUNT target must be NUMBER.");
+    }
+
+    private void AnalyzeDataSave(DataSaveStatementSyntax statement)
+    {
+        if (!TryResolveExisting(statement.Source.Text, out var source) || !source.IsArray || source.ArrayRank != 1 ||
+            source.Type != SmileType.Number)
+            Report("SML3506", statement.Source.Span,
+                "SAVE DATA source must be a fixed one-dimensional NUMBER array.");
+        RequireType(statement.Count, SmileType.Number, "SML3506", "SAVE DATA COUNT must be NUMBER.");
+        RequireType(statement.Key, SmileType.Text, "SML3506", "SAVE DATA key must be TEXT.");
     }
 
     private void AnalyzeGameWindow(GameWindowStatementSyntax statement, bool topLevel)
@@ -1647,6 +1729,22 @@ internal sealed class SemanticAnalyzer
             Report("SML3023", identifier.Span, $"Built-in '{identifier.Text}' requires GAME WINDOW.");
         if (arguments.Count != expected)
             Report("SML3016", identifier.Span, $"Built-in '{identifier.Text}' expects {expected} argument(s), found {arguments.Count}.");
+        if (identifier.Kind is SyntaxKind.ImageWidthKeyword or SyntaxKind.ImageHeightKeyword or SyntaxKind.ImageLoadedKeyword)
+        {
+            if (arguments.Count != 0)
+                RequireType(arguments[0], SmileType.Image, "SML3501", $"Built-in '{identifier.Text}' requires IMAGE.");
+            return identifier.Kind == SyntaxKind.ImageLoadedKeyword ? SmileType.Boolean : SmileType.Number;
+        }
+        if (identifier.Kind is SyntaxKind.TextWidthKeyword or SyntaxKind.TextHeightKeyword)
+        {
+            if (!_hasGameWindow)
+                Report("SML3505", identifier.Span, $"Built-in '{identifier.Text}' requires GAME WINDOW.");
+            if (arguments.Count > 0)
+                RequireType(arguments[0], SmileType.Text, "SML3505", $"Built-in '{identifier.Text}' requires TEXT as its first argument.");
+            if (arguments.Count > 1)
+                RequireType(arguments[1], SmileType.Number, "SML3505", $"Built-in '{identifier.Text}' requires NUMBER size.");
+            return SmileType.Number;
+        }
         foreach (var argument in arguments)
             RequireType(argument, SmileType.Number, "SML3003", $"Built-in '{identifier.Text}' requires NUMBER arguments.");
         return identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword ? SmileType.Boolean : SmileType.Number;
@@ -1670,9 +1768,12 @@ internal sealed class SemanticAnalyzer
         var rightType = AnalyzeExpression(binary.Right);
         if (leftType == SmileType.Error || rightType == SmileType.Error)
             return SmileType.Error;
-        if (leftType.IsRecord || rightType.IsRecord)
+        if (leftType.IsRecord || rightType.IsRecord || leftType == SmileType.Image || rightType == SmileType.Image)
         {
-            Report("SML3407", binary.Span, "Whole records cannot be used with operators in Phase 3B.");
+            Report(leftType == SmileType.Image || rightType == SmileType.Image ? "SML3509" : "SML3407", binary.Span,
+                leftType == SmileType.Image || rightType == SmileType.Image
+                    ? "IMAGE values cannot be used with operators. Use IMAGE_LOADED instead."
+                    : "Whole records cannot be used with operators in Phase 3B.");
             return SmileType.Error;
         }
         switch (binary.OperatorToken.Kind)
@@ -1965,6 +2066,7 @@ internal sealed class SemanticAnalyzer
         var type = token.Kind == SyntaxKind.NumberKeyword ? SmileType.Number
             : token.Kind == SyntaxKind.BooleanKeyword ? SmileType.Boolean
             : token.Kind == SyntaxKind.TextKeyword ? SmileType.Text
+            : token.Kind == SyntaxKind.ImageKeyword ? SmileType.Image
             : _types.TryGetValue(token.Text, out var record) ? record
             : SmileType.Error;
         if (type == SmileType.Error)

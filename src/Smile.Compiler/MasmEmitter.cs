@@ -44,7 +44,7 @@ internal sealed class MasmTemporaryStorage
     public MasmStorageKind Kind { get; }
     public int FrameOffset { get; set; }
     public int Size => Math.Max(8, Type.Size);
-    public bool RequiresCleanup => Type.ContainsOwnedText;
+    public bool RequiresCleanup => Type.RequiresCleanup;
 }
 
 internal sealed class MasmFrameLayout
@@ -65,7 +65,7 @@ internal sealed class MasmFrameLayout
 }
 
 internal sealed record MasmCleanupAction(MasmTemporaryStorage Storage);
-internal sealed record MasmLoopContext(string ExitLabel, int CleanupDepth);
+internal sealed record MasmLoopContext(string ExitLabel, int CleanupDepth, int ClipDepth);
 
 internal sealed class MasmEmitter
 {
@@ -100,6 +100,7 @@ internal sealed class MasmEmitter
     private bool _usesKeyHeld;
     private bool _usesMusic;
     private int _dynamicStackSlots;
+    private int _clipDepth;
     private RoutineDeclarationSyntax? _collectRoutine;
 
     public MasmEmitter(SmileAnalysisResult analysis, SmileGraphicsBackend graphicsBackend,
@@ -139,6 +140,15 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_text_equal_case:PROC");
         Line("EXTERN smile_text_clear:PROC");
         Line("EXTERN smile_text_lifetime_report:PROC");
+        Line("EXTERN smile_image_retain:PROC");
+        Line("EXTERN smile_image_release:PROC");
+        Line("EXTERN smile_image_move_assign:PROC");
+        Line("EXTERN smile_image_clear:PROC");
+        Line("EXTERN smile_load_image_value:PROC");
+        Line("EXTERN smile_draw_image_value:PROC");
+        Line("EXTERN smile_image_width_value:PROC");
+        Line("EXTERN smile_image_height_value:PROC");
+        Line("EXTERN smile_image_loaded_value:PROC");
         Line("EXTERN smile_print_text_value:PROC");
         Line("EXTERN smile_draw_text_value:PROC");
         Line("EXTERN smile_get_key:PROC");
@@ -163,9 +173,15 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_draw_line:PROC");
         Line("EXTERN smile_draw_text:PROC");
         Line("EXTERN smile_draw_number:PROC");
+        Line("EXTERN smile_clip_push:PROC");
+        Line("EXTERN smile_clip_pop:PROC");
+        Line("EXTERN smile_text_width_value:PROC");
+        Line("EXTERN smile_text_height_value:PROC");
         Line("EXTERN smile_show_screen:PROC");
         Line("EXTERN smile_play_sound:PROC");
         Line("EXTERN smile_stop_sound:PROC");
+        Line("EXTERN smile_play_sound_channel:PROC");
+        Line("EXTERN smile_stop_sound_channel:PROC");
         if (_usesMusic)
         {
             Line("EXTERN smile_music_play:PROC");
@@ -178,6 +194,9 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_load_value:PROC");
         Line("EXTERN smile_load_text_file:PROC");
         Line("EXTERN smile_save_value:PROC");
+        Line("EXTERN smile_load_data_value:PROC");
+        Line("EXTERN smile_save_data_value:PROC");
+        Line("EXTERN smile_media_shutdown:PROC");
         foreach (var site in _debugSites)
             Line($"EXTERN {site.HelperName}:PROC");
         Line();
@@ -210,6 +229,7 @@ internal sealed class MasmEmitter
         _currentSource = _analysis.BoundSyntaxTree.Source;
         EmitStatements(_analysis.BoundSyntaxTree.Root.Statements);
         EmitProgramCleanup();
+        CallAligned("smile_media_shutdown");
         CallAligned("smile_text_lifetime_report");
         if (_usesMusic) CallAligned("smile_music_shutdown");
         Line("    xor ecx, ecx");
@@ -329,8 +349,21 @@ internal sealed class MasmEmitter
                     foreach (var argument in graphics.Arguments)
                         CollectExpression(argument);
                     break;
-                case SoundStatementSyntax sound when sound.Path != null:
-                    CollectTextToken(sound.Path);
+                case DrawImageStatementSyntax image:
+                    CollectExpression(image.Image);
+                    foreach (var argument in ImageExpressions(image)) CollectExpression(argument);
+                    break;
+                case ImageLoadStatementSyntax image:
+                    foreach (var index in image.Target.Indices) CollectExpression(index);
+                    CollectExpression(image.Path);
+                    break;
+                case ClipRectangleStatementSyntax clip:
+                    foreach (var argument in clip.Arguments) CollectExpression(argument);
+                    Collect(clip.Statements);
+                    break;
+                case SoundStatementSyntax sound:
+                    if (sound.Path != null) CollectTextToken(sound.Path);
+                    CollectExpression(sound.Channel);
                     break;
                 case MusicStatementSyntax music:
                     _usesMusic = true;
@@ -344,6 +377,14 @@ internal sealed class MasmEmitter
                     break;
                 case TextFileLoadStatementSyntax textFileLoad:
                     CollectTextToken(textFileLoad.Path);
+                    break;
+                case DataLoadStatementSyntax data:
+                    CollectExpression(data.Key);
+                    foreach (var index in data.CountTarget.Indices) CollectExpression(index);
+                    break;
+                case DataSaveStatementSyntax data:
+                    CollectExpression(data.Count);
+                    CollectExpression(data.Key);
                     break;
                 case SaveStatementSyntax save:
                     CollectTextToken(save.Key);
@@ -457,6 +498,7 @@ internal sealed class MasmEmitter
         _currentFrame = _frameLayouts[routine];
         _returnLabel = NewLabel("routine_return");
         _activeCleanups.Clear();
+        _clipDepth = 0;
         Line();
         Line($"{_routineLabels[routine]} PROC");
         Line("    push rbp");
@@ -507,7 +549,7 @@ internal sealed class MasmEmitter
         Line($"{_returnLabel}:");
         foreach (var temporary in _currentFrame.Temporaries.Where(temporary => temporary.RequiresCleanup))
             EmitCleanup(new MasmCleanupAction(temporary));
-        foreach (var symbol in routine.LocalSymbols.Values.Where(symbol => symbol.Type.ContainsOwnedText &&
+        foreach (var symbol in routine.LocalSymbols.Values.Where(symbol => symbol.Type.RequiresCleanup &&
                      symbol.ParameterMode != ParameterPassingMode.ByRef))
             EmitReleaseSymbol(symbol);
         Line($"    mov rax, QWORD PTR [rbp-{_currentFrame.ReturnOffset}]");
@@ -593,6 +635,7 @@ internal sealed class MasmEmitter
                 }
                 else
                     Line($"    mov QWORD PTR [rbp-{_currentFrame!.ReturnOffset}], rax");
+                EmitPopClipsTo(0);
                 EmitCleanupToDepth(0);
                 Line($"    jmp {_returnLabel}");
                 break;
@@ -603,20 +646,23 @@ internal sealed class MasmEmitter
                 var loop = exit.TargetKeyword.Kind == SyntaxKind.ForKeyword
                     ? _forExitLabels.Peek()
                     : _doExitLabels.Peek();
+                EmitPopClipsTo(loop.ClipDepth);
                 EmitCleanupToDepth(loop.CleanupDepth);
                 Line($"    jmp {loop.ExitLabel}");
                 break;
             case EndProgramStatementSyntax:
+                EmitPopClipsTo(0);
                 EmitCleanupToDepth(0);
                 if (_currentRoutine != null)
                 {
                     foreach (var temporary in _currentFrame!.Temporaries.Where(temporary => temporary.RequiresCleanup))
                         EmitCleanup(new MasmCleanupAction(temporary));
-                    foreach (var symbol in _currentRoutine.LocalSymbols.Values.Where(symbol => symbol.Type.ContainsOwnedText &&
+                    foreach (var symbol in _currentRoutine.LocalSymbols.Values.Where(symbol => symbol.Type.RequiresCleanup &&
                                  symbol.ParameterMode != ParameterPassingMode.ByRef))
                         EmitReleaseSymbol(symbol);
                 }
                 EmitProgramCleanup();
+                CallAligned("smile_media_shutdown");
                 CallAligned("smile_text_lifetime_report");
                 if (_usesMusic) CallAligned("smile_music_shutdown");
                 Line("    xor ecx, ecx");
@@ -638,16 +684,41 @@ internal sealed class MasmEmitter
             case GraphicsStatementSyntax graphics:
                 EmitGraphics(graphics);
                 break;
+            case DrawImageStatementSyntax image:
+                EmitDrawImage(image);
+                break;
+            case ImageLoadStatementSyntax image:
+                EmitImageLoad(image);
+                break;
+            case ClipRectangleStatementSyntax clip:
+                EmitClip(clip);
+                break;
             case ShowScreenStatementSyntax:
                 CallAligned("smile_show_screen");
                 break;
             case SoundStatementSyntax sound:
                 if (sound.IsStop)
-                    CallAligned("smile_stop_sound");
+                {
+                    if (sound.Channel == null)
+                        CallAligned("smile_stop_sound");
+                    else
+                    {
+                        EmitExpression(sound.Channel);
+                        Line("    mov rcx, rax");
+                        CallAligned("smile_stop_sound_channel");
+                    }
+                }
                 else
                 {
                     EmitTextArgument(sound.Path!);
-                    EmitNativeCall("smile_play_sound", 2);
+                    if (sound.Channel == null)
+                        EmitNativeCall("smile_play_sound", 2);
+                    else
+                    {
+                        EmitExpression(sound.Channel);
+                        PushRax();
+                        EmitNativeCall("smile_play_sound_channel", 3);
+                    }
                 }
                 break;
             case MusicStatementSyntax music:
@@ -669,6 +740,33 @@ internal sealed class MasmEmitter
                 PushRax();
                 EmitNativeCall("smile_load_text_file", 4);
                 EmitStore(Resolve(textFileLoad.CountIdentifier.Text));
+                break;
+            case DataLoadStatementSyntax dataLoad:
+                EmitExpression(dataLoad.Key);
+                PushRax();
+                var dataDestination = Resolve(dataLoad.Destination.Text);
+                EmitAddress(dataDestination);
+                PushRax();
+                Line($"    mov rax, {dataDestination.ArraySize.ToString(CultureInfo.InvariantCulture)}");
+                PushRax();
+                EmitNativeCall("smile_load_data_value", 3);
+                PushRax();
+                EmitTargetAddress(dataLoad.CountTarget);
+                Line("    mov rcx, rax");
+                PopRax();
+                Line("    mov QWORD PTR [rcx], rax");
+                break;
+            case DataSaveStatementSyntax dataSave:
+                var dataSource = Resolve(dataSave.Source.Text);
+                EmitAddress(dataSource);
+                PushRax();
+                Line($"    mov rax, {dataSource.ArraySize.ToString(CultureInfo.InvariantCulture)}");
+                PushRax();
+                EmitExpression(dataSave.Count);
+                PushRax();
+                EmitExpression(dataSave.Key);
+                PushRax();
+                EmitNativeCall("smile_save_data_value", 4);
                 break;
             case SaveStatementSyntax save:
                 EmitTextArgument(save.Key);
@@ -743,6 +841,75 @@ internal sealed class MasmEmitter
         EmitNativeCall(name, statement.Arguments.Count + (statement.Operation == GraphicsOperation.DrawText ? 2 : 0));
     }
 
+    private static IEnumerable<ExpressionSyntax> ImageExpressions(DrawImageStatementSyntax image)
+    {
+        foreach (var argument in new ExpressionSyntax?[] { image.SourceX, image.SourceY, image.SourceWidth,
+                     image.SourceHeight, image.DestinationX, image.DestinationY, image.DestinationWidth,
+                     image.DestinationHeight, image.Opacity, image.AnchorX, image.AnchorY })
+            if (argument != null)
+                yield return argument;
+    }
+
+    private void EmitDrawImage(DrawImageStatementSyntax image)
+    {
+        EmitExpression(image.Image);
+        PushRax();
+        EmitImageArgument(image.SourceX, 0);
+        EmitImageArgument(image.SourceY, 0);
+        EmitImageArgument(image.SourceWidth, -1);
+        EmitImageArgument(image.SourceHeight, -1);
+        EmitImageArgument(image.DestinationX, 0);
+        EmitImageArgument(image.DestinationY, 0);
+        EmitImageArgument(image.DestinationWidth, -1);
+        EmitImageArgument(image.DestinationHeight, -1);
+        EmitImageArgument(image.Opacity, 100);
+        Line($"    mov rax, {(int)image.Filter}");
+        PushRax();
+        Line($"    mov rax, {(int)image.Flip}");
+        PushRax();
+        EmitImageArgument(image.AnchorX, 0);
+        EmitImageArgument(image.AnchorY, 0);
+        EmitNativeCall("smile_draw_image_value", 14);
+    }
+
+    private void EmitImageArgument(ExpressionSyntax? expression, long defaultValue)
+    {
+        if (expression == null)
+            Line($"    mov rax, {defaultValue.ToString(CultureInfo.InvariantCulture)}");
+        else
+            EmitExpression(expression);
+        PushRax();
+    }
+
+    private void EmitImageLoad(ImageLoadStatementSyntax image)
+    {
+        EmitTargetAddress(image.Target);
+        if (image.IsUnload)
+        {
+            Line("    mov rcx, rax");
+            CallAligned("smile_image_clear");
+            return;
+        }
+        PushRax();
+        EmitExpression(image.Path!);
+        PushRax();
+        EmitNativeCall("smile_load_image_value", 2);
+    }
+
+    private void EmitClip(ClipRectangleStatementSyntax clip)
+    {
+        foreach (var argument in clip.Arguments)
+        {
+            EmitExpression(argument);
+            PushRax();
+        }
+        EmitNativeCall("smile_clip_push", 4);
+        _clipDepth++;
+        EmitStatements(clip.Statements);
+        CallAligned("smile_clip_pop");
+        _clipDepth--;
+    }
+
     private void EmitTextArgument(SyntaxToken token)
     {
         var text = _gameTextLiterals[token];
@@ -798,10 +965,10 @@ internal sealed class MasmEmitter
             EmitTargetAddress(assignment.Target);
             Line("    mov rcx, rax");
             PopRax();
-            if (targetType == SmileType.Text)
+            if (targetType == SmileType.Text || targetType == SmileType.Image)
             {
                 Line("    mov rdx, rax");
-                CallAligned("smile_text_move_assign");
+                CallAligned(targetType == SmileType.Text ? "smile_text_move_assign" : "smile_image_move_assign");
             }
             else
                 Line("    mov QWORD PTR [rcx], rax");
@@ -810,14 +977,14 @@ internal sealed class MasmEmitter
         if (!assignment.Target.IsArrayElement)
         {
             var target = Resolve(assignment.Target.Identifier.Text);
-            if (target.Type == SmileType.Text)
+            if (target.Type == SmileType.Text || target.Type == SmileType.Image)
             {
                 PushRax();
                 EmitAddress(target);
                 Line("    mov rcx, rax");
                 PopRax();
                 Line("    mov rdx, rax");
-                CallAligned("smile_text_move_assign");
+                CallAligned(target.Type == SmileType.Text ? "smile_text_move_assign" : "smile_image_move_assign");
             }
             else
                 EmitStore(target);
@@ -831,10 +998,10 @@ internal sealed class MasmEmitter
         Line($"    imul rcx, {Math.Max(8, symbol.Type.Size).ToString(CultureInfo.InvariantCulture)}");
         Line("    lea rcx, [rax+rcx]");
         PopRax();
-        if (symbol.Type == SmileType.Text)
+        if (symbol.Type == SmileType.Text || symbol.Type == SmileType.Image)
         {
             Line("    mov rdx, rax");
-            CallAligned("smile_text_move_assign");
+            CallAligned(symbol.Type == SmileType.Text ? "smile_text_move_assign" : "smile_image_move_assign");
         }
         else
             Line("    mov QWORD PTR [rcx], rax");
@@ -942,7 +1109,7 @@ internal sealed class MasmEmitter
         EmitLoad(counter);
         Line($"    cmp rax, {TemporaryMemory(limit)}");
         Line(statement.IsDescending ? $"    jl {endLabel}" : $"    jg {endLabel}");
-        _forExitLabels.Push(new MasmLoopContext(endLabel, _activeCleanups.Count));
+        _forExitLabels.Push(new MasmLoopContext(endLabel, _activeCleanups.Count, _clipDepth));
         EmitStatements(statement.Statements);
         _forExitLabels.Pop();
         EmitAddress(counter);
@@ -956,7 +1123,7 @@ internal sealed class MasmEmitter
         var startLabel = NewLabel("do_start");
         var endLabel = NewLabel("do_end");
         Line($"{startLabel}:");
-        _doExitLabels.Push(new MasmLoopContext(endLabel, _activeCleanups.Count));
+        _doExitLabels.Push(new MasmLoopContext(endLabel, _activeCleanups.Count, _clipDepth));
         EmitStatements(statement.Statements);
         _doExitLabels.Pop();
         if (statement.UntilCondition == null)
@@ -1057,10 +1224,10 @@ internal sealed class MasmEmitter
                 else
                 {
                     Line("    mov rax, QWORD PTR [rax+rcx]");
-                    if (arraySymbol.Type == SmileType.Text)
+                    if (arraySymbol.Type == SmileType.Text || arraySymbol.Type == SmileType.Image)
                     {
                         Line("    mov rcx, rax");
-                        CallAligned("smile_text_retain");
+                        CallAligned(arraySymbol.Type == SmileType.Text ? "smile_text_retain" : "smile_image_retain");
                     }
                 }
                 break;
@@ -1069,10 +1236,12 @@ internal sealed class MasmEmitter
                 if (_analysis.SemanticModel.GetType(field) is not RecordTypeSymbol)
                 {
                     Line("    mov rax, QWORD PTR [rax]");
-                    if (_analysis.SemanticModel.GetType(field) == SmileType.Text)
+                    if (_analysis.SemanticModel.GetType(field) == SmileType.Text ||
+                        _analysis.SemanticModel.GetType(field) == SmileType.Image)
                     {
                         Line("    mov rcx, rax");
-                        CallAligned("smile_text_retain");
+                        CallAligned(_analysis.SemanticModel.GetType(field) == SmileType.Text
+                            ? "smile_text_retain" : "smile_image_retain");
                     }
                 }
                 break;
@@ -1144,6 +1313,27 @@ internal sealed class MasmEmitter
                 EmitExpression(call.Arguments[0]);
                 Line("    mov rcx, rax");
                 CallAligned("smile_key_held");
+                break;
+            case SyntaxKind.ImageWidthKeyword:
+            case SyntaxKind.ImageHeightKeyword:
+            case SyntaxKind.ImageLoadedKeyword:
+                EmitExpression(call.Arguments[0]);
+                Line("    mov rcx, rax");
+                CallAligned(call.Identifier.Kind switch
+                {
+                    SyntaxKind.ImageWidthKeyword => "smile_image_width_value",
+                    SyntaxKind.ImageHeightKeyword => "smile_image_height_value",
+                    _ => "smile_image_loaded_value"
+                });
+                break;
+            case SyntaxKind.TextWidthKeyword:
+            case SyntaxKind.TextHeightKeyword:
+                EmitExpression(call.Arguments[0]);
+                PushRax();
+                EmitExpression(call.Arguments[1]);
+                PushRax();
+                EmitNativeCall(call.Identifier.Kind == SyntaxKind.TextWidthKeyword
+                    ? "smile_text_width_value" : "smile_text_height_value", 2);
                 break;
             default:
                 if (_analysis.SemanticModel.TryGetRoutine(call.Identifier.Text, out var routine) &&
@@ -1313,10 +1503,10 @@ internal sealed class MasmEmitter
         if (symbol.Type is RecordTypeSymbol)
             return;
         Line("    mov rax, QWORD PTR [rax]");
-        if (symbol.Type == SmileType.Text)
+        if (symbol.Type == SmileType.Text || symbol.Type == SmileType.Image)
         {
             Line("    mov rcx, rax");
-            CallAligned("smile_text_retain");
+            CallAligned(symbol.Type == SmileType.Text ? "smile_text_retain" : "smile_image_retain");
         }
     }
 
@@ -1344,7 +1534,7 @@ internal sealed class MasmEmitter
             else
             {
                 Line("    mov rcx, QWORD PTR [rax]");
-                CallAligned("smile_text_release");
+                CallAligned(symbol.Type == SmileType.Text ? "smile_text_release" : "smile_image_release");
             }
         }
     }
@@ -1352,7 +1542,7 @@ internal sealed class MasmEmitter
     private void EmitProgramCleanup()
     {
         foreach (var symbol in _analysis.SemanticModel.Symbols.Values.Where(symbol =>
-                     !symbol.IsConstant && symbol.Type.ContainsOwnedText))
+                     !symbol.IsConstant && symbol.Type.RequiresCleanup))
             EmitReleaseSymbol(symbol);
         foreach (var temporary in _temporaries.Where(temporary => temporary.Kind == MasmStorageKind.Static &&
                      temporary.RequiresCleanup))
@@ -1379,13 +1569,19 @@ internal sealed class MasmEmitter
         if (cleanup.Storage.Type is RecordTypeSymbol record)
             CallAligned(RecordClear(record));
         else
-            CallAligned("smile_text_clear");
+            CallAligned(cleanup.Storage.Type == SmileType.Text ? "smile_text_clear" : "smile_image_clear");
     }
 
     private void EmitCleanupToDepth(int cleanupDepth)
     {
         for (var index = _activeCleanups.Count - 1; index >= cleanupDepth; index--)
             EmitCleanup(_activeCleanups[index]);
+    }
+
+    private void EmitPopClipsTo(int clipDepth)
+    {
+        for (var index = _clipDepth; index > clipDepth; index--)
+            CallAligned("smile_clip_pop");
     }
 
     private void EmitRecordHelpers(RecordTypeSymbol record)
@@ -1406,13 +1602,13 @@ internal sealed class MasmEmitter
         Line("    mov QWORD PTR [rbp-8], rcx");
         foreach (var field in record.Fields)
         {
-            if (!field.Type.ContainsOwnedText)
+            if (!field.Type.RequiresCleanup)
                 continue;
             Line("    mov rax, QWORD PTR [rbp-8]");
             Line($"    lea rcx, [rax{Offset(field.Offset)}]");
             Line(field.Type is RecordTypeSymbol nested
                 ? $"    call {RecordClear(nested)}"
-                : "    call smile_text_clear");
+                : field.Type == SmileType.Text ? "    call smile_text_clear" : "    call smile_image_clear");
         }
         Line("    mov rax, QWORD PTR [rbp-8]");
         Line("    mov rsp, rbp");
@@ -1448,6 +1644,16 @@ internal sealed class MasmEmitter
                 Line("    mov rax, QWORD PTR [rbp-8]");
                 Line($"    lea rcx, [rax{Offset(field.Offset)}]");
                 Line("    call smile_text_move_assign");
+            }
+            else if (field.Type == SmileType.Image)
+            {
+                Line("    mov rax, QWORD PTR [rbp-16]");
+                Line($"    mov rcx, QWORD PTR [rax{Offset(field.Offset)}]");
+                Line("    call smile_image_retain");
+                Line("    mov rdx, rax");
+                Line("    mov rax, QWORD PTR [rbp-8]");
+                Line($"    lea rcx, [rax{Offset(field.Offset)}]");
+                Line("    call smile_image_move_assign");
             }
             else
             {

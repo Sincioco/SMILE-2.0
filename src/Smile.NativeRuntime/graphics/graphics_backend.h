@@ -60,6 +60,15 @@ typedef struct SmileGraphicsBackendVTable
         long long x, long long y, long long size, long long color, long long centered);
     void (*draw_number)(SmileGraphicsBackend* backend, long long value, long long x,
         long long y, long long size, long long color);
+    void (*draw_image)(SmileGraphicsBackend* backend, void* image,
+        long long source_x, long long source_y, long long source_width, long long source_height,
+        long long destination_x, long long destination_y, long long destination_width, long long destination_height,
+        long long opacity, long long filter, long long flip);
+    void (*push_clip)(SmileGraphicsBackend* backend, long long x, long long y,
+        long long width, long long height);
+    void (*pop_clip)(SmileGraphicsBackend* backend);
+    long long (*text_width)(SmileGraphicsBackend* backend, const char* text, long long length, long long size);
+    long long (*text_height)(SmileGraphicsBackend* backend, const char* text, long long length, long long size);
     int (*present)(SmileGraphicsBackend* backend);
     void (*repaint)(SmileGraphicsBackend* backend, void* native_paint_context);
     void (*on_fullscreen_changed)(SmileGraphicsBackend* backend, int fullscreen);

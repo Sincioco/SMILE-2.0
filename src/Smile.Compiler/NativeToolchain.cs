@@ -15,8 +15,7 @@ internal sealed class NativeToolchain
         if (!File.Exists(vcvars))
             return new ToolchainResult(false, $"vcvars64.bat was not found under {installationPath}.");
 
-        var runtimeLibraries = " ucrt.lib";
-        var musicLibraries = usesMusic ? " msvcrt.lib msvcprt.lib vcruntime.lib" : string.Empty;
+        var runtimeLibraries = " ucrt.lib msvcrt.lib msvcprt.lib vcruntime.lib";
         var debugCompile = debugSourcePath == null || debugObjectPath == null
             ? string.Empty
             : $"cl.exe /nologo /c /TC /Od /Z7 /JMC /GS- /Fo{Quote(debugObjectPath)} {Quote(debugSourcePath)} && ";
@@ -29,7 +28,7 @@ internal sealed class NativeToolchain
             debugCompile +
             $"ml64.exe /nologo /c /Fo{Quote(objectPath)} {Quote(assemblyPath)} && " +
             $"link.exe /nologo /subsystem:{(isGame ? "windows" : "console")} /entry:main /machine:x64 /out:{Quote(outputPath)}{debugLink} " +
-            $"{Quote(objectPath)}{debugObject} {Quote(runtimePath)} kernel32.lib user32.lib gdi32.lib dwmapi.lib d3d11.lib dxgi.lib d2d1.lib dwrite.lib winmm.lib shell32.lib ole32.lib windowsapp.lib{runtimeLibraries}{musicLibraries}";
+            $"{Quote(objectPath)}{debugObject} {Quote(runtimePath)} kernel32.lib user32.lib gdi32.lib gdiplus.lib dwmapi.lib d3d11.lib dxgi.lib d2d1.lib dwrite.lib windowscodecs.lib winmm.lib shell32.lib ole32.lib windowsapp.lib xaudio2.lib{runtimeLibraries}";
 
         return RunCommandPrompt(command);
     }

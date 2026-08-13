@@ -111,6 +111,57 @@ Run("Existing PLAY SOUND and STOP SOUND remain shared sound syntax", () =>
     Equal(false, analysis.HasErrors);
     Equal(2, analysis.SyntaxTree.Root.Statements.OfType<SoundStatementSyntax>().Count());
 });
+Run("Phase 4 media keywords and constants are shared", () =>
+{
+    Equal(SyntaxKind.ImageKeyword, SyntaxFacts.GetKeywordKind("image"));
+    Equal(SyntaxKind.ClipKeyword, SyntaxFacts.GetKeywordKind("ClIp"));
+    Equal(SyntaxKind.ChannelKeyword, SyntaxFacts.GetKeywordKind("channel"));
+    Equal(16L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.SoundChannelCountKeyword));
+    Equal(1048576L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.DataBlockMaxBytesKeyword));
+    Equal(true, SyntaxFacts.IsKeyword(SyntaxKind.PixelKeyword));
+});
+Run("IMAGE works in variables arrays records parameters BYREF and returns", () =>
+{
+    const string source = "OPTION EXPLICIT\nTYPE Art\nPicture AS IMAGE\nEND TYPE\nDIM SourceImage AS IMAGE\nDIM Copies[2] AS IMAGE\nDIM Card AS Art\nLOAD IMAGE SourceImage FROM \"Assets\\A.png\"\nCopies[0] = SourceImage\nCard.Picture = Copies[0]\nCALL Keep(Card.Picture)\nSourceImage = CopyImage(Card.Picture)\nUNLOAD IMAGE Copies[0]\nSUB Keep(BYREF Value AS IMAGE)\nValue = Value\nEND SUB\nFUNCTION CopyImage(Value AS IMAGE) AS IMAGE\nRETURN Value\nEND FUNCTION\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    Equal(SmileType.Image, analysis.SemanticModel.Symbols["SourceImage"].Type);
+    Equal(true, analysis.SemanticModel.Types["Art"].ContainsOwnedImage);
+});
+Run("DRAW IMAGE supports full and explicit rectangles with all Phase 4 modifiers", () =>
+{
+    const string source = "GAME WINDOW \"Images\" SIZE 960 BY 540\nDIM Art AS IMAGE\nDRAW IMAGE Art AT 0, 0\nDRAW IMAGE Art FROM 10, 20 SIZE 300 BY 200 AT 480, 270 SIZE 600 BY 400 OPACITY 65 ANCHOR 300, 400 FILTER PIXEL FLIP BOTH\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var draws = analysis.SyntaxTree.Root.Statements.OfType<DrawImageStatementSyntax>().ToArray();
+    Equal(2, draws.Length);
+    Equal(ImageFilter.Smooth, draws[0].Filter);
+    Equal(ImageFilter.Pixel, draws[1].Filter);
+    Equal(ImageFlip.Horizontal | ImageFlip.Vertical, draws[1].Flip);
+});
+Run("CLIP RECTANGLE nests and includes structured statements", () =>
+{
+    var analysis = Analyze("GAME WINDOW \"Clip\"\nCLIP RECTANGLE 0, 0, 100, 100\nCLIP RECTANGLE 10, 10, 40, 40\nFILL RECTANGLE 0, 0, 100, 100, WHITE\nEND CLIP\nEND CLIP\n");
+    Equal(false, analysis.HasErrors);
+    var outer = analysis.SyntaxTree.Root.Statements.OfType<ClipRectangleStatementSyntax>().Single();
+    Equal(1, outer.Statements.OfType<ClipRectangleStatementSyntax>().Count());
+});
+Run("IMAGE measurement and TEXT measurement built-ins type check", () => Equal(false,
+    Analyze("GAME WINDOW \"Measure\"\nDIM Art AS IMAGE\nDIM Caption AS TEXT\nPRINT IMAGE_WIDTH(Art)\nPRINT IMAGE_HEIGHT(Art)\nPRINT IMAGE_LOADED(Art)\nPRINT TEXT_WIDTH(Caption, 28)\nPRINT TEXT_HEIGHT(Caption, 28)\n").HasErrors));
+Run("Persistent DATA statements accept byte arrays and writable count targets", () => Equal(false,
+    Analyze("OPTION EXPLICIT\nDIM Bytes[8]\nDIM ByteCount AS NUMBER\nSAVE DATA Bytes COUNT 8 TO \"slot\"\nLOAD DATA \"slot\" INTO Bytes COUNT ByteCount\n").HasErrors));
+Run("Explicit WAV channels support play per-channel stop and global stop", () =>
+{
+    var analysis = Analyze("GAME WINDOW \"Audio\"\nPLAY SOUND \"Assets\\One.wav\" ON CHANNEL 1\nPLAY SOUND \"Assets\\Two.wav\" ON CHANNEL 2\nSTOP SOUND ON CHANNEL 1\nSTOP SOUND\n");
+    Equal(false, analysis.HasErrors);
+    var sounds = analysis.SyntaxTree.Root.Statements.OfType<SoundStatementSyntax>().ToArray();
+    Equal(4, sounds.Length);
+    Equal(true, sounds[0].Channel != null && sounds[2].Channel != null && sounds[3].Channel == null);
+});
+Run("Out-of-range constant sound channels report SML3507", () => Equal(true,
+    HasDiagnostic(Analyze("GAME WINDOW \"Audio\"\nPLAY SOUND \"a.wav\" ON CHANNEL 16\n"), "SML3507")));
+Run("IMAGE operators report SML3509", () => Equal(true,
+    HasDiagnostic(Analyze("DIM A AS IMAGE\nDIM B AS IMAGE\nPRINT A = B\n"), "SML3509")));
 Run("Every music operation requires GAME WINDOW", () =>
 {
     var analysis = Analyze("PLAY MUSIC \"Assets\\Background.mp3\"\nPAUSE MUSIC\nRESUME MUSIC\nSTOP MUSIC\nMUSIC VOLUME 50\n");
@@ -170,6 +221,9 @@ Run("Completion catalog uses shared keywords and built-in signatures", () =>
     Equal("Built-in function RGB(red, green, blue)", rgb.Description);
     Equal(true, completions.Any(completion => completion.DisplayText == "GAME_CLOSED"));
     Equal(true, completions.Any(completion => completion.DisplayText == "KEY_ENTER"));
+    Equal(true, completions.Any(completion => completion.DisplayText == "IMAGE"));
+    Equal(true, completions.Any(completion => completion.DisplayText == "CLIP"));
+    Equal(true, completions.Any(completion => completion.DisplayText == "IMAGE_WIDTH"));
     Equal(false, completions.Any(completion => completion.DisplayText == "PRI"));
 });
 Run("Completion catalog includes visible variables arrays and routines", () =>
@@ -1518,7 +1572,7 @@ Run("Web emitter uses JavaScript TEXT values and BYREF references", () =>
     Equal(true, javascript.Contains(".set(", StringComparison.Ordinal));
     Equal(true, javascript.Contains("\"A\"", StringComparison.Ordinal));
 });
-Run("FormatVersion 3 packages contain deterministic typed public API metadata", () =>
+Run("FormatVersion 4 packages contain deterministic typed public API metadata", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "SmilePhase3APackageTests-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(directory);
@@ -1537,7 +1591,7 @@ Run("FormatVersion 3 packages contain deterministic typed public API metadata", 
         using (var archive = System.IO.Compression.ZipFile.OpenRead(first))
         {
             using var manifestReader = new StreamReader(archive.GetEntry("manifest.json")!.Open());
-            Equal(true, manifestReader.ReadToEnd().Contains("\"formatVersion\": 3", StringComparison.Ordinal));
+            Equal(true, manifestReader.ReadToEnd().Contains("\"formatVersion\": 4", StringComparison.Ordinal));
             using var apiReader = new StreamReader(archive.GetEntry("api/public-symbols.json")!.Open());
             var api = apiReader.ReadToEnd();
             Equal(true, api.Contains("\"type\": \"TEXT\"", StringComparison.Ordinal));
@@ -1546,7 +1600,7 @@ Run("FormatVersion 3 packages contain deterministic typed public API metadata", 
             Equal(true, api.Contains("\"returnType\": \"TEXT\"", StringComparison.Ordinal));
             Equal(false, api.Contains("Hidden", StringComparison.Ordinal));
         }
-        RewriteManifest(first, manifest => manifest.Replace("\"formatVersion\": 3", "\"formatVersion\": 2",
+        RewriteManifest(first, manifest => manifest.Replace("\"formatVersion\": 4", "\"formatVersion\": 3",
             StringComparison.Ordinal));
         ThrowsContains(() => SmileLibraryPackage.ReadIdentity(first), "rebuild the library");
     }
@@ -1561,8 +1615,61 @@ Run("Typed completion descriptions include parameter modes and returns", () =>
     Equal("FUNCTION Join(First AS TEXT, Second AS TEXT) AS TEXT",
         completions.Single(item => item.DisplayText == "Join").Description);
     const string typedDeclaration = "DIM Name AS ";
-    Equal("BOOLEAN|NUMBER|TEXT", string.Join("|", SmileCompletionService
+    Equal("BOOLEAN|IMAGE|NUMBER|TEXT", string.Join("|", SmileCompletionService
         .GetCompletions(Analyze(typedDeclaration), typedDeclaration.Length).Select(item => item.DisplayText)));
+});
+
+Run("FormatVersion 4 public API metadata preserves IMAGE signatures", () =>
+{
+    var root = Path.Combine(Path.GetTempPath(), "SmilePhase4ImagePackageTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(root);
+    try
+    {
+        var projectPath = Path.Combine(root, "Media.smilelibproj");
+        File.WriteAllText(projectPath,
+            "<SmileProject Version=\"1.0\"><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Smile.Media.Proof</LibraryName><Version>1.0.0</Version><OutputName>Media</OutputName></PropertyGroup><ItemGroup><SmileSource Include=\"Media.smile\" /></ItemGroup></SmileProject>");
+        File.WriteAllText(Path.Combine(root, "Media.smile"),
+            "MODULE Smile.Media.Proof\nPUBLIC FUNCTION Ready(Value AS IMAGE) AS BOOLEAN\nRETURN IMAGE_LOADED(Value)\nEND FUNCTION\nEND MODULE\n");
+        var compilation = SmileProjectCompilation.Load(projectPath, Path.Combine(root, "cache"));
+        var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library,
+            compilation.DependencyContext);
+        Equal(false, analysis.HasErrors);
+        var package = Path.Combine(root, "Media.smilelib");
+        SmileLibraryPackage.Write(package, compilation.Graph.Root, analysis);
+        using var archive = System.IO.Compression.ZipFile.OpenRead(package);
+        using var reader = new StreamReader(archive.GetEntry("api/public-symbols.json")!.Open());
+        var api = reader.ReadToEnd();
+        Equal(true, api.Contains("\"type\": \"IMAGE\"", StringComparison.Ordinal));
+        Equal(true, api.Contains("\"returnType\": \"BOOLEAN\"", StringComparison.Ordinal));
+    }
+    finally { Directory.Delete(root, true); }
+});
+
+Run("IMAGE ownership emits retain release move and record cleanup on both targets", () =>
+{
+    const string source = "TYPE Media\nArt AS IMAGE\nEND TYPE\nDIM SourceImage AS IMAGE\nDIM Copy AS IMAGE\nDIM Items[2] AS IMAGE\nDIM Card AS Media\nCopy = SourceImage\nItems[0] = Copy\nCard.Art = Items[0]\nSourceImage = Card.Art\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var native = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
+    Equal(true, native.Contains("call smile_image_retain", StringComparison.Ordinal));
+    Equal(true, native.Contains("call smile_image_move_assign", StringComparison.Ordinal));
+    Equal(true, native.Contains("call smile_image_clear", StringComparison.Ordinal));
+    var web = new WebEmitter(analysis).Emit();
+    Equal(true, web.Contains("smile.imageAssign", StringComparison.Ordinal));
+    Equal(true, web.Contains("smile.imageRelease", StringComparison.Ordinal));
+    Equal(true, web.Contains("record_0_media_clear", StringComparison.Ordinal));
+});
+
+Run("Structured clips emit balanced cleanup for RETURN loop exits and END PROGRAM", () =>
+{
+    const string source = "GAME WINDOW \"Clip cleanup\"\nCALL Leave()\nFOR Index = 0 TO 1\nCLIP RECTANGLE 0, 0, 20, 20\nEXIT FOR\nEND CLIP\nEND FOR\nDO\nCLIP RECTANGLE 0, 0, 20, 20\nEXIT DO\nEND CLIP\nLOOP\nCLIP RECTANGLE 0, 0, 20, 20\nEND PROGRAM\nEND CLIP\nSUB Leave()\nCLIP RECTANGLE 0, 0, 20, 20\nRETURN\nEND CLIP\nEND SUB\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var native = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
+    Equal(true, native.Split(new[] { "call smile_clip_pop" }, StringSplitOptions.None).Length >= 8);
+    var web = new WebEmitter(analysis).Emit();
+    Equal(true, web.Split(new[] { "finally {" }, StringSplitOptions.None).Length >= 6);
+    Equal(true, web.Split(new[] { "smile.popClip();" }, StringSplitOptions.None).Length >= 5);
 });
 
 Run("Record types bind nominal identities nested fields arrays and deterministic layouts", () =>
@@ -1773,7 +1880,7 @@ Run("Record completion separates type value alias and indexed-field contexts", (
         .GetCompletions(importedFields, importedFieldSource.Length).Select(item => item.DisplayText)));
 });
 
-Run("FormatVersion 3 public API uses logical provider identities deterministically", () =>
+Run("FormatVersion 4 public API uses logical provider identities deterministically", () =>
 {
     var root = Path.Combine(Path.GetTempPath(), "SmileP3B1ProviderTests-" + Guid.NewGuid().ToString("N"));
     var firstRoot = Path.Combine(root, "checkout-a");

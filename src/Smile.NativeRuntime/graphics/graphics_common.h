@@ -45,6 +45,13 @@ void smile_graphics_draw_line(long long x1, long long y1, long long x2, long lon
 void smile_graphics_draw_text(const char* text, long long length, long long x, long long y,
     long long size, long long color, long long centered);
 void smile_graphics_draw_number(long long value, long long x, long long y, long long size, long long color);
+void smile_graphics_draw_image(void* image, long long source_x, long long source_y,
+    long long source_width, long long source_height, long long destination_x, long long destination_y,
+    long long destination_width, long long destination_height, long long opacity, long long filter, long long flip);
+void smile_graphics_push_clip(long long x, long long y, long long width, long long height);
+void smile_graphics_pop_clip(void);
+long long smile_graphics_text_width(const char* text, long long length, long long size);
+long long smile_graphics_text_height(const char* text, long long length, long long size);
 int smile_graphics_present(void);
 void smile_graphics_repaint(void* native_paint_context);
 void smile_graphics_on_fullscreen_changed(int fullscreen);
