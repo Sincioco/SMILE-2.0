@@ -1,0 +1,3 @@
+TYPE Invalid
+    Value AS NUMBER = 1
+END TYPE

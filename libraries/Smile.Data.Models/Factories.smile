@@ -1,0 +1,35 @@
+MODULE Smile.Data.Models
+
+OPTION EXPLICIT
+
+PUBLIC FUNCTION CreateActor(Name AS TEXT, X AS NUMBER, Y AS NUMBER, CurrentHP AS NUMBER, MaximumHP AS NUMBER) AS Actor
+    DIM Result AS Actor
+
+    Result.Name = Name
+    Result.Position.X = X
+    Result.Position.Y = Y
+    Result.Health.Current = CurrentHP
+    Result.Health.Maximum = MaximumHP
+    Result.Active = TRUE
+
+    RETURN Result
+END FUNCTION
+
+PUBLIC FUNCTION CopyActor(Value AS Actor) AS Actor
+    RETURN Value
+END FUNCTION
+
+PUBLIC SUB Move(BYREF Value AS Actor, DeltaX AS NUMBER, DeltaY AS NUMBER)
+    Value.Position.X = Value.Position.X + DeltaX
+    Value.Position.Y = Value.Position.Y + DeltaY
+END SUB
+
+PUBLIC SUB Damage(BYREF Value AS Actor, Amount AS NUMBER)
+    Value.Health.Current = MAX(0, Value.Health.Current - Amount)
+END SUB
+
+PRIVATE FUNCTION InternalIdentity(Value AS NUMBER) AS NUMBER
+    RETURN Value
+END FUNCTION
+
+END MODULE

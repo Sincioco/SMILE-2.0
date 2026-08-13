@@ -13,6 +13,7 @@ internal sealed class WebEmitter
     private readonly StringBuilder _builder = new();
     private readonly Dictionary<VariableSymbol, string> _variableNames = new();
     private readonly Dictionary<RoutineSymbol, string> _routineNames = new();
+    private readonly Dictionary<RecordTypeSymbol, string> _recordNames = new();
     private readonly Stack<string> _forExitLabels = new();
     private readonly Stack<string> _doExitLabels = new();
     private SourceText _currentSource;
@@ -35,6 +36,7 @@ internal sealed class WebEmitter
     {
         Line("\"use strict\";");
         Line();
+        EmitRecordHelpers();
         EmitGlobalDeclarations();
 
         foreach (var routine in OrderedRoutines())
@@ -71,6 +73,26 @@ internal sealed class WebEmitter
                     _variableNames[local] = $"l_{id - 1}_{localId++}_{Sanitize(local.Name)}";
             }
         }
+
+        id = 0;
+        foreach (var type in OrderedRecordTypes())
+            _recordNames[type] = $"record_{id++}_{Sanitize(type.RuntimeIdentity)}";
+    }
+
+    private void EmitRecordHelpers()
+    {
+        foreach (var type in OrderedRecordTypes())
+        {
+            var name = _recordNames[type];
+            var defaults = string.Join(", ", type.Fields.Select(field =>
+                $"{Json(field.Name)}: {DefaultValue(field.Type)}"));
+            var copies = string.Join(", ", type.Fields.Select(field =>
+                $"{Json(field.Name)}: {CloneValue(field.Type, $"value[{Json(field.Name)}]")}"));
+            Line($"function {name}_default() {{ return {{ {defaults} }}; }}");
+            Line($"function {name}_clone(value) {{ return {{ {copies} }}; }}");
+        }
+        if (_recordNames.Count != 0)
+            Line();
     }
 
     private void EmitGlobalDeclarations()
@@ -106,7 +128,9 @@ internal sealed class WebEmitter
     private string InitialValue(VariableSymbol symbol)
     {
         if (symbol.IsArray)
-            return $"smile.array([{string.Join(", ", symbol.ArrayDimensions)}], {DefaultValue(symbol.Type)})";
+            return symbol.Type is RecordTypeSymbol
+                ? $"smile.array([{string.Join(", ", symbol.ArrayDimensions)}], () => {DefaultValue(symbol.Type)})"
+                : $"smile.array([{string.Join(", ", symbol.ArrayDimensions)}], {DefaultValue(symbol.Type)})";
         return symbol.IsConstant ? ConstantValue(symbol.ConstantValue) : DefaultValue(symbol.Type);
     }
 
@@ -128,7 +152,7 @@ internal sealed class WebEmitter
     {
         switch (statement)
         {
-            case ConstStatementSyntax or DimStatementSyntax:
+            case ConstStatementSyntax or DimStatementSyntax or TypeDeclarationSyntax:
                 return;
             case AssignmentStatementSyntax assignment:
                 EmitAssignment(assignment);
@@ -153,7 +177,8 @@ internal sealed class WebEmitter
                 Line($"await {Routine(call.Identifier)}({RoutineArguments(call.Identifier, call.Arguments)});");
                 return;
             case ReturnStatementSyntax returnStatement:
-                Line(returnStatement.Expression == null ? "return;" : $"return {Expression(returnStatement.Expression)};");
+                Line(returnStatement.Expression == null ? "return;" :
+                    $"return {CloneValue(_currentRoutine!.ReturnType, Expression(returnStatement.Expression))};");
                 return;
             case SelectStatementSyntax select:
                 EmitSelect(select, topLevel);
@@ -211,16 +236,22 @@ internal sealed class WebEmitter
     private void EmitAssignment(AssignmentStatementSyntax assignment)
     {
         var value = Expression(assignment.Expression);
+        if (assignment.Target.Fields.Count != 0)
+        {
+            var targetType = TargetType(assignment.Target);
+            Line($"{TargetLocation(assignment.Target)} = {StoreValue(targetType, value)};");
+            return;
+        }
         if (!assignment.Target.IsArrayElement)
         {
             var targetSymbol = ResolveVariable(assignment.Target.Identifier);
-            var stored = targetSymbol.Type == SmileType.Number ? $"smile.safe({value})" : value;
+            var stored = StoreValue(targetSymbol.Type, value);
             Line(WriteVariable(targetSymbol, stored) + ";");
             return;
         }
 
         var symbol = ResolveVariable(assignment.Target.Identifier);
-        var arrayValue = symbol.Type == SmileType.Number ? $"smile.safe({value})" : value;
+        var arrayValue = StoreValue(symbol.Type, value);
         Line($"smile.set({_variableNames[symbol]}, [{Arguments(assignment.Target.Indices)}], {arrayValue});");
     }
 
@@ -430,6 +461,10 @@ internal sealed class WebEmitter
                 return ReadVariable(name.Identifier);
             case ArrayAccessExpressionSyntax array:
                 return $"smile.get({_variableNames[ResolveVariable(array.Identifier)]}, [{Arguments(array.Indices)}])";
+            case FieldAccessExpressionSyntax field:
+                if (!_analysis.SemanticModel.TryGetField(field, out var fieldSymbol))
+                    throw UnsupportedExpression(field, "unbound record field");
+                return $"({Expression(field.Receiver)})[{Json(fieldSymbol.Name)}]";
             case ParenthesizedExpressionSyntax parenthesized:
                 return $"({Expression(parenthesized.Expression)})";
             case UnaryExpressionSyntax unary:
@@ -520,6 +555,8 @@ internal sealed class WebEmitter
             if (parameter.ParameterMode == ParameterPassingMode.ByRef)
                 return Reference(argument);
             var value = Expression(argument);
+            if (parameter.Type is RecordTypeSymbol)
+                return CloneValue(parameter.Type, value);
             return !parameter.HasDeclaredType && parameter.Type == SmileType.Number &&
                    _analysis.SemanticModel.GetType(argument) == SmileType.Boolean
                 ? $"(smile.isTrue({value}) ? 1 : 0)"
@@ -541,15 +578,60 @@ internal sealed class WebEmitter
             var symbol = ResolveVariable(array.Identifier);
             return $"smile.refArray({_variableNames[symbol]}, [{Arguments(array.Indices)}])";
         }
+        if (expression is FieldAccessExpressionSyntax field)
+        {
+            if (!_analysis.SemanticModel.TryGetField(field, out var fieldSymbol))
+                return "smile.invalidRef()";
+            var receiver = Expression(field.Receiver);
+            var key = Json(fieldSymbol.Name);
+            return $"(() => {{ const target = {receiver}; return smile.ref(() => target[{key}], value => {{ target[{key}] = value; }}); }})()";
+        }
         return "smile.invalidRef()";
     }
 
-    private static string DefaultValue(SmileType type) => type switch
+    private string DefaultValue(SmileType type) => type is RecordTypeSymbol record
+        ? $"{_recordNames[record]}_default()"
+        : type == SmileType.Text
+        ? "\"\""
+        : type == SmileType.Boolean ? "false" : "0";
+
+    private string CloneValue(SmileType type, string value) => type is RecordTypeSymbol record
+        ? $"{_recordNames[record]}_clone({value})"
+        : value;
+
+    private string StoreValue(SmileType type, string value) => type == SmileType.Number
+        ? $"smile.safe({value})"
+        : CloneValue(type, value);
+
+    private SmileType TargetType(AssignmentTargetSyntax target)
     {
-        SmileType.Text => "\"\"",
-        SmileType.Boolean => "false",
-        _ => "0"
-    };
+        SmileType type = ResolveVariable(target.Identifier).Type;
+        foreach (var token in target.Fields)
+        {
+            if (type is not RecordTypeSymbol record || !record.TryGetField(token.Text, out var field))
+                throw new WebTargetException(_currentSource, "SML5101", token.Span,
+                    $"Web target could not resolve record field '{token.Text}'.");
+            type = field.Type;
+        }
+        return type;
+    }
+
+    private string TargetLocation(AssignmentTargetSyntax target)
+    {
+        var symbol = ResolveVariable(target.Identifier);
+        var location = target.IsArrayElement
+            ? $"smile.get({_variableNames[symbol]}, [{Arguments(target.Indices)}])"
+            : ReadVariable(symbol);
+        SmileType type = symbol.Type;
+        foreach (var token in target.Fields)
+        {
+            var record = (RecordTypeSymbol)type;
+            record.TryGetField(token.Text, out var field);
+            location = $"({location})[{Json(field.Name)}]";
+            type = field.Type;
+        }
+        return location;
+    }
 
     private static string ConstantValue(object value) => value switch
     {
@@ -584,6 +666,9 @@ internal sealed class WebEmitter
 
     private IOrderedEnumerable<RoutineSymbol> OrderedRoutines() =>
         _analysis.SemanticModel.Routines.Values.OrderBy(item => item.SourceOrdinal).ThenBy(item => item.Declaration.Span.Start);
+
+    private IOrderedEnumerable<RecordTypeSymbol> OrderedRecordTypes() =>
+        _analysis.SemanticModel.Types.Values.OrderBy(item => item.SourceOrdinal).ThenBy(item => item.DeclarationSpan.Start);
 
     private string Temporary(string purpose) => $"t_{_temporaryId++}_{purpose}";
 

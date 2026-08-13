@@ -185,12 +185,13 @@ public static class SmileLanguage
         var boundStartupTree = moduleProcessing.BoundTrees.Single(tree => tree.IsStartup);
         var semanticAnalyzer = new SemanticAnalyzer(moduleProcessing.BoundTrees, boundStartupTree);
         var semanticModel = semanticAnalyzer.Analyze();
-        moduleProcessing.Link(semanticModel);
+        var linkDiagnostics = moduleProcessing.Link(semanticModel);
 
         var diagnostics = new List<Diagnostic>();
         diagnostics.AddRange(parserDiagnostics);
         diagnostics.AddRange(moduleProcessing.Diagnostics);
         diagnostics.AddRange(semanticAnalyzer.Diagnostics);
+        diagnostics.AddRange(linkDiagnostics);
 
         var sourceOrder = syntaxTrees.Select((tree, index) => new { tree.Source, index })
             .ToDictionary(item => item.Source, item => item.index);

@@ -1,0 +1,107 @@
+OPTION EXPLICIT
+
+TYPE Leaf
+    Name AS TEXT
+    Value AS NUMBER
+END TYPE
+
+TYPE Box
+    Leaf AS Leaf
+    Active AS BOOLEAN
+END TYPE
+
+DIM First AS Box
+DIM Copy AS Box
+DIM Grid[2, 2] AS Box
+
+PRINT First.Leaf.Value
+
+First = Make5(1, 2, 3, 4, 5)
+First.Leaf.Name = "FIRST"
+Copy = First
+First = First
+First.Leaf.Name = "CHANGED"
+PRINT Copy.Leaf.Name
+PRINT First.Leaf.Name
+
+Grid[0, 0] = Copy
+Grid[1, 1] = Make0()
+CALL RenameLeaf(Grid[0, 0].Leaf, "NESTED")
+CALL SetNumber(Grid[1, 1].Leaf.Value, 9)
+PRINT Grid[0, 0].Leaf.Name
+PRINT Grid[1, 1].Leaf.Value
+
+PRINT Make1(1).Leaf.Value
+PRINT Make4(1, 2, 3, 4).Leaf.Value
+PRINT Make5(1, 2, 3, 4, 5).Leaf.Value
+PRINT Make8(1, 2, 3, 4, 5, 6, 7, 8).Leaf.Value
+PRINT Make16(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16).Leaf.Value
+PRINT MakeRecursive(3).Leaf.Value
+
+CALL TryMutate(Copy)
+PRINT Copy.Leaf.Name
+CALL Mutate(Copy)
+PRINT Copy.Leaf.Name
+
+END PROGRAM
+
+FUNCTION Make0() AS Box
+    DIM Result AS Box
+    RETURN Result
+END FUNCTION
+
+FUNCTION Make1(Value1 AS NUMBER) AS Box
+    DIM Result AS Box
+    Result.Leaf.Value = Value1
+    RETURN Result
+END FUNCTION
+
+FUNCTION Make4(Value1 AS NUMBER, Value2 AS NUMBER, Value3 AS NUMBER, Value4 AS NUMBER) AS Box
+    DIM Result AS Box
+    Result.Leaf.Value = Value1 + Value2 + Value3 + Value4
+    RETURN Result
+END FUNCTION
+
+FUNCTION Make5(Value1 AS NUMBER, Value2 AS NUMBER, Value3 AS NUMBER, Value4 AS NUMBER, Value5 AS NUMBER) AS Box
+    DIM Result AS Box
+    Result.Leaf.Value = Value1 + Value2 + Value3 + Value4 + Value5
+    RETURN Result
+END FUNCTION
+
+FUNCTION Make8(Value1 AS NUMBER, Value2 AS NUMBER, Value3 AS NUMBER, Value4 AS NUMBER, Value5 AS NUMBER, Value6 AS NUMBER, Value7 AS NUMBER, Value8 AS NUMBER) AS Box
+    DIM Result AS Box
+    Result.Leaf.Value = Value1 + Value2 + Value3 + Value4 + Value5 + Value6 + Value7 + Value8
+    RETURN Result
+END FUNCTION
+
+FUNCTION Make16(Value1 AS NUMBER, Value2 AS NUMBER, Value3 AS NUMBER, Value4 AS NUMBER, Value5 AS NUMBER, Value6 AS NUMBER, Value7 AS NUMBER, Value8 AS NUMBER, Value9 AS NUMBER, Value10 AS NUMBER, Value11 AS NUMBER, Value12 AS NUMBER, Value13 AS NUMBER, Value14 AS NUMBER, Value15 AS NUMBER, Value16 AS NUMBER) AS Box
+    DIM Result AS Box
+    Result.Leaf.Value = Value1 + Value2 + Value3 + Value4 + Value5 + Value6 + Value7 + Value8 + Value9 + Value10 + Value11 + Value12 + Value13 + Value14 + Value15 + Value16
+    RETURN Result
+END FUNCTION
+
+FUNCTION MakeRecursive(Depth AS NUMBER) AS Box
+    DIM Result AS Box
+    IF Depth = 0 THEN
+        RETURN Make1(7)
+    END IF
+    Result = MakeRecursive(Depth - 1)
+    Result.Leaf.Value = Result.Leaf.Value + 1
+    RETURN Result
+END FUNCTION
+
+SUB RenameLeaf(BYREF Value AS Leaf, Name AS TEXT)
+    Value.Name = Name
+END SUB
+
+SUB SetNumber(BYREF Value AS NUMBER, NewValue AS NUMBER)
+    Value = NewValue
+END SUB
+
+SUB TryMutate(Value AS Box)
+    Value.Leaf.Name = "BYVAL"
+END SUB
+
+SUB Mutate(BYREF Value AS Box)
+    Value.Leaf.Name = "BYREF"
+END SUB

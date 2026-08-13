@@ -43,7 +43,8 @@ internal sealed class MasmTemporaryStorage
     public RoutineDeclarationSyntax? Owner { get; }
     public MasmStorageKind Kind { get; }
     public int FrameOffset { get; set; }
-    public bool RequiresCleanup => Type == SmileType.Text;
+    public int Size => Math.Max(8, Type.Size);
+    public bool RequiresCleanup => Type.ContainsOwnedText;
 }
 
 internal sealed class MasmFrameLayout
@@ -75,6 +76,8 @@ internal sealed class MasmEmitter
     private readonly StringBuilder _builder = new();
     private readonly Dictionary<VariableSymbol, string> _symbolLabels = new();
     private readonly Dictionary<RoutineSymbol, string> _routineLabels = new();
+    private readonly Dictionary<RecordTypeSymbol, string> _recordHelperLabels = new();
+    private readonly Dictionary<CallExpressionSyntax, MasmTemporaryStorage> _recordCallResults = new();
     private readonly Dictionary<LiteralExpressionSyntax, TextLiteral> _textLiterals = new();
     private readonly Dictionary<VariableSymbol, TextLiteral> _constantTextLiterals = new();
     private readonly Dictionary<SyntaxToken, TextLiteral> _gameTextLiterals = new();
@@ -181,7 +184,8 @@ internal sealed class MasmEmitter
         Line(".data");
         EmitStorage(_analysis.SemanticModel.Symbols.Values);
         foreach (var temporary in _temporaries.Where(temporary => temporary.Kind == MasmStorageKind.Static))
-            Line($"{temporary.Name} QWORD 0");
+            Line(temporary.Size == 8 ? $"{temporary.Name} QWORD 0" :
+                $"{temporary.Name} QWORD {(temporary.Size / 8).ToString(CultureInfo.InvariantCulture)} DUP(0)");
         foreach (var literal in _textLiterals.Values.Concat(_constantTextLiterals.Values))
         {
             Line("ALIGN 8");
@@ -215,6 +219,9 @@ internal sealed class MasmEmitter
         foreach (var routine in _analysis.SemanticModel.Routines.Values)
             EmitRoutine(routine);
 
+        foreach (var record in OrderedRecordTypes())
+            EmitRecordHelpers(record);
+
         Line("END");
         return _builder.ToString();
     }
@@ -226,9 +233,9 @@ internal sealed class MasmEmitter
             if (symbol.IsConstant)
                 continue;
             var label = _symbolLabels[symbol];
-            Line(symbol.IsArray
-                ? $"{label} QWORD {symbol.ArraySize.ToString(CultureInfo.InvariantCulture)} DUP(0)"
-                : $"{label} QWORD 0");
+            var qwords = Math.Max(1, symbol.ArraySize) * Math.Max(1, symbol.Type.Size / 8);
+            Line(qwords == 1 ? $"{label} QWORD 0" :
+                $"{label} QWORD {qwords.ToString(CultureInfo.InvariantCulture)} DUP(0)");
         }
     }
 
@@ -370,6 +377,9 @@ internal sealed class MasmEmitter
                 foreach (var index in array.Indices)
                     CollectExpression(index);
                 break;
+            case FieldAccessExpressionSyntax field:
+                CollectExpression(field.Receiver);
+                break;
             case ParenthesizedExpressionSyntax parenthesized:
                 CollectExpression(parenthesized.Expression);
                 break;
@@ -386,6 +396,9 @@ internal sealed class MasmEmitter
                 _usesKeyHeld |= call.Identifier.Kind == SyntaxKind.KeyHeldKeyword;
                 foreach (var argument in call.Arguments)
                     CollectExpression(argument);
+                if (_analysis.SemanticModel.TryGetRoutine(call.Identifier.Text, out var routine) &&
+                    routine.ReturnType is RecordTypeSymbol)
+                    _recordCallResults[call] = CreateTemporary("record_result", routine.ReturnType);
                 break;
         }
     }
@@ -405,6 +418,9 @@ internal sealed class MasmEmitter
         {
             _routineLabels[routine] = "routine_" + _routineLabels.Count;
         }
+        var recordId = 0;
+        foreach (var record in OrderedRecordTypes())
+            _recordHelperLabels[record] = $"record_{recordId++}_{SafeName(record.RuntimeIdentity)}";
     }
 
     private void BuildFrameLayouts()
@@ -416,7 +432,7 @@ internal sealed class MasmEmitter
             foreach (var symbol in routine.LocalSymbols.Values.Where(symbol => !symbol.IsConstant)
                          .OrderBy(symbol => symbol.DeclarationSpan.Start))
             {
-                offset += Math.Max(1, symbol.ArraySize) * 8;
+                offset += Math.Max(1, symbol.ArraySize) * Math.Max(8, symbol.Type.Size);
                 localOffsets[symbol] = offset;
             }
 
@@ -424,7 +440,7 @@ internal sealed class MasmEmitter
                 .ToArray();
             foreach (var temporary in temporaries)
             {
-                offset += 8;
+                offset += temporary.Size;
                 temporary.FrameOffset = offset;
             }
 
@@ -447,31 +463,51 @@ internal sealed class MasmEmitter
         Line("    mov rbp, rsp");
         Line($"    sub rsp, {_currentFrame.FrameSize}");
         foreach (var symbol in routine.LocalSymbols.Values.Where(symbol => !symbol.IsConstant))
-            for (var index = 0; index < Math.Max(1, symbol.ArraySize); index++)
+            for (var index = 0; index < Math.Max(1, symbol.ArraySize) * Math.Max(1, symbol.Type.Size / 8); index++)
                 Line($"    mov QWORD PTR [rbp-{_currentFrame.LocalOffsets[symbol] - index * 8}], 0");
         foreach (var temporary in _currentFrame.Temporaries.Where(temporary => temporary.RequiresCleanup))
-            Line($"    mov QWORD PTR [rbp-{temporary.FrameOffset}], 0");
+            for (var index = 0; index < temporary.Size / 8; index++)
+                Line($"    mov QWORD PTR [rbp-{temporary.FrameOffset - index * 8}], 0");
+        var argumentShift = routine.ReturnType is RecordTypeSymbol ? 1 : 0;
+        if (argumentShift != 0)
+        {
+            Line("    mov QWORD PTR [rbp-" + _currentFrame.ReturnOffset + "], rcx");
+        }
         for (var index = 0; index < routine.Parameters.Count; index++)
         {
             var parameter = routine.Parameters[index];
-            var source = index switch
+            var argumentIndex = index + argumentShift;
+            var source = argumentIndex switch
             {
                 0 => "rcx", 1 => "rdx", 2 => "r8", 3 => "r9",
-                _ => $"QWORD PTR [rbp+{48 + (index - 4) * 8}]"
+                _ => $"QWORD PTR [rbp+{48 + (argumentIndex - 4) * 8}]"
             };
-            if (index >= 4)
+            if (argumentIndex >= 4)
                 Line($"    mov rax, {source}");
-            Line($"    mov QWORD PTR [rbp-{_currentFrame.LocalOffsets[parameter]}], {(index >= 4 ? "rax" : source)}");
+            var sourceRegister = argumentIndex >= 4 ? "rax" : source;
+            Line($"    mov QWORD PTR [rbp-{_currentFrame.LocalOffsets[parameter]}], {sourceRegister}");
         }
-        Line($"    mov QWORD PTR [rbp-{_currentFrame.ReturnOffset}], 0");
+        foreach (var parameter in routine.Parameters.Where(parameter =>
+                     parameter.Type is RecordTypeSymbol && parameter.ParameterMode != ParameterPassingMode.ByRef))
+        {
+            var record = (RecordTypeSymbol)parameter.Type;
+            var offset = _currentFrame.LocalOffsets[parameter];
+            Line($"    mov rdx, QWORD PTR [rbp-{offset}]");
+            Line($"    mov QWORD PTR [rbp-{offset}], 0");
+            Line($"    lea rcx, [rbp-{offset}]");
+            CallAligned(RecordCopy(record));
+        }
+        if (argumentShift == 0)
+            Line($"    mov QWORD PTR [rbp-{_currentFrame.ReturnOffset}], 0");
         EmitStatements(routine.Declaration.Statements);
         if (!routine.IsFunction)
             Line("    xor eax, eax");
-        Line($"    mov QWORD PTR [rbp-{_currentFrame.ReturnOffset}], rax");
+        if (routine.ReturnType is not RecordTypeSymbol)
+            Line($"    mov QWORD PTR [rbp-{_currentFrame.ReturnOffset}], rax");
         Line($"{_returnLabel}:");
         foreach (var temporary in _currentFrame.Temporaries.Where(temporary => temporary.RequiresCleanup))
             EmitCleanup(new MasmCleanupAction(temporary));
-        foreach (var symbol in routine.LocalSymbols.Values.Where(symbol => symbol.Type == SmileType.Text &&
+        foreach (var symbol in routine.LocalSymbols.Values.Where(symbol => symbol.Type.ContainsOwnedText &&
                      symbol.ParameterMode != ParameterPassingMode.ByRef))
             EmitReleaseSymbol(symbol);
         Line($"    mov rax, QWORD PTR [rbp-{_currentFrame.ReturnOffset}]");
@@ -502,6 +538,7 @@ internal sealed class MasmEmitter
         {
             case ConstStatementSyntax:
             case DimStatementSyntax:
+            case TypeDeclarationSyntax:
             case RoutineDeclarationSyntax:
                 break;
             case AssignmentStatementSyntax assignment:
@@ -548,7 +585,14 @@ internal sealed class MasmEmitter
                     EmitExpression(returnStatement.Expression);
                 else
                     Line("    xor eax, eax");
-                Line($"    mov QWORD PTR [rbp-{_currentFrame!.ReturnOffset}], rax");
+                if (_currentRoutine!.ReturnType is RecordTypeSymbol returnRecord)
+                {
+                    Line("    mov rdx, rax");
+                    Line($"    mov rcx, QWORD PTR [rbp-{_currentFrame!.ReturnOffset}]");
+                    CallAligned(RecordCopy(returnRecord));
+                }
+                else
+                    Line($"    mov QWORD PTR [rbp-{_currentFrame!.ReturnOffset}], rax");
                 EmitCleanupToDepth(0);
                 Line($"    jmp {_returnLabel}");
                 break;
@@ -565,9 +609,13 @@ internal sealed class MasmEmitter
             case EndProgramStatementSyntax:
                 EmitCleanupToDepth(0);
                 if (_currentRoutine != null)
-                    foreach (var symbol in _currentRoutine.LocalSymbols.Values.Where(symbol => symbol.Type == SmileType.Text &&
+                {
+                    foreach (var temporary in _currentFrame!.Temporaries.Where(temporary => temporary.RequiresCleanup))
+                        EmitCleanup(new MasmCleanupAction(temporary));
+                    foreach (var symbol in _currentRoutine.LocalSymbols.Values.Where(symbol => symbol.Type.ContainsOwnedText &&
                                  symbol.ParameterMode != ParameterPassingMode.ByRef))
                         EmitReleaseSymbol(symbol);
+                }
                 EmitProgramCleanup();
                 CallAligned("smile_text_lifetime_report");
                 if (_usesMusic) CallAligned("smile_music_shutdown");
@@ -733,6 +781,32 @@ internal sealed class MasmEmitter
     private void EmitAssignment(AssignmentStatementSyntax assignment)
     {
         EmitExpression(assignment.Expression);
+        var targetType = GetTargetType(assignment.Target);
+        if (targetType is RecordTypeSymbol targetRecord)
+        {
+            PushRax();
+            EmitTargetAddress(assignment.Target);
+            Line("    mov rcx, rax");
+            PopRax();
+            Line("    mov rdx, rax");
+            CallAligned(RecordCopy(targetRecord));
+            return;
+        }
+        if (assignment.Target.Fields.Count != 0)
+        {
+            PushRax();
+            EmitTargetAddress(assignment.Target);
+            Line("    mov rcx, rax");
+            PopRax();
+            if (targetType == SmileType.Text)
+            {
+                Line("    mov rdx, rax");
+                CallAligned("smile_text_move_assign");
+            }
+            else
+                Line("    mov QWORD PTR [rcx], rax");
+            return;
+        }
         if (!assignment.Target.IsArrayElement)
         {
             var target = Resolve(assignment.Target.Identifier.Text);
@@ -754,7 +828,8 @@ internal sealed class MasmEmitter
         EmitArrayIndex(assignment.Target.Indices, symbol);
         Line("    mov rcx, rax");
         EmitAddress(symbol);
-        Line("    lea rcx, [rax+rcx*8]");
+        Line($"    imul rcx, {Math.Max(8, symbol.Type.Size).ToString(CultureInfo.InvariantCulture)}");
+        Line("    lea rcx, [rax+rcx]");
         PopRax();
         if (symbol.Type == SmileType.Text)
         {
@@ -776,6 +851,43 @@ internal sealed class MasmEmitter
         PopRax();
         Line($"    imul rax, {symbol.ArrayDimensions[1].ToString(CultureInfo.InvariantCulture)}");
         Line("    add rax, rcx");
+    }
+
+    private SmileType GetTargetType(AssignmentTargetSyntax target)
+    {
+        SmileType type = Resolve(target.Identifier.Text).Type;
+        foreach (var token in target.Fields)
+        {
+            if (type is not RecordTypeSymbol record || !record.TryGetField(token.Text, out var field))
+                throw new InvalidOperationException($"Unresolved record field '{token.Text}'.");
+            type = field.Type;
+        }
+        return type;
+    }
+
+    private void EmitTargetAddress(AssignmentTargetSyntax target)
+    {
+        var symbol = Resolve(target.Identifier.Text);
+        if (target.IsArrayElement)
+        {
+            EmitArrayIndex(target.Indices, symbol);
+            Line("    mov rcx, rax");
+            EmitAddress(symbol);
+            Line($"    imul rcx, {Math.Max(8, symbol.Type.Size).ToString(CultureInfo.InvariantCulture)}");
+            Line("    add rax, rcx");
+        }
+        else
+            EmitAddress(symbol);
+
+        SmileType type = symbol.Type;
+        foreach (var token in target.Fields)
+        {
+            var record = (RecordTypeSymbol)type;
+            record.TryGetField(token.Text, out var field);
+            if (field.Offset != 0)
+                Line($"    add rax, {field.Offset.ToString(CultureInfo.InvariantCulture)}");
+            type = field.Type;
+        }
     }
 
     private void EmitPrint(PrintStatementSyntax print)
@@ -939,11 +1051,29 @@ internal sealed class MasmEmitter
                 EmitArrayIndex(array.Indices, arraySymbol);
                 Line("    mov rcx, rax");
                 EmitAddress(arraySymbol);
-                Line("    mov rax, QWORD PTR [rax+rcx*8]");
-                if (arraySymbol.Type == SmileType.Text)
+                Line($"    imul rcx, {Math.Max(8, arraySymbol.Type.Size).ToString(CultureInfo.InvariantCulture)}");
+                if (arraySymbol.Type is RecordTypeSymbol)
+                    Line("    lea rax, [rax+rcx]");
+                else
                 {
-                    Line("    mov rcx, rax");
-                    CallAligned("smile_text_retain");
+                    Line("    mov rax, QWORD PTR [rax+rcx]");
+                    if (arraySymbol.Type == SmileType.Text)
+                    {
+                        Line("    mov rcx, rax");
+                        CallAligned("smile_text_retain");
+                    }
+                }
+                break;
+            case FieldAccessExpressionSyntax field:
+                EmitWritableAddress(field);
+                if (_analysis.SemanticModel.GetType(field) is not RecordTypeSymbol)
+                {
+                    Line("    mov rax, QWORD PTR [rax]");
+                    if (_analysis.SemanticModel.GetType(field) == SmileType.Text)
+                    {
+                        Line("    mov rcx, rax");
+                        CallAligned("smile_text_retain");
+                    }
                 }
                 break;
             case ParenthesizedExpressionSyntax parenthesized:
@@ -1016,15 +1146,25 @@ internal sealed class MasmEmitter
                 CallAligned("smile_key_held");
                 break;
             default:
-                EmitRoutineCall(call.Identifier.Text, call.Arguments);
+                if (_analysis.SemanticModel.TryGetRoutine(call.Identifier.Text, out var routine) &&
+                    routine.ReturnType is RecordTypeSymbol)
+                    EmitRoutineCall(call.Identifier.Text, call.Arguments, _recordCallResults[call]);
+                else
+                    EmitRoutineCall(call.Identifier.Text, call.Arguments);
                 break;
         }
     }
 
-    private void EmitRoutineCall(string name, IReadOnlyList<ExpressionSyntax> arguments)
+    private void EmitRoutineCall(string name, IReadOnlyList<ExpressionSyntax> arguments,
+        MasmTemporaryStorage? recordResult = null)
     {
         if (!_analysis.SemanticModel.TryGetRoutine(name, out var routine))
             throw new InvalidOperationException($"Unresolved routine '{name}'.");
+        if (recordResult != null)
+        {
+            EmitTemporaryAddress(recordResult, "rax");
+            PushRax();
+        }
         for (var index = 0; index < arguments.Count; index++)
         {
             if (index < routine.Parameters.Count &&
@@ -1034,7 +1174,9 @@ internal sealed class MasmEmitter
                 EmitExpression(arguments[index]);
             PushRax();
         }
-        EmitNativeCall(_routineLabels[routine], arguments.Count);
+        EmitNativeCall(_routineLabels[routine], arguments.Count + (recordResult == null ? 0 : 1));
+        if (recordResult != null)
+            EmitTemporaryAddress(recordResult, "rax");
     }
 
     private void EmitWritableAddress(ExpressionSyntax expression)
@@ -1050,7 +1192,27 @@ internal sealed class MasmEmitter
             EmitArrayIndex(array.Indices, symbol);
             Line("    mov rcx, rax");
             EmitAddress(symbol);
-            Line("    lea rax, [rax+rcx*8]");
+            Line($"    imul rcx, {Math.Max(8, symbol.Type.Size).ToString(CultureInfo.InvariantCulture)}");
+            Line("    lea rax, [rax+rcx]");
+            return;
+        }
+        if (expression is FieldAccessExpressionSyntax field)
+        {
+            EmitWritableAddress(field.Receiver);
+            if (!_analysis.SemanticModel.TryGetField(field, out var fieldSymbol))
+                throw new InvalidOperationException($"Unbound record field '{field.Field.Text}'.");
+            if (fieldSymbol.Offset != 0)
+                Line($"    add rax, {fieldSymbol.Offset.ToString(CultureInfo.InvariantCulture)}");
+            return;
+        }
+        if (expression is ParenthesizedExpressionSyntax parenthesized)
+        {
+            EmitWritableAddress(parenthesized.Expression);
+            return;
+        }
+        if (expression is CallExpressionSyntax call && _analysis.SemanticModel.GetType(call) is RecordTypeSymbol)
+        {
+            EmitCallExpression(call);
             return;
         }
         Line("    xor eax, eax");
@@ -1148,6 +1310,8 @@ internal sealed class MasmEmitter
             return;
         }
         EmitAddress(symbol);
+        if (symbol.Type is RecordTypeSymbol)
+            return;
         Line("    mov rax, QWORD PTR [rax]");
         if (symbol.Type == SmileType.Text)
         {
@@ -1171,16 +1335,24 @@ internal sealed class MasmEmitter
         {
             EmitAddress(symbol);
             if (index != 0)
-                Line($"    add rax, {index * 8}");
-            Line("    mov rcx, QWORD PTR [rax]");
-            CallAligned("smile_text_release");
+                Line($"    add rax, {index * Math.Max(8, symbol.Type.Size)}");
+            if (symbol.Type is RecordTypeSymbol record)
+            {
+                Line("    mov rcx, rax");
+                CallAligned(RecordClear(record));
+            }
+            else
+            {
+                Line("    mov rcx, QWORD PTR [rax]");
+                CallAligned("smile_text_release");
+            }
         }
     }
 
     private void EmitProgramCleanup()
     {
         foreach (var symbol in _analysis.SemanticModel.Symbols.Values.Where(symbol =>
-                     !symbol.IsConstant && symbol.Type == SmileType.Text))
+                     !symbol.IsConstant && symbol.Type.ContainsOwnedText))
             EmitReleaseSymbol(symbol);
         foreach (var temporary in _temporaries.Where(temporary => temporary.Kind == MasmStorageKind.Static &&
                      temporary.RequiresCleanup))
@@ -1204,13 +1376,110 @@ internal sealed class MasmEmitter
     private void EmitCleanup(MasmCleanupAction cleanup)
     {
         EmitTemporaryAddress(cleanup.Storage, "rcx");
-        CallAligned("smile_text_clear");
+        if (cleanup.Storage.Type is RecordTypeSymbol record)
+            CallAligned(RecordClear(record));
+        else
+            CallAligned("smile_text_clear");
     }
 
     private void EmitCleanupToDepth(int cleanupDepth)
     {
         for (var index = _activeCleanups.Count - 1; index >= cleanupDepth; index--)
             EmitCleanup(_activeCleanups[index]);
+    }
+
+    private void EmitRecordHelpers(RecordTypeSymbol record)
+    {
+        var prefix = _recordHelperLabels[record];
+        Line();
+        Line($"{prefix}_init PROC");
+        for (var offset = 0; offset < record.Size; offset += 8)
+            Line($"    mov QWORD PTR [rcx{Offset(offset)}], 0");
+        Line("    mov rax, rcx");
+        Line("    ret");
+        Line($"{prefix}_init ENDP");
+
+        Line($"{prefix}_clear PROC");
+        Line("    push rbp");
+        Line("    mov rbp, rsp");
+        Line("    sub rsp, 48");
+        Line("    mov QWORD PTR [rbp-8], rcx");
+        foreach (var field in record.Fields)
+        {
+            if (!field.Type.ContainsOwnedText)
+                continue;
+            Line("    mov rax, QWORD PTR [rbp-8]");
+            Line($"    lea rcx, [rax{Offset(field.Offset)}]");
+            Line(field.Type is RecordTypeSymbol nested
+                ? $"    call {RecordClear(nested)}"
+                : "    call smile_text_clear");
+        }
+        Line("    mov rax, QWORD PTR [rbp-8]");
+        Line("    mov rsp, rbp");
+        Line("    pop rbp");
+        Line("    ret");
+        Line($"{prefix}_clear ENDP");
+
+        var done = NewLabel("record_copy_done");
+        Line($"{prefix}_copy PROC");
+        Line("    cmp rcx, rdx");
+        Line($"    je {done}");
+        Line("    push rbp");
+        Line("    mov rbp, rsp");
+        Line("    sub rsp, 48");
+        Line("    mov QWORD PTR [rbp-8], rcx");
+        Line("    mov QWORD PTR [rbp-16], rdx");
+        foreach (var field in record.Fields)
+        {
+            if (field.Type is RecordTypeSymbol nested)
+            {
+                Line("    mov rax, QWORD PTR [rbp-8]");
+                Line($"    lea rcx, [rax{Offset(field.Offset)}]");
+                Line("    mov rax, QWORD PTR [rbp-16]");
+                Line($"    lea rdx, [rax{Offset(field.Offset)}]");
+                Line($"    call {RecordCopy(nested)}");
+            }
+            else if (field.Type == SmileType.Text)
+            {
+                Line("    mov rax, QWORD PTR [rbp-16]");
+                Line($"    mov rcx, QWORD PTR [rax{Offset(field.Offset)}]");
+                Line("    call smile_text_retain");
+                Line("    mov rdx, rax");
+                Line("    mov rax, QWORD PTR [rbp-8]");
+                Line($"    lea rcx, [rax{Offset(field.Offset)}]");
+                Line("    call smile_text_move_assign");
+            }
+            else
+            {
+                Line("    mov rax, QWORD PTR [rbp-16]");
+                Line($"    mov rdx, QWORD PTR [rax{Offset(field.Offset)}]");
+                Line("    mov rax, QWORD PTR [rbp-8]");
+                Line($"    mov QWORD PTR [rax{Offset(field.Offset)}], rdx");
+            }
+        }
+        Line("    mov rax, QWORD PTR [rbp-8]");
+        Line("    mov rsp, rbp");
+        Line("    pop rbp");
+        Line("    ret");
+        Line($"{done}:");
+        Line("    mov rax, rcx");
+        Line("    ret");
+        Line($"{prefix}_copy ENDP");
+    }
+
+    private string RecordCopy(RecordTypeSymbol record) => _recordHelperLabels[record] + "_copy";
+    private string RecordClear(RecordTypeSymbol record) => _recordHelperLabels[record] + "_clear";
+    private static string Offset(int offset) => offset == 0 ? string.Empty : $"+{offset}";
+
+    private IOrderedEnumerable<RecordTypeSymbol> OrderedRecordTypes() =>
+        _analysis.SemanticModel.Types.Values.OrderBy(type => type.SourceOrdinal).ThenBy(type => type.DeclarationSpan.Start);
+
+    private static string SafeName(string value)
+    {
+        var builder = new StringBuilder(value.Length);
+        foreach (var character in value)
+            builder.Append(char.IsLetterOrDigit(character) || character == '_' ? char.ToLowerInvariant(character) : '_');
+        return builder.Length == 0 ? "record" : builder.ToString();
     }
 
     private void PushRax()
@@ -1244,7 +1513,7 @@ internal sealed class MasmEmitter
     private void Line(string text = "") => _builder.AppendLine(text);
 
     private static bool IsExecutable(StatementSyntax statement) =>
-        statement is not ConstStatementSyntax and not DimStatementSyntax and not RoutineDeclarationSyntax;
+        statement is not ConstStatementSyntax and not DimStatementSyntax and not TypeDeclarationSyntax and not RoutineDeclarationSyntax;
 
     private void EmitBytes(byte[] bytes, bool terminate)
     {

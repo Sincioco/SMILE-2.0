@@ -131,7 +131,10 @@ internal static class WebOutputWriter
                         throw new Error("SMILE Web array dimensions must be positive safe integers.");
                     total = safe(total * dimension);
                 }
-                return { dimensions: dimensions.slice(), data: new Array(total).fill(initialValue) };
+                const data = typeof initialValue === "function"
+                    ? Array.from({ length: total }, () => initialValue())
+                    : new Array(total).fill(initialValue);
+                return { dimensions: dimensions.slice(), data };
             }
 
             function arrayOffset(target, indices) {

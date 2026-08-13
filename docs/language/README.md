@@ -15,7 +15,7 @@ Library compilation requires every source to declare a module. Application proje
 
 SMILE evolves only when current syntax cannot express a requirement clearly. New general-purpose features prefer readable, established BASIC wording; the smallest beginner-friendly C#-inspired concept is used only when BASIC has no suitable precedent. The language avoids aliases, multiple spellings, clever punctuation, and game-specific statements. Syntax, diagnostics, examples, and documentation change proportionally through the shared authority.
 
-SMILE is case-insensitive and line-oriented. An apostrophe starts a comment. Phase 3A values are signed 64-bit `NUMBER`, `BOOLEAN`, and mutable UTF-8 `TEXT` values.
+SMILE is case-insensitive and line-oriented. An apostrophe starts a comment. Values include signed 64-bit `NUMBER`, `BOOLEAN`, mutable UTF-8 `TEXT`, and user-defined record types.
 
 ## Explicit declarations and built-in types
 
@@ -50,15 +50,42 @@ END FUNCTION
 
 Native and Web calls have no four-parameter language restriction; the regression matrix covers 0, 1, 4, 5, 8, and 16 parameters.
 
+## Record types
+
+`TYPE Name` ... `END TYPE` declares a nominal value type. A project-global type is shared across physical sources. A type directly inside a module is private by default and may be marked `PUBLIC` or `PRIVATE`. Fields use `FieldName AS Type`; field types may be built-in, another visible record type, or an imported public type such as `Models.Actor`. Fields cannot be arrays and cannot have initializers.
+
+```smile
+TYPE Point2D
+    X AS NUMBER
+    Y AS NUMBER
+END TYPE
+
+TYPE Actor
+    Name AS TEXT
+    Position AS Point2D
+    Active AS BOOLEAN
+END TYPE
+
+DIM Hero AS Actor
+DIM Party[4] AS Actor
+Hero.Name = "Alyssa"
+Party[0] = Hero
+PRINT Party[0].Position.X
+```
+
+Record identity is exact and nominal: separately declared types with identical fields are not interchangeable. Records default each field recursively, use deep value-copy assignment, preserve safe self-assignment, and allow nested field locations and fixed one- or two-dimensional arrays. `BYVAL` receives an independent deep copy. `BYREF` may target a record variable, record array element, nested record field, or scalar field. Functions may return records, including recursively and with 0, 1, 4, 5, 8, or 16 explicit parameters.
+
+Native records use deterministic inline 8-byte-aligned layouts and generated initialize, clear, and deep-copy helpers. Record results use a hidden caller-owned return buffer; invocation-local result temporaries keep recursive calls reentrant and release nested `TEXT` exactly once. Web records use fresh default objects and deep clones so assignment, arrays, `BYVAL`, `BYREF`, and returns do not leak JavaScript object aliases.
+
 The native backend keeps routine-owned `FOR` limits and NUMBER, BOOLEAN, or TEXT `SELECT CASE` selectors in each invocation's stack frame, so recursive and mutually recursive routines do not share compiler state. Owned TEXT selectors are move-assigned into zero-initialized slots and cleared in reverse nesting order on normal completion, `RETURN`, `EXIT FOR`, `EXIT DO`, `END PROGRAM`, and the routine epilogue. A function's owned TEXT return is preserved separately while its locals, arrays, BYVAL parameters, and compiler temporaries are released.
 
 `PRINT` preserves UTF-8 as the language representation. On an attached Windows console the runtime converts bounded complete UTF-8 chunks to UTF-16 and writes them with `WriteConsoleW`; redirected files and pipes receive the original UTF-8 bytes through chunked `WriteFile` calls without a BOM. Generated Web console output uses the same logical text and is compared against native output by the repository's dependency-free Node host.
 
 ## Multi-file programs
 
-A compilation may contain one selected startup source and any number of support sources. Every file is parsed separately and retains its real path, lines, tokens, diagnostics, and debug locations; all files share one case-insensitive global symbol and routine model.
+A compilation may contain one selected startup source and any number of support sources. Every file is parsed separately and retains its real path, lines, tokens, diagnostics, and debug locations; all files share one case-insensitive value/routine model and a separate type namespace.
 
-The startup source owns executable top-level statements, `GAME WINDOW`, and `END PROGRAM`. A support source may contain only top-level `CONST`, `DIM`, `SUB`, and `FUNCTION` declarations. Routine bodies retain the complete normal statement surface. The command-line form is:
+The startup source owns executable top-level statements, `GAME WINDOW`, and `END PROGRAM`. A support source may contain only top-level `CONST`, `DIM`, `TYPE`, `SUB`, and `FUNCTION` declarations. Routine bodies retain the complete normal statement surface. The command-line form is:
 
 ```text
 smilec Program.smile --source GameState.smile --source Drawing.smile -o Program.exe
@@ -137,12 +164,12 @@ END PROGRAM
 
 Drawing statements support filled or outlined rectangles, rounded rectangles, circles, and arbitrary four-corner quadrilaterals, plus outlined arcs, lines, text expressions, and numbers. Quadrilaterals take four perimeter-ordered `(X, Y)` points followed by a color. `SHOW SCREEN` presents the logical canvas. `PLAY SOUND` starts an asynchronous WAV effect and missing files are safe. `LOAD` and `SAVE` persist integer values in storage isolated by executable name.
 
-## Phase 3A diagnostics
+## Phase 3 diagnostics
 
 | Code | Meaning |
 |---|---|
 | `SML3300` | `OPTION EXPLICIT` is late or duplicated. |
-| `SML3301` | A declaration names an unknown type. |
+| `SML3301` | Reserved for compatibility with pre-record typed diagnostics. |
 | `SML3302` | A scalar `DIM` omits `AS Type`. |
 | `SML3303` | `OPTION EXPLICIT` requires a declaration. |
 | `SML3304` | Assignment, argument, case, or return types do not match. |
@@ -152,6 +179,23 @@ Drawing statements support filled or outlined rectangles, rounded rectangles, ci
 | `SML3308` | `TEXT` is used with an unsupported or mixed-type operator. |
 | `SML3309` | A legacy function has inconsistent inferred return types. |
 | `SML3310` | A typed declaration or return-type context is unsupported. |
+
+Record-specific diagnostics are stable and source-located:
+
+| Code | Meaning |
+|---|---|
+| `SML3400` | A `TYPE` is duplicated. |
+| `SML3401` | A record type reference is unknown. |
+| `SML3402` | A field is duplicated or malformed. |
+| `SML3403` | A `TYPE` is misplaced or a field uses an unsupported form. |
+| `SML3404` | Nested value types form a recursive layout cycle. |
+| `SML3405` | A field does not exist on the record type. |
+| `SML3406` | Field access is applied to a non-record value. |
+| `SML3407` | A whole record is used in an unsupported operation. |
+| `SML3408` | An imported record type is private or inaccessible. |
+| `SML3409` | A public API exposes an inaccessible record type. |
+| `SML3410` | A type is used as a value, or a value as a type. |
+| `SML3411` | A record layout exceeds the supported size. |
 
 ### Arc drawing
 

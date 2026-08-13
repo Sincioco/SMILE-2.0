@@ -1,0 +1,1 @@
+<SmileProject Version="1.0"><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include="Program.smile" StartupOnly="true" /><SmileSource Include="Types.smile" /></ItemGroup></SmileProject>

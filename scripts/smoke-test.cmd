@@ -68,7 +68,7 @@ copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib" "%SMILE_RO
 if errorlevel 1 exit /b %errorlevel%
 fc /b "%SMILE_ROOT%\artifacts\temp\Smile.Text.Extras.first.smilelib" "%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib" >nul
 if errorlevel 1 exit /b 1
-powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib'); try { $manifest=[IO.StreamReader]::new($zip.GetEntry('manifest.json').Open()).ReadToEnd(); $api=[IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open()).ReadToEnd(); if (!$manifest.Contains('formatVersion') -or !$manifest.Contains(': 2') -or !$api.Contains('ByRef') -or !$api.Contains('returnType') -or !$api.Contains('Text')) { exit 1 } } finally { $zip.Dispose() }"
+powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib'); try { $manifest=[IO.StreamReader]::new($zip.GetEntry('manifest.json').Open()).ReadToEnd(); $api=[IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open()).ReadToEnd(); if (!$manifest.Contains('formatVersion') -or !$manifest.Contains(': 3') -or !$api.Contains('ByRef') -or !$api.Contains('returnType') -or !$api.Contains('TEXT')) { exit 1 } } finally { $zip.Dispose() }"
 if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3ABasics\Phase3ABasics.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase3ABasics.exe" --debug
@@ -138,7 +138,78 @@ for %%N in (RecursiveFor RecursiveTextSelect ExitCleanup NestedCleanup EndProgra
 )
 echo Phase 3A.1 reentrancy, cleanup, Unicode, lifetime, and native/Web execution parity tests passed.
 
-for %%P in (OptionExplicitLate:SML3300 OptionExplicitUndeclared:SML3303 ScalarDimWithoutAs:SML3302 UnknownBuiltInType:SML3301 NumberToTextAssignment:SML3304 TextToBooleanAssignment:SML3304 MixedTextAddition:SML3308 TextRelationalComparison:SML3308 InvalidByRefLiteral:SML3305 InvalidByRefConstant:SML3305 WrongArgumentType:SML3304 WrongReturnType:SML3304 InconsistentLegacyReturnTypes:SML3309 DuplicateLocal:SML3306 UseBeforeLocalDeclaration:SML3307) do (
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\libraries\Smile.Data.Models\Smile.Data.Models.smilelibproj" --target library --configuration Release -o "%SMILE_ROOT%\artifacts\libraries\Smile.Data.Models.smilelib"
+if errorlevel 1 exit /b %errorlevel%
+copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.Data.Models.smilelib" "%SMILE_ROOT%\artifacts\temp\Smile.Data.Models.first.smilelib" >nul
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\libraries\Smile.Data.Models\Smile.Data.Models.smilelibproj" --target library --configuration Release -o "%SMILE_ROOT%\artifacts\libraries\Smile.Data.Models.smilelib"
+if errorlevel 1 exit /b %errorlevel%
+fc /b "%SMILE_ROOT%\artifacts\temp\Smile.Data.Models.first.smilelib" "%SMILE_ROOT%\artifacts\libraries\Smile.Data.Models.smilelib" >nul || exit /b 1
+powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.Data.Models.smilelib'); try { $manifest=[IO.StreamReader]::new($zip.GetEntry('manifest.json').Open()).ReadToEnd(); $api=[IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open()).ReadToEnd(); if (!$manifest.Contains(': 3') -or !$api.Contains('Smile.Data.Models::Actor') -or !$api.Contains('\"fields\"') -or $api.Contains('InternalTag')) { exit 1 } } finally { $zip.Dispose() }"
+if errorlevel 1 exit /b 1
+
+for %%P in (Phase3BRecords.smileproj Phase3BRecords.Package.smileproj) do (
+    "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3BRecords\%%P" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\%%~nP.exe" --debug
+    if errorlevel 1 exit /b 1
+    "%SMILE_ROOT%\artifacts\games\%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\%%~nP.out"
+    if errorlevel 1 exit /b 1
+    fc "%SMILE_ROOT%\examples\Phase3BRecords\Phase3BRecords.expected.txt" "%SMILE_ROOT%\artifacts\temp\%%~nP.out" >nul || exit /b 1
+    set "SMILE_TEXT_LIFETIME_DIAGNOSTICS=1"
+    "%SMILE_ROOT%\artifacts\games\%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\%%~nP.lifetime.out"
+    if errorlevel 1 exit /b 1
+    set "SMILE_TEXT_LIFETIME_DIAGNOSTICS="
+    findstr /x /c:"SMILE_TEXT_LIVE=0" "%SMILE_ROOT%\artifacts\temp\%%~nP.lifetime.out" >nul || exit /b 1
+    "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3BRecords\%%P" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\%%~nP"
+    if errorlevel 1 exit /b 1
+    node --check "%SMILE_ROOT%\artifacts\web\%%~nP\game.js" || exit /b 1
+    node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\%%~nP" --expected "%SMILE_ROOT%\examples\Phase3BRecords\Phase3BRecords.expected.txt" --native-output "%SMILE_ROOT%\artifacts\temp\%%~nP.out" --timeout 10000
+    if errorlevel 1 exit /b 1
+)
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3BLocalRecords\Phase3BLocalRecords.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase3BLocalRecords.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\games\Phase3BLocalRecords.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3BLocalRecords.out"
+fc "%SMILE_ROOT%\examples\Phase3BLocalRecords\Phase3BLocalRecords.expected.txt" "%SMILE_ROOT%\artifacts\temp\Phase3BLocalRecords.out" >nul || exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3BLocalRecords\Phase3BLocalRecords.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\Phase3BLocalRecords"
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase3BLocalRecords" --expected "%SMILE_ROOT%\examples\Phase3BLocalRecords\Phase3BLocalRecords.expected.txt" --native-output "%SMILE_ROOT%\artifacts\temp\Phase3BLocalRecords.out" --timeout 10000 || exit /b 1
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase3BRecordMatrix.smile" -o "%SMILE_ROOT%\artifacts\games\Phase3BRecordMatrix.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\games\Phase3BRecordMatrix.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3BRecordMatrix.out"
+fc "%SMILE_ROOT%\examples\Phase3BRecordMatrix.expected.txt" "%SMILE_ROOT%\artifacts\temp\Phase3BRecordMatrix.out" >nul || exit /b 1
+set "SMILE_TEXT_LIFETIME_DIAGNOSTICS=1"
+"%SMILE_ROOT%\artifacts\games\Phase3BRecordMatrix.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3BRecordMatrix.lifetime.out"
+if errorlevel 1 exit /b 1
+set "SMILE_TEXT_LIFETIME_DIAGNOSTICS="
+findstr /x /c:"SMILE_TEXT_LIVE=0" "%SMILE_ROOT%\artifacts\temp\Phase3BRecordMatrix.lifetime.out" >nul || exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase3BRecordMatrix.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\Phase3BRecordMatrix"
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase3BRecordMatrix" --expected "%SMILE_ROOT%\examples\Phase3BRecordMatrix.expected.txt" --native-output "%SMILE_ROOT%\artifacts\temp\Phase3BRecordMatrix.out" --timeout 10000 || exit /b 1
+
+for %%P in (DuplicateType:SML3400 TypeInsideRoutine:SML3403 EmptyType:SML3402 DuplicateField:SML3402 FieldWithoutAs:SML3402 ArrayField:SML3403 FieldInitializer:SML3403 UnknownFieldType:SML3401 DirectRecursiveType:SML3404 IndirectRecursiveType:SML3404 UnknownField:SML3405 FieldOnNumber:SML3406 RecordComparison:SML3407 PrintRecord:SML3407 WrongRecordAssignment:SML3304 InvalidRecordByRefTemporary:SML3305 RecordConst:SML3403) do (
+    for /f "tokens=1,2 delims=:" %%F in ("%%P") do (
+        "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\InvalidPhase3B\%%F.smile" > "%SMILE_ROOT%\artifacts\temp\%%F.log" 2>&1
+        if not errorlevel 1 exit /b 1
+        if errorlevel 2 exit /b 1
+        findstr /c:"%%G" "%SMILE_ROOT%\artifacts\temp\%%F.log" >nul || exit /b 1
+        findstr /c:"%%F.smile(" "%SMILE_ROOT%\artifacts\temp\%%F.log" >nul || exit /b 1
+    )
+)
+for %%P in (UnknownImportedType:SML3401 PrivateImportedType:SML3408) do (
+    for /f "tokens=1,2 delims=:" %%F in ("%%P") do (
+        "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\InvalidPhase3B\%%F\%%F.smileproj" > "%SMILE_ROOT%\artifacts\temp\%%F.log" 2>&1
+        if not errorlevel 1 exit /b 1
+        if errorlevel 2 exit /b 1
+        findstr /c:"%%G" "%SMILE_ROOT%\artifacts\temp\%%F.log" >nul || exit /b 1
+    )
+)
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\InvalidPhase3B\PublicApiPrivateType\PublicApiPrivateType.smilelibproj" --target library -o "%SMILE_ROOT%\artifacts\temp\invalid-private.smilelib" > "%SMILE_ROOT%\artifacts\temp\PublicApiPrivateType.log" 2>&1
+if not errorlevel 1 exit /b 1
+if errorlevel 2 exit /b 1
+findstr /c:"SML3409" "%SMILE_ROOT%\artifacts\temp\PublicApiPrivateType.log" >nul || exit /b 1
+echo Phase 3B record semantics, native ABI, Web parity, packages, diagnostics, completion, and lifetime tests passed.
+
+for %%P in (OptionExplicitLate:SML3300 OptionExplicitUndeclared:SML3303 ScalarDimWithoutAs:SML3302 UnknownBuiltInType:SML3401 NumberToTextAssignment:SML3304 TextToBooleanAssignment:SML3304 MixedTextAddition:SML3308 TextRelationalComparison:SML3308 InvalidByRefLiteral:SML3305 InvalidByRefConstant:SML3305 WrongArgumentType:SML3304 WrongReturnType:SML3304 InconsistentLegacyReturnTypes:SML3309 DuplicateLocal:SML3306 UseBeforeLocalDeclaration:SML3307) do (
     for /f "tokens=1,2 delims=:" %%F in ("%%P") do (
         "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\InvalidPhase3A\%%F.smile" > "%SMILE_ROOT%\artifacts\temp\%%F.log" 2>&1
         if not errorlevel 1 exit /b 1

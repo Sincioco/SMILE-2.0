@@ -1,0 +1,5 @@
+SUB Invalid()
+    TYPE LocalType
+        Value AS NUMBER
+    END TYPE
+END SUB

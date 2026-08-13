@@ -1,0 +1,11 @@
+TYPE Point
+    X AS NUMBER
+END TYPE
+CALL Change(Create())
+FUNCTION Create() AS Point
+    DIM Result AS Point
+    RETURN Result
+END FUNCTION
+SUB Change(BYREF Value AS Point)
+    Value.X = 1
+END SUB

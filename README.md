@@ -88,7 +88,7 @@ artifacts\compiler\smilec.exe --project examples\LibraryConsumer\LibraryConsumer
 artifacts\compiler\smilec.exe --project examples\LibraryConsumer\LibraryConsumer.smileproj --target web --output-dir artifacts\web\LibraryConsumer
 ```
 
-The Phase 3A typed-text proof uses `libraries\Smile.Text.Extras`, `examples\Phase3ABasics`, `examples\Phase3ATextStress.smile`, and `examples\Phase3ATextGame`. `.smilelib` packages now use deterministic formatVersion 2 typed public API metadata.
+The Phase 3A typed-text proof uses `libraries\Smile.Text.Extras`, `examples\Phase3ABasics`, `examples\Phase3ATextStress.smile`, and `examples\Phase3ATextGame`. The Phase 3B record proof uses `libraries\Smile.Data.Models`, `examples\Phase3BRecords`, `examples\Phase3BLocalRecords`, and `examples\Phase3BRecordMatrix.smile`. `.smilelib` packages now use deterministic formatVersion 3 metadata with typed public record layouts.
 
 Loose-file builds can add a built package with repeated `--library <path.smilelib>`. Project builds read `<SmileProjectReference>` and `<SmileLibraryReference>` items, build project dependencies in deterministic order, reject cycles, and reuse a referenced project package only when its identity, modules, normalized source hashes, and direct dependency identities match the current library project. Imports follow direct provider boundaries: application and library-project sources see only their own modules and direct references, package sources see only exact manifest dependencies, and loose roots see every package supplied directly with `--library`.
 
@@ -201,6 +201,7 @@ Loose `.smile` files remain supported: open one and use **Tools > Build SMILE Fi
 Implemented syntax includes:
 
 - signed 64-bit `NUMBER`, `BOOLEAN`, and mutable UTF-8 `TEXT` values, constants, and typed one- or two-dimensional fixed arrays;
+- project-global and module-owned `TYPE` records with built-in or nested fields, fixed one- or two-dimensional record arrays, deep value-copy assignment, `BYVAL`/`BYREF`, and record function returns;
 - per-physical-source `OPTION EXPLICIT` and scalar `DIM Name AS NUMBER|BOOLEAN|TEXT` declarations;
 - arithmetic and comparison operators, integer `/`, `MOD`, `AND`, `OR`, and `NOT`;
 - multiline `IF`/`ELSE IF`/`ELSE`, ascending and descending `FOR`, `DO`/`LOOP UNTIL`, `EXIT FOR`, `EXIT DO`, and `SELECT CASE`;
@@ -222,9 +223,9 @@ Arc outlines use `DRAW ARC CenterX, CenterY, Radius, StartAngle, SweepAngle, Col
 - Native routine-owned `FOR` limits and NUMBER/BOOLEAN/TEXT `SELECT CASE` selectors are invocation-local and reentrant. Owned TEXT selector cleanup runs on normal completion, `RETURN`, `EXIT FOR`, `EXIT DO`, and `END PROGRAM`.
 - Native console handles receive UTF-16 through `WriteConsoleW`; redirected files and pipes receive the original UTF-8 bytes without a BOM. The Web parity harness under `scripts\run-web-test.js` uses only built-in Node modules.
 - Browser `.smile` breakpoints are not yet supported. Windows x64 `.smile` breakpoints, IntelliSense, normal file opening, and native F5 remain supported.
-- Numeric storage is signed 64-bit integer only; there is no floating-point type, user-defined `TYPE`, record field, or dynamic collection.
+- Numeric storage is signed 64-bit integer only; there is no floating-point type or dynamic collection.
 - Arrays are fixed at compile time and support at most two dimensions.
-- Whole-array routine parameters and returns remain deferred; scalar routine calls are tested through sixteen parameters without a language-level cap.
+- Record fields cannot be arrays and there are no record literals, constructors, methods, inheritance, pointers, null, record comparison, or whole-array assignment/parameters/returns. Routine calls and hidden-buffer record returns are tested through sixteen explicit parameters.
 - The Visual Studio project system intentionally remains focused rather than becoming an MSBuild SDK. Application `.smileproj` and library `.smilelibproj` files share one project model, including sources and project/package references.
 - `PLAY SOUND` supports one asynchronous WAV effect at a time. `PLAY MUSIC` supports one MP3 background track through `Windows.Media.Playback.MediaPlayer`; there are no playlists, seeking, or multiple music channels.
 - Windows editions without the required optional media components may decline MP3 playback, but the game continues without crashing.

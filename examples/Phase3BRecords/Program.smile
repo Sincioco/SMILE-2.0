@@ -1,0 +1,54 @@
+OPTION EXPLICIT
+
+IMPORT Smile.Data.Models AS Models
+
+DIM Hero AS Models.Actor
+DIM Copy AS Models.Actor
+DIM Party[2] AS Models.Actor
+DIM OriginalName AS TEXT
+
+Hero = Models.CreateActor("Alyssa", 10, 20, 35, 35)
+Copy = Hero
+OriginalName = Copy.Name
+Hero.Name = "Changed"
+
+PRINT OriginalName
+PRINT Copy.Name
+PRINT Hero.Name
+
+Party[0] = Copy
+Party[1] = Models.CreateActor("Rolf", 1, 2, 20, 25)
+
+CALL Models.Move(Party[0], 5, -2)
+CALL Models.Damage(Party[0], 7)
+
+PRINT Party[0].Position.X
+PRINT Party[0].Position.Y
+PRINT Party[0].Health.Current
+PRINT Party[1].Name
+
+CALL TryChange(Party[0])
+PRINT Party[0].Name
+
+CALL Change(Party[0])
+PRINT Party[0].Name
+
+CALL RenameField(Party[1].Name, "Nei")
+PRINT Party[1].Name
+
+Copy = Models.CopyActor(Party[0])
+PRINT Copy.Name
+
+END PROGRAM
+
+SUB TryChange(Value AS Models.Actor)
+    Value.Name = "BYVAL"
+END SUB
+
+SUB Change(BYREF Value AS Models.Actor)
+    Value.Name = "BYREF"
+END SUB
+
+SUB RenameField(BYREF Value AS TEXT, NewValue AS TEXT)
+    Value = NewValue
+END SUB

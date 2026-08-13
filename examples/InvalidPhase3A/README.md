@@ -7,7 +7,7 @@ Each source intentionally fails with one stable Phase 3A diagnostic family:
 | `OptionExplicitLate.smile` | SML3300 |
 | `OptionExplicitUndeclared.smile` | SML3303 |
 | `ScalarDimWithoutAs.smile` | SML3302 |
-| `UnknownBuiltInType.smile` | SML3301 |
+| `UnknownBuiltInType.smile` | SML3401 |
 | `NumberToTextAssignment.smile` | SML3304 |
 | `TextToBooleanAssignment.smile` | SML3304 |
 | `MixedTextAddition.smile` | SML3308 |

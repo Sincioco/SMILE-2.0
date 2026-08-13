@@ -1,0 +1,6 @@
+TYPE Point
+    X AS NUMBER
+END TYPE
+DIM First AS Point
+DIM Second AS Point
+PRINT First = Second

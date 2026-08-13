@@ -1,0 +1,3 @@
+TYPE Invalid
+    Value AS MissingType
+END TYPE

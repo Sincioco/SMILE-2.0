@@ -1,0 +1,9 @@
+MODULE Invalid.PublicApi
+PRIVATE TYPE Hidden
+    Value AS NUMBER
+END TYPE
+PUBLIC FUNCTION Create() AS Hidden
+    DIM Result AS Hidden
+    RETURN Result
+END FUNCTION
+END MODULE

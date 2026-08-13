@@ -1454,7 +1454,7 @@ Run("Typed scalars arrays and legacy numeric arrays bind shared types", () =>
     Equal(SmileType.Text, analysis.SemanticModel.Symbols["Names"].Type);
     Equal(SmileType.Number, analysis.SemanticModel.Symbols["Legacy"].Type);
     Equal(true, HasDiagnostic(Analyze("DIM MissingType\n"), "SML3302"));
-    Equal(true, HasDiagnostic(Analyze("DIM Value AS STRING\n"), "SML3301"));
+    Equal(true, HasDiagnostic(Analyze("DIM Value AS STRING\n"), "SML3401"));
 });
 Run("TEXT constants values operators arrays SELECT and DRAW bind", () =>
 {
@@ -1518,7 +1518,7 @@ Run("Web emitter uses JavaScript TEXT values and BYREF references", () =>
     Equal(true, javascript.Contains(".set(", StringComparison.Ordinal));
     Equal(true, javascript.Contains("\"A\"", StringComparison.Ordinal));
 });
-Run("FormatVersion 2 packages contain deterministic typed public API metadata", () =>
+Run("FormatVersion 3 packages contain deterministic typed public API metadata", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "SmilePhase3APackageTests-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(directory);
@@ -1537,16 +1537,16 @@ Run("FormatVersion 2 packages contain deterministic typed public API metadata", 
         using (var archive = System.IO.Compression.ZipFile.OpenRead(first))
         {
             using var manifestReader = new StreamReader(archive.GetEntry("manifest.json")!.Open());
-            Equal(true, manifestReader.ReadToEnd().Contains("\"formatVersion\": 2", StringComparison.Ordinal));
+            Equal(true, manifestReader.ReadToEnd().Contains("\"formatVersion\": 3", StringComparison.Ordinal));
             using var apiReader = new StreamReader(archive.GetEntry("api/public-symbols.json")!.Open());
             var api = apiReader.ReadToEnd();
-            Equal(true, api.Contains("\"type\": \"Text\"", StringComparison.Ordinal));
+            Equal(true, api.Contains("\"type\": \"TEXT\"", StringComparison.Ordinal));
             Equal(true, api.Contains("\"mode\": \"ByRef\"", StringComparison.Ordinal));
             Equal(true, api.Contains("\"mode\": \"ByVal\"", StringComparison.Ordinal));
-            Equal(true, api.Contains("\"returnType\": \"Text\"", StringComparison.Ordinal));
+            Equal(true, api.Contains("\"returnType\": \"TEXT\"", StringComparison.Ordinal));
             Equal(false, api.Contains("Hidden", StringComparison.Ordinal));
         }
-        RewriteManifest(first, manifest => manifest.Replace("\"formatVersion\": 2", "\"formatVersion\": 1",
+        RewriteManifest(first, manifest => manifest.Replace("\"formatVersion\": 3", "\"formatVersion\": 2",
             StringComparison.Ordinal));
         ThrowsContains(() => SmileLibraryPackage.ReadIdentity(first), "rebuild the library");
     }
@@ -1563,6 +1563,79 @@ Run("Typed completion descriptions include parameter modes and returns", () =>
     const string typedDeclaration = "DIM Name AS ";
     Equal("BOOLEAN|NUMBER|TEXT", string.Join("|", SmileCompletionService
         .GetCompletions(Analyze(typedDeclaration), typedDeclaration.Length).Select(item => item.DisplayText)));
+});
+
+Run("Record types bind nominal identities nested fields arrays and deterministic layouts", () =>
+{
+    const string source = "TYPE Point\nX AS NUMBER\nY AS NUMBER\nEND TYPE\nTYPE Actor\nName AS TEXT\nPosition AS Point\nActive AS BOOLEAN\nEND TYPE\nDIM Hero AS Actor\nDIM Party[2, 2] AS Actor\nHero.Position.X = 7\nParty[1, 1] = Hero\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var point = analysis.SemanticModel.Types["Point"];
+    var actor = analysis.SemanticModel.Types["Actor"];
+    Equal(16, point.Size);
+    Equal(32, actor.Size);
+    Equal(true, actor.ContainsOwnedText);
+    Equal(actor, analysis.SemanticModel.Symbols["Hero"].Type);
+    Equal(actor, analysis.SemanticModel.Symbols["Party"].Type);
+    Equal(2, analysis.SemanticModel.Symbols["Party"].ArrayRank);
+    Equal(8, actor.Fields.Single(field => field.Name == "Position").Offset);
+});
+
+Run("Record value semantics emit native helpers and Web defaults clones and fresh arrays", () =>
+{
+    const string source = "TYPE Item\nName AS TEXT\nValue AS NUMBER\nEND TYPE\nDIM First AS Item\nDIM Copy AS Item\nDIM Items[2] AS Item\nFirst.Name = \"A\"\nCopy = First\nFirst = First\nItems[0] = Copy\nPRINT Items[0].Name\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var native = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
+    Equal(true, native.Contains("record_0_item_copy PROC", StringComparison.Ordinal));
+    Equal(true, native.Contains("call smile_text_retain", StringComparison.Ordinal));
+    var web = new WebEmitter(analysis).Emit();
+    Equal(true, web.Contains("record_0_item_default", StringComparison.Ordinal));
+    Equal(true, web.Contains("record_0_item_clone", StringComparison.Ordinal));
+    Equal(true, web.Contains("smile.array([2], () =>", StringComparison.Ordinal));
+});
+
+Run("Record returns shift the Windows x64 ABI through sixteen explicit parameters", () =>
+{
+    const string parameters = "Value1 AS NUMBER, Value2 AS NUMBER, Value3 AS NUMBER, Value4 AS NUMBER, Value5 AS NUMBER, Value6 AS NUMBER, Value7 AS NUMBER, Value8 AS NUMBER, Value9 AS NUMBER, Value10 AS NUMBER, Value11 AS NUMBER, Value12 AS NUMBER, Value13 AS NUMBER, Value14 AS NUMBER, Value15 AS NUMBER, Value16 AS NUMBER";
+    var analysis = Analyze($"TYPE Result\nValue AS NUMBER\nEND TYPE\nDIM Answer AS Result\nAnswer = Make(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)\nFUNCTION Make({parameters}) AS Result\nDIM Value AS Result\nValue.Value = Value16\nRETURN Value\nEND FUNCTION\n");
+    Equal(false, analysis.HasErrors);
+    var assembly = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
+    Equal(true, assembly.Contains("[rbp+144]", StringComparison.Ordinal));
+    Equal(true, assembly.Contains("record_result", StringComparison.Ordinal));
+});
+
+Run("Record type and field completion shares public visibility and nested type information", () =>
+{
+    const string fieldSource = "TYPE Point\nX AS NUMBER\nY AS NUMBER\nEND TYPE\nDIM Hero AS Point\nPRINT Hero.";
+    var fieldCompletions = SmileCompletionService.GetCompletions(Analyze(fieldSource), fieldSource.Length);
+    Equal("X|Y", string.Join("|", fieldCompletions.Select(item => item.DisplayText)));
+    Equal(true, fieldCompletions.All(item => item.Kind == SmileCompletionKind.Field));
+
+    const string typeSource = "TYPE Point\nX AS NUMBER\nEND TYPE\nDIM Hero AS ";
+    var typeCompletions = SmileCompletionService.GetCompletions(Analyze(typeSource), typeSource.Length);
+    Equal(true, typeCompletions.Any(item => item.DisplayText == "Point" && item.Kind == SmileCompletionKind.Type));
+
+    const string program = "IMPORT Example.Models AS Models\nDIM Value AS Models.";
+    var imported = Multi(("Program.smile", true, program),
+        ("Models.smile", false, "MODULE Example.Models\nPUBLIC TYPE Visible\nValue AS NUMBER\nEND TYPE\nPRIVATE TYPE Hidden\nValue AS NUMBER\nEND TYPE\nEND MODULE\n"));
+    var importedCompletions = SmileCompletionService.GetCompletions(imported, program.Length);
+    Equal(true, importedCompletions.Any(item => item.DisplayText == "Visible"));
+    Equal(false, importedCompletions.Any(item => item.DisplayText == "Hidden"));
+    Equal(false, importedCompletions.Any(item => item.Kind is SmileCompletionKind.Variable or SmileCompletionKind.Function));
+});
+
+Run("Record diagnostics cover declarations fields cycles visibility operations and BYREF", () =>
+{
+    Equal(true, HasDiagnostic(Analyze("TYPE A\nX AS NUMBER\nEND TYPE\nTYPE A\nY AS NUMBER\nEND TYPE\n"), "SML3400"));
+    Equal(true, HasDiagnostic(Analyze("TYPE A\nX AS Missing\nEND TYPE\n"), "SML3401"));
+    Equal(true, HasDiagnostic(Analyze("TYPE A\nX AS NUMBER\nX AS NUMBER\nEND TYPE\n"), "SML3402"));
+    Equal(true, HasDiagnostic(Analyze("SUB Work()\nTYPE A\nX AS NUMBER\nEND TYPE\nEND SUB\n"), "SML3403"));
+    Equal(true, HasDiagnostic(Analyze("TYPE A\nNext AS A\nEND TYPE\n"), "SML3404"));
+    Equal(true, HasDiagnostic(Analyze("TYPE A\nX AS NUMBER\nEND TYPE\nDIM Value AS A\nPRINT Value.Y\n"), "SML3405"));
+    Equal(true, HasDiagnostic(Analyze("DIM Value AS NUMBER\nPRINT Value.X\n"), "SML3406"));
+    Equal(true, HasDiagnostic(Analyze("TYPE A\nX AS NUMBER\nEND TYPE\nDIM Value AS A\nPRINT Value\n"), "SML3407"));
+    Equal(true, HasDiagnostic(Analyze("TYPE A\nX AS NUMBER\nEND TYPE\nCALL Change(Create())\nFUNCTION Create() AS A\nDIM Result AS A\nRETURN Result\nEND FUNCTION\nSUB Change(BYREF Value AS A)\nEND SUB\n"), "SML3305"));
 });
 
 Run("Routine compiler temporaries have distinct invocation-local frame storage", () =>

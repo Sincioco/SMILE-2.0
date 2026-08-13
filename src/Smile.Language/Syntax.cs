@@ -114,6 +114,7 @@ public enum SyntaxKind
     BooleanKeyword,
     ByRefKeyword,
     ByValKeyword,
+    TypeKeyword,
     NoneKeyword,
     WKeyword,
     AKeyword,
@@ -250,6 +251,7 @@ public static class SyntaxFacts
         ["BOOLEAN"] = SyntaxKind.BooleanKeyword,
         ["BYREF"] = SyntaxKind.ByRefKeyword,
         ["BYVAL"] = SyntaxKind.ByValKeyword,
+        ["TYPE"] = SyntaxKind.TypeKeyword,
         ["NONE"] = SyntaxKind.NoneKeyword,
         ["W"] = SyntaxKind.WKeyword,
         ["A"] = SyntaxKind.AKeyword,
@@ -299,7 +301,7 @@ public static class SyntaxFacts
     public static IReadOnlyList<string> GetKeywordTexts() => new List<string>(Keywords.Keys);
 
     public static bool IsKeyword(SyntaxKind kind) =>
-        kind >= SyntaxKind.DimKeyword && kind <= SyntaxKind.ByValKeyword;
+        kind >= SyntaxKind.DimKeyword && kind <= SyntaxKind.TypeKeyword;
 
     public static bool IsBuiltInConstant(SyntaxKind kind) =>
         kind >= SyntaxKind.NoneKeyword && kind <= SyntaxKind.LightGrayKeyword || kind == SyntaxKind.DownKeyword;
@@ -462,10 +464,26 @@ public sealed class CompilationUnitSyntax : SyntaxNode
 public abstract class StatementSyntax : SyntaxNode { }
 public abstract class ExpressionSyntax : SyntaxNode { }
 
+public sealed class FieldAccessExpressionSyntax : ExpressionSyntax
+{
+    public FieldAccessExpressionSyntax(ExpressionSyntax receiver, SyntaxToken dotToken, SyntaxToken field)
+    {
+        Receiver = receiver;
+        DotToken = dotToken;
+        Field = field;
+    }
+
+    public ExpressionSyntax Receiver { get; }
+    public SyntaxToken DotToken { get; }
+    public SyntaxToken Field { get; }
+    public override TextSpan Span => TextSpan.FromBounds(Receiver.Span.Start, Field.Span.End);
+}
+
 public sealed class AssignmentTargetSyntax : SyntaxNode
 {
     public AssignmentTargetSyntax(SyntaxToken identifier, SyntaxToken? openBracket, IReadOnlyList<ExpressionSyntax> indices, SyntaxToken? closeBracket,
-        SyntaxToken? qualifier = null, SyntaxToken? dotToken = null)
+        SyntaxToken? qualifier = null, SyntaxToken? dotToken = null,
+        IReadOnlyList<SyntaxToken>? fieldDots = null, IReadOnlyList<SyntaxToken>? fields = null)
     {
         Identifier = identifier;
         OpenBracket = openBracket;
@@ -473,6 +491,8 @@ public sealed class AssignmentTargetSyntax : SyntaxNode
         CloseBracket = closeBracket;
         Qualifier = qualifier;
         DotToken = dotToken;
+        FieldDots = fieldDots ?? Array.Empty<SyntaxToken>();
+        Fields = fields ?? Array.Empty<SyntaxToken>();
     }
 
     public SyntaxToken? Qualifier { get; }
@@ -481,9 +501,12 @@ public sealed class AssignmentTargetSyntax : SyntaxNode
     public SyntaxToken? OpenBracket { get; }
     public IReadOnlyList<ExpressionSyntax> Indices { get; }
     public SyntaxToken? CloseBracket { get; }
+    public IReadOnlyList<SyntaxToken> FieldDots { get; }
+    public IReadOnlyList<SyntaxToken> Fields { get; }
     public bool IsArrayElement => Indices.Count != 0;
     public bool IsQualified => Qualifier != null;
-    public override TextSpan Span => TextSpan.FromBounds(Qualifier?.Span.Start ?? Identifier.Span.Start, CloseBracket?.Span.End ?? Identifier.Span.End);
+    public override TextSpan Span => TextSpan.FromBounds(Qualifier?.Span.Start ?? Identifier.Span.Start,
+        Fields.Count != 0 ? Fields[Fields.Count - 1].Span.End : CloseBracket?.Span.End ?? Identifier.Span.End);
 }
 
 public sealed class AssignmentStatementSyntax : StatementSyntax

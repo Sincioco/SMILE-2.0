@@ -13,7 +13,9 @@ public enum SmileCompletionKind
     Array,
     Subroutine,
     Function,
-    Module
+    Module,
+    Type,
+    Field
 }
 
 public sealed class SmileCompletion
@@ -51,18 +53,33 @@ public static class SmileCompletionService
         if (syntaxTree == null)
             throw new ArgumentNullException(nameof(syntaxTree));
 
+        var afterAs = IsAfterAs(syntaxTree.Source.Text, position);
         var qualifiedAlias = AliasBeforeDot(syntaxTree.Source.Text, position);
+        var qualifiedTypeContext = qualifiedAlias != null && IsQualifiedTypeContext(syntaxTree.Source.Text, position, qualifiedAlias);
         if (qualifiedAlias != null && analysis.SemanticModel.GetImports(syntaxTree.Source)
             .TryGetValue(qualifiedAlias, out var importedModule))
         {
-            return importedModule.PublicMembers.OrderBy(member => member.Name, StringComparer.OrdinalIgnoreCase)
+            return importedModule.PublicMembers.Where(member => !(afterAs || qualifiedTypeContext) || member.Kind == SmileModuleMemberKind.Type)
+                .OrderBy(member => member.Name, StringComparer.OrdinalIgnoreCase)
                 .Select(MemberCompletion).ToArray();
         }
 
-        if (IsAfterAs(syntaxTree.Source.Text, position))
+        var fieldCompletions = TryGetFieldCompletions(analysis, syntaxTree, position);
+        if (fieldCompletions != null)
+            return fieldCompletions;
+
+        if (afterAs)
         {
-            return new[] { "BOOLEAN", "NUMBER", "TEXT" }.Select(name =>
-                new SmileCompletion(name, $"SMILE built-in type {name}", SmileCompletionKind.Keyword)).ToArray();
+            var types = new Dictionary<string, SmileCompletion>(StringComparer.OrdinalIgnoreCase);
+            foreach (var name in new[] { "BOOLEAN", "NUMBER", "TEXT" })
+                types[name] = new SmileCompletion(name, $"SMILE built-in type {name}", SmileCompletionKind.Type);
+            foreach (var type in analysis.SemanticModel.Types.Values.Where(type => type.ModuleName == null ||
+                         type.Source != null && ReferenceEquals(type.Source, syntaxTree.Source)))
+                types[type.Name] = TypeCompletion(type);
+            foreach (var import in analysis.SemanticModel.GetImports(syntaxTree.Source))
+                types[import.Key] = new SmileCompletion(import.Key,
+                    $"Import alias for record types in module {import.Value.Name}", SmileCompletionKind.Module);
+            return types.Values.OrderBy(item => item.DisplayText, StringComparer.OrdinalIgnoreCase).ToArray();
         }
 
         var completions = new Dictionary<string, SmileCompletion>(StringComparer.OrdinalIgnoreCase);
@@ -109,6 +126,11 @@ public static class SmileCompletionService
         foreach (var import in analysis.SemanticModel.GetImports(syntaxTree.Source))
             completions[import.Key] = new SmileCompletion(import.Key,
                 $"Import alias for module {import.Value.Name} from {import.Value.ProviderIdentity}", SmileCompletionKind.Module);
+
+        foreach (var type in analysis.SemanticModel.Types.Values.Where(type =>
+                     type.ModuleName == null || string.Equals(type.ModuleName, currentModule?.Name,
+                         StringComparison.OrdinalIgnoreCase)))
+            completions[type.Name] = TypeCompletion(type);
 
         if (IsAfterImport(syntaxTree.Source.Text, position))
         {
@@ -173,7 +195,65 @@ public static class SmileCompletionService
         }
         if (member.Variable != null)
             return VariableCompletion(member.Variable);
+        if (member.Type != null)
+            return TypeCompletion(member.Type);
         return new SmileCompletion(member.Name, $"Public module member {member.Name}", SmileCompletionKind.Variable);
+    }
+
+    private static SmileCompletion TypeCompletion(RecordTypeSymbol type)
+    {
+        var fields = string.Join(", ", type.Fields.Select(field => $"{field.Name} AS {field.Type.Name}"));
+        var provider = type.ModuleName == null ? string.Empty :
+            $" from module {type.ModuleName} ({type.ProviderIdentity})";
+        return new SmileCompletion(type.Name, $"TYPE {type.Name} ({fields}){provider}", SmileCompletionKind.Type);
+    }
+
+    private static IReadOnlyList<SmileCompletion>? TryGetFieldCompletions(SmileAnalysisResult analysis,
+        SyntaxTree syntaxTree, int position)
+    {
+        var end = Math.Min(position, syntaxTree.Source.Text.Length);
+        var start = end;
+        while (start > 0 && syntaxTree.Source.Text[start - 1] is not ('\r' or '\n' or ' ' or '\t' or '=' or '(' or ','))
+            start--;
+        var suffix = syntaxTree.Source.Text.Substring(start, end - start).Trim();
+        if (!suffix.EndsWith(".", StringComparison.Ordinal))
+            return null;
+        suffix = suffix.Substring(0, suffix.Length - 1);
+        var parts = suffix.Split('.');
+        if (parts.Length == 0)
+            return null;
+        var root = parts[0];
+        var bracket = root.IndexOf('[');
+        if (bracket >= 0)
+            root = root.Substring(0, bracket);
+        var routine = analysis.SemanticModel.Routines.Values.FirstOrDefault(candidate =>
+            ReferenceEquals(candidate.Source, syntaxTree.Source) && candidate.Declaration.Span.Start <= position &&
+            position <= candidate.Declaration.Span.End);
+        SmileType type;
+        var firstFieldIndex = 1;
+        if (analysis.SemanticModel.GetImports(syntaxTree.Source).TryGetValue(root, out var imported) && parts.Length >= 2 &&
+            imported.Members.TryGetValue(parts[1], out var importedMember) &&
+            importedMember.Visibility == ModuleVisibility.Public && importedMember.Variable != null)
+        {
+            type = importedMember.Variable.Type;
+            firstFieldIndex = 2;
+        }
+        else
+        {
+            if (!analysis.SemanticModel.TryResolveVariable(root, routine?.Name, out var symbol))
+                return null;
+            type = symbol.Type;
+        }
+        for (var index = firstFieldIndex; index < parts.Length; index++)
+        {
+            if (type is not RecordTypeSymbol record || !record.TryGetField(parts[index], out var field))
+                return Array.Empty<SmileCompletion>();
+            type = field.Type;
+        }
+        if (type is not RecordTypeSymbol target)
+            return Array.Empty<SmileCompletion>();
+        return target.Fields.OrderBy(field => field.Ordinal).Select(field => new SmileCompletion(field.Name,
+            $"{field.Name} AS {field.Type.Name} field of TYPE {target.Name}", SmileCompletionKind.Field)).ToArray();
     }
 
     private static string DescribeProvider(VariableSymbol symbol, string description) => symbol.ModuleName == null
@@ -213,6 +293,18 @@ public static class SmileCompletionService
         var before = text.Substring(start, Math.Min(position, text.Length) - start).TrimEnd();
         return before.EndsWith(" AS", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(before, "AS", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsQualifiedTypeContext(string text, int position, string alias)
+    {
+        var start = Math.Min(position, text.Length);
+        while (start > 0 && text[start - 1] is not ('\r' or '\n')) start--;
+        var before = text.Substring(start, Math.Min(position, text.Length) - start);
+        var marker = before.LastIndexOf(" AS ", StringComparison.OrdinalIgnoreCase);
+        if (marker < 0 && before.TrimStart().StartsWith("AS ", StringComparison.OrdinalIgnoreCase))
+            marker = before.IndexOf("AS ", StringComparison.OrdinalIgnoreCase) - 1;
+        var tail = marker < 0 ? string.Empty : before.Substring(marker + 4).TrimStart();
+        return tail.StartsWith(alias + ".", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsDeclarationBeingTyped(VariableSymbol symbol, SourceText source, int position) =>

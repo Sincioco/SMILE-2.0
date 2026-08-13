@@ -1,0 +1,6 @@
+TYPE First
+    Next AS Second
+END TYPE
+TYPE Second
+    Next AS First
+END TYPE

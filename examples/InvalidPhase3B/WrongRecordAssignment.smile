@@ -1,0 +1,9 @@
+TYPE FirstType
+    Value AS NUMBER
+END TYPE
+TYPE SecondType
+    Value AS NUMBER
+END TYPE
+DIM First AS FirstType
+DIM Second AS SecondType
+First = Second

@@ -179,7 +179,7 @@ public sealed class SmileLibraryBuildFingerprint
 
 public static class SmileLibraryPackage
 {
-    public const int CurrentFormatVersion = 2;
+    public const int CurrentFormatVersion = 3;
     private static readonly DateTimeOffset DeterministicTimestamp =
         new(1980, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
@@ -394,14 +394,15 @@ public static class SmileLibraryPackage
 
     public static string BuildPublicApi(IEnumerable<ModuleSymbol> modules)
     {
-        var builder = new StringBuilder("{\n  \"formatVersion\": 2,\n  \"modules\": [");
+        var builder = new StringBuilder("{\n  \"formatVersion\": 3,\n  \"modules\": [");
         var orderedModules = modules.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray();
         for (var moduleIndex = 0; moduleIndex < orderedModules.Length; moduleIndex++)
         {
             var module = orderedModules[moduleIndex];
             builder.Append(moduleIndex == 0 ? "\n" : ",\n")
                 .Append("    {\"name\": \"").Append(JsonEscape(module.Name)).Append("\", \"members\": [");
-            var members = module.PublicMembers.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+            var members = module.PublicMembers.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(item => item.Kind).ToArray();
             for (var memberIndex = 0; memberIndex < members.Length; memberIndex++)
             {
                 var member = members[memberIndex];
@@ -410,12 +411,12 @@ public static class SmileLibraryPackage
                     .Append("\", \"kind\": \"").Append(member.Kind).Append('"');
                 if (member.Variable != null)
                 {
-                    builder.Append(", \"type\": \"").Append(member.Variable.Type).Append('"');
+                    builder.Append(", \"type\": \"").Append(JsonEscape(TypeIdentity(member.Variable.Type))).Append('"');
                     if (member.Variable.IsConstant)
                         builder.Append(", \"value\": ").Append(JsonValue(member.Variable.ConstantValue));
                     if (member.Variable.IsArray)
                     {
-                        builder.Append(", \"elementType\": \"").Append(member.Variable.Type)
+                        builder.Append(", \"elementType\": \"").Append(JsonEscape(TypeIdentity(member.Variable.Type)))
                             .Append("\", \"rank\": ").Append(member.Variable.ArrayRank.ToString(CultureInfo.InvariantCulture))
                             .Append(", \"dimensions\": [")
                             .Append(string.Join(", ", member.Variable.ArrayDimensions.Select(size =>
@@ -424,11 +425,21 @@ public static class SmileLibraryPackage
                 }
                 if (member.Routine != null)
                     builder.Append(", \"returnType\": \"")
-                        .Append(member.Routine.IsFunction ? member.Routine.ReturnType.ToString() : "VOID")
+                        .Append(member.Routine.IsFunction ? JsonEscape(TypeIdentity(member.Routine.ReturnType)) : "VOID")
                         .Append("\", \"parameters\": [")
                         .Append(string.Join(", ", member.Routine.Parameters.Select(parameter =>
                             "{\"name\": \"" + JsonEscape(parameter.Name) + "\", \"type\": \"" +
-                            parameter.Type + "\", \"mode\": \"" + parameter.ParameterMode + "\"}"))).Append(']');
+                            JsonEscape(TypeIdentity(parameter.Type)) + "\", \"mode\": \"" + parameter.ParameterMode + "\"}"))).Append(']');
+                if (member.Type != null)
+                {
+                    builder.Append(", \"identity\": \"").Append(JsonEscape(TypeIdentity(member.Type)))
+                        .Append("\", \"module\": \"").Append(JsonEscape(member.Type.ModuleName ?? string.Empty))
+                        .Append("\", \"provider\": \"").Append(JsonEscape(member.Type.ModuleName ?? string.Empty))
+                        .Append("\", \"size\": ").Append(member.Type.Size.ToString(CultureInfo.InvariantCulture))
+                        .Append(", \"fields\": [")
+                        .Append(string.Join(", ", member.Type.Fields.OrderBy(field => field.Ordinal).Select(FieldJson)))
+                        .Append(']');
+                }
                 member.Source.GetLineColumn(member.DeclarationSpan.Start, out var line, out var column);
                 builder.Append(", \"source\": \"").Append(JsonEscape(Normalize(Path.GetFileName(member.Source.FilePath))))
                     .Append("\", \"line\": ").Append(line.ToString(CultureInfo.InvariantCulture))
@@ -454,7 +465,7 @@ public static class SmileLibraryPackage
         var dependencyJson = string.Join(",\n", dependencies.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .Select(item => "    {\"name\": \"" + JsonEscape(item.Name) + "\", \"version\": \"" +
                             JsonEscape(item.Version) + "\"}"));
-        return "{\n  \"formatVersion\": 2,\n  \"name\": \"" + JsonEscape(project.LibraryName) +
+        return "{\n  \"formatVersion\": 3,\n  \"name\": \"" + JsonEscape(project.LibraryName) +
                "\",\n  \"version\": \"" + JsonEscape(project.Version) + "\",\n  \"modules\": [" + moduleJson +
                "],\n  \"sources\": [" + sourceJson + "],\n  \"sourceHashes\": {\n" + hashJson +
                "\n  },\n  \"dependencies\": [\n" + dependencyJson + "\n  ]\n}\n";
@@ -486,8 +497,8 @@ public static class SmileLibraryPackage
     private static SmileLibraryIdentity ParseIdentity(PackageManifest manifest)
     {
         if (manifest.FormatVersion != CurrentFormatVersion)
-            throw new InvalidDataException(manifest.FormatVersion == 1
-                ? "SMILE library formatVersion 1 is obsolete; rebuild the library with the current SMILE compiler (formatVersion 2)."
+            throw new InvalidDataException(manifest.FormatVersion is 1 or 2
+                ? $"SMILE library formatVersion {manifest.FormatVersion} is obsolete; rebuild the library with the current SMILE compiler (formatVersion 3)."
                 : $"Unsupported SMILE library formatVersion {manifest.FormatVersion}; expected {CurrentFormatVersion}. Rebuild the library with the current SMILE compiler.");
         var name = RequiredValue(manifest.Name, "name");
         var version = RequiredValue(manifest.Version, "version");
@@ -618,6 +629,22 @@ public static class SmileLibraryPackage
         long number => number.ToString(CultureInfo.InvariantCulture),
         _ => throw new InvalidDataException($"Unsupported SMILE constant value type '{value.GetType().Name}'.")
     };
+
+    private static string TypeIdentity(SmileType type) => type is RecordTypeSymbol record
+        ? record.RuntimeIdentity
+        : type.Name;
+
+    private static string FieldJson(RecordFieldSymbol field)
+    {
+        field.Source.GetLineColumn(field.DeclarationSpan.Start, out var line, out var column);
+        return "{\"name\": \"" + JsonEscape(field.Name) + "\", \"type\": \"" +
+               JsonEscape(TypeIdentity(field.Type)) + "\", \"ordinal\": " +
+               field.Ordinal.ToString(CultureInfo.InvariantCulture) + ", \"offset\": " +
+               field.Offset.ToString(CultureInfo.InvariantCulture) + ", \"source\": \"" +
+               JsonEscape(Normalize(Path.GetFileName(field.Source.FilePath))) + "\", \"line\": " +
+               line.ToString(CultureInfo.InvariantCulture) + ", \"column\": " +
+               column.ToString(CultureInfo.InvariantCulture) + "}";
+    }
 
     [DataContract]
     private sealed class PackageManifest

@@ -1,0 +1,3 @@
+TYPE Node
+    Next AS Node
+END TYPE

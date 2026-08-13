@@ -1,0 +1,3 @@
+TYPE Point
+    X NUMBER
+END TYPE

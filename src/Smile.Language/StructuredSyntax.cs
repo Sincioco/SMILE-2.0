@@ -22,6 +22,41 @@ public sealed class OptionExplicitStatementSyntax : StatementSyntax
     public override TextSpan Span => TextSpan.FromBounds(OptionKeyword.Span.Start, ExplicitKeyword.Span.End);
 }
 
+public sealed class RecordFieldDeclarationSyntax : SyntaxNode
+{
+    public RecordFieldDeclarationSyntax(SyntaxToken identifier, SyntaxToken asKeyword, SyntaxToken typeToken)
+    {
+        Identifier = identifier;
+        AsKeyword = asKeyword;
+        TypeToken = typeToken;
+    }
+
+    public SyntaxToken Identifier { get; }
+    public SyntaxToken AsKeyword { get; }
+    public SyntaxToken TypeToken { get; }
+    public override TextSpan Span => TextSpan.FromBounds(Identifier.Span.Start, TypeToken.Span.End);
+}
+
+public sealed class TypeDeclarationSyntax : StatementSyntax
+{
+    public TypeDeclarationSyntax(SyntaxToken typeKeyword, SyntaxToken identifier,
+        IReadOnlyList<RecordFieldDeclarationSyntax> fields, SyntaxToken endKeyword, SyntaxToken finalTypeKeyword)
+    {
+        TypeKeyword = typeKeyword;
+        Identifier = identifier;
+        Fields = fields;
+        EndKeyword = endKeyword;
+        FinalTypeKeyword = finalTypeKeyword;
+    }
+
+    public SyntaxToken TypeKeyword { get; }
+    public SyntaxToken Identifier { get; }
+    public IReadOnlyList<RecordFieldDeclarationSyntax> Fields { get; }
+    public SyntaxToken EndKeyword { get; }
+    public SyntaxToken FinalTypeKeyword { get; }
+    public override TextSpan Span => TextSpan.FromBounds(TypeKeyword.Span.Start, FinalTypeKeyword.Span.End);
+}
+
 public sealed class ParameterSyntax : SyntaxNode
 {
     public ParameterSyntax(SyntaxToken? modeKeyword, SyntaxToken identifier, SyntaxToken? asKeyword,

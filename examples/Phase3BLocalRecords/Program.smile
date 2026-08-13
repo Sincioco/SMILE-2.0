@@ -1,0 +1,7 @@
+OPTION EXPLICIT
+
+DIM Value AS Message
+Value = CreateMessage("LOCAL", 42)
+PRINT Value.Content
+PRINT Value.Code
+END PROGRAM

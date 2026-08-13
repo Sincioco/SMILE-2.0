@@ -123,6 +123,7 @@ public enum SmileModuleMemberKind
     Constant,
     Variable,
     Array,
+    Type,
     Subroutine,
     Function
 }
@@ -150,12 +151,15 @@ public sealed class SmileModuleMember
     public SourceLocation DeclarationLocation => new(Source, DeclarationSpan);
     public VariableSymbol? Variable { get; internal set; }
     public RoutineSymbol? Routine { get; internal set; }
+    public RecordTypeSymbol? Type { get; internal set; }
     internal string SemanticName { get; }
 }
 
 public sealed class ModuleSymbol
 {
     private readonly Dictionary<string, SmileModuleMember> _members =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, SmileModuleMember> _types =
         new(StringComparer.OrdinalIgnoreCase);
     private readonly List<SyntaxTree> _syntaxTrees = new();
 
@@ -168,11 +172,14 @@ public sealed class ModuleSymbol
     public string Name { get; }
     public string ProviderIdentity { get; }
     public IReadOnlyDictionary<string, SmileModuleMember> Members => _members;
+    public IReadOnlyDictionary<string, SmileModuleMember> Types => _types;
     public IReadOnlyList<SyntaxTree> SyntaxTrees => _syntaxTrees;
     public IEnumerable<SmileModuleMember> PublicMembers =>
-        _members.Values.Where(member => member.Visibility == ModuleVisibility.Public);
+        _members.Values.Concat(_types.Values).Where(member => member.Visibility == ModuleVisibility.Public);
 
     internal Dictionary<string, SmileModuleMember> MutableMembers => _members;
+    internal Dictionary<string, SmileModuleMember> MutableTypes => _types;
+    internal IEnumerable<SmileModuleMember> AllMembers => _members.Values.Concat(_types.Values);
     internal List<SyntaxTree> MutableSyntaxTrees => _syntaxTrees;
 }
 
@@ -194,11 +201,11 @@ internal sealed class ModuleProcessingResult
     public IReadOnlyDictionary<SourceText, IReadOnlyDictionary<string, ModuleSymbol>> Imports { get; }
     public IReadOnlyList<Diagnostic> Diagnostics { get; }
 
-    public void Link(SemanticModel model)
+    public IReadOnlyList<Diagnostic> Link(SemanticModel model)
     {
         foreach (var module in Modules.Values)
         {
-            foreach (var member in module.Members.Values)
+            foreach (var member in module.AllMembers)
             {
                 if (member.Kind is SmileModuleMemberKind.Constant or SmileModuleMemberKind.Variable or SmileModuleMemberKind.Array)
                 {
@@ -207,6 +214,15 @@ internal sealed class ModuleProcessingResult
                         variable.ApplyModuleIdentity(member.Name, module.Name, member.Visibility,
                             module.ProviderIdentity, member.RuntimeIdentity);
                         member.Variable = variable;
+                    }
+                }
+                else if (member.Kind == SmileModuleMemberKind.Type)
+                {
+                    if (model.Types.TryGetValue(member.SemanticName, out var type))
+                    {
+                        type.ApplyModuleIdentity(member.Name, module.Name, member.Visibility,
+                            module.ProviderIdentity, member.RuntimeIdentity);
+                        member.Type = type;
                     }
                 }
                 else if (model.Routines.TryGetValue(member.SemanticName, out var routine))
@@ -218,6 +234,39 @@ internal sealed class ModuleProcessingResult
             }
         }
         model.SetModules(Modules, Imports);
+        var diagnostics = new List<Diagnostic>();
+        foreach (var module in Modules.Values)
+        {
+            foreach (var member in module.PublicMembers)
+            {
+                if (member.Type != null)
+                {
+                    foreach (var field in member.Type.Fields.Where(field => IsInaccessible(field.Type)))
+                        diagnostics.Add(new Diagnostic("SML3409", DiagnosticSeverity.Error,
+                            $"PUBLIC TYPE '{module.Name}.{member.Name}' exposes inaccessible type '{field.Type.Name}' through field '{field.Name}'.",
+                            field.Source, field.TypeToken.Span));
+                }
+                if (member.Variable != null && IsInaccessible(member.Variable.Type))
+                    diagnostics.Add(new Diagnostic("SML3409", DiagnosticSeverity.Error,
+                        $"PUBLIC member '{module.Name}.{member.Name}' exposes inaccessible type '{member.Variable.Type.Name}'.",
+                        member.Source, member.DeclarationSpan));
+                if (member.Routine != null)
+                {
+                    if (member.Routine.IsFunction && IsInaccessible(member.Routine.ReturnType))
+                        diagnostics.Add(new Diagnostic("SML3409", DiagnosticSeverity.Error,
+                            $"PUBLIC FUNCTION '{module.Name}.{member.Name}' returns inaccessible type '{member.Routine.ReturnType.Name}'.",
+                            member.Source, member.Routine.Declaration.ReturnTypeToken?.Span ?? member.DeclarationSpan));
+                    foreach (var parameter in member.Routine.Parameters.Where(parameter => IsInaccessible(parameter.Type)))
+                        diagnostics.Add(new Diagnostic("SML3409", DiagnosticSeverity.Error,
+                            $"PUBLIC routine '{module.Name}.{member.Name}' exposes inaccessible parameter type '{parameter.Type.Name}'.",
+                            parameter.Source, parameter.DeclarationSpan));
+                }
+            }
+        }
+        return diagnostics;
+
+        static bool IsInaccessible(SmileType type) =>
+            type is RecordTypeSymbol record && record.ModuleName != null && record.Visibility != ModuleVisibility.Public;
     }
 }
 
@@ -375,6 +424,7 @@ internal sealed class ModuleProcessor
                 ConstStatementSyntax constant => (constant.Identifier, SmileModuleMemberKind.Constant),
                 DimStatementSyntax variable => (variable.Identifier,
                     variable.IsArray ? SmileModuleMemberKind.Array : SmileModuleMemberKind.Variable),
+                TypeDeclarationSyntax type => (type.Identifier, SmileModuleMemberKind.Type),
                 RoutineDeclarationSyntax routine when routine.IsFunction => (routine.Identifier, SmileModuleMemberKind.Function),
                 RoutineDeclarationSyntax routine => (routine.Identifier, SmileModuleMemberKind.Subroutine),
                 _ => (null, SmileModuleMemberKind.Constant)
@@ -382,11 +432,12 @@ internal sealed class ModuleProcessor
             if (identifier == null)
             {
                 Report(tree.Source, "SML3101", statement.Span,
-                    "Module sources may contain only IMPORT and CONST, DIM, SUB, or FUNCTION declarations.");
+                    "Module sources may contain only IMPORT and CONST, DIM, TYPE, SUB, or FUNCTION declarations.");
                 continue;
             }
 
-            if (module.MutableMembers.ContainsKey(identifier.Text))
+            var memberTable = kind == SmileModuleMemberKind.Type ? module.MutableTypes : module.MutableMembers;
+            if (memberTable.ContainsKey(identifier.Text))
             {
                 Report(tree.Source, "SML3104", identifier.Span,
                     $"Module '{module.Name}' already declares member '{identifier.Text}'.");
@@ -395,7 +446,7 @@ internal sealed class ModuleProcessor
 
             var runtimeIdentity = module.Name + "::" + identifier.Text;
             var semanticName = SemanticName(module.Name, identifier.Text);
-            module.MutableMembers.Add(identifier.Text, new SmileModuleMember(identifier.Text, runtimeIdentity,
+            memberTable.Add(identifier.Text, new SmileModuleMember(identifier.Text, runtimeIdentity,
                 semanticName, kind, visibility, tree.Source, identifier.Span));
         }
     }
@@ -460,7 +511,7 @@ internal sealed class ModuleProcessor
                     continue;
                 }
                 if (_moduleBySource.TryGetValue(tree.Source, out var current) &&
-                    current.Members.ContainsKey(import.Alias.Text))
+                    (current.Members.ContainsKey(import.Alias.Text) || current.Types.ContainsKey(import.Alias.Text)))
                 {
                     Report(tree.Source, "SML3106", import.Alias.Span,
                         $"Import alias '{import.Alias.Text}' conflicts with a declaration in module '{current.Name}'.");
@@ -539,7 +590,7 @@ internal sealed class ModuleProcessor
     {
         if (statement is VisibilityDeclarationSyntax visible)
             statement = visible.Declaration;
-        if (statement is not (ConstStatementSyntax or DimStatementSyntax or RoutineDeclarationSyntax))
+        if (statement is not (ConstStatementSyntax or DimStatementSyntax or TypeDeclarationSyntax or RoutineDeclarationSyntax))
             return null;
         return LowerStatement(statement, tree, module, null);
     }
@@ -556,24 +607,43 @@ internal sealed class ModuleProcessor
             case DimStatementSyntax dim:
                 return new DimStatementSyntax(dim.DimKeyword, DeclarationToken(dim.Identifier, module), dim.OpenBracket,
                     dim.Sizes.Select(item => LowerExpression(item, tree, module, locals)).ToArray(), dim.CloseBracket,
-                    dim.AsKeyword, dim.TypeToken);
+                    dim.AsKeyword, LowerTypeToken(dim.TypeToken, tree, module));
+            case TypeDeclarationSyntax type:
+                return new TypeDeclarationSyntax(type.TypeKeyword, TypeDeclarationToken(type.Identifier, module),
+                    type.Fields.Select(field => new RecordFieldDeclarationSyntax(field.Identifier, field.AsKeyword,
+                        LowerTypeToken(field.TypeToken, tree, module)!)).ToArray(), type.EndKeyword, type.FinalTypeKeyword);
             case RoutineDeclarationSyntax routine:
             {
                 var routineLocals = CollectRoutineLocals(routine, module);
                 return new RoutineDeclarationSyntax(routine.Keyword, DeclarationToken(routine.Identifier, module),
-                    routine.Parameters, routine.AsKeyword, routine.ReturnTypeToken,
+                    routine.Parameters.Select(parameter => new ParameterSyntax(parameter.ModeKeyword, parameter.Identifier,
+                        parameter.AsKeyword, LowerTypeToken(parameter.TypeToken, tree, module))).ToArray(), routine.AsKeyword,
+                    LowerTypeToken(routine.ReturnTypeToken, tree, module),
                     routine.Statements.Select(item => LowerStatement(item, tree, module, routineLocals)).ToArray(),
                     routine.EndKeyword, routine.FinalKeyword);
             }
             case AssignmentStatementSyntax assignment:
             {
-                var identifier = assignment.Target.IsQualified
+                var importedQualifier = assignment.Target.IsQualified &&
+                    _imports.TryGetValue(tree.Source, out var aliases) && aliases.ContainsKey(assignment.Target.Qualifier!.Text);
+                var identifier = importedQualifier
                     ? QualifiedToken(tree, assignment.Target.Qualifier!, assignment.Target.Identifier,
                         member => member.Kind is SmileModuleMemberKind.Constant or SmileModuleMemberKind.Variable or SmileModuleMemberKind.Array)
-                    : ReferenceToken(assignment.Target.Identifier, tree, module, locals);
+                    : ReferenceToken(assignment.Target.IsQualified ? assignment.Target.Qualifier! : assignment.Target.Identifier,
+                        tree, module, locals);
+                var fields = importedQualifier
+                    ? assignment.Target.Fields
+                    : assignment.Target.IsQualified
+                        ? new[] { assignment.Target.Identifier }.Concat(assignment.Target.Fields).ToArray()
+                        : assignment.Target.Fields;
+                var fieldDots = importedQualifier
+                    ? assignment.Target.FieldDots
+                    : assignment.Target.IsQualified
+                        ? new[] { assignment.Target.DotToken! }.Concat(assignment.Target.FieldDots).ToArray()
+                        : assignment.Target.FieldDots;
                 var target = new AssignmentTargetSyntax(identifier, assignment.Target.OpenBracket,
                     assignment.Target.Indices.Select(item => LowerExpression(item, tree, module, locals)).ToArray(),
-                    assignment.Target.CloseBracket);
+                    assignment.Target.CloseBracket, fieldDots: fieldDots, fields: fields);
                 return new AssignmentStatementSyntax(target, assignment.EqualsToken,
                     LowerExpression(assignment.Expression, tree, module, locals));
             }
@@ -669,8 +739,11 @@ internal sealed class ModuleProcessor
                 return new CallExpressionSyntax(ReferenceToken(call.Identifier, tree, module, locals),
                     call.Arguments.Select(item => LowerExpression(item, tree, module, locals)).ToArray(), call.CloseParenthesis);
             case QualifiedNameExpressionSyntax name:
-                return new NameExpressionSyntax(QualifiedToken(tree, name.Alias, name.Member,
-                    member => member.Kind is SmileModuleMemberKind.Constant or SmileModuleMemberKind.Variable or SmileModuleMemberKind.Array));
+                if (_imports.TryGetValue(tree.Source, out var aliases) && aliases.ContainsKey(name.Alias.Text))
+                    return new NameExpressionSyntax(QualifiedToken(tree, name.Alias, name.Member,
+                        member => member.Kind is SmileModuleMemberKind.Constant or SmileModuleMemberKind.Variable or SmileModuleMemberKind.Array));
+                return new FieldAccessExpressionSyntax(
+                    new NameExpressionSyntax(ReferenceToken(name.Alias, tree, module, locals)), name.DotToken, name.Member);
             case QualifiedArrayAccessExpressionSyntax array:
                 return new ArrayAccessExpressionSyntax(QualifiedToken(tree, array.Alias, array.Member,
                         member => member.Kind == SmileModuleMemberKind.Array),
@@ -679,6 +752,9 @@ internal sealed class ModuleProcessor
                 return new CallExpressionSyntax(QualifiedToken(tree, call.Alias, call.Member,
                         member => member.Kind is SmileModuleMemberKind.Subroutine or SmileModuleMemberKind.Function),
                     call.Arguments.Select(item => LowerExpression(item, tree, module, locals)).ToArray(), call.CloseParenthesis);
+            case FieldAccessExpressionSyntax field:
+                return new FieldAccessExpressionSyntax(LowerExpression(field.Receiver, tree, module, locals),
+                    field.DotToken, field.Field);
             case ParenthesizedExpressionSyntax parenthesized:
                 return new ParenthesizedExpressionSyntax(parenthesized.OpenParenthesis,
                     LowerExpression(parenthesized.Expression, tree, module, locals), parenthesized.CloseParenthesis);
@@ -700,6 +776,33 @@ internal sealed class ModuleProcessor
         return SemanticToken(token, member.SemanticName);
     }
 
+    private SyntaxToken TypeDeclarationToken(SyntaxToken token, ModuleSymbol? module)
+    {
+        if (module == null || !module.Types.TryGetValue(token.Text, out var member))
+            return token;
+        return SemanticToken(token, member.SemanticName);
+    }
+
+    private SyntaxToken? LowerTypeToken(SyntaxToken? token, SyntaxTree tree, ModuleSymbol? module)
+    {
+        if (token == null || token.Kind is SyntaxKind.NumberKeyword or SyntaxKind.BooleanKeyword or SyntaxKind.TextKeyword)
+            return token;
+        var dot = token.Text.IndexOf('.');
+        if (dot > 0)
+        {
+            var aliasText = token.Text.Substring(0, dot);
+            var memberText = token.Text.Substring(dot + 1);
+            var alias = new SyntaxToken(SyntaxKind.IdentifierToken, token.Position, aliasText,
+                spanLength: aliasText.Length);
+            var member = new SyntaxToken(SyntaxKind.IdentifierToken, token.Position + dot + 1, memberText,
+                spanLength: memberText.Length);
+            return QualifiedTypeToken(tree, alias, member);
+        }
+        if (module != null && module.Types.TryGetValue(token.Text, out var own))
+            return SemanticToken(token, own.SemanticName);
+        return token;
+    }
+
     private SyntaxToken ReferenceToken(SyntaxToken token, SyntaxTree tree, ModuleSymbol? module,
         HashSet<string>? locals)
     {
@@ -710,8 +813,10 @@ internal sealed class ModuleProcessor
         if (module != null && module.Members.TryGetValue(token.Text, out var member))
             return SemanticToken(token, member.SemanticName);
         if (module != null && token.Kind is SyntaxKind.IdentifierToken or SyntaxKind.KeyKeyword)
-            Report(tree.Source, "SML3110", token.Span,
-                $"Module '{module.Name}' cannot access undeclared or consuming-program name '{token.Text}'.");
+            Report(tree.Source, module.Types.ContainsKey(token.Text) ? "SML3410" : "SML3110", token.Span,
+                module.Types.ContainsKey(token.Text)
+                    ? $"Type name '{token.Text}' cannot be used as a value."
+                    : $"Module '{module.Name}' cannot access undeclared or consuming-program name '{token.Text}'.");
         return token;
     }
 
@@ -723,22 +828,49 @@ internal sealed class ModuleProcessor
             Report(tree.Source, "SML3102", alias.Span, $"Import alias '{alias.Text}' was not found in this source.");
             return SemanticToken(member, "__smile_missing_" + SafeIdentifier(member.Text));
         }
-        if (!module.Members.TryGetValue(member.Text, out var resolved))
+        SmileModuleMember? resolved = null;
+        if (module.Members.TryGetValue(member.Text, out var valueCandidate) && expectedKind(valueCandidate))
+            resolved = valueCandidate;
+        else if (module.Types.TryGetValue(member.Text, out var typeCandidate) && expectedKind(typeCandidate))
+            resolved = typeCandidate;
+        if (resolved == null)
         {
-            Report(tree.Source, "SML3103", member.Span,
-                $"Module '{module.Name}' does not contain member '{member.Text}'.");
+            var wrongContext = module.Members.ContainsKey(member.Text) || module.Types.ContainsKey(member.Text);
+            Report(tree.Source, wrongContext ? "SML3410" : "SML3103", member.Span,
+                wrongContext
+                    ? $"Member '{module.Name}.{member.Text}' cannot be used in this type or value context."
+                    : $"Module '{module.Name}' does not contain member '{member.Text}'.");
             return SemanticToken(member, "__smile_missing_" + SafeIdentifier(member.Text));
         }
         if (resolved.Visibility != ModuleVisibility.Public)
         {
-            Report(tree.Source, "SML3105", member.Span,
-                $"Member '{module.Name}.{resolved.Name}' is PRIVATE and cannot be accessed through an import.");
+            Report(tree.Source, resolved.Kind == SmileModuleMemberKind.Type ? "SML3408" : "SML3105", member.Span,
+                $"{(resolved.Kind == SmileModuleMemberKind.Type ? "Type" : "Member")} '{module.Name}.{resolved.Name}' is PRIVATE and cannot be accessed through an import.");
             return SemanticToken(member, "__smile_private_" + SafeIdentifier(member.Text));
         }
-        if (!expectedKind(resolved))
+        return SemanticToken(member, resolved.SemanticName);
+    }
+
+    private SyntaxToken QualifiedTypeToken(SyntaxTree tree, SyntaxToken alias, SyntaxToken member)
+    {
+        if (!_imports.TryGetValue(tree.Source, out var aliases) || !aliases.TryGetValue(alias.Text, out var module))
         {
-            Report(tree.Source, "SML3103", member.Span,
-                $"Member '{module.Name}.{resolved.Name}' cannot be used in this context.");
+            Report(tree.Source, "SML3102", alias.Span, $"Import alias '{alias.Text}' was not found in this source.");
+            return SemanticToken(member, "__smile_missing_" + SafeIdentifier(member.Text));
+        }
+        if (!module.Types.TryGetValue(member.Text, out var resolved))
+        {
+            var code = module.Members.ContainsKey(member.Text) ? "SML3410" : "SML3401";
+            Report(tree.Source, code, member.Span, code == "SML3410"
+                ? $"Member '{module.Name}.{member.Text}' is a value and cannot be used as a type."
+                : $"Module '{module.Name}' does not contain record type '{member.Text}'.");
+            return SemanticToken(member, "__smile_missing_" + SafeIdentifier(member.Text));
+        }
+        if (resolved.Visibility != ModuleVisibility.Public)
+        {
+            Report(tree.Source, "SML3408", member.Span,
+                $"Type '{module.Name}.{resolved.Name}' is PRIVATE and cannot be accessed through an import.");
+            return SemanticToken(member, "__smile_private_" + SafeIdentifier(member.Text));
         }
         return SemanticToken(member, resolved.SemanticName);
     }

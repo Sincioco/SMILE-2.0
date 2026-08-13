@@ -1,0 +1,26 @@
+MODULE Smile.Data.Models
+
+OPTION EXPLICIT
+
+PUBLIC TYPE Point2D
+    X AS NUMBER
+    Y AS NUMBER
+END TYPE
+
+PUBLIC TYPE Gauge
+    Current AS NUMBER
+    Maximum AS NUMBER
+END TYPE
+
+PUBLIC TYPE Actor
+    Name AS TEXT
+    Position AS Point2D
+    Health AS Gauge
+    Active AS BOOLEAN
+END TYPE
+
+PRIVATE TYPE InternalTag
+    Value AS NUMBER
+END TYPE
+
+END MODULE

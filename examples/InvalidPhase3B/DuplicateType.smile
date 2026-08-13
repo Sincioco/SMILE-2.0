@@ -1,0 +1,6 @@
+TYPE Point
+    X AS NUMBER
+END TYPE
+TYPE Point
+    Y AS NUMBER
+END TYPE
