@@ -8,13 +8,14 @@ namespace Smile.Language;
 public sealed class SyntaxTree
 {
     internal SyntaxTree(SourceText source, CompilationUnitSyntax root, IReadOnlyList<SyntaxToken> tokens, bool isStartup,
-        string? providerIdentity = null)
+        string? providerIdentity = null, bool? optionExplicit = null)
     {
         Source = source;
         Root = root;
         Tokens = tokens;
         IsStartup = isStartup;
         ProviderIdentity = providerIdentity ?? string.Empty;
+        OptionExplicit = optionExplicit ?? FindOptionExplicit(root);
     }
 
     public SourceText Source { get; }
@@ -22,6 +23,15 @@ public sealed class SyntaxTree
     public IReadOnlyList<SyntaxToken> Tokens { get; }
     public bool IsStartup { get; }
     public string ProviderIdentity { get; }
+    public bool OptionExplicit { get; }
+
+    private static bool FindOptionExplicit(CompilationUnitSyntax root)
+    {
+        if (root.Statements.FirstOrDefault() is OptionExplicitStatementSyntax)
+            return true;
+        return root.Statements.FirstOrDefault() is ModuleDeclarationSyntax module &&
+               module.Statements.FirstOrDefault() is OptionExplicitStatementSyntax;
+    }
 }
 
 public sealed class SmileSourceDocument

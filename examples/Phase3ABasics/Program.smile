@@ -1,0 +1,73 @@
+OPTION EXPLICIT
+
+IMPORT Smile.Text.Extras AS TextExtras
+
+DIM Message AS TEXT
+DIM Original AS TEXT
+DIM Nested AS TEXT
+DIM Words[3] AS TEXT
+DIM Flags[2] AS BOOLEAN
+DIM Total AS NUMBER
+DIM Sum AS NUMBER
+
+Message = TextExtras.JoinFive("Hello", ", ", "SMILE", " ", "2.0")
+Original = Message
+Nested = ">" + TextExtras.JoinFive("nested", " ", "call", " ", "works") + "<"
+TextExtras.ModuleLabel = "MODULE TEXT"
+
+CALL ChangeByValue(Message)
+PRINT Message
+
+CALL TextExtras.Replace(Message, "Changed")
+PRINT Message
+
+Words[0] = Original
+Flags[0] = Original = "Hello, SMILE 2.0"
+Total = AddEight(1, 2, 3, 4, 5, 6, 7, 8)
+Sum = 1000 + AddSixteen(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)
+
+PRINT Words[0]
+PRINT Nested
+PRINT Flags[0]
+PRINT Total
+PRINT Sum
+PRINT TextExtras.IsEmpty("")
+PRINT TextExtras.ModuleLabel
+PRINT Zero()
+PRINT Identity(7)
+PRINT AddFour(1, 2, 3, 4)
+
+SELECT CASE Message
+    CASE "Changed"
+        PRINT "MATCH"
+    CASE ELSE
+        PRINT "NO MATCH"
+END SELECT
+
+END PROGRAM
+
+SUB ChangeByValue(Value AS TEXT)
+    DIM LocalCopy AS TEXT
+    LocalCopy = Value
+    Value = "Local only"
+END SUB
+
+FUNCTION Zero() AS NUMBER
+    RETURN 0
+END FUNCTION
+
+FUNCTION Identity(Value AS NUMBER) AS NUMBER
+    RETURN Value
+END FUNCTION
+
+FUNCTION AddFour(Value1 AS NUMBER, Value2 AS NUMBER, Value3 AS NUMBER, Value4 AS NUMBER) AS NUMBER
+    RETURN Value1 + Value2 + Value3 + Value4
+END FUNCTION
+
+FUNCTION AddEight(Value1 AS NUMBER, Value2 AS NUMBER, Value3 AS NUMBER, Value4 AS NUMBER, Value5 AS NUMBER, Value6 AS NUMBER, Value7 AS NUMBER, Value8 AS NUMBER) AS NUMBER
+    RETURN Value1 + Value2 + Value3 + Value4 + Value5 + Value6 + Value7 + Value8
+END FUNCTION
+
+FUNCTION AddSixteen(Value1 AS NUMBER, Value2 AS NUMBER, Value3 AS NUMBER, Value4 AS NUMBER, Value5 AS NUMBER, Value6 AS NUMBER, Value7 AS NUMBER, Value8 AS NUMBER, Value9 AS NUMBER, Value10 AS NUMBER, Value11 AS NUMBER, Value12 AS NUMBER, Value13 AS NUMBER, Value14 AS NUMBER, Value15 AS NUMBER, Value16 AS NUMBER) AS NUMBER
+    RETURN Value1 + Value2 + Value3 + Value4 + Value5 + Value6 + Value7 + Value8 + Value9 + Value10 + Value11 + Value12 + Value13 + Value14 + Value15 + Value16
+END FUNCTION

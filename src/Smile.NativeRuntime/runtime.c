@@ -6,6 +6,7 @@
 #include <knownfolders.h>
 #include <shlobj.h>
 #include <limits.h>
+#include <stdint.h>
 #include "graphics/graphics_common.h"
 #include "graphics/graphics_diagnostics.h"
 #include "timing/frame_clock_win32.h"
@@ -51,6 +52,7 @@ static SmileMusicActivationCallback smile_music_activation_callback;
 static void smile_pump_messages(void);
 static void smile_toggle_fullscreen(void);
 static void smile_update_game_audio_active(void);
+void smile_print_text(const char* text, long long length);
 
 static void smile_zero_memory(void* memory, SIZE_T length)
 {
@@ -59,9 +61,145 @@ static void smile_zero_memory(void* memory, SIZE_T length)
         *current++ = 0;
 }
 
+static void smile_copy_bytes(char* destination, const char* source, SIZE_T length)
+{
+    while (length-- != 0)
+        *destination++ = *source++;
+}
+
+static int smile_bytes_equal(const char* left, const char* right, SIZE_T length)
+{
+    while (length-- != 0)
+        if (*left++ != *right++)
+            return 0;
+    return 1;
+}
+
 static HANDLE smile_output(void)
 {
     return GetStdHandle(STD_OUTPUT_HANDLE);
+}
+
+typedef struct SmileText
+{
+    volatile LONG64 references;
+    long long length;
+    char bytes[1];
+} SmileText;
+
+static const char* smile_text_bytes(const SmileText* text)
+{
+    static const char empty[] = "";
+    return text == 0 ? empty : text->bytes;
+}
+
+static long long smile_text_length(const SmileText* text)
+{
+    return text == 0 ? 0 : text->length;
+}
+
+void* smile_text_retain(void* value)
+{
+    SmileText* text = (SmileText*)value;
+    if (text != 0 && text->references >= 0)
+        InterlockedIncrement64(&text->references);
+    return text;
+}
+
+void smile_text_release(void* value)
+{
+    SmileText* text = (SmileText*)value;
+    if (text != 0 && text->references >= 0 && InterlockedDecrement64(&text->references) == 0)
+        HeapFree(GetProcessHeap(), 0, text);
+}
+
+static SmileText* smile_text_allocate(long long length)
+{
+    SIZE_T bytes;
+    SmileText* text;
+    if (length <= 0)
+        return 0;
+    if ((unsigned long long)length > (unsigned long long)(SIZE_MAX - sizeof(SmileText)))
+        ExitProcess(2);
+    bytes = sizeof(SmileText) + (SIZE_T)length;
+    text = (SmileText*)HeapAlloc(GetProcessHeap(), 0, bytes);
+    if (text == 0)
+        ExitProcess(2);
+    text->references = 1;
+    text->length = length;
+    text->bytes[length] = 0;
+    return text;
+}
+
+void smile_text_move_assign(void** target, void* owned_value)
+{
+    void* previous;
+    if (target == 0)
+    {
+        smile_text_release(owned_value);
+        return;
+    }
+    previous = *target;
+    *target = owned_value;
+    smile_text_release(previous);
+}
+
+void smile_text_clear(void** target)
+{
+    smile_text_move_assign(target, 0);
+}
+
+void* smile_text_concat(void* owned_left, void* owned_right)
+{
+    SmileText* left = (SmileText*)owned_left;
+    SmileText* right = (SmileText*)owned_right;
+    long long left_length = smile_text_length(left);
+    long long right_length = smile_text_length(right);
+    long long total;
+    SmileText* result;
+    if (right_length > LLONG_MAX - left_length)
+        ExitProcess(2);
+    total = left_length + right_length;
+    result = smile_text_allocate(total);
+    if (left_length != 0)
+        smile_copy_bytes(result->bytes, smile_text_bytes(left), (SIZE_T)left_length);
+    if (right_length != 0)
+        smile_copy_bytes(result->bytes + left_length, smile_text_bytes(right), (SIZE_T)right_length);
+    smile_text_release(left);
+    smile_text_release(right);
+    return result;
+}
+
+static long long smile_text_content_equal(const SmileText* left, const SmileText* right)
+{
+    long long length = smile_text_length(left);
+    if (length != smile_text_length(right))
+        return 0;
+    if (length == 0)
+        return 1;
+    return smile_bytes_equal(smile_text_bytes(left), smile_text_bytes(right), (SIZE_T)length);
+}
+
+long long smile_text_equal(void* owned_left, void* owned_right)
+{
+    long long equal = smile_text_content_equal((SmileText*)owned_left, (SmileText*)owned_right);
+    smile_text_release(owned_left);
+    smile_text_release(owned_right);
+    return equal;
+}
+
+long long smile_text_equal_case(void* borrowed_left, void* owned_right)
+{
+    long long equal = smile_text_content_equal((SmileText*)borrowed_left, (SmileText*)owned_right);
+    smile_text_release(owned_right);
+    return equal;
+}
+
+void smile_print_text_value(void* owned_value)
+{
+    SmileText* text = (SmileText*)owned_value;
+    smile_print_text(smile_text_bytes(text), smile_text_length(text));
+    smile_text_release(text);
 }
 
 void smile_print_text(const char* text, long long length)
@@ -637,6 +775,13 @@ void smile_draw_line(long long x1, long long y1, long long x2, long long y2, lon
 void smile_draw_text(const char* text, long long length, long long x, long long y, long long size, long long color, long long centered)
 {
     smile_graphics_draw_text(text, length, x, y, size, color, centered);
+}
+
+void smile_draw_text_value(void* owned_value, long long x, long long y, long long size, long long color, long long centered)
+{
+    SmileText* text = (SmileText*)owned_value;
+    smile_graphics_draw_text(smile_text_bytes(text), smile_text_length(text), x, y, size, color, centered);
+    smile_text_release(text);
 }
 
 void smile_draw_number(long long value, long long x, long long y, long long size, long long color)

@@ -30,11 +30,14 @@ internal sealed class MasmEmitter
     private readonly bool _emitDebugInformation;
     private readonly StringBuilder _builder = new();
     private readonly Dictionary<VariableSymbol, string> _symbolLabels = new();
+    private readonly Dictionary<VariableSymbol, int> _localOffsets = new();
     private readonly Dictionary<RoutineSymbol, string> _routineLabels = new();
     private readonly Dictionary<LiteralExpressionSyntax, TextLiteral> _textLiterals = new();
+    private readonly Dictionary<VariableSymbol, TextLiteral> _constantTextLiterals = new();
     private readonly Dictionary<SyntaxToken, TextLiteral> _gameTextLiterals = new();
     private readonly Dictionary<ForStatementSyntax, string> _forLimits = new();
     private readonly Dictionary<SelectStatementSyntax, string> _selectValues = new();
+    private readonly Dictionary<SelectStatementSyntax, RoutineDeclarationSyntax?> _selectOwners = new();
     private readonly Stack<string> _forExitLabels = new();
     private readonly Stack<string> _doExitLabels = new();
     private readonly List<MasmDebugSite> _debugSites = new();
@@ -47,6 +50,9 @@ internal sealed class MasmEmitter
     private bool _usesGameClosed;
     private bool _usesKeyHeld;
     private bool _usesMusic;
+    private int _dynamicStackSlots;
+    private int _returnOffset;
+    private RoutineDeclarationSyntax? _collectRoutine;
 
     public MasmEmitter(SmileAnalysisResult analysis, SmileGraphicsBackend graphicsBackend,
         bool vSync, bool emitDebugInformation)
@@ -75,6 +81,15 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_print_number:PROC");
         Line("EXTERN smile_print_boolean:PROC");
         Line("EXTERN smile_print_newline:PROC");
+        Line("EXTERN smile_text_retain:PROC");
+        Line("EXTERN smile_text_release:PROC");
+        Line("EXTERN smile_text_move_assign:PROC");
+        Line("EXTERN smile_text_concat:PROC");
+        Line("EXTERN smile_text_equal:PROC");
+        Line("EXTERN smile_text_equal_case:PROC");
+        Line("EXTERN smile_text_clear:PROC");
+        Line("EXTERN smile_print_text_value:PROC");
+        Line("EXTERN smile_draw_text_value:PROC");
         Line("EXTERN smile_get_key:PROC");
         Line("EXTERN smile_clear_screen:PROC");
         Line("EXTERN smile_wait:PROC");
@@ -117,29 +132,34 @@ internal sealed class MasmEmitter
         Line();
         Line(".data");
         EmitStorage(_analysis.SemanticModel.Symbols.Values);
-        foreach (var routine in _analysis.SemanticModel.Routines.Values)
-            EmitStorage(routine.LocalSymbols.Values);
         foreach (var limit in _forLimits.Values)
             Line($"{limit} QWORD 0");
         foreach (var value in _selectValues.Values)
             Line($"{value} QWORD 0");
-        foreach (var literal in _textLiterals.Values)
-            Line($"{literal.Label} BYTE {FormatBytes(literal.Bytes)}");
+        foreach (var literal in _textLiterals.Values.Concat(_constantTextLiterals.Values))
+        {
+            Line("ALIGN 8");
+            Line($"{literal.Label} QWORD -1, {literal.Bytes.Length.ToString(CultureInfo.InvariantCulture)}");
+            Line($"BYTE {FormatBytesWithTerminator(literal.Bytes)}");
+        }
         foreach (var literal in _gameTextLiterals.Values)
             Line($"{literal.Label} BYTE {FormatBytes(literal.Bytes)}");
 
         Line();
         Line(".code");
         Line("main PROC");
-        Line("    sub rsp, 104");
+        Line("    push rbp");
+        Line("    mov rbp, rsp");
+        Line("    sub rsp, 256");
         Line($"    mov rcx, {(int)_graphicsBackend}");
         Line($"    mov rdx, {(_vSync ? 1 : 0)}");
-        Line("    call smile_graphics_configure");
+        CallAligned("smile_graphics_configure");
         _currentSource = _analysis.BoundSyntaxTree.Source;
         EmitStatements(_analysis.BoundSyntaxTree.Root.Statements);
-        if (_usesMusic) Line("    call smile_music_shutdown");
+        EmitProgramCleanup();
+        if (_usesMusic) CallAligned("smile_music_shutdown");
         Line("    xor ecx, ecx");
-        Line("    call ExitProcess");
+        CallAligned("ExitProcess");
         Line("main ENDP");
 
         foreach (var routine in _analysis.SemanticModel.Routines.Values)
@@ -217,7 +237,10 @@ internal sealed class MasmEmitter
                     CollectExpression(doStatement.UntilCondition);
                     break;
                 case RoutineDeclarationSyntax routine:
+                    var previousRoutine = _collectRoutine;
+                    _collectRoutine = routine;
                     Collect(routine.Statements);
+                    _collectRoutine = previousRoutine;
                     break;
                 case CallStatementSyntax call:
                     foreach (var argument in call.Arguments)
@@ -229,6 +252,7 @@ internal sealed class MasmEmitter
                 case SelectStatementSyntax select:
                     CollectExpression(select.Expression);
                     _selectValues[select] = $"select_value_{_selectValues.Count}";
+                    _selectOwners[select] = _collectRoutine;
                     foreach (var clause in select.Cases)
                     {
                         CollectExpression(clause.Value);
@@ -244,8 +268,7 @@ internal sealed class MasmEmitter
                     CollectExpression(clearColor.Color);
                     break;
                 case GraphicsStatementSyntax graphics:
-                    if (graphics.Text != null)
-                        CollectTextToken(graphics.Text);
+                    CollectExpression(graphics.TextExpression);
                     foreach (var argument in graphics.Arguments)
                         CollectExpression(argument);
                     break;
@@ -317,15 +340,13 @@ internal sealed class MasmEmitter
         {
             if (!symbol.IsConstant)
                 _symbolLabels[symbol] = (symbol.IsArray ? "array_" : "variable_") + id++;
+            else if (symbol.Type == SmileType.Text && symbol.ConstantValue is string text)
+                _constantTextLiterals[symbol] = new TextLiteral($"constant_text_{_constantTextLiterals.Count}",
+                    Encoding.UTF8.GetBytes(text));
         }
         foreach (var routine in _analysis.SemanticModel.Routines.Values)
         {
             _routineLabels[routine] = "routine_" + _routineLabels.Count;
-            foreach (var symbol in routine.LocalSymbols.Values)
-            {
-                if (!symbol.IsConstant)
-                    _symbolLabels[symbol] = (symbol.IsArray ? "local_array_" : "local_") + id++;
-            }
         }
     }
 
@@ -334,18 +355,54 @@ internal sealed class MasmEmitter
         _currentSource = routine.Source;
         _currentRoutine = routine;
         _returnLabel = NewLabel("routine_return");
+        _localOffsets.Clear();
+        var localBytes = 0;
+        foreach (var symbol in routine.LocalSymbols.Values.Where(symbol => !symbol.IsConstant)
+                     .OrderBy(symbol => symbol.DeclarationSpan.Start))
+        {
+            localBytes += Math.Max(1, symbol.ArraySize) * 8;
+            _localOffsets[symbol] = localBytes;
+        }
+        _returnOffset = localBytes + 8;
+        var frameSize = Align16(localBytes + 8 + 160);
         Line();
         Line($"{_routineLabels[routine]} PROC");
-        Line("    sub rsp, 104");
+        Line("    push rbp");
+        Line("    mov rbp, rsp");
+        Line($"    sub rsp, {frameSize}");
+        foreach (var symbol in routine.LocalSymbols.Values.Where(symbol => !symbol.IsConstant))
+            for (var index = 0; index < Math.Max(1, symbol.ArraySize); index++)
+                Line($"    mov QWORD PTR [rbp-{_localOffsets[symbol] - index * 8}], 0");
+        for (var index = 0; index < routine.Parameters.Count; index++)
+        {
+            var parameter = routine.Parameters[index];
+            var source = index switch
+            {
+                0 => "rcx", 1 => "rdx", 2 => "r8", 3 => "r9",
+                _ => $"QWORD PTR [rbp+{48 + (index - 4) * 8}]"
+            };
+            if (index >= 4)
+                Line($"    mov rax, {source}");
+            Line($"    mov QWORD PTR [rbp-{_localOffsets[parameter]}], {(index >= 4 ? "rax" : source)}");
+        }
+        Line($"    mov QWORD PTR [rbp-{_returnOffset}], 0");
         EmitStatements(routine.Declaration.Statements);
         if (!routine.IsFunction)
             Line("    xor eax, eax");
+        Line($"    mov QWORD PTR [rbp-{_returnOffset}], rax");
         Line($"{_returnLabel}:");
-        Line("    add rsp, 104");
+        foreach (var symbol in routine.LocalSymbols.Values.Where(symbol => symbol.Type == SmileType.Text &&
+                     symbol.ParameterMode != ParameterPassingMode.ByRef))
+            EmitReleaseSymbol(symbol);
+        EmitSelectCleanup(routine.Declaration);
+        Line($"    mov rax, QWORD PTR [rbp-{_returnOffset}]");
+        Line("    mov rsp, rbp");
+        Line("    pop rbp");
         Line("    ret");
         Line($"{_routineLabels[routine]} ENDP");
         _returnLabel = null;
         _currentRoutine = null;
+        _localOffsets.Clear();
     }
 
     private void EmitStatements(IReadOnlyList<StatementSyntax> statements)
@@ -358,7 +415,7 @@ internal sealed class MasmEmitter
     {
         if (_emitDebugInformation && IsExecutable(statement))
         {
-            Line($"    call {_debugSitesByStatement[statement].HelperName}");
+            CallAligned(_debugSitesByStatement[statement].HelperName);
         }
 
         switch (statement)
@@ -374,25 +431,25 @@ internal sealed class MasmEmitter
                 EmitPrint(print);
                 break;
             case GetKeyStatementSyntax getKey:
-                Line("    call smile_get_key");
-                Line($"    mov QWORD PTR [{Label(getKey.Identifier.Text)}], rax");
+                CallAligned("smile_get_key");
+                EmitStore(Resolve(getKey.Identifier.Text));
                 break;
             case ClearScreenStatementSyntax:
-                Line("    call smile_clear_screen");
+                CallAligned("smile_clear_screen");
                 break;
             case WaitStatementSyntax wait:
                 EmitExpression(wait.Duration);
                 Line("    mov rcx, rax");
-                Line("    call smile_wait");
+                CallAligned("smile_wait");
                 break;
             case RandomStatementSyntax random:
                 EmitExpression(random.Minimum);
-                Line("    push rax");
+                PushRax();
                 EmitExpression(random.Maximum);
                 Line("    mov rdx, rax");
-                Line("    pop rcx");
-                Line("    call smile_random");
-                Line($"    mov QWORD PTR [{Label(random.Identifier.Text)}], rax");
+                PopRcx();
+                CallAligned("smile_random");
+                EmitStore(Resolve(random.Identifier.Text));
                 break;
             case IfStatementSyntax ifStatement:
                 EmitIf(ifStatement);
@@ -411,6 +468,7 @@ internal sealed class MasmEmitter
                     EmitExpression(returnStatement.Expression);
                 else
                     Line("    xor eax, eax");
+                Line($"    mov QWORD PTR [rbp-{_returnOffset}], rax");
                 Line($"    jmp {_returnLabel}");
                 break;
             case SelectStatementSyntax select:
@@ -420,32 +478,37 @@ internal sealed class MasmEmitter
                 Line($"    jmp {(exit.TargetKeyword.Kind == SyntaxKind.ForKeyword ? _forExitLabels.Peek() : _doExitLabels.Peek())}");
                 break;
             case EndProgramStatementSyntax:
-                if (_usesMusic) Line("    call smile_music_shutdown");
+                if (_currentRoutine != null)
+                    foreach (var symbol in _currentRoutine.LocalSymbols.Values.Where(symbol => symbol.Type == SmileType.Text &&
+                                 symbol.ParameterMode != ParameterPassingMode.ByRef))
+                        EmitReleaseSymbol(symbol);
+                EmitProgramCleanup();
+                if (_usesMusic) CallAligned("smile_music_shutdown");
                 Line("    xor ecx, ecx");
-                Line("    call ExitProcess");
+                CallAligned("ExitProcess");
                 break;
             case GameWindowStatementSyntax gameWindow:
                 EmitTextArgument(gameWindow.Title);
                 if (gameWindow.Width != null) EmitExpression(gameWindow.Width); else Line("    mov rax, 960");
-                Line("    push rax");
+                PushRax();
                 if (gameWindow.Height != null) EmitExpression(gameWindow.Height); else Line("    mov rax, 540");
-                Line("    push rax");
+                PushRax();
                 EmitNativeCall("smile_game_open", 4);
                 break;
             case ClearColorStatementSyntax clearColor:
                 EmitExpression(clearColor.Color);
-                Line("    push rax");
+                PushRax();
                 EmitNativeCall("smile_game_clear", 1);
                 break;
             case GraphicsStatementSyntax graphics:
                 EmitGraphics(graphics);
                 break;
             case ShowScreenStatementSyntax:
-                Line("    call smile_show_screen");
+                CallAligned("smile_show_screen");
                 break;
             case SoundStatementSyntax sound:
                 if (sound.IsStop)
-                    Line("    call smile_stop_sound");
+                    CallAligned("smile_stop_sound");
                 else
                 {
                     EmitTextArgument(sound.Path!);
@@ -458,27 +521,25 @@ internal sealed class MasmEmitter
             case LoadStatementSyntax load:
                 EmitTextArgument(load.Key);
                 EmitExpression(load.DefaultValue);
-                Line("    push rax");
+                PushRax();
                 EmitNativeCall("smile_load_value", 3);
-                Line($"    mov QWORD PTR [{Label(load.Identifier.Text)}], rax");
+                EmitStore(Resolve(load.Identifier.Text));
                 break;
             case TextFileLoadStatementSyntax textFileLoad:
                 EmitTextArgument(textFileLoad.Path);
                 var destination = Resolve(textFileLoad.Destination.Text);
-                Line($"    lea rax, {_symbolLabels[destination]}");
-                Line("    push rax");
+                EmitAddress(destination);
+                PushRax();
                 Line($"    mov rax, {destination.ArraySize.ToString(CultureInfo.InvariantCulture)}");
-                Line("    push rax");
+                PushRax();
                 EmitNativeCall("smile_load_text_file", 4);
-                Line($"    mov QWORD PTR [{Label(textFileLoad.CountIdentifier.Text)}], rax");
+                EmitStore(Resolve(textFileLoad.CountIdentifier.Text));
                 break;
             case SaveStatementSyntax save:
                 EmitTextArgument(save.Key);
                 var saved = Resolve(save.Identifier.Text);
-                Line(saved.IsConstant
-                    ? $"    mov rax, {saved.ConstantValue.ToString(CultureInfo.InvariantCulture)}"
-                    : $"    mov rax, QWORD PTR [{_symbolLabels[saved]}]");
-                Line("    push rax");
+                EmitLoad(saved);
+                PushRax();
                 EmitNativeCall("smile_save_value", 3);
                 break;
         }
@@ -491,22 +552,22 @@ internal sealed class MasmEmitter
             case MusicOperation.Play:
                 EmitTextArgument(statement.Path!);
                 Line($"    mov rax, {(statement.Loop ? 1 : 0)}");
-                Line("    push rax");
+                PushRax();
                 EmitNativeCall("smile_music_play", 3);
                 break;
             case MusicOperation.Pause:
-                Line("    call smile_music_pause");
+                CallAligned("smile_music_pause");
                 break;
             case MusicOperation.Resume:
-                Line("    call smile_music_resume");
+                CallAligned("smile_music_resume");
                 break;
             case MusicOperation.Stop:
-                Line("    call smile_music_stop");
+                CallAligned("smile_music_stop");
                 break;
             case MusicOperation.SetVolume:
                 EmitExpression(statement.Volume!);
                 Line("    mov rcx, rax");
-                Line("    call smile_music_set_volume");
+                CallAligned("smile_music_set_volume");
                 break;
         }
     }
@@ -514,16 +575,19 @@ internal sealed class MasmEmitter
     private void EmitGraphics(GraphicsStatementSyntax statement)
     {
         if (statement.Operation == GraphicsOperation.DrawText)
-            EmitTextArgument(statement.Text!);
+        {
+            EmitExpression(statement.TextExpression!);
+            PushRax();
+        }
         foreach (var argument in statement.Arguments)
         {
             EmitExpression(argument);
-            Line("    push rax");
+            PushRax();
         }
         if (statement.Operation == GraphicsOperation.DrawText)
         {
             Line($"    mov rax, {(statement.Centered ? 1 : 0)}");
-            Line("    push rax");
+            PushRax();
         }
         var name = statement.Operation switch
         {
@@ -537,40 +601,46 @@ internal sealed class MasmEmitter
             GraphicsOperation.FillQuadrilateral => "smile_fill_quadrilateral",
             GraphicsOperation.DrawQuadrilateral => "smile_draw_quadrilateral",
             GraphicsOperation.DrawLine => "smile_draw_line",
-            GraphicsOperation.DrawText => "smile_draw_text",
+            GraphicsOperation.DrawText => "smile_draw_text_value",
             GraphicsOperation.DrawNumber => "smile_draw_number",
             _ => throw new InvalidOperationException("Unknown graphics operation.")
         };
-        EmitNativeCall(name, statement.Arguments.Count + (statement.Operation == GraphicsOperation.DrawText ? 3 : 0));
+        EmitNativeCall(name, statement.Arguments.Count + (statement.Operation == GraphicsOperation.DrawText ? 2 : 0));
     }
 
     private void EmitTextArgument(SyntaxToken token)
     {
         var text = _gameTextLiterals[token];
         Line($"    lea rax, {text.Label}");
-        Line("    push rax");
+        PushRax();
         Line($"    mov rax, {text.Bytes.Length.ToString(CultureInfo.InvariantCulture)}");
-        Line("    push rax");
+        PushRax();
     }
 
     private void EmitNativeCall(string name, int argumentCount)
     {
-        for (var index = argumentCount - 1; index >= 0; index--)
+        var outerSlots = _dynamicStackSlots - argumentCount;
+        var stackArguments = Math.Max(0, argumentCount - 4);
+        var padSlots = (outerSlots + argumentCount + stackArguments) & 1;
+        var callAreaBytes = (4 + stackArguments + padSlots) * 8;
+        Line($"    sub rsp, {callAreaBytes}");
+        for (var index = 4; index < argumentCount; index++)
         {
-            Line("    pop rax");
-            switch (index)
-            {
-                case 0: Line("    mov rcx, rax"); break;
-                case 1: Line("    mov rdx, rax"); break;
-                case 2: Line("    mov r8, rax"); break;
-                case 3: Line("    mov r9, rax"); break;
-                // The remaining arguments are still below RSP while values are popped.
-                // Account for that temporary expression stack so the value lands in the
-                // final Windows x64 outgoing-argument slot after all pops complete.
-                default: Line($"    mov QWORD PTR [rsp+{index * 16}], rax"); break;
-            }
+            var sourceOffset = callAreaBytes + (argumentCount - 1 - index) * 8;
+            var destinationOffset = 32 + (index - 4) * 8;
+            Line($"    mov rax, QWORD PTR [rsp+{sourceOffset}]");
+            Line($"    mov QWORD PTR [rsp+{destinationOffset}], rax");
+        }
+        var registerCount = Math.Min(4, argumentCount);
+        for (var index = 0; index < registerCount; index++)
+        {
+            var sourceOffset = callAreaBytes + (argumentCount - 1 - index) * 8;
+            var register = index switch { 0 => "rcx", 1 => "rdx", 2 => "r8", _ => "r9" };
+            Line($"    mov {register}, QWORD PTR [rsp+{sourceOffset}]");
         }
         Line($"    call {name}");
+        Line($"    add rsp, {callAreaBytes + argumentCount * 8}");
+        _dynamicStackSlots = outerSlots;
     }
 
     private void EmitAssignment(AssignmentStatementSyntax assignment)
@@ -578,16 +648,34 @@ internal sealed class MasmEmitter
         EmitExpression(assignment.Expression);
         if (!assignment.Target.IsArrayElement)
         {
-            Line($"    mov QWORD PTR [{Label(assignment.Target.Identifier.Text)}], rax");
+            var target = Resolve(assignment.Target.Identifier.Text);
+            if (target.Type == SmileType.Text)
+            {
+                PushRax();
+                EmitAddress(target);
+                Line("    mov rcx, rax");
+                PopRax();
+                Line("    mov rdx, rax");
+                CallAligned("smile_text_move_assign");
+            }
+            else
+                EmitStore(target);
             return;
         }
-        Line("    push rax");
+        PushRax();
         var symbol = Resolve(assignment.Target.Identifier.Text);
         EmitArrayIndex(assignment.Target.Indices, symbol);
         Line("    mov rcx, rax");
-        Line("    pop rax");
-        Line($"    lea rdx, {_symbolLabels[symbol]}");
-        Line("    mov QWORD PTR [rdx+rcx*8], rax");
+        EmitAddress(symbol);
+        Line("    lea rcx, [rax+rcx*8]");
+        PopRax();
+        if (symbol.Type == SmileType.Text)
+        {
+            Line("    mov rdx, rax");
+            CallAligned("smile_text_move_assign");
+        }
+        else
+            Line("    mov QWORD PTR [rcx], rax");
     }
 
     private void EmitArrayIndex(IReadOnlyList<ExpressionSyntax> indices, VariableSymbol symbol)
@@ -595,10 +683,10 @@ internal sealed class MasmEmitter
         EmitExpression(indices[0]);
         if (indices.Count == 1)
             return;
-        Line("    push rax");
+        PushRax();
         EmitExpression(indices[1]);
         Line("    mov rcx, rax");
-        Line("    pop rax");
+        PopRax();
         Line($"    imul rax, {symbol.ArrayDimensions[1].ToString(CultureInfo.InvariantCulture)}");
         Line("    add rax, rcx");
     }
@@ -607,22 +695,21 @@ internal sealed class MasmEmitter
     {
         foreach (var item in print.Items)
         {
-            if (item is LiteralExpressionSyntax literal && literal.Value is string)
+            if (_analysis.SemanticModel.GetType(item) == SmileType.Text)
             {
-                var text = _textLiterals[literal];
-                Line($"    lea rcx, {text.Label}");
-                Line($"    mov rdx, {text.Bytes.Length.ToString(CultureInfo.InvariantCulture)}");
-                Line("    call smile_print_text");
+                EmitExpression(item);
+                Line("    mov rcx, rax");
+                CallAligned("smile_print_text_value");
                 continue;
             }
             EmitExpression(item);
             Line("    mov rcx, rax");
-            Line(_analysis.SemanticModel.GetType(item) == SmileType.Boolean
-                ? "    call smile_print_boolean"
-                : "    call smile_print_number");
+            CallAligned(_analysis.SemanticModel.GetType(item) == SmileType.Boolean
+                ? "smile_print_boolean"
+                : "smile_print_number");
         }
         if (!print.SuppressNewLine)
-            Line("    call smile_print_newline");
+            CallAligned("smile_print_newline");
     }
 
     private void EmitIf(IfStatementSyntax statement)
@@ -646,20 +733,21 @@ internal sealed class MasmEmitter
     {
         var startLabel = NewLabel("for_start");
         var endLabel = NewLabel("for_end");
-        var counterLabel = Label(statement.Identifier.Text);
+        var counter = Resolve(statement.Identifier.Text);
         var limitLabel = _forLimits[statement];
         EmitExpression(statement.LowerBound);
-        Line($"    mov QWORD PTR [{counterLabel}], rax");
+        EmitStore(counter);
         EmitExpression(statement.UpperBound);
         Line($"    mov QWORD PTR [{limitLabel}], rax");
         Line($"{startLabel}:");
-        Line($"    mov rax, QWORD PTR [{counterLabel}]");
+        EmitLoad(counter);
         Line($"    cmp rax, QWORD PTR [{limitLabel}]");
         Line(statement.IsDescending ? $"    jl {endLabel}" : $"    jg {endLabel}");
         _forExitLabels.Push(endLabel);
         EmitStatements(statement.Statements);
         _forExitLabels.Pop();
-        Line(statement.IsDescending ? $"    dec QWORD PTR [{counterLabel}]" : $"    inc QWORD PTR [{counterLabel}]");
+        EmitAddress(counter);
+        Line(statement.IsDescending ? "    dec QWORD PTR [rax]" : "    inc QWORD PTR [rax]");
         Line($"    jmp {startLabel}");
         Line($"{endLabel}:");
     }
@@ -689,6 +777,7 @@ internal sealed class MasmEmitter
     {
         var endLabel = NewLabel("select_end");
         var valueLabel = _selectValues[statement];
+        var isText = _analysis.SemanticModel.GetType(statement.Expression) == SmileType.Text;
         EmitExpression(statement.Expression);
         Line($"    mov QWORD PTR [{valueLabel}], rax");
         SelectCaseClauseSyntax? elseClause = null;
@@ -701,8 +790,19 @@ internal sealed class MasmEmitter
             }
             var nextLabel = NewLabel("case_next");
             EmitExpression(clause.Value!);
-            Line($"    cmp QWORD PTR [{valueLabel}], rax");
-            Line($"    jne {nextLabel}");
+            if (isText)
+            {
+                Line("    mov rdx, rax");
+                Line($"    mov rcx, QWORD PTR [{valueLabel}]");
+                CallAligned("smile_text_equal_case");
+                Line("    cmp rax, 0");
+                Line($"    je {nextLabel}");
+            }
+            else
+            {
+                Line($"    cmp QWORD PTR [{valueLabel}], rax");
+                Line($"    jne {nextLabel}");
+            }
             EmitStatements(clause.Statements);
             Line($"    jmp {endLabel}");
             Line($"{nextLabel}:");
@@ -710,6 +810,11 @@ internal sealed class MasmEmitter
         if (elseClause != null)
             EmitStatements(elseClause.Statements);
         Line($"{endLabel}:");
+        if (isText)
+        {
+            Line($"    lea rcx, {valueLabel}");
+            CallAligned("smile_text_clear");
+        }
     }
 
     private void EmitExpression(ExpressionSyntax expression)
@@ -722,17 +827,25 @@ internal sealed class MasmEmitter
             case LiteralExpressionSyntax literal when literal.Value is long number:
                 Line($"    mov rax, {number.ToString(CultureInfo.InvariantCulture)}");
                 break;
+            case LiteralExpressionSyntax literal when literal.Value is string:
+                Line($"    lea rcx, {_textLiterals[literal].Label}");
+                CallAligned("smile_text_retain");
+                break;
             case NameExpressionSyntax name:
                 var symbol = Resolve(name.Identifier.Text);
-                Line(symbol.IsConstant
-                    ? $"    mov rax, {symbol.ConstantValue.ToString(CultureInfo.InvariantCulture)}"
-                    : $"    mov rax, QWORD PTR [{_symbolLabels[symbol]}]");
+                EmitLoad(symbol);
                 break;
             case ArrayAccessExpressionSyntax array:
                 var arraySymbol = Resolve(array.Identifier.Text);
                 EmitArrayIndex(array.Indices, arraySymbol);
-                Line($"    lea rdx, {_symbolLabels[arraySymbol]}");
-                Line("    mov rax, QWORD PTR [rdx+rax*8]");
+                Line("    mov rcx, rax");
+                EmitAddress(arraySymbol);
+                Line("    mov rax, QWORD PTR [rax+rcx*8]");
+                if (arraySymbol.Type == SmileType.Text)
+                {
+                    Line("    mov rcx, rax");
+                    CallAligned("smile_text_retain");
+                }
                 break;
             case ParenthesizedExpressionSyntax parenthesized:
                 EmitExpression(parenthesized.Expression);
@@ -768,22 +881,22 @@ internal sealed class MasmEmitter
             case SyntaxKind.MinKeyword:
             case SyntaxKind.MaxKeyword:
                 EmitExpression(call.Arguments[0]);
-                Line("    push rax");
+                PushRax();
                 EmitExpression(call.Arguments[1]);
                 Line("    mov rcx, rax");
-                Line("    pop rax");
+                PopRax();
                 Line("    cmp rax, rcx");
                 Line(call.Identifier.Kind == SyntaxKind.MinKeyword ? "    cmovg rax, rcx" : "    cmovl rax, rcx");
                 break;
             case SyntaxKind.RgbKeyword:
                 EmitExpression(call.Arguments[0]);
-                Line("    push rax");
+                PushRax();
                 EmitExpression(call.Arguments[1]);
-                Line("    push rax");
+                PushRax();
                 EmitExpression(call.Arguments[2]);
                 Line("    mov rdx, rax");
-                Line("    pop rcx");
-                Line("    pop rax");
+                PopRcx();
+                PopRax();
                 Line("    and rax, 255");
                 Line("    and rcx, 255");
                 Line("    shl rcx, 8");
@@ -793,15 +906,15 @@ internal sealed class MasmEmitter
                 Line("    or rax, rdx");
                 break;
             case SyntaxKind.TimerKeyword:
-                Line("    call smile_timer");
+                CallAligned("smile_timer");
                 break;
             case SyntaxKind.GameClosedKeyword:
-                Line("    call smile_game_closed");
+                CallAligned("smile_game_closed");
                 break;
             case SyntaxKind.KeyHeldKeyword:
                 EmitExpression(call.Arguments[0]);
                 Line("    mov rcx, rax");
-                Line("    call smile_key_held");
+                CallAligned("smile_key_held");
                 break;
             default:
                 EmitRoutineCall(call.Identifier.Text, call.Arguments);
@@ -813,26 +926,58 @@ internal sealed class MasmEmitter
     {
         if (!_analysis.SemanticModel.TryGetRoutine(name, out var routine))
             throw new InvalidOperationException($"Unresolved routine '{name}'.");
-        foreach (var argument in arguments)
+        for (var index = 0; index < arguments.Count; index++)
         {
-            EmitExpression(argument);
-            Line("    push rax");
+            if (index < routine.Parameters.Count &&
+                routine.Parameters[index].ParameterMode == ParameterPassingMode.ByRef)
+                EmitWritableAddress(arguments[index]);
+            else
+                EmitExpression(arguments[index]);
+            PushRax();
         }
-        for (var index = arguments.Count - 1; index >= 0; index--)
+        EmitNativeCall(_routineLabels[routine], arguments.Count);
+    }
+
+    private void EmitWritableAddress(ExpressionSyntax expression)
+    {
+        if (expression is NameExpressionSyntax name)
         {
-            Line("    pop rax");
-            Line($"    mov QWORD PTR [{_symbolLabels[routine.Parameters[index]]}], rax");
+            EmitAddress(Resolve(name.Identifier.Text));
+            return;
         }
-        Line($"    call {_routineLabels[routine]}");
+        if (expression is ArrayAccessExpressionSyntax array)
+        {
+            var symbol = Resolve(array.Identifier.Text);
+            EmitArrayIndex(array.Indices, symbol);
+            Line("    mov rcx, rax");
+            EmitAddress(symbol);
+            Line("    lea rax, [rax+rcx*8]");
+            return;
+        }
+        Line("    xor eax, eax");
     }
 
     private void EmitBinary(BinaryExpressionSyntax binary)
     {
         EmitExpression(binary.Left);
-        Line("    push rax");
+        PushRax();
         EmitExpression(binary.Right);
         Line("    mov rcx, rax");
-        Line("    pop rax");
+        PopRax();
+        if (_analysis.SemanticModel.GetType(binary.Left) == SmileType.Text)
+        {
+            Line("    mov rdx, rcx");
+            Line("    mov rcx, rax");
+            if (binary.OperatorToken.Kind == SyntaxKind.PlusToken)
+                CallAligned("smile_text_concat");
+            else
+            {
+                CallAligned("smile_text_equal");
+                if (binary.OperatorToken.Kind == SyntaxKind.NotEqualsToken)
+                    Line("    xor rax, 1");
+            }
+            return;
+        }
         switch (binary.OperatorToken.Kind)
         {
             case SyntaxKind.PlusToken: Line("    add rax, rcx"); break;
@@ -872,7 +1017,112 @@ internal sealed class MasmEmitter
         throw new InvalidOperationException($"Unresolved symbol '{name}'.");
     }
 
-    private string Label(string name) => _symbolLabels[Resolve(name)];
+    private void EmitAddress(VariableSymbol symbol)
+    {
+        if (_currentRoutine != null && _localOffsets.TryGetValue(symbol, out var offset))
+        {
+            Line(symbol.ParameterMode == ParameterPassingMode.ByRef
+                ? $"    mov rax, QWORD PTR [rbp-{offset}]"
+                : $"    lea rax, [rbp-{offset}]");
+            return;
+        }
+        Line($"    lea rax, {_symbolLabels[symbol]}");
+    }
+
+    private void EmitLoad(VariableSymbol symbol)
+    {
+        if (symbol.IsConstant)
+        {
+            if (symbol.Type == SmileType.Text)
+            {
+                Line($"    lea rcx, {_constantTextLiterals[symbol].Label}");
+                CallAligned("smile_text_retain");
+                return;
+            }
+            var value = symbol.ConstantValue switch
+            {
+                long number => number,
+                bool boolean => boolean ? 1L : 0L,
+                _ => 0L
+            };
+            Line($"    mov rax, {value.ToString(CultureInfo.InvariantCulture)}");
+            return;
+        }
+        EmitAddress(symbol);
+        Line("    mov rax, QWORD PTR [rax]");
+        if (symbol.Type == SmileType.Text)
+        {
+            Line("    mov rcx, rax");
+            CallAligned("smile_text_retain");
+        }
+    }
+
+    private void EmitStore(VariableSymbol symbol)
+    {
+        Line("    mov r10, rax");
+        EmitAddress(symbol);
+        Line("    mov QWORD PTR [rax], r10");
+        Line("    mov rax, r10");
+    }
+
+    private void EmitReleaseSymbol(VariableSymbol symbol)
+    {
+        var count = Math.Max(1, symbol.ArraySize);
+        for (var index = 0; index < count; index++)
+        {
+            EmitAddress(symbol);
+            if (index != 0)
+                Line($"    add rax, {index * 8}");
+            Line("    mov rcx, QWORD PTR [rax]");
+            CallAligned("smile_text_release");
+        }
+    }
+
+    private void EmitProgramCleanup()
+    {
+        foreach (var symbol in _analysis.SemanticModel.Symbols.Values.Where(symbol =>
+                     !symbol.IsConstant && symbol.Type == SmileType.Text))
+            EmitReleaseSymbol(symbol);
+        EmitSelectCleanup(null);
+    }
+
+    private void EmitSelectCleanup(RoutineDeclarationSyntax? owner)
+    {
+        foreach (var select in _selectValues.Keys.Where(select => ReferenceEquals(_selectOwners[select], owner) &&
+                     _analysis.SemanticModel.GetType(select.Expression) == SmileType.Text))
+        {
+            Line($"    lea rcx, {_selectValues[select]}");
+            CallAligned("smile_text_clear");
+        }
+    }
+
+    private void PushRax()
+    {
+        Line("    push rax");
+        _dynamicStackSlots++;
+    }
+
+    private void PopRax()
+    {
+        Line("    pop rax");
+        _dynamicStackSlots--;
+    }
+
+    private void PopRcx()
+    {
+        Line("    pop rcx");
+        _dynamicStackSlots--;
+    }
+
+    private void CallAligned(string name)
+    {
+        var callAreaBytes = 32 + ((_dynamicStackSlots & 1) != 0 ? 8 : 0);
+        Line($"    sub rsp, {callAreaBytes}");
+        Line($"    call {name}");
+        Line($"    add rsp, {callAreaBytes}");
+    }
+
+    private static int Align16(int value) => (value + 15) & ~15;
     private string NewLabel(string prefix) => prefix + "_" + _labelId++;
     private void Line(string text = "") => _builder.AppendLine(text);
 
@@ -882,6 +1132,10 @@ internal sealed class MasmEmitter
     private static string FormatBytes(byte[] bytes) => bytes.Length == 0
         ? "0"
         : string.Join(",", bytes.Select(value => $"0{value:X2}h"));
+
+    private static string FormatBytesWithTerminator(byte[] bytes) => bytes.Length == 0
+        ? "0"
+        : FormatBytes(bytes) + ",0";
 
     private sealed class TextLiteral
     {

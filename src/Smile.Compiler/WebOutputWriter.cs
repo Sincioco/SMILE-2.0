@@ -105,7 +105,7 @@ internal static class WebOutputWriter
                 return safe(left % right);
             }
 
-            function isTrue(value) { return safe(value) !== 0; }
+            function isTrue(value) { return typeof value === "boolean" ? value : safe(value) !== 0; }
             function booleanText(value) { return isTrue(value) ? "TRUE" : "FALSE"; }
             function abs(value) { return safe(Math.abs(safe(value))); }
             function min(left, right) { [left, right] = operands(left, right); return Math.min(left, right); }
@@ -124,14 +124,14 @@ internal static class WebOutputWriter
                 return safe(minimum + Math.floor(Math.random() * (maximum - minimum + 1)));
             }
 
-            function array(dimensions) {
+            function array(dimensions, initialValue = 0) {
                 let total = 1;
                 for (const dimension of dimensions) {
                     if (!Number.isSafeInteger(dimension) || dimension <= 0)
                         throw new Error("SMILE Web array dimensions must be positive safe integers.");
                     total = safe(total * dimension);
                 }
-                return { dimensions: dimensions.slice(), data: new Array(total).fill(0) };
+                return { dimensions: dimensions.slice(), data: new Array(total).fill(initialValue) };
             }
 
             function arrayOffset(target, indices) {
@@ -148,7 +148,13 @@ internal static class WebOutputWriter
             }
 
             function get(target, indices) { return target.data[arrayOffset(target, indices)]; }
-            function set(target, indices, value) { target.data[arrayOffset(target, indices)] = safe(value); }
+            function set(target, indices, value) { target.data[arrayOffset(target, indices)] = value; }
+            function ref(getter, setter) { return { get: getter, set: setter }; }
+            function refArray(target, indices) {
+                const offset = arrayOffset(target, indices);
+                return { get: () => target.data[offset], set: value => { target.data[offset] = value; } };
+            }
+            function invalidRef() { throw new Error("Invalid SMILE BYREF argument."); }
 
             function color(value) {
                 value = safe(value);
@@ -528,7 +534,7 @@ internal static class WebOutputWriter
 
             return {
                 safe, add, sub, mul, div, mod, neg, isTrue, booleanText, abs, min, max, timer, rgb, random,
-                array, get, set, gameWindow, clear, fillRectangle, drawRectangle,
+                array, get, set, ref, refArray, invalidRef, gameWindow, clear, fillRectangle, drawRectangle,
                 fillRoundedRectangle, drawRoundedRectangle, fillCircle, drawCircle, drawArc,
                 fillQuadrilateral, drawQuadrilateral, drawLine, drawText, drawNumber, showScreen,
                 print, clearScreen, wait, getKey, keyHeld, playSound, stopSound,

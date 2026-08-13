@@ -48,7 +48,7 @@ echo Visual Studio may close automatically. Save open work before running this s
 echo.
 echo [1/3] Removing the installed SMILE extension.
 echo Visual Studio's installer will show its own progress window.
-"%VSIX_INSTALLER%" /shutdownprocesses /instanceIds:%SMILE_VS_INSTANCE% /uninstall:%SMILE_EXTENSION_ID% /logFile:"%SMILE_ROOT%\artifacts\temp\vsix-uninstall.log"
+"%VSIX_INSTALLER%" /quiet /shutdownprocesses /instanceIds:%SMILE_VS_INSTANCE% /uninstall:%SMILE_EXTENSION_ID% /logFile:"%SMILE_ROOT%\artifacts\temp\vsix-uninstall.log"
 if errorlevel 1 echo Existing SMILE extension was not installed or could not be removed; continuing with forced installation.
 
 echo.
@@ -59,7 +59,7 @@ if errorlevel 1 exit /b %errorlevel%
 echo.
 echo [3/3] Installing the newly built SMILE extension.
 echo Visual Studio's installer will show its own progress window.
-"%VSIX_INSTALLER%" /shutdownprocesses /force /instanceIds:%SMILE_VS_INSTANCE% /logFile:"%SMILE_ROOT%\artifacts\temp\vsix-install.log" "%SMILE_VSIX%"
+"%VSIX_INSTALLER%" /quiet /shutdownprocesses /force /instanceIds:%SMILE_VS_INSTANCE% /logFile:"%SMILE_ROOT%\artifacts\temp\vsix-install.log" "%SMILE_VSIX%"
 if errorlevel 1 (
     echo error: The new SMILE extension could not be installed.
     echo See "%SMILE_ROOT%\artifacts\temp\vsix-install.log" for details.

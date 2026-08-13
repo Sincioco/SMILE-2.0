@@ -53,12 +53,12 @@ public enum GraphicsOperation
 public sealed class GraphicsStatementSyntax : StatementSyntax
 {
     public GraphicsStatementSyntax(SyntaxToken keyword, GraphicsOperation operation, IReadOnlyList<ExpressionSyntax> arguments,
-        SyntaxToken? text, bool centered, int end)
+        ExpressionSyntax? textExpression, bool centered, int end)
     {
         Keyword = keyword;
         Operation = operation;
         Arguments = arguments;
-        Text = text;
+        TextExpression = textExpression;
         Centered = centered;
         _end = end;
     }
@@ -67,7 +67,7 @@ public sealed class GraphicsStatementSyntax : StatementSyntax
     public SyntaxToken Keyword { get; }
     public GraphicsOperation Operation { get; }
     public IReadOnlyList<ExpressionSyntax> Arguments { get; }
-    public SyntaxToken? Text { get; }
+    public ExpressionSyntax? TextExpression { get; }
     public bool Centered { get; }
     public override TextSpan Span => TextSpan.FromBounds(Keyword.Span.Start, _end);
 }

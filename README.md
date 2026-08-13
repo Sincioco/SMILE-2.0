@@ -1,6 +1,6 @@
 # SMILE 2.0
 
-SMILE 2.0 is a small, structured BASIC-style language with a complete native Windows x64 target and a browser target. It includes modules, reusable target-neutral libraries, true multi-file compilation, a MASM-based native compiler, a Win32 game runtime, Canvas 2D Web publication, Visual Studio 2026 language and project support, console examples, and ten complete games written in SMILE. Windows x64 remains the default target, and every included application project exposes both native and Web publication.
+SMILE 2.0 is a small, structured BASIC-style language with a complete native Windows x64 target and a browser target. It includes explicit built-in types, first-class UTF-8 text, typed `BYVAL`/`BYREF` routines, modules, reusable target-neutral libraries, true multi-file compilation, a MASM-based native compiler, a Win32 game runtime, Canvas 2D Web publication, Visual Studio 2026 language and project support, console examples, and ten complete games written in SMILE. Windows x64 remains the default target, and every included application project exposes both native and Web publication.
 
 The repository has one language authority: `src\Smile.Language`. The command-line compiler and Visual Studio extension use the same lexer, parser, syntax model, diagnostics, symbols, types, and semantic model. Game rules remain in `.smile` source; the C runtime provides only generic Windows graphics, input, sound, timing, and storage services.
 
@@ -87,6 +87,8 @@ artifacts\compiler\smilec.exe --project libraries\Smile.Math.Extras\Smile.Math.E
 artifacts\compiler\smilec.exe --project examples\LibraryConsumer\LibraryConsumer.smileproj --target windows-x64 -o artifacts\games\LibraryConsumer.exe
 artifacts\compiler\smilec.exe --project examples\LibraryConsumer\LibraryConsumer.smileproj --target web --output-dir artifacts\web\LibraryConsumer
 ```
+
+The Phase 3A typed-text proof uses `libraries\Smile.Text.Extras`, `examples\Phase3ABasics`, `examples\Phase3ATextStress.smile`, and `examples\Phase3ATextGame`. `.smilelib` packages now use deterministic formatVersion 2 typed public API metadata.
 
 Loose-file builds can add a built package with repeated `--library <path.smilelib>`. Project builds read `<SmileProjectReference>` and `<SmileLibraryReference>` items, build project dependencies in deterministic order, reject cycles, and reuse a referenced project package only when its identity, modules, normalized source hashes, and direct dependency identities match the current library project. Imports follow direct provider boundaries: application and library-project sources see only their own modules and direct references, package sources see only exact manifest dependencies, and loose roots see every package supplied directly with `--library`.
 
@@ -198,10 +200,11 @@ Loose `.smile` files remain supported: open one and use **Tools > Build SMILE Fi
 
 Implemented syntax includes:
 
-- signed 64-bit numeric values, booleans, text literals, variables, constants, and one- or two-dimensional fixed arrays;
+- signed 64-bit `NUMBER`, `BOOLEAN`, and mutable UTF-8 `TEXT` values, constants, and typed one- or two-dimensional fixed arrays;
+- per-physical-source `OPTION EXPLICIT` and scalar `DIM Name AS NUMBER|BOOLEAN|TEXT` declarations;
 - arithmetic and comparison operators, integer `/`, `MOD`, `AND`, `OR`, and `NOT`;
 - multiline `IF`/`ELSE IF`/`ELSE`, ascending and descending `FOR`, `DO`/`LOOP UNTIL`, `EXIT FOR`, `EXIT DO`, and `SELECT CASE`;
-- `SUB`, `FUNCTION`, `CALL`, `RETURN`, and up to four scalar parameters;
+- `SUB`, `FUNCTION`, `CALL`, `RETURN`, typed parameters and returns, default `BYVAL`, explicit `BYREF`, routine-local `DIM`, and calls tested through sixteen parameters;
 - `PRINT`, `GET KEY`, `KEY_HELD`, `WAIT`, `RANDOM`, `TIMER`, `ABS`, `MIN`, `MAX`, and `RGB`;
 - `GAME WINDOW`, double-buffered rectangles, rounded rectangles, circles, arcs, lines, quadrilaterals, text, and numbers, `SHOW SCREEN`, asynchronous WAV effects, MP3 background music, and integer persistence through `LOAD` and `SAVE`;
 - bounded executable-relative UTF-8 input through `LOAD TEXT FILE "path" INTO Array COUNT Variable`, including BOM skipping, zero-fill, and safe missing-file behavior;
@@ -217,9 +220,9 @@ Arc outlines use `DRAW ARC CenterX, CenterY, Radius, StartAngle, SweepAngle, Col
 - Web NUMBER values use JavaScript safe integers. Unsafe literals fail Web compilation, and unsafe runtime arithmetic stops with a visible error rather than silently losing precision.
 - Web uses Canvas 2D, browser keyboard/audio APIs, `fetch` for declared text/map assets, and `localStorage`. Browser autoplay policy may defer WAV or MP3 playback until the first key or click without stopping the program.
 - Browser `.smile` breakpoints are not yet supported. Windows x64 `.smile` breakpoints, IntelliSense, normal file opening, and native F5 remain supported.
-- Numeric storage is signed 64-bit integer only; there is no floating-point type, user-defined `TYPE`, dynamic collection, or general mutable `TEXT`.
+- Numeric storage is signed 64-bit integer only; there is no floating-point type, user-defined `TYPE`, record field, or dynamic collection.
 - Arrays are fixed at compile time and support at most two dimensions.
-- Routines accept at most four scalar parameters. Text is currently used as a literal-oriented console/graphics/audio surface rather than a general mutable string type.
+- Whole-array routine parameters and returns remain deferred; scalar routine calls are tested through sixteen parameters without a language-level cap.
 - The Visual Studio project system intentionally remains focused rather than becoming an MSBuild SDK. Application `.smileproj` and library `.smilelibproj` files share one project model, including sources and project/package references.
 - `PLAY SOUND` supports one asynchronous WAV effect at a time. `PLAY MUSIC` supports one MP3 background track through `Windows.Media.Playback.MediaPlayer`; there are no playlists, seeking, or multiple music channels.
 - Windows editions without the required optional media components may decline MP3 playback, but the game continues without crashing.

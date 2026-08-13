@@ -1,0 +1,4 @@
+CALL SetValue(1)
+SUB SetValue(BYREF Value AS NUMBER)
+    Value = 2
+END SUB

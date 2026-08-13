@@ -59,6 +59,12 @@ public static class SmileCompletionService
                 .Select(MemberCompletion).ToArray();
         }
 
+        if (IsAfterAs(syntaxTree.Source.Text, position))
+        {
+            return new[] { "BOOLEAN", "NUMBER", "TEXT" }.Select(name =>
+                new SmileCompletion(name, $"SMILE built-in type {name}", SmileCompletionKind.Keyword)).ToArray();
+        }
+
         var completions = new Dictionary<string, SmileCompletion>(StringComparer.OrdinalIgnoreCase);
         foreach (var completion in LanguageCompletions)
             completions[completion.DisplayText] = completion;
@@ -80,7 +86,8 @@ public static class SmileCompletionService
         {
             foreach (var symbol in currentRoutine.LocalSymbols.Values)
             {
-                if (!IsDeclarationBeingTyped(symbol, syntaxTree.Source, position))
+                if ((symbol.IsParameter || symbol.DeclarationSpan.Start <= position) &&
+                    !IsDeclarationBeingTyped(symbol, syntaxTree.Source, position))
                     completions[symbol.Name] = VariableCompletion(symbol);
             }
         }
@@ -91,10 +98,11 @@ public static class SmileCompletionService
         {
             var kind = routine.IsFunction ? SmileCompletionKind.Function : SmileCompletionKind.Subroutine;
             var keyword = routine.IsFunction ? "FUNCTION" : "SUB";
-            var parameters = string.Join(", ", routine.Parameters.Select(parameter => parameter.Name));
+            var parameters = string.Join(", ", routine.Parameters.Select(DescribeParameter));
+            var returnType = routine.IsFunction ? $" AS {routine.ReturnType.ToString().ToUpperInvariant()}" : string.Empty;
             completions[routine.Name] = new SmileCompletion(
                 routine.Name,
-                $"{keyword} {routine.Name}({parameters})",
+                $"{keyword} {routine.Name}({parameters}){returnType}",
                 kind);
         }
 
@@ -155,10 +163,12 @@ public static class SmileCompletionService
     {
         if (member.Routine != null)
         {
-            var parameters = string.Join(", ", member.Routine.Parameters.Select(parameter => parameter.Name));
+            var parameters = string.Join(", ", member.Routine.Parameters.Select(DescribeParameter));
             var keyword = member.Routine.IsFunction ? "FUNCTION" : "SUB";
+            var returnType = member.Routine.IsFunction
+                ? $" AS {member.Routine.ReturnType.ToString().ToUpperInvariant()}" : string.Empty;
             return new SmileCompletion(member.Name,
-                $"{keyword} {member.Name}({parameters}) from module {member.Routine.ModuleName} ({member.Routine.ProviderIdentity})",
+                $"{keyword} {member.Name}({parameters}){returnType} from module {member.Routine.ModuleName} ({member.Routine.ProviderIdentity})",
                 member.Routine.IsFunction ? SmileCompletionKind.Function : SmileCompletionKind.Subroutine);
         }
         if (member.Variable != null)
@@ -169,6 +179,12 @@ public static class SmileCompletionService
     private static string DescribeProvider(VariableSymbol symbol, string description) => symbol.ModuleName == null
         ? description
         : $"{description} from module {symbol.ModuleName} ({symbol.ProviderIdentity})";
+
+    private static string DescribeParameter(VariableSymbol parameter)
+    {
+        var mode = parameter.ParameterMode == ParameterPassingMode.ByRef ? "BYREF " : string.Empty;
+        return $"{mode}{parameter.Name} AS {parameter.Type.ToString().ToUpperInvariant()}";
+    }
 
     private static string? AliasBeforeDot(string text, int position)
     {
@@ -188,6 +204,15 @@ public static class SmileCompletionService
         while (start > 0 && text[start - 1] is not ('\r' or '\n')) start--;
         return text.Substring(start, Math.Min(position, text.Length) - start)
             .TrimStart().StartsWith("IMPORT ", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsAfterAs(string text, int position)
+    {
+        var start = Math.Min(position, text.Length);
+        while (start > 0 && text[start - 1] is not ('\r' or '\n')) start--;
+        var before = text.Substring(start, Math.Min(position, text.Length) - start).TrimEnd();
+        return before.EndsWith(" AS", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(before, "AS", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsDeclarationBeingTyped(VariableSymbol symbol, SourceText source, int position) =>

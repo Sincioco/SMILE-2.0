@@ -1,0 +1,5 @@
+CONST FixedValue = 1
+CALL SetValue(FixedValue)
+SUB SetValue(BYREF Value AS NUMBER)
+    Value = 2
+END SUB

@@ -109,6 +109,11 @@ public enum SyntaxKind
     AsKeyword,
     PublicKeyword,
     PrivateKeyword,
+    OptionKeyword,
+    ExplicitKeyword,
+    BooleanKeyword,
+    ByRefKeyword,
+    ByValKeyword,
     NoneKeyword,
     WKeyword,
     AKeyword,
@@ -240,6 +245,11 @@ public static class SyntaxFacts
         ["AS"] = SyntaxKind.AsKeyword,
         ["PUBLIC"] = SyntaxKind.PublicKeyword,
         ["PRIVATE"] = SyntaxKind.PrivateKeyword,
+        ["OPTION"] = SyntaxKind.OptionKeyword,
+        ["EXPLICIT"] = SyntaxKind.ExplicitKeyword,
+        ["BOOLEAN"] = SyntaxKind.BooleanKeyword,
+        ["BYREF"] = SyntaxKind.ByRefKeyword,
+        ["BYVAL"] = SyntaxKind.ByValKeyword,
         ["NONE"] = SyntaxKind.NoneKeyword,
         ["W"] = SyntaxKind.WKeyword,
         ["A"] = SyntaxKind.AKeyword,
@@ -289,7 +299,7 @@ public static class SyntaxFacts
     public static IReadOnlyList<string> GetKeywordTexts() => new List<string>(Keywords.Keys);
 
     public static bool IsKeyword(SyntaxKind kind) =>
-        kind >= SyntaxKind.DimKeyword && kind <= SyntaxKind.PrivateKeyword;
+        kind >= SyntaxKind.DimKeyword && kind <= SyntaxKind.ByValKeyword;
 
     public static bool IsBuiltInConstant(SyntaxKind kind) =>
         kind >= SyntaxKind.NoneKeyword && kind <= SyntaxKind.LightGrayKeyword || kind == SyntaxKind.DownKeyword;
@@ -493,21 +503,29 @@ public sealed class AssignmentStatementSyntax : StatementSyntax
 
 public sealed class DimStatementSyntax : StatementSyntax
 {
-    public DimStatementSyntax(SyntaxToken dimKeyword, SyntaxToken identifier, SyntaxToken openBracket, IReadOnlyList<ExpressionSyntax> sizes, SyntaxToken closeBracket)
+    public DimStatementSyntax(SyntaxToken dimKeyword, SyntaxToken identifier, SyntaxToken? openBracket,
+        IReadOnlyList<ExpressionSyntax> sizes, SyntaxToken? closeBracket, SyntaxToken? asKeyword = null,
+        SyntaxToken? typeToken = null)
     {
         DimKeyword = dimKeyword;
         Identifier = identifier;
         OpenBracket = openBracket;
         Sizes = sizes;
         CloseBracket = closeBracket;
+        AsKeyword = asKeyword;
+        TypeToken = typeToken;
     }
 
     public SyntaxToken DimKeyword { get; }
     public SyntaxToken Identifier { get; }
-    public SyntaxToken OpenBracket { get; }
+    public SyntaxToken? OpenBracket { get; }
     public IReadOnlyList<ExpressionSyntax> Sizes { get; }
-    public SyntaxToken CloseBracket { get; }
-    public override TextSpan Span => TextSpan.FromBounds(DimKeyword.Span.Start, CloseBracket.Span.End);
+    public SyntaxToken? CloseBracket { get; }
+    public SyntaxToken? AsKeyword { get; }
+    public SyntaxToken? TypeToken { get; }
+    public bool IsArray => OpenBracket != null;
+    public override TextSpan Span => TextSpan.FromBounds(DimKeyword.Span.Start,
+        TypeToken?.Span.End ?? CloseBracket?.Span.End ?? Identifier.Span.End);
 }
 
 public sealed class PrintStatementSyntax : StatementSyntax

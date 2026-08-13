@@ -9,6 +9,38 @@ public enum ModuleVisibility
     Public
 }
 
+public sealed class OptionExplicitStatementSyntax : StatementSyntax
+{
+    public OptionExplicitStatementSyntax(SyntaxToken optionKeyword, SyntaxToken explicitKeyword)
+    {
+        OptionKeyword = optionKeyword;
+        ExplicitKeyword = explicitKeyword;
+    }
+
+    public SyntaxToken OptionKeyword { get; }
+    public SyntaxToken ExplicitKeyword { get; }
+    public override TextSpan Span => TextSpan.FromBounds(OptionKeyword.Span.Start, ExplicitKeyword.Span.End);
+}
+
+public sealed class ParameterSyntax : SyntaxNode
+{
+    public ParameterSyntax(SyntaxToken? modeKeyword, SyntaxToken identifier, SyntaxToken? asKeyword,
+        SyntaxToken? typeToken)
+    {
+        ModeKeyword = modeKeyword;
+        Identifier = identifier;
+        AsKeyword = asKeyword;
+        TypeToken = typeToken;
+    }
+
+    public SyntaxToken? ModeKeyword { get; }
+    public SyntaxToken Identifier { get; }
+    public SyntaxToken? AsKeyword { get; }
+    public SyntaxToken? TypeToken { get; }
+    public override TextSpan Span => TextSpan.FromBounds(ModeKeyword?.Span.Start ?? Identifier.Span.Start,
+        TypeToken?.Span.End ?? Identifier.Span.End);
+}
+
 public sealed class DottedNameSyntax : SyntaxNode
 {
     public DottedNameSyntax(IReadOnlyList<SyntaxToken> identifiers, IReadOnlyList<SyntaxToken> dots)
@@ -96,12 +128,15 @@ public sealed class ConstStatementSyntax : StatementSyntax
 
 public sealed class RoutineDeclarationSyntax : StatementSyntax
 {
-    public RoutineDeclarationSyntax(SyntaxToken keyword, SyntaxToken identifier, IReadOnlyList<SyntaxToken> parameters,
-        IReadOnlyList<StatementSyntax> statements, SyntaxToken endKeyword, SyntaxToken finalKeyword)
+    public RoutineDeclarationSyntax(SyntaxToken keyword, SyntaxToken identifier, IReadOnlyList<ParameterSyntax> parameters,
+        SyntaxToken? asKeyword, SyntaxToken? returnTypeToken, IReadOnlyList<StatementSyntax> statements,
+        SyntaxToken endKeyword, SyntaxToken finalKeyword)
     {
         Keyword = keyword;
         Identifier = identifier;
         Parameters = parameters;
+        AsKeyword = asKeyword;
+        ReturnTypeToken = returnTypeToken;
         Statements = statements;
         EndKeyword = endKeyword;
         FinalKeyword = finalKeyword;
@@ -109,7 +144,9 @@ public sealed class RoutineDeclarationSyntax : StatementSyntax
 
     public SyntaxToken Keyword { get; }
     public SyntaxToken Identifier { get; }
-    public IReadOnlyList<SyntaxToken> Parameters { get; }
+    public IReadOnlyList<ParameterSyntax> Parameters { get; }
+    public SyntaxToken? AsKeyword { get; }
+    public SyntaxToken? ReturnTypeToken { get; }
     public IReadOnlyList<StatementSyntax> Statements { get; }
     public SyntaxToken EndKeyword { get; }
     public SyntaxToken FinalKeyword { get; }

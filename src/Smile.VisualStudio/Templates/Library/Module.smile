@@ -1,5 +1,9 @@
 MODULE $safeprojectname$
-PUBLIC FUNCTION DoubleValue(Value)
+
+OPTION EXPLICIT
+
+PUBLIC FUNCTION DoubleValue(Value AS NUMBER) AS NUMBER
     RETURN Value * 2
 END FUNCTION
+
 END MODULE

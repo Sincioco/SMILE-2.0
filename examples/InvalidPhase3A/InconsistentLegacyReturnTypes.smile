@@ -1,0 +1,8 @@
+PRINT GetValue(TRUE)
+FUNCTION GetValue(UseText AS BOOLEAN)
+    IF UseText THEN
+        RETURN "text"
+    ELSE
+        RETURN 1
+    END IF
+END FUNCTION

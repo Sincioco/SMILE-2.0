@@ -1,0 +1,24 @@
+MODULE Smile.Text.Extras
+
+OPTION EXPLICIT
+
+PUBLIC CONST EmptyText = ""
+PUBLIC DIM ModuleLabel AS TEXT
+
+PUBLIC FUNCTION JoinFive(First AS TEXT, Second AS TEXT, Third AS TEXT, Fourth AS TEXT, Fifth AS TEXT) AS TEXT
+    RETURN First + Second + Third + Fourth + Fifth
+END FUNCTION
+
+PUBLIC SUB Replace(BYREF Value AS TEXT, NewValue AS TEXT)
+    Value = NewValue
+END SUB
+
+PUBLIC FUNCTION IsEmpty(Value AS TEXT) AS BOOLEAN
+    RETURN Value = EmptyText
+END FUNCTION
+
+PRIVATE FUNCTION Hidden(Value AS TEXT) AS TEXT
+    RETURN Value
+END FUNCTION
+
+END MODULE

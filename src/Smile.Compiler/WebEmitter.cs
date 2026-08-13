@@ -106,8 +106,8 @@ internal sealed class WebEmitter
     private string InitialValue(VariableSymbol symbol)
     {
         if (symbol.IsArray)
-            return $"smile.array([{string.Join(", ", symbol.ArrayDimensions)}])";
-        return symbol.IsConstant ? symbol.ConstantValue.ToString(CultureInfo.InvariantCulture) : "0";
+            return $"smile.array([{string.Join(", ", symbol.ArrayDimensions)}], {DefaultValue(symbol.Type)})";
+        return symbol.IsConstant ? ConstantValue(symbol.ConstantValue) : DefaultValue(symbol.Type);
     }
 
     private void EmitStatements(IReadOnlyList<StatementSyntax> statements, bool topLevel)
@@ -134,10 +134,11 @@ internal sealed class WebEmitter
                 EmitAssignment(assignment);
                 return;
             case GetKeyStatementSyntax getKey:
-                Line($"{Variable(getKey.Identifier)} = smile.getKey();");
+                Line(WriteVariable(getKey.Identifier, "smile.getKey()") + ";");
                 return;
             case RandomStatementSyntax random:
-                Line($"{Variable(random.Identifier)} = smile.random({Expression(random.Minimum)}, {Expression(random.Maximum)});");
+                Line(WriteVariable(random.Identifier,
+                    $"smile.random({Expression(random.Minimum)}, {Expression(random.Maximum)})") + ";");
                 return;
             case IfStatementSyntax ifStatement:
                 EmitIf(ifStatement, topLevel);
@@ -149,7 +150,7 @@ internal sealed class WebEmitter
                 EmitDo(doStatement, topLevel);
                 return;
             case CallStatementSyntax call:
-                Line($"await {Routine(call.Identifier)}({Arguments(call.Arguments)});");
+                Line($"await {Routine(call.Identifier)}({RoutineArguments(call.Identifier, call.Arguments)});");
                 return;
             case ReturnStatementSyntax returnStatement:
                 Line(returnStatement.Expression == null ? "return;" : $"return {Expression(returnStatement.Expression)};");
@@ -182,13 +183,14 @@ internal sealed class WebEmitter
                 EmitMusic(music);
                 return;
             case LoadStatementSyntax load:
-                Line($"{Variable(load.Identifier)} = smile.loadInt({Json(load.Key.Value as string ?? string.Empty)}, {Expression(load.DefaultValue)});");
+                Line(WriteVariable(load.Identifier,
+                    $"smile.loadInt({Json(load.Key.Value as string ?? string.Empty)}, {Expression(load.DefaultValue)})") + ";");
                 return;
             case TextFileLoadStatementSyntax textFileLoad:
                 EmitTextFileLoad(textFileLoad);
                 return;
             case SaveStatementSyntax save:
-                Line($"smile.saveInt({Json(save.Key.Value as string ?? string.Empty)}, {Variable(save.Identifier)});");
+                Line($"smile.saveInt({Json(save.Key.Value as string ?? string.Empty)}, {ReadVariable(save.Identifier)});");
                 return;
             case PrintStatementSyntax print:
                 var items = string.Join(", ", print.Items.Select(PrintItem));
@@ -211,12 +213,15 @@ internal sealed class WebEmitter
         var value = Expression(assignment.Expression);
         if (!assignment.Target.IsArrayElement)
         {
-            Line($"{Variable(assignment.Target.Identifier)} = smile.safe({value});");
+            var targetSymbol = ResolveVariable(assignment.Target.Identifier);
+            var stored = targetSymbol.Type == SmileType.Number ? $"smile.safe({value})" : value;
+            Line(WriteVariable(targetSymbol, stored) + ";");
             return;
         }
 
         var symbol = ResolveVariable(assignment.Target.Identifier);
-        Line($"smile.set({_variableNames[symbol]}, [{Arguments(assignment.Target.Indices)}], {value});");
+        var arrayValue = symbol.Type == SmileType.Number ? $"smile.safe({value})" : value;
+        Line($"smile.set({_variableNames[symbol]}, [{Arguments(assignment.Target.Indices)}], {arrayValue});");
     }
 
     private void EmitIf(IfStatementSyntax statement, bool topLevel)
@@ -242,14 +247,14 @@ internal sealed class WebEmitter
 
     private void EmitFor(ForStatementSyntax statement, bool topLevel)
     {
-        var counter = Variable(statement.Identifier);
+        var counter = ResolveVariable(statement.Identifier);
         var limit = Temporary("limit");
         var label = Temporary("for");
-        Line($"{counter} = smile.safe({Expression(statement.LowerBound)});");
+        Line(WriteVariable(counter, $"smile.safe({Expression(statement.LowerBound)})") + ";");
         Line($"const {limit} = smile.safe({Expression(statement.UpperBound)});");
         var comparison = statement.IsDescending ? ">=" : "<=";
         var step = statement.IsDescending ? "-1" : "1";
-        Line($"{label}: for (; {counter} {comparison} {limit}; {counter} = smile.add({counter}, {step})) {{");
+        Line($"{label}: for (; {ReadVariable(counter)} {comparison} {limit}; {WriteVariable(counter, $"smile.add({ReadVariable(counter)}, {step})")}) {{");
         _indent++;
         _forExitLabels.Push(label);
         EmitStatements(statement.Statements, topLevel);
@@ -275,7 +280,10 @@ internal sealed class WebEmitter
     private void EmitSelect(SelectStatementSyntax statement, bool topLevel)
     {
         var selected = Temporary("select");
-        Line($"const {selected} = smile.safe({Expression(statement.Expression)});");
+        var selectedValue = Expression(statement.Expression);
+        if (_analysis.SemanticModel.GetType(statement.Expression) == SmileType.Number)
+            selectedValue = $"smile.safe({selectedValue})";
+        Line($"const {selected} = {selectedValue};");
         var emittedCondition = false;
         var elseClause = statement.Cases.FirstOrDefault(clause => clause.IsElse);
         foreach (var clause in statement.Cases.Where(clause => !clause.IsElse))
@@ -349,7 +357,7 @@ internal sealed class WebEmitter
                 Line($"smile.drawLine({arguments});");
                 return;
             case GraphicsOperation.DrawText:
-                Line($"smile.drawText({Json(statement.Text?.Value as string ?? string.Empty)}, {arguments}, {(statement.Centered ? "true" : "false")});");
+                Line($"smile.drawText({Expression(statement.TextExpression!)}, {arguments}, {(statement.Centered ? "true" : "false")});");
                 return;
             case GraphicsOperation.DrawNumber:
                 Line($"smile.drawNumber({arguments}, {(statement.Centered ? "true" : "false")});");
@@ -401,7 +409,7 @@ internal sealed class WebEmitter
     {
         var path = (statement.Path.Value as string ?? string.Empty).Replace('\\', '/');
         var destination = _variableNames[ResolveVariable(statement.Destination)];
-        Line($"{Variable(statement.CountIdentifier)} = await smile.loadTextFile({Json(path)}, {destination});");
+        Line(WriteVariable(statement.CountIdentifier, $"await smile.loadTextFile({Json(path)}, {destination})") + ";");
     }
 
     private string Expression(ExpressionSyntax expression)
@@ -413,13 +421,13 @@ internal sealed class WebEmitter
                     throw new WebTargetException(_currentSource, "SML5102", literal.Span, "Web target NUMBER literals must be within JavaScript's safe integer range.");
                 return number.ToString(CultureInfo.InvariantCulture);
             case LiteralExpressionSyntax literal when literal.Value is bool boolean:
-                return boolean ? "1" : "0";
+                return boolean ? "true" : "false";
             case LiteralExpressionSyntax literal when literal.Value is string text:
                 return Json(text);
             case NameExpressionSyntax name:
                 if (SyntaxFacts.IsBuiltInConstant(name.Identifier.Kind))
                     return SyntaxFacts.GetBuiltInConstantValue(name.Identifier.Kind).ToString(CultureInfo.InvariantCulture);
-                return Variable(name.Identifier);
+                return ReadVariable(name.Identifier);
             case ArrayAccessExpressionSyntax array:
                 return $"smile.get({_variableNames[ResolveVariable(array.Identifier)]}, [{Arguments(array.Indices)}])";
             case ParenthesizedExpressionSyntax parenthesized:
@@ -428,7 +436,7 @@ internal sealed class WebEmitter
                 return unary.OperatorToken.Kind switch
                 {
                     SyntaxKind.MinusToken => $"smile.neg({Expression(unary.Operand)})",
-                    SyntaxKind.NotKeyword => $"(smile.isTrue({Expression(unary.Operand)}) ? 0 : 1)",
+                    SyntaxKind.NotKeyword => $"(!smile.isTrue({Expression(unary.Operand)}))",
                     _ => throw UnsupportedExpression(unary, unary.OperatorToken.Text)
                 };
             case BinaryExpressionSyntax binary:
@@ -446,19 +454,20 @@ internal sealed class WebEmitter
         var right = Expression(binary.Right);
         return binary.OperatorToken.Kind switch
         {
+            SyntaxKind.PlusToken when _analysis.SemanticModel.GetType(binary) == SmileType.Text => $"(({left}) + ({right}))",
             SyntaxKind.PlusToken => $"smile.add({left}, {right})",
             SyntaxKind.MinusToken => $"smile.sub({left}, {right})",
             SyntaxKind.StarToken => $"smile.mul({left}, {right})",
             SyntaxKind.SlashToken => $"smile.div({left}, {right})",
             SyntaxKind.ModKeyword => $"smile.mod({left}, {right})",
-            SyntaxKind.EqualsToken => $"(({left}) === ({right}) ? 1 : 0)",
-            SyntaxKind.NotEqualsToken => $"(({left}) !== ({right}) ? 1 : 0)",
-            SyntaxKind.LessToken => $"(({left}) < ({right}) ? 1 : 0)",
-            SyntaxKind.GreaterToken => $"(({left}) > ({right}) ? 1 : 0)",
-            SyntaxKind.LessOrEqualsToken => $"(({left}) <= ({right}) ? 1 : 0)",
-            SyntaxKind.GreaterOrEqualsToken => $"(({left}) >= ({right}) ? 1 : 0)",
-            SyntaxKind.AndKeyword => $"((smile.isTrue({left}) && smile.isTrue({right})) ? 1 : 0)",
-            SyntaxKind.OrKeyword => $"((smile.isTrue({left}) || smile.isTrue({right})) ? 1 : 0)",
+            SyntaxKind.EqualsToken => $"(({left}) === ({right}))",
+            SyntaxKind.NotEqualsToken => $"(({left}) !== ({right}))",
+            SyntaxKind.LessToken => $"(({left}) < ({right}))",
+            SyntaxKind.GreaterToken => $"(({left}) > ({right}))",
+            SyntaxKind.LessOrEqualsToken => $"(({left}) <= ({right}))",
+            SyntaxKind.GreaterOrEqualsToken => $"(({left}) >= ({right}))",
+            SyntaxKind.AndKeyword => $"(smile.isTrue({left}) && smile.isTrue({right}))",
+            SyntaxKind.OrKeyword => $"(smile.isTrue({left}) || smile.isTrue({right}))",
             _ => throw UnsupportedExpression(binary, binary.OperatorToken.Text)
         };
     }
@@ -473,9 +482,9 @@ internal sealed class WebEmitter
             SyntaxKind.MinKeyword => $"smile.min({arguments})",
             SyntaxKind.MaxKeyword => $"smile.max({arguments})",
             SyntaxKind.RgbKeyword => $"smile.rgb({arguments})",
-            SyntaxKind.GameClosedKeyword => "smile.gameClosed()",
-            SyntaxKind.KeyHeldKeyword => $"smile.keyHeld({arguments})",
-            _ => $"await {Routine(call.Identifier)}({arguments})"
+            SyntaxKind.GameClosedKeyword => "smile.isTrue(smile.gameClosed())",
+            SyntaxKind.KeyHeldKeyword => $"smile.isTrue(smile.keyHeld({arguments}))",
+            _ => $"await {Routine(call.Identifier)}({RoutineArguments(call.Identifier, call.Arguments)})"
         };
     }
 
@@ -486,7 +495,69 @@ internal sealed class WebEmitter
             ? $"smile.booleanText({Expression(expression)})"
             : Expression(expression);
 
-    private string Variable(SyntaxToken identifier) => _variableNames[ResolveVariable(identifier)];
+    private string ReadVariable(SyntaxToken identifier) => ReadVariable(ResolveVariable(identifier));
+
+    private string ReadVariable(VariableSymbol symbol) => symbol.ParameterMode == ParameterPassingMode.ByRef
+        ? _variableNames[symbol] + ".get()"
+        : _variableNames[symbol];
+
+    private string WriteVariable(SyntaxToken identifier, string value) =>
+        WriteVariable(ResolveVariable(identifier), value);
+
+    private string WriteVariable(VariableSymbol symbol, string value) => symbol.ParameterMode == ParameterPassingMode.ByRef
+        ? _variableNames[symbol] + $".set({value})"
+        : _variableNames[symbol] + $" = {value}";
+
+    private string RoutineArguments(SyntaxToken identifier, IReadOnlyList<ExpressionSyntax> arguments)
+    {
+        if (!_analysis.SemanticModel.TryGetRoutine(identifier.Text, out var routine))
+            return Arguments(arguments);
+        return string.Join(", ", arguments.Select((argument, index) =>
+        {
+            if (index >= routine.Parameters.Count)
+                return Expression(argument);
+            var parameter = routine.Parameters[index];
+            if (parameter.ParameterMode == ParameterPassingMode.ByRef)
+                return Reference(argument);
+            var value = Expression(argument);
+            return !parameter.HasDeclaredType && parameter.Type == SmileType.Number &&
+                   _analysis.SemanticModel.GetType(argument) == SmileType.Boolean
+                ? $"(smile.isTrue({value}) ? 1 : 0)"
+                : value;
+        }));
+    }
+
+    private string Reference(ExpressionSyntax expression)
+    {
+        if (expression is NameExpressionSyntax name)
+        {
+            var symbol = ResolveVariable(name.Identifier);
+            if (symbol.ParameterMode == ParameterPassingMode.ByRef)
+                return _variableNames[symbol];
+            return $"smile.ref(() => {_variableNames[symbol]}, value => {{ {_variableNames[symbol]} = value; }})";
+        }
+        if (expression is ArrayAccessExpressionSyntax array)
+        {
+            var symbol = ResolveVariable(array.Identifier);
+            return $"smile.refArray({_variableNames[symbol]}, [{Arguments(array.Indices)}])";
+        }
+        return "smile.invalidRef()";
+    }
+
+    private static string DefaultValue(SmileType type) => type switch
+    {
+        SmileType.Text => "\"\"",
+        SmileType.Boolean => "false",
+        _ => "0"
+    };
+
+    private static string ConstantValue(object value) => value switch
+    {
+        string text => Json(text),
+        bool boolean => boolean ? "true" : "false",
+        long number => number.ToString(CultureInfo.InvariantCulture),
+        _ => "0"
+    };
 
     private VariableSymbol ResolveVariable(SyntaxToken identifier)
     {

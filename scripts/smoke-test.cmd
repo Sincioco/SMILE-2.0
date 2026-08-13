@@ -58,6 +58,65 @@ node --check "%SMILE_ROOT%\artifacts\web\LocalModuleBasics\game.js"
 if errorlevel 1 exit /b %errorlevel%
 echo Phase 2 library project, package reference, local module, native, Web, and deterministic package tests passed.
 
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\libraries\Smile.Text.Extras\Smile.Text.Extras.smilelibproj" --target library --configuration Release -o "%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib"
+if errorlevel 1 exit /b %errorlevel%
+copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib" "%SMILE_ROOT%\artifacts\temp\Smile.Text.Extras.first.smilelib" >nul
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\libraries\Smile.Text.Extras\Smile.Text.Extras.smilelibproj" --target library --configuration Release -o "%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib"
+if errorlevel 1 exit /b %errorlevel%
+fc /b "%SMILE_ROOT%\artifacts\temp\Smile.Text.Extras.first.smilelib" "%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib" >nul
+if errorlevel 1 exit /b 1
+powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib'); try { $manifest=[IO.StreamReader]::new($zip.GetEntry('manifest.json').Open()).ReadToEnd(); $api=[IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open()).ReadToEnd(); if (!$manifest.Contains('formatVersion') -or !$manifest.Contains(': 2') -or !$api.Contains('ByRef') -or !$api.Contains('returnType') -or !$api.Contains('Text')) { exit 1 } } finally { $zip.Dispose() }"
+if errorlevel 1 exit /b 1
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3ABasics\Phase3ABasics.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase3ABasics.exe" --debug
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\games\Phase3ABasics.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3ABasics.out"
+if errorlevel 1 exit /b %errorlevel%
+for %%V in ("Changed" "TRUE" "36" "1136" "MODULE TEXT" "MATCH") do (
+    findstr /x /c:%%V "%SMILE_ROOT%\artifacts\temp\Phase3ABasics.out" >nul
+    if errorlevel 1 exit /b 1
+)
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3ABasics\Phase3ABasics.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\Phase3ABasics"
+if errorlevel 1 exit /b %errorlevel%
+node --check "%SMILE_ROOT%\artifacts\web\Phase3ABasics\game.js"
+if errorlevel 1 exit /b %errorlevel%
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3ABasics\Phase3ABasics.Package.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase3ABasicsPackage.exe"
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\games\Phase3ABasicsPackage.exe" | findstr /x /c:"MATCH" >nul
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3ABasics\Phase3ABasics.Package.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\Phase3ABasicsPackage"
+if errorlevel 1 exit /b %errorlevel%
+node --check "%SMILE_ROOT%\artifacts\web\Phase3ABasicsPackage\game.js"
+if errorlevel 1 exit /b %errorlevel%
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase3ATextStress.smile" -o "%SMILE_ROOT%\artifacts\games\Phase3ATextStress.exe"
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\games\Phase3ATextStress.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3ATextStress.out"
+if errorlevel 1 exit /b %errorlevel%
+findstr /x /c:"FALSE" "%SMILE_ROOT%\artifacts\temp\Phase3ATextStress.out" >nul || exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase3ATextStress.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\Phase3ATextStress"
+if errorlevel 1 exit /b %errorlevel%
+node --check "%SMILE_ROOT%\artifacts\web\Phase3ATextStress\game.js"
+if errorlevel 1 exit /b %errorlevel%
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3ATextGame\Phase3ATextGame.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase3ATextGame.exe"
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3ATextGame\Phase3ATextGame.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\Phase3ATextGame"
+if errorlevel 1 exit /b %errorlevel%
+node --check "%SMILE_ROOT%\artifacts\web\Phase3ATextGame\game.js"
+if errorlevel 1 exit /b %errorlevel%
+
+for %%P in (OptionExplicitLate:SML3300 OptionExplicitUndeclared:SML3303 ScalarDimWithoutAs:SML3302 UnknownBuiltInType:SML3301 NumberToTextAssignment:SML3304 TextToBooleanAssignment:SML3304 MixedTextAddition:SML3308 TextRelationalComparison:SML3308 InvalidByRefLiteral:SML3305 InvalidByRefConstant:SML3305 WrongArgumentType:SML3304 WrongReturnType:SML3304 InconsistentLegacyReturnTypes:SML3309 DuplicateLocal:SML3306 UseBeforeLocalDeclaration:SML3307) do (
+    for /f "tokens=1,2 delims=:" %%F in ("%%P") do (
+        "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\InvalidPhase3A\%%F.smile" > "%SMILE_ROOT%\artifacts\temp\%%F.log" 2>&1
+        if not errorlevel 1 exit /b 1
+        if errorlevel 2 exit /b 1
+        findstr /c:"%%G" "%SMILE_ROOT%\artifacts\temp\%%F.log" >nul || exit /b 1
+    )
+)
+echo Phase 3A typed declarations, TEXT lifetime, routine ABI, packages, diagnostics, native, and Web tests passed.
+
 for %%F in (MissingModule UnknownMember PrivateMemberAccess DuplicateAlias ModuleImportCycle) do (
     "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\InvalidModules\%%F\%%F.smileproj" -o "%SMILE_ROOT%\artifacts\temp\%%F.exe" > "%SMILE_ROOT%\artifacts\temp\%%F.log" 2>&1
     if not errorlevel 1 (

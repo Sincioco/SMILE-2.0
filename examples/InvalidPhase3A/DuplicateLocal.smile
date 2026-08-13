@@ -1,0 +1,5 @@
+CALL Work()
+SUB Work()
+    DIM Value AS NUMBER
+    DIM Value AS TEXT
+END SUB

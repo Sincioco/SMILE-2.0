@@ -1,10 +1,15 @@
 ' GAME WINDOW programs automatically silence music and sounds while inactive or minimized.
 ' The shared runtime restores requested music volume; no per-game focus handler is needed.
+OPTION EXPLICIT
+
 GAME WINDOW "My SMILE Game"
+
+DIM Caption AS TEXT
+Caption = "HELLO, SMILE!"
 
 DO
     CLEAR RGB(20, 20, 35)
-    DRAW TEXT "HELLO, SMILE!" AT 480, 240 SIZE 42 COLOR YELLOW CENTERED
+    DRAW TEXT Caption AT 480, 240 SIZE 42 COLOR YELLOW CENTERED
     SHOW SCREEN
     WAIT 16 MILLISECONDS
 LOOP UNTIL GAME_CLOSED() = TRUE

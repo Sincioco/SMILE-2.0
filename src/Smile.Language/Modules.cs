@@ -121,6 +121,7 @@ public sealed class SmileCompilationDependencyContext
 public enum SmileModuleMemberKind
 {
     Constant,
+    Variable,
     Array,
     Subroutine,
     Function
@@ -199,7 +200,7 @@ internal sealed class ModuleProcessingResult
         {
             foreach (var member in module.Members.Values)
             {
-                if (member.Kind is SmileModuleMemberKind.Constant or SmileModuleMemberKind.Array)
+                if (member.Kind is SmileModuleMemberKind.Constant or SmileModuleMemberKind.Variable or SmileModuleMemberKind.Array)
                 {
                     if (model.Symbols.TryGetValue(member.SemanticName, out var variable))
                     {
@@ -241,6 +242,7 @@ internal sealed class ModuleProcessor
 
     public ModuleProcessingResult Process()
     {
+        ValidateOptionExplicit();
         InventoryModules();
         InventoryImports();
         DiagnoseCycles();
@@ -259,6 +261,49 @@ internal sealed class ModuleProcessor
         var imports = _imports.ToDictionary(item => item.Key,
             item => (IReadOnlyDictionary<string, ModuleSymbol>)item.Value);
         return new ModuleProcessingResult(boundTrees, _modules, imports, _diagnostics.ToArray());
+    }
+
+    private void ValidateOptionExplicit()
+    {
+        foreach (var tree in _trees)
+        {
+            var modules = tree.Root.Statements.OfType<ModuleDeclarationSyntax>().ToArray();
+            var allowed = modules.Length == 1 && ReferenceEquals(tree.Root.Statements.FirstOrDefault(), modules[0])
+                ? modules[0].Statements.FirstOrDefault() as OptionExplicitStatementSyntax
+                : tree.Root.Statements.FirstOrDefault() as OptionExplicitStatementSyntax;
+            foreach (var option in EnumerateOptions(tree.Root.Statements))
+            {
+                if (!ReferenceEquals(option, allowed))
+                    Report(tree.Source, "SML3300", option.Span,
+                        "OPTION EXPLICIT must be the first statement in its physical source and may appear only once.");
+            }
+        }
+    }
+
+    private static IEnumerable<OptionExplicitStatementSyntax> EnumerateOptions(IEnumerable<StatementSyntax> statements)
+    {
+        foreach (var statement in statements)
+        {
+            if (statement is OptionExplicitStatementSyntax option)
+                yield return option;
+            if (statement is ModuleDeclarationSyntax module)
+                foreach (var nested in EnumerateOptions(module.Statements)) yield return nested;
+            if (statement is RoutineDeclarationSyntax routine)
+                foreach (var nested in EnumerateOptions(routine.Statements)) yield return nested;
+            if (statement is IfStatementSyntax conditional)
+            {
+                foreach (var clause in conditional.Clauses)
+                    foreach (var nested in EnumerateOptions(clause.Statements)) yield return nested;
+                foreach (var nested in EnumerateOptions(conditional.ElseStatements)) yield return nested;
+            }
+            if (statement is ForStatementSyntax forStatement)
+                foreach (var nested in EnumerateOptions(forStatement.Statements)) yield return nested;
+            if (statement is DoStatementSyntax doStatement)
+                foreach (var nested in EnumerateOptions(doStatement.Statements)) yield return nested;
+            if (statement is SelectStatementSyntax select)
+                foreach (var clause in select.Cases)
+                    foreach (var nested in EnumerateOptions(clause.Statements)) yield return nested;
+        }
     }
 
     private void InventoryModules()
@@ -306,6 +351,8 @@ internal sealed class ModuleProcessor
         var sawDeclaration = false;
         foreach (var statement in declaration.Statements)
         {
+            if (statement is OptionExplicitStatementSyntax)
+                continue;
             if (statement is ImportStatementSyntax)
             {
                 if (sawDeclaration)
@@ -326,7 +373,8 @@ internal sealed class ModuleProcessor
             var (identifier, kind) = member switch
             {
                 ConstStatementSyntax constant => (constant.Identifier, SmileModuleMemberKind.Constant),
-                DimStatementSyntax array => (array.Identifier, SmileModuleMemberKind.Array),
+                DimStatementSyntax variable => (variable.Identifier,
+                    variable.IsArray ? SmileModuleMemberKind.Array : SmileModuleMemberKind.Variable),
                 RoutineDeclarationSyntax routine when routine.IsFunction => (routine.Identifier, SmileModuleMemberKind.Function),
                 RoutineDeclarationSyntax routine => (routine.Identifier, SmileModuleMemberKind.Subroutine),
                 _ => (null, SmileModuleMemberKind.Constant)
@@ -363,6 +411,8 @@ internal sealed class ModuleProcessor
             var sawNonImport = false;
             foreach (var statement in statements)
             {
+                if (statement is OptionExplicitStatementSyntax)
+                    continue;
                 if (statement is ImportStatementSyntax import)
                 {
                     if (sawNonImport)
@@ -472,17 +522,17 @@ internal sealed class ModuleProcessor
         {
             var declaration = tree.Root.Statements.OfType<ModuleDeclarationSyntax>().First();
             statements = declaration.Statements
-                .Where(statement => statement is not ImportStatementSyntax)
+                .Where(statement => statement is not (ImportStatementSyntax or OptionExplicitStatementSyntax))
                 .Select(statement => LowerModuleMember(statement, tree, module))
                 .Where(statement => statement != null).Cast<StatementSyntax>().ToArray();
         }
         else
         {
-            statements = tree.Root.Statements.Where(statement => statement is not ImportStatementSyntax)
+            statements = tree.Root.Statements.Where(statement => statement is not (ImportStatementSyntax or OptionExplicitStatementSyntax))
                 .Select(statement => LowerStatement(statement, tree, null, null)).ToArray();
         }
         return new SyntaxTree(tree.Source, new CompilationUnitSyntax(statements, tree.Root.EndOfFileToken),
-            tree.Tokens, tree.IsStartup, tree.ProviderIdentity);
+            tree.Tokens, tree.IsStartup, tree.ProviderIdentity, tree.OptionExplicit);
     }
 
     private StatementSyntax? LowerModuleMember(StatementSyntax statement, SyntaxTree tree, ModuleSymbol module)
@@ -505,19 +555,21 @@ internal sealed class ModuleProcessor
                     LowerExpression(constant.Expression, tree, module, locals));
             case DimStatementSyntax dim:
                 return new DimStatementSyntax(dim.DimKeyword, DeclarationToken(dim.Identifier, module), dim.OpenBracket,
-                    dim.Sizes.Select(item => LowerExpression(item, tree, module, locals)).ToArray(), dim.CloseBracket);
+                    dim.Sizes.Select(item => LowerExpression(item, tree, module, locals)).ToArray(), dim.CloseBracket,
+                    dim.AsKeyword, dim.TypeToken);
             case RoutineDeclarationSyntax routine:
             {
                 var routineLocals = CollectRoutineLocals(routine, module);
                 return new RoutineDeclarationSyntax(routine.Keyword, DeclarationToken(routine.Identifier, module),
-                    routine.Parameters, routine.Statements.Select(item => LowerStatement(item, tree, module, routineLocals)).ToArray(),
+                    routine.Parameters, routine.AsKeyword, routine.ReturnTypeToken,
+                    routine.Statements.Select(item => LowerStatement(item, tree, module, routineLocals)).ToArray(),
                     routine.EndKeyword, routine.FinalKeyword);
             }
             case AssignmentStatementSyntax assignment:
             {
                 var identifier = assignment.Target.IsQualified
                     ? QualifiedToken(tree, assignment.Target.Qualifier!, assignment.Target.Identifier,
-                        member => member.Kind is SmileModuleMemberKind.Constant or SmileModuleMemberKind.Array)
+                        member => member.Kind is SmileModuleMemberKind.Constant or SmileModuleMemberKind.Variable or SmileModuleMemberKind.Array)
                     : ReferenceToken(assignment.Target.Identifier, tree, module, locals);
                 var target = new AssignmentTargetSyntax(identifier, assignment.Target.OpenBracket,
                     assignment.Target.Indices.Select(item => LowerExpression(item, tree, module, locals)).ToArray(),
@@ -584,7 +636,8 @@ internal sealed class ModuleProcessor
             case GraphicsStatementSyntax graphics:
                 return new GraphicsStatementSyntax(graphics.Keyword, graphics.Operation,
                     graphics.Arguments.Select(item => LowerExpression(item, tree, module, locals)).ToArray(),
-                    graphics.Text, graphics.Centered, graphics.Span.End);
+                    graphics.TextExpression == null ? null : LowerExpression(graphics.TextExpression, tree, module, locals),
+                    graphics.Centered, graphics.Span.End);
             case MusicStatementSyntax music:
                 return new MusicStatementSyntax(music.Keyword, music.MusicKeyword, music.Operation, music.Path,
                     music.LoopKeyword, music.Volume == null ? null : LowerExpression(music.Volume, tree, module, locals));
@@ -617,7 +670,7 @@ internal sealed class ModuleProcessor
                     call.Arguments.Select(item => LowerExpression(item, tree, module, locals)).ToArray(), call.CloseParenthesis);
             case QualifiedNameExpressionSyntax name:
                 return new NameExpressionSyntax(QualifiedToken(tree, name.Alias, name.Member,
-                    member => member.Kind is SmileModuleMemberKind.Constant or SmileModuleMemberKind.Array));
+                    member => member.Kind is SmileModuleMemberKind.Constant or SmileModuleMemberKind.Variable or SmileModuleMemberKind.Array));
             case QualifiedArrayAccessExpressionSyntax array:
                 return new ArrayAccessExpressionSyntax(QualifiedToken(tree, array.Alias, array.Member,
                         member => member.Kind == SmileModuleMemberKind.Array),
@@ -692,7 +745,7 @@ internal sealed class ModuleProcessor
 
     private static HashSet<string> CollectRoutineLocals(RoutineDeclarationSyntax routine, ModuleSymbol? module)
     {
-        var locals = new HashSet<string>(routine.Parameters.Select(parameter => parameter.Text),
+        var locals = new HashSet<string>(routine.Parameters.Select(parameter => parameter.Identifier.Text),
             StringComparer.OrdinalIgnoreCase);
         Collect(routine.Statements);
         return locals;

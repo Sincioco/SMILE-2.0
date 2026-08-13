@@ -1,1 +1,5 @@
-PRINT "Hello World"
+OPTION EXPLICIT
+
+DIM Message AS TEXT
+Message = "Hello World"
+PRINT Message

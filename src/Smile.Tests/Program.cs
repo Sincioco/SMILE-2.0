@@ -181,7 +181,7 @@ Run("Completion catalog includes visible variables arrays and routines", () =>
     Equal(true, completions.Any(completion => completion.DisplayText == "PlayerX"));
     Equal(true, completions.Any(completion => completion.DisplayText == "Step"));
     Equal(false, completions.Any(completion => completion.DisplayText == "Hidden"));
-    Equal("SUB Move(PlayerX)", completions.Single(completion => completion.DisplayText == "Move").Description);
+    Equal("SUB Move(PlayerX AS NUMBER)", completions.Single(completion => completion.DisplayText == "Move").Description);
 });
 Run("Fixed-step ball speed is identical at 60, 100, 120, and 144 Hz", () =>
 {
@@ -228,7 +228,7 @@ Run("Web emitter lowers console output waits and screen clearing", () =>
     var analysis = Analyze("PRINT TRUE; 42\nWAIT 1 MILLISECONDS\nCLEAR SCREEN\n");
     Equal(false, analysis.HasErrors);
     var javascript = new WebEmitter(analysis).Emit();
-    Equal(true, javascript.Contains("smile.print([smile.booleanText(1), 42]"));
+    Equal(true, javascript.Contains("smile.print([smile.booleanText(true), 42]"));
     Equal(true, javascript.Contains("await smile.wait(1)"));
     Equal(true, javascript.Contains("smile.clearScreen()"));
 });
@@ -1422,6 +1422,147 @@ Run("Identical member names in different modules receive distinct emitter identi
     Equal(2, analysis.SemanticModel.Routines.Values.Count(routine => routine.Name == "Value"));
     Equal(true, assembly.Contains("call smile_", StringComparison.Ordinal));
     Equal(true, new WebEmitter(analysis).Emit().Split(new[] { "async function r_" }, StringSplitOptions.None).Length >= 3);
+});
+
+Run("Phase 3A keywords are shared and case-insensitive", () =>
+{
+    Equal(SyntaxKind.OptionKeyword, SyntaxFacts.GetKeywordKind("option"));
+    Equal(SyntaxKind.ExplicitKeyword, SyntaxFacts.GetKeywordKind("EXPLICIT"));
+    Equal(SyntaxKind.BooleanKeyword, SyntaxFacts.GetKeywordKind("Boolean"));
+    Equal(SyntaxKind.ByRefKeyword, SyntaxFacts.GetKeywordKind("byref"));
+    Equal(SyntaxKind.ByValKeyword, SyntaxFacts.GetKeywordKind("BYVAL"));
+});
+Run("OPTION EXPLICIT is physical-source scoped and enforces declarations", () =>
+{
+    Equal(false, Analyze("OPTION EXPLICIT\nDIM Value AS NUMBER\nValue = 1\n").HasErrors);
+    Equal(true, HasDiagnostic(Analyze("OPTION EXPLICIT\nValue = 1\n"), "SML3303"));
+    Equal(true, HasDiagnostic(Analyze("Value = 1\nOPTION EXPLICIT\n"), "SML3300"));
+    Equal(true, HasDiagnostic(Analyze("OPTION EXPLICIT\nOPTION EXPLICIT\n"), "SML3300"));
+    var scoped = Multi(
+        ("Program.smile", true, "OPTION EXPLICIT\nDIM Value AS NUMBER\nValue = 1\n"),
+        ("Support.smile", false, "SUB Legacy()\nImplicit = 2\nEND SUB\n"));
+    Equal(false, scoped.HasErrors);
+});
+Run("Typed scalars arrays and legacy numeric arrays bind shared types", () =>
+{
+    var analysis = Analyze("OPTION EXPLICIT\nDIM Score AS NUMBER\nDIM Alive AS BOOLEAN\nDIM Name AS TEXT\nDIM Flags[2] AS BOOLEAN\nDIM Names[3] AS TEXT\nDIM Legacy[4]\n");
+    Equal(false, analysis.HasErrors);
+    Equal(SmileType.Number, analysis.SemanticModel.Symbols["Score"].Type);
+    Equal(SmileType.Boolean, analysis.SemanticModel.Symbols["Alive"].Type);
+    Equal(SmileType.Text, analysis.SemanticModel.Symbols["Name"].Type);
+    Equal(SmileType.Boolean, analysis.SemanticModel.Symbols["Flags"].Type);
+    Equal(SmileType.Text, analysis.SemanticModel.Symbols["Names"].Type);
+    Equal(SmileType.Number, analysis.SemanticModel.Symbols["Legacy"].Type);
+    Equal(true, HasDiagnostic(Analyze("DIM MissingType\n"), "SML3302"));
+    Equal(true, HasDiagnostic(Analyze("DIM Value AS STRING\n"), "SML3301"));
+});
+Run("TEXT constants values operators arrays SELECT and DRAW bind", () =>
+{
+    const string source = "OPTION EXPLICIT\nCONST Greeting = \"Hello, \" + \"SMILE\"\nDIM Name AS TEXT\nDIM Copy AS TEXT\nDIM Names[2] AS TEXT\nDIM Same AS BOOLEAN\nName = Greeting\nCopy = Name\nNames[0] = Copy\nSame = Name = Copy\nSELECT CASE Name\nCASE \"Hello, SMILE\"\nPRINT Names[0]\nCASE ELSE\nPRINT \"NO\"\nEND SELECT\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    Equal("Hello, SMILE", analysis.SemanticModel.Symbols["Greeting"].ConstantValue);
+    Equal(SmileType.Text, analysis.SemanticModel.Symbols["Names"].Type);
+    Equal(true, HasDiagnostic(Analyze("DIM TextValue AS TEXT\nTextValue = \"x\" + 1\n"), "SML3308"));
+    Equal(true, HasDiagnostic(Analyze("DIM A AS TEXT\nDIM B AS TEXT\nPRINT A < B\n"), "SML3308"));
+    Equal(false, Analyze("GAME WINDOW \"Text\"\nDIM Caption AS TEXT\nCaption = \"Ready\"\nDRAW TEXT Caption AT 10, 20 SIZE 16 COLOR WHITE\n").HasErrors);
+});
+Run("Typed routines default BYVAL and validate BYREF writable locations", () =>
+{
+    const string source = "OPTION EXPLICIT\nDIM Name AS TEXT\nName = \"Before\"\nCALL Rename(Name, \"After\")\nSUB Rename(BYREF Value AS TEXT, BYVAL Replacement AS TEXT)\nValue = Replacement\nEND SUB\nFUNCTION IsEmpty(Value AS TEXT) AS BOOLEAN\nRETURN Value = \"\"\nEND FUNCTION\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var rename = analysis.SemanticModel.Routines.Values.Single(routine => routine.Name == "Rename");
+    Equal(ParameterPassingMode.ByRef, rename.Parameters[0].ParameterMode);
+    Equal(ParameterPassingMode.ByVal, rename.Parameters[1].ParameterMode);
+    Equal(SmileType.Text, rename.Parameters[0].Type);
+    Equal(SmileType.Boolean, analysis.SemanticModel.Routines.Values.Single(routine => routine.Name == "IsEmpty").ReturnType);
+    Equal(true, HasDiagnostic(Analyze("SUB Set(BYREF Value AS NUMBER)\nValue = 1\nEND SUB\nCALL Set(5)\n"), "SML3305"));
+    Equal(true, HasDiagnostic(Analyze("CONST Fixed = 1\nSUB Set(BYREF Value AS NUMBER)\nValue = 1\nEND SUB\nCALL Set(Fixed)\n"), "SML3305"));
+});
+Run("Legacy numeric parameters accept Boolean values compatibly", () =>
+{
+    const string source = "PRINT Legacy(TRUE)\nFUNCTION Legacy(Value)\nRETURN Value = 1\nEND FUNCTION\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    Equal(false, analysis.SemanticModel.Routines.Values.Single().Parameters[0].HasDeclaredType);
+    Equal(true, new WebEmitter(analysis).Emit().Contains("? 1 : 0", StringComparison.Ordinal));
+    Equal(true, HasDiagnostic(Analyze("PRINT Typed(TRUE)\nFUNCTION Typed(Value AS NUMBER) AS BOOLEAN\nRETURN Value = 1\nEND FUNCTION\n"), "SML3304"));
+});
+Run("Routine calls support sixteen typed parameters", () =>
+{
+    const string parameters = "Value1 AS NUMBER, Value2 AS NUMBER, Value3 AS NUMBER, Value4 AS NUMBER, Value5 AS NUMBER, Value6 AS NUMBER, Value7 AS NUMBER, Value8 AS NUMBER, Value9 AS NUMBER, Value10 AS NUMBER, Value11 AS NUMBER, Value12 AS NUMBER, Value13 AS NUMBER, Value14 AS NUMBER, Value15 AS NUMBER, Value16 AS NUMBER";
+    var analysis = Analyze($"PRINT Sum16(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)\nFUNCTION Sum16({parameters}) AS NUMBER\nRETURN Value1 + Value2 + Value3 + Value4 + Value5 + Value6 + Value7 + Value8 + Value9 + Value10 + Value11 + Value12 + Value13 + Value14 + Value15 + Value16\nEND FUNCTION\n");
+    Equal(false, analysis.HasErrors);
+    Equal(16, analysis.SemanticModel.Routines.Values.Single().Parameters.Count);
+    Equal(true, new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit().Contains("[rbp+136]", StringComparison.Ordinal));
+});
+Run("Routine-local DIM shadows globals and diagnoses duplicate and early use", () =>
+{
+    var shadow = Analyze("DIM Value AS NUMBER\nSUB Work()\nDIM Value AS TEXT\nValue = \"local\"\nPRINT Value\nEND SUB\nValue = 1\nCALL Work()\n");
+    Equal(false, shadow.HasErrors);
+    Equal(SmileType.Text, shadow.SemanticModel.Routines.Values.Single().LocalSymbols["Value"].Type);
+    Equal(true, HasDiagnostic(Analyze("SUB Work()\nDIM Value AS NUMBER\nDIM Value AS TEXT\nEND SUB\n"), "SML3306"));
+    Equal(true, HasDiagnostic(Analyze("SUB Work()\nPRINT Value\nDIM Value AS NUMBER\nEND SUB\n"), "SML3307"));
+});
+Run("Legacy function inference checks all return types", () =>
+{
+    Equal(true, HasDiagnostic(Analyze("PRINT Mixed(TRUE)\nFUNCTION Mixed(Flag AS BOOLEAN)\nIF Flag THEN\nRETURN \"text\"\nELSE\nRETURN 1\nEND IF\nEND FUNCTION\n"), "SML3309"));
+});
+Run("Web emitter uses JavaScript TEXT values and BYREF references", () =>
+{
+    var analysis = Analyze("DIM Name AS TEXT\nName = \"A\"\nCALL Replace(Name, \"B\")\nPRINT Name\nSUB Replace(BYREF Value AS TEXT, NewValue AS TEXT)\nValue = NewValue\nEND SUB\n");
+    Equal(false, analysis.HasErrors);
+    var javascript = new WebEmitter(analysis).Emit();
+    Equal(true, javascript.Contains("smile.ref(() =>", StringComparison.Ordinal));
+    Equal(true, javascript.Contains(".set(", StringComparison.Ordinal));
+    Equal(true, javascript.Contains("\"A\"", StringComparison.Ordinal));
+});
+Run("FormatVersion 2 packages contain deterministic typed public API metadata", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmilePhase3APackageTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var projectPath = Path.GetFullPath("libraries/Smile.Text.Extras/Smile.Text.Extras.smilelibproj");
+        var compilation = SmileProjectCompilation.Load(projectPath, Path.Combine(directory, "cache"));
+        var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library,
+            compilation.DependencyContext);
+        Equal(false, analysis.HasErrors);
+        var first = Path.Combine(directory, "first.smilelib");
+        var second = Path.Combine(directory, "second.smilelib");
+        SmileLibraryPackage.Write(first, compilation.Graph.Root, analysis);
+        SmileLibraryPackage.Write(second, compilation.Graph.Root, analysis);
+        Equal(true, File.ReadAllBytes(first).SequenceEqual(File.ReadAllBytes(second)));
+        using (var archive = System.IO.Compression.ZipFile.OpenRead(first))
+        {
+            using var manifestReader = new StreamReader(archive.GetEntry("manifest.json")!.Open());
+            Equal(true, manifestReader.ReadToEnd().Contains("\"formatVersion\": 2", StringComparison.Ordinal));
+            using var apiReader = new StreamReader(archive.GetEntry("api/public-symbols.json")!.Open());
+            var api = apiReader.ReadToEnd();
+            Equal(true, api.Contains("\"type\": \"Text\"", StringComparison.Ordinal));
+            Equal(true, api.Contains("\"mode\": \"ByRef\"", StringComparison.Ordinal));
+            Equal(true, api.Contains("\"mode\": \"ByVal\"", StringComparison.Ordinal));
+            Equal(true, api.Contains("\"returnType\": \"Text\"", StringComparison.Ordinal));
+            Equal(false, api.Contains("Hidden", StringComparison.Ordinal));
+        }
+        RewriteManifest(first, manifest => manifest.Replace("\"formatVersion\": 2", "\"formatVersion\": 1",
+            StringComparison.Ordinal));
+        ThrowsContains(() => SmileLibraryPackage.ReadIdentity(first), "rebuild the library");
+    }
+    finally { Directory.Delete(directory, true); }
+});
+Run("Typed completion descriptions include parameter modes and returns", () =>
+{
+    const string source = "SUB Rename(BYREF Name AS TEXT, NewName AS TEXT)\nName = NewName\nEND SUB\nFUNCTION Join(First AS TEXT, Second AS TEXT) AS TEXT\nRETURN First + Second\nEND FUNCTION\nPRINT Ren";
+    var completions = SmileCompletionService.GetCompletions(Analyze(source), source.Length);
+    Equal("SUB Rename(BYREF Name AS TEXT, NewName AS TEXT)",
+        completions.Single(item => item.DisplayText == "Rename").Description);
+    Equal("FUNCTION Join(First AS TEXT, Second AS TEXT) AS TEXT",
+        completions.Single(item => item.DisplayText == "Join").Description);
+    const string typedDeclaration = "DIM Name AS ";
+    Equal("BOOLEAN|NUMBER|TEXT", string.Join("|", SmileCompletionService
+        .GetCompletions(Analyze(typedDeclaration), typedDeclaration.Length).Select(item => item.DisplayText)));
 });
 
 if (failures.Count != 0)

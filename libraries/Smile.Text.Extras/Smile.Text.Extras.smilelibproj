@@ -1,0 +1,11 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Library</ProjectKind>
+    <LibraryName>Smile.Text.Extras</LibraryName>
+    <Version>1.0.0</Version>
+    <OutputName>Smile.Text.Extras</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="TextExtras.smile" />
+  </ItemGroup>
+</SmileProject>

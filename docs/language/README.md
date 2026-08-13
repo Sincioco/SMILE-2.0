@@ -15,7 +15,40 @@ Library compilation requires every source to declare a module. Application proje
 
 SMILE evolves only when current syntax cannot express a requirement clearly. New general-purpose features prefer readable, established BASIC wording; the smallest beginner-friendly C#-inspired concept is used only when BASIC has no suitable precedent. The language avoids aliases, multiple spellings, clever punctuation, and game-specific statements. Syntax, diagnostics, examples, and documentation change proportionally through the shared authority.
 
-SMILE is case-insensitive and line-oriented. An apostrophe starts a comment. Values are signed 64-bit numbers, booleans, or text literals; runtime game state is normally stored in numeric variables and fixed arrays.
+SMILE is case-insensitive and line-oriented. An apostrophe starts a comment. Phase 3A values are signed 64-bit `NUMBER`, `BOOLEAN`, and mutable UTF-8 `TEXT` values.
+
+## Explicit declarations and built-in types
+
+`OPTION EXPLICIT` disables implicit variables for one physical source. In an application or support source it must be the first non-comment statement. In a module it follows `MODULE` and precedes imports and declarations. Sources without it retain legacy implicit variables.
+
+```smile
+OPTION EXPLICIT
+
+DIM Score AS NUMBER
+DIM IsAlive AS BOOLEAN
+DIM Caption AS TEXT
+DIM Names[10] AS TEXT
+DIM Flags[10] AS BOOLEAN
+DIM LegacyGrid[20, 15]
+```
+
+Scalar `DIM` requires `AS NUMBER`, `AS BOOLEAN`, or `AS TEXT`. Arrays may use those types; an untyped legacy array remains a `NUMBER` array. Defaults are `0`, `FALSE`, and `""`. `TEXT` supports value assignment, `+` concatenation, `=`/`<>` ordinal equality, constants, arrays, routine parameters/returns, `PRINT`, text `SELECT CASE`, and any `TEXT` expression in `DRAW TEXT`. There are no implicit conversions between the three built-in types.
+
+Routine parameters accept `[BYVAL | BYREF] Name [AS Type]`. Missing mode means `BYVAL`; missing type preserves the legacy numeric calling convention, including converting a `BOOLEAN` argument to `0` or `1` for old untyped `BYVAL` routines. Explicitly typed parameters still require an exact type. A function can declare `AS NUMBER`, `AS BOOLEAN`, or `AS TEXT`; legacy omitted return types are inferred consistently from every value return. `BYREF` requires an exact-type writable scalar, array element, or writable parameter. Routine-local `DIM` declarations are visible from their declaration to routine end and may shadow a global.
+
+```smile
+SUB Rename(BYREF Name AS TEXT, NewName AS TEXT)
+    Name = NewName
+END SUB
+
+FUNCTION Join(Left AS TEXT, Right AS TEXT) AS TEXT
+    DIM Result AS TEXT
+    Result = Left + Right
+    RETURN Result
+END FUNCTION
+```
+
+Native and Web calls have no four-parameter language restriction; the regression matrix covers 0, 1, 4, 5, 8, and 16 parameters.
 
 ## Multi-file programs
 
@@ -63,7 +96,7 @@ SELECT CASE PointsFor(0)
 END SELECT
 ```
 
-Implemented control flow comprises multiline `IF`/`ELSE IF`/`ELSE`, `FOR ... TO`, `FOR ... DOWN TO`, `DO ... LOOP`, `DO ... LOOP UNTIL`, `EXIT FOR`, `EXIT DO`, and `SELECT CASE`. Procedures and functions use `SUB`, `FUNCTION`, `CALL`, and `RETURN`, with at most four scalar parameters.
+Implemented control flow comprises multiline `IF`/`ELSE IF`/`ELSE`, `FOR ... TO`, `FOR ... DOWN TO`, `DO ... LOOP`, `DO ... LOOP UNTIL`, `EXIT FOR`, `EXIT DO`, and `SELECT CASE`. Procedures and functions use `SUB`, `FUNCTION`, `CALL`, and `RETURN`, including typed `BYVAL`/`BYREF` parameters and typed returns.
 
 The expression surface includes `+`, `-`, `*`, integer `/`, `MOD`, comparisons, parentheses, unary `-` and `NOT`, and boolean `AND`/`OR`. Built-in functions are `TIMER()`, `RGB(r, g, b)`, `ABS(value)`, `MIN(a, b)`, `MAX(a, b)`, `GAME_CLOSED()`, and `KEY_HELD(key)`.
 
@@ -98,7 +131,23 @@ STOP SOUND
 END PROGRAM
 ```
 
-Drawing statements support filled or outlined rectangles, rounded rectangles, circles, and arbitrary four-corner quadrilaterals, plus outlined arcs, lines, literal text, and numbers. Quadrilaterals take four perimeter-ordered `(X, Y)` points followed by a color. `SHOW SCREEN` presents the logical canvas. `PLAY SOUND` starts an asynchronous WAV effect and missing files are safe. `LOAD` and `SAVE` persist integer values in storage isolated by executable name.
+Drawing statements support filled or outlined rectangles, rounded rectangles, circles, and arbitrary four-corner quadrilaterals, plus outlined arcs, lines, text expressions, and numbers. Quadrilaterals take four perimeter-ordered `(X, Y)` points followed by a color. `SHOW SCREEN` presents the logical canvas. `PLAY SOUND` starts an asynchronous WAV effect and missing files are safe. `LOAD` and `SAVE` persist integer values in storage isolated by executable name.
+
+## Phase 3A diagnostics
+
+| Code | Meaning |
+|---|---|
+| `SML3300` | `OPTION EXPLICIT` is late or duplicated. |
+| `SML3301` | A declaration names an unknown type. |
+| `SML3302` | A scalar `DIM` omits `AS Type`. |
+| `SML3303` | `OPTION EXPLICIT` requires a declaration. |
+| `SML3304` | Assignment, argument, case, or return types do not match. |
+| `SML3305` | A `BYREF` argument is not an exact-type writable location. |
+| `SML3306` | A routine duplicates a parameter or local. |
+| `SML3307` | A local is used before its `DIM`. |
+| `SML3308` | `TEXT` is used with an unsupported or mixed-type operator. |
+| `SML3309` | A legacy function has inconsistent inferred return types. |
+| `SML3310` | A typed declaration or return-type context is unsupported. |
 
 ### Arc drawing
 
