@@ -14,6 +14,7 @@ internal sealed class WebEmitter
     private readonly Dictionary<VariableSymbol, string> _variableNames = new();
     private readonly Dictionary<RoutineSymbol, string> _routineNames = new();
     private readonly Dictionary<RecordTypeSymbol, string> _recordNames = new();
+    private readonly Dictionary<RecordFieldSymbol, string> _fieldNames = new();
     private readonly Stack<string> _forExitLabels = new();
     private readonly Stack<string> _doExitLabels = new();
     private SourceText _currentSource;
@@ -76,7 +77,12 @@ internal sealed class WebEmitter
 
         id = 0;
         foreach (var type in OrderedRecordTypes())
-            _recordNames[type] = $"record_{id++}_{Sanitize(type.RuntimeIdentity)}";
+        {
+            var typeId = id++;
+            _recordNames[type] = $"record_{typeId}_{Sanitize(type.RuntimeIdentity)}";
+            foreach (var field in type.Fields.OrderBy(field => field.Ordinal))
+                _fieldNames[field] = $"__smile_r{typeId}_f{field.Ordinal}";
+        }
     }
 
     private void EmitRecordHelpers()
@@ -85,9 +91,9 @@ internal sealed class WebEmitter
         {
             var name = _recordNames[type];
             var defaults = string.Join(", ", type.Fields.Select(field =>
-                $"{Json(field.Name)}: {DefaultValue(field.Type)}"));
+                $"{Json(FieldKey(field))}: {DefaultValue(field.Type)}"));
             var copies = string.Join(", ", type.Fields.Select(field =>
-                $"{Json(field.Name)}: {CloneValue(field.Type, $"value[{Json(field.Name)}]")}"));
+                $"{Json(FieldKey(field))}: {CloneValue(field.Type, $"value[{Json(FieldKey(field))}]")}"));
             Line($"function {name}_default() {{ return {{ {defaults} }}; }}");
             Line($"function {name}_clone(value) {{ return {{ {copies} }}; }}");
         }
@@ -464,7 +470,7 @@ internal sealed class WebEmitter
             case FieldAccessExpressionSyntax field:
                 if (!_analysis.SemanticModel.TryGetField(field, out var fieldSymbol))
                     throw UnsupportedExpression(field, "unbound record field");
-                return $"({Expression(field.Receiver)})[{Json(fieldSymbol.Name)}]";
+                return $"({Expression(field.Receiver)})[{Json(FieldKey(fieldSymbol))}]";
             case ParenthesizedExpressionSyntax parenthesized:
                 return $"({Expression(parenthesized.Expression)})";
             case UnaryExpressionSyntax unary:
@@ -583,7 +589,7 @@ internal sealed class WebEmitter
             if (!_analysis.SemanticModel.TryGetField(field, out var fieldSymbol))
                 return "smile.invalidRef()";
             var receiver = Expression(field.Receiver);
-            var key = Json(fieldSymbol.Name);
+            var key = Json(FieldKey(fieldSymbol));
             return $"(() => {{ const target = {receiver}; return smile.ref(() => target[{key}], value => {{ target[{key}] = value; }}); }})()";
         }
         return "smile.invalidRef()";
@@ -627,7 +633,7 @@ internal sealed class WebEmitter
         {
             var record = (RecordTypeSymbol)type;
             record.TryGetField(token.Text, out var field);
-            location = $"({location})[{Json(field.Name)}]";
+            location = $"({location})[{Json(FieldKey(field))}]";
             type = field.Type;
         }
         return location;
@@ -669,6 +675,10 @@ internal sealed class WebEmitter
 
     private IOrderedEnumerable<RecordTypeSymbol> OrderedRecordTypes() =>
         _analysis.SemanticModel.Types.Values.OrderBy(item => item.SourceOrdinal).ThenBy(item => item.DeclarationSpan.Start);
+
+    private string FieldKey(RecordFieldSymbol field) => _fieldNames.TryGetValue(field, out var key)
+        ? key
+        : throw new InvalidOperationException($"Web record field '{field.Name}' does not have a bound runtime key.");
 
     private string Temporary(string purpose) => $"t_{_temporaryId++}_{purpose}";
 

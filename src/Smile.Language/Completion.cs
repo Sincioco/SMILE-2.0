@@ -53,29 +53,37 @@ public static class SmileCompletionService
         if (syntaxTree == null)
             throw new ArgumentNullException(nameof(syntaxTree));
 
+        var currentModule = analysis.SemanticModel.Modules.Values.FirstOrDefault(module =>
+            module.SyntaxTrees.Any(tree => ReferenceEquals(tree.Source, syntaxTree.Source)));
         var afterAs = IsAfterAs(syntaxTree.Source.Text, position);
+
+        var fieldCompletions = TryGetFieldCompletions(analysis, syntaxTree, position, currentModule);
+        if (fieldCompletions != null)
+            return fieldCompletions;
+
         var qualifiedAlias = AliasBeforeDot(syntaxTree.Source.Text, position);
         var qualifiedTypeContext = qualifiedAlias != null && IsQualifiedTypeContext(syntaxTree.Source.Text, position, qualifiedAlias);
         if (qualifiedAlias != null && analysis.SemanticModel.GetImports(syntaxTree.Source)
             .TryGetValue(qualifiedAlias, out var importedModule))
         {
-            return importedModule.PublicMembers.Where(member => !(afterAs || qualifiedTypeContext) || member.Kind == SmileModuleMemberKind.Type)
+            var typeContext = afterAs || qualifiedTypeContext;
+            return importedModule.PublicMembers.Where(member => typeContext
+                    ? member.Kind == SmileModuleMemberKind.Type
+                    : member.Kind != SmileModuleMemberKind.Type)
                 .OrderBy(member => member.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(MemberCompletion).ToArray();
+                .Select(member => MemberCompletion(member, analysis.DependencyContext)).ToArray();
         }
-
-        var fieldCompletions = TryGetFieldCompletions(analysis, syntaxTree, position);
-        if (fieldCompletions != null)
-            return fieldCompletions;
 
         if (afterAs)
         {
             var types = new Dictionary<string, SmileCompletion>(StringComparer.OrdinalIgnoreCase);
             foreach (var name in new[] { "BOOLEAN", "NUMBER", "TEXT" })
                 types[name] = new SmileCompletion(name, $"SMILE built-in type {name}", SmileCompletionKind.Type);
-            foreach (var type in analysis.SemanticModel.Types.Values.Where(type => type.ModuleName == null ||
-                         type.Source != null && ReferenceEquals(type.Source, syntaxTree.Source)))
-                types[type.Name] = TypeCompletion(type);
+            var availableTypes = currentModule == null
+                ? analysis.SemanticModel.Types.Values.Where(type => type.ModuleName == null)
+                : currentModule.Types.Values.Where(member => member.Type != null).Select(member => member.Type!);
+            foreach (var type in availableTypes)
+                types[type.Name] = TypeCompletion(type, analysis.DependencyContext);
             foreach (var import in analysis.SemanticModel.GetImports(syntaxTree.Source))
                 types[import.Key] = new SmileCompletion(import.Key,
                     $"Import alias for record types in module {import.Value.Name}", SmileCompletionKind.Module);
@@ -86,14 +94,12 @@ public static class SmileCompletionService
         foreach (var completion in LanguageCompletions)
             completions[completion.DisplayText] = completion;
 
-        var currentModule = analysis.SemanticModel.Modules.Values.FirstOrDefault(module =>
-            module.SyntaxTrees.Any(tree => ReferenceEquals(tree.Source, syntaxTree.Source)));
         foreach (var symbol in analysis.SemanticModel.Symbols.Values)
         {
             if ((symbol.ModuleName == null || string.Equals(symbol.ModuleName, currentModule?.Name,
                     StringComparison.OrdinalIgnoreCase)) &&
                 !IsDeclarationBeingTyped(symbol, syntaxTree.Source, position))
-                completions[symbol.Name] = VariableCompletion(symbol);
+                completions[symbol.Name] = VariableCompletion(symbol, analysis.DependencyContext);
         }
 
         var currentRoutine = analysis.SemanticModel.Routines.Values.FirstOrDefault(routine =>
@@ -105,7 +111,7 @@ public static class SmileCompletionService
             {
                 if ((symbol.IsParameter || symbol.DeclarationSpan.Start <= position) &&
                     !IsDeclarationBeingTyped(symbol, syntaxTree.Source, position))
-                    completions[symbol.Name] = VariableCompletion(symbol);
+                    completions[symbol.Name] = VariableCompletion(symbol, analysis.DependencyContext);
             }
         }
 
@@ -125,12 +131,8 @@ public static class SmileCompletionService
 
         foreach (var import in analysis.SemanticModel.GetImports(syntaxTree.Source))
             completions[import.Key] = new SmileCompletion(import.Key,
-                $"Import alias for module {import.Value.Name} from {import.Value.ProviderIdentity}", SmileCompletionKind.Module);
-
-        foreach (var type in analysis.SemanticModel.Types.Values.Where(type =>
-                     type.ModuleName == null || string.Equals(type.ModuleName, currentModule?.Name,
-                         StringComparison.OrdinalIgnoreCase)))
-            completions[type.Name] = TypeCompletion(type);
+                $"Import alias for module {import.Value.Name} from " +
+                DescribeProvider(import.Value.ProviderIdentity, analysis.DependencyContext), SmileCompletionKind.Module);
 
         if (IsAfterImport(syntaxTree.Source.Text, position))
         {
@@ -139,7 +141,8 @@ public static class SmileCompletionService
                          analysis.DependencyContext.CanAccess(syntaxTree.ProviderIdentity,
                              module.ProviderIdentity)))
                 completions[module.Name] = new SmileCompletion(module.Name,
-                    $"SMILE module from {module.ProviderIdentity}", SmileCompletionKind.Module);
+                    $"SMILE module from {DescribeProvider(module.ProviderIdentity, analysis.DependencyContext)}",
+                    SmileCompletionKind.Module);
             completions["AS"] = new SmileCompletion("AS", "Required import alias keyword", SmileCompletionKind.Keyword);
         }
 
@@ -169,19 +172,24 @@ public static class SmileCompletionService
         return completions.OrderBy(completion => completion.DisplayText, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
-    private static SmileCompletion VariableCompletion(VariableSymbol symbol)
+    private static SmileCompletion VariableCompletion(VariableSymbol symbol,
+        SmileCompilationDependencyContext dependencyContext)
     {
         var type = symbol.Type.ToString().ToUpperInvariant();
         if (symbol.IsArray)
         {
             var dimensions = string.Join(", ", symbol.ArrayDimensions);
-            return new SmileCompletion(symbol.Name, DescribeProvider(symbol, $"{type} array {symbol.Name}[{dimensions}]"), SmileCompletionKind.Array);
+            return new SmileCompletion(symbol.Name,
+                DescribeProvider(symbol, $"{type} array {symbol.Name}[{dimensions}]", dependencyContext),
+                SmileCompletionKind.Array);
         }
         var noun = symbol.IsConstant ? "constant" : "variable";
-        return new SmileCompletion(symbol.Name, DescribeProvider(symbol, $"{type} {noun} {symbol.Name}"), SmileCompletionKind.Variable);
+        return new SmileCompletion(symbol.Name,
+            DescribeProvider(symbol, $"{type} {noun} {symbol.Name}", dependencyContext), SmileCompletionKind.Variable);
     }
 
-    private static SmileCompletion MemberCompletion(SmileModuleMember member)
+    private static SmileCompletion MemberCompletion(SmileModuleMember member,
+        SmileCompilationDependencyContext dependencyContext)
     {
         if (member.Routine != null)
         {
@@ -190,48 +198,43 @@ public static class SmileCompletionService
             var returnType = member.Routine.IsFunction
                 ? $" AS {member.Routine.ReturnType.ToString().ToUpperInvariant()}" : string.Empty;
             return new SmileCompletion(member.Name,
-                $"{keyword} {member.Name}({parameters}){returnType} from module {member.Routine.ModuleName} ({member.Routine.ProviderIdentity})",
+                $"{keyword} {member.Name}({parameters}){returnType} from module {member.Routine.ModuleName} " +
+                $"({DescribeProvider(member.Routine.ProviderIdentity, dependencyContext)})",
                 member.Routine.IsFunction ? SmileCompletionKind.Function : SmileCompletionKind.Subroutine);
         }
         if (member.Variable != null)
-            return VariableCompletion(member.Variable);
+            return VariableCompletion(member.Variable, dependencyContext);
         if (member.Type != null)
-            return TypeCompletion(member.Type);
+            return TypeCompletion(member.Type, dependencyContext);
         return new SmileCompletion(member.Name, $"Public module member {member.Name}", SmileCompletionKind.Variable);
     }
 
-    private static SmileCompletion TypeCompletion(RecordTypeSymbol type)
+    private static SmileCompletion TypeCompletion(RecordTypeSymbol type,
+        SmileCompilationDependencyContext dependencyContext)
     {
         var fields = string.Join(", ", type.Fields.Select(field => $"{field.Name} AS {field.Type.Name}"));
         var provider = type.ModuleName == null ? string.Empty :
-            $" from module {type.ModuleName} ({type.ProviderIdentity})";
+            $" from module {type.ModuleName} ({DescribeProvider(type.ProviderIdentity, dependencyContext)})";
         return new SmileCompletion(type.Name, $"TYPE {type.Name} ({fields}){provider}", SmileCompletionKind.Type);
     }
 
     private static IReadOnlyList<SmileCompletion>? TryGetFieldCompletions(SmileAnalysisResult analysis,
-        SyntaxTree syntaxTree, int position)
+        SyntaxTree syntaxTree, int position, ModuleSymbol? currentModule)
     {
-        var end = Math.Min(position, syntaxTree.Source.Text.Length);
-        var start = end;
-        while (start > 0 && syntaxTree.Source.Text[start - 1] is not ('\r' or '\n' or ' ' or '\t' or '=' or '(' or ','))
-            start--;
-        var suffix = syntaxTree.Source.Text.Substring(start, end - start).Trim();
-        if (!suffix.EndsWith(".", StringComparison.Ordinal))
+        var tokens = syntaxTree.Tokens.Where(token => token.Kind is not (SyntaxKind.EndOfFileToken or SyntaxKind.NewLineToken) &&
+                                                      token.Span.End <= position).ToArray();
+        if (tokens.Length == 0 || tokens[tokens.Length - 1].Kind != SyntaxKind.DotToken)
             return null;
-        suffix = suffix.Substring(0, suffix.Length - 1);
-        var parts = suffix.Split('.');
-        if (parts.Length == 0)
+        var parts = ReceiverParts(tokens, tokens.Length - 1);
+        if (parts.Count == 0)
             return null;
         var root = parts[0];
-        var bracket = root.IndexOf('[');
-        if (bracket >= 0)
-            root = root.Substring(0, bracket);
         var routine = analysis.SemanticModel.Routines.Values.FirstOrDefault(candidate =>
             ReferenceEquals(candidate.Source, syntaxTree.Source) && candidate.Declaration.Span.Start <= position &&
             position <= candidate.Declaration.Span.End);
         SmileType type;
         var firstFieldIndex = 1;
-        if (analysis.SemanticModel.GetImports(syntaxTree.Source).TryGetValue(root, out var imported) && parts.Length >= 2 &&
+        if (analysis.SemanticModel.GetImports(syntaxTree.Source).TryGetValue(root, out var imported) && parts.Count >= 2 &&
             imported.Members.TryGetValue(parts[1], out var importedMember) &&
             importedMember.Visibility == ModuleVisibility.Public && importedMember.Variable != null)
         {
@@ -241,10 +244,15 @@ public static class SmileCompletionService
         else
         {
             if (!analysis.SemanticModel.TryResolveVariable(root, routine?.Name, out var symbol))
-                return null;
+            {
+                if (currentModule?.Members.TryGetValue(root, out var moduleMember) != true ||
+                    moduleMember.Variable == null)
+                    return null;
+                symbol = moduleMember.Variable;
+            }
             type = symbol.Type;
         }
-        for (var index = firstFieldIndex; index < parts.Length; index++)
+        for (var index = firstFieldIndex; index < parts.Count; index++)
         {
             if (type is not RecordTypeSymbol record || !record.TryGetField(parts[index], out var field))
                 return Array.Empty<SmileCompletion>();
@@ -253,12 +261,53 @@ public static class SmileCompletionService
         if (type is not RecordTypeSymbol target)
             return Array.Empty<SmileCompletion>();
         return target.Fields.OrderBy(field => field.Ordinal).Select(field => new SmileCompletion(field.Name,
-            $"{field.Name} AS {field.Type.Name} field of TYPE {target.Name}", SmileCompletionKind.Field)).ToArray();
+            $"{field.Name} AS {field.Type.Name} field of TYPE {target.Name}" +
+            (target.ModuleName == null ? string.Empty :
+                $" from module {target.ModuleName} ({DescribeProvider(target.ProviderIdentity, analysis.DependencyContext)})"),
+            SmileCompletionKind.Field)).ToArray();
     }
 
-    private static string DescribeProvider(VariableSymbol symbol, string description) => symbol.ModuleName == null
+    private static IReadOnlyList<string> ReceiverParts(IReadOnlyList<SyntaxToken> tokens, int finalDotIndex)
+    {
+        var parts = new List<string>();
+        var index = finalDotIndex - 1;
+        while (index >= 0)
+        {
+            if (tokens[index].Kind == SyntaxKind.CloseBracketToken)
+            {
+                var depth = 1;
+                index--;
+                while (index >= 0 && depth != 0)
+                {
+                    if (tokens[index].Kind == SyntaxKind.CloseBracketToken) depth++;
+                    else if (tokens[index].Kind == SyntaxKind.OpenBracketToken) depth--;
+                    index--;
+                }
+                if (depth != 0)
+                    return Array.Empty<string>();
+            }
+            if (index < 0 || tokens[index].Kind is not (SyntaxKind.IdentifierToken or SyntaxKind.KeyKeyword))
+                return Array.Empty<string>();
+            parts.Add(tokens[index--].Text);
+            if (index < 0 || tokens[index].Kind != SyntaxKind.DotToken)
+                break;
+            index--;
+        }
+        parts.Reverse();
+        return parts;
+    }
+
+    private static string DescribeProvider(VariableSymbol symbol, string description,
+        SmileCompilationDependencyContext dependencyContext) => symbol.ModuleName == null
         ? description
-        : $"{description} from module {symbol.ModuleName} ({symbol.ProviderIdentity})";
+        : $"{description} from module {symbol.ModuleName} ({DescribeProvider(symbol.ProviderIdentity, dependencyContext)})";
+
+    private static string DescribeProvider(string providerIdentity,
+        SmileCompilationDependencyContext dependencyContext) =>
+        dependencyContext.TryGetProviderDescriptor(providerIdentity, out var descriptor) &&
+        !string.IsNullOrWhiteSpace(descriptor.LogicalIdentity)
+            ? descriptor.LogicalIdentity
+            : providerIdentity;
 
     private static string DescribeParameter(VariableSymbol parameter)
     {

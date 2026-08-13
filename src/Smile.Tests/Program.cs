@@ -1688,6 +1688,180 @@ Run("Owned TEXT selector cleanup precedes RETURN and loop exits", () =>
     }
 });
 
+Run("Web record fields use deterministic bound keys instead of source properties", () =>
+{
+    var analysis = Analyze(File.ReadAllText("examples/Phase3B1Hardening/WebFieldKeys.smile"));
+    Equal(false, analysis.HasErrors);
+    var web = new WebEmitter(analysis).Emit();
+    foreach (var sourceName in new[] { "__proto__", "constructor", "prototype", "toString", "valueOf" })
+        Equal(false, web.Contains("[\"" + sourceName + "\"]", StringComparison.Ordinal));
+    foreach (var field in analysis.SemanticModel.Types.Values.SelectMany(type => type.Fields))
+        Equal(true, web.Contains("__smile_r", StringComparison.Ordinal));
+    Equal(true, web.Contains("__smile_r0_f0", StringComparison.Ordinal));
+});
+
+Run("Module record types cannot capture project-global ambient types", () =>
+{
+    const string module = "MODULE Example.Isolated\nPUBLIC TYPE Wrapper\nValue AS ConsumerData\nEND TYPE\nPUBLIC DIM Shared AS ConsumerData\nPUBLIC FUNCTION Copy(Value AS ConsumerData) AS ConsumerData\nRETURN Value\nEND FUNCTION\nEND MODULE\n";
+    var withGlobal = Multi(
+        ("Program.smile", true, "TYPE ConsumerData\nValue AS NUMBER\nEND TYPE\nPRINT 1\n"),
+        ("Library.smile", false, module));
+    var withoutGlobal = Multi(
+        ("Program.smile", true, "PRINT 1\n"),
+        ("Library.smile", false, module));
+    var withDiagnostics = withGlobal.Diagnostics.Where(item => item.Code == "SML3401")
+        .Select(item => item.Message).ToArray();
+    var withoutDiagnostics = withoutGlobal.Diagnostics.Where(item => item.Code == "SML3401")
+        .Select(item => item.Message).ToArray();
+    Equal(4, withDiagnostics.Length);
+    Equal(string.Join("\n", withDiagnostics), string.Join("\n", withoutDiagnostics));
+    Equal(true, withDiagnostics.All(message => message.Contains("Alias.Type", StringComparison.Ordinal)));
+});
+
+Run("Same-module record types bind unqualified across physical files", () =>
+{
+    var analysis = SmileLanguage.Analyze(new[]
+    {
+        new SmileSourceDocument("MODULE Example.Shared\nPUBLIC TYPE Component\nValue AS NUMBER\nEND TYPE\nPUBLIC TYPE Container\nItem AS Component\nEND TYPE\nEND MODULE\n", "Types.smile"),
+        new SmileSourceDocument("MODULE Example.Shared\nPUBLIC DIM Values[2] AS Container\nPUBLIC FUNCTION Copy(Value AS Container) AS Container\nDIM Local AS Container\nLocal = Value\nRETURN Local\nEND FUNCTION\nEND MODULE\n", "Factories.smile")
+    }, SmileCompilationKind.Library);
+    Equal(false, analysis.HasErrors);
+    Equal("Container", analysis.SemanticModel.Modules["Example.Shared"].Members["Values"].Variable!.Type.Name);
+});
+
+Run("Record completion separates type value alias and indexed-field contexts", () =>
+{
+    const string moduleTypes = "MODULE Example.Models\nPUBLIC TYPE Position\nX AS NUMBER\nY AS NUMBER\nEND TYPE\nPUBLIC TYPE Actor\nName AS TEXT\nPosition AS Position\nEND TYPE\nPUBLIC DIM DefaultActor AS Actor\nPUBLIC FUNCTION Create() AS Actor\nDIM Value AS Actor\nRETURN Value\nEND FUNCTION\nEND MODULE\n";
+
+    const string crossFile = "MODULE Example.Models\nPUBLIC DIM Value AS \nEND MODULE\n";
+    var crossAnalysis = Multi(
+        ("Program.smile", true, "TYPE ConsumerOnly\nValue AS NUMBER\nEND TYPE\nPRINT 1\n"),
+        ("Types.smile", false, moduleTypes), ("Use.smile", false, crossFile));
+    var crossTypes = SmileCompletionService.GetCompletions(crossAnalysis, "Use.smile",
+        crossFile.IndexOf("\nEND MODULE", StringComparison.Ordinal));
+    Equal(true, crossTypes.Any(item => item.DisplayText == "Actor" && item.Kind == SmileCompletionKind.Type));
+    Equal(false, crossTypes.Any(item => item.DisplayText == "ConsumerOnly"));
+
+    const string valueProgram = "IMPORT Example.Models AS Models\nPRINT Models.";
+    var valueAnalysis = Multi(("Program.smile", true, valueProgram), ("Models.smile", false, moduleTypes));
+    var aliasValues = SmileCompletionService.GetCompletions(valueAnalysis, valueProgram.Length);
+    Equal(true, aliasValues.Any(item => item.DisplayText == "DefaultActor"));
+    Equal(true, aliasValues.Any(item => item.DisplayText == "Create"));
+    Equal(false, aliasValues.Any(item => item.Kind == SmileCompletionKind.Type));
+
+    const string typeProgram = "IMPORT Example.Models AS Models\nDIM Value AS Models.";
+    var typeAnalysis = Multi(("Program.smile", true, typeProgram), ("Models.smile", false, moduleTypes));
+    var aliasTypes = SmileCompletionService.GetCompletions(typeAnalysis, typeProgram.Length);
+    Equal("Actor|Position", string.Join("|", aliasTypes.Select(item => item.DisplayText)));
+    Equal(true, aliasTypes.All(item => item.Kind == SmileCompletionKind.Type));
+    Equal(false, SmileCompletionService.GetCompletions(Analyze("TYPE Local\nValue AS NUMBER\nEND TYPE\nPRINT "), 49)
+        .Any(item => item.Kind == SmileCompletionKind.Type));
+
+    const string records = "TYPE Position\nX AS NUMBER\nY AS NUMBER\nEND TYPE\nTYPE Actor\nName AS TEXT\nPosition AS Position\nEND TYPE\nDIM Party[4] AS Actor\nDIM Grid[2, 2] AS Actor\n";
+    foreach (var expression in new[] { "Party[Index + 1].", "Grid[X, Y]." })
+    {
+        var source = records + "PRINT " + expression;
+        var fields = SmileCompletionService.GetCompletions(Analyze(source), source.Length);
+        Equal("Name|Position", string.Join("|", fields.Select(item => item.DisplayText)));
+    }
+    var nestedSource = records + "PRINT Party[Index + 1].Position.";
+    Equal("X|Y", string.Join("|", SmileCompletionService.GetCompletions(Analyze(nestedSource), nestedSource.Length)
+        .Select(item => item.DisplayText)));
+    var importedFieldSource = "IMPORT Example.Models AS Models\nPRINT Models.DefaultActor.";
+    var importedFields = Multi(("Program.smile", true, importedFieldSource), ("Models.smile", false, moduleTypes));
+    Equal("Name|Position", string.Join("|", SmileCompletionService
+        .GetCompletions(importedFields, importedFieldSource.Length).Select(item => item.DisplayText)));
+});
+
+Run("FormatVersion 3 public API uses logical provider identities deterministically", () =>
+{
+    var root = Path.Combine(Path.GetTempPath(), "SmileP3B1ProviderTests-" + Guid.NewGuid().ToString("N"));
+    var firstRoot = Path.Combine(root, "checkout-a");
+    var secondRoot = Path.Combine(root, "checkout-b");
+    Directory.CreateDirectory(firstRoot);
+    Directory.CreateDirectory(secondRoot);
+    try
+    {
+        const string projectText = "<SmileProject Version=\"1.0\"><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.ProviderBundle</LibraryName><Version>1.2.3</Version><OutputName>Provider</OutputName></PropertyGroup><ItemGroup><SmileSource Include=\"Types.smile\" /></ItemGroup></SmileProject>";
+        const string sourceText = "MODULE Example.Models\nPUBLIC TYPE Actor\nName AS TEXT\nEND TYPE\nEND MODULE\n";
+        byte[] Build(string checkout, string packagePath)
+        {
+            File.WriteAllText(Path.Combine(checkout, "Provider.smilelibproj"), projectText);
+            File.WriteAllText(Path.Combine(checkout, "Types.smile"), sourceText);
+            var compilation = SmileProjectCompilation.Load(Path.Combine(checkout, "Provider.smilelibproj"),
+                Path.Combine(checkout, "cache"));
+            var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library,
+                compilation.DependencyContext);
+            Equal(false, analysis.HasErrors);
+            SmileLibraryPackage.Write(packagePath, compilation.Graph.Root, analysis);
+            return File.ReadAllBytes(packagePath);
+        }
+
+        var firstPackage = Path.Combine(firstRoot, "Provider.smilelib");
+        var secondPackage = Path.Combine(secondRoot, "Provider.smilelib");
+        var firstBytes = Build(firstRoot, firstPackage);
+        var secondBytes = Build(secondRoot, secondPackage);
+        Equal(true, firstBytes.SequenceEqual(secondBytes));
+        string api;
+        using (var archive = System.IO.Compression.ZipFile.OpenRead(firstPackage))
+        using (var reader = new StreamReader(archive.GetEntry("api/public-symbols.json")!.Open()))
+            api = reader.ReadToEnd();
+        Equal(true, api.Contains("\"module\": \"Example.Models\"", StringComparison.Ordinal));
+        Equal(true, api.Contains("\"provider\": \"Example.ProviderBundle@1.2.3\"", StringComparison.Ordinal));
+        Equal(false, api.Contains(firstRoot, StringComparison.OrdinalIgnoreCase));
+        Equal(false, api.Contains(secondRoot, StringComparison.OrdinalIgnoreCase));
+
+        RewritePackageTextEntry(firstPackage, "api/public-symbols.json", text =>
+            text.Replace("Example.ProviderBundle@1.2.3", "Wrong.Provider@9.9.9", StringComparison.Ordinal));
+        ThrowsProjectDiagnostic(() => SmileLibraryPackage.Read(firstPackage, Path.Combine(root, "read-cache")), "SML3207");
+    }
+    finally { Directory.Delete(root, true); }
+});
+
+Run("Public API preserves referenced record provider identities", () =>
+{
+    var root = Path.Combine(Path.GetTempPath(), "SmileP3B1DependencyProviderTests-" + Guid.NewGuid().ToString("N"));
+    var baseRoot = Path.Combine(root, "Base");
+    var consumerRoot = Path.Combine(root, "Consumer");
+    Directory.CreateDirectory(baseRoot);
+    Directory.CreateDirectory(consumerRoot);
+    try
+    {
+        File.WriteAllText(Path.Combine(baseRoot, "Base.smilelibproj"),
+            "<SmileProject Version=\"1.0\"><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.BaseProvider</LibraryName><Version>1.0.0</Version><OutputName>Base</OutputName></PropertyGroup><ItemGroup><SmileSource Include=\"Types.smile\" /></ItemGroup></SmileProject>");
+        File.WriteAllText(Path.Combine(baseRoot, "Types.smile"),
+            "MODULE Example.Base\nPUBLIC TYPE Point\nX AS NUMBER\nEND TYPE\nEND MODULE\n");
+        File.WriteAllText(Path.Combine(consumerRoot, "Consumer.smilelibproj"),
+            "<SmileProject Version=\"1.0\"><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.ConsumerProvider</LibraryName><Version>2.0.0</Version><OutputName>Consumer</OutputName></PropertyGroup><ItemGroup><SmileSource Include=\"Types.smile\" /><SmileProjectReference Include=\"..\\Base\\Base.smilelibproj\" /></ItemGroup></SmileProject>");
+        File.WriteAllText(Path.Combine(consumerRoot, "Types.smile"),
+            "MODULE Example.Consumer\nIMPORT Example.Base AS Base\nPUBLIC TYPE Wrapper\nValue AS Base.Point\nEND TYPE\nPUBLIC FUNCTION Copy(Value AS Base.Point) AS Base.Point\nRETURN Value\nEND FUNCTION\nEND MODULE\n");
+
+        string BuildPackage(string projectPath, string packagePath)
+        {
+            var compilation = SmileProjectCompilation.Load(projectPath, Path.Combine(root, "project-cache"));
+            var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library,
+                compilation.DependencyContext);
+            Equal(false, analysis.HasErrors);
+            SmileLibraryPackage.Write(packagePath, compilation.Graph.Root, analysis);
+            return packagePath;
+        }
+
+        var basePackage = BuildPackage(Path.Combine(baseRoot, "Base.smilelibproj"), Path.Combine(root, "Base.smilelib"));
+        var consumerPackage = BuildPackage(Path.Combine(consumerRoot, "Consumer.smilelibproj"),
+            Path.Combine(root, "Consumer.smilelib"));
+        string api;
+        using (var archive = System.IO.Compression.ZipFile.OpenRead(consumerPackage))
+        using (var reader = new StreamReader(archive.GetEntry("api/public-symbols.json")!.Open()))
+            api = reader.ReadToEnd();
+        Equal(true, api.Contains("\"typeProvider\": \"Example.BaseProvider@1.0.0\"", StringComparison.Ordinal));
+        Equal(true, api.Contains("\"provider\": \"Example.ConsumerProvider@2.0.0\"", StringComparison.Ordinal));
+        Equal(false, api.Contains(root, StringComparison.OrdinalIgnoreCase));
+        SmileLibraryProviderResolver.LoadPackages(new[] { basePackage, consumerPackage },
+            Path.Combine(root, "package-cache"));
+    }
+    finally { Directory.Delete(root, true); }
+});
+
 if (failures.Count != 0)
 {
     Console.Error.WriteLine($"{failures.Count} SMILE project-option test(s) failed:");

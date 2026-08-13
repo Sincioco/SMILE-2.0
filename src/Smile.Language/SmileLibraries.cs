@@ -208,7 +208,7 @@ public static class SmileLibraryPackage
             entry => Hash(entry.Bytes), StringComparer.Ordinal);
         var dependencies = GetDependencies(project);
         var manifest = BuildManifest(project, modules.Select(module => module.Name), sourceEntries.Select(entry => entry.Name), hashes, dependencies);
-        var api = BuildPublicApi(modules);
+        var api = BuildPublicApi(modules, analysis.DependencyContext);
 
         var entries = new List<PackageEntry>
         {
@@ -298,7 +298,7 @@ public static class SmileLibraryPackage
             StringComparer.Ordinal);
         return new SmileLibraryBuildFingerprint(CurrentFormatVersion, project.LibraryName, project.Version,
             modules.Select(module => module.Name).ToArray(), hashes, GetDependencies(project),
-            Hash(Encoding.UTF8.GetBytes(BuildPublicApi(modules))));
+            Hash(Encoding.UTF8.GetBytes(BuildPublicApi(modules, analysis.DependencyContext))));
     }
 
     public static bool IsCurrentProjectBuild(string packagePath, SmileProjectSourceSet project,
@@ -392,8 +392,11 @@ public static class SmileLibraryPackage
         }
     }
 
-    public static string BuildPublicApi(IEnumerable<ModuleSymbol> modules)
+    public static string BuildPublicApi(IEnumerable<ModuleSymbol> modules,
+        SmileCompilationDependencyContext dependencyContext)
     {
+        if (modules == null) throw new ArgumentNullException(nameof(modules));
+        if (dependencyContext == null) throw new ArgumentNullException(nameof(dependencyContext));
         var builder = new StringBuilder("{\n  \"formatVersion\": 3,\n  \"modules\": [");
         var orderedModules = modules.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray();
         for (var moduleIndex = 0; moduleIndex < orderedModules.Length; moduleIndex++)
@@ -412,32 +415,41 @@ public static class SmileLibraryPackage
                 if (member.Variable != null)
                 {
                     builder.Append(", \"type\": \"").Append(JsonEscape(TypeIdentity(member.Variable.Type))).Append('"');
+                    AppendTypeProvider(builder, "typeProvider", member.Variable.Type, dependencyContext);
                     if (member.Variable.IsConstant)
                         builder.Append(", \"value\": ").Append(JsonValue(member.Variable.ConstantValue));
                     if (member.Variable.IsArray)
                     {
                         builder.Append(", \"elementType\": \"").Append(JsonEscape(TypeIdentity(member.Variable.Type)))
-                            .Append("\", \"rank\": ").Append(member.Variable.ArrayRank.ToString(CultureInfo.InvariantCulture))
+                            .Append('"');
+                        AppendTypeProvider(builder, "elementProvider", member.Variable.Type, dependencyContext);
+                        builder.Append(", \"rank\": ").Append(member.Variable.ArrayRank.ToString(CultureInfo.InvariantCulture))
                             .Append(", \"dimensions\": [")
                             .Append(string.Join(", ", member.Variable.ArrayDimensions.Select(size =>
                                 size.ToString(CultureInfo.InvariantCulture)))).Append(']');
                     }
                 }
                 if (member.Routine != null)
+                {
                     builder.Append(", \"returnType\": \"")
                         .Append(member.Routine.IsFunction ? JsonEscape(TypeIdentity(member.Routine.ReturnType)) : "VOID")
-                        .Append("\", \"parameters\": [")
-                        .Append(string.Join(", ", member.Routine.Parameters.Select(parameter =>
-                            "{\"name\": \"" + JsonEscape(parameter.Name) + "\", \"type\": \"" +
-                            JsonEscape(TypeIdentity(parameter.Type)) + "\", \"mode\": \"" + parameter.ParameterMode + "\"}"))).Append(']');
+                        .Append('"');
+                    if (member.Routine.IsFunction)
+                        AppendTypeProvider(builder, "returnProvider", member.Routine.ReturnType, dependencyContext);
+                    builder.Append(", \"parameters\": [")
+                        .Append(string.Join(", ", member.Routine.Parameters.Select(parameter => ParameterJson(parameter,
+                            dependencyContext)))).Append(']');
+                }
                 if (member.Type != null)
                 {
                     builder.Append(", \"identity\": \"").Append(JsonEscape(TypeIdentity(member.Type)))
                         .Append("\", \"module\": \"").Append(JsonEscape(member.Type.ModuleName ?? string.Empty))
-                        .Append("\", \"provider\": \"").Append(JsonEscape(member.Type.ModuleName ?? string.Empty))
+                        .Append("\", \"provider\": \"").Append(JsonEscape(LogicalProviderIdentity(member.Type,
+                            dependencyContext)))
                         .Append("\", \"size\": ").Append(member.Type.Size.ToString(CultureInfo.InvariantCulture))
                         .Append(", \"fields\": [")
-                        .Append(string.Join(", ", member.Type.Fields.OrderBy(field => field.Ordinal).Select(FieldJson)))
+                        .Append(string.Join(", ", member.Type.Fields.OrderBy(field => field.Ordinal)
+                            .Select(field => FieldJson(field, dependencyContext))))
                         .Append(']');
                 }
                 member.Source.GetLineColumn(member.DeclarationSpan.Start, out var line, out var column);
@@ -634,16 +646,47 @@ public static class SmileLibraryPackage
         ? record.RuntimeIdentity
         : type.Name;
 
-    private static string FieldJson(RecordFieldSymbol field)
+    private static string LogicalProviderIdentity(SmileType type,
+        SmileCompilationDependencyContext dependencyContext)
+    {
+        if (type is not RecordTypeSymbol record)
+            return string.Empty;
+        if (!dependencyContext.TryGetProviderDescriptor(record.ProviderIdentity, out var descriptor) ||
+            string.IsNullOrWhiteSpace(descriptor.LogicalIdentity))
+            throw new InvalidDataException(
+                $"Public record type '{record.RuntimeIdentity}' has no exact logical library provider descriptor.");
+        return descriptor.LogicalIdentity;
+    }
+
+    private static void AppendTypeProvider(StringBuilder builder, string propertyName, SmileType type,
+        SmileCompilationDependencyContext dependencyContext)
+    {
+        if (type is RecordTypeSymbol)
+            builder.Append(", \"").Append(propertyName).Append("\": \"")
+                .Append(JsonEscape(LogicalProviderIdentity(type, dependencyContext))).Append('"');
+    }
+
+    private static string ParameterJson(VariableSymbol parameter,
+        SmileCompilationDependencyContext dependencyContext)
+    {
+        var builder = new StringBuilder("{\"name\": \"").Append(JsonEscape(parameter.Name))
+            .Append("\", \"type\": \"").Append(JsonEscape(TypeIdentity(parameter.Type))).Append('"');
+        AppendTypeProvider(builder, "typeProvider", parameter.Type, dependencyContext);
+        return builder.Append(", \"mode\": \"").Append(parameter.ParameterMode).Append("\"}").ToString();
+    }
+
+    private static string FieldJson(RecordFieldSymbol field,
+        SmileCompilationDependencyContext dependencyContext)
     {
         field.Source.GetLineColumn(field.DeclarationSpan.Start, out var line, out var column);
-        return "{\"name\": \"" + JsonEscape(field.Name) + "\", \"type\": \"" +
-               JsonEscape(TypeIdentity(field.Type)) + "\", \"ordinal\": " +
-               field.Ordinal.ToString(CultureInfo.InvariantCulture) + ", \"offset\": " +
-               field.Offset.ToString(CultureInfo.InvariantCulture) + ", \"source\": \"" +
-               JsonEscape(Normalize(Path.GetFileName(field.Source.FilePath))) + "\", \"line\": " +
-               line.ToString(CultureInfo.InvariantCulture) + ", \"column\": " +
-               column.ToString(CultureInfo.InvariantCulture) + "}";
+        var builder = new StringBuilder("{\"name\": \"").Append(JsonEscape(field.Name))
+            .Append("\", \"type\": \"").Append(JsonEscape(TypeIdentity(field.Type))).Append('"');
+        AppendTypeProvider(builder, "typeProvider", field.Type, dependencyContext);
+        return builder.Append(", \"ordinal\": ").Append(field.Ordinal.ToString(CultureInfo.InvariantCulture))
+            .Append(", \"offset\": ").Append(field.Offset.ToString(CultureInfo.InvariantCulture))
+            .Append(", \"source\": \"").Append(JsonEscape(Normalize(Path.GetFileName(field.Source.FilePath))))
+            .Append("\", \"line\": ").Append(line.ToString(CultureInfo.InvariantCulture))
+            .Append(", \"column\": ").Append(column.ToString(CultureInfo.InvariantCulture)).Append('}').ToString();
     }
 
     [DataContract]
@@ -902,7 +945,7 @@ public static class SmileLibraryProviderResolver
                 throw new SmileProjectDiagnosticException("SML3207",
                     $"Packaged library '{provider.Identity.Name}' {provider.Identity.Version} at '{provider.ProviderPath}' " +
                     "has a manifest module list that does not match its owned source modules.", provider.ProviderPath);
-            var expectedApi = SmileLibraryPackage.BuildPublicApi(modules);
+            var expectedApi = SmileLibraryPackage.BuildPublicApi(modules, analysis.DependencyContext);
             if (!string.Equals(provider.Package!.PublicApiMetadata, expectedApi, StringComparison.Ordinal))
                 throw new SmileProjectDiagnosticException("SML3207",
                     $"Packaged library '{provider.Identity.Name}' {provider.Identity.Version} at '{provider.ProviderPath}' " +

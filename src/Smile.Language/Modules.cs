@@ -36,6 +36,9 @@ public sealed class SmileProviderDescriptor
     public string Name { get; }
     public string Version { get; }
     public string Path { get; }
+    public string LogicalIdentity => string.IsNullOrWhiteSpace(Name) || string.IsNullOrWhiteSpace(Version)
+        ? string.Empty
+        : Name + "@" + Version;
 
     internal string Describe() => Kind == SmileProviderKind.Loose
         ? "loose source root"
@@ -72,6 +75,9 @@ public sealed class SmileCompilationDependencyContext
         var target = Descriptor(targetProvider).Describe();
         return $"Module '{moduleName}' is provided by {target}, but {source} does not declare that provider as a direct reference.";
     }
+
+    public bool TryGetProviderDescriptor(string providerIdentity, out SmileProviderDescriptor descriptor) =>
+        _providers.TryGetValue(Normalize(providerIdentity), out descriptor!);
 
     internal static SmileCompilationDependencyContext Create() => new(allowAll: false);
 
@@ -787,6 +793,8 @@ internal sealed class ModuleProcessor
     {
         if (token == null || token.Kind is SyntaxKind.NumberKeyword or SyntaxKind.BooleanKeyword or SyntaxKind.TextKeyword)
             return token;
+        if (string.IsNullOrWhiteSpace(token.Text))
+            return token;
         var dot = token.Text.IndexOf('.');
         if (dot > 0)
         {
@@ -800,6 +808,13 @@ internal sealed class ModuleProcessor
         }
         if (module != null && module.Types.TryGetValue(token.Text, out var own))
             return SemanticToken(token, own.SemanticName);
+        if (module != null)
+        {
+            Report(tree.Source, "SML3401", token.Span,
+                $"Module '{module.Name}' cannot resolve unqualified record type '{token.Text}'. " +
+                "Import the defining module and use Alias.Type for an external record type.");
+            return SemanticToken(token, "__smile_missing_" + SafeIdentifier(token.Text));
+        }
         return token;
     }
 

@@ -4,7 +4,7 @@
 
 ## Modules and imports
 
-`MODULE dotted.name` ... `END MODULE` declares a module. Declarations are private unless prefixed with `PUBLIC`; `PRIVATE` is available when explicit intent helps. A physical source imports a module with `IMPORT dotted.name AS Alias`, then accesses exported constants, arrays, functions, and subroutines as `Alias.Member`. Imports are scoped to that physical source. One module may span files from one provider, while duplicate providers, import cycles, private access, unknown members, and module access to consumer globals are diagnosed by the shared binder.
+`MODULE dotted.name` ... `END MODULE` declares a module. Declarations are private unless prefixed with `PUBLIC`; `PRIVATE` is available when explicit intent helps. A physical source imports a module with `IMPORT dotted.name AS Alias`, then accesses exported constants, arrays, functions, subroutines, and record types through that alias. Imports are scoped to that physical source. One module may span files from one provider. Inside a module, an unqualified record type must be built in or owned by that same module, including a type declared in another physical module source; external module types require explicit `Alias.Type` qualification. Project-global and ambient sibling-library types never enter a module's unqualified type scope. Duplicate providers, import cycles, private access, unknown members, and module access to consumer globals are diagnosed by the shared binder.
 
 ```smile
 IMPORT Smile.Math.Extras AS Math
@@ -75,7 +75,7 @@ PRINT Party[0].Position.X
 
 Record identity is exact and nominal: separately declared types with identical fields are not interchangeable. Records default each field recursively, use deep value-copy assignment, preserve safe self-assignment, and allow nested field locations and fixed one- or two-dimensional arrays. `BYVAL` receives an independent deep copy. `BYREF` may target a record variable, record array element, nested record field, or scalar field. Functions may return records, including recursively and with 0, 1, 4, 5, 8, or 16 explicit parameters.
 
-Native records use deterministic inline 8-byte-aligned layouts and generated initialize, clear, and deep-copy helpers. Record results use a hidden caller-owned return buffer; invocation-local result temporaries keep recursive calls reentrant and release nested `TEXT` exactly once. Web records use fresh default objects and deep clones so assignment, arrays, `BYVAL`, `BYREF`, and returns do not leak JavaScript object aliases.
+Native records use deterministic inline 8-byte-aligned layouts and generated initialize, clear, and deep-copy helpers. Record results use a hidden caller-owned return buffer; invocation-local result temporaries keep recursive calls reentrant and release nested `TEXT` exactly once. Web records use fresh default objects and deep clones so assignment, arrays, `BYVAL`, `BYREF`, and returns do not leak JavaScript object aliases. Generated JavaScript stores fields under deterministic private keys derived from the bound record-field symbol and ordinal, never under source spelling. Fields such as `__proto__`, `constructor`, `prototype`, `toString`, and `valueOf` therefore behave like ordinary SMILE fields while IntelliSense and package metadata continue to show their original names.
 
 The native backend keeps routine-owned `FOR` limits and NUMBER, BOOLEAN, or TEXT `SELECT CASE` selectors in each invocation's stack frame, so recursive and mutually recursive routines do not share compiler state. Owned TEXT selectors are move-assigned into zero-initialized slots and cleared in reverse nesting order on normal completion, `RETURN`, `EXIT FOR`, `EXIT DO`, `END PROGRAM`, and the routine epilogue. A function's owned TEXT return is preserved separately while its locals, arrays, BYVAL parameters, and compiler temporaries are released.
 
@@ -185,7 +185,7 @@ Record-specific diagnostics are stable and source-located:
 | Code | Meaning |
 |---|---|
 | `SML3400` | A `TYPE` is duplicated. |
-| `SML3401` | A record type reference is unknown. |
+| `SML3401` | A record type reference is unknown, or a module uses an external type without explicit `Alias.Type` qualification. |
 | `SML3402` | A field is duplicated or malformed. |
 | `SML3403` | A `TYPE` is misplaced or a field uses an unsupported form. |
 | `SML3404` | Nested value types form a recursive layout cycle. |

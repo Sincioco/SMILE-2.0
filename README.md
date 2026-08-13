@@ -88,7 +88,7 @@ artifacts\compiler\smilec.exe --project examples\LibraryConsumer\LibraryConsumer
 artifacts\compiler\smilec.exe --project examples\LibraryConsumer\LibraryConsumer.smileproj --target web --output-dir artifacts\web\LibraryConsumer
 ```
 
-The Phase 3A typed-text proof uses `libraries\Smile.Text.Extras`, `examples\Phase3ABasics`, `examples\Phase3ATextStress.smile`, and `examples\Phase3ATextGame`. The Phase 3B record proof uses `libraries\Smile.Data.Models`, `examples\Phase3BRecords`, `examples\Phase3BLocalRecords`, and `examples\Phase3BRecordMatrix.smile`. `.smilelib` packages now use deterministic formatVersion 3 metadata with typed public record layouts.
+The Phase 3A typed-text proof uses `libraries\Smile.Text.Extras`, `examples\Phase3ABasics`, `examples\Phase3ATextStress.smile`, and `examples\Phase3ATextGame`. The Phase 3B record proof uses `libraries\Smile.Data.Models`, `examples\Phase3BRecords`, `examples\Phase3BLocalRecords`, and `examples\Phase3BRecordMatrix.smile`; `examples\Phase3B1Hardening` adds reserved-name Web field parity. `.smilelib` packages use deterministic formatVersion 3 metadata with typed public record layouts and logical `LibraryName@Version` provider identities.
 
 Loose-file builds can add a built package with repeated `--library <path.smilelib>`. Project builds read `<SmileProjectReference>` and `<SmileLibraryReference>` items, build project dependencies in deterministic order, reject cycles, and reuse a referenced project package only when its identity, modules, normalized source hashes, and direct dependency identities match the current library project. Imports follow direct provider boundaries: application and library-project sources see only their own modules and direct references, package sources see only exact manifest dependencies, and loose roots see every package supplied directly with `--library`.
 
@@ -201,7 +201,7 @@ Loose `.smile` files remain supported: open one and use **Tools > Build SMILE Fi
 Implemented syntax includes:
 
 - signed 64-bit `NUMBER`, `BOOLEAN`, and mutable UTF-8 `TEXT` values, constants, and typed one- or two-dimensional fixed arrays;
-- project-global and module-owned `TYPE` records with built-in or nested fields, fixed one- or two-dimensional record arrays, deep value-copy assignment, `BYVAL`/`BYREF`, and record function returns;
+- project-global and module-owned `TYPE` records with built-in or nested fields, fixed one- or two-dimensional record arrays, deep value-copy assignment, `BYVAL`/`BYREF`, and record function returns; module type lookup is same-module unqualified or explicit imported `Alias.Type`;
 - per-physical-source `OPTION EXPLICIT` and scalar `DIM Name AS NUMBER|BOOLEAN|TEXT` declarations;
 - arithmetic and comparison operators, integer `/`, `MOD`, `AND`, `OR`, and `NOT`;
 - multiline `IF`/`ELSE IF`/`ELSE`, ascending and descending `FOR`, `DO`/`LOOP UNTIL`, `EXIT FOR`, `EXIT DO`, and `SELECT CASE`;

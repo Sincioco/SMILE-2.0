@@ -1,0 +1,60 @@
+OPTION EXPLICIT
+
+TYPE Dangerous
+    __proto__ AS TEXT
+    constructor AS NUMBER
+    prototype AS BOOLEAN
+    toString AS TEXT
+    valueOf AS NUMBER
+END TYPE
+
+TYPE Wrapper
+    Value AS Dangerous
+END TYPE
+
+DIM First AS Dangerous
+DIM Copy AS Dangerous
+DIM Values[2] AS Dangerous
+DIM Wrapped AS Wrapper
+
+First.__proto__ = "SAFE"
+First.constructor = 42
+First.prototype = TRUE
+First.toString = "TEXT"
+First.valueOf = 7
+
+Copy = First
+First.__proto__ = "CHANGED"
+
+Values[0] = Copy
+Values[1] = MakeDangerous("RETURNED")
+
+CALL Rename(Values[0].__proto__, "BYREF")
+Wrapped.Value = Values[0]
+
+PRINT Copy.__proto__
+PRINT Copy.constructor
+PRINT Copy.prototype
+PRINT Copy.toString
+PRINT Copy.valueOf
+PRINT Values[0].__proto__
+PRINT Values[1].__proto__
+PRINT Wrapped.Value.__proto__
+
+END PROGRAM
+
+SUB Rename(BYREF Value AS TEXT, NewValue AS TEXT)
+    Value = NewValue
+END SUB
+
+FUNCTION MakeDangerous(Name AS TEXT) AS Dangerous
+    DIM Result AS Dangerous
+
+    Result.__proto__ = Name
+    Result.constructor = 99
+    Result.prototype = TRUE
+    Result.toString = "RESULT"
+    Result.valueOf = 11
+
+    RETURN Result
+END FUNCTION

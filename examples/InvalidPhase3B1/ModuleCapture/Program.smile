@@ -1,0 +1,7 @@
+OPTION EXPLICIT
+
+TYPE ConsumerData
+    Score AS NUMBER
+END TYPE
+
+END PROGRAM

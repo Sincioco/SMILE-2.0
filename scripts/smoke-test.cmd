@@ -209,6 +209,25 @@ if errorlevel 2 exit /b 1
 findstr /c:"SML3409" "%SMILE_ROOT%\artifacts\temp\PublicApiPrivateType.log" >nul || exit /b 1
 echo Phase 3B record semantics, native ABI, Web parity, packages, diagnostics, completion, and lifetime tests passed.
 
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase3B1Hardening\WebFieldKeys.smile" -o "%SMILE_ROOT%\artifacts\games\WebFieldKeys.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\games\WebFieldKeys.exe" > "%SMILE_ROOT%\artifacts\temp\WebFieldKeys.out"
+if errorlevel 1 exit /b 1
+fc "%SMILE_ROOT%\examples\Phase3B1Hardening\WebFieldKeys.expected.txt" "%SMILE_ROOT%\artifacts\temp\WebFieldKeys.out" >nul || exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase3B1Hardening\WebFieldKeys.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\WebFieldKeys"
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\WebFieldKeys\game.js" || exit /b 1
+findstr /c:"__smile_r0_f0" "%SMILE_ROOT%\artifacts\web\WebFieldKeys\game.js" >nul || exit /b 1
+findstr /l /c:"[\"__proto__\"]" "%SMILE_ROOT%\artifacts\web\WebFieldKeys\game.js" >nul && exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\WebFieldKeys" --expected "%SMILE_ROOT%\examples\Phase3B1Hardening\WebFieldKeys.expected.txt" --native-output "%SMILE_ROOT%\artifacts\temp\WebFieldKeys.out" --timeout 10000 || exit /b 1
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\InvalidPhase3B1\ModuleCapture\ModuleCapture.smileproj" -o "%SMILE_ROOT%\artifacts\temp\ModuleCapture.exe" > "%SMILE_ROOT%\artifacts\temp\ModuleCapture.log" 2>&1
+if not errorlevel 1 exit /b 1
+if errorlevel 2 exit /b 1
+findstr /c:"SML3401" "%SMILE_ROOT%\artifacts\temp\ModuleCapture.log" >nul || exit /b 1
+findstr /c:"Alias.Type" "%SMILE_ROOT%\artifacts\temp\ModuleCapture.log" >nul || exit /b 1
+echo Phase 3B.1 Web field identity, module type boundaries, provider metadata, and completion tests passed.
+
 for %%P in (OptionExplicitLate:SML3300 OptionExplicitUndeclared:SML3303 ScalarDimWithoutAs:SML3302 UnknownBuiltInType:SML3401 NumberToTextAssignment:SML3304 TextToBooleanAssignment:SML3304 MixedTextAddition:SML3308 TextRelationalComparison:SML3308 InvalidByRefLiteral:SML3305 InvalidByRefConstant:SML3305 WrongArgumentType:SML3304 WrongReturnType:SML3304 InconsistentLegacyReturnTypes:SML3309 DuplicateLocal:SML3306 UseBeforeLocalDeclaration:SML3307) do (
     for /f "tokens=1,2 delims=:" %%F in ("%%P") do (
         "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\InvalidPhase3A\%%F.smile" > "%SMILE_ROOT%\artifacts\temp\%%F.log" 2>&1
