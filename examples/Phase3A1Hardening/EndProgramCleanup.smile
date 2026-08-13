@@ -1,0 +1,18 @@
+OPTION EXPLICIT
+
+DIM GlobalValue AS TEXT
+GlobalValue = "G" + "LOBAL"
+PRINT "ENDING"
+CALL StopNow("STOP")
+PRINT "UNREACHABLE"
+
+END PROGRAM
+
+SUB StopNow(Command AS TEXT)
+    DIM LocalValue AS TEXT
+    LocalValue = Command + ""
+    SELECT CASE LocalValue + ""
+        CASE "STOP"
+            END PROGRAM
+    END SELECT
+END SUB

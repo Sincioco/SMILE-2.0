@@ -12,6 +12,9 @@ if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\tests\Smile.NativeGraphicsTests.exe"
 if errorlevel 1 exit /b %errorlevel%
 
+"%SMILE_ROOT%\artifacts\tests\Smile.NativeTextTests.exe"
+if errorlevel 1 exit /b %errorlevel%
+
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Hello.smile" -o "%SMILE_ROOT%\artifacts\games\Hello.exe"
 if errorlevel 1 exit /b %errorlevel%
 
@@ -80,14 +83,18 @@ for %%V in ("Changed" "TRUE" "36" "1136" "MODULE TEXT" "MATCH") do (
 if errorlevel 1 exit /b %errorlevel%
 node --check "%SMILE_ROOT%\artifacts\web\Phase3ABasics\game.js"
 if errorlevel 1 exit /b %errorlevel%
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase3ABasics" --native-output "%SMILE_ROOT%\artifacts\temp\Phase3ABasics.out"
+if errorlevel 1 exit /b %errorlevel%
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3ABasics\Phase3ABasics.Package.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase3ABasicsPackage.exe"
 if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\games\Phase3ABasicsPackage.exe" | findstr /x /c:"MATCH" >nul
-if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\games\Phase3ABasicsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3ABasicsPackage.out"
+if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3ABasics\Phase3ABasics.Package.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\Phase3ABasicsPackage"
 if errorlevel 1 exit /b %errorlevel%
 node --check "%SMILE_ROOT%\artifacts\web\Phase3ABasicsPackage\game.js"
+if errorlevel 1 exit /b %errorlevel%
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase3ABasicsPackage" --native-output "%SMILE_ROOT%\artifacts\temp\Phase3ABasicsPackage.out"
 if errorlevel 1 exit /b %errorlevel%
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase3ATextStress.smile" -o "%SMILE_ROOT%\artifacts\games\Phase3ATextStress.exe"
@@ -99,6 +106,8 @@ findstr /x /c:"FALSE" "%SMILE_ROOT%\artifacts\temp\Phase3ATextStress.out" >nul |
 if errorlevel 1 exit /b %errorlevel%
 node --check "%SMILE_ROOT%\artifacts\web\Phase3ATextStress\game.js"
 if errorlevel 1 exit /b %errorlevel%
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase3ATextStress" --native-output "%SMILE_ROOT%\artifacts\temp\Phase3ATextStress.out" --timeout 10000
+if errorlevel 1 exit /b %errorlevel%
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3ATextGame\Phase3ATextGame.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase3ATextGame.exe"
 if errorlevel 1 exit /b %errorlevel%
@@ -106,6 +115,28 @@ if errorlevel 1 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 node --check "%SMILE_ROOT%\artifacts\web\Phase3ATextGame\game.js"
 if errorlevel 1 exit /b %errorlevel%
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase3ATextGame" --draw-text-file "%SMILE_ROOT%\examples\Phase3ATextGame\Caption.expected.txt" --frames 2 --timeout 10000
+if errorlevel 1 exit /b %errorlevel%
+
+for %%N in (RecursiveFor RecursiveTextSelect ExitCleanup NestedCleanup EndProgramCleanup Unicode WebParity) do (
+    "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase3A1Hardening\%%N.smile" -o "%SMILE_ROOT%\artifacts\games\%%N.exe"
+    if errorlevel 1 exit /b 1
+    "%SMILE_ROOT%\artifacts\games\%%N.exe" > "%SMILE_ROOT%\artifacts\temp\%%N.out"
+    if errorlevel 1 exit /b 1
+    set "SMILE_TEXT_LIFETIME_DIAGNOSTICS=1"
+    "%SMILE_ROOT%\artifacts\games\%%N.exe" > "%SMILE_ROOT%\artifacts\temp\%%N.lifetime.out"
+    if errorlevel 1 exit /b 1
+    set "SMILE_TEXT_LIFETIME_DIAGNOSTICS="
+    findstr /x /c:"SMILE_TEXT_LIVE=0" "%SMILE_ROOT%\artifacts\temp\%%N.lifetime.out" >nul
+    if errorlevel 1 exit /b 1
+    "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase3A1Hardening\%%N.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\%%N"
+    if errorlevel 1 exit /b 1
+    node --check "%SMILE_ROOT%\artifacts\web\%%N\game.js"
+    if errorlevel 1 exit /b 1
+    node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\%%N" --expected "%SMILE_ROOT%\examples\Phase3A1Hardening\%%N.expected.txt" --native-output "%SMILE_ROOT%\artifacts\temp\%%N.out" --timeout 10000
+    if errorlevel 1 exit /b 1
+)
+echo Phase 3A.1 reentrancy, cleanup, Unicode, lifetime, and native/Web execution parity tests passed.
 
 for %%P in (OptionExplicitLate:SML3300 OptionExplicitUndeclared:SML3303 ScalarDimWithoutAs:SML3302 UnknownBuiltInType:SML3301 NumberToTextAssignment:SML3304 TextToBooleanAssignment:SML3304 MixedTextAddition:SML3308 TextRelationalComparison:SML3308 InvalidByRefLiteral:SML3305 InvalidByRefConstant:SML3305 WrongArgumentType:SML3304 WrongReturnType:SML3304 InconsistentLegacyReturnTypes:SML3309 DuplicateLocal:SML3306 UseBeforeLocalDeclaration:SML3307) do (
     for /f "tokens=1,2 delims=:" %%F in ("%%P") do (

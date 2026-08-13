@@ -68,7 +68,7 @@ Run the complete noninteractive regression and artifact verification suite with:
 scripts\smoke-test.cmd
 ```
 
-The smoke suite builds the solution, runs console examples, checks invalid-program diagnostics, exercises save/reload and corrupt-value fallback, validates the supplied Dungeon Star I, Dungeon Star II, and Platform Quest maps, compiles the multi-file sample and both teaching variants of all ten games for Windows and Web, copies and hashes game assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Graphical gameplay and audible playback remain hands-on acceptance steps.
+The smoke suite builds the solution, runs console examples, checks invalid-program diagnostics, exercises native TEXT lifetime and reentrancy, executes generated Web programs in a dependency-free Node host, compares native/Web UTF-8 output exactly, asserts dynamic Canvas text, exercises save/reload and corrupt-value fallback, validates the supplied Dungeon Star I, Dungeon Star II, and Platform Quest maps, compiles the multi-file sample and both teaching variants of all ten games for Windows and Web, copies and hashes game assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Graphical gameplay and audible playback remain hands-on acceptance steps.
 
 ## Compile loose files
 
@@ -219,6 +219,8 @@ Arc outlines use `DRAW ARC CenterX, CenterY, Radius, StartAngle, SweepAngle, Col
 - Windows x64 is the complete/default target and requires the Visual Studio MASM/link toolchain when compiling. Web publication supports the shared language and generic runtime surface used by all ten included games and their no-demo teaching variants.
 - Web NUMBER values use JavaScript safe integers. Unsafe literals fail Web compilation, and unsafe runtime arithmetic stops with a visible error rather than silently losing precision.
 - Web uses Canvas 2D, browser keyboard/audio APIs, `fetch` for declared text/map assets, and `localStorage`. Browser autoplay policy may defer WAV or MP3 playback until the first key or click without stopping the program.
+- Native routine-owned `FOR` limits and NUMBER/BOOLEAN/TEXT `SELECT CASE` selectors are invocation-local and reentrant. Owned TEXT selector cleanup runs on normal completion, `RETURN`, `EXIT FOR`, `EXIT DO`, and `END PROGRAM`.
+- Native console handles receive UTF-16 through `WriteConsoleW`; redirected files and pipes receive the original UTF-8 bytes without a BOM. The Web parity harness under `scripts\run-web-test.js` uses only built-in Node modules.
 - Browser `.smile` breakpoints are not yet supported. Windows x64 `.smile` breakpoints, IntelliSense, normal file opening, and native F5 remain supported.
 - Numeric storage is signed 64-bit integer only; there is no floating-point type, user-defined `TYPE`, record field, or dynamic collection.
 - Arrays are fixed at compile time and support at most two dimensions.

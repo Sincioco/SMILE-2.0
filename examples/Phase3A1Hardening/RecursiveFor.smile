@@ -1,0 +1,19 @@
+OPTION EXPLICIT
+
+DIM VisitCount AS NUMBER
+
+CALL Visit(3)
+PRINT VisitCount
+
+END PROGRAM
+
+SUB Visit(Level AS NUMBER)
+    DIM Index AS NUMBER
+
+    FOR Index = 1 TO Level
+        VisitCount = VisitCount + 1
+        IF Index = 1 AND Level > 1 THEN
+            CALL Visit(Level - 1)
+        END IF
+    END FOR
+END SUB

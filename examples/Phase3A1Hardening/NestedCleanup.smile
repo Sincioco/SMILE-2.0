@@ -1,0 +1,24 @@
+OPTION EXPLICIT
+
+PRINT Choose("RETURN")
+
+END PROGRAM
+
+FUNCTION Choose(Command AS TEXT) AS TEXT
+    SELECT CASE Command + ""
+        CASE "RETURN"
+            DO
+                SELECT CASE "INNER" + ""
+                    CASE "INNER"
+                        RETURN BuildResult("RETURN", "ED")
+                END SELECT
+            LOOP
+    END SELECT
+    RETURN "FAILED"
+END FUNCTION
+
+FUNCTION BuildResult(LeftValue AS TEXT, RightValue AS TEXT) AS TEXT
+    DIM Result AS TEXT
+    Result = LeftValue + RightValue
+    RETURN Result
+END FUNCTION

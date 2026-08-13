@@ -1,0 +1,7 @@
+OPTION EXPLICIT
+
+DIM Message AS TEXT
+Message = "Café — Καλημέρα — こんにちは — 你好 — 😀"
+PRINT Message
+
+END PROGRAM

@@ -50,6 +50,10 @@ END FUNCTION
 
 Native and Web calls have no four-parameter language restriction; the regression matrix covers 0, 1, 4, 5, 8, and 16 parameters.
 
+The native backend keeps routine-owned `FOR` limits and NUMBER, BOOLEAN, or TEXT `SELECT CASE` selectors in each invocation's stack frame, so recursive and mutually recursive routines do not share compiler state. Owned TEXT selectors are move-assigned into zero-initialized slots and cleared in reverse nesting order on normal completion, `RETURN`, `EXIT FOR`, `EXIT DO`, `END PROGRAM`, and the routine epilogue. A function's owned TEXT return is preserved separately while its locals, arrays, BYVAL parameters, and compiler temporaries are released.
+
+`PRINT` preserves UTF-8 as the language representation. On an attached Windows console the runtime converts bounded complete UTF-8 chunks to UTF-16 and writes them with `WriteConsoleW`; redirected files and pipes receive the original UTF-8 bytes through chunked `WriteFile` calls without a BOM. Generated Web console output uses the same logical text and is compared against native output by the repository's dependency-free Node host.
+
 ## Multi-file programs
 
 A compilation may contain one selected startup source and any number of support sources. Every file is parsed separately and retains its real path, lines, tokens, diagnostics, and debug locations; all files share one case-insensitive global symbol and routine model.

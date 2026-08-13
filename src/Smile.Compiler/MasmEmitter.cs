@@ -22,6 +22,50 @@ internal sealed class MasmDebugSite
     public string HelperName => $"smile_debug_site_{Id}";
 }
 
+internal enum MasmStorageKind
+{
+    Static,
+    Frame
+}
+
+internal sealed class MasmTemporaryStorage
+{
+    public MasmTemporaryStorage(string name, SmileType type, RoutineDeclarationSyntax? owner)
+    {
+        Name = name;
+        Type = type;
+        Owner = owner;
+        Kind = owner == null ? MasmStorageKind.Static : MasmStorageKind.Frame;
+    }
+
+    public string Name { get; }
+    public SmileType Type { get; }
+    public RoutineDeclarationSyntax? Owner { get; }
+    public MasmStorageKind Kind { get; }
+    public int FrameOffset { get; set; }
+    public bool RequiresCleanup => Type == SmileType.Text;
+}
+
+internal sealed class MasmFrameLayout
+{
+    public MasmFrameLayout(IReadOnlyDictionary<VariableSymbol, int> localOffsets,
+        IReadOnlyList<MasmTemporaryStorage> temporaries, int returnOffset, int frameSize)
+    {
+        LocalOffsets = localOffsets;
+        Temporaries = temporaries;
+        ReturnOffset = returnOffset;
+        FrameSize = frameSize;
+    }
+
+    public IReadOnlyDictionary<VariableSymbol, int> LocalOffsets { get; }
+    public IReadOnlyList<MasmTemporaryStorage> Temporaries { get; }
+    public int ReturnOffset { get; }
+    public int FrameSize { get; }
+}
+
+internal sealed record MasmCleanupAction(MasmTemporaryStorage Storage);
+internal sealed record MasmLoopContext(string ExitLabel, int CleanupDepth);
+
 internal sealed class MasmEmitter
 {
     private readonly SmileAnalysisResult _analysis;
@@ -30,20 +74,22 @@ internal sealed class MasmEmitter
     private readonly bool _emitDebugInformation;
     private readonly StringBuilder _builder = new();
     private readonly Dictionary<VariableSymbol, string> _symbolLabels = new();
-    private readonly Dictionary<VariableSymbol, int> _localOffsets = new();
     private readonly Dictionary<RoutineSymbol, string> _routineLabels = new();
     private readonly Dictionary<LiteralExpressionSyntax, TextLiteral> _textLiterals = new();
     private readonly Dictionary<VariableSymbol, TextLiteral> _constantTextLiterals = new();
     private readonly Dictionary<SyntaxToken, TextLiteral> _gameTextLiterals = new();
-    private readonly Dictionary<ForStatementSyntax, string> _forLimits = new();
-    private readonly Dictionary<SelectStatementSyntax, string> _selectValues = new();
-    private readonly Dictionary<SelectStatementSyntax, RoutineDeclarationSyntax?> _selectOwners = new();
-    private readonly Stack<string> _forExitLabels = new();
-    private readonly Stack<string> _doExitLabels = new();
+    private readonly Dictionary<ForStatementSyntax, MasmTemporaryStorage> _forLimits = new();
+    private readonly Dictionary<SelectStatementSyntax, MasmTemporaryStorage> _selectValues = new();
+    private readonly List<MasmTemporaryStorage> _temporaries = new();
+    private readonly Dictionary<RoutineSymbol, MasmFrameLayout> _frameLayouts = new();
+    private readonly Stack<MasmLoopContext> _forExitLabels = new();
+    private readonly Stack<MasmLoopContext> _doExitLabels = new();
+    private readonly List<MasmCleanupAction> _activeCleanups = new();
     private readonly List<MasmDebugSite> _debugSites = new();
     private readonly Dictionary<StatementSyntax, MasmDebugSite> _debugSitesByStatement = new();
     private SourceText _currentSource = null!;
     private RoutineSymbol? _currentRoutine;
+    private MasmFrameLayout? _currentFrame;
     private string? _returnLabel;
     private int _labelId;
     private bool _usesTimer;
@@ -51,7 +97,6 @@ internal sealed class MasmEmitter
     private bool _usesKeyHeld;
     private bool _usesMusic;
     private int _dynamicStackSlots;
-    private int _returnOffset;
     private RoutineDeclarationSyntax? _collectRoutine;
 
     public MasmEmitter(SmileAnalysisResult analysis, SmileGraphicsBackend graphicsBackend,
@@ -65,6 +110,7 @@ internal sealed class MasmEmitter
 
     public bool UsesMusic => _usesMusic;
     public IReadOnlyList<MasmDebugSite> DebugSites => _debugSites;
+    public IReadOnlyDictionary<RoutineSymbol, MasmFrameLayout> FrameLayouts => _frameLayouts;
 
     public string Emit()
     {
@@ -74,6 +120,7 @@ internal sealed class MasmEmitter
             Collect(tree.Root.Statements);
         }
         AssignLabels();
+        BuildFrameLayouts();
 
         Line("option casemap:none");
         Line("EXTERN ExitProcess:PROC");
@@ -88,6 +135,7 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_text_equal:PROC");
         Line("EXTERN smile_text_equal_case:PROC");
         Line("EXTERN smile_text_clear:PROC");
+        Line("EXTERN smile_text_lifetime_report:PROC");
         Line("EXTERN smile_print_text_value:PROC");
         Line("EXTERN smile_draw_text_value:PROC");
         Line("EXTERN smile_get_key:PROC");
@@ -132,18 +180,19 @@ internal sealed class MasmEmitter
         Line();
         Line(".data");
         EmitStorage(_analysis.SemanticModel.Symbols.Values);
-        foreach (var limit in _forLimits.Values)
-            Line($"{limit} QWORD 0");
-        foreach (var value in _selectValues.Values)
-            Line($"{value} QWORD 0");
+        foreach (var temporary in _temporaries.Where(temporary => temporary.Kind == MasmStorageKind.Static))
+            Line($"{temporary.Name} QWORD 0");
         foreach (var literal in _textLiterals.Values.Concat(_constantTextLiterals.Values))
         {
             Line("ALIGN 8");
             Line($"{literal.Label} QWORD -1, {literal.Bytes.Length.ToString(CultureInfo.InvariantCulture)}");
-            Line($"BYTE {FormatBytesWithTerminator(literal.Bytes)}");
+            EmitBytes(literal.Bytes, terminate: true);
         }
         foreach (var literal in _gameTextLiterals.Values)
-            Line($"{literal.Label} BYTE {FormatBytes(literal.Bytes)}");
+        {
+            Line($"{literal.Label} LABEL BYTE");
+            EmitBytes(literal.Bytes, terminate: false);
+        }
 
         Line();
         Line(".code");
@@ -157,6 +206,7 @@ internal sealed class MasmEmitter
         _currentSource = _analysis.BoundSyntaxTree.Source;
         EmitStatements(_analysis.BoundSyntaxTree.Root.Statements);
         EmitProgramCleanup();
+        CallAligned("smile_text_lifetime_report");
         if (_usesMusic) CallAligned("smile_music_shutdown");
         Line("    xor ecx, ecx");
         CallAligned("ExitProcess");
@@ -229,7 +279,7 @@ internal sealed class MasmEmitter
                 case ForStatementSyntax forStatement:
                     CollectExpression(forStatement.LowerBound);
                     CollectExpression(forStatement.UpperBound);
-                    _forLimits[forStatement] = $"for_limit_{_forLimits.Count}";
+                    _forLimits[forStatement] = CreateTemporary("for_limit", SmileType.Number);
                     Collect(forStatement.Statements);
                     break;
                 case DoStatementSyntax doStatement:
@@ -251,8 +301,8 @@ internal sealed class MasmEmitter
                     break;
                 case SelectStatementSyntax select:
                     CollectExpression(select.Expression);
-                    _selectValues[select] = $"select_value_{_selectValues.Count}";
-                    _selectOwners[select] = _collectRoutine;
+                    _selectValues[select] = CreateTemporary("select_value",
+                        _analysis.SemanticModel.GetType(select.Expression));
                     foreach (var clause in select.Cases)
                     {
                         CollectExpression(clause.Value);
@@ -293,6 +343,13 @@ internal sealed class MasmEmitter
                     break;
             }
         }
+    }
+
+    private MasmTemporaryStorage CreateTemporary(string prefix, SmileType type)
+    {
+        var storage = new MasmTemporaryStorage($"{prefix}_{_temporaries.Count}", type, _collectRoutine);
+        _temporaries.Add(storage);
+        return storage;
     }
 
     private void CollectTextToken(SyntaxToken token)
@@ -350,29 +407,50 @@ internal sealed class MasmEmitter
         }
     }
 
+    private void BuildFrameLayouts()
+    {
+        foreach (var routine in _analysis.SemanticModel.Routines.Values)
+        {
+            var localOffsets = new Dictionary<VariableSymbol, int>();
+            var offset = 0;
+            foreach (var symbol in routine.LocalSymbols.Values.Where(symbol => !symbol.IsConstant)
+                         .OrderBy(symbol => symbol.DeclarationSpan.Start))
+            {
+                offset += Math.Max(1, symbol.ArraySize) * 8;
+                localOffsets[symbol] = offset;
+            }
+
+            var temporaries = _temporaries.Where(temporary => ReferenceEquals(temporary.Owner, routine.Declaration))
+                .ToArray();
+            foreach (var temporary in temporaries)
+            {
+                offset += 8;
+                temporary.FrameOffset = offset;
+            }
+
+            var returnOffset = offset + 8;
+            _frameLayouts[routine] = new MasmFrameLayout(localOffsets, temporaries, returnOffset,
+                Align16(returnOffset + 160));
+        }
+    }
+
     private void EmitRoutine(RoutineSymbol routine)
     {
         _currentSource = routine.Source;
         _currentRoutine = routine;
+        _currentFrame = _frameLayouts[routine];
         _returnLabel = NewLabel("routine_return");
-        _localOffsets.Clear();
-        var localBytes = 0;
-        foreach (var symbol in routine.LocalSymbols.Values.Where(symbol => !symbol.IsConstant)
-                     .OrderBy(symbol => symbol.DeclarationSpan.Start))
-        {
-            localBytes += Math.Max(1, symbol.ArraySize) * 8;
-            _localOffsets[symbol] = localBytes;
-        }
-        _returnOffset = localBytes + 8;
-        var frameSize = Align16(localBytes + 8 + 160);
+        _activeCleanups.Clear();
         Line();
         Line($"{_routineLabels[routine]} PROC");
         Line("    push rbp");
         Line("    mov rbp, rsp");
-        Line($"    sub rsp, {frameSize}");
+        Line($"    sub rsp, {_currentFrame.FrameSize}");
         foreach (var symbol in routine.LocalSymbols.Values.Where(symbol => !symbol.IsConstant))
             for (var index = 0; index < Math.Max(1, symbol.ArraySize); index++)
-                Line($"    mov QWORD PTR [rbp-{_localOffsets[symbol] - index * 8}], 0");
+                Line($"    mov QWORD PTR [rbp-{_currentFrame.LocalOffsets[symbol] - index * 8}], 0");
+        foreach (var temporary in _currentFrame.Temporaries.Where(temporary => temporary.RequiresCleanup))
+            Line($"    mov QWORD PTR [rbp-{temporary.FrameOffset}], 0");
         for (var index = 0; index < routine.Parameters.Count; index++)
         {
             var parameter = routine.Parameters[index];
@@ -383,26 +461,28 @@ internal sealed class MasmEmitter
             };
             if (index >= 4)
                 Line($"    mov rax, {source}");
-            Line($"    mov QWORD PTR [rbp-{_localOffsets[parameter]}], {(index >= 4 ? "rax" : source)}");
+            Line($"    mov QWORD PTR [rbp-{_currentFrame.LocalOffsets[parameter]}], {(index >= 4 ? "rax" : source)}");
         }
-        Line($"    mov QWORD PTR [rbp-{_returnOffset}], 0");
+        Line($"    mov QWORD PTR [rbp-{_currentFrame.ReturnOffset}], 0");
         EmitStatements(routine.Declaration.Statements);
         if (!routine.IsFunction)
             Line("    xor eax, eax");
-        Line($"    mov QWORD PTR [rbp-{_returnOffset}], rax");
+        Line($"    mov QWORD PTR [rbp-{_currentFrame.ReturnOffset}], rax");
         Line($"{_returnLabel}:");
+        foreach (var temporary in _currentFrame.Temporaries.Where(temporary => temporary.RequiresCleanup))
+            EmitCleanup(new MasmCleanupAction(temporary));
         foreach (var symbol in routine.LocalSymbols.Values.Where(symbol => symbol.Type == SmileType.Text &&
                      symbol.ParameterMode != ParameterPassingMode.ByRef))
             EmitReleaseSymbol(symbol);
-        EmitSelectCleanup(routine.Declaration);
-        Line($"    mov rax, QWORD PTR [rbp-{_returnOffset}]");
+        Line($"    mov rax, QWORD PTR [rbp-{_currentFrame.ReturnOffset}]");
         Line("    mov rsp, rbp");
         Line("    pop rbp");
         Line("    ret");
         Line($"{_routineLabels[routine]} ENDP");
         _returnLabel = null;
         _currentRoutine = null;
-        _localOffsets.Clear();
+        _currentFrame = null;
+        _activeCleanups.Clear();
     }
 
     private void EmitStatements(IReadOnlyList<StatementSyntax> statements)
@@ -468,21 +548,28 @@ internal sealed class MasmEmitter
                     EmitExpression(returnStatement.Expression);
                 else
                     Line("    xor eax, eax");
-                Line($"    mov QWORD PTR [rbp-{_returnOffset}], rax");
+                Line($"    mov QWORD PTR [rbp-{_currentFrame!.ReturnOffset}], rax");
+                EmitCleanupToDepth(0);
                 Line($"    jmp {_returnLabel}");
                 break;
             case SelectStatementSyntax select:
                 EmitSelect(select);
                 break;
             case ExitStatementSyntax exit:
-                Line($"    jmp {(exit.TargetKeyword.Kind == SyntaxKind.ForKeyword ? _forExitLabels.Peek() : _doExitLabels.Peek())}");
+                var loop = exit.TargetKeyword.Kind == SyntaxKind.ForKeyword
+                    ? _forExitLabels.Peek()
+                    : _doExitLabels.Peek();
+                EmitCleanupToDepth(loop.CleanupDepth);
+                Line($"    jmp {loop.ExitLabel}");
                 break;
             case EndProgramStatementSyntax:
+                EmitCleanupToDepth(0);
                 if (_currentRoutine != null)
                     foreach (var symbol in _currentRoutine.LocalSymbols.Values.Where(symbol => symbol.Type == SmileType.Text &&
                                  symbol.ParameterMode != ParameterPassingMode.ByRef))
                         EmitReleaseSymbol(symbol);
                 EmitProgramCleanup();
+                CallAligned("smile_text_lifetime_report");
                 if (_usesMusic) CallAligned("smile_music_shutdown");
                 Line("    xor ecx, ecx");
                 CallAligned("ExitProcess");
@@ -734,16 +821,16 @@ internal sealed class MasmEmitter
         var startLabel = NewLabel("for_start");
         var endLabel = NewLabel("for_end");
         var counter = Resolve(statement.Identifier.Text);
-        var limitLabel = _forLimits[statement];
+        var limit = _forLimits[statement];
         EmitExpression(statement.LowerBound);
         EmitStore(counter);
         EmitExpression(statement.UpperBound);
-        Line($"    mov QWORD PTR [{limitLabel}], rax");
+        Line($"    mov {TemporaryMemory(limit)}, rax");
         Line($"{startLabel}:");
         EmitLoad(counter);
-        Line($"    cmp rax, QWORD PTR [{limitLabel}]");
+        Line($"    cmp rax, {TemporaryMemory(limit)}");
         Line(statement.IsDescending ? $"    jl {endLabel}" : $"    jg {endLabel}");
-        _forExitLabels.Push(endLabel);
+        _forExitLabels.Push(new MasmLoopContext(endLabel, _activeCleanups.Count));
         EmitStatements(statement.Statements);
         _forExitLabels.Pop();
         EmitAddress(counter);
@@ -757,7 +844,7 @@ internal sealed class MasmEmitter
         var startLabel = NewLabel("do_start");
         var endLabel = NewLabel("do_end");
         Line($"{startLabel}:");
-        _doExitLabels.Push(endLabel);
+        _doExitLabels.Push(new MasmLoopContext(endLabel, _activeCleanups.Count));
         EmitStatements(statement.Statements);
         _doExitLabels.Pop();
         if (statement.UntilCondition == null)
@@ -776,10 +863,22 @@ internal sealed class MasmEmitter
     private void EmitSelect(SelectStatementSyntax statement)
     {
         var endLabel = NewLabel("select_end");
-        var valueLabel = _selectValues[statement];
-        var isText = _analysis.SemanticModel.GetType(statement.Expression) == SmileType.Text;
+        var value = _selectValues[statement];
+        var isText = value.Type == SmileType.Text;
         EmitExpression(statement.Expression);
-        Line($"    mov QWORD PTR [{valueLabel}], rax");
+        MasmCleanupAction? cleanup = null;
+        if (isText)
+        {
+            PushRax();
+            EmitTemporaryAddress(value, "rcx");
+            PopRax();
+            Line("    mov rdx, rax");
+            CallAligned("smile_text_move_assign");
+            cleanup = new MasmCleanupAction(value);
+            _activeCleanups.Add(cleanup);
+        }
+        else
+            Line($"    mov {TemporaryMemory(value)}, rax");
         SelectCaseClauseSyntax? elseClause = null;
         foreach (var clause in statement.Cases)
         {
@@ -793,14 +892,14 @@ internal sealed class MasmEmitter
             if (isText)
             {
                 Line("    mov rdx, rax");
-                Line($"    mov rcx, QWORD PTR [{valueLabel}]");
+                Line($"    mov rcx, {TemporaryMemory(value)}");
                 CallAligned("smile_text_equal_case");
                 Line("    cmp rax, 0");
                 Line($"    je {nextLabel}");
             }
             else
             {
-                Line($"    cmp QWORD PTR [{valueLabel}], rax");
+                Line($"    cmp {TemporaryMemory(value)}, rax");
                 Line($"    jne {nextLabel}");
             }
             EmitStatements(clause.Statements);
@@ -810,10 +909,10 @@ internal sealed class MasmEmitter
         if (elseClause != null)
             EmitStatements(elseClause.Statements);
         Line($"{endLabel}:");
-        if (isText)
+        if (cleanup != null)
         {
-            Line($"    lea rcx, {valueLabel}");
-            CallAligned("smile_text_clear");
+            EmitCleanup(cleanup);
+            _activeCleanups.RemoveAt(_activeCleanups.Count - 1);
         }
     }
 
@@ -1019,7 +1118,7 @@ internal sealed class MasmEmitter
 
     private void EmitAddress(VariableSymbol symbol)
     {
-        if (_currentRoutine != null && _localOffsets.TryGetValue(symbol, out var offset))
+        if (_currentFrame != null && _currentFrame.LocalOffsets.TryGetValue(symbol, out var offset))
         {
             Line(symbol.ParameterMode == ParameterPassingMode.ByRef
                 ? $"    mov rax, QWORD PTR [rbp-{offset}]"
@@ -1083,17 +1182,35 @@ internal sealed class MasmEmitter
         foreach (var symbol in _analysis.SemanticModel.Symbols.Values.Where(symbol =>
                      !symbol.IsConstant && symbol.Type == SmileType.Text))
             EmitReleaseSymbol(symbol);
-        EmitSelectCleanup(null);
+        foreach (var temporary in _temporaries.Where(temporary => temporary.Kind == MasmStorageKind.Static &&
+                     temporary.RequiresCleanup))
+            EmitCleanup(new MasmCleanupAction(temporary));
     }
 
-    private void EmitSelectCleanup(RoutineDeclarationSyntax? owner)
+    private string TemporaryMemory(MasmTemporaryStorage storage)
     {
-        foreach (var select in _selectValues.Keys.Where(select => ReferenceEquals(_selectOwners[select], owner) &&
-                     _analysis.SemanticModel.GetType(select.Expression) == SmileType.Text))
-        {
-            Line($"    lea rcx, {_selectValues[select]}");
-            CallAligned("smile_text_clear");
-        }
+        return storage.Kind == MasmStorageKind.Static
+            ? $"QWORD PTR [{storage.Name}]"
+            : $"QWORD PTR [rbp-{storage.FrameOffset}]";
+    }
+
+    private void EmitTemporaryAddress(MasmTemporaryStorage storage, string register)
+    {
+        Line(storage.Kind == MasmStorageKind.Static
+            ? $"    lea {register}, {storage.Name}"
+            : $"    lea {register}, [rbp-{storage.FrameOffset}]");
+    }
+
+    private void EmitCleanup(MasmCleanupAction cleanup)
+    {
+        EmitTemporaryAddress(cleanup.Storage, "rcx");
+        CallAligned("smile_text_clear");
+    }
+
+    private void EmitCleanupToDepth(int cleanupDepth)
+    {
+        for (var index = _activeCleanups.Count - 1; index >= cleanupDepth; index--)
+            EmitCleanup(_activeCleanups[index]);
     }
 
     private void PushRax()
@@ -1129,13 +1246,14 @@ internal sealed class MasmEmitter
     private static bool IsExecutable(StatementSyntax statement) =>
         statement is not ConstStatementSyntax and not DimStatementSyntax and not RoutineDeclarationSyntax;
 
-    private static string FormatBytes(byte[] bytes) => bytes.Length == 0
-        ? "0"
-        : string.Join(",", bytes.Select(value => $"0{value:X2}h"));
-
-    private static string FormatBytesWithTerminator(byte[] bytes) => bytes.Length == 0
-        ? "0"
-        : FormatBytes(bytes) + ",0";
+    private void EmitBytes(byte[] bytes, bool terminate)
+    {
+        var values = terminate ? bytes.Concat(new byte[] { 0 }).ToArray() : bytes;
+        if (values.Length == 0)
+            values = new byte[] { 0 };
+        for (var offset = 0; offset < values.Length; offset += 16)
+            Line("BYTE " + string.Join(",", values.Skip(offset).Take(16).Select(value => $"0{value:X2}h")));
+    }
 
     private sealed class TextLiteral
     {

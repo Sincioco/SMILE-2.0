@@ -87,6 +87,10 @@ typedef struct SmileText
     char bytes[1];
 } SmileText;
 
+static volatile LONG64 smile_text_allocations;
+static volatile LONG64 smile_text_frees;
+static volatile LONG64 smile_text_live_objects;
+
 static const char* smile_text_bytes(const SmileText* text)
 {
     static const char empty[] = "";
@@ -110,7 +114,11 @@ void smile_text_release(void* value)
 {
     SmileText* text = (SmileText*)value;
     if (text != 0 && text->references >= 0 && InterlockedDecrement64(&text->references) == 0)
+    {
+        InterlockedIncrement64(&smile_text_frees);
+        InterlockedDecrement64(&smile_text_live_objects);
         HeapFree(GetProcessHeap(), 0, text);
+    }
 }
 
 static SmileText* smile_text_allocate(long long length)
@@ -128,6 +136,8 @@ static SmileText* smile_text_allocate(long long length)
     text->references = 1;
     text->length = length;
     text->bytes[length] = 0;
+    InterlockedIncrement64(&smile_text_allocations);
+    InterlockedIncrement64(&smile_text_live_objects);
     return text;
 }
 
@@ -202,12 +212,94 @@ void smile_print_text_value(void* owned_value)
     smile_text_release(text);
 }
 
+static SIZE_T smile_utf8_output_chunk(const char* text, SIZE_T remaining)
+{
+    const SIZE_T maximum = 16384;
+    SIZE_T length = remaining < maximum ? remaining : maximum;
+    SIZE_T lead;
+    unsigned char value;
+    int expected;
+    if (length == remaining)
+        return length;
+    lead = length;
+    while (lead > 0 && (((unsigned char)text[lead]) & 0xc0) == 0x80)
+        lead--;
+    value = (unsigned char)text[lead];
+    expected = value < 0x80 ? 1 : value < 0xe0 ? 2 : value < 0xf0 ? 3 : 4;
+    if (lead + (SIZE_T)expected > length)
+        length = lead;
+    return length == 0 ? (remaining < maximum ? remaining : maximum) : length;
+}
+
+static int smile_write_console_utf8(HANDLE output, const char* text, SIZE_T length)
+{
+    while (length != 0)
+    {
+        SIZE_T input_length = smile_utf8_output_chunk(text, length);
+        int wide_length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text, (int)input_length, 0, 0);
+        WCHAR* wide;
+        int offset = 0;
+        if (wide_length <= 0)
+            return 0;
+        wide = (WCHAR*)HeapAlloc(GetProcessHeap(), 0, (SIZE_T)wide_length * sizeof(WCHAR));
+        if (wide == 0)
+            return 0;
+        if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text, (int)input_length,
+            wide, wide_length) != wide_length)
+        {
+            HeapFree(GetProcessHeap(), 0, wide);
+            return 0;
+        }
+        while (offset < wide_length)
+        {
+            DWORD requested = (DWORD)(wide_length - offset);
+            DWORD written = 0;
+            if (requested > 8192)
+                requested = 8192;
+            if (offset + (int)requested < wide_length && requested > 0 &&
+                wide[offset + requested - 1] >= 0xd800 && wide[offset + requested - 1] <= 0xdbff)
+                requested--;
+            if (requested == 0 || !WriteConsoleW(output, wide + offset, requested, &written, 0) || written == 0)
+            {
+                HeapFree(GetProcessHeap(), 0, wide);
+                return 0;
+            }
+            offset += (int)written;
+        }
+        HeapFree(GetProcessHeap(), 0, wide);
+        text += input_length;
+        length -= input_length;
+    }
+    return 1;
+}
+
+static int smile_write_utf8(HANDLE output, const char* text, unsigned long long length)
+{
+    while (length != 0)
+    {
+        DWORD requested = length > MAXDWORD ? MAXDWORD : (DWORD)length;
+        DWORD written = 0;
+        if (!WriteFile(output, text, requested, &written, 0) || written == 0)
+            return 0;
+        text += written;
+        length -= written;
+    }
+    return 1;
+}
+
 void smile_print_text(const char* text, long long length)
 {
-    DWORD written;
+    HANDLE output;
+    DWORD mode;
     if (text == 0 || length <= 0)
         return;
-    WriteFile(smile_output(), text, (DWORD)length, &written, 0);
+    output = smile_output();
+    if (output == 0 || output == INVALID_HANDLE_VALUE)
+        return;
+    if (GetConsoleMode(output, &mode))
+        (void)smile_write_console_utf8(output, text, (SIZE_T)length);
+    else
+        (void)smile_write_utf8(output, text, (unsigned long long)length);
 }
 
 static int smile_format_number(long long value, char* buffer, int capacity)
@@ -253,6 +345,21 @@ void smile_print_newline(void)
 {
     static const char newline[] = "\r\n";
     smile_print_text(newline, 2);
+}
+
+long long smile_text_allocation_count(void) { return InterlockedCompareExchange64(&smile_text_allocations, 0, 0); }
+long long smile_text_free_count(void) { return InterlockedCompareExchange64(&smile_text_frees, 0, 0); }
+long long smile_text_live_count(void) { return InterlockedCompareExchange64(&smile_text_live_objects, 0, 0); }
+
+void smile_text_lifetime_report(void)
+{
+    WCHAR enabled[2];
+    static const char prefix[] = "SMILE_TEXT_LIVE=";
+    if (GetEnvironmentVariableW(L"SMILE_TEXT_LIFETIME_DIAGNOSTICS", enabled, 2) == 0)
+        return;
+    smile_print_text(prefix, (long long)(sizeof(prefix) - 1));
+    smile_print_number(smile_text_live_count());
+    smile_print_newline();
 }
 
 static long long smile_map_key(WCHAR character, WORD virtual_key)

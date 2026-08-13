@@ -1,0 +1,19 @@
+OPTION EXPLICIT
+
+PRINT Visit(3)
+
+END PROGRAM
+
+FUNCTION Visit(Level AS NUMBER) AS TEXT
+    DIM Nested AS TEXT
+
+    SELECT CASE "G" + "O"
+        CASE "GO"
+            IF Level > 0 THEN
+                Nested = Visit(Level - 1)
+            END IF
+            RETURN "MATCH"
+        CASE ELSE
+            RETURN "MISS"
+    END SELECT
+END FUNCTION

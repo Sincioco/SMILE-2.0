@@ -1565,6 +1565,56 @@ Run("Typed completion descriptions include parameter modes and returns", () =>
         .GetCompletions(Analyze(typedDeclaration), typedDeclaration.Length).Select(item => item.DisplayText)));
 });
 
+Run("Routine compiler temporaries have distinct invocation-local frame storage", () =>
+{
+    const string source = "OPTION EXPLICIT\nCALL Work(2)\nSUB Work(Level AS NUMBER)\nDIM Index AS NUMBER\nDIM Values[2] AS TEXT\nFOR Index = 1 TO Level\nSELECT CASE Level\nCASE 1\nPRINT Index\nEND SELECT\nSELECT CASE TRUE\nCASE TRUE\nPRINT Index\nEND SELECT\nSELECT CASE \"X\" + \"\"\nCASE \"X\"\nPRINT Values[0]\nEND SELECT\nEND FOR\nEND SUB\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var emitter = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false);
+    var assembly = emitter.Emit();
+    var frame = emitter.FrameLayouts.Single().Value;
+    var occupied = new HashSet<int>();
+    var expectedSlots = 1;
+    foreach (var item in frame.LocalOffsets)
+    {
+        var slots = Math.Max(1, item.Key.ArraySize);
+        expectedSlots += slots;
+        for (var index = 0; index < slots; index++)
+            Equal(true, occupied.Add(item.Value - index * 8));
+    }
+    expectedSlots += frame.Temporaries.Count;
+    foreach (var temporary in frame.Temporaries)
+        Equal(true, occupied.Add(temporary.FrameOffset));
+    Equal(true, occupied.Add(frame.ReturnOffset));
+    Equal(expectedSlots, occupied.Count);
+    Equal(0, frame.FrameSize % 16);
+    Equal(false, assembly.Contains("for_limit_", StringComparison.Ordinal));
+    Equal(false, assembly.Contains("select_value_", StringComparison.Ordinal));
+    Equal(true, assembly.Contains("call smile_text_move_assign", StringComparison.Ordinal));
+});
+
+Run("Owned TEXT selector cleanup precedes RETURN and loop exits", () =>
+{
+    var nested = Analyze(File.ReadAllText("examples/Phase3A1Hardening/NestedCleanup.smile"));
+    Equal(false, nested.HasErrors);
+    var nestedAssembly = new MasmEmitter(nested, SmileGraphicsBackend.Auto, true, false).Emit();
+    var returnJump = nestedAssembly.IndexOf("jmp routine_return", StringComparison.Ordinal);
+    var returnMove = nestedAssembly.LastIndexOf("call smile_text_move_assign", returnJump, StringComparison.Ordinal);
+    var returnClear = nestedAssembly.LastIndexOf("call smile_text_clear", returnJump, StringComparison.Ordinal);
+    Equal(true, returnJump > 0 && returnClear > returnMove);
+
+    var exits = Analyze(File.ReadAllText("examples/Phase3A1Hardening/ExitCleanup.smile"));
+    Equal(false, exits.HasErrors);
+    var exitAssembly = new MasmEmitter(exits, SmileGraphicsBackend.Auto, true, false).Emit();
+    foreach (var prefix in new[] { "for_end", "do_end" })
+    {
+        var jump = exitAssembly.IndexOf("jmp " + prefix, StringComparison.Ordinal);
+        var move = exitAssembly.LastIndexOf("call smile_text_move_assign", jump, StringComparison.Ordinal);
+        var clear = exitAssembly.LastIndexOf("call smile_text_clear", jump, StringComparison.Ordinal);
+        Equal(true, jump > 0 && clear > move);
+    }
+});
+
 if (failures.Count != 0)
 {
     Console.Error.WriteLine($"{failures.Count} SMILE project-option test(s) failed:");

@@ -23,6 +23,9 @@ if errorlevel 1 exit /b %errorlevel%
 msbuild "%SMILE_ROOT%\src\Smile.NativeRuntime\Smile.NativeRuntime.vcxproj" /m /nr:false /p:Configuration=Release /p:Platform=x64 /p:SolutionDir="%SMILE_ROOT_SLASH%" /v:minimal
 if errorlevel 1 exit /b %errorlevel%
 
+msbuild "%SMILE_ROOT%\src\Smile.NativeTextTests\Smile.NativeTextTests.vcxproj" /m /nr:false /p:Configuration=Release /p:Platform=x64 /p:SolutionDir="%SMILE_ROOT_SLASH%" /v:minimal
+if errorlevel 1 exit /b %errorlevel%
+
 dotnet publish "%SMILE_ROOT%\src\Smile.Compiler\Smile.Compiler.csproj" -c Release -r win-x64 --self-contained false -o "%SMILE_ROOT%\artifacts\compiler"
 if errorlevel 1 exit /b %errorlevel%
 
