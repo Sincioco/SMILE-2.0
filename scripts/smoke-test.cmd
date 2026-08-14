@@ -234,14 +234,8 @@ if not exist "%SMILE_ROOT%\artifacts\games\Phase4VisualSlice-GDI" mkdir "%SMILE_
 if errorlevel 1 exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase4VisualSlice\Phase4VisualSlice.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\Phase4VisualSlice-GDI\Phase4VisualSlice.exe"
 if errorlevel 1 exit /b 1
-xcopy "%SMILE_ROOT%\examples\Phase4VisualSlice\Assets" "%SMILE_ROOT%\artifacts\games\Phase4VisualSlice-DirectX\Assets" /E /I /Y >nul
-if errorlevel 1 exit /b 1
-xcopy "%SMILE_ROOT%\examples\Phase4VisualSlice\Assets" "%SMILE_ROOT%\artifacts\games\Phase4VisualSlice-GDI\Assets" /E /I /Y >nul
-if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase4VisualSlice\Phase4VisualSlice.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\Phase4VisualSlice"
-if errorlevel 1 exit /b 1
-xcopy "%SMILE_ROOT%\examples\Phase4VisualSlice\Assets" "%SMILE_ROOT%\artifacts\web\Phase4VisualSlice\Assets" /E /I /Y >nul
 if errorlevel 1 exit /b 1
 node --check "%SMILE_ROOT%\artifacts\web\Phase4VisualSlice\game.js"
 if errorlevel 1 exit /b 1
@@ -294,6 +288,9 @@ if errorlevel 1 exit /b 1
 node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase4Hardening\AudioGeneration" --frames 3 --timeout 10000 --phase4-audio
 if errorlevel 1 exit /b 1
 echo Phase 4.1 ownership, high-DPI, clip lifetime, DATA identity, cache race, and audio generation tests passed.
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-phase4-asset-publication.ps1"
+if errorlevel 1 exit /b 1
 
 for %%P in (OptionExplicitLate:SML3300 OptionExplicitUndeclared:SML3303 ScalarDimWithoutAs:SML3302 UnknownBuiltInType:SML3401 NumberToTextAssignment:SML3304 TextToBooleanAssignment:SML3304 MixedTextAddition:SML3308 TextRelationalComparison:SML3308 InvalidByRefLiteral:SML3305 InvalidByRefConstant:SML3305 WrongArgumentType:SML3304 WrongReturnType:SML3304 InconsistentLegacyReturnTypes:SML3309 DuplicateLocal:SML3306 UseBeforeLocalDeclaration:SML3307) do (
     for /f "tokens=1,2 delims=:" %%F in ("%%P") do (
@@ -536,13 +533,10 @@ if errorlevel 1 exit /b %errorlevel%
 echo Live refresh fixture compiled for native and Web.
 
 if not exist "%SMILE_ROOT%\artifacts\games\Snake" mkdir "%SMILE_ROOT%\artifacts\games\Snake"
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\Snake\Program.smile" -o "%SMILE_ROOT%\artifacts\games\Snake\Snake.exe" --keep-temp
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\Snake\Snake.smileproj" -o "%SMILE_ROOT%\artifacts\games\Snake\Snake.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\Snake\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\Snake\Snake-NoDemo.exe"
 if errorlevel 1 exit /b %errorlevel%
-xcopy "%SMILE_ROOT%\games\Snake\Assets" "%SMILE_ROOT%\artifacts\games\Snake\Assets" /E /I /Y >nul
-if errorlevel 1 exit /b %errorlevel%
-
 echo Snake demo and no-demo versions compiled successfully.
 
 if not exist "%SMILE_ROOT%\artifacts\games\FallingBlocks" mkdir "%SMILE_ROOT%\artifacts\games\FallingBlocks"
@@ -550,11 +544,9 @@ if not exist "%SMILE_ROOT%\games\FallingBlocks\Assets\Background.mp3" (
     echo Falling Blocks background music source asset is missing.
     exit /b 1
 )
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\FallingBlocks\Program.smile" -o "%SMILE_ROOT%\artifacts\games\FallingBlocks\FallingBlocks.exe" --keep-temp
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\FallingBlocks\FallingBlocks.smileproj" -o "%SMILE_ROOT%\artifacts\games\FallingBlocks\FallingBlocks.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\FallingBlocks\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\FallingBlocks\FallingBlocks-NoDemo.exe"
-if errorlevel 1 exit /b %errorlevel%
-xcopy "%SMILE_ROOT%\games\FallingBlocks\Assets" "%SMILE_ROOT%\artifacts\games\FallingBlocks\Assets" /E /I /Y >nul
 if errorlevel 1 exit /b %errorlevel%
 if not exist "%SMILE_ROOT%\artifacts\games\FallingBlocks\Assets\Background.mp3" (
     echo Falling Blocks background music output asset is missing.
@@ -568,20 +560,16 @@ if errorlevel 1 (
 echo Falling Blocks demo and no-demo versions compiled successfully.
 
 if not exist "%SMILE_ROOT%\artifacts\games\PaddleBall" mkdir "%SMILE_ROOT%\artifacts\games\PaddleBall"
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\PaddleBall\Program.smile" -o "%SMILE_ROOT%\artifacts\games\PaddleBall\PaddleBall.exe"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\PaddleBall\PaddleBall.smileproj" -o "%SMILE_ROOT%\artifacts\games\PaddleBall\PaddleBall.exe"
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\PaddleBall\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\PaddleBall\PaddleBall-NoDemo.exe"
-if errorlevel 1 exit /b %errorlevel%
-xcopy "%SMILE_ROOT%\games\PaddleBall\Assets" "%SMILE_ROOT%\artifacts\games\PaddleBall\Assets" /E /I /Y >nul
 if errorlevel 1 exit /b %errorlevel%
 echo Paddle Ball demo and no-demo versions compiled successfully.
 
 if not exist "%SMILE_ROOT%\artifacts\games\BrickBreaker" mkdir "%SMILE_ROOT%\artifacts\games\BrickBreaker"
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\BrickBreaker\Program.smile" -o "%SMILE_ROOT%\artifacts\games\BrickBreaker\BrickBreaker.exe"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\BrickBreaker\BrickBreaker.smileproj" -o "%SMILE_ROOT%\artifacts\games\BrickBreaker\BrickBreaker.exe"
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\BrickBreaker\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\BrickBreaker\BrickBreaker-NoDemo.exe"
-if errorlevel 1 exit /b %errorlevel%
-xcopy "%SMILE_ROOT%\games\BrickBreaker\Assets" "%SMILE_ROOT%\artifacts\games\BrickBreaker\Assets" /E /I /Y >nul
 if errorlevel 1 exit /b %errorlevel%
 echo Brick Breaker demo and no-demo versions compiled successfully.
 
@@ -590,13 +578,9 @@ if not exist "%SMILE_ROOT%\games\MazeMuncher\Assets\Background.mp3" (
     echo Maze Muncher background music source asset is missing.
     exit /b 1
 )
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\MazeMuncher\Program.smile" -o "%SMILE_ROOT%\artifacts\games\MazeMuncher\MazeMuncher.exe" --keep-temp
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\MazeMuncher\MazeMuncher.smileproj" -o "%SMILE_ROOT%\artifacts\games\MazeMuncher\MazeMuncher.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\MazeMuncher\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\MazeMuncher\MazeMuncher-NoDemo.exe" --keep-temp
-if errorlevel 1 exit /b %errorlevel%
-xcopy "%SMILE_ROOT%\games\MazeMuncher\Assets" "%SMILE_ROOT%\artifacts\games\MazeMuncher\Assets" /E /I /Y >nul
-if errorlevel 1 exit /b %errorlevel%
-xcopy "%SMILE_ROOT%\games\MazeMuncher\Maps" "%SMILE_ROOT%\artifacts\games\MazeMuncher\Maps" /E /I /Y >nul
 if errorlevel 1 exit /b %errorlevel%
 if not exist "%SMILE_ROOT%\artifacts\games\MazeMuncher\Assets\Background.mp3" (
     echo Maze Muncher background music output asset is missing.
@@ -615,11 +599,9 @@ if errorlevel 1 (
 echo Maze Muncher demo and no-demo versions compiled successfully.
 
 if not exist "%SMILE_ROOT%\artifacts\games\StarSquadron" mkdir "%SMILE_ROOT%\artifacts\games\StarSquadron"
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\StarSquadron\Program.smile" -o "%SMILE_ROOT%\artifacts\games\StarSquadron\StarSquadron.exe" --keep-temp
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\StarSquadron\StarSquadron.smileproj" -o "%SMILE_ROOT%\artifacts\games\StarSquadron\StarSquadron.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\StarSquadron\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\StarSquadron\StarSquadron-NoDemo.exe"
-if errorlevel 1 exit /b %errorlevel%
-xcopy "%SMILE_ROOT%\games\StarSquadron\Assets" "%SMILE_ROOT%\artifacts\games\StarSquadron\Assets" /E /I /Y >nul
 if errorlevel 1 exit /b %errorlevel%
 echo Star Squadron demo and no-demo versions compiled successfully.
 
@@ -630,13 +612,9 @@ if not exist "%SMILE_ROOT%\games\DungeonStarI\Assets\Background.mp3" (
 )
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\validate-dungeon-maps.ps1"
 if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\DungeonStarI\Program.smile" -o "%SMILE_ROOT%\artifacts\games\DungeonStarI\DungeonStarI.exe" --keep-temp
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\DungeonStarI\DungeonStarI.smileproj" -o "%SMILE_ROOT%\artifacts\games\DungeonStarI\DungeonStarI.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\DungeonStarI\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\DungeonStarI\DungeonStarI-NoDemo.exe"
-if errorlevel 1 exit /b %errorlevel%
-xcopy "%SMILE_ROOT%\games\DungeonStarI\Assets" "%SMILE_ROOT%\artifacts\games\DungeonStarI\Assets" /E /I /Y >nul
-if errorlevel 1 exit /b %errorlevel%
-xcopy "%SMILE_ROOT%\games\DungeonStarI\Maps" "%SMILE_ROOT%\artifacts\games\DungeonStarI\Maps" /E /I /Y >nul
 if errorlevel 1 exit /b %errorlevel%
 if not exist "%SMILE_ROOT%\artifacts\games\DungeonStarI\Assets\Background.mp3" (
     echo Dungeon Star I background music output asset is missing.
@@ -659,11 +637,9 @@ echo Dungeon Star I demo and no-demo versions compiled successfully.
 if not exist "%SMILE_ROOT%\artifacts\games\DungeonStarII" mkdir "%SMILE_ROOT%\artifacts\games\DungeonStarII"
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\validate-raycasting-maps.ps1"
 if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\DungeonStarII\Program.smile" -o "%SMILE_ROOT%\artifacts\games\DungeonStarII\DungeonStarII.exe" --keep-temp
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\DungeonStarII\DungeonStarII.smileproj" -o "%SMILE_ROOT%\artifacts\games\DungeonStarII\DungeonStarII.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\DungeonStarII\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\DungeonStarII\DungeonStarII-NoDemo.exe"
-if errorlevel 1 exit /b %errorlevel%
-xcopy "%SMILE_ROOT%\games\DungeonStarII\Maps" "%SMILE_ROOT%\artifacts\games\DungeonStarII\Maps" /E /I /Y >nul
 if errorlevel 1 exit /b %errorlevel%
 for %%M in (default.map custom.map) do (
     fc /b "%SMILE_ROOT%\games\DungeonStarII\Maps\%%M" "%SMILE_ROOT%\artifacts\games\DungeonStarII\Maps\%%M" >nul
@@ -681,13 +657,9 @@ if not exist "%SMILE_ROOT%\games\PlatformQuest\Assets\Background.mp3" (
 )
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\validate-platform-quest-maps.ps1"
 if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\PlatformQuest\Program.smile" -o "%SMILE_ROOT%\artifacts\games\PlatformQuest\PlatformQuest.exe" --keep-temp
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\PlatformQuest\PlatformQuest.smileproj" -o "%SMILE_ROOT%\artifacts\games\PlatformQuest\PlatformQuest.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\PlatformQuest\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\PlatformQuest\PlatformQuest-NoDemo.exe"
-if errorlevel 1 exit /b %errorlevel%
-xcopy "%SMILE_ROOT%\games\PlatformQuest\Assets" "%SMILE_ROOT%\artifacts\games\PlatformQuest\Assets" /E /I /Y >nul
-if errorlevel 1 exit /b %errorlevel%
-xcopy "%SMILE_ROOT%\games\PlatformQuest\Maps" "%SMILE_ROOT%\artifacts\games\PlatformQuest\Maps" /E /I /Y >nul
 if errorlevel 1 exit /b %errorlevel%
 for %%A in (Background.mp3 Background.wav Start.wav Jump.wav Coin.wav Block.wav Stomp.wav Hurt.wav Goal.wav GameOver.wav) do (
     fc /b "%SMILE_ROOT%\games\PlatformQuest\Assets\%%A" "%SMILE_ROOT%\artifacts\games\PlatformQuest\Assets\%%A" >nul
@@ -710,11 +682,9 @@ if not exist "%SMILE_ROOT%\games\SkyHopper\Assets\Background.mp3" (
     echo Sky Hopper background music source asset is missing.
     exit /b 1
 )
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\SkyHopper\Program.smile" -o "%SMILE_ROOT%\artifacts\games\SkyHopper\SkyHopper.exe" --keep-temp
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\SkyHopper\SkyHopper.smileproj" -o "%SMILE_ROOT%\artifacts\games\SkyHopper\SkyHopper.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\SkyHopper\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\SkyHopper\SkyHopper-NoDemo.exe"
-if errorlevel 1 exit /b %errorlevel%
-xcopy "%SMILE_ROOT%\games\SkyHopper\Assets" "%SMILE_ROOT%\artifacts\games\SkyHopper\Assets" /E /I /Y >nul
 if errorlevel 1 exit /b %errorlevel%
 for %%A in (Background.mp3 Background.wav Start.wav Flap.wav Score.wav Hit.wav GameOver.wav) do (
     fc /b "%SMILE_ROOT%\games\SkyHopper\Assets\%%A" "%SMILE_ROOT%\artifacts\games\SkyHopper\Assets\%%A" >nul
@@ -726,7 +696,7 @@ for %%A in (Background.mp3 Background.wav Start.wav Flap.wav Score.wav Hit.wav G
 echo Sky Hopper demo and no-demo versions compiled successfully.
 
 for %%G in (Snake FallingBlocks PaddleBall BrickBreaker DungeonStarI DungeonStarII MazeMuncher StarSquadron PlatformQuest SkyHopper) do (
-    "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\%%G\Program.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\%%G"
+    "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\%%G\%%G.smileproj" --target web --output-dir "%SMILE_ROOT%\artifacts\web\%%G"
     if errorlevel 1 exit /b 1
     node --check "%SMILE_ROOT%\artifacts\web\%%G\game.js"
     if errorlevel 1 exit /b 1

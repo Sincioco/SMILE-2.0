@@ -213,8 +213,9 @@ int main(void)
         {
             check(smile_sfx_active_count() == 1, "started native WAV occupies exactly one channel");
             Sleep(750);
+            smile_sfx_reap();
             check(smile_sfx_active_count() == 0 && smile_sfx_completion_count() == completions + 1,
-                "natural XAudio2 completion is reaped on the main thread and frees its channel");
+                "normal-pump SFX reaping frees a naturally completed channel on the main thread");
         }
         else
             check(smile_sfx_active_count() == 0 && smile_sfx_completion_count() == completions,

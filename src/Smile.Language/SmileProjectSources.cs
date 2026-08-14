@@ -58,7 +58,7 @@ public sealed class SmileProjectSourceSet
     private SmileProjectSourceSet(string projectPath, SmileProjectKind projectKind, string startupFile,
         string libraryName, string version, string outputName,
         IReadOnlyList<SmileProjectSourceItem> items, IReadOnlyList<SmileProjectSourceItem> compilationSources,
-        IReadOnlyList<SmileProjectReferenceItem> references, IReadOnlyList<string> assetPaths)
+        IReadOnlyList<SmileProjectReferenceItem> references, SmileProjectAssetManifest assetManifest)
     {
         ProjectPath = projectPath;
         ProjectDirectory = Path.GetDirectoryName(projectPath) ?? Environment.CurrentDirectory;
@@ -72,7 +72,7 @@ public sealed class SmileProjectSourceSet
         StartupSource = projectKind == SmileProjectKind.Library ? null : compilationSources[0];
         SupportSources = projectKind == SmileProjectKind.Library ? compilationSources : compilationSources.Skip(1).ToArray();
         References = references;
-        AssetPaths = assetPaths;
+        AssetManifest = assetManifest;
     }
 
     public string ProjectPath { get; }
@@ -88,7 +88,8 @@ public sealed class SmileProjectSourceSet
     public IReadOnlyList<SmileProjectSourceItem> CompilationSources { get; }
     public IReadOnlyList<SmileProjectSourceItem> SupportSources { get; }
     public IReadOnlyList<SmileProjectReferenceItem> References { get; }
-    public IReadOnlyList<string> AssetPaths { get; }
+    public SmileProjectAssetManifest AssetManifest { get; }
+    public IReadOnlyList<string> AssetPaths => AssetManifest.AssetPaths;
 
     public IReadOnlyList<SmileProjectSourceItem> GetCompilationSourcesFor(string filePath)
     {
@@ -222,56 +223,9 @@ public sealed class SmileProjectSourceSet
             references.Add(new SmileProjectReferenceItem(include, referencePath, referenceKind));
         }
 
-        var assetPaths = ExpandAssetPaths(root, projectDirectory);
+        var assetManifest = SmileProjectAssetResolver.Resolve(fullProjectPath, projectKind, root);
         return new SmileProjectSourceSet(fullProjectPath, projectKind, startupFile ?? string.Empty,
-            libraryName, version, outputName!, items, compilationSources, references, assetPaths);
-    }
-
-    private static IReadOnlyList<string> ExpandAssetPaths(XElement root, string projectDirectory)
-    {
-        var assets = new HashSet<string>(StringComparer.Ordinal);
-        var includes = root.Elements().Where(element => element.Name.LocalName == "ItemGroup")
-            .SelectMany(element => element.Elements().Where(item => item.Name.LocalName == "Asset"));
-        foreach (var element in includes)
-        {
-            var include = ((string?)element.Attribute("Include") ?? string.Empty).Trim()
-                .Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
-            if (string.IsNullOrWhiteSpace(include))
-                throw new InvalidDataException("Asset Include must name a project-relative file or wildcard.");
-            if (Path.IsPathRooted(include) || include.Split(Path.DirectorySeparatorChar).Any(part => part == ".."))
-                throw new InvalidDataException($"Asset Include must remain inside the project directory: '{include}'.");
-
-            var wildcard = include.IndexOfAny(new[] { '*', '?' });
-            if (wildcard < 0)
-            {
-                var fullPath = Path.GetFullPath(Path.Combine(projectDirectory, include));
-                if (File.Exists(fullPath))
-                    assets.Add(ProjectRelativePath(projectDirectory, fullPath));
-                continue;
-            }
-
-            var prefix = include.Substring(0, wildcard);
-            var separator = prefix.LastIndexOf(Path.DirectorySeparatorChar);
-            var relativeRoot = separator < 0 ? string.Empty : prefix.Substring(0, separator);
-            var searchRoot = Path.GetFullPath(Path.Combine(projectDirectory, relativeRoot));
-            if (!Directory.Exists(searchRoot))
-                continue;
-            var recursive = include.IndexOf($"**{Path.DirectorySeparatorChar}", StringComparison.Ordinal) >= 0;
-            foreach (var fullPath in Directory.EnumerateFiles(searchRoot, "*",
-                         recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly))
-                assets.Add(ProjectRelativePath(projectDirectory, fullPath));
-        }
-        return assets.OrderBy(path => path, StringComparer.Ordinal).ToArray();
-    }
-
-    private static string ProjectRelativePath(string projectDirectory, string fullPath)
-    {
-        var root = Path.GetFullPath(projectDirectory).TrimEnd(Path.DirectorySeparatorChar,
-            Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        var normalized = Path.GetFullPath(fullPath);
-        if (!normalized.StartsWith(root, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException($"Asset path escaped the project directory: '{fullPath}'.");
-        return normalized.Substring(root.Length).Replace('\\', '/');
+            libraryName, version, outputName!, items, compilationSources, references, assetManifest);
     }
 
     public void ValidateFiles()
@@ -285,6 +239,8 @@ public sealed class SmileProjectSourceSet
             }
         }
     }
+
+    public void ValidateAssetsForBuild() => AssetManifest.ValidateForBuild();
 
     public void ValidateReferences()
     {

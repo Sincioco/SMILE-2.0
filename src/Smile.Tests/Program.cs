@@ -425,13 +425,202 @@ Run("Game hierarchy projection includes startup alternate support and assets exa
 {
     var projectPath = Path.GetFullPath("examples/SourceVisibilityBasics/SourceVisibilityBasics.smileproj");
     var sourceSet = SmileProjectSourceSet.Load(projectPath);
-    var projection = SmileProjectHierarchyProjection.Create(sourceSet, "Game", new[] { "Assets\\**\\*" });
+    var projection = SmileProjectHierarchyProjection.Create(sourceSet, "Game");
     Equal("References|Program.smile|Program-NoDemo.smile|Helpers.smile|Assets|Readme.txt",
         string.Join("|", projection.Select(item => item.Caption)));
     foreach (var source in sourceSet.Items)
         Equal(1, projection.Count(item => item.Kind == SmileProjectHierarchyItemKind.Source &&
             string.Equals(item.FullPath, source.FullPath, StringComparison.OrdinalIgnoreCase)));
     Equal(projection.Count, projection.Select(item => item.Key).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+});
+Run("Phase 4.2 asset globs resolve exactly deduplicate overlaps and project only resolved files", () =>
+{
+    var projectPath = Path.GetFullPath("examples/Phase4AssetPublication/Phase4AssetPublication.smileproj");
+    var expected = File.ReadAllLines(Path.Combine(Path.GetDirectoryName(projectPath)!, "ExpectedAssetPaths.txt"));
+    var sourceSet = SmileProjectSourceSet.Load(projectPath);
+    Equal(0, sourceSet.AssetManifest.Diagnostics.Count);
+    Equal(string.Join("|", expected), string.Join("|", sourceSet.AssetManifest.AssetPaths));
+    Equal(2, sourceSet.AssetManifest.Items.Single(item => item.LogicalPath == "Assets/UI/Window.png")
+        .MatchedIncludes.Count);
+    Equal(0, sourceSet.AssetManifest.Includes.Single(include =>
+        include.NormalizedPattern == "Assets/Empty/**/*").IsValid ? 0 : 1);
+
+    var hierarchy = SmileProjectHierarchyProjection.Create(sourceSet, "Game");
+    var hierarchyAssets = hierarchy
+        .Where(item => item.Kind == SmileProjectHierarchyItemKind.Asset)
+        .Select(item => Path.GetRelativePath(sourceSet.ProjectDirectory, item.FullPath!).Replace('\\', '/'))
+        .OrderBy(path => path, StringComparer.Ordinal)
+        .ToArray();
+    Equal(string.Join("|", expected), string.Join("|", hierarchyAssets));
+    Equal(false, hierarchyAssets.Contains("Assets/UI/Sub/Nested.png", StringComparer.Ordinal));
+    Equal(false, hierarchyAssets.Contains("Assets/Audio/Notes.txt", StringComparer.Ordinal));
+    Equal(false, hierarchyAssets.Contains("Assets/Unlisted/Secret.txt", StringComparer.Ordinal));
+    Equal(false, hierarchy.Any(item => item.Kind == SmileProjectHierarchyItemKind.Folder &&
+        item.FullPath.EndsWith(Path.Combine("Assets", "Empty"), StringComparison.OrdinalIgnoreCase)));
+});
+Run("Missing explicit assets report SML3601 at the project Include", () =>
+{
+    var projectPath = Path.GetFullPath("examples/InvalidPhase4Assets/MissingExplicit/MissingExplicit.smileproj");
+    var sourceSet = SmileProjectSourceSet.Load(projectPath);
+    var diagnostic = sourceSet.AssetManifest.Diagnostics.Single(item => item.Code == "SML3601");
+    Equal(true, diagnostic.Line > 1);
+    Equal(true, diagnostic.Column > 1);
+    ThrowsProjectDiagnostic(sourceSet.ValidateAssetsForBuild, "SML3601");
+});
+Run("Library project assets report SML3606 while the project remains loadable", () =>
+{
+    var projectPath = Path.GetFullPath("examples/InvalidPhase4Assets/LibraryAsset/LibraryAsset.smilelibproj");
+    var sourceSet = SmileProjectSourceSet.Load(projectPath);
+    Equal("SML3606", sourceSet.AssetManifest.Diagnostics.Single().Code);
+    ThrowsProjectDiagnostic(sourceSet.ValidateAssetsForBuild, "SML3606");
+});
+Run("Asset matching is ordinal case-sensitive and reports SML3602", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileAssetCaseTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(Path.Combine(directory, "Assets", "UI"));
+    try
+    {
+        File.WriteAllText(Path.Combine(directory, "Program.smile"), "END PROGRAM\n");
+        File.WriteAllText(Path.Combine(directory, "Assets", "UI", "Window.png"), "image");
+        var projectPath = Path.Combine(directory, "Case.smileproj");
+        File.WriteAllText(projectPath, "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /><Asset Include=\"Assets\\ui\\window.png\" /></ItemGroup></SmileProject>");
+        var sourceSet = SmileProjectSourceSet.Load(projectPath);
+        var diagnostic = sourceSet.AssetManifest.Diagnostics.Single(item => item.Code == "SML3602");
+        Equal(true, diagnostic.Message.Contains("Assets/UI/Window.png", StringComparison.Ordinal));
+        ThrowsProjectDiagnostic(sourceSet.ValidateAssetsForBuild, "SML3602");
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
+});
+Run("Asset stars match zero characters and question marks match exactly one", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileAssetQuestionTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(Path.Combine(directory, "Assets"));
+    try
+    {
+        File.WriteAllText(Path.Combine(directory, "Program.smile"), "END PROGRAM\n");
+        File.WriteAllText(Path.Combine(directory, "Assets", "a-click.wav"), "one");
+        File.WriteAllText(Path.Combine(directory, "Assets", "ab-click.wav"), "two");
+        File.WriteAllText(Path.Combine(directory, "Assets", "abc-click.wav"), "three");
+        File.WriteAllText(Path.Combine(directory, "Assets", ".png"), "zero");
+        var projectPath = Path.Combine(directory, "Question.smileproj");
+        File.WriteAllText(projectPath, "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /><Asset Include=\"Assets\\??-click.wav\" /><Asset Include=\"Assets\\*.png\" /></ItemGroup></SmileProject>");
+        var manifest = SmileProjectSourceSet.Load(projectPath).AssetManifest;
+        Equal("Assets/.png|Assets/ab-click.wav", string.Join("|", manifest.AssetPaths));
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
+});
+Run("Invalid asset path and glob forms report SML3600", () =>
+{
+    foreach (var include in new[]
+             {
+                 "C:\\Assets\\Image.png", "\\\\server\\share\\Image.png", "https://example.test/Image.png",
+                 "..\\Image.png", "Assets\\ab**\\Image.png", "Assets\\[ab].png", "Assets\\{a,b}.png",
+                 "Assets\\!Image.png", "Assets\\A.png;Assets\\B.png"
+             })
+    {
+        var xml = $"<SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /><Asset Include=\"{include}\" /></ItemGroup></SmileProject>";
+        Equal("SML3600", ProjectSources(xml).AssetManifest.Diagnostics.Single().Code);
+    }
+});
+Run("Portable destination collisions report both source paths as SML3603", () =>
+{
+    var diagnostic = SmileProjectAssetResolver.FindDestinationCollision("Collision.smileproj", new[]
+    {
+        new KeyValuePair<string, string>("Assets/UI/Icon.png", @"D:\\Project\\Assets\\UI\\Icon.png"),
+        new KeyValuePair<string, string>("Assets/ui/icon.png", @"D:\\Project\\Assets\\ui\\icon.png")
+    });
+    Equal("SML3603", diagnostic!.Code);
+    Equal(true, diagnostic.Message.Contains(@"Assets\\UI\\Icon.png", StringComparison.Ordinal));
+    Equal(true, diagnostic.Message.Contains(@"Assets\\ui\\icon.png", StringComparison.Ordinal));
+});
+Run("Asset publisher safely removes only stale owned files and preserves unrelated output", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileAssetPublishTests-" + Guid.NewGuid().ToString("N"));
+    var output = Path.Combine(directory, "output");
+    Directory.CreateDirectory(Path.Combine(directory, "Assets"));
+    Directory.CreateDirectory(output);
+    try
+    {
+        File.WriteAllText(Path.Combine(directory, "Program.smile"), "END PROGRAM\n");
+        File.WriteAllText(Path.Combine(directory, "Assets", "Old.txt"), "old");
+        File.WriteAllText(Path.Combine(directory, "Assets", "New.txt"), "new");
+        File.WriteAllText(Path.Combine(output, "game.js"), "generated");
+        var projectPath = Path.Combine(directory, "Publish.smileproj");
+        void WriteProject(string asset) => File.WriteAllText(projectPath, $"<SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /><Asset Include=\"Assets\\{asset}\" /></ItemGroup></SmileProject>");
+
+        WriteProject("Old.txt");
+        SmileProjectAssetPublisher.Publish(SmileProjectSourceSet.Load(projectPath).AssetManifest,
+            output, "Publish", "web");
+        Equal(true, File.Exists(Path.Combine(output, "Assets", "Old.txt")));
+
+        WriteProject("New.txt");
+        SmileProjectAssetPublisher.Publish(SmileProjectSourceSet.Load(projectPath).AssetManifest,
+            output, "Publish", "web");
+        Equal(false, File.Exists(Path.Combine(output, "Assets", "Old.txt")));
+        Equal(true, File.Exists(Path.Combine(output, "Assets", "New.txt")));
+        Equal("generated", File.ReadAllText(Path.Combine(output, "game.js")));
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
+});
+Run("Malformed prior asset manifests are ignored without unsafe deletion and replaced safely", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileAssetManifestTests-" + Guid.NewGuid().ToString("N"));
+    var output = Path.Combine(directory, "output");
+    Directory.CreateDirectory(Path.Combine(directory, "Assets"));
+    Directory.CreateDirectory(output);
+    try
+    {
+        File.WriteAllText(Path.Combine(directory, "Program.smile"), "END PROGRAM\n");
+        File.WriteAllText(Path.Combine(directory, "Assets", "Safe.txt"), "safe");
+        var outside = Path.Combine(directory, "outside.txt");
+        File.WriteAllText(outside, "untouched");
+        var projectPath = Path.Combine(directory, "Manifest.smileproj");
+        File.WriteAllText(projectPath, "<SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /><Asset Include=\"Assets\\Safe.txt\" /></ItemGroup></SmileProject>");
+        File.WriteAllText(Path.Combine(output, "smile-assets.json"), "{\"formatVersion\":1,\"applicationIdentity\":\"Manifest\",\"target\":\"web\",\"assets\":[\"../outside.txt\"]}");
+
+        var result = SmileProjectAssetPublisher.Publish(SmileProjectSourceSet.Load(projectPath).AssetManifest,
+            output, "Manifest", "web");
+        Equal("SML3605", result.Warnings.Single().Code);
+        Equal("untouched", File.ReadAllText(outside));
+        Equal(true, File.ReadAllText(Path.Combine(output, "smile-assets.json"))
+            .Contains("Safe.txt", StringComparison.Ordinal));
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
+});
+Run("Asset publication I/O failures report SML3604 and do not claim success", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileAssetFailureTests-" + Guid.NewGuid().ToString("N"));
+    var output = Path.Combine(directory, "output");
+    Directory.CreateDirectory(Path.Combine(directory, "Assets"));
+    try
+    {
+        File.WriteAllText(Path.Combine(directory, "Program.smile"), "END PROGRAM\n");
+        var assetPath = Path.Combine(directory, "Assets", "Vanishing.txt");
+        File.WriteAllText(assetPath, "temporary");
+        var projectPath = Path.Combine(directory, "Failure.smileproj");
+        File.WriteAllText(projectPath, "<SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /><Asset Include=\"Assets\\Vanishing.txt\" /></ItemGroup></SmileProject>");
+        var manifest = SmileProjectSourceSet.Load(projectPath).AssetManifest;
+        File.Delete(assetPath);
+        ThrowsProjectDiagnostic(() => SmileProjectAssetPublisher.Publish(manifest, output,
+            "Failure", "web"), "SML3604");
+        Equal(false, File.Exists(Path.Combine(output, "smile-assets.json")));
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
 });
 Run("Console hierarchy projection contains every support source without an Assets node", () =>
 {
@@ -442,7 +631,7 @@ Run("Console hierarchy projection contains every support source without an Asset
         <SmileSource Include="Third.smile" />
         </ItemGroup></SmileProject>
         """);
-    var projection = SmileProjectHierarchyProjection.Create(sourceSet, "Console", Array.Empty<string>());
+    var projection = SmileProjectHierarchyProjection.Create(sourceSet, "Console");
     Equal("References|Program.smile|Second.smile|Third.smile", string.Join("|", projection.Select(item => item.Caption)));
 });
 Run("Root hierarchy traversal reaches every source once without missing IDs cycles or Assets ordering gaps", () =>
@@ -465,7 +654,7 @@ Run("Root hierarchy traversal reaches every source once without missing IDs cycl
             """);
 
         var sourceSet = SmileProjectSourceSet.Load(projectPath);
-        var projection = SmileProjectHierarchyProjection.Create(sourceSet, "Game", new[] { "Assets\\**\\*" });
+        var projection = SmileProjectHierarchyProjection.Create(sourceSet, "Game");
         var ids = new SmileProjectHierarchyIdentityMap().Apply(projection);
         var rootItems = projection.Where(item => item.ParentPath == null).ToArray();
         var nextById = rootItems.Select((item, index) => new
@@ -509,11 +698,11 @@ Run("Hierarchy mutation preserves existing IDs and remove re-add keeps the physi
         File.WriteAllText(dynamicPath, "CONST Dynamic = 2\n");
         File.WriteAllText(projectPath, "<SmileProject><PropertyGroup><ProjectKind>Console</ProjectKind><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /><SmileSource Include=\"Support.smile\" /></ItemGroup></SmileProject>");
         var identities = new SmileProjectHierarchyIdentityMap();
-        var initial = SmileProjectHierarchyProjection.Create(SmileProjectSourceSet.Load(projectPath), "Console", Array.Empty<string>());
+        var initial = SmileProjectHierarchyProjection.Create(SmileProjectSourceSet.Load(projectPath), "Console");
         var initialIds = identities.Apply(initial);
         var addedSet = SmileProjectFileEditor.AddSource(projectPath, dynamicPath);
         var blankLinesAfterAdd = File.ReadAllLines(projectPath).Count(string.IsNullOrWhiteSpace);
-        var added = SmileProjectHierarchyProjection.Create(addedSet, "Console", Array.Empty<string>());
+        var added = SmileProjectHierarchyProjection.Create(addedSet, "Console");
         var addedIds = identities.Apply(added);
         Equal(initial.Count + 1, added.Count);
         foreach (var item in initial)
@@ -522,14 +711,14 @@ Run("Hierarchy mutation preserves existing IDs and remove re-add keeps the physi
         Equal(true, addedIds[dynamicItem.Key] is > 0 and < 0xfffffffd);
         ThrowsContains(() => SmileProjectFileEditor.AddSource(projectPath, dynamicPath), "already included in the project");
         var removedSet = SmileProjectFileEditor.RemoveSource(projectPath, dynamicPath);
-        Equal(false, SmileProjectHierarchyProjection.Create(removedSet, "Console", Array.Empty<string>())
+        Equal(false, SmileProjectHierarchyProjection.Create(removedSet, "Console")
             .Any(item => string.Equals(item.FullPath, dynamicPath, StringComparison.OrdinalIgnoreCase)));
         Equal(true, File.Exists(dynamicPath));
         var readdedSet = SmileProjectFileEditor.AddSource(projectPath, dynamicPath);
-        var readded = SmileProjectHierarchyProjection.Create(readdedSet, "Console", Array.Empty<string>());
+        var readded = SmileProjectHierarchyProjection.Create(readdedSet, "Console");
         Equal(1, readded.Count(item => string.Equals(item.FullPath, dynamicPath, StringComparison.OrdinalIgnoreCase)));
         Equal(addedIds[dynamicItem.Key], identities.Apply(readded)[dynamicItem.Key]);
-        var reloaded = SmileProjectHierarchyProjection.Create(SmileProjectSourceSet.Load(projectPath), "Console", Array.Empty<string>());
+        var reloaded = SmileProjectHierarchyProjection.Create(SmileProjectSourceSet.Load(projectPath), "Console");
         Equal(string.Join("|", readded.Select(item => item.Key)), string.Join("|", reloaded.Select(item => item.Key)));
         var finalBlankLines = File.ReadAllLines(projectPath).Count(string.IsNullOrWhiteSpace);
         Equal(blankLinesAfterAdd, finalBlankLines);
@@ -554,7 +743,7 @@ Run("Included missing sources stay projected while untracked files remain exclud
         File.WriteAllText(projectPath, "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /><SmileSource Include=\"Missing.smile\" /></ItemGroup></SmileProject>");
 
         var sourceSet = SmileProjectSourceSet.Load(projectPath);
-        var missingProjection = SmileProjectHierarchyProjection.Create(sourceSet, "Console", Array.Empty<string>());
+        var missingProjection = SmileProjectHierarchyProjection.Create(sourceSet, "Console");
         Equal(3, missingProjection.Count);
         Equal(false, missingProjection.Single(item => string.Equals(item.FullPath, missingPath,
             StringComparison.OrdinalIgnoreCase)).Exists);
@@ -564,7 +753,7 @@ Run("Included missing sources stay projected while untracked files remain exclud
 
         File.WriteAllText(missingPath, "CONST Restored = 1\n");
         var restoredProjection = SmileProjectHierarchyProjection.Create(
-            SmileProjectSourceSet.Load(projectPath), "Console", Array.Empty<string>());
+            SmileProjectSourceSet.Load(projectPath), "Console");
         Equal(true, restoredProjection.Single(item => string.Equals(item.FullPath, missingPath,
             StringComparison.OrdinalIgnoreCase)).Exists);
         SmileProjectSourceSet.Load(projectPath).ValidateFiles();
@@ -884,7 +1073,7 @@ Run("Reference editing refresh projection immediately and never deletes the targ
         File.WriteAllText(project, "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" /></ItemGroup></SmileProject>");
         var added = SmileProjectFileEditor.AddReference(project, package);
         Equal(1, added.References.Count);
-        Equal(1, SmileProjectHierarchyProjection.Create(added, "Console", Array.Empty<string>())
+        Equal(1, SmileProjectHierarchyProjection.Create(added, "Console")
             .Count(item => item.Kind == SmileProjectHierarchyItemKind.Reference));
         var removed = SmileProjectFileEditor.RemoveReference(project, package);
         Equal(0, removed.References.Count);

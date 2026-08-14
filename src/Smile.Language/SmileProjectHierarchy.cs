@@ -42,7 +42,7 @@ public sealed class SmileProjectHierarchyItem
 public static class SmileProjectHierarchyProjection
 {
     public static IReadOnlyList<SmileProjectHierarchyItem> Create(
-        SmileProjectSourceSet sourceSet, string projectKind, IReadOnlyList<string> assetIncludes)
+        SmileProjectSourceSet sourceSet, string projectKind)
     {
         if (sourceSet == null)
             throw new ArgumentNullException(nameof(sourceSet));
@@ -94,38 +94,68 @@ public static class SmileProjectHierarchyProjection
                 SmileProjectHierarchyItemKind.Source));
         }
 
-        if (projectKind.Equals("Game", StringComparison.OrdinalIgnoreCase) || assetIncludes.Count != 0)
+        var folders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (projectKind.Equals("Game", StringComparison.OrdinalIgnoreCase))
+            AddFolderAndParents(folders, "Assets");
+        foreach (var asset in sourceSet.AssetManifest.Items)
         {
-            var assetsPath = Path.Combine(sourceSet.ProjectDirectory, "Assets");
-            result.Add(new SmileProjectHierarchyItem("Assets", assetsPath, null,
-                SmileProjectHierarchyItemKind.Folder));
-            AddAssetChildren(result, assetsPath, sourcePaths);
+            var separator = asset.LogicalPath.LastIndexOf('/');
+            if (separator >= 0)
+                AddFolderAndParents(folders, asset.LogicalPath.Substring(0, separator));
         }
+        AddAssetLevel(result, sourceSet, sourcePaths, folders, parentLogicalPath: null, parentFullPath: null);
 
         return result;
     }
 
-    private static void AddAssetChildren(List<SmileProjectHierarchyItem> result, string directory,
-        HashSet<string> sourcePaths)
+    private static void AddFolderAndParents(Dictionary<string, string> folders, string logicalPath)
     {
-        if (!Directory.Exists(directory))
+        if (string.IsNullOrWhiteSpace(logicalPath))
             return;
-
-        foreach (var childDirectory in Directory.EnumerateDirectories(directory)
-                     .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        var segments = logicalPath.Split('/');
+        var current = string.Empty;
+        foreach (var segment in segments)
         {
-            result.Add(new SmileProjectHierarchyItem(Path.GetFileName(childDirectory), childDirectory, directory,
+            current = current.Length == 0 ? segment : current + "/" + segment;
+            if (!folders.ContainsKey(current))
+                folders.Add(current, current);
+        }
+    }
+
+    private static void AddAssetLevel(List<SmileProjectHierarchyItem> result, SmileProjectSourceSet sourceSet,
+        HashSet<string> sourcePaths, Dictionary<string, string> folders, string? parentLogicalPath,
+        string? parentFullPath)
+    {
+        var parentPrefix = string.IsNullOrEmpty(parentLogicalPath) ? string.Empty : parentLogicalPath + "/";
+        var childFolders = folders.Values.Where(folder =>
+        {
+            if (!folder.StartsWith(parentPrefix, StringComparison.OrdinalIgnoreCase))
+                return false;
+            return folder.IndexOf('/', parentPrefix.Length) < 0;
+        }).OrderBy(folder => folder, StringComparer.Ordinal).ToArray();
+        foreach (var child in childFolders)
+        {
+            var caption = child.Substring(parentPrefix.Length);
+            var fullPath = Path.Combine(sourceSet.ProjectDirectory, child.Replace('/', Path.DirectorySeparatorChar));
+            result.Add(new SmileProjectHierarchyItem(caption, fullPath, parentFullPath,
                 SmileProjectHierarchyItemKind.Folder));
-            AddAssetChildren(result, childDirectory, sourcePaths);
+            AddAssetLevel(result, sourceSet, sourcePaths, folders, child, fullPath);
         }
 
-        foreach (var file in Directory.EnumerateFiles(directory)
-                     .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        foreach (var asset in sourceSet.AssetManifest.Items.Where(item =>
+                 string.Equals(ParentLogicalPath(item.LogicalPath), parentLogicalPath ?? string.Empty,
+                     StringComparison.OrdinalIgnoreCase)).OrderBy(item => item.LogicalPath, StringComparer.Ordinal))
         {
-            if (!sourcePaths.Contains(Path.GetFullPath(file)))
-                result.Add(new SmileProjectHierarchyItem(Path.GetFileName(file), file, directory,
-                    SmileProjectHierarchyItemKind.Asset));
+            if (!sourcePaths.Contains(asset.FullPath))
+                result.Add(new SmileProjectHierarchyItem(Path.GetFileName(asset.FullPath), asset.FullPath,
+                    parentFullPath, SmileProjectHierarchyItemKind.Asset));
         }
+    }
+
+    private static string ParentLogicalPath(string logicalPath)
+    {
+        var separator = logicalPath.LastIndexOf('/');
+        return separator < 0 ? string.Empty : logicalPath.Substring(0, separator);
     }
 }
 

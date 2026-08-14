@@ -180,7 +180,6 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     public string OutputName { get; private set; } = "Program";
     public SmileGraphicsBackend GraphicsBackend { get; private set; } = SmileGraphicsBackend.Auto;
     public bool VSync { get; private set; } = true;
-    public IReadOnlyList<string> AssetIncludes { get; private set; } = Array.Empty<string>();
 
     public string GetOutputPath(string configuration) =>
         SourceSet.IsLibrary ? SourceSet.GetLibraryOutputPath(configuration) :
@@ -203,7 +202,10 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         {
             graph = SmileProjectBuildGraph.Load(ProjectPath);
             foreach (var project in graph.BuildOrder)
+            {
                 project.ValidateFiles();
+                project.ValidateAssetsForBuild();
+            }
         }
         catch (Exception exception) when (SmileProjectDiagnostic.TryCreate(exception, ProjectPath, out _))
         {
@@ -238,8 +240,6 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         else if (IsWeb(platform))
         {
             var outputDirectory = GetWebOutputDirectory(configuration);
-            if (Directory.Exists(outputDirectory))
-                Directory.Delete(outputDirectory, true);
             Directory.CreateDirectory(outputDirectory);
             pane.OutputStringThreadSafe($"> \"{compilerPath}\" --project \"{ProjectPath}\" --target web --output-dir \"{outputDirectory}\" --configuration \"{NormalizeConfiguration(configuration)}\"\r\n");
             result = ThreadHelper.JoinableTaskFactory.Run(() =>
@@ -267,8 +267,6 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             return false;
         }
 
-        var assetOutput = IsWeb(platform) ? GetWebOutputDirectory(configuration) : Path.GetDirectoryName(outputPath)!;
-        if (!SourceSet.IsLibrary) CopyAssets(assetOutput);
         pane.OutputStringThreadSafe(SourceSet.IsLibrary
             ? $"SMILE library build succeeded: {outputPath}\r\n"
             : IsWeb(platform)
@@ -378,37 +376,6 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         return true;
     }
 
-    private void CopyAssets(string outputDirectory)
-    {
-        foreach (var include in AssetIncludes)
-        {
-            var wildcard = include.IndexOfAny(new[] { '*', '?' });
-            var relativeRoot = wildcard < 0 ? include : include.Substring(0, wildcard);
-            relativeRoot = relativeRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            if (string.IsNullOrWhiteSpace(relativeRoot))
-                continue;
-
-            var source = Path.GetFullPath(Path.Combine(ProjectDirectory, relativeRoot));
-            if (File.Exists(source))
-            {
-                var destination = Path.Combine(outputDirectory, relativeRoot);
-                Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-                File.Copy(source, destination, true);
-                continue;
-            }
-            if (!Directory.Exists(source))
-                continue;
-
-            foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
-            {
-                var relative = file.Substring(ProjectDirectory.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                var destination = Path.Combine(outputDirectory, relative);
-                Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-                File.Copy(file, destination, true);
-            }
-        }
-    }
-
     private void ReadProject()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -423,15 +390,9 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         var projectKind = sourceSet.ProjectKind.ToString();
         var outputName = sourceSet.OutputName;
         var graphicsOptions = SmileProjectGraphicsOptions.Parse(properties);
-        var assetIncludes = root.Elements().Where(element => element.Name.LocalName == "ItemGroup")
-            .SelectMany(element => element.Elements().Where(item => item.Name.LocalName == "Asset"))
-            .Select(item => (string?)item.Attribute("Include") ?? string.Empty)
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .ToArray();
-
-        if (projectKind.Equals("Game", StringComparison.OrdinalIgnoreCase) || assetIncludes.Length != 0)
+        if (projectKind.Equals("Game", StringComparison.OrdinalIgnoreCase) || sourceSet.AssetManifest.Includes.Count != 0)
             Directory.CreateDirectory(Path.Combine(ProjectDirectory, "Assets"));
-        var projection = SmileProjectHierarchyProjection.Create(sourceSet, projectKind, assetIncludes);
+        var projection = SmileProjectHierarchyProjection.Create(sourceSet, projectKind);
         var hierarchy = CreateHierarchy(projection, sourceSet);
 
         ProjectKind = projectKind;
@@ -440,7 +401,6 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         OutputName = outputName;
         GraphicsBackend = graphicsOptions.GraphicsBackend;
         VSync = graphicsOptions.VSync;
-        AssetIncludes = assetIncludes;
         _items.Clear();
         foreach (var item in hierarchy)
             _items.Add(item.Key, item.Value);

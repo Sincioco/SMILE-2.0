@@ -242,6 +242,13 @@ extern "C" void smile_sfx_stop_all(void)
     ReleaseSRWLockExclusive(&smile_sfx_lock);
 }
 
+extern "C" void smile_sfx_reap(void)
+{
+    AcquireSRWLockExclusive(&smile_sfx_lock);
+    smile_sfx_reap_locked();
+    ReleaseSRWLockExclusive(&smile_sfx_lock);
+}
+
 extern "C" int smile_sfx_active_count(void)
 {
     int channel;

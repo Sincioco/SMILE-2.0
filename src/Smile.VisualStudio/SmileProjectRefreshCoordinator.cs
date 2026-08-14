@@ -21,6 +21,7 @@ internal enum SmileProjectRefreshReason
     IncludedSourceCreated,
     IncludedSourceDeleted,
     IncludedSourceRenamed,
+    AssetChanged,
     ManualRefresh,
     BuildValidation
 }
@@ -39,6 +40,7 @@ internal sealed class SmileProjectRefreshCoordinator : IDisposable
     private readonly CancellationTokenSource _cancellation = new();
     private HashSet<string> _includedSources = new(StringComparer.OrdinalIgnoreCase);
     private HashSet<string> _referencePaths = new(StringComparer.OrdinalIgnoreCase);
+    private List<AssetWatchRoot> _assetWatchRoots = new();
     private HashSet<string> _lastKnownParticipatingPaths = new(StringComparer.OrdinalIgnoreCase);
     private List<FileSystemWatcher> _additionalWatchers = new();
     private SmileProjectRefreshReason _pendingReason;
@@ -123,6 +125,11 @@ internal sealed class SmileProjectRefreshCoordinator : IDisposable
                 Queue(SmileProjectRefreshReason.ReferenceChanged);
                 return;
             }
+            if (IsAssetPathOrAncestor(path))
+            {
+                Queue(SmileProjectRefreshReason.AssetChanged);
+                return;
+            }
             if (!_includedSources.Contains(path))
                 return;
         }
@@ -155,6 +162,12 @@ internal sealed class SmileProjectRefreshCoordinator : IDisposable
             if (referenceChanged)
             {
                 Queue(SmileProjectRefreshReason.ReferenceChanged);
+                return;
+            }
+            if ((oldPath != null && IsAssetPathOrAncestor(oldPath)) ||
+                (newPath != null && IsAssetPathOrAncestor(newPath)))
+            {
+                Queue(SmileProjectRefreshReason.AssetChanged);
                 return;
             }
             if ((oldPath == null || !_includedSources.Contains(oldPath)) &&
@@ -239,15 +252,29 @@ internal sealed class SmileProjectRefreshCoordinator : IDisposable
 
         var watchedPaths = sources.Concat(references).ToArray();
         var projectDirectory = Path.GetFullPath(_project.ProjectDirectory);
-        var additionalDirectories = watchedPaths.Select(FindExistingDirectory)
+        var sourceAndReferenceRequests = watchedPaths.Select(FindExistingDirectory)
             .Where(directory => !string.IsNullOrWhiteSpace(directory))
             .Select(directory => Path.GetFullPath(directory!))
             .Where(directory => !string.Equals(directory, projectDirectory, StringComparison.OrdinalIgnoreCase) &&
                                 Directory.Exists(directory))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(directory => directory, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-        var watchers = additionalDirectories.Select(CreateAdditionalWatcher).ToList();
+            .Select(directory => new WatcherRequest(directory, includeSubdirectories: false));
+        var assetRoots = _project.SourceSet.AssetManifest.Includes.Where(include => include.IsValid)
+            .Select(include => new AssetWatchRoot(Path.GetFullPath(include.SearchRootFullPath),
+                include.WatchSubdirectories)).ToList();
+        var assetRequests = assetRoots.Select(root =>
+        {
+            var directory = Directory.Exists(root.Path) ? root.Path : FindExistingDirectoryForDirectory(root.Path);
+            return string.IsNullOrWhiteSpace(directory) ? null : new WatcherRequest(Path.GetFullPath(directory!),
+                root.IncludeSubdirectories || !string.Equals(directory, root.Path, StringComparison.OrdinalIgnoreCase));
+        }).Where(request => request != null).Select(request => request!);
+        var requests = sourceAndReferenceRequests.Concat(assetRequests)
+            .Where(request => !string.Equals(request.Path, projectDirectory, StringComparison.OrdinalIgnoreCase) ||
+                              request.IncludeSubdirectories)
+            .GroupBy(request => request.Path, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new WatcherRequest(group.Key, group.Any(request => request.IncludeSubdirectories)))
+            .OrderBy(request => request.Path, StringComparer.OrdinalIgnoreCase).ToArray();
+        var watchers = requests.Select(request => CreateAdditionalWatcher(request.Path,
+            request.IncludeSubdirectories)).ToList();
         List<FileSystemWatcher> oldWatchers;
         lock (_gate)
         {
@@ -259,6 +286,7 @@ internal sealed class SmileProjectRefreshCoordinator : IDisposable
             {
                 _includedSources = sources;
                 _referencePaths = references;
+                _assetWatchRoots = assetRoots;
                 oldWatchers = _additionalWatchers;
                 _additionalWatchers = watchers;
             }
@@ -267,11 +295,11 @@ internal sealed class SmileProjectRefreshCoordinator : IDisposable
             DisposeWatcher(watcher);
     }
 
-    private FileSystemWatcher CreateAdditionalWatcher(string directory)
+    private FileSystemWatcher CreateAdditionalWatcher(string directory, bool includeSubdirectories)
     {
         var watcher = new FileSystemWatcher(directory)
         {
-            IncludeSubdirectories = false,
+            IncludeSubdirectories = includeSubdirectories,
             Filter = "*",
             NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite |
                            NotifyFilters.CreationTime | NotifyFilters.Size,
@@ -295,9 +323,36 @@ internal sealed class SmileProjectRefreshCoordinator : IDisposable
             StringComparison.OrdinalIgnoreCase));
     }
 
+    private bool IsAssetPathOrAncestor(string path)
+    {
+        var normalized = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var normalizedPrefix = normalized + Path.DirectorySeparatorChar;
+        foreach (var root in _assetWatchRoots)
+        {
+            var rootPath = root.Path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (string.Equals(normalized, rootPath, StringComparison.OrdinalIgnoreCase) ||
+                rootPath.StartsWith(normalizedPrefix, StringComparison.OrdinalIgnoreCase))
+                return true;
+            var rootPrefix = rootPath + Path.DirectorySeparatorChar;
+            if (normalized.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase) &&
+                (root.IncludeSubdirectories || string.Equals(Path.GetDirectoryName(normalized), rootPath,
+                    StringComparison.OrdinalIgnoreCase)))
+                return true;
+        }
+        return false;
+    }
+
     private static string? FindExistingDirectory(string path)
     {
         var directory = Path.GetDirectoryName(path);
+        while (!string.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
+            directory = Path.GetDirectoryName(directory);
+        return directory;
+    }
+
+    private static string? FindExistingDirectoryForDirectory(string path)
+    {
+        var directory = path;
         while (!string.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
             directory = Path.GetDirectoryName(directory);
         return directory;
@@ -362,6 +417,7 @@ internal sealed class SmileProjectRefreshCoordinator : IDisposable
             _disposed = true;
             _includedSources.Clear();
             _referencePaths.Clear();
+            _assetWatchRoots.Clear();
             _lastKnownParticipatingPaths.Clear();
             additionalWatchers = _additionalWatchers;
             _additionalWatchers = new List<FileSystemWatcher>();
@@ -379,5 +435,21 @@ internal sealed class SmileProjectRefreshCoordinator : IDisposable
             DisposeWatcher(watcher);
         _timer.Dispose();
         _cancellation.Dispose();
+    }
+
+    private sealed class AssetWatchRoot
+    {
+        public AssetWatchRoot(string path, bool includeSubdirectories)
+        { Path = path; IncludeSubdirectories = includeSubdirectories; }
+        public string Path { get; }
+        public bool IncludeSubdirectories { get; }
+    }
+
+    private sealed class WatcherRequest
+    {
+        public WatcherRequest(string path, bool includeSubdirectories)
+        { Path = path; IncludeSubdirectories = includeSubdirectories; }
+        public string Path { get; }
+        public bool IncludeSubdirectories { get; }
     }
 }

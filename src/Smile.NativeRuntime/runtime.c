@@ -888,6 +888,7 @@ static void smile_pump_messages(void)
         TranslateMessage(&message);
         DispatchMessageW(&message);
     }
+    smile_sfx_reap();
 }
 
 void smile_show_screen(void)

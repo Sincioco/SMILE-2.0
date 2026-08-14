@@ -1,0 +1,5 @@
+Assets/Audio/Click.wav
+Assets/Audio/Sub/Confirm.wav
+Assets/Exact/Readme.txt
+Assets/UI/Icon.png
+Assets/UI/Window.png

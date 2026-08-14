@@ -26,6 +26,7 @@ internal sealed class CompilerDriver
             if (analysis.HasErrors)
                 return 1;
 
+            input.Project?.ValidateAssetsForBuild();
             if (input.Project != null)
                 BuildProjectDependencies(input.Project.ProjectPath, options.Configuration);
 
@@ -46,10 +47,14 @@ internal sealed class CompilerDriver
             {
                 var outputDirectory = Path.GetFullPath(options.OutputDirectory!);
                 var appIdentity = input.Project?.OutputName ?? Path.GetFileNameWithoutExtension(input.DisplayPath);
+                SmileProjectAssetPublishResult? publication = null;
                 try
                 {
                     WebOutputWriter.Write(outputDirectory, new WebEmitter(analysis, appIdentity,
                         input.Project?.AssetPaths));
+                    if (input.Project != null)
+                        publication = SmileProjectAssetPublisher.Publish(input.Project.AssetManifest,
+                            outputDirectory, appIdentity, "web");
                 }
                 catch (WebTargetException exception)
                 {
@@ -57,8 +62,13 @@ internal sealed class CompilerDriver
                     return 1;
                 }
 
+                if (publication != null)
+                    foreach (var warning in publication.Warnings)
+                        Console.Error.WriteLine(warning.FormatCompiler());
                 Console.WriteLine($"Compiled {sourcePath} for Web");
                 Console.WriteLine($"Output: {outputDirectory}");
+                if (publication != null)
+                    Console.WriteLine($"Published {publication.PublishedCount} project assets.");
                 return 0;
             }
 
@@ -110,8 +120,20 @@ internal sealed class CompilerDriver
                 TryDelete(debugObjectPath);
             }
 
+            SmileProjectAssetPublishResult? nativePublication = null;
+            if (input.Project != null)
+            {
+                nativePublication = SmileProjectAssetPublisher.Publish(input.Project.AssetManifest,
+                    Path.GetDirectoryName(outputPath)!, input.Project.OutputName, "windows-x64",
+                    Path.GetFileNameWithoutExtension(outputPath));
+                foreach (var warning in nativePublication.Warnings)
+                    Console.Error.WriteLine(warning.FormatCompiler());
+            }
+
             Console.WriteLine($"Compiled {sourcePath}");
             Console.WriteLine($"Output: {outputPath}");
+            if (nativePublication != null)
+                Console.WriteLine($"Published {nativePublication.PublishedCount} project assets.");
             if (options.KeepTemp)
             {
                 Console.WriteLine($"Assembly: {assemblyPath}");
@@ -165,6 +187,7 @@ internal sealed class CompilerDriver
         foreach (var dependency in graph.BuildOrder.Where(project => project.IsLibrary &&
                      !string.Equals(project.ProjectPath, graph.Root.ProjectPath, StringComparison.OrdinalIgnoreCase)))
         {
+            dependency.ValidateAssetsForBuild();
             var dependencyOutput = dependency.GetLibraryOutputPath(configuration);
             var dependencyCompilation = SmileProjectCompilation.Load(dependency.ProjectPath);
             var dependencyAnalysis = SmileLanguage.Analyze(dependencyCompilation.Sources,

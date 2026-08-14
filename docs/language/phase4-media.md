@@ -73,6 +73,12 @@ DATA keys are case-sensitive exact UTF-8 values identified by SHA-256, so punctu
 
 All media paths use one canonical project-relative form with `/` separators. Repeated separators and `.` segments collapse; contained `..` segments normalize, while escaping traversal, drive/rooted/UNC paths, URI schemes, NUL, empty paths, undeclared assets, and incorrect project asset case are rejected. IMAGE, WAV effects, music, and text assets share this rule.
 
+## Project asset resolution and publication
+
+Application projects declare the complete runtime asset set with `<Asset Include="..." />`. The shared resolver accepts exact files plus `*` and `?` within one path segment and `**` as a complete zero-or-more-directory segment. Matching is ordinal and case-sensitive, results are sorted, overlaps publish once, directories never publish, and an empty wildcard is valid. Unsupported glob syntax, missing explicit assets, wrong explicit-path case, output collisions, and library-owned assets report project-located `SML36xx` diagnostics.
+
+Both native and Web `smilec --project` builds publish the resolved files automatically after code generation succeeds. Native files go beside the selected `.exe`; Web files go beside `index.html`, `game.js`, `smile-runtime.js`, and `smile.css`. A small safe publication manifest removes only formerly managed assets on later builds. Loose-file compilation has no project manifest and therefore continues to require manual asset placement.
+
 ## WAV effect channels and music
 
 `SOUND_CHANNEL_COUNT` is 16. The original `PLAY SOUND` statement uses channel 0. Explicit channels can overlap; replay on a channel replaces only that channel.

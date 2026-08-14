@@ -1,0 +1,17 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>Phase4AssetPublication</OutputName>
+    <GraphicsBackend>Auto</GraphicsBackend>
+    <VSync>true</VSync>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <Asset Include="Assets\Exact\Readme.txt" />
+    <Asset Include="Assets\UI\*.png" />
+    <Asset Include="Assets\Audio\**\*.wav" />
+    <Asset Include="Assets\Empty\**\*" />
+    <Asset Include="Assets\UI\Window.png" />
+  </ItemGroup>
+</SmileProject>

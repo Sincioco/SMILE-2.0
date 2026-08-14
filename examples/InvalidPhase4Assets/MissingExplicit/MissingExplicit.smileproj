@@ -1,0 +1,11 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Console</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>MissingExplicit</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <Asset Include="Assets\Missing.png" />
+  </ItemGroup>
+</SmileProject>

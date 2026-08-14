@@ -22,6 +22,8 @@ public sealed class SmilePackage : AsyncPackage
     protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
     {
         await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+        var assembly = typeof(SmilePackage).Assembly;
+        ActivityLog.LogInformation("SMILE 2.0", $"Loaded {assembly.Location} version {assembly.GetName().Version}.");
         SmileBuildService.Initialize(this);
         RegisterProjectFactory(new SmileProjectFactory(this));
         await BuildSmileFileCommand.InitializeAsync(this);

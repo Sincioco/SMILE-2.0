@@ -49,20 +49,26 @@ public enum SmileLibraryProviderKind
 
 public sealed class SmileProjectDiagnostic
 {
-    public SmileProjectDiagnostic(string code, string message, string filePath)
+    public SmileProjectDiagnostic(string code, string message, string filePath, int line = 1, int column = 1,
+        DiagnosticSeverity severity = DiagnosticSeverity.Error)
     {
         Code = code;
         Message = message;
         FilePath = SmileSourceDocument.NormalizePath(filePath);
+        Line = Math.Max(1, line);
+        Column = Math.Max(1, column);
+        Severity = severity;
     }
 
     public string Code { get; }
     public string Message { get; }
     public string FilePath { get; }
-    public int Line => 1;
-    public int Column => 1;
+    public int Line { get; }
+    public int Column { get; }
+    public DiagnosticSeverity Severity { get; }
     public string FormatCompiler() =>
-        $"{(string.IsNullOrWhiteSpace(FilePath) ? "<project>" : FilePath)}({Line},{Column}): error {Code}: {Message}";
+        $"{(string.IsNullOrWhiteSpace(FilePath) ? "<project>" : FilePath)}({Line},{Column}): " +
+        $"{(Severity == DiagnosticSeverity.Error ? "error" : "warning")} {Code}: {Message}";
 
     public static bool TryCreate(Exception exception, string fallbackPath, out SmileProjectDiagnostic diagnostic)
     {
@@ -99,10 +105,10 @@ public sealed class SmileProjectDiagnostic
 
 public sealed class SmileProjectDiagnosticException : Exception
 {
-    public SmileProjectDiagnosticException(string code, string message, string filePath)
+    public SmileProjectDiagnosticException(string code, string message, string filePath, int line = 1, int column = 1)
         : base(message)
     {
-        Diagnostic = new SmileProjectDiagnostic(code, message, filePath);
+        Diagnostic = new SmileProjectDiagnostic(code, message, filePath, line, column);
     }
 
     public SmileProjectDiagnostic Diagnostic { get; }

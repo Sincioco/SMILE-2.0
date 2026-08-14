@@ -11,6 +11,7 @@ extern "C" {
 int smile_sfx_play(const WCHAR* path, int channel);
 void smile_sfx_stop(int channel);
 void smile_sfx_stop_all(void);
+void smile_sfx_reap(void);
 void smile_sfx_shutdown(void);
 int smile_sfx_active_count(void);
 int smile_sfx_preload(const WCHAR* path);
