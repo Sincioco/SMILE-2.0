@@ -73,6 +73,8 @@ internal sealed class MasmEmitter
     private readonly SmileGraphicsBackend _graphicsBackend;
     private readonly bool _vSync;
     private readonly bool _emitDebugInformation;
+    private readonly byte[] _appIdentityBytes;
+    private readonly byte[] _assetManifestBytes;
     private readonly StringBuilder _builder = new();
     private readonly Dictionary<VariableSymbol, string> _symbolLabels = new();
     private readonly Dictionary<RoutineSymbol, string> _routineLabels = new();
@@ -104,12 +106,15 @@ internal sealed class MasmEmitter
     private RoutineDeclarationSyntax? _collectRoutine;
 
     public MasmEmitter(SmileAnalysisResult analysis, SmileGraphicsBackend graphicsBackend,
-        bool vSync, bool emitDebugInformation)
+        bool vSync, bool emitDebugInformation, string? appIdentity = null,
+        IReadOnlyList<string>? assetPaths = null)
     {
         _analysis = analysis;
         _graphicsBackend = graphicsBackend;
         _vSync = vSync;
         _emitDebugInformation = emitDebugInformation;
+        _appIdentityBytes = Encoding.UTF8.GetBytes(string.IsNullOrWhiteSpace(appIdentity) ? "Program" : appIdentity);
+        _assetManifestBytes = Encoding.UTF8.GetBytes(string.Join("\n", assetPaths ?? Array.Empty<string>()));
     }
 
     public bool UsesMusic => _usesMusic;
@@ -197,6 +202,7 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_load_data_value:PROC");
         Line("EXTERN smile_save_data_value:PROC");
         Line("EXTERN smile_media_shutdown:PROC");
+        Line("EXTERN smile_media_configure:PROC");
         foreach (var site in _debugSites)
             Line($"EXTERN {site.HelperName}:PROC");
         Line();
@@ -216,6 +222,10 @@ internal sealed class MasmEmitter
             Line($"{literal.Label} LABEL BYTE");
             EmitBytes(literal.Bytes, terminate: false);
         }
+        Line("smile_app_identity LABEL BYTE");
+        EmitBytes(_appIdentityBytes, terminate: false);
+        Line("smile_asset_manifest LABEL BYTE");
+        EmitBytes(_assetManifestBytes, terminate: false);
 
         Line();
         Line(".code");
@@ -223,6 +233,11 @@ internal sealed class MasmEmitter
         Line("    push rbp");
         Line("    mov rbp, rsp");
         Line("    sub rsp, 256");
+        Line("    lea rcx, smile_app_identity");
+        Line($"    mov rdx, {_appIdentityBytes.Length.ToString(CultureInfo.InvariantCulture)}");
+        Line("    lea r8, smile_asset_manifest");
+        Line($"    mov r9, {_assetManifestBytes.Length.ToString(CultureInfo.InvariantCulture)}");
+        CallAligned("smile_media_configure");
         Line($"    mov rcx, {(int)_graphicsBackend}");
         Line($"    mov rdx, {(_vSync ? 1 : 0)}");
         CallAligned("smile_graphics_configure");

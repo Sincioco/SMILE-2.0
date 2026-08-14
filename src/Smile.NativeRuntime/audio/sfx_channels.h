@@ -17,6 +17,7 @@ int smile_sfx_preload(const WCHAR* path);
 int smile_sfx_cache_count(void);
 long long smile_sfx_decode_count(void);
 long long smile_sfx_cache_hit_count(void);
+long long smile_sfx_completion_count(void);
 
 #ifdef __cplusplus
 }

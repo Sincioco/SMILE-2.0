@@ -45,9 +45,11 @@ internal sealed class CompilerDriver
             if (options.Target == SmileCompilationTarget.Web)
             {
                 var outputDirectory = Path.GetFullPath(options.OutputDirectory!);
+                var appIdentity = input.Project?.OutputName ?? Path.GetFileNameWithoutExtension(input.DisplayPath);
                 try
                 {
-                    WebOutputWriter.Write(outputDirectory, new WebEmitter(analysis));
+                    WebOutputWriter.Write(outputDirectory, new WebEmitter(analysis, appIdentity,
+                        input.Project?.AssetPaths));
                 }
                 catch (WebTargetException exception)
                 {
@@ -82,7 +84,9 @@ internal sealed class CompilerDriver
                 return 2;
             }
 
-            var emitter = new MasmEmitter(analysis, options.GraphicsBackend, options.VSync, options.EmitDebugInformation);
+            var emitter = new MasmEmitter(analysis, options.GraphicsBackend, options.VSync,
+                options.EmitDebugInformation, input.Project?.OutputName ?? Path.GetFileNameWithoutExtension(input.DisplayPath),
+                input.Project?.AssetPaths);
             File.WriteAllText(assemblyPath, emitter.Emit());
             if (options.EmitDebugInformation)
                 File.WriteAllText(debugSourcePath, BuildDebugSource(emitter.DebugSites));

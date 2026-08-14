@@ -1655,9 +1655,23 @@ Run("IMAGE ownership emits retain release move and record cleanup on both target
     Equal(true, native.Contains("call smile_image_move_assign", StringComparison.Ordinal));
     Equal(true, native.Contains("call smile_image_clear", StringComparison.Ordinal));
     var web = new WebEmitter(analysis).Emit();
-    Equal(true, web.Contains("smile.imageAssign", StringComparison.Ordinal));
+    Equal(true, web.Contains("smile.imageMoveAssign", StringComparison.Ordinal));
+    Equal(true, web.Contains("smile.imageRetain", StringComparison.Ordinal));
     Equal(true, web.Contains("smile.imageRelease", StringComparison.Ordinal));
     Equal(true, web.Contains("record_0_media_clear", StringComparison.Ordinal));
+});
+
+Run("Web IMAGE reads are owned and calls transfer without an extra retain", () =>
+{
+    const string source = "GAME WINDOW \"Display title\" SIZE 320 BY 180\nDIM Shared AS IMAGE\nDIM Copy AS IMAGE\nCopy = GetImage()\nPRINT IMAGE_WIDTH(GetImage())\nDRAW IMAGE GetImage() AT 0, 0\nFUNCTION GetImage() AS IMAGE\nRETURN Shared\nEND FUNCTION\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var web = new WebEmitter(analysis, "Stable.Output", new[] { "Assets/Hero.png" }).Emit();
+    Equal(true, web.Contains("smile.configure(\"Stable.Output\", [\"Assets/Hero.png\"])", StringComparison.Ordinal));
+    Equal(true, web.Contains("return smile.imageRetain(g_0_shared);", StringComparison.Ordinal));
+    Equal(false, web.Contains("smile.imageAssign", StringComparison.Ordinal));
+    Equal(true, web.Contains("smile.imageWidth(await", StringComparison.Ordinal));
+    Equal(true, web.Contains("smile.drawImage(await", StringComparison.Ordinal));
 });
 
 Run("Structured clips emit balanced cleanup for RETURN loop exits and END PROGRAM", () =>

@@ -16,10 +16,66 @@ struct SmileWavCacheEntry
 static SRWLOCK smile_sfx_lock = SRWLOCK_INIT;
 static IXAudio2* smile_sfx_engine;
 static IXAudio2MasteringVoice* smile_sfx_master;
-static IXAudio2SourceVoice* smile_sfx_voices[16];
+struct SmileSfxChannelState
+{
+    IXAudio2SourceVoice* voice;
+    volatile LONG64 generation;
+    volatile LONG64 completed_generation;
+};
+static SmileSfxChannelState smile_sfx_channels[16];
 static SmileWavCacheEntry* smile_sfx_cache;
 static volatile LONG64 smile_sfx_decodes;
 static volatile LONG64 smile_sfx_cache_hits;
+static volatile LONG64 smile_sfx_completions;
+
+class SmileSfxVoiceCallback : public IXAudio2VoiceCallback
+{
+public:
+    int channel;
+    void STDMETHODCALLTYPE OnVoiceProcessingPassStart(UINT32) override { }
+    void STDMETHODCALLTYPE OnVoiceProcessingPassEnd() override { }
+    void STDMETHODCALLTYPE OnStreamEnd() override { }
+    void STDMETHODCALLTYPE OnBufferStart(void*) override { }
+    void STDMETHODCALLTYPE OnBufferEnd(void* context) override
+    {
+        InterlockedExchange64(&smile_sfx_channels[channel].completed_generation,
+            (LONG64)(uintptr_t)context);
+    }
+    void STDMETHODCALLTYPE OnLoopEnd(void*) override { }
+    void STDMETHODCALLTYPE OnVoiceError(void* context, HRESULT) override
+    {
+        InterlockedExchange64(&smile_sfx_channels[channel].completed_generation,
+            (LONG64)(uintptr_t)context);
+    }
+};
+static SmileSfxVoiceCallback smile_sfx_callbacks[16];
+
+static void smile_sfx_invalidate_locked(int channel)
+{
+    SmileSfxChannelState* state = &smile_sfx_channels[channel];
+    state->generation++;
+    state->completed_generation = 0;
+    if (state->voice != 0)
+    {
+        state->voice->Stop(0);
+        state->voice->DestroyVoice();
+        state->voice = 0;
+    }
+}
+
+static void smile_sfx_reap_locked(void)
+{
+    int channel;
+    for (channel = 0; channel < 16; ++channel)
+    {
+        SmileSfxChannelState* state = &smile_sfx_channels[channel];
+        if (state->voice == 0 || state->completed_generation != state->generation) continue;
+        state->voice->DestroyVoice();
+        state->voice = 0;
+        state->completed_generation = 0;
+        InterlockedIncrement64(&smile_sfx_completions);
+    }
+}
 
 static DWORD smile_u32(const unsigned char* value)
 {
@@ -95,7 +151,9 @@ done:
 
 static int smile_sfx_initialize(void)
 {
+    int channel;
     if (smile_sfx_engine != 0) return 1;
+    for (channel = 0; channel < 16; ++channel) smile_sfx_callbacks[channel].channel = channel;
     if (FAILED(XAudio2Create(&smile_sfx_engine, 0, XAUDIO2_DEFAULT_PROCESSOR))) return 0;
     if (FAILED(smile_sfx_engine->CreateMasteringVoice(&smile_sfx_master)))
     {
@@ -142,26 +200,24 @@ extern "C" int smile_sfx_play(const WCHAR* path, int channel)
     HRESULT result;
     if (path == 0 || channel < 0 || channel >= 16) return 0;
     AcquireSRWLockExclusive(&smile_sfx_lock);
+    smile_sfx_reap_locked();
     if (!smile_sfx_initialize()) { ReleaseSRWLockExclusive(&smile_sfx_lock); return 0; }
     entry = smile_sfx_find_or_decode(path);
     if (entry == 0) { ReleaseSRWLockExclusive(&smile_sfx_lock); return 0; }
-    if (smile_sfx_voices[channel] != 0)
-    {
-        smile_sfx_voices[channel]->Stop(0);
-        smile_sfx_voices[channel]->DestroyVoice();
-        smile_sfx_voices[channel] = 0;
-    }
-    result = smile_sfx_engine->CreateSourceVoice(&smile_sfx_voices[channel], entry->format);
+    smile_sfx_invalidate_locked(channel);
+    result = smile_sfx_engine->CreateSourceVoice(&smile_sfx_channels[channel].voice,
+        entry->format, 0, XAUDIO2_DEFAULT_FREQ_RATIO, &smile_sfx_callbacks[channel]);
     ZeroMemory(&buffer, sizeof(buffer));
     buffer.AudioBytes = entry->audio_bytes;
     buffer.pAudioData = entry->audio;
     buffer.Flags = XAUDIO2_END_OF_STREAM;
-    if (SUCCEEDED(result)) result = smile_sfx_voices[channel]->SubmitSourceBuffer(&buffer);
-    if (SUCCEEDED(result)) result = smile_sfx_voices[channel]->Start(0);
-    if (FAILED(result) && smile_sfx_voices[channel] != 0)
+    buffer.pContext = (void*)(uintptr_t)smile_sfx_channels[channel].generation;
+    if (SUCCEEDED(result)) result = smile_sfx_channels[channel].voice->SubmitSourceBuffer(&buffer);
+    if (SUCCEEDED(result)) result = smile_sfx_channels[channel].voice->Start(0);
+    if (FAILED(result) && smile_sfx_channels[channel].voice != 0)
     {
-        smile_sfx_voices[channel]->DestroyVoice();
-        smile_sfx_voices[channel] = 0;
+        smile_sfx_channels[channel].voice->DestroyVoice();
+        smile_sfx_channels[channel].voice = 0;
     }
     ReleaseSRWLockExclusive(&smile_sfx_lock);
     return SUCCEEDED(result);
@@ -171,12 +227,8 @@ extern "C" void smile_sfx_stop(int channel)
 {
     if (channel < 0 || channel >= 16) return;
     AcquireSRWLockExclusive(&smile_sfx_lock);
-    if (smile_sfx_voices[channel] != 0)
-    {
-        smile_sfx_voices[channel]->Stop(0);
-        smile_sfx_voices[channel]->DestroyVoice();
-        smile_sfx_voices[channel] = 0;
-    }
+    smile_sfx_reap_locked();
+    smile_sfx_invalidate_locked(channel);
     ReleaseSRWLockExclusive(&smile_sfx_lock);
 }
 
@@ -184,13 +236,9 @@ extern "C" void smile_sfx_stop_all(void)
 {
     int channel;
     AcquireSRWLockExclusive(&smile_sfx_lock);
+    smile_sfx_reap_locked();
     for (channel = 0; channel < 16; ++channel)
-    {
-        if (smile_sfx_voices[channel] == 0) continue;
-        smile_sfx_voices[channel]->Stop(0);
-        smile_sfx_voices[channel]->DestroyVoice();
-        smile_sfx_voices[channel] = 0;
-    }
+        smile_sfx_invalidate_locked(channel);
     ReleaseSRWLockExclusive(&smile_sfx_lock);
 }
 
@@ -198,9 +246,10 @@ extern "C" int smile_sfx_active_count(void)
 {
     int channel;
     int count = 0;
-    AcquireSRWLockShared(&smile_sfx_lock);
-    for (channel = 0; channel < 16; ++channel) if (smile_sfx_voices[channel] != 0) ++count;
-    ReleaseSRWLockShared(&smile_sfx_lock);
+    AcquireSRWLockExclusive(&smile_sfx_lock);
+    smile_sfx_reap_locked();
+    for (channel = 0; channel < 16; ++channel) if (smile_sfx_channels[channel].voice != 0) ++count;
+    ReleaseSRWLockExclusive(&smile_sfx_lock);
     return count;
 }
 
@@ -215,13 +264,15 @@ extern "C" int smile_sfx_cache_count(void)
 
 extern "C" long long smile_sfx_decode_count(void) { return smile_sfx_decodes; }
 extern "C" long long smile_sfx_cache_hit_count(void) { return smile_sfx_cache_hits; }
+extern "C" long long smile_sfx_completion_count(void) { return smile_sfx_completions; }
 
 extern "C" void smile_sfx_shutdown(void)
 {
     SmileWavCacheEntry* entry;
     SmileWavCacheEntry* next;
-    smile_sfx_stop_all();
     AcquireSRWLockExclusive(&smile_sfx_lock);
+    smile_sfx_reap_locked();
+    for (int channel = 0; channel < 16; ++channel) smile_sfx_invalidate_locked(channel);
     if (smile_sfx_master != 0) smile_sfx_master->DestroyVoice();
     smile_sfx_master = 0;
     if (smile_sfx_engine != 0) smile_sfx_engine->Release();

@@ -15,6 +15,8 @@ internal sealed class WebEmitter
     private readonly Dictionary<RoutineSymbol, string> _routineNames = new();
     private readonly Dictionary<RecordTypeSymbol, string> _recordNames = new();
     private readonly Dictionary<RecordFieldSymbol, string> _fieldNames = new();
+    private readonly string _appIdentity;
+    private readonly IReadOnlyList<string> _assetPaths;
     private readonly Stack<string> _forExitLabels = new();
     private readonly Stack<string> _doExitLabels = new();
     private SourceText _currentSource;
@@ -22,9 +24,12 @@ internal sealed class WebEmitter
     private int _indent;
     private int _temporaryId;
 
-    public WebEmitter(SmileAnalysisResult analysis)
+    public WebEmitter(SmileAnalysisResult analysis, string? appIdentity = null,
+        IReadOnlyList<string>? assetPaths = null)
     {
         _analysis = analysis;
+        _appIdentity = string.IsNullOrWhiteSpace(appIdentity) ? "Program" : appIdentity;
+        _assetPaths = assetPaths ?? Array.Empty<string>();
         _currentSource = analysis.BoundSyntaxTree.Source;
         AssignNames();
         var gameWindow = analysis.BoundSyntaxTree.Root.Statements.OfType<GameWindowStatementSyntax>().FirstOrDefault();
@@ -49,6 +54,7 @@ internal sealed class WebEmitter
         Line("async function smileMain() {");
         _indent++;
         _currentSource = _analysis.BoundSyntaxTree.Source;
+        Line($"smile.configure({Json(_appIdentity)}, [{string.Join(", ", _assetPaths.Select(Json))}]);");
         Line("try {");
         _indent++;
         EmitStatements(_analysis.BoundSyntaxTree.Root.Statements, topLevel: true);
@@ -210,7 +216,7 @@ internal sealed class WebEmitter
                 return;
             case ReturnStatementSyntax returnStatement:
                 Line(returnStatement.Expression == null ? "return;" :
-                    $"return {CloneValue(_currentRoutine!.ReturnType, Expression(returnStatement.Expression))};");
+                    $"return {ReturnValue(_currentRoutine!.ReturnType, returnStatement.Expression)};");
                 return;
             case SelectStatementSyntax select:
                 EmitSelect(select, topLevel);
@@ -288,13 +294,13 @@ internal sealed class WebEmitter
         if (targetType == SmileType.Image)
         {
             Line(WriteTarget(assignment.Target,
-                $"smile.imageAssign({ReadTarget(assignment.Target)}, {value})") + ";");
+                $"smile.imageMoveAssign({ReadTarget(assignment.Target)}, {value})") + ";");
             return;
         }
         if (targetType is RecordTypeSymbol record && record.RequiresCleanup)
         {
             var temporary = Temporary("record");
-            Line($"const {temporary} = {CloneValue(targetType, value)};");
+            Line($"const {temporary} = {RecordValue(assignment.Expression, targetType, value)};");
             Line($"{_recordNames[record]}_clear({ReadTarget(assignment.Target)});");
             Line(WriteTarget(assignment.Target, temporary) + ";");
             return;
@@ -564,13 +570,19 @@ internal sealed class WebEmitter
             case NameExpressionSyntax name:
                 if (SyntaxFacts.IsBuiltInConstant(name.Identifier.Kind))
                     return SyntaxFacts.GetBuiltInConstantValue(name.Identifier.Kind).ToString(CultureInfo.InvariantCulture);
-                return ReadVariable(name.Identifier);
+                var namedValue = ReadVariable(name.Identifier);
+                return _analysis.SemanticModel.GetType(name) == SmileType.Image
+                    ? $"smile.imageRetain({namedValue})" : namedValue;
             case ArrayAccessExpressionSyntax array:
-                return $"smile.get({_variableNames[ResolveVariable(array.Identifier)]}, [{Arguments(array.Indices)}])";
+                var arrayValue = $"smile.get({_variableNames[ResolveVariable(array.Identifier)]}, [{Arguments(array.Indices)}])";
+                return _analysis.SemanticModel.GetType(array) == SmileType.Image
+                    ? $"smile.imageRetain({arrayValue})" : arrayValue;
             case FieldAccessExpressionSyntax field:
                 if (!_analysis.SemanticModel.TryGetField(field, out var fieldSymbol))
                     throw UnsupportedExpression(field, "unbound record field");
-                return $"({Expression(field.Receiver)})[{Json(FieldKey(fieldSymbol))}]";
+                var fieldValue = $"({Expression(field.Receiver)})[{Json(FieldKey(fieldSymbol))}]";
+                return _analysis.SemanticModel.GetType(field) == SmileType.Image
+                    ? $"smile.imageRetain({fieldValue})" : fieldValue;
             case ParenthesizedExpressionSyntax parenthesized:
                 return $"({Expression(parenthesized.Expression)})";
             case UnaryExpressionSyntax unary:
@@ -667,9 +679,7 @@ internal sealed class WebEmitter
                 return Reference(argument);
             var value = Expression(argument);
             if (parameter.Type is RecordTypeSymbol)
-                return CloneValue(parameter.Type, value);
-            if (parameter.Type == SmileType.Image)
-                return $"smile.imageRetain({value})";
+                return RecordValue(argument, parameter.Type, value);
             return !parameter.HasDeclaredType && parameter.Type == SmileType.Number &&
                    _analysis.SemanticModel.GetType(argument) == SmileType.Boolean
                 ? $"(smile.isTrue({value}) ? 1 : 0)"
@@ -715,6 +725,24 @@ internal sealed class WebEmitter
         : type == SmileType.Image
         ? $"smile.imageRetain({value})"
         : value;
+
+    private string ReturnValue(SmileType type, ExpressionSyntax expression)
+    {
+        var value = Expression(expression);
+        if (type is RecordTypeSymbol)
+            return RecordValue(expression, type, value);
+        return value;
+    }
+
+    private string RecordValue(ExpressionSyntax expression, SmileType type, string value) =>
+        IsOwnedRecordExpression(expression) ? value : CloneValue(type, value);
+
+    private bool IsOwnedRecordExpression(ExpressionSyntax expression) => expression switch
+    {
+        ParenthesizedExpressionSyntax parenthesized => IsOwnedRecordExpression(parenthesized.Expression),
+        CallExpressionSyntax call => _analysis.SemanticModel.GetType(call) is RecordTypeSymbol,
+        _ => false
+    };
 
     private string StoreValue(SmileType type, string value) => type == SmileType.Number
         ? $"smile.safe({value})"

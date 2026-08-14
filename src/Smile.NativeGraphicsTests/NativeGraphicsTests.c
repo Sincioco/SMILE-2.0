@@ -295,6 +295,22 @@ int main(void)
     check(smile_graphics_text_width("SMILE", 5, 20) == 100 &&
         smile_graphics_text_height("SMILE", 5, 20) == 22 && directx_state.text_measure_count == 2,
         "TEXT_WIDTH and TEXT_HEIGHT route through the selected backend");
+    check(smile_graphics_text_width("", 0, 20) == 0 && smile_graphics_text_height("", 0, 20) == 20 &&
+        directx_state.text_measure_count == 2,
+        "empty TEXT has zero width and a positive backend-independent line height");
+
+    smile_graphics_push_clip(9, 10, 200, 120);
+    smile_graphics_present();
+    check(directx_state.push_clip_count == 3 && directx_state.pop_clip_count == 3,
+        "frame presentation unwinds user clips before the backend ends its frame");
+    smile_graphics_fill_rectangle(0, 0, 20, 20, 1);
+    check(directx_state.begin_count == 2 && directx_state.push_clip_count == 4,
+        "the next frame reapplies the shared logical clip stack");
+    smile_graphics_resize(1280, 720);
+    smile_graphics_begin_frame();
+    check(directx_state.pop_clip_count == 4 && directx_state.push_clip_count == 5,
+        "resize preserves and reapplies active logical clips");
+    smile_graphics_pop_clip();
 
     reset_mocks();
     error[0] = 0;

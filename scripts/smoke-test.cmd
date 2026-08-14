@@ -258,6 +258,43 @@ for %%P in (InvalidImageTarget:SML3500 InvalidDrawImage:SML3501 InvalidImageModi
 )
 echo Phase 4 IMAGE, high-resolution drawing, clip, data, SFX, diagnostics, native, and Web tests passed.
 
+if not exist "%SMILE_ROOT%\artifacts\games\Phase4Hardening" mkdir "%SMILE_ROOT%\artifacts\games\Phase4Hardening"
+if not exist "%SMILE_ROOT%\artifacts\web\Phase4Hardening" mkdir "%SMILE_ROOT%\artifacts\web\Phase4Hardening"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase4Hardening\DataKeyIdentity.smileproj" --target windows-x64 -o "%SMILE_ROOT%\artifacts\games\Phase4Hardening\DataKeyIdentity.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\games\Phase4Hardening\DataKeyIdentity.exe" > "%SMILE_ROOT%\artifacts\temp\DataKeyIdentity.out"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase4Hardening\DataLoadCorrupt.smileproj" --target windows-x64 -o "%SMILE_ROOT%\artifacts\games\Phase4Hardening\DataLoadCorrupt.exe"
+if errorlevel 1 exit /b 1
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-phase4-data-envelope.ps1" -LoaderPath "%SMILE_ROOT%\artifacts\games\Phase4Hardening\DataLoadCorrupt.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase4Hardening\DataKeyIdentity.smileproj" --target web --output-dir "%SMILE_ROOT%\artifacts\web\Phase4Hardening\DataKeyIdentity"
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase4Hardening\DataKeyIdentity" --expected "%SMILE_ROOT%\examples\Phase4Hardening\DataKeyIdentity.expected.txt" --native-output "%SMILE_ROOT%\artifacts\temp\DataKeyIdentity.out" --timeout 10000
+if errorlevel 1 exit /b 1
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase4Hardening\ImageReturnOwnership.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\Phase4Hardening\ImageReturnOwnership"
+if errorlevel 1 exit /b 1
+xcopy "%SMILE_ROOT%\examples\Phase4VisualSlice\Assets" "%SMILE_ROOT%\artifacts\web\Phase4Hardening\ImageReturnOwnership\Assets" /E /I /Y >nul
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase4Hardening\ImageReturnOwnership" --frames 3 --timeout 10000 --phase4-ownership
+if errorlevel 1 exit /b 1
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase4Hardening\ClipAcrossFrames.smile" --target windows-x64 --graphics DirectX -o "%SMILE_ROOT%\artifacts\games\Phase4Hardening\ClipAcrossFrames-DirectX.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase4Hardening\ClipAcrossFrames.smile" --target windows-x64 --graphics GDI -o "%SMILE_ROOT%\artifacts\games\Phase4Hardening\ClipAcrossFrames-GDI.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase4Hardening\ClipAcrossFrames.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\Phase4Hardening\ClipAcrossFrames"
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase4Hardening\ClipAcrossFrames" --frames 6 --timeout 10000 --phase4-clip
+if errorlevel 1 exit /b 1
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase4Hardening\AudioGeneration.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\Phase4Hardening\AudioGeneration"
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase4Hardening\AudioGeneration" --frames 3 --timeout 10000 --phase4-audio
+if errorlevel 1 exit /b 1
+echo Phase 4.1 ownership, high-DPI, clip lifetime, DATA identity, cache race, and audio generation tests passed.
+
 for %%P in (OptionExplicitLate:SML3300 OptionExplicitUndeclared:SML3303 ScalarDimWithoutAs:SML3302 UnknownBuiltInType:SML3401 NumberToTextAssignment:SML3304 TextToBooleanAssignment:SML3304 MixedTextAddition:SML3308 TextRelationalComparison:SML3308 InvalidByRefLiteral:SML3305 InvalidByRefConstant:SML3305 WrongArgumentType:SML3304 WrongReturnType:SML3304 InconsistentLegacyReturnTypes:SML3309 DuplicateLocal:SML3306 UseBeforeLocalDeclaration:SML3307) do (
     for /f "tokens=1,2 delims=:" %%F in ("%%P") do (
         "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\InvalidPhase3A\%%F.smile" > "%SMILE_ROOT%\artifacts\temp\%%F.log" 2>&1

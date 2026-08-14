@@ -23,6 +23,8 @@ void smile_image_resource_shutdown(void);
 long long smile_image_resource_decode_count(void);
 long long smile_image_resource_cache_hit_count(void);
 long long smile_image_resource_live_count(void);
+long long smile_image_resource_cache_count(void);
+long long smile_image_resource_reference_count(void);
 
 #ifdef __cplusplus
 }

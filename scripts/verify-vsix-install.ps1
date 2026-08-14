@@ -26,8 +26,15 @@ if ($RemoveOrphans) {
         }
 
         $files = @(Get-ChildItem -LiteralPath $directory.FullName -Recurse -File)
-        if ($files.Count -ne 1 -or
-            -not [string]::Equals($files[0].FullName, $dllPath, [StringComparison]::OrdinalIgnoreCase) -or
+        $allowedAssemblies = @{
+            'Smile.VisualStudio.dll' = 'Smile.VisualStudio'
+            'Smile.Language.dll' = 'Smile.Language'
+        }
+        $unexpected = @($files | Where-Object {
+            -not $allowedAssemblies.ContainsKey($_.Name) -or
+            [Reflection.AssemblyName]::GetAssemblyName($_.FullName).Name -ne $allowedAssemblies[$_.Name]
+        })
+        if ($files.Count -lt 1 -or $files.Count -gt $allowedAssemblies.Count -or $unexpected.Count -ne 0 -or
             [Reflection.AssemblyName]::GetAssemblyName($dllPath).Name -ne 'Smile.VisualStudio') {
             throw "Refusing to remove unexpected orphan extension contents: $($directory.FullName)"
         }

@@ -1,0 +1,53 @@
+OPTION EXPLICIT
+
+GAME WINDOW "Phase 4.1 IMAGE Ownership" SIZE 320 BY 180
+
+TYPE MediaBox
+    Picture AS IMAGE
+END TYPE
+
+TYPE NestedBox
+    Media AS MediaBox
+END TYPE
+
+DIM Shared AS IMAGE
+DIM Copy AS IMAGE
+DIM Box AS MediaBox
+DIM Nested AS NestedBox
+
+LOAD IMAGE Shared FROM "Assets\PixelProof.png"
+
+Copy = GetImage()
+PRINT IMAGE_WIDTH(GetImage())
+PRINT IMAGE_HEIGHT(GetImage())
+PRINT IMAGE_LOADED(GetImage())
+
+CALL UseImage(GetImage())
+
+Box = GetBox()
+Nested = GetNested()
+
+DRAW IMAGE GetImage() AT 0, 0 SIZE 74 BY 106 FILTER PIXEL
+SHOW SCREEN
+
+END PROGRAM
+
+FUNCTION GetImage() AS IMAGE
+    RETURN Shared
+END FUNCTION
+
+SUB UseImage(Value AS IMAGE)
+    PRINT IMAGE_WIDTH(Value)
+END SUB
+
+FUNCTION GetBox() AS MediaBox
+    DIM Result AS MediaBox
+    Result.Picture = Shared
+    RETURN Result
+END FUNCTION
+
+FUNCTION GetNested() AS NestedBox
+    DIM Result AS NestedBox
+    Result.Media.Picture = Shared
+    RETURN Result
+END FUNCTION

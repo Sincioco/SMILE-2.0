@@ -20,12 +20,37 @@ long long smile_text_equal(void* owned_left, void* owned_right);
 long long smile_text_allocation_count(void);
 long long smile_text_free_count(void);
 long long smile_text_live_count(void);
+void smile_media_configure(const char* app_identity, long long app_length,
+    const char* asset_manifest, long long manifest_length);
+void smile_media_shutdown(void);
+int smile_resolve_asset_path_utf8(const char* path, long long length, WCHAR* resolved_path, int capacity);
 
 static StaticText x_text = { -1, 1, { 'X', 0 } };
 static StaticText emoji_text = { -1, 4, { 0xf0, 0x9f, 0x98, 0x80, 0 } };
 static StaticText x_emoji_text = { -1, 5, { 'X', 0xf0, 0x9f, 0x98, 0x80, 0 } };
 static int failures;
 static int checks;
+static HANDLE image_race_start;
+static HANDLE image_race_loaded;
+static HANDLE image_race_release;
+static volatile LONG image_race_load_count;
+
+typedef struct ImageRaceState
+{
+    const WCHAR* path;
+    SmileImageResource* image;
+} ImageRaceState;
+
+static DWORD WINAPI image_race_worker(void* context)
+{
+    ImageRaceState* state = (ImageRaceState*)context;
+    WaitForSingleObject(image_race_start, INFINITE);
+    state->image = smile_image_resource_load(state->path);
+    if (InterlockedIncrement(&image_race_load_count) == 2) SetEvent(image_race_loaded);
+    WaitForSingleObject(image_race_release, INFINITE);
+    smile_image_resource_release(state->image);
+    return 0;
+}
 
 static void check(int condition, const char* message)
 {
@@ -49,15 +74,35 @@ int main(void)
     WCHAR pixel_path[MAX_PATH];
     WCHAR tone_one_path[MAX_PATH];
     WCHAR tone_two_path[MAX_PATH];
+    WCHAR resolved_asset[MAX_PATH * 2];
     SmileImageResource* first_image;
     SmileImageResource* second_image;
     SmileImageResource* background_image;
     SmileImageResource* pixel_image;
+    ImageRaceState race_states[2];
+    HANDLE race_threads[2];
     long long initial_image_decodes = smile_image_resource_decode_count();
     long long initial_image_hits = smile_image_resource_cache_hit_count();
     long long initial_image_live = smile_image_resource_live_count();
     long long initial_sfx_decodes = smile_sfx_decode_count();
     long long initial_sfx_hits = smile_sfx_cache_hit_count();
+    static const char app_identity[] = "Smile.NativeTextTests.Phase4.1";
+    static const char asset_manifest[] = "Assets/CharacterSheet.png\nAssets/ToneOne.wav";
+
+    smile_media_configure(app_identity, sizeof(app_identity) - 1,
+        asset_manifest, sizeof(asset_manifest) - 1);
+    check(smile_resolve_asset_path_utf8("Assets\\.\\CharacterSheet.png", sizeof("Assets\\.\\CharacterSheet.png") - 1,
+        resolved_asset, (int)(sizeof(resolved_asset) / sizeof(resolved_asset[0]))),
+        "native media paths canonicalize project-relative separators and dot segments");
+    check(!smile_resolve_asset_path_utf8("../CharacterSheet.png", sizeof("../CharacterSheet.png") - 1, resolved_asset,
+        (int)(sizeof(resolved_asset) / sizeof(resolved_asset[0]))) &&
+        !smile_resolve_asset_path_utf8("C:\\CharacterSheet.png", sizeof("C:\\CharacterSheet.png") - 1, resolved_asset,
+        (int)(sizeof(resolved_asset) / sizeof(resolved_asset[0]))) &&
+        !smile_resolve_asset_path_utf8("https://example/CharacterSheet.png", sizeof("https://example/CharacterSheet.png") - 1, resolved_asset,
+        (int)(sizeof(resolved_asset) / sizeof(resolved_asset[0]))) &&
+        !smile_resolve_asset_path_utf8("Assets/charactersheet.png", sizeof("Assets/charactersheet.png") - 1, resolved_asset,
+        (int)(sizeof(resolved_asset) / sizeof(resolved_asset[0]))),
+        "native media paths reject traversal roots URIs and undeclared case variants");
 
     check(smile_text_live_count() == 0, "TEXT runtime starts with zero dynamic objects");
     value = smile_text_concat(smile_text_retain(&x_text), smile_text_retain(&emoji_text));
@@ -107,6 +152,35 @@ int main(void)
     check(smile_image_resource_live_count() == initial_image_live,
         "final IMAGE release evicts the cached resource");
 
+    image_race_start = CreateEventW(0, TRUE, FALSE, 0);
+    image_race_loaded = CreateEventW(0, TRUE, FALSE, 0);
+    image_race_release = CreateEventW(0, TRUE, FALSE, 0);
+    image_race_load_count = 0;
+    race_states[0].path = race_states[1].path = character_path;
+    race_states[0].image = race_states[1].image = 0;
+    {
+        long long race_decodes = smile_image_resource_decode_count();
+        long long race_hits = smile_image_resource_cache_hit_count();
+        race_threads[0] = CreateThread(0, 0, image_race_worker, &race_states[0], 0, 0);
+        race_threads[1] = CreateThread(0, 0, image_race_worker, &race_states[1], 0, 0);
+        SetEvent(image_race_start);
+        check(WaitForSingleObject(image_race_loaded, 10000) == WAIT_OBJECT_0,
+            "two-thread IMAGE cache race reaches the shared ownership barrier");
+        check(race_states[0].image != 0 && race_states[0].image == race_states[1].image &&
+            smile_image_resource_cache_count() == 1 && smile_image_resource_reference_count() == 2,
+            "same-path concurrent loads merge into one resource with two owners");
+        check(smile_image_resource_decode_count() == race_decodes + 1 &&
+            smile_image_resource_cache_hit_count() == race_hits + 1,
+            "the concurrent cache race records one inserted decode and one merged hit");
+        SetEvent(image_race_release);
+        WaitForMultipleObjects(2, race_threads, TRUE, 10000);
+        CloseHandle(race_threads[0]); CloseHandle(race_threads[1]);
+        CloseHandle(image_race_start); CloseHandle(image_race_loaded); CloseHandle(image_race_release);
+        check(smile_image_resource_cache_count() == 0 && smile_image_resource_reference_count() == 0 &&
+            smile_image_resource_live_count() == initial_image_live,
+            "concurrent final releases atomically evict the IMAGE cache entry");
+    }
+
     background_image = smile_image_resource_load(background_path);
     pixel_image = smile_image_resource_load(pixel_path);
     check(background_image != 0 && smile_image_resource_width(background_image) == 2304 &&
@@ -120,6 +194,7 @@ int main(void)
     check(smile_image_resource_live_count() == initial_image_live,
         "all focused IMAGE resources return to zero live owners");
     smile_image_resource_shutdown();
+    smile_image_resource_shutdown();
 
     GetFullPathNameW(L"examples\\Phase4VisualSlice\\Assets\\ToneOne.wav", MAX_PATH, tone_one_path, 0);
     GetFullPathNameW(L"examples\\Phase4VisualSlice\\Assets\\ToneTwo.wav", MAX_PATH, tone_two_path, 0);
@@ -132,7 +207,22 @@ int main(void)
     smile_sfx_stop(-1);
     smile_sfx_stop(16);
     check(smile_sfx_active_count() == 0, "out-of-range channel stop requests are harmless");
+    {
+        long long completions = smile_sfx_completion_count();
+        if (smile_sfx_play(tone_one_path, 3))
+        {
+            check(smile_sfx_active_count() == 1, "started native WAV occupies exactly one channel");
+            Sleep(750);
+            check(smile_sfx_active_count() == 0 && smile_sfx_completion_count() == completions + 1,
+                "natural XAudio2 completion is reaped on the main thread and frees its channel");
+        }
+        else
+            check(smile_sfx_active_count() == 0 && smile_sfx_completion_count() == completions,
+                "an unavailable XAudio2 endpoint leaves all native channels clean");
+    }
     smile_sfx_shutdown();
+    smile_sfx_shutdown();
+    smile_media_shutdown();
 
     if (failures != 0)
     {

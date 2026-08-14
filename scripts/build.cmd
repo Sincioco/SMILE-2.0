@@ -20,6 +20,9 @@ if not defined SMILE_VS (
 call "%SMILE_VS%\VC\Auxiliary\Build\vcvars64.bat" >nul
 if errorlevel 1 exit /b %errorlevel%
 
+dotnet restore "%SMILE_ROOT%\SMILE 2.0.sln"
+if errorlevel 1 exit /b %errorlevel%
+
 msbuild "%SMILE_ROOT%\src\Smile.NativeRuntime\Smile.NativeRuntime.vcxproj" /m /nr:false /p:Configuration=Release /p:Platform=x64 /p:SolutionDir="%SMILE_ROOT_SLASH%" /v:minimal
 if errorlevel 1 exit /b %errorlevel%
 

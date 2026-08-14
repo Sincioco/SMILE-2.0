@@ -50,6 +50,10 @@ static SmileGraphicsBackendKind smile_requested_graphics_backend = SMILE_GRAPHIC
 static int smile_vsync_enabled = 1;
 static SmileAudioFocusState smile_audio_focus = { 1, 1, 0, 1 };
 static SmileMusicActivationCallback smile_music_activation_callback;
+static char* smile_app_identity;
+static long long smile_app_identity_length;
+static char* smile_asset_manifest;
+static long long smile_asset_manifest_length;
 
 static void smile_pump_messages(void);
 static void smile_toggle_fullscreen(void);
@@ -77,6 +81,143 @@ static int smile_bytes_equal(const char* left, const char* right, SIZE_T length)
         if (*left++ != *right++)
             return 0;
     return 1;
+}
+
+typedef struct SmileSha256
+{
+    uint32_t state[8];
+    uint64_t bit_length;
+    unsigned char block[64];
+    unsigned int block_length;
+} SmileSha256;
+
+static uint32_t smile_sha_rotate(uint32_t value, unsigned int count)
+{
+    return (value >> count) | (value << (32 - count));
+}
+
+static void smile_sha_transform(SmileSha256* sha, const unsigned char* block)
+{
+    static const uint32_t constants[64] = {
+        0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+        0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+        0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+        0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+        0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+        0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+        0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+        0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+    };
+    uint32_t words[64];
+    uint32_t a,b,c,d,e,f,g,h,first,second,s0,s1,choice,majority;
+    unsigned int index;
+    for (index = 0; index < 16; ++index)
+        words[index] = ((uint32_t)block[index * 4] << 24) | ((uint32_t)block[index * 4 + 1] << 16) |
+            ((uint32_t)block[index * 4 + 2] << 8) | block[index * 4 + 3];
+    for (index = 16; index < 64; ++index)
+    {
+        s0 = smile_sha_rotate(words[index - 15], 7) ^ smile_sha_rotate(words[index - 15], 18) ^ (words[index - 15] >> 3);
+        s1 = smile_sha_rotate(words[index - 2], 17) ^ smile_sha_rotate(words[index - 2], 19) ^ (words[index - 2] >> 10);
+        words[index] = words[index - 16] + s0 + words[index - 7] + s1;
+    }
+    a=sha->state[0]; b=sha->state[1]; c=sha->state[2]; d=sha->state[3];
+    e=sha->state[4]; f=sha->state[5]; g=sha->state[6]; h=sha->state[7];
+    for (index = 0; index < 64; ++index)
+    {
+        s1 = smile_sha_rotate(e, 6) ^ smile_sha_rotate(e, 11) ^ smile_sha_rotate(e, 25);
+        choice = (e & f) ^ (~e & g);
+        first = h + s1 + choice + constants[index] + words[index];
+        s0 = smile_sha_rotate(a, 2) ^ smile_sha_rotate(a, 13) ^ smile_sha_rotate(a, 22);
+        majority = (a & b) ^ (a & c) ^ (b & c);
+        second = s0 + majority;
+        h=g; g=f; f=e; e=d+first; d=c; c=b; b=a; a=first+second;
+    }
+    sha->state[0]+=a; sha->state[1]+=b; sha->state[2]+=c; sha->state[3]+=d;
+    sha->state[4]+=e; sha->state[5]+=f; sha->state[6]+=g; sha->state[7]+=h;
+}
+
+static void smile_sha_initialize(SmileSha256* sha)
+{
+    static const uint32_t initial[8] = { 0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,
+        0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19 };
+    smile_zero_memory(sha, sizeof(*sha));
+    CopyMemory(sha->state, initial, sizeof(initial));
+}
+
+static void smile_sha_update(SmileSha256* sha, const unsigned char* data, SIZE_T length)
+{
+    SIZE_T index;
+    for (index = 0; index < length; ++index)
+    {
+        sha->block[sha->block_length++] = data[index];
+        if (sha->block_length == 64)
+        {
+            smile_sha_transform(sha, sha->block);
+            sha->bit_length += 512;
+            sha->block_length = 0;
+        }
+    }
+}
+
+static void smile_sha_finish(SmileSha256* sha, unsigned char digest[32])
+{
+    unsigned int index = sha->block_length;
+    uint64_t length;
+    sha->block[index++] = 0x80;
+    if (index > 56)
+    {
+        while (index < 64) sha->block[index++] = 0;
+        smile_sha_transform(sha, sha->block);
+        index = 0;
+    }
+    while (index < 56) sha->block[index++] = 0;
+    length = sha->bit_length + (uint64_t)sha->block_length * 8;
+    for (index = 0; index < 8; ++index) sha->block[63 - index] = (unsigned char)(length >> (index * 8));
+    smile_sha_transform(sha, sha->block);
+    for (index = 0; index < 8; ++index)
+    {
+        digest[index * 4] = (unsigned char)(sha->state[index] >> 24);
+        digest[index * 4 + 1] = (unsigned char)(sha->state[index] >> 16);
+        digest[index * 4 + 2] = (unsigned char)(sha->state[index] >> 8);
+        digest[index * 4 + 3] = (unsigned char)sha->state[index];
+    }
+}
+
+static void smile_sha_bytes(const unsigned char* data, SIZE_T length, unsigned char digest[32])
+{
+    SmileSha256 sha;
+    smile_sha_initialize(&sha);
+    smile_sha_update(&sha, data, length);
+    smile_sha_finish(&sha, digest);
+}
+
+void smile_media_configure(const char* app_identity, long long app_length,
+    const char* asset_manifest, long long manifest_length)
+{
+    if (smile_app_identity != 0) HeapFree(GetProcessHeap(), 0, smile_app_identity);
+    if (smile_asset_manifest != 0) HeapFree(GetProcessHeap(), 0, smile_asset_manifest);
+    smile_app_identity = 0;
+    smile_asset_manifest = 0;
+    smile_app_identity_length = 0;
+    smile_asset_manifest_length = 0;
+    if (app_identity != 0 && app_length > 0 && app_length <= 4096)
+    {
+        smile_app_identity = (char*)HeapAlloc(GetProcessHeap(), 0, (SIZE_T)app_length);
+        if (smile_app_identity != 0)
+        {
+            smile_copy_bytes(smile_app_identity, app_identity, (SIZE_T)app_length);
+            smile_app_identity_length = app_length;
+        }
+    }
+    if (asset_manifest != 0 && manifest_length > 0 && manifest_length <= 16 * 1024 * 1024)
+    {
+        smile_asset_manifest = (char*)HeapAlloc(GetProcessHeap(), 0, (SIZE_T)manifest_length);
+        if (smile_asset_manifest != 0)
+        {
+            smile_copy_bytes(smile_asset_manifest, asset_manifest, (SIZE_T)manifest_length);
+            smile_asset_manifest_length = manifest_length;
+        }
+    }
 }
 
 static HANDLE smile_output(void)
@@ -1027,9 +1168,60 @@ long long smile_text_height_value(void* owned_text, long long size)
     return result;
 }
 
-static int smile_is_absolute_path(const WCHAR* path)
+static int smile_asset_declared(const char* path, int length)
 {
-    return path != 0 && ((path[0] != 0 && path[1] == L':') || (path[0] == L'\\' && path[1] == L'\\'));
+    long long start = 0;
+    if (smile_asset_manifest_length == 0) return 1;
+    while (start < smile_asset_manifest_length)
+    {
+        long long end = start;
+        while (end < smile_asset_manifest_length && smile_asset_manifest[end] != '\n') end++;
+        if (end - start == length && smile_bytes_equal(smile_asset_manifest + start, path, (SIZE_T)length)) return 1;
+        start = end + 1;
+    }
+    return 0;
+}
+
+static int smile_canonical_asset_path(const char* path, long long length, char* output, int capacity)
+{
+    int segment_starts[512];
+    int segment_count = 0;
+    int written = 0;
+    long long index = 0;
+    if (path == 0 || length <= 0 || output == 0 || capacity <= 1) return 0;
+    if (path[0] == '/' || path[0] == '\\') return 0;
+    while (index < length)
+    {
+        long long start;
+        long long segment_length;
+        while (index < length && (path[index] == '/' || path[index] == '\\')) index++;
+        if (index >= length) break;
+        start = index;
+        while (index < length && path[index] != '/' && path[index] != '\\')
+        {
+            unsigned char character = (unsigned char)path[index];
+            if (character == 0 || character == ':') return 0;
+            index++;
+        }
+        segment_length = index - start;
+        if (segment_length == 1 && path[start] == '.') continue;
+        if (segment_length == 2 && path[start] == '.' && path[start + 1] == '.')
+        {
+            if (segment_count == 0) return 0;
+            written = segment_starts[--segment_count];
+            if (written > 0 && output[written - 1] == '/') written--;
+            continue;
+        }
+        if (segment_count >= (int)(sizeof(segment_starts) / sizeof(segment_starts[0])) ||
+            written + (written == 0 ? 0 : 1) + segment_length >= capacity) return 0;
+        if (written != 0) output[written++] = '/';
+        segment_starts[segment_count++] = written;
+        smile_copy_bytes(output + written, path + start, (SIZE_T)segment_length);
+        written += (int)segment_length;
+    }
+    if (written == 0) return 0;
+    output[written] = 0;
+    return smile_asset_declared(output, written);
 }
 
 static void smile_append(WCHAR* destination, int capacity, const WCHAR* source)
@@ -1042,23 +1234,16 @@ static void smile_append(WCHAR* destination, int capacity, const WCHAR* source)
 
 int smile_resolve_asset_path_utf8(const char* path, long long length, WCHAR* resolved_path, int capacity)
 {
-    WCHAR* wide = smile_utf8_to_wide(path, length);
+    char canonical[4096];
+    WCHAR* wide;
     WCHAR* slash;
     int base_length;
     int path_length;
+    if (!smile_canonical_asset_path(path, length, canonical, (int)sizeof(canonical))) return 0;
+    wide = smile_utf8_to_wide(canonical, (long long)lstrlenA(canonical));
     if (resolved_path == 0 || capacity <= 0 || wide == 0)
         return 0;
     resolved_path[0] = 0;
-    if (smile_is_absolute_path(wide))
-    {
-        if (lstrlenW(wide) >= capacity)
-        {
-            HeapFree(GetProcessHeap(), 0, wide);
-            return 0;
-        }
-        smile_append(resolved_path, capacity, wide);
-    }
-    else
     {
         DWORD copied = GetModuleFileNameW(0, resolved_path, (DWORD)capacity);
         if (copied == 0 || copied >= (DWORD)capacity)
@@ -1289,14 +1474,73 @@ void smile_save_value(const char* key, long long key_length, long long value)
 
 static int smile_storage_data_path(const char* key, long long key_length, WCHAR* path, int capacity)
 {
-    int length;
-    if (!smile_storage_path(key, key_length, path, capacity)) return 0;
-    length = lstrlenW(path);
-    if (length < 4 || length + 1 >= capacity) return 0;
-    path[length - 3] = L'b';
-    path[length - 2] = L'i';
-    path[length - 1] = L'n';
+    static const char fallback_identity[] = "Program";
+    static const WCHAR hex[] = L"0123456789abcdef";
+    PWSTR local_app_data = 0;
+    unsigned char app_digest[32];
+    unsigned char key_digest[32];
+    WCHAR hash_text[65];
+    int index;
+    const unsigned char* identity = (const unsigned char*)(smile_app_identity != 0 ? smile_app_identity : fallback_identity);
+    SIZE_T identity_length = smile_app_identity != 0 ? (SIZE_T)smile_app_identity_length : sizeof(fallback_identity) - 1;
+    if (key == 0 || key_length < 0 || key_length > 1024 * 1024 ||
+        FAILED(SHGetKnownFolderPath(&FOLDERID_LocalAppData, KF_FLAG_CREATE, 0, &local_app_data)) || local_app_data == 0)
+        return 0;
+    smile_sha_bytes(identity, identity_length, app_digest);
+    smile_sha_bytes((const unsigned char*)key, (SIZE_T)key_length, key_digest);
+    path[0] = 0;
+    smile_append(path, capacity, local_app_data);
+    CoTaskMemFree(local_app_data);
+    smile_append(path, capacity, L"\\SMILE 2.0\\Games");
+    SHCreateDirectoryExW(0, path, 0);
+    smile_append(path, capacity, L"\\");
+    for (index = 0; index < 32; ++index)
+    {
+        hash_text[index * 2] = hex[app_digest[index] >> 4];
+        hash_text[index * 2 + 1] = hex[app_digest[index] & 15];
+    }
+    hash_text[64] = 0;
+    smile_append(path, capacity, hash_text);
+    SHCreateDirectoryExW(0, path, 0);
+    smile_append(path, capacity, L"\\Data");
+    SHCreateDirectoryExW(0, path, 0);
+    smile_append(path, capacity, L"\\");
+    for (index = 0; index < 32; ++index)
+    {
+        hash_text[index * 2] = hex[key_digest[index] >> 4];
+        hash_text[index * 2 + 1] = hex[key_digest[index] & 15];
+    }
+    hash_text[64] = 0;
+    smile_append(path, capacity, hash_text);
+    smile_append(path, capacity, L".bin");
     return 1;
+}
+
+static uint32_t smile_data_u32(const unsigned char* value)
+{
+    return (uint32_t)value[0] | ((uint32_t)value[1] << 8) |
+        ((uint32_t)value[2] << 16) | ((uint32_t)value[3] << 24);
+}
+
+static void smile_data_put_u32(unsigned char* value, uint32_t number)
+{
+    value[0] = (unsigned char)number;
+    value[1] = (unsigned char)(number >> 8);
+    value[2] = (unsigned char)(number >> 16);
+    value[3] = (unsigned char)(number >> 24);
+}
+
+static void smile_data_error(const char* message)
+{
+    if (smile_window != 0)
+        MessageBoxA(smile_window, message, "SMILE 2.0 persistent data", MB_OK | MB_ICONERROR);
+    else
+    {
+        DWORD written;
+        HANDLE error = GetStdHandle(STD_ERROR_HANDLE);
+        WriteFile(error, message, (DWORD)lstrlenA(message), &written, 0);
+        WriteFile(error, "\r\n", 2, &written, 0);
+    }
 }
 
 long long smile_load_data_value(void* owned_key, long long* destination, long long capacity)
@@ -1305,9 +1549,11 @@ long long smile_load_data_value(void* owned_key, long long* destination, long lo
     WCHAR path[2048];
     HANDLE file = INVALID_HANDLE_VALUE;
     LARGE_INTEGER size;
-    unsigned char buffer[4096];
-    DWORD read;
-    long long copied = 0;
+    unsigned char* envelope = 0;
+    unsigned char digest[32];
+    DWORD read = 0;
+    uint32_t payload_length;
+    uint32_t index;
     if (destination == 0 || capacity < 0 || capacity > 1024 * 1024)
         goto fail;
     smile_zero_memory(destination, (SIZE_T)capacity * sizeof(long long));
@@ -1319,27 +1565,31 @@ long long smile_load_data_value(void* owned_key, long long* destination, long lo
         smile_text_release(key);
         return 0;
     }
-    if (!GetFileSizeEx(file, &size) || size.QuadPart < 0 || size.QuadPart > 1024 * 1024 || size.QuadPart > capacity)
+    if (!GetFileSizeEx(file, &size) || size.QuadPart < 44 || size.QuadPart > 1024 * 1024 + 44)
         goto fail;
-    while (copied < size.QuadPart)
-    {
-        DWORD request = (DWORD)((size.QuadPart - copied) < (long long)sizeof(buffer)
-            ? size.QuadPart - copied : sizeof(buffer));
-        DWORD index;
-        if (!ReadFile(file, buffer, request, &read, 0) || read != request) goto fail;
-        for (index = 0; index < read; ++index) destination[copied++] = buffer[index];
-    }
+    envelope = (unsigned char*)HeapAlloc(GetProcessHeap(), 0, (SIZE_T)size.QuadPart);
+    if (envelope == 0 || !ReadFile(file, envelope, (DWORD)size.QuadPart, &read, 0) || read != (DWORD)size.QuadPart)
+        goto fail;
+    if (envelope[0] != 'S' || envelope[1] != 'M' || envelope[2] != 'D' || envelope[3] != '4' ||
+        smile_data_u32(envelope + 4) != 1) goto fail;
+    payload_length = smile_data_u32(envelope + 8);
+    if (payload_length > 1024 * 1024 || payload_length > capacity || size.QuadPart != (long long)payload_length + 44)
+        goto fail;
+    smile_sha_bytes(envelope + 44, payload_length, digest);
+    if (!smile_bytes_equal((const char*)digest, (const char*)envelope + 12, 32)) goto fail;
+    for (index = 0; index < payload_length; ++index) destination[index] = envelope[44 + index];
     CloseHandle(file);
+    HeapFree(GetProcessHeap(), 0, envelope);
     smile_text_release(key);
-    return copied;
+    return payload_length;
 
 fail:
     if (file != INVALID_HANDLE_VALUE) CloseHandle(file);
+    if (envelope != 0) HeapFree(GetProcessHeap(), 0, envelope);
     if (destination != 0 && capacity > 0 && capacity <= 1024 * 1024)
         smile_zero_memory(destination, (SIZE_T)capacity * sizeof(long long));
     smile_text_release(key);
-    MessageBoxA(smile_window, "LOAD DATA encountered an invalid destination, corrupt block, or oversized block.",
-        "SMILE 2.0 persistent data", MB_OK | MB_ICONERROR);
+    smile_data_error("LOAD DATA encountered an invalid destination, corrupt block, or oversized block.");
     ExitProcess(2);
 }
 
@@ -1347,45 +1597,47 @@ void smile_save_data_value(const long long* source, long long capacity, long lon
 {
     SmileText* key = (SmileText*)owned_key;
     WCHAR path[2048];
-    WCHAR temporary[2056];
+    WCHAR temporary[2100] = { 0 };
     HANDLE file = INVALID_HANDLE_VALUE;
-    unsigned char buffer[4096];
+    unsigned char header[44];
+    unsigned char* payload = 0;
     long long copied = 0;
     DWORD written;
     int valid = source != 0 && capacity >= 0 && capacity <= 1024 * 1024 && count >= 0 &&
         count <= capacity && count <= 1024 * 1024;
+    payload = (unsigned char*)HeapAlloc(GetProcessHeap(), 0, (SIZE_T)(count > 0 ? count : 1));
+    if (payload == 0) valid = 0;
     while (valid && copied < count)
     {
         long long value = source[copied++];
         if (value < 0 || value > 255) valid = 0;
+        else payload[copied - 1] = (unsigned char)value;
     }
     if (!valid || !smile_storage_data_path(smile_text_bytes(key), smile_text_length(key), path,
         (int)(sizeof(path) / sizeof(path[0])))) goto fail;
-    lstrcpynW(temporary, path, (int)(sizeof(temporary) / sizeof(temporary[0])));
-    smile_append(temporary, (int)(sizeof(temporary) / sizeof(temporary[0])), L".tmp");
+    wsprintfW(temporary, L"%s.tmp.%lu.%I64u", path, GetCurrentProcessId(), GetTickCount64());
     file = CreateFileW(temporary, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
     if (file == INVALID_HANDLE_VALUE) goto fail;
-    copied = 0;
-    while (copied < count)
-    {
-        DWORD chunk = (DWORD)((count - copied) < (long long)sizeof(buffer) ? count - copied : sizeof(buffer));
-        DWORD index;
-        for (index = 0; index < chunk; ++index) buffer[index] = (unsigned char)source[copied + index];
-        if (!WriteFile(file, buffer, chunk, &written, 0) || written != chunk) goto fail;
-        copied += chunk;
-    }
-    FlushFileBuffers(file);
+    header[0] = 'S'; header[1] = 'M'; header[2] = 'D'; header[3] = '4';
+    smile_data_put_u32(header + 4, 1);
+    smile_data_put_u32(header + 8, (uint32_t)count);
+    smile_sha_bytes(payload, (SIZE_T)count, header + 12);
+    if (!WriteFile(file, header, (DWORD)sizeof(header), &written, 0) || written != (DWORD)sizeof(header) ||
+        (count > 0 && (!WriteFile(file, payload, (DWORD)count, &written, 0) || written != (DWORD)count)) ||
+        !FlushFileBuffers(file)) goto fail;
     CloseHandle(file);
     file = INVALID_HANDLE_VALUE;
     if (!MoveFileExW(temporary, path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) goto fail;
+    HeapFree(GetProcessHeap(), 0, payload);
     smile_text_release(key);
     return;
 
 fail:
     if (file != INVALID_HANDLE_VALUE) CloseHandle(file);
+    if (temporary[0] != 0) DeleteFileW(temporary);
+    if (payload != 0) HeapFree(GetProcessHeap(), 0, payload);
     smile_text_release(key);
-    MessageBoxA(smile_window, "SAVE DATA received invalid bytes/count or could not atomically store the block.",
-        "SMILE 2.0 persistent data", MB_OK | MB_ICONERROR);
+    smile_data_error("SAVE DATA received invalid bytes/count or could not atomically store the block.");
     ExitProcess(2);
 }
 
@@ -1393,4 +1645,10 @@ void smile_media_shutdown(void)
 {
     smile_sfx_shutdown();
     smile_image_resource_shutdown();
+    if (smile_app_identity != 0) HeapFree(GetProcessHeap(), 0, smile_app_identity);
+    if (smile_asset_manifest != 0) HeapFree(GetProcessHeap(), 0, smile_asset_manifest);
+    smile_app_identity = 0;
+    smile_asset_manifest = 0;
+    smile_app_identity_length = 0;
+    smile_asset_manifest_length = 0;
 }

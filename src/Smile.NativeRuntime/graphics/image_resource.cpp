@@ -20,7 +20,6 @@ struct SmileImageResource
 
 static SRWLOCK smile_image_lock = SRWLOCK_INIT;
 static SmileImageResource* smile_image_cache;
-static IWICImagingFactory* smile_wic_factory;
 static volatile LONG64 smile_image_decodes;
 static volatile LONG64 smile_image_cache_hits;
 static volatile LONG64 smile_image_live;
@@ -40,12 +39,14 @@ static WCHAR* smile_image_copy_path(const WCHAR* path)
     return copy;
 }
 
-static int smile_image_factory(void)
+static void smile_image_destroy(SmileImageResource* image)
 {
-    if (smile_wic_factory != 0) return 1;
-    CoInitializeEx(0, COINIT_MULTITHREADED);
-    return SUCCEEDED(CoCreateInstance(CLSID_WICImagingFactory, 0, CLSCTX_INPROC_SERVER,
-        IID_PPV_ARGS(&smile_wic_factory)));
+    if (image == 0) return;
+    smile_image_release_com(image->d2d_bitmap);
+    image->d2d_owner = 0;
+    if (image->pixels != 0) HeapFree(GetProcessHeap(), 0, image->pixels);
+    if (image->path != 0) HeapFree(GetProcessHeap(), 0, image->path);
+    HeapFree(GetProcessHeap(), 0, image);
 }
 
 static SmileImageResource* smile_image_decode(const WCHAR* path)
@@ -53,14 +54,17 @@ static SmileImageResource* smile_image_decode(const WCHAR* path)
     IWICBitmapDecoder* decoder = 0;
     IWICBitmapFrameDecode* frame = 0;
     IWICFormatConverter* converter = 0;
+    IWICImagingFactory* factory = 0;
     SmileImageResource* image = 0;
     UINT width = 0;
     UINT height = 0;
     UINT stride;
     UINT bytes;
-    HRESULT result;
-    if (!smile_image_factory()) return 0;
-    result = smile_wic_factory->CreateDecoderFromFilename(path, 0, GENERIC_READ,
+    HRESULT initialize_result = CoInitializeEx(0, COINIT_MULTITHREADED);
+    HRESULT result = CoCreateInstance(CLSID_WICImagingFactory, 0, CLSCTX_INPROC_SERVER,
+        IID_PPV_ARGS(&factory));
+    if (FAILED(result)) goto done;
+    result = factory->CreateDecoderFromFilename(path, 0, GENERIC_READ,
         WICDecodeMetadataCacheOnLoad, &decoder);
     if (SUCCEEDED(result)) result = decoder->GetFrame(0, &frame);
     if (SUCCEEDED(result)) result = frame->GetSize(&width, &height);
@@ -68,7 +72,7 @@ static SmileImageResource* smile_image_decode(const WCHAR* path)
         result = E_INVALIDARG;
     stride = width * 4;
     bytes = stride * height;
-    if (SUCCEEDED(result)) result = smile_wic_factory->CreateFormatConverter(&converter);
+    if (SUCCEEDED(result)) result = factory->CreateFormatConverter(&converter);
     if (SUCCEEDED(result)) result = converter->Initialize(frame, GUID_WICPixelFormat32bppPBGRA,
         WICBitmapDitherTypeNone, 0, 0.0, WICBitmapPaletteTypeCustom);
     if (SUCCEEDED(result))
@@ -97,9 +101,12 @@ static SmileImageResource* smile_image_decode(const WCHAR* path)
         HeapFree(GetProcessHeap(), 0, image);
         image = 0;
     }
+done:
     smile_image_release_com(converter);
     smile_image_release_com(frame);
     smile_image_release_com(decoder);
+    smile_image_release_com(factory);
+    if (SUCCEEDED(initialize_result)) CoUninitialize();
     return image;
 }
 
@@ -108,48 +115,65 @@ extern "C" SmileImageResource* smile_image_resource_load(const WCHAR* path)
     SmileImageResource* current;
     SmileImageResource* decoded;
     if (path == 0 || path[0] == 0) return 0;
+    AcquireSRWLockShared(&smile_image_lock);
+    for (current = smile_image_cache; current != 0; current = current->next)
+    {
+        if (lstrcmpW(current->path, path) == 0)
+        {
+            InterlockedIncrement64(&current->references);
+            InterlockedIncrement64(&smile_image_cache_hits);
+            ReleaseSRWLockShared(&smile_image_lock);
+            return current;
+        }
+    }
+    ReleaseSRWLockShared(&smile_image_lock);
+    decoded = smile_image_decode(path);
+    if (decoded == 0) return 0;
     AcquireSRWLockExclusive(&smile_image_lock);
     for (current = smile_image_cache; current != 0; current = current->next)
     {
-        if (lstrcmpiW(current->path, path) == 0)
+        if (lstrcmpW(current->path, path) == 0)
         {
             InterlockedIncrement64(&current->references);
             InterlockedIncrement64(&smile_image_cache_hits);
             ReleaseSRWLockExclusive(&smile_image_lock);
+            smile_image_destroy(decoded);
             return current;
         }
     }
-    decoded = smile_image_decode(path);
-    if (decoded != 0)
-    {
-        InterlockedIncrement64(&smile_image_decodes);
-        InterlockedIncrement64(&smile_image_live);
-        decoded->next = smile_image_cache;
-        smile_image_cache = decoded;
-    }
+    InterlockedIncrement64(&smile_image_decodes);
+    InterlockedIncrement64(&smile_image_live);
+    decoded->next = smile_image_cache;
+    smile_image_cache = decoded;
     ReleaseSRWLockExclusive(&smile_image_lock);
     return decoded;
 }
 
 extern "C" SmileImageResource* smile_image_resource_retain(SmileImageResource* image)
 {
-    if (image != 0) InterlockedIncrement64(&image->references);
+    if (image != 0)
+    {
+        AcquireSRWLockShared(&smile_image_lock);
+        InterlockedIncrement64(&image->references);
+        ReleaseSRWLockShared(&smile_image_lock);
+    }
     return image;
 }
 
 extern "C" void smile_image_resource_release(SmileImageResource* image)
 {
     SmileImageResource** link;
-    if (image == 0 || InterlockedDecrement64(&image->references) != 0) return;
+    if (image == 0) return;
     AcquireSRWLockExclusive(&smile_image_lock);
+    if (InterlockedDecrement64(&image->references) != 0)
+    {
+        ReleaseSRWLockExclusive(&smile_image_lock);
+        return;
+    }
     link = &smile_image_cache;
     while (*link != 0 && *link != image) link = &(*link)->next;
     if (*link == image) *link = image->next;
-    smile_image_release_com(image->d2d_bitmap);
-    image->d2d_owner = 0;
-    if (image->pixels != 0) HeapFree(GetProcessHeap(), 0, image->pixels);
-    if (image->path != 0) HeapFree(GetProcessHeap(), 0, image->path);
-    HeapFree(GetProcessHeap(), 0, image);
+    smile_image_destroy(image);
     InterlockedDecrement64(&smile_image_live);
     ReleaseSRWLockExclusive(&smile_image_lock);
 }
@@ -192,9 +216,24 @@ extern "C" void smile_image_resource_release_backend_resources(void)
 extern "C" void smile_image_resource_shutdown(void)
 {
     smile_image_resource_release_backend_resources();
-    smile_image_release_com(smile_wic_factory);
 }
 
 extern "C" long long smile_image_resource_decode_count(void) { return smile_image_decodes; }
 extern "C" long long smile_image_resource_cache_hit_count(void) { return smile_image_cache_hits; }
 extern "C" long long smile_image_resource_live_count(void) { return smile_image_live; }
+extern "C" long long smile_image_resource_cache_count(void)
+{
+    long long count = 0;
+    AcquireSRWLockShared(&smile_image_lock);
+    for (SmileImageResource* image = smile_image_cache; image != 0; image = image->next) count++;
+    ReleaseSRWLockShared(&smile_image_lock);
+    return count;
+}
+extern "C" long long smile_image_resource_reference_count(void)
+{
+    long long count = 0;
+    AcquireSRWLockShared(&smile_image_lock);
+    for (SmileImageResource* image = smile_image_cache; image != 0; image = image->next) count += image->references;
+    ReleaseSRWLockShared(&smile_image_lock);
+    return count;
+}

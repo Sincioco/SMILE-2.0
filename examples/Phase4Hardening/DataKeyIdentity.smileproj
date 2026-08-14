@@ -1,0 +1,10 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Console</ProjectKind>
+    <StartupFile>DataKeyIdentity.smile</StartupFile>
+    <OutputName>Phase4HardeningData</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="DataKeyIdentity.smile" />
+  </ItemGroup>
+</SmileProject>

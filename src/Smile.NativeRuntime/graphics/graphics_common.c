@@ -4,6 +4,11 @@
 
 static SmileGraphicsBackend smile_active_backend;
 static int smile_frame_started;
+#define SMILE_MAX_CLIP_DEPTH 256
+typedef struct SmileLogicalClip { long long x, y, width, height; } SmileLogicalClip;
+static SmileLogicalClip smile_logical_clips[SMILE_MAX_CLIP_DEPTH];
+static int smile_logical_clip_depth;
+static int smile_backend_clip_depth;
 static const char* smile_requested_backend_name = "Auto";
 static const char* smile_fallback_reason = "None";
 static char smile_fallback_reason_buffer[512];
@@ -103,12 +108,35 @@ static int smile_graphics_available(void)
     return smile_active_backend.operations != 0;
 }
 
+static void smile_graphics_unapply_clips(void)
+{
+    while (smile_backend_clip_depth > 0 && smile_graphics_available())
+    {
+        smile_active_backend.operations->pop_clip(&smile_active_backend);
+        smile_backend_clip_depth--;
+    }
+}
+
+static void smile_graphics_apply_clips(void)
+{
+    int index;
+    for (index = 0; index < smile_logical_clip_depth && smile_graphics_available(); ++index)
+    {
+        SmileLogicalClip* clip = &smile_logical_clips[index];
+        smile_active_backend.operations->push_clip(&smile_active_backend,
+            clip->x, clip->y, clip->width, clip->height);
+        smile_backend_clip_depth++;
+    }
+}
+
 static void smile_graphics_ensure_frame(void)
 {
     if (!smile_graphics_available() || smile_frame_started)
         return;
     smile_active_backend.operations->begin_frame(&smile_active_backend);
     smile_frame_started = 1;
+    smile_backend_clip_depth = 0;
+    smile_graphics_apply_clips();
 }
 
 int smile_graphics_initialize(void* native_window, long long logical_width,
@@ -118,6 +146,8 @@ int smile_graphics_initialize(void* native_window, long long logical_width,
     char directx_error[512];
     smile_fallback_reason_buffer[0] = 0;
     smile_fallback_reason = "None";
+    smile_logical_clip_depth = 0;
+    smile_backend_clip_depth = 0;
     if (requested_backend == SMILE_GRAPHICS_BACKEND_AUTO)
     {
         smile_requested_backend_name = "Auto";
@@ -183,6 +213,7 @@ int smile_graphics_initialize(void* native_window, long long logical_width,
 
 void smile_graphics_resize(int physical_width, int physical_height)
 {
+    if (smile_frame_started) smile_graphics_unapply_clips();
     if (smile_graphics_available())
         smile_active_backend.operations->resize(&smile_active_backend, physical_width, physical_height);
     smile_frame_started = 0;
@@ -292,22 +323,41 @@ void smile_graphics_draw_image(void* image, long long source_x, long long source
 void smile_graphics_push_clip(long long x, long long y, long long width, long long height)
 {
     smile_graphics_ensure_frame();
-    if (smile_graphics_available()) smile_active_backend.operations->push_clip(&smile_active_backend, x, y, width, height);
+    if (smile_logical_clip_depth >= SMILE_MAX_CLIP_DEPTH) return;
+    smile_logical_clips[smile_logical_clip_depth].x = x;
+    smile_logical_clips[smile_logical_clip_depth].y = y;
+    smile_logical_clips[smile_logical_clip_depth].width = width;
+    smile_logical_clips[smile_logical_clip_depth].height = height;
+    smile_logical_clip_depth++;
+    if (smile_graphics_available())
+    {
+        smile_active_backend.operations->push_clip(&smile_active_backend, x, y, width, height);
+        smile_backend_clip_depth++;
+    }
 }
 
 void smile_graphics_pop_clip(void)
 {
-    if (smile_graphics_available()) smile_active_backend.operations->pop_clip(&smile_active_backend);
+    if (smile_logical_clip_depth <= 0) return;
+    smile_logical_clip_depth--;
+    if (smile_graphics_available() && smile_frame_started && smile_backend_clip_depth > 0)
+    {
+        smile_active_backend.operations->pop_clip(&smile_active_backend);
+        smile_backend_clip_depth--;
+    }
 }
 
 long long smile_graphics_text_width(const char* text, long long length, long long size)
 {
+    if (length <= 0 || size <= 0) return 0;
     smile_graphics_ensure_frame();
     return smile_graphics_available() ? smile_active_backend.operations->text_width(&smile_active_backend, text, length, size) : 0;
 }
 
 long long smile_graphics_text_height(const char* text, long long length, long long size)
 {
+    if (size <= 0) return 0;
+    if (length <= 0) return size;
     smile_graphics_ensure_frame();
     return smile_graphics_available() ? smile_active_backend.operations->text_height(&smile_active_backend, text, length, size) : 0;
 }
@@ -318,6 +368,7 @@ int smile_graphics_present(void)
     if (!smile_graphics_available())
         return 0;
     smile_graphics_ensure_frame();
+    smile_graphics_unapply_clips();
     result = smile_active_backend.operations->present(&smile_active_backend);
     smile_frame_started = 0;
     return result;
@@ -331,6 +382,7 @@ void smile_graphics_repaint(void* native_paint_context)
 
 void smile_graphics_on_fullscreen_changed(int fullscreen)
 {
+    if (smile_frame_started) smile_graphics_unapply_clips();
     if (smile_graphics_available())
         smile_active_backend.operations->on_fullscreen_changed(&smile_active_backend, fullscreen);
     smile_frame_started = 0;
@@ -338,6 +390,7 @@ void smile_graphics_on_fullscreen_changed(int fullscreen)
 
 void smile_graphics_on_dpi_changed(unsigned int dpi)
 {
+    if (smile_frame_started) smile_graphics_unapply_clips();
     if (smile_graphics_available())
         smile_active_backend.operations->on_dpi_changed(&smile_active_backend, dpi);
     smile_frame_started = 0;
@@ -345,10 +398,13 @@ void smile_graphics_on_dpi_changed(unsigned int dpi)
 
 void smile_graphics_shutdown(void)
 {
+    if (smile_frame_started) smile_graphics_unapply_clips();
     if (smile_graphics_available())
         smile_active_backend.operations->shutdown(&smile_active_backend);
     smile_graphics_clear_backend();
     smile_frame_started = 0;
+    smile_logical_clip_depth = 0;
+    smile_backend_clip_depth = 0;
 }
 
 const char* smile_graphics_backend_name(void)

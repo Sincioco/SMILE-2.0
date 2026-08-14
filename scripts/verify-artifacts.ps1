@@ -190,8 +190,8 @@ try {
     $manifestReader = [System.IO.StreamReader]::new($manifestEntry.Open())
     try { $vsixManifest = $manifestReader.ReadToEnd() }
     finally { $manifestReader.Dispose() }
-    if ($vsixManifest -notmatch 'Version="2\.0\.24"') {
-        throw 'VSIX identity version is not 2.0.24.'
+    if ($vsixManifest -notmatch 'Version="2\.0\.25"') {
+        throw 'VSIX identity version is not 2.0.25.'
     }
 }
 finally {
@@ -201,11 +201,11 @@ Write-Host 'VSIX compiler, shared-language, and project-template payload verifie
 $visualStudioDll = Require-File 'src\Smile.VisualStudio\bin\Release\net472\Smile.VisualStudio.dll'
 $versionInfo = [Diagnostics.FileVersionInfo]::GetVersionInfo($visualStudioDll)
 $assemblyVersion = [Reflection.AssemblyName]::GetAssemblyName($visualStudioDll).Version.ToString()
-if ($versionInfo.FileVersion -ne '2.0.24.0' -or $versionInfo.ProductVersion -notlike '2.0.24*' -or
-    $assemblyVersion -ne '2.0.24.0') {
+if ($versionInfo.FileVersion -ne '2.0.25.0' -or $versionInfo.ProductVersion -notlike '2.0.25*' -or
+    $assemblyVersion -ne '2.0.25.0') {
     throw "Visual Studio DLL versions differ: file=$($versionInfo.FileVersion), product=$($versionInfo.ProductVersion), assembly=$assemblyVersion."
 }
-Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.24.'
+Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.25.'
 
 $scaleCases = @(
     @{ Width = 960; Height = 540; ExpectedWidth = 960; ExpectedHeight = 540; X = 0; Y = 0 },

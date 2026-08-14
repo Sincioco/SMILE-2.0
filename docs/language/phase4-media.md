@@ -17,6 +17,8 @@ UNLOAD IMAGE Portrait
 
 Loaded PNGs retain their original dimensions and per-pixel alpha. Repeated loads of the same normalized path share one immutable decoded resource. Assignment retains that resource; replacing, unloading, or leaving an owning scope releases it. The last release permits cache eviction. Program shutdown clears remaining image, WAV, and backend resources.
 
+On both targets, an IMAGE expression produces one owned value. Assignment, `BYVAL`, and `RETURN` transfer that owner; `BYREF` aliases the storage location. `IMAGE_WIDTH`, `IMAGE_HEIGHT`, `IMAGE_LOADED`, and `DRAW IMAGE` consume expression temporaries. Record copies retain owned fields exactly once, while record-return temporaries transfer without an extra clone.
+
 ## Drawing
 
 Full-image drawing uses the original image as its source:
@@ -36,6 +38,8 @@ DRAW IMAGE Sheet FROM 512, 0 SIZE 512 BY 512 AT 480, 440 SIZE 320 BY 320 ANCHOR 
 
 Rotation is not part of Phase 4 because it could not be added with the same simple semantics across Direct2D, GDI+, and Canvas without broadening this milestone.
 
+Web canvases keep logical SMILE coordinates while allocating equal visible/back-buffer physical dimensions from CSS size and `devicePixelRatio`, capped at 8192 pixels per dimension and 33,554,432 pixels total. Canvas transforms are restored after resize, fullscreen, orientation, and DPR changes. Smooth sampling remains the default and high-resolution sources rasterize directly into the physical backing store.
+
 ## Structured clipping and text measurement
 
 Clips can nest and intersect. The compiler restores each active clip on normal exit and before `RETURN`, `EXIT FOR`, `EXIT DO`, or `END PROGRAM` transfers control out of its scope.
@@ -50,6 +54,8 @@ END CLIP
 
 `TEXT_WIDTH(Text, Size)` and `TEXT_HEIGHT(Text, Size)` use the target's actual text engine and match `DRAW TEXT` closely enough for dynamic layout. Cross-backend tests should compare sensible ordering and ranges rather than exact pixels.
 
+The logical clip stack is independent of a backend frame. Native user clips unwind before Direct2D/GDI presentation and reapply on the next frame or after resize/fullscreen/DPI changes. Web backing-store changes rebuild the same logical nested clips. Empty text has width zero and a positive height for every positive requested size.
+
 ## Persistent binary data
 
 Phase 4 keeps the existing integer `LOAD` and `SAVE` statements and adds exact byte blocks:
@@ -62,6 +68,10 @@ LOAD DATA "PlayerProfile" INTO Bytes COUNT ByteCount
 ```
 
 Bytes must be 0 through 255. Count cannot exceed the fixed one-dimensional destination/source array or `DATA_BLOCK_MAX_BYTES` (1 MiB). A missing key returns zero count and a zeroed buffer. Native writes use a temporary file plus atomic replacement; Web stores a versioned base64 block in the application's isolated local-storage namespace. Invalid or corrupt blocks fail safely and visibly.
+
+DATA keys are case-sensitive exact UTF-8 values identified by SHA-256, so punctuation and Unicode cannot collide through filename sanitization. The compiler supplies a stable application identity (`OutputName` for projects) that is independent of `GAME WINDOW` title. Native and Web use the same `SMD4` version-1 envelope: magic, version, byte length, SHA-256 payload digest, and payload. Legacy integer `LOAD` and `SAVE` keep their existing format and behavior.
+
+All media paths use one canonical project-relative form with `/` separators. Repeated separators and `.` segments collapse; contained `..` segments normalize, while escaping traversal, drive/rooted/UNC paths, URI schemes, NUL, empty paths, undeclared assets, and incorrect project asset case are rejected. IMAGE, WAV effects, music, and text assets share this rule.
 
 ## WAV effect channels and music
 
@@ -76,6 +86,10 @@ STOP SOUND
 
 Bare `STOP SOUND` stops all effects. Background `PLAY MUSIC`, pause/resume, and volume remain separate. Losing focus stops all effect channels, suppresses new effect requests, and does not queue them for replay. Music retains its independent focus policy. Native and Web cache decoded WAV resources by logical path.
 
+Web requests carry a per-channel generation across every asynchronous boundary, so only the newest request may start and late completion cannot clear a replacement. Normal completion, `END PROGRAM`, runtime failure, and `pagehide` use one idempotent shutdown path. Native XAudio2 callbacks only mark channel/generation completion; the main thread reaps and destroys completed voices.
+
 ## Visual proof
 
 Open `examples\Phase4VisualSlice\Phase4VisualSlice.slnx`. Its deterministic original assets include a 2304x1296 illustrated background, a transparent 2048x1024 two-state sprite sheet, a transparent 1920x1080 foreground, a 37x53 pixel-filter proof, two WAV effects, and separate looping WAV music.
+
+`examples\Phase4Hardening` adds deterministic DATA key/corruption, IMAGE return/record ownership, clip-across-frame/resize, and stale same-channel audio fixtures.

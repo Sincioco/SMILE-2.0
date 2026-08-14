@@ -1,0 +1,9 @@
+OPTION EXPLICIT
+
+DIM Loaded[3]
+DIM LoadedCount AS NUMBER
+
+LOAD DATA "Slot/A" INTO Loaded COUNT LoadedCount
+PRINT LoadedCount
+
+END PROGRAM

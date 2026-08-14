@@ -10,7 +10,7 @@ function fail(message) {
 }
 
 const args = process.argv.slice(2);
-if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media]");
+if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio]");
 
 const webDirectory = path.resolve(args.shift());
 let expectedPath = null;
@@ -19,12 +19,18 @@ let expectedDrawText = null;
 let maximumFrames = 3;
 let timeoutMilliseconds = 5000;
 let verifyPhase4Media = false;
+let verifyPhase4Ownership = false;
+let verifyPhase4Clip = false;
+let verifyPhase4Audio = false;
 while (args.length !== 0) {
     const option = args.shift();
     if (option === "--phase4-media") {
         verifyPhase4Media = true;
         continue;
     }
+    if (option === "--phase4-ownership") { verifyPhase4Ownership = true; continue; }
+    if (option === "--phase4-clip") { verifyPhase4Clip = true; continue; }
+    if (option === "--phase4-audio") { verifyPhase4Audio = true; continue; }
     const value = args.shift();
     if (value === undefined) fail(`missing value for ${option}`);
     if (option === "--expected") expectedPath = path.resolve(value);
@@ -54,7 +60,12 @@ let audioPauses = 0;
 let clipCalls = 0;
 let measurementCalls = 0;
 let negativeScaleCalls = 0;
+let transformCalls = 0;
+let bufferSourceConstructions = 0;
+let bufferSourceStarts = 0;
+let bufferSourceStops = 0;
 const imageDraws = [];
+let backCanvasElement = null;
 
 function addListener(target, type, listener) {
     if (!target.has(type)) target.set(type, []);
@@ -69,6 +80,7 @@ function context2d(name) {
         beginPath: noop, closePath: noop, moveTo: noop, lineTo: noop, quadraticCurveTo: noop,
         arc: noop, rect: noop,
         clip: () => { clipCalls += 1; }, save: noop, restore: noop, translate: noop,
+        setTransform: () => { transformCalls += 1; },
         scale: (x, y) => { if (x < 0 || y < 0) negativeScaleCalls += 1; },
         fill: noop, stroke: noop, fillRect: noop, strokeRect: noop, clearRect: noop,
         drawImage: (resource, ...values) => {
@@ -111,7 +123,11 @@ const host = {
     document: {
         title: "", hidden: false, fullscreenElement: null,
         getElementById: id => elements.get(id) || null,
-        createElement: tag => tag === "canvas" ? canvas("back") : {},
+        createElement: tag => {
+            if (tag !== "canvas") return {};
+            backCanvasElement = canvas("back");
+            return backCanvasElement;
+        },
         addEventListener: (type, listener) => addListener(documentListeners, type, listener),
         hasFocus: () => true,
         exitFullscreen: async () => {}
@@ -140,32 +156,67 @@ const host = {
         }
         get src() { return this._src; }
     },
-    fetch: async () => ({ ok: false, arrayBuffer: async () => new ArrayBuffer(0) }),
+    fetch: async source => {
+        if (verifyPhase4Audio) {
+            await new Promise(resolve => setTimeout(resolve, String(source).includes("ToneOne") ? 35 : 5));
+            return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
+        }
+        return { ok: false, arrayBuffer: async () => new ArrayBuffer(0) };
+    },
     btoa: value => Buffer.from(value, "binary").toString("base64"),
     atob: value => Buffer.from(value, "base64").toString("binary"),
-    setTimeout, clearTimeout, setImmediate, Promise, Map, Set, Uint8Array, ArrayBuffer,
-    innerWidth: 1280, innerHeight: 720,
+    setTimeout, clearTimeout, setImmediate, Promise, Map, Set, Uint8Array, Uint32Array, ArrayBuffer, DataView,
+    innerWidth: 1280, innerHeight: 720, devicePixelRatio: 2,
+    screen: { orientation: { addEventListener: () => {} } },
+    visualViewport: { addEventListener: () => {} },
     addEventListener: (type, listener) => addListener(windowListeners, type, listener),
     dispatchEvent: event => dispatch(windowListeners, event.type, event),
     requestAnimationFrame: callback => {
         requestedFrames += 1;
         return setImmediate(() => {
+            if (verifyPhase4Clip && requestedFrames === 2) {
+                host.innerWidth = 1000;
+                host.innerHeight = 700;
+                dispatch(windowListeners, "resize");
+            }
             if (requestedFrames >= maximumFrames) dispatch(windowListeners, "pagehide");
             callback(Date.now());
         });
     }
 };
+if (verifyPhase4Audio) {
+    host.AudioContext = class {
+        constructor() { this.state = "running"; this.destination = {}; }
+        async resume() { this.state = "running"; }
+        async decodeAudioData() { return {}; }
+        createBufferSource() {
+            bufferSourceConstructions += 1;
+            return {
+                connect: () => {},
+                start: () => { bufferSourceStarts += 1; },
+                stop: () => { bufferSourceStops += 1; },
+                onended: null,
+                buffer: null
+            };
+        }
+        close() { this.state = "closed"; return Promise.resolve(); }
+    };
+}
 host.window = host;
 
 const context = vm.createContext(host);
 try {
     vm.runInContext(fs.readFileSync(runtimePath, "utf8"), context, { filename: runtimePath });
     vm.runInContext(fs.readFileSync(gamePath, "utf8"), context, { filename: gamePath });
-    if (verifyPhase4Media) {
+    if (verifyPhase4Media || verifyPhase4Audio) {
         dispatch(windowListeners, "keydown", {
             code: "KeyX", repeat: false, ctrlKey: false, altKey: false, metaKey: false,
             preventDefault: () => {}
         });
+    }
+    if (verifyPhase4Audio) {
+        host.smile.playSound("Assets/ToneOne.wav", 5);
+        host.smile.playSound("Assets/ToneTwo.wav", 5);
     }
 } catch (error) {
     fail(error && error.stack ? error.stack : String(error));
@@ -224,17 +275,67 @@ const started = Date.now();
         if (negativeScaleCalls < 1) fail("Phase 4 horizontal flip was not recorded");
         if (clipCalls < 2) fail(`Phase 4 nested clips expected at least 2 clips, found ${clipCalls}`);
         if (measurementCalls < 2) fail("Phase 4 text measurement was not recorded");
-        if (![...storage.keys()].some(key => key.includes("data:Phase4VisualSlice")))
+        const dataKey = [...storage.keys()].find(key => key.includes(":data:"));
+        if (!dataKey)
             fail("Phase 4 persistent DATA storage was not recorded");
+        const envelope = Buffer.from(storage.get(dataKey), "base64");
+        if (envelope.length !== 52 || envelope.subarray(0, 4).toString("ascii") !== "SMD4" ||
+            envelope.readUInt32LE(4) !== 1 || envelope.readUInt32LE(8) !== 8)
+            fail("Phase 4.1 Web persistent DATA envelope was malformed");
+        envelope[envelope.length - 1] ^= 1;
+        storage.set(dataKey, envelope.toString("base64"));
+        const corruptTarget = host.smile.array([8], 9);
+        let corruptRejected = false;
+        try { host.smile.loadData("Phase4VisualSlice", corruptTarget); }
+        catch (_) { corruptRejected = true; }
+        if (!corruptRejected || corruptTarget.data.some(value => value !== 0))
+            fail("Phase 4.1 Web corrupt DATA was not rejected with a zeroed destination");
         if (audioConstructions < 3 || audioPlays < 3)
             fail("Phase 4 music and overlapping SFX were not recorded");
         if (audioPauses < 3)
             fail("Phase 4 page-hide audio shutdown did not stop music and SFX channels");
+        for (const invalidPath of ["../escape.png", "C:\\escape.png", "/escape.png", "\\\\server\\asset.png",
+            "file:///asset.png", "https://example.invalid/asset.png", "data:image/png;base64,AA==",
+            "Assets/background.png", "Assets/Bad\0Name.png"]) {
+            let rejected = false;
+            try { await host.smile.loadImage(invalidPath); }
+            catch (_) { rejected = true; }
+            if (!rejected) fail(`Phase 4.1 invalid or undeclared media path was accepted: ${JSON.stringify(invalidPath)}`);
+        }
+    }
+    const diagnostics = host.smile.mediaDiagnostics();
+    if (verifyPhase4Media || verifyPhase4Ownership || verifyPhase4Clip) {
+        if (diagnostics.backingWidth !== visibleCanvas.width || diagnostics.backingHeight !== visibleCanvas.height ||
+            diagnostics.backingWidth !== backCanvasElement.width || diagnostics.backingHeight !== backCanvasElement.height)
+            fail("Phase 4.1 visible/backing canvas physical sizes diverged");
+        if (diagnostics.backingWidth <= diagnostics.logicalWidth || diagnostics.backingHeight <= diagnostics.logicalHeight)
+            fail(`Phase 4.1 DPR backing store was not high resolution: ${diagnostics.backingWidth}x${diagnostics.backingHeight}`);
+        if (transformCalls < 2) fail("Phase 4.1 logical-to-physical canvas transforms were not restored");
+    }
+    if (verifyPhase4Ownership) {
+        if (diagnostics.shutdownImageCacheEntries !== 0 || diagnostics.shutdownImageReferences !== 0 ||
+            diagnostics.imageCacheCount !== 0 || diagnostics.imageReferenceCount !== 0)
+            fail(`Phase 4.1 IMAGE ownership leaked: ${JSON.stringify(diagnostics)}`);
+        if (diagnostics.imageDecodeCount !== 1)
+            fail(`Phase 4.1 IMAGE ownership expected one decode, found ${diagnostics.imageDecodeCount}`);
+    }
+    if (verifyPhase4Clip) {
+        if (clipCalls < 2) fail(`Phase 4.1 clip was not reapplied after resize: ${clipCalls}`);
+        if (diagnostics.clipDepth !== 0) fail(`Phase 4.1 clip stack did not unwind: ${diagnostics.clipDepth}`);
+    }
+    if (verifyPhase4Audio) {
+        if (bufferSourceConstructions !== 1 || bufferSourceStarts !== 1)
+            fail(`Phase 4.1 stale same-channel audio started (${bufferSourceConstructions} sources, ${bufferSourceStarts} starts)`);
+        if (bufferSourceStops < 1 || diagnostics.sfxActiveCount !== 0 || !diagnostics.mediaStopped)
+            fail(`Phase 4.1 audio shutdown was incomplete: ${JSON.stringify(diagnostics)}`);
     }
 
     process.stdout.write(`Web execution passed: ${webDirectory}`);
     if (expectedPath !== null || nativeOutputPath !== null) process.stdout.write(" (exact console parity)");
     if (expectedDrawText !== null) process.stdout.write(" (dynamic DRAW TEXT parity)");
     if (verifyPhase4Media) process.stdout.write(" (Phase 4 media/cache/clip/data/audio parity)");
+    if (verifyPhase4Ownership) process.stdout.write(" (Phase 4.1 IMAGE ownership/high-DPI parity)");
+    if (verifyPhase4Clip) process.stdout.write(" (Phase 4.1 clip/high-DPI resize parity)");
+    if (verifyPhase4Audio) process.stdout.write(" (Phase 4.1 audio generation/shutdown parity)");
     process.stdout.write("\n");
 })().catch(error => fail(error && error.stack ? error.stack : String(error)));
