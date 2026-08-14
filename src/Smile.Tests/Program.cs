@@ -2279,6 +2279,39 @@ Run("Public API preserves referenced record provider identities", () =>
     finally { Directory.Delete(root, true); }
 });
 
+Run("Smile.UI 1.1.0 publishes the Phase 5.2 submenu foundation", () =>
+{
+    var project = File.ReadAllText("libraries/Smile.UI/Smile.UI.smilelibproj");
+    var core = File.ReadAllText("libraries/Smile.UI/Core.smile");
+    var menu = File.ReadAllText("libraries/Smile.UI/Menu.smile");
+    var navigator = File.ReadAllText("libraries/Smile.UI/MenuNavigator.smile");
+    Equal(true, project.Contains("<Version>1.1.0</Version>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<SmileSource Include=\"MenuNavigator.smile\" />", StringComparison.Ordinal));
+    foreach (var constant in new[] { "UI_EVENT_SUBMENU_OPENED", "UI_EVENT_SUBMENU_CLOSED",
+        "UI_MENU_TEXT_ELLIPSIS", "UI_MENU_TEXT_CLIP", "UI_MENU_TEXT_WRAP",
+        "UI_MAX_MENU_NAVIGATORS", "UI_MAX_MENU_DEPTH", "UI_MAX_SUBMENU_BINDINGS" })
+        Equal(true, core.Contains("PUBLIC CONST " + constant, StringComparison.Ordinal));
+    foreach (var member in new[] { "SetItemHasSubmenu", "ItemHasSubmenu", "ItemRevision", "Bounds",
+        "SetPosition", "SelectedRowRect", "ResetSelection", "DrawFocused" })
+        Equal(true, menu.Contains("PUBLIC ", StringComparison.Ordinal) &&
+            menu.Contains(member + "(", StringComparison.Ordinal));
+    foreach (var member in new[] { "BindSubmenu", "UnbindSubmenu", "ClearBindings", "OpenSelected", "Back",
+        "HandleKey", "LastAcceptedValue", "Relayout", "DrawActive", "DrawStack" })
+        Equal(true, navigator.Contains(member + "(", StringComparison.Ordinal));
+});
+
+Run("MenuGallery uses reusable hierarchical navigation without embedded markers", () =>
+{
+    var gallery = File.ReadAllText("examples/MenuGallery/Program.smile");
+    Equal(true, gallery.Contains("IMPORT Smile.UI.MenuNavigator AS MenuNavigator", StringComparison.Ordinal));
+    Equal(true, gallery.Contains("MenuNavigator.HandleKey", StringComparison.Ordinal));
+    Equal(true, gallery.Contains("MenuNavigator.DrawStack", StringComparison.Ordinal));
+    Equal(true, gallery.Contains("MenuNavigator.LastAcceptedValue", StringComparison.Ordinal));
+    Equal(false, gallery.Contains("MenuDepth", StringComparison.Ordinal));
+    Equal(false, gallery.Split('\n').Any(line => line.Contains("Menu.AddItem", StringComparison.Ordinal) &&
+        line.Contains(" >", StringComparison.Ordinal)));
+});
+
 if (failures.Count != 0)
 {
     Console.Error.WriteLine($"{failures.Count} SMILE project-option test(s) failed:");

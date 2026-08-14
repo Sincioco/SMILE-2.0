@@ -1,9 +1,9 @@
 OPTION EXPLICIT
 
 IMPORT Smile.UI.Core AS UI
-IMPORT Smile.UI.Window AS Window
 IMPORT Smile.UI.BitmapFont AS BitmapFont
 IMPORT Smile.UI.Menu AS Menu
+IMPORT Smile.UI.MenuNavigator AS MenuNavigator
 IMPORT Smile.UI.Dialogue AS Dialogue
 
 GAME WINDOW "SMILE 2.0 Menu Gallery" SIZE 960 BY 540
@@ -13,37 +13,41 @@ DIM WindowSkin AS IMAGE
 DIM CursorImage AS IMAGE
 DIM ContinueImage AS IMAGE
 DIM FontAtlas AS IMAGE
-
 DIM FontDefinition AS UI.BitmapFontStyle
 DIM FontHandle AS NUMBER
 
 DIM SkinWindow AS UI.WindowStyle
 DIM VectorWindow AS UI.WindowStyle
-DIM InvalidWindow AS UI.WindowStyle
-
 DIM SystemText AS UI.TextStyle
 DIM SystemSelectedText AS UI.TextStyle
 DIM SystemDisabledText AS UI.TextStyle
 DIM BitmapText AS UI.TextStyle
 DIM BitmapSelectedText AS UI.TextStyle
 DIM BitmapDisabledText AS UI.TextStyle
-
 DIM MenuStyle AS UI.MenuStyle
+DIM WrapMenuStyle AS UI.MenuStyle
 DIM DialogueStyle AS UI.DialogueStyle
+DIM NavigatorStyle AS UI.MenuNavigatorStyle
 
-DIM MenuHandle AS NUMBER
-DIM SubMenu1Handle AS NUMBER
-DIM SubMenu2Handle AS NUMBER
-DIM SubMenu3Handle AS NUMBER
+DIM RootMenu AS NUMBER
+DIM CategoryMenu AS NUMBER
+DIM OptionMenu AS NUMBER
+DIM DetailMenu AS NUMBER
+DIM NavigatorHandle AS NUMBER
 DIM DialogueHandle AS NUMBER
+DIM RootSharedIndex AS NUMBER
+DIM RootDisabledIndex AS NUMBER
+DIM RootHierarchyIndex AS NUMBER
+DIM CategoryOptionIndex AS NUMBER
+DIM CategorySharedIndex AS NUMBER
+DIM OptionDetailIndex AS NUMBER
+DIM ItemIndex AS NUMBER
 DIM Key AS NUMBER
 DIM Event AS NUMBER
-DIM SelectedValue AS NUMBER
-DIM Running AS BOOLEAN
-DIM ItemIndex AS NUMBER
-DIM OperationSucceeded AS BOOLEAN
 DIM UpdateEvent AS NUMBER
-DIM MenuDepth AS NUMBER
+DIM AcceptedValue AS NUMBER
+DIM OperationSucceeded AS BOOLEAN
+DIM Running AS BOOLEAN
 
 LOAD IMAGE Background FROM "Assets\Background.png"
 LOAD IMAGE WindowSkin FROM "Assets\WindowSkin.png"
@@ -52,8 +56,6 @@ LOAD IMAGE ContinueImage FROM "Assets\Continue.png"
 LOAD IMAGE FontAtlas FROM "Assets\BitmapFont.png"
 
 FontDefinition.Atlas = FontAtlas
-FontDefinition.SourceX = 0
-FontDefinition.SourceY = 0
 FontDefinition.FirstCodePoint = 32
 FontDefinition.GlyphCount = 96
 FontDefinition.Columns = 16
@@ -65,13 +67,10 @@ FontDefinition.AdvanceX = 21
 FontDefinition.LineHeight = 30
 FontDefinition.FallbackCodePoint = 63
 FontDefinition.FilterMode = UI.UI_FILTER_SMOOTH
-
 FontHandle = BitmapFont.Create(FontDefinition)
 
 SkinWindow.UseSkin = TRUE
 SkinWindow.Skin = WindowSkin
-SkinWindow.SourceX = 0
-SkinWindow.SourceY = 0
 SkinWindow.SourceWidth = 768
 SkinWindow.SourceHeight = 768
 SkinWindow.SourceLeft = 192
@@ -105,12 +104,9 @@ VectorWindow.Padding.Bottom = 22
 SystemText.Mode = UI.UI_TEXT_SYSTEM
 SystemText.SystemSize = 25
 SystemText.SystemColor = WHITE
-SystemText.BitmapFontHandle = 0
 SystemText.LineSpacing = 5
-
 SystemSelectedText = SystemText
 SystemSelectedText.SystemColor = YELLOW
-
 SystemDisabledText = SystemText
 SystemDisabledText.SystemColor = DARK_GRAY
 
@@ -119,7 +115,6 @@ BitmapText.SystemSize = 25
 BitmapText.SystemColor = WHITE
 BitmapText.BitmapFontHandle = FontHandle
 BitmapText.LineSpacing = 5
-
 BitmapSelectedText = BitmapText
 BitmapDisabledText = BitmapText
 
@@ -132,12 +127,19 @@ MenuStyle.UseCursor = TRUE
 MenuStyle.Cursor = CursorImage
 MenuStyle.CursorWidth = 30
 MenuStyle.CursorHeight = 30
-MenuStyle.CursorOffsetX = 0
 MenuStyle.CursorOffsetY = -2
 MenuStyle.CursorFilterMode = UI.UI_FILTER_SMOOTH
 MenuStyle.RowHeight = 43
 MenuStyle.WrapSelection = TRUE
 MenuStyle.ShowScrollbar = TRUE
+MenuStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_ELLIPSIS
+MenuStyle.ItemTextMaxLines = 1
+
+WrapMenuStyle = MenuStyle
+WrapMenuStyle.RowHeight = 78
+WrapMenuStyle.ShowScrollbar = FALSE
+WrapMenuStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_WRAP
+WrapMenuStyle.ItemTextMaxLines = 2
 
 DialogueStyle.Window = SkinWindow
 DialogueStyle.Text = SystemText
@@ -151,64 +153,55 @@ DialogueStyle.IndicatorOffsetX = -14
 DialogueStyle.IndicatorOffsetY = -12
 DialogueStyle.IndicatorBlinkMilliseconds = 420
 
-MenuHandle = Menu.Create(MenuStyle, 54, 75, 360, 390, 6)
-Running = FontHandle > 0 AND MenuHandle > 0
-ItemIndex = Menu.AddItem(MenuHandle, "ITEM", 1, TRUE)
-Running = Running AND ItemIndex >= 0
-ItemIndex = Menu.AddItem(MenuHandle, "MAGIC", 2, TRUE)
-Running = Running AND ItemIndex >= 0
-ItemIndex = Menu.AddItem(MenuHandle, "SUB-MENUS >", 9, TRUE)
-Running = Running AND ItemIndex >= 0
-ItemIndex = Menu.AddItem(MenuHandle, "EQUIP", 3, TRUE)
-Running = Running AND ItemIndex >= 0
-ItemIndex = Menu.AddItem(MenuHandle, "STATUS", 4, TRUE)
-Running = Running AND ItemIndex >= 0
-ItemIndex = Menu.AddItem(MenuHandle, "FORMATION", 5, FALSE)
-Running = Running AND ItemIndex >= 0
-ItemIndex = Menu.AddItem(MenuHandle, "SAVE", 6, TRUE)
-Running = Running AND ItemIndex >= 0
-ItemIndex = Menu.AddItem(MenuHandle, "OPTIONS", 7, TRUE)
-Running = Running AND ItemIndex >= 0
-ItemIndex = Menu.AddItem(MenuHandle, "EXIT", 8, TRUE)
-Running = Running AND ItemIndex >= 0
+' The root starts near the bottom. Deeper fixed-size menus force right placement,
+' left fallback, upward adjustment, and overlap while remaining fully on-screen.
+RootMenu = Menu.Create(MenuStyle, 320, 250, 250, 250, 5)
+CategoryMenu = Menu.Create(WrapMenuStyle, 0, 0, 280, 270, 3)
+OptionMenu = Menu.Create(MenuStyle, 0, 0, 320, 240, 4)
+DetailMenu = Menu.Create(MenuStyle, 0, 0, 400, 230, 4)
 
-SubMenu1Handle = Menu.Create(MenuStyle, 370, 170, 210, 235, 4)
-SubMenu2Handle = Menu.Create(MenuStyle, 550, 210, 210, 235, 4)
-SubMenu3Handle = Menu.Create(MenuStyle, 710, 250, 225, 235, 4)
-Running = Running AND SubMenu1Handle > 0 AND SubMenu2Handle > 0 AND SubMenu3Handle > 0
+ItemIndex = Menu.AddItem(RootMenu, "QUICK LEAF", 10, TRUE)
+RootSharedIndex = Menu.AddItem(RootMenu, "A VERY LONG SHARED LIBRARY CATEGORY", 11, TRUE)
+RootDisabledIndex = Menu.AddItem(RootMenu, "DISABLED LIBRARY SECTION", 12, FALSE)
+RootHierarchyIndex = Menu.AddItem(RootMenu, "OPEN HIERARCHY", 13, TRUE)
+ItemIndex = Menu.AddItem(RootMenu, "EXIT SAMPLE", 99, TRUE)
 
-ItemIndex = Menu.AddItem(SubMenu1Handle, "ROLF>", 101, TRUE)
-Running = Running AND ItemIndex >= 0
-ItemIndex = Menu.AddItem(SubMenu1Handle, "NEI>", 102, TRUE)
-Running = Running AND ItemIndex >= 0
-ItemIndex = Menu.AddItem(SubMenu1Handle, "RUDO>", 103, TRUE)
-Running = Running AND ItemIndex >= 0
-ItemIndex = Menu.AddItem(SubMenu1Handle, "AMY>", 104, TRUE)
-Running = Running AND ItemIndex >= 0
+CategoryOptionIndex = Menu.AddItem(CategoryMenu, "LOCALIZATION AND ACCESSIBILITY OPTIONS THAT WRAP ACROSS MULTIPLE WORDS", 20, TRUE)
+CategorySharedIndex = Menu.AddItem(CategoryMenu, "SHARED DETAIL VIEW", 21, TRUE)
+ItemIndex = Menu.AddItem(CategoryMenu, "CATEGORY LEAF", 22, TRUE)
 
-ItemIndex = Menu.AddItem(SubMenu2Handle, "TECH>", 201, TRUE)
-Running = Running AND ItemIndex >= 0
-ItemIndex = Menu.AddItem(SubMenu2Handle, "ITEM>", 202, TRUE)
-Running = Running AND ItemIndex >= 0
-ItemIndex = Menu.AddItem(SubMenu2Handle, "GEAR>", 203, TRUE)
-Running = Running AND ItemIndex >= 0
-ItemIndex = Menu.AddItem(SubMenu2Handle, "STAT>", 204, TRUE)
-Running = Running AND ItemIndex >= 0
+OptionDetailIndex = Menu.AddItem(OptionMenu, "DISPLAY MODE DETAILS", 30, TRUE)
+ItemIndex = Menu.AddItem(OptionMenu, "A VERY LONG OPTION LEAF THAT ELLIPSIZES SAFELY", 31, TRUE)
+ItemIndex = Menu.AddItem(OptionMenu, "OPTION LEAF", 32, TRUE)
 
-ItemIndex = Menu.AddItem(SubMenu3Handle, "ROLF", 301, TRUE)
-Running = Running AND ItemIndex >= 0
-ItemIndex = Menu.AddItem(SubMenu3Handle, "NEI", 302, TRUE)
-Running = Running AND ItemIndex >= 0
-ItemIndex = Menu.AddItem(SubMenu3Handle, "RUDO", 303, TRUE)
-Running = Running AND ItemIndex >= 0
-ItemIndex = Menu.AddItem(SubMenu3Handle, "PARTY", 304, TRUE)
-Running = Running AND ItemIndex >= 0
+ItemIndex = Menu.AddItem(DetailMenu, "DEEPEST ACCEPTED LEAF", 40, TRUE)
+ItemIndex = Menu.AddItem(DetailMenu, "ANOTHER LONG DETAIL LEAF THAT MUST ELLIPSIZE", 41, TRUE)
+ItemIndex = Menu.AddItem(DetailMenu, "FINAL ACTION", 42, TRUE)
 
-DialogueHandle = Dialogue.Create(DialogueStyle, 438, 290, 470, 205)
+NavigatorStyle.Viewport.X = 0
+NavigatorStyle.Viewport.Y = 0
+NavigatorStyle.Viewport.Width = 960
+NavigatorStyle.Viewport.Height = 540
+NavigatorStyle.ViewportPadding.Left = 12
+NavigatorStyle.ViewportPadding.Top = 12
+NavigatorStyle.ViewportPadding.Right = 12
+NavigatorStyle.ViewportPadding.Bottom = 12
+NavigatorStyle.HorizontalGap = 8
+NavigatorStyle.PreferredDirection = UI.UI_SUBMENU_DIRECTION_AUTO
+
+NavigatorHandle = MenuNavigator.Create(RootMenu, NavigatorStyle)
+Running = FontHandle > 0 AND RootMenu > 0 AND CategoryMenu > 0 AND OptionMenu > 0 AND DetailMenu > 0 AND NavigatorHandle > 0
+OperationSucceeded = MenuNavigator.BindSubmenu(NavigatorHandle, RootMenu, RootSharedIndex, CategoryMenu, FALSE)
+OperationSucceeded = OperationSucceeded AND MenuNavigator.BindSubmenu(NavigatorHandle, RootMenu, RootDisabledIndex, DetailMenu, FALSE)
+OperationSucceeded = OperationSucceeded AND MenuNavigator.BindSubmenu(NavigatorHandle, RootMenu, RootHierarchyIndex, CategoryMenu, TRUE)
+OperationSucceeded = OperationSucceeded AND MenuNavigator.BindSubmenu(NavigatorHandle, CategoryMenu, CategoryOptionIndex, OptionMenu, TRUE)
+OperationSucceeded = OperationSucceeded AND MenuNavigator.BindSubmenu(NavigatorHandle, CategoryMenu, CategorySharedIndex, DetailMenu, FALSE)
+OperationSucceeded = OperationSucceeded AND MenuNavigator.BindSubmenu(NavigatorHandle, OptionMenu, OptionDetailIndex, DetailMenu, TRUE)
+OperationSucceeded = OperationSucceeded AND Menu.SetSelectedIndex(RootMenu, RootHierarchyIndex)
+Running = Running AND OperationSucceeded
+
+DialogueHandle = Dialogue.Create(DialogueStyle, 38, 38, 450, 180)
 Running = Running AND DialogueHandle > 0
-InvalidWindow = SkinWindow
-InvalidWindow.SourceX = 1
-Running = Running AND NOT Window.IsStyleValid(InvalidWindow)
 
 DO
     GET KEY Key
@@ -219,153 +212,86 @@ DO
         MenuStyle.NormalText = SystemText
         MenuStyle.SelectedText = SystemSelectedText
         MenuStyle.DisabledText = SystemDisabledText
+        WrapMenuStyle.Window = SkinWindow
+        WrapMenuStyle.NormalText = SystemText
+        WrapMenuStyle.SelectedText = SystemSelectedText
+        WrapMenuStyle.DisabledText = SystemDisabledText
         DialogueStyle.Window = SkinWindow
         DialogueStyle.Text = SystemText
-        OperationSucceeded = Menu.SetStyle(MenuHandle, MenuStyle)
-        IF OperationSucceeded THEN
-            OperationSucceeded = Menu.SetStyle(SubMenu1Handle, MenuStyle)
-        END IF
-        IF OperationSucceeded THEN
-            OperationSucceeded = Menu.SetStyle(SubMenu2Handle, MenuStyle)
-        END IF
-        IF OperationSucceeded THEN
-            OperationSucceeded = Menu.SetStyle(SubMenu3Handle, MenuStyle)
-        END IF
-        IF OperationSucceeded THEN
-            OperationSucceeded = Dialogue.SetStyle(DialogueHandle, DialogueStyle)
-        END IF
-        IF NOT OperationSucceeded THEN
-            Running = FALSE
-        END IF
+        OperationSucceeded = Menu.SetStyle(RootMenu, MenuStyle)
+        OperationSucceeded = OperationSucceeded AND Menu.SetStyle(CategoryMenu, WrapMenuStyle)
+        OperationSucceeded = OperationSucceeded AND Menu.SetStyle(OptionMenu, MenuStyle)
+        OperationSucceeded = OperationSucceeded AND Menu.SetStyle(DetailMenu, MenuStyle)
+        OperationSucceeded = OperationSucceeded AND Dialogue.SetStyle(DialogueHandle, DialogueStyle)
+        OperationSucceeded = OperationSucceeded AND MenuNavigator.Relayout(NavigatorHandle)
+        Running = Running AND OperationSucceeded
     ELSE IF Key = KEY_2 THEN
         MenuStyle.Window = SkinWindow
         MenuStyle.NormalText = BitmapText
         MenuStyle.SelectedText = BitmapSelectedText
         MenuStyle.DisabledText = BitmapDisabledText
+        WrapMenuStyle.Window = SkinWindow
+        WrapMenuStyle.NormalText = BitmapText
+        WrapMenuStyle.SelectedText = BitmapSelectedText
+        WrapMenuStyle.DisabledText = BitmapDisabledText
         DialogueStyle.Window = SkinWindow
         DialogueStyle.Text = BitmapText
-        OperationSucceeded = Menu.SetStyle(MenuHandle, MenuStyle)
-        IF OperationSucceeded THEN
-            OperationSucceeded = Menu.SetStyle(SubMenu1Handle, MenuStyle)
-        END IF
-        IF OperationSucceeded THEN
-            OperationSucceeded = Menu.SetStyle(SubMenu2Handle, MenuStyle)
-        END IF
-        IF OperationSucceeded THEN
-            OperationSucceeded = Menu.SetStyle(SubMenu3Handle, MenuStyle)
-        END IF
-        IF OperationSucceeded THEN
-            OperationSucceeded = Dialogue.SetStyle(DialogueHandle, DialogueStyle)
-        END IF
-        IF NOT OperationSucceeded THEN
-            Running = FALSE
-        END IF
+        OperationSucceeded = Menu.SetStyle(RootMenu, MenuStyle)
+        OperationSucceeded = OperationSucceeded AND Menu.SetStyle(CategoryMenu, WrapMenuStyle)
+        OperationSucceeded = OperationSucceeded AND Menu.SetStyle(OptionMenu, MenuStyle)
+        OperationSucceeded = OperationSucceeded AND Menu.SetStyle(DetailMenu, MenuStyle)
+        OperationSucceeded = OperationSucceeded AND Dialogue.SetStyle(DialogueHandle, DialogueStyle)
+        OperationSucceeded = OperationSucceeded AND MenuNavigator.Relayout(NavigatorHandle)
+        Running = Running AND OperationSucceeded
     ELSE IF Key = KEY_3 THEN
         MenuStyle.Window = VectorWindow
         MenuStyle.NormalText = SystemText
         MenuStyle.SelectedText = SystemSelectedText
         MenuStyle.DisabledText = SystemDisabledText
+        WrapMenuStyle.Window = VectorWindow
+        WrapMenuStyle.NormalText = SystemText
+        WrapMenuStyle.SelectedText = SystemSelectedText
+        WrapMenuStyle.DisabledText = SystemDisabledText
         DialogueStyle.Window = VectorWindow
         DialogueStyle.Text = SystemText
-        OperationSucceeded = Menu.SetStyle(MenuHandle, MenuStyle)
-        IF OperationSucceeded THEN
-            OperationSucceeded = Menu.SetStyle(SubMenu1Handle, MenuStyle)
-        END IF
-        IF OperationSucceeded THEN
-            OperationSucceeded = Menu.SetStyle(SubMenu2Handle, MenuStyle)
-        END IF
-        IF OperationSucceeded THEN
-            OperationSucceeded = Menu.SetStyle(SubMenu3Handle, MenuStyle)
-        END IF
-        IF OperationSucceeded THEN
-            OperationSucceeded = Dialogue.SetStyle(DialogueHandle, DialogueStyle)
-        END IF
-        IF NOT OperationSucceeded THEN
-            Running = FALSE
-        END IF
+        OperationSucceeded = Menu.SetStyle(RootMenu, MenuStyle)
+        OperationSucceeded = OperationSucceeded AND Menu.SetStyle(CategoryMenu, WrapMenuStyle)
+        OperationSucceeded = OperationSucceeded AND Menu.SetStyle(OptionMenu, MenuStyle)
+        OperationSucceeded = OperationSucceeded AND Menu.SetStyle(DetailMenu, MenuStyle)
+        OperationSucceeded = OperationSucceeded AND Dialogue.SetStyle(DialogueHandle, DialogueStyle)
+        OperationSucceeded = OperationSucceeded AND MenuNavigator.Relayout(NavigatorHandle)
+        Running = Running AND OperationSucceeded
+    ELSE IF Dialogue.IsActive(DialogueHandle) THEN
+        Event = Dialogue.HandleKey(DialogueHandle, Key, TIMER())
     ELSE
-        IF Dialogue.IsActive(DialogueHandle) THEN
-            Event = Dialogue.HandleKey(DialogueHandle, Key, TIMER())
-        ELSE IF MenuDepth > 0 THEN
-            IF MenuDepth = 1 THEN
-                Event = Menu.HandleKey(SubMenu1Handle, Key)
-            ELSE IF MenuDepth = 2 THEN
-                Event = Menu.HandleKey(SubMenu2Handle, Key)
+        Event = MenuNavigator.HandleKey(NavigatorHandle, Key)
+        IF Event = UI.UI_EVENT_ACCEPTED THEN
+            AcceptedValue = MenuNavigator.LastAcceptedValue(NavigatorHandle)
+            CALL Dialogue.ClearPages(DialogueHandle)
+            IF AcceptedValue = 99 THEN
+                OperationSucceeded = Dialogue.AddPage(DialogueHandle, "The reusable hierarchical menu demonstration is complete. Press Enter again to close the sample.")
             ELSE
-                Event = Menu.HandleKey(SubMenu3Handle, Key)
+                OperationSucceeded = Dialogue.AddPage(DialogueHandle, "A leaf item was accepted through MenuNavigator. The game owns this reaction while the reusable library owns stack routing, focus, markers, and placement.")
             END IF
-
-            IF Event = UI.UI_EVENT_ACCEPTED THEN
-                IF MenuDepth < 3 THEN
-                    MenuDepth = MenuDepth + 1
-                ELSE
-                    CALL Dialogue.ClearPages(DialogueHandle)
-                    OperationSucceeded = Dialogue.AddPage(DialogueHandle, "This is a three-level submenu path: party member, command, then target. Each level is an ordinary Smile.UI menu owned and composed by the game.")
-                    IF OperationSucceeded THEN
-                        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Press Escape after this dialogue to back out one submenu level at a time. Theme keys 1, 2, and 3 update every open level together.")
-                    END IF
-                    IF OperationSucceeded THEN
-                        OperationSucceeded = Dialogue.Start(DialogueHandle, TIMER())
-                    END IF
-                    IF NOT OperationSucceeded THEN
-                        Running = FALSE
-                    END IF
-                END IF
-            ELSE IF Event = UI.UI_EVENT_CANCELLED THEN
-                MenuDepth = MenuDepth - 1
+            IF OperationSucceeded THEN
+                OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Right, Enter, or Space opens a submenu. Left or Escape closes one level. Escape at the root returns the normal cancel event.")
             END IF
-        ELSE
-            Event = Menu.HandleKey(MenuHandle, Key)
-
-            IF Event = UI.UI_EVENT_ACCEPTED THEN
-                SelectedValue = Menu.SelectedValue(MenuHandle)
-                IF SelectedValue = 9 THEN
-                    MenuDepth = 1
-                ELSE
-                    CALL Dialogue.ClearPages(DialogueHandle)
-                    OperationSucceeded = FALSE
-
-                    IF SelectedValue = 1 THEN
-                        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Items will be implemented later by the reusable Inventory phase. This gallery proves generic window, menu, and dialogue components.")
-                    ELSE IF SelectedValue = 2 THEN
-                        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Magic will later use reusable Abilities and MP systems. Phase 5 returns a selected command value to the game.")
-                    ELSE IF SelectedValue = 3 THEN
-                        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Equipment is deliberately outside this UI library. The menu knows labels, enabled state, selection, and user values - not RPG rules.")
-                    ELSE IF SelectedValue = 4 THEN
-                        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "The dialogue renderer wraps Unicode text, reveals it by scalar values 😀, and uses system text or an app-supplied bitmap-font atlas.")
-                    ELSE IF SelectedValue = 6 THEN
-                        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Save-game encoding belongs to a later RPG component. The generic persistent DATA primitive is already available underneath it.")
-                    ELSE IF SelectedValue = 7 THEN
-                        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Press 1 for smooth system text, 2 for the high-resolution bitmap font, or 3 for the vector fallback window.")
-                    ELSE IF SelectedValue = 8 THEN
-                        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "This completes the Menu Gallery. Press Enter once more to close the sample.")
-                    END IF
-
-                    IF OperationSucceeded THEN
-                        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "The same SMILE library source is running on native Windows and the Web target.
-
-Theme changes preserve this active multiline dialogue.")
-                    END IF
-                    IF OperationSucceeded THEN
-                        OperationSucceeded = Dialogue.Start(DialogueHandle, TIMER())
-                    END IF
-                    IF NOT OperationSucceeded THEN
-                        Running = FALSE
-                    END IF
-                END IF
+            IF OperationSucceeded THEN
+                OperationSucceeded = Dialogue.Start(DialogueHandle, TIMER())
             END IF
+            Running = Running AND OperationSucceeded
         END IF
     END IF
 
     IF Event = UI.UI_EVENT_CHANGED THEN
         PLAY SOUND "Assets\Move.wav" ON CHANNEL 1
-    ELSE IF Event = UI.UI_EVENT_ACCEPTED OR Event = UI.UI_EVENT_ADVANCED THEN
+    ELSE IF Event = UI.UI_EVENT_SUBMENU_OPENED OR Event = UI.UI_EVENT_ACCEPTED OR Event = UI.UI_EVENT_ADVANCED THEN
         PLAY SOUND "Assets\Confirm.wav" ON CHANNEL 2
-    ELSE IF Event = UI.UI_EVENT_CANCELLED THEN
+    ELSE IF Event = UI.UI_EVENT_SUBMENU_CLOSED OR Event = UI.UI_EVENT_CANCELLED THEN
         PLAY SOUND "Assets\Cancel.wav" ON CHANNEL 3
     ELSE IF Event = UI.UI_EVENT_COMPLETED THEN
         PLAY SOUND "Assets\Confirm.wav" ON CHANNEL 2
-        IF Menu.SelectedValue(MenuHandle) = 8 THEN
+        IF AcceptedValue = 99 THEN
             Running = FALSE
         END IF
     END IF
@@ -374,35 +300,21 @@ Theme changes preserve this active multiline dialogue.")
 
     CLEAR RGB(5, 9, 25)
     DRAW IMAGE Background AT 0, 0 SIZE 960 BY 540 FILTER SMOOTH
-    CALL Menu.Draw(MenuHandle)
-
-    IF MenuDepth >= 1 THEN
-        CALL Menu.Draw(SubMenu1Handle)
-    END IF
-    IF MenuDepth >= 2 THEN
-        CALL Menu.Draw(SubMenu2Handle)
-    END IF
-    IF MenuDepth >= 3 THEN
-        CALL Menu.Draw(SubMenu3Handle)
-    END IF
-
+    CALL MenuNavigator.DrawStack(NavigatorHandle)
     IF Dialogue.IsActive(DialogueHandle) THEN
         CALL Dialogue.Draw(DialogueHandle, TIMER())
     END IF
-
-    DRAW TEXT "1 SYSTEM   2 BITMAP   3 VECTOR" AT 480, 20 SIZE 18 COLOR CYAN CENTERED
-    IF MenuDepth > 0 THEN
-        DRAW TEXT "PARTY > COMMAND > TARGET   ESCAPE BACKS OUT" AT 480, 46 SIZE 16 COLOR WHITE CENTERED
-    END IF
+    DRAW TEXT "RIGHT/ENTER/SPACE OPEN   LEFT/ESC BACK   1 SYSTEM   2 BITMAP   3 VECTOR" AT 480, 16 SIZE 16 COLOR CYAN CENTERED
     SHOW SCREEN
     WAIT 8 MILLISECONDS
 LOOP UNTIL GAME_CLOSED() = TRUE OR Running = FALSE
 
 CALL Dialogue.Destroy(DialogueHandle)
-CALL Menu.Destroy(SubMenu3Handle)
-CALL Menu.Destroy(SubMenu2Handle)
-CALL Menu.Destroy(SubMenu1Handle)
-CALL Menu.Destroy(MenuHandle)
+CALL MenuNavigator.Destroy(NavigatorHandle)
+CALL Menu.Destroy(DetailMenu)
+CALL Menu.Destroy(OptionMenu)
+CALL Menu.Destroy(CategoryMenu)
+CALL Menu.Destroy(RootMenu)
 CALL BitmapFont.Destroy(FontHandle)
 
 UNLOAD IMAGE FontAtlas

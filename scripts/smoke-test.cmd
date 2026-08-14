@@ -311,7 +311,7 @@ copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.UI.smilelib" "%SMILE_ROOT%\artif
 if errorlevel 1 exit /b 1
 fc /b "%SMILE_ROOT%\artifacts\temp\Smile.UI.first.smilelib" "%SMILE_ROOT%\artifacts\libraries\Smile.UI.smilelib" >nul
 if errorlevel 1 exit /b 1
-powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.UI.smilelib'); try { $manifest=([IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())).ReadToEnd() | ConvertFrom-Json; $api=([IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open())).ReadToEnd() | ConvertFrom-Json; $menu=$api.modules | Where-Object name -eq 'Smile.UI.Menu'; $text=$api.modules | Where-Object name -eq 'Smile.UI.Text'; $dialogue=$api.modules | Where-Object name -eq 'Smile.UI.Dialogue'; $draw=$menu.members | Where-Object name -eq 'Draw'; $key=$menu.members | Where-Object name -eq 'HandleKey'; $visibleRows=$menu.members | Where-Object name -eq 'VisibleRows'; $textValid=$text.members | Where-Object name -eq 'IsStyleValid'; $dialogueSet=$dialogue.members | Where-Object name -eq 'SetStyle'; if ($manifest.formatVersion -ne 5 -or $manifest.version -ne '1.0.1' -or !$draw.requiresGameWindow -or $key.requiresGameWindow -or $visibleRows.requiresGameWindow -or $textValid.requiresGameWindow -or !$dialogueSet.requiresGameWindow) { exit 1 } } finally { $zip.Dispose() }"
+powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.UI.smilelib'); try { $manifest=([IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())).ReadToEnd() | ConvertFrom-Json; $api=([IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open())).ReadToEnd() | ConvertFrom-Json; $menu=$api.modules | Where-Object name -eq 'Smile.UI.Menu'; $navigator=$api.modules | Where-Object name -eq 'Smile.UI.MenuNavigator'; $text=$api.modules | Where-Object name -eq 'Smile.UI.Text'; $dialogue=$api.modules | Where-Object name -eq 'Smile.UI.Dialogue'; $draw=$menu.members | Where-Object name -eq 'Draw'; $drawFocused=$menu.members | Where-Object name -eq 'DrawFocused'; $key=$menu.members | Where-Object name -eq 'HandleKey'; $visibleRows=$menu.members | Where-Object name -eq 'VisibleRows'; $bounds=$menu.members | Where-Object name -eq 'Bounds'; $drawStack=$navigator.members | Where-Object name -eq 'DrawStack'; $drawActive=$navigator.members | Where-Object name -eq 'DrawActive'; $navigatorKey=$navigator.members | Where-Object name -eq 'HandleKey'; $relayout=$navigator.members | Where-Object name -eq 'Relayout'; $textValid=$text.members | Where-Object name -eq 'IsStyleValid'; $dialogueSet=$dialogue.members | Where-Object name -eq 'SetStyle'; if ($manifest.formatVersion -ne 5 -or $manifest.version -ne '1.1.0' -or !$draw.requiresGameWindow -or !$drawFocused.requiresGameWindow -or $key.requiresGameWindow -or $visibleRows.requiresGameWindow -or $bounds.requiresGameWindow -or !$drawStack.requiresGameWindow -or !$drawActive.requiresGameWindow -or $navigatorKey.requiresGameWindow -or $relayout.requiresGameWindow -or $textValid.requiresGameWindow -or !$dialogueSet.requiresGameWindow) { exit 1 } } finally { $zip.Dispose() }"
 if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5UIStateTests\Phase5UIStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase5UIStateTests.exe"
@@ -325,6 +325,19 @@ if errorlevel 1 exit /b 1
 "%SMILE_ROOT%\artifacts\games\Phase5UIStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5UIStateTestsPackage.out"
 if errorlevel 1 exit /b 1
 fc /b "%SMILE_ROOT%\artifacts\temp\Phase5UIStateTests.out" "%SMILE_ROOT%\artifacts\temp\Phase5UIStateTestsPackage.out" >nul
+if errorlevel 1 exit /b 1
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5SubmenuStateTests\Phase5SubmenuStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase5SubmenuStateTests.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\games\Phase5SubmenuStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5SubmenuStateTests.out"
+if errorlevel 1 exit /b 1
+powershell -NoProfile -Command "$expected=[IO.File]::ReadAllLines('%SMILE_ROOT%\examples\Phase5SubmenuStateTests\Phase5SubmenuStateTests.expected.txt',[Text.Encoding]::UTF8); $actual=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5SubmenuStateTests.out',[Text.Encoding]::UTF8); if (Compare-Object $expected $actual) { exit 1 }"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5SubmenuStateTests\Phase5SubmenuStateTests.Package.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase5SubmenuStateTestsPackage.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\games\Phase5SubmenuStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5SubmenuStateTestsPackage.out"
+if errorlevel 1 exit /b 1
+powershell -NoProfile -Command "$project=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5SubmenuStateTests.out',[Text.Encoding]::UTF8); $package=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5SubmenuStateTestsPackage.out',[Text.Encoding]::UTF8); if (Compare-Object $project $package) { exit 1 }"
 if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5DialogueStateTests\Phase5DialogueStateTests.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\Phase5DialogueStateTests.exe"
@@ -385,6 +398,24 @@ for %%P in (ConsoleCallsDialogueSetStyle.smileproj ConsoleCallsDialogueSetStyle.
     powershell -NoProfile -Command "if ((Select-String -LiteralPath '%SMILE_ROOT%\artifacts\temp\%%P.log' -SimpleMatch 'SML3704').Count -ne 1) { exit 1 }"
     if errorlevel 1 exit /b 1
 )
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\InvalidPhase5Submenus\ConsoleDrawStack\ConsoleDrawStack.smileproj" -o "%SMILE_ROOT%\artifacts\temp\ConsoleDrawStack.exe" > "%SMILE_ROOT%\artifacts\temp\ConsoleDrawStack.log" 2>&1
+if not errorlevel 1 exit /b 1
+if errorlevel 2 exit /b 1
+powershell -NoProfile -Command "$matches=Select-String -LiteralPath '%SMILE_ROOT%\artifacts\temp\ConsoleDrawStack.log' -SimpleMatch 'SML3704'; if ($matches.Count -ne 1 -or $matches.Line -notmatch 'Program\.smile\(7,20\).*DrawStack.*requires a GAME WINDOW') { exit 1 }"
+if errorlevel 1 exit /b 1
+
+if not exist "%SMILE_ROOT%\artifacts\games\Phase5SubmenuViewport-DirectX" mkdir "%SMILE_ROOT%\artifacts\games\Phase5SubmenuViewport-DirectX"
+if not exist "%SMILE_ROOT%\artifacts\games\Phase5SubmenuViewport-GDI" mkdir "%SMILE_ROOT%\artifacts\games\Phase5SubmenuViewport-GDI"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5SubmenuViewport\Phase5SubmenuViewport.smileproj" --target windows-x64 --configuration Release --graphics DirectX -o "%SMILE_ROOT%\artifacts\games\Phase5SubmenuViewport-DirectX\Phase5SubmenuViewport.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5SubmenuViewport\Phase5SubmenuViewport.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\Phase5SubmenuViewport-GDI\Phase5SubmenuViewport.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5SubmenuViewport\Phase5SubmenuViewport.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\Phase5SubmenuViewport"
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\Phase5SubmenuViewport\game.js"
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase5SubmenuViewport" --frames 4 --timeout 10000
+if errorlevel 1 exit /b 1
 
 if not exist "%SMILE_ROOT%\artifacts\games\MenuGallery-DirectX" mkdir "%SMILE_ROOT%\artifacts\games\MenuGallery-DirectX"
 if not exist "%SMILE_ROOT%\artifacts\games\MenuGallery-GDI" mkdir "%SMILE_ROOT%\artifacts\games\MenuGallery-GDI"
@@ -398,7 +429,7 @@ if errorlevel 1 exit /b 1
 if errorlevel 1 exit /b 1
 node --check "%SMILE_ROOT%\artifacts\web\MenuGallery\game.js"
 if errorlevel 1 exit /b 1
-node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\MenuGallery" --frames 15 --timeout 10000 --phase5-ui
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\MenuGallery" --frames 18 --timeout 10000 --phase5-submenus
 if errorlevel 1 exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\MenuGallery\MenuGallery.Package.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\MenuGalleryPackage"
 if errorlevel 1 exit /b 1
@@ -408,7 +439,7 @@ for %%A in (Background.png WindowSkin.png Cursor.png Continue.png BitmapFont.png
     fc /b "%SMILE_ROOT%\examples\MenuGallery\Assets\%%A" "%SMILE_ROOT%\artifacts\web\MenuGallery\Assets\%%A" >nul
     if errorlevel 1 exit /b 1
 )
-echo Phase 5 Unicode text, routine capabilities, Smile.UI state, packages, assets, native, and Web tests passed.
+echo Phase 5 Unicode text, routine capabilities, Smile.UI state, submenu navigation, packages, assets, native, and Web tests passed.
 
 for %%P in (OptionExplicitLate:SML3300 OptionExplicitUndeclared:SML3303 ScalarDimWithoutAs:SML3302 UnknownBuiltInType:SML3401 NumberToTextAssignment:SML3304 TextToBooleanAssignment:SML3304 MixedTextAddition:SML3308 TextRelationalComparison:SML3308 InvalidByRefLiteral:SML3305 InvalidByRefConstant:SML3305 WrongArgumentType:SML3304 WrongReturnType:SML3304 InconsistentLegacyReturnTypes:SML3309 DuplicateLocal:SML3306 UseBeforeLocalDeclaration:SML3307) do (
     for /f "tokens=1,2 delims=:" %%F in ("%%P") do (

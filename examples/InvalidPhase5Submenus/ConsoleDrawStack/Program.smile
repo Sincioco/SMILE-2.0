@@ -1,0 +1,9 @@
+OPTION EXPLICIT
+
+IMPORT Smile.UI.MenuNavigator AS MenuNavigator
+
+DIM Navigator AS NUMBER
+
+CALL MenuNavigator.DrawStack(Navigator)
+
+END PROGRAM

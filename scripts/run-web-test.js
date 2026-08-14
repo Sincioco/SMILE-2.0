@@ -10,7 +10,7 @@ function fail(message) {
 }
 
 const args = process.argv.slice(2);
-if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio|--phase5-ui|--phase5-hardening]");
+if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio|--phase5-ui|--phase5-hardening|--phase5-submenus]");
 
 const webDirectory = path.resolve(args.shift());
 let expectedPath = null;
@@ -24,6 +24,7 @@ let verifyPhase4Clip = false;
 let verifyPhase4Audio = false;
 let verifyPhase5Ui = false;
 let verifyPhase5Hardening = false;
+let verifyPhase5Submenus = false;
 while (args.length !== 0) {
     const option = args.shift();
     if (option === "--phase4-media") {
@@ -35,6 +36,7 @@ while (args.length !== 0) {
     if (option === "--phase4-audio") { verifyPhase4Audio = true; continue; }
     if (option === "--phase5-ui") { verifyPhase5Ui = true; continue; }
     if (option === "--phase5-hardening") { verifyPhase5Hardening = true; continue; }
+    if (option === "--phase5-submenus") { verifyPhase5Submenus = true; continue; }
     const value = args.shift();
     if (value === undefined) fail(`missing value for ${option}`);
     if (option === "--expected") expectedPath = path.resolve(value);
@@ -153,7 +155,7 @@ const host = {
         getItem: key => storage.has(key) ? storage.get(key) : null,
         setItem: (key, value) => storage.set(key, String(value))
     },
-    performance: { now: () => verifyPhase5Ui ? virtualNow : Date.now() },
+    performance: { now: () => verifyPhase5Ui || verifyPhase5Submenus ? virtualNow : Date.now() },
     Audio: class {
         constructor(source) {
             audioConstructions += 1;
@@ -205,13 +207,18 @@ const host = {
     requestAnimationFrame: callback => {
         requestedFrames += 1;
         return setImmediate(() => {
-            if (verifyPhase5Ui) {
+            if (verifyPhase5Ui || verifyPhase5Submenus) {
                 virtualNow = requestedFrames * 280;
-                const scriptedCode = new Map([
+                const scriptedCode = (verifyPhase5Submenus ? new Map([
+                    [2, "ArrowRight"], [3, "Enter"], [4, "Space"], [5, "ArrowLeft"],
+                    [6, "Escape"], [7, "Escape"], [8, "Escape"], [9, "ArrowRight"],
+                    [10, "Enter"], [11, "Space"], [12, "ArrowDown"], [13, "Enter"],
+                    [14, "Escape"], [15, "Digit2"], [16, "Digit3"], [17, "Digit1"]
+                ]) : new Map([
                     [2, "ArrowDown"], [3, "ArrowDown"], [4, "ArrowDown"], [5, "ArrowDown"],
                     [6, "ArrowDown"], [7, "ArrowDown"], [8, "ArrowUp"], [9, "Digit2"],
                     [10, "Enter"], [11, "Digit3"], [12, "Digit1"], [13, "Space"], [14, "Escape"]
-                ]).get(requestedFrames);
+                ])).get(requestedFrames);
                 if (scriptedCode) {
                     const event = { code: scriptedCode, repeat: false, ctrlKey: false, altKey: false,
                         metaKey: false, preventDefault: () => {} };
@@ -417,6 +424,67 @@ const started = Date.now();
             fail(`Phase 5 Web ownership/shutdown was incomplete: ${JSON.stringify(diagnostics)}`);
         if (hostConsoleErrors.length !== 0)
             fail(`Phase 5 Web console reported errors: ${hostConsoleErrors.join("\n")}`);
+    }
+    if (verifyPhase5Submenus) {
+        const expectedKeys = ["ArrowRight", "Enter", "Space", "ArrowLeft", "Escape", "Escape", "Escape",
+            "ArrowRight", "Enter", "Space", "ArrowDown", "Enter", "Escape", "Digit2", "Digit3", "Digit1"];
+        if (phase5Keys.join("|") !== expectedKeys.join("|"))
+            fail(`Phase 5.2 scripted key sequence differed: ${phase5Keys.join(", ")}`);
+
+        const basenames = imageDraws.map(draw => path.basename(draw.source));
+        for (const required of ["Background.png", "WindowSkin.png", "Cursor.png", "BitmapFont.png"])
+            if (!basenames.includes(required)) fail(`Phase 5.2 Web draws did not include ${required}`);
+
+        const frameImageNames = new Map();
+        for (const draw of imageDraws) {
+            if (!frameImageNames.has(draw.frame)) frameImageNames.set(draw.frame, []);
+            frameImageNames.get(draw.frame).push(path.basename(draw.source));
+        }
+        for (const [frame, names] of frameImageNames) {
+            if (names.length !== 0 && names[0] !== "Background.png")
+                fail(`Phase 5.2 painter order did not begin with Background.png on frame ${frame}: ${names[0]}`);
+        }
+
+        const cursorByFrame = new Map();
+        for (const draw of imageDraws.filter(draw => path.basename(draw.source) === "Cursor.png" && draw.values.length === 8))
+            cursorByFrame.set(draw.frame, (cursorByFrame.get(draw.frame) || 0) + 1);
+        if (cursorByFrame.size < 10 || [...cursorByFrame.values()].some(value => value !== 1))
+            fail(`Phase 5.2 expected exactly one active cursor per drawn frame: ${JSON.stringify([...cursorByFrame])}`);
+        const cursorXs = new Set(imageDraws.filter(draw => path.basename(draw.source) === "Cursor.png" && draw.values.length === 8)
+            .map(draw => draw.values[4]));
+        if (cursorXs.size < 4)
+            fail(`Phase 5.2 did not exercise four active stack levels: ${JSON.stringify([...cursorXs])}`);
+
+        const initialLabels = textDraws.filter(draw => draw.frame === 1 && draw.y >= 250 && draw.value !== " >");
+        if (initialLabels.length < 4 || new Set(initialLabels.map(draw => draw.x)).size !== 1)
+            fail(`Phase 5.2 fixed cursor gutter shifted row text: ${JSON.stringify(initialLabels)}`);
+        if (!textDraws.some(draw => draw.value === " >"))
+            fail("Phase 5.2 automatic submenu marker was not drawn as exact literal ' >'");
+        if (!textDraws.some(draw => draw.value.endsWith("...")))
+            fail("Phase 5.2 long-label ellipsis was not drawn");
+        if (!textDraws.some(draw => draw.value === "LOCALIZATION AND"))
+            fail(`Phase 5.2 bounded wrapped label was not drawn: ${JSON.stringify([...new Set(textDraws.map(draw => draw.value))])}`);
+
+        const frameFourWindows = imageDraws.filter(draw => draw.frame === 4 && path.basename(draw.source) === "WindowSkin.png" &&
+            draw.values.length === 8 && draw.values[0] === 0 && draw.values[1] === 0)
+            .map(draw => [draw.values[4], draw.values[5]]);
+        const expectedWindows = [[320, 250], [578, 258], [250, 286], [548, 298]];
+        if (JSON.stringify(frameFourWindows.slice(0, 4)) !== JSON.stringify(expectedWindows))
+            fail(`Phase 5.2 viewport placement/painter stack differed: ${JSON.stringify(frameFourWindows)}`);
+        if (fillRectangleDraws.filter(draw => draw.frame === 4).length < 4)
+            fail("Phase 5.2 ancestor path selection fills were not retained");
+        if (!fillRectangleDraws.some(draw => draw.frame >= 16))
+            fail("Phase 5.2 vector fallback drawing was not recorded");
+        for (const required of ["Move.wav", "Confirm.wav", "Cancel.wav"])
+            if (!audioSources.some(source => path.basename(source) === required))
+                fail(`Phase 5.2 event-driven SFX did not include ${required}: ${JSON.stringify(audioSources)}`);
+        if (clipCalls < maximumFrames)
+            fail(`Phase 5.2 expected structured clipping on each frame, found ${clipCalls} clips across ${maximumFrames} frames`);
+        if (diagnostics.backingWidth <= diagnostics.logicalWidth || diagnostics.backingHeight <= diagnostics.logicalHeight)
+            fail(`Phase 5.2 DPR backing store was not high resolution: ${diagnostics.backingWidth}x${diagnostics.backingHeight}`);
+        if (diagnostics.imageCacheCount !== 0 || diagnostics.imageReferenceCount !== 0 ||
+            diagnostics.sfxActiveCount !== 0 || !diagnostics.mediaStopped)
+            fail(`Phase 5.2 Web ownership/shutdown was incomplete: ${JSON.stringify(diagnostics)}`);
     }
     if (verifyPhase5Hardening) {
         const basenames = imageDraws.map(draw => path.basename(draw.source));

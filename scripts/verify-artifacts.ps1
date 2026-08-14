@@ -85,6 +85,11 @@ Require-File 'artifacts\web\Phase4AssetPublication\smile-assets.json' | Out-Null
 Require-File 'artifacts\libraries\Smile.UI.smilelib' | Out-Null
 Require-File 'artifacts\games\Phase5UIStateTests.exe' | Out-Null
 Require-File 'artifacts\games\Phase5UIStateTestsPackage.exe' | Out-Null
+Require-File 'artifacts\games\Phase5SubmenuStateTests.exe' | Out-Null
+Require-File 'artifacts\games\Phase5SubmenuStateTestsPackage.exe' | Out-Null
+Require-File 'artifacts\games\Phase5SubmenuViewport-DirectX\Phase5SubmenuViewport.smile-assets.json' | Out-Null
+Require-File 'artifacts\games\Phase5SubmenuViewport-GDI\Phase5SubmenuViewport.smile-assets.json' | Out-Null
+Require-File 'artifacts\web\Phase5SubmenuViewport\smile-assets.json' | Out-Null
 Require-File 'artifacts\games\Phase5Hardening-DirectX\Phase5Hardening.exe' | Out-Null
 Require-File 'artifacts\games\Phase5Hardening-GDI\Phase5Hardening.exe' | Out-Null
 Require-File 'artifacts\games\Phase5HardeningPackage.exe' | Out-Null
@@ -103,6 +108,8 @@ $nativePrograms = @(
     'artifacts\games\MenuGallery-GDI\MenuGallery.exe',
     'artifacts\games\MenuGalleryPackage.exe',
     'artifacts\games\Phase5DialogueStateTests.exe',
+    'artifacts\games\Phase5SubmenuViewport-DirectX\Phase5SubmenuViewport.exe',
+    'artifacts\games\Phase5SubmenuViewport-GDI\Phase5SubmenuViewport.exe',
     'artifacts\games\Phase5Hardening-DirectX\Phase5Hardening.exe',
     'artifacts\games\Phase5Hardening-GDI\Phase5Hardening.exe',
     'artifacts\games\Phase5HardeningPackage.exe',
@@ -170,6 +177,11 @@ foreach ($asset in @('Background.png', 'WindowSkin.png', 'Cursor.png', 'Continue
     Assert-AssetCopy "examples\MenuGallery\Assets\$asset" "artifacts\web\MenuGallery\Assets\$asset"
     Assert-AssetCopy "examples\MenuGallery\Assets\$asset" "artifacts\web\MenuGalleryPackage\Assets\$asset"
 }
+foreach ($asset in @('Cursor.png', 'BitmapFont.png')) {
+    Assert-AssetCopy "examples\Phase5SubmenuViewport\Assets\$asset" "artifacts\games\Phase5SubmenuViewport-DirectX\Assets\$asset"
+    Assert-AssetCopy "examples\Phase5SubmenuViewport\Assets\$asset" "artifacts\games\Phase5SubmenuViewport-GDI\Assets\$asset"
+    Assert-AssetCopy "examples\Phase5SubmenuViewport\Assets\$asset" "artifacts\web\Phase5SubmenuViewport\Assets\$asset"
+}
 $phase42ExpectedPath = Join-Path $repositoryRoot 'examples\Phase4AssetPublication\ExpectedAssetPaths.txt'
 foreach ($asset in Get-Content -LiteralPath $phase42ExpectedPath) {
     $assetPath = $asset.Replace('/', '\')
@@ -233,8 +245,8 @@ try {
     $manifestReader = [System.IO.StreamReader]::new($manifestEntry.Open())
     try { $vsixManifest = $manifestReader.ReadToEnd() }
     finally { $manifestReader.Dispose() }
-    if ($vsixManifest -notmatch 'Version="2\.0\.29"') {
-        throw 'VSIX identity version is not 2.0.29.'
+    if ($vsixManifest -notmatch 'Version="2\.0\.30"') {
+        throw 'VSIX identity version is not 2.0.30.'
     }
 }
 finally {
@@ -244,11 +256,11 @@ Write-Host 'VSIX compiler, shared-language, and project-template payload verifie
 $visualStudioDll = Require-File 'src\Smile.VisualStudio\bin\Release\net472\Smile.VisualStudio.dll'
 $versionInfo = [Diagnostics.FileVersionInfo]::GetVersionInfo($visualStudioDll)
 $assemblyVersion = [Reflection.AssemblyName]::GetAssemblyName($visualStudioDll).Version.ToString()
-if ($versionInfo.FileVersion -ne '2.0.29.0' -or $versionInfo.ProductVersion -notlike '2.0.29*' -or
-    $assemblyVersion -ne '2.0.29.0') {
+if ($versionInfo.FileVersion -ne '2.0.30.0' -or $versionInfo.ProductVersion -notlike '2.0.30*' -or
+    $assemblyVersion -ne '2.0.30.0') {
     throw "Visual Studio DLL versions differ: file=$($versionInfo.FileVersion), product=$($versionInfo.ProductVersion), assembly=$assemblyVersion."
 }
-Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.29.'
+Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.30.'
 
 $scaleCases = @(
     @{ Width = 960; Height = 540; ExpectedWidth = 960; ExpectedHeight = 540; X = 0; Y = 0 },

@@ -1,4 +1,4 @@
-# Smile.UI 1.0.1 public API
+# Smile.UI 1.1.0 public API
 
 All handles are generation-safe `NUMBER` values. Handle `0` is invalid.
 
@@ -48,17 +48,63 @@ AddItem(Handle, Label, UserValue, Enabled) AS NUMBER
 SetItemLabel(Handle, Index, Label) AS BOOLEAN
 SetItemEnabled(Handle, Index, Enabled) AS BOOLEAN
 SetItemValue(Handle, Index, UserValue) AS BOOLEAN
+SetItemHasSubmenu(Handle, Index, HasSubmenu) AS BOOLEAN
+ItemHasSubmenu(Handle, Index) AS BOOLEAN
+ItemRevision(Handle) AS NUMBER
 ItemCount(Handle) AS NUMBER
 SelectedIndex(Handle) AS NUMBER
 SelectedValue(Handle) AS NUMBER
 TopIndex(Handle) AS NUMBER
 VisibleRows(Handle) AS NUMBER
+Bounds(Handle) AS Core.Rect
+SetPosition(Handle, X, Y) AS BOOLEAN
+SelectedRowRect(Handle) AS Core.Rect
 SetSelectedIndex(Handle, Index) AS BOOLEAN
+ResetSelection(Handle) AS BOOLEAN
 HandleKey(Handle, Key) AS NUMBER
+DrawFocused(Handle, Focused)
 Draw(Handle)
 ```
 
 The row count passed to `Create` is retained as the requested count. `VisibleRows` returns the current effective count after window/style constraints. Valid style changes can shrink and later re-expand the effective count while keeping selection and top index in range. `CursorFilterMode` accepts `UI_FILTER_SMOOTH` or `UI_FILTER_PIXEL`.
+
+`ItemTextOverflowMode` accepts `UI_MENU_TEXT_ELLIPSIS`, `UI_MENU_TEXT_CLIP`, or `UI_MENU_TEXT_WRAP`; `ItemTextMaxLines` is bounded by `UI_MAX_MENU_ITEM_LINES` (4). Labels are bounded by `UI_MAX_MENU_ITEM_SCALARS` (256). Ellipsis and wrapping are Unicode-scalar safe. Submenu rows reserve a right-side marker region and draw the exact automatic marker ` >`; callers do not add marker text to labels. A fixed cursor gutter keeps label geometry stable, and `DrawFocused(FALSE)` suppresses the cursor while retaining normal row rendering. Item revisions invalidate stale navigator bindings after structural item changes.
+
+## Smile.UI.MenuNavigator
+
+```text
+IsStyleValid(BYREF MenuNavigatorStyle) AS BOOLEAN
+Create(RootMenuHandle, BYREF MenuNavigatorStyle) AS NUMBER
+Destroy(NavigatorHandle)
+IsValid(NavigatorHandle) AS BOOLEAN
+SetStyle(NavigatorHandle, BYREF MenuNavigatorStyle) AS BOOLEAN
+Relayout(NavigatorHandle) AS BOOLEAN
+Reset(NavigatorHandle) AS BOOLEAN
+BindSubmenu(NavigatorHandle, ParentMenuHandle, ParentItemIndex, ChildMenuHandle, ResetChildSelection) AS BOOLEAN
+UnbindSubmenu(NavigatorHandle, ParentMenuHandle, ParentItemIndex) AS BOOLEAN
+ClearBindings(NavigatorHandle)
+HasSubmenu(NavigatorHandle, ParentMenuHandle, ParentItemIndex) AS BOOLEAN
+OpenSelected(NavigatorHandle) AS NUMBER
+Back(NavigatorHandle) AS NUMBER
+HandleKey(NavigatorHandle, Key) AS NUMBER
+Depth(NavigatorHandle) AS NUMBER
+RootMenu(NavigatorHandle) AS NUMBER
+CurrentMenu(NavigatorHandle) AS NUMBER
+MenuAtDepth(NavigatorHandle, DepthIndex) AS NUMBER
+ParentMenu(NavigatorHandle) AS NUMBER
+CanGoBack(NavigatorHandle) AS BOOLEAN
+LastAcceptedMenu(NavigatorHandle) AS NUMBER
+LastAcceptedIndex(NavigatorHandle) AS NUMBER
+LastAcceptedValue(NavigatorHandle) AS NUMBER
+DrawActive(NavigatorHandle)
+DrawStack(NavigatorHandle)
+```
+
+The navigator owns bindings and stack state, never menu handles. It supports `UI_MAX_MENU_NAVIGATORS` (8), `UI_MAX_MENU_DEPTH` (8), and `UI_MAX_SUBMENU_BINDINGS` (128). A child menu may be shared by multiple parent items, while self-links, cycles, active duplicates, stale handles, and stale item revisions are rejected or repaired safely. Binding changes maintain the automatic submenu marker.
+
+Right, Enter, and Space open a selected enabled submenu. Left and Escape close exactly one submenu level; at the root, Escape returns `UI_EVENT_CANCELLED` and Left returns `UI_EVENT_NONE`. Accepting a leaf records its menu, index, and user value. Opening can reset or preserve the child selection as selected per binding.
+
+`MenuNavigatorStyle` defines the viewport, nonnegative viewport padding, horizontal gap, and `AUTO`, `RIGHT`, or `LEFT` preference. Layout clamps the root, aligns children with their parent row, chooses right/left fallback, clamps vertically, and uses bounded overlap when neither horizontal side fits. Style changes and relayout are transactional. `DrawStack` paints root-to-leaf and focuses only the active menu, preserving deterministic painter order.
 
 ## Smile.UI.Dialogue
 
@@ -84,3 +130,5 @@ VisibleCharacters(Handle) AS NUMBER
 Dialogue line advance is `measured text height + TextStyle.LineSpacing + DialogueStyle.LineSpacing`; each spacing value is applied once.
 
 `UI_MAX_DIALOGUE_PAGE_SCALARS` is 2048. `AddPage` rejects a larger value immediately without changing existing pages. `Start` prepares bounded spill pages transactionally. A valid `SetStyle` on an active dialogue reflows with the candidate style while preserving active state, raw-page identity, current content, and the already-visible scalar count; failed validation or reflow leaves the previous style and state unchanged.
+
+`Draw`, `DrawFocused`, `DrawActive`, and `DrawStack` require a `GAME WINDOW`. State, binding, geometry, selection, and key-routing APIs remain usable by Console consumers.

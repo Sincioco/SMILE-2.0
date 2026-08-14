@@ -1,0 +1,856 @@
+MODULE Smile.UI.MenuNavigator
+
+OPTION EXPLICIT
+
+IMPORT Smile.UI.Core AS Core
+IMPORT Smile.UI.Menu AS Menu
+
+PRIVATE DIM NavigatorUsed[8] AS BOOLEAN
+PRIVATE DIM NavigatorGeneration[8] AS NUMBER
+PRIVATE DIM NavigatorStyles[8] AS Core.MenuNavigatorStyle
+PRIVATE DIM NavigatorRoot[8] AS NUMBER
+PRIVATE DIM NavigatorDepth[8] AS NUMBER
+PRIVATE DIM StackMenus[8, 8] AS NUMBER
+PRIVATE DIM StackParentItems[8, 8] AS NUMBER
+
+PRIVATE DIM BindingUsed[8, 128] AS BOOLEAN
+PRIVATE DIM BindingParentMenus[8, 128] AS NUMBER
+PRIVATE DIM BindingParentItems[8, 128] AS NUMBER
+PRIVATE DIM BindingParentRevisions[8, 128] AS NUMBER
+PRIVATE DIM BindingChildMenus[8, 128] AS NUMBER
+PRIVATE DIM BindingResetChild[8, 128] AS BOOLEAN
+
+PRIVATE DIM AcceptedMenus[8] AS NUMBER
+PRIVATE DIM AcceptedIndices[8] AS NUMBER
+PRIVATE DIM AcceptedValues[8] AS NUMBER
+
+PRIVATE DIM ScratchTraversal[16] AS NUMBER
+PRIVATE DIM ScratchX[8] AS NUMBER
+PRIVATE DIM ScratchY[8] AS NUMBER
+PRIVATE DIM ScratchOldX[8] AS NUMBER
+PRIVATE DIM ScratchOldY[8] AS NUMBER
+
+PRIVATE FUNCTION SlotFromHandle(Handle AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    DIM Generation AS NUMBER
+    IF Handle <= 0 THEN
+        RETURN -1
+    END IF
+    Slot = (Handle MOD 100) - 1
+    Generation = Handle / 100
+    IF Slot < 0 OR Slot >= Core.UI_MAX_MENU_NAVIGATORS THEN
+        RETURN -1
+    END IF
+    IF NOT NavigatorUsed[Slot] OR NavigatorGeneration[Slot] <> Generation THEN
+        RETURN -1
+    END IF
+    RETURN Slot
+END FUNCTION
+
+PUBLIC FUNCTION IsStyleValid(BYREF Style AS Core.MenuNavigatorStyle) AS BOOLEAN
+    IF Style.Viewport.X < -Core.UI_MAX_LAYOUT_VALUE OR Style.Viewport.X > Core.UI_MAX_LAYOUT_VALUE OR Style.Viewport.Y < -Core.UI_MAX_LAYOUT_VALUE OR Style.Viewport.Y > Core.UI_MAX_LAYOUT_VALUE THEN
+        RETURN FALSE
+    END IF
+    IF Style.Viewport.Width <= 0 OR Style.Viewport.Width > Core.UI_MAX_LAYOUT_VALUE OR Style.Viewport.Height <= 0 OR Style.Viewport.Height > Core.UI_MAX_LAYOUT_VALUE THEN
+        RETURN FALSE
+    END IF
+    IF Style.Viewport.X > Core.UI_MAX_LAYOUT_VALUE - Style.Viewport.Width OR Style.Viewport.Y > Core.UI_MAX_LAYOUT_VALUE - Style.Viewport.Height THEN
+        RETURN FALSE
+    END IF
+    IF Style.ViewportPadding.Left < 0 OR Style.ViewportPadding.Left > Core.UI_MAX_LAYOUT_VALUE OR Style.ViewportPadding.Top < 0 OR Style.ViewportPadding.Top > Core.UI_MAX_LAYOUT_VALUE OR Style.ViewportPadding.Right < 0 OR Style.ViewportPadding.Right > Core.UI_MAX_LAYOUT_VALUE OR Style.ViewportPadding.Bottom < 0 OR Style.ViewportPadding.Bottom > Core.UI_MAX_LAYOUT_VALUE THEN
+        RETURN FALSE
+    END IF
+    IF Style.ViewportPadding.Left >= Style.Viewport.Width OR Style.ViewportPadding.Right >= Style.Viewport.Width - Style.ViewportPadding.Left THEN
+        RETURN FALSE
+    END IF
+    IF Style.ViewportPadding.Top >= Style.Viewport.Height OR Style.ViewportPadding.Bottom >= Style.Viewport.Height - Style.ViewportPadding.Top THEN
+        RETURN FALSE
+    END IF
+    IF Style.HorizontalGap < 0 OR Style.HorizontalGap > Core.UI_MAX_LAYOUT_VALUE THEN
+        RETURN FALSE
+    END IF
+    IF Style.PreferredDirection <> Core.UI_SUBMENU_DIRECTION_AUTO AND Style.PreferredDirection <> Core.UI_SUBMENU_DIRECTION_RIGHT AND Style.PreferredDirection <> Core.UI_SUBMENU_DIRECTION_LEFT THEN
+        RETURN FALSE
+    END IF
+    RETURN TRUE
+END FUNCTION
+
+PRIVATE FUNCTION InnerLeft(BYREF Style AS Core.MenuNavigatorStyle) AS NUMBER
+    RETURN Style.Viewport.X + Style.ViewportPadding.Left
+END FUNCTION
+
+PRIVATE FUNCTION InnerTop(BYREF Style AS Core.MenuNavigatorStyle) AS NUMBER
+    RETURN Style.Viewport.Y + Style.ViewportPadding.Top
+END FUNCTION
+
+PRIVATE FUNCTION InnerRight(BYREF Style AS Core.MenuNavigatorStyle) AS NUMBER
+    RETURN Style.Viewport.X + Style.Viewport.Width - Style.ViewportPadding.Right
+END FUNCTION
+
+PRIVATE FUNCTION InnerBottom(BYREF Style AS Core.MenuNavigatorStyle) AS NUMBER
+    RETURN Style.Viewport.Y + Style.Viewport.Height - Style.ViewportPadding.Bottom
+END FUNCTION
+
+PRIVATE FUNCTION EffectiveGap(BYREF Style AS Core.MenuNavigatorStyle) AS NUMBER
+    IF Style.HorizontalGap = 0 THEN
+        RETURN 8
+    END IF
+    RETURN Style.HorizontalGap
+END FUNCTION
+
+PRIVATE FUNCTION MenuFitsStyle(MenuHandle AS NUMBER, BYREF Style AS Core.MenuNavigatorStyle) AS BOOLEAN
+    DIM Value AS Core.Rect
+    IF NOT Menu.IsValid(MenuHandle) THEN
+        RETURN FALSE
+    END IF
+    Value = Menu.Bounds(MenuHandle)
+    RETURN Value.Width > 0 AND Value.Height > 0 AND Value.Width <= InnerRight(Style) - InnerLeft(Style) AND Value.Height <= InnerBottom(Style) - InnerTop(Style)
+END FUNCTION
+
+PRIVATE SUB ClearAccepted(Slot AS NUMBER)
+    AcceptedMenus[Slot] = 0
+    AcceptedIndices[Slot] = -1
+    AcceptedValues[Slot] = 0
+END SUB
+
+PRIVATE FUNCTION OtherBindingKeepsMarker(SkipNavigator AS NUMBER, SkipBinding AS NUMBER, ParentMenuHandle AS NUMBER, ParentItemIndex AS NUMBER, ParentRevision AS NUMBER) AS BOOLEAN
+    DIM NavigatorIndex AS NUMBER
+    DIM BindingIndex AS NUMBER
+    FOR NavigatorIndex = 0 TO Core.UI_MAX_MENU_NAVIGATORS - 1
+        IF NavigatorUsed[NavigatorIndex] THEN
+            FOR BindingIndex = 0 TO Core.UI_MAX_SUBMENU_BINDINGS - 1
+                IF BindingUsed[NavigatorIndex, BindingIndex] AND (NavigatorIndex <> SkipNavigator OR BindingIndex <> SkipBinding) THEN
+                    IF BindingParentMenus[NavigatorIndex, BindingIndex] = ParentMenuHandle AND BindingParentItems[NavigatorIndex, BindingIndex] = ParentItemIndex AND BindingParentRevisions[NavigatorIndex, BindingIndex] = ParentRevision THEN
+                        IF Menu.IsValid(ParentMenuHandle) AND Menu.IsValid(BindingChildMenus[NavigatorIndex, BindingIndex]) AND Menu.ItemRevision(ParentMenuHandle) = ParentRevision AND ParentItemIndex >= 0 AND ParentItemIndex < Menu.ItemCount(ParentMenuHandle) THEN
+                            RETURN TRUE
+                        END IF
+                    END IF
+                END IF
+            END FOR
+        END IF
+    END FOR
+    RETURN FALSE
+END FUNCTION
+
+PRIVATE SUB ClearBindingAt(Slot AS NUMBER, BindingIndex AS NUMBER)
+    DIM ParentHandle AS NUMBER
+    DIM ParentItem AS NUMBER
+    DIM ParentRevision AS NUMBER
+    DIM Ignored AS BOOLEAN
+    IF NOT BindingUsed[Slot, BindingIndex] THEN
+        RETURN
+    END IF
+    ParentHandle = BindingParentMenus[Slot, BindingIndex]
+    ParentItem = BindingParentItems[Slot, BindingIndex]
+    ParentRevision = BindingParentRevisions[Slot, BindingIndex]
+    IF Menu.IsValid(ParentHandle) AND Menu.ItemRevision(ParentHandle) = ParentRevision AND ParentItem >= 0 AND ParentItem < Menu.ItemCount(ParentHandle) THEN
+        IF NOT OtherBindingKeepsMarker(Slot, BindingIndex, ParentHandle, ParentItem, ParentRevision) THEN
+            Ignored = Menu.SetItemHasSubmenu(ParentHandle, ParentItem, FALSE)
+        END IF
+    END IF
+    BindingUsed[Slot, BindingIndex] = FALSE
+    BindingParentMenus[Slot, BindingIndex] = 0
+    BindingParentItems[Slot, BindingIndex] = -1
+    BindingParentRevisions[Slot, BindingIndex] = 0
+    BindingChildMenus[Slot, BindingIndex] = 0
+    BindingResetChild[Slot, BindingIndex] = FALSE
+END SUB
+
+PRIVATE FUNCTION FindBinding(Slot AS NUMBER, ParentMenuHandle AS NUMBER, ParentItemIndex AS NUMBER) AS NUMBER
+    DIM BindingIndex AS NUMBER
+    FOR BindingIndex = 0 TO Core.UI_MAX_SUBMENU_BINDINGS - 1
+        IF BindingUsed[Slot, BindingIndex] AND BindingParentMenus[Slot, BindingIndex] = ParentMenuHandle AND BindingParentItems[Slot, BindingIndex] = ParentItemIndex THEN
+            RETURN BindingIndex
+        END IF
+    END FOR
+    RETURN -1
+END FUNCTION
+
+PRIVATE SUB ClearStackFrom(Slot AS NUMBER, StartIndex AS NUMBER)
+    DIM Level AS NUMBER
+    FOR Level = StartIndex TO Core.UI_MAX_MENU_DEPTH - 1
+        StackMenus[Slot, Level] = 0
+        StackParentItems[Slot, Level] = -1
+    END FOR
+END SUB
+
+PRIVATE SUB PruneBindings(Slot AS NUMBER)
+    DIM BindingIndex AS NUMBER
+    DIM ParentHandle AS NUMBER
+    DIM ParentItem AS NUMBER
+    DIM ParentRevision AS NUMBER
+    DIM ChildHandle AS NUMBER
+    FOR BindingIndex = 0 TO Core.UI_MAX_SUBMENU_BINDINGS - 1
+        IF BindingUsed[Slot, BindingIndex] THEN
+            ParentHandle = BindingParentMenus[Slot, BindingIndex]
+            ParentItem = BindingParentItems[Slot, BindingIndex]
+            ParentRevision = BindingParentRevisions[Slot, BindingIndex]
+            ChildHandle = BindingChildMenus[Slot, BindingIndex]
+            IF NOT Menu.IsValid(ParentHandle) OR NOT Menu.IsValid(ChildHandle) OR ParentHandle = ChildHandle THEN
+                CALL ClearBindingAt(Slot, BindingIndex)
+            ELSE IF Menu.ItemRevision(ParentHandle) <> ParentRevision OR ParentItem < 0 OR ParentItem >= Menu.ItemCount(ParentHandle) THEN
+                CALL ClearBindingAt(Slot, BindingIndex)
+            END IF
+        END IF
+    END FOR
+END SUB
+
+PRIVATE FUNCTION RepairSlot(Slot AS NUMBER) AS BOOLEAN
+    DIM Level AS NUMBER
+    DIM Prior AS NUMBER
+    DIM BindingIndex AS NUMBER
+    DIM ParentHandle AS NUMBER
+    DIM ChildHandle AS NUMBER
+    IF Slot < 0 OR NOT NavigatorUsed[Slot] THEN
+        RETURN FALSE
+    END IF
+    CALL PruneBindings(Slot)
+    IF NOT Menu.IsValid(NavigatorRoot[Slot]) THEN
+        NavigatorDepth[Slot] = 0
+        CALL ClearStackFrom(Slot, 0)
+        CALL ClearAccepted(Slot)
+        RETURN FALSE
+    END IF
+    IF NavigatorDepth[Slot] < 1 OR StackMenus[Slot, 0] <> NavigatorRoot[Slot] THEN
+        NavigatorDepth[Slot] = 1
+        StackMenus[Slot, 0] = NavigatorRoot[Slot]
+        StackParentItems[Slot, 0] = -1
+        CALL ClearStackFrom(Slot, 1)
+        CALL ClearAccepted(Slot)
+    END IF
+    FOR Level = 1 TO NavigatorDepth[Slot] - 1
+        ParentHandle = StackMenus[Slot, Level - 1]
+        ChildHandle = StackMenus[Slot, Level]
+        BindingIndex = FindBinding(Slot, ParentHandle, StackParentItems[Slot, Level])
+        IF BindingIndex < 0 OR BindingChildMenus[Slot, BindingIndex] <> ChildHandle OR NOT Menu.IsValid(ChildHandle) THEN
+            NavigatorDepth[Slot] = Level
+            CALL ClearStackFrom(Slot, Level)
+            CALL ClearAccepted(Slot)
+            EXIT FOR
+        END IF
+        FOR Prior = 0 TO Level - 1
+            IF StackMenus[Slot, Prior] = ChildHandle THEN
+                NavigatorDepth[Slot] = Level
+                CALL ClearStackFrom(Slot, Level)
+                CALL ClearAccepted(Slot)
+                EXIT FOR
+            END IF
+        END FOR
+    END FOR
+    IF AcceptedMenus[Slot] <> 0 AND NOT Menu.IsValid(AcceptedMenus[Slot]) THEN
+        CALL ClearAccepted(Slot)
+    END IF
+    RETURN TRUE
+END FUNCTION
+
+PRIVATE FUNCTION TraversalContains(MenuHandle AS NUMBER, Length AS NUMBER) AS BOOLEAN
+    DIM Index AS NUMBER
+    FOR Index = 0 TO Length - 1
+        IF ScratchTraversal[Index] = MenuHandle THEN
+            RETURN TRUE
+        END IF
+    END FOR
+    RETURN FALSE
+END FUNCTION
+
+PRIVATE FUNCTION WouldCreateCycle(Slot AS NUMBER, ParentMenuHandle AS NUMBER, ParentItemIndex AS NUMBER, ChildMenuHandle AS NUMBER) AS BOOLEAN
+    DIM Head AS NUMBER
+    DIM QueueLength AS NUMBER
+    DIM CurrentHandle AS NUMBER
+    DIM NextHandle AS NUMBER
+    DIM BindingIndex AS NUMBER
+    IF ParentMenuHandle = ChildMenuHandle THEN
+        RETURN TRUE
+    END IF
+    ScratchTraversal[0] = ChildMenuHandle
+    QueueLength = 1
+    FOR Head = 0 TO Core.UI_MAX_MENUS - 1
+        IF Head >= QueueLength THEN
+            EXIT FOR
+        END IF
+        CurrentHandle = ScratchTraversal[Head]
+        IF CurrentHandle = ParentMenuHandle THEN
+            RETURN TRUE
+        END IF
+        FOR BindingIndex = 0 TO Core.UI_MAX_SUBMENU_BINDINGS - 1
+            IF BindingUsed[Slot, BindingIndex] AND BindingParentMenus[Slot, BindingIndex] = CurrentHandle THEN
+                IF BindingParentMenus[Slot, BindingIndex] <> ParentMenuHandle OR BindingParentItems[Slot, BindingIndex] <> ParentItemIndex THEN
+                    NextHandle = BindingChildMenus[Slot, BindingIndex]
+                    IF NOT TraversalContains(NextHandle, QueueLength) AND QueueLength < Core.UI_MAX_MENUS THEN
+                        ScratchTraversal[QueueLength] = NextHandle
+                        QueueLength = QueueLength + 1
+                    END IF
+                END IF
+            END IF
+        END FOR
+    END FOR
+    RETURN FALSE
+END FUNCTION
+
+PRIVATE FUNCTION ActiveContains(Slot AS NUMBER, MenuHandle AS NUMBER) AS BOOLEAN
+    DIM Level AS NUMBER
+    FOR Level = 0 TO NavigatorDepth[Slot] - 1
+        IF StackMenus[Slot, Level] = MenuHandle THEN
+            RETURN TRUE
+        END IF
+    END FOR
+    RETURN FALSE
+END FUNCTION
+
+PRIVATE SUB TrimActiveEdge(Slot AS NUMBER, ParentMenuHandle AS NUMBER, ParentItemIndex AS NUMBER)
+    DIM Level AS NUMBER
+    FOR Level = 1 TO NavigatorDepth[Slot] - 1
+        IF StackMenus[Slot, Level - 1] = ParentMenuHandle AND StackParentItems[Slot, Level] = ParentItemIndex THEN
+            NavigatorDepth[Slot] = Level
+            CALL ClearStackFrom(Slot, Level)
+            CALL ClearAccepted(Slot)
+            RETURN
+        END IF
+    END FOR
+END SUB
+
+PRIVATE FUNCTION AllBoundMenusFit(Slot AS NUMBER, BYREF Style AS Core.MenuNavigatorStyle) AS BOOLEAN
+    DIM BindingIndex AS NUMBER
+    IF NOT MenuFitsStyle(NavigatorRoot[Slot], Style) THEN
+        RETURN FALSE
+    END IF
+    FOR BindingIndex = 0 TO Core.UI_MAX_SUBMENU_BINDINGS - 1
+        IF BindingUsed[Slot, BindingIndex] THEN
+            IF NOT MenuFitsStyle(BindingParentMenus[Slot, BindingIndex], Style) OR NOT MenuFitsStyle(BindingChildMenus[Slot, BindingIndex], Style) THEN
+                RETURN FALSE
+            END IF
+        END IF
+    END FOR
+    RETURN TRUE
+END FUNCTION
+
+PRIVATE FUNCTION CalculateLayout(Slot AS NUMBER, BYREF Style AS Core.MenuNavigatorStyle) AS BOOLEAN
+    DIM Level AS NUMBER
+    DIM LeftLimit AS NUMBER
+    DIM TopLimit AS NUMBER
+    DIM RightLimit AS NUMBER
+    DIM BottomLimit AS NUMBER
+    DIM Gap AS NUMBER
+    DIM ParentBounds AS Core.Rect
+    DIM ChildBounds AS Core.Rect
+    DIM RowBounds AS Core.Rect
+    DIM ParentRight AS NUMBER
+    DIM PreferredRight AS NUMBER
+    DIM PreferredLeft AS NUMBER
+    DIM RightSpace AS NUMBER
+    DIM LeftSpace AS NUMBER
+    DIM CandidateX AS NUMBER
+    DIM CandidateY AS NUMBER
+    DIM RowOffset AS NUMBER
+    DIM RightFits AS BOOLEAN
+    DIM LeftFits AS BOOLEAN
+    IF NavigatorDepth[Slot] < 1 THEN
+        RETURN FALSE
+    END IF
+    LeftLimit = InnerLeft(Style)
+    TopLimit = InnerTop(Style)
+    RightLimit = InnerRight(Style)
+    BottomLimit = InnerBottom(Style)
+    Gap = EffectiveGap(Style)
+    FOR Level = 0 TO NavigatorDepth[Slot] - 1
+        IF NOT MenuFitsStyle(StackMenus[Slot, Level], Style) THEN
+            RETURN FALSE
+        END IF
+        ChildBounds = Menu.Bounds(StackMenus[Slot, Level])
+        ScratchOldX[Level] = ChildBounds.X
+        ScratchOldY[Level] = ChildBounds.Y
+        IF Level = 0 THEN
+            ScratchX[Level] = MAX(LeftLimit, MIN(RightLimit - ChildBounds.Width, ChildBounds.X))
+            ScratchY[Level] = MAX(TopLimit, MIN(BottomLimit - ChildBounds.Height, ChildBounds.Y))
+        ELSE
+            ParentBounds = Menu.Bounds(StackMenus[Slot, Level - 1])
+            RowBounds = Menu.SelectedRowRect(StackMenus[Slot, Level - 1])
+            RowOffset = 0
+            IF RowBounds.Height > 0 THEN
+                RowOffset = RowBounds.Y - ParentBounds.Y
+            END IF
+            ParentRight = ScratchX[Level - 1] + ParentBounds.Width
+            PreferredRight = ParentRight + Gap
+            PreferredLeft = ScratchX[Level - 1] - Gap - ChildBounds.Width
+            RightFits = PreferredRight + ChildBounds.Width <= RightLimit
+            LeftFits = PreferredLeft >= LeftLimit
+            RightSpace = RightLimit - PreferredRight
+            LeftSpace = ScratchX[Level - 1] - Gap - LeftLimit
+            IF Style.PreferredDirection = Core.UI_SUBMENU_DIRECTION_LEFT THEN
+                IF LeftFits THEN
+                    CandidateX = PreferredLeft
+                ELSE IF RightFits THEN
+                    CandidateX = PreferredRight
+                ELSE IF LeftSpace >= RightSpace THEN
+                    CandidateX = PreferredLeft
+                ELSE
+                    CandidateX = PreferredRight
+                END IF
+            ELSE
+                IF RightFits THEN
+                    CandidateX = PreferredRight
+                ELSE IF LeftFits THEN
+                    CandidateX = PreferredLeft
+                ELSE IF RightSpace >= LeftSpace THEN
+                    CandidateX = PreferredRight
+                ELSE
+                    CandidateX = PreferredLeft
+                END IF
+            END IF
+            CandidateY = ScratchY[Level - 1] + RowOffset
+            ScratchX[Level] = MAX(LeftLimit, MIN(RightLimit - ChildBounds.Width, CandidateX))
+            ScratchY[Level] = MAX(TopLimit, MIN(BottomLimit - ChildBounds.Height, CandidateY))
+        END IF
+    END FOR
+    RETURN TRUE
+END FUNCTION
+
+PRIVATE FUNCTION ApplyLayout(Slot AS NUMBER) AS BOOLEAN
+    DIM Level AS NUMBER
+    DIM Rollback AS NUMBER
+    DIM Ignored AS BOOLEAN
+    FOR Level = 0 TO NavigatorDepth[Slot] - 1
+        IF NOT Menu.SetPosition(StackMenus[Slot, Level], ScratchX[Level], ScratchY[Level]) THEN
+            FOR Rollback = 0 TO Level - 1
+                Ignored = Menu.SetPosition(StackMenus[Slot, Rollback], ScratchOldX[Rollback], ScratchOldY[Rollback])
+            END FOR
+            RETURN FALSE
+        END IF
+    END FOR
+    RETURN TRUE
+END FUNCTION
+
+PRIVATE FUNCTION RelayoutSlot(Slot AS NUMBER, BYREF Style AS Core.MenuNavigatorStyle) AS BOOLEAN
+    IF NOT CalculateLayout(Slot, Style) THEN
+        RETURN FALSE
+    END IF
+    RETURN ApplyLayout(Slot)
+END FUNCTION
+
+PUBLIC FUNCTION Create(RootMenuHandle AS NUMBER, BYREF Style AS Core.MenuNavigatorStyle) AS NUMBER
+    DIM Slot AS NUMBER
+    DIM Index AS NUMBER
+    DIM EmptyStyle AS Core.MenuNavigatorStyle
+    IF NOT Menu.IsValid(RootMenuHandle) OR NOT IsStyleValid(Style) OR NOT MenuFitsStyle(RootMenuHandle, Style) THEN
+        RETURN 0
+    END IF
+    Slot = -1
+    FOR Index = 0 TO Core.UI_MAX_MENU_NAVIGATORS - 1
+        IF NOT NavigatorUsed[Index] THEN
+            Slot = Index
+            EXIT FOR
+        END IF
+    END FOR
+    IF Slot < 0 THEN
+        RETURN 0
+    END IF
+    NavigatorGeneration[Slot] = NavigatorGeneration[Slot] + 1
+    IF NavigatorGeneration[Slot] <= 0 THEN
+        NavigatorGeneration[Slot] = 1
+    END IF
+    NavigatorUsed[Slot] = TRUE
+    NavigatorStyles[Slot] = EmptyStyle
+    NavigatorStyles[Slot] = Style
+    NavigatorRoot[Slot] = RootMenuHandle
+    NavigatorDepth[Slot] = 1
+    CALL ClearStackFrom(Slot, 0)
+    StackMenus[Slot, 0] = RootMenuHandle
+    StackParentItems[Slot, 0] = -1
+    FOR Index = 0 TO Core.UI_MAX_SUBMENU_BINDINGS - 1
+        BindingUsed[Slot, Index] = FALSE
+        BindingParentMenus[Slot, Index] = 0
+        BindingParentItems[Slot, Index] = -1
+        BindingParentRevisions[Slot, Index] = 0
+        BindingChildMenus[Slot, Index] = 0
+        BindingResetChild[Slot, Index] = FALSE
+    END FOR
+    CALL ClearAccepted(Slot)
+    IF NOT RelayoutSlot(Slot, NavigatorStyles[Slot]) THEN
+        NavigatorUsed[Slot] = FALSE
+        NavigatorRoot[Slot] = 0
+        NavigatorDepth[Slot] = 0
+        CALL ClearStackFrom(Slot, 0)
+        RETURN 0
+    END IF
+    RETURN NavigatorGeneration[Slot] * 100 + Slot + 1
+END FUNCTION
+
+PUBLIC SUB Destroy(NavigatorHandle AS NUMBER)
+    DIM Slot AS NUMBER
+    DIM BindingIndex AS NUMBER
+    DIM EmptyStyle AS Core.MenuNavigatorStyle
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 THEN
+        RETURN
+    END IF
+    FOR BindingIndex = 0 TO Core.UI_MAX_SUBMENU_BINDINGS - 1
+        CALL ClearBindingAt(Slot, BindingIndex)
+    END FOR
+    CALL ClearStackFrom(Slot, 0)
+    NavigatorStyles[Slot] = EmptyStyle
+    NavigatorRoot[Slot] = 0
+    NavigatorDepth[Slot] = 0
+    CALL ClearAccepted(Slot)
+    NavigatorUsed[Slot] = FALSE
+END SUB
+
+PUBLIC FUNCTION IsValid(NavigatorHandle AS NUMBER) AS BOOLEAN
+    RETURN SlotFromHandle(NavigatorHandle) >= 0
+END FUNCTION
+
+PUBLIC FUNCTION SetStyle(NavigatorHandle AS NUMBER, BYREF Style AS Core.MenuNavigatorStyle) AS BOOLEAN
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 OR NOT IsStyleValid(Style) THEN
+        RETURN FALSE
+    END IF
+    IF NOT RepairSlot(Slot) OR NOT AllBoundMenusFit(Slot, Style) THEN
+        RETURN FALSE
+    END IF
+    IF NOT CalculateLayout(Slot, Style) OR NOT ApplyLayout(Slot) THEN
+        RETURN FALSE
+    END IF
+    NavigatorStyles[Slot] = Style
+    RETURN TRUE
+END FUNCTION
+
+PUBLIC FUNCTION Relayout(NavigatorHandle AS NUMBER) AS BOOLEAN
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 OR NOT RepairSlot(Slot) THEN
+        RETURN FALSE
+    END IF
+    RETURN RelayoutSlot(Slot, NavigatorStyles[Slot])
+END FUNCTION
+
+PUBLIC FUNCTION Reset(NavigatorHandle AS NUMBER) AS BOOLEAN
+    DIM Slot AS NUMBER
+    DIM OldDepth AS NUMBER
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 OR NOT RepairSlot(Slot) THEN
+        RETURN FALSE
+    END IF
+    OldDepth = NavigatorDepth[Slot]
+    NavigatorDepth[Slot] = 1
+    IF NOT CalculateLayout(Slot, NavigatorStyles[Slot]) OR NOT ApplyLayout(Slot) THEN
+        NavigatorDepth[Slot] = OldDepth
+        RETURN FALSE
+    END IF
+    CALL ClearStackFrom(Slot, 1)
+    CALL ClearAccepted(Slot)
+    RETURN TRUE
+END FUNCTION
+
+PUBLIC FUNCTION BindSubmenu(NavigatorHandle AS NUMBER, ParentMenuHandle AS NUMBER, ParentItemIndex AS NUMBER, ChildMenuHandle AS NUMBER, ResetChildSelection AS BOOLEAN) AS BOOLEAN
+    DIM Slot AS NUMBER
+    DIM BindingIndex AS NUMBER
+    DIM FreeBinding AS NUMBER
+    DIM ExistingChild AS NUMBER
+    DIM ParentRevision AS NUMBER
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 OR NOT RepairSlot(Slot) THEN
+        RETURN FALSE
+    END IF
+    IF NOT Menu.IsValid(ParentMenuHandle) OR NOT Menu.IsValid(ChildMenuHandle) OR ParentMenuHandle = ChildMenuHandle THEN
+        RETURN FALSE
+    END IF
+    IF ParentItemIndex < 0 OR ParentItemIndex >= Menu.ItemCount(ParentMenuHandle) OR NOT MenuFitsStyle(ChildMenuHandle, NavigatorStyles[Slot]) THEN
+        RETURN FALSE
+    END IF
+    IF WouldCreateCycle(Slot, ParentMenuHandle, ParentItemIndex, ChildMenuHandle) THEN
+        RETURN FALSE
+    END IF
+    BindingIndex = FindBinding(Slot, ParentMenuHandle, ParentItemIndex)
+    IF BindingIndex < 0 THEN
+        FreeBinding = -1
+        FOR BindingIndex = 0 TO Core.UI_MAX_SUBMENU_BINDINGS - 1
+            IF NOT BindingUsed[Slot, BindingIndex] THEN
+                FreeBinding = BindingIndex
+                EXIT FOR
+            END IF
+        END FOR
+        IF FreeBinding < 0 THEN
+            RETURN FALSE
+        END IF
+        BindingIndex = FreeBinding
+    ELSE
+        ExistingChild = BindingChildMenus[Slot, BindingIndex]
+    END IF
+    ParentRevision = Menu.ItemRevision(ParentMenuHandle)
+    IF ParentRevision <= 0 OR NOT Menu.SetItemHasSubmenu(ParentMenuHandle, ParentItemIndex, TRUE) THEN
+        RETURN FALSE
+    END IF
+    IF ExistingChild <> 0 AND ExistingChild <> ChildMenuHandle THEN
+        CALL TrimActiveEdge(Slot, ParentMenuHandle, ParentItemIndex)
+    END IF
+    BindingUsed[Slot, BindingIndex] = TRUE
+    BindingParentMenus[Slot, BindingIndex] = ParentMenuHandle
+    BindingParentItems[Slot, BindingIndex] = ParentItemIndex
+    BindingParentRevisions[Slot, BindingIndex] = ParentRevision
+    BindingChildMenus[Slot, BindingIndex] = ChildMenuHandle
+    BindingResetChild[Slot, BindingIndex] = ResetChildSelection
+    RETURN RelayoutSlot(Slot, NavigatorStyles[Slot])
+END FUNCTION
+
+PUBLIC FUNCTION UnbindSubmenu(NavigatorHandle AS NUMBER, ParentMenuHandle AS NUMBER, ParentItemIndex AS NUMBER) AS BOOLEAN
+    DIM Slot AS NUMBER
+    DIM BindingIndex AS NUMBER
+    DIM Ignored AS BOOLEAN
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 OR NOT RepairSlot(Slot) THEN
+        RETURN FALSE
+    END IF
+    BindingIndex = FindBinding(Slot, ParentMenuHandle, ParentItemIndex)
+    IF BindingIndex < 0 THEN
+        RETURN FALSE
+    END IF
+    CALL TrimActiveEdge(Slot, ParentMenuHandle, ParentItemIndex)
+    CALL ClearBindingAt(Slot, BindingIndex)
+    CALL ClearAccepted(Slot)
+    Ignored = RelayoutSlot(Slot, NavigatorStyles[Slot])
+    RETURN TRUE
+END FUNCTION
+
+PUBLIC SUB ClearBindings(NavigatorHandle AS NUMBER)
+    DIM Slot AS NUMBER
+    DIM BindingIndex AS NUMBER
+    DIM Ignored AS BOOLEAN
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 THEN
+        RETURN
+    END IF
+    CALL PruneBindings(Slot)
+    FOR BindingIndex = 0 TO Core.UI_MAX_SUBMENU_BINDINGS - 1
+        CALL ClearBindingAt(Slot, BindingIndex)
+    END FOR
+    IF Menu.IsValid(NavigatorRoot[Slot]) THEN
+        NavigatorDepth[Slot] = 1
+        StackMenus[Slot, 0] = NavigatorRoot[Slot]
+        StackParentItems[Slot, 0] = -1
+        CALL ClearStackFrom(Slot, 1)
+        Ignored = RelayoutSlot(Slot, NavigatorStyles[Slot])
+    ELSE
+        NavigatorDepth[Slot] = 0
+        CALL ClearStackFrom(Slot, 0)
+    END IF
+    CALL ClearAccepted(Slot)
+END SUB
+
+PUBLIC FUNCTION HasSubmenu(NavigatorHandle AS NUMBER, ParentMenuHandle AS NUMBER, ParentItemIndex AS NUMBER) AS BOOLEAN
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 OR NOT RepairSlot(Slot) THEN
+        RETURN FALSE
+    END IF
+    RETURN FindBinding(Slot, ParentMenuHandle, ParentItemIndex) >= 0
+END FUNCTION
+
+PUBLIC FUNCTION OpenSelected(NavigatorHandle AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    DIM CurrentHandle AS NUMBER
+    DIM SelectedItem AS NUMBER
+    DIM BindingIndex AS NUMBER
+    DIM ChildHandle AS NUMBER
+    DIM OldDepth AS NUMBER
+    DIM Level AS NUMBER
+    DIM Ignored AS BOOLEAN
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 OR NOT RepairSlot(Slot) OR NavigatorDepth[Slot] >= Core.UI_MAX_MENU_DEPTH THEN
+        RETURN Core.UI_EVENT_NONE
+    END IF
+    CurrentHandle = StackMenus[Slot, NavigatorDepth[Slot] - 1]
+    SelectedItem = Menu.SelectedIndex(CurrentHandle)
+    IF SelectedItem < 0 OR Menu.HandleKey(CurrentHandle, KEY_ENTER) <> Core.UI_EVENT_ACCEPTED THEN
+        RETURN Core.UI_EVENT_NONE
+    END IF
+    BindingIndex = FindBinding(Slot, CurrentHandle, SelectedItem)
+    IF BindingIndex < 0 THEN
+        RETURN Core.UI_EVENT_NONE
+    END IF
+    ChildHandle = BindingChildMenus[Slot, BindingIndex]
+    IF NOT Menu.IsValid(ChildHandle) OR ActiveContains(Slot, ChildHandle) THEN
+        RETURN Core.UI_EVENT_NONE
+    END IF
+    OldDepth = NavigatorDepth[Slot]
+    StackMenus[Slot, OldDepth] = ChildHandle
+    StackParentItems[Slot, OldDepth] = SelectedItem
+    NavigatorDepth[Slot] = OldDepth + 1
+    IF NOT CalculateLayout(Slot, NavigatorStyles[Slot]) OR NOT ApplyLayout(Slot) THEN
+        NavigatorDepth[Slot] = OldDepth
+        StackMenus[Slot, OldDepth] = 0
+        StackParentItems[Slot, OldDepth] = -1
+        RETURN Core.UI_EVENT_NONE
+    END IF
+    IF BindingResetChild[Slot, BindingIndex] THEN
+        Ignored = Menu.ResetSelection(ChildHandle)
+    END IF
+    CALL ClearAccepted(Slot)
+    RETURN Core.UI_EVENT_SUBMENU_OPENED
+END FUNCTION
+
+PUBLIC FUNCTION Back(NavigatorHandle AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    DIM OldDepth AS NUMBER
+    DIM RemovedMenu AS NUMBER
+    DIM RemovedItem AS NUMBER
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 OR NOT RepairSlot(Slot) OR NavigatorDepth[Slot] <= 1 THEN
+        RETURN Core.UI_EVENT_NONE
+    END IF
+    OldDepth = NavigatorDepth[Slot]
+    RemovedMenu = StackMenus[Slot, OldDepth - 1]
+    RemovedItem = StackParentItems[Slot, OldDepth - 1]
+    NavigatorDepth[Slot] = OldDepth - 1
+    IF NOT CalculateLayout(Slot, NavigatorStyles[Slot]) OR NOT ApplyLayout(Slot) THEN
+        NavigatorDepth[Slot] = OldDepth
+        RETURN Core.UI_EVENT_NONE
+    END IF
+    StackMenus[Slot, OldDepth - 1] = 0
+    StackParentItems[Slot, OldDepth - 1] = -1
+    CALL ClearAccepted(Slot)
+    RETURN Core.UI_EVENT_SUBMENU_CLOSED
+END FUNCTION
+
+PUBLIC FUNCTION HandleKey(NavigatorHandle AS NUMBER, Key AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    DIM CurrentHandle AS NUMBER
+    DIM SelectedItem AS NUMBER
+    DIM Event AS NUMBER
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 OR NOT RepairSlot(Slot) THEN
+        RETURN Core.UI_EVENT_NONE
+    END IF
+    CurrentHandle = StackMenus[Slot, NavigatorDepth[Slot] - 1]
+    IF Key = KEY_UP OR Key = KEY_DOWN THEN
+        RETURN Menu.HandleKey(CurrentHandle, Key)
+    END IF
+    IF Key = KEY_RIGHT THEN
+        RETURN OpenSelected(NavigatorHandle)
+    END IF
+    IF Key = KEY_LEFT THEN
+        RETURN Back(NavigatorHandle)
+    END IF
+    IF Key = KEY_ESCAPE THEN
+        IF NavigatorDepth[Slot] > 1 THEN
+            RETURN Back(NavigatorHandle)
+        END IF
+        RETURN Core.UI_EVENT_CANCELLED
+    END IF
+    IF Key = KEY_ENTER OR Key = KEY_SPACE THEN
+        Event = OpenSelected(NavigatorHandle)
+        IF Event = Core.UI_EVENT_SUBMENU_OPENED THEN
+            RETURN Event
+        END IF
+        CurrentHandle = StackMenus[Slot, NavigatorDepth[Slot] - 1]
+        Event = Menu.HandleKey(CurrentHandle, Key)
+        IF Event = Core.UI_EVENT_ACCEPTED THEN
+            SelectedItem = Menu.SelectedIndex(CurrentHandle)
+            IF SelectedItem >= 0 THEN
+                AcceptedMenus[Slot] = CurrentHandle
+                AcceptedIndices[Slot] = SelectedItem
+                AcceptedValues[Slot] = Menu.SelectedValue(CurrentHandle)
+                RETURN Core.UI_EVENT_ACCEPTED
+            END IF
+        END IF
+    END IF
+    RETURN Core.UI_EVENT_NONE
+END FUNCTION
+
+PUBLIC FUNCTION Depth(NavigatorHandle AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 OR NOT RepairSlot(Slot) THEN
+        RETURN 0
+    END IF
+    RETURN NavigatorDepth[Slot]
+END FUNCTION
+
+PUBLIC FUNCTION RootMenu(NavigatorHandle AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 OR NOT RepairSlot(Slot) THEN
+        RETURN 0
+    END IF
+    RETURN NavigatorRoot[Slot]
+END FUNCTION
+
+PUBLIC FUNCTION CurrentMenu(NavigatorHandle AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 OR NOT RepairSlot(Slot) THEN
+        RETURN 0
+    END IF
+    RETURN StackMenus[Slot, NavigatorDepth[Slot] - 1]
+END FUNCTION
+
+PUBLIC FUNCTION MenuAtDepth(NavigatorHandle AS NUMBER, DepthIndex AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 OR NOT RepairSlot(Slot) OR DepthIndex < 0 OR DepthIndex >= NavigatorDepth[Slot] THEN
+        RETURN 0
+    END IF
+    RETURN StackMenus[Slot, DepthIndex]
+END FUNCTION
+
+PUBLIC FUNCTION ParentMenu(NavigatorHandle AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 OR NOT RepairSlot(Slot) OR NavigatorDepth[Slot] <= 1 THEN
+        RETURN 0
+    END IF
+    RETURN StackMenus[Slot, NavigatorDepth[Slot] - 2]
+END FUNCTION
+
+PUBLIC FUNCTION CanGoBack(NavigatorHandle AS NUMBER) AS BOOLEAN
+    RETURN Depth(NavigatorHandle) > 1
+END FUNCTION
+
+PUBLIC FUNCTION LastAcceptedMenu(NavigatorHandle AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 OR NOT RepairSlot(Slot) THEN
+        RETURN 0
+    END IF
+    RETURN AcceptedMenus[Slot]
+END FUNCTION
+
+PUBLIC FUNCTION LastAcceptedIndex(NavigatorHandle AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 OR NOT RepairSlot(Slot) THEN
+        RETURN -1
+    END IF
+    RETURN AcceptedIndices[Slot]
+END FUNCTION
+
+PUBLIC FUNCTION LastAcceptedValue(NavigatorHandle AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 OR NOT RepairSlot(Slot) THEN
+        RETURN 0
+    END IF
+    RETURN AcceptedValues[Slot]
+END FUNCTION
+
+PUBLIC SUB DrawActive(NavigatorHandle AS NUMBER)
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 OR NOT Relayout(NavigatorHandle) THEN
+        RETURN
+    END IF
+    CALL Menu.DrawFocused(StackMenus[Slot, NavigatorDepth[Slot] - 1], TRUE)
+END SUB
+
+PUBLIC SUB DrawStack(NavigatorHandle AS NUMBER)
+    DIM Slot AS NUMBER
+    DIM Level AS NUMBER
+    Slot = SlotFromHandle(NavigatorHandle)
+    IF Slot < 0 OR NOT Relayout(NavigatorHandle) THEN
+        RETURN
+    END IF
+    FOR Level = 0 TO NavigatorDepth[Slot] - 1
+        CALL Menu.DrawFocused(StackMenus[Slot, Level], Level = NavigatorDepth[Slot] - 1)
+    END FOR
+END SUB
+
+END MODULE
