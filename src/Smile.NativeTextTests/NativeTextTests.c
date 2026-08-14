@@ -1,6 +1,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <stdio.h>
+#include <wchar.h>
 #include "image_resource.h"
 #include "sfx_channels.h"
 
@@ -94,6 +95,9 @@ int main(void)
     check(smile_resolve_asset_path_utf8("Assets\\.\\CharacterSheet.png", sizeof("Assets\\.\\CharacterSheet.png") - 1,
         resolved_asset, (int)(sizeof(resolved_asset) / sizeof(resolved_asset[0]))),
         "native media paths canonicalize project-relative separators and dot segments");
+    check(wcschr(resolved_asset, L'/') == 0 &&
+        wcsstr(resolved_asset, L"\\Assets\\CharacterSheet.png") != 0,
+        "native media paths use Win32 separators accepted by Windows Runtime storage APIs");
     check(!smile_resolve_asset_path_utf8("../CharacterSheet.png", sizeof("../CharacterSheet.png") - 1, resolved_asset,
         (int)(sizeof(resolved_asset) / sizeof(resolved_asset[0]))) &&
         !smile_resolve_asset_path_utf8("C:\\CharacterSheet.png", sizeof("C:\\CharacterSheet.png") - 1, resolved_asset,

@@ -43,3 +43,7 @@ Before Phase 6, consider an explicit portable `ApplicationId` independent of `Ou
 - Native debugging stopped at `CLEAR` on line 9 and F10 advanced to `DRAW IMAGE` on line 10.
 - DirectX and GDI rendered the high-resolution visual slice with smooth scaling, alpha, clipping, painter order, animation, and opt-in pixel filtering.
 - Chrome rendered the Web visual slice at a 200% device scale (`1820 x 1024` backing canvas for a `910 x 512` CSS canvas) with no console errors.
+
+## Native music path correction
+
+Post-release Visual Studio debugging exposed HRESULT `0x800700A1` at `StorageFile::GetFileFromPathAsync` for `PLAY MUSIC`. The shared resolver had validated the canonical asset name correctly but appended its `/` separators directly to the native executable directory. Win32 image, sound, and file APIs accepted the mixed path while the Windows Runtime storage API rejected it. Native resolved paths now convert canonical separators to `\` after manifest validation and before calling platform APIs. The native media regression asserts the resulting Windows path form, and the corrected VSIX advances to `2.0.27`. A clean Visual Studio F5 run then passed line 70 without entering C++/WinRT exception handling, and its Debug output contained no music or bad-path failure.

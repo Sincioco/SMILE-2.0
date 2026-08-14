@@ -1244,6 +1244,8 @@ int smile_resolve_asset_path_utf8(const char* path, long long length, WCHAR* res
     wide = smile_utf8_to_wide(canonical, (long long)lstrlenA(canonical));
     if (resolved_path == 0 || capacity <= 0 || wide == 0)
         return 0;
+    for (slash = wide; *slash != 0; ++slash)
+        if (*slash == L'/') *slash = L'\\';
     resolved_path[0] = 0;
     {
         DWORD copied = GetModuleFileNameW(0, resolved_path, (DWORD)capacity);
