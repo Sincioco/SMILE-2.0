@@ -32,6 +32,9 @@ DIM MenuStyle AS UI.MenuStyle
 DIM DialogueStyle AS UI.DialogueStyle
 
 DIM MenuHandle AS NUMBER
+DIM SubMenu1Handle AS NUMBER
+DIM SubMenu2Handle AS NUMBER
+DIM SubMenu3Handle AS NUMBER
 DIM DialogueHandle AS NUMBER
 DIM Key AS NUMBER
 DIM Event AS NUMBER
@@ -40,6 +43,7 @@ DIM Running AS BOOLEAN
 DIM ItemIndex AS NUMBER
 DIM OperationSucceeded AS BOOLEAN
 DIM UpdateEvent AS NUMBER
+DIM MenuDepth AS NUMBER
 
 LOAD IMAGE Background FROM "Assets\Background.png"
 LOAD IMAGE WindowSkin FROM "Assets\WindowSkin.png"
@@ -153,6 +157,8 @@ ItemIndex = Menu.AddItem(MenuHandle, "ITEM", 1, TRUE)
 Running = Running AND ItemIndex >= 0
 ItemIndex = Menu.AddItem(MenuHandle, "MAGIC", 2, TRUE)
 Running = Running AND ItemIndex >= 0
+ItemIndex = Menu.AddItem(MenuHandle, "SUB-MENUS >", 9, TRUE)
+Running = Running AND ItemIndex >= 0
 ItemIndex = Menu.AddItem(MenuHandle, "EQUIP", 3, TRUE)
 Running = Running AND ItemIndex >= 0
 ItemIndex = Menu.AddItem(MenuHandle, "STATUS", 4, TRUE)
@@ -164,6 +170,38 @@ Running = Running AND ItemIndex >= 0
 ItemIndex = Menu.AddItem(MenuHandle, "OPTIONS", 7, TRUE)
 Running = Running AND ItemIndex >= 0
 ItemIndex = Menu.AddItem(MenuHandle, "EXIT", 8, TRUE)
+Running = Running AND ItemIndex >= 0
+
+SubMenu1Handle = Menu.Create(MenuStyle, 370, 170, 210, 235, 4)
+SubMenu2Handle = Menu.Create(MenuStyle, 550, 210, 210, 235, 4)
+SubMenu3Handle = Menu.Create(MenuStyle, 710, 250, 225, 235, 4)
+Running = Running AND SubMenu1Handle > 0 AND SubMenu2Handle > 0 AND SubMenu3Handle > 0
+
+ItemIndex = Menu.AddItem(SubMenu1Handle, "ROLF>", 101, TRUE)
+Running = Running AND ItemIndex >= 0
+ItemIndex = Menu.AddItem(SubMenu1Handle, "NEI>", 102, TRUE)
+Running = Running AND ItemIndex >= 0
+ItemIndex = Menu.AddItem(SubMenu1Handle, "RUDO>", 103, TRUE)
+Running = Running AND ItemIndex >= 0
+ItemIndex = Menu.AddItem(SubMenu1Handle, "AMY>", 104, TRUE)
+Running = Running AND ItemIndex >= 0
+
+ItemIndex = Menu.AddItem(SubMenu2Handle, "TECH>", 201, TRUE)
+Running = Running AND ItemIndex >= 0
+ItemIndex = Menu.AddItem(SubMenu2Handle, "ITEM>", 202, TRUE)
+Running = Running AND ItemIndex >= 0
+ItemIndex = Menu.AddItem(SubMenu2Handle, "GEAR>", 203, TRUE)
+Running = Running AND ItemIndex >= 0
+ItemIndex = Menu.AddItem(SubMenu2Handle, "STAT>", 204, TRUE)
+Running = Running AND ItemIndex >= 0
+
+ItemIndex = Menu.AddItem(SubMenu3Handle, "ROLF", 301, TRUE)
+Running = Running AND ItemIndex >= 0
+ItemIndex = Menu.AddItem(SubMenu3Handle, "NEI", 302, TRUE)
+Running = Running AND ItemIndex >= 0
+ItemIndex = Menu.AddItem(SubMenu3Handle, "RUDO", 303, TRUE)
+Running = Running AND ItemIndex >= 0
+ItemIndex = Menu.AddItem(SubMenu3Handle, "PARTY", 304, TRUE)
 Running = Running AND ItemIndex >= 0
 
 DialogueHandle = Dialogue.Create(DialogueStyle, 438, 290, 470, 205)
@@ -185,6 +223,15 @@ DO
         DialogueStyle.Text = SystemText
         OperationSucceeded = Menu.SetStyle(MenuHandle, MenuStyle)
         IF OperationSucceeded THEN
+            OperationSucceeded = Menu.SetStyle(SubMenu1Handle, MenuStyle)
+        END IF
+        IF OperationSucceeded THEN
+            OperationSucceeded = Menu.SetStyle(SubMenu2Handle, MenuStyle)
+        END IF
+        IF OperationSucceeded THEN
+            OperationSucceeded = Menu.SetStyle(SubMenu3Handle, MenuStyle)
+        END IF
+        IF OperationSucceeded THEN
             OperationSucceeded = Dialogue.SetStyle(DialogueHandle, DialogueStyle)
         END IF
         IF NOT OperationSucceeded THEN
@@ -198,6 +245,15 @@ DO
         DialogueStyle.Window = SkinWindow
         DialogueStyle.Text = BitmapText
         OperationSucceeded = Menu.SetStyle(MenuHandle, MenuStyle)
+        IF OperationSucceeded THEN
+            OperationSucceeded = Menu.SetStyle(SubMenu1Handle, MenuStyle)
+        END IF
+        IF OperationSucceeded THEN
+            OperationSucceeded = Menu.SetStyle(SubMenu2Handle, MenuStyle)
+        END IF
+        IF OperationSucceeded THEN
+            OperationSucceeded = Menu.SetStyle(SubMenu3Handle, MenuStyle)
+        END IF
         IF OperationSucceeded THEN
             OperationSucceeded = Dialogue.SetStyle(DialogueHandle, DialogueStyle)
         END IF
@@ -213,6 +269,15 @@ DO
         DialogueStyle.Text = SystemText
         OperationSucceeded = Menu.SetStyle(MenuHandle, MenuStyle)
         IF OperationSucceeded THEN
+            OperationSucceeded = Menu.SetStyle(SubMenu1Handle, MenuStyle)
+        END IF
+        IF OperationSucceeded THEN
+            OperationSucceeded = Menu.SetStyle(SubMenu2Handle, MenuStyle)
+        END IF
+        IF OperationSucceeded THEN
+            OperationSucceeded = Menu.SetStyle(SubMenu3Handle, MenuStyle)
+        END IF
+        IF OperationSucceeded THEN
             OperationSucceeded = Dialogue.SetStyle(DialogueHandle, DialogueStyle)
         END IF
         IF NOT OperationSucceeded THEN
@@ -221,40 +286,72 @@ DO
     ELSE
         IF Dialogue.IsActive(DialogueHandle) THEN
             Event = Dialogue.HandleKey(DialogueHandle, Key, TIMER())
+        ELSE IF MenuDepth > 0 THEN
+            IF MenuDepth = 1 THEN
+                Event = Menu.HandleKey(SubMenu1Handle, Key)
+            ELSE IF MenuDepth = 2 THEN
+                Event = Menu.HandleKey(SubMenu2Handle, Key)
+            ELSE
+                Event = Menu.HandleKey(SubMenu3Handle, Key)
+            END IF
+
+            IF Event = UI.UI_EVENT_ACCEPTED THEN
+                IF MenuDepth < 3 THEN
+                    MenuDepth = MenuDepth + 1
+                ELSE
+                    CALL Dialogue.ClearPages(DialogueHandle)
+                    OperationSucceeded = Dialogue.AddPage(DialogueHandle, "This is a three-level submenu path: party member, command, then target. Each level is an ordinary Smile.UI menu owned and composed by the game.")
+                    IF OperationSucceeded THEN
+                        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Press Escape after this dialogue to back out one submenu level at a time. Theme keys 1, 2, and 3 update every open level together.")
+                    END IF
+                    IF OperationSucceeded THEN
+                        OperationSucceeded = Dialogue.Start(DialogueHandle, TIMER())
+                    END IF
+                    IF NOT OperationSucceeded THEN
+                        Running = FALSE
+                    END IF
+                END IF
+            ELSE IF Event = UI.UI_EVENT_CANCELLED THEN
+                MenuDepth = MenuDepth - 1
+            END IF
         ELSE
             Event = Menu.HandleKey(MenuHandle, Key)
 
             IF Event = UI.UI_EVENT_ACCEPTED THEN
                 SelectedValue = Menu.SelectedValue(MenuHandle)
-                CALL Dialogue.ClearPages(DialogueHandle)
-                OperationSucceeded = FALSE
+                IF SelectedValue = 9 THEN
+                    MenuDepth = 1
+                ELSE
+                    CALL Dialogue.ClearPages(DialogueHandle)
+                    OperationSucceeded = FALSE
 
-                IF SelectedValue = 1 THEN
-                    OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Items will be implemented later by the reusable Inventory phase. This gallery proves generic window, menu, and dialogue components.")
-                ELSE IF SelectedValue = 2 THEN
-                    OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Magic will later use reusable Abilities and MP systems. Phase 5 returns a selected command value to the game.")
-                ELSE IF SelectedValue = 3 THEN
-                    OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Equipment is deliberately outside this UI library. The menu knows labels, enabled state, selection, and user values - not RPG rules.")
-                ELSE IF SelectedValue = 4 THEN
-                    OperationSucceeded = Dialogue.AddPage(DialogueHandle, "The dialogue renderer wraps Unicode text, reveals it by scalar values 😀, and uses system text or an app-supplied bitmap-font atlas.")
-                ELSE IF SelectedValue = 6 THEN
-                    OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Save-game encoding belongs to a later RPG component. The generic persistent DATA primitive is already available underneath it.")
-                ELSE IF SelectedValue = 7 THEN
-                    OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Press 1 for smooth system text, 2 for the high-resolution bitmap font, or 3 for the vector fallback window.")
-                ELSE IF SelectedValue = 8 THEN
-                    OperationSucceeded = Dialogue.AddPage(DialogueHandle, "This completes the Menu Gallery. Press Enter once more to close the sample.")
-                END IF
+                    IF SelectedValue = 1 THEN
+                        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Items will be implemented later by the reusable Inventory phase. This gallery proves generic window, menu, and dialogue components.")
+                    ELSE IF SelectedValue = 2 THEN
+                        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Magic will later use reusable Abilities and MP systems. Phase 5 returns a selected command value to the game.")
+                    ELSE IF SelectedValue = 3 THEN
+                        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Equipment is deliberately outside this UI library. The menu knows labels, enabled state, selection, and user values - not RPG rules.")
+                    ELSE IF SelectedValue = 4 THEN
+                        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "The dialogue renderer wraps Unicode text, reveals it by scalar values 😀, and uses system text or an app-supplied bitmap-font atlas.")
+                    ELSE IF SelectedValue = 6 THEN
+                        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Save-game encoding belongs to a later RPG component. The generic persistent DATA primitive is already available underneath it.")
+                    ELSE IF SelectedValue = 7 THEN
+                        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Press 1 for smooth system text, 2 for the high-resolution bitmap font, or 3 for the vector fallback window.")
+                    ELSE IF SelectedValue = 8 THEN
+                        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "This completes the Menu Gallery. Press Enter once more to close the sample.")
+                    END IF
 
-                IF OperationSucceeded THEN
-                    OperationSucceeded = Dialogue.AddPage(DialogueHandle, "The same SMILE library source is running on native Windows and the Web target.
+                    IF OperationSucceeded THEN
+                        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "The same SMILE library source is running on native Windows and the Web target.
 
 Theme changes preserve this active multiline dialogue.")
-                END IF
-                IF OperationSucceeded THEN
-                    OperationSucceeded = Dialogue.Start(DialogueHandle, TIMER())
-                END IF
-                IF NOT OperationSucceeded THEN
-                    Running = FALSE
+                    END IF
+                    IF OperationSucceeded THEN
+                        OperationSucceeded = Dialogue.Start(DialogueHandle, TIMER())
+                    END IF
+                    IF NOT OperationSucceeded THEN
+                        Running = FALSE
+                    END IF
                 END IF
             END IF
         END IF
@@ -279,16 +376,32 @@ Theme changes preserve this active multiline dialogue.")
     DRAW IMAGE Background AT 0, 0 SIZE 960 BY 540 FILTER SMOOTH
     CALL Menu.Draw(MenuHandle)
 
+    IF MenuDepth >= 1 THEN
+        CALL Menu.Draw(SubMenu1Handle)
+    END IF
+    IF MenuDepth >= 2 THEN
+        CALL Menu.Draw(SubMenu2Handle)
+    END IF
+    IF MenuDepth >= 3 THEN
+        CALL Menu.Draw(SubMenu3Handle)
+    END IF
+
     IF Dialogue.IsActive(DialogueHandle) THEN
         CALL Dialogue.Draw(DialogueHandle, TIMER())
     END IF
 
     DRAW TEXT "1 SYSTEM   2 BITMAP   3 VECTOR" AT 480, 20 SIZE 18 COLOR CYAN CENTERED
+    IF MenuDepth > 0 THEN
+        DRAW TEXT "PARTY > COMMAND > TARGET   ESCAPE BACKS OUT" AT 480, 46 SIZE 16 COLOR WHITE CENTERED
+    END IF
     SHOW SCREEN
     WAIT 8 MILLISECONDS
 LOOP UNTIL GAME_CLOSED() = TRUE OR Running = FALSE
 
 CALL Dialogue.Destroy(DialogueHandle)
+CALL Menu.Destroy(SubMenu3Handle)
+CALL Menu.Destroy(SubMenu2Handle)
+CALL Menu.Destroy(SubMenu1Handle)
 CALL Menu.Destroy(MenuHandle)
 CALL BitmapFont.Destroy(FontHandle)
 

@@ -209,8 +209,8 @@ const host = {
                 virtualNow = requestedFrames * 280;
                 const scriptedCode = new Map([
                     [2, "ArrowDown"], [3, "ArrowDown"], [4, "ArrowDown"], [5, "ArrowDown"],
-                    [6, "ArrowDown"], [7, "ArrowUp"], [8, "Digit2"], [9, "Enter"],
-                    [10, "Digit3"], [11, "Digit1"], [12, "Space"], [13, "Escape"]
+                    [6, "ArrowDown"], [7, "ArrowDown"], [8, "ArrowUp"], [9, "Digit2"],
+                    [10, "Enter"], [11, "Digit3"], [12, "Digit1"], [13, "Space"], [14, "Escape"]
                 ]).get(requestedFrames);
                 if (scriptedCode) {
                     const event = { code: scriptedCode, repeat: false, ctrlKey: false, altKey: false,
@@ -376,7 +376,7 @@ const started = Date.now();
             fail(`Phase 4.1 audio shutdown was incomplete: ${JSON.stringify(diagnostics)}`);
     }
     if (verifyPhase5Ui) {
-        const expectedKeys = ["ArrowDown", "ArrowDown", "ArrowDown", "ArrowDown", "ArrowDown", "ArrowUp",
+        const expectedKeys = ["ArrowDown", "ArrowDown", "ArrowDown", "ArrowDown", "ArrowDown", "ArrowDown", "ArrowUp",
             "Digit2", "Enter", "Digit3", "Digit1", "Space", "Escape"];
         if (phase5Keys.join("|") !== expectedKeys.join("|"))
             fail(`Phase 5 scripted key sequence differed: ${phase5Keys.join(", ")}`);
@@ -392,15 +392,17 @@ const started = Date.now();
             if (names.length !== 0 && names[0] !== "Background.png")
                 fail(`Phase 5 painter order did not begin with Background.png on frame ${frame}: ${names[0]}`);
         }
-        const cursorYs = new Set(imageDraws.filter(draw => path.basename(draw.source) === "Cursor.png" && draw.values.length === 8)
+        const rootCursorDraws = imageDraws.filter(draw => path.basename(draw.source) === "Cursor.png" &&
+            draw.values.length === 8 && draw.values[4] === 88);
+        const cursorYs = new Set(rootCursorDraws
             .map(draw => draw.values[5]));
-        const cursorByFrame = new Map(imageDraws.filter(draw => path.basename(draw.source) === "Cursor.png" && draw.values.length === 8)
+        const cursorByFrame = new Map(rootCursorDraws
             .map(draw => [draw.frame, draw.values[5]]));
-        if (cursorYs.size < 5 || cursorByFrame.get(4) !== 230 || cursorByFrame.get(5) !== 316)
-            fail(`Phase 5 disabled-item skipping/scroll cursor positions differed: ${JSON.stringify([...cursorYs])}`);
-        const frameSixText = textDraws.filter(draw => draw.frame === 6).map(draw => draw.value);
-        if (!frameSixText.includes("OPTIONS") || frameSixText.includes("ITEM"))
-            fail(`Phase 5 scrolling did not expose OPTIONS and remove ITEM: ${JSON.stringify(frameSixText)}`);
+        if (cursorYs.size < 6 || cursorByFrame.get(5) !== 273 || cursorByFrame.get(6) !== 316)
+            fail(`Phase 5 disabled-item skipping/scroll cursor positions differed: ${JSON.stringify([...cursorByFrame])}`);
+        const frameSevenText = textDraws.filter(draw => draw.frame === 7).map(draw => draw.value);
+        if (!frameSevenText.includes("OPTIONS") || frameSevenText.includes("ITEM"))
+            fail(`Phase 5 scrolling did not expose OPTIONS and remove ITEM: ${JSON.stringify(frameSevenText)}`);
         if (clipCalls < maximumFrames)
             fail(`Phase 5 expected structured clipping on each frame, found ${clipCalls} clips across ${maximumFrames} frames`);
         if (fillRectangleDraws.length < 1)
