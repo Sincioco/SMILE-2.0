@@ -13,6 +13,16 @@ These instructions apply to the entire SMILE 2.0 repository.
 - Web compilation and execution is priority 2.
 - Both targets consume the same shared language, semantic model, and compiler front end.
 
+## Permanent future 3D direction
+
+SMILE must evolve incrementally from the current SMILE 2.0 compiler and runtime into a language/runtime capable of modern 3D games, including a Final Fantasy VII-style cinematic 3D RPG battle system. A future SMILE 3.0 name may mark mature first-class 3D support, but it must remain an evolution of SMILE 2.0 rather than a replacement compiler or from-scratch rewrite.
+
+- Preserve SMILE's beginner-friendly programming model and keep backend-specific GPU details internal.
+- Keep the current 2D renderer as a permanent first-class capability for images, text, menus, HUDs, and overlays alongside any future 3D renderer.
+- Let future 3D rendering, assets, transforms, and cameras coexist with the current 2D systems instead of forcing them into one permanently 2D abstraction.
+- Keep project asset publication format-neutral so future models, materials, and animations can use the same project-level declaration and publication path without making every runtime resource an image.
+- During 2D milestones, add only inexpensive architectural guardrails. Do not implement speculative 3D features or generalize stable code without a current requirement.
+
 ## KISS and velocity
 
 Use KISS: Keep It Simple, Stupid.

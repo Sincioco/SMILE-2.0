@@ -1,6 +1,13 @@
 #ifndef SMILE_GRAPHICS_BACKEND_H
 #define SMILE_GRAPHICS_BACKEND_H
 
+/*
+ * This stable vtable is SMILE's current 2D drawing layer despite its historical
+ * general name. A future 3D renderer should coexist with it; images, text, and
+ * other 2D overlays remain first-class rather than being folded into a universal
+ * renderer abstraction.
+ */
+
 typedef struct SmileGraphicsBackend SmileGraphicsBackend;
 
 typedef enum SmileGraphicsBackendKind

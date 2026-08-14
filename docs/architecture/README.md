@@ -14,6 +14,16 @@ startup .smile + support .smile sources
 
 Language evolution follows one permanent hierarchy: use existing syntax when it stays clear; otherwise prefer an established BASIC idea; use the smallest beginner-friendly C#-inspired concept only when BASIC has no suitable precedent. Additions remain general-purpose, avoid aliases and clever punctuation, and receive only proportional diagnostics, tests, examples, and documentation through the shared language authority.
 
+## Phase 4 and future 3D readiness
+
+Phase 4 remains a high-resolution 2D milestone. Its native `SmileGraphicsBackend` vtable is the stable current **2D** drawing layer despite the historical general name; DirectX and GDI implement that layer behind the compiler-facing C ABI. The Web Canvas 2D surface provides the same role for Web builds. These layers continue to own images, shapes, text, clipping, and painter-order overlays when a future 3D renderer is introduced.
+
+A future renderer should sit beside this 2D capability rather than replace it or force 3D concepts into today's beginner-level commands. On a 3D-capable target, a future frame may render a 3D world and then composite the existing 2D HUD, menu, text, and image operations. Backend-specific DirectX, Canvas, WebGL, WebGPU, or similar objects remain internal.
+
+The shared project asset resolver and publisher are intentionally file-format-neutral: they validate, identify, copy, and clean declared project assets without assuming PNG, WAV, or any other media format. Runtime ownership and decoding remain type-specific (`SmileImageResource`, WAV caches, and music), so future model, material, or animation resources can add their own lifetime rules without replacing project asset publication or pretending every asset is an image.
+
+No Phase 4 transform, camera, mesh, material, shader, skeletal-animation, lighting, physics, particle, or model-import feature is implied by this direction. Add such systems only in their approved milestones, extending this compiler/runtime and preserving the 2D layer.
+
 The native backend emits MASM x64 and links `Smile.NativeRuntime.lib`. Console programs use the console subsystem. Programs containing `GAME WINDOW` use the Windows GUI subsystem and the generic Win32 runtime for:
 
 - a backend-neutral graphics interface that preserves the compiler-facing C ABI;
