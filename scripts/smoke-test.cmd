@@ -311,7 +311,7 @@ copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.UI.smilelib" "%SMILE_ROOT%\artif
 if errorlevel 1 exit /b 1
 fc /b "%SMILE_ROOT%\artifacts\temp\Smile.UI.first.smilelib" "%SMILE_ROOT%\artifacts\libraries\Smile.UI.smilelib" >nul
 if errorlevel 1 exit /b 1
-powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.UI.smilelib'); try { $manifest=([IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())).ReadToEnd() | ConvertFrom-Json; $api=([IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open())).ReadToEnd() | ConvertFrom-Json; $menu=$api.modules | Where-Object name -eq 'Smile.UI.Menu'; $draw=$menu.members | Where-Object name -eq 'Draw'; $key=$menu.members | Where-Object name -eq 'HandleKey'; if ($manifest.formatVersion -ne 5 -or !$draw.requiresGameWindow -or $key.requiresGameWindow) { exit 1 } } finally { $zip.Dispose() }"
+powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.UI.smilelib'); try { $manifest=([IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())).ReadToEnd() | ConvertFrom-Json; $api=([IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open())).ReadToEnd() | ConvertFrom-Json; $menu=$api.modules | Where-Object name -eq 'Smile.UI.Menu'; $text=$api.modules | Where-Object name -eq 'Smile.UI.Text'; $dialogue=$api.modules | Where-Object name -eq 'Smile.UI.Dialogue'; $draw=$menu.members | Where-Object name -eq 'Draw'; $key=$menu.members | Where-Object name -eq 'HandleKey'; $visibleRows=$menu.members | Where-Object name -eq 'VisibleRows'; $textValid=$text.members | Where-Object name -eq 'IsStyleValid'; $dialogueSet=$dialogue.members | Where-Object name -eq 'SetStyle'; if ($manifest.formatVersion -ne 5 -or $manifest.version -ne '1.0.1' -or !$draw.requiresGameWindow -or $key.requiresGameWindow -or $visibleRows.requiresGameWindow -or $textValid.requiresGameWindow -or !$dialogueSet.requiresGameWindow) { exit 1 } } finally { $zip.Dispose() }"
 if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5UIStateTests\Phase5UIStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase5UIStateTests.exe"
@@ -329,7 +329,9 @@ if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5DialogueStateTests\Phase5DialogueStateTests.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\Phase5DialogueStateTests.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\games\Phase5DialogueStateTests.exe"
+"%SMILE_ROOT%\artifacts\games\Phase5DialogueStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5DialogueStateTests.out"
+if errorlevel 1 exit /b 1
+powershell -NoProfile -Command "$expected=[IO.File]::ReadAllLines('%SMILE_ROOT%\examples\Phase5DialogueStateTests\Phase5DialogueStateTests.expected.txt',[Text.Encoding]::UTF8); $actual=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5DialogueStateTests.out',[Text.Encoding]::UTF8); if (Compare-Object $expected $actual) { exit 1 }"
 if errorlevel 1 exit /b 1
 powershell -NoProfile -Command "if ((Get-Content -Raw -LiteralPath '%LOCALAPPDATA%\SMILE 2.0\Games\Phase5DialogueStateTests\Result.txt').Trim() -ne '0') { exit 1 }"
 if errorlevel 1 exit /b 1
@@ -337,9 +339,47 @@ if errorlevel 1 exit /b 1
 if errorlevel 1 exit /b 1
 node --check "%SMILE_ROOT%\artifacts\web\Phase5DialogueStateTests\game.js"
 if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase5DialogueStateTests" --expected "%SMILE_ROOT%\examples\Phase5DialogueStateTests\Phase5DialogueStateTests.expected.txt" --frames 3 --timeout 10000
+if errorlevel 1 exit /b 1
+
+if not exist "%SMILE_ROOT%\artifacts\games\Phase5Hardening-DirectX" mkdir "%SMILE_ROOT%\artifacts\games\Phase5Hardening-DirectX"
+if not exist "%SMILE_ROOT%\artifacts\games\Phase5Hardening-GDI" mkdir "%SMILE_ROOT%\artifacts\games\Phase5Hardening-GDI"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5Hardening\Phase5Hardening.smileproj" --target windows-x64 --configuration Release --graphics DirectX -o "%SMILE_ROOT%\artifacts\games\Phase5Hardening-DirectX\Phase5Hardening.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\games\Phase5Hardening-DirectX\Phase5Hardening.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5Hardening-DirectX.out"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5Hardening\Phase5Hardening.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\Phase5Hardening-GDI\Phase5Hardening.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\games\Phase5Hardening-GDI\Phase5Hardening.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5Hardening-GDI.out"
+if errorlevel 1 exit /b 1
+for %%O in (Phase5Hardening-DirectX.out Phase5Hardening-GDI.out) do (
+    powershell -NoProfile -Command "$expected=[IO.File]::ReadAllLines('%SMILE_ROOT%\examples\Phase5Hardening\Phase5Hardening.expected.txt',[Text.Encoding]::UTF8); $actual=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\%%O',[Text.Encoding]::UTF8); if (Compare-Object $expected $actual) { exit 1 }"
+    if errorlevel 1 exit /b 1
+)
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5Hardening\Phase5Hardening.Package.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\Phase5HardeningPackage.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\games\Phase5HardeningPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5HardeningPackage.out"
+if errorlevel 1 exit /b 1
+fc /b "%SMILE_ROOT%\artifacts\temp\Phase5Hardening-GDI.out" "%SMILE_ROOT%\artifacts\temp\Phase5HardeningPackage.out" >nul
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5Hardening\Phase5Hardening.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\Phase5Hardening"
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase5Hardening" --expected "%SMILE_ROOT%\examples\Phase5Hardening\Phase5Hardening.expected.txt" --phase5-hardening --frames 3 --timeout 10000
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5Hardening\Phase5Hardening.Package.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\Phase5HardeningPackage"
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase5HardeningPackage" --expected "%SMILE_ROOT%\examples\Phase5Hardening\Phase5Hardening.expected.txt" --phase5-hardening --frames 3 --timeout 10000
+if errorlevel 1 exit /b 1
 
 for %%P in (ConsoleCallsDraw.smileproj ConsoleCallsDraw.Package.smileproj) do (
     "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\InvalidPhase5\ConsoleCallsDraw\%%P" -o "%SMILE_ROOT%\artifacts\temp\ConsoleCallsDraw.exe" > "%SMILE_ROOT%\artifacts\temp\%%P.log" 2>&1
+    if not errorlevel 1 exit /b 1
+    if errorlevel 2 exit /b 1
+    powershell -NoProfile -Command "if ((Select-String -LiteralPath '%SMILE_ROOT%\artifacts\temp\%%P.log' -SimpleMatch 'SML3704').Count -ne 1) { exit 1 }"
+    if errorlevel 1 exit /b 1
+)
+for %%P in (ConsoleCallsDialogueSetStyle.smileproj ConsoleCallsDialogueSetStyle.Package.smileproj) do (
+    "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\InvalidPhase5\ConsoleCallsDialogueSetStyle\%%P" -o "%SMILE_ROOT%\artifacts\temp\ConsoleCallsDialogueSetStyle.exe" > "%SMILE_ROOT%\artifacts\temp\%%P.log" 2>&1
     if not errorlevel 1 exit /b 1
     if errorlevel 2 exit /b 1
     powershell -NoProfile -Command "if ((Select-String -LiteralPath '%SMILE_ROOT%\artifacts\temp\%%P.log' -SimpleMatch 'SML3704').Count -ne 1) { exit 1 }"

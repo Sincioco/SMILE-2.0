@@ -1,4 +1,4 @@
-# Smile.UI public API
+# Smile.UI 1.0.1 public API
 
 All handles are generation-safe `NUMBER` values. Handle `0` is invalid.
 
@@ -9,6 +9,8 @@ IsStyleValid(BYREF WindowStyle) AS BOOLEAN
 ContentRect(BYREF WindowStyle, X, Y, Width, Height) AS Core.Rect
 Draw(BYREF WindowStyle, X, Y, Width, Height)
 ```
+
+Skin source rectangles, nine-slice borders, filter values, opacity, destination borders, and bounded padding/vector fields are validated before drawing. `Opacity = 0` means the compatibility default of 100 percent, `1..100` is exact skin opacity, and values outside `0..100` are invalid. The vector fallback is binary visible because generic rectangle primitives do not expose alpha.
 
 ## Smile.UI.BitmapFont
 
@@ -25,10 +27,13 @@ Draw(Handle, TEXT, X, Y, Alignment, Opacity)
 ## Smile.UI.Text
 
 ```text
+IsStyleValid(BYREF TextStyle) AS BOOLEAN
 MeasureWidth(BYREF TextStyle, TEXT) AS NUMBER
 MeasureHeight(BYREF TextStyle, TEXT) AS NUMBER
 Draw(BYREF TextStyle, TEXT, X, Y, Alignment, Opacity)
 ```
+
+Newline scalar 10 splits lines in both modes. Empty values are one line; empty interior lines and a trailing newline are preserved. Width is the widest line. Height is `line count * line height + (line count - 1) * TextStyle.LineSpacing`. Alignment is applied per line and unknown alignment values normalize to left. `Opacity <= 0` draws nothing; positive opacity draws system text fully opaque, while bitmap text uses clamped `1..100` image opacity. A stale bitmap-font handle safely uses system text measurement/drawing with the style's system size, while `IsStyleValid` returns `FALSE` for that candidate style.
 
 ## Smile.UI.Menu
 
@@ -47,10 +52,13 @@ ItemCount(Handle) AS NUMBER
 SelectedIndex(Handle) AS NUMBER
 SelectedValue(Handle) AS NUMBER
 TopIndex(Handle) AS NUMBER
+VisibleRows(Handle) AS NUMBER
 SetSelectedIndex(Handle, Index) AS BOOLEAN
 HandleKey(Handle, Key) AS NUMBER
 Draw(Handle)
 ```
+
+The row count passed to `Create` is retained as the requested count. `VisibleRows` returns the current effective count after window/style constraints. Valid style changes can shrink and later re-expand the effective count while keeping selection and top index in range. `CursorFilterMode` accepts `UI_FILTER_SMOOTH` or `UI_FILTER_PIXEL`.
 
 ## Smile.UI.Dialogue
 
@@ -74,3 +82,5 @@ VisibleCharacters(Handle) AS NUMBER
 ```
 
 Dialogue line advance is `measured text height + TextStyle.LineSpacing + DialogueStyle.LineSpacing`; each spacing value is applied once.
+
+`UI_MAX_DIALOGUE_PAGE_SCALARS` is 2048. `AddPage` rejects a larger value immediately without changing existing pages. `Start` prepares bounded spill pages transactionally. A valid `SetStyle` on an active dialogue reflows with the candidate style while preserving active state, raw-page identity, current content, and the already-visible scalar count; failed validation or reflow leaves the previous style and state unchanged.

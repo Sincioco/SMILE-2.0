@@ -5,9 +5,9 @@
     <Nullable>enable</Nullable>
     <RootNamespace>Smile.VisualStudio</RootNamespace>
     <AssemblyName>Smile.VisualStudio</AssemblyName>
-    <Version>2.0.28</Version>
-    <AssemblyVersion>2.0.28.0</AssemblyVersion>
-    <FileVersion>2.0.28.0</FileVersion>
+    <Version>2.0.29</Version>
+    <AssemblyVersion>2.0.29.0</AssemblyVersion>
+    <FileVersion>2.0.29.0</FileVersion>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <IncludeAssemblyInVSIXContainer>true</IncludeAssemblyInVSIXContainer>
     <IncludeDebugSymbolsInVSIXContainer>false</IncludeDebugSymbolsInVSIXContainer>

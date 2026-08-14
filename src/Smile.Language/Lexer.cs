@@ -157,8 +157,22 @@ internal sealed class Lexer
         var value = new StringBuilder();
         var terminated = false;
 
-        while (Current != '\0' && Current != '\r' && Current != '\n')
+        while (Current != '\0')
         {
+            if (Current == '\r')
+            {
+                value.Append('\n');
+                _position += Peek(1) == '\n' ? 2 : 1;
+                continue;
+            }
+
+            if (Current == '\n')
+            {
+                value.Append('\n');
+                _position++;
+                continue;
+            }
+
             if (Current == '"')
             {
                 if (Peek(1) == '"')

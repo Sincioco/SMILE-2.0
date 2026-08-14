@@ -5,14 +5,45 @@ OPTION EXPLICIT
 IMPORT Smile.UI.Core AS Core
 
 PUBLIC FUNCTION IsStyleValid(BYREF Style AS Core.WindowStyle) AS BOOLEAN
+    DIM ImageWidth AS NUMBER
+    DIM ImageHeight AS NUMBER
+    IF Style.Opacity < 0 OR Style.Opacity > 100 THEN
+        RETURN FALSE
+    END IF
+    IF Style.FilterMode <> Core.UI_FILTER_SMOOTH AND Style.FilterMode <> Core.UI_FILTER_PIXEL THEN
+        RETURN FALSE
+    END IF
+    IF Style.BorderThickness < 0 OR Style.BorderThickness > Core.UI_MAX_LAYOUT_VALUE THEN
+        RETURN FALSE
+    END IF
+    IF Style.Padding.Left < -Core.UI_MAX_LAYOUT_VALUE OR Style.Padding.Left > Core.UI_MAX_LAYOUT_VALUE OR Style.Padding.Top < -Core.UI_MAX_LAYOUT_VALUE OR Style.Padding.Top > Core.UI_MAX_LAYOUT_VALUE OR Style.Padding.Right < -Core.UI_MAX_LAYOUT_VALUE OR Style.Padding.Right > Core.UI_MAX_LAYOUT_VALUE OR Style.Padding.Bottom < -Core.UI_MAX_LAYOUT_VALUE OR Style.Padding.Bottom > Core.UI_MAX_LAYOUT_VALUE THEN
+        RETURN FALSE
+    END IF
+    IF NOT Style.UseSkin OR NOT IMAGE_LOADED(Style.Skin) THEN
+        RETURN TRUE
+    END IF
+    IF Style.SourceX < 0 OR Style.SourceY < 0 OR Style.SourceWidth <= 0 OR Style.SourceHeight <= 0 THEN
+        RETURN FALSE
+    END IF
     IF Style.SourceLeft < 0 OR Style.SourceTop < 0 OR Style.SourceRight < 0 OR Style.SourceBottom < 0 THEN
         RETURN FALSE
     END IF
-    IF Style.DestinationLeft < 0 OR Style.DestinationTop < 0 OR Style.DestinationRight < 0 OR Style.DestinationBottom < 0 THEN
+    IF Style.SourceLeft >= Style.SourceWidth OR Style.SourceRight >= Style.SourceWidth - Style.SourceLeft THEN
         RETURN FALSE
     END IF
-    IF Style.UseSkin AND IMAGE_LOADED(Style.Skin) THEN
-        RETURN Style.SourceWidth > Style.SourceLeft + Style.SourceRight AND Style.SourceHeight > Style.SourceTop + Style.SourceBottom
+    IF Style.SourceTop >= Style.SourceHeight OR Style.SourceBottom >= Style.SourceHeight - Style.SourceTop THEN
+        RETURN FALSE
+    END IF
+    IF Style.DestinationLeft < 0 OR Style.DestinationLeft > Core.UI_MAX_LAYOUT_VALUE OR Style.DestinationTop < 0 OR Style.DestinationTop > Core.UI_MAX_LAYOUT_VALUE OR Style.DestinationRight < 0 OR Style.DestinationRight > Core.UI_MAX_LAYOUT_VALUE OR Style.DestinationBottom < 0 OR Style.DestinationBottom > Core.UI_MAX_LAYOUT_VALUE THEN
+        RETURN FALSE
+    END IF
+    ImageWidth = IMAGE_WIDTH(Style.Skin)
+    ImageHeight = IMAGE_HEIGHT(Style.Skin)
+    IF Style.SourceWidth > ImageWidth OR Style.SourceHeight > ImageHeight THEN
+        RETURN FALSE
+    END IF
+    IF Style.SourceX > ImageWidth - Style.SourceWidth OR Style.SourceY > ImageHeight - Style.SourceHeight THEN
+        RETURN FALSE
     END IF
     RETURN TRUE
 END FUNCTION

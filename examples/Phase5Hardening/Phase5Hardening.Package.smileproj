@@ -1,0 +1,12 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>Phase5HardeningPackage</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <SmileLibraryReference Include="..\..\artifacts\libraries\Smile.UI.smilelib" />
+    <Asset Include="Assets\**\*" />
+  </ItemGroup>
+</SmileProject>

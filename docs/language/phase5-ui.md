@@ -33,4 +33,12 @@ The library uses fixed module-owned arrays and generation-safe numeric handles. 
 
 Dialogue line advance is exactly measured text height plus `TextStyle.LineSpacing` plus `DialogueStyle.LineSpacing`; each spacing value is applied once.
 
-`examples\MenuGallery` supplies original high-resolution PNG/WAV assets and demonstrates project/package references on DirectX, GDI, and Web. `examples\Phase5UIStateTests` proves pure menu state from a Console project. `examples\InvalidPhase5\ConsoleCallsDraw` proves the single consumer-located `SML3704`.
+### Phase 5.1 hardening contract
+
+`Smile.UI` 1.0.1 deeply validates loaded nine-slice and bitmap-font source regions with subtraction-style bounds, valid Unicode scalar ranges, filters, opacity, and bounded layout fields. Nested Menu and Dialogue styles validate before retained records are replaced. Unloaded optional UI images remain safe no-draw/vector fallbacks, and stale bitmap handles use the system-text fields without accessing a later font generation.
+
+Text literals may span source lines. Public Text measurement and drawing split on Unicode newline scalar 10, preserve empty and trailing lines, measure the widest line, align each line independently, and add `TextStyle.LineSpacing` only between lines. Empty text is one positive-height line. `Opacity <= 0` suppresses both modes; positive system text is fully opaque because Phase 5.1 does not add generic text-alpha syntax, while bitmap text uses image opacity.
+
+Menu stores requested and effective row counts separately; `VisibleRows` reports the effective value, style changes reflow it in both directions, selection stays visible, the scrollbar is bounded, and `CursorFilterMode` selects smooth or pixel filtering. Dialogue accepts at most `UI_MAX_DIALOGUE_PAGE_SCALARS` (2048) scalars per raw page and uses bounded transactional preparation. Active `SetStyle` reflows with the candidate style while preserving the active raw-page/visible state, and a failed reflow changes nothing.
+
+`examples\MenuGallery` supplies original high-resolution PNG/WAV assets and demonstrates project/package references on DirectX, GDI, and Web. `examples\Phase5Hardening` covers the Phase 5.1 validation, reflow, multiline, bounds, and ownership matrix. `examples\Phase5UIStateTests` proves pure menu state from a Console project. `examples\InvalidPhase5\ConsoleCallsDraw` proves the single consumer-located `SML3704`.

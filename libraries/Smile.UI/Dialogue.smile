@@ -26,6 +26,9 @@ PRIVATE DIM DialogueVisible[8] AS NUMBER
 PRIVATE DIM DialogueStartedAt[8] AS NUMBER
 PRIVATE DIM DialogueActive[8] AS BOOLEAN
 PRIVATE DIM DialogueComplete[8] AS BOOLEAN
+PRIVATE DIM ScratchPreparedRawPage[32] AS NUMBER
+PRIVATE DIM ScratchPreparedStart[32] AS NUMBER
+PRIVATE DIM ScratchPreparedPageCount AS NUMBER
 
 PRIVATE FUNCTION SlotFromHandle(Handle AS NUMBER) AS NUMBER
     DIM Slot AS NUMBER
@@ -45,33 +48,44 @@ PRIVATE FUNCTION SlotFromHandle(Handle AS NUMBER) AS NUMBER
 END FUNCTION
 
 PUBLIC FUNCTION IsStyleValid(BYREF Style AS Core.DialogueStyle) AS BOOLEAN
-    IF Style.LineSpacing < 0 OR Style.Text.LineSpacing < 0 THEN
+    IF NOT Window.IsStyleValid(Style.Window) OR NOT Text.IsStyleValid(Style.Text) THEN
         RETURN FALSE
     END IF
-    IF Style.UseContinueIndicator AND (Style.IndicatorWidth < 0 OR Style.IndicatorHeight < 0 OR Style.IndicatorBlinkMilliseconds < 0) THEN
+    IF Style.CharactersPerSecond < 0 OR Style.CharactersPerSecond > Core.UI_MAX_LAYOUT_VALUE OR Style.LineSpacing < 0 OR Style.LineSpacing > Core.UI_MAX_LAYOUT_VALUE THEN
+        RETURN FALSE
+    END IF
+    IF Style.IndicatorWidth < 0 OR Style.IndicatorWidth > Core.UI_MAX_LAYOUT_VALUE OR Style.IndicatorHeight < 0 OR Style.IndicatorHeight > Core.UI_MAX_LAYOUT_VALUE OR Style.IndicatorBlinkMilliseconds < 0 OR Style.IndicatorBlinkMilliseconds > Core.UI_MAX_LAYOUT_VALUE THEN
+        RETURN FALSE
+    END IF
+    IF Style.IndicatorOffsetX < -Core.UI_MAX_LAYOUT_VALUE OR Style.IndicatorOffsetX > Core.UI_MAX_LAYOUT_VALUE OR Style.IndicatorOffsetY < -Core.UI_MAX_LAYOUT_VALUE OR Style.IndicatorOffsetY > Core.UI_MAX_LAYOUT_VALUE THEN
+        RETURN FALSE
+    END IF
+    IF Style.UseContinueIndicator AND IMAGE_LOADED(Style.ContinueIndicator) AND (Style.IndicatorWidth <= 0 OR Style.IndicatorHeight <= 0) THEN
         RETURN FALSE
     END IF
     RETURN TRUE
 END FUNCTION
 
-PRIVATE FUNCTION LineStep(Slot AS NUMBER) AS NUMBER
+PRIVATE FUNCTION LineStep(BYREF Style AS Core.DialogueStyle) AS NUMBER
     DIM Height AS NUMBER
-    Height = Text.MeasureHeight(DialogueStyles[Slot].Text, "M")
+    Height = Text.MeasureHeight(Style.Text, "")
     IF Height <= 0 THEN
-        Height = MAX(1, DialogueStyles[Slot].Text.SystemSize)
+        Height = MAX(1, Style.Text.SystemSize)
     END IF
-    RETURN Height + MAX(0, DialogueStyles[Slot].Text.LineSpacing) + MAX(0, DialogueStyles[Slot].LineSpacing)
+    RETURN Height + MAX(0, Style.Text.LineSpacing) + MAX(0, Style.LineSpacing)
 END FUNCTION
 
-PRIVATE FUNCTION MaximumLines(Slot AS NUMBER) AS NUMBER
+PRIVATE FUNCTION MaximumLines(Slot AS NUMBER, BYREF Style AS Core.DialogueStyle) AS NUMBER
     DIM Content AS Core.Rect
     DIM StepHeight AS NUMBER
-    Content = Window.ContentRect(DialogueStyles[Slot].Window, DialogueX[Slot], DialogueY[Slot], DialogueWidth[Slot], DialogueHeight[Slot])
-    StepHeight = LineStep(Slot)
+    DIM Spacing AS NUMBER
+    Content = Window.ContentRect(Style.Window, DialogueX[Slot], DialogueY[Slot], DialogueWidth[Slot], DialogueHeight[Slot])
+    StepHeight = LineStep(Style)
+    Spacing = MAX(0, Style.Text.LineSpacing) + MAX(0, Style.LineSpacing)
     IF Content.Width <= 0 OR Content.Height <= 0 OR StepHeight <= 0 THEN
         RETURN 0
     END IF
-    RETURN MIN(Core.UI_MAX_DIALOGUE_LINES, MAX(1, (Content.Height + MAX(0, DialogueStyles[Slot].Text.LineSpacing) + MAX(0, DialogueStyles[Slot].LineSpacing)) / StepHeight))
+    RETURN MIN(Core.UI_MAX_DIALOGUE_LINES, MAX(1, (Content.Height + Spacing) / StepHeight))
 END FUNCTION
 
 PRIVATE SUB ClearCurrentLines(Slot AS NUMBER)
@@ -83,7 +97,7 @@ PRIVATE SUB ClearCurrentLines(Slot AS NUMBER)
     CurrentScalarCount[Slot] = 0
 END SUB
 
-PRIVATE FUNCTION PrepareRawPage(Slot AS NUMBER, RawIndex AS NUMBER, StartIndex AS NUMBER, StoreLines AS BOOLEAN) AS NUMBER
+PRIVATE FUNCTION PrepareRawPage(Slot AS NUMBER, BYREF Style AS Core.DialogueStyle, RawIndex AS NUMBER, StartIndex AS NUMBER, StoreLines AS BOOLEAN) AS NUMBER
     DIM Value AS TEXT
     DIM Length AS NUMBER
     DIM Content AS Core.Rect
@@ -93,18 +107,22 @@ PRIVATE FUNCTION PrepareRawPage(Slot AS NUMBER, RawIndex AS NUMBER, StartIndex A
     DIM LineNumber AS NUMBER
     DIM Scan AS NUMBER
     DIM SkipIndex AS NUMBER
-    DIM Code AS NUMBER
     DIM LastSpace AS NUMBER
     DIM FitEnd AS NUMBER
     DIM LineEnd AS NUMBER
     DIM Candidate AS TEXT
     DIM LineValue AS TEXT
-    DIM EndedWithNewline AS BOOLEAN
+    DIM SegmentEnd AS NUMBER
+    DIM Low AS NUMBER
+    DIM High AS NUMBER
+    DIM Middle AS NUMBER
+    DIM BestCount AS NUMBER
+    DIM HasNewline AS BOOLEAN
 
     Value = RawPages[Slot, RawIndex]
     Length = TEXT_LENGTH(Value)
-    Content = Window.ContentRect(DialogueStyles[Slot].Window, DialogueX[Slot], DialogueY[Slot], DialogueWidth[Slot], DialogueHeight[Slot])
-    Maximum = MaximumLines(Slot)
+    Content = Window.ContentRect(Style.Window, DialogueX[Slot], DialogueY[Slot], DialogueWidth[Slot], DialogueHeight[Slot])
+    Maximum = MaximumLines(Slot, Style)
     IF StoreLines THEN
         CALL ClearCurrentLines(Slot)
     END IF
@@ -134,48 +152,64 @@ PRIVATE FUNCTION PrepareRawPage(Slot AS NUMBER, RawIndex AS NUMBER, StartIndex A
             RETURN Length + 1
         END IF
 
-        LastSpace = -1
-        FitEnd = Cursor
-        LineEnd = Cursor
-        EndedWithNewline = FALSE
         LineStart = Cursor
-
+        SegmentEnd = Length
+        HasNewline = FALSE
         FOR Scan = LineStart TO Length - 1
-            Code = TEXT_CODE_AT(Value, Scan)
-            IF Code = 10 THEN
-                LineEnd = Scan
-                Cursor = Scan + 1
-                EndedWithNewline = TRUE
+            IF TEXT_CODE_AT(Value, Scan) = 10 THEN
+                SegmentEnd = Scan
+                HasNewline = TRUE
                 EXIT FOR
             END IF
+        END FOR
 
-            Candidate = TEXT_SLICE(Value, LineStart, Scan - LineStart + 1)
-            IF Text.MeasureWidth(DialogueStyles[Slot].Text, Candidate) <= Content.Width OR Scan = LineStart THEN
-                FitEnd = Scan + 1
-                LineEnd = FitEnd
-                IF Code = 32 THEN
-                    LastSpace = Scan
+        IF SegmentEnd = LineStart THEN
+            LineEnd = LineStart
+            Cursor = SegmentEnd + 1
+        ELSE
+            Low = 1
+            High = SegmentEnd - LineStart
+            BestCount = 1
+            FOR Scan = 0 TO 31
+                IF Low > High THEN
+                    EXIT FOR
                 END IF
-                IF Scan = Length - 1 THEN
-                    Cursor = Length + 1
+                Middle = Low + (High - Low) / 2
+                Candidate = TEXT_SLICE(Value, LineStart, Middle)
+                IF Text.MeasureWidth(Style.Text, Candidate) <= Content.Width OR Middle = 1 THEN
+                    BestCount = Middle
+                    Low = Middle + 1
+                ELSE
+                    High = Middle - 1
                 END IF
-            ELSE
-                IF LastSpace >= LineStart THEN
+            END FOR
+            FitEnd = LineStart + BestCount
+            LineEnd = FitEnd
+            IF FitEnd < SegmentEnd THEN
+                LastSpace = -1
+                FOR Scan = LineStart TO FitEnd - 1
+                    IF TEXT_CODE_AT(Value, Scan) = 32 THEN
+                        LastSpace = Scan
+                    END IF
+                END FOR
+                IF LastSpace > LineStart THEN
                     LineEnd = LastSpace
                     Cursor = LastSpace + 1
-                    FOR SkipIndex = Cursor TO Length - 1
+                    FOR SkipIndex = Cursor TO SegmentEnd - 1
                         IF TEXT_CODE_AT(Value, SkipIndex) <> 32 THEN
                             EXIT FOR
                         END IF
                         Cursor = Cursor + 1
                     END FOR
                 ELSE
-                    LineEnd = FitEnd
                     Cursor = FitEnd
                 END IF
-                EXIT FOR
+            ELSE IF HasNewline THEN
+                Cursor = SegmentEnd + 1
+            ELSE
+                Cursor = Length + 1
             END IF
-        END FOR
+        END IF
 
         LineValue = TEXT_SLICE(Value, LineStart, MAX(0, LineEnd - LineStart))
         IF StoreLines THEN
@@ -206,13 +240,78 @@ PRIVATE SUB ClearPrepared(Slot AS NUMBER)
     CALL ClearCurrentLines(Slot)
 END SUB
 
+PRIVATE SUB ClearScratch()
+    DIM Page AS NUMBER
+    FOR Page = 0 TO Core.UI_MAX_DIALOGUE_PAGES - 1
+        ScratchPreparedRawPage[Page] = 0
+        ScratchPreparedStart[Page] = 0
+    END FOR
+    ScratchPreparedPageCount = 0
+END SUB
+
+PRIVATE FUNCTION BuildScratch(Slot AS NUMBER, BYREF Style AS Core.DialogueStyle) AS BOOLEAN
+    DIM RawIndex AS NUMBER
+    DIM Spill AS NUMBER
+    DIM Cursor AS NUMBER
+    DIM NextIndex AS NUMBER
+    DIM Length AS NUMBER
+    DIM Finished AS BOOLEAN
+    CALL ClearScratch()
+    IF MaximumLines(Slot, Style) <= 0 THEN
+        RETURN FALSE
+    END IF
+    FOR RawIndex = 0 TO RawPageCount[Slot] - 1
+        Cursor = 0
+        Length = TEXT_LENGTH(RawPages[Slot, RawIndex])
+        Finished = FALSE
+        FOR Spill = 0 TO Core.UI_MAX_DIALOGUE_PAGES
+            IF Cursor > Length THEN
+                Finished = TRUE
+                EXIT FOR
+            END IF
+            IF ScratchPreparedPageCount >= Core.UI_MAX_DIALOGUE_PAGES THEN
+                CALL ClearScratch()
+                RETURN FALSE
+            END IF
+            ScratchPreparedRawPage[ScratchPreparedPageCount] = RawIndex
+            ScratchPreparedStart[ScratchPreparedPageCount] = Cursor
+            ScratchPreparedPageCount = ScratchPreparedPageCount + 1
+            NextIndex = PrepareRawPage(Slot, Style, RawIndex, Cursor, FALSE)
+            IF NextIndex <= Cursor THEN
+                CALL ClearScratch()
+                RETURN FALSE
+            END IF
+            Cursor = NextIndex
+        END FOR
+        IF NOT Finished THEN
+            CALL ClearScratch()
+            RETURN FALSE
+        END IF
+    END FOR
+    RETURN ScratchPreparedPageCount > 0
+END FUNCTION
+
+PRIVATE SUB CommitScratch(Slot AS NUMBER)
+    DIM Page AS NUMBER
+    FOR Page = 0 TO Core.UI_MAX_DIALOGUE_PAGES - 1
+        PreparedRawPage[Slot, Page] = 0
+        PreparedStart[Slot, Page] = 0
+    END FOR
+    FOR Page = 0 TO ScratchPreparedPageCount - 1
+        PreparedRawPage[Slot, Page] = ScratchPreparedRawPage[Page]
+        PreparedStart[Slot, Page] = ScratchPreparedStart[Page]
+    END FOR
+    PreparedPageCount[Slot] = ScratchPreparedPageCount
+    CALL ClearScratch()
+END SUB
+
 PRIVATE SUB PrepareCurrentPage(Slot AS NUMBER)
     DIM NextIndex AS NUMBER
     IF DialogueCurrentPage[Slot] < 0 OR DialogueCurrentPage[Slot] >= PreparedPageCount[Slot] THEN
         CALL ClearCurrentLines(Slot)
         RETURN
     END IF
-    NextIndex = PrepareRawPage(Slot, PreparedRawPage[Slot, DialogueCurrentPage[Slot]], PreparedStart[Slot, DialogueCurrentPage[Slot]], TRUE)
+    NextIndex = PrepareRawPage(Slot, DialogueStyles[Slot], PreparedRawPage[Slot, DialogueCurrentPage[Slot]], PreparedStart[Slot, DialogueCurrentPage[Slot]], TRUE)
 END SUB
 
 PUBLIC FUNCTION Create(BYREF Style AS Core.DialogueStyle, X AS NUMBER, Y AS NUMBER, Width AS NUMBER, Height AS NUMBER) AS NUMBER
@@ -239,8 +338,8 @@ PUBLIC FUNCTION Create(BYREF Style AS Core.DialogueStyle, X AS NUMBER, Y AS NUMB
     DialogueStyles[Slot] = Style
     DialogueX[Slot] = X
     DialogueY[Slot] = Y
-    DialogueWidth[Slot] = MAX(0, Width)
-    DialogueHeight[Slot] = MAX(0, Height)
+    DialogueWidth[Slot] = MAX(0, MIN(Core.UI_MAX_LAYOUT_VALUE, Width))
+    DialogueHeight[Slot] = MAX(0, MIN(Core.UI_MAX_LAYOUT_VALUE, Height))
     RawPageCount[Slot] = 0
     CALL ClearPrepared(Slot)
     RETURN DialogueGeneration[Slot] * 100 + Slot + 1
@@ -278,12 +377,47 @@ END SUB
 
 PUBLIC FUNCTION SetStyle(Handle AS NUMBER, BYREF Style AS Core.DialogueStyle) AS BOOLEAN
     DIM Slot AS NUMBER
+    DIM OldRawPage AS NUMBER
+    DIM OldStart AS NUMBER
+    DIM OldVisible AS NUMBER
+    DIM Page AS NUMBER
+    DIM NewPage AS NUMBER
     Slot = SlotFromHandle(Handle)
     IF Slot < 0 OR NOT IsStyleValid(Style) THEN
         RETURN FALSE
     END IF
+    IF NOT DialogueActive[Slot] OR PreparedPageCount[Slot] <= 0 THEN
+        DialogueStyles[Slot] = Style
+        CALL ClearPrepared(Slot)
+        RETURN TRUE
+    END IF
+    OldRawPage = PreparedRawPage[Slot, DialogueCurrentPage[Slot]]
+    OldStart = PreparedStart[Slot, DialogueCurrentPage[Slot]]
+    OldVisible = DialogueVisible[Slot]
+    IF NOT BuildScratch(Slot, Style) THEN
+        RETURN FALSE
+    END IF
+    NewPage = -1
+    FOR Page = 0 TO ScratchPreparedPageCount - 1
+        IF ScratchPreparedRawPage[Page] = OldRawPage AND ScratchPreparedStart[Page] <= OldStart THEN
+            NewPage = Page
+        END IF
+    END FOR
+    IF NewPage < 0 THEN
+        CALL ClearScratch()
+        RETURN FALSE
+    END IF
     DialogueStyles[Slot] = Style
-    CALL ClearPrepared(Slot)
+    CALL CommitScratch(Slot)
+    DialogueCurrentPage[Slot] = NewPage
+    DialogueActive[Slot] = TRUE
+    DialogueComplete[Slot] = FALSE
+    CALL PrepareCurrentPage(Slot)
+    DialogueVisible[Slot] = MIN(OldVisible, CurrentScalarCount[Slot])
+    DialogueStartedAt[Slot] = TIMER()
+    IF DialogueStyles[Slot].CharactersPerSecond > 0 THEN
+        DialogueStartedAt[Slot] = DialogueStartedAt[Slot] - DialogueVisible[Slot] * 1000 / DialogueStyles[Slot].CharactersPerSecond
+    END IF
     RETURN TRUE
 END FUNCTION
 
@@ -291,7 +425,7 @@ PUBLIC FUNCTION AddPage(Handle AS NUMBER, Value AS TEXT) AS BOOLEAN
     DIM Slot AS NUMBER
     DIM Index AS NUMBER
     Slot = SlotFromHandle(Handle)
-    IF Slot < 0 OR RawPageCount[Slot] >= Core.UI_MAX_DIALOGUE_PAGES THEN
+    IF Slot < 0 OR RawPageCount[Slot] >= Core.UI_MAX_DIALOGUE_PAGES OR TEXT_LENGTH(Value) > Core.UI_MAX_DIALOGUE_PAGE_SCALARS THEN
         RETURN FALSE
     END IF
     Index = RawPageCount[Slot]
@@ -302,50 +436,14 @@ END FUNCTION
 
 PUBLIC FUNCTION Start(Handle AS NUMBER, NowMilliseconds AS NUMBER) AS BOOLEAN
     DIM Slot AS NUMBER
-    DIM RawIndex AS NUMBER
-    DIM Spill AS NUMBER
-    DIM Cursor AS NUMBER
-    DIM NextIndex AS NUMBER
-    DIM Length AS NUMBER
-    DIM Finished AS BOOLEAN
     Slot = SlotFromHandle(Handle)
     IF Slot < 0 OR RawPageCount[Slot] <= 0 THEN
         RETURN FALSE
     END IF
-    CALL ClearPrepared(Slot)
-    IF MaximumLines(Slot) <= 0 THEN
+    IF NOT BuildScratch(Slot, DialogueStyles[Slot]) THEN
         RETURN FALSE
     END IF
-
-    FOR RawIndex = 0 TO RawPageCount[Slot] - 1
-        Cursor = 0
-        Length = TEXT_LENGTH(RawPages[Slot, RawIndex])
-        Finished = FALSE
-        FOR Spill = 0 TO Core.UI_MAX_DIALOGUE_PAGES
-            IF Cursor > Length THEN
-                Finished = TRUE
-                EXIT FOR
-            END IF
-            IF PreparedPageCount[Slot] >= Core.UI_MAX_DIALOGUE_PAGES THEN
-                CALL ClearPrepared(Slot)
-                RETURN FALSE
-            END IF
-            PreparedRawPage[Slot, PreparedPageCount[Slot]] = RawIndex
-            PreparedStart[Slot, PreparedPageCount[Slot]] = Cursor
-            PreparedPageCount[Slot] = PreparedPageCount[Slot] + 1
-            NextIndex = PrepareRawPage(Slot, RawIndex, Cursor, FALSE)
-            IF NextIndex <= Cursor THEN
-                CALL ClearPrepared(Slot)
-                RETURN FALSE
-            END IF
-            Cursor = NextIndex
-        END FOR
-        IF NOT Finished THEN
-            CALL ClearPrepared(Slot)
-            RETURN FALSE
-        END IF
-    END FOR
-
+    CALL CommitScratch(Slot)
     DialogueCurrentPage[Slot] = 0
     DialogueStartedAt[Slot] = NowMilliseconds
     DialogueVisible[Slot] = 0
@@ -441,7 +539,7 @@ PUBLIC SUB Draw(Handle AS NUMBER, NowMilliseconds AS NUMBER)
         RETURN
     END IF
     Remaining = DialogueVisible[Slot]
-    StepHeight = LineStep(Slot)
+    StepHeight = LineStep(DialogueStyles[Slot])
     CLIP RECTANGLE Content.X, Content.Y, Content.Width, Content.Height
         FOR Line = 0 TO CurrentLineCount[Slot] - 1
             Length = TEXT_LENGTH(CurrentLines[Slot, Line])

@@ -12,28 +12,83 @@ PRIVATE FUNCTION SystemSize(BYREF Style AS Core.TextStyle) AS NUMBER
     RETURN Style.SystemSize
 END FUNCTION
 
-PUBLIC FUNCTION MeasureWidth(BYREF Style AS Core.TextStyle, Value AS TEXT) AS NUMBER
-    IF Style.Mode = Core.UI_TEXT_BITMAP AND BitmapFont.IsValid(Style.BitmapFontHandle) THEN
+PUBLIC FUNCTION IsStyleValid(BYREF Style AS Core.TextStyle) AS BOOLEAN
+    IF Style.Mode <> Core.UI_TEXT_SYSTEM AND Style.Mode <> Core.UI_TEXT_BITMAP THEN
+        RETURN FALSE
+    END IF
+    IF Style.SystemSize < 0 OR Style.SystemSize > Core.UI_MAX_LAYOUT_VALUE OR Style.LineSpacing < 0 OR Style.LineSpacing > Core.UI_MAX_LAYOUT_VALUE THEN
+        RETURN FALSE
+    END IF
+    IF Style.Mode = Core.UI_TEXT_BITMAP THEN
+        RETURN BitmapFont.IsValid(Style.BitmapFontHandle)
+    END IF
+    RETURN TRUE
+END FUNCTION
+
+PRIVATE FUNCTION UseBitmap(BYREF Style AS Core.TextStyle) AS BOOLEAN
+    RETURN Style.Mode = Core.UI_TEXT_BITMAP AND BitmapFont.IsValid(Style.BitmapFontHandle)
+END FUNCTION
+
+PRIVATE FUNCTION MeasureLineWidth(BYREF Style AS Core.TextStyle, Value AS TEXT) AS NUMBER
+    IF UseBitmap(Style) THEN
         RETURN BitmapFont.MeasureWidth(Style.BitmapFontHandle, Value)
     END IF
+
     RETURN TEXT_WIDTH(Value, SystemSize(Style))
 END FUNCTION
 
-PUBLIC FUNCTION MeasureHeight(BYREF Style AS Core.TextStyle, Value AS TEXT) AS NUMBER
-    IF Style.Mode = Core.UI_TEXT_BITMAP AND BitmapFont.IsValid(Style.BitmapFontHandle) THEN
-        RETURN BitmapFont.MeasureHeight(Style.BitmapFontHandle, Value)
+PRIVATE FUNCTION MeasureLineHeight(BYREF Style AS Core.TextStyle) AS NUMBER
+    IF UseBitmap(Style) THEN
+        RETURN BitmapFont.MeasureHeight(Style.BitmapFontHandle, "")
     END IF
-    RETURN TEXT_HEIGHT(Value, SystemSize(Style))
+    RETURN TEXT_HEIGHT("", SystemSize(Style))
 END FUNCTION
 
-PUBLIC SUB Draw(BYREF Style AS Core.TextStyle, Value AS TEXT, X AS NUMBER, Y AS NUMBER, Alignment AS NUMBER, Opacity AS NUMBER)
+PUBLIC FUNCTION MeasureWidth(BYREF Style AS Core.TextStyle, Value AS TEXT) AS NUMBER
+    DIM Length AS NUMBER
+    DIM Index AS NUMBER
+    DIM LineStart AS NUMBER
+    DIM LineWidth AS NUMBER
+    DIM MaximumWidth AS NUMBER
+    IF Style.Mode <> Core.UI_TEXT_SYSTEM AND Style.Mode <> Core.UI_TEXT_BITMAP THEN
+        RETURN 0
+    END IF
+    Length = TEXT_LENGTH(Value)
+    FOR Index = 0 TO Length
+        IF Index = Length THEN
+            LineWidth = MeasureLineWidth(Style, TEXT_SLICE(Value, LineStart, Index - LineStart))
+            MaximumWidth = MAX(MaximumWidth, LineWidth)
+        ELSE IF TEXT_CODE_AT(Value, Index) = 10 THEN
+            LineWidth = MeasureLineWidth(Style, TEXT_SLICE(Value, LineStart, Index - LineStart))
+            MaximumWidth = MAX(MaximumWidth, LineWidth)
+            LineStart = Index + 1
+        END IF
+    END FOR
+    RETURN MaximumWidth
+END FUNCTION
+
+PUBLIC FUNCTION MeasureHeight(BYREF Style AS Core.TextStyle, Value AS TEXT) AS NUMBER
+    DIM Index AS NUMBER
+    DIM Lines AS NUMBER
+    DIM Spacing AS NUMBER
+    IF Style.Mode <> Core.UI_TEXT_SYSTEM AND Style.Mode <> Core.UI_TEXT_BITMAP THEN
+        RETURN 0
+    END IF
+    Lines = 1
+    FOR Index = 0 TO TEXT_LENGTH(Value) - 1
+        IF TEXT_CODE_AT(Value, Index) = 10 THEN
+            Lines = Lines + 1
+        END IF
+    END FOR
+    Spacing = MAX(0, Style.LineSpacing)
+    RETURN Lines * MeasureLineHeight(Style) + (Lines - 1) * Spacing
+END FUNCTION
+
+PRIVATE SUB DrawLine(BYREF Style AS Core.TextStyle, Value AS TEXT, X AS NUMBER, Y AS NUMBER, Alignment AS NUMBER, Opacity AS NUMBER)
     DIM Width AS NUMBER
     DIM DrawX AS NUMBER
     DIM Size AS NUMBER
-    IF Opacity <= 0 THEN
-        RETURN
-    END IF
-    IF Style.Mode = Core.UI_TEXT_BITMAP AND BitmapFont.IsValid(Style.BitmapFontHandle) THEN
+    IF UseBitmap(Style) THEN
         CALL BitmapFont.Draw(Style.BitmapFontHandle, Value, X, Y, Alignment, MIN(100, Opacity))
         RETURN
     END IF
@@ -48,6 +103,38 @@ PUBLIC SUB Draw(BYREF Style AS Core.TextStyle, Value AS TEXT, X AS NUMBER, Y AS 
         END IF
         DRAW TEXT Value AT DrawX, Y SIZE Size COLOR Style.SystemColor
     END IF
+END SUB
+
+PUBLIC SUB Draw(BYREF Style AS Core.TextStyle, Value AS TEXT, X AS NUMBER, Y AS NUMBER, Alignment AS NUMBER, Opacity AS NUMBER)
+    DIM Length AS NUMBER
+    DIM Index AS NUMBER
+    DIM LineStart AS NUMBER
+    DIM LineY AS NUMBER
+    DIM LineText AS TEXT
+    DIM LineAdvance AS NUMBER
+    IF Opacity <= 0 THEN
+        RETURN
+    END IF
+    IF Style.Mode <> Core.UI_TEXT_SYSTEM AND Style.Mode <> Core.UI_TEXT_BITMAP THEN
+        RETURN
+    END IF
+    IF Alignment <> Core.UI_ALIGN_CENTER AND Alignment <> Core.UI_ALIGN_RIGHT THEN
+        Alignment = Core.UI_ALIGN_LEFT
+    END IF
+    Length = TEXT_LENGTH(Value)
+    LineY = Y
+    LineAdvance = MeasureLineHeight(Style) + MAX(0, Style.LineSpacing)
+    FOR Index = 0 TO Length
+        IF Index = Length THEN
+            LineText = TEXT_SLICE(Value, LineStart, Index - LineStart)
+            CALL DrawLine(Style, LineText, X, LineY, Alignment, Opacity)
+        ELSE IF TEXT_CODE_AT(Value, Index) = 10 THEN
+            LineText = TEXT_SLICE(Value, LineStart, Index - LineStart)
+            CALL DrawLine(Style, LineText, X, LineY, Alignment, Opacity)
+            LineStart = Index + 1
+            LineY = LineY + LineAdvance
+        END IF
+    END FOR
 END SUB
 
 END MODULE

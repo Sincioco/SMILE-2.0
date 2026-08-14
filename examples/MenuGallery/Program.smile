@@ -1,6 +1,7 @@
 OPTION EXPLICIT
 
 IMPORT Smile.UI.Core AS UI
+IMPORT Smile.UI.Window AS Window
 IMPORT Smile.UI.BitmapFont AS BitmapFont
 IMPORT Smile.UI.Menu AS Menu
 IMPORT Smile.UI.Dialogue AS Dialogue
@@ -18,6 +19,7 @@ DIM FontHandle AS NUMBER
 
 DIM SkinWindow AS UI.WindowStyle
 DIM VectorWindow AS UI.WindowStyle
+DIM InvalidWindow AS UI.WindowStyle
 
 DIM SystemText AS UI.TextStyle
 DIM SystemSelectedText AS UI.TextStyle
@@ -128,6 +130,7 @@ MenuStyle.CursorWidth = 30
 MenuStyle.CursorHeight = 30
 MenuStyle.CursorOffsetX = 0
 MenuStyle.CursorOffsetY = -2
+MenuStyle.CursorFilterMode = UI.UI_FILTER_SMOOTH
 MenuStyle.RowHeight = 43
 MenuStyle.WrapSelection = TRUE
 MenuStyle.ShowScrollbar = TRUE
@@ -145,17 +148,29 @@ DialogueStyle.IndicatorOffsetY = -12
 DialogueStyle.IndicatorBlinkMilliseconds = 420
 
 MenuHandle = Menu.Create(MenuStyle, 54, 75, 360, 390, 6)
+Running = FontHandle > 0 AND MenuHandle > 0
 ItemIndex = Menu.AddItem(MenuHandle, "ITEM", 1, TRUE)
+Running = Running AND ItemIndex >= 0
 ItemIndex = Menu.AddItem(MenuHandle, "MAGIC", 2, TRUE)
+Running = Running AND ItemIndex >= 0
 ItemIndex = Menu.AddItem(MenuHandle, "EQUIP", 3, TRUE)
+Running = Running AND ItemIndex >= 0
 ItemIndex = Menu.AddItem(MenuHandle, "STATUS", 4, TRUE)
+Running = Running AND ItemIndex >= 0
 ItemIndex = Menu.AddItem(MenuHandle, "FORMATION", 5, FALSE)
+Running = Running AND ItemIndex >= 0
 ItemIndex = Menu.AddItem(MenuHandle, "SAVE", 6, TRUE)
+Running = Running AND ItemIndex >= 0
 ItemIndex = Menu.AddItem(MenuHandle, "OPTIONS", 7, TRUE)
+Running = Running AND ItemIndex >= 0
 ItemIndex = Menu.AddItem(MenuHandle, "EXIT", 8, TRUE)
+Running = Running AND ItemIndex >= 0
 
 DialogueHandle = Dialogue.Create(DialogueStyle, 438, 290, 470, 205)
-Running = TRUE
+Running = Running AND DialogueHandle > 0
+InvalidWindow = SkinWindow
+InvalidWindow.SourceX = 1
+Running = Running AND NOT Window.IsStyleValid(InvalidWindow)
 
 DO
     GET KEY Key
@@ -169,7 +184,12 @@ DO
         DialogueStyle.Window = SkinWindow
         DialogueStyle.Text = SystemText
         OperationSucceeded = Menu.SetStyle(MenuHandle, MenuStyle)
-        OperationSucceeded = Dialogue.SetStyle(DialogueHandle, DialogueStyle)
+        IF OperationSucceeded THEN
+            OperationSucceeded = Dialogue.SetStyle(DialogueHandle, DialogueStyle)
+        END IF
+        IF NOT OperationSucceeded THEN
+            Running = FALSE
+        END IF
     ELSE IF Key = KEY_2 THEN
         MenuStyle.Window = SkinWindow
         MenuStyle.NormalText = BitmapText
@@ -178,7 +198,12 @@ DO
         DialogueStyle.Window = SkinWindow
         DialogueStyle.Text = BitmapText
         OperationSucceeded = Menu.SetStyle(MenuHandle, MenuStyle)
-        OperationSucceeded = Dialogue.SetStyle(DialogueHandle, DialogueStyle)
+        IF OperationSucceeded THEN
+            OperationSucceeded = Dialogue.SetStyle(DialogueHandle, DialogueStyle)
+        END IF
+        IF NOT OperationSucceeded THEN
+            Running = FALSE
+        END IF
     ELSE IF Key = KEY_3 THEN
         MenuStyle.Window = VectorWindow
         MenuStyle.NormalText = SystemText
@@ -187,7 +212,12 @@ DO
         DialogueStyle.Window = VectorWindow
         DialogueStyle.Text = SystemText
         OperationSucceeded = Menu.SetStyle(MenuHandle, MenuStyle)
-        OperationSucceeded = Dialogue.SetStyle(DialogueHandle, DialogueStyle)
+        IF OperationSucceeded THEN
+            OperationSucceeded = Dialogue.SetStyle(DialogueHandle, DialogueStyle)
+        END IF
+        IF NOT OperationSucceeded THEN
+            Running = FALSE
+        END IF
     ELSE
         IF Dialogue.IsActive(DialogueHandle) THEN
             Event = Dialogue.HandleKey(DialogueHandle, Key, TIMER())
@@ -197,6 +227,7 @@ DO
             IF Event = UI.UI_EVENT_ACCEPTED THEN
                 SelectedValue = Menu.SelectedValue(MenuHandle)
                 CALL Dialogue.ClearPages(DialogueHandle)
+                OperationSucceeded = FALSE
 
                 IF SelectedValue = 1 THEN
                     OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Items will be implemented later by the reusable Inventory phase. This gallery proves generic window, menu, and dialogue components.")
@@ -214,8 +245,17 @@ DO
                     OperationSucceeded = Dialogue.AddPage(DialogueHandle, "This completes the Menu Gallery. Press Enter once more to close the sample.")
                 END IF
 
-                OperationSucceeded = Dialogue.AddPage(DialogueHandle, "The same SMILE library source is running on native Windows and the Web target.")
-                OperationSucceeded = Dialogue.Start(DialogueHandle, TIMER())
+                IF OperationSucceeded THEN
+                    OperationSucceeded = Dialogue.AddPage(DialogueHandle, "The same SMILE library source is running on native Windows and the Web target.
+
+Theme changes preserve this active multiline dialogue.")
+                END IF
+                IF OperationSucceeded THEN
+                    OperationSucceeded = Dialogue.Start(DialogueHandle, TIMER())
+                END IF
+                IF NOT OperationSucceeded THEN
+                    Running = FALSE
+                END IF
             END IF
         END IF
     END IF

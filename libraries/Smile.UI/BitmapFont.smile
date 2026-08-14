@@ -26,7 +26,55 @@ PRIVATE FUNCTION SlotFromHandle(Handle AS NUMBER) AS NUMBER
 END FUNCTION
 
 PUBLIC FUNCTION IsStyleValid(BYREF Style AS Core.BitmapFontStyle) AS BOOLEAN
-    RETURN IMAGE_LOADED(Style.Atlas) AND Style.GlyphCount > 0 AND Style.Columns > 0 AND Style.SourceCellWidth > 0 AND Style.SourceCellHeight > 0 AND Style.DrawWidth > 0 AND Style.DrawHeight > 0 AND Style.AdvanceX > 0 AND Style.LineHeight > 0
+    DIM ImageWidth AS NUMBER
+    DIM ImageHeight AS NUMBER
+    DIM RemainingWidth AS NUMBER
+    DIM RemainingHeight AS NUMBER
+    DIM Rows AS NUMBER
+    DIM LastCodePoint AS NUMBER
+    IF NOT IMAGE_LOADED(Style.Atlas) THEN
+        RETURN FALSE
+    END IF
+    IF Style.SourceX < 0 OR Style.SourceY < 0 OR Style.GlyphCount <= 0 OR Style.Columns <= 0 THEN
+        RETURN FALSE
+    END IF
+    IF Style.SourceCellWidth <= 0 OR Style.SourceCellHeight <= 0 OR Style.DrawWidth <= 0 OR Style.DrawHeight <= 0 OR Style.AdvanceX <= 0 OR Style.LineHeight <= 0 THEN
+        RETURN FALSE
+    END IF
+    IF Style.DrawWidth > Core.UI_MAX_LAYOUT_VALUE OR Style.DrawHeight > Core.UI_MAX_LAYOUT_VALUE OR Style.AdvanceX > Core.UI_MAX_LAYOUT_VALUE OR Style.LineHeight > Core.UI_MAX_LAYOUT_VALUE THEN
+        RETURN FALSE
+    END IF
+    IF Style.FilterMode <> Core.UI_FILTER_SMOOTH AND Style.FilterMode <> Core.UI_FILTER_PIXEL THEN
+        RETURN FALSE
+    END IF
+    IF Style.FirstCodePoint < 0 OR Style.FirstCodePoint > 1114111 THEN
+        RETURN FALSE
+    END IF
+    IF Style.GlyphCount - 1 > 1114111 - Style.FirstCodePoint THEN
+        RETURN FALSE
+    END IF
+    LastCodePoint = Style.FirstCodePoint + Style.GlyphCount - 1
+    IF Style.FirstCodePoint <= 57343 AND LastCodePoint >= 55296 THEN
+        RETURN FALSE
+    END IF
+    ImageWidth = IMAGE_WIDTH(Style.Atlas)
+    ImageHeight = IMAGE_HEIGHT(Style.Atlas)
+    IF Style.SourceX > ImageWidth OR Style.SourceY > ImageHeight THEN
+        RETURN FALSE
+    END IF
+    RemainingWidth = ImageWidth - Style.SourceX
+    RemainingHeight = ImageHeight - Style.SourceY
+    IF Style.Columns > RemainingWidth / Style.SourceCellWidth THEN
+        RETURN FALSE
+    END IF
+    Rows = Style.GlyphCount / Style.Columns
+    IF Style.GlyphCount MOD Style.Columns <> 0 THEN
+        Rows = Rows + 1
+    END IF
+    IF Rows > RemainingHeight / Style.SourceCellHeight THEN
+        RETURN FALSE
+    END IF
+    RETURN TRUE
 END FUNCTION
 
 PUBLIC FUNCTION Create(BYREF Style AS Core.BitmapFontStyle) AS NUMBER

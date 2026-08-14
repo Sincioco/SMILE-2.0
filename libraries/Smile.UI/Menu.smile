@@ -13,6 +13,7 @@ PRIVATE DIM MenuX[16] AS NUMBER
 PRIVATE DIM MenuY[16] AS NUMBER
 PRIVATE DIM MenuWidth[16] AS NUMBER
 PRIVATE DIM MenuHeight[16] AS NUMBER
+PRIVATE DIM MenuRequestedVisibleRows[16] AS NUMBER
 PRIVATE DIM MenuVisibleRows[16] AS NUMBER
 PRIVATE DIM MenuItemCount[16] AS NUMBER
 PRIVATE DIM MenuSelected[16] AS NUMBER
@@ -23,6 +24,7 @@ PRIVATE DIM ItemEnabled[16, 64] AS BOOLEAN
 
 PRIVATE FUNCTION SlotFromHandle(Handle AS NUMBER) AS NUMBER
     DIM Slot AS NUMBER
+
     DIM Generation AS NUMBER
     IF Handle <= 0 THEN
         RETURN -1
@@ -39,21 +41,43 @@ PRIVATE FUNCTION SlotFromHandle(Handle AS NUMBER) AS NUMBER
 END FUNCTION
 
 PUBLIC FUNCTION IsStyleValid(BYREF Style AS Core.MenuStyle) AS BOOLEAN
-    RETURN Style.RowHeight >= 0
+    IF NOT Window.IsStyleValid(Style.Window) OR NOT Text.IsStyleValid(Style.NormalText) OR NOT Text.IsStyleValid(Style.SelectedText) OR NOT Text.IsStyleValid(Style.DisabledText) THEN
+        RETURN FALSE
+    END IF
+    IF Style.RowHeight < 0 OR Style.RowHeight > Core.UI_MAX_LAYOUT_VALUE THEN
+        RETURN FALSE
+    END IF
+    IF Style.CursorWidth < 0 OR Style.CursorWidth > Core.UI_MAX_LAYOUT_VALUE OR Style.CursorHeight < 0 OR Style.CursorHeight > Core.UI_MAX_LAYOUT_VALUE THEN
+        RETURN FALSE
+    END IF
+    IF Style.CursorOffsetX < -Core.UI_MAX_LAYOUT_VALUE OR Style.CursorOffsetX > Core.UI_MAX_LAYOUT_VALUE OR Style.CursorOffsetY < -Core.UI_MAX_LAYOUT_VALUE OR Style.CursorOffsetY > Core.UI_MAX_LAYOUT_VALUE THEN
+        RETURN FALSE
+    END IF
+    IF Style.CursorFilterMode <> Core.UI_FILTER_SMOOTH AND Style.CursorFilterMode <> Core.UI_FILTER_PIXEL THEN
+        RETURN FALSE
+    END IF
+    IF Style.UseCursor AND IMAGE_LOADED(Style.Cursor) AND (Style.CursorWidth <= 0 OR Style.CursorHeight <= 0) THEN
+        RETURN FALSE
+    END IF
+    RETURN TRUE
+END FUNCTION
+
+PRIVATE FUNCTION EffectiveRowHeight(Slot AS NUMBER) AS NUMBER
+    IF MenuStyles[Slot].RowHeight <= 0 THEN
+        RETURN 32
+    END IF
+    RETURN MenuStyles[Slot].RowHeight
 END FUNCTION
 
 PRIVATE SUB ClampVisibleRows(Slot AS NUMBER)
     DIM Content AS Core.Rect
     DIM Maximum AS NUMBER
-    IF MenuStyles[Slot].RowHeight <= 0 THEN
-        MenuStyles[Slot].RowHeight = 32
-    END IF
     Content = Window.ContentRect(MenuStyles[Slot].Window, MenuX[Slot], MenuY[Slot], MenuWidth[Slot], MenuHeight[Slot])
-    Maximum = Content.Height / MenuStyles[Slot].RowHeight
+    Maximum = Content.Height / EffectiveRowHeight(Slot)
     IF Maximum < 1 THEN
         Maximum = 1
     END IF
-    MenuVisibleRows[Slot] = MAX(1, MIN(MenuVisibleRows[Slot], Maximum))
+    MenuVisibleRows[Slot] = MAX(1, MIN(MenuRequestedVisibleRows[Slot], Maximum))
 END SUB
 
 PUBLIC FUNCTION Create(BYREF Style AS Core.MenuStyle, X AS NUMBER, Y AS NUMBER, Width AS NUMBER, Height AS NUMBER, VisibleRows AS NUMBER) AS NUMBER
@@ -80,9 +104,10 @@ PUBLIC FUNCTION Create(BYREF Style AS Core.MenuStyle, X AS NUMBER, Y AS NUMBER, 
     MenuStyles[Slot] = Style
     MenuX[Slot] = X
     MenuY[Slot] = Y
-    MenuWidth[Slot] = MAX(0, Width)
-    MenuHeight[Slot] = MAX(0, Height)
-    MenuVisibleRows[Slot] = MAX(1, VisibleRows)
+    MenuWidth[Slot] = MAX(0, MIN(Core.UI_MAX_LAYOUT_VALUE, Width))
+    MenuHeight[Slot] = MAX(0, MIN(Core.UI_MAX_LAYOUT_VALUE, Height))
+    MenuRequestedVisibleRows[Slot] = MAX(1, MIN(Core.UI_MAX_MENU_ITEMS, VisibleRows))
+    MenuVisibleRows[Slot] = MenuRequestedVisibleRows[Slot]
     MenuItemCount[Slot] = 0
     MenuSelected[Slot] = -1
     MenuTop[Slot] = 0
@@ -131,6 +156,7 @@ PUBLIC FUNCTION SetStyle(Handle AS NUMBER, BYREF Style AS Core.MenuStyle) AS BOO
     END IF
     MenuStyles[Slot] = Style
     CALL ClampVisibleRows(Slot)
+    CALL UpdateTop(Slot)
     RETURN TRUE
 END FUNCTION
 
@@ -149,6 +175,7 @@ PUBLIC FUNCTION AddItem(Handle AS NUMBER, Label AS TEXT, UserValue AS NUMBER, En
     IF Enabled AND MenuSelected[Slot] < 0 THEN
         MenuSelected[Slot] = Index
     END IF
+    CALL UpdateTop(Slot)
     RETURN Index
 END FUNCTION
 
@@ -196,8 +223,8 @@ PUBLIC FUNCTION SetItemEnabled(Handle AS NUMBER, Index AS NUMBER, Enabled AS BOO
     ItemEnabled[Slot, Index] = Enabled
     IF MenuSelected[Slot] < 0 OR NOT ItemEnabled[Slot, MenuSelected[Slot]] THEN
         MenuSelected[Slot] = FirstEnabled(Slot)
-        CALL UpdateTop(Slot)
     END IF
+    CALL UpdateTop(Slot)
     RETURN TRUE
 END FUNCTION
 
@@ -245,6 +272,15 @@ PUBLIC FUNCTION TopIndex(Handle AS NUMBER) AS NUMBER
         RETURN 0
     END IF
     RETURN MenuTop[Slot]
+END FUNCTION
+
+PUBLIC FUNCTION VisibleRows(Handle AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(Handle)
+    IF Slot < 0 THEN
+        RETURN 0
+    END IF
+    RETURN MenuVisibleRows[Slot]
 END FUNCTION
 
 PUBLIC FUNCTION SetSelectedIndex(Handle AS NUMBER, Index AS NUMBER) AS BOOLEAN
@@ -324,6 +360,7 @@ PUBLIC SUB Draw(Handle AS NUMBER)
     DIM ScrollHeight AS NUMBER
     DIM ThumbHeight AS NUMBER
     DIM ThumbY AS NUMBER
+    DIM RowHeight AS NUMBER
     Slot = SlotFromHandle(Handle)
     IF Slot < 0 OR MenuWidth[Slot] <= 0 OR MenuHeight[Slot] <= 0 THEN
         RETURN
@@ -333,16 +370,21 @@ PUBLIC SUB Draw(Handle AS NUMBER)
     IF Content.Width <= 0 OR Content.Height <= 0 THEN
         RETURN
     END IF
+    RowHeight = EffectiveRowHeight(Slot)
     CLIP RECTANGLE Content.X, Content.Y, Content.Width, Content.Height
         FOR Row = 0 TO MenuVisibleRows[Slot] - 1
             Index = MenuTop[Slot] + Row
             IF Index < MenuItemCount[Slot] THEN
-                RowY = Content.Y + Row * MenuStyles[Slot].RowHeight
+                RowY = Content.Y + Row * RowHeight
                 TextX = Content.X + 10
                 IF Index = MenuSelected[Slot] THEN
-                    FILL RECTANGLE Content.X, RowY, Content.Width, MenuStyles[Slot].RowHeight, MenuStyles[Slot].SelectionFillColor
+                    FILL RECTANGLE Content.X, RowY, Content.Width, RowHeight, MenuStyles[Slot].SelectionFillColor
                     IF MenuStyles[Slot].UseCursor AND IMAGE_LOADED(MenuStyles[Slot].Cursor) AND MenuStyles[Slot].CursorWidth > 0 AND MenuStyles[Slot].CursorHeight > 0 THEN
-                        DRAW IMAGE MenuStyles[Slot].Cursor AT Content.X + MenuStyles[Slot].CursorOffsetX, RowY + MenuStyles[Slot].CursorOffsetY SIZE MenuStyles[Slot].CursorWidth BY MenuStyles[Slot].CursorHeight FILTER SMOOTH
+                        IF MenuStyles[Slot].CursorFilterMode = Core.UI_FILTER_PIXEL THEN
+                            DRAW IMAGE MenuStyles[Slot].Cursor AT Content.X + MenuStyles[Slot].CursorOffsetX, RowY + MenuStyles[Slot].CursorOffsetY SIZE MenuStyles[Slot].CursorWidth BY MenuStyles[Slot].CursorHeight FILTER PIXEL
+                        ELSE
+                            DRAW IMAGE MenuStyles[Slot].Cursor AT Content.X + MenuStyles[Slot].CursorOffsetX, RowY + MenuStyles[Slot].CursorOffsetY SIZE MenuStyles[Slot].CursorWidth BY MenuStyles[Slot].CursorHeight FILTER SMOOTH
+                        END IF
                         TextX = Content.X + MenuStyles[Slot].CursorWidth + 8
                     END IF
                     CALL Text.Draw(MenuStyles[Slot].SelectedText, ItemLabels[Slot, Index], TextX, RowY, Core.UI_ALIGN_LEFT, 100)
@@ -354,11 +396,14 @@ PUBLIC SUB Draw(Handle AS NUMBER)
             END IF
         END FOR
         IF MenuStyles[Slot].ShowScrollbar AND MenuItemCount[Slot] > MenuVisibleRows[Slot] THEN
-            ScrollHeight = MIN(Content.Height, MenuVisibleRows[Slot] * MenuStyles[Slot].RowHeight)
+            ScrollHeight = MAX(0, MIN(Content.Height, MenuVisibleRows[Slot] * RowHeight))
             FILL RECTANGLE Content.X + Content.Width - 5, Content.Y, 4, ScrollHeight, DARK_GRAY
-            ThumbHeight = MAX(8, ScrollHeight * MenuVisibleRows[Slot] / MenuItemCount[Slot])
-            ThumbY = Content.Y + (ScrollHeight - ThumbHeight) * MenuTop[Slot] / (MenuItemCount[Slot] - MenuVisibleRows[Slot])
-            FILL RECTANGLE Content.X + Content.Width - 5, ThumbY, 4, ThumbHeight, LIGHT_BLUE
+            IF ScrollHeight > 0 THEN
+                ThumbHeight = MIN(ScrollHeight, MAX(MIN(8, ScrollHeight), ScrollHeight * MenuVisibleRows[Slot] / MenuItemCount[Slot]))
+                ThumbY = Content.Y + (ScrollHeight - ThumbHeight) * MenuTop[Slot] / (MenuItemCount[Slot] - MenuVisibleRows[Slot])
+                ThumbY = MAX(Content.Y, MIN(Content.Y + ScrollHeight - ThumbHeight, ThumbY))
+                FILL RECTANGLE Content.X + Content.Width - 5, ThumbY, 4, ThumbHeight, LIGHT_BLUE
+            END IF
         END IF
     END CLIP
 END SUB

@@ -85,6 +85,11 @@ Require-File 'artifacts\web\Phase4AssetPublication\smile-assets.json' | Out-Null
 Require-File 'artifacts\libraries\Smile.UI.smilelib' | Out-Null
 Require-File 'artifacts\games\Phase5UIStateTests.exe' | Out-Null
 Require-File 'artifacts\games\Phase5UIStateTestsPackage.exe' | Out-Null
+Require-File 'artifacts\games\Phase5Hardening-DirectX\Phase5Hardening.exe' | Out-Null
+Require-File 'artifacts\games\Phase5Hardening-GDI\Phase5Hardening.exe' | Out-Null
+Require-File 'artifacts\games\Phase5HardeningPackage.exe' | Out-Null
+Require-File 'artifacts\web\Phase5Hardening\smile-assets.json' | Out-Null
+Require-File 'artifacts\web\Phase5HardeningPackage\smile-assets.json' | Out-Null
 Require-File 'artifacts\web\MenuGallery\smile-assets.json' | Out-Null
 Require-File 'artifacts\web\MenuGalleryPackage\smile-assets.json' | Out-Null
 
@@ -98,6 +103,9 @@ $nativePrograms = @(
     'artifacts\games\MenuGallery-GDI\MenuGallery.exe',
     'artifacts\games\MenuGalleryPackage.exe',
     'artifacts\games\Phase5DialogueStateTests.exe',
+    'artifacts\games\Phase5Hardening-DirectX\Phase5Hardening.exe',
+    'artifacts\games\Phase5Hardening-GDI\Phase5Hardening.exe',
+    'artifacts\games\Phase5HardeningPackage.exe',
     'artifacts\games\Snake\Snake.exe',
     'artifacts\games\Snake\Snake-NoDemo.exe',
     'artifacts\games\FallingBlocks\FallingBlocks.exe',
@@ -225,8 +233,8 @@ try {
     $manifestReader = [System.IO.StreamReader]::new($manifestEntry.Open())
     try { $vsixManifest = $manifestReader.ReadToEnd() }
     finally { $manifestReader.Dispose() }
-    if ($vsixManifest -notmatch 'Version="2\.0\.28"') {
-        throw 'VSIX identity version is not 2.0.28.'
+    if ($vsixManifest -notmatch 'Version="2\.0\.29"') {
+        throw 'VSIX identity version is not 2.0.29.'
     }
 }
 finally {
@@ -236,11 +244,11 @@ Write-Host 'VSIX compiler, shared-language, and project-template payload verifie
 $visualStudioDll = Require-File 'src\Smile.VisualStudio\bin\Release\net472\Smile.VisualStudio.dll'
 $versionInfo = [Diagnostics.FileVersionInfo]::GetVersionInfo($visualStudioDll)
 $assemblyVersion = [Reflection.AssemblyName]::GetAssemblyName($visualStudioDll).Version.ToString()
-if ($versionInfo.FileVersion -ne '2.0.28.0' -or $versionInfo.ProductVersion -notlike '2.0.28*' -or
-    $assemblyVersion -ne '2.0.28.0') {
+if ($versionInfo.FileVersion -ne '2.0.29.0' -or $versionInfo.ProductVersion -notlike '2.0.29*' -or
+    $assemblyVersion -ne '2.0.29.0') {
     throw "Visual Studio DLL versions differ: file=$($versionInfo.FileVersion), product=$($versionInfo.ProductVersion), assembly=$assemblyVersion."
 }
-Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.28.'
+Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.29.'
 
 $scaleCases = @(
     @{ Width = 960; Height = 540; ExpectedWidth = 960; ExpectedHeight = 540; X = 0; Y = 0 },

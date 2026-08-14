@@ -12,6 +12,7 @@ DIM ItemIndex AS NUMBER
 DIM Index AS NUMBER
 DIM Handles[16] AS NUMBER
 DIM OperationSucceeded AS BOOLEAN
+DIM ReflowStyle AS UI.MenuStyle
 
 Style.RowHeight = 32
 Style.WrapSelection = TRUE
@@ -79,6 +80,27 @@ ItemIndex = Menu.AddItem(Handle, "TWO", 2, TRUE)
 OperationSucceeded = Menu.SetSelectedIndex(Handle, 1)
 PRINT Menu.HandleKey(Handle, KEY_DOWN)
 PRINT Menu.SelectedIndex(Handle)
+CALL Menu.Destroy(Handle)
+
+Style.RowHeight = 24
+Handle = Menu.Create(Style, 0, 0, 300, 180, 6)
+FOR Index = 0 TO 11
+    ItemIndex = Menu.AddItem(Handle, "ITEM", Index, TRUE)
+END FOR
+PRINT Menu.VisibleRows(Handle)
+OperationSucceeded = Menu.SetSelectedIndex(Handle, 10)
+PRINT Menu.TopIndex(Handle)
+ReflowStyle = Style
+ReflowStyle.RowHeight = 80
+OperationSucceeded = Menu.SetStyle(Handle, ReflowStyle)
+PRINT Menu.VisibleRows(Handle)
+PRINT Menu.TopIndex(Handle)
+OperationSucceeded = Menu.SetStyle(Handle, Style)
+PRINT Menu.VisibleRows(Handle)
+PRINT Menu.TopIndex(Handle)
+OperationSucceeded = Menu.SetSelectedIndex(Handle, 5)
+OperationSucceeded = Menu.SetSelectedIndex(Handle, 10)
+PRINT Menu.TopIndex(Handle)
 CALL Menu.Destroy(Handle)
 
 FOR Index = 0 TO 15

@@ -1,0 +1,12 @@
+OPTION EXPLICIT
+
+IMPORT Smile.UI.Core AS UI
+IMPORT Smile.UI.Dialogue AS Dialogue
+
+DIM Handle AS NUMBER
+DIM Style AS UI.DialogueStyle
+DIM Result AS BOOLEAN
+
+Result = Dialogue.SetStyle(Handle, Style)
+
+END PROGRAM

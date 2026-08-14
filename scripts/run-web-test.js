@@ -10,7 +10,7 @@ function fail(message) {
 }
 
 const args = process.argv.slice(2);
-if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio|--phase5-ui]");
+if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio|--phase5-ui|--phase5-hardening]");
 
 const webDirectory = path.resolve(args.shift());
 let expectedPath = null;
@@ -23,6 +23,7 @@ let verifyPhase4Ownership = false;
 let verifyPhase4Clip = false;
 let verifyPhase4Audio = false;
 let verifyPhase5Ui = false;
+let verifyPhase5Hardening = false;
 while (args.length !== 0) {
     const option = args.shift();
     if (option === "--phase4-media") {
@@ -33,6 +34,7 @@ while (args.length !== 0) {
     if (option === "--phase4-clip") { verifyPhase4Clip = true; continue; }
     if (option === "--phase4-audio") { verifyPhase4Audio = true; continue; }
     if (option === "--phase5-ui") { verifyPhase5Ui = true; continue; }
+    if (option === "--phase5-hardening") { verifyPhase5Hardening = true; continue; }
     const value = args.shift();
     if (value === undefined) fail(`missing value for ${option}`);
     if (option === "--expected") expectedPath = path.resolve(value);
@@ -208,7 +210,7 @@ const host = {
                 const scriptedCode = new Map([
                     [2, "ArrowDown"], [3, "ArrowDown"], [4, "ArrowDown"], [5, "ArrowDown"],
                     [6, "ArrowDown"], [7, "ArrowUp"], [8, "Digit2"], [9, "Enter"],
-                    [10, "Space"], [11, "Escape"], [12, "Digit3"], [13, "Digit1"]
+                    [10, "Digit3"], [11, "Digit1"], [12, "Space"], [13, "Escape"]
                 ]).get(requestedFrames);
                 if (scriptedCode) {
                     const event = { code: scriptedCode, repeat: false, ctrlKey: false, altKey: false,
@@ -375,7 +377,7 @@ const started = Date.now();
     }
     if (verifyPhase5Ui) {
         const expectedKeys = ["ArrowDown", "ArrowDown", "ArrowDown", "ArrowDown", "ArrowDown", "ArrowUp",
-            "Digit2", "Enter", "Space", "Escape", "Digit3", "Digit1"];
+            "Digit2", "Enter", "Digit3", "Digit1", "Space", "Escape"];
         if (phase5Keys.join("|") !== expectedKeys.join("|"))
             fail(`Phase 5 scripted key sequence differed: ${phase5Keys.join(", ")}`);
         const basenames = imageDraws.map(draw => path.basename(draw.source));
@@ -414,6 +416,29 @@ const started = Date.now();
         if (hostConsoleErrors.length !== 0)
             fail(`Phase 5 Web console reported errors: ${hostConsoleErrors.join("\n")}`);
     }
+    if (verifyPhase5Hardening) {
+        const basenames = imageDraws.map(draw => path.basename(draw.source));
+        for (const required of ["WindowSkin.png", "Cursor.png", "BitmapFont.png"])
+            if (!basenames.includes(required)) fail(`Phase 5.1 Web draws did not include ${required}`);
+        if (!imageDraws.some(draw => draw.smoothing === true) || !imageDraws.some(draw => draw.smoothing === false))
+            fail("Phase 5.1 smooth and pixel UI filters were not both recorded");
+        const bitmapLineYs = new Set(imageDraws.filter(draw => path.basename(draw.source) === "BitmapFont.png")
+            .map(draw => draw.values[5]));
+        if (bitmapLineYs.size < 2)
+            fail(`Phase 5.1 bitmap multiline drawing did not span two lines: ${JSON.stringify([...bitmapLineYs])}`);
+        const systemLines = textDraws.map(draw => draw.value);
+        if (!systemLines.includes("SYSTEM") || !systemLines.includes("MULTILINE") || systemLines.includes("HIDDEN"))
+            fail(`Phase 5.1 system multiline/opacity drawing differed: ${JSON.stringify(systemLines)}`);
+        const tinyScrollbar = fillRectangleDraws.filter(draw => draw.values[0] === 625 && draw.values[2] === 4);
+        if (tinyScrollbar.length !== 2 || tinyScrollbar.some(draw => draw.values[1] < 350 || draw.values[3] < 0 || draw.values[1] + draw.values[3] > 353))
+            fail(`Phase 5.1 tiny scrollbar escaped its track: ${JSON.stringify(tinyScrollbar)}`);
+        if (diagnostics.backingWidth <= diagnostics.logicalWidth || diagnostics.backingHeight <= diagnostics.logicalHeight)
+            fail(`Phase 5.1 DPR backing store was not high resolution: ${diagnostics.backingWidth}x${diagnostics.backingHeight}`);
+        if (diagnostics.imageCacheCount !== 0 || diagnostics.imageReferenceCount !== 0 || !diagnostics.mediaStopped)
+            fail(`Phase 5.1 Web ownership/shutdown was incomplete: ${JSON.stringify(diagnostics)}`);
+        if (hostConsoleErrors.length !== 0)
+            fail(`Phase 5.1 Web console reported errors: ${hostConsoleErrors.join("\n")}`);
+    }
 
     process.stdout.write(`Web execution passed: ${webDirectory}`);
     if (expectedPath !== null || nativeOutputPath !== null) process.stdout.write(" (exact console parity)");
@@ -423,5 +448,6 @@ const started = Date.now();
     if (verifyPhase4Clip) process.stdout.write(" (Phase 4.1 clip/high-DPI resize parity)");
     if (verifyPhase4Audio) process.stdout.write(" (Phase 4.1 audio generation/shutdown parity)");
     if (verifyPhase5Ui) process.stdout.write(" (Phase 5 scripted UI/high-DPI/painter/audio/ownership parity)");
+    if (verifyPhase5Hardening) process.stdout.write(" (Phase 5.1 validation/reflow/multiline/high-DPI/ownership parity)");
     process.stdout.write("\n");
 })().catch(error => fail(error && error.stack ? error.stack : String(error)));

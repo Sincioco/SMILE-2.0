@@ -176,6 +176,16 @@ Run("Phase 5 TEXT inspection built-ins use Unicode scalar signatures", () =>
     Equal(true, HasDiagnostic(Analyze("PRINT TEXT_CODE_AT(\"A\", TRUE)\n"), "SML3700"));
     Equal(true, HasDiagnostic(Analyze("PRINT TEXT_SLICE(\"A\", 0, FALSE)\n"), "SML3700"));
 });
+Run("Phase 5.1 text literals preserve embedded and trailing newlines", () =>
+{
+    var analysis = Analyze("DIM Value AS TEXT\nValue = \"\nONE\nTWO\n\"\nPRINT TEXT_LENGTH(Value)\n");
+    Equal(false, analysis.HasErrors);
+    var windowsAnalysis = Analyze("DIM Value AS TEXT\r\nValue = \"\r\nONE\r\nTWO\r\n\"\r\nPRINT TEXT_LENGTH(Value)\r\n");
+    Equal(false, windowsAnalysis.HasErrors);
+    var literal = (LiteralExpressionSyntax)windowsAnalysis.SyntaxTree.Root.Statements
+        .OfType<AssignmentStatementSyntax>().Single().Expression;
+    Equal("\nONE\nTWO\n", (string)literal.Value);
+});
 Run("Phase 5 routine GAME WINDOW capabilities are direct transitive and call-site located", () =>
 {
     const string module = "MODULE Test.UI\nPUBLIC SUB Draw()\nFILL RECTANGLE 0, 0, 10, 10, WHITE\nEND SUB\nPUBLIC SUB Wrapper()\nCALL Draw()\nEND SUB\nPUBLIC SUB RecursiveA()\nCALL RecursiveB()\nEND SUB\nPUBLIC SUB RecursiveB()\nCALL RecursiveA()\nCALL Draw()\nEND SUB\nPUBLIC SUB Pure()\nEND SUB\nEND MODULE\n";
