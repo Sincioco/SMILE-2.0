@@ -812,7 +812,7 @@ internal sealed class ModuleProcessor
     {
         if (module == null || !module.Members.TryGetValue(token.Text, out var member))
             return token;
-        return SemanticToken(token, member.SemanticName);
+        return SemanticToken(token, member.SemanticName, module.Name + "." + member.Name);
     }
 
     private SyntaxToken TypeDeclarationToken(SyntaxToken token, ModuleSymbol? module)
@@ -962,8 +962,9 @@ internal sealed class ModuleProcessor
         }
     }
 
-    private static SyntaxToken SemanticToken(SyntaxToken original, string semanticName) =>
-        new(SyntaxKind.IdentifierToken, original.Position, semanticName, spanLength: original.Span.Length);
+    private static SyntaxToken SemanticToken(SyntaxToken original, string semanticName, string? displayName = null) =>
+        new(SyntaxKind.IdentifierToken, original.Position, semanticName,
+            value: displayName ?? original.Value, spanLength: original.Span.Length);
 
     private static string SemanticName(string moduleName, string memberName)
     {

@@ -185,7 +185,7 @@ public sealed class SmileLibraryBuildFingerprint
 
 public static class SmileLibraryPackage
 {
-    public const int CurrentFormatVersion = 4;
+    public const int CurrentFormatVersion = 5;
     private static readonly DateTimeOffset DeterministicTimestamp =
         new(1980, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
@@ -403,7 +403,7 @@ public static class SmileLibraryPackage
     {
         if (modules == null) throw new ArgumentNullException(nameof(modules));
         if (dependencyContext == null) throw new ArgumentNullException(nameof(dependencyContext));
-        var builder = new StringBuilder("{\n  \"formatVersion\": 4,\n  \"modules\": [");
+        var builder = new StringBuilder("{\n  \"formatVersion\": 5,\n  \"modules\": [");
         var orderedModules = modules.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray();
         for (var moduleIndex = 0; moduleIndex < orderedModules.Length; moduleIndex++)
         {
@@ -440,6 +440,8 @@ public static class SmileLibraryPackage
                     builder.Append(", \"returnType\": \"")
                         .Append(member.Routine.IsFunction ? JsonEscape(TypeIdentity(member.Routine.ReturnType)) : "VOID")
                         .Append('"');
+                    builder.Append(", \"requiresGameWindow\": ")
+                        .Append(member.Routine.RequiresGameWindow ? "true" : "false");
                     if (member.Routine.IsFunction)
                         AppendTypeProvider(builder, "returnProvider", member.Routine.ReturnType, dependencyContext);
                     builder.Append(", \"parameters\": [")
@@ -483,7 +485,7 @@ public static class SmileLibraryPackage
         var dependencyJson = string.Join(",\n", dependencies.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .Select(item => "    {\"name\": \"" + JsonEscape(item.Name) + "\", \"version\": \"" +
                             JsonEscape(item.Version) + "\"}"));
-        return "{\n  \"formatVersion\": 4,\n  \"name\": \"" + JsonEscape(project.LibraryName) +
+        return "{\n  \"formatVersion\": 5,\n  \"name\": \"" + JsonEscape(project.LibraryName) +
                "\",\n  \"version\": \"" + JsonEscape(project.Version) + "\",\n  \"modules\": [" + moduleJson +
                "],\n  \"sources\": [" + sourceJson + "],\n  \"sourceHashes\": {\n" + hashJson +
                "\n  },\n  \"dependencies\": [\n" + dependencyJson + "\n  ]\n}\n";
@@ -515,8 +517,8 @@ public static class SmileLibraryPackage
     private static SmileLibraryIdentity ParseIdentity(PackageManifest manifest)
     {
         if (manifest.FormatVersion != CurrentFormatVersion)
-            throw new InvalidDataException(manifest.FormatVersion is 1 or 2 or 3
-                ? $"SMILE library formatVersion {manifest.FormatVersion} is obsolete; rebuild the library with the current SMILE compiler (formatVersion 4)."
+            throw new InvalidDataException(manifest.FormatVersion is 1 or 2 or 3 or 4
+                ? $"SMILE library formatVersion {manifest.FormatVersion} is obsolete; rebuild the library with the current SMILE compiler (formatVersion 5)."
                 : $"Unsupported SMILE library formatVersion {manifest.FormatVersion}; expected {CurrentFormatVersion}. Rebuild the library with the current SMILE compiler.");
         var name = RequiredValue(manifest.Name, "name");
         var version = RequiredValue(manifest.Version, "version");

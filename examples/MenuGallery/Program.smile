@@ -1,0 +1,262 @@
+OPTION EXPLICIT
+
+IMPORT Smile.UI.Core AS UI
+IMPORT Smile.UI.BitmapFont AS BitmapFont
+IMPORT Smile.UI.Menu AS Menu
+IMPORT Smile.UI.Dialogue AS Dialogue
+
+GAME WINDOW "SMILE 2.0 Menu Gallery" SIZE 960 BY 540
+
+DIM Background AS IMAGE
+DIM WindowSkin AS IMAGE
+DIM CursorImage AS IMAGE
+DIM ContinueImage AS IMAGE
+DIM FontAtlas AS IMAGE
+
+DIM FontDefinition AS UI.BitmapFontStyle
+DIM FontHandle AS NUMBER
+
+DIM SkinWindow AS UI.WindowStyle
+DIM VectorWindow AS UI.WindowStyle
+
+DIM SystemText AS UI.TextStyle
+DIM SystemSelectedText AS UI.TextStyle
+DIM SystemDisabledText AS UI.TextStyle
+DIM BitmapText AS UI.TextStyle
+DIM BitmapSelectedText AS UI.TextStyle
+DIM BitmapDisabledText AS UI.TextStyle
+
+DIM MenuStyle AS UI.MenuStyle
+DIM DialogueStyle AS UI.DialogueStyle
+
+DIM MenuHandle AS NUMBER
+DIM DialogueHandle AS NUMBER
+DIM Key AS NUMBER
+DIM Event AS NUMBER
+DIM SelectedValue AS NUMBER
+DIM Running AS BOOLEAN
+DIM ItemIndex AS NUMBER
+DIM OperationSucceeded AS BOOLEAN
+DIM UpdateEvent AS NUMBER
+
+LOAD IMAGE Background FROM "Assets\Background.png"
+LOAD IMAGE WindowSkin FROM "Assets\WindowSkin.png"
+LOAD IMAGE CursorImage FROM "Assets\Cursor.png"
+LOAD IMAGE ContinueImage FROM "Assets\Continue.png"
+LOAD IMAGE FontAtlas FROM "Assets\BitmapFont.png"
+
+FontDefinition.Atlas = FontAtlas
+FontDefinition.SourceX = 0
+FontDefinition.SourceY = 0
+FontDefinition.FirstCodePoint = 32
+FontDefinition.GlyphCount = 96
+FontDefinition.Columns = 16
+FontDefinition.SourceCellWidth = 64
+FontDefinition.SourceCellHeight = 64
+FontDefinition.DrawWidth = 25
+FontDefinition.DrawHeight = 25
+FontDefinition.AdvanceX = 21
+FontDefinition.LineHeight = 30
+FontDefinition.FallbackCodePoint = 63
+FontDefinition.FilterMode = UI.UI_FILTER_SMOOTH
+
+FontHandle = BitmapFont.Create(FontDefinition)
+
+SkinWindow.UseSkin = TRUE
+SkinWindow.Skin = WindowSkin
+SkinWindow.SourceX = 0
+SkinWindow.SourceY = 0
+SkinWindow.SourceWidth = 768
+SkinWindow.SourceHeight = 768
+SkinWindow.SourceLeft = 192
+SkinWindow.SourceTop = 192
+SkinWindow.SourceRight = 192
+SkinWindow.SourceBottom = 192
+SkinWindow.DestinationLeft = 34
+SkinWindow.DestinationTop = 34
+SkinWindow.DestinationRight = 34
+SkinWindow.DestinationBottom = 34
+SkinWindow.FillColor = RGB(15, 23, 48)
+SkinWindow.BorderColor = RGB(120, 210, 255)
+SkinWindow.BorderThickness = 2
+SkinWindow.Opacity = 96
+SkinWindow.FilterMode = UI.UI_FILTER_SMOOTH
+SkinWindow.Padding.Left = 34
+SkinWindow.Padding.Top = 28
+SkinWindow.Padding.Right = 28
+SkinWindow.Padding.Bottom = 26
+
+VectorWindow = SkinWindow
+VectorWindow.UseSkin = FALSE
+VectorWindow.FillColor = RGB(13, 19, 42)
+VectorWindow.BorderColor = RGB(98, 213, 255)
+VectorWindow.BorderThickness = 3
+VectorWindow.Padding.Left = 28
+VectorWindow.Padding.Top = 24
+VectorWindow.Padding.Right = 24
+VectorWindow.Padding.Bottom = 22
+
+SystemText.Mode = UI.UI_TEXT_SYSTEM
+SystemText.SystemSize = 25
+SystemText.SystemColor = WHITE
+SystemText.BitmapFontHandle = 0
+SystemText.LineSpacing = 5
+
+SystemSelectedText = SystemText
+SystemSelectedText.SystemColor = YELLOW
+
+SystemDisabledText = SystemText
+SystemDisabledText.SystemColor = DARK_GRAY
+
+BitmapText.Mode = UI.UI_TEXT_BITMAP
+BitmapText.SystemSize = 25
+BitmapText.SystemColor = WHITE
+BitmapText.BitmapFontHandle = FontHandle
+BitmapText.LineSpacing = 5
+
+BitmapSelectedText = BitmapText
+BitmapDisabledText = BitmapText
+
+MenuStyle.Window = SkinWindow
+MenuStyle.NormalText = SystemText
+MenuStyle.SelectedText = SystemSelectedText
+MenuStyle.DisabledText = SystemDisabledText
+MenuStyle.SelectionFillColor = RGB(45, 77, 130)
+MenuStyle.UseCursor = TRUE
+MenuStyle.Cursor = CursorImage
+MenuStyle.CursorWidth = 30
+MenuStyle.CursorHeight = 30
+MenuStyle.CursorOffsetX = 0
+MenuStyle.CursorOffsetY = -2
+MenuStyle.RowHeight = 43
+MenuStyle.WrapSelection = TRUE
+MenuStyle.ShowScrollbar = TRUE
+
+DialogueStyle.Window = SkinWindow
+DialogueStyle.Text = SystemText
+DialogueStyle.CharactersPerSecond = 32
+DialogueStyle.LineSpacing = 5
+DialogueStyle.UseContinueIndicator = TRUE
+DialogueStyle.ContinueIndicator = ContinueImage
+DialogueStyle.IndicatorWidth = 24
+DialogueStyle.IndicatorHeight = 24
+DialogueStyle.IndicatorOffsetX = -14
+DialogueStyle.IndicatorOffsetY = -12
+DialogueStyle.IndicatorBlinkMilliseconds = 420
+
+MenuHandle = Menu.Create(MenuStyle, 54, 75, 360, 390, 6)
+ItemIndex = Menu.AddItem(MenuHandle, "ITEM", 1, TRUE)
+ItemIndex = Menu.AddItem(MenuHandle, "MAGIC", 2, TRUE)
+ItemIndex = Menu.AddItem(MenuHandle, "EQUIP", 3, TRUE)
+ItemIndex = Menu.AddItem(MenuHandle, "STATUS", 4, TRUE)
+ItemIndex = Menu.AddItem(MenuHandle, "FORMATION", 5, FALSE)
+ItemIndex = Menu.AddItem(MenuHandle, "SAVE", 6, TRUE)
+ItemIndex = Menu.AddItem(MenuHandle, "OPTIONS", 7, TRUE)
+ItemIndex = Menu.AddItem(MenuHandle, "EXIT", 8, TRUE)
+
+DialogueHandle = Dialogue.Create(DialogueStyle, 438, 290, 470, 205)
+Running = TRUE
+
+DO
+    GET KEY Key
+    Event = UI.UI_EVENT_NONE
+
+    IF Key = KEY_1 THEN
+        MenuStyle.Window = SkinWindow
+        MenuStyle.NormalText = SystemText
+        MenuStyle.SelectedText = SystemSelectedText
+        MenuStyle.DisabledText = SystemDisabledText
+        DialogueStyle.Window = SkinWindow
+        DialogueStyle.Text = SystemText
+        OperationSucceeded = Menu.SetStyle(MenuHandle, MenuStyle)
+        OperationSucceeded = Dialogue.SetStyle(DialogueHandle, DialogueStyle)
+    ELSE IF Key = KEY_2 THEN
+        MenuStyle.Window = SkinWindow
+        MenuStyle.NormalText = BitmapText
+        MenuStyle.SelectedText = BitmapSelectedText
+        MenuStyle.DisabledText = BitmapDisabledText
+        DialogueStyle.Window = SkinWindow
+        DialogueStyle.Text = BitmapText
+        OperationSucceeded = Menu.SetStyle(MenuHandle, MenuStyle)
+        OperationSucceeded = Dialogue.SetStyle(DialogueHandle, DialogueStyle)
+    ELSE IF Key = KEY_3 THEN
+        MenuStyle.Window = VectorWindow
+        MenuStyle.NormalText = SystemText
+        MenuStyle.SelectedText = SystemSelectedText
+        MenuStyle.DisabledText = SystemDisabledText
+        DialogueStyle.Window = VectorWindow
+        DialogueStyle.Text = SystemText
+        OperationSucceeded = Menu.SetStyle(MenuHandle, MenuStyle)
+        OperationSucceeded = Dialogue.SetStyle(DialogueHandle, DialogueStyle)
+    ELSE
+        IF Dialogue.IsActive(DialogueHandle) THEN
+            Event = Dialogue.HandleKey(DialogueHandle, Key, TIMER())
+        ELSE
+            Event = Menu.HandleKey(MenuHandle, Key)
+
+            IF Event = UI.UI_EVENT_ACCEPTED THEN
+                SelectedValue = Menu.SelectedValue(MenuHandle)
+                CALL Dialogue.ClearPages(DialogueHandle)
+
+                IF SelectedValue = 1 THEN
+                    OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Items will be implemented later by the reusable Inventory phase. This gallery proves generic window, menu, and dialogue components.")
+                ELSE IF SelectedValue = 2 THEN
+                    OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Magic will later use reusable Abilities and MP systems. Phase 5 returns a selected command value to the game.")
+                ELSE IF SelectedValue = 3 THEN
+                    OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Equipment is deliberately outside this UI library. The menu knows labels, enabled state, selection, and user values - not RPG rules.")
+                ELSE IF SelectedValue = 4 THEN
+                    OperationSucceeded = Dialogue.AddPage(DialogueHandle, "The dialogue renderer wraps Unicode text, reveals it by scalar values 😀, and uses system text or an app-supplied bitmap-font atlas.")
+                ELSE IF SelectedValue = 6 THEN
+                    OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Save-game encoding belongs to a later RPG component. The generic persistent DATA primitive is already available underneath it.")
+                ELSE IF SelectedValue = 7 THEN
+                    OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Press 1 for smooth system text, 2 for the high-resolution bitmap font, or 3 for the vector fallback window.")
+                ELSE IF SelectedValue = 8 THEN
+                    OperationSucceeded = Dialogue.AddPage(DialogueHandle, "This completes the Menu Gallery. Press Enter once more to close the sample.")
+                END IF
+
+                OperationSucceeded = Dialogue.AddPage(DialogueHandle, "The same SMILE library source is running on native Windows and the Web target.")
+                OperationSucceeded = Dialogue.Start(DialogueHandle, TIMER())
+            END IF
+        END IF
+    END IF
+
+    IF Event = UI.UI_EVENT_CHANGED THEN
+        PLAY SOUND "Assets\Move.wav" ON CHANNEL 1
+    ELSE IF Event = UI.UI_EVENT_ACCEPTED OR Event = UI.UI_EVENT_ADVANCED THEN
+        PLAY SOUND "Assets\Confirm.wav" ON CHANNEL 2
+    ELSE IF Event = UI.UI_EVENT_CANCELLED THEN
+        PLAY SOUND "Assets\Cancel.wav" ON CHANNEL 3
+    ELSE IF Event = UI.UI_EVENT_COMPLETED THEN
+        PLAY SOUND "Assets\Confirm.wav" ON CHANNEL 2
+        IF Menu.SelectedValue(MenuHandle) = 8 THEN
+            Running = FALSE
+        END IF
+    END IF
+
+    UpdateEvent = Dialogue.Update(DialogueHandle, TIMER())
+
+    CLEAR RGB(5, 9, 25)
+    DRAW IMAGE Background AT 0, 0 SIZE 960 BY 540 FILTER SMOOTH
+    CALL Menu.Draw(MenuHandle)
+
+    IF Dialogue.IsActive(DialogueHandle) THEN
+        CALL Dialogue.Draw(DialogueHandle, TIMER())
+    END IF
+
+    DRAW TEXT "1 SYSTEM   2 BITMAP   3 VECTOR" AT 480, 20 SIZE 18 COLOR CYAN CENTERED
+    SHOW SCREEN
+    WAIT 8 MILLISECONDS
+LOOP UNTIL GAME_CLOSED() = TRUE OR Running = FALSE
+
+CALL Dialogue.Destroy(DialogueHandle)
+CALL Menu.Destroy(MenuHandle)
+CALL BitmapFont.Destroy(FontHandle)
+
+UNLOAD IMAGE FontAtlas
+UNLOAD IMAGE ContinueImage
+UNLOAD IMAGE CursorImage
+UNLOAD IMAGE WindowSkin
+UNLOAD IMAGE Background
+
+STOP SOUND
+END PROGRAM

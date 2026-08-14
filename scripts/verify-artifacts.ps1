@@ -82,6 +82,11 @@ Require-File 'artifacts\games\Phase4VisualSlice-GDI\Phase4VisualSlice.smile-asse
 Require-File 'artifacts\web\Phase4VisualSlice\smile-assets.json' | Out-Null
 Require-File 'artifacts\games\Phase4AssetPublication\Phase4AssetPublication.smile-assets.json' | Out-Null
 Require-File 'artifacts\web\Phase4AssetPublication\smile-assets.json' | Out-Null
+Require-File 'artifacts\libraries\Smile.UI.smilelib' | Out-Null
+Require-File 'artifacts\games\Phase5UIStateTests.exe' | Out-Null
+Require-File 'artifacts\games\Phase5UIStateTestsPackage.exe' | Out-Null
+Require-File 'artifacts\web\MenuGallery\smile-assets.json' | Out-Null
+Require-File 'artifacts\web\MenuGalleryPackage\smile-assets.json' | Out-Null
 
 $nativePrograms = @(
     'artifacts\games\GraphicsBasics.exe',
@@ -89,6 +94,10 @@ $nativePrograms = @(
     'artifacts\games\GraphicsTextSample.exe',
     'artifacts\games\Phase4VisualSlice-DirectX\Phase4VisualSlice.exe',
     'artifacts\games\Phase4VisualSlice-GDI\Phase4VisualSlice.exe',
+    'artifacts\games\MenuGallery-DirectX\MenuGallery.exe',
+    'artifacts\games\MenuGallery-GDI\MenuGallery.exe',
+    'artifacts\games\MenuGalleryPackage.exe',
+    'artifacts\games\Phase5DialogueStateTests.exe',
     'artifacts\games\Snake\Snake.exe',
     'artifacts\games\Snake\Snake-NoDemo.exe',
     'artifacts\games\FallingBlocks\FallingBlocks.exe',
@@ -144,6 +153,14 @@ foreach ($asset in @('Background.png', 'CharacterSheet.png', 'Foreground.png', '
     Assert-AssetCopy "examples\Phase4VisualSlice\Assets\$asset" "artifacts\games\Phase4VisualSlice-DirectX\Assets\$asset"
     Assert-AssetCopy "examples\Phase4VisualSlice\Assets\$asset" "artifacts\games\Phase4VisualSlice-GDI\Assets\$asset"
     Assert-AssetCopy "examples\Phase4VisualSlice\Assets\$asset" "artifacts\web\Phase4VisualSlice\Assets\$asset"
+}
+foreach ($asset in @('Background.png', 'WindowSkin.png', 'Cursor.png', 'Continue.png', 'BitmapFont.png',
+    'Move.wav', 'Confirm.wav', 'Cancel.wav')) {
+    Assert-AssetCopy "examples\MenuGallery\Assets\$asset" "artifacts\games\MenuGallery-DirectX\Assets\$asset"
+    Assert-AssetCopy "examples\MenuGallery\Assets\$asset" "artifacts\games\MenuGallery-GDI\Assets\$asset"
+    Assert-AssetCopy "examples\MenuGallery\Assets\$asset" "artifacts\games\Assets\$asset"
+    Assert-AssetCopy "examples\MenuGallery\Assets\$asset" "artifacts\web\MenuGallery\Assets\$asset"
+    Assert-AssetCopy "examples\MenuGallery\Assets\$asset" "artifacts\web\MenuGalleryPackage\Assets\$asset"
 }
 $phase42ExpectedPath = Join-Path $repositoryRoot 'examples\Phase4AssetPublication\ExpectedAssetPaths.txt'
 foreach ($asset in Get-Content -LiteralPath $phase42ExpectedPath) {
@@ -208,8 +225,8 @@ try {
     $manifestReader = [System.IO.StreamReader]::new($manifestEntry.Open())
     try { $vsixManifest = $manifestReader.ReadToEnd() }
     finally { $manifestReader.Dispose() }
-    if ($vsixManifest -notmatch 'Version="2\.0\.27"') {
-        throw 'VSIX identity version is not 2.0.27.'
+    if ($vsixManifest -notmatch 'Version="2\.0\.28"') {
+        throw 'VSIX identity version is not 2.0.28.'
     }
 }
 finally {
@@ -219,11 +236,11 @@ Write-Host 'VSIX compiler, shared-language, and project-template payload verifie
 $visualStudioDll = Require-File 'src\Smile.VisualStudio\bin\Release\net472\Smile.VisualStudio.dll'
 $versionInfo = [Diagnostics.FileVersionInfo]::GetVersionInfo($visualStudioDll)
 $assemblyVersion = [Reflection.AssemblyName]::GetAssemblyName($visualStudioDll).Version.ToString()
-if ($versionInfo.FileVersion -ne '2.0.27.0' -or $versionInfo.ProductVersion -notlike '2.0.27*' -or
-    $assemblyVersion -ne '2.0.27.0') {
+if ($versionInfo.FileVersion -ne '2.0.28.0' -or $versionInfo.ProductVersion -notlike '2.0.28*' -or
+    $assemblyVersion -ne '2.0.28.0') {
     throw "Visual Studio DLL versions differ: file=$($versionInfo.FileVersion), product=$($versionInfo.ProductVersion), assembly=$assemblyVersion."
 }
-Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.27.'
+Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.28.'
 
 $scaleCases = @(
     @{ Width = 960; Height = 540; ExpectedWidth = 960; ExpectedHeight = 540; X = 0; Y = 0 },

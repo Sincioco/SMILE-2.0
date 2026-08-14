@@ -1,0 +1,8 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Windows 64-bit .exe" />
+    <Platform Name="Web" />
+  </Configurations>
+  <Project Path="..\..\libraries\Smile.UI\Smile.UI.smilelibproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="fc427bce-d97d-a992-84f5-0833f91e84c1" />
+  <Project Path="MenuGallery.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="0a4eed98-9879-7fde-287f-e8c7c60b3928" />
+</Solution>

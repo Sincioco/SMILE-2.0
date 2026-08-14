@@ -1,0 +1,16 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Library</ProjectKind>
+    <LibraryName>Smile.UI</LibraryName>
+    <Version>1.0.0</Version>
+    <OutputName>Smile.UI</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Core.smile" />
+    <SmileSource Include="Window.smile" />
+    <SmileSource Include="BitmapFont.smile" />
+    <SmileSource Include="Text.smile" />
+    <SmileSource Include="Menu.smile" />
+    <SmileSource Include="Dialogue.smile" />
+  </ItemGroup>
+</SmileProject>

@@ -78,6 +78,9 @@ public enum SyntaxKind
     ImageLoadedKeyword,
     TextWidthKeyword,
     TextHeightKeyword,
+    TextLengthKeyword,
+    TextCodeAtKeyword,
+    TextSliceKeyword,
     GameKeyword,
     WindowKeyword,
     SizeKeyword,
@@ -157,6 +160,7 @@ public enum SyntaxKind
     KeySpaceKeyword,
     Key1Keyword,
     Key2Keyword,
+    Key3Keyword,
     KeyOtherKeyword,
     BlackKeyword,
     WhiteKeyword,
@@ -189,6 +193,9 @@ public static class SyntaxFacts
     private static readonly IReadOnlyList<string> ColorParameters = new[] { "red", "green", "blue" };
     private static readonly IReadOnlyList<string> ImageParameter = new[] { "image" };
     private static readonly IReadOnlyList<string> TextSizeParameters = new[] { "text", "size" };
+    private static readonly IReadOnlyList<string> TextParameter = new[] { "text" };
+    private static readonly IReadOnlyList<string> TextIndexParameters = new[] { "text", "index" };
+    private static readonly IReadOnlyList<string> TextSliceParameters = new[] { "text", "start", "count" };
 
     private static readonly Dictionary<string, SyntaxKind> Keywords = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -239,6 +246,9 @@ public static class SyntaxFacts
         ["IMAGE_LOADED"] = SyntaxKind.ImageLoadedKeyword,
         ["TEXT_WIDTH"] = SyntaxKind.TextWidthKeyword,
         ["TEXT_HEIGHT"] = SyntaxKind.TextHeightKeyword,
+        ["TEXT_LENGTH"] = SyntaxKind.TextLengthKeyword,
+        ["TEXT_CODE_AT"] = SyntaxKind.TextCodeAtKeyword,
+        ["TEXT_SLICE"] = SyntaxKind.TextSliceKeyword,
         ["GAME"] = SyntaxKind.GameKeyword,
         ["WINDOW"] = SyntaxKind.WindowKeyword,
         ["SIZE"] = SyntaxKind.SizeKeyword,
@@ -318,6 +328,7 @@ public static class SyntaxFacts
         ["KEY_SPACE"] = SyntaxKind.KeySpaceKeyword,
         ["KEY_1"] = SyntaxKind.Key1Keyword,
         ["KEY_2"] = SyntaxKind.Key2Keyword,
+        ["KEY_3"] = SyntaxKind.Key3Keyword,
         ["KEY_OTHER"] = SyntaxKind.KeyOtherKeyword,
         ["BLACK"] = SyntaxKind.BlackKeyword,
         ["WHITE"] = SyntaxKind.WhiteKeyword,
@@ -354,7 +365,7 @@ public static class SyntaxFacts
         kind >= SyntaxKind.NoneKeyword && kind <= SyntaxKind.DataBlockMaxBytesKeyword || kind == SyntaxKind.DownKeyword;
 
     public static bool IsBuiltInFunction(SyntaxKind kind) =>
-        kind >= SyntaxKind.TimerKeyword && kind <= SyntaxKind.TextHeightKeyword;
+        kind >= SyntaxKind.TimerKeyword && kind <= SyntaxKind.TextSliceKeyword;
 
     public static IReadOnlyList<string> GetBuiltInFunctionParameters(SyntaxKind kind)
     {
@@ -365,6 +376,9 @@ public static class SyntaxFacts
             SyntaxKind.KeyHeldKeyword => KeyParameter,
             SyntaxKind.ImageWidthKeyword or SyntaxKind.ImageHeightKeyword or SyntaxKind.ImageLoadedKeyword => ImageParameter,
             SyntaxKind.TextWidthKeyword or SyntaxKind.TextHeightKeyword => TextSizeParameters,
+            SyntaxKind.TextLengthKeyword => TextParameter,
+            SyntaxKind.TextCodeAtKeyword => TextIndexParameters,
+            SyntaxKind.TextSliceKeyword => TextSliceParameters,
             SyntaxKind.MinKeyword or SyntaxKind.MaxKeyword => TwoValueParameters,
             SyntaxKind.RgbKeyword => ColorParameters,
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Not a built-in SMILE function.")
@@ -446,6 +460,7 @@ public static class SyntaxFacts
             SyntaxKind.KeySpaceKeyword => 16,
             SyntaxKind.Key1Keyword => 17,
             SyntaxKind.Key2Keyword => 18,
+            SyntaxKind.Key3Keyword => 20,
             SyntaxKind.KeyOtherKeyword => 19,
             SyntaxKind.BlackKeyword => 0x000000,
             SyntaxKind.WhiteKeyword => 0xFFFFFF,

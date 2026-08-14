@@ -1,0 +1,53 @@
+MODULE Smile.UI.Text
+
+OPTION EXPLICIT
+
+IMPORT Smile.UI.Core AS Core
+IMPORT Smile.UI.BitmapFont AS BitmapFont
+
+PRIVATE FUNCTION SystemSize(BYREF Style AS Core.TextStyle) AS NUMBER
+    IF Style.SystemSize <= 0 THEN
+        RETURN 18
+    END IF
+    RETURN Style.SystemSize
+END FUNCTION
+
+PUBLIC FUNCTION MeasureWidth(BYREF Style AS Core.TextStyle, Value AS TEXT) AS NUMBER
+    IF Style.Mode = Core.UI_TEXT_BITMAP AND BitmapFont.IsValid(Style.BitmapFontHandle) THEN
+        RETURN BitmapFont.MeasureWidth(Style.BitmapFontHandle, Value)
+    END IF
+    RETURN TEXT_WIDTH(Value, SystemSize(Style))
+END FUNCTION
+
+PUBLIC FUNCTION MeasureHeight(BYREF Style AS Core.TextStyle, Value AS TEXT) AS NUMBER
+    IF Style.Mode = Core.UI_TEXT_BITMAP AND BitmapFont.IsValid(Style.BitmapFontHandle) THEN
+        RETURN BitmapFont.MeasureHeight(Style.BitmapFontHandle, Value)
+    END IF
+    RETURN TEXT_HEIGHT(Value, SystemSize(Style))
+END FUNCTION
+
+PUBLIC SUB Draw(BYREF Style AS Core.TextStyle, Value AS TEXT, X AS NUMBER, Y AS NUMBER, Alignment AS NUMBER, Opacity AS NUMBER)
+    DIM Width AS NUMBER
+    DIM DrawX AS NUMBER
+    DIM Size AS NUMBER
+    IF Opacity <= 0 THEN
+        RETURN
+    END IF
+    IF Style.Mode = Core.UI_TEXT_BITMAP AND BitmapFont.IsValid(Style.BitmapFontHandle) THEN
+        CALL BitmapFont.Draw(Style.BitmapFontHandle, Value, X, Y, Alignment, MIN(100, Opacity))
+        RETURN
+    END IF
+    Size = SystemSize(Style)
+    DrawX = X
+    IF Alignment = Core.UI_ALIGN_CENTER THEN
+        DRAW TEXT Value AT X, Y SIZE Size COLOR Style.SystemColor CENTERED
+    ELSE
+        IF Alignment = Core.UI_ALIGN_RIGHT THEN
+            Width = TEXT_WIDTH(Value, Size)
+            DrawX = X - Width
+        END IF
+        DRAW TEXT Value AT DrawX, Y SIZE Size COLOR Style.SystemColor
+    END IF
+END SUB
+
+END MODULE

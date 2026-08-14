@@ -78,6 +78,7 @@ Run("Existing key constants retain their values", () =>
     Equal(1L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyWKeyword));
     Equal(14L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyEnterKeyword));
     Equal(18L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.Key2Keyword));
+    Equal(20L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.Key3Keyword));
 });
 Run("Existing graphics statements remain valid", () => Equal(false,
     Analyze("GAME WINDOW \"Existing\"\nFILL RECTANGLE 1, 2, 3, 4, RED\nDRAW CIRCLE 10, 10, 4, WHITE\nDRAW LINE 0, 0, 20, 20, BLUE\n").HasErrors));
@@ -162,6 +163,72 @@ Run("Out-of-range constant sound channels report SML3507", () => Equal(true,
     HasDiagnostic(Analyze("GAME WINDOW \"Audio\"\nPLAY SOUND \"a.wav\" ON CHANNEL 16\n"), "SML3507")));
 Run("IMAGE operators report SML3509", () => Equal(true,
     HasDiagnostic(Analyze("DIM A AS IMAGE\nDIM B AS IMAGE\nPRINT A = B\n"), "SML3509")));
+Run("Phase 5 TEXT inspection built-ins use Unicode scalar signatures", () =>
+{
+    var analysis = Analyze("DIM Value AS TEXT\nValue = \"A😀B\"\nPRINT TEXT_LENGTH(Value)\nPRINT TEXT_CODE_AT(Value, 1)\nPRINT TEXT_SLICE(Value, 1, 1)\n");
+    Equal(false, analysis.HasErrors);
+    var calls = analysis.BoundSyntaxTree.Root.Statements.OfType<PrintStatementSyntax>()
+        .SelectMany(statement => statement.Items).OfType<CallExpressionSyntax>().ToArray();
+    Equal(SmileType.Number, analysis.SemanticModel.GetType(calls.Single(call => call.Identifier.Kind == SyntaxKind.TextLengthKeyword)));
+    Equal(SmileType.Number, analysis.SemanticModel.GetType(calls.Single(call => call.Identifier.Kind == SyntaxKind.TextCodeAtKeyword)));
+    Equal(SmileType.Text, analysis.SemanticModel.GetType(calls.Single(call => call.Identifier.Kind == SyntaxKind.TextSliceKeyword)));
+    Equal(true, HasDiagnostic(Analyze("PRINT TEXT_LENGTH(1)\n"), "SML3700"));
+    Equal(true, HasDiagnostic(Analyze("PRINT TEXT_CODE_AT(\"A\", TRUE)\n"), "SML3700"));
+    Equal(true, HasDiagnostic(Analyze("PRINT TEXT_SLICE(\"A\", 0, FALSE)\n"), "SML3700"));
+});
+Run("Phase 5 routine GAME WINDOW capabilities are direct transitive and call-site located", () =>
+{
+    const string module = "MODULE Test.UI\nPUBLIC SUB Draw()\nFILL RECTANGLE 0, 0, 10, 10, WHITE\nEND SUB\nPUBLIC SUB Wrapper()\nCALL Draw()\nEND SUB\nPUBLIC SUB RecursiveA()\nCALL RecursiveB()\nEND SUB\nPUBLIC SUB RecursiveB()\nCALL RecursiveA()\nCALL Draw()\nEND SUB\nPUBLIC SUB Pure()\nEND SUB\nEND MODULE\n";
+    var library = SmileLanguage.Analyze(new[] { new SmileSourceDocument(module, "UI.smile") }, SmileCompilationKind.Library);
+    if (library.HasErrors)
+        throw new InvalidOperationException(string.Join(" | ", library.Diagnostics.Select(diagnostic => diagnostic.Code + ": " + diagnostic.Message)));
+    var routines = library.SemanticModel.Routines.Values.ToArray();
+    Equal(true, routines.Single(routine => routine.DisplayName == "Test.UI.Draw").RequiresGameWindow);
+    Equal(true, routines.Single(routine => routine.DisplayName == "Test.UI.Wrapper").RequiresGameWindow);
+    Equal(true, routines.Single(routine => routine.DisplayName == "Test.UI.RecursiveA").RequiresGameWindow);
+    Equal(false, routines.Single(routine => routine.DisplayName == "Test.UI.Pure").RequiresGameWindow);
+
+    var console = Multi(("Program.smile", true, "IMPORT Test.UI AS UI\nCALL UI.Wrapper()\nEND PROGRAM\n"),
+        ("UI.smile", false, module));
+    var capabilityDiagnostic = console.Diagnostics.Single(diagnostic => diagnostic.Code == "SML3704");
+    Equal("Program.smile", Path.GetFileName(capabilityDiagnostic.FilePath));
+    Equal(true, capabilityDiagnostic.Message.Contains("Test.UI.Wrapper", StringComparison.Ordinal));
+    Equal(0, console.Diagnostics.Count(diagnostic => diagnostic.Code == "SML3023"));
+
+    var pureConsole = Multi(("Program.smile", true, "IMPORT Test.UI AS UI\nCALL UI.Pure()\nEND PROGRAM\n"),
+        ("UI.smile", false, module));
+    Equal(false, pureConsole.HasErrors);
+    var game = Multi(("Program.smile", true, "IMPORT Test.UI AS UI\nGAME WINDOW \"Capabilities\"\nCALL UI.Wrapper()\nEND PROGRAM\n"),
+        ("UI.smile", false, module));
+    Equal(false, game.HasErrors);
+});
+Run("Phase 5 API keyword names remain identifiers in declaration and member contexts", () =>
+{
+    const string core = "MODULE Context.Core\nPUBLIC TYPE Insets\nLeft AS NUMBER\nRight AS NUMBER\nEND TYPE\nPUBLIC TYPE Style\nWindow AS Insets\nText AS NUMBER\nLine AS NUMBER\nEND TYPE\nEND MODULE\n";
+    const string window = "MODULE Context.Window\nIMPORT Context.Core AS UI\nPUBLIC SUB Draw(BYREF Size AS UI.Style)\nSize.Window.Left = Size.Window.Right\nSize.Text = Size.Line\nEND SUB\nEND MODULE\n";
+    var analysis = SmileLanguage.Analyze(new[]
+    {
+        new SmileSourceDocument(core, "Core.smile"),
+        new SmileSourceDocument(window, "Window.smile")
+    }, SmileCompilationKind.Library);
+    if (analysis.HasErrors)
+        throw new InvalidOperationException(string.Join(" | ", analysis.Diagnostics.Select(diagnostic => diagnostic.Code + ": " + diagnostic.Message)));
+    Equal(false, analysis.HasErrors);
+});
+Run("Emitters resolve locals by routine identity when modules reuse routine names", () =>
+{
+    const string first = "MODULE First.Library\nPUBLIC SUB Set(BYREF Value AS NUMBER)\nValue = 1\nEND SUB\nEND MODULE\n";
+    const string second = "MODULE Second.Library\nPUBLIC SUB Set(BYREF Value AS NUMBER)\nValue = 2\nEND SUB\nEND MODULE\n";
+    var analysis = Multi(
+        ("Program.smile", true, "IMPORT First.Library AS First\nIMPORT Second.Library AS Second\nDIM Value AS NUMBER\nCALL First.Set(Value)\nCALL Second.Set(Value)\n"),
+        ("First.smile", false, first),
+        ("Second.smile", false, second));
+    if (analysis.HasErrors)
+        throw new InvalidOperationException(string.Join(" | ", analysis.Diagnostics.Select(diagnostic => diagnostic.Code + ": " + diagnostic.Message)));
+    Equal(false, analysis.HasErrors);
+    Equal(true, new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit().Contains("routine_", StringComparison.Ordinal));
+    Equal(true, new WebEmitter(analysis).Emit().Contains("async function r_", StringComparison.Ordinal));
+});
 Run("Every music operation requires GAME WINDOW", () =>
 {
     var analysis = Analyze("PLAY MUSIC \"Assets\\Background.mp3\"\nPAUSE MUSIC\nRESUME MUSIC\nSTOP MUSIC\nMUSIC VOLUME 50\n");
@@ -1761,7 +1828,7 @@ Run("Web emitter uses JavaScript TEXT values and BYREF references", () =>
     Equal(true, javascript.Contains(".set(", StringComparison.Ordinal));
     Equal(true, javascript.Contains("\"A\"", StringComparison.Ordinal));
 });
-Run("FormatVersion 4 packages contain deterministic typed public API metadata", () =>
+Run("FormatVersion 5 packages contain deterministic typed public API metadata", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "SmilePhase3APackageTests-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(directory);
@@ -1780,7 +1847,7 @@ Run("FormatVersion 4 packages contain deterministic typed public API metadata", 
         using (var archive = System.IO.Compression.ZipFile.OpenRead(first))
         {
             using var manifestReader = new StreamReader(archive.GetEntry("manifest.json")!.Open());
-            Equal(true, manifestReader.ReadToEnd().Contains("\"formatVersion\": 4", StringComparison.Ordinal));
+            Equal(true, manifestReader.ReadToEnd().Contains("\"formatVersion\": 5", StringComparison.Ordinal));
             using var apiReader = new StreamReader(archive.GetEntry("api/public-symbols.json")!.Open());
             var api = apiReader.ReadToEnd();
             Equal(true, api.Contains("\"type\": \"TEXT\"", StringComparison.Ordinal));
@@ -1789,9 +1856,39 @@ Run("FormatVersion 4 packages contain deterministic typed public API metadata", 
             Equal(true, api.Contains("\"returnType\": \"TEXT\"", StringComparison.Ordinal));
             Equal(false, api.Contains("Hidden", StringComparison.Ordinal));
         }
-        RewriteManifest(first, manifest => manifest.Replace("\"formatVersion\": 4", "\"formatVersion\": 3",
+        RewriteManifest(first, manifest => manifest.Replace("\"formatVersion\": 5", "\"formatVersion\": 4",
             StringComparison.Ordinal));
         ThrowsContains(() => SmileLibraryPackage.ReadIdentity(first), "rebuild the library");
+    }
+    finally { Directory.Delete(directory, true); }
+});
+Run("FormatVersion 5 packages preserve direct and transitive GAME WINDOW capabilities", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmilePhase5CapabilityPackageTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var projectPath = Path.Combine(directory, "Capability.smilelibproj");
+        File.WriteAllText(projectPath,
+            "<SmileProject Version=\"1.0\"><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Capability.Proof</LibraryName><Version>1.0.0</Version><OutputName>Capability</OutputName></PropertyGroup><ItemGroup><SmileSource Include=\"Capability.smile\" /></ItemGroup></SmileProject>");
+        File.WriteAllText(Path.Combine(directory, "Capability.smile"),
+            "MODULE Capability.Proof\nPUBLIC SUB Draw()\nFILL RECTANGLE 0, 0, 1, 1, WHITE\nEND SUB\nPUBLIC SUB Wrapper()\nCALL Draw()\nEND SUB\nPUBLIC SUB Pure()\nEND SUB\nEND MODULE\n");
+        var compilation = SmileProjectCompilation.Load(projectPath, Path.Combine(directory, "cache"));
+        var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library,
+            compilation.DependencyContext);
+        Equal(false, analysis.HasErrors);
+        var package = Path.Combine(directory, "Capability.smilelib");
+        SmileLibraryPackage.Write(package, compilation.Graph.Root, analysis);
+        using var archive = System.IO.Compression.ZipFile.OpenRead(package);
+        using var reader = new StreamReader(archive.GetEntry("api/public-symbols.json")!.Open());
+        using var document = System.Text.Json.JsonDocument.Parse(reader.ReadToEnd());
+        var members = document.RootElement.GetProperty("modules")[0].GetProperty("members");
+        bool Capability(string name) => members.EnumerateArray()
+            .Single(member => member.GetProperty("name").GetString() == name)
+            .GetProperty("requiresGameWindow").GetBoolean();
+        Equal(true, Capability("Draw"));
+        Equal(true, Capability("Wrapper"));
+        Equal(false, Capability("Pure"));
     }
     finally { Directory.Delete(directory, true); }
 });
@@ -1808,7 +1905,7 @@ Run("Typed completion descriptions include parameter modes and returns", () =>
         .GetCompletions(Analyze(typedDeclaration), typedDeclaration.Length).Select(item => item.DisplayText)));
 });
 
-Run("FormatVersion 4 public API metadata preserves IMAGE signatures", () =>
+Run("FormatVersion 5 public API metadata preserves IMAGE signatures", () =>
 {
     var root = Path.Combine(Path.GetTempPath(), "SmilePhase4ImagePackageTests-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(root);
@@ -2083,7 +2180,7 @@ Run("Record completion separates type value alias and indexed-field contexts", (
         .GetCompletions(importedFields, importedFieldSource.Length).Select(item => item.DisplayText)));
 });
 
-Run("FormatVersion 4 public API uses logical provider identities deterministically", () =>
+Run("FormatVersion 5 public API uses logical provider identities deterministically", () =>
 {
     var root = Path.Combine(Path.GetTempPath(), "SmileP3B1ProviderTests-" + Guid.NewGuid().ToString("N"));
     var firstRoot = Path.Combine(root, "checkout-a");

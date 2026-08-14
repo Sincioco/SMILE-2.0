@@ -600,6 +600,24 @@ internal static class WebOutputWriter
                 return safe(Math.ceil(height > 0 ? height : safe(size)));
             }
 
+            function textLength(text) { return safe(Array.from(String(text)).length); }
+
+            function textCodeAt(text, index) {
+                index = safe(index);
+                if (index < 0) return -1;
+                const values = Array.from(String(text));
+                return index >= values.length ? -1 : safe(values[index].codePointAt(0));
+            }
+
+            function textSlice(text, start, count) {
+                start = safe(start); count = safe(count);
+                if (start < 0 || count <= 0) return "";
+                const values = Array.from(String(text));
+                if (start >= values.length) return "";
+                const end = count >= values.length - start ? values.length : safe(start + count);
+                return values.slice(start, end).join("");
+            }
+
             function print(items, suppressNewLine) {
                 canvas.hidden = true;
                 consoleOutput.hidden = false;
@@ -642,6 +660,7 @@ internal static class WebOutputWriter
                     case "Space": return 16;
                     case "Digit1": return 17;
                     case "Digit2": return 18;
+                    case "Digit3": return 20;
                     default: return 19;
                 }
             }
@@ -1012,7 +1031,7 @@ internal static class WebOutputWriter
                 fillRoundedRectangle, drawRoundedRectangle, fillCircle, drawCircle, drawArc,
                 fillQuadrilateral, drawQuadrilateral, drawLine, drawText, drawNumber, loadImage, imageRetain,
                 imageRelease, imageAssign, imageMoveAssign, imageLoaded, imageWidth, imageHeight, drawImage,
-                pushClip, popClip, textWidth, textHeight, showScreen,
+                pushClip, popClip, textWidth, textHeight, textLength, textCodeAt, textSlice, showScreen,
                 print, clearScreen, wait, getKey, keyHeld, playSound, stopSound,
                 playMusic, pauseMusic, resumeMusic, stopMusic, setMusicVolume, loadTextFile,
                 loadInt, saveInt, loadData, saveData, gameClosed, endProgram, mediaShutdown, mediaDiagnostics, run

@@ -1132,6 +1132,8 @@ internal sealed class Parser
     }
 
     private static bool IsContextualIdentifier(SyntaxKind kind) =>
+        kind is SyntaxKind.WindowKeyword or SyntaxKind.SizeKeyword or SyntaxKind.DrawKeyword or SyntaxKind.LineKeyword or
+            SyntaxKind.TextKeyword or SyntaxKind.LeftKeyword or SyntaxKind.RightKeyword ||
         kind >= SyntaxKind.UnloadKeyword && kind <= SyntaxKind.ChannelKeyword;
 
     private static bool IsIdentifierLike(SyntaxKind kind) =>

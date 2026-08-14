@@ -1,0 +1,126 @@
+MODULE Smile.UI.Core
+
+OPTION EXPLICIT
+
+PUBLIC CONST UI_EVENT_NONE = 0
+PUBLIC CONST UI_EVENT_CHANGED = 1
+PUBLIC CONST UI_EVENT_ACCEPTED = 2
+PUBLIC CONST UI_EVENT_CANCELLED = 3
+PUBLIC CONST UI_EVENT_ADVANCED = 4
+PUBLIC CONST UI_EVENT_COMPLETED = 5
+
+PUBLIC CONST UI_ALIGN_LEFT = 0
+PUBLIC CONST UI_ALIGN_CENTER = 1
+PUBLIC CONST UI_ALIGN_RIGHT = 2
+
+PUBLIC CONST UI_TEXT_SYSTEM = 0
+PUBLIC CONST UI_TEXT_BITMAP = 1
+
+PUBLIC CONST UI_FILTER_SMOOTH = 0
+PUBLIC CONST UI_FILTER_PIXEL = 1
+
+PUBLIC CONST UI_MAX_BITMAP_FONTS = 8
+PUBLIC CONST UI_MAX_MENUS = 16
+PUBLIC CONST UI_MAX_MENU_ITEMS = 64
+PUBLIC CONST UI_MAX_DIALOGUES = 8
+PUBLIC CONST UI_MAX_DIALOGUE_PAGES = 32
+PUBLIC CONST UI_MAX_DIALOGUE_LINES = 16
+
+PUBLIC TYPE Rect
+    X AS NUMBER
+    Y AS NUMBER
+    Width AS NUMBER
+    Height AS NUMBER
+END TYPE
+
+PUBLIC TYPE Insets
+    Left AS NUMBER
+    Top AS NUMBER
+    Right AS NUMBER
+    Bottom AS NUMBER
+END TYPE
+
+PUBLIC TYPE BitmapFontStyle
+    Atlas AS IMAGE
+    SourceX AS NUMBER
+    SourceY AS NUMBER
+    FirstCodePoint AS NUMBER
+    GlyphCount AS NUMBER
+    Columns AS NUMBER
+    SourceCellWidth AS NUMBER
+    SourceCellHeight AS NUMBER
+    DrawWidth AS NUMBER
+    DrawHeight AS NUMBER
+    AdvanceX AS NUMBER
+    LineHeight AS NUMBER
+    FallbackCodePoint AS NUMBER
+    FilterMode AS NUMBER
+END TYPE
+
+PUBLIC TYPE TextStyle
+    Mode AS NUMBER
+    SystemSize AS NUMBER
+    SystemColor AS NUMBER
+    BitmapFontHandle AS NUMBER
+    LineSpacing AS NUMBER
+END TYPE
+
+PUBLIC TYPE WindowStyle
+    UseSkin AS BOOLEAN
+    Skin AS IMAGE
+    SourceX AS NUMBER
+    SourceY AS NUMBER
+    SourceWidth AS NUMBER
+    SourceHeight AS NUMBER
+    SourceLeft AS NUMBER
+    SourceTop AS NUMBER
+    SourceRight AS NUMBER
+    SourceBottom AS NUMBER
+    DestinationLeft AS NUMBER
+    DestinationTop AS NUMBER
+    DestinationRight AS NUMBER
+    DestinationBottom AS NUMBER
+    FillColor AS NUMBER
+    BorderColor AS NUMBER
+    BorderThickness AS NUMBER
+    Opacity AS NUMBER
+    FilterMode AS NUMBER
+    Padding AS Insets
+END TYPE
+
+PUBLIC TYPE MenuStyle
+    Window AS WindowStyle
+    NormalText AS TextStyle
+    SelectedText AS TextStyle
+    DisabledText AS TextStyle
+    SelectionFillColor AS NUMBER
+    UseCursor AS BOOLEAN
+    Cursor AS IMAGE
+    CursorWidth AS NUMBER
+    CursorHeight AS NUMBER
+    CursorOffsetX AS NUMBER
+    CursorOffsetY AS NUMBER
+    RowHeight AS NUMBER
+    WrapSelection AS BOOLEAN
+    ShowScrollbar AS BOOLEAN
+END TYPE
+
+PUBLIC TYPE DialogueStyle
+    Window AS WindowStyle
+    Text AS TextStyle
+    CharactersPerSecond AS NUMBER
+    LineSpacing AS NUMBER
+    UseContinueIndicator AS BOOLEAN
+    ContinueIndicator AS IMAGE
+    IndicatorWidth AS NUMBER
+    IndicatorHeight AS NUMBER
+    IndicatorOffsetX AS NUMBER
+    IndicatorOffsetY AS NUMBER
+    IndicatorBlinkMilliseconds AS NUMBER
+END TYPE
+
+PUBLIC FUNCTION IsRectValid(BYREF Value AS Rect) AS BOOLEAN
+    RETURN Value.Width > 0 AND Value.Height > 0
+END FUNCTION
+
+END MODULE

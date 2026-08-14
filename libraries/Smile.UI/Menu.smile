@@ -1,0 +1,366 @@
+MODULE Smile.UI.Menu
+
+OPTION EXPLICIT
+
+IMPORT Smile.UI.Core AS Core
+IMPORT Smile.UI.Window AS Window
+IMPORT Smile.UI.Text AS Text
+
+PRIVATE DIM MenuUsed[16] AS BOOLEAN
+PRIVATE DIM MenuGeneration[16] AS NUMBER
+PRIVATE DIM MenuStyles[16] AS Core.MenuStyle
+PRIVATE DIM MenuX[16] AS NUMBER
+PRIVATE DIM MenuY[16] AS NUMBER
+PRIVATE DIM MenuWidth[16] AS NUMBER
+PRIVATE DIM MenuHeight[16] AS NUMBER
+PRIVATE DIM MenuVisibleRows[16] AS NUMBER
+PRIVATE DIM MenuItemCount[16] AS NUMBER
+PRIVATE DIM MenuSelected[16] AS NUMBER
+PRIVATE DIM MenuTop[16] AS NUMBER
+PRIVATE DIM ItemLabels[16, 64] AS TEXT
+PRIVATE DIM ItemValues[16, 64] AS NUMBER
+PRIVATE DIM ItemEnabled[16, 64] AS BOOLEAN
+
+PRIVATE FUNCTION SlotFromHandle(Handle AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    DIM Generation AS NUMBER
+    IF Handle <= 0 THEN
+        RETURN -1
+    END IF
+    Slot = (Handle MOD 100) - 1
+    Generation = Handle / 100
+    IF Slot < 0 OR Slot >= Core.UI_MAX_MENUS THEN
+        RETURN -1
+    END IF
+    IF NOT MenuUsed[Slot] OR MenuGeneration[Slot] <> Generation THEN
+        RETURN -1
+    END IF
+    RETURN Slot
+END FUNCTION
+
+PUBLIC FUNCTION IsStyleValid(BYREF Style AS Core.MenuStyle) AS BOOLEAN
+    RETURN Style.RowHeight >= 0
+END FUNCTION
+
+PRIVATE SUB ClampVisibleRows(Slot AS NUMBER)
+    DIM Content AS Core.Rect
+    DIM Maximum AS NUMBER
+    IF MenuStyles[Slot].RowHeight <= 0 THEN
+        MenuStyles[Slot].RowHeight = 32
+    END IF
+    Content = Window.ContentRect(MenuStyles[Slot].Window, MenuX[Slot], MenuY[Slot], MenuWidth[Slot], MenuHeight[Slot])
+    Maximum = Content.Height / MenuStyles[Slot].RowHeight
+    IF Maximum < 1 THEN
+        Maximum = 1
+    END IF
+    MenuVisibleRows[Slot] = MAX(1, MIN(MenuVisibleRows[Slot], Maximum))
+END SUB
+
+PUBLIC FUNCTION Create(BYREF Style AS Core.MenuStyle, X AS NUMBER, Y AS NUMBER, Width AS NUMBER, Height AS NUMBER, VisibleRows AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    DIM Index AS NUMBER
+    IF NOT IsStyleValid(Style) THEN
+        RETURN 0
+    END IF
+    Slot = -1
+    FOR Index = 0 TO Core.UI_MAX_MENUS - 1
+        IF NOT MenuUsed[Index] THEN
+            Slot = Index
+            EXIT FOR
+        END IF
+    END FOR
+    IF Slot < 0 THEN
+        RETURN 0
+    END IF
+    MenuGeneration[Slot] = MenuGeneration[Slot] + 1
+    IF MenuGeneration[Slot] <= 0 THEN
+        MenuGeneration[Slot] = 1
+    END IF
+    MenuUsed[Slot] = TRUE
+    MenuStyles[Slot] = Style
+    MenuX[Slot] = X
+    MenuY[Slot] = Y
+    MenuWidth[Slot] = MAX(0, Width)
+    MenuHeight[Slot] = MAX(0, Height)
+    MenuVisibleRows[Slot] = MAX(1, VisibleRows)
+    MenuItemCount[Slot] = 0
+    MenuSelected[Slot] = -1
+    MenuTop[Slot] = 0
+    CALL ClampVisibleRows(Slot)
+    RETURN MenuGeneration[Slot] * 100 + Slot + 1
+END FUNCTION
+
+PUBLIC FUNCTION IsValid(Handle AS NUMBER) AS BOOLEAN
+    RETURN SlotFromHandle(Handle) >= 0
+END FUNCTION
+
+PUBLIC SUB ClearItems(Handle AS NUMBER)
+    DIM Slot AS NUMBER
+    DIM Index AS NUMBER
+    Slot = SlotFromHandle(Handle)
+    IF Slot < 0 THEN
+        RETURN
+    END IF
+    FOR Index = 0 TO Core.UI_MAX_MENU_ITEMS - 1
+        ItemLabels[Slot, Index] = ""
+        ItemValues[Slot, Index] = 0
+        ItemEnabled[Slot, Index] = FALSE
+    END FOR
+    MenuItemCount[Slot] = 0
+    MenuSelected[Slot] = -1
+    MenuTop[Slot] = 0
+END SUB
+
+PUBLIC SUB Destroy(Handle AS NUMBER)
+    DIM Slot AS NUMBER
+    DIM Empty AS Core.MenuStyle
+    Slot = SlotFromHandle(Handle)
+    IF Slot < 0 THEN
+        RETURN
+    END IF
+    CALL ClearItems(Handle)
+    MenuStyles[Slot] = Empty
+    MenuUsed[Slot] = FALSE
+END SUB
+
+PUBLIC FUNCTION SetStyle(Handle AS NUMBER, BYREF Style AS Core.MenuStyle) AS BOOLEAN
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(Handle)
+    IF Slot < 0 OR NOT IsStyleValid(Style) THEN
+        RETURN FALSE
+    END IF
+    MenuStyles[Slot] = Style
+    CALL ClampVisibleRows(Slot)
+    RETURN TRUE
+END FUNCTION
+
+PUBLIC FUNCTION AddItem(Handle AS NUMBER, Label AS TEXT, UserValue AS NUMBER, Enabled AS BOOLEAN) AS NUMBER
+    DIM Slot AS NUMBER
+    DIM Index AS NUMBER
+    Slot = SlotFromHandle(Handle)
+    IF Slot < 0 OR MenuItemCount[Slot] >= Core.UI_MAX_MENU_ITEMS THEN
+        RETURN -1
+    END IF
+    Index = MenuItemCount[Slot]
+    ItemLabels[Slot, Index] = Label
+    ItemValues[Slot, Index] = UserValue
+    ItemEnabled[Slot, Index] = Enabled
+    MenuItemCount[Slot] = Index + 1
+    IF Enabled AND MenuSelected[Slot] < 0 THEN
+        MenuSelected[Slot] = Index
+    END IF
+    RETURN Index
+END FUNCTION
+
+PUBLIC FUNCTION SetItemLabel(Handle AS NUMBER, Index AS NUMBER, Label AS TEXT) AS BOOLEAN
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(Handle)
+    IF Slot < 0 OR Index < 0 OR Index >= MenuItemCount[Slot] THEN
+        RETURN FALSE
+    END IF
+    ItemLabels[Slot, Index] = Label
+    RETURN TRUE
+END FUNCTION
+
+PRIVATE FUNCTION FirstEnabled(Slot AS NUMBER) AS NUMBER
+    DIM Index AS NUMBER
+    FOR Index = 0 TO MenuItemCount[Slot] - 1
+        IF ItemEnabled[Slot, Index] THEN
+            RETURN Index
+        END IF
+    END FOR
+    RETURN -1
+END FUNCTION
+
+PRIVATE SUB UpdateTop(Slot AS NUMBER)
+    DIM Maximum AS NUMBER
+    IF MenuSelected[Slot] < 0 THEN
+        MenuTop[Slot] = 0
+        RETURN
+    END IF
+    IF MenuSelected[Slot] < MenuTop[Slot] THEN
+        MenuTop[Slot] = MenuSelected[Slot]
+    ELSE IF MenuSelected[Slot] >= MenuTop[Slot] + MenuVisibleRows[Slot] THEN
+        MenuTop[Slot] = MenuSelected[Slot] - MenuVisibleRows[Slot] + 1
+    END IF
+    Maximum = MAX(0, MenuItemCount[Slot] - MenuVisibleRows[Slot])
+    MenuTop[Slot] = MAX(0, MIN(MenuTop[Slot], Maximum))
+END SUB
+
+PUBLIC FUNCTION SetItemEnabled(Handle AS NUMBER, Index AS NUMBER, Enabled AS BOOLEAN) AS BOOLEAN
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(Handle)
+    IF Slot < 0 OR Index < 0 OR Index >= MenuItemCount[Slot] THEN
+        RETURN FALSE
+    END IF
+    ItemEnabled[Slot, Index] = Enabled
+    IF MenuSelected[Slot] < 0 OR NOT ItemEnabled[Slot, MenuSelected[Slot]] THEN
+        MenuSelected[Slot] = FirstEnabled(Slot)
+        CALL UpdateTop(Slot)
+    END IF
+    RETURN TRUE
+END FUNCTION
+
+PUBLIC FUNCTION SetItemValue(Handle AS NUMBER, Index AS NUMBER, UserValue AS NUMBER) AS BOOLEAN
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(Handle)
+    IF Slot < 0 OR Index < 0 OR Index >= MenuItemCount[Slot] THEN
+        RETURN FALSE
+    END IF
+    ItemValues[Slot, Index] = UserValue
+    RETURN TRUE
+END FUNCTION
+
+PUBLIC FUNCTION ItemCount(Handle AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(Handle)
+    IF Slot < 0 THEN
+        RETURN 0
+    END IF
+    RETURN MenuItemCount[Slot]
+END FUNCTION
+
+PUBLIC FUNCTION SelectedIndex(Handle AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(Handle)
+    IF Slot < 0 THEN
+        RETURN -1
+    END IF
+    RETURN MenuSelected[Slot]
+END FUNCTION
+
+PUBLIC FUNCTION SelectedValue(Handle AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(Handle)
+    IF Slot < 0 OR MenuSelected[Slot] < 0 THEN
+        RETURN 0
+    END IF
+    RETURN ItemValues[Slot, MenuSelected[Slot]]
+END FUNCTION
+
+PUBLIC FUNCTION TopIndex(Handle AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(Handle)
+    IF Slot < 0 THEN
+        RETURN 0
+    END IF
+    RETURN MenuTop[Slot]
+END FUNCTION
+
+PUBLIC FUNCTION SetSelectedIndex(Handle AS NUMBER, Index AS NUMBER) AS BOOLEAN
+    DIM Slot AS NUMBER
+    Slot = SlotFromHandle(Handle)
+    IF Slot < 0 OR Index < 0 OR Index >= MenuItemCount[Slot] OR NOT ItemEnabled[Slot, Index] THEN
+        RETURN FALSE
+    END IF
+    MenuSelected[Slot] = Index
+    CALL UpdateTop(Slot)
+    RETURN TRUE
+END FUNCTION
+
+PRIVATE FUNCTION FindNext(Slot AS NUMBER, Direction AS NUMBER) AS NUMBER
+    DIM Candidate AS NUMBER
+    DIM StepCount AS NUMBER
+    IF MenuSelected[Slot] < 0 OR MenuItemCount[Slot] <= 0 THEN
+        RETURN -1
+    END IF
+    Candidate = MenuSelected[Slot]
+    FOR StepCount = 1 TO MenuItemCount[Slot]
+        Candidate = Candidate + Direction
+        IF Candidate < 0 OR Candidate >= MenuItemCount[Slot] THEN
+            IF NOT MenuStyles[Slot].WrapSelection THEN
+                RETURN -1
+            END IF
+            IF Candidate < 0 THEN
+                Candidate = MenuItemCount[Slot] - 1
+            ELSE
+                Candidate = 0
+            END IF
+        END IF
+        IF ItemEnabled[Slot, Candidate] THEN
+            RETURN Candidate
+        END IF
+    END FOR
+    RETURN -1
+END FUNCTION
+
+PUBLIC FUNCTION HandleKey(Handle AS NUMBER, Key AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    DIM NextIndex AS NUMBER
+    Slot = SlotFromHandle(Handle)
+    IF Slot < 0 THEN
+        RETURN Core.UI_EVENT_NONE
+    END IF
+    IF Key = KEY_ESCAPE THEN
+        RETURN Core.UI_EVENT_CANCELLED
+    END IF
+    IF Key = KEY_ENTER OR Key = KEY_SPACE THEN
+        IF MenuSelected[Slot] >= 0 AND ItemEnabled[Slot, MenuSelected[Slot]] THEN
+            RETURN Core.UI_EVENT_ACCEPTED
+        END IF
+        RETURN Core.UI_EVENT_NONE
+    END IF
+    NextIndex = -1
+    IF Key = KEY_UP THEN
+        NextIndex = FindNext(Slot, -1)
+    ELSE IF Key = KEY_DOWN THEN
+        NextIndex = FindNext(Slot, 1)
+    END IF
+    IF NextIndex >= 0 AND NextIndex <> MenuSelected[Slot] THEN
+        MenuSelected[Slot] = NextIndex
+        CALL UpdateTop(Slot)
+        RETURN Core.UI_EVENT_CHANGED
+    END IF
+    RETURN Core.UI_EVENT_NONE
+END FUNCTION
+
+PUBLIC SUB Draw(Handle AS NUMBER)
+    DIM Slot AS NUMBER
+    DIM Content AS Core.Rect
+    DIM Row AS NUMBER
+    DIM Index AS NUMBER
+    DIM RowY AS NUMBER
+    DIM TextX AS NUMBER
+    DIM ScrollHeight AS NUMBER
+    DIM ThumbHeight AS NUMBER
+    DIM ThumbY AS NUMBER
+    Slot = SlotFromHandle(Handle)
+    IF Slot < 0 OR MenuWidth[Slot] <= 0 OR MenuHeight[Slot] <= 0 THEN
+        RETURN
+    END IF
+    CALL Window.Draw(MenuStyles[Slot].Window, MenuX[Slot], MenuY[Slot], MenuWidth[Slot], MenuHeight[Slot])
+    Content = Window.ContentRect(MenuStyles[Slot].Window, MenuX[Slot], MenuY[Slot], MenuWidth[Slot], MenuHeight[Slot])
+    IF Content.Width <= 0 OR Content.Height <= 0 THEN
+        RETURN
+    END IF
+    CLIP RECTANGLE Content.X, Content.Y, Content.Width, Content.Height
+        FOR Row = 0 TO MenuVisibleRows[Slot] - 1
+            Index = MenuTop[Slot] + Row
+            IF Index < MenuItemCount[Slot] THEN
+                RowY = Content.Y + Row * MenuStyles[Slot].RowHeight
+                TextX = Content.X + 10
+                IF Index = MenuSelected[Slot] THEN
+                    FILL RECTANGLE Content.X, RowY, Content.Width, MenuStyles[Slot].RowHeight, MenuStyles[Slot].SelectionFillColor
+                    IF MenuStyles[Slot].UseCursor AND IMAGE_LOADED(MenuStyles[Slot].Cursor) AND MenuStyles[Slot].CursorWidth > 0 AND MenuStyles[Slot].CursorHeight > 0 THEN
+                        DRAW IMAGE MenuStyles[Slot].Cursor AT Content.X + MenuStyles[Slot].CursorOffsetX, RowY + MenuStyles[Slot].CursorOffsetY SIZE MenuStyles[Slot].CursorWidth BY MenuStyles[Slot].CursorHeight FILTER SMOOTH
+                        TextX = Content.X + MenuStyles[Slot].CursorWidth + 8
+                    END IF
+                    CALL Text.Draw(MenuStyles[Slot].SelectedText, ItemLabels[Slot, Index], TextX, RowY, Core.UI_ALIGN_LEFT, 100)
+                ELSE IF ItemEnabled[Slot, Index] THEN
+                    CALL Text.Draw(MenuStyles[Slot].NormalText, ItemLabels[Slot, Index], TextX, RowY, Core.UI_ALIGN_LEFT, 100)
+                ELSE
+                    CALL Text.Draw(MenuStyles[Slot].DisabledText, ItemLabels[Slot, Index], TextX, RowY, Core.UI_ALIGN_LEFT, 100)
+                END IF
+            END IF
+        END FOR
+        IF MenuStyles[Slot].ShowScrollbar AND MenuItemCount[Slot] > MenuVisibleRows[Slot] THEN
+            ScrollHeight = MIN(Content.Height, MenuVisibleRows[Slot] * MenuStyles[Slot].RowHeight)
+            FILL RECTANGLE Content.X + Content.Width - 5, Content.Y, 4, ScrollHeight, DARK_GRAY
+            ThumbHeight = MAX(8, ScrollHeight * MenuVisibleRows[Slot] / MenuItemCount[Slot])
+            ThumbY = Content.Y + (ScrollHeight - ThumbHeight) * MenuTop[Slot] / (MenuItemCount[Slot] - MenuVisibleRows[Slot])
+            FILL RECTANGLE Content.X + Content.Width - 5, ThumbY, 4, ThumbHeight, LIGHT_BLUE
+        END IF
+    END CLIP
+END SUB
+
+END MODULE

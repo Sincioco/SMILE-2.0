@@ -1,0 +1,11 @@
+# Phase 5 reusable UI implementation report
+
+Phase 5 adds Unicode-scalar `TEXT_LENGTH`, `TEXT_CODE_AT`, and `TEXT_SLICE` to the shared syntax, semantic model, native runtime, Web runtime, emitters, completion, and tests. Native decoding is bounded UTF-8; Web uses code-point-aware iteration. The same shared semantic model derives direct and transitive routine `requiresGameWindow` capability, reports `SML3704` once at a Console consumer call site, and writes the capability into deterministic package format version 5.
+
+`libraries\Smile.UI` implements Core, Window, BitmapFont, Text, Menu, and Dialogue as ordinary SMILE modules. State uses fixed capacities and generation-safe numeric handles. Images and text inside stored styles/arrays follow existing record ownership and are cleared on destroy/reset. The library contains no assets and never owns the loop or plays sounds.
+
+`examples\MenuGallery` is the project/package, DirectX/GDI/Web visual proof. Its original generated assets include a 1920x1080 illustrated background, 768x768 alpha nine-slice skin, 1024x384 fixed-grid font atlas, alpha cursor/continuation images, and three WAV effects. The app, not the library, loads and publishes them.
+
+Focused automated coverage includes exact native/Web Unicode output, nested owned text expressions, native allocation balance, pure menu state/capacity/stale handles through project and package references, dialogue manual/spill/empty/Unicode/timing/event/capacity state, deterministic package bytes and capability metadata, one expected project/package `SML3704`, asset hash parity, and native/Web gallery compilation. The scripted Web gallery run also verifies high-DPI backing size, deterministic painter order, scrolling with disabled-item skipping, vector and bitmap themes, nested clipping, all three SFX events, and resource shutdown.
+
+Live acceptance covered the DirectX and GDI gallery paths, bitmap and vector themes, scrolling, disabled items, dialogue paging, and cancellation. Visual Studio 2026 Enterprise resolved project-referenced `Smile.UI` completion with the `requires GAME WINDOW` capability annotation; breakpoints bound in `Menu.HandleKey`, `Menu.Draw`, `Window.Draw`, and `Text.Draw`, and F10 remained in mapped `.smile` library source. VSIX identity, assembly, file, and product versions advance together to 2.0.28.

@@ -1,0 +1,187 @@
+MODULE Smile.UI.BitmapFont
+
+OPTION EXPLICIT
+
+IMPORT Smile.UI.Core AS Core
+
+PRIVATE DIM FontUsed[8] AS BOOLEAN
+PRIVATE DIM FontGeneration[8] AS NUMBER
+PRIVATE DIM FontStyles[8] AS Core.BitmapFontStyle
+
+PRIVATE FUNCTION SlotFromHandle(Handle AS NUMBER) AS NUMBER
+    DIM Slot AS NUMBER
+    DIM Generation AS NUMBER
+    IF Handle <= 0 THEN
+        RETURN -1
+    END IF
+    Slot = (Handle MOD 100) - 1
+    Generation = Handle / 100
+    IF Slot < 0 OR Slot >= Core.UI_MAX_BITMAP_FONTS THEN
+        RETURN -1
+    END IF
+    IF NOT FontUsed[Slot] OR FontGeneration[Slot] <> Generation THEN
+        RETURN -1
+    END IF
+    RETURN Slot
+END FUNCTION
+
+PUBLIC FUNCTION IsStyleValid(BYREF Style AS Core.BitmapFontStyle) AS BOOLEAN
+    RETURN IMAGE_LOADED(Style.Atlas) AND Style.GlyphCount > 0 AND Style.Columns > 0 AND Style.SourceCellWidth > 0 AND Style.SourceCellHeight > 0 AND Style.DrawWidth > 0 AND Style.DrawHeight > 0 AND Style.AdvanceX > 0 AND Style.LineHeight > 0
+END FUNCTION
+
+PUBLIC FUNCTION Create(BYREF Style AS Core.BitmapFontStyle) AS NUMBER
+    DIM Slot AS NUMBER
+    DIM Index AS NUMBER
+    IF NOT IsStyleValid(Style) THEN
+        RETURN 0
+    END IF
+    Slot = -1
+    FOR Index = 0 TO Core.UI_MAX_BITMAP_FONTS - 1
+        IF NOT FontUsed[Index] THEN
+            Slot = Index
+            EXIT FOR
+        END IF
+    END FOR
+    IF Slot < 0 THEN
+        RETURN 0
+    END IF
+    FontGeneration[Slot] = FontGeneration[Slot] + 1
+    IF FontGeneration[Slot] <= 0 THEN
+        FontGeneration[Slot] = 1
+    END IF
+    FontUsed[Slot] = TRUE
+    FontStyles[Slot] = Style
+    RETURN FontGeneration[Slot] * 100 + Slot + 1
+END FUNCTION
+
+PUBLIC SUB Destroy(Handle AS NUMBER)
+    DIM Slot AS NUMBER
+    DIM Empty AS Core.BitmapFontStyle
+    Slot = SlotFromHandle(Handle)
+    IF Slot < 0 THEN
+        RETURN
+    END IF
+    FontStyles[Slot] = Empty
+    FontUsed[Slot] = FALSE
+END SUB
+
+PUBLIC FUNCTION IsValid(Handle AS NUMBER) AS BOOLEAN
+    RETURN SlotFromHandle(Handle) >= 0
+END FUNCTION
+
+PRIVATE FUNCTION GlyphAdvance(BYREF Style AS Core.BitmapFontStyle, Code AS NUMBER) AS NUMBER
+    IF Code = 9 THEN
+        RETURN Style.AdvanceX * 4
+    END IF
+    RETURN Style.AdvanceX
+END FUNCTION
+
+PUBLIC FUNCTION MeasureWidth(Handle AS NUMBER, Value AS TEXT) AS NUMBER
+    DIM Slot AS NUMBER
+    DIM Index AS NUMBER
+    DIM Length AS NUMBER
+    DIM Code AS NUMBER
+    DIM CurrentWidth AS NUMBER
+    DIM MaximumWidth AS NUMBER
+    Slot = SlotFromHandle(Handle)
+    IF Slot < 0 THEN
+        RETURN 0
+    END IF
+    Length = TEXT_LENGTH(Value)
+    FOR Index = 0 TO Length - 1
+        Code = TEXT_CODE_AT(Value, Index)
+        IF Code = 10 THEN
+            MaximumWidth = MAX(MaximumWidth, CurrentWidth)
+            CurrentWidth = 0
+        ELSE
+            CurrentWidth = CurrentWidth + GlyphAdvance(FontStyles[Slot], Code)
+        END IF
+    END FOR
+    RETURN MAX(MaximumWidth, CurrentWidth)
+END FUNCTION
+
+PUBLIC FUNCTION MeasureHeight(Handle AS NUMBER, Value AS TEXT) AS NUMBER
+    DIM Slot AS NUMBER
+    DIM Index AS NUMBER
+    DIM Lines AS NUMBER
+    Slot = SlotFromHandle(Handle)
+    IF Slot < 0 THEN
+        RETURN 0
+    END IF
+    Lines = 1
+    FOR Index = 0 TO TEXT_LENGTH(Value) - 1
+        IF TEXT_CODE_AT(Value, Index) = 10 THEN
+            Lines = Lines + 1
+        END IF
+    END FOR
+    RETURN Lines * FontStyles[Slot].LineHeight
+END FUNCTION
+
+PRIVATE SUB DrawLine(Slot AS NUMBER, Value AS TEXT, X AS NUMBER, Y AS NUMBER, Opacity AS NUMBER)
+    DIM Index AS NUMBER
+    DIM Code AS NUMBER
+    DIM Glyph AS NUMBER
+    DIM Column AS NUMBER
+    DIM Row AS NUMBER
+    DIM DrawX AS NUMBER
+    DrawX = X
+    FOR Index = 0 TO TEXT_LENGTH(Value) - 1
+        Code = TEXT_CODE_AT(Value, Index)
+        IF Code = 9 THEN
+            DrawX = DrawX + FontStyles[Slot].AdvanceX * 4
+        ELSE
+            Glyph = Code - FontStyles[Slot].FirstCodePoint
+            IF Glyph < 0 OR Glyph >= FontStyles[Slot].GlyphCount THEN
+                Glyph = FontStyles[Slot].FallbackCodePoint - FontStyles[Slot].FirstCodePoint
+            END IF
+            IF Glyph >= 0 AND Glyph < FontStyles[Slot].GlyphCount THEN
+                Column = Glyph MOD FontStyles[Slot].Columns
+                Row = Glyph / FontStyles[Slot].Columns
+                IF FontStyles[Slot].FilterMode = Core.UI_FILTER_PIXEL THEN
+                    DRAW IMAGE FontStyles[Slot].Atlas FROM FontStyles[Slot].SourceX + Column * FontStyles[Slot].SourceCellWidth, FontStyles[Slot].SourceY + Row * FontStyles[Slot].SourceCellHeight SIZE FontStyles[Slot].SourceCellWidth BY FontStyles[Slot].SourceCellHeight AT DrawX, Y SIZE FontStyles[Slot].DrawWidth BY FontStyles[Slot].DrawHeight OPACITY Opacity FILTER PIXEL
+                ELSE
+                    DRAW IMAGE FontStyles[Slot].Atlas FROM FontStyles[Slot].SourceX + Column * FontStyles[Slot].SourceCellWidth, FontStyles[Slot].SourceY + Row * FontStyles[Slot].SourceCellHeight SIZE FontStyles[Slot].SourceCellWidth BY FontStyles[Slot].SourceCellHeight AT DrawX, Y SIZE FontStyles[Slot].DrawWidth BY FontStyles[Slot].DrawHeight OPACITY Opacity FILTER SMOOTH
+                END IF
+            END IF
+            DrawX = DrawX + FontStyles[Slot].AdvanceX
+        END IF
+    END FOR
+END SUB
+
+PUBLIC SUB Draw(Handle AS NUMBER, Value AS TEXT, X AS NUMBER, Y AS NUMBER, Alignment AS NUMBER, Opacity AS NUMBER)
+    DIM Slot AS NUMBER
+    DIM Length AS NUMBER
+    DIM Index AS NUMBER
+    DIM Code AS NUMBER
+    DIM LineStart AS NUMBER
+    DIM LineText AS TEXT
+    DIM LineWidth AS NUMBER
+    DIM LineX AS NUMBER
+    DIM LineY AS NUMBER
+    Slot = SlotFromHandle(Handle)
+    IF Slot < 0 OR Opacity <= 0 THEN
+        RETURN
+    END IF
+    Opacity = MIN(100, Opacity)
+    Length = TEXT_LENGTH(Value)
+    LineStart = 0
+    LineY = Y
+    FOR Index = 0 TO Length
+        Code = TEXT_CODE_AT(Value, Index)
+        IF Index = Length OR Code = 10 THEN
+            LineText = TEXT_SLICE(Value, LineStart, Index - LineStart)
+            LineWidth = MeasureWidth(Handle, LineText)
+            LineX = X
+            IF Alignment = Core.UI_ALIGN_CENTER THEN
+                LineX = X - LineWidth / 2
+            ELSE IF Alignment = Core.UI_ALIGN_RIGHT THEN
+                LineX = X - LineWidth
+            END IF
+            CALL DrawLine(Slot, LineText, LineX, LineY, Opacity)
+            LineStart = Index + 1
+            LineY = LineY + FontStyles[Slot].LineHeight
+        END IF
+    END FOR
+END SUB
+
+END MODULE

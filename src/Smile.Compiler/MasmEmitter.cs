@@ -143,6 +143,9 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_text_concat:PROC");
         Line("EXTERN smile_text_equal:PROC");
         Line("EXTERN smile_text_equal_case:PROC");
+        Line("EXTERN smile_text_scalar_length:PROC");
+        Line("EXTERN smile_text_code_at:PROC");
+        Line("EXTERN smile_text_slice:PROC");
         Line("EXTERN smile_text_clear:PROC");
         Line("EXTERN smile_text_lifetime_report:PROC");
         Line("EXTERN smile_image_retain:PROC");
@@ -1350,6 +1353,27 @@ internal sealed class MasmEmitter
                 EmitNativeCall(call.Identifier.Kind == SyntaxKind.TextWidthKeyword
                     ? "smile_text_width_value" : "smile_text_height_value", 2);
                 break;
+            case SyntaxKind.TextLengthKeyword:
+                EmitExpression(call.Arguments[0]);
+                Line("    mov rcx, rax");
+                CallAligned("smile_text_scalar_length");
+                break;
+            case SyntaxKind.TextCodeAtKeyword:
+                EmitExpression(call.Arguments[0]);
+                PushRax();
+                EmitExpression(call.Arguments[1]);
+                PushRax();
+                EmitNativeCall("smile_text_code_at", 2);
+                break;
+            case SyntaxKind.TextSliceKeyword:
+                EmitExpression(call.Arguments[0]);
+                PushRax();
+                EmitExpression(call.Arguments[1]);
+                PushRax();
+                EmitExpression(call.Arguments[2]);
+                PushRax();
+                EmitNativeCall("smile_text_slice", 3);
+                break;
             default:
                 if (_analysis.SemanticModel.TryGetRoutine(call.Identifier.Text, out var routine) &&
                     routine.ReturnType is RecordTypeSymbol)
@@ -1478,7 +1502,7 @@ internal sealed class MasmEmitter
 
     private VariableSymbol Resolve(string name)
     {
-        if (_analysis.SemanticModel.TryResolveVariable(name, _currentRoutine?.Name, out var symbol))
+        if (_analysis.SemanticModel.TryResolveVariable(name, _currentRoutine, out var symbol))
             return symbol;
         throw new InvalidOperationException($"Unresolved symbol '{name}'.");
     }

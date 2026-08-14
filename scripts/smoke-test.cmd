@@ -68,7 +68,7 @@ copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib" "%SMILE_RO
 if errorlevel 1 exit /b %errorlevel%
 fc /b "%SMILE_ROOT%\artifacts\temp\Smile.Text.Extras.first.smilelib" "%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib" >nul
 if errorlevel 1 exit /b 1
-powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib'); try { $manifest=[IO.StreamReader]::new($zip.GetEntry('manifest.json').Open()).ReadToEnd(); $api=[IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open()).ReadToEnd(); if (!$manifest.Contains('formatVersion') -or !$manifest.Contains(': 4') -or !$api.Contains('ByRef') -or !$api.Contains('returnType') -or !$api.Contains('TEXT')) { exit 1 } } finally { $zip.Dispose() }"
+powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib'); try { $manifest=[IO.StreamReader]::new($zip.GetEntry('manifest.json').Open()).ReadToEnd(); $api=[IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open()).ReadToEnd(); if (!$manifest.Contains('formatVersion') -or !$manifest.Contains(': 5') -or !$api.Contains('ByRef') -or !$api.Contains('returnType') -or !$api.Contains('TEXT')) { exit 1 } } finally { $zip.Dispose() }"
 if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3ABasics\Phase3ABasics.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase3ABasics.exe" --debug
@@ -144,7 +144,7 @@ copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.Data.Models.smilelib" "%SMILE_RO
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\libraries\Smile.Data.Models\Smile.Data.Models.smilelibproj" --target library --configuration Release -o "%SMILE_ROOT%\artifacts\libraries\Smile.Data.Models.smilelib"
 if errorlevel 1 exit /b %errorlevel%
 fc /b "%SMILE_ROOT%\artifacts\temp\Smile.Data.Models.first.smilelib" "%SMILE_ROOT%\artifacts\libraries\Smile.Data.Models.smilelib" >nul || exit /b 1
-powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.Data.Models.smilelib'); try { $manifest=[IO.StreamReader]::new($zip.GetEntry('manifest.json').Open()).ReadToEnd(); $api=[IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open()).ReadToEnd(); if (!$manifest.Contains(': 4') -or !$api.Contains('Smile.Data.Models::Actor') -or !$api.Contains('\"fields\"') -or $api.Contains('InternalTag')) { exit 1 } } finally { $zip.Dispose() }"
+powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.Data.Models.smilelib'); try { $manifest=[IO.StreamReader]::new($zip.GetEntry('manifest.json').Open()).ReadToEnd(); $api=[IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open()).ReadToEnd(); if (!$manifest.Contains(': 5') -or !$api.Contains('Smile.Data.Models::Actor') -or !$api.Contains('\"fields\"') -or $api.Contains('InternalTag')) { exit 1 } } finally { $zip.Dispose() }"
 if errorlevel 1 exit /b 1
 
 for %%P in (Phase3BRecords.smileproj Phase3BRecords.Package.smileproj) do (
@@ -291,6 +291,84 @@ echo Phase 4.1 ownership, high-DPI, clip lifetime, DATA identity, cache race, an
 
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-phase4-asset-publication.ps1"
 if errorlevel 1 exit /b 1
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\generate-phase5-ui-assets.ps1"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase5TextPrimitives.smile" --target windows-x64 -o "%SMILE_ROOT%\artifacts\games\Phase5TextPrimitives.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\games\Phase5TextPrimitives.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5TextPrimitives.out"
+if errorlevel 1 exit /b 1
+powershell -NoProfile -Command "$expected=[IO.File]::ReadAllLines('%SMILE_ROOT%\examples\Phase5TextPrimitives.expected.txt',[Text.Encoding]::UTF8); $actual=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5TextPrimitives.out',[Text.Encoding]::UTF8); if (Compare-Object $expected $actual) { exit 1 }"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase5TextPrimitives.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\Phase5TextPrimitives"
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase5TextPrimitives" --expected "%SMILE_ROOT%\examples\Phase5TextPrimitives.expected.txt" --native-output "%SMILE_ROOT%\artifacts\temp\Phase5TextPrimitives.out" --timeout 10000
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\libraries\Smile.UI\Smile.UI.smilelibproj" --target library --configuration Release -o "%SMILE_ROOT%\artifacts\libraries\Smile.UI.smilelib"
+if errorlevel 1 exit /b 1
+copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.UI.smilelib" "%SMILE_ROOT%\artifacts\temp\Smile.UI.first.smilelib" >nul
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\libraries\Smile.UI\Smile.UI.smilelibproj" --target library --configuration Release -o "%SMILE_ROOT%\artifacts\libraries\Smile.UI.smilelib"
+if errorlevel 1 exit /b 1
+fc /b "%SMILE_ROOT%\artifacts\temp\Smile.UI.first.smilelib" "%SMILE_ROOT%\artifacts\libraries\Smile.UI.smilelib" >nul
+if errorlevel 1 exit /b 1
+powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.UI.smilelib'); try { $manifest=([IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())).ReadToEnd() | ConvertFrom-Json; $api=([IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open())).ReadToEnd() | ConvertFrom-Json; $menu=$api.modules | Where-Object name -eq 'Smile.UI.Menu'; $draw=$menu.members | Where-Object name -eq 'Draw'; $key=$menu.members | Where-Object name -eq 'HandleKey'; if ($manifest.formatVersion -ne 5 -or !$draw.requiresGameWindow -or $key.requiresGameWindow) { exit 1 } } finally { $zip.Dispose() }"
+if errorlevel 1 exit /b 1
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5UIStateTests\Phase5UIStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase5UIStateTests.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\games\Phase5UIStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5UIStateTests.out"
+if errorlevel 1 exit /b 1
+powershell -NoProfile -Command "$expected=[IO.File]::ReadAllLines('%SMILE_ROOT%\examples\Phase5UIStateTests\Phase5UIStateTests.expected.txt',[Text.Encoding]::UTF8); $actual=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5UIStateTests.out',[Text.Encoding]::UTF8); if (Compare-Object $expected $actual) { exit 1 }"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5UIStateTests\Phase5UIStateTests.Package.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase5UIStateTestsPackage.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\games\Phase5UIStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5UIStateTestsPackage.out"
+if errorlevel 1 exit /b 1
+fc /b "%SMILE_ROOT%\artifacts\temp\Phase5UIStateTests.out" "%SMILE_ROOT%\artifacts\temp\Phase5UIStateTestsPackage.out" >nul
+if errorlevel 1 exit /b 1
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5DialogueStateTests\Phase5DialogueStateTests.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\Phase5DialogueStateTests.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\games\Phase5DialogueStateTests.exe"
+if errorlevel 1 exit /b 1
+powershell -NoProfile -Command "if ((Get-Content -Raw -LiteralPath '%LOCALAPPDATA%\SMILE 2.0\Games\Phase5DialogueStateTests\Result.txt').Trim() -ne '0') { exit 1 }"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5DialogueStateTests\Phase5DialogueStateTests.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\Phase5DialogueStateTests"
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\Phase5DialogueStateTests\game.js"
+if errorlevel 1 exit /b 1
+
+for %%P in (ConsoleCallsDraw.smileproj ConsoleCallsDraw.Package.smileproj) do (
+    "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\InvalidPhase5\ConsoleCallsDraw\%%P" -o "%SMILE_ROOT%\artifacts\temp\ConsoleCallsDraw.exe" > "%SMILE_ROOT%\artifacts\temp\%%P.log" 2>&1
+    if not errorlevel 1 exit /b 1
+    if errorlevel 2 exit /b 1
+    powershell -NoProfile -Command "if ((Select-String -LiteralPath '%SMILE_ROOT%\artifacts\temp\%%P.log' -SimpleMatch 'SML3704').Count -ne 1) { exit 1 }"
+    if errorlevel 1 exit /b 1
+)
+
+if not exist "%SMILE_ROOT%\artifacts\games\MenuGallery-DirectX" mkdir "%SMILE_ROOT%\artifacts\games\MenuGallery-DirectX"
+if not exist "%SMILE_ROOT%\artifacts\games\MenuGallery-GDI" mkdir "%SMILE_ROOT%\artifacts\games\MenuGallery-GDI"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\MenuGallery\MenuGallery.smileproj" --target windows-x64 --configuration Release --graphics DirectX -o "%SMILE_ROOT%\artifacts\games\MenuGallery-DirectX\MenuGallery.exe" --debug
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\MenuGallery\MenuGallery.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\MenuGallery-GDI\MenuGallery.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\MenuGallery\MenuGallery.Package.smileproj" --target windows-x64 --configuration Release --graphics DirectX -o "%SMILE_ROOT%\artifacts\games\MenuGalleryPackage.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\MenuGallery\MenuGallery.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\MenuGallery"
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\MenuGallery\game.js"
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\MenuGallery" --frames 15 --timeout 10000 --phase5-ui
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\MenuGallery\MenuGallery.Package.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\MenuGalleryPackage"
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\MenuGalleryPackage\game.js"
+if errorlevel 1 exit /b 1
+for %%A in (Background.png WindowSkin.png Cursor.png Continue.png BitmapFont.png Move.wav Confirm.wav Cancel.wav) do (
+    fc /b "%SMILE_ROOT%\examples\MenuGallery\Assets\%%A" "%SMILE_ROOT%\artifacts\web\MenuGallery\Assets\%%A" >nul
+    if errorlevel 1 exit /b 1
+)
+echo Phase 5 Unicode text, routine capabilities, Smile.UI state, packages, assets, native, and Web tests passed.
 
 for %%P in (OptionExplicitLate:SML3300 OptionExplicitUndeclared:SML3303 ScalarDimWithoutAs:SML3302 UnknownBuiltInType:SML3401 NumberToTextAssignment:SML3304 TextToBooleanAssignment:SML3304 MixedTextAddition:SML3308 TextRelationalComparison:SML3308 InvalidByRefLiteral:SML3305 InvalidByRefConstant:SML3305 WrongArgumentType:SML3304 WrongReturnType:SML3304 InconsistentLegacyReturnTypes:SML3309 DuplicateLocal:SML3306 UseBeforeLocalDeclaration:SML3307) do (
     for /f "tokens=1,2 delims=:" %%F in ("%%P") do (

@@ -31,6 +31,7 @@
 #define SMILE_KEY_1 17
 #define SMILE_KEY_2 18
 #define SMILE_KEY_OTHER 19
+#define SMILE_KEY_3 20
 
 static HWND smile_window;
 static long long smile_logical_width = 960;
@@ -286,6 +287,137 @@ static SmileText* smile_text_allocate(long long length)
     return text;
 }
 
+static int smile_utf8_scalar(const char* bytes, long long length, long long* offset, unsigned int* scalar)
+{
+    const unsigned char* input = (const unsigned char*)bytes;
+    long long index;
+    unsigned int first;
+    unsigned int value;
+    int count;
+    if (bytes == 0 || offset == 0 || scalar == 0 || *offset < 0 || *offset >= length)
+        return 0;
+    index = *offset;
+    first = input[index];
+    if (first < 0x80)
+    {
+        *scalar = first;
+        *offset = index + 1;
+        return 1;
+    }
+    if (first >= 0xc2 && first <= 0xdf) { value = first & 0x1f; count = 1; }
+    else if (first >= 0xe0 && first <= 0xef) { value = first & 0x0f; count = 2; }
+    else if (first >= 0xf0 && first <= 0xf4) { value = first & 0x07; count = 3; }
+    else return 0;
+    if (index > length - count - 1)
+        return 0;
+    if (count >= 2 && ((first == 0xe0 && input[index + 1] < 0xa0) ||
+        (first == 0xed && input[index + 1] >= 0xa0)))
+        return 0;
+    if (count == 3 && ((first == 0xf0 && input[index + 1] < 0x90) ||
+        (first == 0xf4 && input[index + 1] >= 0x90)))
+        return 0;
+    while (count-- > 0)
+    {
+        unsigned int next = input[++index];
+        if ((next & 0xc0) != 0x80)
+            return 0;
+        value = (value << 6) | (next & 0x3f);
+    }
+    if (value > 0x10ffff || (value >= 0xd800 && value <= 0xdfff))
+        return 0;
+    *scalar = value;
+    *offset = index + 1;
+    return 1;
+}
+
+long long smile_text_scalar_length(void* owned_value)
+{
+    SmileText* text = (SmileText*)owned_value;
+    const char* bytes = smile_text_bytes(text);
+    long long length = smile_text_length(text);
+    long long offset = 0;
+    long long count = 0;
+    unsigned int scalar;
+    while (offset < length)
+    {
+        if (!smile_utf8_scalar(bytes, length, &offset, &scalar))
+        {
+            count = -1;
+            break;
+        }
+        count++;
+    }
+    smile_text_release(text);
+    return count;
+}
+
+long long smile_text_code_at(void* owned_value, long long requested_index)
+{
+    SmileText* text = (SmileText*)owned_value;
+    const char* bytes = smile_text_bytes(text);
+    long long length = smile_text_length(text);
+    long long offset = 0;
+    long long index = 0;
+    long long result = -1;
+    unsigned int scalar;
+    if (requested_index >= 0)
+    {
+        while (offset < length)
+        {
+            if (!smile_utf8_scalar(bytes, length, &offset, &scalar))
+                break;
+            if (index++ == requested_index)
+            {
+                result = (long long)scalar;
+                break;
+            }
+        }
+    }
+    smile_text_release(text);
+    return result;
+}
+
+void* smile_text_slice(void* owned_value, long long start, long long count)
+{
+    SmileText* text = (SmileText*)owned_value;
+    const char* bytes = smile_text_bytes(text);
+    long long length = smile_text_length(text);
+    long long offset = 0;
+    long long index = 0;
+    long long copied = 0;
+    long long byte_start = -1;
+    long long byte_end = -1;
+    unsigned int scalar;
+    SmileText* result = 0;
+    if (start >= 0 && count > 0)
+    {
+        while (offset < length)
+        {
+            long long scalar_start = offset;
+            if (!smile_utf8_scalar(bytes, length, &offset, &scalar))
+            {
+                byte_start = -1;
+                break;
+            }
+            if (index >= start)
+            {
+                if (byte_start < 0) byte_start = scalar_start;
+                byte_end = offset;
+                copied++;
+                if (copied >= count) break;
+            }
+            index++;
+        }
+    }
+    if (byte_start >= 0 && byte_end > byte_start)
+    {
+        result = smile_text_allocate(byte_end - byte_start);
+        smile_copy_bytes(result->bytes, bytes + byte_start, (SIZE_T)(byte_end - byte_start));
+    }
+    smile_text_release(text);
+    return result;
+}
+
 void smile_text_move_assign(void** target, void* owned_value)
 {
     void* previous;
@@ -522,6 +654,7 @@ static long long smile_map_key(WCHAR character, WORD virtual_key)
     if (virtual_key == VK_SPACE) return SMILE_KEY_SPACE;
     if (virtual_key == '1') return SMILE_KEY_1;
     if (virtual_key == '2') return SMILE_KEY_2;
+    if (virtual_key == '3') return SMILE_KEY_3;
     return character != 0 || virtual_key != 0 ? SMILE_KEY_OTHER : SMILE_KEY_NONE;
 }
 
@@ -542,6 +675,7 @@ static int smile_key_virtual(long long key)
         case SMILE_KEY_SPACE: return VK_SPACE;
         case SMILE_KEY_1: return '1';
         case SMILE_KEY_2: return '2';
+        case SMILE_KEY_3: return '3';
         default: return 0;
     }
 }

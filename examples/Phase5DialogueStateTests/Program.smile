@@ -1,0 +1,107 @@
+OPTION EXPLICIT
+
+IMPORT Smile.UI.Core AS UI
+IMPORT Smile.UI.Dialogue AS Dialogue
+
+GAME WINDOW "Phase 5 Dialogue State Tests" SIZE 320 BY 200
+
+DIM Style AS UI.DialogueStyle
+DIM NarrowStyle AS UI.DialogueStyle
+DIM GalleryStyle AS UI.DialogueStyle
+DIM Handle AS NUMBER
+DIM NarrowHandle AS NUMBER
+DIM GalleryHandle AS NUMBER
+DIM Index AS NUMBER
+DIM OperationSucceeded AS BOOLEAN
+DIM Failures AS NUMBER
+
+Style.Window.Padding.Left = 10
+Style.Window.Padding.Top = 10
+Style.Window.Padding.Right = 10
+Style.Window.Padding.Bottom = 10
+Style.Text.Mode = UI.UI_TEXT_SYSTEM
+Style.Text.SystemSize = 20
+Style.Text.SystemColor = WHITE
+Style.CharactersPerSecond = 0
+Style.LineSpacing = 0
+
+Handle = Dialogue.Create(Style, 0, 0, 300, 150)
+OperationSucceeded = Dialogue.AddPage(Handle, "ONE")
+OperationSucceeded = Dialogue.AddPage(Handle, "TWO")
+CALL Check(Dialogue.Start(Handle, 0))
+CALL Check(Dialogue.PageCount(Handle) = 2)
+CALL Check(Dialogue.VisibleCharacters(Handle) = 3)
+CALL Check(Dialogue.HandleKey(Handle, KEY_ENTER, 0) = UI.UI_EVENT_ADVANCED)
+CALL Check(Dialogue.CurrentPage(Handle) = 1)
+CALL Check(Dialogue.HandleKey(Handle, KEY_ENTER, 0) = UI.UI_EVENT_COMPLETED)
+CALL Check(Dialogue.IsComplete(Handle))
+
+GalleryStyle = Style
+GalleryStyle.Window.Padding.Left = 28
+GalleryStyle.Window.Padding.Top = 24
+GalleryStyle.Window.Padding.Right = 24
+GalleryStyle.Window.Padding.Bottom = 22
+GalleryStyle.Text.SystemSize = 25
+GalleryStyle.Text.LineSpacing = 5
+GalleryStyle.LineSpacing = 5
+GalleryHandle = Dialogue.Create(GalleryStyle, 438, 290, 470, 205)
+OperationSucceeded = Dialogue.AddPage(GalleryHandle, "Save-game encoding belongs to a later RPG component. The generic persistent DATA primitive is already available underneath it.")
+CALL Check(Dialogue.Start(GalleryHandle, 0))
+CALL Check(Dialogue.PageCount(GalleryHandle) = 2)
+CALL Dialogue.Destroy(GalleryHandle)
+
+CALL Dialogue.ClearPages(Handle)
+Style.CharactersPerSecond = 10
+OperationSucceeded = Dialogue.SetStyle(Handle, Style)
+OperationSucceeded = Dialogue.AddPage(Handle, "A😀B")
+CALL Check(Dialogue.Start(Handle, 100))
+CALL Check(Dialogue.Update(Handle, 200) = UI.UI_EVENT_CHANGED)
+CALL Check(Dialogue.VisibleCharacters(Handle) = 1)
+CALL Check(Dialogue.HandleKey(Handle, KEY_ENTER, 200) = UI.UI_EVENT_CHANGED)
+CALL Check(Dialogue.VisibleCharacters(Handle) = 3)
+CALL Check(Dialogue.HandleKey(Handle, KEY_ENTER, 200) = UI.UI_EVENT_COMPLETED)
+CALL Check(Dialogue.IsComplete(Handle))
+
+CALL Dialogue.ClearPages(Handle)
+OperationSucceeded = Dialogue.AddPage(Handle, "CANCEL")
+CALL Check(Dialogue.Start(Handle, 0))
+CALL Check(Dialogue.HandleKey(Handle, KEY_ESCAPE, 0) = UI.UI_EVENT_CANCELLED)
+CALL Check(NOT Dialogue.IsActive(Handle))
+
+CALL Dialogue.ClearPages(Handle)
+Style.CharactersPerSecond = 0
+OperationSucceeded = Dialogue.SetStyle(Handle, Style)
+OperationSucceeded = Dialogue.AddPage(Handle, "")
+CALL Check(Dialogue.Start(Handle, 0))
+CALL Check(Dialogue.VisibleCharacters(Handle) = 0)
+CALL Check(Dialogue.HandleKey(Handle, KEY_ENTER, 0) = UI.UI_EVENT_COMPLETED)
+
+NarrowStyle = Style
+NarrowStyle.Window.Padding.Left = 45
+NarrowStyle.Window.Padding.Right = 45
+NarrowStyle.Window.Padding.Top = 35
+NarrowStyle.Window.Padding.Bottom = 35
+NarrowHandle = Dialogue.Create(NarrowStyle, 0, 0, 100, 100)
+CALL Check(Dialogue.AddPage(NarrowHandle, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"))
+CALL Check(NOT Dialogue.Start(NarrowHandle, 0))
+
+CALL Dialogue.ClearPages(NarrowHandle)
+FOR Index = 0 TO 31
+    OperationSucceeded = Dialogue.AddPage(NarrowHandle, "A")
+END FOR
+CALL Check(NOT Dialogue.AddPage(NarrowHandle, "OVERFLOW"))
+CALL Check(Dialogue.Start(NarrowHandle, 0))
+CALL Check(Dialogue.PageCount(NarrowHandle) = 32)
+
+CALL Dialogue.Destroy(NarrowHandle)
+CALL Dialogue.Destroy(Handle)
+
+SAVE Failures TO "Result"
+
+SUB Check(Condition AS BOOLEAN)
+    IF NOT Condition THEN
+        Failures = Failures + 1
+    END IF
+END SUB
+
+END PROGRAM

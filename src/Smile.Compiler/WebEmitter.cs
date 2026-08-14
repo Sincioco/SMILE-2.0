@@ -642,6 +642,9 @@ internal sealed class WebEmitter
             SyntaxKind.ImageLoadedKeyword => $"smile.imageLoaded({arguments})",
             SyntaxKind.TextWidthKeyword => $"smile.textWidth({arguments})",
             SyntaxKind.TextHeightKeyword => $"smile.textHeight({arguments})",
+            SyntaxKind.TextLengthKeyword => $"smile.textLength({arguments})",
+            SyntaxKind.TextCodeAtKeyword => $"smile.textCodeAt({arguments})",
+            SyntaxKind.TextSliceKeyword => $"smile.textSlice({arguments})",
             _ => $"await {Routine(call.Identifier)}({RoutineArguments(call.Identifier, call.Arguments)})"
         };
     }
@@ -827,7 +830,7 @@ internal sealed class WebEmitter
 
     private VariableSymbol ResolveVariable(SyntaxToken identifier)
     {
-        if (_analysis.SemanticModel.TryResolveVariable(identifier.Text, _currentRoutine?.Name, out var symbol))
+        if (_analysis.SemanticModel.TryResolveVariable(identifier.Text, _currentRoutine, out var symbol))
             return symbol;
         throw new WebTargetException(_currentSource, "SML5101", identifier.Span, $"Web target could not resolve variable '{identifier.Text}'.");
     }

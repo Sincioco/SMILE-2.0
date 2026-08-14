@@ -1,0 +1,92 @@
+OPTION EXPLICIT
+
+IMPORT Smile.UI.Core AS UI
+IMPORT Smile.UI.Menu AS Menu
+
+DIM Style AS UI.MenuStyle
+DIM Handle AS NUMBER
+DIM OldHandle AS NUMBER
+DIM Event AS NUMBER
+DIM Value AS TEXT
+DIM ItemIndex AS NUMBER
+DIM Index AS NUMBER
+DIM Handles[16] AS NUMBER
+DIM OperationSucceeded AS BOOLEAN
+
+Style.RowHeight = 32
+Style.WrapSelection = TRUE
+
+Handle = Menu.Create(Style, 0, 0, 320, 240, 2)
+
+ItemIndex = Menu.AddItem(Handle, "FIRST", 10, TRUE)
+ItemIndex = Menu.AddItem(Handle, "DISABLED", 20, FALSE)
+ItemIndex = Menu.AddItem(Handle, "THIRD", 30, TRUE)
+ItemIndex = Menu.AddItem(Handle, "FOURTH", 40, TRUE)
+
+PRINT Menu.SelectedIndex(Handle)
+
+Event = Menu.HandleKey(Handle, KEY_DOWN)
+PRINT Event
+PRINT Menu.SelectedIndex(Handle)
+PRINT Menu.TopIndex(Handle)
+
+Event = Menu.HandleKey(Handle, KEY_ENTER)
+PRINT Event
+PRINT Menu.SelectedValue(Handle)
+
+Event = Menu.HandleKey(Handle, KEY_DOWN)
+PRINT Menu.SelectedIndex(Handle)
+PRINT Menu.TopIndex(Handle)
+
+Event = Menu.HandleKey(Handle, KEY_DOWN)
+PRINT Menu.SelectedIndex(Handle)
+
+Event = Menu.HandleKey(Handle, KEY_ESCAPE)
+PRINT Event
+
+Value = "A😀B"
+PRINT TEXT_LENGTH(Value)
+PRINT TEXT_CODE_AT(Value, 1)
+PRINT TEXT_SLICE(Value, 1, 1)
+
+OldHandle = Handle
+CALL Menu.Destroy(Handle)
+PRINT Menu.SelectedIndex(OldHandle)
+
+Handle = Menu.Create(Style, 0, 0, 320, 240, 2)
+PRINT Handle
+CALL Menu.Destroy(Handle)
+
+Handle = Menu.Create(Style, 0, 0, 320, 240, 2)
+FOR Index = 0 TO 63
+    ItemIndex = Menu.AddItem(Handle, "ITEM", Index, TRUE)
+END FOR
+PRINT Menu.AddItem(Handle, "OVERFLOW", 64, TRUE)
+PRINT Menu.ItemCount(Handle)
+CALL Menu.Destroy(Handle)
+
+Handle = Menu.Create(Style, 0, 0, 320, 240, 2)
+ItemIndex = Menu.AddItem(Handle, "OFF", 1, FALSE)
+ItemIndex = Menu.AddItem(Handle, "ALSO OFF", 2, FALSE)
+PRINT Menu.SelectedIndex(Handle)
+PRINT Menu.HandleKey(Handle, KEY_DOWN)
+CALL Menu.Destroy(Handle)
+
+Style.WrapSelection = FALSE
+Handle = Menu.Create(Style, 0, 0, 320, 240, 2)
+ItemIndex = Menu.AddItem(Handle, "ONE", 1, TRUE)
+ItemIndex = Menu.AddItem(Handle, "TWO", 2, TRUE)
+OperationSucceeded = Menu.SetSelectedIndex(Handle, 1)
+PRINT Menu.HandleKey(Handle, KEY_DOWN)
+PRINT Menu.SelectedIndex(Handle)
+CALL Menu.Destroy(Handle)
+
+FOR Index = 0 TO 15
+    Handles[Index] = Menu.Create(Style, 0, 0, 320, 240, 2)
+END FOR
+PRINT Menu.Create(Style, 0, 0, 320, 240, 2)
+FOR Index = 0 TO 15
+    CALL Menu.Destroy(Handles[Index])
+END FOR
+
+END PROGRAM

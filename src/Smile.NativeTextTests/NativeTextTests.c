@@ -18,6 +18,9 @@ void smile_text_move_assign(void** target, void* owned_value);
 void smile_text_clear(void** target);
 void* smile_text_concat(void* owned_left, void* owned_right);
 long long smile_text_equal(void* owned_left, void* owned_right);
+long long smile_text_scalar_length(void* owned_value);
+long long smile_text_code_at(void* owned_value, long long index);
+void* smile_text_slice(void* owned_value, long long start, long long count);
 long long smile_text_allocation_count(void);
 long long smile_text_free_count(void);
 long long smile_text_live_count(void);
@@ -115,6 +118,19 @@ int main(void)
     check(smile_text_live_count() == 1, "concat produces one live object");
     check(smile_text_equal(smile_text_retain(value), smile_text_retain(&x_emoji_text)) != 0,
         "Unicode UTF-8 bytes compare exactly");
+    check(smile_text_scalar_length(smile_text_retain(value)) == 2,
+        "TEXT_LENGTH counts Unicode scalar values instead of UTF-8 bytes");
+    check(smile_text_code_at(smile_text_retain(value), 1) == 0x1f600 &&
+        smile_text_code_at(smile_text_retain(value), -1) == -1 &&
+        smile_text_code_at(smile_text_retain(value), 2) == -1,
+        "TEXT_CODE_AT returns zero-based Unicode scalars and safe out-of-range values");
+    replacement = smile_text_slice(smile_text_retain(value), 1, 1);
+    check(smile_text_equal(replacement, smile_text_retain(&emoji_text)) != 0,
+        "TEXT_SLICE returns complete UTF-8 scalar sequences");
+    check(smile_text_slice(smile_text_retain(value), -1, 1) == 0 &&
+        smile_text_slice(smile_text_retain(value), 0, 0) == 0 &&
+        smile_text_slice(smile_text_retain(value), 5, 1) == 0,
+        "TEXT_SLICE returns empty TEXT for invalid or empty ranges");
 
     owned = smile_text_retain(value);
     smile_text_move_assign(&value, owned);

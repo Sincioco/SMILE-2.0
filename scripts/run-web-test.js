@@ -10,7 +10,7 @@ function fail(message) {
 }
 
 const args = process.argv.slice(2);
-if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio]");
+if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio|--phase5-ui]");
 
 const webDirectory = path.resolve(args.shift());
 let expectedPath = null;
@@ -22,6 +22,7 @@ let verifyPhase4Media = false;
 let verifyPhase4Ownership = false;
 let verifyPhase4Clip = false;
 let verifyPhase4Audio = false;
+let verifyPhase5Ui = false;
 while (args.length !== 0) {
     const option = args.shift();
     if (option === "--phase4-media") {
@@ -31,6 +32,7 @@ while (args.length !== 0) {
     if (option === "--phase4-ownership") { verifyPhase4Ownership = true; continue; }
     if (option === "--phase4-clip") { verifyPhase4Clip = true; continue; }
     if (option === "--phase4-audio") { verifyPhase4Audio = true; continue; }
+    if (option === "--phase5-ui") { verifyPhase5Ui = true; continue; }
     const value = args.shift();
     if (value === undefined) fail(`missing value for ${option}`);
     if (option === "--expected") expectedPath = path.resolve(value);
@@ -57,6 +59,7 @@ let imageConstructions = 0;
 let audioConstructions = 0;
 let audioPlays = 0;
 let audioPauses = 0;
+const audioSources = [];
 let clipCalls = 0;
 let measurementCalls = 0;
 let negativeScaleCalls = 0;
@@ -65,7 +68,11 @@ let bufferSourceConstructions = 0;
 let bufferSourceStarts = 0;
 let bufferSourceStops = 0;
 const imageDraws = [];
+const textDraws = [];
+const fillRectangleDraws = [];
 let backCanvasElement = null;
+let virtualNow = 0;
+const phase5Keys = [];
 
 function addListener(target, type, listener) {
     if (!target.has(type)) target.set(type, []);
@@ -82,18 +89,26 @@ function context2d(name) {
         clip: () => { clipCalls += 1; }, save: noop, restore: noop, translate: noop,
         setTransform: () => { transformCalls += 1; },
         scale: (x, y) => { if (x < 0 || y < 0) negativeScaleCalls += 1; },
-        fill: noop, stroke: noop, fillRect: noop, strokeRect: noop, clearRect: noop,
+        fill: noop, stroke: noop,
+        fillRect: (...values) => {
+            if (name === "back") fillRectangleDraws.push({ frame: requestedFrames, values, fillStyle: context.fillStyle });
+        },
+        strokeRect: noop, clearRect: noop,
         drawImage: (resource, ...values) => {
             if (name === "back" && resource && typeof resource.src === "string") {
                 imageDraws.push({ source: resource.src, values, smoothing: context.imageSmoothingEnabled,
-                    alpha: context.globalAlpha });
+                    alpha: context.globalAlpha, frame: requestedFrames });
             }
         },
         measureText: value => {
             measurementCalls += 1;
             return { width: String(value).length * 8, actualBoundingBoxAscent: 12, actualBoundingBoxDescent: 4 };
         },
-        fillText: value => drawnText.push(String(value)),
+        fillText: (value, x, y) => {
+            drawnText.push(String(value));
+            if (name === "back") textDraws.push({ value: String(value), x, y, frame: requestedFrames,
+                fillStyle: context.fillStyle, font: context.font, alignment: context.textAlign });
+        },
         fillStyle: "", strokeStyle: "", lineWidth: 1, font: "", textAlign: "left",
         textBaseline: "top", imageSmoothingEnabled: false, globalAlpha: 1
     };
@@ -136,9 +151,16 @@ const host = {
         getItem: key => storage.has(key) ? storage.get(key) : null,
         setItem: (key, value) => storage.set(key, String(value))
     },
-    performance: { now: () => Date.now() },
+    performance: { now: () => verifyPhase5Ui ? virtualNow : Date.now() },
     Audio: class {
-        constructor(source) { audioConstructions += 1; this.src = source || ""; this.loop = false; this.volume = 1; this.currentTime = 0; }
+        constructor(source) {
+            audioConstructions += 1;
+            this.src = source || "";
+            audioSources.push(String(this.src));
+            this.loop = false;
+            this.volume = 1;
+            this.currentTime = 0;
+        }
         addEventListener() {}
         play() { audioPlays += 1; return Promise.resolve(); }
         pause() { audioPauses += 1; }
@@ -148,7 +170,14 @@ const host = {
         set src(value) {
             this._src = value;
             const normalized = String(value).replace(/\\/g, "/");
-            if (normalized.endsWith("/Background.png")) { this.naturalWidth = this.width = 2304; this.naturalHeight = this.height = 1296; }
+            if (normalized.endsWith("/Background.png")) {
+                this.naturalWidth = this.width = verifyPhase5Ui ? 1920 : 2304;
+                this.naturalHeight = this.height = verifyPhase5Ui ? 1080 : 1296;
+            }
+            else if (normalized.endsWith("/WindowSkin.png")) { this.naturalWidth = this.width = 768; this.naturalHeight = this.height = 768; }
+            else if (normalized.endsWith("/BitmapFont.png")) { this.naturalWidth = this.width = 1024; this.naturalHeight = this.height = 384; }
+            else if (normalized.endsWith("/Cursor.png")) { this.naturalWidth = this.width = 128; this.naturalHeight = this.height = 128; }
+            else if (normalized.endsWith("/Continue.png")) { this.naturalWidth = this.width = 96; this.naturalHeight = this.height = 96; }
             else if (normalized.endsWith("/CharacterSheet.png")) { this.naturalWidth = this.width = 2048; this.naturalHeight = this.height = 1024; }
             else if (normalized.endsWith("/Foreground.png")) { this.naturalWidth = this.width = 1920; this.naturalHeight = this.height = 1080; }
             else if (normalized.endsWith("/PixelProof.png")) { this.naturalWidth = this.width = 37; this.naturalHeight = this.height = 53; }
@@ -174,6 +203,21 @@ const host = {
     requestAnimationFrame: callback => {
         requestedFrames += 1;
         return setImmediate(() => {
+            if (verifyPhase5Ui) {
+                virtualNow = requestedFrames * 280;
+                const scriptedCode = new Map([
+                    [2, "ArrowDown"], [3, "ArrowDown"], [4, "ArrowDown"], [5, "ArrowDown"],
+                    [6, "ArrowDown"], [7, "ArrowUp"], [8, "Digit2"], [9, "Enter"],
+                    [10, "Space"], [11, "Escape"], [12, "Digit3"], [13, "Digit1"]
+                ]).get(requestedFrames);
+                if (scriptedCode) {
+                    const event = { code: scriptedCode, repeat: false, ctrlKey: false, altKey: false,
+                        metaKey: false, preventDefault: () => {} };
+                    phase5Keys.push(scriptedCode);
+                    dispatch(windowListeners, "keydown", event);
+                    dispatch(windowListeners, "keyup", event);
+                }
+            }
             if (verifyPhase4Clip && requestedFrames === 2) {
                 host.innerWidth = 1000;
                 host.innerHeight = 700;
@@ -329,6 +373,47 @@ const started = Date.now();
         if (bufferSourceStops < 1 || diagnostics.sfxActiveCount !== 0 || !diagnostics.mediaStopped)
             fail(`Phase 4.1 audio shutdown was incomplete: ${JSON.stringify(diagnostics)}`);
     }
+    if (verifyPhase5Ui) {
+        const expectedKeys = ["ArrowDown", "ArrowDown", "ArrowDown", "ArrowDown", "ArrowDown", "ArrowUp",
+            "Digit2", "Enter", "Space", "Escape", "Digit3", "Digit1"];
+        if (phase5Keys.join("|") !== expectedKeys.join("|"))
+            fail(`Phase 5 scripted key sequence differed: ${phase5Keys.join(", ")}`);
+        const basenames = imageDraws.map(draw => path.basename(draw.source));
+        for (const required of ["Background.png", "WindowSkin.png", "Cursor.png", "Continue.png", "BitmapFont.png"])
+            if (!basenames.includes(required)) fail(`Phase 5 Web draws did not include ${required}`);
+        const frameImageNames = new Map();
+        for (const draw of imageDraws) {
+            if (!frameImageNames.has(draw.frame)) frameImageNames.set(draw.frame, []);
+            frameImageNames.get(draw.frame).push(path.basename(draw.source));
+        }
+        for (const [frame, names] of frameImageNames) {
+            if (names.length !== 0 && names[0] !== "Background.png")
+                fail(`Phase 5 painter order did not begin with Background.png on frame ${frame}: ${names[0]}`);
+        }
+        const cursorYs = new Set(imageDraws.filter(draw => path.basename(draw.source) === "Cursor.png" && draw.values.length === 8)
+            .map(draw => draw.values[5]));
+        const cursorByFrame = new Map(imageDraws.filter(draw => path.basename(draw.source) === "Cursor.png" && draw.values.length === 8)
+            .map(draw => [draw.frame, draw.values[5]]));
+        if (cursorYs.size < 5 || cursorByFrame.get(4) !== 230 || cursorByFrame.get(5) !== 316)
+            fail(`Phase 5 disabled-item skipping/scroll cursor positions differed: ${JSON.stringify([...cursorYs])}`);
+        const frameSixText = textDraws.filter(draw => draw.frame === 6).map(draw => draw.value);
+        if (!frameSixText.includes("OPTIONS") || frameSixText.includes("ITEM"))
+            fail(`Phase 5 scrolling did not expose OPTIONS and remove ITEM: ${JSON.stringify(frameSixText)}`);
+        if (clipCalls < maximumFrames)
+            fail(`Phase 5 expected structured clipping on each frame, found ${clipCalls} clips across ${maximumFrames} frames`);
+        if (fillRectangleDraws.length < 1)
+            fail("Phase 5 vector fallback did not record rectangle drawing");
+        for (const required of ["Move.wav", "Confirm.wav", "Cancel.wav"])
+            if (!audioSources.some(source => path.basename(source) === required))
+                fail(`Phase 5 event-driven SFX did not include ${required}: ${JSON.stringify(audioSources)}`);
+        if (diagnostics.backingWidth <= diagnostics.logicalWidth || diagnostics.backingHeight <= diagnostics.logicalHeight)
+            fail(`Phase 5 DPR backing store was not high resolution: ${diagnostics.backingWidth}x${diagnostics.backingHeight}`);
+        if (diagnostics.imageCacheCount !== 0 || diagnostics.imageReferenceCount !== 0 ||
+            diagnostics.sfxActiveCount !== 0 || !diagnostics.mediaStopped)
+            fail(`Phase 5 Web ownership/shutdown was incomplete: ${JSON.stringify(diagnostics)}`);
+        if (hostConsoleErrors.length !== 0)
+            fail(`Phase 5 Web console reported errors: ${hostConsoleErrors.join("\n")}`);
+    }
 
     process.stdout.write(`Web execution passed: ${webDirectory}`);
     if (expectedPath !== null || nativeOutputPath !== null) process.stdout.write(" (exact console parity)");
@@ -337,5 +422,6 @@ const started = Date.now();
     if (verifyPhase4Ownership) process.stdout.write(" (Phase 4.1 IMAGE ownership/high-DPI parity)");
     if (verifyPhase4Clip) process.stdout.write(" (Phase 4.1 clip/high-DPI resize parity)");
     if (verifyPhase4Audio) process.stdout.write(" (Phase 4.1 audio generation/shutdown parity)");
+    if (verifyPhase5Ui) process.stdout.write(" (Phase 5 scripted UI/high-DPI/painter/audio/ownership parity)");
     process.stdout.write("\n");
 })().catch(error => fail(error && error.stack ? error.stack : String(error)));

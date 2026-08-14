@@ -129,6 +129,13 @@ public enum ParameterPassingMode
     ByRef
 }
 
+[Flags]
+public enum RoutineCapability
+{
+    None = 0,
+    RequiresGameWindow = 1
+}
+
 public sealed class VariableSymbol
 {
     internal VariableSymbol(string name, SmileType type, IReadOnlyList<int> dimensions, SourceText source,
@@ -203,6 +210,8 @@ public sealed class RoutineSymbol
         HasDeclaredReturnType = hasDeclaredReturnType;
         Source = source;
         SourceOrdinal = sourceOrdinal;
+        DisplayName = declaration.Identifier.Value as string ??
+            source.Substring(declaration.Identifier.Span.Start, declaration.Identifier.Span.Length);
         Locals = new Dictionary<string, VariableSymbol>(StringComparer.OrdinalIgnoreCase);
         FirstDeclarations = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         foreach (var parameter in parameters)
@@ -223,6 +232,9 @@ public sealed class RoutineSymbol
     public RoutineDeclarationSyntax Declaration { get; }
     public SourceText Source { get; }
     public int SourceOrdinal { get; }
+    public string DisplayName { get; private set; }
+    public RoutineCapability Capabilities { get; internal set; }
+    public bool RequiresGameWindow => (Capabilities & RoutineCapability.RequiresGameWindow) != 0;
     public SourceLocation DeclarationLocation => new(Source, Declaration.Identifier.Span);
     internal Dictionary<string, VariableSymbol> Locals { get; }
     internal Dictionary<string, int> FirstDeclarations { get; }
@@ -235,6 +247,7 @@ public sealed class RoutineSymbol
         Visibility = visibility;
         ProviderIdentity = providerIdentity;
         RuntimeIdentity = runtimeIdentity;
+        DisplayName = moduleName + "." + name;
     }
 }
 
@@ -283,6 +296,13 @@ public sealed class SemanticModel
         return _symbols.TryGetValue(name, out symbol!);
     }
 
+    public bool TryResolveVariable(string name, RoutineSymbol? routine, out VariableSymbol symbol)
+    {
+        if (routine != null && routine.Locals.TryGetValue(name, out symbol!))
+            return true;
+        return _symbols.TryGetValue(name, out symbol!);
+    }
+
     public SmileType GetType(ExpressionSyntax expression) =>
         _expressionTypes.TryGetValue(expression, out var type) ? type : SmileType.Error;
 
@@ -317,6 +337,7 @@ internal sealed class SemanticAnalyzer
     private readonly Dictionary<ExpressionSyntax, SmileType> _expressionTypes = new();
     private readonly Dictionary<string, RecordTypeSymbol> _types = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<FieldAccessExpressionSyntax, RecordFieldSymbol> _fields = new();
+    private readonly List<RoutineCallSite> _routineCalls = new();
     private SourceText _currentSource = null!;
     private int _currentSourceOrdinal;
     private RoutineSymbol? _currentRoutine;
@@ -370,6 +391,8 @@ internal sealed class SemanticAnalyzer
                 Report("SML3017", routine.Declaration.Identifier.Span, $"FUNCTION '{routine.Name}' does not return a value on every path.");
         }
         _currentRoutine = null;
+        PropagateRoutineCapabilities();
+        DiagnoseTopLevelRoutineCapabilities();
         return new SemanticModel(_symbols, _routines, _expressionTypes, _types, _fields);
     }
 
@@ -815,7 +838,8 @@ internal sealed class SemanticAnalyzer
                 InferImplicitGlobalType(binary.Left) == SmileType.Text && InferImplicitGlobalType(binary.Right) == SmileType.Text:
                 return SmileType.Text;
             case CallExpressionSyntax call when SyntaxFacts.IsBuiltInFunction(call.Identifier.Kind):
-                return call.Identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword or SyntaxKind.ImageLoadedKeyword
+                return call.Identifier.Kind == SyntaxKind.TextSliceKeyword ? SmileType.Text
+                    : call.Identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword or SyntaxKind.ImageLoadedKeyword
                     ? SmileType.Boolean
                     : SmileType.Number;
             case CallExpressionSyntax call when _routines.TryGetValue(call.Identifier.Text, out var routine):
@@ -933,6 +957,8 @@ internal sealed class SemanticAnalyzer
                     InferLegacyExpressionType(binary.Left, routine, locals) == SmileType.Text &&
                     InferLegacyExpressionType(binary.Right, routine, locals) == SmileType.Text) return SmileType.Text;
                 return SmileType.Number;
+            case CallExpressionSyntax call when call.Identifier.Kind == SyntaxKind.TextSliceKeyword:
+                return SmileType.Text;
             case CallExpressionSyntax call when call.Identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword or SyntaxKind.ImageLoadedKeyword:
                 return SmileType.Boolean;
             case CallExpressionSyntax call when _routines.TryGetValue(call.Identifier.Text, out var called):
@@ -1104,6 +1130,8 @@ internal sealed class SemanticAnalyzer
                     RequireType(argument, SmileType.Number, "SML3503", "DRAW IMAGE rectangle, opacity, and anchor values must be NUMBER.");
                 break;
             case ImageLoadStatementSyntax image:
+                if (_currentRoutine != null)
+                    RequireGameWindow(image.Span, image.IsUnload ? "UNLOAD IMAGE" : "LOAD IMAGE");
                 var targetType = ResolveWritableTargetType(image.Target);
                 if (targetType != SmileType.Error && targetType != SmileType.Image)
                     Report("SML3500", image.Target.Span, $"{(image.IsUnload ? "UNLOAD" : "LOAD")} IMAGE target must be IMAGE.");
@@ -1225,8 +1253,24 @@ internal sealed class SemanticAnalyzer
 
     private void RequireGameWindow(TextSpan span, string statementName)
     {
+        if (_currentRoutine != null)
+        {
+            _currentRoutine.Capabilities |= RoutineCapability.RequiresGameWindow;
+            return;
+        }
         if (!_hasGameWindow)
             Report("SML3023", span, $"{statementName} requires a GAME WINDOW statement.");
+    }
+
+    private void RequireGameWindow(TextSpan span, string statementName, string diagnosticCode)
+    {
+        if (_currentRoutine != null)
+        {
+            _currentRoutine.Capabilities |= RoutineCapability.RequiresGameWindow;
+            return;
+        }
+        if (!_hasGameWindow)
+            Report(diagnosticCode, span, $"{statementName} requires a GAME WINDOW statement.");
     }
 
     private void ValidateStorageKey(SyntaxToken key)
@@ -1658,6 +1702,7 @@ internal sealed class SemanticAnalyzer
             Report("SML3021", identifier.Span, $"Unknown routine or built-in function '{identifier.Text}'.");
             return SmileType.Error;
         }
+        _routineCalls.Add(new RoutineCallSite(_currentRoutine, routine, _currentSource, identifier.Span));
         if (routine.Parameters.Count != arguments.Count)
             Report("SML3016", identifier.Span, $"Routine '{routine.Name}' expects {routine.Parameters.Count} argument(s), found {arguments.Count}.");
         for (var index = 0; index < arguments.Count; index++)
@@ -1725,8 +1770,8 @@ internal sealed class SemanticAnalyzer
             return SmileType.Error;
         }
         var expected = SyntaxFacts.GetBuiltInFunctionParameters(identifier.Kind).Count;
-        if (identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword && !_hasGameWindow)
-            Report("SML3023", identifier.Span, $"Built-in '{identifier.Text}' requires GAME WINDOW.");
+        if (identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword)
+            RequireGameWindow(identifier.Span, $"Built-in '{identifier.Text}'");
         if (arguments.Count != expected)
             Report("SML3016", identifier.Span, $"Built-in '{identifier.Text}' expects {expected} argument(s), found {arguments.Count}.");
         if (identifier.Kind is SyntaxKind.ImageWidthKeyword or SyntaxKind.ImageHeightKeyword or SyntaxKind.ImageLoadedKeyword)
@@ -1737,17 +1782,68 @@ internal sealed class SemanticAnalyzer
         }
         if (identifier.Kind is SyntaxKind.TextWidthKeyword or SyntaxKind.TextHeightKeyword)
         {
-            if (!_hasGameWindow)
-                Report("SML3505", identifier.Span, $"Built-in '{identifier.Text}' requires GAME WINDOW.");
+            RequireGameWindow(identifier.Span, $"Built-in '{identifier.Text}'", "SML3505");
             if (arguments.Count > 0)
                 RequireType(arguments[0], SmileType.Text, "SML3505", $"Built-in '{identifier.Text}' requires TEXT as its first argument.");
             if (arguments.Count > 1)
                 RequireType(arguments[1], SmileType.Number, "SML3505", $"Built-in '{identifier.Text}' requires NUMBER size.");
             return SmileType.Number;
         }
+        if (identifier.Kind is SyntaxKind.TextLengthKeyword or SyntaxKind.TextCodeAtKeyword or SyntaxKind.TextSliceKeyword)
+        {
+            if (arguments.Count > 0)
+                RequireType(arguments[0], SmileType.Text, "SML3700",
+                    $"Built-in '{identifier.Text}' requires TEXT as its first argument.");
+            for (var index = 1; index < arguments.Count; index++)
+                RequireType(arguments[index], SmileType.Number, "SML3700",
+                    $"Built-in '{identifier.Text}' requires NUMBER index arguments.");
+            return identifier.Kind == SyntaxKind.TextSliceKeyword ? SmileType.Text : SmileType.Number;
+        }
         foreach (var argument in arguments)
             RequireType(argument, SmileType.Number, "SML3003", $"Built-in '{identifier.Text}' requires NUMBER arguments.");
         return identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword ? SmileType.Boolean : SmileType.Number;
+    }
+
+    private void PropagateRoutineCapabilities()
+    {
+        bool changed;
+        do
+        {
+            changed = false;
+            foreach (var call in _routineCalls.Where(call => call.Caller != null))
+            {
+                var combined = call.Caller!.Capabilities | call.Callee.Capabilities;
+                if (combined == call.Caller.Capabilities)
+                    continue;
+                call.Caller.Capabilities = combined;
+                changed = true;
+            }
+        } while (changed);
+    }
+
+    private void DiagnoseTopLevelRoutineCapabilities()
+    {
+        if (_hasGameWindow)
+            return;
+        foreach (var call in _routineCalls.Where(call => call.Caller == null && call.Callee.RequiresGameWindow))
+            _diagnostics.Report(call.Source, "SML3704", call.Span,
+                $"Routine '{call.Callee.DisplayName}' requires a GAME WINDOW.");
+    }
+
+    private sealed class RoutineCallSite
+    {
+        public RoutineCallSite(RoutineSymbol? caller, RoutineSymbol callee, SourceText source, TextSpan span)
+        {
+            Caller = caller;
+            Callee = callee;
+            Source = source;
+            Span = span;
+        }
+
+        public RoutineSymbol? Caller { get; }
+        public RoutineSymbol Callee { get; }
+        public SourceText Source { get; }
+        public TextSpan Span { get; }
     }
 
     private SmileType AnalyzeUnary(UnaryExpressionSyntax unary)

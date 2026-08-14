@@ -160,7 +160,14 @@ public static class SmileCompletionService
             if (SyntaxFacts.IsBuiltInFunction(kind))
             {
                 var parameters = string.Join(", ", SyntaxFacts.GetBuiltInFunctionParameters(kind));
-                completions.Add(new SmileCompletion(name, $"Built-in function {name}({parameters})", SmileCompletionKind.BuiltInFunction));
+                var description = kind switch
+                {
+                    SyntaxKind.TextLengthKeyword => "TEXT_LENGTH(Value AS TEXT) AS NUMBER - Unicode scalar count",
+                    SyntaxKind.TextCodeAtKeyword => "TEXT_CODE_AT(Value AS TEXT, Index AS NUMBER) AS NUMBER - zero-based Unicode scalar value",
+                    SyntaxKind.TextSliceKeyword => "TEXT_SLICE(Value AS TEXT, Start AS NUMBER, Count AS NUMBER) AS TEXT - Unicode scalar slice",
+                    _ => $"Built-in function {name}({parameters})"
+                };
+                completions.Add(new SmileCompletion(name, description, SmileCompletionKind.BuiltInFunction));
             }
             else if (SyntaxFacts.IsKeyword(kind))
             {
@@ -199,8 +206,9 @@ public static class SmileCompletionService
             var keyword = member.Routine.IsFunction ? "FUNCTION" : "SUB";
             var returnType = member.Routine.IsFunction
                 ? $" AS {member.Routine.ReturnType.ToString().ToUpperInvariant()}" : string.Empty;
+            var capability = member.Routine.RequiresGameWindow ? " - requires GAME WINDOW" : string.Empty;
             return new SmileCompletion(member.Name,
-                $"{keyword} {member.Name}({parameters}){returnType} from module {member.Routine.ModuleName} " +
+                $"{keyword} {member.Name}({parameters}){returnType}{capability} from module {member.Routine.ModuleName} " +
                 $"({DescribeProvider(member.Routine.ProviderIdentity, dependencyContext)})",
                 member.Routine.IsFunction ? SmileCompletionKind.Function : SmileCompletionKind.Subroutine);
         }
