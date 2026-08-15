@@ -103,11 +103,13 @@ StaleHandle = BitmapFont.Create(FontStyle)
 StaleText = SystemText
 StaleText.Mode = UI.UI_TEXT_BITMAP
 StaleText.BitmapFontHandle = StaleHandle
+
 Call BitmapFont.Destroy(StaleHandle)
 Call Check(Not Text.IsStyleValid(StaleText))
 Call Check(Text.MeasureHeight(StaleText, "") > 0)
 
 FontHandle = BitmapFont.Create(FontStyle)
+
 Call Check(FontHandle > 0)
 
 BitmapText = SystemText
@@ -118,59 +120,72 @@ Call Check(Window.IsStyleValid(SkinWindow))
 
 BadWindow = SkinWindow
 BadWindow.SourceX = -1
+
 Call Check(Not Window.IsStyleValid(BadWindow))
 
 BadWindow = SkinWindow
 BadWindow.SourceWidth = 769
+
 Call Check(Not Window.IsStyleValid(BadWindow))
 
 BadWindow = SkinWindow
 BadWindow.SourceLeft = 384
 BadWindow.SourceRight = 384
+
 Call Check(Not Window.IsStyleValid(BadWindow))
 
 BadWindow = SkinWindow
 BadWindow.SourceX = 1
+
 Call Check(Not Window.IsStyleValid(BadWindow))
 
 BadWindow = SkinWindow
 BadWindow.FilterMode = 9
+
 Call Check(Not Window.IsStyleValid(BadWindow))
 
 BadWindow = SkinWindow
 BadWindow.Opacity = 101
+
 Call Check(Not Window.IsStyleValid(BadWindow))
 
 BadWindow = VectorWindow
 BadWindow.Padding.LEFT = UI.UI_MAX_LAYOUT_VALUE + 1
+
 Call Check(Not Window.IsStyleValid(BadWindow))
 
 Call Check(BitmapFont.IsStyleValid(FontStyle))
 
 BadFont = FontStyle
 BadFont.SourceX = -1
+
 Call Check(Not BitmapFont.IsStyleValid(BadFont))
 
 BadFont = FontStyle
 BadFont.Columns = 17
+
 Call Check(Not BitmapFont.IsStyleValid(BadFont))
 
 BadFont = FontStyle
 BadFont.SourceY = 1
+
 Call Check(Not BitmapFont.IsStyleValid(BadFont))
 
 BadFont = FontStyle
 BadFont.FilterMode = 4
+
 Call Check(Not BitmapFont.IsStyleValid(BadFont))
 
 BadFont = FontStyle
 BadFont.FirstCodePoint = 1114110
 BadFont.GlyphCount = 3
+
 Call Check(Not BitmapFont.IsStyleValid(BadFont))
 
 BadFont = FontStyle
 BadFont.FirstCodePoint = 55296
 BadFont.GlyphCount = 1
+
 Call Check(Not BitmapFont.IsStyleValid(BadFont))
 
 MenuStyle.Window = SkinWindow
@@ -185,31 +200,36 @@ MenuStyle.CursorFilterMode = UI.UI_FILTER_PIXEL
 MenuStyle.RowHeight = 40
 MenuStyle.WrapSelection = True
 MenuStyle.ShowScrollbar = True
+
 Call Check(Menu.IsStyleValid(MenuStyle))
 
 BadMenuStyle = MenuStyle
 BadMenuStyle.NormalText.Mode = 9
+
 Call Check(Not Menu.IsStyleValid(BadMenuStyle))
 
 BadMenuStyle = MenuStyle
 BadMenuStyle.CursorWidth = 0
+
 Call Check(Not Menu.IsStyleValid(BadMenuStyle))
 
 BadMenuStyle = MenuStyle
 BadMenuStyle.CursorFilterMode = 7
+
 Call Check(Not Menu.IsStyleValid(BadMenuStyle))
 
 MenuHandle = Menu.Create(MenuStyle, 10, 10, 280, 280, 6)
 
 For Index = 0 To 11
     ItemIndex = Menu.AddItem(MenuHandle, "Item", Index, True)
-
 End For
+
 Call Check(Menu.VisibleRows(MenuHandle) = 6)
 Call Check(Menu.SetSelectedIndex(MenuHandle, 10))
 
 LargeMenuStyle = MenuStyle
 LargeMenuStyle.RowHeight = 100
+
 Call Check(Menu.SetStyle(MenuHandle, LargeMenuStyle))
 Call Check(Menu.VisibleRows(MenuHandle) = 2)
 Call Check(Menu.TopIndex(MenuHandle) = 9)
@@ -223,6 +243,7 @@ Call Check(Menu.SetSelectedIndex(MenuHandle, 10))
 Call Check(Menu.TopIndex(MenuHandle) = 5)
 
 OldTop = Menu.TopIndex(MenuHandle)
+
 Call Check(Not Menu.SetStyle(MenuHandle, BadMenuStyle))
 Call Check(Menu.TopIndex(MenuHandle) = OldTop)
 
@@ -237,13 +258,14 @@ TinyMenuHandle = Menu.Create(TinyMenuStyle, 600, 350, 30, 3, 6)
 
 For Index = 0 To 11
     ItemIndex = Menu.AddItem(TinyMenuHandle, "Tiny", Index, True)
-
 End For
+
 Call Check(Menu.VisibleRows(TinyMenuHandle) = 1)
 Call Check(Menu.SetSelectedIndex(TinyMenuHandle, 11))
 Call Check(Menu.TopIndex(TinyMenuHandle) = 11)
 
 LineHeight = Text.MeasureHeight(SystemText, "")
+
 Call Check(Text.MeasureHeight(SystemText, "One") = LineHeight)
 Call Check(Text.MeasureHeight(SystemText, "One
 Two") = LineHeight * 2 + SystemText.LineSpacing)
@@ -256,6 +278,7 @@ Call Check(Text.MeasureWidth(SystemText, "One
 Longer") = Text.MeasureWidth(SystemText, "Longer"))
 
 LineHeight = Text.MeasureHeight(BitmapText, "")
+
 Call Check(Text.MeasureHeight(BitmapText, "One
 Two") = LineHeight * 2 + BitmapText.LineSpacing)
 Call Check(Text.MeasureHeight(BitmapText, "One
@@ -268,10 +291,12 @@ DialogueStyle.Window = SkinWindow
 DialogueStyle.Text = SystemText
 DialogueStyle.CharactersPerSecond = 10
 DialogueStyle.LineSpacing = 3
+
 Call Check(Dialogue.IsStyleValid(DialogueStyle))
 
 BadDialogueStyle = DialogueStyle
 BadDialogueStyle.CharactersPerSecond = -1
+
 Call Check(Not Dialogue.IsStyleValid(BadDialogueStyle))
 
 BadDialogueStyle = DialogueStyle
@@ -279,9 +304,11 @@ BadDialogueStyle.UseContinueIndicator = True
 BadDialogueStyle.ContinueIndicator = Cursor
 BadDialogueStyle.IndicatorWidth = 0
 BadDialogueStyle.IndicatorHeight = 20
+
 Call Check(Not Dialogue.IsStyleValid(BadDialogueStyle))
 
 DialogueHandle = Dialogue.Create(DialogueStyle, 310, 10, 320, 200)
+
 Call Check(Dialogue.AddPage(DialogueHandle, "One Two Three Four Five Six Seven Eight Nine Ten"))
 Call Check(Dialogue.AddPage(DialogueHandle, "Second Page"))
 Call Check(Dialogue.Start(DialogueHandle, 0))
@@ -291,6 +318,7 @@ OldVisible = Dialogue.VisibleCharacters(DialogueHandle)
 OldPage = Dialogue.CurrentPage(DialogueHandle)
 BitmapDialogueStyle = DialogueStyle
 BitmapDialogueStyle.Text = BitmapText
+
 Call Check(Dialogue.SetStyle(DialogueHandle, BitmapDialogueStyle))
 Call Check(Dialogue.IsActive(DialogueHandle))
 Call Check(Dialogue.VisibleCharacters(DialogueHandle) = OldVisible)
@@ -298,6 +326,7 @@ Call Check(Dialogue.CurrentPage(DialogueHandle) = OldPage)
 
 VectorDialogueStyle = BitmapDialogueStyle
 VectorDialogueStyle.Window = VectorWindow
+
 Call Check(Dialogue.SetStyle(DialogueHandle, VectorDialogueStyle))
 Call Check(Dialogue.IsActive(DialogueHandle))
 
@@ -306,6 +335,7 @@ OldPage = Dialogue.CurrentPage(DialogueHandle)
 BadDialogueStyle = VectorDialogueStyle
 BadDialogueStyle.Window.Padding.LEFT = 160
 BadDialogueStyle.Window.Padding.RIGHT = 160
+
 Call Check(Not Dialogue.SetStyle(DialogueHandle, BadDialogueStyle))
 Call Check(Dialogue.IsActive(DialogueHandle))
 Call Check(Dialogue.VisibleCharacters(DialogueHandle) = OldVisible)
@@ -315,23 +345,27 @@ LimitHandle = Dialogue.Create(DialogueStyle, 0, 0, 1000, 300)
 
 For Index = 1 To UI.UI_MAX_DIALOGUE_PAGE_SCALARS - 1
     LongValue = LongValue + "A"
-
 End For
+
 Call Check(Dialogue.AddPage(LimitHandle, LongValue))
 Call Dialogue.ClearPages(LimitHandle)
 
 LongValue = LongValue + "A"
+
 Call Check(Dialogue.AddPage(LimitHandle, LongValue))
 Call Check(Dialogue.PageCount(LimitHandle) = 1)
 
 LongValue = LongValue + "A"
+
 Call Check(Not Dialogue.AddPage(LimitHandle, LongValue))
 Call Check(Dialogue.PageCount(LimitHandle) = 1)
 
 Started = Timer()
+
 Call Check(Dialogue.Start(LimitHandle, Started))
 
 UnbrokenMilliseconds = Timer() - Started
+
 Call Check(UnbrokenMilliseconds < 5000)
 
 Call Dialogue.ClearPages(LimitHandle)
@@ -340,15 +374,17 @@ LongValue = ""
 
 For Index = 1 To UI.UI_MAX_DIALOGUE_PAGE_SCALARS / 2
     LongValue = LongValue + "A "
-
 End For
+
 Call Check(Text_Length(LongValue) = UI.UI_MAX_DIALOGUE_PAGE_SCALARS)
 Call Check(Dialogue.AddPage(LimitHandle, LongValue))
 
 Started = Timer()
+
 Call Check(Dialogue.Start(LimitHandle, Started))
 
 SpacedMilliseconds = Timer() - Started
+
 Call Check(SpacedMilliseconds < 5000)
 
 Call Dialogue.ClearPages(LimitHandle)
@@ -357,15 +393,17 @@ LongValue = ""
 
 For Index = 1 To UI.UI_MAX_DIALOGUE_PAGE_SCALARS
     LongValue = LongValue + "😀"
-
 End For
+
 Call Check(Text_Length(LongValue) = UI.UI_MAX_DIALOGUE_PAGE_SCALARS)
 Call Check(Dialogue.AddPage(LimitHandle, LongValue))
 
 Started = Timer()
+
 Call Check(Dialogue.Start(LimitHandle, Started))
 
 UnicodeMilliseconds = Timer() - Started
+
 Call Check(UnicodeMilliseconds < 5000)
 
 Call Dialogue.ClearPages(LimitHandle)
@@ -374,8 +412,8 @@ LongValue = ""
 
 For Index = 1 To UI.UI_MAX_DIALOGUE_PAGE_SCALARS
     LongValue = LongValue + " "
-
 End For
+
 Call Check(Dialogue.AddPage(LimitHandle, LongValue))
 Call Check(Dialogue.Start(LimitHandle, Timer()))
 
@@ -386,14 +424,15 @@ LongValue = ""
 For Index = 1 To UI.UI_MAX_DIALOGUE_PAGE_SCALARS
     LongValue = LongValue + "
 "
-
 End For
+
 Call Check(Dialogue.AddPage(LimitHandle, LongValue))
 Call Check(Not Dialogue.Start(LimitHandle, Timer()))
 
 PreparationMilliseconds = Max(UnbrokenMilliseconds, Max(SpacedMilliseconds, UnicodeMilliseconds))
 
 Clear Rgb(5, 9, 25)
+
 Call Menu.Draw(MenuHandle)
 Call Menu.Draw(TinyMenuHandle)
 Call Dialogue.Draw(DialogueHandle, Timer())

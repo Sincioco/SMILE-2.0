@@ -4,6 +4,7 @@ Dim GlobalValue As Text
 
 GlobalValue = "G" + "Lobal"
 Print "Ending"
+
 Call StopNow("Stop")
 
 Print "Unreachable"

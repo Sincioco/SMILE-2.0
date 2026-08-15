@@ -9,11 +9,11 @@ Value = "初期"
 
 For Index = 0 To 999
     Copy = Value
+
     Call ChangeByValue(Copy)
     Call Replace(Value, BuildValue("SMILE", "✓"))
 
     Values[Index Mod 4] = Value
-
 End For
 
 Value = Value

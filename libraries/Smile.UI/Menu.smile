@@ -201,6 +201,7 @@ Public Function Create(ByRef Style As Core.MenuStyle, X As Number, Y As Number, 
 
     MenuSelected[Slot] = -1
     MenuTop[Slot] = 0
+
     Call ClampVisibleRows(Slot)
 
     ReturnValue = MenuGeneration[Slot] * 100 + Slot + 1
@@ -238,7 +239,6 @@ Public Sub ClearItems(Handle As Number)
         ItemValues[Slot, Index] = 0
         ItemEnabled[Slot, Index] = False
         ItemSubmenu[Slot, Index] = False
-
     End For
     MenuItemCount[Slot] = 0
     MenuSelected[Slot] = -1
@@ -292,6 +292,7 @@ Public Function SetStyle(Handle As Number, ByRef Style As Core.MenuStyle) As Boo
     End If
 
     MenuStyles[Slot] = Style
+
     Call ClampVisibleRows(Slot)
     Call UpdateTop(Slot)
 
@@ -696,6 +697,7 @@ Public Function SetSelectedIndex(Handle As Number, Index As Number) As Boolean
     End If
 
     MenuSelected[Slot] = Index
+
     Call UpdateTop(Slot)
 
     Return True
@@ -718,6 +720,7 @@ Public Function ResetSelection(Handle As Number) As Boolean
 
     MenuSelected[Slot] = FirstEnabled(Slot)
     MenuTop[Slot] = 0
+
     Call UpdateTop(Slot)
 
     ReturnValue = MenuSelected[Slot] >= 0
@@ -739,6 +742,7 @@ Private Function FindNext(Slot As Number, Direction As Number) As Number
     Candidate = MenuSelected[Slot]
 
     For StepCount = 1 To MenuItemCount[Slot]
+
         Candidate = Candidate + Direction
 
         If Candidate < 0 Or Candidate >= MenuItemCount[Slot] Then
@@ -797,6 +801,7 @@ Public Function HandleKey(Handle As Number, Key As Number) As Number
 
         ReturnValue = Core.UI_EVENT_NONE
         Return ReturnValue
+
     End If
 
     NextIndex = -1
@@ -808,11 +813,14 @@ Public Function HandleKey(Handle As Number, Key As Number) As Number
     End If
 
     If NextIndex >= 0 And NextIndex <> MenuSelected[Slot] Then
+
         MenuSelected[Slot] = NextIndex
+
         Call UpdateTop(Slot)
 
         ReturnValue = Core.UI_EVENT_CHANGED
         Return ReturnValue
+
     End If
 
     ReturnValue = Core.UI_EVENT_NONE
@@ -865,9 +873,11 @@ Private Function Ellipsize(ByRef Style As Core.TextStyle, Value As Text, Maximum
     For Index = 0 To Length - 1
 
         If Text_Code_At(Value, Index) = 10 Then
+
             SegmentEnd = Index
             HasOverflow = True
             Exit For
+
         End If
 
     End For
@@ -882,6 +892,7 @@ Private Function Ellipsize(ByRef Style As Core.TextStyle, Value As Text, Maximum
     If Text.MeasureWidth(Style, Ellipsis) > MaximumWidth Then
 
         For EllipsisCount = 1 To 3
+
             Candidate = Text_Slice(Ellipsis, 0, EllipsisCount)
 
             If Text.MeasureWidth(Style, Candidate) <= MaximumWidth Then
@@ -892,6 +903,7 @@ Private Function Ellipsize(ByRef Style As Core.TextStyle, Value As Text, Maximum
 
         End For
         Return VisibleEllipsis
+
     End If
 
     Low = 0
@@ -927,7 +939,6 @@ Private Sub ClearPreparedLines()
         PreparedLines[Index] = ""
         PreparedLineWidths[Index] = 0
         PreparedLineYs[Index] = 0
-
     End For
     PreparedLineCount = 0
     PreparedOverflow = False
@@ -983,17 +994,22 @@ Private Sub PrepareWrapped(ByRef Style As Core.TextStyle, Value As Text, Width A
         For Scan = Cursor To Length - 1
 
             If Text_Code_At(Value, Scan) = 10 Then
+
                 SegmentEnd = Scan
                 HasNewline = True
                 Exit For
+
             End If
 
         End For
 
         If SegmentEnd = Cursor Then
+
             LineEnd = Cursor
             NextIndex = Cursor + 1
+
         Else
+
             Low = 1
             High = SegmentEnd - Cursor
             Best = 0
@@ -1025,6 +1041,7 @@ Private Sub PrepareWrapped(ByRef Style As Core.TextStyle, Value As Text, Width A
             NextIndex = LineEnd
 
             If FitEnd < SegmentEnd Then
+
                 LastSpace = -1
 
                 For Scan = Cursor To FitEnd - 1
@@ -1036,6 +1053,7 @@ Private Sub PrepareWrapped(ByRef Style As Core.TextStyle, Value As Text, Width A
                 End For
 
                 If LastSpace > Cursor Then
+
                     LineEnd = LastSpace
                     NextIndex = LastSpace + 1
 
@@ -1046,14 +1064,18 @@ Private Sub PrepareWrapped(ByRef Style As Core.TextStyle, Value As Text, Width A
                         End If
 
                         NextIndex = NextIndex + 1
-
                     End For
+
                 End If
 
             Else If HasNewline Then
+
                 NextIndex = SegmentEnd + 1
+
             Else
+
                 NextIndex = Length + 1
+
             End If
 
         End If
@@ -1078,7 +1100,6 @@ Private Sub PrepareWrapped(ByRef Style As Core.TextStyle, Value As Text, Width A
         PreparedLineWidths[LineNumber] = Text.MeasureWidth(Style, LineValue)
         PreparedLineCount = LineNumber + 1
         Cursor = NextIndex
-
     End For
 
 End Sub
@@ -1103,6 +1124,7 @@ Private Sub PrepareLabel(Slot As Number, Index As Number, ByRef Style As Core.Te
     End If
 
     If MenuStyles[Slot].ItemTextOverflowMode = Core.UI_MENU_TEXT_WRAP Then
+
         MaximumLines = MenuStyles[Slot].ItemTextMaxLines
 
         If MaximumLines <= 0 Then
@@ -1112,15 +1134,19 @@ Private Sub PrepareLabel(Slot As Number, Index As Number, ByRef Style As Core.Te
         Call PrepareWrapped(Style, Value, Width, RowHeight, MaximumLines, DrawAfterIndicator, IndicatorWidth)
 
     Else If MenuStyles[Slot].ItemTextOverflowMode = Core.UI_MENU_TEXT_CLIP Then
+
         PreparedLines[0] = FirstLine(Value)
         PreparedLineWidths[0] = Text.MeasureWidth(Style, PreparedLines[0])
         PreparedLineCount = 1
         PreparedOverflow = PreparedLineWidths[0] > LabelWidth Or Text_Length(FirstLine(Value)) < Text_Length(Value)
+
     Else
+
         PreparedLines[0] = Ellipsize(Style, Value, LabelWidth)
         PreparedLineWidths[0] = Text.MeasureWidth(Style, PreparedLines[0])
         PreparedLineCount = 1
         PreparedOverflow = PreparedLines[0] <> FirstLine(Value) Or Text_Length(FirstLine(Value)) < Text_Length(Value)
+
     End If
 
 End Sub
@@ -1154,7 +1180,6 @@ Private Function DrawLabel(Slot As Number, Index As Number, ByRef Style As Core.
 
     For LineNumber = 0 To PreparedLineCount - 1
         PreparedLineYs[LineNumber] = TextBlockY + LineNumber * (LineHeight + LineSpacing)
-
     End For
 
     If Width <= 0 Then
@@ -1166,11 +1191,15 @@ Private Function DrawLabel(Slot As Number, Index As Number, ByRef Style As Core.
         For LineNumber = 0 To PreparedLineCount - 1
 
             If MenuStyles[Slot].ItemTextOverflowMode = Core.UI_MENU_TEXT_CLIP Then
+
                 Clip Rectangle X, Y, LabelWidth, RowHeight
+
                     Call Text.Draw(Style, PreparedLines[LineNumber], X, PreparedLineYs[LineNumber], Core.UI_ALIGN_LEFT, 100)
 
                 End Clip
+
             Else
+
                 Call Text.Draw(Style, PreparedLines[LineNumber], X, PreparedLineYs[LineNumber], Core.UI_ALIGN_LEFT, 100)
 
             End If
@@ -1178,8 +1207,10 @@ Private Function DrawLabel(Slot As Number, Index As Number, ByRef Style As Core.
         End For
 
         If DrawAfterIndicator And IndicatorWidth > 0 Then
+
             LineNumber = PreparedLineCount - 1
             IndicatorX = X + Min(LabelWidth, PreparedLineWidths[LineNumber])
+
             Call Text.Draw(Style, " >", IndicatorX, PreparedLineYs[LineNumber], Core.UI_ALIGN_LEFT, 100)
 
         End If
@@ -1249,20 +1280,25 @@ Public Sub DrawFocused(Handle As Number, Focused As Boolean)
     Clip Rectangle Content.X, Content.Y, Content.Width, Content.Height
 
         For Row = 0 To MenuVisibleRows[Slot] - 1
+
             Index = MenuTop[Slot] + Row
 
             If Index < MenuItemCount[Slot] Then
+
                 RowY = Content.Y + Row * RowHeight
                 RowDrawHeight = Max(0, Min(RowHeight, Content.Y + Content.Height - RowY))
 
                 If RowDrawHeight > 0 Then
+
                     Clip Rectangle Content.X, RowY, Content.Width, RowDrawHeight
 
                         If Index = MenuSelected[Slot] Then
+
                             RowStyle = MenuStyles[Slot].SelectedText
                             Fill Rectangle Content.X, RowY, Content.Width, RowHeight, MenuStyles[Slot].SelectionFillColor
 
                             If Focused And MenuStyles[Slot].UseCursor And Image_Loaded(MenuStyles[Slot].Cursor) And MenuStyles[Slot].CursorWidth > 0 And MenuStyles[Slot].CursorHeight > 0 Then
+
                                 CursorX = Content.X + MenuStyles[Slot].CursorOffsetX
                                 CursorY = RowY + Max(0, (RowDrawHeight - MenuStyles[Slot].CursorHeight) / 2) + MenuStyles[Slot].CursorOffsetY
                                 MaximumCursorX = TextX - MenuStyles[Slot].CursorWidth - 2
@@ -1287,9 +1323,13 @@ Public Sub DrawFocused(Handle As Number, Focused As Boolean)
                             End If
 
                         Else If ItemEnabled[Slot, Index] Then
+
                             RowStyle = MenuStyles[Slot].NormalText
+
                         Else
+
                             RowStyle = MenuStyles[Slot].DisabledText
+
                         End If
 
                         LabelRight = Content.X + Content.Width - ScrollReserve - 8
@@ -1299,24 +1339,32 @@ Public Sub DrawFocused(Handle As Number, Focused As Boolean)
                         AfterMarker = ShowMarker And MenuStyles[Slot].SubmenuIndicatorPosition = Core.UI_SUBMENU_INDICATOR_AFTER_TEXT
 
                         If ShowMarker And MenuStyles[Slot].SubmenuIndicatorPosition = Core.UI_SUBMENU_INDICATOR_RIGHT_ALIGNED Then
+
                             MarkerWidth = Text.MeasureWidth(RowStyle, " >")
                             MarkerX = LabelRight - MarkerWidth
 
                             If MarkerX >= TextX Then
+
                                 LabelRight = MarkerX - 4
+
                             Else
+
                                 ShowMarker = False
                                 MarkerWidth = 0
                                 MarkerX = 0
+
                             End If
 
                         Else If AfterMarker Then
+
                             MarkerWidth = Text.MeasureWidth(RowStyle, " >")
 
                             If MarkerWidth > LabelRight - TextX Then
+
                                 ShowMarker = False
                                 AfterMarker = False
                                 MarkerWidth = 0
+
                             End If
 
                         End If
@@ -1326,10 +1374,10 @@ Public Sub DrawFocused(Handle As Number, Focused As Boolean)
 
                         If ShowMarker And Not AfterMarker And MarkerWidth > 0 Then
                             Call Text.Draw(RowStyle, " >", MarkerX, MarkerY, Core.UI_ALIGN_LEFT, 100)
-
                         End If
 
                     End Clip
+
                 End If
 
             End If
@@ -1337,14 +1385,17 @@ Public Sub DrawFocused(Handle As Number, Focused As Boolean)
         End For
 
         If MenuStyles[Slot].ShowScrollbar And MenuItemCount[Slot] > MenuVisibleRows[Slot] Then
+
             ScrollHeight = Max(0, Min(Content.Height, MenuVisibleRows[Slot] * RowHeight))
             Fill Rectangle Content.X + Content.Width - 5, Content.Y, 4, ScrollHeight, DARK_GRAY
 
             If ScrollHeight > 0 Then
+
                 ThumbHeight = Min(ScrollHeight, Max(Min(8, ScrollHeight), ScrollHeight * MenuVisibleRows[Slot] / MenuItemCount[Slot]))
                 ThumbY = Content.Y + (ScrollHeight - ThumbHeight) * MenuTop[Slot] / (MenuItemCount[Slot] - MenuVisibleRows[Slot])
                 ThumbY = Max(Content.Y, Min(Content.Y + ScrollHeight - ThumbHeight, ThumbY))
                 Fill Rectangle Content.X + Content.Width - 5, ThumbY, 4, ThumbHeight, LIGHT_BLUE
+
             End If
 
         End If

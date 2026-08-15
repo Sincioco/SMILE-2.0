@@ -2,6 +2,7 @@ Game Window "SMILE 2.0 Live Refresh Basics - No Demo" Size 800 By 450
 
 Do
     Clear Rgb(8, 16, 32)
+
     Call DrawRefreshProof()
 
     Show Screen

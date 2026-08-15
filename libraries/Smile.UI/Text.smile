@@ -96,12 +96,16 @@ Public Function MeasureWidth(ByRef Style As Core.TextStyle, Value As Text) As Nu
     For Index = 0 To Length
 
         If Index = Length Then
+
             LineWidth = MeasureLineWidth(Style, Text_Slice(Value, LineStart, Index - LineStart))
             MaximumWidth = Max(MaximumWidth, LineWidth)
+
         Else If Text_Code_At(Value, Index) = 10 Then
+
             LineWidth = MeasureLineWidth(Style, Text_Slice(Value, LineStart, Index - LineStart))
             MaximumWidth = Max(MaximumWidth, LineWidth)
             LineStart = Index + 1
+
         End If
 
     End For
@@ -152,7 +156,9 @@ Private Sub DrawLine(ByRef Style As Core.TextStyle, Value As Text, X As Number, 
     DrawX = X
 
     If Alignment = Core.UI_ALIGN_CENTER Then
+
         Draw Text Value At X, Y Size Size Color Style.SystemColor Centered
+
     Else
 
         If Alignment = Core.UI_ALIGN_RIGHT Then
@@ -161,6 +167,7 @@ Private Sub DrawLine(ByRef Style As Core.TextStyle, Value As Text, X As Number, 
         End If
 
         Draw Text Value At DrawX, Y Size Size Color Style.SystemColor
+
     End If
 
 End Sub
@@ -193,15 +200,20 @@ Public Sub Draw(ByRef Style As Core.TextStyle, Value As Text, X As Number, Y As 
     For Index = 0 To Length
 
         If Index = Length Then
+
             LineText = Text_Slice(Value, LineStart, Index - LineStart)
+
             Call DrawLine(Style, LineText, X, LineY, Alignment, Opacity)
 
         Else If Text_Code_At(Value, Index) = 10 Then
+
             LineText = Text_Slice(Value, LineStart, Index - LineStart)
+
             Call DrawLine(Style, LineText, X, LineY, Alignment, Opacity)
 
             LineStart = Index + 1
             LineY = LineY + LineAdvance
+
         End If
 
     End For

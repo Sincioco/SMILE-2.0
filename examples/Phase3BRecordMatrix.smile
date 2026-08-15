@@ -26,6 +26,7 @@ Print First.Leaf.Name
 
 Grid[0, 0] = Copy
 Grid[1, 1] = Make0()
+
 Call RenameLeaf(Grid[0, 0].Leaf, "Nested")
 Call SetNumber(Grid[1, 1].Leaf.Value, 9)
 
@@ -42,6 +43,7 @@ Print MakeRecursive(3).Leaf.Value
 Call TryMutate(Copy)
 
 Print Copy.Leaf.Name
+
 Call Mutate(Copy)
 
 Print Copy.Leaf.Name

@@ -222,6 +222,7 @@ Do
     StyleChanged = False
 
     If Key = KEY_1 Then
+
         MenuStyle.Window = SkinWindow
         MenuStyle.NormalText = SystemText
         MenuStyle.SelectedText = SystemSelectedText
@@ -233,7 +234,9 @@ Do
         DialogueStyle.Window = SkinWindow
         DialogueStyle.Text = SystemText
         StyleChanged = True
+
     Else If Key = KEY_2 Then
+
         MenuStyle.Window = SkinWindow
         MenuStyle.NormalText = BitmapText
         MenuStyle.SelectedText = BitmapSelectedText
@@ -245,7 +248,9 @@ Do
         DialogueStyle.Window = SkinWindow
         DialogueStyle.Text = BitmapText
         StyleChanged = True
+
     Else If Key = KEY_3 Then
+
         MenuStyle.Window = VectorWindow
         MenuStyle.NormalText = SystemText
         MenuStyle.SelectedText = SystemSelectedText
@@ -257,68 +262,99 @@ Do
         DialogueStyle.Window = VectorWindow
         DialogueStyle.Text = SystemText
         StyleChanged = True
+
     Else If Key = KEY_W Then
+
         MenuStyle.ShowSubmenuIndicator = False
         WrapMenuStyle.ShowSubmenuIndicator = False
         StyleChanged = True
+
     Else If Key = KEY_A Then
+
         MenuStyle.ShowSubmenuIndicator = True
         MenuStyle.SubmenuIndicatorPosition = UI.UI_SUBMENU_INDICATOR_AFTER_TEXT
         WrapMenuStyle.ShowSubmenuIndicator = True
         WrapMenuStyle.SubmenuIndicatorPosition = UI.UI_SUBMENU_INDICATOR_AFTER_TEXT
         WrapMenuStyle.UseCursor = True
         StyleChanged = True
+
     Else If Key = KEY_S Then
+
         MenuStyle.ShowSubmenuIndicator = True
         MenuStyle.SubmenuIndicatorPosition = UI.UI_SUBMENU_INDICATOR_RIGHT_ALIGNED
         WrapMenuStyle.ShowSubmenuIndicator = True
         WrapMenuStyle.SubmenuIndicatorPosition = UI.UI_SUBMENU_INDICATOR_RIGHT_ALIGNED
         StyleChanged = True
+
     Else If Key = KEY_D Then
+
         MenuStyle.ShowScrollbar = Not MenuStyle.ShowScrollbar
         WrapMenuStyle.ShowScrollbar = MenuStyle.ShowScrollbar
         StyleChanged = True
+
     Else If Key = KEY_OTHER Then
 
         If TestStage = 0 Then
+
             OperationSucceeded = Menu.SetSelectedIndex(RootMenu, RootSharedIndex)
             OperationSucceeded = OperationSucceeded And MenuNavigator.Depth(NavigatorHandle) = 1
             WrapMenuStyle.UseCursor = False
+
         Else If TestStage = 1 Then
+
             MenuStyle.CursorOffsetY = 0
             WrapMenuStyle.CursorOffsetY = 0
+
         Else If TestStage = 2 Then
+
             MenuStyle.CursorOffsetY = 8
             WrapMenuStyle.CursorOffsetY = 8
+
         Else If TestStage = 3 Then
+
             MenuStyle.CursorOffsetY = -20
             WrapMenuStyle.CursorOffsetY = -20
+
         Else If TestStage = 4 Then
+
             MenuStyle.CursorHeight = 96
             WrapMenuStyle.CursorHeight = 96
+
         Else If TestStage = 5 Then
+
             MenuStyle.CursorHeight = 30
             MenuStyle.CursorOffsetY = -2
             WrapMenuStyle.CursorHeight = 30
             WrapMenuStyle.CursorOffsetY = -2
+
         Else If TestStage = 6 Then
+
             MenuStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_CLIP
             WrapMenuStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_CLIP
+
         Else If TestStage = 7 Then
+
             MenuStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_ELLIPSIS
             WrapMenuStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_WRAP
+
         End If
 
         TestStage = TestStage + 1
         StyleChanged = True
         Running = Running And OperationSucceeded
+
     Else If Dialogue.IsActive(DialogueHandle) Then
+
         Event = Dialogue.HandleKey(DialogueHandle, Key, Timer())
+
     Else
+
         Event = MenuNavigator.HandleKey(NavigatorHandle, Key)
 
         If Event = UI.UI_EVENT_ACCEPTED Then
+
             AcceptedValue = MenuNavigator.LastAcceptedValue(NavigatorHandle)
+
             Call Dialogue.ClearPages(DialogueHandle)
 
             If AcceptedValue = 99 Then
@@ -336,11 +372,13 @@ Do
             End If
 
             Running = Running And OperationSucceeded
+
         End If
 
     End If
 
     If StyleChanged Then
+
         OperationSucceeded = Menu.SetStyle(RootMenu, MenuStyle)
         OperationSucceeded = OperationSucceeded And Menu.SetStyle(CategoryMenu, WrapMenuStyle)
         OperationSucceeded = OperationSucceeded And Menu.SetStyle(OptionMenu, MenuStyle)
@@ -348,15 +386,23 @@ Do
         OperationSucceeded = OperationSucceeded And Dialogue.SetStyle(DialogueHandle, DialogueStyle)
         OperationSucceeded = OperationSucceeded And MenuNavigator.Relayout(NavigatorHandle)
         Running = Running And OperationSucceeded
+
     End If
 
     If Event = UI.UI_EVENT_CHANGED Then
+
         Play Sound "Assets\Move.wav" On Channel 1
+
     Else If Event = UI.UI_EVENT_SUBMENU_OPENED Or Event = UI.UI_EVENT_ACCEPTED Or Event = UI.UI_EVENT_ADVANCED Then
+
         Play Sound "Assets\Confirm.wav" On Channel 2
+
     Else If Event = UI.UI_EVENT_SUBMENU_CLOSED Or Event = UI.UI_EVENT_CANCELLED Then
+
         Play Sound "Assets\Cancel.wav" On Channel 3
+
     Else If Event = UI.UI_EVENT_COMPLETED Then
+
         Play Sound "Assets\Confirm.wav" On Channel 2
 
         If AcceptedValue = 99 Then
@@ -369,11 +415,11 @@ Do
 
     Clear Rgb(5, 9, 25)
     Draw Image Background At 0, 0 Size 960 By 540 Filter Smooth
+
     Call MenuNavigator.DrawStack(NavigatorHandle)
 
     If Dialogue.IsActive(DialogueHandle) Then
         Call Dialogue.Draw(DialogueHandle, Timer())
-
     End If
 
     Draw Text "Right/Enter/Space Open   Left/Esc Back   1 System   2 Bitmap   3 Vector" At 480, 12 Size 15 Color CYAN Centered

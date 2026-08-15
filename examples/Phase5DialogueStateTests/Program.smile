@@ -34,6 +34,7 @@ Style.LineSpacing = 0
 Handle = Dialogue.Create(Style, 0, 0, 300, 150)
 OperationSucceeded = Dialogue.AddPage(Handle, "One")
 OperationSucceeded = Dialogue.AddPage(Handle, "Two")
+
 Call Check(Dialogue.Start(Handle, 0))
 Call Check(Dialogue.PageCount(Handle) = 2)
 Call Check(Dialogue.VisibleCharacters(Handle) = 3)
@@ -52,6 +53,7 @@ GalleryStyle.Text.LineSpacing = 5
 GalleryStyle.LineSpacing = 5
 GalleryHandle = Dialogue.Create(GalleryStyle, 438, 290, 470, 205)
 OperationSucceeded = Dialogue.AddPage(GalleryHandle, "Save-game encoding belongs to a later RPG component. The generic persistent Data primitive is already available underneath it.")
+
 Call Check(Dialogue.Start(GalleryHandle, 0))
 Call Check(Dialogue.PageCount(GalleryHandle) >= 1 And Dialogue.PageCount(GalleryHandle) <= 2)
 Call Dialogue.Destroy(GalleryHandle)
@@ -61,6 +63,7 @@ Call Dialogue.ClearPages(Handle)
 Style.CharactersPerSecond = 10
 OperationSucceeded = Dialogue.SetStyle(Handle, Style)
 OperationSucceeded = Dialogue.AddPage(Handle, "A😀B")
+
 Call Check(Dialogue.Start(Handle, 100))
 Call Check(Dialogue.Update(Handle, 200) = UI.UI_EVENT_CHANGED)
 Call Check(Dialogue.VisibleCharacters(Handle) = 1)
@@ -72,6 +75,7 @@ Call Check(Dialogue.IsComplete(Handle))
 Call Dialogue.ClearPages(Handle)
 
 OperationSucceeded = Dialogue.AddPage(Handle, "Active Style Change Keeps This Page Visible")
+
 Call Check(Dialogue.Start(Handle, 100))
 
 OperationSucceeded = Dialogue.Update(Handle, 400) = UI.UI_EVENT_CHANGED
@@ -79,6 +83,7 @@ OldVisible = Dialogue.VisibleCharacters(Handle)
 OldPage = Dialogue.CurrentPage(Handle)
 ActiveStyle = Style
 ActiveStyle.Text.SystemSize = 22
+
 Call Check(Dialogue.SetStyle(Handle, ActiveStyle))
 Call Check(Dialogue.IsActive(Handle))
 Call Check(Dialogue.VisibleCharacters(Handle) = OldVisible)
@@ -87,6 +92,7 @@ Call Check(Dialogue.CurrentPage(Handle) = OldPage)
 FailedStyle = ActiveStyle
 FailedStyle.Window.Padding.LEFT = 150
 FailedStyle.Window.Padding.RIGHT = 150
+
 Call Check(Not Dialogue.SetStyle(Handle, FailedStyle))
 Call Check(Dialogue.IsActive(Handle))
 Call Check(Dialogue.VisibleCharacters(Handle) = OldVisible)
@@ -97,6 +103,7 @@ Call Check(Dialogue.HandleKey(Handle, KEY_ENTER, 400) = UI.UI_EVENT_COMPLETED)
 Call Dialogue.ClearPages(Handle)
 
 OperationSucceeded = Dialogue.AddPage(Handle, "Cancel")
+
 Call Check(Dialogue.Start(Handle, 0))
 Call Check(Dialogue.HandleKey(Handle, KEY_ESCAPE, 0) = UI.UI_EVENT_CANCELLED)
 Call Check(Not Dialogue.IsActive(Handle))
@@ -106,6 +113,7 @@ Call Dialogue.ClearPages(Handle)
 Style.CharactersPerSecond = 0
 OperationSucceeded = Dialogue.SetStyle(Handle, Style)
 OperationSucceeded = Dialogue.AddPage(Handle, "")
+
 Call Check(Dialogue.Start(Handle, 0))
 Call Check(Dialogue.VisibleCharacters(Handle) = 0)
 Call Check(Dialogue.HandleKey(Handle, KEY_ENTER, 0) = UI.UI_EVENT_COMPLETED)
@@ -119,6 +127,7 @@ OperationSucceeded = Dialogue.AddPage(Handle, "One
 
 Three
 ")
+
 Call Check(OperationSucceeded)
 Call Check(Dialogue.Start(Handle, 0))
 Call Check(Dialogue.PageCount(Handle) = 1)
@@ -128,16 +137,18 @@ Call Dialogue.ClearPages(Handle)
 
 For Index = 1 To UI.UI_MAX_DIALOGUE_PAGE_SCALARS - 1
     LongValue = LongValue + "A"
-
 End For
+
 Call Check(Dialogue.AddPage(Handle, LongValue))
 Call Dialogue.ClearPages(Handle)
 
 LongValue = LongValue + "A"
+
 Call Check(Dialogue.AddPage(Handle, LongValue))
 Call Check(Dialogue.PageCount(Handle) = 1)
 
 LongValue = LongValue + "A"
+
 Call Check(Not Dialogue.AddPage(Handle, LongValue))
 Call Check(Dialogue.PageCount(Handle) = 1)
 Call Check(Dialogue.Start(Handle, 0))
@@ -148,6 +159,7 @@ NarrowStyle.Window.Padding.RIGHT = 45
 NarrowStyle.Window.Padding.Top = 35
 NarrowStyle.Window.Padding.Bottom = 35
 NarrowHandle = Dialogue.Create(NarrowStyle, 0, 0, 100, 100)
+
 Call Check(Dialogue.AddPage(NarrowHandle, "Abcdefghijklmnopqrstuvwxyz0123456789"))
 Call Check(Not Dialogue.Start(NarrowHandle, 0))
 
@@ -161,13 +173,12 @@ LongValue = ""
 
 For Index = 1 To UI.UI_MAX_DIALOGUE_PAGE_SCALARS
     LongValue = LongValue + "A"
-
 End For
 
 For Index = 1 To UI.UI_MAX_DIALOGUE_PAGES - 1
     Call Check(Dialogue.AddPage(NarrowHandle, LongValue))
-
 End For
+
 Call Check(Not Dialogue.Start(NarrowHandle, 0))
 Call Check(Dialogue.IsActive(NarrowHandle))
 Call Check(Dialogue.VisibleCharacters(NarrowHandle) = OldVisible)
@@ -177,8 +188,8 @@ Call Dialogue.ClearPages(NarrowHandle)
 
 For Index = 0 To 31
     OperationSucceeded = Dialogue.AddPage(NarrowHandle, "A")
-
 End For
+
 Call Check(Not Dialogue.AddPage(NarrowHandle, "Overflow"))
 Call Check(Dialogue.Start(NarrowHandle, 0))
 Call Check(Dialogue.PageCount(NarrowHandle) = 32)

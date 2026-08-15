@@ -64,6 +64,7 @@ Do
 
     If DemoMode = True And Key <> KEY_NONE Then
         Call EnterTitle()
+
         Key = KEY_NONE
     End If
 
@@ -124,7 +125,9 @@ Do
                 End If
 
             Else
+
                 Call MoveSnake()
+
             End If
 
         End If
@@ -233,11 +236,13 @@ Sub EndRound()
 
     If DemoMode = True And Timer() - DemoStartedAt < DemoMinimumPlayTime Then
         Call RecoverDemo()
+
         Return
     End If
 
     If DemoMode = True Then
         Call EnterTitle()
+
         Return
     End If
 
@@ -340,6 +345,7 @@ Function CellBlocked(TestX, TestY, AllowTail)
             End If
 
             Return True
+
         End If
 
     End For
@@ -422,10 +428,8 @@ Function FloodAreaForDirection(TestDirection)
     For FloodClearY = 0 To GridHeight - 1
 
         For FloodClearX = 0 To GridWidth - 1
-
             FloodVisited[FloodClearX, FloodClearY] = 0
         End For
-
     End For
 
     FloodRead = 0
@@ -451,10 +455,12 @@ Function FloodAreaForDirection(TestDirection)
                 If FloodVisited[FloodNextX, FloodNextY] = 0 Then
 
                     If SimulatedCellBlocked(FloodNextX, FloodNextY) = False Then
+
                         FloodVisited[FloodNextX, FloodNextY] = 1
                         FloodQueueX[FloodWrite] = FloodNextX
                         FloodQueueY[FloodWrite] = FloodNextY
                         FloodWrite = FloodWrite + 1
+
                     End If
 
                 End If
@@ -481,14 +487,17 @@ Sub ChooseSafeFallback()
         SafeArea = FloodAreaForDirection(SafeDirection)
 
         If SafeArea >= 0 Then
+
             SafeX = SnakeX[0] + DirectionX(SafeDirection)
             SafeY = SnakeY[0] + DirectionY(SafeDirection)
             SafeFoodDistance = Abs(SafeX - FoodX) + Abs(SafeY - FoodY)
 
             If SafeArea > BestSafeArea Or (SafeArea = BestSafeArea And SafeFoodDistance < BestFoodDistance) Then
+
                 BestSafeArea = SafeArea
                 BestFoodDistance = SafeFoodDistance
                 BestSafeDirection = SafeDirection
+
             End If
 
         End If
@@ -511,13 +520,11 @@ Sub PlanDemoDirection()
     For BFSClearY = 0 To GridHeight - 1
 
         For BFSClearX = 0 To GridWidth - 1
-
             BFSVisited[BFSClearX, BFSClearY] = 0
             BFSParentX[BFSClearX, BFSClearY] = -1
             BFSParentY[BFSClearX, BFSClearY] = -1
             BFSFirstDirection[BFSClearX, BFSClearY] = KEY_NONE
         End For
-
     End For
 
     BFSRead = 0
@@ -543,6 +550,7 @@ Sub PlanDemoDirection()
                 If BFSVisited[BFSNextX, BFSNextY] = 0 Then
 
                     If CellBlocked(BFSNextX, BFSNextY, True) = False Then
+
                         BFSVisited[BFSNextX, BFSNextY] = 1
                         BFSParentX[BFSNextX, BFSNextY] = Bfsx
                         BFSParentY[BFSNextX, BFSNextY] = Bfsy
@@ -573,9 +581,11 @@ Sub PlanDemoDirection()
     Loop Until BFSRead >= BFSWrite Or BFSFound = True
 
     If BFSFound = True And IsSafeImmediate(BFSFoodDirection) = True Then
+
         NextDirection = BFSFoodDirection
         DemoHasSafeMove = True
         Return
+
     End If
 
     Call ChooseSafeFallback()
@@ -589,7 +599,6 @@ Sub MoveSnake()
     TailY = SnakeY[Length - 1]
 
     For I = Length - 1 Down To 1
-
         SnakeX[I] = SnakeX[I - 1]
         SnakeY[I] = SnakeY[I - 1]
     End For
@@ -619,7 +628,9 @@ Sub MoveSnake()
     End For
 
     If Collision = True Then
+
         Call EndRound()
+
     Else If SnakeX[0] = FoodX And SnakeY[0] = FoodY Then
 
         SnakeX[Length] = TailX
@@ -667,11 +678,13 @@ Sub DrawBoard()
     Draw Text "Escape Exits" At 835, 490 Size 16 Color LIGHT_GRAY Centered
 
     If DemoMode = True And State = 1 Then
+
         Fill Rounded Rectangle 740, 375, 200, 88, 10, Rgb(16, 25, 45)
         Draw Rounded Rectangle 740, 375, 200, 88, 10, CYAN
         Draw Text "Demo" At 840, 388 Size 21 Color YELLOW Centered
         Draw Text "Press Any Key" At 840, 420 Size 13 Color WHITE Centered
         Draw Text "To Return" At 840, 440 Size 13 Color WHITE Centered
+
     End If
 
 End Sub
@@ -711,7 +724,6 @@ End Sub
 Sub DrainPendingKeys()
 
     For DrainIndex = 1 To 64
-
         Get Key DrainedKey
     End For
 
@@ -723,6 +735,7 @@ Sub EnterTitle()
     State = 0
     Key = KEY_NONE
     Stop Sound
+
     Call DrainPendingKeys()
 
     TitleStartedAt = Timer()
@@ -733,6 +746,7 @@ End Sub
 Sub ResetGame()
 
     DemoMode = False
+
     Call ResetPlay()
 
 End Sub
@@ -741,6 +755,7 @@ Sub StartDemo()
 
     DemoMode = True
     DemoStartedAt = Timer()
+
     Call ResetPlay()
 
 End Sub

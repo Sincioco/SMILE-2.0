@@ -206,6 +206,7 @@ Public Function MeasureWidth(Handle As Number, Value As Text) As Number
     Length = Text_Length(Value)
 
     For Index = 0 To Length - 1
+
         Code = Text_Code_At(Value, Index)
 
         If Code = 10 Then
@@ -261,11 +262,15 @@ Private Sub DrawLine(Slot As Number, Value As Text, X As Number, Y As Number, Op
     DrawX = X
 
     For Index = 0 To Text_Length(Value) - 1
+
         Code = Text_Code_At(Value, Index)
 
         If Code = 9 Then
+
             DrawX = DrawX + FontStyles[Slot].AdvanceX * 4
+
         Else
+
             Glyph = Code - FontStyles[Slot].FirstCodePoint
 
             If Glyph < 0 Or Glyph >= FontStyles[Slot].GlyphCount Then
@@ -273,6 +278,7 @@ Private Sub DrawLine(Slot As Number, Value As Text, X As Number, Y As Number, Op
             End If
 
             If Glyph >= 0 And Glyph < FontStyles[Slot].GlyphCount Then
+
                 Column = Glyph Mod FontStyles[Slot].Columns
                 Row = Glyph / FontStyles[Slot].Columns
 
@@ -285,6 +291,7 @@ Private Sub DrawLine(Slot As Number, Value As Text, X As Number, Y As Number, Op
             End If
 
             DrawX = DrawX + FontStyles[Slot].AdvanceX
+
         End If
 
     End For
@@ -315,9 +322,11 @@ Public Sub Draw(Handle As Number, Value As Text, X As Number, Y As Number, Align
     LineY = Y
 
     For Index = 0 To Length
+
         Code = Text_Code_At(Value, Index)
 
         If Index = Length Or Code = 10 Then
+
             LineText = Text_Slice(Value, LineStart, Index - LineStart)
             LineWidth = MeasureWidth(Handle, LineText)
             LineX = X
@@ -332,6 +341,7 @@ Public Sub Draw(Handle As Number, Value As Text, X As Number, Y As Number, Align
 
             LineStart = Index + 1
             LineY = LineY + FontStyles[Slot].LineHeight
+
         End If
 
     End For

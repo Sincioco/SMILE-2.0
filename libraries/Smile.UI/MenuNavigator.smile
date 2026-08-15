@@ -193,6 +193,7 @@ Private Function OtherBindingKeepsMarker(SkipNavigator As Number, SkipBinding As
                 End If
 
             End For
+
         End If
 
     End For
@@ -256,7 +257,6 @@ Private Sub ClearStackFrom(Slot As Number, StartIndex As Number)
     For Level = StartIndex To Core.UI_MAX_MENU_DEPTH - 1
         StackMenus[Slot, Level] = 0
         StackParentItems[Slot, Level] = -1
-
     End For
 
 End Sub
@@ -272,6 +272,7 @@ Private Sub PruneBindings(Slot As Number)
     For BindingIndex = 0 To Core.UI_MAX_SUBMENU_BINDINGS - 1
 
         If BindingUsed[Slot, BindingIndex] Then
+
             ParentHandle = BindingParentMenus[Slot, BindingIndex]
             ParentItem = BindingParentItems[Slot, BindingIndex]
             ParentRevision = BindingParentRevisions[Slot, BindingIndex]
@@ -279,10 +280,8 @@ Private Sub PruneBindings(Slot As Number)
 
             If Not Menu.IsValid(ParentHandle) Or Not Menu.IsValid(ChildHandle) Or ParentHandle = ChildHandle Then
                 Call ClearBindingAt(Slot, BindingIndex)
-
             Else If Menu.ItemRevision(ParentHandle) <> ParentRevision Or ParentItem < 0 Or ParentItem >= Menu.ItemCount(ParentHandle) Then
                 Call ClearBindingAt(Slot, BindingIndex)
-
             End If
 
         End If
@@ -306,61 +305,74 @@ Private Function RepairSlot(Slot As Number) As Boolean
     Call PruneBindings(Slot)
 
     If Not Menu.IsValid(NavigatorRoot[Slot]) Then
+
         NavigatorDepth[Slot] = 0
+
         Call ClearStackFrom(Slot, 0)
         Call ClearAccepted(Slot)
 
         Return False
+
     End If
 
     If NavigatorDepth[Slot] < 1 Or StackMenus[Slot, 0] <> NavigatorRoot[Slot] Then
+
         NavigatorDepth[Slot] = 1
         StackMenus[Slot, 0] = NavigatorRoot[Slot]
         StackParentItems[Slot, 0] = -1
+
         Call ClearStackFrom(Slot, 1)
         Call ClearAccepted(Slot)
 
     End If
 
     For Level = 1 To NavigatorDepth[Slot] - 1
+
         ParentHandle = StackMenus[Slot, Level - 1]
         ChildHandle = StackMenus[Slot, Level]
 
         If Menu.SelectedIndex(ParentHandle) <> StackParentItems[Slot, Level] Then
+
             NavigatorDepth[Slot] = Level
+
             Call ClearStackFrom(Slot, Level)
             Call ClearAccepted(Slot)
 
             Exit For
+
         End If
 
         BindingIndex = FindBinding(Slot, ParentHandle, StackParentItems[Slot, Level])
 
         If BindingIndex < 0 Or BindingChildMenus[Slot, BindingIndex] <> ChildHandle Or Not Menu.IsValid(ChildHandle) Then
+
             NavigatorDepth[Slot] = Level
+
             Call ClearStackFrom(Slot, Level)
             Call ClearAccepted(Slot)
 
             Exit For
+
         End If
 
         For Prior = 0 To Level - 1
 
             If StackMenus[Slot, Prior] = ChildHandle Then
+
                 NavigatorDepth[Slot] = Level
+
                 Call ClearStackFrom(Slot, Level)
                 Call ClearAccepted(Slot)
 
                 Exit For
+
             End If
 
         End For
-
     End For
 
     If AcceptedMenus[Slot] <> 0 And Not Menu.IsValid(AcceptedMenus[Slot]) Then
         Call ClearAccepted(Slot)
-
     End If
 
     Return True
@@ -414,6 +426,7 @@ Private Function WouldCreateCycle(Slot As Number, ParentMenuHandle As Number, Pa
             If BindingUsed[Slot, BindingIndex] And BindingParentMenus[Slot, BindingIndex] = CurrentHandle Then
 
                 If BindingParentMenus[Slot, BindingIndex] <> ParentMenuHandle Or BindingParentItems[Slot, BindingIndex] <> ParentItemIndex Then
+
                     NextHandle = BindingChildMenus[Slot, BindingIndex]
 
                     If Not TraversalContains(NextHandle, QueueLength) And QueueLength < Core.UI_MAX_MENUS Then
@@ -426,7 +439,6 @@ Private Function WouldCreateCycle(Slot As Number, ParentMenuHandle As Number, Pa
             End If
 
         End For
-
     End For
     Return False
 
@@ -454,11 +466,14 @@ Private Sub TrimActiveEdge(Slot As Number, ParentMenuHandle As Number, ParentIte
     For Level = 1 To NavigatorDepth[Slot] - 1
 
         If StackMenus[Slot, Level - 1] = ParentMenuHandle And StackParentItems[Slot, Level] = ParentItemIndex Then
+
             NavigatorDepth[Slot] = Level
+
             Call ClearStackFrom(Slot, Level)
             Call ClearAccepted(Slot)
 
             Return
+
         End If
 
     End For
@@ -531,9 +546,12 @@ Private Function CalculateLayout(Slot As Number, ByRef Style As Core.MenuNavigat
         ScratchOldY[Level] = ChildBounds.Y
 
         If Level = 0 Then
+
             ScratchX[Level] = Max(LeftLimit, Min(RightLimit - ChildBounds.Width, ChildBounds.X))
             ScratchY[Level] = Max(TopLimit, Min(BottomLimit - ChildBounds.Height, ChildBounds.Y))
+
         Else
+
             ParentBounds = Menu.Bounds(StackMenus[Slot, Level - 1])
             RowBounds = Menu.SelectedRowRect(StackMenus[Slot, Level - 1])
             RowOffset = 0
@@ -579,6 +597,7 @@ Private Function CalculateLayout(Slot As Number, ByRef Style As Core.MenuNavigat
             CandidateY = ScratchY[Level - 1] + RowOffset
             ScratchX[Level] = Max(LeftLimit, Min(RightLimit - ChildBounds.Width, CandidateX))
             ScratchY[Level] = Max(TopLimit, Min(BottomLimit - ChildBounds.Height, CandidateY))
+
         End If
 
     End For
@@ -598,9 +617,9 @@ Private Function ApplyLayout(Slot As Number) As Boolean
 
             For Rollback = 0 To Level - 1
                 Ignored = Menu.SetPosition(StackMenus[Slot, Rollback], ScratchOldX[Rollback], ScratchOldY[Rollback])
-
             End For
             Return False
+
         End If
 
     End For
@@ -660,30 +679,35 @@ Public Function Create(RootMenuHandle As Number, ByRef Style As Core.MenuNavigat
     NavigatorStyles[Slot] = Style
     NavigatorRoot[Slot] = RootMenuHandle
     NavigatorDepth[Slot] = 1
+
     Call ClearStackFrom(Slot, 0)
 
     StackMenus[Slot, 0] = RootMenuHandle
     StackParentItems[Slot, 0] = -1
 
     For Index = 0 To Core.UI_MAX_SUBMENU_BINDINGS - 1
+
         BindingUsed[Slot, Index] = False
         BindingParentMenus[Slot, Index] = 0
         BindingParentItems[Slot, Index] = -1
         BindingParentRevisions[Slot, Index] = 0
         BindingChildMenus[Slot, Index] = 0
         BindingResetChild[Slot, Index] = False
-
     End For
+
     Call ClearAccepted(Slot)
 
     If Not RelayoutSlot(Slot, NavigatorStyles[Slot]) Then
+
         NavigatorUsed[Slot] = False
         NavigatorRoot[Slot] = 0
         NavigatorDepth[Slot] = 0
+
         Call ClearStackFrom(Slot, 0)
 
         ReturnValue = 0
         Return ReturnValue
+
     End If
 
     ReturnValue = NavigatorGeneration[Slot] * 100 + Slot + 1
@@ -705,13 +729,14 @@ Public Sub Destroy(NavigatorHandle As Number)
 
     For BindingIndex = 0 To Core.UI_MAX_SUBMENU_BINDINGS - 1
         Call ClearBindingAt(Slot, BindingIndex)
-
     End For
+
     Call ClearStackFrom(Slot, 0)
 
     NavigatorStyles[Slot] = EmptyStyle
     NavigatorRoot[Slot] = 0
     NavigatorDepth[Slot] = 0
+
     Call ClearAccepted(Slot)
 
     NavigatorUsed[Slot] = False
@@ -822,6 +847,7 @@ Public Function BindSubmenu(NavigatorHandle As Number, ParentMenuHandle As Numbe
     BindingIndex = FindBinding(Slot, ParentMenuHandle, ParentItemIndex)
 
     If BindingIndex < 0 Then
+
         FreeBinding = -1
 
         For BindingIndex = 0 To Core.UI_MAX_SUBMENU_BINDINGS - 1
@@ -838,8 +864,11 @@ Public Function BindSubmenu(NavigatorHandle As Number, ParentMenuHandle As Numbe
         End If
 
         BindingIndex = FreeBinding
+
     Else
+
         ExistingChild = BindingChildMenus[Slot, BindingIndex]
+
     End If
 
     ParentRevision = Menu.ItemRevision(ParentMenuHandle)
@@ -850,7 +879,6 @@ Public Function BindSubmenu(NavigatorHandle As Number, ParentMenuHandle As Numbe
 
     If ExistingChild <> 0 And ExistingChild <> ChildMenuHandle Then
         Call TrimActiveEdge(Slot, ParentMenuHandle, ParentItemIndex)
-
     End If
 
     BindingUsed[Slot, BindingIndex] = True
@@ -907,18 +935,22 @@ Public Sub ClearBindings(NavigatorHandle As Number)
 
     For BindingIndex = 0 To Core.UI_MAX_SUBMENU_BINDINGS - 1
         Call ClearBindingAt(Slot, BindingIndex)
-
     End For
 
     If Menu.IsValid(NavigatorRoot[Slot]) Then
+
         NavigatorDepth[Slot] = 1
         StackMenus[Slot, 0] = NavigatorRoot[Slot]
         StackParentItems[Slot, 0] = -1
+
         Call ClearStackFrom(Slot, 1)
 
         Ignored = RelayoutSlot(Slot, NavigatorStyles[Slot])
+
     Else
+
         NavigatorDepth[Slot] = 0
+
         Call ClearStackFrom(Slot, 0)
 
     End If
@@ -997,11 +1029,13 @@ Public Function OpenSelected(NavigatorHandle As Number) As Number
     NavigatorDepth[Slot] = OldDepth + 1
 
     If Not CalculateLayout(Slot, NavigatorStyles[Slot]) Or Not ApplyLayout(Slot) Then
+
         NavigatorDepth[Slot] = OldDepth
         StackMenus[Slot, OldDepth] = 0
         StackParentItems[Slot, OldDepth] = -1
         ReturnValue = Core.UI_EVENT_NONE
         Return ReturnValue
+
     End If
 
     Call ClearAccepted(Slot)
@@ -1032,13 +1066,16 @@ Public Function Back(NavigatorHandle As Number) As Number
     NavigatorDepth[Slot] = OldDepth - 1
 
     If Not CalculateLayout(Slot, NavigatorStyles[Slot]) Or Not ApplyLayout(Slot) Then
+
         NavigatorDepth[Slot] = OldDepth
         ReturnValue = Core.UI_EVENT_NONE
         Return ReturnValue
+
     End If
 
     StackMenus[Slot, OldDepth - 1] = 0
     StackParentItems[Slot, OldDepth - 1] = -1
+
     Call ClearAccepted(Slot)
 
     ReturnValue = Core.UI_EVENT_SUBMENU_CLOSED
@@ -1070,6 +1107,7 @@ Public Function HandleKey(NavigatorHandle As Number, Key As Number) As Number
     End If
 
     If Key = KEY_RIGHT Or Key = KEY_ENTER Or Key = KEY_SPACE Then
+
         SelectedItem = Menu.SelectedIndex(CurrentHandle)
         BindingIndex = -1
 
@@ -1103,20 +1141,25 @@ Public Function HandleKey(NavigatorHandle As Number, Key As Number) As Number
 
         ReturnValue = Core.UI_EVENT_CANCELLED
         Return ReturnValue
+
     End If
 
     If Key = KEY_ENTER Or Key = KEY_SPACE Then
+
         Event = Menu.HandleKey(CurrentHandle, Key)
 
         If Event = Core.UI_EVENT_ACCEPTED Then
+
             SelectedItem = Menu.SelectedIndex(CurrentHandle)
 
             If SelectedItem >= 0 Then
+
                 AcceptedMenus[Slot] = CurrentHandle
                 AcceptedIndices[Slot] = SelectedItem
                 AcceptedValues[Slot] = Menu.SelectedValue(CurrentHandle)
                 ReturnValue = Core.UI_EVENT_ACCEPTED
                 Return ReturnValue
+
             End If
 
         End If
@@ -1300,7 +1343,6 @@ Public Sub DrawStack(NavigatorHandle As Number)
 
     For Level = 0 To NavigatorDepth[Slot] - 1
         Call Menu.DrawFocused(StackMenus[Slot, Level], True)
-
     End For
 
 End Sub

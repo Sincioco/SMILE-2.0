@@ -10,7 +10,6 @@ Values[2] = Values[1] + 1
 
 For I = 0 To 2
     Total = Total + Values[I]
-
 End For
 
 If Total = 9 Then
@@ -26,7 +25,6 @@ Loop Until Value = 0
 
 For I = 2 Down To 0
     Print Values[I];
-
 End For
 
 Print

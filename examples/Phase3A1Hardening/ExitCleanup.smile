@@ -18,7 +18,6 @@ Sub Exercise(Command As Text)
                 Case "Stop"
                     Exit For
             End Select
-
         End For
 
         Do

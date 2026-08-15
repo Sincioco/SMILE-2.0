@@ -244,7 +244,6 @@ Sub PaintRoomWalls(LeftValue, TopValue, WidthValue, HeightValue)
             End If
 
         End For
-
     End For
 
 End Sub
@@ -257,9 +256,7 @@ Sub CarveRoom(LeftValue, TopValue, WidthValue, HeightValue)
 
         For CarveX = LeftValue To LeftValue + WidthValue - 1
             Tiles[MapIndex(CarveX, CarveY)] = TILE_FLOOR
-
         End For
-
     End For
 
 End Sub
@@ -271,7 +268,6 @@ Sub CarveHorizontal(YValue, X1, X2)
 
     For CarveX = CarveStart To CarveEnd
         Call SetTile(CarveX, YValue, TILE_FLOOR)
-
     End For
 
 End Sub
@@ -283,7 +279,6 @@ Sub CarveVertical(XValue, Y1, Y2)
 
     For CarveY = CarveStart To CarveEnd
         Call SetTile(XValue, CarveY, TILE_FLOOR)
-
     End For
 
 End Sub
@@ -298,11 +293,9 @@ Sub ConnectRoomCenters(FirstRoom, SecondRoom, HorizontalFirst)
     If HorizontalFirst = 1 Then
         Call CarveHorizontal(FirstY, FirstX, SecondX)
         Call CarveVertical(SecondX, FirstY, SecondY)
-
     Else
         Call CarveVertical(FirstX, FirstY, SecondY)
         Call CarveHorizontal(SecondY, FirstX, SecondX)
-
     End If
 
 End Sub
@@ -325,6 +318,7 @@ Sub PlaceGeneratedDoors()
         For DoorPlaceX = 1 To MapWidth - 2
 
             If GeneratedDoorCount < 4 And GetTile(DoorPlaceX, DoorPlaceY) = TILE_FLOOR And HasNeighborDoor(DoorPlaceX, DoorPlaceY) = False Then
+
                 DoorHorizontal = IsPassage(GetTile(DoorPlaceX - 1, DoorPlaceY)) And IsPassage(GetTile(DoorPlaceX + 1, DoorPlaceY)) And IsWall(GetTile(DoorPlaceX, DoorPlaceY - 1)) And IsWall(GetTile(DoorPlaceX, DoorPlaceY + 1))
                 DoorVertical = IsPassage(GetTile(DoorPlaceX, DoorPlaceY - 1)) And IsPassage(GetTile(DoorPlaceX, DoorPlaceY + 1)) And IsWall(GetTile(DoorPlaceX - 1, DoorPlaceY)) And IsWall(GetTile(DoorPlaceX + 1, DoorPlaceY))
 
@@ -336,7 +330,6 @@ Sub PlaceGeneratedDoors()
             End If
 
         End For
-
     End For
 
 End Sub
@@ -364,25 +357,27 @@ Sub BuildRandomCandidate()
                 End If
 
             End For
-
         End For
 
         If RoomFits = True Then
+
             RoomLeft[RoomCount] = NewRoomLeft
             RoomTop[RoomCount] = NewRoomTop
             RoomWidth[RoomCount] = NewRoomWidth
             RoomHeight[RoomCount] = NewRoomHeight
             RoomCenterX[RoomCount] = NewRoomLeft + NewRoomWidth / 2
             RoomCenterY[RoomCount] = NewRoomTop + NewRoomHeight / 2
+
             Call CarveRoom(NewRoomLeft, NewRoomTop, NewRoomWidth, NewRoomHeight)
 
             If RoomCount > 0 Then
                 Random CorridorOrder From 0 To 1
-                Call ConnectRoomCenters(RoomCount - 1, RoomCount, CorridorOrder)
 
+                Call ConnectRoomCenters(RoomCount - 1, RoomCount, CorridorOrder)
             End If
 
             RoomCount = RoomCount + 1
+
         End If
 
         RoomAttempt = RoomAttempt + 1
@@ -390,14 +385,15 @@ Sub BuildRandomCandidate()
     Loop Until RoomCount >= MaximumRooms Or RoomAttempt >= 72
 
     If RoomCount >= 3 Then
+
         Call ConnectRoomCenters(0, RoomCount - 1, 1)
 
         MiddleRoom = RoomCount / 2
+
         Call ConnectRoomCenters(1, MiddleRoom, 0)
 
         If RoomCount >= 7 Then
             Call ConnectRoomCenters(2, RoomCount - 2, 1)
-
         End If
 
     End If
@@ -406,6 +402,7 @@ Sub BuildRandomCandidate()
     MapStartY = RoomCenterY[0]
     MapStartDirection = EAST
     MapStartCount = 1
+
     Call PlaceGeneratedDoors()
 
 End Sub
@@ -422,6 +419,7 @@ Sub BuildFallbackMap()
     RoomHeight[0] = 8
     RoomCenterX[0] = 6
     RoomCenterY[0] = 6
+
     Call CarveRoom(2, 2, 8, 8)
 
     RoomCount = 1
@@ -432,6 +430,7 @@ Sub BuildFallbackMap()
     RoomHeight[1] = 8
     RoomCenterX[1] = 16
     RoomCenterY[1] = 6
+
     Call CarveRoom(12, 2, 8, 8)
 
     RoomCount = 2
@@ -442,6 +441,7 @@ Sub BuildFallbackMap()
     RoomHeight[2] = 8
     RoomCenterX[2] = 25
     RoomCenterY[2] = 6
+
     Call CarveRoom(22, 2, 7, 8)
 
     RoomCount = 3
@@ -452,6 +452,7 @@ Sub BuildFallbackMap()
     RoomHeight[3] = 7
     RoomCenterX[3] = 8
     RoomCenterY[3] = 16
+
     Call CarveRoom(2, 13, 12, 7)
 
     RoomCount = 4
@@ -462,6 +463,7 @@ Sub BuildFallbackMap()
     RoomHeight[4] = 7
     RoomCenterX[4] = 23
     RoomCenterY[4] = 16
+
     Call CarveRoom(17, 13, 12, 7)
 
     RoomCount = 5
@@ -472,6 +474,7 @@ Sub BuildFallbackMap()
     RoomHeight[5] = 6
     RoomCenterX[5] = 15
     RoomCenterY[5] = 26
+
     Call CarveRoom(7, 23, 17, 6)
 
     RoomCount = 6
@@ -488,6 +491,7 @@ Sub BuildFallbackMap()
     MapStartY = RoomCenterY[0]
     MapStartDirection = EAST
     MapStartCount = 1
+
     Call PlaceGeneratedDoors()
     Call ValidateMap()
 
@@ -499,6 +503,7 @@ Sub GenerateRandomMap()
     GenerationReady = False
 
     Do
+
         Call BuildRandomCandidate()
         Call ValidateMap()
 
@@ -509,7 +514,6 @@ Sub GenerateRandomMap()
 
     If GenerationReady = False Then
         Call BuildFallbackMap()
-
     End If
 
 End Sub
@@ -526,17 +530,17 @@ Sub BuildSelectedMap()
 
     If SelectedMap = MAP_DEFAULT Then
         Call LoadDefaultMap()
-
     Else
         Call LoadCustomMap()
-
     End If
 
     If MapLoadValid = False Then
+
         Call GenerateRandomMap()
 
         MapFallbackUsed = True
         MapFallbackMessageUntil = Timer() + MapFallbackMessageDuration
+
     End If
 
 End Sub
@@ -628,6 +632,7 @@ Sub InitializeCamera()
     Call UpdateCameraPlane()
 
     TurnAccumulator = 0
+
     Call ResetRenderCamera()
 
 End Sub
@@ -641,13 +646,17 @@ Sub RotateCameraHalfStep(TurnDirection)
     OldDirectionY = CameraDirectionY
 
     If TurnDirection > 0 Then
+
         CameraDirectionX = (OldDirectionX * HalfDegreeCos - OldDirectionY * HalfDegreeSin) / RotationScale
         CameraDirectionY = (OldDirectionX * HalfDegreeSin + OldDirectionY * HalfDegreeCos) / RotationScale
         FacingStep = FacingStep + 1
+
     Else
+
         CameraDirectionX = (OldDirectionX * HalfDegreeCos + OldDirectionY * HalfDegreeSin) / RotationScale
         CameraDirectionY = (0 - OldDirectionX * HalfDegreeSin + OldDirectionY * HalfDegreeCos) / RotationScale
         FacingStep = FacingStep - 1
+
     End If
 
     If FacingStep < 0 Then
@@ -720,10 +729,12 @@ End Sub
 Sub BeginDoorOpening(DoorXValue, DoorYValue)
 
     If DoorOpening = False And GetTile(DoorXValue, DoorYValue) = TILE_DOOR Then
+
         ActiveDoorX = DoorXValue
         ActiveDoorY = DoorYValue
         DoorProgress = 0
         DoorOpening = True
+
     End If
 
 End Sub
@@ -731,15 +742,18 @@ End Sub
 Sub UpdateDoor()
 
     If DoorOpening = True Then
+
         DoorProgress = DoorProgress + DoorOpenUnitsPerSecond * SimulationStep / 1000
 
         If DoorProgress >= CellScale Then
+
             Call SetTile(ActiveDoorX, ActiveDoorY, TILE_FLOOR)
 
             DoorOpening = False
             DoorProgress = 0
             ActiveDoorX = -1
             ActiveDoorY = -1
+
         End If
 
     End If
@@ -750,7 +764,6 @@ Sub TryOpenDoor()
 
     If CenterRayTile = TILE_DOOR And CenterRayDistance <= DoorUseDistance Then
         Call BeginDoorOpening(CenterRayMapX, CenterRayMapY)
-
     End If
 
 End Sub
@@ -786,7 +799,6 @@ Sub FillMapWithWalls()
 
     For FillIndex = 0 To MapCellCount - 1
         Tiles[FillIndex] = TILE_WALL_1
-
     End For
 
 End Sub
@@ -828,6 +840,7 @@ Sub ProcessMapLine(LineStart, LineLength)
     IsFloorHeader = LineLength = 9 And MapFileBytes[LineStart] = 91 And MapFileBytes[LineStart + 1] = 70 And MapFileBytes[LineStart + 2] = 76 And MapFileBytes[LineStart + 3] = 79 And MapFileBytes[LineStart + 4] = 79 And MapFileBytes[LineStart + 5] = 82 And MapFileBytes[LineStart + 6] = 32 And MapFileBytes[LineStart + 8] = 93
 
     If IsFloorHeader = True Then
+
         HeaderNumber = MapFileBytes[LineStart + 7] - 48
 
         If HeaderNumber = 1 And MapHeaderSeen = False And MapParsedRows = 0 Then
@@ -839,6 +852,7 @@ Sub ProcessMapLine(LineStart, LineLength)
         End If
 
         Return
+
     End If
 
     If MapHeaderSeen = False Or MapParsedRows >= MapHeight Or LineLength <> MapWidth Then
@@ -849,18 +863,28 @@ Sub ProcessMapLine(LineStart, LineLength)
     ParsedY = MapParsedRows
 
     For ParsedX = 0 To MapWidth - 1
+
         MapByte = MapFileBytes[LineStart + ParsedX]
         ParsedTile = TILE_WALL_1
 
         If MapByte = 35 Or MapByte = 49 Then
+
             ParsedTile = TILE_WALL_1
+
         Else If MapByte >= 50 And MapByte <= 54 Then
+
             ParsedTile = MapByte - 48
+
         Else If MapByte = 46 Or MapByte = 79 Or MapByte = 85 Or MapByte = 86 Then
+
             ParsedTile = TILE_FLOOR
+
         Else If MapByte = 68 Then
+
             ParsedTile = TILE_DOOR
+
         Else If MapByte = 78 Or MapByte = 69 Or MapByte = 83 Or MapByte = 87 Then
+
             ParsedTile = TILE_FLOOR
             MapStartCount = MapStartCount + 1
             MapStartX = ParsedX
@@ -877,11 +901,12 @@ Sub ProcessMapLine(LineStart, LineLength)
             End If
 
         Else
+
             MapLoadValid = False
+
         End If
 
         Tiles[MapIndex(ParsedX, ParsedY)] = ParsedTile
-
     End For
     MapParsedRows = MapParsedRows + 1
 
@@ -895,6 +920,7 @@ Sub ParseLoadedMap()
     MapLoadValid = MapFileLength > 0
 
     If MapLoadValid = True Then
+
         LineStart = 0
 
         For ByteIndex = 0 To MapFileLength - 1
@@ -909,7 +935,6 @@ Sub ParseLoadedMap()
 
         If LineStart < MapFileLength Then
             Call ProcessMapLine(LineStart, MapFileLength - LineStart)
-
         End If
 
     End If
@@ -929,6 +954,7 @@ End Sub
 Sub LoadDefaultMap()
 
     Load Text File "Maps\default.map" Into MapFileBytes Count MapFileLength
+
     Call ParseLoadedMap()
 
 End Sub
@@ -936,6 +962,7 @@ End Sub
 Sub LoadCustomMap()
 
     Load Text File "Maps\custom.map" Into MapFileBytes Count MapFileLength
+
     Call ParseLoadedMap()
 
 End Sub
@@ -973,6 +1000,7 @@ Sub ValidateMap()
         For DoorCheckX = 1 To MapWidth - 2
 
             If GetTile(DoorCheckX, DoorCheckY) = TILE_DOOR Then
+
                 DoorHorizontal = IsPassage(GetTile(DoorCheckX - 1, DoorCheckY)) And IsPassage(GetTile(DoorCheckX + 1, DoorCheckY)) And IsWall(GetTile(DoorCheckX, DoorCheckY - 1)) And IsWall(GetTile(DoorCheckX, DoorCheckY + 1))
                 DoorVertical = IsPassage(GetTile(DoorCheckX, DoorCheckY - 1)) And IsPassage(GetTile(DoorCheckX, DoorCheckY + 1)) And IsWall(GetTile(DoorCheckX - 1, DoorCheckY)) And IsWall(GetTile(DoorCheckX + 1, DoorCheckY))
 
@@ -983,12 +1011,10 @@ Sub ValidateMap()
             End If
 
         End For
-
     End For
 
     For ClearIndex = 0 To MapCellCount - 1
         FloodVisited[ClearIndex] = 0
-
     End For
     FloodHead = 0
     FloodTail = 0
@@ -1000,12 +1026,14 @@ Sub ValidateMap()
     Do
 
         If FloodHead < FloodTail Then
+
             FloodCell = FloodQueue[FloodHead]
             FloodHead = FloodHead + 1
             FloodX = FloodCell Mod MapWidth
             FloodY = FloodCell / MapWidth
 
             For FloodDirection = 0 To 3
+
                 FloodNextX = FloodX + GridStepX[FloodDirection]
                 FloodNextY = FloodY + GridStepY[FloodDirection]
                 FloodNext = MapIndex(FloodNextX, FloodNextY)
@@ -1013,14 +1041,17 @@ Sub ValidateMap()
                 If FloodNextX > 0 And FloodNextX < MapWidth - 1 And FloodNextY > 0 And FloodNextY < MapHeight - 1 Then
 
                     If FloodVisited[FloodNext] = 0 And IsPassage(GetTile(FloodNextX, FloodNextY)) = True Then
+
                         FloodVisited[FloodNext] = 1
                         FloodQueue[FloodTail] = FloodNext
                         FloodTail = FloodTail + 1
+
                     End If
 
                 End If
 
             End For
+
         End If
 
     Loop Until FloodHead >= FloodTail
@@ -1031,6 +1062,7 @@ Sub ValidateMap()
     For ValidateIndex = 0 To MapCellCount - 1
 
         If IsPassage(Tiles[ValidateIndex]) = True Then
+
             PassageCount = PassageCount + 1
 
             If FloodVisited[ValidateIndex] = 1 Then
@@ -1063,10 +1095,13 @@ Sub CastRay(RayIndex)
     RayMapY = ViewPlayerY / CellScale
 
     If RayDirectionX = 0 Then
+
         DeltaDistanceX = HugeDistance
         StepX = 1
         SideDistanceX = HugeDistance
+
     Else
+
         DeltaDistanceX = Abs(CellScale * VectorScale / RayDirectionX)
 
         If RayDirectionX < 0 Then
@@ -1080,10 +1115,13 @@ Sub CastRay(RayIndex)
     End If
 
     If RayDirectionY = 0 Then
+
         DeltaDistanceY = HugeDistance
         StepY = 1
         SideDistanceY = HugeDistance
+
     Else
+
         DeltaDistanceY = Abs(CellScale * VectorScale / RayDirectionY)
 
         If RayDirectionY < 0 Then
@@ -1107,13 +1145,17 @@ Sub CastRay(RayIndex)
     Do
 
         If SideDistanceX < SideDistanceY Then
+
             SideDistanceX = SideDistanceX + DeltaDistanceX
             RayMapX = RayMapX + StepX
             RayHitSide = 0
+
         Else
+
             SideDistanceY = SideDistanceY + DeltaDistanceY
             RayMapY = RayMapY + StepY
             RayHitSide = 1
+
         End If
 
         RayHitTile = GetTile(RayMapX, RayMapY)
@@ -1154,6 +1196,7 @@ Sub CastRay(RayIndex)
     RayCellY[RayIndex] = RayMapY
 
     If RayHitSide = 0 Then
+
         RayPlane[RayIndex] = RayMapX
 
         If StepX < 0 Then
@@ -1161,6 +1204,7 @@ Sub CastRay(RayIndex)
         End If
 
     Else
+
         RayPlane[RayIndex] = RayMapY
 
         If StepY < 0 Then
@@ -1170,10 +1214,12 @@ Sub CastRay(RayIndex)
     End If
 
     If RayIndex = RayCount / 2 Then
+
         CenterRayDistance = RayHitDistance
         CenterRayTile = RayHitTile
         CenterRayMapX = RayHitMapX
         CenterRayMapY = RayHitMapY
+
     End If
 
 End Sub
@@ -1220,47 +1266,63 @@ End Function
 Sub FindSharedWallCorner(FirstRay, SecondRay)
 
     If RaySide[FirstRay] = 0 Then
+
         FirstFaceStartX = RayPlane[FirstRay]
         FirstFaceStartY = RayCellY[FirstRay]
         FirstFaceEndX = RayPlane[FirstRay]
         FirstFaceEndY = RayCellY[FirstRay] + 1
+
     Else
+
         FirstFaceStartX = RayCellX[FirstRay]
         FirstFaceStartY = RayPlane[FirstRay]
         FirstFaceEndX = RayCellX[FirstRay] + 1
         FirstFaceEndY = RayPlane[FirstRay]
+
     End If
 
     If RaySide[SecondRay] = 0 Then
+
         SecondFaceStartX = RayPlane[SecondRay]
         SecondFaceStartY = RayCellY[SecondRay]
         SecondFaceEndX = RayPlane[SecondRay]
         SecondFaceEndY = RayCellY[SecondRay] + 1
+
     Else
+
         SecondFaceStartX = RayCellX[SecondRay]
         SecondFaceStartY = RayPlane[SecondRay]
         SecondFaceEndX = RayCellX[SecondRay] + 1
         SecondFaceEndY = RayPlane[SecondRay]
+
     End If
 
     SharedCornerFound = False
 
     If FirstFaceStartX = SecondFaceStartX And FirstFaceStartY = SecondFaceStartY Then
+
         SharedCornerX = FirstFaceStartX
         SharedCornerY = FirstFaceStartY
         SharedCornerFound = True
+
     Else If FirstFaceStartX = SecondFaceEndX And FirstFaceStartY = SecondFaceEndY Then
+
         SharedCornerX = FirstFaceStartX
         SharedCornerY = FirstFaceStartY
         SharedCornerFound = True
+
     Else If FirstFaceEndX = SecondFaceStartX And FirstFaceEndY = SecondFaceStartY Then
+
         SharedCornerX = FirstFaceEndX
         SharedCornerY = FirstFaceEndY
         SharedCornerFound = True
+
     Else If FirstFaceEndX = SecondFaceEndX And FirstFaceEndY = SecondFaceEndY Then
+
         SharedCornerX = FirstFaceEndX
         SharedCornerY = FirstFaceEndY
         SharedCornerFound = True
+
     End If
 
 End Sub
@@ -1290,7 +1352,6 @@ Sub DrawRaycastView()
 
     For CastIndex = 0 To RayCount - 1
         Call CastRay(CastIndex)
-
     End For
 
     DrawRay = 0
@@ -1320,6 +1381,7 @@ Sub DrawRaycastView()
         WallHeight = Max(1, ProjectionDistance * CellScale / RayHitDistance)
 
         If DrawRay > 0 Then
+
             Call FindSharedWallCorner(DrawRay - 1, DrawRay)
 
             If SharedCornerFound = True Then
@@ -1341,6 +1403,7 @@ Sub DrawRaycastView()
         NextWallHeight = Max(1, ProjectionDistance * CellScale / RayDepth[RunEnd])
 
         If RunEnd < RayCount - 1 Then
+
             Call FindSharedWallCorner(RunEnd, RunEnd + 1)
 
             If SharedCornerFound = True Then
@@ -1356,9 +1419,11 @@ Sub DrawRaycastView()
         NextPanelBottom = NextDrawBottom
 
         If RayHitTile = TILE_DOOR And RayDoorLift > 0 Then
+
             PanelBottom = DrawTop + DrawHeight * (CellScale - RayDoorLift) / CellScale
             NextDrawHeight = NextWallHeight
             NextPanelBottom = NextDrawTop + NextDrawHeight * (CellScale - RayDoorLift) / CellScale
+
         End If
 
         DrawLeft = DrawRay * StripWidth
@@ -1394,15 +1459,18 @@ Sub DrawWalkView()
     Call DrawRaycastView()
 
     Fill Rectangle 0, 0, CanvasWidth, 42, Rgb(5, 8, 16)
+
     Call DrawSelectedSourceLabel()
 
     Draw Text "Enter / Space Opens Door" At 700, 14 Size 12 Color LIGHT_GRAY
 
     If MapFallbackUsed = True And Now < MapFallbackMessageUntil Then
+
         Fill Rounded Rectangle 300, 450, 360, 64, 8, Rgb(35, 12, 12)
         Draw Rounded Rectangle 300, 450, 360, 64, 8, ORANGE
         Draw Text "Map Missing Or Invalid" At 480, 458 Size 17 Color YELLOW Centered
         Draw Text "Random Map Used" At 480, 485 Size 14 Color WHITE Centered
+
     End If
 
 End Sub
@@ -1415,7 +1483,6 @@ Sub DrainPendingKeys()
 
     For DrainIndex = 1 To 64
         Get Key DrainedKey
-
     End For
 
 End Sub
@@ -1429,6 +1496,7 @@ Sub EnterTitle()
     DoorProgress = 0
     Accumulator = 0
     TurnAccumulator = 0
+
     Call DrainPendingKeys()
 
     TitleStartedAt = Timer()
@@ -1461,10 +1529,8 @@ Sub UpdateUserStep()
 
     If UserTurnsLeft = True And UserTurnsRight = False Then
         Call ApplyTurn(-1)
-
     Else If UserTurnsRight = True And UserTurnsLeft = False Then
         Call ApplyTurn(1)
-
     Else
         TurnAccumulator = 0
     End If
@@ -1474,10 +1540,8 @@ Sub UpdateUserStep()
 
     If UserMovesForward = True And UserMovesBackward = False Then
         Call MovePlayer(1)
-
     Else If UserMovesBackward = True And UserMovesForward = False Then
         Call MovePlayer(-1)
-
     End If
 
 End Sub
@@ -1531,11 +1595,15 @@ End Sub
 Sub UpdateTitle()
 
     If Key <> KEY_NONE And Now >= TitleAcceptInputAt Then
+
         TitleStartedAt = Now
 
         If Key = KEY_ESCAPE Then
+
             End Program
+
         Else If Key = KEY_UP Or Key = KEY_W Then
+
             SelectedMap = SelectedMap - 1
 
             If SelectedMap < MAP_DEFAULT Then
@@ -1543,6 +1611,7 @@ Sub UpdateTitle()
             End If
 
         Else If Key = KEY_DOWN Or Key = KEY_S Then
+
             SelectedMap = SelectedMap + 1
 
             If SelectedMap > MAP_RANDOM Then
@@ -1550,11 +1619,13 @@ Sub UpdateTitle()
             End If
 
         Else If Key = KEY_ENTER Or Key = KEY_SPACE Then
+
             Call StartWalk()
 
         End If
 
         Return
+
     End If
 
 End Sub
@@ -1579,26 +1650,25 @@ Do
     Get Key Key
 
     If ScreenState = STATE_TITLE Then
+
         Call UpdateTitle()
 
         If ScreenState = STATE_TITLE Then
             Call DrawTitle()
-
         Else
             Call DrawWalkView()
-
         End If
 
     Else
 
         If Key = KEY_ESCAPE Then
+
             Call EnterTitle()
 
         Else
 
             If Key = KEY_ENTER Or Key = KEY_SPACE Then
                 Call TryOpenDoor()
-
             End If
 
             Accumulator = Min(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
@@ -1607,11 +1677,13 @@ Do
             Do
 
                 If Accumulator >= SimulationStep Then
+
                     Call CapturePreviousCamera()
                     Call UpdateUserStep()
 
                     Accumulator = Accumulator - SimulationStep
                     CatchUpSteps = CatchUpSteps + 1
+
                 End If
 
             Loop Until Accumulator < SimulationStep Or CatchUpSteps >= MaxCatchUpSteps
@@ -1620,10 +1692,8 @@ Do
 
         If ScreenState = STATE_TITLE Then
             Call DrawTitle()
-
         Else
             Call DrawWalkView()
-
         End If
 
     End If

@@ -127,7 +127,6 @@ Private Sub ClearCurrentLines(Slot As Number)
 
     For Line = 0 To Core.UI_MAX_DIALOGUE_LINES - 1
         CurrentLines[Slot, Line] = ""
-
     End For
     CurrentLineCount[Slot] = 0
     CurrentScalarCount[Slot] = 0
@@ -165,7 +164,6 @@ Private Function PrepareRawPage(Slot As Number, ByRef Style As Core.DialogueStyl
 
     If StoreLines Then
         Call ClearCurrentLines(Slot)
-
     End If
 
     If Maximum <= 0 Or Content.Width <= 0 Then
@@ -175,13 +173,16 @@ Private Function PrepareRawPage(Slot As Number, ByRef Style As Core.DialogueStyl
     If Length = 0 Or StartIndex = Length Then
 
         If StoreLines Then
+
             CurrentLines[Slot, 0] = ""
             CurrentLineCount[Slot] = 1
             CurrentScalarCount[Slot] = 0
+
         End If
 
         ReturnValue = Length + 1
         Return ReturnValue
+
     End If
 
     Cursor = StartIndex
@@ -202,6 +203,7 @@ Private Function PrepareRawPage(Slot As Number, ByRef Style As Core.DialogueStyl
 
             ReturnValue = Length + 1
             Return ReturnValue
+
         End If
 
         LineStart = Cursor
@@ -211,17 +213,22 @@ Private Function PrepareRawPage(Slot As Number, ByRef Style As Core.DialogueStyl
         For Scan = LineStart To Length - 1
 
             If Text_Code_At(Value, Scan) = 10 Then
+
                 SegmentEnd = Scan
                 HasNewline = True
                 Exit For
+
             End If
 
         End For
 
         If SegmentEnd = LineStart Then
+
             LineEnd = LineStart
             Cursor = SegmentEnd + 1
+
         Else
+
             Low = 1
             High = SegmentEnd - LineStart
             BestCount = 1
@@ -247,6 +254,7 @@ Private Function PrepareRawPage(Slot As Number, ByRef Style As Core.DialogueStyl
             LineEnd = FitEnd
 
             If FitEnd < SegmentEnd Then
+
                 LastSpace = -1
 
                 For Scan = LineStart To FitEnd - 1
@@ -258,6 +266,7 @@ Private Function PrepareRawPage(Slot As Number, ByRef Style As Core.DialogueStyl
                 End For
 
                 If LastSpace > LineStart Then
+
                     LineEnd = LastSpace
                     Cursor = LastSpace + 1
 
@@ -268,16 +277,22 @@ Private Function PrepareRawPage(Slot As Number, ByRef Style As Core.DialogueStyl
                         End If
 
                         Cursor = Cursor + 1
-
                     End For
+
                 Else
+
                     Cursor = FitEnd
+
                 End If
 
             Else If HasNewline Then
+
                 Cursor = SegmentEnd + 1
+
             Else
+
                 Cursor = Length + 1
+
             End If
 
         End If
@@ -285,9 +300,11 @@ Private Function PrepareRawPage(Slot As Number, ByRef Style As Core.DialogueStyl
         LineValue = Text_Slice(Value, LineStart, Max(0, LineEnd - LineStart))
 
         If StoreLines Then
+
             CurrentLines[Slot, LineNumber] = LineValue
             CurrentLineCount[Slot] = LineNumber + 1
             CurrentScalarCount[Slot] = CurrentScalarCount[Slot] + Text_Length(LineValue)
+
         End If
 
         If Cursor > Length Then
@@ -307,7 +324,6 @@ Private Sub ClearPrepared(Slot As Number)
     For Page = 0 To Core.UI_MAX_DIALOGUE_PAGES - 1
         PreparedRawPage[Slot, Page] = 0
         PreparedStart[Slot, Page] = 0
-
     End For
     PreparedPageCount[Slot] = 0
     DialogueCurrentPage[Slot] = 0
@@ -315,6 +331,7 @@ Private Sub ClearPrepared(Slot As Number)
     DialogueStartedAt[Slot] = 0
     DialogueActive[Slot] = False
     DialogueComplete[Slot] = False
+
     Call ClearCurrentLines(Slot)
 
 End Sub
@@ -326,7 +343,6 @@ Private Sub ClearScratch()
     For Page = 0 To Core.UI_MAX_DIALOGUE_PAGES - 1
         ScratchPreparedRawPage[Page] = 0
         ScratchPreparedStart[Page] = 0
-
     End For
     ScratchPreparedPageCount = 0
 
@@ -349,6 +365,7 @@ Private Function BuildScratch(Slot As Number, ByRef Style As Core.DialogueStyle)
     End If
 
     For RawIndex = 0 To RawPageCount[Slot] - 1
+
         Cursor = 0
         Length = Text_Length(RawPages[Slot, RawIndex])
         Finished = False
@@ -378,7 +395,6 @@ Private Function BuildScratch(Slot As Number, ByRef Style As Core.DialogueStyle)
             End If
 
             Cursor = NextIndex
-
         End For
 
         If Not Finished Then
@@ -400,15 +416,14 @@ Private Sub CommitScratch(Slot As Number)
     For Page = 0 To Core.UI_MAX_DIALOGUE_PAGES - 1
         PreparedRawPage[Slot, Page] = 0
         PreparedStart[Slot, Page] = 0
-
     End For
 
     For Page = 0 To ScratchPreparedPageCount - 1
         PreparedRawPage[Slot, Page] = ScratchPreparedRawPage[Page]
         PreparedStart[Slot, Page] = ScratchPreparedStart[Page]
-
     End For
     PreparedPageCount[Slot] = ScratchPreparedPageCount
+
     Call ClearScratch()
 
 End Sub
@@ -467,6 +482,7 @@ Public Function Create(ByRef Style As Core.DialogueStyle, X As Number, Y As Numb
     DialogueWidth[Slot] = Max(0, Min(Core.UI_MAX_LAYOUT_VALUE, Width))
     DialogueHeight[Slot] = Max(0, Min(Core.UI_MAX_LAYOUT_VALUE, Height))
     RawPageCount[Slot] = 0
+
     Call ClearPrepared(Slot)
 
     ReturnValue = DialogueGeneration[Slot] * 100 + Slot + 1
@@ -496,9 +512,9 @@ Public Sub ClearPages(Handle As Number)
 
     For Page = 0 To Core.UI_MAX_DIALOGUE_PAGES - 1
         RawPages[Slot, Page] = ""
-
     End For
     RawPageCount[Slot] = 0
+
     Call ClearPrepared(Slot)
 
 End Sub
@@ -537,10 +553,13 @@ Public Function SetStyle(Handle As Number, ByRef Style As Core.DialogueStyle) As
     End If
 
     If Not DialogueActive[Slot] Or PreparedPageCount[Slot] <= 0 Then
+
         DialogueStyles[Slot] = Style
+
         Call ClearPrepared(Slot)
 
         Return True
+
     End If
 
     OldRawPage = PreparedRawPage[Slot, DialogueCurrentPage[Slot]]
@@ -568,11 +587,13 @@ Public Function SetStyle(Handle As Number, ByRef Style As Core.DialogueStyle) As
     End If
 
     DialogueStyles[Slot] = Style
+
     Call CommitScratch(Slot)
 
     DialogueCurrentPage[Slot] = NewPage
     DialogueActive[Slot] = True
     DialogueComplete[Slot] = False
+
     Call PrepareCurrentPage(Slot)
 
     DialogueVisible[Slot] = Min(OldVisible, CurrentScalarCount[Slot])
@@ -625,6 +646,7 @@ Public Function Start(Handle As Number, NowMilliseconds As Number) As Boolean
     DialogueVisible[Slot] = 0
     DialogueActive[Slot] = True
     DialogueComplete[Slot] = False
+
     Call PrepareCurrentPage(Slot)
 
     If DialogueStyles[Slot].CharactersPerSecond <= 0 Then
@@ -653,11 +675,15 @@ Public Function Update(Handle As Number, NowMilliseconds As Number) As Number
     Previous = DialogueVisible[Slot]
 
     If DialogueStyles[Slot].CharactersPerSecond <= 0 Then
+
         DialogueVisible[Slot] = CurrentScalarCount[Slot]
+
     Else
+
         Elapsed = Max(0, NowMilliseconds - DialogueStartedAt[Slot])
         Target = Elapsed * DialogueStyles[Slot].CharactersPerSecond / 1000
         DialogueVisible[Slot] = Min(CurrentScalarCount[Slot], Max(DialogueVisible[Slot], Target))
+
     End If
 
     If DialogueVisible[Slot] <> Previous Then
@@ -684,10 +710,12 @@ Public Function HandleKey(Handle As Number, Key As Number, NowMilliseconds As Nu
     End If
 
     If Key = KEY_ESCAPE Then
+
         DialogueActive[Slot] = False
         DialogueComplete[Slot] = False
         ReturnValue = Core.UI_EVENT_CANCELLED
         Return ReturnValue
+
     End If
 
     If Key <> KEY_ENTER And Key <> KEY_SPACE Then
@@ -698,15 +726,19 @@ Public Function HandleKey(Handle As Number, Key As Number, NowMilliseconds As Nu
     UpdateEvent = Update(Handle, NowMilliseconds)
 
     If DialogueVisible[Slot] < CurrentScalarCount[Slot] Then
+
         DialogueVisible[Slot] = CurrentScalarCount[Slot]
         ReturnValue = Core.UI_EVENT_CHANGED
         Return ReturnValue
+
     End If
 
     If DialogueCurrentPage[Slot] + 1 < PreparedPageCount[Slot] Then
+
         DialogueCurrentPage[Slot] = DialogueCurrentPage[Slot] + 1
         DialogueStartedAt[Slot] = NowMilliseconds
         DialogueVisible[Slot] = 0
+
         Call PrepareCurrentPage(Slot)
 
         If DialogueStyles[Slot].CharactersPerSecond <= 0 Then
@@ -715,6 +747,7 @@ Public Function HandleKey(Handle As Number, Key As Number, NowMilliseconds As Nu
 
         ReturnValue = Core.UI_EVENT_ADVANCED
         Return ReturnValue
+
     End If
 
     DialogueActive[Slot] = False
@@ -746,6 +779,7 @@ Public Sub Draw(Handle As Number, NowMilliseconds As Number)
     End If
 
     UpdateEvent = Update(Handle, NowMilliseconds)
+
     Call Window.Draw(DialogueStyles[Slot].Window, DialogueX[Slot], DialogueY[Slot], DialogueWidth[Slot], DialogueHeight[Slot])
 
     Content = Window.ContentRect(DialogueStyles[Slot].Window, DialogueX[Slot], DialogueY[Slot], DialogueWidth[Slot], DialogueHeight[Slot])
@@ -759,20 +793,20 @@ Public Sub Draw(Handle As Number, NowMilliseconds As Number)
     Clip Rectangle Content.X, Content.Y, Content.Width, Content.Height
 
         For Line = 0 To CurrentLineCount[Slot] - 1
+
             Length = Text_Length(CurrentLines[Slot, Line])
             VisibleOnLine = Min(Length, Max(0, Remaining))
             LineY = Content.Y + Line * StepHeight
 
             If VisibleOnLine > 0 Then
                 Call Text.Draw(DialogueStyles[Slot].Text, Text_Slice(CurrentLines[Slot, Line], 0, VisibleOnLine), Content.X, LineY, Core.UI_ALIGN_LEFT, 100)
-
             End If
 
             Remaining = Max(0, Remaining - Length)
-
         End For
 
         If DialogueVisible[Slot] >= CurrentScalarCount[Slot] And DialogueStyles[Slot].UseContinueIndicator And Image_Loaded(DialogueStyles[Slot].ContinueIndicator) And DialogueStyles[Slot].IndicatorWidth > 0 And DialogueStyles[Slot].IndicatorHeight > 0 Then
+
             BlinkOn = True
 
             If DialogueStyles[Slot].IndicatorBlinkMilliseconds > 0 Then
@@ -780,9 +814,11 @@ Public Sub Draw(Handle As Number, NowMilliseconds As Number)
             End If
 
             If BlinkOn Then
+
                 IndicatorX = Content.X + Content.Width - DialogueStyles[Slot].IndicatorWidth + DialogueStyles[Slot].IndicatorOffsetX
                 IndicatorY = Content.Y + Content.Height - DialogueStyles[Slot].IndicatorHeight + DialogueStyles[Slot].IndicatorOffsetY
                 Draw Image DialogueStyles[Slot].ContinueIndicator At IndicatorX, IndicatorY Size DialogueStyles[Slot].IndicatorWidth By DialogueStyles[Slot].IndicatorHeight Filter Smooth
+
             End If
 
         End If

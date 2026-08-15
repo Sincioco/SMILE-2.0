@@ -1,7 +1,9 @@
 ' Exercises shared semantic diagnostics for invalid game-language use.
 Clear RED
 Draw Circle 100, 100, 20, WHITE
+
 Play Sound ""
+
 Play Music ""
 Music Volume True
 Fill Quadrilateral 0, 0, 10

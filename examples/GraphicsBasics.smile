@@ -10,6 +10,7 @@ Save LaunchCount To "LaunchCount"
 
 MarkerX = 480
 MarkerY = 420
+
 Play Sound "Assets\Missing.wav"
 Play Sound "Assets\Graphics.wav"
 

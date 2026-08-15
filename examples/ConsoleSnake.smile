@@ -51,7 +51,6 @@ Do
     For I = Length - 1 Down To 1
         SnakeX[I] = SnakeX[I - 1]
         SnakeY[I] = SnakeY[I - 1]
-
     End For
 
     If Direction = UP Then
@@ -77,6 +76,7 @@ Do
     End For
 
     If SnakeX[0] = FoodX And SnakeY[0] = FoodY Then
+
         SnakeX[Length] = TailX
         SnakeY[Length] = TailY
         Length = Length + 1
@@ -106,6 +106,7 @@ Do
     For Y = 0 To Height - 1
 
         For X = 0 To Width - 1
+
             SnakeHere = False
 
             For I = 0 To Length - 1
@@ -129,7 +130,6 @@ Do
         End For
 
         Print
-
     End For
 
     Print "Score: "; Length - 3

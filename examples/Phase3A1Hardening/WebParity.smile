@@ -20,9 +20,11 @@ Print First <> Copy
 TextValues[1] = "Array"
 NumberValues[1] = 10
 BooleanValues[1] = False
+
 Call ChangeByValue(TextValues[1])
 
 Print TextValues[1]
+
 Call SetText(TextValues[1], "Changed")
 Call Increment(NumberValues[1])
 Call Toggle(BooleanValues[1])
@@ -33,6 +35,7 @@ Print BooleanValues[1]
 
 Counter = 3
 Ready = False
+
 Call Increment(Counter)
 Call Toggle(Ready)
 

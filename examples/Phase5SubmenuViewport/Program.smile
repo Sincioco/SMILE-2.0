@@ -138,22 +138,18 @@ For I = 0 To 4
     ItemIndex = Menu.AddItem(FiveMenu, "Five", I, True)
     ItemIndex = Menu.AddItem(HiddenScrollbarMenu, "Hidden", I, True)
     ItemIndex = Menu.AddItem(TinyMenu, "Tiny", I, True)
-
 End For
 
 For I = 0 To 19
     ItemIndex = Menu.AddItem(TwentyMenu, "Twenty", I, True)
-
 End For
 
 For I = 0 To 63
     ItemIndex = Menu.AddItem(SixtyFourMenu, "Sixty Four", I, True)
-
 End For
 
 For I = 0 To 3
     ItemIndex = Menu.AddItem(AllVisibleMenu, "Visible", I, True)
-
 End For
 
 Root = Menu.Create(MenuStyle, 430, 185, 190, 160, 4)
@@ -197,6 +193,7 @@ Do
     Event = UI.UI_EVENT_NONE
 
     If Key = KEY_1 Then
+
         MenuStyle.NormalText = SystemText
         MenuStyle.SelectedText = SystemSelected
         MenuStyle.DisabledText = SystemDisabled
@@ -207,7 +204,9 @@ Do
         Result = Result And Menu.SetStyle(Child, WrapStyle)
         Result = Result And Menu.SetStyle(Grandchild, MenuStyle)
         Running = Running And Result
+
     Else If Key = KEY_2 Then
+
         MenuStyle.NormalText = BitmapText
         MenuStyle.SelectedText = BitmapSelected
         MenuStyle.DisabledText = BitmapDisabled
@@ -218,11 +217,15 @@ Do
         Result = Result And Menu.SetStyle(Child, WrapStyle)
         Result = Result And Menu.SetStyle(Grandchild, MenuStyle)
         Running = Running And Result
+
     Else
+
         Event = MenuNavigator.HandleKey(Navigator, Key)
+
     End If
 
     Clear Rgb(4, 8, 20)
+
     Call Menu.Draw(FiveMenu)
     Call Menu.Draw(TwentyMenu)
     Call Menu.Draw(SixtyFourMenu)
