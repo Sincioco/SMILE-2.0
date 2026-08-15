@@ -150,6 +150,8 @@ foreach ($game in @('Snake', 'FallingBlocks', 'PaddleBall', 'BrickBreaker', 'Dun
     Require-File "artifacts\web\$game\smile-assets.json" | Out-Null
 }
 Assert-AssetCopy 'games\FallingBlocks\Assets\Background.mp3' 'artifacts\games\FallingBlocks\Assets\Background.mp3'
+Assert-AssetCopy 'games\PaddleBall\Assets\Background.mp3' 'artifacts\games\PaddleBall\Assets\Background.mp3'
+Assert-AssetCopy 'games\Snake\Assets\Background.mp3' 'artifacts\games\Snake\Assets\Background.mp3'
 Assert-AssetCopy 'games\DungeonStarI\Assets\Background.mp3' 'artifacts\games\DungeonStarI\Assets\Background.mp3'
 Assert-AssetCopy 'games\MazeMuncher\Assets\Background.mp3' 'artifacts\games\MazeMuncher\Assets\Background.mp3'
 foreach ($asset in @('Background.png', 'CharacterSheet.png', 'Foreground.png', 'PixelProof.png',

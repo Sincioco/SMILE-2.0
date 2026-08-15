@@ -178,6 +178,15 @@ Every attract/demo mode, including those in future games, must return directly t
 - Keep normal player game-over, victory, retry, and rematch screens unchanged.
 - Continue to let any user input cancel an active demo and return directly to the title screen.
 
+### Background-music lifecycle rule
+
+Every current and future game that defines background music must loop it throughout active player gameplay and attract/demo gameplay.
+
+- Start or restart the background track when a player round, match, level, or demo begins.
+- Keep the track playing across in-game recovery that continues the same active player or demo session.
+- Stop the track when returning to the title screen, reaching a terminal game-over, victory, or match-result screen, or exiting the program.
+- Games without a defined background-music asset remain silent; do not assign arbitrary music merely to satisfy this rule.
+
 ## Default game-audio focus contract
 
 Every program containing `Game Window` automatically inherits shared native audio focus behavior. Do not duplicate activation handling in `.smile` games.

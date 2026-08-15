@@ -169,6 +169,7 @@ Do
 
 Loop Until Game_Closed() = True
 
+Stop Music
 Stop Sound
 
 '----------------------------------------------------------------------------------------------------
@@ -215,6 +216,8 @@ Sub ResetMatch()
     Accumulator = 0
     State = 1
 
+    Play Music "Assets\Background.mp3" Loop
+
 End Sub
 
 Sub DrainPendingKeys()
@@ -227,6 +230,7 @@ End Sub
 
 Sub EnterTitle()
 
+    Stop Music
     Mode = 0
     State = 0
     Accumulator = 0
@@ -302,6 +306,7 @@ Sub FinishMatch()
         Return
     End If
 
+    Stop Music
     State = 2
 
     Play Sound "Assets\GameOver.wav"

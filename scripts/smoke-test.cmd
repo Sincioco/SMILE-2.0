@@ -742,10 +742,23 @@ if errorlevel 1 (
 echo Falling Blocks demo and no-demo versions compiled successfully.
 
 if not exist "%SMILE_ROOT%\artifacts\games\PaddleBall" mkdir "%SMILE_ROOT%\artifacts\games\PaddleBall"
+if not exist "%SMILE_ROOT%\games\PaddleBall\Assets\Background.mp3" (
+    echo Paddle Ball background music source asset is missing.
+    exit /b 1
+)
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\PaddleBall\PaddleBall.smileproj" -o "%SMILE_ROOT%\artifacts\games\PaddleBall\PaddleBall.exe"
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\PaddleBall\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\PaddleBall\PaddleBall-NoDemo.exe"
 if errorlevel 1 exit /b %errorlevel%
+if not exist "%SMILE_ROOT%\artifacts\games\PaddleBall\Assets\Background.mp3" (
+    echo Paddle Ball background music output asset is missing.
+    exit /b 1
+)
+fc /b "%SMILE_ROOT%\games\PaddleBall\Assets\Background.mp3" "%SMILE_ROOT%\artifacts\games\PaddleBall\Assets\Background.mp3" >nul
+if errorlevel 1 (
+    echo Paddle Ball background music output does not match its project asset.
+    exit /b 1
+)
 echo Paddle Ball demo and no-demo versions compiled successfully.
 
 if not exist "%SMILE_ROOT%\artifacts\games\BrickBreaker" mkdir "%SMILE_ROOT%\artifacts\games\BrickBreaker"

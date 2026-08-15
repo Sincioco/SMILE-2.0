@@ -32,6 +32,8 @@ All games use a logical 960-by-540 canvas. A 16:9 output such as 1920-by-1080 fi
 
 ## Automatic game-audio focus
 
+When a game defines background music, that track loops throughout active player gameplay and attract/demo gameplay. It stops on title and terminal game-over, victory, or match-result screens. Games without a defined background track remain silent.
+
 Every program containing `Game Window` automatically inherits one shared audio-focus policy; games do not need activation handlers. Losing application or top-level window activation, or minimizing the window, immediately stops all active asynchronous WAV effects, suppresses new WAV requests, and changes MP3 music to effective volume zero. The requested `Music Volume` and playback position remain intact. Returning to an active, non-minimized window reapplies the exact requested volume without restarting the track or resuming music that the program paused or stopped. Suppressed effects are not replayed.
 
 This policy is identical for DirectX and GDI and affects only the SMILE process. It never changes Windows master volume or another application's audio.
