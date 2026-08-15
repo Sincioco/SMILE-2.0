@@ -1,13 +1,20 @@
+' ====================================================================================================
+'                                      SMILE Game Window Template
+' ====================================================================================================
+' Programmed By: $smileuser$Version: 0.0.1
+' Programmed Date: $smiledate$SMILE: $smileversion$
+' ====================================================================================================
 ' Game Window programs automatically silence music and sounds while inactive or minimized.
 ' The shared runtime restores requested music volume; no per-game focus handler is needed.
+' ====================================================================================================
 
 Option Explicit
 
-Game Window "My SMILE Game"
+Game Window "My SMILE 2.0 Game"
 
 Dim Caption As Text
 
-Caption = "Hello, SMILE!"
+Caption = "Hello, SMILE 2.0!"
 
 Do
     Clear Rgb(20, 20, 35)

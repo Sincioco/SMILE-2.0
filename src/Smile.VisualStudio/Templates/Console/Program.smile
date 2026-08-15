@@ -1,6 +1,13 @@
+' ====================================================================================================
+'                                      SMILE Console Window Template
+' ====================================================================================================
+' Programmed By: $smileuser$Version: 0.0.1
+' Programmed Date: $smiledate$SMILE: $smileversion$
+' ====================================================================================================
+
 Option Explicit
 
 Dim Message As Text
 
-Message = "Hello World"
+Message = "Hello World and SMILE 2.0!"
 Print Message

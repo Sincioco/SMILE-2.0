@@ -71,9 +71,9 @@ SkinWindow.DestinationBottom = 24
 SkinWindow.BorderThickness = 2
 SkinWindow.Opacity = 100
 SkinWindow.FilterMode = UI.UI_FILTER_SMOOTH
-SkinWindow.Padding.LEFT = 20
+SkinWindow.Padding.Left = 20
 SkinWindow.Padding.Top = 20
-SkinWindow.Padding.RIGHT = 20
+SkinWindow.Padding.Right = 20
 SkinWindow.Padding.Bottom = 20
 
 VectorWindow = SkinWindow
@@ -150,7 +150,7 @@ BadWindow.Opacity = 101
 Call Check(Not Window.IsStyleValid(BadWindow))
 
 BadWindow = VectorWindow
-BadWindow.Padding.LEFT = UI.UI_MAX_LAYOUT_VALUE + 1
+BadWindow.Padding.Left = UI.UI_MAX_LAYOUT_VALUE + 1
 
 Call Check(Not Window.IsStyleValid(BadWindow))
 
@@ -249,9 +249,9 @@ Call Check(Menu.TopIndex(MenuHandle) = OldTop)
 
 TinyMenuStyle = MenuStyle
 TinyMenuStyle.Window = VectorWindow
-TinyMenuStyle.Window.Padding.LEFT = 0
+TinyMenuStyle.Window.Padding.Left = 0
 TinyMenuStyle.Window.Padding.Top = 0
-TinyMenuStyle.Window.Padding.RIGHT = 0
+TinyMenuStyle.Window.Padding.Right = 0
 TinyMenuStyle.Window.Padding.Bottom = 0
 TinyMenuStyle.RowHeight = 100
 TinyMenuHandle = Menu.Create(TinyMenuStyle, 600, 350, 30, 3, 6)
@@ -333,8 +333,8 @@ Call Check(Dialogue.IsActive(DialogueHandle))
 OldVisible = Dialogue.VisibleCharacters(DialogueHandle)
 OldPage = Dialogue.CurrentPage(DialogueHandle)
 BadDialogueStyle = VectorDialogueStyle
-BadDialogueStyle.Window.Padding.LEFT = 160
-BadDialogueStyle.Window.Padding.RIGHT = 160
+BadDialogueStyle.Window.Padding.Left = 160
+BadDialogueStyle.Window.Padding.Right = 160
 
 Call Check(Not Dialogue.SetStyle(DialogueHandle, BadDialogueStyle))
 Call Check(Dialogue.IsActive(DialogueHandle))

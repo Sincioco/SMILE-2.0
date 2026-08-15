@@ -89,11 +89,14 @@ Public Function IsStyleValid(ByRef Style As Core.MenuStyle) As Boolean
         Return False
     End If
 
-    If Style.CursorFilterMode <> Core.UI_FILTER_SMOOTH And Style.CursorFilterMode <> Core.UI_FILTER_PIXEL Then
+    If (Style.CursorFilterMode <> Core.UI_FILTER_SMOOTH And
+        Style.CursorFilterMode <> Core.UI_FILTER_PIXEL) Then
         Return False
     End If
 
-    If Style.ItemTextOverflowMode <> Core.UI_MENU_TEXT_ELLIPSIS And Style.ItemTextOverflowMode <> Core.UI_MENU_TEXT_CLIP And Style.ItemTextOverflowMode <> Core.UI_MENU_TEXT_WRAP Then
+    If (Style.ItemTextOverflowMode <> Core.UI_MENU_TEXT_ELLIPSIS And
+        Style.ItemTextOverflowMode <> Core.UI_MENU_TEXT_CLIP And
+        Style.ItemTextOverflowMode <> Core.UI_MENU_TEXT_WRAP) Then
         Return False
     End If
 
@@ -101,11 +104,14 @@ Public Function IsStyleValid(ByRef Style As Core.MenuStyle) As Boolean
         Return False
     End If
 
-    If Style.SubmenuIndicatorPosition <> Core.UI_SUBMENU_INDICATOR_AFTER_TEXT And Style.SubmenuIndicatorPosition <> Core.UI_SUBMENU_INDICATOR_RIGHT_ALIGNED Then
+    If (Style.SubmenuIndicatorPosition <> Core.UI_SUBMENU_INDICATOR_AFTER_TEXT And
+        Style.SubmenuIndicatorPosition <> Core.UI_SUBMENU_INDICATOR_RIGHT_ALIGNED) Then
         Return False
     End If
 
-    If Style.UseCursor And Image_Loaded(Style.Cursor) And (Style.CursorWidth <= 0 Or Style.CursorHeight <= 0) Then
+    If (Style.UseCursor And
+        Image_Loaded(Style.Cursor) And
+        (Style.CursorWidth <= 0 Or Style.CursorHeight <= 0)) Then
         Return False
     End If
 
@@ -314,7 +320,9 @@ Public Function AddItem(Handle As Number, Label As Text, UserValue As Number, En
 
     Slot = SlotFromHandle(Handle)
 
-    If Slot < 0 Or MenuItemCount[Slot] >= Core.UI_MAX_MENU_ITEMS Or Text_Length(Label) > Core.UI_MAX_MENU_ITEM_SCALARS Then
+    If (Slot < 0 Or
+        MenuItemCount[Slot] >= Core.UI_MAX_MENU_ITEMS Or
+        Text_Length(Label) > Core.UI_MAX_MENU_ITEM_SCALARS) Then
         ReturnValue = -1
         Return ReturnValue
     End If
@@ -347,7 +355,10 @@ Public Function SetItemLabel(Handle As Number, Index As Number, Label As Text) A
 
     Slot = SlotFromHandle(Handle)
 
-    If Slot < 0 Or Index < 0 Or Index >= MenuItemCount[Slot] Or Text_Length(Label) > Core.UI_MAX_MENU_ITEM_SCALARS Then
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= MenuItemCount[Slot] Or
+        Text_Length(Label) > Core.UI_MAX_MENU_ITEM_SCALARS) Then
         Return False
     End If
 
@@ -404,7 +415,9 @@ Public Function SetItemEnabled(Handle As Number, Index As Number, Enabled As Boo
 
     Slot = SlotFromHandle(Handle)
 
-    If Slot < 0 Or Index < 0 Or Index >= MenuItemCount[Slot] Then
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= MenuItemCount[Slot]) Then
         Return False
     End If
 
@@ -431,7 +444,9 @@ Public Function SetItemValue(Handle As Number, Index As Number, UserValue As Num
 
     Slot = SlotFromHandle(Handle)
 
-    If Slot < 0 Or Index < 0 Or Index >= MenuItemCount[Slot] Then
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= MenuItemCount[Slot]) Then
         Return False
     End If
 
@@ -451,7 +466,9 @@ Public Function SetItemHasSubmenu(Handle As Number, Index As Number, HasSubmenu 
 
     Slot = SlotFromHandle(Handle)
 
-    If Slot < 0 Or Index < 0 Or Index >= MenuItemCount[Slot] Then
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= MenuItemCount[Slot]) Then
         Return False
     End If
 
@@ -471,7 +488,9 @@ Public Function ItemHasSubmenu(Handle As Number, Index As Number) As Boolean
 
     Slot = SlotFromHandle(Handle)
 
-    If Slot < 0 Or Index < 0 Or Index >= MenuItemCount[Slot] Then
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= MenuItemCount[Slot]) Then
         Return False
     End If
 
@@ -633,7 +652,11 @@ Public Function SetPosition(Handle As Number, X As Number, Y As Number) As Boole
 
     Slot = SlotFromHandle(Handle)
 
-    If Slot < 0 Or X < -Core.UI_MAX_LAYOUT_VALUE Or X > Core.UI_MAX_LAYOUT_VALUE Or Y < -Core.UI_MAX_LAYOUT_VALUE Or Y > Core.UI_MAX_LAYOUT_VALUE Then
+    If (Slot < 0 Or
+        X < -Core.UI_MAX_LAYOUT_VALUE Or
+        X > Core.UI_MAX_LAYOUT_VALUE Or
+        Y < -Core.UI_MAX_LAYOUT_VALUE Or
+        Y > Core.UI_MAX_LAYOUT_VALUE) Then
         Return False
     End If
 
@@ -692,7 +715,10 @@ Public Function SetSelectedIndex(Handle As Number, Index As Number) As Boolean
 
     Slot = SlotFromHandle(Handle)
 
-    If Slot < 0 Or Index < 0 Or Index >= MenuItemCount[Slot] Or Not ItemEnabled[Slot, Index] Then
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= MenuItemCount[Slot] Or
+        Not ItemEnabled[Slot, Index]) Then
         Return False
     End If
 
@@ -1253,7 +1279,9 @@ Public Sub DrawFocused(Handle As Number, Focused As Boolean)
 
     Slot = SlotFromHandle(Handle)
 
-    If Slot < 0 Or MenuWidth[Slot] <= 0 Or MenuHeight[Slot] <= 0 Then
+    If (Slot < 0 Or
+        MenuWidth[Slot] <= 0 Or
+        MenuHeight[Slot] <= 0) Then
         Return
     End If
 

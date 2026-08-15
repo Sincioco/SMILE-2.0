@@ -21,7 +21,14 @@ Public Function IsStyleValid(ByRef Style As Core.WindowStyle) As Boolean
         Return False
     End If
 
-    If Style.Padding.LEFT < -Core.UI_MAX_LAYOUT_VALUE Or Style.Padding.LEFT > Core.UI_MAX_LAYOUT_VALUE Or Style.Padding.Top < -Core.UI_MAX_LAYOUT_VALUE Or Style.Padding.Top > Core.UI_MAX_LAYOUT_VALUE Or Style.Padding.RIGHT < -Core.UI_MAX_LAYOUT_VALUE Or Style.Padding.RIGHT > Core.UI_MAX_LAYOUT_VALUE Or Style.Padding.Bottom < -Core.UI_MAX_LAYOUT_VALUE Or Style.Padding.Bottom > Core.UI_MAX_LAYOUT_VALUE Then
+    If (Style.Padding.Left < -Core.UI_MAX_LAYOUT_VALUE Or
+        Style.Padding.Left > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.Padding.Top < -Core.UI_MAX_LAYOUT_VALUE Or
+        Style.Padding.Top > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.Padding.Right < -Core.UI_MAX_LAYOUT_VALUE Or
+        Style.Padding.Right > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.Padding.Bottom < -Core.UI_MAX_LAYOUT_VALUE Or
+        Style.Padding.Bottom > Core.UI_MAX_LAYOUT_VALUE) Then
         Return False
     End If
 
@@ -29,23 +36,38 @@ Public Function IsStyleValid(ByRef Style As Core.WindowStyle) As Boolean
         Return True
     End If
 
-    If Style.SourceX < 0 Or Style.SourceY < 0 Or Style.SourceWidth <= 0 Or Style.SourceHeight <= 0 Then
+    If (Style.SourceX < 0 Or
+        Style.SourceY < 0 Or
+        Style.SourceWidth <= 0 Or
+        Style.SourceHeight <= 0) Then
         Return False
     End If
 
-    If Style.SourceLeft < 0 Or Style.SourceTop < 0 Or Style.SourceRight < 0 Or Style.SourceBottom < 0 Then
+    If (Style.SourceLeft < 0 Or
+        Style.SourceTop < 0 Or
+        Style.SourceRight < 0 Or
+        Style.SourceBottom < 0) Then
         Return False
     End If
 
-    If Style.SourceLeft >= Style.SourceWidth Or Style.SourceRight >= Style.SourceWidth - Style.SourceLeft Then
+    If (Style.SourceLeft >= Style.SourceWidth Or
+        Style.SourceRight >= Style.SourceWidth - Style.SourceLeft) Then
         Return False
     End If
 
-    If Style.SourceTop >= Style.SourceHeight Or Style.SourceBottom >= Style.SourceHeight - Style.SourceTop Then
+    If (Style.SourceTop >= Style.SourceHeight Or
+        Style.SourceBottom >= Style.SourceHeight - Style.SourceTop) Then
         Return False
     End If
 
-    If Style.DestinationLeft < 0 Or Style.DestinationLeft > Core.UI_MAX_LAYOUT_VALUE Or Style.DestinationTop < 0 Or Style.DestinationTop > Core.UI_MAX_LAYOUT_VALUE Or Style.DestinationRight < 0 Or Style.DestinationRight > Core.UI_MAX_LAYOUT_VALUE Or Style.DestinationBottom < 0 Or Style.DestinationBottom > Core.UI_MAX_LAYOUT_VALUE Then
+    If (Style.DestinationLeft < 0 Or
+        Style.DestinationLeft > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.DestinationTop < 0 Or
+        Style.DestinationTop > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.DestinationRight < 0 Or
+        Style.DestinationRight > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.DestinationBottom < 0 Or
+        Style.DestinationBottom > Core.UI_MAX_LAYOUT_VALUE) Then
         Return False
     End If
 
@@ -56,7 +78,8 @@ Public Function IsStyleValid(ByRef Style As Core.WindowStyle) As Boolean
         Return False
     End If
 
-    If Style.SourceX > ImageWidth - Style.SourceWidth Or Style.SourceY > ImageHeight - Style.SourceHeight Then
+    If (Style.SourceX > ImageWidth - Style.SourceWidth Or
+        Style.SourceY > ImageHeight - Style.SourceHeight) Then
         Return False
     End If
 
@@ -68,9 +91,9 @@ Public Function ContentRect(ByRef Style As Core.WindowStyle, X As Number, Y As N
 
     Dim Result As Core.Rect
 
-    Result.X = X + Max(0, Style.Padding.LEFT)
+    Result.X = X + Max(0, Style.Padding.Left)
     Result.Y = Y + Max(0, Style.Padding.Top)
-    Result.Width = Max(0, Width - Max(0, Style.Padding.LEFT) - Max(0, Style.Padding.RIGHT))
+    Result.Width = Max(0, Width - Max(0, Style.Padding.Left) - Max(0, Style.Padding.Right))
     Result.Height = Max(0, Height - Max(0, Style.Padding.Top) - Max(0, Style.Padding.Bottom))
     Return Result
 
@@ -92,7 +115,10 @@ End Function
 
 Private Sub DrawSlice(ByRef Style As Core.WindowStyle, SourceX As Number, SourceY As Number, SourceWidth As Number, SourceHeight As Number, DestinationX As Number, DestinationY As Number, DestinationWidth As Number, DestinationHeight As Number, Opacity As Number)
 
-    If SourceWidth <= 0 Or SourceHeight <= 0 Or DestinationWidth <= 0 Or DestinationHeight <= 0 Then
+    If (SourceWidth <= 0 Or
+        SourceHeight <= 0 Or
+        DestinationWidth <= 0 Or
+        DestinationHeight <= 0) Then
         Return
     End If
 
@@ -143,7 +169,10 @@ Public Sub Draw(ByRef Style As Core.WindowStyle, X As Number, Y As Number, Width
         Return
     End If
 
-    If Not Style.UseSkin Or Not Image_Loaded(Style.Skin) Or Not IsStyleValid(Style) Then
+    If (Not Style.UseSkin Or
+        Not Image_Loaded(Style.Skin) Or
+        Not IsStyleValid(Style)) Then
+
         Call DrawVector(Style, X, Y, Width, Height)
 
         Return

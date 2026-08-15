@@ -66,17 +66,15 @@ If (FirstValue < SecondValue Or
     Print "Trailing"
 End If
 
-If (FirstValue < 0
-    Or SecondValue = 3
-    Or ThirdValue < 0) Then
+If (FirstValue < 0 Or
+    SecondValue = 3 Or
+    ThirdValue < 0) Then
     Print "Leading"
 End If
 
-If (
-    FirstValue < SecondValue Or
+If (FirstValue < SecondValue Or
     SecondValue < ThirdValue Or
-    ThirdValue = 4
-) Then
+    ThirdValue = 4) Then
     Print "Canonical"
 End If
 

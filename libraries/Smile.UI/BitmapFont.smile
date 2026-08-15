@@ -49,15 +49,26 @@ Public Function IsStyleValid(ByRef Style As Core.BitmapFontStyle) As Boolean
         Return False
     End If
 
-    If Style.SourceX < 0 Or Style.SourceY < 0 Or Style.GlyphCount <= 0 Or Style.Columns <= 0 Then
+    If (Style.SourceX < 0 Or
+        Style.SourceY < 0 Or
+        Style.GlyphCount <= 0 Or
+        Style.Columns <= 0) Then
         Return False
     End If
 
-    If Style.SourceCellWidth <= 0 Or Style.SourceCellHeight <= 0 Or Style.DrawWidth <= 0 Or Style.DrawHeight <= 0 Or Style.AdvanceX <= 0 Or Style.LineHeight <= 0 Then
+    If (Style.SourceCellWidth <= 0 Or
+        Style.SourceCellHeight <= 0 Or
+        Style.DrawWidth <= 0 Or
+        Style.DrawHeight <= 0 Or
+        Style.AdvanceX <= 0 Or
+        Style.LineHeight <= 0) Then
         Return False
     End If
 
-    If Style.DrawWidth > Core.UI_MAX_LAYOUT_VALUE Or Style.DrawHeight > Core.UI_MAX_LAYOUT_VALUE Or Style.AdvanceX > Core.UI_MAX_LAYOUT_VALUE Or Style.LineHeight > Core.UI_MAX_LAYOUT_VALUE Then
+    If (Style.DrawWidth > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.DrawHeight > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.AdvanceX > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.LineHeight > Core.UI_MAX_LAYOUT_VALUE) Then
         Return False
     End If
 

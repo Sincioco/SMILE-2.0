@@ -88,9 +88,9 @@ SkinWindow.BorderColor = Rgb(120, 210, 255)
 SkinWindow.BorderThickness = 2
 SkinWindow.Opacity = 96
 SkinWindow.FilterMode = UI.UI_FILTER_SMOOTH
-SkinWindow.Padding.LEFT = 34
+SkinWindow.Padding.Left = 34
 SkinWindow.Padding.Top = 28
-SkinWindow.Padding.RIGHT = 28
+SkinWindow.Padding.Right = 28
 SkinWindow.Padding.Bottom = 26
 
 VectorWindow = SkinWindow
@@ -98,9 +98,9 @@ VectorWindow.UseSkin = False
 VectorWindow.FillColor = Rgb(13, 19, 42)
 VectorWindow.BorderColor = Rgb(98, 213, 255)
 VectorWindow.BorderThickness = 3
-VectorWindow.Padding.LEFT = 28
+VectorWindow.Padding.Left = 28
 VectorWindow.Padding.Top = 24
-VectorWindow.Padding.RIGHT = 24
+VectorWindow.Padding.Right = 24
 VectorWindow.Padding.Bottom = 22
 
 SystemText.Mode = UI.UI_TEXT_SYSTEM
@@ -195,9 +195,9 @@ NavigatorStyle.Viewport.X = 0
 NavigatorStyle.Viewport.Y = 0
 NavigatorStyle.Viewport.Width = 960
 NavigatorStyle.Viewport.Height = 540
-NavigatorStyle.ViewportPadding.LEFT = 12
+NavigatorStyle.ViewportPadding.Left = 12
 NavigatorStyle.ViewportPadding.Top = 12
-NavigatorStyle.ViewportPadding.RIGHT = 12
+NavigatorStyle.ViewportPadding.Right = 12
 NavigatorStyle.ViewportPadding.Bottom = 12
 NavigatorStyle.HorizontalGap = 8
 NavigatorStyle.PreferredDirection = UI.UI_SUBMENU_DIRECTION_AUTO
@@ -393,7 +393,9 @@ Do
 
         Play Sound "Assets\Move.wav" On Channel 1
 
-    Else If Event = UI.UI_EVENT_SUBMENU_OPENED Or Event = UI.UI_EVENT_ACCEPTED Or Event = UI.UI_EVENT_ADVANCED Then
+    Else If (Event = UI.UI_EVENT_SUBMENU_OPENED Or
+        Event = UI.UI_EVENT_ACCEPTED Or
+        Event = UI.UI_EVENT_ADVANCED) Then
 
         Play Sound "Assets\Confirm.wav" On Channel 2
 

@@ -200,15 +200,43 @@ try {
         'Compiler/Smile.NativeRuntime.lib',
         'ProjectTemplates/Smile/1033/SmileConsole/SmileConsole.smileproj',
         'ProjectTemplates/Smile/1033/SmileConsole/SmileConsole.vstemplate',
+        'ProjectTemplates/Smile/1033/SmileConsole/Program.smile',
         'ProjectTemplates/Smile/1033/SmileGame/SmileGame.smileproj',
-        'ProjectTemplates/Smile/1033/SmileGame/SmileGame.vstemplate'
-        'ProjectTemplates/Smile/1033/SmileLibrary/SmileLibrary.smilelibproj'
-        'ProjectTemplates/Smile/1033/SmileLibrary/SmileLibrary.vstemplate'
+        'ProjectTemplates/Smile/1033/SmileGame/SmileGame.vstemplate',
+        'ProjectTemplates/Smile/1033/SmileGame/Program.smile',
+        'ProjectTemplates/Smile/1033/SmileLibrary/SmileLibrary.smilelibproj',
+        'ProjectTemplates/Smile/1033/SmileLibrary/SmileLibrary.vstemplate',
         'ProjectTemplates/Smile/1033/SmileLibrary/Module.smile'
     )
     foreach ($entry in $requiredEntries) {
         if ($entries -notcontains $entry) {
             throw "VSIX entry is missing: $entry"
+        }
+    }
+
+    foreach ($templateName in @('SmileConsole', 'SmileGame')) {
+        $templateRoot = "ProjectTemplates/Smile/1033/$templateName"
+        $programEntry = $archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -eq "$templateRoot/Program.smile" }
+        $templateEntry = $archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -eq "$templateRoot/$templateName.vstemplate" }
+        $programReader = [IO.StreamReader]::new($programEntry.Open())
+        $templateReader = [IO.StreamReader]::new($templateEntry.Open())
+
+        try {
+            $programText = $programReader.ReadToEnd()
+            $templateText = $templateReader.ReadToEnd()
+        }
+        finally {
+            $programReader.Dispose()
+            $templateReader.Dispose()
+        }
+
+        if ($programText -notmatch '\$smileuser\$' -or $programText -notmatch '\$smiledate\$' -or
+            $programText -notmatch '\$smileversion\$') {
+            throw "$templateName does not contain all generated identity tokens."
+        }
+        if ($templateText -notmatch 'SmileProjectTemplateWizard' -or
+            $templateText -notmatch 'Version=2\.0\.37\.0') {
+            throw "$templateName does not invoke the synchronized template wizard."
         }
     }
 
@@ -233,8 +261,12 @@ try {
     $manifestReader = [System.IO.StreamReader]::new($manifestEntry.Open())
     try { $vsixManifest = $manifestReader.ReadToEnd() }
     finally { $manifestReader.Dispose() }
-    if ($vsixManifest -notmatch 'Version="2\.0\.36"') {
-        throw 'VSIX identity version is not 2.0.36.'
+    if ($vsixManifest -notmatch 'Version="2\.0\.37"') {
+        throw 'VSIX identity version is not 2.0.37.'
+    }
+    if ($vsixManifest -notmatch 'Type="Microsoft\.VisualStudio\.Assembly"' -or
+        $vsixManifest -notmatch 'AssemblyName="Smile\.VisualStudio, Version=2\.0\.37\.0, Culture=neutral, PublicKeyToken=null"') {
+        throw 'VSIX does not register the template wizard assembly.'
     }
 }
 finally {
@@ -244,11 +276,11 @@ Write-Host 'VSIX compiler, shared-language, and project-template payload verifie
 $visualStudioDll = Require-File 'src\Smile.VisualStudio\bin\Release\net472\Smile.VisualStudio.dll'
 $versionInfo = [Diagnostics.FileVersionInfo]::GetVersionInfo($visualStudioDll)
 $assemblyVersion = [Reflection.AssemblyName]::GetAssemblyName($visualStudioDll).Version.ToString()
-if ($versionInfo.FileVersion -ne '2.0.36.0' -or $versionInfo.ProductVersion -notlike '2.0.36*' -or
-    $assemblyVersion -ne '2.0.36.0') {
+if ($versionInfo.FileVersion -ne '2.0.37.0' -or $versionInfo.ProductVersion -notlike '2.0.37*' -or
+    $assemblyVersion -ne '2.0.37.0') {
     throw "Visual Studio DLL versions differ: file=$($versionInfo.FileVersion), product=$($versionInfo.ProductVersion), assembly=$assemblyVersion."
 }
-Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.36.'
+Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.37.'
 
 $scaleCases = @(
     @{ Width = 960; Height = 540; ExpectedWidth = 960; ExpectedHeight = 540; X = 0; Y = 0 },

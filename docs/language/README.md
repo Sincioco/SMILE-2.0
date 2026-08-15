@@ -222,7 +222,7 @@ Use exactly one blank line between logical groups and never use double or triple
 - keep one blank line between a function's final `Return` and `End Function`;
 - allow a one-statement `If ... Then ... End If` body without additional interior blank lines.
 
-The formatter and checker at `scripts\format-smile-style.ps1` applies these rules to current tracked SMILE sources while leaving historical requirement archives unchanged. Deliberately invalid diagnostic fixtures retain malformed return expressions when rewriting them would change the diagnostic being taught.
+The formatter and checker at `scripts\format-smile-style.ps1` applies these rules to current tracked SMILE sources while leaving historical requirement archives unchanged. It uses the shared parser and semantic model for complete Return expressions, long If conditions, and contextual identifiers. The default ignores untracked files; use `-IncludeUntracked` to include them or `-Files` to explicitly target named `.smile` files. `-Check` never writes. Mutating runs preflight every result, reject new diagnostics or concurrent hash changes, and commit atomic replacements only after every target is safe. Deliberately invalid diagnostic fixtures retain malformed return expressions when rewriting them would change the diagnostic being taught. The focused formatter safety suite and repository-wide style check run early in `scripts\smoke-test.cmd`.
 
 ## Game surface
 

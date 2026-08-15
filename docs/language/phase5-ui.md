@@ -71,3 +71,7 @@ Navigator layout clamps the root to a padded viewport, aligns each child with it
 Menu prepares the exact bounded visible lines for ellipsis, clip, or wrap before drawing. For measured line height `H`, nonnegative line spacing `S`, and visible line count `N`, the text-block height is `N * H + (N - 1) * S`; the block begins at `RowY + Max(0, (RowDrawHeight - TextBlockHeight) / 2)`. Every continuation uses the fixed label X. A right-aligned ` >` uses the first visible line's Y, while an after-text marker uses its target final visible line's Y.
 
 The cursor begins at `RowY + Max(0, (RowDrawHeight - CursorHeight) / 2)`, applies `CursorOffsetY`, and is then clamped or clipped to the visible row. This keeps the gutter and label X fixed across selection, focus, enabled state, marker visibility, scrollbar visibility, and the ancestor cursors drawn by `MenuNavigator.DrawStack`. Row height remains application-selected and fixed; Phase 5.2.2 adds no automatic height, baseline API, native menu helper, input modality, or Phase 6 feature.
+
+### Smile.UI 1.1.3 identifier presentation
+
+`Smile.UI` 1.1.3 presents the public inset fields as `Left`, `Top`, `Right`, and `Bottom`. The `Left` and `Right` casing update follows the SMILE 2.0 Visual Basic-style identifier convention in source, completion, Quick Info, definitions, project references, and package references. Name binding remains case-insensitive, and the `.smilelib` package format remains version 5.

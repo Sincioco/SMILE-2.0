@@ -21,9 +21,9 @@ Dim OldVisible As Number
 Dim OldPage As Number
 Dim LongValue As Text
 
-Style.Window.Padding.LEFT = 10
+Style.Window.Padding.Left = 10
 Style.Window.Padding.Top = 10
-Style.Window.Padding.RIGHT = 10
+Style.Window.Padding.Right = 10
 Style.Window.Padding.Bottom = 10
 Style.Text.Mode = UI.UI_TEXT_SYSTEM
 Style.Text.SystemSize = 20
@@ -44,9 +44,9 @@ Call Check(Dialogue.HandleKey(Handle, KEY_ENTER, 0) = UI.UI_EVENT_COMPLETED)
 Call Check(Dialogue.IsComplete(Handle))
 
 GalleryStyle = Style
-GalleryStyle.Window.Padding.LEFT = 28
+GalleryStyle.Window.Padding.Left = 28
 GalleryStyle.Window.Padding.Top = 24
-GalleryStyle.Window.Padding.RIGHT = 24
+GalleryStyle.Window.Padding.Right = 24
 GalleryStyle.Window.Padding.Bottom = 22
 GalleryStyle.Text.SystemSize = 25
 GalleryStyle.Text.LineSpacing = 5
@@ -90,8 +90,8 @@ Call Check(Dialogue.VisibleCharacters(Handle) = OldVisible)
 Call Check(Dialogue.CurrentPage(Handle) = OldPage)
 
 FailedStyle = ActiveStyle
-FailedStyle.Window.Padding.LEFT = 150
-FailedStyle.Window.Padding.RIGHT = 150
+FailedStyle.Window.Padding.Left = 150
+FailedStyle.Window.Padding.Right = 150
 
 Call Check(Not Dialogue.SetStyle(Handle, FailedStyle))
 Call Check(Dialogue.IsActive(Handle))
@@ -154,8 +154,8 @@ Call Check(Dialogue.PageCount(Handle) = 1)
 Call Check(Dialogue.Start(Handle, 0))
 
 NarrowStyle = Style
-NarrowStyle.Window.Padding.LEFT = 45
-NarrowStyle.Window.Padding.RIGHT = 45
+NarrowStyle.Window.Padding.Left = 45
+NarrowStyle.Window.Padding.Right = 45
 NarrowStyle.Window.Padding.Top = 35
 NarrowStyle.Window.Padding.Bottom = 35
 NarrowHandle = Dialogue.Create(NarrowStyle, 0, 0, 100, 100)

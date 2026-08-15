@@ -1,6 +1,8 @@
-# Smile.UI 1.1.2 public API
+# Smile.UI 1.1.3 public API
 
 All handles are generation-safe `Number` values. Handle `0` is invalid.
+
+The public `Core.Insets` fields are `Left`, `Top`, `Right`, and `Bottom`. Version 1.1.3 standardizes the presentation casing of `Left` and `Right`; SMILE name binding remains case-insensitive.
 
 ## Smile.UI.Window
 

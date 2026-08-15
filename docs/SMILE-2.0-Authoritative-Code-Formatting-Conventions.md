@@ -471,6 +471,7 @@ Within the SMILE 2.0 repository, the following are the Codex-maintained authorit
 - `AGENTS.md` for permanent project instructions;
 - this document for the self-contained ChatGPT handoff;
 - `scripts\format-smile-style.ps1` for mechanical formatting enforcement;
+- `scripts\test-smile-formatter.ps1` for source-rewriter, scope, transaction, and idempotence safety;
 - current canonical source in `games\Snake` and `games\PaddleBall` for concrete examples.
 
 If ChatGPT produces a conflicting convention:
@@ -481,3 +482,5 @@ If ChatGPT produces a conflicting convention:
 4. Change the convention only after Sin explicitly approves the new rule.
 
 Codex's maintained version takes precedence over ChatGPT-generated formatting guidance unless Sin explicitly says otherwise.
+
+The formatter uses the shared `Smile.Language` parser, syntax tree, semantic model, and symbol service for Return expressions, long If conditions, and contextual identifiers. Its default repository scope is tracked `.smile` files only. `-IncludeUntracked` opts into nonignored untracked sources, while `-Files` explicitly targets existing `.smile` paths, including untracked paths. `-Check` is read-only. Mutating runs analyze every output and verify source hashes before committing any atomic replacement; a failed preflight or concurrent change commits no formatter output. The focused formatter tests and repository-wide `-Check -FormatLongIf` run near the start of `scripts\smoke-test.cmd` as a permanent gate.

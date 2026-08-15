@@ -64,19 +64,32 @@ Public Function IsStyleValid(ByRef Style As Core.DialogueStyle) As Boolean
         Return False
     End If
 
-    If Style.CharactersPerSecond < 0 Or Style.CharactersPerSecond > Core.UI_MAX_LAYOUT_VALUE Or Style.LineSpacing < 0 Or Style.LineSpacing > Core.UI_MAX_LAYOUT_VALUE Then
+    If (Style.CharactersPerSecond < 0 Or
+        Style.CharactersPerSecond > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.LineSpacing < 0 Or
+        Style.LineSpacing > Core.UI_MAX_LAYOUT_VALUE) Then
         Return False
     End If
 
-    If Style.IndicatorWidth < 0 Or Style.IndicatorWidth > Core.UI_MAX_LAYOUT_VALUE Or Style.IndicatorHeight < 0 Or Style.IndicatorHeight > Core.UI_MAX_LAYOUT_VALUE Or Style.IndicatorBlinkMilliseconds < 0 Or Style.IndicatorBlinkMilliseconds > Core.UI_MAX_LAYOUT_VALUE Then
+    If (Style.IndicatorWidth < 0 Or
+        Style.IndicatorWidth > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.IndicatorHeight < 0 Or
+        Style.IndicatorHeight > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.IndicatorBlinkMilliseconds < 0 Or
+        Style.IndicatorBlinkMilliseconds > Core.UI_MAX_LAYOUT_VALUE) Then
         Return False
     End If
 
-    If Style.IndicatorOffsetX < -Core.UI_MAX_LAYOUT_VALUE Or Style.IndicatorOffsetX > Core.UI_MAX_LAYOUT_VALUE Or Style.IndicatorOffsetY < -Core.UI_MAX_LAYOUT_VALUE Or Style.IndicatorOffsetY > Core.UI_MAX_LAYOUT_VALUE Then
+    If (Style.IndicatorOffsetX < -Core.UI_MAX_LAYOUT_VALUE Or
+        Style.IndicatorOffsetX > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.IndicatorOffsetY < -Core.UI_MAX_LAYOUT_VALUE Or
+        Style.IndicatorOffsetY > Core.UI_MAX_LAYOUT_VALUE) Then
         Return False
     End If
 
-    If Style.UseContinueIndicator And Image_Loaded(Style.ContinueIndicator) And (Style.IndicatorWidth <= 0 Or Style.IndicatorHeight <= 0) Then
+    If (Style.UseContinueIndicator And
+        Image_Loaded(Style.ContinueIndicator) And
+        (Style.IndicatorWidth <= 0 Or Style.IndicatorHeight <= 0)) Then
         Return False
     End If
 
@@ -111,7 +124,9 @@ Private Function MaximumLines(Slot As Number, ByRef Style As Core.DialogueStyle)
     StepHeight = LineStep(Style)
     Spacing = Max(0, Style.Text.LineSpacing) + Max(0, Style.LineSpacing)
 
-    If Content.Width <= 0 Or Content.Height <= 0 Or StepHeight <= 0 Then
+    If (Content.Width <= 0 Or
+        Content.Height <= 0 Or
+        StepHeight <= 0) Then
         ReturnValue = 0
         Return ReturnValue
     End If
@@ -614,7 +629,9 @@ Public Function AddPage(Handle As Number, Value As Text) As Boolean
 
     Slot = SlotFromHandle(Handle)
 
-    If Slot < 0 Or RawPageCount[Slot] >= Core.UI_MAX_DIALOGUE_PAGES Or Text_Length(Value) > Core.UI_MAX_DIALOGUE_PAGE_SCALARS Then
+    If (Slot < 0 Or
+        RawPageCount[Slot] >= Core.UI_MAX_DIALOGUE_PAGES Or
+        Text_Length(Value) > Core.UI_MAX_DIALOGUE_PAGE_SCALARS) Then
         Return False
     End If
 
@@ -774,8 +791,12 @@ Public Sub Draw(Handle As Number, NowMilliseconds As Number)
 
     Slot = SlotFromHandle(Handle)
 
-    If Slot < 0 Or Not DialogueActive[Slot] Or DialogueWidth[Slot] <= 0 Or DialogueHeight[Slot] <= 0 Then
+    If (Slot < 0 Or
+        Not DialogueActive[Slot] Or
+        DialogueWidth[Slot] <= 0 Or
+        DialogueHeight[Slot] <= 0) Then
         Return
+
     End If
 
     UpdateEvent = Update(Handle, NowMilliseconds)

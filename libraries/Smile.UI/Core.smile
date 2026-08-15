@@ -54,9 +54,9 @@ Public Type Rect
 End Type
 
 Public Type Insets
-    LEFT As Number
+    Left As Number
     Top As Number
-    RIGHT As Number
+    Right As Number
     Bottom As Number
 End Type
 

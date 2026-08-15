@@ -1890,13 +1890,13 @@ Run("Project-reference debug sites retain the real library source path", () =>
 Run("Official SMILE libraries are labeled separately from student libraries", () =>
 {
     var context = SmileCompilationDependencyContext.Create();
-    context.AddProvider("official", SmileProviderKind.Package, "Smile.UI", "1.1.2", "Smile.UI.smilelib");
+    context.AddProvider("official", SmileProviderKind.Package, "Smile.UI", "1.1.3", "Smile.UI.smilelib");
     context.AddProvider("student", SmileProviderKind.Project, "Student.Tools", "1.0.0",
         "Student.Tools.smilelibproj");
     Equal(true, context.TryGetProviderDescriptor("official", out var official));
     Equal(true, official.IsBuiltIn);
     Equal(true, official.Describe().Contains("SMILE 2.0 built-in library", StringComparison.Ordinal));
-    Equal("SMILE 2.0 built-in library Smile.UI@1.1.2",
+    Equal("SMILE 2.0 built-in library Smile.UI@1.1.3",
         SmileSymbolDisplayService.DescribeProvider("official", context));
     Equal(true, context.TryGetProviderDescriptor("student", out var student));
     Equal(false, student.IsBuiltIn);
@@ -2552,19 +2552,253 @@ Run("Public API preserves referenced record provider identities", () =>
     finally { Directory.Delete(root, true); }
 });
 
-Run("Smile.UI 1.1.2 publishes the Phase 5.2.2 submenu acceptance and row alignment hardening", () =>
+Run("Syntax-aware formatter preserves all authoritative direct Return forms", () =>
+{
+    const string source = "Option Explicit\n\nConst MAX_ITEMS = 10\n\nDim ModuleValue As Number\n\n" +
+        "Function ReturnLocal() As Number\n\n    Dim LocalValue As Number\n\n    LocalValue = 7\n    Return LocalValue\n\nEnd Function\n\n" +
+        "Function ReturnParameter(Value As Number) As Number\n\n    Return Value\n\nEnd Function\n\n" +
+        "Function ReturnModuleValue() As Number\n\n    Return ModuleValue\n\nEnd Function\n\n" +
+        "Function ReturnConstant() As Number\n\n    Return MAX_ITEMS\n\nEnd Function\n\n" +
+        "Function ReturnBooleanLiteral() As Boolean\n\n    Return False\n\nEnd Function\n\n" +
+        "Function ReturnNumberLiteral() As Number\n\n    Return 0\n\nEnd Function\n\n" +
+        "Function ReturnBuiltInConstant() As Number\n\n    Return KEY_ENTER\n\nEnd Function\n\n" +
+        "Function ReturnTextLiteral() As Text\n\n    Return \"Ready\"\n\nEnd Function\n";
+    Equal(source, FormatSource(source));
+});
+
+Run("Syntax-aware formatter rewrites complete multiline computed Return spans exactly", () =>
+{
+    const string source = "Option Explicit\n\nImport Example.Math As Math\n\n" +
+        "Function AddValues(FirstValue As Number, SecondValue As Number) As Number\n\n" +
+        "    Return (\n        FirstValue +\n        SecondValue\n    )\n\nEnd Function\n\n" +
+        "Function CalculateValues(FirstValue As Number, SecondValue As Number) As Number\n\n" +
+        "    Return Math.Calculate(\n        FirstValue,\n        SecondValue\n    )\n\nEnd Function\n";
+    const string expected = "Option Explicit\n\nImport Example.Math As Math\n\n" +
+        "Function AddValues(FirstValue As Number, SecondValue As Number) As Number\n\n" +
+        "    Dim ReturnValue As Number\n\n" +
+        "    ReturnValue = (\n        FirstValue +\n        SecondValue\n    )\n\n" +
+        "    Return ReturnValue\n\nEnd Function\n\n" +
+        "Function CalculateValues(FirstValue As Number, SecondValue As Number) As Number\n\n" +
+        "    Dim ReturnValue As Number\n\n" +
+        "    ReturnValue = Math.Calculate(\n        FirstValue,\n        SecondValue\n    )\n\n" +
+        "    Return ReturnValue\n\nEnd Function\n";
+    var formatted = FormatSource(source);
+    Equal(expected, formatted);
+    Equal(formatted, FormatSource(formatted));
+});
+
+Run("Syntax-aware formatter traverses public and private module declarations", () =>
+{
+    const string source = "Module Example.Visibility\n\nOption Explicit\n\n" +
+        "Public Function PublicValue() As Number\n\n    Return 1 + 2\n\nEnd Function\n\n" +
+        "Private Function PrivateValue() As Number\n\n    Return 3 + 4\n\nEnd Function\n\nEnd Module\n";
+    var formatted = FormatSource(source);
+    Equal(2, formatted.Split("Dim ReturnValue As Number", StringSplitOptions.None).Length - 1);
+    Equal(true, formatted.Contains("ReturnValue = 1 + 2", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("ReturnValue = 3 + 4", StringComparison.Ordinal));
+    Equal(false, SmileLanguage.Analyze(formatted).HasErrors);
+});
+
+Run("Syntax-aware formatter handles every computed Return category and collision-free names", () =>
+{
+    const string source = "Option Explicit\n\nType Holder\n    Value As Number\nEnd Type\n\n" +
+        "Dim Values[2] As Number\nDim HolderValue As Holder\n\n" +
+        "Function Identity(Value As Number) As Number\n\n    Return Value\n\nEnd Function\n\n" +
+        "Function FromField() As Number\n\n    Return HolderValue.Value\n\nEnd Function\n\n" +
+        "Function FromArray() As Number\n\n    Return Values[0]\n\nEnd Function\n\n" +
+        "Function FromCall() As Number\n\n    Return Identity(1)\n\nEnd Function\n\n" +
+        "Function FromUnary() As Number\n\n    Return -1\n\nEnd Function\n\n" +
+        "Function FromBinary() As Number\n\n    Return 1 + 2\n\nEnd Function\n\n" +
+        "Function FromComparison() As Boolean\n\n    Return 1 < 2\n\nEnd Function\n\n" +
+        "Function FromParentheses() As Number\n\n    Return (1)\n\nEnd Function\n\n" +
+        "Function Collision() As Number\n\n    Dim ReturnValue As Number\n\n    Return 2 * 3\n\nEnd Function\n";
+    var formatted = FormatSource(source);
+    Equal(true, formatted.Contains("ReturnValue = HolderValue.Value", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("ReturnValue = Values[0]", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("ReturnValue = Identity(1)", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("ReturnValue = -1", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("ReturnValue = 1 + 2", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("ReturnValue = 1 < 2", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("ReturnValue = (1)", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("Dim ReturnValue2 As Number", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("ReturnValue2 = 2 * 3", StringComparison.Ordinal));
+    Equal(false, SmileLanguage.Analyze(formatted).HasErrors);
+});
+
+Run("Syntax-aware Return intermediates retain Text Image and record ownership types", () =>
+{
+    const string source = "Module Example.Ownership\n\nOption Explicit\n\nPublic Type Point\n    X As Number\nEnd Type\n\n" +
+        "Private Function CreatePoint() As Point\n\n    Dim Value As Point\n\n    Value.X = 1\n    Return Value\n\nEnd Function\n\n" +
+        "Public Function CopyPoint() As Point\n\n    Return CreatePoint()\n\nEnd Function\n\n" +
+        "Private Function ForwardText(Value As Text) As Text\n\n    Return Value\n\nEnd Function\n\n" +
+        "Public Function CopyText(Value As Text) As Text\n\n    Return ForwardText(Value)\n\nEnd Function\n\n" +
+        "Private Function ForwardImage(ByRef Value As Image) As Image\n\n    Return Value\n\nEnd Function\n\n" +
+        "Public Function CopyImage(ByRef Value As Image) As Image\n\n    Return ForwardImage(Value)\n\nEnd Function\n\nEnd Module\n";
+    var formatted = FormatSource(source);
+    Equal(true, formatted.Contains("Dim ReturnValue As Point", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("Dim ReturnValue As Text", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("Dim ReturnValue As Image", StringComparison.Ordinal));
+    Equal(formatted, FormatSource(formatted));
+    Equal(false, SmileLanguage.Analyze(formatted).HasErrors);
+
+    const string imported = "Module Example.Consumer\n\nOption Explicit\n\nImport Example.Base As Base\n\n" +
+        "Public Function CopyImported() As Base.Point\n\n    Return Base.CreatePoint()\n\nEnd Function\n\nEnd Module\n";
+    var importedFormatted = FormatSource(imported);
+    Equal(true, importedFormatted.Contains("Dim ReturnValue As Base.Point", StringComparison.Ordinal));
+    Equal(true, importedFormatted.Contains("ReturnValue = Base.CreatePoint()", StringComparison.Ordinal));
+});
+
+Run("Syntax-aware formatter preserves multiline Return comments blank lines calls and Boolean shape", () =>
+{
+    const string source = "Option Explicit\r\n\r\n" +
+        "Function Combine(First As Number, Second As Number) As Number\r\n\r\n    Return First + Second\r\n\r\nEnd Function\r\n\r\n" +
+        "Function Nested(Value As Number) As Number\r\n\r\n    Return Combine(\r\n        Combine(\r\n            Value,\r\n            1\r\n        ),\r\n\r\n        2\r\n    )\r\n\r\nEnd Function\r\n\r\n" +
+        "Function Both(First As Boolean, Second As Boolean) As Boolean\r\n\r\n    Return (\r\n        First And ' Keep this Return comment\r\n\r\n        Second\r\n    )\r\n\r\nEnd Function\r\n";
+    var formatted = FormatSource(source);
+    Equal(true, formatted.Contains("ReturnValue = Combine(\n        Combine(", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("        ),\n\n        2", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("First And ' Keep this Return comment\n\n        Second", StringComparison.Ordinal));
+    Equal(1, formatted.Split("Keep this Return comment", StringSplitOptions.None).Length - 1);
+    Equal(formatted, FormatSource(formatted));
+    Equal(false, SmileLanguage.Analyze(formatted).HasErrors);
+});
+
+Run("Syntax-aware formatter normalizes leading Boolean operators with parser-owned spans", () =>
+{
+    const string source = "Option Explicit\n\nDim FirstCondition As Boolean\nDim SecondCondition As Boolean\n" +
+        "Dim ThirdCondition As Boolean\n\nIf (FirstCondition\n    Or SecondCondition\n    Or ThirdCondition) Then\n" +
+        "    Print \"Matched\"\nEnd If\n";
+    const string expected = "Option Explicit\n\nDim FirstCondition As Boolean\nDim SecondCondition As Boolean\n" +
+        "Dim ThirdCondition As Boolean\n\nIf (FirstCondition Or\n    SecondCondition Or\n    ThirdCondition) Then\n" +
+        "    Print \"Matched\"\nEnd If\n";
+    var formatted = FormatSource(source);
+    Equal(expected, formatted);
+    Equal(formatted, FormatSource(formatted));
+    Equal(false, SmileLanguage.Analyze(formatted).HasErrors);
+});
+
+Run("Syntax-aware long If formatting preserves comments nested calls and text literals", () =>
+{
+    const string source = "Option Explicit\n\nDim First As Boolean\nDim Second As Boolean\nDim Third As Boolean\n" +
+        "Dim Fourth As Boolean\n\nFunction Matches(Value As Text) As Boolean\n\n    Return True\n\nEnd Function\n\n" +
+        "If (Matches(\"A And B\") Or ' Preserve this comment\n    (First And Second) Or\n    Third Or\n    Fourth) Then\n" +
+        "    Print \"Matched\"\nEnd If\n";
+    var formatted = FormatSource(source);
+    Equal(true, formatted.Contains("Matches(\"A And B\") Or ' Preserve this comment", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("    (First And Second) Or\n    Third Or\n    Fourth) Then", StringComparison.Ordinal));
+    Equal(1, formatted.Split("Preserve this comment", StringSplitOptions.None).Length - 1);
+    Equal(formatted, FormatSource(formatted.Replace("\n", "\r\n")));
+    Equal(false, SmileLanguage.Analyze(formatted).HasErrors);
+});
+
+Run("Syntax-aware long If thresholds cover short over-limit and Else If conditions", () =>
+{
+    const string shortSource = "Option Explicit\n\nDim First As Boolean\nDim Second As Boolean\n\n" +
+        "If First Or Second Then\n    Print \"Short\"\nEnd If\n";
+    Equal(shortSource, FormatSource(shortSource));
+
+    const string source = "Option Explicit\n\nDim FirstConditionWithALongName As Boolean\n" +
+        "Dim SecondConditionWithALongName As Boolean\nDim ThirdCondition As Boolean\nDim FourthCondition As Boolean\n\n" +
+        "If FirstConditionWithALongName Or SecondConditionWithALongName Then\n" +
+        "    Print \"Long\"\nElse If FirstConditionWithALongName Or ThirdCondition Or FourthCondition Then\n" +
+        "    Print \"Else If\"\nEnd If\n";
+    var formatted = SmileSourceFormatter.Format(source, formatLongIf: true, maximumLineLength: 60,
+        rewriteComputedReturns: true, formatContextualIdentifiers: true, filePath: "FormatterTest.smile");
+    Equal(true, formatted.Contains("If (FirstConditionWithALongName Or\n    SecondConditionWithALongName) Then", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("Else If (FirstConditionWithALongName Or\n    ThirdCondition Or\n    FourthCondition) Then", StringComparison.Ordinal));
+    Equal(formatted, SmileSourceFormatter.Format(formatted, true, 60, true, true, "FormatterTest.smile"));
+    Equal(false, SmileLanguage.Analyze(formatted).HasErrors);
+});
+
+Run("Formatter presentation preserves intentional invalid Return diagnostic purpose", () =>
+{
+    const string source = "Option Explicit\n\nFunction InvalidReturn() As Number\n\n    Return (1 + )\n\nEnd Function\n";
+    var before = SmileLanguage.Analyze(source).Diagnostics.Where(diagnostic =>
+        diagnostic.Severity == DiagnosticSeverity.Error).Select(diagnostic => diagnostic.Code).ToArray();
+    var formatted = SmileSourceFormatter.Format(source, formatLongIf: true, maximumLineLength: 100,
+        rewriteComputedReturns: false, formatContextualIdentifiers: true, filePath: "InvalidReturn/Program.smile");
+    var after = SmileLanguage.Analyze(formatted).Diagnostics.Where(diagnostic =>
+        diagnostic.Severity == DiagnosticSeverity.Error).Select(diagnostic => diagnostic.Code).ToArray();
+    Equal(true, before.Length > 0);
+    Equal(string.Join("|", before), string.Join("|", after));
+    Equal(true, formatted.Contains("Return (1 + )", StringComparison.Ordinal));
+});
+
+Run("Syntax-aware formatter presents contextual identifiers without changing constants", () =>
+{
+    const string source = "Module Example.Layout\n\nOption Explicit\n\nPublic Const LEFT_LIMIT = 10\n\n" +
+        "Public Type Insets\n    LEFT As Number\n    Top As Number\n    RIGHT As Number\n    Bottom As Number\n" +
+        "End Type\n\nPublic Type ContextNames\n    TEXT As Number\n    LINE As Number\n    WINDOW As Number\n" +
+        "    SIZE As Number\n    KEY As Number\nEnd Type\n\n" +
+        "Public Function HorizontalTotal(ByRef Value As Insets) As Number\n\n" +
+        "    Dim ReturnValue As Number\n\n    ReturnValue = Value.LEFT + Value.RIGHT\n\n" +
+        "    Return ReturnValue\n\nEnd Function\n\n" +
+        "Public Function ContextTotal(ByRef Value As ContextNames) As Number\n\n" +
+        "    Dim ReturnValue As Number\n\n" +
+        "    ReturnValue = Value.TEXT + Value.LINE + Value.WINDOW + Value.SIZE + Value.KEY\n\n" +
+        "    Return ReturnValue\n\nEnd Function\n\nEnd Module\n";
+    var formatted = FormatSource(source);
+    Equal(true, formatted.Contains("    Left As Number", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("    Right As Number", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("Value.Left + Value.Right", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("Value.Text + Value.Line + Value.Window + Value.Size + Value.Key", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("LEFT_LIMIT", StringComparison.Ordinal));
+    Equal(formatted, FormatSource(formatted));
+    Equal(false, SmileLanguage.Analyze(formatted).HasErrors);
+});
+
+Run("VSIX templates render localized identity metadata within the aligned header", () =>
+{
+    var gameTemplate = File.ReadAllText("src/Smile.VisualStudio/Templates/Game/Program.smile");
+    var consoleTemplate = File.ReadAllText("src/Smile.VisualStudio/Templates/Console/Program.smile");
+    var gameManifest = File.ReadAllText("src/Smile.VisualStudio/Templates/Game/SmileGame.vstemplate");
+    var consoleManifest = File.ReadAllText("src/Smile.VisualStudio/Templates/Console/SmileConsole.vstemplate");
+    var wizard = File.ReadAllText("src/Smile.VisualStudio/SmileProjectTemplateWizard.cs");
+    var project = File.ReadAllText("src/Smile.VisualStudio/Smile.VisualStudio.csproj");
+    var vsixManifest = File.ReadAllText("src/Smile.VisualStudio/source.extension.vsixmanifest");
+    var border = gameTemplate.Split('\n')[0].TrimEnd('\r');
+    var rendered = gameTemplate.Replace("$smileuser$", "Sin".PadRight(69), StringComparison.Ordinal)
+        .Replace("$smiledate$", "August 15, 2026".PadRight(69), StringComparison.Ordinal)
+        .Replace("$smileversion$", "2.0.37", StringComparison.Ordinal);
+    var header = rendered.Split('\n').Take(9).Select(line => line.TrimEnd('\r')).ToArray();
+    Equal("' Programmed By: " + "Sin".PadRight(69) + "Version: 0.0.1", header[3]);
+    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.37", header[4]);
+    Equal(header[3].IndexOf("Version:", StringComparison.Ordinal) + "Version".Length,
+        header[4].IndexOf("SMILE:", StringComparison.Ordinal) + "SMILE".Length);
+    Equal(true, header.All(line => line.Length <= border.Length));
+    foreach (var template in new[] { gameTemplate, consoleTemplate })
+    {
+        Equal(true, template.Contains("$smileuser$", StringComparison.Ordinal));
+        Equal(true, template.Contains("$smiledate$", StringComparison.Ordinal));
+        Equal(true, template.Contains("$smileversion$", StringComparison.Ordinal));
+    }
+    foreach (var manifest in new[] { gameManifest, consoleManifest })
+    {
+        Equal(true, manifest.Contains("SmileProjectTemplateWizard", StringComparison.Ordinal));
+        Equal(true, manifest.Contains("Version=2.0.37.0", StringComparison.Ordinal));
+    }
+    Equal(true, wizard.Contains("ToString(\"D\", CultureInfo.CurrentCulture)", StringComparison.Ordinal));
+    Equal(true, project.Contains("<Version>2.0.37</Version>", StringComparison.Ordinal));
+    Equal(true, vsixManifest.Contains("Type=\"Microsoft.VisualStudio.Assembly\"", StringComparison.Ordinal));
+});
+
+Run("Smile.UI 1.1.3 publishes canonical Insets fields and the Phase 5.2.2 hardening", () =>
 {
     var project = File.ReadAllText("libraries/Smile.UI/Smile.UI.smilelibproj");
     var core = File.ReadAllText("libraries/Smile.UI/Core.smile");
     var menu = File.ReadAllText("libraries/Smile.UI/Menu.smile");
     var navigator = File.ReadAllText("libraries/Smile.UI/MenuNavigator.smile");
-    Equal(true, project.Contains("<Version>1.1.2</Version>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<Version>1.1.3</Version>", StringComparison.Ordinal));
     Equal(true, project.Contains("<SmileSource Include=\"MenuNavigator.smile\" />", StringComparison.Ordinal));
     foreach (var constant in new[] { "UI_EVENT_SUBMENU_OPENED", "UI_EVENT_SUBMENU_CLOSED",
         "UI_MENU_TEXT_ELLIPSIS", "UI_MENU_TEXT_CLIP", "UI_MENU_TEXT_WRAP",
         "UI_SUBMENU_INDICATOR_AFTER_TEXT", "UI_SUBMENU_INDICATOR_RIGHT_ALIGNED",
         "UI_MAX_MENU_NAVIGATORS", "UI_MAX_MENU_DEPTH", "UI_MAX_SUBMENU_BINDINGS" })
         Equal(true, core.Contains("Public Const " + constant, StringComparison.Ordinal));
+    Equal(true, core.Contains("    Left As Number", StringComparison.Ordinal));
+    Equal(true, core.Contains("    Right As Number", StringComparison.Ordinal));
+    Equal(false, core.Contains("    LEFT As Number", StringComparison.Ordinal));
+    Equal(false, core.Contains("    RIGHT As Number", StringComparison.Ordinal));
     foreach (var member in new[] { "SetItemHasSubmenu", "ItemHasSubmenu", "ItemRevision", "Bounds",
         "SetPosition", "SelectedRowRect", "ResetSelection", "DrawFocused" })
         Equal(true, menu.Contains("Public ", StringComparison.Ordinal) &&
@@ -2607,6 +2841,10 @@ return 0;
 
 SmileProjectGraphicsOptions Parse(string xml) =>
     SmileProjectGraphicsOptions.Parse(XElement.Parse(xml));
+
+string FormatSource(string source) =>
+    SmileSourceFormatter.Format(source, formatLongIf: true, maximumLineLength: 100,
+        rewriteComputedReturns: true, formatContextualIdentifiers: true, filePath: "FormatterTest.smile");
 
 SmileAnalysisResult Analyze(string source) => SmileLanguage.Analyze(source);
 

@@ -1,8 +1,10 @@
 param(
     [switch]$Check,
+    [switch]$IncludeUntracked,
     [switch]$FormatLongIf,
     [int]$MaximumLineLength = 100,
-    [string[]]$Files
+    [string[]]$Files,
+    [scriptblock]$BeforeCommitTestHook
 )
 
 $ErrorActionPreference = 'Stop'
@@ -80,364 +82,26 @@ function Get-LeadingWhitespace {
     return $Match.Value
 }
 
-function Test-DirectReturnValue {
-    param([string]$Expression)
-
-    if ($Expression -match '^\d+$') {
-        return $true
-    }
-
-    if ($Expression -match '^"(?:[^"\\]|\\.|"")*"$') {
-        return $true
-    }
-
-    if ($Expression -notmatch '^[A-Za-z_][A-Za-z0-9_]*$') {
-        return $false
-    }
-
-    return $true
-}
-
-function Get-ReturnType {
-    param(
-        [string]$Declaration,
-        [string]$InferredType
-    )
-
-    $ClosingParenthesis = $Declaration.LastIndexOf(')')
-
-    if ($ClosingParenthesis -ge 0) {
-        $Suffix = $Declaration.Substring($ClosingParenthesis + 1).Trim()
-        $TypeMatch = [regex]::Match($Suffix, '^As\s+(.+)$', [Text.RegularExpressions.RegexOptions]::IgnoreCase)
-
-        if ($TypeMatch.Success) {
-            return $TypeMatch.Groups[1].Value.Trim()
-        }
-    }
-
-    if ([string]::IsNullOrWhiteSpace($InferredType) -or $InferredType -eq 'ERROR') {
-        throw "Unable to infer the return type for '$($Declaration.Trim())'."
-    }
-
-    return $InferredType
-}
-
 function Initialize-LanguageAssembly {
-    if (-not (Test-Path -LiteralPath $LanguageAssemblyPath)) {
+    $NeedsBuild = -not (Test-Path -LiteralPath $LanguageAssemblyPath)
+
+    if (-not $NeedsBuild) {
+        $AssemblyWriteTime = (Get-Item -LiteralPath $LanguageAssemblyPath).LastWriteTimeUtc
+        $NeedsBuild = @(Get-ChildItem -LiteralPath (Join-Path $RepositoryRoot 'src\Smile.Language') -Filter '*.cs' -File |
+            Where-Object { $_.LastWriteTimeUtc -gt $AssemblyWriteTime }).Count -gt 0
+    }
+
+    if ($NeedsBuild) {
         & dotnet build (Join-Path $RepositoryRoot 'src\Smile.Language\Smile.Language.csproj') --nologo
 
         if ($LASTEXITCODE -ne 0) {
-            throw 'Unable to build Smile.Language for return-type inference.'
+            throw 'Unable to build Smile.Language for syntax-aware formatting.'
         }
     }
 
     if (-not ('Smile.Language.SmileLanguage' -as [type])) {
         [Reflection.Assembly]::LoadFrom($LanguageAssemblyPath) | Out-Null
     }
-}
-
-function Get-LogicalLineNumber {
-    param(
-        [string]$Text,
-        [int]$Position
-    )
-
-    $LogicalLine = 1
-    $InTextLiteral = $false
-    $InComment = $false
-
-    for ($Index = 0; $Index -lt $Position; $Index++) {
-        $Character = $Text[$Index]
-
-        if ($Character -eq "`n") {
-            if (-not $InTextLiteral) {
-                $LogicalLine++
-            }
-
-            $InComment = $false
-            continue
-        }
-
-        if ($InComment) {
-            continue
-        }
-
-        if (-not $InTextLiteral -and $Character -eq "'") {
-            $InComment = $true
-            continue
-        }
-
-        if ($Character -ne '"') {
-            continue
-        }
-
-        if ($InTextLiteral -and $Index + 1 -lt $Position -and $Text[$Index + 1] -eq '"') {
-            $Index++
-            continue
-        }
-
-        $InTextLiteral = -not $InTextLiteral
-    }
-
-    return $LogicalLine
-}
-
-function Get-FunctionReturnTypes {
-    param([string]$Text)
-
-    Initialize-LanguageAssembly
-    $Analysis = [Smile.Language.SmileLanguage]::Analyze($Text)
-    $ReturnTypes = @{}
-
-    foreach ($Routine in $Analysis.SemanticModel.Routines.Values) {
-        if (-not $Routine.IsFunction) {
-            continue
-        }
-
-        $LogicalLine = Get-LogicalLineNumber $Text $Routine.Declaration.Identifier.Position
-        $ReturnTypes[$LogicalLine] = $Routine.ReturnType.Name
-    }
-
-    return $ReturnTypes
-}
-
-function Remove-OuterParentheses {
-    param([string]$Condition)
-
-    $Value = $Condition.Trim()
-
-    if (-not ($Value.StartsWith('(') -and $Value.EndsWith(')'))) {
-        return $Value
-    }
-
-    $Depth = 0
-    $InString = $false
-
-    for ($Index = 0; $Index -lt $Value.Length; $Index++) {
-        $Character = $Value[$Index]
-
-        if ($Character -eq '"') {
-            if ($InString -and $Index + 1 -lt $Value.Length -and $Value[$Index + 1] -eq '"') {
-                $Index++
-                continue
-            }
-
-            $InString = -not $InString
-            continue
-        }
-
-        if ($InString) {
-            continue
-        }
-
-        if ($Character -eq '(') {
-            $Depth++
-        }
-        elseif ($Character -eq ')') {
-            $Depth--
-
-            if ($Depth -eq 0 -and $Index -ne $Value.Length - 1) {
-                return $Value
-            }
-        }
-    }
-
-    if ($Depth -eq 0) {
-        return $Value.Substring(1, $Value.Length - 2).Trim()
-    }
-
-    return $Value
-}
-
-function Split-LogicalCondition {
-    param([string]$Condition)
-
-    $Parts = [Collections.Generic.List[string]]::new()
-    $Start = 0
-    $Depth = 0
-    $InString = $false
-
-    for ($Index = 0; $Index -lt $Condition.Length; $Index++) {
-        $Character = $Condition[$Index]
-
-        if ($Character -eq '"') {
-            if ($InString -and $Index + 1 -lt $Condition.Length -and $Condition[$Index + 1] -eq '"') {
-                $Index++
-                continue
-            }
-
-            $InString = -not $InString
-            continue
-        }
-
-        if ($InString) {
-            continue
-        }
-
-        if ($Character -eq '(') {
-            $Depth++
-            continue
-        }
-
-        if ($Character -eq ')') {
-            $Depth--
-            continue
-        }
-
-        if ($Depth -ne 0) {
-            continue
-        }
-
-        foreach ($Operator in @(' And ', ' Or ')) {
-            if ($Index + $Operator.Length -le $Condition.Length -and
-                $Condition.Substring($Index, $Operator.Length) -ieq $Operator) {
-                $Segment = $Condition.Substring($Start, $Index - $Start).Trim()
-                $LogicalWord = $Operator.Trim()
-                $Parts.Add("$Segment $LogicalWord")
-                $Index += $Operator.Length - 1
-                $Start = $Index + 1
-                break
-            }
-        }
-    }
-
-    $FinalSegment = $Condition.Substring($Start).Trim()
-
-    if ($FinalSegment.Length -gt 0) {
-        $Parts.Add($FinalSegment)
-    }
-
-    return $Parts.ToArray()
-}
-
-function Format-LongIfStatements {
-    param(
-        [string[]]$Lines,
-        [int]$LineLimit
-    )
-
-    $Formatted = [Collections.Generic.List[string]]::new()
-
-    foreach ($Line in $Lines) {
-        $Match = [regex]::Match($Line, '^(\s*)(If|Else\s+If)\s+(.+)\s+Then\s*$', [Text.RegularExpressions.RegexOptions]::IgnoreCase)
-
-        if (-not $Match.Success) {
-            $Formatted.Add($Line)
-            continue
-        }
-
-        $Indent = $Match.Groups[1].Value
-        $Keyword = if ($Match.Groups[2].Value -match '^Else') { 'Else If' } else { 'If' }
-        $Condition = Remove-OuterParentheses $Match.Groups[3].Value
-        $Parts = @(Split-LogicalCondition $Condition)
-
-        if ($Parts.Count -lt 2 -or ($Line.Length -le $LineLimit -and $Parts.Count -lt 3)) {
-            $Formatted.Add($Line)
-            continue
-        }
-
-        $ContinuationIndent = $Indent + '    '
-        $Formatted.Add("$Indent$Keyword ($($Parts[0])")
-
-        for ($PartIndex = 1; $PartIndex -lt $Parts.Count; $PartIndex++) {
-            if ($PartIndex -eq $Parts.Count - 1) {
-                $Formatted.Add("$ContinuationIndent$($Parts[$PartIndex])) Then")
-            }
-            else {
-                $Formatted.Add("$ContinuationIndent$($Parts[$PartIndex])")
-            }
-        }
-    }
-
-    return $Formatted.ToArray()
-}
-
-function Add-ReturnVariables {
-    param(
-        [string[]]$Lines,
-        [hashtable]$ReturnTypes
-    )
-
-    $Formatted = [Collections.Generic.List[string]]::new()
-    $LineIndex = 0
-
-    while ($LineIndex -lt $Lines.Count) {
-        $Declaration = $Lines[$LineIndex]
-        $FunctionMatch = [regex]::Match($Declaration, '^\s*(?:Public\s+|Private\s+)?Function\b', [Text.RegularExpressions.RegexOptions]::IgnoreCase)
-
-        if (-not $FunctionMatch.Success) {
-            $Formatted.Add($Declaration)
-            $LineIndex++
-            continue
-        }
-
-        $EndIndex = $LineIndex + 1
-
-        while ($EndIndex -lt $Lines.Count -and $Lines[$EndIndex].Trim() -notmatch '^End\s+Function$') {
-            $EndIndex++
-        }
-
-        if ($EndIndex -ge $Lines.Count) {
-            $Formatted.Add($Declaration)
-            $LineIndex++
-            continue
-        }
-
-        $NeedsReturnVariable = $false
-
-        for ($BodyIndex = $LineIndex + 1; $BodyIndex -lt $EndIndex; $BodyIndex++) {
-            $ReturnMatch = [regex]::Match($Lines[$BodyIndex], '^\s*Return\s+(.+?)\s*$', [Text.RegularExpressions.RegexOptions]::IgnoreCase)
-
-            if ($ReturnMatch.Success -and -not (Test-DirectReturnValue $ReturnMatch.Groups[1].Value.Trim())) {
-                $NeedsReturnVariable = $true
-                break
-            }
-        }
-
-        if (-not $NeedsReturnVariable) {
-            for ($CopyIndex = $LineIndex; $CopyIndex -le $EndIndex; $CopyIndex++) {
-                $Formatted.Add($Lines[$CopyIndex])
-            }
-
-            $LineIndex = $EndIndex + 1
-            continue
-        }
-
-        $FunctionText = ($Lines[$LineIndex..$EndIndex] -join "`n")
-        $ReturnVariable = 'ReturnValue'
-        $Suffix = 2
-
-        while ($FunctionText -match "\b$([regex]::Escape($ReturnVariable))\b") {
-            $ReturnVariable = "ReturnValue$Suffix"
-            $Suffix++
-        }
-
-        $DeclarationIndent = Get-LeadingWhitespace $Declaration
-        $BodyIndent = $DeclarationIndent + '    '
-        $InferredType = if ($ReturnTypes.ContainsKey($LineIndex + 1)) { $ReturnTypes[$LineIndex + 1] } else { '' }
-        $ReturnType = Get-ReturnType $Declaration $InferredType
-        $Formatted.Add($Declaration)
-        $Formatted.Add("${BodyIndent}Dim $ReturnVariable As $ReturnType")
-
-        for ($BodyIndex = $LineIndex + 1; $BodyIndex -lt $EndIndex; $BodyIndex++) {
-            $ReturnMatch = [regex]::Match($Lines[$BodyIndex], '^(\s*)Return\s+(.+?)\s*$', [Text.RegularExpressions.RegexOptions]::IgnoreCase)
-
-            if ($ReturnMatch.Success -and -not (Test-DirectReturnValue $ReturnMatch.Groups[2].Value.Trim())) {
-                $ReturnIndent = $ReturnMatch.Groups[1].Value
-                $Expression = $ReturnMatch.Groups[2].Value.Trim()
-                $Formatted.Add("$ReturnIndent$ReturnVariable = $Expression")
-                $Formatted.Add("${ReturnIndent}Return $ReturnVariable")
-            }
-            else {
-                $Formatted.Add($Lines[$BodyIndex])
-            }
-        }
-
-        $Formatted.Add($Lines[$EndIndex])
-        $LineIndex = $EndIndex + 1
-    }
-
-    return $Formatted.ToArray()
 }
 
 function Get-StatementCategory {
@@ -852,56 +516,182 @@ function Format-BlankLines {
 function Format-SmileText {
     param(
         [string]$Text,
-        [bool]$SkipReturnVariables
+        [bool]$SkipReturnVariables,
+        [string]$FilePath
     )
 
     $NormalizedText = $Text.Replace("`r`n", "`n").Replace("`r", "`n")
-    $Lines = @($NormalizedText.Split("`n"))
+    $StructuredText = [Smile.Language.SmileSourceFormatter]::Format(
+        $NormalizedText,
+        [bool]$FormatLongIf,
+        $MaximumLineLength,
+        -not $SkipReturnVariables,
+        $true,
+        $FilePath)
+    $Lines = @($StructuredText.Split("`n"))
 
     if ($Lines.Count -gt 0 -and $Lines[$Lines.Count - 1].Length -eq 0) {
         $Lines = if ($Lines.Count -eq 1) { @() } else { @($Lines[0..($Lines.Count - 2)]) }
     }
 
     $Lines = @(Join-MultilineTextLiterals $Lines)
-
-    if (-not $SkipReturnVariables) {
-        $ReturnTypes = Get-FunctionReturnTypes $NormalizedText
-        $Lines = @(Add-ReturnVariables $Lines $ReturnTypes)
-    }
-    if ($FormatLongIf) {
-        $Lines = @(Format-LongIfStatements $Lines $MaximumLineLength)
-    }
     $Lines = @(Format-BlankLines $Lines)
     $Lines = @(Expand-MultilineTextLiterals $Lines)
     return ($Lines -join "`n") + "`n"
 }
 
-$TrackedFiles = @(& git -C $RepositoryRoot ls-files --cached --others --exclude-standard -- '*.smile')
+function Get-Sha256 {
+    param([byte[]]$Bytes)
 
-if ($LASTEXITCODE -ne 0) {
-    throw 'Unable to enumerate tracked SMILE source files.'
+    $Algorithm = [Security.Cryptography.SHA256]::Create()
+
+    try {
+        return ([BitConverter]::ToString($Algorithm.ComputeHash($Bytes))).Replace('-', '').ToLowerInvariant()
+    }
+    finally {
+        $Algorithm.Dispose()
+    }
 }
 
-if ($null -ne $Files -and $Files.Count -gt 0) {
-    $RequestedFiles = @($Files | ForEach-Object { $_.Replace('\', '/') })
-    $TrackedFiles = @($TrackedFiles | Where-Object { $RequestedFiles -contains $_ })
+function Get-ErrorCodeCounts {
+    param([string]$Text, [string]$FilePath)
+
+    $Counts = @{}
+    $Analysis = [Smile.Language.SmileLanguage]::Analyze($Text, $FilePath)
+
+    foreach ($Diagnostic in $Analysis.Diagnostics) {
+        if ($Diagnostic.Severity.ToString() -ne 'Error') {
+            continue
+        }
+
+        if (-not $Counts.ContainsKey($Diagnostic.Code)) {
+            $Counts[$Diagnostic.Code] = 0
+        }
+
+        $Counts[$Diagnostic.Code]++
+    }
+
+    return $Counts
 }
 
-$ChangedFiles = [Collections.Generic.List[string]]::new()
+function Assert-NoNewDiagnostics {
+    param(
+        [hashtable]$OriginalCounts,
+        [hashtable]$FormattedCounts,
+        [string]$RelativePath
+    )
 
-foreach ($RelativePath in $TrackedFiles) {
-    $FullPath = Join-Path $RepositoryRoot $RelativePath
-    $Original = [IO.File]::ReadAllText($FullPath)
-    $SkipReturnVariables = $RelativePath -match '(^|/)Invalid[^/]*/|^examples/diagnostics/'
-    $Formatted = Format-SmileText $Original $SkipReturnVariables
+    foreach ($Code in $FormattedCounts.Keys) {
+        $OriginalCount = if ($OriginalCounts.ContainsKey($Code)) { $OriginalCounts[$Code] } else { 0 }
 
-    if ($Original.Replace("`r`n", "`n").Replace("`r", "`n") -cne $Formatted) {
-        $ChangedFiles.Add($RelativePath)
-
-        if (-not $Check) {
-            [IO.File]::WriteAllText($FullPath, $Formatted, $Utf8WithoutBom)
+        if ($FormattedCounts[$Code] -gt $OriginalCount) {
+            throw "Formatting '$RelativePath' introduced $Code diagnostics."
         }
     }
+}
+
+function Resolve-RequestedTargets {
+    param([string[]]$Requested)
+
+    $RepositoryPrefix = $RepositoryRoot.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+    $Seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    $Resolved = [Collections.Generic.List[string]]::new()
+
+    foreach ($RequestedPath in $Requested) {
+        if ([string]::IsNullOrWhiteSpace($RequestedPath)) {
+            throw 'An explicit formatter file path cannot be empty.'
+        }
+
+        $FullPath = if ([IO.Path]::IsPathRooted($RequestedPath)) {
+            [IO.Path]::GetFullPath($RequestedPath)
+        }
+        else {
+            [IO.Path]::GetFullPath((Join-Path $RepositoryRoot $RequestedPath))
+        }
+
+        if (-not $FullPath.StartsWith($RepositoryPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Explicit formatter target '$RequestedPath' is outside the repository."
+        }
+
+        if (-not [IO.File]::Exists($FullPath)) {
+            throw "Explicit formatter target '$RequestedPath' does not exist."
+        }
+
+        if ([IO.Path]::GetExtension($FullPath) -ine '.smile') {
+            throw "Explicit formatter target '$RequestedPath' is not a .smile file."
+        }
+
+        $RelativePath = $FullPath.Substring($RepositoryPrefix.Length).Replace('\', '/')
+
+        if ($Seen.Add($RelativePath)) {
+            $Resolved.Add($RelativePath)
+        }
+    }
+
+    return $Resolved.ToArray()
+}
+
+Initialize-LanguageAssembly
+
+if ($null -ne $Files -and $Files.Count -gt 0) {
+    $TargetFiles = @(Resolve-RequestedTargets $Files)
+}
+else {
+    $TargetFiles = @(& git -C $RepositoryRoot ls-files -- '*.smile')
+
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Unable to enumerate tracked SMILE source files.'
+    }
+
+    if ($IncludeUntracked) {
+        $UntrackedFiles = @(& git -C $RepositoryRoot ls-files --others --exclude-standard -- '*.smile')
+
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Unable to enumerate untracked SMILE source files.'
+        }
+
+        $Seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+        $Combined = [Collections.Generic.List[string]]::new()
+
+        foreach ($RelativePath in @($TargetFiles) + @($UntrackedFiles)) {
+            if ($Seen.Add($RelativePath)) {
+                $Combined.Add($RelativePath)
+            }
+        }
+
+        $TargetFiles = $Combined.ToArray()
+    }
+}
+
+$States = [Collections.Generic.List[object]]::new()
+$ChangedFiles = [Collections.Generic.List[string]]::new()
+
+foreach ($RelativePath in $TargetFiles) {
+    $FullPath = Join-Path $RepositoryRoot $RelativePath
+    $OriginalBytes = [IO.File]::ReadAllBytes($FullPath)
+    $Original = [IO.File]::ReadAllText($FullPath)
+    $OriginalDiagnostics = Get-ErrorCodeCounts $Original $FullPath
+    $SkipReturnVariables = $RelativePath -match '(^|/)Invalid[^/]*/|^examples/diagnostics/'
+    $Formatted = Format-SmileText $Original $SkipReturnVariables $FullPath
+    $FormattedDiagnostics = Get-ErrorCodeCounts $Formatted $FullPath
+
+    Assert-NoNewDiagnostics $OriginalDiagnostics $FormattedDiagnostics $RelativePath
+
+    $Changed = $Original.Replace("`r`n", "`n").Replace("`r", "`n") -cne $Formatted
+
+    if ($Changed) {
+        $ChangedFiles.Add($RelativePath)
+    }
+
+    $States.Add([pscustomobject]@{
+        RelativePath = $RelativePath
+        FullPath = $FullPath
+        OriginalBytes = $OriginalBytes
+        OriginalHash = Get-Sha256 $OriginalBytes
+        OriginalWriteTimeUtc = [IO.File]::GetLastWriteTimeUtc($FullPath)
+        Formatted = $Formatted
+        Changed = $Changed
+    })
 }
 
 if ($Check -and $ChangedFiles.Count -gt 0) {
@@ -910,8 +700,65 @@ if ($Check -and $ChangedFiles.Count -gt 0) {
 }
 
 if ($Check) {
-    Write-Output ("SMILE style check passed for {0} file(s)." -f $TrackedFiles.Count)
+    Write-Output ("SMILE style check passed for {0} file(s)." -f $TargetFiles.Count)
+    exit 0
 }
-else {
-    Write-Output ("Formatted {0} of {1} tracked SMILE file(s)." -f $ChangedFiles.Count, $TrackedFiles.Count)
+
+if ($null -ne $BeforeCommitTestHook) {
+    & $BeforeCommitTestHook $States.ToArray()
 }
+
+foreach ($State in $States) {
+    $CurrentHash = Get-Sha256 ([IO.File]::ReadAllBytes($State.FullPath))
+
+    if ($CurrentHash -cne $State.OriginalHash) {
+        throw "Formatter target '$($State.RelativePath)' changed after preflight; no formatter writes were committed."
+    }
+}
+
+if ($ChangedFiles.Count -eq 0) {
+    Write-Output ("Formatted 0 of {0} SMILE file(s)." -f $TargetFiles.Count)
+    exit 0
+}
+
+$ArtifactsTemp = Join-Path $RepositoryRoot 'artifacts\temp'
+[IO.Directory]::CreateDirectory($ArtifactsTemp) | Out-Null
+$StageRoot = Join-Path $ArtifactsTemp ("smile-formatter-" + [Guid]::NewGuid().ToString('N'))
+[IO.Directory]::CreateDirectory($StageRoot) | Out-Null
+$Committed = [Collections.Generic.List[object]]::new()
+
+try {
+    foreach ($State in $States | Where-Object Changed) {
+        $StagePath = Join-Path $StageRoot ([Guid]::NewGuid().ToString('N') + '.new')
+        $BackupPath = Join-Path $StageRoot ([Guid]::NewGuid().ToString('N') + '.backup')
+        [IO.File]::WriteAllText($StagePath, $State.Formatted, $Utf8WithoutBom)
+        Add-Member -InputObject $State -NotePropertyName StagePath -NotePropertyValue $StagePath
+        Add-Member -InputObject $State -NotePropertyName BackupPath -NotePropertyValue $BackupPath
+    }
+
+    foreach ($State in $States | Where-Object Changed) {
+        [IO.File]::Replace($State.StagePath, $State.FullPath, $State.BackupPath)
+        $Committed.Add($State)
+    }
+}
+catch {
+    $CommitError = $_
+
+    foreach ($State in $Committed) {
+        $DiscardPath = Join-Path $StageRoot ([Guid]::NewGuid().ToString('N') + '.discard')
+        [IO.File]::Replace($State.BackupPath, $State.FullPath, $DiscardPath)
+        [IO.File]::SetLastWriteTimeUtc($State.FullPath, $State.OriginalWriteTimeUtc)
+    }
+
+    throw $CommitError
+}
+finally {
+    $ExpectedStagePrefix = $ArtifactsTemp.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+
+    if ($StageRoot.StartsWith($ExpectedStagePrefix, [StringComparison]::OrdinalIgnoreCase) -and
+        [IO.Directory]::Exists($StageRoot)) {
+        Remove-Item -LiteralPath $StageRoot -Recurse -Force
+    }
+}
+
+Write-Output ("Formatted {0} of {1} SMILE file(s)." -f $ChangedFiles.Count, $TargetFiles.Count)

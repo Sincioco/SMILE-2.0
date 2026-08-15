@@ -17,4 +17,8 @@
       <ProjectItem ReplaceParameters="true" TargetFileName="Program.smile">Program.smile</ProjectItem>
     </Project>
   </TemplateContent>
+  <WizardExtension>
+    <Assembly>Smile.VisualStudio, Version=2.0.37.0, Culture=neutral, PublicKeyToken=null</Assembly>
+    <FullClassName>Smile.VisualStudio.SmileProjectTemplateWizard</FullClassName>
+  </WizardExtension>
 </VSTemplate>

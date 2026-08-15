@@ -83,6 +83,9 @@ End If
 - A function may directly return a variable, a constant, or a literal value such as `True`, `False`, a number, or a string. Only a computed or evaluated expression must **not** be returned directly. Assign that expression to a clearly named local variable first, because students cannot know its value until it is evaluated. This lets students inspect, print, hover over, or watch the evaluated value before it is returned.
 - When a final `Return` is followed by `End Function`, keep one blank line between them.
 - Apply this style to SMILE source, modules, libraries, examples, games, templates, tutorials, embedded documentation examples, diagnostics, and generated SMILE presentation.
+- Keep source-aware formatting decisions in `src\Smile.Language` so Return expressions, long If conditions, contextual identifiers, diagnostics, completion, Quick Info, definitions, compiler behavior, and the VSIX use the same parser and semantic model. Do not reintroduce line-based parsing for these decisions.
+- Keep `scripts\format-smile-style.ps1` transactional. Its default repository scope is tracked `.smile` files; untracked files require `-IncludeUntracked` or explicit `-Files`. `-Check` must never write. A mutating run must preflight every target, reject new diagnostics or concurrent hash changes, and commit no partial formatter output.
+- Run `scripts\test-smile-formatter.ps1` and the repository-wide `format-smile-style.ps1 -Check -FormatLongIf` near the start of the permanent smoke suite, before long native or Web validation.
 
 ## Permanent generated SMILE program structure
 
@@ -102,6 +105,7 @@ Treat the current `games\Snake\Program.smile` as the canonical structural refere
 - Group routines by responsibility and, when practical, in the order the main flow introduces or calls them.
 - Use exactly one blank line between the major startup phases and apply the permanent statement-level spacing rules inside every phase and routine.
 - Apply this ordering to newly generated code and to code being substantively reorganized. Do not churn otherwise untouched working files solely to impose the ordering.
+- The Game starter template header must insert the creating user's name, the current date in the user's local long-date format, and the installed SMILE VSIX version. Keep the `Version:` and `SMILE:` colons vertically aligned and keep every rendered header line within the surrounding border.
 
 ## One authoritative language implementation
 

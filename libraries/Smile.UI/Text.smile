@@ -27,7 +27,10 @@ Public Function IsStyleValid(ByRef Style As Core.TextStyle) As Boolean
         Return False
     End If
 
-    If Style.SystemSize < 0 Or Style.SystemSize > Core.UI_MAX_LAYOUT_VALUE Or Style.LineSpacing < 0 Or Style.LineSpacing > Core.UI_MAX_LAYOUT_VALUE Then
+    If (Style.SystemSize < 0 Or
+        Style.SystemSize > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.LineSpacing < 0 Or
+        Style.LineSpacing > Core.UI_MAX_LAYOUT_VALUE) Then
         Return False
     End If
 

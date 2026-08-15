@@ -60,27 +60,43 @@ End Function
 
 Public Function IsStyleValid(ByRef Style As Core.MenuNavigatorStyle) As Boolean
 
-    If Style.Viewport.X < -Core.UI_MAX_LAYOUT_VALUE Or Style.Viewport.X > Core.UI_MAX_LAYOUT_VALUE Or Style.Viewport.Y < -Core.UI_MAX_LAYOUT_VALUE Or Style.Viewport.Y > Core.UI_MAX_LAYOUT_VALUE Then
+    If (Style.Viewport.X < -Core.UI_MAX_LAYOUT_VALUE Or
+        Style.Viewport.X > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.Viewport.Y < -Core.UI_MAX_LAYOUT_VALUE Or
+        Style.Viewport.Y > Core.UI_MAX_LAYOUT_VALUE) Then
         Return False
     End If
 
-    If Style.Viewport.Width <= 0 Or Style.Viewport.Width > Core.UI_MAX_LAYOUT_VALUE Or Style.Viewport.Height <= 0 Or Style.Viewport.Height > Core.UI_MAX_LAYOUT_VALUE Then
+    If (Style.Viewport.Width <= 0 Or
+        Style.Viewport.Width > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.Viewport.Height <= 0 Or
+        Style.Viewport.Height > Core.UI_MAX_LAYOUT_VALUE) Then
         Return False
     End If
 
-    If Style.Viewport.X > Core.UI_MAX_LAYOUT_VALUE - Style.Viewport.Width Or Style.Viewport.Y > Core.UI_MAX_LAYOUT_VALUE - Style.Viewport.Height Then
+    If (Style.Viewport.X > Core.UI_MAX_LAYOUT_VALUE - Style.Viewport.Width Or
+        Style.Viewport.Y > Core.UI_MAX_LAYOUT_VALUE - Style.Viewport.Height) Then
         Return False
     End If
 
-    If Style.ViewportPadding.LEFT < 0 Or Style.ViewportPadding.LEFT > Core.UI_MAX_LAYOUT_VALUE Or Style.ViewportPadding.Top < 0 Or Style.ViewportPadding.Top > Core.UI_MAX_LAYOUT_VALUE Or Style.ViewportPadding.RIGHT < 0 Or Style.ViewportPadding.RIGHT > Core.UI_MAX_LAYOUT_VALUE Or Style.ViewportPadding.Bottom < 0 Or Style.ViewportPadding.Bottom > Core.UI_MAX_LAYOUT_VALUE Then
+    If (Style.ViewportPadding.Left < 0 Or
+        Style.ViewportPadding.Left > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.ViewportPadding.Top < 0 Or
+        Style.ViewportPadding.Top > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.ViewportPadding.Right < 0 Or
+        Style.ViewportPadding.Right > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.ViewportPadding.Bottom < 0 Or
+        Style.ViewportPadding.Bottom > Core.UI_MAX_LAYOUT_VALUE) Then
         Return False
     End If
 
-    If Style.ViewportPadding.LEFT >= Style.Viewport.Width Or Style.ViewportPadding.RIGHT >= Style.Viewport.Width - Style.ViewportPadding.LEFT Then
+    If (Style.ViewportPadding.Left >= Style.Viewport.Width Or
+        Style.ViewportPadding.Right >= Style.Viewport.Width - Style.ViewportPadding.Left) Then
         Return False
     End If
 
-    If Style.ViewportPadding.Top >= Style.Viewport.Height Or Style.ViewportPadding.Bottom >= Style.Viewport.Height - Style.ViewportPadding.Top Then
+    If (Style.ViewportPadding.Top >= Style.Viewport.Height Or
+        Style.ViewportPadding.Bottom >= Style.Viewport.Height - Style.ViewportPadding.Top) Then
         Return False
     End If
 
@@ -88,7 +104,9 @@ Public Function IsStyleValid(ByRef Style As Core.MenuNavigatorStyle) As Boolean
         Return False
     End If
 
-    If Style.PreferredDirection <> Core.UI_SUBMENU_DIRECTION_AUTO And Style.PreferredDirection <> Core.UI_SUBMENU_DIRECTION_RIGHT And Style.PreferredDirection <> Core.UI_SUBMENU_DIRECTION_LEFT Then
+    If (Style.PreferredDirection <> Core.UI_SUBMENU_DIRECTION_AUTO And
+        Style.PreferredDirection <> Core.UI_SUBMENU_DIRECTION_RIGHT And
+        Style.PreferredDirection <> Core.UI_SUBMENU_DIRECTION_LEFT) Then
         Return False
     End If
 
@@ -100,7 +118,7 @@ Private Function InnerLeft(ByRef Style As Core.MenuNavigatorStyle) As Number
 
     Dim ReturnValue As Number
 
-    ReturnValue = Style.Viewport.X + Style.ViewportPadding.LEFT
+    ReturnValue = Style.Viewport.X + Style.ViewportPadding.Left
     Return ReturnValue
 
 End Function
@@ -118,7 +136,7 @@ Private Function InnerRight(ByRef Style As Core.MenuNavigatorStyle) As Number
 
     Dim ReturnValue As Number
 
-    ReturnValue = Style.Viewport.X + Style.Viewport.Width - Style.ViewportPadding.RIGHT
+    ReturnValue = Style.Viewport.X + Style.Viewport.Width - Style.ViewportPadding.Right
     Return ReturnValue
 
 End Function
@@ -180,11 +198,18 @@ Private Function OtherBindingKeepsMarker(SkipNavigator As Number, SkipBinding As
 
             For BindingIndex = 0 To Core.UI_MAX_SUBMENU_BINDINGS - 1
 
-                If BindingUsed[NavigatorIndex, BindingIndex] And (NavigatorIndex <> SkipNavigator Or BindingIndex <> SkipBinding) Then
+                If (BindingUsed[NavigatorIndex, BindingIndex] And
+                    (NavigatorIndex <> SkipNavigator Or BindingIndex <> SkipBinding)) Then
 
-                    If BindingParentMenus[NavigatorIndex, BindingIndex] = ParentMenuHandle And BindingParentItems[NavigatorIndex, BindingIndex] = ParentItemIndex And BindingParentRevisions[NavigatorIndex, BindingIndex] = ParentRevision Then
+                    If (BindingParentMenus[NavigatorIndex, BindingIndex] = ParentMenuHandle And
+                        BindingParentItems[NavigatorIndex, BindingIndex] = ParentItemIndex And
+                        BindingParentRevisions[NavigatorIndex, BindingIndex] = ParentRevision) Then
 
-                        If Menu.IsValid(ParentMenuHandle) And Menu.IsValid(BindingChildMenus[NavigatorIndex, BindingIndex]) And Menu.ItemRevision(ParentMenuHandle) = ParentRevision And ParentItemIndex >= 0 And ParentItemIndex < Menu.ItemCount(ParentMenuHandle) Then
+                        If (Menu.IsValid(ParentMenuHandle) And
+                            Menu.IsValid(BindingChildMenus[NavigatorIndex, BindingIndex]) And
+                            Menu.ItemRevision(ParentMenuHandle) = ParentRevision And
+                            ParentItemIndex >= 0 And
+                            ParentItemIndex < Menu.ItemCount(ParentMenuHandle)) Then
                             Return True
                         End If
 
@@ -216,12 +241,14 @@ Private Sub ClearBindingAt(Slot As Number, BindingIndex As Number)
     ParentItem = BindingParentItems[Slot, BindingIndex]
     ParentRevision = BindingParentRevisions[Slot, BindingIndex]
 
-    If Menu.IsValid(ParentHandle) And Menu.ItemRevision(ParentHandle) = ParentRevision And ParentItem >= 0 And ParentItem < Menu.ItemCount(ParentHandle) Then
+    If (Menu.IsValid(ParentHandle) And
+        Menu.ItemRevision(ParentHandle) = ParentRevision And
+        ParentItem >= 0 And
+        ParentItem < Menu.ItemCount(ParentHandle)) Then
 
         If Not OtherBindingKeepsMarker(Slot, BindingIndex, ParentHandle, ParentItem, ParentRevision) Then
             Ignored = Menu.SetItemHasSubmenu(ParentHandle, ParentItem, False)
         End If
-
     End If
 
     BindingUsed[Slot, BindingIndex] = False
@@ -240,7 +267,9 @@ Private Function FindBinding(Slot As Number, ParentMenuHandle As Number, ParentI
 
     For BindingIndex = 0 To Core.UI_MAX_SUBMENU_BINDINGS - 1
 
-        If BindingUsed[Slot, BindingIndex] And BindingParentMenus[Slot, BindingIndex] = ParentMenuHandle And BindingParentItems[Slot, BindingIndex] = ParentItemIndex Then
+        If (BindingUsed[Slot, BindingIndex] And
+            BindingParentMenus[Slot, BindingIndex] = ParentMenuHandle And
+            BindingParentItems[Slot, BindingIndex] = ParentItemIndex) Then
             Return BindingIndex
         End If
 
@@ -278,10 +307,18 @@ Private Sub PruneBindings(Slot As Number)
             ParentRevision = BindingParentRevisions[Slot, BindingIndex]
             ChildHandle = BindingChildMenus[Slot, BindingIndex]
 
-            If Not Menu.IsValid(ParentHandle) Or Not Menu.IsValid(ChildHandle) Or ParentHandle = ChildHandle Then
+            If (Not Menu.IsValid(ParentHandle) Or
+                Not Menu.IsValid(ChildHandle) Or
+                ParentHandle = ChildHandle) Then
+
                 Call ClearBindingAt(Slot, BindingIndex)
-            Else If Menu.ItemRevision(ParentHandle) <> ParentRevision Or ParentItem < 0 Or ParentItem >= Menu.ItemCount(ParentHandle) Then
+
+            Else If (Menu.ItemRevision(ParentHandle) <> ParentRevision Or
+                ParentItem < 0 Or
+                ParentItem >= Menu.ItemCount(ParentHandle)) Then
+
                 Call ClearBindingAt(Slot, BindingIndex)
+
             End If
 
         End If
@@ -344,7 +381,9 @@ Private Function RepairSlot(Slot As Number) As Boolean
 
         BindingIndex = FindBinding(Slot, ParentHandle, StackParentItems[Slot, Level])
 
-        If BindingIndex < 0 Or BindingChildMenus[Slot, BindingIndex] <> ChildHandle Or Not Menu.IsValid(ChildHandle) Then
+        If (BindingIndex < 0 Or
+            BindingChildMenus[Slot, BindingIndex] <> ChildHandle Or
+            Not Menu.IsValid(ChildHandle)) Then
 
             NavigatorDepth[Slot] = Level
 
@@ -423,13 +462,16 @@ Private Function WouldCreateCycle(Slot As Number, ParentMenuHandle As Number, Pa
 
         For BindingIndex = 0 To Core.UI_MAX_SUBMENU_BINDINGS - 1
 
-            If BindingUsed[Slot, BindingIndex] And BindingParentMenus[Slot, BindingIndex] = CurrentHandle Then
+            If (BindingUsed[Slot, BindingIndex] And
+                BindingParentMenus[Slot, BindingIndex] = CurrentHandle) Then
 
-                If BindingParentMenus[Slot, BindingIndex] <> ParentMenuHandle Or BindingParentItems[Slot, BindingIndex] <> ParentItemIndex Then
+                If (BindingParentMenus[Slot, BindingIndex] <> ParentMenuHandle Or
+                    BindingParentItems[Slot, BindingIndex] <> ParentItemIndex) Then
 
                     NextHandle = BindingChildMenus[Slot, BindingIndex]
 
-                    If Not TraversalContains(NextHandle, QueueLength) And QueueLength < Core.UI_MAX_MENUS Then
+                    If (Not TraversalContains(NextHandle, QueueLength) And
+                        QueueLength < Core.UI_MAX_MENUS) Then
                         ScratchTraversal[QueueLength] = NextHandle
                         QueueLength = QueueLength + 1
                     End If
@@ -465,7 +507,8 @@ Private Sub TrimActiveEdge(Slot As Number, ParentMenuHandle As Number, ParentIte
 
     For Level = 1 To NavigatorDepth[Slot] - 1
 
-        If StackMenus[Slot, Level - 1] = ParentMenuHandle And StackParentItems[Slot, Level] = ParentItemIndex Then
+        If (StackMenus[Slot, Level - 1] = ParentMenuHandle And
+            StackParentItems[Slot, Level] = ParentItemIndex) Then
 
             NavigatorDepth[Slot] = Level
 
@@ -473,7 +516,6 @@ Private Sub TrimActiveEdge(Slot As Number, ParentMenuHandle As Number, ParentIte
             Call ClearAccepted(Slot)
 
             Return
-
         End If
 
     End For
@@ -492,8 +534,10 @@ Private Function AllBoundMenusFit(Slot As Number, ByRef Style As Core.MenuNaviga
 
         If BindingUsed[Slot, BindingIndex] Then
 
-            If Not MenuFitsStyle(BindingParentMenus[Slot, BindingIndex], Style) Or Not MenuFitsStyle(BindingChildMenus[Slot, BindingIndex], Style) Then
+            If (Not MenuFitsStyle(BindingParentMenus[Slot, BindingIndex], Style) Or
+                Not MenuFitsStyle(BindingChildMenus[Slot, BindingIndex], Style)) Then
                 Return False
+
             End If
 
         End If
@@ -647,7 +691,9 @@ Public Function Create(RootMenuHandle As Number, ByRef Style As Core.MenuNavigat
     Dim Index As Number
     Dim EmptyStyle As Core.MenuNavigatorStyle
 
-    If Not Menu.IsValid(RootMenuHandle) Or Not IsStyleValid(Style) Or Not MenuFitsStyle(RootMenuHandle, Style) Then
+    If (Not Menu.IsValid(RootMenuHandle) Or
+        Not IsStyleValid(Style) Or
+        Not MenuFitsStyle(RootMenuHandle, Style)) Then
         ReturnValue = 0
         Return ReturnValue
     End If
@@ -832,11 +878,15 @@ Public Function BindSubmenu(NavigatorHandle As Number, ParentMenuHandle As Numbe
         Return False
     End If
 
-    If Not Menu.IsValid(ParentMenuHandle) Or Not Menu.IsValid(ChildMenuHandle) Or ParentMenuHandle = ChildMenuHandle Then
+    If (Not Menu.IsValid(ParentMenuHandle) Or
+        Not Menu.IsValid(ChildMenuHandle) Or
+        ParentMenuHandle = ChildMenuHandle) Then
         Return False
     End If
 
-    If ParentItemIndex < 0 Or ParentItemIndex >= Menu.ItemCount(ParentMenuHandle) Or Not MenuFitsStyle(ChildMenuHandle, NavigatorStyles[Slot]) Then
+    If (ParentItemIndex < 0 Or
+        ParentItemIndex >= Menu.ItemCount(ParentMenuHandle) Or
+        Not MenuFitsStyle(ChildMenuHandle, NavigatorStyles[Slot])) Then
         Return False
     End If
 
@@ -873,8 +923,10 @@ Public Function BindSubmenu(NavigatorHandle As Number, ParentMenuHandle As Numbe
 
     ParentRevision = Menu.ItemRevision(ParentMenuHandle)
 
-    If ParentRevision <= 0 Or Not Menu.SetItemHasSubmenu(ParentMenuHandle, ParentItemIndex, True) Then
+    If (ParentRevision <= 0 Or
+        Not Menu.SetItemHasSubmenu(ParentMenuHandle, ParentItemIndex, True)) Then
         Return False
+
     End If
 
     If ExistingChild <> 0 And ExistingChild <> ChildMenuHandle Then
@@ -1002,7 +1054,9 @@ Public Function OpenSelected(NavigatorHandle As Number) As Number
 
     BindingIndex = FindBinding(Slot, CurrentHandle, SelectedItem)
 
-    If BindingIndex < 0 Or Menu.HandleKey(CurrentHandle, KEY_ENTER) <> Core.UI_EVENT_ACCEPTED Or NavigatorDepth[Slot] >= Core.UI_MAX_MENU_DEPTH Then
+    If (BindingIndex < 0 Or
+        Menu.HandleKey(CurrentHandle, KEY_ENTER) <> Core.UI_EVENT_ACCEPTED Or
+        NavigatorDepth[Slot] >= Core.UI_MAX_MENU_DEPTH) Then
         ReturnValue = Core.UI_EVENT_NONE
         Return ReturnValue
     End If
@@ -1055,9 +1109,12 @@ Public Function Back(NavigatorHandle As Number) As Number
 
     Slot = SlotFromHandle(NavigatorHandle)
 
-    If Slot < 0 Or Not RepairSlot(Slot) Or NavigatorDepth[Slot] <= 1 Then
+    If (Slot < 0 Or
+        Not RepairSlot(Slot) Or
+        NavigatorDepth[Slot] <= 1) Then
         ReturnValue = Core.UI_EVENT_NONE
         Return ReturnValue
+
     End If
 
     OldDepth = NavigatorDepth[Slot]
@@ -1106,7 +1163,9 @@ Public Function HandleKey(NavigatorHandle As Number, Key As Number) As Number
         Return ReturnValue
     End If
 
-    If Key = KEY_RIGHT Or Key = KEY_ENTER Or Key = KEY_SPACE Then
+    If (Key = KEY_RIGHT Or
+        Key = KEY_ENTER Or
+        Key = KEY_SPACE) Then
 
         SelectedItem = Menu.SelectedIndex(CurrentHandle)
         BindingIndex = -1
@@ -1124,7 +1183,6 @@ Public Function HandleKey(NavigatorHandle As Number, Key As Number) As Number
             ReturnValue = Core.UI_EVENT_NONE
             Return ReturnValue
         End If
-
     End If
 
     If Key = KEY_LEFT Then
@@ -1229,7 +1287,10 @@ Public Function MenuAtDepth(NavigatorHandle As Number, DepthIndex As Number) As 
 
     Slot = SlotFromHandle(NavigatorHandle)
 
-    If Slot < 0 Or Not RepairSlot(Slot) Or DepthIndex < 0 Or DepthIndex >= NavigatorDepth[Slot] Then
+    If (Slot < 0 Or
+        Not RepairSlot(Slot) Or
+        DepthIndex < 0 Or
+        DepthIndex >= NavigatorDepth[Slot]) Then
         ReturnValue = 0
         Return ReturnValue
     End If
@@ -1246,7 +1307,9 @@ Public Function ParentMenu(NavigatorHandle As Number) As Number
 
     Slot = SlotFromHandle(NavigatorHandle)
 
-    If Slot < 0 Or Not RepairSlot(Slot) Or NavigatorDepth[Slot] <= 1 Then
+    If (Slot < 0 Or
+        Not RepairSlot(Slot) Or
+        NavigatorDepth[Slot] <= 1) Then
         ReturnValue = 0
         Return ReturnValue
     End If
