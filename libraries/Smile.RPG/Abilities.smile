@@ -1,0 +1,522 @@
+''' Ability definitions, ordered learned sets, and transactional Magic Point costs.
+Module Smile.RPG.Abilities
+
+Option Explicit
+
+Import Smile.RPG.Core As Core
+Import Smile.RPG.Characters As Characters
+
+Public Type AbilityDefinition
+    Id As Number
+    Name As Text
+    MagicPointCost As Number
+    Power As Number
+    TargetMode As Number
+    EffectId As Number
+End Type
+
+Private Dim StateGeneration[4] As Number
+Private Dim DefinitionCount[4] As Number
+Private Dim AbilityIds[4, 128] As Number
+Private Dim AbilityNames[4, 128] As Text
+Private Dim AbilityCosts[4, 128] As Number
+Private Dim AbilityPowers[4, 128] As Number
+Private Dim AbilityTargetModes[4, 128] As Number
+Private Dim AbilityEffectIds[4, 128] As Number
+Private Dim LearnedCounts[4, 32] As Number
+Private Dim LearnedAbilityIds[4, 1024] As Number
+
+Private Function StateSlot(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim CharacterIndex As Number
+    Dim Generation As Number
+
+    Slot = Core.StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Generation = Core.StateGeneration(StateHandle)
+
+    If StateGeneration[Slot] <> Generation Then
+
+        For Index = 0 To Core.RPG_MAX_ABILITY_DEFINITIONS - 1
+            AbilityIds[Slot, Index] = 0
+            AbilityNames[Slot, Index] = ""
+        End For
+
+        For CharacterIndex = 0 To Core.RPG_MAX_CHARACTERS - 1
+
+            LearnedCounts[Slot, CharacterIndex] = 0
+
+            For Index = 0 To Core.RPG_MAX_LEARNED_ABILITIES - 1
+                LearnedAbilityIds[Slot, CharacterIndex * Core.RPG_MAX_LEARNED_ABILITIES + Index] = 0
+            End For
+        End For
+
+        DefinitionCount[Slot] = 0
+        StateGeneration[Slot] = Generation
+
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function DefinitionIndex(StateHandle As Number, AbilityId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To DefinitionCount[Slot] - 1
+
+        If AbilityIds[Slot, Index] = AbilityId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function CharacterIndex(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    If StateSlot(StateHandle) < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To Characters.CharacterDefinitionCount(StateHandle) - 1
+
+        If Characters.CharacterIdAt(StateHandle, Index) = CharacterId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function IsTargetModeValid(Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Value >= Core.RPG_TARGET_SELF And Value <= Core.RPG_TARGET_ALL_ENEMIES
+
+    Return ReturnValue
+
+End Function
+
+Public Function DefineAbility(StateHandle As Number, ByRef Definition As AbilityDefinition) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not Core.IsValidId(Definition.Id) Or
+        Not Core.IsValidName(Definition.Name) Or
+        Not Core.IsValidValue(Definition.MagicPointCost) Or
+        Not Core.IsValidValue(Definition.Power) Or
+        Not IsTargetModeValid(Definition.TargetMode) Or
+        Not Core.IsValidValue(Definition.EffectId) Or
+        DefinitionIndex(StateHandle, Definition.Id) >= 0 Or
+        DefinitionCount[Slot] >= Core.RPG_MAX_ABILITY_DEFINITIONS) Then
+        Return False
+    End If
+
+    Index = DefinitionCount[Slot]
+    AbilityIds[Slot, Index] = Definition.Id
+    AbilityNames[Slot, Index] = Definition.Name
+    AbilityCosts[Slot, Index] = Definition.MagicPointCost
+    AbilityPowers[Slot, Index] = Definition.Power
+    AbilityTargetModes[Slot, Index] = Definition.TargetMode
+    AbilityEffectIds[Slot, Index] = Definition.EffectId
+    DefinitionCount[Slot] = Index + 1
+    Return True
+
+End Function
+
+Public Function IsAbilityDefined(StateHandle As Number, AbilityId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = DefinitionIndex(StateHandle, AbilityId) >= 0
+
+    Return ReturnValue
+
+End Function
+
+Public Function AbilityDefinitionCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = DefinitionCount[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function AbilityIdAtDefinitionIndex(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= DefinitionCount[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = AbilityIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Name(StateHandle As Number, AbilityId As Number) As Text
+
+    Dim ReturnValue As Text
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = DefinitionIndex(StateHandle, AbilityId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return ""
+    End If
+
+    ReturnValue = AbilityNames[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function MagicPointCost(StateHandle As Number, AbilityId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = DefinitionIndex(StateHandle, AbilityId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = AbilityCosts[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Power(StateHandle As Number, AbilityId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = DefinitionIndex(StateHandle, AbilityId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = AbilityPowers[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function TargetMode(StateHandle As Number, AbilityId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = DefinitionIndex(StateHandle, AbilityId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = AbilityTargetModes[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function EffectId(StateHandle As Number, AbilityId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = DefinitionIndex(StateHandle, AbilityId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = AbilityEffectIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Private Function LearnedIndex(StateHandle As Number, CharacterId As Number, AbilityId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Character As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Character = CharacterIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Character < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To LearnedCounts[Slot, Character] - 1
+
+        If LearnedAbilityIds[Slot, Character * Core.RPG_MAX_LEARNED_ABILITIES + Index] = AbilityId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Public Function LearnAbility(StateHandle As Number, CharacterId As Number, AbilityId As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Character As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Character = CharacterIndex(StateHandle, CharacterId)
+
+    If (Slot < 0 Or
+        Character < 0 Or
+        Not IsAbilityDefined(StateHandle, AbilityId) Or
+        LearnedIndex(StateHandle, CharacterId, AbilityId) >= 0 Or
+        LearnedCounts[Slot, Character] >= Core.RPG_MAX_LEARNED_ABILITIES) Then
+        Return False
+    End If
+
+    Index = LearnedCounts[Slot, Character]
+    LearnedAbilityIds[Slot, Character * Core.RPG_MAX_LEARNED_ABILITIES + Index] = AbilityId
+    LearnedCounts[Slot, Character] = Index + 1
+    Return True
+
+End Function
+
+Public Function ForgetAbility(StateHandle As Number, CharacterId As Number, AbilityId As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Character As Number
+    Dim Index As Number
+    Dim MoveIndex As Number
+
+    Slot = StateSlot(StateHandle)
+    Character = CharacterIndex(StateHandle, CharacterId)
+    Index = LearnedIndex(StateHandle, CharacterId, AbilityId)
+
+    If (Slot < 0 Or
+        Character < 0 Or
+        Index < 0) Then
+        Return False
+    End If
+
+    For MoveIndex = Index To LearnedCounts[Slot, Character] - 2
+        LearnedAbilityIds[Slot, Character * Core.RPG_MAX_LEARNED_ABILITIES + MoveIndex] = LearnedAbilityIds[Slot, Character * Core.RPG_MAX_LEARNED_ABILITIES + MoveIndex + 1]
+    End For
+
+    LearnedCounts[Slot, Character] = LearnedCounts[Slot, Character] - 1
+    LearnedAbilityIds[Slot, Character * Core.RPG_MAX_LEARNED_ABILITIES + LearnedCounts[Slot, Character]] = 0
+    Return True
+
+End Function
+
+Public Function KnowsAbility(StateHandle As Number, CharacterId As Number, AbilityId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = LearnedIndex(StateHandle, CharacterId, AbilityId) >= 0
+
+    Return ReturnValue
+
+End Function
+
+Public Function LearnedAbilityCount(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Character As Number
+
+    Slot = StateSlot(StateHandle)
+    Character = CharacterIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Character < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = LearnedCounts[Slot, Character]
+
+    Return ReturnValue
+
+End Function
+
+Public Function LearnedAbilityIdAt(StateHandle As Number, CharacterId As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Character As Number
+
+    Slot = StateSlot(StateHandle)
+    Character = CharacterIndex(StateHandle, CharacterId)
+
+    If (Slot < 0 Or
+        Character < 0 Or
+        Index < 0 Or
+        Index >= LearnedCounts[Slot, Character]) Then
+        Return 0
+    End If
+
+    ReturnValue = LearnedAbilityIds[Slot, Character * Core.RPG_MAX_LEARNED_ABILITIES + Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ClearCharacterAbilities(StateHandle As Number, CharacterId As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Character As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Character = CharacterIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Character < 0 Then
+        Return False
+    End If
+
+    For Index = 0 To LearnedCounts[Slot, Character] - 1
+        LearnedAbilityIds[Slot, Character * Core.RPG_MAX_LEARNED_ABILITIES + Index] = 0
+    End For
+
+    LearnedCounts[Slot, Character] = 0
+    Return True
+
+End Function
+
+Public Function ClearAllLearnedAbilities(StateHandle As Number) As Boolean
+
+    Dim Character As Number
+    Dim Cleared As Boolean
+
+    If StateSlot(StateHandle) < 0 Then
+        Return False
+    End If
+
+    For Character = 0 To Characters.CharacterDefinitionCount(StateHandle) - 1
+        Cleared = ClearCharacterAbilities(StateHandle, Characters.CharacterIdAt(StateHandle, Character))
+    End For
+
+    Return True
+
+End Function
+
+Public Function CanPayMagicPointCost(StateHandle As Number, CharacterId As Number, AbilityId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Cost As Number
+
+    If Not KnowsAbility(StateHandle, CharacterId, AbilityId) Then
+        Return False
+    End If
+
+    Cost = MagicPointCost(StateHandle, AbilityId)
+    ReturnValue = Characters.MagicPoints(StateHandle, CharacterId) >= Cost
+
+    Return ReturnValue
+
+End Function
+
+Public Function PayMagicPointCost(StateHandle As Number, CharacterId As Number, AbilityId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    If Not CanPayMagicPointCost(StateHandle, CharacterId, AbilityId) Then
+        Return False
+    End If
+
+    ReturnValue = Characters.SpendMagicPoints(StateHandle, CharacterId, MagicPointCost(StateHandle, AbilityId))
+
+    Return ReturnValue
+
+End Function
+
+End Module

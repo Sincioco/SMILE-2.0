@@ -2,13 +2,14 @@
   <PropertyGroup>
     <ProjectKind>Game</ProjectKind>
     <StartupFile>Program.smile</StartupFile>
-    <OutputName>$safeprojectname$</OutputName>
-    <ApplicationId>$smileapplicationid$</ApplicationId>
+    <OutputName>RpgManagementGallery</OutputName>
+    <ApplicationId>smile.gallery.rpg-management</ApplicationId>
     <GraphicsBackend>Auto</GraphicsBackend>
     <VSync>true</VSync>
   </PropertyGroup>
   <ItemGroup>
     <SmileSource Include="Program.smile" StartupOnly="true" />
-    <Asset Include="Assets\**\*" />
+    <SmileProjectReference Include="..\..\libraries\Smile.RPG\Smile.RPG.smilelibproj" />
+    <SmileProjectReference Include="..\..\libraries\Smile.UI\Smile.UI.smilelibproj" />
   </ItemGroup>
 </SmileProject>

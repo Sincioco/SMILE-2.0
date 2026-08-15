@@ -1,0 +1,18 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Library</ProjectKind>
+    <LibraryName>Smile.RPG</LibraryName>
+    <Version>1.0.0</Version>
+    <OutputName>Smile.RPG</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Core.smile" />
+    <SmileSource Include="Characters.smile" />
+    <SmileSource Include="Party.smile" />
+    <SmileSource Include="Inventory.smile" />
+    <SmileSource Include="Equipment.smile" />
+    <SmileSource Include="Abilities.smile" />
+    <SmileSource Include="Shops.smile" />
+    <SmileSource Include="SaveGames.smile" />
+  </ItemGroup>
+</SmileProject>

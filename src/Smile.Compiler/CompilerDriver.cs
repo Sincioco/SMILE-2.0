@@ -11,13 +11,14 @@ internal sealed class CompilerDriver
         {
             if (!string.IsNullOrWhiteSpace(argumentError))
                 Console.Error.WriteLine($"error SML5007: {argumentError}");
-            Console.Error.WriteLine("Usage: smilec <startup.smile> [--source <support.smile>]... [--library <package.smilelib>]... [--target windows-x64 -o <output.exe>] [--target web --output-dir <directory>] | smilec --project <project> [--target windows-x64|web|library] [-o <output>] [--configuration <name>]");
+            Console.Error.WriteLine("Usage: smilec <startup.smile> [--source <support.smile>]... [--library <package.smilelib>]... [--application-id <id>] [--target windows-x64 -o <output.exe>] [--target web --output-dir <directory>] | smilec --project <project> [--target windows-x64|web|library] [-o <output>] [--configuration <name>] [--application-id <id>]");
             return 2;
         }
 
         try
         {
             var input = options.ProjectPath != null ? LoadProject(options) : LoadLoose(options);
+            var appIdentity = ResolveApplicationIdentity(input, options);
             var sourcePath = input.DisplayPath;
             var analysis = SmileLanguage.Analyze(input.Sources, input.CompilationKind, input.DependencyContext);
             foreach (var diagnostic in analysis.Diagnostics)
@@ -46,7 +47,6 @@ internal sealed class CompilerDriver
             if (options.Target == SmileCompilationTarget.Web)
             {
                 var outputDirectory = Path.GetFullPath(options.OutputDirectory!);
-                var appIdentity = input.Project?.OutputName ?? Path.GetFileNameWithoutExtension(input.DisplayPath);
                 SmileProjectAssetPublishResult? publication = null;
                 try
                 {
@@ -95,7 +95,7 @@ internal sealed class CompilerDriver
             }
 
             var emitter = new MasmEmitter(analysis, options.GraphicsBackend, options.VSync,
-                options.EmitDebugInformation, input.Project?.OutputName ?? Path.GetFileNameWithoutExtension(input.DisplayPath),
+                options.EmitDebugInformation, appIdentity,
                 input.Project?.AssetPaths);
             File.WriteAllText(assemblyPath, emitter.Emit());
             if (options.EmitDebugInformation)
@@ -124,7 +124,7 @@ internal sealed class CompilerDriver
             if (input.Project != null)
             {
                 nativePublication = SmileProjectAssetPublisher.Publish(input.Project.AssetManifest,
-                    Path.GetDirectoryName(outputPath)!, input.Project.OutputName, "windows-x64",
+                    Path.GetDirectoryName(outputPath)!, appIdentity, "windows-x64",
                     Path.GetFileNameWithoutExtension(outputPath));
                 foreach (var warning in nativePublication.Warnings)
                     Console.Error.WriteLine(warning.FormatCompiler());
@@ -179,6 +179,33 @@ internal sealed class CompilerDriver
         var defaultOutput = Path.Combine(project.ProjectDirectory, "bin", configuration, project.OutputName + ".exe");
         return new CompilationInput(project.ProjectPath, compilation.Sources, compilation.CompilationKind,
             defaultOutput, project, compilation.DependencyContext);
+    }
+
+    private static string ResolveApplicationIdentity(CompilationInput input, CompilerOptions options)
+    {
+        if (input.Project?.IsLibrary == true)
+        {
+            if (options.ApplicationId != null)
+                throw new SmileProjectDiagnosticException("SML3802",
+                    "Library projects do not own an ApplicationId and cannot use --application-id.",
+                    input.Project.ProjectPath);
+            return input.Project.OutputName;
+        }
+
+        var explicitOverride = options.ApplicationId == null
+            ? null
+            : SmileApplicationIdentity.ValidateExplicit(options.ApplicationId, input.DisplayPath);
+        if (input.Project != null)
+        {
+            if (explicitOverride != null && input.Project.ApplicationId != null &&
+                !string.Equals(explicitOverride, input.Project.ApplicationId, StringComparison.Ordinal))
+                throw new SmileProjectDiagnosticException("SML3803",
+                    $"--application-id '{explicitOverride}' conflicts with project ApplicationId '{input.Project.ApplicationId}'.",
+                    input.Project.ProjectPath);
+            return explicitOverride ?? input.Project.EffectiveApplicationId;
+        }
+
+        return explicitOverride ?? Path.GetFileNameWithoutExtension(input.DisplayPath);
     }
 
     private static void BuildProjectDependencies(string projectPath, string configuration)

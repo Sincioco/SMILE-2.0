@@ -461,6 +461,47 @@ for %%A in (Background.png WindowSkin.png Cursor.png Continue.png BitmapFont.png
 )
 echo Phase 5 Unicode text, routine capabilities, Smile.UI state, submenu navigation, packages, assets, native, and Web tests passed.
 
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\libraries\Smile.RPG\Smile.RPG.smilelibproj" --target library --configuration Release -o "%SMILE_ROOT%\artifacts\libraries\Smile.RPG.smilelib"
+if errorlevel 1 exit /b 1
+copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.RPG.smilelib" "%SMILE_ROOT%\artifacts\temp\Smile.RPG.first.smilelib" >nul
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\libraries\Smile.RPG\Smile.RPG.smilelibproj" --target library --configuration Release -o "%SMILE_ROOT%\artifacts\libraries\Smile.RPG.smilelib"
+if errorlevel 1 exit /b 1
+fc /b "%SMILE_ROOT%\artifacts\temp\Smile.RPG.first.smilelib" "%SMILE_ROOT%\artifacts\libraries\Smile.RPG.smilelib" >nul
+if errorlevel 1 exit /b 1
+powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.RPG.smilelib'); try { $manifest=([IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())).ReadToEnd() | ConvertFrom-Json; $api=([IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open())).ReadToEnd() | ConvertFrom-Json; $names=@($api.modules.name); if ($manifest.formatVersion -ne 5 -or $manifest.version -ne '1.0.0' -or $names.Count -ne 8 -or $names -notcontains 'Smile.RPG.Core' -or $names -notcontains 'Smile.RPG.SaveGames' -or @($api.modules.members | Where-Object requiresGameWindow).Count -ne 0) { exit 1 } } finally { $zip.Dispose() }"
+if errorlevel 1 exit /b 1
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase6RpgStateTests\Phase6RpgStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase6RpgStateTests.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\tests\Phase6RpgStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase6RpgStateTests.out"
+if errorlevel 1 exit /b 1
+findstr /x /c:"Phase 6 RPG state tests: PASS" "%SMILE_ROOT%\artifacts\temp\Phase6RpgStateTests.out" >nul
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase6RpgStateTests\Phase6RpgStateTests.Package.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase6RpgStateTestsPackage.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\tests\Phase6RpgStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase6RpgStateTestsPackage.out"
+if errorlevel 1 exit /b 1
+fc /b "%SMILE_ROOT%\artifacts\temp\Phase6RpgStateTests.out" "%SMILE_ROOT%\artifacts\temp\Phase6RpgStateTestsPackage.out" >nul
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase6RpgStateTests\Phase6RpgStateTests.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\Phase6RpgStateTests"
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\Phase6RpgStateTests\game.js"
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase6RpgStateTests" --native-output "%SMILE_ROOT%\artifacts\temp\Phase6RpgStateTests.out" --timeout 10000
+if errorlevel 1 exit /b 1
+
+if not exist "%SMILE_ROOT%\artifacts\games\RpgManagementGallery-DirectX" mkdir "%SMILE_ROOT%\artifacts\games\RpgManagementGallery-DirectX"
+if not exist "%SMILE_ROOT%\artifacts\games\RpgManagementGallery-GDI" mkdir "%SMILE_ROOT%\artifacts\games\RpgManagementGallery-GDI"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgManagementGallery\RpgManagementGallery.smileproj" --target windows-x64 --configuration Release --graphics DirectX -o "%SMILE_ROOT%\artifacts\games\RpgManagementGallery-DirectX\RpgManagementGallery.exe" --debug
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgManagementGallery\RpgManagementGallery.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\RpgManagementGallery-GDI\RpgManagementGallery.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgManagementGallery\RpgManagementGallery.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\RpgManagementGallery"
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\RpgManagementGallery\game.js"
+if errorlevel 1 exit /b 1
+echo Phase 6 ApplicationId, Smile.RPG package, state, save, project/package, DirectX, GDI, and Web tests passed.
+
 for %%P in (OptionExplicitLate:SML3300 OptionExplicitUndeclared:SML3303 ScalarDimWithoutAs:SML3302 UnknownBuiltInType:SML3401 NumberToTextAssignment:SML3304 TextToBooleanAssignment:SML3304 MixedTextAddition:SML3308 TextRelationalComparison:SML3308 InvalidByRefLiteral:SML3305 InvalidByRefConstant:SML3305 WrongArgumentType:SML3304 WrongReturnType:SML3304 InconsistentLegacyReturnTypes:SML3309 DuplicateLocal:SML3306 UseBeforeLocalDeclaration:SML3307) do (
     for /f "tokens=1,2 delims=:" %%F in ("%%P") do (
         "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\InvalidPhase3A\%%F.smile" > "%SMILE_ROOT%\artifacts\temp\%%F.log" 2>&1

@@ -1,0 +1,849 @@
+''' Stable character definitions and dynamic character progress.
+Module Smile.RPG.Characters
+
+Option Explicit
+
+Import Smile.RPG.Core As Core
+
+Public Type CharacterDefinition
+    Id As Number
+    Name As Text
+    StartingLevel As Number
+    StartingMaximumHealth As Number
+    StartingMaximumMagicPoints As Number
+    Strength As Number
+    Defense As Number
+    Magic As Number
+    Resistance As Number
+    Agility As Number
+    Luck As Number
+End Type
+
+Private Dim StateGeneration[4] As Number
+Private Dim DefinitionCount[4] As Number
+Private Dim CharacterIds[4, 32] As Number
+Private Dim CharacterNames[4, 32] As Text
+Private Dim StartingLevels[4, 32] As Number
+Private Dim StartingMaximumHealth[4, 32] As Number
+Private Dim StartingMaximumMagicPoints[4, 32] As Number
+Private Dim StartingStrength[4, 32] As Number
+Private Dim StartingDefense[4, 32] As Number
+Private Dim StartingMagic[4, 32] As Number
+Private Dim StartingResistance[4, 32] As Number
+Private Dim StartingAgility[4, 32] As Number
+Private Dim StartingLuck[4, 32] As Number
+Private Dim Levels[4, 32] As Number
+Private Dim ExperienceValues[4, 32] As Number
+Private Dim HealthValues[4, 32] As Number
+Private Dim MaximumHealthValues[4, 32] As Number
+Private Dim MagicPointValues[4, 32] As Number
+Private Dim MaximumMagicPointValues[4, 32] As Number
+Private Dim StrengthValues[4, 32] As Number
+Private Dim DefenseValues[4, 32] As Number
+Private Dim MagicValues[4, 32] As Number
+Private Dim ResistanceValues[4, 32] As Number
+Private Dim AgilityValues[4, 32] As Number
+Private Dim LuckValues[4, 32] As Number
+
+Private Function StateSlot(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim Generation As Number
+
+    Slot = Core.StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Generation = Core.StateGeneration(StateHandle)
+
+    If StateGeneration[Slot] <> Generation Then
+
+        For Index = 0 To Core.RPG_MAX_CHARACTERS - 1
+
+            CharacterIds[Slot, Index] = 0
+            CharacterNames[Slot, Index] = ""
+            Levels[Slot, Index] = 0
+            ExperienceValues[Slot, Index] = 0
+            HealthValues[Slot, Index] = 0
+            MaximumHealthValues[Slot, Index] = 0
+            MagicPointValues[Slot, Index] = 0
+            MaximumMagicPointValues[Slot, Index] = 0
+            StrengthValues[Slot, Index] = 0
+            DefenseValues[Slot, Index] = 0
+            MagicValues[Slot, Index] = 0
+            ResistanceValues[Slot, Index] = 0
+            AgilityValues[Slot, Index] = 0
+            LuckValues[Slot, Index] = 0
+        End For
+
+        DefinitionCount[Slot] = 0
+        StateGeneration[Slot] = Generation
+
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function CharacterIndex(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To DefinitionCount[Slot] - 1
+
+        If CharacterIds[Slot, Index] = CharacterId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function IsDefinitionValid(ByRef Definition As CharacterDefinition) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = (
+        Core.IsValidId(Definition.Id) And
+        Core.IsValidName(Definition.Name) And
+        Definition.StartingLevel > 0 And
+        Core.IsValidValue(Definition.StartingLevel) And
+        Definition.StartingMaximumHealth > 0 And
+        Core.IsValidValue(Definition.StartingMaximumHealth) And
+        Core.IsValidValue(Definition.StartingMaximumMagicPoints) And
+        Core.IsValidValue(Definition.Strength) And
+        Core.IsValidValue(Definition.Defense) And
+        Core.IsValidValue(Definition.Magic) And
+        Core.IsValidValue(Definition.Resistance) And
+        Core.IsValidValue(Definition.Agility) And
+        Core.IsValidValue(Definition.Luck)
+    )
+
+    Return ReturnValue
+
+End Function
+
+Private Sub ResetIndex(Slot As Number, Index As Number)
+
+    Levels[Slot, Index] = StartingLevels[Slot, Index]
+    ExperienceValues[Slot, Index] = 0
+    MaximumHealthValues[Slot, Index] = StartingMaximumHealth[Slot, Index]
+    HealthValues[Slot, Index] = StartingMaximumHealth[Slot, Index]
+    MaximumMagicPointValues[Slot, Index] = StartingMaximumMagicPoints[Slot, Index]
+    MagicPointValues[Slot, Index] = StartingMaximumMagicPoints[Slot, Index]
+    StrengthValues[Slot, Index] = StartingStrength[Slot, Index]
+    DefenseValues[Slot, Index] = StartingDefense[Slot, Index]
+    MagicValues[Slot, Index] = StartingMagic[Slot, Index]
+    ResistanceValues[Slot, Index] = StartingResistance[Slot, Index]
+    AgilityValues[Slot, Index] = StartingAgility[Slot, Index]
+    LuckValues[Slot, Index] = StartingLuck[Slot, Index]
+
+End Sub
+
+Public Function DefineCharacter(StateHandle As Number, ByRef Definition As CharacterDefinition) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Not IsDefinitionValid(Definition) Then
+        Return False
+    End If
+
+    If (CharacterIndex(StateHandle, Definition.Id) >= 0 Or
+        DefinitionCount[Slot] >= Core.RPG_MAX_CHARACTERS) Then
+        Return False
+    End If
+
+    Index = DefinitionCount[Slot]
+    CharacterIds[Slot, Index] = Definition.Id
+    CharacterNames[Slot, Index] = Definition.Name
+    StartingLevels[Slot, Index] = Definition.StartingLevel
+    StartingMaximumHealth[Slot, Index] = Definition.StartingMaximumHealth
+    StartingMaximumMagicPoints[Slot, Index] = Definition.StartingMaximumMagicPoints
+    StartingStrength[Slot, Index] = Definition.Strength
+    StartingDefense[Slot, Index] = Definition.Defense
+    StartingMagic[Slot, Index] = Definition.Magic
+    StartingResistance[Slot, Index] = Definition.Resistance
+    StartingAgility[Slot, Index] = Definition.Agility
+    StartingLuck[Slot, Index] = Definition.Luck
+    DefinitionCount[Slot] = Index + 1
+
+    Call ResetIndex(Slot, Index)
+
+    Return True
+
+End Function
+
+Public Function IsCharacterDefined(StateHandle As Number, CharacterId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = CharacterIndex(StateHandle, CharacterId) >= 0
+
+    Return ReturnValue
+
+End Function
+
+Public Function CharacterDefinitionCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = DefinitionCount[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function CharacterIdAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= DefinitionCount[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = CharacterIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Name(StateHandle As Number, CharacterId As Number) As Text
+
+    Dim ReturnValue As Text
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return ""
+    End If
+
+    ReturnValue = CharacterNames[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Level(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = Levels[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function SetLevel(StateHandle As Number, CharacterId As Number, Value As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Value <= 0 Or
+        Not Core.IsValidValue(Value)) Then
+        Return False
+    End If
+
+    Levels[Slot, Index] = Value
+    Return True
+
+End Function
+
+Public Function Experience(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ExperienceValues[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function SetExperience(StateHandle As Number, CharacterId As Number, Value As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Not Core.IsValidValue(Value)) Then
+        Return False
+    End If
+
+    ExperienceValues[Slot, Index] = Value
+    Return True
+
+End Function
+
+Public Function AddExperience(StateHandle As Number, CharacterId As Number, Amount As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Current As Number
+
+    If Amount < 0 Then
+        Return False
+    End If
+
+    Current = Experience(StateHandle, CharacterId)
+
+    If (Not IsCharacterDefined(StateHandle, CharacterId) Or
+        Current > Core.RPG_MAX_VALUE - Amount) Then
+        Return False
+    End If
+
+    ReturnValue = SetExperience(StateHandle, CharacterId, Current + Amount)
+
+    Return ReturnValue
+
+End Function
+
+Public Function Health(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = HealthValues[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function SetHealth(StateHandle As Number, CharacterId As Number, Value As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Value < 0 Or
+        Value > MaximumHealthValues[Slot, Index]) Then
+        Return False
+    End If
+
+    HealthValues[Slot, Index] = Value
+    Return True
+
+End Function
+
+Public Function Damage(StateHandle As Number, CharacterId As Number, Amount As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    If Amount < 0 Or Not IsCharacterDefined(StateHandle, CharacterId) Then
+        Return False
+    End If
+
+    ReturnValue = SetHealth(StateHandle, CharacterId, Max(0, Health(StateHandle, CharacterId) - Amount))
+
+    Return ReturnValue
+
+End Function
+
+Public Function Heal(StateHandle As Number, CharacterId As Number, Amount As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    If Amount < 0 Or Not IsCharacterDefined(StateHandle, CharacterId) Then
+        Return False
+    End If
+
+    ReturnValue = SetHealth(StateHandle, CharacterId, Min(MaximumHealth(StateHandle, CharacterId), Health(StateHandle, CharacterId) + Amount))
+
+    Return ReturnValue
+
+End Function
+
+Public Function MaximumHealth(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = MaximumHealthValues[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function SetMaximumHealth(StateHandle As Number, CharacterId As Number, Value As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Value <= 0 Or
+        Not Core.IsValidValue(Value)) Then
+        Return False
+    End If
+
+    MaximumHealthValues[Slot, Index] = Value
+    HealthValues[Slot, Index] = Min(HealthValues[Slot, Index], Value)
+    Return True
+
+End Function
+
+Public Function MagicPoints(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = MagicPointValues[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function SetMagicPoints(StateHandle As Number, CharacterId As Number, Value As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Value < 0 Or
+        Value > MaximumMagicPointValues[Slot, Index]) Then
+        Return False
+    End If
+
+    MagicPointValues[Slot, Index] = Value
+    Return True
+
+End Function
+
+Public Function SpendMagicPoints(StateHandle As Number, CharacterId As Number, Amount As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    If Amount < 0 Or MagicPoints(StateHandle, CharacterId) < Amount Then
+        Return False
+    End If
+
+    ReturnValue = SetMagicPoints(StateHandle, CharacterId, MagicPoints(StateHandle, CharacterId) - Amount)
+
+    Return ReturnValue
+
+End Function
+
+Public Function RestoreMagicPoints(StateHandle As Number, CharacterId As Number, Amount As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    If Amount < 0 Or Not IsCharacterDefined(StateHandle, CharacterId) Then
+        Return False
+    End If
+
+    ReturnValue = SetMagicPoints(StateHandle, CharacterId, Min(MaximumMagicPoints(StateHandle, CharacterId), MagicPoints(StateHandle, CharacterId) + Amount))
+
+    Return ReturnValue
+
+End Function
+
+Public Function MaximumMagicPoints(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = MaximumMagicPointValues[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function SetMaximumMagicPoints(StateHandle As Number, CharacterId As Number, Value As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Not Core.IsValidValue(Value)) Then
+        Return False
+    End If
+
+    MaximumMagicPointValues[Slot, Index] = Value
+    MagicPointValues[Slot, Index] = Min(MagicPointValues[Slot, Index], Value)
+    Return True
+
+End Function
+
+Public Function Strength(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = StrengthValues[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Defense(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = DefenseValues[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Magic(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = MagicValues[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Resistance(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ResistanceValues[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Agility(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = AgilityValues[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Luck(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = LuckValues[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Private Function SetStatistic(StateHandle As Number, CharacterId As Number, Value As Number, Kind As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Not Core.IsValidValue(Value)) Then
+        Return False
+    End If
+
+    If Kind = 1 Then
+        StrengthValues[Slot, Index] = Value
+    Else If Kind = 2 Then
+        DefenseValues[Slot, Index] = Value
+    Else If Kind = 3 Then
+        MagicValues[Slot, Index] = Value
+    Else If Kind = 4 Then
+        ResistanceValues[Slot, Index] = Value
+    Else If Kind = 5 Then
+        AgilityValues[Slot, Index] = Value
+    Else If Kind = 6 Then
+        LuckValues[Slot, Index] = Value
+    Else
+        Return False
+    End If
+
+    Return True
+
+End Function
+
+Public Function SetStrength(StateHandle As Number, CharacterId As Number, Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = SetStatistic(StateHandle, CharacterId, Value, 1)
+
+    Return ReturnValue
+
+End Function
+
+Public Function SetDefense(StateHandle As Number, CharacterId As Number, Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = SetStatistic(StateHandle, CharacterId, Value, 2)
+
+    Return ReturnValue
+
+End Function
+
+Public Function SetMagic(StateHandle As Number, CharacterId As Number, Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = SetStatistic(StateHandle, CharacterId, Value, 3)
+
+    Return ReturnValue
+
+End Function
+
+Public Function SetResistance(StateHandle As Number, CharacterId As Number, Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = SetStatistic(StateHandle, CharacterId, Value, 4)
+
+    Return ReturnValue
+
+End Function
+
+Public Function SetAgility(StateHandle As Number, CharacterId As Number, Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = SetStatistic(StateHandle, CharacterId, Value, 5)
+
+    Return ReturnValue
+
+End Function
+
+Public Function SetLuck(StateHandle As Number, CharacterId As Number, Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = SetStatistic(StateHandle, CharacterId, Value, 6)
+
+    Return ReturnValue
+
+End Function
+
+Public Function IsAlive(StateHandle As Number, CharacterId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = IsCharacterDefined(StateHandle, CharacterId) And Health(StateHandle, CharacterId) > 0
+
+    Return ReturnValue
+
+End Function
+
+Public Function ResetCharacter(StateHandle As Number, CharacterId As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = CharacterIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return False
+    End If
+
+    Call ResetIndex(Slot, Index)
+
+    Return True
+
+End Function
+
+Public Function ResetProgress(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    For Index = 0 To DefinitionCount[Slot] - 1
+        Call ResetIndex(Slot, Index)
+    End For
+
+    Return True
+
+End Function
+
+End Module

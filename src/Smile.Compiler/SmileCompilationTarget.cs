@@ -19,6 +19,7 @@ internal sealed class CompilerOptions
     public string Configuration { get; private set; } = "Debug";
     public string? OutputPath { get; private set; }
     public string? OutputDirectory { get; private set; }
+    public string? ApplicationId { get; private set; }
     public SmileCompilationTarget Target { get; private set; } = SmileCompilationTarget.WindowsX64;
     public bool KeepTemp { get; private set; }
     public bool EmitDebugInformation { get; private set; }
@@ -107,6 +108,15 @@ internal sealed class CompilerOptions
                     return false;
                 }
                 options.Configuration = args[i];
+            }
+            else if (string.Equals(args[i], "--application-id", StringComparison.OrdinalIgnoreCase))
+            {
+                if (++i >= args.Length || options.ApplicationId != null)
+                {
+                    error = "--application-id requires one value.";
+                    return false;
+                }
+                options.ApplicationId = args[i];
             }
             else if (string.Equals(args[i], "-o", StringComparison.OrdinalIgnoreCase))
             {

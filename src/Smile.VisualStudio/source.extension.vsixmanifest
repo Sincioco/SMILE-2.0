@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
-    <Identity Id="Smile.VisualStudio.2.0" Version="2.0.38" Language="en-US" Publisher="Sin" />
+    <Identity Id="Smile.VisualStudio.2.0" Version="2.0.39" Language="en-US" Publisher="Sin" />
     <DisplayName>SMILE 2.0 Language Support</DisplayName>
     <Description xml:space="preserve">SMILE 2.0 language services, live variable hover while debugging, visually distinct built-in libraries, modules, reusable libraries, Windows x64 and Web compiler targets, project system, and console/game/library templates for Visual Studio 2026.</Description>
   </Metadata>

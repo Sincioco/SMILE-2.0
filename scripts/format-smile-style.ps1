@@ -99,6 +99,7 @@ function Initialize-LanguageAssembly {
     if (-not $NeedsBuild) {
         $AssemblyWriteTime = (Get-Item -LiteralPath $LanguageAssemblyPath).LastWriteTimeUtc
         $NeedsBuild = @(Get-ChildItem -LiteralPath (Join-Path $RepositoryRoot 'src\Smile.Language') -Recurse -File |
+            Where-Object { $_.FullName -notmatch '[\\/](?:bin|obj)[\\/]' } |
             Where-Object { $_.Extension -eq '.cs' -or $_.Extension -eq '.csproj' } |
             Where-Object { $_.LastWriteTimeUtc -gt $AssemblyWriteTime }).Count -gt 0
     }

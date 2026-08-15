@@ -2,10 +2,11 @@
   <PropertyGroup>
     <ProjectKind>Console</ProjectKind>
     <StartupFile>Program.smile</StartupFile>
-    <OutputName>$safeprojectname$</OutputName>
-    <ApplicationId>$smileapplicationid$</ApplicationId>
+    <OutputName>Phase6RpgStateTestsPackage</OutputName>
+    <ApplicationId>smile.tests.phase6-rpg-state</ApplicationId>
   </PropertyGroup>
   <ItemGroup>
     <SmileSource Include="Program.smile" StartupOnly="true" />
+    <SmileLibraryReference Include="..\..\artifacts\libraries\Smile.RPG.smilelib" />
   </ItemGroup>
 </SmileProject>

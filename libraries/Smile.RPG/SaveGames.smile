@@ -1,0 +1,978 @@
+''' Deterministic SRPG version-1 encoding and transactional persistent save games.
+Module Smile.RPG.SaveGames
+
+Option Explicit
+
+Import Smile.RPG.Core As Core
+Import Smile.RPG.Characters As Characters
+Import Smile.RPG.Party As Party
+Import Smile.RPG.Inventory As Inventory
+Import Smile.RPG.Equipment As Equipment
+Import Smile.RPG.Abilities As Abilities
+Import Smile.RPG.Shops As Shops
+
+Private Const SAVE_FORMAT_VERSION = 1
+
+Private Dim EncodedBytes[32768] As Number
+Private Dim IncomingBytes[32768] As Number
+Private Dim RollbackBytes[32768] As Number
+Private Dim BufferCount As Number
+Private Dim WritePosition As Number
+Private Dim WriteFailed As Boolean
+Private Dim ReadPosition As Number
+Private Dim ReadFailed As Boolean
+
+Private Dim ScratchCharacterCount As Number
+Private Dim ScratchCharacterIds[32] As Number
+Private Dim ScratchLevels[32] As Number
+Private Dim ScratchExperience[32] As Number
+Private Dim ScratchHealth[32] As Number
+Private Dim ScratchMaximumHealth[32] As Number
+Private Dim ScratchMagicPoints[32] As Number
+Private Dim ScratchMaximumMagicPoints[32] As Number
+Private Dim ScratchStrength[32] As Number
+Private Dim ScratchDefense[32] As Number
+Private Dim ScratchMagic[32] As Number
+Private Dim ScratchResistance[32] As Number
+Private Dim ScratchAgility[32] As Number
+Private Dim ScratchLuck[32] As Number
+
+Private Dim ScratchPartyCount As Number
+Private Dim ScratchPartyIds[8] As Number
+Private Dim ScratchGold As Number
+
+Private Dim ScratchInventoryCount As Number
+Private Dim ScratchInventoryItemIds[64] As Number
+Private Dim ScratchInventoryQuantities[64] As Number
+
+Private Dim ScratchEquipmentCount As Number
+Private Dim ScratchEquipmentCharacterIds[512] As Number
+Private Dim ScratchEquipmentSlotIds[512] As Number
+Private Dim ScratchEquipmentItemIds[512] As Number
+
+Private Dim ScratchLearnedCount As Number
+Private Dim ScratchLearnedCharacterIds[1024] As Number
+Private Dim ScratchLearnedAbilityIds[1024] As Number
+
+Private Dim ScratchShopCount As Number
+Private Dim ScratchShopIds[1024] As Number
+Private Dim ScratchShopItemIds[1024] As Number
+Private Dim ScratchShopStock[1024] As Number
+
+Private Sub PutByte(Value As Number)
+
+    If (WritePosition >= Core.RPG_MAX_SAVE_BYTES Or
+        Value < 0 Or
+        Value > 255) Then
+        WriteFailed = True
+        Return
+    End If
+
+    EncodedBytes[WritePosition] = Value
+    WritePosition = WritePosition + 1
+
+End Sub
+
+Private Sub PutInt(Value As Number)
+
+    Dim UnsignedValue As Number
+
+    If Value < -1 Or Value > Core.RPG_MAX_VALUE Then
+        WriteFailed = True
+        Return
+    End If
+
+    UnsignedValue = Value
+
+    If UnsignedValue < 0 Then
+        UnsignedValue = UnsignedValue + 4294967296
+    End If
+
+    Call PutByte(UnsignedValue Mod 256)
+
+    UnsignedValue = UnsignedValue / 256
+
+    Call PutByte(UnsignedValue Mod 256)
+
+    UnsignedValue = UnsignedValue / 256
+
+    Call PutByte(UnsignedValue Mod 256)
+
+    UnsignedValue = UnsignedValue / 256
+
+    Call PutByte(UnsignedValue Mod 256)
+
+End Sub
+
+Private Function GetInt() As Number
+
+    Dim Value As Number
+
+    If ReadPosition > BufferCount - 4 Then
+        ReadFailed = True
+        Return 0
+    End If
+
+    Value = EncodedBytes[ReadPosition]
+    Value = Value + EncodedBytes[ReadPosition + 1] * 256
+    Value = Value + EncodedBytes[ReadPosition + 2] * 65536
+    Value = Value + EncodedBytes[ReadPosition + 3] * 16777216
+    ReadPosition = ReadPosition + 4
+
+    If Value >= 2147483648 Then
+        Value = Value - 4294967296
+    End If
+
+    Return Value
+
+End Function
+
+''' Encodes dynamic state into the module buffer and returns an RPG result code.
+Public Function Encode(StateHandle As Number, SchemaVersion As Number) As Number
+
+    Dim Index As Number
+    Dim CharacterIndex As Number
+    Dim SlotIndex As Number
+    Dim ShopIndex As Number
+    Dim EntryIndex As Number
+    Dim CharacterId As Number
+    Dim EquipmentSlotId As Number
+    Dim ItemId As Number
+    Dim RecordCount As Number
+
+    If Not Core.IsValid(StateHandle) Then
+        Return Core.RPG_RESULT_INVALID_STATE
+    End If
+
+    If SchemaVersion <= 0 Or Not Core.IsValidValue(SchemaVersion) Then
+        Return Core.RPG_RESULT_INVALID_ARGUMENT
+    End If
+
+    WritePosition = 0
+    WriteFailed = False
+
+    Call PutByte(83)
+    Call PutByte(82)
+    Call PutByte(80)
+    Call PutByte(71)
+    Call PutInt(SAVE_FORMAT_VERSION)
+    Call PutInt(SchemaVersion)
+
+    Call PutInt(Characters.CharacterDefinitionCount(StateHandle))
+
+    For Index = 0 To Characters.CharacterDefinitionCount(StateHandle) - 1
+
+        CharacterId = Characters.CharacterIdAt(StateHandle, Index)
+
+        Call PutInt(CharacterId)
+        Call PutInt(Characters.Level(StateHandle, CharacterId))
+        Call PutInt(Characters.Experience(StateHandle, CharacterId))
+        Call PutInt(Characters.Health(StateHandle, CharacterId))
+        Call PutInt(Characters.MaximumHealth(StateHandle, CharacterId))
+        Call PutInt(Characters.MagicPoints(StateHandle, CharacterId))
+        Call PutInt(Characters.MaximumMagicPoints(StateHandle, CharacterId))
+        Call PutInt(Characters.Strength(StateHandle, CharacterId))
+        Call PutInt(Characters.Defense(StateHandle, CharacterId))
+        Call PutInt(Characters.Magic(StateHandle, CharacterId))
+        Call PutInt(Characters.Resistance(StateHandle, CharacterId))
+        Call PutInt(Characters.Agility(StateHandle, CharacterId))
+        Call PutInt(Characters.Luck(StateHandle, CharacterId))
+    End For
+
+    Call PutInt(Party.PartyCount(StateHandle))
+
+    For Index = 0 To Party.PartyCount(StateHandle) - 1
+        Call PutInt(Party.CharacterIdAt(StateHandle, Index))
+    End For
+
+    Call PutInt(Party.Gold(StateHandle))
+
+    Call PutInt(Inventory.EntryCount(StateHandle))
+
+    For Index = 0 To Inventory.EntryCount(StateHandle) - 1
+        ItemId = Inventory.ItemIdAtEntryIndex(StateHandle, Index)
+
+        Call PutInt(ItemId)
+        Call PutInt(Inventory.Quantity(StateHandle, ItemId))
+    End For
+
+    RecordCount = 0
+
+    For CharacterIndex = 0 To Characters.CharacterDefinitionCount(StateHandle) - 1
+
+        CharacterId = Characters.CharacterIdAt(StateHandle, CharacterIndex)
+
+        For SlotIndex = 0 To Equipment.SlotCount(StateHandle) - 1
+
+            EquipmentSlotId = Equipment.SlotIdAt(StateHandle, SlotIndex)
+
+            If Equipment.EquippedItem(StateHandle, CharacterId, EquipmentSlotId) <> 0 Then
+                RecordCount = RecordCount + 1
+            End If
+
+        End For
+    End For
+
+    Call PutInt(RecordCount)
+
+    For CharacterIndex = 0 To Characters.CharacterDefinitionCount(StateHandle) - 1
+
+        CharacterId = Characters.CharacterIdAt(StateHandle, CharacterIndex)
+
+        For SlotIndex = 0 To Equipment.SlotCount(StateHandle) - 1
+
+            EquipmentSlotId = Equipment.SlotIdAt(StateHandle, SlotIndex)
+            ItemId = Equipment.EquippedItem(StateHandle, CharacterId, EquipmentSlotId)
+
+            If ItemId <> 0 Then
+
+                Call PutInt(CharacterId)
+                Call PutInt(EquipmentSlotId)
+                Call PutInt(ItemId)
+
+            End If
+
+        End For
+    End For
+
+    RecordCount = 0
+
+    For CharacterIndex = 0 To Characters.CharacterDefinitionCount(StateHandle) - 1
+        CharacterId = Characters.CharacterIdAt(StateHandle, CharacterIndex)
+        RecordCount = RecordCount + Abilities.LearnedAbilityCount(StateHandle, CharacterId)
+    End For
+
+    Call PutInt(RecordCount)
+
+    For CharacterIndex = 0 To Characters.CharacterDefinitionCount(StateHandle) - 1
+
+        CharacterId = Characters.CharacterIdAt(StateHandle, CharacterIndex)
+
+        For Index = 0 To Abilities.LearnedAbilityCount(StateHandle, CharacterId) - 1
+            Call PutInt(CharacterId)
+            Call PutInt(Abilities.LearnedAbilityIdAt(StateHandle, CharacterId, Index))
+        End For
+    End For
+
+    RecordCount = 0
+
+    For ShopIndex = 0 To Shops.ShopCount(StateHandle) - 1
+        RecordCount = RecordCount + Shops.ShopItemCount(StateHandle, Shops.ShopIdAt(StateHandle, ShopIndex))
+    End For
+
+    Call PutInt(RecordCount)
+
+    For ShopIndex = 0 To Shops.ShopCount(StateHandle) - 1
+
+        For EntryIndex = 0 To Shops.ShopItemCount(StateHandle, Shops.ShopIdAt(StateHandle, ShopIndex)) - 1
+            ItemId = Shops.ShopItemIdAt(StateHandle, Shops.ShopIdAt(StateHandle, ShopIndex), EntryIndex)
+
+            Call PutInt(Shops.ShopIdAt(StateHandle, ShopIndex))
+            Call PutInt(ItemId)
+            Call PutInt(Shops.Stock(StateHandle, Shops.ShopIdAt(StateHandle, ShopIndex), ItemId))
+        End For
+    End For
+
+    If WriteFailed Then
+        BufferCount = 0
+        Return Core.RPG_RESULT_CAPACITY
+    End If
+
+    BufferCount = WritePosition
+    Return Core.RPG_RESULT_OK
+
+End Function
+
+Private Function IsDuplicateCharacter(Index As Number) As Boolean
+
+    Dim Earlier As Number
+
+    For Earlier = 0 To Index - 1
+
+        If ScratchCharacterIds[Earlier] = ScratchCharacterIds[Index] Then
+            Return True
+        End If
+
+    End For
+    Return False
+
+End Function
+
+Private Function IsDuplicatePartyMember(Index As Number) As Boolean
+
+    Dim Earlier As Number
+
+    For Earlier = 0 To Index - 1
+
+        If ScratchPartyIds[Earlier] = ScratchPartyIds[Index] Then
+            Return True
+        End If
+
+    End For
+    Return False
+
+End Function
+
+Private Function IsDuplicateInventoryItem(Index As Number) As Boolean
+
+    Dim Earlier As Number
+
+    For Earlier = 0 To Index - 1
+
+        If ScratchInventoryItemIds[Earlier] = ScratchInventoryItemIds[Index] Then
+            Return True
+        End If
+
+    End For
+    Return False
+
+End Function
+
+Private Function IsDuplicateEquipment(Index As Number) As Boolean
+
+    Dim Earlier As Number
+
+    For Earlier = 0 To Index - 1
+
+        If (ScratchEquipmentCharacterIds[Earlier] = ScratchEquipmentCharacterIds[Index] And
+            ScratchEquipmentSlotIds[Earlier] = ScratchEquipmentSlotIds[Index]) Then
+            Return True
+        End If
+
+    End For
+    Return False
+
+End Function
+
+Private Function IsDuplicateLearnedAbility(Index As Number) As Boolean
+
+    Dim Earlier As Number
+
+    For Earlier = 0 To Index - 1
+
+        If (ScratchLearnedCharacterIds[Earlier] = ScratchLearnedCharacterIds[Index] And
+            ScratchLearnedAbilityIds[Earlier] = ScratchLearnedAbilityIds[Index]) Then
+            Return True
+        End If
+
+    End For
+    Return False
+
+End Function
+
+Private Function IsDuplicateShopStock(Index As Number) As Boolean
+
+    Dim Earlier As Number
+
+    For Earlier = 0 To Index - 1
+
+        If (ScratchShopIds[Earlier] = ScratchShopIds[Index] And
+            ScratchShopItemIds[Earlier] = ScratchShopItemIds[Index]) Then
+            Return True
+        End If
+
+    End For
+    Return False
+
+End Function
+
+Private Function ParseEncoded(StateHandle As Number, ExpectedSchemaVersion As Number) As Number
+
+    Dim FormatVersion As Number
+    Dim SchemaVersion As Number
+    Dim Index As Number
+    Dim CharacterLearnedCounts[32] As Number
+
+    If BufferCount < 12 Or BufferCount > Core.RPG_MAX_SAVE_BYTES Then
+        Return Core.RPG_RESULT_NOT_FOUND_OR_INVALID_SAVE
+    End If
+
+    If (EncodedBytes[0] <> 83 Or
+        EncodedBytes[1] <> 82 Or
+        EncodedBytes[2] <> 80 Or
+        EncodedBytes[3] <> 71) Then
+        Return Core.RPG_RESULT_NOT_FOUND_OR_INVALID_SAVE
+    End If
+
+    ReadPosition = 4
+    ReadFailed = False
+    FormatVersion = GetInt()
+    SchemaVersion = GetInt()
+
+    If ReadFailed Or FormatVersion <> SAVE_FORMAT_VERSION Then
+        Return Core.RPG_RESULT_NOT_FOUND_OR_INVALID_SAVE
+    End If
+
+    If SchemaVersion <> ExpectedSchemaVersion Then
+        Return Core.RPG_RESULT_WRONG_SCHEMA
+    End If
+
+    ScratchCharacterCount = GetInt()
+
+    If (ReadFailed Or
+        ScratchCharacterCount < 0 Or
+        ScratchCharacterCount > Core.RPG_MAX_CHARACTERS) Then
+        Return Core.RPG_RESULT_CAPACITY
+    End If
+
+    For Index = 0 To ScratchCharacterCount - 1
+
+        ScratchCharacterIds[Index] = GetInt()
+        ScratchLevels[Index] = GetInt()
+        ScratchExperience[Index] = GetInt()
+        ScratchHealth[Index] = GetInt()
+        ScratchMaximumHealth[Index] = GetInt()
+        ScratchMagicPoints[Index] = GetInt()
+        ScratchMaximumMagicPoints[Index] = GetInt()
+        ScratchStrength[Index] = GetInt()
+        ScratchDefense[Index] = GetInt()
+        ScratchMagic[Index] = GetInt()
+        ScratchResistance[Index] = GetInt()
+        ScratchAgility[Index] = GetInt()
+        ScratchLuck[Index] = GetInt()
+
+        If ReadFailed Then
+            Return Core.RPG_RESULT_NOT_FOUND_OR_INVALID_SAVE
+        End If
+
+        If Not Characters.IsCharacterDefined(StateHandle, ScratchCharacterIds[Index]) Then
+            Return Core.RPG_RESULT_MISSING_DEFINITION
+        End If
+
+        If (IsDuplicateCharacter(Index) Or
+            ScratchLevels[Index] <= 0 Or
+            Not Core.IsValidValue(ScratchLevels[Index]) Or
+            Not Core.IsValidValue(ScratchExperience[Index]) Or
+            ScratchMaximumHealth[Index] <= 0 Or
+            Not Core.IsValidValue(ScratchMaximumHealth[Index]) Or
+            ScratchHealth[Index] < 0 Or
+            ScratchHealth[Index] > ScratchMaximumHealth[Index] Or
+            Not Core.IsValidValue(ScratchMaximumMagicPoints[Index]) Or
+            ScratchMagicPoints[Index] < 0 Or
+            ScratchMagicPoints[Index] > ScratchMaximumMagicPoints[Index] Or
+            Not Core.IsValidValue(ScratchStrength[Index]) Or
+            Not Core.IsValidValue(ScratchDefense[Index]) Or
+            Not Core.IsValidValue(ScratchMagic[Index]) Or
+            Not Core.IsValidValue(ScratchResistance[Index]) Or
+            Not Core.IsValidValue(ScratchAgility[Index]) Or
+            Not Core.IsValidValue(ScratchLuck[Index])) Then
+            Return Core.RPG_RESULT_INVALID_ARGUMENT
+        End If
+
+    End For
+
+    ScratchPartyCount = GetInt()
+
+    If (ReadFailed Or
+        ScratchPartyCount < 0 Or
+        ScratchPartyCount > Core.RPG_MAX_PARTY_MEMBERS) Then
+        Return Core.RPG_RESULT_CAPACITY
+    End If
+
+    For Index = 0 To ScratchPartyCount - 1
+
+        ScratchPartyIds[Index] = GetInt()
+
+        If Not Characters.IsCharacterDefined(StateHandle, ScratchPartyIds[Index]) Then
+            Return Core.RPG_RESULT_MISSING_DEFINITION
+        End If
+
+        If ReadFailed Or IsDuplicatePartyMember(Index) Then
+            Return Core.RPG_RESULT_INVALID_ARGUMENT
+        End If
+
+    End For
+
+    ScratchGold = GetInt()
+
+    If ReadFailed Or Not Core.IsValidValue(ScratchGold) Then
+        Return Core.RPG_RESULT_INVALID_ARGUMENT
+    End If
+
+    ScratchInventoryCount = GetInt()
+
+    If (ReadFailed Or
+        ScratchInventoryCount < 0 Or
+        ScratchInventoryCount > Core.RPG_MAX_INVENTORY_ENTRIES) Then
+        Return Core.RPG_RESULT_CAPACITY
+    End If
+
+    For Index = 0 To ScratchInventoryCount - 1
+
+        ScratchInventoryItemIds[Index] = GetInt()
+        ScratchInventoryQuantities[Index] = GetInt()
+
+        If Not Inventory.IsItemDefined(StateHandle, ScratchInventoryItemIds[Index]) Then
+            Return Core.RPG_RESULT_MISSING_DEFINITION
+        End If
+
+        If (ReadFailed Or
+            IsDuplicateInventoryItem(Index) Or
+            Not Core.IsValidQuantity(ScratchInventoryQuantities[Index]) Or
+            ScratchInventoryQuantities[Index] > Inventory.MaximumStack(StateHandle, ScratchInventoryItemIds[Index])) Then
+            Return Core.RPG_RESULT_INVALID_ARGUMENT
+        End If
+
+    End For
+
+    ScratchEquipmentCount = GetInt()
+
+    If (ReadFailed Or
+        ScratchEquipmentCount < 0 Or
+        ScratchEquipmentCount > Core.RPG_MAX_CHARACTERS * Core.RPG_MAX_EQUIPMENT_SLOTS) Then
+        Return Core.RPG_RESULT_CAPACITY
+    End If
+
+    For Index = 0 To ScratchEquipmentCount - 1
+
+        ScratchEquipmentCharacterIds[Index] = GetInt()
+        ScratchEquipmentSlotIds[Index] = GetInt()
+        ScratchEquipmentItemIds[Index] = GetInt()
+
+        If (Not Characters.IsCharacterDefined(StateHandle, ScratchEquipmentCharacterIds[Index]) Or
+            Not Equipment.IsSlotDefined(StateHandle, ScratchEquipmentSlotIds[Index]) Or
+            Not Inventory.IsItemDefined(StateHandle, ScratchEquipmentItemIds[Index])) Then
+            Return Core.RPG_RESULT_MISSING_DEFINITION
+        End If
+
+        If (ReadFailed Or
+            IsDuplicateEquipment(Index) Or
+            Inventory.Kind(StateHandle, ScratchEquipmentItemIds[Index]) <> Core.RPG_ITEM_EQUIPMENT Or
+            Inventory.EquipmentSlotId(StateHandle, ScratchEquipmentItemIds[Index]) <> ScratchEquipmentSlotIds[Index]) Then
+            Return Core.RPG_RESULT_INVALID_ARGUMENT
+        End If
+
+    End For
+
+    ScratchLearnedCount = GetInt()
+
+    If (ReadFailed Or
+        ScratchLearnedCount < 0 Or
+        ScratchLearnedCount > Core.RPG_MAX_CHARACTERS * Core.RPG_MAX_LEARNED_ABILITIES) Then
+        Return Core.RPG_RESULT_CAPACITY
+    End If
+
+    For Index = 0 To Core.RPG_MAX_CHARACTERS - 1
+        CharacterLearnedCounts[Index] = 0
+    End For
+
+    For Index = 0 To ScratchLearnedCount - 1
+
+        ScratchLearnedCharacterIds[Index] = GetInt()
+        ScratchLearnedAbilityIds[Index] = GetInt()
+
+        If (Not Characters.IsCharacterDefined(StateHandle, ScratchLearnedCharacterIds[Index]) Or
+            Not Abilities.IsAbilityDefined(StateHandle, ScratchLearnedAbilityIds[Index])) Then
+            Return Core.RPG_RESULT_MISSING_DEFINITION
+        End If
+
+        If ReadFailed Or IsDuplicateLearnedAbility(Index) Then
+            Return Core.RPG_RESULT_INVALID_ARGUMENT
+        End If
+
+    End For
+
+    For Index = 0 To ScratchLearnedCount - 1
+
+        Dim CharacterDefinitionIndex As Number
+
+        CharacterDefinitionIndex = 0
+
+        Do
+
+            If CharacterDefinitionIndex >= Characters.CharacterDefinitionCount(StateHandle) Then
+                Exit Do
+            End If
+
+            If Characters.CharacterIdAt(StateHandle, CharacterDefinitionIndex) = ScratchLearnedCharacterIds[Index] Then
+                CharacterLearnedCounts[CharacterDefinitionIndex] = CharacterLearnedCounts[CharacterDefinitionIndex] + 1
+                Exit Do
+            End If
+
+            CharacterDefinitionIndex = CharacterDefinitionIndex + 1
+
+        Loop
+
+        If CharacterLearnedCounts[CharacterDefinitionIndex] > Core.RPG_MAX_LEARNED_ABILITIES Then
+            Return Core.RPG_RESULT_CAPACITY
+        End If
+
+    End For
+
+    ScratchShopCount = GetInt()
+
+    If (ReadFailed Or
+        ScratchShopCount < 0 Or
+        ScratchShopCount > Core.RPG_MAX_SHOPS * Core.RPG_MAX_SHOP_ITEMS) Then
+        Return Core.RPG_RESULT_CAPACITY
+    End If
+
+    For Index = 0 To ScratchShopCount - 1
+
+        ScratchShopIds[Index] = GetInt()
+        ScratchShopItemIds[Index] = GetInt()
+        ScratchShopStock[Index] = GetInt()
+
+        If (Not Shops.IsShopDefined(StateHandle, ScratchShopIds[Index]) Or
+            Not Shops.HasShopItem(StateHandle, ScratchShopIds[Index], ScratchShopItemIds[Index])) Then
+            Return Core.RPG_RESULT_MISSING_DEFINITION
+        End If
+
+        If (ReadFailed Or
+            IsDuplicateShopStock(Index) Or
+            (ScratchShopStock[Index] <> Core.RPG_STOCK_UNLIMITED And Not Core.IsValidValue(ScratchShopStock[Index]))) Then
+            Return Core.RPG_RESULT_INVALID_ARGUMENT
+        End If
+
+    End For
+
+    If ReadFailed Or ReadPosition <> BufferCount Then
+        Return Core.RPG_RESULT_NOT_FOUND_OR_INVALID_SAVE
+    End If
+
+    Return Core.RPG_RESULT_OK
+
+End Function
+
+Private Function ApplyScratch(StateHandle As Number) As Boolean
+
+    Dim Index As Number
+    Dim ShopIndex As Number
+    Dim CharacterId As Number
+
+    If (Not Characters.ResetProgress(StateHandle) Or
+        Not Party.ClearParty(StateHandle) Or
+        Not Party.SetGold(StateHandle, 0) Or
+        Not Inventory.ClearInventory(StateHandle) Or
+        Not Equipment.ClearAllEquipment(StateHandle) Or
+        Not Abilities.ClearAllLearnedAbilities(StateHandle)) Then
+        Return False
+    End If
+
+    For ShopIndex = 0 To Shops.ShopCount(StateHandle) - 1
+
+        If Not Shops.ResetShopStock(StateHandle, Shops.ShopIdAt(StateHandle, ShopIndex)) Then
+            Return False
+        End If
+
+    End For
+
+    For Index = 0 To ScratchCharacterCount - 1
+
+        CharacterId = ScratchCharacterIds[Index]
+
+        If (Not Characters.SetLevel(StateHandle, CharacterId, ScratchLevels[Index]) Or
+            Not Characters.SetExperience(StateHandle, CharacterId, ScratchExperience[Index]) Or
+            Not Characters.SetMaximumHealth(StateHandle, CharacterId, ScratchMaximumHealth[Index]) Or
+            Not Characters.SetHealth(StateHandle, CharacterId, ScratchHealth[Index]) Or
+            Not Characters.SetMaximumMagicPoints(StateHandle, CharacterId, ScratchMaximumMagicPoints[Index]) Or
+            Not Characters.SetMagicPoints(StateHandle, CharacterId, ScratchMagicPoints[Index]) Or
+            Not Characters.SetStrength(StateHandle, CharacterId, ScratchStrength[Index]) Or
+            Not Characters.SetDefense(StateHandle, CharacterId, ScratchDefense[Index]) Or
+            Not Characters.SetMagic(StateHandle, CharacterId, ScratchMagic[Index]) Or
+            Not Characters.SetResistance(StateHandle, CharacterId, ScratchResistance[Index]) Or
+            Not Characters.SetAgility(StateHandle, CharacterId, ScratchAgility[Index]) Or
+            Not Characters.SetLuck(StateHandle, CharacterId, ScratchLuck[Index])) Then
+            Return False
+        End If
+
+    End For
+
+    For Index = 0 To ScratchPartyCount - 1
+
+        If Not Party.AddCharacter(StateHandle, ScratchPartyIds[Index]) Then
+            Return False
+        End If
+
+    End For
+
+    If Not Party.SetGold(StateHandle, ScratchGold) Then
+        Return False
+    End If
+
+    For Index = 0 To ScratchEquipmentCount - 1
+
+        If (Not Inventory.AddItem(StateHandle, ScratchEquipmentItemIds[Index], 1) Or
+            Not Equipment.Equip(StateHandle, ScratchEquipmentCharacterIds[Index], ScratchEquipmentSlotIds[Index], ScratchEquipmentItemIds[Index])) Then
+            Return False
+        End If
+
+    End For
+
+    For Index = 0 To ScratchInventoryCount - 1
+
+        If Not Inventory.AddItem(StateHandle, ScratchInventoryItemIds[Index], ScratchInventoryQuantities[Index]) Then
+            Return False
+        End If
+
+    End For
+
+    For Index = 0 To ScratchLearnedCount - 1
+
+        If Not Abilities.LearnAbility(StateHandle, ScratchLearnedCharacterIds[Index], ScratchLearnedAbilityIds[Index]) Then
+            Return False
+        End If
+
+    End For
+
+    For Index = 0 To ScratchShopCount - 1
+
+        If Not Shops.SetStock(StateHandle, ScratchShopIds[Index], ScratchShopItemIds[Index], ScratchShopStock[Index]) Then
+            Return False
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+''' Validates the module buffer completely, then replaces dynamic state transactionally.
+Public Function Decode(StateHandle As Number, ExpectedSchemaVersion As Number) As Number
+
+    Dim Result As Number
+    Dim IncomingCount As Number
+    Dim RollbackCount As Number
+    Dim Index As Number
+    Dim Restored As Boolean
+
+    If Not Core.IsValid(StateHandle) Then
+        Return Core.RPG_RESULT_INVALID_STATE
+    End If
+
+    If ExpectedSchemaVersion <= 0 Or Not Core.IsValidValue(ExpectedSchemaVersion) Then
+        Return Core.RPG_RESULT_INVALID_ARGUMENT
+    End If
+
+    Result = ParseEncoded(StateHandle, ExpectedSchemaVersion)
+
+    If Result <> Core.RPG_RESULT_OK Then
+        Return Result
+    End If
+
+    IncomingCount = BufferCount
+
+    For Index = 0 To IncomingCount - 1
+        IncomingBytes[Index] = EncodedBytes[Index]
+    End For
+
+    Result = Encode(StateHandle, ExpectedSchemaVersion)
+
+    If Result <> Core.RPG_RESULT_OK Then
+
+        For Index = 0 To IncomingCount - 1
+            EncodedBytes[Index] = IncomingBytes[Index]
+        End For
+        BufferCount = IncomingCount
+        Return Core.RPG_RESULT_APPLY_FAILED
+
+    End If
+
+    RollbackCount = BufferCount
+
+    For Index = 0 To RollbackCount - 1
+        RollbackBytes[Index] = EncodedBytes[Index]
+    End For
+
+    For Index = 0 To IncomingCount - 1
+        EncodedBytes[Index] = IncomingBytes[Index]
+    End For
+
+    BufferCount = IncomingCount
+
+    If ApplyScratch(StateHandle) Then
+        Return Core.RPG_RESULT_OK
+    End If
+
+    For Index = 0 To RollbackCount - 1
+        EncodedBytes[Index] = RollbackBytes[Index]
+    End For
+
+    BufferCount = RollbackCount
+    Result = ParseEncoded(StateHandle, ExpectedSchemaVersion)
+
+    If Result = Core.RPG_RESULT_OK Then
+        Restored = ApplyScratch(StateHandle)
+    End If
+
+    For Index = 0 To IncomingCount - 1
+        EncodedBytes[Index] = IncomingBytes[Index]
+    End For
+
+    BufferCount = IncomingCount
+    Return Core.RPG_RESULT_APPLY_FAILED
+
+End Function
+
+''' Returns the number of bytes currently available to Decode.
+Public Function EncodedByteCount() As Number
+
+    Return BufferCount
+
+End Function
+
+''' Returns one encoded byte, or -1 when the index is outside the current payload.
+Public Function EncodedByteAt(Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Index < 0 Or Index >= BufferCount Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = EncodedBytes[Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Clears the public in-memory codec buffer.
+Public Sub ClearEncodedBytes()
+
+    BufferCount = 0
+
+End Sub
+
+''' Appends or replaces one byte for deterministic decoder tests and export workflows.
+Public Function SetEncodedByte(Index As Number, Value As Number) As Boolean
+
+    If (Index < 0 Or
+        Index >= Core.RPG_MAX_SAVE_BYTES Or
+        Value < 0 Or
+        Value > 255) Then
+        Return False
+    End If
+
+    EncodedBytes[Index] = Value
+
+    If Index >= BufferCount Then
+        BufferCount = Index + 1
+    End If
+
+    Return True
+
+End Function
+
+''' Saves the current dynamic state to one of eight literal Phase 4 Data keys.
+Public Function SaveGame(StateHandle As Number, SaveSlot As Number, SchemaVersion As Number) As Number
+
+    Dim Result As Number
+
+    If SaveSlot < 1 Or SaveSlot > Core.RPG_MAX_SAVE_SLOTS Then
+        Return Core.RPG_RESULT_INVALID_ARGUMENT
+    End If
+
+    Result = Encode(StateHandle, SchemaVersion)
+
+    If Result <> Core.RPG_RESULT_OK Then
+        Return Result
+    End If
+
+    Select Case SaveSlot
+        Case 1
+            Save Data EncodedBytes Count BufferCount To "Smile.RPG.Save.1"
+        Case 2
+            Save Data EncodedBytes Count BufferCount To "Smile.RPG.Save.2"
+        Case 3
+            Save Data EncodedBytes Count BufferCount To "Smile.RPG.Save.3"
+        Case 4
+            Save Data EncodedBytes Count BufferCount To "Smile.RPG.Save.4"
+        Case 5
+            Save Data EncodedBytes Count BufferCount To "Smile.RPG.Save.5"
+        Case 6
+            Save Data EncodedBytes Count BufferCount To "Smile.RPG.Save.6"
+        Case 7
+            Save Data EncodedBytes Count BufferCount To "Smile.RPG.Save.7"
+        Case 8
+            Save Data EncodedBytes Count BufferCount To "Smile.RPG.Save.8"
+    End Select
+
+    Return Core.RPG_RESULT_OK
+
+End Function
+
+''' Loads, validates, and transactionally applies one persistent save slot.
+Public Function LoadGame(StateHandle As Number, SaveSlot As Number, ExpectedSchemaVersion As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Not Core.IsValid(StateHandle) Then
+        Return Core.RPG_RESULT_INVALID_STATE
+    End If
+
+    If SaveSlot < 1 Or SaveSlot > Core.RPG_MAX_SAVE_SLOTS Then
+        Return Core.RPG_RESULT_INVALID_ARGUMENT
+    End If
+
+    BufferCount = 0
+
+    Select Case SaveSlot
+        Case 1
+            Load Data "Smile.RPG.Save.1" Into EncodedBytes Count BufferCount
+        Case 2
+            Load Data "Smile.RPG.Save.2" Into EncodedBytes Count BufferCount
+        Case 3
+            Load Data "Smile.RPG.Save.3" Into EncodedBytes Count BufferCount
+        Case 4
+            Load Data "Smile.RPG.Save.4" Into EncodedBytes Count BufferCount
+        Case 5
+            Load Data "Smile.RPG.Save.5" Into EncodedBytes Count BufferCount
+        Case 6
+            Load Data "Smile.RPG.Save.6" Into EncodedBytes Count BufferCount
+        Case 7
+            Load Data "Smile.RPG.Save.7" Into EncodedBytes Count BufferCount
+        Case 8
+            Load Data "Smile.RPG.Save.8" Into EncodedBytes Count BufferCount
+    End Select
+
+    If BufferCount <= 0 Then
+        Return Core.RPG_RESULT_NOT_FOUND_OR_INVALID_SAVE
+    End If
+
+    ReturnValue = Decode(StateHandle, ExpectedSchemaVersion)
+
+    Return ReturnValue
+
+End Function
+
+''' Checks whether a valid outer Phase 4 Data block exists for a save slot.
+Public Function Exists(StateHandle As Number, SaveSlot As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    If (Not Core.IsValid(StateHandle) Or
+        SaveSlot < 1 Or
+        SaveSlot > Core.RPG_MAX_SAVE_SLOTS) Then
+        Return False
+    End If
+
+    BufferCount = 0
+
+    Select Case SaveSlot
+        Case 1
+            Load Data "Smile.RPG.Save.1" Into EncodedBytes Count BufferCount
+        Case 2
+            Load Data "Smile.RPG.Save.2" Into EncodedBytes Count BufferCount
+        Case 3
+            Load Data "Smile.RPG.Save.3" Into EncodedBytes Count BufferCount
+        Case 4
+            Load Data "Smile.RPG.Save.4" Into EncodedBytes Count BufferCount
+        Case 5
+            Load Data "Smile.RPG.Save.5" Into EncodedBytes Count BufferCount
+        Case 6
+            Load Data "Smile.RPG.Save.6" Into EncodedBytes Count BufferCount
+        Case 7
+            Load Data "Smile.RPG.Save.7" Into EncodedBytes Count BufferCount
+        Case 8
+            Load Data "Smile.RPG.Save.8" Into EncodedBytes Count BufferCount
+    End Select
+
+    ReturnValue = BufferCount > 0
+
+    Return ReturnValue
+
+End Function
+
+End Module

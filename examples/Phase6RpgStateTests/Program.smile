@@ -1,0 +1,210 @@
+Option Explicit
+
+Import Smile.RPG.Core As RPG
+Import Smile.RPG.Characters As Characters
+Import Smile.RPG.Party As Party
+Import Smile.RPG.Inventory As Inventory
+Import Smile.RPG.Equipment As Equipment
+Import Smile.RPG.Abilities As Abilities
+Import Smile.RPG.Shops As Shops
+Import Smile.RPG.SaveGames As SaveGames
+
+Dim Hero As Characters.CharacterDefinition
+Dim Mage As Characters.CharacterDefinition
+Dim Potion As Inventory.ItemDefinition
+Dim Sword As Inventory.ItemDefinition
+Dim Hand As Equipment.EquipmentSlotDefinition
+Dim Fire As Abilities.AbilityDefinition
+Dim GeneralStore As Shops.ShopDefinition
+Dim State As Number
+Dim OldState As Number
+Dim OtherState As Number
+Dim Result As Number
+Dim Failures As Number
+Dim Index As Number
+Dim FirstByteCount As Number
+Dim FirstBytes[32768] As Number
+Dim OperationSucceeded As Boolean
+
+State = RPG.Create()
+
+Call Check(State > 0 And RPG.IsValid(State))
+
+OldState = State
+
+Call RPG.Destroy(State)
+Call Check(Not RPG.IsValid(OldState))
+
+State = RPG.Create()
+OtherState = RPG.Create()
+
+Call Check(State > 0 And OtherState > 0 And State <> OldState)
+
+Hero.Id = 100
+Hero.Name = "Aria"
+Hero.StartingLevel = 2
+Hero.StartingMaximumHealth = 120
+Hero.StartingMaximumMagicPoints = 30
+Hero.Strength = 14
+Hero.Defense = 10
+Hero.Magic = 8
+Hero.Resistance = 9
+Hero.Agility = 12
+Hero.Luck = 7
+
+Mage = Hero
+Mage.Id = 200
+Mage.Name = "Bram"
+Mage.StartingMaximumHealth = 80
+Mage.StartingMaximumMagicPoints = 60
+Mage.Magic = 18
+
+Call Check(Characters.DefineCharacter(State, Hero))
+Call Check(Characters.DefineCharacter(State, Mage))
+Call Check(Not Characters.DefineCharacter(State, Mage))
+Call Check(Characters.CharacterDefinitionCount(State) = 2)
+Call Check(Characters.Damage(State, 100, 25) And Characters.Health(State, 100) = 95)
+Call Check(Characters.Heal(State, 100, 10) And Characters.Health(State, 100) = 105)
+Call Check(Characters.SetExperience(State, 100, 450) And Characters.SetLevel(State, 100, 3))
+
+Call Check(Party.AddCharacter(State, 100))
+Call Check(Party.AddCharacter(State, 200))
+Call Check(Not Party.AddCharacter(State, 100))
+Call Check(Party.MoveCharacter(State, 1, 0))
+Call Check(Party.CharacterIdAt(State, 0) = 200 And Party.CharacterIdAt(State, 1) = 100)
+Call Check(Party.SetGold(State, 500))
+
+Potion.Id = 10
+Potion.Name = "Potion"
+Potion.Kind = RPG.RPG_ITEM_CONSUMABLE
+Potion.MaximumStack = 20
+Potion.BasePrice = 25
+Potion.CanSell = True
+Potion.EffectId = 1
+
+Sword.Id = 20
+Sword.Name = "Bronze Sword"
+Sword.Kind = RPG.RPG_ITEM_EQUIPMENT
+Sword.MaximumStack = 1
+Sword.BasePrice = 120
+Sword.CanSell = True
+Sword.EquipmentSlotId = 1
+Sword.StrengthBonus = 5
+
+Call Check(Inventory.DefineItem(State, Potion))
+Call Check(Inventory.DefineItem(State, Sword))
+Call Check(Inventory.AddItem(State, 10, 4))
+Call Check(Inventory.Quantity(State, 10) = 4)
+Call Check(Not Inventory.AddItem(State, 10, 17))
+
+Hand.Id = 1
+Hand.Name = "Hand"
+
+Call Check(Equipment.DefineSlot(State, Hand))
+Call Check(Inventory.AddItem(State, 20, 1))
+Call Check(Equipment.Equip(State, 100, 1, 20))
+Call Check(Equipment.EquippedItem(State, 100, 1) = 20)
+Call Check(Inventory.Quantity(State, 20) = 0)
+Call Check(Equipment.StrengthBonus(State, 100) = 5)
+
+Fire.Id = 50
+Fire.Name = "Fire"
+Fire.MagicPointCost = 7
+Fire.Power = 22
+Fire.TargetMode = RPG.RPG_TARGET_ONE_ENEMY
+Fire.EffectId = 3
+
+Call Check(Abilities.DefineAbility(State, Fire))
+Call Check(Abilities.LearnAbility(State, 200, 50))
+Call Check(Abilities.PayMagicPointCost(State, 200, 50))
+Call Check(Characters.MagicPoints(State, 200) = 53)
+
+GeneralStore.Id = 1
+GeneralStore.Name = "General Store"
+
+Call Check(Shops.DefineShop(State, GeneralStore))
+Call Check(Shops.AddShopItem(State, 1, 10, 25, 10, 12))
+
+Result = Shops.Buy(State, 1, 10, 2)
+
+Call Check(Result = RPG.RPG_RESULT_OK)
+Call Check(Party.Gold(State) = 450 And Inventory.Quantity(State, 10) = 6 And Shops.Stock(State, 1, 10) = 10)
+
+Result = Shops.Sell(State, 1, 10, 1)
+
+Call Check(Result = RPG.RPG_RESULT_OK)
+Call Check(Party.Gold(State) = 460 And Inventory.Quantity(State, 10) = 5 And Shops.Stock(State, 1, 10) = 11)
+
+Result = SaveGames.Encode(State, 7)
+
+Call Check(Result = RPG.RPG_RESULT_OK)
+
+FirstByteCount = SaveGames.EncodedByteCount()
+
+Call Check(FirstByteCount > 0 And FirstByteCount < RPG.RPG_MAX_SAVE_BYTES)
+
+For Index = 0 To FirstByteCount - 1
+    FirstBytes[Index] = SaveGames.EncodedByteAt(Index)
+End For
+
+Call Check(Characters.Damage(State, 100, 1000))
+Call Check(Party.SetGold(State, 1))
+Call Check(Inventory.RemoveItem(State, 10, 5))
+
+Result = SaveGames.Decode(State, 7)
+
+Call Check(Result = RPG.RPG_RESULT_OK)
+Call Check(Characters.Health(State, 100) = 105)
+Call Check(Party.Gold(State) = 460)
+Call Check(Inventory.Quantity(State, 10) = 5)
+Call Check(Equipment.EquippedItem(State, 100, 1) = 20)
+Call Check(Abilities.KnowsAbility(State, 200, 50))
+Call Check(Shops.Stock(State, 1, 10) = 11)
+
+OperationSucceeded = SaveGames.SetEncodedByte(FirstByteCount, 99)
+Result = SaveGames.Decode(State, 7)
+
+Call Check(OperationSucceeded And Result = RPG.RPG_RESULT_NOT_FOUND_OR_INVALID_SAVE)
+Call Check(Party.Gold(State) = 460)
+
+Call SaveGames.ClearEncodedBytes()
+
+For Index = 0 To FirstByteCount - 1
+    OperationSucceeded = SaveGames.SetEncodedByte(Index, FirstBytes[Index])
+End For
+
+Result = SaveGames.Decode(State, 8)
+
+Call Check(Result = RPG.RPG_RESULT_WRONG_SCHEMA)
+Call Check(Party.Gold(State) = 460)
+
+Result = SaveGames.SaveGame(State, 8, 7)
+
+Call Check(Result = RPG.RPG_RESULT_OK And SaveGames.Exists(State, 8))
+Call Check(Party.SetGold(State, 5))
+
+Result = SaveGames.LoadGame(State, 8, 7)
+
+Call Check(Result = RPG.RPG_RESULT_OK And Party.Gold(State) = 460)
+
+Call Check(Characters.CharacterDefinitionCount(OtherState) = 0)
+
+Call RPG.Destroy(OtherState)
+Call RPG.Destroy(State)
+
+If Failures = 0 Then
+    Print "Phase 6 RPG state tests: PASS"
+Else
+    Print "Phase 6 RPG state tests: FAIL"
+    Print Failures
+End If
+
+End Program
+
+Sub Check(Condition As Boolean)
+
+    If Not Condition Then
+        Failures = Failures + 1
+    End If
+
+End Sub

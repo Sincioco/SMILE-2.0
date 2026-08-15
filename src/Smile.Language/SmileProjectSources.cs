@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
+using System.Xml;
 using System.Xml.Linq;
 
 namespace Smile.Language;
@@ -17,6 +19,29 @@ public enum SmileProjectReferenceKind
 {
     Project,
     Package
+}
+
+public static class SmileApplicationIdentity
+{
+    private static readonly Regex SegmentPattern = new("^[a-z][a-z0-9-]*$", RegexOptions.CultureInvariant);
+
+    public static bool IsValid(string? value)
+    {
+        if (value == null || value.Length < 3 || value.Length > 128 || value.IndexOf('.') < 0)
+            return false;
+        var segments = value.Split('.');
+        return segments.Length >= 2 && segments.All(segment =>
+            segment.Length != 0 && !segment.EndsWith("-", StringComparison.Ordinal) && SegmentPattern.IsMatch(segment));
+    }
+
+    public static string ValidateExplicit(string? value, string filePath, int line = 1, int column = 1)
+    {
+        if (!IsValid(value))
+            throw new SmileProjectDiagnosticException("SML3800",
+                "ApplicationId must be 3 through 128 ASCII lowercase characters in at least two dot-separated segments; each segment begins with a letter and contains only lowercase letters, digits, or non-trailing hyphens.",
+                filePath, line, column);
+        return value!;
+    }
 }
 
 public sealed class SmileProjectReferenceItem
@@ -56,7 +81,7 @@ public sealed class SmileProjectSourceItem
 public sealed class SmileProjectSourceSet
 {
     private SmileProjectSourceSet(string projectPath, SmileProjectKind projectKind, string startupFile,
-        string libraryName, string version, string outputName,
+        string libraryName, string version, string outputName, string? applicationId,
         IReadOnlyList<SmileProjectSourceItem> items, IReadOnlyList<SmileProjectSourceItem> compilationSources,
         IReadOnlyList<SmileProjectReferenceItem> references, SmileProjectAssetManifest assetManifest)
     {
@@ -67,6 +92,7 @@ public sealed class SmileProjectSourceSet
         LibraryName = libraryName;
         Version = version;
         OutputName = outputName;
+        ApplicationId = applicationId;
         Items = items;
         CompilationSources = compilationSources;
         StartupSource = projectKind == SmileProjectKind.Library ? null : compilationSources[0];
@@ -82,6 +108,8 @@ public sealed class SmileProjectSourceSet
     public string LibraryName { get; }
     public string Version { get; }
     public string OutputName { get; }
+    public string? ApplicationId { get; }
+    public string EffectiveApplicationId => ApplicationId ?? OutputName;
     public bool IsLibrary => ProjectKind == SmileProjectKind.Library;
     public SmileProjectSourceItem? StartupSource { get; }
     public IReadOnlyList<SmileProjectSourceItem> Items { get; }
@@ -118,7 +146,8 @@ public sealed class SmileProjectSourceSet
             throw new InvalidDataException("A SMILE project file must have a SmileProject root element.");
 
         var projectDirectory = Path.GetDirectoryName(fullProjectPath) ?? Environment.CurrentDirectory;
-        var properties = root.Elements().FirstOrDefault(element => element.Name.LocalName == "PropertyGroup");
+        var propertyGroups = root.Elements().Where(element => element.Name.LocalName == "PropertyGroup").ToArray();
+        var properties = propertyGroups.FirstOrDefault();
         var kindText = properties?.Elements().FirstOrDefault(element => element.Name.LocalName == "ProjectKind")?.Value.Trim();
         if (string.IsNullOrWhiteSpace(kindText))
             kindText = string.Equals(Path.GetExtension(fullProjectPath), ".smilelibproj", StringComparison.OrdinalIgnoreCase)
@@ -145,6 +174,33 @@ public sealed class SmileProjectSourceSet
         else if (string.IsNullOrWhiteSpace(outputName))
         {
             outputName = Path.GetFileNameWithoutExtension(fullProjectPath);
+        }
+
+        var applicationElements = propertyGroups.SelectMany(group =>
+            group.Elements().Where(element => element.Name.LocalName == "ApplicationId")).ToArray();
+        if (applicationElements.Length > 1)
+        {
+            var duplicate = applicationElements[1];
+            var duplicateLocation = (IXmlLineInfo)duplicate;
+            throw new SmileProjectDiagnosticException("SML3801",
+                "ApplicationId may be declared only once in a SMILE project.", fullProjectPath,
+                duplicateLocation.HasLineInfo() ? duplicateLocation.LineNumber : 1,
+                duplicateLocation.HasLineInfo() ? duplicateLocation.LinePosition : 1);
+        }
+
+        string? applicationId = null;
+        if (applicationElements.Length == 1)
+        {
+            var applicationElement = applicationElements[0];
+            var location = (IXmlLineInfo)applicationElement;
+            var line = location.HasLineInfo() ? location.LineNumber : 1;
+            var column = location.HasLineInfo() ? location.LinePosition : 1;
+            if (projectKind == SmileProjectKind.Library)
+                throw new SmileProjectDiagnosticException("SML3802",
+                    "Library projects do not own an ApplicationId; declare it only in Console or Game application projects.",
+                    fullProjectPath, line, column);
+            applicationId = SmileApplicationIdentity.ValidateExplicit(applicationElement.Value.Trim(),
+                fullProjectPath, line, column);
         }
 
         var startupFile = properties?.Elements().FirstOrDefault(element => element.Name.LocalName == "StartupFile")?.Value.Trim();
@@ -225,7 +281,7 @@ public sealed class SmileProjectSourceSet
 
         var assetManifest = SmileProjectAssetResolver.Resolve(fullProjectPath, projectKind, root);
         return new SmileProjectSourceSet(fullProjectPath, projectKind, startupFile ?? string.Empty,
-            libraryName, version, outputName!, items, compilationSources, references, assetManifest);
+            libraryName, version, outputName!, applicationId, items, compilationSources, references, assetManifest);
     }
 
     public void ValidateFiles()

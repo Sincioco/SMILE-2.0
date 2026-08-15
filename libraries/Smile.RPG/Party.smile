@@ -1,0 +1,313 @@
+''' Ordered active-party membership and shared Gold.
+Module Smile.RPG.Party
+
+Option Explicit
+
+Import Smile.RPG.Core As Core
+Import Smile.RPG.Characters As Characters
+
+Private Dim StateGeneration[4] As Number
+Private Dim MemberCount[4] As Number
+Private Dim Members[4, 8] As Number
+Private Dim GoldValues[4] As Number
+
+Private Function StateSlot(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim Generation As Number
+
+    Slot = Core.StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Generation = Core.StateGeneration(StateHandle)
+
+    If StateGeneration[Slot] <> Generation Then
+
+        For Index = 0 To Core.RPG_MAX_PARTY_MEMBERS - 1
+            Members[Slot, Index] = 0
+        End For
+
+        MemberCount[Slot] = 0
+        GoldValues[Slot] = 0
+        StateGeneration[Slot] = Generation
+
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function MemberIndex(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To MemberCount[Slot] - 1
+
+        If Members[Slot, Index] = CharacterId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Public Function AddCharacter(StateHandle As Number, CharacterId As Number) As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not Characters.IsCharacterDefined(StateHandle, CharacterId) Or
+        MemberIndex(StateHandle, CharacterId) >= 0 Or
+        MemberCount[Slot] >= Core.RPG_MAX_PARTY_MEMBERS) Then
+        Return False
+    End If
+
+    Members[Slot, MemberCount[Slot]] = CharacterId
+    MemberCount[Slot] = MemberCount[Slot] + 1
+    Return True
+
+End Function
+
+Public Function RemoveCharacter(StateHandle As Number, CharacterId As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim MoveIndex As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = MemberIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return False
+    End If
+
+    For MoveIndex = Index To MemberCount[Slot] - 2
+        Members[Slot, MoveIndex] = Members[Slot, MoveIndex + 1]
+    End For
+
+    MemberCount[Slot] = MemberCount[Slot] - 1
+    Members[Slot, MemberCount[Slot]] = 0
+    Return True
+
+End Function
+
+Public Function MoveCharacter(StateHandle As Number, FromIndex As Number, ToIndex As Number) As Boolean
+
+    Dim Slot As Number
+    Dim CharacterId As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        FromIndex < 0 Or
+        FromIndex >= MemberCount[Slot] Or
+        ToIndex < 0 Or
+        ToIndex >= MemberCount[Slot]) Then
+        Return False
+    End If
+
+    If FromIndex = ToIndex Then
+        Return True
+    End If
+
+    CharacterId = Members[Slot, FromIndex]
+
+    If FromIndex < ToIndex Then
+
+        For Index = FromIndex To ToIndex - 1
+            Members[Slot, Index] = Members[Slot, Index + 1]
+        End For
+
+    Else
+        Index = FromIndex
+
+        Do
+
+            If Index <= ToIndex Then
+                Exit Do
+            End If
+
+            Members[Slot, Index] = Members[Slot, Index - 1]
+            Index = Index - 1
+
+        Loop
+
+    End If
+
+    Members[Slot, ToIndex] = CharacterId
+    Return True
+
+End Function
+
+Public Function ClearParty(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    For Index = 0 To MemberCount[Slot] - 1
+        Members[Slot, Index] = 0
+    End For
+
+    MemberCount[Slot] = 0
+    Return True
+
+End Function
+
+Public Function Contains(StateHandle As Number, CharacterId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = MemberIndex(StateHandle, CharacterId) >= 0
+
+    Return ReturnValue
+
+End Function
+
+Public Function PartyCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = MemberCount[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function CharacterIdAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= MemberCount[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = Members[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Gold(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = GoldValues[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function SetGold(StateHandle As Number, Value As Number) As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Not Core.IsValidValue(Value) Then
+        Return False
+    End If
+
+    GoldValues[Slot] = Value
+    Return True
+
+End Function
+
+Public Function AddGold(StateHandle As Number, Amount As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Current As Number
+
+    If Amount < 0 Or Not Core.IsValid(StateHandle) Then
+        Return False
+    End If
+
+    Current = Gold(StateHandle)
+
+    If Current > Core.RPG_MAX_VALUE - Amount Then
+        Return False
+    End If
+
+    ReturnValue = SetGold(StateHandle, Current + Amount)
+
+    Return ReturnValue
+
+End Function
+
+Public Function SpendGold(StateHandle As Number, Amount As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Current As Number
+
+    If Amount < 0 Or Not Core.IsValid(StateHandle) Then
+        Return False
+    End If
+
+    Current = Gold(StateHandle)
+
+    If Current < Amount Then
+        Return False
+    End If
+
+    ReturnValue = SetGold(StateHandle, Current - Amount)
+
+    Return ReturnValue
+
+End Function
+
+End Module

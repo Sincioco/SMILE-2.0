@@ -1,0 +1,585 @@
+''' Shop definitions, stock, and transactional buying and selling.
+Module Smile.RPG.Shops
+
+Option Explicit
+
+Import Smile.RPG.Core As Core
+Import Smile.RPG.Party As Party
+Import Smile.RPG.Inventory As Inventory
+
+Public Type ShopDefinition
+    Id As Number
+    Name As Text
+End Type
+
+Private Dim StateGeneration[4] As Number
+Private Dim DefinitionCount[4] As Number
+Private Dim ShopIds[4, 16] As Number
+Private Dim ShopNames[4, 16] As Text
+Private Dim EntryCounts[4, 16] As Number
+Private Dim EntryItemIds[4, 1024] As Number
+Private Dim EntryBuyPrices[4, 1024] As Number
+Private Dim EntrySellPrices[4, 1024] As Number
+Private Dim EntryInitialStock[4, 1024] As Number
+Private Dim EntryCurrentStock[4, 1024] As Number
+
+Private Function StateSlot(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim ShopIndex As Number
+    Dim EntryIndex As Number
+    Dim Generation As Number
+
+    Slot = Core.StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Generation = Core.StateGeneration(StateHandle)
+
+    If StateGeneration[Slot] <> Generation Then
+
+        For ShopIndex = 0 To Core.RPG_MAX_SHOPS - 1
+
+            ShopIds[Slot, ShopIndex] = 0
+            ShopNames[Slot, ShopIndex] = ""
+            EntryCounts[Slot, ShopIndex] = 0
+
+            For EntryIndex = 0 To Core.RPG_MAX_SHOP_ITEMS - 1
+                EntryItemIds[Slot, ShopIndex * Core.RPG_MAX_SHOP_ITEMS + EntryIndex] = 0
+                EntryCurrentStock[Slot, ShopIndex * Core.RPG_MAX_SHOP_ITEMS + EntryIndex] = 0
+            End For
+        End For
+
+        DefinitionCount[Slot] = 0
+        StateGeneration[Slot] = Generation
+
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function DefinitionIndex(StateHandle As Number, ShopId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To DefinitionCount[Slot] - 1
+
+        If ShopIds[Slot, Index] = ShopId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function EntryIndex(StateHandle As Number, ShopId As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Shop As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Shop = DefinitionIndex(StateHandle, ShopId)
+
+    If Slot < 0 Or Shop < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To EntryCounts[Slot, Shop] - 1
+
+        If EntryItemIds[Slot, Shop * Core.RPG_MAX_SHOP_ITEMS + Index] = ItemId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function FlatIndex(ShopIndex As Number, ItemIndex As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = ShopIndex * Core.RPG_MAX_SHOP_ITEMS + ItemIndex
+
+    Return ReturnValue
+
+End Function
+
+Private Function IsStockValid(Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Value = Core.RPG_STOCK_UNLIMITED Or Core.IsValidValue(Value)
+
+    Return ReturnValue
+
+End Function
+
+Public Function DefineShop(StateHandle As Number, ByRef Definition As ShopDefinition) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not Core.IsValidId(Definition.Id) Or
+        Not Core.IsValidName(Definition.Name) Or
+        DefinitionIndex(StateHandle, Definition.Id) >= 0 Or
+        DefinitionCount[Slot] >= Core.RPG_MAX_SHOPS) Then
+        Return False
+    End If
+
+    Index = DefinitionCount[Slot]
+    ShopIds[Slot, Index] = Definition.Id
+    ShopNames[Slot, Index] = Definition.Name
+    EntryCounts[Slot, Index] = 0
+    DefinitionCount[Slot] = Index + 1
+    Return True
+
+End Function
+
+Public Function IsShopDefined(StateHandle As Number, ShopId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = DefinitionIndex(StateHandle, ShopId) >= 0
+
+    Return ReturnValue
+
+End Function
+
+Public Function ShopCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = DefinitionCount[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ShopIdAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= DefinitionCount[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = ShopIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Name(StateHandle As Number, ShopId As Number) As Text
+
+    Dim ReturnValue As Text
+
+    Dim Slot As Number
+    Dim Shop As Number
+
+    Slot = StateSlot(StateHandle)
+    Shop = DefinitionIndex(StateHandle, ShopId)
+
+    If Slot < 0 Or Shop < 0 Then
+        Return ""
+    End If
+
+    ReturnValue = ShopNames[Slot, Shop]
+
+    Return ReturnValue
+
+End Function
+
+Public Function AddShopItem(StateHandle As Number, ShopId As Number, ItemId As Number, BuyPriceValue As Number, SellPriceValue As Number, InitialStock As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Shop As Number
+    Dim Entry As Number
+    Dim Flat As Number
+
+    Slot = StateSlot(StateHandle)
+    Shop = DefinitionIndex(StateHandle, ShopId)
+
+    If (Slot < 0 Or
+        Shop < 0 Or
+        Not Inventory.IsItemDefined(StateHandle, ItemId) Or
+        Not Core.IsValidValue(BuyPriceValue) Or
+        Not Core.IsValidValue(SellPriceValue) Or
+        Not IsStockValid(InitialStock) Or
+        EntryIndex(StateHandle, ShopId, ItemId) >= 0 Or
+        EntryCounts[Slot, Shop] >= Core.RPG_MAX_SHOP_ITEMS) Then
+        Return False
+    End If
+
+    Entry = EntryCounts[Slot, Shop]
+    Flat = FlatIndex(Shop, Entry)
+    EntryItemIds[Slot, Flat] = ItemId
+    EntryBuyPrices[Slot, Flat] = BuyPriceValue
+    EntrySellPrices[Slot, Flat] = SellPriceValue
+    EntryInitialStock[Slot, Flat] = InitialStock
+    EntryCurrentStock[Slot, Flat] = InitialStock
+    EntryCounts[Slot, Shop] = Entry + 1
+    Return True
+
+End Function
+
+Public Function RemoveShopItem(StateHandle As Number, ShopId As Number, ItemId As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Shop As Number
+    Dim Entry As Number
+    Dim Index As Number
+    Dim Target As Number
+    Dim Source As Number
+
+    Slot = StateSlot(StateHandle)
+    Shop = DefinitionIndex(StateHandle, ShopId)
+    Entry = EntryIndex(StateHandle, ShopId, ItemId)
+
+    If (Slot < 0 Or
+        Shop < 0 Or
+        Entry < 0) Then
+        Return False
+    End If
+
+    For Index = Entry To EntryCounts[Slot, Shop] - 2
+
+        Target = FlatIndex(Shop, Index)
+        Source = FlatIndex(Shop, Index + 1)
+        EntryItemIds[Slot, Target] = EntryItemIds[Slot, Source]
+        EntryBuyPrices[Slot, Target] = EntryBuyPrices[Slot, Source]
+        EntrySellPrices[Slot, Target] = EntrySellPrices[Slot, Source]
+        EntryInitialStock[Slot, Target] = EntryInitialStock[Slot, Source]
+        EntryCurrentStock[Slot, Target] = EntryCurrentStock[Slot, Source]
+    End For
+
+    EntryCounts[Slot, Shop] = EntryCounts[Slot, Shop] - 1
+    Target = FlatIndex(Shop, EntryCounts[Slot, Shop])
+    EntryItemIds[Slot, Target] = 0
+    EntryCurrentStock[Slot, Target] = 0
+    Return True
+
+End Function
+
+Public Function HasShopItem(StateHandle As Number, ShopId As Number, ItemId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = EntryIndex(StateHandle, ShopId, ItemId) >= 0
+
+    Return ReturnValue
+
+End Function
+
+Public Function ShopItemCount(StateHandle As Number, ShopId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Shop As Number
+
+    Slot = StateSlot(StateHandle)
+    Shop = DefinitionIndex(StateHandle, ShopId)
+
+    If Slot < 0 Or Shop < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = EntryCounts[Slot, Shop]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ShopItemIdAt(StateHandle As Number, ShopId As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Shop As Number
+
+    Slot = StateSlot(StateHandle)
+    Shop = DefinitionIndex(StateHandle, ShopId)
+
+    If (Slot < 0 Or
+        Shop < 0 Or
+        Index < 0 Or
+        Index >= EntryCounts[Slot, Shop]) Then
+        Return 0
+    End If
+
+    ReturnValue = EntryItemIds[Slot, FlatIndex(Shop, Index)]
+
+    Return ReturnValue
+
+End Function
+
+Public Function BuyPrice(StateHandle As Number, ShopId As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Shop As Number
+    Dim Entry As Number
+
+    Slot = StateSlot(StateHandle)
+    Shop = DefinitionIndex(StateHandle, ShopId)
+    Entry = EntryIndex(StateHandle, ShopId, ItemId)
+
+    If (Slot < 0 Or
+        Shop < 0 Or
+        Entry < 0) Then
+        Return 0
+    End If
+
+    ReturnValue = EntryBuyPrices[Slot, FlatIndex(Shop, Entry)]
+
+    Return ReturnValue
+
+End Function
+
+Public Function SellPrice(StateHandle As Number, ShopId As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Shop As Number
+    Dim Entry As Number
+
+    Slot = StateSlot(StateHandle)
+    Shop = DefinitionIndex(StateHandle, ShopId)
+    Entry = EntryIndex(StateHandle, ShopId, ItemId)
+
+    If (Slot < 0 Or
+        Shop < 0 Or
+        Entry < 0) Then
+        Return 0
+    End If
+
+    ReturnValue = EntrySellPrices[Slot, FlatIndex(Shop, Entry)]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Stock(StateHandle As Number, ShopId As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Shop As Number
+    Dim Entry As Number
+
+    Slot = StateSlot(StateHandle)
+    Shop = DefinitionIndex(StateHandle, ShopId)
+    Entry = EntryIndex(StateHandle, ShopId, ItemId)
+
+    If (Slot < 0 Or
+        Shop < 0 Or
+        Entry < 0) Then
+        Return 0
+    End If
+
+    ReturnValue = EntryCurrentStock[Slot, FlatIndex(Shop, Entry)]
+
+    Return ReturnValue
+
+End Function
+
+''' Sets validated current stock for SaveGames decoded-state application.
+Public Function SetStock(StateHandle As Number, ShopId As Number, ItemId As Number, Value As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Shop As Number
+    Dim Entry As Number
+
+    Slot = StateSlot(StateHandle)
+    Shop = DefinitionIndex(StateHandle, ShopId)
+    Entry = EntryIndex(StateHandle, ShopId, ItemId)
+
+    If (Slot < 0 Or
+        Shop < 0 Or
+        Entry < 0 Or
+        Not IsStockValid(Value)) Then
+        Return False
+    End If
+
+    EntryCurrentStock[Slot, FlatIndex(Shop, Entry)] = Value
+    Return True
+
+End Function
+
+Public Function ResetShopStock(StateHandle As Number, ShopId As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Shop As Number
+    Dim Entry As Number
+    Dim Flat As Number
+
+    Slot = StateSlot(StateHandle)
+    Shop = DefinitionIndex(StateHandle, ShopId)
+
+    If Slot < 0 Or Shop < 0 Then
+        Return False
+    End If
+
+    For Entry = 0 To EntryCounts[Slot, Shop] - 1
+        Flat = FlatIndex(Shop, Entry)
+        EntryCurrentStock[Slot, Flat] = EntryInitialStock[Slot, Flat]
+    End For
+    Return True
+
+End Function
+
+Public Function Buy(StateHandle As Number, ShopId As Number, ItemId As Number, QuantityToBuy As Number) As Number
+
+    Dim UnitPrice As Number
+    Dim TotalPrice As Number
+    Dim CurrentStock As Number
+    Dim GoldRestored As Boolean
+
+    If (Not Core.IsValid(StateHandle) Or
+        Not HasShopItem(StateHandle, ShopId, ItemId) Or
+        Not Core.IsValidQuantity(QuantityToBuy)) Then
+        Return Core.RPG_RESULT_INVALID_ARGUMENT
+    End If
+
+    UnitPrice = BuyPrice(StateHandle, ShopId, ItemId)
+    CurrentStock = Stock(StateHandle, ShopId, ItemId)
+
+    If UnitPrice > Core.RPG_MAX_VALUE / QuantityToBuy Then
+        Return Core.RPG_RESULT_INVALID_ARGUMENT
+    End If
+
+    TotalPrice = UnitPrice * QuantityToBuy
+
+    If CurrentStock <> Core.RPG_STOCK_UNLIMITED And CurrentStock < QuantityToBuy Then
+        Return Core.RPG_RESULT_INSUFFICIENT_QUANTITY
+    End If
+
+    If Party.Gold(StateHandle) < TotalPrice Then
+        Return Core.RPG_RESULT_INSUFFICIENT_GOLD
+    End If
+
+    If Not Inventory.CanAddItem(StateHandle, ItemId, QuantityToBuy) Then
+        Return Core.RPG_RESULT_CAPACITY
+    End If
+
+    If Not Party.SpendGold(StateHandle, TotalPrice) Then
+        Return Core.RPG_RESULT_APPLY_FAILED
+    End If
+
+    If Not Inventory.AddItem(StateHandle, ItemId, QuantityToBuy) Then
+        GoldRestored = Party.AddGold(StateHandle, TotalPrice)
+        Return Core.RPG_RESULT_APPLY_FAILED
+    End If
+
+    If CurrentStock <> Core.RPG_STOCK_UNLIMITED Then
+        EntryCurrentStock[StateSlot(StateHandle), FlatIndex(DefinitionIndex(StateHandle, ShopId), EntryIndex(StateHandle, ShopId, ItemId))] = CurrentStock - QuantityToBuy
+    End If
+
+    Return Core.RPG_RESULT_OK
+
+End Function
+
+Public Function Sell(StateHandle As Number, ShopId As Number, ItemId As Number, QuantityToSell As Number) As Number
+
+    Dim UnitPrice As Number
+    Dim TotalPrice As Number
+    Dim CurrentStock As Number
+    Dim InventoryRestored As Boolean
+
+    If (Not Core.IsValid(StateHandle) Or
+        Not HasShopItem(StateHandle, ShopId, ItemId) Or
+        Not Core.IsValidQuantity(QuantityToSell)) Then
+        Return Core.RPG_RESULT_INVALID_ARGUMENT
+    End If
+
+    If (Not Inventory.CanSell(StateHandle, ItemId) Or
+        Not Inventory.CanRemoveItem(StateHandle, ItemId, QuantityToSell)) Then
+        Return Core.RPG_RESULT_INSUFFICIENT_QUANTITY
+    End If
+
+    UnitPrice = SellPrice(StateHandle, ShopId, ItemId)
+    CurrentStock = Stock(StateHandle, ShopId, ItemId)
+
+    If UnitPrice > Core.RPG_MAX_VALUE / QuantityToSell Then
+        Return Core.RPG_RESULT_INVALID_ARGUMENT
+    End If
+
+    TotalPrice = UnitPrice * QuantityToSell
+
+    If Party.Gold(StateHandle) > Core.RPG_MAX_VALUE - TotalPrice Then
+        Return Core.RPG_RESULT_CAPACITY
+    End If
+
+    If (CurrentStock <> Core.RPG_STOCK_UNLIMITED And
+        CurrentStock > Core.RPG_MAX_VALUE - QuantityToSell) Then
+        Return Core.RPG_RESULT_CAPACITY
+    End If
+
+    If Not Inventory.RemoveItem(StateHandle, ItemId, QuantityToSell) Then
+        Return Core.RPG_RESULT_APPLY_FAILED
+    End If
+
+    If Not Party.AddGold(StateHandle, TotalPrice) Then
+        InventoryRestored = Inventory.AddItem(StateHandle, ItemId, QuantityToSell)
+        Return Core.RPG_RESULT_APPLY_FAILED
+    End If
+
+    If CurrentStock <> Core.RPG_STOCK_UNLIMITED Then
+        EntryCurrentStock[StateSlot(StateHandle), FlatIndex(DefinitionIndex(StateHandle, ShopId), EntryIndex(StateHandle, ShopId, ItemId))] = CurrentStock + QuantityToSell
+    End If
+
+    Return Core.RPG_RESULT_OK
+
+End Function
+
+End Module

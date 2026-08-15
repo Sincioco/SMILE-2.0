@@ -1,0 +1,198 @@
+''' Shared capacities, result codes, validation, and generation-safe RPG state handles.
+Module Smile.RPG.Core
+
+Option Explicit
+
+Public Const RPG_MAX_STATES = 4
+Public Const RPG_MAX_CHARACTERS = 32
+Public Const RPG_MAX_PARTY_MEMBERS = 8
+Public Const RPG_MAX_ITEM_DEFINITIONS = 128
+Public Const RPG_MAX_INVENTORY_ENTRIES = 64
+Public Const RPG_MAX_EQUIPMENT_SLOTS = 16
+Public Const RPG_MAX_ABILITY_DEFINITIONS = 128
+Public Const RPG_MAX_LEARNED_ABILITIES = 32
+Public Const RPG_MAX_SHOPS = 16
+Public Const RPG_MAX_SHOP_ITEMS = 64
+Public Const RPG_MAX_SAVE_SLOTS = 8
+Public Const RPG_MAX_SAVE_BYTES = 32768
+Public Const RPG_MAX_NAME_LENGTH = 64
+Public Const RPG_MAX_VALUE = 999999999
+
+Public Const RPG_ITEM_CONSUMABLE = 1
+Public Const RPG_ITEM_EQUIPMENT = 2
+Public Const RPG_ITEM_KEY_ITEM = 3
+
+Public Const RPG_TARGET_SELF = 1
+Public Const RPG_TARGET_ONE_ALLY = 2
+Public Const RPG_TARGET_ALL_ALLIES = 3
+Public Const RPG_TARGET_ONE_ENEMY = 4
+Public Const RPG_TARGET_ALL_ENEMIES = 5
+
+Public Const RPG_STOCK_UNLIMITED = -1
+
+Public Const RPG_RESULT_OK = 0
+Public Const RPG_RESULT_INVALID_STATE = 1
+Public Const RPG_RESULT_INVALID_ARGUMENT = 2
+Public Const RPG_RESULT_NOT_FOUND = 3
+Public Const RPG_RESULT_CAPACITY = 4
+Public Const RPG_RESULT_INSUFFICIENT_QUANTITY = 5
+Public Const RPG_RESULT_INSUFFICIENT_GOLD = 6
+Public Const RPG_RESULT_WRONG_SCHEMA = 7
+Public Const RPG_RESULT_NOT_FOUND_OR_INVALID_SAVE = 8
+Public Const RPG_RESULT_MISSING_DEFINITION = 9
+Public Const RPG_RESULT_APPLY_FAILED = 10
+
+Private Const STATE_HANDLE_FACTOR = 10
+Private Const MAXIMUM_GENERATION = 99999999
+
+Private Dim StateUsed[4] As Boolean
+Private Dim StateGenerations[4] As Number
+
+''' Creates an isolated RPG state and returns its generation-safe handle.
+Public Function Create() As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Generation As Number
+
+    For Slot = 0 To RPG_MAX_STATES - 1
+
+        If Not StateUsed[Slot] And StateGenerations[Slot] < MAXIMUM_GENERATION Then
+
+            Generation = StateGenerations[Slot] + 1
+            StateGenerations[Slot] = Generation
+            StateUsed[Slot] = True
+            ReturnValue = Generation * STATE_HANDLE_FACTOR + Slot + 1
+
+            Return ReturnValue
+
+        End If
+
+    End For
+
+    Return 0
+
+End Function
+
+''' Invalidates a state handle. Destroying zero, stale, or already destroyed handles is harmless.
+Public Sub Destroy(StateHandle As Number)
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot >= 0 Then
+        StateUsed[Slot] = False
+    End If
+
+End Sub
+
+''' Returns True only while a state handle refers to its live slot generation.
+Public Function IsValid(StateHandle As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = StateSlot(StateHandle) >= 0
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the zero-based state slot, or -1 for an invalid or stale handle.
+Public Function StateSlot(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Generation As Number
+
+    If StateHandle <= 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Slot = (StateHandle Mod STATE_HANDLE_FACTOR) - 1
+    Generation = StateHandle / STATE_HANDLE_FACTOR
+
+    If Slot < 0 Or Slot >= RPG_MAX_STATES Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    If Not StateUsed[Slot] Or StateGenerations[Slot] <> Generation Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Return Slot
+
+End Function
+
+''' Returns the live generation carried by a valid state handle, or zero.
+Public Function StateGeneration(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = StateGenerations[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Checks an ID supplied by the game.
+Public Function IsValidId(Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Value > 0 And Value <= RPG_MAX_VALUE
+
+    Return ReturnValue
+
+End Function
+
+''' Checks a positive quantity that can be safely added and multiplied.
+Public Function IsValidQuantity(Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Value > 0 And Value <= RPG_MAX_VALUE
+
+    Return ReturnValue
+
+End Function
+
+''' Checks a nonnegative shared RPG value.
+Public Function IsValidValue(Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Value >= 0 And Value <= RPG_MAX_VALUE
+
+    Return ReturnValue
+
+End Function
+
+''' Checks a bounded nonempty user-facing name.
+Public Function IsValidName(Value As Text) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Text_Length(Value) > 0 And Text_Length(Value) <= RPG_MAX_NAME_LENGTH
+
+    Return ReturnValue
+
+End Function
+
+End Module

@@ -1,0 +1,731 @@
+''' Stable item metadata and bounded per-state inventory quantities.
+Module Smile.RPG.Inventory
+
+Option Explicit
+
+Import Smile.RPG.Core As Core
+
+Public Type ItemDefinition
+    Id As Number
+    Name As Text
+    Kind As Number
+    MaximumStack As Number
+    BasePrice As Number
+    CanSell As Boolean
+    EffectId As Number
+    EquipmentSlotId As Number
+    HealthBonus As Number
+    MagicPointBonus As Number
+    StrengthBonus As Number
+    DefenseBonus As Number
+    MagicBonus As Number
+    ResistanceBonus As Number
+    AgilityBonus As Number
+    LuckBonus As Number
+End Type
+
+Private Dim StateGeneration[4] As Number
+Private Dim DefinitionCount[4] As Number
+Private Dim ItemIds[4, 128] As Number
+Private Dim ItemNames[4, 128] As Text
+Private Dim ItemKinds[4, 128] As Number
+Private Dim ItemMaximumStacks[4, 128] As Number
+Private Dim ItemBasePrices[4, 128] As Number
+Private Dim ItemCanSell[4, 128] As Boolean
+Private Dim ItemEffectIds[4, 128] As Number
+Private Dim ItemEquipmentSlotIds[4, 128] As Number
+Private Dim ItemHealthBonuses[4, 128] As Number
+Private Dim ItemMagicPointBonuses[4, 128] As Number
+Private Dim ItemStrengthBonuses[4, 128] As Number
+Private Dim ItemDefenseBonuses[4, 128] As Number
+Private Dim ItemMagicBonuses[4, 128] As Number
+Private Dim ItemResistanceBonuses[4, 128] As Number
+Private Dim ItemAgilityBonuses[4, 128] As Number
+Private Dim ItemLuckBonuses[4, 128] As Number
+Private Dim InventoryCount[4] As Number
+Private Dim InventoryItemIds[4, 64] As Number
+Private Dim InventoryQuantities[4, 64] As Number
+
+Private Function StateSlot(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim Generation As Number
+
+    Slot = Core.StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Generation = Core.StateGeneration(StateHandle)
+
+    If StateGeneration[Slot] <> Generation Then
+
+        For Index = 0 To Core.RPG_MAX_ITEM_DEFINITIONS - 1
+            ItemIds[Slot, Index] = 0
+            ItemNames[Slot, Index] = ""
+        End For
+
+        For Index = 0 To Core.RPG_MAX_INVENTORY_ENTRIES - 1
+            InventoryItemIds[Slot, Index] = 0
+            InventoryQuantities[Slot, Index] = 0
+        End For
+
+        DefinitionCount[Slot] = 0
+        InventoryCount[Slot] = 0
+        StateGeneration[Slot] = Generation
+
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function DefinitionIndex(StateHandle As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To DefinitionCount[Slot] - 1
+
+        If ItemIds[Slot, Index] = ItemId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function EntryIndex(StateHandle As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To InventoryCount[Slot] - 1
+
+        If InventoryItemIds[Slot, Index] = ItemId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function IsDefinitionValid(ByRef Definition As ItemDefinition) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    If (Not Core.IsValidId(Definition.Id) Or
+        Not Core.IsValidName(Definition.Name) Or
+        Not Core.IsValidQuantity(Definition.MaximumStack) Or
+        Not Core.IsValidValue(Definition.BasePrice) Or
+        Not Core.IsValidValue(Definition.EffectId) Or
+        Not Core.IsValidValue(Definition.HealthBonus) Or
+        Not Core.IsValidValue(Definition.MagicPointBonus) Or
+        Not Core.IsValidValue(Definition.StrengthBonus) Or
+        Not Core.IsValidValue(Definition.DefenseBonus) Or
+        Not Core.IsValidValue(Definition.MagicBonus) Or
+        Not Core.IsValidValue(Definition.ResistanceBonus) Or
+        Not Core.IsValidValue(Definition.AgilityBonus) Or
+        Not Core.IsValidValue(Definition.LuckBonus)) Then
+        Return False
+    End If
+
+    If Definition.Kind = Core.RPG_ITEM_KEY_ITEM Then
+        ReturnValue = Definition.MaximumStack = 1 And Definition.EquipmentSlotId = 0
+
+        Return ReturnValue
+    End If
+
+    If Definition.Kind = Core.RPG_ITEM_EQUIPMENT Then
+        ReturnValue = Core.IsValidId(Definition.EquipmentSlotId)
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = Definition.Kind = Core.RPG_ITEM_CONSUMABLE And Definition.EquipmentSlotId = 0
+
+    Return ReturnValue
+
+End Function
+
+Public Function DefineItem(StateHandle As Number, ByRef Definition As ItemDefinition) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not IsDefinitionValid(Definition) Or
+        DefinitionIndex(StateHandle, Definition.Id) >= 0 Or
+        DefinitionCount[Slot] >= Core.RPG_MAX_ITEM_DEFINITIONS) Then
+        Return False
+    End If
+
+    Index = DefinitionCount[Slot]
+    ItemIds[Slot, Index] = Definition.Id
+    ItemNames[Slot, Index] = Definition.Name
+    ItemKinds[Slot, Index] = Definition.Kind
+    ItemMaximumStacks[Slot, Index] = Definition.MaximumStack
+    ItemBasePrices[Slot, Index] = Definition.BasePrice
+    ItemCanSell[Slot, Index] = Definition.CanSell
+    ItemEffectIds[Slot, Index] = Definition.EffectId
+    ItemEquipmentSlotIds[Slot, Index] = Definition.EquipmentSlotId
+    ItemHealthBonuses[Slot, Index] = Definition.HealthBonus
+    ItemMagicPointBonuses[Slot, Index] = Definition.MagicPointBonus
+    ItemStrengthBonuses[Slot, Index] = Definition.StrengthBonus
+    ItemDefenseBonuses[Slot, Index] = Definition.DefenseBonus
+    ItemMagicBonuses[Slot, Index] = Definition.MagicBonus
+    ItemResistanceBonuses[Slot, Index] = Definition.ResistanceBonus
+    ItemAgilityBonuses[Slot, Index] = Definition.AgilityBonus
+    ItemLuckBonuses[Slot, Index] = Definition.LuckBonus
+    DefinitionCount[Slot] = Index + 1
+    Return True
+
+End Function
+
+Public Function IsItemDefined(StateHandle As Number, ItemId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = DefinitionIndex(StateHandle, ItemId) >= 0
+
+    Return ReturnValue
+
+End Function
+
+Public Function ItemDefinitionCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = DefinitionCount[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ItemIdAtDefinitionIndex(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= DefinitionCount[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = ItemIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Name(StateHandle As Number, ItemId As Number) As Text
+
+    Dim ReturnValue As Text
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = DefinitionIndex(StateHandle, ItemId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return ""
+    End If
+
+    ReturnValue = ItemNames[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Kind(StateHandle As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = DefinitionIndex(StateHandle, ItemId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ItemKinds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function MaximumStack(StateHandle As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = DefinitionIndex(StateHandle, ItemId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ItemMaximumStacks[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function BasePrice(StateHandle As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = DefinitionIndex(StateHandle, ItemId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ItemBasePrices[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function CanSell(StateHandle As Number, ItemId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = DefinitionIndex(StateHandle, ItemId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return False
+    End If
+
+    ReturnValue = ItemCanSell[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function EffectId(StateHandle As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = DefinitionIndex(StateHandle, ItemId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ItemEffectIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function EquipmentSlotId(StateHandle As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = DefinitionIndex(StateHandle, ItemId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ItemEquipmentSlotIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Private Function Bonus(StateHandle As Number, ItemId As Number, KindValue As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = DefinitionIndex(StateHandle, ItemId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    If KindValue = 1 Then
+        ReturnValue = ItemHealthBonuses[Slot, Index]
+
+        Return ReturnValue
+    Else If KindValue = 2 Then
+        ReturnValue = ItemMagicPointBonuses[Slot, Index]
+
+        Return ReturnValue
+    Else If KindValue = 3 Then
+        ReturnValue = ItemStrengthBonuses[Slot, Index]
+
+        Return ReturnValue
+    Else If KindValue = 4 Then
+        ReturnValue = ItemDefenseBonuses[Slot, Index]
+
+        Return ReturnValue
+    Else If KindValue = 5 Then
+        ReturnValue = ItemMagicBonuses[Slot, Index]
+
+        Return ReturnValue
+    Else If KindValue = 6 Then
+        ReturnValue = ItemResistanceBonuses[Slot, Index]
+
+        Return ReturnValue
+    Else If KindValue = 7 Then
+        ReturnValue = ItemAgilityBonuses[Slot, Index]
+
+        Return ReturnValue
+    Else If KindValue = 8 Then
+        ReturnValue = ItemLuckBonuses[Slot, Index]
+
+        Return ReturnValue
+    End If
+
+    Return 0
+
+End Function
+
+Public Function HealthBonus(StateHandle As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Bonus(StateHandle, ItemId, 1)
+
+    Return ReturnValue
+
+End Function
+
+Public Function MagicPointBonus(StateHandle As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Bonus(StateHandle, ItemId, 2)
+
+    Return ReturnValue
+
+End Function
+
+Public Function StrengthBonus(StateHandle As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Bonus(StateHandle, ItemId, 3)
+
+    Return ReturnValue
+
+End Function
+
+Public Function DefenseBonus(StateHandle As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Bonus(StateHandle, ItemId, 4)
+
+    Return ReturnValue
+
+End Function
+
+Public Function MagicBonus(StateHandle As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Bonus(StateHandle, ItemId, 5)
+
+    Return ReturnValue
+
+End Function
+
+Public Function ResistanceBonus(StateHandle As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Bonus(StateHandle, ItemId, 6)
+
+    Return ReturnValue
+
+End Function
+
+Public Function AgilityBonus(StateHandle As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Bonus(StateHandle, ItemId, 7)
+
+    Return ReturnValue
+
+End Function
+
+Public Function LuckBonus(StateHandle As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Bonus(StateHandle, ItemId, 8)
+
+    Return ReturnValue
+
+End Function
+
+Public Function CanAddItem(StateHandle As Number, ItemId As Number, QuantityToAdd As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim Definition As Number
+    Dim Entry As Number
+
+    Slot = StateSlot(StateHandle)
+    Definition = DefinitionIndex(StateHandle, ItemId)
+
+    If (Slot < 0 Or
+        Definition < 0 Or
+        Not Core.IsValidQuantity(QuantityToAdd)) Then
+        Return False
+    End If
+
+    Entry = EntryIndex(StateHandle, ItemId)
+
+    If Entry < 0 Then
+        ReturnValue = InventoryCount[Slot] < Core.RPG_MAX_INVENTORY_ENTRIES And QuantityToAdd <= ItemMaximumStacks[Slot, Definition]
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = InventoryQuantities[Slot, Entry] <= ItemMaximumStacks[Slot, Definition] - QuantityToAdd
+
+    Return ReturnValue
+
+End Function
+
+Public Function AddItem(StateHandle As Number, ItemId As Number, QuantityToAdd As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Entry As Number
+
+    If Not CanAddItem(StateHandle, ItemId, QuantityToAdd) Then
+        Return False
+    End If
+
+    Slot = StateSlot(StateHandle)
+    Entry = EntryIndex(StateHandle, ItemId)
+
+    If Entry < 0 Then
+
+        Entry = InventoryCount[Slot]
+        InventoryItemIds[Slot, Entry] = ItemId
+        InventoryQuantities[Slot, Entry] = QuantityToAdd
+        InventoryCount[Slot] = Entry + 1
+
+    Else
+        InventoryQuantities[Slot, Entry] = InventoryQuantities[Slot, Entry] + QuantityToAdd
+
+    End If
+
+    Return True
+
+End Function
+
+Public Function CanRemoveItem(StateHandle As Number, ItemId As Number, QuantityToRemove As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim Entry As Number
+
+    Slot = StateSlot(StateHandle)
+    Entry = EntryIndex(StateHandle, ItemId)
+
+    If (Slot < 0 Or
+        Entry < 0 Or
+        Not Core.IsValidQuantity(QuantityToRemove)) Then
+        Return False
+    End If
+
+    ReturnValue = InventoryQuantities[Slot, Entry] >= QuantityToRemove
+
+    Return ReturnValue
+
+End Function
+
+Public Function RemoveItem(StateHandle As Number, ItemId As Number, QuantityToRemove As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Entry As Number
+    Dim Index As Number
+
+    If Not CanRemoveItem(StateHandle, ItemId, QuantityToRemove) Then
+        Return False
+    End If
+
+    Slot = StateSlot(StateHandle)
+    Entry = EntryIndex(StateHandle, ItemId)
+    InventoryQuantities[Slot, Entry] = InventoryQuantities[Slot, Entry] - QuantityToRemove
+
+    If InventoryQuantities[Slot, Entry] = 0 Then
+
+        For Index = Entry To InventoryCount[Slot] - 2
+            InventoryItemIds[Slot, Index] = InventoryItemIds[Slot, Index + 1]
+            InventoryQuantities[Slot, Index] = InventoryQuantities[Slot, Index + 1]
+        End For
+
+        InventoryCount[Slot] = InventoryCount[Slot] - 1
+        InventoryItemIds[Slot, InventoryCount[Slot]] = 0
+        InventoryQuantities[Slot, InventoryCount[Slot]] = 0
+
+    End If
+
+    Return True
+
+End Function
+
+Public Function Quantity(StateHandle As Number, ItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Entry As Number
+
+    Slot = StateSlot(StateHandle)
+    Entry = EntryIndex(StateHandle, ItemId)
+
+    If Slot < 0 Or Entry < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = InventoryQuantities[Slot, Entry]
+
+    Return ReturnValue
+
+End Function
+
+Public Function EntryCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = InventoryCount[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ItemIdAtEntryIndex(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= InventoryCount[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = InventoryItemIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ClearInventory(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    For Index = 0 To InventoryCount[Slot] - 1
+        InventoryItemIds[Slot, Index] = 0
+        InventoryQuantities[Slot, Index] = 0
+    End For
+    InventoryCount[Slot] = 0
+    Return True
+
+End Function
+
+End Module

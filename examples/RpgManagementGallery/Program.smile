@@ -1,0 +1,362 @@
+Option Explicit
+
+Import Smile.RPG.Core As RPG
+Import Smile.RPG.Characters As Characters
+Import Smile.RPG.Party As Party
+Import Smile.RPG.Inventory As Inventory
+Import Smile.RPG.Equipment As Equipment
+Import Smile.RPG.Abilities As Abilities
+Import Smile.RPG.Shops As Shops
+Import Smile.RPG.SaveGames As SaveGames
+Import Smile.UI.Core As UI
+Import Smile.UI.Menu As Menu
+Import Smile.UI.MenuNavigator As MenuNavigator
+
+Dim WindowStyle As UI.WindowStyle
+Dim NormalText As UI.TextStyle
+Dim SelectedText As UI.TextStyle
+Dim DisabledText As UI.TextStyle
+Dim MenuStyle As UI.MenuStyle
+Dim NavigatorStyle As UI.MenuNavigatorStyle
+Dim Hero As Characters.CharacterDefinition
+Dim Mage As Characters.CharacterDefinition
+Dim Potion As Inventory.ItemDefinition
+Dim Sword As Inventory.ItemDefinition
+Dim Hand As Equipment.EquipmentSlotDefinition
+Dim Fire As Abilities.AbilityDefinition
+Dim Store As Shops.ShopDefinition
+Dim State As Number
+Dim RootMenu As Number
+Dim PartyMenu As Number
+Dim InventoryMenu As Number
+Dim EquipmentMenu As Number
+Dim AbilityMenu As Number
+Dim ShopMenu As Number
+Dim SaveMenu As Number
+Dim Navigator As Number
+Dim PartyIndex As Number
+Dim InventoryIndex As Number
+Dim EquipmentIndex As Number
+Dim AbilityIndex As Number
+Dim ShopIndex As Number
+Dim SaveIndex As Number
+Dim ItemIndex As Number
+Dim Event As Number
+Dim Action As Number
+Dim Key As Number
+Dim Result As Number
+Dim Status As Text
+Dim Running As Boolean
+Dim OperationSucceeded As Boolean
+
+State = RPG.Create()
+
+Call InitializeDefinitions()
+Call InitializeProgress()
+Call InitializeStyles()
+Call InitializeMenus()
+
+Status = "Choose a category, then run a management action."
+Running = State > 0 And Navigator > 0
+
+Game Window "SMILE 2.0 RPG Management Gallery" Size 1120 By 700
+
+Do
+    Get Key Key
+    Event = MenuNavigator.HandleKey(Navigator, Key)
+
+    If Event = UI.UI_EVENT_ACCEPTED Then
+        Action = MenuNavigator.LastAcceptedValue(Navigator)
+
+        Call RunAction(Action)
+    End If
+
+    Clear Rgb(8, 14, 27)
+    Fill Rectangle 0, 0, 1120, 88, Rgb(12, 31, 48)
+    Draw Text "SMILE 2.0 RPG Management Gallery" At 40, 20 Size 30 Color CYAN
+    Draw Text "Party | Inventory | Equipment | Abilities | Shops | Save / Load" At 42, 58 Size 16 Color WHITE
+    Draw Text Status At 42, 630 Size 18 Color YELLOW
+    Draw Text "Arrow keys navigate. Enter opens or runs. Left / Escape returns." At 42, 660 Size 15 Color LIGHT_GRAY
+
+    Call DrawStateSummary()
+    Call MenuNavigator.DrawStack(Navigator)
+
+    Show Screen
+    Wait 8 Milliseconds
+
+Loop Until Game_Closed() = True Or Not Running
+
+Call MenuNavigator.Destroy(Navigator)
+Call Menu.Destroy(SaveMenu)
+Call Menu.Destroy(ShopMenu)
+Call Menu.Destroy(AbilityMenu)
+Call Menu.Destroy(EquipmentMenu)
+Call Menu.Destroy(InventoryMenu)
+Call Menu.Destroy(PartyMenu)
+Call Menu.Destroy(RootMenu)
+Call RPG.Destroy(State)
+
+End Program
+
+Sub InitializeDefinitions()
+
+    Hero.Id = 100
+    Hero.Name = "Aria"
+    Hero.StartingLevel = 4
+    Hero.StartingMaximumHealth = 140
+    Hero.StartingMaximumMagicPoints = 32
+    Hero.Strength = 16
+    Hero.Defense = 12
+    Hero.Magic = 8
+    Hero.Resistance = 10
+    Hero.Agility = 14
+    Hero.Luck = 9
+
+    Mage = Hero
+    Mage.Id = 200
+    Mage.Name = "Bram"
+    Mage.StartingMaximumHealth = 96
+    Mage.StartingMaximumMagicPoints = 70
+    Mage.Strength = 8
+    Mage.Magic = 21
+
+    Potion.Id = 10
+    Potion.Name = "Potion"
+    Potion.Kind = RPG.RPG_ITEM_CONSUMABLE
+    Potion.MaximumStack = 20
+    Potion.BasePrice = 25
+    Potion.CanSell = True
+    Potion.EffectId = 1
+
+    Sword.Id = 20
+    Sword.Name = "Bronze Sword"
+    Sword.Kind = RPG.RPG_ITEM_EQUIPMENT
+    Sword.MaximumStack = 1
+    Sword.BasePrice = 120
+    Sword.CanSell = True
+    Sword.EquipmentSlotId = 1
+    Sword.StrengthBonus = 5
+
+    Hand.Id = 1
+    Hand.Name = "Hand"
+
+    Fire.Id = 50
+    Fire.Name = "Fire"
+    Fire.MagicPointCost = 7
+    Fire.Power = 22
+    Fire.TargetMode = RPG.RPG_TARGET_ONE_ENEMY
+    Fire.EffectId = 3
+
+    Store.Id = 1
+    Store.Name = "General Store"
+
+    OperationSucceeded = Characters.DefineCharacter(State, Hero)
+    OperationSucceeded = OperationSucceeded And Characters.DefineCharacter(State, Mage)
+    OperationSucceeded = OperationSucceeded And Inventory.DefineItem(State, Potion)
+    OperationSucceeded = OperationSucceeded And Inventory.DefineItem(State, Sword)
+    OperationSucceeded = OperationSucceeded And Equipment.DefineSlot(State, Hand)
+    OperationSucceeded = OperationSucceeded And Abilities.DefineAbility(State, Fire)
+    OperationSucceeded = OperationSucceeded And Shops.DefineShop(State, Store)
+    OperationSucceeded = OperationSucceeded And Shops.AddShopItem(State, 1, 10, 25, 10, 12)
+
+End Sub
+
+Sub InitializeProgress()
+
+    OperationSucceeded = Party.AddCharacter(State, 100)
+    OperationSucceeded = OperationSucceeded And Party.AddCharacter(State, 200)
+    OperationSucceeded = OperationSucceeded And Party.SetGold(State, 500)
+    OperationSucceeded = OperationSucceeded And Inventory.AddItem(State, 10, 4)
+    OperationSucceeded = OperationSucceeded And Inventory.AddItem(State, 20, 1)
+    OperationSucceeded = OperationSucceeded And Abilities.LearnAbility(State, 200, 50)
+
+End Sub
+
+Sub InitializeStyles()
+
+    WindowStyle.UseSkin = False
+    WindowStyle.FillColor = Rgb(14, 24, 42)
+    WindowStyle.BorderColor = Rgb(38, 199, 201)
+    WindowStyle.BorderThickness = 2
+    WindowStyle.Opacity = 96
+    WindowStyle.FilterMode = UI.UI_FILTER_SMOOTH
+    WindowStyle.Padding.Left = 20
+    WindowStyle.Padding.Top = 18
+    WindowStyle.Padding.Right = 20
+    WindowStyle.Padding.Bottom = 18
+
+    NormalText.Mode = UI.UI_TEXT_SYSTEM
+    NormalText.SystemSize = 20
+    NormalText.SystemColor = WHITE
+    NormalText.LineSpacing = 4
+    SelectedText = NormalText
+    SelectedText.SystemColor = YELLOW
+    DisabledText = NormalText
+    DisabledText.SystemColor = DARK_GRAY
+
+    MenuStyle.Window = WindowStyle
+    MenuStyle.NormalText = NormalText
+    MenuStyle.SelectedText = SelectedText
+    MenuStyle.DisabledText = DisabledText
+    MenuStyle.SelectionFillColor = Rgb(24, 83, 103)
+    MenuStyle.RowHeight = 42
+    MenuStyle.WrapSelection = True
+    MenuStyle.ShowScrollbar = True
+    MenuStyle.ShowSubmenuIndicator = True
+    MenuStyle.SubmenuIndicatorPosition = UI.UI_SUBMENU_INDICATOR_RIGHT_ALIGNED
+    MenuStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_ELLIPSIS
+    MenuStyle.ItemTextMaxLines = 1
+
+    NavigatorStyle.Viewport.X = 0
+    NavigatorStyle.Viewport.Y = 90
+    NavigatorStyle.Viewport.Width = 1120
+    NavigatorStyle.Viewport.Height = 520
+    NavigatorStyle.ViewportPadding.Left = 30
+    NavigatorStyle.ViewportPadding.Top = 20
+    NavigatorStyle.ViewportPadding.Right = 30
+    NavigatorStyle.ViewportPadding.Bottom = 20
+    NavigatorStyle.HorizontalGap = 14
+    NavigatorStyle.PreferredDirection = UI.UI_SUBMENU_DIRECTION_RIGHT
+
+End Sub
+
+Sub InitializeMenus()
+
+    RootMenu = Menu.Create(MenuStyle, 30, 110, 320, 430, 8)
+    PartyMenu = Menu.Create(MenuStyle, 0, 0, 360, 230, 4)
+    InventoryMenu = Menu.Create(MenuStyle, 0, 0, 360, 230, 4)
+    EquipmentMenu = Menu.Create(MenuStyle, 0, 0, 360, 230, 4)
+    AbilityMenu = Menu.Create(MenuStyle, 0, 0, 360, 230, 4)
+    ShopMenu = Menu.Create(MenuStyle, 0, 0, 360, 270, 5)
+    SaveMenu = Menu.Create(MenuStyle, 0, 0, 360, 230, 4)
+
+    PartyIndex = Menu.AddItem(RootMenu, "Party", 1, True)
+    InventoryIndex = Menu.AddItem(RootMenu, "Inventory", 2, True)
+    EquipmentIndex = Menu.AddItem(RootMenu, "Equipment", 3, True)
+    AbilityIndex = Menu.AddItem(RootMenu, "Abilities and Magic Points", 4, True)
+    ShopIndex = Menu.AddItem(RootMenu, "Shops", 5, True)
+    SaveIndex = Menu.AddItem(RootMenu, "Save / Load", 6, True)
+    ItemIndex = Menu.AddItem(RootMenu, "Exit Gallery", 999, True)
+
+    ItemIndex = Menu.AddItem(PartyMenu, "Move Bram after Aria", 101, True)
+    ItemIndex = Menu.AddItem(PartyMenu, "Add 100 Gold", 102, True)
+    ItemIndex = Menu.AddItem(InventoryMenu, "Add Potion", 201, True)
+    ItemIndex = Menu.AddItem(InventoryMenu, "Remove Potion", 202, True)
+    ItemIndex = Menu.AddItem(EquipmentMenu, "Equip Bronze Sword", 301, True)
+    ItemIndex = Menu.AddItem(EquipmentMenu, "Unequip Bronze Sword", 302, True)
+    ItemIndex = Menu.AddItem(AbilityMenu, "Cast Fire for 7 MP", 401, True)
+    ItemIndex = Menu.AddItem(AbilityMenu, "Restore 10 MP", 402, True)
+    ItemIndex = Menu.AddItem(ShopMenu, "Buy Potion", 501, True)
+    ItemIndex = Menu.AddItem(ShopMenu, "Sell Potion", 502, True)
+    ItemIndex = Menu.AddItem(ShopMenu, "Reset Stock", 503, True)
+    ItemIndex = Menu.AddItem(SaveMenu, "Save Slot 1", 601, True)
+    ItemIndex = Menu.AddItem(SaveMenu, "Load Slot 1", 602, True)
+
+    Navigator = MenuNavigator.Create(RootMenu, NavigatorStyle)
+    OperationSucceeded = MenuNavigator.BindSubmenu(Navigator, RootMenu, PartyIndex, PartyMenu, False)
+    OperationSucceeded = OperationSucceeded And MenuNavigator.BindSubmenu(Navigator, RootMenu, InventoryIndex, InventoryMenu, False)
+    OperationSucceeded = OperationSucceeded And MenuNavigator.BindSubmenu(Navigator, RootMenu, EquipmentIndex, EquipmentMenu, False)
+    OperationSucceeded = OperationSucceeded And MenuNavigator.BindSubmenu(Navigator, RootMenu, AbilityIndex, AbilityMenu, False)
+    OperationSucceeded = OperationSucceeded And MenuNavigator.BindSubmenu(Navigator, RootMenu, ShopIndex, ShopMenu, False)
+    OperationSucceeded = OperationSucceeded And MenuNavigator.BindSubmenu(Navigator, RootMenu, SaveIndex, SaveMenu, False)
+
+End Sub
+
+Sub RunAction(Value As Number)
+
+    If Value = 101 Then
+
+        OperationSucceeded = Party.MoveCharacter(State, 0, 1)
+        Status = "Party order moved transactionally."
+
+    Else If Value = 102 Then
+
+        OperationSucceeded = Party.AddGold(State, 100)
+        Status = "The party received 100 Gold."
+
+    Else If Value = 201 Then
+
+        OperationSucceeded = Inventory.AddItem(State, 10, 1)
+        Status = "One Potion was added within its stack limit."
+
+    Else If Value = 202 Then
+
+        OperationSucceeded = Inventory.RemoveItem(State, 10, 1)
+        Status = "One Potion was removed; zero stacks disappear."
+
+    Else If Value = 301 Then
+
+        OperationSucceeded = Equipment.Equip(State, 100, 1, 20)
+        Status = "Aria equipped the sword; its Strength bonus is data only."
+
+    Else If Value = 302 Then
+
+        OperationSucceeded = Equipment.Unequip(State, 100, 1)
+        Status = "The sword returned to Inventory transactionally."
+
+    Else If Value = 401 Then
+
+        OperationSucceeded = Abilities.PayMagicPointCost(State, 200, 50)
+        Status = "Bram paid exactly 7 Magic Points. No battle effect ran."
+
+    Else If Value = 402 Then
+
+        OperationSucceeded = Characters.RestoreMagicPoints(State, 200, 10)
+        Status = "Bram restored up to his Maximum Magic Points."
+
+    Else If Value = 501 Then
+
+        Result = Shops.Buy(State, 1, 10, 1)
+        OperationSucceeded = Result = RPG.RPG_RESULT_OK
+        Status = "Buy preflighted Gold, stock, and Inventory before commit."
+
+    Else If Value = 502 Then
+
+        Result = Shops.Sell(State, 1, 10, 1)
+        OperationSucceeded = Result = RPG.RPG_RESULT_OK
+        Status = "Sell updated Inventory, Gold, and limited stock together."
+
+    Else If Value = 503 Then
+
+        OperationSucceeded = Shops.ResetShopStock(State, 1)
+        Status = "The General Store returned to its registered stock."
+
+    Else If Value = 601 Then
+
+        Result = SaveGames.SaveGame(State, 1, 1)
+        OperationSucceeded = Result = RPG.RPG_RESULT_OK
+        Status = "Slot 1 saved deterministic SRPG version-1 progress."
+
+    Else If Value = 602 Then
+
+        Result = SaveGames.LoadGame(State, 1, 1)
+        OperationSucceeded = Result = RPG.RPG_RESULT_OK
+        Status = "Slot 1 validated completely before transactional apply."
+
+    Else If Value = 999 Then
+
+        Running = False
+
+    End If
+
+    If Value <> 999 And Not OperationSucceeded Then
+        Status = "That action was safely rejected without partial mutation."
+    End If
+
+End Sub
+
+Sub DrawStateSummary()
+
+    Fill Rectangle 760, 112, 325, 430, Rgb(13, 23, 39)
+    Draw Rectangle 760, 112, 325, 430, Rgb(38, 199, 201)
+    Draw Text "Live State" At 790, 138 Size 24 Color CYAN
+    Draw Text "Party: Aria and Bram" At 790, 188 Size 18 Color WHITE
+    Draw Text "Gold: bounded shared value" At 790, 224 Size 18 Color WHITE
+    Draw Text "Inventory: Potion, Sword" At 790, 260 Size 18 Color WHITE
+    Draw Text "Equipment: Hand slot" At 790, 296 Size 18 Color WHITE
+    Draw Text "Ability: Fire, 7 MP" At 790, 332 Size 18 Color WHITE
+    Draw Text "Shop: explicit prices / stock" At 790, 368 Size 18 Color WHITE
+    Draw Text "Save: SRPG v1 / schema 1" At 790, 404 Size 18 Color WHITE
+    Draw Text "No battles, enemies, or quests" At 790, 470 Size 16 Color LIGHT_GRAY
+
+End Sub

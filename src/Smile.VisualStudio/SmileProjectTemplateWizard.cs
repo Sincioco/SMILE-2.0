@@ -29,6 +29,7 @@ public sealed class SmileProjectTemplateWizard : IWizard
         replacementsDictionary["$smileuser$"] = FitHeaderValue(user);
         replacementsDictionary["$smiledate$"] = FitHeaderValue(date);
         replacementsDictionary["$smileversion$"] = smileVersion;
+        replacementsDictionary["$smileapplicationid$"] = "smile.app.a" + Guid.NewGuid().ToString("N");
     }
 
     public bool ShouldAddProjectItem(string filePath) => true;

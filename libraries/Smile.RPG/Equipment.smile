@@ -1,0 +1,524 @@
+''' Equipment-slot definitions, transactional equip operations, and bonus totals.
+Module Smile.RPG.Equipment
+
+Option Explicit
+
+Import Smile.RPG.Core As Core
+Import Smile.RPG.Characters As Characters
+Import Smile.RPG.Inventory As Inventory
+
+Public Type EquipmentSlotDefinition
+    Id As Number
+    Name As Text
+End Type
+
+Private Dim StateGeneration[4] As Number
+Private Dim DefinitionCount[4] As Number
+Private Dim SlotIds[4, 16] As Number
+Private Dim SlotNames[4, 16] As Text
+Private Dim EquippedItems[4, 512] As Number
+
+Private Function StateSlot(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim CharacterIndex As Number
+    Dim Generation As Number
+
+    Slot = Core.StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Generation = Core.StateGeneration(StateHandle)
+
+    If StateGeneration[Slot] <> Generation Then
+
+        For Index = 0 To Core.RPG_MAX_EQUIPMENT_SLOTS - 1
+            SlotIds[Slot, Index] = 0
+            SlotNames[Slot, Index] = ""
+        End For
+
+        For CharacterIndex = 0 To Core.RPG_MAX_CHARACTERS - 1
+
+            For Index = 0 To Core.RPG_MAX_EQUIPMENT_SLOTS - 1
+                EquippedItems[Slot, CharacterIndex * Core.RPG_MAX_EQUIPMENT_SLOTS + Index] = 0
+            End For
+        End For
+
+        DefinitionCount[Slot] = 0
+        StateGeneration[Slot] = Generation
+
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function DefinitionIndex(StateHandle As Number, EquipmentSlotId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To DefinitionCount[Slot] - 1
+
+        If SlotIds[Slot, Index] = EquipmentSlotId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function CharacterIndex(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    If StateSlot(StateHandle) < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To Characters.CharacterDefinitionCount(StateHandle) - 1
+
+        If Characters.CharacterIdAt(StateHandle, Index) = CharacterId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Public Function DefineSlot(StateHandle As Number, ByRef Definition As EquipmentSlotDefinition) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not Core.IsValidId(Definition.Id) Or
+        Not Core.IsValidName(Definition.Name) Or
+        DefinitionIndex(StateHandle, Definition.Id) >= 0 Or
+        DefinitionCount[Slot] >= Core.RPG_MAX_EQUIPMENT_SLOTS) Then
+        Return False
+    End If
+
+    Index = DefinitionCount[Slot]
+    SlotIds[Slot, Index] = Definition.Id
+    SlotNames[Slot, Index] = Definition.Name
+    DefinitionCount[Slot] = Index + 1
+    Return True
+
+End Function
+
+Public Function IsSlotDefined(StateHandle As Number, EquipmentSlotId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = DefinitionIndex(StateHandle, EquipmentSlotId) >= 0
+
+    Return ReturnValue
+
+End Function
+
+Public Function SlotCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = DefinitionCount[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function SlotIdAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= DefinitionCount[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = SlotIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function SlotName(StateHandle As Number, EquipmentSlotId As Number) As Text
+
+    Dim ReturnValue As Text
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = DefinitionIndex(StateHandle, EquipmentSlotId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return ""
+    End If
+
+    ReturnValue = SlotNames[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function EquippedItem(StateHandle As Number, CharacterId As Number, EquipmentSlotId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Character As Number
+    Dim EquipmentSlot As Number
+
+    Slot = StateSlot(StateHandle)
+    Character = CharacterIndex(StateHandle, CharacterId)
+    EquipmentSlot = DefinitionIndex(StateHandle, EquipmentSlotId)
+
+    If (Slot < 0 Or
+        Character < 0 Or
+        EquipmentSlot < 0) Then
+        Return 0
+    End If
+
+    ReturnValue = EquippedItems[Slot, Character * Core.RPG_MAX_EQUIPMENT_SLOTS + EquipmentSlot]
+
+    Return ReturnValue
+
+End Function
+
+Private Function CanReturnOldItem(StateHandle As Number, NewItemId As Number, OldItemId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    If OldItemId = 0 Or Inventory.CanAddItem(StateHandle, OldItemId, 1) Then
+        Return True
+    End If
+
+    ReturnValue = (
+        Inventory.EntryCount(StateHandle) = Core.RPG_MAX_INVENTORY_ENTRIES And
+        Inventory.Quantity(StateHandle, NewItemId) = 1 And
+        Inventory.Quantity(StateHandle, OldItemId) = 0 And
+        Inventory.MaximumStack(StateHandle, OldItemId) >= 1
+    )
+
+    Return ReturnValue
+
+End Function
+
+Public Function CanEquip(StateHandle As Number, CharacterId As Number, EquipmentSlotId As Number, ItemId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim CurrentItem As Number
+
+    If (StateSlot(StateHandle) < 0 Or
+        CharacterIndex(StateHandle, CharacterId) < 0 Or
+        DefinitionIndex(StateHandle, EquipmentSlotId) < 0 Or
+        Not Inventory.IsItemDefined(StateHandle, ItemId) Or
+        Inventory.Kind(StateHandle, ItemId) <> Core.RPG_ITEM_EQUIPMENT Or
+        Inventory.EquipmentSlotId(StateHandle, ItemId) <> EquipmentSlotId) Then
+        Return False
+    End If
+
+    CurrentItem = EquippedItem(StateHandle, CharacterId, EquipmentSlotId)
+
+    If CurrentItem = ItemId Then
+        Return True
+    End If
+
+    ReturnValue = Inventory.CanRemoveItem(StateHandle, ItemId, 1) And CanReturnOldItem(StateHandle, ItemId, CurrentItem)
+
+    Return ReturnValue
+
+End Function
+
+Public Function Equip(StateHandle As Number, CharacterId As Number, EquipmentSlotId As Number, ItemId As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Character As Number
+    Dim EquipmentSlot As Number
+    Dim CurrentItem As Number
+    Dim Restored As Boolean
+
+    If Not CanEquip(StateHandle, CharacterId, EquipmentSlotId, ItemId) Then
+        Return False
+    End If
+
+    CurrentItem = EquippedItem(StateHandle, CharacterId, EquipmentSlotId)
+
+    If CurrentItem = ItemId Then
+        Return True
+    End If
+
+    Slot = StateSlot(StateHandle)
+    Character = CharacterIndex(StateHandle, CharacterId)
+    EquipmentSlot = DefinitionIndex(StateHandle, EquipmentSlotId)
+
+    If Not Inventory.RemoveItem(StateHandle, ItemId, 1) Then
+        Return False
+    End If
+
+    If CurrentItem <> 0 And Not Inventory.AddItem(StateHandle, CurrentItem, 1) Then
+        Restored = Inventory.AddItem(StateHandle, ItemId, 1)
+        Return False
+    End If
+
+    EquippedItems[Slot, Character * Core.RPG_MAX_EQUIPMENT_SLOTS + EquipmentSlot] = ItemId
+    Return True
+
+End Function
+
+Public Function CanUnequip(StateHandle As Number, CharacterId As Number, EquipmentSlotId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim ItemId As Number
+
+    ItemId = EquippedItem(StateHandle, CharacterId, EquipmentSlotId)
+    ReturnValue = ItemId <> 0 And Inventory.CanAddItem(StateHandle, ItemId, 1)
+
+    Return ReturnValue
+
+End Function
+
+Public Function Unequip(StateHandle As Number, CharacterId As Number, EquipmentSlotId As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Character As Number
+    Dim EquipmentSlot As Number
+    Dim ItemId As Number
+
+    If Not CanUnequip(StateHandle, CharacterId, EquipmentSlotId) Then
+        Return False
+    End If
+
+    Slot = StateSlot(StateHandle)
+    Character = CharacterIndex(StateHandle, CharacterId)
+    EquipmentSlot = DefinitionIndex(StateHandle, EquipmentSlotId)
+    ItemId = EquippedItems[Slot, Character * Core.RPG_MAX_EQUIPMENT_SLOTS + EquipmentSlot]
+
+    If Not Inventory.AddItem(StateHandle, ItemId, 1) Then
+        Return False
+    End If
+
+    EquippedItems[Slot, Character * Core.RPG_MAX_EQUIPMENT_SLOTS + EquipmentSlot] = 0
+    Return True
+
+End Function
+
+''' Clears assignments without moving items. Intended for progress reset and decoded-state application.
+Public Function ClearCharacterEquipment(StateHandle As Number, CharacterId As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Character As Number
+    Dim EquipmentSlot As Number
+
+    Slot = StateSlot(StateHandle)
+    Character = CharacterIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Character < 0 Then
+        Return False
+    End If
+
+    For EquipmentSlot = 0 To DefinitionCount[Slot] - 1
+        EquippedItems[Slot, Character * Core.RPG_MAX_EQUIPMENT_SLOTS + EquipmentSlot] = 0
+    End For
+
+    Return True
+
+End Function
+
+''' Clears every assignment without moving items. Definitions remain registered.
+Public Function ClearAllEquipment(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Character As Number
+    Dim EquipmentSlot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    For Character = 0 To Characters.CharacterDefinitionCount(StateHandle) - 1
+
+        For EquipmentSlot = 0 To DefinitionCount[Slot] - 1
+            EquippedItems[Slot, Character * Core.RPG_MAX_EQUIPMENT_SLOTS + EquipmentSlot] = 0
+        End For
+    End For
+
+    Return True
+
+End Function
+
+Private Function TotalBonus(StateHandle As Number, CharacterId As Number, BonusKind As Number) As Number
+
+    Dim Slot As Number
+    Dim Character As Number
+    Dim EquipmentSlot As Number
+    Dim ItemId As Number
+    Dim Value As Number
+    Dim Total As Number
+
+    Slot = StateSlot(StateHandle)
+    Character = CharacterIndex(StateHandle, CharacterId)
+
+    If Slot < 0 Or Character < 0 Then
+        Return 0
+    End If
+
+    For EquipmentSlot = 0 To DefinitionCount[Slot] - 1
+
+        ItemId = EquippedItems[Slot, Character * Core.RPG_MAX_EQUIPMENT_SLOTS + EquipmentSlot]
+
+        If BonusKind = 1 Then
+            Value = Inventory.HealthBonus(StateHandle, ItemId)
+        Else If BonusKind = 2 Then
+            Value = Inventory.MagicPointBonus(StateHandle, ItemId)
+        Else If BonusKind = 3 Then
+            Value = Inventory.StrengthBonus(StateHandle, ItemId)
+        Else If BonusKind = 4 Then
+            Value = Inventory.DefenseBonus(StateHandle, ItemId)
+        Else If BonusKind = 5 Then
+            Value = Inventory.MagicBonus(StateHandle, ItemId)
+        Else If BonusKind = 6 Then
+            Value = Inventory.ResistanceBonus(StateHandle, ItemId)
+        Else If BonusKind = 7 Then
+            Value = Inventory.AgilityBonus(StateHandle, ItemId)
+        Else
+            Value = Inventory.LuckBonus(StateHandle, ItemId)
+        End If
+
+        Total = Min(Core.RPG_MAX_VALUE, Total + Value)
+    End For
+
+    Return Total
+
+End Function
+
+Public Function HealthBonus(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = TotalBonus(StateHandle, CharacterId, 1)
+
+    Return ReturnValue
+
+End Function
+
+Public Function MagicPointBonus(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = TotalBonus(StateHandle, CharacterId, 2)
+
+    Return ReturnValue
+
+End Function
+
+Public Function StrengthBonus(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = TotalBonus(StateHandle, CharacterId, 3)
+
+    Return ReturnValue
+
+End Function
+
+Public Function DefenseBonus(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = TotalBonus(StateHandle, CharacterId, 4)
+
+    Return ReturnValue
+
+End Function
+
+Public Function MagicBonus(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = TotalBonus(StateHandle, CharacterId, 5)
+
+    Return ReturnValue
+
+End Function
+
+Public Function ResistanceBonus(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = TotalBonus(StateHandle, CharacterId, 6)
+
+    Return ReturnValue
+
+End Function
+
+Public Function AgilityBonus(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = TotalBonus(StateHandle, CharacterId, 7)
+
+    Return ReturnValue
+
+End Function
+
+Public Function LuckBonus(StateHandle As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = TotalBonus(StateHandle, CharacterId, 8)
+
+    Return ReturnValue
+
+End Function
+
+End Module

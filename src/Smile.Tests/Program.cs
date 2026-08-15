@@ -2885,12 +2885,107 @@ Run("Syntax-aware formatter presents contextual identifiers without changing con
     Equal(false, SmileLanguage.Analyze(formatted).HasErrors);
 });
 
+Run("ApplicationId validates optional project identity and preserves OutputName fallback", () =>
+{
+    foreach (var value in new[] { "smile.game", "com.example.game-2", "a.b", "smile.app.a0123456789abcdef0123456789abcdef" })
+        Equal(true, SmileApplicationIdentity.IsValid(value));
+    foreach (var value in new[] { "", "ab", "Smile.game", "smile", ".smile", "smile.", "smile..game",
+        "1smile.game", "smile.game-", "smile.game_name", "smile.gáme", new string('a', 127) + ".b" })
+        Equal(false, SmileApplicationIdentity.IsValid(value));
+
+    var legacy = ProjectSources("<SmileProject><PropertyGroup><ProjectKind>Console</ProjectKind>" +
+        "<StartupFile>Program.smile</StartupFile><OutputName>LegacyName</OutputName></PropertyGroup>" +
+        "<ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /></ItemGroup></SmileProject>");
+    Equal(null, legacy.ApplicationId);
+    Equal("LegacyName", legacy.EffectiveApplicationId);
+
+    var explicitIdentity = ProjectSources("<SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind>" +
+        "<StartupFile>Program.smile</StartupFile><OutputName>Renamed</OutputName>" +
+        "<ApplicationId>smile.tests.stable</ApplicationId></PropertyGroup>" +
+        "<ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /></ItemGroup></SmileProject>");
+    Equal("smile.tests.stable", explicitIdentity.ApplicationId);
+    Equal("smile.tests.stable", explicitIdentity.EffectiveApplicationId);
+
+    ThrowsProjectDiagnostic(() => ProjectSources("<SmileProject><PropertyGroup><ProjectKind>Console</ProjectKind>" +
+        "<ApplicationId>Bad.Id</ApplicationId></PropertyGroup><ItemGroup>" +
+        "<SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /></ItemGroup></SmileProject>"), "SML3800");
+    ThrowsProjectDiagnostic(() => ProjectSources("<SmileProject><PropertyGroup><ProjectKind>Console</ProjectKind>" +
+        "<ApplicationId>smile.one</ApplicationId></PropertyGroup><PropertyGroup>" +
+        "<ApplicationId>smile.two</ApplicationId></PropertyGroup><ItemGroup>" +
+        "<SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /></ItemGroup></SmileProject>"), "SML3801");
+    ThrowsProjectDiagnostic(() => ProjectSources("<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind>" +
+        "<LibraryName>Example</LibraryName><Version>1.0.0</Version><ApplicationId>smile.library</ApplicationId>" +
+        "</PropertyGroup><ItemGroup><SmileSource Include=\"Module.smile\" /></ItemGroup></SmileProject>"), "SML3802");
+});
+
+Run("ApplicationId CLI parses and rejects conflicting project overrides", () =>
+{
+    Equal(true, CompilerOptions.TryParse(new[] { "Program.smile", "--application-id", "smile.cli.test" },
+        out var looseOptions, out _));
+    Equal("smile.cli.test", looseOptions.ApplicationId);
+    Equal(false, CompilerOptions.TryParse(new[] { "Program.smile", "--application-id" }, out _, out _));
+    Equal(false, CompilerOptions.TryParse(new[] { "Program.smile", "--application-id", "smile.one",
+        "--application-id", "smile.two" }, out _, out _));
+
+    var directory = Path.Combine(Path.GetTempPath(), "smile-application-id-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var programPath = Path.Combine(directory, "Program.smile");
+        var projectPath = Path.Combine(directory, "Identity.smileproj");
+        File.WriteAllText(programPath, "Print \"identity\"\n");
+        File.WriteAllText(projectPath, "<SmileProject><PropertyGroup><ProjectKind>Console</ProjectKind>" +
+            "<StartupFile>Program.smile</StartupFile><OutputName>Identity</OutputName>" +
+            "<ApplicationId>smile.project.identity</ApplicationId></PropertyGroup><ItemGroup>" +
+            "<SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /></ItemGroup></SmileProject>");
+        Equal(1, new CompilerDriver().Run(new[] { "--project", projectPath, "--target", "web",
+            "--output-dir", Path.Combine(directory, "web"), "--application-id", "smile.other.identity" }));
+        Equal(0, new CompilerDriver().Run(new[] { "--project", projectPath, "--target", "web",
+            "--output-dir", Path.Combine(directory, "web"), "--application-id", "smile.project.identity" }));
+        Equal(true, File.ReadAllText(Path.Combine(directory, "web", "game.js"))
+            .Contains("smile.project.identity", StringComparison.Ordinal));
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
+});
+
+Run("Smile.RPG 1.0.0 is an ordinary built-in source package with bounded public modules", () =>
+{
+    var project = SmileProjectSourceSet.Load("libraries/Smile.RPG/Smile.RPG.smilelibproj");
+    var compilation = SmileProjectCompilation.Load(project.ProjectPath);
+    var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library,
+        compilation.DependencyContext);
+    Equal(false, analysis.HasErrors);
+    Equal("1.0.0", project.Version);
+    Equal(8, project.CompilationSources.Count);
+    Equal(true, SmileBuiltInLibraryCatalog.IsBuiltIn("Smile.RPG"));
+    foreach (var module in new[] { "Smile.RPG.Core", "Smile.RPG.Characters", "Smile.RPG.Party",
+        "Smile.RPG.Inventory", "Smile.RPG.Equipment", "Smile.RPG.Abilities", "Smile.RPG.Shops",
+        "Smile.RPG.SaveGames" })
+        Equal(true, analysis.SemanticModel.Modules.ContainsKey(module));
+    Equal(false, project.References.Any());
+    Equal(false, project.CompilationSources.Any(source => File.ReadAllText(source.FullPath)
+        .Contains("Game Window", StringComparison.OrdinalIgnoreCase)));
+    Equal(false, project.CompilationSources.Any(source => File.ReadAllText(source.FullPath)
+        .Contains("Smile.UI", StringComparison.OrdinalIgnoreCase)));
+
+    const int maximumPayload = 12 + 4 + 32 * 13 * 4 + 4 + 8 * 4 + 4 + 4 + 64 * 2 * 4 +
+        4 + 32 * 16 * 3 * 4 + 4 + 32 * 32 * 2 * 4 + 4 + 16 * 64 * 3 * 4;
+    Equal(true, maximumPayload < 32768);
+    Equal(true, maximumPayload < 1024 * 1024);
+});
+
 Run("VSIX templates render localized identity metadata within the aligned header", () =>
 {
     var gameTemplate = File.ReadAllText("src/Smile.VisualStudio/Templates/Game/Program.smile");
     var consoleTemplate = File.ReadAllText("src/Smile.VisualStudio/Templates/Console/Program.smile");
     var gameManifest = File.ReadAllText("src/Smile.VisualStudio/Templates/Game/SmileGame.vstemplate");
     var consoleManifest = File.ReadAllText("src/Smile.VisualStudio/Templates/Console/SmileConsole.vstemplate");
+    var gameProject = File.ReadAllText("src/Smile.VisualStudio/Templates/Game/SmileGame.smileproj");
+    var consoleProject = File.ReadAllText("src/Smile.VisualStudio/Templates/Console/SmileConsole.smileproj");
+    var libraryProject = File.ReadAllText("src/Smile.VisualStudio/Templates/Library/SmileLibrary.smilelibproj");
     var wizard = File.ReadAllText("src/Smile.VisualStudio/SmileProjectTemplateWizard.cs");
     var project = File.ReadAllText("src/Smile.VisualStudio/Smile.VisualStudio.csproj");
     var vsixManifest = File.ReadAllText("src/Smile.VisualStudio/source.extension.vsixmanifest");
@@ -2903,10 +2998,10 @@ Run("VSIX templates render localized identity metadata within the aligned header
     var border = gameTemplate.Split('\n')[0].TrimEnd('\r');
     var rendered = gameTemplate.Replace("$smileuser$", "Sin".PadRight(69), StringComparison.Ordinal)
         .Replace("$smiledate$", "August 15, 2026".PadRight(69), StringComparison.Ordinal)
-        .Replace("$smileversion$", "2.0.38", StringComparison.Ordinal);
+        .Replace("$smileversion$", "2.0.39", StringComparison.Ordinal);
     var header = rendered.Split('\n').Take(9).Select(line => line.TrimEnd('\r')).ToArray();
     Equal("' Programmed By: " + "Sin".PadRight(69) + "Version: 0.0.1", header[3]);
-    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.38", header[4]);
+    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.39", header[4]);
     Equal(header[3].IndexOf("Version:", StringComparison.Ordinal) + "Version".Length,
         header[4].IndexOf("SMILE:", StringComparison.Ordinal) + "SMILE".Length);
     Equal(true, header.All(line => line.Length <= border.Length));
@@ -2919,10 +3014,14 @@ Run("VSIX templates render localized identity metadata within the aligned header
     foreach (var manifest in new[] { gameManifest, consoleManifest })
     {
         Equal(true, manifest.Contains("SmileProjectTemplateWizard", StringComparison.Ordinal));
-        Equal(true, manifest.Contains("Version=2.0.38.0", StringComparison.Ordinal));
+        Equal(true, manifest.Contains("Version=2.0.39.0", StringComparison.Ordinal));
     }
+    foreach (var applicationProject in new[] { gameProject, consoleProject })
+        Equal(true, applicationProject.Contains("<ApplicationId>$smileapplicationid$</ApplicationId>", StringComparison.Ordinal));
+    Equal(false, libraryProject.Contains("ApplicationId", StringComparison.Ordinal));
+    Equal(true, wizard.Contains("\"smile.app.a\" + Guid.NewGuid().ToString(\"N\")", StringComparison.Ordinal));
     Equal(true, wizard.Contains("ToString(\"D\", CultureInfo.CurrentCulture)", StringComparison.Ordinal));
-    Equal(true, project.Contains("<Version>2.0.38</Version>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<Version>2.0.39</Version>", StringComparison.Ordinal));
     Equal(true, vsixManifest.Contains("Type=\"Microsoft.VisualStudio.Assembly\"", StringComparison.Ordinal));
 });
 

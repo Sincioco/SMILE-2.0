@@ -23,7 +23,8 @@ public static class SmileBuiltInLibraryCatalog
 {
     private static readonly HashSet<string> Names = new(StringComparer.OrdinalIgnoreCase)
     {
-        "Smile.UI"
+        "Smile.UI",
+        "Smile.RPG"
     };
 
     public static bool IsBuiltIn(string libraryName) =>
