@@ -122,12 +122,9 @@ public static class SmileCompletionService
                          StringComparison.OrdinalIgnoreCase)))
         {
             var kind = routine.IsFunction ? SmileCompletionKind.Function : SmileCompletionKind.Subroutine;
-            var keyword = routine.IsFunction ? "FUNCTION" : "SUB";
-            var parameters = string.Join(", ", routine.Parameters.Select(DescribeParameter));
-            var returnType = routine.IsFunction ? $" AS {routine.ReturnType.ToString().ToUpperInvariant()}" : string.Empty;
             completions[routine.Name] = new SmileCompletion(
                 routine.Name,
-                $"{keyword} {routine.Name}({parameters}){returnType}",
+                SmileSymbolDisplayService.FormatRoutineSignature(routine, includeModuleName: false),
                 kind);
         }
 
@@ -202,13 +199,10 @@ public static class SmileCompletionService
     {
         if (member.Routine != null)
         {
-            var parameters = string.Join(", ", member.Routine.Parameters.Select(DescribeParameter));
-            var keyword = member.Routine.IsFunction ? "FUNCTION" : "SUB";
-            var returnType = member.Routine.IsFunction
-                ? $" AS {member.Routine.ReturnType.ToString().ToUpperInvariant()}" : string.Empty;
             var capability = member.Routine.RequiresGameWindow ? " - requires GAME WINDOW" : string.Empty;
             return new SmileCompletion(member.Name,
-                $"{keyword} {member.Name}({parameters}){returnType}{capability} from module {member.Routine.ModuleName} " +
+                $"{SmileSymbolDisplayService.FormatRoutineSignature(member.Routine, includeModuleName: false)}" +
+                $"{capability} from module {member.Routine.ModuleName} " +
                 $"({DescribeProvider(member.Routine.ProviderIdentity, dependencyContext)})",
                 member.Routine.IsFunction ? SmileCompletionKind.Function : SmileCompletionKind.Subroutine);
         }
@@ -318,12 +312,6 @@ public static class SmileCompletionService
         !string.IsNullOrWhiteSpace(descriptor.LogicalIdentity)
             ? descriptor.LogicalIdentity
             : providerIdentity;
-
-    private static string DescribeParameter(VariableSymbol parameter)
-    {
-        var mode = parameter.ParameterMode == ParameterPassingMode.ByRef ? "BYREF " : string.Empty;
-        return $"{mode}{parameter.Name} AS {parameter.Type.ToString().ToUpperInvariant()}";
-    }
 
     private static string? AliasBeforeDot(string text, int position)
     {

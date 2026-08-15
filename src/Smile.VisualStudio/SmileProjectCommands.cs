@@ -20,6 +20,7 @@ internal static class SmileProjectCommands
     public const uint RefreshProject = 0x2107;
     public const uint AddReference = 0x2108;
     public const uint RemoveReference = 0x2109;
+    public const uint SetStartupProject = 0x210A;
     public const uint SetStartupSource = 0x2110;
     public const uint IncludeSupportSource = 0x2111;
     public const uint RemoveSource = 0x2112;

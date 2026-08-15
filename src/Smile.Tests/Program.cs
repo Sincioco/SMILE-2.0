@@ -1129,6 +1129,127 @@ Run("Alias dot completion exposes only public module members", () =>
     Equal(true, completions.Any(item => item.DisplayText == "Double"));
     Equal(false, completions.Any(item => item.DisplayText == "Secret"));
 });
+Run("Educational documentation comments parse safely and case-insensitively", () =>
+{
+    const string source = "''' First summary line.\n''' Second summary line.\n''' @PaRaM Value: Primary explanation.\n''' continuation text.\n''' @PARAM value: Ignored duplicate.\n''' @param Unknown: Tolerated metadata.\n''' @ReTuRnS: The resulting value.\n''' @Remarks: First remark.\n''' Additional remark.\n''' @unknown malformed metadata\nFUNCTION Echo(Value AS NUMBER) AS NUMBER\nRETURN Value\nEND FUNCTION\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var routine = analysis.SemanticModel.Routines["Echo"];
+    var documentation = SmileDocumentationService.GetDocumentation(routine.Source,
+        routine.Declaration.Keyword.Span.Start);
+    Equal("First summary line. Second summary line.", documentation.Summary);
+    Equal("Primary explanation. continuation text.", documentation.Parameters["VALUE"]);
+    Equal("Tolerated metadata.", documentation.Parameters["unknown"]);
+    Equal("The resulting value.", documentation.Returns);
+    Equal("First remark. Additional remark.", documentation.Remarks);
+});
+Run("Ordinary comments blank gaps malformed tags and missing documentation stay inert", () =>
+{
+    foreach (var source in new[]
+             {
+                 "' Ordinary comment\nFUNCTION Plain() AS NUMBER\nRETURN 1\nEND FUNCTION\n",
+                 "''' Detached summary\n\nFUNCTION Plain() AS NUMBER\nRETURN 1\nEND FUNCTION\n",
+                 "''' @param MissingColon\n''' @returns MissingColon\nFUNCTION Plain() AS NUMBER\nRETURN 1\nEND FUNCTION\n",
+                 "FUNCTION Plain() AS NUMBER\nRETURN 1\nEND FUNCTION\n"
+             })
+    {
+        var analysis = Analyze(source);
+        Equal(false, analysis.HasErrors);
+        var routine = analysis.SemanticModel.Routines["Plain"];
+        var documentation = SmileDocumentationService.GetDocumentation(routine.Source,
+            routine.Declaration.Keyword.Span.Start);
+        Equal(string.Empty, documentation.Summary);
+        Equal(0, documentation.Parameters.Count);
+        Equal(string.Empty, documentation.Returns);
+    }
+});
+Run("Every public Smile.UI.Menu routine has complete educational documentation", () =>
+{
+    var compilation = SmileProjectCompilation.Load("libraries/Smile.UI/Smile.UI.smilelibproj");
+    var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library,
+        compilation.DependencyContext);
+    Equal(false, analysis.HasErrors);
+    var routines = analysis.SemanticModel.Modules["Smile.UI.Menu"].PublicMembers
+        .Where(member => member.Routine != null).Select(member => member.Routine!).ToArray();
+    Equal(26, routines.Length);
+    foreach (var routine in routines)
+    {
+        var documentation = SmileDocumentationService.GetDocumentation(routine.Source,
+            routine.Declaration.Keyword.Span.Start);
+        Equal(false, string.IsNullOrWhiteSpace(documentation.Summary));
+        foreach (var parameter in routine.Parameters)
+            Equal(true, documentation.Parameters.ContainsKey(parameter.Name));
+        if (routine.IsFunction)
+            Equal(false, string.IsNullOrWhiteSpace(documentation.Returns));
+    }
+});
+Run("Imported aliases and qualified members resolve to exact declarations and documentation", () =>
+{
+    const string program = "IMPORT Example.Menu AS Menu\nPRINT menu.create(7)\n";
+    const string module = "''' Menu module summary.\nMODULE Example.Menu\n''' Creates a value.\n''' @param Value: Number to return.\n''' @returns: The supplied number.\nPUBLIC FUNCTION Create(Value AS NUMBER) AS NUMBER\nRETURN Value\nEND FUNCTION\nPRIVATE FUNCTION Secret() AS NUMBER\nRETURN 1\nEND FUNCTION\nEND MODULE\n";
+    var analysis = Multi(("Program.smile", true, program), ("Menu.smile", false, module));
+    Equal(false, analysis.HasErrors);
+    var tree = analysis.GetSyntaxTree("Program.smile");
+    var aliasPosition = program.IndexOf("menu.create", StringComparison.Ordinal);
+    Equal(true, SmileSymbolService.TryResolve(analysis, tree, aliasPosition + 4, out var alias));
+    Equal(SmileResolvedSymbolKind.Module, alias.Kind);
+    Equal("Example.Menu", alias.Name);
+    Equal("Menu module summary.", alias.Documentation.Summary);
+    Equal("Example.Menu", alias.DeclarationLocation!.Source.Substring(alias.DeclarationLocation.Span.Start,
+        alias.DeclarationLocation.Span.Length));
+
+    var memberPosition = program.IndexOf("create", StringComparison.Ordinal);
+    Equal(true, SmileSymbolService.TryResolve(analysis, tree, memberPosition, out var member));
+    Equal(SmileResolvedSymbolKind.Function, member.Kind);
+    Equal("FUNCTION Example.Menu.Create(Value AS NUMBER) AS NUMBER", member.Signature);
+    Equal("Create", member.DeclarationLocation!.Source.Substring(member.DeclarationLocation.Span.Start,
+        member.DeclarationLocation.Span.Length));
+    Equal("Number to return.", member.Documentation.Parameters["value"]);
+    Equal("The supplied number.", member.Documentation.Returns);
+
+    const string privateUse = "IMPORT Example.Menu AS Menu\nPRINT Menu.Secret()\n";
+    var privateAnalysis = Multi(("Private.smile", true, privateUse), ("Menu.smile", false, module));
+    Equal(false, SmileSymbolService.TryResolve(privateAnalysis, privateAnalysis.GetSyntaxTree("Private.smile"),
+        privateUse.IndexOf("Secret", StringComparison.Ordinal), out _));
+});
+Run("Symbol resolution handles locals parameters types fields boundaries and invalid positions", () =>
+{
+    const string source = "OPTION EXPLICIT\nTYPE Player\nName AS TEXT\nEND TYPE\nDIM Hero AS Player\nCALL Work(Hero)\nSUB Work(Value AS Player)\nDIM Local AS NUMBER\nPRINT Value.Name\nPRINT Local\nEND SUB\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var tree = analysis.SyntaxTree;
+
+    var workUse = source.IndexOf("Work(Hero)", StringComparison.Ordinal);
+    Equal(SmileResolvedSymbolKind.Subroutine,
+        ResolveSymbol(analysis, tree, workUse + "Work".Length).Kind);
+    var valueUse = source.IndexOf("Value.Name", StringComparison.Ordinal);
+    Equal(SmileResolvedSymbolKind.Parameter, ResolveSymbol(analysis, tree, valueUse).Kind);
+    var fieldUse = source.IndexOf("Name", valueUse, StringComparison.Ordinal);
+    var field = ResolveSymbol(analysis, tree, fieldUse);
+    Equal(SmileResolvedSymbolKind.Field, field.Kind);
+    Equal("Name", field.DeclarationLocation!.Source.Substring(field.DeclarationLocation.Span.Start,
+        field.DeclarationLocation.Span.Length));
+    var localUse = source.LastIndexOf("Local", StringComparison.Ordinal);
+    Equal(SmileResolvedSymbolKind.Local, ResolveSymbol(analysis, tree, localUse).Kind);
+    var typeUse = source.IndexOf("Player", source.IndexOf("Hero", StringComparison.Ordinal), StringComparison.Ordinal);
+    Equal(SmileResolvedSymbolKind.Type, ResolveSymbol(analysis, tree, typeUse).Kind);
+    Equal(false, SmileSymbolService.TryResolve(analysis, tree,
+        source.IndexOf("OPTION", StringComparison.Ordinal), out _));
+    Equal(false, SmileSymbolService.TryResolve(analysis, tree,
+        source.IndexOf("\n", StringComparison.Ordinal), out _));
+});
+Run("Symbol resolution ignores comments strings and unresolved names without throwing", () =>
+{
+    const string source = "' MissingName in a comment\nPRINT \"MissingName in text\"\nPRINT MissingName\n";
+    var analysis = Analyze(source);
+    var tree = analysis.SyntaxTree;
+    Equal(false, SmileSymbolService.TryResolve(analysis, tree,
+        source.IndexOf("MissingName", StringComparison.Ordinal), out _));
+    Equal(false, SmileSymbolService.TryResolve(analysis, tree,
+        source.IndexOf("MissingName in text", StringComparison.Ordinal), out _));
+    Equal(false, SmileSymbolService.TryResolve(analysis, tree,
+        source.LastIndexOf("MissingName", StringComparison.Ordinal), out _));
+});
 Run("Library projects have no startup and support project and package references", () =>
 {
     var library = ProjectSources("<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Tools</LibraryName><Version>1.2.3</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Module.smile\" /><SmileLibraryReference Include=\"Tools.smilelib\" /></ItemGroup></SmileProject>");
@@ -2336,6 +2457,13 @@ SmileAnalysisResult Analyze(string source) => SmileLanguage.Analyze(source);
 SmileAnalysisResult Multi(params (string Path, bool Startup, string Text)[] sources) =>
     SmileLanguage.Analyze(sources.Select(source =>
         new SmileSourceDocument(source.Text, source.Path, source.Startup)).ToArray());
+
+SmileResolvedSymbol ResolveSymbol(SmileAnalysisResult analysis, SyntaxTree syntaxTree, int position)
+{
+    if (SmileSymbolService.TryResolve(analysis, syntaxTree, position, out var symbol))
+        return symbol;
+    throw new InvalidOperationException($"Expected a symbol at source position {position}.");
+}
 
 SmileProjectSourceSet ProjectSources(string xml) =>
     SmileProjectSourceSet.Parse(Path.GetFullPath("Test.smileproj"), xml);

@@ -734,6 +734,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
 
     public int QueryStatusCommand(uint itemid, ref Guid pguidCmdGroup, uint cCmds, OLECMD[] prgCmds, IntPtr pCmdText)
     {
+        ThreadHelper.ThrowIfNotOnUIThread();
         var item = Item(itemid);
         if (pguidCmdGroup == VSConstants.GUID_VsUIHierarchyWindowCmds && item != null)
         {
@@ -864,15 +865,21 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
 
     private uint CommandStatus(ProjectItem item, uint commandId)
     {
+        ThreadHelper.ThrowIfNotOnUIThread();
         var supported = (uint)OLECMDF.OLECMDF_SUPPORTED;
         var enabled = supported | (uint)OLECMDF.OLECMDF_ENABLED;
         var invisible = supported | (uint)OLECMDF.OLECMDF_INVISIBLE;
         if (item.Kind == ItemKind.Project)
+        {
+            if (commandId == SmileProjectCommands.SetStartupProject)
+                return SourceSet.IsLibrary ? invisible : IsStartupProject()
+                    ? enabled | (uint)OLECMDF.OLECMDF_LATCHED : enabled;
             return commandId is SmileProjectCommands.Build or SmileProjectCommands.Rebuild or SmileProjectCommands.Clean or
                 SmileProjectCommands.AddNewSource or SmileProjectCommands.AddExistingSource or
                 SmileProjectCommands.EditProjectFile or SmileProjectCommands.OpenProjectFolder or
                 SmileProjectCommands.RefreshProject or SmileProjectCommands.AddReference
                 ? enabled : invisible;
+        }
         if (item.Kind == ItemKind.References)
             return commandId == SmileProjectCommands.AddReference ? enabled : invisible;
         if (item.Kind == ItemKind.Reference)
@@ -923,6 +930,13 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         }
         if (commandId is SmileProjectCommands.Build or SmileProjectCommands.Rebuild or SmileProjectCommands.Clean)
             return ExecuteBuildCommand(commandId);
+        if (commandId == SmileProjectCommands.SetStartupProject && item.Kind == ItemKind.Project)
+        {
+            var manager = Package.GetGlobalService(typeof(SVsSolutionBuildManager)) as IVsSolutionBuildManager2
+                ?? throw new InvalidOperationException("Visual Studio's solution build manager is unavailable.");
+            ErrorHandler.ThrowOnFailure(manager.set_StartupProject(this));
+            return VSConstants.S_OK;
+        }
         if (!TryGetSource(item, out _))
             return CommandNotSupported;
         var reason = SmileProjectRefreshReason.SupportStateChanged;
@@ -947,6 +961,15 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         if (commandId == SmileProjectCommands.RemoveSource)
             NotifyProjectDocumentRemoved(item.Path);
         return VSConstants.S_OK;
+    }
+
+    private bool IsStartupProject()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var manager = Package.GetGlobalService(typeof(SVsSolutionBuildManager)) as IVsSolutionBuildManager2;
+        if (manager == null || ErrorHandler.Failed(manager.get_StartupProject(out var startupProject)))
+            return false;
+        return ReferenceEquals(startupProject, this) || Equals(startupProject, this);
     }
 
     private int AddNewSource()

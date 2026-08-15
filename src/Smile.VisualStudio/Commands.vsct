@@ -62,6 +62,11 @@
           <ButtonText>Build SMILE File</ButtonText>
         </Strings>
       </Button>
+      <Button guid="guidSmileProjectCommandSet" id="SetStartupProjectCommand" priority="0x00F0" type="Button">
+        <Parent guid="guidSmileProjectCommandSet" id="SmileProjectBuildGroup" />
+        <CommandFlag>DynamicVisibility</CommandFlag><CommandFlag>DefaultInvisible</CommandFlag>
+        <Strings><ButtonText>Set as Startup Project</ButtonText></Strings>
+      </Button>
       <Button guid="guidSmileProjectCommandSet" id="BuildProjectCommand" priority="0x0100" type="Button">
         <Parent guid="guidSmileProjectCommandSet" id="SmileProjectBuildGroup" />
         <Strings><ButtonText>Build</ButtonText></Strings>
@@ -105,7 +110,7 @@
       <Button guid="guidSmileProjectCommandSet" id="SetStartupSourceCommand" priority="0x0100" type="Button">
         <Parent guid="guidSmileProjectCommandSet" id="SmileSourceActionGroup" />
         <CommandFlag>DynamicVisibility</CommandFlag><CommandFlag>DefaultInvisible</CommandFlag>
-        <Strings><ButtonText>Set as Startup</ButtonText></Strings>
+        <Strings><ButtonText>Set as Startup Source</ButtonText></Strings>
       </Button>
       <Button guid="guidSmileProjectCommandSet" id="IncludeSupportSourceCommand" priority="0x0110" type="Button">
         <Parent guid="guidSmileProjectCommandSet" id="SmileSourceActionGroup" />
@@ -158,6 +163,7 @@
       <IDSymbol name="RefreshProjectCommand" value="0x2107" />
       <IDSymbol name="AddReferenceProjectCommand" value="0x2108" />
       <IDSymbol name="RemoveReferenceCommand" value="0x2109" />
+      <IDSymbol name="SetStartupProjectCommand" value="0x210A" />
       <IDSymbol name="SetStartupSourceCommand" value="0x2110" />
       <IDSymbol name="IncludeSupportSourceCommand" value="0x2111" />
       <IDSymbol name="RemoveSourceCommand" value="0x2112" />

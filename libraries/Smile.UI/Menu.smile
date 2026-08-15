@@ -1,3 +1,4 @@
+''' Reusable menu creation, item management, input handling, and drawing services.
 MODULE Smile.UI.Menu
 
 OPTION EXPLICIT
@@ -42,6 +43,9 @@ PRIVATE FUNCTION SlotFromHandle(Handle AS NUMBER) AS NUMBER
     RETURN Slot
 END FUNCTION
 
+''' Checks whether a menu style can be used safely by the menu services.
+''' @param Style: Menu appearance, text, cursor, spacing, and overflow settings to validate. Passed by reference.
+''' @returns: TRUE when every nested style and layout value is supported; otherwise FALSE.
 PUBLIC FUNCTION IsStyleValid(BYREF Style AS Core.MenuStyle) AS BOOLEAN
     IF NOT Window.IsStyleValid(Style.Window) OR NOT Text.IsStyleValid(Style.NormalText) OR NOT Text.IsStyleValid(Style.SelectedText) OR NOT Text.IsStyleValid(Style.DisabledText) THEN
         RETURN FALSE
@@ -91,6 +95,14 @@ PRIVATE SUB ClampVisibleRows(Slot AS NUMBER)
     MenuVisibleRows[Slot] = MAX(1, MIN(MenuRequestedVisibleRows[Slot], Maximum))
 END SUB
 
+''' Creates a menu instance using the supplied style, position, size, and requested visible-row count.
+''' @param Style: Menu appearance, window, text, cursor, spacing, and overflow settings. Passed by reference and validated before creation.
+''' @param X: Left edge of the menu in game-window coordinates.
+''' @param Y: Top edge of the menu in game-window coordinates.
+''' @param Width: Menu width in pixels. Values are clamped to the supported layout range.
+''' @param Height: Menu height in pixels. Values are clamped to the supported layout range.
+''' @param VisibleRows: Requested number of rows visible at once. The effective count may be reduced to fit the content area.
+''' @returns: A positive generation-safe menu handle, or 0 when the style is invalid or no menu slot is available.
 PUBLIC FUNCTION Create(BYREF Style AS Core.MenuStyle, X AS NUMBER, Y AS NUMBER, Width AS NUMBER, Height AS NUMBER, VisibleRows AS NUMBER) AS NUMBER
     DIM Slot AS NUMBER
     DIM Index AS NUMBER
@@ -130,10 +142,15 @@ PUBLIC FUNCTION Create(BYREF Style AS Core.MenuStyle, X AS NUMBER, Y AS NUMBER, 
     RETURN MenuGeneration[Slot] * 100 + Slot + 1
 END FUNCTION
 
+''' Checks whether a menu handle still identifies a live menu instance.
+''' @param Handle: Generation-safe menu handle returned by Create.
+''' @returns: TRUE for a live handle; otherwise FALSE.
 PUBLIC FUNCTION IsValid(Handle AS NUMBER) AS BOOLEAN
     RETURN SlotFromHandle(Handle) >= 0
 END FUNCTION
 
+''' Removes every item from a menu and resets its selection and scroll position.
+''' @param Handle: Menu handle to clear. An invalid handle is ignored.
 PUBLIC SUB ClearItems(Handle AS NUMBER)
     DIM Slot AS NUMBER
     DIM Index AS NUMBER
@@ -156,6 +173,8 @@ PUBLIC SUB ClearItems(Handle AS NUMBER)
     END IF
 END SUB
 
+''' Releases a menu instance and invalidates its current generation-safe handle.
+''' @param Handle: Menu handle to destroy. An invalid handle is ignored.
 PUBLIC SUB Destroy(Handle AS NUMBER)
     DIM Slot AS NUMBER
     DIM Empty AS Core.MenuStyle
@@ -172,6 +191,10 @@ PUBLIC SUB Destroy(Handle AS NUMBER)
     MenuUsed[Slot] = FALSE
 END SUB
 
+''' Replaces a menu's style and recalculates its visible layout.
+''' @param Handle: Menu handle whose style will change.
+''' @param Style: Valid replacement menu style. Passed by reference.
+''' @returns: TRUE when the handle and style are valid; otherwise FALSE.
 PUBLIC FUNCTION SetStyle(Handle AS NUMBER, BYREF Style AS Core.MenuStyle) AS BOOLEAN
     DIM Slot AS NUMBER
     Slot = SlotFromHandle(Handle)
@@ -184,6 +207,12 @@ PUBLIC FUNCTION SetStyle(Handle AS NUMBER, BYREF Style AS Core.MenuStyle) AS BOO
     RETURN TRUE
 END FUNCTION
 
+''' Appends an item and selects it automatically when it is the first enabled item.
+''' @param Handle: Menu handle that receives the item.
+''' @param Label: Text shown for the item, limited to the library's maximum scalar count.
+''' @param UserValue: Application-defined numeric value returned when the item is selected.
+''' @param Enabled: TRUE when the item may be selected and accepted.
+''' @returns: The zero-based item index, or -1 for an invalid handle, a full menu, or an overlong label.
 PUBLIC FUNCTION AddItem(Handle AS NUMBER, Label AS TEXT, UserValue AS NUMBER, Enabled AS BOOLEAN) AS NUMBER
     DIM Slot AS NUMBER
     DIM Index AS NUMBER
@@ -204,6 +233,11 @@ PUBLIC FUNCTION AddItem(Handle AS NUMBER, Label AS TEXT, UserValue AS NUMBER, En
     RETURN Index
 END FUNCTION
 
+''' Changes the text displayed for an existing menu item.
+''' @param Handle: Menu handle containing the item.
+''' @param Index: Zero-based item index.
+''' @param Label: Replacement text, limited to the library's maximum scalar count.
+''' @returns: TRUE when the handle, index, and label are valid; otherwise FALSE.
 PUBLIC FUNCTION SetItemLabel(Handle AS NUMBER, Index AS NUMBER, Label AS TEXT) AS BOOLEAN
     DIM Slot AS NUMBER
     Slot = SlotFromHandle(Handle)
@@ -239,6 +273,11 @@ PRIVATE SUB UpdateTop(Slot AS NUMBER)
     MenuTop[Slot] = MAX(0, MIN(MenuTop[Slot], Maximum))
 END SUB
 
+''' Enables or disables an item and repairs the selection when the selected item becomes disabled.
+''' @param Handle: Menu handle containing the item.
+''' @param Index: Zero-based item index.
+''' @param Enabled: TRUE to make the item selectable; FALSE to disable it.
+''' @returns: TRUE when the handle and index are valid; otherwise FALSE.
 PUBLIC FUNCTION SetItemEnabled(Handle AS NUMBER, Index AS NUMBER, Enabled AS BOOLEAN) AS BOOLEAN
     DIM Slot AS NUMBER
     Slot = SlotFromHandle(Handle)
@@ -253,6 +292,11 @@ PUBLIC FUNCTION SetItemEnabled(Handle AS NUMBER, Index AS NUMBER, Enabled AS BOO
     RETURN TRUE
 END FUNCTION
 
+''' Changes the application-defined value associated with an item.
+''' @param Handle: Menu handle containing the item.
+''' @param Index: Zero-based item index.
+''' @param UserValue: Replacement numeric value returned for the item.
+''' @returns: TRUE when the handle and index are valid; otherwise FALSE.
 PUBLIC FUNCTION SetItemValue(Handle AS NUMBER, Index AS NUMBER, UserValue AS NUMBER) AS BOOLEAN
     DIM Slot AS NUMBER
     Slot = SlotFromHandle(Handle)
@@ -263,6 +307,11 @@ PUBLIC FUNCTION SetItemValue(Handle AS NUMBER, Index AS NUMBER, UserValue AS NUM
     RETURN TRUE
 END FUNCTION
 
+''' Marks whether an item should display the style's submenu indicator.
+''' @param Handle: Menu handle containing the item.
+''' @param Index: Zero-based item index.
+''' @param HasSubmenu: TRUE when the item opens a submenu; otherwise FALSE.
+''' @returns: TRUE when the handle and index are valid; otherwise FALSE.
 PUBLIC FUNCTION SetItemHasSubmenu(Handle AS NUMBER, Index AS NUMBER, HasSubmenu AS BOOLEAN) AS BOOLEAN
     DIM Slot AS NUMBER
     Slot = SlotFromHandle(Handle)
@@ -273,6 +322,10 @@ PUBLIC FUNCTION SetItemHasSubmenu(Handle AS NUMBER, Index AS NUMBER, HasSubmenu 
     RETURN TRUE
 END FUNCTION
 
+''' Reports whether an item is marked as opening a submenu.
+''' @param Handle: Menu handle containing the item.
+''' @param Index: Zero-based item index.
+''' @returns: TRUE when the valid item has a submenu; FALSE for no submenu or an invalid handle/index.
 PUBLIC FUNCTION ItemHasSubmenu(Handle AS NUMBER, Index AS NUMBER) AS BOOLEAN
     DIM Slot AS NUMBER
     Slot = SlotFromHandle(Handle)
@@ -282,6 +335,9 @@ PUBLIC FUNCTION ItemHasSubmenu(Handle AS NUMBER, Index AS NUMBER) AS BOOLEAN
     RETURN ItemSubmenu[Slot, Index]
 END FUNCTION
 
+''' Gets the revision that changes when the menu's item collection is reset or destroyed.
+''' @param Handle: Menu handle to inspect.
+''' @returns: A positive revision for a valid menu, or 0 for an invalid handle.
 PUBLIC FUNCTION ItemRevision(Handle AS NUMBER) AS NUMBER
     DIM Slot AS NUMBER
     Slot = SlotFromHandle(Handle)
@@ -291,6 +347,9 @@ PUBLIC FUNCTION ItemRevision(Handle AS NUMBER) AS NUMBER
     RETURN MenuItemRevision[Slot]
 END FUNCTION
 
+''' Gets the number of items currently stored in a menu.
+''' @param Handle: Menu handle to inspect.
+''' @returns: The item count, or 0 for an invalid handle.
 PUBLIC FUNCTION ItemCount(Handle AS NUMBER) AS NUMBER
     DIM Slot AS NUMBER
     Slot = SlotFromHandle(Handle)
@@ -300,6 +359,9 @@ PUBLIC FUNCTION ItemCount(Handle AS NUMBER) AS NUMBER
     RETURN MenuItemCount[Slot]
 END FUNCTION
 
+''' Gets the currently selected item index.
+''' @param Handle: Menu handle to inspect.
+''' @returns: The zero-based selected index, or -1 for an invalid handle or no selection.
 PUBLIC FUNCTION SelectedIndex(Handle AS NUMBER) AS NUMBER
     DIM Slot AS NUMBER
     Slot = SlotFromHandle(Handle)
@@ -309,6 +371,9 @@ PUBLIC FUNCTION SelectedIndex(Handle AS NUMBER) AS NUMBER
     RETURN MenuSelected[Slot]
 END FUNCTION
 
+''' Gets the application-defined value associated with the selected item.
+''' @param Handle: Menu handle to inspect.
+''' @returns: The selected item's value, or 0 for an invalid handle or no selection.
 PUBLIC FUNCTION SelectedValue(Handle AS NUMBER) AS NUMBER
     DIM Slot AS NUMBER
     Slot = SlotFromHandle(Handle)
@@ -318,6 +383,9 @@ PUBLIC FUNCTION SelectedValue(Handle AS NUMBER) AS NUMBER
     RETURN ItemValues[Slot, MenuSelected[Slot]]
 END FUNCTION
 
+''' Gets the item index shown in the menu's first visible row.
+''' @param Handle: Menu handle to inspect.
+''' @returns: The zero-based top item index, or 0 for an invalid handle.
 PUBLIC FUNCTION TopIndex(Handle AS NUMBER) AS NUMBER
     DIM Slot AS NUMBER
     Slot = SlotFromHandle(Handle)
@@ -327,6 +395,9 @@ PUBLIC FUNCTION TopIndex(Handle AS NUMBER) AS NUMBER
     RETURN MenuTop[Slot]
 END FUNCTION
 
+''' Gets the effective number of rows that fit in the menu's current content area.
+''' @param Handle: Menu handle to inspect.
+''' @returns: The effective visible-row count, or 0 for an invalid handle.
 PUBLIC FUNCTION VisibleRows(Handle AS NUMBER) AS NUMBER
     DIM Slot AS NUMBER
     Slot = SlotFromHandle(Handle)
@@ -336,6 +407,9 @@ PUBLIC FUNCTION VisibleRows(Handle AS NUMBER) AS NUMBER
     RETURN MenuVisibleRows[Slot]
 END FUNCTION
 
+''' Gets the menu's outer position and size.
+''' @param Handle: Menu handle to inspect.
+''' @returns: The menu bounds, or an empty rectangle for an invalid handle.
 PUBLIC FUNCTION Bounds(Handle AS NUMBER) AS Core.Rect
     DIM Slot AS NUMBER
     DIM Result AS Core.Rect
@@ -350,6 +424,11 @@ PUBLIC FUNCTION Bounds(Handle AS NUMBER) AS Core.Rect
     RETURN Result
 END FUNCTION
 
+''' Moves a menu without changing its size, style, items, or selection.
+''' @param Handle: Menu handle to move.
+''' @param X: New left edge in game-window coordinates.
+''' @param Y: New top edge in game-window coordinates.
+''' @returns: TRUE when the handle and coordinates are supported; otherwise FALSE.
 PUBLIC FUNCTION SetPosition(Handle AS NUMBER, X AS NUMBER, Y AS NUMBER) AS BOOLEAN
     DIM Slot AS NUMBER
     Slot = SlotFromHandle(Handle)
@@ -361,6 +440,9 @@ PUBLIC FUNCTION SetPosition(Handle AS NUMBER, X AS NUMBER, Y AS NUMBER) AS BOOLE
     RETURN TRUE
 END FUNCTION
 
+''' Gets the visible content rectangle occupied by the selected row.
+''' @param Handle: Menu handle to inspect.
+''' @returns: The selected row rectangle, or an empty rectangle when the handle/selection is invalid or off-screen.
 PUBLIC FUNCTION SelectedRowRect(Handle AS NUMBER) AS Core.Rect
     DIM Slot AS NUMBER
     DIM Result AS Core.Rect
@@ -388,6 +470,10 @@ PUBLIC FUNCTION SelectedRowRect(Handle AS NUMBER) AS Core.Rect
     RETURN Result
 END FUNCTION
 
+''' Selects a specific enabled menu item and scrolls it into view.
+''' @param Handle: Menu handle whose selection will change.
+''' @param Index: Zero-based enabled item index to select.
+''' @returns: TRUE when the handle and enabled index are valid; otherwise FALSE.
 PUBLIC FUNCTION SetSelectedIndex(Handle AS NUMBER, Index AS NUMBER) AS BOOLEAN
     DIM Slot AS NUMBER
     Slot = SlotFromHandle(Handle)
@@ -399,6 +485,9 @@ PUBLIC FUNCTION SetSelectedIndex(Handle AS NUMBER, Index AS NUMBER) AS BOOLEAN
     RETURN TRUE
 END FUNCTION
 
+''' Selects the first enabled item and returns the menu to its top row.
+''' @param Handle: Menu handle whose selection will reset.
+''' @returns: TRUE when an enabled item is selected; FALSE for an invalid handle or a menu with no enabled items.
 PUBLIC FUNCTION ResetSelection(Handle AS NUMBER) AS BOOLEAN
     DIM Slot AS NUMBER
     Slot = SlotFromHandle(Handle)
@@ -437,6 +526,10 @@ PRIVATE FUNCTION FindNext(Slot AS NUMBER, Direction AS NUMBER) AS NUMBER
     RETURN -1
 END FUNCTION
 
+''' Applies one keyboard input to menu navigation and acceptance behavior.
+''' @param Handle: Menu handle that receives the key.
+''' @param Key: SMILE key constant such as KEY_UP, KEY_DOWN, KEY_ENTER, KEY_SPACE, or KEY_ESCAPE.
+''' @returns: A UI_EVENT_* value describing cancellation, acceptance, selection change, or no action.
 PUBLIC FUNCTION HandleKey(Handle AS NUMBER, Key AS NUMBER) AS NUMBER
     DIM Slot AS NUMBER
     DIM NextIndex AS NUMBER
@@ -695,6 +788,10 @@ PRIVATE SUB DrawLabel(Slot AS NUMBER, Index AS NUMBER, BYREF Style AS Core.TextS
     END CLIP
 END SUB
 
+''' Draws a menu and optionally shows its focused cursor treatment.
+''' @param Handle: Menu handle to draw. Invalid or zero-sized menus are ignored.
+''' @param Focused: TRUE to draw the selection cursor as focused; FALSE for an unfocused menu.
+''' @remarks: Requires GAME WINDOW because it draws window, text, image, clipping, and scrollbar primitives.
 PUBLIC SUB DrawFocused(Handle AS NUMBER, Focused AS BOOLEAN)
     DIM Slot AS NUMBER
     DIM Content AS Core.Rect
@@ -807,6 +904,9 @@ PUBLIC SUB DrawFocused(Handle AS NUMBER, Focused AS BOOLEAN)
     END CLIP
 END SUB
 
+''' Draws a menu using the normal focused appearance.
+''' @param Handle: Menu handle to draw. Invalid or zero-sized menus are ignored.
+''' @remarks: Requires GAME WINDOW. This is equivalent to DrawFocused with Focused set to TRUE.
 PUBLIC SUB Draw(Handle AS NUMBER)
     CALL DrawFocused(Handle, TRUE)
 END SUB
