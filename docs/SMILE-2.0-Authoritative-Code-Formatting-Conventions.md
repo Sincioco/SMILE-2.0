@@ -63,6 +63,8 @@ Use Visual Basic-style initial capitalization and readable BASIC conventions.
 
 The startup file must tell the program's executable story near the top.
 
+This is a permanent rule and convention for every executable SMILE program. Every executable startup file must create its `Game Window` near the top and place its primary `Do...Loop` game loop immediately after window creation and startup setup. Supporting `Sub` and `Function` implementations must follow the complete main executable flow; they must never make students scroll to find window creation or the game loop.
+
 Use this order:
 
 1. File header comment.
@@ -451,7 +453,7 @@ Before returning generated SMILE code, verify all of the following:
 - Constants are the only ordinary code identifiers allowed to remain uppercase.
 - Four spaces are used; no tabs exist.
 - No double or triple blank lines exist.
-- `Game Window` and the main loop appear before helper routine implementations in a startup file.
+- `Game Window` is near the top and the main loop immediately follows startup setup, before every helper routine implementation in each executable startup file.
 - Each If block was classified using the complete-block compact/expanded rule.
 - Long conditions use parenthesized continuation with trailing Boolean operators.
 - Each For loop was classified as compact or expanded.

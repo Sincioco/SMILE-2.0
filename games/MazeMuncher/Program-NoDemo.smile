@@ -94,7 +94,141 @@ EnemyStartCount = 0
 TunnelCount = 0
 ParsedPelletCount = 0
 
+'----------------------------------------------------------------------------------------------------
+
 Load HighScore From "HighScore" Default 0
+
+Game Window "SMILE 2.0 Maze Muncher"
+
+Call LoadMaze()
+Call EnterTitle()
+
+Do
+    FrameTime = Timer()
+    Elapsed = Max(0, Min(50, FrameTime - LastFrameTime))
+    LastFrameTime = FrameTime
+    Get Key Key
+
+    If State = 0 Then
+
+        If Key = KEY_ENTER Or Key = KEY_SPACE Then
+            Call StartMatch()
+        Else If Key = KEY_ESCAPE Then
+            End Program
+        End If
+
+    Else If State = 1 Then
+
+        If Key = KEY_ESCAPE Then
+            Call EnterTitle()
+        Else If Key = KEY_UP Or Key = KEY_W Then
+            RequestedDirection = 0
+        Else If Key = KEY_RIGHT Or Key = KEY_D Then
+            RequestedDirection = 1
+        Else If Key = KEY_DOWN Or Key = KEY_S Then
+            RequestedDirection = 2
+        Else If Key = KEY_LEFT Or Key = KEY_A Then
+            RequestedDirection = 3
+        End If
+
+        If State = 1 Then
+
+            Accumulator = Min(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
+            CatchUpSteps = 0
+
+            Do
+
+                If Accumulator >= SimulationStep Then
+
+                    Call UpdatePlayer()
+
+                    If State = 1 Then
+
+                        Call UpdateEnemies()
+                        Call UpdateRenderPositions()
+                        Call CheckCollisions()
+
+                    End If
+
+                    Accumulator = Accumulator - SimulationStep
+                    CatchUpSteps = CatchUpSteps + 1
+
+                End If
+
+            Loop Until Accumulator < SimulationStep Or CatchUpSteps >= MaxCatchUpSteps Or State <> 1
+
+        End If
+
+    Else If State = 3 Then
+
+        If FrameTime >= PauseUntil Then
+
+            If PauseAction = 1 Then
+
+                Call ResetCharacters()
+
+                State = 1
+
+            Else
+
+                Level = Level + 1
+
+                Call CopyStartingPellets()
+                Call ResetCharacters()
+
+                State = 1
+
+            End If
+
+            Music Volume 38
+            Play Music "Assets\Background.mp3" Loop
+            Accumulator = 0
+
+        End If
+
+    Else
+
+        If Key = KEY_ENTER Or Key = KEY_SPACE Then
+            Call StartMatch()
+        Else If Key = KEY_ESCAPE Then
+            Call EnterTitle()
+        End If
+
+    End If
+
+    If State = 0 Then
+
+        Call DrawTitle()
+
+    Else
+
+        Call UpdateRenderPositions()
+        Call DrawMaze()
+
+        If State = 2 Then
+
+            Call DrawTerminal()
+
+        Else If State = 3 Then
+
+            If PauseAction = 1 Then
+                Draw Text "Caught!" At 371, 270 Size 28 Color MAGENTA Centered
+            Else
+                Draw Text "Maze Cleared!" At 371, 270 Size 28 Color YELLOW Centered
+            End If
+
+        End If
+
+    End If
+
+    Show Screen
+
+Loop Until Game_Closed() = True
+
+Stop Sound
+Stop Music
+
+'----------------------------------------------------------------------------------------------------
 
 Function CellIndex(XValue, YValue)
 
@@ -136,8 +270,12 @@ Function PlayerCellOpen(XValue, YValue)
 
     Dim ReturnValue As Boolean
 
-    If XValue < 0 Or XValue >= MazeWidth Or YValue < 0 Or YValue >= MazeHeight Then
+    If (XValue < 0 Or
+        XValue >= MazeWidth Or
+        YValue < 0 Or
+        YValue >= MazeHeight) Then
         Return False
+
     End If
 
     TileValue = Tiles[CellIndex(XValue, YValue)]
@@ -150,8 +288,12 @@ Function EnemyCellOpen(XValue, YValue)
 
     Dim ReturnValue As Boolean
 
-    If XValue < 0 Or XValue >= MazeWidth Or YValue < 0 Or YValue >= MazeHeight Then
+    If (XValue < 0 Or
+        XValue >= MazeWidth Or
+        YValue < 0 Or
+        YValue >= MazeHeight) Then
         Return False
+
     End If
 
     ReturnValue = Tiles[CellIndex(XValue, YValue)] <> TILE_WALL
@@ -165,14 +307,20 @@ Function NextCellX(XValue, YValue, DirectionValue)
 
     CandidateX = XValue + DirectionX[DirectionValue]
 
-    If YValue = 10 And XValue = 0 And DirectionValue = 3 Then
+    If (YValue = 10 And
+        XValue = 0 And
+        DirectionValue = 3) Then
         ReturnValue = MazeWidth - 1
         Return ReturnValue
+
     End If
 
-    If YValue = 10 And XValue = MazeWidth - 1 And DirectionValue = 1 Then
+    If (YValue = 10 And
+        XValue = MazeWidth - 1 And
+        DirectionValue = 1) Then
         ReturnValue = 0
         Return ReturnValue
+
     End If
 
     Return CandidateX
@@ -402,8 +550,13 @@ Sub ParseLoadedMap()
 
     End If
 
-    If ParsedRow <> MazeHeight Or PlayerStartCount <> 1 Or EnemyStartCount <> 4 Or TunnelCount <> 2 Or ParsedPelletCount <= 0 Then
+    If (ParsedRow <> MazeHeight Or
+        PlayerStartCount <> 1 Or
+        EnemyStartCount <> 4 Or
+        TunnelCount <> 2 Or
+        ParsedPelletCount <= 0) Then
         MapValid = False
+
     End If
 
     For ParsedEnemy = 0 To 3
@@ -428,7 +581,10 @@ Sub BuildFallbackMap()
 
             FallbackIndex = CellIndex(FallbackX, FallbackY)
 
-            If FallbackX = 0 Or FallbackX = MazeWidth - 1 Or FallbackY = 0 Or FallbackY = MazeHeight - 1 Then
+            If (FallbackX = 0 Or
+                FallbackX = MazeWidth - 1 Or
+                FallbackY = 0 Or
+                FallbackY = MazeHeight - 1) Then
                 Tiles[FallbackIndex] = TILE_WALL
             Else
                 Tiles[FallbackIndex] = TILE_CORRIDOR
@@ -706,7 +862,9 @@ Sub ChooseEnemyDirection(EnemyNumber)
 
         CandidateAllowed = CanEnemyMove(EnemyFromX[EnemyNumber], EnemyFromY[EnemyNumber], CandidateDirection)
 
-        If CandidateDirection = ReverseDirection And LegalCount > 1 And EnemyEaten[EnemyNumber] = 0 Then
+        If (CandidateDirection = ReverseDirection And
+            LegalCount > 1 And
+            EnemyEaten[EnemyNumber] = 0) Then
             CandidateAllowed = False
         End If
 
@@ -715,8 +873,11 @@ Sub ChooseEnemyDirection(EnemyNumber)
             CandidateX = NextCellX(EnemyFromX[EnemyNumber], EnemyFromY[EnemyNumber], CandidateDirection)
             CandidateY = NextCellY(EnemyFromX[EnemyNumber], EnemyFromY[EnemyNumber], CandidateDirection)
 
-            If CandidateX = EnemyPreviousX[EnemyNumber] And CandidateY = EnemyPreviousY[EnemyNumber] And LegalCount > 1 Then
+            If (CandidateX = EnemyPreviousX[EnemyNumber] And
+                CandidateY = EnemyPreviousY[EnemyNumber] And
+                LegalCount > 1) Then
                 CandidateAllowed = False
+
             End If
 
         End If
@@ -763,7 +924,9 @@ Sub UpdateEnemies()
 
             If EnemyProgress[MoveEnemy] = 0 Then
 
-                If EnemyEaten[MoveEnemy] = 1 And EnemyFromX[MoveEnemy] = EnemyStartX[MoveEnemy] And EnemyFromY[MoveEnemy] = EnemyStartY[MoveEnemy] Then
+                If (EnemyEaten[MoveEnemy] = 1 And
+                    EnemyFromX[MoveEnemy] = EnemyStartX[MoveEnemy] And
+                    EnemyFromY[MoveEnemy] = EnemyStartY[MoveEnemy]) Then
 
                     EnemyEaten[MoveEnemy] = 0
                     EnemyReleased[MoveEnemy] = 0
@@ -819,13 +982,21 @@ Sub UpdateRenderPositions()
 
     If PlayerProgress > 0 Then
 
-        If PlayerFromX = 0 And PlayerToX = MazeWidth - 1 And PlayerDirection = 3 Then
+        If (PlayerFromX = 0 And
+            PlayerToX = MazeWidth - 1 And
+            PlayerDirection = 3) Then
             PlayerPixelX = CellCenterX(0) - PlayerProgress / SubpixelsPerPixel
-        Else If PlayerFromX = MazeWidth - 1 And PlayerToX = 0 And PlayerDirection = 1 Then
+
+        Else If (PlayerFromX = MazeWidth - 1 And
+            PlayerToX = 0 And
+            PlayerDirection = 1) Then
             PlayerPixelX = CellCenterX(MazeWidth - 1) + PlayerProgress / SubpixelsPerPixel
+
         Else
+
             PlayerPixelX = CellCenterX(PlayerFromX) + (CellCenterX(PlayerToX) - CellCenterX(PlayerFromX)) * PlayerProgress / CellTravelSub
             PlayerPixelY = CellCenterY(PlayerFromY) + (CellCenterY(PlayerToY) - CellCenterY(PlayerFromY)) * PlayerProgress / CellTravelSub
+
         End If
 
     End If
@@ -837,13 +1008,21 @@ Sub UpdateRenderPositions()
 
         If EnemyProgress[RenderEnemy] > 0 Then
 
-            If EnemyFromX[RenderEnemy] = 0 And EnemyToX[RenderEnemy] = MazeWidth - 1 And EnemyDirection[RenderEnemy] = 3 Then
+            If (EnemyFromX[RenderEnemy] = 0 And
+                EnemyToX[RenderEnemy] = MazeWidth - 1 And
+                EnemyDirection[RenderEnemy] = 3) Then
                 EnemyPixelX[RenderEnemy] = CellCenterX(0) - EnemyProgress[RenderEnemy] / SubpixelsPerPixel
-            Else If EnemyFromX[RenderEnemy] = MazeWidth - 1 And EnemyToX[RenderEnemy] = 0 And EnemyDirection[RenderEnemy] = 1 Then
+
+            Else If (EnemyFromX[RenderEnemy] = MazeWidth - 1 And
+                EnemyToX[RenderEnemy] = 0 And
+                EnemyDirection[RenderEnemy] = 1) Then
                 EnemyPixelX[RenderEnemy] = CellCenterX(MazeWidth - 1) + EnemyProgress[RenderEnemy] / SubpixelsPerPixel
+
             Else
+
                 EnemyPixelX[RenderEnemy] = CellCenterX(EnemyFromX[RenderEnemy]) + (CellCenterX(EnemyToX[RenderEnemy]) - CellCenterX(EnemyFromX[RenderEnemy])) * EnemyProgress[RenderEnemy] / CellTravelSub
                 EnemyPixelY[RenderEnemy] = CellCenterY(EnemyFromY[RenderEnemy]) + (CellCenterY(EnemyToY[RenderEnemy]) - CellCenterY(EnemyFromY[RenderEnemy])) * EnemyProgress[RenderEnemy] / CellTravelSub
+
             End If
 
         End If
@@ -954,7 +1133,10 @@ Function IsWallTile(XValue, YValue)
 
     Dim ReturnValue As Boolean
 
-    If XValue < 0 Or XValue >= MazeWidth Or YValue < 0 Or YValue >= MazeHeight Then
+    If (XValue < 0 Or
+        XValue >= MazeWidth Or
+        YValue < 0 Or
+        YValue >= MazeHeight) Then
         Return False
     End If
 
@@ -1155,19 +1337,31 @@ Sub DrawMaze()
 
             Else
 
-                If IsWallTile(DrawX, DrawY - 1) = True And IsWallTile(DrawX - 1, DrawY) = True And IsWallTile(DrawX - 1, DrawY - 1) = True Then
+                If (IsWallTile(DrawX, DrawY - 1) = True And
+                    IsWallTile(DrawX - 1, DrawY) = True And
+                    IsWallTile(DrawX - 1, DrawY - 1) = True) Then
+
                     Call DrawNeonCorner(DrawCellX + WallCurveRadius, DrawCellY + WallCurveRadius, 180, 90)
                 End If
 
-                If IsWallTile(DrawX, DrawY - 1) = True And IsWallTile(DrawX + 1, DrawY) = True And IsWallTile(DrawX + 1, DrawY - 1) = True Then
+                If (IsWallTile(DrawX, DrawY - 1) = True And
+                    IsWallTile(DrawX + 1, DrawY) = True And
+                    IsWallTile(DrawX + 1, DrawY - 1) = True) Then
+
                     Call DrawNeonCorner(DrawCellX + CellSize - WallCurveRadius, DrawCellY + WallCurveRadius, 270, 90)
                 End If
 
-                If IsWallTile(DrawX, DrawY + 1) = True And IsWallTile(DrawX + 1, DrawY) = True And IsWallTile(DrawX + 1, DrawY + 1) = True Then
+                If (IsWallTile(DrawX, DrawY + 1) = True And
+                    IsWallTile(DrawX + 1, DrawY) = True And
+                    IsWallTile(DrawX + 1, DrawY + 1) = True) Then
+
                     Call DrawNeonCorner(DrawCellX + CellSize - WallCurveRadius, DrawCellY + CellSize - WallCurveRadius, 0, 90)
                 End If
 
-                If IsWallTile(DrawX, DrawY + 1) = True And IsWallTile(DrawX - 1, DrawY) = True And IsWallTile(DrawX - 1, DrawY + 1) = True Then
+                If (IsWallTile(DrawX, DrawY + 1) = True And
+                    IsWallTile(DrawX - 1, DrawY) = True And
+                    IsWallTile(DrawX - 1, DrawY + 1) = True) Then
+
                     Call DrawNeonCorner(DrawCellX + WallCurveRadius, DrawCellY + CellSize - WallCurveRadius, 90, 90)
                 End If
 
@@ -1257,133 +1451,4 @@ Sub DrawTerminal()
 
 End Sub
 
-Game Window "SMILE 2.0 Maze Muncher"
-
-Call LoadMaze()
-Call EnterTitle()
-
-Do
-    FrameTime = Timer()
-    Elapsed = Max(0, Min(50, FrameTime - LastFrameTime))
-    LastFrameTime = FrameTime
-    Get Key Key
-
-    If State = 0 Then
-
-        If Key = KEY_ENTER Or Key = KEY_SPACE Then
-            Call StartMatch()
-        Else If Key = KEY_ESCAPE Then
-            End Program
-        End If
-
-    Else If State = 1 Then
-
-        If Key = KEY_ESCAPE Then
-            Call EnterTitle()
-        Else If Key = KEY_UP Or Key = KEY_W Then
-            RequestedDirection = 0
-        Else If Key = KEY_RIGHT Or Key = KEY_D Then
-            RequestedDirection = 1
-        Else If Key = KEY_DOWN Or Key = KEY_S Then
-            RequestedDirection = 2
-        Else If Key = KEY_LEFT Or Key = KEY_A Then
-            RequestedDirection = 3
-        End If
-
-        If State = 1 Then
-
-            Accumulator = Min(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
-            CatchUpSteps = 0
-
-            Do
-
-                If Accumulator >= SimulationStep Then
-
-                    Call UpdatePlayer()
-
-                    If State = 1 Then
-
-                        Call UpdateEnemies()
-                        Call UpdateRenderPositions()
-                        Call CheckCollisions()
-
-                    End If
-
-                    Accumulator = Accumulator - SimulationStep
-                    CatchUpSteps = CatchUpSteps + 1
-
-                End If
-
-            Loop Until Accumulator < SimulationStep Or CatchUpSteps >= MaxCatchUpSteps Or State <> 1
-
-        End If
-
-    Else If State = 3 Then
-
-        If FrameTime >= PauseUntil Then
-
-            If PauseAction = 1 Then
-
-                Call ResetCharacters()
-
-                State = 1
-
-            Else
-
-                Level = Level + 1
-
-                Call CopyStartingPellets()
-                Call ResetCharacters()
-
-                State = 1
-
-            End If
-
-            Music Volume 38
-            Play Music "Assets\Background.mp3" Loop
-            Accumulator = 0
-
-        End If
-
-    Else
-
-        If Key = KEY_ENTER Or Key = KEY_SPACE Then
-            Call StartMatch()
-        Else If Key = KEY_ESCAPE Then
-            Call EnterTitle()
-        End If
-
-    End If
-
-    If State = 0 Then
-
-        Call DrawTitle()
-
-    Else
-
-        Call UpdateRenderPositions()
-        Call DrawMaze()
-
-        If State = 2 Then
-
-            Call DrawTerminal()
-
-        Else If State = 3 Then
-
-            If PauseAction = 1 Then
-                Draw Text "Caught!" At 371, 270 Size 28 Color MAGENTA Centered
-            Else
-                Draw Text "Maze Cleared!" At 371, 270 Size 28 Color YELLOW Centered
-            End If
-
-        End If
-
-    End If
-
-    Show Screen
-
-Loop Until Game_Closed() = True
-
-Stop Sound
-Stop Music
 End Program

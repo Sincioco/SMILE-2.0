@@ -332,7 +332,10 @@ End Function
 
 Function CellBlocked(TestX, TestY, AllowTail)
 
-    If TestX < 0 Or TestX >= GridWidth Or TestY < 0 Or TestY >= GridHeight Then
+    If (TestX < 0 Or
+        TestX >= GridWidth Or
+        TestY < 0 Or
+        TestY >= GridHeight) Then
         Return True
     End If
 
@@ -380,7 +383,10 @@ End Function
 
 Function SimulatedCellBlocked(TestX, TestY)
 
-    If TestX < 0 Or TestX >= GridWidth Or TestY < 0 Or TestY >= GridHeight Then
+    If (TestX < 0 Or
+        TestX >= GridWidth Or
+        TestY < 0 Or
+        TestY >= GridHeight) Then
         Return True
     End If
 
@@ -450,7 +456,10 @@ Function FloodAreaForDirection(TestDirection)
             FloodNextX = FloodX + DirectionX(FloodDirection)
             FloodNextY = FloodY + DirectionY(FloodDirection)
 
-            If FloodNextX >= 0 And FloodNextX < GridWidth And FloodNextY >= 0 And FloodNextY < GridHeight Then
+            If (FloodNextX >= 0 And
+                FloodNextX < GridWidth And
+                FloodNextY >= 0 And
+                FloodNextY < GridHeight) Then
 
                 If FloodVisited[FloodNextX, FloodNextY] = 0 Then
 
@@ -464,7 +473,6 @@ Function FloodAreaForDirection(TestDirection)
                     End If
 
                 End If
-
             End If
 
         End For
@@ -492,12 +500,12 @@ Sub ChooseSafeFallback()
             SafeY = SnakeY[0] + DirectionY(SafeDirection)
             SafeFoodDistance = Abs(SafeX - FoodX) + Abs(SafeY - FoodY)
 
-            If SafeArea > BestSafeArea Or (SafeArea = BestSafeArea And SafeFoodDistance < BestFoodDistance) Then
+            If (SafeArea > BestSafeArea Or
+                (SafeArea = BestSafeArea And SafeFoodDistance < BestFoodDistance)) Then
 
                 BestSafeArea = SafeArea
                 BestFoodDistance = SafeFoodDistance
                 BestSafeDirection = SafeDirection
-
             End If
 
         End If
@@ -545,7 +553,10 @@ Sub PlanDemoDirection()
             BFSNextX = Bfsx + DirectionX(BFSDirection)
             BFSNextY = Bfsy + DirectionY(BFSDirection)
 
-            If BFSNextX >= 0 And BFSNextX < GridWidth And BFSNextY >= 0 And BFSNextY < GridHeight Then
+            If (BFSNextX >= 0 And
+                BFSNextX < GridWidth And
+                BFSNextY >= 0 And
+                BFSNextY < GridHeight) Then
 
                 If BFSVisited[BFSNextX, BFSNextY] = 0 Then
 
@@ -573,7 +584,6 @@ Sub PlanDemoDirection()
                     End If
 
                 End If
-
             End If
 
         End For
@@ -615,7 +625,10 @@ Sub MoveSnake()
 
     Collision = False
 
-    If SnakeX[0] < 0 Or SnakeX[0] >= GridWidth Or SnakeY[0] < 0 Or SnakeY[0] >= GridHeight Then
+    If (SnakeX[0] < 0 Or
+        SnakeX[0] >= GridWidth Or
+        SnakeY[0] < 0 Or
+        SnakeY[0] >= GridHeight) Then
         Collision = True
     End If
 
@@ -656,7 +669,10 @@ Sub DrawBoard()
 
     For I = 0 To Length - 1
 
-        If SnakeX[I] >= 0 And SnakeX[I] < GridWidth And SnakeY[I] >= 0 And SnakeY[I] < GridHeight Then
+        If (SnakeX[I] >= 0 And
+            SnakeX[I] < GridWidth And
+            SnakeY[I] >= 0 And
+            SnakeY[I] < GridHeight) Then
             Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)
             Draw Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(20, 105, 35)
         End If

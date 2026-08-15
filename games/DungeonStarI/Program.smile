@@ -211,6 +211,61 @@ VisibleSections = 1
 FrontBlockTile = TILE_WALL
 DoorDrawProgress = 0
 
+'----------------------------------------------------------------------------------------------------
+
+' -----------------------------------------------------------------------------
+' Native game entry and continuous VSync-paced loop
+' -----------------------------------------------------------------------------
+
+Game Window "SMILE 2.0 Dungeon Star I"
+
+Call EnterTitle()
+
+Do
+    Now = Timer()
+    Get Key Key
+
+    If ScreenState = STATE_TITLE Then
+
+        Call UpdateTitle()
+
+        If ScreenState = STATE_TITLE Then
+            Call DrawTitle()
+        Else
+            Call DrawDungeonScene()
+        End If
+
+    Else If ScreenState = STATE_DEMO_DUNGEON Then
+
+        Call UpdateDemo()
+
+        If ScreenState = STATE_TITLE Then
+            Call DrawTitle()
+        Else
+            Call DrawDungeonScene()
+        End If
+
+    Else
+
+        Call UpdateUserDungeon()
+
+        If ScreenState = STATE_TITLE Then
+            Call DrawTitle()
+        Else
+            Call DrawDungeonScene()
+            Call DrawIdleWarning()
+        End If
+
+    End If
+
+    Show Screen
+
+Loop Until Game_Closed() = True
+
+Stop Music
+
+'----------------------------------------------------------------------------------------------------
+
 ' -----------------------------------------------------------------------------
 ' Bounds-aware map and coordinate helpers
 ' -----------------------------------------------------------------------------
@@ -233,7 +288,10 @@ Function GetTile(FloorValue, XValue, YValue)
         Return ReturnValue
     End If
 
-    If XValue < 0 Or XValue >= MapWidth Or YValue < 0 Or YValue >= MapHeight Then
+    If (XValue < 0 Or
+        XValue >= MapWidth Or
+        YValue < 0 Or
+        YValue >= MapHeight) Then
         ReturnValue = TILE_WALL
         Return ReturnValue
     End If
@@ -245,7 +303,12 @@ End Function
 
 Sub SetTile(FloorValue, XValue, YValue, TileValue)
 
-    If FloorValue >= 0 And FloorValue < FloorCount And XValue > 0 And XValue < MapWidth - 1 And YValue > 0 And YValue < MapHeight - 1 Then
+    If (FloorValue >= 0 And
+        FloorValue < FloorCount And
+        XValue > 0 And
+        XValue < MapWidth - 1 And
+        YValue > 0 And
+        YValue < MapHeight - 1) Then
         Dungeon[MapIndex(FloorValue, XValue, YValue)] = TileValue
     End If
 
@@ -448,11 +511,13 @@ Function DoorHasClearRun(FloorValue, DoorTestX, DoorTestY, HorizontalValue)
                 Return False
             End If
 
-            If GetTile(FloorValue, DoorTestX - DoorDistance, DoorTestY - 1) <> TILE_WALL Or GetTile(FloorValue, DoorTestX - DoorDistance, DoorTestY + 1) <> TILE_WALL Then
+            If (GetTile(FloorValue, DoorTestX - DoorDistance, DoorTestY - 1) <> TILE_WALL Or
+                GetTile(FloorValue, DoorTestX - DoorDistance, DoorTestY + 1) <> TILE_WALL) Then
                 Return False
             End If
 
-            If GetTile(FloorValue, DoorTestX + DoorDistance, DoorTestY - 1) <> TILE_WALL Or GetTile(FloorValue, DoorTestX + DoorDistance, DoorTestY + 1) <> TILE_WALL Then
+            If (GetTile(FloorValue, DoorTestX + DoorDistance, DoorTestY - 1) <> TILE_WALL Or
+                GetTile(FloorValue, DoorTestX + DoorDistance, DoorTestY + 1) <> TILE_WALL) Then
                 Return False
             End If
 
@@ -465,11 +530,13 @@ Function DoorHasClearRun(FloorValue, DoorTestX, DoorTestY, HorizontalValue)
                 Return False
             End If
 
-            If GetTile(FloorValue, DoorTestX - 1, DoorTestY - DoorDistance) <> TILE_WALL Or GetTile(FloorValue, DoorTestX + 1, DoorTestY - DoorDistance) <> TILE_WALL Then
+            If (GetTile(FloorValue, DoorTestX - 1, DoorTestY - DoorDistance) <> TILE_WALL Or
+                GetTile(FloorValue, DoorTestX + 1, DoorTestY - DoorDistance) <> TILE_WALL) Then
                 Return False
             End If
 
-            If GetTile(FloorValue, DoorTestX - 1, DoorTestY + DoorDistance) <> TILE_WALL Or GetTile(FloorValue, DoorTestX + 1, DoorTestY + DoorDistance) <> TILE_WALL Then
+            If (GetTile(FloorValue, DoorTestX - 1, DoorTestY + DoorDistance) <> TILE_WALL Or
+                GetTile(FloorValue, DoorTestX + 1, DoorTestY + DoorDistance) <> TILE_WALL) Then
                 Return False
             End If
 
@@ -484,16 +551,20 @@ Sub ValidateFloor(FloorValue)
 
     For BorderX = 0 To MapWidth - 1
 
-        If GetTile(FloorValue, BorderX, 0) <> TILE_WALL Or GetTile(FloorValue, BorderX, MapHeight - 1) <> TILE_WALL Then
+        If (GetTile(FloorValue, BorderX, 0) <> TILE_WALL Or
+            GetTile(FloorValue, BorderX, MapHeight - 1) <> TILE_WALL) Then
             GenerationValid = False
+
         End If
 
     End For
 
     For BorderY = 0 To MapHeight - 1
 
-        If GetTile(FloorValue, 0, BorderY) <> TILE_WALL Or GetTile(FloorValue, MapWidth - 1, BorderY) <> TILE_WALL Then
+        If (GetTile(FloorValue, 0, BorderY) <> TILE_WALL Or
+            GetTile(FloorValue, MapWidth - 1, BorderY) <> TILE_WALL) Then
             GenerationValid = False
+
         End If
 
     End For
@@ -501,7 +572,10 @@ Sub ValidateFloor(FloorValue)
     AnchorX = FloorStartX[FloorValue]
     AnchorY = FloorStartY[FloorValue]
 
-    If AnchorX < 1 Or AnchorX >= MapWidth - 1 Or AnchorY < 1 Or AnchorY >= MapHeight - 1 Then
+    If (AnchorX < 1 Or
+        AnchorX >= MapWidth - 1 Or
+        AnchorY < 1 Or
+        AnchorY >= MapHeight - 1) Then
 
         GenerationValid = False
         AnchorX = 1
@@ -535,18 +609,21 @@ Sub ValidateFloor(FloorValue)
             FloodNextX = FloodX + DirectionX[FloodDirection]
             FloodNextY = FloodY + DirectionY[FloodDirection]
 
-            If FloodNextX > 0 And FloodNextX < MapWidth - 1 And FloodNextY > 0 And FloodNextY < MapHeight - 1 Then
+            If (FloodNextX > 0 And
+                FloodNextX < MapWidth - 1 And
+                FloodNextY > 0 And
+                FloodNextY < MapHeight - 1) Then
 
                 FloodNext = FloodNextY * MapWidth + FloodNextX
 
-                If FloodVisited[FloodNext] = 0 And IsWalkable(GetTile(FloorValue, FloodNextX, FloodNextY)) = True Then
+                If (FloodVisited[FloodNext] = 0 And
+                    IsWalkable(GetTile(FloorValue, FloodNextX, FloodNextY)) = True) Then
 
                     FloodVisited[FloodNext] = 1
                     FloodQueue[FloodTail] = FloodNext
                     FloodTail = FloodTail + 1
 
                 End If
-
             End If
 
         End For
@@ -662,12 +739,12 @@ Sub ValidateDungeon()
 
     End For
 
-    If MapStartCount <> 1 Or PlayerStartFloor < 0 Or PlayerStartFloor >= FloorCount Then
+    If (MapStartCount <> 1 Or
+        PlayerStartFloor < 0 Or
+        PlayerStartFloor >= FloorCount) Then
 
         GenerationValid = False
-
     Else
-
         StartTile = GetTile(PlayerStartFloor, PlayerStartX, PlayerStartY)
         ForwardX = PlayerStartX + DirectionX[PlayerStartDirection]
         ForwardY = PlayerStartY + DirectionY[PlayerStartDirection]
@@ -677,14 +754,16 @@ Sub ValidateDungeon()
         LeftDirection = (PlayerStartDirection + 3) Mod 4
         RightDirection = (PlayerStartDirection + 1) Mod 4
 
-        If StartTile <> TILE_FLOOR Or IsWalkable(GetTile(PlayerStartFloor, ForwardX, ForwardY)) = False Or IsWalkable(GetTile(PlayerStartFloor, BackwardX, BackwardY)) = False Then
+        If (StartTile <> TILE_FLOOR Or
+            IsWalkable(GetTile(PlayerStartFloor, ForwardX, ForwardY)) = False Or
+            IsWalkable(GetTile(PlayerStartFloor, BackwardX, BackwardY)) = False) Then
             GenerationValid = False
         End If
 
-        If GetTile(PlayerStartFloor, PlayerStartX + DirectionX[LeftDirection], PlayerStartY + DirectionY[LeftDirection]) <> TILE_WALL Or GetTile(PlayerStartFloor, PlayerStartX + DirectionX[RightDirection], PlayerStartY + DirectionY[RightDirection]) <> TILE_WALL Then
+        If (GetTile(PlayerStartFloor, PlayerStartX + DirectionX[LeftDirection], PlayerStartY + DirectionY[LeftDirection]) <> TILE_WALL Or
+            GetTile(PlayerStartFloor, PlayerStartX + DirectionX[RightDirection], PlayerStartY + DirectionY[RightDirection]) <> TILE_WALL) Then
             GenerationValid = False
         End If
-
     End If
 
 End Sub
@@ -842,7 +921,9 @@ Sub ProcessMapLine(LineStart, LineLength)
 
         HeaderFloor = MapFileBytes[LineStart + 7] - 49
 
-        If HeaderFloor < 0 Or HeaderFloor >= FloorCount Or HeaderFloor <> NextFloorHeader Then
+        If (HeaderFloor < 0 Or
+            HeaderFloor >= FloorCount Or
+            HeaderFloor <> NextFloorHeader) Then
             MapLoadValid = False
             Return
         End If
@@ -858,9 +939,13 @@ Sub ProcessMapLine(LineStart, LineLength)
 
     End If
 
-    If CurrentParsedFloor < 0 Or CurrentParsedFloor >= FloorCount Or LineLength <> MapWidth Or ParsedRows[CurrentParsedFloor] >= MapHeight Then
+    If (CurrentParsedFloor < 0 Or
+        CurrentParsedFloor >= FloorCount Or
+        LineLength <> MapWidth Or
+        ParsedRows[CurrentParsedFloor] >= MapHeight) Then
         MapLoadValid = False
         Return
+
     End If
 
     ParsedY = ParsedRows[CurrentParsedFloor]
@@ -900,7 +985,10 @@ Sub ProcessMapLine(LineStart, LineLength)
             StairDownX[CurrentParsedFloor] = ParsedX
             StairDownY[CurrentParsedFloor] = ParsedY
 
-        Else If MapByte = 78 Or MapByte = 69 Or MapByte = 83 Or MapByte = 87 Then
+        Else If (MapByte = 78 Or
+            MapByte = 69 Or
+            MapByte = 83 Or
+            MapByte = 87) Then
 
             ParsedTile = TILE_FLOOR
             MapStartCount = MapStartCount + 1
@@ -973,7 +1061,13 @@ Sub ParseLoadedMap()
 
     End For
 
-    If MapStartCount <> 1 Or ParsedUpCount[0] <> 0 Or ParsedDownCount[0] <> 1 Or ParsedUpCount[1] <> 1 Or ParsedDownCount[1] <> 1 Or ParsedUpCount[2] <> 1 Or ParsedDownCount[2] <> 0 Then
+    If (MapStartCount <> 1 Or
+        ParsedUpCount[0] <> 0 Or
+        ParsedDownCount[0] <> 1 Or
+        ParsedUpCount[1] <> 1 Or
+        ParsedDownCount[1] <> 1 Or
+        ParsedUpCount[2] <> 1 Or
+        ParsedDownCount[2] <> 0) Then
         MapLoadValid = False
     End If
 
@@ -1366,8 +1460,11 @@ Sub DrawDungeonView(DirectionValue, ScaleValue, OffsetValue)
         FrontX = WorldX(0, VisibleSections, RenderDirection)
         FrontY = WorldY(0, VisibleSections, RenderDirection)
 
-        If ActionState = ACTION_OPEN_DOOR And FrontX = DoorX And FrontY = DoorY Then
+        If (ActionState = ACTION_OPEN_DOOR And
+            FrontX = DoorX And
+            FrontY = DoorY) Then
             DoorDrawProgress = ActionProgress
+
         End If
 
         Call DrawDoorPanel(VisibleSections, DoorDrawProgress)
@@ -1633,18 +1730,16 @@ Sub UpdateAction()
             PlayerY = TargetY
             ArrivedTile = GetTile(CurrentFloor, PlayerX, PlayerY)
 
-            If (ArrivedTile = TILE_STAIRS_UP Or ArrivedTile = TILE_STAIRS_DOWN) And StairSuppressed = 0 Then
+            If ((ArrivedTile = TILE_STAIRS_UP Or ArrivedTile = TILE_STAIRS_DOWN) And
+                StairSuppressed = 0) Then
 
                 Call BeginStairTransition(ArrivedTile)
-
             Else
-
                 If ArrivedTile <> TILE_STAIRS_UP And ArrivedTile <> TILE_STAIRS_DOWN Then
                     StairSuppressed = 0
                 End If
 
                 Call EnterIdle()
-
             End If
 
         End If
@@ -1819,18 +1914,20 @@ Sub PlanDemoAction()
             DemoNextX = DemoCellX + DirectionX[DemoSearchDirection]
             DemoNextY = DemoCellY + DirectionY[DemoSearchDirection]
 
-            If DemoNextX > 0 And DemoNextX < MapWidth - 1 And DemoNextY > 0 And DemoNextY < MapHeight - 1 Then
+            If (DemoNextX > 0 And
+                DemoNextX < MapWidth - 1 And
+                DemoNextY > 0 And
+                DemoNextY < MapHeight - 1) Then
 
                 DemoNextCell = DemoNextY * MapWidth + DemoNextX
 
-                If DemoParent[DemoNextCell] = -2 And IsWalkable(GetTile(CurrentFloor, DemoNextX, DemoNextY)) = True Then
+                If (DemoParent[DemoNextCell] = -2 And
+                    IsWalkable(GetTile(CurrentFloor, DemoNextX, DemoNextY)) = True) Then
 
                     DemoParent[DemoNextCell] = DemoCell
                     DemoQueue[DemoTail] = DemoNextCell
                     DemoTail = DemoTail + 1
-
                 End If
-
             End If
 
         End For
@@ -2179,54 +2276,4 @@ Sub UpdateUserDungeon()
 
 End Sub
 
-' -----------------------------------------------------------------------------
-' Native game entry and continuous VSync-paced loop
-' -----------------------------------------------------------------------------
-
-Game Window "SMILE 2.0 Dungeon Star I"
-
-Call EnterTitle()
-
-Do
-    Now = Timer()
-    Get Key Key
-
-    If ScreenState = STATE_TITLE Then
-
-        Call UpdateTitle()
-
-        If ScreenState = STATE_TITLE Then
-            Call DrawTitle()
-        Else
-            Call DrawDungeonScene()
-        End If
-
-    Else If ScreenState = STATE_DEMO_DUNGEON Then
-
-        Call UpdateDemo()
-
-        If ScreenState = STATE_TITLE Then
-            Call DrawTitle()
-        Else
-            Call DrawDungeonScene()
-        End If
-
-    Else
-
-        Call UpdateUserDungeon()
-
-        If ScreenState = STATE_TITLE Then
-            Call DrawTitle()
-        Else
-            Call DrawDungeonScene()
-            Call DrawIdleWarning()
-        End If
-
-    End If
-
-    Show Screen
-
-Loop Until Game_Closed() = True
-
-Stop Music
 End Program

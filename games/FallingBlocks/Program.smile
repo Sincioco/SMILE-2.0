@@ -125,7 +125,181 @@ ClearFlashDuration = 0
 ClearCollapseDuration = 0
 PendingClearCount = 0
 
+'----------------------------------------------------------------------------------------------------
+
 Load HighScore From "HighScore" Default 0
+
+Game Window "SMILE 2.0 Falling Blocks"
+
+Call EnterTitle()
+
+Do
+    Get Key Key
+
+    If DemoMode = True And Key <> KEY_NONE Then
+        Call EnterTitle()
+
+        Key = KEY_NONE
+    End If
+
+    If State = 0 Then
+
+        If Key <> KEY_NONE And Timer() >= TitleAcceptInputAt Then
+
+            TitleStartedAt = Timer()
+
+            If Key = KEY_ESCAPE Then
+                Stop Sound
+                End Program
+            Else If Key = KEY_ENTER Then
+                Call ResetGame()
+            End If
+
+        End If
+
+        If State = 0 And Timer() - TitleStartedAt >= TitleDemoDelay Then
+            Call StartDemo()
+        End If
+
+    Else If DemoMode = False And Key = KEY_ESCAPE Then
+
+        Stop Music
+        Stop Sound
+        End Program
+
+    End If
+
+    If State = 0 Then
+
+        Call DrawTitle()
+
+    Else If State = 1 Then
+
+        If DemoMode = True And Timer() - DemoStartedAt >= DemoMaximumPlayTime Then
+            Call EnterTitle()
+        End If
+
+        If State = 1 And ClearPhase > 0 Then
+
+            Call UpdateRowClear()
+
+        Else If State = 1 Then
+
+            If DemoMode = True Then
+
+                Call ExecuteDemoPlan()
+
+            Else
+
+                If Key = KEY_A Or Key = KEY_LEFT Then
+
+                    If CanMove(-1, 0, Rotation) = True Then
+                        PieceX = PieceX - 1
+
+                        Play Sound "Assets\Move.wav"
+
+                    End If
+
+                Else If Key = KEY_D Or Key = KEY_RIGHT Then
+
+                    If CanMove(1, 0, Rotation) = True Then
+                        PieceX = PieceX + 1
+
+                        Play Sound "Assets\Move.wav"
+
+                    End If
+
+                Else If Key = KEY_W Or Key = KEY_UP Then
+
+                    NewRotation = (Rotation + 1) Mod 4
+
+                    If CanMove(0, 0, NewRotation) = True Then
+                        Rotation = NewRotation
+
+                        Play Sound "Assets\Rotate.wav"
+
+                    End If
+
+                Else If Key = KEY_S Or Key = KEY_DOWN Then
+
+                    If CanMove(0, 1, Rotation) = True Then
+                        PieceY = PieceY + 1
+                    Else
+                        Call LockPiece()
+                    End If
+
+                    NextFallTime = Timer() + FallDelay
+
+                Else If Key = KEY_SPACE Then
+
+                    Do
+
+                        If CanMove(0, 1, Rotation) = True Then
+                            PieceY = PieceY + 1
+                        Else
+                            Exit Do
+                        End If
+
+                    Loop
+
+                    Call LockPiece()
+
+                End If
+
+            End If
+
+            If (State = 1 And
+                Timer() >= NextFallTime And
+                (DemoMode = False Or DemoPlanAligned = True)) Then
+
+                If CanMove(0, 1, Rotation) = True Then
+                    PieceY = PieceY + 1
+                Else
+                    Call LockPiece()
+                End If
+
+                NextFallTime = Timer() + FallDelay
+
+            End If
+
+        End If
+
+        Call DrawGame()
+
+        If State = 2 Then
+            Call DrawGameOver()
+        End If
+
+    Else
+
+        If Key = KEY_ENTER Then
+            Call ResetGame()
+        End If
+
+        If State = 0 Then
+
+            Call DrawTitle()
+
+        Else
+
+            Call DrawGame()
+
+            If State = 2 Then
+                Call DrawGameOver()
+            End If
+
+        End If
+
+    End If
+
+    Show Screen
+
+Loop Until Game_Closed() = True
+
+Stop Music
+Stop Sound
+
+'----------------------------------------------------------------------------------------------------
 
 Function BlockX(PieceValue, RotationValue, CellValue)
 
@@ -191,8 +365,11 @@ Function CanMove(OffsetX, OffsetY, TestRotation)
         TestX = PieceX + OffsetX + BlockX(CurrentPiece, TestRotation, TestCell)
         TestY = PieceY + OffsetY + BlockY(CurrentPiece, TestRotation, TestCell)
 
-        If TestX < 0 Or TestX >= BoardWidth Or TestY >= BoardHeight Then
+        If (TestX < 0 Or
+            TestX >= BoardWidth Or
+            TestY >= BoardHeight) Then
             Return False
+
         End If
 
         If TestY >= 0 Then
@@ -230,8 +407,11 @@ Function CandidateCanFit(PositionX, PositionY)
         CandidateBlockX = PositionX + BlockX(CurrentPiece, CandidateRotation, CandidateCell)
         CandidateBlockY = PositionY + BlockY(CurrentPiece, CandidateRotation, CandidateCell)
 
-        If CandidateBlockX < 0 Or CandidateBlockX >= BoardWidth Or CandidateBlockY >= BoardHeight Then
+        If (CandidateBlockX < 0 Or
+            CandidateBlockX >= BoardWidth Or
+            CandidateBlockY >= BoardHeight) Then
             Return False
+
         End If
 
         If CandidateBlockY >= 0 And Board[CandidateBlockX, CandidateBlockY] <> 0 Then
@@ -901,171 +1081,4 @@ Sub DrawGameOver()
 
 End Sub
 
-Game Window "SMILE 2.0 Falling Blocks"
-
-Call EnterTitle()
-
-Do
-    Get Key Key
-
-    If DemoMode = True And Key <> KEY_NONE Then
-        Call EnterTitle()
-
-        Key = KEY_NONE
-    End If
-
-    If State = 0 Then
-
-        If Key <> KEY_NONE And Timer() >= TitleAcceptInputAt Then
-
-            TitleStartedAt = Timer()
-
-            If Key = KEY_ESCAPE Then
-                Stop Sound
-                End Program
-            Else If Key = KEY_ENTER Then
-                Call ResetGame()
-            End If
-
-        End If
-
-        If State = 0 And Timer() - TitleStartedAt >= TitleDemoDelay Then
-            Call StartDemo()
-        End If
-
-    Else If DemoMode = False And Key = KEY_ESCAPE Then
-
-        Stop Music
-        Stop Sound
-        End Program
-
-    End If
-
-    If State = 0 Then
-
-        Call DrawTitle()
-
-    Else If State = 1 Then
-
-        If DemoMode = True And Timer() - DemoStartedAt >= DemoMaximumPlayTime Then
-            Call EnterTitle()
-        End If
-
-        If State = 1 And ClearPhase > 0 Then
-
-            Call UpdateRowClear()
-
-        Else If State = 1 Then
-
-            If DemoMode = True Then
-
-                Call ExecuteDemoPlan()
-
-            Else
-
-                If Key = KEY_A Or Key = KEY_LEFT Then
-
-                    If CanMove(-1, 0, Rotation) = True Then
-                        PieceX = PieceX - 1
-
-                        Play Sound "Assets\Move.wav"
-
-                    End If
-
-                Else If Key = KEY_D Or Key = KEY_RIGHT Then
-
-                    If CanMove(1, 0, Rotation) = True Then
-                        PieceX = PieceX + 1
-
-                        Play Sound "Assets\Move.wav"
-
-                    End If
-
-                Else If Key = KEY_W Or Key = KEY_UP Then
-
-                    NewRotation = (Rotation + 1) Mod 4
-
-                    If CanMove(0, 0, NewRotation) = True Then
-                        Rotation = NewRotation
-
-                        Play Sound "Assets\Rotate.wav"
-
-                    End If
-
-                Else If Key = KEY_S Or Key = KEY_DOWN Then
-
-                    If CanMove(0, 1, Rotation) = True Then
-                        PieceY = PieceY + 1
-                    Else
-                        Call LockPiece()
-                    End If
-
-                    NextFallTime = Timer() + FallDelay
-
-                Else If Key = KEY_SPACE Then
-
-                    Do
-
-                        If CanMove(0, 1, Rotation) = True Then
-                            PieceY = PieceY + 1
-                        Else
-                            Exit Do
-                        End If
-
-                    Loop
-
-                    Call LockPiece()
-
-                End If
-
-            End If
-
-            If State = 1 And Timer() >= NextFallTime And (DemoMode = False Or DemoPlanAligned = True) Then
-
-                If CanMove(0, 1, Rotation) = True Then
-                    PieceY = PieceY + 1
-                Else
-                    Call LockPiece()
-                End If
-
-                NextFallTime = Timer() + FallDelay
-
-            End If
-
-        End If
-
-        Call DrawGame()
-
-        If State = 2 Then
-            Call DrawGameOver()
-        End If
-
-    Else
-
-        If Key = KEY_ENTER Then
-            Call ResetGame()
-        End If
-
-        If State = 0 Then
-
-            Call DrawTitle()
-
-        Else
-
-            Call DrawGame()
-
-            If State = 2 Then
-                Call DrawGameOver()
-            End If
-
-        End If
-
-    End If
-
-    Show Screen
-
-Loop Until Game_Closed() = True
-
-Stop Music
-Stop Sound
 End Program

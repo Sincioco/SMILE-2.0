@@ -88,6 +88,10 @@ End If
 
 Treat the current `games\Snake\Program.smile` as the canonical structural reference for newly generated SMILE game code.
 
+- This structure is a permanent rule and convention for every executable SMILE program, not merely a recommendation for newly generated games.
+- Every executable SMILE startup file must place `Game Window` near the top and must place its primary `Do...Loop` game loop immediately after window creation and startup setup.
+- No supporting `Function` or `Sub` implementation may appear before `Game Window` or the primary game loop.
+
 - Present the startup program's executable story near the top of the startup file so a student can read it from top to bottom before reaching implementation details.
 - Begin with only the file header, options, imports, constants, shared variables, and initial state needed by the startup flow.
 - Place `Game Window` near the top, after the minimum declarations and initial state that must precede it, and before any `Function` or `Sub` implementation.

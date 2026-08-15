@@ -203,6 +203,95 @@ DemoLastPlayerX = 0
 DemoLastPlayerY = 0
 DemoTurnDirection = 0
 
+'----------------------------------------------------------------------------------------------------
+
+' -----------------------------------------------------------------------------
+' Native game entry and VSync-paced main loop
+' -----------------------------------------------------------------------------
+
+Call InitializeWallPalettes()
+
+Game Window "SMILE 2.0 Raycasting Demo" Size 960 By 540
+
+Call EnterTitle()
+
+LastFrameTime = Timer()
+
+Do
+    Now = Timer()
+    Elapsed = Now - LastFrameTime
+    LastFrameTime = Now
+    Elapsed = Max(0, Min(SimulationStep * MaxCatchUpSteps, Elapsed))
+    Get Key Key
+
+    If ScreenState = STATE_TITLE Then
+
+        Call UpdateTitle()
+
+        If ScreenState = STATE_TITLE Then
+            Call DrawTitle()
+        Else
+            Call DrawWalkView()
+        End If
+
+    Else
+
+        If ScreenState = STATE_DEMO_WALK And Key <> KEY_NONE Then
+
+            Call EnterTitle()
+
+        Else If ScreenState = STATE_DEMO_WALK And Now - DemoStartedAt >= DemoDuration Then
+
+            Call EnterTitle()
+
+        Else If ScreenState = STATE_USER_WALK And Key = KEY_ESCAPE Then
+
+            Call EnterTitle()
+
+        Else
+
+            If ScreenState = STATE_USER_WALK And (Key = KEY_ENTER Or Key = KEY_SPACE) Then
+                Call TryOpenDoor()
+            End If
+
+            Accumulator = Min(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
+            CatchUpSteps = 0
+
+            Do
+
+                If Accumulator >= SimulationStep Then
+
+                    Call CapturePreviousCamera()
+
+                    If ScreenState = STATE_DEMO_WALK Then
+                        Call UpdateDemoStep()
+                    Else
+                        Call UpdateUserStep()
+                    End If
+
+                    Accumulator = Accumulator - SimulationStep
+                    CatchUpSteps = CatchUpSteps + 1
+
+                End If
+
+            Loop Until Accumulator < SimulationStep Or CatchUpSteps >= MaxCatchUpSteps
+
+        End If
+
+        If ScreenState = STATE_TITLE Then
+            Call DrawTitle()
+        Else
+            Call DrawWalkView()
+        End If
+
+    End If
+
+    Show Screen
+
+Loop Until Game_Closed() = True
+
+'----------------------------------------------------------------------------------------------------
+
 ' -----------------------------------------------------------------------------
 ' Bounds-aware tile helpers
 ' -----------------------------------------------------------------------------
@@ -220,9 +309,13 @@ Function GetTile(XValue, YValue)
 
     Dim ReturnValue As Number
 
-    If XValue < 0 Or XValue >= MapWidth Or YValue < 0 Or YValue >= MapHeight Then
+    If (XValue < 0 Or
+        XValue >= MapWidth Or
+        YValue < 0 Or
+        YValue >= MapHeight) Then
         ReturnValue = TILE_WALL_1
         Return ReturnValue
+
     End If
 
     ReturnValue = Tiles[MapIndex(XValue, YValue)]
@@ -232,8 +325,12 @@ End Function
 
 Sub SetTile(XValue, YValue, TileValue)
 
-    If XValue > 0 And XValue < MapWidth - 1 And YValue > 0 And YValue < MapHeight - 1 Then
+    If (XValue > 0 And
+        XValue < MapWidth - 1 And
+        YValue > 0 And
+        YValue < MapHeight - 1) Then
         Tiles[MapIndex(XValue, YValue)] = TileValue
+
     End If
 
 End Sub
@@ -250,16 +347,21 @@ Sub PaintRoomWalls(LeftValue, TopValue, WidthValue, HeightValue)
 
         For PaintX = LeftValue - 1 To LeftValue + WidthValue
 
-            If PaintX > 0 And PaintX < MapWidth - 1 And PaintY > 0 And PaintY < MapHeight - 1 Then
+            If (PaintX > 0 And
+                PaintX < MapWidth - 1 And
+                PaintY > 0 And
+                PaintY < MapHeight - 1) Then
 
-                If PaintX = LeftValue - 1 Or PaintX = LeftValue + WidthValue Or PaintY = TopValue - 1 Or PaintY = TopValue + HeightValue Then
+                If (PaintX = LeftValue - 1 Or
+                    PaintX = LeftValue + WidthValue Or
+                    PaintY = TopValue - 1 Or
+                    PaintY = TopValue + HeightValue) Then
 
                     If IsWall(GetTile(PaintX, PaintY)) = True Then
                         Tiles[MapIndex(PaintX, PaintY)] = WallMaterial
                     End If
 
                 End If
-
             End If
 
         End For
@@ -336,16 +438,19 @@ Sub PlaceGeneratedDoors()
 
         For DoorPlaceX = 1 To MapWidth - 2
 
-            If GeneratedDoorCount < 4 And GetTile(DoorPlaceX, DoorPlaceY) = TILE_FLOOR And HasNeighborDoor(DoorPlaceX, DoorPlaceY) = False Then
+            If (GeneratedDoorCount < 4 And
+                GetTile(DoorPlaceX, DoorPlaceY) = TILE_FLOOR And
+                HasNeighborDoor(DoorPlaceX, DoorPlaceY) = False) Then
 
                 DoorHorizontal = IsPassage(GetTile(DoorPlaceX - 1, DoorPlaceY)) And IsPassage(GetTile(DoorPlaceX + 1, DoorPlaceY)) And IsWall(GetTile(DoorPlaceX, DoorPlaceY - 1)) And IsWall(GetTile(DoorPlaceX, DoorPlaceY + 1))
                 DoorVertical = IsPassage(GetTile(DoorPlaceX, DoorPlaceY - 1)) And IsPassage(GetTile(DoorPlaceX, DoorPlaceY + 1)) And IsWall(GetTile(DoorPlaceX - 1, DoorPlaceY)) And IsWall(GetTile(DoorPlaceX + 1, DoorPlaceY))
 
-                If DoorHorizontal <> DoorVertical And (DoorPlaceX <> MapStartX Or DoorPlaceY <> MapStartY) Then
+                If (DoorHorizontal <> DoorVertical And
+                    (DoorPlaceX <> MapStartX Or DoorPlaceY <> MapStartY)) Then
                     Tiles[MapIndex(DoorPlaceX, DoorPlaceY)] = TILE_DOOR
                     GeneratedDoorCount = GeneratedDoorCount + 1
-                End If
 
+                End If
             End If
 
         End For
@@ -862,21 +967,33 @@ Sub ProcessMapLine(LineStart, LineLength)
 
         HeaderNumber = MapFileBytes[LineStart + 7] - 48
 
-        If HeaderNumber = 1 And MapHeaderSeen = False And MapParsedRows = 0 Then
+        If (HeaderNumber = 1 And
+            MapHeaderSeen = False And
+            MapParsedRows = 0) Then
             MapHeaderSeen = True
-        Else If HeaderNumber >= 2 And HeaderNumber <= 3 And MapHeaderSeen = True And MapParsedRows = MapHeight Then
+
+        Else If (HeaderNumber >= 2 And
+            HeaderNumber <= 3 And
+            MapHeaderSeen = True And
+            MapParsedRows = MapHeight) Then
             MapParsingStopped = True
+
         Else
+
             MapLoadValid = False
+
         End If
 
         Return
 
     End If
 
-    If MapHeaderSeen = False Or MapParsedRows >= MapHeight Or LineLength <> MapWidth Then
+    If (MapHeaderSeen = False Or
+        MapParsedRows >= MapHeight Or
+        LineLength <> MapWidth) Then
         MapLoadValid = False
         Return
+
     End If
 
     ParsedY = MapParsedRows
@@ -894,7 +1011,10 @@ Sub ProcessMapLine(LineStart, LineLength)
 
             ParsedTile = MapByte - 48
 
-        Else If MapByte = 46 Or MapByte = 79 Or MapByte = 85 Or MapByte = 86 Then
+        Else If (MapByte = 46 Or
+            MapByte = 79 Or
+            MapByte = 85 Or
+            MapByte = 86) Then
 
             ParsedTile = TILE_FLOOR
 
@@ -902,7 +1022,10 @@ Sub ProcessMapLine(LineStart, LineLength)
 
             ParsedTile = TILE_DOOR
 
-        Else If MapByte = 78 Or MapByte = 69 Or MapByte = 83 Or MapByte = 87 Then
+        Else If (MapByte = 78 Or
+            MapByte = 69 Or
+            MapByte = 83 Or
+            MapByte = 87) Then
 
             ParsedTile = TILE_FLOOR
             MapStartCount = MapStartCount + 1
@@ -958,8 +1081,11 @@ Sub ParseLoadedMap()
 
     End If
 
-    If MapHeaderSeen = False Or MapParsedRows <> MapHeight Or MapStartCount <> 1 Then
+    If (MapHeaderSeen = False Or
+        MapParsedRows <> MapHeight Or
+        MapStartCount <> 1) Then
         MapLoadValid = False
+
     End If
 
     If MapLoadValid = True Then
@@ -996,7 +1122,8 @@ Sub ValidateMap()
 
     For BorderX = 0 To MapWidth - 1
 
-        If IsWall(GetTile(BorderX, 0)) = False Or IsWall(GetTile(BorderX, MapHeight - 1)) = False Then
+        If (IsWall(GetTile(BorderX, 0)) = False Or
+            IsWall(GetTile(BorderX, MapHeight - 1)) = False) Then
             MapValid = False
         End If
 
@@ -1004,7 +1131,8 @@ Sub ValidateMap()
 
     For BorderY = 0 To MapHeight - 1
 
-        If IsWall(GetTile(0, BorderY)) = False Or IsWall(GetTile(MapWidth - 1, BorderY)) = False Then
+        If (IsWall(GetTile(0, BorderY)) = False Or
+            IsWall(GetTile(MapWidth - 1, BorderY)) = False) Then
             MapValid = False
         End If
 
@@ -1057,16 +1185,18 @@ Sub ValidateMap()
                 FloodNextY = FloodY + GridStepY[FloodDirection]
                 FloodNext = MapIndex(FloodNextX, FloodNextY)
 
-                If FloodNextX > 0 And FloodNextX < MapWidth - 1 And FloodNextY > 0 And FloodNextY < MapHeight - 1 Then
+                If (FloodNextX > 0 And
+                    FloodNextX < MapWidth - 1 And
+                    FloodNextY > 0 And
+                    FloodNextY < MapHeight - 1) Then
 
-                    If FloodVisited[FloodNext] = 0 And IsPassage(GetTile(FloodNextX, FloodNextY)) = True Then
+                    If (FloodVisited[FloodNext] = 0 And
+                        IsPassage(GetTile(FloodNextX, FloodNextY)) = True) Then
 
                         FloodVisited[FloodNext] = 1
                         FloodQueue[FloodTail] = FloodNext
                         FloodTail = FloodTail + 1
-
                     End If
-
                 End If
 
             End For
@@ -1203,7 +1333,10 @@ Sub CastRay(RayIndex)
     RayHitMapY = RayMapY
     RayDoorLift = 0
 
-    If RayHitTile = TILE_DOOR And DoorOpening = True And RayHitMapX = ActiveDoorX And RayHitMapY = ActiveDoorY Then
+    If (RayHitTile = TILE_DOOR And
+        DoorOpening = True And
+        RayHitMapX = ActiveDoorX And
+        RayHitMapY = ActiveDoorY) Then
         RayDoorLift = DoorProgress
     End If
 
@@ -1382,11 +1515,19 @@ Sub DrawRaycastView()
         Do
 
             If RunEnd >= RayCount - 1 Then
+
                 RunComplete = True
-            Else If RayTile[RunEnd + 1] = RayTile[DrawRay] And RaySide[RunEnd + 1] = RaySide[DrawRay] And RayPlane[RunEnd + 1] = RayPlane[DrawRay] And RayLift[RunEnd + 1] = RayLift[DrawRay] Then
+
+            Else If (RayTile[RunEnd + 1] = RayTile[DrawRay] And
+                RaySide[RunEnd + 1] = RaySide[DrawRay] And
+                RayPlane[RunEnd + 1] = RayPlane[DrawRay] And
+                RayLift[RunEnd + 1] = RayLift[DrawRay]) Then
                 RunEnd = RunEnd + 1
+
             Else
+
                 RunComplete = True
+
             End If
 
         Loop Until RunComplete = True
@@ -1537,9 +1678,13 @@ Sub PlanDemoRoute()
                 DemoNextY = DemoCellY + GridStepY[DemoDirection]
                 DemoNextCell = MapIndex(DemoNextX, DemoNextY)
 
-                If DemoNextX > 0 And DemoNextX < MapWidth - 1 And DemoNextY > 0 And DemoNextY < MapHeight - 1 Then
+                If (DemoNextX > 0 And
+                    DemoNextX < MapWidth - 1 And
+                    DemoNextY > 0 And
+                    DemoNextY < MapHeight - 1) Then
 
-                    If DemoParent[DemoNextCell] = -2 And IsPassage(GetTile(DemoNextX, DemoNextY)) = True Then
+                    If (DemoParent[DemoNextCell] = -2 And
+                        IsPassage(GetTile(DemoNextX, DemoNextY)) = True) Then
 
                         DemoParent[DemoNextCell] = DemoCell
                         FloodVisited[DemoNextCell] = FloodVisited[DemoCell] + 1
@@ -1550,9 +1695,7 @@ Sub PlanDemoRoute()
                             DemoFarthestDistance = FloodVisited[DemoNextCell]
                             DemoFarthestCell = DemoNextCell
                         End If
-
                     End If
-
                 End If
 
             End For
@@ -1566,7 +1709,9 @@ Sub PlanDemoRoute()
 
     Do
 
-        If DemoCursor <> DemoStartCell And DemoCursor >= 0 And DemoRouteCount < MapCellCount Then
+        If (DemoCursor <> DemoStartCell And
+            DemoCursor >= 0 And
+            DemoRouteCount < MapCellCount) Then
 
             DemoRoute[DemoRouteCount] = DemoCursor
             DemoRouteCount = DemoRouteCount + 1
@@ -1859,90 +2004,5 @@ Sub UpdateTitle()
     End If
 
 End Sub
-
-' -----------------------------------------------------------------------------
-' Native game entry and VSync-paced main loop
-' -----------------------------------------------------------------------------
-
-Call InitializeWallPalettes()
-
-Game Window "SMILE 2.0 Raycasting Demo" Size 960 By 540
-
-Call EnterTitle()
-
-LastFrameTime = Timer()
-
-Do
-    Now = Timer()
-    Elapsed = Now - LastFrameTime
-    LastFrameTime = Now
-    Elapsed = Max(0, Min(SimulationStep * MaxCatchUpSteps, Elapsed))
-    Get Key Key
-
-    If ScreenState = STATE_TITLE Then
-
-        Call UpdateTitle()
-
-        If ScreenState = STATE_TITLE Then
-            Call DrawTitle()
-        Else
-            Call DrawWalkView()
-        End If
-
-    Else
-
-        If ScreenState = STATE_DEMO_WALK And Key <> KEY_NONE Then
-
-            Call EnterTitle()
-
-        Else If ScreenState = STATE_DEMO_WALK And Now - DemoStartedAt >= DemoDuration Then
-
-            Call EnterTitle()
-
-        Else If ScreenState = STATE_USER_WALK And Key = KEY_ESCAPE Then
-
-            Call EnterTitle()
-
-        Else
-
-            If ScreenState = STATE_USER_WALK And (Key = KEY_ENTER Or Key = KEY_SPACE) Then
-                Call TryOpenDoor()
-            End If
-
-            Accumulator = Min(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
-            CatchUpSteps = 0
-
-            Do
-
-                If Accumulator >= SimulationStep Then
-
-                    Call CapturePreviousCamera()
-
-                    If ScreenState = STATE_DEMO_WALK Then
-                        Call UpdateDemoStep()
-                    Else
-                        Call UpdateUserStep()
-                    End If
-
-                    Accumulator = Accumulator - SimulationStep
-                    CatchUpSteps = CatchUpSteps + 1
-
-                End If
-
-            Loop Until Accumulator < SimulationStep Or CatchUpSteps >= MaxCatchUpSteps
-
-        End If
-
-        If ScreenState = STATE_TITLE Then
-            Call DrawTitle()
-        Else
-            Call DrawWalkView()
-        End If
-
-    End If
-
-    Show Screen
-
-Loop Until Game_Closed() = True
 
 End Program

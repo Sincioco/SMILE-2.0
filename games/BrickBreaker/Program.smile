@@ -61,7 +61,143 @@ DemoLaunchAt = 0
 DemoLastBrickAt = 0
 DemoBouncePattern = 0
 
+'----------------------------------------------------------------------------------------------------
+
 Load HighScore From "HighScore" Default 0
+
+Game Window "SMILE 2.0 Brick Breaker"
+
+Call EnterTitle()
+
+Do
+    FrameTime = Timer()
+    Elapsed = Max(0, Min(50, FrameTime - LastFrameTime))
+    LastFrameTime = FrameTime
+    Get Key Key
+
+    If DemoMode = True And Key <> KEY_NONE Then
+        Call EnterTitle()
+
+        Key = KEY_NONE
+    End If
+
+    If State = 0 Then
+
+        If Key <> KEY_NONE And FrameTime >= TitleAcceptInputAt Then
+
+            TitleStartedAt = FrameTime
+
+            If Key = KEY_ESCAPE Then
+                End Program
+            Else If Key = KEY_ENTER Or Key = KEY_SPACE Then
+                Call StartGame()
+            End If
+
+        End If
+
+        If State = 0 And FrameTime - TitleStartedAt >= TitleDemoDelay Then
+            Call StartDemo()
+        End If
+
+    Else If DemoMode = False And Key = KEY_ESCAPE Then
+
+        End Program
+
+    End If
+
+    If State = 0 Then
+
+        Call DrawTitle()
+
+    Else If State = 1 Then
+
+        If DemoMode = True Then
+
+            If Launched = False And FrameTime >= DemoLaunchAt Then
+                Launched = True
+                ReadyMessage = 0
+            End If
+
+            If Launched = True And FrameTime - DemoLastBrickAt >= DemoStallTime Then
+                Call BreakDemoStall()
+            End If
+
+            If FrameTime - DemoStartedAt >= DemoMaximumPlayTime Then
+                Call EnterTitle()
+            End If
+
+        Else If Launched = False Then
+
+            If Key = KEY_SPACE Or Key = KEY_ENTER Then
+                Launched = True
+                ReadyMessage = 0
+            End If
+
+        End If
+
+        If State = 1 Then
+
+            Accumulator = Min(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
+            CatchUpSteps = 0
+
+            Do
+
+                If Accumulator >= SimulationStep Then
+
+                    Call MovePaddle()
+
+                    If Launched = True Then
+                        Call MoveBall()
+                    End If
+
+                    Accumulator = Accumulator - SimulationStep
+                    CatchUpSteps = CatchUpSteps + 1
+
+                End If
+
+            Loop Until Accumulator < SimulationStep Or CatchUpSteps >= MaxCatchUpSteps Or State <> 1
+
+        End If
+
+        Call DrawPlayfield()
+
+        If State = 2 Then
+            Call DrawGameOver()
+        Else If State = 3 Then
+            Call DrawVictory()
+        End If
+
+    Else
+
+        If Key = KEY_ENTER Or Key = KEY_SPACE Then
+            Call StartGame()
+        End If
+
+        If State = 0 Then
+
+            Call DrawTitle()
+
+        Else
+
+            Call DrawPlayfield()
+
+            If State = 2 Then
+                Call DrawGameOver()
+            Else
+                Call DrawVictory()
+            End If
+
+        End If
+
+    End If
+
+    Show Screen
+
+Loop Until Game_Closed() = True
+
+Stop Sound
+
+'----------------------------------------------------------------------------------------------------
 
 Function BrickColor(RowValue)
 
@@ -414,7 +550,8 @@ Sub HitBricks()
 
                 If BallX + BallRadius >= BrickX And BallX - BallRadius <= BrickX + BrickWidth Then
 
-                    If BallY + BallRadius >= BrickY And BallY - BallRadius <= BrickY + BrickHeight Then
+                    If (BallY + BallRadius >= BrickY And
+                        BallY - BallRadius <= BrickY + BrickHeight) Then
 
                         Bricks[Column, Row] = 0
                         RemainingBricks = RemainingBricks - 1
@@ -507,7 +644,9 @@ Sub MoveBall()
 
     End If
 
-    If BallVY > 0 And BallY + BallRadius >= PaddleY And BallY - BallRadius <= PaddleY + PaddleHeight Then
+    If (BallVY > 0 And
+        BallY + BallRadius >= PaddleY And
+        BallY - BallRadius <= PaddleY + PaddleHeight) Then
 
         If BallX + BallRadius >= PaddleX And BallX - BallRadius <= PaddleX + PaddleWidth Then
             Call BounceFromPaddle()
@@ -647,135 +786,4 @@ Sub DrawVictory()
 
 End Sub
 
-Game Window "SMILE 2.0 Brick Breaker"
-
-Call EnterTitle()
-
-Do
-    FrameTime = Timer()
-    Elapsed = Max(0, Min(50, FrameTime - LastFrameTime))
-    LastFrameTime = FrameTime
-    Get Key Key
-
-    If DemoMode = True And Key <> KEY_NONE Then
-        Call EnterTitle()
-
-        Key = KEY_NONE
-    End If
-
-    If State = 0 Then
-
-        If Key <> KEY_NONE And FrameTime >= TitleAcceptInputAt Then
-
-            TitleStartedAt = FrameTime
-
-            If Key = KEY_ESCAPE Then
-                End Program
-            Else If Key = KEY_ENTER Or Key = KEY_SPACE Then
-                Call StartGame()
-            End If
-
-        End If
-
-        If State = 0 And FrameTime - TitleStartedAt >= TitleDemoDelay Then
-            Call StartDemo()
-        End If
-
-    Else If DemoMode = False And Key = KEY_ESCAPE Then
-
-        End Program
-
-    End If
-
-    If State = 0 Then
-
-        Call DrawTitle()
-
-    Else If State = 1 Then
-
-        If DemoMode = True Then
-
-            If Launched = False And FrameTime >= DemoLaunchAt Then
-                Launched = True
-                ReadyMessage = 0
-            End If
-
-            If Launched = True And FrameTime - DemoLastBrickAt >= DemoStallTime Then
-                Call BreakDemoStall()
-            End If
-
-            If FrameTime - DemoStartedAt >= DemoMaximumPlayTime Then
-                Call EnterTitle()
-            End If
-
-        Else If Launched = False Then
-
-            If Key = KEY_SPACE Or Key = KEY_ENTER Then
-                Launched = True
-                ReadyMessage = 0
-            End If
-
-        End If
-
-        If State = 1 Then
-
-            Accumulator = Min(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
-            CatchUpSteps = 0
-
-            Do
-
-                If Accumulator >= SimulationStep Then
-
-                    Call MovePaddle()
-
-                    If Launched = True Then
-                        Call MoveBall()
-                    End If
-
-                    Accumulator = Accumulator - SimulationStep
-                    CatchUpSteps = CatchUpSteps + 1
-
-                End If
-
-            Loop Until Accumulator < SimulationStep Or CatchUpSteps >= MaxCatchUpSteps Or State <> 1
-
-        End If
-
-        Call DrawPlayfield()
-
-        If State = 2 Then
-            Call DrawGameOver()
-        Else If State = 3 Then
-            Call DrawVictory()
-        End If
-
-    Else
-
-        If Key = KEY_ENTER Or Key = KEY_SPACE Then
-            Call StartGame()
-        End If
-
-        If State = 0 Then
-
-            Call DrawTitle()
-
-        Else
-
-            Call DrawPlayfield()
-
-            If State = 2 Then
-                Call DrawGameOver()
-            Else
-                Call DrawVictory()
-            End If
-
-        End If
-
-    End If
-
-    Show Screen
-
-Loop Until Game_Closed() = True
-
-Stop Sound
 End Program
