@@ -179,6 +179,65 @@ foreach ($path in @('Assets\New.txt', 'Stale.exe', 'Stale.smile-assets.json', 's
     }
 }
 
+$identityRoot = Join-Path $temporaryRoot 'Identity'
+$identityOutput = Join-Path $identityRoot 'Output'
+$identityProject = Join-Path $identityRoot 'Identity.smileproj'
+New-Item -ItemType Directory -Path (Join-Path $identityRoot 'Assets') -Force | Out-Null
+New-Item -ItemType Directory -Path $identityOutput -Force | Out-Null
+[IO.File]::WriteAllText((Join-Path $identityRoot 'Program.smile'), "Print 1`n")
+[IO.File]::WriteAllText((Join-Path $identityRoot 'Assets\A.txt'), 'A')
+[IO.File]::WriteAllText((Join-Path $identityRoot 'Assets\B.txt'), 'B')
+
+function Write-IdentityProject {
+    param([string]$OutputName, [string[]]$AssetNames)
+
+    $assetItems = $AssetNames | ForEach-Object { "<Asset Include=`"Assets\$_`" />" }
+    [IO.File]::WriteAllText($identityProject, @"
+<SmileProject Version="1.0">
+  <PropertyGroup><ProjectKind>Console</ProjectKind><StartupFile>Program.smile</StartupFile><OutputName>$OutputName</OutputName><ApplicationId>smile.tests.asset-identity</ApplicationId></PropertyGroup>
+  <ItemGroup><SmileSource Include="Program.smile" StartupOnly="true" />$($assetItems -join '')</ItemGroup>
+</SmileProject>
+"@)
+}
+
+Write-IdentityProject 'OldName' @('A.txt', 'B.txt')
+Invoke-SmileCompiler -Arguments @('--project', $identityProject, '--target', 'windows-x64', '-o',
+    (Join-Path $identityOutput 'OldName.exe')) | Out-Null
+$stableIdentityManifest = Join-Path $identityOutput 'smile.tests.asset-identity.smile-assets.json'
+$legacyIdentityManifest = Join-Path $identityOutput 'OldName.smile-assets.json'
+if (-not (Test-Path -LiteralPath $stableIdentityManifest -PathType Leaf)) {
+    throw 'Explicit ApplicationId did not select a stable native manifest filename.'
+}
+Move-Item -LiteralPath $stableIdentityManifest -Destination $legacyIdentityManifest
+[IO.File]::WriteAllText((Join-Path $identityOutput 'sentinel.txt'), 'unrelated')
+$mismatchedManifest = Join-Path $identityOutput 'Mismatched.smile-assets.json'
+$malformedManifest = Join-Path $identityOutput 'Malformed.smile-assets.json'
+[IO.File]::WriteAllText($mismatchedManifest,
+    '{"formatVersion":1,"applicationIdentity":"smile.tests.other","target":"windows-x64","assets":["sentinel.txt"]}')
+[IO.File]::WriteAllText($malformedManifest, '{not-json')
+
+Write-IdentityProject 'NewName' @('A.txt')
+$identityMigrationOutput = Invoke-SmileCompiler -Arguments @('--project', $identityProject,
+    '--target', 'windows-x64', '-o', (Join-Path $identityOutput 'NewName.exe'))
+if (($identityMigrationOutput -join "`n") -notmatch 'SML3605') {
+    throw 'Malformed legacy native manifest did not report SML3605.'
+}
+if (-not (Test-Path -LiteralPath $stableIdentityManifest -PathType Leaf)) {
+    throw 'Stable ApplicationId manifest was not written after OutputName migration.'
+}
+if (Test-Path -LiteralPath $legacyIdentityManifest) {
+    throw 'Validated matching legacy native manifest was not removed after migration.'
+}
+if (Test-Path -LiteralPath (Join-Path $identityOutput 'Assets\B.txt')) {
+    throw 'OutputName rename left a stale managed asset from the validated legacy manifest.'
+}
+foreach ($path in @('Assets\A.txt', 'NewName.exe', 'sentinel.txt',
+        'Mismatched.smile-assets.json', 'Malformed.smile-assets.json')) {
+    if (-not (Test-Path -LiteralPath (Join-Path $identityOutput $path) -PathType Leaf)) {
+        throw "ApplicationId migration removed or omitted required output: $path"
+    }
+}
+
 $outside = Join-Path $temporaryRoot 'outside.txt'
 [IO.File]::WriteAllText($outside, 'untouched')
 [IO.File]::WriteAllText((Join-Path $staleOutput 'smile-assets.json'),

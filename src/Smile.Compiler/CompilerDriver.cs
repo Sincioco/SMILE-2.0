@@ -125,7 +125,8 @@ internal sealed class CompilerDriver
             {
                 nativePublication = SmileProjectAssetPublisher.Publish(input.Project.AssetManifest,
                     Path.GetDirectoryName(outputPath)!, appIdentity, "windows-x64",
-                    Path.GetFileNameWithoutExtension(outputPath));
+                    Path.GetFileNameWithoutExtension(outputPath),
+                    options.ApplicationId != null || input.Project.ApplicationId != null);
                 foreach (var warning in nativePublication.Warnings)
                     Console.Error.WriteLine(warning.FormatCompiler());
             }

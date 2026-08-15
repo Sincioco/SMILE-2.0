@@ -207,6 +207,42 @@ try {
     Assert-Equal ([Convert]::ToBase64String($QualifiedFirstPass)) ([Convert]::ToBase64String($QualifiedSecondPass)) 'Qualified Return formatting was not idempotent.'
     Pass 'Clip traversal, multiline If layout, and symbol-aware qualified Returns'
 
+    Write-TestSource 'Context\TrackedProvider\Values.smile' "Module Context.Values`n`nOption Explicit`n`nPublic Dim Current As Number`n`nEnd Module`n" | Out-Null
+    Write-TestSource 'Context\TrackedProvider\Provider.smilelibproj' '<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Context.TrackedProvider</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include="Values.smile" /></ItemGroup></SmileProject>' | Out-Null
+    $ContextShared = Write-TestSource 'Context\Shared.smile' "Module Context.Consumer`n`nOption Explicit`n`nImport Context.Values As Values`n`nPublic Function ReadValue() As Number`n`n    Return Values.Current`n`nEnd Function`n`nEnd Module`n"
+    Write-TestSource 'Context\ZTracked.smilelibproj' '<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Context.Tracked</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include="Shared.smile" /><SmileProjectReference Include="TrackedProvider\Provider.smilelibproj" /></ItemGroup></SmileProject>' | Out-Null
+    & git -C $TestRoot add -- Context/Shared.smile Context/ZTracked.smilelibproj Context/TrackedProvider
+    if ($LASTEXITCODE -ne 0) { throw 'Unable to track the formatter project-context fixture.' }
+
+    Write-TestSource 'Context\UntrackedProvider\Values.smile' "Module Context.Values`n`nOption Explicit`n`nPublic Function Current() As Number`n`n    Return 2`n`nEnd Function`n`nEnd Module`n" | Out-Null
+    Write-TestSource 'Context\UntrackedProvider\Provider.smilelibproj' '<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Context.UntrackedProvider</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include="Values.smile" /></ItemGroup></SmileProject>' | Out-Null
+    Write-TestSource 'Context\AUntracked.smilelibproj' '<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Context.Untracked</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include="Shared.smile" /><SmileProjectReference Include="UntrackedProvider\Provider.smilelibproj" /></ItemGroup></SmileProject>' | Out-Null
+
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'Context\Shared.smile')).ExitCode 'Explicit tracked project-context formatting failed.'
+    $TrackedContextText = [IO.File]::ReadAllText($ContextShared)
+    Assert-True ($TrackedContextText.Contains('Return Values.Current') -and
+        -not $TrackedContextText.Contains('ReturnValue = Values.Current')) "An untracked project influenced explicit tracked source formatting: $TrackedContextText"
+    $TrackedContextBytes = [IO.File]::ReadAllBytes($ContextShared)
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'Context\Shared.smile', '-IncludeUntracked')).ExitCode 'IncludeUntracked project-context formatting failed.'
+    Assert-Equal ([Convert]::ToBase64String($TrackedContextBytes)) ([Convert]::ToBase64String([IO.File]::ReadAllBytes($ContextShared))) 'Tracked owner precedence changed when untracked contexts were enabled.'
+
+    $OnlyUntracked = Write-TestSource 'Context\OnlyUntracked.smile' "Module Context.NewConsumer`n`nOption Explicit`n`nImport Context.Values As Values`n`nPublic Function ReadValue() As Number`n`n    Return Values.Current`n`nEnd Function`n`nEnd Module`n"
+    Write-TestSource 'Context\OnlyUntracked.smilelibproj' '<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Context.OnlyUntracked</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include="OnlyUntracked.smile" /><SmileProjectReference Include="UntrackedProvider\Provider.smilelibproj" /></ItemGroup></SmileProject>' | Out-Null
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'Context\OnlyUntracked.smile')).ExitCode 'Explicit untracked owning context formatting failed.'
+    Assert-True (([IO.File]::ReadAllText($OnlyUntracked)).Contains('ReturnValue = Values.Current')) 'An explicit untracked source did not use its owning untracked project context.'
+
+    Write-TestSource 'Context\FirstProvider\Values.smile' "Module Context.Values`n`nOption Explicit`n`nPublic Function Current() As Number`n`n    Return 3`n`nEnd Function`n`nEnd Module`n" | Out-Null
+    Write-TestSource 'Context\FirstProvider\Provider.smilelibproj' '<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Context.FirstProvider</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include="Values.smile" /></ItemGroup></SmileProject>' | Out-Null
+    Write-TestSource 'Context\AFirstOwner.smilelibproj' '<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Context.FirstOwner</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include="Shared.smile" /><SmileProjectReference Include="FirstProvider\Provider.smilelibproj" /></ItemGroup></SmileProject>' | Out-Null
+    & git -C $TestRoot add -- Context/AFirstOwner.smilelibproj Context/FirstProvider
+    if ($LASTEXITCODE -ne 0) { throw 'Unable to track the multiple-owner formatter fixture.' }
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'Context\Shared.smile')).ExitCode 'Multiple tracked-owner formatting failed.'
+    Assert-True (([IO.File]::ReadAllText($ContextShared)).Contains('ReturnValue = Values.Current')) 'Tracked project owners were not selected in ordinal path order.'
+    $FirstOwnerBytes = [IO.File]::ReadAllBytes($ContextShared)
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'Context\Shared.smile')).ExitCode 'Multiple tracked-owner idempotence pass failed.'
+    Assert-Equal ([Convert]::ToBase64String($FirstOwnerBytes)) ([Convert]::ToBase64String([IO.File]::ReadAllBytes($ContextShared))) 'Multiple tracked-owner formatting was not idempotent.'
+    Pass 'tracked and untracked project contexts remain deliberate, deterministic, and idempotent'
+
     $First = Write-TestSource 'AFirst.smile' "Option Explicit`n`nFunction First() As Number`n`n    Return 4 + 5`n`nEnd Function`n"
     $Bad = Write-TestSource 'ZBad.smile' "Option Explicit`n`nFunction Broken()`n`n    Return Missing()`n`nEnd Function`n"
     $FirstBefore = [IO.File]::ReadAllBytes($First)

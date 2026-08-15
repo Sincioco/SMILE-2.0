@@ -492,19 +492,48 @@ function Initialize-ProjectOwners {
     param([string[]]$RelativeTargets)
 
     $TargetPaths = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    $TrackedTargetPaths = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 
     foreach ($RelativeTarget in $RelativeTargets) {
         [void]$TargetPaths.Add([IO.Path]::GetFullPath((Join-Path $RepositoryRoot $RelativeTarget)))
     }
 
-    $ProjectPaths = @(& git -C $RepositoryRoot ls-files --cached --others --exclude-standard -- '*.smileproj' '*.smilelibproj')
+    $TrackedSourcePaths = @(& git -C $RepositoryRoot ls-files -- '*.smile')
 
     if ($LASTEXITCODE -ne 0) {
-        throw 'Unable to enumerate SMILE project files for formatter symbol resolution.'
+        throw 'Unable to enumerate tracked SMILE source files for formatter symbol resolution.'
     }
 
-    foreach ($RelativeProjectPath in $ProjectPaths | Sort-Object) {
+    foreach ($RelativeSourcePath in $TrackedSourcePaths) {
+        [void]$TrackedTargetPaths.Add([IO.Path]::GetFullPath((Join-Path $RepositoryRoot $RelativeSourcePath)))
+    }
+
+    $TrackedProjectPaths = [string[]]@(& git -C $RepositoryRoot ls-files -- '*.smileproj' '*.smilelibproj')
+
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Unable to enumerate tracked SMILE project files for formatter symbol resolution.'
+    }
+
+    [Array]::Sort($TrackedProjectPaths, [StringComparer]::Ordinal)
+
+    $ExplicitTargets = $null -ne $Files -and $Files.Count -gt 0
+    $AllowUntrackedProjects = $IncludeUntracked -or ($ExplicitTargets -and
+        @($TargetPaths | Where-Object { -not $TrackedTargetPaths.Contains($_) }).Count -gt 0)
+    $UntrackedProjectPaths = [string[]]@()
+
+    if ($AllowUntrackedProjects) {
+        $UntrackedProjectPaths = [string[]]@(& git -C $RepositoryRoot ls-files --others --exclude-standard -- '*.smileproj' '*.smilelibproj')
+
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Unable to enumerate untracked SMILE project files for formatter symbol resolution.'
+        }
+
+        [Array]::Sort($UntrackedProjectPaths, [StringComparer]::Ordinal)
+    }
+
+    foreach ($RelativeProjectPath in @($TrackedProjectPaths) + @($UntrackedProjectPaths)) {
         $ProjectPath = [IO.Path]::GetFullPath((Join-Path $RepositoryRoot $RelativeProjectPath))
+        $ProjectIsUntracked = $UntrackedProjectPaths -contains $RelativeProjectPath
 
         try {
             $SourceSet = [Smile.Language.SmileProjectSourceSet]::Load($ProjectPath)
@@ -517,6 +546,10 @@ function Initialize-ProjectOwners {
             $SourcePath = [IO.Path]::GetFullPath($Source.FullPath)
 
             if (-not $TargetPaths.Contains($SourcePath)) {
+                continue
+            }
+
+            if ($ProjectIsUntracked -and -not $IncludeUntracked -and $TrackedTargetPaths.Contains($SourcePath)) {
                 continue
             }
 

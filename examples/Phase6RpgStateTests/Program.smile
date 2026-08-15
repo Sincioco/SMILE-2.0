@@ -24,6 +24,10 @@ Dim Failures As Number
 Dim Index As Number
 Dim FirstByteCount As Number
 Dim FirstBytes[32768] As Number
+Dim BoundaryByteCount As Number
+Dim BoundaryBytes[32768] As Number
+Dim MaximumByteCount As Number
+Dim MaximumBytes[32768] As Number
 Dim OperationSucceeded As Boolean
 
 State = RPG.Create()
@@ -192,6 +196,10 @@ Call Check(Characters.CharacterDefinitionCount(OtherState) = 0)
 Call RPG.Destroy(OtherState)
 Call RPG.Destroy(State)
 
+Call TestBoundaryRoundtrip()
+Call TestMaximumState()
+Call TestShopResults()
+
 If Failures = 0 Then
     Print "Phase 6 RPG state tests: PASS"
 Else
@@ -206,5 +214,626 @@ Sub Check(Condition As Boolean)
     If Not Condition Then
         Failures = Failures + 1
     End If
+
+End Sub
+
+Sub TestBoundaryRoundtrip()
+
+    Dim BoundaryCharacter As Characters.CharacterDefinition
+    Dim BoundaryItem As Inventory.ItemDefinition
+    Dim BoundarySlot As Equipment.EquipmentSlotDefinition
+    Dim BoundaryAbility As Abilities.AbilityDefinition
+    Dim BoundaryShop As Shops.ShopDefinition
+    Dim Index As Number
+    Dim ExpectedQuantity As Number
+
+    State = RPG.Create()
+
+    BoundaryCharacter.Id = 100
+    BoundaryCharacter.Name = "Boundary Hero"
+    BoundaryCharacter.StartingLevel = 1
+    BoundaryCharacter.StartingMaximumHealth = 100
+    BoundaryCharacter.StartingMaximumMagicPoints = 40
+    BoundaryCharacter.Strength = 10
+    BoundaryCharacter.Defense = 11
+    BoundaryCharacter.Magic = 12
+    BoundaryCharacter.Resistance = 13
+    BoundaryCharacter.Agility = 14
+    BoundaryCharacter.Luck = 15
+
+    Call Check(Characters.DefineCharacter(State, BoundaryCharacter))
+
+    BoundaryCharacter.Id = 200
+    BoundaryCharacter.Name = "Boundary Mage"
+
+    Call Check(Characters.DefineCharacter(State, BoundaryCharacter))
+
+    BoundarySlot.Id = 1
+    BoundarySlot.Name = "Hand"
+
+    Call Check(Equipment.DefineSlot(State, BoundarySlot))
+
+    BoundarySlot.Id = 2
+    BoundarySlot.Name = "Head"
+
+    Call Check(Equipment.DefineSlot(State, BoundarySlot))
+
+    For Index = 0 To 64
+
+        BoundaryItem.Id = 1000 + Index
+        BoundaryItem.Name = "Boundary Item"
+        BoundaryItem.Kind = RPG.RPG_ITEM_CONSUMABLE
+        BoundaryItem.MaximumStack = 3
+        BoundaryItem.BasePrice = 10
+        BoundaryItem.CanSell = True
+        BoundaryItem.EffectId = 1
+        BoundaryItem.EquipmentSlotId = 0
+        BoundaryItem.HealthBonus = 0
+        BoundaryItem.MagicPointBonus = 0
+        BoundaryItem.StrengthBonus = 0
+        BoundaryItem.DefenseBonus = 0
+        BoundaryItem.MagicBonus = 0
+        BoundaryItem.ResistanceBonus = 0
+        BoundaryItem.AgilityBonus = 0
+        BoundaryItem.LuckBonus = 0
+
+        If Index = 0 Then
+
+            BoundaryItem.Kind = RPG.RPG_ITEM_EQUIPMENT
+            BoundaryItem.MaximumStack = 1
+            BoundaryItem.EquipmentSlotId = 1
+            BoundaryItem.StrengthBonus = 2
+
+        Else If Index = 1 Or Index = 64 Then
+
+            BoundaryItem.Kind = RPG.RPG_ITEM_EQUIPMENT
+            BoundaryItem.MaximumStack = 1
+            BoundaryItem.EquipmentSlotId = 2
+            BoundaryItem.DefenseBonus = 3
+
+        End If
+
+        Call Check(Inventory.DefineItem(State, BoundaryItem))
+    End For
+
+    Call Check(Inventory.AddItem(State, 1000, 1))
+    Call Check(Equipment.Equip(State, 100, 1, 1000))
+    Call Check(Inventory.AddItem(State, 1000, 1))
+    Call Check(Equipment.Equip(State, 200, 1, 1000))
+    Call Check(Inventory.AddItem(State, 1001, 1))
+    Call Check(Equipment.Equip(State, 100, 2, 1001))
+    Call Check(Inventory.AddItem(State, 1064, 1))
+    Call Check(Equipment.Equip(State, 200, 2, 1064))
+
+    For Index = 0 To 63
+
+        ExpectedQuantity = 3
+
+        If Index < 2 Then
+            ExpectedQuantity = 1
+        End If
+
+        Call Check(Inventory.AddItem(State, 1000 + Index, ExpectedQuantity))
+    End For
+
+    Call Check(Inventory.EntryCount(State) = RPG.RPG_MAX_INVENTORY_ENTRIES)
+    Call Check(Characters.SetLevel(State, 100, 7))
+    Call Check(Characters.SetExperience(State, 100, 7654))
+    Call Check(Characters.SetMaximumHealth(State, 100, 777))
+    Call Check(Characters.SetHealth(State, 100, 321))
+    Call Check(Characters.SetMaximumMagicPoints(State, 100, 222))
+    Call Check(Characters.SetMagicPoints(State, 100, 111))
+    Call Check(Characters.SetStrength(State, 100, 21))
+    Call Check(Characters.SetDefense(State, 100, 22))
+    Call Check(Characters.SetMagic(State, 100, 23))
+    Call Check(Characters.SetResistance(State, 100, 24))
+    Call Check(Characters.SetAgility(State, 100, 25))
+    Call Check(Characters.SetLuck(State, 100, 26))
+    Call Check(Party.AddCharacter(State, 200))
+    Call Check(Party.AddCharacter(State, 100))
+    Call Check(Party.SetGold(State, 654321))
+
+    BoundaryAbility.Id = 3000
+    BoundaryAbility.Name = "Boundary Ability"
+    BoundaryAbility.MagicPointCost = 5
+    BoundaryAbility.Power = 10
+    BoundaryAbility.TargetMode = RPG.RPG_TARGET_SELF
+    BoundaryAbility.EffectId = 4
+
+    Call Check(Abilities.DefineAbility(State, BoundaryAbility))
+    Call Check(Abilities.LearnAbility(State, 100, 3000))
+    Call Check(Abilities.LearnAbility(State, 200, 3000))
+
+    BoundaryShop.Id = 4000
+    BoundaryShop.Name = "Boundary Shop"
+
+    Call Check(Shops.DefineShop(State, BoundaryShop))
+    Call Check(Shops.AddShopItem(State, 4000, 1002, 10, 5, 8))
+    Call Check(Shops.SetStock(State, 4000, 1002, 6))
+
+    Result = SaveGames.Encode(State, 61)
+    BoundaryByteCount = SaveGames.EncodedByteCount()
+
+    Call Check(Result = RPG.RPG_RESULT_OK And BoundaryByteCount > 0)
+
+    For Index = 0 To BoundaryByteCount - 1
+        BoundaryBytes[Index] = SaveGames.EncodedByteAt(Index)
+    End For
+
+    Result = SaveGames.Decode(State, 61)
+
+    Call Check(Result = RPG.RPG_RESULT_OK)
+    Call CheckBoundaryState()
+
+    Result = SaveGames.Encode(State, 61)
+
+    Call Check(Result = RPG.RPG_RESULT_OK And SaveGames.EncodedByteCount() = BoundaryByteCount)
+
+    For Index = 0 To BoundaryByteCount - 1
+        Call Check(SaveGames.EncodedByteAt(Index) = BoundaryBytes[Index])
+    End For
+
+    Result = SaveGames.SaveGame(State, 7, 61)
+
+    Call Check(Result = RPG.RPG_RESULT_OK)
+    Call Check(Equipment.ClearAllEquipment(State))
+    Call Check(Inventory.ClearInventory(State))
+    Call Check(Abilities.ClearAllLearnedAbilities(State))
+    Call Check(Party.ClearParty(State))
+    Call Check(Party.SetGold(State, 0))
+    Call Check(Characters.ResetProgress(State))
+    Call Check(Shops.ResetShopStock(State, 4000))
+
+    Result = SaveGames.LoadGame(State, 7, 61)
+
+    Call Check(Result = RPG.RPG_RESULT_OK)
+    Call CheckBoundaryState()
+    Call RPG.Destroy(State)
+
+End Sub
+
+Sub CheckBoundaryState()
+
+    Dim Index As Number
+    Dim ExpectedQuantity As Number
+
+    Call Check(Characters.CharacterDefinitionCount(State) = 2)
+    Call Check(Inventory.ItemDefinitionCount(State) = 65)
+    Call Check(Equipment.SlotCount(State) = 2)
+    Call Check(Abilities.AbilityDefinitionCount(State) = 1)
+    Call Check(Shops.ShopCount(State) = 1)
+    Call Check(Characters.Level(State, 100) = 7)
+    Call Check(Characters.Experience(State, 100) = 7654)
+    Call Check(Characters.Health(State, 100) = 321)
+    Call Check(Characters.MaximumHealth(State, 100) = 777)
+    Call Check(Characters.MagicPoints(State, 100) = 111)
+    Call Check(Characters.MaximumMagicPoints(State, 100) = 222)
+    Call Check(Characters.Strength(State, 100) = 21)
+    Call Check(Characters.Defense(State, 100) = 22)
+    Call Check(Characters.Magic(State, 100) = 23)
+    Call Check(Characters.Resistance(State, 100) = 24)
+    Call Check(Characters.Agility(State, 100) = 25)
+    Call Check(Characters.Luck(State, 100) = 26)
+    Call Check(Party.PartyCount(State) = 2)
+    Call Check(Party.CharacterIdAt(State, 0) = 200 And Party.CharacterIdAt(State, 1) = 100)
+    Call Check(Party.Gold(State) = 654321)
+    Call Check(Inventory.EntryCount(State) = RPG.RPG_MAX_INVENTORY_ENTRIES)
+
+    For Index = 0 To 63
+
+        ExpectedQuantity = 3
+
+        If Index < 2 Then
+            ExpectedQuantity = 1
+        End If
+
+        Call Check(Inventory.Quantity(State, 1000 + Index) = ExpectedQuantity)
+    End For
+
+    Call Check(Equipment.EquippedItem(State, 100, 1) = 1000)
+    Call Check(Equipment.EquippedItem(State, 200, 1) = 1000)
+    Call Check(Equipment.EquippedItem(State, 100, 2) = 1001)
+    Call Check(Equipment.EquippedItem(State, 200, 2) = 1064)
+    Call Check(Abilities.KnowsAbility(State, 100, 3000))
+    Call Check(Abilities.KnowsAbility(State, 200, 3000))
+    Call Check(Shops.Stock(State, 4000, 1002) = 6)
+
+End Sub
+
+Sub TestMaximumState()
+
+    Dim MaximumCharacter As Characters.CharacterDefinition
+    Dim MaximumItem As Inventory.ItemDefinition
+    Dim MaximumSlot As Equipment.EquipmentSlotDefinition
+    Dim MaximumAbility As Abilities.AbilityDefinition
+    Dim MaximumShop As Shops.ShopDefinition
+    Dim CharacterIndex As Number
+    Dim SlotIndex As Number
+    Dim ItemIndex As Number
+    Dim AbilityIndex As Number
+    Dim ShopIndex As Number
+    Dim EntryIndex As Number
+    Dim CharacterId As Number
+    Dim ItemId As Number
+    Dim ExpectedQuantity As Number
+    Dim ExpectedStock As Number
+
+    State = RPG.Create()
+
+    For CharacterIndex = 0 To RPG.RPG_MAX_CHARACTERS - 1
+
+        MaximumCharacter.Id = 100 + CharacterIndex
+        MaximumCharacter.Name = "Maximum Character"
+        MaximumCharacter.StartingLevel = 1
+        MaximumCharacter.StartingMaximumHealth = 100
+        MaximumCharacter.StartingMaximumMagicPoints = 50
+        MaximumCharacter.Strength = 10
+        MaximumCharacter.Defense = 11
+        MaximumCharacter.Magic = 12
+        MaximumCharacter.Resistance = 13
+        MaximumCharacter.Agility = 14
+        MaximumCharacter.Luck = 15
+
+        Call Check(Characters.DefineCharacter(State, MaximumCharacter))
+        Call Check(Characters.SetLevel(State, MaximumCharacter.Id, CharacterIndex + 1))
+        Call Check(Characters.SetExperience(State, MaximumCharacter.Id, CharacterIndex * 100))
+        Call Check(Characters.SetMaximumHealth(State, MaximumCharacter.Id, 1000 + CharacterIndex))
+        Call Check(Characters.SetHealth(State, MaximumCharacter.Id, 500 + CharacterIndex))
+        Call Check(Characters.SetMaximumMagicPoints(State, MaximumCharacter.Id, 200 + CharacterIndex))
+        Call Check(Characters.SetMagicPoints(State, MaximumCharacter.Id, 100 + CharacterIndex))
+        Call Check(Characters.SetStrength(State, MaximumCharacter.Id, 20 + CharacterIndex))
+        Call Check(Characters.SetDefense(State, MaximumCharacter.Id, 30 + CharacterIndex))
+        Call Check(Characters.SetMagic(State, MaximumCharacter.Id, 40 + CharacterIndex))
+        Call Check(Characters.SetResistance(State, MaximumCharacter.Id, 50 + CharacterIndex))
+        Call Check(Characters.SetAgility(State, MaximumCharacter.Id, 60 + CharacterIndex))
+        Call Check(Characters.SetLuck(State, MaximumCharacter.Id, 70 + CharacterIndex))
+    End For
+
+    For CharacterIndex = 0 To RPG.RPG_MAX_PARTY_MEMBERS - 1
+        Call Check(Party.AddCharacter(State, 100 + CharacterIndex))
+    End For
+
+    Call Check(Party.SetGold(State, 999999))
+
+    For SlotIndex = 0 To RPG.RPG_MAX_EQUIPMENT_SLOTS - 1
+        MaximumSlot.Id = 1 + SlotIndex
+        MaximumSlot.Name = "Maximum Slot"
+
+        Call Check(Equipment.DefineSlot(State, MaximumSlot))
+    End For
+
+    For ItemIndex = 0 To RPG.RPG_MAX_ITEM_DEFINITIONS - 1
+
+        MaximumItem.Id = 1000 + ItemIndex
+        MaximumItem.Name = "Maximum Item"
+        MaximumItem.Kind = RPG.RPG_ITEM_CONSUMABLE
+        MaximumItem.MaximumStack = 5
+        MaximumItem.BasePrice = 10
+        MaximumItem.CanSell = True
+        MaximumItem.EffectId = 1
+        MaximumItem.EquipmentSlotId = 0
+        MaximumItem.HealthBonus = 0
+        MaximumItem.MagicPointBonus = 0
+        MaximumItem.StrengthBonus = 0
+        MaximumItem.DefenseBonus = 0
+        MaximumItem.MagicBonus = 0
+        MaximumItem.ResistanceBonus = 0
+        MaximumItem.AgilityBonus = 0
+        MaximumItem.LuckBonus = 0
+
+        If ItemIndex < RPG.RPG_MAX_EQUIPMENT_SLOTS Then
+
+            MaximumItem.Kind = RPG.RPG_ITEM_EQUIPMENT
+            MaximumItem.MaximumStack = 1
+            MaximumItem.EquipmentSlotId = ItemIndex + 1
+            MaximumItem.StrengthBonus = 1
+
+        End If
+
+        Call Check(Inventory.DefineItem(State, MaximumItem))
+    End For
+
+    For CharacterIndex = 0 To RPG.RPG_MAX_CHARACTERS - 1
+
+        For SlotIndex = 0 To RPG.RPG_MAX_EQUIPMENT_SLOTS - 1
+            ItemId = 1000 + SlotIndex
+
+            Call Check(Inventory.AddItem(State, ItemId, 1))
+            Call Check(Equipment.Equip(State, 100 + CharacterIndex, 1 + SlotIndex, ItemId))
+        End For
+    End For
+
+    For ItemIndex = 0 To RPG.RPG_MAX_INVENTORY_ENTRIES - 1
+
+        ExpectedQuantity = 5
+
+        If ItemIndex < RPG.RPG_MAX_EQUIPMENT_SLOTS Then
+            ExpectedQuantity = 1
+        End If
+
+        Call Check(Inventory.AddItem(State, 1000 + ItemIndex, ExpectedQuantity))
+    End For
+
+    For AbilityIndex = 0 To RPG.RPG_MAX_ABILITY_DEFINITIONS - 1
+
+        MaximumAbility.Id = 2000 + AbilityIndex
+        MaximumAbility.Name = "Maximum Ability"
+        MaximumAbility.MagicPointCost = 1
+        MaximumAbility.Power = 10
+        MaximumAbility.TargetMode = RPG.RPG_TARGET_SELF
+        MaximumAbility.EffectId = 1
+
+        Call Check(Abilities.DefineAbility(State, MaximumAbility))
+    End For
+
+    For CharacterIndex = 0 To RPG.RPG_MAX_CHARACTERS - 1
+
+        For AbilityIndex = 0 To RPG.RPG_MAX_LEARNED_ABILITIES - 1
+            Call Check(Abilities.LearnAbility(State, 100 + CharacterIndex, 2000 + AbilityIndex))
+        End For
+    End For
+
+    For ShopIndex = 0 To RPG.RPG_MAX_SHOPS - 1
+
+        MaximumShop.Id = 3000 + ShopIndex
+        MaximumShop.Name = "Maximum Shop"
+
+        Call Check(Shops.DefineShop(State, MaximumShop))
+
+        For EntryIndex = 0 To RPG.RPG_MAX_SHOP_ITEMS - 1
+
+            ExpectedStock = 100 + EntryIndex
+
+            If EntryIndex Mod 2 = 0 Then
+                ExpectedStock = RPG.RPG_STOCK_UNLIMITED
+            End If
+
+            Call Check(Shops.AddShopItem(State, MaximumShop.Id, 1000 + EntryIndex, 10, 5, ExpectedStock))
+        End For
+    End For
+
+    Result = SaveGames.Encode(State, 61)
+    MaximumByteCount = SaveGames.EncodedByteCount()
+
+    Call Check(Result = RPG.RPG_RESULT_OK)
+    Call Check(MaximumByteCount = 28872)
+    Call Check(MaximumByteCount < RPG.RPG_MAX_SAVE_BYTES)
+    Call Check(RPG.RPG_MAX_SAVE_BYTES < DATA_BLOCK_MAX_BYTES)
+
+    For ItemIndex = 0 To MaximumByteCount - 1
+        MaximumBytes[ItemIndex] = SaveGames.EncodedByteAt(ItemIndex)
+    End For
+
+    Result = SaveGames.Decode(State, 61)
+
+    Call Check(Result = RPG.RPG_RESULT_OK)
+    Call Check(Characters.CharacterDefinitionCount(State) = RPG.RPG_MAX_CHARACTERS)
+    Call Check(Inventory.ItemDefinitionCount(State) = RPG.RPG_MAX_ITEM_DEFINITIONS)
+    Call Check(Equipment.SlotCount(State) = RPG.RPG_MAX_EQUIPMENT_SLOTS)
+    Call Check(Abilities.AbilityDefinitionCount(State) = RPG.RPG_MAX_ABILITY_DEFINITIONS)
+    Call Check(Shops.ShopCount(State) = RPG.RPG_MAX_SHOPS)
+    Call Check(Party.PartyCount(State) = RPG.RPG_MAX_PARTY_MEMBERS)
+    Call Check(Party.Gold(State) = 999999)
+    Call Check(Inventory.EntryCount(State) = RPG.RPG_MAX_INVENTORY_ENTRIES)
+
+    For CharacterIndex = 0 To RPG.RPG_MAX_CHARACTERS - 1
+
+        CharacterId = 100 + CharacterIndex
+
+        Call Check(Characters.Level(State, CharacterId) = CharacterIndex + 1)
+        Call Check(Characters.Experience(State, CharacterId) = CharacterIndex * 100)
+        Call Check(Characters.Health(State, CharacterId) = 500 + CharacterIndex)
+        Call Check(Characters.MaximumHealth(State, CharacterId) = 1000 + CharacterIndex)
+        Call Check(Characters.MagicPoints(State, CharacterId) = 100 + CharacterIndex)
+        Call Check(Characters.MaximumMagicPoints(State, CharacterId) = 200 + CharacterIndex)
+        Call Check(Characters.Strength(State, CharacterId) = 20 + CharacterIndex)
+        Call Check(Characters.Defense(State, CharacterId) = 30 + CharacterIndex)
+        Call Check(Characters.Magic(State, CharacterId) = 40 + CharacterIndex)
+        Call Check(Characters.Resistance(State, CharacterId) = 50 + CharacterIndex)
+        Call Check(Characters.Agility(State, CharacterId) = 60 + CharacterIndex)
+        Call Check(Characters.Luck(State, CharacterId) = 70 + CharacterIndex)
+        Call Check(Abilities.LearnedAbilityCount(State, CharacterId) = RPG.RPG_MAX_LEARNED_ABILITIES)
+
+        For SlotIndex = 0 To RPG.RPG_MAX_EQUIPMENT_SLOTS - 1
+            Call Check(Equipment.EquippedItem(State, CharacterId, 1 + SlotIndex) = 1000 + SlotIndex)
+        End For
+
+        For AbilityIndex = 0 To RPG.RPG_MAX_LEARNED_ABILITIES - 1
+            Call Check(Abilities.LearnedAbilityIdAt(State, CharacterId, AbilityIndex) = 2000 + AbilityIndex)
+        End For
+    End For
+
+    For CharacterIndex = 0 To RPG.RPG_MAX_PARTY_MEMBERS - 1
+        Call Check(Party.CharacterIdAt(State, CharacterIndex) = 100 + CharacterIndex)
+    End For
+
+    For ItemIndex = 0 To RPG.RPG_MAX_INVENTORY_ENTRIES - 1
+
+        ExpectedQuantity = 5
+
+        If ItemIndex < RPG.RPG_MAX_EQUIPMENT_SLOTS Then
+            ExpectedQuantity = 1
+        End If
+
+        Call Check(Inventory.Quantity(State, 1000 + ItemIndex) = ExpectedQuantity)
+    End For
+
+    For ShopIndex = 0 To RPG.RPG_MAX_SHOPS - 1
+
+        Call Check(Shops.ShopItemCount(State, 3000 + ShopIndex) = RPG.RPG_MAX_SHOP_ITEMS)
+
+        For EntryIndex = 0 To RPG.RPG_MAX_SHOP_ITEMS - 1
+
+            ExpectedStock = 100 + EntryIndex
+
+            If EntryIndex Mod 2 = 0 Then
+                ExpectedStock = RPG.RPG_STOCK_UNLIMITED
+            End If
+
+            Call Check(Shops.Stock(State, 3000 + ShopIndex, 1000 + EntryIndex) = ExpectedStock)
+        End For
+    End For
+
+    Result = SaveGames.Encode(State, 61)
+
+    Call Check(Result = RPG.RPG_RESULT_OK And SaveGames.EncodedByteCount() = MaximumByteCount)
+
+    For ItemIndex = 0 To MaximumByteCount - 1
+        Call Check(SaveGames.EncodedByteAt(ItemIndex) = MaximumBytes[ItemIndex])
+    End For
+
+    Call RPG.Destroy(State)
+
+End Sub
+
+Sub TestShopResults()
+
+    Dim ShopItem As Inventory.ItemDefinition
+    Dim ResultShop As Shops.ShopDefinition
+    Dim Index As Number
+    Dim GoldBefore As Number
+    Dim QuantityBefore As Number
+    Dim StockBefore As Number
+
+    State = RPG.Create()
+
+    For Index = 0 To 64
+
+        ShopItem.Id = 5000 + Index
+        ShopItem.Name = "Shop Result Item"
+        ShopItem.Kind = RPG.RPG_ITEM_CONSUMABLE
+        ShopItem.MaximumStack = 1
+        ShopItem.BasePrice = 10
+        ShopItem.CanSell = True
+        ShopItem.EffectId = 1
+        ShopItem.EquipmentSlotId = 0
+        ShopItem.HealthBonus = 0
+        ShopItem.MagicPointBonus = 0
+        ShopItem.StrengthBonus = 0
+        ShopItem.DefenseBonus = 0
+        ShopItem.MagicBonus = 0
+        ShopItem.ResistanceBonus = 0
+        ShopItem.AgilityBonus = 0
+        ShopItem.LuckBonus = 0
+
+        If Index = 0 Or Index = 3 Then
+            ShopItem.MaximumStack = 10
+        Else If Index = 1 Then
+            ShopItem.MaximumStack = 10
+            ShopItem.CanSell = False
+        End If
+
+        Call Check(Inventory.DefineItem(State, ShopItem))
+    End For
+
+    ResultShop.Id = 7000
+    ResultShop.Name = "Result Shop"
+
+    Call Check(Shops.DefineShop(State, ResultShop))
+    Call Check(Shops.AddShopItem(State, 7000, 5000, 10, 5, 10))
+    Call Check(Shops.AddShopItem(State, 7000, 5001, 10, 5, 10))
+    Call Check(Shops.AddShopItem(State, 7000, 5002, 10, 5, 0))
+    Call Check(Shops.AddShopItem(State, 7000, 5003, RPG.RPG_MAX_VALUE, RPG.RPG_MAX_VALUE, 10))
+    Call Check(Shops.AddShopItem(State, 7000, 5064, 1, 1, 1))
+    Call Check(Party.SetGold(State, 100))
+
+    Call Check(Shops.Buy(0, 7000, 5000, 1) = RPG.RPG_RESULT_INVALID_STATE)
+    Call Check(Shops.Sell(0, 7000, 5000, 1) = RPG.RPG_RESULT_INVALID_STATE)
+
+    GoldBefore = Party.Gold(State)
+    QuantityBefore = Inventory.Quantity(State, 5000)
+    StockBefore = Shops.Stock(State, 7000, 5000)
+    Result = Shops.Buy(State, 7000, 5000, 0)
+
+    Call Check(Result = RPG.RPG_RESULT_INVALID_ARGUMENT)
+    Call Check(Party.Gold(State) = GoldBefore)
+    Call Check(Inventory.Quantity(State, 5000) = QuantityBefore)
+    Call Check(Shops.Stock(State, 7000, 5000) = StockBefore)
+
+    Result = Shops.Buy(State, 7000, 5004, 1)
+
+    Call Check(Result = RPG.RPG_RESULT_INVALID_ARGUMENT)
+    Call Check(Party.Gold(State) = GoldBefore And Inventory.Quantity(State, 5004) = 0)
+
+    Result = Shops.Buy(State, 7000, 5002, 1)
+
+    Call Check(Result = RPG.RPG_RESULT_INSUFFICIENT_QUANTITY)
+    Call Check(Party.Gold(State) = GoldBefore And Inventory.Quantity(State, 5002) = 0)
+
+    Call Check(Party.SetGold(State, 0))
+
+    Result = Shops.Buy(State, 7000, 5000, 1)
+
+    Call Check(Result = RPG.RPG_RESULT_INSUFFICIENT_GOLD)
+    Call Check(Party.Gold(State) = 0 And Inventory.Quantity(State, 5000) = 0)
+    Call Check(Party.SetGold(State, 100))
+
+    For Index = 0 To 63
+        Call Check(Inventory.AddItem(State, 5000 + Index, 1))
+    End For
+
+    GoldBefore = Party.Gold(State)
+    StockBefore = Shops.Stock(State, 7000, 5064)
+    Result = Shops.Buy(State, 7000, 5064, 1)
+
+    Call Check(Result = RPG.RPG_RESULT_CAPACITY)
+    Call Check(Party.Gold(State) = GoldBefore)
+    Call Check(Inventory.EntryCount(State) = RPG.RPG_MAX_INVENTORY_ENTRIES)
+    Call Check(Shops.Stock(State, 7000, 5064) = StockBefore)
+
+    QuantityBefore = Inventory.Quantity(State, 5001)
+    StockBefore = Shops.Stock(State, 7000, 5001)
+    Result = Shops.Sell(State, 7000, 5001, 1)
+
+    Call Check(Result = RPG.RPG_RESULT_NOT_SELLABLE)
+    Call Check(Inventory.Quantity(State, 5001) = QuantityBefore)
+    Call Check(Shops.Stock(State, 7000, 5001) = StockBefore)
+
+    QuantityBefore = Inventory.Quantity(State, 5000)
+    StockBefore = Shops.Stock(State, 7000, 5000)
+    Result = Shops.Sell(State, 7000, 5000, 2)
+
+    Call Check(Result = RPG.RPG_RESULT_INSUFFICIENT_QUANTITY)
+    Call Check(Inventory.Quantity(State, 5000) = QuantityBefore)
+    Call Check(Shops.Stock(State, 7000, 5000) = StockBefore)
+
+    Call Check(Party.SetGold(State, RPG.RPG_MAX_VALUE))
+
+    Result = Shops.Sell(State, 7000, 5000, 1)
+
+    Call Check(Result = RPG.RPG_RESULT_CAPACITY)
+    Call Check(Party.Gold(State) = RPG.RPG_MAX_VALUE And Inventory.Quantity(State, 5000) = 1)
+    Call Check(Shops.Stock(State, 7000, 5000) = StockBefore)
+    Call Check(Party.SetGold(State, 0))
+    Call Check(Shops.SetStock(State, 7000, 5000, RPG.RPG_MAX_VALUE))
+
+    Result = Shops.Sell(State, 7000, 5000, 1)
+
+    Call Check(Result = RPG.RPG_RESULT_CAPACITY)
+    Call Check(Party.Gold(State) = 0 And Inventory.Quantity(State, 5000) = 1)
+    Call Check(Shops.Stock(State, 7000, 5000) = RPG.RPG_MAX_VALUE)
+    Call Check(Inventory.ClearInventory(State))
+    Call Check(Shops.SetStock(State, 7000, 5000, 10))
+    Call Check(Party.SetGold(State, RPG.RPG_MAX_VALUE))
+
+    Result = Shops.Buy(State, 7000, 5003, 2)
+
+    Call Check(Result = RPG.RPG_RESULT_CAPACITY)
+    Call Check(Party.Gold(State) = RPG.RPG_MAX_VALUE And Inventory.Quantity(State, 5003) = 0)
+    Call Check(Shops.Stock(State, 7000, 5003) = 10)
+    Call Check(Party.SetGold(State, 100))
+
+    Result = Shops.Buy(State, 7000, 5000, 2)
+
+    Call Check(Result = RPG.RPG_RESULT_OK)
+    Call Check(Party.Gold(State) = 80 And Inventory.Quantity(State, 5000) = 2)
+    Call Check(Shops.Stock(State, 7000, 5000) = 8)
+
+    Result = Shops.Sell(State, 7000, 5000, 1)
+
+    Call Check(Result = RPG.RPG_RESULT_OK)
+    Call Check(Party.Gold(State) = 85 And Inventory.Quantity(State, 5000) = 1)
+    Call Check(Shops.Stock(State, 7000, 5000) = 9)
+    Call RPG.Destroy(State)
 
 End Sub

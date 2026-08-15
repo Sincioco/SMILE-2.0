@@ -86,8 +86,8 @@ Require-File 'artifacts\libraries\Smile.UI.smilelib' | Out-Null
 Require-File 'artifacts\libraries\Smile.RPG.smilelib' | Out-Null
 Require-File 'artifacts\tests\Phase6RpgStateTests.exe' | Out-Null
 Require-File 'artifacts\tests\Phase6RpgStateTestsPackage.exe' | Out-Null
-Require-File 'artifacts\games\RpgManagementGallery-DirectX\RpgManagementGallery.smile-assets.json' | Out-Null
-Require-File 'artifacts\games\RpgManagementGallery-GDI\RpgManagementGallery.smile-assets.json' | Out-Null
+Require-File 'artifacts\games\RpgManagementGallery-DirectX\smile.gallery.rpg-management.smile-assets.json' | Out-Null
+Require-File 'artifacts\games\RpgManagementGallery-GDI\smile.gallery.rpg-management.smile-assets.json' | Out-Null
 Require-File 'artifacts\web\RpgManagementGallery\smile-assets.json' | Out-Null
 Require-File 'artifacts\games\Phase5UIStateTests.exe' | Out-Null
 Require-File 'artifacts\games\Phase5UIStateTestsPackage.exe' | Out-Null
@@ -245,7 +245,7 @@ try {
             throw "$templateName does not contain all generated identity tokens."
         }
         if ($templateText -notmatch 'SmileProjectTemplateWizard' -or
-            $templateText -notmatch 'Version=2\.0\.39\.0') {
+            $templateText -notmatch 'Version=2\.0\.40\.0') {
             throw "$templateName does not invoke the synchronized template wizard."
         }
     }
@@ -271,11 +271,11 @@ try {
     $manifestReader = [System.IO.StreamReader]::new($manifestEntry.Open())
     try { $vsixManifest = $manifestReader.ReadToEnd() }
     finally { $manifestReader.Dispose() }
-    if ($vsixManifest -notmatch 'Version="2\.0\.39"') {
-        throw 'VSIX identity version is not 2.0.39.'
+    if ($vsixManifest -notmatch 'Version="2\.0\.40"') {
+        throw 'VSIX identity version is not 2.0.40.'
     }
     if ($vsixManifest -notmatch 'Type="Microsoft\.VisualStudio\.Assembly"' -or
-        $vsixManifest -notmatch 'AssemblyName="Smile\.VisualStudio, Version=2\.0\.39\.0, Culture=neutral, PublicKeyToken=null"') {
+        $vsixManifest -notmatch 'AssemblyName="Smile\.VisualStudio, Version=2\.0\.40\.0, Culture=neutral, PublicKeyToken=null"') {
         throw 'VSIX does not register the template wizard assembly.'
     }
 }
@@ -286,11 +286,11 @@ Write-Host 'VSIX compiler, shared-language, and project-template payload verifie
 $visualStudioDll = Require-File 'src\Smile.VisualStudio\bin\Release\net472\Smile.VisualStudio.dll'
 $versionInfo = [Diagnostics.FileVersionInfo]::GetVersionInfo($visualStudioDll)
 $assemblyVersion = [Reflection.AssemblyName]::GetAssemblyName($visualStudioDll).Version.ToString()
-if ($versionInfo.FileVersion -ne '2.0.39.0' -or $versionInfo.ProductVersion -notlike '2.0.39*' -or
-    $assemblyVersion -ne '2.0.39.0') {
+if ($versionInfo.FileVersion -ne '2.0.40.0' -or $versionInfo.ProductVersion -notlike '2.0.40*' -or
+    $assemblyVersion -ne '2.0.40.0') {
     throw "Visual Studio DLL versions differ: file=$($versionInfo.FileVersion), product=$($versionInfo.ProductVersion), assembly=$assemblyVersion."
 }
-Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.39.'
+Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.40.'
 
 $scaleCases = @(
     @{ Width = 960; Height = 540; ExpectedWidth = 960; ExpectedHeight = 540; X = 0; Y = 0 },

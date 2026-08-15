@@ -468,7 +468,7 @@ copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.RPG.smilelib" "%SMILE_ROOT%\arti
 if errorlevel 1 exit /b 1
 fc /b "%SMILE_ROOT%\artifacts\temp\Smile.RPG.first.smilelib" "%SMILE_ROOT%\artifacts\libraries\Smile.RPG.smilelib" >nul
 if errorlevel 1 exit /b 1
-powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.RPG.smilelib'); try { $manifest=([IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())).ReadToEnd() | ConvertFrom-Json; $api=([IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open())).ReadToEnd() | ConvertFrom-Json; $names=@($api.modules.name); if ($manifest.formatVersion -ne 5 -or $manifest.version -ne '1.0.0' -or $names.Count -ne 8 -or $names -notcontains 'Smile.RPG.Core' -or $names -notcontains 'Smile.RPG.SaveGames' -or @($api.modules.members | Where-Object requiresGameWindow).Count -ne 0) { exit 1 } } finally { $zip.Dispose() }"
+powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.RPG.smilelib'); try { $manifest=([IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())).ReadToEnd() | ConvertFrom-Json; $api=([IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open())).ReadToEnd() | ConvertFrom-Json; $names=@($api.modules.name); if ($manifest.formatVersion -ne 5 -or $manifest.version -ne '1.0.1' -or $names.Count -ne 8 -or $names -notcontains 'Smile.RPG.Core' -or $names -notcontains 'Smile.RPG.SaveGames' -or @($api.modules.members | Where-Object requiresGameWindow).Count -ne 0 -or $api.modules.members.name -notcontains 'RPG_RESULT_NOT_SELLABLE') { exit 1 } } finally { $zip.Dispose() }"
 if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase6RpgStateTests\Phase6RpgStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase6RpgStateTests.exe"
@@ -488,6 +488,14 @@ if errorlevel 1 exit /b 1
 node --check "%SMILE_ROOT%\artifacts\web\Phase6RpgStateTests\game.js"
 if errorlevel 1 exit /b 1
 node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase6RpgStateTests" --native-output "%SMILE_ROOT%\artifacts\temp\Phase6RpgStateTests.out" --timeout 10000
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase6RpgStateTests\Phase6RpgStateTests.Package.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\Phase6RpgStateTestsPackage"
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\Phase6RpgStateTestsPackage\game.js"
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase6RpgStateTestsPackage" --native-output "%SMILE_ROOT%\artifacts\temp\Phase6RpgStateTestsPackage.out" --timeout 10000
+if errorlevel 1 exit /b 1
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-phase6-rpg-rollback.ps1"
 if errorlevel 1 exit /b 1
 
 if not exist "%SMILE_ROOT%\artifacts\games\RpgManagementGallery-DirectX" mkdir "%SMILE_ROOT%\artifacts\games\RpgManagementGallery-DirectX"

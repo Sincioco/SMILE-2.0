@@ -1,0 +1,304 @@
+Option Explicit
+
+Import Smile.RPG.Core As RPG
+Import Smile.RPG.Characters As Characters
+Import Smile.RPG.Party As Party
+Import Smile.RPG.Inventory As Inventory
+Import Smile.RPG.Equipment As Equipment
+Import Smile.RPG.Abilities As Abilities
+Import Smile.RPG.Shops As Shops
+Import Smile.RPG.SaveGames As SaveGames
+
+Dim CharacterDefinition As Characters.CharacterDefinition
+Dim ItemDefinition As Inventory.ItemDefinition
+Dim SlotDefinition As Equipment.EquipmentSlotDefinition
+Dim AbilityDefinition As Abilities.AbilityDefinition
+Dim ShopDefinition As Shops.ShopDefinition
+Dim State As Number
+Dim IncomingState As Number
+Dim Result As Number
+Dim Failures As Number
+
+State = RPG.Create()
+IncomingState = RPG.Create()
+
+Call DefineState(State)
+Call DefineState(IncomingState)
+Call BuildRollbackState(State)
+Call BuildIncomingState(IncomingState)
+
+Result = SaveGames.Encode(IncomingState, 61)
+
+Call Check(Result = RPG.RPG_RESULT_OK)
+
+Result = SaveGames.Decode(State, 61)
+
+Call Check(Result = RPG.RPG_RESULT_APPLY_FAILED)
+Call CheckRollbackState()
+Call RPG.Destroy(IncomingState)
+Call RPG.Destroy(State)
+
+If Failures = 0 Then
+    Print "Phase 6.1 RPG rollback fault test: PASS"
+Else
+    Print "Phase 6.1 RPG rollback fault test: FAIL"
+    Print Failures
+End If
+
+End Program
+
+Sub DefineState(StateHandle As Number)
+
+    Dim Index As Number
+
+    CharacterDefinition.Id = 100
+    CharacterDefinition.Name = "Rollback Hero"
+    CharacterDefinition.StartingLevel = 1
+    CharacterDefinition.StartingMaximumHealth = 100
+    CharacterDefinition.StartingMaximumMagicPoints = 40
+    CharacterDefinition.Strength = 10
+    CharacterDefinition.Defense = 11
+    CharacterDefinition.Magic = 12
+    CharacterDefinition.Resistance = 13
+    CharacterDefinition.Agility = 14
+    CharacterDefinition.Luck = 15
+
+    Call Check(Characters.DefineCharacter(StateHandle, CharacterDefinition))
+
+    CharacterDefinition.Id = 200
+    CharacterDefinition.Name = "Rollback Mage"
+
+    Call Check(Characters.DefineCharacter(StateHandle, CharacterDefinition))
+
+    SlotDefinition.Id = 1
+    SlotDefinition.Name = "Hand"
+
+    Call Check(Equipment.DefineSlot(StateHandle, SlotDefinition))
+
+    SlotDefinition.Id = 2
+    SlotDefinition.Name = "Head"
+
+    Call Check(Equipment.DefineSlot(StateHandle, SlotDefinition))
+
+    For Index = 0 To 64
+
+        ItemDefinition.Id = 1000 + Index
+        ItemDefinition.Name = "Rollback Item"
+        ItemDefinition.Kind = RPG.RPG_ITEM_CONSUMABLE
+        ItemDefinition.MaximumStack = 3
+        ItemDefinition.BasePrice = 10
+        ItemDefinition.CanSell = True
+        ItemDefinition.EffectId = 1
+        ItemDefinition.EquipmentSlotId = 0
+        ItemDefinition.HealthBonus = 0
+        ItemDefinition.MagicPointBonus = 0
+        ItemDefinition.StrengthBonus = 0
+        ItemDefinition.DefenseBonus = 0
+        ItemDefinition.MagicBonus = 0
+        ItemDefinition.ResistanceBonus = 0
+        ItemDefinition.AgilityBonus = 0
+        ItemDefinition.LuckBonus = 0
+
+        If Index = 0 Then
+
+            ItemDefinition.Kind = RPG.RPG_ITEM_EQUIPMENT
+            ItemDefinition.MaximumStack = 1
+            ItemDefinition.EquipmentSlotId = 1
+            ItemDefinition.StrengthBonus = 2
+
+        Else If Index = 1 Or Index = 64 Then
+
+            ItemDefinition.Kind = RPG.RPG_ITEM_EQUIPMENT
+            ItemDefinition.MaximumStack = 1
+            ItemDefinition.EquipmentSlotId = 2
+            ItemDefinition.DefenseBonus = 3
+
+        End If
+
+        Call Check(Inventory.DefineItem(StateHandle, ItemDefinition))
+    End For
+
+    For Index = 0 To RPG.RPG_MAX_LEARNED_ABILITIES - 1
+
+        AbilityDefinition.Id = 3000 + Index
+        AbilityDefinition.Name = "Rollback Ability"
+        AbilityDefinition.MagicPointCost = 1
+        AbilityDefinition.Power = 10
+        AbilityDefinition.TargetMode = RPG.RPG_TARGET_SELF
+        AbilityDefinition.EffectId = 1
+
+        Call Check(Abilities.DefineAbility(StateHandle, AbilityDefinition))
+    End For
+
+    ShopDefinition.Id = 4000
+    ShopDefinition.Name = "Finite Shop"
+
+    Call Check(Shops.DefineShop(StateHandle, ShopDefinition))
+    Call Check(Shops.AddShopItem(StateHandle, 4000, 1002, 10, 5, 8))
+
+    ShopDefinition.Id = 4001
+    ShopDefinition.Name = "Unlimited Shop"
+
+    Call Check(Shops.DefineShop(StateHandle, ShopDefinition))
+    Call Check(Shops.AddShopItem(StateHandle, 4001, 1003, 10, 5, RPG.RPG_STOCK_UNLIMITED))
+
+End Sub
+
+Sub BuildRollbackState(StateHandle As Number)
+
+    Dim Index As Number
+    Dim ExpectedQuantity As Number
+
+    Call Check(Characters.SetLevel(StateHandle, 100, 7))
+    Call Check(Characters.SetExperience(StateHandle, 100, 7654))
+    Call Check(Characters.SetMaximumHealth(StateHandle, 100, 777))
+    Call Check(Characters.SetHealth(StateHandle, 100, 321))
+    Call Check(Characters.SetMaximumMagicPoints(StateHandle, 100, 222))
+    Call Check(Characters.SetMagicPoints(StateHandle, 100, 111))
+    Call Check(Characters.SetStrength(StateHandle, 100, 21))
+    Call Check(Characters.SetDefense(StateHandle, 100, 22))
+    Call Check(Characters.SetMagic(StateHandle, 100, 23))
+    Call Check(Characters.SetResistance(StateHandle, 100, 24))
+    Call Check(Characters.SetAgility(StateHandle, 100, 25))
+    Call Check(Characters.SetLuck(StateHandle, 100, 26))
+    Call Check(Characters.SetLevel(StateHandle, 200, 8))
+    Call Check(Characters.SetExperience(StateHandle, 200, 8765))
+    Call Check(Characters.SetMaximumHealth(StateHandle, 200, 888))
+    Call Check(Characters.SetHealth(StateHandle, 200, 432))
+    Call Check(Characters.SetMaximumMagicPoints(StateHandle, 200, 333))
+    Call Check(Characters.SetMagicPoints(StateHandle, 200, 222))
+    Call Check(Characters.SetStrength(StateHandle, 200, 31))
+    Call Check(Characters.SetDefense(StateHandle, 200, 32))
+    Call Check(Characters.SetMagic(StateHandle, 200, 33))
+    Call Check(Characters.SetResistance(StateHandle, 200, 34))
+    Call Check(Characters.SetAgility(StateHandle, 200, 35))
+    Call Check(Characters.SetLuck(StateHandle, 200, 36))
+    Call Check(Party.AddCharacter(StateHandle, 200))
+    Call Check(Party.AddCharacter(StateHandle, 100))
+    Call Check(Party.SetGold(StateHandle, 654321))
+    Call Check(Inventory.AddItem(StateHandle, 1000, 1))
+    Call Check(Equipment.Equip(StateHandle, 100, 1, 1000))
+    Call Check(Inventory.AddItem(StateHandle, 1000, 1))
+    Call Check(Equipment.Equip(StateHandle, 200, 1, 1000))
+    Call Check(Inventory.AddItem(StateHandle, 1001, 1))
+    Call Check(Equipment.Equip(StateHandle, 100, 2, 1001))
+    Call Check(Inventory.AddItem(StateHandle, 1064, 1))
+    Call Check(Equipment.Equip(StateHandle, 200, 2, 1064))
+
+    For Index = 0 To 63
+
+        ExpectedQuantity = 3
+
+        If Index < 2 Then
+            ExpectedQuantity = 1
+        End If
+
+        Call Check(Inventory.AddItem(StateHandle, 1000 + Index, ExpectedQuantity))
+    End For
+
+    For Index = 0 To RPG.RPG_MAX_LEARNED_ABILITIES - 1
+        Call Check(Abilities.LearnAbility(StateHandle, 100, 3000 + Index))
+        Call Check(Abilities.LearnAbility(StateHandle, 200, 3000 + Index))
+    End For
+
+    Call Check(Shops.SetStock(StateHandle, 4000, 1002, 6))
+    Call Check(Shops.SetStock(StateHandle, 4001, 1003, RPG.RPG_STOCK_UNLIMITED))
+
+End Sub
+
+Sub BuildIncomingState(StateHandle As Number)
+
+    Call Check(Characters.SetLevel(StateHandle, 100, 2))
+    Call Check(Characters.SetExperience(StateHandle, 100, 2))
+    Call Check(Characters.SetMaximumHealth(StateHandle, 100, 200))
+    Call Check(Characters.SetHealth(StateHandle, 100, 200))
+    Call Check(Characters.SetMaximumMagicPoints(StateHandle, 100, 80))
+    Call Check(Characters.SetMagicPoints(StateHandle, 100, 80))
+    Call Check(Characters.SetStrength(StateHandle, 100, 2))
+    Call Check(Characters.SetDefense(StateHandle, 100, 2))
+    Call Check(Characters.SetMagic(StateHandle, 100, 2))
+    Call Check(Characters.SetResistance(StateHandle, 100, 2))
+    Call Check(Characters.SetAgility(StateHandle, 100, 2))
+    Call Check(Characters.SetLuck(StateHandle, 100, 2))
+    Call Check(Party.AddCharacter(StateHandle, 100))
+    Call Check(Party.SetGold(StateHandle, 777777777))
+    Call Check(Inventory.AddItem(StateHandle, 1000, 1))
+    Call Check(Equipment.Equip(StateHandle, 100, 1, 1000))
+    Call Check(Inventory.AddItem(StateHandle, 1002, 1))
+    Call Check(Abilities.LearnAbility(StateHandle, 100, 3000))
+    Call Check(Shops.SetStock(StateHandle, 4000, 1002, 5))
+
+End Sub
+
+Sub CheckRollbackState()
+
+    Dim Index As Number
+    Dim ExpectedQuantity As Number
+
+    Call Check(Characters.CharacterDefinitionCount(State) = 2)
+    Call Check(Inventory.ItemDefinitionCount(State) = 65)
+    Call Check(Equipment.SlotCount(State) = 2)
+    Call Check(Abilities.AbilityDefinitionCount(State) = RPG.RPG_MAX_LEARNED_ABILITIES)
+    Call Check(Shops.ShopCount(State) = 2)
+    Call Check(Characters.Level(State, 100) = 7)
+    Call Check(Characters.Experience(State, 100) = 7654)
+    Call Check(Characters.Health(State, 100) = 321)
+    Call Check(Characters.MaximumHealth(State, 100) = 777)
+    Call Check(Characters.MagicPoints(State, 100) = 111)
+    Call Check(Characters.MaximumMagicPoints(State, 100) = 222)
+    Call Check(Characters.Strength(State, 100) = 21)
+    Call Check(Characters.Defense(State, 100) = 22)
+    Call Check(Characters.Magic(State, 100) = 23)
+    Call Check(Characters.Resistance(State, 100) = 24)
+    Call Check(Characters.Agility(State, 100) = 25)
+    Call Check(Characters.Luck(State, 100) = 26)
+    Call Check(Characters.Level(State, 200) = 8)
+    Call Check(Characters.Experience(State, 200) = 8765)
+    Call Check(Characters.Health(State, 200) = 432)
+    Call Check(Characters.MaximumHealth(State, 200) = 888)
+    Call Check(Characters.MagicPoints(State, 200) = 222)
+    Call Check(Characters.MaximumMagicPoints(State, 200) = 333)
+    Call Check(Characters.Strength(State, 200) = 31)
+    Call Check(Characters.Defense(State, 200) = 32)
+    Call Check(Characters.Magic(State, 200) = 33)
+    Call Check(Characters.Resistance(State, 200) = 34)
+    Call Check(Characters.Agility(State, 200) = 35)
+    Call Check(Characters.Luck(State, 200) = 36)
+    Call Check(Party.PartyCount(State) = 2)
+    Call Check(Party.CharacterIdAt(State, 0) = 200 And Party.CharacterIdAt(State, 1) = 100)
+    Call Check(Party.Gold(State) = 654321)
+    Call Check(Inventory.EntryCount(State) = RPG.RPG_MAX_INVENTORY_ENTRIES)
+
+    For Index = 0 To 63
+
+        ExpectedQuantity = 3
+
+        If Index < 2 Then
+            ExpectedQuantity = 1
+        End If
+
+        Call Check(Inventory.Quantity(State, 1000 + Index) = ExpectedQuantity)
+    End For
+
+    Call Check(Equipment.EquippedItem(State, 100, 1) = 1000)
+    Call Check(Equipment.EquippedItem(State, 200, 1) = 1000)
+    Call Check(Equipment.EquippedItem(State, 100, 2) = 1001)
+    Call Check(Equipment.EquippedItem(State, 200, 2) = 1064)
+
+    For Index = 0 To RPG.RPG_MAX_LEARNED_ABILITIES - 1
+        Call Check(Abilities.LearnedAbilityIdAt(State, 100, Index) = 3000 + Index)
+        Call Check(Abilities.LearnedAbilityIdAt(State, 200, Index) = 3000 + Index)
+    End For
+
+    Call Check(Shops.Stock(State, 4000, 1002) = 6)
+    Call Check(Shops.Stock(State, 4001, 1003) = RPG.RPG_STOCK_UNLIMITED)
+
+End Sub
+
+Sub Check(Condition As Boolean)
+
+    If Not Condition Then
+        Failures = Failures + 1
+    End If
+
+End Sub

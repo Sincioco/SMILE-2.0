@@ -485,8 +485,11 @@ Public Function Buy(StateHandle As Number, ShopId As Number, ItemId As Number, Q
     Dim CurrentStock As Number
     Dim GoldRestored As Boolean
 
-    If (Not Core.IsValid(StateHandle) Or
-        Not HasShopItem(StateHandle, ShopId, ItemId) Or
+    If Not Core.IsValid(StateHandle) Then
+        Return Core.RPG_RESULT_INVALID_STATE
+    End If
+
+    If (Not HasShopItem(StateHandle, ShopId, ItemId) Or
         Not Core.IsValidQuantity(QuantityToBuy)) Then
         Return Core.RPG_RESULT_INVALID_ARGUMENT
     End If
@@ -495,7 +498,7 @@ Public Function Buy(StateHandle As Number, ShopId As Number, ItemId As Number, Q
     CurrentStock = Stock(StateHandle, ShopId, ItemId)
 
     If UnitPrice > Core.RPG_MAX_VALUE / QuantityToBuy Then
-        Return Core.RPG_RESULT_INVALID_ARGUMENT
+        Return Core.RPG_RESULT_CAPACITY
     End If
 
     TotalPrice = UnitPrice * QuantityToBuy
@@ -536,14 +539,20 @@ Public Function Sell(StateHandle As Number, ShopId As Number, ItemId As Number, 
     Dim CurrentStock As Number
     Dim InventoryRestored As Boolean
 
-    If (Not Core.IsValid(StateHandle) Or
-        Not HasShopItem(StateHandle, ShopId, ItemId) Or
+    If Not Core.IsValid(StateHandle) Then
+        Return Core.RPG_RESULT_INVALID_STATE
+    End If
+
+    If (Not HasShopItem(StateHandle, ShopId, ItemId) Or
         Not Core.IsValidQuantity(QuantityToSell)) Then
         Return Core.RPG_RESULT_INVALID_ARGUMENT
     End If
 
-    If (Not Inventory.CanSell(StateHandle, ItemId) Or
-        Not Inventory.CanRemoveItem(StateHandle, ItemId, QuantityToSell)) Then
+    If Not Inventory.CanSell(StateHandle, ItemId) Then
+        Return Core.RPG_RESULT_NOT_SELLABLE
+    End If
+
+    If Not Inventory.CanRemoveItem(StateHandle, ItemId, QuantityToSell) Then
         Return Core.RPG_RESULT_INSUFFICIENT_QUANTITY
     End If
 
@@ -551,7 +560,7 @@ Public Function Sell(StateHandle As Number, ShopId As Number, ItemId As Number, 
     CurrentStock = Stock(StateHandle, ShopId, ItemId)
 
     If UnitPrice > Core.RPG_MAX_VALUE / QuantityToSell Then
-        Return Core.RPG_RESULT_INVALID_ARGUMENT
+        Return Core.RPG_RESULT_CAPACITY
     End If
 
     TotalPrice = UnitPrice * QuantityToSell

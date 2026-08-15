@@ -85,6 +85,7 @@ End If
 - Apply this style to SMILE source, modules, libraries, examples, games, templates, tutorials, embedded documentation examples, diagnostics, and generated SMILE presentation.
 - Keep source-aware formatting decisions in `src\Smile.Language` so Return expressions, long If conditions, contextual identifiers, diagnostics, completion, Quick Info, definitions, compiler behavior, and the VSIX use the same parser and semantic model. Do not reintroduce line-based parsing for these decisions.
 - Keep `scripts\format-smile-style.ps1` transactional. Its default repository scope is tracked `.smile` files; untracked files require `-IncludeUntracked` or explicit `-Files`. `-Check` must never write. A mutating run must preflight every target, reject new diagnostics or concurrent hash changes, and commit no partial formatter output.
+- Keep formatter semantic project context deterministic. Default and explicit tracked-source runs use tracked `.smileproj` and `.smilelibproj` owners only. `-IncludeUntracked` deliberately permits eligible untracked owners after tracked owners, while an explicitly targeted untracked source may use an untracked project that actually owns it. Order multiple owners ordinally by repository-relative project path.
 - Run `scripts\test-smile-formatter.ps1` and the repository-wide `format-smile-style.ps1 -Check -FormatLongIf` near the start of the permanent smoke suite, before long native or Web validation.
 
 ## Permanent generated SMILE program structure

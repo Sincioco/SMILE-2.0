@@ -8,6 +8,8 @@ All IDs are caller-supplied stable positive Numbers. Invalid handles and argumen
 - `StateSlot`, `StateGeneration` for official sibling-module infrastructure
 - fixed capacities, `RPG_MAX_VALUE`, item kinds, target modes, `RPG_STOCK_UNLIMITED`, and result codes
 
+Shop callers can distinguish `RPG_RESULT_INVALID_STATE`, `RPG_RESULT_INVALID_ARGUMENT`, `RPG_RESULT_INSUFFICIENT_QUANTITY`, `RPG_RESULT_INSUFFICIENT_GOLD`, `RPG_RESULT_CAPACITY`, `RPG_RESULT_NOT_SELLABLE`, `RPG_RESULT_APPLY_FAILED`, and `RPG_RESULT_OK`.
+
 ## `Smile.RPG.Characters`
 
 `CharacterDefinition` contains `Id`, `Name`, starting Level, Maximum Health, Maximum Magic Points, and six base statistics.
@@ -58,10 +60,12 @@ All IDs are caller-supplied stable positive Numbers. Invalid handles and argumen
 - transactions: `Buy`, `Sell`
 - `SetStock` is validated SaveGames apply infrastructure
 
+`Buy` and `Sell` return `RPG_RESULT_INVALID_STATE` for an invalid handle. `Sell` returns `RPG_RESULT_NOT_SELLABLE` for a defined Item whose `CanSell` field is False. Actual missing owned quantity or finite stock returns `RPG_RESULT_INSUFFICIENT_QUANTITY`; bounded collection or arithmetic overflow returns `RPG_RESULT_CAPACITY`. Every rejected transaction is mutation-free.
+
 ## `Smile.RPG.SaveGames`
 
 - codec: `Encode(StateHandle, SchemaVersion)`, `Decode(StateHandle, ExpectedSchemaVersion)`
 - codec buffer: `EncodedByteCount`, `EncodedByteAt`, `ClearEncodedBytes`, `SetEncodedByte`
 - persistence: `SaveGame(StateHandle, SaveSlot, SchemaVersion)`, `LoadGame(StateHandle, SaveSlot, ExpectedSchemaVersion)`, `Exists`
 
-`Decode` validates the complete payload and all references before mutation. It snapshots current progress and restores that snapshot if application fails unexpectedly. Definition records remain registered.
+`Decode` validates the complete payload and all references before mutation. It snapshots current progress and restores that snapshot if application fails unexpectedly. During apply, Equipment assignments are restored into an empty temporary bag before saved Inventory entries, avoiding transient stack or entry-capacity requirements. Definition records remain registered.

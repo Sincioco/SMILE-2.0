@@ -474,30 +474,49 @@ public sealed class SmileProjectAssetPublishResult
 public static class SmileProjectAssetPublisher
 {
     public static SmileProjectAssetPublishResult Publish(SmileProjectAssetManifest manifest, string outputRoot,
-        string applicationIdentity, string target, string? nativeOutputBaseName = null)
+        string applicationIdentity, string target, string? nativeOutputBaseName = null,
+        bool hasExplicitApplicationIdentity = false)
     {
         manifest.ValidateForBuild();
         var root = Path.GetFullPath(outputRoot);
         Directory.CreateDirectory(root);
-        var manifestName = string.Equals(target, "web", StringComparison.OrdinalIgnoreCase)
+        var isWeb = string.Equals(target, "web", StringComparison.OrdinalIgnoreCase);
+        var manifestName = isWeb
             ? "smile-assets.json"
-            : SafeFileName(nativeOutputBaseName ?? applicationIdentity) + ".smile-assets.json";
+            : SafeFileName(hasExplicitApplicationIdentity ? applicationIdentity :
+                nativeOutputBaseName ?? applicationIdentity) + ".smile-assets.json";
         var manifestPath = ContainedDestination(root, manifestName);
         var warnings = new List<SmileProjectDiagnostic>();
         var previous = ReadPreviousManifest(manifestPath, applicationIdentity, target, root, manifest.ProjectPath, warnings);
+        var legacyManifests = new List<(string Path, PublicationManifest Manifest)>();
+        if (!isWeb && hasExplicitApplicationIdentity)
+        {
+            foreach (var candidatePath in Directory.EnumerateFiles(root, "*.smile-assets.json")
+                         .OrderBy(path => path, StringComparer.Ordinal))
+            {
+                if (string.Equals(candidatePath, manifestPath, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                var candidate = ReadPreviousManifest(candidatePath, applicationIdentity, target, root,
+                    manifest.ProjectPath, warnings, warnOnIdentityMismatch: false);
+                if (candidate != null)
+                    legacyManifests.Add((candidatePath, candidate));
+            }
+        }
         var currentPaths = new HashSet<string>(manifest.AssetPaths, StringComparer.Ordinal);
 
         try
         {
+            var priorAssets = new HashSet<string>(StringComparer.Ordinal);
             if (previous != null)
+                priorAssets.UnionWith(previous.Assets);
+            foreach (var legacy in legacyManifests)
+                priorAssets.UnionWith(legacy.Manifest.Assets);
+            foreach (var stale in priorAssets.Where(asset => !currentPaths.Contains(asset)))
             {
-                foreach (var stale in previous.Assets.Where(asset => !currentPaths.Contains(asset)))
-                {
-                    var stalePath = ContainedDestination(root, stale);
-                    if (File.Exists(stalePath))
-                        File.Delete(stalePath);
-                    RemoveEmptyParents(Path.GetDirectoryName(stalePath), root);
-                }
+                var stalePath = ContainedDestination(root, stale);
+                if (File.Exists(stalePath))
+                    File.Delete(stalePath);
+                RemoveEmptyParents(Path.GetDirectoryName(stalePath), root);
             }
             foreach (var item in manifest.Items)
                 CopyAsset(item, ContainedDestination(root, item.LogicalPath));
@@ -508,6 +527,8 @@ public static class SmileProjectAssetPublisher
                 Target = target,
                 Assets = manifest.AssetPaths.ToList()
             });
+            foreach (var legacy in legacyManifests)
+                File.Delete(legacy.Path);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
@@ -519,7 +540,8 @@ public static class SmileProjectAssetPublisher
     }
 
     private static PublicationManifest? ReadPreviousManifest(string manifestPath, string applicationIdentity,
-        string target, string outputRoot, string projectPath, List<SmileProjectDiagnostic> warnings)
+        string target, string outputRoot, string projectPath, List<SmileProjectDiagnostic> warnings,
+        bool warnOnIdentityMismatch = true)
     {
         if (!File.Exists(manifestPath))
             return null;
@@ -529,6 +551,9 @@ public static class SmileProjectAssetPublisher
             using (var stream = File.OpenRead(manifestPath))
                 data = (PublicationManifest?)new DataContractJsonSerializer(typeof(PublicationManifest)).ReadObject(stream)
                        ?? throw new SerializationException("The manifest was empty.");
+            if (!string.Equals(data.ApplicationIdentity, applicationIdentity, StringComparison.Ordinal) &&
+                !warnOnIdentityMismatch)
+                return null;
             if (data.FormatVersion != 1 || data.Assets == null ||
                 !string.Equals(data.ApplicationIdentity, applicationIdentity, StringComparison.Ordinal) ||
                 !string.Equals(data.Target, target, StringComparison.OrdinalIgnoreCase))

@@ -676,6 +676,66 @@ Run("Malformed prior asset manifests are ignored without unsafe deletion and rep
         Directory.Delete(directory, true);
     }
 });
+Run("Explicit ApplicationId keeps a stable native manifest and safely migrates legacy output names", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileAssetIdentityTests-" + Guid.NewGuid().ToString("N"));
+    var output = Path.Combine(directory, "output");
+    Directory.CreateDirectory(Path.Combine(directory, "Assets"));
+    Directory.CreateDirectory(output);
+    try
+    {
+        File.WriteAllText(Path.Combine(directory, "Program.smile"), "End Program\n");
+        File.WriteAllText(Path.Combine(directory, "Assets", "A.txt"), "A");
+        File.WriteAllText(Path.Combine(directory, "Assets", "B.txt"), "B");
+        File.WriteAllText(Path.Combine(output, "sentinel.txt"), "user-owned");
+        var projectPath = Path.Combine(directory, "Identity.smileproj");
+        void WriteProject(params string[] assets) => File.WriteAllText(projectPath,
+            "<SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind><StartupFile>Program.smile</StartupFile>" +
+            "<OutputName>Renamed</OutputName><ApplicationId>smile.tests.asset-identity</ApplicationId>" +
+            "</PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" />" +
+            string.Concat(assets.Select(asset => $"<Asset Include=\"Assets\\{asset}\" />")) +
+            "</ItemGroup></SmileProject>");
+
+        WriteProject("A.txt", "B.txt");
+        var legacy = SmileProjectSourceSet.Load(projectPath).AssetManifest;
+        var legacyResult = SmileProjectAssetPublisher.Publish(legacy, output,
+            "smile.tests.asset-identity", "windows-x64", "OldName");
+        Equal("OldName.smile-assets.json", Path.GetFileName(legacyResult.ManifestPath));
+
+        var mismatchedPath = Path.Combine(output, "Mismatched.smile-assets.json");
+        var malformedPath = Path.Combine(output, "Malformed.smile-assets.json");
+        File.WriteAllText(mismatchedPath,
+            "{\"formatVersion\":1,\"applicationIdentity\":\"smile.tests.other\",\"target\":\"windows-x64\",\"assets\":[\"sentinel.txt\"]}");
+        File.WriteAllText(malformedPath, "{not-json");
+
+        WriteProject("A.txt");
+        var current = SmileProjectSourceSet.Load(projectPath).AssetManifest;
+        var migrated = SmileProjectAssetPublisher.Publish(current, output,
+            "smile.tests.asset-identity", "windows-x64", "NewName",
+            hasExplicitApplicationIdentity: true);
+
+        Equal("smile.tests.asset-identity.smile-assets.json", Path.GetFileName(migrated.ManifestPath));
+        Equal(true, File.Exists(Path.Combine(output, "Assets", "A.txt")));
+        Equal(false, File.Exists(Path.Combine(output, "Assets", "B.txt")));
+        Equal(false, File.Exists(Path.Combine(output, "OldName.smile-assets.json")));
+        Equal(true, File.Exists(mismatchedPath));
+        Equal(true, File.Exists(malformedPath));
+        Equal("user-owned", File.ReadAllText(Path.Combine(output, "sentinel.txt")));
+        Equal(true, migrated.Warnings.Any(warning => warning.Code == "SML3605"));
+
+        var changedIdentity = SmileProjectAssetPublisher.Publish(current, output,
+            "smile.tests.changed-identity", "windows-x64", "AnotherName",
+            hasExplicitApplicationIdentity: true);
+        Equal("smile.tests.changed-identity.smile-assets.json", Path.GetFileName(changedIdentity.ManifestPath));
+        Equal(true, File.Exists(migrated.ManifestPath));
+        Equal(true, File.Exists(mismatchedPath));
+        Equal(true, File.Exists(malformedPath));
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
+});
 Run("Asset publication I/O failures report SML3604 and do not claim success", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "SmileAssetFailureTests-" + Guid.NewGuid().ToString("N"));
@@ -2951,14 +3011,14 @@ Run("ApplicationId CLI parses and rejects conflicting project overrides", () =>
     }
 });
 
-Run("Smile.RPG 1.0.0 is an ordinary built-in source package with bounded public modules", () =>
+Run("Smile.RPG 1.0.1 is an ordinary built-in source package with bounded public modules", () =>
 {
     var project = SmileProjectSourceSet.Load("libraries/Smile.RPG/Smile.RPG.smilelibproj");
     var compilation = SmileProjectCompilation.Load(project.ProjectPath);
     var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library,
         compilation.DependencyContext);
     Equal(false, analysis.HasErrors);
-    Equal("1.0.0", project.Version);
+    Equal("1.0.1", project.Version);
     Equal(8, project.CompilationSources.Count);
     Equal(true, SmileBuiltInLibraryCatalog.IsBuiltIn("Smile.RPG"));
     foreach (var module in new[] { "Smile.RPG.Core", "Smile.RPG.Characters", "Smile.RPG.Party",
@@ -2998,10 +3058,10 @@ Run("VSIX templates render localized identity metadata within the aligned header
     var border = gameTemplate.Split('\n')[0].TrimEnd('\r');
     var rendered = gameTemplate.Replace("$smileuser$", "Sin".PadRight(69), StringComparison.Ordinal)
         .Replace("$smiledate$", "August 15, 2026".PadRight(69), StringComparison.Ordinal)
-        .Replace("$smileversion$", "2.0.39", StringComparison.Ordinal);
+        .Replace("$smileversion$", "2.0.40", StringComparison.Ordinal);
     var header = rendered.Split('\n').Take(9).Select(line => line.TrimEnd('\r')).ToArray();
     Equal("' Programmed By: " + "Sin".PadRight(69) + "Version: 0.0.1", header[3]);
-    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.39", header[4]);
+    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.40", header[4]);
     Equal(header[3].IndexOf("Version:", StringComparison.Ordinal) + "Version".Length,
         header[4].IndexOf("SMILE:", StringComparison.Ordinal) + "SMILE".Length);
     Equal(true, header.All(line => line.Length <= border.Length));
@@ -3014,14 +3074,14 @@ Run("VSIX templates render localized identity metadata within the aligned header
     foreach (var manifest in new[] { gameManifest, consoleManifest })
     {
         Equal(true, manifest.Contains("SmileProjectTemplateWizard", StringComparison.Ordinal));
-        Equal(true, manifest.Contains("Version=2.0.39.0", StringComparison.Ordinal));
+        Equal(true, manifest.Contains("Version=2.0.40.0", StringComparison.Ordinal));
     }
     foreach (var applicationProject in new[] { gameProject, consoleProject })
         Equal(true, applicationProject.Contains("<ApplicationId>$smileapplicationid$</ApplicationId>", StringComparison.Ordinal));
     Equal(false, libraryProject.Contains("ApplicationId", StringComparison.Ordinal));
     Equal(true, wizard.Contains("\"smile.app.a\" + Guid.NewGuid().ToString(\"N\")", StringComparison.Ordinal));
     Equal(true, wizard.Contains("ToString(\"D\", CultureInfo.CurrentCulture)", StringComparison.Ordinal));
-    Equal(true, project.Contains("<Version>2.0.39</Version>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<Version>2.0.40</Version>", StringComparison.Ordinal));
     Equal(true, vsixManifest.Contains("Type=\"Microsoft.VisualStudio.Assembly\"", StringComparison.Ordinal));
 });
 

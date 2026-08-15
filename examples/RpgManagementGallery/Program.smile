@@ -242,6 +242,8 @@ Sub InitializeMenus()
     ItemIndex = Menu.AddItem(PartyMenu, "Add 100 Gold", 102, True)
     ItemIndex = Menu.AddItem(InventoryMenu, "Add Potion", 201, True)
     ItemIndex = Menu.AddItem(InventoryMenu, "Remove Potion", 202, True)
+    ItemIndex = Menu.AddItem(InventoryMenu, "Add Bronze Sword", 203, True)
+    ItemIndex = Menu.AddItem(InventoryMenu, "Remove Bronze Sword", 204, True)
     ItemIndex = Menu.AddItem(EquipmentMenu, "Equip Bronze Sword", 301, True)
     ItemIndex = Menu.AddItem(EquipmentMenu, "Unequip Bronze Sword", 302, True)
     ItemIndex = Menu.AddItem(AbilityMenu, "Cast Fire for 7 MP", 401, True)
@@ -283,6 +285,16 @@ Sub RunAction(Value As Number)
 
         OperationSucceeded = Inventory.RemoveItem(State, 10, 1)
         Status = "One Potion was removed; zero stacks disappear."
+
+    Else If Value = 203 Then
+
+        OperationSucceeded = Inventory.AddItem(State, 20, 1)
+        Status = "One Bronze Sword was added to the bag."
+
+    Else If Value = 204 Then
+
+        OperationSucceeded = Inventory.RemoveItem(State, 20, 1)
+        Status = "One Bronze Sword was removed from the bag."
 
     Else If Value = 301 Then
 
@@ -340,7 +352,19 @@ Sub RunAction(Value As Number)
     End If
 
     If Value <> 999 And Not OperationSucceeded Then
-        Status = "That action was safely rejected without partial mutation."
+
+        If (Value = 501 Or Value = 502) And Result = RPG.RPG_RESULT_INSUFFICIENT_QUANTITY Then
+            Status = "The transaction needs more Item quantity or finite stock."
+        Else If (Value = 501 Or Value = 502) And Result = RPG.RPG_RESULT_INSUFFICIENT_GOLD Then
+            Status = "The party does not have enough Gold for that purchase."
+        Else If (Value = 501 Or Value = 502) And Result = RPG.RPG_RESULT_NOT_SELLABLE Then
+            Status = "That Item is defined as not sellable."
+        Else If (Value = 501 Or Value = 502) And Result = RPG.RPG_RESULT_CAPACITY Then
+            Status = "A bounded RPG value or collection has reached capacity."
+        Else
+            Status = "That action was safely rejected without partial mutation."
+        End If
+
     End If
 
 End Sub

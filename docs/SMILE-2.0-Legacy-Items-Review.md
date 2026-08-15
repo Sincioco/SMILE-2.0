@@ -19,7 +19,7 @@ The audit covered the complete tracked repository plus ignored and generated out
 - exact filename and path searches to find active and stale references;
 - exact-content hashes to examine duplicate tracked files;
 - PDF metadata, extracted text, and rendered cover pages to verify the two User Guide versions;
-- current product identity checks against the seven game folders, Smile.UI 1.1.3, and VSIX 2.0.39.
+- current product identity checks against the seven game folders, Smile.UI 1.1.3, and VSIX 2.0.40.
 
 The repository contained 552 tracked files before the approved User Guide deletion. There were no nonignored untracked files before this report was created.
 
@@ -43,7 +43,7 @@ Evidence:
 - Neither PDF was referenced by any tracked source, script, project, tutorial, or Markdown file.
 - Version 2.0.1 described commit `92bf27e9`, VSIX 2.0.1, and eight games.
 - Version 2.0.2 retained all 70 pages of the 2.0.1 guide and appended only three update pages. Its original cover and main content still described VSIX 2.0.1 and eight games; its update described VSIX 2.0.33.
-- The current repository has VSIX 2.0.39 and seven games.
+- The current repository has VSIX 2.0.40 and seven games.
 - Both guides contained old all-uppercase SMILE examples and predated the current authoritative formatting convention.
 
 ## Recommended cleanup candidates
