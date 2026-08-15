@@ -38,4 +38,4 @@ Official libraries maintained with SMILE 2.0 are identified by the shared built-
 
 `libraries\Smile.Game` is the Phase 7 reusable 2D gameplay package. Its five ordinary modules provide cardinal movement/interpolation, animation timing, SMILE-MAP 1 parsing/rendering, camera math, and collision predicates without UI or assets.
 
-`libraries\Smile.RPG` 1.1.0 contains eleven ordinary modules: the Phase 6 data/management surface plus World, Story, Encounters, and format-2 transactional saves with format-1 compatibility. It has no Smile.UI or asset dependency and deliberately excludes battle resolution, quests, classes, status effects, and presentation policy.
+`libraries\Smile.RPG` 1.1.1 contains eleven ordinary modules: the Phase 6 data/management surface plus World, Story, Encounters, visible-solid world invariants, and batch-aware format-2 transactional saves with format-1 compatibility. It has no Smile.UI or asset dependency and deliberately excludes battle resolution, quests, classes, status effects, and presentation policy.

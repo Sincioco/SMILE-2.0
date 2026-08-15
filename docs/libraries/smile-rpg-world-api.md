@@ -1,4 +1,4 @@
-# Smile.RPG 1.1.0 world API
+# Smile.RPG 1.1.1 world API
 
 Phase 7 adds three asset-free modules to the existing RPG data package. All IDs are stable positive Numbers and definitions must be registered before loading progress.
 
@@ -15,7 +15,11 @@ Definitions:
 
 Definition and enumeration operations include `DefineScene`, `DefineSpawn`, `DefineTransition`, `DefineActor`, `IsSceneDefined`, `IsActorDefined`, `SceneCount`, `ActorCount`, `ActorIdAt`, `PersistentActorCount`, and `PersistentActorIdAt`.
 
-Progress operations include current/controlled actor access, actor field queries, `ActorIsPersistent`, facing/visibility setters, destination reservation/completion/cancellation, `FrontActor`, spawn/transition activation, return-location access, `SetActorProgress`, and `ResetProgress`. `ResetPersistentProgress` is public SaveGames infrastructure that resets persisted world fields and persistent actors while leaving transient actors untouched.
+Progress operations include current/controlled actor access, actor field queries, `ActorIsPersistent`, facing/visibility setters, destination reservation/completion/cancellation, `FrontActor`, spawn/transition activation, return-location access, `SetActorProgress`, and `ResetProgress`. `ActorHasReservation`, `ActorReservedDestinationX`, and `ActorReservedDestinationY` are observational queries used by applications and transactional save infrastructure. A missing reservation returns False and coordinates `-1`.
+
+Two different actors that are both visible and solid cannot occupy the same cell in the same scene. A visible-solid definition, reveal, spawn, transition, or direct progress replacement also cannot occupy another visible solid actor's active reserved destination. Rejected operations are mutation-free; hidden and non-solid overlaps remain legal. Registered starting definitions obey the same rule, so `ResetProgress` cannot manufacture an overlap. `ResetPersistentProgress` is public SaveGames infrastructure that atomically resets persisted world fields and persistent actors while leaving transient actors untouched, and rejects a persistent default that would conflict with preserved transient collision state.
+
+When `CurrentScene` and `ControlledActor` are both nonzero, the controlled actor belongs to that scene. Zero remains legal for setup and clearing. `ApplySpawn` maintains this rule and a blocked spawn or transition preserves the complete prior actor, scene, and reservation state.
 
 ## `Smile.RPG.Story`
 
@@ -29,4 +33,4 @@ An encounter ID is presentation metadata. Full battle gameplay remains outside t
 
 ## Save integration
 
-`SaveGames` writes SRPG format 2 and reads formats 1–2. Format 2 stores only actors whose definition has `Persistent = True`, plus story and encounter progress. Transient actor position, visibility, facing, and route progress survive load unchanged. Complete preflight validation and cross-module rollback preserve transactional load behavior.
+`SaveGames` writes SRPG format 2 and reads formats 1–2. Format 2 stores only actors whose definition has `Persistent = True`, plus story and encounter progress. The decoder validates the incoming final persistent layout against pairwise overlap, preserved transient visible-solid cells, transient reservations, and current-scene coherence before mutation. Persistent actors are hidden and placed as a batch before final visibility is restored, allowing legal swaps and rearrangements. Transient actor progress and reservations survive load unchanged. Complete preflight validation and cross-module rollback, including active actor reservations, preserve transactional load behavior.

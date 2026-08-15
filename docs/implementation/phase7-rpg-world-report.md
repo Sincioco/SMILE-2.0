@@ -1,5 +1,7 @@
 # Phase 7 RPG world implementation report
 
+> Phase 7.1 subsequently hardens the world-state and save invariants without beginning a later feature phase. See [the Phase 7.1 hardening report](phase7.1-world-state-invariant-hardening-report.md).
+
 Phase 7 introduces `Smile.Game` 1.0.0 and advances `Smile.RPG` to 1.1.0. The permanent `RpgWorldGallery` proves the complete reusable slice with original art: fixed-step walking, map and actor collision, exact camera clamping, wandering NPCs, menu-initiated multi-page/state-aware Talk, a walkable shop plus transactional purchase overlay, stats/inventory/party management, town/overworld scenes, visible followers, save/load, and a bounded Encounter Preview with exact return.
 
 Focused state tests cover generation safety, invalid handles, capacity boundaries, one-shot/loop animation, small-map and edge camera math, collision helpers, required and optional map layers, coordinate conversions, transition destination validation, actor reservations, story enumeration, deterministic encounters, format-2 determinism, transactional rejection, persistent-only actors, and format-1 compatibility.

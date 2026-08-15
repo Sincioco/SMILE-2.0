@@ -6,7 +6,7 @@ Phase 7 keeps presentation, reusable movement mechanics, and RPG state separate:
 RpgWorldGallery
   -> Smile.UI 1.1.3       menus and dialogue presentation
   -> Smile.Game 1.0.0     movement, animation, maps, camera, collision
-  -> Smile.RPG 1.1.0      characters, party, shops, world/story/encounters/save
+  -> Smile.RPG 1.1.1      characters, party, shops, world/story/encounters/save
 ```
 
 Neither source package opens a window, owns assets, or depends on `Smile.UI`. Applications select art, audio, controls, scene music, UI layout, dialogue text, map files, and encounter presentation.
@@ -23,6 +23,8 @@ Neither source package opens a window, owns assets, or depends on `Smile.UI`. Ap
 
 Map collision is cell-authoritative. `World.TryReserveDestination` adds solid visible actor occupancy and reservation checks, preventing two actors from entering the same cell. `Collision2D` supplies generic map and rectangular-footprint predicates; an application remains responsible for choosing its footbox and map collision data.
 
+Phase 7.1 applies the same final-state rule to every world placement path: two different visible solid actors cannot occupy the same scene/cell, and a new visible-solid placement cannot invalidate another visible solid actor's active destination reservation. Hidden and non-solid overlaps remain legal. Failed definitions, reveals, spawns, transitions, progress replacements, and persistent resets are atomic.
+
 ## Scenes, actors, story, and encounters
 
 `Smile.RPG.World` defines immutable scenes, spawns, transitions, and actors. Transitions validate that their destination spawn belongs to their destination scene. Actor progress includes scene, cell, facing, visibility, route step, and a persistence flag. Front-cell targeting supports menu-initiated Talk without embedding an interaction language.
@@ -31,6 +33,6 @@ Map collision is cell-authoritative. `World.TryReserveDestination` adds solid vi
 
 ## Persistence
 
-SRPG format 2 retains the format-1 prefix and appends current/return location, persistent actor progress, story flags/values, and encounter progress. The decoder accepts formats 1 and 2. It parses and cross-validates the complete payload before mutation, preserves transient actor progress during both successful apply and rollback, and restores every persisted RPG/world/story/encounter field if apply fails.
+SRPG format 2 retains the format-1 prefix and appends current/return location, persistent actor progress, story flags/values, and encounter progress. The decoder accepts formats 1 and 2. It validates the complete final persistent layout against itself and preserved transient actors/reservations before mutation. Persistent actors are hidden, placed as one batch, and then restored to final visibility, so valid swaps do not fail on intermediate old cells. Transient actor progress and reservations survive successful loads, while unexpected apply failure restores every RPG/world/story/encounter field and active reservation.
 
 The maximum format-2 payload is 32,436 bytes in a 36,864-byte package buffer, still below the Phase 4 one-MiB Data envelope.

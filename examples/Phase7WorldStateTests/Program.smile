@@ -33,6 +33,8 @@ Dim ReencodedCount As Number
 Dim Index As Number
 Dim SavedBytes[36864] As Number
 Dim LegacyBytes[36864] As Number
+Dim LayoutBytes[36864] As Number
+Dim LayoutByteCount As Number
 
 Call GameCore.Place(Mover, 3, 4, GameCore.GAME_DIRECTION_DOWN)
 Call Check(GameCore.BeginMove(Mover, GameCore.GAME_DIRECTION_RIGHT, 4))
@@ -213,6 +215,7 @@ For Index = 0 To ByteCount - 1
     SavedBytes[Index] = SaveGames.EncodedByteAt(Index)
 End For
 
+Call Check(World.SetCurrentScene(State, 0))
 Call Check(World.SetActorProgress(State, 100, 1, 1, 1, World.WORLD_FACING_UP, False, 0))
 Call Check(World.SetActorProgress(State, 200, 1, 8, 8, World.WORLD_FACING_UP, False, 9))
 Call Check(World.SetCurrentScene(State, 1))
@@ -276,6 +279,14 @@ Result = SaveGames.Decode(LegacyState, 11)
 Call Check(Result = RPG.RPG_RESULT_OK)
 Call Check(World.CurrentScene(LegacyState) = 0 And World.ControlledActor(LegacyState) = 0)
 
+Call TestDefinitionInvariant()
+Call TestVisibilityInvariant()
+Call TestSpawnAndTransitionAtomicity()
+Call TestActorProgressInvariant()
+Call TestResetInvariant()
+Call TestSceneActorCoherence()
+Call TestSaveLayoutHardening()
+
 Call TileMap.Unload(MapHandle)
 Call TileMap.Unload(OptionalMapHandle)
 Call Animation.Destroy(AnimationHandle)
@@ -303,5 +314,686 @@ Sub Check(Condition As Boolean)
         Print Checks
 
     End If
+
+End Sub
+
+Sub TestDefinitionInvariant()
+
+    Dim TestState As Number
+    Dim DefinitionCount As Number
+
+    TestState = RPG.Create()
+
+    Scene.Id = 1
+    Scene.MapId = 1
+    Scene.DefaultSpawnId = 1
+    Scene.CameraMode = World.WORLD_CAMERA_FOLLOW
+
+    Call Check(World.DefineScene(TestState, Scene))
+
+    Scene.Id = 2
+    Scene.MapId = 2
+    Scene.DefaultSpawnId = 2
+
+    Call Check(World.DefineScene(TestState, Scene))
+
+    Actor.Id = 1001
+    Actor.SceneId = 1
+    Actor.CellX = 5
+    Actor.CellY = 5
+    Actor.Facing = World.WORLD_FACING_DOWN
+    Actor.Visible = True
+    Actor.Solid = True
+    Actor.Persistent = True
+    Actor.AnimationSetId = 0
+    Actor.InteractionId = 0
+
+    Call Check(World.DefineActor(TestState, Actor))
+
+    DefinitionCount = World.ActorCount(TestState)
+    Actor.Id = 1002
+
+    Call Check(Not World.DefineActor(TestState, Actor))
+    Call Check(World.ActorCount(TestState) = DefinitionCount)
+    Call Check(Not World.IsActorDefined(TestState, 1002))
+
+    Actor.Id = 1003
+    Actor.Visible = False
+
+    Call Check(World.DefineActor(TestState, Actor))
+
+    Actor.Id = 1004
+    Actor.Visible = True
+    Actor.Solid = False
+
+    Call Check(World.DefineActor(TestState, Actor))
+
+    Actor.Id = 1005
+    Actor.SceneId = 2
+    Actor.Solid = True
+
+    Call Check(World.DefineActor(TestState, Actor))
+    Call Check(World.SetActorProgress(TestState, 1001, 1, 6, 5, World.WORLD_FACING_RIGHT, True, 0))
+
+    DefinitionCount = World.ActorCount(TestState)
+    Actor.Id = 1006
+    Actor.SceneId = 1
+    Actor.CellX = 5
+
+    Call Check(Not World.DefineActor(TestState, Actor))
+    Call Check(World.ActorCount(TestState) = DefinitionCount And Not World.IsActorDefined(TestState, 1006))
+    Call RPG.Destroy(TestState)
+
+    TestState = RPG.Create()
+    Scene.Id = 1
+    Scene.MapId = 1
+    Scene.DefaultSpawnId = 1
+
+    Call Check(World.DefineScene(TestState, Scene))
+
+    Actor.Id = 1011
+    Actor.SceneId = 1
+    Actor.CellX = 4
+    Actor.CellY = 5
+    Actor.Facing = World.WORLD_FACING_RIGHT
+    Actor.Visible = True
+    Actor.Solid = True
+    Actor.Persistent = True
+
+    Call Check(World.DefineActor(TestState, Actor))
+    Call Check(World.TryReserveDestination(TestState, 1011, 5, 5))
+    Call Check(World.ActorHasReservation(TestState, 1011))
+    Call Check(World.ActorReservedDestinationX(TestState, 1011) = 5 And World.ActorReservedDestinationY(TestState, 1011) = 5)
+
+    Actor.Id = 1012
+    Actor.CellX = 5
+
+    Call Check(Not World.DefineActor(TestState, Actor))
+    Call Check(World.ActorCount(TestState) = 1 And Not World.IsActorDefined(TestState, 1012))
+    Call Check(World.CompleteReservedMove(TestState, 1011, World.WORLD_FACING_RIGHT))
+    Call Check(World.ActorX(TestState, 1011) = 5 And World.ActorRouteStep(TestState, 1011) = 1)
+    Call Check(Not World.ActorHasReservation(TestState, 1011))
+    Call Check(World.ActorReservedDestinationX(TestState, 1011) = -1 And World.ActorReservedDestinationY(TestState, 1011) = -1)
+    Call RPG.Destroy(TestState)
+
+End Sub
+
+Sub TestVisibilityInvariant()
+
+    Dim TestState As Number
+
+    TestState = RPG.Create()
+    Scene.Id = 1
+    Scene.MapId = 1
+    Scene.DefaultSpawnId = 1
+    Scene.CameraMode = World.WORLD_CAMERA_FOLLOW
+
+    Call Check(World.DefineScene(TestState, Scene))
+
+    Actor.Id = 2001
+    Actor.SceneId = 1
+    Actor.CellX = 5
+    Actor.CellY = 5
+    Actor.Facing = World.WORLD_FACING_DOWN
+    Actor.Visible = True
+    Actor.Solid = True
+    Actor.Persistent = True
+    Actor.AnimationSetId = 0
+    Actor.InteractionId = 0
+
+    Call Check(World.DefineActor(TestState, Actor))
+
+    Actor.Id = 2002
+    Actor.Visible = False
+
+    Call Check(World.DefineActor(TestState, Actor))
+
+    Actor.Id = 2003
+    Actor.Solid = False
+
+    Call Check(World.DefineActor(TestState, Actor))
+    Call Check(Not World.SetActorVisible(TestState, 2002, True))
+    Call Check(Not World.ActorIsVisible(TestState, 2002))
+    Call Check(World.SetActorVisible(TestState, 2003, True))
+    Call Check(World.SetActorProgress(TestState, 2001, 1, 6, 5, World.WORLD_FACING_RIGHT, True, 4))
+    Call Check(World.SetActorVisible(TestState, 2002, True))
+    Call Check(World.SetActorVisible(TestState, 2002, False))
+    Call Check(World.SetActorProgress(TestState, 2001, 1, 4, 5, World.WORLD_FACING_RIGHT, True, 0))
+    Call Check(World.TryReserveDestination(TestState, 2001, 5, 5))
+    Call Check(Not World.SetActorVisible(TestState, 2002, True))
+    Call Check(Not World.ActorIsVisible(TestState, 2002))
+    Call Check(World.CompleteReservedMove(TestState, 2001, World.WORLD_FACING_RIGHT))
+    Call Check(World.ActorX(TestState, 2001) = 5)
+    Call Check(World.TryReserveDestination(TestState, 2001, 6, 5))
+    Call Check(World.SetActorVisible(TestState, 2001, False))
+    Call Check(Not World.CompleteReservedMove(TestState, 2001, World.WORLD_FACING_RIGHT))
+    Call Check(World.ActorX(TestState, 2001) = 5)
+    Call RPG.Destroy(TestState)
+
+End Sub
+
+Sub TestSpawnAndTransitionAtomicity()
+
+    Dim TestState As Number
+
+    TestState = RPG.Create()
+
+    Call DefineSpawnTestWorld(TestState)
+    Call Check(World.SetCurrentScene(TestState, 1))
+    Call Check(World.SetControlledActor(TestState, 3001))
+    Call Check(World.TryReserveDestination(TestState, 3001, 1, 2))
+    Call Check(Not World.ApplySpawn(TestState, 3001, 20))
+    Call Check(World.CurrentScene(TestState) = 1 And World.ControlledActor(TestState) = 3001)
+    Call Check(World.ActorScene(TestState, 3001) = 1 And World.ActorX(TestState, 3001) = 1 And World.ActorY(TestState, 3001) = 1)
+    Call Check(World.ActorFacingDirection(TestState, 3001) = World.WORLD_FACING_DOWN And World.ActorRouteStep(TestState, 3001) = 0)
+    Call Check(World.CompleteReservedMove(TestState, 3001, World.WORLD_FACING_DOWN))
+    Call Check(World.ActorX(TestState, 3001) = 1 And World.ActorY(TestState, 3001) = 2)
+    Call Check(World.SetActorVisible(TestState, 3002, False))
+    Call Check(World.ApplySpawn(TestState, 3001, 20))
+    Call Check(World.CurrentScene(TestState) = 2 And World.ActorScene(TestState, 3001) = 2)
+    Call Check(World.ActorX(TestState, 3001) = 7 And World.ActorY(TestState, 3001) = 7)
+    Call Check(World.ActorFacingDirection(TestState, 3001) = World.WORLD_FACING_LEFT)
+    Call RPG.Destroy(TestState)
+
+    TestState = RPG.Create()
+
+    Call DefineSpawnTestWorld(TestState)
+    Call Check(World.SetCurrentScene(TestState, 1))
+    Call Check(World.SetControlledActor(TestState, 3001))
+    Call Check(World.TryReserveDestination(TestState, 3001, 1, 2))
+    Call Check(Not World.ActivateTransition(TestState, 1))
+    Call Check(World.CurrentScene(TestState) = 1 And World.ActorX(TestState, 3001) = 1 And World.ActorY(TestState, 3001) = 1)
+    Call Check(World.CompleteReservedMove(TestState, 3001, World.WORLD_FACING_DOWN))
+    Call Check(World.SetActorProgress(TestState, 3001, 1, 1, 1, World.WORLD_FACING_DOWN, True, 0))
+    Call Check(World.SetActorVisible(TestState, 3002, False))
+    Call Check(World.ActivateTransition(TestState, 1))
+    Call Check(World.CurrentScene(TestState) = 2 And World.ActorScene(TestState, 3001) = 2)
+    Call RPG.Destroy(TestState)
+
+    TestState = RPG.Create()
+
+    Call DefineSpawnTestWorld(TestState)
+    Call Check(World.SetActorVisible(TestState, 3002, False))
+    Call Check(World.SetActorProgress(TestState, 3002, 2, 6, 7, World.WORLD_FACING_RIGHT, True, 0))
+    Call Check(World.TryReserveDestination(TestState, 3002, 7, 7))
+    Call Check(World.SetCurrentScene(TestState, 1))
+    Call Check(World.SetControlledActor(TestState, 3001))
+    Call Check(Not World.ApplySpawn(TestState, 3001, 20))
+    Call Check(World.CurrentScene(TestState) = 1 And World.ActorX(TestState, 3001) = 1)
+    Call Check(World.CompleteReservedMove(TestState, 3002, World.WORLD_FACING_RIGHT))
+    Call Check(World.ActorX(TestState, 3002) = 7 And World.ActorY(TestState, 3002) = 7)
+    Call RPG.Destroy(TestState)
+
+End Sub
+
+Sub DefineSpawnTestWorld(TestState As Number)
+
+    Scene.Id = 1
+    Scene.MapId = 1
+    Scene.DefaultSpawnId = 10
+    Scene.CameraMode = World.WORLD_CAMERA_FOLLOW
+
+    Call Check(World.DefineScene(TestState, Scene))
+
+    Scene.Id = 2
+    Scene.MapId = 2
+    Scene.DefaultSpawnId = 20
+
+    Call Check(World.DefineScene(TestState, Scene))
+
+    Spawn.Id = 10
+    Spawn.SceneId = 1
+    Spawn.CellX = 1
+    Spawn.CellY = 1
+    Spawn.Facing = World.WORLD_FACING_DOWN
+
+    Call Check(World.DefineSpawn(TestState, Spawn))
+
+    Spawn.Id = 20
+    Spawn.SceneId = 2
+    Spawn.CellX = 7
+    Spawn.CellY = 7
+    Spawn.Facing = World.WORLD_FACING_LEFT
+
+    Call Check(World.DefineSpawn(TestState, Spawn))
+
+    Transition.Id = 1
+    Transition.SourceSceneId = 1
+    Transition.SourceRegionId = 1
+    Transition.DestinationSceneId = 2
+    Transition.DestinationSpawnId = 20
+
+    Call Check(World.DefineTransition(TestState, Transition))
+
+    Actor.Id = 3001
+    Actor.SceneId = 1
+    Actor.CellX = 1
+    Actor.CellY = 1
+    Actor.Facing = World.WORLD_FACING_DOWN
+    Actor.Visible = True
+    Actor.Solid = True
+    Actor.Persistent = True
+    Actor.AnimationSetId = 0
+    Actor.InteractionId = 0
+
+    Call Check(World.DefineActor(TestState, Actor))
+
+    Actor.Id = 3002
+    Actor.SceneId = 2
+    Actor.CellX = 7
+    Actor.CellY = 7
+    Actor.Facing = World.WORLD_FACING_UP
+    Actor.Persistent = False
+
+    Call Check(World.DefineActor(TestState, Actor))
+
+End Sub
+
+Sub TestActorProgressInvariant()
+
+    Dim TestState As Number
+
+    TestState = RPG.Create()
+    Scene.Id = 1
+    Scene.MapId = 1
+    Scene.DefaultSpawnId = 1
+    Scene.CameraMode = World.WORLD_CAMERA_FOLLOW
+
+    Call Check(World.DefineScene(TestState, Scene))
+
+    Actor.Id = 4001
+    Actor.SceneId = 1
+    Actor.CellX = 1
+    Actor.CellY = 1
+    Actor.Facing = World.WORLD_FACING_DOWN
+    Actor.Visible = True
+    Actor.Solid = True
+    Actor.Persistent = True
+    Actor.AnimationSetId = 0
+    Actor.InteractionId = 0
+
+    Call Check(World.DefineActor(TestState, Actor))
+
+    Actor.Id = 4002
+    Actor.CellX = 2
+    Actor.CellY = 2
+
+    Call Check(World.DefineActor(TestState, Actor))
+    Call Check(World.TryReserveDestination(TestState, 4001, 1, 2))
+    Call Check(Not World.SetActorProgress(TestState, 4001, 1, 2, 2, World.WORLD_FACING_LEFT, True, 9))
+    Call Check(World.ActorX(TestState, 4001) = 1 And World.ActorY(TestState, 4001) = 1)
+    Call Check(World.ActorFacingDirection(TestState, 4001) = World.WORLD_FACING_DOWN And World.ActorRouteStep(TestState, 4001) = 0)
+    Call Check(World.CompleteReservedMove(TestState, 4001, World.WORLD_FACING_DOWN))
+    Call Check(World.SetActorProgress(TestState, 4001, 1, 2, 2, World.WORLD_FACING_LEFT, False, 9))
+    Call Check(World.ActorX(TestState, 4001) = 2 And World.ActorY(TestState, 4001) = 2)
+    Call Check(Not World.ActorIsVisible(TestState, 4001) And World.ActorFacingDirection(TestState, 4001) = World.WORLD_FACING_LEFT)
+    Call Check(World.ActorRouteStep(TestState, 4001) = 9)
+    Call Check(World.SetActorProgress(TestState, 4002, 1, 3, 2, World.WORLD_FACING_RIGHT, True, 0))
+    Call Check(World.SetActorVisible(TestState, 4001, True))
+    Call Check(World.SetActorVisible(TestState, 4001, False))
+    Call Check(World.SetActorProgress(TestState, 4001, 1, 1, 1, World.WORLD_FACING_DOWN, False, 0))
+    Call Check(World.TryReserveDestination(TestState, 4002, 4, 2))
+    Call Check(Not World.SetActorProgress(TestState, 4001, 1, 4, 2, World.WORLD_FACING_RIGHT, True, 3))
+    Call Check(World.ActorX(TestState, 4001) = 1 And Not World.ActorIsVisible(TestState, 4001))
+    Call Check(World.CompleteReservedMove(TestState, 4002, World.WORLD_FACING_RIGHT))
+    Call Check(World.ActorX(TestState, 4002) = 4)
+    Call RPG.Destroy(TestState)
+
+End Sub
+
+Sub TestResetInvariant()
+
+    Dim TestState As Number
+
+    TestState = RPG.Create()
+    Scene.Id = 1
+    Scene.MapId = 1
+    Scene.DefaultSpawnId = 1
+    Scene.CameraMode = World.WORLD_CAMERA_FOLLOW
+
+    Call Check(World.DefineScene(TestState, Scene))
+
+    Actor.Id = 5001
+    Actor.SceneId = 1
+    Actor.CellX = 1
+    Actor.CellY = 1
+    Actor.Facing = World.WORLD_FACING_DOWN
+    Actor.Visible = True
+    Actor.Solid = True
+    Actor.Persistent = True
+    Actor.AnimationSetId = 0
+    Actor.InteractionId = 0
+
+    Call Check(World.DefineActor(TestState, Actor))
+
+    Actor.Id = 5002
+    Actor.Visible = False
+    Actor.Persistent = False
+
+    Call Check(World.DefineActor(TestState, Actor))
+
+    Actor.Id = 5003
+    Actor.Visible = True
+    Actor.Solid = False
+
+    Call Check(World.DefineActor(TestState, Actor))
+
+    Actor.Id = 5004
+    Actor.CellX = 2
+    Actor.Solid = True
+    Actor.Persistent = True
+
+    Call Check(World.DefineActor(TestState, Actor))
+    Call Check(World.SetCurrentScene(TestState, 1))
+    Call Check(World.SetControlledActor(TestState, 5001))
+    Call Check(World.SetReturnLocation(TestState, 1, 9, 9, World.WORLD_FACING_LEFT))
+    Call Check(World.SetActorProgress(TestState, 5001, 1, 1, 2, World.WORLD_FACING_UP, True, 8))
+    Call Check(World.SetActorVisible(TestState, 5002, True))
+    Call Check(World.TryReserveDestination(TestState, 5004, 3, 1))
+    Call Check(World.ResetProgress(TestState))
+    Call Check(World.CurrentScene(TestState) = 0 And World.ControlledActor(TestState) = 0)
+    Call Check(World.ReturnScene(TestState) = 0 And World.ReturnX(TestState) = 0 And World.ReturnY(TestState) = 0)
+    Call Check(World.ActorX(TestState, 5001) = 1 And World.ActorY(TestState, 5001) = 1 And World.ActorIsVisible(TestState, 5001))
+    Call Check(Not World.ActorIsVisible(TestState, 5002) And World.ActorIsVisible(TestState, 5003))
+    Call Check(World.ActorX(TestState, 5004) = 2 And World.ActorRouteStep(TestState, 5004) = 0)
+    Call Check(World.TryReserveDestination(TestState, 5004, 3, 1))
+    Call World.CancelReservedMove(TestState, 5004)
+
+    Call Check(World.SetCurrentScene(TestState, 1))
+    Call Check(World.SetControlledActor(TestState, 5001))
+    Call Check(World.SetReturnLocation(TestState, 1, 9, 9, World.WORLD_FACING_LEFT))
+    Call Check(World.SetActorProgress(TestState, 5001, 1, 3, 1, World.WORLD_FACING_RIGHT, True, 6))
+    Call Check(World.SetActorProgress(TestState, 5002, 1, 1, 1, World.WORLD_FACING_DOWN, True, 4))
+    Call Check(Not World.ResetPersistentProgress(TestState))
+    Call Check(World.CurrentScene(TestState) = 1 And World.ControlledActor(TestState) = 5001)
+    Call Check(World.ReturnScene(TestState) = 1 And World.ReturnX(TestState) = 9 And World.ReturnY(TestState) = 9)
+    Call Check(World.ActorX(TestState, 5001) = 3 And World.ActorRouteStep(TestState, 5001) = 6)
+    Call Check(World.ActorX(TestState, 5002) = 1 And World.ActorIsVisible(TestState, 5002))
+    Call Check(World.SetActorProgress(TestState, 5002, 1, 4, 1, World.WORLD_FACING_DOWN, True, 4))
+    Call Check(World.ResetPersistentProgress(TestState))
+    Call Check(World.ActorX(TestState, 5001) = 1 And World.ActorIsVisible(TestState, 5001))
+    Call Check(World.ActorX(TestState, 5004) = 2 And World.ActorIsVisible(TestState, 5004))
+    Call Check(World.ActorX(TestState, 5002) = 4 And World.ActorRouteStep(TestState, 5002) = 4)
+    Call Check(World.CurrentScene(TestState) = 0 And World.ControlledActor(TestState) = 0)
+    Call RPG.Destroy(TestState)
+
+End Sub
+
+Sub TestSceneActorCoherence()
+
+    Dim TestState As Number
+
+    TestState = RPG.Create()
+
+    Call DefineCoherenceWorld(TestState)
+    Call Check(World.SetCurrentScene(TestState, 1))
+    Call Check(Not World.SetControlledActor(TestState, 6002))
+    Call Check(World.ControlledActor(TestState) = 0 And World.CurrentScene(TestState) = 1)
+    Call RPG.Destroy(TestState)
+
+    TestState = RPG.Create()
+
+    Call DefineCoherenceWorld(TestState)
+    Call Check(World.SetControlledActor(TestState, 6001))
+    Call Check(Not World.SetCurrentScene(TestState, 2))
+    Call Check(World.CurrentScene(TestState) = 0 And World.ControlledActor(TestState) = 6001)
+    Call Check(World.SetCurrentScene(TestState, 1))
+    Call Check(Not World.SetActorProgress(TestState, 6001, 2, 4, 4, World.WORLD_FACING_DOWN, True, 0))
+    Call Check(World.ActorScene(TestState, 6001) = 1 And World.CurrentScene(TestState) = 1)
+    Call Check(Not World.ApplySpawn(TestState, 6002, 20))
+    Call Check(World.CurrentScene(TestState) = 1 And World.ActorScene(TestState, 6002) = 2)
+    Call Check(World.ApplySpawn(TestState, 6001, 20))
+    Call Check(World.CurrentScene(TestState) = 2 And World.ActorScene(TestState, 6001) = 2)
+    Call RPG.Destroy(TestState)
+
+End Sub
+
+Sub DefineCoherenceWorld(TestState As Number)
+
+    Scene.Id = 1
+    Scene.MapId = 1
+    Scene.DefaultSpawnId = 10
+    Scene.CameraMode = World.WORLD_CAMERA_FOLLOW
+
+    Call Check(World.DefineScene(TestState, Scene))
+
+    Scene.Id = 2
+    Scene.MapId = 2
+    Scene.DefaultSpawnId = 20
+
+    Call Check(World.DefineScene(TestState, Scene))
+
+    Spawn.Id = 20
+    Spawn.SceneId = 2
+    Spawn.CellX = 4
+    Spawn.CellY = 4
+    Spawn.Facing = World.WORLD_FACING_DOWN
+
+    Call Check(World.DefineSpawn(TestState, Spawn))
+
+    Actor.Id = 6001
+    Actor.SceneId = 1
+    Actor.CellX = 1
+    Actor.CellY = 1
+    Actor.Facing = World.WORLD_FACING_DOWN
+    Actor.Visible = True
+    Actor.Solid = True
+    Actor.Persistent = True
+    Actor.AnimationSetId = 0
+    Actor.InteractionId = 0
+
+    Call Check(World.DefineActor(TestState, Actor))
+
+    Actor.Id = 6002
+    Actor.SceneId = 2
+    Actor.CellX = 2
+    Actor.CellY = 2
+    Actor.Persistent = False
+
+    Call Check(World.DefineActor(TestState, Actor))
+
+End Sub
+
+Sub TestSaveLayoutHardening()
+
+    Dim TestState As Number
+    Dim TestResult As Number
+    Dim TestIndex As Number
+
+    TestState = RPG.Create()
+
+    Call DefineSaveLayoutWorld(TestState, 8, 5, False)
+    Call Check(World.SetActorProgress(TestState, 7001, 1, 5, 5, World.WORLD_FACING_RIGHT, True, 2))
+    Call Check(World.SetActorProgress(TestState, 7002, 1, 6, 5, World.WORLD_FACING_LEFT, True, 3))
+    Call Check(World.SetCurrentScene(TestState, 1))
+    Call Check(World.SetControlledActor(TestState, 7001))
+
+    TestResult = SaveGames.Encode(TestState, 71)
+    LayoutByteCount = SaveGames.EncodedByteCount()
+
+    Call Check(TestResult = RPG.RPG_RESULT_OK And LayoutByteCount = 140)
+
+    For TestIndex = 0 To LayoutByteCount - 1
+        LayoutBytes[TestIndex] = SaveGames.EncodedByteAt(TestIndex)
+    End For
+
+    Call Check(World.SetActorProgress(TestState, 7001, 1, 7, 5, World.WORLD_FACING_RIGHT, True, 4))
+    Call Check(World.SetActorProgress(TestState, 7002, 1, 5, 5, World.WORLD_FACING_LEFT, True, 5))
+    Call Check(World.SetActorProgress(TestState, 7001, 1, 6, 5, World.WORLD_FACING_RIGHT, True, 6))
+    Call RestoreLayoutBytes()
+
+    TestResult = SaveGames.Decode(TestState, 71)
+
+    Call Check(TestResult = RPG.RPG_RESULT_OK)
+    Call Check(World.ActorX(TestState, 7001) = 5 And World.ActorX(TestState, 7002) = 6)
+    Call Check(World.ActorIsVisible(TestState, 7001) And World.ActorIsVisible(TestState, 7002))
+    Call Check(World.ActorRouteStep(TestState, 7001) = 2 And World.ActorRouteStep(TestState, 7002) = 3)
+    Call Check(SaveGames.Encode(TestState, 71) = RPG.RPG_RESULT_OK)
+    Call Check(SaveGames.EncodedByteCount() = LayoutByteCount)
+
+    For TestIndex = 0 To LayoutByteCount - 1
+        Call Check(SaveGames.EncodedByteAt(TestIndex) = LayoutBytes[TestIndex])
+    End For
+
+    Call Check(World.SetActorProgress(TestState, 7001, 1, 3, 3, World.WORLD_FACING_DOWN, True, 9))
+    Call Check(World.SetActorProgress(TestState, 7002, 1, 4, 3, World.WORLD_FACING_UP, True, 10))
+    Call RestoreLayoutBytes()
+    Call SetCodecInt(104, 5)
+    Call SetCodecInt(108, 5)
+
+    TestResult = SaveGames.Decode(TestState, 71)
+
+    Call Check(TestResult = RPG.RPG_RESULT_INVALID_ARGUMENT)
+    Call Check(World.ActorX(TestState, 7001) = 3 And World.ActorY(TestState, 7001) = 3)
+    Call Check(World.ActorX(TestState, 7002) = 4 And World.ActorY(TestState, 7002) = 3)
+    Call Check(World.ActorRouteStep(TestState, 7001) = 9 And World.ActorRouteStep(TestState, 7002) = 10)
+    Call Check(World.ActorX(TestState, 7003) = 8 And Not World.ActorIsVisible(TestState, 7003))
+    Call Check(World.CurrentScene(TestState) = 1 And World.ControlledActor(TestState) = 7001)
+    Call Check(SaveGames.EncodedByteCount() = LayoutByteCount And SaveGames.EncodedByteAt(104) = 5)
+    Call RPG.Destroy(TestState)
+
+    TestState = RPG.Create()
+
+    Call DefineSaveLayoutWorld(TestState, 8, 5, False)
+    Call Check(World.SetActorProgress(TestState, 7001, 1, 8, 5, World.WORLD_FACING_RIGHT, True, 2))
+    Call Check(SaveGames.Encode(TestState, 72) = RPG.RPG_RESULT_OK)
+
+    LayoutByteCount = SaveGames.EncodedByteCount()
+
+    For TestIndex = 0 To LayoutByteCount - 1
+        LayoutBytes[TestIndex] = SaveGames.EncodedByteAt(TestIndex)
+    End For
+
+    Call Check(World.SetActorProgress(TestState, 7001, 1, 3, 3, World.WORLD_FACING_DOWN, True, 9))
+    Call Check(World.SetActorVisible(TestState, 7003, True))
+
+    TestResult = SaveGames.Decode(TestState, 72)
+
+    Call Check(TestResult = RPG.RPG_RESULT_INVALID_ARGUMENT)
+    Call Check(World.ActorX(TestState, 7001) = 3 And World.ActorRouteStep(TestState, 7001) = 9)
+    Call Check(World.ActorX(TestState, 7003) = 8 And World.ActorY(TestState, 7003) = 5 And World.ActorIsVisible(TestState, 7003))
+    Call Check(World.SetActorVisible(TestState, 7003, False))
+    Call RestoreLayoutBytes()
+    Call Check(SaveGames.Decode(TestState, 72) = RPG.RPG_RESULT_OK)
+    Call Check(World.ActorX(TestState, 7001) = 8 And Not World.ActorIsVisible(TestState, 7003))
+    Call RPG.Destroy(TestState)
+
+    TestState = RPG.Create()
+
+    Call DefineSaveLayoutWorld(TestState, 7, 5, True)
+    Call Check(World.SetActorProgress(TestState, 7001, 1, 8, 5, World.WORLD_FACING_RIGHT, True, 2))
+    Call Check(SaveGames.Encode(TestState, 73) = RPG.RPG_RESULT_OK)
+
+    LayoutByteCount = SaveGames.EncodedByteCount()
+
+    For TestIndex = 0 To LayoutByteCount - 1
+        LayoutBytes[TestIndex] = SaveGames.EncodedByteAt(TestIndex)
+    End For
+
+    Call Check(World.SetActorProgress(TestState, 7001, 1, 3, 3, World.WORLD_FACING_DOWN, True, 9))
+    Call Check(World.TryReserveDestination(TestState, 7003, 8, 5))
+
+    TestResult = SaveGames.Decode(TestState, 73)
+
+    Call Check(TestResult = RPG.RPG_RESULT_INVALID_ARGUMENT)
+    Call Check(World.ActorX(TestState, 7001) = 3 And World.ActorRouteStep(TestState, 7001) = 9)
+    Call Check(World.CompleteReservedMove(TestState, 7003, World.WORLD_FACING_RIGHT))
+    Call Check(World.ActorX(TestState, 7003) = 8 And World.ActorY(TestState, 7003) = 5)
+    Call RPG.Destroy(TestState)
+
+    TestState = RPG.Create()
+
+    Call DefineSaveLayoutWorld(TestState, 8, 5, False)
+    Call Check(World.SetCurrentScene(TestState, 1))
+    Call Check(World.SetControlledActor(TestState, 7001))
+    Call Check(SaveGames.Encode(TestState, 74) = RPG.RPG_RESULT_OK)
+
+    LayoutByteCount = SaveGames.EncodedByteCount()
+
+    For TestIndex = 0 To LayoutByteCount - 1
+        LayoutBytes[TestIndex] = SaveGames.EncodedByteAt(TestIndex)
+    End For
+
+    Call SetCodecInt(40, 2)
+
+    TestResult = SaveGames.Decode(TestState, 74)
+
+    Call Check(TestResult = RPG.RPG_RESULT_INVALID_ARGUMENT)
+    Call Check(World.CurrentScene(TestState) = 1 And World.ControlledActor(TestState) = 7001)
+    Call Check(World.ActorScene(TestState, 7001) = 1)
+    Call RPG.Destroy(TestState)
+
+End Sub
+
+Sub DefineSaveLayoutWorld(TestState As Number, TransientX As Number, TransientY As Number, TransientVisible As Boolean)
+
+    Scene.Id = 1
+    Scene.MapId = 1
+    Scene.DefaultSpawnId = 1
+    Scene.CameraMode = World.WORLD_CAMERA_FOLLOW
+
+    Call Check(World.DefineScene(TestState, Scene))
+
+    Scene.Id = 2
+    Scene.MapId = 2
+    Scene.DefaultSpawnId = 2
+
+    Call Check(World.DefineScene(TestState, Scene))
+
+    Actor.Id = 7001
+    Actor.SceneId = 1
+    Actor.CellX = 1
+    Actor.CellY = 1
+    Actor.Facing = World.WORLD_FACING_DOWN
+    Actor.Visible = True
+    Actor.Solid = True
+    Actor.Persistent = True
+    Actor.AnimationSetId = 0
+    Actor.InteractionId = 0
+
+    Call Check(World.DefineActor(TestState, Actor))
+
+    Actor.Id = 7002
+    Actor.CellX = 2
+
+    Call Check(World.DefineActor(TestState, Actor))
+
+    Actor.Id = 7003
+    Actor.CellX = TransientX
+    Actor.CellY = TransientY
+    Actor.Visible = TransientVisible
+    Actor.Persistent = False
+
+    Call Check(World.DefineActor(TestState, Actor))
+
+End Sub
+
+Sub RestoreLayoutBytes()
+
+    Dim TestIndex As Number
+
+    Call SaveGames.ClearEncodedBytes()
+
+    For TestIndex = 0 To LayoutByteCount - 1
+        Call Check(SaveGames.SetEncodedByte(TestIndex, LayoutBytes[TestIndex]))
+    End For
+
+End Sub
+
+Sub SetCodecInt(ByteIndex As Number, Value As Number)
+
+    Call Check(SaveGames.SetEncodedByte(ByteIndex, Value Mod 256))
+
+    Value = Value / 256
+
+    Call Check(SaveGames.SetEncodedByte(ByteIndex + 1, Value Mod 256))
+
+    Value = Value / 256
+
+    Call Check(SaveGames.SetEncodedByte(ByteIndex + 2, Value Mod 256))
+
+    Value = Value / 256
+
+    Call Check(SaveGames.SetEncodedByte(ByteIndex + 3, Value Mod 256))
 
 End Sub

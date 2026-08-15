@@ -70,12 +70,14 @@ Shop callers can distinguish `RPG_RESULT_INVALID_STATE`, `RPG_RESULT_INVALID_ARG
 
 `EncodedByteCount`, `EncodedByteAt`, and `Exists` are observational queries. `SaveGames.Exists` preserves the public codec buffer byte-for-byte, including an empty buffer, and does not change RPG state. `Encode`, `Decode`, `SaveGame`, `LoadGame`, `SetEncodedByte`, and `ClearEncodedBytes` intentionally replace or manipulate the public codec buffer as part of their documented work.
 
-`Decode` validates the complete payload and all references before mutation. It snapshots current progress and restores that snapshot if application fails unexpectedly. During apply, Equipment assignments are restored into an empty temporary bag before saved Inventory entries, avoiding transient stack or entry-capacity requirements. Definition records remain registered.
+`Decode` validates the complete payload and all references before mutation. For format 2, it also validates pairwise persistent actor occupancy, preserved transient actor cells/reservations, and current-scene/controlled-actor coherence. It snapshots current progress and active reservations and restores that snapshot if application fails unexpectedly. During apply, persistent actors are hidden and placed as one batch before final visibility is restored; Equipment assignments are restored into an empty temporary bag before saved Inventory entries. These orders avoid false actor-swap collisions and transient stack or entry-capacity requirements. Definition records remain registered.
 
 ## Phase 7 world modules
 
 `Smile.RPG.World` adds bounded scene, spawn, transition, actor, collision-reservation, front-cell interaction, return-location, and persistent-actor progress APIs. `Smile.RPG.Story` adds 128 stable Boolean flags and 64 stable integer values. `Smile.RPG.Encounters` adds 16 deterministic zones with up to 64 weighted entries each and one pending preview encounter.
 
 `World.ResetProgress` restores all world progress to definition defaults. `World.ResetPersistentProgress` is SaveGames infrastructure that resets persisted world fields and persistent actors without changing transient actors.
+
+Visible-solid occupancy is invariant across `DefineActor`, `SetActorVisible`, `ApplySpawn`, `ActivateTransition`, `SetActorProgress`, and resets. A visible solid actor cannot share a scene/cell with another visible solid actor or invalidate another visible solid actor's reservation. Hidden and non-solid overlaps remain legal. `ActorHasReservation`, `ActorReservedDestinationX`, and `ActorReservedDestinationY` expose reservation state observationally. When current scene and controlled actor are both nonzero, the controlled actor belongs to that scene.
 
 SaveGames writes SRPG format 2, reads formats 1 and 2, and transactionally includes persistent World actors, Story state, and Encounter progress. See [the world API](../../docs/libraries/smile-rpg-world-api.md) and [payload layout](../../docs/libraries/smile-rpg-save-payload.md).

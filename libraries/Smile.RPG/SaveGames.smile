@@ -1,4 +1,4 @@
-''' Deterministic SRPG version-1 encoding and transactional persistent save games.
+''' Deterministic SRPG format-2 encoding, format-1 compatibility, and transactional save games.
 Module Smile.RPG.SaveGames
 
 Option Explicit
@@ -89,6 +89,12 @@ Private Dim ScratchZoneCount As Number
 Private Dim ScratchZoneIds[16] As Number
 Private Dim ScratchZoneStepCounts[16] As Number
 Private Dim ScratchZoneSeeds[16] As Number
+
+Private Dim RollbackActorCount As Number
+Private Dim RollbackActorIds[64] As Number
+Private Dim RollbackActorReserved[64] As Boolean
+Private Dim RollbackActorReservedX[64] As Number
+Private Dim RollbackActorReservedY[64] As Number
 
 Private Sub PutByte(Value As Number)
 
@@ -537,6 +543,107 @@ Private Function IsDuplicateZone(Index As Number) As Boolean
 
 End Function
 
+Private Function ScratchActorIndex(ActorId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    For Index = 0 To ScratchActorCount - 1
+
+        If ScratchActorIds[Index] = ActorId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function ScratchWorldLayoutIsValid(StateHandle As Number) As Boolean
+
+    Dim Index As Number
+    Dim Other As Number
+    Dim ActorId As Number
+    Dim ControlledIndex As Number
+    Dim ControlledSceneId As Number
+
+    For Index = 0 To ScratchActorCount - 1
+
+        ActorId = ScratchActorIds[Index]
+
+        If ScratchActorVisible[Index] = 1 And World.ActorIsSolid(StateHandle, ActorId) Then
+
+            For Other = Index + 1 To ScratchActorCount - 1
+
+                If (ScratchActorVisible[Other] = 1 And
+                    World.ActorIsSolid(StateHandle, ScratchActorIds[Other]) And
+                    ScratchActorSceneIds[Other] = ScratchActorSceneIds[Index] And
+                    ScratchActorCellX[Other] = ScratchActorCellX[Index] And
+                    ScratchActorCellY[Other] = ScratchActorCellY[Index]) Then
+                    Return False
+                End If
+
+            End For
+
+            For Other = 0 To World.ActorCount(StateHandle) - 1
+
+                ActorId = World.ActorIdAt(StateHandle, Other)
+
+                If (Not World.ActorIsPersistent(StateHandle, ActorId) And
+                    World.ActorIsVisible(StateHandle, ActorId) And
+                    World.ActorIsSolid(StateHandle, ActorId) And
+                    World.ActorScene(StateHandle, ActorId) = ScratchActorSceneIds[Index]) Then
+
+                    If (World.ActorX(StateHandle, ActorId) = ScratchActorCellX[Index] And
+                        World.ActorY(StateHandle, ActorId) = ScratchActorCellY[Index]) Then
+                        Return False
+                    End If
+
+                    If (World.ActorHasReservation(StateHandle, ActorId) And
+                        World.ActorReservedDestinationX(StateHandle, ActorId) = ScratchActorCellX[Index] And
+                        World.ActorReservedDestinationY(StateHandle, ActorId) = ScratchActorCellY[Index]) Then
+                        Return False
+                    End If
+
+                End If
+
+            End For
+
+        End If
+
+    End For
+
+    If ScratchCurrentSceneId <> 0 And ScratchControlledActorId <> 0 Then
+
+        If World.ActorIsPersistent(StateHandle, ScratchControlledActorId) Then
+
+            ControlledIndex = ScratchActorIndex(ScratchControlledActorId)
+
+            If ControlledIndex < 0 Then
+                Return False
+            End If
+
+            ControlledSceneId = ScratchActorSceneIds[ControlledIndex]
+
+        Else
+            ControlledSceneId = World.ActorScene(StateHandle, ScratchControlledActorId)
+
+        End If
+
+        If ControlledSceneId <> ScratchCurrentSceneId Then
+            Return False
+        End If
+
+    End If
+
+    Return True
+
+End Function
+
 Private Function ParseEncoded(StateHandle As Number, ExpectedSchemaVersion As Number) As Number
 
     Dim FormatVersion As Number
@@ -940,7 +1047,119 @@ Private Function ParseEncoded(StateHandle As Number, ExpectedSchemaVersion As Nu
         Return Core.RPG_RESULT_NOT_FOUND_OR_INVALID_SAVE
     End If
 
+    If ScratchFormatVersion >= 2 And Not ScratchWorldLayoutIsValid(StateHandle) Then
+        Return Core.RPG_RESULT_INVALID_ARGUMENT
+    End If
+
     Return Core.RPG_RESULT_OK
+
+End Function
+
+Private Function ApplyScratchWorld(StateHandle As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Index As Number
+    Dim ActorId As Number
+
+    If ScratchFormatVersion < 2 Then
+        ReturnValue = World.ResetPersistentProgress(StateHandle)
+
+        Return ReturnValue
+    End If
+
+    If (Not World.SetCurrentScene(StateHandle, 0) Or
+        Not World.SetControlledActor(StateHandle, 0) Or
+        Not World.SetReturnLocation(StateHandle, 0, 0, 0, World.WORLD_FACING_DOWN)) Then
+        Return False
+    End If
+
+    For Index = 0 To World.PersistentActorCount(StateHandle) - 1
+
+        ActorId = World.PersistentActorIdAt(StateHandle, Index)
+
+        If Not World.SetActorVisible(StateHandle, ActorId, False) Then
+            Return False
+        End If
+
+    End For
+
+    For Index = 0 To ScratchActorCount - 1
+
+        If Not World.SetActorProgress(StateHandle, ScratchActorIds[Index], ScratchActorSceneIds[Index], ScratchActorCellX[Index], ScratchActorCellY[Index], ScratchActorFacing[Index], False, ScratchActorRouteSteps[Index]) Then
+            Return False
+        End If
+
+    End For
+
+    For Index = 0 To ScratchActorCount - 1
+
+        If ScratchActorVisible[Index] = 1 Then
+
+            If Not World.SetActorVisible(StateHandle, ScratchActorIds[Index], True) Then
+                Return False
+            End If
+
+        End If
+
+    End For
+
+    If (Not World.SetCurrentScene(StateHandle, ScratchCurrentSceneId) Or
+        Not World.SetControlledActor(StateHandle, ScratchControlledActorId) Or
+        Not World.SetReturnLocation(StateHandle, ScratchReturnSceneId, ScratchReturnCellX, ScratchReturnCellY, ScratchReturnFacing)) Then
+        Return False
+    End If
+
+    Return True
+
+End Function
+
+Private Sub SnapshotRollbackReservations(StateHandle As Number)
+
+    Dim Index As Number
+    Dim ActorId As Number
+
+    RollbackActorCount = World.ActorCount(StateHandle)
+
+    For Index = 0 To RollbackActorCount - 1
+
+        ActorId = World.ActorIdAt(StateHandle, Index)
+        RollbackActorIds[Index] = ActorId
+        RollbackActorReserved[Index] = World.ActorHasReservation(StateHandle, ActorId)
+        RollbackActorReservedX[Index] = World.ActorReservedDestinationX(StateHandle, ActorId)
+        RollbackActorReservedY[Index] = World.ActorReservedDestinationY(StateHandle, ActorId)
+    End For
+
+End Sub
+
+Private Function RestoreRollbackReservations(StateHandle As Number) As Boolean
+
+    Dim Index As Number
+    Dim ActorId As Number
+
+    For Index = 0 To RollbackActorCount - 1
+
+        ActorId = RollbackActorIds[Index]
+
+        If World.ActorHasReservation(StateHandle, ActorId) Then
+
+            If (Not RollbackActorReserved[Index] Or
+                World.ActorReservedDestinationX(StateHandle, ActorId) <> RollbackActorReservedX[Index] Or
+                World.ActorReservedDestinationY(StateHandle, ActorId) <> RollbackActorReservedY[Index]) Then
+                Call World.CancelReservedMove(StateHandle, ActorId)
+            End If
+
+        End If
+
+        If (RollbackActorReserved[Index] And
+            Not World.ActorHasReservation(StateHandle, ActorId) And
+            Not World.TryReserveDestination(StateHandle, ActorId, RollbackActorReservedX[Index], RollbackActorReservedY[Index])) Then
+            Return False
+        End If
+
+    End For
+
+    Return True
 
 End Function
 
@@ -956,7 +1175,7 @@ Private Function ApplyScratch(StateHandle As Number) As Boolean
         Not Inventory.ClearInventory(StateHandle) Or
         Not Equipment.ClearAllEquipment(StateHandle) Or
         Not Abilities.ClearAllLearnedAbilities(StateHandle) Or
-        Not World.ResetPersistentProgress(StateHandle) Or
+        Not ApplyScratchWorld(StateHandle) Or
         Not Story.Reset(StateHandle) Or
         Not Encounters.ResetProgress(StateHandle)) Then
         Return False
@@ -1031,20 +1250,6 @@ Private Function ApplyScratch(StateHandle As Number) As Boolean
     For Index = 0 To ScratchShopCount - 1
 
         If Not Shops.SetStock(StateHandle, ScratchShopIds[Index], ScratchShopItemIds[Index], ScratchShopStock[Index]) Then
-            Return False
-        End If
-
-    End For
-
-    If (Not World.SetCurrentScene(StateHandle, ScratchCurrentSceneId) Or
-        Not World.SetControlledActor(StateHandle, ScratchControlledActorId) Or
-        Not World.SetReturnLocation(StateHandle, ScratchReturnSceneId, ScratchReturnCellX, ScratchReturnCellY, ScratchReturnFacing)) Then
-        Return False
-    End If
-
-    For Index = 0 To ScratchActorCount - 1
-
-        If Not World.SetActorProgress(StateHandle, ScratchActorIds[Index], ScratchActorSceneIds[Index], ScratchActorCellX[Index], ScratchActorCellY[Index], ScratchActorFacing[Index], ScratchActorVisible[Index] = 1, ScratchActorRouteSteps[Index]) Then
             Return False
         End If
 
@@ -1129,6 +1334,8 @@ Public Function Decode(StateHandle As Number, ExpectedSchemaVersion As Number) A
         RollbackBytes[Index] = EncodedBytes[Index]
     End For
 
+    Call SnapshotRollbackReservations(StateHandle)
+
     For Index = 0 To IncomingCount - 1
         EncodedBytes[Index] = IncomingBytes[Index]
     End For
@@ -1147,7 +1354,13 @@ Public Function Decode(StateHandle As Number, ExpectedSchemaVersion As Number) A
     Result = ParseEncoded(StateHandle, ExpectedSchemaVersion)
 
     If Result = Core.RPG_RESULT_OK Then
+
         Restored = ApplyScratch(StateHandle)
+
+        If Restored Then
+            Restored = RestoreRollbackReservations(StateHandle)
+        End If
+
     End If
 
     For Index = 0 To IncomingCount - 1

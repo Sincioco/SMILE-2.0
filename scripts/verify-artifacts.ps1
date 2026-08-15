@@ -279,7 +279,7 @@ try {
             throw "$templateName does not contain all generated identity tokens."
         }
         if ($templateText -notmatch 'SmileProjectTemplateWizard' -or
-            $templateText -notmatch 'Version=2\.0\.42\.0') {
+        $templateText -notmatch 'Version=2\.0\.43\.0') {
             throw "$templateName does not invoke the synchronized template wizard."
         }
     }
@@ -305,11 +305,11 @@ try {
     $manifestReader = [System.IO.StreamReader]::new($manifestEntry.Open())
     try { $vsixManifest = $manifestReader.ReadToEnd() }
     finally { $manifestReader.Dispose() }
-    if ($vsixManifest -notmatch 'Version="2\.0\.42"') {
-        throw 'VSIX identity version is not 2.0.42.'
+    if ($vsixManifest -notmatch 'Version="2\.0\.43"') {
+        throw 'VSIX identity version is not 2.0.43.'
     }
     if ($vsixManifest -notmatch 'Type="Microsoft\.VisualStudio\.Assembly"' -or
-        $vsixManifest -notmatch 'AssemblyName="Smile\.VisualStudio, Version=2\.0\.42\.0, Culture=neutral, PublicKeyToken=null"') {
+        $vsixManifest -notmatch 'AssemblyName="Smile\.VisualStudio, Version=2\.0\.43\.0, Culture=neutral, PublicKeyToken=null"') {
         throw 'VSIX does not register the template wizard assembly.'
     }
 }
@@ -320,11 +320,11 @@ Write-Host 'VSIX compiler, shared-language, and project-template payload verifie
 $visualStudioDll = Require-File 'src\Smile.VisualStudio\bin\Release\net472\Smile.VisualStudio.dll'
 $versionInfo = [Diagnostics.FileVersionInfo]::GetVersionInfo($visualStudioDll)
 $assemblyVersion = [Reflection.AssemblyName]::GetAssemblyName($visualStudioDll).Version.ToString()
-if ($versionInfo.FileVersion -ne '2.0.42.0' -or $versionInfo.ProductVersion -notlike '2.0.42*' -or
-    $assemblyVersion -ne '2.0.42.0') {
+if ($versionInfo.FileVersion -ne '2.0.43.0' -or $versionInfo.ProductVersion -notlike '2.0.43*' -or
+    $assemblyVersion -ne '2.0.43.0') {
     throw "Visual Studio DLL versions differ: file=$($versionInfo.FileVersion), product=$($versionInfo.ProductVersion), assembly=$assemblyVersion."
 }
-Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.42.'
+Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.43.'
 
 $scaleCases = @(
     @{ Width = 960; Height = 540; ExpectedWidth = 960; ExpectedHeight = 540; X = 0; Y = 0 },

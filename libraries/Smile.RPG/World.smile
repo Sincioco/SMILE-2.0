@@ -251,6 +251,125 @@ Private Function ActorIndex(StateHandle As Number, ActorId As Number) As Number
 
 End Function
 
+Private Function PlacementConflicts(StateHandle As Number, IgnoredActorIndex As Number, SceneId As Number, CellX As Number, CellY As Number, Visible As Boolean, Solid As Boolean) As Boolean
+
+    Dim Slot As Number
+    Dim Other As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return True
+    End If
+
+    If Not Visible Or Not Solid Then
+        Return False
+    End If
+
+    For Other = 0 To ActorCounts[Slot] - 1
+
+        If (Other <> IgnoredActorIndex And
+            ActorVisible[Slot, Other] And
+            ActorSolidValues[Slot, Other] And
+            ActorSceneIds[Slot, Other] = SceneId) Then
+
+            If ActorCellX[Slot, Other] = CellX And ActorCellY[Slot, Other] = CellY Then
+                Return True
+            End If
+
+            If (ActorReserved[Slot, Other] And
+                ActorReservedX[Slot, Other] = CellX And
+                ActorReservedY[Slot, Other] = CellY) Then
+                Return True
+            End If
+
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+Private Function StartingPlacementConflicts(StateHandle As Number, SceneId As Number, CellX As Number, CellY As Number, Visible As Boolean, Solid As Boolean) As Boolean
+
+    Dim Slot As Number
+    Dim Other As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return True
+    End If
+
+    If Not Visible Or Not Solid Then
+        Return False
+    End If
+
+    For Other = 0 To ActorCounts[Slot] - 1
+
+        If (ActorStartingVisible[Slot, Other] And
+            ActorSolidValues[Slot, Other] And
+            ActorStartingSceneIds[Slot, Other] = SceneId And
+            ActorStartingCellX[Slot, Other] = CellX And
+            ActorStartingCellY[Slot, Other] = CellY) Then
+            Return True
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+Private Function PersistentDefaultsConflictWithTransient(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim PersistentActor As Number
+    Dim TransientActor As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return True
+    End If
+
+    For PersistentActor = 0 To ActorCounts[Slot] - 1
+
+        If (ActorPersistentValues[Slot, PersistentActor] And
+            ActorStartingVisible[Slot, PersistentActor] And
+            ActorSolidValues[Slot, PersistentActor]) Then
+
+            For TransientActor = 0 To ActorCounts[Slot] - 1
+
+                If (Not ActorPersistentValues[Slot, TransientActor] And
+                    ActorVisible[Slot, TransientActor] And
+                    ActorSolidValues[Slot, TransientActor] And
+                    ActorSceneIds[Slot, TransientActor] = ActorStartingSceneIds[Slot, PersistentActor]) Then
+
+                    If (ActorCellX[Slot, TransientActor] = ActorStartingCellX[Slot, PersistentActor] And
+                        ActorCellY[Slot, TransientActor] = ActorStartingCellY[Slot, PersistentActor]) Then
+                        Return True
+                    End If
+
+                    If (ActorReserved[Slot, TransientActor] And
+                        ActorReservedX[Slot, TransientActor] = ActorStartingCellX[Slot, PersistentActor] And
+                        ActorReservedY[Slot, TransientActor] = ActorStartingCellY[Slot, PersistentActor]) Then
+                        Return True
+                    End If
+
+                End If
+
+            End For
+
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
 ''' Returns True when a scene ID is defined for this RPG state.
 Public Function IsSceneDefined(StateHandle As Number, SceneId As Number) As Boolean
 
@@ -390,6 +509,8 @@ Public Function DefineActor(StateHandle As Number, ByRef Definition As ActorDefi
         Definition.AnimationSetId < 0 Or
         Definition.InteractionId < 0 Or
         ActorIndex(StateHandle, Definition.Id) >= 0 Or
+        PlacementConflicts(StateHandle, -1, Definition.SceneId, Definition.CellX, Definition.CellY, Definition.Visible, Definition.Solid) Or
+        StartingPlacementConflicts(StateHandle, Definition.SceneId, Definition.CellX, Definition.CellY, Definition.Visible, Definition.Solid) Or
         ActorCounts[Slot] >= WORLD_MAX_ACTORS) Then
         Return False
     End If
@@ -547,7 +668,14 @@ Public Function SetCurrentScene(StateHandle As Number, SceneId As Number) As Boo
 
     Slot = StateSlot(StateHandle)
 
-    If Slot < 0 Or (SceneId <> 0 And SceneIndex(StateHandle, SceneId) < 0) Then
+    If (Slot < 0 Or
+        (SceneId <> 0 And SceneIndex(StateHandle, SceneId) < 0)) Then
+        Return False
+    End If
+
+    If (SceneId <> 0 And
+        ControlledActorIds[Slot] <> 0 And
+        ActorSceneIds[Slot, ActorIndex(StateHandle, ControlledActorIds[Slot])] <> SceneId) Then
         Return False
     End If
 
@@ -582,7 +710,14 @@ Public Function SetControlledActor(StateHandle As Number, ActorId As Number) As 
 
     Slot = StateSlot(StateHandle)
 
-    If Slot < 0 Or (ActorId <> 0 And ActorIndex(StateHandle, ActorId) < 0) Then
+    If (Slot < 0 Or
+        (ActorId <> 0 And ActorIndex(StateHandle, ActorId) < 0)) Then
+        Return False
+    End If
+
+    If (ActorId <> 0 And
+        CurrentSceneIds[Slot] <> 0 And
+        ActorSceneIds[Slot, ActorIndex(StateHandle, ActorId)] <> CurrentSceneIds[Slot]) Then
         Return False
     End If
 
@@ -858,6 +993,10 @@ Public Function SetActorVisible(StateHandle As Number, ActorId As Number, Visibl
         Return False
     End If
 
+    If PlacementConflicts(StateHandle, Index, ActorSceneIds[Slot, Index], ActorCellX[Slot, Index], ActorCellY[Slot, Index], Visible, ActorSolidValues[Slot, Index]) Then
+        Return False
+    End If
+
     ActorVisible[Slot, Index] = Visible
 
     If Not Visible Then
@@ -967,6 +1106,77 @@ Public Sub CancelReservedMove(StateHandle As Number, ActorId As Number)
 
 End Sub
 
+''' Returns True when an actor has an active destination reservation.
+Public Function ActorHasReservation(StateHandle As Number, ActorId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ActorIndex(StateHandle, ActorId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return False
+    End If
+
+    ReturnValue = ActorReserved[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns an actor's reserved destination X, or -1 when no reservation is active.
+Public Function ActorReservedDestinationX(StateHandle As Number, ActorId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ActorIndex(StateHandle, ActorId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Not ActorReserved[Slot, Index]) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = ActorReservedX[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns an actor's reserved destination Y, or -1 when no reservation is active.
+Public Function ActorReservedDestinationY(StateHandle As Number, ActorId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ActorIndex(StateHandle, ActorId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Not ActorReserved[Slot, Index]) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = ActorReservedY[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
 ''' Returns the visible actor in the controlled actor's immediately facing cell.
 Public Function FrontActor(StateHandle As Number) As Number
 
@@ -1023,6 +1233,7 @@ Public Function ApplySpawn(StateHandle As Number, ActorId As Number, SpawnId As 
     Dim Slot As Number
     Dim Actor As Number
     Dim Spawn As Number
+    Dim ControlledActor As Number
 
     Slot = StateSlot(StateHandle)
     Actor = ActorIndex(StateHandle, ActorId)
@@ -1031,6 +1242,18 @@ Public Function ApplySpawn(StateHandle As Number, ActorId As Number, SpawnId As 
     If (Slot < 0 Or
         Actor < 0 Or
         Spawn < 0) Then
+        Return False
+    End If
+
+    ControlledActor = ActorIndex(StateHandle, ControlledActorIds[Slot])
+
+    If (ControlledActor >= 0 And
+        ControlledActor <> Actor And
+        ActorSceneIds[Slot, ControlledActor] <> SpawnSceneIds[Slot, Spawn]) Then
+        Return False
+    End If
+
+    If PlacementConflicts(StateHandle, Actor, SpawnSceneIds[Slot, Spawn], SpawnCellX[Slot, Spawn], SpawnCellY[Slot, Spawn], ActorVisible[Slot, Actor], ActorSolidValues[Slot, Actor]) Then
         Return False
     End If
 
@@ -1225,6 +1448,16 @@ Public Function SetActorProgress(StateHandle As Number, ActorId As Number, Scene
         Return False
     End If
 
+    If (ControlledActorIds[Slot] = ActorId And
+        CurrentSceneIds[Slot] <> 0 And
+        CurrentSceneIds[Slot] <> SceneId) Then
+        Return False
+    End If
+
+    If PlacementConflicts(StateHandle, Index, SceneId, CellX, CellY, Visible, ActorSolidValues[Slot, Index]) Then
+        Return False
+    End If
+
     ActorSceneIds[Slot, Index] = SceneId
     ActorCellX[Slot, Index] = CellX
     ActorCellY[Slot, Index] = CellY
@@ -1279,6 +1512,10 @@ Public Function ResetPersistentProgress(StateHandle As Number) As Boolean
     Slot = StateSlot(StateHandle)
 
     If Slot < 0 Then
+        Return False
+    End If
+
+    If PersistentDefaultsConflictWithTransient(StateHandle) Then
         Return False
     End If
 

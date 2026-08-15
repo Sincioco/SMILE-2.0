@@ -1,4 +1,4 @@
-# Smile.RPG 1.1.0
+# Smile.RPG 1.1.1
 
 `Smile.RPG` is the official source-authored package for reusable RPG data, management, and bounded top-down world state. It contains eleven ordinary SMILE modules and deliberately owns no window, drawing, input, audio, asset, battle-resolution, quest-language, class, or status-effect behavior.
 
@@ -14,7 +14,7 @@ The package manages:
 - scenes, spawns, transitions, persistent actor progress, story flags/values, and deterministic encounter previews;
 - deterministic SRPG format-2 writes with format-1/2 reads over Phase 4 `Save Data` and `Load Data`.
 
-Version 1.1.0 preserves the Phase 6 APIs and adds `World`, `Story`, and `Encounters`. Save/load remains transactional across the combined state; only actors marked persistent are serialized.
+Version 1.1.1 preserves the Phase 7 APIs and formats while enforcing visible-solid occupancy, reservation-safe placement, coherent current-scene/controlled-actor state, batch-aware persistent actor restore, transient collision preflight, and exact reservation rollback. Only actors marked persistent are serialized; transient actor progress and reservations remain application state across successful loads.
 
 Reference `Smile.RPG.smilelibproj` during development or a deterministic `Smile.RPG.smilelib` package for distribution. Register all stable definitions before loading a save.
 

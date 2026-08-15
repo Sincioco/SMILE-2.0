@@ -19,3 +19,5 @@ Import Smile.RPG.Encounters As Encounters
 ```
 
 Maps are declared as ordinary project assets. Applications load them through `TileMap.LoadMap(PathText)`, define tiles against an application-owned `Image`, and draw only visible layers. See [SMILE-MAP 1](../formats/smile-map-format-1.md) and the [Phase 7 architecture](../architecture/phase7-top-down-rpg-world.md).
+
+Phase 7.1 changes no grammar and adds no map or save fields. It advances the source package to `Smile.RPG` 1.1.1 by enforcing visible-solid placement, reservation, scene/controlled-actor coherence, batch restore, and rollback invariants through the existing language surface plus observational reservation queries.
