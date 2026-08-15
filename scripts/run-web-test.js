@@ -220,7 +220,8 @@ const host = {
                     [18, "Enter"], [19, "KeyS"], [20, "Space"], [21, "ArrowLeft"],
                     [22, "Escape"], [23, "Escape"], [24, "Escape"], [25, "ArrowRight"],
                     [26, "Digit2"], [27, "Digit3"], [28, "Digit1"], [29, "Enter"],
-                    [30, "Space"], [31, "Enter"]
+                    [30, "Space"], [31, "Enter"], [32, "KeyQ"], [33, "KeyE"],
+                    [34, "KeyR"], [35, "KeyT"], [36, "KeyY"], [37, "KeyI"], [38, "KeyO"]
                 ]) : new Map([
                     [2, "ArrowDown"], [3, "ArrowDown"], [4, "ArrowDown"], [5, "ArrowDown"],
                     [6, "ArrowDown"], [7, "ArrowDown"], [8, "ArrowUp"], [9, "Digit2"],
@@ -436,13 +437,14 @@ const started = Date.now();
         const expectedKeys = ["ArrowRight", "Enter", "Space", "ArrowDown", "ArrowDown", "ArrowDown", "ArrowDown",
             "ArrowDown", "ArrowDown", "ArrowDown", "KeyD", "KeyD", "KeyW", "KeyX", "ArrowRight", "KeyA",
             "Enter", "KeyS", "Space", "ArrowLeft", "Escape", "Escape", "Escape", "ArrowRight", "Digit2",
-            "Digit3", "Digit1", "Enter", "Space", "Enter"];
+            "Digit3", "Digit1", "Enter", "Space", "Enter", "KeyQ", "KeyE", "KeyR", "KeyT", "KeyY",
+            "KeyI", "KeyO"];
         if (phase5Keys.join("|") !== expectedKeys.join("|"))
-            fail(`Phase 5.2.1 scripted key sequence differed: ${phase5Keys.join(", ")}`);
+            fail(`Phase 5.2.2 scripted key sequence differed: ${phase5Keys.join(", ")}`);
 
         const basenames = imageDraws.map(draw => path.basename(draw.source));
         for (const required of ["Background.png", "WindowSkin.png", "Cursor.png", "BitmapFont.png"])
-            if (!basenames.includes(required)) fail(`Phase 5.2.1 Web draws did not include ${required}`);
+            if (!basenames.includes(required)) fail(`Phase 5.2.2 Web draws did not include ${required}`);
 
         const frameImageNames = new Map();
         for (const draw of imageDraws) {
@@ -451,7 +453,7 @@ const started = Date.now();
         }
         for (const [frame, names] of frameImageNames) {
             if (names.length !== 0 && names[0] !== "Background.png")
-                fail(`Phase 5.2.1 painter order did not begin with Background.png on frame ${frame}: ${names[0]}`);
+                fail(`Phase 5.2.2 painter order did not begin with Background.png on frame ${frame}: ${names[0]}`);
         }
 
         const cursorByFrame = new Map();
@@ -463,97 +465,165 @@ const started = Date.now();
             [29, 3], [30, 4], [31, 4]]);
         for (const [frame, expected] of expectedCursorDepth) {
             if ((cursorByFrame.get(frame) || 0) !== expected)
-                fail(`Phase 5.2.1 cursor depth differed on frame ${frame}: expected ${expected}, got ${cursorByFrame.get(frame) || 0}`);
+                fail(`Phase 5.2.2 cursor depth differed on frame ${frame}: expected ${expected}, got ${cursorByFrame.get(frame) || 0}`);
         }
 
         const initialLabels = textDraws.filter(draw => draw.frame === 1 && draw.y >= 230 && draw.y < 450 && draw.value !== " >");
         if (initialLabels.length < 3 || new Set(initialLabels.map(draw => draw.x)).size !== 1)
-            fail(`Phase 5.2.1 fixed cursor gutter shifted row text: ${JSON.stringify(initialLabels)}`);
+            fail(`Phase 5.2.2 fixed cursor gutter shifted row text: ${JSON.stringify(initialLabels)}`);
         for (const cursor of imageDraws.filter(draw => path.basename(draw.source) === "Cursor.png" && draw.values.length === 8 && draw.frame <= 31 && draw.frame !== 26)) {
             const cursorRight = cursor.values[4] + cursor.values[6];
             const rowLabels = textDraws.filter(draw => draw.frame === cursor.frame && draw.value !== " >" &&
                 draw.x >= cursorRight && draw.y >= cursor.values[5] - 4 && draw.y <= cursor.values[5] + cursor.values[7] + 8);
             if (rowLabels.length === 0)
-                fail(`Phase 5.2.1 cursor overlapped or lost its row label: ${JSON.stringify(cursor)}`);
+                fail(`Phase 5.2.2 cursor overlapped or lost its row label: ${JSON.stringify(cursor)}`);
         }
 
         for (const frame of [14, 15, 16]) {
             if (textDraws.some(draw => draw.frame === frame && draw.value === " >"))
-                fail(`Phase 5.2.1 hidden submenu indicator remained visible on frame ${frame}`);
+                fail(`Phase 5.2.2 hidden submenu indicator remained visible on frame ${frame}`);
         }
         const windowCount = frame => imageDraws.filter(draw => draw.frame === frame && path.basename(draw.source) === "WindowSkin.png" &&
             draw.values.length === 8 && draw.values[0] === 0 && draw.values[1] === 0).length;
         if (windowCount(14) !== 4 || windowCount(15) !== 1 || windowCount(16) !== 2)
-            fail(`Phase 5.2.1 edge pruning or hidden-indicator navigation differed: ${JSON.stringify({ before: windowCount(14), pruned: windowCount(15), reopened: windowCount(16) })}`);
+            fail(`Phase 5.2.2 edge pruning or hidden-indicator navigation differed: ${JSON.stringify({ before: windowCount(14), pruned: windowCount(15), reopened: windowCount(16) })}`);
         const afterMarkers = textDraws.filter(draw => draw.frame === 17 && draw.value === " >");
         if (afterMarkers.length < 2 || !afterMarkers.every(marker => textDraws.some(label => label.frame === marker.frame &&
             label.y === marker.y && label.value !== " >" && marker.x === label.x + label.value.length * 8)))
-            fail(`Phase 5.2.1 after-text indicators did not follow rendered labels: ${JSON.stringify(afterMarkers)}`);
+            fail(`Phase 5.2.2 after-text indicators did not follow rendered labels: ${JSON.stringify(afterMarkers)}`);
         const rightMarkers = textDraws.filter(draw => draw.frame === 19 && draw.value === " >");
         if (rightMarkers.length < 3)
-            fail(`Phase 5.2.1 right-aligned indicators were missing: ${JSON.stringify(rightMarkers)}`);
+            fail(`Phase 5.2.2 right-aligned indicators were missing: ${JSON.stringify(rightMarkers)}`);
         for (const prefix of ["A Very Long Shared", "Disabled Library", "Open Hierarchy"]) {
             const label = textDraws.find(draw => draw.frame === 1 && draw.value.startsWith(prefix));
             const marker = label && textDraws.find(draw => draw.frame === 1 && draw.value === " >" &&
                 draw.y >= label.y && draw.y < label.y + 43 && draw.fillStyle === label.fillStyle);
             if (!label || !marker)
-                fail(`Phase 5.2.1 normal/disabled/selected indicator style differed for ${prefix}`);
+                fail(`Phase 5.2.2 normal/disabled/selected indicator style differed for ${prefix}`);
         }
         if (!textDraws.some(draw => draw.value === " >"))
-            fail("Phase 5.2.1 submenu indicator was not drawn as exact literal ' >'");
+            fail("Phase 5.2.2 submenu indicator was not drawn as exact literal ' >'");
         if (!textDraws.some(draw => draw.value.endsWith("...")))
-            fail("Phase 5.2.1 long-label ellipsis was not drawn");
-        if (!textDraws.some(draw => draw.value === "Localization And"))
-            fail(`Phase 5.2.1 bounded wrapped label was not drawn: ${JSON.stringify([...new Set(textDraws.map(draw => draw.value))])}`);
+            fail("Phase 5.2.2 long-label ellipsis was not drawn");
+        if (!textDraws.some(draw => draw.value === "A Very Long"))
+            fail(`Phase 5.2.2 bounded wrapped label was not drawn: ${JSON.stringify([...new Set(textDraws.map(draw => draw.value))])}`);
+
+        const rootSelection = fillRectangleDraws.find(draw => draw.frame === 1 && draw.values[0] === 234 &&
+            draw.values[2] === 538 && draw.values[3] === 43);
+        const oneLineLabel = textDraws.find(draw => draw.frame === 1 && draw.value === "Open Hierarchy");
+        const oneLineMarker = oneLineLabel && textDraws.find(draw => draw.frame === 1 && draw.value === " >" &&
+            draw.y === oneLineLabel.y && draw.fillStyle === oneLineLabel.fillStyle);
+        const oneLineCursor = imageDraws.find(draw => draw.frame === 1 && path.basename(draw.source) === "Cursor.png" &&
+            draw.values.length === 8 && rootSelection && draw.values[4] === rootSelection.values[0]);
+        if (!rootSelection || !oneLineLabel || !oneLineMarker || !oneLineCursor || oneLineLabel.x !== 282 ||
+            oneLineLabel.y !== rootSelection.values[1] + Math.trunc((43 - 25) / 2) ||
+            oneLineCursor.values[5] !== rootSelection.values[1] + Math.trunc((43 - 30) / 2) - 2)
+            fail(`Phase 5.2.2 one-line row centering differed: ${JSON.stringify({ rootSelection, oneLineLabel, oneLineMarker, oneLineCursor })}`);
+
+        const wrappedSelection = fillRectangleDraws.find(draw => draw.frame === 2 && draw.values[0] === 46 &&
+            draw.values[3] === 78);
+        const wrappedLines = wrappedSelection ? textDraws.filter(draw => draw.frame === 2 && draw.value !== " >" &&
+            draw.x === 94 && draw.y >= wrappedSelection.values[1] && draw.y < wrappedSelection.values[1] + 78) : [];
+        const wrappedYs = [...new Set(wrappedLines.map(draw => draw.y))].sort((left, right) => left - right);
+        const wrappedMarker = wrappedSelection && textDraws.find(draw => draw.frame === 2 && draw.value === " >" &&
+            draw.y >= wrappedSelection.values[1] && draw.y < wrappedSelection.values[1] + 78 &&
+            wrappedLines.length !== 0 && draw.fillStyle === wrappedLines[0].fillStyle);
+        const wrappedCursor = wrappedSelection && imageDraws.find(draw => draw.frame === 2 &&
+            path.basename(draw.source) === "Cursor.png" && draw.values.length === 8 && draw.values[4] === wrappedSelection.values[0]);
+        const wrappedFirstY = wrappedSelection ? wrappedSelection.values[1] + Math.trunc((78 - (25 * 2 + 5)) / 2) : -1;
+        if (!wrappedSelection || wrappedLines.length < 2 || wrappedYs.length !== 2 || wrappedYs[0] !== wrappedFirstY ||
+            wrappedYs[1] !== wrappedFirstY + 30 || !wrappedMarker || wrappedMarker.y !== wrappedFirstY || !wrappedCursor ||
+            wrappedCursor.values[5] !== wrappedSelection.values[1] + Math.trunc((78 - 30) / 2) - 2 ||
+            new Set(wrappedLines.map(draw => draw.x)).size !== 1)
+            fail(`Phase 5.2.2 wrapped system row geometry differed: ${JSON.stringify({ wrappedSelection, wrappedLines, wrappedMarker, wrappedCursor })}`);
+
+        const bitmapSelection = fillRectangleDraws.find(draw => draw.frame === 26 && draw.values[0] === 46 &&
+            draw.values[3] === 78);
+        const bitmapLineStarts = bitmapSelection ? imageDraws.filter(draw => draw.frame === 26 &&
+            path.basename(draw.source) === "BitmapFont.png" && draw.values.length === 8 && draw.values[4] === 94 &&
+            draw.values[5] >= bitmapSelection.values[1] && draw.values[5] < bitmapSelection.values[1] + 78) : [];
+        const bitmapYs = [...new Set(bitmapLineStarts.map(draw => draw.values[5]))].sort((left, right) => left - right);
+        const bitmapFirstY = bitmapSelection ? bitmapSelection.values[1] + Math.trunc((78 - (30 * 2 + 5)) / 2) : -1;
+        const bitmapMarker = bitmapSelection && imageDraws.find(draw => draw.frame === 26 &&
+            path.basename(draw.source) === "BitmapFont.png" && draw.values.length === 8 &&
+            draw.values[0] === 896 && draw.values[1] === 64 && draw.values[5] === bitmapFirstY);
+        if (!bitmapSelection || bitmapYs.length !== 2 || bitmapYs[0] !== bitmapFirstY ||
+            bitmapYs[1] !== bitmapFirstY + 35 || !bitmapMarker)
+            fail(`Phase 5.2.2 wrapped bitmap row geometry differed: ${JSON.stringify({ bitmapSelection, bitmapLineStarts, bitmapMarker })}`);
+
+        const expectedOffsets = new Map([[32, 0], [33, 8], [34, -20], [36, -2]]);
+        for (const [frame, offset] of expectedOffsets) {
+            const cursors = imageDraws.filter(draw => draw.frame === frame && path.basename(draw.source) === "Cursor.png" &&
+                draw.values.length === 8);
+            if (cursors.length !== 4) fail(`Phase 5.2.2 expected four visible cursors on frame ${frame}, found ${cursors.length}`);
+            for (const cursor of cursors) {
+                const row = fillRectangleDraws.find(draw => draw.frame === frame && draw.values[0] === cursor.values[4] &&
+                    draw.values[2] > cursor.values[6] && (draw.values[3] === 43 || draw.values[3] === 78));
+                if (!row) fail(`Phase 5.2.2 cursor row was not traced on frame ${frame}: ${JSON.stringify(cursor)}`);
+                const maximumY = row.values[1] + row.values[3] - cursor.values[7];
+                let expectedY = row.values[1] + Math.max(0, Math.trunc((row.values[3] - cursor.values[7]) / 2)) + offset;
+                expectedY = maximumY >= row.values[1] ? Math.max(row.values[1], Math.min(maximumY, expectedY)) : row.values[1];
+                if (cursor.values[5] !== expectedY)
+                    fail(`Phase 5.2.2 centered cursor offset differed on frame ${frame}: ${JSON.stringify({ cursor, row, expectedY })}`);
+            }
+        }
+        const oversizedCursors = imageDraws.filter(draw => draw.frame === 35 && path.basename(draw.source) === "Cursor.png" &&
+            draw.values.length === 8 && draw.values[7] === 96);
+        if (oversizedCursors.length !== 4 || !oversizedCursors.every(cursor => fillRectangleDraws.some(draw =>
+            draw.frame === 35 && draw.values[0] === cursor.values[4] && draw.values[1] === cursor.values[5] &&
+            (draw.values[3] === 43 || draw.values[3] === 78))))
+            fail(`Phase 5.2.2 oversized cursors were not clamped to row tops: ${JSON.stringify(oversizedCursors)}`);
+        if (!textDraws.some(draw => draw.frame === 37 && draw.value === "A Very Long Shared Library Category"))
+            fail("Phase 5.2.2 clip mode did not draw the full first source line inside the row clip");
 
         const scrollbar = (frame, x) => fillRectangleDraws.filter(draw => draw.frame === frame && draw.values[0] === x && draw.values[2] === 4);
         const topScroll = scrollbar(4, 915);
         const middleScroll = scrollbar(9, 915);
         const bottomScroll = scrollbar(11, 915);
         if (topScroll.length !== 2 || middleScroll.length !== 2 || bottomScroll.length !== 2)
-            fail(`Phase 5.2.1 detail scrollbar track/thumb count differed: ${JSON.stringify({ topScroll, middleScroll, bottomScroll })}`);
+            fail(`Phase 5.2.2 detail scrollbar track/thumb count differed: ${JSON.stringify({ topScroll, middleScroll, bottomScroll })}`);
         const topThumb = topScroll.find(draw => draw.values[3] < 172);
         const middleThumb = middleScroll.find(draw => draw.values[3] < 172);
         const bottomThumb = bottomScroll.find(draw => draw.values[3] < 172);
         if (!topThumb || !middleThumb || !bottomThumb || topThumb.values[3] !== 86 ||
             topThumb.values[1] !== 326 || middleThumb.values[1] !== 369 || bottomThumb.values[1] !== 412)
-            fail(`Phase 5.2.1 proportional scrollbar geometry differed: ${JSON.stringify({ topThumb, middleThumb, bottomThumb })}`);
+            fail(`Phase 5.2.2 proportional scrollbar geometry differed: ${JSON.stringify({ topThumb, middleThumb, bottomThumb })}`);
         if (fillRectangleDraws.some(draw => draw.frame === 12 && draw.values[2] === 4))
-            fail("Phase 5.2.1 ShowScrollbar False left track/thumb drawing");
+            fail("Phase 5.2.2 ShowScrollbar False left track/thumb drawing");
         const restoredScrollbars = fillRectangleDraws.filter(draw => draw.frame === 13 && draw.values[2] === 4);
         if (scrollbar(13, 915).length !== 2 || restoredScrollbars.length < 4)
-            fail(`Phase 5.2.1 ShowScrollbar True did not restore overflowing scrollbars: ${JSON.stringify(restoredScrollbars)}`);
+            fail(`Phase 5.2.2 ShowScrollbar True did not restore overflowing scrollbars: ${JSON.stringify(restoredScrollbars)}`);
         const frameFourMarkers = textDraws.filter(draw => draw.frame === 4 && draw.value === " >");
         const frameFourTrackXs = fillRectangleDraws.filter(draw => draw.frame === 4 && draw.values[2] === 4).map(draw => draw.values[0]);
         if (!frameFourMarkers.some(marker => frameFourTrackXs.some(trackX => trackX >= marker.x + 16 && trackX - marker.x < 100)))
-            fail(`Phase 5.2.1 marker/scrollbar regions overlapped: ${JSON.stringify({ frameFourMarkers, frameFourTrackXs })}`);
+            fail(`Phase 5.2.2 marker/scrollbar regions overlapped: ${JSON.stringify({ frameFourMarkers, frameFourTrackXs })}`);
         const frameFourLastDetailRowDraw = Math.max(...textDraws.filter(draw => draw.frame === 4 && draw.x >= 580).map(draw => draw.order),
             ...imageDraws.filter(draw => draw.frame === 4 && path.basename(draw.source) === "Cursor.png" && draw.values[4] >= 548).map(draw => draw.order));
         if (Math.min(...scrollbar(4, 915).map(draw => draw.order)) <= frameFourLastDetailRowDraw)
-            fail("Phase 5.2.1 scrollbars were not drawn after row cursor/text/indicator content");
+            fail("Phase 5.2.2 scrollbars were not drawn after row cursor/text/indicator content");
 
         const frameFourWindows = imageDraws.filter(draw => draw.frame === 4 && path.basename(draw.source) === "WindowSkin.png" &&
             draw.values.length === 8 && draw.values[0] === 0 && draw.values[1] === 0)
             .map(draw => [draw.values[4], draw.values[5]]);
         const expectedWindows = [[200, 250], [12, 258], [300, 286], [548, 298]];
         if (JSON.stringify(frameFourWindows.slice(0, 4)) !== JSON.stringify(expectedWindows))
-            fail(`Phase 5.2.1 viewport placement/painter stack differed: ${JSON.stringify(frameFourWindows)}`);
+            fail(`Phase 5.2.2 viewport placement/painter stack differed: ${JSON.stringify(frameFourWindows)}`);
         if (fillRectangleDraws.filter(draw => draw.frame === 4).length < 4)
-            fail("Phase 5.2.1 ancestor path selection fills were not retained");
+            fail("Phase 5.2.2 ancestor path selection fills were not retained");
         if (!fillRectangleDraws.some(draw => draw.frame >= 27))
-            fail("Phase 5.2.1 vector fallback drawing was not recorded");
+            fail("Phase 5.2.2 vector fallback drawing was not recorded");
         for (const required of ["Move.wav", "Confirm.wav", "Cancel.wav"])
             if (!audioSources.some(source => path.basename(source) === required))
-                fail(`Phase 5.2.1 event-driven SFX did not include ${required}: ${JSON.stringify(audioSources)}`);
+                fail(`Phase 5.2.2 event-driven SFX did not include ${required}: ${JSON.stringify(audioSources)}`);
         if (clipCalls < maximumFrames)
-            fail(`Phase 5.2.1 expected structured clipping on each frame, found ${clipCalls} clips across ${maximumFrames} frames`);
+            fail(`Phase 5.2.2 expected structured clipping on each frame, found ${clipCalls} clips across ${maximumFrames} frames`);
         if (diagnostics.backingWidth <= diagnostics.logicalWidth || diagnostics.backingHeight <= diagnostics.logicalHeight)
-            fail(`Phase 5.2.1 DPR backing store was not high resolution: ${diagnostics.backingWidth}x${diagnostics.backingHeight}`);
+            fail(`Phase 5.2.2 DPR backing store was not high resolution: ${diagnostics.backingWidth}x${diagnostics.backingHeight}`);
         if (diagnostics.imageCacheCount !== 0 || diagnostics.imageReferenceCount !== 0 ||
             diagnostics.sfxActiveCount !== 0 || !diagnostics.mediaStopped)
-            fail(`Phase 5.2.1 Web ownership/shutdown was incomplete: ${JSON.stringify(diagnostics)}`);
+            fail(`Phase 5.2.2 Web ownership/shutdown was incomplete: ${JSON.stringify(diagnostics)}`);
         if (hostConsoleErrors.length !== 0)
-            fail(`Phase 5.2.1 Web console reported errors: ${hostConsoleErrors.join("\n")}`);
+            fail(`Phase 5.2.2 Web console reported errors: ${hostConsoleErrors.join("\n")}`);
     }
     if (verifyPhase5SubmenuViewport) {
         const scrollbar = x => fillRectangleDraws.filter(draw => draw.frame === 1 && draw.values[0] === x && draw.values[2] === 4);

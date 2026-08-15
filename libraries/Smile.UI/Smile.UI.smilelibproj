@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ProjectKind>Library</ProjectKind>
     <LibraryName>Smile.UI</LibraryName>
-    <Version>1.1.1</Version>
+    <Version>1.1.2</Version>
     <OutputName>Smile.UI</OutputName>
   </PropertyGroup>
   <ItemGroup>

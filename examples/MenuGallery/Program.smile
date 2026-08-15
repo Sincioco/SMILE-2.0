@@ -49,6 +49,7 @@ Dim AcceptedValue As Number
 Dim OperationSucceeded As Boolean
 Dim StyleChanged As Boolean
 Dim Running As Boolean
+Dim TestStage As Number
 
 Load Image Background From "Assets\Background.png"
 Load Image WindowSkin From "Assets\WindowSkin.png"
@@ -141,7 +142,7 @@ MenuStyle.ItemTextMaxLines = 1
 WrapMenuStyle = MenuStyle
 WrapMenuStyle.RowHeight = 78
 WrapMenuStyle.ShowScrollbar = False
-WrapMenuStyle.SubmenuIndicatorPosition = UI.UI_SUBMENU_INDICATOR_AFTER_TEXT
+WrapMenuStyle.SubmenuIndicatorPosition = UI.UI_SUBMENU_INDICATOR_RIGHT_ALIGNED
 WrapMenuStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_WRAP
 WrapMenuStyle.ItemTextMaxLines = 2
 
@@ -173,7 +174,7 @@ ItemIndex = Menu.AddItem(RootMenu, "Additional Root Action", 14, True)
 ItemIndex = Menu.AddItem(RootMenu, "More Root Content", 15, True)
 ItemIndex = Menu.AddItem(RootMenu, "Final Root Content", 16, True)
 
-CategoryOptionIndex = Menu.AddItem(CategoryMenu, "Localization And Accessibility Options That Wrap Across Multiple Words", 20, True)
+CategoryOptionIndex = Menu.AddItem(CategoryMenu, "A Very Long Shared Library Command That Wraps Because It Is Long", 20, True)
 CategorySharedIndex = Menu.AddItem(CategoryMenu, "Shared Detail View", 21, True)
 ItemIndex = Menu.AddItem(CategoryMenu, "Category Leaf", 22, True)
 
@@ -278,9 +279,35 @@ Do
         WrapMenuStyle.ShowScrollbar = MenuStyle.ShowScrollbar
         StyleChanged = True
     Else If Key = KEY_OTHER Then
-        OperationSucceeded = Menu.SetSelectedIndex(RootMenu, RootSharedIndex)
-        OperationSucceeded = OperationSucceeded And MenuNavigator.Depth(NavigatorHandle) = 1
-        WrapMenuStyle.UseCursor = False
+        If TestStage = 0 Then
+            OperationSucceeded = Menu.SetSelectedIndex(RootMenu, RootSharedIndex)
+            OperationSucceeded = OperationSucceeded And MenuNavigator.Depth(NavigatorHandle) = 1
+            WrapMenuStyle.UseCursor = False
+        Else If TestStage = 1 Then
+            MenuStyle.CursorOffsetY = 0
+            WrapMenuStyle.CursorOffsetY = 0
+        Else If TestStage = 2 Then
+            MenuStyle.CursorOffsetY = 8
+            WrapMenuStyle.CursorOffsetY = 8
+        Else If TestStage = 3 Then
+            MenuStyle.CursorOffsetY = -20
+            WrapMenuStyle.CursorOffsetY = -20
+        Else If TestStage = 4 Then
+            MenuStyle.CursorHeight = 96
+            WrapMenuStyle.CursorHeight = 96
+        Else If TestStage = 5 Then
+            MenuStyle.CursorHeight = 30
+            MenuStyle.CursorOffsetY = -2
+            WrapMenuStyle.CursorHeight = 30
+            WrapMenuStyle.CursorOffsetY = -2
+        Else If TestStage = 6 Then
+            MenuStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_CLIP
+            WrapMenuStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_CLIP
+        Else If TestStage = 7 Then
+            MenuStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_ELLIPSIS
+            WrapMenuStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_WRAP
+        End If
+        TestStage = TestStage + 1
         StyleChanged = True
         Running = Running And OperationSucceeded
     Else If Dialogue.IsActive(DialogueHandle) Then

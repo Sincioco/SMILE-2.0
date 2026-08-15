@@ -2400,13 +2400,13 @@ Run("Public API preserves referenced record provider identities", () =>
     finally { Directory.Delete(root, true); }
 });
 
-Run("Smile.UI 1.1.1 publishes the Phase 5.2.1 submenu hardening", () =>
+Run("Smile.UI 1.1.2 publishes the Phase 5.2.2 submenu acceptance and row alignment hardening", () =>
 {
     var project = File.ReadAllText("libraries/Smile.UI/Smile.UI.smilelibproj");
     var core = File.ReadAllText("libraries/Smile.UI/Core.smile");
     var menu = File.ReadAllText("libraries/Smile.UI/Menu.smile");
     var navigator = File.ReadAllText("libraries/Smile.UI/MenuNavigator.smile");
-    Equal(true, project.Contains("<Version>1.1.1</Version>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<Version>1.1.2</Version>", StringComparison.Ordinal));
     Equal(true, project.Contains("<SmileSource Include=\"MenuNavigator.smile\" />", StringComparison.Ordinal));
     foreach (var constant in new[] { "UI_EVENT_SUBMENU_OPENED", "UI_EVENT_SUBMENU_CLOSED",
         "UI_MENU_TEXT_ELLIPSIS", "UI_MENU_TEXT_CLIP", "UI_MENU_TEXT_WRAP",
@@ -2423,6 +2423,10 @@ Run("Smile.UI 1.1.1 publishes the Phase 5.2.1 submenu hardening", () =>
     Equal(true, core.Contains("ShowSubmenuIndicator As Boolean", StringComparison.Ordinal));
     Equal(true, core.Contains("SubmenuIndicatorPosition As Number", StringComparison.Ordinal));
     Equal(true, navigator.Contains("Menu.SelectedIndex(ParentHandle) <> StackParentItems[Slot, Level]", StringComparison.Ordinal));
+    Equal(true, navigator.Contains("BindingIndex = FindBinding(Slot, CurrentHandle, SelectedItem)", StringComparison.Ordinal));
+    Equal(true, menu.Contains("TextBlockHeight = PreparedLineCount * LineHeight", StringComparison.Ordinal));
+    Equal(true, menu.Contains("CursorY = RowY + Max(0, (RowDrawHeight - MenuStyles[Slot].CursorHeight) / 2)", StringComparison.Ordinal));
+    Equal(true, menu.Contains("MarkerY = DrawLabel", StringComparison.Ordinal));
     Equal(true, navigator.Contains("Call Menu.DrawFocused(StackMenus[Slot, Level], True)", StringComparison.Ordinal));
 });
 

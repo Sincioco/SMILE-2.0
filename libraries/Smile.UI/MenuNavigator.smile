@@ -658,24 +658,27 @@ Public Function OpenSelected(NavigatorHandle As Number) As Number
     Dim BindingIndex As Number
     Dim ChildHandle As Number
     Dim OldDepth As Number
-    Dim Level As Number
-    Dim Ignored As Boolean
     Slot = SlotFromHandle(NavigatorHandle)
-    If Slot < 0 Or Not RepairSlot(Slot) Or NavigatorDepth[Slot] >= Core.UI_MAX_MENU_DEPTH Then
+    If Slot < 0 Or Not RepairSlot(Slot) Then
         Return Core.UI_EVENT_NONE
     End If
     CurrentHandle = StackMenus[Slot, NavigatorDepth[Slot] - 1]
     SelectedItem = Menu.SelectedIndex(CurrentHandle)
-    If SelectedItem < 0 Or Menu.HandleKey(CurrentHandle, KEY_ENTER) <> Core.UI_EVENT_ACCEPTED Then
+    If SelectedItem < 0 Then
         Return Core.UI_EVENT_NONE
     End If
     BindingIndex = FindBinding(Slot, CurrentHandle, SelectedItem)
-    If BindingIndex < 0 Then
+    If BindingIndex < 0 Or Menu.HandleKey(CurrentHandle, KEY_ENTER) <> Core.UI_EVENT_ACCEPTED Or NavigatorDepth[Slot] >= Core.UI_MAX_MENU_DEPTH Then
         Return Core.UI_EVENT_NONE
     End If
     ChildHandle = BindingChildMenus[Slot, BindingIndex]
     If Not Menu.IsValid(ChildHandle) Or ActiveContains(Slot, ChildHandle) Then
         Return Core.UI_EVENT_NONE
+    End If
+    If BindingResetChild[Slot, BindingIndex] Then
+        If Not Menu.ResetSelection(ChildHandle) Then
+            Return Core.UI_EVENT_NONE
+        End If
     End If
     OldDepth = NavigatorDepth[Slot]
     StackMenus[Slot, OldDepth] = ChildHandle
@@ -686,9 +689,6 @@ Public Function OpenSelected(NavigatorHandle As Number) As Number
         StackMenus[Slot, OldDepth] = 0
         StackParentItems[Slot, OldDepth] = -1
         Return Core.UI_EVENT_NONE
-    End If
-    If BindingResetChild[Slot, BindingIndex] Then
-        Ignored = Menu.ResetSelection(ChildHandle)
     End If
     Call ClearAccepted(Slot)
     Return Core.UI_EVENT_SUBMENU_OPENED
@@ -721,6 +721,7 @@ Public Function HandleKey(NavigatorHandle As Number, Key As Number) As Number
     Dim Slot As Number
     Dim CurrentHandle As Number
     Dim SelectedItem As Number
+    Dim BindingIndex As Number
     Dim Event As Number
     Slot = SlotFromHandle(NavigatorHandle)
     If Slot < 0 Or Not RepairSlot(Slot) Then
@@ -730,8 +731,18 @@ Public Function HandleKey(NavigatorHandle As Number, Key As Number) As Number
     If Key = KEY_UP Or Key = KEY_DOWN Then
         Return Menu.HandleKey(CurrentHandle, Key)
     End If
-    If Key = KEY_RIGHT Then
-        Return OpenSelected(NavigatorHandle)
+    If Key = KEY_RIGHT Or Key = KEY_ENTER Or Key = KEY_SPACE Then
+        SelectedItem = Menu.SelectedIndex(CurrentHandle)
+        BindingIndex = -1
+        If SelectedItem >= 0 Then
+            BindingIndex = FindBinding(Slot, CurrentHandle, SelectedItem)
+        End If
+        If BindingIndex >= 0 Then
+            Return OpenSelected(NavigatorHandle)
+        End If
+        If Key = KEY_RIGHT Then
+            Return Core.UI_EVENT_NONE
+        End If
     End If
     If Key = KEY_LEFT Then
         Return Back(NavigatorHandle)
@@ -743,11 +754,6 @@ Public Function HandleKey(NavigatorHandle As Number, Key As Number) As Number
         Return Core.UI_EVENT_CANCELLED
     End If
     If Key = KEY_ENTER Or Key = KEY_SPACE Then
-        Event = OpenSelected(NavigatorHandle)
-        If Event = Core.UI_EVENT_SUBMENU_OPENED Then
-            Return Event
-        End If
-        CurrentHandle = StackMenus[Slot, NavigatorDepth[Slot] - 1]
         Event = Menu.HandleKey(CurrentHandle, Key)
         If Event = Core.UI_EVENT_ACCEPTED Then
             SelectedItem = Menu.SelectedIndex(CurrentHandle)
