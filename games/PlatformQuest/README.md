@@ -14,7 +14,7 @@ To build the teaching edition in Visual Studio, change:
 
 in `PlatformQuest.smileproj`. Both sources remain declared in the project.
 
-The title offers `DEFAULT.MAP`, `CUSTOM.MAP`, and `RANDOM LEVEL`. File maps reload on every start. Missing or invalid files fall back to a safe random level. See `MAP_AUTHORING.md` for the exact 120-by-15 format and editing checklist.
+The title offers `Default.MAP`, `CUSTOM.MAP`, and `Random LEVEL`. File maps reload on every start. Missing or invalid files fall back to a safe random level. See `MAP_AUTHORING.md` for the exact 120-by-15 format and editing checklist.
 
 Controls:
 

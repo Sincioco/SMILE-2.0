@@ -4,8 +4,8 @@
 Width = 30
 Height = 15
 
-DIM SnakeX[400]
-DIM SnakeY[400]
+Dim SnakeX[400]
+Dim SnakeY[400]
 
 Length = 3
 Direction = RIGHT
@@ -13,9 +13,9 @@ Direction = RIGHT
 FoodX = 20
 FoodY = 7
 
-GameOver = FALSE
-FoodOnSnake = FALSE
-SnakeHere = FALSE
+GameOver = False
+FoodOnSnake = False
+SnakeHere = False
 
 Key = NONE
 TailX = 0
@@ -30,102 +30,102 @@ SnakeY[1] = 7
 SnakeX[2] = 13
 SnakeY[2] = 7
 
-CLEAR SCREEN
+Clear Screen
 
-DO
-    GET KEY Key
+Do
+    Get Key Key
 
-    IF Key = W AND Direction <> DOWN THEN
+    If Key = W And Direction <> Down Then
         Direction = UP
-    ELSE IF Key = S AND Direction <> UP THEN
-        Direction = DOWN
-    ELSE IF Key = A AND Direction <> RIGHT THEN
+    Else If Key = S And Direction <> UP Then
+        Direction = Down
+    Else If Key = A And Direction <> RIGHT Then
         Direction = LEFT
-    ELSE IF Key = D AND Direction <> LEFT THEN
+    Else If Key = D And Direction <> LEFT Then
         Direction = RIGHT
-    END IF
+    End If
 
     TailX = SnakeX[Length - 1]
     TailY = SnakeY[Length - 1]
 
-    FOR I = Length - 1 DOWN TO 1
+    For I = Length - 1 Down To 1
         SnakeX[I] = SnakeX[I - 1]
         SnakeY[I] = SnakeY[I - 1]
-    END FOR
+    End For
 
-    IF Direction = UP THEN
+    If Direction = UP Then
         SnakeY[0] = SnakeY[0] - 1
-    ELSE IF Direction = DOWN THEN
+    Else If Direction = Down Then
         SnakeY[0] = SnakeY[0] + 1
-    ELSE IF Direction = LEFT THEN
+    Else If Direction = LEFT Then
         SnakeX[0] = SnakeX[0] - 1
-    ELSE IF Direction = RIGHT THEN
+    Else If Direction = RIGHT Then
         SnakeX[0] = SnakeX[0] + 1
-    END IF
+    End If
 
-    IF SnakeX[0] = 0 OR SnakeX[0] = Width - 1 OR SnakeY[0] = 0 OR SnakeY[0] = Height - 1 THEN
-        GameOver = TRUE
-    END IF
+    If SnakeX[0] = 0 Or SnakeX[0] = Width - 1 Or SnakeY[0] = 0 Or SnakeY[0] = Height - 1 Then
+        GameOver = True
+    End If
 
-    FOR I = 1 TO Length - 1
-        IF SnakeX[0] = SnakeX[I] AND SnakeY[0] = SnakeY[I] THEN
-            GameOver = TRUE
-        END IF
-    END FOR
+    For I = 1 To Length - 1
+        If SnakeX[0] = SnakeX[I] And SnakeY[0] = SnakeY[I] Then
+            GameOver = True
+        End If
+    End For
 
-    IF SnakeX[0] = FoodX AND SnakeY[0] = FoodY THEN
+    If SnakeX[0] = FoodX And SnakeY[0] = FoodY Then
         SnakeX[Length] = TailX
         SnakeY[Length] = TailY
         Length = Length + 1
 
-        FoodOnSnake = TRUE
+        FoodOnSnake = True
 
-        DO
-            RANDOM FoodX FROM 1 TO Width - 2
-            RANDOM FoodY FROM 1 TO Height - 2
+        Do
+            Random FoodX From 1 To Width - 2
+            Random FoodY From 1 To Height - 2
 
-            FoodOnSnake = FALSE
+            FoodOnSnake = False
 
-            FOR I = 0 TO Length - 1
-                IF FoodX = SnakeX[I] AND FoodY = SnakeY[I] THEN
-                    FoodOnSnake = TRUE
-                END IF
-            END FOR
-        LOOP UNTIL FoodOnSnake = FALSE
-    END IF
+            For I = 0 To Length - 1
+                If FoodX = SnakeX[I] And FoodY = SnakeY[I] Then
+                    FoodOnSnake = True
+                End If
+            End For
+        Loop Until FoodOnSnake = False
+    End If
 
-    CLEAR SCREEN
+    Clear Screen
 
-    FOR Y = 0 TO Height - 1
-        FOR X = 0 TO Width - 1
-            SnakeHere = FALSE
+    For Y = 0 To Height - 1
+        For X = 0 To Width - 1
+            SnakeHere = False
 
-            FOR I = 0 TO Length - 1
-                IF X = SnakeX[I] AND Y = SnakeY[I] THEN
-                    SnakeHere = TRUE
-                END IF
-            END FOR
+            For I = 0 To Length - 1
+                If X = SnakeX[I] And Y = SnakeY[I] Then
+                    SnakeHere = True
+                End If
+            End For
 
-            IF X = 0 OR X = Width - 1 OR Y = 0 OR Y = Height - 1 THEN
-                PRINT "#";
-            ELSE IF X = FoodX AND Y = FoodY THEN
-                PRINT "@";
-            ELSE IF SnakeHere = TRUE THEN
-                PRINT "O";
-            ELSE
-                PRINT " ";
-            END IF
-        END FOR
+            If X = 0 Or X = Width - 1 Or Y = 0 Or Y = Height - 1 Then
+                Print "#";
+            Else If X = FoodX And Y = FoodY Then
+                Print "@";
+            Else If SnakeHere = True Then
+                Print "O";
+            Else
+                Print " ";
+            End If
+        End For
 
-        PRINT
-    END FOR
+        Print
+    End For
 
-    PRINT "Score: "; Length - 3
-    PRINT "W A S D to move"
+    Print "Score: "; Length - 3
+    Print "W A S D to move"
 
-    WAIT 120 MILLISECONDS
-LOOP UNTIL GameOver = TRUE
+    Wait 120 Milliseconds
+Loop Until GameOver = True
 
-PRINT
-PRINT "GAME OVER"
-PRINT "Score: "; Length - 3
+Print
+Print "Game Over"
+Print "Score: "; Length - 3

@@ -7,7 +7,7 @@
 - Apostrophe begins a comment.
 - Newline terminates a statement.
 - Runtime scalar storage remains signed 64-bit integer.
-- Booleans use `FALSE = 0` and `TRUE = 1`.
+- Booleans use `False = 0` and `True = 1`.
 - Colors and keys are scalar values.
 - Text remains literal-only for this milestone.
 
@@ -15,19 +15,19 @@
 
 ```smile
 Score = 0
-DIM Values[100]
+Dim Values[100]
 
-IF Score = 0 THEN
-    PRINT "Ready"
-END IF
+If Score = 0 Then
+    Print "Ready"
+End If
 
-FOR I = 0 TO 9
+For I = 0 To 9
     Values[I] = I
-END FOR
+End For
 
-DO
+Do
     Score = Score + 1
-LOOP UNTIL Score = 10
+Loop Until Score = 10
 ```
 
 ## Lexical additions
@@ -42,15 +42,15 @@ Allow underscores in identifiers:
 
 ```smile
 KEY_LEFT
-GAME_CLOSED
+Game_Closed
 ```
 
 ## Constants
 
 ```smile
-CONST ScreenWidth = 960
-CONST CellSize = 20
-CONST MaximumSegments = 35 * 24
+Const ScreenWidth = 960
+Const CellSize = 20
+Const MaximumSegments = 35 * 24
 ```
 
 Constants are compile-time, initialized once, and cannot be assigned later.
@@ -60,25 +60,25 @@ Constants are compile-time, initialized once, and cannot be assigned later.
 Support:
 
 ```text
-+  -  *  /  MOD
++  -  *  /  Mod
 ```
 
 Precedence:
 
 1. parentheses;
-2. unary `-`, `NOT`;
-3. `*`, `/`, `MOD`;
+2. unary `-`, `Not`;
+3. `*`, `/`, `Mod`;
 4. `+`, `-`;
 5. relational;
 6. equality;
-7. `AND`;
-8. `OR`.
+7. `And`;
+8. `Or`.
 
 ## Arrays
 
 ```smile
-DIM SnakeX[840]
-DIM Board[10, 20]
+Dim SnakeX[840]
+Dim Board[10, 20]
 
 Board[Column, Row] = RED
 ```
@@ -94,13 +94,13 @@ Rules:
 ## Procedures
 
 ```smile
-SUB DrawBlock(GridX, GridY, BlockColor)
+Sub DrawBlock(GridX, GridY, BlockColor)
     PixelX = GridX * CellSize
     PixelY = GridY * CellSize
-    FILL RECTANGLE PixelX, PixelY, CellSize, CellSize, BlockColor
-END SUB
+    Fill Rectangle PixelX, PixelY, CellSize, CellSize, BlockColor
+End Sub
 
-CALL DrawBlock(X, Y, GREEN)
+Call DrawBlock(X, Y, GREEN)
 ```
 
 - zero to four scalar parameters;
@@ -111,17 +111,17 @@ CALL DrawBlock(X, Y, GREEN)
 ## Functions
 
 ```smile
-FUNCTION CanMove(OffsetX, OffsetY, TestRotation)
-    IF MoveIsBlocked = TRUE THEN
-        RETURN FALSE
-    END IF
+Function CanMove(OffsetX, OffsetY, TestRotation)
+    If MoveIsBlocked = True Then
+        Return False
+    End If
 
-    RETURN TRUE
-END FUNCTION
+    Return True
+End Function
 
-IF CanMove(0, 1, Rotation) = TRUE THEN
+If CanMove(0, 1, Rotation) = True Then
     PieceY = PieceY + 1
-END IF
+End If
 ```
 
 Functions may appear in expressions and conditions. Missing returns produce diagnostics.
@@ -129,26 +129,26 @@ Functions may appear in expressions and conditions. Missing returns produce diag
 ## Flow control
 
 ```smile
-DO
-    CALL UpdateGame()
-LOOP
+Do
+    Call UpdateGame()
+Loop
 
-EXIT FOR
-EXIT DO
-END PROGRAM
+Exit For
+Exit Do
+End Program
 ```
 
-## SELECT CASE
+## Select Case
 
 ```smile
-SELECT CASE PieceType
-    CASE 1
+Select Case PieceType
+    Case 1
         PieceColor = CYAN
-    CASE 2
+    Case 2
         PieceColor = YELLOW
-    CASE ELSE
+    Case Else
         PieceColor = WHITE
-END SELECT
+End Select
 ```
 
 Exact scalar cases only. No fall-through.
@@ -168,17 +168,17 @@ KEY_1 KEY_2
 Direction constants remain:
 
 ```text
-UP DOWN LEFT RIGHT
+UP Down LEFT RIGHT
 ```
 
 Input:
 
 ```smile
-GET KEY Key
+Get Key Key
 
-IF KEY_HELD(KEY_LEFT) = TRUE THEN
+If Key_Held(KEY_LEFT) = True Then
     PaddleX = PaddleX - PaddleSpeed
-END IF
+End If
 ```
 
 Alt+Enter is handled by the runtime, not returned as game input.
@@ -186,12 +186,12 @@ Alt+Enter is handled by the runtime, not returned as game input.
 ## Built-in functions
 
 ```smile
-Elapsed = TIMER()
-Color = RGB(40, 220, 30)
-Distance = ABS(Value)
-Smaller = MIN(A, B)
-Larger = MAX(A, B)
-Closed = GAME_CLOSED()
+Elapsed = Timer()
+Color = Rgb(40, 220, 30)
+Distance = Abs(Value)
+Smaller = Min(A, B)
+Larger = Max(A, B)
+Closed = Game_Closed()
 ```
 
 ## Colors
@@ -205,13 +205,13 @@ LIGHT_RED LIGHT_GREEN LIGHT_BLUE LIGHT_GRAY
 ## Game window
 
 ```smile
-GAME WINDOW "SMILE Snake"
+Game Window "SMILE Snake"
 ```
 
 Equivalent:
 
 ```smile
-GAME WINDOW "SMILE Snake" SIZE 960 BY 540
+Game Window "SMILE Snake" Size 960 By 540
 ```
 
 Only one window. Omitted size means 960×540. Game executables use the Windows GUI subsystem and show no console window.
@@ -219,32 +219,32 @@ Only one window. Omitted size means 960×540. Game executables use the Windows G
 ## Graphics
 
 ```smile
-CLEAR BLACK
+Clear BLACK
 
-FILL RECTANGLE X, Y, Width, Height, Color
-DRAW RECTANGLE X, Y, Width, Height, Color
+Fill Rectangle X, Y, Width, Height, Color
+Draw Rectangle X, Y, Width, Height, Color
 
-FILL ROUNDED RECTANGLE X, Y, Width, Height, Radius, Color
-DRAW ROUNDED RECTANGLE X, Y, Width, Height, Radius, Color
+Fill Rounded Rectangle X, Y, Width, Height, Radius, Color
+Draw Rounded Rectangle X, Y, Width, Height, Radius, Color
 
-FILL CIRCLE CenterX, CenterY, Radius, Color
-DRAW CIRCLE CenterX, CenterY, Radius, Color
+Fill Circle CenterX, CenterY, Radius, Color
+Draw Circle CenterX, CenterY, Radius, Color
 
-DRAW LINE X1, Y1, X2, Y2, Color
+Draw Line X1, Y1, X2, Y2, Color
 
-DRAW TEXT "GAME OVER" AT 480, 190 SIZE 54 COLOR RED CENTERED
-DRAW NUMBER Score AT 820, 120 SIZE 36 COLOR YELLOW
+Draw Text "Game OVER" At 480, 190 Size 54 Color RED Centered
+Draw Number Score At 820, 120 Size 36 Color YELLOW
 
-SHOW SCREEN
+Show Screen
 ```
 
-`CLEAR SCREEN` remains the console statement. `CLEAR Color` clears the game back buffer.
+`Clear Screen` remains the console statement. `Clear Color` clears the game back buffer.
 
 ## Sound
 
 ```smile
-PLAY SOUND "Assets\Eat.wav"
-STOP SOUND
+Play Sound "Assets\Eat.wav"
+Stop Sound
 ```
 
 Asynchronous WAV playback. Missing sounds do not crash.
@@ -252,8 +252,8 @@ Asynchronous WAV playback. Missing sounds do not crash.
 ## Persistence
 
 ```smile
-LOAD HighScore FROM "HighScore" DEFAULT 0
-SAVE HighScore TO "HighScore"
+Load HighScore From "HighScore" Default 0
+Save HighScore To "HighScore"
 ```
 
 Integer values only. Storage is isolated per game and managed by the runtime.

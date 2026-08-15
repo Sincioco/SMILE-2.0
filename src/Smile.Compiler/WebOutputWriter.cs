@@ -104,7 +104,7 @@ internal static class WebOutputWriter
 
             function safe(value) {
                 if (!Number.isSafeInteger(value))
-                    throw new Error(`SMILE Web NUMBER is outside the safe integer range: ${value}`);
+                    throw new Error(`SMILE Web Number is outside the safe integer range: ${value}`);
                 return value;
             }
 
@@ -123,12 +123,12 @@ internal static class WebOutputWriter
             }
             function mod(left, right) {
                 [left, right] = operands(left, right);
-                if (right === 0) throw new Error("SMILE Web MOD by zero.");
+                if (right === 0) throw new Error("SMILE Web Mod by zero.");
                 return safe(left % right);
             }
 
             function isTrue(value) { return typeof value === "boolean" ? value : safe(value) !== 0; }
-            function booleanText(value) { return isTrue(value) ? "TRUE" : "FALSE"; }
+            function booleanText(value) { return isTrue(value) ? "True" : "False"; }
             function abs(value) { return safe(Math.abs(safe(value))); }
             function min(left, right) { [left, right] = operands(left, right); return Math.min(left, right); }
             function max(left, right) { [left, right] = operands(left, right); return Math.max(left, right); }
@@ -142,7 +142,7 @@ internal static class WebOutputWriter
             function random(minimum, maximum) {
                 minimum = safe(minimum);
                 maximum = safe(maximum);
-                if (maximum < minimum) throw new Error("SMILE Web RANDOM maximum is below its minimum.");
+                if (maximum < minimum) throw new Error("SMILE Web Random maximum is below its minimum.");
                 return safe(minimum + Math.floor(Math.random() * (maximum - minimum + 1)));
             }
 
@@ -179,7 +179,7 @@ internal static class WebOutputWriter
                 const offset = arrayOffset(target, indices);
                 return { get: () => target.data[offset], set: value => { target.data[offset] = value; } };
             }
-            function invalidRef() { throw new Error("Invalid SMILE BYREF argument."); }
+            function invalidRef() { throw new Error("Invalid SMILE ByRef argument."); }
 
             function color(value) {
                 value = safe(value);
@@ -192,7 +192,7 @@ internal static class WebOutputWriter
             function gameWindow(title, width, height) {
                 logicalWidth = safe(width);
                 logicalHeight = safe(height);
-                if (logicalWidth <= 0 || logicalHeight <= 0) throw new Error("GAME WINDOW dimensions must be positive.");
+                if (logicalWidth <= 0 || logicalHeight <= 0) throw new Error("Game Window dimensions must be positive.");
                 canvas.style.aspectRatio = `${logicalWidth} / ${logicalHeight}`;
                 document.title = title;
                 canvas.setAttribute("aria-label", title);
@@ -454,7 +454,7 @@ internal static class WebOutputWriter
 
             async function loadImage(path) {
                 const logical = logicalPath(path);
-                if (!logical) throw new Error("LOAD IMAGE path must not be empty.");
+                if (!logical) throw new Error("Load Image path must not be empty.");
                 let entry = imageCache.get(logical);
                 if (!entry) {
                     entry = { logical, refs: 0, resource: null, width: 0, height: 0, promise: null, disposed: false };
@@ -465,10 +465,10 @@ internal static class WebOutputWriter
                             entry.resource = resource;
                             entry.width = safe(resource.naturalWidth || resource.width);
                             entry.height = safe(resource.naturalHeight || resource.height);
-                            if (entry.width <= 0 || entry.height <= 0) reject(new Error(`LOAD IMAGE decoded invalid dimensions: ${logical}`));
+                            if (entry.width <= 0 || entry.height <= 0) reject(new Error(`Load Image decoded invalid dimensions: ${logical}`));
                             else resolve(entry);
                         };
-                        resource.onerror = () => reject(new Error(`LOAD IMAGE failed: ${logical}`));
+                        resource.onerror = () => reject(new Error(`Load Image failed: ${logical}`));
                         resource.src = logical;
                     }).catch(error => { if (entry.refs === 0) imageCache.delete(logical); throw error; });
                     imageCache.set(logical, entry);
@@ -527,7 +527,7 @@ internal static class WebOutputWriter
             function drawImage(handle, sourceX, sourceY, sourceWidth, sourceHeight, destinationX, destinationY,
                 destinationWidth, destinationHeight, opacity, filter, flip, anchorX, anchorY) {
                 try {
-                    if (!imageLoadedRaw(handle)) throw new Error("DRAW IMAGE requires a loaded IMAGE.");
+                    if (!imageLoadedRaw(handle)) throw new Error("Draw Image requires a loaded Image.");
                     const entry = handle.entry;
                     sourceX = safe(sourceX); sourceY = safe(sourceY);
                     sourceWidth = safe(sourceWidth); sourceHeight = safe(sourceHeight);
@@ -541,10 +541,10 @@ internal static class WebOutputWriter
                     if (destinationHeight < 0) destinationHeight = sourceHeight;
                     if (sourceX < 0 || sourceY < 0 || sourceWidth <= 0 || sourceHeight <= 0 ||
                         sourceX + sourceWidth > entry.width || sourceY + sourceHeight > entry.height)
-                        throw new Error("DRAW IMAGE source rectangle is outside the image.");
+                        throw new Error("Draw Image source rectangle is outside the image.");
                     if (destinationWidth <= 0 || destinationHeight <= 0 || opacity < 0 || opacity > 100 ||
                         (filter !== 0 && filter !== 1) || (flip & ~3) !== 0)
-                        throw new Error("DRAW IMAGE destination, opacity, filter, or flip is invalid.");
+                        throw new Error("Draw Image destination, opacity, filter, or flip is invalid.");
                     const left = destinationX - anchorX;
                     const top = destinationY - anchorY;
                     const flipX = (flip & 1) !== 0;
@@ -568,7 +568,7 @@ internal static class WebOutputWriter
 
             function pushClip(x, y, width, height) {
                 x = safe(x); y = safe(y); width = safe(width); height = safe(height);
-                if (width <= 0 || height <= 0) throw new Error("CLIP RECTANGLE width and height must be positive.");
+                if (width <= 0 || height <= 0) throw new Error("Clip Rectangle width and height must be positive.");
                 clipStack.push({ x, y, width, height });
                 back.save();
                 back.beginPath();
@@ -746,7 +746,7 @@ internal static class WebOutputWriter
                     if (!AudioContextType) return { logical, buffer: null };
                     if (!audioContext) audioContext = new AudioContextType();
                     const response = await fetch(logical);
-                    if (!response.ok) throw new Error(`PLAY SOUND failed: ${logical}`);
+                    if (!response.ok) throw new Error(`Play Sound failed: ${logical}`);
                     const bytes = await response.arrayBuffer();
                     const buffer = await audioContext.decodeAudioData(bytes.slice(0));
                     return { logical, buffer };
@@ -849,7 +849,7 @@ internal static class WebOutputWriter
             }
 
             async function loadTextFile(path, target) {
-                if (!target || !Array.isArray(target.data)) throw new Error("LOAD TEXT FILE requires a one-dimensional array.");
+                if (!target || !Array.isArray(target.data)) throw new Error("Load Text File requires a one-dimensional array.");
                 target.data.fill(0);
                 try {
                     const response = await fetch(logicalPath(path), { cache: "no-store" });
@@ -912,29 +912,29 @@ internal static class WebOutputWriter
             function dataPayload(envelope) {
                 if (envelope.length < 44 || envelope[0] !== 0x53 || envelope[1] !== 0x4d ||
                     envelope[2] !== 0x44 || envelope[3] !== 0x34)
-                    throw new Error("LOAD DATA encountered an invalid persistent-data envelope.");
+                    throw new Error("Load Data encountered an invalid persistent-data envelope.");
                 const view = new DataView(envelope.buffer, envelope.byteOffset, envelope.byteLength);
                 const version = view.getUint32(4, true);
                 const length = view.getUint32(8, true);
                 if (version !== 1 || length > 1024 * 1024 || envelope.length !== 44 + length)
-                    throw new Error("LOAD DATA encountered an unsupported or malformed persistent-data envelope.");
+                    throw new Error("Load Data encountered an unsupported or malformed persistent-data envelope.");
                 const payload = envelope.slice(44);
                 const digest = sha256(payload);
                 for (let index = 0; index < digest.length; index += 1)
                     if (digest[index] !== envelope[12 + index])
-                        throw new Error("LOAD DATA persistent-data checksum mismatch.");
+                        throw new Error("Load Data persistent-data checksum mismatch.");
                 return payload;
             }
 
             function saveData(target, count, key) {
                 if (!target || !Array.isArray(target.data) || target.dimensions.length !== 1)
-                    throw new Error("SAVE DATA source must be a one-dimensional NUMBER array.");
+                    throw new Error("Save Data source must be a one-dimensional Number array.");
                 count = safe(count);
                 if (count < 0 || count > target.data.length || count > 1024 * 1024)
-                    throw new Error("SAVE DATA COUNT is outside the buffer or DATA_BLOCK_MAX_BYTES.");
+                    throw new Error("Save Data Count is outside the buffer or DATA_BLOCK_MAX_BYTES.");
                 const bytes = target.data.slice(0, count).map(value => {
                     value = safe(value);
-                    if (value < 0 || value > 255) throw new Error("SAVE DATA values must be bytes from 0 through 255.");
+                    if (value < 0 || value > 255) throw new Error("Save Data values must be bytes from 0 through 255.");
                     return value;
                 });
                 const fullKey = dataStorageKey(key);
@@ -945,7 +945,7 @@ internal static class WebOutputWriter
 
             function loadData(key, target) {
                 if (!target || !Array.isArray(target.data) || target.dimensions.length !== 1)
-                    throw new Error("LOAD DATA destination must be a one-dimensional NUMBER array.");
+                    throw new Error("Load Data destination must be a one-dimensional Number array.");
                 target.data.fill(0);
                 const fullKey = dataStorageKey(key);
                 let text = memoryStorage.has(fullKey) ? memoryStorage.get(fullKey) : null;
@@ -955,7 +955,7 @@ internal static class WebOutputWriter
                 try { bytes = dataPayload(new Uint8Array(decodeBytes(text))); }
                 catch (error) { target.data.fill(0); throw error; }
                 if (bytes.length > 1024 * 1024 || bytes.length > target.data.length)
-                    throw new Error("LOAD DATA block exceeds the destination capacity.");
+                    throw new Error("Load Data block exceeds the destination capacity.");
                 for (let index = 0; index < bytes.length; index += 1) target.data[index] = bytes[index];
                 return safe(bytes.length);
             }

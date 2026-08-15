@@ -23,15 +23,15 @@ Add:
 Mode 3  demo, computer vs computer
 ```
 
-or retain the existing modes and use `DemoMode = TRUE`. Either is acceptable; keep the code clear.
+or retain the existing modes and use `DemoMode = True`. Either is acceptable; keep the code clear.
 
 Use shared timing constants:
 
 ```smile
-CONST TitleDemoDelay = 5000
-CONST DemoMinimumPlayTime = 30000
-CONST DemoMaximumPlayTime = 45000
-CONST DemoTerminalDuration = 5000
+Const TitleDemoDelay = 5000
+Const DemoMinimumPlayTime = 30000
+Const DemoMaximumPlayTime = 45000
+Const DemoTerminalDuration = 5000
 ```
 
 ## 2. Title
@@ -65,7 +65,7 @@ Behavior:
 - reset scores, rally, ball, accumulator;
 - set `DemoStartedAt`;
 - start the normal serve automatically;
-- show `DEMO` and `PRESS ANY KEY TO RETURN`;
+- show `DEMO` and `PRESS ANY Key To Return`;
 - not save best rally.
 
 ## 4. Two-paddle AI

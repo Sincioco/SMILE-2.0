@@ -1,15 +1,15 @@
-' GAME WINDOW programs automatically silence music and sounds while inactive or minimized.
+' Game Window programs automatically silence music and sounds while inactive or minimized.
 ' The shared runtime restores requested music volume; no per-game focus handler is needed.
-OPTION EXPLICIT
+Option Explicit
 
-GAME WINDOW "My SMILE Game"
+Game Window "My SMILE Game"
 
-DIM Caption AS TEXT
-Caption = "HELLO, SMILE!"
+Dim Caption As Text
+Caption = "Hello, SMILE!"
 
-DO
-    CLEAR RGB(20, 20, 35)
-    DRAW TEXT Caption AT 480, 240 SIZE 42 COLOR YELLOW CENTERED
-    SHOW SCREEN
-    WAIT 16 MILLISECONDS
-LOOP UNTIL GAME_CLOSED() = TRUE
+Do
+    Clear Rgb(20, 20, 35)
+    Draw Text Caption At 480, 240 Size 42 Color YELLOW Centered
+    Show Screen
+    Wait 16 Milliseconds
+Loop Until Game_Closed() = True

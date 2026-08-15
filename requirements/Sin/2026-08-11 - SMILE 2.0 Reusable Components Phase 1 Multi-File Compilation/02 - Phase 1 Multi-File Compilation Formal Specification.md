@@ -157,9 +157,9 @@ The startup source may contain everything currently legal at top level, includin
 - arrays;
 - routines;
 - assignments and other executable statements;
-- `GAME WINDOW`;
+- `Game Window`;
 - the main loop;
-- `END PROGRAM`.
+- `End Program`.
 
 Existing single-file programs must retain their behavior.
 
@@ -167,10 +167,10 @@ Existing single-file programs must retain their behavior.
 
 At top level, a support source may contain only:
 
-- `CONST` declarations;
-- `DIM` declarations;
-- `SUB ... END SUB` declarations;
-- `FUNCTION ... END FUNCTION` declarations;
+- `Const` declarations;
+- `Dim` declarations;
+- `Sub ... End Sub` declarations;
+- `Function ... End Function` declarations;
 - comments and blank lines.
 
 The bodies of support-file routines may use all normally valid statements.
@@ -179,10 +179,10 @@ A support source must not contain an executable top-level statement such as:
 
 ```smile
 Score = 0
-CALL StartGame()
-PRINT "Hello"
-GAME WINDOW "Other Program"
-END PROGRAM
+Call StartGame()
+Print "Hello"
+Game Window "Other Program"
+End Program
 ```
 
 Report a clear semantic diagnostic in the support file explaining that executable top-level statements belong in the selected startup source. Do not silently ignore or reorder them.
@@ -190,18 +190,18 @@ Report a clear semantic diagnostic in the support file explaining that executabl
 This restriction is intentional. Until Phase 3 adds proper scalar declarations and later phases define module initialization, reusable support files should expose explicit initialization routines such as:
 
 ```smile
-SUB InitializeMenu()
+Sub InitializeMenu()
     ' Initialize component state.
-END SUB
+End Sub
 ```
 
 ## Game window
 
-`GAME WINDOW` is legal only in the startup source and retains the existing program-wide rules. A support-file `GAME WINDOW` is an error.
+`Game Window` is legal only in the startup source and retains the existing program-wide rules. A support-file `Game Window` is an error.
 
 ## Program termination
 
-`END PROGRAM` is legal only in the startup source. A support-file `END PROGRAM` is an error.
+`End Program` is legal only in the startup source. A support-file `End Program` is an error.
 
 ---
 
@@ -214,7 +214,7 @@ The implementation must support:
 - a startup file calling a routine declared in any support file;
 - a support routine calling a routine declared in another support file;
 - a support routine referencing a valid global symbol declared by the startup source;
-- any source referencing a global `CONST` or `DIM` array declared in a support source;
+- any source referencing a global `Const` or `Dim` array declared in a support source;
 - forward references across source order;
 - case-insensitive symbol lookup across the compilation.
 
@@ -377,7 +377,7 @@ Update the Web emitter to:
 - assign collision-safe names across all compilation symbols/routines;
 - emit all global declarations and routines exactly once;
 - emit only startup top-level entry statements in `smileMain`;
-- derive the page/game title from the startup source’s `GAME WINDOW`;
+- derive the page/game title from the startup source’s `Game Window`;
 - retain current safe-integer, async, Canvas, audio, input, persistence, and asset semantics;
 - report unsupported Web operations against the correct source document.
 
@@ -490,8 +490,8 @@ Add focused diagnostics for at least:
 - duplicate source path;
 - missing support source at the compiler/project layer;
 - executable top-level statement in a support source;
-- `GAME WINDOW` in a support source;
-- `END PROGRAM` in a support source;
+- `Game Window` in a support source;
+- `End Program` in a support source;
 - duplicate global symbol across files;
 - duplicate routine across files;
 - Web-target error mapped to a support file.
@@ -504,16 +504,16 @@ Use the next appropriate codes in the repository’s existing diagnostic familie
 
 Do not implement in Phase 1:
 
-- `MODULE` or `END MODULE`;
-- `IMPORT`;
-- `PUBLIC`/`PRIVATE`;
+- `Module` or `End Module`;
+- `Import`;
+- `Public`/`Private`;
 - `.smilelib` or `.smilelibproj`;
 - project references;
-- `OPTION EXPLICIT`;
-- user-defined `TYPE`;
-- scalar `DIM ... AS ...`;
-- mutable `TEXT`;
-- `BYREF`/`BYVAL`;
+- `Option Explicit`;
+- user-defined `Type`;
+- scalar `Dim ... As ...`;
+- mutable `Text`;
+- `ByRef`/`ByVal`;
 - parameter-limit removal;
 - images or sprites;
 - clipping;

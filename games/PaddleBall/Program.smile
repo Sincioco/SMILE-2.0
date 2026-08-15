@@ -1,25 +1,25 @@
 ' SMILE 2.0 Paddle Ball - one-player AI and local two-player modes.
-CONST CanvasWidth = 960
-CONST CanvasHeight = 540
-CONST PaddleWidth = 16
-CONST PaddleHeight = 100
-CONST PaddleMargin = 40
-CONST BallRadius = 9
-CONST WinningScore = 3
-CONST SubpixelsPerPixel = 1000
-CONST SimulationStep = 8
-CONST MaxCatchUpSteps = 6
-CONST BallSpeedUnit = 60000
-CONST PlayerPaddleSpeed = 360000
-CONST ComputerPaddleSpeed = 260000
-CONST ComputerCenterSpeed = 130000
-CONST DemoPaddleSpeed = 440000
-CONST DemoCenterSpeed = 180000
-CONST DemoPaddleAcceleration = 2400000
-CONST TitleDemoDelay = 5000
-CONST DemoMinimumPlayTime = 30000
-CONST DemoMaximumPlayTime = 45000
-CONST TitleInputArmDelay = 250
+Const CanvasWidth = 960
+Const CanvasHeight = 540
+Const PaddleWidth = 16
+Const PaddleHeight = 100
+Const PaddleMargin = 40
+Const BallRadius = 9
+Const WinningScore = 3
+Const SubpixelsPerPixel = 1000
+Const SimulationStep = 8
+Const MaxCatchUpSteps = 6
+Const BallSpeedUnit = 60000
+Const PlayerPaddleSpeed = 360000
+Const ComputerPaddleSpeed = 260000
+Const ComputerCenterSpeed = 130000
+Const DemoPaddleSpeed = 440000
+Const DemoCenterSpeed = 180000
+Const DemoPaddleAcceleration = 2400000
+Const TitleDemoDelay = 5000
+Const DemoMinimumPlayTime = 30000
+Const DemoMaximumPlayTime = 45000
+Const TitleInputArmDelay = 250
 
 LeftY = 220
 RightY = 220
@@ -42,7 +42,7 @@ ServeTime = 0
 ServeSide = 0
 ServeVertical = 0
 Dash = 0
-LastFrameTime = TIMER()
+LastFrameTime = Timer()
 FrameTime = LastFrameTime
 Elapsed = 0
 Accumulator = 0
@@ -55,29 +55,29 @@ DrainIndex = 0
 DemoLeftVelocity = 0
 DemoRightVelocity = 0
 
-LOAD BestRally FROM "BestRally" DEFAULT 0
+Load BestRally From "BestRally" Default 0
 
-SUB ResetBall()
+Sub ResetBall()
     BallX = CanvasWidth / 2
     BallY = CanvasHeight / 2
     BallXSub = BallX * SubpixelsPerPixel
     BallYSub = BallY * SubpixelsPerPixel
-    RANDOM ServeSide FROM 0 TO 1
-    IF ServeSide = 0 THEN
+    Random ServeSide From 0 To 1
+    If ServeSide = 0 Then
         BallVX = -5 * BallSpeedUnit
-    ELSE
+    Else
         BallVX = 5 * BallSpeedUnit
-    END IF
-    RANDOM ServeVertical FROM -3 TO 3
-    IF ServeVertical = 0 THEN
+    End If
+    Random ServeVertical From -3 To 3
+    If ServeVertical = 0 Then
         ServeVertical = 2
-    END IF
+    End If
     BallVY = ServeVertical * BallSpeedUnit
     Rally = 0
-    ServeTime = TIMER() + 650
-END SUB
+    ServeTime = Timer() + 650
+End Sub
 
-SUB ResetMatch()
+Sub ResetMatch()
     LeftY = (CanvasHeight - PaddleHeight) / 2
     RightY = (CanvasHeight - PaddleHeight) / 2
     LeftYSub = LeftY * SubpixelsPerPixel
@@ -86,383 +86,383 @@ SUB ResetMatch()
     RightScore = 0
     DemoLeftVelocity = 0
     DemoRightVelocity = 0
-    CALL ResetBall()
+    Call ResetBall()
     Accumulator = 0
     State = 1
-END SUB
+End Sub
 
-SUB DrainPendingKeys()
-    FOR DrainIndex = 1 TO 64
-        GET KEY DrainedKey
-    END FOR
-END SUB
+Sub DrainPendingKeys()
+    For DrainIndex = 1 To 64
+        Get Key DrainedKey
+    End For
+End Sub
 
-SUB EnterTitle()
+Sub EnterTitle()
     Mode = 0
     State = 0
     Accumulator = 0
     Key = KEY_NONE
-    STOP SOUND
-    CALL DrainPendingKeys()
-    TitleStartedAt = TIMER()
+    Stop Sound
+    Call DrainPendingKeys()
+    TitleStartedAt = Timer()
     TitleAcceptInputAt = TitleStartedAt + TitleInputArmDelay
-END SUB
+End Sub
 
-SUB StartGame(GameMode)
+Sub StartGame(GameMode)
     Mode = GameMode
-    CALL ResetMatch()
-END SUB
+    Call ResetMatch()
+End Sub
 
-SUB StartDemo()
+Sub StartDemo()
     Mode = 3
-    CALL ResetMatch()
-    DemoStartedAt = TIMER()
-END SUB
+    Call ResetMatch()
+    DemoStartedAt = Timer()
+End Sub
 
-SUB RecordRally()
+Sub RecordRally()
     Rally = Rally + 1
-    IF Mode = 1 AND Rally > BestRally THEN
+    If Mode = 1 And Rally > BestRally Then
         BestRally = Rally
-        SAVE BestRally TO "BestRally"
-    END IF
-END SUB
+        Save BestRally To "BestRally"
+    End If
+End Sub
 
-SUB BounceFromPaddle(PaddleY, DirectionSign)
+Sub BounceFromPaddle(PaddleY, DirectionSign)
     Contact = BallY - (PaddleY + PaddleHeight / 2)
     VerticalSpeed = Contact / 8
-    IF VerticalSpeed = 0 THEN
-        IF Contact < 0 THEN
+    If VerticalSpeed = 0 Then
+        If Contact < 0 Then
             VerticalSpeed = -1
-        ELSE
+        Else
             VerticalSpeed = 1
-        END IF
-    END IF
-    HorizontalSpeed = MIN(10, 5 + Rally / 4)
+        End If
+    End If
+    HorizontalSpeed = Min(10, 5 + Rally / 4)
     BallVX = HorizontalSpeed * BallSpeedUnit * DirectionSign
     BallVY = VerticalSpeed * BallSpeedUnit
-    CALL RecordRally()
-    PLAY SOUND "Assets\Paddle.wav"
-END SUB
+    Call RecordRally()
+    Play Sound "Assets\Paddle.wav"
+End Sub
 
-SUB FinishMatch()
-    IF Mode = 3 THEN
-        CALL EnterTitle()
-        RETURN
-    END IF
+Sub FinishMatch()
+    If Mode = 3 Then
+        Call EnterTitle()
+        Return
+    End If
     State = 2
-    PLAY SOUND "Assets\GameOver.wav"
-END SUB
+    Play Sound "Assets\GameOver.wav"
+End Sub
 
-SUB AwardPoint(PlayerNumber)
-    IF PlayerNumber = 1 THEN
+Sub AwardPoint(PlayerNumber)
+    If PlayerNumber = 1 Then
         LeftScore = LeftScore + 1
-    ELSE
+    Else
         RightScore = RightScore + 1
-    END IF
-    PLAY SOUND "Assets\Score.wav"
-    IF LeftScore >= WinningScore OR RightScore >= WinningScore THEN
-        IF Mode = 3 AND TIMER() - DemoStartedAt < DemoMinimumPlayTime THEN
+    End If
+    Play Sound "Assets\Score.wav"
+    If LeftScore >= WinningScore Or RightScore >= WinningScore Then
+        If Mode = 3 And Timer() - DemoStartedAt < DemoMinimumPlayTime Then
             LeftScore = 0
             RightScore = 0
-            CALL ResetBall()
-        ELSE
-            CALL FinishMatch()
-        END IF
-    ELSE
-        CALL ResetBall()
-    END IF
-END SUB
+            Call ResetBall()
+        Else
+            Call FinishMatch()
+        End If
+    Else
+        Call ResetBall()
+    End If
+End Sub
 
-SUB UpdatePaddles()
+Sub UpdatePaddles()
     PlayerStep = PlayerPaddleSpeed * SimulationStep / 1000
     ComputerStep = ComputerPaddleSpeed * SimulationStep / 1000
     CenterStep = ComputerCenterSpeed * SimulationStep / 1000
     MinimumPaddleSub = 12 * SubpixelsPerPixel
     MaximumPaddleSub = (CanvasHeight - PaddleHeight - 12) * SubpixelsPerPixel
 
-    IF Mode = 3 THEN
+    If Mode = 3 Then
         DemoAccelerationStep = DemoPaddleAcceleration * SimulationStep / 1000
         LeftCenter = LeftY + PaddleHeight / 2
         RightCenter = RightY + PaddleHeight / 2
         DemoLeftDesiredVelocity = 0
         DemoRightDesiredVelocity = 0
 
-        IF BallVX < 0 THEN
-            IF BallY < LeftCenter - 10 THEN
+        If BallVX < 0 Then
+            If BallY < LeftCenter - 10 Then
                 DemoLeftDesiredVelocity = -DemoPaddleSpeed
-            ELSE IF BallY > LeftCenter + 10 THEN
+            Else If BallY > LeftCenter + 10 Then
                 DemoLeftDesiredVelocity = DemoPaddleSpeed
-            END IF
-        ELSE
-            IF LeftCenter < CanvasHeight / 2 - 10 THEN
+            End If
+        Else
+            If LeftCenter < CanvasHeight / 2 - 10 Then
                 DemoLeftDesiredVelocity = DemoCenterSpeed
-            ELSE IF LeftCenter > CanvasHeight / 2 + 10 THEN
+            Else If LeftCenter > CanvasHeight / 2 + 10 Then
                 DemoLeftDesiredVelocity = -DemoCenterSpeed
-            END IF
-        END IF
+            End If
+        End If
 
-        IF BallVX > 0 THEN
-            IF BallY < RightCenter - 10 THEN
+        If BallVX > 0 Then
+            If BallY < RightCenter - 10 Then
                 DemoRightDesiredVelocity = -DemoPaddleSpeed
-            ELSE IF BallY > RightCenter + 10 THEN
+            Else If BallY > RightCenter + 10 Then
                 DemoRightDesiredVelocity = DemoPaddleSpeed
-            END IF
-        ELSE
-            IF RightCenter < CanvasHeight / 2 - 10 THEN
+            End If
+        Else
+            If RightCenter < CanvasHeight / 2 - 10 Then
                 DemoRightDesiredVelocity = DemoCenterSpeed
-            ELSE IF RightCenter > CanvasHeight / 2 + 10 THEN
+            Else If RightCenter > CanvasHeight / 2 + 10 Then
                 DemoRightDesiredVelocity = -DemoCenterSpeed
-            END IF
-        END IF
+            End If
+        End If
 
-        IF DemoLeftVelocity < DemoLeftDesiredVelocity THEN
-            DemoLeftVelocity = MIN(DemoLeftDesiredVelocity, DemoLeftVelocity + DemoAccelerationStep)
-        ELSE IF DemoLeftVelocity > DemoLeftDesiredVelocity THEN
-            DemoLeftVelocity = MAX(DemoLeftDesiredVelocity, DemoLeftVelocity - DemoAccelerationStep)
-        END IF
-        IF DemoRightVelocity < DemoRightDesiredVelocity THEN
-            DemoRightVelocity = MIN(DemoRightDesiredVelocity, DemoRightVelocity + DemoAccelerationStep)
-        ELSE IF DemoRightVelocity > DemoRightDesiredVelocity THEN
-            DemoRightVelocity = MAX(DemoRightDesiredVelocity, DemoRightVelocity - DemoAccelerationStep)
-        END IF
+        If DemoLeftVelocity < DemoLeftDesiredVelocity Then
+            DemoLeftVelocity = Min(DemoLeftDesiredVelocity, DemoLeftVelocity + DemoAccelerationStep)
+        Else If DemoLeftVelocity > DemoLeftDesiredVelocity Then
+            DemoLeftVelocity = Max(DemoLeftDesiredVelocity, DemoLeftVelocity - DemoAccelerationStep)
+        End If
+        If DemoRightVelocity < DemoRightDesiredVelocity Then
+            DemoRightVelocity = Min(DemoRightDesiredVelocity, DemoRightVelocity + DemoAccelerationStep)
+        Else If DemoRightVelocity > DemoRightDesiredVelocity Then
+            DemoRightVelocity = Max(DemoRightDesiredVelocity, DemoRightVelocity - DemoAccelerationStep)
+        End If
 
-        LeftYSub = MAX(MinimumPaddleSub, MIN(MaximumPaddleSub, LeftYSub + DemoLeftVelocity * SimulationStep / 1000))
-        RightYSub = MAX(MinimumPaddleSub, MIN(MaximumPaddleSub, RightYSub + DemoRightVelocity * SimulationStep / 1000))
-    ELSE
-        IF KEY_HELD(KEY_W) = TRUE THEN
-            LeftYSub = MAX(MinimumPaddleSub, LeftYSub - PlayerStep)
-        END IF
-        IF KEY_HELD(KEY_S) = TRUE THEN
-            LeftYSub = MIN(MaximumPaddleSub, LeftYSub + PlayerStep)
-        END IF
-    END IF
+        LeftYSub = Max(MinimumPaddleSub, Min(MaximumPaddleSub, LeftYSub + DemoLeftVelocity * SimulationStep / 1000))
+        RightYSub = Max(MinimumPaddleSub, Min(MaximumPaddleSub, RightYSub + DemoRightVelocity * SimulationStep / 1000))
+    Else
+        If Key_Held(KEY_W) = True Then
+            LeftYSub = Max(MinimumPaddleSub, LeftYSub - PlayerStep)
+        End If
+        If Key_Held(KEY_S) = True Then
+            LeftYSub = Min(MaximumPaddleSub, LeftYSub + PlayerStep)
+        End If
+    End If
     LeftY = LeftYSub / SubpixelsPerPixel
 
-    IF Mode = 2 THEN
-        IF KEY_HELD(KEY_UP) = TRUE THEN
-            RightYSub = MAX(MinimumPaddleSub, RightYSub - PlayerStep)
-        END IF
-        IF KEY_HELD(KEY_DOWN) = TRUE THEN
-            RightYSub = MIN(MaximumPaddleSub, RightYSub + PlayerStep)
-        END IF
-    ELSE IF Mode = 1 THEN
-        AIY = RightY + PaddleHeight / 2
-        IF BallVX > 0 THEN
-            IF BallY < AIY - 14 THEN
-                RightYSub = MAX(MinimumPaddleSub, RightYSub - ComputerStep)
-            ELSE IF BallY > AIY + 14 THEN
-                RightYSub = MIN(MaximumPaddleSub, RightYSub + ComputerStep)
-            END IF
-        ELSE
-            IF AIY < CanvasHeight / 2 - 10 THEN
-                RightYSub = MIN(MaximumPaddleSub, RightYSub + CenterStep)
-            ELSE IF AIY > CanvasHeight / 2 + 10 THEN
-                RightYSub = MAX(MinimumPaddleSub, RightYSub - CenterStep)
-            END IF
-        END IF
-    END IF
+    If Mode = 2 Then
+        If Key_Held(KEY_UP) = True Then
+            RightYSub = Max(MinimumPaddleSub, RightYSub - PlayerStep)
+        End If
+        If Key_Held(KEY_DOWN) = True Then
+            RightYSub = Min(MaximumPaddleSub, RightYSub + PlayerStep)
+        End If
+    Else If Mode = 1 Then
+        Aiy = RightY + PaddleHeight / 2
+        If BallVX > 0 Then
+            If BallY < Aiy - 14 Then
+                RightYSub = Max(MinimumPaddleSub, RightYSub - ComputerStep)
+            Else If BallY > Aiy + 14 Then
+                RightYSub = Min(MaximumPaddleSub, RightYSub + ComputerStep)
+            End If
+        Else
+            If Aiy < CanvasHeight / 2 - 10 Then
+                RightYSub = Min(MaximumPaddleSub, RightYSub + CenterStep)
+            Else If Aiy > CanvasHeight / 2 + 10 Then
+                RightYSub = Max(MinimumPaddleSub, RightYSub - CenterStep)
+            End If
+        End If
+    End If
     RightY = RightYSub / SubpixelsPerPixel
-END SUB
+End Sub
 
-SUB UpdateBall()
-    IF TIMER() >= ServeTime THEN
+Sub UpdateBall()
+    If Timer() >= ServeTime Then
         BallXSub = BallXSub + BallVX * SimulationStep / 1000
         BallYSub = BallYSub + BallVY * SimulationStep / 1000
         BallX = BallXSub / SubpixelsPerPixel
         BallY = BallYSub / SubpixelsPerPixel
 
-        IF BallY - BallRadius <= 8 THEN
+        If BallY - BallRadius <= 8 Then
             BallY = 8 + BallRadius
             BallYSub = BallY * SubpixelsPerPixel
-            BallVY = ABS(BallVY)
-            PLAY SOUND "Assets\Wall.wav"
-        ELSE IF BallY + BallRadius >= CanvasHeight - 8 THEN
+            BallVY = Abs(BallVY)
+            Play Sound "Assets\Wall.wav"
+        Else If BallY + BallRadius >= CanvasHeight - 8 Then
             BallY = CanvasHeight - 8 - BallRadius
             BallYSub = BallY * SubpixelsPerPixel
-            BallVY = -ABS(BallVY)
-            PLAY SOUND "Assets\Wall.wav"
-        END IF
+            BallVY = -Abs(BallVY)
+            Play Sound "Assets\Wall.wav"
+        End If
 
-        IF BallVX < 0 AND BallX - BallRadius <= PaddleMargin + PaddleWidth AND BallX - BallRadius >= PaddleMargin THEN
-            IF BallY + BallRadius >= LeftY AND BallY - BallRadius <= LeftY + PaddleHeight THEN
+        If BallVX < 0 And BallX - BallRadius <= PaddleMargin + PaddleWidth And BallX - BallRadius >= PaddleMargin Then
+            If BallY + BallRadius >= LeftY And BallY - BallRadius <= LeftY + PaddleHeight Then
                 BallX = PaddleMargin + PaddleWidth + BallRadius
                 BallXSub = BallX * SubpixelsPerPixel
-                CALL BounceFromPaddle(LeftY, 1)
-            END IF
-        END IF
+                Call BounceFromPaddle(LeftY, 1)
+            End If
+        End If
 
-        IF BallVX > 0 AND BallX + BallRadius >= CanvasWidth - PaddleMargin - PaddleWidth AND BallX + BallRadius <= CanvasWidth - PaddleMargin THEN
-            IF BallY + BallRadius >= RightY AND BallY - BallRadius <= RightY + PaddleHeight THEN
+        If BallVX > 0 And BallX + BallRadius >= CanvasWidth - PaddleMargin - PaddleWidth And BallX + BallRadius <= CanvasWidth - PaddleMargin Then
+            If BallY + BallRadius >= RightY And BallY - BallRadius <= RightY + PaddleHeight Then
                 BallX = CanvasWidth - PaddleMargin - PaddleWidth - BallRadius
                 BallXSub = BallX * SubpixelsPerPixel
-                CALL BounceFromPaddle(RightY, -1)
-            END IF
-        END IF
+                Call BounceFromPaddle(RightY, -1)
+            End If
+        End If
 
-        IF BallX < -BallRadius THEN
-            CALL AwardPoint(2)
-        ELSE IF BallX > CanvasWidth + BallRadius THEN
-            CALL AwardPoint(1)
-        END IF
-    END IF
-END SUB
+        If BallX < -BallRadius Then
+            Call AwardPoint(2)
+        Else If BallX > CanvasWidth + BallRadius Then
+            Call AwardPoint(1)
+        End If
+    End If
+End Sub
 
-SUB DrawField()
-    CLEAR BLACK
-    FILL RECTANGLE 8, 8, CanvasWidth - 16, CanvasHeight - 16, RGB(5, 8, 14)
-    DRAW RECTANGLE 8, 8, CanvasWidth - 16, CanvasHeight - 16, RGB(55, 70, 90)
+Sub DrawField()
+    Clear BLACK
+    Fill Rectangle 8, 8, CanvasWidth - 16, CanvasHeight - 16, Rgb(5, 8, 14)
+    Draw Rectangle 8, 8, CanvasWidth - 16, CanvasHeight - 16, Rgb(55, 70, 90)
 
-    FOR Dash = 0 TO 14
-        FILL RECTANGLE 476, 18 + Dash * 36, 8, 20, RGB(100, 110, 125)
-    END FOR
+    For Dash = 0 To 14
+        Fill Rectangle 476, 18 + Dash * 36, 8, 20, Rgb(100, 110, 125)
+    End For
 
-    FILL ROUNDED RECTANGLE PaddleMargin, LeftY, PaddleWidth, PaddleHeight, 5, WHITE
-    FILL ROUNDED RECTANGLE CanvasWidth - PaddleMargin - PaddleWidth, RightY, PaddleWidth, PaddleHeight, 5, WHITE
-    FILL CIRCLE BallX, BallY, BallRadius, WHITE
+    Fill Rounded Rectangle PaddleMargin, LeftY, PaddleWidth, PaddleHeight, 5, WHITE
+    Fill Rounded Rectangle CanvasWidth - PaddleMargin - PaddleWidth, RightY, PaddleWidth, PaddleHeight, 5, WHITE
+    Fill Circle BallX, BallY, BallRadius, WHITE
 
-    DRAW NUMBER LeftScore AT 350, 35 SIZE 68 COLOR WHITE
-    DRAW NUMBER RightScore AT 555, 35 SIZE 68 COLOR WHITE
-    IF Mode = 1 THEN
-        DRAW TEXT "YOU" AT 355, 112 SIZE 16 COLOR CYAN
-        DRAW TEXT "COMPUTER" AT 540, 112 SIZE 16 COLOR MAGENTA
-        DRAW TEXT "RALLY" AT 150, 25 SIZE 15 COLOR LIGHT_GRAY
-        DRAW NUMBER Rally AT 150, 48 SIZE 24 COLOR YELLOW
-        DRAW TEXT "BEST" AT 820, 25 SIZE 15 COLOR LIGHT_GRAY
-        DRAW NUMBER BestRally AT 820, 48 SIZE 24 COLOR CYAN
-    ELSE IF Mode = 2 THEN
-        DRAW TEXT "PLAYER 1" AT 320, 112 SIZE 16 COLOR CYAN
-        DRAW TEXT "PLAYER 2" AT 540, 112 SIZE 16 COLOR MAGENTA
-    ELSE
-        DRAW TEXT "COMPUTER" AT 315, 112 SIZE 16 COLOR CYAN
-        DRAW TEXT "COMPUTER" AT 540, 112 SIZE 16 COLOR MAGENTA
-        DRAW TEXT "DEMO" AT 480, 18 SIZE 17 COLOR YELLOW CENTERED
-        DRAW TEXT "PRESS ANY KEY TO RETURN" AT 480, 510 SIZE 16 COLOR LIGHT_GRAY CENTERED
-    END IF
+    Draw Number LeftScore At 350, 35 Size 68 Color WHITE
+    Draw Number RightScore At 555, 35 Size 68 Color WHITE
+    If Mode = 1 Then
+        Draw Text "You" At 355, 112 Size 16 Color CYAN
+        Draw Text "Computer" At 540, 112 Size 16 Color MAGENTA
+        Draw Text "Rally" At 150, 25 Size 15 Color LIGHT_GRAY
+        Draw Number Rally At 150, 48 Size 24 Color YELLOW
+        Draw Text "Best" At 820, 25 Size 15 Color LIGHT_GRAY
+        Draw Number BestRally At 820, 48 Size 24 Color CYAN
+    Else If Mode = 2 Then
+        Draw Text "Player 1" At 320, 112 Size 16 Color CYAN
+        Draw Text "Player 2" At 540, 112 Size 16 Color MAGENTA
+    Else
+        Draw Text "Computer" At 315, 112 Size 16 Color CYAN
+        Draw Text "Computer" At 540, 112 Size 16 Color MAGENTA
+        Draw Text "Demo" At 480, 18 Size 17 Color YELLOW Centered
+        Draw Text "Press Any Key To Return" At 480, 510 Size 16 Color LIGHT_GRAY Centered
+    End If
 
-    IF TIMER() < ServeTime THEN
-        DRAW TEXT "READY" AT 480, 240 SIZE 26 COLOR YELLOW CENTERED
-    END IF
-END SUB
+    If Timer() < ServeTime Then
+        Draw Text "Ready" At 480, 240 Size 26 Color YELLOW Centered
+    End If
+End Sub
 
-SUB DrawTitle()
-    CLEAR BLACK
-    DRAW LINE 480, 45, 480, 495, RGB(70, 80, 95)
-    FILL ROUNDED RECTANGLE 110, 180, 18, 130, 5, WHITE
-    FILL ROUNDED RECTANGLE 832, 230, 18, 130, 5, WHITE
-    FILL CIRCLE 480, 205, 12, WHITE
-    DRAW TEXT "PADDLE BALL" AT 480, 85 SIZE 54 COLOR WHITE CENTERED
-    DRAW TEXT "1 - ONE PLAYER" AT 480, 300 SIZE 28 COLOR CYAN CENTERED
-    DRAW TEXT "2 - TWO PLAYERS" AT 480, 345 SIZE 28 COLOR MAGENTA CENTERED
-    IF (TIMER() / 500) MOD 2 = 0 THEN
-        DRAW TEXT "DEMO STARTS AUTOMATICALLY" AT 480, 382 SIZE 16 COLOR YELLOW CENTERED
-    ELSE
-        DRAW TEXT "DEMO STARTS AUTOMATICALLY" AT 480, 382 SIZE 16 COLOR LIGHT_GRAY CENTERED
-    END IF
-    DRAW TEXT "W / S    AND    UP / DOWN" AT 480, 418 SIZE 18 COLOR LIGHT_GRAY CENTERED
-    DRAW TEXT "ESCAPE - EXIT" AT 480, 455 SIZE 18 COLOR LIGHT_GRAY CENTERED
-    DRAW TEXT "BEST ONE-PLAYER RALLY" AT 480, 480 SIZE 16 COLOR LIGHT_GRAY CENTERED
-    DRAW NUMBER BestRally AT 455, 505 SIZE 24 COLOR YELLOW
-END SUB
+Sub DrawTitle()
+    Clear BLACK
+    Draw Line 480, 45, 480, 495, Rgb(70, 80, 95)
+    Fill Rounded Rectangle 110, 180, 18, 130, 5, WHITE
+    Fill Rounded Rectangle 832, 230, 18, 130, 5, WHITE
+    Fill Circle 480, 205, 12, WHITE
+    Draw Text "Paddle Ball" At 480, 85 Size 54 Color WHITE Centered
+    Draw Text "1 - One Player" At 480, 300 Size 28 Color CYAN Centered
+    Draw Text "2 - Two Players" At 480, 345 Size 28 Color MAGENTA Centered
+    If (Timer() / 500) Mod 2 = 0 Then
+        Draw Text "Demo Starts Automatically" At 480, 382 Size 16 Color YELLOW Centered
+    Else
+        Draw Text "Demo Starts Automatically" At 480, 382 Size 16 Color LIGHT_GRAY Centered
+    End If
+    Draw Text "W / S    And    Up / Down" At 480, 418 Size 18 Color LIGHT_GRAY Centered
+    Draw Text "Escape - Exit" At 480, 455 Size 18 Color LIGHT_GRAY Centered
+    Draw Text "Best One-Player Rally" At 480, 480 Size 16 Color LIGHT_GRAY Centered
+    Draw Number BestRally At 455, 505 Size 24 Color YELLOW
+End Sub
 
-SUB DrawResult()
-    FILL ROUNDED RECTANGLE 210, 145, 540, 275, 22, RGB(16, 22, 36)
-    DRAW ROUNDED RECTANGLE 210, 145, 540, 275, 22, CYAN
+Sub DrawResult()
+    Fill Rounded Rectangle 210, 145, 540, 275, 22, Rgb(16, 22, 36)
+    Draw Rounded Rectangle 210, 145, 540, 275, 22, CYAN
 
-    IF Mode = 1 THEN
-        IF LeftScore > RightScore THEN
-            DRAW TEXT "YOU WIN!" AT 480, 190 SIZE 48 COLOR LIGHT_GREEN CENTERED
-        ELSE
-            DRAW TEXT "COMPUTER WINS" AT 480, 190 SIZE 44 COLOR MAGENTA CENTERED
-        END IF
-    ELSE
-        IF LeftScore > RightScore THEN
-            DRAW TEXT "PLAYER 1 WINS" AT 480, 190 SIZE 44 COLOR CYAN CENTERED
-        ELSE
-            DRAW TEXT "PLAYER 2 WINS" AT 480, 190 SIZE 44 COLOR MAGENTA CENTERED
-        END IF
-    END IF
+    If Mode = 1 Then
+        If LeftScore > RightScore Then
+            Draw Text "You Win!" At 480, 190 Size 48 Color LIGHT_GREEN Centered
+        Else
+            Draw Text "Computer Wins" At 480, 190 Size 44 Color MAGENTA Centered
+        End If
+    Else
+        If LeftScore > RightScore Then
+            Draw Text "Player 1 Wins" At 480, 190 Size 44 Color CYAN Centered
+        Else
+            Draw Text "Player 2 Wins" At 480, 190 Size 44 Color MAGENTA Centered
+        End If
+    End If
 
-    DRAW NUMBER LeftScore AT 375, 260 SIZE 52 COLOR WHITE
-    DRAW TEXT "-" AT 480, 265 SIZE 42 COLOR LIGHT_GRAY CENTERED
-    DRAW NUMBER RightScore AT 555, 260 SIZE 52 COLOR WHITE
-    DRAW TEXT "ENTER - REMATCH" AT 480, 345 SIZE 22 COLOR WHITE CENTERED
-    DRAW TEXT "ESCAPE - TITLE" AT 480, 382 SIZE 18 COLOR LIGHT_GRAY CENTERED
-END SUB
+    Draw Number LeftScore At 375, 260 Size 52 Color WHITE
+    Draw Text "-" At 480, 265 Size 42 Color LIGHT_GRAY Centered
+    Draw Number RightScore At 555, 260 Size 52 Color WHITE
+    Draw Text "Enter - Rematch" At 480, 345 Size 22 Color WHITE Centered
+    Draw Text "Escape - Title" At 480, 382 Size 18 Color LIGHT_GRAY Centered
+End Sub
 
-GAME WINDOW "SMILE 2.0 Paddle Ball"
+Game Window "SMILE 2.0 Paddle Ball"
 
-CALL EnterTitle()
+Call EnterTitle()
 
-DO
-    FrameTime = TIMER()
-    Elapsed = MAX(0, MIN(50, FrameTime - LastFrameTime))
+Do
+    FrameTime = Timer()
+    Elapsed = Max(0, Min(50, FrameTime - LastFrameTime))
     LastFrameTime = FrameTime
-    GET KEY Key
+    Get Key Key
 
-    IF Mode = 3 AND Key <> KEY_NONE THEN
-        CALL EnterTitle()
+    If Mode = 3 And Key <> KEY_NONE Then
+        Call EnterTitle()
         Key = KEY_NONE
-    END IF
+    End If
 
-    IF State = 0 THEN
-        IF Key <> KEY_NONE AND FrameTime >= TitleAcceptInputAt THEN
+    If State = 0 Then
+        If Key <> KEY_NONE And FrameTime >= TitleAcceptInputAt Then
             TitleStartedAt = FrameTime
-            IF Key = KEY_1 THEN
-                CALL StartGame(1)
-            ELSE IF Key = KEY_2 THEN
-                CALL StartGame(2)
-            ELSE IF Key = KEY_ESCAPE THEN
-                END PROGRAM
-            END IF
-        END IF
-        IF State = 0 AND FrameTime - TitleStartedAt >= TitleDemoDelay THEN
-            CALL StartDemo()
-        END IF
-        CALL DrawTitle()
-    ELSE IF State = 1 THEN
-        IF Mode <> 3 AND Key = KEY_ESCAPE THEN
-            CALL EnterTitle()
-        ELSE
-            IF Mode = 3 AND FrameTime - DemoStartedAt >= DemoMaximumPlayTime THEN
-                CALL EnterTitle()
-            END IF
-            Accumulator = MIN(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
+            If Key = KEY_1 Then
+                Call StartGame(1)
+            Else If Key = KEY_2 Then
+                Call StartGame(2)
+            Else If Key = KEY_ESCAPE Then
+                End Program
+            End If
+        End If
+        If State = 0 And FrameTime - TitleStartedAt >= TitleDemoDelay Then
+            Call StartDemo()
+        End If
+        Call DrawTitle()
+    Else If State = 1 Then
+        If Mode <> 3 And Key = KEY_ESCAPE Then
+            Call EnterTitle()
+        Else
+            If Mode = 3 And FrameTime - DemoStartedAt >= DemoMaximumPlayTime Then
+                Call EnterTitle()
+            End If
+            Accumulator = Min(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
             CatchUpSteps = 0
-            DO
-                IF State = 1 AND Accumulator >= SimulationStep THEN
-                    CALL UpdatePaddles()
-                    CALL UpdateBall()
+            Do
+                If State = 1 And Accumulator >= SimulationStep Then
+                    Call UpdatePaddles()
+                    Call UpdateBall()
                     Accumulator = Accumulator - SimulationStep
                     CatchUpSteps = CatchUpSteps + 1
-                END IF
-            LOOP UNTIL Accumulator < SimulationStep OR CatchUpSteps >= MaxCatchUpSteps OR State <> 1
-        END IF
-        IF State = 0 THEN
-            CALL DrawTitle()
-        ELSE
-            CALL DrawField()
-            IF State = 2 THEN
-                CALL DrawResult()
-            END IF
-        END IF
-    ELSE
-        IF Key = KEY_ENTER THEN
-            CALL ResetMatch()
-        ELSE IF Key = KEY_ESCAPE THEN
-            CALL EnterTitle()
-        END IF
-        IF State = 0 THEN
-            CALL DrawTitle()
-        ELSE
-            CALL DrawField()
-            IF State = 2 THEN
-                CALL DrawResult()
-            END IF
-        END IF
-    END IF
+                End If
+            Loop Until Accumulator < SimulationStep Or CatchUpSteps >= MaxCatchUpSteps Or State <> 1
+        End If
+        If State = 0 Then
+            Call DrawTitle()
+        Else
+            Call DrawField()
+            If State = 2 Then
+                Call DrawResult()
+            End If
+        End If
+    Else
+        If Key = KEY_ENTER Then
+            Call ResetMatch()
+        Else If Key = KEY_ESCAPE Then
+            Call EnterTitle()
+        End If
+        If State = 0 Then
+            Call DrawTitle()
+        Else
+            Call DrawField()
+            If State = 2 Then
+                Call DrawResult()
+            End If
+        End If
+    End If
 
-    SHOW SCREEN
-LOOP UNTIL GAME_CLOSED() = TRUE
+    Show Screen
+Loop Until Game_Closed() = True
 
-STOP SOUND
-END PROGRAM
+Stop Sound
+End Program

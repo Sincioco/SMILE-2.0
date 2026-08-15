@@ -1,2 +1,2 @@
-DIM Value AS BOOLEAN
-Value = "TRUE"
+Dim Value As Boolean
+Value = "True"

@@ -1,6 +1,6 @@
-TYPE Point
-    X AS NUMBER
-END TYPE
-TYPE Point
-    Y AS NUMBER
-END TYPE
+Type Point
+    X As Number
+End Type
+Type Point
+    Y As Number
+End Type

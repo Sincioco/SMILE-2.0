@@ -4,9 +4,9 @@
 <rect x="20" y="30" width="700" height="480" fill="#000" stroke="rgb(40,70,95)" stroke-width="2"/>
 <g fill="rgb(60,230,75)" stroke="rgb(20,105,35)" stroke-width="2"><rect x="342" y="272" width="16" height="16"/><rect x="322" y="272" width="16" height="16"/><rect x="302" y="272" width="16" height="16"/></g>
 <rect x="145" y="135" width="590" height="285" rx="22" fill="rgb(16,25,45)" stroke="rgb(245,45,55)" stroke-width="3"/>
-<text x="440" y="185" text-anchor="middle" dominant-baseline="middle" fill="#ff4e63" font-family="Segoe UI, Arial" font-size="50" font-weight="850">GAME OVER</text>
-<text x="330" y="255" text-anchor="middle" dominant-baseline="middle" fill="#bbc5d4" font-family="Segoe UI, Arial" font-size="22">FINAL SCORE</text><text x="530" y="247" dominant-baseline="middle" fill="#ffd21f" font-family="Segoe UI, Arial" font-size="38" font-weight="800">120</text>
-<text x="330" y="305" text-anchor="middle" dominant-baseline="middle" fill="#bbc5d4" font-family="Segoe UI, Arial" font-size="22">HIGH SCORE</text><text x="530" y="297" dominant-baseline="middle" fill="#29cce5" font-family="Segoe UI, Arial" font-size="38" font-weight="800">350</text>
-<text x="440" y="360" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="24" font-weight="800">ENTER TO RETRY</text>
-<text x="440" y="392" text-anchor="middle" dominant-baseline="middle" fill="#bbc5d4" font-family="Segoe UI, Arial" font-size="18">ESCAPE TO EXIT</text>
+<text x="440" y="185" text-anchor="middle" dominant-baseline="middle" fill="#ff4e63" font-family="Segoe UI, Arial" font-size="50" font-weight="850">Game Over</text>
+<text x="330" y="255" text-anchor="middle" dominant-baseline="middle" fill="#bbc5d4" font-family="Segoe UI, Arial" font-size="22">Final Score</text><text x="530" y="247" dominant-baseline="middle" fill="#ffd21f" font-family="Segoe UI, Arial" font-size="38" font-weight="800">120</text>
+<text x="330" y="305" text-anchor="middle" dominant-baseline="middle" fill="#bbc5d4" font-family="Segoe UI, Arial" font-size="22">High Score</text><text x="530" y="297" dominant-baseline="middle" fill="#29cce5" font-family="Segoe UI, Arial" font-size="38" font-weight="800">350</text>
+<text x="440" y="360" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="24" font-weight="800">Enter To Retry</text>
+<text x="440" y="392" text-anchor="middle" dominant-baseline="middle" fill="#bbc5d4" font-family="Segoe UI, Arial" font-size="18">Escape To Exit</text>
 </svg>

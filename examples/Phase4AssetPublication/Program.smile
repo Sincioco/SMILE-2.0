@@ -1,18 +1,18 @@
-OPTION EXPLICIT
+Option Explicit
 
-GAME WINDOW "Phase 4.2 Asset Publication" SIZE 320 BY 180
+Game Window "Phase 4.2 Asset Publication" Size 320 By 180
 
-DIM WindowImage AS IMAGE
+Dim WindowImage As Image
 
-LOAD IMAGE WindowImage FROM "Assets\UI\Window.png"
+Load Image WindowImage From "Assets\UI\Window.png"
 
-CLEAR RGB(10, 16, 28)
-DRAW IMAGE WindowImage AT 40, 30 SIZE 240 BY 120 FILTER SMOOTH
-DRAW TEXT "ASSET PUBLICATION" AT 160, 72 SIZE 18 COLOR WHITE CENTERED
+Clear Rgb(10, 16, 28)
+Draw Image WindowImage At 40, 30 Size 240 By 120 Filter Smooth
+Draw Text "Asset Publication" At 160, 72 Size 18 Color WHITE Centered
 
-PLAY SOUND "Assets\Audio\Click.wav" ON CHANNEL 1
+Play Sound "Assets\Audio\Click.wav" On Channel 1
 
-SHOW SCREEN
-WAIT 150 MILLISECONDS
+Show Screen
+Wait 150 Milliseconds
 
-END PROGRAM
+End Program

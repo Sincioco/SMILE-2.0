@@ -35,7 +35,7 @@ Keep the existing music asset copying.
 Add a small general-purpose BASIC-style text-file loading statement:
 
 ```smile
-LOAD TEXT FILE "Maps\default.map" INTO MapBytes COUNT MapByteCount
+Load Text File "Maps\default.map" Into MapBytes Count MapByteCount
 ```
 
 ### Meaning
@@ -49,7 +49,7 @@ LOAD TEXT FILE "Maps\default.map" INTO MapBytes COUNT MapByteCount
 - A UTF-8 BOM, when present, is skipped.
 - Each byte is stored as a zero-through-255 numeric array element.
 - At most the array’s capacity is copied.
-- `COUNT` receives the number of bytes copied.
+- `Count` receives the number of bytes copied.
 - Missing, inaccessible, empty, or unreadable files return count zero and never crash.
 - Reading a file larger than the destination array safely truncates to capacity.
 - No text-file saving is added in this milestone.
@@ -61,14 +61,14 @@ The statement is generic and may be used by console or game programs. It is not 
 The existing persistence form remains unchanged:
 
 ```smile
-LOAD HighScore FROM "HighScore" DEFAULT 0
+Load HighScore From "HighScore" Default 0
 ```
 
 Disambiguate:
 
 ```text
-LOAD TEXT FILE ...     generic file input
-LOAD Identifier FROM   integer persistence
+Load Text File ...     generic file input
+Load Identifier From   integer persistence
 ```
 
 ### Shared implementation
@@ -90,12 +90,12 @@ README.md
 New keywords are:
 
 ```text
-FILE
-INTO
-COUNT
+File
+Into
+Count
 ```
 
-`TEXT` and `LOAD` already exist.
+`Text` and `Load` already exist.
 
 Recommended native ABI:
 
@@ -107,7 +107,7 @@ long long smile_load_text_file(
     long long capacity);
 ```
 
-The MASM emitter stores the return value into the `COUNT` variable.
+The MASM emitter stores the return value into the `Count` variable.
 
 Reuse the existing executable-relative asset-path resolver rather than creating another path implementation.
 
@@ -174,18 +174,18 @@ Keep map interpretation in `Program.smile`.
 Add a sufficiently large numeric byte array, for example:
 
 ```smile
-CONST MapFileCapacity = 8192
-DIM MapFileBytes[MapFileCapacity]
+Const MapFileCapacity = 8192
+Dim MapFileBytes[MapFileCapacity]
 MapFileLength = 0
 ```
 
 Create literal-path loader routines:
 
 ```smile
-SUB LoadDefaultMap()
-    LOAD TEXT FILE "Maps\default.map" INTO MapFileBytes COUNT MapFileLength
-    CALL ParseLoadedMap()
-END SUB
+Sub LoadDefaultMap()
+    Load Text File "Maps\default.map" Into MapFileBytes Count MapFileLength
+    Call ParseLoadedMap()
+End Sub
 ```
 
 Do the same for the two other supplied files.
@@ -212,16 +212,16 @@ Change the Dungeon Star I title screen into a simple menu.
 Initial selection:
 
 ```text
-DEFAULT.MAP
+Default.MAP
 ```
 
 Menu entries:
 
 ```text
-DEFAULT.MAP
+Default.MAP
 SAMPLE-LOOPS.MAP
 SAMPLE-SWITCHBACKS.MAP
-RANDOM DUNGEON
+Random DUNGEON
 ```
 
 Controls:
@@ -243,19 +243,19 @@ When a selected file is missing or invalid:
 3. Display a brief message such as:
 
 ```text
-MAP NOT AVAILABLE - RANDOM DUNGEON USED
+MAP Not AVAILABLE - Random DUNGEON USED
 ```
 
 The selected file remains available for the student to fix and retry.
 
-The demo uses the currently selected entry. Since the title initially selects `DEFAULT.MAP`, the normal automatic demo loads `default.map`.
+The demo uses the currently selected entry. Since the title initially selects `Default.MAP`, the normal automatic demo loads `default.map`.
 
 ## 6. Default-map behavior
 
 User starts and demo starts should call one routine such as:
 
 ```smile
-SUB BuildSelectedDungeon()
+Sub BuildSelectedDungeon()
 ```
 
 Behavior:
@@ -387,11 +387,11 @@ Change the title’s tunnel art from green to the existing Floor 2 blue/sapphire
 Suggested title colors:
 
 ```text
-Background       RGB(3, 8, 20)
-Near wall        RGB(28, 80, 150)
-Middle wall      RGB(20, 58, 112)
-Far wall         RGB(12, 36, 72)
-Line/highlight   RGB(135, 190, 255)
+Background       Rgb(3, 8, 20)
+Near wall        Rgb(28, 80, 150)
+Middle wall      Rgb(20, 58, 112)
+Far wall         Rgb(12, 36, 72)
+Line/highlight   Rgb(135, 190, 255)
 Secondary text   LIGHT_BLUE / CYAN
 ```
 
@@ -406,7 +406,7 @@ Remove the existing 15-second delay and 5-through-0 title countdown.
 Use:
 
 ```smile
-CONST TitleDemoDelay = 5000
+Const TitleDemoDelay = 5000
 ```
 
 After five seconds with no title-menu activity:
@@ -430,9 +430,9 @@ Do not add focus-muting code to `Program.smile`.
 Dungeon Star I should continue using normal:
 
 ```smile
-PLAY MUSIC ...
-STOP MUSIC
-PLAY SOUND ...
+Play Music ...
+Stop Music
+Play Sound ...
 ```
 
 The shared runtime automatically silences all audio when inactive or minimized.
@@ -453,7 +453,7 @@ Explain:
 
 - external map selection;
 - missing-file random fallback;
-- generic `LOAD TEXT FILE`;
+- generic `Load Text File`;
 - pipe-style random generation;
 - five-second attract mode;
 - title blue palette.
@@ -468,7 +468,7 @@ cmd /c scripts\smoke-test.cmd
 
 Add only focused checks for:
 
-- valid `LOAD TEXT FILE` syntax;
+- valid `Load Text File` syntax;
 - invalid target array/rank diagnostics;
 - missing file returns zero;
 - a tiny known text file loads expected bytes;

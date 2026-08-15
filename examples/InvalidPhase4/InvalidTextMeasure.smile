@@ -1,1 +1,1 @@
-PRINT TEXT_WIDTH(123, 20)
+Print Text_Width(123, 20)

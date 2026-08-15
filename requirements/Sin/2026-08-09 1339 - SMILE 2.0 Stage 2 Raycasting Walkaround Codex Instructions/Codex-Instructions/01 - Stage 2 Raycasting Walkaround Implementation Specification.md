@@ -31,12 +31,12 @@ The program may be longer than a tiny example, but it must remain one understand
 Use:
 
 ```smile
-CONST CanvasWidth = 960
-CONST CanvasHeight = 540
+Const CanvasWidth = 960
+Const CanvasHeight = 540
 
-CONST MapWidth = 31
-CONST MapHeight = 31
-CONST MapCellCount = MapWidth * MapHeight
+Const MapWidth = 31
+Const MapHeight = 31
+Const MapCellCount = MapWidth * MapHeight
 ```
 
 Dungeon Star II is one floor only.
@@ -59,9 +59,9 @@ Unlike Dungeon Star I, Dungeon Star II **allows and expects** large 2-by-2 and l
 Start with:
 
 ```smile
-CONST RayCount = 240
-CONST StripWidth = 4
-CONST HorizonY = CanvasHeight / 2
+Const RayCount = 240
+Const StripWidth = 4
+Const HorizonY = CanvasHeight / 2
 ```
 
 `RayCount * StripWidth` must equal `CanvasWidth`.
@@ -69,8 +69,8 @@ CONST HorizonY = CanvasHeight / 2
 Draw the ceiling and floor once per frame:
 
 ```smile
-FILL RECTANGLE 0, 0, CanvasWidth, HorizonY, CeilingColor
-FILL RECTANGLE 0, HorizonY, CanvasWidth, CanvasHeight - HorizonY, FloorColor
+Fill Rectangle 0, 0, CanvasWidth, HorizonY, CeilingColor
+Fill Rectangle 0, HorizonY, CanvasWidth, CanvasHeight - HorizonY, FloorColor
 ```
 
 Then draw 240 wall strips over them.
@@ -92,11 +92,11 @@ Use integer fixed-point values.
 Recommended constants:
 
 ```smile
-CONST CellScale = 1024
-CONST VectorScale = 1000000
-CONST CameraPlaneMagnitude = 660000
-CONST ProjectionDistance = 830
-CONST HugeDistance = 1000000000
+Const CellScale = 1024
+Const VectorScale = 1000000
+Const CameraPlaneMagnitude = 660000
+Const ProjectionDistance = 830
+Const HugeDistance = 1000000000
 ```
 
 Meaning:
@@ -150,11 +150,11 @@ Use a small rotation matrix for one half-degree step.
 Recommended:
 
 ```smile
-CONST RotationScale = 1000000
-CONST HalfDegreeCos = 999962
-CONST HalfDegreeSin = 8727
-CONST HalfDegreeStepsPerCircle = 720
-CONST HalfDegreeStepsPerQuarter = 180
+Const RotationScale = 1000000
+Const HalfDegreeCos = 999962
+Const HalfDegreeSin = 8727
+Const HalfDegreeStepsPerCircle = 720
+Const HalfDegreeStepsPerQuarter = 180
 ```
 
 For a right turn:
@@ -201,7 +201,7 @@ After updating direction, derive the camera plane again from the direction rathe
 Use an accumulator so turn speed remains time-based:
 
 ```smile
-CONST TurnHalfStepsPerSecond = 180
+Const TurnHalfStepsPerSecond = 180
 ```
 
 That is:
@@ -219,23 +219,23 @@ Follow the proven fixed-step structure used by the current ball games.
 Recommended:
 
 ```smile
-CONST SimulationStep = 8
-CONST MaxCatchUpSteps = 6
+Const SimulationStep = 8
+Const MaxCatchUpSteps = 6
 ```
 
 Each rendered frame:
 
-1. measure elapsed time with `TIMER()`;
+1. measure elapsed time with `Timer()`;
 2. clamp unusually long elapsed time;
 3. add to an accumulator;
 4. run zero or more eight-millisecond simulation steps;
 5. cap catch-up work;
 6. render once;
-7. `SHOW SCREEN`.
+7. `Show Screen`.
 
 Do not use frame-count-dependent movement.
 
-Do not add `WAIT 16 MILLISECONDS` to the main game loop.
+Do not add `Wait 16 Milliseconds` to the main game loop.
 
 ---
 
@@ -256,8 +256,8 @@ Controls:
 Recommended:
 
 ```smile
-CONST MoveUnitsPerSecond = 2560
-CONST PlayerRadius = 180
+Const MoveUnitsPerSecond = 2560
+Const PlayerRadius = 180
 ```
 
 `MoveUnitsPerSecond = 2560` is approximately 2.5 cells per second.
@@ -344,7 +344,7 @@ It gives fractional ray directions using ordinary integer arithmetic and avoids 
 Create a routine such as:
 
 ```smile
-SUB CastRay(RayIndex)
+Sub CastRay(RayIndex)
 ```
 
 Because SMILE routines currently accept at most four scalar parameters, store ray results in clearly named global scratch variables:
@@ -368,12 +368,12 @@ MapY = PlayerY / CellScale
 Delta distance:
 
 ```text
-IF RayDirectionX = 0
+If RayDirectionX = 0
     DeltaDistanceX = HugeDistance
-ELSE
+Else
     DeltaDistanceX =
-        ABS(CellScale * VectorScale / RayDirectionX)
-END IF
+        Abs(CellScale * VectorScale / RayDirectionX)
+End If
 ```
 
 Repeat for Y.
@@ -386,14 +386,14 @@ If ray goes left:
     SideDistanceX =
         (PlayerX - MapX * CellScale)
         * VectorScale
-        / ABS(RayDirectionX)
+        / Abs(RayDirectionX)
 
 If ray goes right:
     StepX = 1
     SideDistanceX =
         ((MapX + 1) * CellScale - PlayerX)
         * VectorScale
-        / ABS(RayDirectionX)
+        / Abs(RayDirectionX)
 ```
 
 Repeat for Y.
@@ -415,7 +415,7 @@ Stop at the first solid tile.
 Bound the loop:
 
 ```smile
-CONST MaximumRaySteps = 96
+Const MaximumRaySteps = 96
 ```
 
 Out-of-range map access behaves as a solid wall.
@@ -490,7 +490,7 @@ Clip drawing coordinates to the logical canvas.
 Draw:
 
 ```smile
-FILL RECTANGLE RayIndex * StripWidth,
+Fill Rectangle RayIndex * StripWidth,
                DrawTop,
                StripWidth,
                DrawHeight,
@@ -521,10 +521,10 @@ An open door becomes floor.
 Use precomputed color arrays:
 
 ```smile
-DIM WallNear[7]
-DIM WallMiddle[7]
-DIM WallFar[7]
-DIM WallVeryFar[7]
+Dim WallNear[7]
+Dim WallMiddle[7]
+Dim WallFar[7]
+Dim WallVeryFar[7]
 ```
 
 Use original palettes, for example:
@@ -542,7 +542,7 @@ Choose a band from distance.
 
 Darken the side hit when the ray crossed a horizontal grid line versus a vertical one.
 
-Do not extract and recompute RGB channels per ray unless the result remains simple. Precomputed color bands are easier for students.
+Do not extract and recompute Rgb channels per ray unless the result remains simple. Precomputed color bands are easier for students.
 
 Door strips use a separate door palette.
 
@@ -599,7 +599,7 @@ No door closing is required in Stage 2.
 Use the current generic statement:
 
 ```smile
-LOAD TEXT FILE "Maps\default.map" INTO MapFileBytes COUNT MapFileLength
+Load Text File "Maps\default.map" Into MapFileBytes Count MapFileLength
 ```
 
 Add literal loaders for:
@@ -736,10 +736,10 @@ A rare last-resort demo reset is permitted only to prevent a broken attract mode
 Recommended states:
 
 ```smile
-CONST STATE_TITLE = 0
-CONST STATE_USER_WALK = 1
-CONST STATE_DEMO_WALK = 2
-CONST STATE_DEMO_COMPLETE = 3
+Const STATE_TITLE = 0
+Const STATE_USER_WALK = 1
+Const STATE_DEMO_WALK = 2
+Const STATE_DEMO_COMPLETE = 3
 ```
 
 Title:
@@ -748,11 +748,11 @@ Title:
 DUNGEON STAR II
 RAYCASTING WALKAROUND
 
-DEFAULT.MAP
+Default.MAP
 CUSTOM.MAP
-RANDOM MAP
+Random MAP
 
-UP / DOWN SELECT
+UP / Down Select
 ENTER START
 ```
 
@@ -776,7 +776,7 @@ Allowed:
 
 - selected map source;
 - `DEMO`;
-- `PRESS ANY KEY TO RETURN`;
+- `PRESS ANY Key To Return`;
 - short fallback message;
 - small center crosshair/dot;
 - concise control hints on title only.

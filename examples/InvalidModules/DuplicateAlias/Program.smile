@@ -1,2 +1,2 @@
-IMPORT Example.Alpha AS Shared
-IMPORT Example.Beta AS Shared
+Import Example.Alpha As Shared
+Import Example.Beta As Shared

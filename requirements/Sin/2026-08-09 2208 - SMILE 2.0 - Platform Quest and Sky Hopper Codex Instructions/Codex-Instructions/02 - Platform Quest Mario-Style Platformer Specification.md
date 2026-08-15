@@ -73,13 +73,13 @@ Not required:
 Use:
 
 ```smile
-CONST CanvasWidth = 960
-CONST CanvasHeight = 540
-CONST HudHeight = 60
+Const CanvasWidth = 960
+Const CanvasHeight = 540
+Const HudHeight = 60
 
-CONST TileSize = 32
-CONST MapWidth = 120
-CONST MapHeight = 15
+Const TileSize = 32
+Const MapWidth = 120
+Const MapHeight = 15
 ```
 
 World rendering begins below the HUD.
@@ -124,16 +124,16 @@ After parsing:
 Suggested scales:
 
 ```smile
-CONST SubpixelsPerPixel = 1000
-CONST SimulationStep = 8
-CONST MaxCatchUpSteps = 6
+Const SubpixelsPerPixel = 1000
+Const SimulationStep = 8
+Const MaxCatchUpSteps = 6
 
-CONST RunAcceleration = 1500000
-CONST RunFriction = 1800000
-CONST MaximumRunSpeed = 260000
-CONST Gravity = 1450000
-CONST JumpVelocity = -520000
-CONST MaximumFallSpeed = 720000
+Const RunAcceleration = 1500000
+Const RunFriction = 1800000
+Const MaximumRunSpeed = 260000
+Const Gravity = 1450000
+Const JumpVelocity = -520000
+Const MaximumFallSpeed = 720000
 ```
 
 Tune visually.
@@ -371,15 +371,15 @@ If a later map/level system exists in the repository, do not overextend this fir
 Title choices:
 
 ```text
-DEFAULT.MAP
+Default.MAP
 CUSTOM.MAP
-RANDOM LEVEL
+Random LEVEL
 ```
 
 Initial selection:
 
 ```text
-DEFAULT.MAP
+Default.MAP
 ```
 
 Controls:
@@ -405,8 +405,8 @@ Use original title artwork.
 Use:
 
 ```smile
-LOAD TEXT FILE "Maps\\default.map" INTO MapBytes COUNT MapByteCount
-LOAD TEXT FILE "Maps\\custom.map" INTO MapBytes COUNT MapByteCount
+Load Text File "Maps\\default.map" Into MapBytes Count MapByteCount
+Load Text File "Maps\\custom.map" Into MapBytes Count MapByteCount
 ```
 
 Parse entirely in `Program.smile`.
@@ -418,7 +418,7 @@ When a file is missing or invalid:
 - show a brief fallback message;
 - continue.
 
-`RANDOM LEVEL` always generates.
+`Random LEVEL` always generates.
 
 Reload external maps every time the selected source starts.
 
@@ -554,7 +554,7 @@ Assets\GameOver.wav
 
 Play background music only during user/demo play.
 
-Tune `MUSIC VOLUME` so effects remain audible.
+Tune `Music Volume` so effects remain audible.
 
 All audio must be original.
 

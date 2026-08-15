@@ -10,8 +10,8 @@ Phase 5.1 hardens the reusable `Smile.UI` library without adding native UI helpe
 
 The ignored `Phase5HPreFix` fixture reproduced all seven required defects against the reviewed Phase 5 baseline:
 
-- an undersized window-skin source rectangle returned `TRUE` from `Window.IsStyleValid`;
-- an undersized bitmap atlas returned `TRUE` from `BitmapFont.IsStyleValid`;
+- an undersized window-skin source rectangle returned `True` from `Window.IsStyleValid`;
+- an undersized bitmap atlas returned `True` from `BitmapFont.IsStyleValid`;
 - `Dialogue.SetStyle` deactivated an active dialogue;
 - `Menu.SetStyle` could leave the selected item outside the viewport;
 - effective menu rows shrank but did not re-expand;
@@ -27,7 +27,7 @@ The baseline Web console-parity fixture otherwise passed, isolating the defects 
 - `Window.IsStyleValid` validates source origin, source size, border sums, image bounds, destination borders, padding, filter, opacity, and bounded layout values with subtraction-based overflow-safe checks.
 - `BitmapFont.IsStyleValid` validates atlas origin, complete row/column grid bounds, glyph geometry, filter, Unicode range overflow, surrogate ranges, and fallback code points.
 - `Text.IsStyleValid`, `Menu.IsStyleValid`, and `Dialogue.IsStyleValid` validate their complete nested styles, rates, spacing, cursor/indicator geometry, and filter modes.
-- Invalid `SetStyle` calls return `FALSE` without replacing retained records. Active dialogue reflow prepares scratch state before committing the candidate style.
+- Invalid `SetStyle` calls return `False` without replacing retained records. Active dialogue reflow prepares scratch state before committing the candidate style.
 - A stale bitmap-font handle is invalid for replacement but safely measures/draws through the documented system-text fallback.
 
 ### Menu layout
@@ -49,10 +49,10 @@ The baseline Web console-parity fixture otherwise passed, isolating the defects 
 ### Dialogue
 
 - `UI_MAX_DIALOGUE_PAGE_SCALARS` is 2048. `AddPage` measures once and rejects 2049 scalars without mutation.
-- Wrapping is bounded and uses a proportional binary search for fitting chunks while preserving scalar-safe `TEXT_SLICE` behavior.
+- Wrapping is bounded and uses a proportional binary search for fitting chunks while preserving scalar-safe `Text_Slice` behavior.
 - `Start` and active `SetStyle` build scratch prepared pages before commit.
 - Valid active theme changes preserve active state, raw-page identity, current prepared page, and visible scalar progress.
-- Failed active reflow returns `FALSE` and preserves the old style and state.
+- Failed active reflow returns `False` and preserves the old style and state.
 - Long unbroken text, spaced text, spaces-only text, repeated newlines, emoji/non-BMP text, and a 32-page failed active restart are covered by focused tests.
 
 ## Packaging, capability, and ownership
@@ -63,7 +63,7 @@ The baseline Web console-parity fixture otherwise passed, isolating the defects 
 - Package metadata keeps `Dialogue.Start` and `Dialogue.SetStyle` transitively game-window-capable while pure state APIs such as `Menu.SetStyle`, `Menu.VisibleRows`, and `Text.IsStyleValid` remain console-safe.
 - Pure-console project/package calls to a game-capable dialogue routine each produce one consumer-located `SML3704`.
 - Project and package consumers pass on native and Web; deterministic two-build package checks remain green.
-- Focused fixtures create, replace, fail replacement, destroy, and unload all component-owned and app-owned values. Web diagnostics return image cache/reference counts to zero and stop media; native TEXT/image ownership and cleanup remain green in the native runtime suites.
+- Focused fixtures create, replace, fail replacement, destroy, and unload all component-owned and app-owned values. Web diagnostics return image cache/reference counts to zero and stop media; native Text/image ownership and cleanup remain green in the native runtime suites.
 
 ## Performance
 
@@ -84,7 +84,7 @@ All are below the broad 5000 ms anti-pathology guard. The normal smoke suite doe
 - Invalid console project/package fixture: exactly one `SML3704` each.
 - Shared language/compiler/project/completion/timing tests: 179 passed.
 - Native graphics/audio-focus tests: 39 passed.
-- Native TEXT tests: 38 passed.
+- Native Text tests: 38 passed.
 - `cmd /c scripts\build.cmd`: passed; expected `NU1503` restore-skip warning for the native `.vcxproj` only.
 - `cmd /c scripts\smoke-test.cmd`: passed in 221.4 seconds.
 - Ten-game matrix: all ten normal and no-demo native builds and all ten normal and no-demo Web builds passed.

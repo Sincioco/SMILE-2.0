@@ -37,24 +37,24 @@
 <p class="eyebrow">Paste checkpoint 3</p>
 <h1>Place Food Safely</h1>
 <p class="lead">A random square is not automatically a good square. The program must prove that food does not overlap the snake.</p>
-<div class="topic-meta"><span class="meta-pill">SUB routine</span><span class="meta-pill">Random numbers</span><span class="meta-pill">Loop until valid</span></div>
+<div class="topic-meta"><span class="meta-pill">Sub routine</span><span class="meta-pill">Random numbers</span><span class="meta-pill">Loop until valid</span></div>
 </section>
-<div class="step-heading"><span class="step-badge">3</span><div><h2>Paste the SpawnFood routine</h2><p>Paste directly below the high-score LOAD.</p></div></div>
+<div class="step-heading"><span class="step-badge">3</span><div><h2>Paste the SpawnFood routine</h2><p>Paste directly below the high-score Load.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 3 &mdash; exact official code</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="34">SUB SpawnFood()
-    FoodValid = FALSE
-    DO
-        RANDOM FoodX FROM 0 TO GridWidth - 1
-        RANDOM FoodY FROM 0 TO GridHeight - 1
-        FoodValid = TRUE
-        FOR I = 0 TO Length - 1
-            IF FoodX = SnakeX[I] AND FoodY = SnakeY[I] THEN
-                FoodValid = FALSE
-            END IF
-        END FOR
-    LOOP UNTIL FoodValid = TRUE
-END SUB</code></pre>
+<pre><code class="language-smile" data-source-start="34">Sub SpawnFood()
+    FoodValid = False
+    Do
+        Random FoodX From 0 To GridWidth - 1
+        Random FoodY From 0 To GridHeight - 1
+        FoodValid = True
+        For I = 0 To Length - 1
+            If FoodX = SnakeX[I] And FoodY = SnakeY[I] Then
+                FoodValid = False
+            End If
+        End For
+    Loop Until FoodValid = True
+End Sub</code></pre>
 </div><figure class="figure-card">
 <a class="figure-link" href="assets/images/food-flow.svg" rel="noopener" target="_blank" title="Open the high-resolution illustration">
 <img alt="Flowchart for choosing a valid food position" src="assets/images/food-flow.svg"/>
@@ -63,20 +63,20 @@ END SUB</code></pre>
 </figure>
 <h2>The algorithm in plain language</h2>
 <ol class="number-list"><li>Assume the position is not valid.</li><li>Pick random X and Y values inside the board.</li><li>Temporarily mark the square valid.</li><li>Look at every active snake segment.</li><li>If both X and Y match a segment, mark it invalid.</li><li>Repeat until a valid square is found.</li></ol>
-<div class="card-grid"><article class="card accent-blue"><h3><span class="syntax">SUB ... END SUB</span></h3><p>Defines a named procedure that performs a job.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>SUB SpawnFood()</code><a class="source-line-link" href="19-complete-source.html#source-line-34">lines 34&ndash;46</a></div></article><article class="card accent-green"><h3><span class="syntax">DO ... LOOP UNTIL</span></h3><p>Runs the body, then checks whether it is allowed to stop.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>DO  ...  LOOP UNTIL FoodValid = TRUE</code><a class="source-line-link" href="19-complete-source.html#source-line-36">lines 36&ndash;45</a></div></article><article class="card accent-yellow"><h3><span class="syntax">RANDOM ... FROM ... TO</span></h3><p>Stores an inclusive random whole number.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>RANDOM FoodX FROM 0 TO GridWidth - 1</code><a class="source-line-link" href="19-complete-source.html#source-line-37">line 37</a></div></article><article class="card accent-red"><h3><span class="syntax">AND</span></h3><p>Both X and Y must match before food overlaps a segment.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>FoodX = SnakeX[I] AND FoodY = SnakeY[I]</code><a class="source-line-link" href="19-complete-source.html#source-line-41">line 41</a></div></article></div>
+<div class="card-grid"><article class="card accent-blue"><h3><span class="syntax">Sub ... End Sub</span></h3><p>Defines a named procedure that performs a job.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Sub SpawnFood()</code><a class="source-line-link" href="19-complete-source.html#source-line-34">lines 34&ndash;46</a></div></article><article class="card accent-green"><h3><span class="syntax">Do ... Loop Until</span></h3><p>Runs the body, then checks whether it is allowed to stop.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Do  ...  Loop Until FoodValid = True</code><a class="source-line-link" href="19-complete-source.html#source-line-36">lines 36&ndash;45</a></div></article><article class="card accent-yellow"><h3><span class="syntax">Random ... From ... To</span></h3><p>Stores an inclusive random whole number.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Random FoodX From 0 To GridWidth - 1</code><a class="source-line-link" href="19-complete-source.html#source-line-37">line 37</a></div></article><article class="card accent-red"><h3><span class="syntax">And</span></h3><p>Both X and Y must match before food overlaps a segment.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>FoodX = SnakeX[I] And FoodY = SnakeY[I]</code><a class="source-line-link" href="19-complete-source.html#source-line-41">line 41</a></div></article></div>
 <details class="quiz"><summary>Why does random X stop at GridWidth &minus; 1?</summary><p>A 35-column board is numbered 0 through 34. Column 35 would be outside the board.</p></details>
 <section aria-labelledby="reinforce-title" class="reinforcement-panel">
 <p class="reinforcement-kicker">Repetition builds memory</p>
 <h2 id="reinforce-title">Reinforce what you learned</h2>
 <div class="reinforcement-grid">
 <article><h3>Say it again</h3><p>Food placement repeats: choose a square, assume it is valid, scan every segment, and retry when occupied.</p></article>
-<article><h3>Recall it</h3><p>Why does the loop stop only when <code>FoodValid = TRUE</code>?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>Because TRUE means no snake segment occupies the chosen square.</strong> The same array scan idea returns during self-collision.</p></details></article>
+<article><h3>Recall it</h3><p>Why does the loop stop only when <code>FoodValid = True</code>?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>Because True means no snake segment occupies the chosen square.</strong> The same array scan idea returns during self-collision.</p></details></article>
 </div>
 </section><nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="07-checkpoint-2-game-memory.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Checkpoint 2: Game Memory</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="09-checkpoint-4-starting-snake.html"><span><small>Next topic</small><strong>Checkpoint 4: Starting Snake</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
 </article>
 </main>
 <footer class="site-footer">
-<div class="footer-line">SMILE 2.0 (SinBASIC). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div>
+<div class="footer-line">SMILE 2.0 (SinBasic). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div>
 <div class="footer-line"><a href="https://github.com/Sincioco" rel="noopener" target="_blank">github.com/Sincioco</a> | <a href="https://facebook.com/louiery.sincioco" rel="noopener" target="_blank">facebook.com/louiery.sincioco</a> | <a href="https://linkedin.com/in/louierysincioco" rel="noopener" target="_blank">linkedin.com/in/louierysincioco</a> | <a href="https://youtube.com/@TheSincioco" rel="noopener" target="_blank">youtube.com/@TheSincioco</a> | <a href="https://tiktok.com/@sincioco" rel="noopener" target="_blank">tiktok.com/@sincioco</a></div>
 </footer>
 </div>

@@ -22,7 +22,7 @@ State 3  victory
 Keep those states if convenient. Add an explicit:
 
 ```smile
-DemoMode = FALSE
+DemoMode = False
 ```
 
 and standard title/demo timers from the shared contract.
@@ -48,16 +48,16 @@ No countdown is required.
 Create:
 
 ```smile
-SUB StartDemo()
+Sub StartDemo()
 ```
 
 It must:
 
-- set `DemoMode = TRUE`;
+- set `DemoMode = True`;
 - reset score, lives, level, bricks, paddle, ball, accumulator;
-- set `DemoStartedAt = TIMER()`;
+- set `DemoStartedAt = Timer()`;
 - auto-launch the ball after a short ready delay, approximately 400–700 ms;
-- draw `DEMO` and `PRESS ANY KEY TO RETURN`;
+- draw `DEMO` and `PRESS ANY Key To Return`;
 - not write high score.
 
 ## 4. Demo paddle AI
@@ -113,7 +113,7 @@ Use either:
 DEMO OVER
 ```
 
-or the normal `GAME OVER` presentation with a small `DEMO` label.
+or the normal `Game OVER` presentation with a small `DEMO` label.
 
 Keep it visible for:
 
@@ -132,10 +132,10 @@ If terminal occurs before 30 seconds, perform safety recovery instead.
 Process this before AI/physics:
 
 ```smile
-IF DemoMode = TRUE AND Key <> KEY_NONE THEN
-    CALL EnterTitle()
-    RETURN
-END IF
+If DemoMode = True And Key <> KEY_NONE Then
+    Call EnterTitle()
+    Return
+End If
 ```
 
 The canceling key is consumed.
@@ -147,8 +147,8 @@ Escape during demo returns to title, not directly out of the application.
 Change `UpdateHighScore()` or its call sites so:
 
 ```text
-DemoMode = TRUE -> never SAVE
-DemoMode = FALSE -> existing behavior
+DemoMode = True -> never Save
+DemoMode = False -> existing behavior
 ```
 
 Do not let demo score become the displayed persisted high score.

@@ -1,16 +1,16 @@
-OPTION EXPLICIT
+Option Explicit
 
-GAME WINDOW "Phase 4.1 Clip Frames" SIZE 320 BY 180
+Game Window "Phase 4.1 Clip Frames" Size 320 By 180
 
-DIM Frame AS NUMBER
+Dim Frame As Number
 
-CLIP RECTANGLE 20, 20, 200, 120
-    FOR Frame = 0 TO 2
-        CLEAR RGB(8, 12, 24)
-        FILL RECTANGLE 0, 0, 320, 180, BLUE
-        DRAW TEXT "CLIPPED FRAME" AT 30, 30 SIZE 20 COLOR WHITE
-        SHOW SCREEN
-    END FOR
-END CLIP
+Clip Rectangle 20, 20, 200, 120
+    For Frame = 0 To 2
+        Clear Rgb(8, 12, 24)
+        Fill Rectangle 0, 0, 320, 180, BLUE
+        Draw Text "Clipped Frame" At 30, 30 Size 20 Color WHITE
+        Show Screen
+    End For
+End Clip
 
-END PROGRAM
+End Program

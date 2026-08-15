@@ -4,11 +4,11 @@
 <rect x="20" y="30" width="700" height="480" fill="#000" stroke="rgb(40,70,95)" stroke-width="2"/>
 <rect x="260" y="255" width="80" height="18" fill="rgb(60,230,75)" stroke="rgb(20,105,35)" stroke-width="2"/>
 <rect x="360" y="257" width="14" height="14" fill="rgb(245,45,55)"/>
-<text x="370" y="140" text-anchor="middle" dominant-baseline="middle" fill="#6df28d" font-family="Segoe UI, Arial" font-size="54" font-weight="800">SMILE SNAKE</text>
-<text x="370" y="215" text-anchor="middle" dominant-baseline="middle" fill="#bbc5d4" font-family="Segoe UI, Arial" font-size="19">A NATIVE GAME WRITTEN IN SMILE</text>
-<text x="370" y="335" text-anchor="middle" dominant-baseline="middle" fill="#ffd21f" font-family="Segoe UI, Arial" font-size="28" font-weight="800">PRESS ENTER TO START</text>
-<text x="370" y="385" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="18">WASD OR ARROW KEYS TO MOVE</text>
-<text x="370" y="415" text-anchor="middle" dominant-baseline="middle" fill="#bbc5d4" font-family="Segoe UI, Arial" font-size="18">ESCAPE TO EXIT</text>
-<text x="835" y="165" text-anchor="middle" dominant-baseline="middle" fill="#bbc5d4" font-family="Segoe UI, Arial" font-size="20">HIGH SCORE</text>
+<text x="370" y="140" text-anchor="middle" dominant-baseline="middle" fill="#6df28d" font-family="Segoe UI, Arial" font-size="54" font-weight="800">SMILE Snake</text>
+<text x="370" y="215" text-anchor="middle" dominant-baseline="middle" fill="#bbc5d4" font-family="Segoe UI, Arial" font-size="19">A Native Game Written In SMILE</text>
+<text x="370" y="335" text-anchor="middle" dominant-baseline="middle" fill="#ffd21f" font-family="Segoe UI, Arial" font-size="28" font-weight="800">Press Enter To Start</text>
+<text x="370" y="385" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="18">WASD Or Arrow Keys To Move</text>
+<text x="370" y="415" text-anchor="middle" dominant-baseline="middle" fill="#bbc5d4" font-family="Segoe UI, Arial" font-size="18">Escape To Exit</text>
+<text x="835" y="165" text-anchor="middle" dominant-baseline="middle" fill="#bbc5d4" font-family="Segoe UI, Arial" font-size="20">High Score</text>
 <text x="805" y="205" dominant-baseline="middle" fill="#29cce5" font-family="Segoe UI, Arial" font-size="38" font-weight="800">350</text>
 </svg>

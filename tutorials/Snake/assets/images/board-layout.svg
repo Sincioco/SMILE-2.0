@@ -11,9 +11,9 @@
 <text x="555" y="50" text-anchor="middle" fill="#ffd21f" font-family="Segoe UI, Arial" font-size="29" font-weight="800">FieldWidth = 700 pixels</text>
 <line x1="78" y1="144" x2="78" y2="686" stroke="#ffd21f" stroke-width="5" marker-start="url(#arrowYellowStart)" marker-end="url(#arrowYellow)"/>
 <g transform="translate(47 415) rotate(-90)"><text x="0" y="0" text-anchor="middle" fill="#ffd21f" font-family="Segoe UI, Arial" font-size="27" font-weight="800">FieldHeight = 480 pixels</text></g>
-<text x="555" y="382" text-anchor="middle" fill="#50ed7a" font-family="Segoe UI, Arial" font-size="56" font-weight="900">35 × 24 GAME GRID</text>
+<text x="555" y="382" text-anchor="middle" fill="#50ed7a" font-family="Segoe UI, Arial" font-size="56" font-weight="900">35 × 24 Game Grid</text>
 <text x="555" y="438" text-anchor="middle" fill="#aac9e6" font-family="Segoe UI, Arial" font-size="29">Each square is 20 × 20 pixels</text>
-<text x="1185" y="220" text-anchor="middle" fill="#50ed7a" font-family="Segoe UI, Arial" font-size="42" font-weight="900">SIDE PANEL</text>
+<text x="1185" y="220" text-anchor="middle" fill="#50ed7a" font-family="Segoe UI, Arial" font-size="42" font-weight="900">Side Panel</text>
 <text x="1185" y="302" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="29">Score</text>
 <text x="1185" y="369" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="29">High score</text>
 <text x="1185" y="436" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="29">Controls</text>

@@ -1,9 +1,9 @@
-OPTION EXPLICIT
+Option Explicit
 
-IMPORT Smile.UI.Menu AS Menu
+Import Smile.UI.Menu As Menu
 
-DIM Handle AS NUMBER
+Dim Handle As Number
 
-CALL Menu.Draw(Handle)
+Call Menu.Draw(Handle)
 
-END PROGRAM
+End Program

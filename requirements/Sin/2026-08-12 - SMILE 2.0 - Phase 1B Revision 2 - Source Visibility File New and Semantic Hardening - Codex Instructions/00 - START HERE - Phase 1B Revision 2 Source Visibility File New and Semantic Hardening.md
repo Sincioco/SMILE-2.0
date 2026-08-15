@@ -123,14 +123,14 @@ This corrective milestone may update:
 
 Do not begin:
 
-- `MODULE`
-- `IMPORT`
-- `PUBLIC`
-- `PRIVATE`
+- `Module`
+- `Import`
+- `Public`
+- `Private`
 - `.smilelib`
 - `.smilelibproj`
-- `TYPE`
-- `BYREF`
+- `Type`
+- `ByRef`
 - image/sprite support
 - multiple sound channels
 - RPG libraries

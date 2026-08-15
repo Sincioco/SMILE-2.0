@@ -40,7 +40,7 @@ if errorlevel 1 (
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\games\LibraryConsumer.exe" > "%SMILE_ROOT%\artifacts\temp\LibraryConsumer.out"
 if errorlevel 1 exit /b %errorlevel%
-for %%V in ("100" "TRUE" "1") do (
+for %%V in ("100" "True" "1") do (
     findstr /x /c:%%V "%SMILE_ROOT%\artifacts\temp\LibraryConsumer.out" >nul
     if errorlevel 1 exit /b 1
 )
@@ -68,14 +68,14 @@ copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib" "%SMILE_RO
 if errorlevel 1 exit /b %errorlevel%
 fc /b "%SMILE_ROOT%\artifacts\temp\Smile.Text.Extras.first.smilelib" "%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib" >nul
 if errorlevel 1 exit /b 1
-powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib'); try { $manifest=[IO.StreamReader]::new($zip.GetEntry('manifest.json').Open()).ReadToEnd(); $api=[IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open()).ReadToEnd(); if (!$manifest.Contains('formatVersion') -or !$manifest.Contains(': 5') -or !$api.Contains('ByRef') -or !$api.Contains('returnType') -or !$api.Contains('TEXT')) { exit 1 } } finally { $zip.Dispose() }"
+powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.Text.Extras.smilelib'); try { $manifest=[IO.StreamReader]::new($zip.GetEntry('manifest.json').Open()).ReadToEnd(); $api=[IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open()).ReadToEnd(); if (!$manifest.Contains('formatVersion') -or !$manifest.Contains(': 5') -or !$api.Contains('ByRef') -or !$api.Contains('returnType') -or !$api.Contains('Text')) { exit 1 } } finally { $zip.Dispose() }"
 if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3ABasics\Phase3ABasics.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase3ABasics.exe" --debug
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\games\Phase3ABasics.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3ABasics.out"
 if errorlevel 1 exit /b %errorlevel%
-for %%V in ("Changed" "TRUE" "36" "1136" "MODULE TEXT" "MATCH") do (
+for %%V in ("Changed" "True" "36" "1136" "Module Text" "Match") do (
     findstr /x /c:%%V "%SMILE_ROOT%\artifacts\temp\Phase3ABasics.out" >nul
     if errorlevel 1 exit /b 1
 )
@@ -101,7 +101,7 @@ if errorlevel 1 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\games\Phase3ATextStress.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3ATextStress.out"
 if errorlevel 1 exit /b %errorlevel%
-findstr /x /c:"FALSE" "%SMILE_ROOT%\artifacts\temp\Phase3ATextStress.out" >nul || exit /b 1
+findstr /x /c:"False" "%SMILE_ROOT%\artifacts\temp\Phase3ATextStress.out" >nul || exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase3ATextStress.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\Phase3ATextStress"
 if errorlevel 1 exit /b %errorlevel%
 node --check "%SMILE_ROOT%\artifacts\web\Phase3ATextStress\game.js"
@@ -250,7 +250,7 @@ for %%P in (InvalidImageTarget:SML3500 InvalidDrawImage:SML3501 InvalidImageModi
         findstr /c:"%%G" "%SMILE_ROOT%\artifacts\temp\%%F.log" >nul || exit /b 1
     )
 )
-echo Phase 4 IMAGE, high-resolution drawing, clip, data, SFX, diagnostics, native, and Web tests passed.
+echo Phase 4 Image, high-resolution drawing, clip, data, SFX, diagnostics, native, and Web tests passed.
 
 if not exist "%SMILE_ROOT%\artifacts\games\Phase4Hardening" mkdir "%SMILE_ROOT%\artifacts\games\Phase4Hardening"
 if not exist "%SMILE_ROOT%\artifacts\web\Phase4Hardening" mkdir "%SMILE_ROOT%\artifacts\web\Phase4Hardening"
@@ -287,7 +287,7 @@ if errorlevel 1 exit /b 1
 if errorlevel 1 exit /b 1
 node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase4Hardening\AudioGeneration" --frames 3 --timeout 10000 --phase4-audio
 if errorlevel 1 exit /b 1
-echo Phase 4.1 ownership, high-DPI, clip lifetime, DATA identity, cache race, and audio generation tests passed.
+echo Phase 4.1 ownership, high-DPI, clip lifetime, Data identity, cache race, and audio generation tests passed.
 
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-phase4-asset-publication.ps1"
 if errorlevel 1 exit /b 1
@@ -401,7 +401,7 @@ for %%P in (ConsoleCallsDialogueSetStyle.smileproj ConsoleCallsDialogueSetStyle.
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\InvalidPhase5Submenus\ConsoleDrawStack\ConsoleDrawStack.smileproj" -o "%SMILE_ROOT%\artifacts\temp\ConsoleDrawStack.exe" > "%SMILE_ROOT%\artifacts\temp\ConsoleDrawStack.log" 2>&1
 if not errorlevel 1 exit /b 1
 if errorlevel 2 exit /b 1
-powershell -NoProfile -Command "$matches=Select-String -LiteralPath '%SMILE_ROOT%\artifacts\temp\ConsoleDrawStack.log' -SimpleMatch 'SML3704'; if ($matches.Count -ne 1 -or $matches.Line -notmatch 'Program\.smile\(7,20\).*DrawStack.*requires a GAME WINDOW') { exit 1 }"
+powershell -NoProfile -Command "$matches=Select-String -LiteralPath '%SMILE_ROOT%\artifacts\temp\ConsoleDrawStack.log' -SimpleMatch 'SML3704'; if ($matches.Count -ne 1 -or $matches.Line -notmatch 'Program\.smile\(7,20\).*DrawStack.*requires a Game Window') { exit 1 }"
 if errorlevel 1 exit /b 1
 
 if not exist "%SMILE_ROOT%\artifacts\games\Phase5SubmenuViewport-DirectX" mkdir "%SMILE_ROOT%\artifacts\games\Phase5SubmenuViewport-DirectX"
@@ -449,7 +449,7 @@ for %%P in (OptionExplicitLate:SML3300 OptionExplicitUndeclared:SML3303 ScalarDi
         findstr /c:"%%G" "%SMILE_ROOT%\artifacts\temp\%%F.log" >nul || exit /b 1
     )
 )
-echo Phase 3A typed declarations, TEXT lifetime, routine ABI, packages, diagnostics, native, and Web tests passed.
+echo Phase 3A typed declarations, Text lifetime, routine ABI, packages, diagnostics, native, and Web tests passed.
 
 for %%F in (MissingModule UnknownMember PrivateMemberAccess DuplicateAlias ModuleImportCycle) do (
     "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\InvalidModules\%%F\%%F.smileproj" -o "%SMILE_ROOT%\artifacts\temp\%%F.exe" > "%SMILE_ROOT%\artifacts\temp\%%F.log" 2>&1
@@ -478,7 +478,7 @@ if errorlevel 1 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\games\StructuredLanguageBasics.exe" > "%SMILE_ROOT%\artifacts\temp\StructuredLanguageBasics.out"
 if errorlevel 1 exit /b %errorlevel%
-for %%V in ("EVEN" "12" "40" "1" "2" "200" "5" "3" "2022440" "16744576") do (
+for %%V in ("Even" "12" "40" "1" "2" "200" "5" "3" "2022440" "16744576") do (
     findstr /x /c:%%V "%SMILE_ROOT%\artifacts\temp\StructuredLanguageBasics.out" >nul
     if errorlevel 1 (
         echo Structured language smoke test failed: missing %%V.

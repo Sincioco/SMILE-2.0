@@ -1,5 +1,5 @@
-TYPE Point
-    X AS NUMBER
-END TYPE
-DIM Value AS Point
-PRINT Value
+Type Point
+    X As Number
+End Type
+Dim Value As Point
+Print Value

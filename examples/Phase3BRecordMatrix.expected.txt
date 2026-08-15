@@ -1,7 +1,7 @@
 0
-FIRST
-CHANGED
-NESTED
+First
+Changed
+Nested
 9
 1
 10
@@ -9,5 +9,5 @@ NESTED
 36
 136
 10
-FIRST
-BYREF
+First
+ByRef

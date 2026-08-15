@@ -129,7 +129,7 @@ public static class SmileSymbolDisplayService
         return new SmileSymbolPresentation(symbol.Signature, symbol.Documentation.Summary, parameters,
             symbol.Kind == SmileResolvedSymbolKind.Function ? symbol.Documentation.Returns : string.Empty,
             symbol.Documentation.Remarks,
-            symbol.RequiresGameWindow ? "Requires GAME WINDOW." : string.Empty,
+            symbol.RequiresGameWindow ? "Requires Game Window." : string.Empty,
             DescribeProvider(symbol.ProviderIdentity, dependencies),
             symbol.DeclarationLocation?.FilePath ?? string.Empty, symbol.Alias);
     }
@@ -144,18 +144,18 @@ public static class SmileSymbolDisplayService
         var parameters = string.Join(", ", Enumerable.Range(0, routine.Parameters.Count)
             .Select(index => FormatParameter(routine, index)));
         var returnType = routine.IsFunction
-            ? " AS " + FormatDeclaredType(routine.Source, routine.Declaration.ReturnTypeToken, routine.ReturnType)
+            ? " As " + FormatDeclaredType(routine.Source, routine.Declaration.ReturnTypeToken, routine.ReturnType)
             : string.Empty;
-        return (routine.IsFunction ? "FUNCTION " : "SUB ") + name + "(" + parameters + ")" + returnType;
+        return (routine.IsFunction ? "Function " : "Sub ") + name + "(" + parameters + ")" + returnType;
     }
 
     public static string FormatParameter(RoutineSymbol routine, int index)
     {
         var parameter = routine.Parameters[index];
-        var mode = parameter.ParameterMode == ParameterPassingMode.ByRef ? "BYREF " : string.Empty;
+        var mode = parameter.ParameterMode == ParameterPassingMode.ByRef ? "ByRef " : string.Empty;
         var typeToken = index < routine.Declaration.Parameters.Count
             ? routine.Declaration.Parameters[index].TypeToken : null;
-        return mode + parameter.Name + " AS " + FormatDeclaredType(routine.Source, typeToken, parameter.Type);
+        return mode + parameter.Name + " As " + FormatDeclaredType(routine.Source, typeToken, parameter.Type);
     }
 
     public static string DescribeProvider(string providerIdentity,
@@ -171,24 +171,24 @@ public static class SmileSymbolDisplayService
 
     internal static string FormatVariableSignature(VariableSymbol variable)
     {
-        var keyword = variable.IsConstant ? "CONST " : variable.IsParameter ? "PARAMETER " : "DIM ";
+        var keyword = variable.IsConstant ? "Const " : variable.IsParameter ? "Parameter " : "Dim ";
         var name = string.IsNullOrWhiteSpace(variable.ModuleName)
             ? variable.Name : variable.ModuleName + "." + variable.Name;
         var dimensions = variable.IsArray ? "[" + string.Join(", ", variable.ArrayDimensions) + "]" : string.Empty;
-        return keyword + name + dimensions + " AS " + FormatType(variable.Type);
+        return keyword + name + dimensions + " As " + FormatType(variable.Type);
     }
 
     internal static string FormatTypeSignature(RecordTypeSymbol type)
     {
         var name = string.IsNullOrWhiteSpace(type.ModuleName) ? type.Name : type.ModuleName + "." + type.Name;
-        return "TYPE " + name;
+        return "Type " + name;
     }
 
     internal static string FormatFieldSignature(RecordTypeSymbol owner, RecordFieldSymbol field)
     {
         var ownerName = string.IsNullOrWhiteSpace(owner.ModuleName)
             ? owner.Name : owner.ModuleName + "." + owner.Name;
-        return "FIELD " + ownerName + "." + field.Name + " AS " + FormatType(field.Type);
+        return "Field " + ownerName + "." + field.Name + " As " + FormatType(field.Type);
     }
 
     private static string FormatDeclaredType(SourceText source, SyntaxToken? token, SmileType fallback)
@@ -204,7 +204,7 @@ public static class SmileSymbolDisplayService
 
     private static string FormatType(SmileType type) => type.Kind == SmileTypeKind.Record
         ? (string.IsNullOrWhiteSpace(type.ModuleName) ? type.Name : type.ModuleName + "." + type.Name)
-        : type.Name.ToUpperInvariant();
+        : type.Name;
 }
 
 public static class SmileSymbolService
@@ -547,7 +547,7 @@ public static class SmileSymbolService
             SmileDocumentationService.GetDocumentation(declaration.Tree.Source,
                 declaration.Declaration.ModuleKeyword.Span.Start);
         return new SmileResolvedSymbol(SmileResolvedSymbolKind.Module, module.Name, module.Name, alias,
-            referenceSpan, location, module.ProviderIdentity, module.Name, "MODULE " + module.Name,
+            referenceSpan, location, module.ProviderIdentity, module.Name, "Module " + module.Name,
             documentation, requiresGameWindow: false);
     }
 
@@ -569,7 +569,7 @@ public static class SmileSymbolService
             _ => SmileResolvedSymbolKind.Variable
         };
         return new SmileResolvedSymbol(kind, member.Name, member.Name, string.Empty, referenceSpan,
-            member.DeclarationLocation, string.Empty, string.Empty, kind.ToString().ToUpperInvariant() + " " + member.Name,
+            member.DeclarationLocation, string.Empty, string.Empty, kind + " " + member.Name,
             SmileDocumentationService.GetDocumentation(member.Source, member.DeclarationSpan.Start), false);
     }
 

@@ -11,15 +11,15 @@ The native compiler and Visual Studio extension continue to share `src\Smile.Lan
 The shared language surface is:
 
 ```smile
-PLAY MUSIC "Assets\Background.mp3"
-PLAY MUSIC "Assets\Background.mp3" LOOP
-PAUSE MUSIC
-RESUME MUSIC
-STOP MUSIC
-MUSIC VOLUME 50
+Play Music "Assets\Background.mp3"
+Play Music "Assets\Background.mp3" Loop
+Pause Music
+Resume Music
+Stop Music
+Music Volume 50
 ```
 
-`MusicStatementSyntax` is separate from WAV-oriented `SoundStatementSyntax`. All music statements require `GAME WINDOW`; paths must be non-empty literals and volume must be numeric. `SML3026` is reserved for music-specific semantic errors, leaving `SML3024` unchanged for WAV effects.
+`MusicStatementSyntax` is separate from WAV-oriented `SoundStatementSyntax`. All music statements require `Game Window`; paths must be non-empty literals and volume must be numeric. `SML3026` is reserved for music-specific semantic errors, leaving `SML3024` unchanged for WAV effects.
 
 The MASM emitter uses its existing Windows x64 call helper for `smile_music_play`, `smile_music_pause`, `smile_music_resume`, `smile_music_stop`, and `smile_music_set_volume`. A music-bearing program also calls the idempotent `smile_music_shutdown` before every `ExitProcess` route and before a normal return from generated `main`.
 
@@ -39,7 +39,7 @@ The pure `audio_focus_state` helper is exercised without audio hardware by the n
 
 ## Falling Blocks integration
 
-Falling Blocks remains silent on its title and game-over screens. `ResetGame` starts the exact supplied `Assets\Background.mp3` in looping mode only after the state becomes live. `EndGame` stops music before the game-over WAV. Retry replaces and restarts the track, and both explicit exit paths stop music and WAV effects before `END PROGRAM`.
+Falling Blocks remains silent on its title and game-over screens. `ResetGame` starts the exact supplied `Assets\Background.mp3` in looping mode only after the state becomes live. `EndGame` stops music before the game-over WAV. Retry replaces and restarts the track, and both explicit exit paths stop music and WAV effects before `End Program`.
 
 ## Scope
 

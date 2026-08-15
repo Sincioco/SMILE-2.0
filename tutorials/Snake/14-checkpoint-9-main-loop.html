@@ -39,102 +39,102 @@
 <p class="lead">The helpers are ready. Now open the window, choose behavior by State, present every frame, and close cleanly.</p>
 <div class="topic-meta"><span class="meta-pill">9A helpers</span><span class="meta-pill">9B window</span><span class="meta-pill">9C title</span><span class="meta-pill">9D playing</span><span class="meta-pill">9E finish</span></div>
 </section>
-<aside class="callout warning"><h3>The final build sequence</h3><p>Paste 9A through 9E in order. The outer <code>DO</code> loop and state <code>IF</code> remain open until the final piece.</p></aside>
+<aside class="callout warning"><h3>The final build sequence</h3><p>Paste 9A through 9E in order. The outer <code>Do</code> loop and state <code>If</code> remain open until the final piece.</p></aside>
 <div class="step-heading"><span class="step-badge">9A</span><div><h2>Prepare the state helpers</h2><p>Use small names that make the main loop read like a story.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 9A &mdash; state helpers</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="184">SUB EnterTitle()
+<pre><code class="language-smile" data-source-start="184">Sub EnterTitle()
     State = 0
     Key = KEY_NONE
-    STOP SOUND
-END SUB
+    Stop Sound
+End Sub
 
-SUB ResetGame()
-    CALL ResetPlay()
-END SUB</code></pre>
+Sub ResetGame()
+    Call ResetPlay()
+End Sub</code></pre>
 </div><figure class="figure-card">
 <a class="figure-link" href="assets/images/state-machine.svg" rel="noopener" target="_blank" title="Open the high-resolution illustration">
 <img alt="Snake state transition diagram" src="assets/images/state-machine.svg"/>
 </a>
 <figcaption>State 0 is title, State 1 is playing, and State 2 is game over. Click the illustration to open its high-resolution version.</figcaption>
 </figure>
-<div class="step-heading"><span class="step-badge">9B</span><div><h2>Open the game window</h2><p>SUB definitions are recipes; this is where the actual program begins.</p></div></div>
+<div class="step-heading"><span class="step-badge">9B</span><div><h2>Open the game window</h2><p>Sub definitions are recipes; this is where the actual program begins.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 9B &mdash; program begins</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="194">GAME WINDOW "SMILE 2.0 Snake"
+<pre><code class="language-smile" data-source-start="194">Game Window "SMILE 2.0 Snake"
 
-CALL EnterTitle()</code></pre>
+Call EnterTitle()</code></pre>
 </div>
 <div class="step-heading"><span class="step-badge">9C</span><div><h2>Handle the title state</h2><p>Read one key event, allow Enter or Escape, and draw the title.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 9C &mdash; loop opening and State 0</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="198">DO
-    GET KEY Key
+<pre><code class="language-smile" data-source-start="198">Do
+    Get Key Key
 
-    IF State = 0 THEN
-        IF Key = KEY_ESCAPE THEN
-            END PROGRAM
-        ELSE IF Key = KEY_ENTER THEN
-            CALL ResetGame()
-        END IF
-        CALL DrawTitle()</code></pre>
+    If State = 0 Then
+        If Key = KEY_ESCAPE Then
+            End Program
+        Else If Key = KEY_ENTER Then
+            Call ResetGame()
+        End If
+        Call DrawTitle()</code></pre>
 </div>
 <div class="step-heading"><span class="step-badge">9D</span><div><h2>Handle the playing state</h2><p>Accept safe turns, move only when time is ready, then draw.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 9D &mdash; State 1</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="208">    ELSE IF State = 1 THEN
-        IF Key = KEY_ESCAPE THEN
-            END PROGRAM
-        END IF
+<pre><code class="language-smile" data-source-start="208">    Else If State = 1 Then
+        If Key = KEY_ESCAPE Then
+            End Program
+        End If
 
-        IF (Key = KEY_W OR Key = KEY_UP) AND Direction &lt;&gt; KEY_DOWN THEN
+        If (Key = KEY_W Or Key = KEY_UP) And Direction &lt;&gt; KEY_DOWN Then
             NextDirection = KEY_UP
-        ELSE IF (Key = KEY_S OR Key = KEY_DOWN) AND Direction &lt;&gt; KEY_UP THEN
+        Else If (Key = KEY_S Or Key = KEY_DOWN) And Direction &lt;&gt; KEY_UP Then
             NextDirection = KEY_DOWN
-        ELSE IF (Key = KEY_A OR Key = KEY_LEFT) AND Direction &lt;&gt; KEY_RIGHT THEN
+        Else If (Key = KEY_A Or Key = KEY_LEFT) And Direction &lt;&gt; KEY_RIGHT Then
             NextDirection = KEY_LEFT
-        ELSE IF (Key = KEY_D OR Key = KEY_RIGHT) AND Direction &lt;&gt; KEY_LEFT THEN
+        Else If (Key = KEY_D Or Key = KEY_RIGHT) And Direction &lt;&gt; KEY_LEFT Then
             NextDirection = KEY_RIGHT
-        END IF
+        End If
 
-        IF State = 1 AND TIMER() &gt;= NextMoveTime THEN
-            CALL MoveSnake()
-        END IF
+        If State = 1 And Timer() &gt;= NextMoveTime Then
+            Call MoveSnake()
+        End If
 
-        CALL DrawBoard()
-        IF State = 2 THEN
-            CALL DrawGameOver()
-        END IF</code></pre>
+        Call DrawBoard()
+        If State = 2 Then
+            Call DrawGameOver()
+        End If</code></pre>
 </div>
 <h3>Prevent an instant 180-degree turn</h3><p>The first direction condition reads: If W or Up was pressed, <strong>and</strong> the snake is not currently moving Down, request Up. The other three branches use the same safety rule.</p>
-<div class="step-heading"><span class="step-badge">9E</span><div><h2>Finish game over, present frames, and clean up</h2><p>This final block closes the state IF and the outer loop.</p></div></div>
+<div class="step-heading"><span class="step-badge">9E</span><div><h2>Finish game over, present frames, and clean up</h2><p>This final block closes the state If and the outer loop.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 9E &mdash; finish the program</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="231">    ELSE
-        IF Key = KEY_ESCAPE THEN
-            END PROGRAM
-        ELSE IF Key = KEY_ENTER THEN
-            CALL ResetGame()
-        END IF
+<pre><code class="language-smile" data-source-start="231">    Else
+        If Key = KEY_ESCAPE Then
+            End Program
+        Else If Key = KEY_ENTER Then
+            Call ResetGame()
+        End If
 
-        IF State = 0 THEN
-            CALL DrawTitle()
-        ELSE
-            CALL DrawBoard()
-            CALL DrawGameOver()
-        END IF
-    END IF
+        If State = 0 Then
+            Call DrawTitle()
+        Else
+            Call DrawBoard()
+            Call DrawGameOver()
+        End If
+    End If
 
-    SHOW SCREEN
-LOOP UNTIL GAME_CLOSED() = TRUE
+    Show Screen
+Loop Until Game_Closed() = True
 
-STOP SOUND
-END PROGRAM</code></pre>
+Stop Sound
+End Program</code></pre>
 </div><figure class="figure-card">
 <a class="figure-link" href="assets/images/game-loop.svg" rel="noopener" target="_blank" title="Open the high-resolution illustration">
 <img alt="Snake main game loop diagram" src="assets/images/game-loop.svg"/>
 </a>
-<figcaption>SHOW SCREEN presents one complete frame; the loop repeats until GAME_CLOSED() is TRUE. Click the illustration to open its high-resolution version.</figcaption>
+<figcaption>Show Screen presents one complete frame; the loop repeats until Game_Closed() is True. Click the illustration to open its high-resolution version.</figcaption>
 </figure>
 <h2>Build checkpoint: your game is ready</h2>
 <ol class="number-list"><li>Save <code>Program-NoDemo.smile</code>.</li><li>Build the solution.</li><li>Press F5 or Ctrl+F5.</li><li>Confirm the title, play, food, score, speed, collision, retry, sound, high score, Escape, and Alt+Enter.</li></ol>
@@ -143,14 +143,14 @@ END PROGRAM</code></pre>
 <p class="reinforcement-kicker">Repetition builds memory</p>
 <h2 id="reinforce-title">Reinforce what you learned</h2>
 <div class="reinforcement-grid">
-<article><h3>Say it again</h3><p>The main loop repeatedly reads input, chooses a state branch, updates on schedule, draws, and calls <code>SHOW SCREEN</code>.</p></article>
-<article><h3>Recall it</h3><p>Why is <code>SHOW SCREEN</code> near the bottom of the loop?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>So the player sees one complete frame after all drawing for that pass is finished.</strong></p></details></article>
+<article><h3>Say it again</h3><p>The main loop repeatedly reads input, chooses a state branch, updates on schedule, draws, and calls <code>Show Screen</code>.</p></article>
+<article><h3>Recall it</h3><p>Why is <code>Show Screen</code> near the bottom of the loop?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>So the player sees one complete frame after all drawing for that pass is finished.</strong></p></details></article>
 </div>
 </section><nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="13-checkpoint-8-screens.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Checkpoint 8: Title &amp; Game Over</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="15-trace-and-debug.html"><span><small>Next topic</small><strong>Trace &amp; Debug</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
 </article>
 </main>
 <footer class="site-footer">
-<div class="footer-line">SMILE 2.0 (SinBASIC). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div>
+<div class="footer-line">SMILE 2.0 (SinBasic). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div>
 <div class="footer-line"><a href="https://github.com/Sincioco" rel="noopener" target="_blank">github.com/Sincioco</a> | <a href="https://facebook.com/louiery.sincioco" rel="noopener" target="_blank">facebook.com/louiery.sincioco</a> | <a href="https://linkedin.com/in/louierysincioco" rel="noopener" target="_blank">linkedin.com/in/louierysincioco</a> | <a href="https://youtube.com/@TheSincioco" rel="noopener" target="_blank">youtube.com/@TheSincioco</a> | <a href="https://tiktok.com/@sincioco" rel="noopener" target="_blank">tiktok.com/@sincioco</a></div>
 </footer>
 </div>

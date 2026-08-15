@@ -76,7 +76,7 @@ Suggested content:
 ' SMILE 2.0 support source.
 ```
 
-Do not insert executable top-level statements, `GAME WINDOW`, or `END PROGRAM`.
+Do not insert executable top-level statements, `Game Window`, or `End Program`.
 
 The new item is an ordinary support source:
 
@@ -109,9 +109,9 @@ Do not report success after only `OpenPath(sourcePath)`.
 For the live acceptance source, add a small routine:
 
 ```smile
-FUNCTION AddedSourceValue()
-    RETURN 42
-END FUNCTION
+Function AddedSourceValue()
+    Return 42
+End Function
 ```
 
 Call it from the startup source.

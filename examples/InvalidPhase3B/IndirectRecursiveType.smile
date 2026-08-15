@@ -1,6 +1,6 @@
-TYPE First
-    Next AS Second
-END TYPE
-TYPE Second
-    Next AS First
-END TYPE
+Type First
+    Next As Second
+End Type
+Type Second
+    Next As First
+End Type

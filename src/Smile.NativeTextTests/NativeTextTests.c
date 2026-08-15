@@ -111,31 +111,31 @@ int main(void)
         (int)(sizeof(resolved_asset) / sizeof(resolved_asset[0]))),
         "native media paths reject traversal roots URIs and undeclared case variants");
 
-    check(smile_text_live_count() == 0, "TEXT runtime starts with zero dynamic objects");
+    check(smile_text_live_count() == 0, "Text runtime starts with zero dynamic objects");
     value = smile_text_concat(smile_text_retain(&x_text), smile_text_retain(&emoji_text));
-    check(value != 0, "concat allocates a dynamic TEXT value");
+    check(value != 0, "concat allocates a dynamic Text value");
     check(smile_text_allocation_count() == initial_allocations + 1, "allocation counter increments");
     check(smile_text_live_count() == 1, "concat produces one live object");
     check(smile_text_equal(smile_text_retain(value), smile_text_retain(&x_emoji_text)) != 0,
         "Unicode UTF-8 bytes compare exactly");
     check(smile_text_scalar_length(smile_text_retain(value)) == 2,
-        "TEXT_LENGTH counts Unicode scalar values instead of UTF-8 bytes");
+        "Text_Length counts Unicode scalar values instead of UTF-8 bytes");
     check(smile_text_code_at(smile_text_retain(value), 1) == 0x1f600 &&
         smile_text_code_at(smile_text_retain(value), -1) == -1 &&
         smile_text_code_at(smile_text_retain(value), 2) == -1,
-        "TEXT_CODE_AT returns zero-based Unicode scalars and safe out-of-range values");
+        "Text_Code_At returns zero-based Unicode scalars and safe out-of-range values");
     replacement = smile_text_slice(smile_text_retain(value), 1, 1);
     check(smile_text_equal(replacement, smile_text_retain(&emoji_text)) != 0,
-        "TEXT_SLICE returns complete UTF-8 scalar sequences");
+        "Text_Slice returns complete UTF-8 scalar sequences");
     check(smile_text_slice(smile_text_retain(value), -1, 1) == 0 &&
         smile_text_slice(smile_text_retain(value), 0, 0) == 0 &&
         smile_text_slice(smile_text_retain(value), 5, 1) == 0,
-        "TEXT_SLICE returns empty TEXT for invalid or empty ranges");
+        "Text_Slice returns empty Text for invalid or empty ranges");
 
     owned = smile_text_retain(value);
     smile_text_move_assign(&value, owned);
     check(smile_text_live_count() == 1, "self-assignment retain/move pattern preserves one owner");
-    check(smile_text_concat(0, 0) == 0, "empty concat remains the zero TEXT handle");
+    check(smile_text_concat(0, 0) == 0, "empty concat remains the zero Text handle");
     smile_text_clear(&value);
     check(value == 0 && smile_text_live_count() == 0, "clear releases a dynamic value and zeros its slot");
     smile_text_clear(&value);
@@ -156,21 +156,21 @@ int main(void)
     GetFullPathNameW(L"examples\\Phase4VisualSlice\\Assets\\PixelProof.png", MAX_PATH, pixel_path, 0);
     first_image = smile_image_resource_load(character_path);
     second_image = smile_image_resource_load(character_path);
-    check(first_image != 0 && second_image == first_image, "duplicate IMAGE paths share one cached resource");
+    check(first_image != 0 && second_image == first_image, "duplicate Image paths share one cached resource");
     check(smile_image_resource_width(first_image) == 2048 && smile_image_resource_height(first_image) == 1024,
         "WIC preserves high-resolution sprite-sheet dimensions");
     check(smile_image_resource_pixels(first_image) != 0 && smile_image_resource_pixels(first_image)[3] == 0,
         "WIC preserves fully transparent PNG pixels");
     check(smile_image_resource_decode_count() == initial_image_decodes + 1 &&
         smile_image_resource_cache_hit_count() == initial_image_hits + 1,
-        "IMAGE cache records one decode and one hit");
+        "Image cache records one decode and one hit");
     smile_image_resource_release(first_image);
     check(smile_image_resource_width(second_image) == 2048 &&
         smile_image_resource_live_count() == initial_image_live + 1,
-        "releasing one shared IMAGE handle preserves the other owner");
+        "releasing one shared Image handle preserves the other owner");
     smile_image_resource_release(second_image);
     check(smile_image_resource_live_count() == initial_image_live,
-        "final IMAGE release evicts the cached resource");
+        "final Image release evicts the cached resource");
 
     image_race_start = CreateEventW(0, TRUE, FALSE, 0);
     image_race_loaded = CreateEventW(0, TRUE, FALSE, 0);
@@ -185,7 +185,7 @@ int main(void)
         race_threads[1] = CreateThread(0, 0, image_race_worker, &race_states[1], 0, 0);
         SetEvent(image_race_start);
         check(WaitForSingleObject(image_race_loaded, 10000) == WAIT_OBJECT_0,
-            "two-thread IMAGE cache race reaches the shared ownership barrier");
+            "two-thread Image cache race reaches the shared ownership barrier");
         check(race_states[0].image != 0 && race_states[0].image == race_states[1].image &&
             smile_image_resource_cache_count() == 1 && smile_image_resource_reference_count() == 2,
             "same-path concurrent loads merge into one resource with two owners");
@@ -198,7 +198,7 @@ int main(void)
         CloseHandle(image_race_start); CloseHandle(image_race_loaded); CloseHandle(image_race_release);
         check(smile_image_resource_cache_count() == 0 && smile_image_resource_reference_count() == 0 &&
             smile_image_resource_live_count() == initial_image_live,
-            "concurrent final releases atomically evict the IMAGE cache entry");
+            "concurrent final releases atomically evict the Image cache entry");
     }
 
     background_image = smile_image_resource_load(background_path);
@@ -212,7 +212,7 @@ int main(void)
     smile_image_resource_release(background_image);
     smile_image_resource_release(pixel_image);
     check(smile_image_resource_live_count() == initial_image_live,
-        "all focused IMAGE resources return to zero live owners");
+        "all focused Image resources return to zero live owners");
     smile_image_resource_shutdown();
     smile_image_resource_shutdown();
 
@@ -247,9 +247,9 @@ int main(void)
 
     if (failures != 0)
     {
-        fprintf(stderr, "%d native TEXT runtime check(s) failed.\n", failures);
+        fprintf(stderr, "%d native Text runtime check(s) failed.\n", failures);
         return 1;
     }
-    printf("%d native TEXT runtime checks passed.\n", checks);
+    printf("%d native Text runtime checks passed.\n", checks);
     return 0;
 }

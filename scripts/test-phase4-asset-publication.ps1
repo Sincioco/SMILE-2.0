@@ -134,7 +134,7 @@ Reset-TestDirectory $temporaryRoot
 $staleProject = Join-Path $temporaryRoot 'Stale.smileproj'
 $staleOutput = Join-Path $temporaryRoot 'Web'
 New-Item -ItemType Directory -Path (Join-Path $temporaryRoot 'Assets') -Force | Out-Null
-[IO.File]::WriteAllText((Join-Path $temporaryRoot 'Program.smile'), "PRINT 1`n")
+[IO.File]::WriteAllText((Join-Path $temporaryRoot 'Program.smile'), "Print 1`n")
 [IO.File]::WriteAllText((Join-Path $temporaryRoot 'Assets\Old.txt'), 'old')
 [IO.File]::WriteAllText((Join-Path $temporaryRoot 'Assets\New.txt'), 'new')
 

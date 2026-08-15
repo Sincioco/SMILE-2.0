@@ -25,7 +25,7 @@ Default back buffer:
 960 × 540, 32-bit
 ```
 
-All SMILE drawing targets this logical buffer. `SHOW SCREEN` presents it.
+All SMILE drawing targets this logical buffer. `Show Screen` presents it.
 
 Exact scale relationships:
 
@@ -47,9 +47,9 @@ Exact scale relationships:
 
 ## Responsiveness
 
-- `SHOW SCREEN` pumps window messages.
-- Graphical `WAIT` remains message-aware.
-- `GAME_CLOSED()` becomes true after close.
+- `Show Screen` pumps window messages.
+- Graphical `Wait` remains message-aware.
+- `Game_Closed()` becomes true after close.
 - Focus loss clears held keys.
 
 ## Graphics API
@@ -80,7 +80,7 @@ Enter Escape Space
 1 2
 ```
 
-`GET KEY` returns a new press or `KEY_NONE`. `KEY_HELD` supports simultaneous keys.
+`Get Key` returns a new press or `KEY_NONE`. `Key_Held` supports simultaneous keys.
 
 ## Timer
 
@@ -113,7 +113,7 @@ Recommended location:
 
 ## Compiler integration
 
-A program containing `GAME WINDOW` compiles as a native x64 Windows GUI executable. Console programs remain console-subsystem programs.
+A program containing `Game Window` compiles as a native x64 Windows GUI executable. Console programs remain console-subsystem programs.
 
 Do not transpile to another high-level language.
 

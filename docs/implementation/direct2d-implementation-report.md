@@ -87,7 +87,7 @@ This report tracks the controlled implementation of the approved Direct2D milest
 - Converted Paddle Ball's player paddle to 360 pixels/second, chasing AI to 240 pixels/second, centering AI to 120 pixels/second, and initial ball velocity to approximately 300 by 180 pixels/second. These values preserve the old intended feel at roughly 60 updates/second while remaining stable at other refresh rates.
 - Converted Brick Breaker's paddle to 420 pixels/second and its level-one initial ball velocity to approximately 240 by 300 pixels/second, with the existing level-based increases and paddle-contact rules preserved.
 - Synchronized subpixel state whenever collision resolution snaps a ball or paddle to a logical boundary.
-- Removed loop-delay pacing from all four bundled games. Snake and Falling Blocks already use `TIMER()` deadlines for gameplay movement, so removing their redundant waits changes presentation/input cadence without changing their scheduled movement speed.
+- Removed loop-delay pacing from all four bundled games. Snake and Falling Blocks already use `Timer()` deadlines for gameplay movement, so removing their redundant waits changes presentation/input cadence without changing their scheduled movement speed.
 - Added automated fixed-point speed-consistency and elapsed-clamp checks for simulated frame sequences.
 - Validation: complete smoke suite passed in 47.9 seconds with 15 managed timing/project checks and 15 native backend-selection checks; live Direct2D gameplay passed for all four games, including Paddle Ball scoring, a Brick Breaker brick hit, Snake direction changes, Falling Blocks rotation and hard drop, and fullscreen checks for both ball games. All four diagnostics logs reported DirectX, VSync, the DXGI frame-latency waitable object, and no device-removal reason.
 
@@ -126,7 +126,7 @@ This report tracks the controlled implementation of the approved Direct2D milest
 
 ## Approved deviations and validation boundaries
 
-- At the user's request, the refresh-independent fixed-step treatment was extended from Paddle Ball to Brick Breaker because both have fast ball/paddle movement. Snake and Falling Blocks were inspected and needed only removal of redundant waits because their movement was already scheduled by `TIMER()` deadlines.
+- At the user's request, the refresh-independent fixed-step treatment was extended from Paddle Ball to Brick Breaker because both have fast ball/paddle movement. Snake and Falling Blocks were inspected and needed only removal of redundant waits because their movement was already scheduled by `Timer()` deadlines.
 - The plan's suggested file layout was followed by responsibility rather than by a wholesale runtime rewrite: existing Win32 window/input/audio/persistence code remains in `runtime.c`, while graphics and timing are separated into dedicated modules.
 - Automated calculations cover 2560 x 1440, 3440 x 1440, 3840 x 2160, and 125/150/200 percent DPI. Live hardware validation is limited to the two attached 1920 x 1080, 96-DPI displays, which exposed 120 Hz and 60 Hz paths; higher physical resolutions, alternate DPI scales, and 100/144 Hz modes were not claimed as live passes.
 - The Debug build requests Direct3D and Direct2D debug layers and falls back if the optional Direct3D SDK layer is absent. No debugger-based COM live-object report was available in this unattended run, so fullscreen plateau counts, working set/handle measurements, deterministic shutdown code, and device-removal diagnostics provide the leak evidence.

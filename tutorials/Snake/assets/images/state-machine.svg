@@ -5,14 +5,14 @@
   <marker id="pinkArrow" viewBox="0 0 10 10" markerWidth="8" markerHeight="8" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#f45d79"/></marker>
 </defs>
 <rect x="10" y="10" width="1260" height="580" rx="32" fill="#071321"/>
-<text x="640" y="70" text-anchor="middle" fill="#50ed7a" font-family="Segoe UI, Arial" font-size="41" font-weight="900">STATE IS THE GAME'S TRAFFIC CONTROLLER</text>
-<g transform="translate(70 165)"><rect width="290" height="210" rx="42" fill="#245fd5" stroke="#82b5ff" stroke-width="5"/><text x="145" y="83" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="34" font-weight="900">STATE 0</text><text x="145" y="137" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="28">TITLE</text></g>
-<g transform="translate(495 165)"><rect width="290" height="210" rx="42" fill="#13823d" stroke="#7cf1a3" stroke-width="5"/><text x="145" y="83" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="34" font-weight="900">STATE 1</text><text x="145" y="137" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="28">PLAYING</text></g>
-<g transform="translate(920 165)"><rect width="290" height="210" rx="42" fill="#bd123c" stroke="#ff8ba3" stroke-width="5"/><text x="145" y="83" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="34" font-weight="900">STATE 2</text><text x="145" y="137" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="28">GAME OVER</text></g>
+<text x="640" y="70" text-anchor="middle" fill="#50ed7a" font-family="Segoe UI, Arial" font-size="41" font-weight="900">State Is The Game'S Traffic Controller</text>
+<g transform="translate(70 165)"><rect width="290" height="210" rx="42" fill="#245fd5" stroke="#82b5ff" stroke-width="5"/><text x="145" y="83" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="34" font-weight="900">State 0</text><text x="145" y="137" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="28">Title</text></g>
+<g transform="translate(495 165)"><rect width="290" height="210" rx="42" fill="#13823d" stroke="#7cf1a3" stroke-width="5"/><text x="145" y="83" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="34" font-weight="900">State 1</text><text x="145" y="137" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="28">Playing</text></g>
+<g transform="translate(920 165)"><rect width="290" height="210" rx="42" fill="#bd123c" stroke="#ff8ba3" stroke-width="5"/><text x="145" y="83" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="34" font-weight="900">State 2</text><text x="145" y="137" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="28">Game Over</text></g>
 <line x1="365" y1="270" x2="485" y2="270" stroke="#ffd21f" stroke-width="7" stroke-linecap="round" marker-end="url(#goldArrow)"/>
-<text x="425" y="214" text-anchor="middle" fill="#ffd21f" font-family="Segoe UI, Arial" font-size="23" font-weight="900">ENTER</text>
+<text x="425" y="214" text-anchor="middle" fill="#ffd21f" font-family="Segoe UI, Arial" font-size="23" font-weight="900">Enter</text>
 <line x1="790" y1="270" x2="910" y2="270" stroke="#f45d79" stroke-width="7" stroke-linecap="round" marker-end="url(#pinkArrow)"/>
-<text x="850" y="214" text-anchor="middle" fill="#ff7f98" font-family="Segoe UI, Arial" font-size="23" font-weight="900">COLLISION</text>
+<text x="850" y="214" text-anchor="middle" fill="#ff7f98" font-family="Segoe UI, Arial" font-size="23" font-weight="900">Collision</text>
 <path d="M 1065 395 C 990 510, 720 510, 640 392" fill="none" stroke="#ffd21f" stroke-width="7" stroke-linecap="round" marker-end="url(#goldArrow)"/>
-<text x="855" y="558" text-anchor="middle" fill="#ffd21f" font-family="Segoe UI, Arial" font-size="25" font-weight="900">ENTER = retry</text>
+<text x="855" y="558" text-anchor="middle" fill="#ffd21f" font-family="Segoe UI, Arial" font-size="25" font-weight="900">Enter = retry</text>
 </svg>

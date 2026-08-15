@@ -13,16 +13,16 @@ Preserve the current board, seven pieces, rotation rules, row clearing, level pr
 Apply the shared arcade contract:
 
 ```smile
-CONST TitleDemoDelay = 5000
-CONST DemoMinimumPlayTime = 30000
-CONST DemoMaximumPlayTime = 45000
-CONST DemoTerminalDuration = 5000
+Const TitleDemoDelay = 5000
+Const DemoMinimumPlayTime = 30000
+Const DemoMaximumPlayTime = 45000
+Const DemoTerminalDuration = 5000
 ```
 
 Add:
 
 ```smile
-DemoMode = FALSE
+DemoMode = False
 TitleStartedAt = 0
 DemoStartedAt = 0
 DemoTerminalStartedAt = 0
@@ -42,11 +42,11 @@ Create `StartDemo()`:
 
 - clear the board;
 - reset score, lines, level, fall timing;
-- set `DemoMode = TRUE`;
+- set `DemoMode = True`;
 - start the same looping `Assets\Background.mp3`;
 - spawn a piece;
 - plan its placement immediately;
-- show `DEMO` and `PRESS ANY KEY TO RETURN`.
+- show `DEMO` and `PRESS ANY Key To Return`.
 
 Do not save demo score.
 
@@ -146,7 +146,7 @@ At 45 seconds:
 - call a demo-specific end routine;
 - stop music;
 - play the existing game-over effect;
-- draw `GAME OVER` or `DEMO OVER`;
+- draw `Game OVER` or `DEMO OVER`;
 - keep it for five seconds;
 - return to title.
 

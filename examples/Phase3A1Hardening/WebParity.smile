@@ -1,75 +1,75 @@
-OPTION EXPLICIT
+Option Explicit
 
-CONST Prefix = "C"
+Const Prefix = "C"
 
-DIM First AS TEXT
-DIM Copy AS TEXT
-DIM TextValues[2] AS TEXT
-DIM NumberValues[2] AS NUMBER
-DIM BooleanValues[2] AS BOOLEAN
-DIM Counter AS NUMBER
-DIM Ready AS BOOLEAN
+Dim First As Text
+Dim Copy As Text
+Dim TextValues[2] As Text
+Dim NumberValues[2] As Number
+Dim BooleanValues[2] As Boolean
+Dim Counter As Number
+Dim Ready As Boolean
 
 First = "A"
 Copy = First
-First = First + "B"
-PRINT Copy
-PRINT First
-PRINT First <> Copy
+First = First + "b"
+Print Copy
+Print First
+Print First <> Copy
 
-TextValues[1] = "ARRAY"
+TextValues[1] = "Array"
 NumberValues[1] = 10
-BooleanValues[1] = FALSE
-CALL ChangeByValue(TextValues[1])
-PRINT TextValues[1]
-CALL SetText(TextValues[1], "CHANGED")
-CALL Increment(NumberValues[1])
-CALL Toggle(BooleanValues[1])
-PRINT TextValues[1]
-PRINT NumberValues[1]
-PRINT BooleanValues[1]
+BooleanValues[1] = False
+Call ChangeByValue(TextValues[1])
+Print TextValues[1]
+Call SetText(TextValues[1], "Changed")
+Call Increment(NumberValues[1])
+Call Toggle(BooleanValues[1])
+Print TextValues[1]
+Print NumberValues[1]
+Print BooleanValues[1]
 
 Counter = 3
-Ready = FALSE
-CALL Increment(Counter)
-CALL Toggle(Ready)
-PRINT Counter
-PRINT Ready
-PRINT ReturnText()
-PRINT Join("N", "EST")
-PRINT AddFive(1, 2, 3, 4, 5)
+Ready = False
+Call Increment(Counter)
+Call Toggle(Ready)
+Print Counter
+Print Ready
+Print ReturnText()
+Print Join("N", "est")
+Print AddFive(1, 2, 3, 4, 5)
 
-SELECT CASE Prefix + "ASE"
-    CASE "CASE"
-        PRINT "SELECT"
-END SELECT
+Select Case Prefix + "ase"
+    Case "Case"
+        Print "Select"
+End Select
 
-END PROGRAM
+End Program
 
-SUB ChangeByValue(Value AS TEXT)
-    Value = "LOCAL"
-END SUB
+Sub ChangeByValue(Value As Text)
+    Value = "Local"
+End Sub
 
-SUB SetText(BYREF Value AS TEXT, NewValue AS TEXT)
+Sub SetText(ByRef Value As Text, NewValue As Text)
     Value = NewValue
-END SUB
+End Sub
 
-SUB Increment(BYREF Value AS NUMBER)
+Sub Increment(ByRef Value As Number)
     Value = Value + 1
-END SUB
+End Sub
 
-SUB Toggle(BYREF Value AS BOOLEAN)
-    Value = NOT Value
-END SUB
+Sub Toggle(ByRef Value As Boolean)
+    Value = Not Value
+End Sub
 
-FUNCTION ReturnText() AS TEXT
-    RETURN "RETURN"
-END FUNCTION
+Function ReturnText() As Text
+    Return "Return"
+End Function
 
-FUNCTION Join(LeftValue AS TEXT, RightValue AS TEXT) AS TEXT
-    RETURN LeftValue + RightValue
-END FUNCTION
+Function Join(LeftValue As Text, RightValue As Text) As Text
+    Return LeftValue + RightValue
+End Function
 
-FUNCTION AddFive(Value1 AS NUMBER, Value2 AS NUMBER, Value3 AS NUMBER, Value4 AS NUMBER, Value5 AS NUMBER) AS NUMBER
-    RETURN Value1 + Value2 + Value3 + Value4 + Value5
-END FUNCTION
+Function AddFive(Value1 As Number, Value2 As Number, Value3 As Number, Value4 As Number, Value5 As Number) As Number
+    Return Value1 + Value2 + Value3 + Value4 + Value5
+End Function

@@ -1,9 +1,9 @@
-OPTION EXPLICIT
+Option Explicit
 
-DIM First[3]
-DIM Second[3]
-DIM Loaded[3]
-DIM LoadedCount AS NUMBER
+Dim First[3]
+Dim Second[3]
+Dim Loaded[3]
+Dim LoadedCount As Number
 
 First[0] = 1
 First[1] = 2
@@ -13,19 +13,19 @@ Second[0] = 7
 Second[1] = 8
 Second[2] = 9
 
-SAVE DATA First COUNT 3 TO "Slot/A"
-SAVE DATA Second COUNT 3 TO "Slot?A"
+Save Data First Count 3 To "Slot/A"
+Save Data Second Count 3 To "Slot?A"
 
-LOAD DATA "Slot/A" INTO Loaded COUNT LoadedCount
-PRINT LoadedCount
-PRINT Loaded[0]
-PRINT Loaded[1]
-PRINT Loaded[2]
+Load Data "Slot/A" Into Loaded Count LoadedCount
+Print LoadedCount
+Print Loaded[0]
+Print Loaded[1]
+Print Loaded[2]
 
-LOAD DATA "Slot?A" INTO Loaded COUNT LoadedCount
-PRINT LoadedCount
-PRINT Loaded[0]
-PRINT Loaded[1]
-PRINT Loaded[2]
+Load Data "Slot?A" Into Loaded Count LoadedCount
+Print LoadedCount
+Print Loaded[0]
+Print Loaded[1]
+Print Loaded[2]
 
-END PROGRAM
+End Program

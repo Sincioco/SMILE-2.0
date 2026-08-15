@@ -1,4 +1,4 @@
-# SMILE 2.0 — `DRAW ARC` Language and Runtime Implementation Instructions
+# SMILE 2.0 — `Draw Arc` Language and Runtime Implementation Instructions
 
 **Repository:** `Sincioco/SMILE-2.0`  
 **Local repository:** `D:\SMILE 2.0`  
@@ -10,7 +10,7 @@
 **Approved syntax:**
 
 ```smile
-DRAW ARC CenterX, CenterY, Radius, StartAngle, SweepAngle, Color
+Draw Arc CenterX, CenterY, Radius, StartAngle, SweepAngle, Color
 ```
 
 ---
@@ -37,7 +37,7 @@ If the repository is newer:
 - adapt this specification to the actual architecture;
 - keep `src\Smile.Language` as the sole language authority.
 
-Implement `DRAW ARC` as a coherent shared graphics capability.
+Implement `Draw Arc` as a coherent shared graphics capability.
 
 After it builds and passes the light validation below:
 
@@ -61,7 +61,7 @@ Do not wait for manual approval before continuing Maze Muncher.
 The approved statement is:
 
 ```smile
-DRAW ARC CenterX, CenterY, Radius, StartAngle, SweepAngle, Color
+Draw Arc CenterX, CenterY, Radius, StartAngle, SweepAngle, Color
 ```
 
 This is the correct first arc primitive for SMILE 2.0.
@@ -69,12 +69,12 @@ This is the correct first arc primitive for SMILE 2.0.
 It is:
 
 - beginner-readable;
-- consistent with `DRAW CIRCLE`, `DRAW LINE`, and other graphics statements;
+- consistent with `Draw Circle`, `Draw Line`, and other graphics statements;
 - useful beyond Maze Muncher;
 - simple to implement in both Direct2D and GDI;
 - grounded in familiar BASIC-style graphics commands.
 
-Do **not** add `FILL ARC` in this milestone.
+Do **not** add `Fill Arc` in this milestone.
 
 Do **not** add an optional thickness parameter only for arcs.
 
@@ -139,10 +139,10 @@ Examples:
 
 ```smile
 ' Right to down, clockwise
-DRAW ARC 200, 200, 50, 0, 90, BLUE
+Draw Arc 200, 200, 50, 0, 90, BLUE
 
 ' Right to up, counterclockwise
-DRAW ARC 200, 200, 50, 0, -90, BLUE
+Draw Arc 200, 200, 50, 0, -90, BLUE
 ```
 
 ## 3.4 Angle normalization
@@ -182,7 +182,7 @@ SweepAngle <= -360
 A complete arc should visually match:
 
 ```smile
-DRAW CIRCLE CenterX, CenterY, Radius, Color
+Draw Circle CenterX, CenterY, Radius, Color
 ```
 
 Do not draw more than one revolution.
@@ -228,22 +228,22 @@ The following examples are correct under the approved angle convention.
 ```smile
 ' Top-left corner:
 ' Start at the left point and sweep clockwise to the top point.
-DRAW ARC CornerX + Radius, CornerY + Radius, Radius, 180, 90, Blue
+Draw Arc CornerX + Radius, CornerY + Radius, Radius, 180, 90, Blue
 
 ' Top-right corner:
 ' Start at the top point and sweep clockwise to the right point.
-DRAW ARC CornerX - Radius, CornerY + Radius, Radius, 270, 90, Blue
+Draw Arc CornerX - Radius, CornerY + Radius, Radius, 270, 90, Blue
 
 ' Bottom-right corner:
 ' Start at the right point and sweep clockwise to the bottom point.
-DRAW ARC CornerX - Radius, CornerY - Radius, Radius, 0, 90, Blue
+Draw Arc CornerX - Radius, CornerY - Radius, Radius, 0, 90, Blue
 
 ' Bottom-left corner:
 ' Start at the bottom point and sweep clockwise to the left point.
-DRAW ARC CornerX + Radius, CornerY - Radius, Radius, 90, 90, Blue
+Draw Arc CornerX + Radius, CornerY - Radius, Radius, 90, 90, Blue
 ```
 
-For a rounded rectangular maze-wall outline, connect the arc endpoints with ordinary `DRAW LINE` calls.
+For a rounded rectangular maze-wall outline, connect the arc endpoints with ordinary `Draw Line` calls.
 
 ---
 
@@ -256,19 +256,19 @@ Use multiple arcs.
 ## 5.1 Simple glow
 
 ```smile
-DRAW ARC CenterX, CenterY, Radius + 2, StartAngle, SweepAngle, DARK_BLUE
-DRAW ARC CenterX, CenterY, Radius + 1, StartAngle, SweepAngle, BLUE
-DRAW ARC CenterX, CenterY, Radius, StartAngle, SweepAngle, LIGHT_BLUE
+Draw Arc CenterX, CenterY, Radius + 2, StartAngle, SweepAngle, DARK_BLUE
+Draw Arc CenterX, CenterY, Radius + 1, StartAngle, SweepAngle, BLUE
+Draw Arc CenterX, CenterY, Radius, StartAngle, SweepAngle, LIGHT_BLUE
 ```
 
 ## 5.2 Double maze wall
 
 ```smile
-DRAW ARC CenterX, CenterY, OuterRadius, StartAngle, SweepAngle, BLUE
-DRAW ARC CenterX, CenterY, InnerRadius, StartAngle, SweepAngle, BLUE
+Draw Arc CenterX, CenterY, OuterRadius, StartAngle, SweepAngle, BLUE
+Draw Arc CenterX, CenterY, InnerRadius, StartAngle, SweepAngle, BLUE
 ```
 
-The matching straight wall sections should use parallel `DRAW LINE` calls.
+The matching straight wall sections should use parallel `Draw Line` calls.
 
 This lets students see that the rounded wall consists of the same two outlines as the straight wall.
 
@@ -295,7 +295,7 @@ LineKeyword
 Add:
 
 ```csharp
-["ARC"] = SyntaxKind.ArcKeyword
+["Arc"] = SyntaxKind.ArcKeyword
 ```
 
 Do not create a Visual Studio-only keyword list.
@@ -319,7 +319,7 @@ Extend `ParseGraphicsStatement`.
 Recognize only:
 
 ```smile
-DRAW ARC CenterX, CenterY, Radius, StartAngle, SweepAngle, Color
+Draw Arc CenterX, CenterY, Radius, StartAngle, SweepAngle, Color
 ```
 
 Parse exactly six numeric expressions.
@@ -336,13 +336,13 @@ Use:
 ParseFixedArguments(6)
 ```
 
-`FILL ARC` must remain invalid and should produce the normal unsupported-fill-primitive diagnostic.
+`Fill Arc` must remain invalid and should produce the normal unsupported-fill-primitive diagnostic.
 
 Preserve all existing graphics syntax.
 
 ## 6.4 `src\Smile.Language\Semantics.cs`
 
-The current generic graphics-argument analysis should validate all six arguments as `NUMBER`.
+The current generic graphics-argument analysis should validate all six arguments as `Number`.
 
 Do not add special semantic machinery unless needed for a clear diagnostic.
 
@@ -352,7 +352,7 @@ The runtime owns value behavior such as:
 - sweep clamping;
 - angle normalization.
 
-`DRAW ARC` requires `GAME WINDOW`, like every other graphical drawing statement.
+`Draw Arc` requires `Game Window`, like every other graphical drawing statement.
 
 ---
 
@@ -504,7 +504,7 @@ When absolute sweep is at least 360 degrees:
 - use the existing circle/ellipse drawing path; or
 - draw two 180-degree arc segments.
 
-Prefer reusing the existing circle drawing implementation so full-circle arc behavior matches `DRAW CIRCLE`.
+Prefer reusing the existing circle drawing implementation so full-circle arc behavior matches `Draw Circle`.
 
 ## 9.3 Failure behavior
 
@@ -565,13 +565,13 @@ Follow the permanent light-testing rule.
 
 Add focused checks for:
 
-1. Valid `DRAW ARC` analysis.
+1. Valid `Draw Arc` analysis.
 2. Operation is `GraphicsOperation.DrawArc`.
 3. Six arguments are present.
 4. Too few arguments produce a parser diagnostic.
 5. Too many arguments are not silently ignored.
 6. A non-number argument produces a semantic diagnostic.
-7. `FILL ARC` is rejected.
+7. `Fill Arc` is rejected.
 8. Existing graphics statements remain valid.
 
 Update the reported test count accurately.
@@ -625,7 +625,7 @@ Verify:
 - `0, -90` draws the top-right quarter;
 - the four approved corner examples join their straight lines;
 - an arc greater than 180 degrees chooses the long path;
-- a full-circle arc matches `DRAW CIRCLE`;
+- a full-circle arc matches `Draw Circle`;
 - resize and Alt+Enter remain correct;
 - no gaps appear at quarter-arc endpoints beyond ordinary one-pixel rasterization.
 
@@ -646,7 +646,7 @@ docs\architecture\README.md
 Document:
 
 ```smile
-DRAW ARC CenterX, CenterY, Radius, StartAngle, SweepAngle, Color
+Draw Arc CenterX, CenterY, Radius, StartAngle, SweepAngle, Color
 ```
 
 Include the angle table:
@@ -662,7 +662,7 @@ negative counterclockwise
 
 State that the arc uses the normal outline stroke and has no fill/chord/radial lines.
 
-Add `DRAW ARC` to the current graphics-capability list.
+Add `Draw Arc` to the current graphics-capability list.
 
 Do not rewrite historical milestone reports merely to add the new primitive.
 
@@ -672,7 +672,7 @@ Do not rewrite historical milestone reports merely to add the new primitive.
 
 After the shared primitive is committed and pushed, resume Maze Muncher.
 
-Use `DRAW ARC` for:
+Use `Draw Arc` for:
 
 - rounded outer maze corners;
 - rounded inner wall corners;
@@ -682,24 +682,24 @@ Use `DRAW ARC` for:
 
 Keep Maze Muncher wall-generation logic in `.smile`.
 
-Do not add a native `DRAW MAZE WALL` helper.
+Do not add a native `Draw MAZE WALL` helper.
 
 The following quarter-circle examples are approved:
 
 ```smile
-DRAW ARC CornerX + Radius, CornerY + Radius, Radius, 180, 90, Blue
-DRAW ARC CornerX - Radius, CornerY + Radius, Radius, 270, 90, Blue
-DRAW ARC CornerX - Radius, CornerY - Radius, Radius, 0, 90, Blue
-DRAW ARC CornerX + Radius, CornerY - Radius, Radius, 90, 90, Blue
+Draw Arc CornerX + Radius, CornerY + Radius, Radius, 180, 90, Blue
+Draw Arc CornerX - Radius, CornerY + Radius, Radius, 270, 90, Blue
+Draw Arc CornerX - Radius, CornerY - Radius, Radius, 0, 90, Blue
+Draw Arc CornerX + Radius, CornerY - Radius, Radius, 90, 90, Blue
 ```
 
 ---
 
 # 15. Definition of Done
 
-- [ ] `ARC` is a shared SMILE keyword.
-- [ ] `DRAW ARC` parses exactly six numeric expressions.
-- [ ] `FILL ARC` is invalid.
+- [ ] `Arc` is a shared SMILE keyword.
+- [ ] `Draw Arc` parses exactly six numeric expressions.
+- [ ] `Fill Arc` is invalid.
 - [ ] Visual Studio receives syntax coloring and diagnostics through shared language facts.
 - [ ] MASM emits `smile_draw_arc`.
 - [ ] Stable C ABI exists.

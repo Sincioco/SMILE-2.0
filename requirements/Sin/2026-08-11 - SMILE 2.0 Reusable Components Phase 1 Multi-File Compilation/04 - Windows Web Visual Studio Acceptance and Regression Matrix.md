@@ -151,7 +151,7 @@ Expected ownership:
 
 ```text
 Program.smile
-- GAME WINDOW
+- Game Window
 - startup global FrameCount
 - input/main loop
 - calls support routines

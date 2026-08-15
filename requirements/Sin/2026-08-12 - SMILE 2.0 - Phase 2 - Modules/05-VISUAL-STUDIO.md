@@ -20,11 +20,11 @@ Module.smile
 Starter source:
 
 ```smile
-MODULE <sanitized.project.name>
+Module <sanitized.project.name>
 
-PUBLIC CONST VERSION_MAJOR = 1
+Public Const VERSION_MAJOR = 1
 
-END MODULE
+End Module
 ```
 
 Use the same SMILE project type implementation where practical.

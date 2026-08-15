@@ -1,6 +1,6 @@
 # SMILE 2.0
 
-SMILE 2.0 is a small, structured BASIC-style language with a complete native Windows x64 target and a browser target. It includes explicit built-in types, first-class UTF-8 text, typed `BYVAL`/`BYREF` routines, modules, reusable target-neutral libraries, true multi-file compilation, a MASM-based native compiler, a Win32 game runtime, Canvas 2D Web publication, Visual Studio 2026 language and project support, console examples, and ten complete games written in SMILE. Windows x64 remains the default target, and every included application project exposes both native and Web publication.
+SMILE 2.0 is a small, structured BASIC-style language with a complete native Windows x64 target and a browser target. It includes explicit built-in types, first-class UTF-8 text, typed `ByVal`/`ByRef` routines, modules, reusable target-neutral libraries, true multi-file compilation, a MASM-based native compiler, a Win32 game runtime, Canvas 2D Web publication, Visual Studio 2026 language and project support, console examples, and ten complete games written in SMILE. Windows x64 remains the default target, and every included application project exposes both native and Web publication.
 
 The repository has one language authority: `src\Smile.Language`. The command-line compiler and Visual Studio extension use the same lexer, parser, syntax model, diagnostics, symbols, types, and semantic model. Game rules remain in `.smile` source; the C runtime provides only generic Windows graphics, input, sound, timing, and storage services.
 
@@ -35,7 +35,7 @@ All games use a logical 960-by-540 canvas. A 16:9 output such as 1920-by-1080 fi
 
 ## Automatic game-audio focus
 
-Every program containing `GAME WINDOW` automatically inherits one shared audio-focus policy; games do not need activation handlers. Losing application or top-level window activation, or minimizing the window, immediately stops all active asynchronous WAV effects, suppresses new WAV requests, and changes MP3 music to effective volume zero. The requested `MUSIC VOLUME` and playback position remain intact. Returning to an active, non-minimized window reapplies the exact requested volume without restarting the track or resuming music that the program paused or stopped. Suppressed effects are not replayed.
+Every program containing `Game Window` automatically inherits one shared audio-focus policy; games do not need activation handlers. Losing application or top-level window activation, or minimizing the window, immediately stops all active asynchronous WAV effects, suppresses new WAV requests, and changes MP3 music to effective volume zero. The requested `Music Volume` and playback position remain intact. Returning to an active, non-minimized window reapplies the exact requested volume without restarting the track or resuming music that the program paused or stopped. Suppressed effects are not replayed.
 
 This policy is identical for DirectX and GDI and affects only the SMILE process. It never changes Windows master volume or another application's audio.
 
@@ -68,7 +68,7 @@ Run the complete noninteractive regression and artifact verification suite with:
 scripts\smoke-test.cmd
 ```
 
-The smoke suite builds the solution, runs console examples, checks invalid-program diagnostics, exercises native TEXT lifetime and reentrancy, executes generated Web programs in a dependency-free Node host, compares native/Web UTF-8 output exactly, tests reusable Smile.UI validation/state/reflow/capability boundaries, asserts dynamic Canvas text, exercises save/reload and corrupt-value fallback, validates the supplied Dungeon Star I, Dungeon Star II, and Platform Quest maps, compiles the multi-file sample and both teaching variants of all ten games for Windows and Web, publishes and hashes declared project assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Graphical gameplay and audible playback remain hands-on acceptance steps.
+The smoke suite builds the solution, runs console examples, checks invalid-program diagnostics, exercises native Text lifetime and reentrancy, executes generated Web programs in a dependency-free Node host, compares native/Web UTF-8 output exactly, tests reusable Smile.UI validation/state/reflow/capability boundaries, asserts dynamic Canvas text, exercises save/reload and corrupt-value fallback, validates the supplied Dungeon Star I, Dungeon Star II, and Platform Quest maps, compiles the multi-file sample and both teaching variants of all ten games for Windows and Web, publishes and hashes declared project assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Graphical gameplay and audible playback remain hands-on acceptance steps.
 
 ## Compile projects and publish assets
 
@@ -109,11 +109,11 @@ artifacts\compiler\smilec.exe --project examples\MenuGallery\MenuGallery.smilepr
 artifacts\compiler\smilec.exe --project examples\MenuGallery\MenuGallery.smileproj --target web --output-dir artifacts\web\MenuGallery
 ```
 
-The Phase 3A typed-text proof uses `libraries\Smile.Text.Extras`, `examples\Phase3ABasics`, `examples\Phase3ATextStress.smile`, and `examples\Phase3ATextGame`. The Phase 3B record proof uses `libraries\Smile.Data.Models`, `examples\Phase3BRecords`, `examples\Phase3BLocalRecords`, and `examples\Phase3BRecordMatrix.smile`; `examples\Phase3B1Hardening` adds reserved-name Web field parity. Phase 4 adds the shared `IMAGE` type, high-resolution PNG drawing, clipping, text measurement, binary persistence, and 16 WAV SFX channels; `examples\Phase4VisualSlice` is its cross-backend proof. Phase 4.1 hardens high-DPI Web output, clips across presentation and resize, owned IMAGE expressions, exact persistent identity/integrity, canonical media paths, audio completion, and concurrent native caching; `examples\Phase4Hardening` contains its focused fixtures. Phase 4.2 unifies exact asset resolution, publication, stale cleanup, compiler manifests, and Visual Studio hierarchy/watch behavior; `examples\Phase4AssetPublication` is its focused fixture. Phase 5 adds Unicode-scalar text inspection, routine capability metadata, and the SMILE-authored `Smile.UI` Window, BitmapFont, Text, Menu, and Dialogue modules; `examples\MenuGallery` is the DirectX/GDI/Web proof. Phase 5.1 hardens deep style bounds, multiline text, live dialogue theme reflow, menu row reflow, ownership, and bounded dialogue preparation. Phase 5.2 adds reusable bounded `MenuNavigator`; Phase 5.2.1 advances `Smile.UI` to 1.1.1 with active-edge pruning, cursors on every visible menu, proportional scrollbars, and hidden/after-text/right-aligned indicators. `examples\Phase5SubmenuStateTests`, `examples\Phase5SubmenuViewport`, and `examples\MenuGallery` provide the project/package and DirectX/GDI/Web proofs. `.smilelib` packages use deterministic formatVersion 5 metadata with typed public record layouts, routine `requiresGameWindow` flags, and logical `LibraryName@Version` provider identities. See `docs\language\phase4-media.md` and `docs\language\phase5-ui.md`.
+The Phase 3A typed-text proof uses `libraries\Smile.Text.Extras`, `examples\Phase3ABasics`, `examples\Phase3ATextStress.smile`, and `examples\Phase3ATextGame`. The Phase 3B record proof uses `libraries\Smile.Data.Models`, `examples\Phase3BRecords`, `examples\Phase3BLocalRecords`, and `examples\Phase3BRecordMatrix.smile`; `examples\Phase3B1Hardening` adds reserved-name Web field parity. Phase 4 adds the shared `Image` type, high-resolution PNG drawing, clipping, text measurement, binary persistence, and 16 WAV SFX channels; `examples\Phase4VisualSlice` is its cross-backend proof. Phase 4.1 hardens high-DPI Web output, clips across presentation and resize, owned Image expressions, exact persistent identity/integrity, canonical media paths, audio completion, and concurrent native caching; `examples\Phase4Hardening` contains its focused fixtures. Phase 4.2 unifies exact asset resolution, publication, stale cleanup, compiler manifests, and Visual Studio hierarchy/watch behavior; `examples\Phase4AssetPublication` is its focused fixture. Phase 5 adds Unicode-scalar text inspection, routine capability metadata, and the SMILE-authored `Smile.UI` Window, BitmapFont, Text, Menu, and Dialogue modules; `examples\MenuGallery` is the DirectX/GDI/Web proof. Phase 5.1 hardens deep style bounds, multiline text, live dialogue theme reflow, menu row reflow, ownership, and bounded dialogue preparation. Phase 5.2 adds reusable bounded `MenuNavigator`; Phase 5.2.1 advances `Smile.UI` to 1.1.1 with active-edge pruning, cursors on every visible menu, proportional scrollbars, and hidden/after-text/right-aligned indicators. `examples\Phase5SubmenuStateTests`, `examples\Phase5SubmenuViewport`, and `examples\MenuGallery` provide the project/package and DirectX/GDI/Web proofs. `.smilelib` packages use deterministic formatVersion 5 metadata with typed public record layouts, routine `requiresGameWindow` flags, and logical `LibraryName@Version` provider identities. See `docs\language\phase4-media.md` and `docs\language\phase5-ui.md`.
 
 Loose-file builds can add a built package with repeated `--library <path.smilelib>`. Project builds read `<SmileProjectReference>` and `<SmileLibraryReference>` items, build project dependencies in deterministic order, reject cycles, and reuse a referenced project package only when its identity, modules, normalized source hashes, and direct dependency identities match the current library project. Imports follow direct provider boundaries: application and library-project sources see only their own modules and direct references, package sources see only exact manifest dependencies, and loose roots see every package supplied directly with `--library`.
 
-Add each declaration-only support file with a repeatable `--source` option. The files are parsed independently and share one case-insensitive semantic model; only the startup file may contain executable top-level statements, `GAME WINDOW`, or `END PROGRAM`:
+Add each declaration-only support file with a repeatable `--source` option. The files are parsed independently and share one case-insensitive semantic model; only the startup file may contain executable top-level statements, `Game Window`, or `End Program`:
 
 ```text
 artifacts\compiler\smilec.exe examples\MultiFileBasics\Program.smile ^
@@ -205,7 +205,7 @@ Both create a `.smileproj` with `Debug` and `Release` configurations. A game pro
 
 With `Web` selected, **Build > Build Solution** is the publish operation. `F5` or `Ctrl+F5` saves every open participating source, republishes the selected startup/support source set and assets, starts/reuses the VSIX's loopback-only static server, and opens a cache-busted `http://127.0.0.1:<port>/?game=<output-name>&v=<cache-token>` URL in the default browser. Switch back to `Windows 64-bit .exe` for native launch and source-level debugging, including breakpoints in support-file routines. Project-aware completion includes compilation-wide globals and routines, while diagnostics and squiggles remain attached to their owning physical files. Compiler failures appear in both the SMILE Output pane and Error List with the same diagnostic code, message, file, line, and column used by the editor and command-line compiler.
 
-Solution Explorer supplies the routine project workflow directly. Every project has a References node. Right-click the project to **Build**, **Rebuild**, **Clean**, add a source, add a `.smilelibproj` or `.smilelib` reference, or open the project folder; remove a reference from its own context menu without deleting its target. Library projects build `.smilelib` packages and are intentionally non-runnable. Reference and source mutations refresh the hierarchy and shared editor workspace immediately. `IMPORT` completion offers modules, and `Alias.` completion exposes public members only.
+Solution Explorer supplies the routine project workflow directly. Every project has a References node. Right-click the project to **Build**, **Rebuild**, **Clean**, add a source, add a `.smilelibproj` or `.smilelib` reference, or open the project folder; remove a reference from its own context menu without deleting its target. Library projects build `.smilelib` packages and are intentionally non-runnable. Reference and source mutations refresh the hierarchy and shared editor workspace immediately. `Import` completion offers modules, and `Alias.` completion exposes public members only.
 
 The editor keeps snapshots for every open SMILE buffer in a project. An unsaved declaration change in one file therefore refreshes completion and diagnostics in the other open files after the normal short debounce. Opening an unselected `StartupOnly` program analyzes it as the hypothetical startup with the ordinary support files and excludes the currently selected complete program.
 
@@ -213,7 +213,7 @@ Debug native builds classify the generated MASM implementation as non-user code 
 
 The published Web directory is ready for a separate static-host upload; the VSIX does not upload to GitHub Pages, Azure, Cloudflare, Netlify, or another remote service.
 
-The game template documents that automatic focus muting is inherited from the shared runtime; new games should use normal `PLAY SOUND` and `PLAY MUSIC` statements without per-game focus code.
+The game template documents that automatic focus muting is inherited from the shared runtime; new games should use normal `Play Sound` and `Play Music` statements without per-game focus code.
 
 Loose `.smile` files remain supported: open one and use **Tools > Build SMILE File**.
 
@@ -221,34 +221,34 @@ Loose `.smile` files remain supported: open one and use **Tools > Build SMILE Fi
 
 Implemented syntax includes:
 
-- signed 64-bit `NUMBER`, `BOOLEAN`, and mutable UTF-8 `TEXT` values, constants, and typed one- or two-dimensional fixed arrays;
-- project-global and module-owned `TYPE` records with built-in or nested fields, fixed one- or two-dimensional record arrays, deep value-copy assignment, `BYVAL`/`BYREF`, and record function returns; module type lookup is same-module unqualified or explicit imported `Alias.Type`;
-- per-physical-source `OPTION EXPLICIT` and scalar `DIM Name AS NUMBER|BOOLEAN|TEXT` declarations;
-- arithmetic and comparison operators, integer `/`, `MOD`, `AND`, `OR`, and `NOT`;
-- multiline `IF`/`ELSE IF`/`ELSE`, ascending and descending `FOR`, `DO`/`LOOP UNTIL`, `EXIT FOR`, `EXIT DO`, and `SELECT CASE`;
-- `SUB`, `FUNCTION`, `CALL`, `RETURN`, typed parameters and returns, default `BYVAL`, explicit `BYREF`, routine-local `DIM`, and calls tested through sixteen parameters;
-- `PRINT`, `GET KEY`, `KEY_HELD`, `WAIT`, `RANDOM`, `TIMER`, `ABS`, `MIN`, `MAX`, and `RGB`;
-- `GAME WINDOW`, double-buffered rectangles, rounded rectangles, circles, arcs, lines, quadrilaterals, text, and numbers, `SHOW SCREEN`, asynchronous WAV effects, MP3 background music, and integer persistence through `LOAD` and `SAVE`;
-- bounded executable-relative UTF-8 input through `LOAD TEXT FILE "path" INTO Array COUNT Variable`, including BOM skipping, zero-fill, and safe missing-file behavior;
+- signed 64-bit `Number`, `Boolean`, and mutable UTF-8 `Text` values, constants, and typed one- or two-dimensional fixed arrays;
+- project-global and module-owned `Type` records with built-in or nested fields, fixed one- or two-dimensional record arrays, deep value-copy assignment, `ByVal`/`ByRef`, and record function returns; module type lookup is same-module unqualified or explicit imported `Alias.Type`;
+- per-physical-source `Option Explicit` and scalar `Dim Name As Number|Boolean|Text` declarations;
+- arithmetic and comparison operators, integer `/`, `Mod`, `And`, `Or`, and `Not`;
+- multiline `If`/`Else If`/`Else`, ascending and descending `For`, `Do`/`Loop Until`, `Exit For`, `Exit Do`, and `Select Case`;
+- `Sub`, `Function`, `Call`, `Return`, typed parameters and returns, default `ByVal`, explicit `ByRef`, routine-local `Dim`, and calls tested through sixteen parameters;
+- `Print`, `Get Key`, `Key_Held`, `Wait`, `Random`, `Timer`, `Abs`, `Min`, `Max`, and `Rgb`;
+- `Game Window`, double-buffered rectangles, rounded rectangles, circles, arcs, lines, quadrilaterals, text, and numbers, `Show Screen`, asynchronous WAV effects, MP3 background music, and integer persistence through `Load` and `Save`;
+- bounded executable-relative UTF-8 input through `Load Text File "path" Into Array Count Variable`, including BOM skipping, zero-fill, and safe missing-file behavior;
 - named keyboard constants, including `KEY_OTHER` for unnamed ordinary key events, and named color constants used by the examples and games.
 
 See `docs\language\README.md` and `examples\StructuredLanguageBasics.smile` for concrete syntax.
 
-Arc outlines use `DRAW ARC CenterX, CenterY, Radius, StartAngle, SweepAngle, Color`. Angles are integer screen degrees (`0` right, `90` down, `180` left, `270` up); positive sweeps move clockwise and negative sweeps move counterclockwise. Arcs use the normal outline stroke and do not add a fill, chord, or radial lines.
+Arc outlines use `Draw Arc CenterX, CenterY, Radius, StartAngle, SweepAngle, Color`. Angles are integer screen degrees (`0` right, `90` down, `180` left, `270` up); positive sweeps move clockwise and negative sweeps move counterclockwise. Arcs use the normal outline stroke and do not add a fill, chord, or radial lines.
 
 ## Current limitations
 
 - Windows x64 is the complete/default target and requires the Visual Studio MASM/link toolchain when compiling. Web publication supports the shared language and generic runtime surface used by all ten included games and their no-demo teaching variants.
-- Web NUMBER values use JavaScript safe integers. Unsafe literals fail Web compilation, and unsafe runtime arithmetic stops with a visible error rather than silently losing precision.
+- Web Number values use JavaScript safe integers. Unsafe literals fail Web compilation, and unsafe runtime arithmetic stops with a visible error rather than silently losing precision.
 - Web uses Canvas 2D, browser keyboard/audio APIs, `fetch` for declared text/map assets, and `localStorage`. Browser autoplay policy may defer WAV or MP3 playback until the first key or click without stopping the program.
-- Native routine-owned `FOR` limits and NUMBER/BOOLEAN/TEXT `SELECT CASE` selectors are invocation-local and reentrant. Owned TEXT selector cleanup runs on normal completion, `RETURN`, `EXIT FOR`, `EXIT DO`, and `END PROGRAM`.
+- Native routine-owned `For` limits and Number/Boolean/Text `Select Case` selectors are invocation-local and reentrant. Owned Text selector cleanup runs on normal completion, `Return`, `Exit For`, `Exit Do`, and `End Program`.
 - Native console handles receive UTF-16 through `WriteConsoleW`; redirected files and pipes receive the original UTF-8 bytes without a BOM. The Web parity harness under `scripts\run-web-test.js` uses only built-in Node modules.
 - Browser `.smile` breakpoints are not yet supported. Windows x64 `.smile` breakpoints, IntelliSense, normal file opening, and native F5 remain supported.
 - Numeric storage is signed 64-bit integer only; there is no floating-point type or dynamic collection.
 - Arrays are fixed at compile time and support at most two dimensions.
 - Record fields cannot be arrays and there are no record literals, constructors, methods, inheritance, pointers, null, record comparison, or whole-array assignment/parameters/returns. Routine calls and hidden-buffer record returns are tested through sixteen explicit parameters.
 - The Visual Studio project system intentionally remains focused rather than becoming an MSBuild SDK. Application `.smileproj` and library `.smilelibproj` files share one project model, including sources and project/package references.
-- `PLAY SOUND` supports 16 explicit asynchronous WAV effect channels. `PLAY MUSIC` supports one independent MP3 background track through `Windows.Media.Playback.MediaPlayer`; there are no playlists, seeking, or multiple music channels.
+- `Play Sound` supports 16 explicit asynchronous WAV effect channels. `Play Music` supports one independent MP3 background track through `Windows.Media.Playback.MediaPlayer`; there are no playlists, seeking, or multiple music channels.
 - Project `OutputName` remains the shared native/Web persistence application identity. Before Phase 6 save-system work, an explicit portable `ApplicationId` should be considered so intentionally equal output names cannot share storage identity.
 - `.smilelib` packages cannot own assets yet. Before reusable libraries require skins, fonts, sounds, or themes, choose explicitly between consumer-supplied resources and versioned target-neutral resources embedded in the package.
 - Windows editions without the required optional media components may decline MP3 playback, but the game continues without crashing.

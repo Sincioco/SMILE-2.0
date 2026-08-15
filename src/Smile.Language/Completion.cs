@@ -77,8 +77,8 @@ public static class SmileCompletionService
         if (afterAs)
         {
             var types = new Dictionary<string, SmileCompletion>(StringComparer.OrdinalIgnoreCase);
-            foreach (var name in new[] { "BOOLEAN", "IMAGE", "NUMBER", "TEXT" })
-                types[name] = new SmileCompletion(name, name == "IMAGE"
+            foreach (var name in new[] { "Boolean", "Image", "Number", "Text" })
+                types[name] = new SmileCompletion(name, name == "Image"
                     ? "SMILE opaque loaded 2D image resource"
                     : $"SMILE built-in type {name}", SmileCompletionKind.Type);
             var availableTypes = currentModule == null
@@ -142,7 +142,7 @@ public static class SmileCompletionService
                 completions[module.Name] = new SmileCompletion(module.Name,
                     $"SMILE module from {DescribeProvider(module.ProviderIdentity, analysis.DependencyContext)}",
                     SmileCompletionKind.Module);
-            completions["AS"] = new SmileCompletion("AS", "Required import alias keyword", SmileCompletionKind.Keyword);
+            completions["As"] = new SmileCompletion("As", "Required import alias keyword", SmileCompletionKind.Keyword);
         }
 
         return completions.Values.OrderBy(completion => completion.DisplayText, StringComparer.OrdinalIgnoreCase).ToArray();
@@ -159,9 +159,9 @@ public static class SmileCompletionService
                 var parameters = string.Join(", ", SyntaxFacts.GetBuiltInFunctionParameters(kind));
                 var description = kind switch
                 {
-                    SyntaxKind.TextLengthKeyword => "TEXT_LENGTH(Value AS TEXT) AS NUMBER - Unicode scalar count",
-                    SyntaxKind.TextCodeAtKeyword => "TEXT_CODE_AT(Value AS TEXT, Index AS NUMBER) AS NUMBER - zero-based Unicode scalar value",
-                    SyntaxKind.TextSliceKeyword => "TEXT_SLICE(Value AS TEXT, Start AS NUMBER, Count AS NUMBER) AS TEXT - Unicode scalar slice",
+                    SyntaxKind.TextLengthKeyword => "Text_Length(Value As Text) As Number - Unicode scalar count",
+                    SyntaxKind.TextCodeAtKeyword => "Text_Code_At(Value As Text, Index As Number) As Number - zero-based Unicode scalar value",
+                    SyntaxKind.TextSliceKeyword => "Text_Slice(Value As Text, Start As Number, Count As Number) As Text - Unicode scalar slice",
                     _ => $"Built-in function {name}({parameters})"
                 };
                 completions.Add(new SmileCompletion(name, description, SmileCompletionKind.BuiltInFunction));
@@ -181,7 +181,7 @@ public static class SmileCompletionService
     private static SmileCompletion VariableCompletion(VariableSymbol symbol,
         SmileCompilationDependencyContext dependencyContext)
     {
-        var type = symbol.Type.ToString().ToUpperInvariant();
+        var type = symbol.Type.Name;
         if (symbol.IsArray)
         {
             var dimensions = string.Join(", ", symbol.ArrayDimensions);
@@ -199,7 +199,7 @@ public static class SmileCompletionService
     {
         if (member.Routine != null)
         {
-            var capability = member.Routine.RequiresGameWindow ? " - requires GAME WINDOW" : string.Empty;
+            var capability = member.Routine.RequiresGameWindow ? " - requires Game Window" : string.Empty;
             return new SmileCompletion(member.Name,
                 $"{SmileSymbolDisplayService.FormatRoutineSignature(member.Routine, includeModuleName: false)}" +
                 $"{capability} from module {member.Routine.ModuleName} " +
@@ -216,10 +216,10 @@ public static class SmileCompletionService
     private static SmileCompletion TypeCompletion(RecordTypeSymbol type,
         SmileCompilationDependencyContext dependencyContext)
     {
-        var fields = string.Join(", ", type.Fields.Select(field => $"{field.Name} AS {field.Type.Name}"));
+        var fields = string.Join(", ", type.Fields.Select(field => $"{field.Name} As {field.Type.Name}"));
         var provider = type.ModuleName == null ? string.Empty :
             $" from module {type.ModuleName} ({DescribeProvider(type.ProviderIdentity, dependencyContext)})";
-        return new SmileCompletion(type.Name, $"TYPE {type.Name} ({fields}){provider}", SmileCompletionKind.Type);
+        return new SmileCompletion(type.Name, $"Type {type.Name} ({fields}){provider}", SmileCompletionKind.Type);
     }
 
     private static IReadOnlyList<SmileCompletion>? TryGetFieldCompletions(SmileAnalysisResult analysis,
@@ -265,7 +265,7 @@ public static class SmileCompletionService
         if (type is not RecordTypeSymbol target)
             return Array.Empty<SmileCompletion>();
         return target.Fields.OrderBy(field => field.Ordinal).Select(field => new SmileCompletion(field.Name,
-            $"{field.Name} AS {field.Type.Name} field of TYPE {target.Name}" +
+            $"{field.Name} As {field.Type.Name} field of Type {target.Name}" +
             (target.ModuleName == null ? string.Empty :
                 $" from module {target.ModuleName} ({DescribeProvider(target.ProviderIdentity, analysis.DependencyContext)})"),
             SmileCompletionKind.Field)).ToArray();
@@ -330,7 +330,7 @@ public static class SmileCompletionService
         var start = Math.Min(position, text.Length);
         while (start > 0 && text[start - 1] is not ('\r' or '\n')) start--;
         return text.Substring(start, Math.Min(position, text.Length) - start)
-            .TrimStart().StartsWith("IMPORT ", StringComparison.OrdinalIgnoreCase);
+            .TrimStart().StartsWith("Import ", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsAfterAs(string text, int position)
@@ -338,8 +338,8 @@ public static class SmileCompletionService
         var start = Math.Min(position, text.Length);
         while (start > 0 && text[start - 1] is not ('\r' or '\n')) start--;
         var before = text.Substring(start, Math.Min(position, text.Length) - start).TrimEnd();
-        return before.EndsWith(" AS", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(before, "AS", StringComparison.OrdinalIgnoreCase);
+        return before.EndsWith(" As", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(before, "As", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsQualifiedTypeContext(string text, int position, string alias)
@@ -347,9 +347,9 @@ public static class SmileCompletionService
         var start = Math.Min(position, text.Length);
         while (start > 0 && text[start - 1] is not ('\r' or '\n')) start--;
         var before = text.Substring(start, Math.Min(position, text.Length) - start);
-        var marker = before.LastIndexOf(" AS ", StringComparison.OrdinalIgnoreCase);
-        if (marker < 0 && before.TrimStart().StartsWith("AS ", StringComparison.OrdinalIgnoreCase))
-            marker = before.IndexOf("AS ", StringComparison.OrdinalIgnoreCase) - 1;
+        var marker = before.LastIndexOf(" As ", StringComparison.OrdinalIgnoreCase);
+        if (marker < 0 && before.TrimStart().StartsWith("As ", StringComparison.OrdinalIgnoreCase))
+            marker = before.IndexOf("As ", StringComparison.OrdinalIgnoreCase) - 1;
         var tail = marker < 0 ? string.Empty : before.Substring(marker + 4).TrimStart();
         return tail.StartsWith(alias + ".", StringComparison.OrdinalIgnoreCase);
     }

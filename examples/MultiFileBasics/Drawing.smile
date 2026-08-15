@@ -2,20 +2,20 @@
 ' This file owns drawing and calls functions declared in GameState.smile.
 ' It also reads FrameCount, a global created by the startup source.
 
-SUB DrawSharedScene()
-    FILL ROUNDED RECTANGLE 40, 40, 880, 460, 18, RGB(14, 28, 58)
-    DRAW ROUNDED RECTANGLE 40, 40, 880, 460, 18, LIGHT_BLUE
+Sub DrawSharedScene()
+    Fill Rounded Rectangle 40, 40, 880, 460, 18, Rgb(14, 28, 58)
+    Draw Rounded Rectangle 40, 40, 880, 460, 18, LIGHT_BLUE
 
-    DRAW TEXT "ONE PROGRAM - THREE SMILE SOURCE FILES" AT 480, 75 SIZE 26 COLOR WHITE CENTERED
-    DRAW TEXT "LEFT / RIGHT ARROW KEYS MOVE THE MARKER" AT 480, 115 SIZE 18 COLOR LIGHT_GRAY CENTERED
+    Draw Text "One Program - Three SMILE Source Files" At 480, 75 Size 26 Color WHITE Centered
+    Draw Text "Left / Right Arrow Keys Move The Marker" At 480, 115 Size 18 Color LIGHT_GRAY Centered
 
-    DRAW LINE 90, 300, 870, 300, DARK_GRAY
-    FILL CIRCLE MarkerX(), MarkerY(), 18 + MarkerPulse() / 5, LIGHT_BLUE
-    DRAW CIRCLE MarkerX(), MarkerY(), 22 + MarkerPulse() / 5, WHITE
+    Draw Line 90, 300, 870, 300, DARK_GRAY
+    Fill Circle MarkerX(), MarkerY(), 18 + MarkerPulse() / 5, LIGHT_BLUE
+    Draw Circle MarkerX(), MarkerY(), 22 + MarkerPulse() / 5, WHITE
 
-    DRAW TEXT "FRAME" AT 70, 450 SIZE 18 COLOR CYAN
-    DRAW NUMBER FrameCount AT 145, 445 SIZE 26 COLOR YELLOW
+    Draw Text "Frame" At 70, 450 Size 18 Color CYAN
+    Draw Number FrameCount At 145, 445 Size 26 Color YELLOW
 
-    DRAW TEXT "X" AT 700, 450 SIZE 18 COLOR CYAN
-    DRAW NUMBER MarkerX() AT 730, 445 SIZE 26 COLOR YELLOW
-END SUB
+    Draw Text "X" At 700, 450 Size 18 Color CYAN
+    Draw Number MarkerX() At 730, 445 Size 26 Color YELLOW
+End Sub

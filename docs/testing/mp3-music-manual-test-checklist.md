@@ -17,7 +17,7 @@ For each backend:
 - [ ] Alt+Tab immediately silences music and WAV effects.
 - [ ] Returning to the game continues music from its current position at the same requested volume.
 - [ ] Minimizing silences all game audio; restoring applies the same policy as Alt+Tab.
-- [ ] Twenty focus changes at `MUSIC VOLUME 50` show no cumulative volume drift.
+- [ ] Twenty focus changes at `Music Volume 50` show no cumulative volume drift.
 - [ ] A manually paused track remains paused after focus loss and return.
 - [ ] A stopped track remains stopped after focus loss and return.
 - [ ] A WAV requested while inactive is not heard later after return.

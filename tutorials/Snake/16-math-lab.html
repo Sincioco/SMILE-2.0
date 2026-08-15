@@ -48,7 +48,7 @@
 <figcaption>The explorer uses the same FieldX, FieldY, CellSize, and +2 inner margin as DrawBoard. Click the illustration to open its high-resolution version.</figcaption>
 </figure>
 <h2>Interactive speed explorer</h2>
-<div class="lab-panel" data-speed-lab=""><div class="lab-row"><strong>Score</strong><input max="900" min="0" step="10" type="range" value="250"/><span class="lab-value"><span data-score="">250</span> points</span></div><div class="table-wrap"><table><thead><tr><th>Step</th><th>Result</th></tr></thead><tbody><tr><td>Integer band: Score / 50</td><td data-band="">5</td></tr><tr><td>MAX(45, 100 &minus; band &times; 4)</td><td data-delay="">80 milliseconds</td></tr></tbody></table></div></div>
+<div class="lab-panel" data-speed-lab=""><div class="lab-row"><strong>Score</strong><input max="900" min="0" step="10" type="range" value="250"/><span class="lab-value"><span data-score="">250</span> points</span></div><div class="table-wrap"><table><thead><tr><th>Step</th><th>Result</th></tr></thead><tbody><tr><td>Integer band: Score / 50</td><td data-band="">5</td></tr><tr><td>Max(45, 100 &minus; band &times; 4)</td><td data-delay="">80 milliseconds</td></tr></tbody></table></div></div>
 <figure class="figure-card">
 <a class="figure-link" href="assets/images/speed-chart.svg" rel="noopener" target="_blank" title="Open the high-resolution illustration">
 <img alt="Snake speed progression chart" src="assets/images/speed-chart.svg"/>
@@ -56,7 +56,7 @@
 <figcaption>The step shape comes from integer division: the delay changes only when the score crosses another multiple of 50. Click the illustration to open its high-resolution version.</figcaption>
 </figure>
 <h2>Scheduling instead of sleeping</h2>
-<p>The game does not pause the whole window. It checks whether <code>TIMER()</code> has reached <code>NextMoveTime</code>.</p>
+<p>The game does not pause the whole window. It checks whether <code>Timer()</code> has reached <code>NextMoveTime</code>.</p>
 <div class="table-wrap"><table><thead><tr><th>Current clock</th><th>NextMoveTime</th><th>Decision</th></tr></thead><tbody><tr><td>6,075</td><td>6,100</td><td>Do not move yet.</td></tr><tr><td>6,105</td><td>6,100</td><td>Move now, then schedule the next time.</td></tr></tbody></table></div>
 <details class="quiz"><summary>At score 49, what is Score / 50 in whole-number math?</summary><p><strong>0.</strong> At score 50 it becomes 1, which starts the next speed band.</p></details>
 <section aria-labelledby="reinforce-title" class="reinforcement-panel">
@@ -70,7 +70,7 @@
 </article>
 </main>
 <footer class="site-footer">
-<div class="footer-line">SMILE 2.0 (SinBASIC). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div>
+<div class="footer-line">SMILE 2.0 (SinBasic). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div>
 <div class="footer-line"><a href="https://github.com/Sincioco" rel="noopener" target="_blank">github.com/Sincioco</a> | <a href="https://facebook.com/louiery.sincioco" rel="noopener" target="_blank">facebook.com/louiery.sincioco</a> | <a href="https://linkedin.com/in/louierysincioco" rel="noopener" target="_blank">linkedin.com/in/louierysincioco</a> | <a href="https://youtube.com/@TheSincioco" rel="noopener" target="_blank">youtube.com/@TheSincioco</a> | <a href="https://tiktok.com/@sincioco" rel="noopener" target="_blank">tiktok.com/@sincioco</a></div>
 </footer>
 </div>

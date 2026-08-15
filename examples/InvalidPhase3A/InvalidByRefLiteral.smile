@@ -1,4 +1,4 @@
-CALL SetValue(1)
-SUB SetValue(BYREF Value AS NUMBER)
+Call SetValue(1)
+Sub SetValue(ByRef Value As Number)
     Value = 2
-END SUB
+End Sub

@@ -1,2 +1,2 @@
-IMPORT Missing.Tools AS Missing
-PRINT Missing.Value
+Import Missing.Tools As Missing
+Print Missing.Value

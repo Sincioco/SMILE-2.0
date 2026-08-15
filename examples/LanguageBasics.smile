@@ -1,31 +1,31 @@
 Value = 2
 Total = 0
-Done = FALSE
+Done = False
 
-DIM Values[3]
+Dim Values[3]
 Values[0] = Value
 Values[1] = Value + 1
 Values[2] = Values[1] + 1
 
-FOR I = 0 TO 2
+For I = 0 To 2
     Total = Total + Values[I]
-END FOR
+End For
 
-IF Total = 9 THEN
-    PRINT "IF OK"
-ELSE
-    PRINT "IF FAILED"
-END IF
+If Total = 9 Then
+    Print "If Ok"
+Else
+    Print "If Failed"
+End If
 
-DO
+Do
     Value = Value - 1
-LOOP UNTIL Value = 0
+Loop Until Value = 0
 
-FOR I = 2 DOWN TO 0
-    PRINT Values[I];
-END FOR
+For I = 2 Down To 0
+    Print Values[I];
+End For
 
-PRINT
-Done = NOT Done
-PRINT "Total: "; Total
-PRINT "Done: "; Done
+Print
+Done = Not Done
+Print "Total: "; Total
+Print "Done: "; Done

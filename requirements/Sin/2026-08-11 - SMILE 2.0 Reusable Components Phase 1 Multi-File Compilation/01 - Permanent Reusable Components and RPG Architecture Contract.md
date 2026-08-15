@@ -233,7 +233,7 @@ Multiple sound-effect channels are part of the approved roadmap and must be impl
 
 The future system must:
 
-- preserve the existing simple `PLAY SOUND` form through a default channel or an intentional repository-wide migration;
+- preserve the existing simple `Play Sound` form through a default channel or an intentional repository-wide migration;
 - allow explicit independent effect channels;
 - work in Windows and Web;
 - remain separate from the one background-music stream;
@@ -263,13 +263,13 @@ Each phase is implemented, committed, pushed, inspected, and reassessed before t
 Planned concepts:
 
 ```text
-MODULE
-END MODULE
-IMPORT
-AS
-PUBLIC
-PRIVATE
-OPTION EXPLICIT
+Module
+End Module
+Import
+As
+Public
+Private
+Option Explicit
 .smilelibproj
 .smilelib
 ProjectReference
@@ -281,12 +281,12 @@ Exact syntax is not implemented until Phase 1 is inspected.
 
 Planned concepts include:
 
-- scalar declarations with `AS`;
-- `NUMBER`, `BOOLEAN`, and proper `TEXT` values;
-- user-defined record-style `TYPE`;
+- scalar declarations with `As`;
+- `Number`, `Boolean`, and proper `Text` values;
+- user-defined record-style `Type`;
 - field access;
 - arrays of records;
-- `BYREF` and `BYVAL`;
+- `ByRef` and `ByVal`;
 - more than four parameters;
 - proper local scope.
 

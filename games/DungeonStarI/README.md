@@ -26,11 +26,11 @@ Copy both `games\DungeonStarI\Assets` and `games\DungeonStarI\Maps` beside the e
 
 ## Title map selection
 
-The blue title screen initially selects `DEFAULT.MAP`. Up/Down or W/S chooses among `DEFAULT.MAP`, `SAMPLE-LOOPS.MAP`, `SAMPLE-SWITCHBACKS.MAP`, and `RANDOM DUNGEON`; Enter/Space starts the selection. Any title activity restarts the five-second attract timer. The automatic demo uses the currently selected entry, and any demo key returns to the title.
+The blue title screen initially selects `Default.MAP`. Up/Down or W/S chooses among `Default.MAP`, `SAMPLE-LOOPS.MAP`, `SAMPLE-SWITCHBACKS.MAP`, and `Random DUNGEON`; Enter/Space starts the selection. Any title activity restarts the five-second attract timer. The automatic demo uses the currently selected entry, and any demo key returns to the title.
 
-The three external files under `Maps` are plain text. The generic `LOAD TEXT FILE` statement reads their executable-relative UTF-8 bytes into a bounded numeric array; all header, row, symbol, topology, start, door, stair, and connectivity interpretation remains in `Program.smile`. See `MAP_AUTHORING.md` for the complete format and student workflow.
+The three external files under `Maps` are plain text. The generic `Load Text File` statement reads their executable-relative UTF-8 bytes into a bounded numeric array; all header, row, symbol, topology, start, door, stair, and connectivity interpretation remains in `Program.smile`. See `MAP_AUTHORING.md` for the complete format and student workflow.
 
-If a selected file is missing or invalid, the game displays `MAP NOT AVAILABLE - RANDOM DUNGEON USED` briefly and remains playable with an internally generated dungeon. The selected entry is retained so the file can be fixed and retried. No hidden copy of `default.map` is embedded in the executable.
+If a selected file is missing or invalid, the game displays `MAP Not AVAILABLE - Random DUNGEON USED` briefly and remains playable with an internally generated dungeon. The selected entry is retained so the file can be fixed and retried. No hidden copy of `default.map` is embedded in the executable.
 
 ## Floors and generation
 

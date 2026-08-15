@@ -67,7 +67,7 @@ Prevent immediate reversal.
 ## High score and sound
 
 ```smile
-LOAD HighScore FROM "HighScore" DEFAULT 0
+Load HighScore From "HighScore" Default 0
 ```
 
 Assets:

@@ -1,11 +1,11 @@
-TYPE Point
-    X AS NUMBER
-END TYPE
-CALL Change(Create())
-FUNCTION Create() AS Point
-    DIM Result AS Point
-    RETURN Result
-END FUNCTION
-SUB Change(BYREF Value AS Point)
+Type Point
+    X As Number
+End Type
+Call Change(Create())
+Function Create() As Point
+    Dim Result As Point
+    Return Result
+End Function
+Sub Change(ByRef Value As Point)
     Value.X = 1
-END SUB
+End Sub

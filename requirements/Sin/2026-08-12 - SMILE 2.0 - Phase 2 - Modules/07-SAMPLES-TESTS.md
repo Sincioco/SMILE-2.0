@@ -38,7 +38,7 @@ examples\LibraryConsumer
 The consumer imports:
 
 ```smile
-IMPORT Smile.Math.Extras AS Math
+Import Smile.Math.Extras As Math
 ```
 
 It uses the same library for:
@@ -52,7 +52,7 @@ Expected console values:
 
 ```text
 100
-TRUE
+True
 1
 ```
 

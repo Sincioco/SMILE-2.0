@@ -5,18 +5,18 @@ Phase 5 keeps one shared language model for the compiler and Visual Studio exten
 ## Unicode scalar inspection
 
 ```smile
-PRINT TEXT_LENGTH("A😀B")
-PRINT TEXT_CODE_AT("A😀B", 1)
-PRINT TEXT_SLICE("A😀B", 1, 1)
+Print Text_Length("A😀B")
+Print Text_Code_At("A😀B", 1)
+Print Text_Slice("A😀B", 1, 1)
 ```
 
-These print `3`, `128512`, and `😀`. A combining mark is a separate scalar. Native code uses bounded UTF-8 decoding; Web code uses code-point-aware iteration. All three built-ins consume normal owned `TEXT` expressions, so variables, record fields, array elements, parameters, function returns, and nested calls follow the existing ownership model.
+These print `3`, `128512`, and `😀`. A combining mark is a separate scalar. Native code uses bounded UTF-8 decoding; Web code uses code-point-aware iteration. All three built-ins consume normal owned `Text` expressions, so variables, record fields, array elements, parameters, function returns, and nested calls follow the existing ownership model.
 
 ## Routine capability
 
 Every routine has a derived `requiresGameWindow` flag. Direct drawing, clipping, screen text measurement, and other game-window operations mark the containing routine. A fixpoint propagates that flag through calls, including recursion. Library analysis itself remains valid; a top-level Console call to a flagged routine receives one `SML3704` at that consumer call site. Game consumers compile normally.
 
-Format-version 5 packages serialize the flag on every public routine. Project and package references therefore enforce the same boundary, and imported completion marks routines that require `GAME WINDOW`.
+Format-version 5 packages serialize the flag on every public routine. Project and package references therefore enforce the same boundary, and imported completion marks routines that require `Game Window`.
 
 ## Smile.UI
 
@@ -50,7 +50,7 @@ Menu stores requested and effective row counts separately; `VisibleRows` reports
 
 Menu labels accept at most 256 Unicode scalars and support ellipsis, clip, or wrap overflow. Wrap is bounded to four lines, and final-line ellipsis remains scalar-safe. Menu reserves stable cursor and right-marker gutters, draws the exact automatic marker ` >` for bound rows, and exposes bounds, selected-row geometry, position, selection reset, revision, and focus-aware drawing to the reusable navigator.
 
-Navigator layout clamps the root to a padded viewport, aligns each child with its parent row, tries the configured right/left direction and fallback, clamps vertically, and uses bounded overlap when neither side fits. Relayout and style updates are transactional. `DrawStack` uses deterministic root-to-leaf painter order; Phase 5.2.1 draws a cursor for every visible menu while routing input only to the deepest level. All navigation, state, and geometry APIs remain Console-safe; only drawing APIs require `GAME WINDOW`.
+Navigator layout clamps the root to a padded viewport, aligns each child with its parent row, tries the configured right/left direction and fallback, clamps vertically, and uses bounded overlap when neither side fits. Relayout and style updates are transactional. `DrawStack` uses deterministic root-to-leaf painter order; Phase 5.2.1 draws a cursor for every visible menu while routing input only to the deepest level. All navigation, state, and geometry APIs remain Console-safe; only drawing APIs require `Game Window`.
 
 `examples\Phase5SubmenuStateTests` proves project/package state parity and the capacity, cycle, revision, stale-handle, placement, and transactional matrix. `examples\InvalidPhase5Submenus\ConsoleDrawStack` proves the consumer-located `SML3704`. `examples\Phase5SubmenuViewport` is the focused DirectX/GDI/Web rendering proof. `examples\MenuGallery` is migrated to a four-level reusable navigator with a shared child, a disabled submenu, long overflow labels, automatic markers, leaf acceptance, and application-owned event audio.
 
@@ -58,7 +58,7 @@ Navigator layout clamps the root to a padded viewport, aligns each child with it
 
 `Smile.UI` 1.1.1 requires every active child edge to remain attached to the exact currently selected parent item that opened it. Navigator repair prunes from the first mismatched edge, clears all deeper stack entries and stale accepted-leaf state, and leaves the changed parent current. Label, user-value, style, position, and viewport changes preserve descendants when the selected edge is unchanged.
 
-`MenuNavigator.DrawStack` requests cursor-visible drawing for every visible menu, while keyboard input remains exclusive to the deepest level. `Menu.DrawFocused(FALSE)` remains the explicit lower-level cursor suppression API. The fixed left gutter keeps every label X stable and the cursor clamped left of text.
+`MenuNavigator.DrawStack` requests cursor-visible drawing for every visible menu, while keyboard input remains exclusive to the deepest level. `Menu.DrawFocused(False)` remains the explicit lower-level cursor suppression API. The fixed left gutter keeps every label X stable and the cursor clamped left of text.
 
 `MenuStyle.ShowScrollbar` reserves a stable gutter whenever true, but draws a track and proportional thumb only when `ItemCount > VisibleRows`; false draws nothing and reclaims the gutter. Thumb size follows `VisibleRows / ItemCount`, thumb position follows `TopIndex / MaxTop`, and track/thumb draw after row content inside the menu clip.
 

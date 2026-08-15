@@ -1,7 +1,7 @@
-OPTION EXPLICIT
+Option Explicit
 
-DIM Message AS TEXT
+Dim Message As Text
 Message = "Café — Καλημέρα — こんにちは — 你好 — 😀"
-PRINT Message
+Print Message
 
-END PROGRAM
+End Program

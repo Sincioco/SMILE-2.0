@@ -1,5 +1,5 @@
-OPTION EXPLICIT
+Option Explicit
 
-DIM Message AS TEXT
+Dim Message As Text
 Message = "Hello World"
-PRINT Message
+Print Message

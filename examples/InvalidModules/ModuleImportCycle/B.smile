@@ -1,4 +1,4 @@
-MODULE Example.Beta
-IMPORT Example.Alpha AS Alpha
-PUBLIC CONST ValueB = 1
-END MODULE
+Module Example.Beta
+Import Example.Alpha As Alpha
+Public Const ValueB = 1
+End Module

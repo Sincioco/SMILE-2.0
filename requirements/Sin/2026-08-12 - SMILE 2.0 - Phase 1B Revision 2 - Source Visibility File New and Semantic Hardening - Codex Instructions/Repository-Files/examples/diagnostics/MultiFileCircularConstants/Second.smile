@@ -1,1 +1,1 @@
-CONST SecondValue = FirstValue + 1
+Const SecondValue = FirstValue + 1

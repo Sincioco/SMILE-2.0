@@ -1,3 +1,3 @@
-TYPE Invalid
-    Value AS MissingType
-END TYPE
+Type Invalid
+    Value As MissingType
+End Type

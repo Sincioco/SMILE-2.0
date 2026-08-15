@@ -283,10 +283,10 @@ Do not type the literal `...` in a real map. It is only shorthand in this guide.
 The title menu offers:
 
 ```text
-DEFAULT.MAP
+Default.MAP
 SAMPLE-LOOPS.MAP
 SAMPLE-SWITCHBACKS.MAP
-RANDOM DUNGEON
+Random DUNGEON
 ```
 
 Use Up/Down or W/S to select and Enter/Space to start.

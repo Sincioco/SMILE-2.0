@@ -31,7 +31,7 @@ chore(repo): establish public governance and rename the SMILE solution
 - constants;
 - 2D arrays;
 - procedures/functions;
-- SELECT CASE;
+- Select Case;
 - loop exits;
 - built-ins and key/color constants.
 
@@ -105,7 +105,7 @@ docs: publish the SMILE game-development milestone
 - Keep game logic in SMILE.
 - Use fixed global arrays where simple.
 - Limit routines to four scalar parameters.
-- Keep text literal-only; use DRAW NUMBER.
+- Keep text literal-only; use Draw Number.
 - Use integer movement.
 - Add focused smoke cases, not a large framework.
 - Build after small coherent changes.

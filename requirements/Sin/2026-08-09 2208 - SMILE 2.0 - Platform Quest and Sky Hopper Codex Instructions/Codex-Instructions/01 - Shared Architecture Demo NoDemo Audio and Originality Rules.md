@@ -13,16 +13,16 @@ Implement physics with integer fixed-point values.
 Use:
 
 ```smile
-CONST SubpixelsPerPixel = 1000
-CONST SimulationStep = 8
-CONST MaxCatchUpSteps = 6
+Const SubpixelsPerPixel = 1000
+Const SimulationStep = 8
+Const MaxCatchUpSteps = 6
 ```
 
 or the current repository’s latest established equivalent.
 
 Movement must be time-based and refresh-independent.
 
-Do not use `WAIT 16 MILLISECONDS` to pace a VSync game loop.
+Do not use `Wait 16 Milliseconds` to pace a VSync game loop.
 
 ---
 
@@ -33,10 +33,10 @@ Use current repository conventions.
 Unless a newer current convention supersedes these values:
 
 ```smile
-CONST TitleDemoDelay = 5000
-CONST DemoMinimumPlayTime = 30000
-CONST DemoMaximumPlayTime = 45000
-CONST TitleInputArmDelay = 250
+Const TitleDemoDelay = 5000
+Const DemoMinimumPlayTime = 30000
+Const DemoMaximumPlayTime = 45000
+Const TitleInputArmDelay = 250
 ```
 
 Required:
@@ -144,13 +144,13 @@ The title should remain silent unless current repository convention says otherwi
 Preferred implementation:
 
 ```smile
-MUSIC VOLUME <tuned value>
-PLAY MUSIC "Assets\\Background.wav" LOOP
+Music Volume <tuned value>
+Play Music "Assets\\Background.wav" Loop
 ```
 
 The current native music channel uses Windows `MediaPlayer` and loads a file-backed media source. Codex must perform one brief playback check with the generated WAV.
 
-If the current target environment does not accept WAV through `PLAY MUSIC`, encode the same original composition as:
+If the current target environment does not accept WAV through `Play Music`, encode the same original composition as:
 
 ```text
 Background.mp3

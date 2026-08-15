@@ -1,27 +1,27 @@
-OPTION EXPLICIT
+Option Explicit
 
-CALL Exercise("STOP")
-PRINT "DONE"
+Call Exercise("Stop")
+Print "Done"
 
-END PROGRAM
+End Program
 
-SUB Exercise(Command AS TEXT)
-    DIM Index AS NUMBER
-    DIM Run AS NUMBER
+Sub Exercise(Command As Text)
+    Dim Index As Number
+    Dim Run As Number
 
-    FOR Run = 1 TO 1000
-        FOR Index = 1 TO 3
-            SELECT CASE Command + ""
-                CASE "STOP"
-                    EXIT FOR
-            END SELECT
-        END FOR
+    For Run = 1 To 1000
+        For Index = 1 To 3
+            Select Case Command + ""
+                Case "Stop"
+                    Exit For
+            End Select
+        End For
 
-        DO
-            SELECT CASE Command + ""
-                CASE "STOP"
-                    EXIT DO
-            END SELECT
-        LOOP
-    END FOR
-END SUB
+        Do
+            Select Case Command + ""
+                Case "Stop"
+                    Exit Do
+            End Select
+        Loop
+    End For
+End Sub

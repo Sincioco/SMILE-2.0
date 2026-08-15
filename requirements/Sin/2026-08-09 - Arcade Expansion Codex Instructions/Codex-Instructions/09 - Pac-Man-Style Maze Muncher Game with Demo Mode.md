@@ -148,7 +148,7 @@ Do not reproduce the exact reference maze.
 Reuse the generic statement added by the Dungeon milestone:
 
 ```smile
-LOAD TEXT FILE "Maps\default.map" INTO MazeFileBytes COUNT MazeFileLength
+Load Text File "Maps\default.map" Into MazeFileBytes Count MazeFileLength
 ```
 
 Keep the maze parser in `Program.smile`.
@@ -185,13 +185,13 @@ Do not add a Maze Muncher-specific native loader.
 Use existing primitives:
 
 ```smile
-DRAW LINE
-DRAW RECTANGLE
-DRAW ROUNDED RECTANGLE
-FILL CIRCLE
-FILL QUADRILATERAL
-DRAW TEXT
-DRAW NUMBER
+Draw Line
+Draw Rectangle
+Draw Rounded Rectangle
+Fill Circle
+Fill Quadrilateral
+Draw Text
+Draw Number
 ```
 
 Walls should look like glowing double lines or rounded blue channels.
@@ -356,10 +356,10 @@ Show:
 
 ```text
 MAZE MUNCHER
-ENTER OR SPACE TO START
-ARROWS OR W A S D
+ENTER Or SPACE To START
+ARROWS Or W A S D
 DEMO STARTS AUTOMATICALLY
-ESCAPE TO EXIT
+ESCAPE To Exit
 ```
 
 Five seconds of no activity starts demo.

@@ -13,7 +13,7 @@ ConsoleSnake.smile
 
 ## Language smoke coverage
 
-Cover constants, operators, 2D arrays, routines, function conditions, argument errors, missing return, SELECT CASE, loop exits, keys, colors, graphics, sound, storage, and missing keywords.
+Cover constants, operators, 2D arrays, routines, function conditions, argument errors, missing return, Select Case, loop exits, keys, colors, graphics, sound, storage, and missing keywords.
 
 ## Shared services
 

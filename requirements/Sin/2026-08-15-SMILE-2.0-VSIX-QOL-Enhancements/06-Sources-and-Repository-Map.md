@@ -118,7 +118,7 @@ libraries\Smile.UI\API.md
 Observed declaration:
 
 ```smile
-PUBLIC FUNCTION Create(BYREF Style AS Core.MenuStyle, X AS NUMBER, Y AS NUMBER, Width AS NUMBER, Height AS NUMBER, VisibleRows AS NUMBER) AS NUMBER
+Public Function Create(ByRef Style As Core.MenuStyle, X As Number, Y As Number, Width As Number, Height As Number, VisibleRows As Number) As Number
 ```
 
 The source currently has ordinary comments/implementation but no educational documentation block immediately above this routine. `API.md` lists the signature and general menu behavior but does not explain every `Create` parameter.

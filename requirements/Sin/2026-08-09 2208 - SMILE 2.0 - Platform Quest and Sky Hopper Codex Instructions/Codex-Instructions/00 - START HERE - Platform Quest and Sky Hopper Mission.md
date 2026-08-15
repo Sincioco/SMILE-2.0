@@ -26,15 +26,15 @@ The current SMILE 2.0 language already provides everything necessary:
 
 - signed integer arithmetic;
 - fixed arrays;
-- `SUB` and `FUNCTION`;
+- `Sub` and `Function`;
 - loops and conditionals;
-- fixed-step timing through `TIMER()`;
+- fixed-step timing through `Timer()`;
 - queued and held keys;
 - rectangles, rounded rectangles, circles, arcs, quadrilaterals, lines, text, and numbers;
-- `LOAD TEXT FILE`;
+- `Load Text File`;
 - integer persistence;
 - WAV sound effects;
-- looping background music through `PLAY MUSIC`;
+- looping background music through `Play Music`;
 - DirectX and GDI rendering;
 - automatic focus muting.
 
@@ -51,7 +51,7 @@ COLLISION
 CAMERA
 FLAP
 PIPE
-DRAW IMAGE
+Draw Image
 ```
 
 or game-specific native helpers.

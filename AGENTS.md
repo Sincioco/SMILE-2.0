@@ -47,13 +47,13 @@ Stop condition:
 
 Do not turn a one-time investigation into a permanent regression burden unless Sin explicitly approves it.
 
-## Permanent SMILE source style and language inspiration
+## Permanent SMILE capitalization and language inspiration
 
-- Write new SMILE-language source, and SMILE source that is substantively edited, using Visual Basic-style initial capitalization rather than all-uppercase BASIC spelling. Use forms such as `Dim`, `As`, `If`, `Then`, `Else`, `End If`, `Sub`, `Function`, `Call`, `Game Window`, and PascalCase identifiers.
-- Constants may remain uppercase, including established language constants such as `KEY_ENTER` and project constants such as `MAX_ITEMS`.
+- Use Visual Basic-style initial capitalization in all existing and future SMILE-language source, embedded code examples, templates, tutorials, documentation, diagnostics, and generated language presentation. Use forms such as `Dim`, `As`, `If`, `Then`, `Else`, `End If`, `Sub`, `Function`, `Call`, `Game Window`, and PascalCase identifiers.
+- Never use all-uppercase spelling for SMILE keywords or variable and parameter names. Constants may remain uppercase, including established language constants such as `KEY_ENTER` and project constants such as `MAX_ITEMS`.
+- Use first-letter/title capitalization for short user-interface labels, menu items, and instructional phrases. Use normal English capitalization for complete sentences. Preserve established brands and acronyms such as SMILE, UI, VSIX, API, and IDE.
 - Use Visual Basic as the primary inspiration for future SMILE syntax, semantics, naming, and readable BASIC conventions.
-- This is an authoring convention, not a request to make the language case-sensitive.
-- Do not mass-reformat otherwise unchanged legacy source solely to alter casing. Apply this convention to new code and to code being meaningfully changed.
+- This is an authoring and presentation convention, not a request to make the language case-sensitive.
 
 ## One authoritative language implementation
 
@@ -68,7 +68,7 @@ Do not turn a one-time investigation into a permanent regression burden unless S
 
 The compiler and Visual Studio extension must consume this shared implementation.
 
-Phase 2 modules and libraries are also shared-language responsibilities. Keep `MODULE`, `IMPORT`, visibility, qualified access, provider identity, package validation, and project dependency graphs in `src\Smile.Language`; do not create compiler-only or editor-only semantics. `.smileproj` applications and `.smilelibproj` libraries use the same project model. `.smilelib` output must remain deterministic and target-neutral.
+Phase 2 modules and libraries are also shared-language responsibilities. Keep `Module`, `Import`, visibility, qualified access, provider identity, package validation, and project dependency graphs in `src\Smile.Language`; do not create compiler-only or editor-only semantics. `.smileproj` applications and `.smilelibproj` libraries use the same project model. `.smilelib` output must remain deterministic and target-neutral.
 
 Never create a compiler-only parser, extension-only parser, duplicate keyword table, duplicate syntax rules, or duplicate semantic rules.
 
@@ -128,12 +128,12 @@ Every attract/demo mode, including those in future games, must return directly t
 
 ## Default game-audio focus contract
 
-Every program containing `GAME WINDOW` automatically inherits shared native audio focus behavior. Do not duplicate activation handling in `.smile` games.
+Every program containing `Game Window` automatically inherits shared native audio focus behavior. Do not duplicate activation handling in `.smile` games.
 
 - Losing application activation, top-level window activation, or becoming minimized immediately silences that game's audio.
-- MP3 playback continues at effective volume zero while the exact requested `MUSIC VOLUME` remains remembered.
+- MP3 playback continues at effective volume zero while the exact requested `Music Volume` remains remembered.
 - Restoring an active, non-minimized window reapplies that volume without restarting or resuming a manually paused or stopped track.
-- The current asynchronous WAV effect stops on focus loss; new `PLAY SOUND` requests are suppressed while inactive and are not replayed later.
+- The current asynchronous WAV effect stops on focus loss; new `Play Sound` requests are suppressed while inactive and are not replayed later.
 - The runtime never changes Windows master volume or another application's volume.
 - DirectX and GDI use the same shared focus policy.
 

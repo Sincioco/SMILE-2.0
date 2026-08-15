@@ -12,7 +12,7 @@ The latest user feedback is authoritative:
 
 - Right-clicking the SMILE project shows “Add new SMILE Source...”.
 - The command creates the physical .smile file and opens it for editing.
-- The new source does NOT appear under the project in Solution Explorer.
+- The new source does Not appear under the project in Solution Explorer.
 - “Add Existing SMILE Source...” then says it is already included.
 - Restarting Visual Studio does not make it visible.
 

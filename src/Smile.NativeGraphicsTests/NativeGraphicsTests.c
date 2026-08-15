@@ -280,12 +280,12 @@ int main(void)
     check(directx_state.begin_count == 1, "Arc drawing begins one shared frame");
 
     smile_graphics_draw_image((void*)1, 11, 12, 513, 257, 101, 102, 777, 333, 64, 1, 3);
-    check(directx_state.draw_image_count == 1, "IMAGE drawing reaches the active backend");
+    check(directx_state.draw_image_count == 1, "Image drawing reaches the active backend");
     check(directx_state.image_values[0] == 11 && directx_state.image_values[2] == 513 &&
         directx_state.image_values[4] == 101 && directx_state.image_values[6] == 777 &&
         directx_state.image_values[8] == 64 && directx_state.image_values[9] == 1 &&
         directx_state.image_values[10] == 3,
-        "IMAGE drawing preserves source/destination rectangles opacity filter and flip");
+        "Image drawing preserves source/destination rectangles opacity filter and flip");
     smile_graphics_push_clip(5, 6, 700, 400);
     smile_graphics_push_clip(20, 30, 100, 80);
     smile_graphics_pop_clip();
@@ -294,10 +294,10 @@ int main(void)
         "nested clip operations remain balanced at the backend boundary");
     check(smile_graphics_text_width("SMILE", 5, 20) == 100 &&
         smile_graphics_text_height("SMILE", 5, 20) == 22 && directx_state.text_measure_count == 2,
-        "TEXT_WIDTH and TEXT_HEIGHT route through the selected backend");
+        "Text_Width and Text_Height route through the selected backend");
     check(smile_graphics_text_width("", 0, 20) == 0 && smile_graphics_text_height("", 0, 20) == 20 &&
         directx_state.text_measure_count == 2,
-        "empty TEXT has zero width and a positive backend-independent line height");
+        "empty Text has zero width and a positive backend-independent line height");
 
     smile_graphics_push_clip(9, 10, 200, 120);
     smile_graphics_present();

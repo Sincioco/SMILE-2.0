@@ -1,7 +1,7 @@
-OPTION EXPLICIT
+Option Explicit
 
-TYPE ConsumerData
-    Score AS NUMBER
-END TYPE
+Type ConsumerData
+    Score As Number
+End Type
 
-END PROGRAM
+End Program

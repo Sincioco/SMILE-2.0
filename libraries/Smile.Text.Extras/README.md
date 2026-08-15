@@ -1,6 +1,6 @@
 # Smile.Text.Extras
 
-Phase 3A proof library for typed public APIs, first-class `TEXT`, default `BYVAL`, and explicit `BYREF`.
+Phase 3A proof library for typed public APIs, first-class `Text`, default `ByVal`, and explicit `ByRef`.
 
 Build it with:
 

@@ -1,13 +1,13 @@
 ' Exercises shared semantic diagnostics for invalid game-language use.
-CLEAR RED
-DRAW CIRCLE 100, 100, 20, WHITE
-PLAY SOUND ""
-PLAY MUSIC ""
-MUSIC VOLUME TRUE
-FILL QUADRILATERAL 0, 0, 10
-LOAD SavedValue FROM "" DEFAULT 0
-SAVE SavedValue TO ""
+Clear RED
+Draw Circle 100, 100, 20, WHITE
+Play Sound ""
+Play Music ""
+Music Volume True
+Fill Quadrilateral 0, 0, 10
+Load SavedValue From "" Default 0
+Save SavedValue To ""
 
-DO
-    GAME WINDOW "Nested" SIZE 0 BY 540
-LOOP UNTIL TRUE
+Do
+    Game Window "Nested" Size 0 By 540
+Loop Until True

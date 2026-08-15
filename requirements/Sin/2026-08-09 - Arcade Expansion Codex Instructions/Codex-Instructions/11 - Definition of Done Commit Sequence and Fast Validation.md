@@ -44,7 +44,7 @@ If the shared focus behavior already fully satisfies the contract, avoid native 
 Implement:
 
 ```smile
-LOAD TEXT FILE "path" INTO Array COUNT Variable
+Load Text File "path" Into Array Count Variable
 ```
 
 Add focused language/runtime tests and documentation.
@@ -196,7 +196,7 @@ cmd /c scripts\smoke-test.cmd
 
 Add only proportional tests.
 
-For `LOAD TEXT FILE`, include quick checks for:
+For `Load Text File`, include quick checks for:
 
 - valid analysis;
 - target rank/type diagnostics;
@@ -270,8 +270,8 @@ Stop when the investigation answers the known question.
 
 ### File loading
 
-- [ ] `LOAD TEXT FILE ... INTO ... COUNT ...` is implemented generically.
-- [ ] Existing persistence `LOAD ... FROM ... DEFAULT ...` remains valid.
+- [ ] `Load Text File ... Into ... Count ...` is implemented generically.
+- [ ] Existing persistence `Load ... From ... Default ...` remains valid.
 - [ ] Missing/invalid file access is safe.
 - [ ] Shared language/compiler/VS documentation agree.
 

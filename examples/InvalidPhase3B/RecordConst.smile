@@ -1,4 +1,4 @@
-TYPE Point
-    X AS NUMBER
-END TYPE
-CONST Origin AS Point = 0
+Type Point
+    X As Number
+End Type
+Const Origin As Point = 0

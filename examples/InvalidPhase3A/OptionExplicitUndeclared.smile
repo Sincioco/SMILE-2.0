@@ -1,2 +1,2 @@
-OPTION EXPLICIT
+Option Explicit
 Value = 1

@@ -164,10 +164,10 @@ Source Not Available did not appear
 
 ### Out of scope
 
-- `MODULE`, `IMPORT`, `PUBLIC`, or `PRIVATE`;
+- `Module`, `Import`, `Public`, or `Private`;
 - `.smilelib` and `.smilelibproj`;
 - reusable UI/RPG components;
-- `TYPE`, `BYREF`, `BYVAL`, or general mutable `TEXT`;
+- `Type`, `ByRef`, `ByVal`, or general mutable `Text`;
 - image/sprite support;
 - multiple sound channels;
 - browser `.smile` breakpoints;

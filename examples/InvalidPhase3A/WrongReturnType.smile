@@ -1,4 +1,4 @@
-PRINT GetValue()
-FUNCTION GetValue() AS BOOLEAN
-    RETURN 1
-END FUNCTION
+Print GetValue()
+Function GetValue() As Boolean
+    Return 1
+End Function

@@ -1,1 +1,1 @@
-PRINT "A" < "B"
+Print "A" < "B"

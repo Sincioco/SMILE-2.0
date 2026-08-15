@@ -68,7 +68,7 @@ Do not implement the entire package as one unreviewable change. Use coherent, va
 At the verified starting commit:
 
 - Dungeon Star I already exists as a complete `.smile` game.
-- `FILL QUADRILATERAL`, `DRAW QUADRILATERAL`, and `KEY_OTHER` already exist.
+- `Fill Quadrilateral`, `Draw Quadrilateral`, and `KEY_OTHER` already exist.
 - MP3 background music already uses `Windows.Media.Playback.MediaPlayer`.
 - The shared native runtime already tracks activation/minimization and silences MP3 and WAV audio while inactive.
 - DirectX and GDI backends are both supported.
@@ -92,10 +92,10 @@ Use this decision order:
 The map milestone introduces one justified generic file-input statement:
 
 ```smile
-LOAD TEXT FILE "Maps\default.map" INTO MapBytes COUNT MapByteCount
+Load Text File "Maps\default.map" Into MapBytes Count MapByteCount
 ```
 
-No `DEMO MODE`, `DRAW MAZE`, `PACMAN AI`, `GALAGA AI`, or dungeon-specific native statement is approved. Demo intelligence and game rules stay in `.smile`.
+No `DEMO MODE`, `Draw MAZE`, `PACMAN AI`, `GALAGA AI`, or dungeon-specific native statement is approved. Demo intelligence and game rules stay in `.smile`.
 
 ## Velocity rule
 

@@ -4,10 +4,10 @@
 
 | ID | Requirement |
 |---|---|
-| A1 | MODULE/END MODULE parse case-insensitively |
+| A1 | Module/End Module parse case-insensitively |
 | A2 | dotted module names parse |
-| A3 | IMPORT module AS alias parses |
-| A4 | PUBLIC/PRIVATE declarations parse |
+| A3 | Import module As alias parses |
+| A4 | Public/Private declarations parse |
 | A5 | Alias.Member value/call/array syntax parses |
 | A6 | malformed forms diagnose clearly |
 | A7 | legacy source syntax remains valid |
@@ -50,7 +50,7 @@
 | D4 | add/remove reference works live |
 | D5 | missing reference state is visible |
 | D6 | library F5 gives non-runnable message |
-| D7 | IMPORT module completion works |
+| D7 | Import module completion works |
 | D8 | Alias. public-member completion works |
 | D9 | private members remain hidden |
 | D10 | editor/build diagnostics agree |
@@ -94,7 +94,7 @@
 7. Type:
 
 ```smile
-IMPORT Smile.Math.Extras AS Math
+Import Smile.Math.Extras As Math
 ```
 
 8. Confirm completion after:

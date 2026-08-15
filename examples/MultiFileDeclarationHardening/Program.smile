@@ -1,5 +1,5 @@
-DIM StartupValues[MaximumValues]
-CALL InitializeArrays()
-PRINT MaximumValues
-PRINT SharedValues[MaximumValues - 1]
-END PROGRAM
+Dim StartupValues[MaximumValues]
+Call InitializeArrays()
+Print MaximumValues
+Print SharedValues[MaximumValues - 1]
+End Program

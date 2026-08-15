@@ -1,8 +1,8 @@
-MODULE Example.AssetLibrary
-OPTION EXPLICIT
+Module Example.AssetLibrary
+Option Explicit
 
-PUBLIC FUNCTION Value() AS NUMBER
-    RETURN 1
-END FUNCTION
+Public Function Value() As Number
+    Return 1
+End Function
 
-END MODULE
+End Module

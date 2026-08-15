@@ -1,5 +1,5 @@
-CALL Work()
-SUB Work()
-    DIM Value AS NUMBER
-    DIM Value AS TEXT
-END SUB
+Call Work()
+Sub Work()
+    Dim Value As Number
+    Dim Value As Text
+End Sub

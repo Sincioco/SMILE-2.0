@@ -1,5 +1,5 @@
-SUB Invalid()
-    TYPE LocalType
-        Value AS NUMBER
-    END TYPE
-END SUB
+Sub Invalid()
+    Type LocalType
+        Value As Number
+    End Type
+End Sub

@@ -5,17 +5,17 @@
 Add shared language support for:
 
 ```text
-MODULE
-IMPORT
-AS
-PUBLIC
-PRIVATE
+Module
+Import
+As
+Public
+Private
 .
 ```
 
 Use one authoritative lexer/parser implementation in `src\Smile.Language`.
 
-`END MODULE` closes a module.
+`End Module` closes a module.
 
 SMILE remains case-insensitive.
 
@@ -26,32 +26,32 @@ SMILE remains case-insensitive.
 A module source has this form:
 
 ```smile
-MODULE Smile.Math.Extras
+Module Smile.Math.Extras
 
-PUBLIC CONST VERSION_MAJOR = 1
+Public Const VERSION_MAJOR = 1
 
-PUBLIC FUNCTION Clamp(Value, MinimumValue, MaximumValue)
-    RETURN MAX(MinimumValue, MIN(MaximumValue, Value))
-END FUNCTION
+Public Function Clamp(Value, MinimumValue, MaximumValue)
+    Return Max(MinimumValue, Min(MaximumValue, Value))
+End Function
 
-PRIVATE FUNCTION Identity(Value)
-    RETURN Value
-END FUNCTION
+Private Function Identity(Value)
+    Return Value
+End Function
 
-END MODULE
+End Module
 ```
 
 Rules:
 
-- `MODULE` is the first non-comment statement.
+- `Module` is the first non-comment statement.
 - The module name has one or more identifiers separated by dots.
 - Exactly one module block is allowed per physical source.
-- `END MODULE` is mandatory.
-- Nothing except comments may follow `END MODULE`.
+- `End Module` is mandatory.
+- Nothing except comments may follow `End Module`.
 - Module sources cannot contain:
-  - `GAME WINDOW`;
+  - `Game Window`;
   - top-level executable statements;
-  - `END PROGRAM`.
+  - `End Program`.
 - A module may span several physical files by repeating the same module name.
 - Every physical source retains its own path, lines, diagnostics, and debug locations.
 
@@ -62,7 +62,7 @@ Rules:
 Import syntax:
 
 ```smile
-IMPORT Smile.Math.Extras AS Math
+Import Smile.Math.Extras As Math
 ```
 
 The alias is mandatory in Phase 2.
@@ -70,24 +70,24 @@ The alias is mandatory in Phase 2.
 In a startup or legacy support source, imports appear before declarations or executable statements:
 
 ```smile
-IMPORT Smile.Math.Extras AS Math
-IMPORT Smile.Validation AS Validation
+Import Smile.Math.Extras As Math
+Import Smile.Validation As Validation
 
-CONST MaximumValue = 100
+Const MaximumValue = 100
 ```
 
-In a module source, imports appear immediately after `MODULE` and before module declarations:
+In a module source, imports appear immediately after `Module` and before module declarations:
 
 ```smile
-MODULE Smile.Game.Score
+Module Smile.Game.Score
 
-IMPORT Smile.Math.Extras AS Math
+Import Smile.Math.Extras As Math
 
-PUBLIC FUNCTION NormalizeScore(Value)
-    RETURN Math.Clamp(Value, 0, 999999)
-END FUNCTION
+Public Function NormalizeScore(Value)
+    Return Math.Clamp(Value, 0, 999999)
+End Function
 
-END MODULE
+End Module
 ```
 
 Imports are physical-source scoped. A second source repeats the import when it uses the alias.
@@ -99,7 +99,7 @@ wildcard imports
 implicit imports
 global using/import files
 multiple spellings
-IMPORT without AS
+Import without As
 ```
 
 ---
@@ -111,7 +111,7 @@ Supported forms:
 ```smile
 Math.VERSION_MAJOR
 Math.Clamp(Value, 0, 100)
-CALL Save.Reset()
+Call Save.Reset()
 Inventory.Items[ItemIndex]
 ```
 
@@ -138,41 +138,41 @@ The dotted module name exists only in declarations/imports; source use goes thro
 Allowed module declarations:
 
 ```smile
-PUBLIC CONST
-PRIVATE CONST
-PUBLIC DIM
-PRIVATE DIM
-PUBLIC SUB
-PRIVATE SUB
-PUBLIC FUNCTION
-PRIVATE FUNCTION
+Public Const
+Private Const
+Public Dim
+Private Dim
+Public Sub
+Private Sub
+Public Function
+Private Function
 ```
 
-When omitted, module declarations are `PRIVATE`.
+When omitted, module declarations are `Private`.
 
 Example:
 
 ```smile
-MODULE Smile.Math.Extras
+Module Smile.Math.Extras
 
-CONST InternalVersion = 1
+Const InternalVersion = 1
 
-PUBLIC FUNCTION Clamp(Value, MinimumValue, MaximumValue)
-    RETURN MAX(MinimumValue, MIN(MaximumValue, Value))
-END FUNCTION
+Public Function Clamp(Value, MinimumValue, MaximumValue)
+    Return Max(MinimumValue, Min(MaximumValue, Value))
+End Function
 
-END MODULE
+End Module
 ```
 
 `InternalVersion` is private.
 
-`PUBLIC` and `PRIVATE` are invalid in legacy unmoduled program/support files during Phase 2.
+`Public` and `Private` are invalid in legacy unmoduled program/support files during Phase 2.
 
 ---
 
 # 6. Legacy compatibility
 
-Sources without `MODULE` retain the current model:
+Sources without `Module` retain the current model:
 
 - one startup owns executable top-level statements;
 - ordinary support sources contribute legacy project-global declarations;

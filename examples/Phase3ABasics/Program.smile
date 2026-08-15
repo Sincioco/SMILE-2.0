@@ -1,73 +1,73 @@
-OPTION EXPLICIT
+Option Explicit
 
-IMPORT Smile.Text.Extras AS TextExtras
+Import Smile.Text.Extras As TextExtras
 
-DIM Message AS TEXT
-DIM Original AS TEXT
-DIM Nested AS TEXT
-DIM Words[3] AS TEXT
-DIM Flags[2] AS BOOLEAN
-DIM Total AS NUMBER
-DIM Sum AS NUMBER
+Dim Message As Text
+Dim Original As Text
+Dim Nested As Text
+Dim Words[3] As Text
+Dim Flags[2] As Boolean
+Dim Total As Number
+Dim Sum As Number
 
 Message = TextExtras.JoinFive("Hello", ", ", "SMILE", " ", "2.0")
 Original = Message
 Nested = ">" + TextExtras.JoinFive("nested", " ", "call", " ", "works") + "<"
-TextExtras.ModuleLabel = "MODULE TEXT"
+TextExtras.ModuleLabel = "Module Text"
 
-CALL ChangeByValue(Message)
-PRINT Message
+Call ChangeByValue(Message)
+Print Message
 
-CALL TextExtras.Replace(Message, "Changed")
-PRINT Message
+Call TextExtras.Replace(Message, "Changed")
+Print Message
 
 Words[0] = Original
 Flags[0] = Original = "Hello, SMILE 2.0"
 Total = AddEight(1, 2, 3, 4, 5, 6, 7, 8)
 Sum = 1000 + AddSixteen(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)
 
-PRINT Words[0]
-PRINT Nested
-PRINT Flags[0]
-PRINT Total
-PRINT Sum
-PRINT TextExtras.IsEmpty("")
-PRINT TextExtras.ModuleLabel
-PRINT Zero()
-PRINT Identity(7)
-PRINT AddFour(1, 2, 3, 4)
+Print Words[0]
+Print Nested
+Print Flags[0]
+Print Total
+Print Sum
+Print TextExtras.IsEmpty("")
+Print TextExtras.ModuleLabel
+Print Zero()
+Print Identity(7)
+Print AddFour(1, 2, 3, 4)
 
-SELECT CASE Message
-    CASE "Changed"
-        PRINT "MATCH"
-    CASE ELSE
-        PRINT "NO MATCH"
-END SELECT
+Select Case Message
+    Case "Changed"
+        Print "Match"
+    Case Else
+        Print "No Match"
+End Select
 
-END PROGRAM
+End Program
 
-SUB ChangeByValue(Value AS TEXT)
-    DIM LocalCopy AS TEXT
+Sub ChangeByValue(Value As Text)
+    Dim LocalCopy As Text
     LocalCopy = Value
     Value = "Local only"
-END SUB
+End Sub
 
-FUNCTION Zero() AS NUMBER
-    RETURN 0
-END FUNCTION
+Function Zero() As Number
+    Return 0
+End Function
 
-FUNCTION Identity(Value AS NUMBER) AS NUMBER
-    RETURN Value
-END FUNCTION
+Function Identity(Value As Number) As Number
+    Return Value
+End Function
 
-FUNCTION AddFour(Value1 AS NUMBER, Value2 AS NUMBER, Value3 AS NUMBER, Value4 AS NUMBER) AS NUMBER
-    RETURN Value1 + Value2 + Value3 + Value4
-END FUNCTION
+Function AddFour(Value1 As Number, Value2 As Number, Value3 As Number, Value4 As Number) As Number
+    Return Value1 + Value2 + Value3 + Value4
+End Function
 
-FUNCTION AddEight(Value1 AS NUMBER, Value2 AS NUMBER, Value3 AS NUMBER, Value4 AS NUMBER, Value5 AS NUMBER, Value6 AS NUMBER, Value7 AS NUMBER, Value8 AS NUMBER) AS NUMBER
-    RETURN Value1 + Value2 + Value3 + Value4 + Value5 + Value6 + Value7 + Value8
-END FUNCTION
+Function AddEight(Value1 As Number, Value2 As Number, Value3 As Number, Value4 As Number, Value5 As Number, Value6 As Number, Value7 As Number, Value8 As Number) As Number
+    Return Value1 + Value2 + Value3 + Value4 + Value5 + Value6 + Value7 + Value8
+End Function
 
-FUNCTION AddSixteen(Value1 AS NUMBER, Value2 AS NUMBER, Value3 AS NUMBER, Value4 AS NUMBER, Value5 AS NUMBER, Value6 AS NUMBER, Value7 AS NUMBER, Value8 AS NUMBER, Value9 AS NUMBER, Value10 AS NUMBER, Value11 AS NUMBER, Value12 AS NUMBER, Value13 AS NUMBER, Value14 AS NUMBER, Value15 AS NUMBER, Value16 AS NUMBER) AS NUMBER
-    RETURN Value1 + Value2 + Value3 + Value4 + Value5 + Value6 + Value7 + Value8 + Value9 + Value10 + Value11 + Value12 + Value13 + Value14 + Value15 + Value16
-END FUNCTION
+Function AddSixteen(Value1 As Number, Value2 As Number, Value3 As Number, Value4 As Number, Value5 As Number, Value6 As Number, Value7 As Number, Value8 As Number, Value9 As Number, Value10 As Number, Value11 As Number, Value12 As Number, Value13 As Number, Value14 As Number, Value15 As Number, Value16 As Number) As Number
+    Return Value1 + Value2 + Value3 + Value4 + Value5 + Value6 + Value7 + Value8 + Value9 + Value10 + Value11 + Value12 + Value13 + Value14 + Value15 + Value16
+End Function

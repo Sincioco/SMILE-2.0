@@ -1,60 +1,60 @@
-OPTION EXPLICIT
+Option Explicit
 
-IMPORT Smile.UI.Core AS UI
-IMPORT Smile.UI.Window AS Window
-IMPORT Smile.UI.BitmapFont AS BitmapFont
-IMPORT Smile.UI.Text AS Text
-IMPORT Smile.UI.Menu AS Menu
-IMPORT Smile.UI.Dialogue AS Dialogue
+Import Smile.UI.Core As UI
+Import Smile.UI.Window As Window
+Import Smile.UI.BitmapFont As BitmapFont
+Import Smile.UI.Text As Text
+Import Smile.UI.Menu As Menu
+Import Smile.UI.Dialogue As Dialogue
 
-GAME WINDOW "Phase 5.1 UI Hardening" SIZE 640 BY 360
+Game Window "Phase 5.1 UI Hardening" Size 640 By 360
 
-DIM Skin AS IMAGE
-DIM Atlas AS IMAGE
-DIM Cursor AS IMAGE
-DIM SkinWindow AS UI.WindowStyle
-DIM VectorWindow AS UI.WindowStyle
-DIM FontStyle AS UI.BitmapFontStyle
-DIM BadWindow AS UI.WindowStyle
-DIM BadFont AS UI.BitmapFontStyle
-DIM SystemText AS UI.TextStyle
-DIM BitmapText AS UI.TextStyle
-DIM StaleText AS UI.TextStyle
-DIM MenuStyle AS UI.MenuStyle
-DIM LargeMenuStyle AS UI.MenuStyle
-DIM TinyMenuStyle AS UI.MenuStyle
-DIM BadMenuStyle AS UI.MenuStyle
-DIM DialogueStyle AS UI.DialogueStyle
-DIM BitmapDialogueStyle AS UI.DialogueStyle
-DIM VectorDialogueStyle AS UI.DialogueStyle
-DIM BadDialogueStyle AS UI.DialogueStyle
-DIM FontHandle AS NUMBER
-DIM StaleHandle AS NUMBER
-DIM MenuHandle AS NUMBER
-DIM TinyMenuHandle AS NUMBER
-DIM DialogueHandle AS NUMBER
-DIM LimitHandle AS NUMBER
-DIM ItemIndex AS NUMBER
-DIM Index AS NUMBER
-DIM Failures AS NUMBER
-DIM CheckNumber AS NUMBER
-DIM OldTop AS NUMBER
-DIM OldPage AS NUMBER
-DIM OldVisible AS NUMBER
-DIM LineHeight AS NUMBER
-DIM LongValue AS TEXT
-DIM Started AS NUMBER
-DIM PreparationMilliseconds AS NUMBER
-DIM UnbrokenMilliseconds AS NUMBER
-DIM SpacedMilliseconds AS NUMBER
-DIM UnicodeMilliseconds AS NUMBER
-DIM OperationSucceeded AS BOOLEAN
+Dim Skin As Image
+Dim Atlas As Image
+Dim Cursor As Image
+Dim SkinWindow As UI.WindowStyle
+Dim VectorWindow As UI.WindowStyle
+Dim FontStyle As UI.BitmapFontStyle
+Dim BadWindow As UI.WindowStyle
+Dim BadFont As UI.BitmapFontStyle
+Dim SystemText As UI.TextStyle
+Dim BitmapText As UI.TextStyle
+Dim StaleText As UI.TextStyle
+Dim MenuStyle As UI.MenuStyle
+Dim LargeMenuStyle As UI.MenuStyle
+Dim TinyMenuStyle As UI.MenuStyle
+Dim BadMenuStyle As UI.MenuStyle
+Dim DialogueStyle As UI.DialogueStyle
+Dim BitmapDialogueStyle As UI.DialogueStyle
+Dim VectorDialogueStyle As UI.DialogueStyle
+Dim BadDialogueStyle As UI.DialogueStyle
+Dim FontHandle As Number
+Dim StaleHandle As Number
+Dim MenuHandle As Number
+Dim TinyMenuHandle As Number
+Dim DialogueHandle As Number
+Dim LimitHandle As Number
+Dim ItemIndex As Number
+Dim Index As Number
+Dim Failures As Number
+Dim CheckNumber As Number
+Dim OldTop As Number
+Dim OldPage As Number
+Dim OldVisible As Number
+Dim LineHeight As Number
+Dim LongValue As Text
+Dim Started As Number
+Dim PreparationMilliseconds As Number
+Dim UnbrokenMilliseconds As Number
+Dim SpacedMilliseconds As Number
+Dim UnicodeMilliseconds As Number
+Dim OperationSucceeded As Boolean
 
-LOAD IMAGE Skin FROM "Assets\WindowSkin.png"
-LOAD IMAGE Atlas FROM "Assets\BitmapFont.png"
-LOAD IMAGE Cursor FROM "Assets\Cursor.png"
+Load Image Skin From "Assets\WindowSkin.png"
+Load Image Atlas From "Assets\BitmapFont.png"
+Load Image Cursor From "Assets\Cursor.png"
 
-SkinWindow.UseSkin = TRUE
+SkinWindow.UseSkin = True
 SkinWindow.Skin = Skin
 SkinWindow.SourceX = 0
 SkinWindow.SourceY = 0
@@ -71,13 +71,13 @@ SkinWindow.DestinationBottom = 24
 SkinWindow.BorderThickness = 2
 SkinWindow.Opacity = 100
 SkinWindow.FilterMode = UI.UI_FILTER_SMOOTH
-SkinWindow.Padding.Left = 20
+SkinWindow.Padding.LEFT = 20
 SkinWindow.Padding.Top = 20
-SkinWindow.Padding.Right = 20
+SkinWindow.Padding.RIGHT = 20
 SkinWindow.Padding.Bottom = 20
 
 VectorWindow = SkinWindow
-VectorWindow.UseSkin = FALSE
+VectorWindow.UseSkin = False
 
 FontStyle.Atlas = Atlas
 FontStyle.SourceX = 0
@@ -103,279 +103,279 @@ StaleHandle = BitmapFont.Create(FontStyle)
 StaleText = SystemText
 StaleText.Mode = UI.UI_TEXT_BITMAP
 StaleText.BitmapFontHandle = StaleHandle
-CALL BitmapFont.Destroy(StaleHandle)
-CALL Check(NOT Text.IsStyleValid(StaleText))
-CALL Check(Text.MeasureHeight(StaleText, "") > 0)
+Call BitmapFont.Destroy(StaleHandle)
+Call Check(Not Text.IsStyleValid(StaleText))
+Call Check(Text.MeasureHeight(StaleText, "") > 0)
 
 FontHandle = BitmapFont.Create(FontStyle)
-CALL Check(FontHandle > 0)
+Call Check(FontHandle > 0)
 BitmapText = SystemText
 BitmapText.Mode = UI.UI_TEXT_BITMAP
 BitmapText.BitmapFontHandle = FontHandle
 
-CALL Check(Window.IsStyleValid(SkinWindow))
+Call Check(Window.IsStyleValid(SkinWindow))
 BadWindow = SkinWindow
 BadWindow.SourceX = -1
-CALL Check(NOT Window.IsStyleValid(BadWindow))
+Call Check(Not Window.IsStyleValid(BadWindow))
 BadWindow = SkinWindow
 BadWindow.SourceWidth = 769
-CALL Check(NOT Window.IsStyleValid(BadWindow))
+Call Check(Not Window.IsStyleValid(BadWindow))
 BadWindow = SkinWindow
 BadWindow.SourceLeft = 384
 BadWindow.SourceRight = 384
-CALL Check(NOT Window.IsStyleValid(BadWindow))
+Call Check(Not Window.IsStyleValid(BadWindow))
 BadWindow = SkinWindow
 BadWindow.SourceX = 1
-CALL Check(NOT Window.IsStyleValid(BadWindow))
+Call Check(Not Window.IsStyleValid(BadWindow))
 BadWindow = SkinWindow
 BadWindow.FilterMode = 9
-CALL Check(NOT Window.IsStyleValid(BadWindow))
+Call Check(Not Window.IsStyleValid(BadWindow))
 BadWindow = SkinWindow
 BadWindow.Opacity = 101
-CALL Check(NOT Window.IsStyleValid(BadWindow))
+Call Check(Not Window.IsStyleValid(BadWindow))
 BadWindow = VectorWindow
-BadWindow.Padding.Left = UI.UI_MAX_LAYOUT_VALUE + 1
-CALL Check(NOT Window.IsStyleValid(BadWindow))
+BadWindow.Padding.LEFT = UI.UI_MAX_LAYOUT_VALUE + 1
+Call Check(Not Window.IsStyleValid(BadWindow))
 
-CALL Check(BitmapFont.IsStyleValid(FontStyle))
+Call Check(BitmapFont.IsStyleValid(FontStyle))
 BadFont = FontStyle
 BadFont.SourceX = -1
-CALL Check(NOT BitmapFont.IsStyleValid(BadFont))
+Call Check(Not BitmapFont.IsStyleValid(BadFont))
 BadFont = FontStyle
 BadFont.Columns = 17
-CALL Check(NOT BitmapFont.IsStyleValid(BadFont))
+Call Check(Not BitmapFont.IsStyleValid(BadFont))
 BadFont = FontStyle
 BadFont.SourceY = 1
-CALL Check(NOT BitmapFont.IsStyleValid(BadFont))
+Call Check(Not BitmapFont.IsStyleValid(BadFont))
 BadFont = FontStyle
 BadFont.FilterMode = 4
-CALL Check(NOT BitmapFont.IsStyleValid(BadFont))
+Call Check(Not BitmapFont.IsStyleValid(BadFont))
 BadFont = FontStyle
 BadFont.FirstCodePoint = 1114110
 BadFont.GlyphCount = 3
-CALL Check(NOT BitmapFont.IsStyleValid(BadFont))
+Call Check(Not BitmapFont.IsStyleValid(BadFont))
 BadFont = FontStyle
 BadFont.FirstCodePoint = 55296
 BadFont.GlyphCount = 1
-CALL Check(NOT BitmapFont.IsStyleValid(BadFont))
+Call Check(Not BitmapFont.IsStyleValid(BadFont))
 
 MenuStyle.Window = SkinWindow
 MenuStyle.NormalText = SystemText
 MenuStyle.SelectedText = SystemText
 MenuStyle.DisabledText = SystemText
-MenuStyle.UseCursor = TRUE
+MenuStyle.UseCursor = True
 MenuStyle.Cursor = Cursor
 MenuStyle.CursorWidth = 24
 MenuStyle.CursorHeight = 24
 MenuStyle.CursorFilterMode = UI.UI_FILTER_PIXEL
 MenuStyle.RowHeight = 40
-MenuStyle.WrapSelection = TRUE
-MenuStyle.ShowScrollbar = TRUE
-CALL Check(Menu.IsStyleValid(MenuStyle))
+MenuStyle.WrapSelection = True
+MenuStyle.ShowScrollbar = True
+Call Check(Menu.IsStyleValid(MenuStyle))
 
 BadMenuStyle = MenuStyle
 BadMenuStyle.NormalText.Mode = 9
-CALL Check(NOT Menu.IsStyleValid(BadMenuStyle))
+Call Check(Not Menu.IsStyleValid(BadMenuStyle))
 BadMenuStyle = MenuStyle
 BadMenuStyle.CursorWidth = 0
-CALL Check(NOT Menu.IsStyleValid(BadMenuStyle))
+Call Check(Not Menu.IsStyleValid(BadMenuStyle))
 BadMenuStyle = MenuStyle
 BadMenuStyle.CursorFilterMode = 7
-CALL Check(NOT Menu.IsStyleValid(BadMenuStyle))
+Call Check(Not Menu.IsStyleValid(BadMenuStyle))
 
 MenuHandle = Menu.Create(MenuStyle, 10, 10, 280, 280, 6)
-FOR Index = 0 TO 11
-    ItemIndex = Menu.AddItem(MenuHandle, "ITEM", Index, TRUE)
-END FOR
-CALL Check(Menu.VisibleRows(MenuHandle) = 6)
-CALL Check(Menu.SetSelectedIndex(MenuHandle, 10))
+For Index = 0 To 11
+    ItemIndex = Menu.AddItem(MenuHandle, "Item", Index, True)
+End For
+Call Check(Menu.VisibleRows(MenuHandle) = 6)
+Call Check(Menu.SetSelectedIndex(MenuHandle, 10))
 LargeMenuStyle = MenuStyle
 LargeMenuStyle.RowHeight = 100
-CALL Check(Menu.SetStyle(MenuHandle, LargeMenuStyle))
-CALL Check(Menu.VisibleRows(MenuHandle) = 2)
-CALL Check(Menu.TopIndex(MenuHandle) = 9)
-CALL Check(Menu.SelectedIndex(MenuHandle) >= Menu.TopIndex(MenuHandle))
-CALL Check(Menu.SelectedIndex(MenuHandle) < Menu.TopIndex(MenuHandle) + Menu.VisibleRows(MenuHandle))
-CALL Check(Menu.SetStyle(MenuHandle, MenuStyle))
-CALL Check(Menu.VisibleRows(MenuHandle) = 6)
-CALL Check(Menu.TopIndex(MenuHandle) = 6)
-CALL Check(Menu.SetSelectedIndex(MenuHandle, 5))
-CALL Check(Menu.SetSelectedIndex(MenuHandle, 10))
-CALL Check(Menu.TopIndex(MenuHandle) = 5)
+Call Check(Menu.SetStyle(MenuHandle, LargeMenuStyle))
+Call Check(Menu.VisibleRows(MenuHandle) = 2)
+Call Check(Menu.TopIndex(MenuHandle) = 9)
+Call Check(Menu.SelectedIndex(MenuHandle) >= Menu.TopIndex(MenuHandle))
+Call Check(Menu.SelectedIndex(MenuHandle) < Menu.TopIndex(MenuHandle) + Menu.VisibleRows(MenuHandle))
+Call Check(Menu.SetStyle(MenuHandle, MenuStyle))
+Call Check(Menu.VisibleRows(MenuHandle) = 6)
+Call Check(Menu.TopIndex(MenuHandle) = 6)
+Call Check(Menu.SetSelectedIndex(MenuHandle, 5))
+Call Check(Menu.SetSelectedIndex(MenuHandle, 10))
+Call Check(Menu.TopIndex(MenuHandle) = 5)
 OldTop = Menu.TopIndex(MenuHandle)
-CALL Check(NOT Menu.SetStyle(MenuHandle, BadMenuStyle))
-CALL Check(Menu.TopIndex(MenuHandle) = OldTop)
+Call Check(Not Menu.SetStyle(MenuHandle, BadMenuStyle))
+Call Check(Menu.TopIndex(MenuHandle) = OldTop)
 
 TinyMenuStyle = MenuStyle
 TinyMenuStyle.Window = VectorWindow
-TinyMenuStyle.Window.Padding.Left = 0
+TinyMenuStyle.Window.Padding.LEFT = 0
 TinyMenuStyle.Window.Padding.Top = 0
-TinyMenuStyle.Window.Padding.Right = 0
+TinyMenuStyle.Window.Padding.RIGHT = 0
 TinyMenuStyle.Window.Padding.Bottom = 0
 TinyMenuStyle.RowHeight = 100
 TinyMenuHandle = Menu.Create(TinyMenuStyle, 600, 350, 30, 3, 6)
-FOR Index = 0 TO 11
-    ItemIndex = Menu.AddItem(TinyMenuHandle, "TINY", Index, TRUE)
-END FOR
-CALL Check(Menu.VisibleRows(TinyMenuHandle) = 1)
-CALL Check(Menu.SetSelectedIndex(TinyMenuHandle, 11))
-CALL Check(Menu.TopIndex(TinyMenuHandle) = 11)
+For Index = 0 To 11
+    ItemIndex = Menu.AddItem(TinyMenuHandle, "Tiny", Index, True)
+End For
+Call Check(Menu.VisibleRows(TinyMenuHandle) = 1)
+Call Check(Menu.SetSelectedIndex(TinyMenuHandle, 11))
+Call Check(Menu.TopIndex(TinyMenuHandle) = 11)
 
 LineHeight = Text.MeasureHeight(SystemText, "")
-CALL Check(Text.MeasureHeight(SystemText, "ONE") = LineHeight)
-CALL Check(Text.MeasureHeight(SystemText, "ONE
-TWO") = LineHeight * 2 + SystemText.LineSpacing)
-CALL Check(Text.MeasureHeight(SystemText, "ONE
+Call Check(Text.MeasureHeight(SystemText, "One") = LineHeight)
+Call Check(Text.MeasureHeight(SystemText, "One
+Two") = LineHeight * 2 + SystemText.LineSpacing)
+Call Check(Text.MeasureHeight(SystemText, "One
 
-THREE") = LineHeight * 3 + SystemText.LineSpacing * 2)
-CALL Check(Text.MeasureHeight(SystemText, "TRAILING
+Three") = LineHeight * 3 + SystemText.LineSpacing * 2)
+Call Check(Text.MeasureHeight(SystemText, "Trailing
 ") = LineHeight * 2 + SystemText.LineSpacing)
-CALL Check(Text.MeasureWidth(SystemText, "ONE
-LONGER") = Text.MeasureWidth(SystemText, "LONGER"))
+Call Check(Text.MeasureWidth(SystemText, "One
+Longer") = Text.MeasureWidth(SystemText, "Longer"))
 LineHeight = Text.MeasureHeight(BitmapText, "")
-CALL Check(Text.MeasureHeight(BitmapText, "ONE
-TWO") = LineHeight * 2 + BitmapText.LineSpacing)
-CALL Check(Text.MeasureHeight(BitmapText, "ONE
+Call Check(Text.MeasureHeight(BitmapText, "One
+Two") = LineHeight * 2 + BitmapText.LineSpacing)
+Call Check(Text.MeasureHeight(BitmapText, "One
 
-THREE") = LineHeight * 3 + BitmapText.LineSpacing * 2)
-CALL Check(Text.MeasureHeight(BitmapText, "TRAILING
+Three") = LineHeight * 3 + BitmapText.LineSpacing * 2)
+Call Check(Text.MeasureHeight(BitmapText, "Trailing
 ") = LineHeight * 2 + BitmapText.LineSpacing)
 
 DialogueStyle.Window = SkinWindow
 DialogueStyle.Text = SystemText
 DialogueStyle.CharactersPerSecond = 10
 DialogueStyle.LineSpacing = 3
-CALL Check(Dialogue.IsStyleValid(DialogueStyle))
+Call Check(Dialogue.IsStyleValid(DialogueStyle))
 BadDialogueStyle = DialogueStyle
 BadDialogueStyle.CharactersPerSecond = -1
-CALL Check(NOT Dialogue.IsStyleValid(BadDialogueStyle))
+Call Check(Not Dialogue.IsStyleValid(BadDialogueStyle))
 BadDialogueStyle = DialogueStyle
-BadDialogueStyle.UseContinueIndicator = TRUE
+BadDialogueStyle.UseContinueIndicator = True
 BadDialogueStyle.ContinueIndicator = Cursor
 BadDialogueStyle.IndicatorWidth = 0
 BadDialogueStyle.IndicatorHeight = 20
-CALL Check(NOT Dialogue.IsStyleValid(BadDialogueStyle))
+Call Check(Not Dialogue.IsStyleValid(BadDialogueStyle))
 
 DialogueHandle = Dialogue.Create(DialogueStyle, 310, 10, 320, 200)
-CALL Check(Dialogue.AddPage(DialogueHandle, "ONE TWO THREE FOUR FIVE SIX SEVEN EIGHT NINE TEN"))
-CALL Check(Dialogue.AddPage(DialogueHandle, "SECOND PAGE"))
-CALL Check(Dialogue.Start(DialogueHandle, 0))
+Call Check(Dialogue.AddPage(DialogueHandle, "One Two Three Four Five Six Seven Eight Nine Ten"))
+Call Check(Dialogue.AddPage(DialogueHandle, "Second Page"))
+Call Check(Dialogue.Start(DialogueHandle, 0))
 OperationSucceeded = Dialogue.Update(DialogueHandle, 500) = UI.UI_EVENT_CHANGED
 OldVisible = Dialogue.VisibleCharacters(DialogueHandle)
 OldPage = Dialogue.CurrentPage(DialogueHandle)
 BitmapDialogueStyle = DialogueStyle
 BitmapDialogueStyle.Text = BitmapText
-CALL Check(Dialogue.SetStyle(DialogueHandle, BitmapDialogueStyle))
-CALL Check(Dialogue.IsActive(DialogueHandle))
-CALL Check(Dialogue.VisibleCharacters(DialogueHandle) = OldVisible)
-CALL Check(Dialogue.CurrentPage(DialogueHandle) = OldPage)
+Call Check(Dialogue.SetStyle(DialogueHandle, BitmapDialogueStyle))
+Call Check(Dialogue.IsActive(DialogueHandle))
+Call Check(Dialogue.VisibleCharacters(DialogueHandle) = OldVisible)
+Call Check(Dialogue.CurrentPage(DialogueHandle) = OldPage)
 VectorDialogueStyle = BitmapDialogueStyle
 VectorDialogueStyle.Window = VectorWindow
-CALL Check(Dialogue.SetStyle(DialogueHandle, VectorDialogueStyle))
-CALL Check(Dialogue.IsActive(DialogueHandle))
+Call Check(Dialogue.SetStyle(DialogueHandle, VectorDialogueStyle))
+Call Check(Dialogue.IsActive(DialogueHandle))
 OldVisible = Dialogue.VisibleCharacters(DialogueHandle)
 OldPage = Dialogue.CurrentPage(DialogueHandle)
 BadDialogueStyle = VectorDialogueStyle
-BadDialogueStyle.Window.Padding.Left = 160
-BadDialogueStyle.Window.Padding.Right = 160
-CALL Check(NOT Dialogue.SetStyle(DialogueHandle, BadDialogueStyle))
-CALL Check(Dialogue.IsActive(DialogueHandle))
-CALL Check(Dialogue.VisibleCharacters(DialogueHandle) = OldVisible)
-CALL Check(Dialogue.CurrentPage(DialogueHandle) = OldPage)
+BadDialogueStyle.Window.Padding.LEFT = 160
+BadDialogueStyle.Window.Padding.RIGHT = 160
+Call Check(Not Dialogue.SetStyle(DialogueHandle, BadDialogueStyle))
+Call Check(Dialogue.IsActive(DialogueHandle))
+Call Check(Dialogue.VisibleCharacters(DialogueHandle) = OldVisible)
+Call Check(Dialogue.CurrentPage(DialogueHandle) = OldPage)
 
 LimitHandle = Dialogue.Create(DialogueStyle, 0, 0, 1000, 300)
-FOR Index = 1 TO UI.UI_MAX_DIALOGUE_PAGE_SCALARS - 1
+For Index = 1 To UI.UI_MAX_DIALOGUE_PAGE_SCALARS - 1
     LongValue = LongValue + "A"
-END FOR
-CALL Check(Dialogue.AddPage(LimitHandle, LongValue))
-CALL Dialogue.ClearPages(LimitHandle)
+End For
+Call Check(Dialogue.AddPage(LimitHandle, LongValue))
+Call Dialogue.ClearPages(LimitHandle)
 LongValue = LongValue + "A"
-CALL Check(Dialogue.AddPage(LimitHandle, LongValue))
-CALL Check(Dialogue.PageCount(LimitHandle) = 1)
+Call Check(Dialogue.AddPage(LimitHandle, LongValue))
+Call Check(Dialogue.PageCount(LimitHandle) = 1)
 LongValue = LongValue + "A"
-CALL Check(NOT Dialogue.AddPage(LimitHandle, LongValue))
-CALL Check(Dialogue.PageCount(LimitHandle) = 1)
-Started = TIMER()
-CALL Check(Dialogue.Start(LimitHandle, Started))
-UnbrokenMilliseconds = TIMER() - Started
-CALL Check(UnbrokenMilliseconds < 5000)
+Call Check(Not Dialogue.AddPage(LimitHandle, LongValue))
+Call Check(Dialogue.PageCount(LimitHandle) = 1)
+Started = Timer()
+Call Check(Dialogue.Start(LimitHandle, Started))
+UnbrokenMilliseconds = Timer() - Started
+Call Check(UnbrokenMilliseconds < 5000)
 
-CALL Dialogue.ClearPages(LimitHandle)
+Call Dialogue.ClearPages(LimitHandle)
 LongValue = ""
-FOR Index = 1 TO UI.UI_MAX_DIALOGUE_PAGE_SCALARS / 2
+For Index = 1 To UI.UI_MAX_DIALOGUE_PAGE_SCALARS / 2
     LongValue = LongValue + "A "
-END FOR
-CALL Check(TEXT_LENGTH(LongValue) = UI.UI_MAX_DIALOGUE_PAGE_SCALARS)
-CALL Check(Dialogue.AddPage(LimitHandle, LongValue))
-Started = TIMER()
-CALL Check(Dialogue.Start(LimitHandle, Started))
-SpacedMilliseconds = TIMER() - Started
-CALL Check(SpacedMilliseconds < 5000)
+End For
+Call Check(Text_Length(LongValue) = UI.UI_MAX_DIALOGUE_PAGE_SCALARS)
+Call Check(Dialogue.AddPage(LimitHandle, LongValue))
+Started = Timer()
+Call Check(Dialogue.Start(LimitHandle, Started))
+SpacedMilliseconds = Timer() - Started
+Call Check(SpacedMilliseconds < 5000)
 
-CALL Dialogue.ClearPages(LimitHandle)
+Call Dialogue.ClearPages(LimitHandle)
 LongValue = ""
-FOR Index = 1 TO UI.UI_MAX_DIALOGUE_PAGE_SCALARS
+For Index = 1 To UI.UI_MAX_DIALOGUE_PAGE_SCALARS
     LongValue = LongValue + "😀"
-END FOR
-CALL Check(TEXT_LENGTH(LongValue) = UI.UI_MAX_DIALOGUE_PAGE_SCALARS)
-CALL Check(Dialogue.AddPage(LimitHandle, LongValue))
-Started = TIMER()
-CALL Check(Dialogue.Start(LimitHandle, Started))
-UnicodeMilliseconds = TIMER() - Started
-CALL Check(UnicodeMilliseconds < 5000)
+End For
+Call Check(Text_Length(LongValue) = UI.UI_MAX_DIALOGUE_PAGE_SCALARS)
+Call Check(Dialogue.AddPage(LimitHandle, LongValue))
+Started = Timer()
+Call Check(Dialogue.Start(LimitHandle, Started))
+UnicodeMilliseconds = Timer() - Started
+Call Check(UnicodeMilliseconds < 5000)
 
-CALL Dialogue.ClearPages(LimitHandle)
+Call Dialogue.ClearPages(LimitHandle)
 LongValue = ""
-FOR Index = 1 TO UI.UI_MAX_DIALOGUE_PAGE_SCALARS
+For Index = 1 To UI.UI_MAX_DIALOGUE_PAGE_SCALARS
     LongValue = LongValue + " "
-END FOR
-CALL Check(Dialogue.AddPage(LimitHandle, LongValue))
-CALL Check(Dialogue.Start(LimitHandle, TIMER()))
+End For
+Call Check(Dialogue.AddPage(LimitHandle, LongValue))
+Call Check(Dialogue.Start(LimitHandle, Timer()))
 
-CALL Dialogue.ClearPages(LimitHandle)
+Call Dialogue.ClearPages(LimitHandle)
 LongValue = ""
-FOR Index = 1 TO UI.UI_MAX_DIALOGUE_PAGE_SCALARS
+For Index = 1 To UI.UI_MAX_DIALOGUE_PAGE_SCALARS
     LongValue = LongValue + "
 "
-END FOR
-CALL Check(Dialogue.AddPage(LimitHandle, LongValue))
-CALL Check(NOT Dialogue.Start(LimitHandle, TIMER()))
+End For
+Call Check(Dialogue.AddPage(LimitHandle, LongValue))
+Call Check(Not Dialogue.Start(LimitHandle, Timer()))
 
-PreparationMilliseconds = MAX(UnbrokenMilliseconds, MAX(SpacedMilliseconds, UnicodeMilliseconds))
+PreparationMilliseconds = Max(UnbrokenMilliseconds, Max(SpacedMilliseconds, UnicodeMilliseconds))
 
-CLEAR RGB(5, 9, 25)
-CALL Menu.Draw(MenuHandle)
-CALL Menu.Draw(TinyMenuHandle)
-CALL Dialogue.Draw(DialogueHandle, TIMER())
-CALL Text.Draw(SystemText, "SYSTEM
-MULTILINE", 320, 235, UI.UI_ALIGN_LEFT, 100)
-CALL Text.Draw(BitmapText, "BITMAP
-MULTILINE", 480, 235, UI.UI_ALIGN_CENTER, 100)
-CALL Text.Draw(SystemText, "HIDDEN", 620, 340, UI.UI_ALIGN_RIGHT, 0)
-SHOW SCREEN
+Clear Rgb(5, 9, 25)
+Call Menu.Draw(MenuHandle)
+Call Menu.Draw(TinyMenuHandle)
+Call Dialogue.Draw(DialogueHandle, Timer())
+Call Text.Draw(SystemText, "System
+Multiline", 320, 235, UI.UI_ALIGN_LEFT, 100)
+Call Text.Draw(BitmapText, "Bitmap
+Multiline", 480, 235, UI.UI_ALIGN_CENTER, 100)
+Call Text.Draw(SystemText, "Hidden", 620, 340, UI.UI_ALIGN_RIGHT, 0)
+Show Screen
 
-CALL Dialogue.Destroy(LimitHandle)
-CALL Dialogue.Destroy(DialogueHandle)
-CALL Menu.Destroy(TinyMenuHandle)
-CALL Menu.Destroy(MenuHandle)
-CALL BitmapFont.Destroy(FontHandle)
-UNLOAD IMAGE Cursor
-UNLOAD IMAGE Atlas
-UNLOAD IMAGE Skin
+Call Dialogue.Destroy(LimitHandle)
+Call Dialogue.Destroy(DialogueHandle)
+Call Menu.Destroy(TinyMenuHandle)
+Call Menu.Destroy(MenuHandle)
+Call BitmapFont.Destroy(FontHandle)
+Unload Image Cursor
+Unload Image Atlas
+Unload Image Skin
 
-SAVE Failures TO "Result"
-SAVE PreparationMilliseconds TO "PreparationMilliseconds"
-SAVE UnbrokenMilliseconds TO "UnbrokenMilliseconds"
-SAVE SpacedMilliseconds TO "SpacedMilliseconds"
-SAVE UnicodeMilliseconds TO "UnicodeMilliseconds"
-PRINT Failures
+Save Failures To "Result"
+Save PreparationMilliseconds To "PreparationMilliseconds"
+Save UnbrokenMilliseconds To "UnbrokenMilliseconds"
+Save SpacedMilliseconds To "SpacedMilliseconds"
+Save UnicodeMilliseconds To "UnicodeMilliseconds"
+Print Failures
 
-SUB Check(Condition AS BOOLEAN)
+Sub Check(Condition As Boolean)
     CheckNumber = CheckNumber + 1
-    IF NOT Condition THEN
+    If Not Condition Then
         Failures = Failures + 1
-        PRINT CheckNumber
-    END IF
-END SUB
+        Print CheckNumber
+    End If
+End Sub
 
-END PROGRAM
+End Program

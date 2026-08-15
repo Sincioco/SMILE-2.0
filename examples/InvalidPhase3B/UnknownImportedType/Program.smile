@@ -1,2 +1,2 @@
-IMPORT Invalid.Types AS Types
-DIM Value AS Types.Missing
+Import Invalid.Types As Types
+Dim Value As Types.Missing

@@ -107,13 +107,13 @@ State the upstream and push result. If push fails because of authentication/netw
 End the entire report with one of these bold forms:
 
 ```text
-**MANUAL TESTING REQUESTED FROM SIN:** None.
+**MANUAL TESTING REQUESTED From SIN:** None.
 ```
 
 or:
 
 ```text
-**MANUAL TESTING REQUESTED FROM SIN:**
+**MANUAL TESTING REQUESTED From SIN:**
 - Open ...
 - Perform ...
 - Expected ...
@@ -160,11 +160,11 @@ After commit/push, stop implementation work.
 Do not begin:
 
 ```text
-MODULE
-IMPORT
-PUBLIC
-PRIVATE
-OPTION EXPLICIT
+Module
+Import
+Public
+Private
+Option Explicit
 .smilelibproj
 .smilelib
 ProjectReference

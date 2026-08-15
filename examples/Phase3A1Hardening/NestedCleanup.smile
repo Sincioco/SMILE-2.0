@@ -1,24 +1,24 @@
-OPTION EXPLICIT
+Option Explicit
 
-PRINT Choose("RETURN")
+Print Choose("Return")
 
-END PROGRAM
+End Program
 
-FUNCTION Choose(Command AS TEXT) AS TEXT
-    SELECT CASE Command + ""
-        CASE "RETURN"
-            DO
-                SELECT CASE "INNER" + ""
-                    CASE "INNER"
-                        RETURN BuildResult("RETURN", "ED")
-                END SELECT
-            LOOP
-    END SELECT
-    RETURN "FAILED"
-END FUNCTION
+Function Choose(Command As Text) As Text
+    Select Case Command + ""
+        Case "Return"
+            Do
+                Select Case "Inner" + ""
+                    Case "Inner"
+                        Return BuildResult("Return", "ed")
+                End Select
+            Loop
+    End Select
+    Return "Failed"
+End Function
 
-FUNCTION BuildResult(LeftValue AS TEXT, RightValue AS TEXT) AS TEXT
-    DIM Result AS TEXT
+Function BuildResult(LeftValue As Text, RightValue As Text) As Text
+    Dim Result As Text
     Result = LeftValue + RightValue
-    RETURN Result
-END FUNCTION
+    Return Result
+End Function

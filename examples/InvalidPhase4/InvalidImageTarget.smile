@@ -1,2 +1,2 @@
-DIM Value AS NUMBER
-LOAD IMAGE Value FROM "Assets\Image.png"
+Dim Value As Number
+Load Image Value From "Assets\Image.png"

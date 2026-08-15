@@ -408,7 +408,7 @@ internal sealed class WebEmitter
     {
         var labels = statement.TargetKeyword.Kind == SyntaxKind.ForKeyword ? _forExitLabels : _doExitLabels;
         if (labels.Count == 0)
-            Unsupported(statement, $"EXIT {statement.TargetKeyword.Text}");
+            Unsupported(statement, $"Exit {statement.TargetKeyword.Text}");
         Line($"break {labels.Peek()};");
     }
 
@@ -561,7 +561,7 @@ internal sealed class WebEmitter
         {
             case LiteralExpressionSyntax literal when literal.Value is long number:
                 if (number is > MaxSafeInteger or < -MaxSafeInteger)
-                    throw new WebTargetException(_currentSource, "SML5102", literal.Span, "Web target NUMBER literals must be within JavaScript's safe integer range.");
+                    throw new WebTargetException(_currentSource, "SML5102", literal.Span, "Web target Number literals must be within JavaScript's safe integer range.");
                 return number.ToString(CultureInfo.InvariantCulture);
             case LiteralExpressionSyntax literal when literal.Value is bool boolean:
                 return boolean ? "true" : "false";

@@ -1,36 +1,36 @@
-OPTION EXPLICIT
+Option Explicit
 
-DIM Value AS TEXT
-DIM Copy AS TEXT
-DIM Values[4] AS TEXT
-DIM Index AS NUMBER
+Dim Value As Text
+Dim Copy As Text
+Dim Values[4] As Text
+Dim Index As Number
 
 Value = "初期"
 
-FOR Index = 0 TO 999
+For Index = 0 To 999
     Copy = Value
-    CALL ChangeByValue(Copy)
-    CALL Replace(Value, BuildValue("SMILE", "✓"))
-    Values[Index MOD 4] = Value
-END FOR
+    Call ChangeByValue(Copy)
+    Call Replace(Value, BuildValue("SMILE", "✓"))
+    Values[Index Mod 4] = Value
+End For
 
 Value = Value
-PRINT Value
-PRINT Values[3]
-PRINT "" = Values[0]
+Print Value
+Print Values[3]
+Print "" = Values[0]
 
-END PROGRAM
+End Program
 
-SUB ChangeByValue(ValueToChange AS TEXT)
-    ValueToChange = "LOCAL"
-END SUB
+Sub ChangeByValue(ValueToChange As Text)
+    ValueToChange = "Local"
+End Sub
 
-SUB Replace(BYREF ValueToChange AS TEXT, NewValue AS TEXT)
+Sub Replace(ByRef ValueToChange As Text, NewValue As Text)
     ValueToChange = NewValue
-END SUB
+End Sub
 
-FUNCTION BuildValue(LeftValue AS TEXT, RightValue AS TEXT) AS TEXT
-    DIM Combined AS TEXT
+Function BuildValue(LeftValue As Text, RightValue As Text) As Text
+    Dim Combined As Text
     Combined = LeftValue + RightValue
-    RETURN Combined
-END FUNCTION
+    Return Combined
+End Function

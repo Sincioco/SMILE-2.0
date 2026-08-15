@@ -46,7 +46,7 @@ The design intentionally requires no new SMILE language syntax.
 It uses the current:
 
 ```smile
-LOAD TEXT FILE "path" INTO Array COUNT Variable
+Load Text File "path" Into Array Count Variable
 ```
 
 plus fixed-point integer camera and DDA mathematics in `Program.smile`.

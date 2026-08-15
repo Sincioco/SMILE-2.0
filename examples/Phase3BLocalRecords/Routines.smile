@@ -1,6 +1,6 @@
-FUNCTION CreateMessage(Content AS TEXT, Code AS NUMBER) AS Message
-    DIM Result AS Message
+Function CreateMessage(Content As Text, Code As Number) As Message
+    Dim Result As Message
     Result.Content = Content
     Result.Code = Code
-    RETURN Result
-END FUNCTION
+    Return Result
+End Function

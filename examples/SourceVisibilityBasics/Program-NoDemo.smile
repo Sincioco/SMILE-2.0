@@ -1,10 +1,10 @@
-GAME WINDOW "Source Visibility Basics - No Demo" SIZE 800 BY 450
+Game Window "Source Visibility Basics - No Demo" Size 800 By 450
 
-DO
-    CLEAR RGB(8, 16, 32)
-    CALL DrawVisibilityProof()
-    SHOW SCREEN
-    WAIT 16 MILLISECONDS
-LOOP UNTIL GAME_CLOSED() = TRUE
+Do
+    Clear Rgb(8, 16, 32)
+    Call DrawVisibilityProof()
+    Show Screen
+    Wait 16 Milliseconds
+Loop Until Game_Closed() = True
 
-END PROGRAM
+End Program

@@ -114,8 +114,8 @@ Do not build a headless 3D-render test framework.
 Use one brief DirectX run:
 
 1. Launch title.
-2. Confirm `DEFAULT.MAP`, `CUSTOM.MAP`, and `RANDOM MAP`.
-3. Start `DEFAULT.MAP`.
+2. Confirm `Default.MAP`, `CUSTOM.MAP`, and `Random MAP`.
+3. Start `Default.MAP`.
 4. Walk forward and backward.
 5. Turn continuously left and right.
 6. Enter a large room.
@@ -123,7 +123,7 @@ Use one brief DirectX run:
 8. Open one door.
 9. Return to title.
 10. Start `CUSTOM.MAP`.
-11. Start `RANDOM MAP`.
+11. Start `Random MAP`.
 12. Temporarily rename `custom.map`; confirm fallback.
 13. Restore the file.
 14. Wait five seconds on title; confirm demo.

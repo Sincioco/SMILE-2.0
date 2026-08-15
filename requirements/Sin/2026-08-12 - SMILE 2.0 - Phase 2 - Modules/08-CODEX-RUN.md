@@ -22,12 +22,12 @@ Implement in this order:
 ## A. Shared syntax
 
 ```text
-MODULE
-END MODULE
-IMPORT
-AS
-PUBLIC
-PRIVATE
+Module
+End Module
+Import
+As
+Public
+Private
 dotted names
 Alias.Member
 ```

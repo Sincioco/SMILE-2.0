@@ -1,2 +1,2 @@
-DIM Value AS NUMBER
-PRINT Value.X
+Dim Value As Number
+Print Value.X

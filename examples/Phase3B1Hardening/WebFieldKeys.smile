@@ -1,60 +1,60 @@
-OPTION EXPLICIT
+Option Explicit
 
-TYPE Dangerous
-    __proto__ AS TEXT
-    constructor AS NUMBER
-    prototype AS BOOLEAN
-    toString AS TEXT
-    valueOf AS NUMBER
-END TYPE
+Type Dangerous
+    __proto__ As Text
+    constructor As Number
+    prototype As Boolean
+    toString As Text
+    valueOf As Number
+End Type
 
-TYPE Wrapper
-    Value AS Dangerous
-END TYPE
+Type Wrapper
+    Value As Dangerous
+End Type
 
-DIM First AS Dangerous
-DIM Copy AS Dangerous
-DIM Values[2] AS Dangerous
-DIM Wrapped AS Wrapper
+Dim First As Dangerous
+Dim Copy As Dangerous
+Dim Values[2] As Dangerous
+Dim Wrapped As Wrapper
 
-First.__proto__ = "SAFE"
+First.__proto__ = "Safe"
 First.constructor = 42
-First.prototype = TRUE
-First.toString = "TEXT"
+First.prototype = True
+First.toString = "Text"
 First.valueOf = 7
 
 Copy = First
-First.__proto__ = "CHANGED"
+First.__proto__ = "Changed"
 
 Values[0] = Copy
-Values[1] = MakeDangerous("RETURNED")
+Values[1] = MakeDangerous("Returned")
 
-CALL Rename(Values[0].__proto__, "BYREF")
+Call Rename(Values[0].__proto__, "ByRef")
 Wrapped.Value = Values[0]
 
-PRINT Copy.__proto__
-PRINT Copy.constructor
-PRINT Copy.prototype
-PRINT Copy.toString
-PRINT Copy.valueOf
-PRINT Values[0].__proto__
-PRINT Values[1].__proto__
-PRINT Wrapped.Value.__proto__
+Print Copy.__proto__
+Print Copy.constructor
+Print Copy.prototype
+Print Copy.toString
+Print Copy.valueOf
+Print Values[0].__proto__
+Print Values[1].__proto__
+Print Wrapped.Value.__proto__
 
-END PROGRAM
+End Program
 
-SUB Rename(BYREF Value AS TEXT, NewValue AS TEXT)
+Sub Rename(ByRef Value As Text, NewValue As Text)
     Value = NewValue
-END SUB
+End Sub
 
-FUNCTION MakeDangerous(Name AS TEXT) AS Dangerous
-    DIM Result AS Dangerous
+Function MakeDangerous(Name As Text) As Dangerous
+    Dim Result As Dangerous
 
     Result.__proto__ = Name
     Result.constructor = 99
-    Result.prototype = TRUE
-    Result.toString = "RESULT"
+    Result.prototype = True
+    Result.toString = "Result"
     Result.valueOf = 11
 
-    RETURN Result
-END FUNCTION
+    Return Result
+End Function

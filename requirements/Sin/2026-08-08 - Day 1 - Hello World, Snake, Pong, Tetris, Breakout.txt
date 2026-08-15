@@ -90,5 +90,5 @@ Direct 2D Support and GDI Enhancements
 
 MP3 Support
 -----------
-18.) Codex is currently implementing Direct2D and GDI enhancements.  Let's go with your recommendations.  Assuming the work to support MP3 playback will not conflict with that, create me the markdown file for CODEX to implement MP3 playback in SMILE 2.0 with LOOP support, etc.
+18.) Codex is currently implementing Direct2D and GDI enhancements.  Let's go with your recommendations.  Assuming the work to support MP3 playback will not conflict with that, create me the markdown file for CODEX to implement MP3 playback in SMILE 2.0 with Loop support, etc.
 19.) Also, could you modify the Tetris / Falling Blocks game, so it plays this MP3 file in the background while the game is being played: "D:\SMILE 2.0\games\FallingBlocks\Assets\Background.mp3".  But only while the player is alive.  Don't play it on the title screen or game over screen.  You can provide a separate markdown file for this or roll it into the #18 markdown file.  Up to you.

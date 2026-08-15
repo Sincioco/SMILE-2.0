@@ -66,9 +66,9 @@ Browser `.smile` breakpoints remain deferred.
 Required completion:
 
 ```text
-IMPORT
-known module names after IMPORT
-AS
+Import
+known module names after Import
+As
 local alias
 Alias.
 public module members

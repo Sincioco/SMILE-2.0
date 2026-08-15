@@ -1,8 +1,8 @@
-SAFE
+Safe
 42
-TRUE
-TEXT
+True
+Text
 7
-BYREF
-RETURNED
-BYREF
+ByRef
+Returned
+ByRef

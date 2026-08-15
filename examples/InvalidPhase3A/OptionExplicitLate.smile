@@ -1,2 +1,2 @@
-DIM Value AS NUMBER
-OPTION EXPLICIT
+Dim Value As Number
+Option Explicit

@@ -610,8 +610,8 @@ void smile_print_number(long long value)
 
 void smile_print_boolean(long long value)
 {
-    static const char true_text[] = "TRUE";
-    static const char false_text[] = "FALSE";
+    static const char true_text[] = "True";
+    static const char false_text[] = "False";
     if (value != 0)
         smile_print_text(true_text, 4);
     else
@@ -1215,7 +1215,7 @@ void smile_load_image_value(void** target, void* owned_path)
     smile_text_release(path);
     if (image == 0)
     {
-        MessageBoxA(smile_window, "LOAD IMAGE could not decode the requested PNG asset.",
+        MessageBoxA(smile_window, "Load Image could not decode the requested PNG asset.",
             "SMILE 2.0 image runtime", MB_OK | MB_ICONERROR);
         ExitProcess(2);
     }
@@ -1261,7 +1261,7 @@ void smile_draw_image_value(void* owned_image, long long source_x, long long sou
         filter < 0 || filter > 1 || flip < 0 || flip > 3)
     {
         smile_image_release(image);
-        MessageBoxA(smile_window, "DRAW IMAGE received an invalid handle, rectangle, opacity, filter, or flip.",
+        MessageBoxA(smile_window, "Draw Image received an invalid handle, rectangle, opacity, filter, or flip.",
             "SMILE 2.0 image runtime", MB_OK | MB_ICONERROR);
         ExitProcess(2);
     }
@@ -1275,7 +1275,7 @@ void smile_clip_push(long long x, long long y, long long width, long long height
 {
     if (width <= 0 || height <= 0)
     {
-        MessageBoxA(smile_window, "CLIP RECTANGLE width and height must be positive.",
+        MessageBoxA(smile_window, "Clip Rectangle width and height must be positive.",
             "SMILE 2.0 graphics runtime", MB_OK | MB_ICONERROR);
         ExitProcess(2);
     }
@@ -1726,7 +1726,7 @@ fail:
     if (destination != 0 && capacity > 0 && capacity <= 1024 * 1024)
         smile_zero_memory(destination, (SIZE_T)capacity * sizeof(long long));
     smile_text_release(key);
-    smile_data_error("LOAD DATA encountered an invalid destination, corrupt block, or oversized block.");
+    smile_data_error("Load Data encountered an invalid destination, corrupt block, or oversized block.");
     ExitProcess(2);
 }
 
@@ -1774,7 +1774,7 @@ fail:
     if (temporary[0] != 0) DeleteFileW(temporary);
     if (payload != 0) HeapFree(GetProcessHeap(), 0, payload);
     smile_text_release(key);
-    smile_data_error("SAVE DATA received invalid bytes/count or could not atomically store the block.");
+    smile_data_error("Save Data received invalid bytes/count or could not atomically store the block.");
     ExitProcess(2);
 }
 

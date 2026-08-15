@@ -210,17 +210,17 @@ The game may infer animation orientation from this structure if needed.
 Title entries:
 
 ```text
-DEFAULT.MAP
+Default.MAP
 CUSTOM.MAP
-RANDOM MAP
+Random MAP
 ```
 
 Literal loaders:
 
 ```smile
-LOAD TEXT FILE "Maps\default.map" INTO MapFileBytes COUNT MapFileLength
+Load Text File "Maps\default.map" Into MapFileBytes Count MapFileLength
 
-LOAD TEXT FILE "Maps\custom.map" INTO MapFileBytes COUNT MapFileLength
+Load Text File "Maps\custom.map" Into MapFileBytes Count MapFileLength
 ```
 
 A title choice resets the five-second inactivity timer.
@@ -261,8 +261,8 @@ the game:
 5. briefly displays:
 
 ```text
-MAP MISSING OR INVALID
-RANDOM MAP USED
+MAP MISSING Or INVALID
+Random MAP USED
 ```
 
 If the entire `Maps` directory is deleted, user and demo play remain available.

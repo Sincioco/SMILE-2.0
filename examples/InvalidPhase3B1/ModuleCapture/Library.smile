@@ -1,15 +1,15 @@
-MODULE Example.Isolated
+Module Example.Isolated
 
-OPTION EXPLICIT
+Option Explicit
 
-PUBLIC TYPE Wrapper
-    Data AS ConsumerData
-END TYPE
+Public Type Wrapper
+    Data As ConsumerData
+End Type
 
-PRIVATE DIM Stored AS ConsumerData
+Private Dim Stored As ConsumerData
 
-PUBLIC FUNCTION Echo(Value AS ConsumerData) AS ConsumerData
-    RETURN Value
-END FUNCTION
+Public Function Echo(Value As ConsumerData) As ConsumerData
+    Return Value
+End Function
 
-END MODULE
+End Module

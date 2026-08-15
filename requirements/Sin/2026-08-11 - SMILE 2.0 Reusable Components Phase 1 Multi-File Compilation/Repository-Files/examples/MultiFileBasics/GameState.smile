@@ -1,47 +1,47 @@
 ' MultiFileBasics support source.
 ' This file owns shared constants, the fixed state array, and update/query routines.
 
-CONST STATE_X = 0
-CONST STATE_Y = 1
-CONST STATE_PULSE = 2
-CONST STATE_PULSE_DIRECTION = 3
+Const STATE_X = 0
+Const STATE_Y = 1
+Const STATE_PULSE = 2
+Const STATE_PULSE_DIRECTION = 3
 
-CONST MinimumMarkerX = 90
-CONST MaximumMarkerX = 870
+Const MinimumMarkerX = 90
+Const MaximumMarkerX = 870
 
-DIM SharedState[4]
+Dim SharedState[4]
 
-SUB ResetSharedState()
+Sub ResetSharedState()
     SharedState[STATE_X] = 480
     SharedState[STATE_Y] = 300
     SharedState[STATE_PULSE] = 0
     SharedState[STATE_PULSE_DIRECTION] = 1
-END SUB
+End Sub
 
-SUB MoveMarker(Amount)
-    SharedState[STATE_X] = MAX(MinimumMarkerX, MIN(MaximumMarkerX, SharedState[STATE_X] + Amount))
-END SUB
+Sub MoveMarker(Amount)
+    SharedState[STATE_X] = Max(MinimumMarkerX, Min(MaximumMarkerX, SharedState[STATE_X] + Amount))
+End Sub
 
-SUB UpdatePulse()
+Sub UpdatePulse()
     SharedState[STATE_PULSE] = SharedState[STATE_PULSE] + SharedState[STATE_PULSE_DIRECTION]
 
-    IF SharedState[STATE_PULSE] >= 40 THEN
+    If SharedState[STATE_PULSE] >= 40 Then
         SharedState[STATE_PULSE] = 40
         SharedState[STATE_PULSE_DIRECTION] = -1
-    ELSE IF SharedState[STATE_PULSE] <= 0 THEN
+    Else If SharedState[STATE_PULSE] <= 0 Then
         SharedState[STATE_PULSE] = 0
         SharedState[STATE_PULSE_DIRECTION] = 1
-    END IF
-END SUB
+    End If
+End Sub
 
-FUNCTION MarkerX()
-    RETURN SharedState[STATE_X]
-END FUNCTION
+Function MarkerX()
+    Return SharedState[STATE_X]
+End Function
 
-FUNCTION MarkerY()
-    RETURN SharedState[STATE_Y]
-END FUNCTION
+Function MarkerY()
+    Return SharedState[STATE_Y]
+End Function
 
-FUNCTION MarkerPulse()
-    RETURN SharedState[STATE_PULSE]
-END FUNCTION
+Function MarkerPulse()
+    Return SharedState[STATE_PULSE]
+End Function

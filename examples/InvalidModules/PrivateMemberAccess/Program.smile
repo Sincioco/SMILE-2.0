@@ -1,2 +1,2 @@
-IMPORT Example.Values AS Values
-PRINT Values.Secret
+Import Example.Values As Values
+Print Values.Secret

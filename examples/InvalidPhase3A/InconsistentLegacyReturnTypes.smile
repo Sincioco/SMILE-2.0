@@ -1,8 +1,8 @@
-PRINT GetValue(TRUE)
-FUNCTION GetValue(UseText AS BOOLEAN)
-    IF UseText THEN
-        RETURN "text"
-    ELSE
-        RETURN 1
-    END IF
-END FUNCTION
+Print GetValue(True)
+Function GetValue(UseText As Boolean)
+    If UseText Then
+        Return "text"
+    Else
+        Return 1
+    End If
+End Function

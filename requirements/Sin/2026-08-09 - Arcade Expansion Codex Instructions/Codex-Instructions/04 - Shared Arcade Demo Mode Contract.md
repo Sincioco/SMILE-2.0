@@ -34,11 +34,11 @@ The native runtime remains generic.
 Use these defaults:
 
 ```smile
-CONST TitleDemoDelay = 5000
-CONST DemoMinimumPlayTime = 30000
-CONST DemoMaximumPlayTime = 45000
-CONST DemoTerminalDuration = 5000
-CONST TitleInputArmDelay = 250
+Const TitleDemoDelay = 5000
+Const DemoMinimumPlayTime = 30000
+Const DemoMaximumPlayTime = 45000
+Const DemoTerminalDuration = 5000
+Const TitleInputArmDelay = 250
 ```
 
 Interpretation:
@@ -59,7 +59,7 @@ Games may retain their existing numeric `State` values, but add explicit demo fl
 Recommended fields:
 
 ```smile
-DemoMode = FALSE
+DemoMode = False
 TitleStartedAt = 0
 TitleAcceptInputAt = 0
 DemoStartedAt = 0
@@ -81,7 +81,7 @@ Demo terminal
 Use one routine such as:
 
 ```smile
-SUB EnterTitle()
+Sub EnterTitle()
 ```
 
 It must:
@@ -127,10 +127,10 @@ No 5-to-0 countdown is required.
 During demo mode:
 
 ```smile
-IF Key <> KEY_NONE THEN
-    CALL EnterTitle()
-    RETURN
-END IF
+If Key <> KEY_NONE Then
+    Call EnterTitle()
+    Return
+End If
 ```
 
 Requirements:
@@ -164,7 +164,7 @@ At or after 30 seconds, normal terminal behavior may occur.
 At 45 seconds:
 
 - if still playing, transition to a demo terminal/result screen;
-- display an appropriate `GAME OVER`, `DEMO OVER`, or match-result overlay;
+- display an appropriate `Game OVER`, `DEMO OVER`, or match-result overlay;
 - retain it for five seconds;
 - return to title.
 
@@ -180,7 +180,7 @@ Demo play must not:
 - consume persisted lives/credits;
 - change user configuration.
 
-Display demo score if useful, but do not call `SAVE` from demo achievements.
+Display demo score if useful, but do not call `Save` from demo achievements.
 
 ## 10. Audio
 
@@ -196,7 +196,7 @@ During demo play draw a small unobtrusive label:
 
 ```text
 DEMO
-PRESS ANY KEY TO RETURN
+PRESS ANY Key To Return
 ```
 
 The label must not cover critical gameplay.

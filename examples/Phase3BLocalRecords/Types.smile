@@ -1,4 +1,4 @@
-TYPE Message
-    Content AS TEXT
-    Code AS NUMBER
-END TYPE
+Type Message
+    Content As Text
+    Code As Number
+End Type

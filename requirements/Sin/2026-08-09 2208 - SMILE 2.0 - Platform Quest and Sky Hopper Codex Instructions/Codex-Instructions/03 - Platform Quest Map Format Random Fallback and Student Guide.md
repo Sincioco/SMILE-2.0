@@ -77,9 +77,9 @@ On any failure, generate a random safe level.
 Title entries:
 
 ```text
-DEFAULT.MAP
+Default.MAP
 CUSTOM.MAP
-RANDOM LEVEL
+Random LEVEL
 ```
 
 `CUSTOM.MAP` always reads:

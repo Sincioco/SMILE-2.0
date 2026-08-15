@@ -32,18 +32,18 @@ This must compile regardless of project order:
 
 ```smile
 ' Program.smile
-DIM Party[MaximumPartySize]
+Dim Party[MaximumPartySize]
 ```
 
 ```smile
 ' Settings.smile
-CONST MaximumPartySize = BasePartySize + ExtraPartySlots
+Const MaximumPartySize = BasePartySize + ExtraPartySlots
 ```
 
 ```smile
 ' BaseSettings.smile
-CONST BasePartySize = 3
-CONST ExtraPartySlots = 1
+Const BasePartySize = 3
+Const ExtraPartySlots = 1
 ```
 
 Resolve valid compile-time expression chains across files.
@@ -55,8 +55,8 @@ Resolve valid compile-time expression chains across files.
 Detect and report deterministically:
 
 ```smile
-CONST FirstValue = SecondValue + 1
-CONST SecondValue = FirstValue + 1
+Const FirstValue = SecondValue + 1
+Const SecondValue = FirstValue + 1
 ```
 
 Requirements:
@@ -74,21 +74,21 @@ Requirements:
 Project-level names are case-insensitive and shared across:
 
 ```text
-CONST
-DIM
+Const
+Dim
 implicit startup global
-SUB
-FUNCTION
+Sub
+Function
 ```
 
 Reject later collisions such as:
 
 ```smile
-CONST Inventory = 64
+Const Inventory = 64
 
-FUNCTION inventory()
-    RETURN 1
-END FUNCTION
+Function inventory()
+    Return 1
+End Function
 ```
 
 Preserve routine-local scope rules.

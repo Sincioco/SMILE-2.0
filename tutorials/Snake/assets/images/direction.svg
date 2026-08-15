@@ -2,13 +2,13 @@
 <title id="t">Snake direction changes</title><desc id="d">Up subtracts one from Y, down adds one to Y, left subtracts one from X, and right adds one to X.</desc>
 <defs><marker id="a" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#5aa6ff"/></marker></defs>
 <rect x="10" y="10" width="800" height="630" rx="30" fill="#071321"/>
-<text x="410" y="65" text-anchor="middle" fill="#50ed7a" font-family="Segoe UI, Arial" font-size="38" font-weight="900">MOVE ONE GRID SQUARE</text>
+<text x="410" y="65" text-anchor="middle" fill="#50ed7a" font-family="Segoe UI, Arial" font-size="38" font-weight="900">Move One Grid Square</text>
 <rect x="335" y="270" width="150" height="110" rx="22" fill="#2ed164" stroke="#8cf5aa" stroke-width="4"/>
-<text x="410" y="337" text-anchor="middle" fill="#071321" font-family="Segoe UI, Arial" font-size="28" font-weight="900">HEAD</text>
+<text x="410" y="337" text-anchor="middle" fill="#071321" font-family="Segoe UI, Arial" font-size="28" font-weight="900">Head</text>
 <line x1="410" y1="260" x2="410" y2="145" stroke="#5aa6ff" stroke-width="7" marker-end="url(#a)"/>
 <text x="410" y="112" text-anchor="middle" fill="#9bcaff" font-family="Segoe UI, Arial" font-size="27" font-weight="900">UP: Y − 1</text>
 <line x1="410" y1="390" x2="410" y2="505" stroke="#5aa6ff" stroke-width="7" marker-end="url(#a)"/>
-<text x="410" y="558" text-anchor="middle" fill="#9bcaff" font-family="Segoe UI, Arial" font-size="27" font-weight="900">DOWN: Y + 1</text>
+<text x="410" y="558" text-anchor="middle" fill="#9bcaff" font-family="Segoe UI, Arial" font-size="27" font-weight="900">Down: Y + 1</text>
 <line x1="325" y1="325" x2="165" y2="325" stroke="#5aa6ff" stroke-width="7" marker-end="url(#a)"/>
 <text x="153" y="285" text-anchor="middle" fill="#9bcaff" font-family="Segoe UI, Arial" font-size="27" font-weight="900">LEFT</text><text x="153" y="318" text-anchor="middle" fill="#dbeeff" font-family="Segoe UI, Arial" font-size="23">X − 1</text>
 <line x1="495" y1="325" x2="655" y2="325" stroke="#5aa6ff" stroke-width="7" marker-end="url(#a)"/>

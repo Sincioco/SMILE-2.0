@@ -49,7 +49,7 @@ Two-player: W/S left paddle; Up/Down right paddle.
 In one-player mode persist longest consecutive paddle-contact rally:
 
 ```smile
-LOAD BestRally FROM "BestRally" DEFAULT 0
+Load BestRally From "BestRally" Default 0
 ```
 
 ## Sound

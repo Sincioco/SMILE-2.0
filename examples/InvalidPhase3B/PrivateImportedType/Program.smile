@@ -1,2 +1,2 @@
-IMPORT Invalid.PrivateTypes AS Types
-DIM Value AS Types.Hidden
+Import Invalid.PrivateTypes As Types
+Dim Value As Types.Hidden

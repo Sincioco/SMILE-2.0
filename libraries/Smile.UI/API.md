@@ -1,13 +1,13 @@
 # Smile.UI 1.1.1 public API
 
-All handles are generation-safe `NUMBER` values. Handle `0` is invalid.
+All handles are generation-safe `Number` values. Handle `0` is invalid.
 
 ## Smile.UI.Window
 
 ```text
-IsStyleValid(BYREF WindowStyle) AS BOOLEAN
-ContentRect(BYREF WindowStyle, X, Y, Width, Height) AS Core.Rect
-Draw(BYREF WindowStyle, X, Y, Width, Height)
+IsStyleValid(ByRef WindowStyle) As Boolean
+ContentRect(ByRef WindowStyle, X, Y, Width, Height) As Core.Rect
+Draw(ByRef WindowStyle, X, Y, Width, Height)
 ```
 
 Skin source rectangles, nine-slice borders, filter values, opacity, destination borders, and bounded padding/vector fields are validated before drawing. `Opacity = 0` means the compatibility default of 100 percent, `1..100` is exact skin opacity, and values outside `0..100` are invalid. The vector fallback is binary visible because generic rectangle primitives do not expose alpha.
@@ -15,89 +15,89 @@ Skin source rectangles, nine-slice borders, filter values, opacity, destination 
 ## Smile.UI.BitmapFont
 
 ```text
-IsStyleValid(BYREF BitmapFontStyle) AS BOOLEAN
-Create(BYREF BitmapFontStyle) AS NUMBER
+IsStyleValid(ByRef BitmapFontStyle) As Boolean
+Create(ByRef BitmapFontStyle) As Number
 Destroy(Handle)
-IsValid(Handle) AS BOOLEAN
-MeasureWidth(Handle, TEXT) AS NUMBER
-MeasureHeight(Handle, TEXT) AS NUMBER
-Draw(Handle, TEXT, X, Y, Alignment, Opacity)
+IsValid(Handle) As Boolean
+MeasureWidth(Handle, Text) As Number
+MeasureHeight(Handle, Text) As Number
+Draw(Handle, Text, X, Y, Alignment, Opacity)
 ```
 
 ## Smile.UI.Text
 
 ```text
-IsStyleValid(BYREF TextStyle) AS BOOLEAN
-MeasureWidth(BYREF TextStyle, TEXT) AS NUMBER
-MeasureHeight(BYREF TextStyle, TEXT) AS NUMBER
-Draw(BYREF TextStyle, TEXT, X, Y, Alignment, Opacity)
+IsStyleValid(ByRef TextStyle) As Boolean
+MeasureWidth(ByRef TextStyle, Text) As Number
+MeasureHeight(ByRef TextStyle, Text) As Number
+Draw(ByRef TextStyle, Text, X, Y, Alignment, Opacity)
 ```
 
-Newline scalar 10 splits lines in both modes. Empty values are one line; empty interior lines and a trailing newline are preserved. Width is the widest line. Height is `line count * line height + (line count - 1) * TextStyle.LineSpacing`. Alignment is applied per line and unknown alignment values normalize to left. `Opacity <= 0` draws nothing; positive opacity draws system text fully opaque, while bitmap text uses clamped `1..100` image opacity. A stale bitmap-font handle safely uses system text measurement/drawing with the style's system size, while `IsStyleValid` returns `FALSE` for that candidate style.
+Newline scalar 10 splits lines in both modes. Empty values are one line; empty interior lines and a trailing newline are preserved. Width is the widest line. Height is `line count * line height + (line count - 1) * TextStyle.LineSpacing`. Alignment is applied per line and unknown alignment values normalize to left. `Opacity <= 0` draws nothing; positive opacity draws system text fully opaque, while bitmap text uses clamped `1..100` image opacity. A stale bitmap-font handle safely uses system text measurement/drawing with the style's system size, while `IsStyleValid` returns `False` for that candidate style.
 
 ## Smile.UI.Menu
 
 ```text
-IsStyleValid(BYREF MenuStyle) AS BOOLEAN
-Create(BYREF MenuStyle, X, Y, Width, Height, VisibleRows) AS NUMBER
+IsStyleValid(ByRef MenuStyle) As Boolean
+Create(ByRef MenuStyle, X, Y, Width, Height, VisibleRows) As Number
 Destroy(Handle)
-IsValid(Handle) AS BOOLEAN
-SetStyle(Handle, BYREF MenuStyle) AS BOOLEAN
+IsValid(Handle) As Boolean
+SetStyle(Handle, ByRef MenuStyle) As Boolean
 ClearItems(Handle)
-AddItem(Handle, Label, UserValue, Enabled) AS NUMBER
-SetItemLabel(Handle, Index, Label) AS BOOLEAN
-SetItemEnabled(Handle, Index, Enabled) AS BOOLEAN
-SetItemValue(Handle, Index, UserValue) AS BOOLEAN
-SetItemHasSubmenu(Handle, Index, HasSubmenu) AS BOOLEAN
-ItemHasSubmenu(Handle, Index) AS BOOLEAN
-ItemRevision(Handle) AS NUMBER
-ItemCount(Handle) AS NUMBER
-SelectedIndex(Handle) AS NUMBER
-SelectedValue(Handle) AS NUMBER
-TopIndex(Handle) AS NUMBER
-VisibleRows(Handle) AS NUMBER
-Bounds(Handle) AS Core.Rect
-SetPosition(Handle, X, Y) AS BOOLEAN
-SelectedRowRect(Handle) AS Core.Rect
-SetSelectedIndex(Handle, Index) AS BOOLEAN
-ResetSelection(Handle) AS BOOLEAN
-HandleKey(Handle, Key) AS NUMBER
+AddItem(Handle, Label, UserValue, Enabled) As Number
+SetItemLabel(Handle, Index, Label) As Boolean
+SetItemEnabled(Handle, Index, Enabled) As Boolean
+SetItemValue(Handle, Index, UserValue) As Boolean
+SetItemHasSubmenu(Handle, Index, HasSubmenu) As Boolean
+ItemHasSubmenu(Handle, Index) As Boolean
+ItemRevision(Handle) As Number
+ItemCount(Handle) As Number
+SelectedIndex(Handle) As Number
+SelectedValue(Handle) As Number
+TopIndex(Handle) As Number
+VisibleRows(Handle) As Number
+Bounds(Handle) As Core.Rect
+SetPosition(Handle, X, Y) As Boolean
+SelectedRowRect(Handle) As Core.Rect
+SetSelectedIndex(Handle, Index) As Boolean
+ResetSelection(Handle) As Boolean
+HandleKey(Handle, Key) As Number
 DrawFocused(Handle, Focused)
 Draw(Handle)
 ```
 
 The row count passed to `Create` is retained as the requested count. `VisibleRows` returns the current effective count after window/style constraints. Valid style changes can shrink and later re-expand the effective count while keeping selection and top index in range. `CursorFilterMode` accepts `UI_FILTER_SMOOTH` or `UI_FILTER_PIXEL`.
 
-`ItemTextOverflowMode` accepts `UI_MENU_TEXT_ELLIPSIS`, `UI_MENU_TEXT_CLIP`, or `UI_MENU_TEXT_WRAP`; `ItemTextMaxLines` is bounded by `UI_MAX_MENU_ITEM_LINES` (4). Labels are bounded by `UI_MAX_MENU_ITEM_SCALARS` (256). Ellipsis and wrapping are Unicode-scalar safe. A fixed cursor gutter keeps label geometry stable, and `DrawFocused(FALSE)` suppresses the cursor while retaining normal row rendering. Item revisions invalidate stale navigator bindings after structural item changes.
+`ItemTextOverflowMode` accepts `UI_MENU_TEXT_ELLIPSIS`, `UI_MENU_TEXT_CLIP`, or `UI_MENU_TEXT_WRAP`; `ItemTextMaxLines` is bounded by `UI_MAX_MENU_ITEM_LINES` (4). Labels are bounded by `UI_MAX_MENU_ITEM_SCALARS` (256). Ellipsis and wrapping are Unicode-scalar safe. A fixed cursor gutter keeps label geometry stable, and `DrawFocused(False)` suppresses the cursor while retaining normal row rendering. Item revisions invalidate stale navigator bindings after structural item changes.
 
-`ShowScrollbar = TRUE` reserves a stable eight-unit right gutter and draws a track/thumb only while `ItemCount > VisibleRows`; `FALSE` reclaims the gutter. The thumb is bounded and proportional to `VisibleRows / ItemCount`, while its position is proportional to `TopIndex / (ItemCount - VisibleRows)`. `ShowSubmenuIndicator` controls presentation only. `SubmenuIndicatorPosition` must be `UI_SUBMENU_INDICATOR_AFTER_TEXT` or `UI_SUBMENU_INDICATOR_RIGHT_ALIGNED`; both draw the exact literal ` >` for valid bound items. After-text markers follow the fitted final visible line, and right-aligned markers occupy a region before the optional scrollbar gutter.
+`ShowScrollbar = True` reserves a stable eight-unit right gutter and draws a track/thumb only while `ItemCount > VisibleRows`; `False` reclaims the gutter. The thumb is bounded and proportional to `VisibleRows / ItemCount`, while its position is proportional to `TopIndex / (ItemCount - VisibleRows)`. `ShowSubmenuIndicator` controls presentation only. `SubmenuIndicatorPosition` must be `UI_SUBMENU_INDICATOR_AFTER_TEXT` or `UI_SUBMENU_INDICATOR_RIGHT_ALIGNED`; both draw the exact literal ` >` for valid bound items. After-text markers follow the fitted final visible line, and right-aligned markers occupy a region before the optional scrollbar gutter.
 
 ## Smile.UI.MenuNavigator
 
 ```text
-IsStyleValid(BYREF MenuNavigatorStyle) AS BOOLEAN
-Create(RootMenuHandle, BYREF MenuNavigatorStyle) AS NUMBER
+IsStyleValid(ByRef MenuNavigatorStyle) As Boolean
+Create(RootMenuHandle, ByRef MenuNavigatorStyle) As Number
 Destroy(NavigatorHandle)
-IsValid(NavigatorHandle) AS BOOLEAN
-SetStyle(NavigatorHandle, BYREF MenuNavigatorStyle) AS BOOLEAN
-Relayout(NavigatorHandle) AS BOOLEAN
-Reset(NavigatorHandle) AS BOOLEAN
-BindSubmenu(NavigatorHandle, ParentMenuHandle, ParentItemIndex, ChildMenuHandle, ResetChildSelection) AS BOOLEAN
-UnbindSubmenu(NavigatorHandle, ParentMenuHandle, ParentItemIndex) AS BOOLEAN
+IsValid(NavigatorHandle) As Boolean
+SetStyle(NavigatorHandle, ByRef MenuNavigatorStyle) As Boolean
+Relayout(NavigatorHandle) As Boolean
+Reset(NavigatorHandle) As Boolean
+BindSubmenu(NavigatorHandle, ParentMenuHandle, ParentItemIndex, ChildMenuHandle, ResetChildSelection) As Boolean
+UnbindSubmenu(NavigatorHandle, ParentMenuHandle, ParentItemIndex) As Boolean
 ClearBindings(NavigatorHandle)
-HasSubmenu(NavigatorHandle, ParentMenuHandle, ParentItemIndex) AS BOOLEAN
-OpenSelected(NavigatorHandle) AS NUMBER
-Back(NavigatorHandle) AS NUMBER
-HandleKey(NavigatorHandle, Key) AS NUMBER
-Depth(NavigatorHandle) AS NUMBER
-RootMenu(NavigatorHandle) AS NUMBER
-CurrentMenu(NavigatorHandle) AS NUMBER
-MenuAtDepth(NavigatorHandle, DepthIndex) AS NUMBER
-ParentMenu(NavigatorHandle) AS NUMBER
-CanGoBack(NavigatorHandle) AS BOOLEAN
-LastAcceptedMenu(NavigatorHandle) AS NUMBER
-LastAcceptedIndex(NavigatorHandle) AS NUMBER
-LastAcceptedValue(NavigatorHandle) AS NUMBER
+HasSubmenu(NavigatorHandle, ParentMenuHandle, ParentItemIndex) As Boolean
+OpenSelected(NavigatorHandle) As Number
+Back(NavigatorHandle) As Number
+HandleKey(NavigatorHandle, Key) As Number
+Depth(NavigatorHandle) As Number
+RootMenu(NavigatorHandle) As Number
+CurrentMenu(NavigatorHandle) As Number
+MenuAtDepth(NavigatorHandle, DepthIndex) As Number
+ParentMenu(NavigatorHandle) As Number
+CanGoBack(NavigatorHandle) As Boolean
+LastAcceptedMenu(NavigatorHandle) As Number
+LastAcceptedIndex(NavigatorHandle) As Number
+LastAcceptedValue(NavigatorHandle) As Number
 DrawActive(NavigatorHandle)
 DrawStack(NavigatorHandle)
 ```
@@ -111,26 +111,26 @@ Right, Enter, and Space open a selected enabled submenu. Left and Escape close e
 ## Smile.UI.Dialogue
 
 ```text
-IsStyleValid(BYREF DialogueStyle) AS BOOLEAN
-Create(BYREF DialogueStyle, X, Y, Width, Height) AS NUMBER
+IsStyleValid(ByRef DialogueStyle) As Boolean
+Create(ByRef DialogueStyle, X, Y, Width, Height) As Number
 Destroy(Handle)
-IsValid(Handle) AS BOOLEAN
-SetStyle(Handle, BYREF DialogueStyle) AS BOOLEAN
+IsValid(Handle) As Boolean
+SetStyle(Handle, ByRef DialogueStyle) As Boolean
 ClearPages(Handle)
-AddPage(Handle, TEXT) AS BOOLEAN
-Start(Handle, NowMilliseconds) AS BOOLEAN
-Update(Handle, NowMilliseconds) AS NUMBER
-HandleKey(Handle, Key, NowMilliseconds) AS NUMBER
+AddPage(Handle, Text) As Boolean
+Start(Handle, NowMilliseconds) As Boolean
+Update(Handle, NowMilliseconds) As Number
+HandleKey(Handle, Key, NowMilliseconds) As Number
 Draw(Handle, NowMilliseconds)
-IsActive(Handle) AS BOOLEAN
-IsComplete(Handle) AS BOOLEAN
-PageCount(Handle) AS NUMBER
-CurrentPage(Handle) AS NUMBER
-VisibleCharacters(Handle) AS NUMBER
+IsActive(Handle) As Boolean
+IsComplete(Handle) As Boolean
+PageCount(Handle) As Number
+CurrentPage(Handle) As Number
+VisibleCharacters(Handle) As Number
 ```
 
 Dialogue line advance is `measured text height + TextStyle.LineSpacing + DialogueStyle.LineSpacing`; each spacing value is applied once.
 
 `UI_MAX_DIALOGUE_PAGE_SCALARS` is 2048. `AddPage` rejects a larger value immediately without changing existing pages. `Start` prepares bounded spill pages transactionally. A valid `SetStyle` on an active dialogue reflows with the candidate style while preserving active state, raw-page identity, current content, and the already-visible scalar count; failed validation or reflow leaves the previous style and state unchanged.
 
-`Draw`, `DrawFocused`, `DrawActive`, and `DrawStack` require a `GAME WINDOW`. State, binding, geometry, selection, and key-routing APIs remain usable by Console consumers.
+`Draw`, `DrawFocused`, `DrawActive`, and `DrawStack` require a `Game Window`. State, binding, geometry, selection, and key-routing APIs remain usable by Console consumers.

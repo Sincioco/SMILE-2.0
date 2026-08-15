@@ -1,4 +1,4 @@
-SUB DrawVisibilityProof()
-    DRAW TEXT "PROGRAM + ALTERNATE STARTUP + SUPPORT + ASSETS" AT 400, 200 SIZE 22 COLOR WHITE CENTERED
-    DRAW TEXT "ALL PROJECT ITEMS MUST BE VISIBLE" AT 400, 250 SIZE 18 COLOR CYAN CENTERED
-END SUB
+Sub DrawVisibilityProof()
+    Draw Text "Program + Alternate Startup + Support + Assets" At 400, 200 Size 22 Color WHITE Centered
+    Draw Text "All Project Items Must Be Visible" At 400, 250 Size 18 Color CYAN Centered
+End Sub

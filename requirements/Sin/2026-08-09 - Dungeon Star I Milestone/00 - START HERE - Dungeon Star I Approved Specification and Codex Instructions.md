@@ -59,7 +59,7 @@ The current SMILE 2.0 code already has the correct foundation:
 - A logical 960-by-540 game canvas with automatic resize, DPI, aspect-ratio, and Alt+Enter handling.
 - Queued key-press events and held-state support.
 - Fixed one- and two-dimensional arrays.
-- Integer arithmetic, procedures, functions, loops, conditionals, and `SELECT CASE`.
+- Integer arithmetic, procedures, functions, loops, conditionals, and `Select Case`.
 - The existing game projects and smoke/artifact verification pipeline.
 
 Do **not** redo the DirectX/GDI milestone. Build this game on top of it.
@@ -67,7 +67,7 @@ Do **not** redo the DirectX/GDI milestone. Build this game on top of it.
 Two generic gaps must be filled before the dungeon can be implemented correctly:
 
 1. SMILE has no filled arbitrary four-corner shape. Perspective walls, floors, ceilings, doors, and stairs need a reusable quadrilateral primitive.
-2. `GET KEY` currently reports only the small predefined key set. It cannot truthfully implement **PRESS ANY KEY** because an otherwise valid key such as `Q`, `F`, `3`, Shift, or a function key currently becomes `KEY_NONE`.
+2. `Get Key` currently reports only the small predefined key set. It cannot truthfully implement **PRESS ANY Key** because an otherwise valid key such as `Q`, `F`, `3`, Shift, or a function key currently becomes `KEY_NONE`.
 
 Add the smallest generic language/runtime extensions described below.
 
@@ -122,7 +122,7 @@ The game is intentionally only about walking around a dungeon.
 Required:
 
 - Title screen.
-- Flashing `PRESS ANY KEY TO START`.
+- Flashing `PRESS ANY Key To START`.
 - Arcade-style attract/demo countdown and self-playing demo.
 - A newly generated dungeon for each user run and demo run.
 - Three connected dungeon floors.
@@ -182,21 +182,21 @@ The pseudo-3D effect must be produced by ordinary 2D quadrilateral and line draw
 Add these two official statements:
 
 ```smile
-FILL QUADRILATERAL X1, Y1, X2, Y2, X3, Y3, X4, Y4, Color
+Fill Quadrilateral X1, Y1, X2, Y2, X3, Y3, X4, Y4, Color
 
-DRAW QUADRILATERAL X1, Y1, X2, Y2, X3, Y3, X4, Y4, Color
+Draw Quadrilateral X1, Y1, X2, Y2, X3, Y3, X4, Y4, Color
 ```
 
 Example:
 
 ```smile
-FILL QUADRILATERAL 0, 0, 240, 80, 240, 460, 0, 540, DARK_GREEN
-DRAW QUADRILATERAL 0, 0, 240, 80, 240, 460, 0, 540, LIGHT_GREEN
+Fill Quadrilateral 0, 0, 240, 80, 240, 460, 0, 540, DARK_GREEN
+Draw Quadrilateral 0, 0, 240, 80, 240, 460, 0, 540, LIGHT_GREEN
 ```
 
 Official rules:
 
-- `QUADRILATERAL` is one keyword.
+- `Quadrilateral` is one keyword.
 - There are exactly nine numeric arguments.
 - The first eight values are four `(X, Y)` points.
 - The ninth value is the color.
@@ -210,13 +210,13 @@ Point 1 -> Point 2 -> Point 3 -> Point 4 -> Point 1
 - Self-intersecting point order has unspecified visual results but must never crash.
 - Degenerate shapes must be safe.
 - Coordinates may be outside the logical canvas; normal viewport clipping applies.
-- `FILL QUADRILATERAL` fills with one solid color.
-- `DRAW QUADRILATERAL` draws a one-logical-pixel outline, scaled through the active backend in the same way as existing lines.
+- `Fill Quadrilateral` fills with one solid color.
+- `Draw Quadrilateral` draws a one-logical-pixel outline, scaled through the active backend in the same way as existing lines.
 - No alpha, gradients, textures, or additional shape options are part of this milestone.
-- Both statements require `GAME WINDOW`.
-- All arguments must type-check as `NUMBER`.
+- Both statements require `Game Window`.
+- All arguments must type-check as `Number`.
 
-Do **not** use the shorter keyword `QUAD`, and do not add aliases. `QUADRILATERAL` is more descriptive and teaches the correct geometric term.
+Do **not** use the shorter keyword `QUAD`, and do not add aliases. `Quadrilateral` is more descriptive and teaches the correct geometric term.
 
 Do **not** increase user-defined routine parameters from four to nine. The graphics statement itself may have nine arguments because it is compiler-defined syntax, not a user routine.
 
@@ -227,7 +227,7 @@ Update the shared implementation, not separate consumers:
 #### `src\Smile.Language\Syntax.cs`
 
 - Add `QuadrilateralKeyword` inside the normal keyword range, before the current final normal keyword boundary used by `SyntaxFacts.IsKeyword`.
-- Add `"QUADRILATERAL"` to the shared keyword dictionary.
+- Add `"Quadrilateral"` to the shared keyword dictionary.
 - Keep classification automatic through `SyntaxFacts`; do not add a Visual Studio-only keyword table.
 
 #### `src\Smile.Language\GameSyntax.cs`
@@ -243,9 +243,9 @@ GraphicsOperation.DrawQuadrilateral
 
 Extend `ParseGraphicsStatement`:
 
-- `FILL QUADRILATERAL` parses exactly nine numeric expressions.
-- `DRAW QUADRILATERAL` parses exactly nine numeric expressions.
-- Improve the fill error text so it includes `QUADRILATERAL`.
+- `Fill Quadrilateral` parses exactly nine numeric expressions.
+- `Draw Quadrilateral` parses exactly nine numeric expressions.
+- Improve the fill error text so it includes `Quadrilateral`.
 - Preserve all existing graphics syntax and diagnostics.
 
 #### `src\Smile.Language\Semantics.cs`
@@ -284,8 +284,8 @@ Official behavior:
 - Known keys continue to return their existing named constants.
 - Any otherwise unrecognized ordinary key-down event returns `KEY_OTHER`.
 - `KEY_OTHER` is an event category, not the raw Windows virtual-key number.
-- `KEY_OTHER` is returned only by `GET KEY`.
-- `KEY_HELD(KEY_OTHER)` must return `FALSE`.
+- `KEY_OTHER` is returned only by `Get Key`.
+- `Key_Held(KEY_OTHER)` must return `False`.
 - Existing key values must not change.
 - Key auto-repeat remains suppressed exactly as it is now.
 - Alt+Enter remains a runtime-reserved full-screen shortcut and is not returned to the game.
@@ -295,17 +295,17 @@ Official behavior:
 Examples:
 
 ```smile
-GET KEY Key
+Get Key Key
 
-IF Key <> KEY_NONE THEN
-    CALL StartGame()
-END IF
+If Key <> KEY_NONE Then
+    Call StartGame()
+End If
 ```
 
 ```smile
-IF Key = KEY_OTHER THEN
-    PRINT "A non-named key was pressed."
-END IF
+If Key = KEY_OTHER Then
+    Print "A non-named key was pressed."
+End If
 ```
 
 ### Required language/runtime changes
@@ -335,7 +335,7 @@ Preserve:
 - focus-loss clearing;
 - Alt+Enter handling.
 
-`smile_key_virtual(SMILE_KEY_OTHER)` must resolve to zero so `KEY_HELD(KEY_OTHER)` remains false.
+`smile_key_virtual(SMILE_KEY_OTHER)` must resolve to zero so `Key_Held(KEY_OTHER)` remains false.
 
 The graphical window path is the primary requirement. Matching console behavior is acceptable and preferred if it follows naturally from the shared mapper.
 
@@ -468,7 +468,7 @@ Use this project shape:
 The program must open:
 
 ```smile
-GAME WINDOW "Dungeon Star I"
+Game Window "Dungeon Star I"
 ```
 
 Use the default logical canvas:
@@ -503,7 +503,7 @@ Suggested source order:
 13. Title screen
 14. User idle warning
 15. State transition routines
-16. GAME WINDOW
+16. Game Window
 17. Main loop
 ```
 
@@ -534,9 +534,9 @@ Use two separate state dimensions.
 Recommended constants:
 
 ```smile
-CONST STATE_TITLE = 0
-CONST STATE_USER_DUNGEON = 1
-CONST STATE_DEMO_DUNGEON = 2
+Const STATE_TITLE = 0
+Const STATE_USER_DUNGEON = 1
+Const STATE_DEMO_DUNGEON = 2
 ```
 
 ## 8.2 Action/animation state
@@ -544,14 +544,14 @@ CONST STATE_DEMO_DUNGEON = 2
 Recommended constants:
 
 ```smile
-CONST ACTION_IDLE = 0
-CONST ACTION_MOVE_FORWARD = 1
-CONST ACTION_MOVE_BACKWARD = 2
-CONST ACTION_TURN_LEFT = 3
-CONST ACTION_TURN_RIGHT = 4
-CONST ACTION_OPEN_DOOR = 5
-CONST ACTION_STAIRS_OUT = 6
-CONST ACTION_STAIRS_IN = 7
+Const ACTION_IDLE = 0
+Const ACTION_MOVE_FORWARD = 1
+Const ACTION_MOVE_BACKWARD = 2
+Const ACTION_TURN_LEFT = 3
+Const ACTION_TURN_RIGHT = 4
+Const ACTION_OPEN_DOOR = 5
+Const ACTION_STAIRS_OUT = 6
+Const ACTION_STAIRS_IN = 7
 ```
 
 Do not encode title/demo/user behavior inside the renderer. The renderer should draw the view it is given. State transitions belong in SMILE game logic.
@@ -591,10 +591,10 @@ Movement is grid-based:
 Recommended direction values:
 
 ```smile
-CONST NORTH = 0
-CONST EAST = 1
-CONST SOUTH = 2
-CONST WEST = 3
+Const NORTH = 0
+Const EAST = 1
+Const SOUTH = 2
+Const WEST = 3
 ```
 
 ---
@@ -604,12 +604,12 @@ CONST WEST = 3
 Use these exact timing constants:
 
 ```smile
-CONST TitleDemoDelay = 15000
-CONST TitleDemoCountdownStart = 5
-CONST TitleDemoStartTime = 21000
-CONST DemoDuration = 60000
-CONST FlashInterval = 500
-CONST TitleInputArmDelay = 250
+Const TitleDemoDelay = 15000
+Const TitleDemoCountdownStart = 5
+Const TitleDemoStartTime = 21000
+Const DemoDuration = 60000
+Const FlashInterval = 500
+Const TitleInputArmDelay = 250
 ```
 
 `TitleDemoStartTime` is 21 seconds because the user requested six visible countdown values: `5`, `4`, `3`, `2`, `1`, and `0`, with each visible for one full second after the initial 15-second delay.
@@ -619,7 +619,7 @@ CONST TitleInputArmDelay = 250
 Create one routine such as:
 
 ```smile
-SUB EnterTitle()
+Sub EnterTitle()
 ```
 
 It must:
@@ -636,11 +636,11 @@ It must:
 A helper may drain the current queue:
 
 ```smile
-SUB DrainPendingKeys()
-    DO
-        GET KEY DrainKey
-    LOOP UNTIL DrainKey = KEY_NONE
-END SUB
+Sub DrainPendingKeys()
+    Do
+        Get Key DrainKey
+    Loop Until DrainKey = KEY_NONE
+End Sub
 ```
 
 Use the short arm delay as additional protection against a still-held or closely repeated key.
@@ -651,10 +651,10 @@ The title screen must show:
 
 ```text
 DUNGEON STAR I
-PRESS ANY KEY TO START
+PRESS ANY Key To START
 ```
 
-`PRESS ANY KEY TO START` flashes with a 500-millisecond on/off interval.
+`PRESS ANY Key To START` flashes with a 500-millisecond on/off interval.
 
 Before 15 seconds, show no demo countdown.
 
@@ -666,13 +666,13 @@ DEMO STARTS IN
 
 plus a separately drawn number.
 
-Because SMILE text is literal-oriented, use `DRAW TEXT` plus `DRAW NUMBER`; do not add mutable strings or string interpolation for this game.
+Because SMILE text is literal-oriented, use `Draw Text` plus `Draw Number`; do not add mutable strings or string interpolation for this game.
 
 Exact title timing:
 
 | Time since entering title | Display/action |
 |---:|---|
-| 0–14,999 ms | Flash `PRESS ANY KEY TO START`; no countdown |
+| 0–14,999 ms | Flash `PRESS ANY Key To START`; no countdown |
 | 15,000–15,999 ms | Show demo countdown `5` |
 | 16,000–16,999 ms | Show `4` |
 | 17,000–17,999 ms | Show `3` |
@@ -707,14 +707,14 @@ Starting demo mode must:
 2. Place the demo player at the normal floor-one entrance.
 3. Reset demo visit/path arrays.
 4. Set `ScreenState = STATE_DEMO_DUNGEON`.
-5. Set `DemoStartedAt = TIMER()` **after** generation is complete.
+5. Set `DemoStartedAt = Timer()` **after** generation is complete.
 6. Start the first automatic action through the same action routines used by a human player.
 
 While demo mode is active, draw a small original label such as:
 
 ```text
 DEMO
-PRESS ANY KEY TO RETURN
+PRESS ANY Key To Return
 ```
 
 Do not obscure the dungeon view.
@@ -731,16 +731,16 @@ DemoElapsed >= 60000
 
 return immediately to the title screen and restart the normal 15-second idle period.
 
-The title returns with `PRESS ANY KEY TO START` flashing.
+The title returns with `PRESS ANY Key To START` flashing.
 
 ## 10.6 Canceling the demo
 
 At any time during demo mode:
 
 ```smile
-IF Key <> KEY_NONE THEN
-    CALL EnterTitle()
-END IF
+If Key <> KEY_NONE Then
+    Call EnterTitle()
+End If
 ```
 
 The pressed key is consumed only as a demo-cancel action.
@@ -758,20 +758,20 @@ Alt+Enter remains the reserved full-screen exception because the runtime handles
 Use these constants:
 
 ```smile
-CONST UserIdleWarningTime = 30000
-CONST UserIdleExitTime = 40000
-CONST UserIdleCountdownStart = 9
+Const UserIdleWarningTime = 30000
+Const UserIdleExitTime = 40000
+Const UserIdleCountdownStart = 9
 ```
 
 When user play begins:
 
 ```text
-LastUserActivityAt = TIMER()
+LastUserActivityAt = Timer()
 ```
 
 Reset `LastUserActivityAt` whenever:
 
-- `GET KEY` returns any value other than `KEY_NONE`, even when the key does not map to a dungeon action;
+- `Get Key` returns any value other than `KEY_NONE`, even when the key does not map to a dungeon action;
 - a supported movement/turn key is currently held;
 - a buffered movement/turn action is accepted.
 
@@ -792,12 +792,12 @@ draw no idle warning.
 At 30 seconds, flash:
 
 ```text
-WILL EXIT IN
+WILL Exit IN
 9
 SECONDS
 ```
 
-Use `DRAW TEXT` and `DRAW NUMBER`.
+Use `Draw Text` and `Draw Number`.
 
 The complete warning overlay flashes with the same 500-millisecond interval as the title prompt.
 
@@ -848,50 +848,50 @@ Use a flattened map because SMILE currently supports at most two array dimension
 Recommended constants:
 
 ```smile
-CONST MapWidth = 31
-CONST MapHeight = 31
-CONST FloorCount = 3
-CONST CellsPerFloor = MapWidth * MapHeight
-CONST TotalCells = CellsPerFloor * FloorCount
-CONST MaximumRooms = 9
-CONST MinimumRooms = 5
+Const MapWidth = 31
+Const MapHeight = 31
+Const FloorCount = 3
+Const CellsPerFloor = MapWidth * MapHeight
+Const TotalCells = CellsPerFloor * FloorCount
+Const MaximumRooms = 9
+Const MinimumRooms = 5
 ```
 
 Recommended tile values:
 
 ```smile
-CONST TILE_WALL = 0
-CONST TILE_FLOOR = 1
-CONST TILE_DOOR_CLOSED = 2
-CONST TILE_DOOR_OPEN = 3
-CONST TILE_STAIRS_UP = 4
-CONST TILE_STAIRS_DOWN = 5
+Const TILE_WALL = 0
+Const TILE_FLOOR = 1
+Const TILE_DOOR_CLOSED = 2
+Const TILE_DOOR_OPEN = 3
+Const TILE_STAIRS_UP = 4
+Const TILE_STAIRS_DOWN = 5
 ```
 
 Recommended arrays:
 
 ```smile
-DIM Dungeon[TotalCells]
+Dim Dungeon[TotalCells]
 
-DIM RoomLeft[MaximumRooms]
-DIM RoomTop[MaximumRooms]
-DIM RoomWidth[MaximumRooms]
-DIM RoomHeight[MaximumRooms]
-DIM RoomCenterX[MaximumRooms]
-DIM RoomCenterY[MaximumRooms]
+Dim RoomLeft[MaximumRooms]
+Dim RoomTop[MaximumRooms]
+Dim RoomWidth[MaximumRooms]
+Dim RoomHeight[MaximumRooms]
+Dim RoomCenterX[MaximumRooms]
+Dim RoomCenterY[MaximumRooms]
 
-DIM StairUpX[FloorCount]
-DIM StairUpY[FloorCount]
-DIM StairDownX[FloorCount]
-DIM StairDownY[FloorCount]
+Dim StairUpX[FloorCount]
+Dim StairUpY[FloorCount]
+Dim StairDownX[FloorCount]
+Dim StairDownY[FloorCount]
 
-DIM FloodQueue[CellsPerFloor]
-DIM FloodVisited[CellsPerFloor]
+Dim FloodQueue[CellsPerFloor]
+Dim FloodVisited[CellsPerFloor]
 
-DIM DemoQueue[CellsPerFloor]
-DIM DemoParent[CellsPerFloor]
-DIM DemoRoute[CellsPerFloor]
-DIM DemoVisits[TotalCells]
+Dim DemoQueue[CellsPerFloor]
+Dim DemoParent[CellsPerFloor]
+Dim DemoRoute[CellsPerFloor]
+Dim DemoVisits[TotalCells]
 ```
 
 A map helper should flatten:
@@ -1168,40 +1168,40 @@ Use distinct original palettes. These are starting suggestions, not mandatory ex
 ### Floor 1 — green/emerald
 
 ```text
-Near wall:  RGB(20, 110, 72)
-Mid wall:   RGB(16, 82, 57)
-Far wall:   RGB(11, 50, 39)
-Mortar:     RGB(55, 190, 125)
-Floor:      RGB(7, 28, 21)
-Ceiling:    RGB(5, 20, 15)
-Door:       RGB(22, 75, 52)
-Highlight:  RGB(100, 225, 160)
+Near wall:  Rgb(20, 110, 72)
+Mid wall:   Rgb(16, 82, 57)
+Far wall:   Rgb(11, 50, 39)
+Mortar:     Rgb(55, 190, 125)
+Floor:      Rgb(7, 28, 21)
+Ceiling:    Rgb(5, 20, 15)
+Door:       Rgb(22, 75, 52)
+Highlight:  Rgb(100, 225, 160)
 ```
 
 ### Floor 2 — blue/sapphire
 
 ```text
-Near wall:  RGB(28, 80, 150)
-Mid wall:   RGB(20, 58, 112)
-Far wall:   RGB(12, 34, 70)
-Mortar:     RGB(90, 155, 225)
-Floor:      RGB(7, 18, 38)
-Ceiling:    RGB(5, 12, 28)
-Door:       RGB(25, 55, 100)
-Highlight:  RGB(135, 190, 255)
+Near wall:  Rgb(28, 80, 150)
+Mid wall:   Rgb(20, 58, 112)
+Far wall:   Rgb(12, 34, 70)
+Mortar:     Rgb(90, 155, 225)
+Floor:      Rgb(7, 18, 38)
+Ceiling:    Rgb(5, 12, 28)
+Door:       Rgb(25, 55, 100)
+Highlight:  Rgb(135, 190, 255)
 ```
 
 ### Floor 3 — red/crimson
 
 ```text
-Near wall:  RGB(145, 48, 45)
-Mid wall:   RGB(102, 32, 35)
-Far wall:   RGB(62, 20, 25)
-Mortar:     RGB(230, 105, 85)
-Floor:      RGB(35, 8, 12)
-Ceiling:    RGB(24, 5, 8)
-Door:       RGB(95, 32, 28)
-Highlight:  RGB(255, 145, 120)
+Near wall:  Rgb(145, 48, 45)
+Mid wall:   Rgb(102, 32, 35)
+Far wall:   Rgb(62, 20, 25)
+Mortar:     Rgb(230, 105, 85)
+Floor:      Rgb(35, 8, 12)
+Ceiling:    Rgb(24, 5, 8)
+Door:       Rgb(95, 32, 28)
+Highlight:  Rgb(255, 145, 120)
 ```
 
 The geometry remains the same; the palette changes by current floor.
@@ -1210,29 +1210,29 @@ The geometry remains the same; the palette changes by current floor.
 
 # 16. Smooth movement and animation
 
-Use `TIMER()` and integer progress.
+Use `Timer()` and integer progress.
 
 Do not use floating point.
 
 Do not use a fixed amount of movement per rendered frame.
 
-Do not put `WAIT 16 MILLISECONDS` in the Dungeon Star I main loop. Let the current VSync/presentation layer pace rendering. Animation state must be time-based.
+Do not put `Wait 16 Milliseconds` in the Dungeon Star I main loop. Let the current VSync/presentation layer pace rendering. Animation state must be time-based.
 
 Recommended durations:
 
 ```smile
-CONST MoveDuration = 260
-CONST TurnDuration = 240
-CONST DoorDuration = 320
-CONST StairOutDuration = 450
-CONST StairBlackDuration = 120
-CONST StairInDuration = 450
+Const MoveDuration = 260
+Const TurnDuration = 240
+Const DoorDuration = 320
+Const StairOutDuration = 450
+Const StairBlackDuration = 120
+Const StairInDuration = 450
 ```
 
 Use progress in the range `0` through `1000`:
 
 ```text
-Progress = MIN(1000, (Now - ActionStartedAt) * 1000 / Duration)
+Progress = Min(1000, (Now - ActionStartedAt) * 1000 / Duration)
 ```
 
 Use integer interpolation:
@@ -1427,7 +1427,7 @@ Suggested elements:
 - `DUNGEON STAR I` centered;
 - floor-theme colors cycling slowly through green, blue, and red;
 - controls in smaller text;
-- flashing `PRESS ANY KEY TO START`;
+- flashing `PRESS ANY Key To START`;
 - demo countdown after 15 seconds.
 
 Suggested text:
@@ -1435,14 +1435,14 @@ Suggested text:
 ```text
 DUNGEON STAR I
 
-ARROWS OR W A S D
+ARROWS Or W A S D
 MOVE / BACK / TURN
 
-ENTER OR SPACE - OPEN DOOR
-ESCAPE - EXIT
-ALT+ENTER - FULL SCREEN
+ENTER Or SPACE - OPEN DOOR
+ESCAPE - Exit
+ALT+ENTER - FULL Screen
 
-PRESS ANY KEY TO START
+PRESS ANY Key To START
 ```
 
 Do not use or imitate a commercial logo.
@@ -1474,9 +1474,9 @@ Use one continuous native game loop.
 Recommended order:
 
 ```text
-1. Now = TIMER()
-2. GET KEY Key
-3. Check GAME_CLOSED()
+1. Now = Timer()
+2. Get Key Key
+3. Check Game_Closed()
 4. Process screen-state input
 5. Apply user-activity reset before idle checks
 6. Process exact title/demo/user deadlines
@@ -1484,44 +1484,44 @@ Recommended order:
 8. When idle, start user-buffered or demo-planned action
 9. Draw title or dungeon
 10. Draw overlays
-11. SHOW SCREEN
+11. Show Screen
 ```
 
 Pseudo-structure:
 
 ```smile
-GAME WINDOW "Dungeon Star I"
+Game Window "Dungeon Star I"
 
-CALL EnterTitle()
+Call EnterTitle()
 
-DO
-    Now = TIMER()
-    GET KEY Key
+Do
+    Now = Timer()
+    Get Key Key
 
-    IF ScreenState = STATE_TITLE THEN
-        CALL UpdateTitle()
-        CALL DrawTitle()
-    ELSE IF ScreenState = STATE_DEMO_DUNGEON THEN
-        CALL UpdateDemo()
-        IF ScreenState = STATE_TITLE THEN
-            CALL DrawTitle()
-        ELSE
-            CALL DrawDungeonScene()
-        END IF
-    ELSE
-        CALL UpdateUserDungeon()
-        IF ScreenState = STATE_TITLE THEN
-            CALL DrawTitle()
-        ELSE
-            CALL DrawDungeonScene()
-            CALL DrawIdleWarning()
-        END IF
-    END IF
+    If ScreenState = STATE_TITLE Then
+        Call UpdateTitle()
+        Call DrawTitle()
+    Else If ScreenState = STATE_DEMO_DUNGEON Then
+        Call UpdateDemo()
+        If ScreenState = STATE_TITLE Then
+            Call DrawTitle()
+        Else
+            Call DrawDungeonScene()
+        End If
+    Else
+        Call UpdateUserDungeon()
+        If ScreenState = STATE_TITLE Then
+            Call DrawTitle()
+        Else
+            Call DrawDungeonScene()
+            Call DrawIdleWarning()
+        End If
+    End If
 
-    SHOW SCREEN
-LOOP UNTIL GAME_CLOSED() = TRUE
+    Show Screen
+Loop Until Game_Closed() = True
 
-END PROGRAM
+End Program
 ```
 
 Do not duplicate the complete renderer between user and demo modes.
@@ -1562,8 +1562,8 @@ and green/blue/red floor palettes.
 
 Add:
 
-- `FILL QUADRILATERAL`;
-- `DRAW QUADRILATERAL`;
+- `Fill Quadrilateral`;
+- `Draw Quadrilateral`;
 - `KEY_OTHER`;
 - Dungeon Star I to the executable examples.
 
@@ -1737,7 +1737,7 @@ Perform and record all checks below.
 ## 23.1 Title and attract mode
 
 - Title appears correctly.
-- `PRESS ANY KEY TO START` flashes.
+- `PRESS ANY Key To START` flashes.
 - No countdown appears for the first 15 seconds.
 - `5`, `4`, `3`, `2`, `1`, and `0` each display for approximately one second.
 - Demo begins after `0` has been visible.
@@ -1754,7 +1754,7 @@ Perform and record all checks below.
 - Demo never teleports.
 - Demo never remains stuck longer than two seconds.
 - Demo returns to title after 60 seconds.
-- Returned title flashes `PRESS ANY KEY TO START`.
+- Returned title flashes `PRESS ANY Key To START`.
 - Any ordinary key during demo returns to title.
 - The canceling key does not immediately start user play.
 - Escape during demo returns to title rather than exiting directly.
@@ -1861,7 +1861,7 @@ feat(graphics): add quadrilateral drawing and generic key events
 
 Include:
 
-- `QUADRILATERAL` keyword and syntax;
+- `Quadrilateral` keyword and syntax;
 - fill/draw graphics operations;
 - parser and semantic behavior;
 - emitter exports/calls;
@@ -1922,15 +1922,15 @@ The work is complete only when every item is true.
 
 ## Language/runtime
 
-- [ ] `FILL QUADRILATERAL` is official, parsed, analyzed, emitted, linked, and documented.
-- [ ] `DRAW QUADRILATERAL` is official, parsed, analyzed, emitted, linked, and documented.
+- [ ] `Fill Quadrilateral` is official, parsed, analyzed, emitted, linked, and documented.
+- [ ] `Draw Quadrilateral` is official, parsed, analyzed, emitted, linked, and documented.
 - [ ] DirectX draws both forms correctly.
 - [ ] GDI draws both forms correctly.
 - [ ] No graphics resource leak is observed.
 - [ ] `KEY_OTHER = 19` is official and documented.
 - [ ] Unnamed ordinary keys produce `KEY_OTHER`.
 - [ ] Existing key values and behaviors remain unchanged.
-- [ ] `KEY_HELD(KEY_OTHER)` is false.
+- [ ] `Key_Held(KEY_OTHER)` is false.
 - [ ] Shared tests and native graphics tests pass.
 - [ ] No duplicate parser or Visual Studio keyword list was added.
 

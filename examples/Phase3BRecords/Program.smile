@@ -1,54 +1,54 @@
-OPTION EXPLICIT
+Option Explicit
 
-IMPORT Smile.Data.Models AS Models
+Import Smile.Data.Models As Models
 
-DIM Hero AS Models.Actor
-DIM Copy AS Models.Actor
-DIM Party[2] AS Models.Actor
-DIM OriginalName AS TEXT
+Dim Hero As Models.Actor
+Dim Copy As Models.Actor
+Dim Party[2] As Models.Actor
+Dim OriginalName As Text
 
 Hero = Models.CreateActor("Alyssa", 10, 20, 35, 35)
 Copy = Hero
 OriginalName = Copy.Name
 Hero.Name = "Changed"
 
-PRINT OriginalName
-PRINT Copy.Name
-PRINT Hero.Name
+Print OriginalName
+Print Copy.Name
+Print Hero.Name
 
 Party[0] = Copy
 Party[1] = Models.CreateActor("Rolf", 1, 2, 20, 25)
 
-CALL Models.Move(Party[0], 5, -2)
-CALL Models.Damage(Party[0], 7)
+Call Models.Move(Party[0], 5, -2)
+Call Models.Damage(Party[0], 7)
 
-PRINT Party[0].Position.X
-PRINT Party[0].Position.Y
-PRINT Party[0].Health.Current
-PRINT Party[1].Name
+Print Party[0].Position.X
+Print Party[0].Position.Y
+Print Party[0].Health.Current
+Print Party[1].Name
 
-CALL TryChange(Party[0])
-PRINT Party[0].Name
+Call TryChange(Party[0])
+Print Party[0].Name
 
-CALL Change(Party[0])
-PRINT Party[0].Name
+Call Change(Party[0])
+Print Party[0].Name
 
-CALL RenameField(Party[1].Name, "Nei")
-PRINT Party[1].Name
+Call RenameField(Party[1].Name, "Nei")
+Print Party[1].Name
 
 Copy = Models.CopyActor(Party[0])
-PRINT Copy.Name
+Print Copy.Name
 
-END PROGRAM
+End Program
 
-SUB TryChange(Value AS Models.Actor)
-    Value.Name = "BYVAL"
-END SUB
+Sub TryChange(Value As Models.Actor)
+    Value.Name = "ByVal"
+End Sub
 
-SUB Change(BYREF Value AS Models.Actor)
-    Value.Name = "BYREF"
-END SUB
+Sub Change(ByRef Value As Models.Actor)
+    Value.Name = "ByRef"
+End Sub
 
-SUB RenameField(BYREF Value AS TEXT, NewValue AS TEXT)
+Sub RenameField(ByRef Value As Text, NewValue As Text)
     Value = NewValue
-END SUB
+End Sub

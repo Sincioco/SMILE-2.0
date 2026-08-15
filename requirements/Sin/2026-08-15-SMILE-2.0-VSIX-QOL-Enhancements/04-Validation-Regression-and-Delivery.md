@@ -93,9 +93,9 @@ Use or create a temporary solution containing:
 - a source file containing:
 
   ```smile
-  IMPORT Smile.UI.Menu AS Menu
+  Import Smile.UI.Menu As Menu
 
-  DIM MainMenu AS NUMBER
+  Dim MainMenu As Number
   MainMenu = Menu.Create(MenuStyle, 80, 70, 480, 300, 6)
   ```
 
@@ -112,7 +112,7 @@ The temporary verification project does not need to be committed unless it is a 
 
 ### 4.3 F12 checks
 
-- F12 on `Menu` opens `Menu.smile` at `MODULE Smile.UI.Menu`.
+- F12 on `Menu` opens `Menu.smile` at `Module Smile.UI.Menu`.
 - F12 on `Create` opens `Menu.smile` at the `Create` declaration.
 - F12 on an unresolved identifier does not crash or steal unrelated command behavior.
 - F12 on one local routine/variable navigates correctly if implemented.
@@ -155,7 +155,7 @@ Do not add a permanent broad test burden for a one-time investigation without ap
 
 Inspect `libraries\Smile.UI\Menu.smile` and verify:
 
-- every `PUBLIC` routine has a contiguous `'''` documentation block;
+- every `Public` routine has a contiguous `'''` documentation block;
 - each parameter is documented;
 - each function documents its return value;
 - sentinel/failure values are explained;

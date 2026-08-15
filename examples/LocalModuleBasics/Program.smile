@@ -1,5 +1,5 @@
-IMPORT Example.LocalMath AS Math
+Import Example.LocalMath As Math
 
-PRINT Math.Double(21)
+Print Math.Double(21)
 
-END PROGRAM
+End Program

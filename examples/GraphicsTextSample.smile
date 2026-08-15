@@ -1,24 +1,24 @@
 ' Required DirectWrite and GDI final-resolution text comparison sample.
-GAME WINDOW "SMILE 2.0 Graphics Text Sample"
+Game Window "SMILE 2.0 Graphics Text Sample"
 
-DO
-    GET KEY Key
-    IF Key = KEY_ESCAPE THEN
-        END PROGRAM
-    END IF
+Do
+    Get Key Key
+    If Key = KEY_ESCAPE Then
+        End Program
+    End If
 
-    CLEAR RGB(10, 14, 24)
-    DRAW TEXT "FINAL-RESOLUTION TEXT" AT 480, 42 SIZE 34 COLOR CYAN CENTERED
-    DRAW TEXT "ABCDEFGHIJKLMNOPQRSTUVWXYZ" AT 480, 112 SIZE 26 COLOR WHITE CENTERED
-    DRAW TEXT "abcdefghijklmnopqrstuvwxyz" AT 480, 158 SIZE 26 COLOR LIGHT_GRAY CENTERED
-    DRAW TEXT "0123456789" AT 480, 204 SIZE 26 COLOR YELLOW CENTERED
-    DRAW TEXT "!@#$%^&*()" AT 480, 250 SIZE 26 COLOR ORANGE CENTERED
-    DRAW TEXT "SCORE" AT 480, 318 SIZE 30 COLOR LIGHT_GREEN CENTERED
-    DRAW TEXT "COMPUTER" AT 480, 362 SIZE 30 COLOR MAGENTA CENTERED
-    DRAW TEXT "PLAYER 1" AT 480, 406 SIZE 30 COLOR LIGHT_BLUE CENTERED
-    DRAW TEXT "BEST ONE-PLAYER RALLY" AT 480, 450 SIZE 30 COLOR WHITE CENTERED
-    DRAW TEXT "ALT+ENTER FULL SCREEN - ESCAPE EXITS" AT 480, 506 SIZE 18 COLOR LIGHT_GRAY CENTERED
-    SHOW SCREEN
-LOOP UNTIL GAME_CLOSED() = TRUE
+    Clear Rgb(10, 14, 24)
+    Draw Text "Final-Resolution Text" At 480, 42 Size 34 Color CYAN Centered
+    Draw Text "Abcdefghijklmnopqrstuvwxyz" At 480, 112 Size 26 Color WHITE Centered
+    Draw Text "abcdefghijklmnopqrstuvwxyz" At 480, 158 Size 26 Color LIGHT_GRAY Centered
+    Draw Text "0123456789" At 480, 204 Size 26 Color YELLOW Centered
+    Draw Text "!@#$%^&*()" At 480, 250 Size 26 Color ORANGE Centered
+    Draw Text "Score" At 480, 318 Size 30 Color LIGHT_GREEN Centered
+    Draw Text "Computer" At 480, 362 Size 30 Color MAGENTA Centered
+    Draw Text "Player 1" At 480, 406 Size 30 Color LIGHT_BLUE Centered
+    Draw Text "Best One-Player Rally" At 480, 450 Size 30 Color WHITE Centered
+    Draw Text "Alt+Enter Full Screen - Escape Exits" At 480, 506 Size 18 Color LIGHT_GRAY Centered
+    Show Screen
+Loop Until Game_Closed() = True
 
-END PROGRAM
+End Program

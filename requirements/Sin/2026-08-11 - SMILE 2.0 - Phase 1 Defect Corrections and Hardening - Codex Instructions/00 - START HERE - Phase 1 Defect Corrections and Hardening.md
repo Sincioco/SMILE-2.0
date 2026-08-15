@@ -136,11 +136,11 @@ Do not claim completion until all of these are true:
 At the very end of the final report, print exactly one bold line:
 
 ```text
-**MANUAL TESTING REQUESTED FROM SIN: NONE.**
+**MANUAL TESTING REQUESTED From SIN: NONE.**
 ```
 
 or:
 
 ```text
-**MANUAL TESTING REQUESTED FROM SIN: <exact short checklist>.**
+**MANUAL TESTING REQUESTED From SIN: <exact short checklist>.**
 ```

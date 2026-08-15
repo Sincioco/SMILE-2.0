@@ -1,4 +1,4 @@
-CALL ShowValue("one")
-SUB ShowValue(Value AS NUMBER)
-    PRINT Value
-END SUB
+Call ShowValue("one")
+Sub ShowValue(Value As Number)
+    Print Value
+End Sub

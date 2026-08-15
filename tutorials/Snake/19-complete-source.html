@@ -42,19 +42,19 @@
 <aside class="callout tip"><h3>Best learning use</h3><p>Try to finish the checkpoints first. Then compare your source with this reference. A difference is not a failure&mdash;it is a clue.</p></aside><aside class="callout line-number-note"><h3>Line numbers are reference-only</h3><p>The visible numbers match every checkpoint and syntax example. <strong>Copy Code copies only clean SMILE source&mdash;the line numbers are never included.</strong></p></aside><div class="code-panel">
 <div class="code-toolbar"><span class="code-label">games\Snake\Program-NoDemo.smile &mdash; complete source</span><button class="copy-code" type="button">Copy code</button></div>
 <pre><code class="language-smile" data-source-anchor="true" data-source-start="1">' SMILE 2.0 Snake - student edition without attract/demo code.
-CONST CanvasWidth = 960
-CONST CanvasHeight = 540
-CONST FieldX = 20
-CONST FieldY = 30
-CONST FieldWidth = 700
-CONST FieldHeight = 480
-CONST GridWidth = 35
-CONST GridHeight = 24
-CONST CellSize = 20
-CONST StartDelay = 100
-CONST MinimumDelay = 45
-DIM SnakeX[840]
-DIM SnakeY[840]
+Const CanvasWidth = 960
+Const CanvasHeight = 540
+Const FieldX = 20
+Const FieldY = 30
+Const FieldWidth = 700
+Const FieldHeight = 480
+Const GridWidth = 35
+Const GridHeight = 24
+Const CellSize = 20
+Const StartDelay = 100
+Const MinimumDelay = 45
+Dim SnakeX[840]
+Dim SnakeY[840]
 
 Length = 0
 Direction = KEY_RIGHT
@@ -69,26 +69,26 @@ Key = KEY_NONE
 I = 0
 TailX = 0
 TailY = 0
-FoodValid = FALSE
-Collision = FALSE
+FoodValid = False
+Collision = False
 
-LOAD HighScore FROM "HighScore" DEFAULT 0
+Load HighScore From "HighScore" Default 0
 
-SUB SpawnFood()
-    FoodValid = FALSE
-    DO
-        RANDOM FoodX FROM 0 TO GridWidth - 1
-        RANDOM FoodY FROM 0 TO GridHeight - 1
-        FoodValid = TRUE
-        FOR I = 0 TO Length - 1
-            IF FoodX = SnakeX[I] AND FoodY = SnakeY[I] THEN
-                FoodValid = FALSE
-            END IF
-        END FOR
-    LOOP UNTIL FoodValid = TRUE
-END SUB
+Sub SpawnFood()
+    FoodValid = False
+    Do
+        Random FoodX From 0 To GridWidth - 1
+        Random FoodY From 0 To GridHeight - 1
+        FoodValid = True
+        For I = 0 To Length - 1
+            If FoodX = SnakeX[I] And FoodY = SnakeY[I] Then
+                FoodValid = False
+            End If
+        End For
+    Loop Until FoodValid = True
+End Sub
 
-SUB ResetSnakeBody()
+Sub ResetSnakeBody()
     Length = 5
     Direction = KEY_RIGHT
     NextDirection = KEY_RIGHT
@@ -102,195 +102,195 @@ SUB ResetSnakeBody()
     SnakeY[3] = 12
     SnakeX[4] = 13
     SnakeY[4] = 12
-END SUB
+End Sub
 
-SUB ResetPlay()
-    CALL ResetSnakeBody()
+Sub ResetPlay()
+    Call ResetSnakeBody()
     Score = 0
     MoveDelay = StartDelay
-    CALL SpawnFood()
-    NextMoveTime = TIMER() + StartDelay
+    Call SpawnFood()
+    NextMoveTime = Timer() + StartDelay
     State = 1
-    PLAY SOUND "Assets\Start.wav"
-END SUB
+    Play Sound "Assets\Start.wav"
+End Sub
 
-SUB EndRound()
+Sub EndRound()
     State = 2
-    IF Score &gt; HighScore THEN
+    If Score &gt; HighScore Then
         HighScore = Score
-        SAVE HighScore TO "HighScore"
-    END IF
-    PLAY SOUND "Assets\GameOver.wav"
-END SUB
+        Save HighScore To "HighScore"
+    End If
+    Play Sound "Assets\GameOver.wav"
+End Sub
 
-SUB MoveSnake()
+Sub MoveSnake()
     Direction = NextDirection
     TailX = SnakeX[Length - 1]
     TailY = SnakeY[Length - 1]
 
-    FOR I = Length - 1 DOWN TO 1
+    For I = Length - 1 Down To 1
         SnakeX[I] = SnakeX[I - 1]
         SnakeY[I] = SnakeY[I - 1]
-    END FOR
+    End For
 
-    IF Direction = KEY_UP THEN
+    If Direction = KEY_UP Then
         SnakeY[0] = SnakeY[0] - 1
-    ELSE IF Direction = KEY_DOWN THEN
+    Else If Direction = KEY_DOWN Then
         SnakeY[0] = SnakeY[0] + 1
-    ELSE IF Direction = KEY_LEFT THEN
+    Else If Direction = KEY_LEFT Then
         SnakeX[0] = SnakeX[0] - 1
-    ELSE IF Direction = KEY_RIGHT THEN
+    Else If Direction = KEY_RIGHT Then
         SnakeX[0] = SnakeX[0] + 1
-    END IF
+    End If
 
-    Collision = FALSE
-    IF SnakeX[0] &lt; 0 OR SnakeX[0] &gt;= GridWidth OR SnakeY[0] &lt; 0 OR SnakeY[0] &gt;= GridHeight THEN
-        Collision = TRUE
-    END IF
+    Collision = False
+    If SnakeX[0] &lt; 0 Or SnakeX[0] &gt;= GridWidth Or SnakeY[0] &lt; 0 Or SnakeY[0] &gt;= GridHeight Then
+        Collision = True
+    End If
 
-    FOR I = 1 TO Length - 1
-        IF SnakeX[0] = SnakeX[I] AND SnakeY[0] = SnakeY[I] THEN
-            Collision = TRUE
-        END IF
-    END FOR
+    For I = 1 To Length - 1
+        If SnakeX[0] = SnakeX[I] And SnakeY[0] = SnakeY[I] Then
+            Collision = True
+        End If
+    End For
 
-    IF Collision = TRUE THEN
-        CALL EndRound()
-    ELSE IF SnakeX[0] = FoodX AND SnakeY[0] = FoodY THEN
+    If Collision = True Then
+        Call EndRound()
+    Else If SnakeX[0] = FoodX And SnakeY[0] = FoodY Then
         SnakeX[Length] = TailX
         SnakeY[Length] = TailY
         Length = Length + 1
         Score = Score + 10
-        MoveDelay = MAX(MinimumDelay, StartDelay - (Score / 50) * 4)
-        PLAY SOUND "Assets\Eat.wav"
-        CALL SpawnFood()
-    END IF
+        MoveDelay = Max(MinimumDelay, StartDelay - (Score / 50) * 4)
+        Play Sound "Assets\Eat.wav"
+        Call SpawnFood()
+    End If
 
-    NextMoveTime = TIMER() + MoveDelay
-END SUB
+    NextMoveTime = Timer() + MoveDelay
+End Sub
 
-SUB DrawBoard()
-    CLEAR RGB(10, 18, 35)
-    FILL RECTANGLE FieldX, FieldY, FieldWidth, FieldHeight, BLACK
-    DRAW RECTANGLE FieldX, FieldY, FieldWidth, FieldHeight, RGB(40, 70, 95)
+Sub DrawBoard()
+    Clear Rgb(10, 18, 35)
+    Fill Rectangle FieldX, FieldY, FieldWidth, FieldHeight, BLACK
+    Draw Rectangle FieldX, FieldY, FieldWidth, FieldHeight, Rgb(40, 70, 95)
 
-    FOR I = 0 TO Length - 1
-        IF SnakeX[I] &gt;= 0 AND SnakeX[I] &lt; GridWidth AND SnakeY[I] &gt;= 0 AND SnakeY[I] &lt; GridHeight THEN
-            FILL RECTANGLE FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, RGB(60, 230, 75)
-            DRAW RECTANGLE FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, RGB(20, 105, 35)
-        END IF
-    END FOR
+    For I = 0 To Length - 1
+        If SnakeX[I] &gt;= 0 And SnakeX[I] &lt; GridWidth And SnakeY[I] &gt;= 0 And SnakeY[I] &lt; GridHeight Then
+            Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)
+            Draw Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(20, 105, 35)
+        End If
+    End For
 
-    FILL RECTANGLE FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, RGB(245, 45, 55)
-    DRAW RECTANGLE FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, RGB(120, 15, 25)
+    Fill Rectangle FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, Rgb(245, 45, 55)
+    Draw Rectangle FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, Rgb(120, 15, 25)
 
-    DRAW TEXT "SMILE SNAKE" AT 835, 55 SIZE 27 COLOR LIGHT_GREEN CENTERED
-    DRAW TEXT "SCORE" AT 755, 115 SIZE 20 COLOR LIGHT_GRAY
-    DRAW NUMBER Score AT 755, 142 SIZE 34 COLOR YELLOW
-    DRAW TEXT "HIGH SCORE" AT 755, 205 SIZE 20 COLOR LIGHT_GRAY
-    DRAW NUMBER HighScore AT 755, 232 SIZE 34 COLOR CYAN
-    DRAW TEXT "WASD / ARROWS" AT 835, 330 SIZE 16 COLOR WHITE CENTERED
-    DRAW TEXT "MOVE THE SNAKE" AT 835, 355 SIZE 16 COLOR LIGHT_GRAY CENTERED
-    DRAW TEXT "ALT+ENTER" AT 835, 415 SIZE 16 COLOR WHITE CENTERED
-    DRAW TEXT "FULL SCREEN" AT 835, 440 SIZE 16 COLOR LIGHT_GRAY CENTERED
-    DRAW TEXT "ESCAPE EXITS" AT 835, 490 SIZE 16 COLOR LIGHT_GRAY CENTERED
-END SUB
+    Draw Text "SMILE Snake" At 835, 55 Size 27 Color LIGHT_GREEN Centered
+    Draw Text "Score" At 755, 115 Size 20 Color LIGHT_GRAY
+    Draw Number Score At 755, 142 Size 34 Color YELLOW
+    Draw Text "High Score" At 755, 205 Size 20 Color LIGHT_GRAY
+    Draw Number HighScore At 755, 232 Size 34 Color CYAN
+    Draw Text "WASD / Arrows" At 835, 330 Size 16 Color WHITE Centered
+    Draw Text "Move The Snake" At 835, 355 Size 16 Color LIGHT_GRAY Centered
+    Draw Text "Alt+Enter" At 835, 415 Size 16 Color WHITE Centered
+    Draw Text "Full Screen" At 835, 440 Size 16 Color LIGHT_GRAY Centered
+    Draw Text "Escape Exits" At 835, 490 Size 16 Color LIGHT_GRAY Centered
+End Sub
 
-SUB DrawTitle()
-    CLEAR RGB(10, 18, 35)
-    FILL RECTANGLE FieldX, FieldY, FieldWidth, FieldHeight, BLACK
-    DRAW RECTANGLE FieldX, FieldY, FieldWidth, FieldHeight, RGB(40, 70, 95)
-    FILL RECTANGLE 260, 255, 80, 18, RGB(60, 230, 75)
-    DRAW RECTANGLE 260, 255, 80, 18, RGB(20, 105, 35)
-    FILL RECTANGLE 360, 257, 14, 14, RGB(245, 45, 55)
-    DRAW TEXT "SMILE SNAKE" AT 370, 140 SIZE 54 COLOR LIGHT_GREEN CENTERED
-    DRAW TEXT "A NATIVE GAME WRITTEN IN SMILE" AT 370, 215 SIZE 19 COLOR LIGHT_GRAY CENTERED
-    DRAW TEXT "PRESS ENTER TO START" AT 370, 335 SIZE 28 COLOR YELLOW CENTERED
-    DRAW TEXT "WASD OR ARROW KEYS TO MOVE" AT 370, 385 SIZE 18 COLOR WHITE CENTERED
-    DRAW TEXT "ESCAPE TO EXIT" AT 370, 415 SIZE 18 COLOR LIGHT_GRAY CENTERED
-    DRAW TEXT "HIGH SCORE" AT 835, 165 SIZE 20 COLOR LIGHT_GRAY CENTERED
-    DRAW NUMBER HighScore AT 805, 205 SIZE 38 COLOR CYAN
-END SUB
+Sub DrawTitle()
+    Clear Rgb(10, 18, 35)
+    Fill Rectangle FieldX, FieldY, FieldWidth, FieldHeight, BLACK
+    Draw Rectangle FieldX, FieldY, FieldWidth, FieldHeight, Rgb(40, 70, 95)
+    Fill Rectangle 260, 255, 80, 18, Rgb(60, 230, 75)
+    Draw Rectangle 260, 255, 80, 18, Rgb(20, 105, 35)
+    Fill Rectangle 360, 257, 14, 14, Rgb(245, 45, 55)
+    Draw Text "SMILE Snake" At 370, 140 Size 54 Color LIGHT_GREEN Centered
+    Draw Text "A Native Game Written In SMILE" At 370, 215 Size 19 Color LIGHT_GRAY Centered
+    Draw Text "Press Enter To Start" At 370, 335 Size 28 Color YELLOW Centered
+    Draw Text "WASD Or Arrow Keys To Move" At 370, 385 Size 18 Color WHITE Centered
+    Draw Text "Escape To Exit" At 370, 415 Size 18 Color LIGHT_GRAY Centered
+    Draw Text "High Score" At 835, 165 Size 20 Color LIGHT_GRAY Centered
+    Draw Number HighScore At 805, 205 Size 38 Color CYAN
+End Sub
 
-SUB DrawGameOver()
-    FILL ROUNDED RECTANGLE 145, 135, 590, 285, 22, RGB(16, 25, 45)
-    DRAW ROUNDED RECTANGLE 145, 135, 590, 285, 22, RGB(245, 45, 55)
-    DRAW TEXT "GAME OVER" AT 440, 185 SIZE 50 COLOR RED CENTERED
-    DRAW TEXT "FINAL SCORE" AT 330, 255 SIZE 22 COLOR LIGHT_GRAY CENTERED
-    DRAW NUMBER Score AT 530, 247 SIZE 38 COLOR YELLOW
-    DRAW TEXT "HIGH SCORE" AT 330, 305 SIZE 22 COLOR LIGHT_GRAY CENTERED
-    DRAW NUMBER HighScore AT 530, 297 SIZE 38 COLOR CYAN
-    DRAW TEXT "ENTER TO RETRY" AT 440, 360 SIZE 24 COLOR WHITE CENTERED
-    DRAW TEXT "ESCAPE TO EXIT" AT 440, 392 SIZE 18 COLOR LIGHT_GRAY CENTERED
-END SUB
+Sub DrawGameOver()
+    Fill Rounded Rectangle 145, 135, 590, 285, 22, Rgb(16, 25, 45)
+    Draw Rounded Rectangle 145, 135, 590, 285, 22, Rgb(245, 45, 55)
+    Draw Text "Game Over" At 440, 185 Size 50 Color RED Centered
+    Draw Text "Final Score" At 330, 255 Size 22 Color LIGHT_GRAY Centered
+    Draw Number Score At 530, 247 Size 38 Color YELLOW
+    Draw Text "High Score" At 330, 305 Size 22 Color LIGHT_GRAY Centered
+    Draw Number HighScore At 530, 297 Size 38 Color CYAN
+    Draw Text "Enter To Retry" At 440, 360 Size 24 Color WHITE Centered
+    Draw Text "Escape To Exit" At 440, 392 Size 18 Color LIGHT_GRAY Centered
+End Sub
 
-SUB EnterTitle()
+Sub EnterTitle()
     State = 0
     Key = KEY_NONE
-    STOP SOUND
-END SUB
+    Stop Sound
+End Sub
 
-SUB ResetGame()
-    CALL ResetPlay()
-END SUB
+Sub ResetGame()
+    Call ResetPlay()
+End Sub
 
-GAME WINDOW "SMILE 2.0 Snake"
+Game Window "SMILE 2.0 Snake"
 
-CALL EnterTitle()
+Call EnterTitle()
 
-DO
-    GET KEY Key
+Do
+    Get Key Key
 
-    IF State = 0 THEN
-        IF Key = KEY_ESCAPE THEN
-            END PROGRAM
-        ELSE IF Key = KEY_ENTER THEN
-            CALL ResetGame()
-        END IF
-        CALL DrawTitle()
-    ELSE IF State = 1 THEN
-        IF Key = KEY_ESCAPE THEN
-            END PROGRAM
-        END IF
+    If State = 0 Then
+        If Key = KEY_ESCAPE Then
+            End Program
+        Else If Key = KEY_ENTER Then
+            Call ResetGame()
+        End If
+        Call DrawTitle()
+    Else If State = 1 Then
+        If Key = KEY_ESCAPE Then
+            End Program
+        End If
 
-        IF (Key = KEY_W OR Key = KEY_UP) AND Direction &lt;&gt; KEY_DOWN THEN
+        If (Key = KEY_W Or Key = KEY_UP) And Direction &lt;&gt; KEY_DOWN Then
             NextDirection = KEY_UP
-        ELSE IF (Key = KEY_S OR Key = KEY_DOWN) AND Direction &lt;&gt; KEY_UP THEN
+        Else If (Key = KEY_S Or Key = KEY_DOWN) And Direction &lt;&gt; KEY_UP Then
             NextDirection = KEY_DOWN
-        ELSE IF (Key = KEY_A OR Key = KEY_LEFT) AND Direction &lt;&gt; KEY_RIGHT THEN
+        Else If (Key = KEY_A Or Key = KEY_LEFT) And Direction &lt;&gt; KEY_RIGHT Then
             NextDirection = KEY_LEFT
-        ELSE IF (Key = KEY_D OR Key = KEY_RIGHT) AND Direction &lt;&gt; KEY_LEFT THEN
+        Else If (Key = KEY_D Or Key = KEY_RIGHT) And Direction &lt;&gt; KEY_LEFT Then
             NextDirection = KEY_RIGHT
-        END IF
+        End If
 
-        IF State = 1 AND TIMER() &gt;= NextMoveTime THEN
-            CALL MoveSnake()
-        END IF
+        If State = 1 And Timer() &gt;= NextMoveTime Then
+            Call MoveSnake()
+        End If
 
-        CALL DrawBoard()
-        IF State = 2 THEN
-            CALL DrawGameOver()
-        END IF
-    ELSE
-        IF Key = KEY_ESCAPE THEN
-            END PROGRAM
-        ELSE IF Key = KEY_ENTER THEN
-            CALL ResetGame()
-        END IF
+        Call DrawBoard()
+        If State = 2 Then
+            Call DrawGameOver()
+        End If
+    Else
+        If Key = KEY_ESCAPE Then
+            End Program
+        Else If Key = KEY_ENTER Then
+            Call ResetGame()
+        End If
 
-        IF State = 0 THEN
-            CALL DrawTitle()
-        ELSE
-            CALL DrawBoard()
-            CALL DrawGameOver()
-        END IF
-    END IF
+        If State = 0 Then
+            Call DrawTitle()
+        Else
+            Call DrawBoard()
+            Call DrawGameOver()
+        End If
+    End If
 
-    SHOW SCREEN
-LOOP UNTIL GAME_CLOSED() = TRUE
+    Show Screen
+Loop Until Game_Closed() = True
 
-STOP SOUND
-END PROGRAM</code></pre>
+Stop Sound
+End Program</code></pre>
 </div>
 <div class="source-actions">
 <a class="source-button primary" href="../../games/Snake/Program-NoDemo.smile">Open official Program-NoDemo.smile</a>
@@ -300,8 +300,8 @@ END PROGRAM</code></pre>
 </div>
 <p class="small-note">The first two links use <code>../../games/Snake</code> and therefore open the files from the real SMILE 2.0 game folder when the tutorial is installed at <code>tutorials\Snake</code>. The snapshot links keep a matching reference copy inside the tutorial package.</p>
 <h2>Source map</h2>
-<div class="table-wrap"><table><thead><tr><th>Lines</th><th>Section</th><th>Question answered</th></tr></thead><tbody><tr><td><a class="source-range-link" data-line-end="14" data-line-start="1" href="#source-line-1">1&ndash;14</a></td><td>Constants and arrays</td><td>How big is the world and where can body coordinates be stored?</td></tr><tr><td><a class="source-range-link" data-line-end="32" data-line-start="16" href="#source-line-16">16&ndash;32</a></td><td>Variables and LOAD</td><td>What can change and what survives between runs?</td></tr><tr><td><a class="source-range-link" data-line-end="46" data-line-start="34" href="#source-line-34">34&ndash;46</a></td><td>SpawnFood</td><td>Where can food safely appear?</td></tr><tr><td><a class="source-range-link" data-line-end="62" data-line-start="48" href="#source-line-48">48&ndash;62</a></td><td>ResetSnakeBody</td><td>What does a new snake look like?</td></tr><tr><td><a class="source-range-link" data-line-end="81" data-line-start="64" href="#source-line-64">64&ndash;81</a></td><td>ResetPlay / EndRound</td><td>How does a round begin and finish?</td></tr><tr><td><a class="source-range-link" data-line-end="127" data-line-start="83" href="#source-line-83">83&ndash;127</a></td><td>MoveSnake</td><td>How does the world change one move at a time?</td></tr><tr><td><a class="source-range-link" data-line-end="182" data-line-start="129" href="#source-line-129">129&ndash;182</a></td><td>Drawing routines</td><td>How do current values become visible screens?</td></tr><tr><td><a class="source-range-link" data-line-end="192" data-line-start="184" href="#source-line-184">184&ndash;192</a></td><td>State helpers</td><td>How do we switch screens or restart?</td></tr><tr><td><a class="source-range-link" data-line-end="250" data-line-start="194" href="#source-line-194">194&ndash;250</a></td><td>Window and main loop</td><td>How does the game keep listening, updating, and drawing?</td></tr></tbody></table></div>
-<h2>Source authority</h2><p>This tutorial uses the repository&rsquo;s <a href="../../games/Snake/Program-NoDemo.smile"><code>games\Snake\Program-NoDemo.smile</code></a> file with blob SHA <code>2cd9c8d07d53aa1c108a54738a4f109920a663d8</code>, plus <a href="../../games/Snake/Snake.smileproj"><code>Snake.smileproj</code></a>, the Snake README, and the language documentation.</p>
+<div class="table-wrap"><table><thead><tr><th>Lines</th><th>Section</th><th>Question answered</th></tr></thead><tbody><tr><td><a class="source-range-link" data-line-end="14" data-line-start="1" href="#source-line-1">1&ndash;14</a></td><td>Constants and arrays</td><td>How big is the world and where can body coordinates be stored?</td></tr><tr><td><a class="source-range-link" data-line-end="32" data-line-start="16" href="#source-line-16">16&ndash;32</a></td><td>Variables and Load</td><td>What can change and what survives between runs?</td></tr><tr><td><a class="source-range-link" data-line-end="46" data-line-start="34" href="#source-line-34">34&ndash;46</a></td><td>SpawnFood</td><td>Where can food safely appear?</td></tr><tr><td><a class="source-range-link" data-line-end="62" data-line-start="48" href="#source-line-48">48&ndash;62</a></td><td>ResetSnakeBody</td><td>What does a new snake look like?</td></tr><tr><td><a class="source-range-link" data-line-end="81" data-line-start="64" href="#source-line-64">64&ndash;81</a></td><td>ResetPlay / EndRound</td><td>How does a round begin and finish?</td></tr><tr><td><a class="source-range-link" data-line-end="127" data-line-start="83" href="#source-line-83">83&ndash;127</a></td><td>MoveSnake</td><td>How does the world change one move at a time?</td></tr><tr><td><a class="source-range-link" data-line-end="182" data-line-start="129" href="#source-line-129">129&ndash;182</a></td><td>Drawing routines</td><td>How do current values become visible screens?</td></tr><tr><td><a class="source-range-link" data-line-end="192" data-line-start="184" href="#source-line-184">184&ndash;192</a></td><td>State helpers</td><td>How do we switch screens or restart?</td></tr><tr><td><a class="source-range-link" data-line-end="250" data-line-start="194" href="#source-line-194">194&ndash;250</a></td><td>Window and main loop</td><td>How does the game keep listening, updating, and drawing?</td></tr></tbody></table></div>
+<h2>Source authority</h2><p>This tutorial uses the repository&rsquo;s <a href="../../games/Snake/Program-NoDemo.smile"><code>games\Snake\Program-NoDemo.smile</code></a> file with blob Sha <code>2cd9c8d07d53aa1c108a54738a4f109920a663d8</code>, plus <a href="../../games/Snake/Snake.smileproj"><code>Snake.smileproj</code></a>, the Snake Readme, and the language documentation.</p>
 <section aria-labelledby="reinforce-title" class="reinforcement-panel">
 <p class="reinforcement-kicker">Repetition builds memory</p>
 <h2 id="reinforce-title">Reinforce what you learned</h2>
@@ -313,7 +313,7 @@ END PROGRAM</code></pre>
 </article>
 </main>
 <footer class="site-footer">
-<div class="footer-line">SMILE 2.0 (SinBASIC). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div>
+<div class="footer-line">SMILE 2.0 (SinBasic). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div>
 <div class="footer-line"><a href="https://github.com/Sincioco" rel="noopener" target="_blank">github.com/Sincioco</a> | <a href="https://facebook.com/louiery.sincioco" rel="noopener" target="_blank">facebook.com/louiery.sincioco</a> | <a href="https://linkedin.com/in/louierysincioco" rel="noopener" target="_blank">linkedin.com/in/louierysincioco</a> | <a href="https://youtube.com/@TheSincioco" rel="noopener" target="_blank">youtube.com/@TheSincioco</a> | <a href="https://tiktok.com/@sincioco" rel="noopener" target="_blank">tiktok.com/@sincioco</a></div>
 </footer>
 </div>

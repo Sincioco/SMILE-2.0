@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1020 460" role="img" aria-labelledby="t d">
-<title id="t">High score storage</title><desc id="d">SAVE moves the high score from game memory to storage, and LOAD restores it during a future run.</desc>
+<title id="t">High score storage</title><desc id="d">Save moves the high score from game memory to storage, and Load restores it during a future run.</desc>
 <defs><marker id="a1" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#ffd21f"/></marker><marker id="a2" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#5aa6ff"/></marker></defs>
 <rect x="10" y="10" width="1000" height="440" rx="30" fill="#071321"/>
-<text x="510" y="65" text-anchor="middle" fill="#50ed7a" font-family="Segoe UI, Arial" font-size="37" font-weight="900">HIGH SCORE SURVIVES AFTER THE GAME CLOSES</text>
+<text x="510" y="65" text-anchor="middle" fill="#50ed7a" font-family="Segoe UI, Arial" font-size="37" font-weight="900">High Score Survives After The Game Closes</text>
 <rect x="75" y="145" width="320" height="190" rx="24" fill="#12385a" stroke="#5aa6ff" stroke-width="4"/>
-<text x="235" y="205" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="27" font-weight="900">GAME MEMORY</text><text x="235" y="265" text-anchor="middle" fill="#ffd21f" font-family="Consolas, monospace" font-size="28">HighScore = 280</text>
+<text x="235" y="205" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="27" font-weight="900">Game Memory</text><text x="235" y="265" text-anchor="middle" fill="#ffd21f" font-family="Consolas, monospace" font-size="28">HighScore = 280</text>
 <rect x="625" y="145" width="320" height="190" rx="24" fill="#143728" stroke="#50ed7a" stroke-width="4"/>
-<text x="785" y="205" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="27" font-weight="900">STORAGE</text><text x="785" y="265" text-anchor="middle" fill="#50ed7a" font-family="Consolas, monospace" font-size="28">"HighScore"</text>
-<line x1="405" y1="205" x2="615" y2="205" stroke="#ffd21f" stroke-width="7" marker-end="url(#a1)"/><text x="510" y="180" text-anchor="middle" fill="#ffd21f" font-family="Segoe UI, Arial" font-size="23" font-weight="900">SAVE</text>
-<line x1="615" y1="293" x2="405" y2="293" stroke="#5aa6ff" stroke-width="7" marker-end="url(#a2)"/><text x="510" y="335" text-anchor="middle" fill="#80b9ff" font-family="Segoe UI, Arial" font-size="23" font-weight="900">LOAD</text>
-<text x="510" y="408" text-anchor="middle" fill="#b8cee2" font-family="Segoe UI, Arial" font-size="21">DEFAULT 0 is used when no saved value exists yet.</text>
+<text x="785" y="205" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial" font-size="27" font-weight="900">Storage</text><text x="785" y="265" text-anchor="middle" fill="#50ed7a" font-family="Consolas, monospace" font-size="28">"HighScore"</text>
+<line x1="405" y1="205" x2="615" y2="205" stroke="#ffd21f" stroke-width="7" marker-end="url(#a1)"/><text x="510" y="180" text-anchor="middle" fill="#ffd21f" font-family="Segoe UI, Arial" font-size="23" font-weight="900">Save</text>
+<line x1="615" y1="293" x2="405" y2="293" stroke="#5aa6ff" stroke-width="7" marker-end="url(#a2)"/><text x="510" y="335" text-anchor="middle" fill="#80b9ff" font-family="Segoe UI, Arial" font-size="23" font-weight="900">Load</text>
+<text x="510" y="408" text-anchor="middle" fill="#b8cee2" font-family="Segoe UI, Arial" font-size="21">Default 0 is used when no saved value exists yet.</text>
 </svg>

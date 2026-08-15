@@ -1,5 +1,5 @@
-MODULE Invalid.PrivateTypes
-PRIVATE TYPE Hidden
-    Value AS NUMBER
-END TYPE
-END MODULE
+Module Invalid.PrivateTypes
+Private Type Hidden
+    Value As Number
+End Type
+End Module

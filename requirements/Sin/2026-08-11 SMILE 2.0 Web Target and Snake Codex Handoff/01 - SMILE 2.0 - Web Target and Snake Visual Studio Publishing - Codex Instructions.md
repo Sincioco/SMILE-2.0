@@ -336,9 +336,9 @@ Required behavior:
 
 - preserve integer-only arithmetic;
 - implement `/` as integer division truncating toward zero;
-- preserve `MOD` behavior;
-- preserve inclusive `RANDOM ... FROM ... TO ...` behavior;
-- represent SMILE BOOLEAN runtime values compatibly with the existing native `0`/`1` behavior;
+- preserve `Mod` behavior;
+- preserve inclusive `Random ... From ... To ...` behavior;
+- represent SMILE Boolean runtime values compatibly with the existing native `0`/`1` behavior;
 - generate conditions by testing the SMILE Boolean value, not JavaScript object truthiness;
 - use clear safe-integer checks rather than silently producing inaccurate values outside JavaScript’s exact integer range.
 
@@ -348,8 +348,8 @@ A valid Web build that contains an unsafe integer literal or encounters an unsaf
 
 Support zero-initialized, fixed-size:
 
-- one-dimensional NUMBER arrays;
-- two-dimensional NUMBER arrays.
+- one-dimensional Number arrays;
+- two-dimensional Number arrays.
 
 Preserve the existing dimension and index order. Use a generic representation such as flat arrays with calculated offsets or arrays of arrays. Do not specialize for Snake.
 
@@ -358,43 +358,43 @@ Preserve the existing dimension and index order. Use a generic representation su
 The Web emitter must correctly generate the forms used by both Snake sources:
 
 - top-level assignments and implicit variable declarations as defined by the semantic model;
-- `CONST`;
-- `DIM` with one or two dimensions;
+- `Const`;
+- `Dim` with one or two dimensions;
 - scalar and array-element assignment;
-- `IF / ELSE IF / ELSE / END IF`;
-- ascending `FOR`;
-- descending `FOR ... DOWN TO`;
-- post-test `DO / LOOP UNTIL`;
-- `SUB`, `FUNCTION`, parameters, `CALL`, and `RETURN`;
-- `GET KEY`;
-- `RANDOM`;
-- `LOAD ... DEFAULT` and `SAVE`;
-- `GAME WINDOW`;
-- `CLEAR <color>`;
+- `If / Else If / Else / End If`;
+- ascending `For`;
+- descending `For ... Down To`;
+- post-test `Do / Loop Until`;
+- `Sub`, `Function`, parameters, `Call`, and `Return`;
+- `Get Key`;
+- `Random`;
+- `Load ... Default` and `Save`;
+- `Game Window`;
+- `Clear <color>`;
 - filled and outlined rectangles;
 - filled and outlined rounded rectangles;
-- `DRAW TEXT`;
-- `DRAW NUMBER`;
-- `PLAY SOUND` and `STOP SOUND`;
-- `SHOW SCREEN`;
-- `END PROGRAM`.
+- `Draw Text`;
+- `Draw Number`;
+- `Play Sound` and `Stop Sound`;
+- `Show Screen`;
+- `End Program`.
 
 Also emit the expression forms Snake uses:
 
 - numeric, Boolean, and text literals where valid;
 - variables, constants, and array elements;
-- unary minus and `NOT`;
-- `+`, `-`, `*`, integer `/`, `MOD`;
+- unary minus and `Not`;
+- `+`, `-`, `*`, integer `/`, `Mod`;
 - comparisons and equality;
-- `AND` and `OR` with correct short-circuit behavior;
+- `And` and `Or` with correct short-circuit behavior;
 - parentheses;
 - routine calls;
-- `TIMER()`;
-- `ABS()`;
-- `MIN()`;
-- `MAX()`;
-- `RGB()`;
-- `GAME_CLOSED()`;
+- `Timer()`;
+- `Abs()`;
+- `Min()`;
+- `Max()`;
+- `Rgb()`;
+- `Game_Closed()`;
 - built-in key and color constants.
 
 Unsupported valid statements must produce a Web-target diagnostic rather than a `NotImplementedException`, null reference, invalid JavaScript, or silent omission.
@@ -403,7 +403,7 @@ Unsupported valid statements must produce a Web-target diagnostic rather than a 
 
 Do not emit Snake’s outer game loop as a synchronous JavaScript busy loop. That would freeze the browser.
 
-The generated program must cooperate with the browser event loop. `SHOW SCREEN` is the frame boundary and must yield until a browser animation frame.
+The generated program must cooperate with the browser event loop. `Show Screen` is the frame boundary and must yield until a browser animation frame.
 
 A suitable conceptual result is:
 
@@ -420,7 +420,7 @@ async function smileMain() {
 
 Requirements:
 
-- `SHOW SCREEN` presents the completed frame and yields with `requestAnimationFrame`.
+- `Show Screen` presents the completed frame and yields with `requestAnimationFrame`.
 - The browser continues processing keyboard, audio, resize, and paint events.
 - Do not convert the game into timer callbacks with game-specific state machines.
 - Do not rewrite `Program.smile` to accommodate browser scheduling.
@@ -435,11 +435,11 @@ Create a small generic browser runtime used by generated Web games.
 ### 7.1 Canvas and presentation
 
 - Create one visible HTML canvas.
-- Use the logical dimensions declared by `GAME WINDOW`; retain the current default logical canvas when size is omitted. Snake uses the existing 960-by-540 logical game space.
+- Use the logical dimensions declared by `Game Window`; retain the current default logical canvas when size is omitted. Snake uses the existing 960-by-540 logical game space.
 - Preserve the logical coordinate system.
 - Scale responsively in CSS while keeping the aspect ratio.
 - Center the game and letterbox with a neutral/black surrounding background when needed.
-- Use a separate in-memory canvas as a back buffer if needed so `SHOW SCREEN` presents complete frames rather than partially drawn frames.
+- Use a separate in-memory canvas as a back buffer if needed so `Show Screen` presents complete frames rather than partially drawn frames.
 - Use Canvas 2D only for this milestone.
 - Use a normal system font stack led by Segoe UI for text.
 - Match current SMILE text positioning and centering closely enough that the Snake title, score panel, board, and game-over overlay are readable and correctly placed.
@@ -454,7 +454,7 @@ green = (color >> 8) & 0xFF
 blue  = (color >> 16) & 0xFF
 ```
 
-Do not treat the values as ordinary `0xRRGGBB` without conversion. `RED`, `BLUE`, `RGB(...)`, and all named colors must display correctly.
+Do not treat the values as ordinary `0xRRGGBB` without conversion. `RED`, `BLUE`, `Rgb(...)`, and all named colors must display correctly.
 
 ### 7.3 Drawing primitives needed by Snake
 
@@ -488,7 +488,7 @@ Map at least:
 
 Requirements:
 
-- `GET KEY` is non-blocking and consumes one queued key event or returns `KEY_NONE`.
+- `Get Key` is non-blocking and consumes one queued key event or returns `KEY_NONE`.
 - Prevent default browser scrolling for game-control keys while the game is active.
 - Ignore or deliberately handle key-repeat consistently.
 - Clear held/queued state appropriately on focus loss.
@@ -507,18 +507,18 @@ Map Alt+Enter to the browser Fullscreen API when allowed by the browser.
 
 ### 7.6 Timing and random values
 
-- `TIMER()` returns monotonically increasing integer milliseconds based on `performance.now()` or an equivalent browser clock.
-- `RANDOM` is inclusive at both ends, matching the existing SMILE contract.
+- `Timer()` returns monotonically increasing integer milliseconds based on `performance.now()` or an equivalent browser clock.
+- `Random` is inclusive at both ends, matching the existing SMILE contract.
 
 ### 7.7 Sound
 
-Snake uses WAV effects through `PLAY SOUND`.
+Snake uses WAV effects through `Play Sound`.
 
 Implement the existing one-effect-at-a-time model with browser audio:
 
 - normalize SMILE backslashes to URL forward slashes;
 - stop/restart the previous effect as required by current behavior;
-- `STOP SOUND` stops the current effect;
+- `Stop Sound` stops the current effect;
 - catch browser `play()` rejection instead of producing an unhandled promise rejection;
 - audio that is blocked before the first user interaction may be suppressed, but the game must continue without crashing;
 - after a user key/click unlocks audio, later effects should play;
@@ -531,8 +531,8 @@ Do not add music support merely for Snake unless it falls out naturally from a t
 Map:
 
 ```smile
-LOAD HighScore FROM "HighScore" DEFAULT 0
-SAVE HighScore TO "HighScore"
+Load HighScore From "HighScore" Default 0
+Save HighScore To "HighScore"
 ```
 
 onto browser `localStorage`.
@@ -547,8 +547,8 @@ Requirements:
 
 ### 7.9 Program lifecycle and errors
 
-- `GAME_CLOSED()` returns false while the browser game is running and true once the runtime has stopped.
-- `END PROGRAM` stops the generated game loop cleanly. A browser tab usually cannot close itself; leaving the final frame or showing a small stopped/reload message is acceptable.
+- `Game_Closed()` returns false while the browser game is running and true once the runtime has stopped.
+- `End Program` stops the generated game loop cleanly. A browser tab usually cannot close itself; leaving the final frame or showing a small stopped/reload message is acceptable.
 - Unhandled runtime errors must be written to the browser console and shown in a small readable error panel rather than leaving a blank page.
 - Expose a small generic status hook for focused automated validation, for example:
 
@@ -834,8 +834,8 @@ Build/install the current VSIX using the repository’s supported process. Then 
 
 In an editor buffer, invoke completion and confirm at least:
 
-- a known keyword such as `PRINT` appears;
-- a built-in such as `RGB` or `GAME_CLOSED` appears;
+- a known keyword such as `Print` appears;
+- a built-in such as `Rgb` or `Game_Closed` appears;
 - a Snake symbol such as `Score`, `SnakeX`, or `MoveSnake` appears in the proper source context.
 
 Undo any temporary typing. Do not leave test edits in game source.
@@ -843,7 +843,7 @@ Undo any temporary typing. Do not leave test edits in game source.
 #### C. Windows breakpoint regression
 
 1. Select `Debug|x64`.
-2. Set a breakpoint on a guaranteed reachable `.smile` line, such as the top-level `CALL EnterTitle()` immediately after `GAME WINDOW`.
+2. Set a breakpoint on a guaranteed reachable `.smile` line, such as the top-level `Call EnterTitle()` immediately after `Game Window`.
 3. Press F5.
 4. Confirm the breakpoint binds and is hit in the `.smile` source.
 5. Continue briefly and close the game.

@@ -1,1 +1,1 @@
-CONST MaximumValues = BaseValues + ExtraValues
+Const MaximumValues = BaseValues + ExtraValues

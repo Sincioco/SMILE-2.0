@@ -1,51 +1,51 @@
-OPTION EXPLICIT
+Option Explicit
 
-IMPORT Smile.UI.Core AS UI
-IMPORT Smile.UI.BitmapFont AS BitmapFont
-IMPORT Smile.UI.Menu AS Menu
-IMPORT Smile.UI.MenuNavigator AS MenuNavigator
+Import Smile.UI.Core As UI
+Import Smile.UI.BitmapFont As BitmapFont
+Import Smile.UI.Menu As Menu
+Import Smile.UI.MenuNavigator As MenuNavigator
 
-GAME WINDOW "Phase 5.2.1 Submenu Viewport" SIZE 640 BY 360
+Game Window "Phase 5.2.1 Submenu Viewport" Size 640 By 360
 
-DIM CursorImage AS IMAGE
-DIM FontAtlas AS IMAGE
-DIM FontDefinition AS UI.BitmapFontStyle
-DIM FontHandle AS NUMBER
-DIM SystemText AS UI.TextStyle
-DIM SystemSelected AS UI.TextStyle
-DIM SystemDisabled AS UI.TextStyle
-DIM BitmapText AS UI.TextStyle
-DIM BitmapSelected AS UI.TextStyle
-DIM BitmapDisabled AS UI.TextStyle
-DIM SmallText AS UI.TextStyle
-DIM MenuStyle AS UI.MenuStyle
-DIM WrapStyle AS UI.MenuStyle
-DIM GeometryStyle AS UI.MenuStyle
-DIM NoScrollbarStyle AS UI.MenuStyle
-DIM NavigatorStyle AS UI.MenuNavigatorStyle
-DIM Root AS NUMBER
-DIM Child AS NUMBER
-DIM Grandchild AS NUMBER
-DIM Navigator AS NUMBER
-DIM FiveMenu AS NUMBER
-DIM TwentyMenu AS NUMBER
-DIM SixtyFourMenu AS NUMBER
-DIM AllVisibleMenu AS NUMBER
-DIM HiddenScrollbarMenu AS NUMBER
-DIM TinyMenu AS NUMBER
-DIM RootLongShared AS NUMBER
-DIM RootDisabled AS NUMBER
-DIM RootSubmenu AS NUMBER
-DIM ChildSubmenu AS NUMBER
-DIM ItemIndex AS NUMBER
-DIM Result AS BOOLEAN
-DIM Event AS NUMBER
-DIM Key AS NUMBER
-DIM Running AS BOOLEAN
-DIM I AS NUMBER
+Dim CursorImage As Image
+Dim FontAtlas As Image
+Dim FontDefinition As UI.BitmapFontStyle
+Dim FontHandle As Number
+Dim SystemText As UI.TextStyle
+Dim SystemSelected As UI.TextStyle
+Dim SystemDisabled As UI.TextStyle
+Dim BitmapText As UI.TextStyle
+Dim BitmapSelected As UI.TextStyle
+Dim BitmapDisabled As UI.TextStyle
+Dim SmallText As UI.TextStyle
+Dim MenuStyle As UI.MenuStyle
+Dim WrapStyle As UI.MenuStyle
+Dim GeometryStyle As UI.MenuStyle
+Dim NoScrollbarStyle As UI.MenuStyle
+Dim NavigatorStyle As UI.MenuNavigatorStyle
+Dim Root As Number
+Dim Child As Number
+Dim Grandchild As Number
+Dim Navigator As Number
+Dim FiveMenu As Number
+Dim TwentyMenu As Number
+Dim SixtyFourMenu As Number
+Dim AllVisibleMenu As Number
+Dim HiddenScrollbarMenu As Number
+Dim TinyMenu As Number
+Dim RootLongShared As Number
+Dim RootDisabled As Number
+Dim RootSubmenu As Number
+Dim ChildSubmenu As Number
+Dim ItemIndex As Number
+Dim Result As Boolean
+Dim Event As Number
+Dim Key As Number
+Dim Running As Boolean
+Dim I As Number
 
-LOAD IMAGE CursorImage FROM "Assets\Cursor.png"
-LOAD IMAGE FontAtlas FROM "Assets\BitmapFont.png"
+Load Image CursorImage From "Assets\Cursor.png"
+Load Image FontAtlas From "Assets\BitmapFont.png"
 
 FontDefinition.Atlas = FontAtlas
 FontDefinition.FirstCodePoint = 32
@@ -81,26 +81,26 @@ BitmapText.LineSpacing = 2
 BitmapSelected = BitmapText
 BitmapDisabled = BitmapText
 
-MenuStyle.Window.FillColor = RGB(12, 22, 48)
+MenuStyle.Window.FillColor = Rgb(12, 22, 48)
 MenuStyle.Window.BorderColor = CYAN
 MenuStyle.Window.BorderThickness = 2
-MenuStyle.Window.Padding.Left = 10
+MenuStyle.Window.Padding.LEFT = 10
 MenuStyle.Window.Padding.Top = 10
-MenuStyle.Window.Padding.Right = 10
+MenuStyle.Window.Padding.RIGHT = 10
 MenuStyle.Window.Padding.Bottom = 10
 MenuStyle.NormalText = SystemText
 MenuStyle.SelectedText = SystemSelected
 MenuStyle.DisabledText = SystemDisabled
-MenuStyle.SelectionFillColor = RGB(35, 70, 118)
-MenuStyle.UseCursor = TRUE
+MenuStyle.SelectionFillColor = Rgb(35, 70, 118)
+MenuStyle.UseCursor = True
 MenuStyle.Cursor = CursorImage
 MenuStyle.CursorWidth = 20
 MenuStyle.CursorHeight = 20
 MenuStyle.CursorFilterMode = UI.UI_FILTER_SMOOTH
 MenuStyle.RowHeight = 32
-MenuStyle.WrapSelection = TRUE
-MenuStyle.ShowScrollbar = FALSE
-MenuStyle.ShowSubmenuIndicator = TRUE
+MenuStyle.WrapSelection = True
+MenuStyle.ShowScrollbar = False
+MenuStyle.ShowSubmenuIndicator = True
 MenuStyle.SubmenuIndicatorPosition = UI.UI_SUBMENU_INDICATOR_RIGHT_ALIGNED
 MenuStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_ELLIPSIS
 MenuStyle.ItemTextMaxLines = 1
@@ -112,20 +112,20 @@ WrapStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_WRAP
 WrapStyle.ItemTextMaxLines = 2
 
 GeometryStyle = MenuStyle
-GeometryStyle.Window.Padding.Left = 2
+GeometryStyle.Window.Padding.LEFT = 2
 GeometryStyle.Window.Padding.Top = 2
-GeometryStyle.Window.Padding.Right = 2
+GeometryStyle.Window.Padding.RIGHT = 2
 GeometryStyle.Window.Padding.Bottom = 2
 GeometryStyle.NormalText = SmallText
 GeometryStyle.SelectedText = SmallText
 GeometryStyle.DisabledText = SmallText
-GeometryStyle.UseCursor = FALSE
+GeometryStyle.UseCursor = False
 GeometryStyle.RowHeight = 12
-GeometryStyle.ShowScrollbar = TRUE
-GeometryStyle.ShowSubmenuIndicator = FALSE
+GeometryStyle.ShowScrollbar = True
+GeometryStyle.ShowSubmenuIndicator = False
 GeometryStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_CLIP
 NoScrollbarStyle = GeometryStyle
-NoScrollbarStyle.ShowScrollbar = FALSE
+NoScrollbarStyle.ShowScrollbar = False
 
 FiveMenu = Menu.Create(GeometryStyle, 8, 60, 90, 52, 4)
 TwentyMenu = Menu.Create(GeometryStyle, 106, 60, 90, 52, 4)
@@ -133,62 +133,62 @@ SixtyFourMenu = Menu.Create(GeometryStyle, 204, 60, 90, 52, 4)
 AllVisibleMenu = Menu.Create(GeometryStyle, 302, 60, 90, 52, 4)
 HiddenScrollbarMenu = Menu.Create(NoScrollbarStyle, 400, 60, 90, 52, 4)
 TinyMenu = Menu.Create(GeometryStyle, 498, 60, 60, 7, 1)
-FOR I = 0 TO 4
-    ItemIndex = Menu.AddItem(FiveMenu, "FIVE", I, TRUE)
-    ItemIndex = Menu.AddItem(HiddenScrollbarMenu, "HIDDEN", I, TRUE)
-    ItemIndex = Menu.AddItem(TinyMenu, "TINY", I, TRUE)
-END FOR
-FOR I = 0 TO 19
-    ItemIndex = Menu.AddItem(TwentyMenu, "TWENTY", I, TRUE)
-END FOR
-FOR I = 0 TO 63
-    ItemIndex = Menu.AddItem(SixtyFourMenu, "SIXTY FOUR", I, TRUE)
-END FOR
-FOR I = 0 TO 3
-    ItemIndex = Menu.AddItem(AllVisibleMenu, "VISIBLE", I, TRUE)
-END FOR
+For I = 0 To 4
+    ItemIndex = Menu.AddItem(FiveMenu, "Five", I, True)
+    ItemIndex = Menu.AddItem(HiddenScrollbarMenu, "Hidden", I, True)
+    ItemIndex = Menu.AddItem(TinyMenu, "Tiny", I, True)
+End For
+For I = 0 To 19
+    ItemIndex = Menu.AddItem(TwentyMenu, "Twenty", I, True)
+End For
+For I = 0 To 63
+    ItemIndex = Menu.AddItem(SixtyFourMenu, "Sixty Four", I, True)
+End For
+For I = 0 To 3
+    ItemIndex = Menu.AddItem(AllVisibleMenu, "Visible", I, True)
+End For
 
 Root = Menu.Create(MenuStyle, 430, 185, 190, 160, 4)
 Child = Menu.Create(WrapStyle, 0, 0, 230, 165, 2)
 Grandchild = Menu.Create(MenuStyle, 0, 0, 245, 150, 4)
 
-ItemIndex = Menu.AddItem(Root, "SHORT LEAF", 10, TRUE)
-RootLongShared = Menu.AddItem(Root, "A VERY LONG SHARED CATEGORY NAME", 11, TRUE)
-RootDisabled = Menu.AddItem(Root, "DISABLED CATEGORY", 12, FALSE)
-RootSubmenu = Menu.AddItem(Root, "DISPLAY AND ACCESSIBILITY SETTINGS", 13, TRUE)
+ItemIndex = Menu.AddItem(Root, "Short Leaf", 10, True)
+RootLongShared = Menu.AddItem(Root, "A Very Long Shared Category Name", 11, True)
+RootDisabled = Menu.AddItem(Root, "Disabled Category", 12, False)
+RootSubmenu = Menu.AddItem(Root, "Display And Accessibility Settings", 13, True)
 
-ChildSubmenu = Menu.AddItem(Child, "A WRAPPED CHILD OPTION WITH EXPLICIT
-MULTILINE CONTENT AND FINAL OVERFLOW", 20, TRUE)
-ItemIndex = Menu.AddItem(Child, "CHILD LEAF", 21, TRUE)
+ChildSubmenu = Menu.AddItem(Child, "A Wrapped Child Option With Explicit
+Multiline Content And Final Overflow", 20, True)
+ItemIndex = Menu.AddItem(Child, "Child Leaf", 21, True)
 
-ItemIndex = Menu.AddItem(Grandchild, "DEEPEST ACCEPTED LEAF", 30, TRUE)
-ItemIndex = Menu.AddItem(Grandchild, "ANOTHER VERY LONG LEAF THAT ELLIPSIZES", 31, TRUE)
+ItemIndex = Menu.AddItem(Grandchild, "Deepest Accepted Leaf", 30, True)
+ItemIndex = Menu.AddItem(Grandchild, "Another Very Long Leaf That Ellipsizes", 31, True)
 
 NavigatorStyle.Viewport.X = 0
 NavigatorStyle.Viewport.Y = 0
 NavigatorStyle.Viewport.Width = 640
 NavigatorStyle.Viewport.Height = 360
-NavigatorStyle.ViewportPadding.Left = 8
+NavigatorStyle.ViewportPadding.LEFT = 8
 NavigatorStyle.ViewportPadding.Top = 8
-NavigatorStyle.ViewportPadding.Right = 8
+NavigatorStyle.ViewportPadding.RIGHT = 8
 NavigatorStyle.ViewportPadding.Bottom = 8
 NavigatorStyle.HorizontalGap = 8
 NavigatorStyle.PreferredDirection = UI.UI_SUBMENU_DIRECTION_AUTO
 
 Navigator = MenuNavigator.Create(Root, NavigatorStyle)
 Result = Navigator > 0
-Result = Result AND MenuNavigator.BindSubmenu(Navigator, Root, RootLongShared, Child, FALSE)
-Result = Result AND MenuNavigator.BindSubmenu(Navigator, Root, RootDisabled, Grandchild, FALSE)
-Result = Result AND MenuNavigator.BindSubmenu(Navigator, Root, RootSubmenu, Child, TRUE)
-Result = Result AND MenuNavigator.BindSubmenu(Navigator, Child, ChildSubmenu, Grandchild, TRUE)
-Result = Result AND Menu.SetSelectedIndex(Root, RootSubmenu)
-Running = Result AND FiveMenu > 0 AND TwentyMenu > 0 AND SixtyFourMenu > 0 AND AllVisibleMenu > 0 AND HiddenScrollbarMenu > 0 AND TinyMenu > 0
+Result = Result And MenuNavigator.BindSubmenu(Navigator, Root, RootLongShared, Child, False)
+Result = Result And MenuNavigator.BindSubmenu(Navigator, Root, RootDisabled, Grandchild, False)
+Result = Result And MenuNavigator.BindSubmenu(Navigator, Root, RootSubmenu, Child, True)
+Result = Result And MenuNavigator.BindSubmenu(Navigator, Child, ChildSubmenu, Grandchild, True)
+Result = Result And Menu.SetSelectedIndex(Root, RootSubmenu)
+Running = Result And FiveMenu > 0 And TwentyMenu > 0 And SixtyFourMenu > 0 And AllVisibleMenu > 0 And HiddenScrollbarMenu > 0 And TinyMenu > 0
 
-DO
-    GET KEY Key
+Do
+    Get Key Key
     Event = UI.UI_EVENT_NONE
 
-    IF Key = KEY_1 THEN
+    If Key = KEY_1 Then
         MenuStyle.NormalText = SystemText
         MenuStyle.SelectedText = SystemSelected
         MenuStyle.DisabledText = SystemDisabled
@@ -196,10 +196,10 @@ DO
         WrapStyle.SelectedText = SystemSelected
         WrapStyle.DisabledText = SystemDisabled
         Result = Menu.SetStyle(Root, MenuStyle)
-        Result = Result AND Menu.SetStyle(Child, WrapStyle)
-        Result = Result AND Menu.SetStyle(Grandchild, MenuStyle)
-        Running = Running AND Result
-    ELSE IF Key = KEY_2 THEN
+        Result = Result And Menu.SetStyle(Child, WrapStyle)
+        Result = Result And Menu.SetStyle(Grandchild, MenuStyle)
+        Running = Running And Result
+    Else If Key = KEY_2 Then
         MenuStyle.NormalText = BitmapText
         MenuStyle.SelectedText = BitmapSelected
         MenuStyle.DisabledText = BitmapDisabled
@@ -207,38 +207,38 @@ DO
         WrapStyle.SelectedText = BitmapSelected
         WrapStyle.DisabledText = BitmapDisabled
         Result = Menu.SetStyle(Root, MenuStyle)
-        Result = Result AND Menu.SetStyle(Child, WrapStyle)
-        Result = Result AND Menu.SetStyle(Grandchild, MenuStyle)
-        Running = Running AND Result
-    ELSE
+        Result = Result And Menu.SetStyle(Child, WrapStyle)
+        Result = Result And Menu.SetStyle(Grandchild, MenuStyle)
+        Running = Running And Result
+    Else
         Event = MenuNavigator.HandleKey(Navigator, Key)
-    END IF
+    End If
 
-    CLEAR RGB(4, 8, 20)
-    CALL Menu.Draw(FiveMenu)
-    CALL Menu.Draw(TwentyMenu)
-    CALL Menu.Draw(SixtyFourMenu)
-    CALL Menu.Draw(AllVisibleMenu)
-    CALL Menu.Draw(HiddenScrollbarMenu)
-    CALL Menu.Draw(TinyMenu)
-    CALL MenuNavigator.DrawStack(Navigator)
-    DRAW TEXT "RIGHT/ENTER OPEN   LEFT/ESC BACK   1 SYSTEM   2 BITMAP" AT 320, 12 SIZE 15 COLOR WHITE CENTERED
-    SHOW SCREEN
-    WAIT 8 MILLISECONDS
-LOOP UNTIL GAME_CLOSED() = TRUE OR Running = FALSE
+    Clear Rgb(4, 8, 20)
+    Call Menu.Draw(FiveMenu)
+    Call Menu.Draw(TwentyMenu)
+    Call Menu.Draw(SixtyFourMenu)
+    Call Menu.Draw(AllVisibleMenu)
+    Call Menu.Draw(HiddenScrollbarMenu)
+    Call Menu.Draw(TinyMenu)
+    Call MenuNavigator.DrawStack(Navigator)
+    Draw Text "Right/Enter Open   Left/Esc Back   1 System   2 Bitmap" At 320, 12 Size 15 Color WHITE Centered
+    Show Screen
+    Wait 8 Milliseconds
+Loop Until Game_Closed() = True Or Running = False
 
-CALL MenuNavigator.Destroy(Navigator)
-CALL Menu.Destroy(TinyMenu)
-CALL Menu.Destroy(HiddenScrollbarMenu)
-CALL Menu.Destroy(AllVisibleMenu)
-CALL Menu.Destroy(SixtyFourMenu)
-CALL Menu.Destroy(TwentyMenu)
-CALL Menu.Destroy(FiveMenu)
-CALL Menu.Destroy(Grandchild)
-CALL Menu.Destroy(Child)
-CALL Menu.Destroy(Root)
-CALL BitmapFont.Destroy(FontHandle)
-UNLOAD IMAGE FontAtlas
-UNLOAD IMAGE CursorImage
+Call MenuNavigator.Destroy(Navigator)
+Call Menu.Destroy(TinyMenu)
+Call Menu.Destroy(HiddenScrollbarMenu)
+Call Menu.Destroy(AllVisibleMenu)
+Call Menu.Destroy(SixtyFourMenu)
+Call Menu.Destroy(TwentyMenu)
+Call Menu.Destroy(FiveMenu)
+Call Menu.Destroy(Grandchild)
+Call Menu.Destroy(Child)
+Call Menu.Destroy(Root)
+Call BitmapFont.Destroy(FontHandle)
+Unload Image FontAtlas
+Unload Image CursorImage
 
-END PROGRAM
+End Program

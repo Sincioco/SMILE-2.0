@@ -13,11 +13,11 @@ Browser `.smile` breakpoints remain out of scope.
 Given:
 
 ```smile
-SUB MoveMarker(Amount)
+Sub MoveMarker(Amount)
     SharedState[STATE_X] = SharedState[STATE_X] + Amount
-    SharedState[STATE_X] = MAX(MinimumMarkerX, SharedState[STATE_X])
-    SharedState[STATE_X] = MIN(MaximumMarkerX, SharedState[STATE_X])
-END SUB
+    SharedState[STATE_X] = Max(MinimumMarkerX, SharedState[STATE_X])
+    SharedState[STATE_X] = Min(MaximumMarkerX, SharedState[STATE_X])
+End Sub
 ```
 
 When a breakpoint stops on the first assignment:
@@ -35,10 +35,10 @@ For:
 
 ```text
 Program.smile
-    CALL MoveMarker(-4)
+    Call MoveMarker(-4)
 
 GameState.smile
-    SUB MoveMarker(Amount)
+    Sub MoveMarker(Amount)
 ```
 
 Required:
@@ -56,17 +56,17 @@ Required:
 Test stepping through representative:
 
 - assignment;
-- `IF` / `ELSE IF`;
-- `FOR`;
-- `DO` / `LOOP`;
-- `SELECT CASE`;
-- `CALL`;
+- `If` / `Else If`;
+- `For`;
+- `Do` / `Loop`;
+- `Select Case`;
+- `Call`;
 - function call;
-- `RETURN`;
-- `EXIT FOR`;
-- `EXIT DO`;
-- `SHOW SCREEN`;
-- `WAIT`;
+- `Return`;
+- `Exit For`;
+- `Exit Do`;
+- `Show Screen`;
+- `Wait`;
 - a support routine calling another support routine.
 
 The debugger should present only executable SMILE statements that are actually reached.

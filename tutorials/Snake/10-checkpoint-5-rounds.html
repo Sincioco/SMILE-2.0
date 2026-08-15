@@ -42,29 +42,29 @@
 <div class="step-heading"><span class="step-badge">5</span><div><h2>Paste ResetPlay and EndRound</h2><p>These two routines define the round lifecycle.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 5 &mdash; exact official code</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="64">SUB ResetPlay()
-    CALL ResetSnakeBody()
+<pre><code class="language-smile" data-source-start="64">Sub ResetPlay()
+    Call ResetSnakeBody()
     Score = 0
     MoveDelay = StartDelay
-    CALL SpawnFood()
-    NextMoveTime = TIMER() + StartDelay
+    Call SpawnFood()
+    NextMoveTime = Timer() + StartDelay
     State = 1
-    PLAY SOUND "Assets\Start.wav"
-END SUB
+    Play Sound "Assets\Start.wav"
+End Sub
 
-SUB EndRound()
+Sub EndRound()
     State = 2
-    IF Score &gt; HighScore THEN
+    If Score &gt; HighScore Then
         HighScore = Score
-        SAVE HighScore TO "HighScore"
-    END IF
-    PLAY SOUND "Assets\GameOver.wav"
-END SUB</code></pre>
+        Save HighScore To "HighScore"
+    End If
+    Play Sound "Assets\GameOver.wav"
+End Sub</code></pre>
 </div>
 <div class="card-grid"><article class="card accent-green"><h3>ResetPlay()</h3><ol><li>Rebuild the body.</li><li>Reset score and delay.</li><li>Spawn food.</li><li>Schedule the first move.</li><li>Change to State 1.</li><li>Play Start.wav.</li></ol></article><article class="card accent-red"><h3>EndRound()</h3><ol><li>Change to State 2.</li><li>Compare score and high score.</li><li>Save a new high score.</li><li>Play GameOver.wav.</li></ol></article></div>
 <h2>Timing formula</h2>
-<p><code>NextMoveTime = TIMER() + StartDelay</code> schedules the first move instead of freezing the whole program.</p>
-<div class="table-wrap"><table><thead><tr><th>Current TIMER()</th><th>StartDelay</th><th>First move allowed at</th></tr></thead><tbody><tr><td>5,000 ms</td><td>100 ms</td><td>5,100 ms</td></tr></tbody></table></div>
+<p><code>NextMoveTime = Timer() + StartDelay</code> schedules the first move instead of freezing the whole program.</p>
+<div class="table-wrap"><table><thead><tr><th>Current Timer()</th><th>StartDelay</th><th>First move allowed at</th></tr></thead><tbody><tr><td>5,000 ms</td><td>100 ms</td><td>5,100 ms</td></tr></tbody></table></div>
 <aside class="callout tip"><h3>Repository asset shortcut</h3><p>The project includes the whole <code>Assets</code> tree, so normal builds copy the three WAV files beside the generated game.</p></aside>
 <section aria-labelledby="reinforce-title" class="reinforcement-panel">
 <p class="reinforcement-kicker">Repetition builds memory</p>
@@ -77,7 +77,7 @@ END SUB</code></pre>
 </article>
 </main>
 <footer class="site-footer">
-<div class="footer-line">SMILE 2.0 (SinBASIC). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div>
+<div class="footer-line">SMILE 2.0 (SinBasic). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div>
 <div class="footer-line"><a href="https://github.com/Sincioco" rel="noopener" target="_blank">github.com/Sincioco</a> | <a href="https://facebook.com/louiery.sincioco" rel="noopener" target="_blank">facebook.com/louiery.sincioco</a> | <a href="https://linkedin.com/in/louierysincioco" rel="noopener" target="_blank">linkedin.com/in/louierysincioco</a> | <a href="https://youtube.com/@TheSincioco" rel="noopener" target="_blank">youtube.com/@TheSincioco</a> | <a href="https://tiktok.com/@sincioco" rel="noopener" target="_blank">tiktok.com/@sincioco</a></div>
 </footer>
 </div>

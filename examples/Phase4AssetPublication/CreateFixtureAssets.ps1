@@ -58,7 +58,7 @@ Write-TinyWav (Join-Path $root 'Assets\Audio\Sub\Confirm.wav') 660
 Write-TinyWav (Join-Path $root 'Assets\UI\Click.wav') 330
 
 [IO.File]::WriteAllText((Join-Path $root 'Assets\Exact\Readme.txt'), 'EXACT ASSET')
-[IO.File]::WriteAllText((Join-Path $root 'Assets\Audio\Sub\Notes.txt'), 'MUST NOT PUBLISH')
-[IO.File]::WriteAllText((Join-Path $root 'Assets\Unlisted\Secret.txt'), 'MUST NOT PUBLISH')
+[IO.File]::WriteAllText((Join-Path $root 'Assets\Audio\Sub\Notes.txt'), 'MUST Not PUBLISH')
+[IO.File]::WriteAllText((Join-Path $root 'Assets\Unlisted\Secret.txt'), 'MUST Not PUBLISH')
 
 Write-Output 'Phase 4.2 asset fixture generated.'

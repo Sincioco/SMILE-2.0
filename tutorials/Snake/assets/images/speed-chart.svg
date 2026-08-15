@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" role="img" aria-labelledby="t d">
 <title id="t">Snake speed progression</title><desc id="d">As score rises the delay between moves drops in steps, but never below 45 milliseconds.</desc>
 <rect x="10" y="10" width="1180" height="680" rx="32" fill="#071321"/>
-<text x="600" y="65" text-anchor="middle" fill="#50ed7a" font-family="Segoe UI, Arial" font-size="38" font-weight="900">HIGHER SCORE = SMALLER DELAY = FASTER SNAKE</text>
+<text x="600" y="65" text-anchor="middle" fill="#50ed7a" font-family="Segoe UI, Arial" font-size="38" font-weight="900">Higher Score = Smaller Delay = Faster Snake</text>
 <line x1="145" y1="560" x2="1070" y2="560" stroke="#6f8ba6" stroke-width="3"/><line x1="145" y1="125" x2="145" y2="560" stroke="#6f8ba6" stroke-width="3"/>
 <text x="610" y="625" text-anchor="middle" fill="#b7cadc" font-family="Segoe UI, Arial" font-size="25" font-weight="800">Score</text>
 <g transform="translate(64 345) rotate(-90)"><text x="0" y="0" text-anchor="middle" fill="#b7cadc" font-family="Segoe UI, Arial" font-size="25" font-weight="800">MoveDelay (milliseconds)</text></g>
@@ -9,5 +9,5 @@
 <polyline points="145,170 211,170 211,202 277,202 277,234 343,234 343,266 409,266 409,298 475,298 475,330 541,330 541,362 607,362 607,394 673,394 673,426 739,426 739,458 805,458 805,490 871,490 871,500 1070,500" fill="none" stroke="#ffd21f" stroke-width="8" stroke-linejoin="round"/>
 <g fill="#ffd21f"><circle cx="145" cy="170" r="8"/><circle cx="211" cy="202" r="8"/><circle cx="277" cy="234" r="8"/><circle cx="343" cy="266" r="8"/><circle cx="409" cy="298" r="8"/><circle cx="475" cy="330" r="8"/><circle cx="541" cy="362" r="8"/><circle cx="607" cy="394" r="8"/><circle cx="673" cy="426" r="8"/><circle cx="739" cy="458" r="8"/><circle cx="805" cy="490" r="8"/><circle cx="871" cy="500" r="8"/></g>
 <g fill="#a9c3da" font-family="Segoe UI, Arial" font-size="19"><text x="130" y="585">0</text><text x="335" y="585">150</text><text x="533" y="585">300</text><text x="731" y="585">450</text><text x="929" y="585">600</text><text x="1050" y="585">700+</text><text x="102" y="178">100</text><text x="112" y="507">45</text></g>
-<text x="600" y="665" text-anchor="middle" fill="#80b9ff" font-family="Consolas, monospace" font-size="23">MAX(45, 100 − (Score / 50) × 4)</text>
+<text x="600" y="665" text-anchor="middle" fill="#80b9ff" font-family="Consolas, monospace" font-size="23">Max(45, 100 − (Score / 50) × 4)</text>
 </svg>

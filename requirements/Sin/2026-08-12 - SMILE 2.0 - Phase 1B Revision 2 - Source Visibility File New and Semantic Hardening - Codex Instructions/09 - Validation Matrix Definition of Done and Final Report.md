@@ -47,12 +47,12 @@
 
 | ID | Requirement |
 |---|---|
-| S1 | Later support CONST sizes startup DIM |
+| S1 | Later support Const sizes startup Dim |
 | S2 | Cross-file constant chain works |
 | S3 | Reversed source order gives same result |
 | S4 | Circular constants fail clearly |
-| S5 | CONST/routine collision fails |
-| S6 | DIM/routine collision fails |
+| S5 | Const/routine collision fails |
+| S6 | Dim/routine collision fails |
 | S7 | implicit global collision fails |
 | S8 | single-file compatibility remains |
 

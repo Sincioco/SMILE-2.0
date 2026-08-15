@@ -158,7 +158,7 @@ internal sealed class Parser
             SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword))
         {
             _diagnostics.Report("SML2003", Current.Span,
-                "PUBLIC or PRIVATE must modify a module CONST, DIM, TYPE, SUB, or FUNCTION declaration.");
+                "Public or Private must modify a module Const, Dim, Type, Sub, or Function declaration.");
         }
         var declaration = ParseStatement();
         if (declaration == null)
@@ -180,7 +180,7 @@ internal sealed class Parser
         if (Current.Kind == SyntaxKind.AsKeyword)
         {
             _diagnostics.Report("SML3403", Current.Span,
-                "CONST declarations cannot have record types; declare a DIM record variable instead.");
+                "Const declarations cannot have record types; declare a Dim record variable instead.");
             SynchronizeLine();
             var missingEquals = new SyntaxToken(SyntaxKind.EqualsToken, identifier.Span.End, string.Empty);
             var missingValue = new SyntaxToken(SyntaxKind.NumberToken, identifier.Span.End, string.Empty, 0L);
@@ -209,7 +209,7 @@ internal sealed class Parser
             if (!IsIdentifierLike(Current.Kind))
             {
                 _diagnostics.Report("SML3403", Current.Span,
-                    "TYPE fields must use 'Name AS Type' and cannot be arrays, declarations, or initializers.");
+                    "Type fields must use 'Name As Type' and cannot be arrays, declarations, or initializers.");
                 SynchronizeLine();
                 continue;
             }
@@ -219,7 +219,7 @@ internal sealed class Parser
                 var unsupported = Current.Kind is SyntaxKind.OpenBracketToken or SyntaxKind.EqualsToken;
                 _diagnostics.Report(unsupported ? "SML3403" : "SML3402", Current.Span, unsupported
                     ? "Record fields cannot be arrays and cannot have initializers."
-                    : $"Field '{field.Text}' requires AS and a field type.");
+                    : $"Field '{field.Text}' requires As and a field type.");
                 SynchronizeLine();
                 continue;
             }
@@ -474,7 +474,7 @@ internal sealed class Parser
         }
         else
         {
-            var expected = isFill ? "RECTANGLE, ROUNDED RECTANGLE, CIRCLE, or QUADRILATERAL" : "a drawing primitive";
+            var expected = isFill ? "Rectangle, Rounded Rectangle, Circle, or Quadrilateral" : "a drawing primitive";
             _diagnostics.Report("SML2001", Current.Span, $"Expected {expected}, found '{Display(Current)}'.");
             arguments = Array.Empty<ExpressionSyntax>();
             operation = isFill ? GraphicsOperation.FillRectangle : GraphicsOperation.DrawRectangle;
@@ -573,7 +573,7 @@ internal sealed class Parser
             else
             {
                 _diagnostics.Report("SML3503", Current.Span,
-                    $"Unexpected DRAW IMAGE modifier '{Display(Current)}'.");
+                    $"Unexpected Draw Image modifier '{Display(Current)}'.");
                 SynchronizeLine();
                 break;
             }

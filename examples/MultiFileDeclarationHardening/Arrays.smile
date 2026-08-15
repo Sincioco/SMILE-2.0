@@ -1,8 +1,8 @@
-DIM SharedValues[MaximumValues]
+Dim SharedValues[MaximumValues]
 
-SUB InitializeArrays()
-    FOR Index = 0 TO MaximumValues - 1
+Sub InitializeArrays()
+    For Index = 0 To MaximumValues - 1
         SharedValues[Index] = Index
         StartupValues[Index] = MaximumValues - Index
-    END FOR
-END SUB
+    End For
+End Sub

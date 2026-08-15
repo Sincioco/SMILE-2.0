@@ -1,5 +1,5 @@
-MODULE Invalid.Types
-PUBLIC TYPE Present
-    Value AS NUMBER
-END TYPE
-END MODULE
+Module Invalid.Types
+Public Type Present
+    Value As Number
+End Type
+End Module

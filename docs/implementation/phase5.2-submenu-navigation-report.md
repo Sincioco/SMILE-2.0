@@ -12,7 +12,7 @@ No compiler keyword, native submenu helper, game-specific menu flow, or Phase 6 
 - `MenuStyle` adds `ItemTextOverflowMode` and `ItemTextMaxLines`.
 - Labels accept at most 256 Unicode scalars. A 256-emoji label succeeds; the 257th scalar is rejected without mutating the menu.
 - Ellipsis uses scalar-safe binary fitting and the ASCII suffix `...`. The permanent Web proof observed bounded labels ending in `...`.
-- Clip draws only the bounded first logical line. Wrap honors explicit newlines, prefers spaces, hard-breaks long words, permits at most four public lines, respects row height, and ellipsizes the final overflow line. The Web proof observed the exact wrapped first line `LOCALIZATION AND`.
+- Clip draws only the bounded first logical line. Wrap honors explicit newlines, prefers spaces, hard-breaks long words, permits at most four public lines, respects row height, and ellipsizes the final overflow line. The Web proof observed the exact wrapped first line `LOCALIZATION And`.
 - Every row reserves the same left cursor gutter. The active cursor is clamped left of the text, and automated Web traces proved identical root-label X values across selection states.
 - Bound rows draw the exact automatic literal ` >` in a reserved right region using the row's normal, selected, or disabled text style. Callers store plain labels.
 - Menu adds generation/revision-safe submenu marker state, `ResetSelection`, `Bounds`, `SetPosition`, `SelectedRowRect`, `DrawFocused`, and revision queries. `Draw` remains the compatibility focused wrapper.
@@ -47,8 +47,8 @@ The sample now uses `MenuNavigator.HandleKey`, `LastAcceptedValue`, `Relayout`, 
 ## Focused and permanent tests
 
 - `src\Smile.Tests`: 181 language/compiler/project/completion/timing checks passed.
-- `Phase5SubmenuStateTests`: 52 project-reference checks printed `TRUE`.
-- `Phase5SubmenuStateTests.Package`: the same 52 packaged-library checks printed `TRUE` with exact line parity.
+- `Phase5SubmenuStateTests`: 52 project-reference checks printed `True`.
+- `Phase5SubmenuStateTests.Package`: the same 52 packaged-library checks printed `True` with exact line parity.
 - `InvalidPhase5Submenus\ConsoleDrawStack`: exactly one consumer-located `Program.smile(7,20)` `SML3704` for `Smile.UI.MenuNavigator.DrawStack`.
 - `Phase5SubmenuViewport`: DirectX, GDI, and Web builds passed; the Web program executed.
 - MenuGallery project/package native and Web builds passed.
@@ -58,9 +58,9 @@ The sample now uses `MenuNavigator.HandleKey`, `LastAcceptedValue`, `Relayout`, 
 
 - `cmd /c scripts\build.cmd`: passed.
 - `cmd /c scripts\smoke-test.cmd`: passed in 230.4 seconds.
-- Native runtime: 39 graphics/audio-focus and 38 TEXT checks passed.
+- Native runtime: 39 graphics/audio-focus and 38 Text checks passed.
 - Ten-game matrix: all ten normal and no-demo native builds plus all ten normal and no-demo Web builds passed.
-- All prior module, library, typed text, record, IMAGE/media, clipping, persistence, audio, asset-publication, UI, debugger-artifact, native-x64-GUI, and package/provider gates remained green.
+- All prior module, library, typed text, record, Image/media, clipping, persistence, audio, asset-publication, UI, debugger-artifact, native-x64-GUI, and package/provider gates remained green.
 
 ## Live acceptance
 

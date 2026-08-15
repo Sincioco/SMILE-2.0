@@ -1,59 +1,59 @@
 ' Demonstrates the complete generic SMILE 2.0 game runtime surface.
-CONST CanvasWidth = 960
-CONST CanvasHeight = 540
+Const CanvasWidth = 960
+Const CanvasHeight = 540
 
-GAME WINDOW "SMILE 2.0 Graphics Basics"
+Game Window "SMILE 2.0 Graphics Basics"
 
-LOAD LaunchCount FROM "LaunchCount" DEFAULT 0
+Load LaunchCount From "LaunchCount" Default 0
 LaunchCount = LaunchCount + 1
-SAVE LaunchCount TO "LaunchCount"
+Save LaunchCount To "LaunchCount"
 
 MarkerX = 480
 MarkerY = 420
-PLAY SOUND "Assets\Missing.wav"
-PLAY SOUND "Assets\Graphics.wav"
+Play Sound "Assets\Missing.wav"
+Play Sound "Assets\Graphics.wav"
 
-DO
-    GET KEY Key
-    IF Key = KEY_ESCAPE THEN
-        END PROGRAM
-    END IF
+Do
+    Get Key Key
+    If Key = KEY_ESCAPE Then
+        End Program
+    End If
 
-    IF KEY_HELD(KEY_LEFT) = TRUE THEN
-        MarkerX = MAX(20, MarkerX - 4)
-    END IF
-    IF KEY_HELD(KEY_RIGHT) = TRUE THEN
-        MarkerX = MIN(CanvasWidth - 20, MarkerX + 4)
-    END IF
-    IF KEY_HELD(KEY_UP) = TRUE THEN
-        MarkerY = MAX(20, MarkerY - 4)
-    END IF
-    IF KEY_HELD(KEY_DOWN) = TRUE THEN
-        MarkerY = MIN(CanvasHeight - 20, MarkerY + 4)
-    END IF
+    If Key_Held(KEY_LEFT) = True Then
+        MarkerX = Max(20, MarkerX - 4)
+    End If
+    If Key_Held(KEY_RIGHT) = True Then
+        MarkerX = Min(CanvasWidth - 20, MarkerX + 4)
+    End If
+    If Key_Held(KEY_UP) = True Then
+        MarkerY = Max(20, MarkerY - 4)
+    End If
+    If Key_Held(KEY_DOWN) = True Then
+        MarkerY = Min(CanvasHeight - 20, MarkerY + 4)
+    End If
 
-    CLEAR RGB(18, 22, 38)
-    FILL RECTANGLE 40, 60, 180, 90, DARK_BLUE
-    DRAW RECTANGLE 40, 60, 180, 90, LIGHT_BLUE
-    FILL ROUNDED RECTANGLE 260, 60, 180, 90, 18, DARK_GREEN
-    DRAW ROUNDED RECTANGLE 260, 60, 180, 90, 18, LIGHT_GREEN
-    FILL CIRCLE 560, 105, 45, MAGENTA
-    DRAW CIRCLE 680, 105, 45, YELLOW
-    FILL QUADRILATERAL 760, 60, 900, 75, 870, 145, 785, 130, DARK_RED
-    DRAW QUADRILATERAL 760, 60, 900, 75, 870, 145, 785, 130, LIGHT_RED
-    DRAW LINE 760, 165, 900, 165, ORANGE
-    DRAW TEXT "HELLO, SMILE!" AT 480, 190 SIZE 42 COLOR WHITE CENTERED
-    DRAW TEXT "ARROWS MOVE THE MARKER - ESCAPE EXITS" AT 480, 255 SIZE 22 COLOR LIGHT_GRAY CENTERED
-    DRAW TEXT "LAUNCH COUNT" AT 380, 315 SIZE 24 COLOR CYAN
-    DRAW NUMBER LaunchCount AT 570, 315 SIZE 24 COLOR CYAN
-    DRAW TEXT "TIMER" AT 380, 350 SIZE 24 COLOR YELLOW
-    DRAW NUMBER TIMER() AT 500, 350 SIZE 24 COLOR YELLOW
-    DRAW TEXT "UNNAMED KEYS REPORT KEY_OTHER" AT 480, 385 SIZE 18 COLOR LIGHT_BLUE CENTERED
-    FILL CIRCLE MarkerX, MarkerY, 14, RED
-    DRAW CIRCLE MarkerX, MarkerY, 18, WHITE
-    SHOW SCREEN
-    WAIT 16 MILLISECONDS
-LOOP UNTIL GAME_CLOSED() = TRUE
+    Clear Rgb(18, 22, 38)
+    Fill Rectangle 40, 60, 180, 90, DARK_BLUE
+    Draw Rectangle 40, 60, 180, 90, LIGHT_BLUE
+    Fill Rounded Rectangle 260, 60, 180, 90, 18, DARK_GREEN
+    Draw Rounded Rectangle 260, 60, 180, 90, 18, LIGHT_GREEN
+    Fill Circle 560, 105, 45, MAGENTA
+    Draw Circle 680, 105, 45, YELLOW
+    Fill Quadrilateral 760, 60, 900, 75, 870, 145, 785, 130, DARK_RED
+    Draw Quadrilateral 760, 60, 900, 75, 870, 145, 785, 130, LIGHT_RED
+    Draw Line 760, 165, 900, 165, ORANGE
+    Draw Text "Hello, SMILE!" At 480, 190 Size 42 Color WHITE Centered
+    Draw Text "Arrows Move The Marker - Escape Exits" At 480, 255 Size 22 Color LIGHT_GRAY Centered
+    Draw Text "Launch Count" At 380, 315 Size 24 Color CYAN
+    Draw Number LaunchCount At 570, 315 Size 24 Color CYAN
+    Draw Text "Timer" At 380, 350 Size 24 Color YELLOW
+    Draw Number Timer() At 500, 350 Size 24 Color YELLOW
+    Draw Text "Unnamed Keys Report KEY_OTHER" At 480, 385 Size 18 Color LIGHT_BLUE Centered
+    Fill Circle MarkerX, MarkerY, 14, RED
+    Draw Circle MarkerX, MarkerY, 18, WHITE
+    Show Screen
+    Wait 16 Milliseconds
+Loop Until Game_Closed() = True
 
-STOP SOUND
-END PROGRAM
+Stop Sound
+End Program

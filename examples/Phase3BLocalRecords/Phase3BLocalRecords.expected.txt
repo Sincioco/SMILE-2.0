@@ -1,2 +1,2 @@
-LOCAL
+Local
 42

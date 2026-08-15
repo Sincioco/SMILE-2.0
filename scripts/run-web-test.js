@@ -318,7 +318,7 @@ const started = Date.now();
             fail(`native/Web output differed\nNATIVE:\n${JSON.stringify(nativeOutput)}\nWEB:\n${JSON.stringify(actual)}`);
     }
     if (expectedDrawText !== null && !drawnText.includes(expectedDrawText))
-        fail(`DRAW TEXT did not contain ${JSON.stringify(expectedDrawText)}; recorded ${JSON.stringify(drawnText)}`);
+        fail(`Draw Text did not contain ${JSON.stringify(expectedDrawText)}; recorded ${JSON.stringify(drawnText)}`);
     if (verifyPhase4Media) {
         if (imageConstructions !== 4) fail(`Phase 4 image cache expected 4 decodes, found ${imageConstructions}`);
         if (imageDraws.length < 5) fail(`Phase 4 expected image draws, found ${imageDraws.length}`);
@@ -337,11 +337,11 @@ const started = Date.now();
         if (measurementCalls < 2) fail("Phase 4 text measurement was not recorded");
         const dataKey = [...storage.keys()].find(key => key.includes(":data:"));
         if (!dataKey)
-            fail("Phase 4 persistent DATA storage was not recorded");
+            fail("Phase 4 persistent Data storage was not recorded");
         const envelope = Buffer.from(storage.get(dataKey), "base64");
         if (envelope.length !== 52 || envelope.subarray(0, 4).toString("ascii") !== "SMD4" ||
             envelope.readUInt32LE(4) !== 1 || envelope.readUInt32LE(8) !== 8)
-            fail("Phase 4.1 Web persistent DATA envelope was malformed");
+            fail("Phase 4.1 Web persistent Data envelope was malformed");
         envelope[envelope.length - 1] ^= 1;
         storage.set(dataKey, envelope.toString("base64"));
         const corruptTarget = host.smile.array([8], 9);
@@ -349,7 +349,7 @@ const started = Date.now();
         try { host.smile.loadData("Phase4VisualSlice", corruptTarget); }
         catch (_) { corruptRejected = true; }
         if (!corruptRejected || corruptTarget.data.some(value => value !== 0))
-            fail("Phase 4.1 Web corrupt DATA was not rejected with a zeroed destination");
+            fail("Phase 4.1 Web corrupt Data was not rejected with a zeroed destination");
         if (audioConstructions < 3 || audioPlays < 3)
             fail("Phase 4 music and overlapping SFX were not recorded");
         if (audioPauses < 3)
@@ -375,9 +375,9 @@ const started = Date.now();
     if (verifyPhase4Ownership) {
         if (diagnostics.shutdownImageCacheEntries !== 0 || diagnostics.shutdownImageReferences !== 0 ||
             diagnostics.imageCacheCount !== 0 || diagnostics.imageReferenceCount !== 0)
-            fail(`Phase 4.1 IMAGE ownership leaked: ${JSON.stringify(diagnostics)}`);
+            fail(`Phase 4.1 Image ownership leaked: ${JSON.stringify(diagnostics)}`);
         if (diagnostics.imageDecodeCount !== 1)
-            fail(`Phase 4.1 IMAGE ownership expected one decode, found ${diagnostics.imageDecodeCount}`);
+            fail(`Phase 4.1 Image ownership expected one decode, found ${diagnostics.imageDecodeCount}`);
     }
     if (verifyPhase4Clip) {
         if (clipCalls < 2) fail(`Phase 4.1 clip was not reapplied after resize: ${clipCalls}`);
@@ -492,7 +492,7 @@ const started = Date.now();
         const rightMarkers = textDraws.filter(draw => draw.frame === 19 && draw.value === " >");
         if (rightMarkers.length < 3)
             fail(`Phase 5.2.1 right-aligned indicators were missing: ${JSON.stringify(rightMarkers)}`);
-        for (const prefix of ["A VERY LONG SHARED", "DISABLED LIBRARY", "OPEN HIERARCHY"]) {
+        for (const prefix of ["A Very Long Shared", "Disabled Library", "Open Hierarchy"]) {
             const label = textDraws.find(draw => draw.frame === 1 && draw.value.startsWith(prefix));
             const marker = label && textDraws.find(draw => draw.frame === 1 && draw.value === " >" &&
                 draw.y >= label.y && draw.y < label.y + 43 && draw.fillStyle === label.fillStyle);
@@ -503,7 +503,7 @@ const started = Date.now();
             fail("Phase 5.2.1 submenu indicator was not drawn as exact literal ' >'");
         if (!textDraws.some(draw => draw.value.endsWith("...")))
             fail("Phase 5.2.1 long-label ellipsis was not drawn");
-        if (!textDraws.some(draw => draw.value === "LOCALIZATION AND"))
+        if (!textDraws.some(draw => draw.value === "Localization And"))
             fail(`Phase 5.2.1 bounded wrapped label was not drawn: ${JSON.stringify([...new Set(textDraws.map(draw => draw.value))])}`);
 
         const scrollbar = (frame, x) => fillRectangleDraws.filter(draw => draw.frame === frame && draw.values[0] === x && draw.values[2] === 4);
@@ -519,10 +519,10 @@ const started = Date.now();
             topThumb.values[1] !== 326 || middleThumb.values[1] !== 369 || bottomThumb.values[1] !== 412)
             fail(`Phase 5.2.1 proportional scrollbar geometry differed: ${JSON.stringify({ topThumb, middleThumb, bottomThumb })}`);
         if (fillRectangleDraws.some(draw => draw.frame === 12 && draw.values[2] === 4))
-            fail("Phase 5.2.1 ShowScrollbar FALSE left track/thumb drawing");
+            fail("Phase 5.2.1 ShowScrollbar False left track/thumb drawing");
         const restoredScrollbars = fillRectangleDraws.filter(draw => draw.frame === 13 && draw.values[2] === 4);
         if (scrollbar(13, 915).length !== 2 || restoredScrollbars.length < 4)
-            fail(`Phase 5.2.1 ShowScrollbar TRUE did not restore overflowing scrollbars: ${JSON.stringify(restoredScrollbars)}`);
+            fail(`Phase 5.2.1 ShowScrollbar True did not restore overflowing scrollbars: ${JSON.stringify(restoredScrollbars)}`);
         const frameFourMarkers = textDraws.filter(draw => draw.frame === 4 && draw.value === " >");
         const frameFourTrackXs = fillRectangleDraws.filter(draw => draw.frame === 4 && draw.values[2] === 4).map(draw => draw.values[0]);
         if (!frameFourMarkers.some(marker => frameFourTrackXs.some(trackX => trackX >= marker.x + 16 && trackX - marker.x < 100)))
@@ -594,7 +594,7 @@ const started = Date.now();
         if (bitmapLineYs.size < 2)
             fail(`Phase 5.1 bitmap multiline drawing did not span two lines: ${JSON.stringify([...bitmapLineYs])}`);
         const systemLines = textDraws.map(draw => draw.value);
-        if (!systemLines.includes("SYSTEM") || !systemLines.includes("MULTILINE") || systemLines.includes("HIDDEN"))
+        if (!systemLines.includes("System") || !systemLines.includes("Multiline") || systemLines.includes("Hidden"))
             fail(`Phase 5.1 system multiline/opacity drawing differed: ${JSON.stringify(systemLines)}`);
         const tinyScrollbar = fillRectangleDraws.filter(draw => draw.values[0] === 625 && draw.values[2] === 4);
         if (tinyScrollbar.length !== 2 || tinyScrollbar.some(draw => draw.values[1] < 350 || draw.values[3] < 0 || draw.values[1] + draw.values[3] > 353))
@@ -609,9 +609,9 @@ const started = Date.now();
 
     process.stdout.write(`Web execution passed: ${webDirectory}`);
     if (expectedPath !== null || nativeOutputPath !== null) process.stdout.write(" (exact console parity)");
-    if (expectedDrawText !== null) process.stdout.write(" (dynamic DRAW TEXT parity)");
+    if (expectedDrawText !== null) process.stdout.write(" (dynamic Draw Text parity)");
     if (verifyPhase4Media) process.stdout.write(" (Phase 4 media/cache/clip/data/audio parity)");
-    if (verifyPhase4Ownership) process.stdout.write(" (Phase 4.1 IMAGE ownership/high-DPI parity)");
+    if (verifyPhase4Ownership) process.stdout.write(" (Phase 4.1 Image ownership/high-DPI parity)");
     if (verifyPhase4Clip) process.stdout.write(" (Phase 4.1 clip/high-DPI resize parity)");
     if (verifyPhase4Audio) process.stdout.write(" (Phase 4.1 audio generation/shutdown parity)");
     if (verifyPhase5Ui) process.stdout.write(" (Phase 5 scripted UI/high-DPI/painter/audio/ownership parity)");

@@ -70,8 +70,8 @@ PixelY = FieldY + GridY * CellSize + 2</code></pre>
 <p>The real drawing routine uses the grid-to-pixel calculation directly. These are full source lines 136&ndash;137.</p>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">DrawBoard &mdash; actual Snake source</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="136">            FILL RECTANGLE FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, RGB(60, 230, 75)
-            DRAW RECTANGLE FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, RGB(20, 105, 35)</code></pre>
+<pre><code class="language-smile" data-source-start="136">            Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)
+            Draw Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(20, 105, 35)</code></pre>
 </div>
 </section>
 <div class="table-wrap"><table><thead><tr><th>Value</th><th>Calculation</th><th>Result</th></tr></thead><tbody><tr><td>Head X = 17</td><td>20 + 17 &times; 20 + 2</td><td>362 pixels</td></tr><tr><td>Head Y = 12</td><td>30 + 12 &times; 20 + 2</td><td>272 pixels</td></tr></tbody></table></div>
@@ -87,7 +87,7 @@ PixelY = FieldY + GridY * CellSize + 2</code></pre>
 </article>
 </main>
 <footer class="site-footer">
-<div class="footer-line">SMILE 2.0 (SinBASIC). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div>
+<div class="footer-line">SMILE 2.0 (SinBasic). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div>
 <div class="footer-line"><a href="https://github.com/Sincioco" rel="noopener" target="_blank">github.com/Sincioco</a> | <a href="https://facebook.com/louiery.sincioco" rel="noopener" target="_blank">facebook.com/louiery.sincioco</a> | <a href="https://linkedin.com/in/louierysincioco" rel="noopener" target="_blank">linkedin.com/in/louierysincioco</a> | <a href="https://youtube.com/@TheSincioco" rel="noopener" target="_blank">youtube.com/@TheSincioco</a> | <a href="https://tiktok.com/@sincioco" rel="noopener" target="_blank">tiktok.com/@sincioco</a></div>
 </footer>
 </div>

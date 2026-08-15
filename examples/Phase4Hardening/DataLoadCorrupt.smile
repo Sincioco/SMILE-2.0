@@ -1,9 +1,9 @@
-OPTION EXPLICIT
+Option Explicit
 
-DIM Loaded[3]
-DIM LoadedCount AS NUMBER
+Dim Loaded[3]
+Dim LoadedCount As Number
 
-LOAD DATA "Slot/A" INTO Loaded COUNT LoadedCount
-PRINT LoadedCount
+Load Data "Slot/A" Into Loaded Count LoadedCount
+Print LoadedCount
 
-END PROGRAM
+End Program

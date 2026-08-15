@@ -1,23 +1,23 @@
-CONST Locked = 1
+Const Locked = 1
 Locked = 2
 
-DIM Broken[0, 4]
+Dim Broken[0, 4]
 
-SUB NeedsTwo(First, Second)
-END SUB
+Sub NeedsTwo(First, Second)
+End Sub
 
-FUNCTION MissingReturn(Value)
+Function MissingReturn(Value)
     Value = Value + 1
-END FUNCTION
+End Function
 
-CALL NeedsTwo(1)
-EXIT FOR
+Call NeedsTwo(1)
+Exit For
 
-SELECT CASE Locked
-    CASE 1
-        PRINT "ONE"
-    CASE 1
-        PRINT "DUPLICATE"
-END SELECT
+Select Case Locked
+    Case 1
+        Print "One"
+    Case 1
+        Print "Duplicate"
+End Select
 
-Result = UNKNOWN_BUILTIN(1)
+Result = Unknown_Builtin(1)

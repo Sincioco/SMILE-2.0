@@ -11,9 +11,9 @@ Make the working SMILE 2.0 Visual Studio experience substantially more helpful t
 The primary example is:
 
 ```smile
-IMPORT Smile.UI.Menu AS Menu
+Import Smile.UI.Menu As Menu
 
-DIM MainMenu AS NUMBER
+Dim MainMenu As Number
 MainMenu = Menu.Create(MenuStyle, 80, 70, 480, 300, 6)
 ```
 
@@ -21,8 +21,8 @@ The student should be able to:
 
 - hover over `Menu` and understand that it is an imported module alias;
 - hover over `Create` and understand the routine, each argument, its return value, and where it is defined;
-- press F12 while the caret is on `Menu` and reach the `MODULE Smile.UI.Menu` declaration;
-- press F12 while the caret is on `Create` and reach the `PUBLIC FUNCTION Create(...)` declaration;
+- press F12 while the caret is on `Menu` and reach the `Module Smile.UI.Menu` declaration;
+- press F12 while the caret is on `Create` and reach the `Public Function Create(...)` declaration;
 - right-click the runnable SMILE project and make it the solution startup project.
 
 ## 2. Terminology
@@ -41,7 +41,7 @@ The existing source-level command must remain functional. The new project-level 
 Hovering `Menu` in `Menu.Create` must produce useful Quick Info similar to:
 
 ```text
-MODULE Smile.UI.Menu
+Module Smile.UI.Menu
 Imported as Menu
 
 Reusable menu creation, item management, input handling, and drawing services.
@@ -64,14 +64,14 @@ A module summary is shown when documentation exists. A useful module identity an
 Hovering `Create` in `Menu.Create` must produce Quick Info equivalent in meaning to:
 
 ```text
-FUNCTION Smile.UI.Menu.Create(
-    BYREF Style AS Core.MenuStyle,
-    X AS NUMBER,
-    Y AS NUMBER,
-    Width AS NUMBER,
-    Height AS NUMBER,
-    VisibleRows AS NUMBER
-) AS NUMBER
+Function Smile.UI.Menu.Create(
+    ByRef Style As Core.MenuStyle,
+    X As Number,
+    Y As Number,
+    Width As Number,
+    Height As Number,
+    VisibleRows As Number
+) As Number
 
 Creates a menu instance using the supplied style, position, size, and requested visible-row count.
 
@@ -92,16 +92,16 @@ libraries\Smile.UI\Menu.smile
 
 The exact typography may use Visual Studio classified text and stacked sections, but all of the following information is required:
 
-- symbol kind (`FUNCTION`, `SUB`, module, type, variable, constant, or field as applicable);
+- symbol kind (`Function`, `Sub`, module, type, variable, constant, or field as applicable);
 - fully qualified name when applicable;
 - complete parameter list in declaration order;
-- `BYREF` where applicable;
+- `ByRef` where applicable;
 - parameter types;
 - return type for a function;
 - plain-language summary when documented;
 - a plain-language explanation for every documented parameter;
 - return-value explanation when documented;
-- capability note such as “requires GAME WINDOW” when the semantic model reports it;
+- capability note such as “requires Game Window” when the semantic model reports it;
 - module/provider and physical source file when known.
 
 ### 3.3 Undocumented symbols
@@ -113,7 +113,7 @@ For an undocumented routine, show at least:
 - the complete signature;
 - module/provider;
 - source file;
-- `BYREF`, types, and return type;
+- `ByRef`, types, and return type;
 - capability information already available from the semantic model.
 
 Do not invent semantic meanings from parameter names. Absence of prose documentation must not produce misleading generated prose.
@@ -151,7 +151,7 @@ The first three entries are release-blocking. The remaining symbol categories sh
 Given:
 
 ```smile
-IMPORT Smile.UI.Menu AS Menu
+Import Smile.UI.Menu As Menu
 MainMenu = Menu.Create(MenuStyle, 80, 70, 480, 300, 6)
 ```
 
@@ -162,7 +162,7 @@ With the caret on `Menu` in `Menu.Create`, F12 must:
 3. position and select the module identifier in:
 
    ```smile
-   MODULE Smile.UI.Menu
+   Module Smile.UI.Menu
    ```
 
 When a module is declared across more than one physical source, choose its first deterministic declaration location. The implementation may prefer the source containing the selected member when that is more useful and deterministic.
@@ -189,9 +189,9 @@ The shared resolver should also allow F12 for the symbol classes listed under Qu
 Required examples:
 
 ```smile
-CALL LocalSubroutine()
-DIM Player AS Models.Player
-PRINT Player.Name
+Call LocalSubroutine()
+Dim Player As Models.Player
+Print Player.Name
 ```
 
 Where the symbols resolve, F12 should navigate to the local routine, type, or field declaration.
@@ -285,7 +285,7 @@ The new services must use the current SMILE content type rather than registering
 
 ### Scenario A — Hover `Menu`
 
-1. Open a project that imports `Smile.UI.Menu AS Menu`.
+1. Open a project that imports `Smile.UI.Menu As Menu`.
 2. Hover the `Menu` token in `Menu.Create`.
 3. Quick Info identifies `Smile.UI.Menu`, the alias `Menu`, its provider, and source file.
 4. No build or file save occurs.

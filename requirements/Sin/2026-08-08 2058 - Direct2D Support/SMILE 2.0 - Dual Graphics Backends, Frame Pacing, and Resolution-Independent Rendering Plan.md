@@ -59,7 +59,7 @@ Codex must not:
 - Force existing SMILE games to contain renderer-specific code.
 - Replace the existing logical coordinate model with physical screen coordinates.
 - Depend on third-party graphics packages for the Windows backend.
-- Make PaddleBall’s speed depend on a hard-coded `WAIT` duration.
+- Make PaddleBall’s speed depend on a hard-coded `Wait` duration.
 - Claim that changing `COLORONCOLOR` to `HALFTONE` alone fixes fullscreen text.
 - Combine all changes into one large, difficult-to-review commit.
 
@@ -93,11 +93,11 @@ BallY = BallY + BallVY
 The loop ends with:
 
 ```smile
-SHOW SCREEN
-WAIT 8 MILLISECONDS
+Show Screen
+Wait 8 Milliseconds
 ```
 
-This means physical game speed depends on how often the loop executes. `WAIT 8 MILLISECONDS` requests a wait, but it does not guarantee that every displayed frame arrives exactly eight milliseconds after the previous frame.
+This means physical game speed depends on how often the loop executes. `Wait 8 Milliseconds` requests a wait, but it does not guarantee that every displayed frame arrives exactly eight milliseconds after the previous frame.
 
 ### 3.3 Current GDI back buffer
 
@@ -109,7 +109,7 @@ The current runtime creates a GDI font and uses `TextOutW` against the logical b
 
 ### 3.5 Current presentation path
 
-`SHOW SCREEN` obtains a destination DC and enlarges the logical back buffer with `StretchBlt` using `COLORONCOLOR`.
+`Show Screen` obtains a destination DC and enlarges the logical back buffer with `StretchBlt` using `COLORONCOLOR`.
 
 At 1920×1080, a 960×540 frame is enlarged by approximately 2× in both dimensions.
 
@@ -132,18 +132,18 @@ The RTX 5090 is not the likely performance limitation for PaddleBall. The import
 Existing code must continue to work:
 
 ```smile
-CLEAR BLACK
-FILL RECTANGLE 100, 100, 200, 50, BLUE
-FILL CIRCLE BallX, BallY, BallRadius, WHITE
-DRAW TEXT "SCORE" AT 40, 25 SIZE 16 COLOR YELLOW
-SHOW SCREEN
+Clear BLACK
+Fill Rectangle 100, 100, 200, 50, BLUE
+Fill Circle BallX, BallY, BallRadius, WHITE
+Draw Text "Score" At 40, 25 Size 16 Color YELLOW
+Show Screen
 ```
 
 Do not create public statements such as:
 
 ```smile
-DIRECTX FILL CIRCLE ...
-GDI DRAW TEXT ...
+DIRECTX Fill Circle ...
+GDI Draw Text ...
 ```
 
 ### 4.2 Support three backend selections
@@ -523,7 +523,7 @@ For each text operation:
 Example:
 
 ```smile
-DRAW TEXT "SCORE" AT 40, 25 SIZE 16 COLOR WHITE
+Draw Text "Score" At 40, 25 Size 16 Color WHITE
 ```
 
 At 1920×1080 with a 2× viewport scale, GDI must create and rasterize an appropriately scaled font at the larger output size. It must not draw 16-pixel text into a 960×540 bitmap and double those pixels.
@@ -818,7 +818,7 @@ Present without a second enlargement step
 The source remains:
 
 ```smile
-DRAW TEXT "SCORE" AT 40, 25 SIZE 16 COLOR WHITE
+Draw Text "Score" At 40, 25 Size 16 Color WHITE
 ```
 
 The runtime interprets the values as logical units.
@@ -871,11 +871,11 @@ ClearType may be enabled only when:
 - Keep baselines stable.
 - Avoid clipping at larger scales.
 - Map first, then apply output-pixel snapping when appropriate.
-- Preserve the current meaning of `CENTERED`.
+- Preserve the current meaning of `Centered`.
 
 ### 12.7 Numbers use the same renderer
 
-`DRAW NUMBER` must use the same high-quality text path as `DRAW TEXT`.
+`Draw Number` must use the same high-quality text path as `Draw Text`.
 
 Do not keep a separate lower-resolution number renderer.
 
@@ -950,24 +950,24 @@ Use the clock to measure:
 - Minimum and maximum frame time.
 - Long-frame events.
 
-### 13.2 Preserve `TIMER()` semantics
+### 13.2 Preserve `Timer()` semantics
 
-The public `TIMER()` behavior should remain compatible with the language specification.
+The public `Timer()` behavior should remain compatible with the language specification.
 
 Its implementation may use the high-resolution monotonic clock internally and return elapsed milliseconds in the existing numeric type.
 
 Do not change its public unit silently.
 
-### 13.3 Treat `SHOW SCREEN` as the frame boundary
+### 13.3 Treat `Show Screen` as the frame boundary
 
-`SHOW SCREEN` is the natural runtime frame boundary.
+`Show Screen` is the natural runtime frame boundary.
 
 When VSync is enabled:
 
 - DirectX presentation may block or wait through the swap-chain pacing mechanism.
 - GDI uses best-effort pacing.
 
-A SMILE game must not need `WAIT 8 MILLISECONDS` to define its physical movement speed.
+A SMILE game must not need `Wait 8 Milliseconds` to define its physical movement speed.
 
 ### 13.4 Avoid uncontrolled frame queues
 
@@ -1004,7 +1004,7 @@ Do not continue relying on:
 ```smile
 BallX = BallX + BallVX
 BallY = BallY + BallVY
-WAIT 8 MILLISECONDS
+Wait 8 Milliseconds
 ```
 
 as the game-speed model.
@@ -1388,14 +1388,14 @@ This milestone is complete only when all applicable criteria pass.
 A beginner can continue writing:
 
 ```smile
-GAME WINDOW "My Game"
+Game Window "My Game"
 
-DO
-    CLEAR BLACK
-    FILL CIRCLE X, Y, 10, WHITE
-    DRAW TEXT "HELLO" AT 20, 20 SIZE 18 COLOR YELLOW
-    SHOW SCREEN
-LOOP UNTIL GAME_CLOSED() = TRUE
+Do
+    Clear BLACK
+    Fill Circle X, Y, 10, WHITE
+    Draw Text "Hello" At 20, 20 Size 18 Color YELLOW
+    Show Screen
+Loop Until Game_Closed() = True
 ```
 
 without writing graphics-backend, resolution, DPI, VSync, or fullscreen-management code.
@@ -1615,9 +1615,9 @@ SMILE 2.0 must preserve a simple, educational drawing language while allowing it
 A student should be able to think in terms of:
 
 ```smile
-FILL CIRCLE X, Y, Radius, WHITE
-DRAW TEXT "SCORE" AT 40, 25 SIZE 16 COLOR YELLOW
-SHOW SCREEN
+Fill Circle X, Y, Radius, WHITE
+Draw Text "Score" At 40, 25 Size 16 Color YELLOW
+Show Screen
 ```
 
 The runtime should handle:

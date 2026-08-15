@@ -4,97 +4,97 @@
 ' Constants
 ' -----------------------------------------------------------------------------
 
-CONST STATE_TITLE = 0
-CONST STATE_USER_DUNGEON = 1
-CONST STATE_DEMO_DUNGEON = 2
+Const STATE_TITLE = 0
+Const STATE_USER_DUNGEON = 1
+Const STATE_DEMO_DUNGEON = 2
 
-CONST ACTION_IDLE = 0
-CONST ACTION_MOVE_FORWARD = 1
-CONST ACTION_MOVE_BACKWARD = 2
-CONST ACTION_TURN_LEFT = 3
-CONST ACTION_TURN_RIGHT = 4
-CONST ACTION_OPEN_DOOR = 5
-CONST ACTION_STAIRS_OUT = 6
-CONST ACTION_STAIRS_IN = 7
+Const ACTION_IDLE = 0
+Const ACTION_MOVE_FORWARD = 1
+Const ACTION_MOVE_BACKWARD = 2
+Const ACTION_TURN_LEFT = 3
+Const ACTION_TURN_RIGHT = 4
+Const ACTION_OPEN_DOOR = 5
+Const ACTION_STAIRS_OUT = 6
+Const ACTION_STAIRS_IN = 7
 
-CONST NORTH = 0
-CONST EAST = 1
-CONST SOUTH = 2
-CONST WEST = 3
+Const NORTH = 0
+Const EAST = 1
+Const SOUTH = 2
+Const WEST = 3
 
-CONST MapWidth = 31
-CONST MapHeight = 31
-CONST FloorCount = 3
-CONST CellsPerFloor = MapWidth * MapHeight
-CONST TotalCells = CellsPerFloor * FloorCount
-CONST MaximumGenerationAttempts = 8
-CONST MapFileCapacity = 16384
+Const MapWidth = 31
+Const MapHeight = 31
+Const FloorCount = 3
+Const CellsPerFloor = MapWidth * MapHeight
+Const TotalCells = CellsPerFloor * FloorCount
+Const MaximumGenerationAttempts = 8
+Const MapFileCapacity = 16384
 
-CONST MAP_DEFAULT = 0
-CONST MAP_LOOPS = 1
-CONST MAP_SWITCHBACKS = 2
-CONST MAP_RANDOM = 3
+Const MAP_DEFAULT = 0
+Const MAP_LOOPS = 1
+Const MAP_SWITCHBACKS = 2
+Const MAP_RANDOM = 3
 
-CONST TILE_WALL = 0
-CONST TILE_FLOOR = 1
-CONST TILE_DOOR_CLOSED = 2
-CONST TILE_DOOR_OPEN = 3
-CONST TILE_STAIRS_UP = 4
-CONST TILE_STAIRS_DOWN = 5
+Const TILE_WALL = 0
+Const TILE_FLOOR = 1
+Const TILE_DOOR_CLOSED = 2
+Const TILE_DOOR_OPEN = 3
+Const TILE_STAIRS_UP = 4
+Const TILE_STAIRS_DOWN = 5
 
-CONST TitleDemoDelay = 5000
-CONST DemoDuration = 60000
-CONST FlashInterval = 500
-CONST TitleInputArmDelay = 250
-CONST MapFallbackMessageDuration = 3500
+Const TitleDemoDelay = 5000
+Const DemoDuration = 60000
+Const FlashInterval = 500
+Const TitleInputArmDelay = 250
+Const MapFallbackMessageDuration = 3500
 
-CONST UserIdleWarningTime = 30000
-CONST UserIdleExitTime = 40000
-CONST UserIdleCountdownStart = 9
+Const UserIdleWarningTime = 30000
+Const UserIdleExitTime = 40000
+Const UserIdleCountdownStart = 9
 
-CONST MoveDuration = 260
-CONST TurnDuration = 240
-CONST DoorDuration = 320
-CONST StairOutDuration = 450
-CONST StairBlackDuration = 120
-CONST StairInDuration = 450
+Const MoveDuration = 260
+Const TurnDuration = 240
+Const DoorDuration = 320
+Const StairOutDuration = 450
+Const StairBlackDuration = 120
+Const StairInDuration = 450
 
-CONST ProjectionDepth = 6
+Const ProjectionDepth = 6
 
 ' -----------------------------------------------------------------------------
 ' Fixed data
 ' -----------------------------------------------------------------------------
 
-DIM Dungeon[TotalCells]
-DIM MapFileBytes[MapFileCapacity]
-DIM ParsedRows[FloorCount]
-DIM ParsedUpCount[FloorCount]
-DIM ParsedDownCount[FloorCount]
+Dim Dungeon[TotalCells]
+Dim MapFileBytes[MapFileCapacity]
+Dim ParsedRows[FloorCount]
+Dim ParsedUpCount[FloorCount]
+Dim ParsedDownCount[FloorCount]
 
-DIM FloorStartX[FloorCount]
-DIM FloorStartY[FloorCount]
-DIM StairUpX[FloorCount]
-DIM StairUpY[FloorCount]
-DIM StairDownX[FloorCount]
-DIM StairDownY[FloorCount]
+Dim FloorStartX[FloorCount]
+Dim FloorStartY[FloorCount]
+Dim StairUpX[FloorCount]
+Dim StairUpY[FloorCount]
+Dim StairDownX[FloorCount]
+Dim StairDownY[FloorCount]
 
-DIM FloodQueue[CellsPerFloor]
-DIM FloodVisited[CellsPerFloor]
+Dim FloodQueue[CellsPerFloor]
+Dim FloodVisited[CellsPerFloor]
 
-DIM DemoQueue[CellsPerFloor]
-DIM DemoParent[CellsPerFloor]
-DIM DemoRoute[CellsPerFloor]
-DIM DemoVisits[TotalCells]
+Dim DemoQueue[CellsPerFloor]
+Dim DemoParent[CellsPerFloor]
+Dim DemoRoute[CellsPerFloor]
+Dim DemoVisits[TotalCells]
 
-DIM DirectionX[4]
-DIM DirectionY[4]
+Dim DirectionX[4]
+Dim DirectionY[4]
 
-DIM BaseHalfWidth[7]
-DIM BaseTopY[7]
-DIM BaseBottomY[7]
-DIM ViewHalfWidth[7]
-DIM ViewTopY[7]
-DIM ViewBottomY[7]
+Dim BaseHalfWidth[7]
+Dim BaseTopY[7]
+Dim BaseBottomY[7]
+Dim ViewHalfWidth[7]
+Dim ViewTopY[7]
+Dim ViewBottomY[7]
 
 DirectionX[NORTH] = 0
 DirectionY[NORTH] = -1
@@ -179,13 +179,13 @@ TitleStartedAt = 0
 TitleAcceptInputAt = 0
 SelectedMap = MAP_DEFAULT
 MapFileLength = 0
-MapLoadValid = FALSE
+MapLoadValid = False
 MapStartCount = 0
 CurrentParsedFloor = -1
 NextFloorHeader = 0
 PlayerStartFloor = 0
 PlayerStartDirection = SOUTH
-MapFallbackUsed = FALSE
+MapFallbackUsed = False
 MapFallbackMessageUntil = 0
 DemoStartedAt = 0
 NextDemoActionAt = 0
@@ -193,16 +193,16 @@ DemoDirection = 1
 DemoRouteCount = 0
 
 CurrentGenerationFloor = 0
-GenerationValid = FALSE
+GenerationValid = False
 
-WallNearColor = RGB(22, 118, 78)
-WallMidColor = RGB(16, 82, 57)
-WallFarColor = RGB(11, 50, 39)
-MortarColor = RGB(55, 190, 125)
-DungeonFloorColor = RGB(7, 28, 21)
-CeilingColor = RGB(5, 20, 15)
-DoorColor = RGB(22, 75, 52)
-HighlightColor = RGB(100, 225, 160)
+WallNearColor = Rgb(22, 118, 78)
+WallMidColor = Rgb(16, 82, 57)
+WallFarColor = Rgb(11, 50, 39)
+MortarColor = Rgb(55, 190, 125)
+DungeonFloorColor = Rgb(7, 28, 21)
+CeilingColor = Rgb(5, 20, 15)
+DoorColor = Rgb(22, 75, 52)
+HighlightColor = Rgb(100, 225, 160)
 
 RenderDirection = NORTH
 RenderScale = 1000
@@ -215,76 +215,76 @@ DoorDrawProgress = 0
 ' Bounds-aware map and coordinate helpers
 ' -----------------------------------------------------------------------------
 
-FUNCTION MapIndex(FloorValue, XValue, YValue)
-    RETURN FloorValue * CellsPerFloor + YValue * MapWidth + XValue
-END FUNCTION
+Function MapIndex(FloorValue, XValue, YValue)
+    Return FloorValue * CellsPerFloor + YValue * MapWidth + XValue
+End Function
 
-FUNCTION GetTile(FloorValue, XValue, YValue)
-    IF FloorValue < 0 OR FloorValue >= FloorCount THEN
-        RETURN TILE_WALL
-    END IF
-    IF XValue < 0 OR XValue >= MapWidth OR YValue < 0 OR YValue >= MapHeight THEN
-        RETURN TILE_WALL
-    END IF
-    RETURN Dungeon[MapIndex(FloorValue, XValue, YValue)]
-END FUNCTION
+Function GetTile(FloorValue, XValue, YValue)
+    If FloorValue < 0 Or FloorValue >= FloorCount Then
+        Return TILE_WALL
+    End If
+    If XValue < 0 Or XValue >= MapWidth Or YValue < 0 Or YValue >= MapHeight Then
+        Return TILE_WALL
+    End If
+    Return Dungeon[MapIndex(FloorValue, XValue, YValue)]
+End Function
 
-SUB SetTile(FloorValue, XValue, YValue, TileValue)
-    IF FloorValue >= 0 AND FloorValue < FloorCount AND XValue > 0 AND XValue < MapWidth - 1 AND YValue > 0 AND YValue < MapHeight - 1 THEN
+Sub SetTile(FloorValue, XValue, YValue, TileValue)
+    If FloorValue >= 0 And FloorValue < FloorCount And XValue > 0 And XValue < MapWidth - 1 And YValue > 0 And YValue < MapHeight - 1 Then
         Dungeon[MapIndex(FloorValue, XValue, YValue)] = TileValue
-    END IF
-END SUB
+    End If
+End Sub
 
-FUNCTION IsWalkable(TileValue)
-    RETURN TileValue <> TILE_WALL
-END FUNCTION
+Function IsWalkable(TileValue)
+    Return TileValue <> TILE_WALL
+End Function
 
-FUNCTION BlocksSight(TileValue)
-    RETURN TileValue = TILE_WALL OR TileValue = TILE_DOOR_CLOSED
-END FUNCTION
+Function BlocksSight(TileValue)
+    Return TileValue = TILE_WALL Or TileValue = TILE_DOOR_CLOSED
+End Function
 
-FUNCTION WorldX(SideValue, ForwardValue, DirectionValue)
-    IF DirectionValue = NORTH THEN
-        RETURN PlayerX + SideValue
-    ELSE IF DirectionValue = EAST THEN
-        RETURN PlayerX + ForwardValue
-    ELSE IF DirectionValue = SOUTH THEN
-        RETURN PlayerX - SideValue
-    ELSE
-        RETURN PlayerX - ForwardValue
-    END IF
-END FUNCTION
+Function WorldX(SideValue, ForwardValue, DirectionValue)
+    If DirectionValue = NORTH Then
+        Return PlayerX + SideValue
+    Else If DirectionValue = EAST Then
+        Return PlayerX + ForwardValue
+    Else If DirectionValue = SOUTH Then
+        Return PlayerX - SideValue
+    Else
+        Return PlayerX - ForwardValue
+    End If
+End Function
 
-FUNCTION WorldY(SideValue, ForwardValue, DirectionValue)
-    IF DirectionValue = NORTH THEN
-        RETURN PlayerY - ForwardValue
-    ELSE IF DirectionValue = EAST THEN
-        RETURN PlayerY + SideValue
-    ELSE IF DirectionValue = SOUTH THEN
-        RETURN PlayerY + ForwardValue
-    ELSE
-        RETURN PlayerY - SideValue
-    END IF
-END FUNCTION
+Function WorldY(SideValue, ForwardValue, DirectionValue)
+    If DirectionValue = NORTH Then
+        Return PlayerY - ForwardValue
+    Else If DirectionValue = EAST Then
+        Return PlayerY + SideValue
+    Else If DirectionValue = SOUTH Then
+        Return PlayerY + ForwardValue
+    Else
+        Return PlayerY - SideValue
+    End If
+End Function
 
-FUNCTION DirectionFromDelta(DeltaX, DeltaY)
-    IF DeltaY < 0 THEN
-        RETURN NORTH
-    ELSE IF DeltaX > 0 THEN
-        RETURN EAST
-    ELSE IF DeltaY > 0 THEN
-        RETURN SOUTH
-    ELSE
-        RETURN WEST
-    END IF
-END FUNCTION
+Function DirectionFromDelta(DeltaX, DeltaY)
+    If DeltaY < 0 Then
+        Return NORTH
+    Else If DeltaX > 0 Then
+        Return EAST
+    Else If DeltaY > 0 Then
+        Return SOUTH
+    Else
+        Return WEST
+    End If
+End Function
 
 ' -----------------------------------------------------------------------------
 ' Map metadata, pipe generation, and validation
 ' -----------------------------------------------------------------------------
 
-SUB ResetDungeonMetadata()
-    FOR MetadataFloor = 0 TO FloorCount - 1
+Sub ResetDungeonMetadata()
+    For MetadataFloor = 0 To FloorCount - 1
         FloorStartX[MetadataFloor] = 1
         FloorStartY[MetadataFloor] = 1
         StairUpX[MetadataFloor] = -1
@@ -294,127 +294,127 @@ SUB ResetDungeonMetadata()
         ParsedRows[MetadataFloor] = 0
         ParsedUpCount[MetadataFloor] = 0
         ParsedDownCount[MetadataFloor] = 0
-    END FOR
+    End For
     PlayerStartFloor = 0
     PlayerStartX = 1
     PlayerStartY = 1
     PlayerStartDirection = SOUTH
     MapStartCount = 0
-END SUB
+End Sub
 
-SUB ClearDemoVisits()
-    FOR VisitIndex = 0 TO TotalCells - 1
+Sub ClearDemoVisits()
+    For VisitIndex = 0 To TotalCells - 1
         DemoVisits[VisitIndex] = 0
-    END FOR
-END SUB
+    End For
+End Sub
 
-SUB FillFloorWithWalls(FloorValue)
-    FOR FillY = 0 TO MapHeight - 1
-        FOR FillX = 0 TO MapWidth - 1
+Sub FillFloorWithWalls(FloorValue)
+    For FillY = 0 To MapHeight - 1
+        For FillX = 0 To MapWidth - 1
             Dungeon[MapIndex(FloorValue, FillX, FillY)] = TILE_WALL
-        END FOR
-    END FOR
-END SUB
+        End For
+    End For
+End Sub
 
-SUB CarveHorizontal(YValue, X1, X2)
-    StartX = MIN(X1, X2)
-    EndX = MAX(X1, X2)
-    FOR CorridorX = StartX TO EndX
-        CALL SetTile(CurrentGenerationFloor, CorridorX, YValue, TILE_FLOOR)
-    END FOR
-END SUB
+Sub CarveHorizontal(YValue, X1, X2)
+    StartX = Min(X1, X2)
+    EndX = Max(X1, X2)
+    For CorridorX = StartX To EndX
+        Call SetTile(CurrentGenerationFloor, CorridorX, YValue, TILE_FLOOR)
+    End For
+End Sub
 
-SUB CarveVertical(XValue, Y1, Y2)
-    StartY = MIN(Y1, Y2)
-    EndY = MAX(Y1, Y2)
-    FOR CorridorY = StartY TO EndY
-        CALL SetTile(CurrentGenerationFloor, XValue, CorridorY, TILE_FLOOR)
-    END FOR
-END SUB
+Sub CarveVertical(XValue, Y1, Y2)
+    StartY = Min(Y1, Y2)
+    EndY = Max(Y1, Y2)
+    For CorridorY = StartY To EndY
+        Call SetTile(CurrentGenerationFloor, XValue, CorridorY, TILE_FLOOR)
+    End For
+End Sub
 
-SUB PlacePipeStairs(FloorValue)
-    IF FloorValue = 0 THEN
+Sub PlacePipeStairs(FloorValue)
+    If FloorValue = 0 Then
         StairDownX[0] = 25
         StairDownY[0] = 25
-        CALL SetTile(0, 25, 25, TILE_STAIRS_DOWN)
-    ELSE IF FloorValue = 1 THEN
+        Call SetTile(0, 25, 25, TILE_STAIRS_DOWN)
+    Else If FloorValue = 1 Then
         StairUpX[1] = 5
         StairUpY[1] = 5
         StairDownX[1] = 25
         StairDownY[1] = 25
-        CALL SetTile(1, 5, 5, TILE_STAIRS_UP)
-        CALL SetTile(1, 25, 25, TILE_STAIRS_DOWN)
-    ELSE
+        Call SetTile(1, 5, 5, TILE_STAIRS_UP)
+        Call SetTile(1, 25, 25, TILE_STAIRS_DOWN)
+    Else
         StairUpX[2] = 5
         StairUpY[2] = 5
-        CALL SetTile(2, 5, 5, TILE_STAIRS_UP)
-    END IF
-END SUB
+        Call SetTile(2, 5, 5, TILE_STAIRS_UP)
+    End If
+End Sub
 
-SUB PlacePipeDoors(FloorValue)
-    CALL SetTile(FloorValue, 10, 5, TILE_DOOR_CLOSED)
-    CALL SetTile(FloorValue, 25, 10, TILE_DOOR_CLOSED)
-    CALL SetTile(FloorValue, 20, 25, TILE_DOOR_CLOSED)
-    CALL SetTile(FloorValue, 5, 20, TILE_DOOR_CLOSED)
-END SUB
+Sub PlacePipeDoors(FloorValue)
+    Call SetTile(FloorValue, 10, 5, TILE_DOOR_CLOSED)
+    Call SetTile(FloorValue, 25, 10, TILE_DOOR_CLOSED)
+    Call SetTile(FloorValue, 20, 25, TILE_DOOR_CLOSED)
+    Call SetTile(FloorValue, 5, 20, TILE_DOOR_CLOSED)
+End Sub
 
-FUNCTION DoorHasClearRun(FloorValue, DoorTestX, DoorTestY, HorizontalValue)
-    FOR DoorDistance = 1 TO 4
-        IF HorizontalValue = 1 THEN
+Function DoorHasClearRun(FloorValue, DoorTestX, DoorTestY, HorizontalValue)
+    For DoorDistance = 1 To 4
+        If HorizontalValue = 1 Then
             LeftRunTile = GetTile(FloorValue, DoorTestX - DoorDistance, DoorTestY)
             RightRunTile = GetTile(FloorValue, DoorTestX + DoorDistance, DoorTestY)
-            IF LeftRunTile <> TILE_FLOOR OR RightRunTile <> TILE_FLOOR THEN
-                RETURN FALSE
-            END IF
-            IF GetTile(FloorValue, DoorTestX - DoorDistance, DoorTestY - 1) <> TILE_WALL OR GetTile(FloorValue, DoorTestX - DoorDistance, DoorTestY + 1) <> TILE_WALL THEN
-                RETURN FALSE
-            END IF
-            IF GetTile(FloorValue, DoorTestX + DoorDistance, DoorTestY - 1) <> TILE_WALL OR GetTile(FloorValue, DoorTestX + DoorDistance, DoorTestY + 1) <> TILE_WALL THEN
-                RETURN FALSE
-            END IF
-        ELSE
+            If LeftRunTile <> TILE_FLOOR Or RightRunTile <> TILE_FLOOR Then
+                Return False
+            End If
+            If GetTile(FloorValue, DoorTestX - DoorDistance, DoorTestY - 1) <> TILE_WALL Or GetTile(FloorValue, DoorTestX - DoorDistance, DoorTestY + 1) <> TILE_WALL Then
+                Return False
+            End If
+            If GetTile(FloorValue, DoorTestX + DoorDistance, DoorTestY - 1) <> TILE_WALL Or GetTile(FloorValue, DoorTestX + DoorDistance, DoorTestY + 1) <> TILE_WALL Then
+                Return False
+            End If
+        Else
             UpRunTile = GetTile(FloorValue, DoorTestX, DoorTestY - DoorDistance)
             DownRunTile = GetTile(FloorValue, DoorTestX, DoorTestY + DoorDistance)
-            IF UpRunTile <> TILE_FLOOR OR DownRunTile <> TILE_FLOOR THEN
-                RETURN FALSE
-            END IF
-            IF GetTile(FloorValue, DoorTestX - 1, DoorTestY - DoorDistance) <> TILE_WALL OR GetTile(FloorValue, DoorTestX + 1, DoorTestY - DoorDistance) <> TILE_WALL THEN
-                RETURN FALSE
-            END IF
-            IF GetTile(FloorValue, DoorTestX - 1, DoorTestY + DoorDistance) <> TILE_WALL OR GetTile(FloorValue, DoorTestX + 1, DoorTestY + DoorDistance) <> TILE_WALL THEN
-                RETURN FALSE
-            END IF
-        END IF
-    END FOR
-    RETURN TRUE
-END FUNCTION
+            If UpRunTile <> TILE_FLOOR Or DownRunTile <> TILE_FLOOR Then
+                Return False
+            End If
+            If GetTile(FloorValue, DoorTestX - 1, DoorTestY - DoorDistance) <> TILE_WALL Or GetTile(FloorValue, DoorTestX + 1, DoorTestY - DoorDistance) <> TILE_WALL Then
+                Return False
+            End If
+            If GetTile(FloorValue, DoorTestX - 1, DoorTestY + DoorDistance) <> TILE_WALL Or GetTile(FloorValue, DoorTestX + 1, DoorTestY + DoorDistance) <> TILE_WALL Then
+                Return False
+            End If
+        End If
+    End For
+    Return True
+End Function
 
-SUB ValidateFloor(FloorValue)
-    FOR BorderX = 0 TO MapWidth - 1
-        IF GetTile(FloorValue, BorderX, 0) <> TILE_WALL OR GetTile(FloorValue, BorderX, MapHeight - 1) <> TILE_WALL THEN
-            GenerationValid = FALSE
-        END IF
-    END FOR
-    FOR BorderY = 0 TO MapHeight - 1
-        IF GetTile(FloorValue, 0, BorderY) <> TILE_WALL OR GetTile(FloorValue, MapWidth - 1, BorderY) <> TILE_WALL THEN
-            GenerationValid = FALSE
-        END IF
-    END FOR
+Sub ValidateFloor(FloorValue)
+    For BorderX = 0 To MapWidth - 1
+        If GetTile(FloorValue, BorderX, 0) <> TILE_WALL Or GetTile(FloorValue, BorderX, MapHeight - 1) <> TILE_WALL Then
+            GenerationValid = False
+        End If
+    End For
+    For BorderY = 0 To MapHeight - 1
+        If GetTile(FloorValue, 0, BorderY) <> TILE_WALL Or GetTile(FloorValue, MapWidth - 1, BorderY) <> TILE_WALL Then
+            GenerationValid = False
+        End If
+    End For
 
     AnchorX = FloorStartX[FloorValue]
     AnchorY = FloorStartY[FloorValue]
-    IF AnchorX < 1 OR AnchorX >= MapWidth - 1 OR AnchorY < 1 OR AnchorY >= MapHeight - 1 THEN
-        GenerationValid = FALSE
+    If AnchorX < 1 Or AnchorX >= MapWidth - 1 Or AnchorY < 1 Or AnchorY >= MapHeight - 1 Then
+        GenerationValid = False
         AnchorX = 1
         AnchorY = 1
-    END IF
-    IF IsWalkable(GetTile(FloorValue, AnchorX, AnchorY)) = FALSE THEN
-        GenerationValid = FALSE
-    END IF
+    End If
+    If IsWalkable(GetTile(FloorValue, AnchorX, AnchorY)) = False Then
+        GenerationValid = False
+    End If
 
-    FOR ClearIndex = 0 TO CellsPerFloor - 1
+    For ClearIndex = 0 To CellsPerFloor - 1
         FloodVisited[ClearIndex] = 0
-    END FOR
+    End For
 
     FloodHead = 0
     FloodTail = 0
@@ -423,326 +423,326 @@ SUB ValidateFloor(FloorValue)
     FloodTail = FloodTail + 1
     FloodVisited[FloodStart] = 1
 
-    DO
+    Do
         FloodCell = FloodQueue[FloodHead]
         FloodHead = FloodHead + 1
-        FloodX = FloodCell MOD MapWidth
+        FloodX = FloodCell Mod MapWidth
         FloodY = FloodCell / MapWidth
-        FOR FloodDirection = 0 TO 3
+        For FloodDirection = 0 To 3
             FloodNextX = FloodX + DirectionX[FloodDirection]
             FloodNextY = FloodY + DirectionY[FloodDirection]
-            IF FloodNextX > 0 AND FloodNextX < MapWidth - 1 AND FloodNextY > 0 AND FloodNextY < MapHeight - 1 THEN
+            If FloodNextX > 0 And FloodNextX < MapWidth - 1 And FloodNextY > 0 And FloodNextY < MapHeight - 1 Then
                 FloodNext = FloodNextY * MapWidth + FloodNextX
-                IF FloodVisited[FloodNext] = 0 AND IsWalkable(GetTile(FloorValue, FloodNextX, FloodNextY)) = TRUE THEN
+                If FloodVisited[FloodNext] = 0 And IsWalkable(GetTile(FloorValue, FloodNextX, FloodNextY)) = True Then
                     FloodVisited[FloodNext] = 1
                     FloodQueue[FloodTail] = FloodNext
                     FloodTail = FloodTail + 1
-                END IF
-            END IF
-        END FOR
-    LOOP UNTIL FloodHead >= FloodTail
+                End If
+            End If
+        End For
+    Loop Until FloodHead >= FloodTail
 
     WalkableCount = 0
     VisitedCount = 0
-    FOR ValidateY = 0 TO MapHeight - 1
-        FOR ValidateX = 0 TO MapWidth - 1
+    For ValidateY = 0 To MapHeight - 1
+        For ValidateX = 0 To MapWidth - 1
             ValidateCell = ValidateY * MapWidth + ValidateX
-            IF IsWalkable(GetTile(FloorValue, ValidateX, ValidateY)) = TRUE THEN
+            If IsWalkable(GetTile(FloorValue, ValidateX, ValidateY)) = True Then
                 WalkableCount = WalkableCount + 1
-                IF FloodVisited[ValidateCell] = 1 THEN
+                If FloodVisited[ValidateCell] = 1 Then
                     VisitedCount = VisitedCount + 1
-                END IF
-            END IF
-        END FOR
-    END FOR
-    IF WalkableCount = 0 OR VisitedCount <> WalkableCount THEN
-        GenerationValid = FALSE
-    END IF
+                End If
+            End If
+        End For
+    End For
+    If WalkableCount = 0 Or VisitedCount <> WalkableCount Then
+        GenerationValid = False
+    End If
 
-    FOR SquareY = 0 TO MapHeight - 2
-        FOR SquareX = 0 TO MapWidth - 2
-            OpenSquare = IsWalkable(GetTile(FloorValue, SquareX, SquareY)) AND IsWalkable(GetTile(FloorValue, SquareX + 1, SquareY)) AND IsWalkable(GetTile(FloorValue, SquareX, SquareY + 1)) AND IsWalkable(GetTile(FloorValue, SquareX + 1, SquareY + 1))
-            IF OpenSquare = TRUE THEN
-                GenerationValid = FALSE
-            END IF
-        END FOR
-    END FOR
+    For SquareY = 0 To MapHeight - 2
+        For SquareX = 0 To MapWidth - 2
+            OpenSquare = IsWalkable(GetTile(FloorValue, SquareX, SquareY)) And IsWalkable(GetTile(FloorValue, SquareX + 1, SquareY)) And IsWalkable(GetTile(FloorValue, SquareX, SquareY + 1)) And IsWalkable(GetTile(FloorValue, SquareX + 1, SquareY + 1))
+            If OpenSquare = True Then
+                GenerationValid = False
+            End If
+        End For
+    End For
 
-    FOR ValidateY = 1 TO MapHeight - 2
-        FOR ValidateX = 1 TO MapWidth - 2
+    For ValidateY = 1 To MapHeight - 2
+        For ValidateX = 1 To MapWidth - 2
             ValidateTile = GetTile(FloorValue, ValidateX, ValidateY)
-            IF ValidateTile = TILE_DOOR_CLOSED OR ValidateTile = TILE_DOOR_OPEN THEN
-                ValidHorizontal = IsWalkable(GetTile(FloorValue, ValidateX - 1, ValidateY)) AND IsWalkable(GetTile(FloorValue, ValidateX + 1, ValidateY)) AND GetTile(FloorValue, ValidateX, ValidateY - 1) = TILE_WALL AND GetTile(FloorValue, ValidateX, ValidateY + 1) = TILE_WALL
-                ValidVertical = IsWalkable(GetTile(FloorValue, ValidateX, ValidateY - 1)) AND IsWalkable(GetTile(FloorValue, ValidateX, ValidateY + 1)) AND GetTile(FloorValue, ValidateX - 1, ValidateY) = TILE_WALL AND GetTile(FloorValue, ValidateX + 1, ValidateY) = TILE_WALL
-                IF ValidHorizontal = ValidVertical THEN
-                    GenerationValid = FALSE
-                ELSE IF ValidHorizontal = TRUE THEN
-                    IF DoorHasClearRun(FloorValue, ValidateX, ValidateY, 1) = FALSE THEN
-                        GenerationValid = FALSE
-                    END IF
-                ELSE IF DoorHasClearRun(FloorValue, ValidateX, ValidateY, 0) = FALSE THEN
-                    GenerationValid = FALSE
-                END IF
-            END IF
-        END FOR
-    END FOR
-END SUB
+            If ValidateTile = TILE_DOOR_CLOSED Or ValidateTile = TILE_DOOR_OPEN Then
+                ValidHorizontal = IsWalkable(GetTile(FloorValue, ValidateX - 1, ValidateY)) And IsWalkable(GetTile(FloorValue, ValidateX + 1, ValidateY)) And GetTile(FloorValue, ValidateX, ValidateY - 1) = TILE_WALL And GetTile(FloorValue, ValidateX, ValidateY + 1) = TILE_WALL
+                ValidVertical = IsWalkable(GetTile(FloorValue, ValidateX, ValidateY - 1)) And IsWalkable(GetTile(FloorValue, ValidateX, ValidateY + 1)) And GetTile(FloorValue, ValidateX - 1, ValidateY) = TILE_WALL And GetTile(FloorValue, ValidateX + 1, ValidateY) = TILE_WALL
+                If ValidHorizontal = ValidVertical Then
+                    GenerationValid = False
+                Else If ValidHorizontal = True Then
+                    If DoorHasClearRun(FloorValue, ValidateX, ValidateY, 1) = False Then
+                        GenerationValid = False
+                    End If
+                Else If DoorHasClearRun(FloorValue, ValidateX, ValidateY, 0) = False Then
+                    GenerationValid = False
+                End If
+            End If
+        End For
+    End For
+End Sub
 
-SUB ValidateDungeon()
-    GenerationValid = TRUE
-    FOR ValidateFloorValue = 0 TO FloorCount - 1
-        CALL ValidateFloor(ValidateFloorValue)
-    END FOR
+Sub ValidateDungeon()
+    GenerationValid = True
+    For ValidateFloorValue = 0 To FloorCount - 1
+        Call ValidateFloor(ValidateFloorValue)
+    End For
 
-    FOR StairFloor = 0 TO FloorCount - 1
+    For StairFloor = 0 To FloorCount - 1
         CountedUp = 0
         CountedDown = 0
-        FOR StairY = 1 TO MapHeight - 2
-            FOR StairX = 1 TO MapWidth - 2
-                IF GetTile(StairFloor, StairX, StairY) = TILE_STAIRS_UP THEN
+        For StairY = 1 To MapHeight - 2
+            For StairX = 1 To MapWidth - 2
+                If GetTile(StairFloor, StairX, StairY) = TILE_STAIRS_UP Then
                     CountedUp = CountedUp + 1
-                ELSE IF GetTile(StairFloor, StairX, StairY) = TILE_STAIRS_DOWN THEN
+                Else If GetTile(StairFloor, StairX, StairY) = TILE_STAIRS_DOWN Then
                     CountedDown = CountedDown + 1
-                END IF
-            END FOR
-        END FOR
-        IF StairFloor = 0 AND (CountedUp <> 0 OR CountedDown <> 1) THEN
-            GenerationValid = FALSE
-        ELSE IF StairFloor = 1 AND (CountedUp <> 1 OR CountedDown <> 1) THEN
-            GenerationValid = FALSE
-        ELSE IF StairFloor = 2 AND (CountedUp <> 1 OR CountedDown <> 0) THEN
-            GenerationValid = FALSE
-        END IF
-    END FOR
+                End If
+            End For
+        End For
+        If StairFloor = 0 And (CountedUp <> 0 Or CountedDown <> 1) Then
+            GenerationValid = False
+        Else If StairFloor = 1 And (CountedUp <> 1 Or CountedDown <> 1) Then
+            GenerationValid = False
+        Else If StairFloor = 2 And (CountedUp <> 1 Or CountedDown <> 0) Then
+            GenerationValid = False
+        End If
+    End For
 
-    IF MapStartCount <> 1 OR PlayerStartFloor < 0 OR PlayerStartFloor >= FloorCount THEN
-        GenerationValid = FALSE
-    ELSE
+    If MapStartCount <> 1 Or PlayerStartFloor < 0 Or PlayerStartFloor >= FloorCount Then
+        GenerationValid = False
+    Else
         StartTile = GetTile(PlayerStartFloor, PlayerStartX, PlayerStartY)
         ForwardX = PlayerStartX + DirectionX[PlayerStartDirection]
         ForwardY = PlayerStartY + DirectionY[PlayerStartDirection]
-        BackwardDirection = (PlayerStartDirection + 2) MOD 4
+        BackwardDirection = (PlayerStartDirection + 2) Mod 4
         BackwardX = PlayerStartX + DirectionX[BackwardDirection]
         BackwardY = PlayerStartY + DirectionY[BackwardDirection]
-        LeftDirection = (PlayerStartDirection + 3) MOD 4
-        RightDirection = (PlayerStartDirection + 1) MOD 4
-        IF StartTile <> TILE_FLOOR OR IsWalkable(GetTile(PlayerStartFloor, ForwardX, ForwardY)) = FALSE OR IsWalkable(GetTile(PlayerStartFloor, BackwardX, BackwardY)) = FALSE THEN
-            GenerationValid = FALSE
-        END IF
-        IF GetTile(PlayerStartFloor, PlayerStartX + DirectionX[LeftDirection], PlayerStartY + DirectionY[LeftDirection]) <> TILE_WALL OR GetTile(PlayerStartFloor, PlayerStartX + DirectionX[RightDirection], PlayerStartY + DirectionY[RightDirection]) <> TILE_WALL THEN
-            GenerationValid = FALSE
-        END IF
-    END IF
-END SUB
+        LeftDirection = (PlayerStartDirection + 3) Mod 4
+        RightDirection = (PlayerStartDirection + 1) Mod 4
+        If StartTile <> TILE_FLOOR Or IsWalkable(GetTile(PlayerStartFloor, ForwardX, ForwardY)) = False Or IsWalkable(GetTile(PlayerStartFloor, BackwardX, BackwardY)) = False Then
+            GenerationValid = False
+        End If
+        If GetTile(PlayerStartFloor, PlayerStartX + DirectionX[LeftDirection], PlayerStartY + DirectionY[LeftDirection]) <> TILE_WALL Or GetTile(PlayerStartFloor, PlayerStartX + DirectionX[RightDirection], PlayerStartY + DirectionY[RightDirection]) <> TILE_WALL Then
+            GenerationValid = False
+        End If
+    End If
+End Sub
 
-SUB PrepareGeneratedFloor(FloorValue)
+Sub PrepareGeneratedFloor(FloorValue)
     FloorStartX[FloorValue] = 5
     FloorStartY[FloorValue] = 5
-    IF FloorValue = 0 THEN
+    If FloorValue = 0 Then
         FloorStartX[0] = 5
         FloorStartY[0] = 10
         PlayerStartFloor = 0
         PlayerStartX = 5
         PlayerStartY = 10
         PlayerStartDirection = SOUTH
-    END IF
-    CALL PlacePipeDoors(FloorValue)
-    CALL PlacePipeStairs(FloorValue)
-END SUB
+    End If
+    Call PlacePipeDoors(FloorValue)
+    Call PlacePipeStairs(FloorValue)
+End Sub
 
-SUB BuildRandomFloor(FloorValue)
+Sub BuildRandomFloor(FloorValue)
     CurrentGenerationFloor = FloorValue
-    CALL FillFloorWithWalls(FloorValue)
+    Call FillFloorWithWalls(FloorValue)
 
-    CALL CarveHorizontal(5, 5, 25)
-    CALL CarveHorizontal(25, 5, 25)
-    CALL CarveVertical(5, 5, 25)
-    CALL CarveVertical(25, 5, 25)
+    Call CarveHorizontal(5, 5, 25)
+    Call CarveHorizontal(25, 5, 25)
+    Call CarveVertical(5, 5, 25)
+    Call CarveVertical(25, 5, 25)
 
-    RANDOM PipePattern FROM 0 TO 3
-    IF PipePattern = 0 THEN
-        CALL CarveHorizontal(15, 5, 25)
-        CALL CarveVertical(15, 5, 15)
-    ELSE IF PipePattern = 1 THEN
-        CALL CarveVertical(15, 5, 25)
-        CALL CarveHorizontal(15, 5, 15)
-    ELSE IF PipePattern = 2 THEN
-        CALL CarveHorizontal(15, 5, 25)
-        CALL CarveVertical(15, 5, 25)
-    ELSE
-        CALL CarveHorizontal(15, 5, 25)
-        CALL CarveVertical(15, 15, 25)
-    END IF
+    Random PipePattern From 0 To 3
+    If PipePattern = 0 Then
+        Call CarveHorizontal(15, 5, 25)
+        Call CarveVertical(15, 5, 15)
+    Else If PipePattern = 1 Then
+        Call CarveVertical(15, 5, 25)
+        Call CarveHorizontal(15, 5, 15)
+    Else If PipePattern = 2 Then
+        Call CarveHorizontal(15, 5, 25)
+        Call CarveVertical(15, 5, 25)
+    Else
+        Call CarveHorizontal(15, 5, 25)
+        Call CarveVertical(15, 15, 25)
+    End If
 
-    CALL PrepareGeneratedFloor(FloorValue)
-    GenerationValid = TRUE
-    CALL ValidateFloor(FloorValue)
-END SUB
+    Call PrepareGeneratedFloor(FloorValue)
+    GenerationValid = True
+    Call ValidateFloor(FloorValue)
+End Sub
 
-SUB BuildFallbackFloor(FloorValue)
+Sub BuildFallbackFloor(FloorValue)
     CurrentGenerationFloor = FloorValue
-    CALL FillFloorWithWalls(FloorValue)
-    CALL CarveHorizontal(5, 5, 25)
-    CALL CarveHorizontal(15, 5, 25)
-    CALL CarveHorizontal(25, 5, 25)
-    CALL CarveVertical(5, 5, 25)
-    CALL CarveVertical(15, 5, 25)
-    CALL CarveVertical(25, 5, 25)
-    CALL PrepareGeneratedFloor(FloorValue)
-    GenerationValid = TRUE
-    CALL ValidateFloor(FloorValue)
-END SUB
+    Call FillFloorWithWalls(FloorValue)
+    Call CarveHorizontal(5, 5, 25)
+    Call CarveHorizontal(15, 5, 25)
+    Call CarveHorizontal(25, 5, 25)
+    Call CarveVertical(5, 5, 25)
+    Call CarveVertical(15, 5, 25)
+    Call CarveVertical(25, 5, 25)
+    Call PrepareGeneratedFloor(FloorValue)
+    GenerationValid = True
+    Call ValidateFloor(FloorValue)
+End Sub
 
-SUB GenerateFloor(FloorValue)
-    GenerationValid = FALSE
-    FOR GenerationAttempt = 1 TO MaximumGenerationAttempts
-        CALL BuildRandomFloor(FloorValue)
-        IF GenerationValid = TRUE THEN
-            EXIT FOR
-        END IF
-    END FOR
-    IF GenerationValid = FALSE THEN
-        CALL BuildFallbackFloor(FloorValue)
-    END IF
-END SUB
+Sub GenerateFloor(FloorValue)
+    GenerationValid = False
+    For GenerationAttempt = 1 To MaximumGenerationAttempts
+        Call BuildRandomFloor(FloorValue)
+        If GenerationValid = True Then
+            Exit For
+        End If
+    End For
+    If GenerationValid = False Then
+        Call BuildFallbackFloor(FloorValue)
+    End If
+End Sub
 
-SUB GenerateAllFloors()
-    CALL ResetDungeonMetadata()
+Sub GenerateAllFloors()
+    Call ResetDungeonMetadata()
     MapStartCount = 1
-    FOR GenerateFloorValue = 0 TO FloorCount - 1
-        CALL GenerateFloor(GenerateFloorValue)
-    END FOR
-    CALL ValidateDungeon()
-    IF GenerationValid = FALSE THEN
-        CALL ResetDungeonMetadata()
+    For GenerateFloorValue = 0 To FloorCount - 1
+        Call GenerateFloor(GenerateFloorValue)
+    End For
+    Call ValidateDungeon()
+    If GenerationValid = False Then
+        Call ResetDungeonMetadata()
         MapStartCount = 1
-        FOR GenerateFloorValue = 0 TO FloorCount - 1
-            CALL BuildFallbackFloor(GenerateFloorValue)
-        END FOR
-        CALL ValidateDungeon()
-    END IF
-    CALL ClearDemoVisits()
-END SUB
+        For GenerateFloorValue = 0 To FloorCount - 1
+            Call BuildFallbackFloor(GenerateFloorValue)
+        End For
+        Call ValidateDungeon()
+    End If
+    Call ClearDemoVisits()
+End Sub
 
 ' -----------------------------------------------------------------------------
 ' External text-map parsing. All interpretation remains in SMILE source.
 ' -----------------------------------------------------------------------------
 
-SUB ProcessMapLine(LineStart, LineLength)
-    IF MapLoadValid = FALSE THEN
-        RETURN
-    END IF
-    IF LineLength > 0 AND MapFileBytes[LineStart + LineLength - 1] = 13 THEN
+Sub ProcessMapLine(LineStart, LineLength)
+    If MapLoadValid = False Then
+        Return
+    End If
+    If LineLength > 0 And MapFileBytes[LineStart + LineLength - 1] = 13 Then
         LineLength = LineLength - 1
-    END IF
-    IF LineLength = 0 THEN
-        RETURN
-    END IF
-    IF MapFileBytes[LineStart] = 59 THEN
-        RETURN
-    END IF
+    End If
+    If LineLength = 0 Then
+        Return
+    End If
+    If MapFileBytes[LineStart] = 59 Then
+        Return
+    End If
 
-    IsHeader = LineLength = 9 AND MapFileBytes[LineStart] = 91 AND MapFileBytes[LineStart + 1] = 70 AND MapFileBytes[LineStart + 2] = 76 AND MapFileBytes[LineStart + 3] = 79 AND MapFileBytes[LineStart + 4] = 79 AND MapFileBytes[LineStart + 5] = 82 AND MapFileBytes[LineStart + 6] = 32 AND MapFileBytes[LineStart + 8] = 93
-    IF IsHeader = TRUE THEN
+    IsHeader = LineLength = 9 And MapFileBytes[LineStart] = 91 And MapFileBytes[LineStart + 1] = 70 And MapFileBytes[LineStart + 2] = 76 And MapFileBytes[LineStart + 3] = 79 And MapFileBytes[LineStart + 4] = 79 And MapFileBytes[LineStart + 5] = 82 And MapFileBytes[LineStart + 6] = 32 And MapFileBytes[LineStart + 8] = 93
+    If IsHeader = True Then
         HeaderFloor = MapFileBytes[LineStart + 7] - 49
-        IF HeaderFloor < 0 OR HeaderFloor >= FloorCount OR HeaderFloor <> NextFloorHeader THEN
-            MapLoadValid = FALSE
-            RETURN
-        END IF
-        IF CurrentParsedFloor >= 0 AND ParsedRows[CurrentParsedFloor] <> MapHeight THEN
-            MapLoadValid = FALSE
-            RETURN
-        END IF
+        If HeaderFloor < 0 Or HeaderFloor >= FloorCount Or HeaderFloor <> NextFloorHeader Then
+            MapLoadValid = False
+            Return
+        End If
+        If CurrentParsedFloor >= 0 And ParsedRows[CurrentParsedFloor] <> MapHeight Then
+            MapLoadValid = False
+            Return
+        End If
         CurrentParsedFloor = HeaderFloor
         NextFloorHeader = NextFloorHeader + 1
-        RETURN
-    END IF
+        Return
+    End If
 
-    IF CurrentParsedFloor < 0 OR CurrentParsedFloor >= FloorCount OR LineLength <> MapWidth OR ParsedRows[CurrentParsedFloor] >= MapHeight THEN
-        MapLoadValid = FALSE
-        RETURN
-    END IF
+    If CurrentParsedFloor < 0 Or CurrentParsedFloor >= FloorCount Or LineLength <> MapWidth Or ParsedRows[CurrentParsedFloor] >= MapHeight Then
+        MapLoadValid = False
+        Return
+    End If
 
     ParsedY = ParsedRows[CurrentParsedFloor]
-    FOR ParsedX = 0 TO MapWidth - 1
+    For ParsedX = 0 To MapWidth - 1
         MapByte = MapFileBytes[LineStart + ParsedX]
         ParsedTile = TILE_WALL
-        IF MapByte = 35 THEN
+        If MapByte = 35 Then
             ParsedTile = TILE_WALL
-        ELSE IF MapByte = 46 THEN
+        Else If MapByte = 46 Then
             ParsedTile = TILE_FLOOR
-        ELSE IF MapByte = 68 THEN
+        Else If MapByte = 68 Then
             ParsedTile = TILE_DOOR_CLOSED
-        ELSE IF MapByte = 79 THEN
+        Else If MapByte = 79 Then
             ParsedTile = TILE_DOOR_OPEN
-        ELSE IF MapByte = 85 THEN
+        Else If MapByte = 85 Then
             ParsedTile = TILE_STAIRS_UP
             ParsedUpCount[CurrentParsedFloor] = ParsedUpCount[CurrentParsedFloor] + 1
             StairUpX[CurrentParsedFloor] = ParsedX
             StairUpY[CurrentParsedFloor] = ParsedY
-        ELSE IF MapByte = 86 THEN
+        Else If MapByte = 86 Then
             ParsedTile = TILE_STAIRS_DOWN
             ParsedDownCount[CurrentParsedFloor] = ParsedDownCount[CurrentParsedFloor] + 1
             StairDownX[CurrentParsedFloor] = ParsedX
             StairDownY[CurrentParsedFloor] = ParsedY
-        ELSE IF MapByte = 78 OR MapByte = 69 OR MapByte = 83 OR MapByte = 87 THEN
+        Else If MapByte = 78 Or MapByte = 69 Or MapByte = 83 Or MapByte = 87 Then
             ParsedTile = TILE_FLOOR
             MapStartCount = MapStartCount + 1
             PlayerStartFloor = CurrentParsedFloor
             PlayerStartX = ParsedX
             PlayerStartY = ParsedY
-            IF MapByte = 78 THEN
+            If MapByte = 78 Then
                 PlayerStartDirection = NORTH
-            ELSE IF MapByte = 69 THEN
+            Else If MapByte = 69 Then
                 PlayerStartDirection = EAST
-            ELSE IF MapByte = 83 THEN
+            Else If MapByte = 83 Then
                 PlayerStartDirection = SOUTH
-            ELSE
+            Else
                 PlayerStartDirection = WEST
-            END IF
-        ELSE
-            MapLoadValid = FALSE
-        END IF
+            End If
+        Else
+            MapLoadValid = False
+        End If
         Dungeon[MapIndex(CurrentParsedFloor, ParsedX, ParsedY)] = ParsedTile
-    END FOR
+    End For
     ParsedRows[CurrentParsedFloor] = ParsedRows[CurrentParsedFloor] + 1
-END SUB
+End Sub
 
-SUB ParseLoadedMap()
-    CALL ResetDungeonMetadata()
-    FOR ClearFloor = 0 TO FloorCount - 1
-        CALL FillFloorWithWalls(ClearFloor)
-    END FOR
+Sub ParseLoadedMap()
+    Call ResetDungeonMetadata()
+    For ClearFloor = 0 To FloorCount - 1
+        Call FillFloorWithWalls(ClearFloor)
+    End For
     MapLoadValid = MapFileLength > 0
     CurrentParsedFloor = -1
     NextFloorHeader = 0
 
-    IF MapLoadValid = TRUE THEN
+    If MapLoadValid = True Then
         LineStart = 0
-        FOR ByteIndex = 0 TO MapFileLength - 1
-            IF MapFileBytes[ByteIndex] = 10 THEN
-                CALL ProcessMapLine(LineStart, ByteIndex - LineStart)
+        For ByteIndex = 0 To MapFileLength - 1
+            If MapFileBytes[ByteIndex] = 10 Then
+                Call ProcessMapLine(LineStart, ByteIndex - LineStart)
                 LineStart = ByteIndex + 1
-            END IF
-        END FOR
-        IF LineStart < MapFileLength THEN
-            CALL ProcessMapLine(LineStart, MapFileLength - LineStart)
-        END IF
-    END IF
+            End If
+        End For
+        If LineStart < MapFileLength Then
+            Call ProcessMapLine(LineStart, MapFileLength - LineStart)
+        End If
+    End If
 
-    IF NextFloorHeader <> FloorCount OR CurrentParsedFloor <> FloorCount - 1 THEN
-        MapLoadValid = FALSE
-    END IF
-    FOR ParsedFloor = 0 TO FloorCount - 1
-        IF ParsedRows[ParsedFloor] <> MapHeight THEN
-            MapLoadValid = FALSE
-        END IF
-    END FOR
-    IF MapStartCount <> 1 OR ParsedUpCount[0] <> 0 OR ParsedDownCount[0] <> 1 OR ParsedUpCount[1] <> 1 OR ParsedDownCount[1] <> 1 OR ParsedUpCount[2] <> 1 OR ParsedDownCount[2] <> 0 THEN
-        MapLoadValid = FALSE
-    END IF
+    If NextFloorHeader <> FloorCount Or CurrentParsedFloor <> FloorCount - 1 Then
+        MapLoadValid = False
+    End If
+    For ParsedFloor = 0 To FloorCount - 1
+        If ParsedRows[ParsedFloor] <> MapHeight Then
+            MapLoadValid = False
+        End If
+    End For
+    If MapStartCount <> 1 Or ParsedUpCount[0] <> 0 Or ParsedDownCount[0] <> 1 Or ParsedUpCount[1] <> 1 Or ParsedDownCount[1] <> 1 Or ParsedUpCount[2] <> 1 Or ParsedDownCount[2] <> 0 Then
+        MapLoadValid = False
+    End If
 
-    IF MapLoadValid = TRUE THEN
+    If MapLoadValid = True Then
         FloorStartX[0] = StairDownX[0]
         FloorStartY[0] = StairDownY[0]
         FloorStartX[1] = StairUpX[1]
@@ -751,208 +751,208 @@ SUB ParseLoadedMap()
         FloorStartY[2] = StairUpY[2]
         FloorStartX[PlayerStartFloor] = PlayerStartX
         FloorStartY[PlayerStartFloor] = PlayerStartY
-        CALL ValidateDungeon()
+        Call ValidateDungeon()
         MapLoadValid = GenerationValid
-    END IF
-    CALL ClearDemoVisits()
-END SUB
+    End If
+    Call ClearDemoVisits()
+End Sub
 
-SUB LoadDefaultMap()
-    LOAD TEXT FILE "Maps\default.map" INTO MapFileBytes COUNT MapFileLength
-    CALL ParseLoadedMap()
-END SUB
+Sub LoadDefaultMap()
+    Load Text File "Maps\default.map" Into MapFileBytes Count MapFileLength
+    Call ParseLoadedMap()
+End Sub
 
-SUB LoadLoopsMap()
-    LOAD TEXT FILE "Maps\sample-loops.map" INTO MapFileBytes COUNT MapFileLength
-    CALL ParseLoadedMap()
-END SUB
+Sub LoadLoopsMap()
+    Load Text File "Maps\sample-loops.map" Into MapFileBytes Count MapFileLength
+    Call ParseLoadedMap()
+End Sub
 
-SUB LoadSwitchbacksMap()
-    LOAD TEXT FILE "Maps\sample-switchbacks.map" INTO MapFileBytes COUNT MapFileLength
-    CALL ParseLoadedMap()
-END SUB
+Sub LoadSwitchbacksMap()
+    Load Text File "Maps\sample-switchbacks.map" Into MapFileBytes Count MapFileLength
+    Call ParseLoadedMap()
+End Sub
 
-SUB BuildSelectedDungeon()
-    MapFallbackUsed = FALSE
-    IF SelectedMap = MAP_RANDOM THEN
-        CALL GenerateAllFloors()
-        RETURN
-    END IF
+Sub BuildSelectedDungeon()
+    MapFallbackUsed = False
+    If SelectedMap = MAP_RANDOM Then
+        Call GenerateAllFloors()
+        Return
+    End If
 
-    IF SelectedMap = MAP_DEFAULT THEN
-        CALL LoadDefaultMap()
-    ELSE IF SelectedMap = MAP_LOOPS THEN
-        CALL LoadLoopsMap()
-    ELSE
-        CALL LoadSwitchbacksMap()
-    END IF
+    If SelectedMap = MAP_DEFAULT Then
+        Call LoadDefaultMap()
+    Else If SelectedMap = MAP_LOOPS Then
+        Call LoadLoopsMap()
+    Else
+        Call LoadSwitchbacksMap()
+    End If
 
-    IF MapLoadValid = FALSE THEN
-        CALL GenerateAllFloors()
-        MapFallbackUsed = TRUE
-        MapFallbackMessageUntil = TIMER() + MapFallbackMessageDuration
-    END IF
-END SUB
+    If MapLoadValid = False Then
+        Call GenerateAllFloors()
+        MapFallbackUsed = True
+        MapFallbackMessageUntil = Timer() + MapFallbackMessageDuration
+    End If
+End Sub
 
 ' -----------------------------------------------------------------------------
 ' Floor palettes and projection helpers
 ' -----------------------------------------------------------------------------
 
-SUB SelectPalette()
-    IF CurrentFloor = 0 THEN
-        WallNearColor = RGB(22, 118, 78)
-        WallMidColor = RGB(16, 82, 57)
-        WallFarColor = RGB(11, 50, 39)
-        MortarColor = RGB(55, 190, 125)
-        DungeonFloorColor = RGB(7, 28, 21)
-        CeilingColor = RGB(5, 20, 15)
-        DoorColor = RGB(22, 75, 52)
-        HighlightColor = RGB(100, 225, 160)
-    ELSE IF CurrentFloor = 1 THEN
-        WallNearColor = RGB(28, 80, 150)
-        WallMidColor = RGB(20, 58, 112)
-        WallFarColor = RGB(12, 36, 72)
-        MortarColor = RGB(90, 155, 225)
-        DungeonFloorColor = RGB(6, 18, 38)
-        CeilingColor = RGB(5, 12, 28)
-        DoorColor = RGB(25, 55, 100)
-        HighlightColor = RGB(135, 190, 255)
-    ELSE
-        WallNearColor = RGB(145, 48, 45)
-        WallMidColor = RGB(102, 32, 35)
-        WallFarColor = RGB(62, 20, 25)
-        MortarColor = RGB(230, 105, 85)
-        DungeonFloorColor = RGB(35, 8, 12)
-        CeilingColor = RGB(24, 5, 8)
-        DoorColor = RGB(95, 32, 28)
-        HighlightColor = RGB(255, 145, 120)
-    END IF
-END SUB
+Sub SelectPalette()
+    If CurrentFloor = 0 Then
+        WallNearColor = Rgb(22, 118, 78)
+        WallMidColor = Rgb(16, 82, 57)
+        WallFarColor = Rgb(11, 50, 39)
+        MortarColor = Rgb(55, 190, 125)
+        DungeonFloorColor = Rgb(7, 28, 21)
+        CeilingColor = Rgb(5, 20, 15)
+        DoorColor = Rgb(22, 75, 52)
+        HighlightColor = Rgb(100, 225, 160)
+    Else If CurrentFloor = 1 Then
+        WallNearColor = Rgb(28, 80, 150)
+        WallMidColor = Rgb(20, 58, 112)
+        WallFarColor = Rgb(12, 36, 72)
+        MortarColor = Rgb(90, 155, 225)
+        DungeonFloorColor = Rgb(6, 18, 38)
+        CeilingColor = Rgb(5, 12, 28)
+        DoorColor = Rgb(25, 55, 100)
+        HighlightColor = Rgb(135, 190, 255)
+    Else
+        WallNearColor = Rgb(145, 48, 45)
+        WallMidColor = Rgb(102, 32, 35)
+        WallFarColor = Rgb(62, 20, 25)
+        MortarColor = Rgb(230, 105, 85)
+        DungeonFloorColor = Rgb(35, 8, 12)
+        CeilingColor = Rgb(24, 5, 8)
+        DoorColor = Rgb(95, 32, 28)
+        HighlightColor = Rgb(255, 145, 120)
+    End If
+End Sub
 
-FUNCTION WallColorForDepth(DepthValue)
-    IF DepthValue <= 1 THEN
-        RETURN WallNearColor
-    ELSE IF DepthValue <= 3 THEN
-        RETURN WallMidColor
-    ELSE
-        RETURN WallFarColor
-    END IF
-END FUNCTION
+Function WallColorForDepth(DepthValue)
+    If DepthValue <= 1 Then
+        Return WallNearColor
+    Else If DepthValue <= 3 Then
+        Return WallMidColor
+    Else
+        Return WallFarColor
+    End If
+End Function
 
-SUB PrepareProjection()
-    FOR ProjectionIndex = 0 TO ProjectionDepth
+Sub PrepareProjection()
+    For ProjectionIndex = 0 To ProjectionDepth
         ViewHalfWidth[ProjectionIndex] = BaseHalfWidth[ProjectionIndex]
         ViewTopY[ProjectionIndex] = BaseTopY[ProjectionIndex]
         ViewBottomY[ProjectionIndex] = BaseBottomY[ProjectionIndex]
 
-        IF ActionState = ACTION_MOVE_FORWARD THEN
-            ProjectionTarget = MAX(0, ProjectionIndex - 1)
+        If ActionState = ACTION_MOVE_FORWARD Then
+            ProjectionTarget = Max(0, ProjectionIndex - 1)
             ViewHalfWidth[ProjectionIndex] = BaseHalfWidth[ProjectionIndex] + (BaseHalfWidth[ProjectionTarget] - BaseHalfWidth[ProjectionIndex]) * ActionProgress / 1000
             ViewTopY[ProjectionIndex] = BaseTopY[ProjectionIndex] + (BaseTopY[ProjectionTarget] - BaseTopY[ProjectionIndex]) * ActionProgress / 1000
             ViewBottomY[ProjectionIndex] = BaseBottomY[ProjectionIndex] + (BaseBottomY[ProjectionTarget] - BaseBottomY[ProjectionIndex]) * ActionProgress / 1000
-        ELSE IF ActionState = ACTION_MOVE_BACKWARD THEN
-            ProjectionTarget = MIN(ProjectionDepth, ProjectionIndex + 1)
+        Else If ActionState = ACTION_MOVE_BACKWARD Then
+            ProjectionTarget = Min(ProjectionDepth, ProjectionIndex + 1)
             ViewHalfWidth[ProjectionIndex] = BaseHalfWidth[ProjectionIndex] + (BaseHalfWidth[ProjectionTarget] - BaseHalfWidth[ProjectionIndex]) * ActionProgress / 1000
             ViewTopY[ProjectionIndex] = BaseTopY[ProjectionIndex] + (BaseTopY[ProjectionTarget] - BaseTopY[ProjectionIndex]) * ActionProgress / 1000
             ViewBottomY[ProjectionIndex] = BaseBottomY[ProjectionIndex] + (BaseBottomY[ProjectionTarget] - BaseBottomY[ProjectionIndex]) * ActionProgress / 1000
-        END IF
-    END FOR
-END SUB
+        End If
+    End For
+End Sub
 
-FUNCTION ProjectLeftX(SideValue, DepthValue)
+Function ProjectLeftX(SideValue, DepthValue)
     RawX = 480 + (2 * SideValue - 1) * ViewHalfWidth[DepthValue]
-    RETURN 480 + (RawX - 480) * RenderScale / 1000 + RenderOffset
-END FUNCTION
+    Return 480 + (RawX - 480) * RenderScale / 1000 + RenderOffset
+End Function
 
-FUNCTION ProjectRightX(SideValue, DepthValue)
+Function ProjectRightX(SideValue, DepthValue)
     RawX = 480 + (2 * SideValue + 1) * ViewHalfWidth[DepthValue]
-    RETURN 480 + (RawX - 480) * RenderScale / 1000 + RenderOffset
-END FUNCTION
+    Return 480 + (RawX - 480) * RenderScale / 1000 + RenderOffset
+End Function
 
 ' -----------------------------------------------------------------------------
 ' Pseudo-3D wall, door, stair, and scene drawing
 ' -----------------------------------------------------------------------------
 
-SUB DrawLeftWall(SideValue, DepthValue, FaceColor)
+Sub DrawLeftWall(SideValue, DepthValue, FaceColor)
     NearLeft = ProjectLeftX(SideValue, DepthValue)
     FarLeft = ProjectLeftX(SideValue, DepthValue + 1)
-    FILL QUADRILATERAL NearLeft, ViewTopY[DepthValue], FarLeft, ViewTopY[DepthValue + 1], FarLeft, ViewBottomY[DepthValue + 1], NearLeft, ViewBottomY[DepthValue], FaceColor
-    DRAW QUADRILATERAL NearLeft, ViewTopY[DepthValue], FarLeft, ViewTopY[DepthValue + 1], FarLeft, ViewBottomY[DepthValue + 1], NearLeft, ViewBottomY[DepthValue], MortarColor
-    DRAW LINE NearLeft, 270, FarLeft, 270, MortarColor
-END SUB
+    Fill Quadrilateral NearLeft, ViewTopY[DepthValue], FarLeft, ViewTopY[DepthValue + 1], FarLeft, ViewBottomY[DepthValue + 1], NearLeft, ViewBottomY[DepthValue], FaceColor
+    Draw Quadrilateral NearLeft, ViewTopY[DepthValue], FarLeft, ViewTopY[DepthValue + 1], FarLeft, ViewBottomY[DepthValue + 1], NearLeft, ViewBottomY[DepthValue], MortarColor
+    Draw Line NearLeft, 270, FarLeft, 270, MortarColor
+End Sub
 
-SUB DrawRightWall(SideValue, DepthValue, FaceColor)
+Sub DrawRightWall(SideValue, DepthValue, FaceColor)
     NearRight = ProjectRightX(SideValue, DepthValue)
     FarRight = ProjectRightX(SideValue, DepthValue + 1)
-    FILL QUADRILATERAL FarRight, ViewTopY[DepthValue + 1], NearRight, ViewTopY[DepthValue], NearRight, ViewBottomY[DepthValue], FarRight, ViewBottomY[DepthValue + 1], FaceColor
-    DRAW QUADRILATERAL FarRight, ViewTopY[DepthValue + 1], NearRight, ViewTopY[DepthValue], NearRight, ViewBottomY[DepthValue], FarRight, ViewBottomY[DepthValue + 1], MortarColor
-    DRAW LINE FarRight, 270, NearRight, 270, MortarColor
-END SUB
+    Fill Quadrilateral FarRight, ViewTopY[DepthValue + 1], NearRight, ViewTopY[DepthValue], NearRight, ViewBottomY[DepthValue], FarRight, ViewBottomY[DepthValue + 1], FaceColor
+    Draw Quadrilateral FarRight, ViewTopY[DepthValue + 1], NearRight, ViewTopY[DepthValue], NearRight, ViewBottomY[DepthValue], FarRight, ViewBottomY[DepthValue + 1], MortarColor
+    Draw Line FarRight, 270, NearRight, 270, MortarColor
+End Sub
 
-SUB DrawFrontWall(DepthValue, FaceColor)
+Sub DrawFrontWall(DepthValue, FaceColor)
     FrontLeft = ProjectLeftX(0, DepthValue)
     FrontRight = ProjectRightX(0, DepthValue)
-    FILL QUADRILATERAL FrontLeft, ViewTopY[DepthValue], FrontRight, ViewTopY[DepthValue], FrontRight, ViewBottomY[DepthValue], FrontLeft, ViewBottomY[DepthValue], FaceColor
-    DRAW QUADRILATERAL FrontLeft, ViewTopY[DepthValue], FrontRight, ViewTopY[DepthValue], FrontRight, ViewBottomY[DepthValue], FrontLeft, ViewBottomY[DepthValue], MortarColor
-    DRAW LINE FrontLeft, 270, FrontRight, 270, MortarColor
-    IF DepthValue <= 3 THEN
-        DRAW LINE 480, ViewTopY[DepthValue], 480, ViewBottomY[DepthValue], MortarColor
-    END IF
-END SUB
+    Fill Quadrilateral FrontLeft, ViewTopY[DepthValue], FrontRight, ViewTopY[DepthValue], FrontRight, ViewBottomY[DepthValue], FrontLeft, ViewBottomY[DepthValue], FaceColor
+    Draw Quadrilateral FrontLeft, ViewTopY[DepthValue], FrontRight, ViewTopY[DepthValue], FrontRight, ViewBottomY[DepthValue], FrontLeft, ViewBottomY[DepthValue], MortarColor
+    Draw Line FrontLeft, 270, FrontRight, 270, MortarColor
+    If DepthValue <= 3 Then
+        Draw Line 480, ViewTopY[DepthValue], 480, ViewBottomY[DepthValue], MortarColor
+    End If
+End Sub
 
-SUB DrawDoorPanel(DepthValue, ProgressValue)
+Sub DrawDoorPanel(DepthValue, ProgressValue)
     DoorLeft = ProjectLeftX(0, DepthValue)
     DoorRight = ProjectRightX(0, DepthValue)
     DoorTop = ViewTopY[DepthValue]
     DoorBottom = ViewBottomY[DepthValue]
     DoorWidth = DoorRight - DoorLeft
-    DoorInsetX = MAX(2, DoorWidth / 12)
-    DoorInsetY = MAX(2, (DoorBottom - DoorTop) / 12)
+    DoorInsetX = Max(2, DoorWidth / 12)
+    DoorInsetY = Max(2, (DoorBottom - DoorTop) / 12)
     DoorCenter = (DoorLeft + DoorRight) / 2
     DoorOpening = DoorWidth * ProgressValue / 2000
 
-    FILL QUADRILATERAL DoorLeft, DoorTop, DoorRight, DoorTop, DoorRight - DoorInsetX, DoorTop + DoorInsetY, DoorLeft + DoorInsetX, DoorTop + DoorInsetY, MortarColor
-    FILL QUADRILATERAL DoorLeft, DoorTop, DoorLeft + DoorInsetX, DoorTop + DoorInsetY, DoorLeft + DoorInsetX, DoorBottom - DoorInsetY, DoorLeft, DoorBottom, MortarColor
-    FILL QUADRILATERAL DoorRight - DoorInsetX, DoorTop + DoorInsetY, DoorRight, DoorTop, DoorRight, DoorBottom, DoorRight - DoorInsetX, DoorBottom - DoorInsetY, MortarColor
+    Fill Quadrilateral DoorLeft, DoorTop, DoorRight, DoorTop, DoorRight - DoorInsetX, DoorTop + DoorInsetY, DoorLeft + DoorInsetX, DoorTop + DoorInsetY, MortarColor
+    Fill Quadrilateral DoorLeft, DoorTop, DoorLeft + DoorInsetX, DoorTop + DoorInsetY, DoorLeft + DoorInsetX, DoorBottom - DoorInsetY, DoorLeft, DoorBottom, MortarColor
+    Fill Quadrilateral DoorRight - DoorInsetX, DoorTop + DoorInsetY, DoorRight, DoorTop, DoorRight, DoorBottom, DoorRight - DoorInsetX, DoorBottom - DoorInsetY, MortarColor
 
-    IF ProgressValue < 1000 THEN
-        FILL QUADRILATERAL DoorLeft + DoorInsetX - DoorOpening, DoorTop + DoorInsetY, DoorCenter - DoorOpening, DoorTop + DoorInsetY, DoorCenter - DoorOpening, DoorBottom - DoorInsetY, DoorLeft + DoorInsetX - DoorOpening, DoorBottom - DoorInsetY, DoorColor
-        FILL QUADRILATERAL DoorCenter + DoorOpening, DoorTop + DoorInsetY, DoorRight - DoorInsetX + DoorOpening, DoorTop + DoorInsetY, DoorRight - DoorInsetX + DoorOpening, DoorBottom - DoorInsetY, DoorCenter + DoorOpening, DoorBottom - DoorInsetY, DoorColor
-        DRAW LINE DoorCenter - DoorOpening, DoorTop + DoorInsetY, DoorCenter - DoorOpening, DoorBottom - DoorInsetY, HighlightColor
-        DRAW LINE DoorCenter + DoorOpening, DoorTop + DoorInsetY, DoorCenter + DoorOpening, DoorBottom - DoorInsetY, HighlightColor
-    END IF
-END SUB
+    If ProgressValue < 1000 Then
+        Fill Quadrilateral DoorLeft + DoorInsetX - DoorOpening, DoorTop + DoorInsetY, DoorCenter - DoorOpening, DoorTop + DoorInsetY, DoorCenter - DoorOpening, DoorBottom - DoorInsetY, DoorLeft + DoorInsetX - DoorOpening, DoorBottom - DoorInsetY, DoorColor
+        Fill Quadrilateral DoorCenter + DoorOpening, DoorTop + DoorInsetY, DoorRight - DoorInsetX + DoorOpening, DoorTop + DoorInsetY, DoorRight - DoorInsetX + DoorOpening, DoorBottom - DoorInsetY, DoorCenter + DoorOpening, DoorBottom - DoorInsetY, DoorColor
+        Draw Line DoorCenter - DoorOpening, DoorTop + DoorInsetY, DoorCenter - DoorOpening, DoorBottom - DoorInsetY, HighlightColor
+        Draw Line DoorCenter + DoorOpening, DoorTop + DoorInsetY, DoorCenter + DoorOpening, DoorBottom - DoorInsetY, HighlightColor
+    End If
+End Sub
 
-SUB DrawOpenDoorFrame(DepthValue)
+Sub DrawOpenDoorFrame(DepthValue)
     FrameLeft = ProjectLeftX(0, DepthValue)
     FrameRight = ProjectRightX(0, DepthValue)
-    DRAW LINE FrameLeft, ViewTopY[DepthValue], FrameLeft, ViewBottomY[DepthValue], HighlightColor
-    DRAW LINE FrameRight, ViewTopY[DepthValue], FrameRight, ViewBottomY[DepthValue], HighlightColor
-    DRAW LINE FrameLeft, ViewTopY[DepthValue], FrameRight, ViewTopY[DepthValue], HighlightColor
-END SUB
+    Draw Line FrameLeft, ViewTopY[DepthValue], FrameLeft, ViewBottomY[DepthValue], HighlightColor
+    Draw Line FrameRight, ViewTopY[DepthValue], FrameRight, ViewBottomY[DepthValue], HighlightColor
+    Draw Line FrameLeft, ViewTopY[DepthValue], FrameRight, ViewTopY[DepthValue], HighlightColor
+End Sub
 
-SUB DrawStairs(DepthValue, StairTile)
+Sub DrawStairs(DepthValue, StairTile)
     StairNearLeft = ProjectLeftX(0, DepthValue)
     StairNearRight = ProjectRightX(0, DepthValue)
     StairFarLeft = ProjectLeftX(0, DepthValue + 1)
     StairFarRight = ProjectRightX(0, DepthValue + 1)
     StairNearY = ViewBottomY[DepthValue]
     StairFarY = ViewBottomY[DepthValue + 1]
-    FILL QUADRILATERAL StairNearLeft, StairNearY, StairNearRight, StairNearY, StairFarRight, StairFarY, StairFarLeft, StairFarY, DoorColor
-    FOR StairLine = 1 TO 4
+    Fill Quadrilateral StairNearLeft, StairNearY, StairNearRight, StairNearY, StairFarRight, StairFarY, StairFarLeft, StairFarY, DoorColor
+    For StairLine = 1 To 4
         StairY = StairFarY + (StairNearY - StairFarY) * StairLine / 5
         StairLeft = StairFarLeft + (StairNearLeft - StairFarLeft) * StairLine / 5
         StairRight = StairFarRight + (StairNearRight - StairFarRight) * StairLine / 5
-        DRAW LINE StairLeft, StairY, StairRight, StairY, HighlightColor
-    END FOR
-    IF StairTile = TILE_STAIRS_UP THEN
-        DRAW LINE 480, StairFarY, 480, StairNearY, HighlightColor
-    ELSE
-        DRAW LINE StairNearLeft, StairNearY, StairFarRight, StairFarY, HighlightColor
-    END IF
-END SUB
+        Draw Line StairLeft, StairY, StairRight, StairY, HighlightColor
+    End For
+    If StairTile = TILE_STAIRS_UP Then
+        Draw Line 480, StairFarY, 480, StairNearY, HighlightColor
+    Else
+        Draw Line StairNearLeft, StairNearY, StairFarRight, StairFarY, HighlightColor
+    End If
+End Sub
 
-SUB DrawCellSection(DepthValue)
+Sub DrawCellSection(DepthValue)
     CellX = WorldX(0, DepthValue, RenderDirection)
     CellY = WorldY(0, DepthValue, RenderDirection)
     CellTile = GetTile(CurrentFloor, CellX, CellY)
@@ -963,391 +963,391 @@ SUB DrawCellSection(DepthValue)
     FarLeft = ProjectLeftX(0, DepthValue + 1)
     FarRight = ProjectRightX(0, DepthValue + 1)
 
-    FILL QUADRILATERAL NearLeft, ViewTopY[DepthValue], NearRight, ViewTopY[DepthValue], FarRight, ViewTopY[DepthValue + 1], FarLeft, ViewTopY[DepthValue + 1], CeilingColor
-    FILL QUADRILATERAL NearLeft, ViewBottomY[DepthValue], FarLeft, ViewBottomY[DepthValue + 1], FarRight, ViewBottomY[DepthValue + 1], NearRight, ViewBottomY[DepthValue], DungeonFloorColor
-    DRAW LINE NearLeft, ViewBottomY[DepthValue], FarLeft, ViewBottomY[DepthValue + 1], MortarColor
-    DRAW LINE NearRight, ViewBottomY[DepthValue], FarRight, ViewBottomY[DepthValue + 1], MortarColor
+    Fill Quadrilateral NearLeft, ViewTopY[DepthValue], NearRight, ViewTopY[DepthValue], FarRight, ViewTopY[DepthValue + 1], FarLeft, ViewTopY[DepthValue + 1], CeilingColor
+    Fill Quadrilateral NearLeft, ViewBottomY[DepthValue], FarLeft, ViewBottomY[DepthValue + 1], FarRight, ViewBottomY[DepthValue + 1], NearRight, ViewBottomY[DepthValue], DungeonFloorColor
+    Draw Line NearLeft, ViewBottomY[DepthValue], FarLeft, ViewBottomY[DepthValue + 1], MortarColor
+    Draw Line NearRight, ViewBottomY[DepthValue], FarRight, ViewBottomY[DepthValue + 1], MortarColor
 
     LeftX = WorldX(-1, DepthValue, RenderDirection)
     LeftY = WorldY(-1, DepthValue, RenderDirection)
     LeftTile = GetTile(CurrentFloor, LeftX, LeftY)
-    IF BlocksSight(LeftTile) = TRUE THEN
-        CALL DrawLeftWall(0, DepthValue, FaceColor)
-    ELSE
+    If BlocksSight(LeftTile) = True Then
+        Call DrawLeftWall(0, DepthValue, FaceColor)
+    Else
         SideNearLeft = ProjectLeftX(-1, DepthValue)
         SideFarLeft = ProjectLeftX(-1, DepthValue + 1)
-        FILL QUADRILATERAL SideNearLeft, ViewTopY[DepthValue], NearLeft, ViewTopY[DepthValue], FarLeft, ViewTopY[DepthValue + 1], SideFarLeft, ViewTopY[DepthValue + 1], CeilingColor
-        FILL QUADRILATERAL SideNearLeft, ViewBottomY[DepthValue], SideFarLeft, ViewBottomY[DepthValue + 1], FarLeft, ViewBottomY[DepthValue + 1], NearLeft, ViewBottomY[DepthValue], DungeonFloorColor
+        Fill Quadrilateral SideNearLeft, ViewTopY[DepthValue], NearLeft, ViewTopY[DepthValue], FarLeft, ViewTopY[DepthValue + 1], SideFarLeft, ViewTopY[DepthValue + 1], CeilingColor
+        Fill Quadrilateral SideNearLeft, ViewBottomY[DepthValue], SideFarLeft, ViewBottomY[DepthValue + 1], FarLeft, ViewBottomY[DepthValue + 1], NearLeft, ViewBottomY[DepthValue], DungeonFloorColor
         OuterLeftX = WorldX(-2, DepthValue, RenderDirection)
         OuterLeftY = WorldY(-2, DepthValue, RenderDirection)
-        IF BlocksSight(GetTile(CurrentFloor, OuterLeftX, OuterLeftY)) = TRUE THEN
-            CALL DrawLeftWall(-1, DepthValue, FaceColor)
-        END IF
-    END IF
+        If BlocksSight(GetTile(CurrentFloor, OuterLeftX, OuterLeftY)) = True Then
+            Call DrawLeftWall(-1, DepthValue, FaceColor)
+        End If
+    End If
 
     RightX = WorldX(1, DepthValue, RenderDirection)
     RightY = WorldY(1, DepthValue, RenderDirection)
     RightTile = GetTile(CurrentFloor, RightX, RightY)
-    IF BlocksSight(RightTile) = TRUE THEN
-        CALL DrawRightWall(0, DepthValue, FaceColor)
-    ELSE
+    If BlocksSight(RightTile) = True Then
+        Call DrawRightWall(0, DepthValue, FaceColor)
+    Else
         SideNearRight = ProjectRightX(1, DepthValue)
         SideFarRight = ProjectRightX(1, DepthValue + 1)
-        FILL QUADRILATERAL NearRight, ViewTopY[DepthValue], SideNearRight, ViewTopY[DepthValue], SideFarRight, ViewTopY[DepthValue + 1], FarRight, ViewTopY[DepthValue + 1], CeilingColor
-        FILL QUADRILATERAL NearRight, ViewBottomY[DepthValue], FarRight, ViewBottomY[DepthValue + 1], SideFarRight, ViewBottomY[DepthValue + 1], SideNearRight, ViewBottomY[DepthValue], DungeonFloorColor
+        Fill Quadrilateral NearRight, ViewTopY[DepthValue], SideNearRight, ViewTopY[DepthValue], SideFarRight, ViewTopY[DepthValue + 1], FarRight, ViewTopY[DepthValue + 1], CeilingColor
+        Fill Quadrilateral NearRight, ViewBottomY[DepthValue], FarRight, ViewBottomY[DepthValue + 1], SideFarRight, ViewBottomY[DepthValue + 1], SideNearRight, ViewBottomY[DepthValue], DungeonFloorColor
         OuterRightX = WorldX(2, DepthValue, RenderDirection)
         OuterRightY = WorldY(2, DepthValue, RenderDirection)
-        IF BlocksSight(GetTile(CurrentFloor, OuterRightX, OuterRightY)) = TRUE THEN
-            CALL DrawRightWall(1, DepthValue, FaceColor)
-        END IF
-    END IF
+        If BlocksSight(GetTile(CurrentFloor, OuterRightX, OuterRightY)) = True Then
+            Call DrawRightWall(1, DepthValue, FaceColor)
+        End If
+    End If
 
-    IF CellTile = TILE_DOOR_OPEN THEN
-        CALL DrawOpenDoorFrame(DepthValue)
-    ELSE IF CellTile = TILE_STAIRS_UP OR CellTile = TILE_STAIRS_DOWN THEN
-        CALL DrawStairs(DepthValue, CellTile)
-    END IF
-END SUB
+    If CellTile = TILE_DOOR_OPEN Then
+        Call DrawOpenDoorFrame(DepthValue)
+    Else If CellTile = TILE_STAIRS_UP Or CellTile = TILE_STAIRS_DOWN Then
+        Call DrawStairs(DepthValue, CellTile)
+    End If
+End Sub
 
-SUB DrawDungeonView(DirectionValue, ScaleValue, OffsetValue)
+Sub DrawDungeonView(DirectionValue, ScaleValue, OffsetValue)
     RenderDirection = DirectionValue
     RenderScale = ScaleValue
     RenderOffset = OffsetValue
-    CALL PrepareProjection()
+    Call PrepareProjection()
 
     VisibleSections = ProjectionDepth
     FrontBlockTile = TILE_FLOOR
-    FOR SightDepth = 1 TO ProjectionDepth
+    For SightDepth = 1 To ProjectionDepth
         SightX = WorldX(0, SightDepth, RenderDirection)
         SightY = WorldY(0, SightDepth, RenderDirection)
         SightTile = GetTile(CurrentFloor, SightX, SightY)
-        IF BlocksSight(SightTile) = TRUE THEN
+        If BlocksSight(SightTile) = True Then
             VisibleSections = SightDepth
             FrontBlockTile = SightTile
-            EXIT FOR
-        END IF
-    END FOR
+            Exit For
+        End If
+    End For
 
-    FOR DrawDepth = VisibleSections - 1 DOWN TO 0
-        CALL DrawCellSection(DrawDepth)
-    END FOR
+    For DrawDepth = VisibleSections - 1 Down To 0
+        Call DrawCellSection(DrawDepth)
+    End For
 
-    IF FrontBlockTile = TILE_WALL THEN
-        CALL DrawFrontWall(VisibleSections, WallColorForDepth(VisibleSections))
-    ELSE IF FrontBlockTile = TILE_DOOR_CLOSED THEN
+    If FrontBlockTile = TILE_WALL Then
+        Call DrawFrontWall(VisibleSections, WallColorForDepth(VisibleSections))
+    Else If FrontBlockTile = TILE_DOOR_CLOSED Then
         DoorDrawProgress = 0
         FrontX = WorldX(0, VisibleSections, RenderDirection)
         FrontY = WorldY(0, VisibleSections, RenderDirection)
-        IF ActionState = ACTION_OPEN_DOOR AND FrontX = DoorX AND FrontY = DoorY THEN
+        If ActionState = ACTION_OPEN_DOOR And FrontX = DoorX And FrontY = DoorY Then
             DoorDrawProgress = ActionProgress
-        END IF
-        CALL DrawDoorPanel(VisibleSections, DoorDrawProgress)
-    END IF
-END SUB
+        End If
+        Call DrawDoorPanel(VisibleSections, DoorDrawProgress)
+    End If
+End Sub
 
-SUB DrawTransitionOverlay()
-    IF ActionState = ACTION_STAIRS_OUT THEN
-        IF StairStage = 1 THEN
-            FILL RECTANGLE 0, 0, 960, 540, BLACK
-        ELSE
+Sub DrawTransitionOverlay()
+    If ActionState = ACTION_STAIRS_OUT Then
+        If StairStage = 1 Then
+            Fill Rectangle 0, 0, 960, 540, BLACK
+        Else
             CoverX = ActionProgress * 480 / 1000
             CoverY = ActionProgress * 270 / 1000
-            FILL RECTANGLE 0, 0, CoverX, 540, BLACK
-            FILL RECTANGLE 960 - CoverX, 0, CoverX, 540, BLACK
-            FILL RECTANGLE 0, 0, 960, CoverY, BLACK
-            FILL RECTANGLE 0, 540 - CoverY, 960, CoverY, BLACK
-        END IF
-    ELSE IF ActionState = ACTION_STAIRS_IN THEN
+            Fill Rectangle 0, 0, CoverX, 540, BLACK
+            Fill Rectangle 960 - CoverX, 0, CoverX, 540, BLACK
+            Fill Rectangle 0, 0, 960, CoverY, BLACK
+            Fill Rectangle 0, 540 - CoverY, 960, CoverY, BLACK
+        End If
+    Else If ActionState = ACTION_STAIRS_IN Then
         Remaining = 1000 - ActionProgress
         CoverX = Remaining * 480 / 1000
         CoverY = Remaining * 270 / 1000
-        FILL RECTANGLE 0, 0, CoverX, 540, BLACK
-        FILL RECTANGLE 960 - CoverX, 0, CoverX, 540, BLACK
-        FILL RECTANGLE 0, 0, 960, CoverY, BLACK
-        FILL RECTANGLE 0, 540 - CoverY, 960, CoverY, BLACK
-    END IF
-END SUB
+        Fill Rectangle 0, 0, CoverX, 540, BLACK
+        Fill Rectangle 960 - CoverX, 0, CoverX, 540, BLACK
+        Fill Rectangle 0, 0, 960, CoverY, BLACK
+        Fill Rectangle 0, 540 - CoverY, 960, CoverY, BLACK
+    End If
+End Sub
 
-SUB DrawHud()
-    FILL ROUNDED RECTANGLE 16, 14, 142, 46, 8, RGB(3, 8, 8)
-    DRAW ROUNDED RECTANGLE 16, 14, 142, 46, 8, MortarColor
-    DRAW TEXT "FLOOR" AT 30, 27 SIZE 16 COLOR LIGHT_GRAY
-    DRAW NUMBER CurrentFloor + 1 AT 88, 21 SIZE 26 COLOR HighlightColor
-    IF PlayerDirection = NORTH THEN
-        DRAW TEXT "N" AT 128, 23 SIZE 24 COLOR WHITE
-    ELSE IF PlayerDirection = EAST THEN
-        DRAW TEXT "E" AT 128, 23 SIZE 24 COLOR WHITE
-    ELSE IF PlayerDirection = SOUTH THEN
-        DRAW TEXT "S" AT 128, 23 SIZE 24 COLOR WHITE
-    ELSE
-        DRAW TEXT "W" AT 128, 23 SIZE 24 COLOR WHITE
-    END IF
+Sub DrawHud()
+    Fill Rounded Rectangle 16, 14, 142, 46, 8, Rgb(3, 8, 8)
+    Draw Rounded Rectangle 16, 14, 142, 46, 8, MortarColor
+    Draw Text "Floor" At 30, 27 Size 16 Color LIGHT_GRAY
+    Draw Number CurrentFloor + 1 At 88, 21 Size 26 Color HighlightColor
+    If PlayerDirection = NORTH Then
+        Draw Text "N" At 128, 23 Size 24 Color WHITE
+    Else If PlayerDirection = EAST Then
+        Draw Text "E" At 128, 23 Size 24 Color WHITE
+    Else If PlayerDirection = SOUTH Then
+        Draw Text "S" At 128, 23 Size 24 Color WHITE
+    Else
+        Draw Text "W" At 128, 23 Size 24 Color WHITE
+    End If
 
-    IF ScreenState = STATE_DEMO_DUNGEON THEN
-        FILL ROUNDED RECTANGLE 735, 14, 208, 58, 8, RGB(3, 8, 8)
-        DRAW ROUNDED RECTANGLE 735, 14, 208, 58, 8, HighlightColor
-        DRAW TEXT "DEMO" AT 839, 22 SIZE 22 COLOR YELLOW CENTERED
-        DRAW TEXT "ANY KEY RETURNS" AT 839, 48 SIZE 12 COLOR WHITE CENTERED
-    END IF
+    If ScreenState = STATE_DEMO_DUNGEON Then
+        Fill Rounded Rectangle 735, 14, 208, 58, 8, Rgb(3, 8, 8)
+        Draw Rounded Rectangle 735, 14, 208, 58, 8, HighlightColor
+        Draw Text "Demo" At 839, 22 Size 22 Color YELLOW Centered
+        Draw Text "Any Key Returns" At 839, 48 Size 12 Color WHITE Centered
+    End If
 
-    IF MapFallbackUsed = TRUE AND Now < MapFallbackMessageUntil THEN
-        FILL ROUNDED RECTANGLE 245, 474, 470, 42, 8, RGB(20, 8, 8)
-        DRAW ROUNDED RECTANGLE 245, 474, 470, 42, 8, YELLOW
-        DRAW TEXT "MAP NOT AVAILABLE - RANDOM DUNGEON USED" AT 480, 486 SIZE 15 COLOR YELLOW CENTERED
-    END IF
-END SUB
+    If MapFallbackUsed = True And Now < MapFallbackMessageUntil Then
+        Fill Rounded Rectangle 245, 474, 470, 42, 8, Rgb(20, 8, 8)
+        Draw Rounded Rectangle 245, 474, 470, 42, 8, YELLOW
+        Draw Text "Map Not Available - Random Dungeon Used" At 480, 486 Size 15 Color YELLOW Centered
+    End If
+End Sub
 
-SUB DrawDungeonScene()
-    CLEAR BLACK
-    FILL RECTANGLE 0, 0, 960, 270, CeilingColor
-    FILL RECTANGLE 0, 270, 960, 270, DungeonFloorColor
+Sub DrawDungeonScene()
+    Clear BLACK
+    Fill Rectangle 0, 0, 960, 270, CeilingColor
+    Fill Rectangle 0, 270, 960, 270, DungeonFloorColor
 
-    IF ActionState = ACTION_TURN_LEFT OR ActionState = ACTION_TURN_RIGHT THEN
+    If ActionState = ACTION_TURN_LEFT Or ActionState = ACTION_TURN_RIGHT Then
         OldScale = 1000 - ActionProgress
         NewScale = ActionProgress
-        IF ActionState = ACTION_TURN_LEFT THEN
+        If ActionState = ACTION_TURN_LEFT Then
             OldOffset = ActionProgress * 480 / 1000
             NewOffset = -(1000 - ActionProgress) * 480 / 1000
-        ELSE
+        Else
             OldOffset = -ActionProgress * 480 / 1000
             NewOffset = (1000 - ActionProgress) * 480 / 1000
-        END IF
+        End If
 
-        IF ActionProgress < 500 THEN
-            CALL DrawDungeonView(TargetDirection, NewScale, NewOffset)
-            CALL DrawDungeonView(PlayerDirection, OldScale, OldOffset)
-        ELSE
-            CALL DrawDungeonView(PlayerDirection, OldScale, OldOffset)
-            CALL DrawDungeonView(TargetDirection, NewScale, NewOffset)
-        END IF
-    ELSE
-        CALL DrawDungeonView(PlayerDirection, 1000, 0)
-    END IF
+        If ActionProgress < 500 Then
+            Call DrawDungeonView(TargetDirection, NewScale, NewOffset)
+            Call DrawDungeonView(PlayerDirection, OldScale, OldOffset)
+        Else
+            Call DrawDungeonView(PlayerDirection, OldScale, OldOffset)
+            Call DrawDungeonView(TargetDirection, NewScale, NewOffset)
+        End If
+    Else
+        Call DrawDungeonView(PlayerDirection, 1000, 0)
+    End If
 
-    CALL DrawHud()
-    CALL DrawTransitionOverlay()
-END SUB
+    Call DrawHud()
+    Call DrawTransitionOverlay()
+End Sub
 
 ' -----------------------------------------------------------------------------
 ' Player action state machine
 ' -----------------------------------------------------------------------------
 
-SUB EnterIdle()
+Sub EnterIdle()
     ActionState = ACTION_IDLE
     ActionProgress = 0
-    IF ScreenState = STATE_DEMO_DUNGEON THEN
-        RANDOM DemoPause FROM 80 TO 160
+    If ScreenState = STATE_DEMO_DUNGEON Then
+        Random DemoPause From 80 To 160
         NextDemoActionAt = Now + DemoPause
-    END IF
-END SUB
+    End If
+End Sub
 
-SUB StartTurnLeft()
-    IF ActionState = ACTION_IDLE THEN
-        TargetDirection = (PlayerDirection + 3) MOD 4
+Sub StartTurnLeft()
+    If ActionState = ACTION_IDLE Then
+        TargetDirection = (PlayerDirection + 3) Mod 4
         ActionState = ACTION_TURN_LEFT
         ActionStartedAt = Now
         ActionProgress = 0
-    END IF
-END SUB
+    End If
+End Sub
 
-SUB StartTurnRight()
-    IF ActionState = ACTION_IDLE THEN
-        TargetDirection = (PlayerDirection + 1) MOD 4
+Sub StartTurnRight()
+    If ActionState = ACTION_IDLE Then
+        TargetDirection = (PlayerDirection + 1) Mod 4
         ActionState = ACTION_TURN_RIGHT
         ActionStartedAt = Now
         ActionProgress = 0
-    END IF
-END SUB
+    End If
+End Sub
 
-SUB StartMove(StepValue)
-    IF ActionState <> ACTION_IDLE THEN
-        RETURN
-    END IF
+Sub StartMove(StepValue)
+    If ActionState <> ACTION_IDLE Then
+        Return
+    End If
     MoveX = PlayerX + DirectionX[PlayerDirection] * StepValue
     MoveY = PlayerY + DirectionY[PlayerDirection] * StepValue
     MoveTile = GetTile(CurrentFloor, MoveX, MoveY)
-    IF MoveTile = TILE_WALL THEN
-        CALL EnterIdle()
-    ELSE IF MoveTile = TILE_DOOR_CLOSED THEN
+    If MoveTile = TILE_WALL Then
+        Call EnterIdle()
+    Else If MoveTile = TILE_DOOR_CLOSED Then
         DoorX = MoveX
         DoorY = MoveY
         PendingMoveStep = StepValue
         ActionState = ACTION_OPEN_DOOR
         ActionStartedAt = Now
         ActionProgress = 0
-    ELSE
+    Else
         TargetX = MoveX
         TargetY = MoveY
-        IF StepValue > 0 THEN
+        If StepValue > 0 Then
             ActionState = ACTION_MOVE_FORWARD
-        ELSE
+        Else
             ActionState = ACTION_MOVE_BACKWARD
-        END IF
+        End If
         ActionStartedAt = Now
         ActionProgress = 0
-    END IF
-END SUB
+    End If
+End Sub
 
-SUB OpenFrontDoor()
-    IF ActionState = ACTION_IDLE THEN
+Sub OpenFrontDoor()
+    If ActionState = ACTION_IDLE Then
         FrontDoorX = PlayerX + DirectionX[PlayerDirection]
         FrontDoorY = PlayerY + DirectionY[PlayerDirection]
-        IF GetTile(CurrentFloor, FrontDoorX, FrontDoorY) = TILE_DOOR_CLOSED THEN
+        If GetTile(CurrentFloor, FrontDoorX, FrontDoorY) = TILE_DOOR_CLOSED Then
             DoorX = FrontDoorX
             DoorY = FrontDoorY
             PendingMoveStep = 0
             ActionState = ACTION_OPEN_DOOR
             ActionStartedAt = Now
             ActionProgress = 0
-        END IF
-    END IF
-END SUB
+        End If
+    End If
+End Sub
 
-SUB BeginStairTransition(StairTile)
-    IF StairTile = TILE_STAIRS_DOWN AND CurrentFloor < FloorCount - 1 THEN
+Sub BeginStairTransition(StairTile)
+    If StairTile = TILE_STAIRS_DOWN And CurrentFloor < FloorCount - 1 Then
         StairDestinationFloor = CurrentFloor + 1
         StairDestinationX = StairUpX[StairDestinationFloor]
         StairDestinationY = StairUpY[StairDestinationFloor]
-    ELSE IF StairTile = TILE_STAIRS_UP AND CurrentFloor > 0 THEN
+    Else If StairTile = TILE_STAIRS_UP And CurrentFloor > 0 Then
         StairDestinationFloor = CurrentFloor - 1
         StairDestinationX = StairDownX[StairDestinationFloor]
         StairDestinationY = StairDownY[StairDestinationFloor]
-    ELSE
-        CALL EnterIdle()
-        RETURN
-    END IF
+    Else
+        Call EnterIdle()
+        Return
+    End If
     StairStage = 0
     ActionState = ACTION_STAIRS_OUT
     ActionStartedAt = Now
     ActionProgress = 0
-END SUB
+End Sub
 
-SUB UpdateAction()
-    IF ActionState = ACTION_IDLE THEN
-        RETURN
-    END IF
+Sub UpdateAction()
+    If ActionState = ACTION_IDLE Then
+        Return
+    End If
 
-    IF ActionState = ACTION_MOVE_FORWARD OR ActionState = ACTION_MOVE_BACKWARD THEN
-        ActionProgress = MIN(1000, (Now - ActionStartedAt) * 1000 / MoveDuration)
-        IF ActionProgress >= 1000 THEN
+    If ActionState = ACTION_MOVE_FORWARD Or ActionState = ACTION_MOVE_BACKWARD Then
+        ActionProgress = Min(1000, (Now - ActionStartedAt) * 1000 / MoveDuration)
+        If ActionProgress >= 1000 Then
             PlayerX = TargetX
             PlayerY = TargetY
             ArrivedTile = GetTile(CurrentFloor, PlayerX, PlayerY)
-            IF (ArrivedTile = TILE_STAIRS_UP OR ArrivedTile = TILE_STAIRS_DOWN) AND StairSuppressed = 0 THEN
-                CALL BeginStairTransition(ArrivedTile)
-            ELSE
-                IF ArrivedTile <> TILE_STAIRS_UP AND ArrivedTile <> TILE_STAIRS_DOWN THEN
+            If (ArrivedTile = TILE_STAIRS_UP Or ArrivedTile = TILE_STAIRS_DOWN) And StairSuppressed = 0 Then
+                Call BeginStairTransition(ArrivedTile)
+            Else
+                If ArrivedTile <> TILE_STAIRS_UP And ArrivedTile <> TILE_STAIRS_DOWN Then
                     StairSuppressed = 0
-                END IF
-                CALL EnterIdle()
-            END IF
-        END IF
-    ELSE IF ActionState = ACTION_TURN_LEFT OR ActionState = ACTION_TURN_RIGHT THEN
-        ActionProgress = MIN(1000, (Now - ActionStartedAt) * 1000 / TurnDuration)
-        IF ActionProgress >= 1000 THEN
+                End If
+                Call EnterIdle()
+            End If
+        End If
+    Else If ActionState = ACTION_TURN_LEFT Or ActionState = ACTION_TURN_RIGHT Then
+        ActionProgress = Min(1000, (Now - ActionStartedAt) * 1000 / TurnDuration)
+        If ActionProgress >= 1000 Then
             PlayerDirection = TargetDirection
-            CALL EnterIdle()
-        END IF
-    ELSE IF ActionState = ACTION_OPEN_DOOR THEN
-        ActionProgress = MIN(1000, (Now - ActionStartedAt) * 1000 / DoorDuration)
-        IF ActionProgress >= 1000 THEN
-            CALL SetTile(CurrentFloor, DoorX, DoorY, TILE_DOOR_OPEN)
+            Call EnterIdle()
+        End If
+    Else If ActionState = ACTION_OPEN_DOOR Then
+        ActionProgress = Min(1000, (Now - ActionStartedAt) * 1000 / DoorDuration)
+        If ActionProgress >= 1000 Then
+            Call SetTile(CurrentFloor, DoorX, DoorY, TILE_DOOR_OPEN)
             ContinueStep = PendingMoveStep
             PendingMoveStep = 0
             ActionState = ACTION_IDLE
-            IF ContinueStep <> 0 THEN
-                CALL StartMove(ContinueStep)
-            ELSE
-                CALL EnterIdle()
-            END IF
-        END IF
-    ELSE IF ActionState = ACTION_STAIRS_OUT THEN
-        IF StairStage = 0 THEN
-            ActionProgress = MIN(1000, (Now - ActionStartedAt) * 1000 / StairOutDuration)
-            IF ActionProgress >= 1000 THEN
+            If ContinueStep <> 0 Then
+                Call StartMove(ContinueStep)
+            Else
+                Call EnterIdle()
+            End If
+        End If
+    Else If ActionState = ACTION_STAIRS_OUT Then
+        If StairStage = 0 Then
+            ActionProgress = Min(1000, (Now - ActionStartedAt) * 1000 / StairOutDuration)
+            If ActionProgress >= 1000 Then
                 StairStage = 1
                 ActionStartedAt = Now
-            END IF
-        ELSE IF Now - ActionStartedAt >= StairBlackDuration THEN
+            End If
+        Else If Now - ActionStartedAt >= StairBlackDuration Then
             CurrentFloor = StairDestinationFloor
             PlayerX = StairDestinationX
             PlayerY = StairDestinationY
             StairSuppressed = 1
-            IF CurrentFloor = 0 THEN
+            If CurrentFloor = 0 Then
                 DemoDirection = 1
-            ELSE IF CurrentFloor = FloorCount - 1 THEN
+            Else If CurrentFloor = FloorCount - 1 Then
                 DemoDirection = -1
-            END IF
-            CALL SelectPalette()
+            End If
+            Call SelectPalette()
             StairStage = 0
             ActionState = ACTION_STAIRS_IN
             ActionStartedAt = Now
             ActionProgress = 0
-        END IF
-    ELSE IF ActionState = ACTION_STAIRS_IN THEN
-        ActionProgress = MIN(1000, (Now - ActionStartedAt) * 1000 / StairInDuration)
-        IF ActionProgress >= 1000 THEN
-            CALL EnterIdle()
-        END IF
-    END IF
-END SUB
+        End If
+    Else If ActionState = ACTION_STAIRS_IN Then
+        ActionProgress = Min(1000, (Now - ActionStartedAt) * 1000 / StairInDuration)
+        If ActionProgress >= 1000 Then
+            Call EnterIdle()
+        End If
+    End If
+End Sub
 
 ' -----------------------------------------------------------------------------
 ' Demo route planner and self-player
 ' -----------------------------------------------------------------------------
 
-SUB PlanDemoFallback()
+Sub PlanDemoFallback()
     BestDirection = -1
     BestVisits = 999999
-    FOR FallbackDirection = 0 TO 3
+    For FallbackDirection = 0 To 3
         FallbackX = PlayerX + DirectionX[FallbackDirection]
         FallbackY = PlayerY + DirectionY[FallbackDirection]
         FallbackTile = GetTile(CurrentFloor, FallbackX, FallbackY)
-        IF IsWalkable(FallbackTile) = TRUE THEN
+        If IsWalkable(FallbackTile) = True Then
             VisitValue = DemoVisits[MapIndex(CurrentFloor, FallbackX, FallbackY)]
-            IF VisitValue < BestVisits THEN
+            If VisitValue < BestVisits Then
                 BestVisits = VisitValue
                 BestDirection = FallbackDirection
-            END IF
-        END IF
-    END FOR
+            End If
+        End If
+    End For
 
-    IF BestDirection < 0 THEN
-        CALL StartTurnRight()
-    ELSE IF BestDirection = PlayerDirection THEN
-        CALL StartMove(1)
-    ELSE
-        TurnDifference = (BestDirection - PlayerDirection + 4) MOD 4
-        IF TurnDifference = 1 OR TurnDifference = 2 THEN
-            CALL StartTurnRight()
-        ELSE
-            CALL StartTurnLeft()
-        END IF
-    END IF
-END SUB
+    If BestDirection < 0 Then
+        Call StartTurnRight()
+    Else If BestDirection = PlayerDirection Then
+        Call StartMove(1)
+    Else
+        TurnDifference = (BestDirection - PlayerDirection + 4) Mod 4
+        If TurnDifference = 1 Or TurnDifference = 2 Then
+            Call StartTurnRight()
+        Else
+            Call StartTurnLeft()
+        End If
+    End If
+End Sub
 
-SUB PlanDemoAction()
-    IF DemoDirection >= 0 THEN
+Sub PlanDemoAction()
+    If DemoDirection >= 0 Then
         GoalX = StairDownX[CurrentFloor]
         GoalY = StairDownY[CurrentFloor]
-    ELSE
+    Else
         GoalX = StairUpX[CurrentFloor]
         GoalY = StairUpY[CurrentFloor]
-    END IF
+    End If
 
-    IF GoalX < 0 THEN
-        IF StairDownX[CurrentFloor] >= 0 THEN
+    If GoalX < 0 Then
+        If StairDownX[CurrentFloor] >= 0 Then
             GoalX = StairDownX[CurrentFloor]
             GoalY = StairDownY[CurrentFloor]
-        ELSE
+        Else
             GoalX = StairUpX[CurrentFloor]
             GoalY = StairUpY[CurrentFloor]
-        END IF
-    END IF
+        End If
+    End If
 
-    FOR DemoClear = 0 TO CellsPerFloor - 1
+    For DemoClear = 0 To CellsPerFloor - 1
         DemoParent[DemoClear] = -2
-    END FOR
+    End For
 
     DemoHead = 0
     DemoTail = 0
@@ -1357,92 +1357,92 @@ SUB PlanDemoAction()
     DemoTail = DemoTail + 1
     DemoParent[DemoStartCell] = -1
 
-    DO
+    Do
         DemoCell = DemoQueue[DemoHead]
         DemoHead = DemoHead + 1
-        DemoCellX = DemoCell MOD MapWidth
+        DemoCellX = DemoCell Mod MapWidth
         DemoCellY = DemoCell / MapWidth
-        FOR DemoSearchDirection = 0 TO 3
+        For DemoSearchDirection = 0 To 3
             DemoNextX = DemoCellX + DirectionX[DemoSearchDirection]
             DemoNextY = DemoCellY + DirectionY[DemoSearchDirection]
-            IF DemoNextX > 0 AND DemoNextX < MapWidth - 1 AND DemoNextY > 0 AND DemoNextY < MapHeight - 1 THEN
+            If DemoNextX > 0 And DemoNextX < MapWidth - 1 And DemoNextY > 0 And DemoNextY < MapHeight - 1 Then
                 DemoNextCell = DemoNextY * MapWidth + DemoNextX
-                IF DemoParent[DemoNextCell] = -2 AND IsWalkable(GetTile(CurrentFloor, DemoNextX, DemoNextY)) = TRUE THEN
+                If DemoParent[DemoNextCell] = -2 And IsWalkable(GetTile(CurrentFloor, DemoNextX, DemoNextY)) = True Then
                     DemoParent[DemoNextCell] = DemoCell
                     DemoQueue[DemoTail] = DemoNextCell
                     DemoTail = DemoTail + 1
-                END IF
-            END IF
-        END FOR
-    LOOP UNTIL DemoHead >= DemoTail OR DemoParent[DemoTargetCell] <> -2
+                End If
+            End If
+        End For
+    Loop Until DemoHead >= DemoTail Or DemoParent[DemoTargetCell] <> -2
 
     DemoVisits[MapIndex(CurrentFloor, PlayerX, PlayerY)] = DemoVisits[MapIndex(CurrentFloor, PlayerX, PlayerY)] + 1
 
-    IF DemoParent[DemoTargetCell] = -2 OR DemoTargetCell = DemoStartCell THEN
-        CALL PlanDemoFallback()
-        RETURN
-    END IF
+    If DemoParent[DemoTargetCell] = -2 Or DemoTargetCell = DemoStartCell Then
+        Call PlanDemoFallback()
+        Return
+    End If
 
     DemoRouteCount = 0
     DemoCursor = DemoTargetCell
-    DO
+    Do
         DemoRoute[DemoRouteCount] = DemoCursor
         DemoRouteCount = DemoRouteCount + 1
         DemoCursor = DemoParent[DemoCursor]
-    LOOP UNTIL DemoCursor = DemoStartCell OR DemoCursor < 0 OR DemoRouteCount >= CellsPerFloor
+    Loop Until DemoCursor = DemoStartCell Or DemoCursor < 0 Or DemoRouteCount >= CellsPerFloor
 
-    IF DemoRouteCount <= 0 THEN
-        CALL PlanDemoFallback()
-        RETURN
-    END IF
+    If DemoRouteCount <= 0 Then
+        Call PlanDemoFallback()
+        Return
+    End If
 
     DemoNextStep = DemoRoute[DemoRouteCount - 1]
-    DemoStepX = DemoNextStep MOD MapWidth
+    DemoStepX = DemoNextStep Mod MapWidth
     DemoStepY = DemoNextStep / MapWidth
     DesiredDirection = DirectionFromDelta(DemoStepX - PlayerX, DemoStepY - PlayerY)
-    IF DesiredDirection = PlayerDirection THEN
-        CALL StartMove(1)
-    ELSE
-        DemoTurn = (DesiredDirection - PlayerDirection + 4) MOD 4
-        IF DemoTurn = 1 THEN
-            CALL StartTurnRight()
-        ELSE IF DemoTurn = 3 THEN
-            CALL StartTurnLeft()
-        ELSE
-            RANDOM HalfTurn FROM 0 TO 1
-            IF HalfTurn = 0 THEN
-                CALL StartTurnLeft()
-            ELSE
-                CALL StartTurnRight()
-            END IF
-        END IF
-    END IF
-END SUB
+    If DesiredDirection = PlayerDirection Then
+        Call StartMove(1)
+    Else
+        DemoTurn = (DesiredDirection - PlayerDirection + 4) Mod 4
+        If DemoTurn = 1 Then
+            Call StartTurnRight()
+        Else If DemoTurn = 3 Then
+            Call StartTurnLeft()
+        Else
+            Random HalfTurn From 0 To 1
+            If HalfTurn = 0 Then
+                Call StartTurnLeft()
+            Else
+                Call StartTurnRight()
+            End If
+        End If
+    End If
+End Sub
 
 ' -----------------------------------------------------------------------------
 ' Title, idle overlay, and screen transitions
 ' -----------------------------------------------------------------------------
 
-SUB DrainPendingKeys()
-    FOR DrainIndex = 1 TO 64
-        GET KEY DrainedKey
-    END FOR
-END SUB
+Sub DrainPendingKeys()
+    For DrainIndex = 1 To 64
+        Get Key DrainedKey
+    End For
+End Sub
 
-SUB EnterTitle()
-    STOP MUSIC
+Sub EnterTitle()
+    Stop Music
     ScreenState = STATE_TITLE
     ActionState = ACTION_IDLE
     ActionProgress = 0
     BufferedKey = KEY_NONE
     DemoRouteCount = 0
-    CALL DrainPendingKeys()
-    TitleStartedAt = TIMER()
+    Call DrainPendingKeys()
+    TitleStartedAt = Timer()
     TitleAcceptInputAt = TitleStartedAt + TitleInputArmDelay
-END SUB
+End Sub
 
-SUB StartUserDungeon()
-    CALL BuildSelectedDungeon()
+Sub StartUserDungeon()
+    Call BuildSelectedDungeon()
     CurrentFloor = PlayerStartFloor
     PlayerX = PlayerStartX
     PlayerY = PlayerStartY
@@ -1450,14 +1450,14 @@ SUB StartUserDungeon()
     StairSuppressed = 0
     ActionState = ACTION_IDLE
     BufferedKey = KEY_NONE
-    CALL SelectPalette()
+    Call SelectPalette()
     ScreenState = STATE_USER_DUNGEON
-    LastUserActivityAt = TIMER()
-    PLAY MUSIC "Assets\Background.mp3" LOOP
-END SUB
+    LastUserActivityAt = Timer()
+    Play Music "Assets\Background.mp3" Loop
+End Sub
 
-SUB StartDemoDungeon()
-    CALL BuildSelectedDungeon()
+Sub StartDemoDungeon()
+    Call BuildSelectedDungeon()
     CurrentFloor = PlayerStartFloor
     PlayerX = PlayerStartX
     PlayerY = PlayerStartY
@@ -1466,215 +1466,215 @@ SUB StartDemoDungeon()
     ActionState = ACTION_IDLE
     BufferedKey = KEY_NONE
     DemoDirection = 1
-    CALL SelectPalette()
+    Call SelectPalette()
     ScreenState = STATE_DEMO_DUNGEON
-    DemoStartedAt = TIMER()
+    DemoStartedAt = Timer()
     NextDemoActionAt = DemoStartedAt + 120
-    PLAY MUSIC "Assets\Background.mp3" LOOP
-END SUB
+    Play Music "Assets\Background.mp3" Loop
+End Sub
 
-SUB DrawTitle()
-    CLEAR RGB(3, 8, 20)
+Sub DrawTitle()
+    Clear Rgb(3, 8, 20)
 
-    FILL QUADRILATERAL 0, 0, 300, 125, 300, 415, 0, 540, RGB(12, 36, 72)
-    FILL QUADRILATERAL 960, 0, 660, 125, 660, 415, 960, 540, RGB(12, 36, 72)
-    FILL QUADRILATERAL 300, 125, 660, 125, 580, 205, 380, 205, RGB(28, 80, 150)
-    FILL QUADRILATERAL 300, 415, 380, 335, 580, 335, 660, 415, RGB(8, 24, 52)
-    DRAW QUADRILATERAL 300, 125, 660, 125, 660, 415, 300, 415, RGB(70, 135, 215)
-    DRAW QUADRILATERAL 380, 205, 580, 205, 580, 335, 380, 335, RGB(135, 190, 255)
-    DRAW LINE 0, 90, 300, 170, RGB(20, 58, 112)
-    DRAW LINE 960, 90, 660, 170, RGB(20, 58, 112)
-    DRAW LINE 0, 450, 300, 370, RGB(20, 58, 112)
-    DRAW LINE 960, 450, 660, 370, RGB(20, 58, 112)
+    Fill Quadrilateral 0, 0, 300, 125, 300, 415, 0, 540, Rgb(12, 36, 72)
+    Fill Quadrilateral 960, 0, 660, 125, 660, 415, 960, 540, Rgb(12, 36, 72)
+    Fill Quadrilateral 300, 125, 660, 125, 580, 205, 380, 205, Rgb(28, 80, 150)
+    Fill Quadrilateral 300, 415, 380, 335, 580, 335, 660, 415, Rgb(8, 24, 52)
+    Draw Quadrilateral 300, 125, 660, 125, 660, 415, 300, 415, Rgb(70, 135, 215)
+    Draw Quadrilateral 380, 205, 580, 205, 580, 335, 380, 335, Rgb(135, 190, 255)
+    Draw Line 0, 90, 300, 170, Rgb(20, 58, 112)
+    Draw Line 960, 90, 660, 170, Rgb(20, 58, 112)
+    Draw Line 0, 450, 300, 370, Rgb(20, 58, 112)
+    Draw Line 960, 450, 660, 370, Rgb(20, 58, 112)
 
-    DRAW TEXT "DUNGEON STAR I" AT 480, 34 SIZE 50 COLOR LIGHT_BLUE CENTERED
-    DRAW TEXT "SELECT A THREE-FLOOR DUNGEON" AT 480, 91 SIZE 17 COLOR CYAN CENTERED
+    Draw Text "Dungeon Star I" At 480, 34 Size 50 Color LIGHT_BLUE Centered
+    Draw Text "Select A Three-Floor Dungeon" At 480, 91 Size 17 Color CYAN Centered
 
-    IF SelectedMap = MAP_DEFAULT THEN
-        FILL ROUNDED RECTANGLE 322, 222, 316, 36, 7, RGB(28, 80, 150)
-        DRAW TEXT "> DEFAULT.MAP" AT 480, 230 SIZE 19 COLOR WHITE CENTERED
-    ELSE
-        DRAW TEXT "DEFAULT.MAP" AT 480, 230 SIZE 19 COLOR LIGHT_GRAY CENTERED
-    END IF
-    IF SelectedMap = MAP_LOOPS THEN
-        FILL ROUNDED RECTANGLE 322, 264, 316, 36, 7, RGB(28, 80, 150)
-        DRAW TEXT "> SAMPLE-LOOPS.MAP" AT 480, 272 SIZE 19 COLOR WHITE CENTERED
-    ELSE
-        DRAW TEXT "SAMPLE-LOOPS.MAP" AT 480, 272 SIZE 19 COLOR LIGHT_GRAY CENTERED
-    END IF
-    IF SelectedMap = MAP_SWITCHBACKS THEN
-        FILL ROUNDED RECTANGLE 322, 306, 316, 36, 7, RGB(28, 80, 150)
-        DRAW TEXT "> SAMPLE-SWITCHBACKS.MAP" AT 480, 314 SIZE 18 COLOR WHITE CENTERED
-    ELSE
-        DRAW TEXT "SAMPLE-SWITCHBACKS.MAP" AT 480, 314 SIZE 18 COLOR LIGHT_GRAY CENTERED
-    END IF
-    IF SelectedMap = MAP_RANDOM THEN
-        FILL ROUNDED RECTANGLE 322, 348, 316, 36, 7, RGB(28, 80, 150)
-        DRAW TEXT "> RANDOM DUNGEON" AT 480, 356 SIZE 19 COLOR WHITE CENTERED
-    ELSE
-        DRAW TEXT "RANDOM DUNGEON" AT 480, 356 SIZE 19 COLOR LIGHT_GRAY CENTERED
-    END IF
+    If SelectedMap = MAP_DEFAULT Then
+        Fill Rounded Rectangle 322, 222, 316, 36, 7, Rgb(28, 80, 150)
+        Draw Text "> Default.map" At 480, 230 Size 19 Color WHITE Centered
+    Else
+        Draw Text "Default.map" At 480, 230 Size 19 Color LIGHT_GRAY Centered
+    End If
+    If SelectedMap = MAP_LOOPS Then
+        Fill Rounded Rectangle 322, 264, 316, 36, 7, Rgb(28, 80, 150)
+        Draw Text "> Sample-Loops.map" At 480, 272 Size 19 Color WHITE Centered
+    Else
+        Draw Text "Sample-Loops.map" At 480, 272 Size 19 Color LIGHT_GRAY Centered
+    End If
+    If SelectedMap = MAP_SWITCHBACKS Then
+        Fill Rounded Rectangle 322, 306, 316, 36, 7, Rgb(28, 80, 150)
+        Draw Text "> Sample-Switchbacks.map" At 480, 314 Size 18 Color WHITE Centered
+    Else
+        Draw Text "Sample-Switchbacks.map" At 480, 314 Size 18 Color LIGHT_GRAY Centered
+    End If
+    If SelectedMap = MAP_RANDOM Then
+        Fill Rounded Rectangle 322, 348, 316, 36, 7, Rgb(28, 80, 150)
+        Draw Text "> Random Dungeon" At 480, 356 Size 19 Color WHITE Centered
+    Else
+        Draw Text "Random Dungeon" At 480, 356 Size 19 Color LIGHT_GRAY Centered
+    End If
 
     TitleElapsed = Now - TitleStartedAt
-    IF (TitleElapsed / FlashInterval) MOD 2 = 0 THEN
-        DRAW TEXT "UP/DOWN SELECT - ENTER START" AT 480, 445 SIZE 19 COLOR YELLOW CENTERED
-    END IF
-    DRAW TEXT "DEMO STARTS AFTER 5 SECONDS" AT 480, 480 SIZE 14 COLOR LIGHT_BLUE CENTERED
-    DRAW TEXT "ALT + ENTER FULL SCREEN" AT 480, 506 SIZE 12 COLOR GRAY CENTERED
-END SUB
+    If (TitleElapsed / FlashInterval) Mod 2 = 0 Then
+        Draw Text "Up/Down Select - Enter Start" At 480, 445 Size 19 Color YELLOW Centered
+    End If
+    Draw Text "Demo Starts After 5 Seconds" At 480, 480 Size 14 Color LIGHT_BLUE Centered
+    Draw Text "Alt + Enter Full Screen" At 480, 506 Size 12 Color GRAY Centered
+End Sub
 
-SUB DrawIdleWarning()
+Sub DrawIdleWarning()
     IdleElapsed = Now - LastUserActivityAt
-    IF IdleElapsed >= UserIdleWarningTime AND IdleElapsed < UserIdleExitTime THEN
+    If IdleElapsed >= UserIdleWarningTime And IdleElapsed < UserIdleExitTime Then
         IdleCountdown = UserIdleCountdownStart - ((IdleElapsed - UserIdleWarningTime) / 1000)
-        IF (IdleElapsed / FlashInterval) MOD 2 = 0 THEN
-            FILL ROUNDED RECTANGLE 300, 205, 360, 130, 14, RGB(20, 8, 8)
-            DRAW ROUNDED RECTANGLE 300, 205, 360, 130, 14, RED
-            DRAW TEXT "RETURNING TO TITLE" AT 480, 226 SIZE 22 COLOR LIGHT_RED CENTERED
-            DRAW NUMBER IdleCountdown AT 468, 260 SIZE 42 COLOR YELLOW
-            DRAW TEXT "PRESS ANY KEY" AT 480, 310 SIZE 14 COLOR WHITE CENTERED
-        END IF
-    END IF
-END SUB
+        If (IdleElapsed / FlashInterval) Mod 2 = 0 Then
+            Fill Rounded Rectangle 300, 205, 360, 130, 14, Rgb(20, 8, 8)
+            Draw Rounded Rectangle 300, 205, 360, 130, 14, RED
+            Draw Text "Returning To Title" At 480, 226 Size 22 Color LIGHT_RED Centered
+            Draw Number IdleCountdown At 468, 260 Size 42 Color YELLOW
+            Draw Text "Press Any Key" At 480, 310 Size 14 Color WHITE Centered
+        End If
+    End If
+End Sub
 
 ' -----------------------------------------------------------------------------
 ' Per-screen update routines
 ' -----------------------------------------------------------------------------
 
-SUB UpdateTitle()
-    IF Key <> KEY_NONE AND Now >= TitleAcceptInputAt THEN
+Sub UpdateTitle()
+    If Key <> KEY_NONE And Now >= TitleAcceptInputAt Then
         TitleStartedAt = Now
-        IF Key = KEY_ESCAPE THEN
-            STOP MUSIC
-            END PROGRAM
-        ELSE IF Key = KEY_UP OR Key = KEY_W THEN
+        If Key = KEY_ESCAPE Then
+            Stop Music
+            End Program
+        Else If Key = KEY_UP Or Key = KEY_W Then
             SelectedMap = SelectedMap - 1
-            IF SelectedMap < MAP_DEFAULT THEN
+            If SelectedMap < MAP_DEFAULT Then
                 SelectedMap = MAP_RANDOM
-            END IF
-        ELSE IF Key = KEY_DOWN OR Key = KEY_S THEN
+            End If
+        Else If Key = KEY_DOWN Or Key = KEY_S Then
             SelectedMap = SelectedMap + 1
-            IF SelectedMap > MAP_RANDOM THEN
+            If SelectedMap > MAP_RANDOM Then
                 SelectedMap = MAP_DEFAULT
-            END IF
-        ELSE IF Key = KEY_ENTER OR Key = KEY_SPACE THEN
-            CALL StartUserDungeon()
-        END IF
-        RETURN
-    END IF
+            End If
+        Else If Key = KEY_ENTER Or Key = KEY_SPACE Then
+            Call StartUserDungeon()
+        End If
+        Return
+    End If
 
     TitleElapsed = Now - TitleStartedAt
-    IF TitleElapsed >= TitleDemoDelay THEN
-        CALL StartDemoDungeon()
-    END IF
-END SUB
+    If TitleElapsed >= TitleDemoDelay Then
+        Call StartDemoDungeon()
+    End If
+End Sub
 
-SUB UpdateDemo()
-    IF Key <> KEY_NONE THEN
-        CALL EnterTitle()
-        RETURN
-    END IF
-    IF Now - DemoStartedAt >= DemoDuration THEN
-        CALL EnterTitle()
-        RETURN
-    END IF
+Sub UpdateDemo()
+    If Key <> KEY_NONE Then
+        Call EnterTitle()
+        Return
+    End If
+    If Now - DemoStartedAt >= DemoDuration Then
+        Call EnterTitle()
+        Return
+    End If
 
-    CALL UpdateAction()
-    IF ActionState = ACTION_IDLE AND Now >= NextDemoActionAt THEN
-        CALL PlanDemoAction()
-    END IF
-END SUB
+    Call UpdateAction()
+    If ActionState = ACTION_IDLE And Now >= NextDemoActionAt Then
+        Call PlanDemoAction()
+    End If
+End Sub
 
-SUB UpdateUserDungeon()
-    HeldActivity = KEY_HELD(KEY_W) OR KEY_HELD(KEY_A) OR KEY_HELD(KEY_S) OR KEY_HELD(KEY_D) OR KEY_HELD(KEY_UP) OR KEY_HELD(KEY_DOWN) OR KEY_HELD(KEY_LEFT) OR KEY_HELD(KEY_RIGHT)
-    IF Key <> KEY_NONE OR HeldActivity = TRUE THEN
+Sub UpdateUserDungeon()
+    HeldActivity = Key_Held(KEY_W) Or Key_Held(KEY_A) Or Key_Held(KEY_S) Or Key_Held(KEY_D) Or Key_Held(KEY_UP) Or Key_Held(KEY_DOWN) Or Key_Held(KEY_LEFT) Or Key_Held(KEY_RIGHT)
+    If Key <> KEY_NONE Or HeldActivity = True Then
         LastUserActivityAt = Now
-    END IF
+    End If
 
-    IF Key = KEY_ESCAPE THEN
-        CALL EnterTitle()
-        RETURN
-    END IF
+    If Key = KEY_ESCAPE Then
+        Call EnterTitle()
+        Return
+    End If
 
-    IF ActionState <> ACTION_IDLE AND Key <> KEY_NONE THEN
+    If ActionState <> ACTION_IDLE And Key <> KEY_NONE Then
         BufferedKey = Key
-    END IF
+    End If
 
     IdleElapsed = Now - LastUserActivityAt
-    IF IdleElapsed >= UserIdleExitTime THEN
-        CALL EnterTitle()
-        RETURN
-    END IF
+    If IdleElapsed >= UserIdleExitTime Then
+        Call EnterTitle()
+        Return
+    End If
 
-    CALL UpdateAction()
+    Call UpdateAction()
 
-    IF ActionState = ACTION_IDLE THEN
+    If ActionState = ACTION_IDLE Then
         ActionKey = Key
-        IF BufferedKey <> KEY_NONE THEN
+        If BufferedKey <> KEY_NONE Then
             ActionKey = BufferedKey
             BufferedKey = KEY_NONE
-        END IF
+        End If
 
-        IF ActionKey = KEY_W OR ActionKey = KEY_UP THEN
-            CALL StartMove(1)
-        ELSE IF ActionKey = KEY_S OR ActionKey = KEY_DOWN THEN
-            CALL StartMove(-1)
-        ELSE IF ActionKey = KEY_A OR ActionKey = KEY_LEFT THEN
-            CALL StartTurnLeft()
-        ELSE IF ActionKey = KEY_D OR ActionKey = KEY_RIGHT THEN
-            CALL StartTurnRight()
-        ELSE IF ActionKey = KEY_ENTER OR ActionKey = KEY_SPACE THEN
-            CALL OpenFrontDoor()
-        ELSE IF KEY_HELD(KEY_W) OR KEY_HELD(KEY_UP) THEN
-            CALL StartMove(1)
-        ELSE IF KEY_HELD(KEY_S) OR KEY_HELD(KEY_DOWN) THEN
-            CALL StartMove(-1)
-        ELSE IF KEY_HELD(KEY_A) OR KEY_HELD(KEY_LEFT) THEN
-            CALL StartTurnLeft()
-        ELSE IF KEY_HELD(KEY_D) OR KEY_HELD(KEY_RIGHT) THEN
-            CALL StartTurnRight()
-        END IF
-    END IF
-END SUB
+        If ActionKey = KEY_W Or ActionKey = KEY_UP Then
+            Call StartMove(1)
+        Else If ActionKey = KEY_S Or ActionKey = KEY_DOWN Then
+            Call StartMove(-1)
+        Else If ActionKey = KEY_A Or ActionKey = KEY_LEFT Then
+            Call StartTurnLeft()
+        Else If ActionKey = KEY_D Or ActionKey = KEY_RIGHT Then
+            Call StartTurnRight()
+        Else If ActionKey = KEY_ENTER Or ActionKey = KEY_SPACE Then
+            Call OpenFrontDoor()
+        Else If Key_Held(KEY_W) Or Key_Held(KEY_UP) Then
+            Call StartMove(1)
+        Else If Key_Held(KEY_S) Or Key_Held(KEY_DOWN) Then
+            Call StartMove(-1)
+        Else If Key_Held(KEY_A) Or Key_Held(KEY_LEFT) Then
+            Call StartTurnLeft()
+        Else If Key_Held(KEY_D) Or Key_Held(KEY_RIGHT) Then
+            Call StartTurnRight()
+        End If
+    End If
+End Sub
 
 ' -----------------------------------------------------------------------------
 ' Native game entry and continuous VSync-paced loop
 ' -----------------------------------------------------------------------------
 
-GAME WINDOW "SMILE 2.0 Dungeon Star I"
+Game Window "SMILE 2.0 Dungeon Star I"
 
-CALL EnterTitle()
+Call EnterTitle()
 
-DO
-    Now = TIMER()
-    GET KEY Key
+Do
+    Now = Timer()
+    Get Key Key
 
-    IF ScreenState = STATE_TITLE THEN
-        CALL UpdateTitle()
-        IF ScreenState = STATE_TITLE THEN
-            CALL DrawTitle()
-        ELSE
-            CALL DrawDungeonScene()
-        END IF
-    ELSE IF ScreenState = STATE_DEMO_DUNGEON THEN
-        CALL UpdateDemo()
-        IF ScreenState = STATE_TITLE THEN
-            CALL DrawTitle()
-        ELSE
-            CALL DrawDungeonScene()
-        END IF
-    ELSE
-        CALL UpdateUserDungeon()
-        IF ScreenState = STATE_TITLE THEN
-            CALL DrawTitle()
-        ELSE
-            CALL DrawDungeonScene()
-            CALL DrawIdleWarning()
-        END IF
-    END IF
+    If ScreenState = STATE_TITLE Then
+        Call UpdateTitle()
+        If ScreenState = STATE_TITLE Then
+            Call DrawTitle()
+        Else
+            Call DrawDungeonScene()
+        End If
+    Else If ScreenState = STATE_DEMO_DUNGEON Then
+        Call UpdateDemo()
+        If ScreenState = STATE_TITLE Then
+            Call DrawTitle()
+        Else
+            Call DrawDungeonScene()
+        End If
+    Else
+        Call UpdateUserDungeon()
+        If ScreenState = STATE_TITLE Then
+            Call DrawTitle()
+        Else
+            Call DrawDungeonScene()
+            Call DrawIdleWarning()
+        End If
+    End If
 
-    SHOW SCREEN
-LOOP UNTIL GAME_CLOSED() = TRUE
+    Show Screen
+Loop Until Game_Closed() = True
 
-STOP MUSIC
-END PROGRAM
+Stop Music
+End Program

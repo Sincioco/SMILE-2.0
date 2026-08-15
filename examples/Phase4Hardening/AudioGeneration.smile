@@ -1,7 +1,7 @@
-OPTION EXPLICIT
+Option Explicit
 
-GAME WINDOW "Phase 4.1 Audio Generation" SIZE 320 BY 180
+Game Window "Phase 4.1 Audio Generation" Size 320 By 180
 
-WAIT 150 MILLISECONDS
+Wait 150 Milliseconds
 
-END PROGRAM
+End Program

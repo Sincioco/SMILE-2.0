@@ -14,7 +14,7 @@ The first implementation phase is deliberately narrow:
 
 > Make one SMILE 2.0 program compile from several `.smile` source files while preserving one startup source, one shared semantic model, Windows native output, Web output, Visual Studio IntelliSense, diagnostics, normal file opening, and Windows `.smile` breakpoints.
 
-This phase does **not** yet add `MODULE`, `IMPORT`, `.smilelib`, user-defined `TYPE`, mutable `TEXT`, images, inventory, menus, MP abilities, or multiple sound-effect channels. Those are later gated phases. Phase 1 establishes the compiler, emitter, debugger, and project-system foundation they require.
+This phase does **not** yet add `Module`, `Import`, `.smilelib`, user-defined `Type`, mutable `Text`, images, inventory, menus, MP abilities, or multiple sound-effect channels. Those are later gated phases. Phase 1 establishes the compiler, emitter, debugger, and project-system foundation they require.
 
 ---
 
@@ -124,13 +124,13 @@ Codex must perform everything it can itself. Manual testing by Sin must never be
 At the very end of the final report, include exactly one bold heading:
 
 ```text
-**MANUAL TESTING REQUESTED FROM SIN:** None.
+**MANUAL TESTING REQUESTED From SIN:** None.
 ```
 
 or, when a genuinely human-only or environment-blocked check remains:
 
 ```text
-**MANUAL TESTING REQUESTED FROM SIN:**
+**MANUAL TESTING REQUESTED From SIN:**
 - Exact step to perform.
 - Exact expected result.
 - Why Codex could not perform it safely itself.
@@ -144,4 +144,4 @@ Make that section visually prominent and place it after the commit/push report.
 
 Phase 1 is complete when `Program.smile`, `GameState.smile`, and `Drawing.smile` can form one project and one program on both Windows and Web; cross-file symbols work; support-file errors report the correct file; Windows breakpoints can stop inside a support file; and every legacy game still builds and runs through its selected startup source.
 
-Do not begin Phase 2 (`MODULE`, `IMPORT`, and SMILE libraries) in this milestone. Commit Phase 1, report it, and wait for Sin/ChatGPT to inspect the real repository before the next package is prepared.
+Do not begin Phase 2 (`Module`, `Import`, and SMILE libraries) in this milestone. Commit Phase 1, report it, and wait for Sin/ChatGPT to inspect the real repository before the next package is prepared.

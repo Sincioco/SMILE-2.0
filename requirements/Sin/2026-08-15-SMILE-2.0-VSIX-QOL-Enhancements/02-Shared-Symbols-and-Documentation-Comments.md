@@ -113,7 +113,7 @@ Do not scan raw text with an editor-only regular expression.
 For this source:
 
 ```smile
-IMPORT Smile.UI.Menu AS Menu
+Import Smile.UI.Menu As Menu
 MainMenu = Menu.Create(...)
 ```
 
@@ -176,7 +176,7 @@ The Visual Studio layer decides whether navigation is possible. Do not fabricate
 
 ## 5. Shared signature presentation
 
-Current completion code already formats routine parameters, `BYREF`, return types, module/provider text, and `RequiresGameWindow`.
+Current completion code already formats routine parameters, `ByRef`, return types, module/provider text, and `RequiresGameWindow`.
 
 Avoid creating conflicting signatures such as one format in completion and a different semantic interpretation in Quick Info.
 
@@ -206,7 +206,7 @@ Use the existing single-apostrophe SMILE comment syntax. A line beginning with t
 ''' @param Height: Menu height in pixels.
 ''' @param VisibleRows: Requested number of menu rows visible at once.
 ''' @returns: A positive menu handle, or 0 when creation fails.
-PUBLIC FUNCTION Create(...)
+Public Function Create(...)
 ```
 
 Supported forms:
@@ -264,7 +264,7 @@ Caching may be per `SmileAnalysisResult`. Avoid a global cache that can leak sta
 
 ## 7. Required Menu documentation
 
-As part of this milestone, add useful `'''` documentation comments to every `PUBLIC` routine in:
+As part of this milestone, add useful `'''` documentation comments to every `Public` routine in:
 
 ```text
 libraries\Smile.UI\Menu.smile
@@ -275,8 +275,8 @@ At minimum, each public routine must have:
 - a one- or two-sentence summary;
 - one `@param` explanation for each parameter;
 - `@returns:` for each function;
-- important failure/sentinel values such as `0`, `-1`, `FALSE`, or `UI_EVENT_*`;
-- a `GAME WINDOW` remark where drawing behavior needs it.
+- important failure/sentinel values such as `0`, `-1`, `False`, or `UI_EVENT_*`;
+- a `Game Window` remark where drawing behavior needs it.
 
 The documentation should teach, not merely restate names.
 
@@ -305,23 +305,23 @@ The exact wording may be improved, but it must communicate:
 ''' @param Height: Menu height in pixels. Values are clamped to the supported layout range.
 ''' @param VisibleRows: Requested number of rows visible at once. The effective count may be reduced to fit the content area.
 ''' @returns: A positive generation-safe menu handle, or 0 when the style is invalid or no menu slot is available.
-PUBLIC FUNCTION Create(BYREF Style AS Core.MenuStyle, X AS NUMBER, Y AS NUMBER, Width AS NUMBER, Height AS NUMBER, VisibleRows AS NUMBER) AS NUMBER
+Public Function Create(ByRef Style As Core.MenuStyle, X As Number, Y As Number, Width As Number, Height As Number, VisibleRows As Number) As Number
 ```
 
 Preserve the routine's executable statements exactly unless a separate correctness issue is discovered.
 
 ## 8. Module-level documentation
 
-Allow a documentation block immediately before `MODULE`:
+Allow a documentation block immediately before `Module`:
 
 ```smile
 ''' Reusable menu creation, item management, input handling, and drawing services.
-MODULE Smile.UI.Menu
+Module Smile.UI.Menu
 ```
 
 Add a concise module summary to `libraries\Smile.UI\Menu.smile`.
 
-`OPTION EXPLICIT` still follows the module declaration under current grammar. Documentation comments must not interfere with the existing rule that `OPTION EXPLICIT` is the first executable/declarative statement where required.
+`Option Explicit` still follows the module declaration under current grammar. Documentation comments must not interfere with the existing rule that `Option Explicit` is the first executable/declarative statement where required.
 
 ## 9. Quick Info presentation data
 

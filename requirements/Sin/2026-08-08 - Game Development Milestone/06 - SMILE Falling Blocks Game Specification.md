@@ -67,7 +67,7 @@ Escape        exit
 Level increases every 10 lines.
 
 ```smile
-FallDelay = MAX(80, 700 - (Level - 1) * 60)
+FallDelay = Max(80, 700 - (Level - 1) * 60)
 ```
 
 Persist high score.

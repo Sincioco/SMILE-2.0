@@ -1,4 +1,4 @@
-TYPE Point
-    X AS NUMBER
-    X AS NUMBER
-END TYPE
+Type Point
+    X As Number
+    X As Number
+End Type

@@ -16,9 +16,9 @@ Maps\custom.map
 The title screen offers:
 
 ```text
-DEFAULT.MAP
+Default.MAP
 CUSTOM.MAP
-RANDOM LEVEL
+Random LEVEL
 ```
 
 Edit `custom.map`, rebuild or copy it beside the executable, and select `CUSTOM.MAP`.
@@ -215,7 +215,7 @@ CUSTOM.MAP
 The SMILE source reads:
 
 ```smile
-LOAD TEXT FILE "Maps\\custom.map" INTO MapBytes COUNT MapByteCount
+Load Text File "Maps\\custom.map" Into MapBytes Count MapByteCount
 ```
 
 Every start reloads the file.

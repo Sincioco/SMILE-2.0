@@ -19,25 +19,25 @@ Phase 2 adds the minimum general-purpose language and tooling foundation for reu
 A reusable library is written in SMILE:
 
 ```smile
-MODULE Smile.Math.Extras
+Module Smile.Math.Extras
 
-PUBLIC FUNCTION Clamp(Value, MinimumValue, MaximumValue)
-    RETURN MAX(MinimumValue, MIN(MaximumValue, Value))
-END FUNCTION
+Public Function Clamp(Value, MinimumValue, MaximumValue)
+    Return Max(MinimumValue, Min(MaximumValue, Value))
+End Function
 
-END MODULE
+End Module
 ```
 
 A SMILE application imports it through an explicit alias:
 
 ```smile
-IMPORT Smile.Math.Extras AS Math
+Import Smile.Math.Extras As Math
 
 ClampedValue = Math.Clamp(150, 0, 100)
 
-PRINT ClampedValue
+Print ClampedValue
 
-END PROGRAM
+End Program
 ```
 
 The same library source works in:
@@ -53,9 +53,9 @@ The library is developed independently, built as a target-neutral `.smilelib` pa
 
 # Phase 2 deliverables
 
-1. `MODULE` and `END MODULE`.
-2. `IMPORT <dotted.module> AS <alias>`.
-3. `PUBLIC` and `PRIVATE` declarations in modules.
+1. `Module` and `End Module`.
+2. `Import <dotted.module> As <alias>`.
+3. `Public` and `Private` declarations in modules.
 4. Qualified member access through `Alias.Member`.
 5. Local modules in ordinary application projects.
 6. `.smilelibproj` library projects.
@@ -91,9 +91,9 @@ The library is developed independently, built as a target-neutral `.smilelib` pa
 Do not implement these during Phase 2:
 
 ```text
-TYPE
-BYREF / BYVAL
-general mutable TEXT variables
+Type
+ByRef / ByVal
+general mutable Text variables
 dynamic arrays or collections
 images and sprites
 persistent data blocks

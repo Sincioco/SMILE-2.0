@@ -1,34 +1,34 @@
-OPTION EXPLICIT
+Option Explicit
 
-GAME WINDOW "SMILE 2.0 Phase 4 - High Resolution 2D" SIZE 960 BY 540
+Game Window "SMILE 2.0 Phase 4 - High Resolution 2D" Size 960 By 540
 
-TYPE AnimationState
-    FirstFrame AS NUMBER
-    FrameCount AS NUMBER
-    Row AS NUMBER
-    FrameMilliseconds AS NUMBER
-END TYPE
+Type AnimationState
+    FirstFrame As Number
+    FrameCount As Number
+    Row As Number
+    FrameMilliseconds As Number
+End Type
 
-TYPE MediaAssets
-    Background AS IMAGE
-    CharacterSheet AS IMAGE
-    Foreground AS IMAGE
-    PixelProof AS IMAGE
-END TYPE
+Type MediaAssets
+    Background As Image
+    CharacterSheet As Image
+    Foreground As Image
+    PixelProof As Image
+End Type
 
-DIM Media AS MediaAssets
-DIM SharedSheet AS IMAGE
-DIM States[2] AS AnimationState
-DIM SavedBytes[8]
-DIM LoadedBytes[8]
-DIM LoadedCount AS NUMBER
-DIM State AS NUMBER
-DIM Frame AS NUMBER
-DIM StateStarted AS NUMBER
-DIM LastFrameTime AS NUMBER
-DIM Caption AS TEXT
-DIM CaptionWidth AS NUMBER
-DIM CaptionHeight AS NUMBER
+Dim Media As MediaAssets
+Dim SharedSheet As Image
+Dim States[2] As AnimationState
+Dim SavedBytes[8]
+Dim LoadedBytes[8]
+Dim LoadedCount As Number
+Dim State As Number
+Dim Frame As Number
+Dim StateStarted As Number
+Dim LastFrameTime As Number
+Dim Caption As Text
+Dim CaptionWidth As Number
+Dim CaptionHeight As Number
 
 States[0].FirstFrame = 0
 States[0].FrameCount = 4
@@ -39,22 +39,22 @@ States[1].FrameCount = 4
 States[1].Row = 1
 States[1].FrameMilliseconds = 90
 
-LOAD IMAGE Media.Background FROM "Assets\Background.png"
-LOAD IMAGE Media.CharacterSheet FROM "Assets\CharacterSheet.png"
-LOAD IMAGE SharedSheet FROM "Assets\CharacterSheet.png"
-LOAD IMAGE Media.Foreground FROM "Assets\Foreground.png"
-LOAD IMAGE Media.PixelProof FROM "Assets\PixelProof.png"
+Load Image Media.Background From "Assets\Background.png"
+Load Image Media.CharacterSheet From "Assets\CharacterSheet.png"
+Load Image SharedSheet From "Assets\CharacterSheet.png"
+Load Image Media.Foreground From "Assets\Foreground.png"
+Load Image Media.PixelProof From "Assets\PixelProof.png"
 
-IF IMAGE_WIDTH(Media.Background) <> 2304 OR IMAGE_HEIGHT(Media.Background) <> 1296 THEN
-    END PROGRAM
-END IF
-IF IMAGE_WIDTH(Media.PixelProof) <> 37 OR IMAGE_HEIGHT(Media.PixelProof) <> 53 THEN
-    END PROGRAM
-END IF
-UNLOAD IMAGE SharedSheet
-IF IMAGE_LOADED(Media.CharacterSheet) = FALSE THEN
-    END PROGRAM
-END IF
+If Image_Width(Media.Background) <> 2304 Or Image_Height(Media.Background) <> 1296 Then
+    End Program
+End If
+If Image_Width(Media.PixelProof) <> 37 Or Image_Height(Media.PixelProof) <> 53 Then
+    End Program
+End If
+Unload Image SharedSheet
+If Image_Loaded(Media.CharacterSheet) = False Then
+    End Program
+End If
 
 SavedBytes[0] = 83
 SavedBytes[1] = 77
@@ -64,78 +64,78 @@ SavedBytes[4] = 69
 SavedBytes[5] = 50
 SavedBytes[6] = 48
 SavedBytes[7] = 52
-SAVE DATA SavedBytes COUNT 8 TO "Phase4VisualSlice"
-LOAD DATA "Phase4VisualSlice" INTO LoadedBytes COUNT LoadedCount
+Save Data SavedBytes Count 8 To "Phase4VisualSlice"
+Load Data "Phase4VisualSlice" Into LoadedBytes Count LoadedCount
 
-PLAY MUSIC "Assets\Music.wav" LOOP
-MUSIC VOLUME 18
-PLAY SOUND "Assets\ToneOne.wav" ON CHANNEL 1
-PLAY SOUND "Assets\ToneTwo.wav" ON CHANNEL 2
+Play Music "Assets\Music.wav" Loop
+Music Volume 18
+Play Sound "Assets\ToneOne.wav" On Channel 1
+Play Sound "Assets\ToneTwo.wav" On Channel 2
 
 State = 1
 Frame = 0
-StateStarted = TIMER()
+StateStarted = Timer()
 LastFrameTime = StateStarted
-Caption = "ACTION - ALPHA, FLIP, CLIP, LAYERS"
+Caption = "Action - Alpha, Flip, Clip, Layers"
 
-DO
-    IF TIMER() - StateStarted >= 2600 THEN
-        IF State = 0 THEN
+Do
+    If Timer() - StateStarted >= 2600 Then
+        If State = 0 Then
             State = 1
-            Caption = "ACTION - ALPHA, FLIP, CLIP, LAYERS"
-            PLAY SOUND "Assets\ToneTwo.wav" ON CHANNEL 2
-        ELSE
+            Caption = "Action - Alpha, Flip, Clip, Layers"
+            Play Sound "Assets\ToneTwo.wav" On Channel 2
+        Else
             State = 0
-            Caption = "IDLE - SMOOTH HIGH-RESOLUTION PNG"
-            PLAY SOUND "Assets\ToneOne.wav" ON CHANNEL 1
-        END IF
+            Caption = "Idle - Smooth High-Resolution PNG"
+            Play Sound "Assets\ToneOne.wav" On Channel 1
+        End If
         Frame = 0
-        StateStarted = TIMER()
+        StateStarted = Timer()
         LastFrameTime = StateStarted
-    END IF
+    End If
 
-    IF TIMER() - LastFrameTime >= States[State].FrameMilliseconds THEN
+    If Timer() - LastFrameTime >= States[State].FrameMilliseconds Then
         Frame = Frame + 1
-        IF Frame >= States[State].FrameCount THEN
+        If Frame >= States[State].FrameCount Then
             Frame = 0
-        END IF
-        LastFrameTime = TIMER()
-    END IF
+        End If
+        LastFrameTime = Timer()
+    End If
 
-    CaptionWidth = TEXT_WIDTH(Caption, 25)
-    CaptionHeight = TEXT_HEIGHT(Caption, 25)
+    CaptionWidth = Text_Width(Caption, 25)
+    CaptionHeight = Text_Height(Caption, 25)
 
-    CLEAR RGB(7, 10, 24)
-    DRAW IMAGE Media.Background AT 0, 0 SIZE 960 BY 540 FILTER SMOOTH
+    Clear Rgb(7, 10, 24)
+    Draw Image Media.Background At 0, 0 Size 960 By 540 Filter Smooth
 
-    CLIP RECTANGLE 255, 80, 450, 405
-        IF State = 0 THEN
-            DRAW IMAGE Media.CharacterSheet FROM Frame * 512, States[State].Row * 512 SIZE 512 BY 512 AT 480, 474 SIZE 330 BY 330 ANCHOR 165, 330 FILTER SMOOTH
-        ELSE
-            DRAW IMAGE Media.CharacterSheet FROM Frame * 512, States[State].Row * 512 SIZE 512 BY 512 AT 480, 474 SIZE 330 BY 330 ANCHOR 165, 330 FILTER SMOOTH FLIP HORIZONTAL
-        END IF
+    Clip Rectangle 255, 80, 450, 405
+        If State = 0 Then
+            Draw Image Media.CharacterSheet From Frame * 512, States[State].Row * 512 Size 512 By 512 At 480, 474 Size 330 By 330 Anchor 165, 330 Filter Smooth
+        Else
+            Draw Image Media.CharacterSheet From Frame * 512, States[State].Row * 512 Size 512 By 512 At 480, 474 Size 330 By 330 Anchor 165, 330 Filter Smooth Flip Horizontal
+        End If
 
-        CLIP RECTANGLE 560, 105, 118, 118
-            DRAW IMAGE Media.Foreground FROM 1160, 115 SIZE 420 BY 420 AT 545, 90 SIZE 150 BY 150 OPACITY 72 ANCHOR 0, 0 FILTER SMOOTH
-        END CLIP
-    END CLIP
+        Clip Rectangle 560, 105, 118, 118
+            Draw Image Media.Foreground From 1160, 115 Size 420 By 420 At 545, 90 Size 150 By 150 Opacity 72 Anchor 0, 0 Filter Smooth
+        End Clip
+    End Clip
 
-    DRAW IMAGE Media.Foreground AT 0, 0 SIZE 960 BY 540 OPACITY 62 FILTER SMOOTH
-    DRAW IMAGE Media.PixelProof AT 30, 388 SIZE 148 BY 106 FILTER PIXEL
+    Draw Image Media.Foreground At 0, 0 Size 960 By 540 Opacity 62 Filter Smooth
+    Draw Image Media.PixelProof At 30, 388 Size 148 By 106 Filter Pixel
 
-    FILL RECTANGLE 480 - CaptionWidth / 2 - 18, 19, CaptionWidth + 36, CaptionHeight + 18, RGB(10, 15, 36)
-    DRAW TEXT Caption AT 480, 27 SIZE 25 COLOR WHITE CENTERED
-    DRAW TEXT "PIXEL FILTER OPT-IN" AT 104, 504 SIZE 15 COLOR CYAN CENTERED
+    Fill Rectangle 480 - CaptionWidth / 2 - 18, 19, CaptionWidth + 36, CaptionHeight + 18, Rgb(10, 15, 36)
+    Draw Text Caption At 480, 27 Size 25 Color WHITE Centered
+    Draw Text "Pixel Filter Opt-In" At 104, 504 Size 15 Color CYAN Centered
 
-    SHOW SCREEN
-    WAIT 8 MILLISECONDS
-LOOP UNTIL GAME_CLOSED() = TRUE
+    Show Screen
+    Wait 8 Milliseconds
+Loop Until Game_Closed() = True
 
-STOP SOUND
-STOP MUSIC
-UNLOAD IMAGE Media.PixelProof
-UNLOAD IMAGE Media.Foreground
-UNLOAD IMAGE Media.CharacterSheet
-UNLOAD IMAGE Media.Background
+Stop Sound
+Stop Music
+Unload Image Media.PixelProof
+Unload Image Media.Foreground
+Unload Image Media.CharacterSheet
+Unload Image Media.Background
 
-END PROGRAM
+End Program

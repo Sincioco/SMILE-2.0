@@ -168,7 +168,7 @@ Commit and push:
 Known limitations:
 - ...
 
-**MANUAL TESTING REQUESTED FROM SIN: ...**
+**MANUAL TESTING REQUESTED From SIN: ...**
 ```
 
 Do not state that the milestone is complete when the Source Not Available defect remains.

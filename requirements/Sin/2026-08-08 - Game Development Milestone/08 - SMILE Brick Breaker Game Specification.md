@@ -65,7 +65,7 @@ Alt+Enter     automatic full-screen
 Persist:
 
 ```smile
-LOAD HighScore FROM "HighScore" DEFAULT 0
+Load HighScore From "HighScore" Default 0
 ```
 
 ## Sound

@@ -249,22 +249,22 @@ internal sealed class ModuleProcessingResult
                 {
                     foreach (var field in member.Type.Fields.Where(field => IsInaccessible(field.Type)))
                         diagnostics.Add(new Diagnostic("SML3409", DiagnosticSeverity.Error,
-                            $"PUBLIC TYPE '{module.Name}.{member.Name}' exposes inaccessible type '{field.Type.Name}' through field '{field.Name}'.",
+                            $"Public Type '{module.Name}.{member.Name}' exposes inaccessible type '{field.Type.Name}' through field '{field.Name}'.",
                             field.Source, field.TypeToken.Span));
                 }
                 if (member.Variable != null && IsInaccessible(member.Variable.Type))
                     diagnostics.Add(new Diagnostic("SML3409", DiagnosticSeverity.Error,
-                        $"PUBLIC member '{module.Name}.{member.Name}' exposes inaccessible type '{member.Variable.Type.Name}'.",
+                        $"Public member '{module.Name}.{member.Name}' exposes inaccessible type '{member.Variable.Type.Name}'.",
                         member.Source, member.DeclarationSpan));
                 if (member.Routine != null)
                 {
                     if (member.Routine.IsFunction && IsInaccessible(member.Routine.ReturnType))
                         diagnostics.Add(new Diagnostic("SML3409", DiagnosticSeverity.Error,
-                            $"PUBLIC FUNCTION '{module.Name}.{member.Name}' returns inaccessible type '{member.Routine.ReturnType.Name}'.",
+                            $"Public Function '{module.Name}.{member.Name}' returns inaccessible type '{member.Routine.ReturnType.Name}'.",
                             member.Source, member.Routine.Declaration.ReturnTypeToken?.Span ?? member.DeclarationSpan));
                     foreach (var parameter in member.Routine.Parameters.Where(parameter => IsInaccessible(parameter.Type)))
                         diagnostics.Add(new Diagnostic("SML3409", DiagnosticSeverity.Error,
-                            $"PUBLIC routine '{module.Name}.{member.Name}' exposes inaccessible parameter type '{parameter.Type.Name}'.",
+                            $"Public routine '{module.Name}.{member.Name}' exposes inaccessible parameter type '{parameter.Type.Name}'.",
                             parameter.Source, parameter.DeclarationSpan));
                 }
             }
@@ -330,7 +330,7 @@ internal sealed class ModuleProcessor
             {
                 if (!ReferenceEquals(option, allowed))
                     Report(tree.Source, "SML3300", option.Span,
-                        "OPTION EXPLICIT must be the first statement in its physical source and may appear only once.");
+                        "Option Explicit must be the first statement in its physical source and may appear only once.");
             }
         }
     }
@@ -370,7 +370,7 @@ internal sealed class ModuleProcessor
             {
                 if (_kind == SmileCompilationKind.Library)
                     Report(tree.Source, "SML3101", tree.Root.Span,
-                        "Every library source must declare exactly one MODULE.");
+                        "Every library source must declare exactly one Module.");
                 continue;
             }
 
@@ -378,7 +378,7 @@ internal sealed class ModuleProcessor
                 !ReferenceEquals(tree.Root.Statements[0], declarations[0]))
             {
                 Report(tree.Source, "SML3100", declarations[0].ModuleKeyword.Span,
-                    "MODULE must be the first statement, exactly one module is allowed per source, and only comments may follow END MODULE.");
+                    "Module must be the first statement, exactly one module is allowed per source, and only comments may follow End Module.");
             }
 
             var declaration = declarations[0];
@@ -412,7 +412,7 @@ internal sealed class ModuleProcessor
             {
                 if (sawDeclaration)
                     Report(tree.Source, "SML3106", statement.Span,
-                        "Module imports must appear immediately after MODULE and before declarations.");
+                        "Module imports must appear immediately after Module and before declarations.");
                 continue;
             }
 
@@ -438,7 +438,7 @@ internal sealed class ModuleProcessor
             if (identifier == null)
             {
                 Report(tree.Source, "SML3101", statement.Span,
-                    "Module sources may contain only IMPORT and CONST, DIM, TYPE, SUB, or FUNCTION declarations.");
+                    "Module sources may contain only Import and Const, Dim, Type, Sub, or Function declarations.");
                 continue;
             }
 
@@ -474,7 +474,7 @@ internal sealed class ModuleProcessor
                 {
                     if (sawNonImport)
                         Report(tree.Source, "SML3106", import.Span,
-                            "IMPORT statements must appear before declarations or executable statements.");
+                            "Import statements must appear before declarations or executable statements.");
                     sourceImports.Add(import);
                 }
                 else
@@ -484,7 +484,7 @@ internal sealed class ModuleProcessor
 
                 if (statement is VisibilityDeclarationSyntax && !_moduleBySource.ContainsKey(tree.Source))
                     Report(tree.Source, "SML3101", statement.Span,
-                        "PUBLIC and PRIVATE are valid only on declarations inside a MODULE.");
+                        "Public and Private are valid only on declarations inside a Module.");
             }
 
             var aliases = new Dictionary<string, ModuleSymbol>(StringComparer.OrdinalIgnoreCase);
@@ -893,7 +893,7 @@ internal sealed class ModuleProcessor
         if (resolved.Visibility != ModuleVisibility.Public)
         {
             Report(tree.Source, resolved.Kind == SmileModuleMemberKind.Type ? "SML3408" : "SML3105", member.Span,
-                $"{(resolved.Kind == SmileModuleMemberKind.Type ? "Type" : "Member")} '{module.Name}.{resolved.Name}' is PRIVATE and cannot be accessed through an import.");
+                $"{(resolved.Kind == SmileModuleMemberKind.Type ? "Type" : "Member")} '{module.Name}.{resolved.Name}' is Private and cannot be accessed through an import.");
             return SemanticToken(member, "__smile_private_" + SafeIdentifier(member.Text));
         }
         return SemanticToken(member, resolved.SemanticName);
@@ -917,7 +917,7 @@ internal sealed class ModuleProcessor
         if (resolved.Visibility != ModuleVisibility.Public)
         {
             Report(tree.Source, "SML3408", member.Span,
-                $"Type '{module.Name}.{resolved.Name}' is PRIVATE and cannot be accessed through an import.");
+                $"Type '{module.Name}.{resolved.Name}' is Private and cannot be accessed through an import.");
             return SemanticToken(member, "__smile_private_" + SafeIdentifier(member.Text));
         }
         return SemanticToken(member, resolved.SemanticName);

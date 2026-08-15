@@ -1,4 +1,4 @@
-SUB DrawRefreshProof()
-    DRAW TEXT "LIVE SOLUTION EXPLORER REFRESH" AT 400, 190 SIZE 24 COLOR WHITE CENTERED
-    DRAW TEXT "ADD, DELETE, RESTORE, REMOVE, AND RE-ADD" AT 400, 240 SIZE 18 COLOR CYAN CENTERED
-END SUB
+Sub DrawRefreshProof()
+    Draw Text "Live Solution Explorer Refresh" At 400, 190 Size 24 Color WHITE Centered
+    Draw Text "Add, Delete, Restore, Remove, And Re-Add" At 400, 240 Size 18 Color CYAN Centered
+End Sub

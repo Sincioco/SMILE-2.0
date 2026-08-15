@@ -1,10 +1,10 @@
-GAME WINDOW "SMILE 2.0 Live Refresh Basics" SIZE 800 BY 450
+Game Window "SMILE 2.0 Live Refresh Basics" Size 800 By 450
 
-DO
-    CLEAR RGB(8, 16, 32)
-    CALL DrawRefreshProof()
-    SHOW SCREEN
-    WAIT 16 MILLISECONDS
-LOOP UNTIL GAME_CLOSED() = TRUE
+Do
+    Clear Rgb(8, 16, 32)
+    Call DrawRefreshProof()
+    Show Screen
+    Wait 16 Milliseconds
+Loop Until Game_Closed() = True
 
-END PROGRAM
+End Program

@@ -41,8 +41,8 @@ Several files declaring the same module merge into one module.
 Example:
 
 ```text
-Clamp.smile   -> MODULE Smile.Math.Extras
-Range.smile   -> MODULE Smile.Math.Extras
+Clamp.smile   -> Module Smile.Math.Extras
+Range.smile   -> Module Smile.Math.Extras
 ```
 
 They form one module named:
@@ -58,10 +58,10 @@ Smile.Math.Extras
 Each module has one case-insensitive declaration namespace across:
 
 ```text
-CONST
-DIM
-SUB
-FUNCTION
+Const
+Dim
+Sub
+Function
 ```
 
 Duplicate names across contributing files receive deterministic physical-file diagnostics.
@@ -73,13 +73,13 @@ Modules cannot directly read or mutate consuming-program globals.
 Invalid module code:
 
 ```smile
-MODULE Smile.Bad
+Module Smile.Bad
 
-PUBLIC FUNCTION ReadGameScore()
-    RETURN Score
-END FUNCTION
+Public Function ReadGameScore()
+    Return Score
+End Function
 
-END MODULE
+End Module
 ```
 
 when `Score` belongs only to the consuming game.
@@ -114,8 +114,8 @@ A module's public API includes:
 ```text
 public constant name/type/value
 public array name/rank/dimensions
-public SUB name and parameters
-public FUNCTION name, parameters, and return type
+public Sub name and parameters
+public Function name, parameters, and return type
 source metadata
 ```
 

@@ -43,36 +43,36 @@
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 1 &mdash; exact official code</span><button class="copy-code" type="button">Copy code</button></div>
 <pre><code class="language-smile" data-source-start="1">' SMILE 2.0 Snake - student edition without attract/demo code.
-CONST CanvasWidth = 960
-CONST CanvasHeight = 540
-CONST FieldX = 20
-CONST FieldY = 30
-CONST FieldWidth = 700
-CONST FieldHeight = 480
-CONST GridWidth = 35
-CONST GridHeight = 24
-CONST CellSize = 20
-CONST StartDelay = 100
-CONST MinimumDelay = 45
-DIM SnakeX[840]
-DIM SnakeY[840]</code></pre>
+Const CanvasWidth = 960
+Const CanvasHeight = 540
+Const FieldX = 20
+Const FieldY = 30
+Const FieldWidth = 700
+Const FieldHeight = 480
+Const GridWidth = 35
+Const GridHeight = 24
+Const CellSize = 20
+Const StartDelay = 100
+Const MinimumDelay = 45
+Dim SnakeX[840]
+Dim SnakeY[840]</code></pre>
 </div>
 <h2>Read every line by job</h2>
-<div class="table-wrap"><table><thead><tr><th>Syntax</th><th>Job</th><th>Snake example / usage</th></tr></thead><tbody><tr><td><span class="syntax">' note</span></td><td>An apostrophe starts a full-line comment for humans.</td><td><code>' SMILE 2.0 Snake - student edition without attract/demo code.</code> <a class="source-line-link" href="19-complete-source.html#source-line-1">line 1</a></td></tr><tr><td><span class="syntax">CONST Name = value</span></td><td>Creates a named value that cannot change later.</td><td><code>CONST CanvasWidth = 960</code> <a class="source-line-link" href="19-complete-source.html#source-line-2">line 2</a></td></tr><tr><td><span class="syntax">DIM SnakeX[840]</span></td><td>Creates a fixed one-dimensional numeric array with 840 numbered slots.</td><td><code>DIM SnakeX[840]</code> <a class="source-line-link" href="19-complete-source.html#source-line-13">line 13</a></td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Syntax</th><th>Job</th><th>Snake example / usage</th></tr></thead><tbody><tr><td><span class="syntax">' note</span></td><td>An apostrophe starts a full-line comment for humans.</td><td><code>' SMILE 2.0 Snake - student edition without attract/demo code.</code> <a class="source-line-link" href="19-complete-source.html#source-line-1">line 1</a></td></tr><tr><td><span class="syntax">Const Name = value</span></td><td>Creates a named value that cannot change later.</td><td><code>Const CanvasWidth = 960</code> <a class="source-line-link" href="19-complete-source.html#source-line-2">line 2</a></td></tr><tr><td><span class="syntax">Dim SnakeX[840]</span></td><td>Creates a fixed one-dimensional numeric array with 840 numbered slots.</td><td><code>Dim SnakeX[840]</code> <a class="source-line-link" href="19-complete-source.html#source-line-13">line 13</a></td></tr></tbody></table></div>
 <div class="card-grid"><article class="card accent-green"><h3>Board measurements</h3><p><code>FieldWidth = 700</code>, <code>GridWidth = 35</code>, and <code>CellSize = 20</code> agree because 35 &times; 20 = 700.</p></article><article class="card accent-yellow"><h3>Timing boundaries</h3><p><code>StartDelay = 100</code> is the early move delay. <code>MinimumDelay = 45</code> prevents the snake from becoming too fast.</p></article></div>
 <aside class="callout think"><h3>Why exactly 840 slots?</h3><p>The board contains 35 &times; 24 = 840 squares. In the most extreme case, the snake could occupy every square.</p></aside><details class="quiz"><summary>What should FieldWidth / CellSize equal?</summary><p><strong>700 / 20 = 35</strong>, the number of grid columns.</p></details>
 <section aria-labelledby="reinforce-title" class="reinforcement-panel">
 <p class="reinforcement-kicker">Repetition builds memory</p>
 <h2 id="reinforce-title">Reinforce what you learned</h2>
 <div class="reinforcement-grid">
-<article><h3>Say it again</h3><p><code>CONST</code> names values that stay fixed; <code>DIM</code> reserves numbered array slots.</p></article>
+<article><h3>Say it again</h3><p><code>Const</code> names values that stay fixed; <code>Dim</code> reserves numbered array slots.</p></article>
 <article><h3>Recall it</h3><p>Why do both body arrays have 840 slots?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>35 &times; 24 = 840.</strong> In the most extreme case, the snake could occupy every board square.</p></details></article>
 </div>
 </section><nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="05-game-loop-states.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Game Loop &amp; States</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="07-checkpoint-2-game-memory.html"><span><small>Next topic</small><strong>Checkpoint 2: Game Memory</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
 </article>
 </main>
 <footer class="site-footer">
-<div class="footer-line">SMILE 2.0 (SinBASIC). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div>
+<div class="footer-line">SMILE 2.0 (SinBasic). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div>
 <div class="footer-line"><a href="https://github.com/Sincioco" rel="noopener" target="_blank">github.com/Sincioco</a> | <a href="https://facebook.com/louiery.sincioco" rel="noopener" target="_blank">facebook.com/louiery.sincioco</a> | <a href="https://linkedin.com/in/louierysincioco" rel="noopener" target="_blank">linkedin.com/in/louierysincioco</a> | <a href="https://youtube.com/@TheSincioco" rel="noopener" target="_blank">youtube.com/@TheSincioco</a> | <a href="https://tiktok.com/@sincioco" rel="noopener" target="_blank">tiktok.com/@sincioco</a></div>
 </footer>
 </div>

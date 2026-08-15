@@ -28,14 +28,14 @@ Baseline recorded on August 8, 2026 before renderer changes at commit `3d7ce03`.
 - Windowed rendering was stable and flicker-free during the observation.
 - Fullscreen used the logical 960x540 DIB enlarged with `StretchBlt(COLORONCOLOR)`.
 - Fullscreen text and score glyphs visibly showed the expected enlarged pixel edges.
-- Movement was driven by fixed per-loop increments plus `WAIT 8 MILLISECONDS`; no presentation timing diagnostics existed.
+- Movement was driven by fixed per-loop increments plus `Wait 8 Milliseconds`; no presentation timing diagnostics existed.
 
 Manual resolution, DPI, refresh-rate, long-run, monitor-move, and 100-cycle fullscreen tests remain part of the final milestone validation.
 
 ## Phase 1 stop condition
 
 - Added a QueryPerformanceCounter frame clock without changing the rendering path.
-- Preserved `TIMER()` milliseconds while moving its monotonic source to QPC.
+- Preserved `Timer()` milliseconds while moving its monotonic source to QPC.
 - Added opt-in logging through `SMILE_GRAPHICS_DIAGNOSTICS=1`; release games remain quiet by default.
 - A live diagnostics run reported the backend, 960x540 logical and physical sizes, viewport, 120 Hz display, requested VSync, legacy GDI pacing, FPS, and frame/draw/present timings.
 - Post-change `scripts\smoke-test.cmd` passed in 44.7 seconds.

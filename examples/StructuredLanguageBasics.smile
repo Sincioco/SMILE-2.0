@@ -1,57 +1,57 @@
 ' Structured language and native backend smoke coverage.
-CONST BoardWidth = 10
-CONST BoardHeight = 4 * 5
-CONST MaximumCells = BoardWidth * BoardHeight
+Const BoardWidth = 10
+Const BoardHeight = 4 * 5
+Const MaximumCells = BoardWidth * BoardHeight
 
-DIM Board[BoardWidth, BoardHeight]
+Dim Board[BoardWidth, BoardHeight]
 
-SUB StoreCell(Column, Row, Value)
-    Adjusted = MAX(0, Value)
+Sub StoreCell(Column, Row, Value)
+    Adjusted = Max(0, Value)
     Board[Column, Row] = Adjusted
-END SUB
+End Sub
 
-FUNCTION IsEven(Value)
-    IF Value MOD 2 = 0 THEN
-        RETURN TRUE
-    ELSE
-        RETURN FALSE
-    END IF
-END FUNCTION
+Function IsEven(Value)
+    If Value Mod 2 = 0 Then
+        Return True
+    Else
+        Return False
+    End If
+End Function
 
-CALL StoreCell(2, 3, 12)
+Call StoreCell(2, 3, 12)
 
 Selected = 0
-SELECT CASE Board[2, 3] / 3
-    CASE 4
+Select Case Board[2, 3] / 3
+    Case 4
         Selected = 40
-    CASE ELSE
+    Case Else
         Selected = -1
-END SELECT
+End Select
 
 Counter = 0
-DO
+Do
     Counter = Counter + 1
-    EXIT DO
-LOOP
+    Exit Do
+Loop
 
-FOR Index = 0 TO 9
-    IF Index = 2 THEN
-        EXIT FOR
-    END IF
-END FOR
+For Index = 0 To 9
+    If Index = 2 Then
+        Exit For
+    End If
+End For
 
-IF IsEven(Board[2, 3]) = TRUE THEN
-    PRINT "EVEN"
-END IF
+If IsEven(Board[2, 3]) = True Then
+    Print "Even"
+End If
 
-PRINT Board[2, 3]
-PRINT Selected
-PRINT Counter
-PRINT Index
-PRINT MaximumCells
-PRINT ABS(-5)
-PRINT MIN(7, 3)
-PRINT RGB(40, 220, 30)
-PRINT KEY_LEFT
-PRINT LIGHT_BLUE
-END PROGRAM
+Print Board[2, 3]
+Print Selected
+Print Counter
+Print Index
+Print MaximumCells
+Print Abs(-5)
+Print Min(7, 3)
+Print Rgb(40, 220, 30)
+Print KEY_LEFT
+Print LIGHT_BLUE
+End Program

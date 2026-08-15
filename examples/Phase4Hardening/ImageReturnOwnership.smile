@@ -1,53 +1,53 @@
-OPTION EXPLICIT
+Option Explicit
 
-GAME WINDOW "Phase 4.1 IMAGE Ownership" SIZE 320 BY 180
+Game Window "Phase 4.1 Image Ownership" Size 320 By 180
 
-TYPE MediaBox
-    Picture AS IMAGE
-END TYPE
+Type MediaBox
+    Picture As Image
+End Type
 
-TYPE NestedBox
-    Media AS MediaBox
-END TYPE
+Type NestedBox
+    Media As MediaBox
+End Type
 
-DIM Shared AS IMAGE
-DIM Copy AS IMAGE
-DIM Box AS MediaBox
-DIM Nested AS NestedBox
+Dim Shared As Image
+Dim Copy As Image
+Dim Box As MediaBox
+Dim Nested As NestedBox
 
-LOAD IMAGE Shared FROM "Assets\PixelProof.png"
+Load Image Shared From "Assets\PixelProof.png"
 
 Copy = GetImage()
-PRINT IMAGE_WIDTH(GetImage())
-PRINT IMAGE_HEIGHT(GetImage())
-PRINT IMAGE_LOADED(GetImage())
+Print Image_Width(GetImage())
+Print Image_Height(GetImage())
+Print Image_Loaded(GetImage())
 
-CALL UseImage(GetImage())
+Call UseImage(GetImage())
 
 Box = GetBox()
 Nested = GetNested()
 
-DRAW IMAGE GetImage() AT 0, 0 SIZE 74 BY 106 FILTER PIXEL
-SHOW SCREEN
+Draw Image GetImage() At 0, 0 Size 74 By 106 Filter Pixel
+Show Screen
 
-END PROGRAM
+End Program
 
-FUNCTION GetImage() AS IMAGE
-    RETURN Shared
-END FUNCTION
+Function GetImage() As Image
+    Return Shared
+End Function
 
-SUB UseImage(Value AS IMAGE)
-    PRINT IMAGE_WIDTH(Value)
-END SUB
+Sub UseImage(Value As Image)
+    Print Image_Width(Value)
+End Sub
 
-FUNCTION GetBox() AS MediaBox
-    DIM Result AS MediaBox
+Function GetBox() As MediaBox
+    Dim Result As MediaBox
     Result.Picture = Shared
-    RETURN Result
-END FUNCTION
+    Return Result
+End Function
 
-FUNCTION GetNested() AS NestedBox
-    DIM Result AS NestedBox
+Function GetNested() As NestedBox
+    Dim Result As NestedBox
     Result.Media.Picture = Shared
-    RETURN Result
-END FUNCTION
+    Return Result
+End Function

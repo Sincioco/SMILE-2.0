@@ -1,114 +1,114 @@
-OPTION EXPLICIT
+Option Explicit
 
-IMPORT Smile.UI.Core AS UI
-IMPORT Smile.UI.Menu AS Menu
+Import Smile.UI.Core As UI
+Import Smile.UI.Menu As Menu
 
-DIM Style AS UI.MenuStyle
-DIM Handle AS NUMBER
-DIM OldHandle AS NUMBER
-DIM Event AS NUMBER
-DIM Value AS TEXT
-DIM ItemIndex AS NUMBER
-DIM Index AS NUMBER
-DIM Handles[16] AS NUMBER
-DIM OperationSucceeded AS BOOLEAN
-DIM ReflowStyle AS UI.MenuStyle
+Dim Style As UI.MenuStyle
+Dim Handle As Number
+Dim OldHandle As Number
+Dim Event As Number
+Dim Value As Text
+Dim ItemIndex As Number
+Dim Index As Number
+Dim Handles[16] As Number
+Dim OperationSucceeded As Boolean
+Dim ReflowStyle As UI.MenuStyle
 
 Style.RowHeight = 32
-Style.WrapSelection = TRUE
+Style.WrapSelection = True
 
 Handle = Menu.Create(Style, 0, 0, 320, 240, 2)
 
-ItemIndex = Menu.AddItem(Handle, "FIRST", 10, TRUE)
-ItemIndex = Menu.AddItem(Handle, "DISABLED", 20, FALSE)
-ItemIndex = Menu.AddItem(Handle, "THIRD", 30, TRUE)
-ItemIndex = Menu.AddItem(Handle, "FOURTH", 40, TRUE)
+ItemIndex = Menu.AddItem(Handle, "First", 10, True)
+ItemIndex = Menu.AddItem(Handle, "Disabled", 20, False)
+ItemIndex = Menu.AddItem(Handle, "Third", 30, True)
+ItemIndex = Menu.AddItem(Handle, "Fourth", 40, True)
 
-PRINT Menu.SelectedIndex(Handle)
+Print Menu.SelectedIndex(Handle)
 
 Event = Menu.HandleKey(Handle, KEY_DOWN)
-PRINT Event
-PRINT Menu.SelectedIndex(Handle)
-PRINT Menu.TopIndex(Handle)
+Print Event
+Print Menu.SelectedIndex(Handle)
+Print Menu.TopIndex(Handle)
 
 Event = Menu.HandleKey(Handle, KEY_ENTER)
-PRINT Event
-PRINT Menu.SelectedValue(Handle)
+Print Event
+Print Menu.SelectedValue(Handle)
 
 Event = Menu.HandleKey(Handle, KEY_DOWN)
-PRINT Menu.SelectedIndex(Handle)
-PRINT Menu.TopIndex(Handle)
+Print Menu.SelectedIndex(Handle)
+Print Menu.TopIndex(Handle)
 
 Event = Menu.HandleKey(Handle, KEY_DOWN)
-PRINT Menu.SelectedIndex(Handle)
+Print Menu.SelectedIndex(Handle)
 
 Event = Menu.HandleKey(Handle, KEY_ESCAPE)
-PRINT Event
+Print Event
 
 Value = "A😀B"
-PRINT TEXT_LENGTH(Value)
-PRINT TEXT_CODE_AT(Value, 1)
-PRINT TEXT_SLICE(Value, 1, 1)
+Print Text_Length(Value)
+Print Text_Code_At(Value, 1)
+Print Text_Slice(Value, 1, 1)
 
 OldHandle = Handle
-CALL Menu.Destroy(Handle)
-PRINT Menu.SelectedIndex(OldHandle)
+Call Menu.Destroy(Handle)
+Print Menu.SelectedIndex(OldHandle)
 
 Handle = Menu.Create(Style, 0, 0, 320, 240, 2)
-PRINT Handle
-CALL Menu.Destroy(Handle)
+Print Handle
+Call Menu.Destroy(Handle)
 
 Handle = Menu.Create(Style, 0, 0, 320, 240, 2)
-FOR Index = 0 TO 63
-    ItemIndex = Menu.AddItem(Handle, "ITEM", Index, TRUE)
-END FOR
-PRINT Menu.AddItem(Handle, "OVERFLOW", 64, TRUE)
-PRINT Menu.ItemCount(Handle)
-CALL Menu.Destroy(Handle)
+For Index = 0 To 63
+    ItemIndex = Menu.AddItem(Handle, "Item", Index, True)
+End For
+Print Menu.AddItem(Handle, "Overflow", 64, True)
+Print Menu.ItemCount(Handle)
+Call Menu.Destroy(Handle)
 
 Handle = Menu.Create(Style, 0, 0, 320, 240, 2)
-ItemIndex = Menu.AddItem(Handle, "OFF", 1, FALSE)
-ItemIndex = Menu.AddItem(Handle, "ALSO OFF", 2, FALSE)
-PRINT Menu.SelectedIndex(Handle)
-PRINT Menu.HandleKey(Handle, KEY_DOWN)
-CALL Menu.Destroy(Handle)
+ItemIndex = Menu.AddItem(Handle, "Off", 1, False)
+ItemIndex = Menu.AddItem(Handle, "Also Off", 2, False)
+Print Menu.SelectedIndex(Handle)
+Print Menu.HandleKey(Handle, KEY_DOWN)
+Call Menu.Destroy(Handle)
 
-Style.WrapSelection = FALSE
+Style.WrapSelection = False
 Handle = Menu.Create(Style, 0, 0, 320, 240, 2)
-ItemIndex = Menu.AddItem(Handle, "ONE", 1, TRUE)
-ItemIndex = Menu.AddItem(Handle, "TWO", 2, TRUE)
+ItemIndex = Menu.AddItem(Handle, "One", 1, True)
+ItemIndex = Menu.AddItem(Handle, "Two", 2, True)
 OperationSucceeded = Menu.SetSelectedIndex(Handle, 1)
-PRINT Menu.HandleKey(Handle, KEY_DOWN)
-PRINT Menu.SelectedIndex(Handle)
-CALL Menu.Destroy(Handle)
+Print Menu.HandleKey(Handle, KEY_DOWN)
+Print Menu.SelectedIndex(Handle)
+Call Menu.Destroy(Handle)
 
 Style.RowHeight = 24
 Handle = Menu.Create(Style, 0, 0, 300, 180, 6)
-FOR Index = 0 TO 11
-    ItemIndex = Menu.AddItem(Handle, "ITEM", Index, TRUE)
-END FOR
-PRINT Menu.VisibleRows(Handle)
+For Index = 0 To 11
+    ItemIndex = Menu.AddItem(Handle, "Item", Index, True)
+End For
+Print Menu.VisibleRows(Handle)
 OperationSucceeded = Menu.SetSelectedIndex(Handle, 10)
-PRINT Menu.TopIndex(Handle)
+Print Menu.TopIndex(Handle)
 ReflowStyle = Style
 ReflowStyle.RowHeight = 80
 OperationSucceeded = Menu.SetStyle(Handle, ReflowStyle)
-PRINT Menu.VisibleRows(Handle)
-PRINT Menu.TopIndex(Handle)
+Print Menu.VisibleRows(Handle)
+Print Menu.TopIndex(Handle)
 OperationSucceeded = Menu.SetStyle(Handle, Style)
-PRINT Menu.VisibleRows(Handle)
-PRINT Menu.TopIndex(Handle)
+Print Menu.VisibleRows(Handle)
+Print Menu.TopIndex(Handle)
 OperationSucceeded = Menu.SetSelectedIndex(Handle, 5)
 OperationSucceeded = Menu.SetSelectedIndex(Handle, 10)
-PRINT Menu.TopIndex(Handle)
-CALL Menu.Destroy(Handle)
+Print Menu.TopIndex(Handle)
+Call Menu.Destroy(Handle)
 
-FOR Index = 0 TO 15
+For Index = 0 To 15
     Handles[Index] = Menu.Create(Style, 0, 0, 320, 240, 2)
-END FOR
-PRINT Menu.Create(Style, 0, 0, 320, 240, 2)
-FOR Index = 0 TO 15
-    CALL Menu.Destroy(Handles[Index])
-END FOR
+End For
+Print Menu.Create(Style, 0, 0, 320, 240, 2)
+For Index = 0 To 15
+    Call Menu.Destroy(Handles[Index])
+End For
 
-END PROGRAM
+End Program

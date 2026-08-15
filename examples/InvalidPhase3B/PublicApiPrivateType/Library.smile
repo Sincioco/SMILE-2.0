@@ -1,9 +1,9 @@
-MODULE Invalid.PublicApi
-PRIVATE TYPE Hidden
-    Value AS NUMBER
-END TYPE
-PUBLIC FUNCTION Create() AS Hidden
-    DIM Result AS Hidden
-    RETURN Result
-END FUNCTION
-END MODULE
+Module Invalid.PublicApi
+Private Type Hidden
+    Value As Number
+End Type
+Public Function Create() As Hidden
+    Dim Result As Hidden
+    Return Result
+End Function
+End Module

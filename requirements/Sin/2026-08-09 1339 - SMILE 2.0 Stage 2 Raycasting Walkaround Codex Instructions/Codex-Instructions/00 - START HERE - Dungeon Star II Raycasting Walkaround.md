@@ -102,12 +102,12 @@ At the verified baseline, SMILE already has everything required for this milesto
 - one- and two-dimensional fixed arrays;
 - procedures and functions;
 - loops and conditionals;
-- `ABS`, `MIN`, `MAX`, `RGB`, and `TIMER`;
+- `Abs`, `Min`, `Max`, `Rgb`, and `Timer`;
 - queued and held keyboard input;
 - fixed-step timing examples;
-- `FILL RECTANGLE` and the other generic drawing primitives;
+- `Fill Rectangle` and the other generic drawing primitives;
 - native DirectX and GDI graphics backends;
-- `LOAD TEXT FILE "path" INTO Array COUNT Variable`;
+- `Load Text File "path" Into Array Count Variable`;
 - executable-relative assets;
 - automatic focus-loss audio muting;
 - project asset copying;
@@ -123,9 +123,9 @@ COS
 FLOAT
 DOUBLE
 RAYCAST
-DRAW WALL COLUMN
+Draw WALL COLUMN
 CREATE 3D CAMERA
-LOAD WOLFENSTEIN MAP
+Load WOLFENSTEIN MAP
 ```
 
 The camera-plane raycaster described in this package avoids trigonometric built-ins by using:
@@ -256,7 +256,7 @@ games\DungeonStarII\
 Window:
 
 ```smile
-GAME WINDOW "Dungeon Star II - Raycasting Walkaround"
+Game Window "Dungeon Star II - Raycasting Walkaround"
 ```
 
 Output:
@@ -287,12 +287,12 @@ No image or audio assets are required.
 The title must offer:
 
 ```text
-DEFAULT.MAP
+Default.MAP
 CUSTOM.MAP
-RANDOM MAP
+Random MAP
 ```
 
-`DEFAULT.MAP` is selected initially.
+`Default.MAP` is selected initially.
 
 Controls:
 
@@ -334,7 +334,7 @@ Then:                   return to title
 The demo:
 
 - loads the currently selected map source;
-- uses `DEFAULT.MAP` when the user has not changed the title selection;
+- uses `Default.MAP` when the user has not changed the title selection;
 - walks through rooms and corridors;
 - turns continuously;
 - opens doors;

@@ -149,16 +149,16 @@
   }
 
   const keywordSet = new Set([
-    "AND", "CALL", "CASE", "CENTERED", "CLEAR", "COLOR", "CONST", "DEFAULT", "DIM",
-    "DO", "DOWN", "DRAW", "ELSE", "END", "EXIT", "FALSE", "FILL", "FOR", "FROM",
-    "FUNCTION", "GAME", "GET", "IF", "INTO", "KEY", "LOAD", "LOOP", "MAX", "MIN",
-    "MOD", "MUSIC", "NOT", "NUMBER", "OR", "PAUSE", "PLAY", "RANDOM", "RECTANGLE",
-    "RESUME", "RETURN", "RGB", "ROUNDED", "SAVE", "SCREEN", "SHOW", "SIZE", "SOUND",
-    "STOP", "SUB", "TEXT", "THEN", "TO", "TRUE", "UNTIL", "VOLUME", "WAIT", "WINDOW"
+    "and", "call", "case", "centered", "clear", "color", "const", "default", "dim",
+    "do", "down", "draw", "else", "end", "exit", "false", "fill", "for", "from",
+    "function", "game", "get", "if", "into", "key", "load", "loop", "max", "min",
+    "mod", "music", "not", "number", "or", "pause", "play", "random", "rectangle",
+    "resume", "return", "rgb", "rounded", "save", "screen", "show", "size", "sound",
+    "stop", "sub", "text", "then", "to", "true", "until", "volume", "wait", "window"
   ]);
 
   const constantPattern = /^(KEY_[A-Z0-9_]+|BLACK|WHITE|RED|GREEN|BLUE|CYAN|MAGENTA|YELLOW|ORANGE|GRAY|LIGHT_[A-Z_]+|DARK_[A-Z_]+)$/i;
-  const functionPattern = /^(TIMER|ABS|MIN|MAX|RGB|GAME_CLOSED|KEY_HELD)$/i;
+  const functionPattern = /^(timer|abs|min|max|rgb|game_closed|key_held)$/i;
 
   function escapeHtml(value) {
     return value.replace(/[&<>]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[ch]));
@@ -186,8 +186,8 @@
         let j = i + 1;
         while (j < line.length && /[A-Za-z0-9_]/.test(line[j])) j += 1;
         const word = line.slice(i, j);
-        const upper = word.toUpperCase();
-        if (keywordSet.has(upper)) result += `<span class="tok-keyword">${word}</span>`;
+        const lower = word.toLowerCase();
+        if (keywordSet.has(lower)) result += `<span class="tok-keyword">${word}</span>`;
         else if (functionPattern.test(word)) result += `<span class="tok-function">${word}</span>`;
         else if (constantPattern.test(word)) result += `<span class="tok-constant">${word}</span>`;
         else result += escapeHtml(word);

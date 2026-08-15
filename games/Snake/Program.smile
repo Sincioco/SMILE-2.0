@@ -1,31 +1,31 @@
 ' SMILE 2.0 Snake - every game rule in SMILE source.
-CONST CanvasWidth = 960
-CONST CanvasHeight = 540
-CONST FieldX = 20
-CONST FieldY = 30
-CONST FieldWidth = 700
-CONST FieldHeight = 480
-CONST GridWidth = 35
-CONST GridHeight = 24
-CONST CellSize = 20
-CONST StartDelay = 100
-CONST MinimumDelay = 45
-CONST TitleDemoDelay = 5000
-CONST DemoMinimumPlayTime = 30000
-CONST DemoMaximumPlayTime = 45000
-CONST TitleInputArmDelay = 250
+Const CanvasWidth = 960
+Const CanvasHeight = 540
+Const FieldX = 20
+Const FieldY = 30
+Const FieldWidth = 700
+Const FieldHeight = 480
+Const GridWidth = 35
+Const GridHeight = 24
+Const CellSize = 20
+Const StartDelay = 100
+Const MinimumDelay = 45
+Const TitleDemoDelay = 5000
+Const DemoMinimumPlayTime = 30000
+Const DemoMaximumPlayTime = 45000
+Const TitleInputArmDelay = 250
 
-DIM SnakeX[840]
-DIM SnakeY[840]
-DIM BFSQueueX[840]
-DIM BFSQueueY[840]
-DIM BFSVisited[GridWidth, GridHeight]
-DIM BFSParentX[GridWidth, GridHeight]
-DIM BFSParentY[GridWidth, GridHeight]
-DIM BFSFirstDirection[GridWidth, GridHeight]
-DIM FloodQueueX[840]
-DIM FloodQueueY[840]
-DIM FloodVisited[GridWidth, GridHeight]
+Dim SnakeX[840]
+Dim SnakeY[840]
+Dim BFSQueueX[840]
+Dim BFSQueueY[840]
+Dim BFSVisited[GridWidth, GridHeight]
+Dim BFSParentX[GridWidth, GridHeight]
+Dim BFSParentY[GridWidth, GridHeight]
+Dim BFSFirstDirection[GridWidth, GridHeight]
+Dim FloodQueueX[840]
+Dim FloodQueueY[840]
+Dim FloodVisited[GridWidth, GridHeight]
 
 Length = 0
 Direction = KEY_RIGHT
@@ -40,34 +40,34 @@ Key = KEY_NONE
 I = 0
 TailX = 0
 TailY = 0
-FoodValid = FALSE
-Collision = FALSE
-DemoMode = FALSE
+FoodValid = False
+Collision = False
+DemoMode = False
 TitleStartedAt = 0
 TitleAcceptInputAt = 0
 DemoStartedAt = 0
-DemoHasSafeMove = FALSE
+DemoHasSafeMove = False
 SimulatedHeadX = 0
 SimulatedHeadY = 0
 SimulatedEating = 0
 
-LOAD HighScore FROM "HighScore" DEFAULT 0
+Load HighScore From "HighScore" Default 0
 
-SUB SpawnFood()
-    FoodValid = FALSE
-    DO
-        RANDOM FoodX FROM 0 TO GridWidth - 1
-        RANDOM FoodY FROM 0 TO GridHeight - 1
-        FoodValid = TRUE
-        FOR I = 0 TO Length - 1
-            IF FoodX = SnakeX[I] AND FoodY = SnakeY[I] THEN
-                FoodValid = FALSE
-            END IF
-        END FOR
-    LOOP UNTIL FoodValid = TRUE
-END SUB
+Sub SpawnFood()
+    FoodValid = False
+    Do
+        Random FoodX From 0 To GridWidth - 1
+        Random FoodY From 0 To GridHeight - 1
+        FoodValid = True
+        For I = 0 To Length - 1
+            If FoodX = SnakeX[I] And FoodY = SnakeY[I] Then
+                FoodValid = False
+            End If
+        End For
+    Loop Until FoodValid = True
+End Sub
 
-SUB ResetSnakeBody()
+Sub ResetSnakeBody()
     Length = 5
     Direction = KEY_RIGHT
     NextDirection = KEY_RIGHT
@@ -81,155 +81,155 @@ SUB ResetSnakeBody()
     SnakeY[3] = 12
     SnakeX[4] = 13
     SnakeY[4] = 12
-END SUB
+End Sub
 
-SUB ResetPlay()
-    CALL ResetSnakeBody()
+Sub ResetPlay()
+    Call ResetSnakeBody()
     Score = 0
     MoveDelay = StartDelay
-    CALL SpawnFood()
-    NextMoveTime = TIMER() + StartDelay
+    Call SpawnFood()
+    NextMoveTime = Timer() + StartDelay
     State = 1
-    PLAY SOUND "Assets\Start.wav"
-END SUB
+    Play Sound "Assets\Start.wav"
+End Sub
 
-SUB RecoverDemo()
-    CALL ResetSnakeBody()
-    MoveDelay = MAX(MinimumDelay, StartDelay - (Score / 50) * 4)
-    CALL SpawnFood()
-    NextMoveTime = TIMER() + MoveDelay
+Sub RecoverDemo()
+    Call ResetSnakeBody()
+    MoveDelay = Max(MinimumDelay, StartDelay - (Score / 50) * 4)
+    Call SpawnFood()
+    NextMoveTime = Timer() + MoveDelay
     State = 1
-END SUB
+End Sub
 
-SUB EndRound()
-    IF DemoMode = TRUE AND TIMER() - DemoStartedAt < DemoMinimumPlayTime THEN
-        CALL RecoverDemo()
-        RETURN
-    END IF
-    IF DemoMode = TRUE THEN
-        CALL EnterTitle()
-        RETURN
-    END IF
+Sub EndRound()
+    If DemoMode = True And Timer() - DemoStartedAt < DemoMinimumPlayTime Then
+        Call RecoverDemo()
+        Return
+    End If
+    If DemoMode = True Then
+        Call EnterTitle()
+        Return
+    End If
     State = 2
-    IF DemoMode = FALSE AND Score > HighScore THEN
+    If DemoMode = False And Score > HighScore Then
         HighScore = Score
-        SAVE HighScore TO "HighScore"
-    END IF
-    PLAY SOUND "Assets\GameOver.wav"
-END SUB
+        Save HighScore To "HighScore"
+    End If
+    Play Sound "Assets\GameOver.wav"
+End Sub
 
-FUNCTION DirectionFromIndex(DirectionIndex)
-    IF DirectionIndex = 0 THEN
-        RETURN KEY_UP
-    ELSE IF DirectionIndex = 1 THEN
-        RETURN KEY_RIGHT
-    ELSE IF DirectionIndex = 2 THEN
-        RETURN KEY_DOWN
-    END IF
-    RETURN KEY_LEFT
-END FUNCTION
+Function DirectionFromIndex(DirectionIndex)
+    If DirectionIndex = 0 Then
+        Return KEY_UP
+    Else If DirectionIndex = 1 Then
+        Return KEY_RIGHT
+    Else If DirectionIndex = 2 Then
+        Return KEY_DOWN
+    End If
+    Return KEY_LEFT
+End Function
 
-FUNCTION DirectionX(DirectionValue)
-    IF DirectionValue = KEY_LEFT THEN
-        RETURN -1
-    ELSE IF DirectionValue = KEY_RIGHT THEN
-        RETURN 1
-    END IF
-    RETURN 0
-END FUNCTION
+Function DirectionX(DirectionValue)
+    If DirectionValue = KEY_LEFT Then
+        Return -1
+    Else If DirectionValue = KEY_RIGHT Then
+        Return 1
+    End If
+    Return 0
+End Function
 
-FUNCTION DirectionY(DirectionValue)
-    IF DirectionValue = KEY_UP THEN
-        RETURN -1
-    ELSE IF DirectionValue = KEY_DOWN THEN
-        RETURN 1
-    END IF
-    RETURN 0
-END FUNCTION
+Function DirectionY(DirectionValue)
+    If DirectionValue = KEY_UP Then
+        Return -1
+    Else If DirectionValue = KEY_DOWN Then
+        Return 1
+    End If
+    Return 0
+End Function
 
-FUNCTION IsReverseDirection(TestDirection)
-    IF TestDirection = KEY_UP AND Direction = KEY_DOWN THEN
-        RETURN TRUE
-    ELSE IF TestDirection = KEY_DOWN AND Direction = KEY_UP THEN
-        RETURN TRUE
-    ELSE IF TestDirection = KEY_LEFT AND Direction = KEY_RIGHT THEN
-        RETURN TRUE
-    ELSE IF TestDirection = KEY_RIGHT AND Direction = KEY_LEFT THEN
-        RETURN TRUE
-    END IF
-    RETURN FALSE
-END FUNCTION
+Function IsReverseDirection(TestDirection)
+    If TestDirection = KEY_UP And Direction = KEY_DOWN Then
+        Return True
+    Else If TestDirection = KEY_DOWN And Direction = KEY_UP Then
+        Return True
+    Else If TestDirection = KEY_LEFT And Direction = KEY_RIGHT Then
+        Return True
+    Else If TestDirection = KEY_RIGHT And Direction = KEY_LEFT Then
+        Return True
+    End If
+    Return False
+End Function
 
-FUNCTION CellBlocked(TestX, TestY, AllowTail)
-    IF TestX < 0 OR TestX >= GridWidth OR TestY < 0 OR TestY >= GridHeight THEN
-        RETURN TRUE
-    END IF
-    FOR BodyIndex = 0 TO Length - 1
-        IF TestX = SnakeX[BodyIndex] AND TestY = SnakeY[BodyIndex] THEN
-            IF AllowTail = 1 AND BodyIndex = Length - 1 THEN
-                RETURN FALSE
-            END IF
-            RETURN TRUE
-        END IF
-    END FOR
-    RETURN FALSE
-END FUNCTION
+Function CellBlocked(TestX, TestY, AllowTail)
+    If TestX < 0 Or TestX >= GridWidth Or TestY < 0 Or TestY >= GridHeight Then
+        Return True
+    End If
+    For BodyIndex = 0 To Length - 1
+        If TestX = SnakeX[BodyIndex] And TestY = SnakeY[BodyIndex] Then
+            If AllowTail = 1 And BodyIndex = Length - 1 Then
+                Return False
+            End If
+            Return True
+        End If
+    End For
+    Return False
+End Function
 
-FUNCTION IsSafeImmediate(TestDirection)
-    IF IsReverseDirection(TestDirection) = TRUE THEN
-        RETURN FALSE
-    END IF
+Function IsSafeImmediate(TestDirection)
+    If IsReverseDirection(TestDirection) = True Then
+        Return False
+    End If
     SafetyX = SnakeX[0] + DirectionX(TestDirection)
     SafetyY = SnakeY[0] + DirectionY(TestDirection)
     SafetyEating = 0
     SafetyAllowTail = 1
-    IF SafetyX = FoodX AND SafetyY = FoodY THEN
+    If SafetyX = FoodX And SafetyY = FoodY Then
         SafetyEating = 1
         SafetyAllowTail = 0
-    END IF
-    IF CellBlocked(SafetyX, SafetyY, SafetyAllowTail) = FALSE THEN
-        RETURN TRUE
-    END IF
-    RETURN FALSE
-END FUNCTION
+    End If
+    If CellBlocked(SafetyX, SafetyY, SafetyAllowTail) = False Then
+        Return True
+    End If
+    Return False
+End Function
 
-FUNCTION SimulatedCellBlocked(TestX, TestY)
-    IF TestX < 0 OR TestX >= GridWidth OR TestY < 0 OR TestY >= GridHeight THEN
-        RETURN TRUE
-    END IF
-    IF TestX = SimulatedHeadX AND TestY = SimulatedHeadY THEN
-        RETURN FALSE
-    END IF
+Function SimulatedCellBlocked(TestX, TestY)
+    If TestX < 0 Or TestX >= GridWidth Or TestY < 0 Or TestY >= GridHeight Then
+        Return True
+    End If
+    If TestX = SimulatedHeadX And TestY = SimulatedHeadY Then
+        Return False
+    End If
     LastSimulatedBody = Length - 2
-    IF SimulatedEating = 1 THEN
+    If SimulatedEating = 1 Then
         LastSimulatedBody = Length - 1
-    END IF
-    FOR SimBodyIndex = 0 TO LastSimulatedBody
-        IF TestX = SnakeX[SimBodyIndex] AND TestY = SnakeY[SimBodyIndex] THEN
-            RETURN TRUE
-        END IF
-    END FOR
-    RETURN FALSE
-END FUNCTION
+    End If
+    For SimBodyIndex = 0 To LastSimulatedBody
+        If TestX = SnakeX[SimBodyIndex] And TestY = SnakeY[SimBodyIndex] Then
+            Return True
+        End If
+    End For
+    Return False
+End Function
 
-FUNCTION FloodAreaForDirection(TestDirection)
-    IF IsSafeImmediate(TestDirection) = FALSE THEN
-        RETURN -1
-    END IF
+Function FloodAreaForDirection(TestDirection)
+    If IsSafeImmediate(TestDirection) = False Then
+        Return -1
+    End If
 
     FloodStartX = SnakeX[0] + DirectionX(TestDirection)
     FloodStartY = SnakeY[0] + DirectionY(TestDirection)
     SimulatedHeadX = FloodStartX
     SimulatedHeadY = FloodStartY
     SimulatedEating = 0
-    IF FloodStartX = FoodX AND FloodStartY = FoodY THEN
+    If FloodStartX = FoodX And FloodStartY = FoodY Then
         SimulatedEating = 1
-    END IF
-    FOR FloodClearY = 0 TO GridHeight - 1
-        FOR FloodClearX = 0 TO GridWidth - 1
+    End If
+    For FloodClearY = 0 To GridHeight - 1
+        For FloodClearX = 0 To GridWidth - 1
             FloodVisited[FloodClearX, FloodClearY] = 0
-        END FOR
-    END FOR
+        End For
+    End For
 
     FloodRead = 0
     FloodWrite = 1
@@ -237,67 +237,67 @@ FUNCTION FloodAreaForDirection(TestDirection)
     FloodQueueY[0] = FloodStartY
     FloodVisited[FloodStartX, FloodStartY] = 1
 
-    DO
+    Do
         FloodX = FloodQueueX[FloodRead]
         FloodY = FloodQueueY[FloodRead]
         FloodRead = FloodRead + 1
-        FOR FloodDirectionIndex = 0 TO 3
+        For FloodDirectionIndex = 0 To 3
             FloodDirection = DirectionFromIndex(FloodDirectionIndex)
             FloodNextX = FloodX + DirectionX(FloodDirection)
             FloodNextY = FloodY + DirectionY(FloodDirection)
-            IF FloodNextX >= 0 AND FloodNextX < GridWidth AND FloodNextY >= 0 AND FloodNextY < GridHeight THEN
-                IF FloodVisited[FloodNextX, FloodNextY] = 0 THEN
-                    IF SimulatedCellBlocked(FloodNextX, FloodNextY) = FALSE THEN
+            If FloodNextX >= 0 And FloodNextX < GridWidth And FloodNextY >= 0 And FloodNextY < GridHeight Then
+                If FloodVisited[FloodNextX, FloodNextY] = 0 Then
+                    If SimulatedCellBlocked(FloodNextX, FloodNextY) = False Then
                         FloodVisited[FloodNextX, FloodNextY] = 1
                         FloodQueueX[FloodWrite] = FloodNextX
                         FloodQueueY[FloodWrite] = FloodNextY
                         FloodWrite = FloodWrite + 1
-                    END IF
-                END IF
-            END IF
-        END FOR
-    LOOP UNTIL FloodRead >= FloodWrite
-    RETURN FloodWrite
-END FUNCTION
+                    End If
+                End If
+            End If
+        End For
+    Loop Until FloodRead >= FloodWrite
+    Return FloodWrite
+End Function
 
-SUB ChooseSafeFallback()
+Sub ChooseSafeFallback()
     BestSafeArea = -1
     BestFoodDistance = 999999
     BestSafeDirection = KEY_NONE
-    FOR SafeDirectionIndex = 0 TO 3
+    For SafeDirectionIndex = 0 To 3
         SafeDirection = DirectionFromIndex(SafeDirectionIndex)
         SafeArea = FloodAreaForDirection(SafeDirection)
-        IF SafeArea >= 0 THEN
+        If SafeArea >= 0 Then
             SafeX = SnakeX[0] + DirectionX(SafeDirection)
             SafeY = SnakeY[0] + DirectionY(SafeDirection)
-            SafeFoodDistance = ABS(SafeX - FoodX) + ABS(SafeY - FoodY)
-            IF SafeArea > BestSafeArea OR (SafeArea = BestSafeArea AND SafeFoodDistance < BestFoodDistance) THEN
+            SafeFoodDistance = Abs(SafeX - FoodX) + Abs(SafeY - FoodY)
+            If SafeArea > BestSafeArea Or (SafeArea = BestSafeArea And SafeFoodDistance < BestFoodDistance) Then
                 BestSafeArea = SafeArea
                 BestFoodDistance = SafeFoodDistance
                 BestSafeDirection = SafeDirection
-            END IF
-        END IF
-    END FOR
+            End If
+        End If
+    End For
 
-    IF BestSafeDirection <> KEY_NONE THEN
+    If BestSafeDirection <> KEY_NONE Then
         NextDirection = BestSafeDirection
-        DemoHasSafeMove = TRUE
-    END IF
-END SUB
+        DemoHasSafeMove = True
+    End If
+End Sub
 
-SUB PlanDemoDirection()
-    DemoHasSafeMove = FALSE
-    BFSFound = FALSE
+Sub PlanDemoDirection()
+    DemoHasSafeMove = False
+    BFSFound = False
     BFSFoodDirection = KEY_NONE
 
-    FOR BFSClearY = 0 TO GridHeight - 1
-        FOR BFSClearX = 0 TO GridWidth - 1
+    For BFSClearY = 0 To GridHeight - 1
+        For BFSClearX = 0 To GridWidth - 1
             BFSVisited[BFSClearX, BFSClearY] = 0
             BFSParentX[BFSClearX, BFSClearY] = -1
             BFSParentY[BFSClearX, BFSClearY] = -1
             BFSFirstDirection[BFSClearX, BFSClearY] = KEY_NONE
-        END FOR
-    END FOR
+        End For
+    End For
 
     BFSRead = 0
     BFSWrite = 1
@@ -305,261 +305,261 @@ SUB PlanDemoDirection()
     BFSQueueY[0] = SnakeY[0]
     BFSVisited[SnakeX[0], SnakeY[0]] = 1
 
-    DO
-        BFSX = BFSQueueX[BFSRead]
-        BFSY = BFSQueueY[BFSRead]
+    Do
+        Bfsx = BFSQueueX[BFSRead]
+        Bfsy = BFSQueueY[BFSRead]
         BFSRead = BFSRead + 1
-        FOR BFSDirectionIndex = 0 TO 3
+        For BFSDirectionIndex = 0 To 3
             BFSDirection = DirectionFromIndex(BFSDirectionIndex)
-            BFSNextX = BFSX + DirectionX(BFSDirection)
-            BFSNextY = BFSY + DirectionY(BFSDirection)
-            IF BFSNextX >= 0 AND BFSNextX < GridWidth AND BFSNextY >= 0 AND BFSNextY < GridHeight THEN
-                IF BFSVisited[BFSNextX, BFSNextY] = 0 THEN
-                    IF CellBlocked(BFSNextX, BFSNextY, TRUE) = FALSE THEN
+            BFSNextX = Bfsx + DirectionX(BFSDirection)
+            BFSNextY = Bfsy + DirectionY(BFSDirection)
+            If BFSNextX >= 0 And BFSNextX < GridWidth And BFSNextY >= 0 And BFSNextY < GridHeight Then
+                If BFSVisited[BFSNextX, BFSNextY] = 0 Then
+                    If CellBlocked(BFSNextX, BFSNextY, True) = False Then
                         BFSVisited[BFSNextX, BFSNextY] = 1
-                        BFSParentX[BFSNextX, BFSNextY] = BFSX
-                        BFSParentY[BFSNextX, BFSNextY] = BFSY
-                        IF BFSX = SnakeX[0] AND BFSY = SnakeY[0] THEN
+                        BFSParentX[BFSNextX, BFSNextY] = Bfsx
+                        BFSParentY[BFSNextX, BFSNextY] = Bfsy
+                        If Bfsx = SnakeX[0] And Bfsy = SnakeY[0] Then
                             BFSFirstDirection[BFSNextX, BFSNextY] = BFSDirection
-                        ELSE
-                            BFSFirstDirection[BFSNextX, BFSNextY] = BFSFirstDirection[BFSX, BFSY]
-                        END IF
+                        Else
+                            BFSFirstDirection[BFSNextX, BFSNextY] = BFSFirstDirection[Bfsx, Bfsy]
+                        End If
                         BFSQueueX[BFSWrite] = BFSNextX
                         BFSQueueY[BFSWrite] = BFSNextY
                         BFSWrite = BFSWrite + 1
-                        IF BFSNextX = FoodX AND BFSNextY = FoodY THEN
-                            BFSFound = TRUE
+                        If BFSNextX = FoodX And BFSNextY = FoodY Then
+                            BFSFound = True
                             BFSFoodDirection = BFSFirstDirection[BFSNextX, BFSNextY]
-                        END IF
-                    END IF
-                END IF
-            END IF
-        END FOR
-    LOOP UNTIL BFSRead >= BFSWrite OR BFSFound = TRUE
+                        End If
+                    End If
+                End If
+            End If
+        End For
+    Loop Until BFSRead >= BFSWrite Or BFSFound = True
 
-    IF BFSFound = TRUE AND IsSafeImmediate(BFSFoodDirection) = TRUE THEN
+    If BFSFound = True And IsSafeImmediate(BFSFoodDirection) = True Then
         NextDirection = BFSFoodDirection
-        DemoHasSafeMove = TRUE
-        RETURN
-    END IF
-    CALL ChooseSafeFallback()
-END SUB
+        DemoHasSafeMove = True
+        Return
+    End If
+    Call ChooseSafeFallback()
+End Sub
 
-SUB MoveSnake()
+Sub MoveSnake()
     Direction = NextDirection
     TailX = SnakeX[Length - 1]
     TailY = SnakeY[Length - 1]
 
-    FOR I = Length - 1 DOWN TO 1
+    For I = Length - 1 Down To 1
         SnakeX[I] = SnakeX[I - 1]
         SnakeY[I] = SnakeY[I - 1]
-    END FOR
+    End For
 
-    IF Direction = KEY_UP THEN
+    If Direction = KEY_UP Then
         SnakeY[0] = SnakeY[0] - 1
-    ELSE IF Direction = KEY_DOWN THEN
+    Else If Direction = KEY_DOWN Then
         SnakeY[0] = SnakeY[0] + 1
-    ELSE IF Direction = KEY_LEFT THEN
+    Else If Direction = KEY_LEFT Then
         SnakeX[0] = SnakeX[0] - 1
-    ELSE IF Direction = KEY_RIGHT THEN
+    Else If Direction = KEY_RIGHT Then
         SnakeX[0] = SnakeX[0] + 1
-    END IF
+    End If
 
-    Collision = FALSE
-    IF SnakeX[0] < 0 OR SnakeX[0] >= GridWidth OR SnakeY[0] < 0 OR SnakeY[0] >= GridHeight THEN
-        Collision = TRUE
-    END IF
+    Collision = False
+    If SnakeX[0] < 0 Or SnakeX[0] >= GridWidth Or SnakeY[0] < 0 Or SnakeY[0] >= GridHeight Then
+        Collision = True
+    End If
 
-    FOR I = 1 TO Length - 1
-        IF SnakeX[0] = SnakeX[I] AND SnakeY[0] = SnakeY[I] THEN
-            Collision = TRUE
-        END IF
-    END FOR
+    For I = 1 To Length - 1
+        If SnakeX[0] = SnakeX[I] And SnakeY[0] = SnakeY[I] Then
+            Collision = True
+        End If
+    End For
 
-    IF Collision = TRUE THEN
-        CALL EndRound()
-    ELSE IF SnakeX[0] = FoodX AND SnakeY[0] = FoodY THEN
+    If Collision = True Then
+        Call EndRound()
+    Else If SnakeX[0] = FoodX And SnakeY[0] = FoodY Then
         SnakeX[Length] = TailX
         SnakeY[Length] = TailY
         Length = Length + 1
         Score = Score + 10
-        MoveDelay = MAX(MinimumDelay, StartDelay - (Score / 50) * 4)
-        PLAY SOUND "Assets\Eat.wav"
-        CALL SpawnFood()
-    END IF
+        MoveDelay = Max(MinimumDelay, StartDelay - (Score / 50) * 4)
+        Play Sound "Assets\Eat.wav"
+        Call SpawnFood()
+    End If
 
-    NextMoveTime = TIMER() + MoveDelay
-END SUB
+    NextMoveTime = Timer() + MoveDelay
+End Sub
 
-SUB DrawBoard()
-    CLEAR RGB(10, 18, 35)
-    FILL RECTANGLE FieldX, FieldY, FieldWidth, FieldHeight, BLACK
-    DRAW RECTANGLE FieldX, FieldY, FieldWidth, FieldHeight, RGB(40, 70, 95)
+Sub DrawBoard()
+    Clear Rgb(10, 18, 35)
+    Fill Rectangle FieldX, FieldY, FieldWidth, FieldHeight, BLACK
+    Draw Rectangle FieldX, FieldY, FieldWidth, FieldHeight, Rgb(40, 70, 95)
 
-    FOR I = 0 TO Length - 1
-        IF SnakeX[I] >= 0 AND SnakeX[I] < GridWidth AND SnakeY[I] >= 0 AND SnakeY[I] < GridHeight THEN
-            FILL RECTANGLE FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, RGB(60, 230, 75)
-            DRAW RECTANGLE FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, RGB(20, 105, 35)
-        END IF
-    END FOR
+    For I = 0 To Length - 1
+        If SnakeX[I] >= 0 And SnakeX[I] < GridWidth And SnakeY[I] >= 0 And SnakeY[I] < GridHeight Then
+            Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)
+            Draw Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(20, 105, 35)
+        End If
+    End For
 
-    FILL RECTANGLE FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, RGB(245, 45, 55)
-    DRAW RECTANGLE FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, RGB(120, 15, 25)
+    Fill Rectangle FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, Rgb(245, 45, 55)
+    Draw Rectangle FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, Rgb(120, 15, 25)
 
-    DRAW TEXT "SMILE SNAKE" AT 835, 55 SIZE 27 COLOR LIGHT_GREEN CENTERED
-    DRAW TEXT "SCORE" AT 755, 115 SIZE 20 COLOR LIGHT_GRAY
-    DRAW NUMBER Score AT 755, 142 SIZE 34 COLOR YELLOW
-    DRAW TEXT "HIGH SCORE" AT 755, 205 SIZE 20 COLOR LIGHT_GRAY
-    DRAW NUMBER HighScore AT 755, 232 SIZE 34 COLOR CYAN
-    DRAW TEXT "WASD / ARROWS" AT 835, 330 SIZE 16 COLOR WHITE CENTERED
-    DRAW TEXT "MOVE THE SNAKE" AT 835, 355 SIZE 16 COLOR LIGHT_GRAY CENTERED
-    DRAW TEXT "ALT+ENTER" AT 835, 415 SIZE 16 COLOR WHITE CENTERED
-    DRAW TEXT "FULL SCREEN" AT 835, 440 SIZE 16 COLOR LIGHT_GRAY CENTERED
-    DRAW TEXT "ESCAPE EXITS" AT 835, 490 SIZE 16 COLOR LIGHT_GRAY CENTERED
-    IF DemoMode = TRUE AND State = 1 THEN
-        FILL ROUNDED RECTANGLE 740, 375, 200, 88, 10, RGB(16, 25, 45)
-        DRAW ROUNDED RECTANGLE 740, 375, 200, 88, 10, CYAN
-        DRAW TEXT "DEMO" AT 840, 388 SIZE 21 COLOR YELLOW CENTERED
-        DRAW TEXT "PRESS ANY KEY" AT 840, 420 SIZE 13 COLOR WHITE CENTERED
-        DRAW TEXT "TO RETURN" AT 840, 440 SIZE 13 COLOR WHITE CENTERED
-    END IF
-END SUB
+    Draw Text "SMILE Snake" At 835, 55 Size 27 Color LIGHT_GREEN Centered
+    Draw Text "Score" At 755, 115 Size 20 Color LIGHT_GRAY
+    Draw Number Score At 755, 142 Size 34 Color YELLOW
+    Draw Text "High Score" At 755, 205 Size 20 Color LIGHT_GRAY
+    Draw Number HighScore At 755, 232 Size 34 Color CYAN
+    Draw Text "WASD / Arrows" At 835, 330 Size 16 Color WHITE Centered
+    Draw Text "Move The Snake" At 835, 355 Size 16 Color LIGHT_GRAY Centered
+    Draw Text "Alt+Enter" At 835, 415 Size 16 Color WHITE Centered
+    Draw Text "Full Screen" At 835, 440 Size 16 Color LIGHT_GRAY Centered
+    Draw Text "Escape Exits" At 835, 490 Size 16 Color LIGHT_GRAY Centered
+    If DemoMode = True And State = 1 Then
+        Fill Rounded Rectangle 740, 375, 200, 88, 10, Rgb(16, 25, 45)
+        Draw Rounded Rectangle 740, 375, 200, 88, 10, CYAN
+        Draw Text "Demo" At 840, 388 Size 21 Color YELLOW Centered
+        Draw Text "Press Any Key" At 840, 420 Size 13 Color WHITE Centered
+        Draw Text "To Return" At 840, 440 Size 13 Color WHITE Centered
+    End If
+End Sub
 
-SUB DrawTitle()
-    CLEAR RGB(10, 18, 35)
-    FILL RECTANGLE FieldX, FieldY, FieldWidth, FieldHeight, BLACK
-    DRAW RECTANGLE FieldX, FieldY, FieldWidth, FieldHeight, RGB(40, 70, 95)
-    FILL RECTANGLE 260, 255, 80, 18, RGB(60, 230, 75)
-    DRAW RECTANGLE 260, 255, 80, 18, RGB(20, 105, 35)
-    FILL RECTANGLE 360, 257, 14, 14, RGB(245, 45, 55)
-    DRAW TEXT "SMILE SNAKE" AT 370, 140 SIZE 54 COLOR LIGHT_GREEN CENTERED
-    DRAW TEXT "A NATIVE GAME WRITTEN IN SMILE" AT 370, 215 SIZE 19 COLOR LIGHT_GRAY CENTERED
-    DRAW TEXT "PRESS ENTER TO START" AT 370, 335 SIZE 28 COLOR YELLOW CENTERED
-    DRAW TEXT "WASD OR ARROW KEYS TO MOVE" AT 370, 385 SIZE 18 COLOR WHITE CENTERED
-    DRAW TEXT "ESCAPE TO EXIT" AT 370, 415 SIZE 18 COLOR LIGHT_GRAY CENTERED
-    DRAW TEXT "HIGH SCORE" AT 835, 165 SIZE 20 COLOR LIGHT_GRAY CENTERED
-    DRAW NUMBER HighScore AT 805, 205 SIZE 38 COLOR CYAN
-END SUB
+Sub DrawTitle()
+    Clear Rgb(10, 18, 35)
+    Fill Rectangle FieldX, FieldY, FieldWidth, FieldHeight, BLACK
+    Draw Rectangle FieldX, FieldY, FieldWidth, FieldHeight, Rgb(40, 70, 95)
+    Fill Rectangle 260, 255, 80, 18, Rgb(60, 230, 75)
+    Draw Rectangle 260, 255, 80, 18, Rgb(20, 105, 35)
+    Fill Rectangle 360, 257, 14, 14, Rgb(245, 45, 55)
+    Draw Text "SMILE Snake" At 370, 140 Size 54 Color LIGHT_GREEN Centered
+    Draw Text "A Native Game Written In SMILE" At 370, 215 Size 19 Color LIGHT_GRAY Centered
+    Draw Text "Press Enter To Start" At 370, 335 Size 28 Color YELLOW Centered
+    Draw Text "WASD Or Arrow Keys To Move" At 370, 385 Size 18 Color WHITE Centered
+    Draw Text "Escape To Exit" At 370, 415 Size 18 Color LIGHT_GRAY Centered
+    Draw Text "High Score" At 835, 165 Size 20 Color LIGHT_GRAY Centered
+    Draw Number HighScore At 805, 205 Size 38 Color CYAN
+End Sub
 
-SUB DrawGameOver()
-    FILL ROUNDED RECTANGLE 145, 135, 590, 285, 22, RGB(16, 25, 45)
-    DRAW ROUNDED RECTANGLE 145, 135, 590, 285, 22, RGB(245, 45, 55)
-    DRAW TEXT "GAME OVER" AT 440, 185 SIZE 50 COLOR RED CENTERED
-    DRAW TEXT "FINAL SCORE" AT 330, 255 SIZE 22 COLOR LIGHT_GRAY CENTERED
-    DRAW NUMBER Score AT 530, 247 SIZE 38 COLOR YELLOW
-    DRAW TEXT "HIGH SCORE" AT 330, 305 SIZE 22 COLOR LIGHT_GRAY CENTERED
-    DRAW NUMBER HighScore AT 530, 297 SIZE 38 COLOR CYAN
-    DRAW TEXT "ENTER TO RETRY" AT 440, 360 SIZE 24 COLOR WHITE CENTERED
-    DRAW TEXT "ESCAPE TO EXIT" AT 440, 392 SIZE 18 COLOR LIGHT_GRAY CENTERED
-END SUB
+Sub DrawGameOver()
+    Fill Rounded Rectangle 145, 135, 590, 285, 22, Rgb(16, 25, 45)
+    Draw Rounded Rectangle 145, 135, 590, 285, 22, Rgb(245, 45, 55)
+    Draw Text "Game Over" At 440, 185 Size 50 Color RED Centered
+    Draw Text "Final Score" At 330, 255 Size 22 Color LIGHT_GRAY Centered
+    Draw Number Score At 530, 247 Size 38 Color YELLOW
+    Draw Text "High Score" At 330, 305 Size 22 Color LIGHT_GRAY Centered
+    Draw Number HighScore At 530, 297 Size 38 Color CYAN
+    Draw Text "Enter To Retry" At 440, 360 Size 24 Color WHITE Centered
+    Draw Text "Escape To Exit" At 440, 392 Size 18 Color LIGHT_GRAY Centered
+End Sub
 
-SUB DrainPendingKeys()
-    FOR DrainIndex = 1 TO 64
-        GET KEY DrainedKey
-    END FOR
-END SUB
+Sub DrainPendingKeys()
+    For DrainIndex = 1 To 64
+        Get Key DrainedKey
+    End For
+End Sub
 
-SUB EnterTitle()
-    DemoMode = FALSE
+Sub EnterTitle()
+    DemoMode = False
     State = 0
     Key = KEY_NONE
-    STOP SOUND
-    CALL DrainPendingKeys()
-    TitleStartedAt = TIMER()
+    Stop Sound
+    Call DrainPendingKeys()
+    TitleStartedAt = Timer()
     TitleAcceptInputAt = TitleStartedAt + TitleInputArmDelay
-END SUB
+End Sub
 
-SUB ResetGame()
-    DemoMode = FALSE
-    CALL ResetPlay()
-END SUB
+Sub ResetGame()
+    DemoMode = False
+    Call ResetPlay()
+End Sub
 
-SUB StartDemo()
-    DemoMode = TRUE
-    DemoStartedAt = TIMER()
-    CALL ResetPlay()
-END SUB
+Sub StartDemo()
+    DemoMode = True
+    DemoStartedAt = Timer()
+    Call ResetPlay()
+End Sub
 
-GAME WINDOW "SMILE 2.0 Snake"
+Game Window "SMILE 2.0 Snake"
 
-CALL EnterTitle()
+Call EnterTitle()
 
-DO
-    GET KEY Key
+Do
+    Get Key Key
 
-    IF DemoMode = TRUE AND Key <> KEY_NONE THEN
-        CALL EnterTitle()
+    If DemoMode = True And Key <> KEY_NONE Then
+        Call EnterTitle()
         Key = KEY_NONE
-    END IF
+    End If
 
-    IF State = 0 THEN
-        IF Key <> KEY_NONE AND TIMER() >= TitleAcceptInputAt THEN
-            TitleStartedAt = TIMER()
-            IF Key = KEY_ESCAPE THEN
-                END PROGRAM
-            ELSE IF Key = KEY_ENTER THEN
-                CALL ResetGame()
-            END IF
-        END IF
-        IF State = 0 AND TIMER() - TitleStartedAt >= TitleDemoDelay THEN
-            CALL StartDemo()
-        END IF
-        CALL DrawTitle()
-    ELSE IF State = 1 THEN
-        IF DemoMode = FALSE AND Key = KEY_ESCAPE THEN
-            END PROGRAM
-        END IF
+    If State = 0 Then
+        If Key <> KEY_NONE And Timer() >= TitleAcceptInputAt Then
+            TitleStartedAt = Timer()
+            If Key = KEY_ESCAPE Then
+                End Program
+            Else If Key = KEY_ENTER Then
+                Call ResetGame()
+            End If
+        End If
+        If State = 0 And Timer() - TitleStartedAt >= TitleDemoDelay Then
+            Call StartDemo()
+        End If
+        Call DrawTitle()
+    Else If State = 1 Then
+        If DemoMode = False And Key = KEY_ESCAPE Then
+            End Program
+        End If
 
-        IF DemoMode = TRUE AND TIMER() - DemoStartedAt >= DemoMaximumPlayTime THEN
-            CALL EnterTitle()
-        END IF
+        If DemoMode = True And Timer() - DemoStartedAt >= DemoMaximumPlayTime Then
+            Call EnterTitle()
+        End If
 
-        IF State = 1 AND DemoMode = FALSE THEN
-            IF (Key = KEY_W OR Key = KEY_UP) AND Direction <> KEY_DOWN THEN
+        If State = 1 And DemoMode = False Then
+            If (Key = KEY_W Or Key = KEY_UP) And Direction <> KEY_DOWN Then
                 NextDirection = KEY_UP
-            ELSE IF (Key = KEY_S OR Key = KEY_DOWN) AND Direction <> KEY_UP THEN
+            Else If (Key = KEY_S Or Key = KEY_DOWN) And Direction <> KEY_UP Then
                 NextDirection = KEY_DOWN
-            ELSE IF (Key = KEY_A OR Key = KEY_LEFT) AND Direction <> KEY_RIGHT THEN
+            Else If (Key = KEY_A Or Key = KEY_LEFT) And Direction <> KEY_RIGHT Then
                 NextDirection = KEY_LEFT
-            ELSE IF (Key = KEY_D OR Key = KEY_RIGHT) AND Direction <> KEY_LEFT THEN
+            Else If (Key = KEY_D Or Key = KEY_RIGHT) And Direction <> KEY_LEFT Then
                 NextDirection = KEY_RIGHT
-            END IF
-        END IF
+            End If
+        End If
 
-        IF State = 1 AND TIMER() >= NextMoveTime THEN
-            IF DemoMode = TRUE THEN
-                CALL PlanDemoDirection()
-                IF DemoHasSafeMove = TRUE THEN
-                    CALL MoveSnake()
-                ELSE
-                    CALL RecoverDemo()
-                END IF
-            ELSE
-                CALL MoveSnake()
-            END IF
-        END IF
+        If State = 1 And Timer() >= NextMoveTime Then
+            If DemoMode = True Then
+                Call PlanDemoDirection()
+                If DemoHasSafeMove = True Then
+                    Call MoveSnake()
+                Else
+                    Call RecoverDemo()
+                End If
+            Else
+                Call MoveSnake()
+            End If
+        End If
 
-        CALL DrawBoard()
-        IF State = 2 THEN
-            CALL DrawGameOver()
-        END IF
-    ELSE
-        IF Key = KEY_ESCAPE THEN
-            END PROGRAM
-        ELSE IF Key = KEY_ENTER THEN
-            CALL ResetGame()
-        END IF
+        Call DrawBoard()
+        If State = 2 Then
+            Call DrawGameOver()
+        End If
+    Else
+        If Key = KEY_ESCAPE Then
+            End Program
+        Else If Key = KEY_ENTER Then
+            Call ResetGame()
+        End If
 
-        IF State = 0 THEN
-            CALL DrawTitle()
-        ELSE
-            CALL DrawBoard()
-            CALL DrawGameOver()
-        END IF
-    END IF
+        If State = 0 Then
+            Call DrawTitle()
+        Else
+            Call DrawBoard()
+            Call DrawGameOver()
+        End If
+    End If
 
-    SHOW SCREEN
-LOOP UNTIL GAME_CLOSED() = TRUE
+    Show Screen
+Loop Until Game_Closed() = True
 
-STOP SOUND
-END PROGRAM
+Stop Sound
+End Program

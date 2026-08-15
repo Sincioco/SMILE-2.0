@@ -22,7 +22,7 @@ MyConsoleApp\
 ```
 
 ```smile
-PRINT "Hello World"
+Print "Hello World"
 ```
 
 ## Game template
@@ -35,14 +35,14 @@ MyGame\
 ```
 
 ```smile
-GAME WINDOW "My SMILE Game"
+Game Window "My SMILE Game"
 
-DO
-    CLEAR RGB(20, 20, 35)
-    DRAW TEXT "HELLO, SMILE!" AT 480, 240 SIZE 42 COLOR YELLOW CENTERED
-    SHOW SCREEN
-    WAIT 16 MILLISECONDS
-LOOP UNTIL GAME_CLOSED() = TRUE
+Do
+    Clear Rgb(20, 20, 35)
+    Draw Text "Hello, SMILE!" At 480, 240 Size 42 Color YELLOW Centered
+    Show Screen
+    Wait 16 Milliseconds
+Loop Until Game_Closed() = True
 ```
 
 ## Minimal project format

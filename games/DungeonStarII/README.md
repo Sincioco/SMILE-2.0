@@ -17,6 +17,6 @@ To build the simpler edition in Visual Studio, change `<StartupFile>` in `Dungeo
 - Escape: return to the title; Escape again exits.
 - Alt+Enter: toggle borderless full screen through the shared runtime.
 
-The title reloads `Maps\default.map` or `Maps\custom.map` whenever that source starts. `RANDOM MAP` generates connected rectangular rooms, corridors, loops, wall materials, and doors. A missing or invalid external map safely uses the same random fallback.
+The title reloads `Maps\default.map` or `Maps\custom.map` whenever that source starts. `Random MAP` generates connected rectangular rooms, corridors, loops, wall materials, and doors. A missing or invalid external map safely uses the same random fallback.
 
 Read `RAYCASTING_EXPLAINED.md` for the fixed-point camera and DDA lesson. Read `MAP_AUTHORING.md` to edit maps or import the first floor of a Dungeon Star I map.

@@ -13,16 +13,16 @@ Preserve current Snake movement, scoring, speed progression, food, sounds, high-
 Use the shared arcade constants:
 
 ```smile
-CONST TitleDemoDelay = 5000
-CONST DemoMinimumPlayTime = 30000
-CONST DemoMaximumPlayTime = 45000
-CONST DemoTerminalDuration = 5000
+Const TitleDemoDelay = 5000
+Const DemoMinimumPlayTime = 30000
+Const DemoMaximumPlayTime = 45000
+Const DemoTerminalDuration = 5000
 ```
 
 Add:
 
 ```smile
-DemoMode = FALSE
+DemoMode = False
 TitleStartedAt = 0
 DemoStartedAt = 0
 DemoTerminalStartedAt = 0
@@ -40,9 +40,9 @@ Title:
 `StartDemo()` should:
 
 - call the normal reset logic without enabling high-score saving;
-- set `DemoMode = TRUE`;
+- set `DemoMode = True`;
 - set the demo timer;
-- show `DEMO` and `PRESS ANY KEY TO RETURN`;
+- show `DEMO` and `PRESS ANY Key To Return`;
 - use the normal movement cadence and sounds.
 
 ## 3. Snake AI
@@ -122,7 +122,7 @@ Escape during demo returns to title; Escape on title exits.
 
 ## 8. Audio focus
 
-Use normal `PLAY SOUND` calls.
+Use normal `Play Sound` calls.
 
 The shared runtime suppresses/stops WAV effects while the game is inactive. Do not duplicate it in Snake.
 

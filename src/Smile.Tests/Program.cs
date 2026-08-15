@@ -35,39 +35,39 @@ Run("Unknown VSync reports a clear diagnostic", () => Throws(
     () => Parse("<PropertyGroup><VSync>sometimes</VSync></PropertyGroup>"),
     "Unknown VSync value 'sometimes'. Expected true or false."));
 Run("Filled quadrilateral analyzes without errors", () => Equal(false,
-    Analyze("GAME WINDOW \"Quad\"\nFILL QUADRILATERAL 0, 0, 20, 0, 20, 20, 0, 20, WHITE\n").HasErrors));
+    Analyze("Game Window \"Quad\"\nFill Quadrilateral 0, 0, 20, 0, 20, 20, 0, 20, WHITE\n").HasErrors));
 Run("Outlined quadrilateral analyzes without errors", () => Equal(false,
-    Analyze("GAME WINDOW \"Quad\"\nDRAW QUADRILATERAL 0, 0, 20, 0, 20, 20, 0, 20, WHITE\n").HasErrors));
+    Analyze("Game Window \"Quad\"\nDraw Quadrilateral 0, 0, 20, 0, 20, 20, 0, 20, WHITE\n").HasErrors));
 Run("Filled quadrilateral records its shared syntax operation", () => Equal(GraphicsOperation.FillQuadrilateral,
-    Analyze("GAME WINDOW \"Quad\"\nFILL QUADRILATERAL 0, 0, 20, 0, 20, 20, 0, 20, WHITE\n")
+    Analyze("Game Window \"Quad\"\nFill Quadrilateral 0, 0, 20, 0, 20, 20, 0, 20, WHITE\n")
         .SyntaxTree.Root.Statements.OfType<GraphicsStatementSyntax>().Single().Operation));
 Run("Outlined quadrilateral records its shared syntax operation", () => Equal(GraphicsOperation.DrawQuadrilateral,
-    Analyze("GAME WINDOW \"Quad\"\nDRAW QUADRILATERAL 0, 0, 20, 0, 20, 20, 0, 20, WHITE\n")
+    Analyze("Game Window \"Quad\"\nDraw Quadrilateral 0, 0, 20, 0, 20, 20, 0, 20, WHITE\n")
         .SyntaxTree.Root.Statements.OfType<GraphicsStatementSyntax>().Single().Operation));
 Run("Too few quadrilateral arguments report a parser error", () => Equal(true,
-    HasDiagnostic(Analyze("GAME WINDOW \"Quad\"\nFILL QUADRILATERAL 0, 0, 20\n"), "SML2001")));
+    HasDiagnostic(Analyze("Game Window \"Quad\"\nFill Quadrilateral 0, 0, 20\n"), "SML2001")));
 Run("Too many quadrilateral arguments report a parser error", () => Equal(true,
-    HasDiagnostic(Analyze("GAME WINDOW \"Quad\"\nDRAW QUADRILATERAL 0, 0, 20, 0, 20, 20, 0, 20, WHITE, 99\n"), "SML2001")));
+    HasDiagnostic(Analyze("Game Window \"Quad\"\nDraw Quadrilateral 0, 0, 20, 0, 20, 20, 0, 20, WHITE, 99\n"), "SML2001")));
 Run("Quadrilateral arguments must be numbers", () => Equal(true,
-    HasDiagnostic(Analyze("GAME WINDOW \"Quad\"\nFILL QUADRILATERAL TRUE, 0, 20, 0, 20, 20, 0, 20, WHITE\n"), "SML3023")));
-Run("ARC is a shared case-insensitive keyword", () => Equal(SyntaxKind.ArcKeyword,
+    HasDiagnostic(Analyze("Game Window \"Quad\"\nFill Quadrilateral True, 0, 20, 0, 20, 20, 0, 20, WHITE\n"), "SML3023")));
+Run("Arc is a shared case-insensitive keyword", () => Equal(SyntaxKind.ArcKeyword,
     SyntaxFacts.GetKeywordKind("arc")));
-Run("DRAW ARC analyzes without errors", () => Equal(false,
-    Analyze("GAME WINDOW \"Arc\"\nDRAW ARC 200, 200, 50, 0, 90, BLUE\n").HasErrors));
-Run("DRAW ARC records its shared syntax operation", () => Equal(GraphicsOperation.DrawArc,
-    Analyze("GAME WINDOW \"Arc\"\nDRAW ARC 200, 200, 50, 0, 90, BLUE\n")
+Run("Draw Arc analyzes without errors", () => Equal(false,
+    Analyze("Game Window \"Arc\"\nDraw Arc 200, 200, 50, 0, 90, BLUE\n").HasErrors));
+Run("Draw Arc records its shared syntax operation", () => Equal(GraphicsOperation.DrawArc,
+    Analyze("Game Window \"Arc\"\nDraw Arc 200, 200, 50, 0, 90, BLUE\n")
         .SyntaxTree.Root.Statements.OfType<GraphicsStatementSyntax>().Single().Operation));
-Run("DRAW ARC records exactly six arguments", () => Equal(6,
-    Analyze("GAME WINDOW \"Arc\"\nDRAW ARC 200, 200, 50, 0, 90, BLUE\n")
+Run("Draw Arc records exactly six arguments", () => Equal(6,
+    Analyze("Game Window \"Arc\"\nDraw Arc 200, 200, 50, 0, 90, BLUE\n")
         .SyntaxTree.Root.Statements.OfType<GraphicsStatementSyntax>().Single().Arguments.Count));
 Run("Too few arc arguments report a parser error", () => Equal(true,
-    HasDiagnostic(Analyze("GAME WINDOW \"Arc\"\nDRAW ARC 200, 200, 50\n"), "SML2001")));
+    HasDiagnostic(Analyze("Game Window \"Arc\"\nDraw Arc 200, 200, 50\n"), "SML2001")));
 Run("Too many arc arguments report a parser error", () => Equal(true,
-    HasDiagnostic(Analyze("GAME WINDOW \"Arc\"\nDRAW ARC 200, 200, 50, 0, 90, BLUE, 99\n"), "SML2001")));
-Run("DRAW ARC arguments must be numbers", () => Equal(true,
-    HasDiagnostic(Analyze("GAME WINDOW \"Arc\"\nDRAW ARC TRUE, 200, 50, 0, 90, BLUE\n"), "SML3023")));
-Run("FILL ARC is rejected", () => Equal(true,
-    HasDiagnostic(Analyze("GAME WINDOW \"Arc\"\nFILL ARC 200, 200, 50, 0, 90, BLUE\n"), "SML2001")));
+    HasDiagnostic(Analyze("Game Window \"Arc\"\nDraw Arc 200, 200, 50, 0, 90, BLUE, 99\n"), "SML2001")));
+Run("Draw Arc arguments must be numbers", () => Equal(true,
+    HasDiagnostic(Analyze("Game Window \"Arc\"\nDraw Arc True, 200, 50, 0, 90, BLUE\n"), "SML3023")));
+Run("Fill Arc is rejected", () => Equal(true,
+    HasDiagnostic(Analyze("Game Window \"Arc\"\nFill Arc 200, 200, 50, 0, 90, BLUE\n"), "SML2001")));
 Run("KEY_OTHER is the shared built-in number constant 19", () =>
 {
     Equal(SyntaxKind.KeyOtherKeyword, SyntaxFacts.GetKeywordKind("key_other"));
@@ -81,34 +81,34 @@ Run("Existing key constants retain their values", () =>
     Equal(20L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.Key3Keyword));
 });
 Run("Existing graphics statements remain valid", () => Equal(false,
-    Analyze("GAME WINDOW \"Existing\"\nFILL RECTANGLE 1, 2, 3, 4, RED\nDRAW CIRCLE 10, 10, 4, WHITE\nDRAW LINE 0, 0, 20, 20, BLUE\n").HasErrors));
+    Analyze("Game Window \"Existing\"\nFill Rectangle 1, 2, 3, 4, RED\nDraw Circle 10, 10, 4, WHITE\nDraw Line 0, 0, 20, 20, BLUE\n").HasErrors));
 Run("Music keywords are shared and case-insensitive", () =>
 {
     Equal(SyntaxKind.MusicKeyword, SyntaxFacts.GetKeywordKind("music"));
     Equal(SyntaxKind.PauseKeyword, SyntaxFacts.GetKeywordKind("PaUsE"));
     Equal(SyntaxKind.ResumeKeyword, SyntaxFacts.GetKeywordKind("resume"));
-    Equal(SyntaxKind.VolumeKeyword, SyntaxFacts.GetKeywordKind("VOLUME"));
+    Equal(SyntaxKind.VolumeKeyword, SyntaxFacts.GetKeywordKind("Volume"));
     Equal(true, SyntaxFacts.IsKeyword(SyntaxKind.MusicKeyword));
 });
-Run("PLAY MUSIC analyzes as non-looping playback", () =>
+Run("Play Music analyzes as non-looping playback", () =>
 {
-    var music = Music(Analyze("GAME WINDOW \"Music\"\nPLAY MUSIC \"Assets\\Background.mp3\"\n"));
+    var music = Music(Analyze("Game Window \"Music\"\nPlay Music \"Assets\\Background.mp3\"\n"));
     Equal(MusicOperation.Play, music.Operation);
     Equal(false, music.Loop);
 });
-Run("PLAY MUSIC LOOP records looping playback", () => Equal(true,
-    Music(Analyze("GAME WINDOW \"Music\"\nPLAY MUSIC \"Assets\\Background.mp3\" LOOP\n")).Loop));
-Run("PAUSE MUSIC records the shared operation", () => Equal(MusicOperation.Pause,
-    Music(Analyze("GAME WINDOW \"Music\"\nPAUSE MUSIC\n")).Operation));
-Run("RESUME MUSIC records the shared operation", () => Equal(MusicOperation.Resume,
-    Music(Analyze("GAME WINDOW \"Music\"\nRESUME MUSIC\n")).Operation));
-Run("STOP MUSIC records the shared operation", () => Equal(MusicOperation.Stop,
-    Music(Analyze("GAME WINDOW \"Music\"\nSTOP MUSIC\n")).Operation));
-Run("MUSIC VOLUME accepts numeric expressions", () => Equal(false,
-    Analyze("GAME WINDOW \"Music\"\nMUSIC VOLUME 25 + 25\n").HasErrors));
-Run("Existing PLAY SOUND and STOP SOUND remain shared sound syntax", () =>
+Run("Play Music Loop records looping playback", () => Equal(true,
+    Music(Analyze("Game Window \"Music\"\nPlay Music \"Assets\\Background.mp3\" Loop\n")).Loop));
+Run("Pause Music records the shared operation", () => Equal(MusicOperation.Pause,
+    Music(Analyze("Game Window \"Music\"\nPause Music\n")).Operation));
+Run("Resume Music records the shared operation", () => Equal(MusicOperation.Resume,
+    Music(Analyze("Game Window \"Music\"\nResume Music\n")).Operation));
+Run("Stop Music records the shared operation", () => Equal(MusicOperation.Stop,
+    Music(Analyze("Game Window \"Music\"\nStop Music\n")).Operation));
+Run("Music Volume accepts numeric expressions", () => Equal(false,
+    Analyze("Game Window \"Music\"\nMusic Volume 25 + 25\n").HasErrors));
+Run("Existing Play Sound and Stop Sound remain shared sound syntax", () =>
 {
-    var analysis = Analyze("GAME WINDOW \"Sound\"\nPLAY SOUND \"Assets\\Effect.wav\"\nSTOP SOUND\n");
+    var analysis = Analyze("Game Window \"Sound\"\nPlay Sound \"Assets\\Effect.wav\"\nStop Sound\n");
     Equal(false, analysis.HasErrors);
     Equal(2, analysis.SyntaxTree.Root.Statements.OfType<SoundStatementSyntax>().Count());
 });
@@ -121,17 +121,17 @@ Run("Phase 4 media keywords and constants are shared", () =>
     Equal(1048576L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.DataBlockMaxBytesKeyword));
     Equal(true, SyntaxFacts.IsKeyword(SyntaxKind.PixelKeyword));
 });
-Run("IMAGE works in variables arrays records parameters BYREF and returns", () =>
+Run("Image works in variables arrays records parameters ByRef and returns", () =>
 {
-    const string source = "OPTION EXPLICIT\nTYPE Art\nPicture AS IMAGE\nEND TYPE\nDIM SourceImage AS IMAGE\nDIM Copies[2] AS IMAGE\nDIM Card AS Art\nLOAD IMAGE SourceImage FROM \"Assets\\A.png\"\nCopies[0] = SourceImage\nCard.Picture = Copies[0]\nCALL Keep(Card.Picture)\nSourceImage = CopyImage(Card.Picture)\nUNLOAD IMAGE Copies[0]\nSUB Keep(BYREF Value AS IMAGE)\nValue = Value\nEND SUB\nFUNCTION CopyImage(Value AS IMAGE) AS IMAGE\nRETURN Value\nEND FUNCTION\n";
+    const string source = "Option Explicit\nType Art\nPicture As Image\nEnd Type\nDim SourceImage As Image\nDim Copies[2] As Image\nDim Card As Art\nLoad Image SourceImage From \"Assets\\A.png\"\nCopies[0] = SourceImage\nCard.Picture = Copies[0]\nCall Keep(Card.Picture)\nSourceImage = CopyImage(Card.Picture)\nUnload Image Copies[0]\nSub Keep(ByRef Value As Image)\nValue = Value\nEnd Sub\nFunction CopyImage(Value As Image) As Image\nReturn Value\nEnd Function\n";
     var analysis = Analyze(source);
     Equal(false, analysis.HasErrors);
     Equal(SmileType.Image, analysis.SemanticModel.Symbols["SourceImage"].Type);
     Equal(true, analysis.SemanticModel.Types["Art"].ContainsOwnedImage);
 });
-Run("DRAW IMAGE supports full and explicit rectangles with all Phase 4 modifiers", () =>
+Run("Draw Image supports full and explicit rectangles with all Phase 4 modifiers", () =>
 {
-    const string source = "GAME WINDOW \"Images\" SIZE 960 BY 540\nDIM Art AS IMAGE\nDRAW IMAGE Art AT 0, 0\nDRAW IMAGE Art FROM 10, 20 SIZE 300 BY 200 AT 480, 270 SIZE 600 BY 400 OPACITY 65 ANCHOR 300, 400 FILTER PIXEL FLIP BOTH\n";
+    const string source = "Game Window \"Images\" Size 960 By 540\nDim Art As Image\nDraw Image Art At 0, 0\nDraw Image Art From 10, 20 Size 300 By 200 At 480, 270 Size 600 By 400 Opacity 65 Anchor 300, 400 Filter Pixel Flip Both\n";
     var analysis = Analyze(source);
     Equal(false, analysis.HasErrors);
     var draws = analysis.SyntaxTree.Root.Statements.OfType<DrawImageStatementSyntax>().ToArray();
@@ -140,55 +140,55 @@ Run("DRAW IMAGE supports full and explicit rectangles with all Phase 4 modifiers
     Equal(ImageFilter.Pixel, draws[1].Filter);
     Equal(ImageFlip.Horizontal | ImageFlip.Vertical, draws[1].Flip);
 });
-Run("CLIP RECTANGLE nests and includes structured statements", () =>
+Run("Clip Rectangle nests and includes structured statements", () =>
 {
-    var analysis = Analyze("GAME WINDOW \"Clip\"\nCLIP RECTANGLE 0, 0, 100, 100\nCLIP RECTANGLE 10, 10, 40, 40\nFILL RECTANGLE 0, 0, 100, 100, WHITE\nEND CLIP\nEND CLIP\n");
+    var analysis = Analyze("Game Window \"Clip\"\nClip Rectangle 0, 0, 100, 100\nClip Rectangle 10, 10, 40, 40\nFill Rectangle 0, 0, 100, 100, WHITE\nEnd Clip\nEnd Clip\n");
     Equal(false, analysis.HasErrors);
     var outer = analysis.SyntaxTree.Root.Statements.OfType<ClipRectangleStatementSyntax>().Single();
     Equal(1, outer.Statements.OfType<ClipRectangleStatementSyntax>().Count());
 });
-Run("IMAGE measurement and TEXT measurement built-ins type check", () => Equal(false,
-    Analyze("GAME WINDOW \"Measure\"\nDIM Art AS IMAGE\nDIM Caption AS TEXT\nPRINT IMAGE_WIDTH(Art)\nPRINT IMAGE_HEIGHT(Art)\nPRINT IMAGE_LOADED(Art)\nPRINT TEXT_WIDTH(Caption, 28)\nPRINT TEXT_HEIGHT(Caption, 28)\n").HasErrors));
-Run("Persistent DATA statements accept byte arrays and writable count targets", () => Equal(false,
-    Analyze("OPTION EXPLICIT\nDIM Bytes[8]\nDIM ByteCount AS NUMBER\nSAVE DATA Bytes COUNT 8 TO \"slot\"\nLOAD DATA \"slot\" INTO Bytes COUNT ByteCount\n").HasErrors));
+Run("Image measurement and Text measurement built-ins type check", () => Equal(false,
+    Analyze("Game Window \"Measure\"\nDim Art As Image\nDim Caption As Text\nPrint Image_Width(Art)\nPrint Image_Height(Art)\nPrint Image_Loaded(Art)\nPrint Text_Width(Caption, 28)\nPrint Text_Height(Caption, 28)\n").HasErrors));
+Run("Persistent Data statements accept byte arrays and writable count targets", () => Equal(false,
+    Analyze("Option Explicit\nDim Bytes[8]\nDim ByteCount As Number\nSave Data Bytes Count 8 To \"slot\"\nLoad Data \"slot\" Into Bytes Count ByteCount\n").HasErrors));
 Run("Explicit WAV channels support play per-channel stop and global stop", () =>
 {
-    var analysis = Analyze("GAME WINDOW \"Audio\"\nPLAY SOUND \"Assets\\One.wav\" ON CHANNEL 1\nPLAY SOUND \"Assets\\Two.wav\" ON CHANNEL 2\nSTOP SOUND ON CHANNEL 1\nSTOP SOUND\n");
+    var analysis = Analyze("Game Window \"Audio\"\nPlay Sound \"Assets\\One.wav\" On Channel 1\nPlay Sound \"Assets\\Two.wav\" On Channel 2\nStop Sound On Channel 1\nStop Sound\n");
     Equal(false, analysis.HasErrors);
     var sounds = analysis.SyntaxTree.Root.Statements.OfType<SoundStatementSyntax>().ToArray();
     Equal(4, sounds.Length);
     Equal(true, sounds[0].Channel != null && sounds[2].Channel != null && sounds[3].Channel == null);
 });
 Run("Out-of-range constant sound channels report SML3507", () => Equal(true,
-    HasDiagnostic(Analyze("GAME WINDOW \"Audio\"\nPLAY SOUND \"a.wav\" ON CHANNEL 16\n"), "SML3507")));
-Run("IMAGE operators report SML3509", () => Equal(true,
-    HasDiagnostic(Analyze("DIM A AS IMAGE\nDIM B AS IMAGE\nPRINT A = B\n"), "SML3509")));
-Run("Phase 5 TEXT inspection built-ins use Unicode scalar signatures", () =>
+    HasDiagnostic(Analyze("Game Window \"Audio\"\nPlay Sound \"a.wav\" On Channel 16\n"), "SML3507")));
+Run("Image operators report SML3509", () => Equal(true,
+    HasDiagnostic(Analyze("Dim A As Image\nDim B As Image\nPrint A = B\n"), "SML3509")));
+Run("Phase 5 Text inspection built-ins use Unicode scalar signatures", () =>
 {
-    var analysis = Analyze("DIM Value AS TEXT\nValue = \"A😀B\"\nPRINT TEXT_LENGTH(Value)\nPRINT TEXT_CODE_AT(Value, 1)\nPRINT TEXT_SLICE(Value, 1, 1)\n");
+    var analysis = Analyze("Dim Value As Text\nValue = \"A😀B\"\nPrint Text_Length(Value)\nPrint Text_Code_At(Value, 1)\nPrint Text_Slice(Value, 1, 1)\n");
     Equal(false, analysis.HasErrors);
     var calls = analysis.BoundSyntaxTree.Root.Statements.OfType<PrintStatementSyntax>()
         .SelectMany(statement => statement.Items).OfType<CallExpressionSyntax>().ToArray();
     Equal(SmileType.Number, analysis.SemanticModel.GetType(calls.Single(call => call.Identifier.Kind == SyntaxKind.TextLengthKeyword)));
     Equal(SmileType.Number, analysis.SemanticModel.GetType(calls.Single(call => call.Identifier.Kind == SyntaxKind.TextCodeAtKeyword)));
     Equal(SmileType.Text, analysis.SemanticModel.GetType(calls.Single(call => call.Identifier.Kind == SyntaxKind.TextSliceKeyword)));
-    Equal(true, HasDiagnostic(Analyze("PRINT TEXT_LENGTH(1)\n"), "SML3700"));
-    Equal(true, HasDiagnostic(Analyze("PRINT TEXT_CODE_AT(\"A\", TRUE)\n"), "SML3700"));
-    Equal(true, HasDiagnostic(Analyze("PRINT TEXT_SLICE(\"A\", 0, FALSE)\n"), "SML3700"));
+    Equal(true, HasDiagnostic(Analyze("Print Text_Length(1)\n"), "SML3700"));
+    Equal(true, HasDiagnostic(Analyze("Print Text_Code_At(\"A\", True)\n"), "SML3700"));
+    Equal(true, HasDiagnostic(Analyze("Print Text_Slice(\"A\", 0, False)\n"), "SML3700"));
 });
 Run("Phase 5.1 text literals preserve embedded and trailing newlines", () =>
 {
-    var analysis = Analyze("DIM Value AS TEXT\nValue = \"\nONE\nTWO\n\"\nPRINT TEXT_LENGTH(Value)\n");
+    var analysis = Analyze("Dim Value As Text\nValue = \"\nONE\nTWO\n\"\nPrint Text_Length(Value)\n");
     Equal(false, analysis.HasErrors);
-    var windowsAnalysis = Analyze("DIM Value AS TEXT\r\nValue = \"\r\nONE\r\nTWO\r\n\"\r\nPRINT TEXT_LENGTH(Value)\r\n");
+    var windowsAnalysis = Analyze("Dim Value As Text\r\nValue = \"\r\nONE\r\nTWO\r\n\"\r\nPrint Text_Length(Value)\r\n");
     Equal(false, windowsAnalysis.HasErrors);
     var literal = (LiteralExpressionSyntax)windowsAnalysis.SyntaxTree.Root.Statements
         .OfType<AssignmentStatementSyntax>().Single().Expression;
     Equal("\nONE\nTWO\n", (string)literal.Value);
 });
-Run("Phase 5 routine GAME WINDOW capabilities are direct transitive and call-site located", () =>
+Run("Phase 5 routine Game Window capabilities are direct transitive and call-site located", () =>
 {
-    const string module = "MODULE Test.UI\nPUBLIC SUB Draw()\nFILL RECTANGLE 0, 0, 10, 10, WHITE\nEND SUB\nPUBLIC SUB Wrapper()\nCALL Draw()\nEND SUB\nPUBLIC SUB RecursiveA()\nCALL RecursiveB()\nEND SUB\nPUBLIC SUB RecursiveB()\nCALL RecursiveA()\nCALL Draw()\nEND SUB\nPUBLIC SUB Pure()\nEND SUB\nEND MODULE\n";
+    const string module = "Module Test.UI\nPublic Sub Draw()\nFill Rectangle 0, 0, 10, 10, WHITE\nEnd Sub\nPublic Sub Wrapper()\nCall Draw()\nEnd Sub\nPublic Sub RecursiveA()\nCall RecursiveB()\nEnd Sub\nPublic Sub RecursiveB()\nCall RecursiveA()\nCall Draw()\nEnd Sub\nPublic Sub Pure()\nEnd Sub\nEnd Module\n";
     var library = SmileLanguage.Analyze(new[] { new SmileSourceDocument(module, "UI.smile") }, SmileCompilationKind.Library);
     if (library.HasErrors)
         throw new InvalidOperationException(string.Join(" | ", library.Diagnostics.Select(diagnostic => diagnostic.Code + ": " + diagnostic.Message)));
@@ -198,24 +198,24 @@ Run("Phase 5 routine GAME WINDOW capabilities are direct transitive and call-sit
     Equal(true, routines.Single(routine => routine.DisplayName == "Test.UI.RecursiveA").RequiresGameWindow);
     Equal(false, routines.Single(routine => routine.DisplayName == "Test.UI.Pure").RequiresGameWindow);
 
-    var console = Multi(("Program.smile", true, "IMPORT Test.UI AS UI\nCALL UI.Wrapper()\nEND PROGRAM\n"),
+    var console = Multi(("Program.smile", true, "Import Test.UI As UI\nCall UI.Wrapper()\nEnd Program\n"),
         ("UI.smile", false, module));
     var capabilityDiagnostic = console.Diagnostics.Single(diagnostic => diagnostic.Code == "SML3704");
     Equal("Program.smile", Path.GetFileName(capabilityDiagnostic.FilePath));
     Equal(true, capabilityDiagnostic.Message.Contains("Test.UI.Wrapper", StringComparison.Ordinal));
     Equal(0, console.Diagnostics.Count(diagnostic => diagnostic.Code == "SML3023"));
 
-    var pureConsole = Multi(("Program.smile", true, "IMPORT Test.UI AS UI\nCALL UI.Pure()\nEND PROGRAM\n"),
+    var pureConsole = Multi(("Program.smile", true, "Import Test.UI As UI\nCall UI.Pure()\nEnd Program\n"),
         ("UI.smile", false, module));
     Equal(false, pureConsole.HasErrors);
-    var game = Multi(("Program.smile", true, "IMPORT Test.UI AS UI\nGAME WINDOW \"Capabilities\"\nCALL UI.Wrapper()\nEND PROGRAM\n"),
+    var game = Multi(("Program.smile", true, "Import Test.UI As UI\nGame Window \"Capabilities\"\nCall UI.Wrapper()\nEnd Program\n"),
         ("UI.smile", false, module));
     Equal(false, game.HasErrors);
 });
 Run("Phase 5 API keyword names remain identifiers in declaration and member contexts", () =>
 {
-    const string core = "MODULE Context.Core\nPUBLIC TYPE Insets\nLeft AS NUMBER\nRight AS NUMBER\nEND TYPE\nPUBLIC TYPE Style\nWindow AS Insets\nText AS NUMBER\nLine AS NUMBER\nEND TYPE\nEND MODULE\n";
-    const string window = "MODULE Context.Window\nIMPORT Context.Core AS UI\nPUBLIC SUB Draw(BYREF Size AS UI.Style)\nSize.Window.Left = Size.Window.Right\nSize.Text = Size.Line\nEND SUB\nEND MODULE\n";
+    const string core = "Module Context.Core\nPublic Type Insets\nLeft As Number\nRight As Number\nEnd Type\nPublic Type Style\nWindow As Insets\nText As Number\nLine As Number\nEnd Type\nEnd Module\n";
+    const string window = "Module Context.Window\nImport Context.Core As UI\nPublic Sub Draw(ByRef Size As UI.Style)\nSize.Window.Left = Size.Window.Right\nSize.Text = Size.Line\nEnd Sub\nEnd Module\n";
     var analysis = SmileLanguage.Analyze(new[]
     {
         new SmileSourceDocument(core, "Core.smile"),
@@ -227,10 +227,10 @@ Run("Phase 5 API keyword names remain identifiers in declaration and member cont
 });
 Run("Emitters resolve locals by routine identity when modules reuse routine names", () =>
 {
-    const string first = "MODULE First.Library\nPUBLIC SUB Set(BYREF Value AS NUMBER)\nValue = 1\nEND SUB\nEND MODULE\n";
-    const string second = "MODULE Second.Library\nPUBLIC SUB Set(BYREF Value AS NUMBER)\nValue = 2\nEND SUB\nEND MODULE\n";
+    const string first = "Module First.Library\nPublic Sub Set(ByRef Value As Number)\nValue = 1\nEnd Sub\nEnd Module\n";
+    const string second = "Module Second.Library\nPublic Sub Set(ByRef Value As Number)\nValue = 2\nEnd Sub\nEnd Module\n";
     var analysis = Multi(
-        ("Program.smile", true, "IMPORT First.Library AS First\nIMPORT Second.Library AS Second\nDIM Value AS NUMBER\nCALL First.Set(Value)\nCALL Second.Set(Value)\n"),
+        ("Program.smile", true, "Import First.Library As First\nImport Second.Library As Second\nDim Value As Number\nCall First.Set(Value)\nCall Second.Set(Value)\n"),
         ("First.smile", false, first),
         ("Second.smile", false, second));
     if (analysis.HasErrors)
@@ -239,80 +239,80 @@ Run("Emitters resolve locals by routine identity when modules reuse routine name
     Equal(true, new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit().Contains("routine_", StringComparison.Ordinal));
     Equal(true, new WebEmitter(analysis).Emit().Contains("async function r_", StringComparison.Ordinal));
 });
-Run("Every music operation requires GAME WINDOW", () =>
+Run("Every music operation requires Game Window", () =>
 {
-    var analysis = Analyze("PLAY MUSIC \"Assets\\Background.mp3\"\nPAUSE MUSIC\nRESUME MUSIC\nSTOP MUSIC\nMUSIC VOLUME 50\n");
+    var analysis = Analyze("Play Music \"Assets\\Background.mp3\"\nPause Music\nResume Music\nStop Music\nMusic Volume 50\n");
     Equal(5, analysis.Diagnostics.Count(diagnostic => diagnostic.Code == "SML3023"));
 });
-Run("PLAY MUSIC rejects an empty path", () => Equal(true,
-    HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nPLAY MUSIC \"\"\n"), "SML3026")));
-Run("MUSIC VOLUME requires a number", () => Equal(true,
-    HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nMUSIC VOLUME \"loud\"\n"), "SML3026")));
-Run("PLAY MUSIC without a path reports a parser diagnostic", () => Equal(true,
-    HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nPLAY MUSIC\n"), "SML2001")));
-Run("PLAY MUSIC rejects a repeated LOOP", () => Equal(true,
-    HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nPLAY MUSIC \"Assets\\Background.mp3\" LOOP LOOP\n"), "SML2001")));
-Run("PAUSE SOUND is not accepted as music syntax", () => Equal(true,
-    HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nPAUSE SOUND\n"), "SML2001")));
-Run("MUSIC requires the VOLUME subcommand", () => Equal(true,
-    HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nMUSIC 75\n"), "SML2001")));
-Run("MUSIC VOLUME without a value reports a parser diagnostic", () => Equal(true,
-    HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nMUSIC VOLUME\n"), "SML2001")));
-Run("RESUME SOUND is not accepted as music syntax", () => Equal(true,
-    HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nRESUME SOUND\n"), "SML2001")));
-Run("Bare STOP remains malformed", () => Equal(true,
-    HasDiagnostic(Analyze("GAME WINDOW \"Music\"\nSTOP\n"), "SML2001")));
-Run("LOAD TEXT FILE keywords are shared and case-insensitive", () =>
+Run("Play Music rejects an empty path", () => Equal(true,
+    HasDiagnostic(Analyze("Game Window \"Music\"\nPlay Music \"\"\n"), "SML3026")));
+Run("Music Volume requires a number", () => Equal(true,
+    HasDiagnostic(Analyze("Game Window \"Music\"\nMusic Volume \"loud\"\n"), "SML3026")));
+Run("Play Music without a path reports a parser diagnostic", () => Equal(true,
+    HasDiagnostic(Analyze("Game Window \"Music\"\nPlay Music\n"), "SML2001")));
+Run("Play Music rejects a repeated Loop", () => Equal(true,
+    HasDiagnostic(Analyze("Game Window \"Music\"\nPlay Music \"Assets\\Background.mp3\" Loop Loop\n"), "SML2001")));
+Run("Pause Sound is not accepted as music syntax", () => Equal(true,
+    HasDiagnostic(Analyze("Game Window \"Music\"\nPause Sound\n"), "SML2001")));
+Run("Music requires the Volume subcommand", () => Equal(true,
+    HasDiagnostic(Analyze("Game Window \"Music\"\nMusic 75\n"), "SML2001")));
+Run("Music Volume without a value reports a parser diagnostic", () => Equal(true,
+    HasDiagnostic(Analyze("Game Window \"Music\"\nMusic Volume\n"), "SML2001")));
+Run("Resume Sound is not accepted as music syntax", () => Equal(true,
+    HasDiagnostic(Analyze("Game Window \"Music\"\nResume Sound\n"), "SML2001")));
+Run("Bare Stop remains malformed", () => Equal(true,
+    HasDiagnostic(Analyze("Game Window \"Music\"\nStop\n"), "SML2001")));
+Run("Load Text File keywords are shared and case-insensitive", () =>
 {
     Equal(SyntaxKind.FileKeyword, SyntaxFacts.GetKeywordKind("file"));
     Equal(SyntaxKind.IntoKeyword, SyntaxFacts.GetKeywordKind("InTo"));
-    Equal(SyntaxKind.CountKeyword, SyntaxFacts.GetKeywordKind("COUNT"));
+    Equal(SyntaxKind.CountKeyword, SyntaxFacts.GetKeywordKind("Count"));
 });
-Run("LOAD TEXT FILE analyzes for a one-dimensional array", () => Equal(false,
-    Analyze("DIM Bytes[8]\nLOAD TEXT FILE \"sample.txt\" INTO Bytes COUNT ByteCount\n").HasErrors));
-Run("LOAD TEXT FILE records its shared syntax", () =>
+Run("Load Text File analyzes for a one-dimensional array", () => Equal(false,
+    Analyze("Dim Bytes[8]\nLoad Text File \"sample.txt\" Into Bytes Count ByteCount\n").HasErrors));
+Run("Load Text File records its shared syntax", () =>
 {
-    var load = Analyze("DIM Bytes[8]\nLOAD TEXT FILE \"sample.txt\" INTO Bytes COUNT ByteCount\n")
+    var load = Analyze("Dim Bytes[8]\nLoad Text File \"sample.txt\" Into Bytes Count ByteCount\n")
         .SyntaxTree.Root.Statements.OfType<TextFileLoadStatementSyntax>().Single();
     Equal("sample.txt", load.Path.Value as string);
     Equal("Bytes", load.Destination.Text);
     Equal("ByteCount", load.CountIdentifier.Text);
 });
-Run("LOAD TEXT FILE rejects an empty path", () => Equal(true,
-    HasDiagnostic(Analyze("DIM Bytes[8]\nLOAD TEXT FILE \"\" INTO Bytes COUNT ByteCount\n"), "SML3027")));
-Run("LOAD TEXT FILE rejects an unknown destination", () => Equal(true,
-    HasDiagnostic(Analyze("LOAD TEXT FILE \"sample.txt\" INTO Bytes COUNT ByteCount\n"), "SML3027")));
-Run("LOAD TEXT FILE rejects a scalar destination", () => Equal(true,
-    HasDiagnostic(Analyze("Bytes = 0\nLOAD TEXT FILE \"sample.txt\" INTO Bytes COUNT ByteCount\n"), "SML3027")));
-Run("LOAD TEXT FILE rejects a two-dimensional destination", () => Equal(true,
-    HasDiagnostic(Analyze("DIM Bytes[4, 4]\nLOAD TEXT FILE \"sample.txt\" INTO Bytes COUNT ByteCount\n"), "SML3027")));
-Run("Existing persistence LOAD syntax remains valid", () => Equal(false,
-    Analyze("LOAD HighScore FROM \"HighScore\" DEFAULT 0\n").HasErrors));
+Run("Load Text File rejects an empty path", () => Equal(true,
+    HasDiagnostic(Analyze("Dim Bytes[8]\nLoad Text File \"\" Into Bytes Count ByteCount\n"), "SML3027")));
+Run("Load Text File rejects an unknown destination", () => Equal(true,
+    HasDiagnostic(Analyze("Load Text File \"sample.txt\" Into Bytes Count ByteCount\n"), "SML3027")));
+Run("Load Text File rejects a scalar destination", () => Equal(true,
+    HasDiagnostic(Analyze("Bytes = 0\nLoad Text File \"sample.txt\" Into Bytes Count ByteCount\n"), "SML3027")));
+Run("Load Text File rejects a two-dimensional destination", () => Equal(true,
+    HasDiagnostic(Analyze("Dim Bytes[4, 4]\nLoad Text File \"sample.txt\" Into Bytes Count ByteCount\n"), "SML3027")));
+Run("Existing persistence Load syntax remains valid", () => Equal(false,
+    Analyze("Load HighScore From \"HighScore\" Default 0\n").HasErrors));
 Run("Completion catalog uses shared keywords and built-in signatures", () =>
 {
     var completions = SmileCompletionService.GetCompletions(Analyze("PRI"), 3);
     Equal(SmileCompletionKind.Keyword,
-        completions.Single(completion => completion.DisplayText == "PRINT").Kind);
-    var rgb = completions.Single(completion => completion.DisplayText == "RGB");
+        completions.Single(completion => completion.DisplayText == "Print").Kind);
+    var rgb = completions.Single(completion => completion.DisplayText == "Rgb");
     Equal(SmileCompletionKind.BuiltInFunction, rgb.Kind);
-    Equal("Built-in function RGB(red, green, blue)", rgb.Description);
-    Equal(true, completions.Any(completion => completion.DisplayText == "GAME_CLOSED"));
+    Equal("Built-in function Rgb(red, green, blue)", rgb.Description);
+    Equal(true, completions.Any(completion => completion.DisplayText == "Game_Closed"));
     Equal(true, completions.Any(completion => completion.DisplayText == "KEY_ENTER"));
-    Equal(true, completions.Any(completion => completion.DisplayText == "IMAGE"));
-    Equal(true, completions.Any(completion => completion.DisplayText == "CLIP"));
-    Equal(true, completions.Any(completion => completion.DisplayText == "IMAGE_WIDTH"));
+    Equal(true, completions.Any(completion => completion.DisplayText == "Image"));
+    Equal(true, completions.Any(completion => completion.DisplayText == "Clip"));
+    Equal(true, completions.Any(completion => completion.DisplayText == "Image_Width"));
     Equal(false, completions.Any(completion => completion.DisplayText == "PRI"));
 });
 Run("Completion catalog includes visible variables arrays and routines", () =>
 {
-    const string source = "Score = 1\nDIM Board[4, 5]\nSUB Move(PlayerX)\nStep = 2\nPRINT PlayerX\nEND SUB\nSUB Other()\nHidden = 3\nEND SUB\n";
-    var completions = SmileCompletionService.GetCompletions(Analyze(source), source.IndexOf("PRINT", StringComparison.Ordinal));
+    const string source = "Score = 1\nDim Board[4, 5]\nSub Move(PlayerX)\nStep = 2\nPrint PlayerX\nEnd Sub\nSub Other()\nHidden = 3\nEnd Sub\n";
+    var completions = SmileCompletionService.GetCompletions(Analyze(source), source.IndexOf("Print", StringComparison.Ordinal));
     Equal(true, completions.Any(completion => completion.DisplayText == "Score"));
-    Equal("NUMBER array Board[4, 5]", completions.Single(completion => completion.DisplayText == "Board").Description);
+    Equal("Number array Board[4, 5]", completions.Single(completion => completion.DisplayText == "Board").Description);
     Equal(true, completions.Any(completion => completion.DisplayText == "PlayerX"));
     Equal(true, completions.Any(completion => completion.DisplayText == "Step"));
     Equal(false, completions.Any(completion => completion.DisplayText == "Hidden"));
-    Equal("SUB Move(PlayerX AS NUMBER)", completions.Single(completion => completion.DisplayText == "Move").Description);
+    Equal("Sub Move(PlayerX As Number)", completions.Single(completion => completion.DisplayText == "Move").Description);
 });
 Run("Fixed-step ball speed is identical at 60, 100, 120, and 144 Hz", () =>
 {
@@ -346,7 +346,7 @@ Run("Web output rejects native output options", () => Equal(false,
     CompilerOptions.TryParse(new[] { "Program.smile", "--target", "web", "--output-dir", "Web", "-o", "Program.exe" }, out _, out _)));
 Run("Web emitter lowers integer division arrays routines booleans and frame yield", () =>
 {
-    const string source = "DIM Values[2]\nSUB SetValue(Index)\nValues[Index] = 9 / 2\nEND SUB\nGAME WINDOW \"Test\" SIZE 320 BY 180\nCALL SetValue(0)\nIF Values[0] = 4 THEN\nSHOW SCREEN\nEND IF\nEND PROGRAM\n";
+    const string source = "Dim Values[2]\nSub SetValue(Index)\nValues[Index] = 9 / 2\nEnd Sub\nGame Window \"Test\" Size 320 By 180\nCall SetValue(0)\nIf Values[0] = 4 Then\nShow Screen\nEnd If\nEnd Program\n";
     var analysis = Analyze(source);
     Equal(false, analysis.HasErrors);
     var javascript = new WebEmitter(analysis).Emit();
@@ -356,7 +356,7 @@ Run("Web emitter lowers integer division arrays routines booleans and frame yiel
 });
 Run("Web emitter lowers console output waits and screen clearing", () =>
 {
-    var analysis = Analyze("PRINT TRUE; 42\nWAIT 1 MILLISECONDS\nCLEAR SCREEN\n");
+    var analysis = Analyze("Print True; 42\nWait 1 Milliseconds\nClear Screen\n");
     Equal(false, analysis.HasErrors);
     var javascript = new WebEmitter(analysis).Emit();
     Equal(true, javascript.Contains("smile.print([smile.booleanText(true), 42]"));
@@ -365,7 +365,7 @@ Run("Web emitter lowers console output waits and screen clearing", () =>
 });
 Run("Web emitter lowers the complete shared game surface", () =>
 {
-    const string source = "DIM Bytes[8]\nGAME WINDOW \"Test\"\nSUB DrawFrame()\nFILL CIRCLE 10, 10, 4, WHITE\nDRAW LINE 0, 0, 10, 10, WHITE\nSHOW SCREEN\nEND SUB\nCALL DrawFrame()\nIF KEY_HELD(KEY_W) THEN\nPLAY SOUND \"Assets\\Effect.wav\"\nEND IF\nLOAD TEXT FILE \"Maps\\test.map\" INTO Bytes COUNT ByteCount\nPLAY MUSIC \"Assets\\Music.mp3\" LOOP\nMUSIC VOLUME 50\nPAUSE MUSIC\nRESUME MUSIC\nSTOP MUSIC\nFOR Index = 0 TO 2\nEXIT FOR\nEND FOR\nDO\nEXIT DO\nLOOP\nSELECT CASE ByteCount\nCASE 0\nByteCount = 1\nCASE ELSE\nByteCount = 2\nEND SELECT\nEND PROGRAM\n";
+    const string source = "Dim Bytes[8]\nGame Window \"Test\"\nSub DrawFrame()\nFill Circle 10, 10, 4, WHITE\nDraw Line 0, 0, 10, 10, WHITE\nShow Screen\nEnd Sub\nCall DrawFrame()\nIf Key_Held(KEY_W) Then\nPlay Sound \"Assets\\Effect.wav\"\nEnd If\nLoad Text File \"Maps\\test.map\" Into Bytes Count ByteCount\nPlay Music \"Assets\\Music.mp3\" Loop\nMusic Volume 50\nPause Music\nResume Music\nStop Music\nFor Index = 0 To 2\nExit For\nEnd For\nDo\nExit Do\nLoop\nSelect Case ByteCount\nCase 0\nByteCount = 1\nCase Else\nByteCount = 2\nEnd Select\nEnd Program\n";
     var analysis = Analyze(source);
     Equal(false, analysis.HasErrors);
     var javascript = new WebEmitter(analysis).Emit();
@@ -381,7 +381,7 @@ Run("Web output writer creates deterministic static files", () =>
     var directory = Path.Combine(Path.GetTempPath(), "smile-web-output-test-" + Guid.NewGuid().ToString("N"));
     try
     {
-        var analysis = Analyze("GAME WINDOW \"Test\"\nSHOW SCREEN\nEND PROGRAM\n");
+        var analysis = Analyze("Game Window \"Test\"\nShow Screen\nEnd Program\n");
         WebOutputWriter.Write(directory, new WebEmitter(analysis));
         foreach (var name in new[] { "index.html", "smile-runtime.js", "game.js", "smile.css" })
             Equal(true, File.Exists(Path.Combine(directory, name)));
@@ -393,7 +393,7 @@ Run("Web output writer creates deterministic static files", () =>
 });
 Run("Single-source API remains a one-document startup compilation", () =>
 {
-    var analysis = SmileLanguage.Analyze("PRINT 1\n", "Single.smile");
+    var analysis = SmileLanguage.Analyze("Print 1\n", "Single.smile");
     Equal(1, analysis.SyntaxTrees.Count);
     Equal(true, ReferenceEquals(analysis.SyntaxTree, analysis.SyntaxTrees[0]));
     Equal(true, analysis.SyntaxTree.IsStartup);
@@ -404,22 +404,22 @@ Run("Multi-source API requires at least one document", () => ThrowsContains(
 Run("Multi-source API requires exactly one startup document", () => ThrowsContains(
     () => SmileLanguage.Analyze(new[]
     {
-        new SmileSourceDocument("PRINT 1\n", "One.smile", true),
-        new SmileSourceDocument("PRINT 2\n", "Two.smile", true)
+        new SmileSourceDocument("Print 1\n", "One.smile", true),
+        new SmileSourceDocument("Print 2\n", "Two.smile", true)
     }),
     "requires exactly one startup source; found 2"));
 Run("Multi-source API rejects duplicate normalized paths", () => ThrowsContains(
     () => SmileLanguage.Analyze(new[]
     {
-        new SmileSourceDocument("PRINT 1\n", "Duplicate.smile", true),
-        new SmileSourceDocument("SUB Work()\nEND SUB\n", ".\\Duplicate.smile")
+        new SmileSourceDocument("Print 1\n", "Duplicate.smile", true),
+        new SmileSourceDocument("Sub Work()\nEnd Sub\n", ".\\Duplicate.smile")
     }),
     "Duplicate SMILE source path"));
 Run("Multi-source analysis exposes distinct physical syntax trees", () =>
 {
     var analysis = Multi(
-        ("Program.smile", true, "CALL Work()\n"),
-        ("Support.smile", false, "SUB Work()\nPRINT 1\nEND SUB\n"));
+        ("Program.smile", true, "Call Work()\n"),
+        ("Support.smile", false, "Sub Work()\nPrint 1\nEnd Sub\n"));
     Equal(2, analysis.SyntaxTrees.Count);
     Equal("Program.smile", Path.GetFileName(analysis.SyntaxTree.Source.FilePath));
     Equal("Support.smile", Path.GetFileName(analysis.SyntaxTrees[1].Source.FilePath));
@@ -427,9 +427,9 @@ Run("Multi-source analysis exposes distinct physical syntax trees", () =>
 Run("Cross-file routines declarations arrays and startup globals bind together", () =>
 {
     var analysis = Multi(
-        ("Program.smile", true, "Score = 7\nCALL ResetState()\nPRINT StateValue()\n"),
-        ("GameState.smile", false, "CONST BaseValue = 3\nDIM State[2]\nSUB ResetState()\nState[0] = BaseValue\nCALL AdvanceState()\nEND SUB\n"),
-        ("Drawing.smile", false, "SUB AdvanceState()\nState[0] = State[0] + Score\nEND SUB\nFUNCTION StateValue()\nRETURN State[0]\nEND FUNCTION\n"));
+        ("Program.smile", true, "Score = 7\nCall ResetState()\nPrint StateValue()\n"),
+        ("GameState.smile", false, "Const BaseValue = 3\nDim State[2]\nSub ResetState()\nState[0] = BaseValue\nCall AdvanceState()\nEnd Sub\n"),
+        ("Drawing.smile", false, "Sub AdvanceState()\nState[0] = State[0] + Score\nEnd Sub\nFunction StateValue()\nReturn State[0]\nEnd Function\n"));
     Equal(false, analysis.HasErrors);
     Equal(true, analysis.SemanticModel.Symbols.ContainsKey("Score"));
     Equal(true, analysis.SemanticModel.Symbols.ContainsKey("State"));
@@ -437,16 +437,16 @@ Run("Cross-file routines declarations arrays and startup globals bind together",
 });
 Run("Cross-file routine visibility does not depend on support source order", () => Equal(false,
     Multi(
-        ("Program.smile", true, "CALL First()\n"),
-        ("Later.smile", false, "SUB First()\nCALL Second()\nEND SUB\n"),
-        ("Earlier.smile", false, "SUB Second()\nEND SUB\n")).HasErrors));
+        ("Program.smile", true, "Call First()\n"),
+        ("Later.smile", false, "Sub First()\nCall Second()\nEnd Sub\n"),
+        ("Earlier.smile", false, "Sub Second()\nEnd Sub\n")).HasErrors));
 Run("Cross-file constants and array dimensions are source-order independent", () =>
 {
     var analysis = Multi(
-        ("Program.smile", true, "DIM StartupValues[MaximumValues]\nCALL InitializeArrays()\nPRINT MaximumValues\n"),
-        ("Arrays.smile", false, "DIM SharedValues[MaximumValues]\nSUB InitializeArrays()\nSharedValues[0] = MaximumValues\nEND SUB\n"),
-        ("Derived.smile", false, "CONST MaximumValues = BaseValues + ExtraValues\n"),
-        ("Base.smile", false, "CONST BaseValues = 4\nCONST ExtraValues = 4\n"));
+        ("Program.smile", true, "Dim StartupValues[MaximumValues]\nCall InitializeArrays()\nPrint MaximumValues\n"),
+        ("Arrays.smile", false, "Dim SharedValues[MaximumValues]\nSub InitializeArrays()\nSharedValues[0] = MaximumValues\nEnd Sub\n"),
+        ("Derived.smile", false, "Const MaximumValues = BaseValues + ExtraValues\n"),
+        ("Base.smile", false, "Const BaseValues = 4\nConst ExtraValues = 4\n"));
     Equal(false, analysis.HasErrors);
     Equal(8L, analysis.SemanticModel.Symbols["MaximumValues"].ConstantValue);
     Equal(8, analysis.SemanticModel.Symbols["StartupValues"].ArrayDimensions[0]);
@@ -455,10 +455,10 @@ Run("Cross-file constants and array dimensions are source-order independent", ()
 Run("Reversing support declaration order preserves constant and array results", () =>
 {
     var analysis = Multi(
-        ("Program.smile", true, "DIM StartupValues[MaximumValues]\nPRINT MaximumValues\n"),
-        ("Base.smile", false, "CONST BaseValues = 3\nCONST ExtraValues = 1\n"),
-        ("Derived.smile", false, "CONST MaximumValues = BaseValues + ExtraValues\n"),
-        ("Arrays.smile", false, "DIM SharedValues[MaximumValues]\n"));
+        ("Program.smile", true, "Dim StartupValues[MaximumValues]\nPrint MaximumValues\n"),
+        ("Base.smile", false, "Const BaseValues = 3\nConst ExtraValues = 1\n"),
+        ("Derived.smile", false, "Const MaximumValues = BaseValues + ExtraValues\n"),
+        ("Arrays.smile", false, "Dim SharedValues[MaximumValues]\n"));
     Equal(false, analysis.HasErrors);
     Equal(4L, analysis.SemanticModel.Symbols["MaximumValues"].ConstantValue);
     Equal(4, analysis.SemanticModel.Symbols["SharedValues"].ArrayDimensions[0]);
@@ -466,35 +466,35 @@ Run("Reversing support declaration order preserves constant and array results", 
 Run("Circular constants report one deterministic physical-file diagnostic", () =>
 {
     var diagnostic = Multi(
-        ("Program.smile", true, "PRINT FirstValue\n"),
-        ("First.smile", false, "CONST FirstValue = SecondValue + 1\n"),
-        ("Second.smile", false, "CONST SecondValue = FirstValue + 1\n"))
+        ("Program.smile", true, "Print FirstValue\n"),
+        ("First.smile", false, "Const FirstValue = SecondValue + 1\n"),
+        ("Second.smile", false, "Const SecondValue = FirstValue + 1\n"))
         .Diagnostics.Single(item => item.Code == "SML3029");
     Equal("First.smile", Path.GetFileName(diagnostic.FilePath));
     Equal(true, diagnostic.Message.Contains("FirstValue -> SecondValue -> FirstValue", StringComparison.Ordinal));
 });
-Run("CONST and routine names share one case-insensitive project namespace", () =>
+Run("Const and routine names share one case-insensitive project namespace", () =>
 {
     var diagnostic = Multi(
-        ("Program.smile", true, "PRINT SharedName\n"),
-        ("Value.smile", false, "CONST SharedName = 1\n"),
-        ("Routine.smile", false, "SUB sharedname()\nEND SUB\n"))
+        ("Program.smile", true, "Print SharedName\n"),
+        ("Value.smile", false, "Const SharedName = 1\n"),
+        ("Routine.smile", false, "Sub sharedname()\nEnd Sub\n"))
         .Diagnostics.Single(item => item.Code == "SML3005");
     Equal("Routine.smile", Path.GetFileName(diagnostic.FilePath));
 });
-Run("DIM and routine names share one case-insensitive project namespace", () =>
+Run("Dim and routine names share one case-insensitive project namespace", () =>
 {
     var diagnostic = Multi(
-        ("Program.smile", true, "DIM Inventory[4]\n"),
-        ("Routine.smile", false, "FUNCTION inventory()\nRETURN 1\nEND FUNCTION\n"))
+        ("Program.smile", true, "Dim Inventory[4]\n"),
+        ("Routine.smile", false, "Function inventory()\nReturn 1\nEnd Function\n"))
         .Diagnostics.Single(item => item.Code == "SML3005");
     Equal("Routine.smile", Path.GetFileName(diagnostic.FilePath));
 });
 Run("Implicit startup globals share the project routine namespace", () =>
 {
     var diagnostic = Multi(
-        ("Program.smile", true, "Score = 1\nPRINT Score\n"),
-        ("Routine.smile", false, "FUNCTION score()\nRETURN 1\nEND FUNCTION\n"))
+        ("Program.smile", true, "Score = 1\nPrint Score\n"),
+        ("Routine.smile", false, "Function score()\nReturn 1\nEnd Function\n"))
         .Diagnostics.Single(item => item.Code == "SML3005");
     Equal("Routine.smile", Path.GetFileName(diagnostic.FilePath));
 });
@@ -557,7 +557,7 @@ Run("Asset matching is ordinal case-sensitive and reports SML3602", () =>
     Directory.CreateDirectory(Path.Combine(directory, "Assets", "UI"));
     try
     {
-        File.WriteAllText(Path.Combine(directory, "Program.smile"), "END PROGRAM\n");
+        File.WriteAllText(Path.Combine(directory, "Program.smile"), "End Program\n");
         File.WriteAllText(Path.Combine(directory, "Assets", "UI", "Window.png"), "image");
         var projectPath = Path.Combine(directory, "Case.smileproj");
         File.WriteAllText(projectPath, "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /><Asset Include=\"Assets\\ui\\window.png\" /></ItemGroup></SmileProject>");
@@ -577,7 +577,7 @@ Run("Asset stars match zero characters and question marks match exactly one", ()
     Directory.CreateDirectory(Path.Combine(directory, "Assets"));
     try
     {
-        File.WriteAllText(Path.Combine(directory, "Program.smile"), "END PROGRAM\n");
+        File.WriteAllText(Path.Combine(directory, "Program.smile"), "End Program\n");
         File.WriteAllText(Path.Combine(directory, "Assets", "a-click.wav"), "one");
         File.WriteAllText(Path.Combine(directory, "Assets", "ab-click.wav"), "two");
         File.WriteAllText(Path.Combine(directory, "Assets", "abc-click.wav"), "three");
@@ -624,7 +624,7 @@ Run("Asset publisher safely removes only stale owned files and preserves unrelat
     Directory.CreateDirectory(output);
     try
     {
-        File.WriteAllText(Path.Combine(directory, "Program.smile"), "END PROGRAM\n");
+        File.WriteAllText(Path.Combine(directory, "Program.smile"), "End Program\n");
         File.WriteAllText(Path.Combine(directory, "Assets", "Old.txt"), "old");
         File.WriteAllText(Path.Combine(directory, "Assets", "New.txt"), "new");
         File.WriteAllText(Path.Combine(output, "game.js"), "generated");
@@ -656,7 +656,7 @@ Run("Malformed prior asset manifests are ignored without unsafe deletion and rep
     Directory.CreateDirectory(output);
     try
     {
-        File.WriteAllText(Path.Combine(directory, "Program.smile"), "END PROGRAM\n");
+        File.WriteAllText(Path.Combine(directory, "Program.smile"), "End Program\n");
         File.WriteAllText(Path.Combine(directory, "Assets", "Safe.txt"), "safe");
         var outside = Path.Combine(directory, "outside.txt");
         File.WriteAllText(outside, "untouched");
@@ -683,7 +683,7 @@ Run("Asset publication I/O failures report SML3604 and do not claim success", ()
     Directory.CreateDirectory(Path.Combine(directory, "Assets"));
     try
     {
-        File.WriteAllText(Path.Combine(directory, "Program.smile"), "END PROGRAM\n");
+        File.WriteAllText(Path.Combine(directory, "Program.smile"), "End Program\n");
         var assetPath = Path.Combine(directory, "Assets", "Vanishing.txt");
         File.WriteAllText(assetPath, "temporary");
         var projectPath = Path.Combine(directory, "Failure.smileproj");
@@ -718,7 +718,7 @@ Run("Root hierarchy traversal reaches every source once without missing IDs cycl
     try
     {
         foreach (var name in new[] { "Program.smile", "BeforeAssets.smile", "AfterAssets.smile" })
-            File.WriteAllText(Path.Combine(directory, name), "END PROGRAM\n");
+            File.WriteAllText(Path.Combine(directory, name), "End Program\n");
         File.WriteAllText(Path.Combine(directory, "Assets", "Readme.txt"), "asset\n");
         var projectPath = Path.Combine(directory, "Traversal.smileproj");
         File.WriteAllText(projectPath, """
@@ -770,9 +770,9 @@ Run("Hierarchy mutation preserves existing IDs and remove re-add keeps the physi
         var programPath = Path.Combine(directory, "Program.smile");
         var supportPath = Path.Combine(directory, "Support.smile");
         var dynamicPath = Path.Combine(directory, "Dynamic.smile");
-        File.WriteAllText(programPath, "END PROGRAM\n");
-        File.WriteAllText(supportPath, "CONST Existing = 1\n");
-        File.WriteAllText(dynamicPath, "CONST Dynamic = 2\n");
+        File.WriteAllText(programPath, "End Program\n");
+        File.WriteAllText(supportPath, "Const Existing = 1\n");
+        File.WriteAllText(dynamicPath, "Const Dynamic = 2\n");
         File.WriteAllText(projectPath, "<SmileProject><PropertyGroup><ProjectKind>Console</ProjectKind><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /><SmileSource Include=\"Support.smile\" /></ItemGroup></SmileProject>");
         var identities = new SmileProjectHierarchyIdentityMap();
         var initial = SmileProjectHierarchyProjection.Create(SmileProjectSourceSet.Load(projectPath), "Console");
@@ -814,8 +814,8 @@ Run("Included missing sources stay projected while untracked files remain exclud
         var programPath = Path.Combine(directory, "Program.smile");
         var missingPath = Path.Combine(directory, "Missing.smile");
         var untrackedPath = Path.Combine(directory, "Untracked.smile");
-        File.WriteAllText(programPath, "END PROGRAM\n");
-        File.WriteAllText(untrackedPath, "CONST Untracked = 1\n");
+        File.WriteAllText(programPath, "End Program\n");
+        File.WriteAllText(untrackedPath, "Const Untracked = 1\n");
         var projectPath = Path.Combine(directory, "Missing.smileproj");
         File.WriteAllText(projectPath, "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /><SmileSource Include=\"Missing.smile\" /></ItemGroup></SmileProject>");
 
@@ -828,7 +828,7 @@ Run("Included missing sources stay projected while untracked files remain exclud
             StringComparison.OrdinalIgnoreCase)));
         ThrowsContains(sourceSet.ValidateFiles, "Support source file was not found");
 
-        File.WriteAllText(missingPath, "CONST Restored = 1\n");
+        File.WriteAllText(missingPath, "Const Restored = 1\n");
         var restoredProjection = SmileProjectHierarchyProjection.Create(
             SmileProjectSourceSet.Load(projectPath), "Console");
         Equal(true, restoredProjection.Single(item => string.Equals(item.FullPath, missingPath,
@@ -847,9 +847,9 @@ Run("One physical source can be owned by multiple SMILE projects", () =>
     try
     {
         var sharedPath = Path.Combine(directory, "Shared.smile");
-        File.WriteAllText(sharedPath, "CONST Shared = 1\n");
-        File.WriteAllText(Path.Combine(directory, "One.smile"), "PRINT Shared\n");
-        File.WriteAllText(Path.Combine(directory, "Two.smile"), "PRINT Shared\n");
+        File.WriteAllText(sharedPath, "Const Shared = 1\n");
+        File.WriteAllText(Path.Combine(directory, "One.smile"), "Print Shared\n");
+        File.WriteAllText(Path.Combine(directory, "Two.smile"), "Print Shared\n");
         var onePath = Path.Combine(directory, "One.smileproj");
         var twoPath = Path.Combine(directory, "Two.smileproj");
         File.WriteAllText(onePath, "<SmileProject><PropertyGroup><StartupFile>One.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"One.smile\" StartupOnly=\"true\" /><SmileSource Include=\"Shared.smile\" /></ItemGroup></SmileProject>");
@@ -874,7 +874,7 @@ Run("Disposing an open-buffer registration releases its text and invalidation ca
     var registry = new SmileOpenBufferRegistry();
     var filePath = Path.Combine(Path.GetTempPath(), "SmileBuffer-" + Guid.NewGuid().ToString("N") + ".smile");
     var invalidations = 0;
-    var registration = registry.Register(filePath, "PRINT 1\n", () => invalidations++);
+    var registration = registry.Register(filePath, "Print 1\n", () => invalidations++);
     Equal(1, registry.OpenBufferCount);
     Equal(1, registry.GetInvalidationCount(filePath));
     foreach (var callback in registry.GetInvalidations(new[] { filePath }))
@@ -888,64 +888,64 @@ Run("Disposing an open-buffer registration releases its text and invalidation ca
 Run("Support executable top-level statements report their physical file", () =>
 {
     var analysis = Multi(
-        ("Program.smile", true, "PRINT 1\n"),
+        ("Program.smile", true, "Print 1\n"),
         ("Support.smile", false, "\nScore = 1\n"));
     var diagnostic = analysis.Diagnostics.Single(item => item.Code == "SML3028");
     Equal("Support.smile", Path.GetFileName(diagnostic.FilePath));
     Equal(2, diagnostic.Line);
 });
-Run("Support GAME WINDOW is rejected in the support file", () =>
+Run("Support Game Window is rejected in the support file", () =>
 {
     var diagnostic = Multi(
-        ("Program.smile", true, "PRINT 1\n"),
-        ("Support.smile", false, "GAME WINDOW \"Wrong\"\n"))
+        ("Program.smile", true, "Print 1\n"),
+        ("Support.smile", false, "Game Window \"Wrong\"\n"))
         .Diagnostics.Single(item => item.Code == "SML3028");
-    Equal(true, diagnostic.Message.Contains("GAME WINDOW"));
+    Equal(true, diagnostic.Message.Contains("Game Window"));
     Equal("Support.smile", Path.GetFileName(diagnostic.FilePath));
 });
-Run("Support END PROGRAM is rejected in the support file", () =>
+Run("Support End Program is rejected in the support file", () =>
 {
     var diagnostic = Multi(
-        ("Program.smile", true, "PRINT 1\n"),
-        ("Support.smile", false, "END PROGRAM\n"))
+        ("Program.smile", true, "Print 1\n"),
+        ("Support.smile", false, "End Program\n"))
         .Diagnostics.Single(item => item.Code == "SML3028");
-    Equal(true, diagnostic.Message.Contains("END PROGRAM"));
+    Equal(true, diagnostic.Message.Contains("End Program"));
 });
 Run("Duplicate globals across files report the later file", () =>
 {
     var diagnostic = Multi(
-        ("Program.smile", true, "PRINT Shared\n"),
-        ("First.smile", false, "CONST Shared = 1\n"),
-        ("Second.smile", false, "DIM shared[2]\n"))
+        ("Program.smile", true, "Print Shared\n"),
+        ("First.smile", false, "Const Shared = 1\n"),
+        ("Second.smile", false, "Dim shared[2]\n"))
         .Diagnostics.Single(item => item.Code == "SML3005");
     Equal("Second.smile", Path.GetFileName(diagnostic.FilePath));
 });
 Run("Duplicate routines across files report the later file", () =>
 {
     var diagnostic = Multi(
-        ("Program.smile", true, "CALL Work()\n"),
-        ("First.smile", false, "SUB Work()\nEND SUB\n"),
-        ("Second.smile", false, "SUB work()\nEND SUB\n"))
+        ("Program.smile", true, "Call Work()\n"),
+        ("First.smile", false, "Sub Work()\nEnd Sub\n"),
+        ("Second.smile", false, "Sub work()\nEnd Sub\n"))
         .Diagnostics.Single(item => item.Code == "SML3015");
     Equal("Second.smile", Path.GetFileName(diagnostic.FilePath));
 });
 Run("Parser diagnostics retain support-file line and column", () =>
 {
     var diagnostic = Multi(
-        ("Program.smile", true, "PRINT 1\n"),
-        ("Broken.smile", false, "SUB Work()\n\nPRINT (\nEND SUB\n"))
+        ("Program.smile", true, "Print 1\n"),
+        ("Broken.smile", false, "Sub Work()\n\nPrint (\nEnd Sub\n"))
         .Diagnostics.First(item => item.Code.StartsWith("SML2", StringComparison.Ordinal));
     Equal("Broken.smile", Path.GetFileName(diagnostic.FilePath));
     Equal(3, diagnostic.Line);
 });
 Run("Cross-file completion uses the active support file scope", () =>
 {
-    const string support = "SUB Move(Amount)\nLocalStep = 1\nPRINT Amount\nEND SUB\n";
+    const string support = "Sub Move(Amount)\nLocalStep = 1\nPrint Amount\nEnd Sub\n";
     var analysis = Multi(
-        ("Program.smile", true, "Score = 1\nCALL Move(2)\n"),
+        ("Program.smile", true, "Score = 1\nCall Move(2)\n"),
         ("Support.smile", false, support));
     var completions = SmileCompletionService.GetCompletions(
-        analysis, analysis.GetSyntaxTree(Path.GetFullPath("Support.smile")), support.IndexOf("PRINT", StringComparison.Ordinal));
+        analysis, analysis.GetSyntaxTree(Path.GetFullPath("Support.smile")), support.IndexOf("Print", StringComparison.Ordinal));
     Equal(true, completions.Any(item => item.DisplayText == "Score"));
     Equal(true, completions.Any(item => item.DisplayText == "Amount"));
     Equal(true, completions.Any(item => item.DisplayText == "LocalStep"));
@@ -963,7 +963,7 @@ Run("Project source selection honors StartupOnly and project order", () =>
 {
     var sourceSet = ProjectSources("""
         <SmileProject><PropertyGroup><StartupFile>Program-NoDemo.smile</StartupFile></PropertyGroup><ItemGroup>
-        <SmileSource Include="Program.smile" StartupOnly="TRUE" />
+        <SmileSource Include="Program.smile" StartupOnly="True" />
         <SmileSource Include="GameState.smile" />
         <SmileSource Include="Program-NoDemo.smile" StartupOnly="true" />
         <SmileSource Include="Drawing.smile" />
@@ -1010,9 +1010,9 @@ Run("Project file mutations preserve properties assets and physical files", () =
         var programPath = Path.Combine(directory, "Program.smile");
         var alternatePath = Path.Combine(directory, "Alternate.smile");
         var supportPath = Path.Combine(directory, "Support.smile");
-        File.WriteAllText(programPath, "END PROGRAM\n");
-        File.WriteAllText(alternatePath, "END PROGRAM\n");
-        File.WriteAllText(supportPath, "CONST Value = 1\n");
+        File.WriteAllText(programPath, "End Program\n");
+        File.WriteAllText(alternatePath, "End Program\n");
+        File.WriteAllText(supportPath, "Const Value = 1\n");
         File.WriteAllText(projectPath, """
             <SmileProject Version="1.0">
               <PropertyGroup><StartupFile>Program.smile</StartupFile><OutputName>Kept</OutputName></PropertyGroup>
@@ -1051,8 +1051,8 @@ Run("Project source parsing requires the selected startup item", () => Throws(
 Run("Multi-file debug sites are unique and retain real source paths", () =>
 {
     var analysis = Multi(
-        ("Program.smile", true, "Score = 1\nCALL Work()\n"),
-        ("Support.smile", false, "SUB Work()\nScore = Score + 1\nEND SUB\n"));
+        ("Program.smile", true, "Score = 1\nCall Work()\n"),
+        ("Support.smile", false, "Sub Work()\nScore = Score + 1\nEnd Sub\n"));
     var emitter = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, true);
     var assembly = emitter.Emit();
     var lineTwoSites = emitter.DebugSites.Where(site => site.Line == 2).ToArray();
@@ -1067,8 +1067,8 @@ Run("Multi-file debug sites are unique and retain real source paths", () =>
 Run("Web target failures retain the support source path", () =>
 {
     var analysis = Multi(
-        ("Program.smile", true, "PRINT HugeValue()\n"),
-        ("Support.smile", false, "FUNCTION HugeValue()\nRETURN 9007199254740992\nEND FUNCTION\n"));
+        ("Program.smile", true, "Print HugeValue()\n"),
+        ("Support.smile", false, "Function HugeValue()\nReturn 9007199254740992\nEnd Function\n"));
     try
     {
         _ = new WebEmitter(analysis).Emit();
@@ -1083,8 +1083,8 @@ Run("Web target failures retain the support source path", () =>
 Run("Web emitter emits support routines but only startup top-level execution", () =>
 {
     var analysis = Multi(
-        ("Program.smile", true, "Score = 1\nCALL AddOne()\nPRINT Score\n"),
-        ("Support.smile", false, "SUB AddOne()\nScore = Score + 1\nEND SUB\n"));
+        ("Program.smile", true, "Score = 1\nCall AddOne()\nPrint Score\n"),
+        ("Support.smile", false, "Sub AddOne()\nScore = Score + 1\nEnd Sub\n"));
     Equal(false, analysis.HasErrors);
     var javascript = new WebEmitter(analysis).Emit();
     Equal(true, javascript.Contains("async function r_0_addone"));
@@ -1094,8 +1094,8 @@ Run("Web emitter emits support routines but only startup top-level execution", (
 Run("Local modules import public members through a qualified alias", () =>
 {
     var analysis = Multi(
-        ("Program.smile", true, "IMPORT Example.Math AS Math\nPRINT Math.Double(21)\nEND PROGRAM\n"),
-        ("Math.smile", false, "MODULE Example.Math\nPUBLIC FUNCTION Double(Value)\nRETURN Value * 2\nEND FUNCTION\nPRIVATE CONST Secret = 9\nEND MODULE\n"));
+        ("Program.smile", true, "Import Example.Math As Math\nPrint Math.Double(21)\nEnd Program\n"),
+        ("Math.smile", false, "Module Example.Math\nPublic Function Double(Value)\nReturn Value * 2\nEnd Function\nPrivate Const Secret = 9\nEnd Module\n"));
     Equal(false, analysis.HasErrors);
     Equal(true, analysis.SemanticModel.Modules.ContainsKey("Example.Math"));
     Equal(true, new WebEmitter(analysis).Emit().Contains("await r_"));
@@ -1104,34 +1104,34 @@ Run("Local modules import public members through a qualified alias", () =>
 Run("Private module members are rejected across import boundaries", () =>
 {
     var analysis = Multi(
-        ("Program.smile", true, "IMPORT Example.Math AS Math\nPRINT Math.Secret\n"),
-        ("Math.smile", false, "MODULE Example.Math\nPRIVATE CONST Secret = 9\nEND MODULE\n"));
+        ("Program.smile", true, "Import Example.Math As Math\nPrint Math.Secret\n"),
+        ("Math.smile", false, "Module Example.Math\nPrivate Const Secret = 9\nEnd Module\n"));
     Equal(true, HasDiagnostic(analysis, "SML3105"));
 });
 Run("Missing modules aliases members and import cycles have stable diagnostics", () =>
 {
-    Equal(true, HasDiagnostic(Multi(("Program.smile", true, "IMPORT Missing.Module AS Missing\n")), "SML3102"));
+    Equal(true, HasDiagnostic(Multi(("Program.smile", true, "Import Missing.Module As Missing\n")), "SML3102"));
     Equal(true, HasDiagnostic(Multi(
-        ("Program.smile", true, "IMPORT Example.Math AS Math\nPRINT Math.Unknown\n"),
-        ("Math.smile", false, "MODULE Example.Math\nPUBLIC CONST Value = 1\nEND MODULE\n")), "SML3103"));
+        ("Program.smile", true, "Import Example.Math As Math\nPrint Math.Unknown\n"),
+        ("Math.smile", false, "Module Example.Math\nPublic Const Value = 1\nEnd Module\n")), "SML3103"));
     Equal(true, HasDiagnostic(Multi(
-        ("Program.smile", true, "IMPORT Example.Alpha AS Alpha\n"),
-        ("A.smile", false, "MODULE Example.Alpha\nIMPORT Example.Beta AS Beta\nPUBLIC CONST AValue = 1\nEND MODULE\n"),
-        ("B.smile", false, "MODULE Example.Beta\nIMPORT Example.Alpha AS Alpha\nPUBLIC CONST BValue = 1\nEND MODULE\n")), "SML3108"));
+        ("Program.smile", true, "Import Example.Alpha As Alpha\n"),
+        ("A.smile", false, "Module Example.Alpha\nImport Example.Beta As Beta\nPublic Const AValue = 1\nEnd Module\n"),
+        ("B.smile", false, "Module Example.Beta\nImport Example.Alpha As Alpha\nPublic Const BValue = 1\nEnd Module\n")), "SML3108"));
 });
 Run("Alias dot completion exposes only public module members", () =>
 {
-    var text = "IMPORT Example.Math AS Math\nPRINT Math.";
+    var text = "Import Example.Math As Math\nPrint Math.";
     var analysis = Multi(
         ("Program.smile", true, text),
-        ("Math.smile", false, "MODULE Example.Math\nPUBLIC FUNCTION Double(Value)\nRETURN Value * 2\nEND FUNCTION\nPRIVATE CONST Secret = 9\nEND MODULE\n"));
+        ("Math.smile", false, "Module Example.Math\nPublic Function Double(Value)\nReturn Value * 2\nEnd Function\nPrivate Const Secret = 9\nEnd Module\n"));
     var completions = SmileCompletionService.GetCompletions(analysis, text.Length);
     Equal(true, completions.Any(item => item.DisplayText == "Double"));
     Equal(false, completions.Any(item => item.DisplayText == "Secret"));
 });
 Run("Educational documentation comments parse safely and case-insensitively", () =>
 {
-    const string source = "''' First summary line.\n''' Second summary line.\n''' @PaRaM Value: Primary explanation.\n''' continuation text.\n''' @PARAM value: Ignored duplicate.\n''' @param Unknown: Tolerated metadata.\n''' @ReTuRnS: The resulting value.\n''' @Remarks: First remark.\n''' Additional remark.\n''' @unknown malformed metadata\nFUNCTION Echo(Value AS NUMBER) AS NUMBER\nRETURN Value\nEND FUNCTION\n";
+    const string source = "''' First summary line.\n''' Second summary line.\n''' @PaRaM Value: Primary explanation.\n''' continuation text.\n''' @PARAM value: Ignored duplicate.\n''' @param Unknown: Tolerated metadata.\n''' @ReTuRnS: The resulting value.\n''' @Remarks: First remark.\n''' Additional remark.\n''' @unknown malformed metadata\nFunction Echo(Value As Number) As Number\nReturn Value\nEnd Function\n";
     var analysis = Analyze(source);
     Equal(false, analysis.HasErrors);
     var routine = analysis.SemanticModel.Routines["Echo"];
@@ -1147,10 +1147,10 @@ Run("Ordinary comments blank gaps malformed tags and missing documentation stay 
 {
     foreach (var source in new[]
              {
-                 "' Ordinary comment\nFUNCTION Plain() AS NUMBER\nRETURN 1\nEND FUNCTION\n",
-                 "''' Detached summary\n\nFUNCTION Plain() AS NUMBER\nRETURN 1\nEND FUNCTION\n",
-                 "''' @param MissingColon\n''' @returns MissingColon\nFUNCTION Plain() AS NUMBER\nRETURN 1\nEND FUNCTION\n",
-                 "FUNCTION Plain() AS NUMBER\nRETURN 1\nEND FUNCTION\n"
+                 "' Ordinary comment\nFunction Plain() As Number\nReturn 1\nEnd Function\n",
+                 "''' Detached summary\n\nFunction Plain() As Number\nReturn 1\nEnd Function\n",
+                 "''' @param MissingColon\n''' @returns MissingColon\nFunction Plain() As Number\nReturn 1\nEnd Function\n",
+                 "Function Plain() As Number\nReturn 1\nEnd Function\n"
              })
     {
         var analysis = Analyze(source);
@@ -1185,8 +1185,8 @@ Run("Every public Smile.UI.Menu routine has complete educational documentation",
 });
 Run("Imported aliases and qualified members resolve to exact declarations and documentation", () =>
 {
-    const string program = "IMPORT Example.Menu AS Menu\nPRINT menu.create(7)\n";
-    const string module = "''' Menu module summary.\nMODULE Example.Menu\n''' Creates a value.\n''' @param Value: Number to return.\n''' @returns: The supplied number.\nPUBLIC FUNCTION Create(Value AS NUMBER) AS NUMBER\nRETURN Value\nEND FUNCTION\nPRIVATE FUNCTION Secret() AS NUMBER\nRETURN 1\nEND FUNCTION\nEND MODULE\n";
+    const string program = "Import Example.Menu As Menu\nPrint menu.create(7)\n";
+    const string module = "''' Menu module summary.\nModule Example.Menu\n''' Creates a value.\n''' @param Value: Number to return.\n''' @returns: The supplied number.\nPublic Function Create(Value As Number) As Number\nReturn Value\nEnd Function\nPrivate Function Secret() As Number\nReturn 1\nEnd Function\nEnd Module\n";
     var analysis = Multi(("Program.smile", true, program), ("Menu.smile", false, module));
     Equal(false, analysis.HasErrors);
     var tree = analysis.GetSyntaxTree("Program.smile");
@@ -1201,20 +1201,20 @@ Run("Imported aliases and qualified members resolve to exact declarations and do
     var memberPosition = program.IndexOf("create", StringComparison.Ordinal);
     Equal(true, SmileSymbolService.TryResolve(analysis, tree, memberPosition, out var member));
     Equal(SmileResolvedSymbolKind.Function, member.Kind);
-    Equal("FUNCTION Example.Menu.Create(Value AS NUMBER) AS NUMBER", member.Signature);
+    Equal("Function Example.Menu.Create(Value As Number) As Number", member.Signature);
     Equal("Create", member.DeclarationLocation!.Source.Substring(member.DeclarationLocation.Span.Start,
         member.DeclarationLocation.Span.Length));
     Equal("Number to return.", member.Documentation.Parameters["value"]);
     Equal("The supplied number.", member.Documentation.Returns);
 
-    const string privateUse = "IMPORT Example.Menu AS Menu\nPRINT Menu.Secret()\n";
+    const string privateUse = "Import Example.Menu As Menu\nPrint Menu.Secret()\n";
     var privateAnalysis = Multi(("Private.smile", true, privateUse), ("Menu.smile", false, module));
     Equal(false, SmileSymbolService.TryResolve(privateAnalysis, privateAnalysis.GetSyntaxTree("Private.smile"),
         privateUse.IndexOf("Secret", StringComparison.Ordinal), out _));
 });
 Run("Symbol resolution handles locals parameters types fields boundaries and invalid positions", () =>
 {
-    const string source = "OPTION EXPLICIT\nTYPE Player\nName AS TEXT\nEND TYPE\nDIM Hero AS Player\nCALL Work(Hero)\nSUB Work(Value AS Player)\nDIM Local AS NUMBER\nPRINT Value.Name\nPRINT Local\nEND SUB\n";
+    const string source = "Option Explicit\nType Player\nName As Text\nEnd Type\nDim Hero As Player\nCall Work(Hero)\nSub Work(Value As Player)\nDim Local As Number\nPrint Value.Name\nPrint Local\nEnd Sub\n";
     var analysis = Analyze(source);
     Equal(false, analysis.HasErrors);
     var tree = analysis.SyntaxTree;
@@ -1234,13 +1234,13 @@ Run("Symbol resolution handles locals parameters types fields boundaries and inv
     var typeUse = source.IndexOf("Player", source.IndexOf("Hero", StringComparison.Ordinal), StringComparison.Ordinal);
     Equal(SmileResolvedSymbolKind.Type, ResolveSymbol(analysis, tree, typeUse).Kind);
     Equal(false, SmileSymbolService.TryResolve(analysis, tree,
-        source.IndexOf("OPTION", StringComparison.Ordinal), out _));
+        source.IndexOf("Option", StringComparison.Ordinal), out _));
     Equal(false, SmileSymbolService.TryResolve(analysis, tree,
         source.IndexOf("\n", StringComparison.Ordinal), out _));
 });
 Run("Symbol resolution ignores comments strings and unresolved names without throwing", () =>
 {
-    const string source = "' MissingName in a comment\nPRINT \"MissingName in text\"\nPRINT MissingName\n";
+    const string source = "' MissingName in a comment\nPrint \"MissingName in text\"\nPrint MissingName\n";
     var analysis = Analyze(source);
     var tree = analysis.SyntaxTree;
     Equal(false, SmileSymbolService.TryResolve(analysis, tree,
@@ -1266,7 +1266,7 @@ Run("Reference editing refresh projection immediately and never deletes the targ
     {
         var project = Path.Combine(directory, "App.smileproj");
         var package = Path.Combine(directory, "Tools.smilelib");
-        File.WriteAllText(Path.Combine(directory, "Program.smile"), "END PROGRAM\n");
+        File.WriteAllText(Path.Combine(directory, "Program.smile"), "End Program\n");
         File.WriteAllText(package, "fixture");
         File.WriteAllText(project, "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" /></ItemGroup></SmileProject>");
         var added = SmileProjectFileEditor.AddReference(project, package);
@@ -1287,7 +1287,7 @@ Run("Library packages are deterministic and reload through authoritative analysi
     {
         var projectPath = Path.Combine(directory, "Tools.smilelibproj");
         var sourcePath = Path.Combine(directory, "Tools.smile");
-        File.WriteAllText(sourcePath, "MODULE Example.Tools\nPUBLIC FUNCTION Double(Value)\nRETURN Value * 2\nEND FUNCTION\nPRIVATE CONST Hidden = 1\nEND MODULE\n");
+        File.WriteAllText(sourcePath, "Module Example.Tools\nPublic Function Double(Value)\nReturn Value * 2\nEnd Function\nPrivate Const Hidden = 1\nEnd Module\n");
         File.WriteAllText(projectPath, "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Tools</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Tools.smile\" /></ItemGroup></SmileProject>");
         var compilation = SmileProjectCompilation.Load(projectPath);
         var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library);
@@ -1309,7 +1309,7 @@ Run("Library packages are deterministic and reload through authoritative analysi
             Equal(true, api.Contains("Double", StringComparison.Ordinal));
             Equal(false, api.Contains("Hidden", StringComparison.Ordinal));
         }
-        File.WriteAllText(sourcePath, "MODULE Example.Tools\nPUBLIC FUNCTION Triple(Value)\nRETURN Value * 3\nEND FUNCTION\nEND MODULE\n");
+        File.WriteAllText(sourcePath, "Module Example.Tools\nPublic Function Triple(Value)\nReturn Value * 3\nEnd Function\nEnd Module\n");
         var changedCompilation = SmileProjectCompilation.Load(projectPath);
         var changedAnalysis = SmileLanguage.Analyze(changedCompilation.Sources, SmileCompilationKind.Library);
         SmileLibraryPackage.Write(first, changedCompilation.Graph.Root, changedAnalysis);
@@ -1334,13 +1334,13 @@ Run("Dependent packages load with an explicitly supplied base package", () =>
 
         var baseProjectPath = Path.Combine(baseDirectory, "Base.smilelibproj");
         File.WriteAllText(Path.Combine(baseDirectory, "Base.smile"),
-            "MODULE Example.Base\nPUBLIC FUNCTION Double(Value)\nRETURN Value * 2\nEND FUNCTION\nEND MODULE\n");
+            "Module Example.Base\nPublic Function Double(Value)\nReturn Value * 2\nEnd Function\nEnd Module\n");
         File.WriteAllText(baseProjectPath,
             "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Base</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Base.smile\" /></ItemGroup></SmileProject>");
 
         var dependentProjectPath = Path.Combine(dependentDirectory, "Dependent.smilelibproj");
         File.WriteAllText(Path.Combine(dependentDirectory, "Dependent.smile"),
-            "MODULE Example.Dependent\nIMPORT Example.Base AS Base\nPUBLIC FUNCTION Quadruple(Value)\nRETURN Base.Double(Base.Double(Value))\nEND FUNCTION\nPRIVATE CONST Hidden = 9\nEND MODULE\n");
+            "Module Example.Dependent\nImport Example.Base As Base\nPublic Function Quadruple(Value)\nReturn Base.Double(Base.Double(Value))\nEnd Function\nPrivate Const Hidden = 9\nEnd Module\n");
         File.WriteAllText(dependentProjectPath,
             "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Dependent</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Dependent.smile\" /><SmileProjectReference Include=\"..\\Base\\Base.smilelibproj\" /></ItemGroup></SmileProject>");
 
@@ -1357,7 +1357,7 @@ Run("Dependent packages load with an explicitly supplied base package", () =>
 
         var consumerProjectPath = Path.Combine(consumerDirectory, "Consumer.smileproj");
         File.WriteAllText(Path.Combine(consumerDirectory, "Program.smile"),
-            "IMPORT Example.Dependent AS Dependent\nPRINT Dependent.Quadruple(3)\nEND PROGRAM\n");
+            "Import Example.Dependent As Dependent\nPrint Dependent.Quadruple(3)\nEnd Program\n");
         File.WriteAllText(consumerProjectPath,
             "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" /><SmileLibraryReference Include=\"..\\Base\\Base.smilelib\" /><SmileLibraryReference Include=\"..\\Dependent\\Dependent.smilelib\" /></ItemGroup></SmileProject>");
 
@@ -1370,7 +1370,7 @@ Run("Dependent packages load with an explicitly supplied base package", () =>
             .Contains("call smile_", StringComparison.Ordinal));
 
         var completionSources = consumerCompilation.Sources.Select(source => source.IsStartup
-            ? new SmileSourceDocument("IMPORT Example.Dependent AS Dependent\nPRINT Dependent.",
+            ? new SmileSourceDocument("Import Example.Dependent As Dependent\nPrint Dependent.",
                 source.FilePath, true, providerIdentity: source.ProviderIdentity)
             : source).ToArray();
         var completionAnalysis = SmileLanguage.Analyze(completionSources, SmileCompilationKind.Program,
@@ -1393,7 +1393,7 @@ Run("Dependent packages load with an explicitly supplied base package", () =>
         var looseResolution = CompilerDriver.LoadLooseLibraryResolution(
             Path.Combine(consumerDirectory, "Program.smile"), new[] { dependentPackagePath, basePackagePath });
         var looseRoot = new SmileSourceDocument(
-            "IMPORT Example.Base AS Base\nPRINT Base.Double(2)\nEND PROGRAM\n",
+            "Import Example.Base As Base\nPrint Base.Double(2)\nEnd Program\n",
             Path.Combine(consumerDirectory, "Loose.smile"), true);
         Equal(false, SmileLanguage.Analyze(new[] { looseRoot }.Concat(looseResolution.Sources).ToArray(),
             SmileCompilationKind.Program, looseResolution.CreateLooseRootContext()).HasErrors);
@@ -1544,18 +1544,18 @@ Run("Direct provider boundaries reject ambient and transitive project imports", 
         var appProject = Path.Combine(appDirectory, "App.smileproj");
         var programSource = Path.Combine(appDirectory, "Program.smile");
         File.WriteAllText(Path.Combine(baseDirectory, "Base.smile"),
-            "MODULE Example.Base\nPUBLIC FUNCTION Double(Value)\nRETURN Value * 2\nEND FUNCTION\nEND MODULE\n");
+            "Module Example.Base\nPublic Function Double(Value)\nReturn Value * 2\nEnd Function\nEnd Module\n");
         File.WriteAllText(baseProject,
             "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Base</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Base.smile\" /></ItemGroup></SmileProject>");
         File.WriteAllText(dependentSource,
-            "MODULE Example.Dependent\nIMPORT Example.Base AS Base\nPUBLIC FUNCTION Quadruple(Value)\nRETURN Base.Double(Base.Double(Value))\nEND FUNCTION\nEND MODULE\n");
+            "Module Example.Dependent\nImport Example.Base As Base\nPublic Function Quadruple(Value)\nReturn Base.Double(Base.Double(Value))\nEnd Function\nEnd Module\n");
         var dependentWithoutReference =
             "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Dependent</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Dependent.smile\" /></ItemGroup></SmileProject>";
         var dependentWithReference = dependentWithoutReference.Replace("</ItemGroup>",
             "<SmileProjectReference Include=\"..\\Base\\Base.smilelibproj\" /></ItemGroup>", StringComparison.Ordinal);
         File.WriteAllText(dependentProject, dependentWithoutReference);
         File.WriteAllText(programSource,
-            "IMPORT Example.Dependent AS Dependent\nPRINT Dependent.Quadruple(3)\nEND PROGRAM\n");
+            "Import Example.Dependent As Dependent\nPrint Dependent.Quadruple(3)\nEnd Program\n");
         File.WriteAllText(appProject,
             "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" /><SmileProjectReference Include=\"..\\Base\\Base.smilelibproj\" /><SmileProjectReference Include=\"..\\Dependent\\Dependent.smilelibproj\" /></ItemGroup></SmileProject>");
 
@@ -1594,7 +1594,7 @@ Run("Direct provider boundaries reject ambient and transitive project imports", 
         Equal(true, new MasmEmitter(validAnalysis, SmileGraphicsBackend.Auto, true, false).Emit()
             .Contains("call smile_", StringComparison.Ordinal));
 
-        File.WriteAllText(programSource, "IMPORT Example.Base AS Base\nEND PROGRAM\n");
+        File.WriteAllText(programSource, "Import Example.Base As Base\nEnd Program\n");
         var transitiveCompilation = SmileProjectCompilation.Load(appProject);
         var transitiveAnalysis = SmileLanguage.Analyze(transitiveCompilation.Sources, SmileCompilationKind.Program,
             transitiveCompilation.DependencyContext);
@@ -1603,7 +1603,7 @@ Run("Direct provider boundaries reject ambient and transitive project imports", 
         Equal(1, transitiveDiagnostic.Line);
         Equal(8, transitiveDiagnostic.Column);
 
-        File.WriteAllText(programSource, "IMPORT ");
+        File.WriteAllText(programSource, "Import ");
         var completionCompilation = SmileProjectCompilation.Load(appProject);
         var completionAnalysis = SmileLanguage.Analyze(completionCompilation.Sources, SmileCompilationKind.Program,
             completionCompilation.DependencyContext);
@@ -1638,7 +1638,7 @@ Run("Library output fingerprints reject stale and foreign packages without times
         var sourcePath = Path.Combine(directory, "Tools.smile");
         var outputPath = Path.Combine(directory, "Tools.smilelib");
         var projectXml = "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Tools</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Tools.smile\" /></ItemGroup></SmileProject>";
-        File.WriteAllText(sourcePath, "MODULE Example.Tools\nPUBLIC CONST Value = 1\nEND MODULE\n");
+        File.WriteAllText(sourcePath, "Module Example.Tools\nPublic Const Value = 1\nEnd Module\n");
         File.WriteAllText(projectPath, projectXml);
         var compilation = SmileProjectCompilation.Load(projectPath);
         var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library,
@@ -1646,7 +1646,7 @@ Run("Library output fingerprints reject stale and foreign packages without times
         SmileLibraryPackage.Write(outputPath, compilation.Graph.Root, analysis);
         Equal(false, CompilerDriver.NeedsLibraryBuild(compilation.Graph.Root, outputPath, analysis));
 
-        File.WriteAllText(sourcePath, "MODULE Example.Tools\nPUBLIC CONST Value = 2\nEND MODULE\n");
+        File.WriteAllText(sourcePath, "Module Example.Tools\nPublic Const Value = 2\nEnd Module\n");
         File.SetLastWriteTimeUtc(sourcePath, new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         var changedCompilation = SmileProjectCompilation.Load(projectPath);
         var changedAnalysis = SmileLanguage.Analyze(changedCompilation.Sources, SmileCompilationKind.Library,
@@ -1666,7 +1666,7 @@ Run("Library output fingerprints reject stale and foreign packages without times
         var foreignProjectPath = Path.Combine(directory, "Foreign.smilelibproj");
         var foreignSourcePath = Path.Combine(directory, "Foreign.smile");
         var foreignPackage = Path.Combine(directory, "Foreign.smilelib");
-        File.WriteAllText(foreignSourcePath, "MODULE Example.Foreign\nPUBLIC CONST Value = 9\nEND MODULE\n");
+        File.WriteAllText(foreignSourcePath, "Module Example.Foreign\nPublic Const Value = 9\nEnd Module\n");
         File.WriteAllText(foreignProjectPath,
             "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Foreign</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Foreign.smile\" /></ItemGroup></SmileProject>");
         var foreignCompilation = SmileProjectCompilation.Load(foreignProjectPath);
@@ -1712,8 +1712,8 @@ Run("Tolerant participation discovery retains missing transitive reference paths
         var middleProject = Path.Combine(directory, "Middle.smilelibproj");
         var leafProject = Path.Combine(directory, "Leaf.smilelibproj");
         var packagePath = Path.Combine(directory, "Restored.smilelib");
-        File.WriteAllText(Path.Combine(directory, "Program.smile"), "END PROGRAM\n");
-        File.WriteAllText(Path.Combine(directory, "Middle.smile"), "MODULE Middle\nEND MODULE\n");
+        File.WriteAllText(Path.Combine(directory, "Program.smile"), "End Program\n");
+        File.WriteAllText(Path.Combine(directory, "Middle.smile"), "Module Middle\nEnd Module\n");
         File.WriteAllText(rootProject,
             "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" /><SmileProjectReference Include=\"Middle.smilelibproj\" /></ItemGroup></SmileProject>");
         File.WriteAllText(middleProject,
@@ -1722,7 +1722,7 @@ Run("Tolerant participation discovery retains missing transitive reference paths
         Equal("SML3200", missingLeaf.Diagnostic!.Code);
         Equal(true, missingLeaf.Paths.Contains(leafProject, StringComparer.OrdinalIgnoreCase));
 
-        File.WriteAllText(Path.Combine(directory, "Leaf.smile"), "MODULE Leaf\nEND MODULE\n");
+        File.WriteAllText(Path.Combine(directory, "Leaf.smile"), "Module Leaf\nEnd Module\n");
         File.WriteAllText(leafProject,
             "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Leaf</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Leaf.smile\" /><SmileLibraryReference Include=\"Restored.smilelib\" /></ItemGroup></SmileProject>");
         var missingPackage = SmileProjectParticipationDiscovery.Discover(rootProject);
@@ -1742,14 +1742,14 @@ Run("Project diagnostics retain shared path formatting and compiler exit code on
         var projectPath = Path.Combine(directory, "App.smileproj");
         var sourcePath = Path.Combine(directory, "Program.smile");
         var missingPath = Path.Combine(directory, "Missing.smilelibproj");
-        File.WriteAllText(sourcePath, "END PROGRAM\n");
+        File.WriteAllText(sourcePath, "End Program\n");
         File.WriteAllText(projectPath,
             "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" /><SmileProjectReference Include=\"Missing.smilelibproj\" /></ItemGroup></SmileProject>");
         var diagnostic = SmileProjectCompilation.TryLoad(projectPath).Diagnostic!;
         Equal($"{missingPath}(1,1): error SML3200: {diagnostic.Message}", diagnostic.FormatCompiler());
         var safe = SmileLanguage.AnalyzeWithProjectDiagnostic(new[]
         {
-            new SmileSourceDocument("END PROGRAM\n", sourcePath, true)
+            new SmileSourceDocument("End Program\n", sourcePath, true)
         }, SmileCompilationKind.Program, diagnostic);
         var editorDiagnostic = safe.Diagnostics.Single(item => item.Code == "SML3200");
         Equal(missingPath, editorDiagnostic.FilePath);
@@ -1789,8 +1789,8 @@ Run("Project reference cycles are diagnosed with the dependency path", () =>
     Directory.CreateDirectory(directory);
     try
     {
-        File.WriteAllText(Path.Combine(directory, "A.smile"), "MODULE A\nEND MODULE\n");
-        File.WriteAllText(Path.Combine(directory, "B.smile"), "MODULE B\nEND MODULE\n");
+        File.WriteAllText(Path.Combine(directory, "A.smile"), "Module A\nEnd Module\n");
+        File.WriteAllText(Path.Combine(directory, "B.smile"), "Module B\nEnd Module\n");
         File.WriteAllText(Path.Combine(directory, "A.smilelibproj"), "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>A</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"A.smile\" /><SmileProjectReference Include=\"B.smilelibproj\" /></ItemGroup></SmileProject>");
         File.WriteAllText(Path.Combine(directory, "B.smilelibproj"), "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>B</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"B.smile\" /><SmileProjectReference Include=\"A.smilelibproj\" /></ItemGroup></SmileProject>");
         var cycle = ThrowsProjectDiagnostic(
@@ -1805,21 +1805,21 @@ Run("Project reference cycles are diagnosed with the dependency path", () =>
 Run("Private is the module default and modules cannot capture consumer globals", () =>
 {
     var privateAnalysis = Multi(
-        ("Program.smile", true, "IMPORT Example.Values AS Values\nPRINT Values.Hidden\n"),
-        ("Values.smile", false, "MODULE Example.Values\nCONST Hidden = 1\nEND MODULE\n"));
+        ("Program.smile", true, "Import Example.Values As Values\nPrint Values.Hidden\n"),
+        ("Values.smile", false, "Module Example.Values\nConst Hidden = 1\nEnd Module\n"));
     Equal(true, HasDiagnostic(privateAnalysis, "SML3105"));
     var captureAnalysis = Multi(
-        ("Program.smile", true, "IMPORT Example.Values AS Values\nScore = 10\nPRINT Values.ReadScore()\n"),
-        ("Values.smile", false, "MODULE Example.Values\nPUBLIC FUNCTION ReadScore()\nRETURN Score\nEND FUNCTION\nEND MODULE\n"));
+        ("Program.smile", true, "Import Example.Values As Values\nScore = 10\nPrint Values.ReadScore()\n"),
+        ("Values.smile", false, "Module Example.Values\nPublic Function ReadScore()\nReturn Score\nEnd Function\nEnd Module\n"));
     Equal(true, HasDiagnostic(captureAnalysis, "SML3110"));
 });
 Run("Duplicate module providers are rejected independently of source names", () =>
 {
     var analysis = SmileLanguage.Analyze(new[]
     {
-        new SmileSourceDocument("IMPORT Shared.Tools AS Tools\n", "Program.smile", true),
-        new SmileSourceDocument("MODULE Shared.Tools\nPUBLIC CONST First = 1\nEND MODULE\n", "First.smile", providerIdentity: "First.smilelib"),
-        new SmileSourceDocument("MODULE Shared.Tools\nPUBLIC CONST Second = 2\nEND MODULE\n", "Second.smile", providerIdentity: "Second.smilelib")
+        new SmileSourceDocument("Import Shared.Tools As Tools\n", "Program.smile", true),
+        new SmileSourceDocument("Module Shared.Tools\nPublic Const First = 1\nEnd Module\n", "First.smile", providerIdentity: "First.smilelib"),
+        new SmileSourceDocument("Module Shared.Tools\nPublic Const Second = 2\nEnd Module\n", "Second.smile", providerIdentity: "Second.smilelib")
     });
     Equal(true, HasDiagnostic(analysis, "SML3107"));
 });
@@ -1836,7 +1836,7 @@ Run("Malformed and unsafe packages are rejected before extraction", () =>
         using (var archive = System.IO.Compression.ZipFile.Open(unsafePackage, System.IO.Compression.ZipArchiveMode.Create))
         {
             using var writer = new StreamWriter(archive.CreateEntry("src/../escape.smile").Open());
-            writer.Write("MODULE Escape\nEND MODULE\n");
+            writer.Write("Module Escape\nEnd Module\n");
         }
         ThrowsContains(() => SmileLibraryPackage.Read(unsafePackage, Path.Combine(directory, "cache")), "Unsafe SMILE library archive path");
     }
@@ -1855,9 +1855,9 @@ Run("Project-reference debug sites retain the real library source path", () =>
 Run("Identical member names in different modules receive distinct emitter identities", () =>
 {
     var analysis = Multi(
-        ("Program.smile", true, "IMPORT Example.Alpha AS Alpha\nIMPORT Example.Beta AS Beta\nPRINT Alpha.Value()\nPRINT Beta.Value()\n"),
-        ("Alpha.smile", false, "MODULE Example.Alpha\nPUBLIC FUNCTION Value()\nRETURN 1\nEND FUNCTION\nEND MODULE\n"),
-        ("Beta.smile", false, "MODULE Example.Beta\nPUBLIC FUNCTION Value()\nRETURN 2\nEND FUNCTION\nEND MODULE\n"));
+        ("Program.smile", true, "Import Example.Alpha As Alpha\nImport Example.Beta As Beta\nPrint Alpha.Value()\nPrint Beta.Value()\n"),
+        ("Alpha.smile", false, "Module Example.Alpha\nPublic Function Value()\nReturn 1\nEnd Function\nEnd Module\n"),
+        ("Beta.smile", false, "Module Example.Beta\nPublic Function Value()\nReturn 2\nEnd Function\nEnd Module\n"));
     Equal(false, analysis.HasErrors);
     var assembly = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
     Equal(2, analysis.SemanticModel.Routines.Values.Count(routine => routine.Name == "Value"));
@@ -1868,25 +1868,25 @@ Run("Identical member names in different modules receive distinct emitter identi
 Run("Phase 3A keywords are shared and case-insensitive", () =>
 {
     Equal(SyntaxKind.OptionKeyword, SyntaxFacts.GetKeywordKind("option"));
-    Equal(SyntaxKind.ExplicitKeyword, SyntaxFacts.GetKeywordKind("EXPLICIT"));
+    Equal(SyntaxKind.ExplicitKeyword, SyntaxFacts.GetKeywordKind("Explicit"));
     Equal(SyntaxKind.BooleanKeyword, SyntaxFacts.GetKeywordKind("Boolean"));
     Equal(SyntaxKind.ByRefKeyword, SyntaxFacts.GetKeywordKind("byref"));
-    Equal(SyntaxKind.ByValKeyword, SyntaxFacts.GetKeywordKind("BYVAL"));
+    Equal(SyntaxKind.ByValKeyword, SyntaxFacts.GetKeywordKind("ByVal"));
 });
-Run("OPTION EXPLICIT is physical-source scoped and enforces declarations", () =>
+Run("Option Explicit is physical-source scoped and enforces declarations", () =>
 {
-    Equal(false, Analyze("OPTION EXPLICIT\nDIM Value AS NUMBER\nValue = 1\n").HasErrors);
-    Equal(true, HasDiagnostic(Analyze("OPTION EXPLICIT\nValue = 1\n"), "SML3303"));
-    Equal(true, HasDiagnostic(Analyze("Value = 1\nOPTION EXPLICIT\n"), "SML3300"));
-    Equal(true, HasDiagnostic(Analyze("OPTION EXPLICIT\nOPTION EXPLICIT\n"), "SML3300"));
+    Equal(false, Analyze("Option Explicit\nDim Value As Number\nValue = 1\n").HasErrors);
+    Equal(true, HasDiagnostic(Analyze("Option Explicit\nValue = 1\n"), "SML3303"));
+    Equal(true, HasDiagnostic(Analyze("Value = 1\nOption Explicit\n"), "SML3300"));
+    Equal(true, HasDiagnostic(Analyze("Option Explicit\nOption Explicit\n"), "SML3300"));
     var scoped = Multi(
-        ("Program.smile", true, "OPTION EXPLICIT\nDIM Value AS NUMBER\nValue = 1\n"),
-        ("Support.smile", false, "SUB Legacy()\nImplicit = 2\nEND SUB\n"));
+        ("Program.smile", true, "Option Explicit\nDim Value As Number\nValue = 1\n"),
+        ("Support.smile", false, "Sub Legacy()\nImplicit = 2\nEnd Sub\n"));
     Equal(false, scoped.HasErrors);
 });
 Run("Typed scalars arrays and legacy numeric arrays bind shared types", () =>
 {
-    var analysis = Analyze("OPTION EXPLICIT\nDIM Score AS NUMBER\nDIM Alive AS BOOLEAN\nDIM Name AS TEXT\nDIM Flags[2] AS BOOLEAN\nDIM Names[3] AS TEXT\nDIM Legacy[4]\n");
+    var analysis = Analyze("Option Explicit\nDim Score As Number\nDim Alive As Boolean\nDim Name As Text\nDim Flags[2] As Boolean\nDim Names[3] As Text\nDim Legacy[4]\n");
     Equal(false, analysis.HasErrors);
     Equal(SmileType.Number, analysis.SemanticModel.Symbols["Score"].Type);
     Equal(SmileType.Boolean, analysis.SemanticModel.Symbols["Alive"].Type);
@@ -1894,23 +1894,23 @@ Run("Typed scalars arrays and legacy numeric arrays bind shared types", () =>
     Equal(SmileType.Boolean, analysis.SemanticModel.Symbols["Flags"].Type);
     Equal(SmileType.Text, analysis.SemanticModel.Symbols["Names"].Type);
     Equal(SmileType.Number, analysis.SemanticModel.Symbols["Legacy"].Type);
-    Equal(true, HasDiagnostic(Analyze("DIM MissingType\n"), "SML3302"));
-    Equal(true, HasDiagnostic(Analyze("DIM Value AS STRING\n"), "SML3401"));
+    Equal(true, HasDiagnostic(Analyze("Dim MissingType\n"), "SML3302"));
+    Equal(true, HasDiagnostic(Analyze("Dim Value As STRING\n"), "SML3401"));
 });
-Run("TEXT constants values operators arrays SELECT and DRAW bind", () =>
+Run("Text constants values operators arrays Select and Draw bind", () =>
 {
-    const string source = "OPTION EXPLICIT\nCONST Greeting = \"Hello, \" + \"SMILE\"\nDIM Name AS TEXT\nDIM Copy AS TEXT\nDIM Names[2] AS TEXT\nDIM Same AS BOOLEAN\nName = Greeting\nCopy = Name\nNames[0] = Copy\nSame = Name = Copy\nSELECT CASE Name\nCASE \"Hello, SMILE\"\nPRINT Names[0]\nCASE ELSE\nPRINT \"NO\"\nEND SELECT\n";
+    const string source = "Option Explicit\nConst Greeting = \"Hello, \" + \"SMILE\"\nDim Name As Text\nDim Copy As Text\nDim Names[2] As Text\nDim Same As Boolean\nName = Greeting\nCopy = Name\nNames[0] = Copy\nSame = Name = Copy\nSelect Case Name\nCase \"Hello, SMILE\"\nPrint Names[0]\nCase Else\nPrint \"NO\"\nEnd Select\n";
     var analysis = Analyze(source);
     Equal(false, analysis.HasErrors);
     Equal("Hello, SMILE", analysis.SemanticModel.Symbols["Greeting"].ConstantValue);
     Equal(SmileType.Text, analysis.SemanticModel.Symbols["Names"].Type);
-    Equal(true, HasDiagnostic(Analyze("DIM TextValue AS TEXT\nTextValue = \"x\" + 1\n"), "SML3308"));
-    Equal(true, HasDiagnostic(Analyze("DIM A AS TEXT\nDIM B AS TEXT\nPRINT A < B\n"), "SML3308"));
-    Equal(false, Analyze("GAME WINDOW \"Text\"\nDIM Caption AS TEXT\nCaption = \"Ready\"\nDRAW TEXT Caption AT 10, 20 SIZE 16 COLOR WHITE\n").HasErrors);
+    Equal(true, HasDiagnostic(Analyze("Dim TextValue As Text\nTextValue = \"x\" + 1\n"), "SML3308"));
+    Equal(true, HasDiagnostic(Analyze("Dim A As Text\nDim B As Text\nPrint A < B\n"), "SML3308"));
+    Equal(false, Analyze("Game Window \"Text\"\nDim Caption As Text\nCaption = \"Ready\"\nDraw Text Caption At 10, 20 Size 16 Color WHITE\n").HasErrors);
 });
-Run("Typed routines default BYVAL and validate BYREF writable locations", () =>
+Run("Typed routines default ByVal and validate ByRef writable locations", () =>
 {
-    const string source = "OPTION EXPLICIT\nDIM Name AS TEXT\nName = \"Before\"\nCALL Rename(Name, \"After\")\nSUB Rename(BYREF Value AS TEXT, BYVAL Replacement AS TEXT)\nValue = Replacement\nEND SUB\nFUNCTION IsEmpty(Value AS TEXT) AS BOOLEAN\nRETURN Value = \"\"\nEND FUNCTION\n";
+    const string source = "Option Explicit\nDim Name As Text\nName = \"Before\"\nCall Rename(Name, \"After\")\nSub Rename(ByRef Value As Text, ByVal Replacement As Text)\nValue = Replacement\nEnd Sub\nFunction IsEmpty(Value As Text) As Boolean\nReturn Value = \"\"\nEnd Function\n";
     var analysis = Analyze(source);
     Equal(false, analysis.HasErrors);
     var rename = analysis.SemanticModel.Routines.Values.Single(routine => routine.Name == "Rename");
@@ -1918,41 +1918,41 @@ Run("Typed routines default BYVAL and validate BYREF writable locations", () =>
     Equal(ParameterPassingMode.ByVal, rename.Parameters[1].ParameterMode);
     Equal(SmileType.Text, rename.Parameters[0].Type);
     Equal(SmileType.Boolean, analysis.SemanticModel.Routines.Values.Single(routine => routine.Name == "IsEmpty").ReturnType);
-    Equal(true, HasDiagnostic(Analyze("SUB Set(BYREF Value AS NUMBER)\nValue = 1\nEND SUB\nCALL Set(5)\n"), "SML3305"));
-    Equal(true, HasDiagnostic(Analyze("CONST Fixed = 1\nSUB Set(BYREF Value AS NUMBER)\nValue = 1\nEND SUB\nCALL Set(Fixed)\n"), "SML3305"));
+    Equal(true, HasDiagnostic(Analyze("Sub Set(ByRef Value As Number)\nValue = 1\nEnd Sub\nCall Set(5)\n"), "SML3305"));
+    Equal(true, HasDiagnostic(Analyze("Const Fixed = 1\nSub Set(ByRef Value As Number)\nValue = 1\nEnd Sub\nCall Set(Fixed)\n"), "SML3305"));
 });
 Run("Legacy numeric parameters accept Boolean values compatibly", () =>
 {
-    const string source = "PRINT Legacy(TRUE)\nFUNCTION Legacy(Value)\nRETURN Value = 1\nEND FUNCTION\n";
+    const string source = "Print Legacy(True)\nFunction Legacy(Value)\nReturn Value = 1\nEnd Function\n";
     var analysis = Analyze(source);
     Equal(false, analysis.HasErrors);
     Equal(false, analysis.SemanticModel.Routines.Values.Single().Parameters[0].HasDeclaredType);
     Equal(true, new WebEmitter(analysis).Emit().Contains("? 1 : 0", StringComparison.Ordinal));
-    Equal(true, HasDiagnostic(Analyze("PRINT Typed(TRUE)\nFUNCTION Typed(Value AS NUMBER) AS BOOLEAN\nRETURN Value = 1\nEND FUNCTION\n"), "SML3304"));
+    Equal(true, HasDiagnostic(Analyze("Print Typed(True)\nFunction Typed(Value As Number) As Boolean\nReturn Value = 1\nEnd Function\n"), "SML3304"));
 });
 Run("Routine calls support sixteen typed parameters", () =>
 {
-    const string parameters = "Value1 AS NUMBER, Value2 AS NUMBER, Value3 AS NUMBER, Value4 AS NUMBER, Value5 AS NUMBER, Value6 AS NUMBER, Value7 AS NUMBER, Value8 AS NUMBER, Value9 AS NUMBER, Value10 AS NUMBER, Value11 AS NUMBER, Value12 AS NUMBER, Value13 AS NUMBER, Value14 AS NUMBER, Value15 AS NUMBER, Value16 AS NUMBER";
-    var analysis = Analyze($"PRINT Sum16(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)\nFUNCTION Sum16({parameters}) AS NUMBER\nRETURN Value1 + Value2 + Value3 + Value4 + Value5 + Value6 + Value7 + Value8 + Value9 + Value10 + Value11 + Value12 + Value13 + Value14 + Value15 + Value16\nEND FUNCTION\n");
+    const string parameters = "Value1 As Number, Value2 As Number, Value3 As Number, Value4 As Number, Value5 As Number, Value6 As Number, Value7 As Number, Value8 As Number, Value9 As Number, Value10 As Number, Value11 As Number, Value12 As Number, Value13 As Number, Value14 As Number, Value15 As Number, Value16 As Number";
+    var analysis = Analyze($"Print Sum16(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)\nFunction Sum16({parameters}) As Number\nReturn Value1 + Value2 + Value3 + Value4 + Value5 + Value6 + Value7 + Value8 + Value9 + Value10 + Value11 + Value12 + Value13 + Value14 + Value15 + Value16\nEnd Function\n");
     Equal(false, analysis.HasErrors);
     Equal(16, analysis.SemanticModel.Routines.Values.Single().Parameters.Count);
     Equal(true, new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit().Contains("[rbp+136]", StringComparison.Ordinal));
 });
-Run("Routine-local DIM shadows globals and diagnoses duplicate and early use", () =>
+Run("Routine-local Dim shadows globals and diagnoses duplicate and early use", () =>
 {
-    var shadow = Analyze("DIM Value AS NUMBER\nSUB Work()\nDIM Value AS TEXT\nValue = \"local\"\nPRINT Value\nEND SUB\nValue = 1\nCALL Work()\n");
+    var shadow = Analyze("Dim Value As Number\nSub Work()\nDim Value As Text\nValue = \"local\"\nPrint Value\nEnd Sub\nValue = 1\nCall Work()\n");
     Equal(false, shadow.HasErrors);
     Equal(SmileType.Text, shadow.SemanticModel.Routines.Values.Single().LocalSymbols["Value"].Type);
-    Equal(true, HasDiagnostic(Analyze("SUB Work()\nDIM Value AS NUMBER\nDIM Value AS TEXT\nEND SUB\n"), "SML3306"));
-    Equal(true, HasDiagnostic(Analyze("SUB Work()\nPRINT Value\nDIM Value AS NUMBER\nEND SUB\n"), "SML3307"));
+    Equal(true, HasDiagnostic(Analyze("Sub Work()\nDim Value As Number\nDim Value As Text\nEnd Sub\n"), "SML3306"));
+    Equal(true, HasDiagnostic(Analyze("Sub Work()\nPrint Value\nDim Value As Number\nEnd Sub\n"), "SML3307"));
 });
 Run("Legacy function inference checks all return types", () =>
 {
-    Equal(true, HasDiagnostic(Analyze("PRINT Mixed(TRUE)\nFUNCTION Mixed(Flag AS BOOLEAN)\nIF Flag THEN\nRETURN \"text\"\nELSE\nRETURN 1\nEND IF\nEND FUNCTION\n"), "SML3309"));
+    Equal(true, HasDiagnostic(Analyze("Print Mixed(True)\nFunction Mixed(Flag As Boolean)\nIf Flag Then\nReturn \"text\"\nElse\nReturn 1\nEnd If\nEnd Function\n"), "SML3309"));
 });
-Run("Web emitter uses JavaScript TEXT values and BYREF references", () =>
+Run("Web emitter uses JavaScript Text values and ByRef references", () =>
 {
-    var analysis = Analyze("DIM Name AS TEXT\nName = \"A\"\nCALL Replace(Name, \"B\")\nPRINT Name\nSUB Replace(BYREF Value AS TEXT, NewValue AS TEXT)\nValue = NewValue\nEND SUB\n");
+    var analysis = Analyze("Dim Name As Text\nName = \"A\"\nCall Replace(Name, \"B\")\nPrint Name\nSub Replace(ByRef Value As Text, NewValue As Text)\nValue = NewValue\nEnd Sub\n");
     Equal(false, analysis.HasErrors);
     var javascript = new WebEmitter(analysis).Emit();
     Equal(true, javascript.Contains("smile.ref(() =>", StringComparison.Ordinal));
@@ -1981,10 +1981,10 @@ Run("FormatVersion 5 packages contain deterministic typed public API metadata", 
             Equal(true, manifestReader.ReadToEnd().Contains("\"formatVersion\": 5", StringComparison.Ordinal));
             using var apiReader = new StreamReader(archive.GetEntry("api/public-symbols.json")!.Open());
             var api = apiReader.ReadToEnd();
-            Equal(true, api.Contains("\"type\": \"TEXT\"", StringComparison.Ordinal));
+            Equal(true, api.Contains("\"type\": \"Text\"", StringComparison.Ordinal));
             Equal(true, api.Contains("\"mode\": \"ByRef\"", StringComparison.Ordinal));
             Equal(true, api.Contains("\"mode\": \"ByVal\"", StringComparison.Ordinal));
-            Equal(true, api.Contains("\"returnType\": \"TEXT\"", StringComparison.Ordinal));
+            Equal(true, api.Contains("\"returnType\": \"Text\"", StringComparison.Ordinal));
             Equal(false, api.Contains("Hidden", StringComparison.Ordinal));
         }
         RewriteManifest(first, manifest => manifest.Replace("\"formatVersion\": 5", "\"formatVersion\": 4",
@@ -1993,7 +1993,7 @@ Run("FormatVersion 5 packages contain deterministic typed public API metadata", 
     }
     finally { Directory.Delete(directory, true); }
 });
-Run("FormatVersion 5 packages preserve direct and transitive GAME WINDOW capabilities", () =>
+Run("FormatVersion 5 packages preserve direct and transitive Game Window capabilities", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "SmilePhase5CapabilityPackageTests-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(directory);
@@ -2003,7 +2003,7 @@ Run("FormatVersion 5 packages preserve direct and transitive GAME WINDOW capabil
         File.WriteAllText(projectPath,
             "<SmileProject Version=\"1.0\"><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Capability.Proof</LibraryName><Version>1.0.0</Version><OutputName>Capability</OutputName></PropertyGroup><ItemGroup><SmileSource Include=\"Capability.smile\" /></ItemGroup></SmileProject>");
         File.WriteAllText(Path.Combine(directory, "Capability.smile"),
-            "MODULE Capability.Proof\nPUBLIC SUB Draw()\nFILL RECTANGLE 0, 0, 1, 1, WHITE\nEND SUB\nPUBLIC SUB Wrapper()\nCALL Draw()\nEND SUB\nPUBLIC SUB Pure()\nEND SUB\nEND MODULE\n");
+            "Module Capability.Proof\nPublic Sub Draw()\nFill Rectangle 0, 0, 1, 1, WHITE\nEnd Sub\nPublic Sub Wrapper()\nCall Draw()\nEnd Sub\nPublic Sub Pure()\nEnd Sub\nEnd Module\n");
         var compilation = SmileProjectCompilation.Load(projectPath, Path.Combine(directory, "cache"));
         var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library,
             compilation.DependencyContext);
@@ -2025,18 +2025,18 @@ Run("FormatVersion 5 packages preserve direct and transitive GAME WINDOW capabil
 });
 Run("Typed completion descriptions include parameter modes and returns", () =>
 {
-    const string source = "SUB Rename(BYREF Name AS TEXT, NewName AS TEXT)\nName = NewName\nEND SUB\nFUNCTION Join(First AS TEXT, Second AS TEXT) AS TEXT\nRETURN First + Second\nEND FUNCTION\nPRINT Ren";
+    const string source = "Sub Rename(ByRef Name As Text, NewName As Text)\nName = NewName\nEnd Sub\nFunction Join(First As Text, Second As Text) As Text\nReturn First + Second\nEnd Function\nPrint Ren";
     var completions = SmileCompletionService.GetCompletions(Analyze(source), source.Length);
-    Equal("SUB Rename(BYREF Name AS TEXT, NewName AS TEXT)",
+    Equal("Sub Rename(ByRef Name As Text, NewName As Text)",
         completions.Single(item => item.DisplayText == "Rename").Description);
-    Equal("FUNCTION Join(First AS TEXT, Second AS TEXT) AS TEXT",
+    Equal("Function Join(First As Text, Second As Text) As Text",
         completions.Single(item => item.DisplayText == "Join").Description);
-    const string typedDeclaration = "DIM Name AS ";
-    Equal("BOOLEAN|IMAGE|NUMBER|TEXT", string.Join("|", SmileCompletionService
+    const string typedDeclaration = "Dim Name As ";
+    Equal("Boolean|Image|Number|Text", string.Join("|", SmileCompletionService
         .GetCompletions(Analyze(typedDeclaration), typedDeclaration.Length).Select(item => item.DisplayText)));
 });
 
-Run("FormatVersion 5 public API metadata preserves IMAGE signatures", () =>
+Run("FormatVersion 5 public API metadata preserves Image signatures", () =>
 {
     var root = Path.Combine(Path.GetTempPath(), "SmilePhase4ImagePackageTests-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(root);
@@ -2046,7 +2046,7 @@ Run("FormatVersion 5 public API metadata preserves IMAGE signatures", () =>
         File.WriteAllText(projectPath,
             "<SmileProject Version=\"1.0\"><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Smile.Media.Proof</LibraryName><Version>1.0.0</Version><OutputName>Media</OutputName></PropertyGroup><ItemGroup><SmileSource Include=\"Media.smile\" /></ItemGroup></SmileProject>");
         File.WriteAllText(Path.Combine(root, "Media.smile"),
-            "MODULE Smile.Media.Proof\nPUBLIC FUNCTION Ready(Value AS IMAGE) AS BOOLEAN\nRETURN IMAGE_LOADED(Value)\nEND FUNCTION\nEND MODULE\n");
+            "Module Smile.Media.Proof\nPublic Function Ready(Value As Image) As Boolean\nReturn Image_Loaded(Value)\nEnd Function\nEnd Module\n");
         var compilation = SmileProjectCompilation.Load(projectPath, Path.Combine(root, "cache"));
         var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library,
             compilation.DependencyContext);
@@ -2056,15 +2056,15 @@ Run("FormatVersion 5 public API metadata preserves IMAGE signatures", () =>
         using var archive = System.IO.Compression.ZipFile.OpenRead(package);
         using var reader = new StreamReader(archive.GetEntry("api/public-symbols.json")!.Open());
         var api = reader.ReadToEnd();
-        Equal(true, api.Contains("\"type\": \"IMAGE\"", StringComparison.Ordinal));
-        Equal(true, api.Contains("\"returnType\": \"BOOLEAN\"", StringComparison.Ordinal));
+        Equal(true, api.Contains("\"type\": \"Image\"", StringComparison.Ordinal));
+        Equal(true, api.Contains("\"returnType\": \"Boolean\"", StringComparison.Ordinal));
     }
     finally { Directory.Delete(root, true); }
 });
 
-Run("IMAGE ownership emits retain release move and record cleanup on both targets", () =>
+Run("Image ownership emits retain release move and record cleanup on both targets", () =>
 {
-    const string source = "TYPE Media\nArt AS IMAGE\nEND TYPE\nDIM SourceImage AS IMAGE\nDIM Copy AS IMAGE\nDIM Items[2] AS IMAGE\nDIM Card AS Media\nCopy = SourceImage\nItems[0] = Copy\nCard.Art = Items[0]\nSourceImage = Card.Art\n";
+    const string source = "Type Media\nArt As Image\nEnd Type\nDim SourceImage As Image\nDim Copy As Image\nDim Items[2] As Image\nDim Card As Media\nCopy = SourceImage\nItems[0] = Copy\nCard.Art = Items[0]\nSourceImage = Card.Art\n";
     var analysis = Analyze(source);
     Equal(false, analysis.HasErrors);
     var native = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
@@ -2078,9 +2078,9 @@ Run("IMAGE ownership emits retain release move and record cleanup on both target
     Equal(true, web.Contains("record_0_media_clear", StringComparison.Ordinal));
 });
 
-Run("Web IMAGE reads are owned and calls transfer without an extra retain", () =>
+Run("Web Image reads are owned and calls transfer without an extra retain", () =>
 {
-    const string source = "GAME WINDOW \"Display title\" SIZE 320 BY 180\nDIM Shared AS IMAGE\nDIM Copy AS IMAGE\nCopy = GetImage()\nPRINT IMAGE_WIDTH(GetImage())\nDRAW IMAGE GetImage() AT 0, 0\nFUNCTION GetImage() AS IMAGE\nRETURN Shared\nEND FUNCTION\n";
+    const string source = "Game Window \"Display title\" Size 320 By 180\nDim Shared As Image\nDim Copy As Image\nCopy = GetImage()\nPrint Image_Width(GetImage())\nDraw Image GetImage() At 0, 0\nFunction GetImage() As Image\nReturn Shared\nEnd Function\n";
     var analysis = Analyze(source);
     Equal(false, analysis.HasErrors);
     var web = new WebEmitter(analysis, "Stable.Output", new[] { "Assets/Hero.png" }).Emit();
@@ -2091,9 +2091,9 @@ Run("Web IMAGE reads are owned and calls transfer without an extra retain", () =
     Equal(true, web.Contains("smile.drawImage(await", StringComparison.Ordinal));
 });
 
-Run("Structured clips emit balanced cleanup for RETURN loop exits and END PROGRAM", () =>
+Run("Structured clips emit balanced cleanup for Return loop exits and End Program", () =>
 {
-    const string source = "GAME WINDOW \"Clip cleanup\"\nCALL Leave()\nFOR Index = 0 TO 1\nCLIP RECTANGLE 0, 0, 20, 20\nEXIT FOR\nEND CLIP\nEND FOR\nDO\nCLIP RECTANGLE 0, 0, 20, 20\nEXIT DO\nEND CLIP\nLOOP\nCLIP RECTANGLE 0, 0, 20, 20\nEND PROGRAM\nEND CLIP\nSUB Leave()\nCLIP RECTANGLE 0, 0, 20, 20\nRETURN\nEND CLIP\nEND SUB\n";
+    const string source = "Game Window \"Clip cleanup\"\nCall Leave()\nFor Index = 0 To 1\nClip Rectangle 0, 0, 20, 20\nExit For\nEnd Clip\nEnd For\nDo\nClip Rectangle 0, 0, 20, 20\nExit Do\nEnd Clip\nLoop\nClip Rectangle 0, 0, 20, 20\nEnd Program\nEnd Clip\nSub Leave()\nClip Rectangle 0, 0, 20, 20\nReturn\nEnd Clip\nEnd Sub\n";
     var analysis = Analyze(source);
     Equal(false, analysis.HasErrors);
     var native = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
@@ -2105,7 +2105,7 @@ Run("Structured clips emit balanced cleanup for RETURN loop exits and END PROGRA
 
 Run("Record types bind nominal identities nested fields arrays and deterministic layouts", () =>
 {
-    const string source = "TYPE Point\nX AS NUMBER\nY AS NUMBER\nEND TYPE\nTYPE Actor\nName AS TEXT\nPosition AS Point\nActive AS BOOLEAN\nEND TYPE\nDIM Hero AS Actor\nDIM Party[2, 2] AS Actor\nHero.Position.X = 7\nParty[1, 1] = Hero\n";
+    const string source = "Type Point\nX As Number\nY As Number\nEnd Type\nType Actor\nName As Text\nPosition As Point\nActive As Boolean\nEnd Type\nDim Hero As Actor\nDim Party[2, 2] As Actor\nHero.Position.X = 7\nParty[1, 1] = Hero\n";
     var analysis = Analyze(source);
     Equal(false, analysis.HasErrors);
     var point = analysis.SemanticModel.Types["Point"];
@@ -2121,7 +2121,7 @@ Run("Record types bind nominal identities nested fields arrays and deterministic
 
 Run("Record value semantics emit native helpers and Web defaults clones and fresh arrays", () =>
 {
-    const string source = "TYPE Item\nName AS TEXT\nValue AS NUMBER\nEND TYPE\nDIM First AS Item\nDIM Copy AS Item\nDIM Items[2] AS Item\nFirst.Name = \"A\"\nCopy = First\nFirst = First\nItems[0] = Copy\nPRINT Items[0].Name\n";
+    const string source = "Type Item\nName As Text\nValue As Number\nEnd Type\nDim First As Item\nDim Copy As Item\nDim Items[2] As Item\nFirst.Name = \"A\"\nCopy = First\nFirst = First\nItems[0] = Copy\nPrint Items[0].Name\n";
     var analysis = Analyze(source);
     Equal(false, analysis.HasErrors);
     var native = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
@@ -2135,8 +2135,8 @@ Run("Record value semantics emit native helpers and Web defaults clones and fres
 
 Run("Record returns shift the Windows x64 ABI through sixteen explicit parameters", () =>
 {
-    const string parameters = "Value1 AS NUMBER, Value2 AS NUMBER, Value3 AS NUMBER, Value4 AS NUMBER, Value5 AS NUMBER, Value6 AS NUMBER, Value7 AS NUMBER, Value8 AS NUMBER, Value9 AS NUMBER, Value10 AS NUMBER, Value11 AS NUMBER, Value12 AS NUMBER, Value13 AS NUMBER, Value14 AS NUMBER, Value15 AS NUMBER, Value16 AS NUMBER";
-    var analysis = Analyze($"TYPE Result\nValue AS NUMBER\nEND TYPE\nDIM Answer AS Result\nAnswer = Make(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)\nFUNCTION Make({parameters}) AS Result\nDIM Value AS Result\nValue.Value = Value16\nRETURN Value\nEND FUNCTION\n");
+    const string parameters = "Value1 As Number, Value2 As Number, Value3 As Number, Value4 As Number, Value5 As Number, Value6 As Number, Value7 As Number, Value8 As Number, Value9 As Number, Value10 As Number, Value11 As Number, Value12 As Number, Value13 As Number, Value14 As Number, Value15 As Number, Value16 As Number";
+    var analysis = Analyze($"Type Result\nValue As Number\nEnd Type\nDim Answer As Result\nAnswer = Make(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)\nFunction Make({parameters}) As Result\nDim Value As Result\nValue.Value = Value16\nReturn Value\nEnd Function\n");
     Equal(false, analysis.HasErrors);
     var assembly = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
     Equal(true, assembly.Contains("[rbp+144]", StringComparison.Ordinal));
@@ -2145,40 +2145,40 @@ Run("Record returns shift the Windows x64 ABI through sixteen explicit parameter
 
 Run("Record type and field completion shares public visibility and nested type information", () =>
 {
-    const string fieldSource = "TYPE Point\nX AS NUMBER\nY AS NUMBER\nEND TYPE\nDIM Hero AS Point\nPRINT Hero.";
+    const string fieldSource = "Type Point\nX As Number\nY As Number\nEnd Type\nDim Hero As Point\nPrint Hero.";
     var fieldCompletions = SmileCompletionService.GetCompletions(Analyze(fieldSource), fieldSource.Length);
     Equal("X|Y", string.Join("|", fieldCompletions.Select(item => item.DisplayText)));
     Equal(true, fieldCompletions.All(item => item.Kind == SmileCompletionKind.Field));
 
-    const string typeSource = "TYPE Point\nX AS NUMBER\nEND TYPE\nDIM Hero AS ";
+    const string typeSource = "Type Point\nX As Number\nEnd Type\nDim Hero As ";
     var typeCompletions = SmileCompletionService.GetCompletions(Analyze(typeSource), typeSource.Length);
     Equal(true, typeCompletions.Any(item => item.DisplayText == "Point" && item.Kind == SmileCompletionKind.Type));
 
-    const string program = "IMPORT Example.Models AS Models\nDIM Value AS Models.";
+    const string program = "Import Example.Models As Models\nDim Value As Models.";
     var imported = Multi(("Program.smile", true, program),
-        ("Models.smile", false, "MODULE Example.Models\nPUBLIC TYPE Visible\nValue AS NUMBER\nEND TYPE\nPRIVATE TYPE Hidden\nValue AS NUMBER\nEND TYPE\nEND MODULE\n"));
+        ("Models.smile", false, "Module Example.Models\nPublic Type Visible\nValue As Number\nEnd Type\nPrivate Type Hidden\nValue As Number\nEnd Type\nEnd Module\n"));
     var importedCompletions = SmileCompletionService.GetCompletions(imported, program.Length);
     Equal(true, importedCompletions.Any(item => item.DisplayText == "Visible"));
     Equal(false, importedCompletions.Any(item => item.DisplayText == "Hidden"));
     Equal(false, importedCompletions.Any(item => item.Kind is SmileCompletionKind.Variable or SmileCompletionKind.Function));
 });
 
-Run("Record diagnostics cover declarations fields cycles visibility operations and BYREF", () =>
+Run("Record diagnostics cover declarations fields cycles visibility operations and ByRef", () =>
 {
-    Equal(true, HasDiagnostic(Analyze("TYPE A\nX AS NUMBER\nEND TYPE\nTYPE A\nY AS NUMBER\nEND TYPE\n"), "SML3400"));
-    Equal(true, HasDiagnostic(Analyze("TYPE A\nX AS Missing\nEND TYPE\n"), "SML3401"));
-    Equal(true, HasDiagnostic(Analyze("TYPE A\nX AS NUMBER\nX AS NUMBER\nEND TYPE\n"), "SML3402"));
-    Equal(true, HasDiagnostic(Analyze("SUB Work()\nTYPE A\nX AS NUMBER\nEND TYPE\nEND SUB\n"), "SML3403"));
-    Equal(true, HasDiagnostic(Analyze("TYPE A\nNext AS A\nEND TYPE\n"), "SML3404"));
-    Equal(true, HasDiagnostic(Analyze("TYPE A\nX AS NUMBER\nEND TYPE\nDIM Value AS A\nPRINT Value.Y\n"), "SML3405"));
-    Equal(true, HasDiagnostic(Analyze("DIM Value AS NUMBER\nPRINT Value.X\n"), "SML3406"));
-    Equal(true, HasDiagnostic(Analyze("TYPE A\nX AS NUMBER\nEND TYPE\nDIM Value AS A\nPRINT Value\n"), "SML3407"));
-    Equal(true, HasDiagnostic(Analyze("TYPE A\nX AS NUMBER\nEND TYPE\nCALL Change(Create())\nFUNCTION Create() AS A\nDIM Result AS A\nRETURN Result\nEND FUNCTION\nSUB Change(BYREF Value AS A)\nEND SUB\n"), "SML3305"));
+    Equal(true, HasDiagnostic(Analyze("Type A\nX As Number\nEnd Type\nType A\nY As Number\nEnd Type\n"), "SML3400"));
+    Equal(true, HasDiagnostic(Analyze("Type A\nX As Missing\nEnd Type\n"), "SML3401"));
+    Equal(true, HasDiagnostic(Analyze("Type A\nX As Number\nX As Number\nEnd Type\n"), "SML3402"));
+    Equal(true, HasDiagnostic(Analyze("Sub Work()\nType A\nX As Number\nEnd Type\nEnd Sub\n"), "SML3403"));
+    Equal(true, HasDiagnostic(Analyze("Type A\nNext As A\nEnd Type\n"), "SML3404"));
+    Equal(true, HasDiagnostic(Analyze("Type A\nX As Number\nEnd Type\nDim Value As A\nPrint Value.Y\n"), "SML3405"));
+    Equal(true, HasDiagnostic(Analyze("Dim Value As Number\nPrint Value.X\n"), "SML3406"));
+    Equal(true, HasDiagnostic(Analyze("Type A\nX As Number\nEnd Type\nDim Value As A\nPrint Value\n"), "SML3407"));
+    Equal(true, HasDiagnostic(Analyze("Type A\nX As Number\nEnd Type\nCall Change(Create())\nFunction Create() As A\nDim Result As A\nReturn Result\nEnd Function\nSub Change(ByRef Value As A)\nEnd Sub\n"), "SML3305"));
 });
 
 Run("Routine compiler temporaries have distinct invocation-local frame storage", () =>
 {
-    const string source = "OPTION EXPLICIT\nCALL Work(2)\nSUB Work(Level AS NUMBER)\nDIM Index AS NUMBER\nDIM Values[2] AS TEXT\nFOR Index = 1 TO Level\nSELECT CASE Level\nCASE 1\nPRINT Index\nEND SELECT\nSELECT CASE TRUE\nCASE TRUE\nPRINT Index\nEND SELECT\nSELECT CASE \"X\" + \"\"\nCASE \"X\"\nPRINT Values[0]\nEND SELECT\nEND FOR\nEND SUB\n";
+    const string source = "Option Explicit\nCall Work(2)\nSub Work(Level As Number)\nDim Index As Number\nDim Values[2] As Text\nFor Index = 1 To Level\nSelect Case Level\nCase 1\nPrint Index\nEnd Select\nSelect Case True\nCase True\nPrint Index\nEnd Select\nSelect Case \"X\" + \"\"\nCase \"X\"\nPrint Values[0]\nEnd Select\nEnd For\nEnd Sub\n";
     var analysis = Analyze(source);
     Equal(false, analysis.HasErrors);
     var emitter = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false);
@@ -2204,7 +2204,7 @@ Run("Routine compiler temporaries have distinct invocation-local frame storage",
     Equal(true, assembly.Contains("call smile_text_move_assign", StringComparison.Ordinal));
 });
 
-Run("Owned TEXT selector cleanup precedes RETURN and loop exits", () =>
+Run("Owned Text selector cleanup precedes Return and loop exits", () =>
 {
     var nested = Analyze(File.ReadAllText("examples/Phase3A1Hardening/NestedCleanup.smile"));
     Equal(false, nested.HasErrors);
@@ -2240,12 +2240,12 @@ Run("Web record fields use deterministic bound keys instead of source properties
 
 Run("Module record types cannot capture project-global ambient types", () =>
 {
-    const string module = "MODULE Example.Isolated\nPUBLIC TYPE Wrapper\nValue AS ConsumerData\nEND TYPE\nPUBLIC DIM Shared AS ConsumerData\nPUBLIC FUNCTION Copy(Value AS ConsumerData) AS ConsumerData\nRETURN Value\nEND FUNCTION\nEND MODULE\n";
+    const string module = "Module Example.Isolated\nPublic Type Wrapper\nValue As ConsumerData\nEnd Type\nPublic Dim Shared As ConsumerData\nPublic Function Copy(Value As ConsumerData) As ConsumerData\nReturn Value\nEnd Function\nEnd Module\n";
     var withGlobal = Multi(
-        ("Program.smile", true, "TYPE ConsumerData\nValue AS NUMBER\nEND TYPE\nPRINT 1\n"),
+        ("Program.smile", true, "Type ConsumerData\nValue As Number\nEnd Type\nPrint 1\n"),
         ("Library.smile", false, module));
     var withoutGlobal = Multi(
-        ("Program.smile", true, "PRINT 1\n"),
+        ("Program.smile", true, "Print 1\n"),
         ("Library.smile", false, module));
     var withDiagnostics = withGlobal.Diagnostics.Where(item => item.Code == "SML3401")
         .Select(item => item.Message).ToArray();
@@ -2260,8 +2260,8 @@ Run("Same-module record types bind unqualified across physical files", () =>
 {
     var analysis = SmileLanguage.Analyze(new[]
     {
-        new SmileSourceDocument("MODULE Example.Shared\nPUBLIC TYPE Component\nValue AS NUMBER\nEND TYPE\nPUBLIC TYPE Container\nItem AS Component\nEND TYPE\nEND MODULE\n", "Types.smile"),
-        new SmileSourceDocument("MODULE Example.Shared\nPUBLIC DIM Values[2] AS Container\nPUBLIC FUNCTION Copy(Value AS Container) AS Container\nDIM Local AS Container\nLocal = Value\nRETURN Local\nEND FUNCTION\nEND MODULE\n", "Factories.smile")
+        new SmileSourceDocument("Module Example.Shared\nPublic Type Component\nValue As Number\nEnd Type\nPublic Type Container\nItem As Component\nEnd Type\nEnd Module\n", "Types.smile"),
+        new SmileSourceDocument("Module Example.Shared\nPublic Dim Values[2] As Container\nPublic Function Copy(Value As Container) As Container\nDim Local As Container\nLocal = Value\nReturn Local\nEnd Function\nEnd Module\n", "Factories.smile")
     }, SmileCompilationKind.Library);
     Equal(false, analysis.HasErrors);
     Equal("Container", analysis.SemanticModel.Modules["Example.Shared"].Members["Values"].Variable!.Type.Name);
@@ -2269,43 +2269,43 @@ Run("Same-module record types bind unqualified across physical files", () =>
 
 Run("Record completion separates type value alias and indexed-field contexts", () =>
 {
-    const string moduleTypes = "MODULE Example.Models\nPUBLIC TYPE Position\nX AS NUMBER\nY AS NUMBER\nEND TYPE\nPUBLIC TYPE Actor\nName AS TEXT\nPosition AS Position\nEND TYPE\nPUBLIC DIM DefaultActor AS Actor\nPUBLIC FUNCTION Create() AS Actor\nDIM Value AS Actor\nRETURN Value\nEND FUNCTION\nEND MODULE\n";
+    const string moduleTypes = "Module Example.Models\nPublic Type Position\nX As Number\nY As Number\nEnd Type\nPublic Type Actor\nName As Text\nPosition As Position\nEnd Type\nPublic Dim DefaultActor As Actor\nPublic Function Create() As Actor\nDim Value As Actor\nReturn Value\nEnd Function\nEnd Module\n";
 
-    const string crossFile = "MODULE Example.Models\nPUBLIC DIM Value AS \nEND MODULE\n";
+    const string crossFile = "Module Example.Models\nPublic Dim Value As \nEnd Module\n";
     var crossAnalysis = Multi(
-        ("Program.smile", true, "TYPE ConsumerOnly\nValue AS NUMBER\nEND TYPE\nPRINT 1\n"),
+        ("Program.smile", true, "Type ConsumerOnly\nValue As Number\nEnd Type\nPrint 1\n"),
         ("Types.smile", false, moduleTypes), ("Use.smile", false, crossFile));
     var crossTypes = SmileCompletionService.GetCompletions(crossAnalysis, "Use.smile",
-        crossFile.IndexOf("\nEND MODULE", StringComparison.Ordinal));
+        crossFile.IndexOf("\nEnd Module", StringComparison.Ordinal));
     Equal(true, crossTypes.Any(item => item.DisplayText == "Actor" && item.Kind == SmileCompletionKind.Type));
     Equal(false, crossTypes.Any(item => item.DisplayText == "ConsumerOnly"));
 
-    const string valueProgram = "IMPORT Example.Models AS Models\nPRINT Models.";
+    const string valueProgram = "Import Example.Models As Models\nPrint Models.";
     var valueAnalysis = Multi(("Program.smile", true, valueProgram), ("Models.smile", false, moduleTypes));
     var aliasValues = SmileCompletionService.GetCompletions(valueAnalysis, valueProgram.Length);
     Equal(true, aliasValues.Any(item => item.DisplayText == "DefaultActor"));
     Equal(true, aliasValues.Any(item => item.DisplayText == "Create"));
     Equal(false, aliasValues.Any(item => item.Kind == SmileCompletionKind.Type));
 
-    const string typeProgram = "IMPORT Example.Models AS Models\nDIM Value AS Models.";
+    const string typeProgram = "Import Example.Models As Models\nDim Value As Models.";
     var typeAnalysis = Multi(("Program.smile", true, typeProgram), ("Models.smile", false, moduleTypes));
     var aliasTypes = SmileCompletionService.GetCompletions(typeAnalysis, typeProgram.Length);
     Equal("Actor|Position", string.Join("|", aliasTypes.Select(item => item.DisplayText)));
     Equal(true, aliasTypes.All(item => item.Kind == SmileCompletionKind.Type));
-    Equal(false, SmileCompletionService.GetCompletions(Analyze("TYPE Local\nValue AS NUMBER\nEND TYPE\nPRINT "), 49)
+    Equal(false, SmileCompletionService.GetCompletions(Analyze("Type Local\nValue As Number\nEnd Type\nPrint "), 49)
         .Any(item => item.Kind == SmileCompletionKind.Type));
 
-    const string records = "TYPE Position\nX AS NUMBER\nY AS NUMBER\nEND TYPE\nTYPE Actor\nName AS TEXT\nPosition AS Position\nEND TYPE\nDIM Party[4] AS Actor\nDIM Grid[2, 2] AS Actor\n";
+    const string records = "Type Position\nX As Number\nY As Number\nEnd Type\nType Actor\nName As Text\nPosition As Position\nEnd Type\nDim Party[4] As Actor\nDim Grid[2, 2] As Actor\n";
     foreach (var expression in new[] { "Party[Index + 1].", "Grid[X, Y]." })
     {
-        var source = records + "PRINT " + expression;
+        var source = records + "Print " + expression;
         var fields = SmileCompletionService.GetCompletions(Analyze(source), source.Length);
         Equal("Name|Position", string.Join("|", fields.Select(item => item.DisplayText)));
     }
-    var nestedSource = records + "PRINT Party[Index + 1].Position.";
+    var nestedSource = records + "Print Party[Index + 1].Position.";
     Equal("X|Y", string.Join("|", SmileCompletionService.GetCompletions(Analyze(nestedSource), nestedSource.Length)
         .Select(item => item.DisplayText)));
-    var importedFieldSource = "IMPORT Example.Models AS Models\nPRINT Models.DefaultActor.";
+    var importedFieldSource = "Import Example.Models As Models\nPrint Models.DefaultActor.";
     var importedFields = Multi(("Program.smile", true, importedFieldSource), ("Models.smile", false, moduleTypes));
     Equal("Name|Position", string.Join("|", SmileCompletionService
         .GetCompletions(importedFields, importedFieldSource.Length).Select(item => item.DisplayText)));
@@ -2321,7 +2321,7 @@ Run("FormatVersion 5 public API uses logical provider identities deterministical
     try
     {
         const string projectText = "<SmileProject Version=\"1.0\"><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.ProviderBundle</LibraryName><Version>1.2.3</Version><OutputName>Provider</OutputName></PropertyGroup><ItemGroup><SmileSource Include=\"Types.smile\" /></ItemGroup></SmileProject>";
-        const string sourceText = "MODULE Example.Models\nPUBLIC TYPE Actor\nName AS TEXT\nEND TYPE\nEND MODULE\n";
+        const string sourceText = "Module Example.Models\nPublic Type Actor\nName As Text\nEnd Type\nEnd Module\n";
         byte[] Build(string checkout, string packagePath)
         {
             File.WriteAllText(Path.Combine(checkout, "Provider.smilelibproj"), projectText);
@@ -2368,11 +2368,11 @@ Run("Public API preserves referenced record provider identities", () =>
         File.WriteAllText(Path.Combine(baseRoot, "Base.smilelibproj"),
             "<SmileProject Version=\"1.0\"><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.BaseProvider</LibraryName><Version>1.0.0</Version><OutputName>Base</OutputName></PropertyGroup><ItemGroup><SmileSource Include=\"Types.smile\" /></ItemGroup></SmileProject>");
         File.WriteAllText(Path.Combine(baseRoot, "Types.smile"),
-            "MODULE Example.Base\nPUBLIC TYPE Point\nX AS NUMBER\nEND TYPE\nEND MODULE\n");
+            "Module Example.Base\nPublic Type Point\nX As Number\nEnd Type\nEnd Module\n");
         File.WriteAllText(Path.Combine(consumerRoot, "Consumer.smilelibproj"),
             "<SmileProject Version=\"1.0\"><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.ConsumerProvider</LibraryName><Version>2.0.0</Version><OutputName>Consumer</OutputName></PropertyGroup><ItemGroup><SmileSource Include=\"Types.smile\" /><SmileProjectReference Include=\"..\\Base\\Base.smilelibproj\" /></ItemGroup></SmileProject>");
         File.WriteAllText(Path.Combine(consumerRoot, "Types.smile"),
-            "MODULE Example.Consumer\nIMPORT Example.Base AS Base\nPUBLIC TYPE Wrapper\nValue AS Base.Point\nEND TYPE\nPUBLIC FUNCTION Copy(Value AS Base.Point) AS Base.Point\nRETURN Value\nEND FUNCTION\nEND MODULE\n");
+            "Module Example.Consumer\nImport Example.Base As Base\nPublic Type Wrapper\nValue As Base.Point\nEnd Type\nPublic Function Copy(Value As Base.Point) As Base.Point\nReturn Value\nEnd Function\nEnd Module\n");
 
         string BuildPackage(string projectPath, string packagePath)
         {
@@ -2412,24 +2412,24 @@ Run("Smile.UI 1.1.1 publishes the Phase 5.2.1 submenu hardening", () =>
         "UI_MENU_TEXT_ELLIPSIS", "UI_MENU_TEXT_CLIP", "UI_MENU_TEXT_WRAP",
         "UI_SUBMENU_INDICATOR_AFTER_TEXT", "UI_SUBMENU_INDICATOR_RIGHT_ALIGNED",
         "UI_MAX_MENU_NAVIGATORS", "UI_MAX_MENU_DEPTH", "UI_MAX_SUBMENU_BINDINGS" })
-        Equal(true, core.Contains("PUBLIC CONST " + constant, StringComparison.Ordinal));
+        Equal(true, core.Contains("Public Const " + constant, StringComparison.Ordinal));
     foreach (var member in new[] { "SetItemHasSubmenu", "ItemHasSubmenu", "ItemRevision", "Bounds",
         "SetPosition", "SelectedRowRect", "ResetSelection", "DrawFocused" })
-        Equal(true, menu.Contains("PUBLIC ", StringComparison.Ordinal) &&
+        Equal(true, menu.Contains("Public ", StringComparison.Ordinal) &&
             menu.Contains(member + "(", StringComparison.Ordinal));
     foreach (var member in new[] { "BindSubmenu", "UnbindSubmenu", "ClearBindings", "OpenSelected", "Back",
         "HandleKey", "LastAcceptedValue", "Relayout", "DrawActive", "DrawStack" })
         Equal(true, navigator.Contains(member + "(", StringComparison.Ordinal));
-    Equal(true, core.Contains("ShowSubmenuIndicator AS BOOLEAN", StringComparison.Ordinal));
-    Equal(true, core.Contains("SubmenuIndicatorPosition AS NUMBER", StringComparison.Ordinal));
+    Equal(true, core.Contains("ShowSubmenuIndicator As Boolean", StringComparison.Ordinal));
+    Equal(true, core.Contains("SubmenuIndicatorPosition As Number", StringComparison.Ordinal));
     Equal(true, navigator.Contains("Menu.SelectedIndex(ParentHandle) <> StackParentItems[Slot, Level]", StringComparison.Ordinal));
-    Equal(true, navigator.Contains("CALL Menu.DrawFocused(StackMenus[Slot, Level], TRUE)", StringComparison.Ordinal));
+    Equal(true, navigator.Contains("Call Menu.DrawFocused(StackMenus[Slot, Level], True)", StringComparison.Ordinal));
 });
 
 Run("MenuGallery uses reusable hierarchical navigation without embedded markers", () =>
 {
     var gallery = File.ReadAllText("examples/MenuGallery/Program.smile");
-    Equal(true, gallery.Contains("IMPORT Smile.UI.MenuNavigator AS MenuNavigator", StringComparison.Ordinal));
+    Equal(true, gallery.Contains("Import Smile.UI.MenuNavigator As MenuNavigator", StringComparison.Ordinal));
     Equal(true, gallery.Contains("MenuNavigator.HandleKey", StringComparison.Ordinal));
     Equal(true, gallery.Contains("MenuNavigator.DrawStack", StringComparison.Ordinal));
     Equal(true, gallery.Contains("MenuNavigator.LastAcceptedValue", StringComparison.Ordinal));

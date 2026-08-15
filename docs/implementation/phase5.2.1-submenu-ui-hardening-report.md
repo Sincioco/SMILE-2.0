@@ -18,7 +18,7 @@ No compiler keyword, native menu helper, game-specific UI flow, Phase 6 feature,
 
 ## State-coherence proof
 
-- **Pre-fix edge-coherence result:** The isolated baseline fixture printed `TRUE FALSE FALSE FALSE`. The root selection changed programmatically, but the child, grandchild, and great-grandchild remained active even though their recorded parent edges were no longer valid.
+- **Pre-fix edge-coherence result:** The isolated baseline fixture printed `True False False False`. The root selection changed programmatically, but the child, grandchild, and great-grandchild remained active even though their recorded parent edges were no longer valid.
 - **Edge-coherence fix:** `MenuNavigator.RepairSlot` now validates every active edge against the current parent selection and recorded parent item, pruning that edge and all descendants plus stale accepted state at the first mismatch.
 - **Programmatic selection pruning:** Covered by project and packaged-library state fixtures and by live MenuGallery key `X`; a four-level stack immediately returned to the root after its parent selection changed.
 - **Disabled parent-item pruning:** Disabling the active parent item invalidates the edge and prunes the child stack without transferring ownership or corrupting selection state.
@@ -27,10 +27,10 @@ No compiler keyword, native menu helper, game-specific UI flow, Phase 6 feature,
 
 ## Scrollbar and indicator proof
 
-- **ShowScrollbar toggle:** `FALSE` reclaims the entire scrollbar gutter. `TRUE` reserves a stable gutter whenever the style enables scrollbars, preventing label-width and marker jitter as item counts change.
+- **ShowScrollbar toggle:** `False` reclaims the entire scrollbar gutter. `True` reserves a stable gutter whenever the style enables scrollbars, preventing label-width and marker jitter as item counts change.
 - **Scrollbar proportional sizing:** The focused viewport fixture covers 4/5, 4/20, and 4/64 visible/total ratios plus all-visible and tiny-track cases. The thumb is bounded, nonzero when drawable, and never exceeds the track.
 - **Scrollbar proportional position:** Top, middle, and bottom selections map proportionally to the available thumb travel, including tiny tracks, without division by zero.
-- **Submenu indicator hidden:** `ShowSubmenuIndicator = FALSE` suppresses marker drawing while Right/Enter/Space navigation remains active.
+- **Submenu indicator hidden:** `ShowSubmenuIndicator = False` suppresses marker drawing while Right/Enter/Space navigation remains active.
 - **Submenu indicator after-text:** `UI_SUBMENU_INDICATOR_AFTER_TEXT` appends the exact marker after the final visible label line and participates safely in clip, ellipsis, and wrap fitting.
 - **Submenu indicator right-aligned:** `UI_SUBMENU_INDICATOR_RIGHT_ALIGNED` reserves a right marker region immediately before any scrollbar gutter.
 - **Exact `" >"` marker:** The library draws the exact two-character literal ` >`; callers continue storing plain labels.
@@ -40,14 +40,14 @@ No compiler keyword, native menu helper, game-specific UI flow, Phase 6 feature,
 
 ## Automated validation
 
-- **Project/package state tests:** `Phase5SubmenuStateTests` and `Phase5SubmenuStateTests.Package` each printed exactly 65 `TRUE` lines with exact parity. The invalid pure-console capability fixture produced the intended consumer-located `SML3704`.
+- **Project/package state tests:** `Phase5SubmenuStateTests` and `Phase5SubmenuStateTests.Package` each printed exactly 65 `True` lines with exact parity. The invalid pure-console capability fixture produced the intended consumer-located `SML3704`.
 - **Web trace:** The 33-frame MenuGallery harness covered depths 1 through 4, all cursor states, top/middle/bottom scrolling, scrollbar toggling, hidden/after-text/right-aligned indicators, long-label overflow, four-to-one programmatic pruning, theme changes, viewport bounds, painter order, audio events, and final cleanup.
 - **DirectX:** Live MenuGallery acceptance covered the four-level stack, four cursors, both marker placements, hidden markers with working navigation, ellipsis/wrap, scrollbar top/middle/bottom and toggle behavior, automated pruning, back navigation, and bitmap/vector themes.
 - **GDI:** The explicit GDI artifact repeated the four-level cursor, marker, scrolling, long-label, pruning, navigation, and painter-order checks.
 - **Web:** Chrome ran the published build at device-pixel-ratio 2 with an 839 by 472 CSS canvas and 1678 by 944 backing canvas. The complete four-level, scrollbar, marker, long-label, pruning, and theme sequence passed with no console warnings or errors. The temporary server and test tab were closed.
 - **Breakpoints/F10:** Visual Studio bound in `MenuNavigator.RepairSlot`, `MenuNavigator.DrawStack`, and `Menu.DrawFocused`; F10 advanced within mapped `.smile` source. Solution Explorer displayed `Smile.UI (1.1.1)`, and completion exposed the two new style fields and both indicator constants.
 - **Build:** `cmd /c scripts\build.cmd` passed in 14.1 seconds.
-- **Smoke:** `cmd /c scripts\smoke-test.cmd` passed with exit code 0 in 225.3 seconds: 181 language/compiler/project/completion/timing tests, 39 native graphics/audio-focus checks, and 38 native TEXT checks passed.
+- **Smoke:** `cmd /c scripts\smoke-test.cmd` passed with exit code 0 in 225.3 seconds: 181 language/compiler/project/completion/timing tests, 39 native graphics/audio-focus checks, and 38 native Text checks passed.
 - **Ten-game matrix:** All ten normal and no-demo native builds and all ten normal and no-demo Web builds passed. Prior Phase 1 through Phase 5.2 package, provider, media, UI, debugger, DirectX, GDI, and browser gates remained green.
 
 ## Installed Visual Studio artifacts
@@ -77,6 +77,6 @@ Every installed payload above matches its final VSIX build counterpart byte-for-
 
 ## Known limitations and final tree
 
-- **Known limitations:** Rotation and Phase 6 remain outside this milestone. Direct calls to lower-level `Menu.DrawFocused(..., FALSE)` intentionally suppress that individual menu's cursor; `MenuNavigator.DrawStack` now passes focused rendering for every active level as specified. No mandatory Phase 5.2.1 limitation remains.
+- **Known limitations:** Rotation and Phase 6 remain outside this milestone. Direct calls to lower-level `Menu.DrawFocused(..., False)` intentionally suppress that individual menu's cursor; `MenuNavigator.DrawStack` now passes focused rendering for every active level as specified. No mandatory Phase 5.2.1 limitation remains.
 - **Uncommitted/untracked files:** The pre-commit review contained only the 22 intended tracked modifications plus this report and no unrelated or untracked files. The final handoff requires and verifies a clean status after push.
 - No additional user manual testing is requested; DirectX, GDI, Chrome, breakpoint, F10, package, and complete regression acceptance were completed in this run.

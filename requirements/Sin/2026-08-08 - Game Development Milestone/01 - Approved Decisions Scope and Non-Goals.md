@@ -26,21 +26,21 @@ Full-screen toggle: Alt+Enter
 4K scaling:         Exact 4×
 ```
 
-`GAME WINDOW "Title"` uses 960×540 automatically.
+`Game Window "Title"` uses 960×540 automatically.
 
 ## Approved language additions
 
 - constants;
-- `*`, `/`, and `MOD`;
+- `*`, `/`, and `Mod`;
 - underscores in identifiers;
 - two-dimensional fixed arrays;
-- `SUB`, `CALL`, `FUNCTION`, and `RETURN`;
-- `SELECT CASE`;
-- unconditional `DO ... LOOP`;
-- `EXIT FOR`, `EXIT DO`, and `END PROGRAM`;
+- `Sub`, `Call`, `Function`, and `Return`;
+- `Select Case`;
+- unconditional `Do ... Loop`;
+- `Exit For`, `Exit Do`, and `End Program`;
 - native game window;
 - rectangles, rounded rectangles, circles, lines, text, and numbers;
-- named and RGB colors;
+- named and Rgb colors;
 - frame presentation;
 - timer and window-close functions;
 - key events and held-key input;

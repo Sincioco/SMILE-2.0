@@ -1,158 +1,158 @@
-MODULE Smile.UI.Core
+Module Smile.UI.Core
 
-OPTION EXPLICIT
+Option Explicit
 
-PUBLIC CONST UI_EVENT_NONE = 0
-PUBLIC CONST UI_EVENT_CHANGED = 1
-PUBLIC CONST UI_EVENT_ACCEPTED = 2
-PUBLIC CONST UI_EVENT_CANCELLED = 3
-PUBLIC CONST UI_EVENT_ADVANCED = 4
-PUBLIC CONST UI_EVENT_COMPLETED = 5
-PUBLIC CONST UI_EVENT_SUBMENU_OPENED = 6
-PUBLIC CONST UI_EVENT_SUBMENU_CLOSED = 7
+Public Const UI_EVENT_NONE = 0
+Public Const UI_EVENT_CHANGED = 1
+Public Const UI_EVENT_ACCEPTED = 2
+Public Const UI_EVENT_CANCELLED = 3
+Public Const UI_EVENT_ADVANCED = 4
+Public Const UI_EVENT_COMPLETED = 5
+Public Const UI_EVENT_SUBMENU_OPENED = 6
+Public Const UI_EVENT_SUBMENU_CLOSED = 7
 
-PUBLIC CONST UI_ALIGN_LEFT = 0
-PUBLIC CONST UI_ALIGN_CENTER = 1
-PUBLIC CONST UI_ALIGN_RIGHT = 2
+Public Const UI_ALIGN_LEFT = 0
+Public Const UI_ALIGN_CENTER = 1
+Public Const UI_ALIGN_RIGHT = 2
 
-PUBLIC CONST UI_TEXT_SYSTEM = 0
-PUBLIC CONST UI_TEXT_BITMAP = 1
+Public Const UI_TEXT_SYSTEM = 0
+Public Const UI_TEXT_BITMAP = 1
 
-PUBLIC CONST UI_FILTER_SMOOTH = 0
-PUBLIC CONST UI_FILTER_PIXEL = 1
+Public Const UI_FILTER_SMOOTH = 0
+Public Const UI_FILTER_PIXEL = 1
 
-PUBLIC CONST UI_MENU_TEXT_ELLIPSIS = 0
-PUBLIC CONST UI_MENU_TEXT_CLIP = 1
-PUBLIC CONST UI_MENU_TEXT_WRAP = 2
+Public Const UI_MENU_TEXT_ELLIPSIS = 0
+Public Const UI_MENU_TEXT_CLIP = 1
+Public Const UI_MENU_TEXT_WRAP = 2
 
-PUBLIC CONST UI_SUBMENU_DIRECTION_AUTO = 0
-PUBLIC CONST UI_SUBMENU_DIRECTION_RIGHT = 1
-PUBLIC CONST UI_SUBMENU_DIRECTION_LEFT = 2
+Public Const UI_SUBMENU_DIRECTION_AUTO = 0
+Public Const UI_SUBMENU_DIRECTION_RIGHT = 1
+Public Const UI_SUBMENU_DIRECTION_LEFT = 2
 
-PUBLIC CONST UI_SUBMENU_INDICATOR_AFTER_TEXT = 0
-PUBLIC CONST UI_SUBMENU_INDICATOR_RIGHT_ALIGNED = 1
+Public Const UI_SUBMENU_INDICATOR_AFTER_TEXT = 0
+Public Const UI_SUBMENU_INDICATOR_RIGHT_ALIGNED = 1
 
-PUBLIC CONST UI_MAX_BITMAP_FONTS = 8
-PUBLIC CONST UI_MAX_MENUS = 16
-PUBLIC CONST UI_MAX_MENU_ITEMS = 64
-PUBLIC CONST UI_MAX_MENU_ITEM_SCALARS = 256
-PUBLIC CONST UI_MAX_MENU_ITEM_LINES = 4
-PUBLIC CONST UI_MAX_MENU_NAVIGATORS = 8
-PUBLIC CONST UI_MAX_MENU_DEPTH = 8
-PUBLIC CONST UI_MAX_SUBMENU_BINDINGS = 128
-PUBLIC CONST UI_MAX_DIALOGUES = 8
-PUBLIC CONST UI_MAX_DIALOGUE_PAGES = 32
-PUBLIC CONST UI_MAX_DIALOGUE_LINES = 16
-PUBLIC CONST UI_MAX_DIALOGUE_PAGE_SCALARS = 2048
-PUBLIC CONST UI_MAX_LAYOUT_VALUE = 1000000
+Public Const UI_MAX_BITMAP_FONTS = 8
+Public Const UI_MAX_MENUS = 16
+Public Const UI_MAX_MENU_ITEMS = 64
+Public Const UI_MAX_MENU_ITEM_SCALARS = 256
+Public Const UI_MAX_MENU_ITEM_LINES = 4
+Public Const UI_MAX_MENU_NAVIGATORS = 8
+Public Const UI_MAX_MENU_DEPTH = 8
+Public Const UI_MAX_SUBMENU_BINDINGS = 128
+Public Const UI_MAX_DIALOGUES = 8
+Public Const UI_MAX_DIALOGUE_PAGES = 32
+Public Const UI_MAX_DIALOGUE_LINES = 16
+Public Const UI_MAX_DIALOGUE_PAGE_SCALARS = 2048
+Public Const UI_MAX_LAYOUT_VALUE = 1000000
 
-PUBLIC TYPE Rect
-    X AS NUMBER
-    Y AS NUMBER
-    Width AS NUMBER
-    Height AS NUMBER
-END TYPE
+Public Type Rect
+    X As Number
+    Y As Number
+    Width As Number
+    Height As Number
+End Type
 
-PUBLIC TYPE Insets
-    Left AS NUMBER
-    Top AS NUMBER
-    Right AS NUMBER
-    Bottom AS NUMBER
-END TYPE
+Public Type Insets
+    LEFT As Number
+    Top As Number
+    RIGHT As Number
+    Bottom As Number
+End Type
 
-PUBLIC TYPE BitmapFontStyle
-    Atlas AS IMAGE
-    SourceX AS NUMBER
-    SourceY AS NUMBER
-    FirstCodePoint AS NUMBER
-    GlyphCount AS NUMBER
-    Columns AS NUMBER
-    SourceCellWidth AS NUMBER
-    SourceCellHeight AS NUMBER
-    DrawWidth AS NUMBER
-    DrawHeight AS NUMBER
-    AdvanceX AS NUMBER
-    LineHeight AS NUMBER
-    FallbackCodePoint AS NUMBER
-    FilterMode AS NUMBER
-END TYPE
+Public Type BitmapFontStyle
+    Atlas As Image
+    SourceX As Number
+    SourceY As Number
+    FirstCodePoint As Number
+    GlyphCount As Number
+    Columns As Number
+    SourceCellWidth As Number
+    SourceCellHeight As Number
+    DrawWidth As Number
+    DrawHeight As Number
+    AdvanceX As Number
+    LineHeight As Number
+    FallbackCodePoint As Number
+    FilterMode As Number
+End Type
 
-PUBLIC TYPE TextStyle
-    Mode AS NUMBER
-    SystemSize AS NUMBER
-    SystemColor AS NUMBER
-    BitmapFontHandle AS NUMBER
-    LineSpacing AS NUMBER
-END TYPE
+Public Type TextStyle
+    Mode As Number
+    SystemSize As Number
+    SystemColor As Number
+    BitmapFontHandle As Number
+    LineSpacing As Number
+End Type
 
-PUBLIC TYPE WindowStyle
-    UseSkin AS BOOLEAN
-    Skin AS IMAGE
-    SourceX AS NUMBER
-    SourceY AS NUMBER
-    SourceWidth AS NUMBER
-    SourceHeight AS NUMBER
-    SourceLeft AS NUMBER
-    SourceTop AS NUMBER
-    SourceRight AS NUMBER
-    SourceBottom AS NUMBER
-    DestinationLeft AS NUMBER
-    DestinationTop AS NUMBER
-    DestinationRight AS NUMBER
-    DestinationBottom AS NUMBER
-    FillColor AS NUMBER
-    BorderColor AS NUMBER
-    BorderThickness AS NUMBER
-    Opacity AS NUMBER
-    FilterMode AS NUMBER
-    Padding AS Insets
-END TYPE
+Public Type WindowStyle
+    UseSkin As Boolean
+    Skin As Image
+    SourceX As Number
+    SourceY As Number
+    SourceWidth As Number
+    SourceHeight As Number
+    SourceLeft As Number
+    SourceTop As Number
+    SourceRight As Number
+    SourceBottom As Number
+    DestinationLeft As Number
+    DestinationTop As Number
+    DestinationRight As Number
+    DestinationBottom As Number
+    FillColor As Number
+    BorderColor As Number
+    BorderThickness As Number
+    Opacity As Number
+    FilterMode As Number
+    Padding As Insets
+End Type
 
-PUBLIC TYPE MenuStyle
-    Window AS WindowStyle
-    NormalText AS TextStyle
-    SelectedText AS TextStyle
-    DisabledText AS TextStyle
-    SelectionFillColor AS NUMBER
-    UseCursor AS BOOLEAN
-    Cursor AS IMAGE
-    CursorWidth AS NUMBER
-    CursorHeight AS NUMBER
-    CursorOffsetX AS NUMBER
-    CursorOffsetY AS NUMBER
-    CursorFilterMode AS NUMBER
-    RowHeight AS NUMBER
-    WrapSelection AS BOOLEAN
-    ShowScrollbar AS BOOLEAN
-    ShowSubmenuIndicator AS BOOLEAN
-    SubmenuIndicatorPosition AS NUMBER
-    ItemTextOverflowMode AS NUMBER
-    ItemTextMaxLines AS NUMBER
-END TYPE
+Public Type MenuStyle
+    Window As WindowStyle
+    NormalText As TextStyle
+    SelectedText As TextStyle
+    DisabledText As TextStyle
+    SelectionFillColor As Number
+    UseCursor As Boolean
+    Cursor As Image
+    CursorWidth As Number
+    CursorHeight As Number
+    CursorOffsetX As Number
+    CursorOffsetY As Number
+    CursorFilterMode As Number
+    RowHeight As Number
+    WrapSelection As Boolean
+    ShowScrollbar As Boolean
+    ShowSubmenuIndicator As Boolean
+    SubmenuIndicatorPosition As Number
+    ItemTextOverflowMode As Number
+    ItemTextMaxLines As Number
+End Type
 
-PUBLIC TYPE MenuNavigatorStyle
-    Viewport AS Rect
-    ViewportPadding AS Insets
-    HorizontalGap AS NUMBER
-    PreferredDirection AS NUMBER
-END TYPE
+Public Type MenuNavigatorStyle
+    Viewport As Rect
+    ViewportPadding As Insets
+    HorizontalGap As Number
+    PreferredDirection As Number
+End Type
 
-PUBLIC TYPE DialogueStyle
-    Window AS WindowStyle
-    Text AS TextStyle
-    CharactersPerSecond AS NUMBER
-    LineSpacing AS NUMBER
-    UseContinueIndicator AS BOOLEAN
-    ContinueIndicator AS IMAGE
-    IndicatorWidth AS NUMBER
-    IndicatorHeight AS NUMBER
-    IndicatorOffsetX AS NUMBER
-    IndicatorOffsetY AS NUMBER
-    IndicatorBlinkMilliseconds AS NUMBER
-END TYPE
+Public Type DialogueStyle
+    Window As WindowStyle
+    Text As TextStyle
+    CharactersPerSecond As Number
+    LineSpacing As Number
+    UseContinueIndicator As Boolean
+    ContinueIndicator As Image
+    IndicatorWidth As Number
+    IndicatorHeight As Number
+    IndicatorOffsetX As Number
+    IndicatorOffsetY As Number
+    IndicatorBlinkMilliseconds As Number
+End Type
 
-PUBLIC FUNCTION IsRectValid(BYREF Value AS Rect) AS BOOLEAN
-    RETURN Value.Width > 0 AND Value.Height > 0
-END FUNCTION
+Public Function IsRectValid(ByRef Value As Rect) As Boolean
+    Return Value.Width > 0 And Value.Height > 0
+End Function
 
-END MODULE
+End Module

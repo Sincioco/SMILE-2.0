@@ -16,9 +16,9 @@ Maps\custom.map
 The title screen offers:
 
 ```text
-DEFAULT.MAP
+Default.MAP
 CUSTOM.MAP
-RANDOM MAP
+Random MAP
 ```
 
 Edit or replace `custom.map`, then select `CUSTOM.MAP`.
@@ -328,7 +328,7 @@ CUSTOM.MAP
 This keeps the language lesson simple and makes the path visible in SMILE source:
 
 ```smile
-LOAD TEXT FILE "Maps\custom.map" INTO MapFileBytes COUNT MapFileLength
+Load Text File "Maps\custom.map" Into MapFileBytes Count MapFileLength
 ```
 
 Every time you start `CUSTOM.MAP`, the game reads it again.

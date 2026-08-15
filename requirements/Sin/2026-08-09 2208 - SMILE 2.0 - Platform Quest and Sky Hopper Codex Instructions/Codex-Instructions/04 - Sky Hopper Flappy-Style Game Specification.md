@@ -89,14 +89,14 @@ Use several parallax cloud/hill layers.
 Suggested:
 
 ```smile
-CONST SubpixelsPerPixel = 1000
-CONST SimulationStep = 8
-CONST MaxCatchUpSteps = 6
+Const SubpixelsPerPixel = 1000
+Const SimulationStep = 8
+Const MaxCatchUpSteps = 6
 
-CONST Gravity = 1150000
-CONST FlapVelocity = -390000
-CONST MaximumFallSpeed = 650000
-CONST BirdX = 250
+Const Gravity = 1150000
+Const FlapVelocity = -390000
+Const MaximumFallSpeed = 650000
+Const BirdX = 250
 ```
 
 Tune visually.
@@ -281,8 +281,8 @@ Title shows:
 
 ```text
 SKY HOPPER
-SPACE / W / UP TO FLAP
-PRESS ENTER OR SPACE
+SPACE / W / UP To FLAP
+PRESS ENTER Or SPACE
 DEMO STARTS AUTOMATICALLY
 ```
 

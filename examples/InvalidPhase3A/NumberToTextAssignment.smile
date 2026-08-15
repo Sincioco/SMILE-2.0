@@ -1,2 +1,2 @@
-DIM Value AS TEXT
+Dim Value As Text
 Value = 1

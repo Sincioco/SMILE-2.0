@@ -22,9 +22,9 @@ For every proposed addition:
 Examples of acceptable evolution:
 
 ```smile
-PLAY MUSIC "Assets\Background.mp3" LOOP
-FILL QUADRILATERAL ...
-LOAD TEXT FILE "Maps\default.map" INTO MapBytes COUNT MapByteCount
+Play Music "Assets\Background.mp3" Loop
+Fill Quadrilateral ...
+Load Text File "Maps\default.map" Into MapBytes Count MapByteCount
 ```
 
 Examples that must not be added:
@@ -33,8 +33,8 @@ Examples that must not be added:
 GENERATE DUNGEON
 DEMO MODE 45
 PACMAN AI
-DRAW GALAGA ENEMY
-AUTO PLAY BRICK BREAKER
+Draw GALAGA ENEMY
+AUTO Play BRICK BREAKER
 ```
 
 Those are game rules and belong in `.smile`.
@@ -95,7 +95,7 @@ Do not turn a one-time troubleshooting test into the new default regression burd
 This is a shared runtime contract for **every** SMILE program containing:
 
 ```smile
-GAME WINDOW ...
+Game Window ...
 ```
 
 No per-game SMILE code is required.
@@ -114,7 +114,7 @@ Required behavior:
 ### MP3 music
 
 - Effective music volume becomes zero.
-- Requested `MUSIC VOLUME` remains remembered.
+- Requested `Music Volume` remains remembered.
 - Playback position continues unless the game explicitly paused/stopped it.
 - Regaining active, non-minimized focus restores the exact requested volume.
 - A manually paused track remains paused.
@@ -123,7 +123,7 @@ Required behavior:
 ### WAV effects
 
 - The currently playing asynchronous WAV effect stops when focus is lost.
-- New `PLAY SOUND` requests are suppressed while inactive.
+- New `Play Sound` requests are suppressed while inactive.
 - Suppressed effects are not replayed when focus returns.
 
 ### System isolation
