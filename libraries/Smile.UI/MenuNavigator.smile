@@ -221,6 +221,12 @@ PRIVATE FUNCTION RepairSlot(Slot AS NUMBER) AS BOOLEAN
     FOR Level = 1 TO NavigatorDepth[Slot] - 1
         ParentHandle = StackMenus[Slot, Level - 1]
         ChildHandle = StackMenus[Slot, Level]
+        IF Menu.SelectedIndex(ParentHandle) <> StackParentItems[Slot, Level] THEN
+            NavigatorDepth[Slot] = Level
+            CALL ClearStackFrom(Slot, Level)
+            CALL ClearAccepted(Slot)
+            EXIT FOR
+        END IF
         BindingIndex = FindBinding(Slot, ParentHandle, StackParentItems[Slot, Level])
         IF BindingIndex < 0 OR BindingChildMenus[Slot, BindingIndex] <> ChildHandle OR NOT Menu.IsValid(ChildHandle) THEN
             NavigatorDepth[Slot] = Level
@@ -849,7 +855,7 @@ PUBLIC SUB DrawStack(NavigatorHandle AS NUMBER)
         RETURN
     END IF
     FOR Level = 0 TO NavigatorDepth[Slot] - 1
-        CALL Menu.DrawFocused(StackMenus[Slot, Level], Level = NavigatorDepth[Slot] - 1)
+        CALL Menu.DrawFocused(StackMenus[Slot, Level], TRUE)
     END FOR
 END SUB
 

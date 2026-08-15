@@ -64,6 +64,9 @@ PUBLIC FUNCTION IsStyleValid(BYREF Style AS Core.MenuStyle) AS BOOLEAN
     IF Style.ItemTextMaxLines < 0 OR Style.ItemTextMaxLines > Core.UI_MAX_MENU_ITEM_LINES THEN
         RETURN FALSE
     END IF
+    IF Style.SubmenuIndicatorPosition <> Core.UI_SUBMENU_INDICATOR_AFTER_TEXT AND Style.SubmenuIndicatorPosition <> Core.UI_SUBMENU_INDICATOR_RIGHT_ALIGNED THEN
+        RETURN FALSE
+    END IF
     IF Style.UseCursor AND IMAGE_LOADED(Style.Cursor) AND (Style.CursorWidth <= 0 OR Style.CursorHeight <= 0) THEN
         RETURN FALSE
     END IF
@@ -534,7 +537,7 @@ PRIVATE FUNCTION Ellipsize(BYREF Style AS Core.TextStyle, Value AS TEXT, Maximum
     RETURN TEXT_SLICE(Value, 0, Best) + Ellipsis
 END FUNCTION
 
-PRIVATE SUB DrawWrapped(BYREF Style AS Core.TextStyle, Value AS TEXT, X AS NUMBER, Y AS NUMBER, Width AS NUMBER, RowHeight AS NUMBER, MaximumLines AS NUMBER)
+PRIVATE SUB DrawWrapped(BYREF Style AS Core.TextStyle, Value AS TEXT, X AS NUMBER, Y AS NUMBER, Width AS NUMBER, RowHeight AS NUMBER, MaximumLines AS NUMBER, DrawAfterIndicator AS BOOLEAN, IndicatorWidth AS NUMBER)
     DIM Length AS NUMBER
     DIM Cursor AS NUMBER
     DIM SegmentEnd AS NUMBER
@@ -556,6 +559,9 @@ PRIVATE SUB DrawWrapped(BYREF Style AS Core.TextStyle, Value AS TEXT, X AS NUMBE
     DIM LineStep AS NUMBER
     DIM PhysicalLines AS NUMBER
     DIM HasNewline AS BOOLEAN
+    DIM IsFinalVisible AS BOOLEAN
+    DIM VisibleWidth AS NUMBER
+    DIM IndicatorX AS NUMBER
     IF Width <= 0 OR RowHeight <= 0 THEN
         RETURN
     END IF
@@ -627,34 +633,64 @@ PRIVATE SUB DrawWrapped(BYREF Style AS Core.TextStyle, Value AS TEXT, X AS NUMBE
                 NextIndex = Length + 1
             END IF
         END IF
+        IsFinalVisible = NextIndex > Length OR LineNumber = MaximumLines - 1
+        VisibleWidth = Width
+        IF IsFinalVisible AND DrawAfterIndicator THEN
+            VisibleWidth = MAX(0, Width - IndicatorWidth)
+        END IF
         IF LineNumber = MaximumLines - 1 AND NextIndex <= Length THEN
-            LineValue = Ellipsize(Style, TEXT_SLICE(Value, LineStart, Length - LineStart), Width)
+            LineValue = Ellipsize(Style, TEXT_SLICE(Value, LineStart, Length - LineStart), VisibleWidth)
+        ELSE IF IsFinalVisible AND DrawAfterIndicator THEN
+            LineValue = Ellipsize(Style, TEXT_SLICE(Value, LineStart, MAX(0, LineEnd - LineStart)), VisibleWidth)
         ELSE
             LineValue = TEXT_SLICE(Value, LineStart, MAX(0, LineEnd - LineStart))
         END IF
         CALL Text.Draw(Style, LineValue, X, Y + LineNumber * LineStep, Core.UI_ALIGN_LEFT, 100)
+        IF IsFinalVisible AND DrawAfterIndicator THEN
+            IndicatorX = X + MIN(VisibleWidth, Text.MeasureWidth(Style, LineValue))
+            CALL Text.Draw(Style, " >", IndicatorX, Y + LineNumber * LineStep, Core.UI_ALIGN_LEFT, 100)
+        END IF
         Cursor = NextIndex
     END FOR
 END SUB
 
-PRIVATE SUB DrawLabel(Slot AS NUMBER, Index AS NUMBER, BYREF Style AS Core.TextStyle, X AS NUMBER, Y AS NUMBER, Width AS NUMBER, RowHeight AS NUMBER)
+PRIVATE SUB DrawLabel(Slot AS NUMBER, Index AS NUMBER, BYREF Style AS Core.TextStyle, X AS NUMBER, Y AS NUMBER, Width AS NUMBER, RowHeight AS NUMBER, DrawAfterIndicator AS BOOLEAN, IndicatorWidth AS NUMBER)
     DIM Value AS TEXT
     DIM MaximumLines AS NUMBER
+    DIM LabelWidth AS NUMBER
+    DIM RenderedValue AS TEXT
+    DIM IndicatorX AS NUMBER
     IF Width <= 0 OR RowHeight <= 0 THEN
         RETURN
     END IF
     Value = ItemLabels[Slot, Index]
+    LabelWidth = Width
+    IF DrawAfterIndicator THEN
+        LabelWidth = MAX(0, Width - IndicatorWidth)
+    END IF
     CLIP RECTANGLE X, Y, Width, RowHeight
         IF MenuStyles[Slot].ItemTextOverflowMode = Core.UI_MENU_TEXT_WRAP THEN
             MaximumLines = MenuStyles[Slot].ItemTextMaxLines
             IF MaximumLines <= 0 THEN
                 MaximumLines = 1
             END IF
-            CALL DrawWrapped(Style, Value, X, Y, Width, RowHeight, MaximumLines)
+            CALL DrawWrapped(Style, Value, X, Y, Width, RowHeight, MaximumLines, DrawAfterIndicator, IndicatorWidth)
         ELSE IF MenuStyles[Slot].ItemTextOverflowMode = Core.UI_MENU_TEXT_CLIP THEN
-            CALL Text.Draw(Style, FirstLine(Value), X, Y, Core.UI_ALIGN_LEFT, 100)
+            RenderedValue = FirstLine(Value)
+            CLIP RECTANGLE X, Y, LabelWidth, RowHeight
+                CALL Text.Draw(Style, RenderedValue, X, Y, Core.UI_ALIGN_LEFT, 100)
+            END CLIP
+            IF DrawAfterIndicator THEN
+                IndicatorX = X + MIN(LabelWidth, Text.MeasureWidth(Style, RenderedValue))
+                CALL Text.Draw(Style, " >", IndicatorX, Y, Core.UI_ALIGN_LEFT, 100)
+            END IF
         ELSE
-            CALL Text.Draw(Style, Ellipsize(Style, Value, Width), X, Y, Core.UI_ALIGN_LEFT, 100)
+            RenderedValue = Ellipsize(Style, Value, LabelWidth)
+            CALL Text.Draw(Style, RenderedValue, X, Y, Core.UI_ALIGN_LEFT, 100)
+            IF DrawAfterIndicator THEN
+                IndicatorX = X + MIN(LabelWidth, Text.MeasureWidth(Style, RenderedValue))
+                CALL Text.Draw(Style, " >", IndicatorX, Y, Core.UI_ALIGN_LEFT, 100)
+            END IF
         END IF
     END CLIP
 END SUB
@@ -680,6 +716,10 @@ PUBLIC SUB DrawFocused(Handle AS NUMBER, Focused AS BOOLEAN)
     DIM CursorY AS NUMBER
     DIM MaximumCursorX AS NUMBER
     DIM MaximumCursorY AS NUMBER
+    DIM ShowMarker AS BOOLEAN
+    DIM AfterMarker AS BOOLEAN
+    DIM MarkerY AS NUMBER
+    DIM MarkerHeight AS NUMBER
     DIM RowStyle AS Core.TextStyle
     Slot = SlotFromHandle(Handle)
     IF Slot < 0 OR MenuWidth[Slot] <= 0 OR MenuHeight[Slot] <= 0 THEN
@@ -691,7 +731,7 @@ PUBLIC SUB DrawFocused(Handle AS NUMBER, Focused AS BOOLEAN)
         RETURN
     END IF
     RowHeight = EffectiveRowHeight(Slot)
-    IF MenuStyles[Slot].ShowScrollbar AND MenuItemCount[Slot] > MenuVisibleRows[Slot] THEN
+    IF MenuStyles[Slot].ShowScrollbar THEN
         ScrollReserve = 8
     END IF
     TextX = Content.X + 10
@@ -732,21 +772,29 @@ PUBLIC SUB DrawFocused(Handle AS NUMBER, Focused AS BOOLEAN)
                             RowStyle = MenuStyles[Slot].DisabledText
                         END IF
                         LabelRight = Content.X + Content.Width - ScrollReserve - 8
-                        IF ItemSubmenu[Slot, Index] THEN
+                        MarkerWidth = 0
+                        MarkerX = 0
+                        ShowMarker = ItemSubmenu[Slot, Index] AND MenuStyles[Slot].ShowSubmenuIndicator
+                        AfterMarker = ShowMarker AND MenuStyles[Slot].SubmenuIndicatorPosition = Core.UI_SUBMENU_INDICATOR_AFTER_TEXT
+                        IF ShowMarker AND MenuStyles[Slot].SubmenuIndicatorPosition = Core.UI_SUBMENU_INDICATOR_RIGHT_ALIGNED THEN
                             MarkerWidth = Text.MeasureWidth(RowStyle, " >")
                             MarkerX = LabelRight - MarkerWidth
                             LabelRight = MarkerX - 4
+                        ELSE IF AfterMarker THEN
+                            MarkerWidth = Text.MeasureWidth(RowStyle, " >")
                         END IF
                         LabelWidth = MAX(0, LabelRight - TextX)
-                        CALL DrawLabel(Slot, Index, RowStyle, TextX, RowY, LabelWidth, RowDrawHeight)
-                        IF ItemSubmenu[Slot, Index] AND MarkerWidth > 0 THEN
-                            CALL Text.Draw(RowStyle, " >", MarkerX, RowY, Core.UI_ALIGN_LEFT, 100)
+                        CALL DrawLabel(Slot, Index, RowStyle, TextX, RowY, LabelWidth, RowDrawHeight, AfterMarker, MarkerWidth)
+                        IF ShowMarker AND NOT AfterMarker AND MarkerWidth > 0 THEN
+                            MarkerHeight = Text.MeasureHeight(RowStyle, " >")
+                            MarkerY = RowY + MAX(0, (RowDrawHeight - MarkerHeight) / 2)
+                            CALL Text.Draw(RowStyle, " >", MarkerX, MarkerY, Core.UI_ALIGN_LEFT, 100)
                         END IF
                     END CLIP
                 END IF
             END IF
         END FOR
-        IF ScrollReserve > 0 THEN
+        IF MenuStyles[Slot].ShowScrollbar AND MenuItemCount[Slot] > MenuVisibleRows[Slot] THEN
             ScrollHeight = MAX(0, MIN(Content.Height, MenuVisibleRows[Slot] * RowHeight))
             FILL RECTANGLE Content.X + Content.Width - 5, Content.Y, 4, ScrollHeight, DARK_GRAY
             IF ScrollHeight > 0 THEN

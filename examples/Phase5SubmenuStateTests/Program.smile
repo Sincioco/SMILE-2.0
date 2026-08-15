@@ -5,11 +5,13 @@ IMPORT Smile.UI.Menu AS Menu
 IMPORT Smile.UI.MenuNavigator AS MenuNavigator
 
 DIM Style AS UI.MenuStyle
+DIM CandidateMenuStyle AS UI.MenuStyle
 DIM NavigatorStyle AS UI.MenuNavigatorStyle
 DIM CandidateStyle AS UI.MenuNavigatorStyle
 DIM Root AS NUMBER
 DIM Child AS NUMBER
 DIM Grandchild AS NUMBER
+DIM DeepChild AS NUMBER
 DIM Oversized AS NUMBER
 DIM Navigator AS NUMBER
 DIM StaleNavigator AS NUMBER
@@ -18,6 +20,9 @@ DIM RootShared AS NUMBER
 DIM RootLeaf AS NUMBER
 DIM RootDisabled AS NUMBER
 DIM ChildGrandchild AS NUMBER
+DIM ChildOther AS NUMBER
+DIM GrandchildDeep AS NUMBER
+DIM GrandchildOther AS NUMBER
 DIM ItemIndex AS NUMBER
 DIM Event AS NUMBER
 DIM Result AS BOOLEAN
@@ -41,6 +46,8 @@ END SUB
 
 Style.RowHeight = 32
 Style.WrapSelection = TRUE
+Style.ShowSubmenuIndicator = TRUE
+Style.SubmenuIndicatorPosition = UI.UI_SUBMENU_INDICATOR_RIGHT_ALIGNED
 Style.ItemTextOverflowMode = UI.UI_MENU_TEXT_ELLIPSIS
 Style.ItemTextMaxLines = 1
 
@@ -56,8 +63,12 @@ NavigatorStyle.HorizontalGap = 8
 NavigatorStyle.PreferredDirection = UI.UI_SUBMENU_DIRECTION_AUTO
 
 CALL Check(UI.UI_EVENT_SUBMENU_OPENED = 6 AND UI.UI_EVENT_SUBMENU_CLOSED = 7)
+CALL Check(UI.UI_SUBMENU_INDICATOR_AFTER_TEXT = 0 AND UI.UI_SUBMENU_INDICATOR_RIGHT_ALIGNED = 1)
 CALL Check(UI.UI_MAX_MENU_NAVIGATORS = 8 AND UI.UI_MAX_MENU_DEPTH = 8 AND UI.UI_MAX_SUBMENU_BINDINGS = 128)
 CALL Check(MenuNavigator.IsStyleValid(NavigatorStyle))
+CandidateMenuStyle = Style
+CandidateMenuStyle.SubmenuIndicatorPosition = 2
+CALL Check(NOT Menu.IsStyleValid(CandidateMenuStyle))
 
 Root = Menu.Create(Style, 10, 10, 220, 180, 5)
 Child = Menu.Create(Style, 0, 0, 200, 160, 4)
@@ -137,6 +148,69 @@ Navigator = MenuNavigator.Create(Root, NavigatorStyle)
 CALL Check(Navigator > 0 AND Navigator <> StaleNavigator AND NOT MenuNavigator.IsValid(StaleNavigator))
 CALL MenuNavigator.Destroy(Navigator)
 CALL Menu.Destroy(Grandchild)
+CALL Menu.Destroy(Root)
+
+' Active edges follow the exact selected parent item and prune from the first changed ancestor.
+Root = Menu.Create(Style, 20, 20, 220, 180, 4)
+Child = Menu.Create(Style, 0, 0, 200, 160, 4)
+Grandchild = Menu.Create(Style, 0, 0, 190, 150, 4)
+DeepChild = Menu.Create(Style, 0, 0, 180, 140, 4)
+RootChild = Menu.AddItem(Root, "OPEN CHILD", 10, TRUE)
+RootShared = Menu.AddItem(Root, "OTHER ROOT", 11, TRUE)
+ChildGrandchild = Menu.AddItem(Child, "OPEN GRANDCHILD", 20, TRUE)
+ChildOther = Menu.AddItem(Child, "OTHER CHILD", 21, TRUE)
+GrandchildDeep = Menu.AddItem(Grandchild, "OPEN DEEP", 30, TRUE)
+GrandchildOther = Menu.AddItem(Grandchild, "OTHER GRANDCHILD", 31, TRUE)
+ItemIndex = Menu.AddItem(DeepChild, "DEEPEST LEAF", 40, TRUE)
+Navigator = MenuNavigator.Create(Root, NavigatorStyle)
+Result = MenuNavigator.BindSubmenu(Navigator, Root, RootChild, Child, FALSE)
+Result = Result AND MenuNavigator.BindSubmenu(Navigator, Child, ChildGrandchild, Grandchild, FALSE)
+Result = Result AND MenuNavigator.BindSubmenu(Navigator, Grandchild, GrandchildDeep, DeepChild, FALSE)
+Event = MenuNavigator.HandleKey(Navigator, KEY_RIGHT)
+Result = Result AND Event = UI.UI_EVENT_SUBMENU_OPENED
+Event = MenuNavigator.HandleKey(Navigator, KEY_ENTER)
+Result = Result AND Event = UI.UI_EVENT_SUBMENU_OPENED
+Event = MenuNavigator.HandleKey(Navigator, KEY_SPACE)
+CALL Check(Result AND Event = UI.UI_EVENT_SUBMENU_OPENED AND MenuNavigator.Depth(Navigator) = 4)
+Event = MenuNavigator.HandleKey(Navigator, KEY_ENTER)
+CALL Check(Event = UI.UI_EVENT_ACCEPTED AND MenuNavigator.LastAcceptedValue(Navigator) = 40)
+
+Result = Menu.SetSelectedIndex(Root, RootShared)
+CALL Check(Result AND MenuNavigator.Depth(Navigator) = 1 AND MenuNavigator.CurrentMenu(Navigator) = Root AND MenuNavigator.LastAcceptedIndex(Navigator) = -1)
+
+Result = Menu.SetSelectedIndex(Root, RootChild)
+Event = MenuNavigator.HandleKey(Navigator, KEY_RIGHT)
+Result = Result AND Event = UI.UI_EVENT_SUBMENU_OPENED
+Event = MenuNavigator.HandleKey(Navigator, KEY_RIGHT)
+Result = Result AND Event = UI.UI_EVENT_SUBMENU_OPENED
+Event = MenuNavigator.HandleKey(Navigator, KEY_RIGHT)
+CALL Check(Result AND Event = UI.UI_EVENT_SUBMENU_OPENED AND MenuNavigator.Depth(Navigator) = 4)
+Result = Menu.SetSelectedIndex(Child, ChildOther)
+CALL Check(Result AND MenuNavigator.Depth(Navigator) = 2 AND MenuNavigator.CurrentMenu(Navigator) = Child)
+
+Result = Menu.SetSelectedIndex(Child, ChildGrandchild)
+Event = MenuNavigator.HandleKey(Navigator, KEY_RIGHT)
+Result = Result AND Event = UI.UI_EVENT_SUBMENU_OPENED
+Event = MenuNavigator.HandleKey(Navigator, KEY_RIGHT)
+CALL Check(Result AND Event = UI.UI_EVENT_SUBMENU_OPENED AND MenuNavigator.Depth(Navigator) = 4)
+Result = Menu.SetItemLabel(Root, RootChild, "RENAMED ACTIVE EDGE")
+CALL Check(Result AND MenuNavigator.Depth(Navigator) = 4)
+Result = Menu.SetItemValue(Root, RootChild, 12)
+CALL Check(Result AND MenuNavigator.Depth(Navigator) = 4)
+CandidateMenuStyle = Style
+CandidateMenuStyle.SelectionFillColor = 123
+Result = Menu.SetStyle(Root, CandidateMenuStyle)
+CALL Check(Result AND MenuNavigator.Depth(Navigator) = 4)
+Result = Menu.SetPosition(Root, 30, 30)
+Result = Result AND MenuNavigator.Relayout(Navigator)
+CALL Check(Result AND MenuNavigator.Depth(Navigator) = 4)
+Result = Menu.SetItemEnabled(Root, RootChild, FALSE)
+CALL Check(Result AND MenuNavigator.Depth(Navigator) = 1 AND MenuNavigator.CurrentMenu(Navigator) = Root)
+
+CALL MenuNavigator.Destroy(Navigator)
+CALL Menu.Destroy(DeepChild)
+CALL Menu.Destroy(Grandchild)
+CALL Menu.Destroy(Child)
 CALL Menu.Destroy(Root)
 
 ' Exact root clamp, left fallback, bottom adjustment, style transaction, overlap, and oversize rejection.

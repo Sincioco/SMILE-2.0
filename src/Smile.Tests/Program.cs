@@ -2279,16 +2279,17 @@ Run("Public API preserves referenced record provider identities", () =>
     finally { Directory.Delete(root, true); }
 });
 
-Run("Smile.UI 1.1.0 publishes the Phase 5.2 submenu foundation", () =>
+Run("Smile.UI 1.1.1 publishes the Phase 5.2.1 submenu hardening", () =>
 {
     var project = File.ReadAllText("libraries/Smile.UI/Smile.UI.smilelibproj");
     var core = File.ReadAllText("libraries/Smile.UI/Core.smile");
     var menu = File.ReadAllText("libraries/Smile.UI/Menu.smile");
     var navigator = File.ReadAllText("libraries/Smile.UI/MenuNavigator.smile");
-    Equal(true, project.Contains("<Version>1.1.0</Version>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<Version>1.1.1</Version>", StringComparison.Ordinal));
     Equal(true, project.Contains("<SmileSource Include=\"MenuNavigator.smile\" />", StringComparison.Ordinal));
     foreach (var constant in new[] { "UI_EVENT_SUBMENU_OPENED", "UI_EVENT_SUBMENU_CLOSED",
         "UI_MENU_TEXT_ELLIPSIS", "UI_MENU_TEXT_CLIP", "UI_MENU_TEXT_WRAP",
+        "UI_SUBMENU_INDICATOR_AFTER_TEXT", "UI_SUBMENU_INDICATOR_RIGHT_ALIGNED",
         "UI_MAX_MENU_NAVIGATORS", "UI_MAX_MENU_DEPTH", "UI_MAX_SUBMENU_BINDINGS" })
         Equal(true, core.Contains("PUBLIC CONST " + constant, StringComparison.Ordinal));
     foreach (var member in new[] { "SetItemHasSubmenu", "ItemHasSubmenu", "ItemRevision", "Bounds",
@@ -2298,6 +2299,10 @@ Run("Smile.UI 1.1.0 publishes the Phase 5.2 submenu foundation", () =>
     foreach (var member in new[] { "BindSubmenu", "UnbindSubmenu", "ClearBindings", "OpenSelected", "Back",
         "HandleKey", "LastAcceptedValue", "Relayout", "DrawActive", "DrawStack" })
         Equal(true, navigator.Contains(member + "(", StringComparison.Ordinal));
+    Equal(true, core.Contains("ShowSubmenuIndicator AS BOOLEAN", StringComparison.Ordinal));
+    Equal(true, core.Contains("SubmenuIndicatorPosition AS NUMBER", StringComparison.Ordinal));
+    Equal(true, navigator.Contains("Menu.SelectedIndex(ParentHandle) <> StackParentItems[Slot, Level]", StringComparison.Ordinal));
+    Equal(true, navigator.Contains("CALL Menu.DrawFocused(StackMenus[Slot, Level], TRUE)", StringComparison.Ordinal));
 });
 
 Run("MenuGallery uses reusable hierarchical navigation without embedded markers", () =>
