@@ -10,11 +10,11 @@
 
 Option Explicit
 
-Game Window "My SMILE 2.0 Game"
-
 Dim Caption As Text
 
 Caption = "Hello, SMILE 2.0!"
+
+Game Window "My SMILE 2.0 Game"
 
 Do
     Clear Rgb(20, 20, 35)

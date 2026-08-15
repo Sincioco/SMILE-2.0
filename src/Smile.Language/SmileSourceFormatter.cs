@@ -6,6 +6,25 @@ using System.Text.RegularExpressions;
 
 namespace Smile.Language;
 
+public sealed class SmileIfBlockLayout
+{
+    internal SmileIfBlockLayout(bool isExpanded, int rootLine, int endLine,
+        IReadOnlyList<int> headerEndLines, IReadOnlyList<int> boundaryLines)
+    {
+        IsExpanded = isExpanded;
+        RootLine = rootLine;
+        EndLine = endLine;
+        HeaderEndLines = headerEndLines;
+        BoundaryLines = boundaryLines;
+    }
+
+    public bool IsExpanded { get; }
+    public int RootLine { get; }
+    public int EndLine { get; }
+    public IReadOnlyList<int> HeaderEndLines { get; }
+    public IReadOnlyList<int> BoundaryLines { get; }
+}
+
 /// <summary>
 /// Performs syntax-aware SMILE source rewrites that must not be inferred from physical lines.
 /// Presentation-only blank-line formatting remains in the command-line formatter wrapper.
@@ -26,6 +45,67 @@ public static class SmileSourceFormatter
 
     public static string Format(string sourceText, bool formatLongIf, int maximumLineLength,
         bool rewriteComputedReturns, bool formatContextualIdentifiers, string? filePath)
+        => FormatCore(sourceText, formatLongIf, maximumLineLength, rewriteComputedReturns,
+            formatContextualIdentifiers, filePath, null, null);
+
+    public static string Format(string sourceText, bool formatLongIf, int maximumLineLength,
+        bool rewriteComputedReturns, bool formatContextualIdentifiers, string? filePath,
+        SmileAnalysisResult symbolAnalysis, SyntaxTree symbolSyntaxTree)
+    {
+        if (symbolAnalysis == null)
+            throw new ArgumentNullException(nameof(symbolAnalysis));
+        if (symbolSyntaxTree == null)
+            throw new ArgumentNullException(nameof(symbolSyntaxTree));
+        if (!symbolAnalysis.SyntaxTrees.Contains(symbolSyntaxTree))
+            throw new ArgumentException("The symbol syntax tree is not part of the supplied analysis.",
+                nameof(symbolSyntaxTree));
+        if (!string.Equals(NormalizeLineEndings(sourceText),
+                NormalizeLineEndings(symbolSyntaxTree.Source.Text), StringComparison.Ordinal))
+        {
+            throw new ArgumentException("The symbol syntax tree does not match the source being formatted.",
+                nameof(symbolSyntaxTree));
+        }
+
+        return FormatCore(sourceText, formatLongIf, maximumLineLength, rewriteComputedReturns,
+            formatContextualIdentifiers, filePath, symbolAnalysis, symbolSyntaxTree);
+    }
+
+    public static IReadOnlyList<SmileIfBlockLayout> GetIfBlockLayouts(string sourceText, string? filePath)
+    {
+        if (sourceText == null)
+            throw new ArgumentNullException(nameof(sourceText));
+
+        var analysis = SmileLanguage.Analyze(NormalizeLineEndings(sourceText), filePath);
+        var tree = analysis.SyntaxTree;
+        var layouts = new List<SmileIfBlockLayout>();
+
+        foreach (var statement in EnumerateIfStatements(tree.Root.Statements))
+        {
+            var elseToken = FindElseToken(tree, statement);
+            var bodies = statement.Clauses.Select(clause => clause.Statements).ToList();
+            if (elseToken != null)
+                bodies.Add(statement.ElseStatements);
+            var isExpanded = bodies.Any(body => body.Count == 0 || body.Count > 2 ||
+                body.Any(IsNestedControlStatement));
+            var headerEndLines = statement.Clauses.Select(clause =>
+                GetLine(tree.Source, Math.Max(clause.Condition.Span.Start, clause.Condition.Span.End - 1)))
+                .ToArray();
+            var boundaryLines = statement.Clauses.Skip(1)
+                .Select(clause => GetLine(tree.Source, clause.Condition.Span.Start)).ToList();
+            if (elseToken != null)
+                boundaryLines.Add(GetLine(tree.Source, elseToken.Span.Start));
+            boundaryLines.Add(GetLine(tree.Source, statement.EndKeyword.Span.Start));
+            layouts.Add(new SmileIfBlockLayout(isExpanded,
+                GetLine(tree.Source, statement.IfKeyword.Span.Start),
+                GetLine(tree.Source, statement.EndKeyword.Span.Start), headerEndLines, boundaryLines));
+        }
+
+        return layouts;
+    }
+
+    private static string FormatCore(string sourceText, bool formatLongIf, int maximumLineLength,
+        bool rewriteComputedReturns, bool formatContextualIdentifiers, string? filePath,
+        SmileAnalysisResult? symbolAnalysis, SyntaxTree? symbolSyntaxTree)
     {
         if (sourceText == null)
             throw new ArgumentNullException(nameof(sourceText));
@@ -36,7 +116,7 @@ public static class SmileSourceFormatter
         if (formatContextualIdentifiers)
             result = RewriteContextualIdentifiers(result, filePath);
         if (rewriteComputedReturns)
-            result = RewriteComputedReturns(result, filePath);
+            result = RewriteComputedReturns(result, filePath, symbolAnalysis, symbolSyntaxTree);
         if (formatLongIf)
             result = RewriteLongIfStatements(result, maximumLineLength, filePath);
         return result;
@@ -74,15 +154,19 @@ public static class SmileSourceFormatter
             SmileResolvedSymbolKind.Field or SmileResolvedSymbolKind.Parameter or
             SmileResolvedSymbolKind.Local;
 
-    private static string RewriteComputedReturns(string text, string? filePath)
+    private static string RewriteComputedReturns(string text, string? filePath,
+        SmileAnalysisResult? symbolAnalysis, SyntaxTree? symbolSyntaxTree)
     {
         var analysis = SmileLanguage.Analyze(text, filePath);
+        var resolutionAnalysis = symbolAnalysis ?? analysis;
+        var resolutionTree = symbolSyntaxTree ?? analysis.SyntaxTree;
         var edits = new List<TextEdit>();
 
         foreach (var routine in EnumerateRoutines(analysis.SyntaxTree.Root.Statements).Where(item => item.IsFunction))
         {
             var computedReturns = EnumerateReturns(routine.Statements)
-                .Where(statement => statement.Expression != null && !IsDirectReturn(statement.Expression))
+                .Where(statement => statement.Expression != null &&
+                    !IsDirectReturn(statement.Expression, resolutionAnalysis, resolutionTree))
                 .ToArray();
             if (computedReturns.Length == 0)
                 continue;
@@ -113,8 +197,48 @@ public static class SmileSourceFormatter
         return ApplyEdits(text, edits);
     }
 
-    private static bool IsDirectReturn(ExpressionSyntax expression) =>
-        expression is LiteralExpressionSyntax or NameExpressionSyntax;
+    private static bool IsDirectReturn(ExpressionSyntax expression, SmileAnalysisResult analysis,
+        SyntaxTree tree)
+    {
+        if (expression is LiteralExpressionSyntax or NameExpressionSyntax)
+            return true;
+        if (expression is not QualifiedNameExpressionSyntax qualified)
+            return false;
+
+        var tokenIndex = -1;
+        for (var index = 0; index < tree.Tokens.Count; index++)
+        {
+            var token = tree.Tokens[index];
+            if (token.Span.Start == qualified.Member.Span.Start && token.Span.Length == qualified.Member.Span.Length)
+            {
+                tokenIndex = index;
+                break;
+            }
+        }
+        return tokenIndex >= 0 &&
+               SmileSymbolService.TryResolveToken(analysis, tree, tree.Tokens[tokenIndex], tokenIndex, out var symbol) &&
+               symbol.Kind is SmileResolvedSymbolKind.Constant or SmileResolvedSymbolKind.Variable;
+    }
+
+    private static SyntaxToken? FindElseToken(SyntaxTree tree, IfStatementSyntax statement)
+    {
+        var lastClause = statement.Clauses[statement.Clauses.Count - 1];
+        var searchStart = lastClause.Statements.Count == 0
+            ? lastClause.Condition.Span.End
+            : lastClause.Statements[lastClause.Statements.Count - 1].Span.End;
+        return tree.Tokens.FirstOrDefault(token => token.Kind == SyntaxKind.ElseKeyword &&
+            searchStart <= token.Span.Start && token.Span.Start < statement.EndKeyword.Span.Start);
+    }
+
+    private static bool IsNestedControlStatement(StatementSyntax statement) =>
+        statement is IfStatementSyntax or ForStatementSyntax or DoStatementSyntax or
+            SelectStatementSyntax or ClipRectangleStatementSyntax;
+
+    private static int GetLine(SourceText source, int position)
+    {
+        source.GetLineColumn(position, out var line, out _);
+        return line;
+    }
 
     private static string ChooseReturnVariable(SyntaxTree tree, RoutineDeclarationSyntax routine)
     {
@@ -315,6 +439,9 @@ public static class SmileSourceFormatter
             case SelectStatementSyntax selectStatement:
                 foreach (var clause in selectStatement.Cases)
                     yield return clause.Statements;
+                break;
+            case ClipRectangleStatementSyntax clipStatement:
+                yield return clipStatement.Statements;
                 break;
         }
     }

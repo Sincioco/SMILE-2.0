@@ -79,18 +79,14 @@ If (FirstValue < SecondValue Or
 End If
 
 If FirstValue = 100 Then
-
     Print "Wrong"
-
 Else If (SecondValue = 3 Or
     ThirdValue = 0 Or
     FirstValue = 0) Then
     Print "Else If"
-
 Else
 
     Print "Wrong"
-
 End If
 
 Call Helpers.PrintPair(

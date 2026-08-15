@@ -1325,7 +1325,11 @@ Public Sub DrawFocused(Handle As Number, Focused As Boolean)
                             RowStyle = MenuStyles[Slot].SelectedText
                             Fill Rectangle Content.X, RowY, Content.Width, RowHeight, MenuStyles[Slot].SelectionFillColor
 
-                            If Focused And MenuStyles[Slot].UseCursor And Image_Loaded(MenuStyles[Slot].Cursor) And MenuStyles[Slot].CursorWidth > 0 And MenuStyles[Slot].CursorHeight > 0 Then
+                            If (Focused And
+                                MenuStyles[Slot].UseCursor And
+                                Image_Loaded(MenuStyles[Slot].Cursor) And
+                                MenuStyles[Slot].CursorWidth > 0 And
+                                MenuStyles[Slot].CursorHeight > 0) Then
 
                                 CursorX = Content.X + MenuStyles[Slot].CursorOffsetX
                                 CursorY = RowY + Max(0, (RowDrawHeight - MenuStyles[Slot].CursorHeight) / 2) + MenuStyles[Slot].CursorOffsetY
@@ -1366,7 +1370,8 @@ Public Sub DrawFocused(Handle As Number, Focused As Boolean)
                         ShowMarker = ItemSubmenu[Slot, Index] And MenuStyles[Slot].ShowSubmenuIndicator
                         AfterMarker = ShowMarker And MenuStyles[Slot].SubmenuIndicatorPosition = Core.UI_SUBMENU_INDICATOR_AFTER_TEXT
 
-                        If ShowMarker And MenuStyles[Slot].SubmenuIndicatorPosition = Core.UI_SUBMENU_INDICATOR_RIGHT_ALIGNED Then
+                        If (ShowMarker And
+                            MenuStyles[Slot].SubmenuIndicatorPosition = Core.UI_SUBMENU_INDICATOR_RIGHT_ALIGNED) Then
 
                             MarkerWidth = Text.MeasureWidth(RowStyle, " >")
                             MarkerX = LabelRight - MarkerWidth
@@ -1400,7 +1405,9 @@ Public Sub DrawFocused(Handle As Number, Focused As Boolean)
                         LabelWidth = Max(0, LabelRight - TextX)
                         MarkerY = DrawLabel(Slot, Index, RowStyle, TextX, RowY, LabelWidth, RowDrawHeight, AfterMarker, MarkerWidth)
 
-                        If ShowMarker And Not AfterMarker And MarkerWidth > 0 Then
+                        If (ShowMarker And
+                            Not AfterMarker And
+                            MarkerWidth > 0) Then
                             Call Text.Draw(RowStyle, " >", MarkerX, MarkerY, Core.UI_ALIGN_LEFT, 100)
                         End If
 

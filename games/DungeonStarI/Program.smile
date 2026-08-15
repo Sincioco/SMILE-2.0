@@ -232,6 +232,7 @@ Do
         If ScreenState = STATE_TITLE Then
             Call DrawTitle()
         Else
+
             Call DrawDungeonScene()
         End If
 
@@ -242,6 +243,7 @@ Do
         If ScreenState = STATE_TITLE Then
             Call DrawTitle()
         Else
+
             Call DrawDungeonScene()
         End If
 
@@ -252,6 +254,7 @@ Do
         If ScreenState = STATE_TITLE Then
             Call DrawTitle()
         Else
+
             Call DrawDungeonScene()
             Call DrawIdleWarning()
         End If
@@ -554,7 +557,6 @@ Sub ValidateFloor(FloorValue)
         If (GetTile(FloorValue, BorderX, 0) <> TILE_WALL Or
             GetTile(FloorValue, BorderX, MapHeight - 1) <> TILE_WALL) Then
             GenerationValid = False
-
         End If
 
     End For
@@ -564,7 +566,6 @@ Sub ValidateFloor(FloorValue)
         If (GetTile(FloorValue, 0, BorderY) <> TILE_WALL Or
             GetTile(FloorValue, MapWidth - 1, BorderY) <> TILE_WALL) Then
             GenerationValid = False
-
         End If
 
     End For
@@ -624,6 +625,7 @@ Sub ValidateFloor(FloorValue)
                     FloodTail = FloodTail + 1
 
                 End If
+
             End If
 
         End For
@@ -744,6 +746,7 @@ Sub ValidateDungeon()
         PlayerStartFloor >= FloorCount) Then
 
         GenerationValid = False
+
     Else
         StartTile = GetTile(PlayerStartFloor, PlayerStartX, PlayerStartY)
         ForwardX = PlayerStartX + DirectionX[PlayerStartDirection]
@@ -764,6 +767,7 @@ Sub ValidateDungeon()
             GetTile(PlayerStartFloor, PlayerStartX + DirectionX[RightDirection], PlayerStartY + DirectionY[RightDirection]) <> TILE_WALL) Then
             GenerationValid = False
         End If
+
     End If
 
 End Sub
@@ -812,6 +816,7 @@ Sub BuildRandomFloor(FloorValue)
         Call CarveHorizontal(15, 5, 25)
         Call CarveVertical(15, 5, 25)
     Else
+
         Call CarveHorizontal(15, 5, 25)
         Call CarveVertical(15, 15, 25)
     End If
@@ -945,7 +950,6 @@ Sub ProcessMapLine(LineStart, LineLength)
         ParsedRows[CurrentParsedFloor] >= MapHeight) Then
         MapLoadValid = False
         Return
-
     End If
 
     ParsedY = ParsedRows[CurrentParsedFloor]
@@ -1131,6 +1135,7 @@ Sub BuildSelectedDungeon()
     Else If SelectedMap = MAP_LOOPS Then
         Call LoadLoopsMap()
     Else
+
         Call LoadSwitchbacksMap()
     End If
 
@@ -1464,7 +1469,6 @@ Sub DrawDungeonView(DirectionValue, ScaleValue, OffsetValue)
             FrontX = DoorX And
             FrontY = DoorY) Then
             DoorDrawProgress = ActionProgress
-
         End If
 
         Call DrawDoorPanel(VisibleSections, DoorDrawProgress)
@@ -1565,6 +1569,7 @@ Sub DrawDungeonScene()
             Call DrawDungeonView(TargetDirection, NewScale, NewOffset)
             Call DrawDungeonView(PlayerDirection, OldScale, OldOffset)
         Else
+
             Call DrawDungeonView(PlayerDirection, OldScale, OldOffset)
             Call DrawDungeonView(TargetDirection, NewScale, NewOffset)
         End If
@@ -1734,12 +1739,15 @@ Sub UpdateAction()
                 StairSuppressed = 0) Then
 
                 Call BeginStairTransition(ArrivedTile)
+
             Else
+
                 If ArrivedTile <> TILE_STAIRS_UP And ArrivedTile <> TILE_STAIRS_DOWN Then
                     StairSuppressed = 0
                 End If
 
                 Call EnterIdle()
+
             End If
 
         End If
@@ -1769,6 +1777,7 @@ Sub UpdateAction()
             If ContinueStep <> 0 Then
                 Call StartMove(ContinueStep)
             Else
+
                 Call EnterIdle()
             End If
 
@@ -1862,6 +1871,7 @@ Sub PlanDemoFallback()
         If TurnDifference = 1 Or TurnDifference = 2 Then
             Call StartTurnRight()
         Else
+
             Call StartTurnLeft()
         End If
 
@@ -1927,7 +1937,9 @@ Sub PlanDemoAction()
                     DemoParent[DemoNextCell] = DemoCell
                     DemoQueue[DemoTail] = DemoNextCell
                     DemoTail = DemoTail + 1
+
                 End If
+
             End If
 
         End For
@@ -1986,6 +1998,7 @@ Sub PlanDemoAction()
             If HalfTurn = 0 Then
                 Call StartTurnLeft()
             Else
+
                 Call StartTurnRight()
             End If
 

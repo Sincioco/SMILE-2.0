@@ -172,7 +172,6 @@ Public Sub Draw(ByRef Style As Core.WindowStyle, X As Number, Y As Number, Width
     If (Not Style.UseSkin Or
         Not Image_Loaded(Style.Skin) Or
         Not IsStyleValid(Style)) Then
-
         Call DrawVector(Style, X, Y, Width, Height)
 
         Return

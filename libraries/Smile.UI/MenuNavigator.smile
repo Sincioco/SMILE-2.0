@@ -249,6 +249,7 @@ Private Sub ClearBindingAt(Slot As Number, BindingIndex As Number)
         If Not OtherBindingKeepsMarker(Slot, BindingIndex, ParentHandle, ParentItem, ParentRevision) Then
             Ignored = Menu.SetItemHasSubmenu(ParentHandle, ParentItem, False)
         End If
+
     End If
 
     BindingUsed[Slot, BindingIndex] = False
@@ -310,15 +311,11 @@ Private Sub PruneBindings(Slot As Number)
             If (Not Menu.IsValid(ParentHandle) Or
                 Not Menu.IsValid(ChildHandle) Or
                 ParentHandle = ChildHandle) Then
-
                 Call ClearBindingAt(Slot, BindingIndex)
-
             Else If (Menu.ItemRevision(ParentHandle) <> ParentRevision Or
                 ParentItem < 0 Or
                 ParentItem >= Menu.ItemCount(ParentHandle)) Then
-
                 Call ClearBindingAt(Slot, BindingIndex)
-
             End If
 
         End If
@@ -516,6 +513,7 @@ Private Sub TrimActiveEdge(Slot As Number, ParentMenuHandle As Number, ParentIte
             Call ClearAccepted(Slot)
 
             Return
+
         End If
 
     End For
@@ -537,7 +535,6 @@ Private Function AllBoundMenusFit(Slot As Number, ByRef Style As Core.MenuNaviga
             If (Not MenuFitsStyle(BindingParentMenus[Slot, BindingIndex], Style) Or
                 Not MenuFitsStyle(BindingChildMenus[Slot, BindingIndex], Style)) Then
                 Return False
-
             End If
 
         End If
@@ -926,7 +923,6 @@ Public Function BindSubmenu(NavigatorHandle As Number, ParentMenuHandle As Numbe
     If (ParentRevision <= 0 Or
         Not Menu.SetItemHasSubmenu(ParentMenuHandle, ParentItemIndex, True)) Then
         Return False
-
     End If
 
     If ExistingChild <> 0 And ExistingChild <> ChildMenuHandle Then
@@ -1114,7 +1110,6 @@ Public Function Back(NavigatorHandle As Number) As Number
         NavigatorDepth[Slot] <= 1) Then
         ReturnValue = Core.UI_EVENT_NONE
         Return ReturnValue
-
     End If
 
     OldDepth = NavigatorDepth[Slot]
@@ -1183,6 +1178,7 @@ Public Function HandleKey(NavigatorHandle As Number, Key As Number) As Number
             ReturnValue = Core.UI_EVENT_NONE
             Return ReturnValue
         End If
+
     End If
 
     If Key = KEY_LEFT Then

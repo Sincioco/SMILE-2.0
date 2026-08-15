@@ -85,9 +85,7 @@ if (-not (Test-Path -LiteralPath $LanguageAssembly)) {
 
 try {
     [IO.Directory]::CreateDirectory((Join-Path $TestRoot 'scripts')) | Out-Null
-    [IO.Directory]::CreateDirectory((Join-Path $TestRoot 'src\Smile.Language\bin\Debug\netstandard2.0')) | Out-Null
     Copy-Item -LiteralPath $FormatterSource -Destination $FormatterPath
-    Copy-Item -LiteralPath $LanguageAssembly -Destination (Join-Path $TestRoot 'src\Smile.Language\bin\Debug\netstandard2.0\Smile.Language.dll')
 
     & git -C $TestRoot init --quiet
     if ($LASTEXITCODE -ne 0) { throw 'Unable to initialize the temporary formatter Git fixture.' }
@@ -95,6 +93,32 @@ try {
     Write-TestSource 'Tracked.smile' "Option Explicit`n" | Out-Null
     & git -C $TestRoot add -- Tracked.smile
     if ($LASTEXITCODE -ne 0) { throw 'Unable to track the formatter fixture.' }
+
+    $TrackedPath = Join-Path $TestRoot 'Tracked.smile'
+    $TrackedBytes = [IO.File]::ReadAllBytes($TrackedPath)
+    $TrackedTimestamp = [IO.File]::GetLastWriteTimeUtc($TrackedPath)
+    $MissingCheck = Invoke-Formatter @('-Check', '-FormatLongIf')
+    Assert-True ($MissingCheck.ExitCode -ne 0 -and $MissingCheck.Output.Contains('Run scripts\build.cmd first')) 'Missing assembly Check did not fail with the build-first instruction.'
+    Assert-Equal ([Convert]::ToBase64String($TrackedBytes)) ([Convert]::ToBase64String([IO.File]::ReadAllBytes($TrackedPath))) 'Missing assembly Check changed source bytes.'
+    Assert-Equal $TrackedTimestamp ([IO.File]::GetLastWriteTimeUtc($TrackedPath)) 'Missing assembly Check changed the source timestamp.'
+    Assert-Equal 0 @(Get-ChildItem -LiteralPath $TestRoot -Recurse -Directory | Where-Object { $_.Name -in @('bin', 'obj') }).Count 'Missing assembly Check created bin or obj.'
+
+    $AssemblyDirectory = Join-Path $TestRoot 'src\Smile.Language\bin\Debug\netstandard2.0'
+    [IO.Directory]::CreateDirectory($AssemblyDirectory) | Out-Null
+    $TestAssembly = Join-Path $AssemblyDirectory 'Smile.Language.dll'
+    Copy-Item -LiteralPath $LanguageAssembly -Destination $TestAssembly
+    $StaleMarker = Write-TestSource 'src\Smile.Language\FormatterMarker.cs' '// stale dependency marker'
+    [IO.File]::SetLastWriteTimeUtc($StaleMarker, [IO.File]::GetLastWriteTimeUtc($TestAssembly).AddSeconds(2))
+    $StaleFilesBefore = @(Get-ChildItem -LiteralPath $TestRoot -Recurse -File | Select-Object -ExpandProperty FullName)
+    $StaleCheck = Invoke-Formatter @('-Check', '-FormatLongIf')
+    Assert-True ($StaleCheck.ExitCode -ne 0 -and $StaleCheck.Output.Contains('Run scripts\build.cmd first')) 'Stale assembly Check did not fail with the build-first instruction.'
+    $StaleFilesAfter = @(Get-ChildItem -LiteralPath $TestRoot -Recurse -File | Select-Object -ExpandProperty FullName)
+    Assert-Equal ($StaleFilesBefore -join '|') ($StaleFilesAfter -join '|') 'Stale assembly Check created a file.'
+    Assert-Equal 0 @(Get-ChildItem -LiteralPath $TestRoot -Recurse -Directory | Where-Object { $_.Name -eq 'obj' }).Count 'Stale assembly Check created obj.'
+    Assert-Equal ([Convert]::ToBase64String($TrackedBytes)) ([Convert]::ToBase64String([IO.File]::ReadAllBytes($TrackedPath))) 'Stale assembly Check changed source bytes.'
+    Assert-Equal $TrackedTimestamp ([IO.File]::GetLastWriteTimeUtc($TrackedPath)) 'Stale assembly Check changed the source timestamp.'
+    Remove-Item -LiteralPath $StaleMarker -Force
+    Pass 'missing and stale Check fail build-first without source or build side effects'
 
     $Untracked = Write-TestSource 'Untracked.smile' "Option Explicit`n`nFunction Add() As Number`n`n    Return 1 + 2`n`nEnd Function`n"
     $DefaultCheck = Invoke-Formatter @('-Check', '-FormatLongIf')
@@ -126,6 +150,62 @@ try {
     Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'Drift.smile')).ExitCode 'Formatting tracked drift failed.'
     Assert-Equal 0 (Invoke-Formatter @('-Check', '-FormatLongIf')).ExitCode 'Repository style gate did not pass after formatting drift.'
     Pass 'read-only Check failure, restoration, bytes, timestamps, and generated-file safety'
+
+    $ClipSource = "Option Explicit`n`nGame Window `"Clip Formatter`"`n`n" +
+        "Function Calculate(Value As Number) As Number`n`n" +
+        "    Clip Rectangle 0, 0, 100, 100`n" +
+        "        If (Value < 0`n            Or Value > 100`n            Or Value = 50) Then`n" +
+        "            Return Value + 1`n        End If`n    End Clip`n`n" +
+        "    Return 0`n`nEnd Function`n"
+    $ClipPath = Write-TestSource 'ClipTraversal.smile' $ClipSource
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'ClipTraversal.smile')).ExitCode 'Nested Clip formatting failed.'
+    $ClipFormatted = [IO.File]::ReadAllText($ClipPath)
+    Assert-True ($ClipFormatted.Contains("If (Value < 0 Or`n            Value > 100 Or`n            Value = 50) Then")) 'Long If inside Clip was not syntax-formatted.'
+    Assert-True ($ClipFormatted.Contains('ReturnValue = Value + 1')) 'Computed Return inside Clip was not rewritten.'
+
+    $CompactSource = "Option Explicit`r`n`r`nDim FirstCondition As Boolean`r`nDim SecondCondition As Boolean`r`n" +
+        "Dim ThirdCondition As Boolean`r`n`r`nIf (FirstCondition`r`n    Or SecondCondition`r`n    Or ThirdCondition) Then`r`n`r`n" +
+        "    Print `"Matched`"`r`n`r`nEnd If`r`n"
+    $CompactPath = Write-TestSource 'MultilineCompact.smile' $CompactSource
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'MultilineCompact.smile')).ExitCode 'Compact multiline If formatting failed.'
+    $CompactExpected = "Option Explicit`n`nDim FirstCondition As Boolean`nDim SecondCondition As Boolean`n" +
+        "Dim ThirdCondition As Boolean`n`nIf (FirstCondition Or`n    SecondCondition Or`n    ThirdCondition) Then`n" +
+        "    Print `"Matched`"`nEnd If`n"
+    Assert-Equal $CompactExpected ([IO.File]::ReadAllText($CompactPath)) 'Compact multiline If layout differed.'
+
+    $ExpandedSource = "Option Explicit`n`nDim FirstCondition As Boolean`nDim SecondCondition As Boolean`n" +
+        "Dim ThirdCondition As Boolean`nDim FourthCondition As Boolean`nDim FifthCondition As Boolean`n" +
+        "Dim SixthCondition As Boolean`nDim Value As Number`nDim Total As Number`nDim Ready As Boolean`n`n" +
+        "If (FirstCondition`n    Or SecondCondition`n    Or ThirdCondition) Then`n" +
+        "    Value = 1`n    Total = Total + 1`n    Ready = True`n" +
+        "Else If (FourthCondition`n    Or FifthCondition`n    Or SixthCondition) Then`n" +
+        "    Value = 2`n    Total = Total + 1`n    Ready = False`nEnd If`n"
+    $ExpandedPath = Write-TestSource 'MultilineExpanded.smile' $ExpandedSource
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'MultilineExpanded.smile')).ExitCode 'Expanded multiline If formatting failed.'
+    $ExpandedFormatted = [IO.File]::ReadAllText($ExpandedPath)
+    Assert-True ($ExpandedFormatted.Contains("ThirdCondition) Then`n`n    Value = 1")) 'Expanded If header did not receive a blank line.'
+    Assert-True ($ExpandedFormatted.Contains("Ready = True`n`nElse If (FourthCondition Or")) 'Expanded Else If boundary did not receive a blank line.'
+    Assert-True ($ExpandedFormatted.Contains("SixthCondition) Then`n`n    Value = 2")) 'Expanded Else If header did not receive a blank line.'
+    Assert-True ($ExpandedFormatted.Contains("Ready = False`n`nEnd If")) 'Expanded End If boundary did not receive a blank line.'
+
+    Write-TestSource 'Provider\Values.smile' "Module Example.Values`n`nOption Explicit`n`nPublic Const UI_EVENT_NONE = 0`nPublic Dim DefaultValue As Number`nPublic Dim Items[2] As Number`n`nPublic Type Holder`n    Value As Number`nEnd Type`n`nPublic Dim Current As Holder`n`nPublic Function CreateValue() As Number`n`n    Return 1`n`nEnd Function`n`nEnd Module`n" | Out-Null
+    Write-TestSource 'Provider\Provider.smilelibproj' '<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Provider</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include="Values.smile" /></ItemGroup></SmileProject>' | Out-Null
+    $QualifiedPath = Write-TestSource 'Consumer\Consumer.smile' "Module Example.Consumer`n`nOption Explicit`n`nImport Example.Values As Values`n`nPublic Function ConstantValue() As Number`n`n    Return Values.UI_EVENT_NONE`n`nEnd Function`n`nPublic Function ModuleValue() As Number`n`n    Return Values.DefaultValue`n`nEnd Function`n`nPublic Function FieldValue() As Number`n`n    Return Values.Current.Value`n`nEnd Function`n`nPublic Function ArrayValue() As Number`n`n    Return Values.Items[0]`n`nEnd Function`n`nPublic Function CallValue() As Number`n`n    Return Values.CreateValue()`n`nEnd Function`n`nEnd Module`n"
+    Write-TestSource 'Consumer\Consumer.smilelibproj' '<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Consumer</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include="Consumer.smile" /><SmileProjectReference Include="..\Provider\Provider.smilelibproj" /></ItemGroup></SmileProject>' | Out-Null
+    & git -C $TestRoot add -- Provider Consumer
+    if ($LASTEXITCODE -ne 0) { throw 'Unable to track the qualified Return project fixture.' }
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'Consumer\Consumer.smile')).ExitCode 'Qualified Return project formatting failed.'
+    $QualifiedFormatted = [IO.File]::ReadAllText($QualifiedPath)
+    Assert-True ($QualifiedFormatted.Contains('Return Values.UI_EVENT_NONE')) 'Imported public constant did not remain a direct Return.'
+    Assert-True ($QualifiedFormatted.Contains('Return Values.DefaultValue')) 'Imported public module variable did not remain a direct Return.'
+    foreach ($Expression in @('Values.Current.Value', 'Values.Items[0]', 'Values.CreateValue()')) {
+        Assert-True ($QualifiedFormatted.Contains('ReturnValue = ' + $Expression)) "Evaluated Return '$Expression' did not receive an intermediate variable."
+    }
+    $QualifiedFirstPass = [IO.File]::ReadAllBytes($QualifiedPath)
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'Consumer\Consumer.smile')).ExitCode 'Qualified Return second pass failed.'
+    $QualifiedSecondPass = [IO.File]::ReadAllBytes($QualifiedPath)
+    Assert-Equal ([Convert]::ToBase64String($QualifiedFirstPass)) ([Convert]::ToBase64String($QualifiedSecondPass)) 'Qualified Return formatting was not idempotent.'
+    Pass 'Clip traversal, multiline If layout, and symbol-aware qualified Returns'
 
     $First = Write-TestSource 'AFirst.smile' "Option Explicit`n`nFunction First() As Number`n`n    Return 4 + 5`n`nEnd Function`n"
     $Bad = Write-TestSource 'ZBad.smile' "Option Explicit`n`nFunction Broken()`n`n    Return Missing()`n`nEnd Function`n"

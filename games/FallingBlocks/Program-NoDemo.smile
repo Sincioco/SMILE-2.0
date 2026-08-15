@@ -177,6 +177,7 @@ Do
                     If CanMove(0, 1, Rotation) = True Then
                         PieceY = PieceY + 1
                     Else
+
                         Call LockPiece()
                     End If
 
@@ -203,6 +204,7 @@ Do
                 If CanMove(0, 1, Rotation) = True Then
                     PieceY = PieceY + 1
                 Else
+
                     Call LockPiece()
                 End If
 
@@ -317,7 +319,6 @@ Function CanMove(OffsetX, OffsetY, TestRotation)
             TestX >= BoardWidth Or
             TestY >= BoardHeight) Then
             Return False
-
         End If
 
         If TestY >= 0 Then
@@ -586,6 +587,7 @@ Sub DrawGame()
                     If PendingClearCount >= 4 Then
                         Call DrawBlock(BoardX + Column * CellSize, BoardY + Row * CellSize, CellSize, YELLOW)
                     Else
+
                         Call DrawBlock(BoardX + Column * CellSize, BoardY + Row * CellSize, CellSize, WHITE)
                     End If
 

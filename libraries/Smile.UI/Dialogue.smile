@@ -796,7 +796,6 @@ Public Sub Draw(Handle As Number, NowMilliseconds As Number)
         DialogueWidth[Slot] <= 0 Or
         DialogueHeight[Slot] <= 0) Then
         Return
-
     End If
 
     UpdateEvent = Update(Handle, NowMilliseconds)
@@ -826,7 +825,11 @@ Public Sub Draw(Handle As Number, NowMilliseconds As Number)
             Remaining = Max(0, Remaining - Length)
         End For
 
-        If DialogueVisible[Slot] >= CurrentScalarCount[Slot] And DialogueStyles[Slot].UseContinueIndicator And Image_Loaded(DialogueStyles[Slot].ContinueIndicator) And DialogueStyles[Slot].IndicatorWidth > 0 And DialogueStyles[Slot].IndicatorHeight > 0 Then
+        If (DialogueVisible[Slot] >= CurrentScalarCount[Slot] And
+            DialogueStyles[Slot].UseContinueIndicator And
+            Image_Loaded(DialogueStyles[Slot].ContinueIndicator) And
+            DialogueStyles[Slot].IndicatorWidth > 0 And
+            DialogueStyles[Slot].IndicatorHeight > 0) Then
 
             BlinkOn = True
 

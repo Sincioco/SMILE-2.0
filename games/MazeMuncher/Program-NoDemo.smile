@@ -275,7 +275,6 @@ Function PlayerCellOpen(XValue, YValue)
         YValue < 0 Or
         YValue >= MazeHeight) Then
         Return False
-
     End If
 
     TileValue = Tiles[CellIndex(XValue, YValue)]
@@ -293,7 +292,6 @@ Function EnemyCellOpen(XValue, YValue)
         YValue < 0 Or
         YValue >= MazeHeight) Then
         Return False
-
     End If
 
     ReturnValue = Tiles[CellIndex(XValue, YValue)] <> TILE_WALL
@@ -312,7 +310,6 @@ Function NextCellX(XValue, YValue, DirectionValue)
         DirectionValue = 3) Then
         ReturnValue = MazeWidth - 1
         Return ReturnValue
-
     End If
 
     If (YValue = 10 And
@@ -320,7 +317,6 @@ Function NextCellX(XValue, YValue, DirectionValue)
         DirectionValue = 1) Then
         ReturnValue = 0
         Return ReturnValue
-
     End If
 
     Return CandidateX
@@ -531,6 +527,7 @@ Sub ParseLoadedMap()
             If ParsedRow >= MazeHeight Or ParsedColumn >= MazeWidth Then
                 MapValid = False
             Else
+
                 Call ParseMapByte(MapByte, ParsedColumn, ParsedRow)
             End If
 
@@ -556,7 +553,6 @@ Sub ParseLoadedMap()
         TunnelCount <> 2 Or
         ParsedPelletCount <= 0) Then
         MapValid = False
-
     End If
 
     For ParsedEnemy = 0 To 3
@@ -877,7 +873,6 @@ Sub ChooseEnemyDirection(EnemyNumber)
                 CandidateY = EnemyPreviousY[EnemyNumber] And
                 LegalCount > 1) Then
                 CandidateAllowed = False
-
             End If
 
         End If
@@ -986,17 +981,14 @@ Sub UpdateRenderPositions()
             PlayerToX = MazeWidth - 1 And
             PlayerDirection = 3) Then
             PlayerPixelX = CellCenterX(0) - PlayerProgress / SubpixelsPerPixel
-
         Else If (PlayerFromX = MazeWidth - 1 And
             PlayerToX = 0 And
             PlayerDirection = 1) Then
             PlayerPixelX = CellCenterX(MazeWidth - 1) + PlayerProgress / SubpixelsPerPixel
-
         Else
 
             PlayerPixelX = CellCenterX(PlayerFromX) + (CellCenterX(PlayerToX) - CellCenterX(PlayerFromX)) * PlayerProgress / CellTravelSub
             PlayerPixelY = CellCenterY(PlayerFromY) + (CellCenterY(PlayerToY) - CellCenterY(PlayerFromY)) * PlayerProgress / CellTravelSub
-
         End If
 
     End If
@@ -1012,17 +1004,14 @@ Sub UpdateRenderPositions()
                 EnemyToX[RenderEnemy] = MazeWidth - 1 And
                 EnemyDirection[RenderEnemy] = 3) Then
                 EnemyPixelX[RenderEnemy] = CellCenterX(0) - EnemyProgress[RenderEnemy] / SubpixelsPerPixel
-
             Else If (EnemyFromX[RenderEnemy] = MazeWidth - 1 And
                 EnemyToX[RenderEnemy] = 0 And
                 EnemyDirection[RenderEnemy] = 1) Then
                 EnemyPixelX[RenderEnemy] = CellCenterX(MazeWidth - 1) + EnemyProgress[RenderEnemy] / SubpixelsPerPixel
-
             Else
 
                 EnemyPixelX[RenderEnemy] = CellCenterX(EnemyFromX[RenderEnemy]) + (CellCenterX(EnemyToX[RenderEnemy]) - CellCenterX(EnemyFromX[RenderEnemy])) * EnemyProgress[RenderEnemy] / CellTravelSub
                 EnemyPixelY[RenderEnemy] = CellCenterY(EnemyFromY[RenderEnemy]) + (CellCenterY(EnemyToY[RenderEnemy]) - CellCenterY(EnemyFromY[RenderEnemy])) * EnemyProgress[RenderEnemy] / CellTravelSub
-
             End If
 
         End If
@@ -1340,28 +1329,24 @@ Sub DrawMaze()
                 If (IsWallTile(DrawX, DrawY - 1) = True And
                     IsWallTile(DrawX - 1, DrawY) = True And
                     IsWallTile(DrawX - 1, DrawY - 1) = True) Then
-
                     Call DrawNeonCorner(DrawCellX + WallCurveRadius, DrawCellY + WallCurveRadius, 180, 90)
                 End If
 
                 If (IsWallTile(DrawX, DrawY - 1) = True And
                     IsWallTile(DrawX + 1, DrawY) = True And
                     IsWallTile(DrawX + 1, DrawY - 1) = True) Then
-
                     Call DrawNeonCorner(DrawCellX + CellSize - WallCurveRadius, DrawCellY + WallCurveRadius, 270, 90)
                 End If
 
                 If (IsWallTile(DrawX, DrawY + 1) = True And
                     IsWallTile(DrawX + 1, DrawY) = True And
                     IsWallTile(DrawX + 1, DrawY + 1) = True) Then
-
                     Call DrawNeonCorner(DrawCellX + CellSize - WallCurveRadius, DrawCellY + CellSize - WallCurveRadius, 0, 90)
                 End If
 
                 If (IsWallTile(DrawX, DrawY + 1) = True And
                     IsWallTile(DrawX - 1, DrawY) = True And
                     IsWallTile(DrawX - 1, DrawY + 1) = True) Then
-
                     Call DrawNeonCorner(DrawCellX + WallCurveRadius, DrawCellY + CellSize - WallCurveRadius, 90, 90)
                 End If
 

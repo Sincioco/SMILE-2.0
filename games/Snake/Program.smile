@@ -121,6 +121,7 @@ Do
                 If DemoHasSafeMove = True Then
                     Call MoveSnake()
                 Else
+
                     Call RecoverDemo()
                 End If
 
@@ -149,6 +150,7 @@ Do
         If State = 0 Then
             Call DrawTitle()
         Else
+
             Call DrawBoard()
             Call DrawGameOver()
         End If
@@ -475,6 +477,7 @@ Function FloodAreaForDirection(TestDirection)
                     End If
 
                 End If
+
             End If
 
         End For
@@ -508,6 +511,7 @@ Sub ChooseSafeFallback()
                 BestSafeArea = SafeArea
                 BestFoodDistance = SafeFoodDistance
                 BestSafeDirection = SafeDirection
+
             End If
 
         End If
@@ -586,6 +590,7 @@ Sub PlanDemoDirection()
                     End If
 
                 End If
+
             End If
 
         End For

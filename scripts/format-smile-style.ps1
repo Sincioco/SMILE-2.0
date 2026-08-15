@@ -12,8 +12,19 @@ Set-StrictMode -Version Latest
 
 $RepositoryRoot = Split-Path -Parent $PSScriptRoot
 $Utf8WithoutBom = [Text.UTF8Encoding]::new($false)
-$LanguageAssemblyPath = Join-Path $RepositoryRoot 'src\Smile.Language\bin\Debug\netstandard2.0\Smile.Language.dll'
+$ReleaseLanguageAssemblyPath = Join-Path $RepositoryRoot 'src\Smile.Language\bin\Release\netstandard2.0\Smile.Language.dll'
+$DebugLanguageAssemblyPath = Join-Path $RepositoryRoot 'src\Smile.Language\bin\Debug\netstandard2.0\Smile.Language.dll'
+$LanguageAssemblyPath = if (Test-Path -LiteralPath $ReleaseLanguageAssemblyPath) {
+    $ReleaseLanguageAssemblyPath
+}
+else {
+    $DebugLanguageAssemblyPath
+}
 $TextLiteralLineBreak = [char]0xE000
+$ProjectOwnersBySource = @{}
+$ProjectAnalyses = @{}
+$ProjectAnalysisFailures = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+$SymbolCacheRoot = Join-Path $env:TEMP ("smile-formatter-symbols-" + [Guid]::NewGuid().ToString('N'))
 
 function Join-MultilineTextLiterals {
     param([string[]]$Lines)
@@ -87,11 +98,16 @@ function Initialize-LanguageAssembly {
 
     if (-not $NeedsBuild) {
         $AssemblyWriteTime = (Get-Item -LiteralPath $LanguageAssemblyPath).LastWriteTimeUtc
-        $NeedsBuild = @(Get-ChildItem -LiteralPath (Join-Path $RepositoryRoot 'src\Smile.Language') -Filter '*.cs' -File |
+        $NeedsBuild = @(Get-ChildItem -LiteralPath (Join-Path $RepositoryRoot 'src\Smile.Language') -Recurse -File |
+            Where-Object { $_.Extension -eq '.cs' -or $_.Extension -eq '.csproj' } |
             Where-Object { $_.LastWriteTimeUtc -gt $AssemblyWriteTime }).Count -gt 0
     }
 
     if ($NeedsBuild) {
+        if ($Check) {
+            throw 'Smile.Language formatter assembly is missing or stale. Run scripts\build.cmd first; -Check never builds dependencies.'
+        }
+
         & dotnet build (Join-Path $RepositoryRoot 'src\Smile.Language\Smile.Language.csproj') --nologo
 
         if ($LASTEXITCODE -ne 0) {
@@ -202,114 +218,21 @@ function Test-RequiresBlankBefore {
         $Value -match '^Option\s+Explicit$'
 }
 
-function Test-IfBranchHeader {
-    param([string]$Line)
-
-    $Value = $Line.Trim()
-    return $Value -match '^If\b.*\bThen$' -or
-        $Value -match '^Else\s+If\b.*\bThen$' -or
-        $Value -match '^Else$'
-}
-
-function Test-IfBranchBoundary {
-    param([string]$Line)
-
-    $Value = $Line.Trim()
-    return $Value -match '^Else\s+If\b' -or
-        $Value -match '^Else$' -or
-        $Value -match '^End\s+If$'
-}
-
-function Get-IfBlockLayout {
+function Get-SyntaxIfBlockLayout {
     param(
-        [string[]]$Lines,
-        [int]$Index
+        $Layouts,
+        [int]$CurrentSourceLine,
+        [int]$NextSourceLine
     )
 
-    $ReferenceIndent = $null
-
-    if (Test-IfBranchHeader $Lines[$Index]) {
-        $ReferenceIndent = Get-LeadingWhitespace $Lines[$Index]
-    }
-    elseif ($Index + 1 -lt $Lines.Count -and (Test-IfBranchBoundary $Lines[$Index + 1])) {
-        $ReferenceIndent = Get-LeadingWhitespace $Lines[$Index + 1]
-    }
-    else {
-        return ''
-    }
-
-    $RootIndex = -1
-
-    for ($CandidateIndex = $Index; $CandidateIndex -ge 0; $CandidateIndex--) {
-        if ((Get-LeadingWhitespace $Lines[$CandidateIndex]) -cne $ReferenceIndent) {
-            continue
-        }
-
-        if ($Lines[$CandidateIndex].Trim() -match '^If\b.*\bThen$') {
-            $RootIndex = $CandidateIndex
-            break
+    foreach ($Layout in $Layouts) {
+        if ($Layout.HeaderEndLines -contains $CurrentSourceLine -or
+            $Layout.BoundaryLines -contains $NextSourceLine) {
+            return $(if ($Layout.IsExpanded) { 'Expanded' } else { 'Compact' })
         }
     }
 
-    if ($RootIndex -lt 0) {
-        return ''
-    }
-
-    $EndIndex = -1
-
-    for ($CandidateIndex = $RootIndex + 1; $CandidateIndex -lt $Lines.Count; $CandidateIndex++) {
-        if ((Get-LeadingWhitespace $Lines[$CandidateIndex]) -ceq $ReferenceIndent -and
-            $Lines[$CandidateIndex].Trim() -match '^End\s+If$') {
-            $EndIndex = $CandidateIndex
-            break
-        }
-    }
-
-    if ($EndIndex -lt 0) {
-        return ''
-    }
-
-    $BranchHeaders = [Collections.Generic.List[int]]::new()
-    $BranchHeaders.Add($RootIndex)
-
-    for ($CandidateIndex = $RootIndex + 1; $CandidateIndex -lt $EndIndex; $CandidateIndex++) {
-        if ((Get-LeadingWhitespace $Lines[$CandidateIndex]) -ceq $ReferenceIndent -and
-            $Lines[$CandidateIndex].Trim() -match '^(?:Else\s+If\b.*\bThen|Else)$') {
-            $BranchHeaders.Add($CandidateIndex)
-        }
-    }
-
-    for ($BranchIndex = 0; $BranchIndex -lt $BranchHeaders.Count; $BranchIndex++) {
-        $BodyStart = $BranchHeaders[$BranchIndex] + 1
-        $BodyEnd = if ($BranchIndex + 1 -lt $BranchHeaders.Count) {
-            $BranchHeaders[$BranchIndex + 1] - 1
-        }
-        else {
-            $EndIndex - 1
-        }
-
-        if ($BodyEnd -lt $BodyStart) {
-            return 'Expanded'
-        }
-
-        $BranchStatements = @($Lines[$BodyStart..$BodyEnd] | Where-Object {
-            $_.Trim().Length -gt 0 -and -not $_.Trim().StartsWith("'")
-        })
-
-        if ($BranchStatements.Count -lt 1 -or $BranchStatements.Count -gt 2) {
-            return 'Expanded'
-        }
-
-        $HasNestedControl = @($BranchStatements | Where-Object {
-            $_.Trim() -match '^(?:If\b|Else\b|End\s+If$|For\b|End\s+For$|Do\b|Loop\b)'
-        }).Count -gt 0
-
-        if ($HasNestedControl) {
-            return 'Expanded'
-        }
-    }
-
-    return 'Compact'
+    return ''
 }
 
 function Test-CompactForBoundary {
@@ -385,18 +308,23 @@ function Test-RequiresBlankAfter {
 }
 
 function Format-BlankLines {
-    param([string[]]$Lines)
+    param([string[]]$Lines, $IfBlockLayouts)
 
     $Collapsed = [Collections.Generic.List[string]]::new()
+    $CollapsedSourceLines = [Collections.Generic.List[int]]::new()
 
-    foreach ($Line in $Lines) {
+    for ($LineIndex = 0; $LineIndex -lt $Lines.Count; $LineIndex++) {
+        $Line = $Lines[$LineIndex]
+
         if ($Line.Trim().Length -eq 0) {
             if ($Collapsed.Count -ne 0 -and $Collapsed[$Collapsed.Count - 1].Length -ne 0) {
                 $Collapsed.Add('')
+                $CollapsedSourceLines.Add($LineIndex + 1)
             }
         }
         else {
             $Collapsed.Add($Line.TrimEnd())
+            $CollapsedSourceLines.Add($LineIndex + 1)
         }
     }
 
@@ -405,6 +333,7 @@ function Format-BlankLines {
     }
 
     $NonBlank = [Collections.Generic.List[string]]::new()
+    $NonBlankSourceLines = [Collections.Generic.List[int]]::new()
     $HadBlankAfter = [Collections.Generic.List[bool]]::new()
 
     for ($CollapsedIndex = 0; $CollapsedIndex -lt $Collapsed.Count; $CollapsedIndex++) {
@@ -413,6 +342,7 @@ function Format-BlankLines {
         }
 
         $NonBlank.Add($Collapsed[$CollapsedIndex])
+        $NonBlankSourceLines.Add($CollapsedSourceLines[$CollapsedIndex])
         $HadBlankAfter.Add($CollapsedIndex + 1 -lt $Collapsed.Count -and
             $Collapsed[$CollapsedIndex + 1].Length -eq 0)
     }
@@ -452,7 +382,7 @@ function Format-BlankLines {
             $CurrentCategory = $CategoriesEndingAt[$Index]
             $NextCategory = $CategoriesStartingAt[$Index + 1]
             $NeedsBlank = (Test-RequiresBlankAfter $Current) -or (Test-RequiresBlankBefore $Next)
-            $IfBlockLayout = Get-IfBlockLayout $NonBlank $Index
+            $IfBlockLayout = Get-SyntaxIfBlockLayout $IfBlockLayouts $NonBlankSourceLines[$Index] $NonBlankSourceLines[$Index + 1]
             $SuppressBlank = ($IfBlockLayout -eq 'Compact') -or
                 (Test-CompactForBoundary $NonBlank $Index)
 
@@ -517,17 +447,32 @@ function Format-SmileText {
     param(
         [string]$Text,
         [bool]$SkipReturnVariables,
-        [string]$FilePath
+        [string]$FilePath,
+        $SymbolAnalysis,
+        $SymbolSyntaxTree
     )
 
     $NormalizedText = $Text.Replace("`r`n", "`n").Replace("`r", "`n")
-    $StructuredText = [Smile.Language.SmileSourceFormatter]::Format(
-        $NormalizedText,
-        [bool]$FormatLongIf,
-        $MaximumLineLength,
-        -not $SkipReturnVariables,
-        $true,
-        $FilePath)
+    $StructuredText = if ($null -ne $SymbolAnalysis -and $null -ne $SymbolSyntaxTree) {
+        [Smile.Language.SmileSourceFormatter]::Format(
+            $NormalizedText,
+            [bool]$FormatLongIf,
+            $MaximumLineLength,
+            -not $SkipReturnVariables,
+            $true,
+            $FilePath,
+            $SymbolAnalysis,
+            $SymbolSyntaxTree)
+    }
+    else {
+        [Smile.Language.SmileSourceFormatter]::Format(
+            $NormalizedText,
+            [bool]$FormatLongIf,
+            $MaximumLineLength,
+            -not $SkipReturnVariables,
+            $true,
+            $FilePath)
+    }
     $Lines = @($StructuredText.Split("`n"))
 
     if ($Lines.Count -gt 0 -and $Lines[$Lines.Count - 1].Length -eq 0) {
@@ -535,9 +480,106 @@ function Format-SmileText {
     }
 
     $Lines = @(Join-MultilineTextLiterals $Lines)
-    $Lines = @(Format-BlankLines $Lines)
+    $LayoutText = ($Lines -join "`n") + "`n"
+    $IfBlockLayouts = [Smile.Language.SmileSourceFormatter]::GetIfBlockLayouts($LayoutText, $FilePath)
+    $Lines = @(Format-BlankLines $Lines $IfBlockLayouts)
     $Lines = @(Expand-MultilineTextLiterals $Lines)
     return ($Lines -join "`n") + "`n"
+}
+
+function Initialize-ProjectOwners {
+    param([string[]]$RelativeTargets)
+
+    $TargetPaths = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+
+    foreach ($RelativeTarget in $RelativeTargets) {
+        [void]$TargetPaths.Add([IO.Path]::GetFullPath((Join-Path $RepositoryRoot $RelativeTarget)))
+    }
+
+    $ProjectPaths = @(& git -C $RepositoryRoot ls-files --cached --others --exclude-standard -- '*.smileproj' '*.smilelibproj')
+
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Unable to enumerate SMILE project files for formatter symbol resolution.'
+    }
+
+    foreach ($RelativeProjectPath in $ProjectPaths | Sort-Object) {
+        $ProjectPath = [IO.Path]::GetFullPath((Join-Path $RepositoryRoot $RelativeProjectPath))
+
+        try {
+            $SourceSet = [Smile.Language.SmileProjectSourceSet]::Load($ProjectPath)
+        }
+        catch {
+            continue
+        }
+
+        foreach ($Source in $SourceSet.Items) {
+            $SourcePath = [IO.Path]::GetFullPath($Source.FullPath)
+
+            if (-not $TargetPaths.Contains($SourcePath)) {
+                continue
+            }
+
+            if (-not $ProjectOwnersBySource.ContainsKey($SourcePath)) {
+                $ProjectOwnersBySource[$SourcePath] = [Collections.Generic.List[string]]::new()
+            }
+
+            $ProjectOwnersBySource[$SourcePath].Add($ProjectPath)
+        }
+    }
+}
+
+function Get-ProjectSymbolContext {
+    param([string]$FilePath, [string]$SourceText)
+
+    $NormalizedPath = [IO.Path]::GetFullPath($FilePath)
+
+    if (-not $ProjectOwnersBySource.ContainsKey($NormalizedPath)) {
+        return $null
+    }
+
+    foreach ($ProjectPath in $ProjectOwnersBySource[$NormalizedPath]) {
+        if ($ProjectAnalysisFailures.Contains($ProjectPath)) {
+            continue
+        }
+
+        if (-not $ProjectAnalyses.ContainsKey($ProjectPath)) {
+            try {
+                $Compilation = [Smile.Language.SmileProjectCompilation]::Load($ProjectPath, $SymbolCacheRoot)
+                $ProjectAnalyses[$ProjectPath] = [Smile.Language.SmileLanguage]::Analyze(
+                    $Compilation.Sources,
+                    $Compilation.CompilationKind,
+                    $Compilation.DependencyContext)
+            }
+            catch {
+                [void]$ProjectAnalysisFailures.Add($ProjectPath)
+                continue
+            }
+        }
+
+        $Analysis = $ProjectAnalyses[$ProjectPath]
+        $SyntaxTree = $Analysis.SyntaxTrees | Where-Object {
+            [string]::Equals([IO.Path]::GetFullPath($_.Source.FilePath), $NormalizedPath,
+                [StringComparison]::OrdinalIgnoreCase)
+        } | Select-Object -First 1
+
+        if ($null -ne $SyntaxTree -and
+            $SyntaxTree.Source.Text.Replace("`r`n", "`n").Replace("`r", "`n") -ceq
+                $SourceText.Replace("`r`n", "`n").Replace("`r", "`n")) {
+            return [pscustomobject]@{ Analysis = $Analysis; SyntaxTree = $SyntaxTree }
+        }
+    }
+
+    return $null
+}
+
+function Remove-SymbolCache {
+    $TempPrefix = ([IO.Path]::GetFullPath($env:TEMP)).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+    $ResolvedCacheRoot = [IO.Path]::GetFullPath($SymbolCacheRoot)
+
+    if ($ResolvedCacheRoot.StartsWith($TempPrefix, [StringComparison]::OrdinalIgnoreCase) -and
+        [IO.Directory]::Exists($ResolvedCacheRoot)) {
+        Remove-Item -LiteralPath $ResolvedCacheRoot -Recurse -Force
+    }
 }
 
 function Get-Sha256 {
@@ -663,6 +705,8 @@ else {
     }
 }
 
+Initialize-ProjectOwners $TargetFiles
+
 $States = [Collections.Generic.List[object]]::new()
 $ChangedFiles = [Collections.Generic.List[string]]::new()
 
@@ -672,7 +716,10 @@ foreach ($RelativePath in $TargetFiles) {
     $Original = [IO.File]::ReadAllText($FullPath)
     $OriginalDiagnostics = Get-ErrorCodeCounts $Original $FullPath
     $SkipReturnVariables = $RelativePath -match '(^|/)Invalid[^/]*/|^examples/diagnostics/'
-    $Formatted = Format-SmileText $Original $SkipReturnVariables $FullPath
+    $SymbolContext = Get-ProjectSymbolContext $FullPath $Original
+    $SymbolAnalysis = if ($null -eq $SymbolContext) { $null } else { $SymbolContext.Analysis }
+    $SymbolSyntaxTree = if ($null -eq $SymbolContext) { $null } else { $SymbolContext.SyntaxTree }
+    $Formatted = Format-SmileText $Original $SkipReturnVariables $FullPath $SymbolAnalysis $SymbolSyntaxTree
     $FormattedDiagnostics = Get-ErrorCodeCounts $Formatted $FullPath
 
     Assert-NoNewDiagnostics $OriginalDiagnostics $FormattedDiagnostics $RelativePath
@@ -695,11 +742,13 @@ foreach ($RelativePath in $TargetFiles) {
 }
 
 if ($Check -and $ChangedFiles.Count -gt 0) {
+    Remove-SymbolCache
     Write-Error ("SMILE style differs in {0} file(s):`n{1}" -f $ChangedFiles.Count, ($ChangedFiles -join "`n"))
     exit 1
 }
 
 if ($Check) {
+    Remove-SymbolCache
     Write-Output ("SMILE style check passed for {0} file(s)." -f $TargetFiles.Count)
     exit 0
 }
@@ -717,6 +766,7 @@ foreach ($State in $States) {
 }
 
 if ($ChangedFiles.Count -eq 0) {
+    Remove-SymbolCache
     Write-Output ("Formatted 0 of {0} SMILE file(s)." -f $TargetFiles.Count)
     exit 0
 }
@@ -761,4 +811,5 @@ finally {
     }
 }
 
+Remove-SymbolCache
 Write-Output ("Formatted {0} of {1} SMILE file(s)." -f $ChangedFiles.Count, $TargetFiles.Count)

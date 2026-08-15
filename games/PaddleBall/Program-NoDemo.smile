@@ -261,6 +261,7 @@ Sub AwardPoint(PlayerNumber)
     If LeftScore >= WinningScore Or RightScore >= WinningScore Then
         Call FinishMatch()
     Else
+
         Call ResetBall()
     End If
 

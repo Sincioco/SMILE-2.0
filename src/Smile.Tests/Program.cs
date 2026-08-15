@@ -2599,6 +2599,144 @@ Run("Syntax-aware formatter traverses public and private module declarations", (
     Equal(false, SmileLanguage.Analyze(formatted).HasErrors);
 });
 
+Run("Syntax-aware formatter traverses nested Clip Return and long If statements", () =>
+{
+    const string source = "Option Explicit\n\nGame Window \"Clip Formatter\"\n\nDim Result As Number\n\n" +
+        "Result = Calculate(50)\n\n" +
+        "Function Calculate(Value As Number) As Number\n\n" +
+        "    Clip Rectangle 0, 0, 100, 100\n" +
+        "        If (Value < 0\n            Or Value > 100\n            Or Value = 50) Then\n" +
+        "            Return Value + 1\n        End If\n\n" +
+        "        Clip Rectangle 10, 10, 80, 80\n" +
+        "            If Value = 1 Then\n                Return 1\n" +
+        "            Else If Value < 10 Or Value > 20 Or Value = 15 Then\n" +
+        "                Return Value + 2\n            End If\n        End Clip\n    End Clip\n\n" +
+        "    Return 0\n\nEnd Function\n";
+    var formatted = FormatSource(source);
+    Equal(true, formatted.Contains("If (Value < 0 Or\n            Value > 100 Or\n            Value = 50) Then", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("Else If (Value < 10 Or\n                Value > 20 Or\n                Value = 15) Then", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("ReturnValue = Value + 1", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("ReturnValue = Value + 2", StringComparison.Ordinal));
+    Equal(formatted, FormatSource(formatted));
+    var analysis = SmileLanguage.Analyze(formatted);
+    Equal(false, analysis.HasErrors);
+    Equal(true, new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit()
+        .Contains("smile_clip_push", StringComparison.Ordinal));
+    Equal(true, new WebEmitter(analysis).Emit().Contains("smile.pushClip", StringComparison.Ordinal));
+});
+
+Run("Syntax-owned If layouts classify multiline complete blocks", () =>
+{
+    const string compact = "Option Explicit\n\nDim First As Boolean\nDim Second As Boolean\nDim Third As Boolean\n\n" +
+        "If (First Or\n    Second Or\n    Third) Then\n\n    Print \"Matched\"\n\nEnd If\n";
+    var compactLayout = SmileSourceFormatter.GetIfBlockLayouts(compact, "Compact.smile").Single();
+    Equal(false, compactLayout.IsExpanded);
+    Equal("9", string.Join("|", compactLayout.HeaderEndLines));
+    Equal("13", string.Join("|", compactLayout.BoundaryLines));
+
+    const string expanded = "Option Explicit\n\nDim First As Boolean\nDim Second As Boolean\nDim Third As Boolean\n\n" +
+        "If (First Or\n    Second Or\n    Third) Then\n    Print \"One\"\n    Print \"Two\"\n    Print \"Three\"\n" +
+        "Else If (Second Or\n    Third Or\n    First) Then\n    Print \"Four\"\nEnd If\n";
+    var expandedLayout = SmileSourceFormatter.GetIfBlockLayouts(expanded, "Expanded.smile").Single();
+    Equal(true, expandedLayout.IsExpanded);
+    Equal("9|15", string.Join("|", expandedLayout.HeaderEndLines));
+    Equal("13|17", string.Join("|", expandedLayout.BoundaryLines));
+});
+
+Run("Symbol-aware formatter preserves only qualified constants and module variables", () =>
+{
+    const string provider = "Module Example.Values\n\nOption Explicit\n\nPublic Const UI_EVENT_NONE = 0\n" +
+        "Public Dim DefaultValue As Number\nPublic Dim Items[2] As Number\n\n" +
+        "Public Type Point\n    X As Number\nEnd Type\n\n" +
+        "Public Type Holder\n    Value As Number\n    Position As Point\nEnd Type\n\n" +
+        "Public Dim Current As Holder\nPrivate Const HIDDEN = 9\n\n" +
+        "Public Function CreateValue() As Number\n\n    Return 1\n\nEnd Function\n\n" +
+        "Public Function SameConstant() As Number\n\n    Return UI_EVENT_NONE\n\nEnd Function\n\n" +
+        "Public Function SameVariable() As Number\n\n    Return DefaultValue\n\nEnd Function\n\nEnd Module\n";
+    const string consumer = "Module Example.Consumer\n\nOption Explicit\n\nImport Example.Values As Values\n" +
+        "Import Missing.Provider As Missing\n\n" +
+        "Public Function ConstantValue() As Number\n\n    Return Values.UI_EVENT_NONE\n\nEnd Function\n\n" +
+        "Public Function ModuleValue() As Number\n\n    Return Values.DefaultValue\n\nEnd Function\n\n" +
+        "Public Function FieldValue() As Number\n\n    Return Values.Current.Value\n\nEnd Function\n\n" +
+        "Public Function NestedFieldValue() As Number\n\n    Return Values.Current.Position.X\n\nEnd Function\n\n" +
+        "Public Function ArrayValue() As Number\n\n    Return Values.Items[0]\n\nEnd Function\n\n" +
+        "Public Function CallValue() As Number\n\n    Return Values.CreateValue()\n\nEnd Function\n\n" +
+        "Public Function PrivateValue() As Number\n\n    Return Values.HIDDEN\n\nEnd Function\n\n" +
+        "Public Function MissingValue() As Number\n\n    Return Missing.UNKNOWN_VALUE\n\nEnd Function\n\nEnd Module\n";
+    var providerPath = Path.GetFullPath("FormatterProvider.smile");
+    var consumerPath = Path.GetFullPath("FormatterConsumer.smile");
+    var analysis = SmileLanguage.Analyze(new[]
+    {
+        new SmileSourceDocument(provider, providerPath),
+        new SmileSourceDocument(consumer, consumerPath)
+    }, SmileCompilationKind.Library);
+    var tree = analysis.GetSyntaxTree(consumerPath);
+    var formatted = SmileSourceFormatter.Format(consumer, true, 100, true, true, consumerPath, analysis, tree);
+    Equal(true, formatted.Contains("Return Values.UI_EVENT_NONE", StringComparison.Ordinal));
+    Equal(true, formatted.Contains("Return Values.DefaultValue", StringComparison.Ordinal));
+    foreach (var expression in new[] { "Values.Current.Value", "Values.Current.Position.X", "Values.Items[0]",
+                 "Values.CreateValue()", "Values.HIDDEN", "Missing.UNKNOWN_VALUE" })
+        Equal(true, formatted.Contains("ReturnValue = " + expression, StringComparison.Ordinal));
+    var refreshed = SmileLanguage.Analyze(new[]
+    {
+        new SmileSourceDocument(provider, providerPath),
+        new SmileSourceDocument(formatted, consumerPath)
+    }, SmileCompilationKind.Library);
+    Equal(formatted, SmileSourceFormatter.Format(formatted, true, 100, true, true, consumerPath,
+        refreshed, refreshed.GetSyntaxTree(consumerPath)));
+});
+
+Run("Qualified direct Returns honor project and package provider boundaries", () =>
+{
+    var root = Path.Combine(Path.GetTempPath(), "SmileFormatterProviderTests-" + Guid.NewGuid().ToString("N"));
+    var providerRoot = Path.Combine(root, "Provider");
+    var consumerRoot = Path.Combine(root, "Consumer");
+    Directory.CreateDirectory(providerRoot);
+    Directory.CreateDirectory(consumerRoot);
+    try
+    {
+        var providerProject = Path.Combine(providerRoot, "Provider.smilelibproj");
+        var providerSource = Path.Combine(providerRoot, "Values.smile");
+        var consumerProject = Path.Combine(consumerRoot, "Consumer.smilelibproj");
+        var consumerSource = Path.Combine(consumerRoot, "Consumer.smile");
+        const string provider = "Module Example.Values\nPublic Const UI_EVENT_NONE = 0\nPublic Dim DefaultValue As Number\nEnd Module\n";
+        const string consumer = "Module Example.Consumer\nImport Example.Values As Values\n" +
+            "Public Function ConstantValue() As Number\nReturn Values.UI_EVENT_NONE\nEnd Function\n" +
+            "Public Function ModuleValue() As Number\nReturn Values.DefaultValue\nEnd Function\nEnd Module\n";
+        File.WriteAllText(providerSource, provider);
+        File.WriteAllText(providerProject,
+            "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Provider</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Values.smile\" /></ItemGroup></SmileProject>");
+        File.WriteAllText(consumerSource, consumer);
+        File.WriteAllText(consumerProject,
+            "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Consumer</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Consumer.smile\" /><SmileProjectReference Include=\"..\\Provider\\Provider.smilelibproj\" /></ItemGroup></SmileProject>");
+
+        string FormatCompilation(SmileProjectCompilation compilation)
+        {
+            var analysis = SmileLanguage.Analyze(compilation.Sources, compilation.CompilationKind,
+                compilation.DependencyContext);
+            var tree = analysis.GetSyntaxTree(consumerSource);
+            return SmileSourceFormatter.Format(consumer, true, 100, true, true, consumerSource, analysis, tree);
+        }
+
+        var projectFormatted = FormatCompilation(SmileProjectCompilation.Load(consumerProject,
+            Path.Combine(root, "project-cache")));
+        Equal(true, projectFormatted.Contains("Return Values.UI_EVENT_NONE", StringComparison.Ordinal));
+        Equal(true, projectFormatted.Contains("Return Values.DefaultValue", StringComparison.Ordinal));
+
+        var providerCompilation = SmileProjectCompilation.Load(providerProject, Path.Combine(root, "provider-cache"));
+        var providerAnalysis = SmileLanguage.Analyze(providerCompilation.Sources, SmileCompilationKind.Library,
+            providerCompilation.DependencyContext);
+        var package = Path.Combine(providerRoot, "Provider.smilelib");
+        SmileLibraryPackage.Write(package, providerCompilation.Graph.Root, providerAnalysis);
+        File.WriteAllText(consumerProject,
+            "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Consumer</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Consumer.smile\" /><SmileLibraryReference Include=\"..\\Provider\\Provider.smilelib\" /></ItemGroup></SmileProject>");
+        var packageFormatted = FormatCompilation(SmileProjectCompilation.Load(consumerProject,
+            Path.Combine(root, "package-cache")));
+        Equal(projectFormatted, packageFormatted);
+    }
+    finally { Directory.Delete(root, true); }
+});
+
 Run("Syntax-aware formatter handles every computed Return category and collision-free names", () =>
 {
     const string source = "Option Explicit\n\nType Holder\n    Value As Number\nEnd Type\n\n" +
@@ -2756,13 +2894,19 @@ Run("VSIX templates render localized identity metadata within the aligned header
     var wizard = File.ReadAllText("src/Smile.VisualStudio/SmileProjectTemplateWizard.cs");
     var project = File.ReadAllText("src/Smile.VisualStudio/Smile.VisualStudio.csproj");
     var vsixManifest = File.ReadAllText("src/Smile.VisualStudio/source.extension.vsixmanifest");
+    var gameDim = gameTemplate.IndexOf("Dim Caption As Text", StringComparison.Ordinal);
+    var gameState = gameTemplate.IndexOf("Caption = \"Hello, SMILE 2.0!\"", StringComparison.Ordinal);
+    var gameWindow = gameTemplate.IndexOf("Game Window \"My SMILE 2.0 Game\"", StringComparison.Ordinal);
+    var gameLoop = gameTemplate.IndexOf("\nDo\n", StringComparison.Ordinal);
+    Equal(true, gameDim >= 0 && gameDim < gameState && gameState < gameWindow && gameWindow < gameLoop);
+    Equal(false, consoleTemplate.Contains("Game Window", StringComparison.Ordinal));
     var border = gameTemplate.Split('\n')[0].TrimEnd('\r');
     var rendered = gameTemplate.Replace("$smileuser$", "Sin".PadRight(69), StringComparison.Ordinal)
         .Replace("$smiledate$", "August 15, 2026".PadRight(69), StringComparison.Ordinal)
-        .Replace("$smileversion$", "2.0.37", StringComparison.Ordinal);
+        .Replace("$smileversion$", "2.0.38", StringComparison.Ordinal);
     var header = rendered.Split('\n').Take(9).Select(line => line.TrimEnd('\r')).ToArray();
     Equal("' Programmed By: " + "Sin".PadRight(69) + "Version: 0.0.1", header[3]);
-    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.37", header[4]);
+    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.38", header[4]);
     Equal(header[3].IndexOf("Version:", StringComparison.Ordinal) + "Version".Length,
         header[4].IndexOf("SMILE:", StringComparison.Ordinal) + "SMILE".Length);
     Equal(true, header.All(line => line.Length <= border.Length));
@@ -2775,10 +2919,10 @@ Run("VSIX templates render localized identity metadata within the aligned header
     foreach (var manifest in new[] { gameManifest, consoleManifest })
     {
         Equal(true, manifest.Contains("SmileProjectTemplateWizard", StringComparison.Ordinal));
-        Equal(true, manifest.Contains("Version=2.0.37.0", StringComparison.Ordinal));
+        Equal(true, manifest.Contains("Version=2.0.38.0", StringComparison.Ordinal));
     }
     Equal(true, wizard.Contains("ToString(\"D\", CultureInfo.CurrentCulture)", StringComparison.Ordinal));
-    Equal(true, project.Contains("<Version>2.0.37</Version>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<Version>2.0.38</Version>", StringComparison.Ordinal));
     Equal(true, vsixManifest.Contains("Type=\"Microsoft.VisualStudio.Assembly\"", StringComparison.Ordinal));
 });
 

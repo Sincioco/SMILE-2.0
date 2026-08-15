@@ -212,6 +212,7 @@ Do
         If ScreenState = STATE_TITLE Then
             Call DrawTitle()
         Else
+
             Call DrawWalkView()
         End If
 
@@ -249,6 +250,7 @@ Do
         If ScreenState = STATE_TITLE Then
             Call DrawTitle()
         Else
+
             Call DrawWalkView()
         End If
 
@@ -283,7 +285,6 @@ Function GetTile(XValue, YValue)
         YValue >= MapHeight) Then
         ReturnValue = TILE_WALL_1
         Return ReturnValue
-
     End If
 
     ReturnValue = Tiles[MapIndex(XValue, YValue)]
@@ -298,7 +299,6 @@ Sub SetTile(XValue, YValue, TileValue)
         YValue > 0 And
         YValue < MapHeight - 1) Then
         Tiles[MapIndex(XValue, YValue)] = TileValue
-
     End If
 
 End Sub
@@ -330,6 +330,7 @@ Sub PaintRoomWalls(LeftValue, TopValue, WidthValue, HeightValue)
                     End If
 
                 End If
+
             End If
 
         End For
@@ -383,6 +384,7 @@ Sub ConnectRoomCenters(FirstRoom, SecondRoom, HorizontalFirst)
         Call CarveHorizontal(FirstY, FirstX, SecondX)
         Call CarveVertical(SecondX, FirstY, SecondY)
     Else
+
         Call CarveVertical(FirstX, FirstY, SecondY)
         Call CarveHorizontal(SecondY, FirstX, SecondX)
     End If
@@ -417,8 +419,8 @@ Sub PlaceGeneratedDoors()
                     (DoorPlaceX <> MapStartX Or DoorPlaceY <> MapStartY)) Then
                     Tiles[MapIndex(DoorPlaceX, DoorPlaceY)] = TILE_DOOR
                     GeneratedDoorCount = GeneratedDoorCount + 1
-
                 End If
+
             End If
 
         End For
@@ -623,6 +625,7 @@ Sub BuildSelectedMap()
     If SelectedMap = MAP_DEFAULT Then
         Call LoadDefaultMap()
     Else
+
         Call LoadCustomMap()
     End If
 
@@ -939,17 +942,14 @@ Sub ProcessMapLine(LineStart, LineLength)
             MapHeaderSeen = False And
             MapParsedRows = 0) Then
             MapHeaderSeen = True
-
         Else If (HeaderNumber >= 2 And
             HeaderNumber <= 3 And
             MapHeaderSeen = True And
             MapParsedRows = MapHeight) Then
             MapParsingStopped = True
-
         Else
 
             MapLoadValid = False
-
         End If
 
         Return
@@ -961,7 +961,6 @@ Sub ProcessMapLine(LineStart, LineLength)
         LineLength <> MapWidth) Then
         MapLoadValid = False
         Return
-
     End If
 
     ParsedY = MapParsedRows
@@ -1053,7 +1052,6 @@ Sub ParseLoadedMap()
         MapParsedRows <> MapHeight Or
         MapStartCount <> 1) Then
         MapLoadValid = False
-
     End If
 
     If MapLoadValid = True Then
@@ -1164,7 +1162,9 @@ Sub ValidateMap()
                         FloodVisited[FloodNext] = 1
                         FloodQueue[FloodTail] = FloodNext
                         FloodTail = FloodTail + 1
+
                     End If
+
                 End If
 
             End For
@@ -1483,19 +1483,15 @@ Sub DrawRaycastView()
         Do
 
             If RunEnd >= RayCount - 1 Then
-
                 RunComplete = True
-
             Else If (RayTile[RunEnd + 1] = RayTile[DrawRay] And
                 RaySide[RunEnd + 1] = RaySide[DrawRay] And
                 RayPlane[RunEnd + 1] = RayPlane[DrawRay] And
                 RayLift[RunEnd + 1] = RayLift[DrawRay]) Then
                 RunEnd = RunEnd + 1
-
             Else
 
                 RunComplete = True
-
             End If
 
         Loop Until RunComplete = True

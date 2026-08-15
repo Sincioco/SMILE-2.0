@@ -86,6 +86,7 @@ Do
         If State = 0 Then
             Call DrawTitle()
         Else
+
             Call DrawBoard()
             Call DrawGameOver()
         End If
