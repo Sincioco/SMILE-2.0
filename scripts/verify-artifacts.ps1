@@ -123,16 +123,10 @@ $nativePrograms = @(
     'artifacts\games\BrickBreaker\BrickBreaker-NoDemo.exe',
     'artifacts\games\MazeMuncher\MazeMuncher.exe',
     'artifacts\games\MazeMuncher\MazeMuncher-NoDemo.exe',
-    'artifacts\games\StarSquadron\StarSquadron.exe',
-    'artifacts\games\StarSquadron\StarSquadron-NoDemo.exe',
     'artifacts\games\DungeonStarI\DungeonStarI.exe',
     'artifacts\games\DungeonStarI\DungeonStarI-NoDemo.exe',
     'artifacts\games\DungeonStarII\DungeonStarII.exe',
-    'artifacts\games\DungeonStarII\DungeonStarII-NoDemo.exe',
-    'artifacts\games\PlatformQuest\PlatformQuest.exe',
-    'artifacts\games\PlatformQuest\PlatformQuest-NoDemo.exe',
-    'artifacts\games\SkyHopper\SkyHopper.exe',
-    'artifacts\games\SkyHopper\SkyHopper-NoDemo.exe'
+    'artifacts\games\DungeonStarII\DungeonStarII-NoDemo.exe'
 )
 foreach ($program in $nativePrograms) {
     Assert-NativeGuiX64 $program
@@ -144,9 +138,6 @@ $assetSets = @{
     PaddleBall = @('GameOver.wav', 'Paddle.wav', 'Score.wav', 'Wall.wav')
     BrickBreaker = @('Brick.wav', 'GameOver.wav', 'LevelClear.wav', 'LoseLife.wav', 'Paddle.wav', 'Wall.wav')
     MazeMuncher = @('EnemyEaten.wav', 'GameOver.wav', 'LevelClear.wav', 'Pellet.wav', 'PlayerCaught.wav', 'Power.wav', 'Start.wav')
-    StarSquadron = @('Dive.wav', 'EnemyHit.wav', 'EnemyShot.wav', 'GameOver.wav', 'PlayerHit.wav', 'PlayerShot.wav', 'StageClear.wav', 'Start.wav')
-    PlatformQuest = @('Background.wav', 'Block.wav', 'Coin.wav', 'GameOver.wav', 'Goal.wav', 'Hurt.wav', 'Jump.wav', 'Start.wav', 'Stomp.wav')
-    SkyHopper = @('Background.wav', 'Flap.wav', 'GameOver.wav', 'Hit.wav', 'Score.wav', 'Start.wav')
 }
 foreach ($game in $assetSets.Keys) {
     foreach ($asset in $assetSets[$game]) {
@@ -154,15 +145,13 @@ foreach ($game in $assetSets.Keys) {
     }
 }
 foreach ($game in @('Snake', 'FallingBlocks', 'PaddleBall', 'BrickBreaker', 'DungeonStarI',
-    'DungeonStarII', 'MazeMuncher', 'StarSquadron', 'PlatformQuest', 'SkyHopper')) {
+    'DungeonStarII', 'MazeMuncher')) {
     Require-File "artifacts\games\$game\$game.smile-assets.json" | Out-Null
     Require-File "artifacts\web\$game\smile-assets.json" | Out-Null
 }
 Assert-AssetCopy 'games\FallingBlocks\Assets\Background.mp3' 'artifacts\games\FallingBlocks\Assets\Background.mp3'
 Assert-AssetCopy 'games\DungeonStarI\Assets\Background.mp3' 'artifacts\games\DungeonStarI\Assets\Background.mp3'
 Assert-AssetCopy 'games\MazeMuncher\Assets\Background.mp3' 'artifacts\games\MazeMuncher\Assets\Background.mp3'
-Assert-AssetCopy 'games\PlatformQuest\Assets\Background.mp3' 'artifacts\games\PlatformQuest\Assets\Background.mp3'
-Assert-AssetCopy 'games\SkyHopper\Assets\Background.mp3' 'artifacts\games\SkyHopper\Assets\Background.mp3'
 foreach ($asset in @('Background.png', 'CharacterSheet.png', 'Foreground.png', 'PixelProof.png',
     'ToneOne.wav', 'ToneTwo.wav', 'Music.wav')) {
     Assert-AssetCopy "examples\Phase4VisualSlice\Assets\$asset" "artifacts\games\Phase4VisualSlice-DirectX\Assets\$asset"
@@ -195,7 +184,6 @@ foreach ($map in @('default.map', 'sample-loops.map', 'sample-switchbacks.map'))
 }
 foreach ($map in @('default.map', 'custom.map')) {
     Assert-AssetCopy "games\DungeonStarII\Maps\$map" "artifacts\games\DungeonStarII\Maps\$map"
-    Assert-AssetCopy "games\PlatformQuest\Maps\$map" "artifacts\games\PlatformQuest\Maps\$map"
 }
 Assert-AssetCopy 'games\MazeMuncher\Maps\default.map' 'artifacts\games\MazeMuncher\Maps\default.map'
 Write-Host 'Game asset copies verified.'

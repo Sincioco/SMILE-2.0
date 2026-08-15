@@ -761,13 +761,6 @@ if errorlevel 1 (
 )
 echo Maze Muncher demo and no-demo versions compiled successfully.
 
-if not exist "%SMILE_ROOT%\artifacts\games\StarSquadron" mkdir "%SMILE_ROOT%\artifacts\games\StarSquadron"
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\StarSquadron\StarSquadron.smileproj" -o "%SMILE_ROOT%\artifacts\games\StarSquadron\StarSquadron.exe" --keep-temp
-if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\StarSquadron\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\StarSquadron\StarSquadron-NoDemo.exe"
-if errorlevel 1 exit /b %errorlevel%
-echo Star Squadron demo and no-demo versions compiled successfully.
-
 if not exist "%SMILE_ROOT%\artifacts\games\DungeonStarI" mkdir "%SMILE_ROOT%\artifacts\games\DungeonStarI"
 if not exist "%SMILE_ROOT%\games\DungeonStarI\Assets\Background.mp3" (
     echo Dungeon Star I background music source asset is missing.
@@ -813,52 +806,7 @@ for %%M in (default.map custom.map) do (
 )
 echo Dungeon Star II demo and no-demo versions compiled successfully.
 
-if not exist "%SMILE_ROOT%\artifacts\games\PlatformQuest" mkdir "%SMILE_ROOT%\artifacts\games\PlatformQuest"
-if not exist "%SMILE_ROOT%\games\PlatformQuest\Assets\Background.mp3" (
-    echo Platform Quest background music source asset is missing.
-    exit /b 1
-)
-powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\validate-platform-quest-maps.ps1"
-if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\PlatformQuest\PlatformQuest.smileproj" -o "%SMILE_ROOT%\artifacts\games\PlatformQuest\PlatformQuest.exe" --keep-temp
-if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\PlatformQuest\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\PlatformQuest\PlatformQuest-NoDemo.exe"
-if errorlevel 1 exit /b %errorlevel%
-for %%A in (Background.mp3 Background.wav Start.wav Jump.wav Coin.wav Block.wav Stomp.wav Hurt.wav Goal.wav GameOver.wav) do (
-    fc /b "%SMILE_ROOT%\games\PlatformQuest\Assets\%%A" "%SMILE_ROOT%\artifacts\games\PlatformQuest\Assets\%%A" >nul
-    if errorlevel 1 (
-        echo Platform Quest output asset %%A does not match its project asset.
-        exit /b 1
-    )
-)
-for %%M in (default.map custom.map) do (
-    fc /b "%SMILE_ROOT%\games\PlatformQuest\Maps\%%M" "%SMILE_ROOT%\artifacts\games\PlatformQuest\Maps\%%M" >nul
-    if errorlevel 1 (
-        echo Platform Quest output map %%M does not match its project asset.
-        exit /b 1
-    )
-)
-echo Platform Quest demo and no-demo versions compiled successfully.
-
-if not exist "%SMILE_ROOT%\artifacts\games\SkyHopper" mkdir "%SMILE_ROOT%\artifacts\games\SkyHopper"
-if not exist "%SMILE_ROOT%\games\SkyHopper\Assets\Background.mp3" (
-    echo Sky Hopper background music source asset is missing.
-    exit /b 1
-)
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\SkyHopper\SkyHopper.smileproj" -o "%SMILE_ROOT%\artifacts\games\SkyHopper\SkyHopper.exe" --keep-temp
-if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\SkyHopper\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\SkyHopper\SkyHopper-NoDemo.exe"
-if errorlevel 1 exit /b %errorlevel%
-for %%A in (Background.mp3 Background.wav Start.wav Flap.wav Score.wav Hit.wav GameOver.wav) do (
-    fc /b "%SMILE_ROOT%\games\SkyHopper\Assets\%%A" "%SMILE_ROOT%\artifacts\games\SkyHopper\Assets\%%A" >nul
-    if errorlevel 1 (
-        echo Sky Hopper output asset %%A does not match its project asset.
-        exit /b 1
-    )
-)
-echo Sky Hopper demo and no-demo versions compiled successfully.
-
-for %%G in (Snake FallingBlocks PaddleBall BrickBreaker DungeonStarI DungeonStarII MazeMuncher StarSquadron PlatformQuest SkyHopper) do (
+for %%G in (Snake FallingBlocks PaddleBall BrickBreaker DungeonStarI DungeonStarII MazeMuncher) do (
     "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\%%G\%%G.smileproj" --target web --output-dir "%SMILE_ROOT%\artifacts\web\%%G"
     if errorlevel 1 exit /b 1
     node --check "%SMILE_ROOT%\artifacts\web\%%G\game.js"
@@ -868,7 +816,7 @@ for %%G in (Snake FallingBlocks PaddleBall BrickBreaker DungeonStarI DungeonStar
     node --check "%SMILE_ROOT%\artifacts\web\%%G-NoDemo\game.js"
     if errorlevel 1 exit /b 1
 )
-echo All ten game demo and no-demo Web versions compiled successfully.
+echo All seven game demo and no-demo Web versions compiled successfully.
 
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\verify-artifacts.ps1"
 if errorlevel 1 exit /b %errorlevel%

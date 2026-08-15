@@ -1,6 +1,5 @@
 param(
     [switch]$Check,
-    [switch]$IncludeRequirements,
     [switch]$FormatLongIf,
     [int]$MaximumLineLength = 100,
     [string[]]$Files
@@ -881,10 +880,6 @@ $TrackedFiles = @(& git -C $RepositoryRoot ls-files --cached --others --exclude-
 
 if ($LASTEXITCODE -ne 0) {
     throw 'Unable to enumerate tracked SMILE source files.'
-}
-
-if (-not $IncludeRequirements) {
-    $TrackedFiles = @($TrackedFiles | Where-Object { $_ -notmatch '^requirements/' })
 }
 
 if ($null -ne $Files -and $Files.Count -gt 0) {

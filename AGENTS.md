@@ -116,7 +116,7 @@ Phase 2 modules and libraries are also shared-language responsibilities. Keep `M
 
 Never create a compiler-only parser, extension-only parser, duplicate keyword table, duplicate syntax rules, or duplicate semantic rules.
 
-Language evolution may migrate all ten legacy games together when a shared language improvement requires it. Reusable game and application components belong in SMILE source rather than game-specific native helpers.
+Language evolution may migrate all included games together when a shared language improvement requires it. Reusable game and application components belong in SMILE source rather than game-specific native helpers.
 
 When SMILE needs to evolve:
 
@@ -129,7 +129,7 @@ When SMILE needs to evolve:
 
 ## Games prove the language
 
-Snake, Falling Blocks, Paddle Ball, Brick Breaker, Dungeon Star I, Dungeon Star II, Maze Muncher, Star Squadron, Platform Quest, and Sky Hopper must be implemented in `.smile` source.
+Snake, Falling Blocks, Paddle Ball, Brick Breaker, Dungeon Star I, Dungeon Star II, and Maze Muncher must be implemented in `.smile` source.
 
 The native and Web runtimes may provide only generic services shared by SMILE programs:
 

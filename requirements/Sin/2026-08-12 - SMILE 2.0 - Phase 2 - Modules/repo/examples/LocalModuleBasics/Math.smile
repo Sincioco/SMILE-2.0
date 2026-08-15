@@ -1,7 +1,0 @@
-Module Example.LocalMath
-
-Public Function Double(Value)
-    Return Value * 2
-End Function
-
-End Module

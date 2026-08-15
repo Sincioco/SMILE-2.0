@@ -1,5 +1,0 @@
-Import Example.LocalMath As Math
-
-Print Math.Double(21)
-
-End Program

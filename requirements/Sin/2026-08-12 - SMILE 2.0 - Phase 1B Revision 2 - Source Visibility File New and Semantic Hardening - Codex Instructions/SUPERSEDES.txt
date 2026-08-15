@@ -1,2 +1,0 @@
-This Revision 2 package supersedes the earlier Phase 1B Source Creation Item Template and Semantic Hardening package.
-The authoritative defect is: source creation/project inclusion succeeds, but the included support source is invisible in Solution Explorer even after Visual Studio restart.

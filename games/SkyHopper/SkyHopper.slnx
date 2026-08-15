@@ -1,7 +1,0 @@
-<Solution>
-  <Configurations>
-    <Platform Name="Windows 64-bit .exe" />
-    <Platform Name="Web" />
-  </Configurations>
-  <Project Path="SkyHopper.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="2253f41c-9abf-1577-3527-33855b4f2e92" />
-</Solution>

@@ -1,6 +1,6 @@
 # SMILE 2.0
 
-SMILE 2.0 is a small, structured BASIC-style language with a complete native Windows x64 target and a browser target. It includes explicit built-in types, first-class UTF-8 text, typed `ByVal`/`ByRef` routines, modules, reusable target-neutral libraries, true multi-file compilation, multiline parenthesized expressions and call arguments, a MASM-based native compiler, a Win32 game runtime, Canvas 2D Web publication, Visual Studio 2026 language and project support, console examples, and ten complete games written in SMILE. Windows x64 remains the default target, and every included application project exposes both native and Web publication.
+SMILE 2.0 is a small, structured BASIC-style language with a complete native Windows x64 target and a browser target. It includes explicit built-in types, first-class UTF-8 text, typed `ByVal`/`ByRef` routines, modules, reusable target-neutral libraries, true multi-file compilation, multiline parenthesized expressions and call arguments, a MASM-based native compiler, a Win32 game runtime, Canvas 2D Web publication, Visual Studio 2026 language and project support, console examples, and seven complete games written in SMILE. Windows x64 remains the default target, and every included application project exposes both native and Web publication.
 
 The repository has one language authority: `src\Smile.Language`. The command-line compiler and Visual Studio extension use the same lexer, parser, syntax model, diagnostics, symbols, types, and semantic model. Game rules remain in `.smile` source; the C runtime provides only generic Windows graphics, input, sound, timing, and storage services.
 
@@ -27,9 +27,6 @@ Attract demos always return directly to the title screen when their run ends or 
 - `games\DungeonStarI` — an original three-floor pseudo-3D dungeon with student-editable external maps, validated pipe-style random generation, a blue map-selection title, doors, stairs, attract mode, and green, blue, and red floor palettes.
 - `games\DungeonStarII` — an original continuous fixed-point raycasting walkaround with editable room-and-corridor maps, DDA projection, colorful stable wall materials, rising doors, collision and wall sliding, random generation, and demo/no-demo teaching sources.
 - `games\MazeMuncher` — an original neon maze chase with pellets, power mode, four geometric enemies, wrap tunnels, levels, a persistent high score, demo and no-demo teaching sources, and an attract demo.
-- `games\StarSquadron` — an original full-width fixed-screen space shooter with a multi-speed starfield, formation enemies, diving attacks, escalating stages, demo and no-demo teaching sources, and a persistent high score.
-- `games\PlatformQuest` — an original side-scrolling platform adventure with fixed-step run/jump physics, tile collision, enemies, blocks, coins, hazards, a camera, editable 120-by-15 maps, safe random chunks, and demo/no-demo teaching sources.
-- `games\SkyHopper` — an original one-button obstacle-flight game with fixed-step flap/gravity physics, recycled purple-and-gold sky gates, safe procedural gaps, increasing difficulty, and demo/no-demo teaching sources.
 
 All games use a logical 960-by-540 canvas. A 16:9 output such as 1920-by-1080 fills the complete screen without letterboxing; other aspect ratios use centered letterboxing to preserve geometry. Alt+Enter toggles borderless full screen.
 
@@ -68,7 +65,7 @@ Run the complete noninteractive regression and artifact verification suite with:
 scripts\smoke-test.cmd
 ```
 
-The smoke suite builds the solution, runs console examples, checks invalid-program diagnostics, exercises native Text lifetime and reentrancy, executes generated Web programs in a dependency-free Node host, compares native/Web UTF-8 output exactly, tests reusable Smile.UI validation/state/reflow/capability boundaries, asserts dynamic Canvas text, exercises save/reload and corrupt-value fallback, validates the supplied Dungeon Star I, Dungeon Star II, and Platform Quest maps, compiles the multi-file sample and both teaching variants of all ten games for Windows and Web, publishes and hashes declared project assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Graphical gameplay and audible playback remain hands-on acceptance steps.
+The smoke suite builds the solution, runs console examples, checks invalid-program diagnostics, exercises native Text lifetime and reentrancy, executes generated Web programs in a dependency-free Node host, compares native/Web UTF-8 output exactly, tests reusable Smile.UI validation/state/reflow/capability boundaries, asserts dynamic Canvas text, exercises save/reload and corrupt-value fallback, validates the supplied Dungeon Star I and Dungeon Star II maps, compiles the multi-file sample and both teaching variants of all seven games for Windows and Web, publishes and hashes declared project assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Graphical gameplay and audible playback remain hands-on acceptance steps.
 
 ## Compile projects and publish assets
 
@@ -124,7 +121,7 @@ artifacts\compiler\smilec.exe examples\MultiFileBasics\Program.smile ^
 
 `examples\MultiFileBasics` is the small teaching example: `Program.smile` owns startup and the loop, while `GameState.smile` and `Drawing.smile` contribute shared declarations and routines.
 
-Use `--keep-temp` to retain generated MASM assembly and object files under `artifacts\temp`. Copy declared asset trees beside a loose-file executable before running it; Dungeon Star I and Platform Quest need both their `Assets` and editable `Maps` directories, while Dungeon Star II needs its editable `Maps` directory.
+Use `--keep-temp` to retain generated MASM assembly and object files under `artifacts\temp`. Copy declared asset trees beside a loose-file executable before running it; Dungeon Star I needs both its `Assets` and editable `Maps` directories, while Dungeon Star II needs its editable `Maps` directory.
 
 Select the static browser target explicitly with `--target web` and an output directory:
 
@@ -176,9 +173,6 @@ artifacts\games\BrickBreaker\BrickBreaker.exe
 artifacts\games\DungeonStarI\DungeonStarI.exe
 artifacts\games\DungeonStarII\DungeonStarII.exe
 artifacts\games\MazeMuncher\MazeMuncher.exe
-artifacts\games\StarSquadron\StarSquadron.exe
-artifacts\games\PlatformQuest\PlatformQuest.exe
-artifacts\games\SkyHopper\SkyHopper.exe
 ```
 
 The executables are self-contained native game programs with respect to SMILE: neither `smilec.exe` nor Visual Studio is needed to run them. They use normal Windows system libraries; a music-bearing executable also uses the Microsoft Visual C++ runtime installed by Visual Studio or the supported Visual C++ Redistributable.
@@ -238,7 +232,7 @@ Arc outlines use `Draw Arc CenterX, CenterY, Radius, StartAngle, SweepAngle, Col
 
 ## Current limitations
 
-- Windows x64 is the complete/default target and requires the Visual Studio MASM/link toolchain when compiling. Web publication supports the shared language and generic runtime surface used by all ten included games and their no-demo teaching variants.
+- Windows x64 is the complete/default target and requires the Visual Studio MASM/link toolchain when compiling. Web publication supports the shared language and generic runtime surface used by all seven included games and their no-demo teaching variants.
 - Web Number values use JavaScript safe integers. Unsafe literals fail Web compilation, and unsafe runtime arithmetic stops with a visible error rather than silently losing precision.
 - Web uses Canvas 2D, browser keyboard/audio APIs, `fetch` for declared text/map assets, and `localStorage`. Browser autoplay policy may defer WAV or MP3 playback until the first key or click without stopping the program.
 - Native routine-owned `For` limits and Number/Boolean/Text `Select Case` selectors are invocation-local and reentrant. Owned Text selector cleanup runs on normal completion, `Return`, `Exit For`, `Exit Do`, and `End Program`.
@@ -256,4 +250,4 @@ Arc outlines use `Draw Arc CenterX, CenterY, Radius, StartAngle, SweepAngle, Col
 
 ## Asset provenance
 
-All committed WAV files are original deterministic tones or melodies generated by `scripts\generate-sounds.ps1`. Platform Quest and Sky Hopper retain their generated `Background.wav` sources and use locally encoded MP3 copies of the same original compositions through the existing MediaPlayer channel. `games\FallingBlocks\Assets\Background.mp3` and `games\DungeonStarI\Assets\Background.mp3` are the exact music files supplied by the repository owner for their milestones. The games use runtime-drawn geometric art and system fonts. No third-party audio library or MP3 decoder is bundled.
+All committed WAV files are original deterministic tones or melodies generated by `scripts\generate-sounds.ps1`. `games\FallingBlocks\Assets\Background.mp3` and `games\DungeonStarI\Assets\Background.mp3` are the exact music files supplied by the repository owner for their milestones. The games use runtime-drawn geometric art and system fonts. No third-party audio library or MP3 decoder is bundled.

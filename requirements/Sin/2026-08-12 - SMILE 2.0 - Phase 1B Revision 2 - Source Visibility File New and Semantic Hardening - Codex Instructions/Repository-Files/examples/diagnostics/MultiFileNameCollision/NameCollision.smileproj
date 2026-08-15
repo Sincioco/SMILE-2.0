@@ -1,8 +1,0 @@
-<SmileProject Version="1.0">
-  <PropertyGroup><ProjectKind>Console</ProjectKind><StartupFile>Program.smile</StartupFile><OutputName>NameCollision</OutputName></PropertyGroup>
-  <ItemGroup>
-    <SmileSource Include="Program.smile" StartupOnly="true" />
-    <SmileSource Include="Value.smile" />
-    <SmileSource Include="Routine.smile" />
-  </ItemGroup>
-</SmileProject>

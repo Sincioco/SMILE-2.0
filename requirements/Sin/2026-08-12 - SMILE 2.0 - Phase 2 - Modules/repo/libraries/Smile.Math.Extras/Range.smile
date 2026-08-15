@@ -1,7 +1,0 @@
-Module Smile.Math.Extras
-
-Public Function IsBetween(Value, MinimumValue, MaximumValue)
-    Return Value >= MinimumValue And Value <= MaximumValue
-End Function
-
-End Module

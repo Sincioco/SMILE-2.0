@@ -165,35 +165,3 @@ New-SmileTone -RelativePath 'games\MazeMuncher\Assets\PlayerCaught.wav' -Frequen
 New-SmileTone -RelativePath 'games\MazeMuncher\Assets\Start.wav' -Frequency 520 -DurationMilliseconds 180
 New-SmileTone -RelativePath 'games\MazeMuncher\Assets\LevelClear.wav' -Frequency 960 -DurationMilliseconds 360
 New-SmileTone -RelativePath 'games\MazeMuncher\Assets\GameOver.wav' -Frequency 120 -DurationMilliseconds 500
-New-SmileTone -RelativePath 'games\StarSquadron\Assets\PlayerShot.wav' -Frequency 1050 -DurationMilliseconds 55
-New-SmileTone -RelativePath 'games\StarSquadron\Assets\EnemyShot.wav' -Frequency 420 -DurationMilliseconds 80
-New-SmileTone -RelativePath 'games\StarSquadron\Assets\EnemyHit.wav' -Frequency 760 -DurationMilliseconds 120
-New-SmileTone -RelativePath 'games\StarSquadron\Assets\PlayerHit.wav' -Frequency 140 -DurationMilliseconds 380
-New-SmileTone -RelativePath 'games\StarSquadron\Assets\Dive.wav' -Frequency 300 -DurationMilliseconds 180
-New-SmileTone -RelativePath 'games\StarSquadron\Assets\StageClear.wav' -Frequency 980 -DurationMilliseconds 380
-New-SmileTone -RelativePath 'games\StarSquadron\Assets\Start.wav' -Frequency 600 -DurationMilliseconds 200
-New-SmileTone -RelativePath 'games\StarSquadron\Assets\GameOver.wav' -Frequency 110 -DurationMilliseconds 520
-New-SmileTone -RelativePath 'games\PlatformQuest\Assets\Start.wav' -Frequency 587 -DurationMilliseconds 170
-New-SmileTone -RelativePath 'games\PlatformQuest\Assets\Jump.wav' -Frequency 740 -DurationMilliseconds 90
-New-SmileTone -RelativePath 'games\PlatformQuest\Assets\Coin.wav' -Frequency 988 -DurationMilliseconds 105
-New-SmileTone -RelativePath 'games\PlatformQuest\Assets\Block.wav' -Frequency 330 -DurationMilliseconds 120
-New-SmileTone -RelativePath 'games\PlatformQuest\Assets\Stomp.wav' -Frequency 220 -DurationMilliseconds 150
-New-SmileTone -RelativePath 'games\PlatformQuest\Assets\Hurt.wav' -Frequency 145 -DurationMilliseconds 310
-New-SmileTone -RelativePath 'games\PlatformQuest\Assets\Goal.wav' -Frequency 1175 -DurationMilliseconds 420
-New-SmileTone -RelativePath 'games\PlatformQuest\Assets\GameOver.wav' -Frequency 105 -DurationMilliseconds 520
-
-$platformQuestNotes = @(523.25, 659.25, 783.99, 1046.50, 880.00, 783.99, 659.25, 587.33, 698.46, 880.00, 987.77, 783.99, 659.25, 587.33, 523.25, 0)
-$platformQuestDurations = @(250, 250, 250, 500, 250, 250, 250, 500, 250, 250, 250, 500, 250, 250, 500, 500)
-New-SmileMelody -RelativePath 'games\PlatformQuest\Assets\Background.wav' -Frequencies $platformQuestNotes -DurationsMilliseconds $platformQuestDurations -RepeatCount 2
-Convert-SmileMusicToMp3 -WaveRelativePath 'games\PlatformQuest\Assets\Background.wav' -Mp3RelativePath 'games\PlatformQuest\Assets\Background.mp3'
-
-New-SmileTone -RelativePath 'games\SkyHopper\Assets\Start.wav' -Frequency 660 -DurationMilliseconds 160
-New-SmileTone -RelativePath 'games\SkyHopper\Assets\Flap.wav' -Frequency 830 -DurationMilliseconds 75
-New-SmileTone -RelativePath 'games\SkyHopper\Assets\Score.wav' -Frequency 1110 -DurationMilliseconds 110
-New-SmileTone -RelativePath 'games\SkyHopper\Assets\Hit.wav' -Frequency 175 -DurationMilliseconds 260
-New-SmileTone -RelativePath 'games\SkyHopper\Assets\GameOver.wav' -Frequency 95 -DurationMilliseconds 480
-
-$skyHopperNotes = @(659.25, 783.99, 987.77, 880.00, 783.99, 659.25, 587.33, 659.25, 880.00, 1046.50, 987.77, 783.99, 698.46, 783.99, 659.25, 0)
-$skyHopperDurations = @(250, 250, 500, 250, 250, 500, 250, 250, 250, 500, 250, 250, 250, 250, 500, 500)
-New-SmileMelody -RelativePath 'games\SkyHopper\Assets\Background.wav' -Frequencies $skyHopperNotes -DurationsMilliseconds $skyHopperDurations -RepeatCount 2
-Convert-SmileMusicToMp3 -WaveRelativePath 'games\SkyHopper\Assets\Background.wav' -Mp3RelativePath 'games\SkyHopper\Assets\Background.mp3'
