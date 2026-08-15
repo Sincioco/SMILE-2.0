@@ -35,7 +35,7 @@ internal sealed class SmileBuiltInLibrarySymbolFormat : ClassificationFormatDefi
     public SmileBuiltInLibrarySymbolFormat()
     {
         DisplayName = "SMILE 2.0 Built-in Module or Library";
-        ForegroundColor = Color.FromRgb(147, 112, 219);
+        ForegroundColor = Color.FromRgb(43, 145, 175);
         ForegroundCustomizable = true;
     }
 }
