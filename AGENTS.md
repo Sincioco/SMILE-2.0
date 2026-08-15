@@ -47,6 +47,14 @@ Stop condition:
 
 Do not turn a one-time investigation into a permanent regression burden unless Sin explicitly approves it.
 
+## Permanent SMILE source style and language inspiration
+
+- Write new SMILE-language source, and SMILE source that is substantively edited, using Visual Basic-style initial capitalization rather than all-uppercase BASIC spelling. Use forms such as `Dim`, `As`, `If`, `Then`, `Else`, `End If`, `Sub`, `Function`, `Call`, `Game Window`, and PascalCase identifiers.
+- Constants may remain uppercase, including established language constants such as `KEY_ENTER` and project constants such as `MAX_ITEMS`.
+- Use Visual Basic as the primary inspiration for future SMILE syntax, semantics, naming, and readable BASIC conventions.
+- This is an authoring convention, not a request to make the language case-sensitive.
+- Do not mass-reformat otherwise unchanged legacy source solely to alter casing. Apply this convention to new code and to code being meaningfully changed.
+
 ## One authoritative language implementation
 
 `src/Smile.Language` remains the single source of truth for:
@@ -69,10 +77,11 @@ Language evolution may migrate all ten legacy games together when a shared langu
 When SMILE needs to evolve:
 
 1. First use current SMILE syntax when it remains clear.
-2. If a new feature is justified, prefer an established, readable BASIC precedent.
-3. Use the smallest beginner-friendly C#-inspired concept only when BASIC has no suitable precedent.
-4. Avoid aliases, multiple spellings, and clever punctuation when readable words are clearer.
-5. Keep every addition general-purpose and add only proportional diagnostics, tests, examples, and documentation.
+2. If a new feature is justified, use Visual Basic as the primary language-design precedent.
+3. Consider another established, readable BASIC precedent only when Visual Basic has no suitable precedent.
+4. Use the smallest beginner-friendly concept from another language only when BASIC has no suitable precedent.
+5. Avoid aliases, multiple spellings, and clever punctuation when readable words are clearer.
+6. Keep every addition general-purpose and add only proportional diagnostics, tests, examples, and documentation.
 
 ## Games prove the language
 
