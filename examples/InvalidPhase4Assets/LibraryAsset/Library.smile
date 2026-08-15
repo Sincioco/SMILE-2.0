@@ -1,8 +1,11 @@
 Module Example.AssetLibrary
+
 Option Explicit
 
 Public Function Value() As Number
+
     Return 1
+
 End Function
 
 End Module

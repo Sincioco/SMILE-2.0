@@ -5,92 +5,129 @@ Option Explicit
 Import Smile.UI.Core As Core
 
 Public Function IsStyleValid(ByRef Style As Core.WindowStyle) As Boolean
+
     Dim ImageWidth As Number
     Dim ImageHeight As Number
+
     If Style.Opacity < 0 Or Style.Opacity > 100 Then
         Return False
     End If
+
     If Style.FilterMode <> Core.UI_FILTER_SMOOTH And Style.FilterMode <> Core.UI_FILTER_PIXEL Then
         Return False
     End If
+
     If Style.BorderThickness < 0 Or Style.BorderThickness > Core.UI_MAX_LAYOUT_VALUE Then
         Return False
     End If
+
     If Style.Padding.LEFT < -Core.UI_MAX_LAYOUT_VALUE Or Style.Padding.LEFT > Core.UI_MAX_LAYOUT_VALUE Or Style.Padding.Top < -Core.UI_MAX_LAYOUT_VALUE Or Style.Padding.Top > Core.UI_MAX_LAYOUT_VALUE Or Style.Padding.RIGHT < -Core.UI_MAX_LAYOUT_VALUE Or Style.Padding.RIGHT > Core.UI_MAX_LAYOUT_VALUE Or Style.Padding.Bottom < -Core.UI_MAX_LAYOUT_VALUE Or Style.Padding.Bottom > Core.UI_MAX_LAYOUT_VALUE Then
         Return False
     End If
+
     If Not Style.UseSkin Or Not Image_Loaded(Style.Skin) Then
         Return True
     End If
+
     If Style.SourceX < 0 Or Style.SourceY < 0 Or Style.SourceWidth <= 0 Or Style.SourceHeight <= 0 Then
         Return False
     End If
+
     If Style.SourceLeft < 0 Or Style.SourceTop < 0 Or Style.SourceRight < 0 Or Style.SourceBottom < 0 Then
         Return False
     End If
+
     If Style.SourceLeft >= Style.SourceWidth Or Style.SourceRight >= Style.SourceWidth - Style.SourceLeft Then
         Return False
     End If
+
     If Style.SourceTop >= Style.SourceHeight Or Style.SourceBottom >= Style.SourceHeight - Style.SourceTop Then
         Return False
     End If
+
     If Style.DestinationLeft < 0 Or Style.DestinationLeft > Core.UI_MAX_LAYOUT_VALUE Or Style.DestinationTop < 0 Or Style.DestinationTop > Core.UI_MAX_LAYOUT_VALUE Or Style.DestinationRight < 0 Or Style.DestinationRight > Core.UI_MAX_LAYOUT_VALUE Or Style.DestinationBottom < 0 Or Style.DestinationBottom > Core.UI_MAX_LAYOUT_VALUE Then
         Return False
     End If
+
     ImageWidth = Image_Width(Style.Skin)
     ImageHeight = Image_Height(Style.Skin)
+
     If Style.SourceWidth > ImageWidth Or Style.SourceHeight > ImageHeight Then
         Return False
     End If
+
     If Style.SourceX > ImageWidth - Style.SourceWidth Or Style.SourceY > ImageHeight - Style.SourceHeight Then
         Return False
     End If
+
     Return True
+
 End Function
 
 Public Function ContentRect(ByRef Style As Core.WindowStyle, X As Number, Y As Number, Width As Number, Height As Number) As Core.Rect
+
     Dim Result As Core.Rect
+
     Result.X = X + Max(0, Style.Padding.LEFT)
     Result.Y = Y + Max(0, Style.Padding.Top)
     Result.Width = Max(0, Width - Max(0, Style.Padding.LEFT) - Max(0, Style.Padding.RIGHT))
     Result.Height = Max(0, Height - Max(0, Style.Padding.Top) - Max(0, Style.Padding.Bottom))
     Return Result
+
 End Function
 
 Private Function EffectiveOpacity(Value As Number) As Number
+
+    Dim ReturnValue As Number
+
     If Value <= 0 Then
-        Return 100
+        ReturnValue = 100
+        Return ReturnValue
     End If
-    Return Min(100, Value)
+
+    ReturnValue = Min(100, Value)
+    Return ReturnValue
+
 End Function
 
 Private Sub DrawSlice(ByRef Style As Core.WindowStyle, SourceX As Number, SourceY As Number, SourceWidth As Number, SourceHeight As Number, DestinationX As Number, DestinationY As Number, DestinationWidth As Number, DestinationHeight As Number, Opacity As Number)
+
     If SourceWidth <= 0 Or SourceHeight <= 0 Or DestinationWidth <= 0 Or DestinationHeight <= 0 Then
         Return
     End If
+
     If Style.FilterMode = Core.UI_FILTER_PIXEL Then
         Draw Image Style.Skin From SourceX, SourceY Size SourceWidth By SourceHeight At DestinationX, DestinationY Size DestinationWidth By DestinationHeight Opacity Opacity Filter Pixel
     Else
         Draw Image Style.Skin From SourceX, SourceY Size SourceWidth By SourceHeight At DestinationX, DestinationY Size DestinationWidth By DestinationHeight Opacity Opacity Filter Smooth
     End If
+
 End Sub
 
 Private Sub DrawVector(ByRef Style As Core.WindowStyle, X As Number, Y As Number, Width As Number, Height As Number)
+
     Dim Border As Number
     Dim Index As Number
+
     If Width <= 0 Or Height <= 0 Then
         Return
     End If
+
     Fill Rectangle X, Y, Width, Height, Style.FillColor
     Border = Max(0, Style.BorderThickness)
+
     For Index = 0 To Border - 1
+
         If Width - Index * 2 > 0 And Height - Index * 2 > 0 Then
             Draw Rectangle X + Index, Y + Index, Width - Index * 2, Height - Index * 2, Style.BorderColor
         End If
+
     End For
+
 End Sub
 
 Public Sub Draw(ByRef Style As Core.WindowStyle, X As Number, Y As Number, Width As Number, Height As Number)
+
     Dim SourceCenterWidth As Number
     Dim SourceCenterHeight As Number
     Dim LeftWidth As Number
@@ -105,8 +142,10 @@ Public Sub Draw(ByRef Style As Core.WindowStyle, X As Number, Y As Number, Width
     If Width <= 0 Or Height <= 0 Then
         Return
     End If
+
     If Not Style.UseSkin Or Not Image_Loaded(Style.Skin) Or Not IsStyleValid(Style) Then
         Call DrawVector(Style, X, Y, Width, Height)
+
         Return
     End If
 
@@ -115,15 +154,19 @@ Public Sub Draw(ByRef Style As Core.WindowStyle, X As Number, Y As Number, Width
     TopHeight = Style.DestinationTop
     BottomHeight = Style.DestinationBottom
     Total = LeftWidth + RightWidth
+
     If Width < Total And Total > 0 Then
         LeftWidth = Width * LeftWidth / Total
         RightWidth = Width - LeftWidth
     End If
+
     Total = TopHeight + BottomHeight
+
     If Height < Total And Total > 0 Then
         TopHeight = Height * TopHeight / Total
         BottomHeight = Height - TopHeight
     End If
+
     CenterWidth = Width - LeftWidth - RightWidth
     CenterHeight = Height - TopHeight - BottomHeight
     SourceCenterWidth = Style.SourceWidth - Style.SourceLeft - Style.SourceRight
@@ -139,6 +182,7 @@ Public Sub Draw(ByRef Style As Core.WindowStyle, X As Number, Y As Number, Width
     Call DrawSlice(Style, Style.SourceX + Style.SourceWidth - Style.SourceRight, Style.SourceY, Style.SourceRight, Style.SourceTop, X + Width - RightWidth, Y, RightWidth, TopHeight, Opacity)
     Call DrawSlice(Style, Style.SourceX, Style.SourceY + Style.SourceHeight - Style.SourceBottom, Style.SourceLeft, Style.SourceBottom, X, Y + Height - BottomHeight, LeftWidth, BottomHeight, Opacity)
     Call DrawSlice(Style, Style.SourceX + Style.SourceWidth - Style.SourceRight, Style.SourceY + Style.SourceHeight - Style.SourceBottom, Style.SourceRight, Style.SourceBottom, X + Width - RightWidth, Y + Height - BottomHeight, RightWidth, BottomHeight, Opacity)
+
 End Sub
 
 End Module

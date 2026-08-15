@@ -13,13 +13,13 @@ The official game should remain at:
 
 Here, <SMILE-2.0-root> means whatever folder contains the student's SMILE 2.0 repository. It may be on any drive and may have any parent folder name.
 
-Open The Tutorial
+Open the Tutorial
 -----------------
 Open this file in a modern browser:
 
 <SMILE-2.0-root>\tutorials\Snake\index.html
 
-RELATIVE Game LINKS
+Relative Game Links
 -------------------
 The website uses this relative path:
 

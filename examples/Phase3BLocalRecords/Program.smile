@@ -1,6 +1,7 @@
 Option Explicit
 
 Dim Value As Message
+
 Value = CreateMessage("Local", 42)
 Print Value.Content
 Print Value.Code

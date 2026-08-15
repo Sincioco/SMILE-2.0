@@ -6,16 +6,20 @@ Const MaximumCells = BoardWidth * BoardHeight
 Dim Board[BoardWidth, BoardHeight]
 
 Sub StoreCell(Column, Row, Value)
+
     Adjusted = Max(0, Value)
     Board[Column, Row] = Adjusted
+
 End Sub
 
 Function IsEven(Value)
+
     If Value Mod 2 = 0 Then
         Return True
     Else
         Return False
     End If
+
 End Function
 
 Call StoreCell(2, 3, 12)
@@ -29,15 +33,19 @@ Select Case Board[2, 3] / 3
 End Select
 
 Counter = 0
+
 Do
     Counter = Counter + 1
     Exit Do
+
 Loop
 
 For Index = 0 To 9
+
     If Index = 2 Then
         Exit For
     End If
+
 End For
 
 If IsEven(Board[2, 3]) = True Then

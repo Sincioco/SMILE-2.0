@@ -33,21 +33,31 @@ Show Screen
 End Program
 
 Function GetImage() As Image
+
     Return Shared
+
 End Function
 
 Sub UseImage(Value As Image)
+
     Print Image_Width(Value)
+
 End Sub
 
 Function GetBox() As MediaBox
+
     Dim Result As MediaBox
+
     Result.Picture = Shared
     Return Result
+
 End Function
 
 Function GetNested() As NestedBox
+
     Dim Result As NestedBox
+
     Result.Media.Picture = Shared
     Return Result
+
 End Function

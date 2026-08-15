@@ -12,17 +12,22 @@ Const MaximumMarkerX = 870
 Dim SharedState[4]
 
 Sub ResetSharedState()
+
     SharedState[STATE_X] = 480
     SharedState[STATE_Y] = 300
     SharedState[STATE_PULSE] = 0
     SharedState[STATE_PULSE_DIRECTION] = 1
+
 End Sub
 
 Sub MoveMarker(Amount)
+
     SharedState[STATE_X] = Max(MinimumMarkerX, Min(MaximumMarkerX, SharedState[STATE_X] + Amount))
+
 End Sub
 
 Sub UpdatePulse()
+
     SharedState[STATE_PULSE] = SharedState[STATE_PULSE] + SharedState[STATE_PULSE_DIRECTION]
 
     If SharedState[STATE_PULSE] >= 40 Then
@@ -32,16 +37,32 @@ Sub UpdatePulse()
         SharedState[STATE_PULSE] = 0
         SharedState[STATE_PULSE_DIRECTION] = 1
     End If
+
 End Sub
 
 Function MarkerX()
-    Return SharedState[STATE_X]
+
+    Dim ReturnValue As Number
+
+    ReturnValue = SharedState[STATE_X]
+    Return ReturnValue
+
 End Function
 
 Function MarkerY()
-    Return SharedState[STATE_Y]
+
+    Dim ReturnValue As Number
+
+    ReturnValue = SharedState[STATE_Y]
+    Return ReturnValue
+
 End Function
 
 Function MarkerPulse()
-    Return SharedState[STATE_PULSE]
+
+    Dim ReturnValue As Number
+
+    ReturnValue = SharedState[STATE_PULSE]
+    Return ReturnValue
+
 End Function

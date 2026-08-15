@@ -13,17 +13,22 @@ Do
 
     If Key = KEY_LEFT Or Key_Held(KEY_LEFT) = True Then
         Call MoveMarker(-5)
+
     Else If Key = KEY_RIGHT Or Key_Held(KEY_RIGHT) = True Then
         Call MoveMarker(5)
+
     End If
 
     Call UpdatePulse()
+
     FrameCount = FrameCount + 1
 
     Clear Rgb(7, 12, 28)
     Call DrawSharedScene()
+
     Show Screen
     Wait 16 Milliseconds
+
 Loop Until Game_Closed() = True
 
 End Program

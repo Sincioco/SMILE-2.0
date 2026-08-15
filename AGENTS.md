@@ -55,6 +55,32 @@ Do not turn a one-time investigation into a permanent regression burden unless S
 - Use Visual Basic as the primary inspiration for future SMILE syntax, semantics, naming, and readable BASIC conventions.
 - This is an authoring and presentation convention, not a request to make the language case-sensitive.
 
+## Permanent SMILE readability and spacing style
+
+Use whitespace to make SMILE source easy for students to scan, step through, hover, print, and watch in the debugger.
+
+- Use exactly one blank line at each required separation point. Never leave double or triple blank lines.
+- Follow the last consecutive `Module`, `Import`, or `Dim` statement in a group with one blank line.
+- Follow every `Function`, `Sub`, or future procedure declaration with one blank line.
+- Put one blank line before an `If` statement. Follow `End If` with one blank line. A single-statement `If...Then...End If` body may remain compact, with no blank line after `Then` or before `End If`.
+- Keep `If ... Then` on one line only when the complete rendered line is 100 characters or fewer and the condition has no more than two top-level Boolean clauses. Otherwise, enclose the complete condition in parentheses, place each continued `And` or `Or` condition on its own line one indentation level deeper, and leave the logical operator at the end of each continued line except the last. This trailing-operator layout is Sin's permanent preferred generated form:
+
+```smile
+If (Style.CursorWidth < 0 Or
+    Style.CursorWidth > Core.UI_MAX_LAYOUT_VALUE Or
+    Style.CursorHeight < 0 Or
+    Style.CursorHeight > Core.UI_MAX_LAYOUT_VALUE) Then
+    Return False
+End If
+```
+
+- Put one blank line before `For`, `End For`, `Do`, `End Sub`, and `Loop`. Follow `Loop` with one blank line.
+- Follow the last consecutive `Call` or `Unload` statement in a group with one blank line.
+- Put `Option Explicit` on its own separated line: one blank line before and after it, except at a file boundary.
+- A function must return a variable, never a literal, constant, member access, function call, comparison, arithmetic operation, or other expression. Assign the expression to a clearly named local variable first so students can inspect, print, hover, or watch the value.
+- When a final `Return` is followed by `End Function`, keep one blank line between them.
+- Apply this style to SMILE source, modules, libraries, examples, games, templates, tutorials, embedded documentation examples, diagnostics, and generated SMILE presentation.
+
 ## One authoritative language implementation
 
 `src/Smile.Language` remains the single source of truth for:
@@ -144,7 +170,7 @@ When a task produces two or more Markdown requirement, specification, handoff, o
 - keep each Markdown file individually usable;
 - package all of them in one ZIP archive;
 - include companion sample, configuration, or map files;
-- include a `START HERE` file describing purpose and reading order;
+- include a `Start Here` file describing purpose and reading order;
 - preserve intended repository-relative paths under `Repository-Files` where useful.
 
 This is an artifact-delivery rule, not a SMILE language feature.

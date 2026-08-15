@@ -31,73 +31,116 @@ Private Dim PreparedLineCount As Number
 Private Dim PreparedOverflow As Boolean
 
 Private Function SlotFromHandle(Handle As Number) As Number
+
+    Dim ReturnValue As Number
     Dim Slot As Number
 
     Dim Generation As Number
+
     If Handle <= 0 Then
-        Return -1
+        ReturnValue = -1
+        Return ReturnValue
     End If
+
     Slot = (Handle Mod 100) - 1
     Generation = Handle / 100
+
     If Slot < 0 Or Slot >= Core.UI_MAX_MENUS Then
-        Return -1
+        ReturnValue = -1
+        Return ReturnValue
     End If
+
     If Not MenuUsed[Slot] Or MenuGeneration[Slot] <> Generation Then
-        Return -1
+        ReturnValue = -1
+        Return ReturnValue
     End If
+
     Return Slot
+
 End Function
 
 ''' Checks whether a menu style can be used safely by the menu services.
 ''' @param Style: Menu appearance, text, cursor, spacing, and overflow settings to validate. Passed by reference.
 ''' @returns: True when every nested style and layout value is supported; otherwise False.
 Public Function IsStyleValid(ByRef Style As Core.MenuStyle) As Boolean
-    If Not Window.IsStyleValid(Style.Window) Or Not Text.IsStyleValid(Style.NormalText) Or Not Text.IsStyleValid(Style.SelectedText) Or Not Text.IsStyleValid(Style.DisabledText) Then
+
+    If (Not Window.IsStyleValid(Style.Window) Or
+        Not Text.IsStyleValid(Style.NormalText) Or
+        Not Text.IsStyleValid(Style.SelectedText) Or
+        Not Text.IsStyleValid(Style.DisabledText)) Then
         Return False
     End If
+
     If Style.RowHeight < 0 Or Style.RowHeight > Core.UI_MAX_LAYOUT_VALUE Then
         Return False
     End If
-    If Style.CursorWidth < 0 Or Style.CursorWidth > Core.UI_MAX_LAYOUT_VALUE Or Style.CursorHeight < 0 Or Style.CursorHeight > Core.UI_MAX_LAYOUT_VALUE Then
+
+    If (Style.CursorWidth < 0 Or
+        Style.CursorWidth > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.CursorHeight < 0 Or
+        Style.CursorHeight > Core.UI_MAX_LAYOUT_VALUE) Then
         Return False
     End If
-    If Style.CursorOffsetX < -Core.UI_MAX_LAYOUT_VALUE Or Style.CursorOffsetX > Core.UI_MAX_LAYOUT_VALUE Or Style.CursorOffsetY < -Core.UI_MAX_LAYOUT_VALUE Or Style.CursorOffsetY > Core.UI_MAX_LAYOUT_VALUE Then
+
+    If (Style.CursorOffsetX < -Core.UI_MAX_LAYOUT_VALUE Or
+        Style.CursorOffsetX > Core.UI_MAX_LAYOUT_VALUE Or
+        Style.CursorOffsetY < -Core.UI_MAX_LAYOUT_VALUE Or
+        Style.CursorOffsetY > Core.UI_MAX_LAYOUT_VALUE) Then
         Return False
     End If
+
     If Style.CursorFilterMode <> Core.UI_FILTER_SMOOTH And Style.CursorFilterMode <> Core.UI_FILTER_PIXEL Then
         Return False
     End If
+
     If Style.ItemTextOverflowMode <> Core.UI_MENU_TEXT_ELLIPSIS And Style.ItemTextOverflowMode <> Core.UI_MENU_TEXT_CLIP And Style.ItemTextOverflowMode <> Core.UI_MENU_TEXT_WRAP Then
         Return False
     End If
+
     If Style.ItemTextMaxLines < 0 Or Style.ItemTextMaxLines > Core.UI_MAX_MENU_ITEM_LINES Then
         Return False
     End If
+
     If Style.SubmenuIndicatorPosition <> Core.UI_SUBMENU_INDICATOR_AFTER_TEXT And Style.SubmenuIndicatorPosition <> Core.UI_SUBMENU_INDICATOR_RIGHT_ALIGNED Then
         Return False
     End If
+
     If Style.UseCursor And Image_Loaded(Style.Cursor) And (Style.CursorWidth <= 0 Or Style.CursorHeight <= 0) Then
         Return False
     End If
+
     Return True
+
 End Function
 
 Private Function EffectiveRowHeight(Slot As Number) As Number
+
+    Dim ReturnValue As Number
+
     If MenuStyles[Slot].RowHeight <= 0 Then
-        Return 32
+        ReturnValue = 32
+        Return ReturnValue
     End If
-    Return MenuStyles[Slot].RowHeight
+
+    ReturnValue = MenuStyles[Slot].RowHeight
+    Return ReturnValue
+
 End Function
 
 Private Sub ClampVisibleRows(Slot As Number)
+
     Dim Content As Core.Rect
     Dim Maximum As Number
+
     Content = Window.ContentRect(MenuStyles[Slot].Window, MenuX[Slot], MenuY[Slot], MenuWidth[Slot], MenuHeight[Slot])
     Maximum = Content.Height / EffectiveRowHeight(Slot)
+
     If Maximum < 1 Then
         Maximum = 1
     End If
+
     MenuVisibleRows[Slot] = Max(1, Min(MenuRequestedVisibleRows[Slot], Maximum))
+
 End Sub
 
 ''' Creates a menu instance using the supplied style, position, size, and requested visible-row count.
@@ -109,25 +152,38 @@ End Sub
 ''' @param VisibleRows: Requested number of rows visible at once. The effective count may be reduced to fit the content area.
 ''' @returns: A positive generation-safe menu handle, or 0 when the style is invalid or no menu slot is available.
 Public Function Create(ByRef Style As Core.MenuStyle, X As Number, Y As Number, Width As Number, Height As Number, VisibleRows As Number) As Number
+
+    Dim ReturnValue As Number
     Dim Slot As Number
     Dim Index As Number
+
     If Not IsStyleValid(Style) Then
-        Return 0
+        ReturnValue = 0
+        Return ReturnValue
     End If
+
     Slot = -1
+
     For Index = 0 To Core.UI_MAX_MENUS - 1
+
         If Not MenuUsed[Index] Then
             Slot = Index
             Exit For
         End If
+
     End For
+
     If Slot < 0 Then
-        Return 0
+        ReturnValue = 0
+        Return ReturnValue
     End If
+
     MenuGeneration[Slot] = MenuGeneration[Slot] + 1
+
     If MenuGeneration[Slot] <= 0 Then
         MenuGeneration[Slot] = 1
     End If
+
     MenuUsed[Slot] = True
     MenuStyles[Slot] = Style
     MenuX[Slot] = X
@@ -138,62 +194,87 @@ Public Function Create(ByRef Style As Core.MenuStyle, X As Number, Y As Number, 
     MenuVisibleRows[Slot] = MenuRequestedVisibleRows[Slot]
     MenuItemCount[Slot] = 0
     MenuItemRevision[Slot] = MenuItemRevision[Slot] + 1
+
     If MenuItemRevision[Slot] <= 0 Then
         MenuItemRevision[Slot] = 1
     End If
+
     MenuSelected[Slot] = -1
     MenuTop[Slot] = 0
     Call ClampVisibleRows(Slot)
-    Return MenuGeneration[Slot] * 100 + Slot + 1
+
+    ReturnValue = MenuGeneration[Slot] * 100 + Slot + 1
+    Return ReturnValue
+
 End Function
 
 ''' Checks whether a menu handle still identifies a live menu instance.
 ''' @param Handle: Generation-safe menu handle returned by Create.
 ''' @returns: True for a live handle; otherwise False.
 Public Function IsValid(Handle As Number) As Boolean
-    Return SlotFromHandle(Handle) >= 0
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = SlotFromHandle(Handle) >= 0
+    Return ReturnValue
+
 End Function
 
 ''' Removes every item from a menu and resets its selection and scroll position.
 ''' @param Handle: Menu handle to clear. An invalid handle is ignored.
 Public Sub ClearItems(Handle As Number)
+
     Dim Slot As Number
     Dim Index As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Then
         Return
     End If
+
     For Index = 0 To Core.UI_MAX_MENU_ITEMS - 1
         ItemLabels[Slot, Index] = ""
         ItemValues[Slot, Index] = 0
         ItemEnabled[Slot, Index] = False
         ItemSubmenu[Slot, Index] = False
+
     End For
     MenuItemCount[Slot] = 0
     MenuSelected[Slot] = -1
     MenuTop[Slot] = 0
     MenuItemRevision[Slot] = MenuItemRevision[Slot] + 1
+
     If MenuItemRevision[Slot] <= 0 Then
         MenuItemRevision[Slot] = 1
     End If
+
 End Sub
 
 ''' Releases a menu instance and invalidates its current generation-safe handle.
 ''' @param Handle: Menu handle to destroy. An invalid handle is ignored.
 Public Sub Destroy(Handle As Number)
+
     Dim Slot As Number
     Dim Empty As Core.MenuStyle
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Then
         Return
     End If
+
     Call ClearItems(Handle)
+
     MenuItemRevision[Slot] = MenuItemRevision[Slot] + 1
+
     If MenuItemRevision[Slot] <= 0 Then
         MenuItemRevision[Slot] = 1
     End If
+
     MenuStyles[Slot] = Empty
     MenuUsed[Slot] = False
+
 End Sub
 
 ''' Replaces a menu's style and recalculates its visible layout.
@@ -201,15 +282,21 @@ End Sub
 ''' @param Style: Valid replacement menu style. Passed by reference.
 ''' @returns: True when the handle and style are valid; otherwise False.
 Public Function SetStyle(Handle As Number, ByRef Style As Core.MenuStyle) As Boolean
+
     Dim Slot As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Or Not IsStyleValid(Style) Then
         Return False
     End If
+
     MenuStyles[Slot] = Style
     Call ClampVisibleRows(Slot)
     Call UpdateTop(Slot)
+
     Return True
+
 End Function
 
 ''' Appends an item and selects it automatically when it is the first enabled item.
@@ -219,23 +306,33 @@ End Function
 ''' @param Enabled: True when the item may be selected and accepted.
 ''' @returns: The zero-based item index, or -1 for an invalid handle, a full menu, or an overlong label.
 Public Function AddItem(Handle As Number, Label As Text, UserValue As Number, Enabled As Boolean) As Number
+
+    Dim ReturnValue As Number
     Dim Slot As Number
     Dim Index As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Or MenuItemCount[Slot] >= Core.UI_MAX_MENU_ITEMS Or Text_Length(Label) > Core.UI_MAX_MENU_ITEM_SCALARS Then
-        Return -1
+        ReturnValue = -1
+        Return ReturnValue
     End If
+
     Index = MenuItemCount[Slot]
     ItemLabels[Slot, Index] = Label
     ItemValues[Slot, Index] = UserValue
     ItemEnabled[Slot, Index] = Enabled
     ItemSubmenu[Slot, Index] = False
     MenuItemCount[Slot] = Index + 1
+
     If Enabled And MenuSelected[Slot] < 0 Then
         MenuSelected[Slot] = Index
     End If
+
     Call UpdateTop(Slot)
+
     Return Index
+
 End Function
 
 ''' Changes the text displayed for an existing menu item.
@@ -244,38 +341,55 @@ End Function
 ''' @param Label: Replacement text, limited to the library's maximum scalar count.
 ''' @returns: True when the handle, index, and label are valid; otherwise False.
 Public Function SetItemLabel(Handle As Number, Index As Number, Label As Text) As Boolean
+
     Dim Slot As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Or Index < 0 Or Index >= MenuItemCount[Slot] Or Text_Length(Label) > Core.UI_MAX_MENU_ITEM_SCALARS Then
         Return False
     End If
+
     ItemLabels[Slot, Index] = Label
     Return True
+
 End Function
 
 Private Function FirstEnabled(Slot As Number) As Number
+
+    Dim ReturnValue As Number
     Dim Index As Number
+
     For Index = 0 To MenuItemCount[Slot] - 1
+
         If ItemEnabled[Slot, Index] Then
             Return Index
         End If
+
     End For
-    Return -1
+    ReturnValue = -1
+    Return ReturnValue
+
 End Function
 
 Private Sub UpdateTop(Slot As Number)
+
     Dim Maximum As Number
+
     If MenuSelected[Slot] < 0 Then
         MenuTop[Slot] = 0
         Return
     End If
+
     If MenuSelected[Slot] < MenuTop[Slot] Then
         MenuTop[Slot] = MenuSelected[Slot]
     Else If MenuSelected[Slot] >= MenuTop[Slot] + MenuVisibleRows[Slot] Then
         MenuTop[Slot] = MenuSelected[Slot] - MenuVisibleRows[Slot] + 1
     End If
+
     Maximum = Max(0, MenuItemCount[Slot] - MenuVisibleRows[Slot])
     MenuTop[Slot] = Max(0, Min(MenuTop[Slot], Maximum))
+
 End Sub
 
 ''' Enables or disables an item and repairs the selection when the selected item becomes disabled.
@@ -284,17 +398,25 @@ End Sub
 ''' @param Enabled: True to make the item selectable; False to disable it.
 ''' @returns: True when the handle and index are valid; otherwise False.
 Public Function SetItemEnabled(Handle As Number, Index As Number, Enabled As Boolean) As Boolean
+
     Dim Slot As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Or Index < 0 Or Index >= MenuItemCount[Slot] Then
         Return False
     End If
+
     ItemEnabled[Slot, Index] = Enabled
+
     If MenuSelected[Slot] < 0 Or Not ItemEnabled[Slot, MenuSelected[Slot]] Then
         MenuSelected[Slot] = FirstEnabled(Slot)
     End If
+
     Call UpdateTop(Slot)
+
     Return True
+
 End Function
 
 ''' Changes the application-defined value associated with an item.
@@ -303,13 +425,18 @@ End Function
 ''' @param UserValue: Replacement numeric value returned for the item.
 ''' @returns: True when the handle and index are valid; otherwise False.
 Public Function SetItemValue(Handle As Number, Index As Number, UserValue As Number) As Boolean
+
     Dim Slot As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Or Index < 0 Or Index >= MenuItemCount[Slot] Then
         Return False
     End If
+
     ItemValues[Slot, Index] = UserValue
     Return True
+
 End Function
 
 ''' Marks whether an item should display the style's submenu indicator.
@@ -318,13 +445,18 @@ End Function
 ''' @param HasSubmenu: True when the item opens a submenu; otherwise False.
 ''' @returns: True when the handle and index are valid; otherwise False.
 Public Function SetItemHasSubmenu(Handle As Number, Index As Number, HasSubmenu As Boolean) As Boolean
+
     Dim Slot As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Or Index < 0 Or Index >= MenuItemCount[Slot] Then
         Return False
     End If
+
     ItemSubmenu[Slot, Index] = HasSubmenu
     Return True
+
 End Function
 
 ''' Reports whether an item is marked as opening a submenu.
@@ -332,101 +464,161 @@ End Function
 ''' @param Index: Zero-based item index.
 ''' @returns: True when the valid item has a submenu; False for no submenu or an invalid handle/index.
 Public Function ItemHasSubmenu(Handle As Number, Index As Number) As Boolean
+
+    Dim ReturnValue As Boolean
     Dim Slot As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Or Index < 0 Or Index >= MenuItemCount[Slot] Then
         Return False
     End If
-    Return ItemSubmenu[Slot, Index]
+
+    ReturnValue = ItemSubmenu[Slot, Index]
+    Return ReturnValue
+
 End Function
 
 ''' Gets the revision that changes when the menu's item collection is reset or destroyed.
 ''' @param Handle: Menu handle to inspect.
 ''' @returns: A positive revision for a valid menu, or 0 for an invalid handle.
 Public Function ItemRevision(Handle As Number) As Number
+
+    Dim ReturnValue As Number
     Dim Slot As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Then
-        Return 0
+        ReturnValue = 0
+        Return ReturnValue
     End If
-    Return MenuItemRevision[Slot]
+
+    ReturnValue = MenuItemRevision[Slot]
+    Return ReturnValue
+
 End Function
 
 ''' Gets the number of items currently stored in a menu.
 ''' @param Handle: Menu handle to inspect.
 ''' @returns: The item count, or 0 for an invalid handle.
 Public Function ItemCount(Handle As Number) As Number
+
+    Dim ReturnValue As Number
     Dim Slot As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Then
-        Return 0
+        ReturnValue = 0
+        Return ReturnValue
     End If
-    Return MenuItemCount[Slot]
+
+    ReturnValue = MenuItemCount[Slot]
+    Return ReturnValue
+
 End Function
 
 ''' Gets the currently selected item index.
 ''' @param Handle: Menu handle to inspect.
 ''' @returns: The zero-based selected index, or -1 for an invalid handle or no selection.
 Public Function SelectedIndex(Handle As Number) As Number
+
+    Dim ReturnValue As Number
     Dim Slot As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Then
-        Return -1
+        ReturnValue = -1
+        Return ReturnValue
     End If
-    Return MenuSelected[Slot]
+
+    ReturnValue = MenuSelected[Slot]
+    Return ReturnValue
+
 End Function
 
 ''' Gets the application-defined value associated with the selected item.
 ''' @param Handle: Menu handle to inspect.
 ''' @returns: The selected item's value, or 0 for an invalid handle or no selection.
 Public Function SelectedValue(Handle As Number) As Number
+
+    Dim ReturnValue As Number
     Dim Slot As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Or MenuSelected[Slot] < 0 Then
-        Return 0
+        ReturnValue = 0
+        Return ReturnValue
     End If
-    Return ItemValues[Slot, MenuSelected[Slot]]
+
+    ReturnValue = ItemValues[Slot, MenuSelected[Slot]]
+    Return ReturnValue
+
 End Function
 
 ''' Gets the item index shown in the menu's first visible row.
 ''' @param Handle: Menu handle to inspect.
 ''' @returns: The zero-based top item index, or 0 for an invalid handle.
 Public Function TopIndex(Handle As Number) As Number
+
+    Dim ReturnValue As Number
     Dim Slot As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Then
-        Return 0
+        ReturnValue = 0
+        Return ReturnValue
     End If
-    Return MenuTop[Slot]
+
+    ReturnValue = MenuTop[Slot]
+    Return ReturnValue
+
 End Function
 
 ''' Gets the effective number of rows that fit in the menu's current content area.
 ''' @param Handle: Menu handle to inspect.
 ''' @returns: The effective visible-row count, or 0 for an invalid handle.
 Public Function VisibleRows(Handle As Number) As Number
+
+    Dim ReturnValue As Number
     Dim Slot As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Then
-        Return 0
+        ReturnValue = 0
+        Return ReturnValue
     End If
-    Return MenuVisibleRows[Slot]
+
+    ReturnValue = MenuVisibleRows[Slot]
+    Return ReturnValue
+
 End Function
 
 ''' Gets the menu's outer position and size.
 ''' @param Handle: Menu handle to inspect.
 ''' @returns: The menu bounds, or an empty rectangle for an invalid handle.
 Public Function Bounds(Handle As Number) As Core.Rect
+
     Dim Slot As Number
     Dim Result As Core.Rect
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Then
         Return Result
     End If
+
     Result.X = MenuX[Slot]
     Result.Y = MenuY[Slot]
     Result.Width = MenuWidth[Slot]
     Result.Height = MenuHeight[Slot]
     Return Result
+
 End Function
 
 ''' Moves a menu without changing its size, style, items, or selection.
@@ -435,44 +627,58 @@ End Function
 ''' @param Y: New top edge in game-window coordinates.
 ''' @returns: True when the handle and coordinates are supported; otherwise False.
 Public Function SetPosition(Handle As Number, X As Number, Y As Number) As Boolean
+
     Dim Slot As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Or X < -Core.UI_MAX_LAYOUT_VALUE Or X > Core.UI_MAX_LAYOUT_VALUE Or Y < -Core.UI_MAX_LAYOUT_VALUE Or Y > Core.UI_MAX_LAYOUT_VALUE Then
         Return False
     End If
+
     MenuX[Slot] = X
     MenuY[Slot] = Y
     Return True
+
 End Function
 
 ''' Gets the visible content rectangle occupied by the selected row.
 ''' @param Handle: Menu handle to inspect.
 ''' @returns: The selected row rectangle, or an empty rectangle when the handle/selection is invalid or off-screen.
 Public Function SelectedRowRect(Handle As Number) As Core.Rect
+
     Dim Slot As Number
     Dim Result As Core.Rect
     Dim Content As Core.Rect
     Dim Row As Number
     Dim Height As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Then
         Return Result
     End If
+
     Content = Window.ContentRect(MenuStyles[Slot].Window, MenuX[Slot], MenuY[Slot], MenuWidth[Slot], MenuHeight[Slot])
     Result.X = Content.X
     Result.Y = Content.Y
+
     If MenuSelected[Slot] < 0 Then
         Return Result
     End If
+
     Row = MenuSelected[Slot] - MenuTop[Slot]
+
     If Row < 0 Or Row >= MenuVisibleRows[Slot] Then
         Return Result
     End If
+
     Result.Y = Content.Y + Row * EffectiveRowHeight(Slot)
     Height = Max(0, Min(EffectiveRowHeight(Slot), Content.Y + Content.Height - Result.Y))
     Result.Width = Max(0, Content.Width)
     Result.Height = Height
     Return Result
+
 End Function
 
 ''' Selects a specific enabled menu item and scrolls it into view.
@@ -480,55 +686,84 @@ End Function
 ''' @param Index: Zero-based enabled item index to select.
 ''' @returns: True when the handle and enabled index are valid; otherwise False.
 Public Function SetSelectedIndex(Handle As Number, Index As Number) As Boolean
+
     Dim Slot As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Or Index < 0 Or Index >= MenuItemCount[Slot] Or Not ItemEnabled[Slot, Index] Then
         Return False
     End If
+
     MenuSelected[Slot] = Index
     Call UpdateTop(Slot)
+
     Return True
+
 End Function
 
 ''' Selects the first enabled item and returns the menu to its top row.
 ''' @param Handle: Menu handle whose selection will reset.
 ''' @returns: True when an enabled item is selected; False for an invalid handle or a menu with no enabled items.
 Public Function ResetSelection(Handle As Number) As Boolean
+
+    Dim ReturnValue As Boolean
     Dim Slot As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Then
         Return False
     End If
+
     MenuSelected[Slot] = FirstEnabled(Slot)
     MenuTop[Slot] = 0
     Call UpdateTop(Slot)
-    Return MenuSelected[Slot] >= 0
+
+    ReturnValue = MenuSelected[Slot] >= 0
+    Return ReturnValue
+
 End Function
 
 Private Function FindNext(Slot As Number, Direction As Number) As Number
+
+    Dim ReturnValue As Number
     Dim Candidate As Number
     Dim StepCount As Number
+
     If MenuSelected[Slot] < 0 Or MenuItemCount[Slot] <= 0 Then
-        Return -1
+        ReturnValue = -1
+        Return ReturnValue
     End If
+
     Candidate = MenuSelected[Slot]
+
     For StepCount = 1 To MenuItemCount[Slot]
         Candidate = Candidate + Direction
+
         If Candidate < 0 Or Candidate >= MenuItemCount[Slot] Then
+
             If Not MenuStyles[Slot].WrapSelection Then
-                Return -1
+                ReturnValue = -1
+                Return ReturnValue
             End If
+
             If Candidate < 0 Then
                 Candidate = MenuItemCount[Slot] - 1
             Else
                 Candidate = 0
             End If
+
         End If
+
         If ItemEnabled[Slot, Candidate] Then
             Return Candidate
         End If
+
     End For
-    Return -1
+    ReturnValue = -1
+    Return ReturnValue
+
 End Function
 
 ''' Applies one keyboard input to menu navigation and acceptance behavior.
@@ -536,46 +771,75 @@ End Function
 ''' @param Key: SMILE key constant such as KEY_UP, KEY_DOWN, KEY_ENTER, KEY_SPACE, or KEY_ESCAPE.
 ''' @returns: A UI_EVENT_* value describing cancellation, acceptance, selection change, or no action.
 Public Function HandleKey(Handle As Number, Key As Number) As Number
+
+    Dim ReturnValue As Number
     Dim Slot As Number
     Dim NextIndex As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Then
-        Return Core.UI_EVENT_NONE
+        ReturnValue = Core.UI_EVENT_NONE
+        Return ReturnValue
     End If
+
     If Key = KEY_ESCAPE Then
-        Return Core.UI_EVENT_CANCELLED
+        ReturnValue = Core.UI_EVENT_CANCELLED
+        Return ReturnValue
     End If
+
     If Key = KEY_ENTER Or Key = KEY_SPACE Then
+
         If MenuSelected[Slot] >= 0 And ItemEnabled[Slot, MenuSelected[Slot]] Then
-            Return Core.UI_EVENT_ACCEPTED
+            ReturnValue = Core.UI_EVENT_ACCEPTED
+            Return ReturnValue
         End If
-        Return Core.UI_EVENT_NONE
+
+        ReturnValue = Core.UI_EVENT_NONE
+        Return ReturnValue
     End If
+
     NextIndex = -1
+
     If Key = KEY_UP Then
         NextIndex = FindNext(Slot, -1)
     Else If Key = KEY_DOWN Then
         NextIndex = FindNext(Slot, 1)
     End If
+
     If NextIndex >= 0 And NextIndex <> MenuSelected[Slot] Then
         MenuSelected[Slot] = NextIndex
         Call UpdateTop(Slot)
-        Return Core.UI_EVENT_CHANGED
+
+        ReturnValue = Core.UI_EVENT_CHANGED
+        Return ReturnValue
     End If
-    Return Core.UI_EVENT_NONE
+
+    ReturnValue = Core.UI_EVENT_NONE
+    Return ReturnValue
+
 End Function
 
 Private Function FirstLine(Value As Text) As Text
+
+    Dim ReturnValue As Text
     Dim Index As Number
+
     For Index = 0 To Text_Length(Value) - 1
+
         If Text_Code_At(Value, Index) = 10 Then
-            Return Text_Slice(Value, 0, Index)
+            ReturnValue = Text_Slice(Value, 0, Index)
+            Return ReturnValue
         End If
+
     End For
     Return Value
+
 End Function
 
 Private Function Ellipsize(ByRef Style As Core.TextStyle, Value As Text, MaximumWidth As Number) As Text
+
+    Dim ReturnValue As Text
     Dim Length As Number
     Dim SegmentEnd As Number
     Dim Index As Number
@@ -589,64 +853,89 @@ Private Function Ellipsize(ByRef Style As Core.TextStyle, Value As Text, Maximum
     Dim Middle As Number
     Dim Best As Number
     Dim HasOverflow As Boolean
+
     If MaximumWidth <= 0 Then
-        Return ""
+        ReturnValue = ""
+        Return ReturnValue
     End If
+
     Length = Text_Length(Value)
     SegmentEnd = Length
+
     For Index = 0 To Length - 1
+
         If Text_Code_At(Value, Index) = 10 Then
             SegmentEnd = Index
             HasOverflow = True
             Exit For
         End If
+
     End For
     LineValue = Text_Slice(Value, 0, SegmentEnd)
+
     If Not HasOverflow And Text.MeasureWidth(Style, LineValue) <= MaximumWidth Then
         Return LineValue
     End If
+
     Ellipsis = "..."
+
     If Text.MeasureWidth(Style, Ellipsis) > MaximumWidth Then
+
         For EllipsisCount = 1 To 3
             Candidate = Text_Slice(Ellipsis, 0, EllipsisCount)
+
             If Text.MeasureWidth(Style, Candidate) <= MaximumWidth Then
                 VisibleEllipsis = Candidate
             Else
                 Exit For
             End If
+
         End For
         Return VisibleEllipsis
     End If
+
     Low = 0
     High = SegmentEnd
+
     For Index = 0 To 15
+
         If Low > High Then
             Exit For
         End If
+
         Middle = Low + (High - Low) / 2
         Candidate = Text_Slice(Value, 0, Middle) + Ellipsis
+
         If Text.MeasureWidth(Style, Candidate) <= MaximumWidth Then
             Best = Middle
             Low = Middle + 1
         Else
             High = Middle - 1
         End If
+
     End For
-    Return Text_Slice(Value, 0, Best) + Ellipsis
+    ReturnValue = Text_Slice(Value, 0, Best) + Ellipsis
+    Return ReturnValue
+
 End Function
 
 Private Sub ClearPreparedLines()
+
     Dim Index As Number
+
     For Index = 0 To Core.UI_MAX_MENU_ITEM_LINES - 1
         PreparedLines[Index] = ""
         PreparedLineWidths[Index] = 0
         PreparedLineYs[Index] = 0
+
     End For
     PreparedLineCount = 0
     PreparedOverflow = False
+
 End Sub
 
 Private Sub PrepareWrapped(ByRef Style As Core.TextStyle, Value As Text, Width As Number, RowHeight As Number, MaximumLines As Number, DrawAfterIndicator As Boolean, IndicatorWidth As Number)
+
     Dim Length As Number
     Dim Cursor As Number
     Dim SegmentEnd As Number
@@ -670,28 +959,37 @@ Private Sub PrepareWrapped(ByRef Style As Core.TextStyle, Value As Text, Width A
     Dim HasNewline As Boolean
     Dim IsFinalVisible As Boolean
     Dim VisibleWidth As Number
+
     If Width < 0 Or RowHeight <= 0 Then
         Return
     End If
+
     LineHeight = Max(1, Text.MeasureHeight(Style, ""))
     LineStep = LineHeight + Max(0, Style.LineSpacing)
     PhysicalLines = Max(1, (RowHeight + Max(0, Style.LineSpacing)) / LineStep)
     MaximumLines = Max(1, Min(Core.UI_MAX_MENU_ITEM_LINES, Min(MaximumLines, PhysicalLines)))
     Length = Text_Length(Value)
+
     For LineNumber = 0 To MaximumLines - 1
+
         If Cursor > Length Then
             Exit For
         End If
+
         LineStart = Cursor
         SegmentEnd = Length
         HasNewline = False
+
         For Scan = Cursor To Length - 1
+
             If Text_Code_At(Value, Scan) = 10 Then
                 SegmentEnd = Scan
                 HasNewline = True
                 Exit For
             End If
+
         End For
+
         If SegmentEnd = Cursor Then
             LineEnd = Cursor
             NextIndex = Cursor + 1
@@ -699,53 +997,74 @@ Private Sub PrepareWrapped(ByRef Style As Core.TextStyle, Value As Text, Width A
             Low = 1
             High = SegmentEnd - Cursor
             Best = 0
+
             For Scan = 0 To 15
+
                 If Low > High Then
                     Exit For
                 End If
+
                 Middle = Low + (High - Low) / 2
                 Candidate = Text_Slice(Value, Cursor, Middle)
+
                 If Text.MeasureWidth(Style, Candidate) <= Width Then
                     Best = Middle
                     Low = Middle + 1
                 Else
                     High = Middle - 1
                 End If
+
             End For
+
             If Best <= 0 Then
                 Best = 1
             End If
+
             FitEnd = Cursor + Best
             LineEnd = Min(FitEnd, SegmentEnd)
             NextIndex = LineEnd
+
             If FitEnd < SegmentEnd Then
                 LastSpace = -1
+
                 For Scan = Cursor To FitEnd - 1
+
                     If Text_Code_At(Value, Scan) = 32 Then
                         LastSpace = Scan
                     End If
+
                 End For
+
                 If LastSpace > Cursor Then
                     LineEnd = LastSpace
                     NextIndex = LastSpace + 1
+
                     For SkipIndex = NextIndex To SegmentEnd - 1
+
                         If Text_Code_At(Value, SkipIndex) <> 32 Then
                             Exit For
                         End If
+
                         NextIndex = NextIndex + 1
+
                     End For
                 End If
+
             Else If HasNewline Then
                 NextIndex = SegmentEnd + 1
             Else
                 NextIndex = Length + 1
             End If
+
         End If
+
         IsFinalVisible = NextIndex > Length Or LineNumber = MaximumLines - 1
         VisibleWidth = Width
+
         If IsFinalVisible And DrawAfterIndicator Then
             VisibleWidth = Max(0, Width - IndicatorWidth)
         End If
+
         If LineNumber = MaximumLines - 1 And NextIndex <= Length Then
             LineValue = Ellipsize(Style, Text_Slice(Value, LineStart, Length - LineStart), VisibleWidth)
             PreparedOverflow = True
@@ -754,32 +1073,44 @@ Private Sub PrepareWrapped(ByRef Style As Core.TextStyle, Value As Text, Width A
         Else
             LineValue = Text_Slice(Value, LineStart, Max(0, LineEnd - LineStart))
         End If
+
         PreparedLines[LineNumber] = LineValue
         PreparedLineWidths[LineNumber] = Text.MeasureWidth(Style, LineValue)
         PreparedLineCount = LineNumber + 1
         Cursor = NextIndex
+
     End For
+
 End Sub
 
 Private Sub PrepareLabel(Slot As Number, Index As Number, ByRef Style As Core.TextStyle, Width As Number, RowHeight As Number, DrawAfterIndicator As Boolean, IndicatorWidth As Number)
+
     Dim Value As Text
     Dim MaximumLines As Number
     Dim LabelWidth As Number
+
     Call ClearPreparedLines()
+
     If Width < 0 Or RowHeight <= 0 Then
         Return
     End If
+
     Value = ItemLabels[Slot, Index]
     LabelWidth = Width
+
     If DrawAfterIndicator Then
         LabelWidth = Max(0, Width - IndicatorWidth)
     End If
+
     If MenuStyles[Slot].ItemTextOverflowMode = Core.UI_MENU_TEXT_WRAP Then
         MaximumLines = MenuStyles[Slot].ItemTextMaxLines
+
         If MaximumLines <= 0 Then
             MaximumLines = 1
         End If
+
         Call PrepareWrapped(Style, Value, Width, RowHeight, MaximumLines, DrawAfterIndicator, IndicatorWidth)
+
     Else If MenuStyles[Slot].ItemTextOverflowMode = Core.UI_MENU_TEXT_CLIP Then
         PreparedLines[0] = FirstLine(Value)
         PreparedLineWidths[0] = Text.MeasureWidth(Style, PreparedLines[0])
@@ -791,9 +1122,11 @@ Private Sub PrepareLabel(Slot As Number, Index As Number, ByRef Style As Core.Te
         PreparedLineCount = 1
         PreparedOverflow = PreparedLines[0] <> FirstLine(Value) Or Text_Length(FirstLine(Value)) < Text_Length(Value)
     End If
+
 End Sub
 
 Private Function DrawLabel(Slot As Number, Index As Number, ByRef Style As Core.TextStyle, X As Number, Y As Number, Width As Number, RowHeight As Number, DrawAfterIndicator As Boolean, IndicatorWidth As Number) As Number
+
     Dim LineHeight As Number
     Dim LineSpacing As Number
     Dim TextBlockHeight As Number
@@ -801,41 +1134,59 @@ Private Function DrawLabel(Slot As Number, Index As Number, ByRef Style As Core.
     Dim LineNumber As Number
     Dim LabelWidth As Number
     Dim IndicatorX As Number
+
     Call PrepareLabel(Slot, Index, Style, Width, RowHeight, DrawAfterIndicator, IndicatorWidth)
+
     LineHeight = Max(1, Text.MeasureHeight(Style, ""))
     LineSpacing = Max(0, Style.LineSpacing)
+
     If PreparedLineCount <= 0 Then
         PreparedLineCount = 1
     End If
+
     TextBlockHeight = PreparedLineCount * LineHeight + (PreparedLineCount - 1) * LineSpacing
     TextBlockY = Y + Max(0, (RowHeight - TextBlockHeight) / 2)
     LabelWidth = Width
+
     If DrawAfterIndicator Then
         LabelWidth = Max(0, Width - IndicatorWidth)
     End If
+
     For LineNumber = 0 To PreparedLineCount - 1
         PreparedLineYs[LineNumber] = TextBlockY + LineNumber * (LineHeight + LineSpacing)
+
     End For
+
     If Width <= 0 Then
         Return TextBlockY
     End If
+
     Clip Rectangle X, Y, Width, RowHeight
+
         For LineNumber = 0 To PreparedLineCount - 1
+
             If MenuStyles[Slot].ItemTextOverflowMode = Core.UI_MENU_TEXT_CLIP Then
                 Clip Rectangle X, Y, LabelWidth, RowHeight
                     Call Text.Draw(Style, PreparedLines[LineNumber], X, PreparedLineYs[LineNumber], Core.UI_ALIGN_LEFT, 100)
+
                 End Clip
             Else
                 Call Text.Draw(Style, PreparedLines[LineNumber], X, PreparedLineYs[LineNumber], Core.UI_ALIGN_LEFT, 100)
+
             End If
+
         End For
+
         If DrawAfterIndicator And IndicatorWidth > 0 Then
             LineNumber = PreparedLineCount - 1
             IndicatorX = X + Min(LabelWidth, PreparedLineWidths[LineNumber])
             Call Text.Draw(Style, " >", IndicatorX, PreparedLineYs[LineNumber], Core.UI_ALIGN_LEFT, 100)
+
         End If
+
     End Clip
     Return TextBlockY
+
 End Function
 
 ''' Draws a menu and optionally shows its focused cursor treatment.
@@ -843,6 +1194,7 @@ End Function
 ''' @param Focused: True to draw the selection cursor as focused; False for an unfocused menu.
 ''' @remarks: Requires Game Window because it draws window, text, image, clipping, and scrollbar primitives.
 Public Sub DrawFocused(Handle As Number, Focused As Boolean)
+
     Dim Slot As Number
     Dim Content As Core.Rect
     Dim Row As Number
@@ -867,66 +1219,89 @@ Public Sub DrawFocused(Handle As Number, Focused As Boolean)
     Dim AfterMarker As Boolean
     Dim MarkerY As Number
     Dim RowStyle As Core.TextStyle
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Or MenuWidth[Slot] <= 0 Or MenuHeight[Slot] <= 0 Then
         Return
     End If
+
     Call Window.Draw(MenuStyles[Slot].Window, MenuX[Slot], MenuY[Slot], MenuWidth[Slot], MenuHeight[Slot])
+
     Content = Window.ContentRect(MenuStyles[Slot].Window, MenuX[Slot], MenuY[Slot], MenuWidth[Slot], MenuHeight[Slot])
+
     If Content.Width <= 0 Or Content.Height <= 0 Then
         Return
     End If
+
     RowHeight = EffectiveRowHeight(Slot)
+
     If MenuStyles[Slot].ShowScrollbar Then
         ScrollReserve = 8
     End If
+
     TextX = Content.X + 10
+
     If MenuStyles[Slot].UseCursor And MenuStyles[Slot].CursorWidth > 0 Then
         TextX = TextX + MenuStyles[Slot].CursorWidth + 8
     End If
+
     Clip Rectangle Content.X, Content.Y, Content.Width, Content.Height
+
         For Row = 0 To MenuVisibleRows[Slot] - 1
             Index = MenuTop[Slot] + Row
+
             If Index < MenuItemCount[Slot] Then
                 RowY = Content.Y + Row * RowHeight
                 RowDrawHeight = Max(0, Min(RowHeight, Content.Y + Content.Height - RowY))
+
                 If RowDrawHeight > 0 Then
                     Clip Rectangle Content.X, RowY, Content.Width, RowDrawHeight
+
                         If Index = MenuSelected[Slot] Then
                             RowStyle = MenuStyles[Slot].SelectedText
                             Fill Rectangle Content.X, RowY, Content.Width, RowHeight, MenuStyles[Slot].SelectionFillColor
+
                             If Focused And MenuStyles[Slot].UseCursor And Image_Loaded(MenuStyles[Slot].Cursor) And MenuStyles[Slot].CursorWidth > 0 And MenuStyles[Slot].CursorHeight > 0 Then
                                 CursorX = Content.X + MenuStyles[Slot].CursorOffsetX
                                 CursorY = RowY + Max(0, (RowDrawHeight - MenuStyles[Slot].CursorHeight) / 2) + MenuStyles[Slot].CursorOffsetY
                                 MaximumCursorX = TextX - MenuStyles[Slot].CursorWidth - 2
                                 MaximumCursorY = RowY + RowDrawHeight - MenuStyles[Slot].CursorHeight
+
                                 If MaximumCursorX >= Content.X Then
                                     CursorX = Max(Content.X, Min(MaximumCursorX, CursorX))
                                 End If
+
                                 If MaximumCursorY >= RowY Then
                                     CursorY = Max(RowY, Min(MaximumCursorY, CursorY))
                                 Else
                                     CursorY = RowY
                                 End If
+
                                 If MenuStyles[Slot].CursorFilterMode = Core.UI_FILTER_PIXEL Then
                                     Draw Image MenuStyles[Slot].Cursor At CursorX, CursorY Size MenuStyles[Slot].CursorWidth By MenuStyles[Slot].CursorHeight Filter Pixel
                                 Else
                                     Draw Image MenuStyles[Slot].Cursor At CursorX, CursorY Size MenuStyles[Slot].CursorWidth By MenuStyles[Slot].CursorHeight Filter Smooth
                                 End If
+
                             End If
+
                         Else If ItemEnabled[Slot, Index] Then
                             RowStyle = MenuStyles[Slot].NormalText
                         Else
                             RowStyle = MenuStyles[Slot].DisabledText
                         End If
+
                         LabelRight = Content.X + Content.Width - ScrollReserve - 8
                         MarkerWidth = 0
                         MarkerX = 0
                         ShowMarker = ItemSubmenu[Slot, Index] And MenuStyles[Slot].ShowSubmenuIndicator
                         AfterMarker = ShowMarker And MenuStyles[Slot].SubmenuIndicatorPosition = Core.UI_SUBMENU_INDICATOR_AFTER_TEXT
+
                         If ShowMarker And MenuStyles[Slot].SubmenuIndicatorPosition = Core.UI_SUBMENU_INDICATOR_RIGHT_ALIGNED Then
                             MarkerWidth = Text.MeasureWidth(RowStyle, " >")
                             MarkerX = LabelRight - MarkerWidth
+
                             If MarkerX >= TextX Then
                                 LabelRight = MarkerX - 4
                             Else
@@ -934,41 +1309,57 @@ Public Sub DrawFocused(Handle As Number, Focused As Boolean)
                                 MarkerWidth = 0
                                 MarkerX = 0
                             End If
+
                         Else If AfterMarker Then
                             MarkerWidth = Text.MeasureWidth(RowStyle, " >")
+
                             If MarkerWidth > LabelRight - TextX Then
                                 ShowMarker = False
                                 AfterMarker = False
                                 MarkerWidth = 0
                             End If
+
                         End If
+
                         LabelWidth = Max(0, LabelRight - TextX)
                         MarkerY = DrawLabel(Slot, Index, RowStyle, TextX, RowY, LabelWidth, RowDrawHeight, AfterMarker, MarkerWidth)
+
                         If ShowMarker And Not AfterMarker And MarkerWidth > 0 Then
                             Call Text.Draw(RowStyle, " >", MarkerX, MarkerY, Core.UI_ALIGN_LEFT, 100)
+
                         End If
+
                     End Clip
                 End If
+
             End If
+
         End For
+
         If MenuStyles[Slot].ShowScrollbar And MenuItemCount[Slot] > MenuVisibleRows[Slot] Then
             ScrollHeight = Max(0, Min(Content.Height, MenuVisibleRows[Slot] * RowHeight))
             Fill Rectangle Content.X + Content.Width - 5, Content.Y, 4, ScrollHeight, DARK_GRAY
+
             If ScrollHeight > 0 Then
                 ThumbHeight = Min(ScrollHeight, Max(Min(8, ScrollHeight), ScrollHeight * MenuVisibleRows[Slot] / MenuItemCount[Slot]))
                 ThumbY = Content.Y + (ScrollHeight - ThumbHeight) * MenuTop[Slot] / (MenuItemCount[Slot] - MenuVisibleRows[Slot])
                 ThumbY = Max(Content.Y, Min(Content.Y + ScrollHeight - ThumbHeight, ThumbY))
                 Fill Rectangle Content.X + Content.Width - 5, ThumbY, 4, ThumbHeight, LIGHT_BLUE
             End If
+
         End If
+
     End Clip
+
 End Sub
 
 ''' Draws a menu using the normal focused appearance.
 ''' @param Handle: Menu handle to draw. Invalid or zero-sized menus are ignored.
 ''' @remarks: Requires Game Window. This is equivalent to DrawFocused with Focused set to True.
 Public Sub Draw(Handle As Number)
+
     Call DrawFocused(Handle, True)
+
 End Sub
 
 End Module

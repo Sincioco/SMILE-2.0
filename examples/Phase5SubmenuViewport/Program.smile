@@ -133,19 +133,27 @@ SixtyFourMenu = Menu.Create(GeometryStyle, 204, 60, 90, 52, 4)
 AllVisibleMenu = Menu.Create(GeometryStyle, 302, 60, 90, 52, 4)
 HiddenScrollbarMenu = Menu.Create(NoScrollbarStyle, 400, 60, 90, 52, 4)
 TinyMenu = Menu.Create(GeometryStyle, 498, 60, 60, 7, 1)
+
 For I = 0 To 4
     ItemIndex = Menu.AddItem(FiveMenu, "Five", I, True)
     ItemIndex = Menu.AddItem(HiddenScrollbarMenu, "Hidden", I, True)
     ItemIndex = Menu.AddItem(TinyMenu, "Tiny", I, True)
+
 End For
+
 For I = 0 To 19
     ItemIndex = Menu.AddItem(TwentyMenu, "Twenty", I, True)
+
 End For
+
 For I = 0 To 63
     ItemIndex = Menu.AddItem(SixtyFourMenu, "Sixty Four", I, True)
+
 End For
+
 For I = 0 To 3
     ItemIndex = Menu.AddItem(AllVisibleMenu, "Visible", I, True)
+
 End For
 
 Root = Menu.Create(MenuStyle, 430, 185, 190, 160, 4)
@@ -222,9 +230,11 @@ Do
     Call Menu.Draw(HiddenScrollbarMenu)
     Call Menu.Draw(TinyMenu)
     Call MenuNavigator.DrawStack(Navigator)
+
     Draw Text "Right/Enter Open   Left/Esc Back   1 System   2 Bitmap" At 320, 12 Size 15 Color WHITE Centered
     Show Screen
     Wait 8 Milliseconds
+
 Loop Until Game_Closed() = True Or Running = False
 
 Call MenuNavigator.Destroy(Navigator)
@@ -238,6 +248,7 @@ Call Menu.Destroy(Grandchild)
 Call Menu.Destroy(Child)
 Call Menu.Destroy(Root)
 Call BitmapFont.Destroy(FontHandle)
+
 Unload Image FontAtlas
 Unload Image CursorImage
 

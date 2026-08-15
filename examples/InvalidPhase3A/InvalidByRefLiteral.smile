@@ -1,4 +1,7 @@
 Call SetValue(1)
+
 Sub SetValue(ByRef Value As Number)
+
     Value = 2
+
 End Sub

@@ -28,12 +28,15 @@ Print Party[0].Health.Current
 Print Party[1].Name
 
 Call TryChange(Party[0])
+
 Print Party[0].Name
 
 Call Change(Party[0])
+
 Print Party[0].Name
 
 Call RenameField(Party[1].Name, "Nei")
+
 Print Party[1].Name
 
 Copy = Models.CopyActor(Party[0])
@@ -42,13 +45,19 @@ Print Copy.Name
 End Program
 
 Sub TryChange(Value As Models.Actor)
+
     Value.Name = "ByVal"
+
 End Sub
 
 Sub Change(ByRef Value As Models.Actor)
+
     Value.Name = "ByRef"
+
 End Sub
 
 Sub RenameField(ByRef Value As Text, NewValue As Text)
+
     Value = NewValue
+
 End Sub

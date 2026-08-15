@@ -5,15 +5,21 @@ Print Visit(3)
 End Program
 
 Function Visit(Level As Number) As Text
+
+    Dim ReturnValue As Text
     Dim Nested As Text
 
-    Select Case "G" + "O"
-        Case "GO"
+    Select Case "G" + "o"
+        Case "Go"
+
             If Level > 0 Then
                 Nested = Visit(Level - 1)
             End If
-            Return "Match"
+
+            ReturnValue = "Match"
+            Return ReturnValue
         Case Else
-            Return "Miss"
+            ReturnValue = "Miss"
+            Return ReturnValue
     End Select
 End Function

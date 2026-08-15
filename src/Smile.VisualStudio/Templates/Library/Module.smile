@@ -3,7 +3,12 @@ Module $safeprojectname$
 Option Explicit
 
 Public Function DoubleValue(Value As Number) As Number
-    Return Value * 2
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Value * 2
+    Return ReturnValue
+
 End Function
 
 End Module

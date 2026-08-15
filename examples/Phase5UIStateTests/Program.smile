@@ -52,6 +52,7 @@ Print Text_Slice(Value, 1, 1)
 
 OldHandle = Handle
 Call Menu.Destroy(Handle)
+
 Print Menu.SelectedIndex(OldHandle)
 
 Handle = Menu.Create(Style, 0, 0, 320, 240, 2)
@@ -59,8 +60,10 @@ Print Handle
 Call Menu.Destroy(Handle)
 
 Handle = Menu.Create(Style, 0, 0, 320, 240, 2)
+
 For Index = 0 To 63
     ItemIndex = Menu.AddItem(Handle, "Item", Index, True)
+
 End For
 Print Menu.AddItem(Handle, "Overflow", 64, True)
 Print Menu.ItemCount(Handle)
@@ -84,8 +87,10 @@ Call Menu.Destroy(Handle)
 
 Style.RowHeight = 24
 Handle = Menu.Create(Style, 0, 0, 300, 180, 6)
+
 For Index = 0 To 11
     ItemIndex = Menu.AddItem(Handle, "Item", Index, True)
+
 End For
 Print Menu.VisibleRows(Handle)
 OperationSucceeded = Menu.SetSelectedIndex(Handle, 10)
@@ -105,10 +110,13 @@ Call Menu.Destroy(Handle)
 
 For Index = 0 To 15
     Handles[Index] = Menu.Create(Style, 0, 0, 320, 240, 2)
+
 End For
 Print Menu.Create(Style, 0, 0, 320, 240, 2)
+
 For Index = 0 To 15
     Call Menu.Destroy(Handles[Index])
+
 End For
 
 End Program

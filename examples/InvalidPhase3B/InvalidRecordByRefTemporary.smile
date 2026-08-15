@@ -2,10 +2,17 @@ Type Point
     X As Number
 End Type
 Call Change(Create())
+
 Function Create() As Point
+
     Dim Result As Point
+
     Return Result
+
 End Function
+
 Sub Change(ByRef Value As Point)
+
     Value.X = 1
+
 End Sub

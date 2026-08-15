@@ -43,17 +43,24 @@
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 3 &mdash; exact official code</span><button class="copy-code" type="button">Copy code</button></div>
 <pre><code class="language-smile" data-source-start="34">Sub SpawnFood()
+
     FoodValid = False
+
     Do
         Random FoodX From 0 To GridWidth - 1
         Random FoodY From 0 To GridHeight - 1
         FoodValid = True
+
         For I = 0 To Length - 1
+
             If FoodX = SnakeX[I] And FoodY = SnakeY[I] Then
                 FoodValid = False
             End If
+
         End For
+
     Loop Until FoodValid = True
+
 End Sub</code></pre>
 </div><figure class="figure-card">
 <a class="figure-link" href="assets/images/food-flow.svg" rel="noopener" target="_blank" title="Open the high-resolution illustration">
@@ -63,7 +70,7 @@ End Sub</code></pre>
 </figure>
 <h2>The algorithm in plain language</h2>
 <ol class="number-list"><li>Assume the position is not valid.</li><li>Pick random X and Y values inside the board.</li><li>Temporarily mark the square valid.</li><li>Look at every active snake segment.</li><li>If both X and Y match a segment, mark it invalid.</li><li>Repeat until a valid square is found.</li></ol>
-<div class="card-grid"><article class="card accent-blue"><h3><span class="syntax">Sub ... End Sub</span></h3><p>Defines a named procedure that performs a job.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Sub SpawnFood()</code><a class="source-line-link" href="19-complete-source.html#source-line-34">lines 34&ndash;46</a></div></article><article class="card accent-green"><h3><span class="syntax">Do ... Loop Until</span></h3><p>Runs the body, then checks whether it is allowed to stop.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Do  ...  Loop Until FoodValid = True</code><a class="source-line-link" href="19-complete-source.html#source-line-36">lines 36&ndash;45</a></div></article><article class="card accent-yellow"><h3><span class="syntax">Random ... From ... To</span></h3><p>Stores an inclusive random whole number.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Random FoodX From 0 To GridWidth - 1</code><a class="source-line-link" href="19-complete-source.html#source-line-37">line 37</a></div></article><article class="card accent-red"><h3><span class="syntax">And</span></h3><p>Both X and Y must match before food overlaps a segment.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>FoodX = SnakeX[I] And FoodY = SnakeY[I]</code><a class="source-line-link" href="19-complete-source.html#source-line-41">line 41</a></div></article></div>
+<div class="card-grid"><article class="card accent-blue"><h3><span class="syntax">Sub ... End Sub</span></h3><p>Defines a named procedure that performs a job.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Sub SpawnFood()</code><a class="source-line-link" href="19-complete-source.html#source-line-34">lines 34&ndash;53</a></div></article><article class="card accent-green"><h3><span class="syntax">Do ... Loop Until</span></h3><p>Runs the body, then checks whether it is allowed to stop.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Do  ...  Loop Until FoodValid = True</code><a class="source-line-link" href="19-complete-source.html#source-line-38">lines 38&ndash;51</a></div></article><article class="card accent-yellow"><h3><span class="syntax">Random ... From ... To</span></h3><p>Stores an inclusive random whole number.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Random FoodX From 0 To GridWidth - 1</code><a class="source-line-link" href="19-complete-source.html#source-line-39">line 39</a></div></article><article class="card accent-red"><h3><span class="syntax">And</span></h3><p>Both X and Y must match before food overlaps a segment.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>FoodX = SnakeX[I] And FoodY = SnakeY[I]</code><a class="source-line-link" href="19-complete-source.html#source-line-45">line 45</a></div></article></div>
 <details class="quiz"><summary>Why does random X stop at GridWidth &minus; 1?</summary><p>A 35-column board is numbered 0 through 34. Column 35 would be outside the board.</p></details>
 <section aria-labelledby="reinforce-title" class="reinforcement-panel">
 <p class="reinforcement-kicker">Repetition builds memory</p>

@@ -1,5 +1,12 @@
 Module Example.Phase2A.Base
+
 Public Function Double(Value)
-Return Value * 2
+
+    Dim ReturnValue As Number
+
+ReturnValue = Value * 2
+Return ReturnValue
+
 End Function
+
 End Module

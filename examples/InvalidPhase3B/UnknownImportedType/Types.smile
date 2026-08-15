@@ -1,4 +1,5 @@
 Module Invalid.Types
+
 Public Type Present
     Value As Number
 End Type

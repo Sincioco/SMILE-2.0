@@ -20,7 +20,12 @@ Print Text_Length(BuildText())
 Print Text_Code_At(Text_Slice(BuildText(), 1, 1), 0)
 
 Function BuildText() As Text
-    Return "A😀B"
+
+    Dim ReturnValue As Text
+
+    ReturnValue = "A😀B"
+    Return ReturnValue
+
 End Function
 
 End Program

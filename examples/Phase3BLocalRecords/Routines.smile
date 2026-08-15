@@ -1,6 +1,9 @@
 Function CreateMessage(Content As Text, Code As Number) As Message
+
     Dim Result As Message
+
     Result.Content = Content
     Result.Code = Code
     Return Result
+
 End Function

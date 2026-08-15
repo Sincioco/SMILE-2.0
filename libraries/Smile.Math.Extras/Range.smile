@@ -1,7 +1,12 @@
 Module Smile.Math.Extras
 
 Public Function IsBetween(Value, MinimumValue, MaximumValue)
-    Return Value >= MinimumValue And Value <= MaximumValue
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Value >= MinimumValue And Value <= MaximumValue
+    Return ReturnValue
+
 End Function
 
 End Module

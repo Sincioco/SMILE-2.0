@@ -1,5 +1,7 @@
 Dim StartupValues[MaximumValues]
+
 Call InitializeArrays()
+
 Print MaximumValues
 Print SharedValues[MaximumValues - 1]
 End Program

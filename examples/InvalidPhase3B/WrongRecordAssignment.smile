@@ -6,4 +6,5 @@ Type SecondType
 End Type
 Dim First As FirstType
 Dim Second As SecondType
+
 First = Second

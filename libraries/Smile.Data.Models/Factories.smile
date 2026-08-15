@@ -3,6 +3,7 @@ Module Smile.Data.Models
 Option Explicit
 
 Public Function CreateActor(Name As Text, X As Number, Y As Number, CurrentHP As Number, MaximumHP As Number) As Actor
+
     Dim Result As Actor
 
     Result.Name = Name
@@ -13,23 +14,32 @@ Public Function CreateActor(Name As Text, X As Number, Y As Number, CurrentHP As
     Result.Active = True
 
     Return Result
+
 End Function
 
 Public Function CopyActor(Value As Actor) As Actor
+
     Return Value
+
 End Function
 
 Public Sub Move(ByRef Value As Actor, DeltaX As Number, DeltaY As Number)
+
     Value.Position.X = Value.Position.X + DeltaX
     Value.Position.Y = Value.Position.Y + DeltaY
+
 End Sub
 
 Public Sub Damage(ByRef Value As Actor, Amount As Number)
+
     Value.Health.Current = Max(0, Value.Health.Current - Amount)
+
 End Sub
 
 Private Function InternalIdentity(Value As Number) As Number
+
     Return Value
+
 End Function
 
 End Module

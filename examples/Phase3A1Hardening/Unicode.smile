@@ -1,6 +1,7 @@
 Option Explicit
 
 Dim Message As Text
+
 Message = "Café — Καλημέρα — こんにちは — 你好 — 😀"
 Print Message
 

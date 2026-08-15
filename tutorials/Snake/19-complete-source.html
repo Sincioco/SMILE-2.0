@@ -75,20 +75,28 @@ Collision = False
 Load HighScore From "HighScore" Default 0
 
 Sub SpawnFood()
+
     FoodValid = False
+
     Do
         Random FoodX From 0 To GridWidth - 1
         Random FoodY From 0 To GridHeight - 1
         FoodValid = True
+
         For I = 0 To Length - 1
+
             If FoodX = SnakeX[I] And FoodY = SnakeY[I] Then
                 FoodValid = False
             End If
+
         End For
+
     Loop Until FoodValid = True
+
 End Sub
 
 Sub ResetSnakeBody()
+
     Length = 5
     Direction = KEY_RIGHT
     NextDirection = KEY_RIGHT
@@ -102,28 +110,38 @@ Sub ResetSnakeBody()
     SnakeY[3] = 12
     SnakeX[4] = 13
     SnakeY[4] = 12
+
 End Sub
 
 Sub ResetPlay()
+
     Call ResetSnakeBody()
+
     Score = 0
     MoveDelay = StartDelay
     Call SpawnFood()
+
     NextMoveTime = Timer() + StartDelay
     State = 1
     Play Sound "Assets\Start.wav"
+
 End Sub
 
 Sub EndRound()
+
     State = 2
+
     If Score &gt; HighScore Then
         HighScore = Score
         Save HighScore To "HighScore"
     End If
+
     Play Sound "Assets\GameOver.wav"
+
 End Sub
 
 Sub MoveSnake()
+
     Direction = NextDirection
     TailX = SnakeX[Length - 1]
     TailY = SnakeY[Length - 1]
@@ -131,6 +149,7 @@ Sub MoveSnake()
     For I = Length - 1 Down To 1
         SnakeX[I] = SnakeX[I - 1]
         SnakeY[I] = SnakeY[I - 1]
+
     End For
 
     If Direction = KEY_UP Then
@@ -144,18 +163,22 @@ Sub MoveSnake()
     End If
 
     Collision = False
+
     If SnakeX[0] &lt; 0 Or SnakeX[0] &gt;= GridWidth Or SnakeY[0] &lt; 0 Or SnakeY[0] &gt;= GridHeight Then
         Collision = True
     End If
 
     For I = 1 To Length - 1
+
         If SnakeX[0] = SnakeX[I] And SnakeY[0] = SnakeY[I] Then
             Collision = True
         End If
+
     End For
 
     If Collision = True Then
         Call EndRound()
+
     Else If SnakeX[0] = FoodX And SnakeY[0] = FoodY Then
         SnakeX[Length] = TailX
         SnakeY[Length] = TailY
@@ -164,21 +187,26 @@ Sub MoveSnake()
         MoveDelay = Max(MinimumDelay, StartDelay - (Score / 50) * 4)
         Play Sound "Assets\Eat.wav"
         Call SpawnFood()
+
     End If
 
     NextMoveTime = Timer() + MoveDelay
+
 End Sub
 
 Sub DrawBoard()
+
     Clear Rgb(10, 18, 35)
     Fill Rectangle FieldX, FieldY, FieldWidth, FieldHeight, BLACK
     Draw Rectangle FieldX, FieldY, FieldWidth, FieldHeight, Rgb(40, 70, 95)
 
     For I = 0 To Length - 1
+
         If SnakeX[I] &gt;= 0 And SnakeX[I] &lt; GridWidth And SnakeY[I] &gt;= 0 And SnakeY[I] &lt; GridHeight Then
             Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)
             Draw Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(20, 105, 35)
         End If
+
     End For
 
     Fill Rectangle FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, Rgb(245, 45, 55)
@@ -194,9 +222,11 @@ Sub DrawBoard()
     Draw Text "Alt+Enter" At 835, 415 Size 16 Color WHITE Centered
     Draw Text "Full Screen" At 835, 440 Size 16 Color LIGHT_GRAY Centered
     Draw Text "Escape Exits" At 835, 490 Size 16 Color LIGHT_GRAY Centered
+
 End Sub
 
 Sub DrawTitle()
+
     Clear Rgb(10, 18, 35)
     Fill Rectangle FieldX, FieldY, FieldWidth, FieldHeight, BLACK
     Draw Rectangle FieldX, FieldY, FieldWidth, FieldHeight, Rgb(40, 70, 95)
@@ -210,9 +240,11 @@ Sub DrawTitle()
     Draw Text "Escape To Exit" At 370, 415 Size 18 Color LIGHT_GRAY Centered
     Draw Text "High Score" At 835, 165 Size 20 Color LIGHT_GRAY Centered
     Draw Number HighScore At 805, 205 Size 38 Color CYAN
+
 End Sub
 
 Sub DrawGameOver()
+
     Fill Rounded Rectangle 145, 135, 590, 285, 22, Rgb(16, 25, 45)
     Draw Rounded Rectangle 145, 135, 590, 285, 22, Rgb(245, 45, 55)
     Draw Text "Game Over" At 440, 185 Size 50 Color RED Centered
@@ -222,16 +254,21 @@ Sub DrawGameOver()
     Draw Number HighScore At 530, 297 Size 38 Color CYAN
     Draw Text "Enter To Retry" At 440, 360 Size 24 Color WHITE Centered
     Draw Text "Escape To Exit" At 440, 392 Size 18 Color LIGHT_GRAY Centered
+
 End Sub
 
 Sub EnterTitle()
+
     State = 0
     Key = KEY_NONE
     Stop Sound
+
 End Sub
 
 Sub ResetGame()
+
     Call ResetPlay()
+
 End Sub
 
 Game Window "SMILE 2.0 Snake"
@@ -242,13 +279,18 @@ Do
     Get Key Key
 
     If State = 0 Then
+
         If Key = KEY_ESCAPE Then
             End Program
         Else If Key = KEY_ENTER Then
             Call ResetGame()
+
         End If
+
         Call DrawTitle()
+
     Else If State = 1 Then
+
         If Key = KEY_ESCAPE Then
             End Program
         End If
@@ -265,28 +307,38 @@ Do
 
         If State = 1 And Timer() &gt;= NextMoveTime Then
             Call MoveSnake()
+
         End If
 
         Call DrawBoard()
+
         If State = 2 Then
             Call DrawGameOver()
+
         End If
+
     Else
+
         If Key = KEY_ESCAPE Then
             End Program
         Else If Key = KEY_ENTER Then
             Call ResetGame()
+
         End If
 
         If State = 0 Then
             Call DrawTitle()
+
         Else
             Call DrawBoard()
             Call DrawGameOver()
+
         End If
+
     End If
 
     Show Screen
+
 Loop Until Game_Closed() = True
 
 Stop Sound
@@ -300,8 +352,8 @@ End Program</code></pre>
 </div>
 <p class="small-note">The first two links use <code>../../games/Snake</code> and therefore open the files from the real SMILE 2.0 game folder when the tutorial is installed at <code>tutorials\Snake</code>. The snapshot links keep a matching reference copy inside the tutorial package.</p>
 <h2>Source map</h2>
-<div class="table-wrap"><table><thead><tr><th>Lines</th><th>Section</th><th>Question answered</th></tr></thead><tbody><tr><td><a class="source-range-link" data-line-end="14" data-line-start="1" href="#source-line-1">1&ndash;14</a></td><td>Constants and arrays</td><td>How big is the world and where can body coordinates be stored?</td></tr><tr><td><a class="source-range-link" data-line-end="32" data-line-start="16" href="#source-line-16">16&ndash;32</a></td><td>Variables and Load</td><td>What can change and what survives between runs?</td></tr><tr><td><a class="source-range-link" data-line-end="46" data-line-start="34" href="#source-line-34">34&ndash;46</a></td><td>SpawnFood</td><td>Where can food safely appear?</td></tr><tr><td><a class="source-range-link" data-line-end="62" data-line-start="48" href="#source-line-48">48&ndash;62</a></td><td>ResetSnakeBody</td><td>What does a new snake look like?</td></tr><tr><td><a class="source-range-link" data-line-end="81" data-line-start="64" href="#source-line-64">64&ndash;81</a></td><td>ResetPlay / EndRound</td><td>How does a round begin and finish?</td></tr><tr><td><a class="source-range-link" data-line-end="127" data-line-start="83" href="#source-line-83">83&ndash;127</a></td><td>MoveSnake</td><td>How does the world change one move at a time?</td></tr><tr><td><a class="source-range-link" data-line-end="182" data-line-start="129" href="#source-line-129">129&ndash;182</a></td><td>Drawing routines</td><td>How do current values become visible screens?</td></tr><tr><td><a class="source-range-link" data-line-end="192" data-line-start="184" href="#source-line-184">184&ndash;192</a></td><td>State helpers</td><td>How do we switch screens or restart?</td></tr><tr><td><a class="source-range-link" data-line-end="250" data-line-start="194" href="#source-line-194">194&ndash;250</a></td><td>Window and main loop</td><td>How does the game keep listening, updating, and drawing?</td></tr></tbody></table></div>
-<h2>Source authority</h2><p>This tutorial uses the repository&rsquo;s <a href="../../games/Snake/Program-NoDemo.smile"><code>games\Snake\Program-NoDemo.smile</code></a> file with blob Sha <code>2cd9c8d07d53aa1c108a54738a4f109920a663d8</code>, plus <a href="../../games/Snake/Snake.smileproj"><code>Snake.smileproj</code></a>, the Snake Readme, and the language documentation.</p>
+<div class="table-wrap"><table><thead><tr><th>Lines</th><th>Section</th><th>Question answered</th></tr></thead><tbody><tr><td><a class="source-range-link" data-line-end="14" data-line-start="1" href="#source-line-1">1&ndash;14</a></td><td>Constants and arrays</td><td>How big is the world and where can body coordinates be stored?</td></tr><tr><td><a class="source-range-link" data-line-end="32" data-line-start="16" href="#source-line-16">16&ndash;32</a></td><td>Variables and Load</td><td>What can change and what survives between runs?</td></tr><tr><td><a class="source-range-link" data-line-end="53" data-line-start="34" href="#source-line-34">34&ndash;53</a></td><td>SpawnFood</td><td>Where can food safely appear?</td></tr><tr><td><a class="source-range-link" data-line-end="71" data-line-start="55" href="#source-line-55">55&ndash;71</a></td><td>ResetSnakeBody</td><td>What does a new snake look like?</td></tr><tr><td><a class="source-range-link" data-line-end="98" data-line-start="73" href="#source-line-73">73&ndash;98</a></td><td>ResetPlay / EndRound</td><td>How does a round begin and finish?</td></tr><tr><td><a class="source-range-link" data-line-end="152" data-line-start="100" href="#source-line-100">100&ndash;152</a></td><td>MoveSnake</td><td>How does the world change one move at a time?</td></tr><tr><td><a class="source-range-link" data-line-end="215" data-line-start="154" href="#source-line-154">154&ndash;215</a></td><td>Drawing routines</td><td>How do current values become visible screens?</td></tr><tr><td><a class="source-range-link" data-line-end="229" data-line-start="217" href="#source-line-217">217&ndash;229</a></td><td>State helpers</td><td>How do we switch screens or restart?</td></tr><tr><td><a class="source-range-link" data-line-end="302" data-line-start="231" href="#source-line-231">231&ndash;302</a></td><td>Window and main loop</td><td>How does the game keep listening, updating, and drawing?</td></tr></tbody></table></div>
+<h2>Source authority</h2><p>This tutorial uses the repository&rsquo;s <a href="../../games/Snake/Program-NoDemo.smile"><code>games\Snake\Program-NoDemo.smile</code></a> file with blob Sha <code>c1fd1fb247895778fc507b337e97b1a515408abf</code>, plus <a href="../../games/Snake/Snake.smileproj"><code>Snake.smileproj</code></a>, the Snake Readme, and the language documentation.</p>
 <section aria-labelledby="reinforce-title" class="reinforcement-panel">
 <p class="reinforcement-kicker">Repetition builds memory</p>
 <h2 id="reinforce-title">Reinforce what you learned</h2>

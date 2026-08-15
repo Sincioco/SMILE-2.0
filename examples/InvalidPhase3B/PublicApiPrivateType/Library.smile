@@ -1,9 +1,14 @@
 Module Invalid.PublicApi
+
 Private Type Hidden
     Value As Number
 End Type
 Public Function Create() As Hidden
+
     Dim Result As Hidden
+
     Return Result
+
 End Function
+
 End Module

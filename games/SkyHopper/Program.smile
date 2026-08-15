@@ -55,12 +55,16 @@ DrainedKey = KEY_NONE
 Load HighScore From "HighScore" Default 0
 
 Sub DrainPendingKeys()
+
     For DrainIndex = 1 To 64
         Get Key DrainedKey
+
     End For
+
 End Sub
 
 Sub EnterTitle()
+
     DemoMode = False
     State = STATE_TITLE
     Accumulator = 0
@@ -68,195 +72,266 @@ Sub EnterTitle()
     Stop Music
     Stop Sound
     Call DrainPendingKeys()
+
     TitleStartedAt = Timer()
     TitleAcceptInputAt = TitleStartedAt + TitleInputArmDelay
+
 End Sub
 
 Sub SetSafeGap(GateIndex, PreviousCenter)
+
     Random GapChange From -65 To 65
     NewGapCenter = PreviousCenter + GapChange
     MinimumCenter = HudHeight + GapHeight / 2 + 28
     MaximumCenter = GroundY - GapHeight / 2 - 28
     GateGapCenter[GateIndex] = Max(MinimumCenter, Min(MaximumCenter, NewGapCenter))
+
 End Sub
 
 ' Gates are initialized with generous spacing and safe vertical transitions.
 Sub ResetGates()
+
     PreviousCenter = 270
+
     For GateIndex = 0 To GateCount - 1
         GateXSub[GateIndex] = (720 + GateIndex * InitialGateSpacing) * SubpixelsPerPixel
         Call SetSafeGap(GateIndex, PreviousCenter)
+
         PreviousCenter = GateGapCenter[GateIndex]
         GatePassed[GateIndex] = 0
+
     End For
+
 End Sub
 
 Sub ResetBird()
+
     BirdYSub = 270 * SubpixelsPerPixel
     BirdVelocity = 0
+
 End Sub
 
 Sub StartRun(DemoValue)
+
     If DemoValue = 1 Then
         DemoMode = True
     Else
         DemoMode = False
     End If
+
     Score = 0
     GateSpeed = BaseGateSpeed
     GapHeight = InitialGapHeight
     Call ResetBird()
     Call ResetGates()
+
     State = STATE_PLAY
     Accumulator = 0
+
     If DemoMode = True Then
         DemoStartedAt = Timer()
         NextDemoDecisionAt = DemoStartedAt
     End If
+
     Play Sound "Assets\Start.wav"
     Music Volume 30
     Play Music "Assets\Background.mp3" Loop
+
 End Sub
 
 Sub AddPoint()
+
     Score = Score + 1
+
     If DemoMode = False And Score > HighScore Then
         HighScore = Score
         Save HighScore To "HighScore"
     End If
+
     GateSpeed = Min(MaximumGateSpeed, BaseGateSpeed + Score * 4500)
     GapHeight = Max(MinimumGapHeight, InitialGapHeight - Score * 2)
     Play Sound "Assets\Score.wav"
+
 End Sub
 
 Sub ResetDemoRun()
+
     Score = 0
     GateSpeed = BaseGateSpeed
     GapHeight = InitialGapHeight
     Call ResetBird()
     Call ResetGates()
+
     State = STATE_PLAY
     Accumulator = 0
     NextDemoDecisionAt = Timer()
     Music Volume 30
     Play Music "Assets\Background.mp3" Loop
+
 End Sub
 
 ' The attract pilot targets the nearest opening and requests normal flaps.
 Sub UpdateDemoPilot()
+
     If Timer() < NextDemoDecisionAt Then
         Return
     End If
+
     NextDemoDecisionAt = Timer() + 75
     ClosestDistance = 9999
     TargetY = 270
+
     For DemoGate = 0 To GateCount - 1
         DemoGateX = GateXSub[DemoGate] / SubpixelsPerPixel
         DemoDistance = DemoGateX + GateWidth - BirdX
+
         If DemoDistance > -GateWidth And DemoDistance < ClosestDistance Then
             ClosestDistance = DemoDistance
             TargetY = GateGapCenter[DemoGate]
         End If
+
     End For
     BirdY = BirdYSub / SubpixelsPerPixel
+
     If BirdY > TargetY + 6 Or BirdVelocity > 235000 Or BirdY > GroundY - 90 Then
+
         If BirdY > HudHeight + 55 Then
             DemoFlapRequested = True
         End If
+
     End If
+
 End Sub
 
 Sub FlapBird()
+
     BirdVelocity = FlapVelocity
     Play Sound "Assets\Flap.wav"
+
 End Sub
 
 Sub RecycleGate(GateIndex)
+
     RightmostX = 0
     RightmostCenter = 270
+
     For SearchGate = 0 To GateCount - 1
         SearchX = GateXSub[SearchGate] / SubpixelsPerPixel
+
         If SearchX > RightmostX Then
             RightmostX = SearchX
             RightmostCenter = GateGapCenter[SearchGate]
         End If
+
     End For
     Random SpacingChange From -24 To 30
     GateXSub[GateIndex] = (RightmostX + InitialGateSpacing + SpacingChange) * SubpixelsPerPixel
     Call SetSafeGap(GateIndex, RightmostCenter)
+
     GatePassed[GateIndex] = 0
+
 End Sub
 
 ' Fixed-step gravity keeps flight independent from monitor refresh rate.
 Sub UpdateFlightStep()
+
     BirdVelocity = Min(MaximumFallSpeed, BirdVelocity + Gravity * SimulationStep / 1000)
     BirdYSub = BirdYSub + BirdVelocity * SimulationStep / 1000
+
     For GateIndex = 0 To GateCount - 1
         GateXSub[GateIndex] = GateXSub[GateIndex] - GateSpeed * SimulationStep / 1000
         GateX = GateXSub[GateIndex] / SubpixelsPerPixel
+
         If GatePassed[GateIndex] = 0 And GateX + GateWidth < BirdX Then
             GatePassed[GateIndex] = 1
             Call AddPoint()
+
         End If
+
         If GateX + GateWidth < -10 Then
             Call RecycleGate(GateIndex)
+
         End If
+
     End For
     Call CheckCollision()
+
 End Sub
 
 Sub CheckCollision()
+
     BirdY = BirdYSub / SubpixelsPerPixel
     CollisionFound = BirdY - BirdHalfHeight <= HudHeight Or BirdY + BirdHalfHeight >= GroundY
+
     For GateIndex = 0 To GateCount - 1
         GateX = GateXSub[GateIndex] / SubpixelsPerPixel
+
         If BirdX + BirdHalfWidth > GateX And BirdX - BirdHalfWidth < GateX + GateWidth Then
             GapTop = GateGapCenter[GateIndex] - GapHeight / 2
             GapBottom = GateGapCenter[GateIndex] + GapHeight / 2
+
             If BirdY - BirdHalfHeight < GapTop Or BirdY + BirdHalfHeight > GapBottom Then
                 CollisionFound = True
             End If
+
         End If
+
     End For
+
     If CollisionFound = True Then
+
         If DemoMode = True Then
+
             If Timer() - DemoStartedAt < DemoMinimumPlayTime Then
                 Call ResetDemoRun()
+
             Else
                 Call EnterTitle()
+
             End If
+
         Else
             State = STATE_GAME_OVER
             Stop Music
             Play Sound "Assets\Hit.wav"
         End If
+
     End If
+
 End Sub
 
 Sub DrawSky()
+
     Clear Rgb(101, 190, 239)
     Fill Rectangle 0, 215, CanvasWidth, GroundY - 215, Rgb(146, 214, 235)
     CloudShift = (Timer() / 45) Mod 500
+
     For CloudIndex = -1 To 2
         CloudX = CloudIndex * 500 + 150 - CloudShift
         Fill Circle CloudX, 125, 30, WHITE
         Fill Circle CloudX + 35, 112, 42, WHITE
         Fill Circle CloudX + 78, 127, 29, WHITE
         Draw Arc CloudX + 37, 130, 58, 180, 180, LIGHT_BLUE
+
     End For
     HillShift = (Timer() / 80) Mod 680
+
     For HillIndex = -1 To 2
         HillX = HillIndex * 680 - HillShift
         Fill Quadrilateral HillX, GroundY, HillX + 180, 315, HillX + 360, GroundY, HillX + 180, 455, Rgb(83, 160, 135)
         Fill Quadrilateral HillX + 300, GroundY, HillX + 480, 350, HillX + 660, GroundY, HillX + 480, 465, Rgb(68, 145, 128)
+
     End For
     Fill Rectangle 0, GroundY, CanvasWidth, CanvasHeight - GroundY, Rgb(83, 105, 92)
     Draw Line 0, GroundY, CanvasWidth, GroundY, Rgb(246, 202, 82)
+
 End Sub
 
 ' Recycled obstacles are original purple sky gates with gold energy edges.
 Sub DrawGate(GateIndex)
+
     GateX = GateXSub[GateIndex] / SubpixelsPerPixel
+
     If GateX > -GateWidth And GateX < CanvasWidth Then
         GapTop = GateGapCenter[GateIndex] - GapHeight / 2
         GapBottom = GateGapCenter[GateIndex] + GapHeight / 2
@@ -271,9 +346,11 @@ Sub DrawGate(GateIndex)
         Draw Line GateX + 7, GapTop - 8, GateX + GateWidth - 7, GapTop - 8, WHITE
         Draw Line GateX + 7, GapBottom + 6, GateX + GateWidth - 7, GapBottom + 6, WHITE
     End If
+
 End Sub
 
 Sub DrawSkyling()
+
     BirdY = BirdYSub / SubpixelsPerPixel
     WingLift = (Timer() / 90) Mod 3
     Fill Circle BirdX, BirdY, 16, Rgb(34, 174, 187)
@@ -282,14 +359,19 @@ Sub DrawSkyling()
     Fill Quadrilateral BirdX + 13, BirdY - 3, BirdX + 27, BirdY + 2, BirdX + 13, BirdY + 7, BirdX + 16, BirdY + 2, Rgb(246, 180, 62)
     Fill Circle BirdX + 6, BirdY - 6, 5, WHITE
     Fill Circle BirdX + 7, BirdY - 6, 2, Rgb(26, 39, 63)
+
 End Sub
 
 Sub DrawPlayfield()
+
     Call DrawSky()
+
     For GateIndex = 0 To GateCount - 1
         Call DrawGate(GateIndex)
+
     End For
     Call DrawSkyling()
+
     Fill Rectangle 0, 0, CanvasWidth, HudHeight, Rgb(26, 44, 78)
     Draw Text "Score" At 24, 8 Size 14 Color LIGHT_GRAY
     Draw Number Score At 24, 26 Size 25 Color YELLOW
@@ -297,15 +379,19 @@ Sub DrawPlayfield()
     Draw Number HighScore At 190, 26 Size 25 Color CYAN
     Draw Text "Sky Hopper" At 720, 14 Size 27 Color WHITE
     Draw Text "Space / W / Up To Flap" At 720, 40 Size 11 Color LIGHT_BLUE
+
     If DemoMode = True Then
         Fill Rounded Rectangle 420, 9, 230, 40, 7, Rgb(18, 38, 68)
         Draw Text "Demo" At 535, 10 Size 16 Color YELLOW Centered
         Draw Text "Any Key Returns" At 535, 31 Size 10 Color WHITE Centered
     End If
+
 End Sub
 
 Sub DrawTitle()
+
     Call DrawSky()
+
     Draw Text "Sky Hopper" At 480, 70 Size 58 Color WHITE Centered
     Draw Text "An Original One-Button Sky Adventure" At 480, 138 Size 18 Color LIGHT_BLUE Centered
     Fill Circle 480, 225, 38, Rgb(34, 174, 187)
@@ -321,9 +407,11 @@ Sub DrawTitle()
     Draw Text "Escape To Exit    Alt+Enter Full Screen" At 480, 432 Size 14 Color LIGHT_GRAY Centered
     Draw Text "High Score" At 410, 468 Size 15 Color LIGHT_GRAY
     Draw Number HighScore At 535, 460 Size 27 Color CYAN
+
 End Sub
 
 Sub DrawGameOver()
+
     Fill Rounded Rectangle 220, 145, 520, 250, 22, Rgb(23, 31, 58)
     Draw Rounded Rectangle 220, 145, 520, 250, 22, Rgb(240, 97, 116)
     Draw Text "Flight Ended" At 480, 182 Size 43 Color RED Centered
@@ -331,6 +419,7 @@ Sub DrawGameOver()
     Draw Number Score At 520, 240 Size 34 Color YELLOW
     Draw Text "Enter Or Space To Retry" At 480, 320 Size 21 Color WHITE Centered
     Draw Text "Escape To Title" At 480, 360 Size 16 Color LIGHT_GRAY Centered
+
 End Sub
 
 Game Window "SMILE 2.0 Sky Hopper"
@@ -345,64 +434,98 @@ Do
 
     If DemoMode = True And Key <> KEY_NONE Then
         Call EnterTitle()
+
         Key = KEY_NONE
     End If
+
     If DemoMode = True And State = STATE_PLAY And FrameTime - DemoStartedAt >= DemoMaximumPlayTime Then
         Call EnterTitle()
+
     End If
 
     If State = STATE_TITLE Then
+
         If Key <> KEY_NONE And FrameTime >= TitleAcceptInputAt Then
             TitleStartedAt = FrameTime
+
             If Key = KEY_ENTER Or Key = KEY_SPACE Then
                 Call StartRun(0)
+
             Else If Key = KEY_ESCAPE Then
                 End Program
             End If
+
         End If
+
         If State = STATE_TITLE And FrameTime - TitleStartedAt >= TitleDemoDelay Then
             Call StartRun(1)
+
         End If
+
     Else If State = STATE_PLAY Then
+
         If Key = KEY_ESCAPE Then
             Call EnterTitle()
+
         Else
+
             If DemoMode = True Then
                 Call UpdateDemoPilot()
+
                 If DemoFlapRequested = True Then
                     Call FlapBird()
+
                     DemoFlapRequested = False
                 End If
+
             Else If Key = KEY_SPACE Or Key = KEY_W Or Key = KEY_UP Then
                 Call FlapBird()
+
             End If
+
             Accumulator = Min(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
             CatchUpSteps = 0
+
             Do
+
                 If Accumulator >= SimulationStep And State = STATE_PLAY Then
                     Call UpdateFlightStep()
+
                     Accumulator = Accumulator - SimulationStep
                     CatchUpSteps = CatchUpSteps + 1
                 End If
+
             Loop Until Accumulator < SimulationStep Or CatchUpSteps >= MaxCatchUpSteps Or State <> STATE_PLAY
+
         End If
+
     Else
+
         If Key = KEY_ENTER Or Key = KEY_SPACE Then
             Call StartRun(0)
+
         Else If Key = KEY_ESCAPE Then
             Call EnterTitle()
+
         End If
+
     End If
 
     If State = STATE_TITLE Then
         Call DrawTitle()
+
     Else
         Call DrawPlayfield()
+
         If State = STATE_GAME_OVER Then
             Call DrawGameOver()
+
         End If
+
     End If
+
     Show Screen
+
 Loop Until Game_Closed() = True
 
 Stop Sound

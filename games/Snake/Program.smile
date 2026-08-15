@@ -54,20 +54,28 @@ SimulatedEating = 0
 Load HighScore From "HighScore" Default 0
 
 Sub SpawnFood()
+
     FoodValid = False
+
     Do
         Random FoodX From 0 To GridWidth - 1
         Random FoodY From 0 To GridHeight - 1
         FoodValid = True
+
         For I = 0 To Length - 1
+
             If FoodX = SnakeX[I] And FoodY = SnakeY[I] Then
                 FoodValid = False
             End If
+
         End For
+
     Loop Until FoodValid = True
+
 End Sub
 
 Sub ResetSnakeBody()
+
     Length = 5
     Direction = KEY_RIGHT
     NextDirection = KEY_RIGHT
@@ -81,73 +89,116 @@ Sub ResetSnakeBody()
     SnakeY[3] = 12
     SnakeX[4] = 13
     SnakeY[4] = 12
+
 End Sub
 
 Sub ResetPlay()
+
     Call ResetSnakeBody()
+
     Score = 0
     MoveDelay = StartDelay
     Call SpawnFood()
+
     NextMoveTime = Timer() + StartDelay
     State = 1
     Play Sound "Assets\Start.wav"
+
 End Sub
 
 Sub RecoverDemo()
+
     Call ResetSnakeBody()
+
     MoveDelay = Max(MinimumDelay, StartDelay - (Score / 50) * 4)
     Call SpawnFood()
+
     NextMoveTime = Timer() + MoveDelay
     State = 1
+
 End Sub
 
 Sub EndRound()
+
     If DemoMode = True And Timer() - DemoStartedAt < DemoMinimumPlayTime Then
         Call RecoverDemo()
+
         Return
     End If
+
     If DemoMode = True Then
         Call EnterTitle()
+
         Return
     End If
+
     State = 2
+
     If DemoMode = False And Score > HighScore Then
         HighScore = Score
         Save HighScore To "HighScore"
     End If
+
     Play Sound "Assets\GameOver.wav"
+
 End Sub
 
 Function DirectionFromIndex(DirectionIndex)
+
+    Dim ReturnValue As Number
+
     If DirectionIndex = 0 Then
-        Return KEY_UP
+        ReturnValue = KEY_UP
+        Return ReturnValue
     Else If DirectionIndex = 1 Then
-        Return KEY_RIGHT
+        ReturnValue = KEY_RIGHT
+        Return ReturnValue
     Else If DirectionIndex = 2 Then
-        Return KEY_DOWN
+        ReturnValue = KEY_DOWN
+        Return ReturnValue
     End If
-    Return KEY_LEFT
+
+    ReturnValue = KEY_LEFT
+    Return ReturnValue
+
 End Function
 
 Function DirectionX(DirectionValue)
+
+    Dim ReturnValue As Number
+
     If DirectionValue = KEY_LEFT Then
-        Return -1
+        ReturnValue = -1
+        Return ReturnValue
     Else If DirectionValue = KEY_RIGHT Then
-        Return 1
+        ReturnValue = 1
+        Return ReturnValue
     End If
-    Return 0
+
+    ReturnValue = 0
+    Return ReturnValue
+
 End Function
 
 Function DirectionY(DirectionValue)
+
+    Dim ReturnValue As Number
+
     If DirectionValue = KEY_UP Then
-        Return -1
+        ReturnValue = -1
+        Return ReturnValue
     Else If DirectionValue = KEY_DOWN Then
-        Return 1
+        ReturnValue = 1
+        Return ReturnValue
     End If
-    Return 0
+
+    ReturnValue = 0
+    Return ReturnValue
+
 End Function
 
 Function IsReverseDirection(TestDirection)
+
     If TestDirection = KEY_UP And Direction = KEY_DOWN Then
         Return True
     Else If TestDirection = KEY_DOWN And Direction = KEY_UP Then
@@ -157,64 +208,91 @@ Function IsReverseDirection(TestDirection)
     Else If TestDirection = KEY_RIGHT And Direction = KEY_LEFT Then
         Return True
     End If
+
     Return False
+
 End Function
 
 Function CellBlocked(TestX, TestY, AllowTail)
+
     If TestX < 0 Or TestX >= GridWidth Or TestY < 0 Or TestY >= GridHeight Then
         Return True
     End If
+
     For BodyIndex = 0 To Length - 1
+
         If TestX = SnakeX[BodyIndex] And TestY = SnakeY[BodyIndex] Then
+
             If AllowTail = 1 And BodyIndex = Length - 1 Then
                 Return False
             End If
+
             Return True
         End If
+
     End For
     Return False
+
 End Function
 
 Function IsSafeImmediate(TestDirection)
+
     If IsReverseDirection(TestDirection) = True Then
         Return False
     End If
+
     SafetyX = SnakeX[0] + DirectionX(TestDirection)
     SafetyY = SnakeY[0] + DirectionY(TestDirection)
     SafetyEating = 0
     SafetyAllowTail = 1
+
     If SafetyX = FoodX And SafetyY = FoodY Then
         SafetyEating = 1
         SafetyAllowTail = 0
     End If
+
     If CellBlocked(SafetyX, SafetyY, SafetyAllowTail) = False Then
         Return True
     End If
+
     Return False
+
 End Function
 
 Function SimulatedCellBlocked(TestX, TestY)
+
     If TestX < 0 Or TestX >= GridWidth Or TestY < 0 Or TestY >= GridHeight Then
         Return True
     End If
+
     If TestX = SimulatedHeadX And TestY = SimulatedHeadY Then
         Return False
     End If
+
     LastSimulatedBody = Length - 2
+
     If SimulatedEating = 1 Then
         LastSimulatedBody = Length - 1
     End If
+
     For SimBodyIndex = 0 To LastSimulatedBody
+
         If TestX = SnakeX[SimBodyIndex] And TestY = SnakeY[SimBodyIndex] Then
             Return True
         End If
+
     End For
     Return False
+
 End Function
 
 Function FloodAreaForDirection(TestDirection)
+
+    Dim ReturnValue As Number
+
     If IsSafeImmediate(TestDirection) = False Then
-        Return -1
+        ReturnValue = -1
+        Return ReturnValue
     End If
 
     FloodStartX = SnakeX[0] + DirectionX(TestDirection)
@@ -222,13 +300,18 @@ Function FloodAreaForDirection(TestDirection)
     SimulatedHeadX = FloodStartX
     SimulatedHeadY = FloodStartY
     SimulatedEating = 0
+
     If FloodStartX = FoodX And FloodStartY = FoodY Then
         SimulatedEating = 1
     End If
+
     For FloodClearY = 0 To GridHeight - 1
+
         For FloodClearX = 0 To GridWidth - 1
             FloodVisited[FloodClearX, FloodClearY] = 0
+
         End For
+
     End For
 
     FloodRead = 0
@@ -241,62 +324,83 @@ Function FloodAreaForDirection(TestDirection)
         FloodX = FloodQueueX[FloodRead]
         FloodY = FloodQueueY[FloodRead]
         FloodRead = FloodRead + 1
+
         For FloodDirectionIndex = 0 To 3
             FloodDirection = DirectionFromIndex(FloodDirectionIndex)
             FloodNextX = FloodX + DirectionX(FloodDirection)
             FloodNextY = FloodY + DirectionY(FloodDirection)
+
             If FloodNextX >= 0 And FloodNextX < GridWidth And FloodNextY >= 0 And FloodNextY < GridHeight Then
+
                 If FloodVisited[FloodNextX, FloodNextY] = 0 Then
+
                     If SimulatedCellBlocked(FloodNextX, FloodNextY) = False Then
                         FloodVisited[FloodNextX, FloodNextY] = 1
                         FloodQueueX[FloodWrite] = FloodNextX
                         FloodQueueY[FloodWrite] = FloodNextY
                         FloodWrite = FloodWrite + 1
                     End If
+
                 End If
+
             End If
+
         End For
+
     Loop Until FloodRead >= FloodWrite
+
     Return FloodWrite
+
 End Function
 
 Sub ChooseSafeFallback()
+
     BestSafeArea = -1
     BestFoodDistance = 999999
     BestSafeDirection = KEY_NONE
+
     For SafeDirectionIndex = 0 To 3
         SafeDirection = DirectionFromIndex(SafeDirectionIndex)
         SafeArea = FloodAreaForDirection(SafeDirection)
+
         If SafeArea >= 0 Then
             SafeX = SnakeX[0] + DirectionX(SafeDirection)
             SafeY = SnakeY[0] + DirectionY(SafeDirection)
             SafeFoodDistance = Abs(SafeX - FoodX) + Abs(SafeY - FoodY)
+
             If SafeArea > BestSafeArea Or (SafeArea = BestSafeArea And SafeFoodDistance < BestFoodDistance) Then
                 BestSafeArea = SafeArea
                 BestFoodDistance = SafeFoodDistance
                 BestSafeDirection = SafeDirection
             End If
+
         End If
+
     End For
 
     If BestSafeDirection <> KEY_NONE Then
         NextDirection = BestSafeDirection
         DemoHasSafeMove = True
     End If
+
 End Sub
 
 Sub PlanDemoDirection()
+
     DemoHasSafeMove = False
     BFSFound = False
     BFSFoodDirection = KEY_NONE
 
     For BFSClearY = 0 To GridHeight - 1
+
         For BFSClearX = 0 To GridWidth - 1
             BFSVisited[BFSClearX, BFSClearY] = 0
             BFSParentX[BFSClearX, BFSClearY] = -1
             BFSParentY[BFSClearX, BFSClearY] = -1
             BFSFirstDirection[BFSClearX, BFSClearY] = KEY_NONE
+
         End For
+
     End For
 
     BFSRead = 0
@@ -309,32 +413,44 @@ Sub PlanDemoDirection()
         Bfsx = BFSQueueX[BFSRead]
         Bfsy = BFSQueueY[BFSRead]
         BFSRead = BFSRead + 1
+
         For BFSDirectionIndex = 0 To 3
             BFSDirection = DirectionFromIndex(BFSDirectionIndex)
             BFSNextX = Bfsx + DirectionX(BFSDirection)
             BFSNextY = Bfsy + DirectionY(BFSDirection)
+
             If BFSNextX >= 0 And BFSNextX < GridWidth And BFSNextY >= 0 And BFSNextY < GridHeight Then
+
                 If BFSVisited[BFSNextX, BFSNextY] = 0 Then
+
                     If CellBlocked(BFSNextX, BFSNextY, True) = False Then
                         BFSVisited[BFSNextX, BFSNextY] = 1
                         BFSParentX[BFSNextX, BFSNextY] = Bfsx
                         BFSParentY[BFSNextX, BFSNextY] = Bfsy
+
                         If Bfsx = SnakeX[0] And Bfsy = SnakeY[0] Then
                             BFSFirstDirection[BFSNextX, BFSNextY] = BFSDirection
                         Else
                             BFSFirstDirection[BFSNextX, BFSNextY] = BFSFirstDirection[Bfsx, Bfsy]
                         End If
+
                         BFSQueueX[BFSWrite] = BFSNextX
                         BFSQueueY[BFSWrite] = BFSNextY
                         BFSWrite = BFSWrite + 1
+
                         If BFSNextX = FoodX And BFSNextY = FoodY Then
                             BFSFound = True
                             BFSFoodDirection = BFSFirstDirection[BFSNextX, BFSNextY]
                         End If
+
                     End If
+
                 End If
+
             End If
+
         End For
+
     Loop Until BFSRead >= BFSWrite Or BFSFound = True
 
     If BFSFound = True And IsSafeImmediate(BFSFoodDirection) = True Then
@@ -342,10 +458,13 @@ Sub PlanDemoDirection()
         DemoHasSafeMove = True
         Return
     End If
+
     Call ChooseSafeFallback()
+
 End Sub
 
 Sub MoveSnake()
+
     Direction = NextDirection
     TailX = SnakeX[Length - 1]
     TailY = SnakeY[Length - 1]
@@ -353,6 +472,7 @@ Sub MoveSnake()
     For I = Length - 1 Down To 1
         SnakeX[I] = SnakeX[I - 1]
         SnakeY[I] = SnakeY[I - 1]
+
     End For
 
     If Direction = KEY_UP Then
@@ -366,18 +486,22 @@ Sub MoveSnake()
     End If
 
     Collision = False
+
     If SnakeX[0] < 0 Or SnakeX[0] >= GridWidth Or SnakeY[0] < 0 Or SnakeY[0] >= GridHeight Then
         Collision = True
     End If
 
     For I = 1 To Length - 1
+
         If SnakeX[0] = SnakeX[I] And SnakeY[0] = SnakeY[I] Then
             Collision = True
         End If
+
     End For
 
     If Collision = True Then
         Call EndRound()
+
     Else If SnakeX[0] = FoodX And SnakeY[0] = FoodY Then
         SnakeX[Length] = TailX
         SnakeY[Length] = TailY
@@ -386,21 +510,26 @@ Sub MoveSnake()
         MoveDelay = Max(MinimumDelay, StartDelay - (Score / 50) * 4)
         Play Sound "Assets\Eat.wav"
         Call SpawnFood()
+
     End If
 
     NextMoveTime = Timer() + MoveDelay
+
 End Sub
 
 Sub DrawBoard()
+
     Clear Rgb(10, 18, 35)
     Fill Rectangle FieldX, FieldY, FieldWidth, FieldHeight, BLACK
     Draw Rectangle FieldX, FieldY, FieldWidth, FieldHeight, Rgb(40, 70, 95)
 
     For I = 0 To Length - 1
+
         If SnakeX[I] >= 0 And SnakeX[I] < GridWidth And SnakeY[I] >= 0 And SnakeY[I] < GridHeight Then
             Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)
             Draw Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(20, 105, 35)
         End If
+
     End For
 
     Fill Rectangle FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, Rgb(245, 45, 55)
@@ -416,6 +545,7 @@ Sub DrawBoard()
     Draw Text "Alt+Enter" At 835, 415 Size 16 Color WHITE Centered
     Draw Text "Full Screen" At 835, 440 Size 16 Color LIGHT_GRAY Centered
     Draw Text "Escape Exits" At 835, 490 Size 16 Color LIGHT_GRAY Centered
+
     If DemoMode = True And State = 1 Then
         Fill Rounded Rectangle 740, 375, 200, 88, 10, Rgb(16, 25, 45)
         Draw Rounded Rectangle 740, 375, 200, 88, 10, CYAN
@@ -423,9 +553,11 @@ Sub DrawBoard()
         Draw Text "Press Any Key" At 840, 420 Size 13 Color WHITE Centered
         Draw Text "To Return" At 840, 440 Size 13 Color WHITE Centered
     End If
+
 End Sub
 
 Sub DrawTitle()
+
     Clear Rgb(10, 18, 35)
     Fill Rectangle FieldX, FieldY, FieldWidth, FieldHeight, BLACK
     Draw Rectangle FieldX, FieldY, FieldWidth, FieldHeight, Rgb(40, 70, 95)
@@ -439,9 +571,11 @@ Sub DrawTitle()
     Draw Text "Escape To Exit" At 370, 415 Size 18 Color LIGHT_GRAY Centered
     Draw Text "High Score" At 835, 165 Size 20 Color LIGHT_GRAY Centered
     Draw Number HighScore At 805, 205 Size 38 Color CYAN
+
 End Sub
 
 Sub DrawGameOver()
+
     Fill Rounded Rectangle 145, 135, 590, 285, 22, Rgb(16, 25, 45)
     Draw Rounded Rectangle 145, 135, 590, 285, 22, Rgb(245, 45, 55)
     Draw Text "Game Over" At 440, 185 Size 50 Color RED Centered
@@ -451,33 +585,44 @@ Sub DrawGameOver()
     Draw Number HighScore At 530, 297 Size 38 Color CYAN
     Draw Text "Enter To Retry" At 440, 360 Size 24 Color WHITE Centered
     Draw Text "Escape To Exit" At 440, 392 Size 18 Color LIGHT_GRAY Centered
+
 End Sub
 
 Sub DrainPendingKeys()
+
     For DrainIndex = 1 To 64
         Get Key DrainedKey
+
     End For
+
 End Sub
 
 Sub EnterTitle()
+
     DemoMode = False
     State = 0
     Key = KEY_NONE
     Stop Sound
     Call DrainPendingKeys()
+
     TitleStartedAt = Timer()
     TitleAcceptInputAt = TitleStartedAt + TitleInputArmDelay
+
 End Sub
 
 Sub ResetGame()
+
     DemoMode = False
     Call ResetPlay()
+
 End Sub
 
 Sub StartDemo()
+
     DemoMode = True
     DemoStartedAt = Timer()
     Call ResetPlay()
+
 End Sub
 
 Game Window "SMILE 2.0 Snake"
@@ -489,32 +634,44 @@ Do
 
     If DemoMode = True And Key <> KEY_NONE Then
         Call EnterTitle()
+
         Key = KEY_NONE
     End If
 
     If State = 0 Then
+
         If Key <> KEY_NONE And Timer() >= TitleAcceptInputAt Then
             TitleStartedAt = Timer()
+
             If Key = KEY_ESCAPE Then
                 End Program
             Else If Key = KEY_ENTER Then
                 Call ResetGame()
+
             End If
+
         End If
+
         If State = 0 And Timer() - TitleStartedAt >= TitleDemoDelay Then
             Call StartDemo()
+
         End If
+
         Call DrawTitle()
+
     Else If State = 1 Then
+
         If DemoMode = False And Key = KEY_ESCAPE Then
             End Program
         End If
 
         If DemoMode = True And Timer() - DemoStartedAt >= DemoMaximumPlayTime Then
             Call EnterTitle()
+
         End If
 
         If State = 1 And DemoMode = False Then
+
             If (Key = KEY_W Or Key = KEY_UP) And Direction <> KEY_DOWN Then
                 NextDirection = KEY_UP
             Else If (Key = KEY_S Or Key = KEY_DOWN) And Direction <> KEY_UP Then
@@ -524,41 +681,58 @@ Do
             Else If (Key = KEY_D Or Key = KEY_RIGHT) And Direction <> KEY_LEFT Then
                 NextDirection = KEY_RIGHT
             End If
+
         End If
 
         If State = 1 And Timer() >= NextMoveTime Then
+
             If DemoMode = True Then
                 Call PlanDemoDirection()
+
                 If DemoHasSafeMove = True Then
                     Call MoveSnake()
+
                 Else
                     Call RecoverDemo()
+
                 End If
+
             Else
                 Call MoveSnake()
+
             End If
+
         End If
 
         Call DrawBoard()
+
         If State = 2 Then
             Call DrawGameOver()
+
         End If
+
     Else
+
         If Key = KEY_ESCAPE Then
             End Program
         Else If Key = KEY_ENTER Then
             Call ResetGame()
+
         End If
 
         If State = 0 Then
             Call DrawTitle()
+
         Else
             Call DrawBoard()
             Call DrawGameOver()
+
         End If
+
     End If
 
     Show Screen
+
 Loop Until Game_Closed() = True
 
 Stop Sound

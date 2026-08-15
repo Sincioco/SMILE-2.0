@@ -25,6 +25,20 @@ if not "%SMILE_HELLO%"=="Hello World" (
 )
 echo Hello smoke test passed.
 
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\MultilineExpressionParity\MultilineExpressionParity.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\MultilineExpressionParity.exe" --debug
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\games\MultilineExpressionParity.exe" > "%SMILE_ROOT%\artifacts\temp\MultilineExpressionParity.out"
+if errorlevel 1 exit /b %errorlevel%
+powershell -NoProfile -Command "$expected=[IO.File]::ReadAllLines('%SMILE_ROOT%\examples\MultilineExpressionParity\MultilineExpressionParity.expected.txt',[Text.Encoding]::UTF8); $actual=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\MultilineExpressionParity.out',[Text.Encoding]::UTF8); if (Compare-Object $expected $actual) { exit 1 }"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\MultilineExpressionParity\MultilineExpressionParity.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\MultilineExpressionParity"
+if errorlevel 1 exit /b %errorlevel%
+node --check "%SMILE_ROOT%\artifacts\web\MultilineExpressionParity\game.js"
+if errorlevel 1 exit /b %errorlevel%
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\MultilineExpressionParity" --expected "%SMILE_ROOT%\examples\MultilineExpressionParity\MultilineExpressionParity.expected.txt" --native-output "%SMILE_ROOT%\artifacts\temp\MultilineExpressionParity.out" --timeout 10000
+if errorlevel 1 exit /b 1
+echo Multiline parenthesized expression native and Web parity test passed.
+
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\libraries\Smile.Math.Extras\Smile.Math.Extras.smilelibproj" --target library --configuration Release -o "%SMILE_ROOT%\artifacts\libraries\Smile.Math.Extras.smilelib"
 if errorlevel 1 exit /b %errorlevel%
 copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.Math.Extras.smilelib" "%SMILE_ROOT%\artifacts\temp\Smile.Math.Extras.first.smilelib" >nul

@@ -4,13 +4,16 @@ Locked = 2
 Dim Broken[0, 4]
 
 Sub NeedsTwo(First, Second)
+
 End Sub
 
 Function MissingReturn(Value)
+
     Value = Value + 1
 End Function
 
 Call NeedsTwo(1)
+
 Exit For
 
 Select Case Locked

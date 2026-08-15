@@ -42,16 +42,19 @@
 <div class="step-heading"><span class="step-badge">7</span><div><h2>Paste the DrawBoard routine</h2><p>This is the complete gameplay renderer.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 7 &mdash; exact official code</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="129">Sub DrawBoard()
+<pre><code class="language-smile" data-source-start="154">Sub DrawBoard()
+
     Clear Rgb(10, 18, 35)
     Fill Rectangle FieldX, FieldY, FieldWidth, FieldHeight, BLACK
     Draw Rectangle FieldX, FieldY, FieldWidth, FieldHeight, Rgb(40, 70, 95)
 
     For I = 0 To Length - 1
+
         If SnakeX[I] &gt;= 0 And SnakeX[I] &lt; GridWidth And SnakeY[I] &gt;= 0 And SnakeY[I] &lt; GridHeight Then
             Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)
             Draw Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(20, 105, 35)
         End If
+
     End For
 
     Fill Rectangle FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, Rgb(245, 45, 55)
@@ -67,6 +70,7 @@
     Draw Text "Alt+Enter" At 835, 415 Size 16 Color WHITE Centered
     Draw Text "Full Screen" At 835, 440 Size 16 Color LIGHT_GRAY Centered
     Draw Text "Escape Exits" At 835, 490 Size 16 Color LIGHT_GRAY Centered
+
 End Sub</code></pre>
 </div><figure class="figure-card">
 <a class="figure-link" href="assets/images/snake-gameplay-framed.png" rel="noopener" target="_blank" title="Open the high-resolution illustration">
@@ -77,10 +81,10 @@ End Sub</code></pre>
 <h2>Draw one segment from its grid coordinate</h2>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">The segment position formula</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="136">            Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)</code></pre>
+<pre><code class="language-smile" data-source-start="163">            Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)</code></pre>
 </div>
 <div class="card-grid"><article class="card accent-green"><h3>Why 16 &times; 16?</h3><p>Each cell is 20 &times; 20. A 16-pixel segment with a 2-pixel margin on every side creates visible gaps.</p></article><article class="card accent-red"><h3>Why food is 14 &times; 14</h3><p>A 3-pixel margin makes the red food slightly smaller than a snake segment.</p></article></div>
-<div class="table-wrap"><table><thead><tr><th>Statement</th><th>Visible result</th><th>Simple example / usage</th></tr></thead><tbody><tr><td><span class="syntax">Clear Color</span></td><td>Paint the full logical canvas.</td><td><code>Clear Rgb(10, 18, 35)</code> <a class="source-line-link" href="19-complete-source.html#source-line-130">line 130</a></td></tr><tr><td><span class="syntax">Fill Rectangle ...</span></td><td>Draw a solid rectangle.</td><td><code>Fill Rectangle FieldX, FieldY, FieldWidth, FieldHeight, BLACK</code> <a class="source-line-link" href="19-complete-source.html#source-line-131">line 131</a></td></tr><tr><td><span class="syntax">Draw Rectangle ...</span></td><td>Draw only the outline.</td><td><code>Draw Rectangle FieldX, FieldY, FieldWidth, FieldHeight, Rgb(40, 70, 95)</code> <a class="source-line-link" href="19-complete-source.html#source-line-132">line 132</a></td></tr><tr><td><span class="syntax">Draw Text ...</span></td><td>Draw literal words.</td><td><code>Draw Text "Score" At 755, 115 Size 20 Color LIGHT_GRAY</code> <a class="source-line-link" href="19-complete-source.html#source-line-145">line 145</a></td></tr><tr><td><span class="syntax">Draw Number ...</span></td><td>Draw a changing numeric value.</td><td><code>Draw Number Score At 755, 142 Size 34 Color YELLOW</code> <a class="source-line-link" href="19-complete-source.html#source-line-146">line 146</a></td></tr><tr><td><span class="syntax">Centered</span></td><td>Treat the given X as the horizontal center.</td><td><code>Draw Text "SMILE Snake" At 835, 55 Size 27 Color LIGHT_GREEN Centered</code> <a class="source-line-link" href="19-complete-source.html#source-line-144">line 144</a></td></tr><tr><td><span class="syntax">Rgb(r,g,b)</span></td><td>Build a color from red, green, and blue amounts from 0 to 255.</td><td><code>Rgb(60, 230, 75)</code> <a class="source-line-link" href="19-complete-source.html#source-line-136">line 136</a></td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Statement</th><th>Visible result</th><th>Simple example / usage</th></tr></thead><tbody><tr><td><span class="syntax">Clear Color</span></td><td>Paint the full logical canvas.</td><td><code>Clear Rgb(10, 18, 35)</code> <a class="source-line-link" href="19-complete-source.html#source-line-156">line 156</a></td></tr><tr><td><span class="syntax">Fill Rectangle ...</span></td><td>Draw a solid rectangle.</td><td><code>Fill Rectangle FieldX, FieldY, FieldWidth, FieldHeight, BLACK</code> <a class="source-line-link" href="19-complete-source.html#source-line-157">line 157</a></td></tr><tr><td><span class="syntax">Draw Rectangle ...</span></td><td>Draw only the outline.</td><td><code>Draw Rectangle FieldX, FieldY, FieldWidth, FieldHeight, Rgb(40, 70, 95)</code> <a class="source-line-link" href="19-complete-source.html#source-line-158">line 158</a></td></tr><tr><td><span class="syntax">Draw Text ...</span></td><td>Draw literal words.</td><td><code>Draw Text "Score" At 755, 115 Size 20 Color LIGHT_GRAY</code> <a class="source-line-link" href="19-complete-source.html#source-line-173">line 173</a></td></tr><tr><td><span class="syntax">Draw Number ...</span></td><td>Draw a changing numeric value.</td><td><code>Draw Number Score At 755, 142 Size 34 Color YELLOW</code> <a class="source-line-link" href="19-complete-source.html#source-line-174">line 174</a></td></tr><tr><td><span class="syntax">Centered</span></td><td>Treat the given X as the horizontal center.</td><td><code>Draw Text "SMILE Snake" At 835, 55 Size 27 Color LIGHT_GREEN Centered</code> <a class="source-line-link" href="19-complete-source.html#source-line-172">line 172</a></td></tr><tr><td><span class="syntax">Rgb(r,g,b)</span></td><td>Build a color from red, green, and blue amounts from 0 to 255.</td><td><code>Rgb(60, 230, 75)</code> <a class="source-line-link" href="19-complete-source.html#source-line-163">line 163</a></td></tr></tbody></table></div>
 <details class="quiz"><summary>Does DrawBoard change the score or snake position?</summary><p><strong>No.</strong> It reads the current data and turns it into a picture. The rules live in update routines such as MoveSnake.</p></details>
 <section aria-labelledby="reinforce-title" class="reinforcement-panel">
 <p class="reinforcement-kicker">Repetition builds memory</p>

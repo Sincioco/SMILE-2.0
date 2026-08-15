@@ -3,8 +3,10 @@ Game Window "Source Visibility Basics" Size 800 By 450
 Do
     Clear Rgb(8, 16, 32)
     Call DrawVisibilityProof()
+
     Show Screen
     Wait 16 Milliseconds
+
 Loop Until Game_Closed() = True
 
 End Program

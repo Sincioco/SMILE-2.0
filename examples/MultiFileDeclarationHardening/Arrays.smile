@@ -1,8 +1,11 @@
 Dim SharedValues[MaximumValues]
 
 Sub InitializeArrays()
+
     For Index = 0 To MaximumValues - 1
         SharedValues[Index] = Index
         StartupValues[Index] = MaximumValues - Index
+
     End For
+
 End Sub

@@ -1,5 +1,8 @@
 Const FixedValue = 1
 Call SetValue(FixedValue)
+
 Sub SetValue(ByRef Value As Number)
+
     Value = 2
+
 End Sub

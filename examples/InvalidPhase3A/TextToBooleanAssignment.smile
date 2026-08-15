@@ -1,2 +1,3 @@
 Dim Value As Boolean
+
 Value = "True"

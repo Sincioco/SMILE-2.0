@@ -1,7 +1,15 @@
 Module Example.Phase2A.Dependent
+
 Import Example.Phase2A.Base As Base
+
 Public Function Quadruple(Value)
-Return Base.Double(Base.Double(Value))
+
+    Dim ReturnValue As Number
+
+ReturnValue = Base.Double(Base.Double(Value))
+Return ReturnValue
+
 End Function
+
 Private Const Hidden = 9
 End Module

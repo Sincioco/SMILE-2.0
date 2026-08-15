@@ -16,9 +16,11 @@ Nested = ">" + TextExtras.JoinFive("nested", " ", "call", " ", "works") + "<"
 TextExtras.ModuleLabel = "Module Text"
 
 Call ChangeByValue(Message)
+
 Print Message
 
 Call TextExtras.Replace(Message, "Changed")
+
 Print Message
 
 Words[0] = Original
@@ -47,27 +49,52 @@ End Select
 End Program
 
 Sub ChangeByValue(Value As Text)
+
     Dim LocalCopy As Text
+
     LocalCopy = Value
     Value = "Local only"
+
 End Sub
 
 Function Zero() As Number
-    Return 0
+
+    Dim ReturnValue As Number
+
+    ReturnValue = 0
+    Return ReturnValue
+
 End Function
 
 Function Identity(Value As Number) As Number
+
     Return Value
+
 End Function
 
 Function AddFour(Value1 As Number, Value2 As Number, Value3 As Number, Value4 As Number) As Number
-    Return Value1 + Value2 + Value3 + Value4
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Value1 + Value2 + Value3 + Value4
+    Return ReturnValue
+
 End Function
 
 Function AddEight(Value1 As Number, Value2 As Number, Value3 As Number, Value4 As Number, Value5 As Number, Value6 As Number, Value7 As Number, Value8 As Number) As Number
-    Return Value1 + Value2 + Value3 + Value4 + Value5 + Value6 + Value7 + Value8
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Value1 + Value2 + Value3 + Value4 + Value5 + Value6 + Value7 + Value8
+    Return ReturnValue
+
 End Function
 
 Function AddSixteen(Value1 As Number, Value2 As Number, Value3 As Number, Value4 As Number, Value5 As Number, Value6 As Number, Value7 As Number, Value8 As Number, Value9 As Number, Value10 As Number, Value11 As Number, Value12 As Number, Value13 As Number, Value14 As Number, Value15 As Number, Value16 As Number) As Number
-    Return Value1 + Value2 + Value3 + Value4 + Value5 + Value6 + Value7 + Value8 + Value9 + Value10 + Value11 + Value12 + Value13 + Value14 + Value15 + Value16
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Value1 + Value2 + Value3 + Value4 + Value5 + Value6 + Value7 + Value8 + Value9 + Value10 + Value11 + Value12 + Value13 + Value14 + Value15 + Value16
+    Return ReturnValue
+
 End Function

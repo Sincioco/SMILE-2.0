@@ -48,10 +48,13 @@ Load Image Media.PixelProof From "Assets\PixelProof.png"
 If Image_Width(Media.Background) <> 2304 Or Image_Height(Media.Background) <> 1296 Then
     End Program
 End If
+
 If Image_Width(Media.PixelProof) <> 37 Or Image_Height(Media.PixelProof) <> 53 Then
     End Program
 End If
+
 Unload Image SharedSheet
+
 If Image_Loaded(Media.CharacterSheet) = False Then
     End Program
 End If
@@ -79,7 +82,9 @@ LastFrameTime = StateStarted
 Caption = "Action - Alpha, Flip, Clip, Layers"
 
 Do
+
     If Timer() - StateStarted >= 2600 Then
+
         If State = 0 Then
             State = 1
             Caption = "Action - Alpha, Flip, Clip, Layers"
@@ -89,6 +94,7 @@ Do
             Caption = "Idle - Smooth High-Resolution PNG"
             Play Sound "Assets\ToneOne.wav" On Channel 1
         End If
+
         Frame = 0
         StateStarted = Timer()
         LastFrameTime = StateStarted
@@ -96,9 +102,11 @@ Do
 
     If Timer() - LastFrameTime >= States[State].FrameMilliseconds Then
         Frame = Frame + 1
+
         If Frame >= States[State].FrameCount Then
             Frame = 0
         End If
+
         LastFrameTime = Timer()
     End If
 
@@ -109,6 +117,7 @@ Do
     Draw Image Media.Background At 0, 0 Size 960 By 540 Filter Smooth
 
     Clip Rectangle 255, 80, 450, 405
+
         If State = 0 Then
             Draw Image Media.CharacterSheet From Frame * 512, States[State].Row * 512 Size 512 By 512 At 480, 474 Size 330 By 330 Anchor 165, 330 Filter Smooth
         Else
@@ -129,6 +138,7 @@ Do
 
     Show Screen
     Wait 8 Milliseconds
+
 Loop Until Game_Closed() = True
 
 Stop Sound

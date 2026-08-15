@@ -9,194 +9,290 @@ Private Dim FontGeneration[8] As Number
 Private Dim FontStyles[8] As Core.BitmapFontStyle
 
 Private Function SlotFromHandle(Handle As Number) As Number
+
+    Dim ReturnValue As Number
     Dim Slot As Number
     Dim Generation As Number
+
     If Handle <= 0 Then
-        Return -1
+        ReturnValue = -1
+        Return ReturnValue
     End If
+
     Slot = (Handle Mod 100) - 1
     Generation = Handle / 100
+
     If Slot < 0 Or Slot >= Core.UI_MAX_BITMAP_FONTS Then
-        Return -1
+        ReturnValue = -1
+        Return ReturnValue
     End If
+
     If Not FontUsed[Slot] Or FontGeneration[Slot] <> Generation Then
-        Return -1
+        ReturnValue = -1
+        Return ReturnValue
     End If
+
     Return Slot
+
 End Function
 
 Public Function IsStyleValid(ByRef Style As Core.BitmapFontStyle) As Boolean
+
     Dim ImageWidth As Number
     Dim ImageHeight As Number
     Dim RemainingWidth As Number
     Dim RemainingHeight As Number
     Dim Rows As Number
     Dim LastCodePoint As Number
+
     If Not Image_Loaded(Style.Atlas) Then
         Return False
     End If
+
     If Style.SourceX < 0 Or Style.SourceY < 0 Or Style.GlyphCount <= 0 Or Style.Columns <= 0 Then
         Return False
     End If
+
     If Style.SourceCellWidth <= 0 Or Style.SourceCellHeight <= 0 Or Style.DrawWidth <= 0 Or Style.DrawHeight <= 0 Or Style.AdvanceX <= 0 Or Style.LineHeight <= 0 Then
         Return False
     End If
+
     If Style.DrawWidth > Core.UI_MAX_LAYOUT_VALUE Or Style.DrawHeight > Core.UI_MAX_LAYOUT_VALUE Or Style.AdvanceX > Core.UI_MAX_LAYOUT_VALUE Or Style.LineHeight > Core.UI_MAX_LAYOUT_VALUE Then
         Return False
     End If
+
     If Style.FilterMode <> Core.UI_FILTER_SMOOTH And Style.FilterMode <> Core.UI_FILTER_PIXEL Then
         Return False
     End If
+
     If Style.FirstCodePoint < 0 Or Style.FirstCodePoint > 1114111 Then
         Return False
     End If
+
     If Style.GlyphCount - 1 > 1114111 - Style.FirstCodePoint Then
         Return False
     End If
+
     LastCodePoint = Style.FirstCodePoint + Style.GlyphCount - 1
+
     If Style.FirstCodePoint <= 57343 And LastCodePoint >= 55296 Then
         Return False
     End If
+
     ImageWidth = Image_Width(Style.Atlas)
     ImageHeight = Image_Height(Style.Atlas)
+
     If Style.SourceX > ImageWidth Or Style.SourceY > ImageHeight Then
         Return False
     End If
+
     RemainingWidth = ImageWidth - Style.SourceX
     RemainingHeight = ImageHeight - Style.SourceY
+
     If Style.Columns > RemainingWidth / Style.SourceCellWidth Then
         Return False
     End If
+
     Rows = Style.GlyphCount / Style.Columns
+
     If Style.GlyphCount Mod Style.Columns <> 0 Then
         Rows = Rows + 1
     End If
+
     If Rows > RemainingHeight / Style.SourceCellHeight Then
         Return False
     End If
+
     Return True
+
 End Function
 
 Public Function Create(ByRef Style As Core.BitmapFontStyle) As Number
+
+    Dim ReturnValue As Number
     Dim Slot As Number
     Dim Index As Number
+
     If Not IsStyleValid(Style) Then
-        Return 0
+        ReturnValue = 0
+        Return ReturnValue
     End If
+
     Slot = -1
+
     For Index = 0 To Core.UI_MAX_BITMAP_FONTS - 1
+
         If Not FontUsed[Index] Then
             Slot = Index
             Exit For
         End If
+
     End For
+
     If Slot < 0 Then
-        Return 0
+        ReturnValue = 0
+        Return ReturnValue
     End If
+
     FontGeneration[Slot] = FontGeneration[Slot] + 1
+
     If FontGeneration[Slot] <= 0 Then
         FontGeneration[Slot] = 1
     End If
+
     FontUsed[Slot] = True
     FontStyles[Slot] = Style
-    Return FontGeneration[Slot] * 100 + Slot + 1
+    ReturnValue = FontGeneration[Slot] * 100 + Slot + 1
+    Return ReturnValue
+
 End Function
 
 Public Sub Destroy(Handle As Number)
+
     Dim Slot As Number
     Dim Empty As Core.BitmapFontStyle
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Then
         Return
     End If
+
     FontStyles[Slot] = Empty
     FontUsed[Slot] = False
+
 End Sub
 
 Public Function IsValid(Handle As Number) As Boolean
-    Return SlotFromHandle(Handle) >= 0
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = SlotFromHandle(Handle) >= 0
+    Return ReturnValue
+
 End Function
 
 Private Function GlyphAdvance(ByRef Style As Core.BitmapFontStyle, Code As Number) As Number
+
+    Dim ReturnValue As Number
+
     If Code = 9 Then
-        Return Style.AdvanceX * 4
+        ReturnValue = Style.AdvanceX * 4
+        Return ReturnValue
     End If
-    Return Style.AdvanceX
+
+    ReturnValue = Style.AdvanceX
+    Return ReturnValue
+
 End Function
 
 Public Function MeasureWidth(Handle As Number, Value As Text) As Number
+
+    Dim ReturnValue As Number
     Dim Slot As Number
     Dim Index As Number
     Dim Length As Number
     Dim Code As Number
     Dim CurrentWidth As Number
     Dim MaximumWidth As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Then
-        Return 0
+        ReturnValue = 0
+        Return ReturnValue
     End If
+
     Length = Text_Length(Value)
+
     For Index = 0 To Length - 1
         Code = Text_Code_At(Value, Index)
+
         If Code = 10 Then
             MaximumWidth = Max(MaximumWidth, CurrentWidth)
             CurrentWidth = 0
         Else
             CurrentWidth = CurrentWidth + GlyphAdvance(FontStyles[Slot], Code)
         End If
+
     End For
-    Return Max(MaximumWidth, CurrentWidth)
+    ReturnValue = Max(MaximumWidth, CurrentWidth)
+    Return ReturnValue
+
 End Function
 
 Public Function MeasureHeight(Handle As Number, Value As Text) As Number
+
+    Dim ReturnValue As Number
     Dim Slot As Number
     Dim Index As Number
     Dim Lines As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Then
-        Return 0
+        ReturnValue = 0
+        Return ReturnValue
     End If
+
     Lines = 1
+
     For Index = 0 To Text_Length(Value) - 1
+
         If Text_Code_At(Value, Index) = 10 Then
             Lines = Lines + 1
         End If
+
     End For
-    Return Lines * FontStyles[Slot].LineHeight
+    ReturnValue = Lines * FontStyles[Slot].LineHeight
+    Return ReturnValue
+
 End Function
 
 Private Sub DrawLine(Slot As Number, Value As Text, X As Number, Y As Number, Opacity As Number)
+
     Dim Index As Number
     Dim Code As Number
     Dim Glyph As Number
     Dim Column As Number
     Dim Row As Number
     Dim DrawX As Number
+
     DrawX = X
+
     For Index = 0 To Text_Length(Value) - 1
         Code = Text_Code_At(Value, Index)
+
         If Code = 9 Then
             DrawX = DrawX + FontStyles[Slot].AdvanceX * 4
         Else
             Glyph = Code - FontStyles[Slot].FirstCodePoint
+
             If Glyph < 0 Or Glyph >= FontStyles[Slot].GlyphCount Then
                 Glyph = FontStyles[Slot].FallbackCodePoint - FontStyles[Slot].FirstCodePoint
             End If
+
             If Glyph >= 0 And Glyph < FontStyles[Slot].GlyphCount Then
                 Column = Glyph Mod FontStyles[Slot].Columns
                 Row = Glyph / FontStyles[Slot].Columns
+
                 If FontStyles[Slot].FilterMode = Core.UI_FILTER_PIXEL Then
                     Draw Image FontStyles[Slot].Atlas From FontStyles[Slot].SourceX + Column * FontStyles[Slot].SourceCellWidth, FontStyles[Slot].SourceY + Row * FontStyles[Slot].SourceCellHeight Size FontStyles[Slot].SourceCellWidth By FontStyles[Slot].SourceCellHeight At DrawX, Y Size FontStyles[Slot].DrawWidth By FontStyles[Slot].DrawHeight Opacity Opacity Filter Pixel
                 Else
                     Draw Image FontStyles[Slot].Atlas From FontStyles[Slot].SourceX + Column * FontStyles[Slot].SourceCellWidth, FontStyles[Slot].SourceY + Row * FontStyles[Slot].SourceCellHeight Size FontStyles[Slot].SourceCellWidth By FontStyles[Slot].SourceCellHeight At DrawX, Y Size FontStyles[Slot].DrawWidth By FontStyles[Slot].DrawHeight Opacity Opacity Filter Smooth
                 End If
+
             End If
+
             DrawX = DrawX + FontStyles[Slot].AdvanceX
         End If
+
     End For
+
 End Sub
 
 Public Sub Draw(Handle As Number, Value As Text, X As Number, Y As Number, Alignment As Number, Opacity As Number)
+
     Dim Slot As Number
     Dim Length As Number
     Dim Index As Number
@@ -206,30 +302,40 @@ Public Sub Draw(Handle As Number, Value As Text, X As Number, Y As Number, Align
     Dim LineWidth As Number
     Dim LineX As Number
     Dim LineY As Number
+
     Slot = SlotFromHandle(Handle)
+
     If Slot < 0 Or Opacity <= 0 Then
         Return
     End If
+
     Opacity = Min(100, Opacity)
     Length = Text_Length(Value)
     LineStart = 0
     LineY = Y
+
     For Index = 0 To Length
         Code = Text_Code_At(Value, Index)
+
         If Index = Length Or Code = 10 Then
             LineText = Text_Slice(Value, LineStart, Index - LineStart)
             LineWidth = MeasureWidth(Handle, LineText)
             LineX = X
+
             If Alignment = Core.UI_ALIGN_CENTER Then
                 LineX = X - LineWidth / 2
             Else If Alignment = Core.UI_ALIGN_RIGHT Then
                 LineX = X - LineWidth
             End If
+
             Call DrawLine(Slot, LineText, LineX, LineY, Opacity)
+
             LineStart = Index + 1
             LineY = LineY + FontStyles[Slot].LineHeight
         End If
+
     End For
+
 End Sub
 
 End Module

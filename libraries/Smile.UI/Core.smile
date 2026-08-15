@@ -152,7 +152,12 @@ Public Type DialogueStyle
 End Type
 
 Public Function IsRectValid(ByRef Value As Rect) As Boolean
-    Return Value.Width > 0 And Value.Height > 0
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Value.Width > 0 And Value.Height > 0
+    Return ReturnValue
+
 End Function
 
 End Module

@@ -51,6 +51,7 @@ Do
     For I = Length - 1 Down To 1
         SnakeX[I] = SnakeX[I - 1]
         SnakeY[I] = SnakeY[I - 1]
+
     End For
 
     If Direction = UP Then
@@ -68,9 +69,11 @@ Do
     End If
 
     For I = 1 To Length - 1
+
         If SnakeX[0] = SnakeX[I] And SnakeY[0] = SnakeY[I] Then
             GameOver = True
         End If
+
     End For
 
     If SnakeX[0] = FoodX And SnakeY[0] = FoodY Then
@@ -87,23 +90,30 @@ Do
             FoodOnSnake = False
 
             For I = 0 To Length - 1
+
                 If FoodX = SnakeX[I] And FoodY = SnakeY[I] Then
                     FoodOnSnake = True
                 End If
+
             End For
+
         Loop Until FoodOnSnake = False
+
     End If
 
     Clear Screen
 
     For Y = 0 To Height - 1
+
         For X = 0 To Width - 1
             SnakeHere = False
 
             For I = 0 To Length - 1
+
                 If X = SnakeX[I] And Y = SnakeY[I] Then
                     SnakeHere = True
                 End If
+
             End For
 
             If X = 0 Or X = Width - 1 Or Y = 0 Or Y = Height - 1 Then
@@ -115,15 +125,18 @@ Do
             Else
                 Print " ";
             End If
+
         End For
 
         Print
+
     End For
 
     Print "Score: "; Length - 3
     Print "W A S D to move"
 
     Wait 120 Milliseconds
+
 Loop Until GameOver = True
 
 Print

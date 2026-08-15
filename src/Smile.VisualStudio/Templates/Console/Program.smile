@@ -1,5 +1,6 @@
 Option Explicit
 
 Dim Message As Text
+
 Message = "Hello World"
 Print Message

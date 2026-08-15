@@ -3,6 +3,7 @@ Game Window "SMILE 2.0 Graphics Text Sample"
 
 Do
     Get Key Key
+
     If Key = KEY_ESCAPE Then
         End Program
     End If
@@ -19,6 +20,7 @@ Do
     Draw Text "Best One-Player Rally" At 480, 450 Size 30 Color WHITE Centered
     Draw Text "Alt+Enter Full Screen - Escape Exits" At 480, 506 Size 18 Color LIGHT_GRAY Centered
     Show Screen
+
 Loop Until Game_Closed() = True
 
 End Program

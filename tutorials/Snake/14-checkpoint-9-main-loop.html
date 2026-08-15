@@ -43,14 +43,18 @@
 <div class="step-heading"><span class="step-badge">9A</span><div><h2>Prepare the state helpers</h2><p>Use small names that make the main loop read like a story.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 9A &mdash; state helpers</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="184">Sub EnterTitle()
+<pre><code class="language-smile" data-source-start="217">Sub EnterTitle()
+
     State = 0
     Key = KEY_NONE
     Stop Sound
+
 End Sub
 
 Sub ResetGame()
+
     Call ResetPlay()
+
 End Sub</code></pre>
 </div><figure class="figure-card">
 <a class="figure-link" href="assets/images/state-machine.svg" rel="noopener" target="_blank" title="Open the high-resolution illustration">
@@ -61,28 +65,32 @@ End Sub</code></pre>
 <div class="step-heading"><span class="step-badge">9B</span><div><h2>Open the game window</h2><p>Sub definitions are recipes; this is where the actual program begins.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 9B &mdash; program begins</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="194">Game Window "SMILE 2.0 Snake"
+<pre><code class="language-smile" data-source-start="231">Game Window "SMILE 2.0 Snake"
 
 Call EnterTitle()</code></pre>
 </div>
 <div class="step-heading"><span class="step-badge">9C</span><div><h2>Handle the title state</h2><p>Read one key event, allow Enter or Escape, and draw the title.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 9C &mdash; loop opening and State 0</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="198">Do
+<pre><code class="language-smile" data-source-start="235">Do
     Get Key Key
 
     If State = 0 Then
+
         If Key = KEY_ESCAPE Then
             End Program
         Else If Key = KEY_ENTER Then
             Call ResetGame()
+
         End If
+
         Call DrawTitle()</code></pre>
 </div>
 <div class="step-heading"><span class="step-badge">9D</span><div><h2>Handle the playing state</h2><p>Accept safe turns, move only when time is ready, then draw.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 9D &mdash; State 1</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="208">    Else If State = 1 Then
+<pre><code class="language-smile" data-source-start="249">    Else If State = 1 Then
+
         If Key = KEY_ESCAPE Then
             End Program
         End If
@@ -99,33 +107,42 @@ Call EnterTitle()</code></pre>
 
         If State = 1 And Timer() &gt;= NextMoveTime Then
             Call MoveSnake()
+
         End If
 
         Call DrawBoard()
+
         If State = 2 Then
             Call DrawGameOver()
+
         End If</code></pre>
 </div>
 <h3>Prevent an instant 180-degree turn</h3><p>The first direction condition reads: If W or Up was pressed, <strong>and</strong> the snake is not currently moving Down, request Up. The other three branches use the same safety rule.</p>
 <div class="step-heading"><span class="step-badge">9E</span><div><h2>Finish game over, present frames, and clean up</h2><p>This final block closes the state If and the outer loop.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 9E &mdash; finish the program</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="231">    Else
+<pre><code class="language-smile" data-source-start="277">    Else
+
         If Key = KEY_ESCAPE Then
             End Program
         Else If Key = KEY_ENTER Then
             Call ResetGame()
+
         End If
 
         If State = 0 Then
             Call DrawTitle()
+
         Else
             Call DrawBoard()
             Call DrawGameOver()
+
         End If
+
     End If
 
     Show Screen
+
 Loop Until Game_Closed() = True
 
 Stop Sound

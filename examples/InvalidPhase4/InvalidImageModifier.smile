@@ -1,3 +1,4 @@
 Game Window "Invalid"
 Dim Art As Image
+
 Draw Image Art At 0, 0 Opacity True

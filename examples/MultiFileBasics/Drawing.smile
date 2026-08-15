@@ -3,6 +3,7 @@
 ' It also reads FrameCount, a global created by the startup source.
 
 Sub DrawSharedScene()
+
     Fill Rounded Rectangle 40, 40, 880, 460, 18, Rgb(14, 28, 58)
     Draw Rounded Rectangle 40, 40, 880, 460, 18, LIGHT_BLUE
 
@@ -18,4 +19,5 @@ Sub DrawSharedScene()
 
     Draw Text "X" At 700, 450 Size 18 Color CYAN
     Draw Number MarkerX() At 730, 445 Size 26 Color YELLOW
+
 End Sub

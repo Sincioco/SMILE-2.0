@@ -30,6 +30,7 @@ Values[0] = Copy
 Values[1] = MakeDangerous("Returned")
 
 Call Rename(Values[0].__proto__, "ByRef")
+
 Wrapped.Value = Values[0]
 
 Print Copy.__proto__
@@ -44,10 +45,13 @@ Print Wrapped.Value.__proto__
 End Program
 
 Sub Rename(ByRef Value As Text, NewValue As Text)
+
     Value = NewValue
+
 End Sub
 
 Function MakeDangerous(Name As Text) As Dangerous
+
     Dim Result As Dangerous
 
     Result.__proto__ = Name
@@ -57,4 +61,5 @@ Function MakeDangerous(Name As Text) As Dangerous
     Result.valueOf = 11
 
     Return Result
+
 End Function

@@ -1,4 +1,6 @@
 Module Example.Alpha
+
 Import Example.Beta As Beta
+
 Public Const ValueA = 1
 End Module

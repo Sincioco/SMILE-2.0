@@ -1,3 +1,4 @@
 Option Explicit
+
 Print "Should Not Build"
 End Program

@@ -1,8 +1,10 @@
 Print GetValue(True)
 Function GetValue(UseText As Boolean)
+
     If UseText Then
         Return "text"
     Else
         Return 1
     End If
+
 End Function

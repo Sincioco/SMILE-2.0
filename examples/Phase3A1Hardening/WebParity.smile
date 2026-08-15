@@ -21,10 +21,12 @@ TextValues[1] = "Array"
 NumberValues[1] = 10
 BooleanValues[1] = False
 Call ChangeByValue(TextValues[1])
+
 Print TextValues[1]
 Call SetText(TextValues[1], "Changed")
 Call Increment(NumberValues[1])
 Call Toggle(BooleanValues[1])
+
 Print TextValues[1]
 Print NumberValues[1]
 Print BooleanValues[1]
@@ -33,6 +35,7 @@ Counter = 3
 Ready = False
 Call Increment(Counter)
 Call Toggle(Ready)
+
 Print Counter
 Print Ready
 Print ReturnText()
@@ -47,29 +50,52 @@ End Select
 End Program
 
 Sub ChangeByValue(Value As Text)
+
     Value = "Local"
+
 End Sub
 
 Sub SetText(ByRef Value As Text, NewValue As Text)
+
     Value = NewValue
+
 End Sub
 
 Sub Increment(ByRef Value As Number)
+
     Value = Value + 1
+
 End Sub
 
 Sub Toggle(ByRef Value As Boolean)
+
     Value = Not Value
+
 End Sub
 
 Function ReturnText() As Text
-    Return "Return"
+
+    Dim ReturnValue As Text
+
+    ReturnValue = "Return"
+    Return ReturnValue
+
 End Function
 
 Function Join(LeftValue As Text, RightValue As Text) As Text
-    Return LeftValue + RightValue
+
+    Dim ReturnValue As Text
+
+    ReturnValue = LeftValue + RightValue
+    Return ReturnValue
+
 End Function
 
 Function AddFive(Value1 As Number, Value2 As Number, Value3 As Number, Value4 As Number, Value5 As Number) As Number
-    Return Value1 + Value2 + Value3 + Value4 + Value5
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Value1 + Value2 + Value3 + Value4 + Value5
+    Return ReturnValue
+
 End Function

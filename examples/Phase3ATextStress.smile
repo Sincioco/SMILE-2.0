@@ -11,7 +11,9 @@ For Index = 0 To 999
     Copy = Value
     Call ChangeByValue(Copy)
     Call Replace(Value, BuildValue("SMILE", "✓"))
+
     Values[Index Mod 4] = Value
+
 End For
 
 Value = Value
@@ -22,15 +24,22 @@ Print "" = Values[0]
 End Program
 
 Sub ChangeByValue(ValueToChange As Text)
+
     ValueToChange = "Local"
+
 End Sub
 
 Sub Replace(ByRef ValueToChange As Text, NewValue As Text)
+
     ValueToChange = NewValue
+
 End Sub
 
 Function BuildValue(LeftValue As Text, RightValue As Text) As Text
+
     Dim Combined As Text
+
     Combined = LeftValue + RightValue
     Return Combined
+
 End Function

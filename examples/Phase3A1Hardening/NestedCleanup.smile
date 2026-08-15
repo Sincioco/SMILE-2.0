@@ -5,20 +5,32 @@ Print Choose("Return")
 End Program
 
 Function Choose(Command As Text) As Text
+
+    Dim ReturnValue As Text
+
     Select Case Command + ""
         Case "Return"
+
             Do
                 Select Case "Inner" + ""
                     Case "Inner"
-                        Return BuildResult("Return", "ed")
+                        ReturnValue = BuildResult("Return", "ed")
+                        Return ReturnValue
                 End Select
+
             Loop
+
     End Select
-    Return "Failed"
+    ReturnValue = "Failed"
+    Return ReturnValue
+
 End Function
 
 Function BuildResult(LeftValue As Text, RightValue As Text) As Text
+
     Dim Result As Text
+
     Result = LeftValue + RightValue
     Return Result
+
 End Function

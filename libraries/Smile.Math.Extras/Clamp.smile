@@ -3,11 +3,18 @@ Module Smile.Math.Extras
 Public Const VERSION_MAJOR = 1
 
 Public Function Clamp(Value, MinimumValue, MaximumValue)
-    Return Max(MinimumValue, Min(MaximumValue, Value))
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Max(MinimumValue, Min(MaximumValue, Value))
+    Return ReturnValue
+
 End Function
 
 Private Function Identity(Value)
+
     Return Value
+
 End Function
 
 End Module

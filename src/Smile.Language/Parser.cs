@@ -9,6 +9,7 @@ internal sealed class Parser
     private readonly List<SyntaxToken> _tokens = new();
     private readonly DiagnosticBag _diagnostics;
     private int _position;
+    private int _expressionContinuationDepth;
 
     public Parser(SourceText source, IReadOnlyList<SyntaxToken> tokens, IReadOnlyList<Diagnostic> lexerDiagnostics)
     {
@@ -897,15 +898,11 @@ internal sealed class Parser
         {
             var dot = NextToken();
             var member = MatchIdentifier();
-            MatchToken(SyntaxKind.OpenParenthesisToken);
-            var qualifiedArguments = ParseExpressionList(SyntaxKind.CloseParenthesisToken);
-            var qualifiedClose = MatchToken(SyntaxKind.CloseParenthesisToken);
+            var (qualifiedArguments, qualifiedClose) = ParseParenthesizedExpressionList();
             ConsumeLineEnd();
             return new QualifiedCallStatementSyntax(call, identifier, dot, member, qualifiedArguments, qualifiedClose);
         }
-        MatchToken(SyntaxKind.OpenParenthesisToken);
-        var arguments = ParseExpressionList(SyntaxKind.CloseParenthesisToken);
-        var close = MatchToken(SyntaxKind.CloseParenthesisToken);
+        var (arguments, close) = ParseParenthesizedExpressionList();
         ConsumeLineEnd();
         return new CallStatementSyntax(call, identifier, arguments, close);
     }
@@ -967,20 +964,45 @@ internal sealed class Parser
     private IReadOnlyList<ExpressionSyntax> ParseExpressionList(SyntaxKind closingKind)
     {
         var expressions = new List<ExpressionSyntax>();
+        SkipExpressionNewLines();
         if (Current.Kind == closingKind)
             return expressions;
         while (true)
         {
             expressions.Add(ParseExpression());
+            SkipExpressionNewLines();
             if (Current.Kind != SyntaxKind.CommaToken)
                 break;
             NextToken();
+            SkipExpressionNewLines();
         }
         return expressions;
     }
 
+    private (IReadOnlyList<ExpressionSyntax> Arguments, SyntaxToken CloseParenthesis) ParseParenthesizedExpressionList()
+    {
+        var hasOpenParenthesis = Current.Kind == SyntaxKind.OpenParenthesisToken;
+        MatchToken(SyntaxKind.OpenParenthesisToken);
+        if (hasOpenParenthesis)
+            _expressionContinuationDepth++;
+
+        try
+        {
+            var arguments = ParseExpressionList(SyntaxKind.CloseParenthesisToken);
+            SkipExpressionNewLines();
+            var closeParenthesis = MatchToken(SyntaxKind.CloseParenthesisToken);
+            return (arguments, closeParenthesis);
+        }
+        finally
+        {
+            if (hasOpenParenthesis)
+                _expressionContinuationDepth--;
+        }
+    }
+
     private ExpressionSyntax ParseExpression(int parentPrecedence = 0)
     {
+        SkipExpressionNewLines();
         ExpressionSyntax left;
         var unaryPrecedence = SyntaxFacts.GetUnaryPrecedence(Current.Kind);
         if (unaryPrecedence != 0 && unaryPrecedence >= parentPrecedence)
@@ -995,10 +1017,12 @@ internal sealed class Parser
 
         while (true)
         {
+            SkipExpressionNewLines();
             var precedence = SyntaxFacts.GetBinaryPrecedence(Current.Kind);
             if (precedence == 0 || precedence <= parentPrecedence)
                 break;
             var operatorToken = NextToken();
+            SkipExpressionNewLines();
             left = new BinaryExpressionSyntax(left, operatorToken, ParseExpression(precedence));
         }
         return left;
@@ -1009,8 +1033,18 @@ internal sealed class Parser
         if (Current.Kind == SyntaxKind.OpenParenthesisToken)
         {
             var open = NextToken();
-            var expression = ParseExpression();
-            return new ParenthesizedExpressionSyntax(open, expression, MatchToken(SyntaxKind.CloseParenthesisToken));
+            _expressionContinuationDepth++;
+
+            try
+            {
+                var expression = ParseExpression();
+                SkipExpressionNewLines();
+                return new ParenthesizedExpressionSyntax(open, expression, MatchToken(SyntaxKind.CloseParenthesisToken));
+            }
+            finally
+            {
+                _expressionContinuationDepth--;
+            }
         }
         if (Current.Kind == SyntaxKind.TrueKeyword || Current.Kind == SyntaxKind.FalseKeyword)
         {
@@ -1041,10 +1075,9 @@ internal sealed class Parser
                 var member = MatchIdentifier();
                 if (Current.Kind == SyntaxKind.OpenParenthesisToken)
                 {
-                    NextToken();
-                    var qualifiedArguments = ParseExpressionList(SyntaxKind.CloseParenthesisToken);
+                    var (qualifiedArguments, qualifiedClose) = ParseParenthesizedExpressionList();
                     return ParseFieldSuffix(new QualifiedCallExpressionSyntax(identifier, dot, member, qualifiedArguments,
-                        MatchToken(SyntaxKind.CloseParenthesisToken)));
+                        qualifiedClose));
                 }
                 if (Current.Kind == SyntaxKind.OpenBracketToken)
                 {
@@ -1063,9 +1096,8 @@ internal sealed class Parser
             }
             if (Current.Kind == SyntaxKind.OpenParenthesisToken)
             {
-                NextToken();
-                var arguments = ParseExpressionList(SyntaxKind.CloseParenthesisToken);
-                return ParseFieldSuffix(new CallExpressionSyntax(identifier, arguments, MatchToken(SyntaxKind.CloseParenthesisToken)));
+                var (arguments, closeParenthesis) = ParseParenthesizedExpressionList();
+                return ParseFieldSuffix(new CallExpressionSyntax(identifier, arguments, closeParenthesis));
             }
             if (Current.Kind == SyntaxKind.OpenBracketToken)
             {
@@ -1089,6 +1121,15 @@ internal sealed class Parser
         }
         var missing = MatchToken(SyntaxKind.NumberToken);
         return new LiteralExpressionSyntax(missing, 0L);
+    }
+
+    private void SkipExpressionNewLines()
+    {
+        if (_expressionContinuationDepth == 0)
+            return;
+
+        while (Current.Kind == SyntaxKind.NewLineToken)
+            NextToken();
     }
 
     private ExpressionSyntax ParseFieldSuffix(ExpressionSyntax expression)

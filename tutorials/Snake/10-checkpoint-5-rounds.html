@@ -42,23 +42,31 @@
 <div class="step-heading"><span class="step-badge">5</span><div><h2>Paste ResetPlay and EndRound</h2><p>These two routines define the round lifecycle.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 5 &mdash; exact official code</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="64">Sub ResetPlay()
+<pre><code class="language-smile" data-source-start="73">Sub ResetPlay()
+
     Call ResetSnakeBody()
+
     Score = 0
     MoveDelay = StartDelay
     Call SpawnFood()
+
     NextMoveTime = Timer() + StartDelay
     State = 1
     Play Sound "Assets\Start.wav"
+
 End Sub
 
 Sub EndRound()
+
     State = 2
+
     If Score &gt; HighScore Then
         HighScore = Score
         Save HighScore To "HighScore"
     End If
+
     Play Sound "Assets\GameOver.wav"
+
 End Sub</code></pre>
 </div>
 <div class="card-grid"><article class="card accent-green"><h3>ResetPlay()</h3><ol><li>Rebuild the body.</li><li>Reset score and delay.</li><li>Spawn food.</li><li>Schedule the first move.</li><li>Change to State 1.</li><li>Play Start.wav.</li></ol></article><article class="card accent-red"><h3>EndRound()</h3><ol><li>Change to State 2.</li><li>Compare score and high score.</li><li>Save a new high score.</li><li>Play GameOver.wav.</li></ol></article></div>

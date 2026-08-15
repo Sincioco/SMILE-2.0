@@ -3,17 +3,23 @@ Option Explicit
 Dim VisitCount As Number
 
 Call Visit(3)
+
 Print VisitCount
 
 End Program
 
 Sub Visit(Level As Number)
+
     Dim Index As Number
 
     For Index = 1 To Level
         VisitCount = VisitCount + 1
+
         If Index = 1 And Level > 1 Then
             Call Visit(Level - 1)
+
         End If
+
     End For
+
 End Sub

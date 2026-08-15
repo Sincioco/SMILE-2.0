@@ -1,0 +1,98 @@
+Option Explicit
+
+Import Parity.Helpers As Helpers
+
+Type Sample
+    Value As Number
+    Caption As Text
+End Type
+
+Dim FirstValue As Number
+Dim SecondValue As Number
+Dim ThirdValue As Number
+Dim FirstFlag As Boolean
+Dim SecondFlag As Boolean
+Dim ThirdFlag As Boolean
+Dim Item As Sample
+Dim Values[2] As Number
+
+FirstValue = 2
+SecondValue = 3
+ThirdValue = 4
+FirstFlag = True
+SecondFlag = False
+ThirdFlag = False
+Item.Value = 7
+Item.Caption = "SMILE"
+Values[0] = 5
+
+Print FirstValue + SecondValue * ThirdValue
+Print (FirstValue +
+    SecondValue *
+    ThirdValue)
+
+Print FirstFlag Or SecondFlag And ThirdFlag
+Print (FirstFlag Or
+    SecondFlag And
+    ThirdFlag)
+Print ((FirstFlag Or SecondFlag) And
+    ThirdFlag)
+Print (FirstFlag Or
+    (SecondFlag And ThirdFlag))
+
+Print Helpers.Add(FirstValue, SecondValue)
+Print Helpers.Add(
+    FirstValue,
+    SecondValue
+)
+Print Helpers.Add(
+    Helpers.Add(FirstValue, SecondValue),
+    ThirdValue
+)
+
+Print Item.Caption = "SMILE" And Text_Length(Item.Caption) = 5
+Print (Item.Caption = "SMILE" And
+    Text_Length(
+        Item.Caption
+    ) = 5)
+
+Print Item.Value + Values[0]
+Print (Item.Value +
+    Values[0])
+
+If (FirstValue < SecondValue Or
+    SecondValue > 100 Or
+    ThirdValue = 4) Then
+    Print "Trailing"
+End If
+
+If (FirstValue < 0
+    Or SecondValue = 3
+    Or ThirdValue < 0) Then
+    Print "Leading"
+End If
+
+If (
+    FirstValue < SecondValue Or
+    SecondValue < ThirdValue Or
+    ThirdValue = 4
+) Then
+    Print "Canonical"
+End If
+
+If FirstValue = 100 Then
+    Print "Wrong"
+Else If (SecondValue = 3 Or
+    ThirdValue = 0 Or
+    FirstValue = 0) Then
+    Print "Else If"
+Else
+    Print "Wrong"
+End If
+
+Call Helpers.PrintPair(
+    FirstValue,
+    SecondValue
+)
+
+End Program

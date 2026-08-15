@@ -3,6 +3,7 @@ Option Explicit
 Game Window "SMILE 2.0 Phase 3A" Size 800 By 450
 
 Dim Caption As Text
+
 Caption = GetCaption()
 
 Do
@@ -10,10 +11,16 @@ Do
     Draw Text Caption At 400, 220 Size 28 Color CYAN Centered
     Show Screen
     Wait 16 Milliseconds
+
 Loop Until Game_Closed() = True
 
 End Program
 
 Function GetCaption() As Text
-    Return "First-Class Text — Café"
+
+    Dim ReturnValue As Text
+
+    ReturnValue = "First-Class Text — Café"
+    Return ReturnValue
+
 End Function

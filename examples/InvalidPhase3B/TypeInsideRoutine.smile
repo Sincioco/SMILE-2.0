@@ -1,5 +1,7 @@
 Sub Invalid()
+
     Type LocalType
         Value As Number
     End Type
+
 End Sub

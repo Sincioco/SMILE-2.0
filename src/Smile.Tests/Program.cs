@@ -936,7 +936,7 @@ Run("Parser diagnostics retain support-file line and column", () =>
         ("Broken.smile", false, "Sub Work()\n\nPrint (\nEnd Sub\n"))
         .Diagnostics.First(item => item.Code.StartsWith("SML2", StringComparison.Ordinal));
     Equal("Broken.smile", Path.GetFileName(diagnostic.FilePath));
-    Equal(3, diagnostic.Line);
+    Equal(4, diagnostic.Line);
 });
 Run("Cross-file completion uses the active support file scope", () =>
 {
@@ -1883,6 +1883,108 @@ Run("Option Explicit is physical-source scoped and enforces declarations", () =>
         ("Program.smile", true, "Option Explicit\nDim Value As Number\nValue = 1\n"),
         ("Support.smile", false, "Sub Legacy()\nImplicit = 2\nEnd Sub\n"));
     Equal(false, scoped.HasErrors);
+});
+Run("Multiline parenthesized If expressions accept both operator positions and nested groups", () =>
+{
+    const string declarations = "Option Explicit\nDim First As Number\nDim Second As Number\nDim Third As Number\nDim Fourth As Number\n";
+    var sources = new[]
+    {
+        declarations + "If First < Second Or Third < Fourth Then\nPrint First\nEnd If\n",
+        declarations + "If (First < Second Or\n    Third < Fourth) Then\nPrint First\nEnd If\n",
+        declarations + "If (First < Second\n    Or Third < Fourth) Then\nPrint First\nEnd If\n",
+        declarations + "If (\n    First < Second Or\n    Third < Fourth\n) Then\nPrint First\nEnd If\n",
+        declarations + "If ((First + Second) * Third > Fourth And\n    Not (First = Second Or\n        Third = Fourth)) Then\nPrint First\nEnd If\n",
+        declarations + "If (First < Second) Then\nPrint First\nElse If (Third < Fourth Or\n    First = Second) Then\nPrint Third\nEnd If\n"
+    };
+
+    foreach (var source in sources)
+        Equal(false, Analyze(source).HasErrors);
+});
+Run("Multiline parenthesized assignment preserves expression shape and precedence", () =>
+{
+    const string source = "Option Explicit\nDim First As Number\nDim Second As Number\nDim Third As Number\nDim Result As Number\nResult = (First +\n    Second *\n    Third)\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var assignment = analysis.BoundSyntaxTree.Root.Statements.OfType<AssignmentStatementSyntax>().Single();
+    var parenthesized = (ParenthesizedExpressionSyntax)assignment.Expression;
+    var addition = (BinaryExpressionSyntax)parenthesized.Expression;
+    Equal(SyntaxKind.PlusToken, addition.OperatorToken.Kind);
+    Equal(SyntaxKind.StarToken, ((BinaryExpressionSyntax)addition.Right).OperatorToken.Kind);
+    Equal(SmileType.Number, analysis.SemanticModel.GetType(parenthesized));
+});
+Run("Multiline normal qualified and Call argument lists analyze", () =>
+{
+    const string program = "Option Explicit\nImport Example.Helpers As Helpers\nDim Value As Number\nValue = Add(\n    1,\n    2\n)\nValue = Helpers.Add(\n    Value\n    ,\n    3\n)\nCall PresentValue(\n    Value,\n    True\n)\nCall Helpers.PresentValue(\n    Value,\n    False\n)\nSub PresentValue(Value As Number, Flag As Boolean)\nPrint Value\nEnd Sub\nFunction Add(Left As Number, Right As Number) As Number\nDim ReturnValue As Number\nReturnValue = Left + Right\nReturn ReturnValue\nEnd Function\n";
+    const string module = "Module Example.Helpers\nPublic Function Add(Left As Number, Right As Number) As Number\nDim ReturnValue As Number\nReturnValue = Left + Right\nReturn ReturnValue\nEnd Function\nPublic Sub PresentValue(Value As Number, Flag As Boolean)\nPrint Value\nEnd Sub\nEnd Module\n";
+    var analysis = Multi(("Program.smile", true, program), ("Helpers.smile", false, module));
+    if (analysis.HasErrors)
+        throw new InvalidOperationException(string.Join(" | ", analysis.Diagnostics.Select(diagnostic =>
+            diagnostic.Code + ": " + diagnostic.Message)));
+    Equal(false, analysis.HasErrors);
+    Equal(2, analysis.GetSyntaxTree("Program.smile").Root.Statements.OfType<AssignmentStatementSyntax>().Count());
+    Equal(2, analysis.GetSyntaxTree("Program.smile").Root.Statements
+        .Count(statement => statement is CallStatementSyntax or QualifiedCallStatementSyntax));
+});
+Run("Multiline parenthesized expressions accept comments blank lines LF and CRLF", () =>
+{
+    const string source = "Option Explicit\nDim First As Number\nDim Second As Number\nIf (First < Second Or ' Continue the condition.\n\n    Second = 0) Then\nPrint First\nEnd If\nIf (First < Second ' Continue before the operator.\n    Or Second = 0) Then\nPrint Second\nEnd If\n";
+    Equal(false, Analyze(source).HasErrors);
+    Equal(false, Analyze(source.Replace("\n", "\r\n", StringComparison.Ordinal)).HasErrors);
+});
+Run("Missing multiline closing parenthesis reports one source-located expected-token diagnostic", () =>
+{
+    const string source = "Dim Value As Number\nIf (Value < 1 Then\nPrint Value\nEnd If\n";
+    var diagnostics = Analyze(source).Diagnostics.Where(diagnostic => diagnostic.Code == "SML2001").ToArray();
+    Equal(1, diagnostics.Length);
+    Equal(2, diagnostics[0].Line);
+    Equal(15, diagnostics[0].Column);
+    Equal("Expected ), found 'Then'.", diagnostics[0].Message);
+});
+Run("Multiline parenthesized expressions preserve native and Web emitter parity", () =>
+{
+    const string source = "Option Explicit\nDim First As Number\nDim Second As Number\nDim Result As Boolean\nResult = (First < Second Or\n    First = Second)\nPrint Result\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    Equal(true, new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit()
+        .Contains("smile_print_number", StringComparison.Ordinal));
+    Equal(true, new WebEmitter(analysis).Emit().Contains("smile.print", StringComparison.Ordinal));
+});
+Run("Newlines remain significant outside parenthesized expression contexts", () =>
+{
+    var invalidSources = new[]
+    {
+        "Dim Value As Number\nIf Value < 1 Or\n    Value > 2 Then\nPrint Value\nEnd If\n",
+        "Dim Value As Number\nValue = 1 +\n    2\n",
+        "Dim Value As Number\nIf (Value < 1 Then\nPrint Value\nEnd If\n",
+        "Dim Value As Number\nIf (Value < 1 Or\n) Then\nPrint Value\nEnd If\n",
+        "Dim Value As Number\nIf (Value < 1\n    Value > 2) Then\nPrint Value\nEnd If\n",
+        "Dim Value As Number\nIf (Value < 1)\nThen\nPrint Value\nEnd If\n",
+        "Dim Value As Number\nValue = (1 +\n",
+        "Dim Values[\n2]\n",
+        "Sub Work(\nValue As Number)\nEnd Sub\n"
+    };
+
+    foreach (var source in invalidSources)
+        Equal(true, HasDiagnostic(Analyze(source), "SML2001"));
+});
+Run("Completion Quick Info and definition work on continuation lines", () =>
+{
+    const string completionSource = "Option Explicit\nDim LongValue As Number\nIf (LongValue > 0 Or\n    LongVal";
+    var completionAnalysis = Analyze(completionSource);
+    Equal(true, SmileCompletionService.GetCompletions(completionAnalysis, completionSource.Length)
+        .Any(item => item.DisplayText == "LongValue"));
+
+    const string source = "Option Explicit\nDim LongValue As Number\nIf (LongValue > 0 Or\n    LongValue < 10) Then\nPrint LongValue\nEnd If\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var continuationPosition = source.IndexOf("LongValue < 10", StringComparison.Ordinal);
+    var symbol = ResolveSymbol(analysis, analysis.SyntaxTree, continuationPosition);
+    Equal(SmileResolvedSymbolKind.Variable, symbol.Kind);
+    Equal("Dim LongValue As Number", symbol.Signature);
+    Equal("LongValue", symbol.DeclarationLocation!.Source.Substring(symbol.DeclarationLocation.Span.Start,
+        symbol.DeclarationLocation.Span.Length));
+    Equal("Dim LongValue As Number",
+        SmileSymbolDisplayService.Present(symbol, analysis.DependencyContext).Signature);
 });
 Run("Typed scalars arrays and legacy numeric arrays bind shared types", () =>
 {

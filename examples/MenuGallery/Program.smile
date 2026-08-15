@@ -279,6 +279,7 @@ Do
         WrapMenuStyle.ShowScrollbar = MenuStyle.ShowScrollbar
         StyleChanged = True
     Else If Key = KEY_OTHER Then
+
         If TestStage = 0 Then
             OperationSucceeded = Menu.SetSelectedIndex(RootMenu, RootSharedIndex)
             OperationSucceeded = OperationSucceeded And MenuNavigator.Depth(NavigatorHandle) = 1
@@ -307,6 +308,7 @@ Do
             MenuStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_ELLIPSIS
             WrapMenuStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_WRAP
         End If
+
         TestStage = TestStage + 1
         StyleChanged = True
         Running = Running And OperationSucceeded
@@ -314,22 +316,28 @@ Do
         Event = Dialogue.HandleKey(DialogueHandle, Key, Timer())
     Else
         Event = MenuNavigator.HandleKey(NavigatorHandle, Key)
+
         If Event = UI.UI_EVENT_ACCEPTED Then
             AcceptedValue = MenuNavigator.LastAcceptedValue(NavigatorHandle)
             Call Dialogue.ClearPages(DialogueHandle)
+
             If AcceptedValue = 99 Then
                 OperationSucceeded = Dialogue.AddPage(DialogueHandle, "The reusable hierarchical menu demonstration is complete. Press Enter again to close the sample.")
             Else
                 OperationSucceeded = Dialogue.AddPage(DialogueHandle, "A leaf item was accepted through MenuNavigator. The game owns this reaction while the reusable library owns stack routing, cursors, indicators, and placement.")
             End If
+
             If OperationSucceeded Then
                 OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Right, Enter, or Space opens a submenu. Left or Escape closes one level. Escape at the root returns the normal cancel event.")
             End If
+
             If OperationSucceeded Then
                 OperationSucceeded = Dialogue.Start(DialogueHandle, Timer())
             End If
+
             Running = Running And OperationSucceeded
         End If
+
     End If
 
     If StyleChanged Then
@@ -350,9 +358,11 @@ Do
         Play Sound "Assets\Cancel.wav" On Channel 3
     Else If Event = UI.UI_EVENT_COMPLETED Then
         Play Sound "Assets\Confirm.wav" On Channel 2
+
         If AcceptedValue = 99 Then
             Running = False
         End If
+
     End If
 
     UpdateEvent = Dialogue.Update(DialogueHandle, Timer())
@@ -360,13 +370,17 @@ Do
     Clear Rgb(5, 9, 25)
     Draw Image Background At 0, 0 Size 960 By 540 Filter Smooth
     Call MenuNavigator.DrawStack(NavigatorHandle)
+
     If Dialogue.IsActive(DialogueHandle) Then
         Call Dialogue.Draw(DialogueHandle, Timer())
+
     End If
+
     Draw Text "Right/Enter/Space Open   Left/Esc Back   1 System   2 Bitmap   3 Vector" At 480, 12 Size 15 Color CYAN Centered
     Draw Text "W Indicators Off   A After Text   S Right Aligned   D Scrollbar" At 480, 32 Size 15 Color CYAN Centered
     Show Screen
     Wait 8 Milliseconds
+
 Loop Until Game_Closed() = True Or Running = False
 
 Call Dialogue.Destroy(DialogueHandle)

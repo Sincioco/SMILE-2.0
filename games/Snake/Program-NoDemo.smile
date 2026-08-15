@@ -32,20 +32,28 @@ Collision = False
 Load HighScore From "HighScore" Default 0
 
 Sub SpawnFood()
+
     FoodValid = False
+
     Do
         Random FoodX From 0 To GridWidth - 1
         Random FoodY From 0 To GridHeight - 1
         FoodValid = True
+
         For I = 0 To Length - 1
+
             If FoodX = SnakeX[I] And FoodY = SnakeY[I] Then
                 FoodValid = False
             End If
+
         End For
+
     Loop Until FoodValid = True
+
 End Sub
 
 Sub ResetSnakeBody()
+
     Length = 5
     Direction = KEY_RIGHT
     NextDirection = KEY_RIGHT
@@ -59,28 +67,38 @@ Sub ResetSnakeBody()
     SnakeY[3] = 12
     SnakeX[4] = 13
     SnakeY[4] = 12
+
 End Sub
 
 Sub ResetPlay()
+
     Call ResetSnakeBody()
+
     Score = 0
     MoveDelay = StartDelay
     Call SpawnFood()
+
     NextMoveTime = Timer() + StartDelay
     State = 1
     Play Sound "Assets\Start.wav"
+
 End Sub
 
 Sub EndRound()
+
     State = 2
+
     If Score > HighScore Then
         HighScore = Score
         Save HighScore To "HighScore"
     End If
+
     Play Sound "Assets\GameOver.wav"
+
 End Sub
 
 Sub MoveSnake()
+
     Direction = NextDirection
     TailX = SnakeX[Length - 1]
     TailY = SnakeY[Length - 1]
@@ -88,6 +106,7 @@ Sub MoveSnake()
     For I = Length - 1 Down To 1
         SnakeX[I] = SnakeX[I - 1]
         SnakeY[I] = SnakeY[I - 1]
+
     End For
 
     If Direction = KEY_UP Then
@@ -101,18 +120,22 @@ Sub MoveSnake()
     End If
 
     Collision = False
+
     If SnakeX[0] < 0 Or SnakeX[0] >= GridWidth Or SnakeY[0] < 0 Or SnakeY[0] >= GridHeight Then
         Collision = True
     End If
 
     For I = 1 To Length - 1
+
         If SnakeX[0] = SnakeX[I] And SnakeY[0] = SnakeY[I] Then
             Collision = True
         End If
+
     End For
 
     If Collision = True Then
         Call EndRound()
+
     Else If SnakeX[0] = FoodX And SnakeY[0] = FoodY Then
         SnakeX[Length] = TailX
         SnakeY[Length] = TailY
@@ -121,21 +144,26 @@ Sub MoveSnake()
         MoveDelay = Max(MinimumDelay, StartDelay - (Score / 50) * 4)
         Play Sound "Assets\Eat.wav"
         Call SpawnFood()
+
     End If
 
     NextMoveTime = Timer() + MoveDelay
+
 End Sub
 
 Sub DrawBoard()
+
     Clear Rgb(10, 18, 35)
     Fill Rectangle FieldX, FieldY, FieldWidth, FieldHeight, BLACK
     Draw Rectangle FieldX, FieldY, FieldWidth, FieldHeight, Rgb(40, 70, 95)
 
     For I = 0 To Length - 1
+
         If SnakeX[I] >= 0 And SnakeX[I] < GridWidth And SnakeY[I] >= 0 And SnakeY[I] < GridHeight Then
             Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)
             Draw Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(20, 105, 35)
         End If
+
     End For
 
     Fill Rectangle FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, Rgb(245, 45, 55)
@@ -151,9 +179,11 @@ Sub DrawBoard()
     Draw Text "Alt+Enter" At 835, 415 Size 16 Color WHITE Centered
     Draw Text "Full Screen" At 835, 440 Size 16 Color LIGHT_GRAY Centered
     Draw Text "Escape Exits" At 835, 490 Size 16 Color LIGHT_GRAY Centered
+
 End Sub
 
 Sub DrawTitle()
+
     Clear Rgb(10, 18, 35)
     Fill Rectangle FieldX, FieldY, FieldWidth, FieldHeight, BLACK
     Draw Rectangle FieldX, FieldY, FieldWidth, FieldHeight, Rgb(40, 70, 95)
@@ -167,9 +197,11 @@ Sub DrawTitle()
     Draw Text "Escape To Exit" At 370, 415 Size 18 Color LIGHT_GRAY Centered
     Draw Text "High Score" At 835, 165 Size 20 Color LIGHT_GRAY Centered
     Draw Number HighScore At 805, 205 Size 38 Color CYAN
+
 End Sub
 
 Sub DrawGameOver()
+
     Fill Rounded Rectangle 145, 135, 590, 285, 22, Rgb(16, 25, 45)
     Draw Rounded Rectangle 145, 135, 590, 285, 22, Rgb(245, 45, 55)
     Draw Text "Game Over" At 440, 185 Size 50 Color RED Centered
@@ -179,16 +211,21 @@ Sub DrawGameOver()
     Draw Number HighScore At 530, 297 Size 38 Color CYAN
     Draw Text "Enter To Retry" At 440, 360 Size 24 Color WHITE Centered
     Draw Text "Escape To Exit" At 440, 392 Size 18 Color LIGHT_GRAY Centered
+
 End Sub
 
 Sub EnterTitle()
+
     State = 0
     Key = KEY_NONE
     Stop Sound
+
 End Sub
 
 Sub ResetGame()
+
     Call ResetPlay()
+
 End Sub
 
 Game Window "SMILE 2.0 Snake"
@@ -199,13 +236,18 @@ Do
     Get Key Key
 
     If State = 0 Then
+
         If Key = KEY_ESCAPE Then
             End Program
         Else If Key = KEY_ENTER Then
             Call ResetGame()
+
         End If
+
         Call DrawTitle()
+
     Else If State = 1 Then
+
         If Key = KEY_ESCAPE Then
             End Program
         End If
@@ -222,28 +264,38 @@ Do
 
         If State = 1 And Timer() >= NextMoveTime Then
             Call MoveSnake()
+
         End If
 
         Call DrawBoard()
+
         If State = 2 Then
             Call DrawGameOver()
+
         End If
+
     Else
+
         If Key = KEY_ESCAPE Then
             End Program
         Else If Key = KEY_ENTER Then
             Call ResetGame()
+
         End If
 
         If State = 0 Then
             Call DrawTitle()
+
         Else
             Call DrawBoard()
             Call DrawGameOver()
+
         End If
+
     End If
 
     Show Screen
+
 Loop Until Game_Closed() = True
 
 Stop Sound

@@ -50,38 +50,60 @@ CatchUpSteps = 0
 Load HighScore From "HighScore" Default 0
 
 Function BrickColor(RowValue)
+
+    Dim ReturnValue As Number
+
     Select Case RowValue
         Case 0
-            Return Rgb(245, 55, 65)
+            ReturnValue = Rgb(245, 55, 65)
+            Return ReturnValue
         Case 1
-            Return Rgb(250, 135, 35)
+            ReturnValue = Rgb(250, 135, 35)
+            Return ReturnValue
         Case 2
-            Return Rgb(250, 220, 45)
+            ReturnValue = Rgb(250, 220, 45)
+            Return ReturnValue
         Case 3
-            Return Rgb(65, 220, 90)
+            ReturnValue = Rgb(65, 220, 90)
+            Return ReturnValue
         Case 4
-            Return Rgb(40, 215, 235)
+            ReturnValue = Rgb(40, 215, 235)
+            Return ReturnValue
         Case 5
-            Return Rgb(65, 110, 245)
+            ReturnValue = Rgb(65, 110, 245)
+            Return ReturnValue
         Case Else
-            Return Rgb(220, 65, 235)
+            ReturnValue = Rgb(220, 65, 235)
+            Return ReturnValue
     End Select
 End Function
 
 Function RowPoints(RowValue)
-    Return 70 - RowValue * 10
+
+    Dim ReturnValue As Number
+
+    ReturnValue = 70 - RowValue * 10
+    Return ReturnValue
+
 End Function
 
 Sub BuildLevel()
+
     RemainingBricks = BrickRows * BrickColumns
+
     For Row = 0 To BrickRows - 1
+
         For Column = 0 To BrickColumns - 1
             Bricks[Column, Row] = 1
+
         End For
+
     End For
+
 End Sub
 
 Sub ResetBall()
+
     PaddleX = (CanvasWidth - PaddleWidth) / 2
     BallX = PaddleX + PaddleWidth / 2
     BallY = PaddleY - BallRadius - 2
@@ -91,9 +113,11 @@ Sub ResetBall()
     BallVX = (3 + Level) * BallSpeedUnit
     BallVY = -(4 + Level) * BallSpeedUnit
     Launched = False
+
 End Sub
 
 Sub ResetMatch()
+
     Score = 0
     Lives = 3
     Level = 1
@@ -101,44 +125,59 @@ Sub ResetMatch()
     State = 1
     Call BuildLevel()
     Call ResetBall()
+
     Accumulator = 0
+
 End Sub
 
 Sub EnterTitle()
+
     State = 0
     Launched = False
     ReadyMessage = 0
     Accumulator = 0
     Key = KEY_NONE
+
 End Sub
 
 Sub StartGame()
+
     Call ResetMatch()
+
 End Sub
 
 Sub UpdateHighScore()
+
     If Score > HighScore Then
         HighScore = Score
         Save HighScore To "HighScore"
     End If
+
 End Sub
 
 Sub LoseLife()
+
     Lives = Lives - 1
     Play Sound "Assets\LoseLife.wav"
+
     If Lives <= 0 Then
         Call UpdateHighScore()
+
         State = 2
         Play Sound "Assets\GameOver.wav"
     Else
         ReadyMessage = 1
         Call ResetBall()
+
     End If
+
 End Sub
 
 Sub AdvanceLevel()
+
     If Level >= MaximumLevel Then
         Call UpdateHighScore()
+
         State = 3
         Play Sound "Assets\LevelClear.wav"
     Else
@@ -147,19 +186,25 @@ Sub AdvanceLevel()
         Play Sound "Assets\LevelClear.wav"
         Call BuildLevel()
         Call ResetBall()
+
     End If
+
 End Sub
 
 Sub MovePaddle()
+
     MinimumPaddleSub = 10 * SubpixelsPerPixel
     MaximumPaddleSub = (CanvasWidth - PaddleWidth - 10) * SubpixelsPerPixel
     PaddleStep = PaddleSpeed * SimulationStep / 1000
+
         If Key_Held(KEY_A) = True Or Key_Held(KEY_LEFT) = True Then
             PaddleXSub = Max(MinimumPaddleSub, PaddleXSub - PaddleStep)
         End If
+
         If Key_Held(KEY_D) = True Or Key_Held(KEY_RIGHT) = True Then
             PaddleXSub = Min(MaximumPaddleSub, PaddleXSub + PaddleStep)
         End If
+
     PaddleX = PaddleXSub / SubpixelsPerPixel
 
     If Launched = False Then
@@ -168,30 +213,41 @@ Sub MovePaddle()
         BallXSub = BallX * SubpixelsPerPixel
         BallYSub = BallY * SubpixelsPerPixel
     End If
+
 End Sub
 
 Sub BounceFromPaddle()
+
     PaddleContact = BallX - (PaddleX + PaddleWidth / 2)
         HorizontalVelocity = PaddleContact / 11
+
         If HorizontalVelocity = 0 Then
             HorizontalVelocity = 1
         End If
+
     HorizontalVelocity = Max(-9, Min(9, HorizontalVelocity))
     BallVX = HorizontalVelocity * BallSpeedUnit
     BallVY = -Abs(BallVY)
     BallY = PaddleY - BallRadius - 1
     BallYSub = BallY * SubpixelsPerPixel
     Play Sound "Assets\Paddle.wav"
+
 End Sub
 
 Sub HitBricks()
+
     HitBrick = False
+
     For Row = 0 To BrickRows - 1
+
         For Column = 0 To BrickColumns - 1
+
             If HitBrick = False And Bricks[Column, Row] = 1 Then
                 BrickX = BrickStartX + Column * (BrickWidth + BrickGap)
                 BrickY = BrickStartY + Row * (BrickHeight + BrickGap)
+
                 If BallX + BallRadius >= BrickX And BallX - BallRadius <= BrickX + BrickWidth Then
+
                     If BallY + BallRadius >= BrickY And BallY - BallRadius <= BrickY + BrickHeight Then
                         Bricks[Column, Row] = 0
                         RemainingBricks = RemainingBricks - 1
@@ -204,6 +260,7 @@ Sub HitBricks()
                         OverlapBottom = BrickY + BrickHeight - (BallY - BallRadius)
                         HorizontalOverlap = Min(OverlapLeft, OverlapRight)
                         VerticalOverlap = Min(OverlapTop, OverlapBottom)
+
                         If HorizontalOverlap < VerticalOverlap Then
                             BallVX = -BallVX
                         Else
@@ -213,18 +270,24 @@ Sub HitBricks()
                         HitBrick = True
                         Play Sound "Assets\Brick.wav"
                     End If
+
                 End If
+
             End If
+
         End For
+
     End For
 
     If RemainingBricks = 0 Then
         Call AdvanceLevel()
+
     End If
+
 End Sub
 
-
 Sub MoveBall()
+
     BallXSub = BallXSub + BallVX * SimulationStep / 1000
     BallYSub = BallYSub + BallVY * SimulationStep / 1000
     BallX = BallXSub / SubpixelsPerPixel
@@ -250,25 +313,33 @@ Sub MoveBall()
     End If
 
     If BallVY > 0 And BallY + BallRadius >= PaddleY And BallY - BallRadius <= PaddleY + PaddleHeight Then
+
         If BallX + BallRadius >= PaddleX And BallX - BallRadius <= PaddleX + PaddleWidth Then
             Call BounceFromPaddle()
+
         End If
+
     End If
 
     Call HitBricks()
 
     If BallY - BallRadius > CanvasHeight Then
         Call LoseLife()
+
     End If
+
 End Sub
 
 Sub DrawBrick(BlockX, BlockY, BlockColor)
+
     Fill Rounded Rectangle BlockX, BlockY, BrickWidth, BrickHeight, 4, BlockColor
     Draw Line BlockX + 5, BlockY + 4, BlockX + BrickWidth - 5, BlockY + 4, WHITE
     Draw Rectangle BlockX, BlockY, BrickWidth, BrickHeight, Rgb(15, 20, 32)
+
 End Sub
 
 Sub DrawPlayfield()
+
     Clear Rgb(7, 10, 18)
     Fill Rectangle 8, 44, CanvasWidth - 16, CanvasHeight - 52, BLACK
     Draw Rectangle 8, 44, CanvasWidth - 16, CanvasHeight - 52, Rgb(55, 70, 95)
@@ -283,11 +354,16 @@ Sub DrawPlayfield()
     Draw Number Lives At 820, 8 Size 24 Color WHITE
 
     For Row = 0 To BrickRows - 1
+
         For Column = 0 To BrickColumns - 1
+
             If Bricks[Column, Row] = 1 Then
                 Call DrawBrick(BrickStartX + Column * (BrickWidth + BrickGap), BrickStartY + Row * (BrickHeight + BrickGap), BrickColor(Row))
+
             End If
+
         End For
+
     End For
 
     Fill Rounded Rectangle PaddleX, PaddleY, PaddleWidth, PaddleHeight, 6, Rgb(225, 235, 250)
@@ -297,26 +373,34 @@ Sub DrawPlayfield()
     If Launched = False Then
         Fill Rounded Rectangle 270, 345, 420, 105, 18, Rgb(14, 22, 38)
         Draw Rounded Rectangle 270, 345, 420, 105, 18, CYAN
+
         If ReadyMessage = 1 Then
+
             If Lives = 1 Then
                 Draw Text "Ready - One Life Left" At 480, 365 Size 24 Color YELLOW Centered
             Else
                 Draw Text "Ready - Two Lives Left" At 480, 365 Size 24 Color YELLOW Centered
             End If
+
         Else If ReadyMessage = 2 Then
             Draw Text "Level Ready" At 480, 365 Size 27 Color LIGHT_GREEN Centered
         Else
             Draw Text "Ready" At 480, 365 Size 29 Color YELLOW Centered
         End If
+
         Draw Text "Space Or Enter To Launch" At 480, 408 Size 20 Color WHITE Centered
     End If
+
 End Sub
 
 Sub DrawTitle()
+
     Clear Rgb(7, 10, 18)
     Draw Text "Brick Breaker" At 480, 80 Size 54 Color WHITE Centered
+
     For Row = 0 To BrickRows - 1
         Call DrawBrick(235 + Row * 70, 175, BrickColor(Row))
+
     End For
     Fill Rounded Rectangle 390, 275, 180, 18, 6, Rgb(225, 235, 250)
     Fill Circle 480, 250, BallRadius, WHITE
@@ -326,9 +410,11 @@ Sub DrawTitle()
     Draw Text "Escape To Exit" At 480, 445 Size 18 Color LIGHT_GRAY Centered
     Draw Text "High Score" At 430, 485 Size 18 Color CYAN
     Draw Number HighScore At 555, 478 Size 28 Color YELLOW
+
 End Sub
 
 Sub DrawGameOver()
+
     Fill Rounded Rectangle 220, 145, 520, 275, 22, Rgb(18, 23, 38)
     Draw Rounded Rectangle 220, 145, 520, 275, 22, RED
     Draw Text "Game Over" At 480, 185 Size 48 Color RED Centered
@@ -336,9 +422,11 @@ Sub DrawGameOver()
     Draw Number Score At 545, 245 Size 38 Color YELLOW
     Draw Text "Enter To Retry" At 480, 335 Size 24 Color WHITE Centered
     Draw Text "Escape To Exit" At 480, 375 Size 18 Color LIGHT_GRAY Centered
+
 End Sub
 
 Sub DrawVictory()
+
     Fill Rounded Rectangle 190, 130, 580, 305, 22, Rgb(18, 28, 36)
     Draw Rounded Rectangle 190, 130, 580, 305, 22, LIGHT_GREEN
     Draw Text "You Cleared All 3 Levels!" At 480, 175 Size 35 Color LIGHT_GREEN Centered
@@ -346,6 +434,7 @@ Sub DrawVictory()
     Draw Number Score At 565, 245 Size 38 Color YELLOW
     Draw Text "Enter To Play Again" At 480, 340 Size 24 Color WHITE Centered
     Draw Text "Escape To Exit" At 480, 382 Size 18 Color LIGHT_GRAY Centered
+
 End Sub
 
 Game Window "SMILE 2.0 Brick Breaker"
@@ -359,63 +448,91 @@ Do
     Get Key Key
 
     If State = 0 Then
+
         If Key = KEY_ESCAPE Then
             End Program
         Else If Key = KEY_ENTER Or Key = KEY_SPACE Then
             Call StartGame()
+
         End If
+
     Else If Key = KEY_ESCAPE Then
         End Program
     End If
 
     If State = 0 Then
         Call DrawTitle()
+
     Else If State = 1 Then
+
         If Launched = False Then
+
             If Key = KEY_SPACE Or Key = KEY_ENTER Then
                 Launched = True
                 ReadyMessage = 0
             End If
+
         End If
 
         If State = 1 Then
             Accumulator = Min(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
             CatchUpSteps = 0
+
             Do
+
                 If Accumulator >= SimulationStep Then
                     Call MovePaddle()
+
                     If Launched = True Then
                         Call MoveBall()
+
                     End If
+
                     Accumulator = Accumulator - SimulationStep
                     CatchUpSteps = CatchUpSteps + 1
                 End If
+
             Loop Until Accumulator < SimulationStep Or CatchUpSteps >= MaxCatchUpSteps Or State <> 1
+
         End If
+
         Call DrawPlayfield()
+
         If State = 2 Then
             Call DrawGameOver()
+
         Else If State = 3 Then
             Call DrawVictory()
+
         End If
+
     Else
+
         If Key = KEY_ENTER Or Key = KEY_SPACE Then
             Call StartGame()
+
         End If
 
         If State = 0 Then
             Call DrawTitle()
+
         Else
             Call DrawPlayfield()
+
             If State = 2 Then
                 Call DrawGameOver()
+
             Else
                 Call DrawVictory()
+
             End If
+
         End If
+
     End If
 
     Show Screen
+
 Loop Until Game_Closed() = True
 
 Stop Sound

@@ -9,7 +9,9 @@ End Type
 Private Dim Stored As ConsumerData
 
 Public Function Echo(Value As ConsumerData) As ConsumerData
+
     Return Value
+
 End Function
 
 End Module

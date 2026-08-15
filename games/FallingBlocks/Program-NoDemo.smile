@@ -106,115 +106,161 @@ PendingClearCount = 0
 Load HighScore From "HighScore" Default 0
 
 Function BlockX(PieceValue, RotationValue, CellValue)
+
     CalcX = ShapeX[PieceValue - 1, CellValue]
     CalcY = ShapeY[PieceValue - 1, CellValue]
+
     For Turn = 1 To RotationValue
         RotatedX = 3 - CalcY
         CalcY = CalcX
         CalcX = RotatedX
+
     End For
     Return CalcX
+
 End Function
 
 Function BlockY(PieceValue, RotationValue, CellValue)
+
     CalcX = ShapeX[PieceValue - 1, CellValue]
     CalcY = ShapeY[PieceValue - 1, CellValue]
+
     For Turn = 1 To RotationValue
         RotatedX = 3 - CalcY
         CalcY = CalcX
         CalcX = RotatedX
+
     End For
     Return CalcY
+
 End Function
 
 Function PieceColor(PieceValue)
+
+    Dim ReturnValue As Number
+
     Select Case PieceValue
         Case 1
-            Return Rgb(35, 220, 235)
+            ReturnValue = Rgb(35, 220, 235)
+            Return ReturnValue
         Case 2
-            Return Rgb(245, 215, 45)
+            ReturnValue = Rgb(245, 215, 45)
+            Return ReturnValue
         Case 3
-            Return Rgb(180, 70, 235)
+            ReturnValue = Rgb(180, 70, 235)
+            Return ReturnValue
         Case 4
-            Return Rgb(70, 220, 95)
+            ReturnValue = Rgb(70, 220, 95)
+            Return ReturnValue
         Case 5
-            Return Rgb(240, 65, 70)
+            ReturnValue = Rgb(240, 65, 70)
+            Return ReturnValue
         Case 6
-            Return Rgb(55, 105, 235)
+            ReturnValue = Rgb(55, 105, 235)
+            Return ReturnValue
         Case Else
-            Return Rgb(245, 145, 35)
+            ReturnValue = Rgb(245, 145, 35)
+            Return ReturnValue
     End Select
 End Function
 
 Function CanMove(OffsetX, OffsetY, TestRotation)
+
     For TestCell = 0 To 3
         TestX = PieceX + OffsetX + BlockX(CurrentPiece, TestRotation, TestCell)
         TestY = PieceY + OffsetY + BlockY(CurrentPiece, TestRotation, TestCell)
+
         If TestX < 0 Or TestX >= BoardWidth Or TestY >= BoardHeight Then
             Return False
         End If
+
         If TestY >= 0 Then
+
             If Board[TestX, TestY] <> 0 Then
                 Return False
             End If
+
         End If
+
     End For
     Return True
+
 End Function
 
 Sub ClearBoard()
+
     For ClearY = 0 To BoardHeight - 1
         ClearingRows[ClearY] = 0
+
         For ClearX = 0 To BoardWidth - 1
             Board[ClearX, ClearY] = 0
+
         End For
+
     End For
     ClearPhase = 0
     PendingClearCount = 0
+
 End Sub
 
 Sub EndGame()
+
     State = 2
     Stop Music
+
     If Score > HighScore Then
         HighScore = Score
         Save HighScore To "HighScore"
     End If
+
     Play Sound "Assets\GameOver.wav"
+
 End Sub
 
 Sub SpawnPiece()
+
     CurrentPiece = NextPiece
     Random NextPiece From 1 To 7
     PieceX = 3
     PieceY = -1
     Rotation = 0
     NextFallTime = Timer() + FallDelay
+
     If CanMove(0, 0, Rotation) = False Then
         Call EndGame()
+
         Return
     End If
+
 End Sub
 
 Sub BeginRowClear()
+
     PendingClearCount = 0
+
     For Row = 0 To BoardHeight - 1
         ClearingRows[Row] = 0
         FullRow = True
+
         For Column = 0 To BoardWidth - 1
+
             If Board[Column, Row] = 0 Then
                 FullRow = False
             End If
+
         End For
+
         If FullRow = True Then
             ClearingRows[Row] = 1
             PendingClearCount = PendingClearCount + 1
         End If
+
     End For
 
     If PendingClearCount > 0 Then
         ClearPhase = 1
         ClearPhaseStartedAt = Timer()
+
         If PendingClearCount >= 4 Then
             ClearFlashDuration = TetrisFlashDuration
             ClearCollapseDuration = TetrisCollapseDuration
@@ -224,23 +270,35 @@ Sub BeginRowClear()
             ClearCollapseDuration = RowCollapseDuration
             Play Sound "Assets\LineClear.wav"
         End If
+
     End If
+
 End Sub
 
 Sub CompleteRowClear()
+
     WriteRow = BoardHeight - 1
+
     For ReadRow = BoardHeight - 1 Down To 0
+
         If ClearingRows[ReadRow] = 0 Then
+
             For Column = 0 To BoardWidth - 1
                 Board[Column, WriteRow] = Board[Column, ReadRow]
+
             End For
             WriteRow = WriteRow - 1
         End If
+
     End For
+
     For ClearY = WriteRow Down To 0
+
         For Column = 0 To BoardWidth - 1
             Board[Column, ClearY] = 0
+
         End For
+
     End For
 
     Select Case PendingClearCount
@@ -259,42 +317,58 @@ Sub CompleteRowClear()
 
     For Row = 0 To BoardHeight - 1
         ClearingRows[Row] = 0
+
     End For
     ClearPhase = 0
     PendingClearCount = 0
     Call SpawnPiece()
+
 End Sub
 
 Sub UpdateRowClear()
+
     If ClearPhase = 1 And Timer() - ClearPhaseStartedAt >= ClearFlashDuration Then
         ClearPhase = 2
         ClearPhaseStartedAt = Timer()
     Else If ClearPhase = 2 And Timer() - ClearPhaseStartedAt >= ClearCollapseDuration Then
         Call CompleteRowClear()
+
     End If
+
 End Sub
 
 Sub LockPiece()
+
     For Cell = 0 To 3
         LockX = PieceX + BlockX(CurrentPiece, Rotation, Cell)
         LockY = PieceY + BlockY(CurrentPiece, Rotation, Cell)
+
         If LockY < 0 Then
             Call EndGame()
+
             Return
         Else
             Board[LockX, LockY] = CurrentPiece
         End If
+
     End For
+
     If State = 1 Then
         Call BeginRowClear()
+
         If ClearPhase = 0 Then
             Call SpawnPiece()
+
         End If
+
     End If
+
 End Sub
 
 Sub ResetPlay()
+
     Call ClearBoard()
+
     Score = 0
     Lines = 0
     Level = 1
@@ -303,24 +377,32 @@ Sub ResetPlay()
     State = 1
     Play Music "Assets\Background.mp3" Loop
     Call SpawnPiece()
+
 End Sub
 
 Sub EnterTitle()
+
     Stop Music
     State = 0
     Key = KEY_NONE
+
 End Sub
 
 Sub ResetGame()
+
     Call ResetPlay()
+
 End Sub
 
 Sub DrawBlock(PixelX, PixelY, BlockSize, BlockColor)
+
     Fill Rectangle PixelX + 1, PixelY + 1, BlockSize - 2, BlockSize - 2, BlockColor
     Draw Rectangle PixelX + 1, PixelY + 1, BlockSize - 2, BlockSize - 2, Rgb(245, 245, 255)
+
 End Sub
 
 Sub DrawGame()
+
     Clear Rgb(8, 12, 22)
     Draw Text "Falling" At 175, 62 Size 36 Color CYAN Centered
     Draw Text "Blocks" At 175, 102 Size 36 Color MAGENTA Centered
@@ -328,6 +410,7 @@ Sub DrawGame()
 
     For Cell = 0 To 3
         Call DrawBlock(125 + BlockX(NextPiece, 0, Cell) * 18, 205 + BlockY(NextPiece, 0, Cell) * 18, 18, PieceColor(NextPiece))
+
     End For
 
     Draw Text "A / D   Move" At 175, 340 Size 15 Color WHITE Centered
@@ -340,49 +423,74 @@ Sub DrawGame()
     Draw Rectangle BoardX, BoardY, BoardWidth * CellSize, BoardHeight * CellSize, Rgb(80, 90, 115)
 
     For Row = 0 To BoardHeight - 1
+
         For Column = 0 To BoardWidth - 1
             Draw Rectangle BoardX + Column * CellSize, BoardY + Row * CellSize, CellSize, CellSize, Rgb(24, 30, 45)
+
             If Board[Column, Row] <> 0 And ClearPhase <> 2 Then
+
                 If ClearPhase = 1 And ClearingRows[Row] = 1 Then
+
                     If PendingClearCount >= 4 Then
                         Call DrawBlock(BoardX + Column * CellSize, BoardY + Row * CellSize, CellSize, YELLOW)
+
                     Else
                         Call DrawBlock(BoardX + Column * CellSize, BoardY + Row * CellSize, CellSize, WHITE)
+
                     End If
+
                 Else
                     Call DrawBlock(BoardX + Column * CellSize, BoardY + Row * CellSize, CellSize, PieceColor(Board[Column, Row]))
+
                 End If
+
             End If
+
         End For
+
     End For
 
     If ClearPhase = 2 Then
         CollapseElapsed = Min(ClearCollapseDuration, Timer() - ClearPhaseStartedAt)
+
         For Row = 0 To BoardHeight - 1
+
             If ClearingRows[Row] = 0 Then
                 DropRows = 0
+
                 For CheckRow = 0 To BoardHeight - 1
+
                     If CheckRow > Row And ClearingRows[CheckRow] = 1 Then
                         DropRows = DropRows + 1
                     End If
+
                 End For
                 AnimatedDrop = DropRows * CellSize * CollapseElapsed / ClearCollapseDuration
+
                 For Column = 0 To BoardWidth - 1
+
                     If Board[Column, Row] <> 0 Then
                         Call DrawBlock(BoardX + Column * CellSize, BoardY + Row * CellSize + AnimatedDrop, CellSize, PieceColor(Board[Column, Row]))
+
                     End If
+
                 End For
             End If
+
         End For
     End If
 
     If State = 1 And ClearPhase = 0 Then
+
         For Cell = 0 To 3
             ActiveX = PieceX + BlockX(CurrentPiece, Rotation, Cell)
             ActiveY = PieceY + BlockY(CurrentPiece, Rotation, Cell)
+
             If ActiveY >= 0 Then
                 Call DrawBlock(BoardX + ActiveX * CellSize, BoardY + ActiveY * CellSize, CellSize, PieceColor(CurrentPiece))
+
             End If
+
         End For
     End If
 
@@ -398,6 +506,7 @@ Sub DrawGame()
 End Sub
 
 Sub DrawTitle()
+
     Clear Rgb(8, 12, 22)
     Draw Text "Falling Blocks" At 480, 125 Size 54 Color CYAN Centered
     Call DrawBlock(386, 210, 30, Rgb(35, 220, 235))
@@ -406,14 +515,17 @@ Sub DrawTitle()
     Call DrawBlock(476, 210, 30, Rgb(70, 220, 95))
     Call DrawBlock(506, 210, 30, Rgb(240, 65, 70))
     Call DrawBlock(536, 210, 30, Rgb(55, 105, 235))
+
     Draw Text "Press Enter To Start" At 480, 315 Size 28 Color YELLOW Centered
     Draw Text "Stack Pieces And Clear Complete Rows" At 480, 365 Size 18 Color WHITE Centered
     Draw Text "Escape To Exit" At 480, 410 Size 18 Color LIGHT_GRAY Centered
     Draw Text "High Score" At 480, 455 Size 18 Color LIGHT_GRAY Centered
     Draw Number HighScore At 455, 480 Size 30 Color CYAN
+
 End Sub
 
 Sub DrawGameOver()
+
     Fill Rounded Rectangle 245, 145, 470, 270, 22, Rgb(17, 24, 42)
     Draw Rounded Rectangle 245, 145, 470, 270, 22, RED
     Draw Text "Game Over" At 480, 190 Size 48 Color RED Centered
@@ -421,6 +533,7 @@ Sub DrawGameOver()
     Draw Number Score At 520, 250 Size 36 Color YELLOW
     Draw Text "Enter To Retry" At 480, 335 Size 24 Color WHITE Centered
     Draw Text "Escape To Exit" At 480, 375 Size 18 Color LIGHT_GRAY Centered
+
 End Sub
 
 Game Window "SMILE 2.0 Falling Blocks"
@@ -431,12 +544,15 @@ Do
     Get Key Key
 
     If State = 0 Then
+
         If Key = KEY_ESCAPE Then
             Stop Sound
             End Program
         Else If Key = KEY_ENTER Then
             Call ResetGame()
+
         End If
+
     Else If Key = KEY_ESCAPE Then
         Stop Music
         Stop Sound
@@ -445,74 +561,107 @@ Do
 
     If State = 0 Then
         Call DrawTitle()
+
     Else If State = 1 Then
+
         If State = 1 And ClearPhase > 0 Then
             Call UpdateRowClear()
+
         Else If State = 1 Then
+
                 If Key = KEY_A Or Key = KEY_LEFT Then
+
                     If CanMove(-1, 0, Rotation) = True Then
                         PieceX = PieceX - 1
                         Play Sound "Assets\Move.wav"
                     End If
+
                 Else If Key = KEY_D Or Key = KEY_RIGHT Then
+
                     If CanMove(1, 0, Rotation) = True Then
                         PieceX = PieceX + 1
                         Play Sound "Assets\Move.wav"
                     End If
+
                 Else If Key = KEY_W Or Key = KEY_UP Then
                     NewRotation = (Rotation + 1) Mod 4
+
                     If CanMove(0, 0, NewRotation) = True Then
                         Rotation = NewRotation
                         Play Sound "Assets\Rotate.wav"
                     End If
+
                 Else If Key = KEY_S Or Key = KEY_DOWN Then
+
                     If CanMove(0, 1, Rotation) = True Then
                         PieceY = PieceY + 1
                     Else
                         Call LockPiece()
+
                     End If
+
                     NextFallTime = Timer() + FallDelay
                 Else If Key = KEY_SPACE Then
+
                     Do
+
                         If CanMove(0, 1, Rotation) = True Then
                             PieceY = PieceY + 1
                         Else
                             Exit Do
                         End If
+
                     Loop
+
                     Call LockPiece()
+
                 End If
 
             If State = 1 And Timer() >= NextFallTime Then
+
                 If CanMove(0, 1, Rotation) = True Then
                     PieceY = PieceY + 1
                 Else
                     Call LockPiece()
+
                 End If
+
                 NextFallTime = Timer() + FallDelay
             End If
+
         End If
 
         Call DrawGame()
+
         If State = 2 Then
             Call DrawGameOver()
+
         End If
+
     Else
+
         If Key = KEY_ENTER Then
             Call ResetGame()
+
         End If
 
         If State = 0 Then
             Call DrawTitle()
+
         Else
             Call DrawGame()
+
             If State = 2 Then
                 Call DrawGameOver()
+
             End If
+
         End If
+
     End If
 
     Show Screen
+
 Loop Until Game_Closed() = True
 
 Stop Music

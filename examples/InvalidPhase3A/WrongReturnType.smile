@@ -1,4 +1,6 @@
 Print GetValue()
 Function GetValue() As Boolean
+
     Return 1
+
 End Function

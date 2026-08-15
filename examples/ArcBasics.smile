@@ -5,6 +5,7 @@ Game Window "SMILE 2.0 Arc Basics"
 
 Do
     Get Key Key
+
     If Key = KEY_ESCAPE Then
         End Program
     End If
@@ -40,6 +41,7 @@ Do
     Draw Text "Escape Exits" At 480, 510 Size 14 Color LIGHT_GRAY Centered
     Show Screen
     Wait 16 Milliseconds
+
 Loop Until Game_Closed() = True
 
 End Program

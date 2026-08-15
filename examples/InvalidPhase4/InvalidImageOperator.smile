@@ -1,3 +1,4 @@
 Dim First As Image
 Dim Second As Image
+
 Print First = Second

@@ -1,20 +1,24 @@
 Option Explicit
 
 Call Exercise("Stop")
+
 Print "Done"
 
 End Program
 
 Sub Exercise(Command As Text)
+
     Dim Index As Number
     Dim Run As Number
 
     For Run = 1 To 1000
+
         For Index = 1 To 3
             Select Case Command + ""
                 Case "Stop"
                     Exit For
             End Select
+
         End For
 
         Do
@@ -22,6 +26,9 @@ Sub Exercise(Command As Text)
                 Case "Stop"
                     Exit Do
             End Select
+
         Loop
+
     End For
+
 End Sub

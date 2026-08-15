@@ -1,3 +1,4 @@
 Dim Bytes As Number
 Dim ByteCount As Number
+
 Load Data "slot" Into Bytes Count ByteCount

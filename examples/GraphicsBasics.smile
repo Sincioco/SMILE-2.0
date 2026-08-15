@@ -15,6 +15,7 @@ Play Sound "Assets\Graphics.wav"
 
 Do
     Get Key Key
+
     If Key = KEY_ESCAPE Then
         End Program
     End If
@@ -22,12 +23,15 @@ Do
     If Key_Held(KEY_LEFT) = True Then
         MarkerX = Max(20, MarkerX - 4)
     End If
+
     If Key_Held(KEY_RIGHT) = True Then
         MarkerX = Min(CanvasWidth - 20, MarkerX + 4)
     End If
+
     If Key_Held(KEY_UP) = True Then
         MarkerY = Max(20, MarkerY - 4)
     End If
+
     If Key_Held(KEY_DOWN) = True Then
         MarkerY = Min(CanvasHeight - 20, MarkerY + 4)
     End If
@@ -53,6 +57,7 @@ Do
     Draw Circle MarkerX, MarkerY, 18, WHITE
     Show Screen
     Wait 16 Milliseconds
+
 Loop Until Game_Closed() = True
 
 Stop Sound

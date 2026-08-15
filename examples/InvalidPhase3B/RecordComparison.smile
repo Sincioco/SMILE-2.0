@@ -3,4 +3,5 @@ Type Point
 End Type
 Dim First As Point
 Dim Second As Point
+
 Print First = Second

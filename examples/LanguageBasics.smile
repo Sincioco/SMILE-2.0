@@ -3,12 +3,14 @@ Total = 0
 Done = False
 
 Dim Values[3]
+
 Values[0] = Value
 Values[1] = Value + 1
 Values[2] = Values[1] + 1
 
 For I = 0 To 2
     Total = Total + Values[I]
+
 End For
 
 If Total = 9 Then
@@ -19,10 +21,12 @@ End If
 
 Do
     Value = Value - 1
+
 Loop Until Value = 0
 
 For I = 2 Down To 0
     Print Values[I];
+
 End For
 
 Print

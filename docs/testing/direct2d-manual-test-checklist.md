@@ -20,10 +20,10 @@ ABCDEFGHIJKLMNOPQRSTUVWXYZ
 abcdefghijklmnopqrstuvwxyz
 0123456789
 !@#$%^&*()
-SCORE
-COMPUTER
-PLAYER 1
-BEST ONE-PLAYER RALLY
+Score
+Computer
+Player 1
+Best One-player Rally
 ```
 
 ## Size, DPI, and display matrix

@@ -1,3 +1,4 @@
 Game Window "Invalid"
 Dim Value As Number
+
 Draw Image Value At 0, 0

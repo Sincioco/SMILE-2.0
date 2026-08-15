@@ -6,19 +6,33 @@ Public Const EmptyText = ""
 Public Dim ModuleLabel As Text
 
 Public Function JoinFive(First As Text, Second As Text, Third As Text, Fourth As Text, Fifth As Text) As Text
-    Return First + Second + Third + Fourth + Fifth
+
+    Dim ReturnValue As Text
+
+    ReturnValue = First + Second + Third + Fourth + Fifth
+    Return ReturnValue
+
 End Function
 
 Public Sub Replace(ByRef Value As Text, NewValue As Text)
+
     Value = NewValue
+
 End Sub
 
 Public Function IsEmpty(Value As Text) As Boolean
-    Return Value = EmptyText
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Value = EmptyText
+    Return ReturnValue
+
 End Function
 
 Private Function Hidden(Value As Text) As Text
+
     Return Value
+
 End Function
 
 End Module

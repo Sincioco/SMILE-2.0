@@ -1,4 +1,5 @@
 Module Invalid.PrivateTypes
+
 Private Type Hidden
     Value As Number
 End Type

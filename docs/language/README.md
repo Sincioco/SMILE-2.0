@@ -38,13 +38,18 @@ Routine parameters accept `[ByVal | ByRef] Name [As Type]`. Missing mode means `
 
 ```smile
 Sub Rename(ByRef Name As Text, NewName As Text)
+
     Name = NewName
+
 End Sub
 
 Function Join(Left As Text, Right As Text) As Text
+
     Dim Result As Text
+
     Result = Left + Right
     Return Result
+
 End Function
 ```
 
@@ -107,14 +112,22 @@ In Visual Studio, use **Set as Startup** on either complete program; the project
 ```smile
 Const Width = 12
 Const Height = 7
+
 Dim Bricks[Width, Height]
 
 Sub SetBrick(Column, Row, Value)
+
     Bricks[Column, Row] = Value
+
 End Sub
 
 Function PointsFor(Row)
-    Return 70 - Row * 10
+
+    Dim ReturnValue As Number
+
+    ReturnValue = 70 - Row * 10
+    Return ReturnValue
+
 End Function
 
 Call SetBrick(0, 0, 1)
@@ -130,6 +143,86 @@ End Select
 Implemented control flow comprises multiline `If`/`Else If`/`Else`, `For ... To`, `For ... Down To`, `Do ... Loop`, `Do ... Loop Until`, `Exit For`, `Exit Do`, and `Select Case`. Procedures and functions use `Sub`, `Function`, `Call`, and `Return`, including typed `ByVal`/`ByRef` parameters and typed returns.
 
 The expression surface includes `+`, `-`, `*`, integer `/`, `Mod`, comparisons, parentheses, unary `-` and `Not`, and boolean `And`/`Or`. Built-in functions are `Timer()`, `Rgb(r, g, b)`, `Abs(value)`, `Min(a, b)`, `Max(a, b)`, `Game_Closed()`, and `Key_Held(key)`.
+
+## Multiline parenthesized expressions
+
+SMILE remains line-oriented: a physical newline normally ends an expression or statement. Inside balanced expression parentheses only, one or more newlines act as whitespace. Parentheses are therefore the visible signal that an expression continues; newlines are not ignored globally.
+
+Both leading- and trailing-operator layouts are legal. SMILE 2.0 source generated or substantively formatted by this repository uses the trailing-operator layout preferred by Sin:
+
+```smile
+If (Style.CursorWidth < 0 Or
+    Style.CursorWidth > Core.UI_MAX_LAYOUT_VALUE Or
+    Style.CursorHeight < 0 Or
+    Style.CursorHeight > Core.UI_MAX_LAYOUT_VALUE) Then
+    Result = False
+End If
+```
+
+The equivalent leading-operator form also compiles:
+
+```smile
+If (Style.CursorWidth < 0
+    Or Style.CursorWidth > Core.UI_MAX_LAYOUT_VALUE
+    Or Style.CursorHeight < 0
+    Or Style.CursorHeight > Core.UI_MAX_LAYOUT_VALUE) Then
+    Result = False
+End If
+```
+
+Keep `If ... Then` on one line when the complete rendered line is at most 100 characters and has no more than two top-level Boolean clauses. Use a parenthesized multiline condition when the line would exceed 100 characters or has three or more top-level clauses. Put one continuation clause on each line, use four spaces rather than tabs, and keep `Then` on the same physical line as the closing `)`. When `And` and `Or` are mixed, retain explicit nested grouping so formatting never changes precedence:
+
+```smile
+If ((IsVisible And IsEnabled) Or
+    (IsSelected And IsAvailable)) Then
+    Result = True
+End If
+```
+
+The same rule works for `Else If`, arithmetic and comparison expressions, nested calls, assignments, ordinary calls, qualified calls, and `Call` statements:
+
+```smile
+Result = CalculateValue(
+    FirstValue,
+    SecondValue,
+    ThirdValue
+)
+
+Call Menu.UpdateItem(
+    MenuHandle,
+    ItemIndex,
+    Result
+)
+```
+
+Newlines may appear after `(`, around arguments and commas, and before `)`. Routine declaration parameters and square-bracket array expressions remain line-oriented. These forms remain invalid because no opening expression parenthesis authorizes continuation:
+
+```smile
+If IsVisible Or
+    IsEnabled Then
+    Result = True
+End If
+
+Result = FirstValue +
+    SecondValue
+```
+
+Functions return a named variable. Assign a literal, constant, member, call, comparison, or arithmetic result to a correctly typed variable first, then return that variable. This keeps intermediate values visible to Print, hover, and Watch while debugging.
+
+## SMILE source readability style
+
+Use Visual Basic-style initial capitalization for keywords and ordinary identifiers. Established constants may remain uppercase. Short interface labels and instructions use initial or title capitalization; sentences use normal English capitalization. Do not use all caps for ordinary keywords, variables, documentation headings, menu items, or instructional prose.
+
+Use exactly one blank line between logical groups and never use double or triple blank lines. In SMILE source:
+
+- separate the final consecutive `Module`, `Import`, `Dim`, `Call`, or `Unload` statement from the following group with one blank line;
+- put one blank line after a `Function`, `Sub`, or procedure declaration;
+- put one blank line before `If`, `For`, `End For`, `Do`, `End Sub`, and `Loop`, and after `End If` and `Loop`;
+- keep `Option Explicit` separated from the statements before and after it;
+- keep one blank line between a function's final `Return` and `End Function`;
+- allow a one-statement `If ... Then ... End If` body without additional interior blank lines.
+
+The formatter and checker at `scripts\format-smile-style.ps1` applies these rules to current tracked SMILE sources while leaving historical requirement archives unchanged. Deliberately invalid diagnostic fixtures retain malformed return expressions when rewriting them would change the diagnostic being taught.
 
 ## Game surface
 

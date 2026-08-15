@@ -28,6 +28,7 @@ Grid[0, 0] = Copy
 Grid[1, 1] = Make0()
 Call RenameLeaf(Grid[0, 0].Leaf, "Nested")
 Call SetNumber(Grid[1, 1].Leaf.Value, 9)
+
 Print Grid[0, 0].Leaf.Name
 Print Grid[1, 1].Leaf.Value
 
@@ -39,69 +40,103 @@ Print Make16(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16).Leaf.Value
 Print MakeRecursive(3).Leaf.Value
 
 Call TryMutate(Copy)
+
 Print Copy.Leaf.Name
 Call Mutate(Copy)
+
 Print Copy.Leaf.Name
 
 End Program
 
 Function Make0() As Box
+
     Dim Result As Box
+
     Return Result
+
 End Function
 
 Function Make1(Value1 As Number) As Box
+
     Dim Result As Box
+
     Result.Leaf.Value = Value1
     Return Result
+
 End Function
 
 Function Make4(Value1 As Number, Value2 As Number, Value3 As Number, Value4 As Number) As Box
+
     Dim Result As Box
+
     Result.Leaf.Value = Value1 + Value2 + Value3 + Value4
     Return Result
+
 End Function
 
 Function Make5(Value1 As Number, Value2 As Number, Value3 As Number, Value4 As Number, Value5 As Number) As Box
+
     Dim Result As Box
+
     Result.Leaf.Value = Value1 + Value2 + Value3 + Value4 + Value5
     Return Result
+
 End Function
 
 Function Make8(Value1 As Number, Value2 As Number, Value3 As Number, Value4 As Number, Value5 As Number, Value6 As Number, Value7 As Number, Value8 As Number) As Box
+
     Dim Result As Box
+
     Result.Leaf.Value = Value1 + Value2 + Value3 + Value4 + Value5 + Value6 + Value7 + Value8
     Return Result
+
 End Function
 
 Function Make16(Value1 As Number, Value2 As Number, Value3 As Number, Value4 As Number, Value5 As Number, Value6 As Number, Value7 As Number, Value8 As Number, Value9 As Number, Value10 As Number, Value11 As Number, Value12 As Number, Value13 As Number, Value14 As Number, Value15 As Number, Value16 As Number) As Box
+
     Dim Result As Box
+
     Result.Leaf.Value = Value1 + Value2 + Value3 + Value4 + Value5 + Value6 + Value7 + Value8 + Value9 + Value10 + Value11 + Value12 + Value13 + Value14 + Value15 + Value16
     Return Result
+
 End Function
 
 Function MakeRecursive(Depth As Number) As Box
+
+    Dim ReturnValue As Box
     Dim Result As Box
+
     If Depth = 0 Then
-        Return Make1(7)
+        ReturnValue = Make1(7)
+        Return ReturnValue
     End If
+
     Result = MakeRecursive(Depth - 1)
     Result.Leaf.Value = Result.Leaf.Value + 1
     Return Result
+
 End Function
 
 Sub RenameLeaf(ByRef Value As Leaf, Name As Text)
+
     Value.Name = Name
+
 End Sub
 
 Sub SetNumber(ByRef Value As Number, NewValue As Number)
+
     Value = NewValue
+
 End Sub
 
 Sub TryMutate(Value As Box)
+
     Value.Leaf.Name = "ByVal"
+
 End Sub
 
 Sub Mutate(ByRef Value As Box)
+
     Value.Leaf.Name = "ByRef"
+
 End Sub

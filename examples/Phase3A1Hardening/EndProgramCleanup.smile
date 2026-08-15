@@ -1,18 +1,23 @@
 Option Explicit
 
 Dim GlobalValue As Text
+
 GlobalValue = "G" + "Lobal"
 Print "Ending"
 Call StopNow("Stop")
+
 Print "Unreachable"
 
 End Program
 
 Sub StopNow(Command As Text)
+
     Dim LocalValue As Text
+
     LocalValue = Command + ""
     Select Case LocalValue + ""
         Case "Stop"
             End Program
     End Select
+
 End Sub
