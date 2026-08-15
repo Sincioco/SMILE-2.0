@@ -207,7 +207,7 @@ Result = FirstValue +
     SecondValue
 ```
 
-Functions return a named variable. Assign a literal, constant, member, call, comparison, or arithmetic result to a correctly typed variable first, then return that variable. This keeps intermediate values visible to Print, hover, and Watch while debugging.
+Functions may directly return a variable, constant, or literal value such as `True`, `False`, a number, or a string. A computed or evaluated expression must not be returned directly. Assign it to a correctly typed variable first, then return that variable. This keeps the evaluated value visible to Print, hover, and Watch while debugging.
 
 ## SMILE source readability style
 

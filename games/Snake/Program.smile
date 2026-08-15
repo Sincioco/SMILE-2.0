@@ -51,13 +51,121 @@ SimulatedHeadX = 0
 SimulatedHeadY = 0
 SimulatedEating = 0
 
+'----------------------------------------------------------------------------------------------------
+
 Load HighScore From "HighScore" Default 0
+
+Game Window "SMILE 2.0 Snake"
+
+Call EnterTitle()
+
+Do
+    Get Key Key
+
+    If DemoMode = True And Key <> KEY_NONE Then
+        Call EnterTitle()
+        Key = KEY_NONE
+    End If
+
+    If State = 0 Then
+
+        If Key <> KEY_NONE And Timer() >= TitleAcceptInputAt Then
+
+            TitleStartedAt = Timer()
+
+            If Key = KEY_ESCAPE Then
+                End Program
+            Else If Key = KEY_ENTER Then
+                Call ResetGame()
+            End If
+
+        End If
+
+        If State = 0 And Timer() - TitleStartedAt >= TitleDemoDelay Then
+            Call StartDemo()
+        End If
+
+        Call DrawTitle()
+
+    Else If State = 1 Then
+
+        If DemoMode = False And Key = KEY_ESCAPE Then
+            End Program
+        End If
+
+        If DemoMode = True And Timer() - DemoStartedAt >= DemoMaximumPlayTime Then
+            Call EnterTitle()
+        End If
+
+        If State = 1 And DemoMode = False Then
+
+            If (Key = KEY_W Or Key = KEY_UP) And Direction <> KEY_DOWN Then
+                NextDirection = KEY_UP
+            Else If (Key = KEY_S Or Key = KEY_DOWN) And Direction <> KEY_UP Then
+                NextDirection = KEY_DOWN
+            Else If (Key = KEY_A Or Key = KEY_LEFT) And Direction <> KEY_RIGHT Then
+                NextDirection = KEY_LEFT
+            Else If (Key = KEY_D Or Key = KEY_RIGHT) And Direction <> KEY_LEFT Then
+                NextDirection = KEY_RIGHT
+            End If
+
+        End If
+
+        If State = 1 And Timer() >= NextMoveTime Then
+
+            If DemoMode = True Then
+
+                Call PlanDemoDirection()
+
+                If DemoHasSafeMove = True Then
+                    Call MoveSnake()
+                Else
+                    Call RecoverDemo()
+                End If
+
+            Else
+                Call MoveSnake()
+            End If
+
+        End If
+
+        Call DrawBoard()
+
+        If State = 2 Then
+            Call DrawGameOver()
+        End If
+
+    Else
+
+        If Key = KEY_ESCAPE Then
+            End Program
+        Else If Key = KEY_ENTER Then
+            Call ResetGame()
+        End If
+
+        If State = 0 Then
+            Call DrawTitle()
+        Else
+            Call DrawBoard()
+            Call DrawGameOver()
+        End If
+
+    End If
+
+    Show Screen
+
+Loop Until Game_Closed() = True
+
+Stop Sound
+
+'----------------------------------------------------------------------------------------------------
 
 Sub SpawnFood()
 
     FoodValid = False
 
     Do
+
         Random FoodX From 0 To GridWidth - 1
         Random FoodY From 0 To GridHeight - 1
         FoodValid = True
@@ -98,10 +206,12 @@ Sub ResetPlay()
 
     Score = 0
     MoveDelay = StartDelay
+
     Call SpawnFood()
 
     NextMoveTime = Timer() + StartDelay
     State = 1
+
     Play Sound "Assets\Start.wav"
 
 End Sub
@@ -111,6 +221,7 @@ Sub RecoverDemo()
     Call ResetSnakeBody()
 
     MoveDelay = Max(MinimumDelay, StartDelay - (Score / 50) * 4)
+
     Call SpawnFood()
 
     NextMoveTime = Timer() + MoveDelay
@@ -122,13 +233,11 @@ Sub EndRound()
 
     If DemoMode = True And Timer() - DemoStartedAt < DemoMinimumPlayTime Then
         Call RecoverDemo()
-
         Return
     End If
 
     If DemoMode = True Then
         Call EnterTitle()
-
         Return
     End If
 
@@ -159,6 +268,7 @@ Function DirectionFromIndex(DirectionIndex)
     End If
 
     ReturnValue = KEY_LEFT
+
     Return ReturnValue
 
 End Function
@@ -176,6 +286,7 @@ Function DirectionX(DirectionValue)
     End If
 
     ReturnValue = 0
+
     Return ReturnValue
 
 End Function
@@ -193,6 +304,7 @@ Function DirectionY(DirectionValue)
     End If
 
     ReturnValue = 0
+
     Return ReturnValue
 
 End Function
@@ -231,6 +343,7 @@ Function CellBlocked(TestX, TestY, AllowTail)
         End If
 
     End For
+
     Return False
 
 End Function
@@ -282,6 +395,7 @@ Function SimulatedCellBlocked(TestX, TestY)
         End If
 
     End For
+
     Return False
 
 End Function
@@ -308,8 +422,8 @@ Function FloodAreaForDirection(TestDirection)
     For FloodClearY = 0 To GridHeight - 1
 
         For FloodClearX = 0 To GridWidth - 1
-            FloodVisited[FloodClearX, FloodClearY] = 0
 
+            FloodVisited[FloodClearX, FloodClearY] = 0
         End For
 
     End For
@@ -321,11 +435,13 @@ Function FloodAreaForDirection(TestDirection)
     FloodVisited[FloodStartX, FloodStartY] = 1
 
     Do
+
         FloodX = FloodQueueX[FloodRead]
         FloodY = FloodQueueY[FloodRead]
         FloodRead = FloodRead + 1
 
         For FloodDirectionIndex = 0 To 3
+
             FloodDirection = DirectionFromIndex(FloodDirectionIndex)
             FloodNextX = FloodX + DirectionX(FloodDirection)
             FloodNextY = FloodY + DirectionY(FloodDirection)
@@ -360,6 +476,7 @@ Sub ChooseSafeFallback()
     BestSafeDirection = KEY_NONE
 
     For SafeDirectionIndex = 0 To 3
+
         SafeDirection = DirectionFromIndex(SafeDirectionIndex)
         SafeArea = FloodAreaForDirection(SafeDirection)
 
@@ -394,11 +511,11 @@ Sub PlanDemoDirection()
     For BFSClearY = 0 To GridHeight - 1
 
         For BFSClearX = 0 To GridWidth - 1
+
             BFSVisited[BFSClearX, BFSClearY] = 0
             BFSParentX[BFSClearX, BFSClearY] = -1
             BFSParentY[BFSClearX, BFSClearY] = -1
             BFSFirstDirection[BFSClearX, BFSClearY] = KEY_NONE
-
         End For
 
     End For
@@ -410,11 +527,13 @@ Sub PlanDemoDirection()
     BFSVisited[SnakeX[0], SnakeY[0]] = 1
 
     Do
+
         Bfsx = BFSQueueX[BFSRead]
         Bfsy = BFSQueueY[BFSRead]
         BFSRead = BFSRead + 1
 
         For BFSDirectionIndex = 0 To 3
+
             BFSDirection = DirectionFromIndex(BFSDirectionIndex)
             BFSNextX = Bfsx + DirectionX(BFSDirection)
             BFSNextY = Bfsy + DirectionY(BFSDirection)
@@ -470,9 +589,9 @@ Sub MoveSnake()
     TailY = SnakeY[Length - 1]
 
     For I = Length - 1 Down To 1
+
         SnakeX[I] = SnakeX[I - 1]
         SnakeY[I] = SnakeY[I - 1]
-
     End For
 
     If Direction = KEY_UP Then
@@ -501,13 +620,14 @@ Sub MoveSnake()
 
     If Collision = True Then
         Call EndRound()
-
     Else If SnakeX[0] = FoodX And SnakeY[0] = FoodY Then
+
         SnakeX[Length] = TailX
         SnakeY[Length] = TailY
         Length = Length + 1
         Score = Score + 10
         MoveDelay = Max(MinimumDelay, StartDelay - (Score / 50) * 4)
+
         Play Sound "Assets\Eat.wav"
         Call SpawnFood()
 
@@ -591,8 +711,8 @@ End Sub
 Sub DrainPendingKeys()
 
     For DrainIndex = 1 To 64
-        Get Key DrainedKey
 
+        Get Key DrainedKey
     End For
 
 End Sub
@@ -625,115 +745,4 @@ Sub StartDemo()
 
 End Sub
 
-Game Window "SMILE 2.0 Snake"
-
-Call EnterTitle()
-
-Do
-    Get Key Key
-
-    If DemoMode = True And Key <> KEY_NONE Then
-        Call EnterTitle()
-
-        Key = KEY_NONE
-    End If
-
-    If State = 0 Then
-
-        If Key <> KEY_NONE And Timer() >= TitleAcceptInputAt Then
-            TitleStartedAt = Timer()
-
-            If Key = KEY_ESCAPE Then
-                End Program
-            Else If Key = KEY_ENTER Then
-                Call ResetGame()
-
-            End If
-
-        End If
-
-        If State = 0 And Timer() - TitleStartedAt >= TitleDemoDelay Then
-            Call StartDemo()
-
-        End If
-
-        Call DrawTitle()
-
-    Else If State = 1 Then
-
-        If DemoMode = False And Key = KEY_ESCAPE Then
-            End Program
-        End If
-
-        If DemoMode = True And Timer() - DemoStartedAt >= DemoMaximumPlayTime Then
-            Call EnterTitle()
-
-        End If
-
-        If State = 1 And DemoMode = False Then
-
-            If (Key = KEY_W Or Key = KEY_UP) And Direction <> KEY_DOWN Then
-                NextDirection = KEY_UP
-            Else If (Key = KEY_S Or Key = KEY_DOWN) And Direction <> KEY_UP Then
-                NextDirection = KEY_DOWN
-            Else If (Key = KEY_A Or Key = KEY_LEFT) And Direction <> KEY_RIGHT Then
-                NextDirection = KEY_LEFT
-            Else If (Key = KEY_D Or Key = KEY_RIGHT) And Direction <> KEY_LEFT Then
-                NextDirection = KEY_RIGHT
-            End If
-
-        End If
-
-        If State = 1 And Timer() >= NextMoveTime Then
-
-            If DemoMode = True Then
-                Call PlanDemoDirection()
-
-                If DemoHasSafeMove = True Then
-                    Call MoveSnake()
-
-                Else
-                    Call RecoverDemo()
-
-                End If
-
-            Else
-                Call MoveSnake()
-
-            End If
-
-        End If
-
-        Call DrawBoard()
-
-        If State = 2 Then
-            Call DrawGameOver()
-
-        End If
-
-    Else
-
-        If Key = KEY_ESCAPE Then
-            End Program
-        Else If Key = KEY_ENTER Then
-            Call ResetGame()
-
-        End If
-
-        If State = 0 Then
-            Call DrawTitle()
-
-        Else
-            Call DrawBoard()
-            Call DrawGameOver()
-
-        End If
-
-    End If
-
-    Show Screen
-
-Loop Until Game_Closed() = True
-
-Stop Sound
 End Program

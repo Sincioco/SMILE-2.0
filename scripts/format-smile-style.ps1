@@ -81,14 +81,22 @@ function Get-LeadingWhitespace {
     return $Match.Value
 }
 
-function Test-SimpleVariable {
+function Test-DirectReturnValue {
     param([string]$Expression)
+
+    if ($Expression -match '^\d+$') {
+        return $true
+    }
+
+    if ($Expression -match '^"(?:[^"\\]|\\.|"")*"$') {
+        return $true
+    }
 
     if ($Expression -notmatch '^[A-Za-z_][A-Za-z0-9_]*$') {
         return $false
     }
 
-    return $Expression.Length -eq 1 -or $Expression -cnotmatch '^[A-Z][A-Z0-9_]*$'
+    return $true
 }
 
 function Get-ReturnType {
@@ -381,7 +389,7 @@ function Add-ReturnVariables {
         for ($BodyIndex = $LineIndex + 1; $BodyIndex -lt $EndIndex; $BodyIndex++) {
             $ReturnMatch = [regex]::Match($Lines[$BodyIndex], '^\s*Return\s+(.+?)\s*$', [Text.RegularExpressions.RegexOptions]::IgnoreCase)
 
-            if ($ReturnMatch.Success -and -not (Test-SimpleVariable $ReturnMatch.Groups[1].Value.Trim())) {
+            if ($ReturnMatch.Success -and -not (Test-DirectReturnValue $ReturnMatch.Groups[1].Value.Trim())) {
                 $NeedsReturnVariable = $true
                 break
             }
@@ -415,7 +423,7 @@ function Add-ReturnVariables {
         for ($BodyIndex = $LineIndex + 1; $BodyIndex -lt $EndIndex; $BodyIndex++) {
             $ReturnMatch = [regex]::Match($Lines[$BodyIndex], '^(\s*)Return\s+(.+?)\s*$', [Text.RegularExpressions.RegexOptions]::IgnoreCase)
 
-            if ($ReturnMatch.Success -and -not (Test-SimpleVariable $ReturnMatch.Groups[2].Value.Trim())) {
+            if ($ReturnMatch.Success -and -not (Test-DirectReturnValue $ReturnMatch.Groups[2].Value.Trim())) {
                 $ReturnIndent = $ReturnMatch.Groups[1].Value
                 $Expression = $ReturnMatch.Groups[2].Value.Trim()
                 $Formatted.Add("$ReturnIndent$ReturnVariable = $Expression")
@@ -442,6 +450,7 @@ function Get-StatementCategory {
     if ($Value -match '^Import\b') { return 'Import' }
     if ($Value -match '^(?:Public\s+|Private\s+)?Dim\b') { return 'Dim' }
     if ($Value -match '^Call\b') { return 'Call' }
+    if ($Value -match '^Play\s+Sound\b') { return 'PlaySound' }
     if ($Value -match '^Unload\b') { return 'Unload' }
     return ''
 }
@@ -524,11 +533,179 @@ function Test-RequiresBlankBefore {
 
     return $Value -match '^If\b' -or
         $Value -match '^For\b' -or
-        $Value -match '^End\s+For$' -or
         $Value -match '^Do\b' -or
         $Value -match '^End\s+Sub$' -or
         $Value -match '^Loop\b' -or
         $Value -match '^Option\s+Explicit$'
+}
+
+function Test-IfBranchHeader {
+    param([string]$Line)
+
+    $Value = $Line.Trim()
+    return $Value -match '^If\b.*\bThen$' -or
+        $Value -match '^Else\s+If\b.*\bThen$' -or
+        $Value -match '^Else$'
+}
+
+function Test-IfBranchBoundary {
+    param([string]$Line)
+
+    $Value = $Line.Trim()
+    return $Value -match '^Else\s+If\b' -or
+        $Value -match '^Else$' -or
+        $Value -match '^End\s+If$'
+}
+
+function Get-IfBlockLayout {
+    param(
+        [string[]]$Lines,
+        [int]$Index
+    )
+
+    $ReferenceIndent = $null
+
+    if (Test-IfBranchHeader $Lines[$Index]) {
+        $ReferenceIndent = Get-LeadingWhitespace $Lines[$Index]
+    }
+    elseif ($Index + 1 -lt $Lines.Count -and (Test-IfBranchBoundary $Lines[$Index + 1])) {
+        $ReferenceIndent = Get-LeadingWhitespace $Lines[$Index + 1]
+    }
+    else {
+        return ''
+    }
+
+    $RootIndex = -1
+
+    for ($CandidateIndex = $Index; $CandidateIndex -ge 0; $CandidateIndex--) {
+        if ((Get-LeadingWhitespace $Lines[$CandidateIndex]) -cne $ReferenceIndent) {
+            continue
+        }
+
+        if ($Lines[$CandidateIndex].Trim() -match '^If\b.*\bThen$') {
+            $RootIndex = $CandidateIndex
+            break
+        }
+    }
+
+    if ($RootIndex -lt 0) {
+        return ''
+    }
+
+    $EndIndex = -1
+
+    for ($CandidateIndex = $RootIndex + 1; $CandidateIndex -lt $Lines.Count; $CandidateIndex++) {
+        if ((Get-LeadingWhitespace $Lines[$CandidateIndex]) -ceq $ReferenceIndent -and
+            $Lines[$CandidateIndex].Trim() -match '^End\s+If$') {
+            $EndIndex = $CandidateIndex
+            break
+        }
+    }
+
+    if ($EndIndex -lt 0) {
+        return ''
+    }
+
+    $BranchHeaders = [Collections.Generic.List[int]]::new()
+    $BranchHeaders.Add($RootIndex)
+
+    for ($CandidateIndex = $RootIndex + 1; $CandidateIndex -lt $EndIndex; $CandidateIndex++) {
+        if ((Get-LeadingWhitespace $Lines[$CandidateIndex]) -ceq $ReferenceIndent -and
+            $Lines[$CandidateIndex].Trim() -match '^(?:Else\s+If\b.*\bThen|Else)$') {
+            $BranchHeaders.Add($CandidateIndex)
+        }
+    }
+
+    for ($BranchIndex = 0; $BranchIndex -lt $BranchHeaders.Count; $BranchIndex++) {
+        $BodyStart = $BranchHeaders[$BranchIndex] + 1
+        $BodyEnd = if ($BranchIndex + 1 -lt $BranchHeaders.Count) {
+            $BranchHeaders[$BranchIndex + 1] - 1
+        }
+        else {
+            $EndIndex - 1
+        }
+
+        if ($BodyEnd -lt $BodyStart) {
+            return 'Expanded'
+        }
+
+        $BranchStatements = @($Lines[$BodyStart..$BodyEnd] | Where-Object {
+            $_.Trim().Length -gt 0 -and -not $_.Trim().StartsWith("'")
+        })
+
+        if ($BranchStatements.Count -lt 1 -or $BranchStatements.Count -gt 2) {
+            return 'Expanded'
+        }
+
+        $HasNestedControl = @($BranchStatements | Where-Object {
+            $_.Trim() -match '^(?:If\b|Else\b|End\s+If$|For\b|End\s+For$|Do\b|Loop\b)'
+        }).Count -gt 0
+
+        if ($HasNestedControl) {
+            return 'Expanded'
+        }
+    }
+
+    return 'Compact'
+}
+
+function Test-CompactForBoundary {
+    param(
+        [string[]]$Lines,
+        [int]$Index
+    )
+
+    $ForIndex = -1
+    $EndForIndex = -1
+
+    if ($Lines[$Index].Trim() -match '^For\b') {
+        $ForIndex = $Index
+
+        for ($CandidateIndex = $Index + 1; $CandidateIndex -lt $Lines.Count; $CandidateIndex++) {
+            if ((Get-LeadingWhitespace $Lines[$CandidateIndex]) -cne (Get-LeadingWhitespace $Lines[$Index])) {
+                continue
+            }
+
+            if ($Lines[$CandidateIndex].Trim() -match '^End\s+For$') {
+                $EndForIndex = $CandidateIndex
+            }
+
+            break
+        }
+    }
+    elseif ($Index + 1 -lt $Lines.Count -and $Lines[$Index + 1].Trim() -match '^End\s+For$') {
+        $EndForIndex = $Index + 1
+
+        for ($CandidateIndex = $Index; $CandidateIndex -ge 0; $CandidateIndex--) {
+            if ((Get-LeadingWhitespace $Lines[$CandidateIndex]) -cne (Get-LeadingWhitespace $Lines[$EndForIndex])) {
+                continue
+            }
+
+            if ($Lines[$CandidateIndex].Trim() -match '^For\b') {
+                $ForIndex = $CandidateIndex
+            }
+
+            break
+        }
+    }
+
+    if ($ForIndex -lt 0 -or $EndForIndex -le $ForIndex + 1) {
+        return $false
+    }
+
+    $BodyStatements = @($Lines[($ForIndex + 1)..($EndForIndex - 1)] | Where-Object {
+        $_.Trim().Length -gt 0 -and -not $_.Trim().StartsWith("'")
+    })
+
+    if ($BodyStatements.Count -lt 1 -or $BodyStatements.Count -gt 4) {
+        return $false
+    }
+
+    $HasNestedControl = @($BodyStatements | Where-Object {
+        $_.Trim() -match '^(?:If\b|Else\b|End\s+If$|For\b|End\s+For$|Do\b|Loop\b)'
+    }).Count -gt 0
+
+    return -not $HasNestedControl
 }
 
 function Test-RequiresBlankAfter {
@@ -536,7 +713,8 @@ function Test-RequiresBlankAfter {
 
     $Value = $Line.Trim()
 
-    return $Value -match '^End\s+If$' -or
+    return $Value -match '^For\b' -or
+        $Value -match '^End\s+If$' -or
         $Value -match '^Loop\b' -or
         $Value -match '^Option\s+Explicit$' -or
         $Value -match '^(?:Public\s+|Private\s+)?(?:Function|Sub|Procedure)\b' -or
@@ -611,6 +789,35 @@ function Format-BlankLines {
             $CurrentCategory = $CategoriesEndingAt[$Index]
             $NextCategory = $CategoriesStartingAt[$Index + 1]
             $NeedsBlank = (Test-RequiresBlankAfter $Current) -or (Test-RequiresBlankBefore $Next)
+            $IfBlockLayout = Get-IfBlockLayout $NonBlank $Index
+            $SuppressBlank = ($IfBlockLayout -eq 'Compact') -or
+                (Test-CompactForBoundary $NonBlank $Index)
+
+            if ($IfBlockLayout -eq 'Expanded') {
+                $NeedsBlank = $true
+            }
+
+            if ($NextCategory -eq 'Call' -and $CurrentCategory -ne 'Call') {
+                $NeedsBlank = $true
+            }
+
+            if ($NextCategory -eq 'PlaySound' -and $CurrentCategory -ne 'PlaySound') {
+                $NeedsBlank = $true
+                $SuppressBlank = $false
+            }
+
+            if ($CurrentCategory -eq 'PlaySound' -and $NextCategory -ne 'PlaySound') {
+                $NeedsBlank = $true
+                $SuppressBlank = $false
+            }
+
+            if ($Current.Trim() -match '^Play\s+Sound\b' -and $Next.Trim() -match '^Call\b') {
+                $SuppressBlank = $true
+            }
+
+            if ($Next.Trim() -match '^End\s+For$' -and -not (Test-RequiresBlankAfter $Current)) {
+                $SuppressBlank = $true
+            }
 
             if ($CurrentCategory.Length -gt 0 -and $CurrentCategory -ne $NextCategory) {
                 $NeedsBlank = $true
@@ -620,7 +827,7 @@ function Format-BlankLines {
                 $NeedsBlank = $true
             }
 
-            if ($NeedsBlank -or $HadBlankAfter[$Index]) {
+            if (-not $SuppressBlank -and ($NeedsBlank -or $HadBlankAfter[$Index])) {
                 $Formatted.Add('')
             }
         }

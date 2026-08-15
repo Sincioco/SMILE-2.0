@@ -41,7 +41,103 @@ Elapsed = 0
 Accumulator = 0
 CatchUpSteps = 0
 
+'----------------------------------------------------------------------------------------------------
 Load BestRally From "BestRally" Default 0
+
+Game Window "SMILE 2.0 Paddle Ball"
+
+Call EnterTitle()
+
+Do
+    FrameTime = Timer()
+    Elapsed = Max(0, Min(50, FrameTime - LastFrameTime))
+    LastFrameTime = FrameTime
+    Get Key Key
+
+    If State = 0 Then
+
+        If Key = KEY_1 Then
+            Call StartGame(1)
+        Else If Key = KEY_2 Then
+            Call StartGame(2)
+        Else If Key = KEY_ESCAPE Then
+            End Program
+        End If
+
+        Call DrawTitle()
+
+    Else If State = 1 Then
+
+        If Key = KEY_ESCAPE Then
+
+            Call EnterTitle()
+
+        Else
+
+            Accumulator = Min(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
+            CatchUpSteps = 0
+
+            Do
+
+                If State = 1 And Accumulator >= SimulationStep Then
+
+                    Call UpdatePaddles()
+                    Call UpdateBall()
+
+                    Accumulator = Accumulator - SimulationStep
+                    CatchUpSteps = CatchUpSteps + 1
+
+                End If
+
+            Loop Until Accumulator < SimulationStep Or CatchUpSteps >= MaxCatchUpSteps Or State <> 1
+
+        End If
+
+        If State = 0 Then
+
+            Call DrawTitle()
+
+        Else
+
+            Call DrawField()
+
+            If State = 2 Then
+                Call DrawResult()
+            End If
+
+        End If
+
+    Else
+
+        If Key = KEY_ENTER Then
+            Call ResetMatch()
+        Else If Key = KEY_ESCAPE Then
+            Call EnterTitle()
+        End If
+
+        If State = 0 Then
+
+            Call DrawTitle()
+
+        Else
+
+            Call DrawField()
+
+            If State = 2 Then
+                Call DrawResult()
+            End If
+
+        End If
+
+    End If
+
+    Show Screen
+
+Loop Until Game_Closed() = True
+
+Stop Sound
+
+'----------------------------------------------------------------------------------------------------
 
 Sub ResetBall()
 
@@ -77,6 +173,7 @@ Sub ResetMatch()
     RightYSub = RightY * SubpixelsPerPixel
     LeftScore = 0
     RightScore = 0
+
     Call ResetBall()
 
     Accumulator = 0
@@ -97,6 +194,7 @@ End Sub
 Sub StartGame(GameMode)
 
     Mode = GameMode
+
     Call ResetMatch()
 
 End Sub
@@ -130,6 +228,7 @@ Sub BounceFromPaddle(PaddleY, DirectionSign)
     HorizontalSpeed = Min(10, 5 + Rally / 4)
     BallVX = HorizontalSpeed * BallSpeedUnit * DirectionSign
     BallVY = VerticalSpeed * BallSpeedUnit
+
     Call RecordRally()
 
     Play Sound "Assets\Paddle.wav"
@@ -139,6 +238,7 @@ End Sub
 Sub FinishMatch()
 
     State = 2
+
     Play Sound "Assets\GameOver.wav"
 
 End Sub
@@ -155,10 +255,8 @@ Sub AwardPoint(PlayerNumber)
 
     If LeftScore >= WinningScore Or RightScore >= WinningScore Then
         Call FinishMatch()
-
     Else
         Call ResetBall()
-
     End If
 
 End Sub
@@ -192,6 +290,7 @@ Sub UpdatePaddles()
         End If
 
     Else If Mode = 1 Then
+
         Aiy = RightY + PaddleHeight / 2
 
         If BallVX > 0 Then
@@ -221,39 +320,54 @@ End Sub
 Sub UpdateBall()
 
     If Timer() >= ServeTime Then
+
         BallXSub = BallXSub + BallVX * SimulationStep / 1000
         BallYSub = BallYSub + BallVY * SimulationStep / 1000
         BallX = BallXSub / SubpixelsPerPixel
         BallY = BallYSub / SubpixelsPerPixel
 
         If BallY - BallRadius <= 8 Then
+
             BallY = 8 + BallRadius
             BallYSub = BallY * SubpixelsPerPixel
             BallVY = Abs(BallVY)
+
             Play Sound "Assets\Wall.wav"
+
         Else If BallY + BallRadius >= CanvasHeight - 8 Then
+
             BallY = CanvasHeight - 8 - BallRadius
             BallYSub = BallY * SubpixelsPerPixel
             BallVY = -Abs(BallVY)
+
             Play Sound "Assets\Wall.wav"
+
         End If
 
-        If BallVX < 0 And BallX - BallRadius <= PaddleMargin + PaddleWidth And BallX - BallRadius >= PaddleMargin Then
+        If (BallVX < 0 And
+            BallX - BallRadius <= PaddleMargin + PaddleWidth And
+            BallX - BallRadius >= PaddleMargin) Then
 
             If BallY + BallRadius >= LeftY And BallY - BallRadius <= LeftY + PaddleHeight Then
+
                 BallX = PaddleMargin + PaddleWidth + BallRadius
                 BallXSub = BallX * SubpixelsPerPixel
+
                 Call BounceFromPaddle(LeftY, 1)
 
             End If
 
         End If
 
-        If BallVX > 0 And BallX + BallRadius >= CanvasWidth - PaddleMargin - PaddleWidth And BallX + BallRadius <= CanvasWidth - PaddleMargin Then
+        If (BallVX > 0 And
+            BallX + BallRadius >= CanvasWidth - PaddleMargin - PaddleWidth And
+            BallX + BallRadius <= CanvasWidth - PaddleMargin) Then
 
             If BallY + BallRadius >= RightY And BallY - BallRadius <= RightY + PaddleHeight Then
+
                 BallX = CanvasWidth - PaddleMargin - PaddleWidth - BallRadius
                 BallXSub = BallX * SubpixelsPerPixel
+
                 Call BounceFromPaddle(RightY, -1)
 
             End If
@@ -262,10 +376,8 @@ Sub UpdateBall()
 
         If BallX < -BallRadius Then
             Call AwardPoint(2)
-
         Else If BallX > CanvasWidth + BallRadius Then
             Call AwardPoint(1)
-
         End If
 
     End If
@@ -280,7 +392,6 @@ Sub DrawField()
 
     For Dash = 0 To 14
         Fill Rectangle 476, 18 + Dash * 36, 8, 20, Rgb(100, 110, 125)
-
     End For
 
     Fill Rounded Rectangle PaddleMargin, LeftY, PaddleWidth, PaddleHeight, 5, WHITE
@@ -291,15 +402,19 @@ Sub DrawField()
     Draw Number RightScore At 555, 35 Size 68 Color WHITE
 
     If Mode = 1 Then
+
         Draw Text "You" At 355, 112 Size 16 Color CYAN
         Draw Text "Computer" At 540, 112 Size 16 Color MAGENTA
         Draw Text "Rally" At 150, 25 Size 15 Color LIGHT_GRAY
         Draw Number Rally At 150, 48 Size 24 Color YELLOW
         Draw Text "Best" At 820, 25 Size 15 Color LIGHT_GRAY
         Draw Number BestRally At 820, 48 Size 24 Color CYAN
+
     Else If Mode = 2 Then
+
         Draw Text "Player 1" At 320, 112 Size 16 Color CYAN
         Draw Text "Player 2" At 540, 112 Size 16 Color MAGENTA
+
     End If
 
     If Timer() < ServeTime Then
@@ -357,94 +472,4 @@ Sub DrawResult()
 
 End Sub
 
-Game Window "SMILE 2.0 Paddle Ball"
-
-Call EnterTitle()
-
-Do
-    FrameTime = Timer()
-    Elapsed = Max(0, Min(50, FrameTime - LastFrameTime))
-    LastFrameTime = FrameTime
-    Get Key Key
-
-    If State = 0 Then
-
-        If Key = KEY_1 Then
-            Call StartGame(1)
-
-        Else If Key = KEY_2 Then
-            Call StartGame(2)
-
-        Else If Key = KEY_ESCAPE Then
-            End Program
-        End If
-
-        Call DrawTitle()
-
-    Else If State = 1 Then
-
-        If Key = KEY_ESCAPE Then
-            Call EnterTitle()
-
-        Else
-            Accumulator = Min(SimulationStep * MaxCatchUpSteps, Accumulator + Elapsed)
-            CatchUpSteps = 0
-
-            Do
-
-                If State = 1 And Accumulator >= SimulationStep Then
-                    Call UpdatePaddles()
-                    Call UpdateBall()
-
-                    Accumulator = Accumulator - SimulationStep
-                    CatchUpSteps = CatchUpSteps + 1
-                End If
-
-            Loop Until Accumulator < SimulationStep Or CatchUpSteps >= MaxCatchUpSteps Or State <> 1
-
-        End If
-
-        If State = 0 Then
-            Call DrawTitle()
-
-        Else
-            Call DrawField()
-
-            If State = 2 Then
-                Call DrawResult()
-
-            End If
-
-        End If
-
-    Else
-
-        If Key = KEY_ENTER Then
-            Call ResetMatch()
-
-        Else If Key = KEY_ESCAPE Then
-            Call EnterTitle()
-
-        End If
-
-        If State = 0 Then
-            Call DrawTitle()
-
-        Else
-            Call DrawField()
-
-            If State = 2 Then
-                Call DrawResult()
-
-            End If
-
-        End If
-
-    End If
-
-    Show Screen
-
-Loop Until Game_Closed() = True
-
-Stop Sound
 End Program

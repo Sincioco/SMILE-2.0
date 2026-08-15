@@ -29,7 +29,76 @@ TailY = 0
 FoodValid = False
 Collision = False
 
+'----------------------------------------------------------------------------------------------------
 Load HighScore From "HighScore" Default 0
+
+Game Window "SMILE 2.0 Snake"
+
+Call EnterTitle()
+
+Do
+    Get Key Key
+
+    If State = 0 Then
+
+        If Key = KEY_ESCAPE Then
+            End Program
+        Else If Key = KEY_ENTER Then
+            Call ResetGame()
+        End If
+
+        Call DrawTitle()
+
+    Else If State = 1 Then
+
+        If Key = KEY_ESCAPE Then
+            End Program
+        End If
+
+        If (Key = KEY_W Or Key = KEY_UP) And Direction <> KEY_DOWN Then
+            NextDirection = KEY_UP
+        Else If (Key = KEY_S Or Key = KEY_DOWN) And Direction <> KEY_UP Then
+            NextDirection = KEY_DOWN
+        Else If (Key = KEY_A Or Key = KEY_LEFT) And Direction <> KEY_RIGHT Then
+            NextDirection = KEY_LEFT
+        Else If (Key = KEY_D Or Key = KEY_RIGHT) And Direction <> KEY_LEFT Then
+            NextDirection = KEY_RIGHT
+        End If
+
+        If State = 1 And Timer() >= NextMoveTime Then
+            Call MoveSnake()
+        End If
+
+        Call DrawBoard()
+
+        If State = 2 Then
+            Call DrawGameOver()
+        End If
+
+    Else
+
+        If Key = KEY_ESCAPE Then
+            End Program
+        Else If Key = KEY_ENTER Then
+            Call ResetGame()
+        End If
+
+        If State = 0 Then
+            Call DrawTitle()
+        Else
+            Call DrawBoard()
+            Call DrawGameOver()
+        End If
+
+    End If
+
+    Show Screen
+
+Loop Until Game_Closed() = True
+
+Stop Sound
+
+'----------------------------------------------------------------------------------------------------
 
 Sub SpawnFood()
 
@@ -76,10 +145,12 @@ Sub ResetPlay()
 
     Score = 0
     MoveDelay = StartDelay
+
     Call SpawnFood()
 
     NextMoveTime = Timer() + StartDelay
     State = 1
+
     Play Sound "Assets\Start.wav"
 
 End Sub
@@ -106,7 +177,6 @@ Sub MoveSnake()
     For I = Length - 1 Down To 1
         SnakeX[I] = SnakeX[I - 1]
         SnakeY[I] = SnakeY[I - 1]
-
     End For
 
     If Direction = KEY_UP Then
@@ -121,7 +191,10 @@ Sub MoveSnake()
 
     Collision = False
 
-    If SnakeX[0] < 0 Or SnakeX[0] >= GridWidth Or SnakeY[0] < 0 Or SnakeY[0] >= GridHeight Then
+    If (SnakeX[0] < 0 Or
+        SnakeX[0] >= GridWidth Or
+        SnakeY[0] < 0 Or
+        SnakeY[0] >= GridHeight) Then
         Collision = True
     End If
 
@@ -134,14 +207,17 @@ Sub MoveSnake()
     End For
 
     If Collision = True Then
+
         Call EndRound()
 
     Else If SnakeX[0] = FoodX And SnakeY[0] = FoodY Then
+
         SnakeX[Length] = TailX
         SnakeY[Length] = TailY
         Length = Length + 1
         Score = Score + 10
         MoveDelay = Max(MinimumDelay, StartDelay - (Score / 50) * 4)
+
         Play Sound "Assets\Eat.wav"
         Call SpawnFood()
 
@@ -159,7 +235,10 @@ Sub DrawBoard()
 
     For I = 0 To Length - 1
 
-        If SnakeX[I] >= 0 And SnakeX[I] < GridWidth And SnakeY[I] >= 0 And SnakeY[I] < GridHeight Then
+        If (SnakeX[I] >= 0 And
+            SnakeX[I] < GridWidth And
+            SnakeY[I] >= 0 And
+            SnakeY[I] < GridHeight) Then
             Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)
             Draw Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(20, 105, 35)
         End If
@@ -228,75 +307,4 @@ Sub ResetGame()
 
 End Sub
 
-Game Window "SMILE 2.0 Snake"
-
-Call EnterTitle()
-
-Do
-    Get Key Key
-
-    If State = 0 Then
-
-        If Key = KEY_ESCAPE Then
-            End Program
-        Else If Key = KEY_ENTER Then
-            Call ResetGame()
-
-        End If
-
-        Call DrawTitle()
-
-    Else If State = 1 Then
-
-        If Key = KEY_ESCAPE Then
-            End Program
-        End If
-
-        If (Key = KEY_W Or Key = KEY_UP) And Direction <> KEY_DOWN Then
-            NextDirection = KEY_UP
-        Else If (Key = KEY_S Or Key = KEY_DOWN) And Direction <> KEY_UP Then
-            NextDirection = KEY_DOWN
-        Else If (Key = KEY_A Or Key = KEY_LEFT) And Direction <> KEY_RIGHT Then
-            NextDirection = KEY_LEFT
-        Else If (Key = KEY_D Or Key = KEY_RIGHT) And Direction <> KEY_LEFT Then
-            NextDirection = KEY_RIGHT
-        End If
-
-        If State = 1 And Timer() >= NextMoveTime Then
-            Call MoveSnake()
-
-        End If
-
-        Call DrawBoard()
-
-        If State = 2 Then
-            Call DrawGameOver()
-
-        End If
-
-    Else
-
-        If Key = KEY_ESCAPE Then
-            End Program
-        Else If Key = KEY_ENTER Then
-            Call ResetGame()
-
-        End If
-
-        If State = 0 Then
-            Call DrawTitle()
-
-        Else
-            Call DrawBoard()
-            Call DrawGameOver()
-
-        End If
-
-    End If
-
-    Show Screen
-
-Loop Until Game_Closed() = True
-
-Stop Sound
 End Program
