@@ -123,6 +123,7 @@ Call EnterTitle()</code></pre>
 
 Loop Until Game_Closed() = True
 
+Stop Music
 Stop Sound
 
 '----------------------------------------------------------------------------------------------------</code></pre>
@@ -130,8 +131,9 @@ Stop Sound
 <div class="step-heading"><span class="step-badge">9E</span><div><h2>Append the state helpers</h2><p>Place these small procedures after the other helpers, then finish the file with <code>End Program</code>.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 9E &mdash; State Helpers</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="296">Sub EnterTitle()
+<pre><code class="language-smile" data-source-start="298">Sub EnterTitle()
 
+    Stop Music
     State = 0
     Key = KEY_NONE
     Stop Sound
@@ -141,6 +143,8 @@ End Sub
 Sub ResetGame()
 
     Call ResetPlay()
+
+    Play Music "Assets\Background.mp3" Loop
 
 End Sub
 

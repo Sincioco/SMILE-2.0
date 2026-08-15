@@ -702,10 +702,23 @@ if errorlevel 1 exit /b %errorlevel%
 echo Live refresh fixture compiled for native and Web.
 
 if not exist "%SMILE_ROOT%\artifacts\games\Snake" mkdir "%SMILE_ROOT%\artifacts\games\Snake"
+if not exist "%SMILE_ROOT%\games\Snake\Assets\Background.mp3" (
+    echo Snake background music source asset is missing.
+    exit /b 1
+)
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\Snake\Snake.smileproj" -o "%SMILE_ROOT%\artifacts\games\Snake\Snake.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\Snake\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\Snake\Snake-NoDemo.exe"
 if errorlevel 1 exit /b %errorlevel%
+if not exist "%SMILE_ROOT%\artifacts\games\Snake\Assets\Background.mp3" (
+    echo Snake background music output asset is missing.
+    exit /b 1
+)
+fc /b "%SMILE_ROOT%\games\Snake\Assets\Background.mp3" "%SMILE_ROOT%\artifacts\games\Snake\Assets\Background.mp3" >nul
+if errorlevel 1 (
+    echo Snake background music output does not match its project asset.
+    exit /b 1
+)
 echo Snake demo and no-demo versions compiled successfully.
 
 if not exist "%SMILE_ROOT%\artifacts\games\FallingBlocks" mkdir "%SMILE_ROOT%\artifacts\games\FallingBlocks"

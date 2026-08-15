@@ -70,7 +70,7 @@ PixelY = FieldY + GridY * CellSize + 2</code></pre>
 <p>The real drawing routine uses the grid-to-pixel calculation directly. These are full source lines 242&ndash;243.</p>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">DrawBoard &mdash; actual Snake source</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="242">            Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)
+<pre><code class="language-smile" data-source-start="244">            Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)
             Draw Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(20, 105, 35)</code></pre>
 </div>
 </section>

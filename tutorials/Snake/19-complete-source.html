@@ -139,6 +139,7 @@ Do
 
 Loop Until Game_Closed() = True
 
+Stop Music
 Stop Sound
 
 '----------------------------------------------------------------------------------------------------
@@ -200,6 +201,7 @@ End Sub
 
 Sub EndRound()
 
+    Stop Music
     State = 2
 
     If Score &gt; HighScore Then
@@ -338,6 +340,7 @@ End Sub
 
 Sub EnterTitle()
 
+    Stop Music
     State = 0
     Key = KEY_NONE
     Stop Sound
@@ -347,6 +350,8 @@ End Sub
 Sub ResetGame()
 
     Call ResetPlay()
+
+    Play Music "Assets\Background.mp3" Loop
 
 End Sub
 
@@ -360,8 +365,8 @@ End Program</code></pre>
 </div>
 <p class="small-note">The first two links use <code>../../games/Snake</code> and therefore open the files from the real SMILE 2.0 game folder when the tutorial is installed at <code>tutorials\Snake</code>. The snapshot links keep a matching reference copy inside the tutorial package.</p>
 <h2>Source map</h2>
-<div class="table-wrap"><table><thead><tr><th>Lines</th><th>Section</th><th>Question answered</th></tr></thead><tbody><tr><td><a class="source-range-link" data-line-end="14" data-line-start="1" href="#source-line-1">1&ndash;14</a></td><td>Constants and arrays</td><td>How big is the world and where can body coordinates be stored?</td></tr><tr><td><a class="source-range-link" data-line-end="33" data-line-start="16" href="#source-line-16">16&ndash;33</a></td><td>Variables and Load</td><td>What can change and what survives between runs?</td></tr><tr><td><a class="source-range-link" data-line-end="101" data-line-start="35" href="#source-line-35">35&ndash;101</a></td><td>Window and main loop</td><td>How does the game begin listening, updating, and drawing near the top of the file?</td></tr><tr><td><a class="source-range-link" data-line-end="122" data-line-start="103" href="#source-line-103">103&ndash;122</a></td><td>SpawnFood</td><td>Where can food safely appear?</td></tr><tr><td><a class="source-range-link" data-line-end="140" data-line-start="124" href="#source-line-124">124&ndash;140</a></td><td>ResetSnakeBody</td><td>What does a new snake look like?</td></tr><tr><td><a class="source-range-link" data-line-end="169" data-line-start="142" href="#source-line-142">142&ndash;169</a></td><td>ResetPlay / EndRound</td><td>How does a round begin and finish?</td></tr><tr><td><a class="source-range-link" data-line-end="228" data-line-start="171" href="#source-line-171">171&ndash;228</a></td><td>MoveSnake</td><td>How does the world change one move at a time?</td></tr><tr><td><a class="source-range-link" data-line-end="294" data-line-start="230" href="#source-line-230">230&ndash;294</a></td><td>Drawing routines</td><td>How do current values become visible screens?</td></tr><tr><td><a class="source-range-link" data-line-end="310" data-line-start="296" href="#source-line-296">296&ndash;310</a></td><td>State helpers and program end</td><td>How do we switch screens, restart, and finish the source file?</td></tr></tbody></table></div>
-<h2>Source authority</h2><p>This tutorial uses the repository&rsquo;s <a href="../../games/Snake/Program-NoDemo.smile"><code>games\Snake\Program-NoDemo.smile</code></a> file with blob Sha <code>024fce74e7cad74d4430a7c95bd7cb92204b8038</code>, plus <a href="../../games/Snake/Snake.smileproj"><code>Snake.smileproj</code></a>, the Snake Readme, and the language documentation.</p>
+<div class="table-wrap"><table><thead><tr><th>Lines</th><th>Section</th><th>Question answered</th></tr></thead><tbody><tr><td><a class="source-range-link" data-line-end="14" data-line-start="1" href="#source-line-1">1&ndash;14</a></td><td>Constants and arrays</td><td>How big is the world and where can body coordinates be stored?</td></tr><tr><td><a class="source-range-link" data-line-end="33" data-line-start="16" href="#source-line-16">16&ndash;33</a></td><td>Variables and Load</td><td>What can change and what survives between runs?</td></tr><tr><td><a class="source-range-link" data-line-end="102" data-line-start="35" href="#source-line-35">35&ndash;102</a></td><td>Window and main loop</td><td>How does the game begin listening, updating, and drawing near the top of the file?</td></tr><tr><td><a class="source-range-link" data-line-end="123" data-line-start="104" href="#source-line-104">104&ndash;123</a></td><td>SpawnFood</td><td>Where can food safely appear?</td></tr><tr><td><a class="source-range-link" data-line-end="141" data-line-start="125" href="#source-line-125">125&ndash;141</a></td><td>ResetSnakeBody</td><td>What does a new snake look like?</td></tr><tr><td><a class="source-range-link" data-line-end="171" data-line-start="143" href="#source-line-143">143&ndash;171</a></td><td>ResetPlay / EndRound</td><td>How does a round begin and finish?</td></tr><tr><td><a class="source-range-link" data-line-end="230" data-line-start="173" href="#source-line-173">173&ndash;230</a></td><td>MoveSnake</td><td>How does the world change one move at a time?</td></tr><tr><td><a class="source-range-link" data-line-end="296" data-line-start="232" href="#source-line-232">232&ndash;296</a></td><td>Drawing routines</td><td>How do current values become visible screens?</td></tr><tr><td><a class="source-range-link" data-line-end="315" data-line-start="298" href="#source-line-298">298&ndash;315</a></td><td>State helpers and program end</td><td>How do we switch screens, restart, and finish the source file?</td></tr></tbody></table></div>
+<h2>Source authority</h2><p>This tutorial uses the repository&rsquo;s <a href="../../games/Snake/Program-NoDemo.smile"><code>games\Snake\Program-NoDemo.smile</code></a> file with blob Sha <code>e4676acf09b2be86e9640390ae23a2ed8618079e</code>, plus <a href="../../games/Snake/Snake.smileproj"><code>Snake.smileproj</code></a>, the Snake Readme, and the language documentation.</p>
 <section aria-labelledby="reinforce-title" class="reinforcement-panel">
 <p class="reinforcement-kicker">Repetition builds memory</p>
 <h2 id="reinforce-title">Reinforce what you learned</h2>

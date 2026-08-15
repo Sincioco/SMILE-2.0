@@ -159,6 +159,7 @@ Do
 
 Loop Until Game_Closed() = True
 
+Stop Music
 Stop Sound
 
 '----------------------------------------------------------------------------------------------------
@@ -246,6 +247,7 @@ Sub EndRound()
         Return
     End If
 
+    Stop Music
     State = 2
 
     If DemoMode = False And Score > HighScore Then
@@ -747,6 +749,7 @@ End Sub
 
 Sub EnterTitle()
 
+    Stop Music
     DemoMode = False
     State = 0
     Key = KEY_NONE
@@ -764,6 +767,8 @@ Sub ResetGame()
     DemoMode = False
 
     Call ResetPlay()
+
+    Play Music "Assets\Background.mp3" Loop
 
 End Sub
 

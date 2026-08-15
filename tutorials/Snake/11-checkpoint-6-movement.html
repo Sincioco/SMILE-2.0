@@ -43,7 +43,7 @@
 <div class="step-heading"><span class="step-badge">6A</span><div><h2>Copy the body backward</h2><p>Save the tail, then shift from the tail toward the head.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 6A &mdash; start MoveSnake</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="171">Sub MoveSnake()
+<pre><code class="language-smile" data-source-start="173">Sub MoveSnake()
 
     Direction = NextDirection
     TailX = SnakeX[Length - 1]
@@ -63,7 +63,7 @@
 <div class="step-heading"><span class="step-badge">6B</span><div><h2>Move the head one square</h2><p>Exactly one coordinate changes by exactly 1.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 6B &mdash; paste inside MoveSnake</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="182">    If Direction = KEY_UP Then
+<pre><code class="language-smile" data-source-start="184">    If Direction = KEY_UP Then
         SnakeY[0] = SnakeY[0] - 1
     Else If Direction = KEY_DOWN Then
         SnakeY[0] = SnakeY[0] + 1
@@ -81,7 +81,7 @@
 <div class="step-heading"><span class="step-badge">6C</span><div><h2>Detect wall and body collisions</h2><p>A collision is a Boolean fact: True or False.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 6C &mdash; paste inside MoveSnake</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="192">    Collision = False
+<pre><code class="language-smile" data-source-start="194">    Collision = False
 
     If (SnakeX[0] &lt; 0 Or
         SnakeX[0] &gt;= GridWidth Or
@@ -106,7 +106,7 @@
 <div class="step-heading"><span class="step-badge">6D</span><div><h2>Eat, grow, score, and schedule the next move</h2><p>This final piece closes MoveSnake.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 6D &mdash; finish MoveSnake</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="209">    If Collision = True Then
+<pre><code class="language-smile" data-source-start="211">    If Collision = True Then
 
         Call EndRound()
 
