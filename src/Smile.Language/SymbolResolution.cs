@@ -165,7 +165,9 @@ public static class SmileSymbolDisplayService
             return string.Empty;
         return dependencies.TryGetProviderDescriptor(providerIdentity, out var descriptor) &&
                !string.IsNullOrWhiteSpace(descriptor.LogicalIdentity)
-            ? descriptor.LogicalIdentity
+            ? descriptor.IsBuiltIn
+                ? "SMILE 2.0 built-in library " + descriptor.LogicalIdentity
+                : descriptor.LogicalIdentity
             : providerIdentity;
     }
 
@@ -217,6 +219,20 @@ public static class SmileSymbolService
             return false;
         if (!TrySelectNameToken(syntaxTree, position, out var token, out var tokenIndex))
             return false;
+
+        return TryResolveToken(analysis, syntaxTree, token, tokenIndex, out symbol);
+    }
+
+    public static bool TryResolveToken(SmileAnalysisResult analysis, SyntaxTree syntaxTree, SyntaxToken token,
+        int tokenIndex, out SmileResolvedSymbol symbol)
+    {
+        symbol = null!;
+        if (analysis == null || syntaxTree == null || token == null || tokenIndex < 0 ||
+            tokenIndex >= syntaxTree.Tokens.Count || !ReferenceEquals(syntaxTree.Tokens[tokenIndex], token) ||
+            !IsNameToken(token))
+        {
+            return false;
+        }
 
         var currentModule = analysis.SemanticModel.Modules.Values.FirstOrDefault(module =>
             module.SyntaxTrees.Any(tree => ReferenceEquals(tree.Source, syntaxTree.Source)));

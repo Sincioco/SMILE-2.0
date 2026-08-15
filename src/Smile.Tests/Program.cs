@@ -1064,6 +1064,41 @@ Run("Multi-file debug sites are unique and retain real source paths", () =>
     Equal(true, debugSource.Contains(Path.GetFullPath("Support.smile").Replace("\\", "\\\\")));
     Equal(true, assembly.Contains(lineTwoSites[0].HelperName));
 });
+Run("Native debug sites expose in-scope SMILE values as named helper parameters", () =>
+{
+    var analysis = Analyze(
+        "Const MAX_SCORE = 99\n" +
+        "Dim Score As Number\n" +
+        "Dim Ready As Boolean\n" +
+        "Dim Message As Text\n" +
+        "Dim Lives As Number\n" +
+        "Dim Level As Number\n" +
+        "Dim Bonus As Number\n" +
+        "Score = 1\n" +
+        "Call Work(Score)\n" +
+        "Sub Work(Value As Number)\n" +
+        "Dim LocalValue As Number\n" +
+        "LocalValue = Value + 1\n" +
+        "Print LocalValue\n" +
+        "End Sub\n");
+    Equal(false, analysis.HasErrors);
+    var emitter = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, true);
+    var assembly = emitter.Emit();
+    var topLevelSite = emitter.DebugSites.Single(site => site.Line == 8);
+    var topLevelDebugSource = CompilerDriver.BuildDebugSource(new[] { topLevelSite });
+    Equal(true, topLevelDebugSource.Contains("long long MAX_SCORE", StringComparison.Ordinal));
+    Equal(true, topLevelDebugSource.Contains("long long Score", StringComparison.Ordinal));
+    Equal(true, topLevelDebugSource.Contains("SmileDebugBoolean Ready", StringComparison.Ordinal));
+    Equal(true, topLevelDebugSource.Contains("const char* Message", StringComparison.Ordinal));
+    Equal(true, assembly.Contains($"call {topLevelSite.HelperName}", StringComparison.Ordinal));
+    Equal(true, assembly.Contains("mov QWORD PTR [rsp+32], rax", StringComparison.Ordinal));
+    Equal(true, assembly.Contains("add rax, 16", StringComparison.Ordinal));
+
+    var routineSite = emitter.DebugSites.Single(site => site.Line == 12);
+    var routineDebugSource = CompilerDriver.BuildDebugSource(new[] { routineSite });
+    Equal(true, routineDebugSource.Contains("long long Value", StringComparison.Ordinal));
+    Equal(true, routineDebugSource.Contains("long long LocalValue", StringComparison.Ordinal));
+});
 Run("Web target failures retain the support source path", () =>
 {
     var analysis = Multi(
@@ -1851,6 +1886,21 @@ Run("Project-reference debug sites retain the real library source path", () =>
     var emitter = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, true);
     _ = emitter.Emit();
     Equal(true, emitter.DebugSites.Any(site => Path.GetFileName(site.Source.FilePath) == "Clamp.smile"));
+});
+Run("Official SMILE libraries are labeled separately from student libraries", () =>
+{
+    var context = SmileCompilationDependencyContext.Create();
+    context.AddProvider("official", SmileProviderKind.Package, "Smile.UI", "1.1.2", "Smile.UI.smilelib");
+    context.AddProvider("student", SmileProviderKind.Project, "Student.Tools", "1.0.0",
+        "Student.Tools.smilelibproj");
+    Equal(true, context.TryGetProviderDescriptor("official", out var official));
+    Equal(true, official.IsBuiltIn);
+    Equal(true, official.Describe().Contains("SMILE 2.0 built-in library", StringComparison.Ordinal));
+    Equal("SMILE 2.0 built-in library Smile.UI@1.1.2",
+        SmileSymbolDisplayService.DescribeProvider("official", context));
+    Equal(true, context.TryGetProviderDescriptor("student", out var student));
+    Equal(false, student.IsBuiltIn);
+    Equal("Student.Tools@1.0.0", SmileSymbolDisplayService.DescribeProvider("student", context));
 });
 Run("Identical member names in different modules receive distinct emitter identities", () =>
 {

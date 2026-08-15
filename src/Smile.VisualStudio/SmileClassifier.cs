@@ -1,14 +1,44 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Windows.Media;
+using Microsoft.VisualStudio.Language.StandardClassification;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
-using Microsoft.VisualStudio.Language.StandardClassification;
 using Smile.Language;
 
 namespace Smile.VisualStudio;
+
+internal static class SmileClassificationNames
+{
+    public const string BuiltInLibrarySymbol = "SMILE 2.0 Built-in Library Symbol";
+}
+
+internal static class SmileClassificationDefinitions
+{
+#pragma warning disable 649
+    [Export(typeof(ClassificationTypeDefinition))]
+    [Name(SmileClassificationNames.BuiltInLibrarySymbol)]
+    [BaseDefinition(PredefinedClassificationTypeNames.Identifier)]
+    internal static ClassificationTypeDefinition? BuiltInLibrarySymbol;
+#pragma warning restore 649
+}
+
+[Export(typeof(EditorFormatDefinition))]
+[ClassificationType(ClassificationTypeNames = SmileClassificationNames.BuiltInLibrarySymbol)]
+[Name(SmileClassificationNames.BuiltInLibrarySymbol)]
+[UserVisible(true)]
+internal sealed class SmileBuiltInLibrarySymbolFormat : ClassificationFormatDefinition
+{
+    public SmileBuiltInLibrarySymbolFormat()
+    {
+        DisplayName = "SMILE 2.0 Built-in Module or Library";
+        ForegroundColor = Color.FromRgb(147, 112, 219);
+        ForegroundCustomizable = true;
+    }
+}
 
 [Export(typeof(IClassifierProvider))]
 [ContentType(SmileContentType.Name)]
@@ -47,6 +77,8 @@ internal sealed class SmileClassifier : IClassifier
             [TokenClassification.Comment] = registry.GetClassificationType(PredefinedClassificationTypeNames.Comment),
             [TokenClassification.Number] = registry.GetClassificationType(PredefinedClassificationTypeNames.Number),
             [TokenClassification.Identifier] = registry.GetClassificationType(PredefinedClassificationTypeNames.Identifier),
+            [TokenClassification.BuiltInLibrary] = registry.GetClassificationType(
+                SmileClassificationNames.BuiltInLibrarySymbol),
             [TokenClassification.Operator] = registry.GetClassificationType(PredefinedClassificationTypeNames.Operator)
         };
     }
@@ -62,15 +94,19 @@ internal sealed class SmileClassifier : IClassifier
         var syntaxTree = analysis.TryGetSyntaxTree(_cache.FilePath, out var activeTree)
             ? activeTree
             : analysis.SyntaxTree;
-        foreach (var token in syntaxTree.Tokens)
+        for (var tokenIndex = 0; tokenIndex < syntaxTree.Tokens.Count; tokenIndex++)
         {
-            var classification = Classify(token.Kind);
-            if (classification == null || token.Span.Length == 0 || token.Span.Start >= span.Snapshot.Length)
+            var token = syntaxTree.Tokens[tokenIndex];
+            if (token.Span.Length == 0 || token.Span.Start >= span.Snapshot.Length)
                 continue;
 
             var length = Math.Min(token.Span.Length, span.Snapshot.Length - token.Span.Start);
             var tokenSpan = new SnapshotSpan(span.Snapshot, token.Span.Start, length);
-            if (tokenSpan.IntersectsWith(span))
+            if (!tokenSpan.IntersectsWith(span))
+                continue;
+
+            var classification = Classify(analysis, syntaxTree, token, tokenIndex);
+            if (classification != null)
                 result.Add(new ClassificationSpan(tokenSpan, _classifications[classification.Value]));
         }
 
@@ -83,10 +119,19 @@ internal sealed class SmileClassifier : IClassifier
         ClassificationChanged?.Invoke(this, new ClassificationChangedEventArgs(new SnapshotSpan(snapshot, 0, snapshot.Length)));
     }
 
-    private static TokenClassification? Classify(SyntaxKind kind)
+    private static TokenClassification? Classify(SmileAnalysisResult analysis, SyntaxTree syntaxTree,
+        SyntaxToken token, int tokenIndex)
     {
+        var kind = token.Kind;
         if (SyntaxFacts.IsKeyword(kind) || SyntaxFacts.IsBuiltInConstant(kind))
             return TokenClassification.Keyword;
+        if (kind == SyntaxKind.IdentifierToken &&
+            SmileSymbolService.TryResolveToken(analysis, syntaxTree, token, tokenIndex, out var symbol) &&
+            analysis.DependencyContext.TryGetProviderDescriptor(symbol.ProviderIdentity, out var provider) &&
+            provider.IsBuiltIn)
+        {
+            return TokenClassification.BuiltInLibrary;
+        }
         return kind switch
         {
             SyntaxKind.StringToken => TokenClassification.String,
@@ -109,6 +154,7 @@ internal sealed class SmileClassifier : IClassifier
         Comment,
         Number,
         Identifier,
+        BuiltInLibrary,
         Operator
     }
 }

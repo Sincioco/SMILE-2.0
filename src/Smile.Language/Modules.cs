@@ -19,6 +19,17 @@ public enum SmileProviderKind
     Loose
 }
 
+public static class SmileBuiltInLibraryCatalog
+{
+    private static readonly HashSet<string> Names = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Smile.UI"
+    };
+
+    public static bool IsBuiltIn(string libraryName) =>
+        !string.IsNullOrWhiteSpace(libraryName) && Names.Contains(libraryName);
+}
+
 public sealed class SmileProviderDescriptor
 {
     internal SmileProviderDescriptor(string identity, SmileProviderKind kind, string name, string version,
@@ -36,12 +47,15 @@ public sealed class SmileProviderDescriptor
     public string Name { get; }
     public string Version { get; }
     public string Path { get; }
+    public bool IsBuiltIn => SmileBuiltInLibraryCatalog.IsBuiltIn(Name);
     public string LogicalIdentity => string.IsNullOrWhiteSpace(Name) || string.IsNullOrWhiteSpace(Version)
         ? string.Empty
         : Name + "@" + Version;
 
     internal string Describe() => Kind == SmileProviderKind.Loose
         ? "loose source root"
+        : IsBuiltIn
+            ? $"SMILE 2.0 built-in library '{Name}' {Version} at '{Path}'"
         : string.IsNullOrWhiteSpace(Name)
             ? $"project '{Path}'"
             : $"library '{Name}' {Version} at '{Path}'";

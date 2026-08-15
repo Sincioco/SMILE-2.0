@@ -6,11 +6,13 @@ namespace Smile.Compiler;
 
 internal sealed class MasmDebugSite
 {
-    public MasmDebugSite(int id, SourceText source, StatementSyntax statement)
+    public MasmDebugSite(int id, SourceText source, StatementSyntax statement,
+        IReadOnlyList<VariableSymbol> variables)
     {
         Id = id;
         Source = source;
         Statement = statement;
+        Variables = variables;
         source.GetLineColumn(statement.Span.Start, out var line, out _);
         Line = line;
     }
@@ -18,6 +20,7 @@ internal sealed class MasmDebugSite
     public int Id { get; }
     public SourceText Source { get; }
     public StatementSyntax Statement { get; }
+    public IReadOnlyList<VariableSymbol> Variables { get; }
     public int Line { get; }
     public string HelperName => $"smile_debug_site_{Id}";
 }
@@ -69,6 +72,15 @@ internal sealed record MasmLoopContext(string ExitLabel, int CleanupDepth, int C
 
 internal sealed class MasmEmitter
 {
+    private static readonly HashSet<string> CDebugKeywords = new(StringComparer.Ordinal)
+    {
+        "auto", "break", "case", "char", "const", "continue", "default", "do", "double", "else",
+        "enum", "extern", "float", "for", "goto", "if", "inline", "int", "long", "register",
+        "restrict", "return", "short", "signed", "sizeof", "static", "struct", "switch", "typedef",
+        "union", "unsigned", "void", "volatile", "while", "_Alignas", "_Alignof", "_Atomic", "_Bool",
+        "_Complex", "_Generic", "_Imaginary", "_Noreturn", "_Static_assert", "_Thread_local"
+    };
+
     private readonly SmileAnalysisResult _analysis;
     private readonly SmileGraphicsBackend _graphicsBackend;
     private readonly bool _vSync;
@@ -283,7 +295,8 @@ internal sealed class MasmEmitter
         {
             if (_emitDebugInformation && IsExecutable(statement))
             {
-                var site = new MasmDebugSite(_debugSites.Count, _currentSource, statement);
+                var site = new MasmDebugSite(_debugSites.Count, _currentSource, statement,
+                    GetDebugVariables());
                 _debugSites.Add(site);
                 _debugSitesByStatement[statement] = site;
             }
@@ -591,7 +604,7 @@ internal sealed class MasmEmitter
     {
         if (_emitDebugInformation && IsExecutable(statement))
         {
-            CallAligned(_debugSitesByStatement[statement].HelperName);
+            EmitDebugSiteCall(_debugSitesByStatement[statement]);
         }
 
         switch (statement)
@@ -1555,6 +1568,129 @@ internal sealed class MasmEmitter
         EmitAddress(symbol);
         Line("    mov QWORD PTR [rax], r10");
         Line("    mov rax, r10");
+    }
+
+    private IReadOnlyList<VariableSymbol> GetDebugVariables()
+    {
+        var variables = new List<VariableSymbol>();
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var routine = _collectRoutine == null
+            ? null
+            : _analysis.SemanticModel.Routines.Values.FirstOrDefault(candidate =>
+                ReferenceEquals(candidate.Declaration, _collectRoutine));
+        var moduleName = routine?.ModuleName ?? _analysis.SemanticModel.Modules.Values
+            .FirstOrDefault(module => module.SyntaxTrees.Any(tree => ReferenceEquals(tree.Source, _currentSource)))
+            ?.Name;
+
+        if (routine != null)
+        {
+            foreach (var local in routine.LocalSymbols.Values.OrderBy(symbol => symbol.DeclarationSpan.Start))
+                Add(local);
+        }
+
+        foreach (var symbol in _analysis.SemanticModel.Symbols.Values
+                     .Where(symbol => string.IsNullOrWhiteSpace(symbol.ModuleName) ||
+                                      string.Equals(symbol.ModuleName, moduleName,
+                                          StringComparison.OrdinalIgnoreCase))
+                     .OrderBy(symbol => string.Equals(symbol.ModuleName, moduleName,
+                         StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                     .ThenBy(symbol => symbol.SourceOrdinal)
+                     .ThenBy(symbol => symbol.DeclarationSpan.Start))
+        {
+            Add(symbol);
+        }
+
+        return variables;
+
+        void Add(VariableSymbol symbol)
+        {
+            if (IsCDebugIdentifier(symbol.Name) && names.Add(symbol.Name))
+                variables.Add(symbol);
+        }
+    }
+
+    private static bool IsCDebugIdentifier(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name) || CDebugKeywords.Contains(name) ||
+            !IsAsciiIdentifierStart(name[0]))
+        {
+            return false;
+        }
+
+        return name.Skip(1).All(character => IsAsciiIdentifierStart(character) ||
+                                               character is >= '0' and <= '9');
+
+        static bool IsAsciiIdentifierStart(char character) =>
+            character is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or '_';
+    }
+
+    private void EmitDebugSiteCall(MasmDebugSite site)
+    {
+        if (site.Variables.Count == 0)
+        {
+            CallAligned(site.HelperName);
+            return;
+        }
+
+        var stackArguments = Math.Max(0, site.Variables.Count - 4);
+        var alignmentBytes = ((_dynamicStackSlots + stackArguments) & 1) != 0 ? 8 : 0;
+        var callAreaBytes = 32 + stackArguments * 8 + alignmentBytes;
+        Line($"    sub rsp, {callAreaBytes}");
+
+        for (var index = 0; index < site.Variables.Count; index++)
+        {
+            EmitDebugValue(site.Variables[index]);
+            switch (index)
+            {
+                case 0: Line("    mov rcx, rax"); break;
+                case 1: Line("    mov rdx, rax"); break;
+                case 2: Line("    mov r8, rax"); break;
+                case 3: Line("    mov r9, rax"); break;
+                default: Line($"    mov QWORD PTR [rsp+{32 + (index - 4) * 8}], rax"); break;
+            }
+        }
+
+        Line($"    call {site.HelperName}");
+        Line($"    add rsp, {callAreaBytes}");
+    }
+
+    private void EmitDebugValue(VariableSymbol symbol)
+    {
+        if (symbol.IsConstant)
+        {
+            if (symbol.Type == SmileType.Text)
+            {
+                Line($"    lea rax, {_constantTextLiterals[symbol].Label}");
+            }
+            else
+            {
+                var value = symbol.ConstantValue switch
+                {
+                    long number => number,
+                    bool boolean => boolean ? 1L : 0L,
+                    _ => 0L
+                };
+                Line($"    mov rax, {value.ToString(CultureInfo.InvariantCulture)}");
+            }
+        }
+        else if (symbol.IsArray || symbol.Type.IsRecord)
+        {
+            EmitAddress(symbol);
+        }
+        else
+        {
+            EmitAddress(symbol);
+            Line("    mov rax, QWORD PTR [rax]");
+        }
+
+        if (symbol.Type == SmileType.Text && !symbol.IsArray)
+        {
+            var empty = NewLabel("debug_text_empty");
+            Line("    test rax, rax");
+            Line($"    jz {empty}");
+            Line("    add rax, 16");
+            Line($"{empty}:");
+        }
     }
 
     private void EmitReleaseSymbol(VariableSymbol symbol)

@@ -310,7 +310,9 @@ public static class SmileCompletionService
         SmileCompilationDependencyContext dependencyContext) =>
         dependencyContext.TryGetProviderDescriptor(providerIdentity, out var descriptor) &&
         !string.IsNullOrWhiteSpace(descriptor.LogicalIdentity)
-            ? descriptor.LogicalIdentity
+            ? descriptor.IsBuiltIn
+                ? "SMILE 2.0 built-in library " + descriptor.LogicalIdentity
+                : descriptor.LogicalIdentity
             : providerIdentity;
 
     private static string? AliasBeforeDot(string text, int position)

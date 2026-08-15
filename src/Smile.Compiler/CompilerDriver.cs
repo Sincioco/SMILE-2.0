@@ -268,15 +268,41 @@ internal sealed class CompilerDriver
 
     internal static string BuildDebugSource(IEnumerable<MasmDebugSite> sites)
     {
-        var builder = new StringBuilder("static volatile unsigned char smile_debug_counter;\n");
+        var builder = new StringBuilder(
+            "typedef enum SmileDebugBoolean { False = 0, True = 1 } SmileDebugBoolean;\n" +
+            "typedef struct SmileDebugText { long long references; long long length; char bytes[1]; } SmileDebugText;\n" +
+            "static volatile unsigned char smile_debug_counter;\n");
         foreach (var site in sites)
         {
             var escapedPath = site.Source.FilePath.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            var parameters = site.Variables.Count == 0
+                ? "void"
+                : string.Join(", ", site.Variables.Select(DebugParameterDeclaration));
             builder.Append("#line ").Append(site.Line).Append(" \"").Append(escapedPath).Append("\"\n")
                 .Append("__declspec(noinline) void ").Append(site.HelperName)
-                .Append("(void) { smile_debug_counter++; }\n");
+                .Append('(').Append(parameters).Append(") { smile_debug_counter++; }\n");
         }
         return builder.ToString();
+    }
+
+    private static string DebugParameterDeclaration(VariableSymbol symbol)
+    {
+        var type = symbol.IsArray
+            ? symbol.Type.Kind switch
+            {
+                SmileTypeKind.Number => "const long long*",
+                SmileTypeKind.Boolean => "const SmileDebugBoolean*",
+                SmileTypeKind.Text => "const SmileDebugText* const*",
+                _ => "const void*"
+            }
+            : symbol.Type.Kind switch
+            {
+                SmileTypeKind.Number => "long long",
+                SmileTypeKind.Boolean => "SmileDebugBoolean",
+                SmileTypeKind.Text => "const char*",
+                _ => "const void*"
+            };
+        return type + " " + symbol.Name;
     }
 
     private static string FindRepositoryRoot()

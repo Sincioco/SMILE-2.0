@@ -5,9 +5,9 @@
     <Nullable>enable</Nullable>
     <RootNamespace>Smile.VisualStudio</RootNamespace>
     <AssemblyName>Smile.VisualStudio</AssemblyName>
-    <Version>2.0.33</Version>
-    <AssemblyVersion>2.0.33.0</AssemblyVersion>
-    <FileVersion>2.0.33.0</FileVersion>
+    <Version>2.0.35</Version>
+    <AssemblyVersion>2.0.35.0</AssemblyVersion>
+    <FileVersion>2.0.35.0</FileVersion>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <IncludeAssemblyInVSIXContainer>true</IncludeAssemblyInVSIXContainer>
     <IncludeDebugSymbolsInVSIXContainer>false</IncludeDebugSymbolsInVSIXContainer>
@@ -24,6 +24,7 @@
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Design" />
     <Reference Include="System.Drawing" />
+    <Reference Include="PresentationCore" />
     <Reference Include="System.Windows.Forms" />
     <ProjectReference Include="..\Smile.Language\Smile.Language.csproj">
       <Private>true</Private>
