@@ -238,7 +238,7 @@ Sub InitializeMenus()
     SaveIndex = Menu.AddItem(RootMenu, "Save / Load", 6, True)
     ItemIndex = Menu.AddItem(RootMenu, "Exit Gallery", 999, True)
 
-    ItemIndex = Menu.AddItem(PartyMenu, "Move Bram after Aria", 101, True)
+    ItemIndex = Menu.AddItem(PartyMenu, "Swap Party Order", 101, True)
     ItemIndex = Menu.AddItem(PartyMenu, "Add 100 Gold", 102, True)
     ItemIndex = Menu.AddItem(InventoryMenu, "Add Potion", 201, True)
     ItemIndex = Menu.AddItem(InventoryMenu, "Remove Potion", 202, True)
@@ -267,7 +267,7 @@ Sub RunAction(Value As Number)
     If Value = 101 Then
 
         OperationSucceeded = Party.MoveCharacter(State, 0, 1)
-        Status = "Party order moved transactionally."
+        Status = "The first party member moved to the second position."
 
     Else If Value = 102 Then
 
@@ -350,13 +350,39 @@ Sub DrawStateSummary()
     Fill Rectangle 760, 112, 325, 430, Rgb(13, 23, 39)
     Draw Rectangle 760, 112, 325, 430, Rgb(38, 199, 201)
     Draw Text "Live State" At 790, 138 Size 24 Color CYAN
-    Draw Text "Party: Aria and Bram" At 790, 188 Size 18 Color WHITE
-    Draw Text "Gold: bounded shared value" At 790, 224 Size 18 Color WHITE
-    Draw Text "Inventory: Potion, Sword" At 790, 260 Size 18 Color WHITE
-    Draw Text "Equipment: Hand slot" At 790, 296 Size 18 Color WHITE
-    Draw Text "Ability: Fire, 7 MP" At 790, 332 Size 18 Color WHITE
-    Draw Text "Shop: explicit prices / stock" At 790, 368 Size 18 Color WHITE
-    Draw Text "Save: SRPG v1 / schema 1" At 790, 404 Size 18 Color WHITE
-    Draw Text "No battles, enemies, or quests" At 790, 470 Size 16 Color LIGHT_GRAY
+    Draw Text "Party Order" At 790, 178 Size 17 Color LIGHT_GRAY
+    Draw Text "1:" At 790, 207 Size 18 Color WHITE
+    Draw Text Characters.Name(State, Party.CharacterIdAt(State, 0)) At 820, 207 Size 18 Color YELLOW
+    Draw Text "2:" At 945, 207 Size 18 Color WHITE
+    Draw Text Characters.Name(State, Party.CharacterIdAt(State, 1)) At 975, 207 Size 18 Color YELLOW
+    Draw Text "Gold:" At 790, 245 Size 18 Color WHITE
+    Draw Number Party.Gold(State) At 875, 245 Size 18 Color YELLOW
+    Draw Text "Potions:" At 790, 279 Size 18 Color WHITE
+    Draw Number Inventory.Quantity(State, 10) At 905, 279 Size 18 Color YELLOW
+    Draw Text "Swords:" At 790, 313 Size 18 Color WHITE
+    Draw Number Inventory.Quantity(State, 20) At 905, 313 Size 18 Color YELLOW
+    Draw Text "Hand:" At 790, 347 Size 18 Color WHITE
+
+    If Equipment.EquippedItem(State, 100, 1) = 20 Then
+        Draw Text "Bronze Sword" At 875, 347 Size 18 Color YELLOW
+    Else
+        Draw Text "None" At 875, 347 Size 18 Color LIGHT_GRAY
+    End If
+
+    Draw Text "Bram MP:" At 790, 381 Size 18 Color WHITE
+    Draw Number Characters.MagicPoints(State, 200) At 915, 381 Size 18 Color YELLOW
+    Draw Text "/" At 950, 381 Size 18 Color LIGHT_GRAY
+    Draw Number Characters.MaximumMagicPoints(State, 200) At 970, 381 Size 18 Color YELLOW
+    Draw Text "Potion Stock:" At 790, 415 Size 18 Color WHITE
+    Draw Number Shops.Stock(State, 1, 10) At 980, 415 Size 18 Color YELLOW
+    Draw Text "Save Slot 1:" At 790, 449 Size 18 Color WHITE
+
+    If SaveGames.Exists(State, 1) Then
+        Draw Text "Saved" At 950, 449 Size 18 Color LIGHT_GREEN
+    Else
+        Draw Text "Empty" At 950, 449 Size 18 Color LIGHT_GRAY
+    End If
+
+    Draw Text "Values refresh after every action." At 790, 496 Size 15 Color CYAN
 
 End Sub
