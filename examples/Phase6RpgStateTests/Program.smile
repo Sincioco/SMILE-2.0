@@ -28,6 +28,8 @@ Dim BoundaryByteCount As Number
 Dim BoundaryBytes[32768] As Number
 Dim MaximumByteCount As Number
 Dim MaximumBytes[32768] As Number
+Dim QueryByteCount As Number
+Dim QueryBytes[32768] As Number
 Dim OperationSucceeded As Boolean
 
 State = RPG.Create()
@@ -190,6 +192,7 @@ Call Check(Party.SetGold(State, 5))
 Result = SaveGames.LoadGame(State, 8, 7)
 
 Call Check(Result = RPG.RPG_RESULT_OK And Party.Gold(State) = 460)
+Call TestSaveGameQueryPurity()
 
 Call Check(Characters.CharacterDefinitionCount(OtherState) = 0)
 
@@ -214,6 +217,109 @@ Sub Check(Condition As Boolean)
     If Not Condition Then
         Failures = Failures + 1
     End If
+
+End Sub
+
+Sub TestSaveGameQueryPurity()
+
+    Dim QueryResult As Boolean
+    Dim Index As Number
+
+    Call Check(Party.SetGold(State, 777))
+
+    Result = SaveGames.Encode(State, 7)
+    QueryByteCount = SaveGames.EncodedByteCount()
+
+    Call Check(Result = RPG.RPG_RESULT_OK And QueryByteCount > 0)
+
+    For Index = 0 To QueryByteCount - 1
+        QueryBytes[Index] = SaveGames.EncodedByteAt(Index)
+    End For
+
+    QueryResult = SaveGames.Exists(State, 8)
+
+    Call Check(QueryResult)
+    Call CheckQueryCodecBuffer()
+    Call CheckQueryState()
+    Call RestoreQueryCodecBuffer()
+
+    QueryResult = SaveGames.Exists(State, 6)
+
+    Call Check(Not QueryResult)
+    Call CheckQueryCodecBuffer()
+    Call CheckQueryState()
+
+    QueryResult = SaveGames.Exists(0, 8)
+
+    Call Check(Not QueryResult)
+    Call CheckQueryCodecBuffer()
+
+    QueryResult = SaveGames.Exists(State, 0)
+
+    Call Check(Not QueryResult)
+    Call CheckQueryCodecBuffer()
+
+    QueryResult = SaveGames.Exists(State, RPG.RPG_MAX_SAVE_SLOTS + 1)
+
+    Call Check(Not QueryResult)
+    Call CheckQueryCodecBuffer()
+
+    Call SaveGames.ClearEncodedBytes()
+
+    QueryResult = SaveGames.Exists(State, 8)
+
+    Call Check(QueryResult)
+    Call Check(SaveGames.EncodedByteCount() = 0)
+    Call CheckQueryState()
+    Call RestoreQueryCodecBuffer()
+
+    For Index = 0 To 63
+        QueryResult = SaveGames.Exists(State, 8)
+
+        Call Check(QueryResult)
+        Call CheckQueryCodecBuffer()
+        Call CheckQueryState()
+    End For
+
+End Sub
+
+Sub CheckQueryCodecBuffer()
+
+    Dim Index As Number
+
+    Call Check(SaveGames.EncodedByteCount() = QueryByteCount)
+
+    For Index = 0 To QueryByteCount - 1
+        Call Check(SaveGames.EncodedByteAt(Index) = QueryBytes[Index])
+    End For
+
+End Sub
+
+Sub RestoreQueryCodecBuffer()
+
+    Dim Index As Number
+
+    Call SaveGames.ClearEncodedBytes()
+
+    For Index = 0 To QueryByteCount - 1
+        OperationSucceeded = SaveGames.SetEncodedByte(Index, QueryBytes[Index])
+
+        Call Check(OperationSucceeded)
+    End For
+
+End Sub
+
+Sub CheckQueryState()
+
+    Call Check(Characters.Health(State, 100) = 105)
+    Call Check(Characters.MagicPoints(State, 200) = 53)
+    Call Check(Party.PartyCount(State) = 2)
+    Call Check(Party.CharacterIdAt(State, 0) = 200 And Party.CharacterIdAt(State, 1) = 100)
+    Call Check(Party.Gold(State) = 777)
+    Call Check(Inventory.Quantity(State, 10) = 5)
+    Call Check(Equipment.EquippedItem(State, 100, 1) = 20)
+    Call Check(Abilities.KnowsAbility(State, 200, 50))
+    Call Check(Shops.Stock(State, 1, 10) = 11)
 
 End Sub
 

@@ -68,4 +68,6 @@ Shop callers can distinguish `RPG_RESULT_INVALID_STATE`, `RPG_RESULT_INVALID_ARG
 - codec buffer: `EncodedByteCount`, `EncodedByteAt`, `ClearEncodedBytes`, `SetEncodedByte`
 - persistence: `SaveGame(StateHandle, SaveSlot, SchemaVersion)`, `LoadGame(StateHandle, SaveSlot, ExpectedSchemaVersion)`, `Exists`
 
+`EncodedByteCount`, `EncodedByteAt`, and `Exists` are observational queries. `SaveGames.Exists` preserves the public codec buffer byte-for-byte, including an empty buffer, and does not change RPG state. `Encode`, `Decode`, `SaveGame`, `LoadGame`, `SetEncodedByte`, and `ClearEncodedBytes` intentionally replace or manipulate the public codec buffer as part of their documented work.
+
 `Decode` validates the complete payload and all references before mutation. It snapshots current progress and restores that snapshot if application fails unexpectedly. During apply, Equipment assignments are restored into an empty temporary bag before saved Inventory entries, avoiding transient stack or entry-capacity requirements. Definition records remain registered.

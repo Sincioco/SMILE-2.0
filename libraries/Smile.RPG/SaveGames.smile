@@ -937,9 +937,10 @@ Public Function LoadGame(StateHandle As Number, SaveSlot As Number, ExpectedSche
 
 End Function
 
-''' Checks whether a valid outer Phase 4 Data block exists for a save slot.
+''' Checks for a Phase 4 Data block without changing the public codec buffer or RPG state.
 Public Function Exists(StateHandle As Number, SaveSlot As Number) As Boolean
 
+    Dim ProbeCount As Number
     Dim ReturnValue As Boolean
 
     If (Not Core.IsValid(StateHandle) Or
@@ -948,28 +949,28 @@ Public Function Exists(StateHandle As Number, SaveSlot As Number) As Boolean
         Return False
     End If
 
-    BufferCount = 0
+    ProbeCount = 0
 
     Select Case SaveSlot
         Case 1
-            Load Data "Smile.RPG.Save.1" Into EncodedBytes Count BufferCount
+            Load Data "Smile.RPG.Save.1" Into IncomingBytes Count ProbeCount
         Case 2
-            Load Data "Smile.RPG.Save.2" Into EncodedBytes Count BufferCount
+            Load Data "Smile.RPG.Save.2" Into IncomingBytes Count ProbeCount
         Case 3
-            Load Data "Smile.RPG.Save.3" Into EncodedBytes Count BufferCount
+            Load Data "Smile.RPG.Save.3" Into IncomingBytes Count ProbeCount
         Case 4
-            Load Data "Smile.RPG.Save.4" Into EncodedBytes Count BufferCount
+            Load Data "Smile.RPG.Save.4" Into IncomingBytes Count ProbeCount
         Case 5
-            Load Data "Smile.RPG.Save.5" Into EncodedBytes Count BufferCount
+            Load Data "Smile.RPG.Save.5" Into IncomingBytes Count ProbeCount
         Case 6
-            Load Data "Smile.RPG.Save.6" Into EncodedBytes Count BufferCount
+            Load Data "Smile.RPG.Save.6" Into IncomingBytes Count ProbeCount
         Case 7
-            Load Data "Smile.RPG.Save.7" Into EncodedBytes Count BufferCount
+            Load Data "Smile.RPG.Save.7" Into IncomingBytes Count ProbeCount
         Case 8
-            Load Data "Smile.RPG.Save.8" Into EncodedBytes Count BufferCount
+            Load Data "Smile.RPG.Save.8" Into IncomingBytes Count ProbeCount
     End Select
 
-    ReturnValue = BufferCount > 0
+    ReturnValue = ProbeCount > 0
 
     Return ReturnValue
 

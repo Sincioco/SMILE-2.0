@@ -468,7 +468,7 @@ copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.RPG.smilelib" "%SMILE_ROOT%\arti
 if errorlevel 1 exit /b 1
 fc /b "%SMILE_ROOT%\artifacts\temp\Smile.RPG.first.smilelib" "%SMILE_ROOT%\artifacts\libraries\Smile.RPG.smilelib" >nul
 if errorlevel 1 exit /b 1
-powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.RPG.smilelib'); try { $manifest=([IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())).ReadToEnd() | ConvertFrom-Json; $api=([IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open())).ReadToEnd() | ConvertFrom-Json; $names=@($api.modules.name); if ($manifest.formatVersion -ne 5 -or $manifest.version -ne '1.0.1' -or $names.Count -ne 8 -or $names -notcontains 'Smile.RPG.Core' -or $names -notcontains 'Smile.RPG.SaveGames' -or @($api.modules.members | Where-Object requiresGameWindow).Count -ne 0 -or $api.modules.members.name -notcontains 'RPG_RESULT_NOT_SELLABLE') { exit 1 } } finally { $zip.Dispose() }"
+powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.RPG.smilelib'); try { $manifest=([IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())).ReadToEnd() | ConvertFrom-Json; $api=([IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open())).ReadToEnd() | ConvertFrom-Json; $names=@($api.modules.name); if ($manifest.formatVersion -ne 5 -or $manifest.version -ne '1.0.2' -or $names.Count -ne 8 -or $names -notcontains 'Smile.RPG.Core' -or $names -notcontains 'Smile.RPG.SaveGames' -or @($api.modules.members | Where-Object requiresGameWindow).Count -ne 0 -or $api.modules.members.name -notcontains 'RPG_RESULT_NOT_SELLABLE') { exit 1 } } finally { $zip.Dispose() }"
 if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase6RpgStateTests\Phase6RpgStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase6RpgStateTests.exe"
@@ -508,7 +508,7 @@ if errorlevel 1 exit /b 1
 if errorlevel 1 exit /b 1
 node --check "%SMILE_ROOT%\artifacts\web\RpgManagementGallery\game.js"
 if errorlevel 1 exit /b 1
-echo Phase 6 ApplicationId, Smile.RPG package, state, save, project/package, DirectX, GDI, and Web tests passed.
+echo Phase 6.2 ApplicationId, Smile.RPG package, state, save, query-purity, project/package, DirectX, GDI, and Web tests passed.
 
 for %%P in (OptionExplicitLate:SML3300 OptionExplicitUndeclared:SML3303 ScalarDimWithoutAs:SML3302 UnknownBuiltInType:SML3401 NumberToTextAssignment:SML3304 TextToBooleanAssignment:SML3304 MixedTextAddition:SML3308 TextRelationalComparison:SML3308 InvalidByRefLiteral:SML3305 InvalidByRefConstant:SML3305 WrongArgumentType:SML3304 WrongReturnType:SML3304 InconsistentLegacyReturnTypes:SML3309 DuplicateLocal:SML3306 UseBeforeLocalDeclaration:SML3307) do (
     for /f "tokens=1,2 delims=:" %%F in ("%%P") do (

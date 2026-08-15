@@ -44,7 +44,7 @@ try {
   <PropertyGroup>
     <ProjectKind>Library</ProjectKind>
     <LibraryName>Smile.RPG</LibraryName>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <OutputName>Smile.RPG</OutputName>
   </PropertyGroup>
   <ItemGroup>
