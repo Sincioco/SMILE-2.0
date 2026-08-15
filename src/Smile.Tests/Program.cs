@@ -274,10 +274,14 @@ Run("Load Text File records its shared syntax", () =>
 {
     var load = Analyze("Dim Bytes[8]\nLoad Text File \"sample.txt\" Into Bytes Count ByteCount\n")
         .SyntaxTree.Root.Statements.OfType<TextFileLoadStatementSyntax>().Single();
-    Equal("sample.txt", load.Path.Value as string);
+    Equal("sample.txt", ((LiteralExpressionSyntax)load.Path).Value as string);
     Equal("Bytes", load.Destination.Text);
     Equal("ByteCount", load.CountIdentifier.Text);
 });
+Run("Load Text File accepts a caller-provided Text expression", () => Equal(false,
+    Analyze("Dim Bytes[8]\nDim MapPath As Text\nMapPath = \"Maps\\Town.smilemap\"\nLoad Text File MapPath Into Bytes Count ByteCount\n").HasErrors));
+Run("Load Text File rejects a non-Text path expression", () => Equal(true,
+    HasDiagnostic(Analyze("Dim Bytes[8]\nLoad Text File 42 Into Bytes Count ByteCount\n"), "SML3027")));
 Run("Load Text File rejects an empty path", () => Equal(true,
     HasDiagnostic(Analyze("Dim Bytes[8]\nLoad Text File \"\" Into Bytes Count ByteCount\n"), "SML3027")));
 Run("Load Text File rejects an unknown destination", () => Equal(true,
@@ -375,6 +379,15 @@ Run("Web emitter lowers the complete shared game surface", () =>
     Equal(true, javascript.Contains("smile.fillCircle"));
     Equal(true, javascript.Contains("smile.playMusic"));
     Equal(true, javascript.Contains("break t_"));
+});
+Run("Native and Web emitters lower a dynamic Load Text File path", () =>
+{
+    const string source = "Dim Bytes[8]\nDim MapPath As Text\nMapPath = \"Maps\\Town.smilemap\"\nLoad Text File MapPath Into Bytes Count ByteCount\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    Equal(true, new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit()
+        .Contains("call smile_load_text_file", StringComparison.Ordinal));
+    Equal(true, new WebEmitter(analysis).Emit().Contains("await smile.loadTextFile(", StringComparison.Ordinal));
 });
 Run("Web output writer creates deterministic static files", () =>
 {
@@ -3011,30 +3024,47 @@ Run("ApplicationId CLI parses and rejects conflicting project overrides", () =>
     }
 });
 
-Run("Smile.RPG 1.0.2 is an ordinary built-in source package with bounded public modules", () =>
+Run("Phase 7 Smile.Game and Smile.RPG are ordinary built-in source packages with bounded public modules", () =>
 {
-    var project = SmileProjectSourceSet.Load("libraries/Smile.RPG/Smile.RPG.smilelibproj");
-    var compilation = SmileProjectCompilation.Load(project.ProjectPath);
-    var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library,
-        compilation.DependencyContext);
-    Equal(false, analysis.HasErrors);
-    Equal("1.0.2", project.Version);
-    Equal(8, project.CompilationSources.Count);
+    var gameProject = SmileProjectSourceSet.Load("libraries/Smile.Game/Smile.Game.smilelibproj");
+    var gameCompilation = SmileProjectCompilation.Load(gameProject.ProjectPath);
+    var gameAnalysis = SmileLanguage.Analyze(gameCompilation.Sources, SmileCompilationKind.Library,
+        gameCompilation.DependencyContext);
+    Equal(false, gameAnalysis.HasErrors);
+    Equal("1.0.0", gameProject.Version);
+    Equal(5, gameProject.CompilationSources.Count);
+    Equal(true, SmileBuiltInLibraryCatalog.IsBuiltIn("Smile.Game"));
+    foreach (var module in new[] { "Smile.Game.Core", "Smile.Game.Animation", "Smile.Game.TileMap",
+        "Smile.Game.Camera2D", "Smile.Game.Collision2D" })
+        Equal(true, gameAnalysis.SemanticModel.Modules.ContainsKey(module));
+    Equal(false, gameProject.References.Any());
+    Equal(false, gameProject.CompilationSources.Any(source => File.ReadAllText(source.FullPath)
+        .Contains("Game Window", StringComparison.OrdinalIgnoreCase)));
+
+    var rpgProject = SmileProjectSourceSet.Load("libraries/Smile.RPG/Smile.RPG.smilelibproj");
+    var rpgCompilation = SmileProjectCompilation.Load(rpgProject.ProjectPath);
+    var rpgAnalysis = SmileLanguage.Analyze(rpgCompilation.Sources, SmileCompilationKind.Library,
+        rpgCompilation.DependencyContext);
+    Equal(false, rpgAnalysis.HasErrors);
+    Equal("1.1.0", rpgProject.Version);
+    Equal(11, rpgProject.CompilationSources.Count);
     Equal(true, SmileBuiltInLibraryCatalog.IsBuiltIn("Smile.RPG"));
     foreach (var module in new[] { "Smile.RPG.Core", "Smile.RPG.Characters", "Smile.RPG.Party",
         "Smile.RPG.Inventory", "Smile.RPG.Equipment", "Smile.RPG.Abilities", "Smile.RPG.Shops",
-        "Smile.RPG.SaveGames" })
-        Equal(true, analysis.SemanticModel.Modules.ContainsKey(module));
-    Equal(false, project.References.Any());
-    Equal(false, project.CompilationSources.Any(source => File.ReadAllText(source.FullPath)
+        "Smile.RPG.World", "Smile.RPG.Story", "Smile.RPG.Encounters", "Smile.RPG.SaveGames" })
+        Equal(true, rpgAnalysis.SemanticModel.Modules.ContainsKey(module));
+    Equal(false, rpgProject.References.Any());
+    Equal(false, rpgProject.CompilationSources.Any(source => File.ReadAllText(source.FullPath)
         .Contains("Game Window", StringComparison.OrdinalIgnoreCase)));
-    Equal(false, project.CompilationSources.Any(source => File.ReadAllText(source.FullPath)
+    Equal(false, rpgProject.CompilationSources.Any(source => File.ReadAllText(source.FullPath)
         .Contains("Smile.UI", StringComparison.OrdinalIgnoreCase)));
 
-    const int maximumPayload = 12 + 4 + 32 * 13 * 4 + 4 + 8 * 4 + 4 + 4 + 64 * 2 * 4 +
+    const int phase6MaximumPayload = 12 + 4 + 32 * 13 * 4 + 4 + 8 * 4 + 4 + 4 + 64 * 2 * 4 +
         4 + 32 * 16 * 3 * 4 + 4 + 32 * 32 * 2 * 4 + 4 + 16 * 64 * 3 * 4;
-    Equal(true, maximumPayload < 32768);
-    Equal(true, maximumPayload < 1024 * 1024);
+    const int phase7MaximumPayload = phase6MaximumPayload + 6 * 4 + 4 + 64 * 7 * 4 +
+        4 + 128 * 2 * 4 + 4 + 64 * 2 * 4 + 2 * 4 + 16 * 3 * 4;
+    Equal(true, phase7MaximumPayload < 36864);
+    Equal(true, phase7MaximumPayload < 1024 * 1024);
 });
 
 Run("VSIX templates render localized identity metadata within the aligned header", () =>
@@ -3058,10 +3088,10 @@ Run("VSIX templates render localized identity metadata within the aligned header
     var border = gameTemplate.Split('\n')[0].TrimEnd('\r');
     var rendered = gameTemplate.Replace("$smileuser$", "Sin".PadRight(69), StringComparison.Ordinal)
         .Replace("$smiledate$", "August 15, 2026".PadRight(69), StringComparison.Ordinal)
-        .Replace("$smileversion$", "2.0.41", StringComparison.Ordinal);
+        .Replace("$smileversion$", "2.0.42", StringComparison.Ordinal);
     var header = rendered.Split('\n').Take(9).Select(line => line.TrimEnd('\r')).ToArray();
     Equal("' Programmed By: " + "Sin".PadRight(69) + "Version: 0.0.1", header[3]);
-    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.41", header[4]);
+    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.42", header[4]);
     Equal(header[3].IndexOf("Version:", StringComparison.Ordinal) + "Version".Length,
         header[4].IndexOf("SMILE:", StringComparison.Ordinal) + "SMILE".Length);
     Equal(true, header.All(line => line.Length <= border.Length));
@@ -3074,14 +3104,14 @@ Run("VSIX templates render localized identity metadata within the aligned header
     foreach (var manifest in new[] { gameManifest, consoleManifest })
     {
         Equal(true, manifest.Contains("SmileProjectTemplateWizard", StringComparison.Ordinal));
-        Equal(true, manifest.Contains("Version=2.0.41.0", StringComparison.Ordinal));
+        Equal(true, manifest.Contains("Version=2.0.42.0", StringComparison.Ordinal));
     }
     foreach (var applicationProject in new[] { gameProject, consoleProject })
         Equal(true, applicationProject.Contains("<ApplicationId>$smileapplicationid$</ApplicationId>", StringComparison.Ordinal));
     Equal(false, libraryProject.Contains("ApplicationId", StringComparison.Ordinal));
     Equal(true, wizard.Contains("\"smile.app.a\" + Guid.NewGuid().ToString(\"N\")", StringComparison.Ordinal));
     Equal(true, wizard.Contains("ToString(\"D\", CultureInfo.CurrentCulture)", StringComparison.Ordinal));
-    Equal(true, project.Contains("<Version>2.0.41</Version>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<Version>2.0.42</Version>", StringComparison.Ordinal));
     Equal(true, vsixManifest.Contains("Type=\"Microsoft.VisualStudio.Assembly\"", StringComparison.Ordinal));
 });
 

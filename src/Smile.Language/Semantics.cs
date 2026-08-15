@@ -1281,8 +1281,10 @@ internal sealed class SemanticAnalyzer
 
     private void AnalyzeTextFileLoad(TextFileLoadStatementSyntax statement)
     {
-        if (string.IsNullOrWhiteSpace(statement.Path.Value as string))
-            Report("SML3027", statement.Path.Span, "Load Text File requires a non-empty path literal.");
+        RequireType(statement.Path, SmileType.Text, "SML3027", "Load Text File path must be Text.");
+        if (TryEvaluateConstant(statement.Path, out var path, out var pathType) &&
+            pathType == SmileType.Text && string.IsNullOrWhiteSpace(path as string))
+            Report("SML3027", statement.Path.Span, "Load Text File requires a non-empty path.");
 
         if (!TryResolveExisting(statement.Destination.Text, out var destination))
         {

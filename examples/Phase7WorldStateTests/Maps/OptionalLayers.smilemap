@@ -1,0 +1,14 @@
+# Optional visual layers intentionally omitted.
+SMILE-MAP 1
+SIZE 2 2
+CELL 16 20
+GROUND
+1 2
+2 1
+COLLISION
+0 0
+0 1
+REGIONS
+0 3
+0 0
+END

@@ -550,9 +550,9 @@ internal sealed class WebEmitter
 
     private void EmitTextFileLoad(TextFileLoadStatementSyntax statement)
     {
-        var path = (statement.Path.Value as string ?? string.Empty).Replace('\\', '/');
         var destination = _variableNames[ResolveVariable(statement.Destination)];
-        Line(WriteVariable(statement.CountIdentifier, $"await smile.loadTextFile({Json(path)}, {destination})") + ";");
+        Line(WriteVariable(statement.CountIdentifier,
+            $"await smile.loadTextFile({Expression(statement.Path)}, {destination})") + ";");
     }
 
     private string Expression(ExpressionSyntax expression)

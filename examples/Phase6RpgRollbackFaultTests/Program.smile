@@ -7,6 +7,9 @@ Import Smile.RPG.Inventory As Inventory
 Import Smile.RPG.Equipment As Equipment
 Import Smile.RPG.Abilities As Abilities
 Import Smile.RPG.Shops As Shops
+Import Smile.RPG.World As World
+Import Smile.RPG.Story As Story
+Import Smile.RPG.Encounters As Encounters
 Import Smile.RPG.SaveGames As SaveGames
 
 Dim CharacterDefinition As Characters.CharacterDefinition
@@ -14,6 +17,10 @@ Dim ItemDefinition As Inventory.ItemDefinition
 Dim SlotDefinition As Equipment.EquipmentSlotDefinition
 Dim AbilityDefinition As Abilities.AbilityDefinition
 Dim ShopDefinition As Shops.ShopDefinition
+Dim SceneDefinition As World.SceneDefinition
+Dim SpawnDefinition As World.SpawnDefinition
+Dim ActorDefinition As World.ActorDefinition
+Dim ZoneDefinition As Encounters.ZoneDefinition
 Dim State As Number
 Dim IncomingState As Number
 Dim Result As Number
@@ -142,6 +149,69 @@ Sub DefineState(StateHandle As Number)
     Call Check(Shops.DefineShop(StateHandle, ShopDefinition))
     Call Check(Shops.AddShopItem(StateHandle, 4001, 1003, 10, 5, RPG.RPG_STOCK_UNLIMITED))
 
+    SceneDefinition.Id = 5000
+    SceneDefinition.MapId = 5000
+    SceneDefinition.DefaultSpawnId = 5100
+    SceneDefinition.CameraMode = World.WORLD_CAMERA_FOLLOW
+
+    Call Check(World.DefineScene(StateHandle, SceneDefinition))
+
+    SceneDefinition.Id = 5001
+    SceneDefinition.MapId = 5001
+    SceneDefinition.DefaultSpawnId = 5101
+    SceneDefinition.CameraMode = World.WORLD_CAMERA_FIXED
+
+    Call Check(World.DefineScene(StateHandle, SceneDefinition))
+
+    SpawnDefinition.Id = 5100
+    SpawnDefinition.SceneId = 5000
+    SpawnDefinition.CellX = 2
+    SpawnDefinition.CellY = 3
+    SpawnDefinition.Facing = World.WORLD_FACING_DOWN
+
+    Call Check(World.DefineSpawn(StateHandle, SpawnDefinition))
+
+    SpawnDefinition.Id = 5101
+    SpawnDefinition.SceneId = 5001
+    SpawnDefinition.CellX = 8
+    SpawnDefinition.CellY = 9
+    SpawnDefinition.Facing = World.WORLD_FACING_LEFT
+
+    Call Check(World.DefineSpawn(StateHandle, SpawnDefinition))
+
+    ActorDefinition.Id = 5200
+    ActorDefinition.SceneId = 5000
+    ActorDefinition.CellX = 2
+    ActorDefinition.CellY = 3
+    ActorDefinition.Facing = World.WORLD_FACING_DOWN
+    ActorDefinition.Visible = True
+    ActorDefinition.Solid = True
+    ActorDefinition.Persistent = True
+    ActorDefinition.AnimationSetId = 1
+    ActorDefinition.InteractionId = 0
+
+    Call Check(World.DefineActor(StateHandle, ActorDefinition))
+
+    ActorDefinition.Id = 5201
+    ActorDefinition.CellX = 10
+    ActorDefinition.CellY = 11
+    ActorDefinition.Persistent = False
+    ActorDefinition.InteractionId = 1
+
+    Call Check(World.DefineActor(StateHandle, ActorDefinition))
+
+    Call Check(Story.DefineFlag(StateHandle, 5300))
+    Call Check(Story.DefineValue(StateHandle, 5400))
+
+    ZoneDefinition.Id = 5500
+    ZoneDefinition.SceneId = 5001
+    ZoneDefinition.RegionId = 9
+    ZoneDefinition.StepsRequired = 3
+    ZoneDefinition.InitialSeed = 1234
+
+    Call Check(Encounters.DefineZone(StateHandle, ZoneDefinition))
+    Call Check(Encounters.AddEntry(StateHandle, 5500, 5600, 1))
+
 End Sub
 
 Sub BuildRollbackState(StateHandle As Number)
@@ -203,6 +273,15 @@ Sub BuildRollbackState(StateHandle As Number)
 
     Call Check(Shops.SetStock(StateHandle, 4000, 1002, 6))
     Call Check(Shops.SetStock(StateHandle, 4001, 1003, RPG.RPG_STOCK_UNLIMITED))
+    Call Check(World.SetCurrentScene(StateHandle, 5001))
+    Call Check(World.SetControlledActor(StateHandle, 5200))
+    Call Check(World.SetActorProgress(StateHandle, 5200, 5001, 21, 22, World.WORLD_FACING_LEFT, False, 7))
+    Call Check(World.SetActorProgress(StateHandle, 5201, 5000, 31, 32, World.WORLD_FACING_UP, False, 8))
+    Call Check(World.SetReturnLocation(StateHandle, 5000, 23, 24, World.WORLD_FACING_UP))
+    Call Check(Story.SetFlag(StateHandle, 5300, True))
+    Call Check(Story.SetValue(StateHandle, 5400, 6789))
+    Call Check(Encounters.SetProgress(StateHandle, 5500, 2, 4321))
+    Call Check(Encounters.SetPendingEncounter(StateHandle, 5600))
 
 End Sub
 
@@ -227,6 +306,15 @@ Sub BuildIncomingState(StateHandle As Number)
     Call Check(Inventory.AddItem(StateHandle, 1002, 1))
     Call Check(Abilities.LearnAbility(StateHandle, 100, 3000))
     Call Check(Shops.SetStock(StateHandle, 4000, 1002, 5))
+    Call Check(World.SetCurrentScene(StateHandle, 5000))
+    Call Check(World.SetControlledActor(StateHandle, 5200))
+    Call Check(World.SetActorProgress(StateHandle, 5200, 5000, 41, 42, World.WORLD_FACING_RIGHT, True, 3))
+    Call Check(World.SetActorProgress(StateHandle, 5201, 5000, 51, 52, World.WORLD_FACING_RIGHT, True, 4))
+    Call Check(World.SetReturnLocation(StateHandle, 5001, 43, 44, World.WORLD_FACING_RIGHT))
+    Call Check(Story.SetFlag(StateHandle, 5300, False))
+    Call Check(Story.SetValue(StateHandle, 5400, 9876))
+    Call Check(Encounters.SetProgress(StateHandle, 5500, 1, 2222))
+    Call Check(Encounters.SetPendingEncounter(StateHandle, 5601))
 
 End Sub
 
@@ -292,6 +380,23 @@ Sub CheckRollbackState()
 
     Call Check(Shops.Stock(State, 4000, 1002) = 6)
     Call Check(Shops.Stock(State, 4001, 1003) = RPG.RPG_STOCK_UNLIMITED)
+    Call Check(World.CurrentScene(State) = 5001)
+    Call Check(World.ControlledActor(State) = 5200)
+    Call Check(World.ActorScene(State, 5200) = 5001)
+    Call Check(World.ActorX(State, 5200) = 21 And World.ActorY(State, 5200) = 22)
+    Call Check(World.ActorFacingDirection(State, 5200) = World.WORLD_FACING_LEFT)
+    Call Check(Not World.ActorIsVisible(State, 5200) And World.ActorRouteStep(State, 5200) = 7)
+    Call Check(World.ActorX(State, 5201) = 31 And World.ActorY(State, 5201) = 32)
+    Call Check(World.ActorFacingDirection(State, 5201) = World.WORLD_FACING_UP)
+    Call Check(Not World.ActorIsVisible(State, 5201) And World.ActorRouteStep(State, 5201) = 8)
+    Call Check(World.ReturnScene(State) = 5000)
+    Call Check(World.ReturnX(State) = 23 And World.ReturnY(State) = 24)
+    Call Check(World.ReturnFacingDirection(State) = World.WORLD_FACING_UP)
+    Call Check(Story.Flag(State, 5300))
+    Call Check(Story.Value(State, 5400) = 6789)
+    Call Check(Encounters.StepCount(State, 5500) = 2)
+    Call Check(Encounters.Seed(State, 5500) = 4321)
+    Call Check(Encounters.PendingEncounter(State) = 5600)
 
 End Sub
 

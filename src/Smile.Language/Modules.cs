@@ -23,6 +23,7 @@ public static class SmileBuiltInLibraryCatalog
 {
     private static readonly HashSet<string> Names = new(StringComparer.OrdinalIgnoreCase)
     {
+        "Smile.Game",
         "Smile.UI",
         "Smile.RPG"
     };
@@ -739,7 +740,8 @@ internal sealed class ModuleProcessor
                 return new LoadStatementSyntax(load.LoadKeyword, ReferenceToken(load.Identifier, tree, module, locals),
                     load.Key, LowerExpression(load.DefaultValue, tree, module, locals));
             case TextFileLoadStatementSyntax load:
-                return new TextFileLoadStatementSyntax(load.LoadKeyword, load.TextKeyword, load.FileKeyword, load.Path,
+                return new TextFileLoadStatementSyntax(load.LoadKeyword, load.TextKeyword, load.FileKeyword,
+                    LowerExpression(load.Path, tree, module, locals),
                     load.IntoKeyword, ReferenceToken(load.Destination, tree, module, locals), load.CountKeyword,
                     ReferenceToken(load.CountIdentifier, tree, module, locals));
             case DataLoadStatementSyntax load:

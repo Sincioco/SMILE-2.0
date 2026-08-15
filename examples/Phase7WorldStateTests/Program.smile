@@ -1,0 +1,307 @@
+Option Explicit
+
+Import Smile.Game.Core As GameCore
+Import Smile.Game.Animation As Animation
+Import Smile.Game.TileMap As TileMap
+Import Smile.Game.Camera2D As Camera2D
+Import Smile.Game.Collision2D As Collision2D
+Import Smile.RPG.Core As RPG
+Import Smile.RPG.World As World
+Import Smile.RPG.Story As Story
+Import Smile.RPG.Encounters As Encounters
+Import Smile.RPG.SaveGames As SaveGames
+
+Dim Checks As Number
+Dim Failures As Number
+Dim MapPath As Text
+Dim MapHandle As Number
+Dim InvalidMapHandle As Number
+Dim OptionalMapHandle As Number
+Dim AnimationHandle As Number
+Dim Mover As GameCore.CardinalMover
+Dim Camera As Camera2D.CameraState
+Dim State As Number
+Dim LegacyState As Number
+Dim Scene As World.SceneDefinition
+Dim Spawn As World.SpawnDefinition
+Dim Actor As World.ActorDefinition
+Dim Zone As Encounters.ZoneDefinition
+Dim Transition As World.TransitionDefinition
+Dim Result As Number
+Dim ByteCount As Number
+Dim ReencodedCount As Number
+Dim Index As Number
+Dim SavedBytes[36864] As Number
+Dim LegacyBytes[36864] As Number
+
+Call GameCore.Place(Mover, 3, 4, GameCore.GAME_DIRECTION_DOWN)
+Call Check(GameCore.BeginMove(Mover, GameCore.GAME_DIRECTION_RIGHT, 4))
+Call Check(GameCore.VisualX(Mover, 32) = 96)
+Call Check(Not GameCore.UpdateMove(Mover, 2))
+Call Check(GameCore.VisualX(Mover, 32) = 112)
+Call Check(GameCore.UpdateMove(Mover, 2))
+Call Check(Mover.CellX = 4 And Mover.CellY = 4)
+
+Call Check(Camera2D.Configure(Camera, 320, 180, 1024, 768))
+Call Camera2D.Follow(Camera, 1000, 740)
+Call Check(Camera.X = 704 And Camera.Y = 588)
+Call Check(Camera2D.LastVisibleCellX(Camera, 32, 32, 1) = 31)
+Call Check(Camera2D.Configure(Camera, 640, 480, 320, 200))
+Call Camera2D.Follow(Camera, 300, 190)
+Call Check(Camera.X = 0 And Camera.Y = 0)
+Call Check(Collision2D.OutsideMap(-1, 0, 10, 10))
+Call Check(Collision2D.CellsOverlap(2, 3, 2, 3))
+Call Check(Collision2D.FootprintsOverlap(2, 2, 2, 1, 3, 2, 1, 1))
+
+AnimationHandle = Animation.Create(3, True, 16, 32)
+
+Call Check(AnimationHandle <> 0)
+Call Check(Animation.AddFrame(AnimationHandle, 0, 0, 32, 32))
+Call Check(Animation.AddFrame(AnimationHandle, 32, 0, 32, 32))
+Call Check(Animation.CurrentFrame(AnimationHandle, 4) = 1)
+Call Check(Animation.CurrentFrame(AnimationHandle, 7) = 0)
+Call Animation.Destroy(AnimationHandle)
+Call Check(Not Animation.IsValid(AnimationHandle) And Animation.CurrentFrame(AnimationHandle, 0) = -1)
+
+AnimationHandle = Animation.Create(2, False, 0, 0)
+
+Call Check(Animation.AddFrame(AnimationHandle, 0, 0, 8, 8))
+Call Check(Animation.AddFrame(AnimationHandle, 8, 0, 8, 8))
+Call Check(Animation.CurrentFrame(AnimationHandle, 99) = 1)
+
+MapPath = "Maps\Test.smilemap"
+MapHandle = TileMap.LoadMap(MapPath)
+
+Call Check(MapHandle <> 0)
+Call Check(TileMap.Width(MapHandle) = 4 And TileMap.Height(MapHandle) = 3)
+Call Check(TileMap.CellWidth(MapHandle) = 32 And TileMap.CellHeight(MapHandle) = 24)
+Call Check(TileMap.TileAt(MapHandle, GameCore.GAME_LAYER_DETAIL, 1, 1) = 3)
+Call Check(Not TileMap.IsSolid(MapHandle, 1, 1) And TileMap.IsSolid(MapHandle, 0, 0))
+Call Check(TileMap.RegionAt(MapHandle, 2, 1) = 8)
+Call Check(TileMap.CellToWorldX(MapHandle, 3) = 96)
+Call Check(TileMap.CellToWorldY(MapHandle, 2) = 48)
+Call Check(TileMap.WorldToCellX(MapHandle, 95) = 2)
+Call Check(TileMap.WorldToCellY(MapHandle, 47) = 1)
+
+MapPath = "Maps\OptionalLayers.smilemap"
+OptionalMapHandle = TileMap.LoadMap(MapPath)
+
+Call Check(OptionalMapHandle <> 0)
+Call Check(TileMap.TileAt(OptionalMapHandle, GameCore.GAME_LAYER_DETAIL, 0, 0) = 0)
+Call Check(TileMap.TileAt(OptionalMapHandle, GameCore.GAME_LAYER_FOREGROUND, 1, 1) = 0)
+
+MapPath = "Maps\Invalid.smilemap"
+InvalidMapHandle = TileMap.LoadMap(MapPath)
+
+Call Check(InvalidMapHandle = 0 And TileMap.IsValid(MapHandle))
+
+State = RPG.Create()
+
+Call Check(State <> 0)
+
+Scene.Id = 1
+Scene.MapId = 1
+Scene.DefaultSpawnId = 10
+Scene.CameraMode = World.WORLD_CAMERA_FOLLOW
+
+Call Check(World.DefineScene(State, Scene))
+
+Scene.Id = 2
+Scene.MapId = 2
+Scene.DefaultSpawnId = 20
+
+Call Check(World.DefineScene(State, Scene))
+
+Spawn.Id = 10
+Spawn.SceneId = 1
+Spawn.CellX = 3
+Spawn.CellY = 4
+Spawn.Facing = World.WORLD_FACING_DOWN
+
+Call Check(World.DefineSpawn(State, Spawn))
+
+Spawn.Id = 20
+Spawn.SceneId = 2
+Spawn.CellX = 7
+Spawn.CellY = 8
+Spawn.Facing = World.WORLD_FACING_LEFT
+
+Call Check(World.DefineSpawn(State, Spawn))
+
+Transition.Id = 1
+Transition.SourceSceneId = 1
+Transition.SourceRegionId = 7
+Transition.DestinationSceneId = 2
+Transition.DestinationSpawnId = 20
+
+Call Check(World.DefineTransition(State, Transition))
+
+Actor.Id = 100
+Actor.SceneId = 1
+Actor.CellX = 3
+Actor.CellY = 4
+Actor.Facing = World.WORLD_FACING_DOWN
+Actor.Visible = True
+Actor.Solid = True
+Actor.Persistent = True
+Actor.AnimationSetId = 1
+Actor.InteractionId = 0
+
+Call Check(World.DefineActor(State, Actor))
+
+Actor.Id = 200
+Actor.SceneId = 1
+Actor.CellX = 4
+Actor.CellY = 4
+Actor.Facing = World.WORLD_FACING_LEFT
+Actor.Persistent = False
+Actor.InteractionId = 99
+
+Call Check(World.DefineActor(State, Actor))
+Call Check(World.PersistentActorCount(State) = 1)
+Call Check(World.PersistentActorIdAt(State, 0) = 100)
+Call Check(World.ActorIsPersistent(State, 100) And Not World.ActorIsPersistent(State, 200))
+
+Transition.Id = 2
+Transition.SourceSceneId = 1
+Transition.SourceRegionId = 8
+Transition.DestinationSceneId = 1
+Transition.DestinationSpawnId = 20
+
+Call Check(Not World.DefineTransition(State, Transition))
+
+Call Check(World.SetCurrentScene(State, 1))
+Call Check(World.SetControlledActor(State, 100))
+Call Check(World.FrontActor(State) = 0)
+Call Check(World.SetActorFacing(State, 100, World.WORLD_FACING_RIGHT))
+Call Check(World.FrontActor(State) = 200)
+Call Check(Not World.TryReserveDestination(State, 100, 4, 4))
+Call Check(World.TryReserveDestination(State, 100, 3, 5))
+Call Check(World.CompleteReservedMove(State, 100, World.WORLD_FACING_DOWN))
+Call Check(World.SetActorProgress(State, 100, 1, 3, 4, World.WORLD_FACING_DOWN, True, 0))
+Call Check(World.TransitionAtRegion(State, 7) = 1)
+Call Check(World.ActivateTransition(State, 1))
+Call Check(World.CurrentScene(State) = 2)
+Call Check(World.ActorScene(State, 100) = 2 And World.ActorX(State, 100) = 7 And World.ActorY(State, 100) = 8)
+
+Call Check(Story.DefineFlag(State, 1))
+Call Check(Story.DefineValue(State, 2))
+Call Check(Story.SetFlag(State, 1, True))
+Call Check(Story.SetValue(State, 2, 17))
+
+Zone.Id = 1
+Zone.SceneId = 2
+Zone.RegionId = 5
+Zone.StepsRequired = 2
+Zone.InitialSeed = 7
+
+Call Check(Encounters.DefineZone(State, Zone))
+Call Check(Encounters.AddEntry(State, 1, 500, 3))
+Call Check(Encounters.AddEntry(State, 1, 501, 1))
+Call Check(Encounters.Advance(State, 1, 0) = 0)
+Call Check(Encounters.Advance(State, 1, 3) = 501)
+
+Call Check(World.SetCurrentScene(State, 2))
+Call Check(World.SetReturnLocation(State, 2, 7, 8, World.WORLD_FACING_LEFT))
+
+Result = SaveGames.Encode(State, 7)
+ByteCount = SaveGames.EncodedByteCount()
+
+Call Check(Result = RPG.RPG_RESULT_OK And ByteCount > 0 And ByteCount < RPG.RPG_MAX_SAVE_BYTES)
+
+For Index = 0 To ByteCount - 1
+    SavedBytes[Index] = SaveGames.EncodedByteAt(Index)
+End For
+
+Call Check(World.SetActorProgress(State, 100, 1, 1, 1, World.WORLD_FACING_UP, False, 0))
+Call Check(World.SetActorProgress(State, 200, 1, 8, 8, World.WORLD_FACING_UP, False, 9))
+Call Check(World.SetCurrentScene(State, 1))
+Call Check(Story.SetFlag(State, 1, False))
+Call Check(Story.SetValue(State, 2, 0))
+Call Encounters.ClearPendingEncounter(State)
+
+Result = SaveGames.Decode(State, 7)
+
+Call Check(Result = RPG.RPG_RESULT_OK)
+Call Check(World.CurrentScene(State) = 2)
+Call Check(World.ActorX(State, 100) = 7 And World.ActorY(State, 100) = 8)
+Call Check(World.ActorIsVisible(State, 100))
+Call Check(World.ActorX(State, 200) = 8 And World.ActorY(State, 200) = 8)
+Call Check(Story.Flag(State, 1) And Story.Value(State, 2) = 17)
+Call Check(Encounters.PendingEncounter(State) = 501)
+Call Check(World.ReturnScene(State) = 2 And World.ReturnX(State) = 7 And World.ReturnY(State) = 8)
+
+Result = SaveGames.Encode(State, 7)
+ReencodedCount = SaveGames.EncodedByteCount()
+
+Call Check(Result = RPG.RPG_RESULT_OK And ReencodedCount = ByteCount)
+
+For Index = 0 To ByteCount - 1
+    Call Check(SaveGames.EncodedByteAt(Index) = SavedBytes[Index])
+End For
+
+Call Check(SaveGames.SetEncodedByte(ByteCount, 99))
+
+Result = SaveGames.Decode(State, 7)
+
+Call Check(Result = RPG.RPG_RESULT_NOT_FOUND_OR_INVALID_SAVE)
+Call Check(World.CurrentScene(State) = 2 And Story.Flag(State, 1))
+
+LegacyState = RPG.Create()
+
+Call Check(LegacyState <> 0)
+
+Result = SaveGames.Encode(LegacyState, 11)
+ByteCount = SaveGames.EncodedByteCount()
+
+For Index = 0 To ByteCount - 1
+    LegacyBytes[Index] = SaveGames.EncodedByteAt(Index)
+End For
+
+Call SaveGames.ClearEncodedBytes()
+
+For Index = 0 To ByteCount - 45
+
+    If Index = 4 Then
+        Call Check(SaveGames.SetEncodedByte(Index, 1))
+    Else
+
+        Call Check(SaveGames.SetEncodedByte(Index, LegacyBytes[Index]))
+    End If
+
+End For
+
+Result = SaveGames.Decode(LegacyState, 11)
+
+Call Check(Result = RPG.RPG_RESULT_OK)
+Call Check(World.CurrentScene(LegacyState) = 0 And World.ControlledActor(LegacyState) = 0)
+
+Call TileMap.Unload(MapHandle)
+Call TileMap.Unload(OptionalMapHandle)
+Call Animation.Destroy(AnimationHandle)
+Call RPG.Destroy(LegacyState)
+Call RPG.Destroy(State)
+
+If Failures = 0 Then
+    Print "Phase 7 world state tests: PASS"
+    Print Checks
+Else
+    Print "Phase 7 world state tests: FAIL"
+    Print Failures
+End If
+
+End Program
+
+Sub Check(Condition As Boolean)
+
+    Checks = Checks + 1
+
+    If Not Condition Then
+
+        Failures = Failures + 1
+        Print "Failed check"
+        Print Checks
+
+    End If
+
+End Sub

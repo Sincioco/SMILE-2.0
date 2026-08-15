@@ -1,0 +1,15 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Library</ProjectKind>
+    <LibraryName>Smile.Game</LibraryName>
+    <Version>1.0.0</Version>
+    <OutputName>Smile.Game</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Core.smile" />
+    <SmileSource Include="Animation.smile" />
+    <SmileSource Include="TileMap.smile" />
+    <SmileSource Include="Camera2D.smile" />
+    <SmileSource Include="Collision2D.smile" />
+  </ItemGroup>
+</SmileProject>

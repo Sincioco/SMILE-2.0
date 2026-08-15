@@ -1,0 +1,49 @@
+''' Generic nonmutating cell, footprint, and rectangle collision helpers.
+Module Smile.Game.Collision2D
+
+Option Explicit
+
+''' Returns True when a cell is outside a bounded map.
+Public Function OutsideMap(CellX As Number, CellY As Number, MapWidth As Number, MapHeight As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = CellX < 0 Or CellY < 0 Or CellX >= MapWidth Or CellY >= MapHeight
+
+    Return ReturnValue
+
+End Function
+
+''' Returns True when two one-cell actor footprints occupy the same cell.
+Public Function CellsOverlap(FirstX As Number, FirstY As Number, SecondX As Number, SecondY As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = FirstX = SecondX And FirstY = SecondY
+
+    Return ReturnValue
+
+End Function
+
+''' Returns True when two documented multi-cell footprints overlap.
+Public Function FootprintsOverlap(FirstX As Number, FirstY As Number, FirstWidth As Number, FirstHeight As Number, SecondX As Number, SecondY As Number, SecondWidth As Number, SecondHeight As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    If (FirstWidth <= 0 Or
+        FirstHeight <= 0 Or
+        SecondWidth <= 0 Or
+        SecondHeight <= 0) Then
+        Return False
+    End If
+
+    ReturnValue = (FirstX < SecondX + SecondWidth And
+        FirstX + FirstWidth > SecondX And
+        FirstY < SecondY + SecondHeight And
+        FirstY + FirstHeight > SecondY)
+
+    Return ReturnValue
+
+End Function
+
+End Module

@@ -731,7 +731,7 @@ internal sealed class Parser
         var load = MatchToken(SyntaxKind.LoadKeyword);
         var text = MatchToken(SyntaxKind.TextKeyword);
         var file = MatchToken(SyntaxKind.FileKeyword);
-        var path = MatchToken(SyntaxKind.StringToken);
+        var path = ParseExpression();
         var into = MatchToken(SyntaxKind.IntoKeyword);
         var destination = MatchIdentifier();
         var count = MatchToken(SyntaxKind.CountKeyword);
@@ -1200,7 +1200,7 @@ internal sealed class Parser
 
     private SyntaxToken MatchDottedIdentifier()
     {
-        if (IsIdentifierLike(Current.Kind) || Current.Kind is SyntaxKind.TextKeyword or
+        if (IsIdentifierLike(Current.Kind) || Current.Kind is SyntaxKind.GameKeyword or SyntaxKind.TextKeyword or
             SyntaxKind.NumberKeyword or SyntaxKind.BooleanKeyword or SyntaxKind.ImageKeyword)
             return NextToken();
         return MatchToken(SyntaxKind.IdentifierToken);

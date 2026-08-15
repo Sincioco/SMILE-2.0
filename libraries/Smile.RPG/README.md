@@ -1,6 +1,6 @@
-# Smile.RPG 1.0.2
+# Smile.RPG 1.1.0
 
-`Smile.RPG` is the official source-authored Phase 6 package for reusable RPG data and management. It contains eight ordinary SMILE modules and deliberately owns no window, drawing, input, audio, asset, battle, enemy, quest, class, or status-effect behavior.
+`Smile.RPG` is the official source-authored package for reusable RPG data, management, and bounded top-down world state. It contains eleven ordinary SMILE modules and deliberately owns no window, drawing, input, audio, asset, battle-resolution, quest-language, class, or status-effect behavior.
 
 The package manages:
 
@@ -11,9 +11,10 @@ The package manages:
 - transactional equipment and bounded bonuses;
 - ability definitions, learned abilities, and exact Magic Point costs;
 - shop definitions, explicit prices, limited or unlimited stock, and transactional buy/sell operations;
-- deterministic SRPG version-1 save payloads over Phase 4 `Save Data` and `Load Data`.
+- scenes, spawns, transitions, persistent actor progress, story flags/values, and deterministic encounter previews;
+- deterministic SRPG format-2 writes with format-1/2 reads over Phase 4 `Save Data` and `Load Data`.
 
-Version 1.0.2 makes `SaveGames.Exists` an observational query that preserves the public codec buffer and RPG state. It retains the 1.0.1 save/load capacity, rollback, restoration-order, and precise Shop-result hardening. The SRPG binary layout remains version 1.
+Version 1.1.0 preserves the Phase 6 APIs and adds `World`, `Story`, and `Encounters`. Save/load remains transactional across the combined state; only actors marked persistent are serialized.
 
 Reference `Smile.RPG.smilelibproj` during development or a deterministic `Smile.RPG.smilelib` package for distribution. Register all stable definitions before loading a save.
 

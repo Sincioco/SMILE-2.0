@@ -121,6 +121,17 @@ The Phase 3A typed-text proof uses `libraries\Smile.Text.Extras`, `examples\Phas
 
 Phase 6.2 advances Smile.RPG to 1.0.2 and makes `SaveGames.Exists` observational with respect to the public codec buffer and RPG state. It preserves SRPG payload format 1 and introduces no Phase 7 world features.
 
+Phase 7 adds `Smile.Game` 1.0.0 for reusable movement, animation, SMILE-MAP 1, camera, and collision mechanics, and advances `Smile.RPG` to 1.1.0 with World, Story, Encounters, and SRPG format-2 persistence while retaining format-1 reads. `examples\RpgWorldGallery` is the original DirectX/GDI/Web capability proof. See `docs\language\phase7-rpg-world.md` and `docs\architecture\phase7-top-down-rpg-world.md`.
+
+Build the Phase 7 packages, state proof, and original world gallery:
+
+```bat
+artifacts\compiler\smilec.exe --project libraries\Smile.Game\Smile.Game.smilelibproj --target library -o artifacts\libraries\Smile.Game.smilelib
+artifacts\compiler\smilec.exe --project libraries\Smile.RPG\Smile.RPG.smilelibproj --target library -o artifacts\libraries\Smile.RPG.smilelib
+artifacts\compiler\smilec.exe --project examples\Phase7WorldStateTests\Phase7WorldStateTests.smileproj --target windows-x64 -o artifacts\tests\Phase7WorldStateTests.exe
+artifacts\compiler\smilec.exe --project examples\RpgWorldGallery\RpgWorldGallery.smileproj --target windows-x64 --graphics DirectX -o artifacts\games\RpgWorldGallery-DirectX\RpgWorldGallery.exe
+```
+
 Loose-file builds can add a built package with repeated `--library <path.smilelib>`. Project builds read `<SmileProjectReference>` and `<SmileLibraryReference>` items, build project dependencies in deterministic order, reject cycles, and reuse a referenced project package only when its identity, modules, normalized source hashes, and direct dependency identities match the current library project. Imports follow direct provider boundaries: application and library-project sources see only their own modules and direct references, package sources see only exact manifest dependencies, and loose roots see every package supplied directly with `--library`.
 
 Add each declaration-only support file with a repeatable `--source` option. The files are parsed independently and share one case-insensitive semantic model; only the startup file may contain executable top-level statements, `Game Window`, or `End Program`:

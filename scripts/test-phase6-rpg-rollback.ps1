@@ -21,7 +21,8 @@ try {
     [IO.Directory]::CreateDirectory($ApplicationRoot) | Out-Null
 
     foreach ($Name in @('Core.smile', 'Characters.smile', 'Party.smile', 'Inventory.smile',
-            'Equipment.smile', 'Abilities.smile', 'Shops.smile', 'SaveGames.smile')) {
+            'Equipment.smile', 'Abilities.smile', 'Shops.smile', 'World.smile', 'Story.smile',
+            'Encounters.smile', 'SaveGames.smile')) {
         Copy-Item -LiteralPath (Join-Path $SourceRoot $Name) -Destination (Join-Path $LibraryRoot $Name)
     }
 
@@ -44,7 +45,7 @@ try {
   <PropertyGroup>
     <ProjectKind>Library</ProjectKind>
     <LibraryName>Smile.RPG</LibraryName>
-    <Version>1.0.2</Version>
+    <Version>1.1.0</Version>
     <OutputName>Smile.RPG</OutputName>
   </PropertyGroup>
   <ItemGroup>
@@ -55,6 +56,9 @@ try {
     <SmileSource Include="Equipment.smile" />
     <SmileSource Include="Abilities.smile" />
     <SmileSource Include="Shops.smile" />
+    <SmileSource Include="World.smile" />
+    <SmileSource Include="Story.smile" />
+    <SmileSource Include="Encounters.smile" />
     <SmileSource Include="SaveGames.smile" />
   </ItemGroup>
 </SmileProject>

@@ -1,0 +1,895 @@
+''' Transactional SMILE-MAP 1 parsing, bounded tile storage, and visible-layer rendering.
+Module Smile.Game.TileMap
+
+Option Explicit
+
+Public Const TILE_MAP_MAX_INSTANCES = 4
+Public Const TILE_MAP_MAX_WIDTH = 64
+Public Const TILE_MAP_MAX_HEIGHT = 64
+Public Const TILE_MAP_MAX_CELLS = 4096
+Public Const TILE_MAP_MAX_TILE_ID = 255
+Public Const TILE_MAP_MAX_REGION_ID = 255
+Public Const TILE_MAP_MAX_FILE_BYTES = 131072
+
+Private Const HANDLE_FACTOR = 10
+Private Const MAXIMUM_GENERATION = 99999999
+
+Private Dim Used[4] As Boolean
+Private Dim Generations[4] As Number
+Private Dim WidthValues[4] As Number
+Private Dim HeightValues[4] As Number
+Private Dim CellWidthValues[4] As Number
+Private Dim CellHeightValues[4] As Number
+Private Dim GroundValues[4, 4096] As Number
+Private Dim DetailValues[4, 4096] As Number
+Private Dim ForegroundValues[4, 4096] As Number
+Private Dim CollisionValues[4, 4096] As Number
+Private Dim RegionValues[4, 4096] As Number
+
+Private Dim TileDefined[4, 256] As Boolean
+Private Dim TileSourceX[4, 256] As Number
+Private Dim TileSourceY[4, 256] As Number
+Private Dim TileSourceWidth[4, 256] As Number
+Private Dim TileSourceHeight[4, 256] As Number
+Private Dim TileOpacity[4, 256] As Number
+
+Private Dim FileBytes[131072] As Number
+Private Dim TemporaryGround[4096] As Number
+Private Dim TemporaryDetail[4096] As Number
+Private Dim TemporaryForeground[4096] As Number
+Private Dim TemporaryCollision[4096] As Number
+Private Dim TemporaryRegions[4096] As Number
+Private Dim TemporaryWidth As Number
+Private Dim TemporaryHeight As Number
+Private Dim TemporaryCellWidth As Number
+Private Dim TemporaryCellHeight As Number
+Private Dim FileByteCount As Number
+Private Dim ParsePosition As Number
+Private Dim ParseFailed As Boolean
+
+Private Function MapSlot(MapHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Generation As Number
+
+    If MapHandle <= 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Slot = (MapHandle Mod HANDLE_FACTOR) - 1
+    Generation = MapHandle / HANDLE_FACTOR
+
+    If (Slot < 0 Or
+        Slot >= TILE_MAP_MAX_INSTANCES Or
+        Not Used[Slot] Or
+        Generations[Slot] <> Generation) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function IsHorizontalSpace(Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Value = 32 Or Value = 9
+
+    Return ReturnValue
+
+End Function
+
+Private Function IsLineBreak(Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Value = 10 Or Value = 13
+
+    Return ReturnValue
+
+End Function
+
+Private Sub SkipDocumentSpace()
+
+    Dim ContinueSkipping As Boolean
+
+    ContinueSkipping = True
+
+    Do
+
+        If Not ContinueSkipping Or ParsePosition >= FileByteCount Then
+            Exit Do
+        End If
+
+        If (IsHorizontalSpace(FileBytes[ParsePosition]) Or
+            IsLineBreak(FileBytes[ParsePosition])) Then
+
+            ParsePosition = ParsePosition + 1
+
+        Else If FileBytes[ParsePosition] = 35 Then
+
+            Do
+
+                If ParsePosition >= FileByteCount Or IsLineBreak(FileBytes[ParsePosition]) Then
+                    Exit Do
+                End If
+
+                ParsePosition = ParsePosition + 1
+
+            Loop
+
+        Else
+            ContinueSkipping = False
+
+        End If
+
+    Loop
+
+End Sub
+
+Private Sub SkipInlineSpace()
+
+    Do
+
+        If ParsePosition >= FileByteCount Then
+            Exit Do
+        End If
+
+        If IsHorizontalSpace(FileBytes[ParsePosition]) Or FileBytes[ParsePosition] = 44 Then
+            ParsePosition = ParsePosition + 1
+        Else
+            Exit Do
+        End If
+
+    Loop
+
+End Sub
+
+Private Function ExpectToken(Expected As Text) As Boolean
+
+    Dim Index As Number
+
+    Call SkipDocumentSpace()
+
+    If ParsePosition > FileByteCount - Text_Length(Expected) Then
+        ParseFailed = True
+        Return False
+    End If
+
+    For Index = 0 To Text_Length(Expected) - 1
+
+        If FileBytes[ParsePosition + Index] <> Text_Code_At(Expected, Index) Then
+            ParseFailed = True
+            Return False
+        End If
+
+    End For
+
+    ParsePosition = ParsePosition + Text_Length(Expected)
+
+    If (ParsePosition < FileByteCount And
+        Not IsHorizontalSpace(FileBytes[ParsePosition]) And
+        Not IsLineBreak(FileBytes[ParsePosition]) And
+        FileBytes[ParsePosition] <> 44 And
+        FileBytes[ParsePosition] <> 35) Then
+        ParseFailed = True
+        Return False
+    End If
+
+    Return True
+
+End Function
+
+Private Function NextTokenIs(Expected As Text) As Boolean
+
+    Dim SavedPosition As Number
+    Dim SavedFailure As Boolean
+    Dim Matches As Boolean
+
+    SavedPosition = ParsePosition
+    SavedFailure = ParseFailed
+    Matches = ExpectToken(Expected)
+    ParsePosition = SavedPosition
+    ParseFailed = SavedFailure
+
+    Return Matches
+
+End Function
+
+Private Function ReadNumber(Maximum As Number) As Number
+
+    Dim Value As Number
+    Dim DigitCount As Number
+
+    Call SkipInlineSpace()
+
+    Do
+
+        If ParsePosition >= FileByteCount Then
+            Exit Do
+        End If
+
+        If FileBytes[ParsePosition] < 48 Or FileBytes[ParsePosition] > 57 Then
+            Exit Do
+        End If
+
+        If Value > (Maximum - (FileBytes[ParsePosition] - 48)) / 10 Then
+            ParseFailed = True
+            Return 0
+        End If
+
+        Value = Value * 10 + FileBytes[ParsePosition] - 48
+        DigitCount = DigitCount + 1
+        ParsePosition = ParsePosition + 1
+
+    Loop
+
+    If DigitCount = 0 Or Value > Maximum Then
+        ParseFailed = True
+        Return 0
+    End If
+
+    Return Value
+
+End Function
+
+Private Function FinishLine() As Boolean
+
+    Call SkipInlineSpace()
+
+    If ParsePosition < FileByteCount And FileBytes[ParsePosition] = 35 Then
+
+        Do
+
+            If ParsePosition >= FileByteCount Or IsLineBreak(FileBytes[ParsePosition]) Then
+                Exit Do
+            End If
+
+            ParsePosition = ParsePosition + 1
+
+        Loop
+
+    End If
+
+    If ParsePosition >= FileByteCount Or Not IsLineBreak(FileBytes[ParsePosition]) Then
+        ParseFailed = True
+        Return False
+    End If
+
+    If FileBytes[ParsePosition] = 13 Then
+
+        ParsePosition = ParsePosition + 1
+
+        If ParsePosition < FileByteCount And FileBytes[ParsePosition] = 10 Then
+            ParsePosition = ParsePosition + 1
+        End If
+
+    Else
+        ParsePosition = ParsePosition + 1
+
+    End If
+
+    Return True
+
+End Function
+
+Private Function ReadLayer(Layer As Number, MapWidth As Number, MapHeight As Number, Maximum As Number) As Boolean
+
+    Dim X As Number
+    Dim Y As Number
+
+    For Y = 0 To MapHeight - 1
+
+        For X = 0 To MapWidth - 1
+
+            Select Case Layer
+                Case 1
+                    TemporaryGround[Y * MapWidth + X] = ReadNumber(Maximum)
+                Case 2
+                    TemporaryDetail[Y * MapWidth + X] = ReadNumber(Maximum)
+                Case 3
+                    TemporaryForeground[Y * MapWidth + X] = ReadNumber(Maximum)
+                Case 4
+                    TemporaryCollision[Y * MapWidth + X] = ReadNumber(Maximum)
+                Case 5
+                    TemporaryRegions[Y * MapWidth + X] = ReadNumber(Maximum)
+            End Select
+
+            If ParseFailed Then
+                Return False
+            End If
+
+        End For
+
+        If Not FinishLine() Then
+            Return False
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Private Function ParseMap() As Boolean
+
+    Dim MapWidth As Number
+    Dim MapHeight As Number
+    Dim CellWidth As Number
+    Dim CellHeight As Number
+    Dim CellIndex As Number
+    Dim CellCount As Number
+
+    ParsePosition = 0
+    ParseFailed = False
+
+    If Not ExpectToken("SMILE-MAP") Then
+        Return False
+    End If
+
+    If ReadNumber(99) <> 1 Or Not FinishLine() Then
+        Return False
+    End If
+
+    If Not ExpectToken("SIZE") Then
+        Return False
+    End If
+
+    MapWidth = ReadNumber(TILE_MAP_MAX_WIDTH)
+    MapHeight = ReadNumber(TILE_MAP_MAX_HEIGHT)
+
+    If (MapWidth <= 0 Or
+        MapHeight <= 0 Or
+        MapWidth * MapHeight > TILE_MAP_MAX_CELLS Or
+        Not FinishLine()) Then
+        Return False
+    End If
+
+    If Not ExpectToken("CELL") Then
+        Return False
+    End If
+
+    CellWidth = ReadNumber(4096)
+    CellHeight = ReadNumber(4096)
+
+    If (CellWidth <= 0 Or
+        CellHeight <= 0 Or
+        Not FinishLine()) Then
+        Return False
+    End If
+
+    CellCount = MapWidth * MapHeight
+
+    For CellIndex = 0 To CellCount - 1
+
+        TemporaryGround[CellIndex] = 0
+        TemporaryDetail[CellIndex] = 0
+        TemporaryForeground[CellIndex] = 0
+        TemporaryCollision[CellIndex] = 0
+        TemporaryRegions[CellIndex] = 0
+    End For
+
+    If Not ExpectToken("GROUND") Or Not FinishLine() Then
+        Return False
+    End If
+
+    If Not ReadLayer(1, MapWidth, MapHeight, TILE_MAP_MAX_TILE_ID) Then
+        Return False
+    End If
+
+    If NextTokenIs("DETAIL") Then
+
+        If Not ExpectToken("DETAIL") Or Not FinishLine() Then
+            Return False
+        End If
+
+        If Not ReadLayer(2, MapWidth, MapHeight, TILE_MAP_MAX_TILE_ID) Then
+            Return False
+        End If
+
+    End If
+
+    If NextTokenIs("FOREGROUND") Then
+
+        If Not ExpectToken("FOREGROUND") Or Not FinishLine() Then
+            Return False
+        End If
+
+        If Not ReadLayer(3, MapWidth, MapHeight, TILE_MAP_MAX_TILE_ID) Then
+            Return False
+        End If
+
+    End If
+
+    If Not ExpectToken("COLLISION") Or Not FinishLine() Then
+        Return False
+    End If
+
+    If Not ReadLayer(4, MapWidth, MapHeight, 15) Then
+        Return False
+    End If
+
+    If Not ExpectToken("REGIONS") Or Not FinishLine() Then
+        Return False
+    End If
+
+    If Not ReadLayer(5, MapWidth, MapHeight, TILE_MAP_MAX_REGION_ID) Then
+        Return False
+    End If
+
+    If Not ExpectToken("END") Then
+        Return False
+    End If
+
+    Call SkipInlineSpace()
+
+    If ParsePosition < FileByteCount And IsLineBreak(FileBytes[ParsePosition]) Then
+
+        If Not FinishLine() Then
+            Return False
+        End If
+
+    End If
+
+    Call SkipDocumentSpace()
+
+    If ParseFailed Or ParsePosition <> FileByteCount Then
+        Return False
+    End If
+
+    TemporaryWidth = MapWidth
+    TemporaryHeight = MapHeight
+    TemporaryCellWidth = CellWidth
+    TemporaryCellHeight = CellHeight
+    Return True
+
+End Function
+
+''' Loads one declared project asset transactionally and returns a generation-safe map handle.
+Public Function LoadMap(Path As Text) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim CellIndex As Number
+    Dim CellCount As Number
+
+    FileByteCount = 0
+    Load Text File Path Into FileBytes Count FileByteCount
+
+    If FileByteCount <= 0 Or Not ParseMap() Then
+        Return 0
+    End If
+
+    For Slot = 0 To TILE_MAP_MAX_INSTANCES - 1
+
+        If Not Used[Slot] And Generations[Slot] < MAXIMUM_GENERATION Then
+            Exit For
+        End If
+
+    End For
+
+    If Slot >= TILE_MAP_MAX_INSTANCES Then
+        Return 0
+    End If
+
+    Used[Slot] = True
+    Generations[Slot] = Generations[Slot] + 1
+    WidthValues[Slot] = TemporaryWidth
+    HeightValues[Slot] = TemporaryHeight
+    CellWidthValues[Slot] = TemporaryCellWidth
+    CellHeightValues[Slot] = TemporaryCellHeight
+    CellCount = WidthValues[Slot] * HeightValues[Slot]
+
+    For CellIndex = 0 To CellCount - 1
+
+        GroundValues[Slot, CellIndex] = TemporaryGround[CellIndex]
+        DetailValues[Slot, CellIndex] = TemporaryDetail[CellIndex]
+        ForegroundValues[Slot, CellIndex] = TemporaryForeground[CellIndex]
+        CollisionValues[Slot, CellIndex] = TemporaryCollision[CellIndex]
+        RegionValues[Slot, CellIndex] = TemporaryRegions[CellIndex]
+    End For
+
+    ReturnValue = Generations[Slot] * HANDLE_FACTOR + Slot + 1
+
+    Return ReturnValue
+
+End Function
+
+''' Invalidates a map handle. Calling Unload with zero or a stale handle is harmless.
+Public Sub Unload(MapHandle As Number)
+
+    Dim Slot As Number
+
+    Slot = MapSlot(MapHandle)
+
+    If Slot >= 0 Then
+        Used[Slot] = False
+    End If
+
+End Sub
+
+''' Returns True when the handle identifies a loaded map.
+Public Function IsValid(MapHandle As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = MapSlot(MapHandle) >= 0
+
+    Return ReturnValue
+
+End Function
+
+''' Returns map width in cells, or zero for an invalid handle.
+Public Function Width(MapHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = MapSlot(MapHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = WidthValues[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns map height in cells, or zero for an invalid handle.
+Public Function Height(MapHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = MapSlot(MapHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = HeightValues[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns logical cell width in world pixels, or zero for an invalid handle.
+Public Function CellWidth(MapHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = MapSlot(MapHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CellWidthValues[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns logical cell height in world pixels, or zero for an invalid handle.
+Public Function CellHeight(MapHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = MapSlot(MapHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CellHeightValues[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Private Function CellOffset(MapHandle As Number, CellX As Number, CellY As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = MapSlot(MapHandle)
+
+    If (Slot < 0 Or
+        CellX < 0 Or
+        CellY < 0 Or
+        CellX >= WidthValues[Slot] Or
+        CellY >= HeightValues[Slot]) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = CellY * WidthValues[Slot] + CellX
+
+    Return ReturnValue
+
+End Function
+
+''' Returns a tile ID for Ground, Detail, or Foreground; invalid queries return zero.
+Public Function TileAt(MapHandle As Number, Layer As Number, CellX As Number, CellY As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Offset As Number
+
+    Slot = MapSlot(MapHandle)
+    Offset = CellOffset(MapHandle, CellX, CellY)
+
+    If Slot < 0 Or Offset < 0 Then
+        Return 0
+    End If
+
+    Select Case Layer
+        Case 1
+            ReturnValue = GroundValues[Slot, Offset]
+
+            Return ReturnValue
+        Case 2
+            ReturnValue = DetailValues[Slot, Offset]
+
+            Return ReturnValue
+        Case 3
+            ReturnValue = ForegroundValues[Slot, Offset]
+
+            Return ReturnValue
+    End Select
+
+    Return 0
+
+End Function
+
+''' Returns True for boundaries or nonzero collision categories.
+Public Function IsSolid(MapHandle As Number, CellX As Number, CellY As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim Offset As Number
+
+    Slot = MapSlot(MapHandle)
+    Offset = CellOffset(MapHandle, CellX, CellY)
+
+    If Slot < 0 Or Offset < 0 Then
+        Return True
+    End If
+
+    ReturnValue = CollisionValues[Slot, Offset] <> 0
+
+    Return ReturnValue
+
+End Function
+
+''' Returns a collision category, or -1 for an invalid map or cell.
+Public Function CollisionAt(MapHandle As Number, CellX As Number, CellY As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Offset As Number
+
+    Slot = MapSlot(MapHandle)
+    Offset = CellOffset(MapHandle, CellX, CellY)
+
+    If Slot < 0 Or Offset < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = CollisionValues[Slot, Offset]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns a region/trigger ID, or zero for an invalid map or cell.
+Public Function RegionAt(MapHandle As Number, CellX As Number, CellY As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Offset As Number
+
+    Slot = MapSlot(MapHandle)
+    Offset = CellOffset(MapHandle, CellX, CellY)
+
+    If Slot < 0 Or Offset < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = RegionValues[Slot, Offset]
+
+    Return ReturnValue
+
+End Function
+
+''' Converts a horizontal map cell to its world-pixel origin; invalid handles return zero.
+Public Function CellToWorldX(MapHandle As Number, CellX As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = MapSlot(MapHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CellX * CellWidthValues[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Converts a vertical map cell to its world-pixel origin; invalid handles return zero.
+Public Function CellToWorldY(MapHandle As Number, CellY As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = MapSlot(MapHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CellY * CellHeightValues[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Converts a world-pixel X coordinate to a map cell; negative or invalid queries return -1.
+Public Function WorldToCellX(MapHandle As Number, WorldX As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = MapSlot(MapHandle)
+
+    If Slot < 0 Or WorldX < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = WorldX / CellWidthValues[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Converts a world-pixel Y coordinate to a map cell; negative or invalid queries return -1.
+Public Function WorldToCellY(MapHandle As Number, WorldY As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = MapSlot(MapHandle)
+
+    If Slot < 0 Or WorldY < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = WorldY / CellHeightValues[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Defines one caller-owned tileset source rectangle for a map tile ID.
+Public Function DefineTile(MapHandle As Number, TileId As Number, SourceX As Number, SourceY As Number, SourceWidth As Number, SourceHeight As Number, Opacity As Number) As Boolean
+
+    Dim Slot As Number
+
+    Slot = MapSlot(MapHandle)
+
+    If (Slot < 0 Or
+        TileId < 0 Or
+        TileId > TILE_MAP_MAX_TILE_ID Or
+        SourceX < 0 Or
+        SourceY < 0 Or
+        SourceWidth <= 0 Or
+        SourceHeight <= 0 Or
+        Opacity < 0 Or
+        Opacity > 100) Then
+        Return False
+    End If
+
+    TileDefined[Slot, TileId] = True
+    TileSourceX[Slot, TileId] = SourceX
+    TileSourceY[Slot, TileId] = SourceY
+    TileSourceWidth[Slot, TileId] = SourceWidth
+    TileSourceHeight[Slot, TileId] = SourceHeight
+    TileOpacity[Slot, TileId] = Opacity
+    Return True
+
+End Function
+
+Private Sub DrawVisibleLayer(MapHandle As Number, Layer As Number, Tileset As Image, CameraX As Number, CameraY As Number, ViewWidth As Number, ViewHeight As Number, PixelFilter As Boolean)
+
+    Dim Slot As Number
+    Dim FirstX As Number
+    Dim FirstY As Number
+    Dim LastX As Number
+    Dim LastY As Number
+    Dim X As Number
+    Dim Y As Number
+    Dim TileId As Number
+
+    Slot = MapSlot(MapHandle)
+
+    If Slot < 0 Or Not Image_Loaded(Tileset) Then
+        Return
+    End If
+
+    FirstX = Max(0, CameraX / CellWidthValues[Slot] - 1)
+    FirstY = Max(0, CameraY / CellHeightValues[Slot] - 1)
+    LastX = Min(WidthValues[Slot] - 1, (CameraX + ViewWidth - 1) / CellWidthValues[Slot] + 1)
+    LastY = Min(HeightValues[Slot] - 1, (CameraY + ViewHeight - 1) / CellHeightValues[Slot] + 1)
+
+    For Y = FirstY To LastY
+
+        For X = FirstX To LastX
+
+            TileId = TileAt(MapHandle, Layer, X, Y)
+
+            If TileDefined[Slot, TileId] Then
+
+                If PixelFilter Then
+                    Draw Image Tileset From TileSourceX[Slot, TileId], TileSourceY[Slot, TileId] Size TileSourceWidth[Slot, TileId] By TileSourceHeight[Slot, TileId] At X * CellWidthValues[Slot] - CameraX, Y * CellHeightValues[Slot] - CameraY Size CellWidthValues[Slot] By CellHeightValues[Slot] Opacity TileOpacity[Slot, TileId] Filter Pixel
+                Else
+                    Draw Image Tileset From TileSourceX[Slot, TileId], TileSourceY[Slot, TileId] Size TileSourceWidth[Slot, TileId] By TileSourceHeight[Slot, TileId] At X * CellWidthValues[Slot] - CameraX, Y * CellHeightValues[Slot] - CameraY Size CellWidthValues[Slot] By CellHeightValues[Slot] Opacity TileOpacity[Slot, TileId] Filter Smooth
+                End If
+
+            End If
+
+        End For
+    End For
+
+End Sub
+
+''' Draws only visible cells from one layer with nearest-neighbor sampling.
+Public Sub DrawLayerPixel(MapHandle As Number, Layer As Number, Tileset As Image, CameraX As Number, CameraY As Number, ViewWidth As Number, ViewHeight As Number)
+
+    Call DrawVisibleLayer(MapHandle, Layer, Tileset, CameraX, CameraY, ViewWidth, ViewHeight, True)
+
+End Sub
+
+''' Draws only visible cells from one layer with smooth sampling.
+Public Sub DrawLayerSmooth(MapHandle As Number, Layer As Number, Tileset As Image, CameraX As Number, CameraY As Number, ViewWidth As Number, ViewHeight As Number)
+
+    Call DrawVisibleLayer(MapHandle, Layer, Tileset, CameraX, CameraY, ViewWidth, ViewHeight, False)
+
+End Sub
+
+End Module

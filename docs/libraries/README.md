@@ -36,4 +36,6 @@ Official libraries maintained with SMILE 2.0 are identified by the shared built-
 
 `libraries\Smile.UI` is the Phase 5 reusable UI package. It owns no assets and exposes fixed-capacity, generation-safe Window, BitmapFont, Text, Menu, and Dialogue modules authored in ordinary SMILE. Pure menu-state routines remain callable from Console consumers, while drawing and transitive measurement routines carry `requiresGameWindow` through project and package references. Future RPG phases may compose this UI without adding inventory, battle, actor, tile-map, or camera rules to the generic library.
 
-`libraries\Smile.RPG` is the Phase 6 reusable RPG data and management package. Its eight ordinary SMILE modules provide generation-safe state, Characters, Party, Inventory, Equipment, Abilities and Magic Points, Shops, and deterministic transactional SaveGames. It has no Smile.UI or asset dependency and deliberately excludes battle, enemies, quests, classes, status effects, and presentation policy.
+`libraries\Smile.Game` is the Phase 7 reusable 2D gameplay package. Its five ordinary modules provide cardinal movement/interpolation, animation timing, SMILE-MAP 1 parsing/rendering, camera math, and collision predicates without UI or assets.
+
+`libraries\Smile.RPG` 1.1.0 contains eleven ordinary modules: the Phase 6 data/management surface plus World, Story, Encounters, and format-2 transactional saves with format-1 compatibility. It has no Smile.UI or asset dependency and deliberately excludes battle resolution, quests, classes, status effects, and presentation policy.

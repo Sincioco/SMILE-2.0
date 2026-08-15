@@ -2,6 +2,21 @@ $ErrorActionPreference = 'Stop'
 
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 
+function Get-Sha256 {
+    param([string]$Path)
+
+    $algorithm = [Security.Cryptography.SHA256]::Create()
+    $stream = [IO.File]::OpenRead($Path)
+
+    try {
+        return [BitConverter]::ToString($algorithm.ComputeHash($stream)).Replace('-', '')
+    }
+    finally {
+        $stream.Dispose()
+        $algorithm.Dispose()
+    }
+}
+
 function Require-File {
     param([string]$RelativePath)
 
@@ -53,7 +68,7 @@ function Assert-WaveCopy {
         [Text.Encoding]::ASCII.GetString($bytes, 8, 4) -ne 'WAVE') {
         throw "$outputRelative is not a RIFF/WAVE asset."
     }
-    if ((Get-FileHash -LiteralPath $source).Hash -ne (Get-FileHash -LiteralPath $output).Hash) {
+    if ((Get-Sha256 $source) -ne (Get-Sha256 $output)) {
         throw "$outputRelative does not match its project asset."
     }
 }
@@ -63,7 +78,7 @@ function Assert-AssetCopy {
 
     $source = Require-File $SourceRelative
     $output = Require-File $OutputRelative
-    if ((Get-FileHash -LiteralPath $source).Hash -ne (Get-FileHash -LiteralPath $output).Hash) {
+    if ((Get-Sha256 $source) -ne (Get-Sha256 $output)) {
         throw "$OutputRelative does not match its project asset."
     }
 }
@@ -84,11 +99,17 @@ Require-File 'artifacts\games\Phase4AssetPublication\Phase4AssetPublication.smil
 Require-File 'artifacts\web\Phase4AssetPublication\smile-assets.json' | Out-Null
 Require-File 'artifacts\libraries\Smile.UI.smilelib' | Out-Null
 Require-File 'artifacts\libraries\Smile.RPG.smilelib' | Out-Null
+Require-File 'artifacts\libraries\Smile.Game.smilelib' | Out-Null
 Require-File 'artifacts\tests\Phase6RpgStateTests.exe' | Out-Null
 Require-File 'artifacts\tests\Phase6RpgStateTestsPackage.exe' | Out-Null
 Require-File 'artifacts\games\RpgManagementGallery-DirectX\smile.gallery.rpg-management.smile-assets.json' | Out-Null
 Require-File 'artifacts\games\RpgManagementGallery-GDI\smile.gallery.rpg-management.smile-assets.json' | Out-Null
 Require-File 'artifacts\web\RpgManagementGallery\smile-assets.json' | Out-Null
+Require-File 'artifacts\tests\Phase7WorldStateTests.exe' | Out-Null
+Require-File 'artifacts\tests\Phase7WorldStateTestsPackage.exe' | Out-Null
+Require-File 'artifacts\games\RpgWorldGallery-DirectX\smile.gallery.rpg-world.smile-assets.json' | Out-Null
+Require-File 'artifacts\games\RpgWorldGallery-GDI\smile.gallery.rpg-world.smile-assets.json' | Out-Null
+Require-File 'artifacts\web\RpgWorldGallery\smile-assets.json' | Out-Null
 Require-File 'artifacts\games\Phase5UIStateTests.exe' | Out-Null
 Require-File 'artifacts\games\Phase5UIStateTestsPackage.exe' | Out-Null
 Require-File 'artifacts\games\Phase5SubmenuStateTests.exe' | Out-Null
@@ -115,6 +136,8 @@ $nativePrograms = @(
     'artifacts\games\MenuGalleryPackage.exe',
     'artifacts\games\RpgManagementGallery-DirectX\RpgManagementGallery.exe',
     'artifacts\games\RpgManagementGallery-GDI\RpgManagementGallery.exe',
+    'artifacts\games\RpgWorldGallery-DirectX\RpgWorldGallery.exe',
+    'artifacts\games\RpgWorldGallery-GDI\RpgWorldGallery.exe',
     'artifacts\games\Phase5DialogueStateTests.exe',
     'artifacts\games\Phase5SubmenuViewport-DirectX\Phase5SubmenuViewport.exe',
     'artifacts\games\Phase5SubmenuViewport-GDI\Phase5SubmenuViewport.exe',
@@ -181,6 +204,17 @@ foreach ($asset in @('Cursor.png', 'BitmapFont.png')) {
     Assert-AssetCopy "examples\Phase5SubmenuViewport\Assets\$asset" "artifacts\games\Phase5SubmenuViewport-GDI\Assets\$asset"
     Assert-AssetCopy "examples\Phase5SubmenuViewport\Assets\$asset" "artifacts\web\Phase5SubmenuViewport\Assets\$asset"
 }
+foreach ($asset in @('Companion.png', 'EncounterBackground.png', 'Hero.png', 'MireWarden.png',
+    'Npc.png', 'PanelOverlay.png', 'TitleBackground.png', 'WorldTiles.png', 'LumenTheme.wav')) {
+    Assert-AssetCopy "examples\RpgWorldGallery\Assets\$asset" "artifacts\games\RpgWorldGallery-DirectX\Assets\$asset"
+    Assert-AssetCopy "examples\RpgWorldGallery\Assets\$asset" "artifacts\games\RpgWorldGallery-GDI\Assets\$asset"
+    Assert-AssetCopy "examples\RpgWorldGallery\Assets\$asset" "artifacts\web\RpgWorldGallery\Assets\$asset"
+}
+foreach ($map in @('Town.smilemap', 'Shop.smilemap', 'Overworld.smilemap')) {
+    Assert-AssetCopy "examples\RpgWorldGallery\Maps\$map" "artifacts\games\RpgWorldGallery-DirectX\Maps\$map"
+    Assert-AssetCopy "examples\RpgWorldGallery\Maps\$map" "artifacts\games\RpgWorldGallery-GDI\Maps\$map"
+    Assert-AssetCopy "examples\RpgWorldGallery\Maps\$map" "artifacts\web\RpgWorldGallery\Maps\$map"
+}
 $phase42ExpectedPath = Join-Path $repositoryRoot 'examples\Phase4AssetPublication\ExpectedAssetPaths.txt'
 foreach ($asset in Get-Content -LiteralPath $phase42ExpectedPath) {
     $assetPath = $asset.Replace('/', '\')
@@ -245,7 +279,7 @@ try {
             throw "$templateName does not contain all generated identity tokens."
         }
         if ($templateText -notmatch 'SmileProjectTemplateWizard' -or
-            $templateText -notmatch 'Version=2\.0\.41\.0') {
+            $templateText -notmatch 'Version=2\.0\.42\.0') {
             throw "$templateName does not invoke the synchronized template wizard."
         }
     }
@@ -271,11 +305,11 @@ try {
     $manifestReader = [System.IO.StreamReader]::new($manifestEntry.Open())
     try { $vsixManifest = $manifestReader.ReadToEnd() }
     finally { $manifestReader.Dispose() }
-    if ($vsixManifest -notmatch 'Version="2\.0\.41"') {
-        throw 'VSIX identity version is not 2.0.41.'
+    if ($vsixManifest -notmatch 'Version="2\.0\.42"') {
+        throw 'VSIX identity version is not 2.0.42.'
     }
     if ($vsixManifest -notmatch 'Type="Microsoft\.VisualStudio\.Assembly"' -or
-        $vsixManifest -notmatch 'AssemblyName="Smile\.VisualStudio, Version=2\.0\.41\.0, Culture=neutral, PublicKeyToken=null"') {
+        $vsixManifest -notmatch 'AssemblyName="Smile\.VisualStudio, Version=2\.0\.42\.0, Culture=neutral, PublicKeyToken=null"') {
         throw 'VSIX does not register the template wizard assembly.'
     }
 }
@@ -286,11 +320,11 @@ Write-Host 'VSIX compiler, shared-language, and project-template payload verifie
 $visualStudioDll = Require-File 'src\Smile.VisualStudio\bin\Release\net472\Smile.VisualStudio.dll'
 $versionInfo = [Diagnostics.FileVersionInfo]::GetVersionInfo($visualStudioDll)
 $assemblyVersion = [Reflection.AssemblyName]::GetAssemblyName($visualStudioDll).Version.ToString()
-if ($versionInfo.FileVersion -ne '2.0.41.0' -or $versionInfo.ProductVersion -notlike '2.0.41*' -or
-    $assemblyVersion -ne '2.0.41.0') {
+if ($versionInfo.FileVersion -ne '2.0.42.0' -or $versionInfo.ProductVersion -notlike '2.0.42*' -or
+    $assemblyVersion -ne '2.0.42.0') {
     throw "Visual Studio DLL versions differ: file=$($versionInfo.FileVersion), product=$($versionInfo.ProductVersion), assembly=$assemblyVersion."
 }
-Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.41.'
+Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.42.'
 
 $scaleCases = @(
     @{ Width = 960; Height = 540; ExpectedWidth = 960; ExpectedHeight = 540; X = 0; Y = 0 },

@@ -1,0 +1,428 @@
+''' Deterministic encounter-zone counters and weighted Encounter Preview selection.
+Module Smile.RPG.Encounters
+
+Option Explicit
+
+Import Smile.RPG.Core As Core
+Import Smile.RPG.World As World
+
+Public Const ENCOUNTER_MAX_ZONES = 16
+Public Const ENCOUNTER_MAX_ENTRIES = 64
+
+''' Static encounter-zone identity, scene/region membership, cadence, and initial seed.
+Public Type ZoneDefinition
+    Id As Number
+    SceneId As Number
+    RegionId As Number
+    StepsRequired As Number
+    InitialSeed As Number
+End Type
+
+Private Dim StateGeneration[4] As Number
+Private Dim ZoneCounts[4] As Number
+Private Dim ZoneIds[4, 16] As Number
+Private Dim ZoneSceneIds[4, 16] As Number
+Private Dim ZoneRegionIds[4, 16] As Number
+Private Dim ZoneStepsRequired[4, 16] As Number
+Private Dim ZoneInitialSeeds[4, 16] As Number
+Private Dim ZoneStepCounts[4, 16] As Number
+Private Dim ZoneSeeds[4, 16] As Number
+Private Dim EntryCounts[4, 16] As Number
+Private Dim EntryEncounterIds[4, 1024] As Number
+Private Dim EntryWeights[4, 1024] As Number
+Private Dim PendingEncounterIds[4] As Number
+
+Private Function StateSlot(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim Generation As Number
+
+    Slot = Core.StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Generation = Core.StateGeneration(StateHandle)
+
+    If StateGeneration[Slot] <> Generation Then
+
+        For Index = 0 To ENCOUNTER_MAX_ZONES - 1
+            ZoneIds[Slot, Index] = 0
+            EntryCounts[Slot, Index] = 0
+        End For
+
+        ZoneCounts[Slot] = 0
+        PendingEncounterIds[Slot] = 0
+        StateGeneration[Slot] = Generation
+
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function ZoneIndex(StateHandle As Number, ZoneId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To ZoneCounts[Slot] - 1
+
+        If ZoneIds[Slot, Index] = ZoneId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+''' Adds one immutable encounter-zone definition and initializes its progress.
+Public Function DefineZone(StateHandle As Number, ByRef Definition As ZoneDefinition) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not Core.IsValidId(Definition.Id) Or
+        Not World.IsSceneDefined(StateHandle, Definition.SceneId) Or
+        Definition.RegionId <= 0 Or
+        Definition.StepsRequired <= 0 Or
+        Definition.StepsRequired > Core.RPG_MAX_VALUE Or
+        Definition.InitialSeed < 0 Or
+        Definition.InitialSeed > 65535 Or
+        ZoneIndex(StateHandle, Definition.Id) >= 0 Or
+        ZoneCounts[Slot] >= ENCOUNTER_MAX_ZONES) Then
+        Return False
+    End If
+
+    Index = ZoneCounts[Slot]
+    ZoneIds[Slot, Index] = Definition.Id
+    ZoneSceneIds[Slot, Index] = Definition.SceneId
+    ZoneRegionIds[Slot, Index] = Definition.RegionId
+    ZoneStepsRequired[Slot, Index] = Definition.StepsRequired
+    ZoneInitialSeeds[Slot, Index] = Definition.InitialSeed
+    ZoneStepCounts[Slot, Index] = 0
+    ZoneSeeds[Slot, Index] = Definition.InitialSeed
+    EntryCounts[Slot, Index] = 0
+    ZoneCounts[Slot] = Index + 1
+    Return True
+
+End Function
+
+''' Appends one weighted, caller-defined Encounter Preview ID to a zone.
+Public Function AddEntry(StateHandle As Number, ZoneId As Number, EncounterId As Number, Weight As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Zone As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Zone = ZoneIndex(StateHandle, ZoneId)
+
+    If (Slot < 0 Or
+        Zone < 0 Or
+        Not Core.IsValidId(EncounterId) Or
+        Weight <= 0 Or
+        Weight > 1000000 Or
+        EntryCounts[Slot, Zone] >= ENCOUNTER_MAX_ENTRIES) Then
+        Return False
+    End If
+
+    For Index = 0 To EntryCounts[Slot, Zone] - 1
+
+        If EntryEncounterIds[Slot, Zone * ENCOUNTER_MAX_ENTRIES + Index] = EncounterId Then
+            Return False
+        End If
+
+    End For
+
+    Index = EntryCounts[Slot, Zone]
+    EntryEncounterIds[Slot, Zone * ENCOUNTER_MAX_ENTRIES + Index] = EncounterId
+    EntryWeights[Slot, Zone * ENCOUNTER_MAX_ENTRIES + Index] = Weight
+    EntryCounts[Slot, Zone] = Index + 1
+    Return True
+
+End Function
+
+''' Returns the number of defined encounter zones.
+Public Function ZoneCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ZoneCounts[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the stable zone ID at a definition index, or zero when invalid.
+Public Function ZoneIdAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= ZoneCounts[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = ZoneIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Finds the encounter zone for an exact scene and map-region pair.
+Public Function ZoneFor(StateHandle As Number, SceneId As Number, RegionId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    For Index = 0 To ZoneCounts[Slot] - 1
+
+        If ZoneSceneIds[Slot, Index] = SceneId And ZoneRegionIds[Slot, Index] = RegionId Then
+            ReturnValue = ZoneIds[Slot, Index]
+
+            Return ReturnValue
+        End If
+
+    End For
+
+    Return 0
+
+End Function
+
+''' Advances one step and returns an Encounter Preview ID when the threshold is reached.
+Public Function Advance(StateHandle As Number, ZoneId As Number, RollValue As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Zone As Number
+    Dim Index As Number
+    Dim TotalWeight As Number
+    Dim Selected As Number
+
+    Slot = StateSlot(StateHandle)
+    Zone = ZoneIndex(StateHandle, ZoneId)
+
+    If (Slot < 0 Or
+        Zone < 0 Or
+        RollValue < 0 Or
+        EntryCounts[Slot, Zone] <= 0) Then
+        Return 0
+    End If
+
+    ZoneStepCounts[Slot, Zone] = ZoneStepCounts[Slot, Zone] + 1
+    ZoneSeeds[Slot, Zone] = (ZoneSeeds[Slot, Zone] * 25173 + 13849) Mod 65536
+
+    If ZoneStepCounts[Slot, Zone] < ZoneStepsRequired[Slot, Zone] Then
+        Return 0
+    End If
+
+    For Index = 0 To EntryCounts[Slot, Zone] - 1
+        TotalWeight = TotalWeight + EntryWeights[Slot, Zone * ENCOUNTER_MAX_ENTRIES + Index]
+    End For
+
+    Selected = RollValue Mod TotalWeight
+
+    For Index = 0 To EntryCounts[Slot, Zone] - 1
+
+        If Selected < EntryWeights[Slot, Zone * ENCOUNTER_MAX_ENTRIES + Index] Then
+
+            PendingEncounterIds[Slot] = EntryEncounterIds[Slot, Zone * ENCOUNTER_MAX_ENTRIES + Index]
+            ZoneStepCounts[Slot, Zone] = 0
+            ReturnValue = PendingEncounterIds[Slot]
+
+            Return ReturnValue
+
+        End If
+
+        Selected = Selected - EntryWeights[Slot, Zone * ENCOUNTER_MAX_ENTRIES + Index]
+    End For
+
+    Return 0
+
+End Function
+
+''' Returns the selected pending encounter ID, or zero when none is pending.
+Public Function PendingEncounter(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = PendingEncounterIds[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Sets or clears the pending encounter ID for save/preview workflows.
+Public Function SetPendingEncounter(StateHandle As Number, EncounterId As Number) As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        EncounterId < 0 Or
+        EncounterId > Core.RPG_MAX_VALUE) Then
+        Return False
+    End If
+
+    PendingEncounterIds[Slot] = EncounterId
+    Return True
+
+End Function
+
+''' Clears the pending encounter without changing zone progress.
+Public Sub ClearPendingEncounter(StateHandle As Number)
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot >= 0 Then
+        PendingEncounterIds[Slot] = 0
+    End If
+
+End Sub
+
+''' Returns current encounter-step progress for a defined zone.
+Public Function StepCount(StateHandle As Number, ZoneId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Zone As Number
+
+    Slot = StateSlot(StateHandle)
+    Zone = ZoneIndex(StateHandle, ZoneId)
+
+    If Slot < 0 Or Zone < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ZoneStepCounts[Slot, Zone]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the deterministic 16-bit selection seed for a defined zone.
+Public Function Seed(StateHandle As Number, ZoneId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Zone As Number
+
+    Slot = StateSlot(StateHandle)
+    Zone = ZoneIndex(StateHandle, ZoneId)
+
+    If Slot < 0 Or Zone < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ZoneSeeds[Slot, Zone]
+
+    Return ReturnValue
+
+End Function
+
+''' SaveGames infrastructure: validates and replaces one zone's dynamic progress.
+Public Function SetProgress(StateHandle As Number, ZoneId As Number, StepCount As Number, Seed As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Zone As Number
+
+    Slot = StateSlot(StateHandle)
+    Zone = ZoneIndex(StateHandle, ZoneId)
+
+    If (Slot < 0 Or
+        Zone < 0 Or
+        StepCount < 0 Or
+        StepCount >= ZoneStepsRequired[Slot, Zone] Or
+        Seed < 0 Or
+        Seed > 65535) Then
+        Return False
+    End If
+
+    ZoneStepCounts[Slot, Zone] = StepCount
+    ZoneSeeds[Slot, Zone] = Seed
+    Return True
+
+End Function
+
+''' Clears pending selection and restores every zone's initial seed and step count.
+Public Function ResetProgress(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    For Index = 0 To ZoneCounts[Slot] - 1
+        ZoneStepCounts[Slot, Index] = 0
+        ZoneSeeds[Slot, Index] = ZoneInitialSeeds[Slot, Index]
+    End For
+
+    PendingEncounterIds[Slot] = 0
+    Return True
+
+End Function
+
+End Module

@@ -407,7 +407,7 @@ internal sealed class MasmEmitter
                     CollectExpression(load.DefaultValue);
                     break;
                 case TextFileLoadStatementSyntax textFileLoad:
-                    CollectTextToken(textFileLoad.Path);
+                    CollectExpression(textFileLoad.Path);
                     break;
                 case DataLoadStatementSyntax data:
                     CollectExpression(data.Key);
@@ -763,13 +763,14 @@ internal sealed class MasmEmitter
                 EmitStore(Resolve(load.Identifier.Text));
                 break;
             case TextFileLoadStatementSyntax textFileLoad:
-                EmitTextArgument(textFileLoad.Path);
+                EmitExpression(textFileLoad.Path);
+                PushRax();
                 var destination = Resolve(textFileLoad.Destination.Text);
                 EmitAddress(destination);
                 PushRax();
                 Line($"    mov rax, {destination.ArraySize.ToString(CultureInfo.InvariantCulture)}");
                 PushRax();
-                EmitNativeCall("smile_load_text_file", 4);
+                EmitNativeCall("smile_load_text_file", 3);
                 EmitStore(Resolve(textFileLoad.CountIdentifier.Text));
                 break;
             case DataLoadStatementSyntax dataLoad:

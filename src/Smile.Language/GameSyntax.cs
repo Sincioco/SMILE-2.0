@@ -297,7 +297,7 @@ public sealed class LoadStatementSyntax : StatementSyntax
 public sealed class TextFileLoadStatementSyntax : StatementSyntax
 {
     public TextFileLoadStatementSyntax(SyntaxToken loadKeyword, SyntaxToken textKeyword, SyntaxToken fileKeyword,
-        SyntaxToken path, SyntaxToken intoKeyword, SyntaxToken destination, SyntaxToken countKeyword,
+        ExpressionSyntax path, SyntaxToken intoKeyword, SyntaxToken destination, SyntaxToken countKeyword,
         SyntaxToken countIdentifier)
     {
         LoadKeyword = loadKeyword;
@@ -313,7 +313,7 @@ public sealed class TextFileLoadStatementSyntax : StatementSyntax
     public SyntaxToken LoadKeyword { get; }
     public SyntaxToken TextKeyword { get; }
     public SyntaxToken FileKeyword { get; }
-    public SyntaxToken Path { get; }
+    public ExpressionSyntax Path { get; }
     public SyntaxToken IntoKeyword { get; }
     public SyntaxToken Destination { get; }
     public SyntaxToken CountKeyword { get; }

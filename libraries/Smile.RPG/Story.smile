@@ -1,0 +1,370 @@
+''' Caller-defined Boolean flags and integer values for deterministic story state.
+Module Smile.RPG.Story
+
+Option Explicit
+
+Import Smile.RPG.Core As Core
+
+Public Const STORY_MAX_FLAGS = 128
+Public Const STORY_MAX_VALUES = 64
+
+Private Dim StateGeneration[4] As Number
+Private Dim FlagCounts[4] As Number
+Private Dim FlagIds[4, 128] As Number
+Private Dim FlagValues[4, 128] As Boolean
+Private Dim ValueCounts[4] As Number
+Private Dim ValueIds[4, 64] As Number
+Private Dim NumberValues[4, 64] As Number
+
+Private Function StateSlot(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim Generation As Number
+
+    Slot = Core.StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Generation = Core.StateGeneration(StateHandle)
+
+    If StateGeneration[Slot] <> Generation Then
+
+        For Index = 0 To STORY_MAX_FLAGS - 1
+            FlagIds[Slot, Index] = 0
+            FlagValues[Slot, Index] = False
+        End For
+
+        For Index = 0 To STORY_MAX_VALUES - 1
+            ValueIds[Slot, Index] = 0
+            NumberValues[Slot, Index] = 0
+        End For
+
+        FlagCounts[Slot] = 0
+        ValueCounts[Slot] = 0
+        StateGeneration[Slot] = Generation
+
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function FlagIndex(StateHandle As Number, FlagId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To FlagCounts[Slot] - 1
+
+        If FlagIds[Slot, Index] = FlagId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function ValueIndex(StateHandle As Number, ValueId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To ValueCounts[Slot] - 1
+
+        If ValueIds[Slot, Index] = ValueId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+''' Registers one stable flag ID; definitions are not serialized.
+Public Function DefineFlag(StateHandle As Number, FlagId As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not Core.IsValidId(FlagId) Or
+        FlagIndex(StateHandle, FlagId) >= 0 Or
+        FlagCounts[Slot] >= STORY_MAX_FLAGS) Then
+        Return False
+    End If
+
+    Index = FlagCounts[Slot]
+    FlagIds[Slot, Index] = FlagId
+    FlagValues[Slot, Index] = False
+    FlagCounts[Slot] = Index + 1
+    Return True
+
+End Function
+
+''' Registers one stable Number value ID; definitions are not serialized.
+Public Function DefineValue(StateHandle As Number, ValueId As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not Core.IsValidId(ValueId) Or
+        ValueIndex(StateHandle, ValueId) >= 0 Or
+        ValueCounts[Slot] >= STORY_MAX_VALUES) Then
+        Return False
+    End If
+
+    Index = ValueCounts[Slot]
+    ValueIds[Slot, Index] = ValueId
+    NumberValues[Slot, Index] = 0
+    ValueCounts[Slot] = Index + 1
+    Return True
+
+End Function
+
+''' Returns True when a stable Boolean story flag is defined.
+Public Function IsFlagDefined(StateHandle As Number, FlagId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = FlagIndex(StateHandle, FlagId) >= 0
+
+    Return ReturnValue
+
+End Function
+
+''' Returns True when a stable numeric story value is defined.
+Public Function IsValueDefined(StateHandle As Number, ValueId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = ValueIndex(StateHandle, ValueId) >= 0
+
+    Return ReturnValue
+
+End Function
+
+''' Updates a defined story flag without affecting any other story state.
+Public Function SetFlag(StateHandle As Number, FlagId As Number, Value As Boolean) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = FlagIndex(StateHandle, FlagId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return False
+    End If
+
+    FlagValues[Slot, Index] = Value
+    Return True
+
+End Function
+
+''' Returns a defined story flag, or False for an invalid query.
+Public Function Flag(StateHandle As Number, FlagId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = FlagIndex(StateHandle, FlagId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return False
+    End If
+
+    ReturnValue = FlagValues[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Updates a defined story value within the bounded RPG numeric range.
+Public Function SetValue(StateHandle As Number, ValueId As Number, Value As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ValueIndex(StateHandle, ValueId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Value < -1 Or
+        Value > Core.RPG_MAX_VALUE) Then
+        Return False
+    End If
+
+    NumberValues[Slot, Index] = Value
+    Return True
+
+End Function
+
+''' Returns a defined story value, or -1 for an invalid query.
+Public Function Value(StateHandle As Number, ValueId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ValueIndex(StateHandle, ValueId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = NumberValues[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the number of defined Boolean story flags.
+Public Function FlagCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = FlagCounts[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the stable flag ID at a definition index, or zero when invalid.
+Public Function FlagIdAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= FlagCounts[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = FlagIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the number of defined numeric story values.
+Public Function ValueCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ValueCounts[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the stable value ID at a definition index, or zero when invalid.
+Public Function ValueIdAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= ValueCounts[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = ValueIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Restores all defined flags to False and numeric story values to zero.
+Public Function Reset(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    For Index = 0 To FlagCounts[Slot] - 1
+        FlagValues[Slot, Index] = False
+    End For
+
+    For Index = 0 To ValueCounts[Slot] - 1
+        NumberValues[Slot, Index] = 0
+    End For
+
+    Return True
+
+End Function
+
+End Module

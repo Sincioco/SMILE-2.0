@@ -9,6 +9,21 @@ $nativeRoot = Join-Path $repositoryRoot 'artifacts\games\Phase4AssetPublication'
 $webRoot = Join-Path $repositoryRoot 'artifacts\web\Phase4AssetPublication'
 $temporaryRoot = Join-Path $repositoryRoot 'artifacts\temp\Phase4AssetPublicationStale'
 
+function Get-Sha256 {
+    param([string]$Path)
+
+    $algorithm = [Security.Cryptography.SHA256]::Create()
+    $stream = [IO.File]::OpenRead($Path)
+
+    try {
+        return [BitConverter]::ToString($algorithm.ComputeHash($stream)).Replace('-', '')
+    }
+    finally {
+        $stream.Dispose()
+        $algorithm.Dispose()
+    }
+}
+
 function Reset-TestDirectory {
     param([string]$Path)
 
@@ -70,8 +85,7 @@ function Assert-ExactPublication {
     foreach ($relativePath in $expectedPaths) {
         $source = Join-Path $fixtureRoot $relativePath.Replace('/', '\')
         $output = Join-Path $OutputRoot $relativePath.Replace('/', '\')
-        if ((Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash -ne
-            (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash) {
+        if ((Get-Sha256 $source) -ne (Get-Sha256 $output)) {
             throw "Published asset bytes differ: $relativePath"
         }
     }

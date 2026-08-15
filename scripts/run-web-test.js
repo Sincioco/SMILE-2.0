@@ -197,7 +197,18 @@ const host = {
             await new Promise(resolve => setTimeout(resolve, String(source).includes("ToneOne") ? 35 : 5));
             return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
         }
-        return { ok: false, arrayBuffer: async () => new ArrayBuffer(0) };
+        const relative = String(source).replace(/\\/g, "/");
+        const candidate = path.resolve(webDirectory, relative);
+        const webPrefix = `${webDirectory}${path.sep}`;
+        if (candidate !== webDirectory && !candidate.startsWith(webPrefix))
+            return { ok: false, arrayBuffer: async () => new ArrayBuffer(0) };
+        try {
+            const bytes = fs.readFileSync(candidate);
+            const payload = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+            return { ok: true, arrayBuffer: async () => payload };
+        } catch (_) {
+            return { ok: false, arrayBuffer: async () => new ArrayBuffer(0) };
+        }
     },
     btoa: value => Buffer.from(value, "binary").toString("base64"),
     atob: value => Buffer.from(value, "base64").toString("binary"),

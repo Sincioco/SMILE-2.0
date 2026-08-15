@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ProjectKind>Library</ProjectKind>
     <LibraryName>Smile.RPG</LibraryName>
-    <Version>1.0.2</Version>
+    <Version>1.1.0</Version>
     <OutputName>Smile.RPG</OutputName>
   </PropertyGroup>
   <ItemGroup>
@@ -13,6 +13,9 @@
     <SmileSource Include="Equipment.smile" />
     <SmileSource Include="Abilities.smile" />
     <SmileSource Include="Shops.smile" />
+    <SmileSource Include="World.smile" />
+    <SmileSource Include="Story.smile" />
+    <SmileSource Include="Encounters.smile" />
     <SmileSource Include="SaveGames.smile" />
   </ItemGroup>
 </SmileProject>

@@ -10,12 +10,16 @@ Import Smile.RPG.Inventory As Inventory
 Import Smile.RPG.Equipment As Equipment
 Import Smile.RPG.Abilities As Abilities
 Import Smile.RPG.Shops As Shops
+Import Smile.RPG.World As World
+Import Smile.RPG.Story As Story
+Import Smile.RPG.Encounters As Encounters
 
-Private Const SAVE_FORMAT_VERSION = 1
+Private Const SAVE_FORMAT_VERSION = 2
+Private Const EARLIEST_READ_FORMAT_VERSION = 1
 
-Private Dim EncodedBytes[32768] As Number
-Private Dim IncomingBytes[32768] As Number
-Private Dim RollbackBytes[32768] As Number
+Private Dim EncodedBytes[36864] As Number
+Private Dim IncomingBytes[36864] As Number
+Private Dim RollbackBytes[36864] As Number
 Private Dim BufferCount As Number
 Private Dim WritePosition As Number
 Private Dim WriteFailed As Boolean
@@ -58,6 +62,33 @@ Private Dim ScratchShopCount As Number
 Private Dim ScratchShopIds[1024] As Number
 Private Dim ScratchShopItemIds[1024] As Number
 Private Dim ScratchShopStock[1024] As Number
+
+Private Dim ScratchFormatVersion As Number
+Private Dim ScratchCurrentSceneId As Number
+Private Dim ScratchControlledActorId As Number
+Private Dim ScratchReturnSceneId As Number
+Private Dim ScratchReturnCellX As Number
+Private Dim ScratchReturnCellY As Number
+Private Dim ScratchReturnFacing As Number
+Private Dim ScratchActorCount As Number
+Private Dim ScratchActorIds[64] As Number
+Private Dim ScratchActorSceneIds[64] As Number
+Private Dim ScratchActorCellX[64] As Number
+Private Dim ScratchActorCellY[64] As Number
+Private Dim ScratchActorFacing[64] As Number
+Private Dim ScratchActorVisible[64] As Number
+Private Dim ScratchActorRouteSteps[64] As Number
+Private Dim ScratchFlagCount As Number
+Private Dim ScratchFlagIds[128] As Number
+Private Dim ScratchFlagValues[128] As Number
+Private Dim ScratchValueCount As Number
+Private Dim ScratchValueIds[64] As Number
+Private Dim ScratchValueValues[64] As Number
+Private Dim ScratchPendingEncounterId As Number
+Private Dim ScratchZoneCount As Number
+Private Dim ScratchZoneIds[16] As Number
+Private Dim ScratchZoneStepCounts[16] As Number
+Private Dim ScratchZoneSeeds[16] As Number
 
 Private Sub PutByte(Value As Number)
 
@@ -273,6 +304,72 @@ Public Function Encode(StateHandle As Number, SchemaVersion As Number) As Number
         End For
     End For
 
+    Call PutInt(World.CurrentScene(StateHandle))
+    Call PutInt(World.ControlledActor(StateHandle))
+    Call PutInt(World.ReturnScene(StateHandle))
+    Call PutInt(World.ReturnX(StateHandle))
+    Call PutInt(World.ReturnY(StateHandle))
+    Call PutInt(World.ReturnFacingDirection(StateHandle))
+
+    Call PutInt(World.PersistentActorCount(StateHandle))
+
+    For Index = 0 To World.PersistentActorCount(StateHandle) - 1
+
+        CharacterId = World.PersistentActorIdAt(StateHandle, Index)
+
+        Call PutInt(CharacterId)
+        Call PutInt(World.ActorScene(StateHandle, CharacterId))
+        Call PutInt(World.ActorX(StateHandle, CharacterId))
+        Call PutInt(World.ActorY(StateHandle, CharacterId))
+        Call PutInt(World.ActorFacingDirection(StateHandle, CharacterId))
+
+        If World.ActorIsVisible(StateHandle, CharacterId) Then
+            Call PutInt(1)
+        Else
+
+            Call PutInt(0)
+        End If
+
+        Call PutInt(World.ActorRouteStep(StateHandle, CharacterId))
+    End For
+
+    Call PutInt(Story.FlagCount(StateHandle))
+
+    For Index = 0 To Story.FlagCount(StateHandle) - 1
+
+        ItemId = Story.FlagIdAt(StateHandle, Index)
+
+        Call PutInt(ItemId)
+
+        If Story.Flag(StateHandle, ItemId) Then
+            Call PutInt(1)
+        Else
+
+            Call PutInt(0)
+        End If
+
+    End For
+
+    Call PutInt(Story.ValueCount(StateHandle))
+
+    For Index = 0 To Story.ValueCount(StateHandle) - 1
+        ItemId = Story.ValueIdAt(StateHandle, Index)
+
+        Call PutInt(ItemId)
+        Call PutInt(Story.Value(StateHandle, ItemId))
+    End For
+
+    Call PutInt(Encounters.PendingEncounter(StateHandle))
+    Call PutInt(Encounters.ZoneCount(StateHandle))
+
+    For Index = 0 To Encounters.ZoneCount(StateHandle) - 1
+        ItemId = Encounters.ZoneIdAt(StateHandle, Index)
+
+        Call PutInt(ItemId)
+        Call PutInt(Encounters.StepCount(StateHandle, ItemId))
+        Call PutInt(Encounters.Seed(StateHandle, ItemId))
+    End For
+
     If WriteFailed Then
         BufferCount = 0
         Return Core.RPG_RESULT_CAPACITY
@@ -376,6 +473,70 @@ Private Function IsDuplicateShopStock(Index As Number) As Boolean
 
 End Function
 
+Private Function IsDuplicateActor(Index As Number) As Boolean
+
+    Dim Earlier As Number
+
+    For Earlier = 0 To Index - 1
+
+        If ScratchActorIds[Earlier] = ScratchActorIds[Index] Then
+            Return True
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+Private Function IsDuplicateFlag(Index As Number) As Boolean
+
+    Dim Earlier As Number
+
+    For Earlier = 0 To Index - 1
+
+        If ScratchFlagIds[Earlier] = ScratchFlagIds[Index] Then
+            Return True
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+Private Function IsDuplicateValue(Index As Number) As Boolean
+
+    Dim Earlier As Number
+
+    For Earlier = 0 To Index - 1
+
+        If ScratchValueIds[Earlier] = ScratchValueIds[Index] Then
+            Return True
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+Private Function IsDuplicateZone(Index As Number) As Boolean
+
+    Dim Earlier As Number
+
+    For Earlier = 0 To Index - 1
+
+        If ScratchZoneIds[Earlier] = ScratchZoneIds[Index] Then
+            Return True
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
 Private Function ParseEncoded(StateHandle As Number, ExpectedSchemaVersion As Number) As Number
 
     Dim FormatVersion As Number
@@ -399,9 +560,13 @@ Private Function ParseEncoded(StateHandle As Number, ExpectedSchemaVersion As Nu
     FormatVersion = GetInt()
     SchemaVersion = GetInt()
 
-    If ReadFailed Or FormatVersion <> SAVE_FORMAT_VERSION Then
+    If (ReadFailed Or
+        FormatVersion < EARLIEST_READ_FORMAT_VERSION Or
+        FormatVersion > SAVE_FORMAT_VERSION) Then
         Return Core.RPG_RESULT_NOT_FOUND_OR_INVALID_SAVE
     End If
+
+    ScratchFormatVersion = FormatVersion
 
     If SchemaVersion <> ExpectedSchemaVersion Then
         Return Core.RPG_RESULT_WRONG_SCHEMA
@@ -626,6 +791,151 @@ Private Function ParseEncoded(StateHandle As Number, ExpectedSchemaVersion As Nu
 
     End For
 
+    ScratchCurrentSceneId = 0
+    ScratchControlledActorId = 0
+    ScratchReturnSceneId = 0
+    ScratchReturnCellX = 0
+    ScratchReturnCellY = 0
+    ScratchReturnFacing = World.WORLD_FACING_DOWN
+    ScratchActorCount = 0
+    ScratchFlagCount = 0
+    ScratchValueCount = 0
+    ScratchPendingEncounterId = 0
+    ScratchZoneCount = 0
+
+    If ScratchFormatVersion >= 2 Then
+
+        ScratchCurrentSceneId = GetInt()
+        ScratchControlledActorId = GetInt()
+        ScratchReturnSceneId = GetInt()
+        ScratchReturnCellX = GetInt()
+        ScratchReturnCellY = GetInt()
+        ScratchReturnFacing = GetInt()
+
+        If (ReadFailed Or
+            (ScratchCurrentSceneId <> 0 And Not World.IsSceneDefined(StateHandle, ScratchCurrentSceneId)) Or
+            (ScratchControlledActorId <> 0 And Not World.IsActorDefined(StateHandle, ScratchControlledActorId)) Or
+            (ScratchReturnSceneId <> 0 And Not World.IsSceneDefined(StateHandle, ScratchReturnSceneId)) Or
+            ScratchReturnCellX < 0 Or
+            ScratchReturnCellY < 0 Or
+            ScratchReturnFacing < World.WORLD_FACING_UP Or
+            ScratchReturnFacing > World.WORLD_FACING_LEFT) Then
+            Return Core.RPG_RESULT_MISSING_DEFINITION
+        End If
+
+        ScratchActorCount = GetInt()
+
+        If (ReadFailed Or
+            ScratchActorCount <> World.PersistentActorCount(StateHandle) Or
+            ScratchActorCount < 0 Or
+            ScratchActorCount > World.WORLD_MAX_ACTORS) Then
+            Return Core.RPG_RESULT_CAPACITY
+        End If
+
+        For Index = 0 To ScratchActorCount - 1
+
+            ScratchActorIds[Index] = GetInt()
+            ScratchActorSceneIds[Index] = GetInt()
+            ScratchActorCellX[Index] = GetInt()
+            ScratchActorCellY[Index] = GetInt()
+            ScratchActorFacing[Index] = GetInt()
+            ScratchActorVisible[Index] = GetInt()
+            ScratchActorRouteSteps[Index] = GetInt()
+
+            If (ReadFailed Or
+                Not World.IsActorDefined(StateHandle, ScratchActorIds[Index]) Or
+                Not World.ActorIsPersistent(StateHandle, ScratchActorIds[Index]) Or
+                Not World.IsSceneDefined(StateHandle, ScratchActorSceneIds[Index]) Or
+                IsDuplicateActor(Index) Or
+                ScratchActorCellX[Index] < 0 Or
+                ScratchActorCellY[Index] < 0 Or
+                ScratchActorFacing[Index] < World.WORLD_FACING_UP Or
+                ScratchActorFacing[Index] > World.WORLD_FACING_LEFT Or
+                (ScratchActorVisible[Index] <> 0 And ScratchActorVisible[Index] <> 1) Or
+                Not Core.IsValidValue(ScratchActorRouteSteps[Index])) Then
+                Return Core.RPG_RESULT_INVALID_ARGUMENT
+            End If
+
+        End For
+
+        ScratchFlagCount = GetInt()
+
+        If (ReadFailed Or
+            ScratchFlagCount <> Story.FlagCount(StateHandle) Or
+            ScratchFlagCount < 0 Or
+            ScratchFlagCount > Story.STORY_MAX_FLAGS) Then
+            Return Core.RPG_RESULT_CAPACITY
+        End If
+
+        For Index = 0 To ScratchFlagCount - 1
+
+            ScratchFlagIds[Index] = GetInt()
+            ScratchFlagValues[Index] = GetInt()
+
+            If (ReadFailed Or
+                Not Story.IsFlagDefined(StateHandle, ScratchFlagIds[Index]) Or
+                IsDuplicateFlag(Index) Or
+                (ScratchFlagValues[Index] <> 0 And ScratchFlagValues[Index] <> 1)) Then
+                Return Core.RPG_RESULT_INVALID_ARGUMENT
+            End If
+
+        End For
+
+        ScratchValueCount = GetInt()
+
+        If (ReadFailed Or
+            ScratchValueCount <> Story.ValueCount(StateHandle) Or
+            ScratchValueCount < 0 Or
+            ScratchValueCount > Story.STORY_MAX_VALUES) Then
+            Return Core.RPG_RESULT_CAPACITY
+        End If
+
+        For Index = 0 To ScratchValueCount - 1
+
+            ScratchValueIds[Index] = GetInt()
+            ScratchValueValues[Index] = GetInt()
+
+            If (ReadFailed Or
+                Not Story.IsValueDefined(StateHandle, ScratchValueIds[Index]) Or
+                IsDuplicateValue(Index) Or
+                ScratchValueValues[Index] < -1 Or
+                ScratchValueValues[Index] > Core.RPG_MAX_VALUE) Then
+                Return Core.RPG_RESULT_INVALID_ARGUMENT
+            End If
+
+        End For
+
+        ScratchPendingEncounterId = GetInt()
+        ScratchZoneCount = GetInt()
+
+        If (ReadFailed Or
+            ScratchPendingEncounterId < 0 Or
+            ScratchPendingEncounterId > Core.RPG_MAX_VALUE Or
+            ScratchZoneCount <> Encounters.ZoneCount(StateHandle) Or
+            ScratchZoneCount < 0 Or
+            ScratchZoneCount > Encounters.ENCOUNTER_MAX_ZONES) Then
+            Return Core.RPG_RESULT_CAPACITY
+        End If
+
+        For Index = 0 To ScratchZoneCount - 1
+
+            ScratchZoneIds[Index] = GetInt()
+            ScratchZoneStepCounts[Index] = GetInt()
+            ScratchZoneSeeds[Index] = GetInt()
+
+            If (ReadFailed Or
+                IsDuplicateZone(Index) Or
+                ScratchZoneIds[Index] <> Encounters.ZoneIdAt(StateHandle, Index) Or
+                ScratchZoneStepCounts[Index] < 0 Or
+                ScratchZoneSeeds[Index] < 0 Or
+                ScratchZoneSeeds[Index] > 65535) Then
+                Return Core.RPG_RESULT_INVALID_ARGUMENT
+            End If
+
+        End For
+
+    End If
+
     If ReadFailed Or ReadPosition <> BufferCount Then
         Return Core.RPG_RESULT_NOT_FOUND_OR_INVALID_SAVE
     End If
@@ -645,7 +955,10 @@ Private Function ApplyScratch(StateHandle As Number) As Boolean
         Not Party.SetGold(StateHandle, 0) Or
         Not Inventory.ClearInventory(StateHandle) Or
         Not Equipment.ClearAllEquipment(StateHandle) Or
-        Not Abilities.ClearAllLearnedAbilities(StateHandle)) Then
+        Not Abilities.ClearAllLearnedAbilities(StateHandle) Or
+        Not World.ResetPersistentProgress(StateHandle) Or
+        Not Story.Reset(StateHandle) Or
+        Not Encounters.ResetProgress(StateHandle)) Then
         Return False
     End If
 
@@ -718,6 +1031,48 @@ Private Function ApplyScratch(StateHandle As Number) As Boolean
     For Index = 0 To ScratchShopCount - 1
 
         If Not Shops.SetStock(StateHandle, ScratchShopIds[Index], ScratchShopItemIds[Index], ScratchShopStock[Index]) Then
+            Return False
+        End If
+
+    End For
+
+    If (Not World.SetCurrentScene(StateHandle, ScratchCurrentSceneId) Or
+        Not World.SetControlledActor(StateHandle, ScratchControlledActorId) Or
+        Not World.SetReturnLocation(StateHandle, ScratchReturnSceneId, ScratchReturnCellX, ScratchReturnCellY, ScratchReturnFacing)) Then
+        Return False
+    End If
+
+    For Index = 0 To ScratchActorCount - 1
+
+        If Not World.SetActorProgress(StateHandle, ScratchActorIds[Index], ScratchActorSceneIds[Index], ScratchActorCellX[Index], ScratchActorCellY[Index], ScratchActorFacing[Index], ScratchActorVisible[Index] = 1, ScratchActorRouteSteps[Index]) Then
+            Return False
+        End If
+
+    End For
+
+    For Index = 0 To ScratchFlagCount - 1
+
+        If Not Story.SetFlag(StateHandle, ScratchFlagIds[Index], ScratchFlagValues[Index] = 1) Then
+            Return False
+        End If
+
+    End For
+
+    For Index = 0 To ScratchValueCount - 1
+
+        If Not Story.SetValue(StateHandle, ScratchValueIds[Index], ScratchValueValues[Index]) Then
+            Return False
+        End If
+
+    End For
+
+    If Not Encounters.SetPendingEncounter(StateHandle, ScratchPendingEncounterId) Then
+        Return False
+    End If
+
+    For Index = 0 To ScratchZoneCount - 1
+
+        If Not Encounters.SetProgress(StateHandle, ScratchZoneIds[Index], ScratchZoneStepCounts[Index], ScratchZoneSeeds[Index]) Then
             Return False
         End If
 

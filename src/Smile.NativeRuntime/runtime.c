@@ -1407,8 +1407,9 @@ int smile_resolve_asset_path_utf8(const char* path, long long length, WCHAR* res
     return 1;
 }
 
-long long smile_load_text_file(const char* path, long long length, long long* destination, long long capacity)
+long long smile_load_text_file(void* owned_path, long long* destination, long long capacity)
 {
+    SmileText* path = (SmileText*)owned_path;
     WCHAR full_path[2048];
     HANDLE file;
     unsigned char buffer[4096];
@@ -1417,11 +1418,19 @@ long long smile_load_text_file(const char* path, long long length, long long* de
     int failed = 0;
 
     if (destination == 0 || capacity <= 0)
+    {
+        smile_text_release(path);
         return 0;
+    }
     smile_zero_memory(destination, (SIZE_T)capacity * sizeof(long long));
-    if (path == 0 || length <= 0 || !smile_resolve_asset_path_utf8(path, length, full_path,
-        (int)(sizeof(full_path) / sizeof(full_path[0]))))
+    if (path == 0 || smile_text_length(path) <= 0 ||
+        !smile_resolve_asset_path_utf8(smile_text_bytes(path), smile_text_length(path), full_path,
+            (int)(sizeof(full_path) / sizeof(full_path[0]))))
+    {
+        smile_text_release(path);
         return 0;
+    }
+    smile_text_release(path);
 
     file = CreateFileW(full_path, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
     if (file == INVALID_HANDLE_VALUE)

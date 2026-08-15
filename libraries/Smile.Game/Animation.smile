@@ -1,0 +1,322 @@
+''' Fixed-capacity sprite-frame definitions and deterministic animation timing.
+Module Smile.Game.Animation
+
+Option Explicit
+
+Public Const ANIMATION_MAX_DEFINITIONS = 64
+Public Const ANIMATION_MAX_FRAMES = 16
+
+Private Const HANDLE_FACTOR = 100
+Private Const MAXIMUM_GENERATION = 9999999
+
+Private Dim Used[64] As Boolean
+Private Dim Generations[64] As Number
+Private Dim FrameCounts[64] As Number
+Private Dim FrameDurations[64] As Number
+Private Dim Looping[64] As Boolean
+Private Dim SourceXValues[64, 16] As Number
+Private Dim SourceYValues[64, 16] As Number
+Private Dim SourceWidthValues[64, 16] As Number
+Private Dim SourceHeightValues[64, 16] As Number
+Private Dim AnchorXValues[64] As Number
+Private Dim AnchorYValues[64] As Number
+
+Private Function Slot(AnimationHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+    Dim Generation As Number
+
+    If AnimationHandle <= 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Index = (AnimationHandle Mod HANDLE_FACTOR) - 1
+    Generation = AnimationHandle / HANDLE_FACTOR
+
+    If (Index < 0 Or
+        Index >= ANIMATION_MAX_DEFINITIONS Or
+        Not Used[Index] Or
+        Generations[Index] <> Generation) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Return Index
+
+End Function
+
+''' Creates an empty animation and returns a generation-safe handle.
+Public Function Create(FrameDuration As Number, IsLooping As Boolean, AnchorX As Number, AnchorY As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    If FrameDuration <= 0 Then
+        Return 0
+    End If
+
+    For Index = 0 To ANIMATION_MAX_DEFINITIONS - 1
+
+        If Not Used[Index] And Generations[Index] < MAXIMUM_GENERATION Then
+
+            Generations[Index] = Generations[Index] + 1
+            Used[Index] = True
+            FrameCounts[Index] = 0
+            FrameDurations[Index] = FrameDuration
+            Looping[Index] = IsLooping
+            AnchorXValues[Index] = AnchorX
+            AnchorYValues[Index] = AnchorY
+            ReturnValue = Generations[Index] * HANDLE_FACTOR + Index + 1
+
+            Return ReturnValue
+
+        End If
+
+    End For
+
+    Return 0
+
+End Function
+
+''' Invalidates an animation handle and releases its frame definition slot.
+Public Sub Destroy(AnimationHandle As Number)
+
+    Dim Index As Number
+
+    Index = Slot(AnimationHandle)
+
+    If Index >= 0 Then
+        Used[Index] = False
+        FrameCounts[Index] = 0
+    End If
+
+End Sub
+
+''' Returns True when the handle identifies a live animation definition.
+Public Function IsValid(AnimationHandle As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Slot(AnimationHandle) >= 0
+
+    Return ReturnValue
+
+End Function
+
+''' Adds one source rectangle in deterministic playback order.
+Public Function AddFrame(AnimationHandle As Number, SourceX As Number, SourceY As Number, SourceWidth As Number, SourceHeight As Number) As Boolean
+
+    Dim DefinitionSlot As Number
+    Dim Index As Number
+
+    DefinitionSlot = Slot(AnimationHandle)
+
+    If (DefinitionSlot < 0 Or
+        SourceX < 0 Or
+        SourceY < 0 Or
+        SourceWidth <= 0 Or
+        SourceHeight <= 0 Or
+        FrameCounts[DefinitionSlot] >= ANIMATION_MAX_FRAMES) Then
+        Return False
+    End If
+
+    Index = FrameCounts[DefinitionSlot]
+    SourceXValues[DefinitionSlot, Index] = SourceX
+    SourceYValues[DefinitionSlot, Index] = SourceY
+    SourceWidthValues[DefinitionSlot, Index] = SourceWidth
+    SourceHeightValues[DefinitionSlot, Index] = SourceHeight
+    FrameCounts[DefinitionSlot] = Index + 1
+    Return True
+
+End Function
+
+''' Returns the number of frames in a live animation, or zero for an invalid handle.
+Public Function FrameCount(AnimationHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim DefinitionSlot As Number
+
+    DefinitionSlot = Slot(AnimationHandle)
+
+    If DefinitionSlot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = FrameCounts[DefinitionSlot]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the current zero-based frame; one-shot animations clamp to their final frame.
+Public Function CurrentFrame(AnimationHandle As Number, ElapsedSteps As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim DefinitionSlot As Number
+    Dim Index As Number
+
+    DefinitionSlot = Slot(AnimationHandle)
+
+    If DefinitionSlot < 0 Or FrameCounts[DefinitionSlot] <= 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Index = Max(0, ElapsedSteps) / FrameDurations[DefinitionSlot]
+
+    If Looping[DefinitionSlot] Then
+        ReturnValue = Index Mod FrameCounts[DefinitionSlot]
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = Min(Index, FrameCounts[DefinitionSlot] - 1)
+
+    Return ReturnValue
+
+End Function
+
+Private Function ValidFrame(AnimationHandle As Number, FrameIndex As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim DefinitionSlot As Number
+
+    DefinitionSlot = Slot(AnimationHandle)
+
+    If (DefinitionSlot < 0 Or
+        FrameIndex < 0 Or
+        FrameIndex >= FrameCounts[DefinitionSlot]) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Return DefinitionSlot
+
+End Function
+
+''' Returns a frame's source-rectangle X coordinate, or zero for an invalid frame.
+Public Function SourceX(AnimationHandle As Number, FrameIndex As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim DefinitionSlot As Number
+
+    DefinitionSlot = ValidFrame(AnimationHandle, FrameIndex)
+
+    If DefinitionSlot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = SourceXValues[DefinitionSlot, FrameIndex]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns a frame's source-rectangle Y coordinate, or zero for an invalid frame.
+Public Function SourceY(AnimationHandle As Number, FrameIndex As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim DefinitionSlot As Number
+
+    DefinitionSlot = ValidFrame(AnimationHandle, FrameIndex)
+
+    If DefinitionSlot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = SourceYValues[DefinitionSlot, FrameIndex]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns a frame's source width, or zero for an invalid frame.
+Public Function SourceWidth(AnimationHandle As Number, FrameIndex As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim DefinitionSlot As Number
+
+    DefinitionSlot = ValidFrame(AnimationHandle, FrameIndex)
+
+    If DefinitionSlot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = SourceWidthValues[DefinitionSlot, FrameIndex]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns a frame's source height, or zero for an invalid frame.
+Public Function SourceHeight(AnimationHandle As Number, FrameIndex As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim DefinitionSlot As Number
+
+    DefinitionSlot = ValidFrame(AnimationHandle, FrameIndex)
+
+    If DefinitionSlot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = SourceHeightValues[DefinitionSlot, FrameIndex]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the animation's caller-defined horizontal drawing anchor.
+Public Function AnchorX(AnimationHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim DefinitionSlot As Number
+
+    DefinitionSlot = Slot(AnimationHandle)
+
+    If DefinitionSlot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = AnchorXValues[DefinitionSlot]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the animation's caller-defined vertical drawing anchor.
+Public Function AnchorY(AnimationHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim DefinitionSlot As Number
+
+    DefinitionSlot = Slot(AnimationHandle)
+
+    If DefinitionSlot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = AnchorYValues[DefinitionSlot]
+
+    Return ReturnValue
+
+End Function
+
+End Module

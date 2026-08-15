@@ -7,6 +7,9 @@ Import Smile.RPG.Inventory As Inventory
 Import Smile.RPG.Equipment As Equipment
 Import Smile.RPG.Abilities As Abilities
 Import Smile.RPG.Shops As Shops
+Import Smile.RPG.World As World
+Import Smile.RPG.Story As Story
+Import Smile.RPG.Encounters As Encounters
 Import Smile.RPG.SaveGames As SaveGames
 
 Dim Hero As Characters.CharacterDefinition
@@ -23,13 +26,13 @@ Dim Result As Number
 Dim Failures As Number
 Dim Index As Number
 Dim FirstByteCount As Number
-Dim FirstBytes[32768] As Number
+Dim FirstBytes[36864] As Number
 Dim BoundaryByteCount As Number
-Dim BoundaryBytes[32768] As Number
+Dim BoundaryBytes[36864] As Number
 Dim MaximumByteCount As Number
-Dim MaximumBytes[32768] As Number
+Dim MaximumBytes[36864] As Number
 Dim QueryByteCount As Number
-Dim QueryBytes[32768] As Number
+Dim QueryBytes[36864] As Number
 Dim OperationSucceeded As Boolean
 
 State = RPG.Create()
@@ -563,6 +566,18 @@ Sub TestMaximumState()
     Dim ItemId As Number
     Dim ExpectedQuantity As Number
     Dim ExpectedStock As Number
+    Dim SceneIndex As Number
+    Dim SpawnIndex As Number
+    Dim TransitionIndex As Number
+    Dim ActorIndex As Number
+    Dim FlagIndex As Number
+    Dim ValueIndex As Number
+    Dim ZoneIndex As Number
+    Dim MaximumScene As World.SceneDefinition
+    Dim MaximumSpawn As World.SpawnDefinition
+    Dim MaximumTransition As World.TransitionDefinition
+    Dim MaximumActor As World.ActorDefinition
+    Dim MaximumZone As Encounters.ZoneDefinition
 
     State = RPG.Create()
 
@@ -698,11 +713,93 @@ Sub TestMaximumState()
         End For
     End For
 
+    For SceneIndex = 0 To World.WORLD_MAX_SCENES - 1
+
+        MaximumScene.Id = 4000 + SceneIndex
+        MaximumScene.MapId = 5000 + SceneIndex
+        MaximumScene.DefaultSpawnId = 6000 + SceneIndex
+        MaximumScene.CameraMode = World.WORLD_CAMERA_FOLLOW
+
+        Call Check(World.DefineScene(State, MaximumScene))
+    End For
+
+    For SpawnIndex = 0 To World.WORLD_MAX_SPAWNS - 1
+
+        MaximumSpawn.Id = 6000 + SpawnIndex
+        MaximumSpawn.SceneId = 4000 + SpawnIndex Mod World.WORLD_MAX_SCENES
+        MaximumSpawn.CellX = SpawnIndex
+        MaximumSpawn.CellY = SpawnIndex + 1
+        MaximumSpawn.Facing = SpawnIndex Mod 4 + 1
+
+        Call Check(World.DefineSpawn(State, MaximumSpawn))
+    End For
+
+    For TransitionIndex = 0 To World.WORLD_MAX_TRANSITIONS - 1
+
+        MaximumTransition.Id = 7000 + TransitionIndex
+        MaximumTransition.SourceSceneId = 4000 + TransitionIndex Mod World.WORLD_MAX_SCENES
+        MaximumTransition.SourceRegionId = TransitionIndex + 1
+        MaximumTransition.DestinationSceneId = 4000 + TransitionIndex Mod World.WORLD_MAX_SCENES
+        MaximumTransition.DestinationSpawnId = 6000 + TransitionIndex
+
+        Call Check(World.DefineTransition(State, MaximumTransition))
+    End For
+
+    For ActorIndex = 0 To World.WORLD_MAX_ACTORS - 1
+
+        MaximumActor.Id = 8000 + ActorIndex
+        MaximumActor.SceneId = 4000 + ActorIndex Mod World.WORLD_MAX_SCENES
+        MaximumActor.CellX = ActorIndex
+        MaximumActor.CellY = ActorIndex + 2
+        MaximumActor.Facing = ActorIndex Mod 4 + 1
+        MaximumActor.Visible = ActorIndex Mod 2 = 0
+        MaximumActor.Solid = True
+        MaximumActor.Persistent = True
+        MaximumActor.AnimationSetId = 9000 + ActorIndex
+        MaximumActor.InteractionId = 10000 + ActorIndex
+
+        Call Check(World.DefineActor(State, MaximumActor))
+        Call Check(World.SetActorProgress(State, MaximumActor.Id, MaximumActor.SceneId, MaximumActor.CellX + 1, MaximumActor.CellY + 1, MaximumActor.Facing, MaximumActor.Visible, ActorIndex))
+    End For
+
+    Call Check(World.SetCurrentScene(State, 4000))
+    Call Check(World.SetControlledActor(State, 8000))
+    Call Check(World.SetReturnLocation(State, 4001, 17, 19, World.WORLD_FACING_LEFT))
+
+    For FlagIndex = 0 To Story.STORY_MAX_FLAGS - 1
+        Call Check(Story.DefineFlag(State, 11000 + FlagIndex))
+        Call Check(Story.SetFlag(State, 11000 + FlagIndex, FlagIndex Mod 2 = 0))
+    End For
+
+    For ValueIndex = 0 To Story.STORY_MAX_VALUES - 1
+        Call Check(Story.DefineValue(State, 12000 + ValueIndex))
+        Call Check(Story.SetValue(State, 12000 + ValueIndex, ValueIndex * 10))
+    End For
+
+    For ZoneIndex = 0 To Encounters.ENCOUNTER_MAX_ZONES - 1
+
+        MaximumZone.Id = 13000 + ZoneIndex
+        MaximumZone.SceneId = 4000 + ZoneIndex
+        MaximumZone.RegionId = 100 + ZoneIndex
+        MaximumZone.StepsRequired = 10 + ZoneIndex
+        MaximumZone.InitialSeed = 200 + ZoneIndex
+
+        Call Check(Encounters.DefineZone(State, MaximumZone))
+
+        For EntryIndex = 0 To 3
+            Call Check(Encounters.AddEntry(State, MaximumZone.Id, 14000 + ZoneIndex * 4 + EntryIndex, EntryIndex + 1))
+        End For
+
+        Call Check(Encounters.SetProgress(State, MaximumZone.Id, ZoneIndex, 300 + ZoneIndex))
+    End For
+
+    Call Check(Encounters.SetPendingEncounter(State, 14000))
+
     Result = SaveGames.Encode(State, 61)
     MaximumByteCount = SaveGames.EncodedByteCount()
 
     Call Check(Result = RPG.RPG_RESULT_OK)
-    Call Check(MaximumByteCount = 28872)
+    Call Check(MaximumByteCount = 32436)
     Call Check(MaximumByteCount < RPG.RPG_MAX_SAVE_BYTES)
     Call Check(RPG.RPG_MAX_SAVE_BYTES < DATA_BLOCK_MAX_BYTES)
 
@@ -721,6 +818,12 @@ Sub TestMaximumState()
     Call Check(Party.PartyCount(State) = RPG.RPG_MAX_PARTY_MEMBERS)
     Call Check(Party.Gold(State) = 999999)
     Call Check(Inventory.EntryCount(State) = RPG.RPG_MAX_INVENTORY_ENTRIES)
+    Call Check(World.SceneCount(State) = World.WORLD_MAX_SCENES)
+    Call Check(World.ActorCount(State) = World.WORLD_MAX_ACTORS)
+    Call Check(Story.FlagCount(State) = Story.STORY_MAX_FLAGS)
+    Call Check(Story.ValueCount(State) = Story.STORY_MAX_VALUES)
+    Call Check(Encounters.ZoneCount(State) = Encounters.ENCOUNTER_MAX_ZONES)
+    Call Check(Encounters.PendingEncounter(State) = 14000)
 
     For CharacterIndex = 0 To RPG.RPG_MAX_CHARACTERS - 1
 

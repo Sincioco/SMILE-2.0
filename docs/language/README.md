@@ -350,4 +350,6 @@ Phase 5 adds `Text_Length`, `Text_Code_At`, and `Text_Slice`. Their zero-based i
 
 Phase 6 adds optional stable `ApplicationId` project identity and the source-authored `Smile.RPG` data/management package without adding syntax or RPG runtime helpers. Phase 6.1 advances Smile.RPG to 1.0.1 with save-boundary, rollback, asset-manifest identity, formatter-context, and Shop-result hardening. Phase 6.2 advances Smile.RPG to 1.0.2 with observational `SaveGames.Exists` query behavior while preserving SRPG format 1. See `phase6-rpg.md`.
 
+Phase 7 adds the ordinary `Smile.Game` source package and advances `Smile.RPG` to 1.1.0 with world, story, encounter-preview, and format-2 persistence modules. `Load Text File` accepts a `Text` expression path and dotted module names may contain the reserved `Game` segment; no RPG-specific syntax is added. See `phase7-rpg-world.md`.
+
 The executable examples are the most precise usage guide: `LanguageBasics.smile`, `StructuredLanguageBasics.smile`, `GraphicsBasics.smile`, `MultiFileBasics`, and the seven projects under `games`. These include Dungeon Star I's external-map parser and quadrilateral-based pseudo-3D renderer, Dungeon Star II's fixed-point DDA raycaster, and Maze Muncher's arc-composed neon maze. Each demo game also includes a complete player-focused `Program-NoDemo.smile` teaching source.

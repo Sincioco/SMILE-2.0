@@ -1,0 +1,1312 @@
+''' Stable scene, spawn, transition, actor, interaction, and return-location state.
+Module Smile.RPG.World
+
+Option Explicit
+
+Import Smile.RPG.Core As Core
+
+Public Const WORLD_MAX_SCENES = 16
+Public Const WORLD_MAX_SPAWNS = 64
+Public Const WORLD_MAX_TRANSITIONS = 64
+Public Const WORLD_MAX_ACTORS = 64
+
+Public Const WORLD_CAMERA_FIXED = 1
+Public Const WORLD_CAMERA_FOLLOW = 2
+
+Public Const WORLD_FACING_UP = 1
+Public Const WORLD_FACING_RIGHT = 2
+Public Const WORLD_FACING_DOWN = 3
+Public Const WORLD_FACING_LEFT = 4
+
+''' Static scene identity, application map ID, default spawn, and camera mode.
+Public Type SceneDefinition
+    Id As Number
+    MapId As Number
+    DefaultSpawnId As Number
+    CameraMode As Number
+End Type
+
+''' Stable spawn identity, scene membership, cell position, and facing.
+Public Type SpawnDefinition
+    Id As Number
+    SceneId As Number
+    CellX As Number
+    CellY As Number
+    Facing As Number
+End Type
+
+''' Region-triggered source scene and destination scene/spawn definition.
+Public Type TransitionDefinition
+    Id As Number
+    SourceSceneId As Number
+    SourceRegionId As Number
+    DestinationSceneId As Number
+    DestinationSpawnId As Number
+End Type
+
+''' Static actor identity, initial field state, presentation IDs, and collision behavior.
+Public Type ActorDefinition
+    Id As Number
+    SceneId As Number
+    CellX As Number
+    CellY As Number
+    Facing As Number
+    Visible As Boolean
+    Solid As Boolean
+    Persistent As Boolean
+    AnimationSetId As Number
+    InteractionId As Number
+End Type
+
+Private Dim StateGeneration[4] As Number
+
+Private Dim SceneCounts[4] As Number
+Private Dim SceneIds[4, 16] As Number
+Private Dim SceneMapIds[4, 16] As Number
+Private Dim SceneDefaultSpawnIds[4, 16] As Number
+Private Dim SceneCameraModes[4, 16] As Number
+
+Private Dim SpawnCounts[4] As Number
+Private Dim SpawnIds[4, 64] As Number
+Private Dim SpawnSceneIds[4, 64] As Number
+Private Dim SpawnCellX[4, 64] As Number
+Private Dim SpawnCellY[4, 64] As Number
+Private Dim SpawnFacing[4, 64] As Number
+
+Private Dim TransitionCounts[4] As Number
+Private Dim TransitionIds[4, 64] As Number
+Private Dim TransitionSourceSceneIds[4, 64] As Number
+Private Dim TransitionSourceRegionIds[4, 64] As Number
+Private Dim TransitionDestinationSceneIds[4, 64] As Number
+Private Dim TransitionDestinationSpawnIds[4, 64] As Number
+
+Private Dim ActorCounts[4] As Number
+Private Dim ActorIds[4, 64] As Number
+Private Dim ActorStartingSceneIds[4, 64] As Number
+Private Dim ActorStartingCellX[4, 64] As Number
+Private Dim ActorStartingCellY[4, 64] As Number
+Private Dim ActorStartingFacing[4, 64] As Number
+Private Dim ActorStartingVisible[4, 64] As Boolean
+Private Dim ActorSolidValues[4, 64] As Boolean
+Private Dim ActorPersistentValues[4, 64] As Boolean
+Private Dim ActorAnimationSetIds[4, 64] As Number
+Private Dim ActorInteractionIds[4, 64] As Number
+
+Private Dim ActorSceneIds[4, 64] As Number
+Private Dim ActorCellX[4, 64] As Number
+Private Dim ActorCellY[4, 64] As Number
+Private Dim ActorFacing[4, 64] As Number
+Private Dim ActorVisible[4, 64] As Boolean
+Private Dim ActorRouteProgress[4, 64] As Number
+Private Dim ActorReserved[4, 64] As Boolean
+Private Dim ActorReservedX[4, 64] As Number
+Private Dim ActorReservedY[4, 64] As Number
+
+Private Dim CurrentSceneIds[4] As Number
+Private Dim ControlledActorIds[4] As Number
+Private Dim ReturnSceneIds[4] As Number
+Private Dim ReturnCellX[4] As Number
+Private Dim ReturnCellY[4] As Number
+Private Dim ReturnFacing[4] As Number
+
+Private Function StateSlot(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim Generation As Number
+
+    Slot = Core.StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Generation = Core.StateGeneration(StateHandle)
+
+    If StateGeneration[Slot] <> Generation Then
+
+        For Index = 0 To WORLD_MAX_SCENES - 1
+            SceneIds[Slot, Index] = 0
+        End For
+
+        For Index = 0 To WORLD_MAX_SPAWNS - 1
+            SpawnIds[Slot, Index] = 0
+        End For
+
+        For Index = 0 To WORLD_MAX_TRANSITIONS - 1
+            TransitionIds[Slot, Index] = 0
+        End For
+
+        For Index = 0 To WORLD_MAX_ACTORS - 1
+            ActorIds[Slot, Index] = 0
+            ActorReserved[Slot, Index] = False
+        End For
+
+        SceneCounts[Slot] = 0
+        SpawnCounts[Slot] = 0
+        TransitionCounts[Slot] = 0
+        ActorCounts[Slot] = 0
+        CurrentSceneIds[Slot] = 0
+        ControlledActorIds[Slot] = 0
+        ReturnSceneIds[Slot] = 0
+        ReturnCellX[Slot] = 0
+        ReturnCellY[Slot] = 0
+        ReturnFacing[Slot] = WORLD_FACING_DOWN
+        StateGeneration[Slot] = Generation
+
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function SceneIndex(StateHandle As Number, SceneId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To SceneCounts[Slot] - 1
+
+        If SceneIds[Slot, Index] = SceneId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function SpawnIndex(StateHandle As Number, SpawnId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To SpawnCounts[Slot] - 1
+
+        If SpawnIds[Slot, Index] = SpawnId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function ActorIndex(StateHandle As Number, ActorId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To ActorCounts[Slot] - 1
+
+        If ActorIds[Slot, Index] = ActorId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+''' Returns True when a scene ID is defined for this RPG state.
+Public Function IsSceneDefined(StateHandle As Number, SceneId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = SceneIndex(StateHandle, SceneId) >= 0
+
+    Return ReturnValue
+
+End Function
+
+''' Returns True when an actor ID is defined for this RPG state.
+Public Function IsActorDefined(StateHandle As Number, ActorId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = ActorIndex(StateHandle, ActorId) >= 0
+
+    Return ReturnValue
+
+End Function
+
+''' Adds one immutable scene definition; duplicate IDs and invalid values fail without mutation.
+Public Function DefineScene(StateHandle As Number, ByRef Definition As SceneDefinition) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not Core.IsValidId(Definition.Id) Or
+        Not Core.IsValidId(Definition.MapId) Or
+        Not Core.IsValidId(Definition.DefaultSpawnId) Or
+        (Definition.CameraMode <> WORLD_CAMERA_FIXED And Definition.CameraMode <> WORLD_CAMERA_FOLLOW) Or
+        SceneIndex(StateHandle, Definition.Id) >= 0 Or
+        SceneCounts[Slot] >= WORLD_MAX_SCENES) Then
+        Return False
+    End If
+
+    Index = SceneCounts[Slot]
+    SceneIds[Slot, Index] = Definition.Id
+    SceneMapIds[Slot, Index] = Definition.MapId
+    SceneDefaultSpawnIds[Slot, Index] = Definition.DefaultSpawnId
+    SceneCameraModes[Slot, Index] = Definition.CameraMode
+    SceneCounts[Slot] = Index + 1
+    Return True
+
+End Function
+
+''' Adds one immutable spawn for a defined scene.
+Public Function DefineSpawn(StateHandle As Number, ByRef Definition As SpawnDefinition) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not Core.IsValidId(Definition.Id) Or
+        SceneIndex(StateHandle, Definition.SceneId) < 0 Or
+        Definition.CellX < 0 Or
+        Definition.CellY < 0 Or
+        Definition.Facing < WORLD_FACING_UP Or
+        Definition.Facing > WORLD_FACING_LEFT Or
+        SpawnIndex(StateHandle, Definition.Id) >= 0 Or
+        SpawnCounts[Slot] >= WORLD_MAX_SPAWNS) Then
+        Return False
+    End If
+
+    Index = SpawnCounts[Slot]
+    SpawnIds[Slot, Index] = Definition.Id
+    SpawnSceneIds[Slot, Index] = Definition.SceneId
+    SpawnCellX[Slot, Index] = Definition.CellX
+    SpawnCellY[Slot, Index] = Definition.CellY
+    SpawnFacing[Slot, Index] = Definition.Facing
+    SpawnCounts[Slot] = Index + 1
+    Return True
+
+End Function
+
+''' Adds one immutable region transition between defined scenes and a defined destination spawn.
+Public Function DefineTransition(StateHandle As Number, ByRef Definition As TransitionDefinition) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim DestinationSpawnIndex As Number
+
+    Slot = StateSlot(StateHandle)
+    DestinationSpawnIndex = SpawnIndex(StateHandle, Definition.DestinationSpawnId)
+
+    If (Slot < 0 Or
+        Not Core.IsValidId(Definition.Id) Or
+        SceneIndex(StateHandle, Definition.SourceSceneId) < 0 Or
+        Definition.SourceRegionId <= 0 Or
+        SceneIndex(StateHandle, Definition.DestinationSceneId) < 0 Or
+        DestinationSpawnIndex < 0 Or
+        SpawnSceneIds[Slot, DestinationSpawnIndex] <> Definition.DestinationSceneId Or
+        TransitionCounts[Slot] >= WORLD_MAX_TRANSITIONS) Then
+        Return False
+    End If
+
+    For Index = 0 To TransitionCounts[Slot] - 1
+
+        If TransitionIds[Slot, Index] = Definition.Id Then
+            Return False
+        End If
+
+    End For
+
+    Index = TransitionCounts[Slot]
+    TransitionIds[Slot, Index] = Definition.Id
+    TransitionSourceSceneIds[Slot, Index] = Definition.SourceSceneId
+    TransitionSourceRegionIds[Slot, Index] = Definition.SourceRegionId
+    TransitionDestinationSceneIds[Slot, Index] = Definition.DestinationSceneId
+    TransitionDestinationSpawnIds[Slot, Index] = Definition.DestinationSpawnId
+    TransitionCounts[Slot] = Index + 1
+    Return True
+
+End Function
+
+''' Adds one immutable actor definition and initializes its dynamic progress.
+Public Function DefineActor(StateHandle As Number, ByRef Definition As ActorDefinition) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not Core.IsValidId(Definition.Id) Or
+        SceneIndex(StateHandle, Definition.SceneId) < 0 Or
+        Definition.CellX < 0 Or
+        Definition.CellY < 0 Or
+        Definition.Facing < WORLD_FACING_UP Or
+        Definition.Facing > WORLD_FACING_LEFT Or
+        Definition.AnimationSetId < 0 Or
+        Definition.InteractionId < 0 Or
+        ActorIndex(StateHandle, Definition.Id) >= 0 Or
+        ActorCounts[Slot] >= WORLD_MAX_ACTORS) Then
+        Return False
+    End If
+
+    Index = ActorCounts[Slot]
+    ActorIds[Slot, Index] = Definition.Id
+    ActorStartingSceneIds[Slot, Index] = Definition.SceneId
+    ActorStartingCellX[Slot, Index] = Definition.CellX
+    ActorStartingCellY[Slot, Index] = Definition.CellY
+    ActorStartingFacing[Slot, Index] = Definition.Facing
+    ActorStartingVisible[Slot, Index] = Definition.Visible
+    ActorSolidValues[Slot, Index] = Definition.Solid
+    ActorPersistentValues[Slot, Index] = Definition.Persistent
+    ActorAnimationSetIds[Slot, Index] = Definition.AnimationSetId
+    ActorInteractionIds[Slot, Index] = Definition.InteractionId
+    ActorSceneIds[Slot, Index] = Definition.SceneId
+    ActorCellX[Slot, Index] = Definition.CellX
+    ActorCellY[Slot, Index] = Definition.CellY
+    ActorFacing[Slot, Index] = Definition.Facing
+    ActorVisible[Slot, Index] = Definition.Visible
+    ActorRouteProgress[Slot, Index] = 0
+    ActorReserved[Slot, Index] = False
+    ActorCounts[Slot] = Index + 1
+    Return True
+
+End Function
+
+''' Returns the number of defined scenes for a valid state.
+Public Function SceneCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = SceneCounts[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the number of defined actors for a valid state.
+Public Function ActorCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ActorCounts[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the number of actors whose dynamic progress participates in format-2 saves.
+Public Function PersistentActorCount(StateHandle As Number) As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim PersistentCount As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    PersistentCount = 0
+
+    For Index = 0 To ActorCounts[Slot] - 1
+
+        If ActorPersistentValues[Slot, Index] Then
+            PersistentCount = PersistentCount + 1
+        End If
+
+    End For
+
+    Return PersistentCount
+
+End Function
+
+''' Returns the stable actor ID at a persistent-actor enumeration index, or zero when invalid.
+Public Function PersistentActorIdAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim ActorIndexValue As Number
+    Dim PersistentIndex As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    PersistentIndex = 0
+
+    For ActorIndexValue = 0 To ActorCounts[Slot] - 1
+
+        If ActorPersistentValues[Slot, ActorIndexValue] Then
+
+            If PersistentIndex = Index Then
+                ReturnValue = ActorIds[Slot, ActorIndexValue]
+
+                Return ReturnValue
+            End If
+
+            PersistentIndex = PersistentIndex + 1
+
+        End If
+
+    End For
+
+    Return 0
+
+End Function
+
+''' Returns the stable actor ID at a definition index, or zero when invalid.
+Public Function ActorIdAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= ActorCounts[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = ActorIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Sets the active scene; zero clears it and nonzero IDs must be defined.
+Public Function SetCurrentScene(StateHandle As Number, SceneId As Number) As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or (SceneId <> 0 And SceneIndex(StateHandle, SceneId) < 0) Then
+        Return False
+    End If
+
+    CurrentSceneIds[Slot] = SceneId
+    Return True
+
+End Function
+
+''' Returns the active scene ID, or zero when none is active.
+Public Function CurrentScene(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CurrentSceneIds[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Selects the controlled actor; zero clears it and nonzero IDs must be defined.
+Public Function SetControlledActor(StateHandle As Number, ActorId As Number) As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or (ActorId <> 0 And ActorIndex(StateHandle, ActorId) < 0) Then
+        Return False
+    End If
+
+    ControlledActorIds[Slot] = ActorId
+    Return True
+
+End Function
+
+''' Returns the current controlled actor ID, or zero when none is selected.
+Public Function ControlledActor(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ControlledActorIds[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns an actor's dynamic scene membership, or zero for an invalid query.
+Public Function ActorScene(StateHandle As Number, ActorId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ActorIndex(StateHandle, ActorId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ActorSceneIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns an actor's authoritative cell X coordinate.
+Public Function ActorX(StateHandle As Number, ActorId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ActorIndex(StateHandle, ActorId)
+
+    If Slot < 0 Or Index < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = ActorCellX[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns an actor's authoritative cell Y coordinate.
+Public Function ActorY(StateHandle As Number, ActorId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ActorIndex(StateHandle, ActorId)
+
+    If Slot < 0 Or Index < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = ActorCellY[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns an actor's current cardinal facing direction.
+Public Function ActorFacingDirection(StateHandle As Number, ActorId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ActorIndex(StateHandle, ActorId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ActorFacing[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns an actor's current visibility flag.
+Public Function ActorIsVisible(StateHandle As Number, ActorId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ActorIndex(StateHandle, ActorId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return False
+    End If
+
+    ReturnValue = ActorVisible[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the actor definition's collision flag.
+Public Function ActorIsSolid(StateHandle As Number, ActorId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ActorIndex(StateHandle, ActorId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return False
+    End If
+
+    ReturnValue = ActorSolidValues[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns whether an actor's dynamic progress participates in format-2 saves.
+Public Function ActorIsPersistent(StateHandle As Number, ActorId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ActorIndex(StateHandle, ActorId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return False
+    End If
+
+    ReturnValue = ActorPersistentValues[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the caller-owned animation-set ID from an actor definition.
+Public Function ActorAnimationSet(StateHandle As Number, ActorId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ActorIndex(StateHandle, ActorId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ActorAnimationSetIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the caller-owned interaction ID from an actor definition.
+Public Function ActorInteraction(StateHandle As Number, ActorId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ActorIndex(StateHandle, ActorId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ActorInteractionIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns an actor's persisted bounded-route progress value.
+Public Function ActorRouteStep(StateHandle As Number, ActorId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ActorIndex(StateHandle, ActorId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ActorRouteProgress[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Changes a defined actor's cardinal facing without moving it.
+Public Function SetActorFacing(StateHandle As Number, ActorId As Number, Facing As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ActorIndex(StateHandle, ActorId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Facing < WORLD_FACING_UP Or
+        Facing > WORLD_FACING_LEFT) Then
+        Return False
+    End If
+
+    ActorFacing[Slot, Index] = Facing
+    Return True
+
+End Function
+
+''' Changes a defined actor's dynamic visibility.
+Public Function SetActorVisible(StateHandle As Number, ActorId As Number, Visible As Boolean) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ActorIndex(StateHandle, ActorId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return False
+    End If
+
+    ActorVisible[Slot, Index] = Visible
+
+    If Not Visible Then
+        ActorReserved[Slot, Index] = False
+    End If
+
+    Return True
+
+End Function
+
+''' Reserves a destination after map collision succeeds; actor overlap and swaps are rejected.
+Public Function TryReserveDestination(StateHandle As Number, ActorId As Number, DestinationX As Number, DestinationY As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim Other As Number
+    Dim OtherX As Number
+    Dim OtherY As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ActorIndex(StateHandle, ActorId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        DestinationX < 0 Or
+        DestinationY < 0 Or
+        ActorReserved[Slot, Index]) Then
+        Return False
+    End If
+
+    For Other = 0 To ActorCounts[Slot] - 1
+
+        If (Other <> Index And
+            ActorVisible[Slot, Other] And
+            ActorSolidValues[Slot, Other] And
+            ActorSceneIds[Slot, Other] = ActorSceneIds[Slot, Index]) Then
+
+            OtherX = ActorCellX[Slot, Other]
+            OtherY = ActorCellY[Slot, Other]
+
+            If ActorReserved[Slot, Other] Then
+                OtherX = ActorReservedX[Slot, Other]
+                OtherY = ActorReservedY[Slot, Other]
+            End If
+
+            If OtherX = DestinationX And OtherY = DestinationY Then
+                Return False
+            End If
+
+            If (ActorReserved[Slot, Other] And
+                ActorReservedX[Slot, Other] = ActorCellX[Slot, Index] And
+                ActorReservedY[Slot, Other] = ActorCellY[Slot, Index] And
+                ActorCellX[Slot, Other] = DestinationX And
+                ActorCellY[Slot, Other] = DestinationY) Then
+                Return False
+            End If
+
+        End If
+
+    End For
+
+    ActorReserved[Slot, Index] = True
+    ActorReservedX[Slot, Index] = DestinationX
+    ActorReservedY[Slot, Index] = DestinationY
+    Return True
+
+End Function
+
+''' Commits an actor's reserved destination and clears its reservation.
+Public Function CompleteReservedMove(StateHandle As Number, ActorId As Number, Facing As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ActorIndex(StateHandle, ActorId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Not ActorReserved[Slot, Index] Or
+        Facing < WORLD_FACING_UP Or
+        Facing > WORLD_FACING_LEFT) Then
+        Return False
+    End If
+
+    ActorCellX[Slot, Index] = ActorReservedX[Slot, Index]
+    ActorCellY[Slot, Index] = ActorReservedY[Slot, Index]
+    ActorFacing[Slot, Index] = Facing
+    ActorRouteProgress[Slot, Index] = ActorRouteProgress[Slot, Index] + 1
+    ActorReserved[Slot, Index] = False
+    Return True
+
+End Function
+
+''' Clears an actor's destination reservation without changing its source cell.
+Public Sub CancelReservedMove(StateHandle As Number, ActorId As Number)
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ActorIndex(StateHandle, ActorId)
+
+    If Slot >= 0 And Index >= 0 Then
+        ActorReserved[Slot, Index] = False
+    End If
+
+End Sub
+
+''' Returns the visible actor in the controlled actor's immediately facing cell.
+Public Function FrontActor(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim ControlledIndex As Number
+    Dim Index As Number
+    Dim TargetX As Number
+    Dim TargetY As Number
+
+    Slot = StateSlot(StateHandle)
+    ControlledIndex = ActorIndex(StateHandle, ControlledActor(StateHandle))
+
+    If Slot < 0 Or ControlledIndex < 0 Then
+        Return 0
+    End If
+
+    TargetX = ActorCellX[Slot, ControlledIndex]
+    TargetY = ActorCellY[Slot, ControlledIndex]
+
+    Select Case ActorFacing[Slot, ControlledIndex]
+        Case WORLD_FACING_UP
+            TargetY = TargetY - 1
+        Case WORLD_FACING_RIGHT
+            TargetX = TargetX + 1
+        Case WORLD_FACING_DOWN
+            TargetY = TargetY + 1
+        Case WORLD_FACING_LEFT
+            TargetX = TargetX - 1
+    End Select
+
+    For Index = 0 To ActorCounts[Slot] - 1
+
+        If (Index <> ControlledIndex And
+            ActorVisible[Slot, Index] And
+            ActorSceneIds[Slot, Index] = CurrentSceneIds[Slot] And
+            ActorCellX[Slot, Index] = TargetX And
+            ActorCellY[Slot, Index] = TargetY) Then
+            ReturnValue = ActorIds[Slot, Index]
+
+            Return ReturnValue
+        End If
+
+    End For
+
+    Return 0
+
+End Function
+
+''' Moves an actor to a defined spawn and makes that spawn's scene current.
+Public Function ApplySpawn(StateHandle As Number, ActorId As Number, SpawnId As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Actor As Number
+    Dim Spawn As Number
+
+    Slot = StateSlot(StateHandle)
+    Actor = ActorIndex(StateHandle, ActorId)
+    Spawn = SpawnIndex(StateHandle, SpawnId)
+
+    If (Slot < 0 Or
+        Actor < 0 Or
+        Spawn < 0) Then
+        Return False
+    End If
+
+    CurrentSceneIds[Slot] = SpawnSceneIds[Slot, Spawn]
+    ActorSceneIds[Slot, Actor] = SpawnSceneIds[Slot, Spawn]
+    ActorCellX[Slot, Actor] = SpawnCellX[Slot, Spawn]
+    ActorCellY[Slot, Actor] = SpawnCellY[Slot, Spawn]
+    ActorFacing[Slot, Actor] = SpawnFacing[Slot, Spawn]
+    ActorReserved[Slot, Actor] = False
+    Return True
+
+End Function
+
+''' Finds the first deterministic transition for a region in the current scene.
+Public Function TransitionAtRegion(StateHandle As Number, RegionId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or RegionId <= 0 Then
+        Return 0
+    End If
+
+    For Index = 0 To TransitionCounts[Slot] - 1
+
+        If (TransitionSourceSceneIds[Slot, Index] = CurrentSceneIds[Slot] And
+            TransitionSourceRegionIds[Slot, Index] = RegionId) Then
+            ReturnValue = TransitionIds[Slot, Index]
+
+            Return ReturnValue
+        End If
+
+    End For
+
+    Return 0
+
+End Function
+
+''' Applies a defined transition to the controlled actor at its destination spawn.
+Public Function ActivateTransition(StateHandle As Number, TransitionId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    For Index = 0 To TransitionCounts[Slot] - 1
+
+        If TransitionIds[Slot, Index] = TransitionId Then
+            ReturnValue = ApplySpawn(StateHandle, ControlledActorIds[Slot], TransitionDestinationSpawnIds[Slot, Index])
+
+            Return ReturnValue
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+''' Stores an exact scene, cell, and facing for encounter or overlay return.
+Public Function SetReturnLocation(StateHandle As Number, SceneId As Number, CellX As Number, CellY As Number, Facing As Number) As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        (SceneId <> 0 And SceneIndex(StateHandle, SceneId) < 0) Or
+        CellX < 0 Or
+        CellY < 0 Or
+        Facing < WORLD_FACING_UP Or
+        Facing > WORLD_FACING_LEFT) Then
+        Return False
+    End If
+
+    ReturnSceneIds[Slot] = SceneId
+    ReturnCellX[Slot] = CellX
+    ReturnCellY[Slot] = CellY
+    ReturnFacing[Slot] = Facing
+    Return True
+
+End Function
+
+''' Returns the stored exact-return scene ID.
+Public Function ReturnScene(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ReturnSceneIds[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the stored exact-return cell X coordinate.
+Public Function ReturnX(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = ReturnCellX[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the stored exact-return cell Y coordinate.
+Public Function ReturnY(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = ReturnCellY[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the stored exact-return cardinal facing.
+Public Function ReturnFacingDirection(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ReturnFacing[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' SaveGames infrastructure: replaces one actor's validated dynamic progress.
+Public Function SetActorProgress(StateHandle As Number, ActorId As Number, SceneId As Number, CellX As Number, CellY As Number, Facing As Number, Visible As Boolean, RouteStep As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ActorIndex(StateHandle, ActorId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        SceneIndex(StateHandle, SceneId) < 0 Or
+        CellX < 0 Or
+        CellY < 0 Or
+        Facing < WORLD_FACING_UP Or
+        Facing > WORLD_FACING_LEFT Or
+        Not Core.IsValidValue(RouteStep)) Then
+        Return False
+    End If
+
+    ActorSceneIds[Slot, Index] = SceneId
+    ActorCellX[Slot, Index] = CellX
+    ActorCellY[Slot, Index] = CellY
+    ActorFacing[Slot, Index] = Facing
+    ActorVisible[Slot, Index] = Visible
+    ActorRouteProgress[Slot, Index] = RouteStep
+    ActorReserved[Slot, Index] = False
+    Return True
+
+End Function
+
+''' Restores every actor and world-progress field to its immutable definition default.
+Public Function ResetProgress(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    CurrentSceneIds[Slot] = 0
+    ControlledActorIds[Slot] = 0
+    ReturnSceneIds[Slot] = 0
+    ReturnCellX[Slot] = 0
+    ReturnCellY[Slot] = 0
+    ReturnFacing[Slot] = WORLD_FACING_DOWN
+
+    For Index = 0 To ActorCounts[Slot] - 1
+
+        ActorSceneIds[Slot, Index] = ActorStartingSceneIds[Slot, Index]
+        ActorCellX[Slot, Index] = ActorStartingCellX[Slot, Index]
+        ActorCellY[Slot, Index] = ActorStartingCellY[Slot, Index]
+        ActorFacing[Slot, Index] = ActorStartingFacing[Slot, Index]
+        ActorVisible[Slot, Index] = ActorStartingVisible[Slot, Index]
+        ActorRouteProgress[Slot, Index] = 0
+        ActorReserved[Slot, Index] = False
+    End For
+
+    Return True
+
+End Function
+
+''' Restores persisted world fields and persistent actors while preserving transient actor progress.
+Public Function ResetPersistentProgress(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    CurrentSceneIds[Slot] = 0
+    ControlledActorIds[Slot] = 0
+    ReturnSceneIds[Slot] = 0
+    ReturnCellX[Slot] = 0
+    ReturnCellY[Slot] = 0
+    ReturnFacing[Slot] = WORLD_FACING_DOWN
+
+    For Index = 0 To ActorCounts[Slot] - 1
+
+        If ActorPersistentValues[Slot, Index] Then
+
+            ActorSceneIds[Slot, Index] = ActorStartingSceneIds[Slot, Index]
+            ActorCellX[Slot, Index] = ActorStartingCellX[Slot, Index]
+            ActorCellY[Slot, Index] = ActorStartingCellY[Slot, Index]
+            ActorFacing[Slot, Index] = ActorStartingFacing[Slot, Index]
+            ActorVisible[Slot, Index] = ActorStartingVisible[Slot, Index]
+            ActorRouteProgress[Slot, Index] = 0
+            ActorReserved[Slot, Index] = False
+
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+End Module

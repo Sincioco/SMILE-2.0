@@ -1,0 +1,16 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Console</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>Phase7WorldStateTestsPackage</OutputName>
+    <ApplicationId>smile.tests.phase7-world-state</ApplicationId>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <SmileLibraryReference Include="..\..\artifacts\libraries\Smile.Game.smilelib" />
+    <SmileLibraryReference Include="..\..\artifacts\libraries\Smile.RPG.smilelib" />
+    <Asset Include="Maps\Test.smilemap" />
+    <Asset Include="Maps\OptionalLayers.smilemap" />
+    <Asset Include="Maps\Invalid.smilemap" />
+  </ItemGroup>
+</SmileProject>

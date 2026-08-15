@@ -10,6 +10,21 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+function Get-Sha256 {
+    param([string]$Path)
+
+    $algorithm = [Security.Cryptography.SHA256]::Create()
+    $stream = [IO.File]::OpenRead($Path)
+
+    try {
+        return [BitConverter]::ToString($algorithm.ComputeHash($stream)).Replace('-', '')
+    }
+    finally {
+        $stream.Dispose()
+        $algorithm.Dispose()
+    }
+}
 $extensionsRoot = [System.IO.Path]::GetFullPath(
     (Join-Path $env:LOCALAPPDATA "Microsoft\VisualStudio\18.0_$InstanceId\Extensions"))
 
@@ -86,8 +101,8 @@ if (-not (Test-Path -LiteralPath $installedDll)) {
     throw "Installed SMILE extension DLL was not found: $installedDll"
 }
 
-$builtHash = (Get-FileHash -LiteralPath $builtDll -Algorithm SHA256).Hash
-$installedHash = (Get-FileHash -LiteralPath $installedDll -Algorithm SHA256).Hash
+$builtHash = Get-Sha256 $builtDll
+$installedHash = Get-Sha256 $installedDll
 if ($installedHash -ne $builtHash) {
     throw 'Installed SMILE extension DLL hash does not match the newly built DLL.'
 }

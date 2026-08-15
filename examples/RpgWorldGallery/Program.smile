@@ -1,0 +1,1113 @@
+Option Explicit
+
+Import Smile.Game.Core As GameCore
+Import Smile.Game.Animation As Animation
+Import Smile.Game.TileMap As TileMap
+Import Smile.Game.Camera2D As Camera2D
+Import Smile.RPG.Core As RPG
+Import Smile.RPG.Characters As Characters
+Import Smile.RPG.Party As Party
+Import Smile.RPG.Inventory As Inventory
+Import Smile.RPG.Shops As Shops
+Import Smile.RPG.World As World
+Import Smile.RPG.Story As Story
+Import Smile.RPG.Encounters As Encounters
+Import Smile.RPG.SaveGames As SaveGames
+Import Smile.UI.Core As UI
+Import Smile.UI.Menu As Menu
+Import Smile.UI.MenuNavigator As MenuNavigator
+Import Smile.UI.Dialogue As Dialogue
+
+Const MODE_TITLE = 1
+Const MODE_FIELD = 2
+Const MODE_FIELD_MENU = 3
+Const MODE_DIALOGUE = 4
+Const MODE_INFO = 5
+Const MODE_SHOP = 6
+Const MODE_ENCOUNTER = 7
+
+Const SCENE_TOWN = 1
+Const SCENE_SHOP = 2
+Const SCENE_OVERWORLD = 3
+Const ACTOR_HERO = 1000
+Const ACTOR_GUIDE = 2000
+Const ACTOR_WANDERER = 3000
+Const ACTOR_MERCHANT = 4000
+Const CHARACTER_HERO = 100
+Const CHARACTER_COMPANION = 200
+Const ITEM_MOONFRUIT = 10
+Const SHOP_GENERAL = 1
+Const STORY_GUIDE_SPOKEN = 1
+Const STORY_VISITS = 2
+Const ENCOUNTER_ZONE = 1
+
+Dim Tileset As Image
+Dim HeroImage As Image
+Dim CompanionImage As Image
+Dim NpcImage As Image
+Dim TitleBackground As Image
+Dim EncounterBackground As Image
+Dim EnemyImage As Image
+Dim PanelImage As Image
+Dim TownMap As Number
+Dim ShopMap As Number
+Dim OverworldMap As Number
+Dim State As Number
+Dim PlayerMover As GameCore.CardinalMover
+Dim Camera As Camera2D.CameraState
+Dim WindowStyle As UI.WindowStyle
+Dim TextStyle As UI.TextStyle
+Dim SelectedTextStyle As UI.TextStyle
+Dim DisabledTextStyle As UI.TextStyle
+Dim MenuStyle As UI.MenuStyle
+Dim NavigatorStyle As UI.MenuNavigatorStyle
+Dim DialogueStyle As UI.DialogueStyle
+Dim FieldMenu As Number
+Dim FieldNavigator As Number
+Dim ShopMenu As Number
+Dim ShopNavigator As Number
+Dim DialogueHandle As Number
+Dim Mode As Number
+Dim InfoMode As Number
+Dim TitleSelection As Number
+Dim Key As Number
+Dim Event As Number
+Dim Action As Number
+Dim Direction As Number
+Dim CurrentMap As Number
+Dim TransitionId As Number
+Dim RegionId As Number
+Dim Result As Number
+Dim TargetActor As Number
+Dim ItemIndex As Number
+Dim Running As Boolean
+Dim OperationSucceeded As Boolean
+Dim Status As Text
+Dim NextMoveTime As Number
+Dim NextWanderTime As Number
+Dim WanderDirection As Number
+Dim AnimationClock As Number
+Dim HeroDefinition As Characters.CharacterDefinition
+Dim CompanionDefinition As Characters.CharacterDefinition
+Dim MoonfruitDefinition As Inventory.ItemDefinition
+Dim ShopDefinition As Shops.ShopDefinition
+Dim SceneDefinition As World.SceneDefinition
+Dim SpawnDefinition As World.SpawnDefinition
+Dim TransitionDefinition As World.TransitionDefinition
+Dim ActorDefinition As World.ActorDefinition
+Dim ZoneDefinition As Encounters.ZoneDefinition
+
+Game Window "SMILE 2.0 RPG World Gallery" Size 960 By 540
+
+Load Image Tileset From "Assets\WorldTiles.png"
+Load Image HeroImage From "Assets\Hero.png"
+Load Image CompanionImage From "Assets\Companion.png"
+Load Image NpcImage From "Assets\Npc.png"
+Load Image TitleBackground From "Assets\TitleBackground.png"
+Load Image EncounterBackground From "Assets\EncounterBackground.png"
+Load Image EnemyImage From "Assets\MireWarden.png"
+Load Image PanelImage From "Assets\PanelOverlay.png"
+
+State = RPG.Create()
+
+Call InitializeStyles()
+Call InitializeMenus()
+Call InitializeRpgDefinitions()
+Call InitializeWorldDefinitions()
+Call LoadWorldMaps()
+Call StartNewGame()
+
+Mode = MODE_TITLE
+TitleSelection = 1
+Status = "Choose a title-screen action."
+Running = State > 0 And TownMap > 0 And ShopMap > 0 And OverworldMap > 0
+Play Music "Assets\LumenTheme.wav" Loop
+
+Do
+    Get Key Key
+    AnimationClock = AnimationClock + 1
+
+    Select Case Mode
+        Case MODE_TITLE
+
+            Call HandleTitle(Key)
+
+        Case MODE_FIELD
+
+            Call HandleField(Key)
+
+        Case MODE_FIELD_MENU
+
+            Call HandleFieldMenu(Key)
+
+        Case MODE_DIALOGUE
+
+            Call HandleDialogue(Key)
+
+        Case MODE_INFO
+
+            Call HandleInfo(Key)
+
+        Case MODE_SHOP
+
+            Call HandleShop(Key)
+
+        Case MODE_ENCOUNTER
+
+            Call HandleEncounter(Key)
+
+    End Select
+
+    If Mode = MODE_FIELD Then
+        Call UpdateMovement()
+        Call UpdateWanderer()
+    End If
+
+    Select Case Mode
+        Case MODE_TITLE
+
+            Call DrawTitle()
+
+        Case MODE_ENCOUNTER
+
+            Call DrawEncounter()
+
+        Case Else
+
+            Call DrawField()
+
+            If Mode = MODE_FIELD_MENU Then
+                Call MenuNavigator.DrawStack(FieldNavigator)
+            Else If Mode = MODE_DIALOGUE Then
+                Event = Dialogue.Update(DialogueHandle, Timer())
+
+                Call Dialogue.Draw(DialogueHandle, Timer())
+            Else If Mode = MODE_INFO Then
+                Call DrawInformation()
+            Else If Mode = MODE_SHOP Then
+                Call DrawShopOverlay()
+                Call MenuNavigator.DrawStack(ShopNavigator)
+            End If
+
+    End Select
+
+    Show Screen
+    Wait 8 Milliseconds
+
+Loop Until Game_Closed() = True Or Not Running
+
+Stop Music
+
+Call Dialogue.Destroy(DialogueHandle)
+Call MenuNavigator.Destroy(ShopNavigator)
+Call MenuNavigator.Destroy(FieldNavigator)
+Call Menu.Destroy(ShopMenu)
+Call Menu.Destroy(FieldMenu)
+Call TileMap.Unload(OverworldMap)
+Call TileMap.Unload(ShopMap)
+Call TileMap.Unload(TownMap)
+
+Unload Image EnemyImage
+Unload Image PanelImage
+Unload Image EncounterBackground
+Unload Image TitleBackground
+Unload Image NpcImage
+Unload Image CompanionImage
+Unload Image HeroImage
+Unload Image Tileset
+
+Call RPG.Destroy(State)
+
+End Program
+
+Sub InitializeStyles()
+
+    WindowStyle.UseSkin = False
+    WindowStyle.FillColor = Rgb(15, 29, 44)
+    WindowStyle.BorderColor = Rgb(107, 220, 198)
+    WindowStyle.BorderThickness = 3
+    WindowStyle.Opacity = 94
+    WindowStyle.FilterMode = UI.UI_FILTER_SMOOTH
+    WindowStyle.Padding.Left = 18
+    WindowStyle.Padding.Top = 16
+    WindowStyle.Padding.Right = 18
+    WindowStyle.Padding.Bottom = 16
+
+    TextStyle.Mode = UI.UI_TEXT_SYSTEM
+    TextStyle.SystemSize = 19
+    TextStyle.SystemColor = WHITE
+    TextStyle.LineSpacing = 4
+    SelectedTextStyle = TextStyle
+    SelectedTextStyle.SystemColor = YELLOW
+    DisabledTextStyle = TextStyle
+    DisabledTextStyle.SystemColor = DARK_GRAY
+
+    MenuStyle.Window = WindowStyle
+    MenuStyle.NormalText = TextStyle
+    MenuStyle.SelectedText = SelectedTextStyle
+    MenuStyle.DisabledText = DisabledTextStyle
+    MenuStyle.SelectionFillColor = Rgb(39, 95, 104)
+    MenuStyle.RowHeight = 38
+    MenuStyle.WrapSelection = True
+    MenuStyle.ShowScrollbar = True
+    MenuStyle.ShowSubmenuIndicator = False
+    MenuStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_ELLIPSIS
+    MenuStyle.ItemTextMaxLines = 1
+
+    NavigatorStyle.Viewport.X = 0
+    NavigatorStyle.Viewport.Y = 0
+    NavigatorStyle.Viewport.Width = 960
+    NavigatorStyle.Viewport.Height = 540
+    NavigatorStyle.ViewportPadding.Left = 18
+    NavigatorStyle.ViewportPadding.Top = 18
+    NavigatorStyle.ViewportPadding.Right = 18
+    NavigatorStyle.ViewportPadding.Bottom = 18
+    NavigatorStyle.HorizontalGap = 10
+    NavigatorStyle.PreferredDirection = UI.UI_SUBMENU_DIRECTION_AUTO
+
+    DialogueStyle.Window = WindowStyle
+    DialogueStyle.Text = TextStyle
+    DialogueStyle.CharactersPerSecond = 42
+    DialogueStyle.LineSpacing = 5
+    DialogueStyle.UseContinueIndicator = False
+    DialogueStyle.IndicatorBlinkMilliseconds = 420
+
+End Sub
+
+Sub InitializeMenus()
+
+    FieldMenu = Menu.Create(MenuStyle, 24, 48, 350, 450, 10)
+    ItemIndex = Menu.AddItem(FieldMenu, "Talk", 1, True)
+    ItemIndex = Menu.AddItem(FieldMenu, "Character Stats", 2, True)
+    ItemIndex = Menu.AddItem(FieldMenu, "Inventory", 3, True)
+    ItemIndex = Menu.AddItem(FieldMenu, "Add / Remove Companion", 4, True)
+    ItemIndex = Menu.AddItem(FieldMenu, "Reorder Party", 5, True)
+    ItemIndex = Menu.AddItem(FieldMenu, "QA: Add Level", 6, True)
+    ItemIndex = Menu.AddItem(FieldMenu, "QA: Add Strength", 7, True)
+    ItemIndex = Menu.AddItem(FieldMenu, "Save Slot 1", 8, True)
+    ItemIndex = Menu.AddItem(FieldMenu, "Load Slot 1", 9, True)
+    ItemIndex = Menu.AddItem(FieldMenu, "Close", 10, True)
+    FieldNavigator = MenuNavigator.Create(FieldMenu, NavigatorStyle)
+
+    ShopMenu = Menu.Create(MenuStyle, 525, 180, 390, 170, 3)
+    ItemIndex = Menu.AddItem(ShopMenu, "Buy Moonfruit - 30 Gold", 201, True)
+    ItemIndex = Menu.AddItem(ShopMenu, "View Inventory", 202, True)
+    ItemIndex = Menu.AddItem(ShopMenu, "Leave Counter", 203, True)
+    ShopNavigator = MenuNavigator.Create(ShopMenu, NavigatorStyle)
+
+    DialogueHandle = Dialogue.Create(DialogueStyle, 40, 330, 880, 180)
+
+End Sub
+
+Sub InitializeRpgDefinitions()
+
+    HeroDefinition.Id = CHARACTER_HERO
+    HeroDefinition.Name = "Mira"
+    HeroDefinition.StartingLevel = 3
+    HeroDefinition.StartingMaximumHealth = 120
+    HeroDefinition.StartingMaximumMagicPoints = 28
+    HeroDefinition.Strength = 14
+    HeroDefinition.Defense = 12
+    HeroDefinition.Magic = 9
+    HeroDefinition.Resistance = 10
+    HeroDefinition.Agility = 13
+    HeroDefinition.Luck = 8
+    OperationSucceeded = Characters.DefineCharacter(State, HeroDefinition)
+
+    CompanionDefinition = HeroDefinition
+    CompanionDefinition.Id = CHARACTER_COMPANION
+    CompanionDefinition.Name = "Tovan"
+    CompanionDefinition.StartingLevel = 2
+    CompanionDefinition.StartingMaximumHealth = 96
+    CompanionDefinition.Strength = 10
+    CompanionDefinition.Magic = 14
+    OperationSucceeded = OperationSucceeded And Characters.DefineCharacter(State, CompanionDefinition)
+
+    MoonfruitDefinition.Id = ITEM_MOONFRUIT
+    MoonfruitDefinition.Name = "Moonfruit"
+    MoonfruitDefinition.Kind = RPG.RPG_ITEM_CONSUMABLE
+    MoonfruitDefinition.MaximumStack = 20
+    MoonfruitDefinition.BasePrice = 30
+    MoonfruitDefinition.CanSell = True
+    MoonfruitDefinition.EffectId = 1
+    OperationSucceeded = OperationSucceeded And Inventory.DefineItem(State, MoonfruitDefinition)
+
+    ShopDefinition.Id = SHOP_GENERAL
+    ShopDefinition.Name = "Lantern Market"
+    OperationSucceeded = OperationSucceeded And Shops.DefineShop(State, ShopDefinition)
+    OperationSucceeded = OperationSucceeded And Shops.AddShopItem(State, SHOP_GENERAL, ITEM_MOONFRUIT, 30, 15, 12)
+
+    OperationSucceeded = OperationSucceeded And Story.DefineFlag(State, STORY_GUIDE_SPOKEN)
+    OperationSucceeded = OperationSucceeded And Story.DefineValue(State, STORY_VISITS)
+
+End Sub
+
+Sub InitializeWorldDefinitions()
+
+    SceneDefinition.Id = SCENE_TOWN
+    SceneDefinition.MapId = SCENE_TOWN
+    SceneDefinition.DefaultSpawnId = 10
+    SceneDefinition.CameraMode = World.WORLD_CAMERA_FOLLOW
+    OperationSucceeded = OperationSucceeded And World.DefineScene(State, SceneDefinition)
+    SceneDefinition.Id = SCENE_SHOP
+    SceneDefinition.MapId = SCENE_SHOP
+    SceneDefinition.DefaultSpawnId = 20
+    OperationSucceeded = OperationSucceeded And World.DefineScene(State, SceneDefinition)
+    SceneDefinition.Id = SCENE_OVERWORLD
+    SceneDefinition.MapId = SCENE_OVERWORLD
+    SceneDefinition.DefaultSpawnId = 30
+    OperationSucceeded = OperationSucceeded And World.DefineScene(State, SceneDefinition)
+
+    SpawnDefinition.Id = 10
+    SpawnDefinition.SceneId = SCENE_TOWN
+    SpawnDefinition.CellX = 13
+    SpawnDefinition.CellY = 12
+    SpawnDefinition.Facing = World.WORLD_FACING_UP
+    OperationSucceeded = OperationSucceeded And World.DefineSpawn(State, SpawnDefinition)
+    SpawnDefinition.Id = 11
+    SpawnDefinition.CellX = 13
+    SpawnDefinition.CellY = 17
+    SpawnDefinition.Facing = World.WORLD_FACING_UP
+    OperationSucceeded = OperationSucceeded And World.DefineSpawn(State, SpawnDefinition)
+    SpawnDefinition.Id = 12
+    SpawnDefinition.CellX = 7
+    SpawnDefinition.CellY = 8
+    SpawnDefinition.Facing = World.WORLD_FACING_DOWN
+    OperationSucceeded = OperationSucceeded And World.DefineSpawn(State, SpawnDefinition)
+    SpawnDefinition.Id = 20
+    SpawnDefinition.SceneId = SCENE_SHOP
+    SpawnDefinition.CellX = 8
+    SpawnDefinition.CellY = 9
+    SpawnDefinition.Facing = World.WORLD_FACING_UP
+    OperationSucceeded = OperationSucceeded And World.DefineSpawn(State, SpawnDefinition)
+    SpawnDefinition.Id = 30
+    SpawnDefinition.SceneId = SCENE_OVERWORLD
+    SpawnDefinition.CellX = 11
+    SpawnDefinition.CellY = 14
+    SpawnDefinition.Facing = World.WORLD_FACING_UP
+    OperationSucceeded = OperationSucceeded And World.DefineSpawn(State, SpawnDefinition)
+
+    Call DefineTransition(1, SCENE_TOWN, 1, SCENE_OVERWORLD, 30)
+    Call DefineTransition(2, SCENE_TOWN, 2, SCENE_SHOP, 20)
+    Call DefineTransition(3, SCENE_SHOP, 6, SCENE_TOWN, 12)
+    Call DefineTransition(4, SCENE_OVERWORLD, 4, SCENE_TOWN, 11)
+
+    ActorDefinition.Id = ACTOR_HERO
+    ActorDefinition.SceneId = SCENE_TOWN
+    ActorDefinition.CellX = 13
+    ActorDefinition.CellY = 12
+    ActorDefinition.Facing = World.WORLD_FACING_UP
+    ActorDefinition.Visible = True
+    ActorDefinition.Solid = True
+    ActorDefinition.Persistent = True
+    ActorDefinition.AnimationSetId = 1
+    ActorDefinition.InteractionId = 0
+    OperationSucceeded = OperationSucceeded And World.DefineActor(State, ActorDefinition)
+
+    ActorDefinition.Id = ACTOR_GUIDE
+    ActorDefinition.CellX = 12
+    ActorDefinition.CellY = 9
+    ActorDefinition.Facing = World.WORLD_FACING_DOWN
+    ActorDefinition.AnimationSetId = 2
+    ActorDefinition.InteractionId = 1
+    OperationSucceeded = OperationSucceeded And World.DefineActor(State, ActorDefinition)
+
+    ActorDefinition.Id = ACTOR_WANDERER
+    ActorDefinition.CellX = 16
+    ActorDefinition.CellY = 10
+    ActorDefinition.Facing = World.WORLD_FACING_RIGHT
+    ActorDefinition.InteractionId = 1
+    OperationSucceeded = OperationSucceeded And World.DefineActor(State, ActorDefinition)
+
+    ActorDefinition.Id = ACTOR_MERCHANT
+    ActorDefinition.SceneId = SCENE_SHOP
+    ActorDefinition.CellX = 8
+    ActorDefinition.CellY = 4
+    ActorDefinition.Facing = World.WORLD_FACING_DOWN
+    ActorDefinition.InteractionId = 2
+    OperationSucceeded = OperationSucceeded And World.DefineActor(State, ActorDefinition)
+
+    ZoneDefinition.Id = ENCOUNTER_ZONE
+    ZoneDefinition.SceneId = SCENE_OVERWORLD
+    ZoneDefinition.RegionId = 5
+    ZoneDefinition.StepsRequired = 6
+    ZoneDefinition.InitialSeed = 17
+    OperationSucceeded = OperationSucceeded And Encounters.DefineZone(State, ZoneDefinition)
+    OperationSucceeded = OperationSucceeded And Encounters.AddEntry(State, ENCOUNTER_ZONE, 500, 3)
+    OperationSucceeded = OperationSucceeded And Encounters.AddEntry(State, ENCOUNTER_ZONE, 501, 1)
+
+End Sub
+
+Sub DefineTransition(Id As Number, SourceScene As Number, SourceRegion As Number, DestinationScene As Number, DestinationSpawn As Number)
+
+    TransitionDefinition.Id = Id
+    TransitionDefinition.SourceSceneId = SourceScene
+    TransitionDefinition.SourceRegionId = SourceRegion
+    TransitionDefinition.DestinationSceneId = DestinationScene
+    TransitionDefinition.DestinationSpawnId = DestinationSpawn
+    OperationSucceeded = OperationSucceeded And World.DefineTransition(State, TransitionDefinition)
+
+End Sub
+
+Sub LoadWorldMaps()
+
+    Dim Path As Text
+
+    Path = "Maps\Town.smilemap"
+    TownMap = TileMap.LoadMap(Path)
+    Path = "Maps\Shop.smilemap"
+    ShopMap = TileMap.LoadMap(Path)
+    Path = "Maps\Overworld.smilemap"
+    OverworldMap = TileMap.LoadMap(Path)
+
+    Call DefineTiles(TownMap)
+    Call DefineTiles(ShopMap)
+    Call DefineTiles(OverworldMap)
+
+End Sub
+
+Sub DefineTiles(MapHandle As Number)
+
+    OperationSucceeded = TileMap.DefineTile(MapHandle, 1, 0, 0, 128, 128, 100)
+    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 2, 128, 0, 128, 128, 100)
+    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 3, 256, 0, 128, 128, 100)
+    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 4, 384, 0, 128, 128, 100)
+    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 5, 512, 0, 128, 128, 100)
+    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 6, 0, 128, 128, 128, 100)
+    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 7, 128, 128, 128, 128, 100)
+    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 8, 256, 128, 128, 128, 100)
+    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 9, 384, 128, 128, 128, 100)
+    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 10, 512, 128, 128, 128, 100)
+
+End Sub
+
+Sub StartNewGame()
+
+    OperationSucceeded = Characters.ResetProgress(State)
+    OperationSucceeded = OperationSucceeded And Party.ClearParty(State)
+    OperationSucceeded = OperationSucceeded And Inventory.ClearInventory(State)
+    OperationSucceeded = OperationSucceeded And Shops.ResetShopStock(State, SHOP_GENERAL)
+    OperationSucceeded = OperationSucceeded And World.ResetProgress(State)
+    OperationSucceeded = OperationSucceeded And Story.Reset(State)
+    OperationSucceeded = OperationSucceeded And Encounters.ResetProgress(State)
+    OperationSucceeded = OperationSucceeded And Party.AddCharacter(State, CHARACTER_HERO)
+    OperationSucceeded = OperationSucceeded And Party.SetGold(State, 180)
+    OperationSucceeded = OperationSucceeded And World.SetControlledActor(State, ACTOR_HERO)
+    OperationSucceeded = OperationSucceeded And World.ApplySpawn(State, ACTOR_HERO, 10)
+
+    Call SyncFieldState()
+
+End Sub
+
+Sub SyncFieldState()
+
+    Call GameCore.Place(PlayerMover, World.ActorX(State, ACTOR_HERO), World.ActorY(State, ACTOR_HERO), World.ActorFacingDirection(State, ACTOR_HERO))
+
+    CurrentMap = MapForScene(World.CurrentScene(State))
+    OperationSucceeded = Camera2D.Configure(Camera, 960, 540, TileMap.Width(CurrentMap) * 64, TileMap.Height(CurrentMap) * 64)
+
+    Call Camera2D.Follow(Camera, GameCore.VisualX(PlayerMover, 64) + 32, GameCore.VisualY(PlayerMover, 64) + 32)
+
+End Sub
+
+Function MapForScene(SceneId As Number) As Number
+
+    Select Case SceneId
+        Case SCENE_TOWN
+            Return TownMap
+        Case SCENE_SHOP
+            Return ShopMap
+        Case SCENE_OVERWORLD
+            Return OverworldMap
+    End Select
+
+    Return TownMap
+
+End Function
+
+Sub HandleTitle(PressedKey As Number)
+
+    If PressedKey = KEY_UP Then
+
+        TitleSelection = Max(1, TitleSelection - 1)
+
+    Else If PressedKey = KEY_DOWN Then
+
+        TitleSelection = Min(3, TitleSelection + 1)
+
+    Else If PressedKey = KEY_ENTER Or PressedKey = KEY_SPACE Then
+
+        Select Case TitleSelection
+            Case 1
+
+                Call StartNewGame()
+
+                Mode = MODE_FIELD
+                Status = "Explore Lumen Vale. Enter opens the field command menu."
+            Case 2
+                Result = SaveGames.LoadGame(State, 1, 1)
+
+                If Result = RPG.RPG_RESULT_OK Then
+
+                    Call SyncFieldState()
+
+                    Mode = MODE_FIELD
+                    Status = "Existing world, party, shop, and story state restored."
+
+                Else
+                    Status = "No valid save exists in slot 1 yet."
+
+                End If
+
+            Case 3
+                Running = False
+        End Select
+
+    End If
+
+End Sub
+
+Sub HandleField(PressedKey As Number)
+
+    If PressedKey = KEY_ENTER Or PressedKey = KEY_SPACE Then
+
+        OperationSucceeded = Menu.SetSelectedIndex(FieldMenu, 0)
+        Mode = MODE_FIELD_MENU
+        Return
+
+    End If
+
+    If PlayerMover.Moving Or Timer() < NextMoveTime Then
+        Return
+    End If
+
+    Direction = 0
+
+    If (PressedKey = KEY_UP Or
+        PressedKey = KEY_W Or
+        Key_Held(KEY_UP) Or
+        Key_Held(KEY_W)) Then
+        Direction = World.WORLD_FACING_UP
+    Else If (PressedKey = KEY_RIGHT Or
+        PressedKey = KEY_D Or
+        Key_Held(KEY_RIGHT) Or
+        Key_Held(KEY_D)) Then
+        Direction = World.WORLD_FACING_RIGHT
+    Else If (PressedKey = KEY_DOWN Or
+        PressedKey = KEY_S Or
+        Key_Held(KEY_DOWN) Or
+        Key_Held(KEY_S)) Then
+        Direction = World.WORLD_FACING_DOWN
+    Else If (PressedKey = KEY_LEFT Or
+        PressedKey = KEY_A Or
+        Key_Held(KEY_LEFT) Or
+        Key_Held(KEY_A)) Then
+        Direction = World.WORLD_FACING_LEFT
+    End If
+
+    If Direction <> 0 Then
+        Call TryBeginPlayerMove(Direction)
+    End If
+
+End Sub
+
+Sub TryBeginPlayerMove(MoveDirection As Number)
+
+    Dim DestinationX As Number
+    Dim DestinationY As Number
+
+    DestinationX = PlayerMover.CellX + GameCore.DirectionX(MoveDirection)
+    DestinationY = PlayerMover.CellY + GameCore.DirectionY(MoveDirection)
+    OperationSucceeded = World.SetActorFacing(State, ACTOR_HERO, MoveDirection)
+    PlayerMover.Facing = MoveDirection
+
+    If TileMap.IsSolid(CurrentMap, DestinationX, DestinationY) Then
+
+        Status = "Collision kept the party on its last legal cell."
+        NextMoveTime = Timer() + 100
+        Return
+
+    End If
+
+    If Not World.TryReserveDestination(State, ACTOR_HERO, DestinationX, DestinationY) Then
+
+        Status = "Another actor already occupies or reserved that cell."
+        NextMoveTime = Timer() + 100
+        Return
+
+    End If
+
+    If Not GameCore.BeginMove(PlayerMover, MoveDirection, 8) Then
+        Call World.CancelReservedMove(State, ACTOR_HERO)
+
+        Return
+    End If
+
+    NextMoveTime = Timer() + 110
+
+End Sub
+
+Sub UpdateMovement()
+
+    If Not PlayerMover.Moving Then
+        Return
+    End If
+
+    If GameCore.UpdateMove(PlayerMover, 1) Then
+
+        OperationSucceeded = World.CompleteReservedMove(State, ACTOR_HERO, PlayerMover.Facing)
+        RegionId = TileMap.RegionAt(CurrentMap, PlayerMover.CellX, PlayerMover.CellY)
+        TransitionId = World.TransitionAtRegion(State, RegionId)
+
+        If TransitionId <> 0 Then
+
+            OperationSucceeded = World.ActivateTransition(State, TransitionId)
+
+            Call SyncFieldState()
+
+            Status = "Scene transition completed at a stable spawn and facing."
+
+        Else If World.CurrentScene(State) = SCENE_OVERWORLD And RegionId = 5 Then
+
+            Result = Encounters.Advance(State, ENCOUNTER_ZONE, Encounters.Seed(State, ENCOUNTER_ZONE))
+
+            If Result <> 0 Then
+
+                OperationSucceeded = World.SetReturnLocation(State, SCENE_OVERWORLD, PlayerMover.CellX, PlayerMover.CellY, PlayerMover.Facing)
+                Mode = MODE_ENCOUNTER
+                Status = "Encounter Preview only - no attacks, damage, rewards, victory, or defeat."
+
+            End If
+
+        End If
+
+    End If
+
+    If Mode = MODE_FIELD Then
+        Call Camera2D.Follow(Camera, GameCore.VisualX(PlayerMover, 64) + 32, GameCore.VisualY(PlayerMover, 64) + 32)
+    End If
+
+End Sub
+
+Sub UpdateWanderer()
+
+    Dim DestinationX As Number
+    Dim DestinationY As Number
+
+    If (World.CurrentScene(State) <> SCENE_TOWN Or
+        Timer() < NextWanderTime Or
+        PlayerMover.Moving) Then
+        Return
+    End If
+
+    WanderDirection = WanderDirection + 1
+
+    If WanderDirection > World.WORLD_FACING_LEFT Then
+        WanderDirection = World.WORLD_FACING_UP
+    End If
+
+    DestinationX = World.ActorX(State, ACTOR_WANDERER) + GameCore.DirectionX(WanderDirection)
+    DestinationY = World.ActorY(State, ACTOR_WANDERER) + GameCore.DirectionY(WanderDirection)
+
+    If (DestinationX >= 15 And
+        DestinationX <= 17 And
+        DestinationY >= 9 And
+        DestinationY <= 11 And
+        Not TileMap.IsSolid(TownMap, DestinationX, DestinationY) And
+        World.TryReserveDestination(State, ACTOR_WANDERER, DestinationX, DestinationY)) Then
+        OperationSucceeded = World.CompleteReservedMove(State, ACTOR_WANDERER, WanderDirection)
+    End If
+
+    NextWanderTime = Timer() + 900
+
+End Sub
+
+Sub HandleFieldMenu(PressedKey As Number)
+
+    Event = MenuNavigator.HandleKey(FieldNavigator, PressedKey)
+
+    If Event = UI.UI_EVENT_ACCEPTED Then
+        Action = MenuNavigator.LastAcceptedValue(FieldNavigator)
+
+        Call RunFieldAction(Action)
+    Else If Event = UI.UI_EVENT_CANCELLED Then
+        Mode = MODE_FIELD
+    End If
+
+End Sub
+
+Sub RunFieldAction(Value As Number)
+
+    Select Case Value
+        Case 1
+
+            Call OpenTalk()
+
+        Case 2
+            InfoMode = 1
+            Mode = MODE_INFO
+        Case 3
+            InfoMode = 2
+            Mode = MODE_INFO
+        Case 4
+
+            If Party.Contains(State, CHARACTER_COMPANION) Then
+                OperationSucceeded = Party.RemoveCharacter(State, CHARACTER_COMPANION)
+                Status = "Tovan was removed; the visible field party updated."
+            Else
+                OperationSucceeded = Party.AddCharacter(State, CHARACTER_COMPANION)
+                Status = "Tovan joined and now follows visibly on the field."
+            End If
+
+            Mode = MODE_FIELD
+        Case 5
+
+            If Party.PartyCount(State) > 1 Then
+                OperationSucceeded = Party.MoveCharacter(State, 0, 1)
+                Status = "Party order changed without changing character definitions."
+            Else
+                Status = "Add Tovan before testing party reorder."
+            End If
+
+            Mode = MODE_FIELD
+        Case 6
+            OperationSucceeded = Characters.SetLevel(State, CHARACTER_HERO, Characters.Level(State, CHARACTER_HERO) + 1)
+            Status = "QA action increased Mira's level."
+            Mode = MODE_FIELD
+        Case 7
+            OperationSucceeded = Characters.SetStrength(State, CHARACTER_HERO, Characters.Strength(State, CHARACTER_HERO) + 1)
+            Status = "QA action increased Mira's Strength."
+            Mode = MODE_FIELD
+        Case 8
+            Result = SaveGames.SaveGame(State, 1, 1)
+            Status = "Slot 1 saved combined RPG, world, actor, story, shop, and encounter state."
+            Mode = MODE_FIELD
+        Case 9
+            Result = SaveGames.LoadGame(State, 1, 1)
+
+            If Result = RPG.RPG_RESULT_OK Then
+                Call SyncFieldState()
+
+                Status = "Slot 1 restored the complete combined state transactionally."
+            Else
+                Status = "Slot 1 did not contain a valid matching save."
+            End If
+
+            Mode = MODE_FIELD
+        Case 10
+            Mode = MODE_FIELD
+    End Select
+
+End Sub
+
+Sub OpenTalk()
+
+    TargetActor = World.FrontActor(State)
+
+    If TargetActor = 0 Then
+
+        Status = "Talk found no actor in the immediately facing cell."
+        Mode = MODE_FIELD
+        Return
+
+    End If
+
+    If World.ActorInteraction(State, TargetActor) = 2 Then
+
+        OperationSucceeded = Menu.SetSelectedIndex(ShopMenu, 0)
+        Mode = MODE_SHOP
+        Status = "The merchant overlay owns input while the field is paused."
+        Return
+
+    End If
+
+    Call Dialogue.ClearPages(DialogueHandle)
+
+    If Story.Flag(State, STORY_GUIDE_SPOKEN) Then
+
+        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "You returned. The road beyond the south gate still leads to the lantern fields.")
+        OperationSucceeded = OperationSucceeded And Dialogue.AddPage(DialogueHandle, "Your earlier conversation survived every scene transition and save cycle.")
+
+    Else
+        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Welcome to Lumen Vale. Open the field menu and choose Talk whenever you stand beside a neighbor.")
+        OperationSucceeded = OperationSucceeded And Dialogue.AddPage(DialogueHandle, "The south gate reaches the overworld. The western market door leads to a walkable shop interior.")
+        OperationSucceeded = OperationSucceeded And Story.SetFlag(State, STORY_GUIDE_SPOKEN, True)
+        OperationSucceeded = OperationSucceeded And Story.SetValue(State, STORY_VISITS, Story.Value(State, STORY_VISITS) + 1)
+
+    End If
+
+    OperationSucceeded = OperationSucceeded And Dialogue.Start(DialogueHandle, Timer())
+    Mode = MODE_DIALOGUE
+
+End Sub
+
+Sub HandleDialogue(PressedKey As Number)
+
+    If PressedKey = 0 Then
+        Return
+    End If
+
+    Event = Dialogue.HandleKey(DialogueHandle, PressedKey, Timer())
+
+    If Event = UI.UI_EVENT_COMPLETED Or Event = UI.UI_EVENT_CANCELLED Then
+        Mode = MODE_FIELD
+        Status = "Dialogue released input back to the field without replaying the closing key."
+    End If
+
+End Sub
+
+Sub HandleInfo(PressedKey As Number)
+
+    If (PressedKey = KEY_ESCAPE Or
+        PressedKey = KEY_ENTER Or
+        PressedKey = KEY_SPACE) Then
+        Mode = MODE_FIELD
+    End If
+
+End Sub
+
+Sub HandleShop(PressedKey As Number)
+
+    Event = MenuNavigator.HandleKey(ShopNavigator, PressedKey)
+
+    If Event = UI.UI_EVENT_ACCEPTED Then
+
+        Action = MenuNavigator.LastAcceptedValue(ShopNavigator)
+
+        Select Case Action
+            Case 201
+                Result = Shops.Buy(State, SHOP_GENERAL, ITEM_MOONFRUIT, 1)
+
+                If Result = RPG.RPG_RESULT_OK Then
+                    Status = "Bought one Moonfruit atomically: Gold, stock, and Inventory all changed."
+                Else
+                    Status = "The purchase was rejected without any partial state change."
+                End If
+
+            Case 202
+                InfoMode = 2
+                Mode = MODE_INFO
+            Case 203
+                Mode = MODE_FIELD
+                Status = "The shop overlay closed and returned input to the interior."
+        End Select
+
+    Else If Event = UI.UI_EVENT_CANCELLED Then
+
+        Mode = MODE_FIELD
+
+    End If
+
+End Sub
+
+Sub HandleEncounter(PressedKey As Number)
+
+    If (PressedKey = KEY_ESCAPE Or
+        PressedKey = KEY_ENTER Or
+        PressedKey = KEY_SPACE) Then
+
+        OperationSucceeded = World.SetCurrentScene(State, World.ReturnScene(State))
+        OperationSucceeded = OperationSucceeded And World.SetActorProgress(State, ACTOR_HERO, World.ReturnScene(State), World.ReturnX(State), World.ReturnY(State), World.ReturnFacingDirection(State), True, World.ActorRouteStep(State, ACTOR_HERO))
+
+        Call Encounters.ClearPendingEncounter(State)
+        Call SyncFieldState()
+
+        Mode = MODE_FIELD
+        Status = "Encounter Preview returned to the exact saved overworld cell and facing."
+
+    End If
+
+End Sub
+
+Sub DrawTitle()
+
+    Clear Rgb(10, 18, 30)
+    Draw Image TitleBackground At 0, 0 Size 960 By 540 Filter Smooth
+    Draw Image PanelImage At 545, 225 Size 350 By 225 Opacity 88 Filter Smooth
+    Draw Rectangle 545, 225, 350, 225, Rgb(107, 220, 198)
+
+    Call DrawTitleChoice(1, "Start New Game", 270)
+    Call DrawTitleChoice(2, "Load Existing Game", 330)
+    Call DrawTitleChoice(3, "Exit", 390)
+
+    Draw Text Status At 58, 490 Size 17 Color WHITE
+
+End Sub
+
+Sub DrawTitleChoice(Index As Number, Label As Text, Y As Number)
+
+    If TitleSelection = Index Then
+        Draw Image PanelImage At 565, Y - 10 Size 310 By 45 Opacity 64 Filter Smooth
+        Draw Text Label At 590, Y Size 22 Color YELLOW
+    Else
+        Draw Text Label At 590, Y Size 22 Color WHITE
+    End If
+
+End Sub
+
+Sub DrawField()
+
+    Dim SceneId As Number
+    Dim Row As Number
+    Dim ActorIndex As Number
+    Dim ActorId As Number
+
+    SceneId = World.CurrentScene(State)
+    CurrentMap = MapForScene(SceneId)
+    Clear Rgb(8, 18, 25)
+
+    Call TileMap.DrawLayerSmooth(CurrentMap, GameCore.GAME_LAYER_GROUND, Tileset, Camera.X, Camera.Y, 960, 540)
+    Call TileMap.DrawLayerSmooth(CurrentMap, GameCore.GAME_LAYER_DETAIL, Tileset, Camera.X, Camera.Y, 960, 540)
+
+    For Row = 0 To TileMap.Height(CurrentMap) - 1
+
+        For ActorIndex = 0 To World.ActorCount(State) - 1
+
+            ActorId = World.ActorIdAt(State, ActorIndex)
+
+            If (ActorId <> ACTOR_HERO And
+                World.ActorScene(State, ActorId) = SceneId And
+                World.ActorIsVisible(State, ActorId) And
+                World.ActorY(State, ActorId) = Row) Then
+                Call DrawActor(ActorId, World.ActorX(State, ActorId) * 64, World.ActorY(State, ActorId) * 64, World.ActorFacingDirection(State, ActorId), False)
+            End If
+
+        End For
+
+        If Max(PlayerMover.SourceY, PlayerMover.DestinationY) = Row Then
+
+            If Party.PartyCount(State) > 1 Then
+                Call DrawFollower()
+            End If
+
+            Call DrawActor(ACTOR_HERO, GameCore.VisualX(PlayerMover, 64), GameCore.VisualY(PlayerMover, 64), PlayerMover.Facing, PlayerMover.Moving)
+
+        End If
+
+    End For
+
+    Call TileMap.DrawLayerSmooth(CurrentMap, GameCore.GAME_LAYER_FOREGROUND, Tileset, Camera.X, Camera.Y, 960, 540)
+
+    Fill Rectangle 0, 0, 960, 36, Rgb(15, 29, 44)
+    Draw Text SceneName(SceneId) At 18, 8 Size 18 Color CYAN
+    Draw Text "Enter: Menu   Arrows/WASD: Walk   Talk is menu initiated" At 250, 9 Size 15 Color WHITE
+    Fill Rectangle 0, 504, 960, 36, Rgb(15, 29, 44)
+    Draw Text Status At 18, 512 Size 15 Color YELLOW
+
+End Sub
+
+Function SceneName(SceneId As Number) As Text
+
+    Select Case SceneId
+        Case SCENE_TOWN
+            Return "Lumen Vale"
+        Case SCENE_SHOP
+            Return "Lantern Market"
+        Case SCENE_OVERWORLD
+            Return "Lantern Fields"
+    End Select
+
+    Return "Unknown Scene"
+
+End Function
+
+Sub DrawActor(ActorId As Number, WorldX As Number, WorldY As Number, Facing As Number, IsMoving As Boolean)
+
+    Dim Frame As Number
+    Dim SourceY As Number
+
+    Frame = 1
+
+    If IsMoving Or ActorId = ACTOR_WANDERER Then
+        Frame = (AnimationClock / 10) Mod 3
+    End If
+
+    SourceY = (Facing - 1) * 128
+
+    If ActorId = ACTOR_HERO Then
+        Draw Image HeroImage From Frame * 96, SourceY Size 96 By 128 At WorldX - Camera.X + 32, WorldY - Camera.Y + 64 Size 64 By 86 Anchor 32, 86 Filter Smooth
+    Else
+        Draw Image NpcImage From Frame * 96, SourceY Size 96 By 128 At WorldX - Camera.X + 32, WorldY - Camera.Y + 64 Size 64 By 86 Anchor 32, 86 Filter Smooth
+    End If
+
+End Sub
+
+Sub DrawFollower()
+
+    Dim OffsetX As Number
+    Dim OffsetY As Number
+    Dim Frame As Number
+
+    OffsetX = -GameCore.DirectionX(PlayerMover.Facing) * 32
+    OffsetY = -GameCore.DirectionY(PlayerMover.Facing) * 32
+    Frame = 1
+
+    If PlayerMover.Moving Then
+        Frame = (AnimationClock / 10) Mod 3
+    End If
+
+    Draw Image CompanionImage From Frame * 96, (PlayerMover.Facing - 1) * 128 Size 96 By 128 At GameCore.VisualX(PlayerMover, 64) + OffsetX - Camera.X + 32, GameCore.VisualY(PlayerMover, 64) + OffsetY - Camera.Y + 64 Size 64 By 86 Anchor 32, 86 Filter Smooth
+
+End Sub
+
+Sub DrawInformation()
+
+    Fill Rectangle 140, 80, 680, 380, Rgb(15, 29, 44)
+    Draw Rectangle 140, 80, 680, 380, Rgb(107, 220, 198)
+
+    If InfoMode = 1 Then
+
+        Draw Text "Character Statistics" At 180, 112 Size 28 Color CYAN
+        Draw Text "Name" At 185, 170 Size 19 Color LIGHT_GRAY
+        Draw Text Characters.Name(State, CHARACTER_HERO) At 360, 170 Size 19 Color YELLOW
+        Draw Text "Level" At 185, 210 Size 19 Color LIGHT_GRAY
+        Draw Number Characters.Level(State, CHARACTER_HERO) At 360, 210 Size 19 Color YELLOW
+        Draw Text "Health" At 185, 250 Size 19 Color LIGHT_GRAY
+        Draw Number Characters.Health(State, CHARACTER_HERO) At 360, 250 Size 19 Color YELLOW
+        Draw Text "Strength" At 185, 290 Size 19 Color LIGHT_GRAY
+        Draw Number Characters.Strength(State, CHARACTER_HERO) At 360, 290 Size 19 Color YELLOW
+        Draw Text "Party Members" At 185, 330 Size 19 Color LIGHT_GRAY
+        Draw Number Party.PartyCount(State) At 360, 330 Size 19 Color YELLOW
+
+    Else
+        Draw Text "Inventory and Shop State" At 180, 112 Size 28 Color CYAN
+        Draw Text "Moonfruit owned" At 185, 185 Size 19 Color LIGHT_GRAY
+        Draw Number Inventory.Quantity(State, ITEM_MOONFRUIT) At 430, 185 Size 19 Color YELLOW
+        Draw Text "Moonfruit stock" At 185, 235 Size 19 Color LIGHT_GRAY
+        Draw Number Shops.Stock(State, SHOP_GENERAL, ITEM_MOONFRUIT) At 430, 235 Size 19 Color YELLOW
+        Draw Text "Gold" At 185, 285 Size 19 Color LIGHT_GRAY
+        Draw Number Party.Gold(State) At 430, 285 Size 19 Color YELLOW
+
+    End If
+
+    Draw Text "Enter / Space / Escape returns to the field" At 185, 405 Size 17 Color WHITE
+
+End Sub
+
+Sub DrawShopOverlay()
+
+    Fill Rectangle 500, 55, 435, 105, Rgb(15, 29, 44)
+    Draw Rectangle 500, 55, 435, 105, Rgb(107, 220, 198)
+    Draw Text "Lantern Market Counter" At 525, 76 Size 25 Color CYAN
+    Draw Text "Gold" At 525, 120 Size 17 Color WHITE
+    Draw Number Party.Gold(State) At 590, 120 Size 17 Color YELLOW
+    Draw Text "Owned" At 700, 120 Size 17 Color WHITE
+    Draw Number Inventory.Quantity(State, ITEM_MOONFRUIT) At 780, 120 Size 17 Color YELLOW
+
+End Sub
+
+Sub DrawEncounter()
+
+    Clear Rgb(8, 18, 25)
+    Draw Image EncounterBackground At 0, 0 Size 960 By 540 Filter Smooth
+    Draw Image EnemyImage At 480, 350 Size 330 By 330 Anchor 165, 330 Filter Smooth
+    Fill Rectangle 35, 35, 450, 145, Rgb(15, 29, 44)
+    Draw Rectangle 35, 35, 450, 145, Rgb(107, 220, 198)
+    Draw Text "Encounter Preview" At 65, 58 Size 28 Color CYAN
+    Draw Text "Mire Warden" At 65, 102 Size 23 Color YELLOW
+    Draw Text "Party" At 65, 140 Size 18 Color WHITE
+    Draw Number Party.PartyCount(State) At 130, 140 Size 18 Color YELLOW
+    Fill Rectangle 35, 445, 890, 65, Rgb(15, 29, 44)
+    Draw Text "Enter / Space / Escape: return to exact overworld position" At 65, 466 Size 19 Color WHITE
+
+End Sub
