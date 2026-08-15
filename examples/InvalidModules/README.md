@@ -1,5 +1,5 @@
 # Phase 2 invalid fixtures
 
-Each named folder isolates one required module, library, package, or dependency-graph failure. `MalformedSmileLibrary` is intentionally not a ZIP. `UnsafeSmileLibraryPath` records the malicious archive entry used by the package tests; the tests construct the ZIP in a temporary directory so no opaque binary fixture is committed. The temporary Phase 2B fixtures in `Smile.Tests` also cover ambient and transitive provider imports, undeclared package imports, direct-reference completion changes, stale/foreign project-library outputs, and missing transitive reference recovery without committing generated packages.
+Each remaining named folder isolates a module, access, or source-validation failure that is still used by the automated checks. Package and dependency-graph failures are constructed in temporary directories by `Smile.Tests`, so generated packages and redundant manual fixtures are not committed.
 
 Expected diagnostics are asserted by `Smile.Tests` and `scripts\smoke-test.cmd`.

@@ -1,4 +1,0 @@
-Import Example.Phase2A.Dependent As Dependent
-
-Print Dependent.Quadruple(3)
-End Program

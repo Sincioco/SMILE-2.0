@@ -42,16 +42,18 @@
 <div class="step-heading"><span class="step-badge">5</span><div><h2>Paste ResetPlay and EndRound</h2><p>These two routines define the round lifecycle.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 5 &mdash; exact official code</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="73">Sub ResetPlay()
+<pre><code class="language-smile" data-source-start="142">Sub ResetPlay()
 
     Call ResetSnakeBody()
 
     Score = 0
     MoveDelay = StartDelay
+
     Call SpawnFood()
 
     NextMoveTime = Timer() + StartDelay
     State = 1
+
     Play Sound "Assets\Start.wav"
 
 End Sub

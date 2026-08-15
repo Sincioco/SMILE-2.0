@@ -1,1 +1,0 @@
-<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include="Program.smile" /><SmileLibraryReference Include="Malformed.smilelib" /></ItemGroup></SmileProject>

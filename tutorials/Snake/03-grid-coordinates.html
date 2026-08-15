@@ -67,10 +67,10 @@
 PixelY = FieldY + GridY * CellSize + 2</code></pre>
 </div><section class="source-revisit" id="grid-source-example">
 <h3>See the same formula in the finished game</h3>
-<p>The real drawing routine uses the grid-to-pixel calculation directly. These are full source lines 136&ndash;137.</p>
+<p>The real drawing routine uses the grid-to-pixel calculation directly. These are full source lines 242&ndash;243.</p>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">DrawBoard &mdash; actual Snake source</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="163">            Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)
+<pre><code class="language-smile" data-source-start="242">            Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)
             Draw Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(20, 105, 35)</code></pre>
 </div>
 </section>
@@ -81,7 +81,7 @@ PixelY = FieldY + GridY * CellSize + 2</code></pre>
 <h2 id="reinforce-title">Reinforce what you learned</h2>
 <div class="reinforcement-grid">
 <article><h3>Say it again</h3><p><strong>X</strong> grows to the right, <strong>Y</strong> grows downward, and drawing converts grid squares into pixels.</p></article>
-<article><h3>Recall it</h3><p>What happens to Y when the snake moves upward?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>Y decreases by 1.</strong> You will use that rule again in <code>MoveSnake</code>, full source lines 93&ndash;101.</p></details></article>
+<article><h3>Recall it</h3><p>What happens to Y when the snake moves upward?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>Y decreases by 1.</strong> You will use that rule again in <code>MoveSnake</code>, full source lines 182&ndash;190.</p></details></article>
 </div>
 </section><nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="02-meet-the-game.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Meet the Game</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="04-arrays-memory.html"><span><small>Next topic</small><strong>Arrays &amp; Memory</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
 </article>

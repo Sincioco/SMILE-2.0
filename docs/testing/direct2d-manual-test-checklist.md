@@ -61,4 +61,4 @@ For every tested size, verify uniform letterboxing/pillarboxing, round circles, 
 
 ## Validation record
 
-Record the date, display topology, available resolution/DPI/refresh modes, backend-specific results, resource counts, diagnostic log names, and any intentionally unavailable cases in `docs\implementation\direct2d-implementation-report.md`.
+Record the date, display topology, available resolution/DPI/refresh modes, backend-specific results, resource counts, diagnostic log names, and any intentionally unavailable cases in the active validation task or release notes.

@@ -1,1 +1,0 @@
-<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.A</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include="A.smile" /><SmileProjectReference Include="B.smilelibproj" /></ItemGroup></SmileProject>

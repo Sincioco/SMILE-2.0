@@ -1,5 +1,6 @@
 param(
-    [string]$BaselineRevision
+    [string]$BaselineRevision,
+    [string]$BaselineHtmlRevision
 )
 
 $ErrorActionPreference = 'Stop'
@@ -36,7 +37,18 @@ $CurrentText = [IO.File]::ReadAllText($SourcePath).Replace("`r`n", "`n").Replace
 $CurrentBlobHash = (& git -C $RepositoryRoot hash-object $SourceRelativePath).Trim()
 
 if ([string]::IsNullOrWhiteSpace($BaselineRevision)) {
-    $ManifestText = [IO.File]::ReadAllText($ManifestPath)
+    if ([string]::IsNullOrWhiteSpace($BaselineHtmlRevision)) {
+        $ManifestText = [IO.File]::ReadAllText($ManifestPath)
+    }
+    else {
+        $ManifestRelativePath = 'tutorials/Snake/tutorial-manifest.json'
+        $ManifestText = (& git -C $RepositoryRoot show "${BaselineHtmlRevision}:$ManifestRelativePath") -join "`n"
+
+        if ($LASTEXITCODE -ne 0) {
+            throw "Unable to read $ManifestRelativePath from $BaselineHtmlRevision."
+        }
+    }
+
     $ManifestHashMatch = [regex]::Match($ManifestText, '"sourceBlobSha": "(?<hash>[0-9a-f]+)"')
 
     if (-not $ManifestHashMatch.Success) {
@@ -65,24 +77,60 @@ if ($LASTEXITCODE -ne 0) {
 $PreviousLines = Split-Lines $PreviousText
 $CurrentLines = Split-Lines $CurrentText
 $LineMap = @{}
-$CurrentIndex = 0
+$CurrentLineIndexes = @{}
 
-for ($PreviousIndex = 0; $PreviousIndex -lt $PreviousLines.Count; $PreviousIndex++) {
-    if ([string]::IsNullOrWhiteSpace($PreviousLines[$PreviousIndex])) {
+for ($CurrentIndex = 0; $CurrentIndex -lt $CurrentLines.Count; $CurrentIndex++) {
+    $CurrentLine = $CurrentLines[$CurrentIndex]
+
+    if ([string]::IsNullOrWhiteSpace($CurrentLine)) {
         continue
     }
 
-    while ($CurrentIndex -lt $CurrentLines.Count -and
-        $CurrentLines[$CurrentIndex] -ine $PreviousLines[$PreviousIndex]) {
-        $CurrentIndex++
+    if (-not $CurrentLineIndexes.ContainsKey($CurrentLine)) {
+        $CurrentLineIndexes[$CurrentLine] = [Collections.Generic.List[int]]::new()
     }
 
-    if ($CurrentIndex -ge $CurrentLines.Count) {
-        throw "Unable to map baseline source line $($PreviousIndex + 1): $($PreviousLines[$PreviousIndex])"
+    $CurrentLineIndexes[$CurrentLine].Add($CurrentIndex + 1)
+}
+
+for ($PreviousIndex = 0; $PreviousIndex -lt $PreviousLines.Count; $PreviousIndex++) {
+    $PreviousLine = $PreviousLines[$PreviousIndex]
+
+    if ([string]::IsNullOrWhiteSpace($PreviousLine) -or
+        -not $CurrentLineIndexes.ContainsKey($PreviousLine)) {
+        continue
     }
 
-    $LineMap[$PreviousIndex + 1] = $CurrentIndex + 1
-    $CurrentIndex++
+    $Candidates = $CurrentLineIndexes[$PreviousLine]
+
+    if ($Candidates.Count -eq 1) {
+        $LineMap[$PreviousIndex + 1] = $Candidates[0]
+    }
+}
+
+for ($PreviousIndex = 0; $PreviousIndex -lt $PreviousLines.Count; $PreviousIndex++) {
+    $PreviousLineNumber = $PreviousIndex + 1
+    $PreviousLine = $PreviousLines[$PreviousIndex]
+
+    if ($LineMap.ContainsKey($PreviousLineNumber) -or
+        [string]::IsNullOrWhiteSpace($PreviousLine) -or
+        -not $CurrentLineIndexes.ContainsKey($PreviousLine)) {
+        continue
+    }
+
+    $AnchorLine = $LineMap.Keys |
+        Sort-Object { [Math]::Abs([int]$_ - $PreviousLineNumber) } |
+        Select-Object -First 1
+
+    if ($null -eq $AnchorLine) {
+        continue
+    }
+
+    $ExpectedLine = [int]$LineMap[$AnchorLine] + $PreviousLineNumber - [int]$AnchorLine
+    $MappedLine = $CurrentLineIndexes[$PreviousLine] |
+        Sort-Object { [Math]::Abs([int]$_ - $ExpectedLine) } |
+        Select-Object -First 1
+    $LineMap[$PreviousLineNumber] = [int]$MappedLine
 }
 
 function Get-MappedLine {
@@ -116,9 +164,34 @@ $CodePattern = [regex]::new('<code(?<attributes>[^>]*class="language-smile"[^>]*
 $AnchorPattern = [regex]::new('<a(?<attributes>[^>]*(?:source-line-|source-range-link)[^>]*)>(?<body>.*?)</a>',
     [Text.RegularExpressions.RegexOptions]::Singleline)
 $HtmlFiles = Get-ChildItem -LiteralPath $TutorialRoot -Filter '*.html' -File
+$HtmlRevision = $BaselineHtmlRevision
+$PendingHtml = @{}
+
+if ([string]::IsNullOrWhiteSpace($HtmlRevision)) {
+    $HtmlRevision = $BaselineRevision
+}
 
 foreach ($HtmlFile in $HtmlFiles) {
-    $Html = [IO.File]::ReadAllText($HtmlFile.FullName)
+    $ExistingHtml = [IO.File]::ReadAllText($HtmlFile.FullName)
+
+    if ([string]::IsNullOrWhiteSpace($HtmlRevision)) {
+        $Html = $ExistingHtml
+    }
+    else {
+        $RepositoryPrefix = $RepositoryRoot.TrimEnd('\') + '\'
+
+        if (-not $HtmlFile.FullName.StartsWith($RepositoryPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Tutorial file is outside the repository: $($HtmlFile.FullName)"
+        }
+
+        $HtmlRelativePath = $HtmlFile.FullName.Substring($RepositoryPrefix.Length).Replace('\', '/')
+        $Html = (& git -C $RepositoryRoot show "${HtmlRevision}:$HtmlRelativePath") -join "`n"
+
+        if ($LASTEXITCODE -ne 0) {
+            throw "Unable to read $HtmlRelativePath from $HtmlRevision."
+        }
+    }
+
     $Updated = $CodePattern.Replace($Html, {
         param($Match)
 
@@ -140,6 +213,11 @@ foreach ($HtmlFile in $HtmlFiles) {
             $OldBlockLines = Split-Lines $Decoded
             $OldEnd = $OldStart + $OldBlockLines.Count - 1
             $NewEnd = Get-MappedLine $OldEnd
+
+            if ($NewEnd -lt $NewStart) {
+                throw "Mapped $($HtmlFile.Name) source block $OldStart-$OldEnd to invalid range $NewStart-$NewEnd."
+            }
+
             $ReplacementText = $CurrentLines[($NewStart - 1)..($NewEnd - 1)] -join "`n"
         }
 
@@ -169,6 +247,14 @@ foreach ($HtmlFile in $HtmlFiles) {
                 (Get-MappedLine ([int]$LineMatch.Groups['line'].Value)) + '"'
         })
 
+        $RangeStartMatch = [regex]::Match($NewAttributes, 'data-line-start="(?<line>\d+)"')
+        $RangeEndMatch = [regex]::Match($NewAttributes, 'data-line-end="(?<line>\d+)"')
+
+        if ($RangeStartMatch.Success -and $RangeEndMatch.Success -and
+            [int]$RangeEndMatch.Groups['line'].Value -lt [int]$RangeStartMatch.Groups['line'].Value) {
+            throw "Mapped $($HtmlFile.Name) source link to an invalid descending range."
+        }
+
         $NewBody = [regex]::Replace($Body, '\d+', {
             param($NumberMatch)
             return [string](Get-MappedLine ([int]$NumberMatch.Value) -PreferFollowing)
@@ -183,9 +269,13 @@ foreach ($HtmlFile in $HtmlFiles) {
             "blob Sha <code>$BlobHash</code>")
     }
 
-    if ($Updated -cne $Html) {
-        [IO.File]::WriteAllText($HtmlFile.FullName, $Updated, $Utf8WithoutBom)
+    if ($Updated -cne $ExistingHtml) {
+        $PendingHtml[$HtmlFile.FullName] = $Updated
     }
+}
+
+foreach ($PendingPath in $PendingHtml.Keys) {
+    [IO.File]::WriteAllText($PendingPath, $PendingHtml[$PendingPath], $Utf8WithoutBom)
 }
 
 [IO.File]::WriteAllText($SnapshotPath, $CurrentText, $Utf8WithoutBom)

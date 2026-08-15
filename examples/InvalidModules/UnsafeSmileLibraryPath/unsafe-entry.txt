@@ -1,1 +1,0 @@
-The package safety test constructs a ZIP containing: src/../escape.smile

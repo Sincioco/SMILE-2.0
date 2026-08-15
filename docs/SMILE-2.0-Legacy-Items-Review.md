@@ -215,10 +215,10 @@ No deletion candidate was identified in:
 
 - [x] A1 - Delete the stale User Guide folder. Approved and completed.
 - [ ] C1 - Delete generated local output and caches, approximately 349.24 MiB.
-- [ ] C2 - Delete the 12 historical implementation reports and redirect the Direct2D checklist.
-- [ ] C3 - Delete five redundant generated-test fixture directories.
-- [ ] C4 - Delete two manual-only invalid library structure fixture directories.
-- [ ] C5 - Delete the manual Phase 2A dependency hardening fixture and update library documentation.
-- [ ] Separate maintenance decision - synchronize the Snake tutorial to its current source.
+- [x] C2 - Delete the 12 historical implementation reports and redirect the Direct2D checklist. Approved and completed.
+- [x] C3 - Delete five redundant generated-test fixture directories. Approved and completed.
+- [x] C4 - Delete two manual-only invalid library structure fixture directories. Approved and completed.
+- [x] C5 - Delete the manual Phase 2A dependency hardening fixture and update library documentation. Approved and completed.
+- [x] Separate maintenance decision - synchronize the Snake tutorial to its current source. Approved and completed.
 
 No unchecked item should be deleted until Sin explicitly approves it.
