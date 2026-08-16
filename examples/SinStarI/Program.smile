@@ -1,0 +1,151 @@
+Option Explicit
+
+Const MODE_TITLE = 0
+Const MODE_NEW_GAME = 1
+Const MODE_TOWN = 2
+Const MODE_SHOP = 3
+Const MODE_DUNGEON = 4
+Const MODE_BATTLE = 5
+
+Dim TitleBackground As Image
+Dim Mode As Number
+Dim TitleSelection As Number
+Dim PressedKey As Number
+Dim SceneLabel As Text
+
+Game Window "Sin Star I" Size 1280 By 720
+
+Load Image TitleBackground From "Assets\TitleBackground.png"
+
+Mode = MODE_TITLE
+TitleSelection = 1
+SceneLabel = ""
+
+Call PlayTitleMusic()
+
+Do
+    Get Key PressedKey
+
+    If Mode = MODE_TITLE Then
+        Call HandleTitle(PressedKey)
+    Else
+        Call HandleScene(PressedKey)
+    End If
+
+    If Mode = MODE_TITLE Then
+        Call DrawTitle()
+    Else
+        Call DrawScene()
+    End If
+
+    Show Screen
+    Wait 8 Milliseconds
+
+Loop Until Game_Closed() = True
+
+Stop Music
+Unload Image TitleBackground
+
+End Program
+
+Sub PlayTitleMusic()
+
+    Stop Music
+    Play Music "Assets\TitleMusic.mp3" Loop
+
+End Sub
+
+Sub HandleTitle(Key As Number)
+
+    If Key = KEY_UP Or Key = KEY_W Then
+
+        TitleSelection = TitleSelection - 1
+
+        If TitleSelection < 1 Then
+            TitleSelection = 5
+        End If
+
+    Else If Key = KEY_DOWN Or Key = KEY_S Then
+
+        TitleSelection = TitleSelection + 1
+
+        If TitleSelection > 5 Then
+            TitleSelection = 1
+        End If
+
+    Else If Key = KEY_ENTER Or Key = KEY_SPACE Then
+
+        Call OpenScene(TitleSelection)
+
+    End If
+
+End Sub
+
+Sub OpenScene(SceneId As Number)
+
+    Mode = SceneId
+
+    If SceneId = MODE_NEW_GAME Then
+        SceneLabel = "Start a New Game"
+    Else If SceneId = MODE_TOWN Then
+        SceneLabel = "Town"
+    Else If SceneId = MODE_SHOP Then
+        SceneLabel = "Shop"
+    Else If SceneId = MODE_DUNGEON Then
+        SceneLabel = "Dungeon"
+    Else
+        SceneLabel = "Battle"
+    End If
+
+    Stop Music
+
+End Sub
+
+Sub HandleScene(Key As Number)
+
+    If Key = KEY_ESCAPE Then
+        Mode = MODE_TITLE
+        Call PlayTitleMusic()
+    End If
+
+End Sub
+
+Sub DrawTitle()
+
+    Clear Rgb(4, 8, 20)
+    Draw Image TitleBackground At 0, 0 Size 1280 By 720 Filter Smooth
+
+    Fill Rectangle 38, 374, 470, 316, Rgb(5, 12, 27)
+    Draw Rectangle 38, 374, 470, 316, Rgb(224, 174, 62)
+
+    Call DrawTitleChoice(1, "Start a New Game", 410)
+    Call DrawTitleChoice(2, "Town", 460)
+    Call DrawTitleChoice(3, "Shop", 510)
+    Call DrawTitleChoice(4, "Dungeon", 560)
+    Call DrawTitleChoice(5, "Battle", 610)
+
+    Draw Text "Up/Down or W/S: Select    Enter/Space: Open" At 62, 660 Size 16 Color WHITE
+
+End Sub
+
+Sub DrawTitleChoice(Index As Number, Label As Text, Y As Number)
+
+    If TitleSelection = Index Then
+        Fill Rectangle 58, Y - 9, 426, 42, Rgb(37, 55, 88)
+        Draw Rectangle 58, Y - 9, 426, 42, Rgb(255, 213, 92)
+        Draw Text ">" At 76, Y Size 24 Color YELLOW
+        Draw Text Label At 114, Y Size 24 Color YELLOW
+    Else
+        Draw Text Label At 114, Y Size 24 Color WHITE
+    End If
+
+End Sub
+
+Sub DrawScene()
+
+    Clear Rgb(5, 9, 18)
+    Fill Rectangle 0, 0, 1280, 72, Rgb(17, 29, 50)
+    Draw Text SceneLabel At 32, 20 Size 32 Color YELLOW
+    Draw Text "Press ESC to return to the main menu" At 32, 674 Size 18 Color WHITE
+
+End Sub

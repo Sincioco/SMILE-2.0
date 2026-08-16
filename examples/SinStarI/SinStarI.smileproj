@@ -1,0 +1,16 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>SinStarI</OutputName>
+    <ApplicationId>smile.game.sin-star-i</ApplicationId>
+    <GraphicsBackend>Auto</GraphicsBackend>
+    <VSync>true</VSync>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Game\Smile.Game.smilelibproj" />
+    <Asset Include="Assets\*.png" />
+    <Asset Include="Assets\*.mp3" />
+  </ItemGroup>
+</SmileProject>
