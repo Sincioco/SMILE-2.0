@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using EnvDTE;
@@ -188,9 +189,9 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     public string GetWebOutputDirectory(string configuration) =>
         Path.Combine(ProjectDirectory, "bin", NormalizeConfiguration(configuration), "Web");
 
-    public bool Build(string configuration, string platform, IVsOutputWindowPane? pane)
+    public async Task<bool> BuildAsync(string configuration, string platform, IVsOutputWindowPane? pane)
     {
-        ThreadHelper.ThrowIfNotOnUIThread();
+        await _package.JoinableTaskFactory.SwitchToMainThreadAsync();
         _refreshCoordinator?.Refresh(SmileProjectRefreshReason.BuildValidation);
         pane ??= SmileBuildService.GetOutputPane();
         pane.Clear();
@@ -234,17 +235,16 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             outputPath = GetOutputPath(configuration);
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
             pane.OutputStringThreadSafe($"> \"{compilerPath}\" --project \"{ProjectPath}\" --target library -o \"{outputPath}\" --configuration \"{NormalizeConfiguration(configuration)}\"\r\n");
-            result = ThreadHelper.JoinableTaskFactory.Run(() => SmileBuildService.RunProjectAsync(
-                compilerPath, ProjectPath, "library", outputPath, NormalizeConfiguration(configuration)));
+            result = await SmileBuildService.RunProjectAsync(compilerPath, ProjectPath, "library", outputPath,
+                NormalizeConfiguration(configuration));
         }
         else if (IsWeb(platform))
         {
             var outputDirectory = GetWebOutputDirectory(configuration);
             Directory.CreateDirectory(outputDirectory);
             pane.OutputStringThreadSafe($"> \"{compilerPath}\" --project \"{ProjectPath}\" --target web --output-dir \"{outputDirectory}\" --configuration \"{NormalizeConfiguration(configuration)}\"\r\n");
-            result = ThreadHelper.JoinableTaskFactory.Run(() =>
-                SmileBuildService.RunProjectAsync(compilerPath, ProjectPath, "web", outputDirectory,
-                    NormalizeConfiguration(configuration)));
+            result = await SmileBuildService.RunProjectAsync(compilerPath, ProjectPath, "web", outputDirectory,
+                NormalizeConfiguration(configuration));
             outputPath = Path.Combine(outputDirectory, "index.html");
         }
         else
@@ -253,10 +253,11 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             outputPath = GetOutputPath(configuration);
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
             pane.OutputStringThreadSafe($"> \"{compilerPath}\" --project \"{ProjectPath}\" --target windows-x64 -o \"{outputPath}\" --configuration \"{NormalizeConfiguration(configuration)}\" --graphics {GraphicsBackend} --vsync {VSync.ToString().ToLowerInvariant()}{(emitDebugInformation ? " --debug" : string.Empty)}\r\n");
-            result = ThreadHelper.JoinableTaskFactory.Run(() => SmileBuildService.RunProjectAsync(
-                compilerPath, ProjectPath, "windows-x64", outputPath, NormalizeConfiguration(configuration),
-                GraphicsBackend, VSync, emitDebugInformation));
+            result = await SmileBuildService.RunProjectAsync(compilerPath, ProjectPath, "windows-x64", outputPath,
+                NormalizeConfiguration(configuration), GraphicsBackend, VSync, emitDebugInformation);
         }
+
+        await _package.JoinableTaskFactory.SwitchToMainThreadAsync();
         if (!string.IsNullOrEmpty(result.Output))
             pane.OutputStringThreadSafe(SmileBuildService.NormalizeOutput(result.Output));
         SmileBuildService.ReportDiagnostics(result.Output);
@@ -341,39 +342,53 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             pane.Activate();
             return false;
         }
-        if (IsWeb(platform))
-        {
-            // Always republish on Web launch so F5/Ctrl+F5 reflects the latest saved source and assets.
-            if (!Build(configuration, platform, null))
-                return false;
-            var url = SmileWebServer.Start(GetWebOutputDirectory(configuration), OutputName);
-            System.Diagnostics.Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
-            return true;
-        }
-
-        var outputPath = GetOutputPath(configuration);
-        // Native F5 must never launch an executable built from a previous source set.
-        if (!Build(configuration, platform, null))
-            return false;
-
-        var debugger = Package.GetGlobalService(typeof(SVsShellDebugger)) as IVsDebugger4;
-        if (debugger == null)
-            return false;
-
-        var targets = new[]
-        {
-            new VsDebugTargetInfo4
-            {
-                dlo = (uint)DEBUG_LAUNCH_OPERATION.DLO_CreateProcess,
-                LaunchFlags = launchFlags,
-                bstrExe = outputPath,
-                bstrCurDir = Path.GetDirectoryName(outputPath),
-                guidLaunchDebugEngine = VSConstants.DebugEnginesGuids.NativeOnly_guid,
-                project = this
-            }
-        };
-        debugger.LaunchDebugTargets4(1, targets, new VsDebugTargetProcessInfo[1]);
+        _ = _package.JoinableTaskFactory.RunAsync(() => LaunchAsync(configuration, platform, launchFlags));
         return true;
+    }
+
+    private async Task LaunchAsync(string configuration, string platform, uint launchFlags)
+    {
+        try
+        {
+            // Always rebuild before launch so F5/Ctrl+F5 cannot run stale source or assets.
+            if (!await BuildAsync(configuration, platform, null))
+                return;
+
+            await _package.JoinableTaskFactory.SwitchToMainThreadAsync();
+            if (IsWeb(platform))
+            {
+                var url = SmileWebServer.Start(GetWebOutputDirectory(configuration), OutputName);
+                System.Diagnostics.Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+                return;
+            }
+
+            var outputPath = GetOutputPath(configuration);
+            var debugger = Package.GetGlobalService(typeof(SVsShellDebugger)) as IVsDebugger4;
+            if (debugger == null)
+                return;
+
+            var targets = new[]
+            {
+                new VsDebugTargetInfo4
+                {
+                    dlo = (uint)DEBUG_LAUNCH_OPERATION.DLO_CreateProcess,
+                    LaunchFlags = launchFlags,
+                    bstrExe = outputPath,
+                    bstrCurDir = Path.GetDirectoryName(outputPath),
+                    guidLaunchDebugEngine = VSConstants.DebugEnginesGuids.NativeOnly_guid,
+                    project = this
+                }
+            };
+            debugger.LaunchDebugTargets4(1, targets, new VsDebugTargetProcessInfo[1]);
+        }
+        catch (Exception exception)
+        {
+            ActivityLog.LogError(nameof(SmileProject), exception.ToString());
+            await _package.JoinableTaskFactory.SwitchToMainThreadAsync();
+            var pane = SmileBuildService.GetOutputPane();
+            pane.OutputStringThreadSafe($"SMILE launch failed: {exception.Message}\r\n");
+            pane.Activate();
+        }
     }
 
     private void ReadProject()
@@ -1134,13 +1149,28 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             ? active.SolutionContexts.Item(1).PlatformName
             : "Windows 64-bit .exe";
         var pane = SmileBuildService.GetOutputPane();
-        var success = commandId switch
+        _ = _package.JoinableTaskFactory.RunAsync(() => ExecuteBuildCommandAsync(
+            commandId, configuration, platform, pane));
+        return VSConstants.S_OK;
+    }
+
+    private async Task ExecuteBuildCommandAsync(uint commandId, string configuration, string platform,
+        IVsOutputWindowPane pane)
+    {
+        try
         {
-            SmileProjectCommands.Clean => Clean(configuration, platform, pane),
-            SmileProjectCommands.Rebuild => Clean(configuration, platform, pane) && Build(configuration, platform, pane),
-            _ => Build(configuration, platform, pane)
-        };
-        return success ? VSConstants.S_OK : VSConstants.E_FAIL;
+            await _package.JoinableTaskFactory.SwitchToMainThreadAsync();
+            if (commandId == SmileProjectCommands.Clean)
+                Clean(configuration, platform, pane);
+            else if (commandId != SmileProjectCommands.Rebuild || Clean(configuration, platform, pane))
+                await BuildAsync(configuration, platform, pane);
+        }
+        catch (Exception exception)
+        {
+            ActivityLog.LogError(nameof(SmileProject), exception.ToString());
+            await _package.JoinableTaskFactory.SwitchToMainThreadAsync();
+            pane.OutputStringThreadSafe($"SMILE build failed: {exception.Message}\r\n");
+        }
     }
 
     private int OpenPath(string path)
@@ -1757,11 +1787,11 @@ internal sealed class SmileProjectConfiguration : IVsProjectCfg2, IVsBuildablePr
     public int QueryStartClean(uint dwOptions, int[] pfSupported, int[] pfReady) => QueryStart(pfSupported, pfReady);
     public int QueryStartUpToDateCheck(uint dwOptions, int[] pfSupported, int[] pfReady) => QueryStart(pfSupported, pfReady);
     public int StartBuild(IVsOutputWindowPane pIVsOutputWindowPane, uint dwOptions)
-    { ThreadHelper.ThrowIfNotOnUIThread(); return RunBuild(pIVsOutputWindowPane, clean: false); }
+    { ThreadHelper.ThrowIfNotOnUIThread(); return StartOperation(pIVsOutputWindowPane, clean: false); }
     public int StartClean(IVsOutputWindowPane pIVsOutputWindowPane, uint dwOptions)
-    { ThreadHelper.ThrowIfNotOnUIThread(); return RunBuild(pIVsOutputWindowPane, clean: true); }
+    { ThreadHelper.ThrowIfNotOnUIThread(); return StartOperation(pIVsOutputWindowPane, clean: true); }
     public int StartUpToDateCheck(IVsOutputWindowPane pIVsOutputWindowPane, uint dwOptions)
-    { ThreadHelper.ThrowIfNotOnUIThread(); return RunBuild(pIVsOutputWindowPane, clean: false); }
+    { ThreadHelper.ThrowIfNotOnUIThread(); return StartOperation(pIVsOutputWindowPane, clean: false); }
     public int QueryStatus(out int pfBuildDone) { pfBuildDone = _building ? 0 : 1; return VSConstants.S_OK; }
     public int Stop(int fSync) { _building = false; return VSConstants.S_OK; }
     public int Wait(uint dwMilliseconds, int fTickWhenMessageQNotEmpty) => VSConstants.S_OK;
@@ -1787,18 +1817,50 @@ internal sealed class SmileProjectConfiguration : IVsProjectCfg2, IVsBuildablePr
     public int DebugLaunch(uint grfLaunch)
     { ThreadHelper.ThrowIfNotOnUIThread(); return _project.Launch(_configuration, _platform, grfLaunch) ? VSConstants.S_OK : VSConstants.E_FAIL; }
 
-    private int RunBuild(IVsOutputWindowPane pane, bool clean)
+    private int StartOperation(IVsOutputWindowPane pane, bool clean)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
+        if (_building)
+            return VSConstants.E_PENDING;
+
         _building = true;
         var continueBuild = 1;
-        foreach (var callback in _callbacks.Values) callback.BuildBegin(ref continueBuild);
-        var success = continueBuild != 0 && (clean
-            ? _project.Clean(_configuration, _platform, pane)
-            : _project.Build(_configuration, _platform, pane));
-        _building = false;
-        foreach (var callback in _callbacks.Values) callback.BuildEnd(success ? 1 : 0);
-        return success ? VSConstants.S_OK : VSConstants.E_FAIL;
+        var callbacks = _callbacks.Values.ToArray();
+        foreach (var callback in callbacks)
+            callback.BuildBegin(ref continueBuild);
+        if (continueBuild == 0)
+        {
+            _building = false;
+            foreach (var callback in callbacks)
+                callback.BuildEnd(0);
+            return VSConstants.S_OK;
+        }
+
+        _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            var success = false;
+            try
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                success = clean
+                    ? _project.Clean(_configuration, _platform, pane)
+                    : await _project.BuildAsync(_configuration, _platform, pane);
+            }
+            catch (Exception exception)
+            {
+                ActivityLog.LogError(nameof(SmileProjectConfiguration), exception.ToString());
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                pane.OutputStringThreadSafe($"SMILE build failed: {exception.Message}\r\n");
+            }
+            finally
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                _building = false;
+                foreach (var callback in callbacks)
+                    callback.BuildEnd(success ? 1 : 0);
+            }
+        });
+        return VSConstants.S_OK;
     }
 
     private int QueryStart(int[] supported, int[] ready)

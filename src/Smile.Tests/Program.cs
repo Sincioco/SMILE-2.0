@@ -3121,10 +3121,10 @@ Run("VSIX templates render localized identity metadata within the aligned header
     var border = gameTemplate.Split('\n')[0].TrimEnd('\r');
     var rendered = gameTemplate.Replace("$smileuser$", "Sin".PadRight(69), StringComparison.Ordinal)
         .Replace("$smiledate$", "August 15, 2026".PadRight(69), StringComparison.Ordinal)
-        .Replace("$smileversion$", "2.0.44", StringComparison.Ordinal);
+        .Replace("$smileversion$", "2.0.45", StringComparison.Ordinal);
     var header = rendered.Split('\n').Take(9).Select(line => line.TrimEnd('\r')).ToArray();
     Equal("' Programmed By: " + "Sin".PadRight(69) + "Version: 0.0.1", header[3]);
-    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.44", header[4]);
+    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.45", header[4]);
     Equal(header[3].IndexOf("Version:", StringComparison.Ordinal) + "Version".Length,
         header[4].IndexOf("SMILE:", StringComparison.Ordinal) + "SMILE".Length);
     Equal(true, header.All(line => line.Length <= border.Length));
@@ -3137,14 +3137,14 @@ Run("VSIX templates render localized identity metadata within the aligned header
     foreach (var manifest in new[] { gameManifest, consoleManifest })
     {
         Equal(true, manifest.Contains("SmileProjectTemplateWizard", StringComparison.Ordinal));
-        Equal(true, manifest.Contains("Version=2.0.44.0", StringComparison.Ordinal));
+        Equal(true, manifest.Contains("Version=2.0.45.0", StringComparison.Ordinal));
     }
     foreach (var applicationProject in new[] { gameProject, consoleProject })
         Equal(true, applicationProject.Contains("<ApplicationId>$smileapplicationid$</ApplicationId>", StringComparison.Ordinal));
     Equal(false, libraryProject.Contains("ApplicationId", StringComparison.Ordinal));
     Equal(true, wizard.Contains("\"smile.app.a\" + Guid.NewGuid().ToString(\"N\")", StringComparison.Ordinal));
     Equal(true, wizard.Contains("ToString(\"D\", CultureInfo.CurrentCulture)", StringComparison.Ordinal));
-    Equal(true, project.Contains("<Version>2.0.44</Version>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<Version>2.0.45</Version>", StringComparison.Ordinal));
     Equal(true, vsixManifest.Contains("Type=\"Microsoft.VisualStudio.Assembly\"", StringComparison.Ordinal));
 });
 
@@ -3171,6 +3171,19 @@ Run("VSIX registers SMILE line comments with the Visual Studio editor", () =>
         "ToggleLineCommentCommandArgs" })
         Equal(true, handler.Contains($"IChainedCommandHandler<{command}>", StringComparison.Ordinal));
     Equal(true, handler.Contains("CommandState.Available", StringComparison.Ordinal));
+});
+
+Run("VSIX project builds release the Visual Studio UI thread while the compiler runs", () =>
+{
+    var projectSystem = File.ReadAllText("src/Smile.VisualStudio/SmileProjectSystem.cs");
+    Equal(true, projectSystem.Contains("public async Task<bool> BuildAsync", StringComparison.Ordinal));
+    Equal(false, projectSystem.Contains(
+        "ThreadHelper.JoinableTaskFactory.Run(() => SmileBuildService.RunProjectAsync",
+        StringComparison.Ordinal));
+    Equal(true, projectSystem.Contains(
+        "_ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>", StringComparison.Ordinal));
+    Equal(true, projectSystem.Contains("callback.BuildBegin(ref continueBuild)", StringComparison.Ordinal));
+    Equal(true, projectSystem.Contains("callback.BuildEnd(success ? 1 : 0)", StringComparison.Ordinal));
 });
 
 Run("Smile.UI 1.1.3 publishes canonical Insets fields and the Phase 5.2.2 hardening", () =>
