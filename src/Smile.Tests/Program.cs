@@ -3121,10 +3121,10 @@ Run("VSIX templates render localized identity metadata within the aligned header
     var border = gameTemplate.Split('\n')[0].TrimEnd('\r');
     var rendered = gameTemplate.Replace("$smileuser$", "Sin".PadRight(69), StringComparison.Ordinal)
         .Replace("$smiledate$", "August 15, 2026".PadRight(69), StringComparison.Ordinal)
-        .Replace("$smileversion$", "2.0.45", StringComparison.Ordinal);
+        .Replace("$smileversion$", "2.0.46", StringComparison.Ordinal);
     var header = rendered.Split('\n').Take(9).Select(line => line.TrimEnd('\r')).ToArray();
     Equal("' Programmed By: " + "Sin".PadRight(69) + "Version: 0.0.1", header[3]);
-    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.45", header[4]);
+    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.46", header[4]);
     Equal(header[3].IndexOf("Version:", StringComparison.Ordinal) + "Version".Length,
         header[4].IndexOf("SMILE:", StringComparison.Ordinal) + "SMILE".Length);
     Equal(true, header.All(line => line.Length <= border.Length));
@@ -3137,14 +3137,14 @@ Run("VSIX templates render localized identity metadata within the aligned header
     foreach (var manifest in new[] { gameManifest, consoleManifest })
     {
         Equal(true, manifest.Contains("SmileProjectTemplateWizard", StringComparison.Ordinal));
-        Equal(true, manifest.Contains("Version=2.0.45.0", StringComparison.Ordinal));
+        Equal(true, manifest.Contains("Version=2.0.46.0", StringComparison.Ordinal));
     }
     foreach (var applicationProject in new[] { gameProject, consoleProject })
         Equal(true, applicationProject.Contains("<ApplicationId>$smileapplicationid$</ApplicationId>", StringComparison.Ordinal));
     Equal(false, libraryProject.Contains("ApplicationId", StringComparison.Ordinal));
     Equal(true, wizard.Contains("\"smile.app.a\" + Guid.NewGuid().ToString(\"N\")", StringComparison.Ordinal));
     Equal(true, wizard.Contains("ToString(\"D\", CultureInfo.CurrentCulture)", StringComparison.Ordinal));
-    Equal(true, project.Contains("<Version>2.0.45</Version>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<Version>2.0.46</Version>", StringComparison.Ordinal));
     Equal(true, vsixManifest.Contains("Type=\"Microsoft.VisualStudio.Assembly\"", StringComparison.Ordinal));
 });
 
@@ -3184,6 +3184,37 @@ Run("VSIX project builds release the Visual Studio UI thread while the compiler 
         "_ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>", StringComparison.Ordinal));
     Equal(true, projectSystem.Contains("callback.BuildBegin(ref continueBuild)", StringComparison.Ordinal));
     Equal(true, projectSystem.Contains("callback.BuildEnd(success ? 1 : 0)", StringComparison.Ordinal));
+});
+
+Run("VSIX launch performs one shell-coordinated build before starting the program", () =>
+{
+    var projectSystem = File.ReadAllText("src/Smile.VisualStudio/SmileProjectSystem.cs");
+    var launchStart = projectSystem.IndexOf("public bool Launch(", StringComparison.Ordinal);
+    var launchEnd = projectSystem.IndexOf("private void ReadProject()", launchStart, StringComparison.Ordinal);
+    var launch = projectSystem.Substring(launchStart, launchEnd - launchStart);
+    Equal(false, launch.Contains("BuildAsync(", StringComparison.Ordinal));
+    Equal(true, launch.Contains("Visual Studio completes the configured build before calling DebugLaunch",
+        StringComparison.Ordinal));
+    var upToDateStart = projectSystem.IndexOf("public int StartUpToDateCheck(", StringComparison.Ordinal);
+    var statusStart = projectSystem.IndexOf("public int QueryStatus(", upToDateStart, StringComparison.Ordinal);
+    var upToDateCheck = projectSystem.Substring(upToDateStart, statusStart - upToDateStart);
+    Equal(false, upToDateCheck.Contains("StartOperation", StringComparison.Ordinal));
+    Equal(true, upToDateCheck.Contains("VSConstants.E_NOTIMPL", StringComparison.Ordinal));
+});
+
+Run("Native compiler isolates intermediates and serializes identical output targets", () =>
+{
+    var first = CompilerDriver.CreateIntermediateBaseName("Game", keepTemp: false);
+    var second = CompilerDriver.CreateIntermediateBaseName("Game", keepTemp: false);
+    Equal(false, string.Equals(first, second, StringComparison.Ordinal));
+    Equal(true, first.StartsWith("Game.", StringComparison.Ordinal));
+    Equal("Game", CompilerDriver.CreateIntermediateBaseName("Game", keepTemp: true));
+    Equal(CompilerDriver.CreateNativeBuildMutexName("bin/Debug/Game.exe"),
+        CompilerDriver.CreateNativeBuildMutexName("bin/Debug/Game.exe"));
+    Equal(false, string.Equals(
+        CompilerDriver.CreateNativeBuildMutexName("bin/Debug/Game.exe"),
+        CompilerDriver.CreateNativeBuildMutexName("bin/Release/Game.exe"),
+        StringComparison.Ordinal));
 });
 
 Run("Smile.UI 1.1.3 publishes canonical Insets fields and the Phase 5.2.2 hardening", () =>

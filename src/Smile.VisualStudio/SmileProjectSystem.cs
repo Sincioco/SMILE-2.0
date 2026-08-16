@@ -342,30 +342,20 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             pane.Activate();
             return false;
         }
-        _ = _package.JoinableTaskFactory.RunAsync(() => LaunchAsync(configuration, platform, launchFlags));
-        return true;
-    }
-
-    private async Task LaunchAsync(string configuration, string platform, uint launchFlags)
-    {
         try
         {
-            // Always rebuild before launch so F5/Ctrl+F5 cannot run stale source or assets.
-            if (!await BuildAsync(configuration, platform, null))
-                return;
-
-            await _package.JoinableTaskFactory.SwitchToMainThreadAsync();
+            // Visual Studio completes the configured build before calling DebugLaunch.
             if (IsWeb(platform))
             {
                 var url = SmileWebServer.Start(GetWebOutputDirectory(configuration), OutputName);
                 System.Diagnostics.Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
-                return;
+                return true;
             }
 
             var outputPath = GetOutputPath(configuration);
             var debugger = Package.GetGlobalService(typeof(SVsShellDebugger)) as IVsDebugger4;
             if (debugger == null)
-                return;
+                return false;
 
             var targets = new[]
             {
@@ -380,14 +370,15 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
                 }
             };
             debugger.LaunchDebugTargets4(1, targets, new VsDebugTargetProcessInfo[1]);
+            return true;
         }
         catch (Exception exception)
         {
             ActivityLog.LogError(nameof(SmileProject), exception.ToString());
-            await _package.JoinableTaskFactory.SwitchToMainThreadAsync();
             var pane = SmileBuildService.GetOutputPane();
             pane.OutputStringThreadSafe($"SMILE launch failed: {exception.Message}\r\n");
             pane.Activate();
+            return false;
         }
     }
 
@@ -1785,13 +1776,18 @@ internal sealed class SmileProjectConfiguration : IVsProjectCfg2, IVsBuildablePr
 
     public int QueryStartBuild(uint dwOptions, int[] pfSupported, int[] pfReady) => QueryStart(pfSupported, pfReady);
     public int QueryStartClean(uint dwOptions, int[] pfSupported, int[] pfReady) => QueryStart(pfSupported, pfReady);
-    public int QueryStartUpToDateCheck(uint dwOptions, int[] pfSupported, int[] pfReady) => QueryStart(pfSupported, pfReady);
+    public int QueryStartUpToDateCheck(uint dwOptions, int[] pfSupported, int[] pfReady)
+    {
+        if (pfSupported != null && pfSupported.Length != 0) pfSupported[0] = 0;
+        if (pfReady != null && pfReady.Length != 0) pfReady[0] = 1;
+        return VSConstants.S_OK;
+    }
     public int StartBuild(IVsOutputWindowPane pIVsOutputWindowPane, uint dwOptions)
     { ThreadHelper.ThrowIfNotOnUIThread(); return StartOperation(pIVsOutputWindowPane, clean: false); }
     public int StartClean(IVsOutputWindowPane pIVsOutputWindowPane, uint dwOptions)
     { ThreadHelper.ThrowIfNotOnUIThread(); return StartOperation(pIVsOutputWindowPane, clean: true); }
-    public int StartUpToDateCheck(IVsOutputWindowPane pIVsOutputWindowPane, uint dwOptions)
-    { ThreadHelper.ThrowIfNotOnUIThread(); return StartOperation(pIVsOutputWindowPane, clean: false); }
+    public int StartUpToDateCheck(IVsOutputWindowPane pIVsOutputWindowPane, uint dwOptions) =>
+        VSConstants.E_NOTIMPL;
     public int QueryStatus(out int pfBuildDone) { pfBuildDone = _building ? 0 : 1; return VSConstants.S_OK; }
     public int Stop(int fSync) { _building = false; return VSConstants.S_OK; }
     public int Wait(uint dwMilliseconds, int fTickWhenMessageQNotEmpty) => VSConstants.S_OK;

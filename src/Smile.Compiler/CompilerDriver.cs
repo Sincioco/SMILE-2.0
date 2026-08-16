@@ -1,4 +1,5 @@
 using Smile.Language;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Smile.Compiler;
@@ -76,16 +77,19 @@ internal sealed class CompilerDriver
                 ? input.DefaultNativeOutputPath
                 : Path.GetFullPath(options.OutputPath);
 
+            using var nativeOutputLock = NativeOutputLock.Acquire(outputPath);
+
             var repositoryRoot = FindRepositoryRoot();
             var tempDirectory = Path.Combine(repositoryRoot, "artifacts", "temp");
             Directory.CreateDirectory(tempDirectory);
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 
             var baseName = Path.GetFileNameWithoutExtension(outputPath);
-            var assemblyPath = Path.Combine(tempDirectory, baseName + ".asm");
-            var objectPath = Path.Combine(tempDirectory, baseName + ".obj");
-            var debugSourcePath = Path.Combine(tempDirectory, baseName + ".debug.c");
-            var debugObjectPath = Path.Combine(tempDirectory, baseName + ".debug.obj");
+            var intermediateBaseName = CreateIntermediateBaseName(baseName, options.KeepTemp);
+            var assemblyPath = Path.Combine(tempDirectory, intermediateBaseName + ".asm");
+            var objectPath = Path.Combine(tempDirectory, intermediateBaseName + ".obj");
+            var debugSourcePath = Path.Combine(tempDirectory, intermediateBaseName + ".debug.c");
+            var debugObjectPath = Path.Combine(tempDirectory, intermediateBaseName + ".debug.obj");
             var runtimePath = FindRuntimeLibrary(repositoryRoot);
 
             if (runtimePath == null)
@@ -164,6 +168,47 @@ internal sealed class CompilerDriver
         {
             Console.Error.WriteLine($"error SML5004: {exception.Message}");
             return 2;
+        }
+    }
+
+    internal static string CreateIntermediateBaseName(string baseName, bool keepTemp) =>
+        keepTemp ? baseName : $"{baseName}.{Environment.ProcessId}.{Guid.NewGuid():N}";
+
+    internal static string CreateNativeBuildMutexName(string outputPath)
+    {
+        var normalizedPath = Path.GetFullPath(outputPath).ToUpperInvariant();
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(normalizedPath));
+        return "Smile.Compiler.Native." + Convert.ToHexString(hash);
+    }
+
+    private sealed class NativeOutputLock : IDisposable
+    {
+        private readonly Mutex _mutex;
+        private bool _ownsMutex;
+
+        private NativeOutputLock(string outputPath)
+        {
+            _mutex = new Mutex(false, CreateNativeBuildMutexName(outputPath));
+            try
+            {
+                _ownsMutex = _mutex.WaitOne();
+            }
+            catch (AbandonedMutexException)
+            {
+                _ownsMutex = true;
+            }
+        }
+
+        public static NativeOutputLock Acquire(string outputPath) => new(outputPath);
+
+        public void Dispose()
+        {
+            if (_ownsMutex)
+            {
+                _mutex.ReleaseMutex();
+                _ownsMutex = false;
+            }
+            _mutex.Dispose();
         }
     }
 
