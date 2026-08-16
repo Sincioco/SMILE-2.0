@@ -8,22 +8,48 @@ Import Smile.RPG.World As World
 Import Smile.RPG.Story As Story
 Import Smile.RPG.Encounters As Encounters
 Import Smile.RPG.SaveGames As SaveGames
+Import RpgDungeonGallery.Workflow As DungeonWorkflow
 
-Const HERO = 100
-Const KEY_ITEM = 10
-Const HERO_ACTOR = 1000
-Const DOOR_ACTOR = 1100
-Const CHEST_ACTOR = 1200
-Const FLAG_DOOR = 1
-Const FLAG_CHEST = 2
-Const FLAG_TRAP = 3
-Const VALUE_REPEAT_TRAP = 10
+Const CHARACTER_HERO = 100
+Const CHARACTER_COMPANION = 200
+Const ITEM_VAULT_KEY = 10
+Const ITEM_SUN_TONIC = 20
+
+Const ACTOR_HERO = 1000
+Const ACTOR_FP_DOOR = 1100
+Const ACTOR_FP_LOCKED_DOOR = 1101
+Const ACTOR_FP_CHEST_GOLD = 1200
+Const ACTOR_FP_CHEST_KEY = 1201
+Const ACTOR_FP_HIDDEN = 1300
+Const ACTOR_TOP_DOOR = 2100
+Const ACTOR_TOP_LOCKED_DOOR = 2101
+Const ACTOR_TOP_CHEST_ITEM = 2200
+Const ACTOR_TOP_CHEST_GOLD = 2201
+Const ACTOR_TOP_HIDDEN = 2300
+
+Const FLAG_FP_DOOR = 1
+Const FLAG_FP_LOCKED_DOOR = 2
+Const FLAG_FP_CHEST_GOLD = 3
+Const FLAG_FP_CHEST_KEY = 4
+Const FLAG_FP_HIDDEN = 5
+Const FLAG_FP_TRAP = 6
+Const FLAG_FP_NPC = 7
+Const FLAG_TOP_DOOR = 8
+Const FLAG_TOP_LOCKED_DOOR = 9
+Const FLAG_TOP_CHEST_ITEM = 10
+Const FLAG_TOP_CHEST_GOLD = 11
+Const FLAG_TOP_HIDDEN = 12
+Const FLAG_TOP_TRAP = 13
+Const FLAG_TOP_NPC = 14
+Const VALUE_REPEAT_TRAPS = 30
 
 Dim Checks As Number
 Dim Failures As Number
 Dim State As Number
 Dim Result As Number
-Dim SavedCount As Number
+Dim PreviousScene As Number
+Dim PreviousX As Number
+Dim PreviousY As Number
 Dim Scene As World.SceneDefinition
 Dim Spawn As World.SpawnDefinition
 Dim Transition As World.TransitionDefinition
@@ -34,153 +60,217 @@ Dim Zone As Encounters.ZoneDefinition
 
 State = RPG.Create()
 
-Character.Id = HERO
-Character.Name = "Aster"
-Character.StartingLevel = 4
-Character.StartingMaximumHealth = 100
-Character.StartingMaximumMagicPoints = 20
-Character.Strength = 12
-Character.Defense = 11
-Character.Magic = 9
-Character.Resistance = 8
-Character.Agility = 10
-Character.Luck = 7
+Call Check(State > 0)
+Call DefineCharacters()
+Call DefineItems()
+Call DefineStory()
+Call DefineWorld()
+Call DefineEncounters()
 
-Call Check(Characters.DefineCharacter(State, Character))
+Result = DungeonWorkflow.StartNewGame(State, 1, 8)
 
-Item.Id = KEY_ITEM
-Item.Name = "Prism Key"
-Item.Kind = RPG.RPG_ITEM_KEY_ITEM
-Item.MaximumStack = 1
-Item.BasePrice = 0
-Item.CanSell = False
-Item.EffectId = 0
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK)
+Call Check(World.CurrentScene(State) = 1)
+Call Check(World.ControlledActor(State) = ACTOR_HERO)
+Call Check(Party.PartyCount(State) = 2 And Party.Gold(State) = 60)
+Call Check(DungeonWorkflow.FieldCommandsAllowed(False))
+Call Check(Not DungeonWorkflow.FieldCommandsAllowed(True))
 
-Call Check(Inventory.DefineItem(State, Item))
+' Ordinary and locked barriers are atomic, requirement-aware, and idempotent.
 
-Call Check(Story.DefineFlag(State, FLAG_DOOR))
-Call Check(Story.DefineFlag(State, FLAG_CHEST))
-Call Check(Story.DefineFlag(State, FLAG_TRAP))
-Call Check(Story.DefineValue(State, VALUE_REPEAT_TRAP))
+Result = DungeonWorkflow.CompleteBarrier(State, ACTOR_FP_DOOR, FLAG_FP_DOOR)
 
-Call DefineScene(1, 11)
-Call DefineScene(2, 21)
-Call DefineScene(3, 31)
-Call DefineScene(4, 41)
-Call DefineSpawn(11, 1, 1, 1, World.WORLD_FACING_RIGHT)
-Call DefineSpawn(21, 2, 7, 7, World.WORLD_FACING_LEFT)
-Call DefineSpawn(31, 3, 3, 3, World.WORLD_FACING_DOWN)
-Call DefineSpawn(41, 4, 5, 5, World.WORLD_FACING_UP)
-Call DefineTransition(1, 1, 101, 2, 21)
-Call DefineTransition(2, 2, 102, 1, 11)
-Call DefineTransition(3, 2, 103, 4, 41)
-Call DefineTransition(4, 3, 104, 1, 11)
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK)
+Call Check(Story.Flag(State, FLAG_FP_DOOR) And Not World.ActorIsVisible(State, ACTOR_FP_DOOR))
 
-Call DefineActor(HERO_ACTOR, 1, 1, 1, True, True, True, 0)
-Call DefineActor(DOOR_ACTOR, 1, 2, 1, True, True, True, 1)
-Call DefineActor(CHEST_ACTOR, 2, 6, 7, True, True, True, 2)
+Result = DungeonWorkflow.CompleteBarrier(State, ACTOR_FP_DOOR, FLAG_FP_DOOR)
 
-Zone.Id = 1
-Zone.SceneId = 4
-Zone.RegionId = 200
-Zone.StepsRequired = 2
-Zone.InitialSeed = 17
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_ALREADY_COMPLETED)
 
-Call Check(Encounters.DefineZone(State, Zone))
-Call Check(Encounters.AddEntry(State, 1, 500, 1))
+Result = DungeonWorkflow.CompleteLockedBarrier(State, ACTOR_FP_LOCKED_DOOR, FLAG_FP_LOCKED_DOOR, ITEM_VAULT_KEY)
 
-Call Check(Characters.ResetProgress(State))
-Call Check(Party.AddCharacter(State, HERO))
-Call Check(World.SetControlledActor(State, HERO_ACTOR))
-Call Check(World.ApplySpawn(State, HERO_ACTOR, 11))
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_MISSING_REQUIREMENT)
+Call Check(Not Story.Flag(State, FLAG_FP_LOCKED_DOOR) And World.ActorIsVisible(State, ACTOR_FP_LOCKED_DOOR))
+Call Check(Inventory.AddItem(State, ITEM_VAULT_KEY, 1))
 
-' A visible-solid door owns collision while its underlying cell stays traversable.
+Result = DungeonWorkflow.CompleteLockedBarrier(State, ACTOR_FP_LOCKED_DOOR, FLAG_FP_LOCKED_DOOR, ITEM_VAULT_KEY)
 
-Call Check(World.FrontActor(State) = DOOR_ACTOR)
-Call Check(Not World.TryReserveDestination(State, HERO_ACTOR, 2, 1))
-Call Check(World.SetActorVisible(State, DOOR_ACTOR, False))
-Call Check(Story.SetFlag(State, FLAG_DOOR, True))
-Call Check(World.TryReserveDestination(State, HERO_ACTOR, 2, 1))
-Call Check(World.CompleteReservedMove(State, HERO_ACTOR, World.WORLD_FACING_RIGHT))
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK)
+Call Check(Inventory.Quantity(State, ITEM_VAULT_KEY) = 1)
+Call Check(Story.Flag(State, FLAG_FP_LOCKED_DOOR) And Not World.ActorIsVisible(State, ACTOR_FP_LOCKED_DOOR))
 
-' Reciprocal stairs use scenes/spawns, while the chute intentionally has no reverse edge.
+' Reward chests grant once and preserve every preflight or repeated-activation invariant.
 
-Call Check(World.SetActorProgress(State, HERO_ACTOR, 1, 1, 1, World.WORLD_FACING_RIGHT, True, 0))
-Call Check(World.SetCurrentScene(State, 1))
-Call Check(World.ActivateTransition(State, 1))
-Call Check(World.CurrentScene(State) = 2 And World.ActorX(State, HERO_ACTOR) = 7)
-Call Check(World.TransitionAtRegion(State, 102) = 2)
-Call Check(World.TransitionAtRegion(State, 103) = 3)
-Call Check(World.ActivateTransition(State, 3))
-Call Check(World.CurrentScene(State) = 4)
-Call Check(World.TransitionAtRegion(State, 103) = 0)
+Result = DungeonWorkflow.CompleteGoldChest(State, ACTOR_FP_CHEST_GOLD, FLAG_FP_CHEST_GOLD, 50)
 
-' Chest policy preflights capacity, grants once, records state, then hides the actor.
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK And Party.Gold(State) = 110)
 
-Call Check(Inventory.CanAddItem(State, KEY_ITEM, 1))
-Call Check(Inventory.AddItem(State, KEY_ITEM, 1))
-Call Check(Story.SetFlag(State, FLAG_CHEST, True))
-Call Check(World.SetActorVisible(State, CHEST_ACTOR, False))
-Call Check(Inventory.Quantity(State, KEY_ITEM) = 1)
-Call Check(Not Inventory.CanAddItem(State, KEY_ITEM, 1))
+Result = DungeonWorkflow.CompleteGoldChest(State, ACTOR_FP_CHEST_GOLD, FLAG_FP_CHEST_GOLD, 50)
 
-' One-shot and repeating traps mutate only on an application-authorized cell entry.
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_ALREADY_COMPLETED And Party.Gold(State) = 110)
 
-Call Check(Characters.Damage(State, HERO, 9))
-Call Check(Story.SetFlag(State, FLAG_TRAP, True))
-Call Check(Characters.Health(State, HERO) = 91)
-Call Check(Story.Flag(State, FLAG_TRAP))
-Call Check(Characters.Damage(State, HERO, 3))
-Call Check(Story.SetValue(State, VALUE_REPEAT_TRAP, Story.Value(State, VALUE_REPEAT_TRAP) + 1))
-Call Check(Characters.Damage(State, HERO, 3))
-Call Check(Story.SetValue(State, VALUE_REPEAT_TRAP, Story.Value(State, VALUE_REPEAT_TRAP) + 1))
-Call Check(Characters.Health(State, HERO) = 85 And Story.Value(State, VALUE_REPEAT_TRAP) = 2)
+Result = DungeonWorkflow.CompleteItemChest(State, ACTOR_FP_CHEST_KEY, FLAG_FP_CHEST_KEY, ITEM_VAULT_KEY)
 
-' Encounter preview stores metadata and an exact return location without battle resolution.
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_CAPACITY)
+Call Check(Not Story.Flag(State, FLAG_FP_CHEST_KEY) And World.ActorIsVisible(State, ACTOR_FP_CHEST_KEY))
 
-Result = 0
+Result = DungeonWorkflow.CompleteMultiItemChest(State, ACTOR_TOP_CHEST_ITEM, FLAG_TOP_CHEST_ITEM, ITEM_VAULT_KEY, ITEM_SUN_TONIC)
 
-If World.SetReturnLocation(State, 4, 5, 5, World.WORLD_FACING_UP) Then
-    Result = 1
-End If
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK)
+Call Check(Inventory.Quantity(State, ITEM_VAULT_KEY) = 1 And Inventory.Quantity(State, ITEM_SUN_TONIC) = 1)
+Call Check(Story.Flag(State, FLAG_TOP_CHEST_ITEM) And Not World.ActorIsVisible(State, ACTOR_TOP_CHEST_ITEM))
 
-Call Check(Result = 1)
+Result = DungeonWorkflow.CompleteMultiItemChest(State, ACTOR_TOP_CHEST_ITEM, FLAG_TOP_CHEST_ITEM, ITEM_VAULT_KEY, ITEM_SUN_TONIC)
 
-Result = Encounters.Advance(State, 1, Encounters.Seed(State, 1))
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_ALREADY_COMPLETED)
+Call Check(Inventory.Quantity(State, ITEM_SUN_TONIC) = 1)
 
-Call Check(Result = 0)
+Result = DungeonWorkflow.CompleteBarrier(State, ACTOR_FP_HIDDEN, FLAG_FP_HIDDEN)
 
-Result = Encounters.Advance(State, 1, Encounters.Seed(State, 1))
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK)
 
-Call Check(Result = 500 And Encounters.PendingEncounter(State) = 500)
+' One-shot traps never double-apply; repeat traps update damage and count together.
 
-' SRPG 2 preserves the complete in-dungeon composition transactionally.
-Result = SaveGames.Encode(State, 8)
-SavedCount = SaveGames.EncodedByteCount()
+Result = DungeonWorkflow.ApplyOneShotTrap(State, CHARACTER_HERO, FLAG_FP_TRAP, 9)
 
-Call Check(Result = RPG.RPG_RESULT_OK And SavedCount > 0)
-Call Check(World.ApplySpawn(State, HERO_ACTOR, 31))
-Call Check(World.SetActorVisible(State, DOOR_ACTOR, True))
-Call Check(World.SetActorVisible(State, CHEST_ACTOR, True))
-Call Check(Story.SetFlag(State, FLAG_DOOR, False))
-Call Check(Story.SetFlag(State, FLAG_CHEST, False))
-Call Check(Story.SetFlag(State, FLAG_TRAP, False))
-Call Check(Story.SetValue(State, VALUE_REPEAT_TRAP, 0))
-Call Check(Inventory.RemoveItem(State, KEY_ITEM, 1))
-Call Encounters.ClearPendingEncounter(State)
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK)
+Call Check(Characters.Health(State, CHARACTER_HERO) = 131 And Story.Flag(State, FLAG_FP_TRAP))
 
-Result = SaveGames.Decode(State, 8)
+Result = DungeonWorkflow.ApplyOneShotTrap(State, CHARACTER_HERO, FLAG_FP_TRAP, 9)
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_ALREADY_COMPLETED)
+Call Check(Characters.Health(State, CHARACTER_HERO) = 131)
+
+Result = DungeonWorkflow.ApplyRepeatTrap(State, CHARACTER_HERO, VALUE_REPEAT_TRAPS, 3)
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK)
+Call Check(Characters.Health(State, CHARACTER_HERO) = 128 And Story.Value(State, VALUE_REPEAT_TRAPS) = 1)
+
+' NPC completion follows actual dialogue start and remains idempotent.
+
+Result = DungeonWorkflow.CompleteNpcDialogue(State, FLAG_FP_NPC, False)
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_APPLY_FAILED)
+Call Check(Not Story.Flag(State, FLAG_FP_NPC))
+
+Result = DungeonWorkflow.CompleteNpcDialogue(State, FLAG_FP_NPC, True)
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK And Story.Flag(State, FLAG_FP_NPC))
+
+Result = DungeonWorkflow.CompleteNpcDialogue(State, FLAG_FP_NPC, True)
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_ALREADY_COMPLETED)
+
+' Encounter preview writes and restores one exact return transaction.
+
+PreviousScene = World.CurrentScene(State)
+PreviousX = World.ActorX(State, ACTOR_HERO)
+PreviousY = World.ActorY(State, ACTOR_HERO)
+Result = DungeonWorkflow.BeginEncounter(State, ACTOR_HERO, 500)
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK)
+Call Check(Encounters.PendingEncounter(State) = 500)
+Call Check(World.ReturnScene(State) = PreviousScene And World.ReturnX(State) = PreviousX And World.ReturnY(State) = PreviousY)
+
+Result = DungeonWorkflow.CompleteEncounter(State, ACTOR_HERO)
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK)
+Call Check(Encounters.PendingEncounter(State) = 0)
+Call Check(World.CurrentScene(State) = PreviousScene And World.ActorX(State, ACTOR_HERO) = PreviousX And World.ActorY(State, ACTOR_HERO) = PreviousY)
+
+Result = DungeonWorkflow.AdvanceEncounter(State, ACTOR_HERO, 1, Encounters.Seed(State, 1))
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_NOT_FOUND)
+Call Check(Encounters.StepCount(State, 1) = 1 And Encounters.PendingEncounter(State) = 0)
+
+Result = DungeonWorkflow.AdvanceEncounter(State, ACTOR_HERO, 1, Encounters.Seed(State, 1))
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK)
+Call Check(Encounters.PendingEncounter(State) = 500)
+
+Result = DungeonWorkflow.CompleteEncounter(State, ACTOR_HERO)
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK And Encounters.PendingEncounter(State) = 0)
+
+' Spawns and transitions expose honest result codes and never claim a failed move.
+
+Result = DungeonWorkflow.ApplySpawn(State, ACTOR_HERO, 201)
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK And World.CurrentScene(State) = 11)
+
+Result = DungeonWorkflow.ActivateTransition(State, 1)
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK And World.CurrentScene(State) = 12)
+
+PreviousScene = World.CurrentScene(State)
+PreviousX = World.ActorX(State, ACTOR_HERO)
+PreviousY = World.ActorY(State, ACTOR_HERO)
+Result = DungeonWorkflow.ActivateTransition(State, 999)
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_BLOCKED)
+Call Check(World.CurrentScene(State) = PreviousScene And World.ActorX(State, ACTOR_HERO) = PreviousX And World.ActorY(State, ACTOR_HERO) = PreviousY)
+
+' Load projects canonical story flags and rejects invalid app semantics with rollback.
+
+Call Check(World.SetActorVisible(State, ACTOR_FP_DOOR, True))
+
+Result = SaveGames.SaveGame(State, 8, 8)
 
 Call Check(Result = RPG.RPG_RESULT_OK)
-Call Check(World.CurrentScene(State) = 4)
-Call Check(World.ActorX(State, HERO_ACTOR) = 5 And World.ActorY(State, HERO_ACTOR) = 5)
-Call Check(Not World.ActorIsVisible(State, DOOR_ACTOR) And Not World.ActorIsVisible(State, CHEST_ACTOR))
-Call Check(Story.Flag(State, FLAG_DOOR) And Story.Flag(State, FLAG_CHEST) And Story.Flag(State, FLAG_TRAP))
-Call Check(Story.Value(State, VALUE_REPEAT_TRAP) = 2)
-Call Check(Inventory.Quantity(State, KEY_ITEM) = 1)
-Call Check(Characters.Health(State, HERO) = 85)
-Call Check(Encounters.PendingEncounter(State) = 500)
-Call Check(World.ReturnScene(State) = 4 And World.ReturnX(State) = 5 And World.ReturnY(State) = 5)
+Call Check(World.SetActorVisible(State, ACTOR_FP_DOOR, False))
+
+Result = DungeonWorkflow.LoadGame(State, 8, 8)
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK)
+Call Check(Story.Flag(State, FLAG_FP_DOOR) And Not World.ActorIsVisible(State, ACTOR_FP_DOOR))
+
+Call Check(World.SetControlledActor(State, 0))
+
+Result = SaveGames.SaveGame(State, 7, 8)
+
+Call Check(Result = RPG.RPG_RESULT_OK)
+Call Check(World.SetControlledActor(State, ACTOR_HERO))
+
+PreviousScene = World.CurrentScene(State)
+PreviousX = World.ActorX(State, ACTOR_HERO)
+PreviousY = World.ActorY(State, ACTOR_HERO)
+Result = DungeonWorkflow.LoadGame(State, 7, 8)
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_INVALID_STATE)
+Call Check(World.ControlledActor(State) = ACTOR_HERO)
+Call Check(World.CurrentScene(State) = PreviousScene And World.ActorX(State, ACTOR_HERO) = PreviousX And World.ActorY(State, ACTOR_HERO) = PreviousY)
+
+Result = DungeonWorkflow.SaveGame(State, 8, 8)
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK)
+
+' Capacity and success paths are independently proven for each single-reward chest.
+
+Result = DungeonWorkflow.StartNewGame(State, 1, 8)
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK)
+
+Result = DungeonWorkflow.CompleteItemChest(State, ACTOR_FP_CHEST_KEY, FLAG_FP_CHEST_KEY, ITEM_VAULT_KEY)
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK)
+Call Check(Inventory.Quantity(State, ITEM_VAULT_KEY) = 1)
+Call Check(Story.Flag(State, FLAG_FP_CHEST_KEY) And Not World.ActorIsVisible(State, ACTOR_FP_CHEST_KEY))
+
+Result = DungeonWorkflow.CompleteItemChest(State, ACTOR_FP_CHEST_KEY, FLAG_FP_CHEST_KEY, ITEM_VAULT_KEY)
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_ALREADY_COMPLETED)
+Call Check(Inventory.Quantity(State, ITEM_VAULT_KEY) = 1)
+
+Result = DungeonWorkflow.StartNewGame(State, 1, 8)
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_OK)
+Call Check(Party.SetGold(State, RPG.RPG_MAX_VALUE))
+
+Result = DungeonWorkflow.CompleteGoldChest(State, ACTOR_FP_CHEST_GOLD, FLAG_FP_CHEST_GOLD, 50)
+
+Call Check(Result = DungeonWorkflow.DUNGEON_RESULT_CAPACITY)
+Call Check(Party.Gold(State) = RPG.RPG_MAX_VALUE)
+Call Check(Not Story.Flag(State, FLAG_FP_CHEST_GOLD) And World.ActorIsVisible(State, ACTOR_FP_CHEST_GOLD))
 
 Call RPG.Destroy(State)
 
@@ -205,6 +295,112 @@ Sub Check(Condition As Boolean)
         Print Checks
 
     End If
+
+End Sub
+
+Sub DefineCharacters()
+
+    Character.Id = CHARACTER_HERO
+    Character.Name = "Aster"
+    Character.StartingLevel = 4
+    Character.StartingMaximumHealth = 140
+    Character.StartingMaximumMagicPoints = 36
+    Character.Strength = 16
+    Character.Defense = 14
+    Character.Magic = 12
+    Character.Resistance = 11
+    Character.Agility = 15
+    Character.Luck = 9
+
+    Call Check(Characters.DefineCharacter(State, Character))
+
+    Character.Id = CHARACTER_COMPANION
+    Character.Name = "Nia"
+    Character.StartingLevel = 3
+    Character.StartingMaximumHealth = 105
+
+    Call Check(Characters.DefineCharacter(State, Character))
+
+End Sub
+
+Sub DefineItems()
+
+    Item.Id = ITEM_VAULT_KEY
+    Item.Name = "Prism Key"
+    Item.Kind = RPG.RPG_ITEM_KEY_ITEM
+    Item.MaximumStack = 1
+    Item.BasePrice = 0
+    Item.CanSell = False
+    Item.EffectId = 0
+    Item.EquipmentSlotId = 0
+
+    Call Check(Inventory.DefineItem(State, Item))
+
+    Item.Id = ITEM_SUN_TONIC
+    Item.Name = "Sun Tonic"
+    Item.Kind = RPG.RPG_ITEM_CONSUMABLE
+    Item.MaximumStack = 9
+    Item.BasePrice = 40
+    Item.CanSell = True
+    Item.EffectId = 1
+
+    Call Check(Inventory.DefineItem(State, Item))
+
+End Sub
+
+Sub DefineStory()
+
+    Dim FlagId As Number
+
+    For FlagId = FLAG_FP_DOOR To FLAG_TOP_NPC
+        Call Check(Story.DefineFlag(State, FlagId))
+    End For
+
+    Call Check(Story.DefineValue(State, VALUE_REPEAT_TRAPS))
+
+End Sub
+
+Sub DefineWorld()
+
+    Call DefineScene(1, 101)
+    Call DefineScene(2, 102)
+    Call DefineScene(3, 103)
+    Call DefineScene(11, 201)
+    Call DefineScene(12, 202)
+    Call DefineScene(13, 203)
+    Call DefineScene(14, 204)
+    Call DefineSpawn(101, 1, 1, 7, World.WORLD_FACING_RIGHT)
+    Call DefineSpawn(102, 2, 1, 7, World.WORLD_FACING_RIGHT)
+    Call DefineSpawn(103, 3, 1, 7, World.WORLD_FACING_RIGHT)
+    Call DefineSpawn(201, 11, 2, 8, World.WORLD_FACING_RIGHT)
+    Call DefineSpawn(202, 12, 10, 8, World.WORLD_FACING_LEFT)
+    Call DefineSpawn(203, 13, 2, 2, World.WORLD_FACING_RIGHT)
+    Call DefineSpawn(204, 14, 10, 8, World.WORLD_FACING_LEFT)
+    Call DefineTransition(1, 11, 101, 12, 202)
+    Call DefineActor(ACTOR_FP_DOOR, 1, 2, 4, True, True, True, 1)
+    Call DefineActor(ACTOR_FP_LOCKED_DOOR, 2, 6, 4, True, True, True, 2)
+    Call DefineActor(ACTOR_FP_CHEST_GOLD, 1, 6, 2, True, True, True, 3)
+    Call DefineActor(ACTOR_FP_CHEST_KEY, 2, 2, 2, True, True, True, 4)
+    Call DefineActor(ACTOR_FP_HIDDEN, 3, 4, 2, True, True, True, 5)
+    Call DefineActor(ACTOR_TOP_DOOR, 11, 6, 8, True, True, True, 1)
+    Call DefineActor(ACTOR_TOP_LOCKED_DOOR, 12, 6, 3, True, True, True, 2)
+    Call DefineActor(ACTOR_TOP_CHEST_ITEM, 13, 10, 2, True, True, True, 7)
+    Call DefineActor(ACTOR_TOP_CHEST_GOLD, 14, 3, 3, True, True, True, 3)
+    Call DefineActor(ACTOR_TOP_HIDDEN, 13, 6, 4, True, True, True, 5)
+    Call DefineActor(ACTOR_HERO, 1, 1, 7, True, True, True, 0)
+
+End Sub
+
+Sub DefineEncounters()
+
+    Zone.Id = 1
+    Zone.SceneId = 11
+    Zone.RegionId = 121
+    Zone.StepsRequired = 2
+    Zone.InitialSeed = 31
+
+    Call Check(Encounters.DefineZone(State, Zone))
+    Call Check(Encounters.AddEntry(State, 1, 500, 1))
 
 End Sub
 

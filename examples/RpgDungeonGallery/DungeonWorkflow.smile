@@ -1,0 +1,885 @@
+''' Application-local transactional dungeon event workflows shared by the gallery and its tests.
+Module RpgDungeonGallery.Workflow
+
+Option Explicit
+
+Import Smile.RPG.Core As RPG
+Import Smile.RPG.Characters As Characters
+Import Smile.RPG.Party As Party
+Import Smile.RPG.Inventory As Inventory
+Import Smile.RPG.World As World
+Import Smile.RPG.Story As Story
+Import Smile.RPG.Encounters As Encounters
+Import Smile.RPG.SaveGames As SaveGames
+
+Public Const DUNGEON_RESULT_OK = 0
+Public Const DUNGEON_RESULT_ALREADY_COMPLETED = 1
+Public Const DUNGEON_RESULT_MISSING_REQUIREMENT = 2
+Public Const DUNGEON_RESULT_CAPACITY = 3
+Public Const DUNGEON_RESULT_BLOCKED = 4
+Public Const DUNGEON_RESULT_INVALID_STATE = 5
+Public Const DUNGEON_RESULT_APPLY_FAILED = 6
+Public Const DUNGEON_RESULT_NOT_FOUND = 7
+Public Const DUNGEON_RESULT_WRONG_SCHEMA = 8
+
+Private Const SCENE_FP_1 = 1
+Private Const SCENE_FP_2 = 2
+Private Const SCENE_FP_3 = 3
+Private Const SCENE_TOP_1 = 11
+Private Const SCENE_TOP_2 = 12
+Private Const SCENE_TOP_3 = 13
+Private Const SCENE_TOP_4 = 14
+
+Private Const ACTOR_HERO = 1000
+Private Const ACTOR_FP_DOOR = 1100
+Private Const ACTOR_FP_LOCKED_DOOR = 1101
+Private Const ACTOR_FP_CHEST_GOLD = 1200
+Private Const ACTOR_FP_CHEST_KEY = 1201
+Private Const ACTOR_FP_HIDDEN = 1300
+Private Const ACTOR_TOP_DOOR = 2100
+Private Const ACTOR_TOP_LOCKED_DOOR = 2101
+Private Const ACTOR_TOP_CHEST_ITEM = 2200
+Private Const ACTOR_TOP_CHEST_GOLD = 2201
+Private Const ACTOR_TOP_HIDDEN = 2300
+
+Private Const CHARACTER_HERO = 100
+Private Const CHARACTER_COMPANION = 200
+Private Const ITEM_VAULT_KEY = 10
+Private Const ITEM_SUN_TONIC = 20
+
+Private Const FLAG_FP_DOOR = 1
+Private Const FLAG_FP_LOCKED_DOOR = 2
+Private Const FLAG_FP_CHEST_GOLD = 3
+Private Const FLAG_FP_CHEST_KEY = 4
+Private Const FLAG_FP_HIDDEN = 5
+Private Const FLAG_TOP_DOOR = 8
+Private Const FLAG_TOP_LOCKED_DOOR = 9
+Private Const FLAG_TOP_CHEST_ITEM = 10
+Private Const FLAG_TOP_CHEST_GOLD = 11
+Private Const FLAG_TOP_HIDDEN = 12
+
+Private Dim SnapshotBytes[36864] As Number
+Private Dim SnapshotCount As Number
+
+Private Function MapRpgResult(Result As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Result = RPG.RPG_RESULT_OK Then
+        Return DUNGEON_RESULT_OK
+    Else If Result = RPG.RPG_RESULT_CAPACITY Then
+        Return DUNGEON_RESULT_CAPACITY
+    Else If Result = RPG.RPG_RESULT_INVALID_STATE Then
+        Return DUNGEON_RESULT_INVALID_STATE
+    Else If Result = RPG.RPG_RESULT_WRONG_SCHEMA Then
+        Return DUNGEON_RESULT_WRONG_SCHEMA
+    Else If (Result = RPG.RPG_RESULT_NOT_FOUND Or
+        Result = RPG.RPG_RESULT_NOT_FOUND_OR_INVALID_SAVE) Then
+        Return DUNGEON_RESULT_NOT_FOUND
+    End If
+
+    ReturnValue = DUNGEON_RESULT_APPLY_FAILED
+
+    Return ReturnValue
+
+End Function
+
+Private Function SceneIsKnown(SceneId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = (
+        SceneId = SCENE_FP_1 Or
+        SceneId = SCENE_FP_2 Or
+        SceneId = SCENE_FP_3 Or
+        SceneId = SCENE_TOP_1 Or
+        SceneId = SCENE_TOP_2 Or
+        SceneId = SCENE_TOP_3 Or
+        SceneId = SCENE_TOP_4
+    )
+
+    Return ReturnValue
+
+End Function
+
+Private Function ActorProjectionMatches(StateHandle As Number, ActorId As Number, FlagId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = World.ActorIsVisible(StateHandle, ActorId) = Not Story.Flag(StateHandle, FlagId)
+
+    Return ReturnValue
+
+End Function
+
+Private Function ValidateDungeonState(StateHandle As Number) As Boolean
+
+    Dim SceneId As Number
+    Dim X As Number
+    Dim Y As Number
+
+    If (Not RPG.IsValid(StateHandle) Or
+        Not World.IsActorDefined(StateHandle, ACTOR_HERO) Or
+        World.ControlledActor(StateHandle) <> ACTOR_HERO) Then
+        Return False
+    End If
+
+    SceneId = World.CurrentScene(StateHandle)
+    X = World.ActorX(StateHandle, ACTOR_HERO)
+    Y = World.ActorY(StateHandle, ACTOR_HERO)
+
+    If (Not SceneIsKnown(SceneId) Or
+        World.ActorScene(StateHandle, ACTOR_HERO) <> SceneId Or
+        Not World.ActorIsVisible(StateHandle, ACTOR_HERO) Or
+        X < 0 Or
+        Y < 0) Then
+        Return False
+    End If
+
+    If SceneId <= SCENE_FP_3 Then
+
+        If X > 8 Or Y > 8 Then
+            Return False
+        End If
+
+    Else If X > 12 Or Y > 10 Then
+        Return False
+    End If
+
+    If (Not ActorProjectionMatches(StateHandle, ACTOR_FP_DOOR, FLAG_FP_DOOR) Or
+        Not ActorProjectionMatches(StateHandle, ACTOR_FP_LOCKED_DOOR, FLAG_FP_LOCKED_DOOR) Or
+        Not ActorProjectionMatches(StateHandle, ACTOR_FP_CHEST_GOLD, FLAG_FP_CHEST_GOLD) Or
+        Not ActorProjectionMatches(StateHandle, ACTOR_FP_CHEST_KEY, FLAG_FP_CHEST_KEY) Or
+        Not ActorProjectionMatches(StateHandle, ACTOR_FP_HIDDEN, FLAG_FP_HIDDEN) Or
+        Not ActorProjectionMatches(StateHandle, ACTOR_TOP_DOOR, FLAG_TOP_DOOR) Or
+        Not ActorProjectionMatches(StateHandle, ACTOR_TOP_LOCKED_DOOR, FLAG_TOP_LOCKED_DOOR) Or
+        Not ActorProjectionMatches(StateHandle, ACTOR_TOP_CHEST_ITEM, FLAG_TOP_CHEST_ITEM) Or
+        Not ActorProjectionMatches(StateHandle, ACTOR_TOP_CHEST_GOLD, FLAG_TOP_CHEST_GOLD) Or
+        Not ActorProjectionMatches(StateHandle, ACTOR_TOP_HIDDEN, FLAG_TOP_HIDDEN)) Then
+        Return False
+    End If
+
+    Return True
+
+End Function
+
+Private Function SetProjection(StateHandle As Number, ActorId As Number, FlagId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = World.SetActorVisible(StateHandle, ActorId, Not Story.Flag(StateHandle, FlagId))
+
+    Return ReturnValue
+
+End Function
+
+Private Function ReconcileDungeonProjection(StateHandle As Number) As Boolean
+
+    If Not SetProjection(StateHandle, ACTOR_FP_DOOR, FLAG_FP_DOOR) Then
+        Return False
+    End If
+
+    If Not SetProjection(StateHandle, ACTOR_FP_LOCKED_DOOR, FLAG_FP_LOCKED_DOOR) Then
+        Return False
+    End If
+
+    If Not SetProjection(StateHandle, ACTOR_FP_CHEST_GOLD, FLAG_FP_CHEST_GOLD) Then
+        Return False
+    End If
+
+    If Not SetProjection(StateHandle, ACTOR_FP_CHEST_KEY, FLAG_FP_CHEST_KEY) Then
+        Return False
+    End If
+
+    If Not SetProjection(StateHandle, ACTOR_FP_HIDDEN, FLAG_FP_HIDDEN) Then
+        Return False
+    End If
+
+    If Not SetProjection(StateHandle, ACTOR_TOP_DOOR, FLAG_TOP_DOOR) Then
+        Return False
+    End If
+
+    If Not SetProjection(StateHandle, ACTOR_TOP_LOCKED_DOOR, FLAG_TOP_LOCKED_DOOR) Then
+        Return False
+    End If
+
+    If Not SetProjection(StateHandle, ACTOR_TOP_CHEST_ITEM, FLAG_TOP_CHEST_ITEM) Then
+        Return False
+    End If
+
+    If Not SetProjection(StateHandle, ACTOR_TOP_CHEST_GOLD, FLAG_TOP_CHEST_GOLD) Then
+        Return False
+    End If
+
+    If Not SetProjection(StateHandle, ACTOR_TOP_HIDDEN, FLAG_TOP_HIDDEN) Then
+        Return False
+    End If
+
+    Return True
+
+End Function
+
+Private Function CaptureSnapshot(StateHandle As Number, SchemaVersion As Number) As Number
+
+    Dim Result As Number
+    Dim Index As Number
+
+    Result = SaveGames.Encode(StateHandle, SchemaVersion)
+
+    If Result <> RPG.RPG_RESULT_OK Then
+        Return MapRpgResult(Result)
+    End If
+
+    SnapshotCount = SaveGames.EncodedByteCount()
+
+    For Index = 0 To SnapshotCount - 1
+        SnapshotBytes[Index] = SaveGames.EncodedByteAt(Index)
+    End For
+
+    Return DUNGEON_RESULT_OK
+
+End Function
+
+Private Function RestoreSnapshot(StateHandle As Number, SchemaVersion As Number) As Boolean
+
+    Dim Index As Number
+    Dim Result As Number
+
+    Call SaveGames.ClearEncodedBytes()
+
+    For Index = 0 To SnapshotCount - 1
+
+        If Not SaveGames.SetEncodedByte(Index, SnapshotBytes[Index]) Then
+            Return False
+        End If
+
+    End For
+
+    Result = SaveGames.Decode(StateHandle, SchemaVersion)
+
+    Return Result = RPG.RPG_RESULT_OK
+
+End Function
+
+''' Returns False while a top-down interpolation owns the authoritative field command boundary.
+Public Function FieldCommandsAllowed(Moving As Boolean) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Not Moving
+
+    Return ReturnValue
+
+End Function
+
+Private Function CompleteActorFlag(StateHandle As Number, ActorId As Number, FlagId As Number) As Number
+
+    If (Not RPG.IsValid(StateHandle) Or
+        Not World.IsActorDefined(StateHandle, ActorId) Or
+        Not Story.IsFlagDefined(StateHandle, FlagId)) Then
+        Return DUNGEON_RESULT_INVALID_STATE
+    End If
+
+    If Story.Flag(StateHandle, FlagId) Then
+
+        If World.ActorIsVisible(StateHandle, ActorId) And Not World.SetActorVisible(StateHandle, ActorId, False) Then
+            Return DUNGEON_RESULT_APPLY_FAILED
+        End If
+
+        Return DUNGEON_RESULT_ALREADY_COMPLETED
+    End If
+
+    If Not World.ActorIsVisible(StateHandle, ActorId) Then
+        Return DUNGEON_RESULT_INVALID_STATE
+    End If
+
+    If Not World.SetActorVisible(StateHandle, ActorId, False) Then
+        Return DUNGEON_RESULT_BLOCKED
+    End If
+
+    If Not Story.SetFlag(StateHandle, FlagId, True) Then
+
+        If Not World.SetActorVisible(StateHandle, ActorId, True) Then
+            Return DUNGEON_RESULT_APPLY_FAILED
+        End If
+
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    Return DUNGEON_RESULT_OK
+
+End Function
+
+''' Opens an ordinary door or reveals a hidden passage as one idempotent transaction.
+Public Function CompleteBarrier(StateHandle As Number, ActorId As Number, FlagId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = CompleteActorFlag(StateHandle, ActorId, FlagId)
+
+    Return ReturnValue
+
+End Function
+
+''' Opens a locked door without consuming its key.
+Public Function CompleteLockedBarrier(StateHandle As Number, ActorId As Number, FlagId As Number, KeyItemId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Inventory.Quantity(StateHandle, KeyItemId) <= 0 Then
+        Return DUNGEON_RESULT_MISSING_REQUIREMENT
+    End If
+
+    ReturnValue = CompleteActorFlag(StateHandle, ActorId, FlagId)
+
+    Return ReturnValue
+
+End Function
+
+''' Grants a Gold reward and closes its actor projection atomically and exactly once.
+Public Function CompleteGoldChest(StateHandle As Number, ActorId As Number, FlagId As Number, GoldAmount As Number) As Number
+
+    Dim PreviousGold As Number
+
+    If (Not RPG.IsValid(StateHandle) Or
+        Not World.IsActorDefined(StateHandle, ActorId) Or
+        Not Story.IsFlagDefined(StateHandle, FlagId) Or
+        GoldAmount <= 0) Then
+        Return DUNGEON_RESULT_INVALID_STATE
+    End If
+
+    If Story.Flag(StateHandle, FlagId) Then
+
+        If World.ActorIsVisible(StateHandle, ActorId) And Not World.SetActorVisible(StateHandle, ActorId, False) Then
+            Return DUNGEON_RESULT_APPLY_FAILED
+        End If
+
+        Return DUNGEON_RESULT_ALREADY_COMPLETED
+    End If
+
+    If Not World.ActorIsVisible(StateHandle, ActorId) Then
+        Return DUNGEON_RESULT_INVALID_STATE
+    End If
+
+    PreviousGold = Party.Gold(StateHandle)
+
+    If PreviousGold > RPG.RPG_MAX_VALUE - GoldAmount Then
+        Return DUNGEON_RESULT_CAPACITY
+    End If
+
+    If Not Party.AddGold(StateHandle, GoldAmount) Then
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    If Not Story.SetFlag(StateHandle, FlagId, True) Then
+
+        If Not Party.SetGold(StateHandle, PreviousGold) Then
+            Return DUNGEON_RESULT_APPLY_FAILED
+        End If
+
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    If Not World.SetActorVisible(StateHandle, ActorId, False) Then
+
+        If (Not Story.SetFlag(StateHandle, FlagId, False) Or
+            Not Party.SetGold(StateHandle, PreviousGold)) Then
+            Return DUNGEON_RESULT_APPLY_FAILED
+        End If
+
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    Return DUNGEON_RESULT_OK
+
+End Function
+
+''' Grants one inventory item and closes its chest atomically and exactly once.
+Public Function CompleteItemChest(StateHandle As Number, ActorId As Number, FlagId As Number, ItemId As Number) As Number
+
+    If (Not RPG.IsValid(StateHandle) Or
+        Not World.IsActorDefined(StateHandle, ActorId) Or
+        Not Story.IsFlagDefined(StateHandle, FlagId) Or
+        Not Inventory.IsItemDefined(StateHandle, ItemId)) Then
+        Return DUNGEON_RESULT_INVALID_STATE
+    End If
+
+    If Story.Flag(StateHandle, FlagId) Then
+
+        If World.ActorIsVisible(StateHandle, ActorId) And Not World.SetActorVisible(StateHandle, ActorId, False) Then
+            Return DUNGEON_RESULT_APPLY_FAILED
+        End If
+
+        Return DUNGEON_RESULT_ALREADY_COMPLETED
+    End If
+
+    If Not World.ActorIsVisible(StateHandle, ActorId) Then
+        Return DUNGEON_RESULT_INVALID_STATE
+    End If
+
+    If Not Inventory.CanAddItem(StateHandle, ItemId, 1) Then
+        Return DUNGEON_RESULT_CAPACITY
+    End If
+
+    If Not Inventory.AddItem(StateHandle, ItemId, 1) Then
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    If Not Story.SetFlag(StateHandle, FlagId, True) Then
+
+        If Not Inventory.RemoveItem(StateHandle, ItemId, 1) Then
+            Return DUNGEON_RESULT_APPLY_FAILED
+        End If
+
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    If Not World.SetActorVisible(StateHandle, ActorId, False) Then
+
+        If (Not Story.SetFlag(StateHandle, FlagId, False) Or
+            Not Inventory.RemoveItem(StateHandle, ItemId, 1)) Then
+            Return DUNGEON_RESULT_APPLY_FAILED
+        End If
+
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    Return DUNGEON_RESULT_OK
+
+End Function
+
+''' Grants the optional key and one tonic as a single all-or-nothing chest reward.
+Public Function CompleteMultiItemChest(StateHandle As Number, ActorId As Number, FlagId As Number, KeyItemId As Number, TonicItemId As Number) As Number
+
+    Dim AddKey As Boolean
+
+    If (Not RPG.IsValid(StateHandle) Or
+        Not World.IsActorDefined(StateHandle, ActorId) Or
+        Not Story.IsFlagDefined(StateHandle, FlagId) Or
+        Not Inventory.IsItemDefined(StateHandle, KeyItemId) Or
+        Not Inventory.IsItemDefined(StateHandle, TonicItemId)) Then
+        Return DUNGEON_RESULT_INVALID_STATE
+    End If
+
+    If Story.Flag(StateHandle, FlagId) Then
+
+        If World.ActorIsVisible(StateHandle, ActorId) And Not World.SetActorVisible(StateHandle, ActorId, False) Then
+            Return DUNGEON_RESULT_APPLY_FAILED
+        End If
+
+        Return DUNGEON_RESULT_ALREADY_COMPLETED
+    End If
+
+    If Not World.ActorIsVisible(StateHandle, ActorId) Then
+        Return DUNGEON_RESULT_INVALID_STATE
+    End If
+
+    AddKey = Inventory.Quantity(StateHandle, KeyItemId) = 0
+
+    If AddKey And Not Inventory.CanAddItem(StateHandle, KeyItemId, 1) Then
+        Return DUNGEON_RESULT_CAPACITY
+    End If
+
+    If Not Inventory.CanAddItem(StateHandle, TonicItemId, 1) Then
+        Return DUNGEON_RESULT_CAPACITY
+    End If
+
+    If AddKey And Not Inventory.AddItem(StateHandle, KeyItemId, 1) Then
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    If Not Inventory.AddItem(StateHandle, TonicItemId, 1) Then
+
+        If AddKey And Not Inventory.RemoveItem(StateHandle, KeyItemId, 1) Then
+            Return DUNGEON_RESULT_APPLY_FAILED
+        End If
+
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    If Not Story.SetFlag(StateHandle, FlagId, True) Then
+
+        If Not Inventory.RemoveItem(StateHandle, TonicItemId, 1) Then
+            Return DUNGEON_RESULT_APPLY_FAILED
+        End If
+
+        If AddKey And Not Inventory.RemoveItem(StateHandle, KeyItemId, 1) Then
+            Return DUNGEON_RESULT_APPLY_FAILED
+        End If
+
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    If Not World.SetActorVisible(StateHandle, ActorId, False) Then
+
+        If Not Story.SetFlag(StateHandle, FlagId, False) Then
+            Return DUNGEON_RESULT_APPLY_FAILED
+        End If
+
+        If Not Inventory.RemoveItem(StateHandle, TonicItemId, 1) Then
+            Return DUNGEON_RESULT_APPLY_FAILED
+        End If
+
+        If AddKey And Not Inventory.RemoveItem(StateHandle, KeyItemId, 1) Then
+            Return DUNGEON_RESULT_APPLY_FAILED
+        End If
+
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    Return DUNGEON_RESULT_OK
+
+End Function
+
+''' Applies a one-shot trap with damage and completion flag rollback.
+Public Function ApplyOneShotTrap(StateHandle As Number, CharacterId As Number, FlagId As Number, DamageAmount As Number) As Number
+
+    Dim PreviousHealth As Number
+
+    If (Not Characters.IsCharacterDefined(StateHandle, CharacterId) Or
+        Not Story.IsFlagDefined(StateHandle, FlagId) Or
+        DamageAmount < 0) Then
+        Return DUNGEON_RESULT_INVALID_STATE
+    End If
+
+    If Story.Flag(StateHandle, FlagId) Then
+        Return DUNGEON_RESULT_ALREADY_COMPLETED
+    End If
+
+    PreviousHealth = Characters.Health(StateHandle, CharacterId)
+
+    If Not Characters.Damage(StateHandle, CharacterId, DamageAmount) Then
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    If Not Story.SetFlag(StateHandle, FlagId, True) Then
+
+        If Not Characters.SetHealth(StateHandle, CharacterId, PreviousHealth) Then
+            Return DUNGEON_RESULT_APPLY_FAILED
+        End If
+
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    Return DUNGEON_RESULT_OK
+
+End Function
+
+''' Applies one repeatable trap activation with damage and counter rollback.
+Public Function ApplyRepeatTrap(StateHandle As Number, CharacterId As Number, ValueId As Number, DamageAmount As Number) As Number
+
+    Dim PreviousHealth As Number
+    Dim PreviousValue As Number
+
+    If (Not Characters.IsCharacterDefined(StateHandle, CharacterId) Or
+        Not Story.IsValueDefined(StateHandle, ValueId) Or
+        DamageAmount < 0) Then
+        Return DUNGEON_RESULT_INVALID_STATE
+    End If
+
+    PreviousHealth = Characters.Health(StateHandle, CharacterId)
+    PreviousValue = Story.Value(StateHandle, ValueId)
+
+    If PreviousValue >= RPG.RPG_MAX_VALUE Then
+        Return DUNGEON_RESULT_CAPACITY
+    End If
+
+    If Not Characters.Damage(StateHandle, CharacterId, DamageAmount) Then
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    If Not Story.SetValue(StateHandle, ValueId, PreviousValue + 1) Then
+
+        If Not Characters.SetHealth(StateHandle, CharacterId, PreviousHealth) Then
+            Return DUNGEON_RESULT_APPLY_FAILED
+        End If
+
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    Return DUNGEON_RESULT_OK
+
+End Function
+
+''' Commits first-conversation state only when the UI dialogue actually started.
+Public Function CompleteNpcDialogue(StateHandle As Number, FlagId As Number, DialogueStarted As Boolean) As Number
+
+    If Not Story.IsFlagDefined(StateHandle, FlagId) Then
+        Return DUNGEON_RESULT_INVALID_STATE
+    End If
+
+    If Not DialogueStarted Then
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    If Story.Flag(StateHandle, FlagId) Then
+        Return DUNGEON_RESULT_ALREADY_COMPLETED
+    End If
+
+    If Not Story.SetFlag(StateHandle, FlagId, True) Then
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    Return DUNGEON_RESULT_OK
+
+End Function
+
+''' Stores exact encounter return state and pending encounter as one transaction.
+Public Function BeginEncounter(StateHandle As Number, ActorId As Number, EncounterId As Number) As Number
+
+    Dim PreviousReturnScene As Number
+    Dim PreviousReturnX As Number
+    Dim PreviousReturnY As Number
+    Dim PreviousReturnFacing As Number
+    Dim PreviousPending As Number
+
+    If (Not RPG.IsValid(StateHandle) Or
+        Not World.IsActorDefined(StateHandle, ActorId) Or
+        EncounterId <= 0 Or
+        (Encounters.PendingEncounter(StateHandle) <> 0 And
+        Encounters.PendingEncounter(StateHandle) <> EncounterId)) Then
+        Return DUNGEON_RESULT_INVALID_STATE
+    End If
+
+    PreviousReturnScene = World.ReturnScene(StateHandle)
+    PreviousReturnX = World.ReturnX(StateHandle)
+    PreviousReturnY = World.ReturnY(StateHandle)
+    PreviousReturnFacing = World.ReturnFacingDirection(StateHandle)
+    PreviousPending = Encounters.PendingEncounter(StateHandle)
+
+    If Not World.SetReturnLocation(StateHandle, World.CurrentScene(StateHandle), World.ActorX(StateHandle, ActorId), World.ActorY(StateHandle, ActorId), World.ActorFacingDirection(StateHandle, ActorId)) Then
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    If Not Encounters.SetPendingEncounter(StateHandle, EncounterId) Then
+
+        If (Not World.SetReturnLocation(StateHandle, PreviousReturnScene, PreviousReturnX, PreviousReturnY, PreviousReturnFacing) Or
+            Not Encounters.SetPendingEncounter(StateHandle, PreviousPending)) Then
+            Return DUNGEON_RESULT_APPLY_FAILED
+        End If
+
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    Return DUNGEON_RESULT_OK
+
+End Function
+
+''' Advances a zone and captures exact return state as one encounter-start transaction.
+Public Function AdvanceEncounter(StateHandle As Number, ActorId As Number, ZoneId As Number, RollValue As Number) As Number
+
+    Dim PreviousStepCount As Number
+    Dim PreviousSeed As Number
+    Dim PreviousPending As Number
+    Dim EncounterId As Number
+    Dim Result As Number
+
+    If (Not RPG.IsValid(StateHandle) Or
+        Not World.IsActorDefined(StateHandle, ActorId) Or
+        ZoneId <= 0) Then
+        Return DUNGEON_RESULT_INVALID_STATE
+    End If
+
+    PreviousStepCount = Encounters.StepCount(StateHandle, ZoneId)
+    PreviousSeed = Encounters.Seed(StateHandle, ZoneId)
+    PreviousPending = Encounters.PendingEncounter(StateHandle)
+    EncounterId = Encounters.Advance(StateHandle, ZoneId, RollValue)
+
+    If EncounterId = 0 Then
+        Return DUNGEON_RESULT_NOT_FOUND
+    End If
+
+    Result = BeginEncounter(StateHandle, ActorId, EncounterId)
+
+    If Result = DUNGEON_RESULT_OK Then
+        Return DUNGEON_RESULT_OK
+    End If
+
+    If (Not Encounters.SetProgress(StateHandle, ZoneId, PreviousStepCount, PreviousSeed) Or
+        Not Encounters.SetPendingEncounter(StateHandle, PreviousPending)) Then
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    Return Result
+
+End Function
+
+''' Restores the exact encounter return before clearing the pending preview.
+Public Function CompleteEncounter(StateHandle As Number, ActorId As Number) As Number
+
+    Dim RollbackSucceeded As Boolean
+    Dim PreviousScene As Number
+    Dim PreviousX As Number
+    Dim PreviousY As Number
+    Dim PreviousFacing As Number
+    Dim PreviousVisible As Boolean
+    Dim PreviousRouteStep As Number
+    Dim PreviousPending As Number
+
+    If (Not RPG.IsValid(StateHandle) Or
+        Not World.IsActorDefined(StateHandle, ActorId) Or
+        Encounters.PendingEncounter(StateHandle) = 0 Or
+        Not SceneIsKnown(World.ReturnScene(StateHandle))) Then
+        Return DUNGEON_RESULT_INVALID_STATE
+    End If
+
+    PreviousScene = World.CurrentScene(StateHandle)
+    PreviousX = World.ActorX(StateHandle, ActorId)
+    PreviousY = World.ActorY(StateHandle, ActorId)
+    PreviousFacing = World.ActorFacingDirection(StateHandle, ActorId)
+    PreviousVisible = World.ActorIsVisible(StateHandle, ActorId)
+    PreviousRouteStep = World.ActorRouteStep(StateHandle, ActorId)
+    PreviousPending = Encounters.PendingEncounter(StateHandle)
+
+    If (Not World.SetCurrentScene(StateHandle, 0) Or
+        Not World.SetActorProgress(StateHandle, ActorId, World.ReturnScene(StateHandle), World.ReturnX(StateHandle), World.ReturnY(StateHandle), World.ReturnFacingDirection(StateHandle), True, PreviousRouteStep) Or
+        Not World.SetCurrentScene(StateHandle, World.ReturnScene(StateHandle))) Then
+
+        RollbackSucceeded = World.SetCurrentScene(StateHandle, 0)
+        RollbackSucceeded = RollbackSucceeded And World.SetActorProgress(StateHandle, ActorId, PreviousScene, PreviousX, PreviousY, PreviousFacing, PreviousVisible, PreviousRouteStep)
+        RollbackSucceeded = RollbackSucceeded And World.SetCurrentScene(StateHandle, PreviousScene)
+
+        Return DUNGEON_RESULT_APPLY_FAILED
+    End If
+
+    Call Encounters.ClearPendingEncounter(StateHandle)
+
+    If Not ValidateDungeonState(StateHandle) Then
+
+        RollbackSucceeded = World.SetCurrentScene(StateHandle, 0)
+        RollbackSucceeded = RollbackSucceeded And World.SetActorProgress(StateHandle, ActorId, PreviousScene, PreviousX, PreviousY, PreviousFacing, PreviousVisible, PreviousRouteStep)
+        RollbackSucceeded = RollbackSucceeded And World.SetCurrentScene(StateHandle, PreviousScene)
+        RollbackSucceeded = RollbackSucceeded And Encounters.SetPendingEncounter(StateHandle, PreviousPending)
+
+        If Not RollbackSucceeded Then
+            Return DUNGEON_RESULT_APPLY_FAILED
+        End If
+
+        Return DUNGEON_RESULT_INVALID_STATE
+
+    End If
+
+    Return DUNGEON_RESULT_OK
+
+End Function
+
+''' Applies a spawn only when it leaves the gallery in a coherent dungeon state.
+Public Function ApplySpawn(StateHandle As Number, ActorId As Number, SpawnId As Number) As Number
+
+    If Not World.ApplySpawn(StateHandle, ActorId, SpawnId) Then
+        Return DUNGEON_RESULT_BLOCKED
+    End If
+
+    If Not ValidateDungeonState(StateHandle) Then
+        Return DUNGEON_RESULT_INVALID_STATE
+    End If
+
+    Return DUNGEON_RESULT_OK
+
+End Function
+
+''' Activates a region transition and reports failure without claiming success.
+Public Function ActivateTransition(StateHandle As Number, TransitionId As Number) As Number
+
+    If Not World.ActivateTransition(StateHandle, TransitionId) Then
+        Return DUNGEON_RESULT_BLOCKED
+    End If
+
+    If Not ValidateDungeonState(StateHandle) Then
+        Return DUNGEON_RESULT_INVALID_STATE
+    End If
+
+    Return DUNGEON_RESULT_OK
+
+End Function
+
+''' Resets all gallery progress atomically and places the party at a known start spawn.
+Public Function StartNewGame(StateHandle As Number, StartScene As Number, SchemaVersion As Number) As Number
+
+    Dim Result As Number
+    Dim SpawnId As Number
+    Dim Succeeded As Boolean
+
+    Result = CaptureSnapshot(StateHandle, SchemaVersion)
+
+    If Result <> DUNGEON_RESULT_OK Then
+        Return Result
+    End If
+
+    If StartScene = SCENE_FP_1 Then
+        SpawnId = 101
+    Else If StartScene = SCENE_TOP_1 Then
+        SpawnId = 201
+    Else
+        Return DUNGEON_RESULT_INVALID_STATE
+    End If
+
+    Succeeded = Characters.ResetProgress(StateHandle)
+    Succeeded = Succeeded And Party.ClearParty(StateHandle)
+    Succeeded = Succeeded And Party.SetGold(StateHandle, 0)
+    Succeeded = Succeeded And Inventory.ClearInventory(StateHandle)
+    Succeeded = Succeeded And World.ResetProgress(StateHandle)
+    Succeeded = Succeeded And Story.Reset(StateHandle)
+    Succeeded = Succeeded And Encounters.ResetProgress(StateHandle)
+    Succeeded = Succeeded And Party.AddCharacter(StateHandle, CHARACTER_HERO)
+    Succeeded = Succeeded And Party.AddCharacter(StateHandle, CHARACTER_COMPANION)
+    Succeeded = Succeeded And Party.SetGold(StateHandle, 60)
+    Succeeded = Succeeded And World.SetControlledActor(StateHandle, ACTOR_HERO)
+    Succeeded = Succeeded And World.ApplySpawn(StateHandle, ACTOR_HERO, SpawnId)
+
+    If Succeeded And ValidateDungeonState(StateHandle) Then
+        Return DUNGEON_RESULT_OK
+    End If
+
+    Succeeded = RestoreSnapshot(StateHandle, SchemaVersion)
+
+    Return DUNGEON_RESULT_APPLY_FAILED
+
+End Function
+
+''' Saves only a coherent gallery state and maps library codes to local workflow results.
+Public Function SaveGame(StateHandle As Number, SaveSlot As Number, SchemaVersion As Number) As Number
+
+    Dim Result As Number
+    Dim ReturnValue As Number
+
+    If Not ValidateDungeonState(StateHandle) Then
+        Return DUNGEON_RESULT_INVALID_STATE
+    End If
+
+    Result = SaveGames.SaveGame(StateHandle, SaveSlot, SchemaVersion)
+    ReturnValue = MapRpgResult(Result)
+
+    Return ReturnValue
+
+End Function
+
+''' Loads transactionally, projects canonical story flags, and rejects invalid gallery semantics.
+Public Function LoadGame(StateHandle As Number, SaveSlot As Number, SchemaVersion As Number) As Number
+
+    Dim Result As Number
+    Dim Restored As Boolean
+
+    Result = CaptureSnapshot(StateHandle, SchemaVersion)
+
+    If Result <> DUNGEON_RESULT_OK Then
+        Return Result
+    End If
+
+    Result = MapRpgResult(SaveGames.LoadGame(StateHandle, SaveSlot, SchemaVersion))
+
+    If Result <> DUNGEON_RESULT_OK Then
+        Return Result
+    End If
+
+    If ReconcileDungeonProjection(StateHandle) And ValidateDungeonState(StateHandle) Then
+        Return DUNGEON_RESULT_OK
+    End If
+
+    Restored = RestoreSnapshot(StateHandle, SchemaVersion)
+
+    Return DUNGEON_RESULT_INVALID_STATE
+
+End Function
+
+End Module

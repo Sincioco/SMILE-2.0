@@ -591,6 +591,8 @@ node --check "%SMILE_ROOT%\artifacts\web\Phase8DungeonStateTestsPackage\game.js"
 if errorlevel 1 exit /b 1
 node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase8DungeonStateTestsPackage" --native-output "%SMILE_ROOT%\artifacts\temp\Phase8DungeonStateTestsPackage.out" --timeout 10000
 if errorlevel 1 exit /b 1
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-phase8-dungeon-workflow-rollback.ps1"
+if errorlevel 1 exit /b 1
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-phase8-dungeon-maps.ps1"
 if errorlevel 1 exit /b 1
 

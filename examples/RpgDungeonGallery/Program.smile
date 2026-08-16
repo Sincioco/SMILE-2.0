@@ -11,11 +11,11 @@ Import Smile.RPG.Inventory As Inventory
 Import Smile.RPG.World As World
 Import Smile.RPG.Story As Story
 Import Smile.RPG.Encounters As Encounters
-Import Smile.RPG.SaveGames As SaveGames
 Import Smile.UI.Core As UI
 Import Smile.UI.Menu As Menu
 Import Smile.UI.MenuNavigator As MenuNavigator
 Import Smile.UI.Dialogue As Dialogue
+Import RpgDungeonGallery.Workflow As DungeonWorkflow
 
 Const MODE_TITLE = 1
 Const MODE_DUNGEON = 2
@@ -142,6 +142,7 @@ Dim TargetActor As Number
 Dim ItemIndex As Number
 Dim Running As Boolean
 Dim OperationSucceeded As Boolean
+Dim InitializationSucceeded As Boolean
 Dim Status As Text
 Dim SceneDefinition As World.SceneDefinition
 Dim SpawnDefinition As World.SpawnDefinition
@@ -160,7 +161,10 @@ Load Image CompanionImage From "Assets\Companion.png"
 Load Image NpcImage From "Assets\Npc.png"
 Load Image EnemyImage From "Assets\MireWarden.png"
 
+InitializationSucceeded = True
 State = RPG.Create()
+
+Call RecordInitialization(State > 0)
 
 Call InitializeProjection()
 Call InitializeAnimations()
@@ -169,12 +173,23 @@ Call InitializeStyles()
 Call InitializeMenus()
 Call InitializeDefinitions()
 Call LoadTopDownMaps()
-Call StartNewGame(SCENE_FP_1)
+
+If InitializationSucceeded Then
+    Result = DungeonWorkflow.StartNewGame(State, SCENE_FP_1, 8)
+
+    Call RecordInitialization(Result = DungeonWorkflow.DUNGEON_RESULT_OK)
+End If
+
+If InitializationSucceeded Then
+    OperationSucceeded = SyncPresentation()
+
+    Call RecordInitialization(OperationSucceeded)
+End If
 
 Mode = MODE_TITLE
 TitleSelection = 1
 Status = "Choose an original dungeon presentation."
-Running = State > 0 And FloorMaps[0] > 0 And FloorMaps[1] > 0 And FloorMaps[2] > 0 And FloorMaps[3] > 0 And Animation.IsValid(WalkAnimations[0]) And Animation.IsValid(WalkAnimations[1]) And Animation.IsValid(WalkAnimations[2]) And Animation.IsValid(WalkAnimations[3])
+Running = InitializationSucceeded
 
 Do
     Get Key Key
@@ -263,6 +278,14 @@ Unload Image Tileset
 
 Call RPG.Destroy(State)
 
+Sub RecordInitialization(Succeeded As Boolean)
+
+    If Not Succeeded Then
+        InitializationSucceeded = False
+    End If
+
+End Sub
+
 End Program
 
 Sub InitializeProjection()
@@ -295,10 +318,12 @@ Sub InitializeAnimations()
     For DirectionIndex = 0 To 3
 
         WalkAnimations[DirectionIndex] = Animation.Create(2, True, 32, 86)
-        OperationSucceeded = Animation.AddFrame(WalkAnimations[DirectionIndex], 0, DirectionIndex * 128, 96, 128)
-        OperationSucceeded = OperationSucceeded And Animation.AddFrame(WalkAnimations[DirectionIndex], 96, DirectionIndex * 128, 96, 128)
-        OperationSucceeded = OperationSucceeded And Animation.AddFrame(WalkAnimations[DirectionIndex], 192, DirectionIndex * 128, 96, 128)
-        OperationSucceeded = OperationSucceeded And Animation.AddFrame(WalkAnimations[DirectionIndex], 96, DirectionIndex * 128, 96, 128)
+
+        Call RecordInitialization(Animation.IsValid(WalkAnimations[DirectionIndex]))
+        Call RecordInitialization(Animation.AddFrame(WalkAnimations[DirectionIndex], 0, DirectionIndex * 128, 96, 128))
+        Call RecordInitialization(Animation.AddFrame(WalkAnimations[DirectionIndex], 96, DirectionIndex * 128, 96, 128))
+        Call RecordInitialization(Animation.AddFrame(WalkAnimations[DirectionIndex], 192, DirectionIndex * 128, 96, 128))
+        Call RecordInitialization(Animation.AddFrame(WalkAnimations[DirectionIndex], 96, DirectionIndex * 128, 96, 128))
     End For
 
 End Sub
@@ -447,14 +472,39 @@ Sub InitializeMenus()
 
     CommandMenu = Menu.Create(MenuStyle, 570, 55, 350, 390, 8)
     ItemIndex = Menu.AddItem(CommandMenu, "Interact", 1, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = Menu.AddItem(CommandMenu, "Character and Party", 2, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = Menu.AddItem(CommandMenu, "Inventory", 3, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = Menu.AddItem(CommandMenu, "Save Slot 1", 4, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = Menu.AddItem(CommandMenu, "Load Slot 1", 5, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = Menu.AddItem(CommandMenu, "Escape Dungeon", 6, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = Menu.AddItem(CommandMenu, "Resume", 7, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     CommandNavigator = MenuNavigator.Create(CommandMenu, NavigatorStyle)
     DialogueHandle = Dialogue.Create(DialogueStyle, 35, 340, 890, 165)
+
+    Call RecordInitialization(CommandMenu > 0)
+    Call RecordInitialization(CommandNavigator > 0)
+    Call RecordInitialization(DialogueHandle > 0)
 
 End Sub
 
@@ -471,7 +521,8 @@ Sub InitializeDefinitions()
     HeroDefinition.Resistance = 11
     HeroDefinition.Agility = 15
     HeroDefinition.Luck = 9
-    OperationSucceeded = Characters.DefineCharacter(State, HeroDefinition)
+
+    Call RecordInitialization(Characters.DefineCharacter(State, HeroDefinition))
 
     CompanionDefinition = HeroDefinition
     CompanionDefinition.Id = CHARACTER_COMPANION
@@ -480,7 +531,8 @@ Sub InitializeDefinitions()
     CompanionDefinition.StartingMaximumHealth = 105
     CompanionDefinition.Strength = 11
     CompanionDefinition.Magic = 16
-    OperationSucceeded = OperationSucceeded And Characters.DefineCharacter(State, CompanionDefinition)
+
+    Call RecordInitialization(Characters.DefineCharacter(State, CompanionDefinition))
 
     ItemDefinition.Id = ITEM_VAULT_KEY
     ItemDefinition.Name = "Prism Key"
@@ -489,7 +541,8 @@ Sub InitializeDefinitions()
     ItemDefinition.BasePrice = 0
     ItemDefinition.CanSell = False
     ItemDefinition.EffectId = 0
-    OperationSucceeded = OperationSucceeded And Inventory.DefineItem(State, ItemDefinition)
+
+    Call RecordInitialization(Inventory.DefineItem(State, ItemDefinition))
 
     ItemDefinition.Id = ITEM_SUN_TONIC
     ItemDefinition.Name = "Sun Tonic"
@@ -498,7 +551,8 @@ Sub InitializeDefinitions()
     ItemDefinition.BasePrice = 40
     ItemDefinition.CanSell = True
     ItemDefinition.EffectId = 1
-    OperationSucceeded = OperationSucceeded And Inventory.DefineItem(State, ItemDefinition)
+
+    Call RecordInitialization(Inventory.DefineItem(State, ItemDefinition))
 
     Call DefineStoryState()
     Call DefineWorldState()
@@ -511,10 +565,10 @@ Sub DefineStoryState()
     Dim FlagId As Number
 
     For FlagId = FLAG_FP_DOOR To FLAG_TOP_NPC
-        OperationSucceeded = OperationSucceeded And Story.DefineFlag(State, FlagId)
+        Call RecordInitialization(Story.DefineFlag(State, FlagId))
     End For
 
-    OperationSucceeded = OperationSucceeded And Story.DefineValue(State, VALUE_REPEAT_TRAPS)
+    Call RecordInitialization(Story.DefineValue(State, VALUE_REPEAT_TRAPS))
 
 End Sub
 
@@ -533,7 +587,7 @@ Sub DefineWorldState()
     Call DefineSpawn(103, SCENE_FP_3, 1, 7, World.WORLD_FACING_RIGHT)
     Call DefineSpawn(111, SCENE_FP_1, 7, 1, World.WORLD_FACING_LEFT)
     Call DefineSpawn(112, SCENE_FP_2, 7, 1, World.WORLD_FACING_LEFT)
-    Call DefineSpawn(113, SCENE_FP_3, 6, 6, World.WORLD_FACING_UP)
+    Call DefineSpawn(113, SCENE_FP_3, 7, 6, World.WORLD_FACING_UP)
     Call DefineSpawn(114, SCENE_FP_1, 1, 1, World.WORLD_FACING_DOWN)
     Call DefineSpawn(201, SCENE_TOP_1, 2, 8, World.WORLD_FACING_RIGHT)
     Call DefineSpawn(202, SCENE_TOP_2, 10, 8, World.WORLD_FACING_LEFT)
@@ -581,25 +635,28 @@ Sub DefineEncounterState()
     ZoneDefinition.RegionId = REGION_TOP_1_ENCOUNTER
     ZoneDefinition.StepsRequired = 2
     ZoneDefinition.InitialSeed = 31
-    OperationSucceeded = OperationSucceeded And Encounters.DefineZone(State, ZoneDefinition)
-    OperationSucceeded = OperationSucceeded And Encounters.AddEntry(State, 1, 500, 3)
-    OperationSucceeded = OperationSucceeded And Encounters.AddEntry(State, 1, 501, 1)
+
+    Call RecordInitialization(Encounters.DefineZone(State, ZoneDefinition))
+    Call RecordInitialization(Encounters.AddEntry(State, 1, 500, 3))
+    Call RecordInitialization(Encounters.AddEntry(State, 1, 501, 1))
 
     ZoneDefinition.Id = 2
     ZoneDefinition.SceneId = SCENE_TOP_4
     ZoneDefinition.RegionId = REGION_TOP_4_ENCOUNTER
     ZoneDefinition.StepsRequired = 2
     ZoneDefinition.InitialSeed = 47
-    OperationSucceeded = OperationSucceeded And Encounters.DefineZone(State, ZoneDefinition)
-    OperationSucceeded = OperationSucceeded And Encounters.AddEntry(State, 2, 502, 1)
+
+    Call RecordInitialization(Encounters.DefineZone(State, ZoneDefinition))
+    Call RecordInitialization(Encounters.AddEntry(State, 2, 502, 1))
 
     ZoneDefinition.Id = 3
     ZoneDefinition.SceneId = SCENE_FP_3
     ZoneDefinition.RegionId = REGION_FP_3_ENCOUNTER
     ZoneDefinition.StepsRequired = 2
     ZoneDefinition.InitialSeed = 59
-    OperationSucceeded = OperationSucceeded And Encounters.DefineZone(State, ZoneDefinition)
-    OperationSucceeded = OperationSucceeded And Encounters.AddEntry(State, 3, 503, 1)
+
+    Call RecordInitialization(Encounters.DefineZone(State, ZoneDefinition))
+    Call RecordInitialization(Encounters.AddEntry(State, 3, 503, 1))
 
 End Sub
 
@@ -609,7 +666,8 @@ Sub DefineScene(Id As Number, DefaultSpawnId As Number, CameraMode As Number)
     SceneDefinition.MapId = Id
     SceneDefinition.DefaultSpawnId = DefaultSpawnId
     SceneDefinition.CameraMode = CameraMode
-    OperationSucceeded = OperationSucceeded And World.DefineScene(State, SceneDefinition)
+
+    Call RecordInitialization(World.DefineScene(State, SceneDefinition))
 
 End Sub
 
@@ -620,7 +678,8 @@ Sub DefineSpawn(Id As Number, SceneId As Number, X As Number, Y As Number, Facin
     SpawnDefinition.CellX = X
     SpawnDefinition.CellY = Y
     SpawnDefinition.Facing = Facing
-    OperationSucceeded = OperationSucceeded And World.DefineSpawn(State, SpawnDefinition)
+
+    Call RecordInitialization(World.DefineSpawn(State, SpawnDefinition))
 
 End Sub
 
@@ -631,7 +690,8 @@ Sub DefineTransition(Id As Number, SourceScene As Number, Region As Number, Dest
     TransitionDefinition.SourceRegionId = Region
     TransitionDefinition.DestinationSceneId = DestinationScene
     TransitionDefinition.DestinationSpawnId = DestinationSpawn
-    OperationSucceeded = OperationSucceeded And World.DefineTransition(State, TransitionDefinition)
+
+    Call RecordInitialization(World.DefineTransition(State, TransitionDefinition))
 
 End Sub
 
@@ -647,7 +707,8 @@ Sub DefineActor(Id As Number, SceneId As Number, X As Number, Y As Number, Facin
     ActorDefinition.Persistent = Persistent
     ActorDefinition.AnimationSetId = 0
     ActorDefinition.InteractionId = Interaction
-    OperationSucceeded = OperationSucceeded And World.DefineActor(State, ActorDefinition)
+
+    Call RecordInitialization(World.DefineActor(State, ActorDefinition))
 
 End Sub
 
@@ -666,6 +727,7 @@ Sub LoadTopDownMaps()
     FloorMaps[3] = TileMap.LoadMap(Path)
 
     For Index = 0 To 3
+        Call RecordInitialization(FloorMaps[Index] > 0)
         Call DefineTiles(FloorMaps[Index])
     End For
 
@@ -673,43 +735,34 @@ End Sub
 
 Sub DefineTiles(MapHandle As Number)
 
-    OperationSucceeded = TileMap.DefineTile(MapHandle, 1, 0, 0, 128, 128, 100)
-    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 2, 128, 0, 128, 128, 100)
-    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 3, 256, 0, 128, 128, 100)
-    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 4, 384, 0, 128, 128, 100)
-    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 5, 512, 0, 128, 128, 100)
-    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 6, 0, 128, 128, 128, 100)
-    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 7, 128, 128, 128, 128, 100)
-    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 8, 256, 128, 128, 128, 100)
-    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 9, 384, 128, 128, 128, 100)
-    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 10, 512, 128, 128, 128, 100)
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 1, 0, 0, 128, 128, 100))
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 2, 128, 0, 128, 128, 100))
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 3, 256, 0, 128, 128, 100))
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 4, 384, 0, 128, 128, 100))
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 5, 512, 0, 128, 128, 100))
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 6, 0, 128, 128, 128, 100))
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 7, 128, 128, 128, 128, 100))
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 8, 256, 128, 128, 128, 100))
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 9, 384, 128, 128, 128, 100))
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 10, 512, 128, 128, 128, 100))
 
 End Sub
 
-Sub StartNewGame(StartScene As Number)
+Function StartNewGame(StartScene As Number) As Number
 
-    OperationSucceeded = Characters.ResetProgress(State)
-    OperationSucceeded = OperationSucceeded And Party.ClearParty(State)
-    OperationSucceeded = OperationSucceeded And Inventory.ClearInventory(State)
-    OperationSucceeded = OperationSucceeded And World.ResetProgress(State)
-    OperationSucceeded = OperationSucceeded And Story.Reset(State)
-    OperationSucceeded = OperationSucceeded And Encounters.ResetProgress(State)
-    OperationSucceeded = OperationSucceeded And Party.AddCharacter(State, CHARACTER_HERO)
-    OperationSucceeded = OperationSucceeded And Party.AddCharacter(State, CHARACTER_COMPANION)
-    OperationSucceeded = OperationSucceeded And Party.SetGold(State, 60)
-    OperationSucceeded = OperationSucceeded And World.SetControlledActor(State, ACTOR_HERO)
+    Dim ReturnValue As Number
 
-    If StartScene = SCENE_FP_1 Then
-        OperationSucceeded = OperationSucceeded And World.ApplySpawn(State, ACTOR_HERO, 101)
-    Else
-        OperationSucceeded = OperationSucceeded And World.ApplySpawn(State, ACTOR_HERO, 201)
+    ReturnValue = DungeonWorkflow.StartNewGame(State, StartScene, 8)
+
+    If ReturnValue = DungeonWorkflow.DUNGEON_RESULT_OK And Not SyncPresentation() Then
+        ReturnValue = DungeonWorkflow.DUNGEON_RESULT_APPLY_FAILED
     End If
 
-    Call SyncPresentation()
+    Return ReturnValue
 
-End Sub
+End Function
 
-Sub SyncPresentation()
+Function SyncPresentation() As Boolean
 
     Dim SceneId As Number
 
@@ -720,13 +773,22 @@ Sub SyncPresentation()
     If Not IsFirstPersonScene(SceneId) Then
 
         CurrentMap = MapForScene(SceneId)
-        OperationSucceeded = Camera2D.Configure(Camera, 960, 540, TileMap.Width(CurrentMap) * 64, TileMap.Height(CurrentMap) * 64)
+
+        If CurrentMap <= 0 Then
+            Return False
+        End If
+
+        If Not Camera2D.Configure(Camera, 960, 540, TileMap.Width(CurrentMap) * 64, TileMap.Height(CurrentMap) * 64) Then
+            Return False
+        End If
 
         Call Camera2D.Follow(Camera, GameCore.VisualX(PlayerMover, 64) + 32, GameCore.VisualY(PlayerMover, 64) + 32)
 
     End If
 
-End Sub
+    Return True
+
+End Function
 
 Function IsFirstPersonScene(SceneId As Number) As Boolean
 
@@ -769,28 +831,45 @@ Sub HandleTitle(PressedKey As Number)
         Select Case TitleSelection
             Case 1
 
-                Call StartNewGame(SCENE_FP_1)
+                Result = StartNewGame(SCENE_FP_1)
 
-                Mode = MODE_DUNGEON
-                Status = "Prism Vault: cardinal movement, doors, traps, stairs, chute, warp, and hidden passage."
+                If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
+                    Mode = MODE_DUNGEON
+                    Status = "Prism Vault: cardinal movement, doors, traps, stairs, chute, warp, and hidden passage."
+                Else
+
+                    Call SetWorkflowFailure(Result)
+                End If
+
             Case 2
 
-                Call StartNewGame(SCENE_TOP_1)
+                Result = StartNewGame(SCENE_TOP_1)
 
-                Mode = MODE_DUNGEON
-                Status = "Sunken Archive: four connected top-down floors."
-            Case 3
-                Result = SaveGames.LoadGame(State, 1, 8)
-
-                If Result = RPG.RPG_RESULT_OK Then
-
-                    Call SyncPresentation()
-
+                If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
                     Mode = MODE_DUNGEON
-                    Status = "Slot 1 restored the exact dungeon floor, cell, facing, actors, story, and inventory."
+                    Status = "Sunken Archive: four connected top-down floors."
+                Else
+
+                    Call SetWorkflowFailure(Result)
+                End If
+
+            Case 3
+                Result = DungeonWorkflow.LoadGame(State, 1, 8)
+
+                If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
+
+                    OperationSucceeded = SyncPresentation()
+
+                    If OperationSucceeded Then
+                        Mode = MODE_DUNGEON
+                        Status = "Slot 1 restored the exact dungeon floor, cell, facing, actors, story, and inventory."
+                    Else
+                        Status = "The save loaded, but its presentation could not be synchronized."
+                    End If
 
                 Else
-                    Status = "No valid Phase 8 save exists in slot 1."
+
+                    Call SetWorkflowFailure(Result)
 
                 End If
 
@@ -803,6 +882,10 @@ Sub HandleTitle(PressedKey As Number)
 End Sub
 
 Sub HandleDungeon(PressedKey As Number)
+
+    If Not DungeonWorkflow.FieldCommandsAllowed(PlayerMover.Moving) Then
+        Return
+    End If
 
     If PressedKey = KEY_ESCAPE Then
 
@@ -845,7 +928,13 @@ Sub HandleFirstPersonMovement(PressedKey As Number)
         End If
 
         OperationSucceeded = World.SetActorFacing(State, ACTOR_HERO, Facing)
-        Status = "Turned left. Turning alone never triggers a trap."
+
+        If OperationSucceeded Then
+            Status = "Turned left. Turning alone never triggers a trap."
+        Else
+            Status = "The facing change was rejected; the actor state is unchanged."
+        End If
+
         Return
 
     Else If PressedKey = KEY_RIGHT Or PressedKey = KEY_D Then
@@ -857,7 +946,13 @@ Sub HandleFirstPersonMovement(PressedKey As Number)
         End If
 
         OperationSucceeded = World.SetActorFacing(State, ACTOR_HERO, Facing)
-        Status = "Turned right."
+
+        If OperationSucceeded Then
+            Status = "Turned right."
+        Else
+            Status = "The facing change was rejected; the actor state is unchanged."
+        End If
+
         Return
 
     End If
@@ -891,6 +986,11 @@ Sub HandleFirstPersonMovement(PressedKey As Number)
 
     If OperationSucceeded Then
         Call ProcessArrival()
+    Else
+
+        Call World.CancelReservedMove(State, ACTOR_HERO)
+
+        Status = "The reserved vault move could not be committed."
     End If
 
 End Sub
@@ -928,6 +1028,12 @@ Sub BeginTopDownMove(MoveDirection As Number)
     DestinationX = PlayerMover.CellX + GameCore.DirectionX(MoveDirection)
     DestinationY = PlayerMover.CellY + GameCore.DirectionY(MoveDirection)
     OperationSucceeded = World.SetActorFacing(State, ACTOR_HERO, MoveDirection)
+
+    If Not OperationSucceeded Then
+        Status = "The facing change was rejected; movement did not begin."
+        Return
+    End If
+
     PlayerMover.Facing = MoveDirection
 
     If TileMap.IsSolid(CurrentMap, DestinationX, DestinationY) Then
@@ -942,6 +1048,8 @@ Sub BeginTopDownMove(MoveDirection As Number)
 
     If Not GameCore.BeginMove(PlayerMover, MoveDirection, 6) Then
         Call World.CancelReservedMove(State, ACTOR_HERO)
+
+        Status = "The visual move could not begin; the destination reservation was cancelled."
     End If
 
 End Sub
@@ -957,7 +1065,16 @@ Sub UpdateTopDownMovement()
         OperationSucceeded = World.CompleteReservedMove(State, ACTOR_HERO, PlayerMover.Facing)
 
         If OperationSucceeded Then
+
             Call ProcessArrival()
+
+        Else
+
+            Call World.CancelReservedMove(State, ACTOR_HERO)
+
+            OperationSucceeded = SyncPresentation()
+            Status = "The completed visual move could not be committed; presentation returned to the authoritative cell."
+
         End If
 
     End If
@@ -1031,11 +1148,7 @@ Sub ProcessFirstPersonArrival()
         X = 1 And
         Y = 7) Then
 
-        OperationSucceeded = World.ApplySpawn(State, ACTOR_HERO, 201)
-
-        Call SyncPresentation()
-
-        Status = "The party exited the Prism Vault into the top-down archive entrance."
+        Call ApplyDungeonSpawn(201, "The party exited the Prism Vault into the top-down archive entrance.")
 
     Else If (SceneId = SCENE_FP_1 And
         X = 5 And
@@ -1053,12 +1166,16 @@ Sub ProcessFirstPersonArrival()
         X = 5 And
         Y = 5) Then
 
-        Result = Encounters.Advance(State, 3, Encounters.Seed(State, 3))
+        Result = DungeonWorkflow.AdvanceEncounter(State, ACTOR_HERO, 3, Encounters.Seed(State, 3))
 
-        If Result <> 0 Then
-            Call BeginEncounterPreview(Result)
-        Else
+        If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
+            Mode = MODE_ENCOUNTER
+            Status = "Encounter Preview only. Phase 9 battle resolution is intentionally absent."
+        Else If Result = DungeonWorkflow.DUNGEON_RESULT_NOT_FOUND Then
             Status = "The first-person encounter zone advanced without triggering."
+        Else
+
+            Call SetWorkflowFailure(Result)
         End If
 
     Else
@@ -1076,16 +1193,26 @@ Sub ProcessTopDownArrival()
 
     If TransitionId <> 0 Then
 
-        OperationSucceeded = World.ActivateTransition(State, TransitionId)
+        Result = DungeonWorkflow.ActivateTransition(State, TransitionId)
 
-        Call SyncPresentation()
+        If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
 
-        If RegionId = REGION_TOP_2_CHUTE Then
-            Status = "The one-way chute dropped the party from Archive B2 to B4."
-        Else If RegionId = REGION_TOP_3_WARP Then
-            Status = "The archive warp returned the party to B1."
+            OperationSucceeded = SyncPresentation()
+
+            If Not OperationSucceeded Then
+                Status = "The transition committed, but presentation synchronization failed."
+            Else If RegionId = REGION_TOP_2_CHUTE Then
+                Status = "The one-way chute dropped the party from Archive B2 to B4."
+            Else If RegionId = REGION_TOP_3_WARP Then
+                Status = "The archive warp returned the party to B1."
+            Else
+                Status = "A stable stair transition changed the authoritative floor and spawn."
+            End If
+
         Else
-            Status = "A stable stair transition changed the authoritative floor and spawn."
+
+            Call SetWorkflowFailure(Result)
+
         End If
 
         Return
@@ -1107,22 +1234,30 @@ Sub ProcessTopDownArrival()
 
     Else If RegionId = REGION_TOP_1_ENCOUNTER Then
 
-        Result = Encounters.Advance(State, 1, Encounters.Seed(State, 1))
+        Result = DungeonWorkflow.AdvanceEncounter(State, ACTOR_HERO, 1, Encounters.Seed(State, 1))
 
-        If Result <> 0 Then
-            Call BeginEncounterPreview(Result)
-        Else
+        If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
+            Mode = MODE_ENCOUNTER
+            Status = "Encounter Preview only. Phase 9 battle resolution is intentionally absent."
+        Else If Result = DungeonWorkflow.DUNGEON_RESULT_NOT_FOUND Then
             Status = "The encounter zone advanced without triggering."
+        Else
+
+            Call SetWorkflowFailure(Result)
         End If
 
     Else If RegionId = REGION_TOP_4_ENCOUNTER Then
 
-        Result = Encounters.Advance(State, 2, Encounters.Seed(State, 2))
+        Result = DungeonWorkflow.AdvanceEncounter(State, ACTOR_HERO, 2, Encounters.Seed(State, 2))
 
-        If Result <> 0 Then
-            Call BeginEncounterPreview(Result)
-        Else
+        If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
+            Mode = MODE_ENCOUNTER
+            Status = "Encounter Preview only. Phase 9 battle resolution is intentionally absent."
+        Else If Result = DungeonWorkflow.DUNGEON_RESULT_NOT_FOUND Then
             Status = "The deep encounter zone advanced without triggering."
+        Else
+
+            Call SetWorkflowFailure(Result)
         End If
 
     Else
@@ -1134,11 +1269,23 @@ End Sub
 
 Sub ApplyDungeonSpawn(SpawnId As Number, Message As Text)
 
-    OperationSucceeded = World.ApplySpawn(State, ACTOR_HERO, SpawnId)
+    Result = DungeonWorkflow.ApplySpawn(State, ACTOR_HERO, SpawnId)
 
-    Call SyncPresentation()
+    If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
 
-    Status = Message
+        OperationSucceeded = SyncPresentation()
+
+        If OperationSucceeded Then
+            Status = Message
+        Else
+            Status = "The spawn committed, but presentation synchronization failed."
+        End If
+
+    Else
+
+        Call SetWorkflowFailure(Result)
+
+    End If
 
 End Sub
 
@@ -1149,9 +1296,16 @@ Sub ApplyOneShotTrap(FlagId As Number, Damage As Number, SpentMessage As Text, A
         Status = SpentMessage
 
     Else
-        OperationSucceeded = Characters.Damage(State, CHARACTER_HERO, Damage)
-        OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FlagId, True)
-        Status = ActiveMessage
+        Result = DungeonWorkflow.ApplyOneShotTrap(State, CHARACTER_HERO, FlagId, Damage)
+
+        If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
+            Status = ActiveMessage
+        Else If Result = DungeonWorkflow.DUNGEON_RESULT_ALREADY_COMPLETED Then
+            Status = SpentMessage
+        Else
+
+            Call SetWorkflowFailure(Result)
+        End If
 
     End If
 
@@ -1159,22 +1313,20 @@ End Sub
 
 Sub ApplyRepeatTrap(Message As Text)
 
-    OperationSucceeded = Characters.Damage(State, CHARACTER_HERO, 3)
-    OperationSucceeded = OperationSucceeded And Story.SetValue(State, VALUE_REPEAT_TRAPS, Story.Value(State, VALUE_REPEAT_TRAPS) + 1)
-    Status = Message
+    Result = DungeonWorkflow.ApplyRepeatTrap(State, CHARACTER_HERO, VALUE_REPEAT_TRAPS, 3)
 
-End Sub
+    If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
+        Status = Message
+    Else
 
-Sub BeginEncounterPreview(EncounterId As Number)
-
-    OperationSucceeded = World.SetReturnLocation(State, World.CurrentScene(State), World.ActorX(State, ACTOR_HERO), World.ActorY(State, ACTOR_HERO), World.ActorFacingDirection(State, ACTOR_HERO))
-    OperationSucceeded = OperationSucceeded And Encounters.SetPendingEncounter(State, EncounterId)
-    Mode = MODE_ENCOUNTER
-    Status = "Encounter Preview only. Phase 9 battle resolution is intentionally absent."
+        Call SetWorkflowFailure(Result)
+    End If
 
 End Sub
 
 Sub InteractAhead()
+
+    Dim FlagId As Number
 
     TargetActor = World.FrontActor(State)
 
@@ -1185,15 +1337,24 @@ Sub InteractAhead()
 
     Select Case World.ActorInteraction(State, TargetActor)
         Case INTERACTION_DOOR
-            OperationSucceeded = World.SetActorVisible(State, TargetActor, False)
 
             If TargetActor = ACTOR_FP_DOOR Then
-                OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FLAG_FP_DOOR, True)
+                FlagId = FLAG_FP_DOOR
             Else
-                OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FLAG_TOP_DOOR, True)
+                FlagId = FLAG_TOP_DOOR
             End If
 
-            Status = "The ordinary door opened; its traversable map cell is now exposed."
+            Result = DungeonWorkflow.CompleteBarrier(State, TargetActor, FlagId)
+
+            If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
+                Status = "The ordinary door opened; its traversable map cell is now exposed."
+            Else If Result = DungeonWorkflow.DUNGEON_RESULT_ALREADY_COMPLETED Then
+                Status = "The ordinary door is already open."
+            Else
+
+                Call SetWorkflowFailure(Result)
+            End If
+
         Case INTERACTION_LOCKED_DOOR
 
             Call OpenLockedDoor(TargetActor)
@@ -1224,20 +1385,26 @@ End Sub
 
 Sub OpenLockedDoor(ActorId As Number)
 
-    If Inventory.Quantity(State, ITEM_VAULT_KEY) <= 0 Then
-        Status = "The locked door needs the Prism Key from another floor."
-        Return
-    End If
-
-    OperationSucceeded = World.SetActorVisible(State, ActorId, False)
+    Dim FlagId As Number
 
     If ActorId = ACTOR_FP_LOCKED_DOOR Then
-        OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FLAG_FP_LOCKED_DOOR, True)
+        FlagId = FLAG_FP_LOCKED_DOOR
     Else
-        OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FLAG_TOP_LOCKED_DOOR, True)
+        FlagId = FLAG_TOP_LOCKED_DOOR
     End If
 
-    Status = "The Prism Key opened the locked door without being consumed."
+    Result = DungeonWorkflow.CompleteLockedBarrier(State, ActorId, FlagId, ITEM_VAULT_KEY)
+
+    If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
+        Status = "The Prism Key opened the locked door without being consumed."
+    Else If Result = DungeonWorkflow.DUNGEON_RESULT_ALREADY_COMPLETED Then
+        Status = "The locked door is already open."
+    Else If Result = DungeonWorkflow.DUNGEON_RESULT_MISSING_REQUIREMENT Then
+        Status = "The locked door needs the Prism Key from another floor."
+    Else
+
+        Call SetWorkflowFailure(Result)
+    End If
 
 End Sub
 
@@ -1251,96 +1418,82 @@ Sub OpenGoldChest(ActorId As Number)
         FlagId = FLAG_TOP_CHEST_GOLD
     End If
 
-    If Story.Flag(State, FlagId) Then
+    Result = DungeonWorkflow.CompleteGoldChest(State, ActorId, FlagId, 50)
+
+    If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
+        Status = "The chest granted 50 Gold exactly once."
+    Else If Result = DungeonWorkflow.DUNGEON_RESULT_ALREADY_COMPLETED Then
         Status = "The chest is already empty."
-        Return
-    End If
-
-    If Not Party.AddGold(State, 50) Then
+    Else If Result = DungeonWorkflow.DUNGEON_RESULT_CAPACITY Then
         Status = "Gold capacity rejected the reward; the chest remains closed."
-        Return
-    End If
+    Else
 
-    OperationSucceeded = Story.SetFlag(State, FlagId, True)
-    OperationSucceeded = OperationSucceeded And World.SetActorVisible(State, ActorId, False)
-    Status = "The chest granted 50 Gold exactly once."
+        Call SetWorkflowFailure(Result)
+    End If
 
 End Sub
 
 Sub OpenKeyChest(ActorId As Number)
 
-    If Not Inventory.CanAddItem(State, ITEM_VAULT_KEY, 1) Then
-        Status = "Inventory preflight rejected the Prism Key; the chest remains closed."
-        Return
-    End If
+    Result = DungeonWorkflow.CompleteItemChest(State, ActorId, FLAG_FP_CHEST_KEY, ITEM_VAULT_KEY)
 
-    OperationSucceeded = Inventory.AddItem(State, ITEM_VAULT_KEY, 1)
-    OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FLAG_FP_CHEST_KEY, True)
-    OperationSucceeded = OperationSucceeded And World.SetActorVisible(State, ActorId, False)
-    Status = "The chest granted the persistent Prism Key exactly once."
+    If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
+        Status = "The chest granted the persistent Prism Key exactly once."
+    Else If Result = DungeonWorkflow.DUNGEON_RESULT_ALREADY_COMPLETED Then
+        Status = "The chest is already empty."
+    Else If Result = DungeonWorkflow.DUNGEON_RESULT_CAPACITY Then
+        Status = "Inventory preflight rejected the Prism Key; the chest remains closed."
+    Else
+
+        Call SetWorkflowFailure(Result)
+    End If
 
 End Sub
 
 Sub OpenItemChest(ActorId As Number)
 
-    Dim RequiredNewSlots As Number
+    Result = DungeonWorkflow.CompleteMultiItemChest(State, ActorId, FLAG_TOP_CHEST_ITEM, ITEM_VAULT_KEY, ITEM_SUN_TONIC)
 
-    RequiredNewSlots = 0
-
-    If Inventory.Quantity(State, ITEM_VAULT_KEY) = 0 Then
-        RequiredNewSlots = RequiredNewSlots + 1
-    End If
-
-    If Inventory.Quantity(State, ITEM_SUN_TONIC) = 0 Then
-        RequiredNewSlots = RequiredNewSlots + 1
-    End If
-
-    If Inventory.EntryCount(State) + RequiredNewSlots > RPG.RPG_MAX_INVENTORY_ENTRIES Then
+    If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
+        Status = "The chest granted the Prism Key and one Sun Tonic exactly once."
+    Else If Result = DungeonWorkflow.DUNGEON_RESULT_ALREADY_COMPLETED Then
+        Status = "The chest is already empty."
+    Else If Result = DungeonWorkflow.DUNGEON_RESULT_CAPACITY Then
         Status = "Inventory needs room for both rewards; the chest remains closed."
-        Return
+    Else
+
+        Call SetWorkflowFailure(Result)
     End If
-
-    If (Inventory.Quantity(State, ITEM_VAULT_KEY) = 0 And
-        Not Inventory.CanAddItem(State, ITEM_VAULT_KEY, 1)) Then
-        Status = "Inventory preflight rejected the Prism Key; the chest remains closed."
-        Return
-    End If
-
-    If Not Inventory.CanAddItem(State, ITEM_SUN_TONIC, 1) Then
-        Status = "Inventory preflight rejected the Sun Tonic; the chest remains closed."
-        Return
-    End If
-
-    OperationSucceeded = True
-
-    If Inventory.Quantity(State, ITEM_VAULT_KEY) = 0 Then
-        OperationSucceeded = Inventory.AddItem(State, ITEM_VAULT_KEY, 1)
-    End If
-
-    OperationSucceeded = OperationSucceeded And Inventory.AddItem(State, ITEM_SUN_TONIC, 1)
-    OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FLAG_TOP_CHEST_ITEM, True)
-    OperationSucceeded = OperationSucceeded And World.SetActorVisible(State, ActorId, False)
-    Status = "The chest granted the Prism Key and one Sun Tonic exactly once."
 
 End Sub
 
 Sub RevealHiddenPassage(ActorId As Number)
 
-    OperationSucceeded = World.SetActorVisible(State, ActorId, False)
+    Dim FlagId As Number
 
     If ActorId = ACTOR_FP_HIDDEN Then
-        OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FLAG_FP_HIDDEN, True)
+        FlagId = FLAG_FP_HIDDEN
     Else
-        OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FLAG_TOP_HIDDEN, True)
+        FlagId = FLAG_TOP_HIDDEN
     End If
 
-    Status = "The suspicious wall receded and revealed a persistent passage."
+    Result = DungeonWorkflow.CompleteBarrier(State, ActorId, FlagId)
+
+    If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
+        Status = "The suspicious wall receded and revealed a persistent passage."
+    Else If Result = DungeonWorkflow.DUNGEON_RESULT_ALREADY_COMPLETED Then
+        Status = "The hidden passage is already revealed."
+    Else
+
+        Call SetWorkflowFailure(Result)
+    End If
 
 End Sub
 
 Sub OpenNpcDialogue(ActorId As Number)
 
     Dim FlagId As Number
+    Dim WasSpoken As Boolean
 
     FlagId = FLAG_FP_NPC
 
@@ -1348,9 +1501,13 @@ Sub OpenNpcDialogue(ActorId As Number)
         FlagId = FLAG_TOP_NPC
     End If
 
+    WasSpoken = Story.Flag(State, FlagId)
+
     Call Dialogue.ClearPages(DialogueHandle)
 
-    If Story.Flag(State, FlagId) Then
+    OperationSucceeded = True
+
+    If WasSpoken Then
 
         If Inventory.Quantity(State, ITEM_VAULT_KEY) > 0 Then
             OperationSucceeded = Dialogue.AddPage(DialogueHandle, "You returned with the Prism Key. The locked branch can now be opened without consuming it.")
@@ -1363,12 +1520,23 @@ Sub OpenNpcDialogue(ActorId As Number)
     Else
         OperationSucceeded = Dialogue.AddPage(DialogueHandle, "The Prism Key opens either locked demonstration door. Search a chest before forcing the deeper route.")
         OperationSucceeded = OperationSucceeded And Dialogue.AddPage(DialogueHandle, "Stairs are reciprocal. Chutes are one-way. The glowing seal is a warp, and suspicious walls may hide passages.")
-        OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FlagId, True)
 
     End If
 
-    OperationSucceeded = OperationSucceeded And Dialogue.Start(DialogueHandle, Timer())
-    Mode = MODE_DIALOGUE
+    If OperationSucceeded Then
+        OperationSucceeded = Dialogue.Start(DialogueHandle, Timer())
+    End If
+
+    Result = DungeonWorkflow.CompleteNpcDialogue(State, FlagId, OperationSucceeded)
+
+    If (Result = DungeonWorkflow.DUNGEON_RESULT_OK Or
+        Result = DungeonWorkflow.DUNGEON_RESULT_ALREADY_COMPLETED) Then
+        Mode = MODE_DIALOGUE
+    Else
+
+        Call Dialogue.ClearPages(DialogueHandle)
+        Call SetWorkflowFailure(Result)
+    End If
 
 End Sub
 
@@ -1393,18 +1561,33 @@ Sub HandleMenu(PressedKey As Number)
                 InfoPage = 2
                 Mode = MODE_INFO
             Case 4
-                Result = SaveGames.SaveGame(State, 1, 8)
-                Status = "Saved slot 1 inside the current dungeon floor."
+                Result = DungeonWorkflow.SaveGame(State, 1, 8)
+
+                If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
+                    Status = "Saved slot 1 inside the current dungeon floor."
+                Else
+
+                    Call SetWorkflowFailure(Result)
+                End If
+
                 Mode = MODE_DUNGEON
             Case 5
-                Result = SaveGames.LoadGame(State, 1, 8)
+                Result = DungeonWorkflow.LoadGame(State, 1, 8)
 
-                If Result = RPG.RPG_RESULT_OK Then
-                    Call SyncPresentation()
+                If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
 
-                    Status = "Loaded slot 1 transactionally inside the dungeon."
+                    OperationSucceeded = SyncPresentation()
+
+                    If OperationSucceeded Then
+                        Status = "Loaded slot 1 transactionally inside the dungeon."
+                    Else
+                        Status = "The save loaded, but its presentation could not be synchronized."
+                    End If
+
                 Else
-                    Status = "Slot 1 is missing or does not match schema 8."
+
+                    Call SetWorkflowFailure(Result)
+
                 End If
 
                 Mode = MODE_DUNGEON
@@ -1426,17 +1609,32 @@ End Sub
 
 Sub EscapeDungeon()
 
-    If IsFirstPersonScene(World.CurrentScene(State)) Then
-        OperationSucceeded = World.ApplySpawn(State, ACTOR_HERO, 201)
-        Status = "Escaped from the first-person interior to the top-down archive entrance."
+    Dim EscapedFromFirstPerson As Boolean
+
+    EscapedFromFirstPerson = IsFirstPersonScene(World.CurrentScene(State))
+    Result = DungeonWorkflow.ApplySpawn(State, ACTOR_HERO, 201)
+
+    If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
+
+        OperationSucceeded = SyncPresentation()
+
+        If Not OperationSucceeded Then
+            Status = "Escape committed, but presentation synchronization failed."
+        Else If EscapedFromFirstPerson Then
+            Status = "Escaped from the first-person interior to the top-down archive entrance."
+        Else
+            Status = "Escaped to the Sunken Archive entrance with dungeon state preserved."
+        End If
+
+        Mode = MODE_DUNGEON
+
     Else
-        OperationSucceeded = World.ApplySpawn(State, ACTOR_HERO, 201)
-        Status = "Escaped to the Sunken Archive entrance with dungeon state preserved."
+
+        Call SetWorkflowFailure(Result)
+
+        Mode = MODE_DUNGEON
+
     End If
-
-    Call SyncPresentation()
-
-    Mode = MODE_DUNGEON
 
 End Sub
 
@@ -1471,17 +1669,49 @@ Sub HandleEncounter(PressedKey As Number)
         PressedKey = KEY_ENTER Or
         PressedKey = KEY_SPACE) Then
 
-        Call Encounters.ClearPendingEncounter(State)
+        Result = DungeonWorkflow.CompleteEncounter(State, ACTOR_HERO)
 
-        OperationSucceeded = World.SetCurrentScene(State, World.ReturnScene(State))
-        OperationSucceeded = OperationSucceeded And World.SetActorProgress(State, ACTOR_HERO, World.ReturnScene(State), World.ReturnX(State), World.ReturnY(State), World.ReturnFacingDirection(State), True, World.ActorRouteStep(State, ACTOR_HERO))
+        If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
 
-        Call SyncPresentation()
+            OperationSucceeded = SyncPresentation()
 
-        Mode = MODE_DUNGEON
-        Status = "Encounter Preview returned to the exact cell and facing."
+            If OperationSucceeded Then
+                Mode = MODE_DUNGEON
+                Status = "Encounter Preview returned to the exact cell and facing."
+            Else
+                Status = "Encounter return committed, but presentation synchronization failed."
+            End If
+
+        Else
+
+            Call SetWorkflowFailure(Result)
+
+        End If
 
     End If
+
+End Sub
+
+Sub SetWorkflowFailure(WorkflowResult As Number)
+
+    Select Case WorkflowResult
+        Case DungeonWorkflow.DUNGEON_RESULT_ALREADY_COMPLETED
+            Status = "That dungeon event was already completed; no reward or state changed."
+        Case DungeonWorkflow.DUNGEON_RESULT_MISSING_REQUIREMENT
+            Status = "A required item or condition is missing; no state changed."
+        Case DungeonWorkflow.DUNGEON_RESULT_CAPACITY
+            Status = "Capacity preflight rejected the operation; no state changed."
+        Case DungeonWorkflow.DUNGEON_RESULT_BLOCKED
+            Status = "The destination or actor state is blocked; no transition was claimed."
+        Case DungeonWorkflow.DUNGEON_RESULT_INVALID_STATE
+            Status = "Dungeon state validation rejected the operation; prior state was preserved."
+        Case DungeonWorkflow.DUNGEON_RESULT_NOT_FOUND
+            Status = "No valid save exists in slot 1; current state was preserved."
+        Case DungeonWorkflow.DUNGEON_RESULT_WRONG_SCHEMA
+            Status = "Slot 1 uses a different schema; current state was preserved."
+        Case Else
+            Status = "The dungeon operation failed while applying; rollback preserved prior state."
+    End Select
 
 End Sub
 

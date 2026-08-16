@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <SmileSource Include="Program.smile" StartupOnly="true" />
+    <SmileSource Include="..\RpgDungeonGallery\DungeonWorkflow.smile" />
     <SmileProjectReference Include="..\..\libraries\Smile.RPG\Smile.RPG.smilelibproj" />
   </ItemGroup>
 </SmileProject>
