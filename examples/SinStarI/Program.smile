@@ -132,6 +132,7 @@ Sub DrawTitle()
     Call DrawTitleChoice(4, "Dungeon", 483)
     Call DrawTitleChoice(5, "Battle", 533)
 
+    'Draw Text "Programmed by:  Louiery R. Sincioco  August 16, 2026. Copyright (c) 2026.  All rights reserved." At 641, 695 Size 12 Color BLACK Centered
     Draw Text "Programmed by:  Louiery R. Sincioco  August 16, 2026. Copyright (c) 2026.  All rights reserved." At 640, 694 Size 12 Color WHITE Centered
 
 End Sub
@@ -141,8 +142,8 @@ Sub DrawTitleChoice(Index As Number, Label As Text, Y As Number)
     If TitleSelection = Index Then
 
         Draw Image MenuBackground At 525, Y - 5 Size 300 By 42 Opacity 80 Filter Smooth
-        Draw Text ">" At 543, Y Size 24 Color YELLOW
-        Draw Text Label At 581, Y Size 24 Color YELLOW
+        Draw Text ">" At 543, Y Size 24 Color WHITE
+        Draw Text Label At 581, Y Size 24 Color WHITE
 
     Else
         Draw Text Label At 581, Y Size 24 Color WHITE
