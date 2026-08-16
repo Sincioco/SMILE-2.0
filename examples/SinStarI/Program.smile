@@ -15,7 +15,7 @@ Dim SceneLabel As Text
 
 Game Window "Sin Star I" Size 1280 By 720
 
-Load Image TitleBackground From "Assets\TitleBackground.png"
+Load Image TitleBackground From "Assets\Title Screen with Logo.png"
 
 Mode = MODE_TITLE
 TitleSelection = 1
