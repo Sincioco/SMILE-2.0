@@ -1,44 +1,41 @@
 Option Explicit
 
-Const MODE_TITLE = 0
-Const MODE_NEW_GAME = 1
-Const MODE_TOWN = 2
-Const MODE_SHOP = 3
-Const MODE_DUNGEON = 4
-Const MODE_BATTLE = 5
+Import SinStarI.TitleScreen As TitleScreen
 
-Dim TitleBackground As Image
-Dim TitleLogo As Image
-Dim MenuBackground As Image
+Const MODE_TITLE = 0
+
 Dim Mode As Number
-Dim TitleSelection As Number
+Dim TitleAction As Number
 Dim PressedKey As Number
 Dim SceneLabel As Text
 
 Game Window "Sin Star I" Size 1280 By 720
 
-Load Image TitleBackground From "Assets\Sin Star - Title Screen - Background.png"
-Load Image TitleLogo From "Assets\Sin Star - Logo.png"
-Load Image MenuBackground From "Assets\MenuBackground.png"
-
 Mode = MODE_TITLE
-TitleSelection = 1
+TitleAction = TitleScreen.TITLE_ACTION_NONE
 SceneLabel = ""
 
-Call PlayTitleMusic()
+Call TitleScreen.Initialize()
 
 Do
     Get Key PressedKey
 
     If Mode = MODE_TITLE Then
-        Call HandleTitle(PressedKey)
+
+        TitleAction = TitleScreen.HandleInput(PressedKey)
+
+        If TitleAction <> TitleScreen.TITLE_ACTION_NONE Then
+            Call OpenScene(TitleAction)
+        End If
+
     Else
 
         Call HandleScene(PressedKey)
+
     End If
 
     If Mode = MODE_TITLE Then
-        Call DrawTitle()
+        Call TitleScreen.Draw()
     Else
 
         Call DrawScene()
@@ -49,63 +46,27 @@ Do
 
 Loop Until Game_Closed() = True
 
-Stop Music
-Unload Image MenuBackground
-Unload Image TitleLogo
-Unload Image TitleBackground
+Call TitleScreen.Shutdown()
 
 End Program
-
-Sub PlayTitleMusic()
-
-    Stop Music
-    Play Music "Assets\TitleMusic.mp3" Loop
-
-End Sub
-
-Sub HandleTitle(Key As Number)
-
-    If Key = KEY_UP Or Key = KEY_W Then
-
-        TitleSelection = TitleSelection - 1
-
-        If TitleSelection < 1 Then
-            TitleSelection = 5
-        End If
-
-    Else If Key = KEY_DOWN Or Key = KEY_S Then
-
-        TitleSelection = TitleSelection + 1
-
-        If TitleSelection > 5 Then
-            TitleSelection = 1
-        End If
-
-    Else If Key = KEY_ENTER Or Key = KEY_SPACE Then
-
-        Call OpenScene(TitleSelection)
-
-    End If
-
-End Sub
 
 Sub OpenScene(SceneId As Number)
 
     Mode = SceneId
 
-    If SceneId = MODE_NEW_GAME Then
+    If SceneId = TitleScreen.TITLE_ACTION_NEW_GAME Then
         SceneLabel = "Start a New Game"
-    Else If SceneId = MODE_TOWN Then
+    Else If SceneId = TitleScreen.TITLE_ACTION_TOWN Then
         SceneLabel = "Town"
-    Else If SceneId = MODE_SHOP Then
+    Else If SceneId = TitleScreen.TITLE_ACTION_SHOP Then
         SceneLabel = "Shop"
-    Else If SceneId = MODE_DUNGEON Then
+    Else If SceneId = TitleScreen.TITLE_ACTION_DUNGEON Then
         SceneLabel = "Dungeon"
     Else
         SceneLabel = "Battle"
     End If
 
-    Stop Music
+    Call TitleScreen.Leave()
 
 End Sub
 
@@ -114,40 +75,7 @@ Sub HandleScene(Key As Number)
     If Key = KEY_ESCAPE Then
         Mode = MODE_TITLE
 
-        Call PlayTitleMusic()
-    End If
-
-End Sub
-
-Sub DrawTitle()
-
-    Clear Rgb(4, 8, 20)
-    Draw Image TitleBackground At 0, 0 Size 1280 By 720 Filter Smooth
-    Draw Image TitleLogo At 30, 30 Size 480 By 600 Filter Smooth
-    'Draw Image MenuBackground At 505, 297 Size 380 By 300 Opacity 80 Filter Smooth
-
-    Call DrawTitleChoice(1, "Start a New Game", 333)
-    Call DrawTitleChoice(2, "Town", 383)
-    Call DrawTitleChoice(3, "Shop", 433)
-    Call DrawTitleChoice(4, "Dungeon", 483)
-    Call DrawTitleChoice(5, "Battle", 533)
-
-    'Draw Text "Programmed by:  Louiery R. Sincioco  August 16, 2026. Copyright (c) 2026.  All rights reserved." At 641, 695 Size 12 Color BLACK Centered
-    Draw Text "Programmed by:  Louiery R. Sincioco  August 16, 2026. Copyright (c) 2026.  All rights reserved." At 640, 694 Size 12 Color WHITE Centered
-
-End Sub
-
-Sub DrawTitleChoice(Index As Number, Label As Text, Y As Number)
-
-    If TitleSelection = Index Then
-
-        Draw Image MenuBackground At 525, Y - 5 Size 300 By 42 Opacity 80 Filter Smooth
-        Draw Text ">" At 543, Y Size 24 Color WHITE
-        Draw Text Label At 581, Y Size 24 Color WHITE
-
-    Else
-        Draw Text Label At 581, Y Size 24 Color WHITE
-
+        Call TitleScreen.Enter()
     End If
 
 End Sub

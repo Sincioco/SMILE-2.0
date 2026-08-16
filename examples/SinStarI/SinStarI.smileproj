@@ -9,6 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <SmileSource Include="Program.smile" StartupOnly="true" />
+    <SmileSource Include="TitleScreen.smile" />
     <SmileProjectReference Include="..\..\libraries\Smile.Game\Smile.Game.smilelibproj" />
     <Asset Include="Assets\*.png" />
     <Asset Include="Assets\*.mp3" />

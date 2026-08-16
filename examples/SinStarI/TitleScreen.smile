@@ -1,0 +1,123 @@
+''' Sin Star I title-screen assets, state, input, music, and drawing.
+Module SinStarI.TitleScreen
+
+Option Explicit
+
+Public Const TITLE_ACTION_NONE = 0
+Public Const TITLE_ACTION_NEW_GAME = 1
+Public Const TITLE_ACTION_TOWN = 2
+Public Const TITLE_ACTION_SHOP = 3
+Public Const TITLE_ACTION_DUNGEON = 4
+Public Const TITLE_ACTION_BATTLE = 5
+
+Private Dim TitleBackground As Image
+Private Dim TitleLogo As Image
+Private Dim MenuBackground As Image
+Private Dim TitleSelection As Number
+
+''' Loads the title-screen assets, selects the first menu item, and starts the title music.
+Public Sub Initialize()
+
+    Load Image TitleBackground From "Assets\Sin Star - Title Screen - Background.png"
+    Load Image TitleLogo From "Assets\Sin Star - Logo.png"
+    Load Image MenuBackground From "Assets\MenuBackground.png"
+
+    TitleSelection = TITLE_ACTION_NEW_GAME
+
+    Call Enter()
+
+End Sub
+
+''' Restarts the looping title-screen music.
+Public Sub Enter()
+
+    Stop Music
+    Play Music "Assets\TitleMusic.mp3" Loop
+
+End Sub
+
+''' Stops title-screen music before the application opens another scene.
+Public Sub Leave()
+
+    Stop Music
+
+End Sub
+
+''' Stops the title music and releases every title-screen image.
+Public Sub Shutdown()
+
+    Stop Music
+    Unload Image MenuBackground
+    Unload Image TitleLogo
+    Unload Image TitleBackground
+
+End Sub
+
+''' Updates menu navigation and returns the chosen title action, or TITLE_ACTION_NONE.
+Public Function HandleInput(Key As Number) As Number
+
+    Dim Action As Number
+
+    Action = TITLE_ACTION_NONE
+
+    If Key = KEY_UP Or Key = KEY_W Then
+
+        TitleSelection = TitleSelection - 1
+
+        If TitleSelection < TITLE_ACTION_NEW_GAME Then
+            TitleSelection = TITLE_ACTION_BATTLE
+        End If
+
+    Else If Key = KEY_DOWN Or Key = KEY_S Then
+
+        TitleSelection = TitleSelection + 1
+
+        If TitleSelection > TITLE_ACTION_BATTLE Then
+            TitleSelection = TITLE_ACTION_NEW_GAME
+        End If
+
+    Else If Key = KEY_ENTER Or Key = KEY_SPACE Then
+
+        Action = TitleSelection
+
+    End If
+
+    Return Action
+
+End Function
+
+''' Draws the complete Sin Star I title screen.
+Public Sub Draw()
+
+    Clear Rgb(4, 8, 20)
+    Draw Image TitleBackground At 0, 0 Size 1280 By 720 Filter Smooth
+    Draw Image TitleLogo At 30, 30 Size 480 By 600 Filter Smooth
+    'Draw Image MenuBackground At 505, 297 Size 380 By 300 Opacity 80 Filter Smooth
+
+    Call DrawChoice(TITLE_ACTION_NEW_GAME, "Start a New Game", 333)
+    Call DrawChoice(TITLE_ACTION_TOWN, "Town", 383)
+    Call DrawChoice(TITLE_ACTION_SHOP, "Shop", 433)
+    Call DrawChoice(TITLE_ACTION_DUNGEON, "Dungeon", 483)
+    Call DrawChoice(TITLE_ACTION_BATTLE, "Battle", 533)
+
+    'Draw Text "Programmed by:  Louiery R. Sincioco  August 16, 2026. Copyright (c) 2026.  All rights reserved." At 641, 695 Size 12 Color BLACK Centered
+    Draw Text "Programmed by:  Louiery R. Sincioco  August 16, 2026. Copyright (c) 2026.  All rights reserved." At 640, 694 Size 12 Color WHITE Centered
+
+End Sub
+
+Private Sub DrawChoice(Index As Number, Label As Text, Y As Number)
+
+    If TitleSelection = Index Then
+
+        Draw Image MenuBackground At 525, Y - 5 Size 300 By 42 Opacity 80 Filter Smooth
+        Draw Text ">" At 543, Y Size 24 Color WHITE
+        Draw Text Label At 581, Y Size 24 Color WHITE
+
+    Else
+        Draw Text Label At 581, Y Size 24 Color WHITE
+
+    End If
+
+End Sub
+
+End Module
