@@ -1,0 +1,3011 @@
+''' Deterministic, bounded, renderer-neutral RPG battle lifecycle and resolution.
+Module Smile.RPG.BattleCore
+
+Option Explicit
+
+Import Smile.RPG.Core As Core
+Import Smile.RPG.Characters As Characters
+Import Smile.RPG.Party As Party
+Import Smile.RPG.Inventory As Inventory
+Import Smile.RPG.Equipment As Equipment
+Import Smile.RPG.Abilities As Abilities
+Import Smile.RPG.BattleEffects As Effects
+
+Public Const BATTLE_MAX_PARTY_MEMBERS = 4
+Public Const BATTLE_MAX_ENEMIES = 8
+Public Const BATTLE_MAX_ENEMY_GROUPS = 4
+Public Const BATTLE_MAX_PARTICIPANTS = 12
+Public Const BATTLE_MAX_ENEMY_DEFINITIONS = 64
+Public Const BATTLE_MAX_FORMATIONS = 32
+Public Const BATTLE_MAX_FORMATION_MEMBERS = 8
+Public Const BATTLE_MAX_STATUSES_PER_PARTICIPANT = 8
+Public Const BATTLE_MAX_EVENTS = 256
+
+Public Const BATTLE_SIDE_PARTY = 1
+Public Const BATTLE_SIDE_ENEMY = 2
+
+Public Const BATTLE_ACTION_ATTACK = 1
+Public Const BATTLE_ACTION_ABILITY = 2
+Public Const BATTLE_ACTION_ITEM = 3
+Public Const BATTLE_ACTION_DEFEND = 4
+Public Const BATTLE_ACTION_RUN = 5
+
+Public Const BATTLE_PHASE_NONE = 0
+Public Const BATTLE_PHASE_COMMAND = 1
+Public Const BATTLE_PHASE_RESOLVING = 2
+Public Const BATTLE_PHASE_VICTORY = 3
+Public Const BATTLE_PHASE_DEFEAT = 4
+Public Const BATTLE_PHASE_ESCAPED = 5
+
+Public Const BATTLE_OUTCOME_NONE = 0
+Public Const BATTLE_OUTCOME_VICTORY = 1
+Public Const BATTLE_OUTCOME_DEFEAT = 2
+Public Const BATTLE_OUTCOME_ESCAPED = 3
+
+Public Const BATTLE_EVENT_BATTLE_STARTED = 1
+Public Const BATTLE_EVENT_ROUND_STARTED = 2
+Public Const BATTLE_EVENT_ACTION_STARTED = 3
+Public Const BATTLE_EVENT_ACTION_DENIED = 4
+Public Const BATTLE_EVENT_ATTACK = 5
+Public Const BATTLE_EVENT_ABILITY = 6
+Public Const BATTLE_EVENT_ITEM = 7
+Public Const BATTLE_EVENT_DEFEND = 8
+Public Const BATTLE_EVENT_RUN_SUCCEEDED = 9
+Public Const BATTLE_EVENT_RUN_FAILED = 10
+Public Const BATTLE_EVENT_DAMAGE = 11
+Public Const BATTLE_EVENT_HEAL = 12
+Public Const BATTLE_EVENT_MAGIC_POINTS = 13
+Public Const BATTLE_EVENT_STATUS_APPLIED = 14
+Public Const BATTLE_EVENT_STATUS_REMOVED = 15
+Public Const BATTLE_EVENT_REVIVED = 16
+Public Const BATTLE_EVENT_DEFEATED = 17
+Public Const BATTLE_EVENT_ROUND_ENDED = 18
+Public Const BATTLE_EVENT_VICTORY = 19
+Public Const BATTLE_EVENT_DEFEAT = 20
+Public Const BATTLE_EVENT_ESCAPE = 21
+Public Const BATTLE_EVENT_REWARD = 22
+Public Const BATTLE_EVENT_MESSAGE = 23
+
+Private Const CHECKPOINT_MAGIC_POINT_PAYMENT = 1
+Private Const CHECKPOINT_ITEM_REMOVAL = 2
+Private Const CHECKPOINT_FIRST_MULTI_TARGET = 3
+Private Const CHECKPOINT_STATUS_COMPOSITE = 4
+Private Const CHECKPOINT_FIRST_CHARACTER_REWARD = 5
+Private Const CHECKPOINT_GOLD_REWARD = 6
+
+Public Type EnemyDefinition
+    Id As Number
+    Name As Text
+    MaximumHealth As Number
+    MaximumMagicPoints As Number
+    Strength As Number
+    Defense As Number
+    Magic As Number
+    Resistance As Number
+    Agility As Number
+    Luck As Number
+    ExperienceReward As Number
+    GoldReward As Number
+    AiProfileId As Number
+End Type
+
+Public Type FormationDefinition
+    Id As Number
+    Name As Text
+    EscapeChance As Number
+End Type
+
+Public Type FormationMemberDefinition
+    FormationId As Number
+    EnemyId As Number
+    GroupId As Number
+    SlotId As Number
+End Type
+
+Private Dim StateGeneration[4] As Number
+Private Dim EnemyDefinitionCounts[4] As Number
+Private Dim EnemyIds[4, 64] As Number
+Private Dim EnemyNames[4, 64] As Text
+Private Dim EnemyMaximumHealth[4, 64] As Number
+Private Dim EnemyMaximumMagicPoints[4, 64] As Number
+Private Dim EnemyStrength[4, 64] As Number
+Private Dim EnemyDefense[4, 64] As Number
+Private Dim EnemyMagic[4, 64] As Number
+Private Dim EnemyResistance[4, 64] As Number
+Private Dim EnemyAgility[4, 64] As Number
+Private Dim EnemyLuck[4, 64] As Number
+Private Dim EnemyExperienceRewards[4, 64] As Number
+Private Dim EnemyGoldRewards[4, 64] As Number
+Private Dim EnemyAiProfileIds[4, 64] As Number
+
+Private Dim FormationCounts[4] As Number
+Private Dim FormationIds[4, 32] As Number
+Private Dim FormationNames[4, 32] As Text
+Private Dim FormationEscapeChances[4, 32] As Number
+Private Dim FormationMemberCounts[4, 32] As Number
+Private Dim FormationEnemyIds[4, 256] As Number
+Private Dim FormationGroupIds[4, 256] As Number
+Private Dim FormationSlotIds[4, 256] As Number
+
+Private Dim BattleActive[4] As Boolean
+Private Dim BattleSerials[4] As Number
+Private Dim BattleHandles[4] As Number
+Private Dim BattlePhases[4] As Number
+Private Dim BattleOutcomes[4] As Number
+Private Dim BattleRounds[4] As Number
+Private Dim BattleSeeds[4] As Number
+Private Dim ActiveFormationIds[4] As Number
+Private Dim ActiveEscapeChances[4] As Number
+Private Dim ActiveParticipantCounts[4] As Number
+Private Dim RewardExperience[4] As Number
+Private Dim RewardGold[4] As Number
+Private Dim RewardsCommitted[4] As Boolean
+
+Private Dim ParticipantSides[4, 12] As Number
+Private Dim ParticipantReferenceIds[4, 12] As Number
+Private Dim ParticipantDefinitionIds[4, 12] As Number
+Private Dim ParticipantGroupIds[4, 12] As Number
+Private Dim ParticipantSlotIds[4, 12] As Number
+Private Dim ParticipantNames[4, 12] As Text
+Private Dim ParticipantHealth[4, 12] As Number
+Private Dim ParticipantMaximumHealth[4, 12] As Number
+Private Dim ParticipantMagicPoints[4, 12] As Number
+Private Dim ParticipantMaximumMagicPoints[4, 12] As Number
+Private Dim ParticipantStrength[4, 12] As Number
+Private Dim ParticipantDefense[4, 12] As Number
+Private Dim ParticipantMagic[4, 12] As Number
+Private Dim ParticipantResistance[4, 12] As Number
+Private Dim ParticipantAgility[4, 12] As Number
+Private Dim ParticipantLuck[4, 12] As Number
+Private Dim ParticipantDefending[4, 12] As Boolean
+Private Dim ParticipantAiProfileIds[4, 12] As Number
+
+Private Dim ParticipantStatusCounts[4, 12] As Number
+Private Dim ParticipantStatusIds[4, 96] As Number
+Private Dim ParticipantStatusDurations[4, 96] As Number
+
+Private Dim SubmittedActions[4, 12] As Boolean
+Private Dim SubmittedActionKinds[4, 12] As Number
+Private Dim SubmittedSourceIds[4, 12] As Number
+Private Dim SubmittedTargetIds[4, 12] As Number
+Private Dim ScheduleCounts[4] As Number
+Private Dim SchedulePositions[4] As Number
+Private Dim ScheduleParticipantIndexes[4, 12] As Number
+
+Private Dim EventCounts[4] As Number
+Private Dim EventKinds[4, 256] As Number
+Private Dim EventActorIds[4, 256] As Number
+Private Dim EventTargetIds[4, 256] As Number
+Private Dim EventValueOne[4, 256] As Number
+Private Dim EventValueTwo[4, 256] As Number
+Private Dim EventTexts[4, 256] As Text
+
+Private Dim BackupHealth[4, 12] As Number
+Private Dim BackupMagicPoints[4, 12] As Number
+Private Dim BackupDefending[4, 12] As Boolean
+Private Dim BackupStatusCounts[4, 12] As Number
+Private Dim BackupStatusIds[4, 96] As Number
+Private Dim BackupStatusDurations[4, 96] As Number
+Private Dim BackupEventCounts[4] As Number
+Private Dim BackupSeeds[4] As Number
+Private Dim BackupItemIds[4] As Number
+Private Dim BackupItemQuantities[4] As Number
+
+Private Function StateSlot(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim Generation As Number
+
+    Slot = Core.StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Generation = Core.StateGeneration(StateHandle)
+
+    If StateGeneration[Slot] <> Generation Then
+
+        For Index = 0 To BATTLE_MAX_ENEMY_DEFINITIONS - 1
+            EnemyIds[Slot, Index] = 0
+            EnemyNames[Slot, Index] = ""
+        End For
+
+        For Index = 0 To BATTLE_MAX_FORMATIONS - 1
+            FormationIds[Slot, Index] = 0
+            FormationNames[Slot, Index] = ""
+            FormationMemberCounts[Slot, Index] = 0
+        End For
+
+        EnemyDefinitionCounts[Slot] = 0
+        FormationCounts[Slot] = 0
+        BattleActive[Slot] = False
+        BattleSerials[Slot] = 0
+        BattleHandles[Slot] = 0
+        BattlePhases[Slot] = BATTLE_PHASE_NONE
+        BattleOutcomes[Slot] = BATTLE_OUTCOME_NONE
+        EventCounts[Slot] = 0
+        StateGeneration[Slot] = Generation
+
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function EnemyIndex(StateHandle As Number, EnemyId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To EnemyDefinitionCounts[Slot] - 1
+
+        If EnemyIds[Slot, Index] = EnemyId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function FormationIndex(StateHandle As Number, FormationId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To FormationCounts[Slot] - 1
+
+        If FormationIds[Slot, Index] = FormationId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function ParticipantIndex(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not BattleActive[Slot] Or
+        ParticipantId <= 0 Or
+        ParticipantId > ActiveParticipantCounts[Slot]) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = ParticipantId - 1
+
+    Return ReturnValue
+
+End Function
+
+Private Function StatusStorageIndex(ParticipantIndexValue As Number, StatusOffset As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = ParticipantIndexValue * BATTLE_MAX_STATUSES_PER_PARTICIPANT + StatusOffset
+
+    Return ReturnValue
+
+End Function
+
+Private Function CurrentHealth(StateHandle As Number, ParticipantIndexValue As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim CharacterId As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        ParticipantIndexValue < 0 Or
+        ParticipantIndexValue >= ActiveParticipantCounts[Slot]) Then
+        Return 0
+    End If
+
+    If ParticipantSides[Slot, ParticipantIndexValue] = BATTLE_SIDE_PARTY Then
+
+        CharacterId = ParticipantReferenceIds[Slot, ParticipantIndexValue]
+
+        ReturnValue = Characters.Health(StateHandle, CharacterId)
+
+        Return ReturnValue
+
+    End If
+
+    ReturnValue = ParticipantHealth[Slot, ParticipantIndexValue]
+
+    Return ReturnValue
+
+End Function
+
+Private Function CurrentMagicPoints(StateHandle As Number, ParticipantIndexValue As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim CharacterId As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        ParticipantIndexValue < 0 Or
+        ParticipantIndexValue >= ActiveParticipantCounts[Slot]) Then
+        Return 0
+    End If
+
+    If ParticipantSides[Slot, ParticipantIndexValue] = BATTLE_SIDE_PARTY Then
+
+        CharacterId = ParticipantReferenceIds[Slot, ParticipantIndexValue]
+
+        ReturnValue = Characters.MagicPoints(StateHandle, CharacterId)
+
+        Return ReturnValue
+
+    End If
+
+    ReturnValue = ParticipantMagicPoints[Slot, ParticipantIndexValue]
+
+    Return ReturnValue
+
+End Function
+
+Private Function CurrentMaximumHealth(StateHandle As Number, ParticipantIndexValue As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim CharacterId As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        ParticipantIndexValue < 0 Or
+        ParticipantIndexValue >= ActiveParticipantCounts[Slot]) Then
+        Return 0
+    End If
+
+    If ParticipantSides[Slot, ParticipantIndexValue] = BATTLE_SIDE_PARTY Then
+
+        CharacterId = ParticipantReferenceIds[Slot, ParticipantIndexValue]
+
+        ReturnValue = Characters.MaximumHealth(StateHandle, CharacterId)
+
+        Return ReturnValue
+
+    End If
+
+    ReturnValue = ParticipantMaximumHealth[Slot, ParticipantIndexValue]
+
+    Return ReturnValue
+
+End Function
+
+Private Function CurrentMaximumMagicPoints(StateHandle As Number, ParticipantIndexValue As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim CharacterId As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        ParticipantIndexValue < 0 Or
+        ParticipantIndexValue >= ActiveParticipantCounts[Slot]) Then
+        Return 0
+    End If
+
+    If ParticipantSides[Slot, ParticipantIndexValue] = BATTLE_SIDE_PARTY Then
+
+        CharacterId = ParticipantReferenceIds[Slot, ParticipantIndexValue]
+
+        ReturnValue = Characters.MaximumMagicPoints(StateHandle, CharacterId)
+
+        Return ReturnValue
+
+    End If
+
+    ReturnValue = ParticipantMaximumMagicPoints[Slot, ParticipantIndexValue]
+
+    Return ReturnValue
+
+End Function
+
+Private Function SetCurrentHealth(StateHandle As Number, ParticipantIndexValue As Number, Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim CharacterId As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        ParticipantIndexValue < 0 Or
+        ParticipantIndexValue >= ActiveParticipantCounts[Slot]) Then
+        Return False
+    End If
+
+    If ParticipantSides[Slot, ParticipantIndexValue] = BATTLE_SIDE_PARTY Then
+
+        CharacterId = ParticipantReferenceIds[Slot, ParticipantIndexValue]
+
+        ReturnValue = Characters.SetHealth(StateHandle, CharacterId, Value)
+
+        Return ReturnValue
+
+    End If
+
+    If Value < 0 Or Value > ParticipantMaximumHealth[Slot, ParticipantIndexValue] Then
+        Return False
+    End If
+
+    ParticipantHealth[Slot, ParticipantIndexValue] = Value
+    Return True
+
+End Function
+
+Private Function SetCurrentMagicPoints(StateHandle As Number, ParticipantIndexValue As Number, Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim CharacterId As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        ParticipantIndexValue < 0 Or
+        ParticipantIndexValue >= ActiveParticipantCounts[Slot]) Then
+        Return False
+    End If
+
+    If ParticipantSides[Slot, ParticipantIndexValue] = BATTLE_SIDE_PARTY Then
+
+        CharacterId = ParticipantReferenceIds[Slot, ParticipantIndexValue]
+
+        ReturnValue = Characters.SetMagicPoints(StateHandle, CharacterId, Value)
+
+        Return ReturnValue
+
+    End If
+
+    If Value < 0 Or Value > ParticipantMaximumMagicPoints[Slot, ParticipantIndexValue] Then
+        Return False
+    End If
+
+    ParticipantMagicPoints[Slot, ParticipantIndexValue] = Value
+    Return True
+
+End Function
+
+Private Function NextRandom(StateHandle As Number) As Number
+
+    Dim Slot As Number
+    Dim ReturnValue As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    BattleSeeds[Slot] = (BattleSeeds[Slot] * 25173 + 13849) Mod 65536
+    ReturnValue = BattleSeeds[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Private Function AddEvent(StateHandle As Number, Kind As Number, ActorId As Number, TargetId As Number, ValueOne As Number, ValueTwo As Number, Message As Text) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or EventCounts[Slot] >= BATTLE_MAX_EVENTS Then
+        Return False
+    End If
+
+    Index = EventCounts[Slot]
+    EventKinds[Slot, Index] = Kind
+    EventActorIds[Slot, Index] = ActorId
+    EventTargetIds[Slot, Index] = TargetId
+    EventValueOne[Slot, Index] = ValueOne
+    EventValueTwo[Slot, Index] = ValueTwo
+    EventTexts[Slot, Index] = Message
+    EventCounts[Slot] = Index + 1
+    Return True
+
+End Function
+
+Private Sub ClearParticipant(Slot As Number, Index As Number)
+
+    Dim StatusOffset As Number
+    Dim StoredIndex As Number
+
+    ParticipantSides[Slot, Index] = 0
+    ParticipantReferenceIds[Slot, Index] = 0
+    ParticipantDefinitionIds[Slot, Index] = 0
+    ParticipantGroupIds[Slot, Index] = 0
+    ParticipantSlotIds[Slot, Index] = 0
+    ParticipantNames[Slot, Index] = ""
+    ParticipantHealth[Slot, Index] = 0
+    ParticipantMaximumHealth[Slot, Index] = 0
+    ParticipantMagicPoints[Slot, Index] = 0
+    ParticipantMaximumMagicPoints[Slot, Index] = 0
+    ParticipantStrength[Slot, Index] = 0
+    ParticipantDefense[Slot, Index] = 0
+    ParticipantMagic[Slot, Index] = 0
+    ParticipantResistance[Slot, Index] = 0
+    ParticipantAgility[Slot, Index] = 0
+    ParticipantLuck[Slot, Index] = 0
+    ParticipantDefending[Slot, Index] = False
+    ParticipantAiProfileIds[Slot, Index] = 0
+    ParticipantStatusCounts[Slot, Index] = 0
+    SubmittedActions[Slot, Index] = False
+
+    For StatusOffset = 0 To BATTLE_MAX_STATUSES_PER_PARTICIPANT - 1
+        StoredIndex = StatusStorageIndex(Index, StatusOffset)
+        ParticipantStatusIds[Slot, StoredIndex] = 0
+        ParticipantStatusDurations[Slot, StoredIndex] = 0
+    End For
+
+End Sub
+
+Private Sub ResetSession(Slot As Number)
+
+    Dim Index As Number
+
+    For Index = 0 To BATTLE_MAX_PARTICIPANTS - 1
+        Call ClearParticipant(Slot, Index)
+
+        ScheduleParticipantIndexes[Slot, Index] = 0
+    End For
+
+    BattlePhases[Slot] = BATTLE_PHASE_NONE
+    BattleOutcomes[Slot] = BATTLE_OUTCOME_NONE
+    BattleRounds[Slot] = 0
+    BattleSeeds[Slot] = 0
+    ActiveFormationIds[Slot] = 0
+    ActiveEscapeChances[Slot] = 0
+    ActiveParticipantCounts[Slot] = 0
+    RewardExperience[Slot] = 0
+    RewardGold[Slot] = 0
+    RewardsCommitted[Slot] = False
+    ScheduleCounts[Slot] = 0
+    SchedulePositions[Slot] = 0
+    EventCounts[Slot] = 0
+
+End Sub
+
+Private Function AddPartyParticipant(StateHandle As Number, CharacterId As Number, PartyIndex As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not Characters.IsCharacterDefined(StateHandle, CharacterId) Or
+        ActiveParticipantCounts[Slot] >= BATTLE_MAX_PARTICIPANTS) Then
+        Return False
+    End If
+
+    Index = ActiveParticipantCounts[Slot]
+    ParticipantSides[Slot, Index] = BATTLE_SIDE_PARTY
+    ParticipantReferenceIds[Slot, Index] = CharacterId
+    ParticipantDefinitionIds[Slot, Index] = CharacterId
+    ParticipantGroupIds[Slot, Index] = 0
+    ParticipantSlotIds[Slot, Index] = PartyIndex + 1
+    ParticipantNames[Slot, Index] = Characters.Name(StateHandle, CharacterId)
+    ParticipantMaximumHealth[Slot, Index] = Characters.MaximumHealth(StateHandle, CharacterId)
+    ParticipantMaximumMagicPoints[Slot, Index] = Characters.MaximumMagicPoints(StateHandle, CharacterId)
+    ParticipantStrength[Slot, Index] = Characters.Strength(StateHandle, CharacterId) + Equipment.StrengthBonus(StateHandle, CharacterId)
+    ParticipantDefense[Slot, Index] = Characters.Defense(StateHandle, CharacterId) + Equipment.DefenseBonus(StateHandle, CharacterId)
+    ParticipantMagic[Slot, Index] = Characters.Magic(StateHandle, CharacterId) + Equipment.MagicBonus(StateHandle, CharacterId)
+    ParticipantResistance[Slot, Index] = Characters.Resistance(StateHandle, CharacterId) + Equipment.ResistanceBonus(StateHandle, CharacterId)
+    ParticipantAgility[Slot, Index] = Characters.Agility(StateHandle, CharacterId) + Equipment.AgilityBonus(StateHandle, CharacterId)
+    ParticipantLuck[Slot, Index] = Characters.Luck(StateHandle, CharacterId) + Equipment.LuckBonus(StateHandle, CharacterId)
+    ActiveParticipantCounts[Slot] = Index + 1
+    Return True
+
+End Function
+
+Private Function AddEnemyParticipant(StateHandle As Number, EnemyId As Number, GroupId As Number, SlotId As Number) As Boolean
+
+    Dim Slot As Number
+    Dim DefinitionIndex As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    DefinitionIndex = EnemyIndex(StateHandle, EnemyId)
+
+    If (Slot < 0 Or
+        DefinitionIndex < 0 Or
+        ActiveParticipantCounts[Slot] >= BATTLE_MAX_PARTICIPANTS) Then
+        Return False
+    End If
+
+    Index = ActiveParticipantCounts[Slot]
+    ParticipantSides[Slot, Index] = BATTLE_SIDE_ENEMY
+    ParticipantReferenceIds[Slot, Index] = Index + 1
+    ParticipantDefinitionIds[Slot, Index] = EnemyId
+    ParticipantGroupIds[Slot, Index] = GroupId
+    ParticipantSlotIds[Slot, Index] = SlotId
+    ParticipantNames[Slot, Index] = EnemyNames[Slot, DefinitionIndex]
+    ParticipantHealth[Slot, Index] = EnemyMaximumHealth[Slot, DefinitionIndex]
+    ParticipantMaximumHealth[Slot, Index] = EnemyMaximumHealth[Slot, DefinitionIndex]
+    ParticipantMagicPoints[Slot, Index] = EnemyMaximumMagicPoints[Slot, DefinitionIndex]
+    ParticipantMaximumMagicPoints[Slot, Index] = EnemyMaximumMagicPoints[Slot, DefinitionIndex]
+    ParticipantStrength[Slot, Index] = EnemyStrength[Slot, DefinitionIndex]
+    ParticipantDefense[Slot, Index] = EnemyDefense[Slot, DefinitionIndex]
+    ParticipantMagic[Slot, Index] = EnemyMagic[Slot, DefinitionIndex]
+    ParticipantResistance[Slot, Index] = EnemyResistance[Slot, DefinitionIndex]
+    ParticipantAgility[Slot, Index] = EnemyAgility[Slot, DefinitionIndex]
+    ParticipantLuck[Slot, Index] = EnemyLuck[Slot, DefinitionIndex]
+    ParticipantAiProfileIds[Slot, Index] = EnemyAiProfileIds[Slot, DefinitionIndex]
+    RewardExperience[Slot] = RewardExperience[Slot] + EnemyExperienceRewards[Slot, DefinitionIndex]
+    RewardGold[Slot] = RewardGold[Slot] + EnemyGoldRewards[Slot, DefinitionIndex]
+    ActiveParticipantCounts[Slot] = Index + 1
+    Return True
+
+End Function
+
+''' Registers one immutable enemy definition for the RPG state.
+Public Function DefineEnemy(StateHandle As Number, ByRef Definition As EnemyDefinition) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not Core.IsValidId(Definition.Id) Or
+        Not Core.IsValidName(Definition.Name) Or
+        Definition.MaximumHealth <= 0 Or
+        Not Core.IsValidValue(Definition.MaximumHealth) Or
+        Not Core.IsValidValue(Definition.MaximumMagicPoints) Or
+        Not Core.IsValidValue(Definition.Strength) Or
+        Not Core.IsValidValue(Definition.Defense) Or
+        Not Core.IsValidValue(Definition.Magic) Or
+        Not Core.IsValidValue(Definition.Resistance) Or
+        Not Core.IsValidValue(Definition.Agility) Or
+        Not Core.IsValidValue(Definition.Luck) Or
+        Not Core.IsValidValue(Definition.ExperienceReward) Or
+        Not Core.IsValidValue(Definition.GoldReward) Or
+        Not Core.IsValidValue(Definition.AiProfileId) Or
+        EnemyIndex(StateHandle, Definition.Id) >= 0 Or
+        EnemyDefinitionCounts[Slot] >= BATTLE_MAX_ENEMY_DEFINITIONS) Then
+        Return False
+    End If
+
+    Index = EnemyDefinitionCounts[Slot]
+    EnemyIds[Slot, Index] = Definition.Id
+    EnemyNames[Slot, Index] = Definition.Name
+    EnemyMaximumHealth[Slot, Index] = Definition.MaximumHealth
+    EnemyMaximumMagicPoints[Slot, Index] = Definition.MaximumMagicPoints
+    EnemyStrength[Slot, Index] = Definition.Strength
+    EnemyDefense[Slot, Index] = Definition.Defense
+    EnemyMagic[Slot, Index] = Definition.Magic
+    EnemyResistance[Slot, Index] = Definition.Resistance
+    EnemyAgility[Slot, Index] = Definition.Agility
+    EnemyLuck[Slot, Index] = Definition.Luck
+    EnemyExperienceRewards[Slot, Index] = Definition.ExperienceReward
+    EnemyGoldRewards[Slot, Index] = Definition.GoldReward
+    EnemyAiProfileIds[Slot, Index] = Definition.AiProfileId
+    EnemyDefinitionCounts[Slot] = Index + 1
+    Return True
+
+End Function
+
+''' Registers one bounded enemy formation.
+Public Function DefineFormation(StateHandle As Number, ByRef Definition As FormationDefinition) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not Core.IsValidId(Definition.Id) Or
+        Not Core.IsValidName(Definition.Name) Or
+        Definition.EscapeChance < 0 Or
+        Definition.EscapeChance > 100 Or
+        FormationIndex(StateHandle, Definition.Id) >= 0 Or
+        FormationCounts[Slot] >= BATTLE_MAX_FORMATIONS) Then
+        Return False
+    End If
+
+    Index = FormationCounts[Slot]
+    FormationIds[Slot, Index] = Definition.Id
+    FormationNames[Slot, Index] = Definition.Name
+    FormationEscapeChances[Slot, Index] = Definition.EscapeChance
+    FormationMemberCounts[Slot, Index] = 0
+    FormationCounts[Slot] = Index + 1
+    Return True
+
+End Function
+
+''' Appends one enemy to an existing formation.
+Public Function AddFormationMember(StateHandle As Number, ByRef Definition As FormationMemberDefinition) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim MemberIndex As Number
+    Dim ExistingIndex As Number
+    Dim StoredIndex As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = FormationIndex(StateHandle, Definition.FormationId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        EnemyIndex(StateHandle, Definition.EnemyId) < 0 Or
+        Definition.GroupId <= 0 Or
+        Definition.GroupId > BATTLE_MAX_ENEMY_GROUPS Or
+        Definition.SlotId <= 0 Or
+        Definition.SlotId > BATTLE_MAX_ENEMIES Or
+        FormationMemberCounts[Slot, Index] >= BATTLE_MAX_FORMATION_MEMBERS) Then
+        Return False
+    End If
+
+    For ExistingIndex = 0 To FormationMemberCounts[Slot, Index] - 1
+
+        StoredIndex = Index * BATTLE_MAX_FORMATION_MEMBERS + ExistingIndex
+
+        If FormationSlotIds[Slot, StoredIndex] = Definition.SlotId Then
+            Return False
+        End If
+
+    End For
+
+    MemberIndex = Index * BATTLE_MAX_FORMATION_MEMBERS + FormationMemberCounts[Slot, Index]
+    FormationEnemyIds[Slot, MemberIndex] = Definition.EnemyId
+    FormationGroupIds[Slot, MemberIndex] = Definition.GroupId
+    FormationSlotIds[Slot, MemberIndex] = Definition.SlotId
+    FormationMemberCounts[Slot, Index] = FormationMemberCounts[Slot, Index] + 1
+    Return True
+
+End Function
+
+Public Function EnemyDefinitionCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = EnemyDefinitionCounts[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function FormationCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = FormationCounts[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Begins a battle from the existing party and one registered formation.
+Public Function BeginBattle(StateHandle As Number, FormationId As Number, Seed As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim PartyMemberCount As Number
+    Dim FormationDefinitionIndex As Number
+    Dim MemberIndex As Number
+    Dim StoredIndex As Number
+    Dim CharacterId As Number
+
+    Slot = StateSlot(StateHandle)
+    FormationDefinitionIndex = FormationIndex(StateHandle, FormationId)
+    PartyMemberCount = Party.PartyCount(StateHandle)
+
+    If (Slot < 0 Or
+        BattleActive[Slot] Or
+        FormationDefinitionIndex < 0 Or
+        FormationMemberCounts[Slot, FormationDefinitionIndex] <= 0 Or
+        PartyMemberCount <= 0 Or
+        Seed < 0) Then
+        Return 0
+    End If
+
+    Call ResetSession(Slot)
+
+    If PartyMemberCount > BATTLE_MAX_PARTY_MEMBERS Then
+        PartyMemberCount = BATTLE_MAX_PARTY_MEMBERS
+    End If
+
+    For Index = 0 To PartyMemberCount - 1
+
+        CharacterId = Party.CharacterIdAt(StateHandle, Index)
+
+        If Not AddPartyParticipant(StateHandle, CharacterId, Index) Then
+            Call ResetSession(Slot)
+
+            Return 0
+        End If
+
+    End For
+
+    For MemberIndex = 0 To FormationMemberCounts[Slot, FormationDefinitionIndex] - 1
+
+        StoredIndex = FormationDefinitionIndex * BATTLE_MAX_FORMATION_MEMBERS + MemberIndex
+
+        If Not AddEnemyParticipant(StateHandle, FormationEnemyIds[Slot, StoredIndex], FormationGroupIds[Slot, StoredIndex], FormationSlotIds[Slot, StoredIndex]) Then
+            Call ResetSession(Slot)
+
+            Return 0
+        End If
+
+    End For
+
+    BattleSerials[Slot] = BattleSerials[Slot] + 1
+
+    If BattleSerials[Slot] > 9999 Then
+        BattleSerials[Slot] = 1
+    End If
+
+    BattleHandles[Slot] = Core.StateGeneration(StateHandle) * 100000 + (Slot + 1) * 10000 + BattleSerials[Slot]
+    BattleActive[Slot] = True
+    BattlePhases[Slot] = BATTLE_PHASE_COMMAND
+    BattleOutcomes[Slot] = BATTLE_OUTCOME_NONE
+    BattleRounds[Slot] = 0
+    BattleSeeds[Slot] = Seed Mod 65536
+    ActiveFormationIds[Slot] = FormationId
+    ActiveEscapeChances[Slot] = FormationEscapeChances[Slot, FormationDefinitionIndex]
+
+    If Not AddEvent(StateHandle, BATTLE_EVENT_BATTLE_STARTED, 0, 0, FormationId, Seed, FormationNames[Slot, FormationDefinitionIndex]) Then
+
+        Call ResetSession(Slot)
+
+        BattleActive[Slot] = False
+
+        Return 0
+
+    End If
+
+    ReturnValue = BattleHandles[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function IsActive(StateHandle As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    ReturnValue = BattleActive[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function CurrentBattleHandle(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Not BattleActive[Slot] Then
+        Return 0
+    End If
+
+    ReturnValue = BattleHandles[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function IsBattleHandleValid(StateHandle As Number, BattleHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim ReturnValue As Boolean
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    ReturnValue = BattleActive[Slot] And BattleHandles[Slot] = BattleHandle
+
+    Return ReturnValue
+
+End Function
+
+Public Function Phase(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return BATTLE_PHASE_NONE
+    End If
+
+    ReturnValue = BattlePhases[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Outcome(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return BATTLE_OUTCOME_NONE
+    End If
+
+    ReturnValue = BattleOutcomes[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function RoundNumber(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = BattleRounds[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ParticipantCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Not BattleActive[Slot] Then
+        Return 0
+    End If
+
+    ReturnValue = ActiveParticipantCounts[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ParticipantSide(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ParticipantSides[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ParticipantReferenceId(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ParticipantReferenceIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ParticipantDefinitionId(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ParticipantDefinitionIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ParticipantGroupId(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ParticipantGroupIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ParticipantSlotId(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ParticipantSlotIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ParticipantName(StateHandle As Number, ParticipantId As Number) As Text
+
+    Dim ReturnValue As Text
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return ""
+    End If
+
+    ReturnValue = ParticipantNames[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Health(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CurrentHealth(StateHandle, Index)
+
+    Return ReturnValue
+
+End Function
+
+Public Function MaximumHealth(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CurrentMaximumHealth(StateHandle, Index)
+
+    Return ReturnValue
+
+End Function
+
+Public Function MagicPoints(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CurrentMagicPoints(StateHandle, Index)
+
+    Return ReturnValue
+
+End Function
+
+Public Function MaximumMagicPoints(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CurrentMaximumMagicPoints(StateHandle, Index)
+
+    Return ReturnValue
+
+End Function
+
+Public Function IsAlive(StateHandle As Number, ParticipantId As Number) As Boolean
+
+    Dim Index As Number
+    Dim ReturnValue As Boolean
+
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Index < 0 Then
+        Return False
+    End If
+
+    ReturnValue = CurrentHealth(StateHandle, Index) > 0
+
+    Return ReturnValue
+
+End Function
+
+Public Function Agility(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim Value As Number
+    Dim StatusOffset As Number
+    Dim StoredIndex As Number
+    Dim StatusId As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    Value = ParticipantAgility[Slot, Index]
+
+    For StatusOffset = 0 To ParticipantStatusCounts[Slot, Index] - 1
+
+        StoredIndex = StatusStorageIndex(Index, StatusOffset)
+        StatusId = ParticipantStatusIds[Slot, StoredIndex]
+
+        If (Effects.StatusKind(StateHandle, StatusId) = Effects.BATTLE_STATUS_STAT_MODIFIER And
+            Effects.StatusStatistic(StateHandle, StatusId) = Effects.BATTLE_STAT_AGILITY) Then
+            Value = Value + Effects.StatusValue(StateHandle, StatusId)
+        End If
+
+    End For
+
+    If Value < 0 Then
+        Value = 0
+    End If
+
+    Return Value
+
+End Function
+
+Public Function AiProfileId(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ParticipantAiProfileIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Private Function StatusIndexOnParticipant(StateHandle As Number, ParticipantIndexValue As Number, StatusId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim StoredIndex As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        ParticipantIndexValue < 0 Or
+        ParticipantIndexValue >= ActiveParticipantCounts[Slot]) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To ParticipantStatusCounts[Slot, ParticipantIndexValue] - 1
+
+        StoredIndex = StatusStorageIndex(ParticipantIndexValue, Index)
+
+        If ParticipantStatusIds[Slot, StoredIndex] = StatusId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Public Function StatusCount(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ParticipantStatusCounts[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function StatusIdAt(StateHandle As Number, ParticipantId As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim ParticipantIndexValue As Number
+    Dim StoredIndex As Number
+
+    Slot = StateSlot(StateHandle)
+    ParticipantIndexValue = ParticipantIndex(StateHandle, ParticipantId)
+
+    If (Slot < 0 Or
+        ParticipantIndexValue < 0 Or
+        Index < 0 Or
+        Index >= ParticipantStatusCounts[Slot, ParticipantIndexValue]) Then
+        Return 0
+    End If
+
+    StoredIndex = StatusStorageIndex(ParticipantIndexValue, Index)
+    ReturnValue = ParticipantStatusIds[Slot, StoredIndex]
+
+    Return ReturnValue
+
+End Function
+
+Public Function StatusDurationAt(StateHandle As Number, ParticipantId As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim ParticipantIndexValue As Number
+    Dim StoredIndex As Number
+
+    Slot = StateSlot(StateHandle)
+    ParticipantIndexValue = ParticipantIndex(StateHandle, ParticipantId)
+
+    If (Slot < 0 Or
+        ParticipantIndexValue < 0 Or
+        Index < 0 Or
+        Index >= ParticipantStatusCounts[Slot, ParticipantIndexValue]) Then
+        Return 0
+    End If
+
+    StoredIndex = StatusStorageIndex(ParticipantIndexValue, Index)
+    ReturnValue = ParticipantStatusDurations[Slot, StoredIndex]
+
+    Return ReturnValue
+
+End Function
+
+Private Function AddStatus(StateHandle As Number, ParticipantIndexValue As Number, StatusId As Number, Duration As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim StoredIndex As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = StatusIndexOnParticipant(StateHandle, ParticipantIndexValue, StatusId)
+
+    If (Slot < 0 Or
+        Not Effects.IsStatusDefined(StateHandle, StatusId) Or
+        Duration <= 0) Then
+        Return False
+    End If
+
+    If Index >= 0 Then
+
+        StoredIndex = StatusStorageIndex(ParticipantIndexValue, Index)
+
+        If ParticipantStatusDurations[Slot, StoredIndex] < Duration Then
+            ParticipantStatusDurations[Slot, StoredIndex] = Duration
+        End If
+
+        Return True
+
+    End If
+
+    If ParticipantStatusCounts[Slot, ParticipantIndexValue] >= BATTLE_MAX_STATUSES_PER_PARTICIPANT Then
+        Return False
+    End If
+
+    Index = ParticipantStatusCounts[Slot, ParticipantIndexValue]
+    StoredIndex = StatusStorageIndex(ParticipantIndexValue, Index)
+    ParticipantStatusIds[Slot, StoredIndex] = StatusId
+    ParticipantStatusDurations[Slot, StoredIndex] = Duration
+    ParticipantStatusCounts[Slot, ParticipantIndexValue] = Index + 1
+    Return True
+
+End Function
+
+Private Function RemoveStatus(StateHandle As Number, ParticipantIndexValue As Number, StatusId As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim MoveIndex As Number
+    Dim StoredIndex As Number
+    Dim NextStoredIndex As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = StatusIndexOnParticipant(StateHandle, ParticipantIndexValue, StatusId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return False
+    End If
+
+    For MoveIndex = Index To ParticipantStatusCounts[Slot, ParticipantIndexValue] - 2
+        StoredIndex = StatusStorageIndex(ParticipantIndexValue, MoveIndex)
+        NextStoredIndex = StatusStorageIndex(ParticipantIndexValue, MoveIndex + 1)
+        ParticipantStatusIds[Slot, StoredIndex] = ParticipantStatusIds[Slot, NextStoredIndex]
+        ParticipantStatusDurations[Slot, StoredIndex] = ParticipantStatusDurations[Slot, NextStoredIndex]
+    End For
+
+    ParticipantStatusCounts[Slot, ParticipantIndexValue] = ParticipantStatusCounts[Slot, ParticipantIndexValue] - 1
+    StoredIndex = StatusStorageIndex(ParticipantIndexValue, ParticipantStatusCounts[Slot, ParticipantIndexValue])
+    ParticipantStatusIds[Slot, StoredIndex] = 0
+    ParticipantStatusDurations[Slot, StoredIndex] = 0
+    Return True
+
+End Function
+
+Private Function IsTargetAliveRequirement(StateHandle As Number, EffectId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim ComponentIndexValue As Number
+
+    For ComponentIndexValue = 0 To Effects.ComponentCount(StateHandle, EffectId) - 1
+
+        If Effects.ComponentKindAt(StateHandle, EffectId, ComponentIndexValue) = Effects.BATTLE_EFFECT_REVIVE Then
+            ReturnValue = -1
+
+            Return ReturnValue
+        End If
+
+    End For
+
+    Return 1
+
+End Function
+
+Private Function IsLegalTarget(StateHandle As Number, ActorIndex As Number, TargetIndex As Number, TargetMode As Number, EffectId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim SameSide As Boolean
+    Dim MustBeAlive As Number
+    Dim TargetIsAlive As Boolean
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        ActorIndex < 0 Or
+        TargetIndex < 0 Or
+        ActorIndex >= ActiveParticipantCounts[Slot] Or
+        TargetIndex >= ActiveParticipantCounts[Slot]) Then
+        Return False
+    End If
+
+    SameSide = ParticipantSides[Slot, ActorIndex] = ParticipantSides[Slot, TargetIndex]
+
+    If TargetMode = Core.RPG_TARGET_SELF And ActorIndex <> TargetIndex Then
+        Return False
+    Else If ((TargetMode = Core.RPG_TARGET_ONE_ALLY Or TargetMode = Core.RPG_TARGET_ALL_ALLIES) And
+        Not SameSide) Then
+        Return False
+    Else If ((TargetMode = Core.RPG_TARGET_ONE_ENEMY Or TargetMode = Core.RPG_TARGET_ALL_ENEMIES) And
+        SameSide) Then
+        Return False
+    End If
+
+    MustBeAlive = IsTargetAliveRequirement(StateHandle, EffectId)
+    TargetIsAlive = CurrentHealth(StateHandle, TargetIndex) > 0
+
+    If MustBeAlive < 0 Then
+        ReturnValue = Not TargetIsAlive
+
+        Return ReturnValue
+    End If
+
+    Return TargetIsAlive
+
+End Function
+
+Private Function Retarget(StateHandle As Number, ActorIndex As Number, TargetIndex As Number, TargetMode As Number, EffectId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    If IsLegalTarget(StateHandle, ActorIndex, TargetIndex, TargetMode, EffectId) Then
+        Return TargetIndex
+    End If
+
+    For Index = 0 To ActiveParticipantCounts[Slot] - 1
+
+        If IsLegalTarget(StateHandle, ActorIndex, Index, TargetMode, EffectId) Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+''' Submits one participant action for the next deterministic round.
+Public Function QueueAction(StateHandle As Number, ParticipantId As Number, ActionKind As Number, SourceId As Number, TargetParticipantId As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim TargetIndex As Number
+    Dim CharacterId As Number
+    Dim EffectId As Number
+    Dim TargetMode As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+    TargetIndex = ParticipantIndex(StateHandle, TargetParticipantId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        BattlePhases[Slot] <> BATTLE_PHASE_COMMAND Or
+        CurrentHealth(StateHandle, Index) <= 0 Or
+        SubmittedActions[Slot, Index] Or
+        ActionKind < BATTLE_ACTION_ATTACK Or
+        ActionKind > BATTLE_ACTION_RUN) Then
+        Return False
+    End If
+
+    If ActionKind = BATTLE_ACTION_ATTACK Then
+
+        EffectId = 0
+        TargetMode = Core.RPG_TARGET_ONE_ENEMY
+
+        If SourceId <> 0 Or Retarget(StateHandle, Index, TargetIndex, TargetMode, EffectId) < 0 Then
+            Return False
+        End If
+
+    Else If ActionKind = BATTLE_ACTION_ABILITY Then
+
+        If ParticipantSides[Slot, Index] = BATTLE_SIDE_PARTY Then
+
+            CharacterId = ParticipantReferenceIds[Slot, Index]
+
+            If (Not Abilities.KnowsAbility(StateHandle, CharacterId, SourceId) Or
+                Not Abilities.CanPayMagicPointCost(StateHandle, CharacterId, SourceId)) Then
+                Return False
+            End If
+
+        Else If Not Abilities.IsAbilityDefined(StateHandle, SourceId) Then
+
+            Return False
+
+        End If
+
+        EffectId = Abilities.EffectId(StateHandle, SourceId)
+        TargetMode = Abilities.TargetMode(StateHandle, SourceId)
+
+        If Not Effects.IsEffectDefined(StateHandle, EffectId) Then
+            Return False
+        End If
+
+        If (TargetMode = Core.RPG_TARGET_SELF Or
+            TargetMode = Core.RPG_TARGET_ONE_ALLY Or
+            TargetMode = Core.RPG_TARGET_ONE_ENEMY) Then
+
+            If Retarget(StateHandle, Index, TargetIndex, TargetMode, EffectId) < 0 Then
+                Return False
+            End If
+
+        End If
+
+    Else If ActionKind = BATTLE_ACTION_ITEM Then
+
+        If ParticipantSides[Slot, Index] <> BATTLE_SIDE_PARTY Then
+            Return False
+        End If
+
+        EffectId = Inventory.EffectId(StateHandle, SourceId)
+
+        If (Inventory.Kind(StateHandle, SourceId) <> Core.RPG_ITEM_CONSUMABLE Or
+            Inventory.Quantity(StateHandle, SourceId) <= 0 Or
+            Not Effects.IsEffectDefined(StateHandle, EffectId) Or
+            Retarget(StateHandle, Index, TargetIndex, Core.RPG_TARGET_ONE_ALLY, EffectId) < 0) Then
+            Return False
+        End If
+
+    Else If ActionKind = BATTLE_ACTION_DEFEND Then
+
+        If SourceId <> 0 Or TargetParticipantId <> 0 Then
+            Return False
+        End If
+
+    Else If ActionKind = BATTLE_ACTION_RUN Then
+
+        If (ParticipantSides[Slot, Index] <> BATTLE_SIDE_PARTY Or
+            SourceId <> 0 Or
+            TargetParticipantId <> 0) Then
+            Return False
+        End If
+
+    End If
+
+    SubmittedActions[Slot, Index] = True
+    SubmittedActionKinds[Slot, Index] = ActionKind
+    SubmittedSourceIds[Slot, Index] = SourceId
+    SubmittedTargetIds[Slot, Index] = TargetParticipantId
+    Return True
+
+End Function
+
+Private Function HasActionDenyStatus(StateHandle As Number, ParticipantIndexValue As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim StoredIndex As Number
+    Dim StatusId As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    For Index = 0 To ParticipantStatusCounts[Slot, ParticipantIndexValue] - 1
+
+        StoredIndex = StatusStorageIndex(ParticipantIndexValue, Index)
+        StatusId = ParticipantStatusIds[Slot, StoredIndex]
+
+        If Effects.StatusKind(StateHandle, StatusId) = Effects.BATTLE_STATUS_ACTION_DENY Then
+            Return True
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+Private Sub SortSchedule(StateHandle As Number)
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim CompareIndex As Number
+    Dim LeftParticipant As Number
+    Dim RightParticipant As Number
+    Dim SwapValue As Number
+    Dim LeftAgility As Number
+    Dim RightAgility As Number
+
+    Slot = StateSlot(StateHandle)
+
+    For Index = 0 To ScheduleCounts[Slot] - 2
+
+        For CompareIndex = Index + 1 To ScheduleCounts[Slot] - 1
+
+            LeftParticipant = ScheduleParticipantIndexes[Slot, Index]
+            RightParticipant = ScheduleParticipantIndexes[Slot, CompareIndex]
+            LeftAgility = Agility(StateHandle, LeftParticipant + 1)
+            RightAgility = Agility(StateHandle, RightParticipant + 1)
+
+            If (RightAgility > LeftAgility Or
+                (RightAgility = LeftAgility And RightParticipant < LeftParticipant)) Then
+
+                SwapValue = ScheduleParticipantIndexes[Slot, Index]
+                ScheduleParticipantIndexes[Slot, Index] = ScheduleParticipantIndexes[Slot, CompareIndex]
+                ScheduleParticipantIndexes[Slot, CompareIndex] = SwapValue
+
+            End If
+
+        End For
+    End For
+
+End Sub
+
+''' Freezes submitted actions and starts their deterministic agility schedule.
+Public Function StartRound(StateHandle As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not BattleActive[Slot] Or
+        BattlePhases[Slot] <> BATTLE_PHASE_COMMAND) Then
+        Return False
+    End If
+
+    ScheduleCounts[Slot] = 0
+    SchedulePositions[Slot] = 0
+
+    For Index = 0 To ActiveParticipantCounts[Slot] - 1
+
+        If SubmittedActions[Slot, Index] And CurrentHealth(StateHandle, Index) > 0 Then
+            ScheduleParticipantIndexes[Slot, ScheduleCounts[Slot]] = Index
+            ScheduleCounts[Slot] = ScheduleCounts[Slot] + 1
+        End If
+
+    End For
+
+    If ScheduleCounts[Slot] <= 0 Or EventCounts[Slot] > BATTLE_MAX_EVENTS - 32 Then
+        Return False
+    End If
+
+    Call SortSchedule(StateHandle)
+
+    BattleRounds[Slot] = BattleRounds[Slot] + 1
+    BattlePhases[Slot] = BATTLE_PHASE_RESOLVING
+
+    ReturnValue = AddEvent(StateHandle, BATTLE_EVENT_ROUND_STARTED, 0, 0, BattleRounds[Slot], ScheduleCounts[Slot], "Round started")
+
+    Return ReturnValue
+
+End Function
+
+Private Sub BackupTransaction(StateHandle As Number)
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim StatusOffset As Number
+    Dim StoredIndex As Number
+
+    Slot = StateSlot(StateHandle)
+    BackupEventCounts[Slot] = EventCounts[Slot]
+    BackupSeeds[Slot] = BattleSeeds[Slot]
+    BackupItemIds[Slot] = 0
+    BackupItemQuantities[Slot] = 0
+
+    For Index = 0 To ActiveParticipantCounts[Slot] - 1
+
+        BackupHealth[Slot, Index] = CurrentHealth(StateHandle, Index)
+        BackupMagicPoints[Slot, Index] = CurrentMagicPoints(StateHandle, Index)
+        BackupDefending[Slot, Index] = ParticipantDefending[Slot, Index]
+        BackupStatusCounts[Slot, Index] = ParticipantStatusCounts[Slot, Index]
+
+        For StatusOffset = 0 To BATTLE_MAX_STATUSES_PER_PARTICIPANT - 1
+            StoredIndex = StatusStorageIndex(Index, StatusOffset)
+            BackupStatusIds[Slot, StoredIndex] = ParticipantStatusIds[Slot, StoredIndex]
+            BackupStatusDurations[Slot, StoredIndex] = ParticipantStatusDurations[Slot, StoredIndex]
+        End For
+    End For
+
+End Sub
+
+Private Sub RestoreTransaction(StateHandle As Number)
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim StatusOffset As Number
+    Dim StoredIndex As Number
+    Dim Ignored As Boolean
+    Dim CurrentItemQuantity As Number
+
+    Slot = StateSlot(StateHandle)
+    EventCounts[Slot] = BackupEventCounts[Slot]
+    BattleSeeds[Slot] = BackupSeeds[Slot]
+
+    If BackupItemIds[Slot] > 0 Then
+
+        CurrentItemQuantity = Inventory.Quantity(StateHandle, BackupItemIds[Slot])
+
+        If CurrentItemQuantity < BackupItemQuantities[Slot] Then
+            Ignored = Inventory.AddItem(StateHandle, BackupItemIds[Slot], BackupItemQuantities[Slot] - CurrentItemQuantity)
+        Else If CurrentItemQuantity > BackupItemQuantities[Slot] Then
+            Ignored = Inventory.RemoveItem(StateHandle, BackupItemIds[Slot], CurrentItemQuantity - BackupItemQuantities[Slot])
+        End If
+
+    End If
+
+    For Index = 0 To ActiveParticipantCounts[Slot] - 1
+
+        Ignored = SetCurrentHealth(StateHandle, Index, BackupHealth[Slot, Index])
+        Ignored = SetCurrentMagicPoints(StateHandle, Index, BackupMagicPoints[Slot, Index])
+
+        ParticipantDefending[Slot, Index] = BackupDefending[Slot, Index]
+        ParticipantStatusCounts[Slot, Index] = BackupStatusCounts[Slot, Index]
+
+        For StatusOffset = 0 To BATTLE_MAX_STATUSES_PER_PARTICIPANT - 1
+            StoredIndex = StatusStorageIndex(Index, StatusOffset)
+            ParticipantStatusIds[Slot, StoredIndex] = BackupStatusIds[Slot, StoredIndex]
+            ParticipantStatusDurations[Slot, StoredIndex] = BackupStatusDurations[Slot, StoredIndex]
+        End For
+    End For
+
+End Sub
+
+Private Function CommitCheckpoint(Checkpoint As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Checkpoint >= CHECKPOINT_MAGIC_POINT_PAYMENT And Checkpoint <= CHECKPOINT_GOLD_REWARD
+
+    Return ReturnValue
+
+End Function
+
+Private Function StatisticValue(StateHandle As Number, ParticipantIndexValue As Number, Statistic As Number) As Number
+
+    Dim Slot As Number
+    Dim Value As Number
+    Dim StatusOffset As Number
+    Dim StoredIndex As Number
+    Dim StatusId As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Statistic = Effects.BATTLE_STAT_STRENGTH Then
+        Value = ParticipantStrength[Slot, ParticipantIndexValue]
+    Else If Statistic = Effects.BATTLE_STAT_DEFENSE Then
+        Value = ParticipantDefense[Slot, ParticipantIndexValue]
+    Else If Statistic = Effects.BATTLE_STAT_MAGIC Then
+        Value = ParticipantMagic[Slot, ParticipantIndexValue]
+    Else If Statistic = Effects.BATTLE_STAT_RESISTANCE Then
+        Value = ParticipantResistance[Slot, ParticipantIndexValue]
+    Else If Statistic = Effects.BATTLE_STAT_AGILITY Then
+        Value = ParticipantAgility[Slot, ParticipantIndexValue]
+    Else If Statistic = Effects.BATTLE_STAT_LUCK Then
+        Value = ParticipantLuck[Slot, ParticipantIndexValue]
+    End If
+
+    For StatusOffset = 0 To ParticipantStatusCounts[Slot, ParticipantIndexValue] - 1
+
+        StoredIndex = StatusStorageIndex(ParticipantIndexValue, StatusOffset)
+        StatusId = ParticipantStatusIds[Slot, StoredIndex]
+
+        If (Effects.StatusKind(StateHandle, StatusId) = Effects.BATTLE_STATUS_STAT_MODIFIER And
+            Effects.StatusStatistic(StateHandle, StatusId) = Statistic) Then
+            Value = Value + Effects.StatusValue(StateHandle, StatusId)
+        End If
+
+    End For
+
+    If Value < 0 Then
+        Value = 0
+    End If
+
+    Return Value
+
+End Function
+
+Private Function ApplyDamage(StateHandle As Number, ActorIndex As Number, TargetIndex As Number, Power As Number, MagicDamage As Boolean) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim AttackValue As Number
+    Dim DefenseValue As Number
+    Dim DamageValue As Number
+    Dim OldHealth As Number
+    Dim NewHealth As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If MagicDamage Then
+        AttackValue = StatisticValue(StateHandle, ActorIndex, Effects.BATTLE_STAT_MAGIC)
+        DefenseValue = StatisticValue(StateHandle, TargetIndex, Effects.BATTLE_STAT_RESISTANCE)
+    Else
+        AttackValue = StatisticValue(StateHandle, ActorIndex, Effects.BATTLE_STAT_STRENGTH)
+        DefenseValue = StatisticValue(StateHandle, TargetIndex, Effects.BATTLE_STAT_DEFENSE)
+    End If
+
+    DamageValue = AttackValue + Power + (NextRandom(StateHandle) Mod 5) - DefenseValue / 2
+
+    If DamageValue < 1 Then
+        DamageValue = 1
+    End If
+
+    If ParticipantDefending[Slot, TargetIndex] Then
+        DamageValue = (DamageValue + 1) / 2
+    End If
+
+    OldHealth = CurrentHealth(StateHandle, TargetIndex)
+    NewHealth = OldHealth - DamageValue
+
+    If NewHealth < 0 Then
+        NewHealth = 0
+    End If
+
+    If Not SetCurrentHealth(StateHandle, TargetIndex, NewHealth) Then
+        Return False
+    End If
+
+    If Not AddEvent(StateHandle, BATTLE_EVENT_DAMAGE, ActorIndex + 1, TargetIndex + 1, OldHealth - NewHealth, NewHealth, "Damage") Then
+        Return False
+    End If
+
+    If NewHealth = 0 Then
+        ReturnValue = AddEvent(StateHandle, BATTLE_EVENT_DEFEATED, ActorIndex + 1, TargetIndex + 1, 0, 0, ParticipantNames[Slot, TargetIndex] + " was defeated")
+
+        Return ReturnValue
+    End If
+
+    Return True
+
+End Function
+
+Private Function ApplyComponent(StateHandle As Number, ActorIndex As Number, TargetIndex As Number, EffectId As Number, ComponentIndexValue As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim Kind As Number
+    Dim Power As Number
+    Dim StatusId As Number
+    Dim Duration As Number
+    Dim OldValue As Number
+    Dim NewValue As Number
+
+    Slot = StateSlot(StateHandle)
+    Kind = Effects.ComponentKindAt(StateHandle, EffectId, ComponentIndexValue)
+    Power = Effects.ComponentPowerAt(StateHandle, EffectId, ComponentIndexValue)
+    StatusId = Effects.ComponentStatusIdAt(StateHandle, EffectId, ComponentIndexValue)
+    Duration = Effects.ComponentDurationAt(StateHandle, EffectId, ComponentIndexValue)
+
+    If Kind = Effects.BATTLE_EFFECT_PHYSICAL_DAMAGE Then
+
+        ReturnValue = ApplyDamage(StateHandle, ActorIndex, TargetIndex, Power, False)
+
+        Return ReturnValue
+
+    Else If Kind = Effects.BATTLE_EFFECT_MAGIC_DAMAGE Then
+
+        ReturnValue = ApplyDamage(StateHandle, ActorIndex, TargetIndex, Power, True)
+
+        Return ReturnValue
+
+    Else If Kind = Effects.BATTLE_EFFECT_HEAL_HEALTH Then
+
+        OldValue = CurrentHealth(StateHandle, TargetIndex)
+        NewValue = OldValue + Power
+
+        If NewValue > CurrentMaximumHealth(StateHandle, TargetIndex) Then
+            NewValue = CurrentMaximumHealth(StateHandle, TargetIndex)
+        End If
+
+        If Not SetCurrentHealth(StateHandle, TargetIndex, NewValue) Then
+            Return False
+        End If
+
+        ReturnValue = AddEvent(StateHandle, BATTLE_EVENT_HEAL, ActorIndex + 1, TargetIndex + 1, NewValue - OldValue, NewValue, "Health restored")
+
+        Return ReturnValue
+
+    Else If Kind = Effects.BATTLE_EFFECT_RESTORE_MAGIC_POINTS Then
+
+        OldValue = CurrentMagicPoints(StateHandle, TargetIndex)
+        NewValue = OldValue + Power
+
+        If NewValue > CurrentMaximumMagicPoints(StateHandle, TargetIndex) Then
+            NewValue = CurrentMaximumMagicPoints(StateHandle, TargetIndex)
+        End If
+
+        If Not SetCurrentMagicPoints(StateHandle, TargetIndex, NewValue) Then
+            Return False
+        End If
+
+        ReturnValue = AddEvent(StateHandle, BATTLE_EVENT_MAGIC_POINTS, ActorIndex + 1, TargetIndex + 1, NewValue - OldValue, NewValue, "Magic Points restored")
+
+        Return ReturnValue
+
+    Else If Kind = Effects.BATTLE_EFFECT_APPLY_STATUS Then
+
+        If Not AddStatus(StateHandle, TargetIndex, StatusId, Duration) Then
+            Return False
+        End If
+
+        ReturnValue = AddEvent(StateHandle, BATTLE_EVENT_STATUS_APPLIED, ActorIndex + 1, TargetIndex + 1, StatusId, Duration, Effects.StatusName(StateHandle, StatusId))
+
+        Return ReturnValue
+
+    Else If Kind = Effects.BATTLE_EFFECT_REMOVE_STATUS Then
+
+        If StatusIndexOnParticipant(StateHandle, TargetIndex, StatusId) < 0 Then
+            Return True
+        End If
+
+        If Not RemoveStatus(StateHandle, TargetIndex, StatusId) Then
+            Return False
+        End If
+
+        ReturnValue = AddEvent(StateHandle, BATTLE_EVENT_STATUS_REMOVED, ActorIndex + 1, TargetIndex + 1, StatusId, 0, Effects.StatusName(StateHandle, StatusId))
+
+        Return ReturnValue
+
+    Else If Kind = Effects.BATTLE_EFFECT_REVIVE Then
+
+        If CurrentHealth(StateHandle, TargetIndex) > 0 Then
+            Return False
+        End If
+
+        NewValue = Power
+
+        If NewValue < 1 Then
+            NewValue = 1
+        End If
+
+        If NewValue > CurrentMaximumHealth(StateHandle, TargetIndex) Then
+            NewValue = CurrentMaximumHealth(StateHandle, TargetIndex)
+        End If
+
+        If Not SetCurrentHealth(StateHandle, TargetIndex, NewValue) Then
+            Return False
+        End If
+
+        ReturnValue = AddEvent(StateHandle, BATTLE_EVENT_REVIVED, ActorIndex + 1, TargetIndex + 1, NewValue, 0, "Revived")
+
+        Return ReturnValue
+
+    End If
+
+    Return False
+
+End Function
+
+Private Function ApplyEffectToTarget(StateHandle As Number, ActorIndex As Number, TargetIndex As Number, EffectId As Number) As Boolean
+
+    Dim ComponentIndexValue As Number
+
+    For ComponentIndexValue = 0 To Effects.ComponentCount(StateHandle, EffectId) - 1
+
+        If Not ApplyComponent(StateHandle, ActorIndex, TargetIndex, EffectId, ComponentIndexValue) Then
+            Return False
+        End If
+
+        If Effects.ComponentKindAt(StateHandle, EffectId, ComponentIndexValue) = Effects.BATTLE_EFFECT_APPLY_STATUS Then
+
+            If Not CommitCheckpoint(CHECKPOINT_STATUS_COMPOSITE) Then
+                Return False
+            End If
+
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Private Function ApplyEffect(StateHandle As Number, ActorIndex As Number, TargetIndex As Number, EffectId As Number, TargetMode As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim AppliedCount As Number
+    Dim ActualTarget As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (TargetMode = Core.RPG_TARGET_SELF Or
+        TargetMode = Core.RPG_TARGET_ONE_ALLY Or
+        TargetMode = Core.RPG_TARGET_ONE_ENEMY) Then
+
+        ActualTarget = Retarget(StateHandle, ActorIndex, TargetIndex, TargetMode, EffectId)
+
+        If ActualTarget < 0 Then
+            Return False
+        End If
+
+        ReturnValue = ApplyEffectToTarget(StateHandle, ActorIndex, ActualTarget, EffectId)
+
+        Return ReturnValue
+
+    End If
+
+    For Index = 0 To ActiveParticipantCounts[Slot] - 1
+
+        If IsLegalTarget(StateHandle, ActorIndex, Index, TargetMode, EffectId) Then
+
+            If Not ApplyEffectToTarget(StateHandle, ActorIndex, Index, EffectId) Then
+                Return False
+            End If
+
+            AppliedCount = AppliedCount + 1
+
+            If AppliedCount = 1 Then
+
+                If Not CommitCheckpoint(CHECKPOINT_FIRST_MULTI_TARGET) Then
+                    Return False
+                End If
+
+            End If
+
+        End If
+
+    End For
+
+    ReturnValue = AppliedCount > 0
+
+    Return ReturnValue
+
+End Function
+
+Private Function ExecuteAttack(StateHandle As Number, ActorIndex As Number, TargetIndex As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim ActualTarget As Number
+
+    ActualTarget = Retarget(StateHandle, ActorIndex, TargetIndex, Core.RPG_TARGET_ONE_ENEMY, 0)
+
+    If ActualTarget < 0 Then
+        Return True
+    End If
+
+    If Not AddEvent(StateHandle, BATTLE_EVENT_ATTACK, ActorIndex + 1, ActualTarget + 1, 0, 0, "Attack") Then
+        Return False
+    End If
+
+    ReturnValue = ApplyDamage(StateHandle, ActorIndex, ActualTarget, 0, False)
+
+    Return ReturnValue
+
+End Function
+
+Private Function ExecuteAbility(StateHandle As Number, ActorIndex As Number, SourceId As Number, TargetIndex As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim CharacterId As Number
+    Dim Cost As Number
+    Dim OldMagicPoints As Number
+    Dim EffectId As Number
+    Dim TargetMode As Number
+
+    Slot = StateSlot(StateHandle)
+    Cost = Abilities.MagicPointCost(StateHandle, SourceId)
+    EffectId = Abilities.EffectId(StateHandle, SourceId)
+    TargetMode = Abilities.TargetMode(StateHandle, SourceId)
+    OldMagicPoints = CurrentMagicPoints(StateHandle, ActorIndex)
+
+    If OldMagicPoints < Cost Then
+        Return False
+    End If
+
+    If ParticipantSides[Slot, ActorIndex] = BATTLE_SIDE_PARTY Then
+
+        CharacterId = ParticipantReferenceIds[Slot, ActorIndex]
+
+        If Not Abilities.PayMagicPointCost(StateHandle, CharacterId, SourceId) Then
+            Return False
+        End If
+
+    Else If Not SetCurrentMagicPoints(StateHandle, ActorIndex, OldMagicPoints - Cost) Then
+
+        Return False
+
+    End If
+
+    If Not CommitCheckpoint(CHECKPOINT_MAGIC_POINT_PAYMENT) Then
+        Return False
+    End If
+
+    If Not AddEvent(StateHandle, BATTLE_EVENT_ABILITY, ActorIndex + 1, TargetIndex + 1, SourceId, Cost, Abilities.Name(StateHandle, SourceId)) Then
+        Return False
+    End If
+
+    ReturnValue = ApplyEffect(StateHandle, ActorIndex, TargetIndex, EffectId, TargetMode)
+
+    Return ReturnValue
+
+End Function
+
+Private Function ExecuteItem(StateHandle As Number, ActorIndex As Number, SourceId As Number, TargetIndex As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim EffectId As Number
+
+    EffectId = Inventory.EffectId(StateHandle, SourceId)
+
+    If Not Inventory.RemoveItem(StateHandle, SourceId, 1) Then
+        Return False
+    End If
+
+    If Not CommitCheckpoint(CHECKPOINT_ITEM_REMOVAL) Then
+        Return False
+    End If
+
+    If Not AddEvent(StateHandle, BATTLE_EVENT_ITEM, ActorIndex + 1, TargetIndex + 1, SourceId, 1, Inventory.Name(StateHandle, SourceId)) Then
+        Return False
+    End If
+
+    ReturnValue = ApplyEffect(StateHandle, ActorIndex, TargetIndex, EffectId, Core.RPG_TARGET_ONE_ALLY)
+
+    Return ReturnValue
+
+End Function
+
+Private Function ExecuteRun(StateHandle As Number, ActorIndex As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim Roll As Number
+
+    Slot = StateSlot(StateHandle)
+    Roll = NextRandom(StateHandle) Mod 100
+
+    If Roll < ActiveEscapeChances[Slot] Then
+
+        BattleOutcomes[Slot] = BATTLE_OUTCOME_ESCAPED
+        BattlePhases[Slot] = BATTLE_PHASE_ESCAPED
+
+        If Not AddEvent(StateHandle, BATTLE_EVENT_RUN_SUCCEEDED, ActorIndex + 1, 0, Roll, ActiveEscapeChances[Slot], "Run succeeded") Then
+            Return False
+        End If
+
+        ReturnValue = AddEvent(StateHandle, BATTLE_EVENT_ESCAPE, 0, 0, 0, 0, "The party escaped")
+
+        Return ReturnValue
+
+    End If
+
+    ReturnValue = AddEvent(StateHandle, BATTLE_EVENT_RUN_FAILED, ActorIndex + 1, 0, Roll, ActiveEscapeChances[Slot], "Run failed")
+
+    Return ReturnValue
+
+End Function
+
+Private Function ExecuteAction(StateHandle As Number, ParticipantIndexValue As Number) As Boolean
+
+    Dim Slot As Number
+    Dim ActionKind As Number
+    Dim SourceId As Number
+    Dim TargetId As Number
+    Dim TargetIndex As Number
+    Dim OldItemQuantity As Number
+    Dim ActionSucceeded As Boolean
+    Dim Ignored As Boolean
+
+    Slot = StateSlot(StateHandle)
+    ActionKind = SubmittedActionKinds[Slot, ParticipantIndexValue]
+    SourceId = SubmittedSourceIds[Slot, ParticipantIndexValue]
+    TargetId = SubmittedTargetIds[Slot, ParticipantIndexValue]
+    TargetIndex = ParticipantIndex(StateHandle, TargetId)
+
+    If CurrentHealth(StateHandle, ParticipantIndexValue) <= 0 Then
+        Return True
+    End If
+
+    Call BackupTransaction(StateHandle)
+
+    If ActionKind = BATTLE_ACTION_ITEM Then
+
+        OldItemQuantity = Inventory.Quantity(StateHandle, SourceId)
+        BackupItemIds[Slot] = SourceId
+        BackupItemQuantities[Slot] = OldItemQuantity
+
+    End If
+
+    ParticipantDefending[Slot, ParticipantIndexValue] = False
+
+    If Not AddEvent(StateHandle, BATTLE_EVENT_ACTION_STARTED, ParticipantIndexValue + 1, TargetId, ActionKind, SourceId, ParticipantNames[Slot, ParticipantIndexValue]) Then
+        Call RestoreTransaction(StateHandle)
+
+        Return False
+    End If
+
+    If HasActionDenyStatus(StateHandle, ParticipantIndexValue) Then
+        ActionSucceeded = AddEvent(StateHandle, BATTLE_EVENT_ACTION_DENIED, ParticipantIndexValue + 1, 0, 0, 0, "Action denied")
+    Else If ActionKind = BATTLE_ACTION_ATTACK Then
+        ActionSucceeded = ExecuteAttack(StateHandle, ParticipantIndexValue, TargetIndex)
+    Else If ActionKind = BATTLE_ACTION_ABILITY Then
+        ActionSucceeded = ExecuteAbility(StateHandle, ParticipantIndexValue, SourceId, TargetIndex)
+    Else If ActionKind = BATTLE_ACTION_ITEM Then
+        ActionSucceeded = ExecuteItem(StateHandle, ParticipantIndexValue, SourceId, TargetIndex)
+    Else If ActionKind = BATTLE_ACTION_DEFEND Then
+        ParticipantDefending[Slot, ParticipantIndexValue] = True
+        ActionSucceeded = AddEvent(StateHandle, BATTLE_EVENT_DEFEND, ParticipantIndexValue + 1, ParticipantIndexValue + 1, 0, 0, "Defend")
+    Else If ActionKind = BATTLE_ACTION_RUN Then
+        ActionSucceeded = ExecuteRun(StateHandle, ParticipantIndexValue)
+    End If
+
+    If Not ActionSucceeded Then
+
+        Call RestoreTransaction(StateHandle)
+
+        If (ActionKind = BATTLE_ACTION_ITEM And
+            Inventory.Quantity(StateHandle, SourceId) < OldItemQuantity) Then
+            Ignored = Inventory.AddItem(StateHandle, SourceId, OldItemQuantity - Inventory.Quantity(StateHandle, SourceId))
+        End If
+
+        Return False
+
+    End If
+
+    Return True
+
+End Function
+
+Private Function SideHasLivingParticipant(StateHandle As Number, Side As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    For Index = 0 To ActiveParticipantCounts[Slot] - 1
+
+        If ParticipantSides[Slot, Index] = Side And CurrentHealth(StateHandle, Index) > 0 Then
+            Return True
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+Private Function CommitRewards(StateHandle As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim CharacterId As Number
+    Dim CharacterCount As Number
+    Dim OldGold As Number
+    Dim OldExperience[4] As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If RewardsCommitted[Slot] Then
+        Return True
+    End If
+
+    OldGold = Party.Gold(StateHandle)
+
+    For Index = 0 To ActiveParticipantCounts[Slot] - 1
+
+        If ParticipantSides[Slot, Index] = BATTLE_SIDE_PARTY Then
+
+            CharacterId = ParticipantReferenceIds[Slot, Index]
+
+            If Characters.Experience(StateHandle, CharacterId) > Core.RPG_MAX_VALUE - RewardExperience[Slot] Then
+                Return False
+            End If
+
+            OldExperience[CharacterCount] = Characters.Experience(StateHandle, CharacterId)
+            CharacterCount = CharacterCount + 1
+
+        End If
+
+    End For
+
+    If OldGold > Core.RPG_MAX_VALUE - RewardGold[Slot] Then
+        Return False
+    End If
+
+    CharacterCount = 0
+
+    For Index = 0 To ActiveParticipantCounts[Slot] - 1
+
+        If ParticipantSides[Slot, Index] = BATTLE_SIDE_PARTY Then
+
+            CharacterId = ParticipantReferenceIds[Slot, Index]
+
+            If Not Characters.AddExperience(StateHandle, CharacterId, RewardExperience[Slot]) Then
+                Call RollbackRewards(StateHandle, CharacterCount, OldGold)
+
+                Return False
+            End If
+
+            CharacterCount = CharacterCount + 1
+
+            If CharacterCount = 1 Then
+
+                If Not CommitCheckpoint(CHECKPOINT_FIRST_CHARACTER_REWARD) Then
+                    Call RollbackRewardsWithValues(StateHandle, CharacterCount, OldGold, OldExperience[0], OldExperience[1], OldExperience[2], OldExperience[3])
+
+                    Return False
+                End If
+
+            End If
+
+        End If
+
+    End For
+
+    If Not Party.AddGold(StateHandle, RewardGold[Slot]) Then
+        Call RollbackRewardsWithValues(StateHandle, CharacterCount, OldGold, OldExperience[0], OldExperience[1], OldExperience[2], OldExperience[3])
+
+        Return False
+    End If
+
+    If Not CommitCheckpoint(CHECKPOINT_GOLD_REWARD) Then
+        Call RollbackRewardsWithValues(StateHandle, CharacterCount, OldGold, OldExperience[0], OldExperience[1], OldExperience[2], OldExperience[3])
+
+        Return False
+    End If
+
+    ReturnValue = AddEvent(StateHandle, BATTLE_EVENT_REWARD, 0, 0, RewardExperience[Slot], RewardGold[Slot], "Battle rewards")
+
+    If Not ReturnValue Then
+        Call RollbackRewardsWithValues(StateHandle, CharacterCount, OldGold, OldExperience[0], OldExperience[1], OldExperience[2], OldExperience[3])
+
+        Return False
+    End If
+
+    RewardsCommitted[Slot] = True
+
+    Return ReturnValue
+
+End Function
+
+Private Sub RollbackRewards(StateHandle As Number, CharacterCount As Number, OldGold As Number)
+
+    Dim Index As Number
+    Dim CharacterId As Number
+    Dim Ignored As Boolean
+
+    For Index = 0 To CharacterCount - 1
+        CharacterId = ParticipantReferenceIds[StateSlot(StateHandle), Index]
+        Ignored = Characters.SetExperience(StateHandle, CharacterId, Characters.Experience(StateHandle, CharacterId) - RewardExperience[StateSlot(StateHandle)])
+    End For
+
+    Ignored = Party.SetGold(StateHandle, OldGold)
+
+End Sub
+
+Private Sub RollbackRewardsWithValues(StateHandle As Number, CharacterCount As Number, OldGold As Number, ExperienceZero As Number, ExperienceOne As Number, ExperienceTwo As Number, ExperienceThree As Number)
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim CharacterId As Number
+    Dim OldExperience As Number
+    Dim Ignored As Boolean
+
+    Slot = StateSlot(StateHandle)
+
+    For Index = 0 To CharacterCount - 1
+
+        CharacterId = ParticipantReferenceIds[Slot, Index]
+
+        If Index = 0 Then
+            OldExperience = ExperienceZero
+        Else If Index = 1 Then
+            OldExperience = ExperienceOne
+        Else If Index = 2 Then
+            OldExperience = ExperienceTwo
+        Else
+            OldExperience = ExperienceThree
+        End If
+
+        Ignored = Characters.SetExperience(StateHandle, CharacterId, OldExperience)
+    End For
+
+    Ignored = Party.SetGold(StateHandle, OldGold)
+
+End Sub
+
+Private Function CheckOutcome(StateHandle As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If BattleOutcomes[Slot] <> BATTLE_OUTCOME_NONE Then
+        Return True
+    End If
+
+    If Not SideHasLivingParticipant(StateHandle, BATTLE_SIDE_ENEMY) Then
+
+        If EventCounts[Slot] > BATTLE_MAX_EVENTS - 2 Then
+            Return False
+        End If
+
+        If Not CommitRewards(StateHandle) Then
+            Return False
+        End If
+
+        BattleOutcomes[Slot] = BATTLE_OUTCOME_VICTORY
+        BattlePhases[Slot] = BATTLE_PHASE_VICTORY
+        ReturnValue = AddEvent(StateHandle, BATTLE_EVENT_VICTORY, 0, 0, RewardExperience[Slot], RewardGold[Slot], "Victory")
+
+        Return ReturnValue
+
+    End If
+
+    If Not SideHasLivingParticipant(StateHandle, BATTLE_SIDE_PARTY) Then
+
+        BattleOutcomes[Slot] = BATTLE_OUTCOME_DEFEAT
+        BattlePhases[Slot] = BATTLE_PHASE_DEFEAT
+        ReturnValue = AddEvent(StateHandle, BATTLE_EVENT_DEFEAT, 0, 0, 0, 0, "Defeat")
+
+        Return ReturnValue
+
+    End If
+
+    Return True
+
+End Function
+
+Private Function TickStatuses(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim ParticipantIndexValue As Number
+    Dim StatusOffset As Number
+    Dim StoredIndex As Number
+    Dim StatusId As Number
+    Dim StatusKind As Number
+    Dim DamageValue As Number
+    Dim OldHealth As Number
+    Dim NewHealth As Number
+    Dim Ignored As Boolean
+
+    Slot = StateSlot(StateHandle)
+
+    For ParticipantIndexValue = 0 To ActiveParticipantCounts[Slot] - 1
+
+        StatusOffset = 0
+
+        If ParticipantStatusCounts[Slot, ParticipantIndexValue] > 0 Then
+
+            Do
+            StoredIndex = StatusStorageIndex(ParticipantIndexValue, StatusOffset)
+            StatusId = ParticipantStatusIds[Slot, StoredIndex]
+            StatusKind = Effects.StatusKind(StateHandle, StatusId)
+
+            If (Effects.StatusTickTiming(StateHandle, StatusId) = Effects.BATTLE_STATUS_TICK_ROUND_END And
+                StatusKind = Effects.BATTLE_STATUS_POISON And
+                CurrentHealth(StateHandle, ParticipantIndexValue) > 0) Then
+
+                DamageValue = Effects.StatusValue(StateHandle, StatusId)
+                OldHealth = CurrentHealth(StateHandle, ParticipantIndexValue)
+                NewHealth = OldHealth - DamageValue
+
+                If NewHealth < 0 Then
+                    NewHealth = 0
+                End If
+
+                If Not SetCurrentHealth(StateHandle, ParticipantIndexValue, NewHealth) Then
+                    Return False
+                End If
+
+                If Not AddEvent(StateHandle, BATTLE_EVENT_DAMAGE, 0, ParticipantIndexValue + 1, OldHealth - NewHealth, NewHealth, Effects.StatusName(StateHandle, StatusId)) Then
+                    Return False
+                End If
+
+            End If
+
+            If Effects.StatusTickTiming(StateHandle, StatusId) = Effects.BATTLE_STATUS_TICK_ROUND_END Then
+                ParticipantStatusDurations[Slot, StoredIndex] = ParticipantStatusDurations[Slot, StoredIndex] - 1
+            End If
+
+            If ParticipantStatusDurations[Slot, StoredIndex] <= 0 Then
+                Ignored = RemoveStatus(StateHandle, ParticipantIndexValue, StatusId)
+            Else
+                StatusOffset = StatusOffset + 1
+            End If
+
+            Loop Until StatusOffset >= ParticipantStatusCounts[Slot, ParticipantIndexValue]
+
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Private Sub TickActionDenyDuration(StateHandle As Number, ParticipantIndexValue As Number)
+
+    Dim Slot As Number
+    Dim StatusOffset As Number
+    Dim StoredIndex As Number
+    Dim StatusId As Number
+    Dim Ignored As Boolean
+
+    Slot = StateSlot(StateHandle)
+    StatusOffset = 0
+
+    Do
+        StoredIndex = StatusStorageIndex(ParticipantIndexValue, StatusOffset)
+        StatusId = ParticipantStatusIds[Slot, StoredIndex]
+
+        If Effects.StatusTickTiming(StateHandle, StatusId) = Effects.BATTLE_STATUS_TICK_ACTION_START Then
+            ParticipantStatusDurations[Slot, StoredIndex] = ParticipantStatusDurations[Slot, StoredIndex] - 1
+        End If
+
+        If ParticipantStatusDurations[Slot, StoredIndex] <= 0 Then
+            Ignored = RemoveStatus(StateHandle, ParticipantIndexValue, StatusId)
+        Else
+            StatusOffset = StatusOffset + 1
+        End If
+
+    Loop Until StatusOffset >= ParticipantStatusCounts[Slot, ParticipantIndexValue]
+
+End Sub
+
+''' Advances exactly one action, or closes the current round after its last action.
+Public Function Advance(StateHandle As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim ParticipantIndexValue As Number
+    Dim WasDenied As Boolean
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not BattleActive[Slot] Or
+        BattlePhases[Slot] <> BATTLE_PHASE_RESOLVING) Then
+        Return False
+    End If
+
+    If SchedulePositions[Slot] < ScheduleCounts[Slot] Then
+
+        ParticipantIndexValue = ScheduleParticipantIndexes[Slot, SchedulePositions[Slot]]
+        WasDenied = HasActionDenyStatus(StateHandle, ParticipantIndexValue)
+
+        If Not ExecuteAction(StateHandle, ParticipantIndexValue) Then
+            Return False
+        End If
+
+        If WasDenied Then
+            Call TickActionDenyDuration(StateHandle, ParticipantIndexValue)
+        End If
+
+        ReturnValue = CheckOutcome(StateHandle)
+
+        If Not ReturnValue Then
+            Call RestoreTransaction(StateHandle)
+
+            Return False
+        End If
+
+        SchedulePositions[Slot] = SchedulePositions[Slot] + 1
+
+        Return ReturnValue
+
+    End If
+
+    Call BackupTransaction(StateHandle)
+
+    If Not TickStatuses(StateHandle) Or Not CheckOutcome(StateHandle) Then
+        Call RestoreTransaction(StateHandle)
+
+        Return False
+    End If
+
+    If BattleOutcomes[Slot] = BATTLE_OUTCOME_NONE Then
+
+        If Not AddEvent(StateHandle, BATTLE_EVENT_ROUND_ENDED, 0, 0, BattleRounds[Slot], 0, "Round ended") Then
+            Call RestoreTransaction(StateHandle)
+
+            Return False
+        End If
+
+        For ParticipantIndexValue = 0 To ActiveParticipantCounts[Slot] - 1
+            SubmittedActions[Slot, ParticipantIndexValue] = False
+        End For
+
+        BattlePhases[Slot] = BATTLE_PHASE_COMMAND
+
+    End If
+
+    Return True
+
+End Function
+
+''' Clears submitted actions while the command phase still owns them.
+Public Function ClearQueuedActions(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not BattleActive[Slot] Or
+        BattlePhases[Slot] <> BATTLE_PHASE_COMMAND) Then
+        Return False
+    End If
+
+    For Index = 0 To ActiveParticipantCounts[Slot] - 1
+        SubmittedActions[Slot, Index] = False
+        SubmittedActionKinds[Slot, Index] = 0
+        SubmittedSourceIds[Slot, Index] = 0
+        SubmittedTargetIds[Slot, Index] = 0
+    End For
+
+    Return True
+
+End Function
+
+''' Ends a completed battle and clears every transient action, status, event, and participant.
+Public Function EndBattle(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not BattleActive[Slot] Or
+        BattleOutcomes[Slot] = BATTLE_OUTCOME_NONE) Then
+        Return False
+    End If
+
+    BattleActive[Slot] = False
+    BattleHandles[Slot] = 0
+
+    Call ResetSession(Slot)
+
+    Return True
+
+End Function
+
+''' Abandons an unfinished transient battle without granting rewards.
+Public Function CancelBattle(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Not BattleActive[Slot] Then
+        Return False
+    End If
+
+    BattleActive[Slot] = False
+    BattleHandles[Slot] = 0
+
+    Call ResetSession(Slot)
+
+    Return True
+
+End Function
+
+Public Function EventCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = EventCounts[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function EventKindAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= EventCounts[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = EventKinds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function EventActorIdAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= EventCounts[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = EventActorIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function EventTargetIdAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= EventCounts[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = EventTargetIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function EventValueOneAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= EventCounts[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = EventValueOne[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function EventValueTwoAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= EventCounts[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = EventValueTwo[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function EventTextAt(StateHandle As Number, Index As Number) As Text
+
+    Dim ReturnValue As Text
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= EventCounts[Slot]) Then
+        Return ""
+    End If
+
+    ReturnValue = EventTexts[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Removes a bounded prefix of already-consumed events.
+Public Function ConsumeEvents(StateHandle As Number, EventCountToConsume As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim SourceIndex As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        EventCountToConsume < 0 Or
+        EventCountToConsume > EventCounts[Slot]) Then
+        Return False
+    End If
+
+    For Index = 0 To EventCounts[Slot] - EventCountToConsume - 1
+
+        SourceIndex = Index + EventCountToConsume
+        EventKinds[Slot, Index] = EventKinds[Slot, SourceIndex]
+        EventActorIds[Slot, Index] = EventActorIds[Slot, SourceIndex]
+        EventTargetIds[Slot, Index] = EventTargetIds[Slot, SourceIndex]
+        EventValueOne[Slot, Index] = EventValueOne[Slot, SourceIndex]
+        EventValueTwo[Slot, Index] = EventValueTwo[Slot, SourceIndex]
+        EventTexts[Slot, Index] = EventTexts[Slot, SourceIndex]
+    End For
+
+    For Index = EventCounts[Slot] - EventCountToConsume To EventCounts[Slot] - 1
+
+        EventKinds[Slot, Index] = 0
+        EventActorIds[Slot, Index] = 0
+        EventTargetIds[Slot, Index] = 0
+        EventValueOne[Slot, Index] = 0
+        EventValueTwo[Slot, Index] = 0
+        EventTexts[Slot, Index] = ""
+    End For
+
+    EventCounts[Slot] = EventCounts[Slot] - EventCountToConsume
+    Return True
+
+End Function
+
+End Module

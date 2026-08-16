@@ -129,6 +129,8 @@ Phase 8 proves that those existing packages can compose complete dungeon explora
 
 Phase 8.1 hardens the gallery with one application-local workflow source consumed by production and focused tests, all-or-nothing/idempotent event mutations, explicit result-aware UI status, load-time Story/actor projection reconciliation, a command lock during top-down interpolation, cumulative initialization gating, disposable post-mutation fault injection, and complete first-person/top-down progression modeling. It changes no public library API or persistence format. See `docs\implementation\phase8.1-dungeon-event-hardening-report.md`.
 
+Phase 9 advances `Smile.RPG` to 1.2.0 with deterministic, bounded, renderer-neutral BattleEffects, BattleCore, BattleStrategy, and BattleView modules. They provide formations, multi-group battles, Attack/Ability/Item/Defend/Run, targeting, agility rounds, battle statuses, revive, victory/defeat/escape, transactional Experience/Gold, Fight/Strategy/Order automation, deterministic enemy AI, event streams, and logical presentation cues without adding a battle keyword or runtime helper. Active battles block Save/Load and remain outside unchanged SRPG format 2. `examples\Phase9BattleStateTests` proves native/Web project/package parity; `examples\RpgBattleGallery` owns the original DirectX/GDI/Web art, audio, animation, and world/dungeon return presentation. See `docs\language\phase9-rpg-battles.md` and `docs\libraries\smile-rpg-battle-api.md`.
+
 Build the Phase 7 packages, state proof, and original world gallery:
 
 ```bat
@@ -144,6 +146,14 @@ Build the Phase 8 dungeon state proof and original gallery:
 artifacts\compiler\smilec.exe --project examples\Phase8DungeonStateTests\Phase8DungeonStateTests.smileproj --target windows-x64 -o artifacts\tests\Phase8DungeonStateTests.exe
 artifacts\compiler\smilec.exe --project examples\RpgDungeonGallery\RpgDungeonGallery.smileproj --target windows-x64 --graphics DirectX -o artifacts\games\RpgDungeonGallery-DirectX\RpgDungeonGallery.exe
 artifacts\compiler\smilec.exe --project examples\RpgDungeonGallery\RpgDungeonGallery.smileproj --target web --output-dir artifacts\web\RpgDungeonGallery
+```
+
+Build the Phase 9 battle state proof and original gallery:
+
+```bat
+artifacts\compiler\smilec.exe --project examples\Phase9BattleStateTests\Phase9BattleStateTests.smileproj --target windows-x64 -o artifacts\tests\Phase9BattleStateTests.exe
+artifacts\compiler\smilec.exe --project examples\RpgBattleGallery\RpgBattleGallery.smileproj --target windows-x64 --graphics DirectX -o artifacts\games\RpgBattleGallery-DirectX\RpgBattleGallery.exe
+artifacts\compiler\smilec.exe --project examples\RpgBattleGallery\RpgBattleGallery.smileproj --target web --output-dir artifacts\web\RpgBattleGallery
 ```
 
 Loose-file builds can add a built package with repeated `--library <path.smilelib>`. Project builds read `<SmileProjectReference>` and `<SmileLibraryReference>` items, build project dependencies in deterministic order, reject cycles, and reuse a referenced project package only when its identity, modules, normalized source hashes, and direct dependency identities match the current library project. Imports follow direct provider boundaries: application and library-project sources see only their own modules and direct references, package sources see only exact manifest dependencies, and loose roots see every package supplied directly with `--library`.

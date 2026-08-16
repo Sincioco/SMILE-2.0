@@ -143,7 +143,9 @@ Private Function ValidateDungeonState(StateHandle As Number) As Boolean
         End If
 
     Else If X > 12 Or Y > 10 Then
+
         Return False
+
     End If
 
     If (Not ActorProjectionMatches(StateHandle, ACTOR_FP_DOOR, FLAG_FP_DOOR) Or
@@ -221,13 +223,17 @@ End Function
 
 Private Function CaptureSnapshot(StateHandle As Number, SchemaVersion As Number) As Number
 
+    Dim ReturnValue As Number
+
     Dim Result As Number
     Dim Index As Number
 
     Result = SaveGames.Encode(StateHandle, SchemaVersion)
 
     If Result <> RPG.RPG_RESULT_OK Then
-        Return MapRpgResult(Result)
+        ReturnValue = MapRpgResult(Result)
+
+        Return ReturnValue
     End If
 
     SnapshotCount = SaveGames.EncodedByteCount()
@@ -241,6 +247,8 @@ Private Function CaptureSnapshot(StateHandle As Number, SchemaVersion As Number)
 End Function
 
 Private Function RestoreSnapshot(StateHandle As Number, SchemaVersion As Number) As Boolean
+
+    Dim ReturnValue As Boolean
 
     Dim Index As Number
     Dim Result As Number
@@ -257,7 +265,9 @@ Private Function RestoreSnapshot(StateHandle As Number, SchemaVersion As Number)
 
     Result = SaveGames.Decode(StateHandle, SchemaVersion)
 
-    Return Result = RPG.RPG_RESULT_OK
+    ReturnValue = Result = RPG.RPG_RESULT_OK
+
+    Return ReturnValue
 
 End Function
 
@@ -282,11 +292,13 @@ Private Function CompleteActorFlag(StateHandle As Number, ActorId As Number, Fla
 
     If Story.Flag(StateHandle, FlagId) Then
 
-        If World.ActorIsVisible(StateHandle, ActorId) And Not World.SetActorVisible(StateHandle, ActorId, False) Then
+        If (World.ActorIsVisible(StateHandle, ActorId) And
+            Not World.SetActorVisible(StateHandle, ActorId, False)) Then
             Return DUNGEON_RESULT_APPLY_FAILED
         End If
 
         Return DUNGEON_RESULT_ALREADY_COMPLETED
+
     End If
 
     If Not World.ActorIsVisible(StateHandle, ActorId) Then
@@ -304,6 +316,7 @@ Private Function CompleteActorFlag(StateHandle As Number, ActorId As Number, Fla
         End If
 
         Return DUNGEON_RESULT_APPLY_FAILED
+
     End If
 
     Return DUNGEON_RESULT_OK
@@ -350,11 +363,13 @@ Public Function CompleteGoldChest(StateHandle As Number, ActorId As Number, Flag
 
     If Story.Flag(StateHandle, FlagId) Then
 
-        If World.ActorIsVisible(StateHandle, ActorId) And Not World.SetActorVisible(StateHandle, ActorId, False) Then
+        If (World.ActorIsVisible(StateHandle, ActorId) And
+            Not World.SetActorVisible(StateHandle, ActorId, False)) Then
             Return DUNGEON_RESULT_APPLY_FAILED
         End If
 
         Return DUNGEON_RESULT_ALREADY_COMPLETED
+
     End If
 
     If Not World.ActorIsVisible(StateHandle, ActorId) Then
@@ -378,6 +393,7 @@ Public Function CompleteGoldChest(StateHandle As Number, ActorId As Number, Flag
         End If
 
         Return DUNGEON_RESULT_APPLY_FAILED
+
     End If
 
     If Not World.SetActorVisible(StateHandle, ActorId, False) Then
@@ -388,6 +404,7 @@ Public Function CompleteGoldChest(StateHandle As Number, ActorId As Number, Flag
         End If
 
         Return DUNGEON_RESULT_APPLY_FAILED
+
     End If
 
     Return DUNGEON_RESULT_OK
@@ -406,11 +423,13 @@ Public Function CompleteItemChest(StateHandle As Number, ActorId As Number, Flag
 
     If Story.Flag(StateHandle, FlagId) Then
 
-        If World.ActorIsVisible(StateHandle, ActorId) And Not World.SetActorVisible(StateHandle, ActorId, False) Then
+        If (World.ActorIsVisible(StateHandle, ActorId) And
+            Not World.SetActorVisible(StateHandle, ActorId, False)) Then
             Return DUNGEON_RESULT_APPLY_FAILED
         End If
 
         Return DUNGEON_RESULT_ALREADY_COMPLETED
+
     End If
 
     If Not World.ActorIsVisible(StateHandle, ActorId) Then
@@ -432,6 +451,7 @@ Public Function CompleteItemChest(StateHandle As Number, ActorId As Number, Flag
         End If
 
         Return DUNGEON_RESULT_APPLY_FAILED
+
     End If
 
     If Not World.SetActorVisible(StateHandle, ActorId, False) Then
@@ -442,6 +462,7 @@ Public Function CompleteItemChest(StateHandle As Number, ActorId As Number, Flag
         End If
 
         Return DUNGEON_RESULT_APPLY_FAILED
+
     End If
 
     Return DUNGEON_RESULT_OK
@@ -463,11 +484,13 @@ Public Function CompleteMultiItemChest(StateHandle As Number, ActorId As Number,
 
     If Story.Flag(StateHandle, FlagId) Then
 
-        If World.ActorIsVisible(StateHandle, ActorId) And Not World.SetActorVisible(StateHandle, ActorId, False) Then
+        If (World.ActorIsVisible(StateHandle, ActorId) And
+            Not World.SetActorVisible(StateHandle, ActorId, False)) Then
             Return DUNGEON_RESULT_APPLY_FAILED
         End If
 
         Return DUNGEON_RESULT_ALREADY_COMPLETED
+
     End If
 
     If Not World.ActorIsVisible(StateHandle, ActorId) Then
@@ -495,6 +518,7 @@ Public Function CompleteMultiItemChest(StateHandle As Number, ActorId As Number,
         End If
 
         Return DUNGEON_RESULT_APPLY_FAILED
+
     End If
 
     If Not Story.SetFlag(StateHandle, FlagId, True) Then
@@ -508,6 +532,7 @@ Public Function CompleteMultiItemChest(StateHandle As Number, ActorId As Number,
         End If
 
         Return DUNGEON_RESULT_APPLY_FAILED
+
     End If
 
     If Not World.SetActorVisible(StateHandle, ActorId, False) Then
@@ -525,6 +550,7 @@ Public Function CompleteMultiItemChest(StateHandle As Number, ActorId As Number,
         End If
 
         Return DUNGEON_RESULT_APPLY_FAILED
+
     End If
 
     Return DUNGEON_RESULT_OK
@@ -559,6 +585,7 @@ Public Function ApplyOneShotTrap(StateHandle As Number, CharacterId As Number, F
         End If
 
         Return DUNGEON_RESULT_APPLY_FAILED
+
     End If
 
     Return DUNGEON_RESULT_OK
@@ -595,6 +622,7 @@ Public Function ApplyRepeatTrap(StateHandle As Number, CharacterId As Number, Va
         End If
 
         Return DUNGEON_RESULT_APPLY_FAILED
+
     End If
 
     Return DUNGEON_RESULT_OK
@@ -659,6 +687,7 @@ Public Function BeginEncounter(StateHandle As Number, ActorId As Number, Encount
         End If
 
         Return DUNGEON_RESULT_APPLY_FAILED
+
     End If
 
     Return DUNGEON_RESULT_OK
@@ -740,6 +769,7 @@ Public Function CompleteEncounter(StateHandle As Number, ActorId As Number) As N
         RollbackSucceeded = RollbackSucceeded And World.SetCurrentScene(StateHandle, PreviousScene)
 
         Return DUNGEON_RESULT_APPLY_FAILED
+
     End If
 
     Call Encounters.ClearPendingEncounter(StateHandle)

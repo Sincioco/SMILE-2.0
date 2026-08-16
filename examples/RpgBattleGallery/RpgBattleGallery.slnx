@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Windows 64-bit .exe" />
+    <Platform Name="Web" />
+  </Configurations>
+  <Project Path="RpgBattleGallery.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="4bb64227-fee6-6ca1-8189-4e167bc0de48" />
+</Solution>

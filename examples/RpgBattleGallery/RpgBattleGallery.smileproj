@@ -1,0 +1,17 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>RpgBattleGallery</OutputName>
+    <ApplicationId>smile.gallery.rpg-battle</ApplicationId>
+    <GraphicsBackend>Auto</GraphicsBackend>
+    <VSync>true</VSync>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Game\Smile.Game.smilelibproj" />
+    <SmileProjectReference Include="..\..\libraries\Smile.RPG\Smile.RPG.smilelibproj" />
+    <Asset Include="Assets\*.png" />
+    <Asset Include="Assets\*.wav" />
+  </ItemGroup>
+</SmileProject>

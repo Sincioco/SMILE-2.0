@@ -1,0 +1,1119 @@
+Option Explicit
+
+Import Smile.Game.Core As GameCore
+Import Smile.RPG.Core As RPG
+Import Smile.RPG.Characters As Characters
+Import Smile.RPG.Party As Party
+Import Smile.RPG.Inventory As Inventory
+Import Smile.RPG.Abilities As Abilities
+Import Smile.RPG.World As World
+Import Smile.RPG.SaveGames As SaveGames
+Import Smile.RPG.BattleEffects As Effects
+Import Smile.RPG.BattleCore As Battle
+Import Smile.RPG.BattleStrategy As Strategy
+Import Smile.RPG.BattleView As BattleView
+
+Const MODE_TITLE = 1
+Const MODE_EXPLORE = 2
+Const MODE_BATTLE = 3
+Const MODE_INFO = 4
+
+Const SCENE_OVERWORLD = 1
+Const SCENE_TOWN = 2
+Const SCENE_DUNGEON = 3
+Const ACTOR_PARTY = 1000
+
+Const CHARACTER_ARDEN = 100
+Const CHARACTER_LYRA = 200
+Const CHARACTER_KAI = 300
+Const CHARACTER_ORA = 400
+Const ITEM_POTION = 10
+Const ABILITY_FLARE = 1000
+Const ABILITY_MEND = 1001
+Const EFFECT_FLARE = 2000
+Const EFFECT_MEND = 2001
+Const EFFECT_POTION = 2002
+Const STATUS_POISON = 3000
+Const ENEMY_SLIME = 4000
+Const ENEMY_WOLF = 4001
+Const ENEMY_SENTINEL = 4002
+Const FORMATION_GALLERY = 5000
+
+Dim OverworldBackground As Image
+Dim TownBackground As Image
+Dim DungeonBackground As Image
+Dim PartyLineup As Image
+Dim EnemyLineup As Image
+Dim State As Number
+Dim Mode As Number
+Dim TitleSelection As Number
+Dim BattleSelection As Number
+Dim Scenario As Number
+Dim StrategyPreset As Number
+Dim LeadOrder As Number
+Dim Key As Number
+Dim Running As Boolean
+Dim StatusText As Text
+Dim LastCueText As Text
+Dim NextBattleStep As Number
+Dim EventCursor As Number
+Dim LastCommandRound As Number
+Dim Result As Number
+Dim OperationSucceeded As Boolean
+Dim Character As Characters.CharacterDefinition
+Dim Item As Inventory.ItemDefinition
+Dim Ability As Abilities.AbilityDefinition
+Dim Effect As Effects.EffectDefinition
+Dim Component As Effects.EffectComponentDefinition
+Dim Poison As Effects.StatusDefinition
+Dim Enemy As Battle.EnemyDefinition
+Dim Formation As Battle.FormationDefinition
+Dim FormationMember As Battle.FormationMemberDefinition
+Dim AiRule As Strategy.AiRuleDefinition
+Dim Order As Strategy.StandingOrderDefinition
+Dim Scene As World.SceneDefinition
+Dim Spawn As World.SpawnDefinition
+Dim Actor As World.ActorDefinition
+Dim ViewSlot As BattleView.SlotDefinition
+
+Game Window "SMILE 2.0 RPG Battle Gallery" Size 1280 By 720
+
+Load Image OverworldBackground From "Assets\StarfallPlateau.png"
+Load Image TownBackground From "Assets\LumenPlaza.png"
+Load Image DungeonBackground From "Assets\PrismVault.png"
+Load Image PartyLineup From "Assets\PartyLineup.png"
+Load Image EnemyLineup From "Assets\EnemyLineup.png"
+
+State = RPG.Create()
+
+Call InitializeRpg()
+Call InitializeWorld()
+Call ApplyStrategyPreset(1)
+
+Mode = MODE_TITLE
+TitleSelection = 1
+BattleSelection = 1
+Scenario = SCENE_OVERWORLD
+StatusText = "Choose one original battle presentation."
+Running = State > 0
+
+Play Music "Assets\OverworldTheme.wav" Loop
+
+Do
+    Get Key Key
+
+    If Mode = MODE_TITLE Then
+        Call HandleTitle(Key)
+    Else If Mode = MODE_EXPLORE Then
+        Call HandleExploration(Key)
+    Else If Mode = MODE_BATTLE Then
+        Call HandleBattle(Key)
+        Call UpdateBattle()
+    Else If Mode = MODE_INFO Then
+        Call HandleInformation(Key)
+    End If
+
+    If Mode = MODE_TITLE Then
+        Call DrawTitle()
+    Else If Mode = MODE_EXPLORE Then
+        Call DrawExploration()
+    Else If Mode = MODE_BATTLE Then
+        Call DrawBattle()
+    Else
+
+        Call DrawInformation()
+    End If
+
+    Show Screen
+    Wait 8 Milliseconds
+
+Loop Until Game_Closed() = True Or Not Running
+
+Stop Sound
+Stop Music
+
+Unload Image EnemyLineup
+Unload Image PartyLineup
+Unload Image DungeonBackground
+Unload Image TownBackground
+Unload Image OverworldBackground
+
+Call RPG.Destroy(State)
+
+End Program
+
+Sub HandleTitle(PressedKey As Number)
+
+    If PressedKey = KEY_UP Or PressedKey = KEY_W Then
+
+        TitleSelection = TitleSelection - 1
+
+        If TitleSelection < 1 Then
+            TitleSelection = 5
+        End If
+
+    Else If PressedKey = KEY_DOWN Or PressedKey = KEY_S Then
+
+        TitleSelection = TitleSelection + 1
+
+        If TitleSelection > 5 Then
+            TitleSelection = 1
+        End If
+
+    Else If PressedKey = KEY_ENTER Or PressedKey = KEY_SPACE Then
+
+        If TitleSelection <= 3 Then
+            Call StartExploration(TitleSelection)
+        Else If TitleSelection = 4 Then
+            Mode = MODE_INFO
+        Else
+            Running = False
+        End If
+
+    End If
+
+End Sub
+
+Sub HandleExploration(PressedKey As Number)
+
+    Dim X As Number
+    Dim Y As Number
+    Dim Facing As Number
+    Dim DestinationX As Number
+    Dim DestinationY As Number
+
+    X = World.ActorX(State, ACTOR_PARTY)
+    Y = World.ActorY(State, ACTOR_PARTY)
+    Facing = World.ActorFacingDirection(State, ACTOR_PARTY)
+    DestinationX = X
+    DestinationY = Y
+
+    If PressedKey = KEY_ESCAPE Then
+
+        Mode = MODE_TITLE
+        StatusText = "Choose one original battle presentation."
+
+        Stop Music
+        Play Music "Assets\OverworldTheme.wav" Loop
+
+        Return
+
+    End If
+
+    If PressedKey = KEY_ENTER Or PressedKey = KEY_SPACE Then
+        Call StartBattle()
+
+        Return
+    End If
+
+    If Scenario = SCENE_DUNGEON Then
+
+        If PressedKey = KEY_LEFT Or PressedKey = KEY_A Then
+
+            Facing = Facing - 1
+
+            If Facing < World.WORLD_FACING_UP Then
+                Facing = World.WORLD_FACING_LEFT
+            End If
+
+        Else If PressedKey = KEY_RIGHT Or PressedKey = KEY_D Then
+
+            Facing = Facing + 1
+
+            If Facing > World.WORLD_FACING_LEFT Then
+                Facing = World.WORLD_FACING_UP
+            End If
+
+        Else If PressedKey = KEY_UP Or PressedKey = KEY_W Then
+
+            DestinationX = X + GameCore.DirectionX(Facing)
+            DestinationY = Y + GameCore.DirectionY(Facing)
+
+        Else If PressedKey = KEY_DOWN Or PressedKey = KEY_S Then
+
+            DestinationX = X - GameCore.DirectionX(Facing)
+            DestinationY = Y - GameCore.DirectionY(Facing)
+
+        End If
+
+    Else
+
+        If PressedKey = KEY_UP Or PressedKey = KEY_W Then
+            DestinationY = Y - 1
+            Facing = World.WORLD_FACING_UP
+        Else If PressedKey = KEY_RIGHT Or PressedKey = KEY_D Then
+            DestinationX = X + 1
+            Facing = World.WORLD_FACING_RIGHT
+        Else If PressedKey = KEY_DOWN Or PressedKey = KEY_S Then
+            DestinationY = Y + 1
+            Facing = World.WORLD_FACING_DOWN
+        Else If PressedKey = KEY_LEFT Or PressedKey = KEY_A Then
+            DestinationX = X - 1
+            Facing = World.WORLD_FACING_LEFT
+        End If
+
+    End If
+
+    If DestinationX < 1 Then
+        DestinationX = 1
+    Else If DestinationX > 12 Then
+        DestinationX = 12
+    End If
+
+    If DestinationY < 1 Then
+        DestinationY = 1
+    Else If DestinationY > 8 Then
+        DestinationY = 8
+    End If
+
+    If (DestinationX <> X Or
+        DestinationY <> Y Or
+        Facing <> World.ActorFacingDirection(State, ACTOR_PARTY)) Then
+
+        OperationSucceeded = World.SetActorProgress(State, ACTOR_PARTY, Scenario, DestinationX, DestinationY, Facing, True, 0)
+
+        If OperationSucceeded Then
+            StatusText = "Exploration state changed. Enter starts battle from this exact location."
+        End If
+
+    End If
+
+End Sub
+
+Sub HandleBattle(PressedKey As Number)
+
+    If Battle.Phase(State) = Battle.BATTLE_PHASE_COMMAND Then
+
+        If PressedKey = KEY_UP Or PressedKey = KEY_W Then
+
+            BattleSelection = BattleSelection - 1
+
+            If BattleSelection < 1 Then
+                BattleSelection = 4
+            End If
+
+        Else If PressedKey = KEY_DOWN Or PressedKey = KEY_S Then
+
+            BattleSelection = BattleSelection + 1
+
+            If BattleSelection > 4 Then
+                BattleSelection = 1
+            End If
+
+        Else If PressedKey = KEY_ENTER Or PressedKey = KEY_SPACE Then
+
+            If BattleSelection = 1 Then
+
+                OperationSucceeded = Strategy.PrepareFightRound(State)
+
+                If OperationSucceeded Then
+                    StatusText = "Fight repeated the current standing orders."
+                    NextBattleStep = Timer() + 180
+                Else
+                    StatusText = "A standing order is invalid. Choose Strategy or Order."
+                End If
+
+            Else If BattleSelection = 2 Then
+
+                StrategyPreset = StrategyPreset + 1
+
+                If StrategyPreset > 3 Then
+                    StrategyPreset = 1
+                End If
+
+                Call ApplyStrategyPreset(StrategyPreset)
+
+            Else If BattleSelection = 3 Then
+
+                Call CycleLeadOrder()
+
+            Else
+                OperationSucceeded = Strategy.PrepareRunRound(State)
+
+                If OperationSucceeded Then
+                    StatusText = "Run is resolving. Failure grants an enemy-only round."
+                    NextBattleStep = Timer() + 180
+                End If
+
+            End If
+
+        Else If PressedKey = KEY_ESCAPE Then
+
+            OperationSucceeded = Battle.CancelBattle(State)
+
+            If OperationSucceeded Then
+                Call RestoreExplorationReturn("Battle cancelled without a claimed outcome.")
+            End If
+
+        End If
+
+    Else If Battle.Phase(State) = Battle.BATTLE_PHASE_RESOLVING And PressedKey = KEY_ESCAPE Then
+
+        OperationSucceeded = Strategy.RequestInterrupt(State)
+
+        If OperationSucceeded Then
+            StatusText = "Interrupt requested; it will open only after this round."
+        End If
+
+    Else If (Battle.Outcome(State) <> Battle.BATTLE_OUTCOME_NONE And
+        (PressedKey = KEY_ENTER Or PressedKey = KEY_SPACE Or PressedKey = KEY_ESCAPE)) Then
+
+        Call FinishBattle()
+
+    End If
+
+End Sub
+
+Sub HandleInformation(PressedKey As Number)
+
+    If (PressedKey = KEY_ESCAPE Or
+        PressedKey = KEY_ENTER Or
+        PressedKey = KEY_SPACE) Then
+        Mode = MODE_TITLE
+    End If
+
+End Sub
+
+Sub UpdateBattle()
+
+    Dim CuePosition As Number
+
+    OperationSucceeded = BattleView.Update(State, 1)
+    CuePosition = BattleView.CuePosition(State)
+
+    If CuePosition < BattleView.CueCount(State) Then
+        LastCueText = BattleView.CueTextAt(State, CuePosition)
+    End If
+
+    If Battle.Phase(State) = Battle.BATTLE_PHASE_RESOLVING And Timer() >= NextBattleStep Then
+
+        OperationSucceeded = Battle.Advance(State)
+
+        If OperationSucceeded Then
+            Call CaptureBattleEvents()
+
+            NextBattleStep = Timer() + 180
+        Else
+            StatusText = "The bounded resolver rejected an invalid step without partial mutation."
+        End If
+
+    End If
+
+    If Strategy.InterruptReady(State) Then
+
+        OperationSucceeded = Strategy.AcknowledgeInterrupt(State)
+        LastCommandRound = Battle.RoundNumber(State)
+        StatusText = "After-round interrupt reached the command boundary."
+
+    Else If (Battle.Phase(State) = Battle.BATTLE_PHASE_COMMAND And
+        Battle.RoundNumber(State) > 0 And
+        LastCommandRound <> Battle.RoundNumber(State)) Then
+
+        LastCommandRound = Battle.RoundNumber(State)
+        StatusText = "Round complete. Fight, revise Strategy/Order, or Run."
+
+    Else If Battle.Outcome(State) <> Battle.BATTLE_OUTCOME_NONE Then
+
+        StatusText = "Battle complete. Press Enter to return to the exact exploration state."
+
+    End If
+
+End Sub
+
+Sub StartExploration(SceneId As Number)
+
+    Scenario = SceneId
+    Mode = MODE_EXPLORE
+    BattleSelection = 1
+    LastCueText = ""
+
+    OperationSucceeded = Characters.SetHealth(State, CHARACTER_ARDEN, Characters.MaximumHealth(State, CHARACTER_ARDEN))
+    OperationSucceeded = Characters.SetHealth(State, CHARACTER_LYRA, Characters.MaximumHealth(State, CHARACTER_LYRA))
+    OperationSucceeded = Characters.SetHealth(State, CHARACTER_KAI, Characters.MaximumHealth(State, CHARACTER_KAI))
+    OperationSucceeded = Characters.SetHealth(State, CHARACTER_ORA, Characters.MaximumHealth(State, CHARACTER_ORA))
+    OperationSucceeded = Characters.SetMagicPoints(State, CHARACTER_ARDEN, Characters.MaximumMagicPoints(State, CHARACTER_ARDEN))
+    OperationSucceeded = Characters.SetMagicPoints(State, CHARACTER_LYRA, Characters.MaximumMagicPoints(State, CHARACTER_LYRA))
+
+    OperationSucceeded = World.SetCurrentScene(State, Scenario)
+    OperationSucceeded = World.SetActorProgress(State, ACTOR_PARTY, Scenario, 6, 5, World.WORLD_FACING_RIGHT, True, 0)
+
+    Stop Music
+
+    If Scenario = SCENE_OVERWORLD Then
+        Play Music "Assets\OverworldTheme.wav" Loop
+        StatusText = "Starfall Plateau: side-view overworld battle staging."
+    Else If Scenario = SCENE_TOWN Then
+        Play Music "Assets\TownTheme.wav" Loop
+        StatusText = "Lumen Plaza: top-down exploration and compact battle staging."
+    Else
+        Play Music "Assets\DungeonTheme.wav" Loop
+        StatusText = "Prism Vault: cardinal first-person exploration and front battle staging."
+    End If
+
+End Sub
+
+Sub StartBattle()
+
+    Dim Seed As Number
+
+    OperationSucceeded = World.SetReturnLocation(State, Scenario, World.ActorX(State, ACTOR_PARTY), World.ActorY(State, ACTOR_PARTY), World.ActorFacingDirection(State, ACTOR_PARTY))
+    Seed = Scenario * 1000 + World.ActorX(State, ACTOR_PARTY) * 31 + World.ActorY(State, ACTOR_PARTY) * 17
+    Result = Battle.BeginBattle(State, FORMATION_GALLERY, Seed)
+
+    If Result <= 0 Then
+        StatusText = "Battle could not begin; exploration state remains unchanged."
+
+        Return
+    End If
+
+    Call ApplyStrategyPreset(StrategyPreset)
+    Call ConfigureBattleSlots()
+
+    OperationSucceeded = BattleView.ClearCues(State)
+    OperationSucceeded = BattleView.AppendEvents(State, 0)
+    EventCursor = Battle.EventCount(State)
+    LastCommandRound = 0
+    Mode = MODE_BATTLE
+    BattleSelection = 1
+    StatusText = "Choose Fight, Strategy, Order, or Run. Save/load is disabled while active."
+
+End Sub
+
+Sub FinishBattle()
+
+    Dim Outcome As Number
+    Dim Message As Text
+
+    Outcome = Battle.Outcome(State)
+
+    If Outcome = Battle.BATTLE_OUTCOME_VICTORY Then
+        Message = "Victory rewards committed once; exact exploration return restored."
+    Else If Outcome = Battle.BATTLE_OUTCOME_DEFEAT Then
+        Message = "Defeat resolved; exact exploration return restored for continued QA."
+    Else
+        Message = "Escape resolved; exact exploration return restored."
+    End If
+
+    OperationSucceeded = Battle.EndBattle(State)
+
+    If Outcome = Battle.BATTLE_OUTCOME_DEFEAT Then
+
+        OperationSucceeded = Characters.SetHealth(State, CHARACTER_ARDEN, Characters.MaximumHealth(State, CHARACTER_ARDEN))
+        OperationSucceeded = Characters.SetHealth(State, CHARACTER_LYRA, Characters.MaximumHealth(State, CHARACTER_LYRA))
+        OperationSucceeded = Characters.SetHealth(State, CHARACTER_KAI, Characters.MaximumHealth(State, CHARACTER_KAI))
+        OperationSucceeded = Characters.SetHealth(State, CHARACTER_ORA, Characters.MaximumHealth(State, CHARACTER_ORA))
+
+    End If
+
+    Call RestoreExplorationReturn(Message)
+
+End Sub
+
+Sub RestoreExplorationReturn(Message As Text)
+
+    Scenario = World.ReturnScene(State)
+    OperationSucceeded = World.SetCurrentScene(State, Scenario)
+    OperationSucceeded = World.SetActorProgress(State, ACTOR_PARTY, Scenario, World.ReturnX(State), World.ReturnY(State), World.ReturnFacingDirection(State), True, 0)
+    Mode = MODE_EXPLORE
+    StatusText = Message
+
+End Sub
+
+Sub CaptureBattleEvents()
+
+    Dim Index As Number
+    Dim EventKind As Number
+
+    OperationSucceeded = BattleView.AppendEvents(State, EventCursor)
+
+    For Index = EventCursor To Battle.EventCount(State) - 1
+
+        EventKind = Battle.EventKindAt(State, Index)
+        LastCueText = Battle.EventTextAt(State, Index)
+
+        If EventKind = Battle.BATTLE_EVENT_ATTACK Or EventKind = Battle.BATTLE_EVENT_DAMAGE Then
+
+            Play Sound "Assets\Strike.wav"
+
+        Else If (EventKind = Battle.BATTLE_EVENT_ABILITY Or
+            EventKind = Battle.BATTLE_EVENT_STATUS_APPLIED Or
+            EventKind = Battle.BATTLE_EVENT_HEAL) Then
+
+            Play Sound "Assets\Ability.wav"
+
+        Else If EventKind = Battle.BATTLE_EVENT_VICTORY Then
+
+            Play Sound "Assets\Victory.wav"
+
+        End If
+
+    End For
+
+    EventCursor = Battle.EventCount(State)
+
+End Sub
+
+Sub ApplyStrategyPreset(Preset As Number)
+
+    OperationSucceeded = Strategy.BeginOrderEdit(State)
+
+    If Not OperationSucceeded Then
+        Return
+    End If
+
+    If Preset = 1 Then
+
+        Call SetAttackOrder(0, Strategy.BATTLE_REPEAT_STANDING)
+        Call SetAbilityOrder(1, ABILITY_MEND, Strategy.BATTLE_TARGET_LOWEST_HEALTH, Strategy.BATTLE_REPEAT_UNTIL_INVALID_THEN_ATTACK)
+        Call SetAttackOrder(2, Strategy.BATTLE_REPEAT_STANDING)
+        Call SetDefendOrder(3)
+
+        StatusText = "Strategy: Balanced - attacks, Mend, scout pressure, and guard."
+
+    Else If Preset = 2 Then
+
+        Call SetAbilityOrder(0, ABILITY_FLARE, Strategy.BATTLE_TARGET_FIRST, Strategy.BATTLE_REPEAT_UNTIL_INVALID_THEN_ATTACK)
+        Call SetAttackOrder(1, Strategy.BATTLE_REPEAT_STANDING)
+        Call SetAttackOrder(2, Strategy.BATTLE_REPEAT_STANDING)
+        Call SetAttackOrder(3, Strategy.BATTLE_REPEAT_STANDING)
+
+        StatusText = "Strategy: Assault - Flare Wave then sustained attacks."
+
+    Else
+
+        Call SetDefendOrder(0)
+        Call SetAbilityOrder(1, ABILITY_MEND, Strategy.BATTLE_TARGET_LOWEST_HEALTH, Strategy.BATTLE_REPEAT_UNTIL_INVALID_THEN_ATTACK)
+        Call SetDefendOrder(2)
+        Call SetDefendOrder(3)
+
+        StatusText = "Strategy: Bastion - defend while Lyra restores Health."
+
+    End If
+
+    OperationSucceeded = Strategy.CommitOrderEdit(State)
+    StrategyPreset = Preset
+
+End Sub
+
+Sub CycleLeadOrder()
+
+    LeadOrder = LeadOrder + 1
+
+    If LeadOrder > 3 Then
+        LeadOrder = 1
+    End If
+
+    OperationSucceeded = Strategy.BeginOrderEdit(State)
+
+    If Not OperationSucceeded Then
+        Return
+    End If
+
+    If LeadOrder = 1 Then
+        Call SetAttackOrder(0, Strategy.BATTLE_REPEAT_STANDING)
+
+        StatusText = "Order: Arden will repeat Attack."
+    Else If LeadOrder = 2 Then
+        Call SetAbilityOrder(0, ABILITY_FLARE, Strategy.BATTLE_TARGET_FIRST, Strategy.BATTLE_REPEAT_UNTIL_INVALID_THEN_ATTACK)
+
+        StatusText = "Order: Arden repeats Flare Wave until invalid, then Attacks."
+    Else
+
+        Call SetDefendOrder(0)
+
+        StatusText = "Order: Arden will repeat Defend."
+    End If
+
+    OperationSucceeded = Strategy.CommitOrderEdit(State)
+
+End Sub
+
+Sub SetAttackOrder(PartyIndex As Number, RepeatPolicy As Number)
+
+    Order.ActionKind = Battle.BATTLE_ACTION_ATTACK
+    Order.SourceId = 0
+    Order.TargetSelector = Strategy.BATTLE_TARGET_FIRST
+    Order.RepeatPolicy = RepeatPolicy
+    OperationSucceeded = Strategy.SetEditedOrder(State, PartyIndex, Order)
+
+End Sub
+
+Sub SetAbilityOrder(PartyIndex As Number, AbilityId As Number, TargetSelector As Number, RepeatPolicy As Number)
+
+    Order.ActionKind = Battle.BATTLE_ACTION_ABILITY
+    Order.SourceId = AbilityId
+    Order.TargetSelector = TargetSelector
+    Order.RepeatPolicy = RepeatPolicy
+    OperationSucceeded = Strategy.SetEditedOrder(State, PartyIndex, Order)
+
+End Sub
+
+Sub SetDefendOrder(PartyIndex As Number)
+
+    Order.ActionKind = Battle.BATTLE_ACTION_DEFEND
+    Order.SourceId = 0
+    Order.TargetSelector = Strategy.BATTLE_TARGET_SELF
+    Order.RepeatPolicy = Strategy.BATTLE_REPEAT_DEFEND
+    OperationSucceeded = Strategy.SetEditedOrder(State, PartyIndex, Order)
+
+End Sub
+
+Sub ConfigureBattleSlots()
+
+    Dim ParticipantId As Number
+
+    For ParticipantId = 1 To Battle.ParticipantCount(State)
+
+        ViewSlot.ParticipantId = ParticipantId
+        ViewSlot.Facing = BattleView.BATTLE_FACING_EAST
+        ViewSlot.Layer = ParticipantId
+        ViewSlot.Anchor = BattleView.BATTLE_ANCHOR_FEET
+
+        If Scenario = SCENE_OVERWORLD Then
+
+            ViewSlot.X = 120 + ParticipantId * 70
+            ViewSlot.Y = 500 - ParticipantId * 12
+            ViewSlot.Z = 0
+
+        Else If Scenario = SCENE_TOWN Then
+
+            ViewSlot.X = 180 + (ParticipantId Mod 4) * 210
+            ViewSlot.Y = 260 + (ParticipantId / 4) * 180
+            ViewSlot.Z = ParticipantId * 4
+
+        Else
+            ViewSlot.X = 640 + (ParticipantId - 5) * 120
+            ViewSlot.Y = 390
+            ViewSlot.Z = 160 - ParticipantId * 8
+
+        End If
+
+        OperationSucceeded = BattleView.SetSlot(State, ViewSlot)
+    End For
+
+End Sub
+
+Sub DrawTitle()
+
+    Dim Index As Number
+    Dim Y As Number
+    Dim Label As Text
+
+    Draw Image OverworldBackground At 0, 0 Size 1280 By 720 Filter Smooth
+    Draw Text "SMILE 2.0 RPG Battle Gallery" At 640, 86 Size 50 Color WHITE Centered
+    Draw Text "Four renderer-neutral modules. Three original presentations." At 640, 136 Size 21 Color Rgb(178, 231, 255) Centered
+
+    For Index = 1 To 5
+
+        Y = 245 + Index * 62
+
+        If Index = 1 Then
+            Label = "Starfall Plateau - Overworld"
+        Else If Index = 2 Then
+            Label = "Lumen Plaza - Top-Down"
+        Else If Index = 3 Then
+            Label = "Prism Vault - First-Person"
+        Else If Index = 4 Then
+            Label = "Battle System Information"
+        Else
+            Label = "Exit"
+        End If
+
+        If Index = TitleSelection Then
+            Draw Text "> " + Label At 640, Y Size 28 Color YELLOW Centered
+        Else
+            Draw Text Label At 640, Y Size 24 Color WHITE Centered
+        End If
+
+    End For
+
+    Draw Text "Arrow Keys / W-S + Enter" At 640, 680 Size 18 Color LIGHT_GRAY Centered
+
+End Sub
+
+Sub DrawExploration()
+
+    Dim X As Number
+    Dim Y As Number
+    Dim Facing As Number
+
+    Call DrawScenarioBackground()
+
+    X = World.ActorX(State, ACTOR_PARTY)
+    Y = World.ActorY(State, ACTOR_PARTY)
+    Facing = World.ActorFacingDirection(State, ACTOR_PARTY)
+
+    Draw Text ScenarioName() At 32, 42 Size 32 Color WHITE
+    Draw Text "Exploration Scene" At 32, 82 Size 20 Color Rgb(183, 236, 255)
+    Draw Number Scenario At 215, 82 Size 20 Color YELLOW
+    Draw Text "Cell" At 270, 82 Size 20 Color Rgb(183, 236, 255)
+    Draw Number X At 320, 82 Size 20 Color YELLOW
+    Draw Number Y At 360, 82 Size 20 Color YELLOW
+    Draw Text "Facing" At 410, 82 Size 20 Color Rgb(183, 236, 255)
+    Draw Number Facing At 490, 82 Size 20 Color YELLOW
+
+    If Scenario = SCENE_DUNGEON Then
+        Draw Image PartyLineup At 410, 505 Size 460 By 230 Opacity 70 Filter Smooth
+        Draw Text "First-person cardinal state: Left/Right turn, Up/Down move." At 640, 610 Size 20 Color WHITE Centered
+    Else
+        Draw Image PartyLineup At X * 70 + 20, Y * 48 + 130 Size 300 By 150 Anchor 150, 150 Opacity 78 Filter Smooth
+    End If
+
+    Draw Text StatusText At 640, 646 Size 18 Color YELLOW Centered
+    Draw Text "Enter: Battle     Escape: Title" At 640, 684 Size 18 Color WHITE Centered
+
+End Sub
+
+Sub DrawBattle()
+
+    Dim Index As Number
+    Dim Y As Number
+    Dim Label As Text
+    Dim ParticipantId As Number
+
+    Call DrawScenarioBackground()
+
+    Draw Text ScenarioName() + " Battle" At 30, 40 Size 32 Color WHITE
+    Draw Text "Round" At 1145, 42 Size 22 Color WHITE
+    Draw Number Battle.RoundNumber(State) At 1220, 42 Size 22 Color YELLOW
+
+    If Scenario = SCENE_OVERWORLD Then
+        Draw Image PartyLineup At 15, 315 Size 500 By 250 Opacity 84 Filter Smooth
+        Draw Image EnemyLineup At 770, 315 Size 480 By 255 Opacity 86 Filter Smooth
+    Else If Scenario = SCENE_TOWN Then
+        Draw Image PartyLineup At 25, 130 Size 430 By 215 Opacity 82 Filter Smooth
+        Draw Image EnemyLineup At 815, 360 Size 430 By 228 Opacity 84 Filter Smooth
+    Else
+        Draw Image EnemyLineup At 340, 165 Size 600 By 319 Opacity 88 Filter Smooth
+        Draw Image PartyLineup At 25, 455 Size 430 By 215 Opacity 68 Filter Smooth
+    End If
+
+    Y = 98
+
+    For ParticipantId = 1 To Battle.ParticipantCount(State)
+
+        If Battle.ParticipantSide(State, ParticipantId) = Battle.BATTLE_SIDE_PARTY Then
+
+            Draw Text Battle.ParticipantName(State, ParticipantId) At 28, Y Size 16 Color Rgb(204, 249, 255)
+            Draw Number Battle.Health(State, ParticipantId) At 165, Y Size 16 Color YELLOW
+            Draw Text "/" At 212, Y Size 16 Color WHITE
+            Draw Number Battle.MaximumHealth(State, ParticipantId) At 226, Y Size 16 Color WHITE
+            Y = Y + 24
+
+        Else
+            Draw Text Battle.ParticipantName(State, ParticipantId) At 990, Y Size 16 Color Rgb(255, 211, 224)
+            Draw Number Battle.Health(State, ParticipantId) At 1140, Y Size 16 Color YELLOW
+            Draw Text "/" At 1187, Y Size 16 Color WHITE
+            Draw Number Battle.MaximumHealth(State, ParticipantId) At 1201, Y Size 16 Color WHITE
+            Y = Y + 24
+
+        End If
+
+    End For
+
+    If Battle.Phase(State) = Battle.BATTLE_PHASE_COMMAND Then
+
+        For Index = 1 To 4
+
+            If Index = 1 Then
+                Label = "Fight"
+            Else If Index = 2 Then
+                Label = "Strategy"
+            Else If Index = 3 Then
+                Label = "Order"
+            Else
+                Label = "Run"
+            End If
+
+            If Index = BattleSelection Then
+                Draw Text "> " + Label At 1020, 515 + Index * 36 Size 24 Color YELLOW
+            Else
+                Draw Text Label At 1020, 515 + Index * 36 Size 21 Color WHITE
+            End If
+
+        End For
+
+    Else If Battle.Outcome(State) <> Battle.BATTLE_OUTCOME_NONE Then
+
+        Draw Text OutcomeName() At 1040, 600 Size 34 Color YELLOW Centered
+
+    Else
+        Draw Text "Resolving one deterministic action at a time..." At 1010, 600 Size 18 Color WHITE Centered
+
+    End If
+
+    If LastCueText <> "" Then
+        Draw Text LastCueText At 640, 575 Size 22 Color WHITE Centered
+    End If
+
+    Draw Text StatusText At 640, 646 Size 17 Color YELLOW Centered
+    Draw Text "Enter: Select     Escape: After-Round Interrupt / Return" At 640, 684 Size 17 Color WHITE Centered
+
+End Sub
+
+Sub DrawInformation()
+
+    Draw Image DungeonBackground At 0, 0 Size 1280 By 720 Filter Smooth
+    Draw Text "Phase 9 Battle System" At 640, 70 Size 44 Color WHITE Centered
+    Draw Text "BattleCore" At 120, 145 Size 26 Color Rgb(115, 230, 255)
+    Draw Text "Lifecycle, participants, actions, targets, rounds, outcomes, rewards, events" At 120, 183 Size 18 Color WHITE
+    Draw Text "BattleEffects" At 120, 235 Size 26 Color Rgb(193, 153, 255)
+    Draw Text "Composite damage, healing, MP, Poison, action denial, modifiers, revive" At 120, 273 Size 18 Color WHITE
+    Draw Text "BattleStrategy" At 120, 325 Size 26 Color Rgb(255, 207, 112)
+    Draw Text "Fight, atomic Order edits, standing policies, after-round interrupt, enemy AI" At 120, 363 Size 18 Color WHITE
+    Draw Text "BattleView" At 120, 415 Size 26 Color Rgb(146, 255, 196)
+    Draw Text "Logical X/Y/Z slots and pose, move, effect, number, message, shake, sound cues" At 120, 453 Size 18 Color WHITE
+    Draw Text "SRPG 2 remains unchanged. Save and Load reject active transient battles." At 120, 520 Size 20 Color YELLOW
+    Draw Text "No module opens a window, loads art/audio, draws, or calls UI." At 120, 556 Size 20 Color YELLOW
+    Draw Text "All gallery art and audio are original, redistributable Phase 9 assets." At 120, 592 Size 20 Color WHITE
+    Draw Text "Enter / Escape: Return" At 640, 674 Size 18 Color WHITE Centered
+
+End Sub
+
+Sub DrawScenarioBackground()
+
+    If Scenario = SCENE_OVERWORLD Then
+        Draw Image OverworldBackground At 0, 0 Size 1280 By 720 Filter Smooth
+    Else If Scenario = SCENE_TOWN Then
+        Draw Image TownBackground At 0, 0 Size 1280 By 720 Filter Smooth
+    Else
+        Draw Image DungeonBackground At 0, 0 Size 1280 By 720 Filter Smooth
+    End If
+
+End Sub
+
+Function ScenarioName() As Text
+
+    Dim ReturnValue As Text
+
+    If Scenario = SCENE_OVERWORLD Then
+        ReturnValue = "Starfall Plateau"
+    Else If Scenario = SCENE_TOWN Then
+        ReturnValue = "Lumen Plaza"
+    Else
+        ReturnValue = "Prism Vault"
+    End If
+
+    Return ReturnValue
+
+End Function
+
+Function OutcomeName() As Text
+
+    Dim ReturnValue As Text
+
+    If Battle.Outcome(State) = Battle.BATTLE_OUTCOME_VICTORY Then
+        ReturnValue = "Victory"
+    Else If Battle.Outcome(State) = Battle.BATTLE_OUTCOME_DEFEAT Then
+        ReturnValue = "Defeat"
+    Else If Battle.Outcome(State) = Battle.BATTLE_OUTCOME_ESCAPED Then
+        ReturnValue = "Escaped"
+    Else
+        ReturnValue = "Resolving"
+    End If
+
+    Return ReturnValue
+
+End Function
+
+Sub InitializeRpg()
+
+    Call DefineCharacter(CHARACTER_ARDEN, "Arden", 98, 32, 20, 14, 18, 13, 20, 9)
+    Call DefineCharacter(CHARACTER_LYRA, "Lyra", 76, 48, 11, 11, 24, 18, 16, 13)
+    Call DefineCharacter(CHARACTER_KAI, "Kai", 84, 20, 18, 12, 12, 11, 24, 15)
+    Call DefineCharacter(CHARACTER_ORA, "Ora", 92, 28, 15, 18, 17, 19, 12, 10)
+
+    OperationSucceeded = Party.AddCharacter(State, CHARACTER_ARDEN)
+    OperationSucceeded = Party.AddCharacter(State, CHARACTER_LYRA)
+    OperationSucceeded = Party.AddCharacter(State, CHARACTER_KAI)
+    OperationSucceeded = Party.AddCharacter(State, CHARACTER_ORA)
+    OperationSucceeded = Party.SetGold(State, 120)
+
+    Poison.Id = STATUS_POISON
+    Poison.Name = "Poison"
+    Poison.Kind = Effects.BATTLE_STATUS_POISON
+    Poison.Statistic = 0
+    Poison.Value = 3
+    Poison.TickTiming = Effects.BATTLE_STATUS_TICK_ROUND_END
+    OperationSucceeded = Effects.DefineStatus(State, Poison)
+
+    Call DefineEffect(EFFECT_FLARE, "Flare Wave")
+    Call AddComponent(EFFECT_FLARE, Effects.BATTLE_EFFECT_MAGIC_DAMAGE, 12, 0, 0)
+    Call AddComponent(EFFECT_FLARE, Effects.BATTLE_EFFECT_APPLY_STATUS, 0, STATUS_POISON, 2)
+    Call DefineEffect(EFFECT_MEND, "Mend")
+    Call AddComponent(EFFECT_MEND, Effects.BATTLE_EFFECT_HEAL_HEALTH, 24, 0, 0)
+    Call DefineEffect(EFFECT_POTION, "Potion")
+    Call AddComponent(EFFECT_POTION, Effects.BATTLE_EFFECT_HEAL_HEALTH, 30, 0, 0)
+
+    Item.Id = ITEM_POTION
+    Item.Name = "Lumen Tonic"
+    Item.Kind = RPG.RPG_ITEM_CONSUMABLE
+    Item.MaximumStack = 9
+    Item.BasePrice = 20
+    Item.CanSell = True
+    Item.EffectId = EFFECT_POTION
+    Item.EquipmentSlotId = 0
+    Item.HealthBonus = 0
+    Item.MagicPointBonus = 0
+    Item.StrengthBonus = 0
+    Item.DefenseBonus = 0
+    Item.MagicBonus = 0
+    Item.ResistanceBonus = 0
+    Item.AgilityBonus = 0
+    Item.LuckBonus = 0
+    OperationSucceeded = Inventory.DefineItem(State, Item)
+    OperationSucceeded = Inventory.AddItem(State, ITEM_POTION, 5)
+
+    Ability.Id = ABILITY_FLARE
+    Ability.Name = "Flare Wave"
+    Ability.MagicPointCost = 7
+    Ability.Power = 12
+    Ability.TargetMode = RPG.RPG_TARGET_ALL_ENEMIES
+    Ability.EffectId = EFFECT_FLARE
+    OperationSucceeded = Abilities.DefineAbility(State, Ability)
+
+    Ability.Id = ABILITY_MEND
+    Ability.Name = "Mend"
+    Ability.MagicPointCost = 5
+    Ability.Power = 24
+    Ability.TargetMode = RPG.RPG_TARGET_ONE_ALLY
+    Ability.EffectId = EFFECT_MEND
+    OperationSucceeded = Abilities.DefineAbility(State, Ability)
+    OperationSucceeded = Abilities.LearnAbility(State, CHARACTER_ARDEN, ABILITY_FLARE)
+    OperationSucceeded = Abilities.LearnAbility(State, CHARACTER_LYRA, ABILITY_MEND)
+
+    Call DefineEnemy(ENEMY_SLIME, "Prism Slime", 46, 12, 9, 6, 10, 7, 8, 7, 10, 5)
+    Call DefineEnemy(ENEMY_WOLF, "Gale Wolf", 68, 16, 16, 10, 11, 9, 19, 10, 16, 8)
+    Call DefineEnemy(ENEMY_SENTINEL, "Vault Sentinel", 82, 24, 18, 15, 17, 14, 11, 8, 22, 12)
+
+    Formation.Id = FORMATION_GALLERY
+    Formation.Name = "Prism Vanguard"
+    Formation.EscapeChance = 55
+    OperationSucceeded = Battle.DefineFormation(State, Formation)
+
+    Call AddFormationMember(ENEMY_SLIME, 1, 1)
+    Call AddFormationMember(ENEMY_WOLF, 2, 2)
+    Call AddFormationMember(ENEMY_SENTINEL, 3, 3)
+
+    AiRule.Id = 1
+    AiRule.ProfileId = 1
+    AiRule.Priority = 1
+    AiRule.ConditionKind = Strategy.BATTLE_AI_ALWAYS
+    AiRule.ConditionValue = 0
+    AiRule.ActionKind = Battle.BATTLE_ACTION_ATTACK
+    AiRule.SourceId = 0
+    AiRule.TargetSelector = Strategy.BATTLE_TARGET_LOWEST_HEALTH
+    OperationSucceeded = Strategy.DefineAiRule(State, AiRule)
+
+End Sub
+
+Sub DefineCharacter(Id As Number, Name As Text, Health As Number, MagicPoints As Number, Strength As Number, Defense As Number, Magic As Number, Resistance As Number, Agility As Number, Luck As Number)
+
+    Character.Id = Id
+    Character.Name = Name
+    Character.StartingLevel = 5
+    Character.StartingMaximumHealth = Health
+    Character.StartingMaximumMagicPoints = MagicPoints
+    Character.Strength = Strength
+    Character.Defense = Defense
+    Character.Magic = Magic
+    Character.Resistance = Resistance
+    Character.Agility = Agility
+    Character.Luck = Luck
+    OperationSucceeded = Characters.DefineCharacter(State, Character)
+
+End Sub
+
+Sub DefineEffect(Id As Number, Name As Text)
+
+    Effect.Id = Id
+    Effect.Name = Name
+    OperationSucceeded = Effects.DefineEffect(State, Effect)
+
+End Sub
+
+Sub AddComponent(EffectId As Number, Kind As Number, Power As Number, StatusId As Number, Duration As Number)
+
+    Component.EffectId = EffectId
+    Component.Kind = Kind
+    Component.Power = Power
+    Component.StatusId = StatusId
+    Component.Duration = Duration
+    OperationSucceeded = Effects.AddComponent(State, Component)
+
+End Sub
+
+Sub DefineEnemy(Id As Number, Name As Text, Health As Number, MagicPoints As Number, Strength As Number, Defense As Number, Magic As Number, Resistance As Number, Agility As Number, Luck As Number, ExperienceReward As Number, GoldReward As Number)
+
+    Enemy.Id = Id
+    Enemy.Name = Name
+    Enemy.MaximumHealth = Health
+    Enemy.MaximumMagicPoints = MagicPoints
+    Enemy.Strength = Strength
+    Enemy.Defense = Defense
+    Enemy.Magic = Magic
+    Enemy.Resistance = Resistance
+    Enemy.Agility = Agility
+    Enemy.Luck = Luck
+    Enemy.ExperienceReward = ExperienceReward
+    Enemy.GoldReward = GoldReward
+    Enemy.AiProfileId = 1
+    OperationSucceeded = Battle.DefineEnemy(State, Enemy)
+
+End Sub
+
+Sub AddFormationMember(EnemyId As Number, GroupId As Number, SlotId As Number)
+
+    FormationMember.FormationId = FORMATION_GALLERY
+    FormationMember.EnemyId = EnemyId
+    FormationMember.GroupId = GroupId
+    FormationMember.SlotId = SlotId
+    OperationSucceeded = Battle.AddFormationMember(State, FormationMember)
+
+End Sub
+
+Sub InitializeWorld()
+
+    Call DefineScene(SCENE_OVERWORLD, 101)
+    Call DefineScene(SCENE_TOWN, 201)
+    Call DefineScene(SCENE_DUNGEON, 301)
+    Call DefineSpawn(101, SCENE_OVERWORLD)
+    Call DefineSpawn(201, SCENE_TOWN)
+    Call DefineSpawn(301, SCENE_DUNGEON)
+
+    Actor.Id = ACTOR_PARTY
+    Actor.SceneId = SCENE_OVERWORLD
+    Actor.CellX = 6
+    Actor.CellY = 5
+    Actor.Facing = World.WORLD_FACING_RIGHT
+    Actor.Visible = True
+    Actor.Solid = True
+    Actor.Persistent = True
+    Actor.AnimationSetId = 0
+    Actor.InteractionId = 0
+    OperationSucceeded = World.DefineActor(State, Actor)
+    OperationSucceeded = World.SetCurrentScene(State, SCENE_OVERWORLD)
+    OperationSucceeded = World.SetControlledActor(State, ACTOR_PARTY)
+
+End Sub
+
+Sub DefineScene(Id As Number, DefaultSpawnId As Number)
+
+    Scene.Id = Id
+    Scene.MapId = Id
+    Scene.DefaultSpawnId = DefaultSpawnId
+    Scene.CameraMode = World.WORLD_CAMERA_FOLLOW
+    OperationSucceeded = World.DefineScene(State, Scene)
+
+End Sub
+
+Sub DefineSpawn(Id As Number, SceneId As Number)
+
+    Spawn.Id = Id
+    Spawn.SceneId = SceneId
+    Spawn.CellX = 6
+    Spawn.CellY = 5
+    Spawn.Facing = World.WORLD_FACING_RIGHT
+    OperationSucceeded = World.DefineSpawn(State, Spawn)
+
+End Sub

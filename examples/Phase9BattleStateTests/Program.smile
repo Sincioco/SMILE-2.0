@@ -1,0 +1,606 @@
+Option Explicit
+
+Import Smile.RPG.Core As RPG
+Import Smile.RPG.Characters As Characters
+Import Smile.RPG.Party As Party
+Import Smile.RPG.Inventory As Inventory
+Import Smile.RPG.Abilities As Abilities
+Import Smile.RPG.SaveGames As SaveGames
+Import Smile.RPG.BattleEffects As Effects
+Import Smile.RPG.BattleCore As Battle
+Import Smile.RPG.BattleStrategy As Strategy
+Import Smile.RPG.BattleView As BattleView
+
+Const CHARACTER_HERO = 100
+Const CHARACTER_MAGE = 200
+Const ITEM_POTION = 10
+Const ITEM_REVIVE = 20
+Const ABILITY_FLARE = 1000
+Const ABILITY_MEND = 1001
+Const ABILITY_STUN = 1002
+Const ABILITY_HASTE = 1003
+Const EFFECT_FLARE = 2000
+Const EFFECT_MEND = 2001
+Const EFFECT_POTION = 2002
+Const EFFECT_REVIVE = 2003
+Const EFFECT_STUN = 2004
+Const EFFECT_HASTE = 2005
+Const STATUS_POISON = 3000
+Const STATUS_STUN = 3001
+Const STATUS_HASTE = 3002
+Const ENEMY_SLIME = 4000
+Const ENEMY_WOLF = 4001
+Const ENEMY_TITAN = 4002
+Const FORMATION_PAIR = 5000
+Const FORMATION_WEAK = 5001
+Const FORMATION_ESCAPE = 5002
+Const FORMATION_NO_ESCAPE = 5003
+
+Dim Checks As Number
+Dim Failures As Number
+Dim State As Number
+Dim BattleHandle As Number
+Dim PreviousExperience As Number
+Dim PreviousGold As Number
+Dim PreviousMagicPoints As Number
+Dim PreviousItemQuantity As Number
+Dim EventStart As Number
+Dim Result As Number
+Dim Ignored As Boolean
+Dim Character As Characters.CharacterDefinition
+Dim Item As Inventory.ItemDefinition
+Dim Ability As Abilities.AbilityDefinition
+Dim Effect As Effects.EffectDefinition
+Dim Component As Effects.EffectComponentDefinition
+Dim Status As Effects.StatusDefinition
+Dim Enemy As Battle.EnemyDefinition
+Dim Formation As Battle.FormationDefinition
+Dim FormationMember As Battle.FormationMemberDefinition
+Dim Order As Strategy.StandingOrderDefinition
+Dim AiRule As Strategy.AiRuleDefinition
+Dim Slot As BattleView.SlotDefinition
+
+State = RPG.Create()
+
+Call Check(State > 0)
+Call DefineCharacters()
+Call DefineEffects()
+Call DefineItemsAndAbilities()
+Call DefineEnemiesAndFormations()
+Call DefineStrategy()
+
+Call Check(Effects.EffectDefinitionCount(State) = 6)
+Call Check(Effects.StatusDefinitionCount(State) = 3)
+Call Check(Battle.EnemyDefinitionCount(State) = 3)
+Call Check(Battle.FormationCount(State) = 4)
+Call Check(Strategy.AiRuleCount(State) = 2)
+
+' A live battle has a generation-safe handle, one session, bounded participants, and no persistence snapshot.
+
+BattleHandle = Battle.BeginBattle(State, FORMATION_PAIR, 77)
+
+Call Check(BattleHandle > 0)
+Call Check(Battle.IsActive(State))
+Call Check(Battle.IsBattleHandleValid(State, BattleHandle))
+Call Check(Battle.BeginBattle(State, FORMATION_WEAK, 1) = 0)
+Call Check(Battle.ParticipantCount(State) = 4)
+Call Check(Battle.ParticipantSide(State, 1) = Battle.BATTLE_SIDE_PARTY)
+Call Check(Battle.ParticipantSide(State, 3) = Battle.BATTLE_SIDE_ENEMY)
+Call Check(Battle.ParticipantGroupId(State, 3) = 1)
+Call Check(Battle.ParticipantGroupId(State, 4) = 2)
+Call Check(SaveGames.Encode(State, 9) = RPG.RPG_RESULT_BATTLE_ACTIVE)
+Call Check(SaveGames.Decode(State, 9) = RPG.RPG_RESULT_BATTLE_ACTIVE)
+Call Check(SaveGames.SaveGame(State, 1, 9) = RPG.RPG_RESULT_BATTLE_ACTIVE)
+Call Check(SaveGames.LoadGame(State, 1, 9) = RPG.RPG_RESULT_BATTLE_ACTIVE)
+
+' Logical X/Y/Z slots and event-derived cues remain renderer neutral.
+
+Slot.ParticipantId = 1
+Slot.X = -120
+Slot.Y = 20
+Slot.Z = 4
+Slot.Facing = BattleView.BATTLE_FACING_EAST
+Slot.Layer = 2
+Slot.Anchor = BattleView.BATTLE_ANCHOR_FEET
+
+Call Check(BattleView.SetSlot(State, Slot))
+Call Check(BattleView.SlotX(State, 1) = -120)
+Call Check(BattleView.SlotZ(State, 1) = 4)
+Call Check(BattleView.SlotFacing(State, 1) = BattleView.BATTLE_FACING_EAST)
+Call Check(BattleView.AppendEvents(State, 0))
+Call Check(BattleView.CueCount(State) > 0)
+Call Check(BattleView.Update(State, 24))
+Call Check(BattleView.CuePosition(State) > 0)
+Call Check(BattleView.ClearCues(State))
+
+' Composite all-enemy Ability, Item consumption, Defend, poison, and enemy AI resolve deterministically.
+
+PreviousMagicPoints = Characters.MagicPoints(State, CHARACTER_HERO)
+PreviousItemQuantity = Inventory.Quantity(State, ITEM_POTION)
+EventStart = Battle.EventCount(State)
+
+Call Check(Battle.QueueAction(State, 1, Battle.BATTLE_ACTION_ABILITY, ABILITY_FLARE, 3))
+Call Check(Battle.QueueAction(State, 2, Battle.BATTLE_ACTION_ITEM, ITEM_POTION, 1))
+Call Check(Battle.QueueAction(State, 3, Battle.BATTLE_ACTION_ATTACK, 0, 1))
+Call Check(Battle.QueueAction(State, 4, Battle.BATTLE_ACTION_DEFEND, 0, 0))
+Call Check(Battle.StartRound(State))
+Call ResolveRound()
+Call Check(Battle.Phase(State) = Battle.BATTLE_PHASE_COMMAND)
+Call Check(Battle.RoundNumber(State) = 1)
+Call Check(Characters.MagicPoints(State, CHARACTER_HERO) = PreviousMagicPoints - 6)
+Call Check(Inventory.Quantity(State, ITEM_POTION) = PreviousItemQuantity - 1)
+Call Check(Battle.Health(State, 3) < Battle.MaximumHealth(State, 3))
+Call Check(Battle.Health(State, 4) < Battle.MaximumHealth(State, 4))
+Call Check(Battle.StatusCount(State, 3) = 1)
+Call Check(Battle.StatusIdAt(State, 3, 0) = STATUS_POISON)
+Call Check(Battle.EventCount(State) > EventStart)
+Call Check(BattleView.AppendEvents(State, EventStart))
+Call Check(BattleView.CueCount(State) > 4)
+
+' Action-denial and statistic-modifier statuses apply, tick, and expire at explicit boundaries.
+
+EventStart = Battle.EventCount(State)
+
+Call Check(Battle.QueueAction(State, 1, Battle.BATTLE_ACTION_ABILITY, ABILITY_STUN, 3))
+Call Check(Battle.QueueAction(State, 2, Battle.BATTLE_ACTION_ABILITY, ABILITY_HASTE, 1))
+Call Check(Battle.QueueAction(State, 3, Battle.BATTLE_ACTION_ATTACK, 0, 1))
+Call Check(Battle.QueueAction(State, 4, Battle.BATTLE_ACTION_DEFEND, 0, 0))
+Call Check(Battle.StartRound(State))
+Call ResolveRound()
+Call Check(HasEventKind(Battle.BATTLE_EVENT_ACTION_DENIED, EventStart))
+Call Check(Battle.Agility(State, 1) = 25)
+Call Check(Battle.StatusIdAt(State, 1, 0) = STATUS_HASTE)
+
+' Order editing is isolated and cancellable; Fight applies standing orders and deterministic AI.
+
+Call Check(Strategy.BeginOrderEdit(State))
+
+Order.ActionKind = Battle.BATTLE_ACTION_ATTACK
+Order.SourceId = 0
+Order.TargetSelector = Strategy.BATTLE_TARGET_FIRST
+Order.RepeatPolicy = Strategy.BATTLE_REPEAT_STANDING
+
+Call Check(Strategy.SetEditedOrder(State, 0, Order))
+
+Order.ActionKind = Battle.BATTLE_ACTION_ABILITY
+Order.SourceId = ABILITY_MEND
+Order.TargetSelector = Strategy.BATTLE_TARGET_LOWEST_HEALTH
+Order.RepeatPolicy = Strategy.BATTLE_REPEAT_ONCE_THEN_ATTACK
+
+Call Check(Strategy.SetEditedOrder(State, 1, Order))
+Call Check(Strategy.CancelOrderEdit(State))
+Call Check(Not Strategy.HasStandingOrder(State, 0))
+Call Check(Strategy.BeginOrderEdit(State))
+
+Order.ActionKind = Battle.BATTLE_ACTION_ATTACK
+Order.SourceId = 0
+Order.TargetSelector = Strategy.BATTLE_TARGET_FIRST
+Order.RepeatPolicy = Strategy.BATTLE_REPEAT_STANDING
+
+Call Check(Strategy.SetEditedOrder(State, 0, Order))
+
+Order.ActionKind = Battle.BATTLE_ACTION_ABILITY
+Order.SourceId = ABILITY_MEND
+Order.TargetSelector = Strategy.BATTLE_TARGET_LOWEST_HEALTH
+Order.RepeatPolicy = Strategy.BATTLE_REPEAT_ONCE_THEN_ATTACK
+
+Call Check(Strategy.SetEditedOrder(State, 1, Order))
+Call Check(Strategy.CommitOrderEdit(State))
+Call Check(Strategy.PrepareFightRound(State))
+Call Check(Strategy.StandingActionKind(State, 1) = Battle.BATTLE_ACTION_ATTACK)
+Call Check(Strategy.RequestInterrupt(State))
+Call Check(Not Strategy.InterruptReady(State))
+Call ResolveRound()
+Call Check(Strategy.InterruptReady(State))
+Call Check(Not Strategy.PrepareFightRound(State))
+Call Check(Strategy.AcknowledgeInterrupt(State))
+Call Check(Battle.Agility(State, 1) = 20)
+
+Ignored = Battle.CancelBattle(State)
+
+Call Check(Ignored)
+Call Check(Not Battle.IsActive(State))
+Call Check(Not Battle.IsBattleHandleValid(State, BattleHandle))
+
+' A revive effect can target a defeated active party member and consumes exactly one Item.
+
+Call Check(Characters.SetHealth(State, CHARACTER_MAGE, 0))
+
+BattleHandle = Battle.BeginBattle(State, FORMATION_WEAK, 10)
+PreviousItemQuantity = Inventory.Quantity(State, ITEM_REVIVE)
+
+Call Check(BattleHandle > 0)
+Call Check(Not Battle.IsAlive(State, 2))
+Call Check(Battle.QueueAction(State, 1, Battle.BATTLE_ACTION_ITEM, ITEM_REVIVE, 2))
+Call Check(Battle.QueueAction(State, 3, Battle.BATTLE_ACTION_DEFEND, 0, 0))
+Call Check(Battle.StartRound(State))
+Call ResolveRound()
+Call Check(Battle.IsAlive(State, 2))
+Call Check(Battle.Health(State, 2) = 18)
+Call Check(Inventory.Quantity(State, ITEM_REVIVE) = PreviousItemQuantity - 1)
+Call Check(Battle.CancelBattle(State))
+
+' Victory grants EXP to every active character and Gold once, then permits SRPG 2 again.
+
+Call Check(Characters.SetHealth(State, CHARACTER_MAGE, Characters.MaximumHealth(State, CHARACTER_MAGE)))
+
+PreviousExperience = Characters.Experience(State, CHARACTER_HERO)
+PreviousGold = Party.Gold(State)
+BattleHandle = Battle.BeginBattle(State, FORMATION_WEAK, 5)
+
+Call Check(BattleHandle > 0)
+Call Check(Battle.QueueAction(State, 1, Battle.BATTLE_ACTION_ATTACK, 0, 3))
+Call Check(Battle.StartRound(State))
+Call ResolveRound()
+Call Check(Battle.Outcome(State) = Battle.BATTLE_OUTCOME_VICTORY)
+Call Check(Characters.Experience(State, CHARACTER_HERO) = PreviousExperience + 7)
+Call Check(Characters.Experience(State, CHARACTER_MAGE) = PreviousExperience + 7)
+Call Check(Party.Gold(State) = PreviousGold + 3)
+
+Result = Battle.EventCount(State)
+
+Call Check(Battle.Advance(State) = False)
+Call Check(Battle.EventCount(State) = Result)
+Call Check(Battle.EndBattle(State))
+Call Check(SaveGames.Encode(State, 9) = RPG.RPG_RESULT_OK)
+
+' Run success exits immediately. Run failure continues as an enemy-only round.
+
+BattleHandle = Battle.BeginBattle(State, FORMATION_ESCAPE, 15)
+
+Call Check(BattleHandle > 0)
+Call Check(Strategy.PrepareRunRound(State))
+Call Check(Battle.Advance(State))
+Call Check(Battle.Outcome(State) = Battle.BATTLE_OUTCOME_ESCAPED)
+Call Check(Battle.EndBattle(State))
+
+BattleHandle = Battle.BeginBattle(State, FORMATION_NO_ESCAPE, 15)
+
+Call Check(BattleHandle > 0)
+Call Check(Strategy.PrepareRunRound(State))
+Call ResolveRound()
+Call Check(Battle.Outcome(State) = Battle.BATTLE_OUTCOME_NONE)
+Call Check(Battle.Phase(State) = Battle.BATTLE_PHASE_COMMAND)
+Call Check(Battle.RoundNumber(State) = 1)
+Call Check(Battle.CancelBattle(State))
+
+' Four failed escape attempts leave four enemy-only actions and reach deterministic defeat.
+
+Call Check(Characters.SetHealth(State, CHARACTER_HERO, 1))
+Call Check(Characters.SetHealth(State, CHARACTER_MAGE, 1))
+
+BattleHandle = Battle.BeginBattle(State, FORMATION_NO_ESCAPE, 22)
+
+Call Check(BattleHandle > 0)
+
+For Result = 1 To 2
+
+    If Battle.Outcome(State) = Battle.BATTLE_OUTCOME_NONE Then
+        Call Check(Strategy.PrepareRunRound(State))
+        Call ResolveRound()
+    End If
+
+End For
+
+Call Check(Battle.Outcome(State) = Battle.BATTLE_OUTCOME_DEFEAT)
+Call Check(Battle.EndBattle(State))
+
+' Generation changes invalidate every battle, definition, order, event, cue, and handle view.
+
+Call RPG.Destroy(State)
+
+Call Check(Not Battle.IsActive(State))
+Call Check(Not Battle.IsBattleHandleValid(State, BattleHandle))
+
+State = RPG.Create()
+
+Call Check(State > 0)
+Call Check(Battle.EnemyDefinitionCount(State) = 0)
+Call Check(Effects.EffectDefinitionCount(State) = 0)
+Call Check(Strategy.AiRuleCount(State) = 0)
+Call Check(Battle.EventCount(State) = 0)
+Call Check(BattleView.CueCount(State) = 0)
+
+Call RPG.Destroy(State)
+
+If Failures = 0 Then
+    Print "Phase 9 battle state tests: PASS"
+    Print Checks
+Else
+    Print "Phase 9 battle state tests: FAIL"
+    Print Failures
+End If
+
+End Program
+
+Sub Check(Condition As Boolean)
+
+    Checks = Checks + 1
+
+    If Not Condition Then
+
+        Failures = Failures + 1
+        Print "Failed check"
+        Print Checks
+
+    End If
+
+End Sub
+
+Sub ResolveRound()
+
+    Dim StepIndex As Number
+
+    For StepIndex = 1 To 32
+
+        If Battle.Phase(State) <> Battle.BATTLE_PHASE_RESOLVING Then
+            Exit For
+        End If
+
+        Call Check(Battle.Advance(State))
+    End For
+
+End Sub
+
+Function HasEventKind(EventKind As Number, FirstIndex As Number) As Boolean
+
+    Dim Index As Number
+
+    For Index = FirstIndex To Battle.EventCount(State) - 1
+
+        If Battle.EventKindAt(State, Index) = EventKind Then
+            Return True
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+Sub DefineCharacters()
+
+    Character.Id = CHARACTER_HERO
+    Character.Name = "Arden"
+    Character.StartingLevel = 4
+    Character.StartingMaximumHealth = 90
+    Character.StartingMaximumMagicPoints = 30
+    Character.Strength = 18
+    Character.Defense = 12
+    Character.Magic = 20
+    Character.Resistance = 12
+    Character.Agility = 20
+    Character.Luck = 8
+
+    Call Check(Characters.DefineCharacter(State, Character))
+
+    Character.Id = CHARACTER_MAGE
+    Character.Name = "Lyra"
+    Character.StartingLevel = 4
+    Character.StartingMaximumHealth = 72
+    Character.StartingMaximumMagicPoints = 40
+    Character.Strength = 10
+    Character.Defense = 10
+    Character.Magic = 22
+    Character.Resistance = 16
+    Character.Agility = 16
+    Character.Luck = 12
+
+    Call Check(Characters.DefineCharacter(State, Character))
+    Call Check(Party.AddCharacter(State, CHARACTER_HERO))
+    Call Check(Party.AddCharacter(State, CHARACTER_MAGE))
+    Call Check(Party.SetGold(State, 25))
+
+End Sub
+
+Sub DefineEffects()
+
+    Status.Id = STATUS_POISON
+    Status.Name = "Poison"
+    Status.Kind = Effects.BATTLE_STATUS_POISON
+    Status.Statistic = 0
+    Status.Value = 3
+    Status.TickTiming = Effects.BATTLE_STATUS_TICK_ROUND_END
+
+    Call Check(Effects.DefineStatus(State, Status))
+
+    Status.Id = STATUS_STUN
+    Status.Name = "Stun"
+    Status.Kind = Effects.BATTLE_STATUS_ACTION_DENY
+    Status.Statistic = 0
+    Status.Value = 0
+    Status.TickTiming = Effects.BATTLE_STATUS_TICK_ACTION_START
+
+    Call Check(Effects.DefineStatus(State, Status))
+
+    Status.Id = STATUS_HASTE
+    Status.Name = "Haste"
+    Status.Kind = Effects.BATTLE_STATUS_STAT_MODIFIER
+    Status.Statistic = Effects.BATTLE_STAT_AGILITY
+    Status.Value = 5
+    Status.TickTiming = Effects.BATTLE_STATUS_TICK_ROUND_END
+
+    Call Check(Effects.DefineStatus(State, Status))
+
+    Call DefineEffect(EFFECT_FLARE, "Flare Wave")
+    Call AddEffectComponent(EFFECT_FLARE, Effects.BATTLE_EFFECT_MAGIC_DAMAGE, 9, 0, 0)
+    Call AddEffectComponent(EFFECT_FLARE, Effects.BATTLE_EFFECT_APPLY_STATUS, 0, STATUS_POISON, 2)
+    Call DefineEffect(EFFECT_MEND, "Mend")
+    Call AddEffectComponent(EFFECT_MEND, Effects.BATTLE_EFFECT_HEAL_HEALTH, 20, 0, 0)
+    Call DefineEffect(EFFECT_POTION, "Potion")
+    Call AddEffectComponent(EFFECT_POTION, Effects.BATTLE_EFFECT_HEAL_HEALTH, 24, 0, 0)
+    Call DefineEffect(EFFECT_REVIVE, "Revive")
+    Call AddEffectComponent(EFFECT_REVIVE, Effects.BATTLE_EFFECT_REVIVE, 18, 0, 0)
+    Call DefineEffect(EFFECT_STUN, "Stun")
+    Call AddEffectComponent(EFFECT_STUN, Effects.BATTLE_EFFECT_APPLY_STATUS, 0, STATUS_STUN, 1)
+    Call DefineEffect(EFFECT_HASTE, "Haste")
+    Call AddEffectComponent(EFFECT_HASTE, Effects.BATTLE_EFFECT_APPLY_STATUS, 0, STATUS_HASTE, 2)
+
+End Sub
+
+Sub DefineEffect(Id As Number, Name As Text)
+
+    Effect.Id = Id
+    Effect.Name = Name
+
+    Call Check(Effects.DefineEffect(State, Effect))
+
+End Sub
+
+Sub AddEffectComponent(EffectId As Number, Kind As Number, Power As Number, StatusId As Number, Duration As Number)
+
+    Component.EffectId = EffectId
+    Component.Kind = Kind
+    Component.Power = Power
+    Component.StatusId = StatusId
+    Component.Duration = Duration
+
+    Call Check(Effects.AddComponent(State, Component))
+
+End Sub
+
+Sub DefineItemsAndAbilities()
+
+    Item.Id = ITEM_POTION
+    Item.Name = "Potion"
+    Item.Kind = RPG.RPG_ITEM_CONSUMABLE
+    Item.MaximumStack = 9
+    Item.BasePrice = 12
+    Item.CanSell = True
+    Item.EffectId = EFFECT_POTION
+    Item.EquipmentSlotId = 0
+
+    Call Check(Inventory.DefineItem(State, Item))
+
+    Item.Id = ITEM_REVIVE
+    Item.Name = "Revive Seed"
+    Item.MaximumStack = 9
+    Item.BasePrice = 30
+    Item.EffectId = EFFECT_REVIVE
+
+    Call Check(Inventory.DefineItem(State, Item))
+    Call Check(Inventory.AddItem(State, ITEM_POTION, 3))
+    Call Check(Inventory.AddItem(State, ITEM_REVIVE, 2))
+
+    Ability.Id = ABILITY_FLARE
+    Ability.Name = "Flare Wave"
+    Ability.MagicPointCost = 6
+    Ability.Power = 9
+    Ability.TargetMode = RPG.RPG_TARGET_ALL_ENEMIES
+    Ability.EffectId = EFFECT_FLARE
+
+    Call Check(Abilities.DefineAbility(State, Ability))
+
+    Ability.Id = ABILITY_MEND
+    Ability.Name = "Mend"
+    Ability.MagicPointCost = 4
+    Ability.Power = 20
+    Ability.TargetMode = RPG.RPG_TARGET_ONE_ALLY
+    Ability.EffectId = EFFECT_MEND
+
+    Call Check(Abilities.DefineAbility(State, Ability))
+
+    Ability.Id = ABILITY_STUN
+    Ability.Name = "Stun"
+    Ability.MagicPointCost = 3
+    Ability.Power = 0
+    Ability.TargetMode = RPG.RPG_TARGET_ONE_ENEMY
+    Ability.EffectId = EFFECT_STUN
+
+    Call Check(Abilities.DefineAbility(State, Ability))
+
+    Ability.Id = ABILITY_HASTE
+    Ability.Name = "Haste"
+    Ability.MagicPointCost = 2
+    Ability.Power = 0
+    Ability.TargetMode = RPG.RPG_TARGET_ONE_ALLY
+    Ability.EffectId = EFFECT_HASTE
+
+    Call Check(Abilities.DefineAbility(State, Ability))
+    Call Check(Abilities.LearnAbility(State, CHARACTER_HERO, ABILITY_FLARE))
+    Call Check(Abilities.LearnAbility(State, CHARACTER_HERO, ABILITY_STUN))
+    Call Check(Abilities.LearnAbility(State, CHARACTER_MAGE, ABILITY_MEND))
+    Call Check(Abilities.LearnAbility(State, CHARACTER_MAGE, ABILITY_HASTE))
+
+End Sub
+
+Sub DefineEnemiesAndFormations()
+
+    Call DefineEnemy(ENEMY_SLIME, "Prism Slime", 42, 0, 11, 7, 4, 6, 8, 5, 9, 4, 1)
+    Call DefineEnemy(ENEMY_WOLF, "Gale Wolf", 55, 0, 15, 9, 4, 7, 18, 7, 12, 6, 1)
+    Call DefineEnemy(ENEMY_TITAN, "Training Titan", 1, 0, 30, 1, 1, 1, 1, 1, 7, 3, 2)
+
+    Call DefineFormation(FORMATION_PAIR, "Prism Pair", 45)
+    Call AddFormationEnemy(FORMATION_PAIR, ENEMY_SLIME, 1, 1)
+    Call AddFormationEnemy(FORMATION_PAIR, ENEMY_WOLF, 2, 2)
+    Call DefineFormation(FORMATION_WEAK, "Training Target", 50)
+    Call AddFormationEnemy(FORMATION_WEAK, ENEMY_TITAN, 1, 1)
+    Call DefineFormation(FORMATION_ESCAPE, "Open Road", 100)
+    Call AddFormationEnemy(FORMATION_ESCAPE, ENEMY_SLIME, 1, 1)
+    Call DefineFormation(FORMATION_NO_ESCAPE, "Sealed Road", 0)
+    Call AddFormationEnemy(FORMATION_NO_ESCAPE, ENEMY_SLIME, 1, 1)
+
+End Sub
+
+Sub DefineEnemy(Id As Number, Name As Text, Health As Number, MagicPoints As Number, Strength As Number, Defense As Number, Magic As Number, Resistance As Number, Agility As Number, Luck As Number, ExperienceReward As Number, GoldReward As Number, AiProfileId As Number)
+
+    Enemy.Id = Id
+    Enemy.Name = Name
+    Enemy.MaximumHealth = Health
+    Enemy.MaximumMagicPoints = MagicPoints
+    Enemy.Strength = Strength
+    Enemy.Defense = Defense
+    Enemy.Magic = Magic
+    Enemy.Resistance = Resistance
+    Enemy.Agility = Agility
+    Enemy.Luck = Luck
+    Enemy.ExperienceReward = ExperienceReward
+    Enemy.GoldReward = GoldReward
+    Enemy.AiProfileId = AiProfileId
+
+    Call Check(Battle.DefineEnemy(State, Enemy))
+
+End Sub
+
+Sub DefineFormation(Id As Number, Name As Text, EscapeChance As Number)
+
+    Formation.Id = Id
+    Formation.Name = Name
+    Formation.EscapeChance = EscapeChance
+
+    Call Check(Battle.DefineFormation(State, Formation))
+
+End Sub
+
+Sub AddFormationEnemy(FormationId As Number, EnemyId As Number, GroupId As Number, SlotId As Number)
+
+    FormationMember.FormationId = FormationId
+    FormationMember.EnemyId = EnemyId
+    FormationMember.GroupId = GroupId
+    FormationMember.SlotId = SlotId
+
+    Call Check(Battle.AddFormationMember(State, FormationMember))
+
+End Sub
+
+Sub DefineStrategy()
+
+    AiRule.Id = 1
+    AiRule.ProfileId = 1
+    AiRule.Priority = 1
+    AiRule.ConditionKind = Strategy.BATTLE_AI_ALWAYS
+    AiRule.ConditionValue = 0
+    AiRule.ActionKind = Battle.BATTLE_ACTION_ATTACK
+    AiRule.SourceId = 0
+    AiRule.TargetSelector = Strategy.BATTLE_TARGET_LOWEST_HEALTH
+
+    Call Check(Strategy.DefineAiRule(State, AiRule))
+
+    AiRule.Id = 2
+    AiRule.ProfileId = 2
+    AiRule.Priority = 1
+    AiRule.TargetSelector = Strategy.BATTLE_TARGET_FIRST
+
+    Call Check(Strategy.DefineAiRule(State, AiRule))
+
+End Sub

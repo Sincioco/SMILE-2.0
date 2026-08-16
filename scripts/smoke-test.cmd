@@ -478,7 +478,7 @@ copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.RPG.smilelib" "%SMILE_ROOT%\arti
 if errorlevel 1 exit /b 1
 fc /b "%SMILE_ROOT%\artifacts\temp\Smile.RPG.first.smilelib" "%SMILE_ROOT%\artifacts\libraries\Smile.RPG.smilelib" >nul
 if errorlevel 1 exit /b 1
-powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.RPG.smilelib'); try { $manifest=([IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())).ReadToEnd() | ConvertFrom-Json; $api=([IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open())).ReadToEnd() | ConvertFrom-Json; $names=@($api.modules.name); if ($manifest.formatVersion -ne 5 -or $manifest.version -ne '1.1.1' -or $names.Count -ne 11 -or $names -notcontains 'Smile.RPG.Core' -or $names -notcontains 'Smile.RPG.World' -or $names -notcontains 'Smile.RPG.Story' -or $names -notcontains 'Smile.RPG.Encounters' -or $names -notcontains 'Smile.RPG.SaveGames' -or @($api.modules.members | Where-Object requiresGameWindow).Count -ne 0 -or $api.modules.members.name -notcontains 'RPG_RESULT_NOT_SELLABLE') { exit 1 } } finally { $zip.Dispose() }"
+powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.RPG.smilelib'); try { $manifest=([IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())).ReadToEnd() | ConvertFrom-Json; $api=([IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open())).ReadToEnd() | ConvertFrom-Json; $names=@($api.modules.name); if ($manifest.formatVersion -ne 5 -or $manifest.version -ne '1.2.0' -or $names.Count -ne 15 -or $names -notcontains 'Smile.RPG.Core' -or $names -notcontains 'Smile.RPG.World' -or $names -notcontains 'Smile.RPG.Story' -or $names -notcontains 'Smile.RPG.Encounters' -or $names -notcontains 'Smile.RPG.BattleEffects' -or $names -notcontains 'Smile.RPG.BattleCore' -or $names -notcontains 'Smile.RPG.BattleStrategy' -or $names -notcontains 'Smile.RPG.BattleView' -or $names -notcontains 'Smile.RPG.SaveGames' -or @($api.modules.members | Where-Object requiresGameWindow).Count -ne 0 -or $api.modules.members.name -notcontains 'RPG_RESULT_NOT_SELLABLE' -or $api.modules.members.name -notcontains 'RPG_RESULT_BATTLE_ACTIVE') { exit 1 } } finally { $zip.Dispose() }"
 if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase6RpgStateTests\Phase6RpgStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase6RpgStateTests.exe"
@@ -617,6 +617,51 @@ for %%A in (Archive1.smilemap Archive2.smilemap Archive3.smilemap Archive4.smile
     if errorlevel 1 exit /b 1
 )
 echo Phase 8 dungeon composition, SRPG 2 state, package, DirectX, GDI, and DPR-2 Web tests passed.
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase9BattleStateTests\Phase9BattleStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase9BattleStateTests.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\tests\Phase9BattleStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase9BattleStateTests.out"
+if errorlevel 1 exit /b 1
+findstr /x /c:"Phase 9 battle state tests: PASS" "%SMILE_ROOT%\artifacts\temp\Phase9BattleStateTests.out" >nul
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase9BattleStateTests\Phase9BattleStateTests.Package.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase9BattleStateTestsPackage.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\tests\Phase9BattleStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase9BattleStateTestsPackage.out"
+if errorlevel 1 exit /b 1
+fc /b "%SMILE_ROOT%\artifacts\temp\Phase9BattleStateTests.out" "%SMILE_ROOT%\artifacts\temp\Phase9BattleStateTestsPackage.out" >nul
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase9BattleStateTests\Phase9BattleStateTests.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\Phase9BattleStateTests"
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\Phase9BattleStateTests\game.js"
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase9BattleStateTests" --native-output "%SMILE_ROOT%\artifacts\temp\Phase9BattleStateTests.out" --timeout 10000
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase9BattleStateTests\Phase9BattleStateTests.Package.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\Phase9BattleStateTestsPackage"
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\Phase9BattleStateTestsPackage\game.js"
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase9BattleStateTestsPackage" --native-output "%SMILE_ROOT%\artifacts\temp\Phase9BattleStateTestsPackage.out" --timeout 10000
+if errorlevel 1 exit /b 1
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-phase9-battle-rollback.ps1"
+if errorlevel 1 exit /b 1
+
+if not exist "%SMILE_ROOT%\artifacts\games\RpgBattleGallery-DirectX" mkdir "%SMILE_ROOT%\artifacts\games\RpgBattleGallery-DirectX"
+if not exist "%SMILE_ROOT%\artifacts\games\RpgBattleGallery-GDI" mkdir "%SMILE_ROOT%\artifacts\games\RpgBattleGallery-GDI"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgBattleGallery\RpgBattleGallery.smileproj" --target windows-x64 --configuration Release --graphics DirectX -o "%SMILE_ROOT%\artifacts\games\RpgBattleGallery-DirectX\RpgBattleGallery.exe" --debug
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgBattleGallery\RpgBattleGallery.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\RpgBattleGallery-GDI\RpgBattleGallery.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgBattleGallery\RpgBattleGallery.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\RpgBattleGallery"
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\RpgBattleGallery\game.js"
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\RpgBattleGallery" --frames 40 --timeout 10000
+if errorlevel 1 exit /b 1
+for %%A in (Ability.wav DungeonTheme.wav EnemyLineup.png LumenPlaza.png OverworldTheme.wav PartyLineup.png PrismVault.png StarfallPlateau.png Strike.wav TownTheme.wav Victory.wav) do (
+    fc /b "%SMILE_ROOT%\examples\RpgBattleGallery\Assets\%%A" "%SMILE_ROOT%\artifacts\web\RpgBattleGallery\Assets\%%A" >nul
+    if errorlevel 1 exit /b 1
+)
+echo Phase 9 battle modules, SRPG-2 active-session boundary, project/package parity, six rollback checkpoints, gallery, DirectX, GDI, and DPR-2 Web tests passed.
 
 for %%P in (OptionExplicitLate:SML3300 OptionExplicitUndeclared:SML3303 ScalarDimWithoutAs:SML3302 UnknownBuiltInType:SML3401 NumberToTextAssignment:SML3304 TextToBooleanAssignment:SML3304 MixedTextAddition:SML3308 TextRelationalComparison:SML3308 InvalidByRefLiteral:SML3305 InvalidByRefConstant:SML3305 WrongArgumentType:SML3304 WrongReturnType:SML3304 InconsistentLegacyReturnTypes:SML3309 DuplicateLocal:SML3306 UseBeforeLocalDeclaration:SML3307) do (
     for /f "tokens=1,2 delims=:" %%F in ("%%P") do (

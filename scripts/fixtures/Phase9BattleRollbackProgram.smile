@@ -1,0 +1,404 @@
+Option Explicit
+
+Import Smile.RPG.Core As RPG
+Import Smile.RPG.Characters As Characters
+Import Smile.RPG.Party As Party
+Import Smile.RPG.Inventory As Inventory
+Import Smile.RPG.Abilities As Abilities
+Import Smile.RPG.BattleEffects As Effects
+Import Smile.RPG.BattleCore As Battle
+
+Const FAULT_POINT = 0
+Const CHARACTER_HERO = 100
+Const CHARACTER_MAGE = 200
+Const ITEM_POTION = 10
+Const ABILITY_DAMAGE = 1000
+Const ABILITY_MULTI = 1001
+Const ABILITY_STATUS = 1002
+Const EFFECT_DAMAGE = 2000
+Const EFFECT_HEAL = 2001
+Const EFFECT_MULTI = 2002
+Const EFFECT_STATUS = 2003
+Const STATUS_POISON = 3000
+Const ENEMY_WEAK = 4000
+Const ENEMY_STURDY = 4001
+Const FORMATION_SINGLE = 5000
+Const FORMATION_MULTI = 5001
+
+Dim Checks As Number
+Dim Failures As Number
+Dim State As Number
+Dim BattleHandle As Number
+Dim FaultResult As Boolean
+Dim EventCountBefore As Number
+Dim MagicPointsBefore As Number
+Dim ItemQuantityBefore As Number
+Dim HealthBefore As Number
+Dim Character As Characters.CharacterDefinition
+Dim Item As Inventory.ItemDefinition
+Dim Ability As Abilities.AbilityDefinition
+Dim Effect As Effects.EffectDefinition
+Dim Component As Effects.EffectComponentDefinition
+Dim Status As Effects.StatusDefinition
+Dim Enemy As Battle.EnemyDefinition
+Dim Formation As Battle.FormationDefinition
+Dim FormationMember As Battle.FormationMemberDefinition
+
+State = RPG.Create()
+
+Call Check(State > 0)
+Call DefineCharacters()
+Call DefineEffects()
+Call DefineInventoryAndAbilities()
+Call DefineEnemiesAndFormations()
+
+If FAULT_POINT = 1 Then
+    Call TestMagicPointRollback()
+Else If FAULT_POINT = 2 Then
+    Call TestItemRollback()
+Else If FAULT_POINT = 3 Then
+    Call TestMultiTargetRollback()
+Else If FAULT_POINT = 4 Then
+    Call TestStatusRollback()
+Else If FAULT_POINT = 5 Or FAULT_POINT = 6 Then
+    Call TestRewardRollback()
+Else
+
+    Call Check(False)
+End If
+
+Call RPG.Destroy(State)
+
+If Failures = 0 Then
+
+    Print "Phase 9 battle rollback fault: PASS"
+    Print FAULT_POINT
+    Print Checks
+
+Else
+    Print "Phase 9 battle rollback fault: FAIL"
+    Print FAULT_POINT
+    Print Failures
+
+End If
+
+End Program
+
+Sub Check(Condition As Boolean)
+
+    Checks = Checks + 1
+
+    If Not Condition Then
+
+        Failures = Failures + 1
+        Print "Failed check"
+        Print Checks
+
+    End If
+
+End Sub
+
+Sub TestMagicPointRollback()
+
+    BattleHandle = Battle.BeginBattle(State, FORMATION_SINGLE, 41)
+    MagicPointsBefore = Characters.MagicPoints(State, CHARACTER_HERO)
+
+    Call Check(BattleHandle > 0)
+    Call Check(Battle.QueueAction(State, 1, Battle.BATTLE_ACTION_ABILITY, ABILITY_DAMAGE, 3))
+    Call Check(Battle.StartRound(State))
+
+    EventCountBefore = Battle.EventCount(State)
+    HealthBefore = Battle.Health(State, 3)
+    FaultResult = Battle.Advance(State)
+
+    Call Check(Not FaultResult)
+    Call Check(Characters.MagicPoints(State, CHARACTER_HERO) = MagicPointsBefore)
+    Call Check(Battle.Health(State, 3) = HealthBefore)
+    Call Check(Battle.EventCount(State) = EventCountBefore)
+    Call Check(Battle.Outcome(State) = Battle.BATTLE_OUTCOME_NONE)
+
+    FaultResult = Battle.Advance(State)
+
+    Call Check(Not FaultResult)
+    Call Check(Characters.MagicPoints(State, CHARACTER_HERO) = MagicPointsBefore)
+    Call Check(Battle.Health(State, 3) = HealthBefore)
+    Call Check(Battle.EventCount(State) = EventCountBefore)
+
+End Sub
+
+Sub TestItemRollback()
+
+    Call Check(Characters.SetHealth(State, CHARACTER_HERO, 40))
+
+    BattleHandle = Battle.BeginBattle(State, FORMATION_SINGLE, 42)
+    ItemQuantityBefore = Inventory.Quantity(State, ITEM_POTION)
+    HealthBefore = Characters.Health(State, CHARACTER_HERO)
+
+    Call Check(BattleHandle > 0)
+    Call Check(Battle.QueueAction(State, 1, Battle.BATTLE_ACTION_ITEM, ITEM_POTION, 1))
+    Call Check(Battle.StartRound(State))
+
+    EventCountBefore = Battle.EventCount(State)
+    FaultResult = Battle.Advance(State)
+
+    Call Check(Not FaultResult)
+    Call Check(Inventory.Quantity(State, ITEM_POTION) = ItemQuantityBefore)
+    Call Check(Characters.Health(State, CHARACTER_HERO) = HealthBefore)
+    Call Check(Battle.EventCount(State) = EventCountBefore)
+
+    FaultResult = Battle.Advance(State)
+
+    Call Check(Not FaultResult)
+    Call Check(Inventory.Quantity(State, ITEM_POTION) = ItemQuantityBefore)
+    Call Check(Characters.Health(State, CHARACTER_HERO) = HealthBefore)
+    Call Check(Battle.EventCount(State) = EventCountBefore)
+
+End Sub
+
+Sub TestMultiTargetRollback()
+
+    BattleHandle = Battle.BeginBattle(State, FORMATION_MULTI, 43)
+    MagicPointsBefore = Characters.MagicPoints(State, CHARACTER_HERO)
+
+    Call Check(BattleHandle > 0)
+    Call Check(Battle.QueueAction(State, 1, Battle.BATTLE_ACTION_ABILITY, ABILITY_MULTI, 3))
+    Call Check(Battle.StartRound(State))
+
+    EventCountBefore = Battle.EventCount(State)
+    HealthBefore = Battle.Health(State, 3)
+    FaultResult = Battle.Advance(State)
+
+    Call Check(Not FaultResult)
+    Call Check(Characters.MagicPoints(State, CHARACTER_HERO) = MagicPointsBefore)
+    Call Check(Battle.Health(State, 3) = HealthBefore)
+    Call Check(Battle.Health(State, 4) = HealthBefore)
+    Call Check(Battle.EventCount(State) = EventCountBefore)
+
+    FaultResult = Battle.Advance(State)
+
+    Call Check(Not FaultResult)
+    Call Check(Characters.MagicPoints(State, CHARACTER_HERO) = MagicPointsBefore)
+    Call Check(Battle.Health(State, 3) = HealthBefore)
+    Call Check(Battle.Health(State, 4) = HealthBefore)
+    Call Check(Battle.EventCount(State) = EventCountBefore)
+
+End Sub
+
+Sub TestStatusRollback()
+
+    BattleHandle = Battle.BeginBattle(State, FORMATION_SINGLE, 44)
+    MagicPointsBefore = Characters.MagicPoints(State, CHARACTER_HERO)
+
+    Call Check(BattleHandle > 0)
+    Call Check(Battle.QueueAction(State, 1, Battle.BATTLE_ACTION_ABILITY, ABILITY_STATUS, 3))
+    Call Check(Battle.StartRound(State))
+
+    EventCountBefore = Battle.EventCount(State)
+    FaultResult = Battle.Advance(State)
+
+    Call Check(Not FaultResult)
+    Call Check(Characters.MagicPoints(State, CHARACTER_HERO) = MagicPointsBefore)
+    Call Check(Battle.StatusCount(State, 3) = 0)
+    Call Check(Battle.EventCount(State) = EventCountBefore)
+
+    FaultResult = Battle.Advance(State)
+
+    Call Check(Not FaultResult)
+    Call Check(Characters.MagicPoints(State, CHARACTER_HERO) = MagicPointsBefore)
+    Call Check(Battle.StatusCount(State, 3) = 0)
+    Call Check(Battle.EventCount(State) = EventCountBefore)
+
+End Sub
+
+Sub TestRewardRollback()
+
+    BattleHandle = Battle.BeginBattle(State, FORMATION_SINGLE, 45)
+
+    Call Check(BattleHandle > 0)
+    Call Check(Battle.QueueAction(State, 1, Battle.BATTLE_ACTION_ATTACK, 0, 3))
+    Call Check(Battle.StartRound(State))
+
+    EventCountBefore = Battle.EventCount(State)
+    FaultResult = Battle.Advance(State)
+
+    Call Check(Not FaultResult)
+    Call Check(Battle.Health(State, 3) = 1)
+    Call Check(Characters.Experience(State, CHARACTER_HERO) = 0)
+    Call Check(Characters.Experience(State, CHARACTER_MAGE) = 0)
+    Call Check(Party.Gold(State) = 0)
+    Call Check(Battle.EventCount(State) = EventCountBefore)
+    Call Check(Battle.Outcome(State) = Battle.BATTLE_OUTCOME_NONE)
+
+    FaultResult = Battle.Advance(State)
+
+    Call Check(Not FaultResult)
+    Call Check(Battle.Health(State, 3) = 1)
+    Call Check(Characters.Experience(State, CHARACTER_HERO) = 0)
+    Call Check(Characters.Experience(State, CHARACTER_MAGE) = 0)
+    Call Check(Party.Gold(State) = 0)
+    Call Check(Battle.EventCount(State) = EventCountBefore)
+
+End Sub
+
+Sub DefineCharacters()
+
+    Character.Id = CHARACTER_HERO
+    Character.Name = "Rollback Hero"
+    Character.StartingLevel = 1
+    Character.StartingMaximumHealth = 80
+    Character.StartingMaximumMagicPoints = 30
+    Character.Strength = 20
+    Character.Defense = 10
+    Character.Magic = 18
+    Character.Resistance = 10
+    Character.Agility = 20
+    Character.Luck = 8
+
+    Call Check(Characters.DefineCharacter(State, Character))
+
+    Character.Id = CHARACTER_MAGE
+    Character.Name = "Rollback Mage"
+    Character.StartingMaximumHealth = 70
+    Character.StartingMaximumMagicPoints = 30
+    Character.Strength = 10
+    Character.Defense = 9
+    Character.Magic = 20
+    Character.Resistance = 12
+    Character.Agility = 15
+    Character.Luck = 10
+
+    Call Check(Characters.DefineCharacter(State, Character))
+    Call Check(Party.AddCharacter(State, CHARACTER_HERO))
+    Call Check(Party.AddCharacter(State, CHARACTER_MAGE))
+
+End Sub
+
+Sub DefineEffects()
+
+    Status.Id = STATUS_POISON
+    Status.Name = "Poison"
+    Status.Kind = Effects.BATTLE_STATUS_POISON
+    Status.Statistic = 0
+    Status.Value = 2
+    Status.TickTiming = Effects.BATTLE_STATUS_TICK_ROUND_END
+
+    Call Check(Effects.DefineStatus(State, Status))
+    Call DefineEffect(EFFECT_DAMAGE, "Damage")
+    Call AddComponent(EFFECT_DAMAGE, Effects.BATTLE_EFFECT_MAGIC_DAMAGE, 6, 0, 0)
+    Call DefineEffect(EFFECT_HEAL, "Heal")
+    Call AddComponent(EFFECT_HEAL, Effects.BATTLE_EFFECT_HEAL_HEALTH, 20, 0, 0)
+    Call DefineEffect(EFFECT_MULTI, "Multi")
+    Call AddComponent(EFFECT_MULTI, Effects.BATTLE_EFFECT_MAGIC_DAMAGE, 6, 0, 0)
+    Call DefineEffect(EFFECT_STATUS, "Status")
+    Call AddComponent(EFFECT_STATUS, Effects.BATTLE_EFFECT_APPLY_STATUS, 0, STATUS_POISON, 2)
+
+End Sub
+
+Sub DefineEffect(Id As Number, Name As Text)
+
+    Effect.Id = Id
+    Effect.Name = Name
+
+    Call Check(Effects.DefineEffect(State, Effect))
+
+End Sub
+
+Sub AddComponent(EffectId As Number, Kind As Number, Power As Number, StatusId As Number, Duration As Number)
+
+    Component.EffectId = EffectId
+    Component.Kind = Kind
+    Component.Power = Power
+    Component.StatusId = StatusId
+    Component.Duration = Duration
+
+    Call Check(Effects.AddComponent(State, Component))
+
+End Sub
+
+Sub DefineInventoryAndAbilities()
+
+    Item.Id = ITEM_POTION
+    Item.Name = "Rollback Potion"
+    Item.Kind = RPG.RPG_ITEM_CONSUMABLE
+    Item.MaximumStack = 9
+    Item.BasePrice = 1
+    Item.CanSell = True
+    Item.EffectId = EFFECT_HEAL
+    Item.EquipmentSlotId = 0
+
+    Call Check(Inventory.DefineItem(State, Item))
+    Call Check(Inventory.AddItem(State, ITEM_POTION, 2))
+    Call DefineAbility(ABILITY_DAMAGE, "Damage", 5, RPG.RPG_TARGET_ONE_ENEMY, EFFECT_DAMAGE)
+    Call DefineAbility(ABILITY_MULTI, "Multi", 5, RPG.RPG_TARGET_ALL_ENEMIES, EFFECT_MULTI)
+    Call DefineAbility(ABILITY_STATUS, "Status", 5, RPG.RPG_TARGET_ONE_ENEMY, EFFECT_STATUS)
+    Call Check(Abilities.LearnAbility(State, CHARACTER_HERO, ABILITY_DAMAGE))
+    Call Check(Abilities.LearnAbility(State, CHARACTER_HERO, ABILITY_MULTI))
+    Call Check(Abilities.LearnAbility(State, CHARACTER_HERO, ABILITY_STATUS))
+
+End Sub
+
+Sub DefineAbility(Id As Number, Name As Text, Cost As Number, TargetMode As Number, EffectId As Number)
+
+    Ability.Id = Id
+    Ability.Name = Name
+    Ability.MagicPointCost = Cost
+    Ability.Power = 6
+    Ability.TargetMode = TargetMode
+    Ability.EffectId = EffectId
+
+    Call Check(Abilities.DefineAbility(State, Ability))
+
+End Sub
+
+Sub DefineEnemiesAndFormations()
+
+    Enemy.Id = ENEMY_WEAK
+    Enemy.Name = "Weak Target"
+    Enemy.MaximumHealth = 1
+    Enemy.MaximumMagicPoints = 0
+    Enemy.Strength = 1
+    Enemy.Defense = 0
+    Enemy.Magic = 0
+    Enemy.Resistance = 0
+    Enemy.Agility = 1
+    Enemy.Luck = 0
+    Enemy.ExperienceReward = 10
+    Enemy.GoldReward = 5
+    Enemy.AiProfileId = 0
+
+    Call Check(Battle.DefineEnemy(State, Enemy))
+
+    Enemy.Id = ENEMY_STURDY
+    Enemy.Name = "Sturdy Target"
+    Enemy.MaximumHealth = 30
+    Enemy.ExperienceReward = 0
+    Enemy.GoldReward = 0
+
+    Call Check(Battle.DefineEnemy(State, Enemy))
+
+    Formation.Id = FORMATION_SINGLE
+    Formation.Name = "Single"
+    Formation.EscapeChance = 0
+
+    Call Check(Battle.DefineFormation(State, Formation))
+    Call AddFormationMember(FORMATION_SINGLE, ENEMY_WEAK, 1, 1)
+
+    Formation.Id = FORMATION_MULTI
+    Formation.Name = "Multi"
+
+    Call Check(Battle.DefineFormation(State, Formation))
+    Call AddFormationMember(FORMATION_MULTI, ENEMY_STURDY, 1, 1)
+    Call AddFormationMember(FORMATION_MULTI, ENEMY_STURDY, 2, 2)
+
+End Sub
+
+Sub AddFormationMember(FormationId As Number, EnemyId As Number, GroupId As Number, SlotId As Number)
+
+    FormationMember.FormationId = FormationId
+    FormationMember.EnemyId = EnemyId
+    FormationMember.GroupId = GroupId
+    FormationMember.SlotId = SlotId
+
+    Call Check(Battle.AddFormationMember(State, FormationMember))
+
+End Sub

@@ -1,0 +1,930 @@
+''' Standing party orders, after-round interrupts, and deterministic enemy AI.
+Module Smile.RPG.BattleStrategy
+
+Option Explicit
+
+Import Smile.RPG.Core As Core
+Import Smile.RPG.Party As Party
+Import Smile.RPG.Inventory As Inventory
+Import Smile.RPG.Abilities As Abilities
+Import Smile.RPG.BattleCore As Battle
+
+Public Const BATTLE_MAX_STRATEGY_AI_RULES = 64
+
+Public Const BATTLE_REPEAT_STANDING = 1
+Public Const BATTLE_REPEAT_ONCE_THEN_ATTACK = 2
+Public Const BATTLE_REPEAT_UNTIL_INVALID_THEN_ATTACK = 3
+Public Const BATTLE_REPEAT_DEFEND = 4
+
+Public Const BATTLE_AI_ALWAYS = 1
+Public Const BATTLE_AI_HEALTH_BELOW_PERCENT = 2
+Public Const BATTLE_AI_MAGIC_POINTS_AT_LEAST = 3
+Public Const BATTLE_AI_ALLY_HEALTH_BELOW_PERCENT = 4
+
+Public Const BATTLE_TARGET_FIRST = 1
+Public Const BATTLE_TARGET_LOWEST_HEALTH = 2
+Public Const BATTLE_TARGET_HIGHEST_HEALTH = 3
+Public Const BATTLE_TARGET_SELF = 4
+Public Const BATTLE_TARGET_FIRST_DEFEATED_ALLY = 5
+
+Public Type StandingOrderDefinition
+    ActionKind As Number
+    SourceId As Number
+    TargetSelector As Number
+    RepeatPolicy As Number
+End Type
+
+Public Type AiRuleDefinition
+    Id As Number
+    ProfileId As Number
+    Priority As Number
+    ConditionKind As Number
+    ConditionValue As Number
+    ActionKind As Number
+    SourceId As Number
+    TargetSelector As Number
+End Type
+
+Private Dim StateGeneration[4] As Number
+Private Dim StandingDefined[4, 4] As Boolean
+Private Dim StandingActionKinds[4, 4] As Number
+Private Dim StandingSourceIds[4, 4] As Number
+Private Dim StandingTargetSelectors[4, 4] As Number
+Private Dim StandingRepeatPolicies[4, 4] As Number
+Private Dim EditActive[4] As Boolean
+Private Dim EditDefined[4, 4] As Boolean
+Private Dim EditActionKinds[4, 4] As Number
+Private Dim EditSourceIds[4, 4] As Number
+Private Dim EditTargetSelectors[4, 4] As Number
+Private Dim EditRepeatPolicies[4, 4] As Number
+Private Dim InterruptRequested[4] As Boolean
+
+Private Dim AiRuleCounts[4] As Number
+Private Dim AiRuleIds[4, 64] As Number
+Private Dim AiProfileIds[4, 64] As Number
+Private Dim AiPriorities[4, 64] As Number
+Private Dim AiConditionKinds[4, 64] As Number
+Private Dim AiConditionValues[4, 64] As Number
+Private Dim AiActionKinds[4, 64] As Number
+Private Dim AiSourceIds[4, 64] As Number
+Private Dim AiTargetSelectors[4, 64] As Number
+
+Private Function StateSlot(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim Generation As Number
+
+    Slot = Core.StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Generation = Core.StateGeneration(StateHandle)
+
+    If StateGeneration[Slot] <> Generation Then
+
+        For Index = 0 To Battle.BATTLE_MAX_PARTY_MEMBERS - 1
+
+            StandingDefined[Slot, Index] = False
+            StandingActionKinds[Slot, Index] = 0
+            StandingSourceIds[Slot, Index] = 0
+            StandingTargetSelectors[Slot, Index] = 0
+            StandingRepeatPolicies[Slot, Index] = 0
+            EditDefined[Slot, Index] = False
+        End For
+
+        For Index = 0 To BATTLE_MAX_STRATEGY_AI_RULES - 1
+            AiRuleIds[Slot, Index] = 0
+        End For
+
+        EditActive[Slot] = False
+        InterruptRequested[Slot] = False
+        AiRuleCounts[Slot] = 0
+        StateGeneration[Slot] = Generation
+
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function AiRuleIndex(StateHandle As Number, RuleId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To AiRuleCounts[Slot] - 1
+
+        If AiRuleIds[Slot, Index] = RuleId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function IsTargetSelectorValid(Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Value >= BATTLE_TARGET_FIRST And Value <= BATTLE_TARGET_FIRST_DEFEATED_ALLY
+
+    Return ReturnValue
+
+End Function
+
+Private Function IsRepeatPolicyValid(Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Value >= BATTLE_REPEAT_STANDING And Value <= BATTLE_REPEAT_DEFEND
+
+    Return ReturnValue
+
+End Function
+
+Private Function IsOrderShapeValid(ByRef Definition As StandingOrderDefinition) As Boolean
+
+    If (Definition.ActionKind < Battle.BATTLE_ACTION_ATTACK Or
+        Definition.ActionKind > Battle.BATTLE_ACTION_DEFEND Or
+        Not IsTargetSelectorValid(Definition.TargetSelector) Or
+        Not IsRepeatPolicyValid(Definition.RepeatPolicy)) Then
+        Return False
+    End If
+
+    If Definition.ActionKind = Battle.BATTLE_ACTION_ATTACK Then
+
+        If Definition.SourceId <> 0 Or Definition.TargetSelector = BATTLE_TARGET_SELF Then
+            Return False
+        End If
+
+    Else If Definition.ActionKind = Battle.BATTLE_ACTION_ABILITY Then
+
+        If Definition.SourceId <= 0 Then
+            Return False
+        End If
+
+    Else If Definition.ActionKind = Battle.BATTLE_ACTION_ITEM Then
+
+        If Definition.SourceId <= 0 Then
+            Return False
+        End If
+
+    Else If Definition.ActionKind = Battle.BATTLE_ACTION_DEFEND Then
+
+        If (Definition.SourceId <> 0 Or
+            Definition.TargetSelector <> BATTLE_TARGET_SELF Or
+            Definition.RepeatPolicy <> BATTLE_REPEAT_DEFEND) Then
+            Return False
+        End If
+
+    End If
+
+    Return True
+
+End Function
+
+Private Function IsOrderDefinitionAvailable(StateHandle As Number, PartyIndex As Number, ByRef Definition As StandingOrderDefinition) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim CharacterId As Number
+
+    If Not IsOrderShapeValid(Definition) Then
+        Return False
+    End If
+
+    CharacterId = Party.CharacterIdAt(StateHandle, PartyIndex)
+
+    If CharacterId <= 0 Then
+        Return False
+    End If
+
+    If Definition.ActionKind = Battle.BATTLE_ACTION_ABILITY Then
+
+        ReturnValue = Abilities.KnowsAbility(StateHandle, CharacterId, Definition.SourceId)
+
+        Return ReturnValue
+
+    Else If Definition.ActionKind = Battle.BATTLE_ACTION_ITEM Then
+
+        If Inventory.Kind(StateHandle, Definition.SourceId) <> Core.RPG_ITEM_CONSUMABLE Then
+            Return False
+        End If
+
+    End If
+
+    Return True
+
+End Function
+
+''' Registers one deterministic rule within a caller-assigned AI profile.
+Public Function DefineAiRule(StateHandle As Number, ByRef Definition As AiRuleDefinition) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not Core.IsValidId(Definition.Id) Or
+        Not Core.IsValidId(Definition.ProfileId) Or
+        Definition.Priority <= 0 Or
+        Definition.Priority > BATTLE_MAX_STRATEGY_AI_RULES Or
+        Definition.ConditionKind < BATTLE_AI_ALWAYS Or
+        Definition.ConditionKind > BATTLE_AI_ALLY_HEALTH_BELOW_PERCENT Or
+        Not Core.IsValidValue(Definition.ConditionValue) Or
+        Definition.ActionKind < Battle.BATTLE_ACTION_ATTACK Or
+        Definition.ActionKind > Battle.BATTLE_ACTION_DEFEND Or
+        Not IsTargetSelectorValid(Definition.TargetSelector) Or
+        AiRuleIndex(StateHandle, Definition.Id) >= 0 Or
+        AiRuleCounts[Slot] >= BATTLE_MAX_STRATEGY_AI_RULES) Then
+        Return False
+    End If
+
+    If (Definition.ConditionKind = BATTLE_AI_HEALTH_BELOW_PERCENT Or
+        Definition.ConditionKind = BATTLE_AI_ALLY_HEALTH_BELOW_PERCENT) Then
+
+        If Definition.ConditionValue > 100 Then
+            Return False
+        End If
+
+    End If
+
+    If Definition.ActionKind = Battle.BATTLE_ACTION_ABILITY Then
+
+        If Not Abilities.IsAbilityDefined(StateHandle, Definition.SourceId) Then
+            Return False
+        End If
+
+    Else If Definition.SourceId <> 0 Then
+
+        Return False
+
+    End If
+
+    If (Definition.ActionKind = Battle.BATTLE_ACTION_DEFEND And
+        Definition.TargetSelector <> BATTLE_TARGET_SELF) Then
+        Return False
+    End If
+
+    Index = AiRuleCounts[Slot]
+    AiRuleIds[Slot, Index] = Definition.Id
+    AiProfileIds[Slot, Index] = Definition.ProfileId
+    AiPriorities[Slot, Index] = Definition.Priority
+    AiConditionKinds[Slot, Index] = Definition.ConditionKind
+    AiConditionValues[Slot, Index] = Definition.ConditionValue
+    AiActionKinds[Slot, Index] = Definition.ActionKind
+    AiSourceIds[Slot, Index] = Definition.SourceId
+    AiTargetSelectors[Slot, Index] = Definition.TargetSelector
+    AiRuleCounts[Slot] = Index + 1
+    Return True
+
+End Function
+
+Public Function AiRuleCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = AiRuleCounts[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Begins an isolated Order edit transaction.
+Public Function BeginOrderEdit(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or EditActive[Slot] Then
+        Return False
+    End If
+
+    For Index = 0 To Battle.BATTLE_MAX_PARTY_MEMBERS - 1
+
+        EditDefined[Slot, Index] = StandingDefined[Slot, Index]
+        EditActionKinds[Slot, Index] = StandingActionKinds[Slot, Index]
+        EditSourceIds[Slot, Index] = StandingSourceIds[Slot, Index]
+        EditTargetSelectors[Slot, Index] = StandingTargetSelectors[Slot, Index]
+        EditRepeatPolicies[Slot, Index] = StandingRepeatPolicies[Slot, Index]
+    End For
+
+    EditActive[Slot] = True
+    Return True
+
+End Function
+
+''' Replaces one order only in the active edit buffer.
+Public Function SetEditedOrder(StateHandle As Number, PartyIndex As Number, ByRef Definition As StandingOrderDefinition) As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not EditActive[Slot] Or
+        PartyIndex < 0 Or
+        PartyIndex >= Battle.BATTLE_MAX_PARTY_MEMBERS Or
+        PartyIndex >= Party.PartyCount(StateHandle) Or
+        Not IsOrderDefinitionAvailable(StateHandle, PartyIndex, Definition)) Then
+        Return False
+    End If
+
+    EditDefined[Slot, PartyIndex] = True
+    EditActionKinds[Slot, PartyIndex] = Definition.ActionKind
+    EditSourceIds[Slot, PartyIndex] = Definition.SourceId
+    EditTargetSelectors[Slot, PartyIndex] = Definition.TargetSelector
+    EditRepeatPolicies[Slot, PartyIndex] = Definition.RepeatPolicy
+    Return True
+
+End Function
+
+''' Atomically replaces all standing orders with the validated edit buffer.
+Public Function CommitOrderEdit(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim Definition As StandingOrderDefinition
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Not EditActive[Slot] Then
+        Return False
+    End If
+
+    For Index = 0 To Battle.BATTLE_MAX_PARTY_MEMBERS - 1
+
+        If EditDefined[Slot, Index] Then
+
+            Definition.ActionKind = EditActionKinds[Slot, Index]
+            Definition.SourceId = EditSourceIds[Slot, Index]
+            Definition.TargetSelector = EditTargetSelectors[Slot, Index]
+            Definition.RepeatPolicy = EditRepeatPolicies[Slot, Index]
+
+            If Not IsOrderDefinitionAvailable(StateHandle, Index, Definition) Then
+                Return False
+            End If
+
+        End If
+
+    End For
+
+    For Index = 0 To Battle.BATTLE_MAX_PARTY_MEMBERS - 1
+
+        StandingDefined[Slot, Index] = EditDefined[Slot, Index]
+        StandingActionKinds[Slot, Index] = EditActionKinds[Slot, Index]
+        StandingSourceIds[Slot, Index] = EditSourceIds[Slot, Index]
+        StandingTargetSelectors[Slot, Index] = EditTargetSelectors[Slot, Index]
+        StandingRepeatPolicies[Slot, Index] = EditRepeatPolicies[Slot, Index]
+    End For
+
+    EditActive[Slot] = False
+    Return True
+
+End Function
+
+''' Cancels Order editing without changing standing orders.
+Public Function CancelOrderEdit(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Not EditActive[Slot] Then
+        Return False
+    End If
+
+    EditActive[Slot] = False
+    Return True
+
+End Function
+
+Public Function HasStandingOrder(StateHandle As Number, PartyIndex As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        PartyIndex < 0 Or
+        PartyIndex >= Battle.BATTLE_MAX_PARTY_MEMBERS) Then
+        Return False
+    End If
+
+    ReturnValue = StandingDefined[Slot, PartyIndex]
+
+    Return ReturnValue
+
+End Function
+
+Public Function StandingActionKind(StateHandle As Number, PartyIndex As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        PartyIndex < 0 Or
+        PartyIndex >= Battle.BATTLE_MAX_PARTY_MEMBERS Or
+        Not StandingDefined[Slot, PartyIndex]) Then
+        Return 0
+    End If
+
+    ReturnValue = StandingActionKinds[Slot, PartyIndex]
+
+    Return ReturnValue
+
+End Function
+
+Private Function SelectTarget(StateHandle As Number, ActorId As Number, SameSide As Boolean, Selector As Number) As Number
+
+    Dim ActorSide As Number
+    Dim Index As Number
+    Dim CandidateId As Number
+    Dim CandidateHealth As Number
+    Dim CandidateMaximumHealth As Number
+    Dim BestValue As Number
+    Dim Value As Number
+    Dim IsCandidateSameSide As Boolean
+
+    If Selector = BATTLE_TARGET_SELF Then
+        Return ActorId
+    End If
+
+    ActorSide = Battle.ParticipantSide(StateHandle, ActorId)
+
+    If Selector = BATTLE_TARGET_LOWEST_HEALTH Then
+        BestValue = Core.RPG_MAX_VALUE
+    Else If Selector = BATTLE_TARGET_HIGHEST_HEALTH Then
+        BestValue = -1
+    End If
+
+    For Index = 1 To Battle.ParticipantCount(StateHandle)
+
+        IsCandidateSameSide = Battle.ParticipantSide(StateHandle, Index) = ActorSide
+
+        If IsCandidateSameSide = SameSide Then
+
+            CandidateHealth = Battle.Health(StateHandle, Index)
+            CandidateMaximumHealth = Battle.MaximumHealth(StateHandle, Index)
+
+            If Selector = BATTLE_TARGET_FIRST_DEFEATED_ALLY Then
+
+                If SameSide And CandidateHealth = 0 Then
+                    Return Index
+                End If
+
+            Else If CandidateHealth > 0 Then
+
+                If Selector = BATTLE_TARGET_FIRST Then
+                    Return Index
+                End If
+
+                If CandidateMaximumHealth <= 0 Then
+                    Value = 0
+                Else
+                    Value = CandidateHealth * 100 / CandidateMaximumHealth
+                End If
+
+                If Selector = BATTLE_TARGET_LOWEST_HEALTH And Value < BestValue Then
+                    BestValue = Value
+                    CandidateId = Index
+                Else If Selector = BATTLE_TARGET_HIGHEST_HEALTH And Value > BestValue Then
+                    BestValue = Value
+                    CandidateId = Index
+                End If
+
+            End If
+
+        End If
+
+    End For
+
+    Return CandidateId
+
+End Function
+
+Private Function SelectOrderTarget(StateHandle As Number, ActorId As Number, ActionKind As Number, SourceId As Number, Selector As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim TargetMode As Number
+
+    If ActionKind = Battle.BATTLE_ACTION_ATTACK Then
+        ReturnValue = SelectTarget(StateHandle, ActorId, False, Selector)
+
+        Return ReturnValue
+    Else If ActionKind = Battle.BATTLE_ACTION_ITEM Then
+        ReturnValue = SelectTarget(StateHandle, ActorId, True, Selector)
+
+        Return ReturnValue
+    Else If ActionKind = Battle.BATTLE_ACTION_DEFEND Then
+        Return 0
+    End If
+
+    TargetMode = Abilities.TargetMode(StateHandle, SourceId)
+
+    If TargetMode = Core.RPG_TARGET_SELF Then
+        Return ActorId
+    Else If TargetMode = Core.RPG_TARGET_ONE_ALLY Or TargetMode = Core.RPG_TARGET_ALL_ALLIES Then
+        ReturnValue = SelectTarget(StateHandle, ActorId, True, Selector)
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = SelectTarget(StateHandle, ActorId, False, Selector)
+
+    Return ReturnValue
+
+End Function
+
+Private Function QueueStandingOrder(StateHandle As Number, PartyIndex As Number, ParticipantId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim ActionKind As Number
+    Dim SourceId As Number
+    Dim Selector As Number
+    Dim TargetId As Number
+    Dim RepeatPolicy As Number
+    Dim CharacterId As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not StandingDefined[Slot, PartyIndex] Then
+
+        TargetId = SelectTarget(StateHandle, ParticipantId, False, BATTLE_TARGET_FIRST)
+
+        ReturnValue = Battle.QueueAction(StateHandle, ParticipantId, Battle.BATTLE_ACTION_ATTACK, 0, TargetId)
+
+        Return ReturnValue
+
+    End If
+
+    ActionKind = StandingActionKinds[Slot, PartyIndex]
+    SourceId = StandingSourceIds[Slot, PartyIndex]
+    Selector = StandingTargetSelectors[Slot, PartyIndex]
+    RepeatPolicy = StandingRepeatPolicies[Slot, PartyIndex]
+    TargetId = SelectOrderTarget(StateHandle, ParticipantId, ActionKind, SourceId, Selector)
+    CharacterId = Party.CharacterIdAt(StateHandle, PartyIndex)
+
+    If ActionKind = Battle.BATTLE_ACTION_ABILITY Then
+
+        If (Not Abilities.KnowsAbility(StateHandle, CharacterId, SourceId) Or
+            Not Abilities.CanPayMagicPointCost(StateHandle, CharacterId, SourceId)) Then
+
+            If RepeatPolicy = BATTLE_REPEAT_UNTIL_INVALID_THEN_ATTACK Then
+
+                TargetId = SelectTarget(StateHandle, ParticipantId, False, BATTLE_TARGET_FIRST)
+
+                ReturnValue = Battle.QueueAction(StateHandle, ParticipantId, Battle.BATTLE_ACTION_ATTACK, 0, TargetId)
+
+                Return ReturnValue
+
+            End If
+
+            Return False
+
+        End If
+
+    Else If (ActionKind = Battle.BATTLE_ACTION_ITEM And
+        Inventory.Quantity(StateHandle, SourceId) <= 0) Then
+
+        If RepeatPolicy = BATTLE_REPEAT_UNTIL_INVALID_THEN_ATTACK Then
+
+            TargetId = SelectTarget(StateHandle, ParticipantId, False, BATTLE_TARGET_FIRST)
+
+            ReturnValue = Battle.QueueAction(StateHandle, ParticipantId, Battle.BATTLE_ACTION_ATTACK, 0, TargetId)
+
+            Return ReturnValue
+
+        End If
+
+        Return False
+
+    End If
+
+    If Battle.QueueAction(StateHandle, ParticipantId, ActionKind, SourceId, TargetId) Then
+        Return True
+    End If
+
+    If RepeatPolicy = BATTLE_REPEAT_UNTIL_INVALID_THEN_ATTACK Then
+
+        TargetId = SelectTarget(StateHandle, ParticipantId, False, BATTLE_TARGET_FIRST)
+
+        ReturnValue = Battle.QueueAction(StateHandle, ParticipantId, Battle.BATTLE_ACTION_ATTACK, 0, TargetId)
+
+        Return ReturnValue
+
+    End If
+
+    Return False
+
+End Function
+
+Private Function AiConditionMatches(StateHandle As Number, RuleIndex As Number, ParticipantId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim ConditionKind As Number
+    Dim ConditionValue As Number
+    Dim HealthPercent As Number
+    Dim TargetId As Number
+
+    Slot = StateSlot(StateHandle)
+    ConditionKind = AiConditionKinds[Slot, RuleIndex]
+    ConditionValue = AiConditionValues[Slot, RuleIndex]
+
+    If ConditionKind = BATTLE_AI_ALWAYS Then
+
+        Return True
+
+    Else If ConditionKind = BATTLE_AI_HEALTH_BELOW_PERCENT Then
+
+        HealthPercent = Battle.Health(StateHandle, ParticipantId) * 100 / Battle.MaximumHealth(StateHandle, ParticipantId)
+
+        ReturnValue = HealthPercent < ConditionValue
+
+        Return ReturnValue
+
+    Else If ConditionKind = BATTLE_AI_MAGIC_POINTS_AT_LEAST Then
+
+        ReturnValue = Battle.MagicPoints(StateHandle, ParticipantId) >= ConditionValue
+
+        Return ReturnValue
+
+    Else If ConditionKind = BATTLE_AI_ALLY_HEALTH_BELOW_PERCENT Then
+
+        TargetId = SelectTarget(StateHandle, ParticipantId, True, BATTLE_TARGET_LOWEST_HEALTH)
+
+        If TargetId <= 0 Then
+            Return False
+        End If
+
+        HealthPercent = Battle.Health(StateHandle, TargetId) * 100 / Battle.MaximumHealth(StateHandle, TargetId)
+
+        ReturnValue = HealthPercent < ConditionValue
+
+        Return ReturnValue
+
+    End If
+
+    Return False
+
+End Function
+
+Private Function QueueAiAction(StateHandle As Number, ParticipantId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim ProfileId As Number
+    Dim Priority As Number
+    Dim Index As Number
+    Dim ActionKind As Number
+    Dim SourceId As Number
+    Dim TargetId As Number
+
+    Slot = StateSlot(StateHandle)
+    ProfileId = Battle.AiProfileId(StateHandle, ParticipantId)
+
+    For Priority = 1 To BATTLE_MAX_STRATEGY_AI_RULES
+
+        For Index = 0 To AiRuleCounts[Slot] - 1
+
+            If (AiProfileIds[Slot, Index] = ProfileId And
+                AiPriorities[Slot, Index] = Priority And
+                AiConditionMatches(StateHandle, Index, ParticipantId)) Then
+
+                ActionKind = AiActionKinds[Slot, Index]
+                SourceId = AiSourceIds[Slot, Index]
+                TargetId = SelectOrderTarget(StateHandle, ParticipantId, ActionKind, SourceId, AiTargetSelectors[Slot, Index])
+
+                If Battle.QueueAction(StateHandle, ParticipantId, ActionKind, SourceId, TargetId) Then
+                    Return True
+                End If
+
+            End If
+
+        End For
+    End For
+
+    TargetId = SelectTarget(StateHandle, ParticipantId, False, BATTLE_TARGET_FIRST)
+
+    ReturnValue = Battle.QueueAction(StateHandle, ParticipantId, Battle.BATTLE_ACTION_ATTACK, 0, TargetId)
+
+    Return ReturnValue
+
+End Function
+
+Private Function QueueEnemies(StateHandle As Number) As Boolean
+
+    Dim ParticipantId As Number
+
+    For ParticipantId = 1 To Battle.ParticipantCount(StateHandle)
+
+        If (Battle.ParticipantSide(StateHandle, ParticipantId) = Battle.BATTLE_SIDE_ENEMY And
+            Battle.IsAlive(StateHandle, ParticipantId)) Then
+
+            If Not QueueAiAction(StateHandle, ParticipantId) Then
+                Return False
+            End If
+
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+''' Selects Fight: repeats standing orders, selects deterministic enemy AI, and begins a round.
+Public Function PrepareFightRound(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim PartyIndex As Number
+    Dim ParticipantId As Number
+    Dim Ignored As Boolean
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not Battle.IsActive(StateHandle) Or
+        Battle.Phase(StateHandle) <> Battle.BATTLE_PHASE_COMMAND Or
+        InterruptReady(StateHandle)) Then
+        Return False
+    End If
+
+    Ignored = Battle.ClearQueuedActions(StateHandle)
+
+    For PartyIndex = 0 To Party.PartyCount(StateHandle) - 1
+
+        If PartyIndex < Battle.BATTLE_MAX_PARTY_MEMBERS Then
+
+            ParticipantId = PartyIndex + 1
+
+            If Battle.IsAlive(StateHandle, ParticipantId) Then
+
+                If Not QueueStandingOrder(StateHandle, PartyIndex, ParticipantId) Then
+                    Ignored = Battle.ClearQueuedActions(StateHandle)
+
+                    Return False
+                End If
+
+            End If
+
+        End If
+
+    End For
+
+    If Not QueueEnemies(StateHandle) Or Not Battle.StartRound(StateHandle) Then
+        Ignored = Battle.ClearQueuedActions(StateHandle)
+
+        Return False
+    End If
+
+    For PartyIndex = 0 To Battle.BATTLE_MAX_PARTY_MEMBERS - 1
+
+        If (StandingDefined[Slot, PartyIndex] And
+            StandingRepeatPolicies[Slot, PartyIndex] = BATTLE_REPEAT_ONCE_THEN_ATTACK) Then
+
+            StandingActionKinds[Slot, PartyIndex] = Battle.BATTLE_ACTION_ATTACK
+            StandingSourceIds[Slot, PartyIndex] = 0
+            StandingTargetSelectors[Slot, PartyIndex] = BATTLE_TARGET_FIRST
+            StandingRepeatPolicies[Slot, PartyIndex] = BATTLE_REPEAT_STANDING
+
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+''' Selects Run: the party attempts escape and failure grants an enemy-only round.
+Public Function PrepareRunRound(StateHandle As Number) As Boolean
+
+    Dim ParticipantId As Number
+    Dim Ignored As Boolean
+
+    If (StateSlot(StateHandle) < 0 Or
+        Not Battle.IsActive(StateHandle) Or
+        Battle.Phase(StateHandle) <> Battle.BATTLE_PHASE_COMMAND) Then
+        Return False
+    End If
+
+    Ignored = Battle.ClearQueuedActions(StateHandle)
+
+    For ParticipantId = 1 To Battle.ParticipantCount(StateHandle)
+
+        If (Battle.ParticipantSide(StateHandle, ParticipantId) = Battle.BATTLE_SIDE_PARTY And
+            Battle.IsAlive(StateHandle, ParticipantId)) Then
+
+            If Not Battle.QueueAction(StateHandle, ParticipantId, Battle.BATTLE_ACTION_RUN, 0, 0) Then
+                Return False
+            End If
+
+            Exit For
+
+        End If
+
+    End For
+
+    If Not QueueEnemies(StateHandle) Or Not Battle.StartRound(StateHandle) Then
+        Ignored = Battle.ClearQueuedActions(StateHandle)
+
+        Return False
+    End If
+
+    Return True
+
+End Function
+
+''' Latches an interrupt request until the next command boundary.
+Public Function RequestInterrupt(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Not Battle.IsActive(StateHandle) Then
+        Return False
+    End If
+
+    InterruptRequested[Slot] = True
+    Return True
+
+End Function
+
+Public Function InterruptReady(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim ReturnValue As Boolean
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    ReturnValue = InterruptRequested[Slot] And Battle.Phase(StateHandle) = Battle.BATTLE_PHASE_COMMAND
+
+    Return ReturnValue
+
+End Function
+
+''' Acknowledges an interrupt only after it reaches an after-round command boundary.
+Public Function AcknowledgeInterrupt(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Not InterruptReady(StateHandle) Then
+        Return False
+    End If
+
+    InterruptRequested[Slot] = False
+    Return True
+
+End Function
+
+End Module

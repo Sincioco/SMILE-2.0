@@ -3057,7 +3057,7 @@ Run("ApplicationId CLI parses and rejects conflicting project overrides", () =>
     }
 });
 
-Run("Phase 7 Smile.Game and Smile.RPG are ordinary built-in source packages with bounded public modules", () =>
+Run("Phase 9 Smile.Game and Smile.RPG are ordinary built-in source packages with bounded public modules", () =>
 {
     var gameProject = SmileProjectSourceSet.Load("libraries/Smile.Game/Smile.Game.smilelibproj");
     var gameCompilation = SmileProjectCompilation.Load(gameProject.ProjectPath);
@@ -3079,11 +3079,12 @@ Run("Phase 7 Smile.Game and Smile.RPG are ordinary built-in source packages with
     var rpgAnalysis = SmileLanguage.Analyze(rpgCompilation.Sources, SmileCompilationKind.Library,
         rpgCompilation.DependencyContext);
     Equal(false, rpgAnalysis.HasErrors);
-    Equal("1.1.1", rpgProject.Version);
-    Equal(11, rpgProject.CompilationSources.Count);
+    Equal("1.2.0", rpgProject.Version);
+    Equal(15, rpgProject.CompilationSources.Count);
     Equal(true, SmileBuiltInLibraryCatalog.IsBuiltIn("Smile.RPG"));
     foreach (var module in new[] { "Smile.RPG.Core", "Smile.RPG.Characters", "Smile.RPG.Party",
-        "Smile.RPG.Inventory", "Smile.RPG.Equipment", "Smile.RPG.Abilities", "Smile.RPG.Shops",
+        "Smile.RPG.Inventory", "Smile.RPG.Equipment", "Smile.RPG.Abilities", "Smile.RPG.BattleEffects",
+        "Smile.RPG.BattleCore", "Smile.RPG.BattleStrategy", "Smile.RPG.BattleView", "Smile.RPG.Shops",
         "Smile.RPG.World", "Smile.RPG.Story", "Smile.RPG.Encounters", "Smile.RPG.SaveGames" })
         Equal(true, rpgAnalysis.SemanticModel.Modules.ContainsKey(module));
     Equal(false, rpgProject.References.Any());
@@ -3121,10 +3122,10 @@ Run("VSIX templates render localized identity metadata within the aligned header
     var border = gameTemplate.Split('\n')[0].TrimEnd('\r');
     var rendered = gameTemplate.Replace("$smileuser$", "Sin".PadRight(69), StringComparison.Ordinal)
         .Replace("$smiledate$", "August 15, 2026".PadRight(69), StringComparison.Ordinal)
-        .Replace("$smileversion$", "2.0.46", StringComparison.Ordinal);
+        .Replace("$smileversion$", "2.0.47", StringComparison.Ordinal);
     var header = rendered.Split('\n').Take(9).Select(line => line.TrimEnd('\r')).ToArray();
     Equal("' Programmed By: " + "Sin".PadRight(69) + "Version: 0.0.1", header[3]);
-    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.46", header[4]);
+    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.47", header[4]);
     Equal(header[3].IndexOf("Version:", StringComparison.Ordinal) + "Version".Length,
         header[4].IndexOf("SMILE:", StringComparison.Ordinal) + "SMILE".Length);
     Equal(true, header.All(line => line.Length <= border.Length));
@@ -3137,14 +3138,14 @@ Run("VSIX templates render localized identity metadata within the aligned header
     foreach (var manifest in new[] { gameManifest, consoleManifest })
     {
         Equal(true, manifest.Contains("SmileProjectTemplateWizard", StringComparison.Ordinal));
-        Equal(true, manifest.Contains("Version=2.0.46.0", StringComparison.Ordinal));
+        Equal(true, manifest.Contains("Version=2.0.47.0", StringComparison.Ordinal));
     }
     foreach (var applicationProject in new[] { gameProject, consoleProject })
         Equal(true, applicationProject.Contains("<ApplicationId>$smileapplicationid$</ApplicationId>", StringComparison.Ordinal));
     Equal(false, libraryProject.Contains("ApplicationId", StringComparison.Ordinal));
     Equal(true, wizard.Contains("\"smile.app.a\" + Guid.NewGuid().ToString(\"N\")", StringComparison.Ordinal));
     Equal(true, wizard.Contains("ToString(\"D\", CultureInfo.CurrentCulture)", StringComparison.Ordinal));
-    Equal(true, project.Contains("<Version>2.0.46</Version>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<Version>2.0.47</Version>", StringComparison.Ordinal));
     Equal(true, vsixManifest.Contains("Type=\"Microsoft.VisualStudio.Assembly\"", StringComparison.Ordinal));
 });
 

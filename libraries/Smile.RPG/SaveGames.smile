@@ -13,6 +13,7 @@ Import Smile.RPG.Shops As Shops
 Import Smile.RPG.World As World
 Import Smile.RPG.Story As Story
 Import Smile.RPG.Encounters As Encounters
+Import Smile.RPG.BattleCore As Battle
 
 Private Const SAVE_FORMAT_VERSION = 2
 Private Const EARLIEST_READ_FORMAT_VERSION = 1
@@ -179,6 +180,10 @@ Public Function Encode(StateHandle As Number, SchemaVersion As Number) As Number
 
     If Not Core.IsValid(StateHandle) Then
         Return Core.RPG_RESULT_INVALID_STATE
+    End If
+
+    If Battle.IsActive(StateHandle) Then
+        Return Core.RPG_RESULT_BATTLE_ACTIVE
     End If
 
     If SchemaVersion <= 0 Or Not Core.IsValidValue(SchemaVersion) Then
@@ -1300,6 +1305,10 @@ Public Function Decode(StateHandle As Number, ExpectedSchemaVersion As Number) A
         Return Core.RPG_RESULT_INVALID_STATE
     End If
 
+    If Battle.IsActive(StateHandle) Then
+        Return Core.RPG_RESULT_BATTLE_ACTIVE
+    End If
+
     If ExpectedSchemaVersion <= 0 Or Not Core.IsValidValue(ExpectedSchemaVersion) Then
         Return Core.RPG_RESULT_INVALID_ARGUMENT
     End If
@@ -1428,6 +1437,14 @@ Public Function SaveGame(StateHandle As Number, SaveSlot As Number, SchemaVersio
 
     Dim Result As Number
 
+    If Not Core.IsValid(StateHandle) Then
+        Return Core.RPG_RESULT_INVALID_STATE
+    End If
+
+    If Battle.IsActive(StateHandle) Then
+        Return Core.RPG_RESULT_BATTLE_ACTIVE
+    End If
+
     If SaveSlot < 1 Or SaveSlot > Core.RPG_MAX_SAVE_SLOTS Then
         Return Core.RPG_RESULT_INVALID_ARGUMENT
     End If
@@ -1468,6 +1485,10 @@ Public Function LoadGame(StateHandle As Number, SaveSlot As Number, ExpectedSche
 
     If Not Core.IsValid(StateHandle) Then
         Return Core.RPG_RESULT_INVALID_STATE
+    End If
+
+    If Battle.IsActive(StateHandle) Then
+        Return Core.RPG_RESULT_BATTLE_ACTIVE
     End If
 
     If SaveSlot < 1 Or SaveSlot > Core.RPG_MAX_SAVE_SLOTS Then

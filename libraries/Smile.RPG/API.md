@@ -81,3 +81,9 @@ Shop callers can distinguish `RPG_RESULT_INVALID_STATE`, `RPG_RESULT_INVALID_ARG
 Visible-solid occupancy is invariant across `DefineActor`, `SetActorVisible`, `ApplySpawn`, `ActivateTransition`, `SetActorProgress`, and resets. A visible solid actor cannot share a scene/cell with another visible solid actor or invalidate another visible solid actor's reservation. Hidden and non-solid overlaps remain legal. `ActorHasReservation`, `ActorReservedDestinationX`, and `ActorReservedDestinationY` expose reservation state observationally. When current scene and controlled actor are both nonzero, the controlled actor belongs to that scene.
 
 SaveGames writes SRPG format 2, reads formats 1 and 2, and transactionally includes persistent World actors, Story state, and Encounter progress. See [the world API](../../docs/libraries/smile-rpg-world-api.md) and [payload layout](../../docs/libraries/smile-rpg-save-payload.md).
+
+## Phase 9 battle modules
+
+`Smile.RPG` 1.2.0 adds deterministic, bounded, renderer-neutral `BattleEffects`, `BattleCore`, `BattleStrategy`, and `BattleView` modules. They support enemy definitions/formations, four party members, eight enemies in four groups, Attack/Ability/Item/Defend/Run, targeting and retargeting, agility rounds, damage/healing/revive, battle statuses, victory/defeat/escape, atomic Experience/Gold rewards, PSII-style standing orders and deterministic AI, mechanics events, logical X/Y/Z slots, and presentation cues.
+
+Only one battle may be active per RPG state. An active battle is transient and makes `Encode`, `Decode`, `SaveGame`, and `LoadGame` return `RPG_RESULT_BATTLE_ACTIVE`; SRPG format 2 is unchanged. See [the battle API](../../docs/libraries/smile-rpg-battle-api.md).

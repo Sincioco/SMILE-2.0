@@ -22,7 +22,7 @@ try {
 
     foreach ($Name in @('Core.smile', 'Characters.smile', 'Party.smile', 'Inventory.smile',
             'Equipment.smile', 'Abilities.smile', 'Shops.smile', 'World.smile', 'Story.smile',
-            'Encounters.smile', 'SaveGames.smile')) {
+            'Encounters.smile', 'BattleEffects.smile', 'BattleCore.smile', 'SaveGames.smile')) {
         Copy-Item -LiteralPath (Join-Path $SourceRoot $Name) -Destination (Join-Path $LibraryRoot $Name)
     }
 
@@ -45,7 +45,7 @@ try {
   <PropertyGroup>
     <ProjectKind>Library</ProjectKind>
     <LibraryName>Smile.RPG</LibraryName>
-    <Version>1.1.1</Version>
+    <Version>1.2.0</Version>
     <OutputName>Smile.RPG</OutputName>
   </PropertyGroup>
   <ItemGroup>
@@ -59,6 +59,8 @@ try {
     <SmileSource Include="World.smile" />
     <SmileSource Include="Story.smile" />
     <SmileSource Include="Encounters.smile" />
+    <SmileSource Include="BattleEffects.smile" />
+    <SmileSource Include="BattleCore.smile" />
     <SmileSource Include="SaveGames.smile" />
   </ItemGroup>
 </SmileProject>

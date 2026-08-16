@@ -1,0 +1,675 @@
+''' Renderer-neutral battle effect and status definitions.
+Module Smile.RPG.BattleEffects
+
+Option Explicit
+
+Import Smile.RPG.Core As Core
+
+Public Const BATTLE_MAX_EFFECT_DEFINITIONS = 128
+Public Const BATTLE_MAX_EFFECT_COMPONENTS = 8
+Public Const BATTLE_MAX_STATUS_DEFINITIONS = 32
+
+Public Const BATTLE_EFFECT_PHYSICAL_DAMAGE = 1
+Public Const BATTLE_EFFECT_MAGIC_DAMAGE = 2
+Public Const BATTLE_EFFECT_HEAL_HEALTH = 3
+Public Const BATTLE_EFFECT_RESTORE_MAGIC_POINTS = 4
+Public Const BATTLE_EFFECT_APPLY_STATUS = 5
+Public Const BATTLE_EFFECT_REMOVE_STATUS = 6
+Public Const BATTLE_EFFECT_REVIVE = 7
+
+Public Const BATTLE_STATUS_POISON = 1
+Public Const BATTLE_STATUS_ACTION_DENY = 2
+Public Const BATTLE_STATUS_STAT_MODIFIER = 3
+
+Public Const BATTLE_STAT_STRENGTH = 1
+Public Const BATTLE_STAT_DEFENSE = 2
+Public Const BATTLE_STAT_MAGIC = 3
+Public Const BATTLE_STAT_RESISTANCE = 4
+Public Const BATTLE_STAT_AGILITY = 5
+Public Const BATTLE_STAT_LUCK = 6
+
+Public Const BATTLE_STATUS_TICK_ROUND_END = 1
+Public Const BATTLE_STATUS_TICK_ACTION_START = 2
+
+Public Type EffectDefinition
+    Id As Number
+    Name As Text
+End Type
+
+Public Type EffectComponentDefinition
+    EffectId As Number
+    Kind As Number
+    Power As Number
+    StatusId As Number
+    Duration As Number
+End Type
+
+Public Type StatusDefinition
+    Id As Number
+    Name As Text
+    Kind As Number
+    Statistic As Number
+    Value As Number
+    TickTiming As Number
+End Type
+
+Private Dim StateGeneration[4] As Number
+Private Dim EffectCounts[4] As Number
+Private Dim EffectIds[4, 128] As Number
+Private Dim EffectNames[4, 128] As Text
+Private Dim ComponentCounts[4, 128] As Number
+Private Dim ComponentKinds[4, 1024] As Number
+Private Dim ComponentPowers[4, 1024] As Number
+Private Dim ComponentStatusIds[4, 1024] As Number
+Private Dim ComponentDurations[4, 1024] As Number
+Private Dim StatusCounts[4] As Number
+Private Dim StatusIds[4, 32] As Number
+Private Dim StatusNames[4, 32] As Text
+Private Dim StatusKinds[4, 32] As Number
+Private Dim StatusStatistics[4, 32] As Number
+Private Dim StatusValues[4, 32] As Number
+Private Dim StatusTickTimings[4, 32] As Number
+
+Private Function StateSlot(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim Generation As Number
+
+    Slot = Core.StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Generation = Core.StateGeneration(StateHandle)
+
+    If StateGeneration[Slot] <> Generation Then
+
+        For Index = 0 To BATTLE_MAX_EFFECT_DEFINITIONS - 1
+            EffectIds[Slot, Index] = 0
+            EffectNames[Slot, Index] = ""
+            ComponentCounts[Slot, Index] = 0
+        End For
+
+        For Index = 0 To BATTLE_MAX_EFFECT_DEFINITIONS * BATTLE_MAX_EFFECT_COMPONENTS - 1
+            ComponentKinds[Slot, Index] = 0
+            ComponentPowers[Slot, Index] = 0
+            ComponentStatusIds[Slot, Index] = 0
+            ComponentDurations[Slot, Index] = 0
+        End For
+
+        For Index = 0 To BATTLE_MAX_STATUS_DEFINITIONS - 1
+
+            StatusIds[Slot, Index] = 0
+            StatusNames[Slot, Index] = ""
+            StatusKinds[Slot, Index] = 0
+            StatusStatistics[Slot, Index] = 0
+            StatusValues[Slot, Index] = 0
+            StatusTickTimings[Slot, Index] = 0
+        End For
+
+        EffectCounts[Slot] = 0
+        StatusCounts[Slot] = 0
+        StateGeneration[Slot] = Generation
+
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function EffectIndex(StateHandle As Number, EffectId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To EffectCounts[Slot] - 1
+
+        If EffectIds[Slot, Index] = EffectId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function StatusIndex(StateHandle As Number, StatusId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To StatusCounts[Slot] - 1
+
+        If StatusIds[Slot, Index] = StatusId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function IsEffectKindValid(Kind As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Kind >= BATTLE_EFFECT_PHYSICAL_DAMAGE And Kind <= BATTLE_EFFECT_REVIVE
+
+    Return ReturnValue
+
+End Function
+
+Private Function IsStatusKindValid(Kind As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Kind >= BATTLE_STATUS_POISON And Kind <= BATTLE_STATUS_STAT_MODIFIER
+
+    Return ReturnValue
+
+End Function
+
+''' Defines one reusable composite effect.
+Public Function DefineEffect(StateHandle As Number, ByRef Definition As EffectDefinition) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not Core.IsValidId(Definition.Id) Or
+        Not Core.IsValidName(Definition.Name) Or
+        EffectIndex(StateHandle, Definition.Id) >= 0 Or
+        EffectCounts[Slot] >= BATTLE_MAX_EFFECT_DEFINITIONS) Then
+        Return False
+    End If
+
+    Index = EffectCounts[Slot]
+    EffectIds[Slot, Index] = Definition.Id
+    EffectNames[Slot, Index] = Definition.Name
+    ComponentCounts[Slot, Index] = 0
+    EffectCounts[Slot] = Index + 1
+    Return True
+
+End Function
+
+''' Defines one transient battle status.
+Public Function DefineStatus(StateHandle As Number, ByRef Definition As StatusDefinition) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not Core.IsValidId(Definition.Id) Or
+        Not Core.IsValidName(Definition.Name) Or
+        Not IsStatusKindValid(Definition.Kind) Or
+        StatusIndex(StateHandle, Definition.Id) >= 0 Or
+        StatusCounts[Slot] >= BATTLE_MAX_STATUS_DEFINITIONS) Then
+        Return False
+    End If
+
+    If Definition.Kind = BATTLE_STATUS_STAT_MODIFIER Then
+
+        If (Definition.Statistic < BATTLE_STAT_STRENGTH Or
+            Definition.Statistic > BATTLE_STAT_LUCK Or
+            Definition.Value < -Core.RPG_MAX_VALUE Or
+            Definition.Value > Core.RPG_MAX_VALUE) Then
+            Return False
+        End If
+
+    Else
+
+        If Definition.Statistic <> 0 Or Not Core.IsValidValue(Definition.Value) Then
+            Return False
+        End If
+
+    End If
+
+    If (Definition.TickTiming <> BATTLE_STATUS_TICK_ROUND_END And
+        Definition.TickTiming <> BATTLE_STATUS_TICK_ACTION_START) Then
+        Return False
+    End If
+
+    Index = StatusCounts[Slot]
+    StatusIds[Slot, Index] = Definition.Id
+    StatusNames[Slot, Index] = Definition.Name
+    StatusKinds[Slot, Index] = Definition.Kind
+    StatusStatistics[Slot, Index] = Definition.Statistic
+    StatusValues[Slot, Index] = Definition.Value
+    StatusTickTimings[Slot, Index] = Definition.TickTiming
+    StatusCounts[Slot] = Index + 1
+    Return True
+
+End Function
+
+''' Appends one component to an existing effect definition.
+Public Function AddComponent(StateHandle As Number, ByRef Definition As EffectComponentDefinition) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim ComponentIndex As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = EffectIndex(StateHandle, Definition.EffectId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Not IsEffectKindValid(Definition.Kind) Or
+        Not Core.IsValidValue(Definition.Power) Or
+        Not Core.IsValidValue(Definition.Duration) Or
+        ComponentCounts[Slot, Index] >= BATTLE_MAX_EFFECT_COMPONENTS) Then
+        Return False
+    End If
+
+    If (Definition.Kind = BATTLE_EFFECT_APPLY_STATUS Or
+        Definition.Kind = BATTLE_EFFECT_REMOVE_STATUS) Then
+
+        If StatusIndex(StateHandle, Definition.StatusId) < 0 Then
+            Return False
+        End If
+
+    Else If Definition.StatusId <> 0 Then
+
+        Return False
+
+    End If
+
+    If Definition.Kind = BATTLE_EFFECT_APPLY_STATUS Then
+
+        If Definition.Duration <= 0 Then
+            Return False
+        End If
+
+    Else If Definition.Duration <> 0 Then
+
+        Return False
+
+    End If
+
+    ComponentIndex = Index * BATTLE_MAX_EFFECT_COMPONENTS + ComponentCounts[Slot, Index]
+    ComponentKinds[Slot, ComponentIndex] = Definition.Kind
+    ComponentPowers[Slot, ComponentIndex] = Definition.Power
+    ComponentStatusIds[Slot, ComponentIndex] = Definition.StatusId
+    ComponentDurations[Slot, ComponentIndex] = Definition.Duration
+    ComponentCounts[Slot, Index] = ComponentCounts[Slot, Index] + 1
+    Return True
+
+End Function
+
+Public Function IsEffectDefined(StateHandle As Number, EffectId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = EffectIndex(StateHandle, EffectId) >= 0
+
+    Return ReturnValue
+
+End Function
+
+Public Function EffectDefinitionCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = EffectCounts[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function EffectIdAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= EffectCounts[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = EffectIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function EffectName(StateHandle As Number, EffectId As Number) As Text
+
+    Dim ReturnValue As Text
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = EffectIndex(StateHandle, EffectId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return ""
+    End If
+
+    ReturnValue = EffectNames[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ComponentCount(StateHandle As Number, EffectId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = EffectIndex(StateHandle, EffectId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ComponentCounts[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Private Function ComponentIndex(StateHandle As Number, EffectId As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim EffectDefinitionIndex As Number
+
+    Slot = StateSlot(StateHandle)
+    EffectDefinitionIndex = EffectIndex(StateHandle, EffectId)
+
+    If (Slot < 0 Or
+        EffectDefinitionIndex < 0 Or
+        Index < 0 Or
+        Index >= ComponentCounts[Slot, EffectDefinitionIndex]) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = EffectDefinitionIndex * BATTLE_MAX_EFFECT_COMPONENTS + Index
+
+    Return ReturnValue
+
+End Function
+
+Public Function ComponentKindAt(StateHandle As Number, EffectId As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim StoredIndex As Number
+
+    Slot = StateSlot(StateHandle)
+    StoredIndex = ComponentIndex(StateHandle, EffectId, Index)
+
+    If Slot < 0 Or StoredIndex < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ComponentKinds[Slot, StoredIndex]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ComponentPowerAt(StateHandle As Number, EffectId As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim StoredIndex As Number
+
+    Slot = StateSlot(StateHandle)
+    StoredIndex = ComponentIndex(StateHandle, EffectId, Index)
+
+    If Slot < 0 Or StoredIndex < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ComponentPowers[Slot, StoredIndex]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ComponentStatusIdAt(StateHandle As Number, EffectId As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim StoredIndex As Number
+
+    Slot = StateSlot(StateHandle)
+    StoredIndex = ComponentIndex(StateHandle, EffectId, Index)
+
+    If Slot < 0 Or StoredIndex < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ComponentStatusIds[Slot, StoredIndex]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ComponentDurationAt(StateHandle As Number, EffectId As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim StoredIndex As Number
+
+    Slot = StateSlot(StateHandle)
+    StoredIndex = ComponentIndex(StateHandle, EffectId, Index)
+
+    If Slot < 0 Or StoredIndex < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ComponentDurations[Slot, StoredIndex]
+
+    Return ReturnValue
+
+End Function
+
+Public Function IsStatusDefined(StateHandle As Number, StatusId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = StatusIndex(StateHandle, StatusId) >= 0
+
+    Return ReturnValue
+
+End Function
+
+Public Function StatusDefinitionCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = StatusCounts[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function StatusIdAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= StatusCounts[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = StatusIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function StatusName(StateHandle As Number, StatusId As Number) As Text
+
+    Dim ReturnValue As Text
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = StatusIndex(StateHandle, StatusId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return ""
+    End If
+
+    ReturnValue = StatusNames[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function StatusKind(StateHandle As Number, StatusId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = StatusIndex(StateHandle, StatusId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = StatusKinds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function StatusStatistic(StateHandle As Number, StatusId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = StatusIndex(StateHandle, StatusId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = StatusStatistics[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function StatusValue(StateHandle As Number, StatusId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = StatusIndex(StateHandle, StatusId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = StatusValues[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function StatusTickTiming(StateHandle As Number, StatusId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = StatusIndex(StateHandle, StatusId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = StatusTickTimings[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+End Module

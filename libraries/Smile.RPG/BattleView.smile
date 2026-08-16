@@ -1,0 +1,801 @@
+''' Logical battle slots and renderer-neutral presentation cues.
+Module Smile.RPG.BattleView
+
+Option Explicit
+
+Import Smile.RPG.Core As Core
+Import Smile.RPG.BattleCore As Battle
+
+Public Const BATTLE_MAX_VIEW_SLOTS = 12
+Public Const BATTLE_MAX_VIEW_CUES = 256
+
+Public Const BATTLE_FACING_NORTH = 0
+Public Const BATTLE_FACING_EAST = 1
+Public Const BATTLE_FACING_SOUTH = 2
+Public Const BATTLE_FACING_WEST = 3
+
+Public Const BATTLE_ANCHOR_CENTER = 1
+Public Const BATTLE_ANCHOR_FEET = 2
+Public Const BATTLE_ANCHOR_HEAD = 3
+Public Const BATTLE_ANCHOR_LEFT = 4
+Public Const BATTLE_ANCHOR_RIGHT = 5
+
+Public Const BATTLE_CUE_SET_POSE = 1
+Public Const BATTLE_CUE_MOVE = 2
+Public Const BATTLE_CUE_EFFECT = 3
+Public Const BATTLE_CUE_NUMBER = 4
+Public Const BATTLE_CUE_MESSAGE = 5
+Public Const BATTLE_CUE_SHAKE = 6
+Public Const BATTLE_CUE_SOUND = 7
+Public Const BATTLE_CUE_WAIT = 8
+Public Const BATTLE_CUE_HIDE = 9
+Public Const BATTLE_CUE_REWARD = 10
+
+Private Const MAX_LOGICAL_COORDINATE = 999999
+Private Const MAX_CUE_DURATION = 10000
+
+Public Type SlotDefinition
+    ParticipantId As Number
+    X As Number
+    Y As Number
+    Z As Number
+    Facing As Number
+    Layer As Number
+    Anchor As Number
+End Type
+
+Private Dim StateGeneration[4] As Number
+Private Dim SlotDefined[4, 12] As Boolean
+Private Dim SlotXValues[4, 12] As Number
+Private Dim SlotYValues[4, 12] As Number
+Private Dim SlotZValues[4, 12] As Number
+Private Dim SlotFacings[4, 12] As Number
+Private Dim SlotLayers[4, 12] As Number
+Private Dim SlotAnchors[4, 12] As Number
+
+Private Dim CueCounts[4] As Number
+Private Dim CuePositions[4] As Number
+Private Dim CueKinds[4, 256] As Number
+Private Dim CueActorIds[4, 256] As Number
+Private Dim CueTargetIds[4, 256] As Number
+Private Dim CueValueOne[4, 256] As Number
+Private Dim CueValueTwo[4, 256] As Number
+Private Dim CueDurations[4, 256] As Number
+Private Dim CueElapsedSteps[4, 256] As Number
+Private Dim CueTexts[4, 256] As Text
+
+Private Function StateSlot(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim Generation As Number
+
+    Slot = Core.StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Generation = Core.StateGeneration(StateHandle)
+
+    If StateGeneration[Slot] <> Generation Then
+
+        For Index = 0 To BATTLE_MAX_VIEW_SLOTS - 1
+            SlotDefined[Slot, Index] = False
+        End For
+
+        For Index = 0 To BATTLE_MAX_VIEW_CUES - 1
+            CueKinds[Slot, Index] = 0
+            CueTexts[Slot, Index] = ""
+        End For
+
+        CueCounts[Slot] = 0
+        CuePositions[Slot] = 0
+        StateGeneration[Slot] = Generation
+
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function IsCoordinateValid(Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Value >= -MAX_LOGICAL_COORDINATE And Value <= MAX_LOGICAL_COORDINATE
+
+    Return ReturnValue
+
+End Function
+
+''' Assigns one participant to a logical renderer-neutral X/Y/Z slot.
+Public Function SetSlot(StateHandle As Number, ByRef Definition As SlotDefinition) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = Definition.ParticipantId - 1
+
+    If (Slot < 0 Or
+        Not Battle.IsActive(StateHandle) Or
+        Definition.ParticipantId <= 0 Or
+        Definition.ParticipantId > Battle.ParticipantCount(StateHandle) Or
+        Definition.ParticipantId > BATTLE_MAX_VIEW_SLOTS Or
+        Not IsCoordinateValid(Definition.X) Or
+        Not IsCoordinateValid(Definition.Y) Or
+        Not IsCoordinateValid(Definition.Z) Or
+        Definition.Facing < BATTLE_FACING_NORTH Or
+        Definition.Facing > BATTLE_FACING_WEST Or
+        Not Core.IsValidValue(Definition.Layer) Or
+        Definition.Anchor < BATTLE_ANCHOR_CENTER Or
+        Definition.Anchor > BATTLE_ANCHOR_RIGHT) Then
+        Return False
+    End If
+
+    SlotDefined[Slot, Index] = True
+    SlotXValues[Slot, Index] = Definition.X
+    SlotYValues[Slot, Index] = Definition.Y
+    SlotZValues[Slot, Index] = Definition.Z
+    SlotFacings[Slot, Index] = Definition.Facing
+    SlotLayers[Slot, Index] = Definition.Layer
+    SlotAnchors[Slot, Index] = Definition.Anchor
+    Return True
+
+End Function
+
+Public Function IsSlotDefined(StateHandle As Number, ParticipantId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantId - 1
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= BATTLE_MAX_VIEW_SLOTS) Then
+        Return False
+    End If
+
+    ReturnValue = SlotDefined[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function SlotX(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Not IsSlotDefined(StateHandle, ParticipantId) Then
+        Return 0
+    End If
+
+    ReturnValue = SlotXValues[Slot, ParticipantId - 1]
+
+    Return ReturnValue
+
+End Function
+
+Public Function SlotY(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Not IsSlotDefined(StateHandle, ParticipantId) Then
+        Return 0
+    End If
+
+    ReturnValue = SlotYValues[Slot, ParticipantId - 1]
+
+    Return ReturnValue
+
+End Function
+
+Public Function SlotZ(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Not IsSlotDefined(StateHandle, ParticipantId) Then
+        Return 0
+    End If
+
+    ReturnValue = SlotZValues[Slot, ParticipantId - 1]
+
+    Return ReturnValue
+
+End Function
+
+Public Function SlotFacing(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Not IsSlotDefined(StateHandle, ParticipantId) Then
+        Return 0
+    End If
+
+    ReturnValue = SlotFacings[Slot, ParticipantId - 1]
+
+    Return ReturnValue
+
+End Function
+
+Public Function SlotLayer(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Not IsSlotDefined(StateHandle, ParticipantId) Then
+        Return 0
+    End If
+
+    ReturnValue = SlotLayers[Slot, ParticipantId - 1]
+
+    Return ReturnValue
+
+End Function
+
+Public Function SlotAnchor(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Not IsSlotDefined(StateHandle, ParticipantId) Then
+        Return 0
+    End If
+
+    ReturnValue = SlotAnchors[Slot, ParticipantId - 1]
+
+    Return ReturnValue
+
+End Function
+
+Private Function AddCue(StateHandle As Number, Kind As Number, ActorId As Number, TargetId As Number, ValueOne As Number, ValueTwo As Number, Duration As Number, Message As Text) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Kind < BATTLE_CUE_SET_POSE Or
+        Kind > BATTLE_CUE_REWARD Or
+        Duration < 0 Or
+        Duration > MAX_CUE_DURATION Or
+        CueCounts[Slot] >= BATTLE_MAX_VIEW_CUES) Then
+        Return False
+    End If
+
+    Index = CueCounts[Slot]
+    CueKinds[Slot, Index] = Kind
+    CueActorIds[Slot, Index] = ActorId
+    CueTargetIds[Slot, Index] = TargetId
+    CueValueOne[Slot, Index] = ValueOne
+    CueValueTwo[Slot, Index] = ValueTwo
+    CueDurations[Slot, Index] = Duration
+    CueElapsedSteps[Slot, Index] = 0
+    CueTexts[Slot, Index] = Message
+    CueCounts[Slot] = Index + 1
+    Return True
+
+End Function
+
+Private Function RequiredCueCount(EventKind As Number) As Number
+
+    If (EventKind = Battle.BATTLE_EVENT_ABILITY Or
+        EventKind = Battle.BATTLE_EVENT_DAMAGE Or
+        EventKind = Battle.BATTLE_EVENT_STATUS_APPLIED Or
+        EventKind = Battle.BATTLE_EVENT_REVIVED Or
+        EventKind = Battle.BATTLE_EVENT_VICTORY Or
+        EventKind = Battle.BATTLE_EVENT_DEFEAT Or
+        EventKind = Battle.BATTLE_EVENT_ESCAPE) Then
+        Return 2
+    End If
+
+    Return 1
+
+End Function
+
+Private Function AppendEvent(StateHandle As Number, EventIndex As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Kind As Number
+    Dim ActorId As Number
+    Dim TargetId As Number
+    Dim ValueOne As Number
+    Dim ValueTwo As Number
+    Dim Message As Text
+
+    Kind = Battle.EventKindAt(StateHandle, EventIndex)
+    ActorId = Battle.EventActorIdAt(StateHandle, EventIndex)
+    TargetId = Battle.EventTargetIdAt(StateHandle, EventIndex)
+    ValueOne = Battle.EventValueOneAt(StateHandle, EventIndex)
+    ValueTwo = Battle.EventValueTwoAt(StateHandle, EventIndex)
+    Message = Battle.EventTextAt(StateHandle, EventIndex)
+
+    If Kind = Battle.BATTLE_EVENT_BATTLE_STARTED Then
+
+        ReturnValue = AddCue(StateHandle, BATTLE_CUE_MESSAGE, 0, 0, ValueOne, ValueTwo, 24, Message)
+
+        Return ReturnValue
+
+    Else If Kind = Battle.BATTLE_EVENT_ROUND_STARTED Then
+
+        ReturnValue = AddCue(StateHandle, BATTLE_CUE_MESSAGE, 0, 0, ValueOne, ValueTwo, 12, Message)
+
+        Return ReturnValue
+
+    Else If Kind = Battle.BATTLE_EVENT_ACTION_STARTED Then
+
+        ReturnValue = AddCue(StateHandle, BATTLE_CUE_SET_POSE, ActorId, TargetId, ValueOne, ValueTwo, 4, "Ready")
+
+        Return ReturnValue
+
+    Else If Kind = Battle.BATTLE_EVENT_ACTION_DENIED Then
+
+        ReturnValue = AddCue(StateHandle, BATTLE_CUE_MESSAGE, ActorId, 0, 0, 0, 18, Message)
+
+        Return ReturnValue
+
+    Else If Kind = Battle.BATTLE_EVENT_ATTACK Then
+
+        ReturnValue = AddCue(StateHandle, BATTLE_CUE_MOVE, ActorId, TargetId, 0, 0, 8, Message)
+
+        Return ReturnValue
+
+    Else If Kind = Battle.BATTLE_EVENT_ABILITY Then
+
+        If Not AddCue(StateHandle, BATTLE_CUE_EFFECT, ActorId, TargetId, ValueOne, ValueTwo, 14, Message) Then
+            Return False
+        End If
+
+        ReturnValue = AddCue(StateHandle, BATTLE_CUE_SOUND, ActorId, TargetId, ValueOne, 0, 1, Message)
+
+        Return ReturnValue
+
+    Else If Kind = Battle.BATTLE_EVENT_ITEM Then
+
+        ReturnValue = AddCue(StateHandle, BATTLE_CUE_EFFECT, ActorId, TargetId, ValueOne, ValueTwo, 10, Message)
+
+        Return ReturnValue
+
+    Else If Kind = Battle.BATTLE_EVENT_DEFEND Then
+
+        ReturnValue = AddCue(StateHandle, BATTLE_CUE_SET_POSE, ActorId, TargetId, 0, 0, 8, Message)
+
+        Return ReturnValue
+
+    Else If Kind = Battle.BATTLE_EVENT_RUN_SUCCEEDED Or Kind = Battle.BATTLE_EVENT_RUN_FAILED Then
+
+        ReturnValue = AddCue(StateHandle, BATTLE_CUE_MESSAGE, ActorId, 0, ValueOne, ValueTwo, 18, Message)
+
+        Return ReturnValue
+
+    Else If Kind = Battle.BATTLE_EVENT_DAMAGE Then
+
+        If Not AddCue(StateHandle, BATTLE_CUE_NUMBER, ActorId, TargetId, -ValueOne, ValueTwo, 16, Message) Then
+            Return False
+        End If
+
+        ReturnValue = AddCue(StateHandle, BATTLE_CUE_SHAKE, ActorId, TargetId, ValueOne, 0, 6, "Impact")
+
+        Return ReturnValue
+
+    Else If Kind = Battle.BATTLE_EVENT_HEAL Or Kind = Battle.BATTLE_EVENT_MAGIC_POINTS Then
+
+        ReturnValue = AddCue(StateHandle, BATTLE_CUE_NUMBER, ActorId, TargetId, ValueOne, ValueTwo, 16, Message)
+
+        Return ReturnValue
+
+    Else If Kind = Battle.BATTLE_EVENT_STATUS_APPLIED Then
+
+        If Not AddCue(StateHandle, BATTLE_CUE_EFFECT, ActorId, TargetId, ValueOne, ValueTwo, 12, Message) Then
+            Return False
+        End If
+
+        ReturnValue = AddCue(StateHandle, BATTLE_CUE_MESSAGE, ActorId, TargetId, ValueOne, ValueTwo, 16, Message)
+
+        Return ReturnValue
+
+    Else If Kind = Battle.BATTLE_EVENT_STATUS_REMOVED Then
+
+        ReturnValue = AddCue(StateHandle, BATTLE_CUE_EFFECT, ActorId, TargetId, ValueOne, 0, 8, Message)
+
+        Return ReturnValue
+
+    Else If Kind = Battle.BATTLE_EVENT_REVIVED Then
+
+        If Not AddCue(StateHandle, BATTLE_CUE_EFFECT, ActorId, TargetId, ValueOne, 0, 18, Message) Then
+            Return False
+        End If
+
+        ReturnValue = AddCue(StateHandle, BATTLE_CUE_MESSAGE, ActorId, TargetId, ValueOne, 0, 16, Message)
+
+        Return ReturnValue
+
+    Else If Kind = Battle.BATTLE_EVENT_DEFEATED Then
+
+        ReturnValue = AddCue(StateHandle, BATTLE_CUE_HIDE, ActorId, TargetId, 0, 0, 10, Message)
+
+        Return ReturnValue
+
+    Else If Kind = Battle.BATTLE_EVENT_ROUND_ENDED Then
+
+        ReturnValue = AddCue(StateHandle, BATTLE_CUE_WAIT, 0, 0, ValueOne, 0, 4, Message)
+
+        Return ReturnValue
+
+    Else If (Kind = Battle.BATTLE_EVENT_VICTORY Or
+        Kind = Battle.BATTLE_EVENT_DEFEAT Or
+        Kind = Battle.BATTLE_EVENT_ESCAPE) Then
+
+        If Not AddCue(StateHandle, BATTLE_CUE_MESSAGE, 0, 0, ValueOne, ValueTwo, 30, Message) Then
+            Return False
+        End If
+
+        ReturnValue = AddCue(StateHandle, BATTLE_CUE_SOUND, 0, 0, Kind, 0, 1, Message)
+
+        Return ReturnValue
+
+    Else If Kind = Battle.BATTLE_EVENT_REWARD Then
+
+        ReturnValue = AddCue(StateHandle, BATTLE_CUE_REWARD, 0, 0, ValueOne, ValueTwo, 24, Message)
+
+        Return ReturnValue
+
+    End If
+
+    ReturnValue = AddCue(StateHandle, BATTLE_CUE_MESSAGE, ActorId, TargetId, ValueOne, ValueTwo, 8, Message)
+
+    Return ReturnValue
+
+End Function
+
+''' Appends presentation cues for an inspectable suffix of BattleCore events.
+Public Function AppendEvents(StateHandle As Number, FirstEventIndex As Number) As Boolean
+
+    Dim Slot As Number
+    Dim EventIndex As Number
+    Dim RequiredCount As Number
+    Dim OriginalCueCount As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        FirstEventIndex < 0 Or
+        FirstEventIndex > Battle.EventCount(StateHandle)) Then
+        Return False
+    End If
+
+    For EventIndex = FirstEventIndex To Battle.EventCount(StateHandle) - 1
+        RequiredCount = RequiredCount + RequiredCueCount(Battle.EventKindAt(StateHandle, EventIndex))
+    End For
+
+    If CueCounts[Slot] > BATTLE_MAX_VIEW_CUES - RequiredCount Then
+        Return False
+    End If
+
+    OriginalCueCount = CueCounts[Slot]
+
+    For EventIndex = FirstEventIndex To Battle.EventCount(StateHandle) - 1
+
+        If Not AppendEvent(StateHandle, EventIndex) Then
+            CueCounts[Slot] = OriginalCueCount
+
+            Return False
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Public Function CueCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CueCounts[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function CuePosition(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CuePositions[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function CueKindAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= CueCounts[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = CueKinds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function CueActorIdAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= CueCounts[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = CueActorIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function CueTargetIdAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= CueCounts[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = CueTargetIds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function CueValueOneAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= CueCounts[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = CueValueOne[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function CueValueTwoAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= CueCounts[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = CueValueTwo[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function CueDurationAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= CueCounts[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = CueDurations[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function CueElapsedAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= CueCounts[Slot]) Then
+        Return 0
+    End If
+
+    ReturnValue = CueElapsedSteps[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function CueTextAt(StateHandle As Number, Index As Number) As Text
+
+    Dim ReturnValue As Text
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Index >= CueCounts[Slot]) Then
+        Return ""
+    End If
+
+    ReturnValue = CueTexts[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Advances cue time by a caller-supplied deterministic number of update steps.
+Public Function Update(StateHandle As Number, Steps As Number) As Boolean
+
+    Dim Slot As Number
+    Dim StepIndex As Number
+    Dim Position As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Steps < 0 Or
+        Steps > MAX_CUE_DURATION) Then
+        Return False
+    End If
+
+    For StepIndex = 1 To Steps
+
+        If CuePositions[Slot] < CueCounts[Slot] Then
+
+            Position = CuePositions[Slot]
+            CueElapsedSteps[Slot, Position] = CueElapsedSteps[Slot, Position] + 1
+
+            If CueElapsedSteps[Slot, Position] >= CueDurations[Slot, Position] Then
+                CuePositions[Slot] = Position + 1
+            End If
+
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Public Function IsComplete(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim ReturnValue As Boolean
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    ReturnValue = CuePositions[Slot] >= CueCounts[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Clears cues after the renderer has consumed them; logical slots remain assigned.
+Public Function ClearCues(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    For Index = 0 To CueCounts[Slot] - 1
+
+        CueKinds[Slot, Index] = 0
+        CueActorIds[Slot, Index] = 0
+        CueTargetIds[Slot, Index] = 0
+        CueValueOne[Slot, Index] = 0
+        CueValueTwo[Slot, Index] = 0
+        CueDurations[Slot, Index] = 0
+        CueElapsedSteps[Slot, Index] = 0
+        CueTexts[Slot, Index] = ""
+    End For
+
+    CueCounts[Slot] = 0
+    CuePositions[Slot] = 0
+    Return True
+
+End Function
+
+End Module

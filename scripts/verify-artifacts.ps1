@@ -115,6 +115,11 @@ Require-File 'artifacts\tests\Phase8DungeonStateTestsPackage.exe' | Out-Null
 Require-File 'artifacts\games\RpgDungeonGallery-DirectX\smile.gallery.rpg-dungeon.smile-assets.json' | Out-Null
 Require-File 'artifacts\games\RpgDungeonGallery-GDI\smile.gallery.rpg-dungeon.smile-assets.json' | Out-Null
 Require-File 'artifacts\web\RpgDungeonGallery\smile-assets.json' | Out-Null
+Require-File 'artifacts\tests\Phase9BattleStateTests.exe' | Out-Null
+Require-File 'artifacts\tests\Phase9BattleStateTestsPackage.exe' | Out-Null
+Require-File 'artifacts\games\RpgBattleGallery-DirectX\smile.gallery.rpg-battle.smile-assets.json' | Out-Null
+Require-File 'artifacts\games\RpgBattleGallery-GDI\smile.gallery.rpg-battle.smile-assets.json' | Out-Null
+Require-File 'artifacts\web\RpgBattleGallery\smile-assets.json' | Out-Null
 Require-File 'artifacts\games\Phase5UIStateTests.exe' | Out-Null
 Require-File 'artifacts\games\Phase5UIStateTestsPackage.exe' | Out-Null
 Require-File 'artifacts\games\Phase5SubmenuStateTests.exe' | Out-Null
@@ -145,6 +150,8 @@ $nativePrograms = @(
     'artifacts\games\RpgWorldGallery-GDI\RpgWorldGallery.exe',
     'artifacts\games\RpgDungeonGallery-DirectX\RpgDungeonGallery.exe',
     'artifacts\games\RpgDungeonGallery-GDI\RpgDungeonGallery.exe',
+    'artifacts\games\RpgBattleGallery-DirectX\RpgBattleGallery.exe',
+    'artifacts\games\RpgBattleGallery-GDI\RpgBattleGallery.exe',
     'artifacts\games\Phase5DialogueStateTests.exe',
     'artifacts\games\Phase5SubmenuViewport-DirectX\Phase5SubmenuViewport.exe',
     'artifacts\games\Phase5SubmenuViewport-GDI\Phase5SubmenuViewport.exe',
@@ -232,6 +239,13 @@ foreach ($map in @('Archive1.smilemap', 'Archive2.smilemap', 'Archive3.smilemap'
     Assert-AssetCopy "examples\RpgDungeonGallery\Maps\$map" "artifacts\games\RpgDungeonGallery-GDI\Maps\$map"
     Assert-AssetCopy "examples\RpgDungeonGallery\Maps\$map" "artifacts\web\RpgDungeonGallery\Maps\$map"
 }
+foreach ($asset in @('Ability.wav', 'DungeonTheme.wav', 'EnemyLineup.png', 'LumenPlaza.png',
+    'OverworldTheme.wav', 'PartyLineup.png', 'PrismVault.png', 'StarfallPlateau.png', 'Strike.wav',
+    'TownTheme.wav', 'Victory.wav')) {
+    Assert-AssetCopy "examples\RpgBattleGallery\Assets\$asset" "artifacts\games\RpgBattleGallery-DirectX\Assets\$asset"
+    Assert-AssetCopy "examples\RpgBattleGallery\Assets\$asset" "artifacts\games\RpgBattleGallery-GDI\Assets\$asset"
+    Assert-AssetCopy "examples\RpgBattleGallery\Assets\$asset" "artifacts\web\RpgBattleGallery\Assets\$asset"
+}
 $phase42ExpectedPath = Join-Path $repositoryRoot 'examples\Phase4AssetPublication\ExpectedAssetPaths.txt'
 foreach ($asset in Get-Content -LiteralPath $phase42ExpectedPath) {
     $assetPath = $asset.Replace('/', '\')
@@ -298,7 +312,7 @@ try {
             throw "$templateName does not contain all generated identity tokens."
         }
         if ($templateText -notmatch 'SmileProjectTemplateWizard' -or
-        $templateText -notmatch 'Version=2\.0\.46\.0') {
+        $templateText -notmatch 'Version=2\.0\.47\.0') {
             throw "$templateName does not invoke the synchronized template wizard."
         }
     }
@@ -342,11 +356,11 @@ try {
     $manifestReader = [System.IO.StreamReader]::new($manifestEntry.Open())
     try { $vsixManifest = $manifestReader.ReadToEnd() }
     finally { $manifestReader.Dispose() }
-    if ($vsixManifest -notmatch 'Version="2\.0\.46"') {
-        throw 'VSIX identity version is not 2.0.46.'
+    if ($vsixManifest -notmatch 'Version="2\.0\.47"') {
+        throw 'VSIX identity version is not 2.0.47.'
     }
     if ($vsixManifest -notmatch 'Type="Microsoft\.VisualStudio\.Assembly"' -or
-        $vsixManifest -notmatch 'AssemblyName="Smile\.VisualStudio, Version=2\.0\.46\.0, Culture=neutral, PublicKeyToken=null"') {
+        $vsixManifest -notmatch 'AssemblyName="Smile\.VisualStudio, Version=2\.0\.47\.0, Culture=neutral, PublicKeyToken=null"') {
         throw 'VSIX does not register the template wizard assembly.'
     }
     if ($vsixManifest -notmatch 'Type="Microsoft\.VisualStudio\.VsPackage" Path="Smile\.LanguageConfiguration\.pkgdef"') {
@@ -360,11 +374,11 @@ Write-Host 'VSIX compiler, shared-language, and project-template payload verifie
 $visualStudioDll = Require-File 'src\Smile.VisualStudio\bin\Release\net472\Smile.VisualStudio.dll'
 $versionInfo = [Diagnostics.FileVersionInfo]::GetVersionInfo($visualStudioDll)
 $assemblyVersion = [Reflection.AssemblyName]::GetAssemblyName($visualStudioDll).Version.ToString()
-if ($versionInfo.FileVersion -ne '2.0.46.0' -or $versionInfo.ProductVersion -notlike '2.0.46*' -or
-    $assemblyVersion -ne '2.0.46.0') {
+if ($versionInfo.FileVersion -ne '2.0.47.0' -or $versionInfo.ProductVersion -notlike '2.0.47*' -or
+    $assemblyVersion -ne '2.0.47.0') {
     throw "Visual Studio DLL versions differ: file=$($versionInfo.FileVersion), product=$($versionInfo.ProductVersion), assembly=$assemblyVersion."
 }
-Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.46.'
+Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.47.'
 
 $scaleCases = @(
     @{ Width = 960; Height = 540; ExpectedWidth = 960; ExpectedHeight = 540; X = 0; Y = 0 },

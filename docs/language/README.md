@@ -356,4 +356,6 @@ Phase 7.1 advances `Smile.RPG` to 1.1.1 with world-state invariant and transacti
 
 Phase 8 adds no language syntax, native runtime primitive, package API, or file-format revision. It demonstrates dungeon exploration by composing the existing source-authored packages in `RpgDungeonGallery`; see [phase8-rpg-dungeons.md](phase8-rpg-dungeons.md).
 
+Phase 9 advances `Smile.RPG` to 1.2.0 with four ordinary deterministic battle modules and no new language syntax, compiler/runtime helper, rendering primitive, or persistence format. Active battles block Save/Load and remain transient. See [phase9-rpg-battles.md](phase9-rpg-battles.md).
+
 The executable examples are the most precise usage guide: `LanguageBasics.smile`, `StructuredLanguageBasics.smile`, `GraphicsBasics.smile`, `MultiFileBasics`, and the seven projects under `games`. These include Dungeon Star I's external-map parser and quadrilateral-based pseudo-3D renderer, Dungeon Star II's fixed-point DDA raycaster, and Maze Muncher's arc-composed neon maze. Each demo game also includes a complete player-focused `Program-NoDemo.smile` teaching source.
