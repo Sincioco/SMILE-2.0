@@ -31,6 +31,10 @@ Capacities: 16 zones and 64 weighted entries per zone. `ZoneDefinition` supplies
 
 An encounter ID is presentation metadata. Full battle gameplay remains outside this module and Phase 7.
 
+## Phase 8 dungeon mapping
+
+No dungeon module was needed. A floor maps to a Scene, an entrance or vertical endpoint maps to a Spawn, region-based stairs/chutes/warps map to Transitions, and doors/chests/hidden walls/NPCs map to Actors with application-owned interaction IDs. Story holds one-time and conditional event state; Inventory and Party hold item and Gold rewards; Encounters holds deterministic dungeon-zone progress. First-person and top-down views consume these same records.
+
 ## Save integration
 
 `SaveGames` writes SRPG format 2 and reads formats 1–2. Format 2 stores only actors whose definition has `Persistent = True`, plus story and encounter progress. The decoder validates the incoming final persistent layout against pairwise overlap, preserved transient visible-solid cells, transient reservations, and current-scene coherence before mutation. Persistent actors are hidden and placed as a batch before final visibility is restored, allowing legal swaps and rearrangements. Transient actor progress and reservations survive load unchanged. Complete preflight validation and cross-module rollback, including active actor reservations, preserve transactional load behavior.

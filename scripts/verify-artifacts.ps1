@@ -110,6 +110,11 @@ Require-File 'artifacts\tests\Phase7WorldStateTestsPackage.exe' | Out-Null
 Require-File 'artifacts\games\RpgWorldGallery-DirectX\smile.gallery.rpg-world.smile-assets.json' | Out-Null
 Require-File 'artifacts\games\RpgWorldGallery-GDI\smile.gallery.rpg-world.smile-assets.json' | Out-Null
 Require-File 'artifacts\web\RpgWorldGallery\smile-assets.json' | Out-Null
+Require-File 'artifacts\tests\Phase8DungeonStateTests.exe' | Out-Null
+Require-File 'artifacts\tests\Phase8DungeonStateTestsPackage.exe' | Out-Null
+Require-File 'artifacts\games\RpgDungeonGallery-DirectX\smile.gallery.rpg-dungeon.smile-assets.json' | Out-Null
+Require-File 'artifacts\games\RpgDungeonGallery-GDI\smile.gallery.rpg-dungeon.smile-assets.json' | Out-Null
+Require-File 'artifacts\web\RpgDungeonGallery\smile-assets.json' | Out-Null
 Require-File 'artifacts\games\Phase5UIStateTests.exe' | Out-Null
 Require-File 'artifacts\games\Phase5UIStateTestsPackage.exe' | Out-Null
 Require-File 'artifacts\games\Phase5SubmenuStateTests.exe' | Out-Null
@@ -138,6 +143,8 @@ $nativePrograms = @(
     'artifacts\games\RpgManagementGallery-GDI\RpgManagementGallery.exe',
     'artifacts\games\RpgWorldGallery-DirectX\RpgWorldGallery.exe',
     'artifacts\games\RpgWorldGallery-GDI\RpgWorldGallery.exe',
+    'artifacts\games\RpgDungeonGallery-DirectX\RpgDungeonGallery.exe',
+    'artifacts\games\RpgDungeonGallery-GDI\RpgDungeonGallery.exe',
     'artifacts\games\Phase5DialogueStateTests.exe',
     'artifacts\games\Phase5SubmenuViewport-DirectX\Phase5SubmenuViewport.exe',
     'artifacts\games\Phase5SubmenuViewport-GDI\Phase5SubmenuViewport.exe',
@@ -214,6 +221,16 @@ foreach ($map in @('Town.smilemap', 'Shop.smilemap', 'Overworld.smilemap')) {
     Assert-AssetCopy "examples\RpgWorldGallery\Maps\$map" "artifacts\games\RpgWorldGallery-DirectX\Maps\$map"
     Assert-AssetCopy "examples\RpgWorldGallery\Maps\$map" "artifacts\games\RpgWorldGallery-GDI\Maps\$map"
     Assert-AssetCopy "examples\RpgWorldGallery\Maps\$map" "artifacts\web\RpgWorldGallery\Maps\$map"
+}
+foreach ($asset in @('Companion.png', 'Hero.png', 'MireWarden.png', 'Npc.png', 'WorldTiles.png')) {
+    Assert-AssetCopy "examples\RpgDungeonGallery\Assets\$asset" "artifacts\games\RpgDungeonGallery-DirectX\Assets\$asset"
+    Assert-AssetCopy "examples\RpgDungeonGallery\Assets\$asset" "artifacts\games\RpgDungeonGallery-GDI\Assets\$asset"
+    Assert-AssetCopy "examples\RpgDungeonGallery\Assets\$asset" "artifacts\web\RpgDungeonGallery\Assets\$asset"
+}
+foreach ($map in @('Archive1.smilemap', 'Archive2.smilemap', 'Archive3.smilemap', 'Archive4.smilemap')) {
+    Assert-AssetCopy "examples\RpgDungeonGallery\Maps\$map" "artifacts\games\RpgDungeonGallery-DirectX\Maps\$map"
+    Assert-AssetCopy "examples\RpgDungeonGallery\Maps\$map" "artifacts\games\RpgDungeonGallery-GDI\Maps\$map"
+    Assert-AssetCopy "examples\RpgDungeonGallery\Maps\$map" "artifacts\web\RpgDungeonGallery\Maps\$map"
 }
 $phase42ExpectedPath = Join-Path $repositoryRoot 'examples\Phase4AssetPublication\ExpectedAssetPaths.txt'
 foreach ($asset in Get-Content -LiteralPath $phase42ExpectedPath) {

@@ -1,0 +1,261 @@
+Option Explicit
+
+Import Smile.RPG.Core As RPG
+Import Smile.RPG.Characters As Characters
+Import Smile.RPG.Party As Party
+Import Smile.RPG.Inventory As Inventory
+Import Smile.RPG.World As World
+Import Smile.RPG.Story As Story
+Import Smile.RPG.Encounters As Encounters
+Import Smile.RPG.SaveGames As SaveGames
+
+Const HERO = 100
+Const KEY_ITEM = 10
+Const HERO_ACTOR = 1000
+Const DOOR_ACTOR = 1100
+Const CHEST_ACTOR = 1200
+Const FLAG_DOOR = 1
+Const FLAG_CHEST = 2
+Const FLAG_TRAP = 3
+Const VALUE_REPEAT_TRAP = 10
+
+Dim Checks As Number
+Dim Failures As Number
+Dim State As Number
+Dim Result As Number
+Dim SavedCount As Number
+Dim Scene As World.SceneDefinition
+Dim Spawn As World.SpawnDefinition
+Dim Transition As World.TransitionDefinition
+Dim Actor As World.ActorDefinition
+Dim Character As Characters.CharacterDefinition
+Dim Item As Inventory.ItemDefinition
+Dim Zone As Encounters.ZoneDefinition
+
+State = RPG.Create()
+
+Character.Id = HERO
+Character.Name = "Aster"
+Character.StartingLevel = 4
+Character.StartingMaximumHealth = 100
+Character.StartingMaximumMagicPoints = 20
+Character.Strength = 12
+Character.Defense = 11
+Character.Magic = 9
+Character.Resistance = 8
+Character.Agility = 10
+Character.Luck = 7
+
+Call Check(Characters.DefineCharacter(State, Character))
+
+Item.Id = KEY_ITEM
+Item.Name = "Prism Key"
+Item.Kind = RPG.RPG_ITEM_KEY_ITEM
+Item.MaximumStack = 1
+Item.BasePrice = 0
+Item.CanSell = False
+Item.EffectId = 0
+
+Call Check(Inventory.DefineItem(State, Item))
+
+Call Check(Story.DefineFlag(State, FLAG_DOOR))
+Call Check(Story.DefineFlag(State, FLAG_CHEST))
+Call Check(Story.DefineFlag(State, FLAG_TRAP))
+Call Check(Story.DefineValue(State, VALUE_REPEAT_TRAP))
+
+Call DefineScene(1, 11)
+Call DefineScene(2, 21)
+Call DefineScene(3, 31)
+Call DefineScene(4, 41)
+Call DefineSpawn(11, 1, 1, 1, World.WORLD_FACING_RIGHT)
+Call DefineSpawn(21, 2, 7, 7, World.WORLD_FACING_LEFT)
+Call DefineSpawn(31, 3, 3, 3, World.WORLD_FACING_DOWN)
+Call DefineSpawn(41, 4, 5, 5, World.WORLD_FACING_UP)
+Call DefineTransition(1, 1, 101, 2, 21)
+Call DefineTransition(2, 2, 102, 1, 11)
+Call DefineTransition(3, 2, 103, 4, 41)
+Call DefineTransition(4, 3, 104, 1, 11)
+
+Call DefineActor(HERO_ACTOR, 1, 1, 1, True, True, True, 0)
+Call DefineActor(DOOR_ACTOR, 1, 2, 1, True, True, True, 1)
+Call DefineActor(CHEST_ACTOR, 2, 6, 7, True, True, True, 2)
+
+Zone.Id = 1
+Zone.SceneId = 4
+Zone.RegionId = 200
+Zone.StepsRequired = 2
+Zone.InitialSeed = 17
+
+Call Check(Encounters.DefineZone(State, Zone))
+Call Check(Encounters.AddEntry(State, 1, 500, 1))
+
+Call Check(Characters.ResetProgress(State))
+Call Check(Party.AddCharacter(State, HERO))
+Call Check(World.SetControlledActor(State, HERO_ACTOR))
+Call Check(World.ApplySpawn(State, HERO_ACTOR, 11))
+
+' A visible-solid door owns collision while its underlying cell stays traversable.
+
+Call Check(World.FrontActor(State) = DOOR_ACTOR)
+Call Check(Not World.TryReserveDestination(State, HERO_ACTOR, 2, 1))
+Call Check(World.SetActorVisible(State, DOOR_ACTOR, False))
+Call Check(Story.SetFlag(State, FLAG_DOOR, True))
+Call Check(World.TryReserveDestination(State, HERO_ACTOR, 2, 1))
+Call Check(World.CompleteReservedMove(State, HERO_ACTOR, World.WORLD_FACING_RIGHT))
+
+' Reciprocal stairs use scenes/spawns, while the chute intentionally has no reverse edge.
+
+Call Check(World.SetActorProgress(State, HERO_ACTOR, 1, 1, 1, World.WORLD_FACING_RIGHT, True, 0))
+Call Check(World.SetCurrentScene(State, 1))
+Call Check(World.ActivateTransition(State, 1))
+Call Check(World.CurrentScene(State) = 2 And World.ActorX(State, HERO_ACTOR) = 7)
+Call Check(World.TransitionAtRegion(State, 102) = 2)
+Call Check(World.TransitionAtRegion(State, 103) = 3)
+Call Check(World.ActivateTransition(State, 3))
+Call Check(World.CurrentScene(State) = 4)
+Call Check(World.TransitionAtRegion(State, 103) = 0)
+
+' Chest policy preflights capacity, grants once, records state, then hides the actor.
+
+Call Check(Inventory.CanAddItem(State, KEY_ITEM, 1))
+Call Check(Inventory.AddItem(State, KEY_ITEM, 1))
+Call Check(Story.SetFlag(State, FLAG_CHEST, True))
+Call Check(World.SetActorVisible(State, CHEST_ACTOR, False))
+Call Check(Inventory.Quantity(State, KEY_ITEM) = 1)
+Call Check(Not Inventory.CanAddItem(State, KEY_ITEM, 1))
+
+' One-shot and repeating traps mutate only on an application-authorized cell entry.
+
+Call Check(Characters.Damage(State, HERO, 9))
+Call Check(Story.SetFlag(State, FLAG_TRAP, True))
+Call Check(Characters.Health(State, HERO) = 91)
+Call Check(Story.Flag(State, FLAG_TRAP))
+Call Check(Characters.Damage(State, HERO, 3))
+Call Check(Story.SetValue(State, VALUE_REPEAT_TRAP, Story.Value(State, VALUE_REPEAT_TRAP) + 1))
+Call Check(Characters.Damage(State, HERO, 3))
+Call Check(Story.SetValue(State, VALUE_REPEAT_TRAP, Story.Value(State, VALUE_REPEAT_TRAP) + 1))
+Call Check(Characters.Health(State, HERO) = 85 And Story.Value(State, VALUE_REPEAT_TRAP) = 2)
+
+' Encounter preview stores metadata and an exact return location without battle resolution.
+
+Result = 0
+
+If World.SetReturnLocation(State, 4, 5, 5, World.WORLD_FACING_UP) Then
+    Result = 1
+End If
+
+Call Check(Result = 1)
+
+Result = Encounters.Advance(State, 1, Encounters.Seed(State, 1))
+
+Call Check(Result = 0)
+
+Result = Encounters.Advance(State, 1, Encounters.Seed(State, 1))
+
+Call Check(Result = 500 And Encounters.PendingEncounter(State) = 500)
+
+' SRPG 2 preserves the complete in-dungeon composition transactionally.
+Result = SaveGames.Encode(State, 8)
+SavedCount = SaveGames.EncodedByteCount()
+
+Call Check(Result = RPG.RPG_RESULT_OK And SavedCount > 0)
+Call Check(World.ApplySpawn(State, HERO_ACTOR, 31))
+Call Check(World.SetActorVisible(State, DOOR_ACTOR, True))
+Call Check(World.SetActorVisible(State, CHEST_ACTOR, True))
+Call Check(Story.SetFlag(State, FLAG_DOOR, False))
+Call Check(Story.SetFlag(State, FLAG_CHEST, False))
+Call Check(Story.SetFlag(State, FLAG_TRAP, False))
+Call Check(Story.SetValue(State, VALUE_REPEAT_TRAP, 0))
+Call Check(Inventory.RemoveItem(State, KEY_ITEM, 1))
+Call Encounters.ClearPendingEncounter(State)
+
+Result = SaveGames.Decode(State, 8)
+
+Call Check(Result = RPG.RPG_RESULT_OK)
+Call Check(World.CurrentScene(State) = 4)
+Call Check(World.ActorX(State, HERO_ACTOR) = 5 And World.ActorY(State, HERO_ACTOR) = 5)
+Call Check(Not World.ActorIsVisible(State, DOOR_ACTOR) And Not World.ActorIsVisible(State, CHEST_ACTOR))
+Call Check(Story.Flag(State, FLAG_DOOR) And Story.Flag(State, FLAG_CHEST) And Story.Flag(State, FLAG_TRAP))
+Call Check(Story.Value(State, VALUE_REPEAT_TRAP) = 2)
+Call Check(Inventory.Quantity(State, KEY_ITEM) = 1)
+Call Check(Characters.Health(State, HERO) = 85)
+Call Check(Encounters.PendingEncounter(State) = 500)
+Call Check(World.ReturnScene(State) = 4 And World.ReturnX(State) = 5 And World.ReturnY(State) = 5)
+
+Call RPG.Destroy(State)
+
+If Failures = 0 Then
+    Print "Phase 8 dungeon state tests: PASS"
+    Print Checks
+Else
+    Print "Phase 8 dungeon state tests: FAIL"
+    Print Failures
+End If
+
+End Program
+
+Sub Check(Condition As Boolean)
+
+    Checks = Checks + 1
+
+    If Not Condition Then
+
+        Failures = Failures + 1
+        Print "Failed check"
+        Print Checks
+
+    End If
+
+End Sub
+
+Sub DefineScene(Id As Number, DefaultSpawnId As Number)
+
+    Scene.Id = Id
+    Scene.MapId = Id
+    Scene.DefaultSpawnId = DefaultSpawnId
+    Scene.CameraMode = World.WORLD_CAMERA_FOLLOW
+
+    Call Check(World.DefineScene(State, Scene))
+
+End Sub
+
+Sub DefineSpawn(Id As Number, SceneId As Number, X As Number, Y As Number, Facing As Number)
+
+    Spawn.Id = Id
+    Spawn.SceneId = SceneId
+    Spawn.CellX = X
+    Spawn.CellY = Y
+    Spawn.Facing = Facing
+
+    Call Check(World.DefineSpawn(State, Spawn))
+
+End Sub
+
+Sub DefineTransition(Id As Number, SourceScene As Number, Region As Number, DestinationScene As Number, DestinationSpawn As Number)
+
+    Transition.Id = Id
+    Transition.SourceSceneId = SourceScene
+    Transition.SourceRegionId = Region
+    Transition.DestinationSceneId = DestinationScene
+    Transition.DestinationSpawnId = DestinationSpawn
+
+    Call Check(World.DefineTransition(State, Transition))
+
+End Sub
+
+Sub DefineActor(Id As Number, SceneId As Number, X As Number, Y As Number, Visible As Boolean, Solid As Boolean, Persistent As Boolean, InteractionId As Number)
+
+    Actor.Id = Id
+    Actor.SceneId = SceneId
+    Actor.CellX = X
+    Actor.CellY = Y
+    Actor.Facing = World.WORLD_FACING_DOWN
+    Actor.Visible = Visible
+    Actor.Solid = Solid
+    Actor.Persistent = Persistent
+    Actor.AnimationSetId = 0
+    Actor.InteractionId = InteractionId
+
+    Call Check(World.DefineActor(State, Actor))
+
+End Sub

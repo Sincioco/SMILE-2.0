@@ -39,3 +39,5 @@ Official libraries maintained with SMILE 2.0 are identified by the shared built-
 `libraries\Smile.Game` is the Phase 7 reusable 2D gameplay package. Its five ordinary modules provide cardinal movement/interpolation, animation timing, SMILE-MAP 1 parsing/rendering, camera math, and collision predicates without UI or assets.
 
 `libraries\Smile.RPG` 1.1.1 contains eleven ordinary modules: the Phase 6 data/management surface plus World, Story, Encounters, visible-solid world invariants, and batch-aware format-2 transactional saves with format-1 compatibility. It has no Smile.UI or asset dependency and deliberately excludes battle resolution, quests, classes, status effects, and presentation policy.
+
+Phase 8 retains `Smile.Game` 1.0.0 and `Smile.RPG` 1.1.1. The gap review found every dungeon-state requirement expressible through their existing public modules, so cardinal first-person projection, top-down floor rendering, door/key/chest/trap policy, dialogue text, and encounter-preview presentation remain application-owned in `examples\RpgDungeonGallery`. No dungeon-specific module, package dependency, or public API was added.

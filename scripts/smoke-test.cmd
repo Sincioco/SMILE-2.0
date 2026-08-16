@@ -567,6 +567,55 @@ for %%A in (Town.smilemap Shop.smilemap Overworld.smilemap) do (
 )
 echo Phase 7 Smile.Game, Smile.RPG world state, format compatibility, package, gallery, DirectX, GDI, and Web tests passed.
 
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase8DungeonStateTests\Phase8DungeonStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase8DungeonStateTests.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\tests\Phase8DungeonStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase8DungeonStateTests.out"
+if errorlevel 1 exit /b 1
+findstr /x /c:"Phase 8 dungeon state tests: PASS" "%SMILE_ROOT%\artifacts\temp\Phase8DungeonStateTests.out" >nul
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase8DungeonStateTests\Phase8DungeonStateTests.Package.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase8DungeonStateTestsPackage.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\tests\Phase8DungeonStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase8DungeonStateTestsPackage.out"
+if errorlevel 1 exit /b 1
+fc /b "%SMILE_ROOT%\artifacts\temp\Phase8DungeonStateTests.out" "%SMILE_ROOT%\artifacts\temp\Phase8DungeonStateTestsPackage.out" >nul
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase8DungeonStateTests\Phase8DungeonStateTests.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\Phase8DungeonStateTests"
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\Phase8DungeonStateTests\game.js"
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase8DungeonStateTests" --native-output "%SMILE_ROOT%\artifacts\temp\Phase8DungeonStateTests.out" --timeout 10000
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase8DungeonStateTests\Phase8DungeonStateTests.Package.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\Phase8DungeonStateTestsPackage"
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\Phase8DungeonStateTestsPackage\game.js"
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase8DungeonStateTestsPackage" --native-output "%SMILE_ROOT%\artifacts\temp\Phase8DungeonStateTestsPackage.out" --timeout 10000
+if errorlevel 1 exit /b 1
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-phase8-dungeon-maps.ps1"
+if errorlevel 1 exit /b 1
+
+if not exist "%SMILE_ROOT%\artifacts\games\RpgDungeonGallery-DirectX" mkdir "%SMILE_ROOT%\artifacts\games\RpgDungeonGallery-DirectX"
+if not exist "%SMILE_ROOT%\artifacts\games\RpgDungeonGallery-GDI" mkdir "%SMILE_ROOT%\artifacts\games\RpgDungeonGallery-GDI"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgDungeonGallery\RpgDungeonGallery.smileproj" --target windows-x64 --configuration Release --graphics DirectX -o "%SMILE_ROOT%\artifacts\games\RpgDungeonGallery-DirectX\RpgDungeonGallery.exe" --debug
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgDungeonGallery\RpgDungeonGallery.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\RpgDungeonGallery-GDI\RpgDungeonGallery.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgDungeonGallery\RpgDungeonGallery.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\RpgDungeonGallery"
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\RpgDungeonGallery\game.js"
+if errorlevel 1 exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\RpgDungeonGallery" --frames 40 --timeout 10000
+if errorlevel 1 exit /b 1
+for %%A in (Companion.png Hero.png MireWarden.png Npc.png WorldTiles.png) do (
+    fc /b "%SMILE_ROOT%\examples\RpgDungeonGallery\Assets\%%A" "%SMILE_ROOT%\artifacts\web\RpgDungeonGallery\Assets\%%A" >nul
+    if errorlevel 1 exit /b 1
+)
+for %%A in (Archive1.smilemap Archive2.smilemap Archive3.smilemap Archive4.smilemap) do (
+    fc /b "%SMILE_ROOT%\examples\RpgDungeonGallery\Maps\%%A" "%SMILE_ROOT%\artifacts\web\RpgDungeonGallery\Maps\%%A" >nul
+    if errorlevel 1 exit /b 1
+)
+echo Phase 8 dungeon composition, SRPG 2 state, package, DirectX, GDI, and DPR-2 Web tests passed.
+
 for %%P in (OptionExplicitLate:SML3300 OptionExplicitUndeclared:SML3303 ScalarDimWithoutAs:SML3302 UnknownBuiltInType:SML3401 NumberToTextAssignment:SML3304 TextToBooleanAssignment:SML3304 MixedTextAddition:SML3308 TextRelationalComparison:SML3308 InvalidByRefLiteral:SML3305 InvalidByRefConstant:SML3305 WrongArgumentType:SML3304 WrongReturnType:SML3304 InconsistentLegacyReturnTypes:SML3309 DuplicateLocal:SML3306 UseBeforeLocalDeclaration:SML3307) do (
     for /f "tokens=1,2 delims=:" %%F in ("%%P") do (
         "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\InvalidPhase3A\%%F.smile" > "%SMILE_ROOT%\artifacts\temp\%%F.log" 2>&1

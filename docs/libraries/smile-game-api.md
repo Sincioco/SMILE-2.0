@@ -13,7 +13,7 @@
 Capacities: 64 generation-safe animation definitions and 16 frames per definition.
 
 - lifecycle: `Create`, `Destroy`, `IsValid`
-- definition/query: `AddFrame`, `FrameCount`, `FrameAtTime`, source rectangle and anchor queries
+- definition/query: `AddFrame`, `FrameCount`, `CurrentFrame`, source rectangle and anchor queries
 - timing is integer, deterministic, and supports looping or one-shot clamping
 
 ## `Smile.Game.TileMap`
@@ -42,3 +42,7 @@ Exact and smooth follow clamp at all map edges; worlds smaller than the viewport
 - `FootprintsOverlap`
 
 The package does not choose game-specific collision layers, footboxes, physics, or pathfinding.
+
+## Phase 8 composition note
+
+No public API changed for Phase 8. `RpgDungeonGallery` uses `CardinalMover`, `Animation`, `TileMap`, and `Camera2D` for its four-floor top-down presentation. Its first-person cardinal projection remains application code because wall geometry and visual style are presentation policy, not reusable persistent state.

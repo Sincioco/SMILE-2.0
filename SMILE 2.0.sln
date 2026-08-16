@@ -29,6 +29,10 @@ Project("{4FBC4E72-6B0F-40D8-B758-BF8932926D5D}") = "Phase7WorldStateTests", "ex
 EndProject
 Project("{4FBC4E72-6B0F-40D8-B758-BF8932926D5D}") = "RpgWorldGallery", "examples\RpgWorldGallery\RpgWorldGallery.smileproj", "{EA20FCAD-4E88-B4D4-091C-B39D26B68FA6}"
 EndProject
+Project("{4FBC4E72-6B0F-40D8-B758-BF8932926D5D}") = "Phase8DungeonStateTests", "examples\Phase8DungeonStateTests\Phase8DungeonStateTests.smileproj", "{A8D8E50E-11F4-4C06-8A10-5E4F45E1C3B1}"
+EndProject
+Project("{4FBC4E72-6B0F-40D8-B758-BF8932926D5D}") = "RpgDungeonGallery", "examples\RpgDungeonGallery\RpgDungeonGallery.smileproj", "{B8D8E50E-22F4-4C06-8A10-5E4F45E1C3B2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -121,6 +125,18 @@ Global
 		{EA20FCAD-4E88-B4D4-091C-B39D26B68FA6}.Release|Any CPU.ActiveCfg = Release|Windows 64-bit .exe
 		{EA20FCAD-4E88-B4D4-091C-B39D26B68FA6}.Release|x64.ActiveCfg = Release|Windows 64-bit .exe
 		{EA20FCAD-4E88-B4D4-091C-B39D26B68FA6}.Release|x86.ActiveCfg = Release|Windows 64-bit .exe
+		{A8D8E50E-11F4-4C06-8A10-5E4F45E1C3B1}.Debug|Any CPU.ActiveCfg = Debug|Windows 64-bit .exe
+		{A8D8E50E-11F4-4C06-8A10-5E4F45E1C3B1}.Debug|x64.ActiveCfg = Debug|Windows 64-bit .exe
+		{A8D8E50E-11F4-4C06-8A10-5E4F45E1C3B1}.Debug|x86.ActiveCfg = Debug|Windows 64-bit .exe
+		{A8D8E50E-11F4-4C06-8A10-5E4F45E1C3B1}.Release|Any CPU.ActiveCfg = Release|Windows 64-bit .exe
+		{A8D8E50E-11F4-4C06-8A10-5E4F45E1C3B1}.Release|x64.ActiveCfg = Release|Windows 64-bit .exe
+		{A8D8E50E-11F4-4C06-8A10-5E4F45E1C3B1}.Release|x86.ActiveCfg = Release|Windows 64-bit .exe
+		{B8D8E50E-22F4-4C06-8A10-5E4F45E1C3B2}.Debug|Any CPU.ActiveCfg = Debug|Windows 64-bit .exe
+		{B8D8E50E-22F4-4C06-8A10-5E4F45E1C3B2}.Debug|x64.ActiveCfg = Debug|Windows 64-bit .exe
+		{B8D8E50E-22F4-4C06-8A10-5E4F45E1C3B2}.Debug|x86.ActiveCfg = Debug|Windows 64-bit .exe
+		{B8D8E50E-22F4-4C06-8A10-5E4F45E1C3B2}.Release|Any CPU.ActiveCfg = Release|Windows 64-bit .exe
+		{B8D8E50E-22F4-4C06-8A10-5E4F45E1C3B2}.Release|x64.ActiveCfg = Release|Windows 64-bit .exe
+		{B8D8E50E-22F4-4C06-8A10-5E4F45E1C3B2}.Release|x86.ActiveCfg = Release|Windows 64-bit .exe
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -135,6 +151,8 @@ Global
 		{86CE4D22-4D26-1894-CF79-16CB2D250796} = {74066D38-9478-4BA7-B835-1ED66B291B2C}
 		{5996C933-BE43-5E19-3CDB-4B32D697BEB9} = {891FB07A-D3B4-411A-95A4-BBE6EE635621}
 		{EA20FCAD-4E88-B4D4-091C-B39D26B68FA6} = {891FB07A-D3B4-411A-95A4-BBE6EE635621}
+		{A8D8E50E-11F4-4C06-8A10-5E4F45E1C3B1} = {891FB07A-D3B4-411A-95A4-BBE6EE635621}
+		{B8D8E50E-22F4-4C06-8A10-5E4F45E1C3B2} = {891FB07A-D3B4-411A-95A4-BBE6EE635621}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D3BB9212-D171-48C4-9FFD-A68D3C34BA85}

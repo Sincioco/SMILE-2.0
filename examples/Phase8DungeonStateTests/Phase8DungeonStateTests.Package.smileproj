@@ -1,0 +1,12 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Console</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>Phase8DungeonStateTestsPackage</OutputName>
+    <ApplicationId>smile.tests.phase8-dungeon-state</ApplicationId>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <SmileLibraryReference Include="..\..\artifacts\libraries\Smile.RPG.smilelib" />
+  </ItemGroup>
+</SmileProject>

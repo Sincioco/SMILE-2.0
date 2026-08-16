@@ -1,0 +1,1936 @@
+Option Explicit
+
+Import Smile.Game.Core As GameCore
+Import Smile.Game.Animation As Animation
+Import Smile.Game.TileMap As TileMap
+Import Smile.Game.Camera2D As Camera2D
+Import Smile.RPG.Core As RPG
+Import Smile.RPG.Characters As Characters
+Import Smile.RPG.Party As Party
+Import Smile.RPG.Inventory As Inventory
+Import Smile.RPG.World As World
+Import Smile.RPG.Story As Story
+Import Smile.RPG.Encounters As Encounters
+Import Smile.RPG.SaveGames As SaveGames
+Import Smile.UI.Core As UI
+Import Smile.UI.Menu As Menu
+Import Smile.UI.MenuNavigator As MenuNavigator
+Import Smile.UI.Dialogue As Dialogue
+
+Const MODE_TITLE = 1
+Const MODE_DUNGEON = 2
+Const MODE_MENU = 3
+Const MODE_DIALOGUE = 4
+Const MODE_INFO = 5
+Const MODE_ENCOUNTER = 6
+
+Const SCENE_FP_1 = 1
+Const SCENE_FP_2 = 2
+Const SCENE_FP_3 = 3
+Const SCENE_TOP_1 = 11
+Const SCENE_TOP_2 = 12
+Const SCENE_TOP_3 = 13
+Const SCENE_TOP_4 = 14
+
+Const ACTOR_HERO = 1000
+Const ACTOR_FP_DOOR = 1100
+Const ACTOR_FP_LOCKED_DOOR = 1101
+Const ACTOR_FP_CHEST_GOLD = 1200
+Const ACTOR_FP_CHEST_KEY = 1201
+Const ACTOR_FP_HIDDEN = 1300
+Const ACTOR_FP_NPC = 1400
+Const ACTOR_TOP_DOOR = 2100
+Const ACTOR_TOP_LOCKED_DOOR = 2101
+Const ACTOR_TOP_CHEST_ITEM = 2200
+Const ACTOR_TOP_CHEST_GOLD = 2201
+Const ACTOR_TOP_HIDDEN = 2300
+Const ACTOR_TOP_NPC = 2400
+
+Const CHARACTER_HERO = 100
+Const CHARACTER_COMPANION = 200
+Const ITEM_VAULT_KEY = 10
+Const ITEM_SUN_TONIC = 20
+
+Const FLAG_FP_DOOR = 1
+Const FLAG_FP_LOCKED_DOOR = 2
+Const FLAG_FP_CHEST_GOLD = 3
+Const FLAG_FP_CHEST_KEY = 4
+Const FLAG_FP_HIDDEN = 5
+Const FLAG_FP_TRAP = 6
+Const FLAG_FP_NPC = 7
+Const FLAG_TOP_DOOR = 8
+Const FLAG_TOP_LOCKED_DOOR = 9
+Const FLAG_TOP_CHEST_ITEM = 10
+Const FLAG_TOP_CHEST_GOLD = 11
+Const FLAG_TOP_HIDDEN = 12
+Const FLAG_TOP_TRAP = 13
+Const FLAG_TOP_NPC = 14
+Const VALUE_REPEAT_TRAPS = 30
+
+Const INTERACTION_DOOR = 1
+Const INTERACTION_LOCKED_DOOR = 2
+Const INTERACTION_CHEST_GOLD = 3
+Const INTERACTION_CHEST_KEY = 4
+Const INTERACTION_HIDDEN = 5
+Const INTERACTION_NPC = 6
+Const INTERACTION_CHEST_ITEM = 7
+
+Const FP_WIDTH = 9
+Const FP_HEIGHT = 9
+Const FP_FLOORS = 3
+Const FP_CELLS_PER_FLOOR = FP_WIDTH * FP_HEIGHT
+Const FP_TOTAL_CELLS = FP_CELLS_PER_FLOOR * FP_FLOORS
+Const FP_WALL = 0
+Const FP_FLOOR = 1
+Const VIEW_DEPTH = 5
+
+Const REGION_TOP_1_DOWN = 101
+Const REGION_TOP_1_EXIT = 109
+Const REGION_TOP_1_TRAP = 111
+Const REGION_TOP_1_ENCOUNTER = 121
+Const REGION_TOP_2_UP = 102
+Const REGION_TOP_2_DOWN = 103
+Const REGION_TOP_2_REPEAT_TRAP = 112
+Const REGION_TOP_2_CHUTE = 114
+Const REGION_TOP_3_UP = 104
+Const REGION_TOP_3_DOWN = 105
+Const REGION_TOP_3_WARP = 115
+Const REGION_TOP_4_UP = 106
+Const REGION_TOP_4_ENCOUNTER = 124
+Const REGION_TOP_1_ALT_DOWN = 107
+Const REGION_TOP_2_ALT_UP = 108
+Const REGION_FP_3_ENCOUNTER = 131
+
+Dim Tileset As Image
+Dim HeroImage As Image
+Dim CompanionImage As Image
+Dim NpcImage As Image
+Dim EnemyImage As Image
+Dim FloorMaps[4] As Number
+Dim WalkAnimations[4] As Number
+Dim FpCells[FP_TOTAL_CELLS] As Number
+Dim ViewHalfWidth[VIEW_DEPTH + 1] As Number
+Dim ViewTop[VIEW_DEPTH + 1] As Number
+Dim ViewBottom[VIEW_DEPTH + 1] As Number
+Dim State As Number
+Dim PlayerMover As GameCore.CardinalMover
+Dim Camera As Camera2D.CameraState
+Dim WindowStyle As UI.WindowStyle
+Dim TextStyle As UI.TextStyle
+Dim SelectedTextStyle As UI.TextStyle
+Dim DisabledTextStyle As UI.TextStyle
+Dim MenuStyle As UI.MenuStyle
+Dim NavigatorStyle As UI.MenuNavigatorStyle
+Dim DialogueStyle As UI.DialogueStyle
+Dim CommandMenu As Number
+Dim CommandNavigator As Number
+Dim DialogueHandle As Number
+Dim Mode As Number
+Dim PreviousMode As Number
+Dim InfoPage As Number
+Dim TitleSelection As Number
+Dim AnimationClock As Number
+Dim Key As Number
+Dim Event As Number
+Dim Action As Number
+Dim Result As Number
+Dim CurrentMap As Number
+Dim Direction As Number
+Dim RegionId As Number
+Dim TransitionId As Number
+Dim TargetActor As Number
+Dim ItemIndex As Number
+Dim Running As Boolean
+Dim OperationSucceeded As Boolean
+Dim Status As Text
+Dim SceneDefinition As World.SceneDefinition
+Dim SpawnDefinition As World.SpawnDefinition
+Dim TransitionDefinition As World.TransitionDefinition
+Dim ActorDefinition As World.ActorDefinition
+Dim HeroDefinition As Characters.CharacterDefinition
+Dim CompanionDefinition As Characters.CharacterDefinition
+Dim ItemDefinition As Inventory.ItemDefinition
+Dim ZoneDefinition As Encounters.ZoneDefinition
+
+Game Window "SMILE 2.0 RPG Dungeon Gallery" Size 960 By 540
+
+Load Image Tileset From "Assets\WorldTiles.png"
+Load Image HeroImage From "Assets\Hero.png"
+Load Image CompanionImage From "Assets\Companion.png"
+Load Image NpcImage From "Assets\Npc.png"
+Load Image EnemyImage From "Assets\MireWarden.png"
+
+State = RPG.Create()
+
+Call InitializeProjection()
+Call InitializeAnimations()
+Call InitializeFirstPersonMaps()
+Call InitializeStyles()
+Call InitializeMenus()
+Call InitializeDefinitions()
+Call LoadTopDownMaps()
+Call StartNewGame(SCENE_FP_1)
+
+Mode = MODE_TITLE
+TitleSelection = 1
+Status = "Choose an original dungeon presentation."
+Running = State > 0 And FloorMaps[0] > 0 And FloorMaps[1] > 0 And FloorMaps[2] > 0 And FloorMaps[3] > 0 And Animation.IsValid(WalkAnimations[0]) And Animation.IsValid(WalkAnimations[1]) And Animation.IsValid(WalkAnimations[2]) And Animation.IsValid(WalkAnimations[3])
+
+Do
+    Get Key Key
+
+    Select Case Mode
+        Case MODE_TITLE
+
+            Call HandleTitle(Key)
+
+        Case MODE_DUNGEON
+
+            Call HandleDungeon(Key)
+
+        Case MODE_MENU
+
+            Call HandleMenu(Key)
+
+        Case MODE_DIALOGUE
+
+            Call HandleDialogue(Key)
+
+        Case MODE_INFO
+
+            Call HandleInfo(Key)
+
+        Case MODE_ENCOUNTER
+
+            Call HandleEncounter(Key)
+
+    End Select
+
+    If Mode = MODE_DUNGEON And Not IsFirstPersonScene(World.CurrentScene(State)) Then
+        Call UpdateTopDownMovement()
+    End If
+
+    If PlayerMover.Moving Then
+        AnimationClock = AnimationClock + 1
+    Else
+        AnimationClock = 0
+    End If
+
+    Select Case Mode
+        Case MODE_TITLE
+
+            Call DrawTitle()
+
+        Case MODE_ENCOUNTER
+
+            Call DrawEncounter()
+
+        Case Else
+
+            Call DrawDungeon()
+
+            If Mode = MODE_MENU Then
+                Call MenuNavigator.DrawStack(CommandNavigator)
+            Else If Mode = MODE_DIALOGUE Then
+                Event = Dialogue.Update(DialogueHandle, Timer())
+
+                Call Dialogue.Draw(DialogueHandle, Timer())
+            Else If Mode = MODE_INFO Then
+                Call DrawInformation()
+            End If
+
+    End Select
+
+    Show Screen
+    Wait 8 Milliseconds
+
+Loop Until Game_Closed() = True Or Not Running
+
+Call Dialogue.Destroy(DialogueHandle)
+Call MenuNavigator.Destroy(CommandNavigator)
+Call Menu.Destroy(CommandMenu)
+
+For ItemIndex = 0 To 3
+    Call TileMap.Unload(FloorMaps[ItemIndex])
+    Call Animation.Destroy(WalkAnimations[ItemIndex])
+End For
+
+Unload Image EnemyImage
+Unload Image NpcImage
+Unload Image CompanionImage
+Unload Image HeroImage
+Unload Image Tileset
+
+Call RPG.Destroy(State)
+
+End Program
+
+Sub InitializeProjection()
+
+    ViewHalfWidth[0] = 650
+    ViewHalfWidth[1] = 350
+    ViewHalfWidth[2] = 210
+    ViewHalfWidth[3] = 122
+    ViewHalfWidth[4] = 68
+    ViewHalfWidth[5] = 34
+    ViewTop[0] = -80
+    ViewTop[1] = 62
+    ViewTop[2] = 145
+    ViewTop[3] = 196
+    ViewTop[4] = 225
+    ViewTop[5] = 244
+    ViewBottom[0] = 620
+    ViewBottom[1] = 478
+    ViewBottom[2] = 395
+    ViewBottom[3] = 344
+    ViewBottom[4] = 315
+    ViewBottom[5] = 296
+
+End Sub
+
+Sub InitializeAnimations()
+
+    Dim DirectionIndex As Number
+
+    For DirectionIndex = 0 To 3
+
+        WalkAnimations[DirectionIndex] = Animation.Create(2, True, 32, 86)
+        OperationSucceeded = Animation.AddFrame(WalkAnimations[DirectionIndex], 0, DirectionIndex * 128, 96, 128)
+        OperationSucceeded = OperationSucceeded And Animation.AddFrame(WalkAnimations[DirectionIndex], 96, DirectionIndex * 128, 96, 128)
+        OperationSucceeded = OperationSucceeded And Animation.AddFrame(WalkAnimations[DirectionIndex], 192, DirectionIndex * 128, 96, 128)
+        OperationSucceeded = OperationSucceeded And Animation.AddFrame(WalkAnimations[DirectionIndex], 96, DirectionIndex * 128, 96, 128)
+    End For
+
+End Sub
+
+Sub InitializeFirstPersonMaps()
+
+    Dim Index As Number
+    Dim FloorIndex As Number
+    Dim X As Number
+    Dim Y As Number
+
+    For Index = 0 To FP_TOTAL_CELLS - 1
+        FpCells[Index] = FP_WALL
+    End For
+
+    For FloorIndex = 0 To FP_FLOORS - 1
+
+        For Y = 1 To FP_HEIGHT - 2
+
+            For X = 1 To FP_WIDTH - 2
+                Call SetFpCell(FloorIndex, X, Y, FP_FLOOR)
+            End For
+        End For
+    End For
+
+    For Y = 2 To 6
+        Call SetFpCell(0, 4, Y, FP_WALL)
+    End For
+
+    Call SetFpCell(0, 4, 4, FP_FLOOR)
+
+    For X = 2 To 6
+        Call SetFpCell(1, X, 4, FP_WALL)
+    End For
+
+    Call SetFpCell(1, 2, 4, FP_FLOOR)
+    Call SetFpCell(1, 6, 4, FP_FLOOR)
+
+    Call SetFpCell(2, 2, 2, FP_WALL)
+    Call SetFpCell(2, 3, 2, FP_WALL)
+    Call SetFpCell(2, 5, 2, FP_WALL)
+    Call SetFpCell(2, 6, 2, FP_WALL)
+    Call SetFpCell(2, 2, 6, FP_WALL)
+    Call SetFpCell(2, 3, 6, FP_WALL)
+    Call SetFpCell(2, 5, 6, FP_WALL)
+    Call SetFpCell(2, 6, 6, FP_WALL)
+
+End Sub
+
+Function FpIndex(FloorIndex As Number, X As Number, Y As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = FloorIndex * FP_CELLS_PER_FLOOR + Y * FP_WIDTH + X
+
+    Return ReturnValue
+
+End Function
+
+Sub SetFpCell(FloorIndex As Number, X As Number, Y As Number, Value As Number)
+
+    FpCells[FpIndex(FloorIndex, X, Y)] = Value
+
+End Sub
+
+Function FpCellAt(SceneId As Number, X As Number, Y As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim FloorIndex As Number
+
+    If (X < 0 Or
+        X >= FP_WIDTH Or
+        Y < 0 Or
+        Y >= FP_HEIGHT) Then
+        Return FP_WALL
+    End If
+
+    FloorIndex = SceneId - SCENE_FP_1
+
+    If FloorIndex < 0 Or FloorIndex >= FP_FLOORS Then
+        Return FP_WALL
+    End If
+
+    ReturnValue = FpCells[FpIndex(FloorIndex, X, Y)]
+
+    Return ReturnValue
+
+End Function
+
+Sub InitializeStyles()
+
+    WindowStyle.UseSkin = False
+    WindowStyle.FillColor = Rgb(12, 20, 35)
+    WindowStyle.BorderColor = Rgb(108, 224, 205)
+    WindowStyle.BorderThickness = 3
+    WindowStyle.Opacity = 95
+    WindowStyle.FilterMode = UI.UI_FILTER_SMOOTH
+    WindowStyle.Padding.Left = 18
+    WindowStyle.Padding.Top = 16
+    WindowStyle.Padding.Right = 18
+    WindowStyle.Padding.Bottom = 16
+
+    TextStyle.Mode = UI.UI_TEXT_SYSTEM
+    TextStyle.SystemSize = 18
+    TextStyle.SystemColor = WHITE
+    TextStyle.LineSpacing = 4
+    SelectedTextStyle = TextStyle
+    SelectedTextStyle.SystemColor = YELLOW
+    DisabledTextStyle = TextStyle
+    DisabledTextStyle.SystemColor = DARK_GRAY
+
+    MenuStyle.Window = WindowStyle
+    MenuStyle.NormalText = TextStyle
+    MenuStyle.SelectedText = SelectedTextStyle
+    MenuStyle.DisabledText = DisabledTextStyle
+    MenuStyle.SelectionFillColor = Rgb(38, 91, 103)
+    MenuStyle.RowHeight = 38
+    MenuStyle.WrapSelection = True
+    MenuStyle.ShowScrollbar = True
+    MenuStyle.ShowSubmenuIndicator = False
+    MenuStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_ELLIPSIS
+    MenuStyle.ItemTextMaxLines = 1
+
+    NavigatorStyle.Viewport.X = 0
+    NavigatorStyle.Viewport.Y = 0
+    NavigatorStyle.Viewport.Width = 960
+    NavigatorStyle.Viewport.Height = 540
+    NavigatorStyle.ViewportPadding.Left = 18
+    NavigatorStyle.ViewportPadding.Top = 18
+    NavigatorStyle.ViewportPadding.Right = 18
+    NavigatorStyle.ViewportPadding.Bottom = 18
+    NavigatorStyle.HorizontalGap = 10
+    NavigatorStyle.PreferredDirection = UI.UI_SUBMENU_DIRECTION_AUTO
+
+    DialogueStyle.Window = WindowStyle
+    DialogueStyle.Text = TextStyle
+    DialogueStyle.CharactersPerSecond = 46
+    DialogueStyle.LineSpacing = 5
+    DialogueStyle.UseContinueIndicator = False
+    DialogueStyle.IndicatorBlinkMilliseconds = 420
+
+End Sub
+
+Sub InitializeMenus()
+
+    CommandMenu = Menu.Create(MenuStyle, 570, 55, 350, 390, 8)
+    ItemIndex = Menu.AddItem(CommandMenu, "Interact", 1, True)
+    ItemIndex = Menu.AddItem(CommandMenu, "Character and Party", 2, True)
+    ItemIndex = Menu.AddItem(CommandMenu, "Inventory", 3, True)
+    ItemIndex = Menu.AddItem(CommandMenu, "Save Slot 1", 4, True)
+    ItemIndex = Menu.AddItem(CommandMenu, "Load Slot 1", 5, True)
+    ItemIndex = Menu.AddItem(CommandMenu, "Escape Dungeon", 6, True)
+    ItemIndex = Menu.AddItem(CommandMenu, "Resume", 7, True)
+    CommandNavigator = MenuNavigator.Create(CommandMenu, NavigatorStyle)
+    DialogueHandle = Dialogue.Create(DialogueStyle, 35, 340, 890, 165)
+
+End Sub
+
+Sub InitializeDefinitions()
+
+    HeroDefinition.Id = CHARACTER_HERO
+    HeroDefinition.Name = "Aster"
+    HeroDefinition.StartingLevel = 4
+    HeroDefinition.StartingMaximumHealth = 140
+    HeroDefinition.StartingMaximumMagicPoints = 36
+    HeroDefinition.Strength = 16
+    HeroDefinition.Defense = 14
+    HeroDefinition.Magic = 12
+    HeroDefinition.Resistance = 11
+    HeroDefinition.Agility = 15
+    HeroDefinition.Luck = 9
+    OperationSucceeded = Characters.DefineCharacter(State, HeroDefinition)
+
+    CompanionDefinition = HeroDefinition
+    CompanionDefinition.Id = CHARACTER_COMPANION
+    CompanionDefinition.Name = "Nia"
+    CompanionDefinition.StartingLevel = 3
+    CompanionDefinition.StartingMaximumHealth = 105
+    CompanionDefinition.Strength = 11
+    CompanionDefinition.Magic = 16
+    OperationSucceeded = OperationSucceeded And Characters.DefineCharacter(State, CompanionDefinition)
+
+    ItemDefinition.Id = ITEM_VAULT_KEY
+    ItemDefinition.Name = "Prism Key"
+    ItemDefinition.Kind = RPG.RPG_ITEM_KEY_ITEM
+    ItemDefinition.MaximumStack = 1
+    ItemDefinition.BasePrice = 0
+    ItemDefinition.CanSell = False
+    ItemDefinition.EffectId = 0
+    OperationSucceeded = OperationSucceeded And Inventory.DefineItem(State, ItemDefinition)
+
+    ItemDefinition.Id = ITEM_SUN_TONIC
+    ItemDefinition.Name = "Sun Tonic"
+    ItemDefinition.Kind = RPG.RPG_ITEM_CONSUMABLE
+    ItemDefinition.MaximumStack = 9
+    ItemDefinition.BasePrice = 40
+    ItemDefinition.CanSell = True
+    ItemDefinition.EffectId = 1
+    OperationSucceeded = OperationSucceeded And Inventory.DefineItem(State, ItemDefinition)
+
+    Call DefineStoryState()
+    Call DefineWorldState()
+    Call DefineEncounterState()
+
+End Sub
+
+Sub DefineStoryState()
+
+    Dim FlagId As Number
+
+    For FlagId = FLAG_FP_DOOR To FLAG_TOP_NPC
+        OperationSucceeded = OperationSucceeded And Story.DefineFlag(State, FlagId)
+    End For
+
+    OperationSucceeded = OperationSucceeded And Story.DefineValue(State, VALUE_REPEAT_TRAPS)
+
+End Sub
+
+Sub DefineWorldState()
+
+    Call DefineScene(SCENE_FP_1, 101, World.WORLD_CAMERA_FIXED)
+    Call DefineScene(SCENE_FP_2, 102, World.WORLD_CAMERA_FIXED)
+    Call DefineScene(SCENE_FP_3, 103, World.WORLD_CAMERA_FIXED)
+    Call DefineScene(SCENE_TOP_1, 201, World.WORLD_CAMERA_FOLLOW)
+    Call DefineScene(SCENE_TOP_2, 202, World.WORLD_CAMERA_FOLLOW)
+    Call DefineScene(SCENE_TOP_3, 203, World.WORLD_CAMERA_FOLLOW)
+    Call DefineScene(SCENE_TOP_4, 204, World.WORLD_CAMERA_FOLLOW)
+
+    Call DefineSpawn(101, SCENE_FP_1, 1, 7, World.WORLD_FACING_RIGHT)
+    Call DefineSpawn(102, SCENE_FP_2, 1, 7, World.WORLD_FACING_RIGHT)
+    Call DefineSpawn(103, SCENE_FP_3, 1, 7, World.WORLD_FACING_RIGHT)
+    Call DefineSpawn(111, SCENE_FP_1, 7, 1, World.WORLD_FACING_LEFT)
+    Call DefineSpawn(112, SCENE_FP_2, 7, 1, World.WORLD_FACING_LEFT)
+    Call DefineSpawn(113, SCENE_FP_3, 6, 6, World.WORLD_FACING_UP)
+    Call DefineSpawn(114, SCENE_FP_1, 1, 1, World.WORLD_FACING_DOWN)
+    Call DefineSpawn(201, SCENE_TOP_1, 2, 8, World.WORLD_FACING_RIGHT)
+    Call DefineSpawn(202, SCENE_TOP_2, 10, 8, World.WORLD_FACING_LEFT)
+    Call DefineSpawn(203, SCENE_TOP_3, 2, 2, World.WORLD_FACING_RIGHT)
+    Call DefineSpawn(204, SCENE_TOP_4, 10, 8, World.WORLD_FACING_LEFT)
+    Call DefineSpawn(211, SCENE_TOP_1, 10, 2, World.WORLD_FACING_LEFT)
+    Call DefineSpawn(212, SCENE_TOP_2, 2, 2, World.WORLD_FACING_RIGHT)
+    Call DefineSpawn(213, SCENE_TOP_3, 10, 8, World.WORLD_FACING_LEFT)
+    Call DefineSpawn(214, SCENE_TOP_3, 6, 7, World.WORLD_FACING_UP)
+    Call DefineSpawn(215, SCENE_TOP_1, 6, 7, World.WORLD_FACING_UP)
+    Call DefineSpawn(216, SCENE_TOP_2, 6, 1, World.WORLD_FACING_DOWN)
+    Call DefineSpawn(217, SCENE_TOP_1, 2, 2, World.WORLD_FACING_DOWN)
+
+    Call DefineTransition(1, SCENE_TOP_1, REGION_TOP_1_DOWN, SCENE_TOP_2, 202)
+    Call DefineTransition(2, SCENE_TOP_2, REGION_TOP_2_UP, SCENE_TOP_1, 211)
+    Call DefineTransition(3, SCENE_TOP_2, REGION_TOP_2_DOWN, SCENE_TOP_3, 203)
+    Call DefineTransition(4, SCENE_TOP_3, REGION_TOP_3_UP, SCENE_TOP_2, 212)
+    Call DefineTransition(5, SCENE_TOP_3, REGION_TOP_3_DOWN, SCENE_TOP_4, 204)
+    Call DefineTransition(6, SCENE_TOP_4, REGION_TOP_4_UP, SCENE_TOP_3, 213)
+    Call DefineTransition(7, SCENE_TOP_2, REGION_TOP_2_CHUTE, SCENE_TOP_4, 204)
+    Call DefineTransition(8, SCENE_TOP_3, REGION_TOP_3_WARP, SCENE_TOP_1, 215)
+    Call DefineTransition(9, SCENE_TOP_1, REGION_TOP_1_ALT_DOWN, SCENE_TOP_2, 216)
+    Call DefineTransition(10, SCENE_TOP_2, REGION_TOP_2_ALT_UP, SCENE_TOP_1, 217)
+
+    Call DefineActor(ACTOR_FP_DOOR, SCENE_FP_1, 2, 4, World.WORLD_FACING_RIGHT, True, True, True, INTERACTION_DOOR)
+    Call DefineActor(ACTOR_FP_LOCKED_DOOR, SCENE_FP_2, 6, 4, World.WORLD_FACING_RIGHT, True, True, True, INTERACTION_LOCKED_DOOR)
+    Call DefineActor(ACTOR_FP_CHEST_GOLD, SCENE_FP_1, 6, 2, World.WORLD_FACING_DOWN, True, True, True, INTERACTION_CHEST_GOLD)
+    Call DefineActor(ACTOR_FP_CHEST_KEY, SCENE_FP_2, 2, 2, World.WORLD_FACING_DOWN, True, True, True, INTERACTION_CHEST_KEY)
+    Call DefineActor(ACTOR_FP_HIDDEN, SCENE_FP_3, 4, 2, World.WORLD_FACING_DOWN, True, True, True, INTERACTION_HIDDEN)
+    Call DefineActor(ACTOR_FP_NPC, SCENE_FP_3, 6, 3, World.WORLD_FACING_LEFT, True, True, False, INTERACTION_NPC)
+    Call DefineActor(ACTOR_TOP_DOOR, SCENE_TOP_1, 6, 8, World.WORLD_FACING_RIGHT, True, True, True, INTERACTION_DOOR)
+    Call DefineActor(ACTOR_TOP_LOCKED_DOOR, SCENE_TOP_2, 6, 3, World.WORLD_FACING_DOWN, True, True, True, INTERACTION_LOCKED_DOOR)
+    Call DefineActor(ACTOR_TOP_CHEST_ITEM, SCENE_TOP_3, 10, 2, World.WORLD_FACING_DOWN, True, True, True, INTERACTION_CHEST_ITEM)
+    Call DefineActor(ACTOR_TOP_CHEST_GOLD, SCENE_TOP_4, 3, 3, World.WORLD_FACING_DOWN, True, True, True, INTERACTION_CHEST_GOLD)
+    Call DefineActor(ACTOR_TOP_HIDDEN, SCENE_TOP_3, 6, 4, World.WORLD_FACING_DOWN, True, True, True, INTERACTION_HIDDEN)
+    Call DefineActor(ACTOR_TOP_NPC, SCENE_TOP_4, 8, 5, World.WORLD_FACING_LEFT, True, True, False, INTERACTION_NPC)
+    Call DefineActor(ACTOR_HERO, SCENE_FP_1, 1, 7, World.WORLD_FACING_RIGHT, True, True, True, 0)
+
+End Sub
+
+Sub DefineEncounterState()
+
+    ZoneDefinition.Id = 1
+    ZoneDefinition.SceneId = SCENE_TOP_1
+    ZoneDefinition.RegionId = REGION_TOP_1_ENCOUNTER
+    ZoneDefinition.StepsRequired = 2
+    ZoneDefinition.InitialSeed = 31
+    OperationSucceeded = OperationSucceeded And Encounters.DefineZone(State, ZoneDefinition)
+    OperationSucceeded = OperationSucceeded And Encounters.AddEntry(State, 1, 500, 3)
+    OperationSucceeded = OperationSucceeded And Encounters.AddEntry(State, 1, 501, 1)
+
+    ZoneDefinition.Id = 2
+    ZoneDefinition.SceneId = SCENE_TOP_4
+    ZoneDefinition.RegionId = REGION_TOP_4_ENCOUNTER
+    ZoneDefinition.StepsRequired = 2
+    ZoneDefinition.InitialSeed = 47
+    OperationSucceeded = OperationSucceeded And Encounters.DefineZone(State, ZoneDefinition)
+    OperationSucceeded = OperationSucceeded And Encounters.AddEntry(State, 2, 502, 1)
+
+    ZoneDefinition.Id = 3
+    ZoneDefinition.SceneId = SCENE_FP_3
+    ZoneDefinition.RegionId = REGION_FP_3_ENCOUNTER
+    ZoneDefinition.StepsRequired = 2
+    ZoneDefinition.InitialSeed = 59
+    OperationSucceeded = OperationSucceeded And Encounters.DefineZone(State, ZoneDefinition)
+    OperationSucceeded = OperationSucceeded And Encounters.AddEntry(State, 3, 503, 1)
+
+End Sub
+
+Sub DefineScene(Id As Number, DefaultSpawnId As Number, CameraMode As Number)
+
+    SceneDefinition.Id = Id
+    SceneDefinition.MapId = Id
+    SceneDefinition.DefaultSpawnId = DefaultSpawnId
+    SceneDefinition.CameraMode = CameraMode
+    OperationSucceeded = OperationSucceeded And World.DefineScene(State, SceneDefinition)
+
+End Sub
+
+Sub DefineSpawn(Id As Number, SceneId As Number, X As Number, Y As Number, Facing As Number)
+
+    SpawnDefinition.Id = Id
+    SpawnDefinition.SceneId = SceneId
+    SpawnDefinition.CellX = X
+    SpawnDefinition.CellY = Y
+    SpawnDefinition.Facing = Facing
+    OperationSucceeded = OperationSucceeded And World.DefineSpawn(State, SpawnDefinition)
+
+End Sub
+
+Sub DefineTransition(Id As Number, SourceScene As Number, Region As Number, DestinationScene As Number, DestinationSpawn As Number)
+
+    TransitionDefinition.Id = Id
+    TransitionDefinition.SourceSceneId = SourceScene
+    TransitionDefinition.SourceRegionId = Region
+    TransitionDefinition.DestinationSceneId = DestinationScene
+    TransitionDefinition.DestinationSpawnId = DestinationSpawn
+    OperationSucceeded = OperationSucceeded And World.DefineTransition(State, TransitionDefinition)
+
+End Sub
+
+Sub DefineActor(Id As Number, SceneId As Number, X As Number, Y As Number, Facing As Number, Visible As Boolean, Solid As Boolean, Persistent As Boolean, Interaction As Number)
+
+    ActorDefinition.Id = Id
+    ActorDefinition.SceneId = SceneId
+    ActorDefinition.CellX = X
+    ActorDefinition.CellY = Y
+    ActorDefinition.Facing = Facing
+    ActorDefinition.Visible = Visible
+    ActorDefinition.Solid = Solid
+    ActorDefinition.Persistent = Persistent
+    ActorDefinition.AnimationSetId = 0
+    ActorDefinition.InteractionId = Interaction
+    OperationSucceeded = OperationSucceeded And World.DefineActor(State, ActorDefinition)
+
+End Sub
+
+Sub LoadTopDownMaps()
+
+    Dim Path As Text
+    Dim Index As Number
+
+    Path = "Maps\Archive1.smilemap"
+    FloorMaps[0] = TileMap.LoadMap(Path)
+    Path = "Maps\Archive2.smilemap"
+    FloorMaps[1] = TileMap.LoadMap(Path)
+    Path = "Maps\Archive3.smilemap"
+    FloorMaps[2] = TileMap.LoadMap(Path)
+    Path = "Maps\Archive4.smilemap"
+    FloorMaps[3] = TileMap.LoadMap(Path)
+
+    For Index = 0 To 3
+        Call DefineTiles(FloorMaps[Index])
+    End For
+
+End Sub
+
+Sub DefineTiles(MapHandle As Number)
+
+    OperationSucceeded = TileMap.DefineTile(MapHandle, 1, 0, 0, 128, 128, 100)
+    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 2, 128, 0, 128, 128, 100)
+    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 3, 256, 0, 128, 128, 100)
+    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 4, 384, 0, 128, 128, 100)
+    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 5, 512, 0, 128, 128, 100)
+    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 6, 0, 128, 128, 128, 100)
+    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 7, 128, 128, 128, 128, 100)
+    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 8, 256, 128, 128, 128, 100)
+    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 9, 384, 128, 128, 128, 100)
+    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 10, 512, 128, 128, 128, 100)
+
+End Sub
+
+Sub StartNewGame(StartScene As Number)
+
+    OperationSucceeded = Characters.ResetProgress(State)
+    OperationSucceeded = OperationSucceeded And Party.ClearParty(State)
+    OperationSucceeded = OperationSucceeded And Inventory.ClearInventory(State)
+    OperationSucceeded = OperationSucceeded And World.ResetProgress(State)
+    OperationSucceeded = OperationSucceeded And Story.Reset(State)
+    OperationSucceeded = OperationSucceeded And Encounters.ResetProgress(State)
+    OperationSucceeded = OperationSucceeded And Party.AddCharacter(State, CHARACTER_HERO)
+    OperationSucceeded = OperationSucceeded And Party.AddCharacter(State, CHARACTER_COMPANION)
+    OperationSucceeded = OperationSucceeded And Party.SetGold(State, 60)
+    OperationSucceeded = OperationSucceeded And World.SetControlledActor(State, ACTOR_HERO)
+
+    If StartScene = SCENE_FP_1 Then
+        OperationSucceeded = OperationSucceeded And World.ApplySpawn(State, ACTOR_HERO, 101)
+    Else
+        OperationSucceeded = OperationSucceeded And World.ApplySpawn(State, ACTOR_HERO, 201)
+    End If
+
+    Call SyncPresentation()
+
+End Sub
+
+Sub SyncPresentation()
+
+    Dim SceneId As Number
+
+    SceneId = World.CurrentScene(State)
+
+    Call GameCore.Place(PlayerMover, World.ActorX(State, ACTOR_HERO), World.ActorY(State, ACTOR_HERO), World.ActorFacingDirection(State, ACTOR_HERO))
+
+    If Not IsFirstPersonScene(SceneId) Then
+
+        CurrentMap = MapForScene(SceneId)
+        OperationSucceeded = Camera2D.Configure(Camera, 960, 540, TileMap.Width(CurrentMap) * 64, TileMap.Height(CurrentMap) * 64)
+
+        Call Camera2D.Follow(Camera, GameCore.VisualX(PlayerMover, 64) + 32, GameCore.VisualY(PlayerMover, 64) + 32)
+
+    End If
+
+End Sub
+
+Function IsFirstPersonScene(SceneId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = SceneId >= SCENE_FP_1 And SceneId <= SCENE_FP_3
+
+    Return ReturnValue
+
+End Function
+
+Function MapForScene(SceneId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If SceneId < SCENE_TOP_1 Or SceneId > SCENE_TOP_4 Then
+        ReturnValue = FloorMaps[0]
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = FloorMaps[SceneId - SCENE_TOP_1]
+
+    Return ReturnValue
+
+End Function
+
+Sub HandleTitle(PressedKey As Number)
+
+    If PressedKey = KEY_UP Or PressedKey = KEY_W Then
+
+        TitleSelection = Max(1, TitleSelection - 1)
+
+    Else If PressedKey = KEY_DOWN Or PressedKey = KEY_S Then
+
+        TitleSelection = Min(4, TitleSelection + 1)
+
+    Else If PressedKey = KEY_ENTER Or PressedKey = KEY_SPACE Then
+
+        Select Case TitleSelection
+            Case 1
+
+                Call StartNewGame(SCENE_FP_1)
+
+                Mode = MODE_DUNGEON
+                Status = "Prism Vault: cardinal movement, doors, traps, stairs, chute, warp, and hidden passage."
+            Case 2
+
+                Call StartNewGame(SCENE_TOP_1)
+
+                Mode = MODE_DUNGEON
+                Status = "Sunken Archive: four connected top-down floors."
+            Case 3
+                Result = SaveGames.LoadGame(State, 1, 8)
+
+                If Result = RPG.RPG_RESULT_OK Then
+
+                    Call SyncPresentation()
+
+                    Mode = MODE_DUNGEON
+                    Status = "Slot 1 restored the exact dungeon floor, cell, facing, actors, story, and inventory."
+
+                Else
+                    Status = "No valid Phase 8 save exists in slot 1."
+
+                End If
+
+            Case 4
+                Running = False
+        End Select
+
+    End If
+
+End Sub
+
+Sub HandleDungeon(PressedKey As Number)
+
+    If PressedKey = KEY_ESCAPE Then
+
+        OperationSucceeded = Menu.SetSelectedIndex(CommandMenu, 0)
+        Mode = MODE_MENU
+        Return
+
+    End If
+
+    If PressedKey = KEY_ENTER Or PressedKey = KEY_SPACE Then
+        Call InteractAhead()
+
+        Return
+    End If
+
+    If IsFirstPersonScene(World.CurrentScene(State)) Then
+        Call HandleFirstPersonMovement(PressedKey)
+    Else
+
+        Call HandleTopDownInput(PressedKey)
+    End If
+
+End Sub
+
+Sub HandleFirstPersonMovement(PressedKey As Number)
+
+    Dim Facing As Number
+    Dim StepValue As Number
+    Dim DestinationX As Number
+    Dim DestinationY As Number
+
+    Facing = World.ActorFacingDirection(State, ACTOR_HERO)
+
+    If PressedKey = KEY_LEFT Or PressedKey = KEY_A Then
+
+        Facing = Facing - 1
+
+        If Facing < World.WORLD_FACING_UP Then
+            Facing = World.WORLD_FACING_LEFT
+        End If
+
+        OperationSucceeded = World.SetActorFacing(State, ACTOR_HERO, Facing)
+        Status = "Turned left. Turning alone never triggers a trap."
+        Return
+
+    Else If PressedKey = KEY_RIGHT Or PressedKey = KEY_D Then
+
+        Facing = Facing + 1
+
+        If Facing > World.WORLD_FACING_LEFT Then
+            Facing = World.WORLD_FACING_UP
+        End If
+
+        OperationSucceeded = World.SetActorFacing(State, ACTOR_HERO, Facing)
+        Status = "Turned right."
+        Return
+
+    End If
+
+    StepValue = 0
+
+    If PressedKey = KEY_UP Or PressedKey = KEY_W Then
+        StepValue = 1
+    Else If PressedKey = KEY_DOWN Or PressedKey = KEY_S Then
+        StepValue = -1
+    End If
+
+    If StepValue = 0 Then
+        Return
+    End If
+
+    DestinationX = World.ActorX(State, ACTOR_HERO) + GameCore.DirectionX(Facing) * StepValue
+    DestinationY = World.ActorY(State, ACTOR_HERO) + GameCore.DirectionY(Facing) * StepValue
+
+    If FpCellAt(World.CurrentScene(State), DestinationX, DestinationY) = FP_WALL Then
+        Status = "The vault wall blocks that cell."
+        Return
+    End If
+
+    If Not World.TryReserveDestination(State, ACTOR_HERO, DestinationX, DestinationY) Then
+        Status = "A closed dungeon actor blocks that cell. Interact while facing it."
+        Return
+    End If
+
+    OperationSucceeded = World.CompleteReservedMove(State, ACTOR_HERO, Facing)
+
+    If OperationSucceeded Then
+        Call ProcessArrival()
+    End If
+
+End Sub
+
+Sub HandleTopDownInput(PressedKey As Number)
+
+    If PlayerMover.Moving Then
+        Return
+    End If
+
+    Direction = 0
+
+    If PressedKey = KEY_UP Or PressedKey = KEY_W Then
+        Direction = World.WORLD_FACING_UP
+    Else If PressedKey = KEY_RIGHT Or PressedKey = KEY_D Then
+        Direction = World.WORLD_FACING_RIGHT
+    Else If PressedKey = KEY_DOWN Or PressedKey = KEY_S Then
+        Direction = World.WORLD_FACING_DOWN
+    Else If PressedKey = KEY_LEFT Or PressedKey = KEY_A Then
+        Direction = World.WORLD_FACING_LEFT
+    End If
+
+    If Direction <> 0 Then
+        Call BeginTopDownMove(Direction)
+    End If
+
+End Sub
+
+Sub BeginTopDownMove(MoveDirection As Number)
+
+    Dim DestinationX As Number
+    Dim DestinationY As Number
+
+    CurrentMap = MapForScene(World.CurrentScene(State))
+    DestinationX = PlayerMover.CellX + GameCore.DirectionX(MoveDirection)
+    DestinationY = PlayerMover.CellY + GameCore.DirectionY(MoveDirection)
+    OperationSucceeded = World.SetActorFacing(State, ACTOR_HERO, MoveDirection)
+    PlayerMover.Facing = MoveDirection
+
+    If TileMap.IsSolid(CurrentMap, DestinationX, DestinationY) Then
+        Status = "The archive collision layer blocks that cell."
+        Return
+    End If
+
+    If Not World.TryReserveDestination(State, ACTOR_HERO, DestinationX, DestinationY) Then
+        Status = "A closed door, chest, concealed wall, or NPC occupies that cell."
+        Return
+    End If
+
+    If Not GameCore.BeginMove(PlayerMover, MoveDirection, 6) Then
+        Call World.CancelReservedMove(State, ACTOR_HERO)
+    End If
+
+End Sub
+
+Sub UpdateTopDownMovement()
+
+    If Not PlayerMover.Moving Then
+        Return
+    End If
+
+    If GameCore.UpdateMove(PlayerMover, 1) Then
+
+        OperationSucceeded = World.CompleteReservedMove(State, ACTOR_HERO, PlayerMover.Facing)
+
+        If OperationSucceeded Then
+            Call ProcessArrival()
+        End If
+
+    End If
+
+    If Mode = MODE_DUNGEON And Not IsFirstPersonScene(World.CurrentScene(State)) Then
+        CurrentMap = MapForScene(World.CurrentScene(State))
+
+        Call Camera2D.Follow(Camera, GameCore.VisualX(PlayerMover, 64) + 32, GameCore.VisualY(PlayerMover, 64) + 32)
+    End If
+
+End Sub
+
+Sub ProcessArrival()
+
+    If IsFirstPersonScene(World.CurrentScene(State)) Then
+        Call ProcessFirstPersonArrival()
+    Else
+
+        Call ProcessTopDownArrival()
+    End If
+
+End Sub
+
+Sub ProcessFirstPersonArrival()
+
+    Dim SceneId As Number
+    Dim X As Number
+    Dim Y As Number
+
+    SceneId = World.CurrentScene(State)
+    X = World.ActorX(State, ACTOR_HERO)
+    Y = World.ActorY(State, ACTOR_HERO)
+
+    If (SceneId = SCENE_FP_1 And
+        X = 7 And
+        Y = 1) Then
+
+        Call ApplyDungeonSpawn(102, "Descended to Prism Vault B2.")
+
+    Else If (SceneId = SCENE_FP_2 And
+        X = 1 And
+        Y = 7) Then
+
+        Call ApplyDungeonSpawn(111, "Climbed to Prism Vault B1.")
+
+    Else If (SceneId = SCENE_FP_2 And
+        X = 7 And
+        Y = 1) Then
+
+        Call ApplyDungeonSpawn(103, "Descended to Prism Vault B3.")
+
+    Else If (SceneId = SCENE_FP_3 And
+        X = 1 And
+        Y = 7) Then
+
+        Call ApplyDungeonSpawn(112, "Climbed to Prism Vault B2.")
+
+    Else If (SceneId = SCENE_FP_2 And
+        X = 4 And
+        Y = 6) Then
+
+        Call ApplyDungeonSpawn(113, "A one-way chute dropped the party onto B3.")
+
+    Else If (SceneId = SCENE_FP_3 And
+        X = 7 And
+        Y = 7) Then
+
+        Call ApplyDungeonSpawn(114, "The prism warp returned the party to B1.")
+
+    Else If (SceneId = SCENE_FP_1 And
+        X = 1 And
+        Y = 7) Then
+
+        OperationSucceeded = World.ApplySpawn(State, ACTOR_HERO, 201)
+
+        Call SyncPresentation()
+
+        Status = "The party exited the Prism Vault into the top-down archive entrance."
+
+    Else If (SceneId = SCENE_FP_1 And
+        X = 5 And
+        Y = 5) Then
+
+        Call ApplyOneShotTrap(FLAG_FP_TRAP, 9, "A spent crystal snare clicks harmlessly.", "A crystal snare deals 9 damage once.")
+
+    Else If (SceneId = SCENE_FP_2 And
+        X = 3 And
+        Y = 6) Then
+
+        Call ApplyRepeatTrap("A repeating mist trap deals 3 damage on every completed entry.")
+
+    Else If (SceneId = SCENE_FP_3 And
+        X = 5 And
+        Y = 5) Then
+
+        Result = Encounters.Advance(State, 3, Encounters.Seed(State, 3))
+
+        If Result <> 0 Then
+            Call BeginEncounterPreview(Result)
+        Else
+            Status = "The first-person encounter zone advanced without triggering."
+        End If
+
+    Else
+        Status = "Moved one authoritative vault cell."
+
+    End If
+
+End Sub
+
+Sub ProcessTopDownArrival()
+
+    CurrentMap = MapForScene(World.CurrentScene(State))
+    RegionId = TileMap.RegionAt(CurrentMap, PlayerMover.CellX, PlayerMover.CellY)
+    TransitionId = World.TransitionAtRegion(State, RegionId)
+
+    If TransitionId <> 0 Then
+
+        OperationSucceeded = World.ActivateTransition(State, TransitionId)
+
+        Call SyncPresentation()
+
+        If RegionId = REGION_TOP_2_CHUTE Then
+            Status = "The one-way chute dropped the party from Archive B2 to B4."
+        Else If RegionId = REGION_TOP_3_WARP Then
+            Status = "The archive warp returned the party to B1."
+        Else
+            Status = "A stable stair transition changed the authoritative floor and spawn."
+        End If
+
+        Return
+
+    End If
+
+    If RegionId = REGION_TOP_1_EXIT Then
+
+        Mode = MODE_TITLE
+        Status = "The party escaped the Sunken Archive."
+
+    Else If RegionId = REGION_TOP_1_TRAP Then
+
+        Call ApplyOneShotTrap(FLAG_TOP_TRAP, 8, "The floor dart trap is already disarmed.", "A floor dart trap deals 8 damage once.")
+
+    Else If RegionId = REGION_TOP_2_REPEAT_TRAP Then
+
+        Call ApplyRepeatTrap("A repeating flame seal deals 3 damage on every completed entry.")
+
+    Else If RegionId = REGION_TOP_1_ENCOUNTER Then
+
+        Result = Encounters.Advance(State, 1, Encounters.Seed(State, 1))
+
+        If Result <> 0 Then
+            Call BeginEncounterPreview(Result)
+        Else
+            Status = "The encounter zone advanced without triggering."
+        End If
+
+    Else If RegionId = REGION_TOP_4_ENCOUNTER Then
+
+        Result = Encounters.Advance(State, 2, Encounters.Seed(State, 2))
+
+        If Result <> 0 Then
+            Call BeginEncounterPreview(Result)
+        Else
+            Status = "The deep encounter zone advanced without triggering."
+        End If
+
+    Else
+        Status = "Moved one collision-checked archive cell."
+
+    End If
+
+End Sub
+
+Sub ApplyDungeonSpawn(SpawnId As Number, Message As Text)
+
+    OperationSucceeded = World.ApplySpawn(State, ACTOR_HERO, SpawnId)
+
+    Call SyncPresentation()
+
+    Status = Message
+
+End Sub
+
+Sub ApplyOneShotTrap(FlagId As Number, Damage As Number, SpentMessage As Text, ActiveMessage As Text)
+
+    If Story.Flag(State, FlagId) Then
+
+        Status = SpentMessage
+
+    Else
+        OperationSucceeded = Characters.Damage(State, CHARACTER_HERO, Damage)
+        OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FlagId, True)
+        Status = ActiveMessage
+
+    End If
+
+End Sub
+
+Sub ApplyRepeatTrap(Message As Text)
+
+    OperationSucceeded = Characters.Damage(State, CHARACTER_HERO, 3)
+    OperationSucceeded = OperationSucceeded And Story.SetValue(State, VALUE_REPEAT_TRAPS, Story.Value(State, VALUE_REPEAT_TRAPS) + 1)
+    Status = Message
+
+End Sub
+
+Sub BeginEncounterPreview(EncounterId As Number)
+
+    OperationSucceeded = World.SetReturnLocation(State, World.CurrentScene(State), World.ActorX(State, ACTOR_HERO), World.ActorY(State, ACTOR_HERO), World.ActorFacingDirection(State, ACTOR_HERO))
+    OperationSucceeded = OperationSucceeded And Encounters.SetPendingEncounter(State, EncounterId)
+    Mode = MODE_ENCOUNTER
+    Status = "Encounter Preview only. Phase 9 battle resolution is intentionally absent."
+
+End Sub
+
+Sub InteractAhead()
+
+    TargetActor = World.FrontActor(State)
+
+    If TargetActor = 0 Then
+        Status = "Nothing interactive occupies the facing cell."
+        Return
+    End If
+
+    Select Case World.ActorInteraction(State, TargetActor)
+        Case INTERACTION_DOOR
+            OperationSucceeded = World.SetActorVisible(State, TargetActor, False)
+
+            If TargetActor = ACTOR_FP_DOOR Then
+                OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FLAG_FP_DOOR, True)
+            Else
+                OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FLAG_TOP_DOOR, True)
+            End If
+
+            Status = "The ordinary door opened; its traversable map cell is now exposed."
+        Case INTERACTION_LOCKED_DOOR
+
+            Call OpenLockedDoor(TargetActor)
+
+        Case INTERACTION_CHEST_GOLD
+
+            Call OpenGoldChest(TargetActor)
+
+        Case INTERACTION_CHEST_KEY
+
+            Call OpenKeyChest(TargetActor)
+
+        Case INTERACTION_CHEST_ITEM
+
+            Call OpenItemChest(TargetActor)
+
+        Case INTERACTION_HIDDEN
+
+            Call RevealHiddenPassage(TargetActor)
+
+        Case INTERACTION_NPC
+
+            Call OpenNpcDialogue(TargetActor)
+
+    End Select
+
+End Sub
+
+Sub OpenLockedDoor(ActorId As Number)
+
+    If Inventory.Quantity(State, ITEM_VAULT_KEY) <= 0 Then
+        Status = "The locked door needs the Prism Key from another floor."
+        Return
+    End If
+
+    OperationSucceeded = World.SetActorVisible(State, ActorId, False)
+
+    If ActorId = ACTOR_FP_LOCKED_DOOR Then
+        OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FLAG_FP_LOCKED_DOOR, True)
+    Else
+        OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FLAG_TOP_LOCKED_DOOR, True)
+    End If
+
+    Status = "The Prism Key opened the locked door without being consumed."
+
+End Sub
+
+Sub OpenGoldChest(ActorId As Number)
+
+    Dim FlagId As Number
+
+    FlagId = FLAG_FP_CHEST_GOLD
+
+    If ActorId = ACTOR_TOP_CHEST_GOLD Then
+        FlagId = FLAG_TOP_CHEST_GOLD
+    End If
+
+    If Story.Flag(State, FlagId) Then
+        Status = "The chest is already empty."
+        Return
+    End If
+
+    If Not Party.AddGold(State, 50) Then
+        Status = "Gold capacity rejected the reward; the chest remains closed."
+        Return
+    End If
+
+    OperationSucceeded = Story.SetFlag(State, FlagId, True)
+    OperationSucceeded = OperationSucceeded And World.SetActorVisible(State, ActorId, False)
+    Status = "The chest granted 50 Gold exactly once."
+
+End Sub
+
+Sub OpenKeyChest(ActorId As Number)
+
+    If Not Inventory.CanAddItem(State, ITEM_VAULT_KEY, 1) Then
+        Status = "Inventory preflight rejected the Prism Key; the chest remains closed."
+        Return
+    End If
+
+    OperationSucceeded = Inventory.AddItem(State, ITEM_VAULT_KEY, 1)
+    OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FLAG_FP_CHEST_KEY, True)
+    OperationSucceeded = OperationSucceeded And World.SetActorVisible(State, ActorId, False)
+    Status = "The chest granted the persistent Prism Key exactly once."
+
+End Sub
+
+Sub OpenItemChest(ActorId As Number)
+
+    Dim RequiredNewSlots As Number
+
+    RequiredNewSlots = 0
+
+    If Inventory.Quantity(State, ITEM_VAULT_KEY) = 0 Then
+        RequiredNewSlots = RequiredNewSlots + 1
+    End If
+
+    If Inventory.Quantity(State, ITEM_SUN_TONIC) = 0 Then
+        RequiredNewSlots = RequiredNewSlots + 1
+    End If
+
+    If Inventory.EntryCount(State) + RequiredNewSlots > RPG.RPG_MAX_INVENTORY_ENTRIES Then
+        Status = "Inventory needs room for both rewards; the chest remains closed."
+        Return
+    End If
+
+    If (Inventory.Quantity(State, ITEM_VAULT_KEY) = 0 And
+        Not Inventory.CanAddItem(State, ITEM_VAULT_KEY, 1)) Then
+        Status = "Inventory preflight rejected the Prism Key; the chest remains closed."
+        Return
+    End If
+
+    If Not Inventory.CanAddItem(State, ITEM_SUN_TONIC, 1) Then
+        Status = "Inventory preflight rejected the Sun Tonic; the chest remains closed."
+        Return
+    End If
+
+    OperationSucceeded = True
+
+    If Inventory.Quantity(State, ITEM_VAULT_KEY) = 0 Then
+        OperationSucceeded = Inventory.AddItem(State, ITEM_VAULT_KEY, 1)
+    End If
+
+    OperationSucceeded = OperationSucceeded And Inventory.AddItem(State, ITEM_SUN_TONIC, 1)
+    OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FLAG_TOP_CHEST_ITEM, True)
+    OperationSucceeded = OperationSucceeded And World.SetActorVisible(State, ActorId, False)
+    Status = "The chest granted the Prism Key and one Sun Tonic exactly once."
+
+End Sub
+
+Sub RevealHiddenPassage(ActorId As Number)
+
+    OperationSucceeded = World.SetActorVisible(State, ActorId, False)
+
+    If ActorId = ACTOR_FP_HIDDEN Then
+        OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FLAG_FP_HIDDEN, True)
+    Else
+        OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FLAG_TOP_HIDDEN, True)
+    End If
+
+    Status = "The suspicious wall receded and revealed a persistent passage."
+
+End Sub
+
+Sub OpenNpcDialogue(ActorId As Number)
+
+    Dim FlagId As Number
+
+    FlagId = FLAG_FP_NPC
+
+    If ActorId = ACTOR_TOP_NPC Then
+        FlagId = FLAG_TOP_NPC
+    End If
+
+    Call Dialogue.ClearPages(DialogueHandle)
+
+    If Story.Flag(State, FlagId) Then
+
+        If Inventory.Quantity(State, ITEM_VAULT_KEY) > 0 Then
+            OperationSucceeded = Dialogue.AddPage(DialogueHandle, "You returned with the Prism Key. The locked branch can now be opened without consuming it.")
+        Else
+            OperationSucceeded = Dialogue.AddPage(DialogueHandle, "You returned without the Prism Key. Search the dead-end reward branch beyond the alternate stair.")
+        End If
+
+        OperationSucceeded = OperationSucceeded And Dialogue.AddPage(DialogueHandle, "Open doors, emptied chests, trap state, and our conversation all survive SRPG 2 save/load.")
+
+    Else
+        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "The Prism Key opens either locked demonstration door. Search a chest before forcing the deeper route.")
+        OperationSucceeded = OperationSucceeded And Dialogue.AddPage(DialogueHandle, "Stairs are reciprocal. Chutes are one-way. The glowing seal is a warp, and suspicious walls may hide passages.")
+        OperationSucceeded = OperationSucceeded And Story.SetFlag(State, FlagId, True)
+
+    End If
+
+    OperationSucceeded = OperationSucceeded And Dialogue.Start(DialogueHandle, Timer())
+    Mode = MODE_DIALOGUE
+
+End Sub
+
+Sub HandleMenu(PressedKey As Number)
+
+    Event = MenuNavigator.HandleKey(CommandNavigator, PressedKey)
+
+    If Event = UI.UI_EVENT_ACCEPTED Then
+
+        Action = MenuNavigator.LastAcceptedValue(CommandNavigator)
+
+        Select Case Action
+            Case 1
+                Mode = MODE_DUNGEON
+
+                Call InteractAhead()
+
+            Case 2
+                InfoPage = 1
+                Mode = MODE_INFO
+            Case 3
+                InfoPage = 2
+                Mode = MODE_INFO
+            Case 4
+                Result = SaveGames.SaveGame(State, 1, 8)
+                Status = "Saved slot 1 inside the current dungeon floor."
+                Mode = MODE_DUNGEON
+            Case 5
+                Result = SaveGames.LoadGame(State, 1, 8)
+
+                If Result = RPG.RPG_RESULT_OK Then
+                    Call SyncPresentation()
+
+                    Status = "Loaded slot 1 transactionally inside the dungeon."
+                Else
+                    Status = "Slot 1 is missing or does not match schema 8."
+                End If
+
+                Mode = MODE_DUNGEON
+            Case 6
+
+                Call EscapeDungeon()
+
+            Case 7
+                Mode = MODE_DUNGEON
+        End Select
+
+    Else If Event = UI.UI_EVENT_CANCELLED Then
+
+        Mode = MODE_DUNGEON
+
+    End If
+
+End Sub
+
+Sub EscapeDungeon()
+
+    If IsFirstPersonScene(World.CurrentScene(State)) Then
+        OperationSucceeded = World.ApplySpawn(State, ACTOR_HERO, 201)
+        Status = "Escaped from the first-person interior to the top-down archive entrance."
+    Else
+        OperationSucceeded = World.ApplySpawn(State, ACTOR_HERO, 201)
+        Status = "Escaped to the Sunken Archive entrance with dungeon state preserved."
+    End If
+
+    Call SyncPresentation()
+
+    Mode = MODE_DUNGEON
+
+End Sub
+
+Sub HandleDialogue(PressedKey As Number)
+
+    If PressedKey = 0 Then
+        Return
+    End If
+
+    Event = Dialogue.HandleKey(DialogueHandle, PressedKey, Timer())
+
+    If Event = UI.UI_EVENT_COMPLETED Or Event = UI.UI_EVENT_CANCELLED Then
+        Mode = MODE_DUNGEON
+        Status = "Dialogue state is persistent and input returned to exploration."
+    End If
+
+End Sub
+
+Sub HandleInfo(PressedKey As Number)
+
+    If (PressedKey = KEY_ESCAPE Or
+        PressedKey = KEY_ENTER Or
+        PressedKey = KEY_SPACE) Then
+        Mode = MODE_MENU
+    End If
+
+End Sub
+
+Sub HandleEncounter(PressedKey As Number)
+
+    If (PressedKey = KEY_ESCAPE Or
+        PressedKey = KEY_ENTER Or
+        PressedKey = KEY_SPACE) Then
+
+        Call Encounters.ClearPendingEncounter(State)
+
+        OperationSucceeded = World.SetCurrentScene(State, World.ReturnScene(State))
+        OperationSucceeded = OperationSucceeded And World.SetActorProgress(State, ACTOR_HERO, World.ReturnScene(State), World.ReturnX(State), World.ReturnY(State), World.ReturnFacingDirection(State), True, World.ActorRouteStep(State, ACTOR_HERO))
+
+        Call SyncPresentation()
+
+        Mode = MODE_DUNGEON
+        Status = "Encounter Preview returned to the exact cell and facing."
+
+    End If
+
+End Sub
+
+Sub DrawTitle()
+
+    Clear Rgb(7, 12, 25)
+    Fill Rectangle 0, 270, 960, 270, Rgb(18, 27, 44)
+    Fill Quadrilateral 0, 0, 280, 120, 280, 420, 0, 540, Rgb(20, 66, 80)
+    Fill Quadrilateral 960, 0, 680, 120, 680, 420, 960, 540, Rgb(72, 38, 94)
+    Draw Text "SMILE 2.0" At 480, 36 Size 24 Color CYAN Centered
+    Draw Text "RPG Dungeon Gallery" At 480, 76 Size 43 Color WHITE Centered
+    Draw Text "One state model - two dungeon presentations" At 480, 130 Size 17 Color LIGHT_GRAY Centered
+
+    Call DrawTitleChoice(1, "Start First-Person Prism Vault", 210)
+    Call DrawTitleChoice(2, "Start Top-Down Sunken Archive", 270)
+    Call DrawTitleChoice(3, "Load Existing Game", 330)
+    Call DrawTitleChoice(4, "Exit", 390)
+
+    Draw Text Status At 480, 482 Size 15 Color YELLOW Centered
+
+End Sub
+
+Sub DrawTitleChoice(Index As Number, Label As Text, Y As Number)
+
+    If TitleSelection = Index Then
+        Fill Rounded Rectangle 250, Y - 10, 460, 44, 8, Rgb(35, 91, 105)
+        Draw Text Label At 480, Y Size 20 Color YELLOW Centered
+    Else
+        Draw Text Label At 480, Y Size 20 Color WHITE Centered
+    End If
+
+End Sub
+
+Sub DrawDungeon()
+
+    If IsFirstPersonScene(World.CurrentScene(State)) Then
+        Call DrawFirstPersonDungeon()
+    Else
+
+        Call DrawTopDownDungeon()
+    End If
+
+    Call DrawHud()
+
+End Sub
+
+Sub DrawHud()
+
+    Fill Rectangle 0, 0, 960, 40, Rgb(8, 15, 28)
+    Draw Text SceneName(World.CurrentScene(State)) At 18, 10 Size 17 Color CYAN
+    Draw Text FacingName(World.ActorFacingDirection(State, ACTOR_HERO)) At 520, 11 Size 14 Color YELLOW
+    Draw Text "Esc: Menu   Enter: Interact" At 700, 11 Size 14 Color WHITE
+    Fill Rectangle 0, 502, 960, 38, Rgb(8, 15, 28)
+    Draw Text Status At 18, 512 Size 14 Color YELLOW
+
+End Sub
+
+Function FacingName(Facing As Number) As Text
+
+    Select Case Facing
+        Case World.WORLD_FACING_UP
+            Return "Facing: North"
+        Case World.WORLD_FACING_RIGHT
+            Return "Facing: East"
+        Case World.WORLD_FACING_DOWN
+            Return "Facing: South"
+        Case World.WORLD_FACING_LEFT
+            Return "Facing: West"
+    End Select
+
+    Return "Facing: Unknown"
+
+End Function
+
+Function SceneName(SceneId As Number) As Text
+
+    Select Case SceneId
+        Case SCENE_FP_1
+            Return "Prism Vault B1 - First Person"
+        Case SCENE_FP_2
+            Return "Prism Vault B2 - First Person"
+        Case SCENE_FP_3
+            Return "Prism Vault B3 - First Person"
+        Case SCENE_TOP_1
+            Return "Sunken Archive B1 - Top Down"
+        Case SCENE_TOP_2
+            Return "Sunken Archive B2 - Top Down"
+        Case SCENE_TOP_3
+            Return "Sunken Archive B3 - Top Down"
+        Case SCENE_TOP_4
+            Return "Sunken Archive B4 - Top Down"
+    End Select
+
+    Return "Unknown Dungeon"
+
+End Function
+
+Function RelativeWorldX(Side As Number, Forward As Number, Facing As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim PlayerX As Number
+
+    PlayerX = World.ActorX(State, ACTOR_HERO)
+
+    If Facing = World.WORLD_FACING_UP Then
+        ReturnValue = PlayerX + Side
+
+        Return ReturnValue
+    Else If Facing = World.WORLD_FACING_RIGHT Then
+        ReturnValue = PlayerX + Forward
+
+        Return ReturnValue
+    Else If Facing = World.WORLD_FACING_DOWN Then
+        ReturnValue = PlayerX - Side
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = PlayerX - Forward
+
+    Return ReturnValue
+
+End Function
+
+Function RelativeWorldY(Side As Number, Forward As Number, Facing As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim PlayerY As Number
+
+    PlayerY = World.ActorY(State, ACTOR_HERO)
+
+    If Facing = World.WORLD_FACING_UP Then
+        ReturnValue = PlayerY - Forward
+
+        Return ReturnValue
+    Else If Facing = World.WORLD_FACING_RIGHT Then
+        ReturnValue = PlayerY + Side
+
+        Return ReturnValue
+    Else If Facing = World.WORLD_FACING_DOWN Then
+        ReturnValue = PlayerY + Forward
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = PlayerY - Side
+
+    Return ReturnValue
+
+End Function
+
+Function VisibleActorAt(SceneId As Number, X As Number, Y As Number) As Number
+
+    Dim Index As Number
+    Dim ActorId As Number
+
+    For Index = 0 To World.ActorCount(State) - 1
+
+        ActorId = World.ActorIdAt(State, Index)
+
+        If (ActorId <> ACTOR_HERO And
+            World.ActorScene(State, ActorId) = SceneId And
+            World.ActorX(State, ActorId) = X And
+            World.ActorY(State, ActorId) = Y And
+            World.ActorIsVisible(State, ActorId)) Then
+            Return ActorId
+        End If
+
+    End For
+
+    Return 0
+
+End Function
+
+Function BlocksFirstPersonView(SceneId As Number, X As Number, Y As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = FpCellAt(SceneId, X, Y) = FP_WALL Or VisibleActorAt(SceneId, X, Y) <> 0
+
+    Return ReturnValue
+
+End Function
+
+Sub DrawFirstPersonDungeon()
+
+    Dim SceneId As Number
+    Dim Facing As Number
+    Dim Depth As Number
+    Dim X As Number
+    Dim Y As Number
+    Dim VisibleDepth As Number
+    Dim FrontActorId As Number
+
+    SceneId = World.CurrentScene(State)
+    Facing = World.ActorFacingDirection(State, ACTOR_HERO)
+    Clear Rgb(4, 8, 18)
+    Fill Rectangle 0, 40, 960, 230, Rgb(13, 27, 49)
+    Fill Rectangle 0, 270, 960, 232, Rgb(22, 18, 35)
+    VisibleDepth = VIEW_DEPTH
+
+    For Depth = 1 To VIEW_DEPTH
+
+        X = RelativeWorldX(0, Depth, Facing)
+        Y = RelativeWorldY(0, Depth, Facing)
+
+        If BlocksFirstPersonView(SceneId, X, Y) Then
+            VisibleDepth = Depth
+            Exit For
+        End If
+
+    End For
+
+    For Depth = VisibleDepth - 1 Down To 0
+        Call DrawFirstPersonSection(SceneId, Facing, Depth)
+    End For
+
+    X = RelativeWorldX(0, VisibleDepth, Facing)
+    Y = RelativeWorldY(0, VisibleDepth, Facing)
+    FrontActorId = VisibleActorAt(SceneId, X, Y)
+
+    If FrontActorId <> 0 Then
+        Call DrawFirstPersonActor(FrontActorId, VisibleDepth)
+    Else If FpCellAt(SceneId, X, Y) = FP_WALL Then
+        Call DrawFrontWall(VisibleDepth, Rgb(61, 83, 118))
+    End If
+
+    Draw Text "Up/W forward  Down/S backward  Left/A and Right/D turn" At 480, 468 Size 14 Color LIGHT_GRAY Centered
+
+End Sub
+
+Sub DrawFirstPersonSection(SceneId As Number, Facing As Number, Depth As Number)
+
+    Dim NearLeft As Number
+    Dim NearRight As Number
+    Dim FarLeft As Number
+    Dim FarRight As Number
+    Dim LeftX As Number
+    Dim LeftY As Number
+    Dim RightX As Number
+    Dim RightY As Number
+
+    NearLeft = 480 - ViewHalfWidth[Depth]
+    NearRight = 480 + ViewHalfWidth[Depth]
+    FarLeft = 480 - ViewHalfWidth[Depth + 1]
+    FarRight = 480 + ViewHalfWidth[Depth + 1]
+    Fill Quadrilateral NearLeft, ViewTop[Depth], NearRight, ViewTop[Depth], FarRight, ViewTop[Depth + 1], FarLeft, ViewTop[Depth + 1], Rgb(13, 27, 49)
+    Fill Quadrilateral NearLeft, ViewBottom[Depth], FarLeft, ViewBottom[Depth + 1], FarRight, ViewBottom[Depth + 1], NearRight, ViewBottom[Depth], Rgb(22, 18, 35)
+    Draw Line NearLeft, ViewBottom[Depth], FarLeft, ViewBottom[Depth + 1], Rgb(98, 146, 174)
+    Draw Line NearRight, ViewBottom[Depth], FarRight, ViewBottom[Depth + 1], Rgb(98, 146, 174)
+
+    LeftX = RelativeWorldX(-1, Depth, Facing)
+    LeftY = RelativeWorldY(-1, Depth, Facing)
+    RightX = RelativeWorldX(1, Depth, Facing)
+    RightY = RelativeWorldY(1, Depth, Facing)
+
+    If BlocksFirstPersonView(SceneId, LeftX, LeftY) Then
+        Fill Quadrilateral NearLeft, ViewTop[Depth], FarLeft, ViewTop[Depth + 1], FarLeft, ViewBottom[Depth + 1], NearLeft, ViewBottom[Depth], Rgb(47, 68, 102)
+        Draw Quadrilateral NearLeft, ViewTop[Depth], FarLeft, ViewTop[Depth + 1], FarLeft, ViewBottom[Depth + 1], NearLeft, ViewBottom[Depth], Rgb(98, 146, 174)
+    End If
+
+    If BlocksFirstPersonView(SceneId, RightX, RightY) Then
+        Fill Quadrilateral FarRight, ViewTop[Depth + 1], NearRight, ViewTop[Depth], NearRight, ViewBottom[Depth], FarRight, ViewBottom[Depth + 1], Rgb(42, 61, 94)
+        Draw Quadrilateral FarRight, ViewTop[Depth + 1], NearRight, ViewTop[Depth], NearRight, ViewBottom[Depth], FarRight, ViewBottom[Depth + 1], Rgb(98, 146, 174)
+    End If
+
+End Sub
+
+Sub DrawFrontWall(Depth As Number, FillColor As Number)
+
+    Dim Left As Number
+    Dim Right As Number
+
+    Left = 480 - ViewHalfWidth[Depth]
+    Right = 480 + ViewHalfWidth[Depth]
+    Fill Rectangle Left, ViewTop[Depth], Right - Left, ViewBottom[Depth] - ViewTop[Depth], FillColor
+    Draw Rectangle Left, ViewTop[Depth], Right - Left, ViewBottom[Depth] - ViewTop[Depth], Rgb(118, 178, 199)
+    Draw Line 480, ViewTop[Depth], 480, ViewBottom[Depth], Rgb(78, 119, 153)
+
+End Sub
+
+Sub DrawFirstPersonActor(ActorId As Number, Depth As Number)
+
+    Dim Interaction As Number
+    Dim FillColor As Number
+    Dim Label As Text
+
+    Interaction = World.ActorInteraction(State, ActorId)
+    FillColor = Rgb(120, 78, 52)
+    Label = "DOOR"
+
+    If Interaction = INTERACTION_LOCKED_DOOR Then
+        FillColor = Rgb(145, 104, 35)
+        Label = "LOCKED"
+    Else If (Interaction = INTERACTION_CHEST_GOLD Or
+        Interaction = INTERACTION_CHEST_KEY Or
+        Interaction = INTERACTION_CHEST_ITEM) Then
+        FillColor = Rgb(167, 112, 38)
+        Label = "CHEST"
+    Else If Interaction = INTERACTION_HIDDEN Then
+        FillColor = Rgb(61, 83, 118)
+        Label = "WALL?"
+    Else If Interaction = INTERACTION_NPC Then
+        FillColor = Rgb(66, 132, 112)
+        Label = "KEEPER"
+    End If
+
+    Call DrawFrontWall(Depth, FillColor)
+
+    Draw Text Label At 480, 258 Size Max(12, 30 - Depth * 3) Color YELLOW Centered
+
+End Sub
+
+Sub DrawTopDownDungeon()
+
+    Dim SceneId As Number
+    Dim ActorIndex As Number
+    Dim ActorId As Number
+    Dim WalkAnimation As Number
+    Dim WalkFrame As Number
+
+    SceneId = World.CurrentScene(State)
+    CurrentMap = MapForScene(SceneId)
+    WalkAnimation = WalkAnimations[PlayerMover.Facing - 1]
+    WalkFrame = 1
+
+    If PlayerMover.Moving Then
+        WalkFrame = Animation.CurrentFrame(WalkAnimation, AnimationClock)
+    End If
+
+    Clear Rgb(5, 10, 18)
+
+    Call TileMap.DrawLayerSmooth(CurrentMap, GameCore.GAME_LAYER_GROUND, Tileset, Camera.X, Camera.Y, 960, 540)
+    Call TileMap.DrawLayerSmooth(CurrentMap, GameCore.GAME_LAYER_DETAIL, Tileset, Camera.X, Camera.Y, 960, 540)
+
+    For ActorIndex = 0 To World.ActorCount(State) - 1
+
+        ActorId = World.ActorIdAt(State, ActorIndex)
+
+        If (ActorId <> ACTOR_HERO And
+            World.ActorScene(State, ActorId) = SceneId And
+            World.ActorIsVisible(State, ActorId)) Then
+            Call DrawTopDownActor(ActorId)
+        End If
+
+    End For
+
+    If Party.PartyCount(State) > 1 Then
+        Draw Image CompanionImage From Animation.SourceX(WalkAnimation, WalkFrame), Animation.SourceY(WalkAnimation, WalkFrame) Size Animation.SourceWidth(WalkAnimation, WalkFrame) By Animation.SourceHeight(WalkAnimation, WalkFrame) At GameCore.VisualX(PlayerMover, 64) - GameCore.DirectionX(PlayerMover.Facing) * 30 - Camera.X + 32, GameCore.VisualY(PlayerMover, 64) - GameCore.DirectionY(PlayerMover.Facing) * 30 - Camera.Y + 64 Size 58 By 78 Anchor 29, 78 Filter Smooth
+    End If
+
+    Draw Image HeroImage From Animation.SourceX(WalkAnimation, WalkFrame), Animation.SourceY(WalkAnimation, WalkFrame) Size Animation.SourceWidth(WalkAnimation, WalkFrame) By Animation.SourceHeight(WalkAnimation, WalkFrame) At GameCore.VisualX(PlayerMover, 64) - Camera.X + 32, GameCore.VisualY(PlayerMover, 64) - Camera.Y + 64 Size 64 By 86 Anchor Animation.AnchorX(WalkAnimation), Animation.AnchorY(WalkAnimation) Filter Smooth
+
+    Call TileMap.DrawLayerSmooth(CurrentMap, GameCore.GAME_LAYER_FOREGROUND, Tileset, Camera.X, Camera.Y, 960, 540)
+
+End Sub
+
+Sub DrawTopDownActor(ActorId As Number)
+
+    Dim ScreenX As Number
+    Dim ScreenY As Number
+    Dim Interaction As Number
+
+    ScreenX = World.ActorX(State, ActorId) * 64 - Camera.X
+    ScreenY = World.ActorY(State, ActorId) * 64 - Camera.Y
+    Interaction = World.ActorInteraction(State, ActorId)
+
+    If Interaction = INTERACTION_NPC Then
+
+        Draw Image NpcImage From 96, (World.ActorFacingDirection(State, ActorId) - 1) * 128 Size 96 By 128 At ScreenX + 32, ScreenY + 64 Size 64 By 86 Anchor 32, 86 Filter Smooth
+
+    Else If (Interaction = INTERACTION_CHEST_GOLD Or
+        Interaction = INTERACTION_CHEST_KEY Or
+        Interaction = INTERACTION_CHEST_ITEM) Then
+
+        Fill Rounded Rectangle ScreenX + 10, ScreenY + 24, 44, 32, 6, Rgb(163, 105, 36)
+        Draw Rounded Rectangle ScreenX + 10, ScreenY + 24, 44, 32, 6, YELLOW
+
+    Else If Interaction = INTERACTION_HIDDEN Then
+
+        Fill Rectangle ScreenX, ScreenY, 64, 64, Rgb(55, 74, 103)
+        Draw Rectangle ScreenX, ScreenY, 64, 64, Rgb(105, 151, 181)
+
+    Else
+        Fill Rectangle ScreenX + 8, ScreenY, 48, 64, Rgb(103, 62, 43)
+        Draw Rectangle ScreenX + 8, ScreenY, 48, 64, YELLOW
+
+        If Interaction = INTERACTION_LOCKED_DOOR Then
+            Fill Rectangle ScreenX + 27, ScreenY + 28, 10, 15, Rgb(232, 190, 62)
+        End If
+
+    End If
+
+End Sub
+
+Sub DrawInformation()
+
+    Fill Rectangle 105, 75, 750, 390, Rgb(12, 20, 35)
+    Draw Rectangle 105, 75, 750, 390, Rgb(108, 224, 205)
+
+    If InfoPage = 1 Then
+
+        Draw Text "Character and Party" At 145, 110 Size 28 Color CYAN
+        Draw Text Characters.Name(State, CHARACTER_HERO) At 150, 170 Size 21 Color YELLOW
+        Draw Text "Level" At 150, 212 Size 18 Color LIGHT_GRAY
+        Draw Number Characters.Level(State, CHARACTER_HERO) At 270, 212 Size 18 Color WHITE
+        Draw Text "HP" At 150, 248 Size 18 Color LIGHT_GRAY
+        Draw Number Characters.Health(State, CHARACTER_HERO) At 270, 248 Size 18 Color WHITE
+        Draw Text "Strength" At 150, 284 Size 18 Color LIGHT_GRAY
+        Draw Number Characters.Strength(State, CHARACTER_HERO) At 270, 284 Size 18 Color WHITE
+        Draw Text "Party members" At 150, 320 Size 18 Color LIGHT_GRAY
+        Draw Number Party.PartyCount(State) At 320, 320 Size 18 Color WHITE
+        Draw Text "Gold" At 150, 356 Size 18 Color LIGHT_GRAY
+        Draw Number Party.Gold(State) At 270, 356 Size 18 Color WHITE
+
+    Else
+        Draw Text "Inventory and Dungeon State" At 145, 110 Size 28 Color CYAN
+        Draw Text "Prism Key" At 150, 180 Size 19 Color LIGHT_GRAY
+        Draw Number Inventory.Quantity(State, ITEM_VAULT_KEY) At 360, 180 Size 19 Color YELLOW
+        Draw Text "Sun Tonic" At 150, 225 Size 19 Color LIGHT_GRAY
+        Draw Number Inventory.Quantity(State, ITEM_SUN_TONIC) At 360, 225 Size 19 Color YELLOW
+        Draw Text "Repeat traps entered" At 150, 270 Size 19 Color LIGHT_GRAY
+        Draw Number Story.Value(State, VALUE_REPEAT_TRAPS) At 390, 270 Size 19 Color YELLOW
+        Draw Text "Current scene" At 150, 315 Size 19 Color LIGHT_GRAY
+        Draw Number World.CurrentScene(State) At 360, 315 Size 19 Color YELLOW
+        Draw Text "Cell X / Y" At 150, 360 Size 19 Color LIGHT_GRAY
+        Draw Number World.ActorX(State, ACTOR_HERO) At 310, 360 Size 19 Color YELLOW
+        Draw Number World.ActorY(State, ACTOR_HERO) At 370, 360 Size 19 Color YELLOW
+
+    End If
+
+    Draw Text "Enter / Space / Escape returns to the dungeon menu" At 480, 420 Size 16 Color WHITE Centered
+
+End Sub
+
+Sub DrawEncounter()
+
+    Clear Rgb(8, 12, 24)
+    Fill Rectangle 0, 300, 960, 240, Rgb(36, 24, 45)
+    Draw Image EnemyImage At 660, 440 Size 340 By 340 Anchor 170, 340 Filter Smooth
+    Fill Rectangle 45, 55, 500, 165, Rgb(12, 20, 35)
+    Draw Rectangle 45, 55, 500, 165, Rgb(108, 224, 205)
+    Draw Text "Encounter Preview" At 75, 82 Size 30 Color CYAN
+    Draw Text "Pending encounter" At 75, 135 Size 20 Color LIGHT_GRAY
+    Draw Number Encounters.PendingEncounter(State) At 285, 135 Size 20 Color YELLOW
+    Draw Text "No turn order, attacks, damage formula, AI, rewards, victory, or defeat." At 75, 180 Size 15 Color WHITE
+    Fill Rectangle 45, 455, 870, 50, Rgb(12, 20, 35)
+    Draw Text "Enter / Space / Escape returns to the exact dungeon cell and facing" At 480, 470 Size 18 Color WHITE Centered
+
+End Sub

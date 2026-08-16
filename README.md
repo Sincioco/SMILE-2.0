@@ -125,6 +125,8 @@ Phase 7 adds `Smile.Game` 1.0.0 for reusable movement, animation, SMILE-MAP 1, c
 
 Phase 7.1 advances `Smile.RPG` to 1.1.1 and makes visible-solid occupancy a world invariant across definitions, reveals, spawns, transitions, direct progress restoration, resets, and format-2 loads. Save restoration validates the complete final actor layout, preserves transient actors and reservations, applies persistent actors as one hidden batch, and rolls every RPG module and active reservation back after an unexpected apply failure. `CurrentScene` and `ControlledActor` now remain coherent whenever both are nonzero. The map and save formats remain SMILE-MAP 1 and SRPG 2 with SRPG 1 reads.
 
+Phase 8 proves that those existing packages can compose complete dungeon exploration without a new public API or persistence format. `examples\RpgDungeonGallery` contains an original three-floor cardinal first-person dungeon and four-floor top-down dungeon with doors, locked doors, keys, treasure and Gold, traps, a hidden passage, stairs, a chute, a warp, state-aware NPC dialogue, escape, encounter preview, and in-dungeon save/load. `examples\Phase8DungeonStateTests` verifies the presentation-independent state composition through both project and package references. See `docs\language\phase8-rpg-dungeons.md` and `docs\architecture\phase8-rpg-dungeon-gap-matrix.md`.
+
 Build the Phase 7 packages, state proof, and original world gallery:
 
 ```bat
@@ -132,6 +134,14 @@ artifacts\compiler\smilec.exe --project libraries\Smile.Game\Smile.Game.smilelib
 artifacts\compiler\smilec.exe --project libraries\Smile.RPG\Smile.RPG.smilelibproj --target library -o artifacts\libraries\Smile.RPG.smilelib
 artifacts\compiler\smilec.exe --project examples\Phase7WorldStateTests\Phase7WorldStateTests.smileproj --target windows-x64 -o artifacts\tests\Phase7WorldStateTests.exe
 artifacts\compiler\smilec.exe --project examples\RpgWorldGallery\RpgWorldGallery.smileproj --target windows-x64 --graphics DirectX -o artifacts\games\RpgWorldGallery-DirectX\RpgWorldGallery.exe
+```
+
+Build the Phase 8 dungeon state proof and original gallery:
+
+```bat
+artifacts\compiler\smilec.exe --project examples\Phase8DungeonStateTests\Phase8DungeonStateTests.smileproj --target windows-x64 -o artifacts\tests\Phase8DungeonStateTests.exe
+artifacts\compiler\smilec.exe --project examples\RpgDungeonGallery\RpgDungeonGallery.smileproj --target windows-x64 --graphics DirectX -o artifacts\games\RpgDungeonGallery-DirectX\RpgDungeonGallery.exe
+artifacts\compiler\smilec.exe --project examples\RpgDungeonGallery\RpgDungeonGallery.smileproj --target web --output-dir artifacts\web\RpgDungeonGallery
 ```
 
 Loose-file builds can add a built package with repeated `--library <path.smilelib>`. Project builds read `<SmileProjectReference>` and `<SmileLibraryReference>` items, build project dependencies in deterministic order, reject cycles, and reuse a referenced project package only when its identity, modules, normalized source hashes, and direct dependency identities match the current library project. Imports follow direct provider boundaries: application and library-project sources see only their own modules and direct references, package sources see only exact manifest dependencies, and loose roots see every package supplied directly with `--library`.
