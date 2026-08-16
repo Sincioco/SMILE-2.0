@@ -19,6 +19,39 @@ Run("DirectX backend parses", () => Equal(SmileGraphicsBackend.DirectX,
 Run("Backend values follow existing case-insensitive value handling", () => Equal(
     SmileGraphicsBackend.DirectX,
     Parse("<PropertyGroup><GraphicsBackend>directx</GraphicsBackend></PropertyGroup>").GraphicsBackend));
+Run("Comment Selection comments every selected nonblank SMILE line", () =>
+{
+    const string source = "If True Then\r\n    Print \"A\"\r\n\r\nEnd If\r\nPrint \"B\"\r\n";
+    var selectionLength = source.IndexOf("Print \"B\"", StringComparison.Ordinal);
+    var result = ApplyCommentEdits(source,
+        SmileCommentService.GetEdits(source, 0, selectionLength, SmileCommentMode.Comment));
+    Equal("'If True Then\r\n    'Print \"A\"\r\n\r\n'End If\r\nPrint \"B\"\r\n", result);
+});
+Run("Uncomment Selection exactly restores editor-generated comments", () =>
+{
+    const string commented = "'If True Then\n    'Print \"A\"\n'End If\n";
+    var result = ApplyCommentEdits(commented,
+        SmileCommentService.GetEdits(commented, 0, commented.Length, SmileCommentMode.Uncomment));
+    Equal("If True Then\n    Print \"A\"\nEnd If\n", result);
+});
+Run("Toggle Line Comment comments mixed selections and then uncomments them", () =>
+{
+    const string mixed = "'Dim A As Number\nDim B As Number\n";
+    var commented = ApplyCommentEdits(mixed,
+        SmileCommentService.GetEdits(mixed, 0, mixed.Length, SmileCommentMode.Toggle));
+    Equal("''Dim A As Number\n'Dim B As Number\n", commented);
+    var restored = ApplyCommentEdits(commented,
+        SmileCommentService.GetEdits(commented, 0, commented.Length, SmileCommentMode.Toggle));
+    Equal(mixed, restored);
+});
+Run("Comment Selection with an empty selection comments the caret line", () =>
+{
+    const string source = "Dim A As Number\n    Dim B As Number\n";
+    var caret = source.IndexOf("B As", StringComparison.Ordinal);
+    var result = ApplyCommentEdits(source,
+        SmileCommentService.GetEdits(source, caret, 0, SmileCommentMode.Comment));
+    Equal("Dim A As Number\n    'Dim B As Number\n", result);
+});
 Run("Unknown backend reports a clear diagnostic", () => Throws(
     () => Parse("<PropertyGroup><GraphicsBackend>Vulkan</GraphicsBackend></PropertyGroup>"),
     "Unknown GraphicsBackend value 'Vulkan'. Expected Auto, GDI, or DirectX."));
@@ -3088,10 +3121,10 @@ Run("VSIX templates render localized identity metadata within the aligned header
     var border = gameTemplate.Split('\n')[0].TrimEnd('\r');
     var rendered = gameTemplate.Replace("$smileuser$", "Sin".PadRight(69), StringComparison.Ordinal)
         .Replace("$smiledate$", "August 15, 2026".PadRight(69), StringComparison.Ordinal)
-        .Replace("$smileversion$", "2.0.43", StringComparison.Ordinal);
+        .Replace("$smileversion$", "2.0.44", StringComparison.Ordinal);
     var header = rendered.Split('\n').Take(9).Select(line => line.TrimEnd('\r')).ToArray();
     Equal("' Programmed By: " + "Sin".PadRight(69) + "Version: 0.0.1", header[3]);
-    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.43", header[4]);
+    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.44", header[4]);
     Equal(header[3].IndexOf("Version:", StringComparison.Ordinal) + "Version".Length,
         header[4].IndexOf("SMILE:", StringComparison.Ordinal) + "SMILE".Length);
     Equal(true, header.All(line => line.Length <= border.Length));
@@ -3104,15 +3137,40 @@ Run("VSIX templates render localized identity metadata within the aligned header
     foreach (var manifest in new[] { gameManifest, consoleManifest })
     {
         Equal(true, manifest.Contains("SmileProjectTemplateWizard", StringComparison.Ordinal));
-        Equal(true, manifest.Contains("Version=2.0.43.0", StringComparison.Ordinal));
+        Equal(true, manifest.Contains("Version=2.0.44.0", StringComparison.Ordinal));
     }
     foreach (var applicationProject in new[] { gameProject, consoleProject })
         Equal(true, applicationProject.Contains("<ApplicationId>$smileapplicationid$</ApplicationId>", StringComparison.Ordinal));
     Equal(false, libraryProject.Contains("ApplicationId", StringComparison.Ordinal));
     Equal(true, wizard.Contains("\"smile.app.a\" + Guid.NewGuid().ToString(\"N\")", StringComparison.Ordinal));
     Equal(true, wizard.Contains("ToString(\"D\", CultureInfo.CurrentCulture)", StringComparison.Ordinal));
-    Equal(true, project.Contains("<Version>2.0.43</Version>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<Version>2.0.44</Version>", StringComparison.Ordinal));
     Equal(true, vsixManifest.Contains("Type=\"Microsoft.VisualStudio.Assembly\"", StringComparison.Ordinal));
+});
+
+Run("VSIX registers SMILE line comments with the Visual Studio editor", () =>
+{
+    var configuration = File.ReadAllText("src/Smile.VisualStudio/smile-language-configuration.json");
+    var registration = File.ReadAllText("src/Smile.VisualStudio/Smile.LanguageConfiguration.pkgdef");
+    var project = File.ReadAllText("src/Smile.VisualStudio/Smile.VisualStudio.csproj");
+    var manifest = File.ReadAllText("src/Smile.VisualStudio/source.extension.vsixmanifest");
+    var handler = File.ReadAllText("src/Smile.VisualStudio/SmileCommentCommandHandler.cs");
+    Equal(true, configuration.Contains("\"lineComment\": \"'\"", StringComparison.Ordinal));
+    Equal(true, registration.Contains("TextMate\\LanguageConfiguration\\ContentTypeMapping",
+        StringComparison.Ordinal));
+    Equal(true, registration.Contains("\"SMILE 2.0\"=\"$PackageFolder$\\smile-language-configuration.json\"",
+        StringComparison.Ordinal));
+    foreach (var payload in new[] { "smile-language-configuration.json", "Smile.LanguageConfiguration.pkgdef" })
+    {
+        Equal(true, project.Contains($"<Content Include=\"{payload}\">", StringComparison.Ordinal));
+        Equal(true, project.Contains("<IncludeInVSIX>true</IncludeInVSIX>", StringComparison.Ordinal));
+    }
+    Equal(true, manifest.Contains("Type=\"Microsoft.VisualStudio.VsPackage\" Path=\"Smile.LanguageConfiguration.pkgdef\"",
+        StringComparison.Ordinal));
+    foreach (var command in new[] { "CommentSelectionCommandArgs", "UncommentSelectionCommandArgs",
+        "ToggleLineCommentCommandArgs" })
+        Equal(true, handler.Contains($"IChainedCommandHandler<{command}>", StringComparison.Ordinal));
+    Equal(true, handler.Contains("CommandState.Available", StringComparison.Ordinal));
 });
 
 Run("Smile.UI 1.1.3 publishes canonical Insets fields and the Phase 5.2.2 hardening", () =>
@@ -3218,6 +3276,14 @@ void Equal<T>(T expected, T actual)
 {
     if (!EqualityComparer<T>.Default.Equals(expected, actual))
         throw new InvalidOperationException($"Expected {expected}, found {actual}.");
+}
+
+string ApplyCommentEdits(string source, IReadOnlyList<SmileCommentEdit> edits)
+{
+    var result = source;
+    foreach (var edit in edits.OrderByDescending(edit => edit.Position))
+        result = result.Remove(edit.Position, edit.DeleteLength).Insert(edit.Position, edit.InsertText);
+    return result;
 }
 
 void Throws(Action action, string expectedMessage)
