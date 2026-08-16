@@ -127,6 +127,8 @@ Phase 7.1 advances `Smile.RPG` to 1.1.1 and makes visible-solid occupancy a worl
 
 Phase 8 proves that those existing packages can compose complete dungeon exploration without a new public API or persistence format. `examples\RpgDungeonGallery` contains an original three-floor cardinal first-person dungeon and four-floor top-down dungeon with doors, locked doors, keys, treasure and Gold, traps, a hidden passage, stairs, a chute, a warp, state-aware NPC dialogue, escape, encounter preview, and in-dungeon save/load. `examples\Phase8DungeonStateTests` verifies the presentation-independent state composition through both project and package references. See `docs\language\phase8-rpg-dungeons.md` and `docs\architecture\phase8-rpg-dungeon-gap-matrix.md`.
 
+Phase 8.1 hardens the gallery with one application-local workflow source consumed by production and focused tests, all-or-nothing/idempotent event mutations, explicit result-aware UI status, load-time Story/actor projection reconciliation, a command lock during top-down interpolation, cumulative initialization gating, disposable post-mutation fault injection, and complete first-person/top-down progression modeling. It changes no public library API or persistence format. See `docs\implementation\phase8.1-dungeon-event-hardening-report.md`.
+
 Build the Phase 7 packages, state proof, and original world gallery:
 
 ```bat

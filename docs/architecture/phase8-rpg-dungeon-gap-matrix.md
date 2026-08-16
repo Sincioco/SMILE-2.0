@@ -18,6 +18,8 @@ This matrix was completed before Phase 8 production code changed. It compares th
 
 ## Result
 
-No generic API gap is proven. Phase 8 therefore keeps `Smile.Game` at 1.0.0, `Smile.RPG` at 1.1.1, SMILE-MAP writes/reads at 1, SRPG writes at 2 with reads at 1/2, `.smilelib` at format 5, and the VSIX at 2.0.45. The permanent work is an original application-level composition, focused regression coverage, documentation, artifact integration, and private local validation.
+No generic API gap is proven. The Phase 8.1 audit likewise found application workflow defects rather than a reusable package-level absence. Transaction orchestration therefore remains in the application-local `RpgDungeonGallery.Workflow` module shared verbatim with focused tests; no `Smile.RPG.Dungeons` API or generic transaction framework was added.
+
+Phase 8.1 keeps `Smile.Game` at 1.0.0, `Smile.RPG` at 1.1.1, SMILE-MAP writes/reads at 1, SRPG writes at 2 with reads at 1/2, and `.smilelib` at format 5. The repository had already advanced the VSIX to 2.0.46 for an unrelated Visual Studio fix before this pass; Phase 8.1 preserves that actual version and changes no shipped VSIX payload.
 
 Explicitly deferred: pathfinding, a second actor/graph/inventory/persistence system, quest DSLs, raycasting or general 3D expansion, and all Phase 9 battle resolution.
