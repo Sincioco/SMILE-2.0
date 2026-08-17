@@ -661,6 +661,41 @@ Public Function TileAt(MapHandle As Number, Layer As Number, CellX As Number, Ce
 
 End Function
 
+''' Replaces one Ground, Detail, or Foreground tile in a loaded map.
+Public Function SetTile(MapHandle As Number, Layer As Number, CellX As Number, CellY As Number, TileId As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Offset As Number
+
+    Slot = MapSlot(MapHandle)
+    Offset = CellOffset(MapHandle, CellX, CellY)
+
+    If (Slot < 0 Or
+        Offset < 0 Or
+        TileId < 0 Or
+        TileId > TILE_MAP_MAX_TILE_ID) Then
+        Return False
+    End If
+
+    Select Case Layer
+        Case 1
+            GroundValues[Slot, Offset] = TileId
+
+            Return True
+        Case 2
+            DetailValues[Slot, Offset] = TileId
+
+            Return True
+        Case 3
+            ForegroundValues[Slot, Offset] = TileId
+
+            Return True
+    End Select
+
+    Return False
+
+End Function
+
 ''' Returns True for boundaries or nonzero collision categories.
 Public Function IsSolid(MapHandle As Number, CellX As Number, CellY As Number) As Boolean
 
@@ -702,6 +737,28 @@ Public Function CollisionAt(MapHandle As Number, CellX As Number, CellY As Numbe
     ReturnValue = CollisionValues[Slot, Offset]
 
     Return ReturnValue
+
+End Function
+
+''' Replaces one collision category in a loaded map; zero is walkable and 1 through 15 are solid.
+Public Function SetCollision(MapHandle As Number, CellX As Number, CellY As Number, Category As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Offset As Number
+
+    Slot = MapSlot(MapHandle)
+    Offset = CellOffset(MapHandle, CellX, CellY)
+
+    If (Slot < 0 Or
+        Offset < 0 Or
+        Category < 0 Or
+        Category > 15) Then
+        Return False
+    End If
+
+    CollisionValues[Slot, Offset] = Category
+
+    Return True
 
 End Function
 

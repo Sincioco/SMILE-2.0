@@ -1,0 +1,391 @@
+''' Sin Star I Aurora Settlement town plate, collision map, camera, and drawing.
+Module SinStarI.TownScreen
+
+Option Explicit
+
+Import Smile.Game.Core As GameCore
+Import Smile.Game.TileMap As TileMap
+Import Smile.Game.Camera2D As Camera2D
+Import Smile.Game.Animation As Animation
+
+Private Const VIEW_WIDTH = 1280
+Private Const VIEW_HEIGHT = 720
+Private Const TOWN_PLATE_WIDTH = 4160
+Private Const TOWN_PLATE_HEIGHT = 3200
+Private Const MOVE_DURATION = 32
+Private Const WALK_FRAME_DURATION = 24
+Private Const CHARACTER_2_WALK_FRAME_DURATION = 10
+Private Const HERO_SOURCE_WIDTH = 256
+Private Const HERO_SOURCE_HEIGHT = 384
+Private Const HERO_DRAW_WIDTH = 88
+Private Const HERO_DRAW_HEIGHT = 132
+Private Const HERO_ANCHOR_X = 44
+Private Const HERO_ANCHOR_Y = 132
+Private Const CHARACTER_EXPLORER = 1
+Private Const CHARACTER_ARMORED = 2
+
+Private Dim TownPlate As Image
+Private Dim ExplorerImage As Image
+Private Dim ArmoredImage As Image
+Private Dim TownMap As Number
+Private Dim Camera As Camera2D.CameraState
+Private Dim PlayerMover As GameCore.CardinalMover
+Private Dim Character1WalkAnimations[4] As Number
+Private Dim Character2WalkAnimations[4] As Number
+Private Dim AnimationClock As Number
+Private Dim TownReady As Boolean
+Private Dim ActiveCharacter As Number
+
+''' Prepares the plate-backed town for lazy loading when the player enters it.
+Public Sub Initialize()
+
+    TownMap = 0
+    TownReady = False
+    ActiveCharacter = CHARACTER_EXPLORER
+
+End Sub
+
+''' Loads the plate-backed town on demand and places the player at its southern entrance.
+Public Sub Enter()
+
+    If Not TownReady Then
+        Call LoadTown()
+    End If
+
+    If TownReady Then
+        TownReady = PlacePlayerAtSpawn()
+        AnimationClock = 0
+    End If
+
+    If TownReady Then
+        Call FollowPlayer()
+    End If
+
+End Sub
+
+Private Sub LoadTown()
+
+    Dim WorldWidth As Number
+    Dim WorldHeight As Number
+
+    Call Shutdown()
+
+    Load Image TownPlate From "Assets\Towns\AuroraSettlement\TownPlate.png"
+    Load Image ExplorerImage From "Assets\Characters\Character1_MannequinFallback_4Direction_v1.png"
+    Load Image ArmoredImage From "Assets\Characters\Character2_Healer_4Direction_v2.png"
+
+    TownMap = TileMap.LoadMap("Maps\Towns\AuroraSettlement.smilemap")
+    TownReady = TownMap > 0 And Image_Loaded(TownPlate) And Image_Loaded(ExplorerImage)
+    TownReady = TownReady And Image_Loaded(ArmoredImage)
+    TownReady = TownReady And Image_Width(TownPlate) = TOWN_PLATE_WIDTH
+    TownReady = TownReady And Image_Height(TownPlate) = TOWN_PLATE_HEIGHT
+
+    If TownReady Then
+        TownReady = InitializeAnimations()
+    End If
+
+    If TownReady Then
+
+        WorldWidth = TileMap.Width(TownMap) * TileMap.CellWidth(TownMap)
+        WorldHeight = TileMap.Height(TownMap) * TileMap.CellHeight(TownMap)
+        TownReady = WorldWidth = TOWN_PLATE_WIDTH And WorldHeight = TOWN_PLATE_HEIGHT
+
+    End If
+
+    If TownReady Then
+        TownReady = Camera2D.Configure(Camera, VIEW_WIDTH, VIEW_HEIGHT, WorldWidth, WorldHeight)
+    End If
+
+End Sub
+
+''' Advances held or tapped cardinal movement against the map collision layer.
+Public Sub Update(PressedKey As Number)
+
+    Dim MoveDirection As Number
+    Dim MoveCompleted As Boolean
+
+    If Not TownReady Then
+        Return
+    End If
+
+    If PressedKey = KEY_1 Then
+        ActiveCharacter = CHARACTER_EXPLORER
+    Else If PressedKey = KEY_2 Then
+        ActiveCharacter = CHARACTER_ARMORED
+    End If
+
+    If PlayerMover.Moving Then
+        AnimationClock = AnimationClock + 1
+        MoveCompleted = GameCore.UpdateMove(PlayerMover, 1)
+    End If
+
+    If Not PlayerMover.Moving Then
+
+        MoveDirection = MovementDirection(PressedKey)
+
+        If MoveDirection <> 0 Then
+            Call TryBeginPlayerMove(MoveDirection)
+        End If
+
+    End If
+
+    If Not PlayerMover.Moving Then
+        AnimationClock = 0
+    End If
+
+    Call FollowPlayer()
+
+End Sub
+
+''' Draws the pre-rendered Aurora Settlement town plate and test player.
+Public Sub Draw()
+
+    Clear Rgb(5, 9, 18)
+
+    If Not TownReady Then
+        Draw Text "Aurora Settlement could not be loaded." At 640, 342 Size 24 Color WHITE Centered
+        Return
+    End If
+
+    Draw Image TownPlate At 0 - Camera.X, 0 - Camera.Y Size TOWN_PLATE_WIDTH By TOWN_PLATE_HEIGHT Filter Smooth
+
+    Call DrawPlayer()
+
+    If ActiveCharacter = CHARACTER_ARMORED Then
+        Draw Text "Character 2: Healer | 1: Paladin | 2: Healer" At 20, 24 Size 16 Color WHITE
+    Else
+        Draw Text "Character 1: Paladin | 1: Paladin | 2: Healer" At 20, 24 Size 16 Color WHITE
+    End If
+
+End Sub
+
+''' Releases the Aurora Settlement collision map and images.
+Public Sub Shutdown()
+
+    Dim DirectionIndex As Number
+
+    For DirectionIndex = 0 To 3
+        Call Animation.Destroy(Character1WalkAnimations[DirectionIndex])
+        Call Animation.Destroy(Character2WalkAnimations[DirectionIndex])
+
+        Character1WalkAnimations[DirectionIndex] = 0
+        Character2WalkAnimations[DirectionIndex] = 0
+    End For
+
+    Call TileMap.Unload(TownMap)
+
+    If Image_Loaded(ArmoredImage) Then
+        Unload Image ArmoredImage
+    End If
+
+    If Image_Loaded(ExplorerImage) Then
+        Unload Image ExplorerImage
+    End If
+
+    If Image_Loaded(TownPlate) Then
+        Unload Image TownPlate
+    End If
+
+    TownMap = 0
+    TownReady = False
+
+End Sub
+
+Private Function InitializeAnimations() As Boolean
+
+    Dim Succeeded As Boolean
+    Dim DirectionIndex As Number
+    Dim FrameIndex As Number
+
+    Succeeded = True
+
+    For DirectionIndex = 0 To 3
+
+        Character1WalkAnimations[DirectionIndex] = Animation.Create(WALK_FRAME_DURATION, True,
+            HERO_ANCHOR_X, HERO_ANCHOR_Y)
+        Character2WalkAnimations[DirectionIndex] = Animation.Create(
+            CHARACTER_2_WALK_FRAME_DURATION, True, HERO_ANCHOR_X, HERO_ANCHOR_Y)
+        Succeeded = Succeeded And Animation.IsValid(Character1WalkAnimations[DirectionIndex])
+        Succeeded = Succeeded And Animation.IsValid(Character2WalkAnimations[DirectionIndex])
+
+        For FrameIndex = 0 To 7
+            Succeeded = Succeeded And Animation.AddFrame(
+                Character1WalkAnimations[DirectionIndex], FrameIndex * HERO_SOURCE_WIDTH,
+                DirectionIndex * HERO_SOURCE_HEIGHT, HERO_SOURCE_WIDTH, HERO_SOURCE_HEIGHT)
+        End For
+
+        For FrameIndex = 0 To 7
+            Succeeded = Succeeded And Animation.AddFrame(
+                Character2WalkAnimations[DirectionIndex], FrameIndex * HERO_SOURCE_WIDTH,
+                DirectionIndex * HERO_SOURCE_HEIGHT, HERO_SOURCE_WIDTH, HERO_SOURCE_HEIGHT)
+        End For
+    End For
+
+    Return Succeeded
+
+End Function
+
+Private Function PlacePlayerAtSpawn() As Boolean
+
+    Dim MapWidth As Number
+    Dim MapHeight As Number
+    Dim PreferredX As Number
+    Dim PreferredY As Number
+    Dim SpawnX As Number
+    Dim SpawnY As Number
+    Dim BestDistance As Number
+    Dim Distance As Number
+    Dim X As Number
+    Dim Y As Number
+
+    MapWidth = TileMap.Width(TownMap)
+    MapHeight = TileMap.Height(TownMap)
+    PreferredX = MapWidth / 2
+    PreferredY = Max(0, MapHeight - 2)
+    SpawnX = -1
+    SpawnY = -1
+    BestDistance = GameCore.GAME_MAX_VALUE
+
+    For Y = 0 To MapHeight - 1
+
+        For X = 0 To MapWidth - 1
+
+            If Not TileMap.IsSolid(TownMap, X, Y) Then
+
+                Distance = Abs(X - PreferredX) + Abs(Y - PreferredY)
+
+                If Distance < BestDistance Then
+
+                    SpawnX = X
+                    SpawnY = Y
+                    BestDistance = Distance
+
+                End If
+
+            End If
+
+        End For
+    End For
+
+    If SpawnX < 0 Then
+        Return False
+    End If
+
+    Call GameCore.Place(PlayerMover, SpawnX, SpawnY, GameCore.GAME_DIRECTION_DOWN)
+
+    Return True
+
+End Function
+
+Private Function MovementDirection(PressedKey As Number) As Number
+
+    If (PressedKey = KEY_UP Or
+        PressedKey = KEY_W Or
+        Key_Held(KEY_UP) Or
+        Key_Held(KEY_W)) Then
+        Return GameCore.GAME_DIRECTION_UP
+    End If
+
+    If (PressedKey = KEY_RIGHT Or
+        PressedKey = KEY_D Or
+        Key_Held(KEY_RIGHT) Or
+        Key_Held(KEY_D)) Then
+        Return GameCore.GAME_DIRECTION_RIGHT
+    End If
+
+    If (PressedKey = KEY_DOWN Or
+        PressedKey = KEY_S Or
+        Key_Held(KEY_DOWN) Or
+        Key_Held(KEY_S)) Then
+        Return GameCore.GAME_DIRECTION_DOWN
+    End If
+
+    If (PressedKey = KEY_LEFT Or
+        PressedKey = KEY_A Or
+        Key_Held(KEY_LEFT) Or
+        Key_Held(KEY_A)) Then
+        Return GameCore.GAME_DIRECTION_LEFT
+    End If
+
+    Return 0
+
+End Function
+
+Private Sub TryBeginPlayerMove(MoveDirection As Number)
+
+    Dim DestinationX As Number
+    Dim DestinationY As Number
+    Dim MoveStarted As Boolean
+
+    DestinationX = PlayerMover.CellX + GameCore.DirectionX(MoveDirection)
+    DestinationY = PlayerMover.CellY + GameCore.DirectionY(MoveDirection)
+    PlayerMover.Facing = MoveDirection
+
+    If TileMap.IsSolid(TownMap, DestinationX, DestinationY) Then
+        Return
+    End If
+
+    MoveStarted = GameCore.BeginMove(PlayerMover, MoveDirection, MOVE_DURATION)
+
+End Sub
+
+Private Sub FollowPlayer()
+
+    Dim CellWidth As Number
+    Dim CellHeight As Number
+    Dim TargetX As Number
+    Dim TargetY As Number
+
+    CellWidth = TileMap.CellWidth(TownMap)
+    CellHeight = TileMap.CellHeight(TownMap)
+    TargetX = GameCore.VisualX(PlayerMover, CellWidth) + CellWidth / 2
+    TargetY = GameCore.VisualY(PlayerMover, CellHeight) + CellHeight / 2
+
+    Call Camera2D.Follow(Camera, TargetX, TargetY)
+
+End Sub
+
+Private Sub DrawPlayer()
+
+    Dim CellWidth As Number
+    Dim CellHeight As Number
+    Dim WalkAnimation As Number
+    Dim WalkFrame As Number
+    Dim SourceX As Number
+    Dim SourceY As Number
+    Dim SourceWidth As Number
+    Dim SourceHeight As Number
+    Dim ScreenX As Number
+    Dim ScreenY As Number
+
+    CellWidth = TileMap.CellWidth(TownMap)
+    CellHeight = TileMap.CellHeight(TownMap)
+
+    If ActiveCharacter = CHARACTER_ARMORED Then
+        WalkAnimation = Character2WalkAnimations[PlayerMover.Facing - 1]
+    Else
+        WalkAnimation = Character1WalkAnimations[PlayerMover.Facing - 1]
+    End If
+
+    WalkFrame = 0
+
+    If PlayerMover.Moving Then
+        WalkFrame = Animation.CurrentFrame(WalkAnimation, AnimationClock)
+    End If
+
+    SourceX = Animation.SourceX(WalkAnimation, WalkFrame)
+    SourceY = Animation.SourceY(WalkAnimation, WalkFrame)
+    SourceWidth = Animation.SourceWidth(WalkAnimation, WalkFrame)
+    SourceHeight = Animation.SourceHeight(WalkAnimation, WalkFrame)
+    ScreenX = GameCore.VisualX(PlayerMover, CellWidth) + CellWidth / 2 - Camera.X
+    ScreenY = GameCore.VisualY(PlayerMover, CellHeight) + CellHeight - Camera.Y
+
+    If ActiveCharacter = CHARACTER_ARMORED Then
+        Draw Image ArmoredImage From SourceX, SourceY Size SourceWidth By SourceHeight At ScreenX, ScreenY Size HERO_DRAW_WIDTH By HERO_DRAW_HEIGHT Anchor HERO_ANCHOR_X, HERO_ANCHOR_Y Filter Smooth
+    Else
+        Draw Image ExplorerImage From SourceX, SourceY Size SourceWidth By SourceHeight At ScreenX, ScreenY Size HERO_DRAW_WIDTH By HERO_DRAW_HEIGHT Anchor HERO_ANCHOR_X, HERO_ANCHOR_Y Filter Smooth
+    End If
+
+End Sub
+
+End Module

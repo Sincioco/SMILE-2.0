@@ -1,0 +1,37 @@
+{
+  "format": "SINSTAR-CHARACTER-SPRITE",
+  "version": 1,
+  "sheet": {
+    "width": 2048,
+    "height": 1536
+  },
+  "frame": {
+    "width": 256,
+    "height": 384
+  },
+  "layout": {
+    "columns": 8,
+    "rows": [
+      "up",
+      "right",
+      "down",
+      "left"
+    ]
+  },
+  "normalization": {
+    "targetHeight": 350,
+    "horizontalPadding": 8,
+    "bottomPadding": 10
+  },
+  "anchor": {
+    "x": 128,
+    "y": 384,
+    "description": "bottom-center feet"
+  },
+  "sources": {
+    "up": "D:\\Projects\\Sin-Star-Asset-Lab-Unreal\\SinStarI\\SourceArt\\Characters\\Sprites\\Generated\\Character03_Tank\\Character03_Tank_Up_v1.png",
+    "right": "D:\\Projects\\Sin-Star-Asset-Lab-Unreal\\SinStarI\\SourceArt\\Characters\\Sprites\\Generated\\Character03_Tank\\Character03_Tank_Right_v1.png",
+    "down": "D:\\Projects\\Sin-Star-Asset-Lab-Unreal\\SinStarI\\SourceArt\\Characters\\Sprites\\Generated\\Character03_Tank\\Character03_Tank_Down_v1.png",
+    "left": "D:\\Projects\\Sin-Star-Asset-Lab-Unreal\\SinStarI\\SourceArt\\Characters\\Sprites\\Generated\\Character03_Tank\\Character03_Tank_Left_v1.png"
+  }
+}

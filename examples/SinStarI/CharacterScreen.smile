@@ -1,0 +1,597 @@
+''' Sin Star I character animation gallery with manual and autonomous preview cells.
+Module SinStarI.CharacterScreen
+
+Option Explicit
+
+Import Smile.Game.Core As GameCore
+Import Smile.Game.Animation As Animation
+
+Private Const CELL_COUNT = 4
+Private Const CELL_WIDTH = 560
+Private Const CELL_HEIGHT = 250
+Private Const CELL_1_X = 50
+Private Const CELL_2_X = 670
+Private Const CELL_1_Y = 100
+Private Const CELL_2_Y = 370
+Private Const PANEL_SIZE = 80
+Private Const SCROLL_STEP_PERIOD = 25
+Private Const AUTO_DIRECTION_STEPS = 128
+Private Const WALK_FRAME_DURATION = 1
+Private Const HUMANOID_WALK_CYCLE_DURATION = 188
+Private Const PET_WALK_CYCLE_DURATION = 133
+Private Const HUMANOID_RUN_CYCLE_DURATION = 221
+Private Const PET_RUN_CYCLE_DURATION = 71
+Private Const AUTO_RUN_PERIOD = 768
+Private Const AUTO_RUN_STEPS = 160
+Private Const RUN_SCROLL_PIXELS_PER_STEP = 2
+Private Const SOURCE_WIDTH = 256
+Private Const SOURCE_HEIGHT = 384
+Private Const CHARACTER_WIDTH = 120
+Private Const CHARACTER_HEIGHT = 180
+Private Const CHARACTER_ANCHOR_X = 60
+Private Const CHARACTER_ANCHOR_Y = 180
+Private Const PET_WIDTH = 180
+Private Const PET_HEIGHT = 270
+Private Const PET_ANCHOR_X = 90
+Private Const PET_ANCHOR_Y = 270
+
+Private Dim ExplorerImage As Image
+Private Dim ArmoredImage As Image
+Private Dim TankImage As Image
+Private Dim PetImage As Image
+Private Dim ExplorerRunImage As Image
+Private Dim ArmoredRunImage As Image
+Private Dim TankRunImage As Image
+Private Dim PetRunImage As Image
+Private Dim WalkAnimations[4] As Number
+Private Dim Facings[4] As Number
+Private Dim AnimationClocks[4] As Number
+Private Dim BackgroundXs[4] As Number
+Private Dim BackgroundYs[4] As Number
+Private Dim AutoClocks[4] As Number
+Private Dim Moving[4] As Boolean
+Private Dim Running[4] As Boolean
+Private Dim ManualRunModes[4] As Boolean
+Private Dim ActiveCell As Number
+Private Dim ScreenReady As Boolean
+
+''' Prepares the character gallery for lazy loading.
+Public Sub Initialize()
+
+    ActiveCell = 1
+    ScreenReady = False
+
+End Sub
+
+''' Loads both reusable sprite sheets and resets their preview cells.
+Public Sub Enter()
+
+    If Not ScreenReady Then
+        Call LoadScreen()
+    End If
+
+    If ScreenReady Then
+        Call ResetCells()
+    End If
+
+End Sub
+
+''' Selects a cell and advances manual and autonomous character previews.
+Public Sub Update(PressedKey As Number)
+
+    Dim Direction As Number
+    Dim Index As Number
+    Dim IsWalking As Boolean
+    Dim IsRunning As Boolean
+
+    If Not ScreenReady Then
+        Return
+    End If
+
+    If PressedKey = KEY_1 Then
+
+        ActiveCell = 1
+
+    Else If PressedKey = KEY_2 Then
+
+        ActiveCell = 2
+
+    Else If PressedKey = KEY_3 Then
+
+        ActiveCell = 3
+
+    Else If PressedKey = KEY_4 Then
+
+        ActiveCell = 4
+
+    Else If PressedKey = KEY_TAB Then
+
+        ActiveCell = ActiveCell + 1
+
+        If ActiveCell > CELL_COUNT Then
+            ActiveCell = 1
+        End If
+
+    End If
+
+    If PressedKey = KEY_SPACE Then
+        ManualRunModes[ActiveCell - 1] = Not ManualRunModes[ActiveCell - 1]
+    End If
+
+    For Index = 0 To CELL_COUNT - 1
+
+        If Index = ActiveCell - 1 Then
+
+            Direction = ManualDirection(PressedKey)
+            IsWalking = Direction <> 0
+            IsRunning = IsWalking And ManualRunModes[Index]
+
+        Else
+            Direction = AutomaticDirection(Index)
+            IsWalking = True
+            IsRunning = AutomaticRunning(Index)
+
+        End If
+
+        Call UpdateCell(Index, Direction, IsWalking, IsRunning)
+    End For
+
+End Sub
+
+''' Draws four independent scrolling preview cells and their active selection state.
+Public Sub Draw()
+
+    Clear Rgb(5, 9, 18)
+    Draw Text "Character Animation Gallery" At 640, 22 Size 30 Color WHITE Centered
+    Draw Text "Press 1-4 or TAB to select | Arrows/WASD move | SPACE toggles run" At 640, 64 Size 18 Color LIGHT_BLUE Centered
+
+    If Not ScreenReady Then
+        Draw Text "Character gallery could not be loaded." At 640, 342 Size 24 Color WHITE Centered
+        Return
+    End If
+
+    Call DrawCell(0, CELL_1_X, CELL_1_Y)
+    Call DrawCell(1, CELL_2_X, CELL_1_Y)
+    Call DrawCell(2, CELL_1_X, CELL_2_Y)
+    Call DrawCell(3, CELL_2_X, CELL_2_Y)
+
+    Draw Text "The selected character is manual; the others walk and run autonomously." At 640, 650 Size 16 Color WHITE Centered
+    Draw Text "Press ESC to return to the title screen" At 640, 690 Size 16 Color LIGHT_BLUE Centered
+
+End Sub
+
+''' Releases all character sheets and shared animation definitions.
+Public Sub Shutdown()
+
+    Dim Index As Number
+
+    For Index = 0 To 3
+        Call Animation.Destroy(WalkAnimations[Index])
+
+        WalkAnimations[Index] = 0
+    End For
+
+    If Image_Loaded(PetRunImage) Then
+        Unload Image PetRunImage
+    End If
+
+    If Image_Loaded(TankRunImage) Then
+        Unload Image TankRunImage
+    End If
+
+    If Image_Loaded(ArmoredRunImage) Then
+        Unload Image ArmoredRunImage
+    End If
+
+    If Image_Loaded(ExplorerRunImage) Then
+        Unload Image ExplorerRunImage
+    End If
+
+    If Image_Loaded(PetImage) Then
+        Unload Image PetImage
+    End If
+
+    If Image_Loaded(TankImage) Then
+        Unload Image TankImage
+    End If
+
+    If Image_Loaded(ArmoredImage) Then
+        Unload Image ArmoredImage
+    End If
+
+    If Image_Loaded(ExplorerImage) Then
+        Unload Image ExplorerImage
+    End If
+
+    ScreenReady = False
+
+End Sub
+
+Private Sub LoadScreen()
+
+    Call Shutdown()
+
+    Load Image ExplorerImage From "Assets\Characters\Character1_MannequinFallback_4Direction_v2.png"
+    Load Image ArmoredImage From "Assets\Characters\Character2_MannequinFallback_4Direction_v1.png"
+    Load Image TankImage From "Assets\Characters\Character3_MannequinFallback_4Direction_v1.png"
+    Load Image PetImage From "Assets\Characters\Character4_GuardianDogFallback_4Direction_v1.png"
+    Load Image ExplorerRunImage From "Assets\Characters\Character1_MannequinFallback_Run_4Direction_v1.png"
+    Load Image ArmoredRunImage From "Assets\Characters\Character2_MannequinFallback_Run_4Direction_v1.png"
+    Load Image TankRunImage From "Assets\Characters\Character3_MannequinFallback_Run_4Direction_v1.png"
+    Load Image PetRunImage From "Assets\Characters\Character4_GuardianDogFallback_Run_4Direction_v1.png"
+    ScreenReady = Image_Loaded(ExplorerImage) And Image_Loaded(ArmoredImage)
+    ScreenReady = ScreenReady And Image_Loaded(TankImage) And Image_Loaded(PetImage)
+    ScreenReady = ScreenReady And Image_Loaded(ExplorerRunImage)
+    ScreenReady = ScreenReady And Image_Loaded(ArmoredRunImage)
+    ScreenReady = ScreenReady And Image_Loaded(TankRunImage) And Image_Loaded(PetRunImage)
+
+    If ScreenReady Then
+        ScreenReady = InitializeAnimations()
+    End If
+
+End Sub
+
+Private Function InitializeAnimations() As Boolean
+
+    Dim DirectionIndex As Number
+    Dim FrameIndex As Number
+    Dim Succeeded As Boolean
+
+    Succeeded = True
+
+    For DirectionIndex = 0 To 3
+
+        WalkAnimations[DirectionIndex] = Animation.Create(WALK_FRAME_DURATION, True,
+            CHARACTER_ANCHOR_X, CHARACTER_ANCHOR_Y)
+        Succeeded = Succeeded And Animation.IsValid(WalkAnimations[DirectionIndex])
+
+        For FrameIndex = 0 To 15
+            Succeeded = Succeeded And Animation.AddFrame(
+                WalkAnimations[DirectionIndex], FrameIndex * SOURCE_WIDTH,
+                DirectionIndex * SOURCE_HEIGHT, SOURCE_WIDTH, SOURCE_HEIGHT)
+        End For
+    End For
+
+    Return Succeeded
+
+End Function
+
+Private Sub ResetCells()
+
+    Dim Index As Number
+
+    ActiveCell = 1
+
+    For Index = 0 To CELL_COUNT - 1
+
+        Facings[Index] = GameCore.GAME_DIRECTION_DOWN
+        AnimationClocks[Index] = 0
+        BackgroundXs[Index] = 0
+        BackgroundYs[Index] = 0
+        AutoClocks[Index] = Index * AUTO_DIRECTION_STEPS
+        Moving[Index] = False
+        Running[Index] = False
+        ManualRunModes[Index] = False
+    End For
+
+End Sub
+
+Private Function ManualDirection(PressedKey As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If (PressedKey = KEY_UP Or
+        PressedKey = KEY_W Or
+        Key_Held(KEY_UP) Or
+        Key_Held(KEY_W)) Then
+        ReturnValue = GameCore.GAME_DIRECTION_UP
+
+        Return ReturnValue
+    End If
+
+    If (PressedKey = KEY_RIGHT Or
+        PressedKey = KEY_D Or
+        Key_Held(KEY_RIGHT) Or
+        Key_Held(KEY_D)) Then
+        ReturnValue = GameCore.GAME_DIRECTION_RIGHT
+
+        Return ReturnValue
+    End If
+
+    If (PressedKey = KEY_DOWN Or
+        PressedKey = KEY_S Or
+        Key_Held(KEY_DOWN) Or
+        Key_Held(KEY_S)) Then
+        ReturnValue = GameCore.GAME_DIRECTION_DOWN
+
+        Return ReturnValue
+    End If
+
+    If (PressedKey = KEY_LEFT Or
+        PressedKey = KEY_A Or
+        Key_Held(KEY_LEFT) Or
+        Key_Held(KEY_A)) Then
+        ReturnValue = GameCore.GAME_DIRECTION_LEFT
+
+        Return ReturnValue
+    End If
+
+    Return 0
+
+End Function
+
+Private Function AutomaticDirection(Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim CycleStep As Number
+
+    AutoClocks[Index] = AutoClocks[Index] + 1
+    CycleStep = AutoClocks[Index] Mod (AUTO_DIRECTION_STEPS * 4)
+
+    If Index = 0 Then
+
+        If CycleStep < AUTO_DIRECTION_STEPS Then
+            ReturnValue = GameCore.GAME_DIRECTION_RIGHT
+
+            Return ReturnValue
+        Else If CycleStep < AUTO_DIRECTION_STEPS * 2 Then
+            ReturnValue = GameCore.GAME_DIRECTION_DOWN
+
+            Return ReturnValue
+        Else If CycleStep < AUTO_DIRECTION_STEPS * 3 Then
+            ReturnValue = GameCore.GAME_DIRECTION_LEFT
+
+            Return ReturnValue
+        End If
+
+        ReturnValue = GameCore.GAME_DIRECTION_UP
+
+        Return ReturnValue
+
+    End If
+
+    If CycleStep < AUTO_DIRECTION_STEPS Then
+        ReturnValue = GameCore.GAME_DIRECTION_LEFT
+
+        Return ReturnValue
+    Else If CycleStep < AUTO_DIRECTION_STEPS * 2 Then
+        ReturnValue = GameCore.GAME_DIRECTION_UP
+
+        Return ReturnValue
+    Else If CycleStep < AUTO_DIRECTION_STEPS * 3 Then
+        ReturnValue = GameCore.GAME_DIRECTION_RIGHT
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = GameCore.GAME_DIRECTION_DOWN
+
+    Return ReturnValue
+
+End Function
+
+Private Function AutomaticRunning(Index As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim RunStep As Number
+
+    RunStep = (AutoClocks[Index] + Index * AUTO_RUN_STEPS) Mod AUTO_RUN_PERIOD
+
+    ReturnValue = RunStep < AUTO_RUN_STEPS
+
+    Return ReturnValue
+
+End Function
+
+Private Sub UpdateCell(Index As Number, Direction As Number, IsWalking As Boolean, IsRunning As Boolean)
+
+    If Running[Index] <> IsRunning Then
+        AnimationClocks[Index] = 0
+    End If
+
+    Moving[Index] = IsWalking
+    Running[Index] = IsRunning
+
+    If Not IsWalking Then
+        AnimationClocks[Index] = 0
+        Return
+    End If
+
+    Facings[Index] = Direction
+    AnimationClocks[Index] = AnimationClocks[Index] + 1
+
+    If IsRunning Then
+        BackgroundXs[Index] = BackgroundXs[Index] - GameCore.DirectionX(Direction) * RUN_SCROLL_PIXELS_PER_STEP
+        BackgroundYs[Index] = BackgroundYs[Index] - GameCore.DirectionY(Direction) * RUN_SCROLL_PIXELS_PER_STEP
+    Else If AnimationClocks[Index] Mod SCROLL_STEP_PERIOD <> 0 Then
+        BackgroundXs[Index] = BackgroundXs[Index] - GameCore.DirectionX(Direction)
+        BackgroundYs[Index] = BackgroundYs[Index] - GameCore.DirectionY(Direction)
+    End If
+
+    Call WrapBackground(Index)
+
+End Sub
+
+Private Sub WrapBackground(Index As Number)
+
+    If BackgroundXs[Index] < 0 Then
+        BackgroundXs[Index] = BackgroundXs[Index] + PANEL_SIZE
+    Else If BackgroundXs[Index] >= PANEL_SIZE Then
+        BackgroundXs[Index] = BackgroundXs[Index] - PANEL_SIZE
+    End If
+
+    If BackgroundYs[Index] < 0 Then
+        BackgroundYs[Index] = BackgroundYs[Index] + PANEL_SIZE
+    Else If BackgroundYs[Index] >= PANEL_SIZE Then
+        BackgroundYs[Index] = BackgroundYs[Index] - PANEL_SIZE
+    End If
+
+End Sub
+
+Private Sub DrawCell(Index As Number, CellX As Number, CellY As Number)
+
+    Dim BorderColor As Number
+
+    If ActiveCell = Index + 1 Then
+        BorderColor = CYAN
+    Else
+        BorderColor = Rgb(50, 67, 90)
+    End If
+
+    Fill Rectangle CellX - 4, CellY - 4, CELL_WIDTH + 8, CELL_HEIGHT + 8, BorderColor
+
+    Clip Rectangle CellX, CellY, CELL_WIDTH, CELL_HEIGHT
+
+        Call DrawMovingFloor(Index, CellX, CellY)
+        Call DrawCharacter(Index, CellX, CellY)
+
+    End Clip
+
+    If Index = 0 Then
+        Draw Text "1" At CellX + 20, CellY + 16 Size 32 Color WHITE
+        Draw Text "Paladin" At CellX + CELL_WIDTH / 2, CellY + 18 Size 22 Color WHITE Centered
+    Else If Index = 1 Then
+        Draw Text "2" At CellX + 20, CellY + 16 Size 32 Color WHITE
+        Draw Text "Healer" At CellX + CELL_WIDTH / 2, CellY + 18 Size 22 Color WHITE Centered
+    Else If Index = 2 Then
+        Draw Text "3" At CellX + 20, CellY + 16 Size 32 Color WHITE
+        Draw Text "Tank" At CellX + CELL_WIDTH / 2, CellY + 18 Size 22 Color WHITE Centered
+    Else
+        Draw Text "4" At CellX + 20, CellY + 16 Size 32 Color WHITE
+        Draw Text "Pet" At CellX + CELL_WIDTH / 2, CellY + 18 Size 22 Color WHITE Centered
+    End If
+
+    If ActiveCell = Index + 1 Then
+        Draw Text "MANUAL" At CellX + CELL_WIDTH - 86, CellY + 24 Size 15 Color CYAN
+    Else
+        Draw Text "AUTO" At CellX + CELL_WIDTH - 70, CellY + 24 Size 15 Color LIGHT_BLUE
+    End If
+
+    If Running[Index] Then
+        Draw Text "RUN" At CellX + CELL_WIDTH - 62, CellY + 48 Size 15 Color Rgb(247, 193, 55)
+    Else If ActiveCell = Index + 1 And ManualRunModes[Index] Then
+        Draw Text "RUN READY" At CellX + CELL_WIDTH - 100, CellY + 48 Size 15 Color Rgb(247, 193, 55)
+    End If
+
+End Sub
+
+Private Sub DrawMovingFloor(Index As Number, CellX As Number, CellY As Number)
+
+    Dim Column As Number
+    Dim PanelColor As Number
+    Dim PanelX As Number
+    Dim PanelY As Number
+    Dim Row As Number
+
+    Fill Rectangle CellX, CellY, CELL_WIDTH, CELL_HEIGHT, Rgb(14, 29, 48)
+
+    For Row = 0 To 7
+
+        For Column = 0 To 8
+
+            PanelX = CellX + Column * PANEL_SIZE + BackgroundXs[Index] - PANEL_SIZE
+            PanelY = CellY + Row * PANEL_SIZE + BackgroundYs[Index] - PANEL_SIZE
+
+            If (Column + Row) Mod 2 = 0 Then
+                PanelColor = Rgb(21, 45, 68)
+            Else
+                PanelColor = Rgb(17, 38, 60)
+            End If
+
+            Fill Rectangle PanelX, PanelY, PANEL_SIZE - 2, PANEL_SIZE - 2, PanelColor
+            Fill Rectangle PanelX + 10, PanelY + 10, 4, 4, Rgb(39, 207, 221)
+        End For
+    End For
+
+    Fill Rectangle CellX, CellY + CELL_HEIGHT - 54, CELL_WIDTH, 54, Rgb(6, 13, 24)
+    Fill Rectangle CellX, CellY + CELL_HEIGHT - 56, CELL_WIDTH, 2, Rgb(39, 207, 221)
+
+End Sub
+
+Private Sub DrawCharacter(Index As Number, CellX As Number, CellY As Number)
+
+    Dim ScreenX As Number
+    Dim ScreenY As Number
+    Dim SourceHeight As Number
+    Dim SourceWidth As Number
+    Dim SourceX As Number
+    Dim SourceY As Number
+    Dim WalkAnimation As Number
+    Dim WalkFrame As Number
+
+    WalkAnimation = WalkAnimations[Facings[Index] - 1]
+
+    WalkFrame = 0
+
+    If Moving[Index] Then
+
+        If Running[Index] Then
+
+            If Index = 3 Then
+                WalkFrame = Animation.CurrentFrameInCycle(WalkAnimation, AnimationClocks[Index],
+                    PET_RUN_CYCLE_DURATION)
+            Else
+                WalkFrame = Animation.CurrentFrameInCycle(WalkAnimation, AnimationClocks[Index],
+                    HUMANOID_RUN_CYCLE_DURATION)
+            End If
+
+        Else
+
+            If Index = 3 Then
+                WalkFrame = Animation.CurrentFrameInCycle(WalkAnimation, AnimationClocks[Index],
+                    PET_WALK_CYCLE_DURATION)
+            Else
+                WalkFrame = Animation.CurrentFrameInCycle(WalkAnimation, AnimationClocks[Index],
+                    HUMANOID_WALK_CYCLE_DURATION)
+            End If
+
+        End If
+
+    End If
+
+    SourceX = Animation.SourceX(WalkAnimation, WalkFrame)
+    SourceY = Animation.SourceY(WalkAnimation, WalkFrame)
+    SourceWidth = Animation.SourceWidth(WalkAnimation, WalkFrame)
+    SourceHeight = Animation.SourceHeight(WalkAnimation, WalkFrame)
+    ScreenX = CellX + CELL_WIDTH / 2
+    ScreenY = CellY + CELL_HEIGHT - 22
+
+    If Index = 0 Then
+
+        If Running[Index] Then
+            Draw Image ExplorerRunImage From SourceX, SourceY Size SourceWidth By SourceHeight At ScreenX, ScreenY Size CHARACTER_WIDTH By CHARACTER_HEIGHT Anchor CHARACTER_ANCHOR_X, CHARACTER_ANCHOR_Y Filter Smooth
+        Else
+            Draw Image ExplorerImage From SourceX, SourceY Size SourceWidth By SourceHeight At ScreenX, ScreenY Size CHARACTER_WIDTH By CHARACTER_HEIGHT Anchor CHARACTER_ANCHOR_X, CHARACTER_ANCHOR_Y Filter Smooth
+        End If
+
+    Else If Index = 1 Then
+
+        If Running[Index] Then
+            Draw Image ArmoredRunImage From SourceX, SourceY Size SourceWidth By SourceHeight At ScreenX, ScreenY Size CHARACTER_WIDTH By CHARACTER_HEIGHT Anchor CHARACTER_ANCHOR_X, CHARACTER_ANCHOR_Y Filter Smooth
+        Else
+            Draw Image ArmoredImage From SourceX, SourceY Size SourceWidth By SourceHeight At ScreenX, ScreenY Size CHARACTER_WIDTH By CHARACTER_HEIGHT Anchor CHARACTER_ANCHOR_X, CHARACTER_ANCHOR_Y Filter Smooth
+        End If
+
+    Else If Index = 2 Then
+
+        If Running[Index] Then
+            Draw Image TankRunImage From SourceX, SourceY Size SourceWidth By SourceHeight At ScreenX, ScreenY Size CHARACTER_WIDTH By CHARACTER_HEIGHT Anchor CHARACTER_ANCHOR_X, CHARACTER_ANCHOR_Y Filter Smooth
+        Else
+            Draw Image TankImage From SourceX, SourceY Size SourceWidth By SourceHeight At ScreenX, ScreenY Size CHARACTER_WIDTH By CHARACTER_HEIGHT Anchor CHARACTER_ANCHOR_X, CHARACTER_ANCHOR_Y Filter Smooth
+        End If
+
+    Else
+
+        If Running[Index] Then
+            Draw Image PetRunImage From SourceX, SourceY Size SourceWidth By SourceHeight At ScreenX, ScreenY Size PET_WIDTH By PET_HEIGHT Anchor PET_ANCHOR_X, PET_ANCHOR_Y Filter Smooth
+        Else
+            Draw Image PetImage From SourceX, SourceY Size SourceWidth By SourceHeight At ScreenX, ScreenY Size PET_WIDTH By PET_HEIGHT Anchor PET_ANCHOR_X, PET_ANCHOR_Y Filter Smooth
+        End If
+
+    End If
+
+End Sub
+
+End Module

@@ -112,6 +112,18 @@ Run("Existing key constants retain their values", () =>
     Equal(14L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyEnterKeyword));
     Equal(18L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.Key2Keyword));
     Equal(20L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.Key3Keyword));
+    Equal(21L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyTabKeyword));
+    Equal(22L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.Key4Keyword));
+});
+Run("KEY_4 is a shared named input constant", () =>
+{
+    Equal(SyntaxKind.Key4Keyword, SyntaxFacts.GetKeywordKind("key_4"));
+    Equal(22L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.Key4Keyword));
+});
+Run("KEY_TAB is a shared named input constant", () =>
+{
+    Equal(SyntaxKind.KeyTabKeyword, SyntaxFacts.GetKeywordKind("key_tab"));
+    Equal(21L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyTabKeyword));
 });
 Run("Existing graphics statements remain valid", () => Equal(false,
     Analyze("Game Window \"Existing\"\nFill Rectangle 1, 2, 3, 4, RED\nDraw Circle 10, 10, 4, WHITE\nDraw Line 0, 0, 20, 20, BLUE\n").HasErrors));

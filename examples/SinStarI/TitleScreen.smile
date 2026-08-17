@@ -4,11 +4,12 @@ Module SinStarI.TitleScreen
 Option Explicit
 
 Public Const TITLE_ACTION_NONE = 0
-Public Const TITLE_ACTION_NEW_GAME = 1
+Public Const TITLE_ACTION_CHARACTER = 1
 Public Const TITLE_ACTION_TOWN = 2
-Public Const TITLE_ACTION_SHOP = 3
-Public Const TITLE_ACTION_DUNGEON = 4
-Public Const TITLE_ACTION_BATTLE = 5
+Public Const TITLE_ACTION_TOWN_2 = 3
+Public Const TITLE_ACTION_SHOP = 4
+Public Const TITLE_ACTION_DUNGEON = 5
+Public Const TITLE_ACTION_BATTLE = 6
 
 Private Dim TitleBackground As Image
 Private Dim TitleLogo As Image
@@ -22,7 +23,7 @@ Public Sub Initialize()
     Load Image TitleLogo From "Assets\Sin Star - Logo.png"
     Load Image MenuBackground From "Assets\MenuBackground.png"
 
-    TitleSelection = TITLE_ACTION_NEW_GAME
+    TitleSelection = TITLE_ACTION_CHARACTER
 
     Call Enter()
 
@@ -64,7 +65,7 @@ Public Function HandleInput(Key As Number) As Number
 
         TitleSelection = TitleSelection - 1
 
-        If TitleSelection < TITLE_ACTION_NEW_GAME Then
+        If TitleSelection < TITLE_ACTION_CHARACTER Then
             TitleSelection = TITLE_ACTION_BATTLE
         End If
 
@@ -73,7 +74,7 @@ Public Function HandleInput(Key As Number) As Number
         TitleSelection = TitleSelection + 1
 
         If TitleSelection > TITLE_ACTION_BATTLE Then
-            TitleSelection = TITLE_ACTION_NEW_GAME
+            TitleSelection = TITLE_ACTION_CHARACTER
         End If
 
     Else If Key = KEY_ENTER Or Key = KEY_SPACE Then
@@ -94,11 +95,12 @@ Public Sub Draw()
     Draw Image TitleLogo At 30, 30 Size 480 By 600 Filter Smooth
     'Draw Image MenuBackground At 505, 297 Size 380 By 300 Opacity 80 Filter Smooth
 
-    Call DrawChoice(TITLE_ACTION_NEW_GAME, "Start a New Game", 333)
-    Call DrawChoice(TITLE_ACTION_TOWN, "Town", 383)
-    Call DrawChoice(TITLE_ACTION_SHOP, "Shop", 433)
-    Call DrawChoice(TITLE_ACTION_DUNGEON, "Dungeon", 483)
-    Call DrawChoice(TITLE_ACTION_BATTLE, "Battle", 533)
+    Call DrawChoice(TITLE_ACTION_CHARACTER, "Character", 358)
+    Call DrawChoice(TITLE_ACTION_TOWN, "Town", 408)
+    Call DrawChoice(TITLE_ACTION_TOWN_2, "Town 2", 458)
+    Call DrawChoice(TITLE_ACTION_SHOP, "Shop", 508)
+    Call DrawChoice(TITLE_ACTION_DUNGEON, "Dungeon", 558)
+    Call DrawChoice(TITLE_ACTION_BATTLE, "Battle", 608)
 
     'Draw Text "Programmed by:  Louiery R. Sincioco  August 16, 2026. Copyright (c) 2026.  All rights reserved." At 641, 695 Size 12 Color BLACK Centered
     Draw Text "Programmed by:  Louiery R. Sincioco  August 16, 2026. Copyright (c) 2026.  All rights reserved." At 640, 694 Size 12 Color WHITE Centered

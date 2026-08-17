@@ -32,6 +32,8 @@
 #define SMILE_KEY_2 18
 #define SMILE_KEY_OTHER 19
 #define SMILE_KEY_3 20
+#define SMILE_KEY_TAB 21
+#define SMILE_KEY_4 22
 
 static HWND smile_window;
 static long long smile_logical_width = 960;
@@ -655,6 +657,8 @@ static long long smile_map_key(WCHAR character, WORD virtual_key)
     if (virtual_key == '1') return SMILE_KEY_1;
     if (virtual_key == '2') return SMILE_KEY_2;
     if (virtual_key == '3') return SMILE_KEY_3;
+    if (virtual_key == '4') return SMILE_KEY_4;
+    if (virtual_key == VK_TAB) return SMILE_KEY_TAB;
     return character != 0 || virtual_key != 0 ? SMILE_KEY_OTHER : SMILE_KEY_NONE;
 }
 
@@ -676,6 +680,8 @@ static int smile_key_virtual(long long key)
         case SMILE_KEY_1: return '1';
         case SMILE_KEY_2: return '2';
         case SMILE_KEY_3: return '3';
+        case SMILE_KEY_4: return '4';
+        case SMILE_KEY_TAB: return VK_TAB;
         default: return 0;
     }
 }

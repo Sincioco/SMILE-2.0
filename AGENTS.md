@@ -33,6 +33,14 @@ Use KISS: Keep It Simple, Stupid.
 - Do not add CI, GitHub Actions, a large automated test suite, cross-platform support, a package manager, or speculative infrastructure.
 - Do not stop after planning or scaffolding. Continue through implementation, build, native compilation, execution, debugging, validation, commit, and push.
 
+### Permanent SMILE capability flagging
+
+- Whenever a requested behavior is not currently supported by the SMILE language, compiler, native runtime, Web runtime, or an applicable SMILE module/library, call it out before extending or working around it.
+- Begin every such notice with the exact bold Markdown label `**Flag:**` so the capability boundary is visually prominent.
+- State what is missing, the user-visible impact, and the smallest reusable SMILE capability that should be incorporated.
+- Clearly distinguish an existing supported feature from a proposed language, runtime, module, or library extension.
+- A capability flag is not a reason to stop when the requested reusable extension is already authorized and can be implemented safely within the current task.
+
 ### Permanent validation rule
 
 Assume the happy path and use the lightest focused evidence that reasonably proves the current milestone. Prefer targeted language or native checks, the normal smoke suite, one brief manual launch, and one short interaction with changed behavior.

@@ -1,0 +1,858 @@
+''' Sin Star I modular Town 2 maps, shared tileset, collision, camera, and drawing.
+Module SinStarI.Town2Screen
+
+Option Explicit
+
+Import Smile.Game.Core As GameCore
+Import Smile.Game.TileMap As TileMap
+Import Smile.Game.Camera2D As Camera2D
+Import Smile.Game.Animation As Animation
+Import SinStarI.TileSets.Town2Tileset As Town2Tileset
+
+Private Const VIEW_WIDTH = 1280
+Private Const VIEW_HEIGHT = 720
+Private Const CHUNK_WIDTH = 36
+Private Const CHUNK_HEIGHT = 28
+Private Const TOWN_WIDTH = 72
+Private Const TOWN_HEIGHT = 56
+Private Const CELL_WIDTH = 80
+Private Const CELL_HEIGHT = 80
+Private Const CHUNK_PIXEL_WIDTH = 2880
+Private Const CHUNK_PIXEL_HEIGHT = 2240
+Private Const TOWN_PIXEL_WIDTH = 5760
+Private Const TOWN_PIXEL_HEIGHT = 4480
+Private Const WALK_MOVE_DURATION = 40
+Private Const RUN_MOVE_DURATION = 21
+Private Const WALK_FRAME_DURATION = 1
+Private Const RUN_FRAME_DURATION = 1
+Private Const WALK_CYCLE_DURATION = 188
+Private Const RUN_CYCLE_DURATION = 221
+Private Const HERO_SOURCE_WIDTH = 256
+Private Const HERO_SOURCE_HEIGHT = 384
+Private Const EXPLORER_DRAW_WIDTH = 160
+Private Const EXPLORER_DRAW_HEIGHT = 240
+Private Const EXPLORER_ANCHOR_X = 80
+Private Const EXPLORER_ANCHOR_Y = 240
+Private Const ARMORED_DRAW_WIDTH = 160
+Private Const ARMORED_DRAW_HEIGHT = 240
+Private Const ARMORED_ANCHOR_X = 80
+Private Const ARMORED_ANCHOR_Y = 240
+Private Const CHARACTER_EXPLORER = 1
+Private Const CHARACTER_ARMORED = 2
+Private Const TOUR_WAYPOINT_COUNT = 7
+Private Const MINIMAP_X = 972
+Private Const MINIMAP_Y = 42
+Private Const MINIMAP_WIDTH = 288
+Private Const MINIMAP_HEIGHT = 224
+Private Const MINIMAP_CELL_PIXELS = 4
+Private Const MINIMAP_ICON_SIZE = 18
+Private Const WORLD_SIGN_SIZE = 52
+
+Private Dim TownAtlas As Image
+Private Dim ExplorerImage As Image
+Private Dim ExplorerRunImage As Image
+Private Dim ArmoredImage As Image
+Private Dim TownMiniMap As Image
+Private Dim LandmarkIcons As Image
+Private Dim TownMaps[4] As Number
+Private Dim Camera As Camera2D.CameraState
+Private Dim PlayerMover As GameCore.CardinalMover
+Private Dim Character1WalkAnimations[4] As Number
+Private Dim Character1RunAnimations[4] As Number
+Private Dim Character2WalkAnimations[4] As Number
+Private Dim AnimationClock As Number
+Private Dim TownReady As Boolean
+Private Dim DemoFlowers As Boolean
+Private Dim TourXs[7] As Number
+Private Dim TourYs[7] As Number
+Private Dim TourWaypoint As Number
+Private Dim TourEnabled As Boolean
+Private Dim TourBlocked As Boolean
+Private Dim ActiveCharacter As Number
+Private Dim PlayerIsRunning As Boolean
+
+''' Prepares the four-chunk modular town for lazy loading when the player enters it.
+Public Sub Initialize()
+
+    TownReady = False
+    DemoFlowers = False
+    ActiveCharacter = CHARACTER_EXPLORER
+    PlayerIsRunning = False
+
+    Call ConfigureTour()
+
+End Sub
+
+''' Loads all four map chunks and places the player at the south entrance.
+Public Sub Enter()
+
+    If Not TownReady Then
+        Call LoadTown()
+    End If
+
+    If TownReady Then
+        DemoFlowers = False
+        TownReady = SetTile(GameCore.GAME_LAYER_GROUND, Town2Tileset.DEMO_CELL_X,
+            Town2Tileset.DEMO_CELL_Y, Town2Tileset.TILE_GROUND_GRASS)
+    End If
+
+    If TownReady Then
+        TownReady = PlacePlayerAtSpawn()
+        AnimationClock = 0
+    End If
+
+    If TownReady Then
+        Call StartTour()
+        Call FollowPlayer()
+    End If
+
+End Sub
+
+''' Advances movement, switches characters with 1/2, and runs while Space is held.
+Public Sub Update(PressedKey As Number)
+
+    Dim MoveDirection As Number
+    Dim MoveStarted As Boolean
+
+    If Not TownReady Then
+        Return
+    End If
+
+    If PressedKey = KEY_1 Then
+        ActiveCharacter = CHARACTER_EXPLORER
+    Else If PressedKey = KEY_2 Then
+        ActiveCharacter = CHARACTER_ARMORED
+    End If
+
+    MoveDirection = MovementDirection(PressedKey)
+
+    If MoveDirection <> 0 Then
+
+        TourBlocked = False
+
+        If TourEnabled Then
+
+            TourEnabled = False
+
+            If PlayerMover.Moving Then
+                Call GameCore.CancelMove(PlayerMover)
+            End If
+
+        End If
+
+    Else If PressedKey = KEY_ENTER Then
+
+        Call ToggleTour()
+
+    End If
+
+    If PlayerMover.Moving Then
+        AnimationClock = AnimationClock + 1
+        MoveStarted = GameCore.UpdateMove(PlayerMover, 1)
+    End If
+
+    If Not PlayerMover.Moving Then
+
+        If MoveDirection <> 0 Then
+            MoveStarted = TryBeginPlayerMove(MoveDirection)
+        Else If TourEnabled Then
+            Call AdvanceTour()
+        End If
+
+    End If
+
+    If Not PlayerMover.Moving Then
+
+        AnimationClock = 0
+
+        If MoveDirection = 0 And Not TourEnabled Then
+            PlayerIsRunning = False
+        End If
+
+    End If
+
+    Call FollowPlayer()
+
+End Sub
+
+''' Draws only modular Ground, Detail, player, and Foreground layers from one atlas.
+Public Sub Draw()
+
+    Clear Rgb(5, 9, 18)
+
+    If Not TownReady Then
+        Draw Text "Town 2 could not be loaded." At 640, 342 Size 24 Color WHITE Centered
+        Return
+    End If
+
+    Call DrawWorldLayer(GameCore.GAME_LAYER_GROUND)
+    Call DrawWorldLayer(GameCore.GAME_LAYER_DETAIL)
+    Call DrawPlayer()
+    Call DrawWorldLayer(GameCore.GAME_LAYER_FOREGROUND)
+    Call DrawLandmarkSigns()
+    Call DrawMiniMap()
+
+    If ActiveCharacter = CHARACTER_ARMORED Then
+        Draw Text "Character 2: Healer | 1: Paladin | 2: Healer" At 20, 24 Size 16 Color WHITE
+    Else
+        Draw Text "Character 1: Paladin | 1: Paladin | 2: Healer" At 20, 24 Size 16 Color WHITE
+    End If
+
+    If TourEnabled Then
+        Draw Text "Auto edge tour | Arrows/WASD: take control | Enter: pause" At 20, 690 Size 16 Color WHITE
+    Else If TourBlocked Then
+        Draw Text "Tour stopped by collision | Enter: restart | Arrows/WASD: walk | Hold Space: run" At 20, 690 Size 16 Color WHITE
+    Else
+        Draw Text "Manual control | Arrows/WASD: walk | Hold Space: run | Enter: edge tour" At 20, 690 Size 16 Color WHITE
+    End If
+
+End Sub
+
+''' Changes one global Town 2 cell on any visual map layer at runtime.
+Public Function SetTile(Layer As Number, CellX As Number, CellY As Number, TileId As Number) As Boolean
+
+    Dim MapHandle As Number
+    Dim LocalX As Number
+    Dim LocalY As Number
+    Dim Changed As Boolean
+
+    MapHandle = MapForCell(CellX, CellY)
+
+    If MapHandle = 0 Then
+        Return False
+    End If
+
+    LocalX = CellX Mod CHUNK_WIDTH
+    LocalY = CellY Mod CHUNK_HEIGHT
+    Changed = TileMap.SetTile(MapHandle, Layer, LocalX, LocalY, TileId)
+
+    Return Changed
+
+End Function
+
+''' Changes one global Town 2 collision category independently from its artwork.
+Public Function SetCollision(CellX As Number, CellY As Number, Category As Number) As Boolean
+
+    Dim MapHandle As Number
+    Dim LocalX As Number
+    Dim LocalY As Number
+    Dim Changed As Boolean
+
+    MapHandle = MapForCell(CellX, CellY)
+
+    If MapHandle = 0 Then
+        Return False
+    End If
+
+    LocalX = CellX Mod CHUNK_WIDTH
+    LocalY = CellY Mod CHUNK_HEIGHT
+    Changed = TileMap.SetCollision(MapHandle, LocalX, LocalY, Category)
+
+    Return Changed
+
+End Function
+
+''' Releases all four map slots and shared images when Town 2 is not active.
+Public Sub Shutdown()
+
+    Dim Index As Number
+
+    For Index = 0 To 3
+
+        Call Animation.Destroy(Character1WalkAnimations[Index])
+        Call Animation.Destroy(Character1RunAnimations[Index])
+        Call Animation.Destroy(Character2WalkAnimations[Index])
+        Call TileMap.Unload(TownMaps[Index])
+
+        Character1WalkAnimations[Index] = 0
+        Character1RunAnimations[Index] = 0
+        Character2WalkAnimations[Index] = 0
+        TownMaps[Index] = 0
+    End For
+
+    If Image_Loaded(ArmoredImage) Then
+        Unload Image ArmoredImage
+    End If
+
+    If Image_Loaded(ExplorerImage) Then
+        Unload Image ExplorerImage
+    End If
+
+    If Image_Loaded(ExplorerRunImage) Then
+        Unload Image ExplorerRunImage
+    End If
+
+    If Image_Loaded(TownAtlas) Then
+        Unload Image TownAtlas
+    End If
+
+    If Image_Loaded(LandmarkIcons) Then
+        Unload Image LandmarkIcons
+    End If
+
+    If Image_Loaded(TownMiniMap) Then
+        Unload Image TownMiniMap
+    End If
+
+    TownReady = False
+    DemoFlowers = False
+    TourWaypoint = 0
+    TourEnabled = False
+    TourBlocked = False
+    PlayerIsRunning = False
+
+End Sub
+
+Private Sub LoadTown()
+
+    Dim Index As Number
+
+    Call Shutdown()
+
+    Load Image TownAtlas From "Assets\Tilesets\Town2\Town2Atlas.png"
+    Load Image ExplorerImage From "Assets\Characters\Character1_MannequinFallback_4Direction_v2.png"
+    Load Image ExplorerRunImage From "Assets\Characters\Character1_MannequinFallback_Run_4Direction_v1.png"
+    Load Image ArmoredImage From "Assets\Characters\Character2_MannequinFallback_4Direction_v1.png"
+    Load Image TownMiniMap From "Assets\UI\Town2\Town2MiniMap.png"
+    Load Image LandmarkIcons From "Assets\UI\Town2\Town2LandmarkIcons.png"
+
+    TownMaps[0] = TileMap.LoadMap("Maps\Towns\Town2_NW.smilemap")
+    TownMaps[1] = TileMap.LoadMap("Maps\Towns\Town2_NE.smilemap")
+    TownMaps[2] = TileMap.LoadMap("Maps\Towns\Town2_SW.smilemap")
+    TownMaps[3] = TileMap.LoadMap("Maps\Towns\Town2_SE.smilemap")
+    TownReady = Image_Loaded(TownAtlas) And Image_Loaded(ExplorerImage)
+    TownReady = TownReady And Image_Loaded(ExplorerRunImage)
+    TownReady = TownReady And Image_Loaded(ArmoredImage)
+    TownReady = TownReady And Image_Loaded(TownMiniMap)
+    TownReady = TownReady And Image_Loaded(LandmarkIcons)
+    TownReady = TownReady And Image_Width(TownMiniMap) = MINIMAP_WIDTH
+    TownReady = TownReady And Image_Height(TownMiniMap) = MINIMAP_HEIGHT
+    TownReady = TownReady And Image_Width(LandmarkIcons) = Town2Tileset.LANDMARK_COUNT * Town2Tileset.LANDMARK_ICON_SIZE
+    TownReady = TownReady And Image_Height(LandmarkIcons) = Town2Tileset.LANDMARK_ICON_SIZE
+
+    For Index = 0 To 3
+
+        TownReady = TownReady And TileMap.IsValid(TownMaps[Index])
+        TownReady = TownReady And Town2Tileset.Register(TownMaps[Index])
+        TownReady = TownReady And TileMap.Width(TownMaps[Index]) = CHUNK_WIDTH
+        TownReady = TownReady And TileMap.Height(TownMaps[Index]) = CHUNK_HEIGHT
+        TownReady = TownReady And TileMap.CellWidth(TownMaps[Index]) = CELL_WIDTH
+        TownReady = TownReady And TileMap.CellHeight(TownMaps[Index]) = CELL_HEIGHT
+    End For
+
+    If TownReady Then
+        TownReady = InitializeAnimations()
+    End If
+
+    If TownReady Then
+        TownReady = Camera2D.Configure(Camera, VIEW_WIDTH, VIEW_HEIGHT,
+            TOWN_PIXEL_WIDTH, TOWN_PIXEL_HEIGHT)
+    End If
+
+End Sub
+
+Private Function InitializeAnimations() As Boolean
+
+    Dim Succeeded As Boolean
+    Dim DirectionIndex As Number
+    Dim FrameIndex As Number
+
+    Succeeded = True
+
+    For DirectionIndex = 0 To 3
+
+        Character1WalkAnimations[DirectionIndex] = Animation.Create(WALK_FRAME_DURATION, True,
+            EXPLORER_ANCHOR_X, EXPLORER_ANCHOR_Y)
+        Character1RunAnimations[DirectionIndex] = Animation.Create(RUN_FRAME_DURATION, True,
+            EXPLORER_ANCHOR_X, EXPLORER_ANCHOR_Y)
+        Character2WalkAnimations[DirectionIndex] = Animation.Create(
+            WALK_FRAME_DURATION, True, ARMORED_ANCHOR_X, ARMORED_ANCHOR_Y)
+        Succeeded = Succeeded And Animation.IsValid(Character1WalkAnimations[DirectionIndex])
+        Succeeded = Succeeded And Animation.IsValid(Character1RunAnimations[DirectionIndex])
+        Succeeded = Succeeded And Animation.IsValid(Character2WalkAnimations[DirectionIndex])
+
+        For FrameIndex = 0 To 15
+
+            Succeeded = Succeeded And Animation.AddFrame(
+                Character1WalkAnimations[DirectionIndex], FrameIndex * HERO_SOURCE_WIDTH,
+                DirectionIndex * HERO_SOURCE_HEIGHT, HERO_SOURCE_WIDTH, HERO_SOURCE_HEIGHT)
+            Succeeded = Succeeded And Animation.AddFrame(
+                Character1RunAnimations[DirectionIndex], FrameIndex * HERO_SOURCE_WIDTH,
+                DirectionIndex * HERO_SOURCE_HEIGHT, HERO_SOURCE_WIDTH, HERO_SOURCE_HEIGHT)
+        End For
+
+        For FrameIndex = 0 To 15
+            Succeeded = Succeeded And Animation.AddFrame(
+                Character2WalkAnimations[DirectionIndex], FrameIndex * HERO_SOURCE_WIDTH,
+                DirectionIndex * HERO_SOURCE_HEIGHT, HERO_SOURCE_WIDTH, HERO_SOURCE_HEIGHT)
+        End For
+    End For
+
+    Return Succeeded
+
+End Function
+
+Private Function MapForCell(CellX As Number, CellY As Number) As Number
+
+    Dim MapHandle As Number
+
+    If (CellX < 0 Or
+        CellY < 0 Or
+        CellX >= TOWN_WIDTH Or
+        CellY >= TOWN_HEIGHT) Then
+        Return 0
+    End If
+
+    If CellY < CHUNK_HEIGHT Then
+
+        If CellX < CHUNK_WIDTH Then
+            MapHandle = TownMaps[0]
+        Else
+            MapHandle = TownMaps[1]
+        End If
+
+    Else
+
+        If CellX < CHUNK_WIDTH Then
+            MapHandle = TownMaps[2]
+        Else
+            MapHandle = TownMaps[3]
+        End If
+
+    End If
+
+    Return MapHandle
+
+End Function
+
+Private Function IsTownCellSolid(CellX As Number, CellY As Number) As Boolean
+
+    Dim MapHandle As Number
+    Dim LocalX As Number
+    Dim LocalY As Number
+    Dim Solid As Boolean
+
+    MapHandle = MapForCell(CellX, CellY)
+
+    If MapHandle = 0 Then
+        Return True
+    End If
+
+    LocalX = CellX Mod CHUNK_WIDTH
+    LocalY = CellY Mod CHUNK_HEIGHT
+    Solid = TileMap.IsSolid(MapHandle, LocalX, LocalY)
+
+    Return Solid
+
+End Function
+
+Private Function PlacePlayerAtSpawn() As Boolean
+
+    Dim PreferredX As Number
+    Dim PreferredY As Number
+    Dim SpawnX As Number
+    Dim SpawnY As Number
+    Dim BestDistance As Number
+    Dim Distance As Number
+    Dim X As Number
+    Dim Y As Number
+
+    PreferredX = Town2Tileset.SPAWN_CELL_X
+    PreferredY = Town2Tileset.SPAWN_CELL_Y
+
+    If Not IsTownCellSolid(PreferredX, PreferredY) Then
+        Call GameCore.Place(PlayerMover, PreferredX, PreferredY, GameCore.GAME_DIRECTION_DOWN)
+
+        Return True
+    End If
+
+    SpawnX = -1
+    SpawnY = -1
+    BestDistance = GameCore.GAME_MAX_VALUE
+
+    For Y = 0 To TOWN_HEIGHT - 1
+
+        For X = 0 To TOWN_WIDTH - 1
+
+            If Not IsTownCellSolid(X, Y) Then
+
+                Distance = Abs(X - PreferredX) + Abs(Y - PreferredY)
+
+                If Distance < BestDistance Then
+
+                    SpawnX = X
+                    SpawnY = Y
+                    BestDistance = Distance
+
+                End If
+
+            End If
+
+        End For
+    End For
+
+    If SpawnX < 0 Then
+        Return False
+    End If
+
+    Call GameCore.Place(PlayerMover, SpawnX, SpawnY, GameCore.GAME_DIRECTION_DOWN)
+
+    Return True
+
+End Function
+
+Private Sub ConfigureTour()
+
+    TourXs[0] = Town2Tileset.SPAWN_CELL_X
+    TourYs[0] = TOWN_HEIGHT - 1
+    TourXs[1] = Town2Tileset.SPAWN_CELL_X
+    TourYs[1] = 0
+    TourXs[2] = Town2Tileset.SPAWN_CELL_X
+    TourYs[2] = CHUNK_HEIGHT
+    TourXs[3] = TOWN_WIDTH - 1
+    TourYs[3] = CHUNK_HEIGHT
+    TourXs[4] = 0
+    TourYs[4] = CHUNK_HEIGHT
+    TourXs[5] = Town2Tileset.SPAWN_CELL_X
+    TourYs[5] = CHUNK_HEIGHT
+    TourXs[6] = Town2Tileset.SPAWN_CELL_X
+    TourYs[6] = Town2Tileset.SPAWN_CELL_Y
+
+End Sub
+
+Private Sub StartTour()
+
+    TourWaypoint = 0
+    TourEnabled = True
+    TourBlocked = False
+
+End Sub
+
+Private Sub ToggleTour()
+
+    Dim Restarted As Boolean
+
+    If PlayerMover.Moving Then
+        Call GameCore.CancelMove(PlayerMover)
+
+        AnimationClock = 0
+    End If
+
+    If TourEnabled Then
+
+        TourEnabled = False
+        TourBlocked = False
+        Return
+
+    End If
+
+    Restarted = PlacePlayerAtSpawn()
+
+    If Restarted Then
+        Call StartTour()
+    Else
+        TourBlocked = True
+    End If
+
+End Sub
+
+Private Sub AdvanceTour()
+
+    Dim TargetX As Number
+    Dim TargetY As Number
+    Dim MoveDirection As Number
+    Dim MoveStarted As Boolean
+
+    TargetX = TourXs[TourWaypoint]
+    TargetY = TourYs[TourWaypoint]
+
+    If PlayerMover.CellX = TargetX And PlayerMover.CellY = TargetY Then
+
+        TourWaypoint = TourWaypoint + 1
+
+        If TourWaypoint >= TOUR_WAYPOINT_COUNT Then
+            TourWaypoint = 0
+        End If
+
+        TargetX = TourXs[TourWaypoint]
+        TargetY = TourYs[TourWaypoint]
+
+    End If
+
+    If PlayerMover.CellX < TargetX Then
+        MoveDirection = GameCore.GAME_DIRECTION_RIGHT
+    Else If PlayerMover.CellX > TargetX Then
+        MoveDirection = GameCore.GAME_DIRECTION_LEFT
+    Else If PlayerMover.CellY < TargetY Then
+        MoveDirection = GameCore.GAME_DIRECTION_DOWN
+    Else If PlayerMover.CellY > TargetY Then
+        MoveDirection = GameCore.GAME_DIRECTION_UP
+    End If
+
+    If MoveDirection = 0 Then
+        Return
+    End If
+
+    MoveStarted = TryBeginPlayerMove(MoveDirection)
+
+    If Not MoveStarted Then
+        TourEnabled = False
+        TourBlocked = True
+    End If
+
+End Sub
+
+Private Function MovementDirection(PressedKey As Number) As Number
+
+    If (PressedKey = KEY_UP Or
+        PressedKey = KEY_W Or
+        Key_Held(KEY_UP) Or
+        Key_Held(KEY_W)) Then
+        Return GameCore.GAME_DIRECTION_UP
+    End If
+
+    If (PressedKey = KEY_RIGHT Or
+        PressedKey = KEY_D Or
+        Key_Held(KEY_RIGHT) Or
+        Key_Held(KEY_D)) Then
+        Return GameCore.GAME_DIRECTION_RIGHT
+    End If
+
+    If (PressedKey = KEY_DOWN Or
+        PressedKey = KEY_S Or
+        Key_Held(KEY_DOWN) Or
+        Key_Held(KEY_S)) Then
+        Return GameCore.GAME_DIRECTION_DOWN
+    End If
+
+    If (PressedKey = KEY_LEFT Or
+        PressedKey = KEY_A Or
+        Key_Held(KEY_LEFT) Or
+        Key_Held(KEY_A)) Then
+        Return GameCore.GAME_DIRECTION_LEFT
+    End If
+
+    Return 0
+
+End Function
+
+Private Function TryBeginPlayerMove(MoveDirection As Number) As Boolean
+
+    Dim DestinationX As Number
+    Dim DestinationY As Number
+    Dim MoveDuration As Number
+    Dim MoveStarted As Boolean
+    Dim RequestedRunning As Boolean
+
+    DestinationX = PlayerMover.CellX + GameCore.DirectionX(MoveDirection)
+    DestinationY = PlayerMover.CellY + GameCore.DirectionY(MoveDirection)
+    PlayerMover.Facing = MoveDirection
+
+    If IsTownCellSolid(DestinationX, DestinationY) Then
+
+        PlayerIsRunning = False
+        AnimationClock = 0
+
+        Return False
+
+    End If
+
+    RequestedRunning = False
+
+    If ActiveCharacter = CHARACTER_EXPLORER And Key_Held(KEY_SPACE) Then
+        RequestedRunning = True
+    End If
+
+    If RequestedRunning <> PlayerIsRunning Then
+        PlayerIsRunning = RequestedRunning
+        AnimationClock = 0
+    End If
+
+    If PlayerIsRunning Then
+        MoveDuration = RUN_MOVE_DURATION
+    Else
+        MoveDuration = WALK_MOVE_DURATION
+    End If
+
+    MoveStarted = GameCore.BeginMove(PlayerMover, MoveDirection, MoveDuration)
+
+    Return MoveStarted
+
+End Function
+
+Private Sub FollowPlayer()
+
+    Dim TargetX As Number
+    Dim TargetY As Number
+
+    TargetX = GameCore.VisualX(PlayerMover, CELL_WIDTH) + CELL_WIDTH / 2
+    TargetY = GameCore.VisualY(PlayerMover, CELL_HEIGHT) + CELL_HEIGHT / 2
+
+    Call Camera2D.Follow(Camera, TargetX, TargetY)
+
+End Sub
+
+Private Sub ToggleDemoTile()
+
+    Dim TileId As Number
+    Dim Changed As Boolean
+
+    If DemoFlowers Then
+        TileId = Town2Tileset.TILE_GROUND_GRASS
+    Else
+        TileId = Town2Tileset.TILE_GROUND_GRASS_FLOWERS
+    End If
+
+    Changed = SetTile(GameCore.GAME_LAYER_GROUND, Town2Tileset.DEMO_CELL_X,
+        Town2Tileset.DEMO_CELL_Y, TileId)
+
+    If Changed Then
+        DemoFlowers = Not DemoFlowers
+    End If
+
+End Sub
+
+Private Sub DrawWorldLayer(Layer As Number)
+
+    Call DrawChunkLayer(TownMaps[0], Layer, 0, 0)
+    Call DrawChunkLayer(TownMaps[1], Layer, CHUNK_PIXEL_WIDTH, 0)
+    Call DrawChunkLayer(TownMaps[2], Layer, 0, CHUNK_PIXEL_HEIGHT)
+    Call DrawChunkLayer(TownMaps[3], Layer, CHUNK_PIXEL_WIDTH, CHUNK_PIXEL_HEIGHT)
+
+End Sub
+
+Private Sub DrawChunkLayer(MapHandle As Number, Layer As Number, ChunkX As Number, ChunkY As Number)
+
+    Dim LocalCameraX As Number
+    Dim LocalCameraY As Number
+
+    If (Camera.X >= ChunkX + CHUNK_PIXEL_WIDTH Or
+        Camera.Y >= ChunkY + CHUNK_PIXEL_HEIGHT Or
+        Camera.X + VIEW_WIDTH <= ChunkX Or
+        Camera.Y + VIEW_HEIGHT <= ChunkY) Then
+        Return
+    End If
+
+    LocalCameraX = Camera.X - ChunkX
+    LocalCameraY = Camera.Y - ChunkY
+
+    Call TileMap.DrawLayerSmooth(MapHandle, Layer, TownAtlas, LocalCameraX, LocalCameraY,
+        VIEW_WIDTH, VIEW_HEIGHT)
+
+End Sub
+
+Private Sub DrawPlayer()
+
+    Dim WalkAnimation As Number
+    Dim WalkFrame As Number
+    Dim SourceX As Number
+    Dim SourceY As Number
+    Dim SourceWidth As Number
+    Dim SourceHeight As Number
+    Dim ScreenX As Number
+    Dim ScreenY As Number
+
+    If ActiveCharacter = CHARACTER_ARMORED Then
+        WalkAnimation = Character2WalkAnimations[PlayerMover.Facing - 1]
+    Else If PlayerIsRunning Then
+        WalkAnimation = Character1RunAnimations[PlayerMover.Facing - 1]
+    Else
+        WalkAnimation = Character1WalkAnimations[PlayerMover.Facing - 1]
+    End If
+
+    WalkFrame = 0
+
+    If PlayerMover.Moving Then
+
+        If ActiveCharacter = CHARACTER_ARMORED Then
+            WalkFrame = Animation.CurrentFrameInCycle(WalkAnimation, AnimationClock,
+                WALK_CYCLE_DURATION)
+        Else If PlayerIsRunning Then
+            WalkFrame = Animation.CurrentFrameInCycle(WalkAnimation, AnimationClock,
+                RUN_CYCLE_DURATION)
+        Else
+            WalkFrame = Animation.CurrentFrameInCycle(WalkAnimation, AnimationClock,
+                WALK_CYCLE_DURATION)
+        End If
+
+    End If
+
+    SourceX = Animation.SourceX(WalkAnimation, WalkFrame)
+    SourceY = Animation.SourceY(WalkAnimation, WalkFrame)
+    SourceWidth = Animation.SourceWidth(WalkAnimation, WalkFrame)
+    SourceHeight = Animation.SourceHeight(WalkAnimation, WalkFrame)
+    ScreenX = GameCore.VisualX(PlayerMover, CELL_WIDTH) + CELL_WIDTH / 2 - Camera.X
+    ScreenY = GameCore.VisualY(PlayerMover, CELL_HEIGHT) + CELL_HEIGHT - Camera.Y
+
+    If ActiveCharacter = CHARACTER_ARMORED Then
+        Draw Image ArmoredImage From SourceX, SourceY Size SourceWidth By SourceHeight At ScreenX, ScreenY Size ARMORED_DRAW_WIDTH By ARMORED_DRAW_HEIGHT Anchor ARMORED_ANCHOR_X, ARMORED_ANCHOR_Y Filter Smooth
+    Else If PlayerIsRunning Then
+        Draw Image ExplorerRunImage From SourceX, SourceY Size SourceWidth By SourceHeight At ScreenX, ScreenY Size EXPLORER_DRAW_WIDTH By EXPLORER_DRAW_HEIGHT Anchor EXPLORER_ANCHOR_X, EXPLORER_ANCHOR_Y Filter Smooth
+    Else
+        Draw Image ExplorerImage From SourceX, SourceY Size SourceWidth By SourceHeight At ScreenX, ScreenY Size EXPLORER_DRAW_WIDTH By EXPLORER_DRAW_HEIGHT Anchor EXPLORER_ANCHOR_X, EXPLORER_ANCHOR_Y Filter Smooth
+    End If
+
+End Sub
+
+Private Sub DrawLandmarkSigns()
+
+    Dim Index As Number
+    Dim IconIndex As Number
+    Dim ScreenX As Number
+    Dim ScreenY As Number
+
+    For Index = 0 To Town2Tileset.LANDMARK_COUNT - 1
+
+        ScreenX = Town2Tileset.LandmarkCellX(Index) * CELL_WIDTH + CELL_WIDTH / 2 - Camera.X
+        ScreenY = Town2Tileset.LandmarkCellY(Index) * CELL_HEIGHT + CELL_HEIGHT / 2 - Camera.Y
+
+        If (ScreenX >= -WORLD_SIGN_SIZE And
+            ScreenX <= VIEW_WIDTH + WORLD_SIGN_SIZE And
+            ScreenY >= -WORLD_SIGN_SIZE And
+            ScreenY <= VIEW_HEIGHT + WORLD_SIGN_SIZE * 2) Then
+
+            IconIndex = Town2Tileset.LandmarkIcon(Index)
+
+            Draw Image LandmarkIcons From IconIndex * Town2Tileset.LANDMARK_ICON_SIZE, 0 Size Town2Tileset.LANDMARK_ICON_SIZE By Town2Tileset.LANDMARK_ICON_SIZE At ScreenX, ScreenY - 38 Size WORLD_SIGN_SIZE By WORLD_SIGN_SIZE Anchor WORLD_SIGN_SIZE / 2, WORLD_SIGN_SIZE Filter Smooth
+            Draw Text Town2Tileset.LandmarkLabel(Index) At ScreenX + 1, ScreenY - 112 Size 13 Color BLACK Centered
+            Draw Text Town2Tileset.LandmarkLabel(Index) At ScreenX, ScreenY - 113 Size 13 Color WHITE Centered
+
+        End If
+
+    End For
+
+End Sub
+
+Private Sub DrawMiniMap()
+
+    Dim Index As Number
+    Dim IconIndex As Number
+    Dim LandmarkX As Number
+    Dim LandmarkY As Number
+    Dim PlayerX As Number
+    Dim PlayerY As Number
+
+    Fill Rectangle MINIMAP_X - 10, MINIMAP_Y - 28, MINIMAP_WIDTH + 20, MINIMAP_HEIGHT + 38, Rgb(5, 9, 18)
+    Draw Rectangle MINIMAP_X - 10, MINIMAP_Y - 28, MINIMAP_WIDTH + 20, MINIMAP_HEIGHT + 38, Rgb(39, 207, 221)
+    Draw Text "TOWN MAP" At MINIMAP_X, MINIMAP_Y - 22 Size 15 Color WHITE
+    Draw Image TownMiniMap At MINIMAP_X, MINIMAP_Y Size MINIMAP_WIDTH By MINIMAP_HEIGHT Opacity 92 Filter Smooth
+
+    For Index = 0 To Town2Tileset.LANDMARK_COUNT - 1
+
+        LandmarkX = MINIMAP_X + Town2Tileset.LandmarkCellX(Index) * MINIMAP_CELL_PIXELS + MINIMAP_CELL_PIXELS / 2
+        LandmarkY = MINIMAP_Y + Town2Tileset.LandmarkCellY(Index) * MINIMAP_CELL_PIXELS + MINIMAP_CELL_PIXELS / 2
+        IconIndex = Town2Tileset.LandmarkIcon(Index)
+
+        Draw Image LandmarkIcons From IconIndex * Town2Tileset.LANDMARK_ICON_SIZE, 0 Size Town2Tileset.LANDMARK_ICON_SIZE By Town2Tileset.LANDMARK_ICON_SIZE At LandmarkX, LandmarkY Size MINIMAP_ICON_SIZE By MINIMAP_ICON_SIZE Anchor MINIMAP_ICON_SIZE / 2, MINIMAP_ICON_SIZE / 2 Filter Smooth
+        Draw Text Town2Tileset.LandmarkLabel(Index) At LandmarkX + 12, LandmarkY - 5 Size 10 Color WHITE
+    End For
+
+    PlayerX = MINIMAP_X + (GameCore.VisualX(PlayerMover, CELL_WIDTH) + CELL_WIDTH / 2) * MINIMAP_CELL_PIXELS / CELL_WIDTH
+    PlayerY = MINIMAP_Y + (GameCore.VisualY(PlayerMover, CELL_HEIGHT) + CELL_HEIGHT / 2) * MINIMAP_CELL_PIXELS / CELL_HEIGHT
+
+    Fill Rectangle PlayerX - 5, PlayerY - 5, 10, 10, Rgb(255, 196, 28)
+    Fill Rectangle PlayerX - 2, PlayerY - 2, 4, 4, Rgb(39, 207, 221)
+
+End Sub
+
+End Module

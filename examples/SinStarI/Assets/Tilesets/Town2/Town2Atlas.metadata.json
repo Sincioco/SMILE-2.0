@@ -1,0 +1,674 @@
+{
+  "schema": "SINSTAR-TOWN2-TILESET",
+  "version": 1,
+  "source": "isolated grid-aligned Unreal Engine module renders",
+  "flattenedTownPlate": false,
+  "atlasReady": true,
+  "tileCount": 193,
+  "atlas": {
+    "columns": 15,
+    "rows": 13,
+    "contentPixels": [
+      256,
+      256
+    ],
+    "extrusionPixels": 4,
+    "slotPixels": [
+      264,
+      264
+    ]
+  },
+  "world": {
+    "sizeCells": [
+      72,
+      56
+    ],
+    "chunkSizeCells": [
+      36,
+      28
+    ],
+    "cellPixels": [
+      80,
+      80
+    ],
+    "spawnCell": [
+      36,
+      53
+    ],
+    "demoCell": [
+      38,
+      53
+    ]
+  },
+  "landmarks": [
+    {
+      "kind": "ARMOR",
+      "label": "ARMOR",
+      "cell": [
+        5,
+        9
+      ]
+    },
+    {
+      "kind": "SWORDS",
+      "label": "SWORDS",
+      "cell": [
+        50,
+        9
+      ]
+    },
+    {
+      "kind": "SUPPLIES",
+      "label": "SUPPLIES",
+      "cell": [
+        5,
+        23
+      ]
+    },
+    {
+      "kind": "CLINIC",
+      "label": "CLINIC",
+      "cell": [
+        42,
+        23
+      ]
+    }
+  ],
+  "captures": [
+    {
+      "name": "GROUND_Grass_A",
+      "file": "GROUND_Grass_A.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 1,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Grass_B",
+      "file": "GROUND_Grass_B.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 2,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Plaza_A",
+      "file": "GROUND_Plaza_A.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 3,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Road_NS",
+      "file": "GROUND_Road_NS.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 4,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Road_EW",
+      "file": "GROUND_Road_EW.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 5,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Road_Cross",
+      "file": "GROUND_Road_Cross.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 6,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Road_Corner_NE",
+      "file": "GROUND_Road_Corner_NE.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 7,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Road_Corner_NW",
+      "file": "GROUND_Road_Corner_NW.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 8,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Road_Corner_SE",
+      "file": "GROUND_Road_Corner_SE.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 9,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Road_Corner_SW",
+      "file": "GROUND_Road_Corner_SW.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 10,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Road_T_N",
+      "file": "GROUND_Road_T_N.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 11,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Road_T_S",
+      "file": "GROUND_Road_T_S.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 12,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Road_T_E",
+      "file": "GROUND_Road_T_E.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 13,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Road_T_W",
+      "file": "GROUND_Road_T_W.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 14,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Road_End_N",
+      "file": "GROUND_Road_End_N.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 15,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Road_End_S",
+      "file": "GROUND_Road_End_S.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 16,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Road_End_E",
+      "file": "GROUND_Road_End_E.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 17,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Road_End_W",
+      "file": "GROUND_Road_End_W.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 18,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Gate_NS",
+      "file": "GROUND_Gate_NS.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 19,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Gate_EW",
+      "file": "GROUND_Gate_EW.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 20,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_CeramicWalkway_A",
+      "file": "GROUND_CeramicWalkway_A.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 21,
+      "pieceCount": 1
+    },
+    {
+      "name": "GROUND_Plaza_CyanGold",
+      "file": "GROUND_Plaza_CyanGold.png",
+      "layer": "GROUND",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 22,
+      "pieceCount": 1
+    },
+    {
+      "name": "DETAIL_Sidewalk_NS",
+      "file": "DETAIL_Sidewalk_NS.png",
+      "layer": "DETAIL",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 23,
+      "pieceCount": 1
+    },
+    {
+      "name": "DETAIL_Sidewalk_EW",
+      "file": "DETAIL_Sidewalk_EW.png",
+      "layer": "DETAIL",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 24,
+      "pieceCount": 1
+    },
+    {
+      "name": "DETAIL_Tree_Jacaranda_A",
+      "file": "DETAIL_Tree_Jacaranda_A.png",
+      "layer": "DETAIL",
+      "footprintCells": [
+        2,
+        2
+      ],
+      "firstTileId": 25,
+      "pieceCount": 4
+    },
+    {
+      "name": "DETAIL_Tree_Jacaranda_B",
+      "file": "DETAIL_Tree_Jacaranda_B.png",
+      "layer": "DETAIL",
+      "footprintCells": [
+        2,
+        2
+      ],
+      "firstTileId": 29,
+      "pieceCount": 4
+    },
+    {
+      "name": "DETAIL_Bench_EW",
+      "file": "DETAIL_Bench_EW.png",
+      "layer": "DETAIL",
+      "footprintCells": [
+        2,
+        1
+      ],
+      "firstTileId": 33,
+      "pieceCount": 2
+    },
+    {
+      "name": "DETAIL_Bench_NS",
+      "file": "DETAIL_Bench_NS.png",
+      "layer": "DETAIL",
+      "footprintCells": [
+        1,
+        2
+      ],
+      "firstTileId": 35,
+      "pieceCount": 2
+    },
+    {
+      "name": "DETAIL_Planter_A",
+      "file": "DETAIL_Planter_A.png",
+      "layer": "DETAIL",
+      "footprintCells": [
+        1,
+        1
+      ],
+      "firstTileId": 37,
+      "pieceCount": 1
+    },
+    {
+      "name": "DETAIL_Building_Habitat_A",
+      "file": "DETAIL_Building_Habitat_A.png",
+      "layer": "DETAIL",
+      "footprintCells": [
+        6,
+        5
+      ],
+      "firstTileId": 38,
+      "pieceCount": 12
+    },
+    {
+      "name": "DETAIL_Building_Habitat_B",
+      "file": "DETAIL_Building_Habitat_B.png",
+      "layer": "DETAIL",
+      "footprintCells": [
+        6,
+        5
+      ],
+      "firstTileId": 50,
+      "pieceCount": 10
+    },
+    {
+      "name": "DETAIL_Building_LumenExchange_A",
+      "file": "DETAIL_Building_LumenExchange_A.png",
+      "layer": "DETAIL",
+      "footprintCells": [
+        8,
+        5
+      ],
+      "firstTileId": 60,
+      "pieceCount": 14
+    },
+    {
+      "name": "DETAIL_Building_BioRestoration_A",
+      "file": "DETAIL_Building_BioRestoration_A.png",
+      "layer": "DETAIL",
+      "footprintCells": [
+        8,
+        5
+      ],
+      "firstTileId": 74,
+      "pieceCount": 16
+    },
+    {
+      "name": "FOREGROUND_TreeCanopy_A",
+      "file": "FOREGROUND_TreeCanopy_A.png",
+      "layer": "FOREGROUND",
+      "footprintCells": [
+        2,
+        2
+      ],
+      "firstTileId": 90,
+      "pieceCount": 4
+    },
+    {
+      "name": "FOREGROUND_TreeCanopy_B",
+      "file": "FOREGROUND_TreeCanopy_B.png",
+      "layer": "FOREGROUND",
+      "footprintCells": [
+        2,
+        2
+      ],
+      "firstTileId": 94,
+      "pieceCount": 4
+    },
+    {
+      "name": "FOREGROUND_Building_Habitat_A",
+      "file": "FOREGROUND_Building_Habitat_A.png",
+      "layer": "FOREGROUND",
+      "footprintCells": [
+        6,
+        5
+      ],
+      "firstTileId": 98,
+      "pieceCount": 22
+    },
+    {
+      "name": "FOREGROUND_Building_Habitat_B",
+      "file": "FOREGROUND_Building_Habitat_B.png",
+      "layer": "FOREGROUND",
+      "footprintCells": [
+        6,
+        5
+      ],
+      "firstTileId": 120,
+      "pieceCount": 20
+    },
+    {
+      "name": "FOREGROUND_Building_LumenExchange_A",
+      "file": "FOREGROUND_Building_LumenExchange_A.png",
+      "layer": "FOREGROUND",
+      "footprintCells": [
+        8,
+        5
+      ],
+      "firstTileId": 140,
+      "pieceCount": 28
+    },
+    {
+      "name": "FOREGROUND_Building_BioRestoration_A",
+      "file": "FOREGROUND_Building_BioRestoration_A.png",
+      "layer": "FOREGROUND",
+      "footprintCells": [
+        8,
+        5
+      ],
+      "firstTileId": 168,
+      "pieceCount": 26
+    }
+  ],
+  "tileUseCounts": {
+    "1": 3231,
+    "2": 95,
+    "3": 63,
+    "4": 120,
+    "5": 230,
+    "6": 4,
+    "11": 6,
+    "12": 6,
+    "17": 3,
+    "18": 3,
+    "19": 2,
+    "20": 2,
+    "21": 202,
+    "22": 65,
+    "23": 261,
+    "24": 468,
+    "38": 10,
+    "39": 10,
+    "40": 10,
+    "41": 10,
+    "42": 10,
+    "43": 10,
+    "44": 10,
+    "45": 10,
+    "46": 10,
+    "47": 10,
+    "48": 10,
+    "49": 10,
+    "50": 9,
+    "51": 9,
+    "52": 9,
+    "53": 9,
+    "54": 9,
+    "55": 9,
+    "56": 9,
+    "57": 9,
+    "58": 9,
+    "59": 9,
+    "60": 5,
+    "61": 5,
+    "62": 5,
+    "63": 5,
+    "64": 5,
+    "65": 5,
+    "66": 5,
+    "67": 5,
+    "68": 5,
+    "69": 5,
+    "70": 5,
+    "71": 5,
+    "72": 5,
+    "73": 5,
+    "74": 3,
+    "75": 3,
+    "76": 3,
+    "77": 3,
+    "78": 3,
+    "79": 3,
+    "80": 3,
+    "81": 3,
+    "82": 3,
+    "83": 3,
+    "84": 3,
+    "85": 3,
+    "86": 3,
+    "87": 3,
+    "88": 3,
+    "89": 3,
+    "98": 10,
+    "99": 10,
+    "100": 10,
+    "101": 10,
+    "102": 10,
+    "103": 10,
+    "104": 10,
+    "105": 10,
+    "106": 10,
+    "107": 10,
+    "108": 10,
+    "109": 10,
+    "110": 10,
+    "111": 10,
+    "112": 10,
+    "113": 10,
+    "114": 10,
+    "115": 10,
+    "116": 10,
+    "117": 10,
+    "118": 10,
+    "119": 10,
+    "120": 9,
+    "121": 9,
+    "122": 9,
+    "123": 9,
+    "124": 9,
+    "125": 9,
+    "126": 9,
+    "127": 9,
+    "128": 9,
+    "129": 9,
+    "130": 9,
+    "131": 9,
+    "132": 9,
+    "133": 9,
+    "134": 9,
+    "135": 9,
+    "136": 9,
+    "137": 9,
+    "138": 9,
+    "139": 9,
+    "140": 5,
+    "141": 5,
+    "142": 5,
+    "143": 5,
+    "144": 5,
+    "145": 5,
+    "146": 5,
+    "147": 5,
+    "148": 5,
+    "149": 5,
+    "150": 5,
+    "151": 5,
+    "152": 5,
+    "153": 5,
+    "154": 5,
+    "155": 5,
+    "156": 5,
+    "157": 5,
+    "158": 5,
+    "159": 5,
+    "160": 5,
+    "161": 5,
+    "162": 5,
+    "163": 5,
+    "164": 5,
+    "165": 5,
+    "166": 5,
+    "167": 5,
+    "168": 3,
+    "169": 3,
+    "170": 3,
+    "171": 3,
+    "172": 3,
+    "173": 3,
+    "174": 3,
+    "175": 3,
+    "176": 3,
+    "177": 3,
+    "178": 3,
+    "179": 3,
+    "180": 3,
+    "181": 3,
+    "182": 3,
+    "183": 3,
+    "184": 3,
+    "185": 3,
+    "186": 3,
+    "187": 3,
+    "188": 3,
+    "189": 3,
+    "190": 3,
+    "191": 3,
+    "192": 3,
+    "193": 3
+  }
+}

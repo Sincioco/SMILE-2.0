@@ -1,0 +1,104 @@
+{
+  "schema": "SINSTAR-RUNTIME-SPRITE",
+  "version": 1,
+  "name": "Sin Star I Hero Explorer v1",
+  "source": "D:\\Projects\\Sin-Star-Asset-Lab-Unreal\\SinStarI\\SourceArt\\Characters\\HeroExplorer\\Generated\\HeroExplorer_WalkSheet_Source_RGB.png",
+  "sourceSha256": "f629fc17b5acaff030fdfc7001c2f6cd973ddb3861ce87fa0d9a4263143d8836",
+  "sheet": {
+    "width": 768,
+    "height": 1536
+  },
+  "frame": {
+    "width": 256,
+    "height": 384
+  },
+  "layout": {
+    "columns": 3,
+    "rows": [
+      "up",
+      "right",
+      "down",
+      "left"
+    ]
+  },
+  "anchor": {
+    "x": 128,
+    "y": 384,
+    "description": "bottom-center feet"
+  },
+  "sharedScale": 1.0506912442396312,
+  "frameAlphaBounds": {
+    "up_0": [
+      51,
+      29,
+      204,
+      374
+    ],
+    "up_1": [
+      62,
+      27,
+      193,
+      374
+    ],
+    "up_2": [
+      48,
+      29,
+      208,
+      374
+    ],
+    "right_0": [
+      25,
+      47,
+      231,
+      374
+    ],
+    "right_1": [
+      22,
+      48,
+      234,
+      374
+    ],
+    "right_2": [
+      15,
+      47,
+      241,
+      374
+    ],
+    "down_0": [
+      58,
+      38,
+      197,
+      374
+    ],
+    "down_1": [
+      58,
+      37,
+      198,
+      374
+    ],
+    "down_2": [
+      58,
+      37,
+      198,
+      374
+    ],
+    "left_0": [
+      17,
+      38,
+      238,
+      374
+    ],
+    "left_1": [
+      14,
+      39,
+      242,
+      374
+    ],
+    "left_2": [
+      17,
+      46,
+      239,
+      374
+    ]
+  }
+}

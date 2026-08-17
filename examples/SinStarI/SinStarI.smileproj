@@ -10,8 +10,13 @@
   <ItemGroup>
     <SmileSource Include="Program.smile" StartupOnly="true" />
     <SmileSource Include="TitleScreen.smile" />
+    <SmileSource Include="TownScreen.smile" />
+    <SmileSource Include="TileSets\Town2Tileset.smile" />
+    <SmileSource Include="Town2Screen.smile" />
+    <SmileSource Include="CharacterScreen.smile" />
     <SmileProjectReference Include="..\..\libraries\Smile.Game\Smile.Game.smilelibproj" />
-    <Asset Include="Assets\*.png" />
+    <Asset Include="Assets\**\*.png" />
     <Asset Include="Assets\*.mp3" />
+    <Asset Include="Maps\**\*.smilemap" />
   </ItemGroup>
 </SmileProject>

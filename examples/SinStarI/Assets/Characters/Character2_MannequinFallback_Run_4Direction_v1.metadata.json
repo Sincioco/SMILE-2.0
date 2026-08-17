@@ -1,0 +1,501 @@
+{
+  "source": "Unreal Engine 5.8 dual-matte orthographic character capture",
+  "sheet": {
+    "width": 4096,
+    "height": 1536
+  },
+  "frame": {
+    "width": 256,
+    "height": 384
+  },
+  "layout": {
+    "columns": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "rows": [
+      "up",
+      "right",
+      "down",
+      "left"
+    ]
+  },
+  "phaseCount": 16,
+  "anchor": {
+    "x": 128,
+    "y": 384,
+    "description": "bottom-center feet"
+  },
+  "sharedSourceCrop": [
+    36,
+    0,
+    475,
+    659
+  ],
+  "frameAlphaBounds": {
+    "up_0": [
+      94,
+      148,
+      166,
+      340
+    ],
+    "up_1": [
+      97,
+      150,
+      168,
+      341
+    ],
+    "up_2": [
+      94,
+      145,
+      169,
+      336
+    ],
+    "up_3": [
+      90,
+      151,
+      166,
+      342
+    ],
+    "up_4": [
+      89,
+      146,
+      159,
+      340
+    ],
+    "up_5": [
+      92,
+      146,
+      163,
+      340
+    ],
+    "up_6": [
+      92,
+      150,
+      164,
+      342
+    ],
+    "up_7": [
+      95,
+      143,
+      163,
+      332
+    ],
+    "up_8": [
+      89,
+      148,
+      167,
+      342
+    ],
+    "up_9": [
+      90,
+      146,
+      158,
+      343
+    ],
+    "up_10": [
+      89,
+      141,
+      162,
+      332
+    ],
+    "up_11": [
+      89,
+      148,
+      166,
+      342
+    ],
+    "up_12": [
+      90,
+      144,
+      164,
+      332
+    ],
+    "up_13": [
+      91,
+      146,
+      168,
+      342
+    ],
+    "up_14": [
+      89,
+      146,
+      162,
+      343
+    ],
+    "up_15": [
+      86,
+      141,
+      160,
+      328
+    ],
+    "right_0": [
+      49,
+      148,
+      166,
+      340
+    ],
+    "right_1": [
+      33,
+      150,
+      177,
+      341
+    ],
+    "right_2": [
+      17,
+      145,
+      174,
+      336
+    ],
+    "right_3": [
+      69,
+      151,
+      173,
+      342
+    ],
+    "right_4": [
+      33,
+      146,
+      185,
+      340
+    ],
+    "right_5": [
+      38,
+      146,
+      173,
+      340
+    ],
+    "right_6": [
+      60,
+      150,
+      177,
+      342
+    ],
+    "right_7": [
+      28,
+      143,
+      187,
+      332
+    ],
+    "right_8": [
+      56,
+      148,
+      162,
+      342
+    ],
+    "right_9": [
+      41,
+      146,
+      183,
+      343
+    ],
+    "right_10": [
+      31,
+      142,
+      188,
+      332
+    ],
+    "right_11": [
+      79,
+      148,
+      166,
+      342
+    ],
+    "right_12": [
+      27,
+      144,
+      180,
+      332
+    ],
+    "right_13": [
+      26,
+      146,
+      170,
+      342
+    ],
+    "right_14": [
+      42,
+      146,
+      181,
+      343
+    ],
+    "right_15": [
+      18,
+      141,
+      183,
+      328
+    ],
+    "down_0": [
+      91,
+      148,
+      162,
+      341
+    ],
+    "down_1": [
+      88,
+      150,
+      160,
+      341
+    ],
+    "down_2": [
+      87,
+      145,
+      163,
+      336
+    ],
+    "down_3": [
+      90,
+      151,
+      166,
+      342
+    ],
+    "down_4": [
+      97,
+      146,
+      168,
+      340
+    ],
+    "down_5": [
+      93,
+      146,
+      165,
+      340
+    ],
+    "down_6": [
+      92,
+      150,
+      164,
+      342
+    ],
+    "down_7": [
+      93,
+      143,
+      162,
+      332
+    ],
+    "down_8": [
+      89,
+      148,
+      167,
+      342
+    ],
+    "down_9": [
+      98,
+      146,
+      167,
+      343
+    ],
+    "down_10": [
+      94,
+      141,
+      167,
+      332
+    ],
+    "down_11": [
+      91,
+      148,
+      167,
+      342
+    ],
+    "down_12": [
+      93,
+      144,
+      166,
+      332
+    ],
+    "down_13": [
+      89,
+      146,
+      165,
+      342
+    ],
+    "down_14": [
+      94,
+      146,
+      167,
+      343
+    ],
+    "down_15": [
+      96,
+      141,
+      170,
+      328
+    ],
+    "left_0": [
+      91,
+      148,
+      208,
+      340
+    ],
+    "left_1": [
+      79,
+      150,
+      224,
+      341
+    ],
+    "left_2": [
+      82,
+      145,
+      239,
+      336
+    ],
+    "left_3": [
+      83,
+      151,
+      188,
+      342
+    ],
+    "left_4": [
+      71,
+      146,
+      224,
+      340
+    ],
+    "left_5": [
+      83,
+      146,
+      218,
+      340
+    ],
+    "left_6": [
+      79,
+      150,
+      196,
+      342
+    ],
+    "left_7": [
+      69,
+      143,
+      228,
+      332
+    ],
+    "left_8": [
+      95,
+      148,
+      200,
+      342
+    ],
+    "left_9": [
+      74,
+      146,
+      215,
+      343
+    ],
+    "left_10": [
+      68,
+      142,
+      225,
+      332
+    ],
+    "left_11": [
+      90,
+      148,
+      178,
+      342
+    ],
+    "left_12": [
+      76,
+      144,
+      230,
+      332
+    ],
+    "left_13": [
+      86,
+      146,
+      231,
+      342
+    ],
+    "left_14": [
+      75,
+      146,
+      215,
+      343
+    ],
+    "left_15": [
+      73,
+      141,
+      239,
+      328
+    ]
+  },
+  "reconstructionModes": {
+    "up_0": "dual-matte-calibrated",
+    "up_1": "dual-matte-calibrated",
+    "up_2": "dual-matte-calibrated",
+    "up_3": "dual-matte-calibrated",
+    "up_4": "dual-matte-calibrated",
+    "up_5": "dual-matte-calibrated",
+    "up_6": "dual-matte-calibrated",
+    "up_7": "dual-matte-calibrated",
+    "up_8": "dual-matte-calibrated",
+    "up_9": "dual-matte-calibrated",
+    "up_10": "dual-matte-calibrated",
+    "up_11": "dual-matte-calibrated",
+    "up_12": "dual-matte-calibrated",
+    "up_13": "dual-matte-calibrated",
+    "up_14": "dual-matte-calibrated",
+    "up_15": "dual-matte-calibrated",
+    "right_0": "dual-matte-calibrated",
+    "right_1": "dual-matte-calibrated",
+    "right_2": "dual-matte-calibrated",
+    "right_3": "dual-matte-calibrated",
+    "right_4": "dual-matte-calibrated",
+    "right_5": "dual-matte-calibrated",
+    "right_6": "dual-matte-calibrated",
+    "right_7": "dual-matte-calibrated",
+    "right_8": "dual-matte-calibrated",
+    "right_9": "dual-matte-calibrated",
+    "right_10": "dual-matte-calibrated",
+    "right_11": "dual-matte-calibrated",
+    "right_12": "dual-matte-calibrated",
+    "right_13": "dual-matte-calibrated",
+    "right_14": "dual-matte-calibrated",
+    "right_15": "dual-matte-calibrated",
+    "down_0": "dual-matte-calibrated",
+    "down_1": "dual-matte-calibrated",
+    "down_2": "dual-matte-calibrated",
+    "down_3": "dual-matte-calibrated",
+    "down_4": "dual-matte-calibrated",
+    "down_5": "dual-matte-calibrated",
+    "down_6": "dual-matte-calibrated",
+    "down_7": "dual-matte-calibrated",
+    "down_8": "dual-matte-calibrated",
+    "down_9": "dual-matte-calibrated",
+    "down_10": "dual-matte-calibrated",
+    "down_11": "dual-matte-calibrated",
+    "down_12": "dual-matte-calibrated",
+    "down_13": "dual-matte-calibrated",
+    "down_14": "dual-matte-calibrated",
+    "down_15": "dual-matte-calibrated",
+    "left_0": "dual-matte-calibrated",
+    "left_1": "dual-matte-calibrated",
+    "left_2": "dual-matte-calibrated",
+    "left_3": "dual-matte-calibrated",
+    "left_4": "dual-matte-calibrated",
+    "left_5": "dual-matte-calibrated",
+    "left_6": "dual-matte-calibrated",
+    "left_7": "dual-matte-calibrated",
+    "left_8": "dual-matte-calibrated",
+    "left_9": "dual-matte-calibrated",
+    "left_10": "dual-matte-calibrated",
+    "left_11": "dual-matte-calibrated",
+    "left_12": "dual-matte-calibrated",
+    "left_13": "dual-matte-calibrated",
+    "left_14": "dual-matte-calibrated",
+    "left_15": "dual-matte-calibrated"
+  }
+}

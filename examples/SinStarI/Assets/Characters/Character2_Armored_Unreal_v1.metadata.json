@@ -1,0 +1,123 @@
+{
+  "source": "Unreal Engine 5.8 dual-matte orthographic character capture",
+  "sheet": {
+    "width": 768,
+    "height": 1536
+  },
+  "frame": {
+    "width": 256,
+    "height": 384
+  },
+  "layout": {
+    "columns": [
+      0,
+      1,
+      2
+    ],
+    "rows": [
+      "up",
+      "right",
+      "down",
+      "left"
+    ]
+  },
+  "anchor": {
+    "x": 128,
+    "y": 384,
+    "description": "bottom-center feet"
+  },
+  "sharedSourceCrop": [
+    142,
+    209,
+    400,
+    596
+  ],
+  "frameAlphaBounds": {
+    "up_0": [
+      40,
+      33,
+      182,
+      373
+    ],
+    "up_1": [
+      26,
+      38,
+      182,
+      371
+    ],
+    "up_2": [
+      33,
+      35,
+      181,
+      370
+    ],
+    "right_0": [
+      64,
+      26,
+      188,
+      370
+    ],
+    "right_1": [
+      45,
+      28,
+      230,
+      372
+    ],
+    "right_2": [
+      60,
+      31,
+      183,
+      371
+    ],
+    "down_0": [
+      43,
+      26,
+      183,
+      373
+    ],
+    "down_1": [
+      32,
+      23,
+      176,
+      371
+    ],
+    "down_2": [
+      45,
+      24,
+      190,
+      372
+    ],
+    "left_0": [
+      41,
+      22,
+      181,
+      370
+    ],
+    "left_1": [
+      36,
+      26,
+      184,
+      371
+    ],
+    "left_2": [
+      33,
+      25,
+      193,
+      370
+    ]
+  },
+  "reconstructionModes": {
+    "up_0": "dual-matte-calibrated",
+    "up_1": "dual-matte-calibrated",
+    "up_2": "dual-matte-calibrated",
+    "right_0": "dual-matte-calibrated",
+    "right_1": "dual-matte-calibrated",
+    "right_2": "dual-matte-calibrated",
+    "down_0": "dual-matte-calibrated",
+    "down_1": "dual-matte-calibrated",
+    "down_2": "dual-matte-calibrated",
+    "left_0": "dual-matte-calibrated",
+    "left_1": "dual-matte-calibrated",
+    "left_2": "dual-matte-calibrated"
+  }
+}

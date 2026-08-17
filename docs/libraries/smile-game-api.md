@@ -21,7 +21,8 @@ Capacities: 64 generation-safe animation definitions and 16 frames per definitio
 Capacities: 4 maps, 64×64/4,096 cells, tile IDs 0–255, region IDs 0–255, and 131,072 input bytes.
 
 - lifecycle/parsing: `LoadMap(Text)`, `Unload`, `IsValid`
-- metadata/cells: `Width`, `Height`, `CellWidth`, `CellHeight`, `TileAt`, `IsSolid`, `RegionAt`
+- metadata/cells: `Width`, `Height`, `CellWidth`, `CellHeight`, `TileAt`, `IsSolid`, `CollisionAt`, `RegionAt`
+- runtime editing: `SetTile` replaces one Ground/Detail/Foreground tile; `SetCollision` changes one collision category
 - coordinate conversion: `CellToWorldX`, `CellToWorldY`, `WorldToCellX`, `WorldToCellY`
 - tiles/rendering: `DefineTile`, `DrawLayerPixel`, `DrawLayerSmooth`
 

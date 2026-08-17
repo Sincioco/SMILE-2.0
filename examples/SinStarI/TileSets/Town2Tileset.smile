@@ -1,0 +1,501 @@
+''' Generated Town 2 reusable Unreal-rendered tile catalog. Do not edit by hand.
+Module SinStarI.TileSets.Town2Tileset
+
+Option Explicit
+
+Import Smile.Game.TileMap As TileMap
+
+Public Const WORLD_COLUMNS = 72
+Public Const WORLD_ROWS = 56
+Public Const CHUNK_COLUMNS = 36
+Public Const CHUNK_ROWS = 28
+Public Const CELL_WIDTH = 80
+Public Const CELL_HEIGHT = 80
+Public Const SPAWN_CELL_X = 36
+Public Const SPAWN_CELL_Y = 53
+Public Const DEMO_CELL_X = 38
+Public Const DEMO_CELL_Y = 53
+Public Const LANDMARK_COUNT = 4
+Public Const LANDMARK_ICON_SIZE = 96
+
+Public Const LANDMARK_KIND_ARMOR = 1
+Public Const LANDMARK_KIND_SWORDS = 2
+Public Const LANDMARK_KIND_SUPPLIES = 3
+Public Const LANDMARK_KIND_CLINIC = 4
+
+Public Const TILE_GROUND_GRASS = 1
+Public Const TILE_GROUND_GRASS_FLOWERS = 2
+
+Public Const TILE_GROUND_GRASS_A = 1
+Public Const TILE_GROUND_GRASS_B = 2
+Public Const TILE_GROUND_PLAZA_A = 3
+Public Const TILE_GROUND_ROAD_NS = 4
+Public Const TILE_GROUND_ROAD_EW = 5
+Public Const TILE_GROUND_ROAD_CROSS = 6
+Public Const TILE_GROUND_ROAD_CORNER_NE = 7
+Public Const TILE_GROUND_ROAD_CORNER_NW = 8
+Public Const TILE_GROUND_ROAD_CORNER_SE = 9
+Public Const TILE_GROUND_ROAD_CORNER_SW = 10
+Public Const TILE_GROUND_ROAD_T_N = 11
+Public Const TILE_GROUND_ROAD_T_S = 12
+Public Const TILE_GROUND_ROAD_T_E = 13
+Public Const TILE_GROUND_ROAD_T_W = 14
+Public Const TILE_GROUND_ROAD_END_N = 15
+Public Const TILE_GROUND_ROAD_END_S = 16
+Public Const TILE_GROUND_ROAD_END_E = 17
+Public Const TILE_GROUND_ROAD_END_W = 18
+Public Const TILE_GROUND_GATE_NS = 19
+Public Const TILE_GROUND_GATE_EW = 20
+Public Const TILE_GROUND_CERAMICWALKWAY_A = 21
+Public Const TILE_GROUND_PLAZA_CYANGOLD = 22
+Public Const TILE_DETAIL_SIDEWALK_NS = 23
+Public Const TILE_DETAIL_SIDEWALK_EW = 24
+Public Const TILE_DETAIL_TREE_JACARANDA_A_0_0 = 25
+Public Const TILE_DETAIL_TREE_JACARANDA_A_1_0 = 26
+Public Const TILE_DETAIL_TREE_JACARANDA_A_0_1 = 27
+Public Const TILE_DETAIL_TREE_JACARANDA_A_1_1 = 28
+Public Const TILE_DETAIL_TREE_JACARANDA_B_0_0 = 29
+Public Const TILE_DETAIL_TREE_JACARANDA_B_1_0 = 30
+Public Const TILE_DETAIL_TREE_JACARANDA_B_0_1 = 31
+Public Const TILE_DETAIL_TREE_JACARANDA_B_1_1 = 32
+Public Const TILE_DETAIL_BENCH_EW_0_0 = 33
+Public Const TILE_DETAIL_BENCH_EW_1_0 = 34
+Public Const TILE_DETAIL_BENCH_NS_0_0 = 35
+Public Const TILE_DETAIL_BENCH_NS_0_1 = 36
+Public Const TILE_DETAIL_PLANTER_A = 37
+Public Const TILE_DETAIL_BUILDING_HABITAT_A_0_3 = 38
+Public Const TILE_DETAIL_BUILDING_HABITAT_A_1_3 = 39
+Public Const TILE_DETAIL_BUILDING_HABITAT_A_2_3 = 40
+Public Const TILE_DETAIL_BUILDING_HABITAT_A_3_3 = 41
+Public Const TILE_DETAIL_BUILDING_HABITAT_A_4_3 = 42
+Public Const TILE_DETAIL_BUILDING_HABITAT_A_5_3 = 43
+Public Const TILE_DETAIL_BUILDING_HABITAT_A_0_4 = 44
+Public Const TILE_DETAIL_BUILDING_HABITAT_A_1_4 = 45
+Public Const TILE_DETAIL_BUILDING_HABITAT_A_2_4 = 46
+Public Const TILE_DETAIL_BUILDING_HABITAT_A_3_4 = 47
+Public Const TILE_DETAIL_BUILDING_HABITAT_A_4_4 = 48
+Public Const TILE_DETAIL_BUILDING_HABITAT_A_5_4 = 49
+Public Const TILE_DETAIL_BUILDING_HABITAT_B_0_3 = 50
+Public Const TILE_DETAIL_BUILDING_HABITAT_B_1_3 = 51
+Public Const TILE_DETAIL_BUILDING_HABITAT_B_2_3 = 52
+Public Const TILE_DETAIL_BUILDING_HABITAT_B_3_3 = 53
+Public Const TILE_DETAIL_BUILDING_HABITAT_B_4_3 = 54
+Public Const TILE_DETAIL_BUILDING_HABITAT_B_5_3 = 55
+Public Const TILE_DETAIL_BUILDING_HABITAT_B_1_4 = 56
+Public Const TILE_DETAIL_BUILDING_HABITAT_B_2_4 = 57
+Public Const TILE_DETAIL_BUILDING_HABITAT_B_3_4 = 58
+Public Const TILE_DETAIL_BUILDING_HABITAT_B_4_4 = 59
+Public Const TILE_DETAIL_BUILDING_LUMENEXCHANGE_A_0_3 = 60
+Public Const TILE_DETAIL_BUILDING_LUMENEXCHANGE_A_1_3 = 61
+Public Const TILE_DETAIL_BUILDING_LUMENEXCHANGE_A_2_3 = 62
+Public Const TILE_DETAIL_BUILDING_LUMENEXCHANGE_A_3_3 = 63
+Public Const TILE_DETAIL_BUILDING_LUMENEXCHANGE_A_4_3 = 64
+Public Const TILE_DETAIL_BUILDING_LUMENEXCHANGE_A_5_3 = 65
+Public Const TILE_DETAIL_BUILDING_LUMENEXCHANGE_A_6_3 = 66
+Public Const TILE_DETAIL_BUILDING_LUMENEXCHANGE_A_7_3 = 67
+Public Const TILE_DETAIL_BUILDING_LUMENEXCHANGE_A_1_4 = 68
+Public Const TILE_DETAIL_BUILDING_LUMENEXCHANGE_A_2_4 = 69
+Public Const TILE_DETAIL_BUILDING_LUMENEXCHANGE_A_3_4 = 70
+Public Const TILE_DETAIL_BUILDING_LUMENEXCHANGE_A_4_4 = 71
+Public Const TILE_DETAIL_BUILDING_LUMENEXCHANGE_A_5_4 = 72
+Public Const TILE_DETAIL_BUILDING_LUMENEXCHANGE_A_6_4 = 73
+Public Const TILE_DETAIL_BUILDING_BIORESTORATION_A_0_3 = 74
+Public Const TILE_DETAIL_BUILDING_BIORESTORATION_A_1_3 = 75
+Public Const TILE_DETAIL_BUILDING_BIORESTORATION_A_2_3 = 76
+Public Const TILE_DETAIL_BUILDING_BIORESTORATION_A_3_3 = 77
+Public Const TILE_DETAIL_BUILDING_BIORESTORATION_A_4_3 = 78
+Public Const TILE_DETAIL_BUILDING_BIORESTORATION_A_5_3 = 79
+Public Const TILE_DETAIL_BUILDING_BIORESTORATION_A_6_3 = 80
+Public Const TILE_DETAIL_BUILDING_BIORESTORATION_A_7_3 = 81
+Public Const TILE_DETAIL_BUILDING_BIORESTORATION_A_0_4 = 82
+Public Const TILE_DETAIL_BUILDING_BIORESTORATION_A_1_4 = 83
+Public Const TILE_DETAIL_BUILDING_BIORESTORATION_A_2_4 = 84
+Public Const TILE_DETAIL_BUILDING_BIORESTORATION_A_3_4 = 85
+Public Const TILE_DETAIL_BUILDING_BIORESTORATION_A_4_4 = 86
+Public Const TILE_DETAIL_BUILDING_BIORESTORATION_A_5_4 = 87
+Public Const TILE_DETAIL_BUILDING_BIORESTORATION_A_6_4 = 88
+Public Const TILE_DETAIL_BUILDING_BIORESTORATION_A_7_4 = 89
+Public Const TILE_FOREGROUND_TREECANOPY_A_0_0 = 90
+Public Const TILE_FOREGROUND_TREECANOPY_A_1_0 = 91
+Public Const TILE_FOREGROUND_TREECANOPY_A_0_1 = 92
+Public Const TILE_FOREGROUND_TREECANOPY_A_1_1 = 93
+Public Const TILE_FOREGROUND_TREECANOPY_B_0_0 = 94
+Public Const TILE_FOREGROUND_TREECANOPY_B_1_0 = 95
+Public Const TILE_FOREGROUND_TREECANOPY_B_0_1 = 96
+Public Const TILE_FOREGROUND_TREECANOPY_B_1_1 = 97
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_1_0 = 98
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_2_0 = 99
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_3_0 = 100
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_4_0 = 101
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_0_1 = 102
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_1_1 = 103
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_2_1 = 104
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_3_1 = 105
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_4_1 = 106
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_5_1 = 107
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_0_2 = 108
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_1_2 = 109
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_2_2 = 110
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_3_2 = 111
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_4_2 = 112
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_5_2 = 113
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_0_3 = 114
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_1_3 = 115
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_2_3 = 116
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_3_3 = 117
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_4_3 = 118
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_A_5_3 = 119
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_2_0 = 120
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_3_0 = 121
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_4_0 = 122
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_0_1 = 123
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_1_1 = 124
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_2_1 = 125
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_3_1 = 126
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_4_1 = 127
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_0_2 = 128
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_1_2 = 129
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_2_2 = 130
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_3_2 = 131
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_4_2 = 132
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_5_2 = 133
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_0_3 = 134
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_1_3 = 135
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_2_3 = 136
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_3_3 = 137
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_4_3 = 138
+Public Const TILE_FOREGROUND_BUILDING_HABITAT_B_5_3 = 139
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_2_0 = 140
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_3_0 = 141
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_4_0 = 142
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_5_0 = 143
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_0_1 = 144
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_1_1 = 145
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_2_1 = 146
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_3_1 = 147
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_4_1 = 148
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_5_1 = 149
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_6_1 = 150
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_7_1 = 151
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_0_2 = 152
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_1_2 = 153
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_2_2 = 154
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_3_2 = 155
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_4_2 = 156
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_5_2 = 157
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_6_2 = 158
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_7_2 = 159
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_0_3 = 160
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_1_3 = 161
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_2_3 = 162
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_3_3 = 163
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_4_3 = 164
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_5_3 = 165
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_6_3 = 166
+Public Const TILE_FOREGROUND_BUILDING_LUMENEXCHANGE_A_7_3 = 167
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_3_0 = 168
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_4_0 = 169
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_0_1 = 170
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_1_1 = 171
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_2_1 = 172
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_3_1 = 173
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_4_1 = 174
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_5_1 = 175
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_6_1 = 176
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_7_1 = 177
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_0_2 = 178
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_1_2 = 179
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_2_2 = 180
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_3_2 = 181
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_4_2 = 182
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_5_2 = 183
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_6_2 = 184
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_7_2 = 185
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_0_3 = 186
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_1_3 = 187
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_2_3 = 188
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_3_3 = 189
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_4_3 = 190
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_5_3 = 191
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_6_3 = 192
+Public Const TILE_FOREGROUND_BUILDING_BIORESTORATION_A_7_3 = 193
+
+''' Returns the global cell X for one generated service landmark.
+Public Function LandmarkCellX(Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Index = 0 Then
+        Return 5
+    Else If Index = 1 Then
+        Return 50
+    Else If Index = 2 Then
+        Return 5
+    Else If Index = 3 Then
+        Return 42
+    End If
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the global cell Y for one generated service landmark.
+Public Function LandmarkCellY(Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Index = 0 Then
+        Return 9
+    Else If Index = 1 Then
+        Return 9
+    Else If Index = 2 Then
+        Return 23
+    Else If Index = 3 Then
+        Return 23
+    End If
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the icon-sheet index for one generated service landmark.
+Public Function LandmarkIcon(Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Index >= 0 And Index < LANDMARK_COUNT Then
+        Return Index
+    End If
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+''' Returns the short service label for one generated landmark.
+Public Function LandmarkLabel(Index As Number) As Text
+
+    If Index = 0 Then
+        Return "ARMOR"
+    Else If Index = 1 Then
+        Return "SWORDS"
+    Else If Index = 2 Then
+        Return "SUPPLIES"
+    Else If Index = 3 Then
+        Return "CLINIC"
+    End If
+
+    Return ""
+
+End Function
+
+''' Registers the shared atlas rectangles on one loaded Town 2 chunk.
+Public Function Register(MapHandle As Number) As Boolean
+
+    Dim Succeeded As Boolean
+
+    Succeeded = True
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 1, 4, 4, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 2, 268, 4, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 3, 532, 4, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 4, 796, 4, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 5, 1060, 4, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 6, 1324, 4, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 7, 1588, 4, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 8, 1852, 4, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 9, 2116, 4, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 10, 2380, 4, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 11, 2644, 4, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 12, 2908, 4, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 13, 3172, 4, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 14, 3436, 4, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 15, 3700, 4, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 16, 4, 268, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 17, 268, 268, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 18, 532, 268, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 19, 796, 268, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 20, 1060, 268, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 21, 1324, 268, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 22, 1588, 268, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 23, 1852, 268, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 24, 2116, 268, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 25, 2380, 268, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 26, 2644, 268, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 27, 2908, 268, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 28, 3172, 268, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 29, 3436, 268, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 30, 3700, 268, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 31, 4, 532, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 32, 268, 532, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 33, 532, 532, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 34, 796, 532, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 35, 1060, 532, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 36, 1324, 532, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 37, 1588, 532, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 38, 1852, 532, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 39, 2116, 532, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 40, 2380, 532, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 41, 2644, 532, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 42, 2908, 532, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 43, 3172, 532, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 44, 3436, 532, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 45, 3700, 532, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 46, 4, 796, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 47, 268, 796, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 48, 532, 796, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 49, 796, 796, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 50, 1060, 796, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 51, 1324, 796, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 52, 1588, 796, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 53, 1852, 796, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 54, 2116, 796, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 55, 2380, 796, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 56, 2644, 796, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 57, 2908, 796, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 58, 3172, 796, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 59, 3436, 796, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 60, 3700, 796, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 61, 4, 1060, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 62, 268, 1060, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 63, 532, 1060, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 64, 796, 1060, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 65, 1060, 1060, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 66, 1324, 1060, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 67, 1588, 1060, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 68, 1852, 1060, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 69, 2116, 1060, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 70, 2380, 1060, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 71, 2644, 1060, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 72, 2908, 1060, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 73, 3172, 1060, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 74, 3436, 1060, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 75, 3700, 1060, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 76, 4, 1324, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 77, 268, 1324, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 78, 532, 1324, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 79, 796, 1324, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 80, 1060, 1324, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 81, 1324, 1324, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 82, 1588, 1324, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 83, 1852, 1324, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 84, 2116, 1324, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 85, 2380, 1324, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 86, 2644, 1324, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 87, 2908, 1324, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 88, 3172, 1324, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 89, 3436, 1324, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 90, 3700, 1324, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 91, 4, 1588, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 92, 268, 1588, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 93, 532, 1588, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 94, 796, 1588, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 95, 1060, 1588, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 96, 1324, 1588, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 97, 1588, 1588, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 98, 1852, 1588, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 99, 2116, 1588, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 100, 2380, 1588, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 101, 2644, 1588, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 102, 2908, 1588, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 103, 3172, 1588, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 104, 3436, 1588, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 105, 3700, 1588, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 106, 4, 1852, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 107, 268, 1852, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 108, 532, 1852, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 109, 796, 1852, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 110, 1060, 1852, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 111, 1324, 1852, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 112, 1588, 1852, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 113, 1852, 1852, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 114, 2116, 1852, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 115, 2380, 1852, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 116, 2644, 1852, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 117, 2908, 1852, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 118, 3172, 1852, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 119, 3436, 1852, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 120, 3700, 1852, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 121, 4, 2116, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 122, 268, 2116, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 123, 532, 2116, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 124, 796, 2116, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 125, 1060, 2116, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 126, 1324, 2116, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 127, 1588, 2116, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 128, 1852, 2116, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 129, 2116, 2116, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 130, 2380, 2116, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 131, 2644, 2116, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 132, 2908, 2116, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 133, 3172, 2116, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 134, 3436, 2116, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 135, 3700, 2116, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 136, 4, 2380, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 137, 268, 2380, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 138, 532, 2380, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 139, 796, 2380, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 140, 1060, 2380, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 141, 1324, 2380, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 142, 1588, 2380, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 143, 1852, 2380, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 144, 2116, 2380, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 145, 2380, 2380, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 146, 2644, 2380, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 147, 2908, 2380, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 148, 3172, 2380, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 149, 3436, 2380, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 150, 3700, 2380, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 151, 4, 2644, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 152, 268, 2644, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 153, 532, 2644, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 154, 796, 2644, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 155, 1060, 2644, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 156, 1324, 2644, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 157, 1588, 2644, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 158, 1852, 2644, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 159, 2116, 2644, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 160, 2380, 2644, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 161, 2644, 2644, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 162, 2908, 2644, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 163, 3172, 2644, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 164, 3436, 2644, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 165, 3700, 2644, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 166, 4, 2908, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 167, 268, 2908, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 168, 532, 2908, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 169, 796, 2908, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 170, 1060, 2908, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 171, 1324, 2908, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 172, 1588, 2908, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 173, 1852, 2908, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 174, 2116, 2908, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 175, 2380, 2908, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 176, 2644, 2908, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 177, 2908, 2908, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 178, 3172, 2908, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 179, 3436, 2908, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 180, 3700, 2908, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 181, 4, 3172, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 182, 268, 3172, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 183, 532, 3172, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 184, 796, 3172, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 185, 1060, 3172, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 186, 1324, 3172, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 187, 1588, 3172, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 188, 1852, 3172, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 189, 2116, 3172, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 190, 2380, 3172, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 191, 2644, 3172, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 192, 2908, 3172, 256, 256, 100)
+    Succeeded = Succeeded And TileMap.DefineTile(MapHandle, 193, 3172, 3172, 256, 256, 100)
+
+    Return Succeeded
+
+End Function
+
+End Module

@@ -661,13 +661,15 @@ internal static class WebOutputWriter
                     case "Digit1": return 17;
                     case "Digit2": return 18;
                     case "Digit3": return 20;
+                    case "Digit4": return 22;
+                    case "Tab": return 21;
                     default: return 19;
                 }
             }
 
             function controlledKey(event) {
                 return event.code.startsWith("Arrow") || event.code === "Space" || event.code === "Enter" ||
-                    event.code === "Escape" || /^Key[WASD]$/.test(event.code);
+                    event.code === "Escape" || event.code === "Tab" || /^Key[WASD]$/.test(event.code);
             }
 
             async function toggleFullScreen() {

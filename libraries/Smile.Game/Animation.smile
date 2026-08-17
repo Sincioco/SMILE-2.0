@@ -185,6 +185,42 @@ Public Function CurrentFrame(AnimationHandle As Number, ElapsedSteps As Number) 
 
 End Function
 
+''' Returns the current frame distributed across an exact caller-defined cycle duration.
+''' This preserves source-animation cadence when the cycle duration does not divide evenly
+''' by the frame count. Looping animations wrap; one-shot animations clamp to their last frame.
+Public Function CurrentFrameInCycle(AnimationHandle As Number, ElapsedSteps As Number, CycleDuration As Number) As Number
+
+    Dim ReturnValue2 As Number
+
+    Dim ReturnValue As Number
+
+    Dim DefinitionSlot As Number
+    Dim CyclePosition As Number
+    Dim Index As Number
+
+    DefinitionSlot = Slot(AnimationHandle)
+
+    If (DefinitionSlot < 0 Or
+        FrameCounts[DefinitionSlot] <= 0 Or
+        CycleDuration <= 0) Then
+        ReturnValue2 = -1
+
+        Return ReturnValue2
+    End If
+
+    CyclePosition = Max(0, ElapsedSteps)
+
+    If Looping[DefinitionSlot] Then
+        CyclePosition = CyclePosition Mod CycleDuration
+    End If
+
+    Index = CyclePosition * FrameCounts[DefinitionSlot] / CycleDuration
+    ReturnValue = Min(Index, FrameCounts[DefinitionSlot] - 1)
+
+    Return ReturnValue
+
+End Function
+
 Private Function ValidFrame(AnimationHandle As Number, FrameIndex As Number) As Number
 
     Dim ReturnValue As Number
