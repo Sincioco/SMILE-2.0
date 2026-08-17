@@ -1,10 +1,9 @@
 <!doctype html>
-
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
-<meta content="Complete copyable official Program-NoDemo.smile source and section map." name="description"/>
+<meta content="Complete copyable official Program-NoDemo.smile and SnakeModel.smile sources with a synchronized two-file map." name="description"/>
 <title>Complete Source | SMILE 2.0 Snake Visual Tutorial</title>
 <link href="assets/images/smile-2-logo.png" rel="icon" type="image/png"/>
 <link href="assets/css/tutorial.css" rel="stylesheet"/>
@@ -15,33 +14,27 @@
 <div aria-hidden="true" class="nav-scrim"></div>
 <div class="site-shell">
 <aside aria-label="Tutorial topics" class="sidebar">
-<div class="brand-block">
-<a aria-label="Return to tutorial home" href="index.html"><img alt="SMILE 2.0 logo" class="brand-logo" src="assets/images/smile-2-logo.png"/></a>
-<p class="brand-kicker">SMILE 2.0 by Sin</p>
-<p class="brand-title">Snake Visual Tutorial</p>
-</div>
+<div class="brand-block"><a aria-label="Return to tutorial home" href="index.html"><img alt="SMILE 2.0 logo" class="brand-logo" src="assets/images/smile-2-logo.png"/></a><p class="brand-kicker">SMILE 2.0 by Sin</p><p class="brand-title">Snake Visual Tutorial</p></div>
 <nav aria-label="Table of contents" class="nav-area">
-<section class="nav-group"><h2 class="nav-group-title">Start Here</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="home" href="index.html"><span class="nav-number">⌂</span><span>Home</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="ready" href="01-get-ready.html"><span class="nav-number">01</span><span>Get Ready</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="meet" href="02-meet-the-game.html"><span class="nav-number">02</span><span>Meet the Game</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Think Like a Programmer</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="grid" href="03-grid-coordinates.html"><span class="nav-number">03</span><span>Grid &amp; Coordinates</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="memory" href="04-arrays-memory.html"><span class="nav-number">04</span><span>Arrays &amp; Memory</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="loop" href="05-game-loop-states.html"><span class="nav-number">05</span><span>Game Loop &amp; States</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Build Snake</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="cp1" href="06-checkpoint-1-board-plan.html"><span class="nav-number">06</span><span>Checkpoint 1: Board Plan</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp2" href="07-checkpoint-2-game-memory.html"><span class="nav-number">07</span><span>Checkpoint 2: Game Memory</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp3" href="08-checkpoint-3-spawn-food.html"><span class="nav-number">08</span><span>Checkpoint 3: Spawn Food</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp4" href="09-checkpoint-4-starting-snake.html"><span class="nav-number">09</span><span>Checkpoint 4: Starting Snake</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp5" href="10-checkpoint-5-rounds.html"><span class="nav-number">10</span><span>Checkpoint 5: Round Lifecycle</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp6" href="11-checkpoint-6-movement.html"><span class="nav-number">11</span><span>Checkpoint 6: Movement &amp; Rules</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp7" href="12-checkpoint-7-draw-board.html"><span class="nav-number">12</span><span>Checkpoint 7: Draw the Board</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp8" href="13-checkpoint-8-screens.html"><span class="nav-number">13</span><span>Checkpoint 8: Title &amp; Game Over</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp9" href="14-checkpoint-9-main-loop.html"><span class="nav-number">14</span><span>Checkpoint 9: Main Loop</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section><section class="nav-group"><h2 class="nav-group-title">Master It</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="trace" href="15-trace-and-debug.html"><span class="nav-number">15</span><span>Trace &amp; Debug</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="math" href="16-math-lab.html"><span class="nav-number">16</span><span>Math Lab</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="syntax" href="17-smile-syntax-guide.html"><span class="nav-number">17</span><span>SMILE Syntax Guide</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="challenges" href="18-challenges.html"><span class="nav-number">18</span><span>Make It Yours</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a aria-current="page" class="nav-link active" data-topic-id="source" href="19-complete-source.html"><span class="nav-number">19</span><span>Complete Source</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="finish" href="20-graduation.html"><span class="nav-number">20</span><span>Graduation</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section>
+<section class="nav-group"><h2 class="nav-group-title">Start Here</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="home" href="index.html"><span class="nav-number">⌂</span><span>Home</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="ready" href="01-get-ready.html"><span class="nav-number">01</span><span>Get Ready</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="meet" href="02-meet-the-game.html"><span class="nav-number">02</span><span>Meet the Game</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section>
+<section class="nav-group"><h2 class="nav-group-title">Think Like a Programmer</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="grid" href="03-grid-coordinates.html"><span class="nav-number">03</span><span>Grid &amp; Coordinates</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="memory" href="04-arrays-memory.html"><span class="nav-number">04</span><span>Objects &amp; Memory</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="loop" href="05-game-loop-states.html"><span class="nav-number">05</span><span>Game Loop &amp; Enums</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section>
+<section class="nav-group"><h2 class="nav-group-title">Build Snake</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="cp1" href="06-checkpoint-1-board-plan.html"><span class="nav-number">06</span><span>Checkpoint 1: Board Plan</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp2" href="07-checkpoint-2-game-memory.html"><span class="nav-number">07</span><span>Checkpoint 2: Game Memory</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp3" href="08-checkpoint-3-spawn-food.html"><span class="nav-number">08</span><span>Checkpoint 3: Spawn Food</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp4" href="09-checkpoint-4-starting-snake.html"><span class="nav-number">09</span><span>Checkpoint 4: Snake Class</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp5" href="10-checkpoint-5-rounds.html"><span class="nav-number">10</span><span>Checkpoint 5: Round Lifecycle</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp6" href="11-checkpoint-6-movement.html"><span class="nav-number">11</span><span>Checkpoint 6: Movement &amp; Rules</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp7" href="12-checkpoint-7-draw-board.html"><span class="nav-number">12</span><span>Checkpoint 7: Draw the Board</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp8" href="13-checkpoint-8-screens.html"><span class="nav-number">13</span><span>Checkpoint 8: Title &amp; Game Over</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="cp9" href="14-checkpoint-9-main-loop.html"><span class="nav-number">14</span><span>Checkpoint 9: Main Loop</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section>
+<section class="nav-group"><h2 class="nav-group-title">Master It</h2><ul class="nav-list"><li><a class="nav-link" data-topic-id="trace" href="15-trace-and-debug.html"><span class="nav-number">15</span><span>Trace &amp; Debug</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="math" href="16-math-lab.html"><span class="nav-number">16</span><span>Math Lab</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="syntax" href="17-smile-syntax-guide.html"><span class="nav-number">17</span><span>SMILE Syntax Guide</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="challenges" href="18-challenges.html"><span class="nav-number">18</span><span>Make It Yours</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a aria-current="page" class="nav-link active" data-topic-id="source" href="19-complete-source.html"><span class="nav-number">19</span><span>Complete Source</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li><li><a class="nav-link" data-topic-id="finish" href="20-graduation.html"><span class="nav-number">20</span><span>Graduation</span><span aria-hidden="true" class="nav-check">&checkmark;</span></a></li></ul></section>
 <div class="sidebar-progress"><span class="progress-label">0 of 20 topics completed</span><div class="progress-track"><div class="progress-fill"></div></div></div>
 </nav>
 </aside>
 <div class="main-column">
-<header class="top-header">
-<button aria-label="Open table of contents" class="mobile-menu-button" data-open-nav="" type="button">☰</button>
-<div class="header-left"><span class="header-course">SMILE 2.0 &mdash; Snake Visual Tutorial</span><p class="header-topic">Complete Source</p></div>
-<div class="header-actions"><a class="header-button" href="index.html">Home</a><a class="header-button" href="19-complete-source.html">Full source</a></div>
-</header>
+<header class="top-header"><button aria-label="Open table of contents" class="mobile-menu-button" data-open-nav="" type="button">☰</button><div class="header-left"><span class="header-course">SMILE 2.0 &mdash; Snake Visual Tutorial</span><p class="header-topic">Complete Source</p></div><div class="header-actions"><a class="header-button" href="index.html">Home</a><a class="header-button" href="19-complete-source.html">Full source</a></div></header>
 <main class="content-wrap" id="main-content">
 <article class="lesson">
-<section class="lesson-hero">
-<p class="eyebrow">Reference and recovery</p>
-<h1>Complete Official No-Demo Source</h1>
-<p class="lead">Use this page to compare your work, recover a missing block, or copy the entire finished game.</p>
-<div class="topic-meta"><span class="meta-pill">310 lines</span><span class="meta-pill">Exact repository source</span><span class="meta-pill">Copy all</span></div>
-</section>
-<aside class="callout tip"><h3>Best learning use</h3><p>Try to finish the checkpoints first. Then compare your source with this reference. A difference is not a failure&mdash;it is a clue.</p></aside><aside class="callout line-number-note"><h3>Line numbers are reference-only</h3><p>The visible numbers match every checkpoint and syntax example. <strong>Copy Code copies only clean SMILE source&mdash;the line numbers are never included.</strong></p></aside><div class="code-panel">
-<div class="code-toolbar"><span class="code-label">games\Snake\Program-NoDemo.smile &mdash; complete source</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-anchor="true" data-source-start="1">' SMILE 2.0 Snake - student edition without attract/demo code.
+<section class="lesson-hero"><p class="eyebrow">Two files, one readable game</p><h1>Complete Official No-Demo Sources</h1><p class="lead">The startup file keeps the game story visible. The shared model file teaches Enum, Type, Class, New, Me, methods, properties, and private state.</p><div class="topic-meta"><span class="meta-pill">Program-NoDemo.smile</span><span class="meta-pill">SnakeModel.smile</span><span class="meta-pill">Exact repository sources</span></div></section>
+<aside class="callout tip"><h2>Why two files?</h2><p><code>Program-NoDemo.smile</code> owns score, food policy, high score, input, timing, audio, screens, and the main loop. <code>SnakeModel.smile</code> owns only the snake&rsquo;s segments, length, direction, turns, movement, growth, and collision queries. This is focused object-oriented design—not “everything is an object.”</p></aside>
+
+<h2>Program-NoDemo.smile</h2>
+<div class="code-panel"><div class="code-toolbar"><span class="code-label">games\Snake\Program-NoDemo.smile &mdash; complete source</span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-smile" data-source-anchor="true" data-source-file="program" data-source-start="1">' SMILE 2.0 Snake - student edition without attract/demo code.
+
+Option Explicit
+
 Const CanvasWidth = 960
 Const CanvasHeight = 540
 Const FieldX = 20
@@ -53,26 +46,29 @@ Const GridHeight = 24
 Const CellSize = 20
 Const StartDelay = 100
 Const MinimumDelay = 45
-Dim SnakeX[840]
-Dim SnakeY[840]
 
-Length = 0
-Direction = KEY_RIGHT
-NextDirection = KEY_RIGHT
-FoodX = 0
-FoodY = 0
+Dim Player As New Snake()
+Dim Food As GridPoint
+Dim State As GameState
+Dim HighScore As Number
+Dim Score As Number
+Dim MoveDelay As Number
+Dim NextMoveTime As Number
+Dim Key As Number
+
+With Food
+    .X = 0
+    .Y = 0
+End With
+
+State = GameState.Title
 Score = 0
 MoveDelay = StartDelay
 NextMoveTime = 0
-State = 0
 Key = KEY_NONE
-I = 0
-TailX = 0
-TailY = 0
-FoodValid = False
-Collision = False
 
 '----------------------------------------------------------------------------------------------------
+
 Load HighScore From "HighScore" Default 0
 
 Game Window "SMILE 2.0 Snake"
@@ -82,7 +78,7 @@ Call EnterTitle()
 Do
     Get Key Key
 
-    If State = 0 Then
+    If State = GameState.Title Then
 
         If Key = KEY_ESCAPE Then
             End Program
@@ -92,29 +88,29 @@ Do
 
         Call DrawTitle()
 
-    Else If State = 1 Then
+    Else If State = GameState.Playing Then
 
         If Key = KEY_ESCAPE Then
             End Program
         End If
 
-        If (Key = KEY_W Or Key = KEY_UP) And Direction &lt;&gt; KEY_DOWN Then
-            NextDirection = KEY_UP
-        Else If (Key = KEY_S Or Key = KEY_DOWN) And Direction &lt;&gt; KEY_UP Then
-            NextDirection = KEY_DOWN
-        Else If (Key = KEY_A Or Key = KEY_LEFT) And Direction &lt;&gt; KEY_RIGHT Then
-            NextDirection = KEY_LEFT
-        Else If (Key = KEY_D Or Key = KEY_RIGHT) And Direction &lt;&gt; KEY_LEFT Then
-            NextDirection = KEY_RIGHT
+        If Key = KEY_W Or Key = KEY_UP Then
+            Call Player.TryTurn(MoveDirection.Up)
+        Else If Key = KEY_S Or Key = KEY_DOWN Then
+            Call Player.TryTurn(MoveDirection.Down)
+        Else If Key = KEY_A Or Key = KEY_LEFT Then
+            Call Player.TryTurn(MoveDirection.Left)
+        Else If Key = KEY_D Or Key = KEY_RIGHT Then
+            Call Player.TryTurn(MoveDirection.Right)
         End If
 
-        If State = 1 And Timer() &gt;= NextMoveTime Then
+        If State = GameState.Playing And Timer() &gt;= NextMoveTime Then
             Call MoveSnake()
         End If
 
         Call DrawBoard()
 
-        If State = 2 Then
+        If State = GameState.GameOver Then
             Call DrawGameOver()
         End If
 
@@ -126,9 +122,10 @@ Do
             Call ResetGame()
         End If
 
-        If State = 0 Then
+        If State = GameState.Title Then
             Call DrawTitle()
         Else
+
             Call DrawBoard()
             Call DrawGameOver()
         End If
@@ -146,46 +143,28 @@ Stop Sound
 
 Sub SpawnFood()
 
+    Dim FoodValid As Boolean
+    Dim NewX As Number
+    Dim NewY As Number
+
     FoodValid = False
 
     Do
-        Random FoodX From 0 To GridWidth - 1
-        Random FoodY From 0 To GridHeight - 1
-        FoodValid = True
+        Random NewX From 0 To GridWidth - 1
+        Random NewY From 0 To GridHeight - 1
 
-        For I = 0 To Length - 1
+        Food.X = NewX
+        Food.Y = NewY
 
-            If FoodX = SnakeX[I] And FoodY = SnakeY[I] Then
-                FoodValid = False
-            End If
-
-        End For
+        FoodValid = Not Player.Contains(Food.X, Food.Y)
 
     Loop Until FoodValid = True
 
 End Sub
 
-Sub ResetSnakeBody()
-
-    Length = 5
-    Direction = KEY_RIGHT
-    NextDirection = KEY_RIGHT
-    SnakeX[0] = 17
-    SnakeY[0] = 12
-    SnakeX[1] = 16
-    SnakeY[1] = 12
-    SnakeX[2] = 15
-    SnakeY[2] = 12
-    SnakeX[3] = 14
-    SnakeY[3] = 12
-    SnakeX[4] = 13
-    SnakeY[4] = 12
-
-End Sub
-
 Sub ResetPlay()
 
-    Call ResetSnakeBody()
+    Call Player.Reset()
 
     Score = 0
     MoveDelay = StartDelay
@@ -193,7 +172,7 @@ Sub ResetPlay()
     Call SpawnFood()
 
     NextMoveTime = Timer() + StartDelay
-    State = 1
+    State = GameState.Playing
 
     Play Sound "Assets\Start.wav"
 
@@ -202,7 +181,7 @@ End Sub
 Sub EndRound()
 
     Stop Music
-    State = 2
+    State = GameState.GameOver
 
     If Score &gt; HighScore Then
         HighScore = Score
@@ -215,53 +194,26 @@ End Sub
 
 Sub MoveSnake()
 
-    Direction = NextDirection
-    TailX = SnakeX[Length - 1]
-    TailY = SnakeY[Length - 1]
+    Dim Collision As Boolean
+    Dim Grew As Boolean
 
-    For I = Length - 1 Down To 1
-        SnakeX[I] = SnakeX[I - 1]
-        SnakeY[I] = SnakeY[I - 1]
-    End For
+    Call Player.Move()
 
-    If Direction = KEY_UP Then
-        SnakeY[0] = SnakeY[0] - 1
-    Else If Direction = KEY_DOWN Then
-        SnakeY[0] = SnakeY[0] + 1
-    Else If Direction = KEY_LEFT Then
-        SnakeX[0] = SnakeX[0] - 1
-    Else If Direction = KEY_RIGHT Then
-        SnakeX[0] = SnakeX[0] + 1
-    End If
+    Collision = Player.HitWall(GridWidth, GridHeight)
+    Collision = Collision Or Player.HitSelf()
 
-    Collision = False
-
-    If (SnakeX[0] &lt; 0 Or
-        SnakeX[0] &gt;= GridWidth Or
-        SnakeY[0] &lt; 0 Or
-        SnakeY[0] &gt;= GridHeight) Then
-        Collision = True
-    End If
-
-    For I = 1 To Length - 1
-
-        If SnakeX[0] = SnakeX[I] And SnakeY[0] = SnakeY[I] Then
-            Collision = True
-        End If
-
-    End For
-
-    If Collision = True Then
+    If Collision Then
 
         Call EndRound()
 
-    Else If SnakeX[0] = FoodX And SnakeY[0] = FoodY Then
+    Else If Player.HeadX = Food.X And Player.HeadY = Food.Y Then
 
-        SnakeX[Length] = TailX
-        SnakeY[Length] = TailY
-        Length = Length + 1
-        Score = Score + 10
-        MoveDelay = Max(MinimumDelay, StartDelay - (Score / 50) * 4)
+        Grew = Player.Grow()
+
+        If Grew Then
+            Score = Score + 10
+            MoveDelay = Max(MinimumDelay, StartDelay - (Score / 50) * 4)
+        End If
 
         Play Sound "Assets\Eat.wav"
         Call SpawnFood()
@@ -274,24 +226,31 @@ End Sub
 
 Sub DrawBoard()
 
+    Dim I As Number
+    Dim SegmentX As Number
+    Dim SegmentY As Number
+
     Clear Rgb(10, 18, 35)
     Fill Rectangle FieldX, FieldY, FieldWidth, FieldHeight, BLACK
     Draw Rectangle FieldX, FieldY, FieldWidth, FieldHeight, Rgb(40, 70, 95)
 
-    For I = 0 To Length - 1
+    For I = 0 To Player.Length - 1
 
-        If (SnakeX[I] &gt;= 0 And
-            SnakeX[I] &lt; GridWidth And
-            SnakeY[I] &gt;= 0 And
-            SnakeY[I] &lt; GridHeight) Then
-            Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)
-            Draw Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(20, 105, 35)
+        SegmentX = Player.SegmentX(I)
+        SegmentY = Player.SegmentY(I)
+
+        If (SegmentX &gt;= 0 And
+            SegmentX &lt; GridWidth And
+            SegmentY &gt;= 0 And
+            SegmentY &lt; GridHeight) Then
+            Fill Rectangle FieldX + SegmentX * CellSize + 2, FieldY + SegmentY * CellSize + 2, 16, 16, Rgb(60, 230, 75)
+            Draw Rectangle FieldX + SegmentX * CellSize + 2, FieldY + SegmentY * CellSize + 2, 16, 16, Rgb(20, 105, 35)
         End If
 
     End For
 
-    Fill Rectangle FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, Rgb(245, 45, 55)
-    Draw Rectangle FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, Rgb(120, 15, 25)
+    Fill Rectangle FieldX + Food.X * CellSize + 3, FieldY + Food.Y * CellSize + 3, 14, 14, Rgb(245, 45, 55)
+    Draw Rectangle FieldX + Food.X * CellSize + 3, FieldY + Food.Y * CellSize + 3, 14, 14, Rgb(120, 15, 25)
 
     Draw Text "SMILE Snake" At 835, 55 Size 27 Color LIGHT_GREEN Centered
     Draw Text "Score" At 755, 115 Size 20 Color LIGHT_GRAY
@@ -341,7 +300,7 @@ End Sub
 Sub EnterTitle()
 
     Stop Music
-    State = 0
+    State = GameState.Title
     Key = KEY_NONE
     Stop Sound
 
@@ -355,32 +314,345 @@ Sub ResetGame()
 
 End Sub
 
-End Program</code></pre>
-</div>
-<div class="source-actions">
-<a class="source-button primary" href="../../games/Snake/Program-NoDemo.smile">Open official Program-NoDemo.smile</a>
-<a class="source-button primary" href="../../games/Snake/Snake.smileproj">Open official Snake.smileproj</a>
-<a class="source-button" download="" href="assets/code/Program-NoDemo.smile">Download tutorial source snapshot</a>
-<a class="source-button" download="" href="assets/code/Snake.smileproj">Download project-file snapshot</a>
-</div>
-<p class="small-note">The first two links use <code>../../games/Snake</code> and therefore open the files from the real SMILE 2.0 game folder when the tutorial is installed at <code>tutorials\Snake</code>. The snapshot links keep a matching reference copy inside the tutorial package.</p>
-<h2>Source map</h2>
-<div class="table-wrap"><table><thead><tr><th>Lines</th><th>Section</th><th>Question answered</th></tr></thead><tbody><tr><td><a class="source-range-link" data-line-end="14" data-line-start="1" href="#source-line-1">1&ndash;14</a></td><td>Constants and arrays</td><td>How big is the world and where can body coordinates be stored?</td></tr><tr><td><a class="source-range-link" data-line-end="33" data-line-start="16" href="#source-line-16">16&ndash;33</a></td><td>Variables and Load</td><td>What can change and what survives between runs?</td></tr><tr><td><a class="source-range-link" data-line-end="102" data-line-start="35" href="#source-line-35">35&ndash;102</a></td><td>Window and main loop</td><td>How does the game begin listening, updating, and drawing near the top of the file?</td></tr><tr><td><a class="source-range-link" data-line-end="123" data-line-start="104" href="#source-line-104">104&ndash;123</a></td><td>SpawnFood</td><td>Where can food safely appear?</td></tr><tr><td><a class="source-range-link" data-line-end="141" data-line-start="125" href="#source-line-125">125&ndash;141</a></td><td>ResetSnakeBody</td><td>What does a new snake look like?</td></tr><tr><td><a class="source-range-link" data-line-end="171" data-line-start="143" href="#source-line-143">143&ndash;171</a></td><td>ResetPlay / EndRound</td><td>How does a round begin and finish?</td></tr><tr><td><a class="source-range-link" data-line-end="230" data-line-start="173" href="#source-line-173">173&ndash;230</a></td><td>MoveSnake</td><td>How does the world change one move at a time?</td></tr><tr><td><a class="source-range-link" data-line-end="296" data-line-start="232" href="#source-line-232">232&ndash;296</a></td><td>Drawing routines</td><td>How do current values become visible screens?</td></tr><tr><td><a class="source-range-link" data-line-end="315" data-line-start="298" href="#source-line-298">298&ndash;315</a></td><td>State helpers and program end</td><td>How do we switch screens, restart, and finish the source file?</td></tr></tbody></table></div>
-<h2>Source authority</h2><p>This tutorial uses the repository&rsquo;s <a href="../../games/Snake/Program-NoDemo.smile"><code>games\Snake\Program-NoDemo.smile</code></a> file with blob Sha <code>e4676acf09b2be86e9640390ae23a2ed8618079e</code>, plus <a href="../../games/Snake/Snake.smileproj"><code>Snake.smileproj</code></a>, the Snake Readme, and the language documentation.</p>
-<section aria-labelledby="reinforce-title" class="reinforcement-panel">
-<p class="reinforcement-kicker">Repetition builds memory</p>
-<h2 id="reinforce-title">Reinforce what you learned</h2>
-<div class="reinforcement-grid">
-<article><h3>Say it again</h3><p>The line-numbered source is the common map for every checkpoint and syntax example.</p></article>
-<article><h3>Recall it</h3><p>Find lines 35&ndash;99, 103&ndash;122, and 171&ndash;228. What big jobs do they perform?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>Run the repeating game loop, spawn food, and move/check the snake.</strong></p></details></article>
-</div>
-</section><nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="18-challenges.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Make It Yours</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="20-graduation.html"><span><small>Next topic</small><strong>Graduation</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
+End Program</code></pre></div>
+
+<h2>SnakeModel.smile</h2>
+<div class="code-panel"><div class="code-toolbar"><span class="code-label">games\Snake\SnakeModel.smile &mdash; complete source</span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-smile" data-source-anchor="true" data-source-file="model" data-source-start="1">' Shared value and reference models for both Snake startup variants.
+
+Option Explicit
+
+Enum GameState
+    Title
+    Playing
+    GameOver
+End Enum
+
+Enum MoveDirection
+    Up
+    Down
+    Left
+    Right
+End Enum
+
+Type GridPoint
+    X As Number
+    Y As Number
+End Type
+
+Class Snake
+
+    Private SegmentXs[840] As Number
+    Private SegmentYs[840] As Number
+    Private CurrentLength As Number
+    Private CurrentDirection As MoveDirection
+    Private RequestedDirection As MoveDirection
+    Private TailX As Number
+    Private TailY As Number
+
+    Public Sub New()
+
+        Call Me.Reset()
+
+    End Sub
+
+    Public Sub Reset()
+
+        Me.CurrentLength = 5
+        Me.CurrentDirection = MoveDirection.Right
+        Me.RequestedDirection = MoveDirection.Right
+        Me.TailX = 0
+        Me.TailY = 0
+
+        Me.SegmentXs[0] = 17
+        Me.SegmentYs[0] = 12
+        Me.SegmentXs[1] = 16
+        Me.SegmentYs[1] = 12
+        Me.SegmentXs[2] = 15
+        Me.SegmentYs[2] = 12
+        Me.SegmentXs[3] = 14
+        Me.SegmentYs[3] = 12
+        Me.SegmentXs[4] = 13
+        Me.SegmentYs[4] = 12
+
+    End Sub
+
+    Public Sub TryTurn(Direction As MoveDirection)
+
+        If Not Me.IsReverse(Direction) Then
+            Me.RequestedDirection = Direction
+        End If
+
+    End Sub
+
+    Public Function CanTurn(Direction As MoveDirection) As Boolean
+
+        Dim Result As Boolean
+
+        Result = Not Me.IsReverse(Direction)
+
+        Return Result
+
+    End Function
+
+    Public Sub Move()
+
+        Dim I As Number
+
+        Me.CurrentDirection = Me.RequestedDirection
+        Me.TailX = Me.SegmentXs[Me.CurrentLength - 1]
+        Me.TailY = Me.SegmentYs[Me.CurrentLength - 1]
+
+        For I = Me.CurrentLength - 1 Down To 1
+            Me.SegmentXs[I] = Me.SegmentXs[I - 1]
+            Me.SegmentYs[I] = Me.SegmentYs[I - 1]
+        End For
+
+        Select Case Me.CurrentDirection
+            Case MoveDirection.Up
+                Me.SegmentYs[0] = Me.SegmentYs[0] - 1
+
+            Case MoveDirection.Down
+                Me.SegmentYs[0] = Me.SegmentYs[0] + 1
+
+            Case MoveDirection.Left
+                Me.SegmentXs[0] = Me.SegmentXs[0] - 1
+
+            Case MoveDirection.Right
+                Me.SegmentXs[0] = Me.SegmentXs[0] + 1
+        End Select
+
+    End Sub
+
+    Public Function Grow() As Boolean
+
+        If Me.CurrentLength &gt;= 840 Then
+            Return False
+        End If
+
+        Me.SegmentXs[Me.CurrentLength] = Me.TailX
+        Me.SegmentYs[Me.CurrentLength] = Me.TailY
+        Me.CurrentLength = Me.CurrentLength + 1
+
+        Return True
+
+    End Function
+
+    Public Function Contains(GridX As Number, GridY As Number) As Boolean
+
+        Dim Result As Boolean
+        Dim I As Number
+
+        Result = False
+
+        For I = 0 To Me.CurrentLength - 1
+
+            If Me.SegmentXs[I] = GridX And Me.SegmentYs[I] = GridY Then
+                Result = True
+                Exit For
+            End If
+
+        End For
+
+        Return Result
+
+    End Function
+
+    Public Function CellBlocked(
+        GridX As Number,
+        GridY As Number,
+        GridWidth As Number,
+        GridHeight As Number,
+        AllowTail As Boolean
+    ) As Boolean
+
+        Dim Result As Boolean
+        Dim I As Number
+
+        Result = False
+
+        If (GridX &lt; 0 Or
+            GridX &gt;= GridWidth Or
+            GridY &lt; 0 Or
+            GridY &gt;= GridHeight) Then
+            Return True
+        End If
+
+        For I = 0 To Me.CurrentLength - 1
+
+            If Me.SegmentXs[I] = GridX And Me.SegmentYs[I] = GridY Then
+
+                If Not AllowTail Or I &lt;&gt; Me.CurrentLength - 1 Then
+                    Result = True
+                End If
+
+                Exit For
+
+            End If
+
+        End For
+
+        Return Result
+
+    End Function
+
+    Public Function HitSelf() As Boolean
+
+        Dim Result As Boolean
+        Dim I As Number
+
+        Result = False
+
+        For I = 1 To Me.CurrentLength - 1
+
+            If Me.SegmentXs[0] = Me.SegmentXs[I] And Me.SegmentYs[0] = Me.SegmentYs[I] Then
+                Result = True
+                Exit For
+            End If
+
+        End For
+
+        Return Result
+
+    End Function
+
+    Public Function HitWall(GridWidth As Number, GridHeight As Number) As Boolean
+
+        Dim Result As Boolean
+
+        Result = (Me.SegmentXs[0] &lt; 0 Or
+            Me.SegmentXs[0] &gt;= GridWidth Or
+            Me.SegmentYs[0] &lt; 0 Or
+            Me.SegmentYs[0] &gt;= GridHeight)
+
+        Return Result
+
+    End Function
+
+    Public Function SegmentX(Index As Number) As Number
+
+        Dim Result As Number
+
+        Result = 0
+
+        If Index &gt;= 0 And Index &lt; Me.CurrentLength Then
+            Result = Me.SegmentXs[Index]
+        End If
+
+        Return Result
+
+    End Function
+
+    Public Function SegmentY(Index As Number) As Number
+
+        Dim Result As Number
+
+        Result = 0
+
+        If Index &gt;= 0 And Index &lt; Me.CurrentLength Then
+            Result = Me.SegmentYs[Index]
+        End If
+
+        Return Result
+
+    End Function
+
+    Public Property Length As Number
+
+        Get
+
+            Dim Result As Number
+
+            Result = Me.CurrentLength
+
+            Return Result
+
+        End Get
+
+    End Property
+
+    Public Property HeadX As Number
+
+        Get
+
+            Dim Result As Number
+
+            Result = Me.SegmentXs[0]
+
+            Return Result
+
+        End Get
+
+    End Property
+
+    Public Property HeadY As Number
+
+        Get
+
+            Dim Result As Number
+
+            Result = Me.SegmentYs[0]
+
+            Return Result
+
+        End Get
+
+    End Property
+
+    Public Property Direction As MoveDirection
+
+        Get
+
+            Dim Result As MoveDirection
+
+            Result = Me.CurrentDirection
+
+            Return Result
+
+        End Get
+
+    End Property
+
+    Private Function IsReverse(Direction As MoveDirection) As Boolean
+
+        Dim Result As Boolean
+
+        Result = ((Direction = MoveDirection.Up And Me.CurrentDirection = MoveDirection.Down) Or
+            (Direction = MoveDirection.Down And Me.CurrentDirection = MoveDirection.Up) Or
+            (Direction = MoveDirection.Left And Me.CurrentDirection = MoveDirection.Right) Or
+            (Direction = MoveDirection.Right And Me.CurrentDirection = MoveDirection.Left))
+
+        Return Result
+
+    End Function
+
+End Class</code></pre></div>
+
+<div class="source-buttons"><a class="source-button primary" href="../../games/Snake/Program-NoDemo.smile">Open official Program-NoDemo.smile</a><a class="source-button primary" href="../../games/Snake/SnakeModel.smile">Open official SnakeModel.smile</a><a class="source-button primary" href="../../games/Snake/Snake.smileproj">Open official Snake.smileproj</a><a class="source-button" download="" href="assets/code/Program-NoDemo.smile">Download program snapshot</a><a class="source-button" download="" href="assets/code/SnakeModel.smile">Download model snapshot</a><a class="source-button" download="" href="assets/code/Snake.smileproj">Download project snapshot</a></div>
+
+<h2>Two-source map</h2>
+<h3>Program story</h3>
+<div class="table-wrap"><table><thead><tr><th>Lines</th><th>Section</th><th>Responsibility</th></tr></thead><tbody>
+<tr><td><a class="source-range-link" data-line-end="39" data-line-start="1" data-source-file="program" href="#source-line-1">1&ndash;39</a></td><td>Constants, game variables, Load</td><td>World measurements and game-level state.</td></tr>
+<tr><td><a class="source-range-link" data-line-end="109" data-line-start="41" data-source-file="program" href="#source-line-41">41&ndash;109</a></td><td>Window and main loop</td><td>Input, state update, drawing, presentation, and shutdown.</td></tr>
+<tr><td><a class="source-range-link" data-line-end="130" data-line-start="111" data-source-file="program" href="#source-line-111">111&ndash;130</a></td><td>SpawnFood</td><td>Game-level food policy using the snake&rsquo;s public query.</td></tr>
+<tr><td><a class="source-range-link" data-line-end="192" data-line-start="132" data-source-file="program" href="#source-line-132">132&ndash;192</a></td><td>Rounds and movement result</td><td>Score, audio, speed, and game-state decisions remain outside the Class.</td></tr>
+<tr><td><a class="source-range-link" data-line-end="284" data-line-start="194" data-source-file="program" href="#source-line-194">194&ndash;284</a></td><td>Drawing and lifecycle helpers</td><td>Visible rendering and screen transitions stay easy to find.</td></tr>
+</tbody></table></div>
+<h3>Shared model</h3>
+<div class="table-wrap"><table><thead><tr><th>Lines</th><th>Section</th><th>Concept</th></tr></thead><tbody>
+<tr><td><a class="source-range-link" data-line-end="21" data-line-start="1" data-source-file="model" href="#model-line-1">1&ndash;21</a></td><td>GameState, MoveDirection, GridPoint</td><td>Enums replace magic numbers; a Type groups a copyable coordinate.</td></tr>
+<tr><td><a class="source-range-link" data-line-end="58" data-line-start="23" data-source-file="model" href="#model-line-23">23&ndash;58</a></td><td>Class fields, constructor, Reset</td><td>Private state and a clear starting invariant.</td></tr>
+<tr><td><a class="source-range-link" data-line-end="119" data-line-start="60" data-source-file="model" href="#model-line-60">60&ndash;119</a></td><td>Turn, Move, Grow</td><td>Behavior that belongs to the snake.</td></tr>
+<tr><td><a class="source-range-link" data-line-end="238" data-line-start="121" data-source-file="model" href="#model-line-121">121&ndash;238</a></td><td>Queries and indexed access</td><td>Public questions without exposing private arrays.</td></tr>
+<tr><td><a class="source-range-link" data-line-end="309" data-line-start="240" data-source-file="model" href="#model-line-240">240&ndash;309</a></td><td>Properties and private reversal rule</td><td>Read-only state and an internal invariant.</td></tr>
+</tbody></table></div>
+
+<h2>Source authority</h2><p>The snapshots and every source excerpt are synchronized by <code>scripts\sync-snake-tutorial.ps1</code>. Program blob Sha <code>cd5a9546b6e16a42df41ce1a823eee91a38c2037</code>. SnakeModel blob Sha <code>6375074def10b3c19eb68ce800ec58031f08caa7</code>.</p>
+<section aria-labelledby="reinforce-title" class="reinforcement-panel"><p class="reinforcement-kicker">Repetition builds memory</p><h2 id="reinforce-title">Reinforce what you learned</h2><div class="reinforcement-grid"><article><h3>Say it again</h3><p>The startup file tells the whole game story; the Class protects only the snake&rsquo;s own state.</p></article><article><h3>Recall it</h3><p>Where do score, sound, food, and drawing live?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>In Program-NoDemo.smile.</strong> They are game-level responsibilities, not intrinsic snake behavior.</p></details></article></div></section>
+<nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="18-challenges.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Make It Yours</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="20-graduation.html"><span><small>Next topic</small><strong>Graduation</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
 </article>
 </main>
-<footer class="site-footer">
-<div class="footer-line">SMILE 2.0 (SinBasic). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div>
-<div class="footer-line"><a href="https://github.com/Sincioco" rel="noopener" target="_blank">github.com/Sincioco</a> | <a href="https://facebook.com/louiery.sincioco" rel="noopener" target="_blank">facebook.com/louiery.sincioco</a> | <a href="https://linkedin.com/in/louierysincioco" rel="noopener" target="_blank">linkedin.com/in/louierysincioco</a> | <a href="https://youtube.com/@TheSincioco" rel="noopener" target="_blank">youtube.com/@TheSincioco</a> | <a href="https://tiktok.com/@sincioco" rel="noopener" target="_blank">tiktok.com/@sincioco</a></div>
-</footer>
+<footer class="site-footer"><div class="footer-line">SMILE 2.0 (SinBasic). Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com">louiery@gmail.com</a></div><div class="footer-line"><a href="https://github.com/Sincioco" rel="noopener" target="_blank">github.com/Sincioco</a> | <a href="https://facebook.com/louiery.sincioco" rel="noopener" target="_blank">facebook.com/louiery.sincioco</a> | <a href="https://linkedin.com/in/louierysincioco" rel="noopener" target="_blank">linkedin.com/in/louierysincioco</a> | <a href="https://youtube.com/@TheSincioco" rel="noopener" target="_blank">youtube.com/@TheSincioco</a> | <a href="https://tiktok.com/@sincioco" rel="noopener" target="_blank">tiktok.com/@sincioco</a></div></footer>
 </div>
 </div>
 </body>

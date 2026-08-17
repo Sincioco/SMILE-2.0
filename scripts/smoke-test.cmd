@@ -1198,13 +1198,31 @@ if errorlevel 1 exit /b %errorlevel%
 echo Live refresh fixture compiled for native and Web.
 
 if not exist "%SMILE_ROOT%\artifacts\games\Snake" mkdir "%SMILE_ROOT%\artifacts\games\Snake"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\sync-snake-tutorial.ps1" -Check
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\SnakeModelTests.smile" --source "%SMILE_ROOT%\games\Snake\SnakeModel.smile" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\SnakeModelTests.exe"
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\games\SnakeModelTests.exe" > "%SMILE_ROOT%\artifacts\temp\SnakeModelTests.out"
+if errorlevel 1 exit /b %errorlevel%
+fc "%SMILE_ROOT%\examples\SnakeModelTests.expected.txt" "%SMILE_ROOT%\artifacts\temp\SnakeModelTests.out" >nul || exit /b 1
+set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
+"%SMILE_ROOT%\artifacts\games\SnakeModelTests.exe" > "%SMILE_ROOT%\artifacts\temp\SnakeModelTests.lifetime.out"
+if errorlevel 1 exit /b %errorlevel%
+set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
+findstr /x /c:"SMILE_CLASS_LIVE=0" "%SMILE_ROOT%\artifacts\temp\SnakeModelTests.lifetime.out" >nul || exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\SnakeModelTests.smile" --source "%SMILE_ROOT%\games\Snake\SnakeModel.smile" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\SnakeModelTests"
+if errorlevel 1 exit /b %errorlevel%
+node --check "%SMILE_ROOT%\artifacts\web\SnakeModelTests\game.js"
+if errorlevel 1 exit /b %errorlevel%
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\SnakeModelTests" --expected "%SMILE_ROOT%\examples\SnakeModelTests.expected.txt" --native-output "%SMILE_ROOT%\artifacts\temp\SnakeModelTests.out" --timeout 10000
+if errorlevel 1 exit /b %errorlevel%
 if not exist "%SMILE_ROOT%\games\Snake\Assets\Background.mp3" (
     echo Snake background music source asset is missing.
     exit /b 1
 )
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\Snake\Snake.smileproj" -o "%SMILE_ROOT%\artifacts\games\Snake\Snake.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\Snake\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\Snake\Snake-NoDemo.exe"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\Snake\Program-NoDemo.smile" --source "%SMILE_ROOT%\games\Snake\SnakeModel.smile" -o "%SMILE_ROOT%\artifacts\games\Snake\Snake-NoDemo.exe"
 if errorlevel 1 exit /b %errorlevel%
 if not exist "%SMILE_ROOT%\artifacts\games\Snake\Assets\Background.mp3" (
     echo Snake background music output asset is missing.
@@ -1215,7 +1233,7 @@ if errorlevel 1 (
     echo Snake background music output does not match its project asset.
     exit /b 1
 )
-echo Snake demo and no-demo versions compiled successfully.
+echo Snake model parity, synchronized tutorial, and demo/no-demo builds passed.
 
 if not exist "%SMILE_ROOT%\artifacts\games\FallingBlocks" mkdir "%SMILE_ROOT%\artifacts\games\FallingBlocks"
 if not exist "%SMILE_ROOT%\games\FallingBlocks\Assets\Background.mp3" (
@@ -1339,7 +1357,11 @@ for %%G in (Snake FallingBlocks PaddleBall BrickBreaker DungeonStarI DungeonStar
     if errorlevel 1 exit /b 1
     node --check "%SMILE_ROOT%\artifacts\web\%%G\game.js"
     if errorlevel 1 exit /b 1
-    "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\%%G\Program-NoDemo.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\%%G-NoDemo"
+    if /I "%%G"=="Snake" (
+        "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\%%G\Program-NoDemo.smile" --source "%SMILE_ROOT%\games\Snake\SnakeModel.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\%%G-NoDemo"
+    ) else (
+        "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\%%G\Program-NoDemo.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\%%G-NoDemo"
+    )
     if errorlevel 1 exit /b 1
     node --check "%SMILE_ROOT%\artifacts\web\%%G-NoDemo\game.js"
     if errorlevel 1 exit /b 1

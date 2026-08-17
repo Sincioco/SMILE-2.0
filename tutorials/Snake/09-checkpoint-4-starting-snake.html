@@ -36,38 +36,57 @@
 <section class="lesson-hero">
 <p class="eyebrow">Paste checkpoint 4</p>
 <h1>Build the Starting Snake</h1>
-<p class="lead">The snake begins with five segments in one horizontal row. The matching arrays describe each square.</p>
-<div class="topic-meta"><span class="meta-pill">Length = 5</span><span class="meta-pill">Head at index 0</span><span class="meta-pill">Facing right</span></div>
+<p class="lead">The <code>Snake</code> class keeps its segment arrays private and exposes behavior through public members.</p>
+<div class="topic-meta"><span class="meta-pill">Model lines 23&ndash;58</span><span class="meta-pill">Class and constructor</span><span class="meta-pill">Private state</span></div>
 </section>
-<div class="step-heading"><span class="step-badge">4</span><div><h2>Paste the ResetSnakeBody routine</h2><p>Paste below SpawnFood.</p></div></div>
+<div class="step-heading"><span class="step-badge">4</span><div><h2>Start the Snake class</h2><p>Create <code>SnakeModel.smile</code> and paste this class opening below the enums and <code>GridPoint</code> Type.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 4 &mdash; exact official code</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="125">Sub ResetSnakeBody()
+<pre><code class="language-smile" data-source-file="model" data-source-start="23">Class Snake
 
-    Length = 5
-    Direction = KEY_RIGHT
-    NextDirection = KEY_RIGHT
-    SnakeX[0] = 17
-    SnakeY[0] = 12
-    SnakeX[1] = 16
-    SnakeY[1] = 12
-    SnakeX[2] = 15
-    SnakeY[2] = 12
-    SnakeX[3] = 14
-    SnakeY[3] = 12
-    SnakeX[4] = 13
-    SnakeY[4] = 12
+    Private SegmentXs[840] As Number
+    Private SegmentYs[840] As Number
+    Private CurrentLength As Number
+    Private CurrentDirection As MoveDirection
+    Private RequestedDirection As MoveDirection
+    Private TailX As Number
+    Private TailY As Number
 
-End Sub</code></pre>
+    Public Sub New()
+
+        Call Me.Reset()
+
+    End Sub
+
+    Public Sub Reset()
+
+        Me.CurrentLength = 5
+        Me.CurrentDirection = MoveDirection.Right
+        Me.RequestedDirection = MoveDirection.Right
+        Me.TailX = 0
+        Me.TailY = 0
+
+        Me.SegmentXs[0] = 17
+        Me.SegmentYs[0] = 12
+        Me.SegmentXs[1] = 16
+        Me.SegmentYs[1] = 12
+        Me.SegmentXs[2] = 15
+        Me.SegmentYs[2] = 12
+        Me.SegmentXs[3] = 14
+        Me.SegmentYs[3] = 12
+        Me.SegmentXs[4] = 13
+        Me.SegmentYs[4] = 12
+
+    End Sub</code></pre>
 </div><figure class="figure-card">
 <a class="figure-link" href="assets/images/arrays.svg" rel="noopener" target="_blank" title="Open the high-resolution illustration">
 <img alt="Starting snake array coordinate pairs" src="assets/images/arrays.svg"/>
 </a>
 <figcaption>All five Y values are 12, so the body forms one horizontal row. Click the illustration to open its high-resolution version.</figcaption>
 </figure>
-<h2>Read one coordinate pair together</h2>
-<p><code>SnakeX[0] = 17</code> and <code>SnakeY[0] = 12</code> place the head in column 17, row 12. Index 1 is at (16,12), then (15,12), (14,12), and (13,12).</p>
-<aside class="callout tip"><h3>Why two direction variables?</h3><p><code>Direction</code> is the direction being used now. <code>NextDirection</code> is the player&rsquo;s latest safe request. Separating &ldquo;now&rdquo; from &ldquo;next&rdquo; prevents confusing mid-move changes.</p></aside><details class="quiz"><summary>Which way is the snake facing?</summary><p><strong>Right.</strong> The head is to the right of the body, and both direction variables are KEY_RIGHT.</p></details>
+<h2>Read the object boundary</h2>
+<p><code>Private</code> means only code inside <code>Snake</code> can touch the raw arrays and movement state. <code>Public Sub New()</code> is the constructor; creating a new Snake automatically calls <code>Reset</code>. <code>Me</code> means the current object.</p>
+<aside class="callout tip"><h3>Why two direction fields?</h3><p><code>CurrentDirection</code> is the direction being used now. <code>RequestedDirection</code> is the player&rsquo;s latest safe request. Both use <code>MoveDirection</code>, never keyboard key codes.</p></aside><details class="quiz"><summary>Which way is the new snake facing?</summary><p><strong><code>MoveDirection.Right</code>.</strong> The head is at (17,12), to the right of the remaining body.</p></details>
 <section aria-labelledby="reinforce-title" class="reinforcement-panel">
 <p class="reinforcement-kicker">Repetition builds memory</p>
 <h2 id="reinforce-title">Reinforce what you learned</h2>

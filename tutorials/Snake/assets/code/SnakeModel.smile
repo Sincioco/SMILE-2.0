@@ -1,0 +1,309 @@
+' Shared value and reference models for both Snake startup variants.
+
+Option Explicit
+
+Enum GameState
+    Title
+    Playing
+    GameOver
+End Enum
+
+Enum MoveDirection
+    Up
+    Down
+    Left
+    Right
+End Enum
+
+Type GridPoint
+    X As Number
+    Y As Number
+End Type
+
+Class Snake
+
+    Private SegmentXs[840] As Number
+    Private SegmentYs[840] As Number
+    Private CurrentLength As Number
+    Private CurrentDirection As MoveDirection
+    Private RequestedDirection As MoveDirection
+    Private TailX As Number
+    Private TailY As Number
+
+    Public Sub New()
+
+        Call Me.Reset()
+
+    End Sub
+
+    Public Sub Reset()
+
+        Me.CurrentLength = 5
+        Me.CurrentDirection = MoveDirection.Right
+        Me.RequestedDirection = MoveDirection.Right
+        Me.TailX = 0
+        Me.TailY = 0
+
+        Me.SegmentXs[0] = 17
+        Me.SegmentYs[0] = 12
+        Me.SegmentXs[1] = 16
+        Me.SegmentYs[1] = 12
+        Me.SegmentXs[2] = 15
+        Me.SegmentYs[2] = 12
+        Me.SegmentXs[3] = 14
+        Me.SegmentYs[3] = 12
+        Me.SegmentXs[4] = 13
+        Me.SegmentYs[4] = 12
+
+    End Sub
+
+    Public Sub TryTurn(Direction As MoveDirection)
+
+        If Not Me.IsReverse(Direction) Then
+            Me.RequestedDirection = Direction
+        End If
+
+    End Sub
+
+    Public Function CanTurn(Direction As MoveDirection) As Boolean
+
+        Dim Result As Boolean
+
+        Result = Not Me.IsReverse(Direction)
+
+        Return Result
+
+    End Function
+
+    Public Sub Move()
+
+        Dim I As Number
+
+        Me.CurrentDirection = Me.RequestedDirection
+        Me.TailX = Me.SegmentXs[Me.CurrentLength - 1]
+        Me.TailY = Me.SegmentYs[Me.CurrentLength - 1]
+
+        For I = Me.CurrentLength - 1 Down To 1
+            Me.SegmentXs[I] = Me.SegmentXs[I - 1]
+            Me.SegmentYs[I] = Me.SegmentYs[I - 1]
+        End For
+
+        Select Case Me.CurrentDirection
+            Case MoveDirection.Up
+                Me.SegmentYs[0] = Me.SegmentYs[0] - 1
+
+            Case MoveDirection.Down
+                Me.SegmentYs[0] = Me.SegmentYs[0] + 1
+
+            Case MoveDirection.Left
+                Me.SegmentXs[0] = Me.SegmentXs[0] - 1
+
+            Case MoveDirection.Right
+                Me.SegmentXs[0] = Me.SegmentXs[0] + 1
+        End Select
+
+    End Sub
+
+    Public Function Grow() As Boolean
+
+        If Me.CurrentLength >= 840 Then
+            Return False
+        End If
+
+        Me.SegmentXs[Me.CurrentLength] = Me.TailX
+        Me.SegmentYs[Me.CurrentLength] = Me.TailY
+        Me.CurrentLength = Me.CurrentLength + 1
+
+        Return True
+
+    End Function
+
+    Public Function Contains(GridX As Number, GridY As Number) As Boolean
+
+        Dim Result As Boolean
+        Dim I As Number
+
+        Result = False
+
+        For I = 0 To Me.CurrentLength - 1
+
+            If Me.SegmentXs[I] = GridX And Me.SegmentYs[I] = GridY Then
+                Result = True
+                Exit For
+            End If
+
+        End For
+
+        Return Result
+
+    End Function
+
+    Public Function CellBlocked(
+        GridX As Number,
+        GridY As Number,
+        GridWidth As Number,
+        GridHeight As Number,
+        AllowTail As Boolean
+    ) As Boolean
+
+        Dim Result As Boolean
+        Dim I As Number
+
+        Result = False
+
+        If (GridX < 0 Or
+            GridX >= GridWidth Or
+            GridY < 0 Or
+            GridY >= GridHeight) Then
+            Return True
+        End If
+
+        For I = 0 To Me.CurrentLength - 1
+
+            If Me.SegmentXs[I] = GridX And Me.SegmentYs[I] = GridY Then
+
+                If Not AllowTail Or I <> Me.CurrentLength - 1 Then
+                    Result = True
+                End If
+
+                Exit For
+
+            End If
+
+        End For
+
+        Return Result
+
+    End Function
+
+    Public Function HitSelf() As Boolean
+
+        Dim Result As Boolean
+        Dim I As Number
+
+        Result = False
+
+        For I = 1 To Me.CurrentLength - 1
+
+            If Me.SegmentXs[0] = Me.SegmentXs[I] And Me.SegmentYs[0] = Me.SegmentYs[I] Then
+                Result = True
+                Exit For
+            End If
+
+        End For
+
+        Return Result
+
+    End Function
+
+    Public Function HitWall(GridWidth As Number, GridHeight As Number) As Boolean
+
+        Dim Result As Boolean
+
+        Result = (Me.SegmentXs[0] < 0 Or
+            Me.SegmentXs[0] >= GridWidth Or
+            Me.SegmentYs[0] < 0 Or
+            Me.SegmentYs[0] >= GridHeight)
+
+        Return Result
+
+    End Function
+
+    Public Function SegmentX(Index As Number) As Number
+
+        Dim Result As Number
+
+        Result = 0
+
+        If Index >= 0 And Index < Me.CurrentLength Then
+            Result = Me.SegmentXs[Index]
+        End If
+
+        Return Result
+
+    End Function
+
+    Public Function SegmentY(Index As Number) As Number
+
+        Dim Result As Number
+
+        Result = 0
+
+        If Index >= 0 And Index < Me.CurrentLength Then
+            Result = Me.SegmentYs[Index]
+        End If
+
+        Return Result
+
+    End Function
+
+    Public Property Length As Number
+
+        Get
+
+            Dim Result As Number
+
+            Result = Me.CurrentLength
+
+            Return Result
+
+        End Get
+
+    End Property
+
+    Public Property HeadX As Number
+
+        Get
+
+            Dim Result As Number
+
+            Result = Me.SegmentXs[0]
+
+            Return Result
+
+        End Get
+
+    End Property
+
+    Public Property HeadY As Number
+
+        Get
+
+            Dim Result As Number
+
+            Result = Me.SegmentYs[0]
+
+            Return Result
+
+        End Get
+
+    End Property
+
+    Public Property Direction As MoveDirection
+
+        Get
+
+            Dim Result As MoveDirection
+
+            Result = Me.CurrentDirection
+
+            Return Result
+
+        End Get
+
+    End Property
+
+    Private Function IsReverse(Direction As MoveDirection) As Boolean
+
+        Dim Result As Boolean
+
+        Result = ((Direction = MoveDirection.Up And Me.CurrentDirection = MoveDirection.Down) Or
+            (Direction = MoveDirection.Down And Me.CurrentDirection = MoveDirection.Up) Or
+            (Direction = MoveDirection.Left And Me.CurrentDirection = MoveDirection.Right) Or
+            (Direction = MoveDirection.Right And Me.CurrentDirection = MoveDirection.Left))
+
+        Return Result
+
+    End Function
+
+End Class

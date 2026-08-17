@@ -9,6 +9,7 @@
   <ItemGroup>
     <SmileSource Include="Program.smile" StartupOnly="true" />
     <SmileSource Include="Program-NoDemo.smile" StartupOnly="true" />
+    <SmileSource Include="SnakeModel.smile" />
     <Asset Include="Assets\**\*" />
   </ItemGroup>
 </SmileProject>

@@ -37,12 +37,12 @@
 <p class="eyebrow">Before you type</p>
 <h1>Get Ready</h1>
 <p class="lead">Keep the finished game nearby, create a safe practice copy, and use the sound assets already in the repository.</p>
-<div class="topic-meta"><span class="meta-pill">Visual Studio 2026</span><span class="meta-pill">games\Snake</span><span class="meta-pill">Program-NoDemo.smile</span></div>
+<div class="topic-meta"><span class="meta-pill">Visual Studio 2026</span><span class="meta-pill">games\Snake</span><span class="meta-pill">Two teaching sources</span></div>
 </section>
 <h2>What you need</h2>
 <div class="card-grid">
 <article class="card accent-green"><h3>Software and files</h3><ul class="check-list"><li>The SMILE 2.0 source repository</li><li>Visual Studio 2026 with the SMILE 2.0 extension</li><li>The folder <code>games\Snake</code></li><li>Curiosity, patience, and permission to make mistakes</li></ul></article>
-<article class="card accent-blue"><h3>Your learning source</h3><p>The repository has two programs. <code>Program.smile</code> includes arcade attract/demo behavior. <code>Program-NoDemo.smile</code> keeps the complete player game but removes the demo logic, making it the clearer teaching source.</p></article>
+<article class="card accent-blue"><h3>Your learning sources</h3><p>The repository has two startup programs. <code>Program.smile</code> includes arcade attract/demo behavior. <code>Program-NoDemo.smile</code> removes that demo logic. Both use <code>SnakeModel.smile</code>, which owns the focused object model.</p></article>
 </div>
 <h2>The Snake project tree</h2>
 <p>This is a file tree. Each line is one file or folder, and the branch characters show what belongs inside the folder.</p>
@@ -51,6 +51,7 @@
 &boxvr;&boxh;&boxh; Snake.smileproj
 &boxvr;&boxh;&boxh; Program.smile                 (includes demo mode)
 &boxvr;&boxh;&boxh; Program-NoDemo.smile          (our teaching source)
+&boxvr;&boxh;&boxh; SnakeModel.smile              (shared object model)
 &boxur;&boxh;&boxh; Assets
     &boxvr;&boxh;&boxh; Start.wav
     &boxvr;&boxh;&boxh; Eat.wav
@@ -68,6 +69,7 @@
 <a class="repo-file-link" href="../../games/Snake/Snake.slnx"><strong>Snake.slnx</strong><span>Open or download the game solution</span></a>
 <a class="repo-file-link" href="../../games/Snake/Snake.smileproj"><strong>Snake.smileproj</strong><span>Open or download the SMILE project file</span></a>
 <a class="repo-file-link" href="../../games/Snake/Program-NoDemo.smile"><strong>Program-NoDemo.smile</strong><span>Open or download the official teaching source</span></a>
+<a class="repo-file-link" href="../../games/Snake/SnakeModel.smile"><strong>SnakeModel.smile</strong><span>Open or download the shared model source</span></a>
 </div>
 <h2 id="sound-assets">Listen to the game&rsquo;s existing sound assets</h2>
 <p>These players use the real files in <code>games\Snake\Assets</code>. They will work when this tutorial is installed at the expected project path.</p>
@@ -77,20 +79,20 @@
 <article class="asset-card"><h3>Round ends</h3><code>GameOver.wav</code><audio controls="" preload="none" src="../../games/Snake/Assets/GameOver.wav">Your browser cannot play this WAV file.</audio><a href="../../games/Snake/Assets/GameOver.wav">Open GameOver.wav</a></article>
 </div>
 <h2>Make a safe practice copy</h2>
-<ol class="number-list"><li>Use the link above or open <code>&lt;SMILE-2.0-root&gt;\games\Snake\Snake.slnx</code> in Visual Studio.</li><li>Make a backup copy of <code>Program-NoDemo.smile</code>.</li><li>Open <code>Snake.smileproj</code> as text.</li><li>Change its startup file from <code>Program.smile</code> to <code>Program-NoDemo.smile</code>.</li></ol>
+<ol class="number-list"><li>Use the link above or open <code>&lt;SMILE-2.0-root&gt;\games\Snake\Snake.slnx</code> in Visual Studio.</li><li>Make backup copies of <code>Program-NoDemo.smile</code> and <code>SnakeModel.smile</code>.</li><li>Open <code>Snake.smileproj</code> as text.</li><li>Confirm it includes <code>SnakeModel.smile</code>, then change its startup file from <code>Program.smile</code> to <code>Program-NoDemo.smile</code>.</li></ol>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Snake.smileproj &mdash; the line to use</span><button class="copy-code" type="button">Copy code</button></div>
 <pre><code class="language-xml">&lt;StartupFile&gt;Program-NoDemo.smile&lt;/StartupFile&gt;</code></pre>
 </div>
 <h2>First discovery mission</h2>
 <p>Before clearing your practice copy, run the finished no-demo game once. Watch the title screen, move the snake, eat one food, hit a wall, and retry.</p>
-<details class="quiz"><summary>What three screens did you see?</summary><p><strong>Title, Playing, and Game Over.</strong> Later we will call these <em>states</em>.</p></details><aside class="callout warning"><h3>The partial program will not run yet</h3><p>The official source defines helper routines first and the main game loop last. Your tutorial copy becomes runnable only after Checkpoint 9. Until then, use the untouched original when you want to see the destination.</p></aside>
+<details class="quiz"><summary>What three screens did you see?</summary><p><strong>Title, Playing, and Game Over.</strong> Later we will name them with a <code>GameState</code> Enum.</p></details><aside class="callout warning"><h3>The partial program will not run yet</h3><p>The checkpoints introduce two cooperating files by concept. Your tutorial copy becomes complete after Checkpoint 9. Until then, use the untouched original when you want to see the destination.</p></aside>
 <section aria-labelledby="reinforce-title" class="reinforcement-panel">
 <p class="reinforcement-kicker">Repetition builds memory</p>
 <h2 id="reinforce-title">Reinforce what you learned</h2>
 <div class="reinforcement-grid">
-<article><h3>Say it again</h3><p>The tutorial source is <code>Program-NoDemo.smile</code>; the finished game assets already live in <code>games\Snake\Assets</code>.</p></article>
-<article><h3>Recall it</h3><p>Which file removes the attract/demo behavior but keeps the complete player game?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>Program-NoDemo.smile.</strong> You will meet that filename again in every checkpoint and on the Full Source page.</p></details></article>
+<article><h3>Say it again</h3><p><code>Program-NoDemo.smile</code> teaches game flow; <code>SnakeModel.smile</code> teaches the shared object model.</p></article>
+<article><h3>Recall it</h3><p>Which file protects the snake&rsquo;s private segment storage?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>SnakeModel.smile.</strong> Both startup programs compile with that same support source.</p></details></article>
 </div>
 </section><nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="index.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Home</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="02-meet-the-game.html"><span><small>Next topic</small><strong>Meet the Game</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
 </article>

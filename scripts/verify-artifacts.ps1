@@ -733,6 +733,7 @@ Require-File 'artifacts\games\LightweightOopCalls.Package.exe' | Out-Null
 Require-File 'artifacts\games\ClassRuntime.exe' | Out-Null
 Require-File 'artifacts\games\ClassEndProgramCleanup.exe' | Out-Null
 Require-File 'artifacts\games\ClassNothingFailure.exe' | Out-Null
+Require-File 'artifacts\games\SnakeModelTests.exe' | Out-Null
 Require-File 'artifacts\games\LocalModuleBasics.exe' | Out-Null
 Require-File 'artifacts\web\LibraryConsumer\game.js' | Out-Null
 Require-File 'artifacts\web\LightweightOopCalls\game.js' | Out-Null
@@ -740,6 +741,7 @@ Require-File 'artifacts\web\LightweightOopCalls.Package\game.js' | Out-Null
 Require-File 'artifacts\web\ClassRuntime\game.js' | Out-Null
 Require-File 'artifacts\web\ClassWebOwnership\game.js' | Out-Null
 Require-File 'artifacts\web\ClassNothingFailure\game.js' | Out-Null
+Require-File 'artifacts\web\SnakeModelTests\game.js' | Out-Null
 Require-File 'artifacts\web\LocalModuleBasics\game.js' | Out-Null
 Require-File 'artifacts\web\Phase4VisualSlice\game.js' | Out-Null
 Require-File 'artifacts\games\Phase4VisualSlice-DirectX\Phase4VisualSlice.smile-assets.json' | Out-Null

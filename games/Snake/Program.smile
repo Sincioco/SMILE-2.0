@@ -1,4 +1,4 @@
-' SMILE 2.0 Snake - every game rule in SMILE source.
+' SMILE 2.0 Snake - full game with its attract demo.
 Const CanvasWidth = 960
 Const CanvasHeight = 540
 Const FieldX = 20
@@ -15,31 +15,29 @@ Const DemoMinimumPlayTime = 30000
 Const DemoMaximumPlayTime = 45000
 Const TitleInputArmDelay = 250
 
-Dim SnakeX[840]
-Dim SnakeY[840]
+Dim Player As New Snake()
+Dim Food As GridPoint
+Dim State As GameState
 Dim BFSQueueX[840]
 Dim BFSQueueY[840]
 Dim BFSVisited[GridWidth, GridHeight]
 Dim BFSParentX[GridWidth, GridHeight]
 Dim BFSParentY[GridWidth, GridHeight]
-Dim BFSFirstDirection[GridWidth, GridHeight]
+Dim BFSFirstDirection[GridWidth, GridHeight] As MoveDirection
 Dim FloodQueueX[840]
 Dim FloodQueueY[840]
 Dim FloodVisited[GridWidth, GridHeight]
 
-Length = 0
-Direction = KEY_RIGHT
-NextDirection = KEY_RIGHT
-FoodX = 0
-FoodY = 0
+With Food
+    .X = 0
+    .Y = 0
+End With
+
 Score = 0
 MoveDelay = StartDelay
 NextMoveTime = 0
-State = 0
+State = GameState.Title
 Key = KEY_NONE
-I = 0
-TailX = 0
-TailY = 0
 FoodValid = False
 Collision = False
 DemoMode = False
@@ -68,7 +66,7 @@ Do
         Key = KEY_NONE
     End If
 
-    If State = 0 Then
+    If State = GameState.Title Then
 
         If Key <> KEY_NONE And Timer() >= TitleAcceptInputAt Then
 
@@ -82,13 +80,13 @@ Do
 
         End If
 
-        If State = 0 And Timer() - TitleStartedAt >= TitleDemoDelay Then
+        If State = GameState.Title And Timer() - TitleStartedAt >= TitleDemoDelay Then
             Call StartDemo()
         End If
 
         Call DrawTitle()
 
-    Else If State = 1 Then
+    Else If State = GameState.Playing Then
 
         If DemoMode = False And Key = KEY_ESCAPE Then
             End Program
@@ -98,21 +96,21 @@ Do
             Call EnterTitle()
         End If
 
-        If State = 1 And DemoMode = False Then
+        If State = GameState.Playing And DemoMode = False Then
 
-            If (Key = KEY_W Or Key = KEY_UP) And Direction <> KEY_DOWN Then
-                NextDirection = KEY_UP
-            Else If (Key = KEY_S Or Key = KEY_DOWN) And Direction <> KEY_UP Then
-                NextDirection = KEY_DOWN
-            Else If (Key = KEY_A Or Key = KEY_LEFT) And Direction <> KEY_RIGHT Then
-                NextDirection = KEY_LEFT
-            Else If (Key = KEY_D Or Key = KEY_RIGHT) And Direction <> KEY_LEFT Then
-                NextDirection = KEY_RIGHT
+            If Key = KEY_W Or Key = KEY_UP Then
+                Call Player.TryTurn(MoveDirection.Up)
+            Else If Key = KEY_S Or Key = KEY_DOWN Then
+                Call Player.TryTurn(MoveDirection.Down)
+            Else If Key = KEY_A Or Key = KEY_LEFT Then
+                Call Player.TryTurn(MoveDirection.Left)
+            Else If Key = KEY_D Or Key = KEY_RIGHT Then
+                Call Player.TryTurn(MoveDirection.Right)
             End If
 
         End If
 
-        If State = 1 And Timer() >= NextMoveTime Then
+        If State = GameState.Playing And Timer() >= NextMoveTime Then
 
             If DemoMode = True Then
 
@@ -135,7 +133,7 @@ Do
 
         Call DrawBoard()
 
-        If State = 2 Then
+        If State = GameState.GameOver Then
             Call DrawGameOver()
         End If
 
@@ -147,7 +145,7 @@ Do
             Call ResetGame()
         End If
 
-        If State = 0 Then
+        If State = GameState.Title Then
             Call DrawTitle()
         Else
 
@@ -168,47 +166,27 @@ Stop Sound
 
 Sub SpawnFood()
 
+    Dim NewX As Number
+    Dim NewY As Number
+
     FoodValid = False
 
     Do
 
-        Random FoodX From 0 To GridWidth - 1
-        Random FoodY From 0 To GridHeight - 1
-        FoodValid = True
+        Random NewX From 0 To GridWidth - 1
+        Random NewY From 0 To GridHeight - 1
 
-        For I = 0 To Length - 1
-
-            If FoodX = SnakeX[I] And FoodY = SnakeY[I] Then
-                FoodValid = False
-            End If
-
-        End For
+        Food.X = NewX
+        Food.Y = NewY
+        FoodValid = Not Player.Contains(Food.X, Food.Y)
 
     Loop Until FoodValid = True
 
 End Sub
 
-Sub ResetSnakeBody()
-
-    Length = 5
-    Direction = KEY_RIGHT
-    NextDirection = KEY_RIGHT
-    SnakeX[0] = 17
-    SnakeY[0] = 12
-    SnakeX[1] = 16
-    SnakeY[1] = 12
-    SnakeX[2] = 15
-    SnakeY[2] = 12
-    SnakeX[3] = 14
-    SnakeY[3] = 12
-    SnakeX[4] = 13
-    SnakeY[4] = 12
-
-End Sub
-
 Sub ResetPlay()
 
-    Call ResetSnakeBody()
+    Call Player.Reset()
 
     Score = 0
     MoveDelay = StartDelay
@@ -216,7 +194,7 @@ Sub ResetPlay()
     Call SpawnFood()
 
     NextMoveTime = Timer() + StartDelay
-    State = 1
+    State = GameState.Playing
 
     Play Sound "Assets\Start.wav"
 
@@ -224,14 +202,14 @@ End Sub
 
 Sub RecoverDemo()
 
-    Call ResetSnakeBody()
+    Call Player.Reset()
 
     MoveDelay = Max(MinimumDelay, StartDelay - (Score / 50) * 4)
 
     Call SpawnFood()
 
     NextMoveTime = Timer() + MoveDelay
-    State = 1
+    State = GameState.Playing
 
 End Sub
 
@@ -250,7 +228,7 @@ Sub EndRound()
     End If
 
     Stop Music
-    State = 2
+    State = GameState.GameOver
 
     If DemoMode = False And Score > HighScore Then
         HighScore = Score
@@ -261,35 +239,35 @@ Sub EndRound()
 
 End Sub
 
-Function DirectionFromIndex(DirectionIndex)
+Function DirectionFromIndex(DirectionIndex As Number) As MoveDirection
 
-    Dim ReturnValue As Number
+    Dim ReturnValue As MoveDirection
 
     If DirectionIndex = 0 Then
-        ReturnValue = KEY_UP
+        ReturnValue = MoveDirection.Up
         Return ReturnValue
     Else If DirectionIndex = 1 Then
-        ReturnValue = KEY_RIGHT
+        ReturnValue = MoveDirection.Right
         Return ReturnValue
     Else If DirectionIndex = 2 Then
-        ReturnValue = KEY_DOWN
+        ReturnValue = MoveDirection.Down
         Return ReturnValue
     End If
 
-    ReturnValue = KEY_LEFT
+    ReturnValue = MoveDirection.Left
 
     Return ReturnValue
 
 End Function
 
-Function DirectionX(DirectionValue)
+Function DirectionX(DirectionValue As MoveDirection) As Number
 
     Dim ReturnValue As Number
 
-    If DirectionValue = KEY_LEFT Then
+    If DirectionValue = MoveDirection.Left Then
         ReturnValue = -1
         Return ReturnValue
-    Else If DirectionValue = KEY_RIGHT Then
+    Else If DirectionValue = MoveDirection.Right Then
         ReturnValue = 1
         Return ReturnValue
     End If
@@ -300,14 +278,14 @@ Function DirectionX(DirectionValue)
 
 End Function
 
-Function DirectionY(DirectionValue)
+Function DirectionY(DirectionValue As MoveDirection) As Number
 
     Dim ReturnValue As Number
 
-    If DirectionValue = KEY_UP Then
+    If DirectionValue = MoveDirection.Up Then
         ReturnValue = -1
         Return ReturnValue
-    Else If DirectionValue = KEY_DOWN Then
+    Else If DirectionValue = MoveDirection.Down Then
         ReturnValue = 1
         Return ReturnValue
     End If
@@ -318,66 +296,23 @@ Function DirectionY(DirectionValue)
 
 End Function
 
-Function IsReverseDirection(TestDirection)
+Function IsSafeImmediate(TestDirection As MoveDirection) As Boolean
 
-    If TestDirection = KEY_UP And Direction = KEY_DOWN Then
-        Return True
-    Else If TestDirection = KEY_DOWN And Direction = KEY_UP Then
-        Return True
-    Else If TestDirection = KEY_LEFT And Direction = KEY_RIGHT Then
-        Return True
-    Else If TestDirection = KEY_RIGHT And Direction = KEY_LEFT Then
-        Return True
-    End If
-
-    Return False
-
-End Function
-
-Function CellBlocked(TestX, TestY, AllowTail)
-
-    If (TestX < 0 Or
-        TestX >= GridWidth Or
-        TestY < 0 Or
-        TestY >= GridHeight) Then
-        Return True
-    End If
-
-    For BodyIndex = 0 To Length - 1
-
-        If TestX = SnakeX[BodyIndex] And TestY = SnakeY[BodyIndex] Then
-
-            If AllowTail = 1 And BodyIndex = Length - 1 Then
-                Return False
-            End If
-
-            Return True
-
-        End If
-
-    End For
-
-    Return False
-
-End Function
-
-Function IsSafeImmediate(TestDirection)
-
-    If IsReverseDirection(TestDirection) = True Then
+    If Not Player.CanTurn(TestDirection) Then
         Return False
     End If
 
-    SafetyX = SnakeX[0] + DirectionX(TestDirection)
-    SafetyY = SnakeY[0] + DirectionY(TestDirection)
+    SafetyX = Player.HeadX + DirectionX(TestDirection)
+    SafetyY = Player.HeadY + DirectionY(TestDirection)
     SafetyEating = 0
-    SafetyAllowTail = 1
+    SafetyAllowTail = True
 
-    If SafetyX = FoodX And SafetyY = FoodY Then
+    If SafetyX = Food.X And SafetyY = Food.Y Then
         SafetyEating = 1
-        SafetyAllowTail = 0
+        SafetyAllowTail = False
     End If
 
-    If CellBlocked(SafetyX, SafetyY, SafetyAllowTail) = False Then
+    If Not Player.CellBlocked(SafetyX, SafetyY, GridWidth, GridHeight, SafetyAllowTail) Then
         Return True
     End If
 
@@ -385,7 +320,7 @@ Function IsSafeImmediate(TestDirection)
 
 End Function
 
-Function SimulatedCellBlocked(TestX, TestY)
+Function SimulatedCellBlocked(TestX As Number, TestY As Number) As Boolean
 
     If (TestX < 0 Or
         TestX >= GridWidth Or
@@ -398,15 +333,15 @@ Function SimulatedCellBlocked(TestX, TestY)
         Return False
     End If
 
-    LastSimulatedBody = Length - 2
+    LastSimulatedBody = Player.Length - 2
 
     If SimulatedEating = 1 Then
-        LastSimulatedBody = Length - 1
+        LastSimulatedBody = Player.Length - 1
     End If
 
     For SimBodyIndex = 0 To LastSimulatedBody
 
-        If TestX = SnakeX[SimBodyIndex] And TestY = SnakeY[SimBodyIndex] Then
+        If TestX = Player.SegmentX(SimBodyIndex) And TestY = Player.SegmentY(SimBodyIndex) Then
             Return True
         End If
 
@@ -416,7 +351,7 @@ Function SimulatedCellBlocked(TestX, TestY)
 
 End Function
 
-Function FloodAreaForDirection(TestDirection)
+Function FloodAreaForDirection(TestDirection As MoveDirection) As Number
 
     Dim ReturnValue As Number
 
@@ -425,13 +360,13 @@ Function FloodAreaForDirection(TestDirection)
         Return ReturnValue
     End If
 
-    FloodStartX = SnakeX[0] + DirectionX(TestDirection)
-    FloodStartY = SnakeY[0] + DirectionY(TestDirection)
+    FloodStartX = Player.HeadX + DirectionX(TestDirection)
+    FloodStartY = Player.HeadY + DirectionY(TestDirection)
     SimulatedHeadX = FloodStartX
     SimulatedHeadY = FloodStartY
     SimulatedEating = 0
 
-    If FloodStartX = FoodX And FloodStartY = FoodY Then
+    If FloodStartX = Food.X And FloodStartY = Food.Y Then
         SimulatedEating = 1
     End If
 
@@ -490,9 +425,13 @@ End Function
 
 Sub ChooseSafeFallback()
 
+    Dim BestSafeDirection As MoveDirection
+    Dim SafeDirection As MoveDirection
+
     BestSafeArea = -1
     BestFoodDistance = 999999
-    BestSafeDirection = KEY_NONE
+    BestSafeDirection = MoveDirection.Up
+    BestSafeDirectionFound = False
 
     For SafeDirectionIndex = 0 To 3
 
@@ -501,9 +440,9 @@ Sub ChooseSafeFallback()
 
         If SafeArea >= 0 Then
 
-            SafeX = SnakeX[0] + DirectionX(SafeDirection)
-            SafeY = SnakeY[0] + DirectionY(SafeDirection)
-            SafeFoodDistance = Abs(SafeX - FoodX) + Abs(SafeY - FoodY)
+            SafeX = Player.HeadX + DirectionX(SafeDirection)
+            SafeY = Player.HeadY + DirectionY(SafeDirection)
+            SafeFoodDistance = Abs(SafeX - Food.X) + Abs(SafeY - Food.Y)
 
             If (SafeArea > BestSafeArea Or
                 (SafeArea = BestSafeArea And SafeFoodDistance < BestFoodDistance)) Then
@@ -511,6 +450,7 @@ Sub ChooseSafeFallback()
                 BestSafeArea = SafeArea
                 BestFoodDistance = SafeFoodDistance
                 BestSafeDirection = SafeDirection
+                BestSafeDirectionFound = True
 
             End If
 
@@ -518,8 +458,9 @@ Sub ChooseSafeFallback()
 
     End For
 
-    If BestSafeDirection <> KEY_NONE Then
-        NextDirection = BestSafeDirection
+    If BestSafeDirectionFound Then
+        Call Player.TryTurn(BestSafeDirection)
+
         DemoHasSafeMove = True
     End If
 
@@ -527,9 +468,12 @@ End Sub
 
 Sub PlanDemoDirection()
 
+    Dim BFSDirection As MoveDirection
+    Dim BFSFoodDirection As MoveDirection
+
     DemoHasSafeMove = False
     BFSFound = False
-    BFSFoodDirection = KEY_NONE
+    BFSFoodDirection = MoveDirection.Up
 
     For BFSClearY = 0 To GridHeight - 1
 
@@ -537,15 +481,15 @@ Sub PlanDemoDirection()
             BFSVisited[BFSClearX, BFSClearY] = 0
             BFSParentX[BFSClearX, BFSClearY] = -1
             BFSParentY[BFSClearX, BFSClearY] = -1
-            BFSFirstDirection[BFSClearX, BFSClearY] = KEY_NONE
+            BFSFirstDirection[BFSClearX, BFSClearY] = MoveDirection.Up
         End For
     End For
 
     BFSRead = 0
     BFSWrite = 1
-    BFSQueueX[0] = SnakeX[0]
-    BFSQueueY[0] = SnakeY[0]
-    BFSVisited[SnakeX[0], SnakeY[0]] = 1
+    BFSQueueX[0] = Player.HeadX
+    BFSQueueY[0] = Player.HeadY
+    BFSVisited[Player.HeadX, Player.HeadY] = 1
 
     Do
 
@@ -566,13 +510,13 @@ Sub PlanDemoDirection()
 
                 If BFSVisited[BFSNextX, BFSNextY] = 0 Then
 
-                    If CellBlocked(BFSNextX, BFSNextY, True) = False Then
+                    If Not Player.CellBlocked(BFSNextX, BFSNextY, GridWidth, GridHeight, True) Then
 
                         BFSVisited[BFSNextX, BFSNextY] = 1
                         BFSParentX[BFSNextX, BFSNextY] = Bfsx
                         BFSParentY[BFSNextX, BFSNextY] = Bfsy
 
-                        If Bfsx = SnakeX[0] And Bfsy = SnakeY[0] Then
+                        If Bfsx = Player.HeadX And Bfsy = Player.HeadY Then
                             BFSFirstDirection[BFSNextX, BFSNextY] = BFSDirection
                         Else
                             BFSFirstDirection[BFSNextX, BFSNextY] = BFSFirstDirection[Bfsx, Bfsy]
@@ -582,7 +526,7 @@ Sub PlanDemoDirection()
                         BFSQueueY[BFSWrite] = BFSNextY
                         BFSWrite = BFSWrite + 1
 
-                        If BFSNextX = FoodX And BFSNextY = FoodY Then
+                        If BFSNextX = Food.X And BFSNextY = Food.Y Then
                             BFSFound = True
                             BFSFoodDirection = BFSFirstDirection[BFSNextX, BFSNextY]
                         End If
@@ -599,7 +543,8 @@ Sub PlanDemoDirection()
 
     If BFSFound = True And IsSafeImmediate(BFSFoodDirection) = True Then
 
-        NextDirection = BFSFoodDirection
+        Call Player.TryTurn(BFSFoodDirection)
+
         DemoHasSafeMove = True
         Return
 
@@ -611,53 +556,25 @@ End Sub
 
 Sub MoveSnake()
 
-    Direction = NextDirection
-    TailX = SnakeX[Length - 1]
-    TailY = SnakeY[Length - 1]
+    Dim Grew As Boolean
 
-    For I = Length - 1 Down To 1
-        SnakeX[I] = SnakeX[I - 1]
-        SnakeY[I] = SnakeY[I - 1]
-    End For
+    Call Player.Move()
 
-    If Direction = KEY_UP Then
-        SnakeY[0] = SnakeY[0] - 1
-    Else If Direction = KEY_DOWN Then
-        SnakeY[0] = SnakeY[0] + 1
-    Else If Direction = KEY_LEFT Then
-        SnakeX[0] = SnakeX[0] - 1
-    Else If Direction = KEY_RIGHT Then
-        SnakeX[0] = SnakeX[0] + 1
-    End If
-
-    Collision = False
-
-    If (SnakeX[0] < 0 Or
-        SnakeX[0] >= GridWidth Or
-        SnakeY[0] < 0 Or
-        SnakeY[0] >= GridHeight) Then
-        Collision = True
-    End If
-
-    For I = 1 To Length - 1
-
-        If SnakeX[0] = SnakeX[I] And SnakeY[0] = SnakeY[I] Then
-            Collision = True
-        End If
-
-    End For
+    Collision = Player.HitWall(GridWidth, GridHeight)
+    Collision = Collision Or Player.HitSelf()
 
     If Collision = True Then
 
         Call EndRound()
 
-    Else If SnakeX[0] = FoodX And SnakeY[0] = FoodY Then
+    Else If Player.HeadX = Food.X And Player.HeadY = Food.Y Then
 
-        SnakeX[Length] = TailX
-        SnakeY[Length] = TailY
-        Length = Length + 1
-        Score = Score + 10
-        MoveDelay = Max(MinimumDelay, StartDelay - (Score / 50) * 4)
+        Grew = Player.Grow()
+
+        If Grew Then
+            Score = Score + 10
+            MoveDelay = Max(MinimumDelay, StartDelay - (Score / 50) * 4)
+        End If
 
         Play Sound "Assets\Eat.wav"
         Call SpawnFood()
@@ -670,24 +587,30 @@ End Sub
 
 Sub DrawBoard()
 
+    Dim SegmentX As Number
+    Dim SegmentY As Number
+
     Clear Rgb(10, 18, 35)
     Fill Rectangle FieldX, FieldY, FieldWidth, FieldHeight, BLACK
     Draw Rectangle FieldX, FieldY, FieldWidth, FieldHeight, Rgb(40, 70, 95)
 
-    For I = 0 To Length - 1
+    For I = 0 To Player.Length - 1
 
-        If (SnakeX[I] >= 0 And
-            SnakeX[I] < GridWidth And
-            SnakeY[I] >= 0 And
-            SnakeY[I] < GridHeight) Then
-            Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)
-            Draw Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(20, 105, 35)
+        SegmentX = Player.SegmentX(I)
+        SegmentY = Player.SegmentY(I)
+
+        If (SegmentX >= 0 And
+            SegmentX < GridWidth And
+            SegmentY >= 0 And
+            SegmentY < GridHeight) Then
+            Fill Rectangle FieldX + SegmentX * CellSize + 2, FieldY + SegmentY * CellSize + 2, 16, 16, Rgb(60, 230, 75)
+            Draw Rectangle FieldX + SegmentX * CellSize + 2, FieldY + SegmentY * CellSize + 2, 16, 16, Rgb(20, 105, 35)
         End If
 
     End For
 
-    Fill Rectangle FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, Rgb(245, 45, 55)
-    Draw Rectangle FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, Rgb(120, 15, 25)
+    Fill Rectangle FieldX + Food.X * CellSize + 3, FieldY + Food.Y * CellSize + 3, 14, 14, Rgb(245, 45, 55)
+    Draw Rectangle FieldX + Food.X * CellSize + 3, FieldY + Food.Y * CellSize + 3, 14, 14, Rgb(120, 15, 25)
 
     Draw Text "SMILE Snake" At 835, 55 Size 27 Color LIGHT_GREEN Centered
     Draw Text "Score" At 755, 115 Size 20 Color LIGHT_GRAY
@@ -700,7 +623,7 @@ Sub DrawBoard()
     Draw Text "Full Screen" At 835, 440 Size 16 Color LIGHT_GRAY Centered
     Draw Text "Escape Exits" At 835, 490 Size 16 Color LIGHT_GRAY Centered
 
-    If DemoMode = True And State = 1 Then
+    If DemoMode = True And State = GameState.Playing Then
 
         Fill Rounded Rectangle 740, 375, 200, 88, 10, Rgb(16, 25, 45)
         Draw Rounded Rectangle 740, 375, 200, 88, 10, CYAN
@@ -756,7 +679,7 @@ Sub EnterTitle()
 
     Stop Music
     DemoMode = False
-    State = 0
+    State = GameState.Title
     Key = KEY_NONE
     Stop Sound
 

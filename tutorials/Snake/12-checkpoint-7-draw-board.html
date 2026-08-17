@@ -42,26 +42,33 @@
 <div class="step-heading"><span class="step-badge">7</span><div><h2>Paste the DrawBoard routine</h2><p>This is the complete gameplay renderer.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 7 &mdash; exact official code</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="232">Sub DrawBoard()
+<pre><code class="language-smile" data-source-file="program" data-source-start="194">Sub DrawBoard()
+
+    Dim I As Number
+    Dim SegmentX As Number
+    Dim SegmentY As Number
 
     Clear Rgb(10, 18, 35)
     Fill Rectangle FieldX, FieldY, FieldWidth, FieldHeight, BLACK
     Draw Rectangle FieldX, FieldY, FieldWidth, FieldHeight, Rgb(40, 70, 95)
 
-    For I = 0 To Length - 1
+    For I = 0 To Player.Length - 1
 
-        If (SnakeX[I] &gt;= 0 And
-            SnakeX[I] &lt; GridWidth And
-            SnakeY[I] &gt;= 0 And
-            SnakeY[I] &lt; GridHeight) Then
-            Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)
-            Draw Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(20, 105, 35)
+        SegmentX = Player.SegmentX(I)
+        SegmentY = Player.SegmentY(I)
+
+        If (SegmentX &gt;= 0 And
+            SegmentX &lt; GridWidth And
+            SegmentY &gt;= 0 And
+            SegmentY &lt; GridHeight) Then
+            Fill Rectangle FieldX + SegmentX * CellSize + 2, FieldY + SegmentY * CellSize + 2, 16, 16, Rgb(60, 230, 75)
+            Draw Rectangle FieldX + SegmentX * CellSize + 2, FieldY + SegmentY * CellSize + 2, 16, 16, Rgb(20, 105, 35)
         End If
 
     End For
 
-    Fill Rectangle FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, Rgb(245, 45, 55)
-    Draw Rectangle FieldX + FoodX * CellSize + 3, FieldY + FoodY * CellSize + 3, 14, 14, Rgb(120, 15, 25)
+    Fill Rectangle FieldX + Food.X * CellSize + 3, FieldY + Food.Y * CellSize + 3, 14, 14, Rgb(245, 45, 55)
+    Draw Rectangle FieldX + Food.X * CellSize + 3, FieldY + Food.Y * CellSize + 3, 14, 14, Rgb(120, 15, 25)
 
     Draw Text "SMILE Snake" At 835, 55 Size 27 Color LIGHT_GREEN Centered
     Draw Text "Score" At 755, 115 Size 20 Color LIGHT_GRAY
@@ -84,17 +91,17 @@ End Sub</code></pre>
 <h2>Draw one segment from its grid coordinate</h2>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">The segment position formula</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="244">            Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)</code></pre>
+<pre><code class="language-smile" data-source-file="program" data-source-start="213">            Fill Rectangle FieldX + SegmentX * CellSize + 2, FieldY + SegmentY * CellSize + 2, 16, 16, Rgb(60, 230, 75)</code></pre>
 </div>
 <div class="card-grid"><article class="card accent-green"><h3>Why 16 &times; 16?</h3><p>Each cell is 20 &times; 20. A 16-pixel segment with a 2-pixel margin on every side creates visible gaps.</p></article><article class="card accent-red"><h3>Why food is 14 &times; 14</h3><p>A 3-pixel margin makes the red food slightly smaller than a snake segment.</p></article></div>
-<div class="table-wrap"><table><thead><tr><th>Statement</th><th>Visible result</th><th>Simple example / usage</th></tr></thead><tbody><tr><td><span class="syntax">Clear Color</span></td><td>Paint the full logical canvas.</td><td><code>Clear Rgb(10, 18, 35)</code> <a class="source-line-link" href="19-complete-source.html#source-line-234">line 234</a></td></tr><tr><td><span class="syntax">Fill Rectangle ...</span></td><td>Draw a solid rectangle.</td><td><code>Fill Rectangle FieldX, FieldY, FieldWidth, FieldHeight, BLACK</code> <a class="source-line-link" href="19-complete-source.html#source-line-235">line 235</a></td></tr><tr><td><span class="syntax">Draw Rectangle ...</span></td><td>Draw only the outline.</td><td><code>Draw Rectangle FieldX, FieldY, FieldWidth, FieldHeight, Rgb(40, 70, 95)</code> <a class="source-line-link" href="19-complete-source.html#source-line-236">line 236</a></td></tr><tr><td><span class="syntax">Draw Text ...</span></td><td>Draw literal words.</td><td><code>Draw Text "Score" At 755, 115 Size 20 Color LIGHT_GRAY</code> <a class="source-line-link" href="19-complete-source.html#source-line-254">line 254</a></td></tr><tr><td><span class="syntax">Draw Number ...</span></td><td>Draw a changing numeric value.</td><td><code>Draw Number Score At 755, 142 Size 34 Color YELLOW</code> <a class="source-line-link" href="19-complete-source.html#source-line-255">line 255</a></td></tr><tr><td><span class="syntax">Centered</span></td><td>Treat the given X as the horizontal center.</td><td><code>Draw Text "SMILE Snake" At 835, 55 Size 27 Color LIGHT_GREEN Centered</code> <a class="source-line-link" href="19-complete-source.html#source-line-253">line 253</a></td></tr><tr><td><span class="syntax">Rgb(r,g,b)</span></td><td>Build a color from red, green, and blue amounts from 0 to 255.</td><td><code>Rgb(60, 230, 75)</code> <a class="source-line-link" href="19-complete-source.html#source-line-244">line 244</a></td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Statement</th><th>Visible result</th><th>Simple example / usage</th></tr></thead><tbody><tr><td><span class="syntax">Clear Color</span></td><td>Paint the full logical canvas.</td><td><code>Clear Rgb(10, 18, 35)</code> <a class="source-line-link" data-source-file="program" href="19-complete-source.html#source-line-200">line 200</a></td></tr><tr><td><span class="syntax">Fill Rectangle ...</span></td><td>Draw a solid rectangle.</td><td><code>Fill Rectangle FieldX, FieldY, FieldWidth, FieldHeight, BLACK</code> <a class="source-line-link" data-source-file="program" href="19-complete-source.html#source-line-201">line 201</a></td></tr><tr><td><span class="syntax">Draw Rectangle ...</span></td><td>Draw only the outline.</td><td><code>Draw Rectangle FieldX, FieldY, FieldWidth, FieldHeight, Rgb(40, 70, 95)</code> <a class="source-line-link" data-source-file="program" href="19-complete-source.html#source-line-202">line 202</a></td></tr><tr><td><span class="syntax">Draw Text ...</span></td><td>Draw literal words.</td><td><code>Draw Text "Score" At 755, 115 Size 20 Color LIGHT_GRAY</code> <a class="source-line-link" data-source-file="program" href="19-complete-source.html#source-line-223">line 223</a></td></tr><tr><td><span class="syntax">Draw Number ...</span></td><td>Draw a changing numeric value.</td><td><code>Draw Number Score At 755, 142 Size 34 Color YELLOW</code> <a class="source-line-link" data-source-file="program" href="19-complete-source.html#source-line-224">line 224</a></td></tr><tr><td><span class="syntax">Centered</span></td><td>Treat the given X as the horizontal center.</td><td><code>Draw Text "SMILE Snake" At 835, 55 Size 27 Color LIGHT_GREEN Centered</code> <a class="source-line-link" data-source-file="program" href="19-complete-source.html#source-line-222">line 222</a></td></tr><tr><td><span class="syntax">Object.Function(...)</span></td><td>Read model data without exposing storage.</td><td><code>Player.SegmentX(I)</code> <a class="source-line-link" data-source-file="program" href="19-complete-source.html#source-line-206">line 206</a></td></tr></tbody></table></div>
 <details class="quiz"><summary>Does DrawBoard change the score or snake position?</summary><p><strong>No.</strong> It reads the current data and turns it into a picture. The rules live in update routines such as MoveSnake.</p></details>
 <section aria-labelledby="reinforce-title" class="reinforcement-panel">
 <p class="reinforcement-kicker">Repetition builds memory</p>
 <h2 id="reinforce-title">Reinforce what you learned</h2>
 <div class="reinforcement-grid">
 <article><h3>Say it again</h3><p>Drawing reads game data; it does not change movement, score, or collision rules.</p></article>
-<article><h3>Recall it</h3><p>Which formula turns a segment&rsquo;s grid X into its drawing X?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>FieldX + SnakeX[I] &times; CellSize + 2.</strong> You first met the same math in Grid &amp; Coordinates.</p></details></article>
+<article><h3>Recall it</h3><p>Which formula turns a segment&rsquo;s grid X into its drawing X?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>FieldX + SegmentX &times; CellSize + 2.</strong> <code>SegmentX</code> came from the object&rsquo;s public query.</p></details></article>
 </div>
 </section><nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="11-checkpoint-6-movement.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Checkpoint 6: Movement &amp; Rules</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="13-checkpoint-8-screens.html"><span><small>Next topic</small><strong>Checkpoint 8: Title &amp; Game Over</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
 </article>

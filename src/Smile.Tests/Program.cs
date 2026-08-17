@@ -4612,6 +4612,81 @@ Run("Smile.Game 2.0 project and package consumers share Type-member and Enum edi
     }
 });
 
+Run("Snake shares one private Class model across both startup stories and editor services", () =>
+{
+    var project = SmileProjectSourceSet.Load("games/Snake/Snake.smileproj");
+    Equal("Program.smile", project.StartupFile);
+    Equal("Program.smile|Program-NoDemo.smile", string.Join("|", project.Items
+        .Where(source => source.StartupOnly).Select(source => source.Include)));
+    Equal("SnakeModel.smile", project.Items.Single(source => !source.StartupOnly).Include);
+
+    var compilation = SmileProjectCompilation.Load(project.ProjectPath);
+    var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Program,
+        compilation.DependencyContext);
+    Equal(false, analysis.HasErrors);
+    var snake = analysis.SemanticModel.NominalTypes.Values.OfType<ClassTypeSymbol>()
+        .Single(type => type.Name == "Snake");
+    Equal(true, snake.Fields.All(field => field.Visibility == ModuleVisibility.Private));
+    Equal("CanTurn|CellBlocked|Contains|Direction|Grow|HeadX|HeadY|HitSelf|HitWall|Length|Move|Reset|SegmentX|SegmentY|TryTurn",
+        string.Join("|", snake.Members.Where(member => member.Visibility == ModuleVisibility.Public)
+            .Select(member => member.Name).OrderBy(name => name, StringComparer.Ordinal)));
+    Equal(false, snake.Members.Where(member => member.Visibility == ModuleVisibility.Public)
+        .Any(member => member.Name is "SegmentXs" or "SegmentYs" or "CurrentLength" or
+            "CurrentDirection" or "RequestedDirection" or "TailX" or "TailY"));
+    Equal(true, snake.Constructor.IsDeclared);
+    Equal(0, snake.Constructor.Parameters.Count);
+    var modelPath = Path.GetFullPath("games/Snake/SnakeModel.smile");
+    Equal(modelPath, Path.GetFullPath(snake.DeclarationLocation!.FilePath));
+
+    var gameState = analysis.SemanticModel.NominalTypes.Values.OfType<EnumTypeSymbol>()
+        .Single(type => type.Name == "GameState");
+    Equal("Title|Playing|GameOver", string.Join("|", gameState.Members.Select(member => member.Name)));
+    var moveDirection = analysis.SemanticModel.NominalTypes.Values.OfType<EnumTypeSymbol>()
+        .Single(type => type.Name == "MoveDirection");
+    Equal("Up|Down|Left|Right", string.Join("|", moveDirection.Members.Select(member => member.Name)));
+    Equal(true, analysis.SemanticModel.NominalTypes.Values.OfType<RecordTypeSymbol>()
+        .Any(type => type.Name == "GridPoint"));
+
+    var programPath = Path.GetFullPath("games/Snake/Program.smile");
+    var programText = File.ReadAllText(programPath);
+    var tree = analysis.GetSyntaxTree(programPath);
+    var memberPosition = programText.IndexOf("Player.TryTurn", StringComparison.Ordinal) +
+                         "Player.".Length;
+    var completions = SmileCompletionService.GetCompletions(analysis, tree, memberPosition);
+    foreach (var expected in new[] { "TryTurn", "Move", "Grow", "Contains", "HitSelf", "HitWall",
+        "SegmentX", "SegmentY", "Length", "HeadX", "HeadY", "Direction" })
+        Equal(true, completions.Any(completion => completion.DisplayText == expected));
+    foreach (var hidden in new[] { "SegmentXs", "SegmentYs", "CurrentLength", "CurrentDirection",
+        "RequestedDirection", "TailX", "TailY", "IsReverse" })
+        Equal(false, completions.Any(completion => completion.DisplayText == hidden));
+    Equal(true, SmileSymbolService.TryResolve(analysis, tree, memberPosition + 2,
+        out var resolvedTryTurn));
+    Equal(SmileResolvedSymbolKind.Subroutine, resolvedTryTurn.Kind);
+    Equal(modelPath, Path.GetFullPath(resolvedTryTurn.DeclarationLocation!.FilePath));
+    Equal(snake.Methods.Single(method => method.Name == "TryTurn").DeclarationLocation.Line,
+        resolvedTryTurn.DeclarationLocation.Line);
+
+    var enumPosition = programText.IndexOf("MoveDirection.Up", StringComparison.Ordinal) +
+                       "MoveDirection.".Length;
+    Equal(true, SmileSymbolService.TryResolve(analysis, tree, enumPosition + 1,
+        out var resolvedDirection));
+    Equal(SmileResolvedSymbolKind.EnumMember, resolvedDirection.Kind);
+    Equal(modelPath, Path.GetFullPath(resolvedDirection.DeclarationLocation!.FilePath));
+
+    var playerPosition = programText.IndexOf("Player.TryTurn", StringComparison.Ordinal);
+    Equal(true, SmileSymbolService.TryResolve(analysis, tree, playerPosition + 1,
+        out var resolvedPlayer));
+    Equal(SmileResolvedSymbolKind.Variable, resolvedPlayer.Kind);
+    Equal(true, SmileSymbolDisplayService.Present(resolvedPlayer, compilation.DependencyContext)
+        .Signature.Contains("Player As Snake", StringComparison.Ordinal));
+
+    var modelText = File.ReadAllText(modelPath);
+    Equal(false, modelText.Contains("KEY_UP", StringComparison.Ordinal));
+    Equal(false, programText.Contains("SnakeX[", StringComparison.Ordinal));
+    Equal(false, File.ReadAllText("games/Snake/Program-NoDemo.smile")
+        .Contains("SnakeX[", StringComparison.Ordinal));
+});
+
 Run("VSIX templates render localized identity metadata within the aligned header", () =>
 {
     var gameTemplate = File.ReadAllText("src/Smile.VisualStudio/Templates/Game/Program.smile");

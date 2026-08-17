@@ -36,45 +36,50 @@
 <section class="lesson-hero">
 <p class="eyebrow">Paste checkpoint 2</p>
 <h1>Create the Game&rsquo;s Memory</h1>
-<p class="lead">Variables remember values that can change while the program runs. Load restores the saved high score.</p>
-<div class="topic-meta"><span class="meta-pill">Paste below Checkpoint 1</span><span class="meta-pill">Lines 16&ndash;33</span><span class="meta-pill">Changing data</span></div>
+<p class="lead">The startup program owns screen, score, timing, and input state. A <code>Snake</code> object owns the moving body.</p>
+<div class="topic-meta"><span class="meta-pill">Program lines 17&ndash;39</span><span class="meta-pill">Class reference</span><span class="meta-pill">Typed state</span></div>
 </section>
-<div class="step-heading"><span class="step-badge">2</span><div><h2>Paste the starting variables and high-score load</h2><p>Leave one blank line after Checkpoint 1, then paste this block.</p></div></div>
+<div class="step-heading"><span class="step-badge">2</span><div><h2>Create the game-facing values</h2><p>Leave one blank line after Checkpoint 1, then paste this block into <code>Program-NoDemo.smile</code>.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 2 &mdash; exact official code</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="16">Length = 0
-Direction = KEY_RIGHT
-NextDirection = KEY_RIGHT
-FoodX = 0
-FoodY = 0
+<pre><code class="language-smile" data-source-file="program" data-source-start="17">Dim Player As New Snake()
+Dim Food As GridPoint
+Dim State As GameState
+Dim HighScore As Number
+Dim Score As Number
+Dim MoveDelay As Number
+Dim NextMoveTime As Number
+Dim Key As Number
+
+With Food
+    .X = 0
+    .Y = 0
+End With
+
+State = GameState.Title
 Score = 0
 MoveDelay = StartDelay
 NextMoveTime = 0
-State = 0
 Key = KEY_NONE
-I = 0
-TailX = 0
-TailY = 0
-FoodValid = False
-Collision = False
 
 '----------------------------------------------------------------------------------------------------
+
 Load HighScore From "HighScore" Default 0</code></pre>
 </div>
 <h2>Important starting facts</h2>
-<div class="card-grid"><article class="card accent-blue"><h3>Directions</h3><p>Both direction variables begin at <code>KEY_RIGHT</code>, so the first snake faces and moves right.</p></article><article class="card accent-green"><h3>Boolean flags</h3><p><code>FoodValid</code> and <code>Collision</code> begin as <code>False</code>. They will become True only when testing proves the fact.</p></article><article class="card accent-yellow"><h3>State</h3><p><code>State = 0</code> means the program begins on the title screen.</p></article><article class="card accent-red"><h3>High score</h3><p><code>Default 0</code> gives a brand-new player a safe score when no saved value exists.</p></article></div>
+<div class="card-grid"><article class="card accent-blue"><h3>Player</h3><p><code>Dim Player As New Snake()</code> creates one live object and runs its constructor. The program asks that object to turn, move, grow, and answer collision questions.</p></article><article class="card accent-green"><h3>Food</h3><p><code>GridPoint</code> keeps X and Y together as one value. <code>With Food</code> makes its two field assignments easy to read.</p></article><article class="card accent-yellow"><h3>State</h3><p><code>GameState.Title</code> is clearer than a magic number. The compiler also prevents mixing a game state with a direction.</p></article><article class="card accent-red"><h3>High score</h3><p><code>Default 0</code> gives a brand-new player a safe score when no saved value exists.</p></article></div>
 <figure class="figure-card">
 <a class="figure-link" href="assets/images/storage.svg" rel="noopener" target="_blank" title="Open the high-resolution illustration">
 <img alt="High-score Load and Save diagram" src="assets/images/storage.svg"/>
 </a>
 <figcaption>The high score moves between game memory and saved storage. Click the illustration to open its high-resolution version.</figcaption>
-</figure><aside class="callout think"><h3>The model is the real game</h3><p>The rectangles and text are only the display. The collection of variables and array entries is the world the computer actually understands.</p></aside>
+</figure><aside class="callout think"><h3>Draw the ownership boundary</h3><p><code>Program-NoDemo.smile</code> owns orchestration and presentation. <code>SnakeModel.smile</code> owns body storage and movement rules. Keeping those responsibilities separate is the first object-oriented design decision in this game.</p></aside>
 <section aria-labelledby="reinforce-title" class="reinforcement-panel">
 <p class="reinforcement-kicker">Repetition builds memory</p>
 <h2 id="reinforce-title">Reinforce what you learned</h2>
 <div class="reinforcement-grid">
 <article><h3>Say it again</h3><p>Variables remember changing facts during the game; <code>Load</code> restores the saved high score between runs.</p></article>
-<article><h3>Recall it</h3><p>Which two variables protect the snake from instantly reversing direction?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>Direction and NextDirection.</strong> You will use both again in movement and keyboard handling.</p></details></article>
+<article><h3>Recall it</h3><p>Which value owns the snake&rsquo;s body and direction state?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>The Player object.</strong> Its private fields cannot be changed directly by the startup program.</p></details></article>
 </div>
 </section><nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="06-checkpoint-1-board-plan.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Checkpoint 1: Board Plan</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="08-checkpoint-3-spawn-food.html"><span><small>Next topic</small><strong>Checkpoint 3: Spawn Food</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
 </article>

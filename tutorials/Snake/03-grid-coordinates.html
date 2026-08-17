@@ -52,7 +52,7 @@
 <article class="card accent-green"><h3>Y answers &ldquo;how far down?&rdquo;</h3><p><code>Y = 0</code> is the top row. Moving down adds 1. Moving up subtracts 1.</p></article>
 </div>
 <h2>Grid size and valid values</h2>
-<div class="table-wrap"><table><thead><tr><th>Dimension</th><th>Count</th><th>Valid coordinates</th><th>Why</th></tr></thead><tbody><tr><td>Columns</td><td>35</td><td>0 through 34</td><td>Counting begins at zero, so the final valid index is 35 &minus; 1.</td></tr><tr><td>Rows</td><td>24</td><td>0 through 23</td><td>The first invalid row is 24.</td></tr><tr><td>Cells</td><td>840</td><td>35 &times; 24</td><td>The arrays reserve enough room for a snake that fills the entire board.</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Dimension</th><th>Count</th><th>Valid coordinates</th><th>Why</th></tr></thead><tbody><tr><td>Columns</td><td>35</td><td>0 through 34</td><td>Counting begins at zero, so the final valid index is 35 &minus; 1.</td></tr><tr><td>Rows</td><td>24</td><td>0 through 23</td><td>The first invalid row is 24.</td></tr><tr><td>Cells</td><td>840</td><td>35 &times; 24</td><td>The Snake Class privately reserves enough segment slots to fill the board.</td></tr></tbody></table></div>
 <figure class="figure-card">
 <a class="figure-link" href="assets/images/pixel-formula.svg" rel="noopener" target="_blank" title="Open the high-resolution illustration">
 <img alt="Diagram explaining the formula for converting a grid X and Y into drawing pixels" src="assets/images/pixel-formula.svg"/>
@@ -67,11 +67,18 @@
 PixelY = FieldY + GridY * CellSize + 2</code></pre>
 </div><section class="source-revisit" id="grid-source-example">
 <h3>See the same formula in the finished game</h3>
-<p>The real drawing routine uses the grid-to-pixel calculation directly. These are full source lines 242&ndash;243.</p>
+<p>The game asks the Snake for each segment&rsquo;s grid coordinate, then applies the same pixel formula.</p>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">DrawBoard &mdash; actual Snake source</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="244">            Fill Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(60, 230, 75)
-            Draw Rectangle FieldX + SnakeX[I] * CellSize + 2, FieldY + SnakeY[I] * CellSize + 2, 16, 16, Rgb(20, 105, 35)</code></pre>
+<pre><code class="language-smile" data-source-file="program" data-source-start="206">        SegmentX = Player.SegmentX(I)
+        SegmentY = Player.SegmentY(I)
+
+        If (SegmentX &gt;= 0 And
+            SegmentX &lt; GridWidth And
+            SegmentY &gt;= 0 And
+            SegmentY &lt; GridHeight) Then
+            Fill Rectangle FieldX + SegmentX * CellSize + 2, FieldY + SegmentY * CellSize + 2, 16, 16, Rgb(60, 230, 75)
+            Draw Rectangle FieldX + SegmentX * CellSize + 2, FieldY + SegmentY * CellSize + 2, 16, 16, Rgb(20, 105, 35)</code></pre>
 </div>
 </section>
 <div class="table-wrap"><table><thead><tr><th>Value</th><th>Calculation</th><th>Result</th></tr></thead><tbody><tr><td>Head X = 17</td><td>20 + 17 &times; 20 + 2</td><td>362 pixels</td></tr><tr><td>Head Y = 12</td><td>30 + 12 &times; 20 + 2</td><td>272 pixels</td></tr></tbody></table></div>
@@ -81,7 +88,7 @@ PixelY = FieldY + GridY * CellSize + 2</code></pre>
 <h2 id="reinforce-title">Reinforce what you learned</h2>
 <div class="reinforcement-grid">
 <article><h3>Say it again</h3><p><strong>X</strong> grows to the right, <strong>Y</strong> grows downward, and drawing converts grid squares into pixels.</p></article>
-<article><h3>Recall it</h3><p>What happens to Y when the snake moves upward?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>Y decreases by 1.</strong> You will use that rule again in <code>MoveSnake</code>, full source lines 182&ndash;190.</p></details></article>
+<article><h3>Recall it</h3><p>What happens to Y when the snake moves upward?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>Y decreases by 1.</strong> The shared Snake model applies that rule inside <code>Move()</code>.</p></details></article>
 </div>
 </section><nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="02-meet-the-game.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Meet the Game</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="04-arrays-memory.html"><span><small>Next topic</small><strong>Arrays &amp; Memory</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
 </article>

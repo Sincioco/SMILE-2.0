@@ -36,13 +36,16 @@
 <section class="lesson-hero">
 <p class="eyebrow">Paste checkpoint 1</p>
 <h1>Build the Game&rsquo;s Measuring Tools</h1>
-<p class="lead">Constants name values that must not change. Arrays reserve storage for every possible snake segment.</p>
-<div class="topic-meta"><span class="meta-pill">Paste first</span><span class="meta-pill">Lines 1&ndash;14</span><span class="meta-pill">Board plan</span></div>
+<p class="lead">Constants name game-level measurements that must not change. The snake&rsquo;s private storage comes later in the shared model.</p>
+<div class="topic-meta"><span class="meta-pill">Paste first</span><span class="meta-pill">Program lines 1&ndash;15</span><span class="meta-pill">Board plan</span></div>
 </section>
-<div class="step-heading"><span class="step-badge">1</span><div><h2>Paste the comment, constants, and arrays</h2><p>Paste this at the very top of your empty practice file.</p></div></div>
+<div class="step-heading"><span class="step-badge">1</span><div><h2>Paste the comment, Option, and constants</h2><p>Paste this at the very top of <code>Program-NoDemo.smile</code>.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 1 &mdash; exact official code</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="1">' SMILE 2.0 Snake - student edition without attract/demo code.
+<pre><code class="language-smile" data-source-file="program" data-source-start="1">' SMILE 2.0 Snake - student edition without attract/demo code.
+
+Option Explicit
+
 Const CanvasWidth = 960
 Const CanvasHeight = 540
 Const FieldX = 20
@@ -52,21 +55,18 @@ Const FieldHeight = 480
 Const GridWidth = 35
 Const GridHeight = 24
 Const CellSize = 20
-Const StartDelay = 100
-Const MinimumDelay = 45
-Dim SnakeX[840]
-Dim SnakeY[840]</code></pre>
+Const StartDelay = 100</code></pre>
 </div>
 <h2>Read every line by job</h2>
-<div class="table-wrap"><table><thead><tr><th>Syntax</th><th>Job</th><th>Snake example / usage</th></tr></thead><tbody><tr><td><span class="syntax">' note</span></td><td>An apostrophe starts a full-line comment for humans.</td><td><code>' SMILE 2.0 Snake - student edition without attract/demo code.</code> <a class="source-line-link" href="19-complete-source.html#source-line-1">line 1</a></td></tr><tr><td><span class="syntax">Const Name = value</span></td><td>Creates a named value that cannot change later.</td><td><code>Const CanvasWidth = 960</code> <a class="source-line-link" href="19-complete-source.html#source-line-2">line 2</a></td></tr><tr><td><span class="syntax">Dim SnakeX[840]</span></td><td>Creates a fixed one-dimensional numeric array with 840 numbered slots.</td><td><code>Dim SnakeX[840]</code> <a class="source-line-link" href="19-complete-source.html#source-line-13">line 13</a></td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Syntax</th><th>Job</th><th>Snake example / usage</th></tr></thead><tbody><tr><td><span class="syntax">' note</span></td><td>An apostrophe starts a full-line comment for humans.</td><td><code>' SMILE 2.0 Snake - student edition without attract/demo code.</code> <a class="source-line-link" data-source-file="program" href="19-complete-source.html#source-line-1">line 1</a></td></tr><tr><td><span class="syntax">Option Explicit</span></td><td>Catches misspelled or undeclared names.</td><td><code>Option Explicit</code> <a class="source-line-link" data-source-file="program" href="19-complete-source.html#source-line-3">line 3</a></td></tr><tr><td><span class="syntax">Const Name = value</span></td><td>Creates a named value that cannot change later.</td><td><code>Const CanvasWidth = 960</code> <a class="source-line-link" data-source-file="program" href="19-complete-source.html#source-line-5">line 5</a></td></tr></tbody></table></div>
 <div class="card-grid"><article class="card accent-green"><h3>Board measurements</h3><p><code>FieldWidth = 700</code>, <code>GridWidth = 35</code>, and <code>CellSize = 20</code> agree because 35 &times; 20 = 700.</p></article><article class="card accent-yellow"><h3>Timing boundaries</h3><p><code>StartDelay = 100</code> is the early move delay. <code>MinimumDelay = 45</code> prevents the snake from becoming too fast.</p></article></div>
-<aside class="callout think"><h3>Why exactly 840 slots?</h3><p>The board contains 35 &times; 24 = 840 squares. In the most extreme case, the snake could occupy every square.</p></aside><details class="quiz"><summary>What should FieldWidth / CellSize equal?</summary><p><strong>700 / 20 = 35</strong>, the number of grid columns.</p></details>
+<aside class="callout think"><h3>Where are the 840 segment slots?</h3><p>The board still contains 35 &times; 24 = 840 squares, but the two fixed arrays are private fields in <code>SnakeModel.smile</code>. The startup story no longer exposes them.</p></aside><details class="quiz"><summary>What should FieldWidth / CellSize equal?</summary><p><strong>700 / 20 = 35</strong>, the number of grid columns.</p></details>
 <section aria-labelledby="reinforce-title" class="reinforcement-panel">
 <p class="reinforcement-kicker">Repetition builds memory</p>
 <h2 id="reinforce-title">Reinforce what you learned</h2>
 <div class="reinforcement-grid">
-<article><h3>Say it again</h3><p><code>Const</code> names values that stay fixed; <code>Dim</code> reserves numbered array slots.</p></article>
-<article><h3>Recall it</h3><p>Why do both body arrays have 840 slots?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>35 &times; 24 = 840.</strong> In the most extreme case, the snake could occupy every board square.</p></details></article>
+<article><h3>Say it again</h3><p><code>Option Explicit</code> catches name mistakes; <code>Const</code> names measurements that stay fixed.</p></article>
+<article><h3>Recall it</h3><p>Why do the model&rsquo;s private arrays have 840 slots?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>35 &times; 24 = 840.</strong> One snake could theoretically occupy every board square.</p></details></article>
 </div>
 </section><nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="05-game-loop-states.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Game Loop &amp; States</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="07-checkpoint-2-game-memory.html"><span><small>Next topic</small><strong>Checkpoint 2: Game Memory</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
 </article>

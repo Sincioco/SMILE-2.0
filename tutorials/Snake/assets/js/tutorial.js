@@ -149,12 +149,14 @@
   }
 
   const keywordSet = new Set([
-    "and", "call", "case", "centered", "clear", "color", "const", "default", "dim",
-    "do", "down", "draw", "else", "end", "exit", "false", "fill", "for", "from",
-    "function", "game", "get", "if", "into", "key", "load", "loop", "max", "min",
-    "mod", "music", "not", "number", "or", "pause", "play", "random", "rectangle",
-    "resume", "return", "rgb", "rounded", "save", "screen", "show", "size", "sound",
-    "stop", "sub", "text", "then", "to", "true", "until", "volume", "wait", "window"
+    "and", "as", "boolean", "byref", "byval", "call", "case", "centered", "class",
+    "clear", "color", "const", "default", "dim", "do", "down", "draw", "else", "end",
+    "enum", "exit", "explicit", "false", "fill", "for", "from", "function", "game", "get",
+    "if", "into", "is", "key", "load", "loop", "max", "me", "min", "mod", "music", "new",
+    "not", "number", "option", "optional", "or", "pause", "play", "private", "property",
+    "public", "random", "rectangle", "resume", "return", "rgb", "rounded", "save", "screen",
+    "select", "set", "show", "size", "sound", "stop", "sub", "text", "then", "to", "true",
+    "type", "until", "value", "volume", "wait", "window", "with"
   ]);
 
   const constantPattern = /^(KEY_[A-Z0-9_]+|BLACK|WHITE|RED|GREEN|BLUE|CYAN|MAGENTA|YELLOW|ORANGE|GRAY|LIGHT_[A-Z_]+|DARK_[A-Z_]+)$/i;
@@ -207,18 +209,27 @@
     return result;
   }
 
-  function addSourceRangeBadge(code, start, lineCount) {
+  function sourceAnchorPrefix(sourceFile) {
+    return sourceFile === "model" ? "model-line" : "source-line";
+  }
+
+  function sourceDisplayName(sourceFile) {
+    return sourceFile === "model" ? "SnakeModel" : "Program";
+  }
+
+  function addSourceRangeBadge(code, start, lineCount, sourceFile) {
     const panel = code.closest(".code-panel");
     const toolbar = panel?.querySelector(".code-toolbar");
     if (!toolbar || toolbar.querySelector(".source-range-badge")) return;
 
     const end = start + lineCount - 1;
-    const text = start === end ? `Full source line ${start}` : `Full source lines ${start}–${end}`;
+    const name = sourceDisplayName(sourceFile);
+    const text = start === end ? `${name} line ${start}` : `${name} lines ${start}–${end}`;
     const badge = document.createElement(code.dataset.sourceAnchor === "true" ? "span" : "a");
     badge.className = "source-range-badge";
     badge.textContent = text;
     if (badge instanceof HTMLAnchorElement) {
-      badge.href = `19-complete-source.html#source-line-${start}`;
+      badge.href = `19-complete-source.html#${sourceAnchorPrefix(sourceFile)}-${start}`;
       badge.title = "Open this fragment in the complete source";
     }
 
@@ -232,16 +243,18 @@
       code.dataset.raw = raw;
       const lines = raw.split("\n");
       const start = Number(code.dataset.sourceStart || 0);
+      const sourceFile = code.dataset.sourceFile || "program";
 
       if (start > 0) {
         code.classList.add("numbered-code");
         code.innerHTML = lines.map((line, index) => {
           const number = start + index;
-          const anchor = code.dataset.sourceAnchor === "true" ? ` id="source-line-${number}"` : "";
+          const anchor = code.dataset.sourceAnchor === "true" ?
+            ` id="${sourceAnchorPrefix(sourceFile)}-${number}"` : "";
           const highlighted = highlightLine(line) || "&nbsp;";
-          return `<span class="code-line"${anchor} data-source-line="${number}"><span class="line-number" aria-hidden="true">${number}</span><span class="line-code">${highlighted}</span></span>`;
+          return `<span class="code-line"${anchor} data-source-file="${sourceFile}" data-source-line="${number}"><span class="line-number" aria-hidden="true">${number}</span><span class="line-code">${highlighted}</span></span>`;
         }).join("");
-        addSourceRangeBadge(code, start, lines.length);
+        addSourceRangeBadge(code, start, lines.length, sourceFile);
       } else {
         code.innerHTML = lines.map(highlightLine).join("\n");
       }
@@ -252,32 +265,36 @@
     document.querySelectorAll(".code-line.range-highlight").forEach(line => line.classList.remove("range-highlight"));
   }
 
-  function highlightSourceRange(start, end) {
+  function highlightSourceRange(start, end, sourceFile = "program") {
     clearSourceHighlights();
+    const prefix = sourceAnchorPrefix(sourceFile);
     for (let line = start; line <= end; line += 1) {
-      document.getElementById(`source-line-${line}`)?.classList.add("range-highlight");
+      document.getElementById(`${prefix}-${line}`)?.classList.add("range-highlight");
     }
   }
 
   function setupSourceMapLinks() {
     document.querySelectorAll(".source-range-link").forEach(link => {
       link.addEventListener("click", () => {
-        highlightSourceRange(Number(link.dataset.lineStart), Number(link.dataset.lineEnd));
+        highlightSourceRange(Number(link.dataset.lineStart), Number(link.dataset.lineEnd),
+          link.dataset.sourceFile || "program");
       });
     });
 
-    const hashMatch = window.location.hash.match(/^#source-line-(\d+)$/);
+    const hashMatch = window.location.hash.match(/^#(source-line|model-line)-(\d+)$/);
     if (!hashMatch) return;
-    const line = Number(hashMatch[1]);
+    const sourceFile = hashMatch[1] === "model-line" ? "model" : "program";
+    const line = Number(hashMatch[2]);
     const rangeLink = [...document.querySelectorAll(".source-range-link")].find(link => {
       const start = Number(link.dataset.lineStart);
       const end = Number(link.dataset.lineEnd);
-      return line >= start && line <= end;
+      return (link.dataset.sourceFile || "program") === sourceFile && line >= start && line <= end;
     });
-    if (rangeLink) highlightSourceRange(Number(rangeLink.dataset.lineStart), Number(rangeLink.dataset.lineEnd));
+    if (rangeLink) highlightSourceRange(Number(rangeLink.dataset.lineStart),
+      Number(rangeLink.dataset.lineEnd), sourceFile);
 
     window.requestAnimationFrame(() => {
-      document.getElementById(`source-line-${line}`)?.scrollIntoView({ block: "center" });
+      document.getElementById(`${sourceAnchorPrefix(sourceFile)}-${line}`)?.scrollIntoView({ block: "center" });
     });
   }
 

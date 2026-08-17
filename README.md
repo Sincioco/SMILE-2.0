@@ -20,7 +20,7 @@ Attract demos always return directly to the title screen when their run ends or 
 
 ## Included games
 
-- `games\Snake` — graphical Snake with score, progressive speed, and a persistent high score.
+- `games\Snake` — graphical Snake with a shared focused `Snake` Class, typed states/directions, score, progressive speed, and a persistent high score.
 - `games\FallingBlocks` — a seven-piece falling-block puzzle with rotation, row clearing, levels, and a persistent high score.
 - `games\PaddleBall` — one-player AI and local two-player paddle modes with a persistent best rally.
 - `games\BrickBreaker` — a 7-by-12 colored brick field, three lives, three levels, row scoring, and a persistent high score.
@@ -89,7 +89,7 @@ The compiler accepts one startup `.smile` source file and an optional output pat
 ```text
 artifacts\compiler\smilec.exe examples\Hello.smile
 artifacts\compiler\smilec.exe examples\GraphicsBasics.smile -o artifacts\games\GraphicsBasics.exe
-artifacts\compiler\smilec.exe games\Snake\Program.smile -o artifacts\games\Snake\Snake.exe
+artifacts\compiler\smilec.exe games\Snake\Program.smile --source games\Snake\SnakeModel.smile -o artifacts\games\Snake\Snake.exe
 ```
 
 Build and consume a reusable library project:

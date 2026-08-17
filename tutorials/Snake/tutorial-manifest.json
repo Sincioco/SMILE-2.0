@@ -6,16 +6,39 @@
   "relativeGamePath": "../../games/Snake",
   "entryPoint": "index.html",
   "topicCount": 20,
-  "sourceFile": "games/Snake/Program-NoDemo.smile",
-  "sourceBlobSha": "e4676acf09b2be86e9640390ae23a2ed8618079e",
+  "sourceFiles": [
+    {
+      "id": "program",
+      "path": "games/Snake/Program-NoDemo.smile",
+      "snapshot": "assets/code/Program-NoDemo.smile",
+      "blobSha": "cd5a9546b6e16a42df41ce1a823eee91a38c2037",
+      "lineCount": 284,
+      "anchorPrefix": "source-line"
+    },
+    {
+      "id": "model",
+      "path": "games/Snake/SnakeModel.smile",
+      "snapshot": "assets/code/SnakeModel.smile",
+      "blobSha": "6375074def10b3c19eb68ce800ec58031f08caa7",
+      "lineCount": 309,
+      "anchorPrefix": "model-line"
+    }
+  ],
+  "sourceMap": {
+    "page": "19-complete-source.html",
+    "programAnchor": "source-line-{line}",
+    "modelAnchor": "model-line-{line}",
+    "excerptAttributes": "data-source-file + data-source-start"
+  },
   "language": "HTML, CSS, pure JavaScript",
   "copyrightYear": 2026,
   "author": "Louiery R. Sincioco (Sin)",
-  "version": "1.1",
+  "version": "2.0",
   "features": [
     "portable repository-relative paths",
+    "two synchronized official SMILE sources",
+    "per-source canonical line numbers and anchors",
     "persistent sidebar scroll position",
-    "canonical source line numbers without copying gutters",
     "clickable full-source map",
     "syntax examples linked to real Snake source",
     "repetition and reinforcement prompts",

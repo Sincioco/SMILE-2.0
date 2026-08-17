@@ -39,25 +39,25 @@
 <p class="lead">A random square is not automatically a good square. The program must prove that food does not overlap the snake.</p>
 <div class="topic-meta"><span class="meta-pill">Sub routine</span><span class="meta-pill">Random numbers</span><span class="meta-pill">Loop until valid</span></div>
 </section>
-<div class="step-heading"><span class="step-badge">3</span><div><h2>Paste the SpawnFood routine</h2><p>For now, paste directly below the high-score Load. Checkpoint 9 will insert the window and main loop above the supporting procedures.</p></div></div>
+<div class="step-heading"><span class="step-badge">3</span><div><h2>Paste the SpawnFood routine</h2><p>The startup program chooses a candidate square; the <code>Snake</code> object decides whether that square is occupied.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 3 &mdash; exact official code</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="104">Sub SpawnFood()
+<pre><code class="language-smile" data-source-file="program" data-source-start="111">Sub SpawnFood()
+
+    Dim FoodValid As Boolean
+    Dim NewX As Number
+    Dim NewY As Number
 
     FoodValid = False
 
     Do
-        Random FoodX From 0 To GridWidth - 1
-        Random FoodY From 0 To GridHeight - 1
-        FoodValid = True
+        Random NewX From 0 To GridWidth - 1
+        Random NewY From 0 To GridHeight - 1
 
-        For I = 0 To Length - 1
+        Food.X = NewX
+        Food.Y = NewY
 
-            If FoodX = SnakeX[I] And FoodY = SnakeY[I] Then
-                FoodValid = False
-            End If
-
-        End For
+        FoodValid = Not Player.Contains(Food.X, Food.Y)
 
     Loop Until FoodValid = True
 
@@ -69,15 +69,15 @@ End Sub</code></pre>
 <figcaption>The process box is wide enough for its full label, and all arrows stop at shape boundaries. Click the illustration to open its high-resolution version.</figcaption>
 </figure>
 <h2>The algorithm in plain language</h2>
-<ol class="number-list"><li>Assume the position is not valid.</li><li>Pick random X and Y values inside the board.</li><li>Temporarily mark the square valid.</li><li>Look at every active snake segment.</li><li>If both X and Y match a segment, mark it invalid.</li><li>Repeat until a valid square is found.</li></ol>
-<div class="card-grid"><article class="card accent-blue"><h3><span class="syntax">Sub ... End Sub</span></h3><p>Defines a named procedure that performs a job.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Sub SpawnFood()</code><a class="source-line-link" href="19-complete-source.html#source-line-104">lines 104&ndash;123</a></div></article><article class="card accent-green"><h3><span class="syntax">Do ... Loop Until</span></h3><p>Runs the body, then checks whether it is allowed to stop.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Do  ...  Loop Until FoodValid = True</code><a class="source-line-link" href="19-complete-source.html#source-line-108">lines 108&ndash;121</a></div></article><article class="card accent-yellow"><h3><span class="syntax">Random ... From ... To</span></h3><p>Stores an inclusive random whole number.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Random FoodX From 0 To GridWidth - 1</code><a class="source-line-link" href="19-complete-source.html#source-line-109">line 109</a></div></article><article class="card accent-red"><h3><span class="syntax">And</span></h3><p>Both X and Y must match before food overlaps a segment.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>FoodX = SnakeX[I] And FoodY = SnakeY[I]</code><a class="source-line-link" href="19-complete-source.html#source-line-115">line 115</a></div></article></div>
+<ol class="number-list"><li>Assume the position is not valid.</li><li>Pick candidate X and Y values inside the board.</li><li>Store them together in <code>Food</code>.</li><li>Ask <code>Player.Contains</code> whether the snake occupies that square.</li><li>Negate the answer: an unoccupied square is valid.</li><li>Repeat until a valid square is found.</li></ol>
+<div class="card-grid"><article class="card accent-blue"><h3><span class="syntax">Sub ... End Sub</span></h3><p>Defines a named procedure that performs a job.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Sub SpawnFood()</code><a class="source-line-link" data-source-file="program" href="19-complete-source.html#source-line-111">lines 111&ndash;130</a></div></article><article class="card accent-green"><h3><span class="syntax">Do ... Loop Until</span></h3><p>Runs the body, then checks whether it is allowed to stop.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Do ... Loop Until FoodValid = True</code><a class="source-line-link" data-source-file="program" href="19-complete-source.html#source-line-119">lines 119&ndash;128</a></div></article><article class="card accent-yellow"><h3><span class="syntax">Random ... From ... To</span></h3><p>Stores an inclusive random whole number.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Random NewX From 0 To GridWidth - 1</code><a class="source-line-link" data-source-file="program" href="19-complete-source.html#source-line-120">line 120</a></div></article><article class="card accent-red"><h3><span class="syntax">Object.Function(...)</span></h3><p>Asks an object a question and receives a value.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Player.Contains(Food.X, Food.Y)</code><a class="source-line-link" data-source-file="program" href="19-complete-source.html#source-line-126">line 126</a></div></article></div>
 <details class="quiz"><summary>Why does random X stop at GridWidth &minus; 1?</summary><p>A 35-column board is numbered 0 through 34. Column 35 would be outside the board.</p></details>
 <section aria-labelledby="reinforce-title" class="reinforcement-panel">
 <p class="reinforcement-kicker">Repetition builds memory</p>
 <h2 id="reinforce-title">Reinforce what you learned</h2>
 <div class="reinforcement-grid">
-<article><h3>Say it again</h3><p>Food placement repeats: choose a square, assume it is valid, scan every segment, and retry when occupied.</p></article>
-<article><h3>Recall it</h3><p>Why does the loop stop only when <code>FoodValid = True</code>?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>Because True means no snake segment occupies the chosen square.</strong> The same array scan idea returns during self-collision.</p></details></article>
+<article><h3>Say it again</h3><p>Food placement chooses a square, asks the snake whether it is occupied, and retries when needed.</p></article>
+<article><h3>Recall it</h3><p>Why does the loop stop only when <code>FoodValid = True</code>?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>Because True means <code>Player.Contains</code> reported that no segment occupies the chosen square.</strong></p></details></article>
 </div>
 </section><nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="07-checkpoint-2-game-memory.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Checkpoint 2: Game Memory</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="09-checkpoint-4-starting-snake.html"><span><small>Next topic</small><strong>Checkpoint 4: Starting Snake</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
 </article>

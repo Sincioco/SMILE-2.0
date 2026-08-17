@@ -35,8 +35,8 @@
 <article class="lesson">
 <section class="lesson-hero">
 <p class="eyebrow">The heartbeat of a game</p>
-<h1>Game Loop &amp; States</h1>
-<p class="lead">A game is information changing and being drawn again and again. State chooses which screen and rules are active.</p>
+<h1>Game Loop &amp; Named States</h1>
+<p class="lead">A game is information changing and being drawn again and again. A <code>GameState</code> Enum names the current screen instead of asking readers to remember magic numbers.</p>
 <div class="topic-meta"><span class="meta-pill">Input</span><span class="meta-pill">Update</span><span class="meta-pill">Rules</span><span class="meta-pill">Drawing</span><span class="meta-pill">State</span></div>
 </section>
 <h2>One repeating game cycle</h2>
@@ -54,14 +54,19 @@
 </a>
 <figcaption>Transition labels sit away from their arrows so both remain easy to read. Click the illustration to open its high-resolution version.</figcaption>
 </figure>
-<div class="card-grid three"><article class="card accent-blue"><h3>State 0</h3><p>Draw the title. Enter starts. Escape exits.</p></article><article class="card accent-green"><h3>State 1</h3><p>Read turns, move on schedule, check rules, and draw gameplay.</p></article><article class="card accent-red"><h3>State 2</h3><p>Keep the board visible, draw the game-over panel, and allow retry.</p></article></div>
+<div class="code-panel"><div class="code-toolbar"><span class="code-label">SnakeModel.smile &mdash; no magic state numbers</span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-smile" data-source-file="model" data-source-start="5">Enum GameState
+    Title
+    Playing
+    GameOver
+End Enum</code></pre></div>
+<div class="card-grid three"><article class="card accent-blue"><h3>GameState.Title</h3><p>Draw the title. Enter starts. Escape exits.</p></article><article class="card accent-green"><h3>GameState.Playing</h3><p>Translate input, move on schedule, check rules, and draw gameplay.</p></article><article class="card accent-red"><h3>GameState.GameOver</h3><p>Keep the board visible, draw the result panel, and allow retry.</p></article></div>
 <aside class="callout tip"><h3>Separate movement speed from frame speed</h3><p>The window can read input and redraw many times while the snake moves only once every 45&ndash;100 milliseconds. This keeps the game responsive without making the snake impossibly fast.</p></aside>
 <section aria-labelledby="reinforce-title" class="reinforcement-panel">
 <p class="reinforcement-kicker">Repetition builds memory</p>
 <h2 id="reinforce-title">Reinforce what you learned</h2>
 <div class="reinforcement-grid">
 <article><h3>Say it again</h3><p>Every frame follows the same idea: <strong>input &rarr; update &rarr; check &rarr; draw &rarr; show</strong>. <code>State</code> chooses which screen rules apply.</p></article>
-<article><h3>Recall it</h3><p>Which state means the player is actively playing?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>State 1.</strong> The main loop revisits this decision on every pass.</p></details></article>
+<article><h3>Recall it</h3><p>Which state means the player is actively playing?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>GameState.Playing.</strong> The name explains itself wherever the main loop uses it.</p></details></article>
 </div>
 </section><nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="04-arrays-memory.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Arrays &amp; Memory</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="06-checkpoint-1-board-plan.html"><span><small>Next topic</small><strong>Checkpoint 1: Board Plan</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
 </article>

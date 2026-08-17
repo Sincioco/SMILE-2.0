@@ -42,9 +42,9 @@
 <div class="step-heading"><span class="step-badge">5</span><div><h2>Paste ResetPlay and EndRound</h2><p>These two routines define the round lifecycle.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 5 &mdash; exact official code</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="143">Sub ResetPlay()
+<pre><code class="language-smile" data-source-file="program" data-source-start="132">Sub ResetPlay()
 
-    Call ResetSnakeBody()
+    Call Player.Reset()
 
     Score = 0
     MoveDelay = StartDelay
@@ -52,7 +52,7 @@
     Call SpawnFood()
 
     NextMoveTime = Timer() + StartDelay
-    State = 1
+    State = GameState.Playing
 
     Play Sound "Assets\Start.wav"
 
@@ -61,7 +61,7 @@ End Sub
 Sub EndRound()
 
     Stop Music
-    State = 2
+    State = GameState.GameOver
 
     If Score &gt; HighScore Then
         HighScore = Score
@@ -72,7 +72,7 @@ Sub EndRound()
 
 End Sub</code></pre>
 </div>
-<div class="card-grid"><article class="card accent-green"><h3>ResetPlay()</h3><ol><li>Rebuild the body.</li><li>Reset score and delay.</li><li>Spawn food.</li><li>Schedule the first move.</li><li>Change to State 1.</li><li>Play Start.wav.</li></ol></article><article class="card accent-red"><h3>EndRound()</h3><ol><li>Change to State 2.</li><li>Compare score and high score.</li><li>Save a new high score.</li><li>Play GameOver.wav.</li></ol></article></div>
+<div class="card-grid"><article class="card accent-green"><h3>ResetPlay()</h3><ol><li>Ask <code>Player</code> to reset itself.</li><li>Reset score and delay.</li><li>Spawn food.</li><li>Schedule the first move.</li><li>Choose <code>GameState.Playing</code>.</li><li>Play Start.wav.</li></ol></article><article class="card accent-red"><h3>EndRound()</h3><ol><li>Choose <code>GameState.GameOver</code>.</li><li>Compare score and high score.</li><li>Save a new high score.</li><li>Play GameOver.wav.</li></ol></article></div>
 <h2>Timing formula</h2>
 <p><code>NextMoveTime = Timer() + StartDelay</code> schedules the first move instead of freezing the whole program.</p>
 <div class="table-wrap"><table><thead><tr><th>Current Timer()</th><th>StartDelay</th><th>First move allowed at</th></tr></thead><tbody><tr><td>5,000 ms</td><td>100 ms</td><td>5,100 ms</td></tr></tbody></table></div>
@@ -82,7 +82,7 @@ End Sub</code></pre>
 <h2 id="reinforce-title">Reinforce what you learned</h2>
 <div class="reinforcement-grid">
 <article><h3>Say it again</h3><p><code>ResetPlay</code> creates a fresh round; <code>EndRound</code> records the result and switches to game over.</p></article>
-<article><h3>Recall it</h3><p>Which state number does <code>EndRound</code> choose?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>State 2.</strong> The state diagram and main loop both use that same meaning.</p></details></article>
+<article><h3>Recall it</h3><p>Which named state does <code>EndRound</code> choose?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong><code>GameState.GameOver</code>.</strong> The enum gives that state one clear meaning everywhere.</p></details></article>
 </div>
 </section><nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="09-checkpoint-4-starting-snake.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Checkpoint 4: Starting Snake</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="11-checkpoint-6-movement.html"><span><small>Next topic</small><strong>Checkpoint 6: Movement &amp; Rules</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
 </article>

@@ -35,24 +35,31 @@
 <article class="lesson">
 <section class="lesson-hero">
 <p class="eyebrow">Think like the computer</p>
-<h1>Arrays &amp; Game Memory</h1>
-<p class="lead">Pictures are only the display. The real game is the information stored in variables and array slots.</p>
-<div class="topic-meta"><span class="meta-pill">SnakeX[]</span><span class="meta-pill">SnakeY[]</span><span class="meta-pill">Booleans</span><span class="meta-pill">HighScore</span></div>
+<h1>Objects, Arrays &amp; Game Memory</h1>
+<p class="lead">Pictures are only the display. The real game is information—and closely related information is easier to understand when one focused object protects it.</p>
+<div class="topic-meta"><span class="meta-pill">Private arrays</span><span class="meta-pill">Class identity</span><span class="meta-pill">Game-level state</span><span class="meta-pill">HighScore</span></div>
 </section>
-<h2>Store the body as matching coordinate lists</h2>
+<h2>The Snake Class stores matching coordinate lists</h2>
 <figure class="figure-card">
 <a class="figure-link" href="assets/images/arrays.svg" rel="noopener" target="_blank" title="Open the high-resolution illustration">
-<img alt="Five cards showing the starting SnakeX and SnakeY coordinate pairs" src="assets/images/arrays.svg"/>
+<img alt="Five cards showing the starting private segment coordinate pairs" src="assets/images/arrays.svg"/>
 </a>
 <figcaption>Index 0 is the head. The X and Y at the same index always belong together. Click the illustration to open its high-resolution version.</figcaption>
 </figure>
-<p><code>SnakeX[0]</code> and <code>SnakeY[0]</code> describe the head. Index 1 is the next segment, index 2 is the next, and so on. The variable <code>Length</code> tells the program how many slots are active.</p>
+<p><code>SegmentXs[0]</code> and <code>SegmentYs[0]</code> describe the head. Index 1 is the next segment, index 2 is the next, and so on. These arrays are <code>Private</code>, so game code asks the object through <code>HeadX</code>, <code>HeadY</code>, <code>Length</code>, <code>SegmentX()</code>, and <code>SegmentY()</code>.</p>
+<div class="code-panel"><div class="code-toolbar"><span class="code-label">SnakeModel.smile &mdash; private intrinsic state</span><button class="copy-code" type="button">Copy code</button></div><pre><code class="language-smile" data-source-file="model" data-source-start="25">    Private SegmentXs[840] As Number
+    Private SegmentYs[840] As Number
+    Private CurrentLength As Number
+    Private CurrentDirection As MoveDirection
+    Private RequestedDirection As MoveDirection
+    Private TailX As Number
+    Private TailY As Number</code></pre></div>
 <div class="card-grid">
-<article class="card accent-green"><h3>Array</h3><p>A numbered collection of storage slots. <code>SnakeX[840]</code> reserves slots numbered 0 through 839.</p></article>
-<article class="card accent-blue"><h3>Index</h3><p>The number inside brackets. It selects one slot, such as <code>SnakeY[4]</code>.</p></article>
+<article class="card accent-green"><h3>Array</h3><p>A numbered collection of storage slots. <code>SegmentXs[840]</code> reserves slots numbered 0 through 839.</p></article>
+<article class="card accent-blue"><h3>Encapsulation</h3><p>The Class can maintain its own rules because other code cannot change its private slots directly.</p></article>
 </div>
-<h2>Variables remember changing facts</h2>
-<div class="table-wrap"><table><thead><tr><th>Variable</th><th>Question it answers</th></tr></thead><tbody><tr><td><code>Length</code></td><td>How many snake segments are active?</td></tr><tr><td><code>Direction</code></td><td>Which direction is being used for the current move?</td></tr><tr><td><code>NextDirection</code></td><td>Which safe direction did the player request next?</td></tr><tr><td><code>FoodX</code>, <code>FoodY</code></td><td>Which grid square contains food?</td></tr><tr><td><code>Score</code></td><td>How many points has the player earned?</td></tr><tr><td><code>FoodValid</code>, <code>Collision</code></td><td>Are these yes/no facts True or False?</td></tr><tr><td><code>State</code></td><td>Are we on the title, playing, or game-over screen?</td></tr></tbody></table></div>
+<h2>Put each fact at the right level</h2>
+<div class="table-wrap"><table><thead><tr><th>Owner</th><th>Facts</th><th>Why</th></tr></thead><tbody><tr><td><code>Snake</code> Class</td><td>Segments, length, current/requested direction, saved tail</td><td>They describe one snake and must stay consistent together.</td></tr><tr><td><code>GridPoint</code> Type</td><td><code>Food.X</code>, <code>Food.Y</code></td><td>A coordinate is a small copyable value.</td></tr><tr><td>Startup program</td><td>Score, high score, timing, food policy, audio, drawing, <code>GameState</code></td><td>They describe the whole round or application—not the snake itself.</td></tr></tbody></table></div>
 <aside class="callout think"><h3>Assignment versus comparison</h3><p>On a normal line, <code>Score = 0</code> means &ldquo;store zero in Score.&rdquo; Inside an <code>If</code> condition, <code>Score = HighScore</code> asks whether the values are equal. Context tells the equals sign which job it has.</p></aside><figure class="figure-card">
 <a class="figure-link" href="assets/images/storage.svg" rel="noopener" target="_blank" title="Open the high-resolution illustration">
 <img alt="Diagram showing HighScore moving between game memory and persistent storage" src="assets/images/storage.svg"/>
@@ -63,8 +70,8 @@
 <p class="reinforcement-kicker">Repetition builds memory</p>
 <h2 id="reinforce-title">Reinforce what you learned</h2>
 <div class="reinforcement-grid">
-<article><h3>Say it again</h3><p><code>SnakeX[I]</code> and <code>SnakeY[I]</code> are a matching pair: together they locate segment <code>I</code>.</p></article>
-<article><h3>Recall it</h3><p>Which array index always represents the snake&rsquo;s head?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>Index 0.</strong> Checkpoint 4 places the starting head in <code>SnakeX[0]</code> and <code>SnakeY[0]</code>.</p></details></article>
+<article><h3>Say it again</h3><p>The Class protects segment arrays; the startup program sees only meaningful public members.</p></article>
+<article><h3>Recall it</h3><p>Why does score stay outside the Snake Class?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>Score belongs to the round.</strong> Movement may cause food contact, but the game decides points, speed, sound, and what happens next.</p></details></article>
 </div>
 </section><nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="03-grid-coordinates.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Grid &amp; Coordinates</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="05-game-loop-states.html"><span><small>Next topic</small><strong>Game Loop &amp; States</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
 </article>

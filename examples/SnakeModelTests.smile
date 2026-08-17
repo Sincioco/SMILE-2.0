@@ -1,0 +1,50 @@
+Option Explicit
+
+Dim Player As New Snake()
+Dim Alias As Snake
+Dim Grew As Boolean
+
+Print Player.Length
+Print Player.HeadX
+Print Player.HeadY
+
+Call Player.TryTurn(MoveDirection.Left)
+Call Player.Move()
+
+Print Player.HeadX
+Print Player.HeadY
+
+Call Player.TryTurn(MoveDirection.Up)
+Call Player.Move()
+
+Print Player.HeadX
+Print Player.HeadY
+Print Player.Contains(18, 11)
+Print Player.HitWall(35, 24)
+Print Player.HitSelf()
+Print Player.SegmentX(2)
+Print Player.SegmentY(2)
+
+Grew = Player.Grow()
+
+Print Grew
+Print Player.Length
+Print Player.SegmentX(5)
+Print Player.SegmentY(5)
+
+Alias = Player
+
+Print Alias Is Player
+
+Call Alias.TryTurn(MoveDirection.Left)
+Call Alias.Move()
+
+Print Player.HeadX
+Print Player.HeadY
+
+Call Player.Reset()
+
+Print Player.CellBlocked(17, 12, 35, 24, False)
+Print Player.CellBlocked(13, 12, 35, 24, True)
+
+End Program

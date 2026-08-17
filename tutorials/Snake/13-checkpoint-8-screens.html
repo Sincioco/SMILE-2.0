@@ -42,7 +42,7 @@
 <div class="step-heading"><span class="step-badge">8</span><div><h2>Paste DrawTitle and DrawGameOver</h2><p>These routines use the same basic shapes in two different ways.</p></div></div>
 <div class="code-panel">
 <div class="code-toolbar"><span class="code-label">Checkpoint 8 &mdash; exact official code</span><button class="copy-code" type="button">Copy code</button></div>
-<pre><code class="language-smile" data-source-start="266">Sub DrawTitle()
+<pre><code class="language-smile" data-source-start="235" data-source-file="program">Sub DrawTitle()
 
     Clear Rgb(10, 18, 35)
     Fill Rectangle FieldX, FieldY, FieldWidth, FieldHeight, BLACK
@@ -79,14 +79,14 @@ End Sub</code></pre>
 <figure class="figure-card"><a class="figure-link" href="assets/images/game-over-screen.svg" rel="noopener" target="_blank"><img alt="Source-faithful Snake game-over screen" src="assets/images/game-over-screen.svg"/></a><figcaption>Game over answers: What happened? What can I do next?</figcaption></figure>
 </div>
 <h2>Rounded rectangles</h2>
-<div class="card-grid"><article class="card accent-blue"><h3><span class="syntax">Fill Rounded Rectangle</span></h3><p>Draws a solid rectangle with curved corners. The radius controls how round the corners become.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Fill Rounded Rectangle 145, 135, 590, 285, 22, Rgb(16, 25, 45)</code><a class="source-line-link" href="19-complete-source.html#source-line-286">line 286</a></div></article><article class="card accent-green"><h3><span class="syntax">Draw Rounded Rectangle</span></h3><p>Draws only the curved outline, creating a bright border around the panel.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Draw Rounded Rectangle 145, 135, 590, 285, 22, Rgb(245, 45, 55)</code><a class="source-line-link" href="19-complete-source.html#source-line-287">line 287</a></div></article></div>
+<div class="card-grid"><article class="card accent-blue"><h3><span class="syntax">Fill Rounded Rectangle</span></h3><p>Draws a solid rectangle with curved corners. The radius controls how round the corners become.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Fill Rounded Rectangle 145, 135, 590, 285, 22, Rgb(16, 25, 45)</code><a class="source-line-link" href="19-complete-source.html#source-line-255" data-source-file="program">line 255</a></div></article><article class="card accent-green"><h3><span class="syntax">Draw Rounded Rectangle</span></h3><p>Draws only the curved outline, creating a bright border around the panel.</p><div class="mini-example"><span class="mini-example-label">Snake example</span><code>Draw Rounded Rectangle 145, 135, 590, 285, 22, Rgb(245, 45, 55)</code><a class="source-line-link" href="19-complete-source.html#source-line-256" data-source-file="program">line 256</a></div></article></div>
 <aside class="callout tip"><h3>Interface design is part of programming</h3><p>A good title screen explains the controls. A good result screen reports the outcome and offers a clear next action. Code is communication, not only calculation.</p></aside>
 <section aria-labelledby="reinforce-title" class="reinforcement-panel">
 <p class="reinforcement-kicker">Repetition builds memory</p>
 <h2 id="reinforce-title">Reinforce what you learned</h2>
 <div class="reinforcement-grid">
 <article><h3>Say it again</h3><p>The title, board, and game-over panel are separate drawing jobs selected by <code>State</code>.</p></article>
-<article><h3>Recall it</h3><p>Which routine draws the gameplay field before the game-over panel is placed over it?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>DrawBoard.</strong> The main loop calls it again when State becomes 2.</p></details></article>
+<article><h3>Recall it</h3><p>Which routine draws the gameplay field before the game-over panel is placed over it?</p><details class="quiz compact"><summary>Check your answer</summary><p><strong>DrawBoard.</strong> The main loop calls it again when State becomes <code>GameState.GameOver</code>.</p></details></article>
 </div>
 </section><nav aria-label="Lesson navigation" class="lesson-nav"><a class="previous" href="12-checkpoint-7-draw-board.html"><span aria-hidden="true">&larr;</span><span><small>Previous topic</small><strong>Checkpoint 7: Draw the Board</strong></span></a><button aria-pressed="false" class="complete-topic" type="button">Mark this topic complete</button><a class="next" href="14-checkpoint-9-main-loop.html"><span><small>Next topic</small><strong>Checkpoint 9: Main Loop</strong></span><span aria-hidden="true">&rarr;</span></a></nav>
 </article>

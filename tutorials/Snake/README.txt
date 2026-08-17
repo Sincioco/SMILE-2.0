@@ -27,13 +27,14 @@ The website uses this relative path:
 
 That keeps project and sound links portable instead of assuming a development-machine drive letter.
 
-Learning Source
----------------
-The tutorial follows:
+Learning Sources
+----------------
+The tutorial follows these two sources together:
 
 games\Snake\Program-NoDemo.smile
+games\Snake\SnakeModel.smile
 
-The full source page and checkpoint fragments show matching canonical line numbers. Copy Code copies only clean source text and never includes the visible line numbers.
+The startup program keeps game flow, drawing, audio, input, timing, score, and lifecycle visible. The shared model contains the Enum, Type, and focused Snake Class. The full source page and checkpoint fragments show matching per-file canonical line numbers. Copy Code copies only clean source text and never includes the visible line numbers.
 
 Files
 -----
@@ -52,4 +53,5 @@ Notes
 - The left navigation preserves its scroll position while moving between topics.
 - Completion progress and navigation state are browser-local conveniences.
 - Sound players use the existing files under games\Snake\Assets.
+- Run scripts\sync-snake-tutorial.ps1 after either teaching source changes; use -Check in validation.
 - Footer links are muted until hovered or keyboard-focused.
