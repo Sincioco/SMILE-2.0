@@ -3,18 +3,21 @@ Module SinStarI.TitleScreen
 
 Option Explicit
 
-Public Const TITLE_ACTION_NONE = 0
-Public Const TITLE_ACTION_CHARACTER = 1
-Public Const TITLE_ACTION_TOWN = 2
-Public Const TITLE_ACTION_TOWN_2 = 3
-Public Const TITLE_ACTION_SHOP = 4
-Public Const TITLE_ACTION_DUNGEON = 5
-Public Const TITLE_ACTION_BATTLE = 6
+''' Identifies a title selection and the application scene it opens.
+Public Enum TitleAction
+    None = 0
+    Character = 1
+    Town = 2
+    Town2 = 3
+    Shop = 4
+    Dungeon = 5
+    Battle = 6
+End Enum
 
 Private Dim TitleBackground As Image
 Private Dim TitleLogo As Image
 Private Dim MenuBackground As Image
-Private Dim TitleSelection As Number
+Private Dim TitleSelection As TitleAction
 
 ''' Loads the title-screen assets, selects the first menu item, and starts the title music.
 Public Sub Initialize()
@@ -23,7 +26,7 @@ Public Sub Initialize()
     Load Image TitleLogo From "Assets\Sin Star - Logo.png"
     Load Image MenuBackground From "Assets\MenuBackground.png"
 
-    TitleSelection = TITLE_ACTION_CHARACTER
+    TitleSelection = TitleAction.Character
 
     Call Enter()
 
@@ -54,28 +57,50 @@ Public Sub Shutdown()
 
 End Sub
 
-''' Updates menu navigation and returns the chosen title action, or TITLE_ACTION_NONE.
-Public Function HandleInput(Key As Number) As Number
+''' Updates menu navigation and returns the chosen title action, or TitleAction.None.
+Public Function HandleInput(Key As Number) As TitleAction
 
-    Dim Action As Number
+    Dim Action As TitleAction
 
-    Action = TITLE_ACTION_NONE
+    Action = TitleAction.None
 
     If Key = KEY_UP Or Key = KEY_W Then
 
-        TitleSelection = TitleSelection - 1
-
-        If TitleSelection < TITLE_ACTION_CHARACTER Then
-            TitleSelection = TITLE_ACTION_BATTLE
-        End If
+        Select Case TitleSelection
+            Case TitleAction.Character
+                TitleSelection = TitleAction.Battle
+            Case TitleAction.Town
+                TitleSelection = TitleAction.Character
+            Case TitleAction.Town2
+                TitleSelection = TitleAction.Town
+            Case TitleAction.Shop
+                TitleSelection = TitleAction.Town2
+            Case TitleAction.Dungeon
+                TitleSelection = TitleAction.Shop
+            Case TitleAction.Battle
+                TitleSelection = TitleAction.Dungeon
+            Case Else
+                TitleSelection = TitleAction.Character
+        End Select
 
     Else If Key = KEY_DOWN Or Key = KEY_S Then
 
-        TitleSelection = TitleSelection + 1
-
-        If TitleSelection > TITLE_ACTION_BATTLE Then
-            TitleSelection = TITLE_ACTION_CHARACTER
-        End If
+        Select Case TitleSelection
+            Case TitleAction.Character
+                TitleSelection = TitleAction.Town
+            Case TitleAction.Town
+                TitleSelection = TitleAction.Town2
+            Case TitleAction.Town2
+                TitleSelection = TitleAction.Shop
+            Case TitleAction.Shop
+                TitleSelection = TitleAction.Dungeon
+            Case TitleAction.Dungeon
+                TitleSelection = TitleAction.Battle
+            Case TitleAction.Battle
+                TitleSelection = TitleAction.Character
+            Case Else
+                TitleSelection = TitleAction.Character
+        End Select
 
     Else If Key = KEY_ENTER Or Key = KEY_SPACE Then
 
@@ -95,21 +120,21 @@ Public Sub Draw()
     Draw Image TitleLogo At 30, 30 Size 480 By 600 Filter Smooth
     'Draw Image MenuBackground At 505, 297 Size 380 By 300 Opacity 80 Filter Smooth
 
-    Call DrawChoice(TITLE_ACTION_CHARACTER, "Character", 358)
-    Call DrawChoice(TITLE_ACTION_TOWN, "Town", 408)
-    Call DrawChoice(TITLE_ACTION_TOWN_2, "Town 2", 458)
-    Call DrawChoice(TITLE_ACTION_SHOP, "Shop", 508)
-    Call DrawChoice(TITLE_ACTION_DUNGEON, "Dungeon", 558)
-    Call DrawChoice(TITLE_ACTION_BATTLE, "Battle", 608)
+    Call DrawChoice(TitleAction.Character, "Character", 358)
+    Call DrawChoice(TitleAction.Town, "Town", 408)
+    Call DrawChoice(TitleAction.Town2, "Town 2", 458)
+    Call DrawChoice(TitleAction.Shop, "Shop", 508)
+    Call DrawChoice(TitleAction.Dungeon, "Dungeon", 558)
+    Call DrawChoice(TitleAction.Battle, "Battle", 608)
 
     'Draw Text "Programmed by:  Louiery R. Sincioco  August 16, 2026. Copyright (c) 2026.  All rights reserved." At 641, 695 Size 12 Color BLACK Centered
     Draw Text "Programmed by:  Louiery R. Sincioco  August 16, 2026. Copyright (c) 2026.  All rights reserved." At 640, 694 Size 12 Color WHITE Centered
 
 End Sub
 
-Private Sub DrawChoice(Index As Number, Label As Text, Y As Number)
+Private Sub DrawChoice(Action As TitleAction, Label As Text, Y As Number)
 
-    If TitleSelection = Index Then
+    If TitleSelection = Action Then
 
         Draw Image MenuBackground At 525, Y - 5 Size 300 By 42 Opacity 80 Filter Smooth
         Draw Text ">" At 543, Y Size 24 Color WHITE

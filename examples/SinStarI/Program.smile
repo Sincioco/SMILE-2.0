@@ -5,17 +5,15 @@ Import SinStarI.TownScreen As TownScreen
 Import SinStarI.Town2Screen As Town2Screen
 Import SinStarI.CharacterScreen As CharacterScreen
 
-Const MODE_TITLE = 0
-
-Dim Mode As Number
-Dim TitleAction As Number
+Dim Mode As TitleScreen.TitleAction
+Dim PendingAction As TitleScreen.TitleAction
 Dim PressedKey As Number
 Dim SceneLabel As Text
 
 Game Window "Sin Star I" Size 1280 By 720
 
-Mode = MODE_TITLE
-TitleAction = TitleScreen.TITLE_ACTION_NONE
+Mode = TitleScreen.TitleAction.None
+PendingAction = TitleScreen.TitleAction.None
 SceneLabel = ""
 
 Call TitleScreen.Initialize()
@@ -26,12 +24,12 @@ Call CharacterScreen.Initialize()
 Do
     Get Key PressedKey
 
-    If Mode = MODE_TITLE Then
+    If Mode = TitleScreen.TitleAction.None Then
 
-        TitleAction = TitleScreen.HandleInput(PressedKey)
+        PendingAction = TitleScreen.HandleInput(PressedKey)
 
-        If TitleAction <> TitleScreen.TITLE_ACTION_NONE Then
-            Call OpenScene(TitleAction)
+        If PendingAction <> TitleScreen.TitleAction.None Then
+            Call OpenScene(PendingAction)
         End If
 
     Else
@@ -40,13 +38,13 @@ Do
 
     End If
 
-    If Mode = MODE_TITLE Then
+    If Mode = TitleScreen.TitleAction.None Then
         Call TitleScreen.Draw()
-    Else If Mode = TitleScreen.TITLE_ACTION_TOWN Then
+    Else If Mode = TitleScreen.TitleAction.Town Then
         Call TownScreen.Draw()
-    Else If Mode = TitleScreen.TITLE_ACTION_TOWN_2 Then
+    Else If Mode = TitleScreen.TitleAction.Town2 Then
         Call Town2Screen.Draw()
-    Else If Mode = TitleScreen.TITLE_ACTION_CHARACTER Then
+    Else If Mode = TitleScreen.TitleAction.Character Then
         Call CharacterScreen.Draw()
     Else
 
@@ -65,19 +63,19 @@ Call TitleScreen.Shutdown()
 
 End Program
 
-Sub OpenScene(SceneId As Number)
+Sub OpenScene(SceneId As TitleScreen.TitleAction)
 
     Mode = SceneId
 
-    If SceneId = TitleScreen.TITLE_ACTION_TOWN Then
+    If SceneId = TitleScreen.TitleAction.Town Then
         SceneLabel = "Town"
-    Else If SceneId = TitleScreen.TITLE_ACTION_TOWN_2 Then
+    Else If SceneId = TitleScreen.TitleAction.Town2 Then
         SceneLabel = "Town 2"
-    Else If SceneId = TitleScreen.TITLE_ACTION_SHOP Then
+    Else If SceneId = TitleScreen.TitleAction.Shop Then
         SceneLabel = "Shop"
-    Else If SceneId = TitleScreen.TITLE_ACTION_DUNGEON Then
+    Else If SceneId = TitleScreen.TitleAction.Dungeon Then
         SceneLabel = "Dungeon"
-    Else If SceneId = TitleScreen.TITLE_ACTION_CHARACTER Then
+    Else If SceneId = TitleScreen.TitleAction.Character Then
         SceneLabel = "Character"
     Else
         SceneLabel = "Battle"
@@ -85,11 +83,11 @@ Sub OpenScene(SceneId As Number)
 
     Call TitleScreen.Leave()
 
-    If SceneId = TitleScreen.TITLE_ACTION_TOWN Then
+    If SceneId = TitleScreen.TitleAction.Town Then
         Call TownScreen.Enter()
-    Else If SceneId = TitleScreen.TITLE_ACTION_TOWN_2 Then
+    Else If SceneId = TitleScreen.TitleAction.Town2 Then
         Call Town2Screen.Enter()
-    Else If SceneId = TitleScreen.TITLE_ACTION_CHARACTER Then
+    Else If SceneId = TitleScreen.TitleAction.Character Then
         Call CharacterScreen.Enter()
     End If
 
@@ -99,15 +97,15 @@ Sub HandleScene(Key As Number)
 
     If Key = KEY_ESCAPE Then
 
-        If Mode = TitleScreen.TITLE_ACTION_TOWN Then
+        If Mode = TitleScreen.TitleAction.Town Then
             Call TownScreen.Shutdown()
-        Else If Mode = TitleScreen.TITLE_ACTION_TOWN_2 Then
+        Else If Mode = TitleScreen.TitleAction.Town2 Then
             Call Town2Screen.Shutdown()
-        Else If Mode = TitleScreen.TITLE_ACTION_CHARACTER Then
+        Else If Mode = TitleScreen.TitleAction.Character Then
             Call CharacterScreen.Shutdown()
         End If
 
-        Mode = MODE_TITLE
+        Mode = TitleScreen.TitleAction.None
 
         Call TitleScreen.Enter()
 
@@ -115,11 +113,11 @@ Sub HandleScene(Key As Number)
 
     End If
 
-    If Mode = TitleScreen.TITLE_ACTION_TOWN Then
+    If Mode = TitleScreen.TitleAction.Town Then
         Call TownScreen.Update(Key)
-    Else If Mode = TitleScreen.TITLE_ACTION_TOWN_2 Then
+    Else If Mode = TitleScreen.TitleAction.Town2 Then
         Call Town2Screen.Update(Key)
-    Else If Mode = TitleScreen.TITLE_ACTION_CHARACTER Then
+    Else If Mode = TitleScreen.TitleAction.Character Then
         Call CharacterScreen.Update(Key)
     End If
 

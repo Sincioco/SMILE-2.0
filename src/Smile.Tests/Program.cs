@@ -4687,6 +4687,76 @@ Run("Snake shares one private Class model across both startup stories and editor
         .Contains("SnakeX[", StringComparison.Ordinal));
 });
 
+Run("Sin Star I keeps its TitleScreen Module and exposes one typed action enum", () =>
+{
+    var project = SmileProjectSourceSet.Load("examples/SinStarI/SinStarI.smileproj");
+    Equal(SmileProjectKind.Game, project.ProjectKind);
+    Equal("smile.game.sin-star-i", project.ApplicationId);
+    Equal("Program.smile", project.StartupFile);
+    Equal(true, project.AssetPaths.Contains("Assets/Sin Star - Title Screen - Background.png"));
+    Equal(true, project.AssetPaths.Contains("Assets/TitleMusic.mp3"));
+    Equal(true, project.AssetPaths.Contains("Maps/Towns/Town2_NE.smilemap"));
+
+    var compilation = SmileProjectCompilation.Load(project.ProjectPath);
+    var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Program,
+        compilation.DependencyContext);
+    Equal(false, analysis.HasErrors);
+    var titleModule = analysis.SemanticModel.Modules["SinStarI.TitleScreen"];
+    var titleAction = (EnumTypeSymbol)titleModule.Types["TitleAction"].Type!;
+    Equal(ModuleVisibility.Public, titleModule.Types["TitleAction"].Visibility);
+    Equal("None|Character|Town|Town2|Shop|Dungeon|Battle",
+        string.Join("|", titleAction.Members.Select(member => member.Name)));
+    Equal("0|1|2|3|4|5|6",
+        string.Join("|", titleAction.Members.Select(member => member.Value)));
+    Equal(false, titleModule.Members.Keys.Any(name =>
+        name.StartsWith("TITLE_ACTION_", StringComparison.OrdinalIgnoreCase)));
+    Equal(true, titleModule.Members["HandleInput"].Routine!.ReturnType.Equals(titleAction));
+
+    var titlePath = Path.GetFullPath("examples/SinStarI/TitleScreen.smile");
+    var programPath = Path.GetFullPath("examples/SinStarI/Program.smile");
+    var programText = File.ReadAllText(programPath);
+    var tree = analysis.GetSyntaxTree(programPath);
+
+    var typeCompletionPosition = programText.IndexOf("TitleScreen.TitleAction",
+        StringComparison.Ordinal) + "TitleScreen.".Length;
+    var typeCompletions = SmileCompletionService.GetCompletions(analysis, tree,
+        typeCompletionPosition);
+    Equal(true, typeCompletions.Any(completion => completion.DisplayText == "TitleAction"));
+
+    var routineCompletionPosition = programText.IndexOf("TitleScreen.Initialize",
+        StringComparison.Ordinal) + "TitleScreen.".Length;
+    var routineCompletions = SmileCompletionService.GetCompletions(analysis, tree,
+        routineCompletionPosition);
+    foreach (var expected in new[] { "Initialize", "Enter", "Leave", "HandleInput", "Draw", "Shutdown" })
+        Equal(true, routineCompletions.Any(completion => completion.DisplayText == expected));
+    foreach (var hidden in new[] { "TitleBackground", "TitleLogo", "MenuBackground", "TitleSelection",
+        "DrawChoice" })
+        Equal(false, routineCompletions.Any(completion => completion.DisplayText == hidden));
+
+    var enumCompletionPosition = programText.IndexOf("TitleScreen.TitleAction.None",
+        StringComparison.Ordinal) + "TitleScreen.TitleAction.".Length;
+    Equal("None|Character|Town|Town2|Shop|Dungeon|Battle", string.Join("|",
+        SmileCompletionService.GetCompletions(analysis, tree, enumCompletionPosition)
+            .Select(completion => completion.DisplayText)));
+
+    var typePosition = programText.IndexOf("TitleScreen.TitleAction", StringComparison.Ordinal) +
+                       "TitleScreen.".Length;
+    Equal(true, SmileSymbolService.TryResolve(analysis, tree, typePosition + 2,
+        out var resolvedType));
+    Equal(SmileResolvedSymbolKind.Enum, resolvedType.Kind);
+    Equal(titlePath, Path.GetFullPath(resolvedType.DeclarationLocation!.FilePath));
+
+    var memberPosition = programText.IndexOf("TitleScreen.TitleAction.None", StringComparison.Ordinal) +
+                         "TitleScreen.TitleAction.".Length;
+    Equal(true, SmileSymbolService.TryResolve(analysis, tree, memberPosition + 1,
+        out var resolvedMember));
+    Equal(SmileResolvedSymbolKind.EnumMember, resolvedMember.Kind);
+    Equal("Enum member SinStarI.TitleScreen.TitleAction.None = 0", resolvedMember.Signature);
+    Equal(titlePath, Path.GetFullPath(resolvedMember.DeclarationLocation!.FilePath));
+    Equal(true, SmileSymbolDisplayService.Present(resolvedMember, compilation.DependencyContext)
+        .SourcePath.EndsWith("TitleScreen.smile", StringComparison.OrdinalIgnoreCase));
+});
+
 Run("VSIX templates render localized identity metadata within the aligned header", () =>
 {
     var gameTemplate = File.ReadAllText("src/Smile.VisualStudio/Templates/Game/Program.smile");

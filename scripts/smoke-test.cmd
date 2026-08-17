@@ -1235,6 +1235,27 @@ if errorlevel 1 (
 )
 echo Snake model parity, synchronized tutorial, and demo/no-demo builds passed.
 
+if not exist "%SMILE_ROOT%\artifacts\games\SinStarI" mkdir "%SMILE_ROOT%\artifacts\games\SinStarI"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\SinStarI\SinStarI.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\SinStarI\SinStarI.exe" --debug
+if errorlevel 1 exit /b %errorlevel%
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\SinStarI\SinStarI.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\SinStarI"
+if errorlevel 1 exit /b %errorlevel%
+node --check "%SMILE_ROOT%\artifacts\web\SinStarI\game.js"
+if errorlevel 1 exit /b %errorlevel%
+for %%A in ("Assets\Sin Star - Title Screen - Background.png" "Assets\TitleMusic.mp3" "Maps\Towns\Town2_NE.smilemap") do (
+    if not exist "%SMILE_ROOT%\artifacts\games\SinStarI\%%~A" (
+        echo Sin Star I native project asset is missing: %%~A
+        exit /b 1
+    )
+    if not exist "%SMILE_ROOT%\artifacts\web\SinStarI\%%~A" (
+        echo Sin Star I Web project asset is missing: %%~A
+        exit /b 1
+    )
+)
+findstr /c:"smile.game.sin-star-i" "%SMILE_ROOT%\artifacts\games\SinStarI\smile.game.sin-star-i.smile-assets.json" >nul || exit /b 1
+findstr /c:"smile.game.sin-star-i" "%SMILE_ROOT%\artifacts\web\SinStarI\smile-assets.json" >nul || exit /b 1
+echo Sin Star I local Module/Enum project compiled for native and Web with accepted assets.
+
 if not exist "%SMILE_ROOT%\artifacts\games\FallingBlocks" mkdir "%SMILE_ROOT%\artifacts\games\FallingBlocks"
 if not exist "%SMILE_ROOT%\games\FallingBlocks\Assets\Background.mp3" (
     echo Falling Blocks background music source asset is missing.
