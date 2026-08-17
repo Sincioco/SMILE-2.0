@@ -163,13 +163,16 @@ public sealed class ConstStatementSyntax : StatementSyntax
 
 public sealed class RoutineDeclarationSyntax : StatementSyntax
 {
-    public RoutineDeclarationSyntax(SyntaxToken keyword, SyntaxToken identifier, IReadOnlyList<ParameterSyntax> parameters,
-        SyntaxToken? asKeyword, SyntaxToken? returnTypeToken, IReadOnlyList<StatementSyntax> statements,
-        SyntaxToken endKeyword, SyntaxToken finalKeyword)
+    public RoutineDeclarationSyntax(SyntaxToken keyword, SyntaxToken identifier, SyntaxToken? openParenthesis,
+        IReadOnlyList<ParameterSyntax> parameters, SyntaxToken? closeParenthesis, SyntaxToken? asKeyword,
+        SyntaxToken? returnTypeToken, IReadOnlyList<StatementSyntax> statements, SyntaxToken endKeyword,
+        SyntaxToken finalKeyword)
     {
         Keyword = keyword;
         Identifier = identifier;
+        OpenParenthesis = openParenthesis;
         Parameters = parameters;
+        CloseParenthesis = closeParenthesis;
         AsKeyword = asKeyword;
         ReturnTypeToken = returnTypeToken;
         Statements = statements;
@@ -179,7 +182,9 @@ public sealed class RoutineDeclarationSyntax : StatementSyntax
 
     public SyntaxToken Keyword { get; }
     public SyntaxToken Identifier { get; }
+    public SyntaxToken? OpenParenthesis { get; }
     public IReadOnlyList<ParameterSyntax> Parameters { get; }
+    public SyntaxToken? CloseParenthesis { get; }
     public SyntaxToken? AsKeyword { get; }
     public SyntaxToken? ReturnTypeToken { get; }
     public IReadOnlyList<StatementSyntax> Statements { get; }

@@ -638,9 +638,10 @@ internal sealed class ModuleProcessor
             {
                 var routineLocals = CollectRoutineLocals(routine, module);
                 return new RoutineDeclarationSyntax(routine.Keyword, DeclarationToken(routine.Identifier, module),
-                    routine.Parameters.Select(parameter => new ParameterSyntax(parameter.ModeKeyword, parameter.Identifier,
-                        parameter.AsKeyword, LowerTypeToken(parameter.TypeToken, tree, module))).ToArray(), routine.AsKeyword,
-                    LowerTypeToken(routine.ReturnTypeToken, tree, module),
+                    routine.OpenParenthesis, routine.Parameters.Select(parameter => new ParameterSyntax(
+                        parameter.ModeKeyword, parameter.Identifier, parameter.AsKeyword,
+                        LowerTypeToken(parameter.TypeToken, tree, module))).ToArray(), routine.CloseParenthesis,
+                    routine.AsKeyword, LowerTypeToken(routine.ReturnTypeToken, tree, module),
                     routine.Statements.Select(item => LowerStatement(item, tree, module, routineLocals)).ToArray(),
                     routine.EndKeyword, routine.FinalKeyword);
             }

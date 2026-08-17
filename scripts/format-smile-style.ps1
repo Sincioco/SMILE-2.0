@@ -236,6 +236,21 @@ function Get-SyntaxIfBlockLayout {
     return ''
 }
 
+function Test-SyntaxRoutineHeaderEnd {
+    param(
+        $Layouts,
+        [int]$SourceLine
+    )
+
+    foreach ($Layout in $Layouts) {
+        if ($Layout.HeaderEndLine -eq $SourceLine) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
 function Test-CompactForBoundary {
     param(
         [string[]]$Lines,
@@ -304,12 +319,11 @@ function Test-RequiresBlankAfter {
         $Value -match '^End\s+If$' -or
         $Value -match '^Loop\b' -or
         $Value -match '^Option\s+Explicit$' -or
-        $Value -match '^(?:Public\s+|Private\s+)?(?:Function|Sub|Procedure)\b' -or
         $Value -match '^End\s+(?:Function|Sub)$'
 }
 
 function Format-BlankLines {
-    param([string[]]$Lines, $IfBlockLayouts)
+    param([string[]]$Lines, $IfBlockLayouts, $RoutineDeclarationLayouts)
 
     $Collapsed = [Collections.Generic.List[string]]::new()
     $CollapsedSourceLines = [Collections.Generic.List[int]]::new()
@@ -382,7 +396,8 @@ function Format-BlankLines {
         if ($null -ne $Next) {
             $CurrentCategory = $CategoriesEndingAt[$Index]
             $NextCategory = $CategoriesStartingAt[$Index + 1]
-            $NeedsBlank = (Test-RequiresBlankAfter $Current) -or (Test-RequiresBlankBefore $Next)
+            $NeedsBlank = (Test-RequiresBlankAfter $Current) -or (Test-RequiresBlankBefore $Next) -or
+                (Test-SyntaxRoutineHeaderEnd $RoutineDeclarationLayouts $NonBlankSourceLines[$Index])
             $IfBlockLayout = Get-SyntaxIfBlockLayout $IfBlockLayouts $NonBlankSourceLines[$Index] $NonBlankSourceLines[$Index + 1]
             $SuppressBlank = ($IfBlockLayout -eq 'Compact') -or
                 (Test-CompactForBoundary $NonBlank $Index)
@@ -483,7 +498,10 @@ function Format-SmileText {
     $Lines = @(Join-MultilineTextLiterals $Lines)
     $LayoutText = ($Lines -join "`n") + "`n"
     $IfBlockLayouts = [Smile.Language.SmileSourceFormatter]::GetIfBlockLayouts($LayoutText, $FilePath)
-    $Lines = @(Format-BlankLines $Lines $IfBlockLayouts)
+    $RoutineDeclarationLayouts = [Smile.Language.SmileSourceFormatter]::GetRoutineDeclarationLayouts(
+        $LayoutText,
+        $FilePath)
+    $Lines = @(Format-BlankLines $Lines $IfBlockLayouts $RoutineDeclarationLayouts)
     $Lines = @(Expand-MultilineTextLiterals $Lines)
     return ($Lines -join "`n") + "`n"
 }

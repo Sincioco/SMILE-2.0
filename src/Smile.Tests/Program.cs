@@ -2041,6 +2041,86 @@ Run("Phase 3A keywords are shared and case-insensitive", () =>
     Equal(SyntaxKind.ByRefKeyword, SyntaxFacts.GetKeywordKind("byref"));
     Equal(SyntaxKind.ByValKeyword, SyntaxFacts.GetKeywordKind("ByVal"));
 });
+Run("Multiline routine declarations preserve parameters and physical source lines", () =>
+{
+    const string source = "Option Explicit\n" +
+        "Sub Present(\n" +
+        "    ByRef\n" +
+        "    Caption\n" +
+        "    As\n" +
+        "    Text, ' Keep the declaration comment.\n" +
+        "\n" +
+        "    Amount As Number\n" +
+        ")\n" +
+        "    Print Caption\n" +
+        "    Print Amount\n" +
+        "End Sub\n" +
+        "Function Add(\n" +
+        "    LeftValue As Number\n" +
+        "    ,\n" +
+        "    RightValue As Number\n" +
+        ") As Number\n" +
+        "    Return LeftValue + RightValue\n" +
+        "End Function\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    Equal(false, Analyze(source.Replace("\n", "\r\n", StringComparison.Ordinal)).HasErrors);
+
+    var routines = analysis.SyntaxTree.Root.Statements.OfType<RoutineDeclarationSyntax>().ToArray();
+    Equal(2, routines.Length);
+    var present = routines[0];
+    Equal(SyntaxKind.OpenParenthesisToken, present.OpenParenthesis!.Kind);
+    Equal(SyntaxKind.CloseParenthesisToken, present.CloseParenthesis!.Kind);
+    Equal(2, present.Parameters.Count);
+    Equal(SyntaxKind.ByRefKeyword, present.Parameters[0].ModeKeyword!.Kind);
+    Equal("Caption", present.Parameters[0].Identifier.Text);
+    Equal("Text", present.Parameters[0].TypeToken!.Text);
+    Equal("Amount", present.Parameters[1].Identifier.Text);
+    Equal(4, new SourceLocation(analysis.SyntaxTree.Source, present.Parameters[0].Identifier.Span).Line);
+    Equal(8, new SourceLocation(analysis.SyntaxTree.Source, present.Parameters[1].Identifier.Span).Line);
+    Equal(9, new SourceLocation(analysis.SyntaxTree.Source, present.CloseParenthesis.Span).Line);
+    var boundPresent = analysis.BoundSyntaxTree.Root.Statements.OfType<RoutineDeclarationSyntax>()
+        .Single(routine => routine.Identifier.Text == "Present");
+    Equal(present.OpenParenthesis.Span.Start, boundPresent.OpenParenthesis!.Span.Start);
+    Equal(present.CloseParenthesis.Span.Start, boundPresent.CloseParenthesis!.Span.Start);
+    var caption = ResolveSymbol(analysis, analysis.SyntaxTree, present.Parameters[0].Identifier.Span.Start);
+    Equal(SmileResolvedSymbolKind.Parameter, caption.Kind);
+    Equal(4, caption.DeclarationLocation!.Line);
+
+    var add = routines[1];
+    Equal(2, add.Parameters.Count);
+    Equal("Number", add.ReturnTypeToken!.Text);
+    Equal(17, new SourceLocation(analysis.SyntaxTree.Source, add.CloseParenthesis!.Span).Line);
+    Equal(17, new SourceLocation(analysis.SyntaxTree.Source, add.ReturnTypeToken.Span).Line);
+    Equal(2, analysis.SemanticModel.Routines.Values.Single(routine => routine.Name == "Add").Parameters.Count);
+    Equal(true, new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit()
+        .Contains("smile_print_number", StringComparison.Ordinal));
+    Equal(true, new WebEmitter(analysis).Emit().Contains("smile.print", StringComparison.Ordinal));
+});
+Run("Malformed multiline routine declarations recover at physical source lines", () =>
+{
+    const string missingComma = "Sub Work(\n    First As Number\n    Second As Number\n)\nEnd Sub\n";
+    var commaDiagnostics = Analyze(missingComma).Diagnostics
+        .Where(diagnostic => diagnostic.Code == "SML2001").ToArray();
+    Equal(1, commaDiagnostics.Length);
+    Equal(3, commaDiagnostics[0].Line);
+    Equal(5, commaDiagnostics[0].Column);
+    Equal("Expected comma between routine parameters, found 'Second'.", commaDiagnostics[0].Message);
+
+    const string missingClose = "Sub Work(\n    Value As Number\nPrint Value\nEnd Sub\n";
+    var closeDiagnostics = Analyze(missingClose).Diagnostics
+        .Where(diagnostic => diagnostic.Code == "SML2001").ToArray();
+    Equal(1, closeDiagnostics.Length);
+    Equal(3, closeDiagnostics[0].Line);
+    Equal(1, closeDiagnostics[0].Column);
+    Equal("Expected ), found 'Print'.", closeDiagnostics[0].Message);
+});
+Run("Routine declaration continuation stays inside balanced parentheses", () =>
+{
+    Equal(true, Analyze("Sub Work\n    Value As Number\nEnd Sub\n").HasErrors);
+    Equal(true, Analyze("Function Work(\n)\nAs Number\nReturn 1\nEnd Function\n").HasErrors);
+    Equal(true, Analyze("Sub Work(\n    Values[2] As Number\n)\nEnd Sub\n").HasErrors);
+});
 Run("Option Explicit is physical-source scoped and enforces declarations", () =>
 {
     Equal(false, Analyze("Option Explicit\nDim Value As Number\nValue = 1\n").HasErrors);
@@ -2128,8 +2208,7 @@ Run("Newlines remain significant outside parenthesized expression contexts", () 
         "Dim Value As Number\nIf (Value < 1\n    Value > 2) Then\nPrint Value\nEnd If\n",
         "Dim Value As Number\nIf (Value < 1)\nThen\nPrint Value\nEnd If\n",
         "Dim Value As Number\nValue = (1 +\n",
-        "Dim Values[\n2]\n",
-        "Sub Work(\nValue As Number)\nEnd Sub\n"
+        "Dim Values[\n2]\n"
     };
 
     foreach (var source in invalidSources)
@@ -2668,6 +2747,37 @@ Run("Public API preserves referenced record provider identities", () =>
             Path.Combine(root, "package-cache"));
     }
     finally { Directory.Delete(root, true); }
+});
+
+Run("Syntax-aware formatter owns complete multiline routine header boundaries", () =>
+{
+    const string source = "Option Explicit\n\n" +
+        "Function Add(\n" +
+        "    LeftValue As Number,\n" +
+        "    RightValue As Number\n" +
+        ")\n" +
+        "    Return LeftValue + RightValue\n" +
+        "End Function\n\n" +
+        "Sub Present(\n" +
+        "    Value As Number\n" +
+        ")\n" +
+        "    Print Value\n" +
+        "End Sub\n";
+    var layouts = SmileSourceFormatter.GetRoutineDeclarationLayouts(source, "FormatterTest.smile");
+    Equal(2, layouts.Count);
+    Equal(3, layouts[0].HeaderStartLine);
+    Equal(6, layouts[0].HeaderEndLine);
+    Equal(true, layouts[0].IsMultiline);
+    Equal(10, layouts[1].HeaderStartLine);
+    Equal(12, layouts[1].HeaderEndLine);
+
+    var formatted = FormatSource(source);
+    Equal(false, formatted.Contains("Function Add(\n\n", StringComparison.Ordinal));
+    Equal(true, formatted.Contains(
+        ")\n\n    Dim ReturnValue As Number\n\n    ReturnValue = LeftValue + RightValue",
+        StringComparison.Ordinal));
+    Equal(formatted, FormatSource(formatted));
+    Equal(false, SmileLanguage.Analyze(formatted).HasErrors);
 });
 
 Run("Syntax-aware formatter preserves all authoritative direct Return forms", () =>

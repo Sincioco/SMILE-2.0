@@ -9,6 +9,7 @@ internal sealed class Parser
     private readonly List<SyntaxToken> _tokens = new();
     private readonly DiagnosticBag _diagnostics;
     private int _position;
+    private int _declarationContinuationDepth;
     private int _expressionContinuationDepth;
 
     public Parser(SourceText source, IReadOnlyList<SyntaxToken> tokens, IReadOnlyList<Diagnostic> lexerDiagnostics)
@@ -848,32 +849,61 @@ internal sealed class Parser
     {
         var keyword = NextToken();
         var identifier = MatchIdentifier();
+        SyntaxToken? openParenthesis = null;
+        SyntaxToken? closeParenthesis = null;
         var parameters = new List<ParameterSyntax>();
+        var continuedDeclaration = false;
         if (Current.Kind == SyntaxKind.OpenParenthesisToken)
         {
-            NextToken();
-            if (Current.Kind != SyntaxKind.CloseParenthesisToken)
+            openParenthesis = NextToken();
+            _declarationContinuationDepth++;
+
+            try
             {
-                while (true)
+                continuedDeclaration |= SkipDeclarationNewLines();
+                if (Current.Kind != SyntaxKind.CloseParenthesisToken)
                 {
-                    SyntaxToken? mode = null;
-                    if (Current.Kind is SyntaxKind.ByRefKeyword or SyntaxKind.ByValKeyword)
-                        mode = NextToken();
-                    var parameter = MatchIdentifier();
-                    SyntaxToken? parameterAs = null;
-                    SyntaxToken? parameterType = null;
-                    if (Current.Kind == SyntaxKind.AsKeyword)
+                    while (true)
                     {
-                        parameterAs = NextToken();
-                        parameterType = MatchTypeToken();
+                        SyntaxToken? mode = null;
+                        if (Current.Kind is SyntaxKind.ByRefKeyword or SyntaxKind.ByValKeyword)
+                        {
+                            mode = NextToken();
+                            continuedDeclaration |= SkipDeclarationNewLines();
+                        }
+                        var parameter = MatchIdentifier();
+                        continuedDeclaration |= SkipDeclarationNewLines();
+                        SyntaxToken? parameterAs = null;
+                        SyntaxToken? parameterType = null;
+                        if (Current.Kind == SyntaxKind.AsKeyword)
+                        {
+                            parameterAs = NextToken();
+                            parameterType = MatchTypeToken();
+                            continuedDeclaration |= SkipDeclarationNewLines();
+                        }
+                        parameters.Add(new ParameterSyntax(mode, parameter, parameterAs, parameterType));
+                        if (Current.Kind == SyntaxKind.CloseParenthesisToken)
+                            break;
+                        if (Current.Kind != SyntaxKind.CommaToken)
+                        {
+                            if (IsParameterStart(Current.Kind))
+                            {
+                                _diagnostics.Report("SML2001", Current.Span,
+                                    $"Expected comma between routine parameters, found '{Display(Current)}'.");
+                                continue;
+                            }
+                            break;
+                        }
+                        NextToken();
+                        continuedDeclaration |= SkipDeclarationNewLines();
                     }
-                    parameters.Add(new ParameterSyntax(mode, parameter, parameterAs, parameterType));
-                    if (Current.Kind != SyntaxKind.CommaToken)
-                        break;
-                    NextToken();
                 }
+                closeParenthesis = MatchToken(SyntaxKind.CloseParenthesisToken);
             }
-            MatchToken(SyntaxKind.CloseParenthesisToken);
+            finally
+            {
+                _declarationContinuationDepth--;
+            }
         }
         SyntaxToken? asKeyword = null;
         SyntaxToken? returnType = null;
@@ -882,12 +912,16 @@ internal sealed class Parser
             asKeyword = NextToken();
             returnType = MatchTypeToken();
         }
-        ConsumeLineEnd();
+        var recoveredAtBody = closeParenthesis is { Span.Length: 0 } && continuedDeclaration &&
+            !IsLineEnd(Current.Kind) && Current.Kind != SyntaxKind.AsKeyword;
+        if (!recoveredAtBody)
+            ConsumeLineEnd();
         var statements = ParseStatementsUntil(() => IsEndPair(keyword.Kind));
         var end = MatchToken(SyntaxKind.EndKeyword);
         var final = MatchToken(keyword.Kind);
         ConsumeLineEnd();
-        return new RoutineDeclarationSyntax(keyword, identifier, parameters, asKeyword, returnType, statements, end, final);
+        return new RoutineDeclarationSyntax(keyword, identifier, openParenthesis, parameters, closeParenthesis,
+            asKeyword, returnType, statements, end, final);
     }
 
     private StatementSyntax ParseCallStatement()
@@ -1132,6 +1166,20 @@ internal sealed class Parser
             NextToken();
     }
 
+    private bool SkipDeclarationNewLines()
+    {
+        if (_declarationContinuationDepth == 0)
+            return false;
+
+        var skipped = false;
+        while (Current.Kind == SyntaxKind.NewLineToken)
+        {
+            NextToken();
+            skipped = true;
+        }
+        return skipped;
+    }
+
     private ExpressionSyntax ParseFieldSuffix(ExpressionSyntax expression)
     {
         while (Current.Kind == SyntaxKind.DotToken)
@@ -1180,15 +1228,21 @@ internal sealed class Parser
     private static bool IsIdentifierLike(SyntaxKind kind) =>
         kind is SyntaxKind.IdentifierToken or SyntaxKind.KeyKeyword || IsContextualIdentifier(kind);
 
+    private static bool IsParameterStart(SyntaxKind kind) =>
+        kind is SyntaxKind.ByRefKeyword or SyntaxKind.ByValKeyword || IsIdentifierLike(kind);
+
     private SyntaxToken MatchTypeToken()
     {
+        SkipDeclarationNewLines();
         if (Current.Kind is SyntaxKind.NumberKeyword or SyntaxKind.BooleanKeyword or SyntaxKind.TextKeyword or SyntaxKind.ImageKeyword or
             SyntaxKind.IdentifierToken)
         {
             var first = NextToken();
+            SkipDeclarationNewLines();
             if (first.Kind == SyntaxKind.IdentifierToken && Current.Kind == SyntaxKind.DotToken)
             {
                 NextToken();
+                SkipDeclarationNewLines();
                 var second = MatchIdentifier();
                 return new SyntaxToken(SyntaxKind.IdentifierToken, first.Position, $"{first.Text}.{second.Text}",
                     spanLength: second.Span.End - first.Position);

@@ -151,6 +151,32 @@ try {
     Assert-Equal 0 (Invoke-Formatter @('-Check', '-FormatLongIf')).ExitCode 'Repository style gate did not pass after formatting drift.'
     Pass 'read-only Check failure, restoration, bytes, timestamps, and generated-file safety'
 
+    $MultilineRoutineSource = "Option Explicit`n" +
+        "Function Add(`n" +
+        "    FirstValue As Number,`n" +
+        "    SecondValue As Number`n" +
+        ")`n" +
+        "    Return FirstValue + SecondValue`n" +
+        "End Function`n" +
+        "Sub Present(`n" +
+        "    Value As Number`n" +
+        ")`n" +
+        "    Print Value`n" +
+        "End Sub`n"
+    $MultilineRoutinePath = Write-TestSource 'MultilineRoutine.smile' $MultilineRoutineSource
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'MultilineRoutine.smile')).ExitCode 'Multiline routine formatting failed.'
+    $MultilineRoutineFormatted = [IO.File]::ReadAllText($MultilineRoutinePath)
+    Assert-True (-not $MultilineRoutineFormatted.Contains("Function Add(`n`n")) 'Function opening line received a premature blank line.'
+    Assert-True ($MultilineRoutineFormatted.Contains(
+        "Function Add(`n    FirstValue As Number,`n    SecondValue As Number`n)`n`n    Dim ReturnValue As Number`n`n")) 'Computed Return local was not placed after the complete multiline Function header.'
+    Assert-True ($MultilineRoutineFormatted.Contains(
+        "Sub Present(`n    Value As Number`n)`n`n    Print Value")) 'Sub header did not receive exactly one trailing blank line.'
+    $MultilineRoutineFirstPass = [IO.File]::ReadAllBytes($MultilineRoutinePath)
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'MultilineRoutine.smile')).ExitCode 'Multiline routine second formatting pass failed.'
+    $MultilineRoutineSecondPass = [IO.File]::ReadAllBytes($MultilineRoutinePath)
+    Assert-Equal ([Convert]::ToBase64String($MultilineRoutineFirstPass)) ([Convert]::ToBase64String($MultilineRoutineSecondPass)) 'Multiline routine formatting was not idempotent.'
+    Pass 'multiline routine headers, computed Returns, blank lines, and idempotence'
+
     $ClipSource = "Option Explicit`n`nGame Window `"Clip Formatter`"`n`n" +
         "Function Calculate(Value As Number) As Number`n`n" +
         "    Clip Rectangle 0, 0, 100, 100`n" +

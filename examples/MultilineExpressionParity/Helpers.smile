@@ -1,6 +1,9 @@
 Module Parity.Helpers
 
-Public Function Add(LeftValue As Number, RightValue As Number) As Number
+Public Function Add(
+    LeftValue As Number,
+    RightValue As Number
+) As Number
 
     Dim ReturnValue As Number
 
@@ -9,7 +12,10 @@ Public Function Add(LeftValue As Number, RightValue As Number) As Number
 
 End Function
 
-Public Sub PrintPair(FirstValue As Number, SecondValue As Number)
+Public Sub PrintPair(
+    FirstValue As Number,
+    SecondValue As Number
+)
 
     Print FirstValue
     Print SecondValue

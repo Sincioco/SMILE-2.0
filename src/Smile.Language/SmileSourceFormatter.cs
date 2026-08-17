@@ -25,6 +25,19 @@ public sealed class SmileIfBlockLayout
     public IReadOnlyList<int> BoundaryLines { get; }
 }
 
+public sealed class SmileRoutineDeclarationLayout
+{
+    internal SmileRoutineDeclarationLayout(int headerStartLine, int headerEndLine)
+    {
+        HeaderStartLine = headerStartLine;
+        HeaderEndLine = headerEndLine;
+    }
+
+    public int HeaderStartLine { get; }
+    public int HeaderEndLine { get; }
+    public bool IsMultiline => HeaderStartLine != HeaderEndLine;
+}
+
 /// <summary>
 /// Performs syntax-aware SMILE source rewrites that must not be inferred from physical lines.
 /// Presentation-only blank-line formatting remains in the command-line formatter wrapper.
@@ -103,6 +116,20 @@ public static class SmileSourceFormatter
         return layouts;
     }
 
+    public static IReadOnlyList<SmileRoutineDeclarationLayout> GetRoutineDeclarationLayouts(
+        string sourceText, string? filePath)
+    {
+        if (sourceText == null)
+            throw new ArgumentNullException(nameof(sourceText));
+
+        var analysis = SmileLanguage.Analyze(NormalizeLineEndings(sourceText), filePath);
+        return EnumerateRoutines(analysis.SyntaxTree.Root.Statements)
+            .Select(routine => new SmileRoutineDeclarationLayout(
+                GetLine(analysis.SyntaxTree.Source, routine.Keyword.Span.Start),
+                GetLine(analysis.SyntaxTree.Source, RoutineHeaderEndToken(routine).Span.Start)))
+            .ToArray();
+    }
+
     private static string FormatCore(string sourceText, bool formatLongIf, int maximumLineLength,
         bool rewriteComputedReturns, bool formatContextualIdentifiers, string? filePath,
         SmileAnalysisResult? symbolAnalysis, SyntaxTree? symbolSyntaxTree)
@@ -172,10 +199,10 @@ public static class SmileSourceFormatter
                 continue;
 
             var returnVariable = ChooseReturnVariable(analysis.SyntaxTree, routine);
-            var returnType = GetReturnType(text, analysis.SemanticModel, routine);
+            var returnType = GetReturnType(text, analysis, routine);
             var declarationIndent = GetLineIndent(text, routine.Keyword.Span.Start);
             var bodyIndent = declarationIndent + "    ";
-            var insertionPosition = FindLineEnd(text, routine.ReturnTypeToken?.Span.End ?? routine.Identifier.Span.End);
+            var insertionPosition = FindLineEnd(text, RoutineHeaderEndToken(routine).Span.End);
             if (insertionPosition < text.Length && text[insertionPosition] == '\n')
                 insertionPosition++;
             var needsBlankAfter = insertionPosition >= text.Length || text[insertionPosition] != '\n';
@@ -234,6 +261,9 @@ public static class SmileSourceFormatter
         statement is IfStatementSyntax or ForStatementSyntax or DoStatementSyntax or
             SelectStatementSyntax or ClipRectangleStatementSyntax;
 
+    private static SyntaxToken RoutineHeaderEndToken(RoutineDeclarationSyntax routine) =>
+        routine.ReturnTypeToken ?? routine.CloseParenthesis ?? routine.Identifier;
+
     private static int GetLine(SourceText source, int position)
     {
         source.GetLineColumn(position, out var line, out _);
@@ -263,14 +293,20 @@ public static class SmileSourceFormatter
         !string.IsNullOrWhiteSpace(text) && (char.IsLetter(text[0]) || text[0] == '_') &&
         text.All(character => char.IsLetterOrDigit(character) || character == '_');
 
-    private static string GetReturnType(string text, SemanticModel semanticModel, RoutineDeclarationSyntax routine)
+    private static string GetReturnType(string text, SmileAnalysisResult analysis,
+        RoutineDeclarationSyntax routine)
     {
         if (routine.ReturnTypeToken != null && routine.ReturnTypeToken.Span.Length > 0)
             return text.Substring(routine.ReturnTypeToken.Span.Start, routine.ReturnTypeToken.Span.Length).Trim();
 
-        var symbol = semanticModel.Routines.Values.FirstOrDefault(candidate =>
-            ReferenceEquals(candidate.Declaration, routine));
-        if (symbol == null || symbol.ReturnType == SmileType.Error)
+        var hasRoutineError = analysis.Diagnostics.Any(diagnostic =>
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            routine.Span.Start <= diagnostic.Span.Start && diagnostic.Span.Start <= routine.Span.End);
+        var symbol = analysis.SemanticModel.Routines.Values.FirstOrDefault(candidate =>
+            string.Equals(candidate.Name, routine.Identifier.Text, StringComparison.OrdinalIgnoreCase) &&
+            candidate.Declaration.Identifier.Span.Start == routine.Identifier.Span.Start &&
+            candidate.Declaration.Identifier.Span.Length == routine.Identifier.Span.Length);
+        if (hasRoutineError || symbol == null || symbol.ReturnType == SmileType.Error)
             throw new InvalidOperationException("Unable to infer the return type for Function '" +
                                                 routine.Identifier.Text + "'.");
         return string.IsNullOrWhiteSpace(symbol.ReturnType.ModuleName)
