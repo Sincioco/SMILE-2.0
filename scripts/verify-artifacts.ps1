@@ -312,7 +312,7 @@ try {
             throw "$templateName does not contain all generated identity tokens."
         }
         if ($templateText -notmatch 'SmileProjectTemplateWizard' -or
-        $templateText -notmatch 'Version=2\.0\.47\.0') {
+        $templateText -notmatch 'Version=2\.0\.48\.0') {
             throw "$templateName does not invoke the synchronized template wizard."
         }
     }
