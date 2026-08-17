@@ -617,6 +617,7 @@ internal sealed class MasmEmitter
             case ConstStatementSyntax:
             case DimStatementSyntax:
             case TypeDeclarationSyntax:
+            case EnumDeclarationSyntax:
             case RoutineDeclarationSyntax:
                 break;
             case AssignmentStatementSyntax assignment:
@@ -1208,6 +1209,11 @@ internal sealed class MasmEmitter
                 }
                 break;
             case FieldAccessExpressionSyntax field:
+                if (_analysis.SemanticModel.TryGetEnumMember(field, out var enumMember))
+                {
+                    Line($"    mov rax, {QwordImmediate(enumMember.Value)}");
+                    break;
+                }
                 EmitWritableAddress(field);
                 if (_analysis.SemanticModel.GetType(field) is not RecordTypeSymbol)
                 {
@@ -1517,7 +1523,7 @@ internal sealed class MasmEmitter
                 bool boolean => boolean ? 1L : 0L,
                 _ => 0L
             };
-            Line($"    mov rax, {value.ToString(CultureInfo.InvariantCulture)}");
+            Line($"    mov rax, {QwordImmediate(value)}");
             return;
         }
         EmitAddress(symbol);
@@ -1639,7 +1645,7 @@ internal sealed class MasmEmitter
                     bool boolean => boolean ? 1L : 0L,
                     _ => 0L
                 };
-                Line($"    mov rax, {value.ToString(CultureInfo.InvariantCulture)}");
+                Line($"    mov rax, {QwordImmediate(value)}");
             }
         }
         else if (symbol.IsArray || symbol.Type.IsRecord)
@@ -1832,6 +1838,9 @@ internal sealed class MasmEmitter
         return builder.Length == 0 ? "record" : builder.ToString();
     }
 
+    private static string QwordImmediate(long value) =>
+        "0" + unchecked((ulong)value).ToString("X16", CultureInfo.InvariantCulture) + "h";
+
     private void PushRax()
     {
         Line("    push rax");
@@ -1863,7 +1872,8 @@ internal sealed class MasmEmitter
     private void Line(string text = "") => _builder.AppendLine(text);
 
     private static bool IsExecutable(StatementSyntax statement) =>
-        statement is not ConstStatementSyntax and not DimStatementSyntax and not TypeDeclarationSyntax and not RoutineDeclarationSyntax;
+        statement is not ConstStatementSyntax and not DimStatementSyntax and not TypeDeclarationSyntax and
+            not EnumDeclarationSyntax and not RoutineDeclarationSyntax;
 
     private void EmitBytes(byte[] bytes, bool terminate)
     {

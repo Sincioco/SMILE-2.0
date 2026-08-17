@@ -177,6 +177,21 @@ try {
     Assert-Equal ([Convert]::ToBase64String($MultilineRoutineFirstPass)) ([Convert]::ToBase64String($MultilineRoutineSecondPass)) 'Multiline routine formatting was not idempotent.'
     Pass 'multiline routine headers, computed Returns, blank lines, and idempotence'
 
+    $EnumSource = "Option Explicit`n`n" +
+        "Enum Direction`n    none`n    up = 10`n    down`n    left = -5`n    right = -5`nEnd Enum`n`n" +
+        "Function DefaultDirection() As Direction`n`n    Return Direction.left`n`nEnd Function`n"
+    $EnumPath = Write-TestSource 'EnumFormatting.smile' $EnumSource
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'EnumFormatting.smile')).ExitCode 'Enum formatting failed.'
+    $EnumFormatted = [IO.File]::ReadAllText($EnumPath)
+    Assert-True ($EnumFormatted.Contains("Enum Direction`n    None`n    Up = 10`n    Down`n    Left = -5`n    Right = -5`nEnd Enum")) 'Enum contextual member names were not canonicalized through the declaration.'
+    Assert-True ($EnumFormatted.Contains('Return Direction.Left')) 'Enum member use was not canonicalized.'
+    Assert-True (-not $EnumFormatted.Contains('ReturnValue = Direction.Left')) 'A direct Enum member Return received an unnecessary temporary.'
+    $EnumFirstPass = [IO.File]::ReadAllBytes($EnumPath)
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'EnumFormatting.smile')).ExitCode 'Enum second formatting pass failed.'
+    $EnumSecondPass = [IO.File]::ReadAllBytes($EnumPath)
+    Assert-Equal ([Convert]::ToBase64String($EnumFirstPass)) ([Convert]::ToBase64String($EnumSecondPass)) 'Enum formatting was not idempotent.'
+    Pass 'Enum declaration traversal, contextual members, direct Returns, and idempotence'
+
     $ClipSource = "Option Explicit`n`nGame Window `"Clip Formatter`"`n`n" +
         "Function Calculate(Value As Number) As Number`n`n" +
         "    Clip Rectangle 0, 0, 100, 100`n" +

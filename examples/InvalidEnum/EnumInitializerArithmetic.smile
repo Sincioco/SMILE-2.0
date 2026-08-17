@@ -1,0 +1,8 @@
+Option Explicit
+
+Enum Direction
+    Up
+    Down = Direction.Up + 1
+End Enum
+
+End Program

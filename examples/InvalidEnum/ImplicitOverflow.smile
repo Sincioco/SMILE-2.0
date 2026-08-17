@@ -1,0 +1,8 @@
+Option Explicit
+
+Enum Limit
+    Maximum = 9223372036854775807
+    Overflow
+End Enum
+
+End Program

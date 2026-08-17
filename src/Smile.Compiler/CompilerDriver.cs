@@ -364,6 +364,7 @@ internal sealed class CompilerDriver
             ? symbol.Type.Kind switch
             {
                 SmileTypeKind.Number => "const long long*",
+                SmileTypeKind.Enum => "const long long*",
                 SmileTypeKind.Boolean => "const SmileDebugBoolean*",
                 SmileTypeKind.Text => "const SmileDebugText* const*",
                 _ => "const void*"
@@ -371,6 +372,7 @@ internal sealed class CompilerDriver
             : symbol.Type.Kind switch
             {
                 SmileTypeKind.Number => "long long",
+                SmileTypeKind.Enum => "long long",
                 SmileTypeKind.Boolean => "SmileDebugBoolean",
                 SmileTypeKind.Text => "const char*",
                 _ => "const void*"

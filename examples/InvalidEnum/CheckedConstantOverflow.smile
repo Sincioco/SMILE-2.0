@@ -1,0 +1,9 @@
+Option Explicit
+
+Enum Limit
+    Overflow = TOO_LARGE
+End Enum
+
+Const TOO_LARGE = 9223372036854775807 + 1
+
+End Program

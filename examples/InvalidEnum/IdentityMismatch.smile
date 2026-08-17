@@ -1,0 +1,23 @@
+Option Explicit
+
+Enum FirstState
+    Ready
+End Enum
+
+Enum SecondState
+    Ready
+End Enum
+
+Dim First As FirstState
+Dim Second As SecondState
+
+First = FirstState.Ready
+Second = SecondState.Ready
+
+If First = Second Then
+    Print "Wrong"
+End If
+
+First = Second
+
+End Program

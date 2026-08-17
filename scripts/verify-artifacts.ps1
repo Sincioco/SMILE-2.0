@@ -83,9 +83,184 @@ function Assert-AssetCopy {
     }
 }
 
+function Get-BytesSha256 {
+    param([byte[]]$Bytes)
+
+    $algorithm = [Security.Cryptography.SHA256]::Create()
+    try {
+        return ([BitConverter]::ToString($algorithm.ComputeHash($Bytes))).Replace('-', '').ToLowerInvariant()
+    }
+    finally {
+        $algorithm.Dispose()
+    }
+}
+
+function Read-ZipEntryBytes {
+    param([IO.Compression.ZipArchiveEntry]$Entry)
+
+    $stream = $Entry.Open()
+    $output = [IO.MemoryStream]::new()
+    try {
+        $stream.CopyTo($output)
+        return $output.ToArray()
+    }
+    finally {
+        $output.Dispose()
+        $stream.Dispose()
+    }
+}
+
+function Assert-PackageLocation {
+    param($Location, [string[]]$DeclaredSources, [string]$Description)
+
+    if ($null -eq $Location -or $DeclaredSources -cnotcontains $Location.source -or
+        $Location.line -lt 1 -or $Location.column -lt 1 -or $Location.length -lt 1) {
+        throw "$Description has an invalid format-6 source location."
+    }
+}
+
+function Assert-SmileLibraryPackage {
+    param(
+        [string]$RelativePath,
+        [string]$ProjectRelativePath,
+        [string]$ExpectedName,
+        [string]$ExpectedVersion,
+        [int]$ExpectedModuleCount,
+        [int]$ExpectedSourceCount,
+        [int]$ExpectedPublicMemberCount
+    )
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $path = Require-File $RelativePath
+    $projectPath = Join-Path $repositoryRoot $ProjectRelativePath
+    [xml]$project = Get-Content -LiteralPath $projectPath -Raw
+    $projectSources = @($project.SelectNodes('//SmileSource') | ForEach-Object {
+        'src/' + $_.Include.Replace('\', '/')
+    })
+    [Array]::Sort($projectSources, [StringComparer]::Ordinal)
+    $archive = [IO.Compression.ZipFile]::OpenRead($path)
+    try {
+        $entryNames = [string[]]@($archive.Entries | ForEach-Object { $_.FullName })
+        $orderedNames = [string[]]$entryNames.Clone()
+        [Array]::Sort($orderedNames, [StringComparer]::Ordinal)
+        if ([string]::Join("`n", $entryNames) -cne [string]::Join("`n", $orderedNames)) {
+            throw "$RelativePath does not use ordinal archive entry order."
+        }
+        if (@($entryNames | Select-Object -Unique).Count -ne $entryNames.Count) {
+            throw "$RelativePath contains duplicate archive entries."
+        }
+        foreach ($entry in $archive.Entries) {
+            if ($entry.LastWriteTime.Year -ne 1980 -or $entry.LastWriteTime.Month -ne 1 -or
+                $entry.LastWriteTime.Day -ne 1 -or $entry.LastWriteTime.Hour -ne 0 -or
+                $entry.LastWriteTime.Minute -ne 0 -or $entry.LastWriteTime.Second -ne 0) {
+                throw "$RelativePath entry '$($entry.FullName)' does not use the deterministic timestamp."
+            }
+            if ($entry.CompressedLength -ne $entry.Length) {
+                throw "$RelativePath entry '$($entry.FullName)' is compressed."
+            }
+        }
+
+        $manifestEntry = $archive.GetEntry('manifest.json')
+        $apiEntry = $archive.GetEntry('api/public-symbols.json')
+        if ($null -eq $manifestEntry -or $null -eq $apiEntry) {
+            throw "$RelativePath is missing required metadata entries."
+        }
+        $manifestText = [Text.Encoding]::UTF8.GetString((Read-ZipEntryBytes $manifestEntry))
+        $apiText = [Text.Encoding]::UTF8.GetString((Read-ZipEntryBytes $apiEntry))
+        $manifest = $manifestText | ConvertFrom-Json
+        $api = $apiText | ConvertFrom-Json
+        $expectedProvider = "$ExpectedName@$ExpectedVersion"
+        if ($manifest.formatVersion -ne 6 -or $api.formatVersion -ne 6 -or
+            $manifest.name -cne $ExpectedName -or $manifest.version -cne $ExpectedVersion -or
+            $manifest.provider -cne $expectedProvider -or $api.library.name -cne $ExpectedName -or
+            $api.library.version -cne $ExpectedVersion -or $api.library.provider -cne $expectedProvider) {
+            throw "$RelativePath has incorrect format-6 library identity metadata."
+        }
+        $declaredSources = [string[]]@($manifest.sources)
+        if (@($manifest.modules).Count -ne $ExpectedModuleCount -or
+            $declaredSources.Count -ne $ExpectedSourceCount -or @($manifest.dependencies).Count -ne 0 -or
+            @($manifest.sourceHashes.PSObject.Properties).Count -ne $ExpectedSourceCount -or
+            @($api.modules).Count -ne $ExpectedModuleCount -or
+            @($api.modules.members).Count -ne $ExpectedPublicMemberCount) {
+            throw "$RelativePath has an unexpected module, source, dependency, or public-member count."
+        }
+        if ([string]::Join("`n", $declaredSources) -cne [string]::Join("`n", $projectSources)) {
+            throw "$RelativePath sources do not retain exact project Include identities."
+        }
+        $expectedEntries = [string[]]@('api/public-symbols.json', 'manifest.json') + $declaredSources
+        [Array]::Sort($expectedEntries, [StringComparer]::Ordinal)
+        if ([string]::Join("`n", $entryNames) -cne [string]::Join("`n", $expectedEntries)) {
+            throw "$RelativePath contains undeclared or missing archive entries."
+        }
+        foreach ($sourceId in $declaredSources) {
+            if (-not $sourceId.StartsWith('src/', [StringComparison]::Ordinal) -or
+                $sourceId.Contains('\') -or $sourceId.Contains(':') -or $sourceId.Contains('/../')) {
+                throw "$RelativePath declares unsafe source ID '$sourceId'."
+            }
+            $entry = $archive.GetEntry($sourceId)
+            $declaredHash = $manifest.sourceHashes.PSObject.Properties[$sourceId].Value
+            $actualHash = Get-BytesSha256 (Read-ZipEntryBytes $entry)
+            if ($declaredHash -cne $actualHash) {
+                throw "$RelativePath source hash is invalid for '$sourceId'."
+            }
+            $include = $sourceId.Substring(4).Replace('/', '\')
+            $sourceText = Get-Content -LiteralPath (Join-Path (Split-Path -Parent $projectPath) $include) -Raw
+            $normalizedBytes = [Text.Encoding]::UTF8.GetBytes($sourceText.Replace("`r`n", "`n").Replace("`r", "`n"))
+            if ((Get-BytesSha256 $normalizedBytes) -cne $actualHash) {
+                throw "$RelativePath source '$sourceId' differs from the current project source."
+            }
+        }
+        if ($manifestText.IndexOf($repositoryRoot, [StringComparison]::OrdinalIgnoreCase) -ge 0 -or
+            $apiText.IndexOf($repositoryRoot, [StringComparison]::OrdinalIgnoreCase) -ge 0 -or
+            $apiText -match '[A-Za-z]:[\\/]') {
+            throw "$RelativePath serializes an absolute checkout, cache, or temporary path."
+        }
+        foreach ($module in @($api.modules)) {
+            if ($module.provider -cne $expectedProvider) {
+                throw "$RelativePath module '$($module.name)' has an incorrect provider."
+            }
+            foreach ($moduleSource in @($module.sources)) {
+                if ($declaredSources -cnotcontains $moduleSource) {
+                    throw "$RelativePath module '$($module.name)' cites undeclared source '$moduleSource'."
+                }
+            }
+            foreach ($member in @($module.members)) {
+                Assert-PackageLocation $member.location $declaredSources "$RelativePath member '$($member.name)'"
+                foreach ($parameter in @($member.parameters | Where-Object { $null -ne $_ })) {
+                    Assert-PackageLocation $parameter.location $declaredSources `
+                        "$RelativePath parameter '$($member.name).$($parameter.name)'"
+                }
+                foreach ($field in @($member.fields | Where-Object { $null -ne $_ })) {
+                    Assert-PackageLocation $field.location $declaredSources `
+                        "$RelativePath field '$($member.name).$($field.name)'"
+                }
+                foreach ($nestedMember in @($member.members | Where-Object { $null -ne $_ })) {
+                    Assert-PackageLocation $nestedMember.location $declaredSources `
+                        "$RelativePath nested member '$($member.name).$($nestedMember.name)'"
+                }
+            }
+        }
+        Write-Host "Format-6 SMILE library verified: $RelativePath"
+    }
+    finally {
+        $archive.Dispose()
+    }
+}
+
 Require-File 'artifacts\compiler\smilec.exe' | Out-Null
 $vsixPath = Require-File 'artifacts\vsix\Smile.VisualStudio.vsix'
-Require-File 'artifacts\libraries\Smile.Math.Extras.smilelib' | Out-Null
+Assert-SmileLibraryPackage 'artifacts\libraries\Smile.Math.Extras.smilelib' `
+    'libraries\Smile.Math.Extras\Smile.Math.Extras.smilelibproj' 'Smile.Math.Extras' '1.0.0' 1 2 3
+Assert-SmileLibraryPackage 'artifacts\libraries\Smile.Text.Extras.smilelib' `
+    'libraries\Smile.Text.Extras\Smile.Text.Extras.smilelibproj' 'Smile.Text.Extras' '1.0.0' 1 1 5
+Assert-SmileLibraryPackage 'artifacts\libraries\Smile.Data.Models.smilelib' `
+    'libraries\Smile.Data.Models\Smile.Data.Models.smilelibproj' 'Smile.Data.Models' '1.0.0' 1 2 7
+Assert-SmileLibraryPackage 'artifacts\libraries\Smile.UI.smilelib' `
+    'libraries\Smile.UI\Smile.UI.smilelibproj' 'Smile.UI' '1.1.3' 7 7 126
+Assert-SmileLibraryPackage 'artifacts\libraries\Smile.Game.smilelib' `
+    'libraries\Smile.Game\Smile.Game.smilelibproj' 'Smile.Game' '1.0.0' 5 5 72
+Assert-SmileLibraryPackage 'artifacts\libraries\Smile.RPG.smilelib' `
+    'libraries\Smile.RPG\Smile.RPG.smilelibproj' 'Smile.RPG' '1.2.0' 15 15 491
 Require-File 'artifacts\games\LibraryConsumer.exe' | Out-Null
 Require-File 'artifacts\games\LibraryPackageConsumer.exe' | Out-Null
 Require-File 'artifacts\games\LocalModuleBasics.exe' | Out-Null
@@ -97,9 +272,6 @@ Require-File 'artifacts\games\Phase4VisualSlice-GDI\Phase4VisualSlice.smile-asse
 Require-File 'artifacts\web\Phase4VisualSlice\smile-assets.json' | Out-Null
 Require-File 'artifacts\games\Phase4AssetPublication\Phase4AssetPublication.smile-assets.json' | Out-Null
 Require-File 'artifacts\web\Phase4AssetPublication\smile-assets.json' | Out-Null
-Require-File 'artifacts\libraries\Smile.UI.smilelib' | Out-Null
-Require-File 'artifacts\libraries\Smile.RPG.smilelib' | Out-Null
-Require-File 'artifacts\libraries\Smile.Game.smilelib' | Out-Null
 Require-File 'artifacts\tests\Phase6RpgStateTests.exe' | Out-Null
 Require-File 'artifacts\tests\Phase6RpgStateTestsPackage.exe' | Out-Null
 Require-File 'artifacts\games\RpgManagementGallery-DirectX\smile.gallery.rpg-management.smile-assets.json' | Out-Null

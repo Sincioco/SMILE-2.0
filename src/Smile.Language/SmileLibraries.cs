@@ -25,6 +25,7 @@ public sealed class SmileLibraryIdentity
 
     public string Name { get; }
     public string Version { get; }
+    public string Provider => Name + "@" + Version;
     public IReadOnlyList<string> Modules { get; }
     public IReadOnlyList<SmileLibraryDependency> Dependencies { get; }
 }
@@ -119,10 +120,12 @@ public sealed class SmileProjectDiagnosticException : Exception
 public sealed class SmileLibraryLoadResult
 {
     internal SmileLibraryLoadResult(SmileLibraryIdentity identity, IReadOnlyList<SmileSourceDocument> sources,
-        string packageHash, string extractionDirectory, string providerPath, string publicApiMetadata)
+        IReadOnlyDictionary<string, string> sourceIds, string packageHash, string extractionDirectory,
+        string providerPath, string publicApiMetadata)
     {
         Identity = identity;
         Sources = sources;
+        SourceIds = sourceIds;
         PackageHash = packageHash;
         ExtractionDirectory = extractionDirectory;
         ProviderPath = providerPath;
@@ -131,6 +134,7 @@ public sealed class SmileLibraryLoadResult
 
     public SmileLibraryIdentity Identity { get; }
     public IReadOnlyList<SmileSourceDocument> Sources { get; }
+    public IReadOnlyDictionary<string, string> SourceIds { get; }
     public string PackageHash { get; }
     public string ExtractionDirectory { get; }
     public string ProviderPath { get; }
@@ -166,8 +170,9 @@ public sealed class SmileLibraryBuildFingerprint
             !string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(Version, other.Version, StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(PublicApiHash, other.PublicApiHash, StringComparison.OrdinalIgnoreCase) ||
-            !Modules.OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
-                .SequenceEqual(other.Modules.OrderBy(item => item, StringComparer.OrdinalIgnoreCase),
+            !Modules.OrderBy(item => item, StringComparer.OrdinalIgnoreCase).ThenBy(item => item, StringComparer.Ordinal)
+                .SequenceEqual(other.Modules.OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                        .ThenBy(item => item, StringComparer.Ordinal),
                     StringComparer.OrdinalIgnoreCase) ||
             SourceHashes.Count != other.SourceHashes.Count)
             return false;
@@ -176,8 +181,10 @@ public sealed class SmileLibraryBuildFingerprint
                 !string.Equals(source.Value, hash, StringComparison.OrdinalIgnoreCase))
                 return false;
         var dependencies = Dependencies.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Name, StringComparer.Ordinal).ThenBy(item => item.Version, StringComparer.Ordinal)
             .Select(item => item.Name + "\0" + item.Version);
         var otherDependencies = other.Dependencies.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Name, StringComparer.Ordinal).ThenBy(item => item.Version, StringComparer.Ordinal)
             .Select(item => item.Name + "\0" + item.Version);
         return dependencies.SequenceEqual(otherDependencies, StringComparer.OrdinalIgnoreCase);
     }
@@ -185,7 +192,7 @@ public sealed class SmileLibraryBuildFingerprint
 
 public static class SmileLibraryPackage
 {
-    public const int CurrentFormatVersion = 5;
+    public const int CurrentFormatVersion = 6;
     private static readonly DateTimeOffset DeterministicTimestamp =
         new(1980, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
@@ -201,20 +208,24 @@ public static class SmileLibraryPackage
         var provider = project.ProjectPath;
         var modules = analysis.SemanticModel.Modules.Values
             .Where(module => string.Equals(module.ProviderIdentity, provider, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(module => module.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+            .OrderBy(module => module.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(module => module.Name, StringComparer.Ordinal).ToArray();
         if (modules.Length == 0)
             throw new InvalidDataException("The library project does not declare a module.");
 
-        var sourceEntries = project.Items.OrderBy(item => Normalize(item.Include), StringComparer.Ordinal).Select(item =>
+        var sourceItems = project.Items.OrderBy(item => Normalize(item.Include), StringComparer.Ordinal).ToArray();
+        var sourceEntries = sourceItems.Select(item =>
         {
             var bytes = Encoding.UTF8.GetBytes(NormalizeText(File.ReadAllText(item.FullPath)));
             return new PackageEntry("src/" + Normalize(item.Include), bytes);
         }).ToArray();
+        var sourceIds = sourceItems.ToDictionary(item => SmileSourceDocument.NormalizePath(item.FullPath),
+            item => "src/" + Normalize(item.Include), StringComparer.OrdinalIgnoreCase);
         var hashes = sourceEntries.ToDictionary(entry => entry.Name,
             entry => Hash(entry.Bytes), StringComparer.Ordinal);
         var dependencies = GetDependencies(project);
         var manifest = BuildManifest(project, modules.Select(module => module.Name), sourceEntries.Select(entry => entry.Name), hashes, dependencies);
-        var api = BuildPublicApi(modules, analysis.DependencyContext);
+        var api = BuildPublicApi(modules, analysis.DependencyContext, project.LibraryName, project.Version, sourceIds);
 
         var entries = new List<PackageEntry>
         {
@@ -262,6 +273,7 @@ public static class SmileLibraryPackage
         var sources = RequiredValues(manifest.Sources, "sources");
         var declaredHashes = manifest.SourceHashes
             ?? throw new InvalidDataException("SMILE library manifest is missing sourceHashes.");
+        ValidateSourceHashes(sources, declaredHashes);
         var verifiedHashes = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var source in sources)
         {
@@ -298,13 +310,17 @@ public static class SmileLibraryPackage
         var modules = analysis.SemanticModel.Modules.Values
             .Where(module => string.Equals(module.ProviderIdentity, project.ProjectPath,
                 StringComparison.OrdinalIgnoreCase))
-            .OrderBy(module => module.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+            .OrderBy(module => module.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(module => module.Name, StringComparer.Ordinal).ToArray();
         var hashes = project.Items.ToDictionary(item => "src/" + Normalize(item.Include),
             item => Hash(Encoding.UTF8.GetBytes(NormalizeText(File.ReadAllText(item.FullPath)))),
             StringComparer.Ordinal);
+        var sourceIds = project.Items.ToDictionary(item => SmileSourceDocument.NormalizePath(item.FullPath),
+            item => "src/" + Normalize(item.Include), StringComparer.OrdinalIgnoreCase);
         return new SmileLibraryBuildFingerprint(CurrentFormatVersion, project.LibraryName, project.Version,
             modules.Select(module => module.Name).ToArray(), hashes, GetDependencies(project),
-            Hash(Encoding.UTF8.GetBytes(BuildPublicApi(modules, analysis.DependencyContext))));
+            Hash(Encoding.UTF8.GetBytes(BuildPublicApi(modules, analysis.DependencyContext,
+                project.LibraryName, project.Version, sourceIds))));
     }
 
     public static bool IsCurrentProjectBuild(string packagePath, SmileProjectSourceSet project,
@@ -353,10 +369,12 @@ public static class SmileLibraryPackage
             Directory.CreateDirectory(extractionDirectory);
 
             var sources = new List<SmileSourceDocument>();
+            var sourceIds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var declaredSources = RequiredValues(manifest.Sources, "sources");
             var sourceHashes = manifest.SourceHashes;
             if (sourceHashes == null)
                 throw new InvalidDataException("SMILE library manifest is missing sourceHashes.");
+            ValidateSourceHashes(declaredSources, sourceHashes);
             foreach (var sourceName in declaredSources.OrderBy(item => item, StringComparer.Ordinal))
             {
                 ValidateEntryName(sourceName);
@@ -378,6 +396,7 @@ public static class SmileLibraryPackage
                     File.WriteAllBytes(extractedPath, bytes);
                 sources.Add(new SmileSourceDocument(Encoding.UTF8.GetString(bytes), extractedPath,
                     providerIdentity: fullPackagePath));
+                sourceIds.Add(SmileSourceDocument.NormalizePath(extractedPath), sourceName);
             }
 
             var allowed = new HashSet<string>(declaredSources, StringComparer.Ordinal)
@@ -393,77 +412,45 @@ public static class SmileLibraryPackage
             var apiEntry = archive.GetEntry("api/public-symbols.json")
                 ?? throw new InvalidDataException("SMILE library package is missing api/public-symbols.json.");
             var actualApi = Encoding.UTF8.GetString(ReadAllBytes(apiEntry));
-            return new SmileLibraryLoadResult(identity, sources, packageHash, extractionDirectory,
+            return new SmileLibraryLoadResult(identity, sources, sourceIds, packageHash, extractionDirectory,
                 fullPackagePath, actualApi);
         }
     }
 
     public static string BuildPublicApi(IEnumerable<ModuleSymbol> modules,
-        SmileCompilationDependencyContext dependencyContext)
+        SmileCompilationDependencyContext dependencyContext, string libraryName, string libraryVersion,
+        IReadOnlyDictionary<string, string> sourceIds)
     {
         if (modules == null) throw new ArgumentNullException(nameof(modules));
         if (dependencyContext == null) throw new ArgumentNullException(nameof(dependencyContext));
-        var builder = new StringBuilder("{\n  \"formatVersion\": 5,\n  \"modules\": [");
-        var orderedModules = modules.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+        if (string.IsNullOrWhiteSpace(libraryName)) throw new ArgumentException("A library name is required.", nameof(libraryName));
+        if (string.IsNullOrWhiteSpace(libraryVersion)) throw new ArgumentException("A library version is required.", nameof(libraryVersion));
+        if (sourceIds == null) throw new ArgumentNullException(nameof(sourceIds));
+        var provider = libraryName + "@" + libraryVersion;
+        var orderedModules = modules.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Name, StringComparer.Ordinal).ToArray();
+        var builder = new StringBuilder("{\n  \"formatVersion\": 6,\n  \"library\": {\"name\": \"")
+            .Append(JsonEscape(libraryName)).Append("\", \"version\": \"")
+            .Append(JsonEscape(libraryVersion)).Append("\", \"provider\": \"")
+            .Append(JsonEscape(provider)).Append("\"},\n  \"modules\": [");
         for (var moduleIndex = 0; moduleIndex < orderedModules.Length; moduleIndex++)
         {
             var module = orderedModules[moduleIndex];
+            var moduleSources = module.SyntaxTrees.Select(tree => SourceId(tree.Source, sourceIds))
+                .Distinct(StringComparer.Ordinal).OrderBy(item => item, StringComparer.Ordinal).ToArray();
             builder.Append(moduleIndex == 0 ? "\n" : ",\n")
-                .Append("    {\"name\": \"").Append(JsonEscape(module.Name)).Append("\", \"members\": [");
+                .Append("    {\"name\": \"").Append(JsonEscape(module.Name))
+                .Append("\", \"provider\": \"").Append(JsonEscape(provider))
+                .Append("\", \"sources\": [")
+                .Append(string.Join(", ", moduleSources.Select(source => "\"" + JsonEscape(source) + "\"")))
+                .Append("], \"members\": [");
             var members = module.PublicMembers.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(item => item.Kind).ToArray();
+                .ThenBy(item => item.Name, StringComparer.Ordinal).ThenBy(item => item.Kind).ToArray();
             for (var memberIndex = 0; memberIndex < members.Length; memberIndex++)
             {
                 var member = members[memberIndex];
-                builder.Append(memberIndex == 0 ? "\n" : ",\n")
-                    .Append("      {\"name\": \"").Append(JsonEscape(member.Name))
-                    .Append("\", \"kind\": \"").Append(member.Kind).Append('"');
-                if (member.Variable != null)
-                {
-                    builder.Append(", \"type\": \"").Append(JsonEscape(TypeIdentity(member.Variable.Type))).Append('"');
-                    AppendTypeProvider(builder, "typeProvider", member.Variable.Type, dependencyContext);
-                    if (member.Variable.IsConstant)
-                        builder.Append(", \"value\": ").Append(JsonValue(member.Variable.ConstantValue));
-                    if (member.Variable.IsArray)
-                    {
-                        builder.Append(", \"elementType\": \"").Append(JsonEscape(TypeIdentity(member.Variable.Type)))
-                            .Append('"');
-                        AppendTypeProvider(builder, "elementProvider", member.Variable.Type, dependencyContext);
-                        builder.Append(", \"rank\": ").Append(member.Variable.ArrayRank.ToString(CultureInfo.InvariantCulture))
-                            .Append(", \"dimensions\": [")
-                            .Append(string.Join(", ", member.Variable.ArrayDimensions.Select(size =>
-                                size.ToString(CultureInfo.InvariantCulture)))).Append(']');
-                    }
-                }
-                if (member.Routine != null)
-                {
-                    builder.Append(", \"returnType\": \"")
-                        .Append(member.Routine.IsFunction ? JsonEscape(TypeIdentity(member.Routine.ReturnType)) : "VOID")
-                        .Append('"');
-                    builder.Append(", \"requiresGameWindow\": ")
-                        .Append(member.Routine.RequiresGameWindow ? "true" : "false");
-                    if (member.Routine.IsFunction)
-                        AppendTypeProvider(builder, "returnProvider", member.Routine.ReturnType, dependencyContext);
-                    builder.Append(", \"parameters\": [")
-                        .Append(string.Join(", ", member.Routine.Parameters.Select(parameter => ParameterJson(parameter,
-                            dependencyContext)))).Append(']');
-                }
-                if (member.Type != null)
-                {
-                    builder.Append(", \"identity\": \"").Append(JsonEscape(TypeIdentity(member.Type)))
-                        .Append("\", \"module\": \"").Append(JsonEscape(member.Type.ModuleName ?? string.Empty))
-                        .Append("\", \"provider\": \"").Append(JsonEscape(LogicalProviderIdentity(member.Type,
-                            dependencyContext)))
-                        .Append("\", \"size\": ").Append(member.Type.Size.ToString(CultureInfo.InvariantCulture))
-                        .Append(", \"fields\": [")
-                        .Append(string.Join(", ", member.Type.Fields.OrderBy(field => field.Ordinal)
-                            .Select(field => FieldJson(field, dependencyContext))))
-                        .Append(']');
-                }
-                member.Source.GetLineColumn(member.DeclarationSpan.Start, out var line, out var column);
-                builder.Append(", \"source\": \"").Append(JsonEscape(Normalize(Path.GetFileName(member.Source.FilePath))))
-                    .Append("\", \"line\": ").Append(line.ToString(CultureInfo.InvariantCulture))
-                    .Append(", \"column\": ").Append(column.ToString(CultureInfo.InvariantCulture)).Append('}');
+                builder.Append(memberIndex == 0 ? "\n" : ",\n").Append("      ")
+                    .Append(MemberJson(member, dependencyContext, sourceIds));
             }
             if (members.Length != 0) builder.Append('\n').Append("    ");
             builder.Append("]}");
@@ -472,21 +459,82 @@ public static class SmileLibraryPackage
         return builder.Append("]\n}\n").ToString();
     }
 
+    private static string MemberJson(SmileModuleMember member,
+        SmileCompilationDependencyContext dependencyContext, IReadOnlyDictionary<string, string> sourceIds)
+    {
+        var builder = new StringBuilder("{\"name\": \"").Append(JsonEscape(member.Name))
+            .Append("\", \"kind\": \"").Append(member.Kind)
+            .Append("\", \"visibility\": \"").Append(member.Visibility).Append('"');
+        if (member.Variable != null)
+        {
+            builder.Append(member.Variable.IsArray ? ", \"elementType\": " : ", \"type\": ")
+                .Append(TypeReferenceJson(member.Variable.Type, dependencyContext));
+            if (member.Variable.IsConstant)
+                builder.Append(", \"value\": ").Append(JsonValue(member.Variable.ConstantValue));
+            if (member.Variable.IsArray)
+                builder.Append(", \"rank\": ")
+                    .Append(member.Variable.ArrayRank.ToString(CultureInfo.InvariantCulture))
+                    .Append(", \"dimensions\": [")
+                    .Append(string.Join(", ", member.Variable.ArrayDimensions.Select(size =>
+                        size.ToString(CultureInfo.InvariantCulture)))).Append(']');
+        }
+        if (member.Routine != null)
+        {
+            builder.Append(", \"returnType\": ")
+                .Append(member.Routine.IsFunction
+                    ? TypeReferenceJson(member.Routine.ReturnType, dependencyContext)
+                    : "null")
+                .Append(", \"parameters\": [")
+                .Append(string.Join(", ", member.Routine.Parameters.Select((parameter, ordinal) =>
+                    ParameterJson(parameter, ordinal, dependencyContext, sourceIds))))
+                .Append("], \"requiresGameWindow\": ")
+                .Append(member.Routine.RequiresGameWindow ? "true" : "false");
+        }
+        if (member.Type != null)
+        {
+            builder.Append(", \"identity\": \"").Append(JsonEscape(TypeIdentity(member.Type)))
+                .Append("\", \"module\": \"").Append(JsonEscape(member.Type.ModuleName ?? string.Empty))
+                .Append("\", \"provider\": \"").Append(JsonEscape(LogicalProviderIdentity(member.Type,
+                    dependencyContext)))
+                .Append("\", \"size\": ").Append(member.Type.Size.ToString(CultureInfo.InvariantCulture))
+                .Append(", \"alignment\": ").Append(member.Type.Alignment.ToString(CultureInfo.InvariantCulture));
+            if (member.Type is RecordTypeSymbol record)
+                builder.Append(", \"fields\": [")
+                    .Append(string.Join(", ", record.Fields.OrderBy(field => field.Ordinal)
+                        .Select(field => FieldJson(field, dependencyContext, sourceIds))))
+                    .Append("], \"members\": []");
+            else if (member.Type is EnumTypeSymbol enumType)
+                builder.Append(", \"members\": [")
+                    .Append(string.Join(", ", enumType.Members.OrderBy(enumMember => enumMember.Ordinal)
+                        .Select(enumMember => EnumMemberJson(enumMember, sourceIds))))
+                    .Append(']');
+            else
+                throw new InvalidDataException(
+                    $"Unsupported public nominal type metadata kind '{member.Type.Kind}'.");
+        }
+        return builder.Append(", \"location\": ").Append(LocationJson(member.Source,
+            member.DeclarationSpan, sourceIds)).Append('}').ToString();
+    }
+
     private static string BuildManifest(SmileProjectSourceSet project, IEnumerable<string> modules,
         IEnumerable<string> sources, IReadOnlyDictionary<string, string> hashes,
         IReadOnlyList<SmileLibraryDependency> dependencies)
     {
         var moduleJson = string.Join(", ", modules.OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item, StringComparer.Ordinal)
             .Select(item => "\"" + JsonEscape(item) + "\""));
         var sourceJson = string.Join(", ", sources.OrderBy(item => item, StringComparer.Ordinal)
             .Select(item => "\"" + JsonEscape(item) + "\""));
         var hashJson = string.Join(",\n", hashes.OrderBy(item => item.Key, StringComparer.Ordinal)
             .Select(item => "    \"" + JsonEscape(item.Key) + "\": \"" + JsonEscape(item.Value) + "\""));
         var dependencyJson = string.Join(",\n", dependencies.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Name, StringComparer.Ordinal).ThenBy(item => item.Version, StringComparer.Ordinal)
             .Select(item => "    {\"name\": \"" + JsonEscape(item.Name) + "\", \"version\": \"" +
                             JsonEscape(item.Version) + "\"}"));
-        return "{\n  \"formatVersion\": 5,\n  \"name\": \"" + JsonEscape(project.LibraryName) +
-               "\",\n  \"version\": \"" + JsonEscape(project.Version) + "\",\n  \"modules\": [" + moduleJson +
+        return "{\n  \"formatVersion\": 6,\n  \"name\": \"" + JsonEscape(project.LibraryName) +
+               "\",\n  \"version\": \"" + JsonEscape(project.Version) +
+               "\",\n  \"provider\": \"" + JsonEscape(project.LibraryName + "@" + project.Version) +
+               "\",\n  \"modules\": [" + moduleJson +
                "],\n  \"sources\": [" + sourceJson + "],\n  \"sourceHashes\": {\n" + hashJson +
                "\n  },\n  \"dependencies\": [\n" + dependencyJson + "\n  ]\n}\n";
     }
@@ -517,12 +565,16 @@ public static class SmileLibraryPackage
     private static SmileLibraryIdentity ParseIdentity(PackageManifest manifest)
     {
         if (manifest.FormatVersion != CurrentFormatVersion)
-            throw new InvalidDataException(manifest.FormatVersion is 1 or 2 or 3 or 4
-                ? $"SMILE library formatVersion {manifest.FormatVersion} is obsolete; rebuild the library with the current SMILE compiler (formatVersion 5)."
-                : $"Unsupported SMILE library formatVersion {manifest.FormatVersion}; expected {CurrentFormatVersion}. Rebuild the library with the current SMILE compiler.");
+            throw new InvalidDataException(manifest.FormatVersion is >= 1 and <= 5
+                ? $"SMILE library formatVersion {manifest.FormatVersion} is no longer supported; rebuild the library with the current SMILE compiler (expected formatVersion 6)."
+                : $"Unsupported SMILE library formatVersion {manifest.FormatVersion}; expected 6. Rebuild the library with the current SMILE compiler.");
         var name = RequiredValue(manifest.Name, "name");
         var version = RequiredValue(manifest.Version, "version");
         ValidateExactVersion(version, $"library '{name}'");
+        var provider = RequiredValue(manifest.Provider, "provider");
+        if (!string.Equals(provider, name + "@" + version, StringComparison.Ordinal))
+            throw new InvalidDataException(
+                $"SMILE library manifest provider must be the canonical identity '{name}@{version}'.");
         var modules = RequiredValues(manifest.Modules, "modules");
         var dependencies = (manifest.Dependencies ?? Array.Empty<PackageDependency>())
             .Select(dependency => new SmileLibraryDependency(RequiredValue(dependency.Name, "dependency name"),
@@ -562,6 +614,15 @@ public static class SmileLibraryPackage
         if (result.Any(string.IsNullOrWhiteSpace) || result.Distinct(StringComparer.OrdinalIgnoreCase).Count() != result.Length)
             throw new InvalidDataException($"SMILE library manifest '{name}' contains empty or duplicate values.");
         return result;
+    }
+
+    private static void ValidateSourceHashes(IReadOnlyList<string> sources,
+        IReadOnlyDictionary<string, string> sourceHashes)
+    {
+        var declaredSources = new HashSet<string>(sources, StringComparer.Ordinal);
+        if (sourceHashes.Count != declaredSources.Count || sourceHashes.Keys.Any(key => !declaredSources.Contains(key)))
+            throw new InvalidDataException(
+                "SMILE library manifest sourceHashes must match the declared sources exactly.");
     }
 
     private static void ValidateEntries(ZipArchive archive)
@@ -650,52 +711,89 @@ public static class SmileLibraryPackage
         _ => throw new InvalidDataException($"Unsupported SMILE constant value type '{value.GetType().Name}'.")
     };
 
-    private static string TypeIdentity(SmileType type) => type is RecordTypeSymbol record
-        ? record.RuntimeIdentity
-        : type.Name;
+    private static string TypeIdentity(SmileType type) => type.Source == null ? type.Name : type.RuntimeIdentity;
+
+    private static string TypeReferenceJson(SmileType type,
+        SmileCompilationDependencyContext dependencyContext)
+    {
+        if (type.Source == null)
+            return "{\"kind\": \"primitive\", \"name\": \"" + JsonEscape(type.Name) + "\"}";
+        var kind = type.Kind switch
+        {
+            SmileTypeKind.Record => "type",
+            SmileTypeKind.Enum => "enum",
+            _ => type.Kind.ToString().ToLowerInvariant()
+        };
+        return "{\"kind\": \"" + JsonEscape(kind) + "\", \"name\": \"" + JsonEscape(type.Name) +
+               "\", \"identity\": \"" + JsonEscape(TypeIdentity(type)) + "\", \"module\": \"" +
+               JsonEscape(type.ModuleName ?? string.Empty) + "\", \"provider\": \"" +
+               JsonEscape(LogicalProviderIdentity(type, dependencyContext)) + "\"}";
+    }
 
     private static string LogicalProviderIdentity(SmileType type,
         SmileCompilationDependencyContext dependencyContext)
     {
-        if (type is not RecordTypeSymbol record)
+        if (type.Source == null)
             return string.Empty;
-        if (!dependencyContext.TryGetProviderDescriptor(record.ProviderIdentity, out var descriptor) ||
+        if (!dependencyContext.TryGetProviderDescriptor(type.ProviderIdentity, out var descriptor) ||
             string.IsNullOrWhiteSpace(descriptor.LogicalIdentity))
             throw new InvalidDataException(
-                $"Public record type '{record.RuntimeIdentity}' has no exact logical library provider descriptor.");
+                $"Public nominal type '{type.RuntimeIdentity}' has no exact logical library provider descriptor.");
         return descriptor.LogicalIdentity;
     }
 
-    private static void AppendTypeProvider(StringBuilder builder, string propertyName, SmileType type,
-        SmileCompilationDependencyContext dependencyContext)
+    private static string SourceId(SourceText source, IReadOnlyDictionary<string, string> sourceIds)
     {
-        if (type is RecordTypeSymbol)
-            builder.Append(", \"").Append(propertyName).Append("\": \"")
-                .Append(JsonEscape(LogicalProviderIdentity(type, dependencyContext))).Append('"');
+        var path = SmileSourceDocument.NormalizePath(source.FilePath);
+        if (!sourceIds.TryGetValue(path, out var sourceId))
+            throw new InvalidDataException($"Public API source '{source.FilePath}' has no declared package source ID.");
+        ValidateEntryName(sourceId);
+        if (!sourceId.StartsWith("src/", StringComparison.Ordinal))
+            throw new InvalidDataException($"Public API source ID is outside src/: {sourceId}");
+        return sourceId;
     }
 
-    private static string ParameterJson(VariableSymbol parameter,
-        SmileCompilationDependencyContext dependencyContext)
+    private static string LocationJson(SourceText source, TextSpan span,
+        IReadOnlyDictionary<string, string> sourceIds)
+    {
+        source.GetLineColumn(span.Start, out var line, out var column);
+        return "{\"source\": \"" + JsonEscape(SourceId(source, sourceIds)) + "\", \"line\": " +
+               line.ToString(CultureInfo.InvariantCulture) + ", \"column\": " +
+               column.ToString(CultureInfo.InvariantCulture) + ", \"length\": " +
+               span.Length.ToString(CultureInfo.InvariantCulture) + "}";
+    }
+
+    private static string ParameterJson(VariableSymbol parameter, int ordinal,
+        SmileCompilationDependencyContext dependencyContext, IReadOnlyDictionary<string, string> sourceIds)
     {
         var builder = new StringBuilder("{\"name\": \"").Append(JsonEscape(parameter.Name))
-            .Append("\", \"type\": \"").Append(JsonEscape(TypeIdentity(parameter.Type))).Append('"');
-        AppendTypeProvider(builder, "typeProvider", parameter.Type, dependencyContext);
-        return builder.Append(", \"mode\": \"").Append(parameter.ParameterMode).Append("\"}").ToString();
+            .Append("\", \"type\": ").Append(TypeReferenceJson(parameter.Type, dependencyContext))
+            .Append(", \"mode\": \"").Append(parameter.ParameterMode)
+            .Append("\", \"optional\": false, \"default\": null, \"ordinal\": ")
+            .Append(ordinal.ToString(CultureInfo.InvariantCulture)).Append(", \"location\": ")
+            .Append(LocationJson(parameter.Source, parameter.DeclarationSpan, sourceIds));
+        return builder.Append('}').ToString();
     }
 
     private static string FieldJson(RecordFieldSymbol field,
-        SmileCompilationDependencyContext dependencyContext)
+        SmileCompilationDependencyContext dependencyContext, IReadOnlyDictionary<string, string> sourceIds)
     {
-        field.Source.GetLineColumn(field.DeclarationSpan.Start, out var line, out var column);
-        var builder = new StringBuilder("{\"name\": \"").Append(JsonEscape(field.Name))
-            .Append("\", \"type\": \"").Append(JsonEscape(TypeIdentity(field.Type))).Append('"');
-        AppendTypeProvider(builder, "typeProvider", field.Type, dependencyContext);
-        return builder.Append(", \"ordinal\": ").Append(field.Ordinal.ToString(CultureInfo.InvariantCulture))
+        return new StringBuilder("{\"name\": \"").Append(JsonEscape(field.Name))
+            .Append("\", \"visibility\": \"Public\", \"type\": ")
+            .Append(TypeReferenceJson(field.Type, dependencyContext))
+            .Append(", \"ordinal\": ").Append(field.Ordinal.ToString(CultureInfo.InvariantCulture))
             .Append(", \"offset\": ").Append(field.Offset.ToString(CultureInfo.InvariantCulture))
-            .Append(", \"source\": \"").Append(JsonEscape(Normalize(Path.GetFileName(field.Source.FilePath))))
-            .Append("\", \"line\": ").Append(line.ToString(CultureInfo.InvariantCulture))
-            .Append(", \"column\": ").Append(column.ToString(CultureInfo.InvariantCulture)).Append('}').ToString();
+            .Append(", \"location\": ").Append(LocationJson(field.Source, field.DeclarationSpan, sourceIds))
+            .Append('}').ToString();
     }
+
+    private static string EnumMemberJson(EnumMemberSymbol member,
+        IReadOnlyDictionary<string, string> sourceIds) =>
+        new StringBuilder("{\"name\": \"").Append(JsonEscape(member.Name))
+            .Append("\", \"value\": ").Append(member.Value.ToString(CultureInfo.InvariantCulture))
+            .Append(", \"ordinal\": ").Append(member.Ordinal.ToString(CultureInfo.InvariantCulture))
+            .Append(", \"location\": ").Append(LocationJson(member.Source, member.DeclarationSpan, sourceIds))
+            .Append('}').ToString();
 
     [DataContract]
     private sealed class PackageManifest
@@ -703,10 +801,11 @@ public static class SmileLibraryPackage
         [DataMember(Name = "formatVersion", Order = 0)] public int FormatVersion { get; set; }
         [DataMember(Name = "name", Order = 1)] public string? Name { get; set; }
         [DataMember(Name = "version", Order = 2)] public string? Version { get; set; }
-        [DataMember(Name = "modules", Order = 3)] public string[]? Modules { get; set; }
-        [DataMember(Name = "sources", Order = 4)] public string[]? Sources { get; set; }
-        [DataMember(Name = "sourceHashes", Order = 5)] public Dictionary<string, string>? SourceHashes { get; set; }
-        [DataMember(Name = "dependencies", Order = 6)] public PackageDependency[]? Dependencies { get; set; }
+        [DataMember(Name = "provider", Order = 3)] public string? Provider { get; set; }
+        [DataMember(Name = "modules", Order = 4)] public string[]? Modules { get; set; }
+        [DataMember(Name = "sources", Order = 5)] public string[]? Sources { get; set; }
+        [DataMember(Name = "sourceHashes", Order = 6)] public Dictionary<string, string>? SourceHashes { get; set; }
+        [DataMember(Name = "dependencies", Order = 7)] public PackageDependency[]? Dependencies { get; set; }
     }
 
     [DataContract]
@@ -935,6 +1034,7 @@ public static class SmileLibraryProviderResolver
     {
         foreach (var provider in providers.Where(item => item.Kind == SmileLibraryProviderKind.Package))
         {
+            var package = provider.Package!;
             var ownedPaths = new HashSet<string>(provider.Sources.Select(source => source.FilePath),
                 StringComparer.OrdinalIgnoreCase);
             var errors = analysis.Diagnostics.Where(diagnostic =>
@@ -947,14 +1047,16 @@ public static class SmileLibraryProviderResolver
 
             var modules = analysis.SemanticModel.Modules.Values.Where(module =>
                     string.Equals(module.ProviderIdentity, provider.ProviderPath, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(module => module.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+                .OrderBy(module => module.Name, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(module => module.Name, StringComparer.Ordinal).ToArray();
             if (!provider.Identity.Modules.SequenceEqual(modules.Select(module => module.Name),
                     StringComparer.OrdinalIgnoreCase))
                 throw new SmileProjectDiagnosticException("SML3207",
                     $"Packaged library '{provider.Identity.Name}' {provider.Identity.Version} at '{provider.ProviderPath}' " +
                     "has a manifest module list that does not match its owned source modules.", provider.ProviderPath);
-            var expectedApi = SmileLibraryPackage.BuildPublicApi(modules, analysis.DependencyContext);
-            if (!string.Equals(provider.Package!.PublicApiMetadata, expectedApi, StringComparison.Ordinal))
+            var expectedApi = SmileLibraryPackage.BuildPublicApi(modules, analysis.DependencyContext,
+                provider.Identity.Name, provider.Identity.Version, package.SourceIds);
+            if (!string.Equals(package.PublicApiMetadata, expectedApi, StringComparison.Ordinal))
                 throw new SmileProjectDiagnosticException("SML3207",
                     $"Packaged library '{provider.Identity.Name}' {provider.Identity.Version} at '{provider.ProviderPath}' " +
                     "has public API metadata that does not match authoritative analysis.", provider.ProviderPath);

@@ -1,0 +1,55 @@
+Module Example.Directions
+
+Option Explicit
+
+Public Const DIRECTION_BASE = 10
+
+Public Enum Direction
+    None = DIRECTION_BASE
+    Up
+    Down
+    Left = -5
+    Right = -5
+End Enum
+
+Public Type DirectionState
+    Facing As Direction
+End Type
+
+Public Function CreateState(Value As Direction) As DirectionState
+
+    Dim Result As DirectionState
+
+    Result.Facing = Value
+
+    Return Result
+
+End Function
+
+Public Function ChooseDirection(ChooseUp As Boolean) As Direction
+
+    If ChooseUp Then
+        Return Direction.Up
+    Else
+        Return Direction.Down
+    End If
+
+End Function
+
+Public Sub SetDirection(ByRef Value As Direction, NewValue As Direction)
+
+    Value = NewValue
+
+End Sub
+
+Public Function IsHorizontal(Value As Direction) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Value = Direction.Left Or Value = Direction.Right
+
+    Return ReturnValue
+
+End Function
+
+End Module

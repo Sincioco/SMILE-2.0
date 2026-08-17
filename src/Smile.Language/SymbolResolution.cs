@@ -13,6 +13,8 @@ public enum SmileResolvedSymbolKind
     Constant,
     Array,
     Type,
+    Enum,
+    EnumMember,
     Field,
     Parameter,
     Local
@@ -23,8 +25,9 @@ public sealed class SmileResolvedSymbol
     internal SmileResolvedSymbol(SmileResolvedSymbolKind kind, string name, string qualifiedName,
         string alias, TextSpan referenceSpan, SourceLocation? declarationLocation, string providerIdentity,
         string moduleName, string signature, SmileDocumentation documentation, bool requiresGameWindow,
-        RoutineSymbol? routine = null, VariableSymbol? variable = null, RecordTypeSymbol? type = null,
-        RecordFieldSymbol? field = null, RecordTypeSymbol? containingType = null)
+        RoutineSymbol? routine = null, VariableSymbol? variable = null, NominalTypeSymbol? type = null,
+        RecordFieldSymbol? field = null, RecordTypeSymbol? containingType = null,
+        EnumMemberSymbol? enumMember = null)
     {
         Kind = kind;
         Name = name;
@@ -42,6 +45,7 @@ public sealed class SmileResolvedSymbol
         Type = type;
         Field = field;
         ContainingType = containingType;
+        EnumMember = enumMember;
     }
 
     public SmileResolvedSymbolKind Kind { get; }
@@ -57,9 +61,10 @@ public sealed class SmileResolvedSymbol
     public bool RequiresGameWindow { get; }
     internal RoutineSymbol? Routine { get; }
     internal VariableSymbol? Variable { get; }
-    internal RecordTypeSymbol? Type { get; }
+    internal NominalTypeSymbol? Type { get; }
     internal RecordFieldSymbol? Field { get; }
     internal RecordTypeSymbol? ContainingType { get; }
+    internal EnumMemberSymbol? EnumMember { get; }
 }
 
 public sealed class SmileParameterPresentation
@@ -180,10 +185,18 @@ public static class SmileSymbolDisplayService
         return keyword + name + dimensions + " As " + FormatType(variable.Type);
     }
 
-    internal static string FormatTypeSignature(RecordTypeSymbol type)
+    internal static string FormatTypeSignature(NominalTypeSymbol type)
     {
         var name = string.IsNullOrWhiteSpace(type.ModuleName) ? type.Name : type.ModuleName + "." + type.Name;
-        return "Type " + name;
+        return (type is EnumTypeSymbol ? "Enum " : "Type ") + name;
+    }
+
+    internal static string FormatEnumMemberSignature(EnumMemberSymbol member)
+    {
+        var owner = member.ContainingType;
+        var ownerName = string.IsNullOrWhiteSpace(owner.ModuleName)
+            ? owner.Name : owner.ModuleName + "." + owner.Name;
+        return "Enum member " + ownerName + "." + member.Name + " = " + member.Value;
     }
 
     internal static string FormatFieldSignature(RecordTypeSymbol owner, RecordFieldSymbol field)
@@ -204,7 +217,7 @@ public static class SmileSymbolDisplayService
         return FormatType(fallback);
     }
 
-    private static string FormatType(SmileType type) => type.Kind == SmileTypeKind.Record
+    private static string FormatType(SmileType type) => type is NominalTypeSymbol
         ? (string.IsNullOrWhiteSpace(type.ModuleName) ? type.Name : type.ModuleName + "." + type.Name)
         : type.Name;
 }
@@ -271,6 +284,12 @@ public static class SmileSymbolService
                 symbol = CreateField(boundOwner, boundField, token.Span);
                 return true;
             }
+        }
+
+        if (analysis.SemanticModel.TryGetEnumMemberUse(syntaxTree.Source, token.Position, out var boundEnumMember))
+        {
+            symbol = CreateEnumMember(boundEnumMember, token.Span);
+            return true;
         }
 
         if (TryResolveFieldUse(analysis, syntaxTree, token, tokenIndex, currentRoutine, currentModule,
@@ -381,6 +400,22 @@ public static class SmileSymbolService
             }
         }
 
+
+        foreach (var type in analysis.SemanticModel.EnumTypes.Values.Where(type => ReferenceEquals(type.Source, syntaxTree.Source)))
+        {
+            if (SameSpan(type.DeclarationSpan, token.Span))
+            {
+                symbol = CreateType(type, token.Span);
+                return true;
+            }
+            var enumMember = type.Members.FirstOrDefault(candidate => SameSpan(candidate.DeclarationSpan, token.Span));
+            if (enumMember != null)
+            {
+                symbol = CreateEnumMember(enumMember, token.Span);
+                return true;
+            }
+        }
+
         foreach (var routine in analysis.SemanticModel.Routines.Values.Where(routine =>
                      ReferenceEquals(routine.Source, syntaxTree.Source)))
         {
@@ -475,14 +510,14 @@ public static class SmileSymbolService
     }
 
     private static bool TryResolveType(SmileAnalysisResult analysis, ModuleSymbol? currentModule, string name,
-        out RecordTypeSymbol type)
+        out NominalTypeSymbol type)
     {
         if (currentModule?.Types.TryGetValue(name, out var member) == true && member.Type != null)
         {
             type = member.Type;
             return true;
         }
-        type = analysis.SemanticModel.Types.Values.FirstOrDefault(candidate =>
+        type = analysis.SemanticModel.NominalTypes.Values.FirstOrDefault(candidate =>
             string.Equals(candidate.Name, name, StringComparison.OrdinalIgnoreCase) &&
             (candidate.ModuleName == null || string.Equals(candidate.ModuleName, currentModule?.Name,
                 StringComparison.OrdinalIgnoreCase)))!;
@@ -591,6 +626,7 @@ public static class SmileSymbolService
             SmileModuleMemberKind.Constant => SmileResolvedSymbolKind.Constant,
             SmileModuleMemberKind.Array => SmileResolvedSymbolKind.Array,
             SmileModuleMemberKind.Type => SmileResolvedSymbolKind.Type,
+            SmileModuleMemberKind.Enum => SmileResolvedSymbolKind.Enum,
             SmileModuleMemberKind.Function => SmileResolvedSymbolKind.Function,
             SmileModuleMemberKind.Subroutine => SmileResolvedSymbolKind.Subroutine,
             _ => SmileResolvedSymbolKind.Variable
@@ -627,14 +663,28 @@ public static class SmileSymbolService
             variable: variable);
     }
 
-    private static SmileResolvedSymbol CreateType(RecordTypeSymbol type, TextSpan referenceSpan)
+    private static SmileResolvedSymbol CreateType(NominalTypeSymbol type, TextSpan referenceSpan)
     {
         var qualifiedName = string.IsNullOrWhiteSpace(type.ModuleName)
             ? type.Name : type.ModuleName + "." + type.Name;
-        return new SmileResolvedSymbol(SmileResolvedSymbolKind.Type, type.Name, qualifiedName, string.Empty,
+        var kind = type is EnumTypeSymbol ? SmileResolvedSymbolKind.Enum : SmileResolvedSymbolKind.Type;
+        return new SmileResolvedSymbol(kind, type.Name, qualifiedName, string.Empty,
             referenceSpan, type.DeclarationLocation, type.ProviderIdentity, type.ModuleName ?? string.Empty,
             SmileSymbolDisplayService.FormatTypeSignature(type),
             SmileDocumentationService.GetDocumentation(type.Source!, type.DeclarationSpan.Start), false, type: type);
+    }
+
+    private static SmileResolvedSymbol CreateEnumMember(EnumMemberSymbol member, TextSpan referenceSpan)
+    {
+        var owner = member.ContainingType;
+        var ownerName = string.IsNullOrWhiteSpace(owner.ModuleName)
+            ? owner.Name : owner.ModuleName + "." + owner.Name;
+        return new SmileResolvedSymbol(SmileResolvedSymbolKind.EnumMember, member.Name,
+            ownerName + "." + member.Name, string.Empty, referenceSpan, member.DeclarationLocation,
+            owner.ProviderIdentity, owner.ModuleName ?? string.Empty,
+            SmileSymbolDisplayService.FormatEnumMemberSignature(member),
+            SmileDocumentationService.GetDocumentation(member.Source, member.DeclarationSpan.Start), false,
+            type: owner, enumMember: member);
     }
 
     private static SmileResolvedSymbol CreateField(RecordTypeSymbol owner, RecordFieldSymbol field,

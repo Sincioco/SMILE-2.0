@@ -57,6 +57,45 @@ public sealed class TypeDeclarationSyntax : StatementSyntax
     public override TextSpan Span => TextSpan.FromBounds(TypeKeyword.Span.Start, FinalTypeKeyword.Span.End);
 }
 
+public sealed class EnumMemberDeclarationSyntax : SyntaxNode
+{
+    public EnumMemberDeclarationSyntax(SyntaxToken identifier, SyntaxToken? equalsToken,
+        ExpressionSyntax? value)
+    {
+        Identifier = identifier;
+        EqualsToken = equalsToken;
+        Value = value;
+    }
+
+    public SyntaxToken Identifier { get; }
+    public SyntaxToken? EqualsToken { get; }
+    public ExpressionSyntax? Value { get; }
+    public override TextSpan Span => Value == null
+        ? Identifier.Span
+        : TextSpan.FromBounds(Identifier.Span.Start, Value.Span.End);
+}
+
+public sealed class EnumDeclarationSyntax : StatementSyntax
+{
+    public EnumDeclarationSyntax(SyntaxToken enumKeyword, SyntaxToken identifier,
+        IReadOnlyList<EnumMemberDeclarationSyntax> members, SyntaxToken endKeyword,
+        SyntaxToken finalEnumKeyword)
+    {
+        EnumKeyword = enumKeyword;
+        Identifier = identifier;
+        Members = members;
+        EndKeyword = endKeyword;
+        FinalEnumKeyword = finalEnumKeyword;
+    }
+
+    public SyntaxToken EnumKeyword { get; }
+    public SyntaxToken Identifier { get; }
+    public IReadOnlyList<EnumMemberDeclarationSyntax> Members { get; }
+    public SyntaxToken EndKeyword { get; }
+    public SyntaxToken FinalEnumKeyword { get; }
+    public override TextSpan Span => TextSpan.FromBounds(EnumKeyword.Span.Start, FinalEnumKeyword.Span.End);
+}
+
 public sealed class ParameterSyntax : SyntaxNode
 {
     public ParameterSyntax(SyntaxToken? modeKeyword, SyntaxToken identifier, SyntaxToken? asKeyword,

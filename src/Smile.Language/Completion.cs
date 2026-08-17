@@ -15,7 +15,8 @@ public enum SmileCompletionKind
     Function,
     Module,
     Type,
-    Field
+    Field,
+    EnumMember
 }
 
 public sealed class SmileCompletion
@@ -68,7 +69,7 @@ public static class SmileCompletionService
         {
             var typeContext = afterAs || qualifiedTypeContext;
             return importedModule.PublicMembers.Where(member => typeContext
-                    ? member.Kind == SmileModuleMemberKind.Type
+                    ? member.Kind is SmileModuleMemberKind.Type or SmileModuleMemberKind.Enum
                     : member.Kind != SmileModuleMemberKind.Type)
                 .OrderBy(member => member.Name, StringComparer.OrdinalIgnoreCase)
                 .Select(member => MemberCompletion(member, analysis.DependencyContext)).ToArray();
@@ -82,13 +83,13 @@ public static class SmileCompletionService
                     ? "SMILE opaque loaded 2D image resource"
                     : $"SMILE built-in type {name}", SmileCompletionKind.Type);
             var availableTypes = currentModule == null
-                ? analysis.SemanticModel.Types.Values.Where(type => type.ModuleName == null)
+                ? analysis.SemanticModel.NominalTypes.Values.Where(type => type.ModuleName == null)
                 : currentModule.Types.Values.Where(member => member.Type != null).Select(member => member.Type!);
             foreach (var type in availableTypes)
                 types[type.Name] = TypeCompletion(type, analysis.DependencyContext);
             foreach (var import in analysis.SemanticModel.GetImports(syntaxTree.Source))
                 types[import.Key] = new SmileCompletion(import.Key,
-                    $"Import alias for record types in module {import.Value.Name}", SmileCompletionKind.Module);
+                    $"Import alias for nominal types in module {import.Value.Name}", SmileCompletionKind.Module);
             return types.Values.OrderBy(item => item.DisplayText, StringComparer.OrdinalIgnoreCase).ToArray();
         }
 
@@ -127,6 +128,13 @@ public static class SmileCompletionService
                 SmileSymbolDisplayService.FormatRoutineSignature(routine, includeModuleName: false),
                 kind);
         }
+
+        var visibleEnums = currentModule == null
+            ? analysis.SemanticModel.EnumTypes.Values.Where(type => type.ModuleName == null)
+            : currentModule.Types.Values.Where(member => member.Type is EnumTypeSymbol)
+                .Select(member => (EnumTypeSymbol)member.Type!);
+        foreach (var enumType in visibleEnums)
+            completions[enumType.Name] = TypeCompletion(enumType, analysis.DependencyContext);
 
         foreach (var import in analysis.SemanticModel.GetImports(syntaxTree.Source))
             completions[import.Key] = new SmileCompletion(import.Key,
@@ -213,13 +221,18 @@ public static class SmileCompletionService
         return new SmileCompletion(member.Name, $"Public module member {member.Name}", SmileCompletionKind.Variable);
     }
 
-    private static SmileCompletion TypeCompletion(RecordTypeSymbol type,
+    private static SmileCompletion TypeCompletion(NominalTypeSymbol type,
         SmileCompilationDependencyContext dependencyContext)
     {
-        var fields = string.Join(", ", type.Fields.Select(field => $"{field.Name} As {field.Type.Name}"));
         var provider = type.ModuleName == null ? string.Empty :
             $" from module {type.ModuleName} ({DescribeProvider(type.ProviderIdentity, dependencyContext)})";
-        return new SmileCompletion(type.Name, $"Type {type.Name} ({fields}){provider}", SmileCompletionKind.Type);
+        var description = type switch
+        {
+            RecordTypeSymbol record => $"Type {record.Name} ({string.Join(", ", record.Fields.Select(field => $"{field.Name} As {field.Type.Name}"))})",
+            EnumTypeSymbol enumType => $"Enum {enumType.Name} ({string.Join(", ", enumType.Members.Select(member => $"{member.Name} = {member.Value}"))})",
+            _ => $"Type {type.Name}"
+        };
+        return new SmileCompletion(type.Name, description + provider, SmileCompletionKind.Type);
     }
 
     private static IReadOnlyList<SmileCompletion>? TryGetFieldCompletions(SmileAnalysisResult analysis,
@@ -247,6 +260,8 @@ public static class SmileCompletionService
         var parts = ReceiverParts(tokens, tokens.Length - 1);
         if (parts.Count == 0)
             return null;
+        if (TryResolveEnumReceiver(analysis, syntaxTree, currentModule, parts, out var enumReceiver))
+            return EnumMemberCompletions(enumReceiver, analysis.DependencyContext);
         var root = parts[0];
         var routine = analysis.SemanticModel.Routines.Values.FirstOrDefault(candidate =>
             ReferenceEquals(candidate.Source, syntaxTree.Source) && candidate.Declaration.Span.Start <= position &&
@@ -290,6 +305,42 @@ public static class SmileCompletionService
                 $" from module {target.ModuleName} ({DescribeProvider(target.ProviderIdentity, dependencyContext)})"),
             SmileCompletionKind.Field)).ToArray();
 
+    private static IReadOnlyList<SmileCompletion> EnumMemberCompletions(EnumTypeSymbol target,
+        SmileCompilationDependencyContext dependencyContext) =>
+        target.Members.OrderBy(member => member.Ordinal).Select(member => new SmileCompletion(member.Name,
+            $"{target.Name}.{member.Name} = {member.Value}" +
+            (target.ModuleName == null ? string.Empty :
+                $" from module {target.ModuleName} ({DescribeProvider(target.ProviderIdentity, dependencyContext)})"),
+            SmileCompletionKind.EnumMember)).ToArray();
+
+    private static bool TryResolveEnumReceiver(SmileAnalysisResult analysis, SyntaxTree syntaxTree,
+        ModuleSymbol? currentModule, IReadOnlyList<string> parts, out EnumTypeSymbol enumType)
+    {
+        enumType = null!;
+        if (parts.Count == 1)
+        {
+            if (currentModule?.Types.TryGetValue(parts[0], out var ownMember) == true &&
+                ownMember.Type is EnumTypeSymbol ownEnum)
+            {
+                enumType = ownEnum;
+                return true;
+            }
+            enumType = analysis.SemanticModel.EnumTypes.Values.FirstOrDefault(candidate =>
+                candidate.ModuleName == null && string.Equals(candidate.Name, parts[0],
+                    StringComparison.OrdinalIgnoreCase))!;
+            return enumType != null;
+        }
+        if (parts.Count == 2 && analysis.SemanticModel.GetImports(syntaxTree.Source)
+                .TryGetValue(parts[0], out var imported) &&
+            imported.Types.TryGetValue(parts[1], out var importedMember) &&
+            importedMember.Visibility == ModuleVisibility.Public && importedMember.Type is EnumTypeSymbol importedEnum)
+        {
+            enumType = importedEnum;
+            return true;
+        }
+        return false;
+    }
+
     private static bool TryGetLeadingReceiverParts(SyntaxTree syntaxTree, IReadOnlyList<SyntaxToken> tokens,
         int finalDotIndex, out IReadOnlyList<string> parts)
     {
@@ -332,7 +383,8 @@ public static class SmileCompletionService
     private static bool IsMemberNameToken(SyntaxKind kind) =>
         kind is SyntaxKind.IdentifierToken or SyntaxKind.KeyKeyword or SyntaxKind.WindowKeyword or
             SyntaxKind.SizeKeyword or SyntaxKind.DrawKeyword or SyntaxKind.LineKeyword or SyntaxKind.TextKeyword or
-            SyntaxKind.LeftKeyword or SyntaxKind.RightKeyword ||
+            SyntaxKind.LeftKeyword or SyntaxKind.RightKeyword or SyntaxKind.NoneKeyword or SyntaxKind.UpKeyword or
+            SyntaxKind.DownKeyword ||
         kind >= SyntaxKind.UnloadKeyword && kind <= SyntaxKind.ChannelKeyword;
 
     private static IReadOnlyList<string> ReceiverParts(IReadOnlyList<SyntaxToken> tokens, int finalDotIndex)

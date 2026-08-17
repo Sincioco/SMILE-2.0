@@ -53,7 +53,10 @@ public static class SmileSourceFormatter
             ["Line"] = "Line",
             ["Window"] = "Window",
             ["Size"] = "Size",
-            ["Key"] = "Key"
+            ["Key"] = "Key",
+            ["None"] = "None",
+            ["Up"] = "Up",
+            ["Down"] = "Down"
         };
 
     public static string Format(string sourceText, bool formatLongIf, int maximumLineLength,
@@ -177,7 +180,8 @@ public static class SmileSourceFormatter
     private static bool IsOrdinaryIdentifier(SmileResolvedSymbolKind kind) =>
         kind is SmileResolvedSymbolKind.Module or SmileResolvedSymbolKind.Function or
             SmileResolvedSymbolKind.Subroutine or SmileResolvedSymbolKind.Variable or
-            SmileResolvedSymbolKind.Array or SmileResolvedSymbolKind.Type or
+            SmileResolvedSymbolKind.Array or SmileResolvedSymbolKind.Type or SmileResolvedSymbolKind.Enum or
+            SmileResolvedSymbolKind.EnumMember or
             SmileResolvedSymbolKind.Field or SmileResolvedSymbolKind.Parameter or
             SmileResolvedSymbolKind.Local;
 
@@ -229,14 +233,20 @@ public static class SmileSourceFormatter
     {
         if (expression is LiteralExpressionSyntax or NameExpressionSyntax)
             return true;
-        if (expression is not QualifiedNameExpressionSyntax qualified)
+        var member = expression switch
+        {
+            QualifiedNameExpressionSyntax qualified => qualified.Member,
+            FieldAccessExpressionSyntax field => field.Field,
+            _ => null
+        };
+        if (member == null)
             return false;
 
         var tokenIndex = -1;
         for (var index = 0; index < tree.Tokens.Count; index++)
         {
             var token = tree.Tokens[index];
-            if (token.Span.Start == qualified.Member.Span.Start && token.Span.Length == qualified.Member.Span.Length)
+            if (token.Span.Start == member.Span.Start && token.Span.Length == member.Span.Length)
             {
                 tokenIndex = index;
                 break;
@@ -244,7 +254,8 @@ public static class SmileSourceFormatter
         }
         return tokenIndex >= 0 &&
                SmileSymbolService.TryResolveToken(analysis, tree, tree.Tokens[tokenIndex], tokenIndex, out var symbol) &&
-               symbol.Kind is SmileResolvedSymbolKind.Constant or SmileResolvedSymbolKind.Variable;
+               symbol.Kind is SmileResolvedSymbolKind.Constant or SmileResolvedSymbolKind.Variable or
+                   SmileResolvedSymbolKind.EnumMember;
     }
 
     private static SyntaxToken? FindElseToken(SyntaxTree tree, IfStatementSyntax statement)

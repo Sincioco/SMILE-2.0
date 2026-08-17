@@ -1,0 +1,28 @@
+Option Explicit
+
+Enum TrafficLight
+    None
+    Halt = 10
+    Ready
+    Go = Max(20, 12)
+End Enum
+
+Dim Light As TrafficLight
+Dim History[2] As TrafficLight
+
+Light = TrafficLight.Halt
+History[0] = Light
+
+Call ChangeLight(History[0], TrafficLight.Go)
+
+If History[0] = TrafficLight.Go Then
+    Print "Standalone Enum"
+End If
+
+End Program
+
+Sub ChangeLight(ByRef Value As TrafficLight, NewValue As TrafficLight)
+
+    Value = NewValue
+
+End Sub

@@ -1,0 +1,8 @@
+Option Explicit
+
+Enum Direction
+    Up
+    up
+End Enum
+
+End Program

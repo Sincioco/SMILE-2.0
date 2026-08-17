@@ -1,0 +1,13 @@
+Option Explicit
+
+Enum Direction
+    Up
+End Enum
+
+Dim Value As Direction
+Dim NumericValue As Number
+
+Value = 0
+NumericValue = Direction.Up
+
+End Program

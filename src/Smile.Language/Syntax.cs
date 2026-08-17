@@ -124,6 +124,7 @@ public enum SyntaxKind
     ByRefKeyword,
     ByValKeyword,
     TypeKeyword,
+    EnumKeyword,
     ImageKeyword,
     UnloadKeyword,
     ClipKeyword,
@@ -295,6 +296,7 @@ public static class SyntaxFacts
         ["ByRef"] = SyntaxKind.ByRefKeyword,
         ["ByVal"] = SyntaxKind.ByValKeyword,
         ["Type"] = SyntaxKind.TypeKeyword,
+        ["Enum"] = SyntaxKind.EnumKeyword,
         ["Image"] = SyntaxKind.ImageKeyword,
         ["Unload"] = SyntaxKind.UnloadKeyword,
         ["Clip"] = SyntaxKind.ClipKeyword,
@@ -364,7 +366,7 @@ public static class SyntaxFacts
     public static IReadOnlyList<string> GetKeywordTexts() => new List<string>(Keywords.Keys);
 
     public static bool IsKeyword(SyntaxKind kind) =>
-        (kind >= SyntaxKind.DimKeyword && kind <= SyntaxKind.TypeKeyword) ||
+        (kind >= SyntaxKind.DimKeyword && kind <= SyntaxKind.EnumKeyword) ||
         (kind >= SyntaxKind.ImageKeyword && kind <= SyntaxKind.ChannelKeyword);
 
     public static bool IsBuiltInConstant(SyntaxKind kind) =>

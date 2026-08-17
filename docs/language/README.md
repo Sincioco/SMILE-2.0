@@ -4,7 +4,7 @@
 
 ## Modules and imports
 
-`Module dotted.name` ... `End Module` declares a module. Declarations are private unless prefixed with `Public`; `Private` is available when explicit intent helps. A physical source imports a module with `Import dotted.name As Alias`, then accesses exported constants, arrays, functions, subroutines, and record types through that alias. Imports are scoped to that physical source. One module may span files from one provider. Inside a module, an unqualified record type must be built in or owned by that same module, including a type declared in another physical module source; external module types require explicit `Alias.Type` qualification. Project-global and ambient sibling-library types never enter a module's unqualified type scope. Duplicate providers, import cycles, private access, unknown members, and module access to consumer globals are diagnosed by the shared binder.
+`Module dotted.name` ... `End Module` declares a module. Declarations are private unless prefixed with `Public`; `Private` is available when explicit intent helps. A physical source imports a module with `Import dotted.name As Alias`, then accesses exported constants, arrays, functions, subroutines, record types, and enums through that alias. Imports are scoped to that physical source. One module may span files from one provider. Inside a module, an unqualified nominal type must be built in or owned by that same module, including a type declared in another physical module source; external module types require explicit `Alias.Type` qualification. Project-global and ambient sibling-library types never enter a module's unqualified type scope. Duplicate providers, import cycles, private access, unknown members, and module access to consumer globals are diagnosed by the shared binder.
 
 ```smile
 Import Smile.Math.Extras As Math
@@ -15,7 +15,7 @@ Library compilation requires every source to declare a module. Application proje
 
 SMILE evolves only when current syntax cannot express a requirement clearly. New general-purpose features prefer readable, established BASIC wording; the smallest beginner-friendly C#-inspired concept is used only when BASIC has no suitable precedent. The language avoids aliases, multiple spellings, clever punctuation, and game-specific statements. Syntax, diagnostics, examples, and documentation change proportionally through the shared authority.
 
-SMILE is case-insensitive and normally line-oriented. Balanced expression parentheses and balanced routine-declaration parameter parentheses provide the documented continuation contexts; newlines remain significant everywhere else. An apostrophe starts a comment. Values include signed 64-bit `Number`, `Boolean`, mutable UTF-8 `Text`, and user-defined record types.
+SMILE is case-insensitive and normally line-oriented. Balanced expression parentheses and balanced routine-declaration parameter parentheses provide the documented continuation contexts; newlines remain significant everywhere else. An apostrophe starts a comment. Values include signed 64-bit `Number`, `Boolean`, mutable UTF-8 `Text`, and user-defined nominal record and enum types.
 
 ## Explicit declarations and built-in types
 
@@ -32,9 +32,9 @@ Dim Flags[10] As Boolean
 Dim LegacyGrid[20, 15]
 ```
 
-Scalar `Dim` requires `As Number`, `As Boolean`, or `As Text`. Arrays may use those types; an untyped legacy array remains a `Number` array. Defaults are `0`, `False`, and `""`. `Text` supports value assignment, `+` concatenation, `=`/`<>` ordinal equality, constants, arrays, routine parameters/returns, `Print`, text `Select Case`, and any `Text` expression in `Draw Text`. There are no implicit conversions between the three built-in types.
+Scalar `Dim` requires `As Type`. Arrays may use built-in or visible nominal types; an untyped legacy array remains a `Number` array. Built-in defaults are `0`, `False`, and `""`; records default recursively and enums default to their underlying zero value. `Text` supports value assignment, `+` concatenation, `=`/`<>` ordinal equality, constants, arrays, routine parameters/returns, `Print`, text `Select Case`, and any `Text` expression in `Draw Text`. There are no implicit conversions among built-in or nominal types.
 
-Routine parameters accept `[ByVal | ByRef] Name [As Type]`. Missing mode means `ByVal`; missing type preserves the legacy numeric calling convention, including converting a `Boolean` argument to `0` or `1` for old untyped `ByVal` routines. Explicitly typed parameters still require an exact type. A function can declare `As Number`, `As Boolean`, or `As Text`; legacy omitted return types are inferred consistently from every value return. `ByRef` requires an exact-type writable scalar, array element, or writable parameter. Routine-local `Dim` declarations are visible from their declaration to routine end and may shadow a global.
+Routine parameters accept `[ByVal | ByRef] Name [As Type]`. Missing mode means `ByVal`; missing type preserves the legacy numeric calling convention, including converting a `Boolean` argument to `0` or `1` for old untyped `ByVal` routines. Explicitly typed parameters still require an exact type. A function can return any visible supported type; legacy omitted return types are inferred consistently from every value return. `ByRef` requires an exact-type writable scalar, array element, record field, or writable parameter. Routine-local `Dim` declarations are visible from their declaration to routine end and may shadow a global.
 
 ```smile
 Sub Rename(ByRef Name As Text, NewName As Text)
@@ -106,7 +106,37 @@ Record identity is exact and nominal: separately declared types with identical f
 
 Native records use deterministic inline 8-byte-aligned layouts and generated initialize, clear, and deep-copy helpers. Record results use a hidden caller-owned return buffer; invocation-local result temporaries keep recursive calls reentrant and release nested `Text` exactly once. Web records use fresh default objects and deep clones so assignment, arrays, `ByVal`, `ByRef`, and returns do not leak JavaScript object aliases. Generated JavaScript stores fields under deterministic private keys derived from the bound record-field symbol and ordinal, never under source spelling. Fields such as `__proto__`, `constructor`, `prototype`, `toString`, and `valueOf` therefore behave like ordinary SMILE fields while IntelliSense and package metadata continue to show their original names.
 
-The native backend keeps routine-owned `For` limits and Number, Boolean, or Text `Select Case` selectors in each invocation's stack frame, so recursive and mutually recursive routines do not share compiler state. Owned Text selectors are move-assigned into zero-initialized slots and cleared in reverse nesting order on normal completion, `Return`, `Exit For`, `Exit Do`, `End Program`, and the routine epilogue. A function's owned Text return is preserved separately while its locals, arrays, ByVal parameters, and compiler temporaries are released.
+## Enum types
+
+`Enum Name` ... `End Enum` declares a closed nominal value type. Enums may be project-global or direct module declarations and follow the same private-by-default module visibility rules as records. Each member begins on its own declaration line and uses either `Name` or `Name = NumberConstantExpression`. The first implicit value is zero; every later implicit value is the checked previous value plus one. Explicit values accept signed 64-bit compile-time `Number` expressions, including forward `Const` resolution and the normal constant arithmetic and numeric built-ins; constant cycles are diagnosed. Overflow, division by zero, non-Number values, and enum-typed operands are rejected rather than wrapped or converted.
+
+```smile
+Const FIRST_DIRECTION = 10
+
+Enum Direction
+    None = FIRST_DIRECTION
+    Up
+    Down
+    Left = -1
+    Right = -1
+End Enum
+
+Dim Facing As Direction
+Dim History[4] As Direction
+
+Facing = Direction.Up
+History[0] = Facing
+```
+
+Member names are case-insensitive and unique. Duplicate numeric values are legal aliases, as `Left` and `Right` demonstrate. Contextual names such as `None`, `Up`, `Down`, `Left`, and `Right` are accepted only where a member name is valid; their existing unqualified built-in-constant meanings do not change. A local value is written `Direction.Up`; an imported public enum member is written `Alias.Direction.Up`.
+
+Enum identity is exact and nominal. Two enum declarations are never interchangeable even when their member names and values match, and an enum does not implicitly convert to or from `Number`. The only enum operators are `=` and `<>` between values of the exact same enum type. Enums work as constants, scalars, fixed-array elements, record fields, `ByVal` or `ByRef` parameters, and function returns. `Select Case` accepts an enum selector and exact-type enum members; aliases with the same numeric value count as duplicate cases and receive `SML3019`. Whole enum values are not accepted by `Print` or numeric built-ins.
+
+Native code stores an enum as one qword and preserves every signed 64-bit bit pattern. Web code uses JavaScript `BigInt`, including for zero defaults, arrays, record fields, constants, calls, and selectors, so values beyond JavaScript's safe `Number` range remain exact. Format-version 6 library metadata records the enum identity, provider, ordered member names, values, ordinals, and source locations. Project-reference and packaged-library consumers therefore bind the same nominal identity and declaration locations.
+
+The syntax-aware formatter preserves `Enum` blocks, canonicalizes contextual member spelling, treats a member as a direct constant return, and remains idempotent. Completion after `Direction.` or `Alias.Direction.` lists members in declaration order. Quick Info shows the containing enum and signed value; Go To Definition (F12) navigates both enum types and members to their original physical source.
+
+The native backend keeps routine-owned `For` limits and Number, Boolean, Text, or enum `Select Case` selectors in each invocation's stack frame, so recursive and mutually recursive routines do not share compiler state. Owned Text selectors are move-assigned into zero-initialized slots and cleared in reverse nesting order on normal completion, `Return`, `Exit For`, `Exit Do`, `End Program`, and the routine epilogue. A function's owned Text return is preserved separately while its locals, arrays, ByVal parameters, and compiler temporaries are released.
 
 `Print` preserves UTF-8 as the language representation. On an attached Windows console the runtime converts bounded complete UTF-8 chunks to UTF-16 and writes them with `WriteConsoleW`; redirected files and pipes receive the original UTF-8 bytes through chunked `WriteFile` calls without a BOM. Generated Web console output uses the same logical text and is compared against native output by the repository's dependency-free Node host.
 
@@ -148,7 +178,7 @@ The syntax-aware formatter treats `With` as structured control flow, preserves `
 
 A compilation may contain one selected startup source and any number of support sources. Every file is parsed separately and retains its real path, lines, tokens, diagnostics, and debug locations; all files share one case-insensitive value/routine model and a separate type namespace.
 
-The startup source owns executable top-level statements, `Game Window`, and `End Program`. A support source may contain only top-level `Const`, `Dim`, `Type`, `Sub`, and `Function` declarations. Routine bodies retain the complete normal statement surface. The command-line form is:
+The startup source owns executable top-level statements, `Game Window`, and `End Program`. A support source may contain only top-level `Const`, `Dim`, `Type`, `Enum`, `Sub`, and `Function` declarations. Routine bodies retain the complete normal statement surface. The command-line form is:
 
 ```text
 smilec Program.smile --source GameState.smile --source Drawing.smile -o Program.exe
@@ -279,6 +309,7 @@ Use exactly one blank line between logical groups and never use double or triple
 
 - separate the final consecutive `Module`, `Import`, `Dim`, `Call`, or `Unload` statement from the following group with one blank line;
 - put one blank line after a `Function`, `Sub`, or procedure declaration;
+- keep enum members together between `Enum` and `End Enum`, with one member per indented line;
 - put one blank line before `If`, `For`, `End For`, `Do`, `End Sub`, and `Loop`, and after `End If` and `Loop`;
 - keep `Option Explicit` separated from the statements before and after it;
 - keep one blank line between a function's final `Return` and `End Function`;
@@ -355,6 +386,16 @@ Record-specific diagnostics are stable and source-located:
 | `SML3413` | Leading-dot member access is used outside `With...End With`. |
 | `SML3414` | `Call .Member(...)` names a record method, which is reserved until `Type` methods are available. |
 | `SML3415` | A `With` target does not have a record type. |
+
+Enum-specific diagnostics are stable and source-located. Exact assignment, argument, case, return, and `ByRef` mismatches continue to use the shared `SML3304` and `SML3305` diagnostics; duplicate numeric aliases in one `Select Case` use `SML3019`.
+
+| Code | Meaning |
+|---|---|
+| `SML3420` | An enum nominal name is duplicated, or an `Enum` declaration is misplaced. |
+| `SML3421` | An enum is empty, a member is malformed, or a case-insensitive member name is duplicated. |
+| `SML3422` | An explicit member value is not a checked compile-time signed 64-bit `Number`, or an implicit successor overflows. |
+| `SML3423` | A named member does not exist on the enum type. |
+| `SML3424` | An enum is used with an unsupported operator or compared with a different enum type. |
 
 ### Arc drawing
 

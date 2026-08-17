@@ -65,6 +65,7 @@ internal sealed class Parser
             case SyntaxKind.PrivateKeyword: return ParseVisibilityDeclaration();
             case SyntaxKind.ConstKeyword: return ParseConstStatement();
             case SyntaxKind.TypeKeyword: return ParseTypeDeclaration();
+            case SyntaxKind.EnumKeyword: return ParseEnumDeclaration();
             case SyntaxKind.DimKeyword: return ParseDimStatement();
             case SyntaxKind.IfKeyword: return ParseIfStatement();
             case SyntaxKind.WithKeyword: return ParseWithStatement();
@@ -158,11 +159,11 @@ internal sealed class Parser
     private VisibilityDeclarationSyntax ParseVisibilityDeclaration()
     {
         var visibility = NextToken();
-        if (Current.Kind is not (SyntaxKind.ConstKeyword or SyntaxKind.DimKeyword or SyntaxKind.TypeKeyword or
+        if (Current.Kind is not (SyntaxKind.ConstKeyword or SyntaxKind.DimKeyword or SyntaxKind.TypeKeyword or SyntaxKind.EnumKeyword or
             SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword))
         {
             _diagnostics.Report("SML2003", Current.Span,
-                "Public or Private must modify a module Const, Dim, Type, Sub, or Function declaration.");
+                "Public or Private must modify a module Const, Dim, Type, Enum, Sub, or Function declaration.");
         }
         var declaration = ParseStatement();
         if (declaration == null)
@@ -245,6 +246,52 @@ internal sealed class Parser
         return new TypeDeclarationSyntax(typeKeyword, identifier, fields, end, finalType);
     }
 
+    private EnumDeclarationSyntax ParseEnumDeclaration()
+    {
+        var enumKeyword = MatchToken(SyntaxKind.EnumKeyword);
+        var identifier = MatchIdentifier();
+        ConsumeLineEnd();
+        var members = new List<EnumMemberDeclarationSyntax>();
+        while (Current.Kind != SyntaxKind.EndOfFileToken && !IsEndPair(SyntaxKind.EnumKeyword))
+        {
+            if (Current.Kind == SyntaxKind.NewLineToken)
+            {
+                NextToken();
+                continue;
+            }
+            if (!IsMemberIdentifier(Current.Kind))
+            {
+                _diagnostics.Report("SML3421", Current.Span,
+                    "Enum members must use 'Name' or 'Name = constant integer expression'.");
+                SynchronizeLine();
+                continue;
+            }
+            var member = MatchMemberIdentifier();
+            SyntaxToken? equals = null;
+            ExpressionSyntax? value = null;
+            if (Current.Kind == SyntaxKind.EqualsToken)
+            {
+                equals = NextToken();
+                value = ParseExpression();
+            }
+            if (!IsLineEnd(Current.Kind))
+            {
+                _diagnostics.Report("SML3421", Current.Span,
+                    "Enum members must use 'Name' or 'Name = constant integer expression'.");
+                SynchronizeLine();
+            }
+            else
+            {
+                ConsumeLineEnd();
+            }
+            members.Add(new EnumMemberDeclarationSyntax(member, equals, value));
+        }
+        var end = MatchToken(SyntaxKind.EndKeyword);
+        var finalEnum = MatchToken(SyntaxKind.EnumKeyword);
+        ConsumeLineEnd();
+        return new EnumDeclarationSyntax(enumKeyword, identifier, members, end, finalEnum);
+    }
+
     private DimStatementSyntax ParseDimStatement()
     {
         var keyword = MatchToken(SyntaxKind.DimKeyword);
@@ -291,7 +338,7 @@ internal sealed class Parser
         if (Current.Kind == SyntaxKind.DotToken)
         {
             var dot = NextToken();
-            var member = MatchIdentifier();
+            var member = MatchMemberIdentifier();
             if (Current.Kind == SyntaxKind.OpenBracketToken)
             {
                 NextToken();
@@ -1088,7 +1135,7 @@ internal sealed class Parser
     {
         if (Current.Kind == SyntaxKind.DotToken)
         {
-            ExpressionSyntax leading = new LeadingMemberAccessExpressionSyntax(NextToken(), MatchIdentifier());
+            ExpressionSyntax leading = new LeadingMemberAccessExpressionSyntax(NextToken(), MatchMemberIdentifier());
             return ParseFieldSuffix(leading);
         }
         if (Current.Kind == SyntaxKind.OpenParenthesisToken)
@@ -1133,7 +1180,7 @@ internal sealed class Parser
             if (Current.Kind == SyntaxKind.DotToken)
             {
                 var dot = NextToken();
-                var member = MatchIdentifier();
+                var member = MatchMemberIdentifier();
                 if (Current.Kind == SyntaxKind.OpenParenthesisToken)
                 {
                     var (qualifiedArguments, qualifiedClose) = ParseParenthesizedExpressionList();
@@ -1151,7 +1198,7 @@ internal sealed class Parser
                 while (Current.Kind == SyntaxKind.DotToken)
                 {
                     var fieldDot = NextToken();
-                    qualified = new FieldAccessExpressionSyntax(qualified, fieldDot, MatchIdentifier());
+                    qualified = new FieldAccessExpressionSyntax(qualified, fieldDot, MatchMemberIdentifier());
                 }
                 return qualified;
             }
@@ -1168,7 +1215,7 @@ internal sealed class Parser
                 while (Current.Kind == SyntaxKind.DotToken)
                 {
                     var fieldDot = NextToken();
-                    array = new FieldAccessExpressionSyntax(array, fieldDot, MatchIdentifier());
+                    array = new FieldAccessExpressionSyntax(array, fieldDot, MatchMemberIdentifier());
                 }
                 return array;
             }
@@ -1176,7 +1223,7 @@ internal sealed class Parser
             while (Current.Kind == SyntaxKind.DotToken)
             {
                 var fieldDot = NextToken();
-                name = new FieldAccessExpressionSyntax(name, fieldDot, MatchIdentifier());
+                name = new FieldAccessExpressionSyntax(name, fieldDot, MatchMemberIdentifier());
             }
             return name;
         }
@@ -1212,7 +1259,7 @@ internal sealed class Parser
         while (Current.Kind == SyntaxKind.DotToken)
         {
             var dot = NextToken();
-            expression = new FieldAccessExpressionSyntax(expression, dot, MatchIdentifier());
+            expression = new FieldAccessExpressionSyntax(expression, dot, MatchMemberIdentifier());
         }
         return expression;
     }
@@ -1246,6 +1293,16 @@ internal sealed class Parser
             return NextToken();
         return MatchToken(SyntaxKind.IdentifierToken);
     }
+
+    private SyntaxToken MatchMemberIdentifier()
+    {
+        if (IsMemberIdentifier(Current.Kind))
+            return NextToken();
+        return MatchToken(SyntaxKind.IdentifierToken);
+    }
+
+    private static bool IsMemberIdentifier(SyntaxKind kind) =>
+        IsIdentifierLike(kind) || kind is SyntaxKind.NoneKeyword or SyntaxKind.UpKeyword or SyntaxKind.DownKeyword;
 
     private static bool IsContextualIdentifier(SyntaxKind kind) =>
         kind is SyntaxKind.WindowKeyword or SyntaxKind.SizeKeyword or SyntaxKind.DrawKeyword or SyntaxKind.LineKeyword or

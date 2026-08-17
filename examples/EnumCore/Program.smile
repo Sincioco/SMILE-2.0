@@ -1,0 +1,74 @@
+Option Explicit
+
+Import Example.Directions As Directions
+
+Enum LocalState
+    None = ENUM_BASE
+    Running
+    Paused = Abs(-7)
+    Maximum = 9223372036854775807
+    Minimum = ENUM_MINIMUM
+    Alias = 7
+End Enum
+
+Const ENUM_BASE = 40
+Const ENUM_MINIMUM = -9223372036854775807 - 1
+Const DEFAULT_LOCAL = LocalState.None
+Const MINIMUM_LOCAL = LocalState.Minimum
+
+Type Session
+    State As LocalState
+    Facing As Directions.Direction
+End Type
+
+Dim Current As Session
+Dim States[3] As LocalState
+Dim DirectionsSeen[2] As Directions.Direction
+Dim ImportedState As Directions.DirectionState
+
+Current.State = DEFAULT_LOCAL
+States[0] = Current.State
+States[1] = LocalState.Running
+States[2] = MINIMUM_LOCAL
+
+Current.Facing = Directions.ChooseDirection(True)
+DirectionsSeen[0] = Current.Facing
+
+Call Directions.SetDirection(DirectionsSeen[0], Directions.Direction.Down)
+
+ImportedState = Directions.CreateState(Directions.Direction.Left)
+
+If States[0] = LocalState.None Then
+    Print "Local None"
+End If
+
+If States[1] <> LocalState.None Then
+    Print "Local Running"
+End If
+
+If States[2] = LocalState.Minimum Then
+    Print "Int64 Minimum"
+End If
+
+If LocalState.Maximum = LocalState.Maximum Then
+    Print "Int64 Maximum"
+End If
+
+If DirectionsSeen[0] = Directions.Direction.Down Then
+    Print "Imported ByRef"
+End If
+
+If Directions.IsHorizontal(ImportedState.Facing) Then
+    Print "Record Field"
+End If
+
+Select Case Current.State
+    Case LocalState.None
+        Print "Enum Select"
+    Case LocalState.Running
+        Print "Unexpected"
+    Case Else
+        Print "Unexpected"
+End Select
+
+End Program

@@ -170,7 +170,7 @@ internal sealed class WebEmitter
             return symbol.Type is RecordTypeSymbol
                 ? $"smile.array([{string.Join(", ", symbol.ArrayDimensions)}], () => {DefaultValue(symbol.Type)})"
                 : $"smile.array([{string.Join(", ", symbol.ArrayDimensions)}], {DefaultValue(symbol.Type)})";
-        return symbol.IsConstant ? ConstantValue(symbol.ConstantValue) : DefaultValue(symbol.Type);
+        return symbol.IsConstant ? ConstantValue(symbol.ConstantValue, symbol.Type) : DefaultValue(symbol.Type);
     }
 
     private void EmitStatements(IReadOnlyList<StatementSyntax> statements, bool topLevel)
@@ -191,7 +191,7 @@ internal sealed class WebEmitter
     {
         switch (statement)
         {
-            case ConstStatementSyntax or DimStatementSyntax or TypeDeclarationSyntax:
+            case ConstStatementSyntax or DimStatementSyntax or TypeDeclarationSyntax or EnumDeclarationSyntax:
                 return;
             case AssignmentStatementSyntax assignment:
                 EmitAssignment(assignment);
@@ -593,6 +593,8 @@ internal sealed class WebEmitter
                 return _analysis.SemanticModel.GetType(array) == SmileType.Image
                     ? $"smile.imageRetain({arrayValue})" : arrayValue;
             case FieldAccessExpressionSyntax field:
+                if (_analysis.SemanticModel.TryGetEnumMember(field, out var enumMember))
+                    return EnumValue(enumMember.Value);
                 if (!_analysis.SemanticModel.TryGetField(field, out var fieldSymbol))
                     throw UnsupportedExpression(field, "unbound record field");
                 var fieldValue = $"({Expression(field.Receiver)})[{Json(FieldKey(fieldSymbol))}]";
@@ -745,6 +747,8 @@ internal sealed class WebEmitter
 
     private string DefaultValue(SmileType type) => type is RecordTypeSymbol record
         ? $"{_recordNames[record]}_default()"
+        : type.IsEnum
+        ? "0n"
         : type == SmileType.Image
         ? "null"
         : type == SmileType.Text
@@ -846,13 +850,16 @@ internal sealed class WebEmitter
         return $"{receiver}.get()[{Json(FieldKey(binding.Field))}]";
     }
 
-    private static string ConstantValue(object value) => value switch
+    private static string ConstantValue(object value, SmileType type) => value switch
     {
         string text => Json(text),
         bool boolean => boolean ? "true" : "false",
+        long number when type.IsEnum => EnumValue(number),
         long number => number.ToString(CultureInfo.InvariantCulture),
         _ => "0"
     };
+
+    private static string EnumValue(long value) => value.ToString(CultureInfo.InvariantCulture) + "n";
 
     private VariableSymbol ResolveVariable(SyntaxToken identifier)
     {

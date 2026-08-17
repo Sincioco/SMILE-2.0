@@ -11,6 +11,7 @@ public enum SmileTypeKind
     Boolean,
     Text,
     Image,
+    Enum,
     Record
 }
 
@@ -26,9 +27,10 @@ public class SmileType
         ContainsOwnedImage = kind == SmileTypeKind.Image;
     }
 
-    protected SmileType(string name, SourceText source, int sourceOrdinal, TextSpan declarationSpan)
+    protected SmileType(SmileTypeKind kind, string name, SourceText source, int sourceOrdinal,
+        TextSpan declarationSpan)
     {
-        Kind = SmileTypeKind.Record;
+        Kind = kind;
         Name = name;
         SemanticName = name;
         RuntimeIdentity = name;
@@ -55,12 +57,32 @@ public class SmileType
     public TextSpan DeclarationSpan { get; }
     public SourceLocation? DeclarationLocation => Source == null ? null : new SourceLocation(Source, DeclarationSpan);
     public bool IsRecord => Kind == SmileTypeKind.Record;
+    public bool IsEnum => Kind == SmileTypeKind.Enum;
     public virtual int Size { get; internal set; } = 8;
     public virtual int Alignment { get; internal set; } = 8;
     public virtual bool ContainsOwnedText { get; internal set; }
     public virtual bool ContainsOwnedImage { get; internal set; }
     public bool RequiresCleanup => ContainsOwnedText || ContainsOwnedImage;
     public override string ToString() => Name;
+}
+
+public abstract class NominalTypeSymbol : SmileType
+{
+    protected NominalTypeSymbol(SmileTypeKind kind, string name, SourceText source, int sourceOrdinal,
+        TextSpan declarationSpan)
+        : base(kind, name, source, sourceOrdinal, declarationSpan)
+    {
+    }
+
+    internal void ApplyModuleIdentity(string name, string moduleName, ModuleVisibility visibility,
+        string providerIdentity, string runtimeIdentity)
+    {
+        Name = name;
+        ModuleName = moduleName;
+        Visibility = visibility;
+        ProviderIdentity = providerIdentity;
+        RuntimeIdentity = runtimeIdentity;
+    }
 }
 
 public sealed class RecordFieldSymbol
@@ -85,13 +107,13 @@ public sealed class RecordFieldSymbol
     public SourceLocation DeclarationLocation => new(Source, DeclarationSpan);
 }
 
-public sealed class RecordTypeSymbol : SmileType
+public sealed class RecordTypeSymbol : NominalTypeSymbol
 {
     private readonly List<RecordFieldSymbol> _fields = new();
     private readonly Dictionary<string, RecordFieldSymbol> _fieldsByName = new(StringComparer.OrdinalIgnoreCase);
 
     internal RecordTypeSymbol(string name, TypeDeclarationSyntax declaration, SourceText source, int sourceOrdinal)
-        : base(name, source, sourceOrdinal, declaration.Identifier.Span)
+        : base(SmileTypeKind.Record, name, source, sourceOrdinal, declaration.Identifier.Span)
     {
         Declaration = declaration;
     }
@@ -112,14 +134,58 @@ public sealed class RecordTypeSymbol : SmileType
         return true;
     }
 
-    internal void ApplyModuleIdentity(string name, string moduleName, ModuleVisibility visibility,
-        string providerIdentity, string runtimeIdentity)
+}
+
+public sealed class EnumMemberSymbol
+{
+    internal EnumMemberSymbol(string name, long value, EnumTypeSymbol containingType,
+        EnumMemberDeclarationSyntax declaration, SourceText source, int ordinal)
     {
         Name = name;
-        ModuleName = moduleName;
-        Visibility = visibility;
-        ProviderIdentity = providerIdentity;
-        RuntimeIdentity = runtimeIdentity;
+        Value = value;
+        ContainingType = containingType;
+        Declaration = declaration;
+        Source = source;
+        Ordinal = ordinal;
+    }
+
+    public string Name { get; }
+    public long Value { get; }
+    public EnumTypeSymbol ContainingType { get; }
+    public EnumMemberDeclarationSyntax Declaration { get; }
+    public SourceText Source { get; }
+    public int Ordinal { get; }
+    public TextSpan DeclarationSpan => Declaration.Identifier.Span;
+    public SourceLocation DeclarationLocation => new(Source, DeclarationSpan);
+}
+
+public sealed class EnumTypeSymbol : NominalTypeSymbol
+{
+    private readonly List<EnumMemberSymbol> _members = new();
+    private readonly Dictionary<string, EnumMemberSymbol> _membersByName =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    internal EnumTypeSymbol(string name, EnumDeclarationSyntax declaration, SourceText source,
+        int sourceOrdinal)
+        : base(SmileTypeKind.Enum, name, source, sourceOrdinal, declaration.Identifier.Span)
+    {
+        Declaration = declaration;
+    }
+
+    public EnumDeclarationSyntax Declaration { get; }
+    public IReadOnlyList<EnumMemberSymbol> Members => _members;
+    public override int Size { get; internal set; } = 8;
+    public override int Alignment { get; internal set; } = 8;
+    public bool TryGetMember(string name, out EnumMemberSymbol member) =>
+        _membersByName.TryGetValue(name, out member!);
+
+    internal bool AddMember(EnumMemberSymbol member)
+    {
+        if (_membersByName.ContainsKey(member.Name))
+            return false;
+        _membersByName[member.Name] = member;
+        _members.Add(member);
+        return true;
     }
 }
 
@@ -309,12 +375,16 @@ public sealed class SemanticModel
     private readonly Dictionary<string, RoutineSymbol> _routines;
     private readonly Dictionary<ExpressionSyntax, SmileType> _expressionTypes;
     private readonly Dictionary<string, RecordTypeSymbol> _types;
+    private readonly Dictionary<string, EnumTypeSymbol> _enumTypes;
+    private readonly Dictionary<string, NominalTypeSymbol> _nominalTypes;
     private readonly Dictionary<ExpressionSyntax, RecordFieldSymbol> _fields;
+    private readonly Dictionary<ExpressionSyntax, EnumMemberSymbol> _enumMembers;
     private readonly Dictionary<WithStatementSyntax, WithTargetBinding> _withTargets;
     private readonly Dictionary<LeadingMemberAccessExpressionSyntax, WithMemberBinding> _withMembers;
     private readonly Dictionary<SourceText, IReadOnlyList<WithTargetBinding>> _withScopes;
     private readonly Dictionary<SourceText, IReadOnlyList<InvalidWithScope>> _invalidWithScopes;
     private readonly Dictionary<SourceText, IReadOnlyDictionary<int, RecordFieldSymbol>> _fieldUses;
+    private readonly Dictionary<SourceText, IReadOnlyDictionary<int, EnumMemberSymbol>> _enumMemberUses;
     private IReadOnlyDictionary<string, ModuleSymbol> _modules =
         new Dictionary<string, ModuleSymbol>(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyDictionary<SourceText, IReadOnlyDictionary<string, ModuleSymbol>> _imports =
@@ -322,18 +392,25 @@ public sealed class SemanticModel
 
     internal SemanticModel(Dictionary<string, VariableSymbol> symbols, Dictionary<string, RoutineSymbol> routines,
         Dictionary<ExpressionSyntax, SmileType> expressionTypes, Dictionary<string, RecordTypeSymbol> types,
+        Dictionary<string, EnumTypeSymbol> enumTypes,
         Dictionary<ExpressionSyntax, RecordFieldSymbol> fields,
+        Dictionary<ExpressionSyntax, EnumMemberSymbol> enumMembers,
         Dictionary<WithStatementSyntax, WithTargetBinding> withTargets,
         Dictionary<LeadingMemberAccessExpressionSyntax, WithMemberBinding> withMembers,
         Dictionary<SourceText, List<WithTargetBinding>> withScopes,
         Dictionary<SourceText, List<InvalidWithScope>> invalidWithScopes,
-        Dictionary<SourceText, Dictionary<int, RecordFieldSymbol>> fieldUses)
+        Dictionary<SourceText, Dictionary<int, RecordFieldSymbol>> fieldUses,
+        Dictionary<SourceText, Dictionary<int, EnumMemberSymbol>> enumMemberUses)
     {
         _symbols = symbols;
         _routines = routines;
         _expressionTypes = expressionTypes;
         _types = types;
+        _enumTypes = enumTypes;
+        _nominalTypes = types.Values.Cast<NominalTypeSymbol>().Concat(enumTypes.Values)
+            .ToDictionary(type => type.SemanticName, StringComparer.OrdinalIgnoreCase);
         _fields = fields;
+        _enumMembers = enumMembers;
         _withTargets = withTargets;
         _withMembers = withMembers;
         _withScopes = withScopes.ToDictionary(item => item.Key,
@@ -342,16 +419,25 @@ public sealed class SemanticModel
             item => (IReadOnlyList<InvalidWithScope>)item.Value.ToArray());
         _fieldUses = fieldUses.ToDictionary(item => item.Key,
             item => (IReadOnlyDictionary<int, RecordFieldSymbol>)item.Value);
+        _enumMemberUses = enumMemberUses.ToDictionary(item => item.Key,
+            item => (IReadOnlyDictionary<int, EnumMemberSymbol>)item.Value);
     }
 
     public IReadOnlyDictionary<string, VariableSymbol> Symbols => _symbols;
     public IReadOnlyDictionary<string, RoutineSymbol> Routines => _routines;
     public IReadOnlyDictionary<string, RecordTypeSymbol> Types => _types;
+    public IReadOnlyDictionary<string, EnumTypeSymbol> EnumTypes => _enumTypes;
+    public IReadOnlyDictionary<string, NominalTypeSymbol> NominalTypes => _nominalTypes;
     public IReadOnlyDictionary<string, ModuleSymbol> Modules => _modules;
     public bool TryGetSymbol(string name, out VariableSymbol symbol) => _symbols.TryGetValue(name, out symbol!);
     public bool TryGetRoutine(string name, out RoutineSymbol routine) => _routines.TryGetValue(name, out routine!);
     public bool TryGetType(string name, out RecordTypeSymbol type) => _types.TryGetValue(name, out type!);
+    public bool TryGetEnumType(string name, out EnumTypeSymbol type) => _enumTypes.TryGetValue(name, out type!);
+    public bool TryGetNominalType(string name, out NominalTypeSymbol type) =>
+        _nominalTypes.TryGetValue(name, out type!);
     public bool TryGetField(ExpressionSyntax expression, out RecordFieldSymbol field) => _fields.TryGetValue(expression, out field!);
+    public bool TryGetEnumMember(ExpressionSyntax expression, out EnumMemberSymbol member) =>
+        _enumMembers.TryGetValue(expression, out member!);
     public bool TryGetWithTarget(WithStatementSyntax statement, out WithTargetBinding binding) =>
         _withTargets.TryGetValue(statement, out binding!);
     public bool TryGetWithMember(LeadingMemberAccessExpressionSyntax expression, out WithMemberBinding binding) =>
@@ -360,6 +446,12 @@ public sealed class SemanticModel
     {
         field = null!;
         return _fieldUses.TryGetValue(source, out var uses) && uses.TryGetValue(position, out field!);
+    }
+
+    public bool TryGetEnumMemberUse(SourceText source, int position, out EnumMemberSymbol member)
+    {
+        member = null!;
+        return _enumMemberUses.TryGetValue(source, out var uses) && uses.TryGetValue(position, out member!);
     }
 
     public bool TryGetInnermostWithScope(SourceText source, int position, out WithTargetBinding binding)
@@ -439,14 +531,20 @@ internal sealed class SemanticAnalyzer
     private readonly Dictionary<string, ConstantDeclaration> _constantDeclarations = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, ConstantResolutionState> _constantStates = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _constantResolutionStack = new();
+    private readonly Dictionary<string, long> _checkedNumberConstants = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ConstantResolutionState> _checkedNumberConstantStates =
+        new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<ExpressionSyntax, SmileType> _expressionTypes = new();
     private readonly Dictionary<string, RecordTypeSymbol> _types = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, EnumTypeSymbol> _enumTypes = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<ExpressionSyntax, RecordFieldSymbol> _fields = new();
+    private readonly Dictionary<ExpressionSyntax, EnumMemberSymbol> _enumMembers = new();
     private readonly Dictionary<WithStatementSyntax, WithTargetBinding> _withTargets = new();
     private readonly Dictionary<LeadingMemberAccessExpressionSyntax, WithMemberBinding> _withMembers = new();
     private readonly Dictionary<SourceText, List<WithTargetBinding>> _withScopes = new();
     private readonly Dictionary<SourceText, List<InvalidWithScope>> _invalidWithScopes = new();
     private readonly Dictionary<SourceText, Dictionary<int, RecordFieldSymbol>> _fieldUses = new();
+    private readonly Dictionary<SourceText, Dictionary<int, EnumMemberSymbol>> _enumMemberUses = new();
     private readonly List<WithTargetBinding?> _withStack = new();
     private readonly List<RoutineCallSite> _routineCalls = new();
     private SourceText _currentSource = null!;
@@ -473,9 +571,11 @@ internal sealed class SemanticAnalyzer
         foreach (var statement in _startupTree.Root.Statements)
             _hasGameWindow |= statement is GameWindowStatementSyntax;
 
-        InventoryRecordTypes();
-        BindRecordTypes();
+        InventoryNominalTypes();
         InventoryProjectDeclarations();
+        InventoryConstantDeclarations();
+        BindEnumTypes();
+        BindRecordTypes();
         foreach (var tree in _syntaxTrees)
             CollectRoutineDeclarations(tree);
         CollectGlobalDeclarations();
@@ -504,26 +604,184 @@ internal sealed class SemanticAnalyzer
         _currentRoutine = null;
         PropagateRoutineCapabilities();
         DiagnoseTopLevelRoutineCapabilities();
-        return new SemanticModel(_symbols, _routines, _expressionTypes, _types, _fields,
-            _withTargets, _withMembers, _withScopes, _invalidWithScopes, _fieldUses);
+        return new SemanticModel(_symbols, _routines, _expressionTypes, _types, _enumTypes, _fields,
+            _enumMembers, _withTargets, _withMembers, _withScopes, _invalidWithScopes, _fieldUses,
+            _enumMemberUses);
     }
 
-    private void InventoryRecordTypes()
+    private void InventoryNominalTypes()
     {
         foreach (var tree in _syntaxTrees)
         {
-            foreach (var declaration in tree.Root.Statements.OfType<TypeDeclarationSyntax>())
+            foreach (var statement in tree.Root.Statements)
             {
-                var name = declaration.Identifier.Text;
-                if (_types.ContainsKey(name))
+                switch (statement)
                 {
-                    _diagnostics.Report(tree.Source, "SML3400", declaration.Identifier.Span,
-                        $"Record type '{DisplaySourceText(tree.Source, declaration.Identifier)}' is already declared.");
-                    continue;
+                    case TypeDeclarationSyntax declaration:
+                    {
+                        var name = declaration.Identifier.Text;
+                        if (_types.ContainsKey(name) || _enumTypes.ContainsKey(name))
+                        {
+                            _diagnostics.Report(tree.Source, "SML3400", declaration.Identifier.Span,
+                                $"Nominal type '{DisplaySourceText(tree.Source, declaration.Identifier)}' is already declared.");
+                            break;
+                        }
+                        _types[name] = new RecordTypeSymbol(name, declaration, tree.Source,
+                            _sourceOrdinals[tree.Source]);
+                        break;
+                    }
+                    case EnumDeclarationSyntax declaration:
+                    {
+                        var name = declaration.Identifier.Text;
+                        if (_types.ContainsKey(name) || _enumTypes.ContainsKey(name))
+                        {
+                            _diagnostics.Report(tree.Source, "SML3420", declaration.Identifier.Span,
+                                $"Nominal type '{DisplaySourceText(tree.Source, declaration.Identifier)}' is already declared.");
+                            break;
+                        }
+                        _enumTypes[name] = new EnumTypeSymbol(name, declaration, tree.Source,
+                            _sourceOrdinals[tree.Source]);
+                        break;
+                    }
                 }
-                _types[name] = new RecordTypeSymbol(name, declaration, tree.Source, _sourceOrdinals[tree.Source]);
             }
         }
+    }
+
+    private void BindEnumTypes()
+    {
+        foreach (var enumType in _enumTypes.Values.OrderBy(type => type.SourceOrdinal)
+                     .ThenBy(type => type.DeclarationSpan.Start))
+        {
+            SetCurrentSource(enumType.Source!);
+            if (enumType.Declaration.Members.Count == 0)
+                Report("SML3421", enumType.Declaration.Identifier.Span,
+                    $"Enum '{DisplaySourceText(_currentSource, enumType.Declaration.Identifier)}' must declare at least one member.");
+
+            long previous = -1;
+            var hasPrevious = false;
+            for (var index = 0; index < enumType.Declaration.Members.Count; index++)
+            {
+                var declaration = enumType.Declaration.Members[index];
+                long value;
+                if (declaration.Value != null)
+                {
+                    if (!TryEvaluateEnumIntegral(declaration.Value, out value))
+                    {
+                        Report("SML3422", declaration.Value.Span,
+                            "Enum member value must be a checked compile-time Int64 expression.");
+                        value = 0;
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        value = hasPrevious ? checked(previous + 1) : 0;
+                    }
+                    catch (OverflowException)
+                    {
+                        Report("SML3422", declaration.Identifier.Span,
+                            $"Implicit value for Enum member '{declaration.Identifier.Text}' exceeds Int64.");
+                        value = long.MaxValue;
+                    }
+                }
+
+                var member = new EnumMemberSymbol(declaration.Identifier.Text, value, enumType,
+                    declaration, _currentSource, index);
+                if (!enumType.AddMember(member))
+                {
+                    Report("SML3421", declaration.Identifier.Span,
+                        $"Enum member '{DisplaySourceText(_currentSource, declaration.Identifier)}' is already declared in Enum '{enumType.Name}'.");
+                    continue;
+                }
+                previous = value;
+                hasPrevious = true;
+            }
+        }
+    }
+
+    private bool TryEvaluateEnumIntegral(ExpressionSyntax expression, out long value)
+    {
+        try
+        {
+            switch (expression)
+            {
+                case LiteralExpressionSyntax { Value: long literal }:
+                    value = literal;
+                    return true;
+                case NameExpressionSyntax name:
+                    return TryResolveCheckedNumberConstant(name.Identifier.Text, out value);
+                case ParenthesizedExpressionSyntax parenthesized:
+                    return TryEvaluateEnumIntegral(parenthesized.Expression, out value);
+                case UnaryExpressionSyntax { OperatorToken.Kind: SyntaxKind.MinusToken } unary
+                    when TryEvaluateEnumIntegral(unary.Operand, out var operand):
+                    value = checked(-operand);
+                    return true;
+                case BinaryExpressionSyntax binary
+                    when TryEvaluateEnumIntegral(binary.Left, out var left) &&
+                         TryEvaluateEnumIntegral(binary.Right, out var right):
+                    value = binary.OperatorToken.Kind switch
+                    {
+                        SyntaxKind.PlusToken => checked(left + right),
+                        SyntaxKind.MinusToken => checked(left - right),
+                        SyntaxKind.StarToken => checked(left * right),
+                        SyntaxKind.SlashToken when right != 0 => checked(left / right),
+                        SyntaxKind.ModKeyword when right != 0 => left % right,
+                        _ => throw new InvalidOperationException()
+                    };
+                    return true;
+                case CallExpressionSyntax call when call.Identifier.Kind == SyntaxKind.AbsKeyword &&
+                    call.Arguments.Count == 1 && TryEvaluateEnumIntegral(call.Arguments[0], out var absValue):
+                    value = absValue == long.MinValue ? throw new OverflowException() : Math.Abs(absValue);
+                    return true;
+                case CallExpressionSyntax call when call.Identifier.Kind is SyntaxKind.MinKeyword or SyntaxKind.MaxKeyword &&
+                    call.Arguments.Count == 2 && TryEvaluateEnumIntegral(call.Arguments[0], out var first) &&
+                    TryEvaluateEnumIntegral(call.Arguments[1], out var second):
+                    value = call.Identifier.Kind == SyntaxKind.MinKeyword ? Math.Min(first, second) : Math.Max(first, second);
+                    return true;
+                case CallExpressionSyntax call when call.Identifier.Kind == SyntaxKind.RgbKeyword &&
+                    call.Arguments.Count == 3 && TryEvaluateEnumIntegral(call.Arguments[0], out var red) &&
+                    TryEvaluateEnumIntegral(call.Arguments[1], out var green) &&
+                    TryEvaluateEnumIntegral(call.Arguments[2], out var blue):
+                    value = (red & 255) | ((green & 255) << 8) | ((blue & 255) << 16);
+                    return true;
+            }
+        }
+        catch (Exception exception) when (exception is OverflowException or DivideByZeroException or InvalidOperationException)
+        {
+        }
+        value = 0;
+        return false;
+    }
+
+    private bool TryResolveCheckedNumberConstant(string name, out long value)
+    {
+        if (_checkedNumberConstantStates.TryGetValue(name, out var state))
+        {
+            if (state == ConstantResolutionState.Resolved)
+            {
+                value = _checkedNumberConstants[name];
+                return true;
+            }
+            value = 0;
+            return false;
+        }
+        if (!_constantDeclarations.TryGetValue(name, out var declaration))
+        {
+            value = 0;
+            return false;
+        }
+
+        _checkedNumberConstantStates[name] = ConstantResolutionState.Resolving;
+        if (!TryEvaluateEnumIntegral(declaration.Statement.Expression, out value))
+        {
+            _checkedNumberConstantStates[name] = ConstantResolutionState.Failed;
+            return false;
+        }
+        _checkedNumberConstants[name] = value;
+        _checkedNumberConstantStates[name] = ConstantResolutionState.Resolved;
+        return true;
     }
 
     private void BindRecordTypes()
@@ -762,7 +1020,7 @@ internal sealed class SemanticAnalyzer
         }
     }
 
-    private void CollectGlobalDeclarations()
+    private void InventoryConstantDeclarations()
     {
         foreach (var tree in _syntaxTrees)
         {
@@ -773,7 +1031,10 @@ internal sealed class SemanticAnalyzer
                         constant, tree.Source, _sourceOrdinals[tree.Source]);
             }
         }
+    }
 
+    private void CollectGlobalDeclarations()
+    {
         foreach (var constant in _constantDeclarations.Values
                      .OrderBy(constant => constant.SourceOrdinal)
                      .ThenBy(constant => constant.Statement.Identifier.Position))
@@ -822,7 +1083,21 @@ internal sealed class SemanticAnalyzer
             return false;
         _constantStates[name] = ConstantResolutionState.Resolving;
         _constantResolutionStack.Add(name);
-        var resolved = TryEvaluateConstant(constant.Statement.Expression, out var value, out var type);
+        var previousSource = _currentSource;
+        var previousSourceOrdinal = _currentSourceOrdinal;
+        SetCurrentSource(constant.Source);
+        bool resolved;
+        object value;
+        SmileType type;
+        try
+        {
+            resolved = TryEvaluateConstant(constant.Statement.Expression, out value, out type);
+        }
+        finally
+        {
+            _currentSource = previousSource;
+            _currentSourceOrdinal = previousSourceOrdinal;
+        }
         _constantResolutionStack.RemoveAt(_constantResolutionStack.Count - 1);
 
         if (_constantStates.TryGetValue(name, out state) && state == ConstantResolutionState.Failed)
@@ -944,8 +1219,19 @@ internal sealed class SemanticAnalyzer
                 return literal.Value is bool ? SmileType.Boolean : literal.Value is string ? SmileType.Text : SmileType.Number;
             case NameExpressionSyntax name when _symbols.TryGetValue(name.Identifier.Text, out var symbol):
                 return symbol.Type;
+            case ArrayAccessExpressionSyntax array when _symbols.TryGetValue(array.Identifier.Text,
+                out var arraySymbol):
+                return arraySymbol.Type;
             case ArrayAccessExpressionSyntax:
                 return SmileType.Number;
+            case FieldAccessExpressionSyntax field:
+                if (field.Receiver is NameExpressionSyntax typeName &&
+                    TryResolveEnumType(typeName.Identifier.Text, out var enumType) &&
+                    enumType.TryGetMember(field.Field.Text, out _))
+                    return enumType;
+                var receiverType = InferImplicitGlobalType(field.Receiver);
+                return receiverType is RecordTypeSymbol record && record.TryGetField(field.Field.Text, out var fieldSymbol)
+                    ? fieldSymbol.Type : SmileType.Number;
             case ParenthesizedExpressionSyntax parenthesized:
                 return InferImplicitGlobalType(parenthesized.Expression);
             case UnaryExpressionSyntax unary:
@@ -975,7 +1261,7 @@ internal sealed class SemanticAnalyzer
         {
             if (statement is RoutineDeclarationSyntax)
                 continue;
-            if (statement is ConstStatementSyntax or DimStatementSyntax or TypeDeclarationSyntax)
+            if (statement is ConstStatementSyntax or DimStatementSyntax or TypeDeclarationSyntax or EnumDeclarationSyntax)
             {
                 AnalyzeStatement(statement, topLevel: true);
                 continue;
@@ -1065,6 +1351,10 @@ internal sealed class SemanticAnalyzer
                 if (_symbols.TryGetValue(array.Identifier.Text, out var arraySymbol)) return arraySymbol.Type;
                 return SmileType.Error;
             case FieldAccessExpressionSyntax field:
+                if (field.Receiver is NameExpressionSyntax enumName &&
+                    TryResolveEnumType(enumName.Identifier.Text, out var enumType) &&
+                    enumType.TryGetMember(field.Field.Text, out _))
+                    return enumType;
                 var receiverType = InferLegacyExpressionType(field.Receiver, routine, locals, withTypes);
                 return receiverType is RecordTypeSymbol receiverRecord &&
                        receiverRecord.TryGetField(field.Field.Text, out var fieldSymbol)
@@ -1257,6 +1547,11 @@ internal sealed class SemanticAnalyzer
             case TypeDeclarationSyntax type:
                 if (!topLevel || _currentRoutine != null)
                     Report("SML3403", type.TypeKeyword.Span, "Type declarations must be project-global or direct module declarations.");
+                break;
+            case EnumDeclarationSyntax enumDeclaration:
+                if (!topLevel || _currentRoutine != null)
+                    Report("SML3420", enumDeclaration.EnumKeyword.Span,
+                        "Enum declarations must be project-global or direct module declarations.");
                 break;
             case AssignmentStatementSyntax assignment: AnalyzeAssignment(assignment); break;
             case DimStatementSyntax dim: AnalyzeDim(dim, topLevel); break;
@@ -1664,6 +1959,46 @@ internal sealed class SemanticAnalyzer
         return field.Type;
     }
 
+    private bool TryBindEnumMember(FieldAccessExpressionSyntax expression, out SmileType type)
+    {
+        type = SmileType.Error;
+        if (expression.Receiver is not NameExpressionSyntax typeName ||
+            !TryResolveEnumType(typeName.Identifier.Text, out var enumType))
+            return false;
+        if (!enumType.TryGetMember(expression.Field.Text, out var member))
+        {
+            Report("SML3423", expression.Field.Span,
+                $"Enum '{enumType.Name}' does not contain member '{expression.Field.Text}'.");
+            return true;
+        }
+
+        RegisterEnumMemberUse(_currentSource, expression, member);
+        type = enumType;
+        return true;
+    }
+
+    private void RegisterEnumMemberUse(SourceText source, FieldAccessExpressionSyntax expression,
+        EnumMemberSymbol member)
+    {
+        _enumMembers[expression] = member;
+        if (!_enumMemberUses.TryGetValue(source, out var uses))
+        {
+            uses = new Dictionary<int, EnumMemberSymbol>();
+            _enumMemberUses[source] = uses;
+        }
+        uses[expression.Field.Position] = member;
+    }
+
+    private bool TryResolveEnumMemberExpression(FieldAccessExpressionSyntax expression,
+        out EnumMemberSymbol member)
+    {
+        if (_enumMembers.TryGetValue(expression, out member!))
+            return true;
+        return expression.Receiver is NameExpressionSyntax typeName &&
+               TryResolveEnumType(typeName.Identifier.Text, out var enumType) &&
+               enumType.TryGetMember(expression.Field.Text, out member!);
+    }
+
     private void AnalyzeDim(DimStatementSyntax dim, bool topLevel)
     {
         if (topLevel && _currentRoutine == null)
@@ -1780,8 +2115,9 @@ internal sealed class SemanticAnalyzer
         if (selectorType.IsRecord)
             Report("SML3407", select.Expression.Span, "Select Case does not support whole record values.");
         else if (selectorType != SmileType.Number && selectorType != SmileType.Boolean &&
-            selectorType != SmileType.Text && selectorType != SmileType.Error)
-            Report("SML3304", select.Expression.Span, "Select Case expression must be Number, Boolean, or Text.");
+            selectorType != SmileType.Text && !selectorType.IsEnum && selectorType != SmileType.Error)
+            Report("SML3304", select.Expression.Span,
+                "Select Case expression must be Number, Boolean, Text, or Enum.");
         var values = new HashSet<string>(StringComparer.Ordinal);
         var sawElse = false;
         foreach (var clause in select.Cases)
@@ -1799,7 +2135,9 @@ internal sealed class SemanticAnalyzer
                     Report("SML3304", clause.Value.Span, "Case value type must match Select Case.");
                 if (!TryEvaluateConstant(clause.Value, out var value, out _))
                     Report("SML3013", clause.Value.Span, "Case value must be a compile-time scalar expression.");
-                else if (!values.Add(selectorType + ":" + Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)))
+                else if (!values.Add((selectorType is NominalTypeSymbol nominal
+                        ? nominal.RuntimeIdentity : selectorType.Name) + ":" +
+                    Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)))
                     Report("SML3019", clause.Value.Span, $"Duplicate Case value '{value}'.");
             }
             AnalyzeStatements(clause.Statements, false);
@@ -1898,7 +2236,9 @@ internal sealed class SemanticAnalyzer
                 }
                 break;
             case FieldAccessExpressionSyntax field:
-                result = BindField(AnalyzeExpression(field.Receiver), field.Field, field.Span, field);
+                result = TryBindEnumMember(field, out var enumMemberType)
+                    ? enumMemberType
+                    : BindField(AnalyzeExpression(field.Receiver), field.Field, field.Span, field);
                 break;
             case LeadingMemberAccessExpressionSyntax leading:
                 if (_withStack.Count == 0)
@@ -2117,6 +2457,15 @@ internal sealed class SemanticAnalyzer
         var rightType = AnalyzeExpression(binary.Right);
         if (leftType == SmileType.Error || rightType == SmileType.Error)
             return SmileType.Error;
+        if (leftType.IsEnum || rightType.IsEnum)
+        {
+            if (binary.OperatorToken.Kind is SyntaxKind.EqualsToken or SyntaxKind.NotEqualsToken &&
+                ReferenceEquals(leftType, rightType))
+                return SmileType.Boolean;
+            Report("SML3424", binary.Span,
+                "Enum values support only '=' and '<>' with the exact same Enum type.");
+            return SmileType.Error;
+        }
         if (leftType.IsRecord || rightType.IsRecord || leftType == SmileType.Image || rightType == SmileType.Image)
         {
             Report(leftType == SmileType.Image || rightType == SmileType.Image ? "SML3509" : "SML3407", binary.Span,
@@ -2211,7 +2560,7 @@ internal sealed class SemanticAnalyzer
             Report("SML3307", token.Span, $"Local '{name}' is used before its Dim declaration.");
         else if (declarations.TryGetValue(name, out var position) && position > token.Position)
             Report("SML3002", token.Span, $"Variable '{name}' is used before its first assignment.");
-        else if (_types.ContainsKey(name))
+        else if (_types.ContainsKey(name) || _enumTypes.ContainsKey(name))
             Report("SML3410", token.Span, $"Type name '{name}' cannot be used as a value.");
         else
             Report(_optionExplicit ? "SML3303" : "SML3001", token.Span,
@@ -2245,6 +2594,9 @@ internal sealed class SemanticAnalyzer
                         break;
                 }
                 value = symbol.ConstantValue; type = symbol.Type; return true;
+            case FieldAccessExpressionSyntax field when TryResolveEnumMemberExpression(field, out var enumMember):
+                RegisterEnumMemberUse(_currentSource, field, enumMember);
+                value = enumMember.Value; type = enumMember.ContainingType; return true;
             case ParenthesizedExpressionSyntax parenthesized:
                 return TryEvaluateConstant(parenthesized.Expression, out value, out type);
             case UnaryExpressionSyntax unary when TryEvaluateConstant(unary.Operand, out var operand, out var operandType):
@@ -2420,12 +2772,16 @@ internal sealed class SemanticAnalyzer
             : token.Kind == SyntaxKind.TextKeyword ? SmileType.Text
             : token.Kind == SyntaxKind.ImageKeyword ? SmileType.Image
             : _types.TryGetValue(token.Text, out var record) ? record
+            : _enumTypes.TryGetValue(token.Text, out var enumType) ? enumType
             : SmileType.Error;
         if (type == SmileType.Error)
             Report("SML3401", token.Span,
-                $"Unknown record type '{DisplaySourceText(_currentSource, token)}'.");
+                $"Unknown type '{DisplaySourceText(_currentSource, token)}'.");
         return type;
     }
+
+    private bool TryResolveEnumType(string name, out EnumTypeSymbol type) =>
+        _enumTypes.TryGetValue(name, out type!);
 
     private static string TypeName(SmileType type) => type.Name;
 }

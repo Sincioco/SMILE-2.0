@@ -1449,6 +1449,8 @@ Run("Reference editing refresh projection immediately and never deletes the targ
     }
     finally { Directory.Delete(directory, true); }
 });
+Run("Library package schema contract is formatVersion 6", () =>
+    Equal(6, SmileLibraryPackage.CurrentFormatVersion));
 Run("Library packages are deterministic and reload through authoritative analysis", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "SmilePackageTests-" + Guid.NewGuid().ToString("N"));
@@ -1456,9 +1458,14 @@ Run("Library packages are deterministic and reload through authoritative analysi
     try
     {
         var projectPath = Path.Combine(directory, "Tools.smilelibproj");
-        var sourcePath = Path.Combine(directory, "Tools.smile");
+        Directory.CreateDirectory(Path.Combine(directory, "Code"));
+        Directory.CreateDirectory(Path.Combine(directory, "Other"));
+        var sourcePath = Path.Combine(directory, "Code", "Tools.smile");
+        var secondSourcePath = Path.Combine(directory, "Other", "Tools.smile");
         File.WriteAllText(sourcePath, "Module Example.Tools\nPublic Function Double(Value)\nReturn Value * 2\nEnd Function\nPrivate Const Hidden = 1\nEnd Module\n");
-        File.WriteAllText(projectPath, "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Tools</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Tools.smile\" /></ItemGroup></SmileProject>");
+        File.WriteAllText(secondSourcePath,
+            "Module Example.Tools\nPublic Const Marker = 7\nEnd Module\n");
+        File.WriteAllText(projectPath, "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Example.Tools</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include=\"Code\\Tools.smile\" /><SmileSource Include=\"Other\\Tools.smile\" /></ItemGroup></SmileProject>");
         var compilation = SmileProjectCompilation.Load(projectPath);
         var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library);
         Equal(false, analysis.HasErrors);
@@ -1469,15 +1476,38 @@ Run("Library packages are deterministic and reload through authoritative analysi
         Equal(true, File.ReadAllBytes(first).SequenceEqual(File.ReadAllBytes(second)));
         var loaded = SmileLibraryPackage.Read(first, Path.Combine(directory, "obj"));
         Equal("Example.Tools", loaded.Identity.Name);
-        Equal(1, loaded.Sources.Count);
+        Equal("Example.Tools@1.0.0", loaded.Identity.Provider);
+        Equal(2, loaded.Sources.Count);
+        Equal("src/Code/Tools.smile|src/Other/Tools.smile", string.Join("|",
+            loaded.SourceIds.Values.OrderBy(item => item, StringComparer.Ordinal)));
         using (var archive = System.IO.Compression.ZipFile.OpenRead(first))
         {
             Equal(true, archive.GetEntry("manifest.json") != null);
+            using (var manifestReader = new StreamReader(archive.GetEntry("manifest.json")!.Open()))
+            using (var manifest = System.Text.Json.JsonDocument.Parse(manifestReader.ReadToEnd()))
+            {
+                Equal(6, manifest.RootElement.GetProperty("formatVersion").GetInt32());
+                Equal("Example.Tools@1.0.0", manifest.RootElement.GetProperty("provider").GetString());
+                Equal("src/Code/Tools.smile", manifest.RootElement.GetProperty("sources")[0].GetString());
+                Equal("src/Other/Tools.smile", manifest.RootElement.GetProperty("sources")[1].GetString());
+            }
             var apiEntry = archive.GetEntry("api/public-symbols.json")!;
             using var reader = new StreamReader(apiEntry.Open());
             var api = reader.ReadToEnd();
             Equal(true, api.Contains("Double", StringComparison.Ordinal));
             Equal(false, api.Contains("Hidden", StringComparison.Ordinal));
+            using var document = System.Text.Json.JsonDocument.Parse(api);
+            Equal(6, document.RootElement.GetProperty("formatVersion").GetInt32());
+            Equal("Example.Tools@1.0.0", document.RootElement.GetProperty("library")
+                .GetProperty("provider").GetString());
+            var module = document.RootElement.GetProperty("modules")[0];
+            Equal("src/Code/Tools.smile", module.GetProperty("sources")[0].GetString());
+            Equal("src/Other/Tools.smile", module.GetProperty("sources")[1].GetString());
+            var member = module.GetProperty("members").EnumerateArray()
+                .Single(item => item.GetProperty("name").GetString() == "Double");
+            Equal("src/Code/Tools.smile", member.GetProperty("location").GetProperty("source").GetString());
+            Equal(6, member.GetProperty("location").GetProperty("length").GetInt32());
+            Equal(false, api.Contains(directory, StringComparison.OrdinalIgnoreCase));
         }
         File.WriteAllText(sourcePath, "Module Example.Tools\nPublic Function Triple(Value)\nReturn Value * 3\nEnd Function\nEnd Module\n");
         var changedCompilation = SmileProjectCompilation.Load(projectPath);
@@ -1486,6 +1516,126 @@ Run("Library packages are deterministic and reload through authoritative analysi
         var changed = SmileLibraryPackage.Read(first, Path.Combine(directory, "obj"));
         Equal(false, loaded.PackageHash == changed.PackageHash);
         Equal(false, loaded.ExtractionDirectory == changed.ExtractionDirectory);
+    }
+    finally { Directory.Delete(directory, true); }
+});
+Run("FormatVersion 6 preserves enum metadata and project package consumer parity", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileEnumPackageTests-" + Guid.NewGuid().ToString("N"));
+    var libraryDirectory = Path.Combine(directory, "Library");
+    var projectConsumerDirectory = Path.Combine(directory, "ProjectConsumer");
+    var packageConsumerDirectory = Path.Combine(directory, "PackageConsumer");
+    Directory.CreateDirectory(libraryDirectory);
+    Directory.CreateDirectory(projectConsumerDirectory);
+    Directory.CreateDirectory(packageConsumerDirectory);
+    try
+    {
+        var libraryProjectPath = Path.Combine(libraryDirectory, "Enums.smilelibproj");
+        var librarySourcePath = Path.Combine(libraryDirectory, "Enums.smile");
+        File.WriteAllText(librarySourcePath,
+            "Module Example.Enums\n" +
+            "Public Enum Direction\n" +
+            "Up = 1\n" +
+            "Right = 2\n" +
+            "Down = 3\n" +
+            "Left = 4\n" +
+            "End Enum\n" +
+            "Private Enum HiddenDirection\n" +
+            "Hidden = 9\n" +
+            "End Enum\n" +
+            "Public Function Echo(Value As Direction) As Direction\n" +
+            "Return Value\n" +
+            "End Function\n" +
+            "End Module\n");
+        File.WriteAllText(libraryProjectPath,
+            "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind>" +
+            "<LibraryName>Example.EnumLibrary</LibraryName><Version>1.0.0</Version></PropertyGroup>" +
+            "<ItemGroup><SmileSource Include=\"Enums.smile\" /></ItemGroup></SmileProject>");
+        var libraryCompilation = SmileProjectCompilation.Load(libraryProjectPath,
+            Path.Combine(directory, "library-cache"));
+        var libraryAnalysis = SmileLanguage.Analyze(libraryCompilation.Sources, SmileCompilationKind.Library,
+            libraryCompilation.DependencyContext);
+        Equal(false, libraryAnalysis.HasErrors);
+        var packagePath = Path.Combine(directory, "Enums.smilelib");
+        SmileLibraryPackage.Write(packagePath, libraryCompilation.Graph.Root, libraryAnalysis);
+
+        string apiText;
+        using (var archive = System.IO.Compression.ZipFile.OpenRead(packagePath))
+        using (var reader = new StreamReader(archive.GetEntry("api/public-symbols.json")!.Open()))
+            apiText = reader.ReadToEnd();
+        using (var document = System.Text.Json.JsonDocument.Parse(apiText))
+        {
+            var root = document.RootElement;
+            Equal(6, root.GetProperty("formatVersion").GetInt32());
+            Equal("Example.EnumLibrary@1.0.0", root.GetProperty("library").GetProperty("provider").GetString());
+            var module = root.GetProperty("modules")[0];
+            Equal("src/Enums.smile", module.GetProperty("sources")[0].GetString());
+            var direction = module.GetProperty("members").EnumerateArray()
+                .Single(member => member.GetProperty("name").GetString() == "Direction");
+            Equal("Enum", direction.GetProperty("kind").GetString());
+            Equal("Example.Enums::Direction", direction.GetProperty("identity").GetString());
+            Equal("Example.EnumLibrary@1.0.0", direction.GetProperty("provider").GetString());
+            Equal("Up|Right|Down|Left", string.Join("|", direction.GetProperty("members")
+                .EnumerateArray().Select(member => member.GetProperty("name").GetString())));
+            Equal("1|2|3|4", string.Join("|", direction.GetProperty("members")
+                .EnumerateArray().Select(member => member.GetProperty("value").GetInt64())));
+            Equal("0|1|2|3", string.Join("|", direction.GetProperty("members")
+                .EnumerateArray().Select(member => member.GetProperty("ordinal").GetInt32())));
+            var echo = module.GetProperty("members").EnumerateArray()
+                .Single(member => member.GetProperty("name").GetString() == "Echo");
+            Equal("enum", echo.GetProperty("returnType").GetProperty("kind").GetString());
+            Equal("Example.EnumLibrary@1.0.0",
+                echo.GetProperty("returnType").GetProperty("provider").GetString());
+            var parameter = echo.GetProperty("parameters")[0];
+            Equal("Value", parameter.GetProperty("name").GetString());
+            Equal("ByVal", parameter.GetProperty("mode").GetString());
+            Equal(0, parameter.GetProperty("ordinal").GetInt32());
+            Equal(false, parameter.GetProperty("optional").GetBoolean());
+            Equal(System.Text.Json.JsonValueKind.Null, parameter.GetProperty("default").ValueKind);
+            Equal("enum", parameter.GetProperty("type").GetProperty("kind").GetString());
+            Equal(false, apiText.Contains("HiddenDirection", StringComparison.Ordinal));
+            Equal(false, apiText.Contains(directory, StringComparison.OrdinalIgnoreCase));
+        }
+
+        const string program = "Import Example.Enums As Enums\n" +
+                               "Dim Facing As Enums.Direction\n" +
+                               "Facing = Enums.Direction.Left\n" +
+                               "If Enums.Echo(Facing) = Enums.Direction.Left Then\n" +
+                               "Print \"PASS\"\n" +
+                               "End If\n";
+        SmileAnalysisResult AnalyzeConsumer(string consumerDirectory, string reference)
+        {
+            var programPath = Path.Combine(consumerDirectory, "Program.smile");
+            var projectPath = Path.Combine(consumerDirectory, "Consumer.smileproj");
+            File.WriteAllText(programPath, program);
+            File.WriteAllText(projectPath,
+                "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup>" +
+                "<ItemGroup><SmileSource Include=\"Program.smile\" />" + reference +
+                "</ItemGroup></SmileProject>");
+            var compilation = SmileProjectCompilation.Load(projectPath,
+                Path.Combine(consumerDirectory, "cache"));
+            var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Program,
+                compilation.DependencyContext);
+            Equal(false, analysis.HasErrors);
+            var facingType = analysis.SemanticModel.Symbols["Facing"].Type;
+            Equal(SmileTypeKind.Enum, facingType.Kind);
+            Equal(true, compilation.DependencyContext.TryGetProviderDescriptor(
+                facingType.ProviderIdentity, out var descriptor));
+            Equal("Example.EnumLibrary@1.0.0", descriptor.LogicalIdentity);
+            var tree = analysis.GetSyntaxTree(programPath);
+            var leftPosition = program.IndexOf("Left", StringComparison.Ordinal);
+            Equal(true, SmileSymbolService.TryResolve(analysis, tree, leftPosition, out var resolved));
+            Equal("Left", resolved.Name);
+            Equal("Enums.smile", Path.GetFileName(resolved.DeclarationLocation!.FilePath));
+            return analysis;
+        }
+
+        AnalyzeConsumer(projectConsumerDirectory,
+            "<SmileProjectReference Include=\"..\\Library\\Enums.smilelibproj\" />");
+        var packageConsumerPackage = Path.Combine(packageConsumerDirectory, "Enums.smilelib");
+        File.Copy(packagePath, packageConsumerPackage);
+        AnalyzeConsumer(packageConsumerDirectory,
+            "<SmileLibraryReference Include=\"Enums.smilelib\" />");
     }
     finally { Directory.Delete(directory, true); }
 });
@@ -2325,7 +2475,7 @@ Run("Web emitter uses JavaScript Text values and ByRef references", () =>
     Equal(true, javascript.Contains(".set(", StringComparison.Ordinal));
     Equal(true, javascript.Contains("\"A\"", StringComparison.Ordinal));
 });
-Run("FormatVersion 5 packages contain deterministic typed public API metadata", () =>
+Run("FormatVersion 6 packages contain deterministic typed public API metadata", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "SmilePhase3APackageTests-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(directory);
@@ -2344,22 +2494,39 @@ Run("FormatVersion 5 packages contain deterministic typed public API metadata", 
         using (var archive = System.IO.Compression.ZipFile.OpenRead(first))
         {
             using var manifestReader = new StreamReader(archive.GetEntry("manifest.json")!.Open());
-            Equal(true, manifestReader.ReadToEnd().Contains("\"formatVersion\": 5", StringComparison.Ordinal));
+            Equal(true, manifestReader.ReadToEnd().Contains("\"formatVersion\": 6", StringComparison.Ordinal));
             using var apiReader = new StreamReader(archive.GetEntry("api/public-symbols.json")!.Open());
             var api = apiReader.ReadToEnd();
-            Equal(true, api.Contains("\"type\": \"Text\"", StringComparison.Ordinal));
+            Equal(true, api.Contains("\"type\": {\"kind\": \"primitive\", \"name\": \"Text\"}",
+                StringComparison.Ordinal));
             Equal(true, api.Contains("\"mode\": \"ByRef\"", StringComparison.Ordinal));
             Equal(true, api.Contains("\"mode\": \"ByVal\"", StringComparison.Ordinal));
-            Equal(true, api.Contains("\"returnType\": \"Text\"", StringComparison.Ordinal));
+            Equal(true, api.Contains("\"returnType\": {\"kind\": \"primitive\", \"name\": \"Text\"}",
+                StringComparison.Ordinal));
+            Equal(true, api.Contains("\"optional\": false, \"default\": null", StringComparison.Ordinal));
             Equal(false, api.Contains("Hidden", StringComparison.Ordinal));
         }
-        RewriteManifest(first, manifest => manifest.Replace("\"formatVersion\": 5", "\"formatVersion\": 4",
-            StringComparison.Ordinal));
-        ThrowsContains(() => SmileLibraryPackage.ReadIdentity(first), "rebuild the library");
+        for (var formatVersion = 1; formatVersion <= 5; formatVersion++)
+        {
+            var legacy = Path.Combine(directory, $"legacy-{formatVersion}.smilelib");
+            File.Copy(first, legacy);
+            RewriteManifest(legacy, manifest => manifest.Replace("\"formatVersion\": 6",
+                $"\"formatVersion\": {formatVersion}", StringComparison.Ordinal));
+            ThrowsContains(() => SmileLibraryPackage.ReadIdentity(legacy), "no longer supported");
+            var diagnostic = ThrowsProjectDiagnostic(() => SmileLibraryProviderResolver.LoadPackages(
+                new[] { legacy }, Path.Combine(directory, $"legacy-cache-{formatVersion}")), "SML3206");
+            Equal(true, diagnostic.Message.Contains("rebuild", StringComparison.OrdinalIgnoreCase));
+            Equal(true, diagnostic.Message.Contains("expected formatVersion 6", StringComparison.Ordinal));
+        }
+        var unknown = Path.Combine(directory, "unknown.smilelib");
+        File.Copy(first, unknown);
+        RewriteManifest(unknown, manifest => manifest.Replace("\"formatVersion\": 6",
+            "\"formatVersion\": 7", StringComparison.Ordinal));
+        ThrowsContains(() => SmileLibraryPackage.ReadIdentity(unknown), "expected 6");
     }
     finally { Directory.Delete(directory, true); }
 });
-Run("FormatVersion 5 packages preserve direct and transitive Game Window capabilities", () =>
+Run("FormatVersion 6 packages preserve direct and transitive Game Window capabilities", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "SmilePhase5CapabilityPackageTests-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(directory);
@@ -2402,7 +2569,7 @@ Run("Typed completion descriptions include parameter modes and returns", () =>
         .GetCompletions(Analyze(typedDeclaration), typedDeclaration.Length).Select(item => item.DisplayText)));
 });
 
-Run("FormatVersion 5 public API metadata preserves Image signatures", () =>
+Run("FormatVersion 6 public API metadata preserves Image signatures", () =>
 {
     var root = Path.Combine(Path.GetTempPath(), "SmilePhase4ImagePackageTests-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(root);
@@ -2422,8 +2589,10 @@ Run("FormatVersion 5 public API metadata preserves Image signatures", () =>
         using var archive = System.IO.Compression.ZipFile.OpenRead(package);
         using var reader = new StreamReader(archive.GetEntry("api/public-symbols.json")!.Open());
         var api = reader.ReadToEnd();
-        Equal(true, api.Contains("\"type\": \"Image\"", StringComparison.Ordinal));
-        Equal(true, api.Contains("\"returnType\": \"Boolean\"", StringComparison.Ordinal));
+        Equal(true, api.Contains("\"type\": {\"kind\": \"primitive\", \"name\": \"Image\"}",
+            StringComparison.Ordinal));
+        Equal(true, api.Contains("\"returnType\": {\"kind\": \"primitive\", \"name\": \"Boolean\"}",
+            StringComparison.Ordinal));
     }
     finally { Directory.Delete(root, true); }
 });
@@ -2467,6 +2636,108 @@ Run("Structured clips emit balanced cleanup for Return loop exits and End Progra
     var web = new WebEmitter(analysis).Emit();
     Equal(true, web.Split(new[] { "finally {" }, StringSplitOptions.None).Length >= 6);
     Equal(true, web.Split(new[] { "smile.popClip();" }, StringSplitOptions.None).Length >= 5);
+});
+
+Run("Enum declarations bind checked Const values aliases contextual names and parser recovery", () =>
+{
+    const string source = "Option Explicit\nEnum Direction\nNone = ENUM_BASE\nUp\nDown = Abs(-10)\nLeft = -1\nRight = -1\nEnd Enum\nConst ENUM_BASE = 5\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var declaration = analysis.SyntaxTree.Root.Statements.OfType<EnumDeclarationSyntax>().Single();
+    Equal("None|Up|Down|Left|Right", string.Join("|", declaration.Members.Select(member => member.Identifier.Text)));
+    var type = analysis.SemanticModel.EnumTypes["Direction"];
+    Equal(SmileTypeKind.Enum, type.Kind);
+    Equal(8, type.Size);
+    Equal("5|6|10|-1|-1", string.Join("|", type.Members.Select(member => member.Value)));
+
+    var recovered = Analyze("Enum Direction\nEnd Type\nUp\nEnd Enum\nDim Value As Direction\n");
+    Equal(true, HasDiagnostic(recovered, "SML3421"));
+    Equal(SmileTypeKind.Enum, recovered.SemanticModel.Symbols["Value"].Type.Kind);
+    Equal("Up", recovered.SemanticModel.EnumTypes["Direction"].Members.Single().Name);
+    Equal(true, HasDiagnostic(Analyze("Enum Empty\nEnd Enum\n"), "SML3421"));
+    Equal(true, HasDiagnostic(Analyze(
+        "Enum Limit\nMaximum = 9223372036854775807\nOverflow\nEnd Enum\n"), "SML3422"));
+    Equal(true, HasDiagnostic(Analyze(
+        "Enum Limit\nOverflow = TOO_LARGE\nEnd Enum\nConst TOO_LARGE = 9223372036854775807 + 1\n"),
+        "SML3422"));
+    Equal(true, HasDiagnostic(Analyze(
+        "Enum Direction\nUp\nDown = Direction.Up + 1\nEnd Enum\n"), "SML3422"));
+});
+
+Run("Enum exact typing spans records arrays ByRef returns Select constants and both emitters", () =>
+{
+    const string source = "Option Explicit\nEnum State\nNone\nReady = 7\nMaximum = 9223372036854775807\nMinimum = -9223372036854775807 - 1\nAlias = 7\nEnd Enum\nConst DEFAULT_STATE = State.None\nConst LOWEST_STATE = State.Minimum\nType Holder\nValue As State\nEnd Type\nDim Current As Holder\nDim Values[2] As State\nDim Selected As State\nCurrent.Value = DEFAULT_STATE\nValues[0] = Current.Value\nValues[1] = LOWEST_STATE\nCall SetState(Values[0], State.Ready)\nSelected = ReadState(Current)\nIf State.Minimum = State.Minimum Then\nSelected = State.Maximum\nEnd If\nSelect Case Values[0]\nCase State.Ready\nSelected = State.Ready\nCase Else\nSelected = State.None\nEnd Select\nSub SetState(ByRef Value As State, NewValue As State)\nValue = NewValue\nEnd Sub\nFunction ReadState(Value As Holder) As State\nReturn Value.Value\nEnd Function\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var state = analysis.SemanticModel.EnumTypes["State"];
+    Equal(state, analysis.SemanticModel.Symbols["Values"].Type);
+    Equal(state, analysis.SemanticModel.Types["Holder"].Fields.Single().Type);
+    Equal(state, analysis.SemanticModel.Routines.Values.Single(routine => routine.Name == "ReadState").ReturnType);
+    Equal(ParameterPassingMode.ByRef, analysis.SemanticModel.Routines.Values
+        .Single(routine => routine.Name == "SetState").Parameters[0].ParameterMode);
+    Equal(state, analysis.SemanticModel.Symbols["DEFAULT_STATE"].Type);
+
+    var nativeEmitter = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, true);
+    var native = nativeEmitter.Emit();
+    Equal(true, native.Contains("08000000000000000h", StringComparison.Ordinal));
+    Equal(true, native.Split(new[] { "08000000000000000h" }, StringSplitOptions.None).Length >= 4);
+    Equal(true, native.Contains("07FFFFFFFFFFFFFFFh", StringComparison.Ordinal));
+    Equal(true, CompilerDriver.BuildDebugSource(nativeEmitter.DebugSites)
+        .Contains("long long Selected", StringComparison.Ordinal));
+    var web = new WebEmitter(analysis).Emit();
+    Equal(true, web.Contains("-9223372036854775808n", StringComparison.Ordinal));
+    Equal(true, web.Contains("9223372036854775807n", StringComparison.Ordinal));
+    Equal(true, web.Contains("smile.array([2], 0n)", StringComparison.Ordinal));
+    Equal(true, web.Contains("const g_0_default_state = 0n", StringComparison.Ordinal));
+});
+
+Run("Enum identity rejects conversion arithmetic cross-type equality and duplicate Select aliases", () =>
+{
+    Equal(true, HasDiagnostic(Analyze(
+        "Enum Direction\nUp\nEnd Enum\nDim Value As Direction\nValue = 0\n"), "SML3304"));
+    Equal(true, HasDiagnostic(Analyze(
+        "Enum Direction\nUp\nEnd Enum\nDim Value As Direction\nValue = Direction.Up + Direction.Up\n"),
+        "SML3424"));
+    Equal(true, HasDiagnostic(Analyze(
+        "Enum First\nReady\nEnd Enum\nEnum Second\nReady\nEnd Enum\nDim A As First\nDim B As Second\nIf A = B Then\nPrint 1\nEnd If\n"),
+        "SML3424"));
+    Equal(true, HasDiagnostic(Analyze(
+        "Enum Direction\nLeft = -1\nRight = -1\nEnd Enum\nDim Value As Direction\nSelect Case Value\nCase Direction.Left\nPrint 1\nCase Direction.Right\nPrint 2\nEnd Select\n"),
+        "SML3019"));
+    Equal(true, HasDiagnostic(Analyze(
+        "Enum Direction\nUp\nEnd Enum\nDim Value As Direction\nValue = Direction.Missing\n"),
+        "SML3423"));
+});
+
+Run("Enum completion Quick Info definition and implicit inference retain nominal identity", () =>
+{
+    const string source = "Enum Direction\nNone\nUp\nDown\nLeft = 3\nRight = 4\nEnd Enum\nConst DEFAULT_DIRECTION = Direction.Left\nType Holder\nValue As Direction\nEnd Type\nDim Items[1] As Direction\nDim Current As Holder\nFromArray = Items[0]\nFromField = Current.Value\nFunction ReadArray()\nReturn Items[0]\nEnd Function\nFunction ReadField()\nReturn Current.Value\nEnd Function\nDim Selected As Direction\nSelected = Direction.Left\nSelected = Direction.\n";
+    var analysis = Analyze(source);
+    Equal(SmileTypeKind.Enum, analysis.SemanticModel.Symbols["FromArray"].Type.Kind);
+    Equal(SmileTypeKind.Enum, analysis.SemanticModel.Symbols["FromField"].Type.Kind);
+    Equal(SmileTypeKind.Enum, analysis.SemanticModel.Routines.Values.Single(routine => routine.Name == "ReadArray").ReturnType.Kind);
+    Equal(SmileTypeKind.Enum, analysis.SemanticModel.Routines.Values.Single(routine => routine.Name == "ReadField").ReturnType.Kind);
+    var ordinaryPosition = source.IndexOf("Dim Selected", StringComparison.Ordinal);
+    Equal(true, SmileCompletionService.GetCompletions(analysis, ordinaryPosition)
+        .Any(completion => completion.DisplayText == "Direction" && completion.Kind == SmileCompletionKind.Type));
+    var completionPosition = source.LastIndexOf("Direction.", StringComparison.Ordinal) + "Direction.".Length;
+    Equal("None|Up|Down|Left|Right", string.Join("|",
+        SmileCompletionService.GetCompletions(analysis, completionPosition)
+            .Select(completion => completion.DisplayText)));
+    var memberUse = source.IndexOf("Direction.Left", StringComparison.Ordinal) + "Direction.".Length;
+    var member = ResolveSymbol(analysis, analysis.SyntaxTree, memberUse);
+    Equal(SmileResolvedSymbolKind.EnumMember, member.Kind);
+    Equal("Enum member Direction.Left = 3", member.Signature);
+    Equal(source.IndexOf("Left = 3", StringComparison.Ordinal), member.DeclarationLocation!.Span.Start);
+    var typeUse = source.IndexOf("As Direction", StringComparison.Ordinal) + "As ".Length;
+    Equal(SmileResolvedSymbolKind.Enum, ResolveSymbol(analysis, analysis.SyntaxTree, typeUse).Kind);
+
+    const string module = "Module Example.Enums\nPublic Enum Direction\nNone\nUp\nDown\nLeft\nRight\nEnd Enum\nEnd Module\n";
+    const string program = "Import Example.Enums As Enums\nDim Value As Enums.Direction\nValue = Enums.Direction.\n";
+    var imported = Multi(("Program.smile", true, program), ("Enums.smile", false, module));
+    Equal("None|Up|Down|Left|Right", string.Join("|", SmileCompletionService.GetCompletions(imported,
+        "Program.smile", program.LastIndexOf("Enums.Direction.", StringComparison.Ordinal) +
+        "Enums.Direction.".Length).Select(completion => completion.DisplayText)));
 });
 
 Run("Record types bind nominal identities nested fields arrays and deterministic layouts", () =>
@@ -2776,7 +3047,7 @@ Run("Record completion separates type value alias and indexed-field contexts", (
         .GetCompletions(importedFields, importedFieldSource.Length).Select(item => item.DisplayText)));
 });
 
-Run("FormatVersion 5 public API uses logical provider identities deterministically", () =>
+Run("FormatVersion 6 public API uses logical provider identities deterministically", () =>
 {
     var root = Path.Combine(Path.GetTempPath(), "SmileP3B1ProviderTests-" + Guid.NewGuid().ToString("N"));
     var firstRoot = Path.Combine(root, "checkout-a");
@@ -2856,7 +3127,7 @@ Run("Public API preserves referenced record provider identities", () =>
         using (var archive = System.IO.Compression.ZipFile.OpenRead(consumerPackage))
         using (var reader = new StreamReader(archive.GetEntry("api/public-symbols.json")!.Open()))
             api = reader.ReadToEnd();
-        Equal(true, api.Contains("\"typeProvider\": \"Example.BaseProvider@1.0.0\"", StringComparison.Ordinal));
+        Equal(true, api.Contains("\"provider\": \"Example.BaseProvider@1.0.0\"", StringComparison.Ordinal));
         Equal(true, api.Contains("\"provider\": \"Example.ConsumerProvider@2.0.0\"", StringComparison.Ordinal));
         Equal(false, api.Contains(root, StringComparison.OrdinalIgnoreCase));
         SmileLibraryProviderResolver.LoadPackages(new[] { basePackage, consumerPackage },
