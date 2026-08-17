@@ -135,6 +135,52 @@ Record identity is exact and nominal: separately declared types with identical f
 
 Native records use deterministic inline 8-byte-aligned layouts and generated initialize, clear, and deep-copy helpers. Record results use a hidden caller-owned return buffer; invocation-local result temporaries keep recursive calls reentrant and release nested `Text` exactly once. Web records use fresh default objects and deep clones so assignment, arrays, `ByVal`, `ByRef`, and returns do not leak JavaScript object aliases. Generated JavaScript stores fields under deterministic private keys derived from the bound record-field symbol and ordinal, never under source spelling. Fields such as `__proto__`, `constructor`, `prototype`, `toString`, and `valueOf` therefore behave like ordinary SMILE fields while IntelliSense and package metadata continue to show their original names.
 
+### Type methods and properties
+
+A `Type` may also contain instance `Sub` and `Function` members plus `Property` declarations. Members are Public by default and may be marked `Public` or `Private`. Fields are always Public: explicit `Public` is allowed, while `Private` is not. Fields, methods, and properties share one case-insensitive member namespace. An instance member uses `Me` to read or replace fields on its hidden `ByRef` receiver. `Me` is not a declared parameter and cannot be assigned or passed `ByRef` as a whole.
+
+```smile
+Type Counter
+    Label As Text
+    StoredValue As Number
+
+    Public Sub Advance(Optional Delta As Number = 1)
+        Me.StoredValue = Me.StoredValue + Delta
+    End Sub
+
+    Public Function Shifted(Optional Delta As Number = 1) As Counter
+        Dim Result As Counter
+        Result = Me
+        Call Result.Advance(Delta)
+        Return Result
+    End Function
+
+    Public Property Total As Number
+        Get
+            Return Me.StoredValue
+        End Get
+        Set
+            Me.StoredValue = Value
+        End Set
+    End Property
+End Type
+
+Dim Current As Counter
+Call Current.Advance(Delta:=2)
+Current.Total = 9
+Print Current.Total
+```
+
+A Property declares `Get`, `Set`, or both. `Get` returns the declared property type. `Set` receives the contextual hidden `ByVal` local `Value`; it is not a public parameter. Reading a write-only property or assigning a read-only property is an error. Private members are available only from another method or accessor of the same containing Type.
+
+The receiver must be a stable writable Type location: a variable or parameter, array element, nested field, or active `With` target. A Function result, Property result, or other temporary is not a valid receiver, even when its value has the right nominal Type. A method evaluates and captures its receiver before evaluating explicit arguments. Explicit arguments still evaluate exactly once in source order before declaration-order ABI placement. A property assignment evaluates its right-hand side first, then resolves the receiver location; replacing a root through `ByRef` during either stage is therefore visible at the specified point. Returned and `ByVal` Type values remain deep copies, not object aliases.
+
+Game Window capability flows through methods and each Property accessor independently. A Console consumer may assign through a safe setter even when that property's getter requires a Game Window. Format-version 6 packages preserve public nested method/function signatures, Optional defaults, structured nominal types, stable runtime identities, source locations, and accessor-specific capabilities. Hidden `Me` and `Value` locals and Private members never enter package API metadata.
+
+Completion after an addressable Type value lists accessible fields, methods, Functions, and properties; named-label completion for a method lists only its declared parameters. A record-valued Property result may still expose readable nested fields, but it does not offer invalid method/property calls because the result is not addressable. Quick Info shows the containing Type, exact project/package provider, signature, accessor availability, and separate getter/setter capability. F12 navigates to the original project declaration or extracted package source. Hovering a property does not invoke its getter. The formatter traverses Type routines and Property accessors, canonicalizes contextual `Me`/`Value`, safely rewrites computed Returns in Functions and getters, and remains idempotent.
+
+Diagnostics use `SML3440` for Type member collisions and illegal Private fields, `SML3441` for malformed Properties/accessors, `SML3442` for invalid `Me`, `SML3443` for a missing/noncallable member or non-Type receiver, `SML3444` for a nonaddressable receiver, `SML3445` for an unavailable accessor, and `SML3446` for access to a Private member from outside its Type. This value-Type slice does not add `Class`, `New`, `Nothing`, `Is`, constructors, destructors, inheritance, or reference identity.
+
 ## Enum types
 
 `Enum Name` ... `End Enum` declares a closed nominal value type. Enums may be project-global or direct module declarations and follow the same private-by-default module visibility rules as records. Each member begins on its own declaration line and uses either `Name` or `Name = NumberConstantExpression`. The first implicit value is zero; every later implicit value is the checked previous value plus one. Explicit values accept signed 64-bit compile-time `Number` expressions, including forward `Const` resolution and the normal constant arithmetic and numeric built-ins; constant cycles are diagnosed. Overflow, division by zero, non-Number values, and enum-typed operands are rejected rather than wrapped or converted.
@@ -199,9 +245,9 @@ Sub ReplaceCurrent(ByRef Value As Actor, Replacement As Actor)
 End Sub
 ```
 
-This slice exposes record fields only. A leading dot outside a `With` block, an unknown field, a non-record target, or a target that is not a stable writable location produces a diagnostic. `Call .Method(...)` is reserved syntax and is diagnosed until `Type` methods are implemented; it does not call a field or an unqualified routine.
+The active target exposes fields plus accessible Type methods and properties. `Call .Advance(...)`, `.Total`, and `.Total = Value` use the same stable target location; nested leading-dot field chains remain valid. A leading dot outside a `With` block, an unknown member, a non-record target, or a target that is not a stable writable location produces a diagnostic. A method call through `With` evaluates the already-captured target before its explicit arguments, while a property assignment evaluates its right-hand side before resolving that target location.
 
-The syntax-aware formatter treats `With` as structured control flow, preserves `With Target`, `End With`, and body indentation, and applies its normal nested transformations idempotently. In the editor, completion after a leading dot offers fields from the innermost active record and follows chains such as `.Position.`. Quick Info and Go To Definition (F12) on a leading-dot field resolve to that field's declaration.
+The syntax-aware formatter treats `With` as structured control flow, preserves `With Target`, `End With`, and body indentation, and applies its normal nested transformations idempotently. In the editor, completion after a leading dot offers accessible fields, methods, and properties from the innermost active record and follows chains such as `.Position.`. Quick Info and Go To Definition (F12) on a leading-dot member resolve to that member's declaration.
 
 ## Multi-file programs
 

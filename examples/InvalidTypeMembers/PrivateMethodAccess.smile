@@ -1,0 +1,11 @@
+Type Counter
+
+    Private Sub Hide()
+
+    End Sub
+
+End Type
+
+Dim Current As Counter
+
+Call Current.Hide()

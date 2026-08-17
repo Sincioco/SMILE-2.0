@@ -1,0 +1,7 @@
+Type Counter
+
+    Public Property Value As Number
+
+    End Property
+
+End Type

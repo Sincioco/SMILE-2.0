@@ -502,7 +502,15 @@ public static class SmileLibraryPackage
                 builder.Append(", \"fields\": [")
                     .Append(string.Join(", ", record.Fields.OrderBy(field => field.Ordinal)
                         .Select(field => FieldJson(field, dependencyContext, sourceIds))))
-                    .Append("], \"members\": []");
+                    .Append("], \"members\": [")
+                    .Append(string.Join(", ", record.Members
+                        .Where(typeMember => typeMember.MemberKind != SmileTypeMemberKind.Field &&
+                                             typeMember.Visibility == ModuleVisibility.Public)
+                        .OrderBy(typeMember => typeMember.Name, StringComparer.OrdinalIgnoreCase)
+                        .ThenBy(typeMember => typeMember.Name, StringComparer.Ordinal)
+                        .ThenBy(typeMember => typeMember.MemberKind)
+                        .Select(typeMember => TypeMemberJson(typeMember, dependencyContext, sourceIds))))
+                    .Append(']');
             else if (member.Type is EnumTypeSymbol enumType)
                 builder.Append(", \"members\": [")
                     .Append(string.Join(", ", enumType.Members.OrderBy(enumMember => enumMember.Ordinal)
@@ -807,6 +815,57 @@ public static class SmileLibraryPackage
 
         throw new InvalidDataException(
             $"Optional public parameter '{parameter.Name}' has unsupported default type '{parameter.Type.Name}'.");
+    }
+
+    private static string TypeMemberJson(ITypeMemberSymbol member,
+        SmileCompilationDependencyContext dependencyContext, IReadOnlyDictionary<string, string> sourceIds)
+    {
+        if (member.Visibility != ModuleVisibility.Public)
+            throw new InvalidDataException($"Private Type member '{member.Name}' cannot enter public API metadata.");
+        if (string.IsNullOrWhiteSpace(member.RuntimeIdentity))
+            throw new InvalidDataException($"Public Type member '{member.Name}' has no stable runtime identity.");
+
+        var builder = new StringBuilder("{\"name\": \"").Append(JsonEscape(member.Name))
+            .Append("\", \"kind\": \"").Append(member.MemberKind)
+            .Append("\", \"visibility\": \"").Append(member.Visibility)
+            .Append("\", \"identity\": \"").Append(JsonEscape(member.RuntimeIdentity)).Append('"');
+        switch (member)
+        {
+            case TypeRoutineSymbol method:
+                var routine = method.Routine;
+                builder.Append(", \"returnType\": ")
+                    .Append(routine.IsFunction
+                        ? TypeReferenceJson(routine.ReturnType, dependencyContext)
+                        : "null")
+                    .Append(", \"parameters\": [")
+                    .Append(string.Join(", ", routine.Parameters.Select((parameter, ordinal) =>
+                        ParameterJson(parameter, ordinal, dependencyContext, sourceIds))))
+                    .Append("], \"requiresGameWindow\": ")
+                    .Append(routine.RequiresGameWindow ? "true" : "false");
+                break;
+            case PropertySymbol property:
+                builder.Append(", \"type\": ").Append(TypeReferenceJson(property.Type, dependencyContext))
+                    .Append(", \"get\": ").Append(PropertyAccessorJson(property.Getter, sourceIds))
+                    .Append(", \"set\": ").Append(PropertyAccessorJson(property.Setter, sourceIds));
+                break;
+            default:
+                throw new InvalidDataException(
+                    $"Unsupported public Type member metadata kind '{member.MemberKind}'.");
+        }
+        return builder.Append(", \"location\": ")
+            .Append(LocationJson(member.Source, member.DeclarationSpan, sourceIds)).Append('}').ToString();
+    }
+
+    private static string PropertyAccessorJson(RoutineSymbol? accessor,
+        IReadOnlyDictionary<string, string> sourceIds)
+    {
+        if (accessor == null)
+            return "null";
+        if (!accessor.IsPropertyAccessor || string.IsNullOrWhiteSpace(accessor.RuntimeIdentity))
+            throw new InvalidDataException("Public property accessor has no stable accessor identity.");
+        return "{\"identity\": \"" + JsonEscape(accessor.RuntimeIdentity) +
+               "\", \"requiresGameWindow\": " + (accessor.RequiresGameWindow ? "true" : "false") +
+               ", \"location\": " + LocationJson(accessor.Source, accessor.DeclarationSpan, sourceIds) + "}";
     }
 
     private static string FieldJson(RecordFieldSymbol field,

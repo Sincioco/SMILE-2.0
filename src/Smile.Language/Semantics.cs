@@ -74,7 +74,7 @@ public abstract class NominalTypeSymbol : SmileType
     {
     }
 
-    internal void ApplyModuleIdentity(string name, string moduleName, ModuleVisibility visibility,
+    internal virtual void ApplyModuleIdentity(string name, string moduleName, ModuleVisibility visibility,
         string providerIdentity, string runtimeIdentity)
     {
         Name = name;
@@ -85,12 +85,35 @@ public abstract class NominalTypeSymbol : SmileType
     }
 }
 
-public sealed class RecordFieldSymbol
+public enum SmileTypeMemberKind
 {
-    internal RecordFieldSymbol(string name, SyntaxToken typeToken, SourceText source, TextSpan declarationSpan, int ordinal)
+    Field,
+    Subroutine,
+    Function,
+    Property
+}
+
+public interface ITypeMemberSymbol
+{
+    string Name { get; }
+    SmileTypeMemberKind MemberKind { get; }
+    NominalTypeSymbol? ContainingType { get; }
+    ModuleVisibility Visibility { get; }
+    string ProviderIdentity { get; }
+    string RuntimeIdentity { get; }
+    SourceText Source { get; }
+    TextSpan DeclarationSpan { get; }
+    SourceLocation DeclarationLocation { get; }
+}
+
+public sealed class RecordFieldSymbol : ITypeMemberSymbol
+{
+    internal RecordFieldSymbol(string name, SyntaxToken typeToken, RecordTypeSymbol containingType,
+        SourceText source, TextSpan declarationSpan, int ordinal)
     {
         Name = name;
         TypeToken = typeToken;
+        RecordType = containingType;
         Source = source;
         DeclarationSpan = declarationSpan;
         Ordinal = ordinal;
@@ -98,6 +121,12 @@ public sealed class RecordFieldSymbol
     }
 
     public string Name { get; }
+    public SmileTypeMemberKind MemberKind => SmileTypeMemberKind.Field;
+    public NominalTypeSymbol ContainingType => RecordType;
+    public RecordTypeSymbol RecordType { get; }
+    public ModuleVisibility Visibility => ModuleVisibility.Public;
+    public string ProviderIdentity => RecordType.ProviderIdentity;
+    public string RuntimeIdentity => RecordType.RuntimeIdentity + "::field::" + Name;
     public SyntaxToken TypeToken { get; }
     public SmileType Type { get; internal set; }
     public int Ordinal { get; }
@@ -107,10 +136,35 @@ public sealed class RecordFieldSymbol
     public SourceLocation DeclarationLocation => new(Source, DeclarationSpan);
 }
 
+public sealed class TypeRoutineSymbol : ITypeMemberSymbol
+{
+    internal TypeRoutineSymbol(RoutineSymbol routine)
+    {
+        Routine = routine;
+    }
+
+    public RoutineSymbol Routine { get; }
+    public string Name => Routine.Name;
+    public SmileTypeMemberKind MemberKind => Routine.IsFunction
+        ? SmileTypeMemberKind.Function : SmileTypeMemberKind.Subroutine;
+    public NominalTypeSymbol? ContainingType => Routine.ContainingType;
+    public ModuleVisibility Visibility => Routine.Visibility;
+    public string ProviderIdentity => Routine.ProviderIdentity;
+    public string RuntimeIdentity => Routine.RuntimeIdentity;
+    public SourceText Source => Routine.Source;
+    public TextSpan DeclarationSpan => Routine.DeclarationSpan;
+    public SourceLocation DeclarationLocation => Routine.DeclarationLocation;
+}
+
 public sealed class RecordTypeSymbol : NominalTypeSymbol
 {
     private readonly List<RecordFieldSymbol> _fields = new();
     private readonly Dictionary<string, RecordFieldSymbol> _fieldsByName = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<ITypeMemberSymbol> _members = new();
+    private readonly List<RoutineSymbol> _methods = new();
+    private readonly List<PropertySymbol> _properties = new();
+    private readonly Dictionary<string, ITypeMemberSymbol> _membersByName =
+        new(StringComparer.OrdinalIgnoreCase);
 
     internal RecordTypeSymbol(string name, TypeDeclarationSyntax declaration, SourceText source, int sourceOrdinal)
         : base(SmileTypeKind.Record, name, source, sourceOrdinal, declaration.Identifier.Span)
@@ -120,18 +174,79 @@ public sealed class RecordTypeSymbol : NominalTypeSymbol
 
     public TypeDeclarationSyntax Declaration { get; }
     public IReadOnlyList<RecordFieldSymbol> Fields => _fields;
+    public IReadOnlyList<ITypeMemberSymbol> Members => _members;
+    public IReadOnlyList<RoutineSymbol> Methods => _methods;
+    public IReadOnlyList<PropertySymbol> Properties => _properties;
     public override int Size { get; internal set; } = 8;
     public override bool ContainsOwnedText { get; internal set; }
     public override bool ContainsOwnedImage { get; internal set; }
     public bool TryGetField(string name, out RecordFieldSymbol field) => _fieldsByName.TryGetValue(name, out field!);
+    public bool TryGetMember(string name, out ITypeMemberSymbol member) =>
+        _membersByName.TryGetValue(name, out member!);
+    public bool TryGetMethod(string name, out RoutineSymbol method)
+    {
+        if (_membersByName.TryGetValue(name, out var member) && member is TypeRoutineSymbol routine)
+        {
+            method = routine.Routine;
+            return true;
+        }
+        method = null!;
+        return false;
+    }
+
+    public bool TryGetProperty(string name, out PropertySymbol property)
+    {
+        if (_membersByName.TryGetValue(name, out var member) && member is PropertySymbol result)
+        {
+            property = result;
+            return true;
+        }
+        property = null!;
+        return false;
+    }
 
     internal bool AddField(RecordFieldSymbol field)
     {
-        if (_fieldsByName.ContainsKey(field.Name))
+        if (!AddMember(field))
             return false;
         _fieldsByName[field.Name] = field;
         _fields.Add(field);
         return true;
+    }
+
+    internal bool AddMethod(RoutineSymbol method)
+    {
+        if (!AddMember(new TypeRoutineSymbol(method)))
+            return false;
+        _methods.Add(method);
+        return true;
+    }
+
+    internal bool AddProperty(PropertySymbol property)
+    {
+        if (!AddMember(property))
+            return false;
+        _properties.Add(property);
+        return true;
+    }
+
+    private bool AddMember(ITypeMemberSymbol member)
+    {
+        if (_membersByName.ContainsKey(member.Name))
+            return false;
+        _membersByName[member.Name] = member;
+        _members.Add(member);
+        return true;
+    }
+
+    internal override void ApplyModuleIdentity(string name, string moduleName, ModuleVisibility visibility,
+        string providerIdentity, string runtimeIdentity)
+    {
+        base.ApplyModuleIdentity(name, moduleName, visibility, providerIdentity, runtimeIdentity);
+        foreach (var method in _methods)
+            method.ApplyContainingTypeIdentity();
+        foreach (var property in _properties)
+            property.ApplyContainingTypeIdentity();
     }
 
 }
@@ -197,7 +312,7 @@ public enum WithStorageKind
 
 public sealed class WithTargetBinding
 {
-    internal WithTargetBinding(WithStatementSyntax statement, RecordTypeSymbol targetType,
+    internal WithTargetBinding(WithStatementSyntax statement, NominalTypeSymbol targetType,
         WithStorageKind storageKind, int depth, TextSpan activeBodySpan)
     {
         Statement = statement;
@@ -208,7 +323,8 @@ public sealed class WithTargetBinding
     }
 
     public WithStatementSyntax Statement { get; }
-    public RecordTypeSymbol TargetType { get; }
+    public NominalTypeSymbol TargetType { get; }
+    public RecordTypeSymbol? RecordType => TargetType as RecordTypeSymbol;
     public WithStorageKind StorageKind { get; }
     public int Depth { get; }
     public TextSpan ActiveBodySpan { get; }
@@ -221,12 +337,22 @@ public sealed class WithMemberBinding
     {
         ReceiverStatement = receiverStatement;
         ContainingType = containingType;
-        Field = field;
+        Member = field;
+    }
+
+    internal WithMemberBinding(WithStatementSyntax receiverStatement, RecordTypeSymbol containingType,
+        PropertySymbol property)
+    {
+        ReceiverStatement = receiverStatement;
+        ContainingType = containingType;
+        Member = property;
     }
 
     public WithStatementSyntax ReceiverStatement { get; }
     public RecordTypeSymbol ContainingType { get; }
-    public RecordFieldSymbol Field { get; }
+    public ITypeMemberSymbol Member { get; }
+    public RecordFieldSymbol? Field => Member as RecordFieldSymbol;
+    public PropertySymbol? Property => Member as PropertySymbol;
 }
 
 internal sealed class InvalidWithScope
@@ -341,6 +467,68 @@ public sealed class ParameterSymbol : VariableSymbol
     }
 }
 
+public sealed class InstanceReceiverSymbol : VariableSymbol
+{
+    internal InstanceReceiverSymbol(NominalTypeSymbol type, SourceText source, int sourceOrdinal,
+        TextSpan declarationSpan, string routineName)
+        : base("Me", type, Array.Empty<int>(), source, sourceOrdinal, declarationSpan,
+            routineName: routineName, parameterMode: ParameterPassingMode.ByRef)
+    {
+        ContainingType = type;
+    }
+
+    public NominalTypeSymbol ContainingType { get; }
+    public bool IsBorrowed => true;
+}
+
+public sealed class PropertyValueSymbol : VariableSymbol
+{
+    internal PropertyValueSymbol(SmileType type, SourceText source, int sourceOrdinal,
+        TextSpan declarationSpan, string routineName)
+        : base("Value", type, Array.Empty<int>(), source, sourceOrdinal, declarationSpan,
+            routineName: routineName, parameterMode: ParameterPassingMode.ByVal)
+    {
+    }
+}
+
+public sealed class PropertySymbol : ITypeMemberSymbol
+{
+    internal PropertySymbol(PropertyDeclarationSyntax declaration, NominalTypeSymbol containingType,
+        SmileType type, SourceText source, RoutineSymbol? getter, RoutineSymbol? setter)
+    {
+        Declaration = declaration;
+        ContainingType = containingType;
+        Type = type;
+        Source = source;
+        Getter = getter;
+        Setter = setter;
+        ApplyContainingTypeIdentity();
+    }
+
+    public string Name => Declaration.Identifier.Text;
+    public SmileTypeMemberKind MemberKind => SmileTypeMemberKind.Property;
+    public NominalTypeSymbol ContainingType { get; }
+    public RecordTypeSymbol? RecordType => ContainingType as RecordTypeSymbol;
+    public ModuleVisibility Visibility => Declaration.Visibility;
+    public SmileType Type { get; }
+    public PropertyDeclarationSyntax Declaration { get; }
+    public RoutineSymbol? Getter { get; internal set; }
+    public RoutineSymbol? Setter { get; internal set; }
+    public SourceText Source { get; }
+    public TextSpan DeclarationSpan => Declaration.Identifier.Span;
+    public SourceLocation DeclarationLocation => new(Source, DeclarationSpan);
+    public string ProviderIdentity { get; private set; } = string.Empty;
+    public string RuntimeIdentity { get; private set; } = string.Empty;
+
+    internal void ApplyContainingTypeIdentity()
+    {
+        ProviderIdentity = ContainingType.ProviderIdentity;
+        RuntimeIdentity = ContainingType.RuntimeIdentity + "::property::" + Name;
+        Getter?.ApplyContainingTypeIdentity();
+        Setter?.ApplyContainingTypeIdentity();
+    }
+}
+
 public sealed class BoundCallArgument
 {
     internal BoundCallArgument(ParameterSymbol parameter, int parameterIndex, ArgumentSyntax? syntax,
@@ -362,42 +550,146 @@ public sealed class BoundCallArgument
     public EnumMemberSymbol? DefaultEnumMember => Parameter.DefaultEnumMember;
 }
 
+public enum BoundInstanceReceiverKind
+{
+    Expression,
+    WithTarget
+}
+
+public sealed class BoundInstanceReceiver
+{
+    internal BoundInstanceReceiver(NominalTypeSymbol containingType, ExpressionSyntax expression)
+    {
+        ContainingType = containingType;
+        Expression = expression;
+        Kind = BoundInstanceReceiverKind.Expression;
+    }
+
+    internal BoundInstanceReceiver(NominalTypeSymbol containingType, WithStatementSyntax withTarget)
+    {
+        ContainingType = containingType;
+        WithTarget = withTarget;
+        Kind = BoundInstanceReceiverKind.WithTarget;
+    }
+
+    public BoundInstanceReceiverKind Kind { get; }
+    public NominalTypeSymbol ContainingType { get; }
+    public ExpressionSyntax? Expression { get; }
+    public WithStatementSyntax? WithTarget { get; }
+    public bool IsAddressable => true;
+}
+
 public sealed class BoundCall
 {
     internal BoundCall(RoutineSymbol routine, IReadOnlyList<BoundCallArgument> sourceArguments,
         IReadOnlyList<BoundCallArgument> parameterArguments)
+        : this(routine, sourceArguments, parameterArguments, null, null, false)
+    {
+    }
+
+    internal BoundCall(RoutineSymbol routine, IReadOnlyList<BoundCallArgument> sourceArguments,
+        IReadOnlyList<BoundCallArgument> parameterArguments, BoundInstanceReceiver? instanceReceiver,
+        ExpressionSyntax? implicitValue,
+        bool evaluateReceiverAfterImplicitValue)
     {
         Routine = routine;
         SourceArguments = sourceArguments;
         ParameterArguments = parameterArguments;
+        InstanceReceiver = instanceReceiver;
+        ImplicitValue = implicitValue;
+        EvaluateReceiverAfterImplicitValue = evaluateReceiverAfterImplicitValue;
     }
 
     public RoutineSymbol Routine { get; }
     public IReadOnlyList<BoundCallArgument> SourceArguments { get; }
     public IReadOnlyList<BoundCallArgument> ParameterArguments { get; }
+    public BoundInstanceReceiver? InstanceReceiver { get; }
+    public ExpressionSyntax? ImplicitValue { get; }
+    public bool HasInstanceReceiver => InstanceReceiver != null;
+    public bool EvaluateReceiverAfterImplicitValue { get; }
+}
+
+public enum RoutineSymbolKind
+{
+    ProjectRoutine,
+    TypeMethod,
+    PropertyGet,
+    PropertySet
 }
 
 public sealed class RoutineSymbol
 {
     internal RoutineSymbol(RoutineDeclarationSyntax declaration, IReadOnlyList<ParameterSymbol> parameters,
         SmileType returnType, bool hasDeclaredReturnType, SourceText source, int sourceOrdinal)
+        : this(declaration, declaration, declaration.Identifier, declaration.Statements, parameters,
+            returnType, hasDeclaredReturnType, source, sourceOrdinal, null, ModuleVisibility.Public,
+            declaration.IsFunction, RoutineSymbolKind.ProjectRoutine, null)
+    {
+    }
+
+    internal RoutineSymbol(RoutineDeclarationSyntax declaration, IReadOnlyList<ParameterSymbol> parameters,
+        SmileType returnType, bool hasDeclaredReturnType, SourceText source, int sourceOrdinal,
+        RecordTypeSymbol containingType, ModuleVisibility visibility)
+        : this(declaration, declaration, declaration.Identifier, declaration.Statements, parameters,
+            returnType, hasDeclaredReturnType, source, sourceOrdinal, containingType, visibility,
+            declaration.IsFunction, RoutineSymbolKind.TypeMethod, null)
+    {
+    }
+
+    internal RoutineSymbol(PropertyAccessorDeclarationSyntax accessor, PropertyDeclarationSyntax property,
+        SmileType propertyType, SourceText source, int sourceOrdinal, RecordTypeSymbol containingType,
+        ModuleVisibility visibility)
+        : this(CreateAccessorDeclaration(accessor, property), accessor, property.Identifier,
+            accessor.Statements, Array.Empty<ParameterSymbol>(),
+            accessor.Kind == PropertyAccessorKind.Get ? propertyType : SmileType.Error,
+            hasDeclaredReturnType: accessor.Kind == PropertyAccessorKind.Get, source, sourceOrdinal,
+            containingType, visibility, accessor.Kind == PropertyAccessorKind.Get,
+            accessor.Kind == PropertyAccessorKind.Get ? RoutineSymbolKind.PropertyGet : RoutineSymbolKind.PropertySet,
+            accessor.Kind == PropertyAccessorKind.Set ? propertyType : null)
+    {
+    }
+
+    private RoutineSymbol(RoutineDeclarationSyntax declaration, SyntaxNode declarationSyntax,
+        SyntaxToken identifierToken, IReadOnlyList<StatementSyntax> bodyStatements,
+        IReadOnlyList<ParameterSymbol> parameters, SmileType returnType, bool hasDeclaredReturnType,
+        SourceText source, int sourceOrdinal, NominalTypeSymbol? containingType, ModuleVisibility visibility,
+        bool isFunction, RoutineSymbolKind symbolKind, SmileType? setterValueType)
     {
         Declaration = declaration;
-        Name = declaration.Identifier.Text;
+        DeclarationSyntax = declarationSyntax;
+        IdentifierToken = identifierToken;
+        BodyStatements = bodyStatements;
+        Name = identifierToken.Text;
         SemanticName = Name;
         RuntimeIdentity = Name;
-        IsFunction = declaration.IsFunction;
+        IsFunction = isFunction;
+        SymbolKind = symbolKind;
+        ContainingType = containingType;
+        Visibility = visibility;
         Parameters = parameters;
         ReturnType = returnType;
         HasDeclaredReturnType = hasDeclaredReturnType;
         Source = source;
         SourceOrdinal = sourceOrdinal;
-        DisplayName = declaration.Identifier.Value as string ??
-            source.Substring(declaration.Identifier.Span.Start, declaration.Identifier.Span.Length);
+        DisplayName = identifierToken.Value as string ??
+            source.Substring(identifierToken.Span.Start, identifierToken.Span.Length);
         Locals = new Dictionary<string, VariableSymbol>(StringComparer.OrdinalIgnoreCase);
         FirstDeclarations = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         foreach (var parameter in parameters)
             Locals[parameter.Name] = parameter;
+        if (containingType != null)
+        {
+            Receiver = new InstanceReceiverSymbol(containingType, source, sourceOrdinal,
+                identifierToken.Span, Name);
+            Locals[Receiver.Name] = Receiver;
+            if (setterValueType != null)
+            {
+                SetterValue = new PropertyValueSymbol(setterValueType, source, sourceOrdinal,
+                    identifierToken.Span, Name);
+                Locals[SetterValue.Name] = SetterValue;
+            }
+            ApplyContainingTypeIdentity();
+        }
     }
 
     public string Name { get; private set; }
@@ -407,17 +699,28 @@ public sealed class RoutineSymbol
     public ModuleVisibility Visibility { get; private set; } = ModuleVisibility.Public;
     public string ProviderIdentity { get; private set; } = string.Empty;
     public bool IsFunction { get; }
+    public RoutineSymbolKind SymbolKind { get; }
+    public NominalTypeSymbol? ContainingType { get; }
+    public bool IsTypeMember => ContainingType != null;
+    public bool IsPropertyAccessor => SymbolKind is RoutineSymbolKind.PropertyGet or RoutineSymbolKind.PropertySet;
     public IReadOnlyList<ParameterSymbol> Parameters { get; }
     public SmileType ReturnType { get; internal set; }
     public bool HasDeclaredReturnType { get; }
     public IReadOnlyDictionary<string, VariableSymbol> LocalSymbols => Locals;
     public RoutineDeclarationSyntax Declaration { get; }
+    public SyntaxNode DeclarationSyntax { get; }
+    public SyntaxToken IdentifierToken { get; }
+    public IReadOnlyList<StatementSyntax> BodyStatements { get; }
+    public InstanceReceiverSymbol? Receiver { get; }
+    public PropertyValueSymbol? SetterValue { get; }
     public SourceText Source { get; }
     public int SourceOrdinal { get; }
     public string DisplayName { get; private set; }
     public RoutineCapability Capabilities { get; internal set; }
     public bool RequiresGameWindow => (Capabilities & RoutineCapability.RequiresGameWindow) != 0;
-    public SourceLocation DeclarationLocation => new(Source, Declaration.Identifier.Span);
+    public TextSpan DeclarationSpan => DeclarationSyntax is PropertyAccessorDeclarationSyntax accessor
+        ? accessor.Keyword.Span : IdentifierToken.Span;
+    public SourceLocation DeclarationLocation => new(Source, DeclarationSpan);
     internal Dictionary<string, VariableSymbol> Locals { get; }
     internal Dictionary<string, int> FirstDeclarations { get; }
 
@@ -437,23 +740,74 @@ public sealed class RoutineSymbol
                 runtimeIdentity + "::parameter::" + index.ToString(System.Globalization.CultureInfo.InvariantCulture));
         }
     }
+
+    internal void ApplyContainingTypeIdentity()
+    {
+        if (ContainingType == null)
+            return;
+        ModuleName = ContainingType.ModuleName;
+        ProviderIdentity = ContainingType.ProviderIdentity;
+        var kind = SymbolKind switch
+        {
+            RoutineSymbolKind.PropertyGet => "::get",
+            RoutineSymbolKind.PropertySet => "::set",
+            _ => string.Empty
+        };
+        var category = IsPropertyAccessor ? "::property::" : "::member::";
+        RuntimeIdentity = ContainingType.RuntimeIdentity + category + Name + kind;
+        DisplayName = ContainingType.Name + "." + Name + (SymbolKind switch
+        {
+            RoutineSymbolKind.PropertyGet => ".Get",
+            RoutineSymbolKind.PropertySet => ".Set",
+            _ => string.Empty
+        });
+        for (var index = 0; index < Parameters.Count; index++)
+        {
+            var parameter = Parameters[index];
+            parameter.ApplyModuleIdentity(parameter.Name, ContainingType.ModuleName ?? string.Empty, Visibility,
+                ContainingType.ProviderIdentity,
+                RuntimeIdentity + "::parameter::" + index.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
+        Receiver?.ApplyModuleIdentity("Me", ContainingType.ModuleName ?? string.Empty, Visibility,
+            ContainingType.ProviderIdentity, RuntimeIdentity + "::receiver");
+        SetterValue?.ApplyModuleIdentity("Value", ContainingType.ModuleName ?? string.Empty, Visibility,
+            ContainingType.ProviderIdentity, RuntimeIdentity + "::value");
+    }
+
+    private static RoutineDeclarationSyntax CreateAccessorDeclaration(PropertyAccessorDeclarationSyntax accessor,
+        PropertyDeclarationSyntax property)
+    {
+        var keywordKind = accessor.Kind == PropertyAccessorKind.Get
+            ? SyntaxKind.FunctionKeyword : SyntaxKind.SubKeyword;
+        var keyword = new SyntaxToken(keywordKind, accessor.Keyword.Position, string.Empty,
+            spanLength: accessor.Keyword.Span.Length);
+        return new RoutineDeclarationSyntax(keyword, property.Identifier, null, Array.Empty<ParameterSyntax>(), null,
+            accessor.Kind == PropertyAccessorKind.Get ? property.AsKeyword : null,
+            accessor.Kind == PropertyAccessorKind.Get ? property.TypeToken : null, accessor.Statements,
+            accessor.EndKeyword, accessor.FinalKeyword);
+    }
 }
 
 public sealed class SemanticModel
 {
     private readonly Dictionary<string, VariableSymbol> _symbols;
     private readonly Dictionary<string, RoutineSymbol> _routines;
+    private readonly IReadOnlyList<RoutineSymbol> _allRoutines;
     private readonly Dictionary<ExpressionSyntax, SmileType> _expressionTypes;
     private readonly Dictionary<string, RecordTypeSymbol> _types;
     private readonly Dictionary<string, EnumTypeSymbol> _enumTypes;
     private readonly Dictionary<string, NominalTypeSymbol> _nominalTypes;
     private readonly Dictionary<ExpressionSyntax, RecordFieldSymbol> _fields;
+    private readonly Dictionary<ExpressionSyntax, PropertySymbol> _properties;
+    private readonly Dictionary<ExpressionSyntax, ITypeMemberSymbol> _typeMembers;
     private readonly Dictionary<ExpressionSyntax, EnumMemberSymbol> _enumMembers;
     private readonly Dictionary<WithStatementSyntax, WithTargetBinding> _withTargets;
     private readonly Dictionary<LeadingMemberAccessExpressionSyntax, WithMemberBinding> _withMembers;
     private readonly Dictionary<SourceText, IReadOnlyList<WithTargetBinding>> _withScopes;
     private readonly Dictionary<SourceText, IReadOnlyList<InvalidWithScope>> _invalidWithScopes;
     private readonly Dictionary<SourceText, IReadOnlyDictionary<int, RecordFieldSymbol>> _fieldUses;
+    private readonly Dictionary<SourceText, IReadOnlyDictionary<int, ITypeMemberSymbol>> _typeMemberUses;
+    private readonly Dictionary<SourceText, IReadOnlyDictionary<int, InstanceReceiverSymbol>> _meUses;
     private readonly Dictionary<SourceText, IReadOnlyDictionary<int, EnumMemberSymbol>> _enumMemberUses;
     private readonly Dictionary<SyntaxNode, BoundCall> _boundCalls;
     private readonly Dictionary<SourceText, IReadOnlyDictionary<int, ParameterSymbol>> _parameterUses;
@@ -463,27 +817,35 @@ public sealed class SemanticModel
         new Dictionary<SourceText, IReadOnlyDictionary<string, ModuleSymbol>>();
 
     internal SemanticModel(Dictionary<string, VariableSymbol> symbols, Dictionary<string, RoutineSymbol> routines,
+        IReadOnlyList<RoutineSymbol> allRoutines,
         Dictionary<ExpressionSyntax, SmileType> expressionTypes, Dictionary<string, RecordTypeSymbol> types,
         Dictionary<string, EnumTypeSymbol> enumTypes,
         Dictionary<ExpressionSyntax, RecordFieldSymbol> fields,
+        Dictionary<ExpressionSyntax, PropertySymbol> properties,
+        Dictionary<ExpressionSyntax, ITypeMemberSymbol> typeMembers,
         Dictionary<ExpressionSyntax, EnumMemberSymbol> enumMembers,
         Dictionary<WithStatementSyntax, WithTargetBinding> withTargets,
         Dictionary<LeadingMemberAccessExpressionSyntax, WithMemberBinding> withMembers,
         Dictionary<SourceText, List<WithTargetBinding>> withScopes,
         Dictionary<SourceText, List<InvalidWithScope>> invalidWithScopes,
         Dictionary<SourceText, Dictionary<int, RecordFieldSymbol>> fieldUses,
+        Dictionary<SourceText, Dictionary<int, ITypeMemberSymbol>> typeMemberUses,
+        Dictionary<SourceText, Dictionary<int, InstanceReceiverSymbol>> meUses,
         Dictionary<SourceText, Dictionary<int, EnumMemberSymbol>> enumMemberUses,
         Dictionary<SyntaxNode, BoundCall> boundCalls,
         Dictionary<SourceText, Dictionary<int, ParameterSymbol>> parameterUses)
     {
         _symbols = symbols;
         _routines = routines;
+        _allRoutines = allRoutines;
         _expressionTypes = expressionTypes;
         _types = types;
         _enumTypes = enumTypes;
         _nominalTypes = types.Values.Cast<NominalTypeSymbol>().Concat(enumTypes.Values)
             .ToDictionary(type => type.SemanticName, StringComparer.OrdinalIgnoreCase);
         _fields = fields;
+        _properties = properties;
+        _typeMembers = typeMembers;
         _enumMembers = enumMembers;
         _withTargets = withTargets;
         _withMembers = withMembers;
@@ -493,6 +855,10 @@ public sealed class SemanticModel
             item => (IReadOnlyList<InvalidWithScope>)item.Value.ToArray());
         _fieldUses = fieldUses.ToDictionary(item => item.Key,
             item => (IReadOnlyDictionary<int, RecordFieldSymbol>)item.Value);
+        _typeMemberUses = typeMemberUses.ToDictionary(item => item.Key,
+            item => (IReadOnlyDictionary<int, ITypeMemberSymbol>)item.Value);
+        _meUses = meUses.ToDictionary(item => item.Key,
+            item => (IReadOnlyDictionary<int, InstanceReceiverSymbol>)item.Value);
         _enumMemberUses = enumMemberUses.ToDictionary(item => item.Key,
             item => (IReadOnlyDictionary<int, EnumMemberSymbol>)item.Value);
         _boundCalls = boundCalls;
@@ -502,6 +868,7 @@ public sealed class SemanticModel
 
     public IReadOnlyDictionary<string, VariableSymbol> Symbols => _symbols;
     public IReadOnlyDictionary<string, RoutineSymbol> Routines => _routines;
+    public IReadOnlyList<RoutineSymbol> AllRoutines => _allRoutines;
     public IReadOnlyDictionary<string, RecordTypeSymbol> Types => _types;
     public IReadOnlyDictionary<string, EnumTypeSymbol> EnumTypes => _enumTypes;
     public IReadOnlyDictionary<string, NominalTypeSymbol> NominalTypes => _nominalTypes;
@@ -513,6 +880,10 @@ public sealed class SemanticModel
     public bool TryGetNominalType(string name, out NominalTypeSymbol type) =>
         _nominalTypes.TryGetValue(name, out type!);
     public bool TryGetField(ExpressionSyntax expression, out RecordFieldSymbol field) => _fields.TryGetValue(expression, out field!);
+    public bool TryGetProperty(ExpressionSyntax expression, out PropertySymbol property) =>
+        _properties.TryGetValue(expression, out property!);
+    public bool TryGetTypeMember(ExpressionSyntax expression, out ITypeMemberSymbol member) =>
+        _typeMembers.TryGetValue(expression, out member!);
     public bool TryGetEnumMember(ExpressionSyntax expression, out EnumMemberSymbol member) =>
         _enumMembers.TryGetValue(expression, out member!);
     public bool TryGetWithTarget(WithStatementSyntax statement, out WithTargetBinding binding) =>
@@ -523,6 +894,18 @@ public sealed class SemanticModel
     {
         field = null!;
         return _fieldUses.TryGetValue(source, out var uses) && uses.TryGetValue(position, out field!);
+    }
+
+    public bool TryGetTypeMemberUse(SourceText source, int position, out ITypeMemberSymbol member)
+    {
+        member = null!;
+        return _typeMemberUses.TryGetValue(source, out var uses) && uses.TryGetValue(position, out member!);
+    }
+
+    public bool TryGetMeUse(SourceText source, int position, out InstanceReceiverSymbol receiver)
+    {
+        receiver = null!;
+        return _meUses.TryGetValue(source, out var uses) && uses.TryGetValue(position, out receiver!);
     }
 
     public bool TryGetEnumMemberUse(SourceText source, int position, out EnumMemberSymbol member)
@@ -571,9 +954,13 @@ public sealed class SemanticModel
     {
         if (routineName != null)
         {
-            var routine = _routines.Values.FirstOrDefault(candidate =>
-                string.Equals(candidate.Name, routineName, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(candidate.SemanticName, routineName, StringComparison.OrdinalIgnoreCase));
+            var matches = _allRoutines.Where(candidate =>
+                string.Equals(candidate.RuntimeIdentity, routineName, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(candidate.DisplayName, routineName, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(candidate.SemanticName, routineName, StringComparison.OrdinalIgnoreCase)).ToArray();
+            var routine = matches.FirstOrDefault(candidate =>
+                              string.Equals(candidate.RuntimeIdentity, routineName, StringComparison.OrdinalIgnoreCase))
+                          ?? (matches.Length == 1 ? matches[0] : null);
             if (routine != null && routine.Locals.TryGetValue(name, out symbol!))
                 return true;
         }
@@ -611,6 +998,7 @@ internal sealed class SemanticAnalyzer
     private readonly DiagnosticBag _diagnostics = new();
     private readonly Dictionary<string, VariableSymbol> _symbols = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, RoutineSymbol> _routines = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<RoutineSymbol> _allRoutines = new();
     private readonly Dictionary<string, int> _globalFirstDeclarations = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _implicitGlobals = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<SyntaxToken> _acceptedProjectDeclarations = new();
@@ -625,12 +1013,16 @@ internal sealed class SemanticAnalyzer
     private readonly Dictionary<string, RecordTypeSymbol> _types = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, EnumTypeSymbol> _enumTypes = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<ExpressionSyntax, RecordFieldSymbol> _fields = new();
+    private readonly Dictionary<ExpressionSyntax, PropertySymbol> _properties = new();
+    private readonly Dictionary<ExpressionSyntax, ITypeMemberSymbol> _typeMembers = new();
     private readonly Dictionary<ExpressionSyntax, EnumMemberSymbol> _enumMembers = new();
     private readonly Dictionary<WithStatementSyntax, WithTargetBinding> _withTargets = new();
     private readonly Dictionary<LeadingMemberAccessExpressionSyntax, WithMemberBinding> _withMembers = new();
     private readonly Dictionary<SourceText, List<WithTargetBinding>> _withScopes = new();
     private readonly Dictionary<SourceText, List<InvalidWithScope>> _invalidWithScopes = new();
     private readonly Dictionary<SourceText, Dictionary<int, RecordFieldSymbol>> _fieldUses = new();
+    private readonly Dictionary<SourceText, Dictionary<int, ITypeMemberSymbol>> _typeMemberUses = new();
+    private readonly Dictionary<SourceText, Dictionary<int, InstanceReceiverSymbol>> _meUses = new();
     private readonly Dictionary<SourceText, Dictionary<int, EnumMemberSymbol>> _enumMemberUses = new();
     private readonly Dictionary<SyntaxNode, BoundCall> _boundCalls = new();
     private readonly Dictionary<SourceText, Dictionary<int, ParameterSymbol>> _parameterUses = new();
@@ -682,21 +1074,28 @@ internal sealed class SemanticAnalyzer
                 AnalyzeSupportTopLevel(tree.Root.Statements);
         }
 
-        foreach (var routine in _routines.Values.OrderBy(routine => routine.SourceOrdinal).ThenBy(routine => routine.Declaration.Span.Start))
+        foreach (var routine in _allRoutines.OrderBy(routine => routine.SourceOrdinal)
+                     .ThenBy(routine => routine.DeclarationSyntax.Span.Start)
+                     .ThenBy(routine => routine.SymbolKind))
         {
             SetCurrentSource(routine.Source);
             _currentRoutine = routine;
-            CollectFirstDeclarations(routine.Declaration.Statements, routine.FirstDeclarations, skipRoutines: false);
-            AnalyzeStatements(routine.Declaration.Statements, topLevel: false);
-            if (routine.IsFunction && !StatementsAlwaysReturn(routine.Declaration.Statements))
-                Report("SML3017", routine.Declaration.Identifier.Span, $"Function '{routine.Name}' does not return a value on every path.");
+            CollectFirstDeclarations(routine.BodyStatements, routine.FirstDeclarations, skipRoutines: false);
+            AnalyzeStatements(routine.BodyStatements, topLevel: false);
+            if (routine.IsFunction && !StatementsAlwaysReturn(routine.BodyStatements))
+                Report("SML3017", routine.IdentifierToken.Span,
+                    $"Function '{routine.DisplayName}' does not return a value on every path.");
         }
         _currentRoutine = null;
         PropagateRoutineCapabilities();
         DiagnoseTopLevelRoutineCapabilities();
-        return new SemanticModel(_symbols, _routines, _expressionTypes, _types, _enumTypes, _fields,
-            _enumMembers, _withTargets, _withMembers, _withScopes, _invalidWithScopes, _fieldUses,
-            _enumMemberUses, _boundCalls, _parameterUses);
+        var orderedRoutines = _allRoutines.OrderBy(routine => routine.SourceOrdinal)
+            .ThenBy(routine => routine.DeclarationSyntax.Span.Start).ThenBy(routine => routine.SymbolKind)
+            .ToArray();
+        return new SemanticModel(_symbols, _routines, orderedRoutines, _expressionTypes, _types,
+            _enumTypes, _fields, _properties, _typeMembers, _enumMembers, _withTargets, _withMembers,
+            _withScopes, _invalidWithScopes, _fieldUses, _typeMemberUses, _meUses, _enumMemberUses,
+            _boundCalls, _parameterUses);
     }
 
     private void InventoryNominalTypes()
@@ -879,21 +1278,79 @@ internal sealed class SemanticAnalyzer
         foreach (var record in _types.Values.OrderBy(type => type.SourceOrdinal).ThenBy(type => type.DeclarationSpan.Start))
         {
             SetCurrentSource(record.Source!);
-            if (record.Declaration.Fields.Count == 0)
+            if (record.Declaration.Members.Count == 0)
                 Report("SML3402", record.Declaration.Identifier.Span,
-                    $"Type '{DisplaySourceText(_currentSource, record.Declaration.Identifier)}' must declare at least one field.");
-            for (var index = 0; index < record.Declaration.Fields.Count; index++)
+                    $"Type '{DisplaySourceText(_currentSource, record.Declaration.Identifier)}' must declare at least one member.");
+            var fieldOrdinal = 0;
+            foreach (var member in record.Declaration.Members)
             {
-                var declaration = record.Declaration.Fields[index];
-                var field = new RecordFieldSymbol(declaration.Identifier.Text, declaration.TypeToken,
-                    _currentSource, declaration.Identifier.Span, index);
-                if (!record.AddField(field))
+                switch (member)
                 {
-                    Report("SML3402", declaration.Identifier.Span,
-                        $"Field '{DisplaySourceText(_currentSource, declaration.Identifier)}' is already declared in Type '{record.Name}'.");
-                    continue;
+                    case RecordFieldDeclarationSyntax declaration:
+                    {
+                        var field = new RecordFieldSymbol(declaration.Identifier.Text, declaration.TypeToken,
+                            record, _currentSource, declaration.Identifier.Span, fieldOrdinal++);
+                        if (!record.AddField(field))
+                        {
+                            if (record.TryGetMember(declaration.Identifier.Text, out var existing) &&
+                                existing is RecordFieldSymbol)
+                                Report("SML3402", declaration.Identifier.Span,
+                                    $"Field '{DisplaySourceText(_currentSource, declaration.Identifier)}' is already declared in Type '{record.Name}'.");
+                            else
+                                ReportDuplicateTypeMember(record, declaration.Identifier);
+                            continue;
+                        }
+                        field.Type = ResolveType(declaration.TypeToken, SmileType.Error);
+                        break;
+                    }
+                    case TypeRoutineDeclarationSyntax declaration:
+                    {
+                        var routineDeclaration = declaration.Declaration;
+                        var parameters = BindParameters(routineDeclaration,
+                            record.Name + "." + routineDeclaration.Identifier.Text);
+                        var hasDeclaredReturnType = routineDeclaration.ReturnTypeToken != null;
+                        var returnType = routineDeclaration.IsFunction
+                            ? ResolveType(routineDeclaration.ReturnTypeToken,
+                                hasDeclaredReturnType ? SmileType.Error : SmileType.Number)
+                            : SmileType.Error;
+                        if (!routineDeclaration.IsFunction && routineDeclaration.ReturnTypeToken != null)
+                            Report("SML3310", routineDeclaration.ReturnTypeToken.Span,
+                                "Only a Function may declare a return type.");
+                        var routine = new RoutineSymbol(routineDeclaration, parameters, returnType,
+                            hasDeclaredReturnType, _currentSource, _currentSourceOrdinal, record,
+                            declaration.Visibility);
+                        if (!record.AddMethod(routine))
+                        {
+                            ReportDuplicateTypeMember(record, declaration.Identifier);
+                            continue;
+                        }
+                        _allRoutines.Add(routine);
+                        break;
+                    }
+                    case PropertyDeclarationSyntax declaration:
+                    {
+                        var propertyType = ResolveType(declaration.TypeToken, SmileType.Error);
+                        if (declaration.Getter == null && declaration.Setter == null)
+                            Report("SML3441", declaration.Identifier.Span,
+                                $"Property '{declaration.Identifier.Text}' must declare Get, Set, or both.");
+                        var getter = declaration.Getter == null ? null : new RoutineSymbol(declaration.Getter,
+                            declaration, propertyType, _currentSource, _currentSourceOrdinal, record,
+                            declaration.Visibility);
+                        var setter = declaration.Setter == null ? null : new RoutineSymbol(declaration.Setter,
+                            declaration, propertyType, _currentSource, _currentSourceOrdinal, record,
+                            declaration.Visibility);
+                        var property = new PropertySymbol(declaration, record, propertyType, _currentSource,
+                            getter, setter);
+                        if (!record.AddProperty(property))
+                        {
+                            ReportDuplicateTypeMember(record, declaration.Identifier);
+                            continue;
+                        }
+                        if (getter != null) _allRoutines.Add(getter);
+                        if (setter != null) _allRoutines.Add(setter);
+                        break;
+                    }
                 }
-                field.Type = ResolveType(declaration.TypeToken, SmileType.Error);
             }
         }
 
@@ -901,6 +1358,10 @@ internal sealed class SemanticAnalyzer
         foreach (var record in _types.Values.OrderBy(type => type.SourceOrdinal).ThenBy(type => type.DeclarationSpan.Start))
             LayoutRecord(record, states, new List<RecordTypeSymbol>());
     }
+
+    private void ReportDuplicateTypeMember(RecordTypeSymbol record, SyntaxToken identifier) =>
+        Report("SML3440", identifier.Span,
+            $"Type '{record.Name}' already declares a field, method, or Property named '{identifier.Text}'.");
 
     private void LayoutRecord(RecordTypeSymbol record, Dictionary<RecordTypeSymbol, int> states,
         List<RecordTypeSymbol> stack)
@@ -1082,6 +1543,23 @@ internal sealed class SemanticAnalyzer
             if (!_acceptedProjectDeclarations.Contains(declaration.Identifier))
                 continue;
             var name = declaration.Identifier.Text;
+            var parameters = BindParameters(declaration, name);
+            var hasDeclaredReturnType = declaration.ReturnTypeToken != null;
+            var returnType = declaration.IsFunction
+                ? ResolveType(declaration.ReturnTypeToken, hasDeclaredReturnType ? SmileType.Error : SmileType.Number)
+                : SmileType.Error;
+            if (!declaration.IsFunction && declaration.ReturnTypeToken != null)
+                Report("SML3310", declaration.ReturnTypeToken.Span, "Only a Function may declare a return type.");
+            var routine = new RoutineSymbol(declaration, parameters, returnType, hasDeclaredReturnType,
+                _currentSource, _currentSourceOrdinal);
+            _routines[name] = routine;
+            _allRoutines.Add(routine);
+        }
+    }
+
+    private IReadOnlyList<ParameterSymbol> BindParameters(RoutineDeclarationSyntax declaration,
+        string routineName)
+    {
             var parameters = new List<ParameterSymbol>();
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var sawOptional = false;
@@ -1118,17 +1596,9 @@ internal sealed class SemanticAnalyzer
                 var mode = parameter.ModeKeyword?.Kind == SyntaxKind.ByRefKeyword
                     ? ParameterPassingMode.ByRef : ParameterPassingMode.ByVal;
                 parameters.Add(new ParameterSymbol(parameter, parameterType, _currentSource,
-                    _currentSourceOrdinal, name, mode, parameter.TypeToken != null));
+                    _currentSourceOrdinal, routineName, mode, parameter.TypeToken != null));
             }
-            var hasDeclaredReturnType = declaration.ReturnTypeToken != null;
-            var returnType = declaration.IsFunction
-                ? ResolveType(declaration.ReturnTypeToken, hasDeclaredReturnType ? SmileType.Error : SmileType.Number)
-                : SmileType.Error;
-            if (!declaration.IsFunction && declaration.ReturnTypeToken != null)
-                Report("SML3310", declaration.ReturnTypeToken.Span, "Only a Function may declare a return type.");
-            _routines[name] = new RoutineSymbol(declaration, parameters, returnType, hasDeclaredReturnType,
-                _currentSource, _currentSourceOrdinal);
-        }
+            return parameters;
     }
 
     private void InventoryConstantDeclarations()
@@ -1172,7 +1642,7 @@ internal sealed class SemanticAnalyzer
 
     private void BindOptionalParameterDefaults()
     {
-        foreach (var routine in _routines.Values
+        foreach (var routine in _allRoutines
                      .OrderBy(routine => routine.SourceOrdinal)
                      .ThenBy(routine => routine.Declaration.Span.Start))
         {
@@ -1402,8 +1872,14 @@ internal sealed class SemanticAnalyzer
                     enumType.TryGetMember(field.Field.Text, out _))
                     return enumType;
                 var receiverType = InferImplicitGlobalType(field.Receiver);
-                return receiverType is RecordTypeSymbol record && record.TryGetField(field.Field.Text, out var fieldSymbol)
-                    ? fieldSymbol.Type : SmileType.Number;
+                if (receiverType is RecordTypeSymbol record && record.TryGetMember(field.Field.Text, out var member))
+                    return member switch
+                    {
+                        RecordFieldSymbol fieldSymbol => fieldSymbol.Type,
+                        PropertySymbol property => property.Type,
+                        _ => SmileType.Number
+                    };
+                return SmileType.Number;
             case ParenthesizedExpressionSyntax parenthesized:
                 return InferImplicitGlobalType(parenthesized.Expression);
             case UnaryExpressionSyntax unary:
@@ -1422,6 +1898,11 @@ internal sealed class SemanticAnalyzer
                     : SmileType.Number;
             case CallExpressionSyntax call when _routines.TryGetValue(call.Identifier.Text, out var routine):
                 return routine.ReturnType;
+            case MemberInvocationExpressionSyntax call:
+                var invocationReceiverType = InferImplicitGlobalType(call.Receiver);
+                return invocationReceiverType is RecordTypeSymbol invocationRecord &&
+                       invocationRecord.TryGetMethod(call.Member.Text, out var method)
+                    ? method.ReturnType : SmileType.Number;
             default:
                 return SmileType.Number;
         }
@@ -1461,14 +1942,14 @@ internal sealed class SemanticAnalyzer
 
     private void InferLegacyRoutineReturnTypes()
     {
-        for (var pass = 0; pass < Math.Max(1, _routines.Count); pass++)
+        for (var pass = 0; pass < Math.Max(1, _allRoutines.Count); pass++)
         {
             var changed = false;
-            foreach (var routine in _routines.Values.Where(item => item.IsFunction && !item.HasDeclaredReturnType))
+            foreach (var routine in _allRoutines.Where(item => item.IsFunction && !item.HasDeclaredReturnType))
             {
                 SetCurrentSource(routine.Source);
                 var localTypes = CollectDeclaredLocalTypes(routine);
-                var returns = InferLegacyReturns(routine.Declaration.Statements, routine, localTypes,
+                var returns = InferLegacyReturns(routine.BodyStatements, routine, localTypes,
                     Array.Empty<SmileType>()).ToArray();
                 var inferred = returns.Select(item => item.Type)
                     .Where(type => type != SmileType.Error).Distinct().ToArray();
@@ -1483,11 +1964,11 @@ internal sealed class SemanticAnalyzer
                 break;
         }
 
-        foreach (var routine in _routines.Values.Where(item => item.IsFunction && !item.HasDeclaredReturnType))
+        foreach (var routine in _allRoutines.Where(item => item.IsFunction && !item.HasDeclaredReturnType))
         {
             SetCurrentSource(routine.Source);
             var localTypes = CollectDeclaredLocalTypes(routine);
-            var typedReturns = InferLegacyReturns(routine.Declaration.Statements, routine, localTypes,
+            var typedReturns = InferLegacyReturns(routine.BodyStatements, routine, localTypes,
                     Array.Empty<SmileType>())
                 .Where(item => item.Type != SmileType.Error).ToArray();
             var distinct = typedReturns.Select(item => item.Type).Distinct().ToArray();
@@ -1499,9 +1980,9 @@ internal sealed class SemanticAnalyzer
 
     private Dictionary<string, SmileType> CollectDeclaredLocalTypes(RoutineSymbol routine)
     {
-        var result = routine.Parameters.ToDictionary(item => item.Name, item => item.Type,
+        var result = routine.LocalSymbols.Values.ToDictionary(item => item.Name, item => item.Type,
             StringComparer.OrdinalIgnoreCase);
-        foreach (var dim in EnumerateStatements(routine.Declaration.Statements).OfType<DimStatementSyntax>())
+        foreach (var dim in EnumerateStatements(routine.BodyStatements).OfType<DimStatementSyntax>())
             if (!result.ContainsKey(dim.Identifier.Text))
                 result[dim.Identifier.Text] = ResolveType(dim.TypeToken, SmileType.Number);
         return result;
@@ -1522,21 +2003,44 @@ internal sealed class SemanticAnalyzer
                 if (locals.TryGetValue(array.Identifier.Text, out var elementType)) return elementType;
                 if (_symbols.TryGetValue(array.Identifier.Text, out var arraySymbol)) return arraySymbol.Type;
                 return SmileType.Error;
+            case MeExpressionSyntax:
+                return routine.ContainingType ?? SmileType.Error;
             case FieldAccessExpressionSyntax field:
                 if (field.Receiver is NameExpressionSyntax enumName &&
                     TryResolveEnumType(enumName.Identifier.Text, out var enumType) &&
                     enumType.TryGetMember(field.Field.Text, out _))
                     return enumType;
                 var receiverType = InferLegacyExpressionType(field.Receiver, routine, locals, withTypes);
-                return receiverType is RecordTypeSymbol receiverRecord &&
-                       receiverRecord.TryGetField(field.Field.Text, out var fieldSymbol)
-                    ? fieldSymbol.Type : SmileType.Error;
+                if (receiverType is not RecordTypeSymbol receiverRecord ||
+                    !receiverRecord.TryGetMember(field.Field.Text, out var fieldMember))
+                    return SmileType.Error;
+                return fieldMember switch
+                {
+                    RecordFieldSymbol fieldSymbol => fieldSymbol.Type,
+                    PropertySymbol property => property.Getter == null ? SmileType.Error : property.Type,
+                    _ => SmileType.Error
+                };
             case LeadingMemberAccessExpressionSyntax leading:
                 if (withTypes == null || withTypes.Count == 0 ||
                     withTypes[withTypes.Count - 1] is not RecordTypeSymbol withRecord ||
-                    !withRecord.TryGetField(leading.Member.Text, out var withField))
+                    !withRecord.TryGetMember(leading.Member.Text, out var withMember))
                     return SmileType.Error;
-                return withField.Type;
+                return withMember switch
+                {
+                    RecordFieldSymbol withField => withField.Type,
+                    PropertySymbol property => property.Getter == null ? SmileType.Error : property.Type,
+                    _ => SmileType.Error
+                };
+            case MemberInvocationExpressionSyntax invocation:
+                var invocationReceiver = InferLegacyExpressionType(invocation.Receiver, routine, locals, withTypes);
+                return invocationReceiver is RecordTypeSymbol invocationRecord &&
+                       invocationRecord.TryGetMethod(invocation.Member.Text, out var method)
+                    ? method.ReturnType : SmileType.Error;
+            case LeadingMemberInvocationExpressionSyntax invocation:
+                return withTypes != null && withTypes.Count != 0 &&
+                       withTypes[withTypes.Count - 1] is RecordTypeSymbol leadingInvocationRecord &&
+                       leadingInvocationRecord.TryGetMethod(invocation.Member.Text, out var leadingMethod)
+                    ? leadingMethod.ReturnType : SmileType.Error;
             case ParenthesizedExpressionSyntax parenthesized:
                 return InferLegacyExpressionType(parenthesized.Expression, routine, locals, withTypes);
             case UnaryExpressionSyntax unary:
@@ -1763,6 +2267,9 @@ internal sealed class SemanticAnalyzer
                     RequireType(doStatement.UntilCondition, SmileType.Boolean, "SML3004", "Loop Until condition must be Boolean.");
                 break;
             case CallStatementSyntax call: AnalyzeCall(call, call.Identifier, call.Arguments, requireFunction: false); break;
+            case MemberCallStatementSyntax call:
+                AnalyzeMemberCall(call, call.Receiver, call.Member, call.Arguments, requireFunction: false);
+                break;
             case LeadingMemberCallStatementSyntax call: AnalyzeLeadingMemberCall(call); break;
             case ReturnStatementSyntax returnStatement: AnalyzeReturn(returnStatement); break;
             case SelectStatementSyntax select: AnalyzeSelect(select); break;
@@ -1872,7 +2379,8 @@ internal sealed class SemanticAnalyzer
     private void AnalyzeWith(WithStatementSyntax statement)
     {
         var targetType = AnalyzeExpression(statement.Target);
-        var isWritable = targetType != SmileType.Error && IsWritableLocation(statement.Target, targetType);
+        var isWritable = targetType != SmileType.Error &&
+            (IsWritableLocation(statement.Target, targetType) || statement.Target is MeExpressionSyntax);
         if (!isWritable && targetType is RecordTypeSymbol)
             Report("SML3412", statement.Target.Span,
                 "With target must be a stable writable record location.");
@@ -1911,13 +2419,6 @@ internal sealed class SemanticAnalyzer
 
     private void AnalyzeLeadingMemberCall(LeadingMemberCallStatementSyntax statement)
     {
-        foreach (var argument in statement.Arguments)
-        {
-            if (argument.IsNamed)
-                Report("SML3433", argument.Name!.Span,
-                    "Named arguments are not available for record member calls.");
-            AnalyzeExpression(argument.Expression);
-        }
         if (_withStack.Count == 0)
         {
             Report("SML3413", statement.DotToken.Span,
@@ -1926,10 +2427,27 @@ internal sealed class SemanticAnalyzer
         }
         var receiver = _withStack[_withStack.Count - 1];
         if (receiver == null)
+        {
+            foreach (var argument in statement.Arguments)
+                AnalyzeExpression(argument.Expression);
             return;
-        var record = receiver.TargetType;
-        Report("SML3414", statement.Member.Span,
-            $"Type '{record.Name}' does not contain callable member '{statement.Member.Text}'; record methods are not declared by Type fields.");
+        }
+        if (receiver.TargetType is not RecordTypeSymbol record)
+        {
+            foreach (var argument in statement.Arguments)
+                AnalyzeExpression(argument.Expression);
+            return;
+        }
+        if (!record.TryGetMember(statement.Member.Text, out _))
+        {
+            foreach (var argument in statement.Arguments)
+                AnalyzeExpression(argument.Expression);
+            Report("SML3414", statement.Member.Span,
+                $"Type '{record.Name}' does not contain callable member '{statement.Member.Text}'.");
+            return;
+        }
+        AnalyzeMemberCall(statement, record, statement.Member, statement.Arguments, requireFunction: false,
+            new BoundInstanceReceiver(record, receiver.Statement));
     }
 
     private void AnalyzeDataLoad(DataLoadStatementSyntax statement)
@@ -2038,6 +2556,14 @@ internal sealed class SemanticAnalyzer
             AnalyzeSimpleAssignment(nameExpression, valueType, assignment.Expression.Span);
             return;
         }
+        if (assignment.Target.Location is MeExpressionSyntax me)
+        {
+            AnalyzeExpression(me);
+            Report("SML3442", me.Span, "Me is the current instance and cannot be assigned.");
+            return;
+        }
+        if (TryAnalyzePropertyAssignment(assignment, valueType))
+            return;
 
         var targetType = AnalyzeExpression(assignment.Target.Location);
         if (targetType != SmileType.Error && !IsWritableLocation(assignment.Target.Location, targetType))
@@ -2108,6 +2634,74 @@ internal sealed class SemanticAnalyzer
         _expressionTypes[target] = valueType;
     }
 
+    private bool TryAnalyzePropertyAssignment(AssignmentStatementSyntax assignment, SmileType valueType)
+    {
+        RecordTypeSymbol? record = null;
+        PropertySymbol? property = null;
+        SyntaxToken? memberToken = null;
+        BoundInstanceReceiver? receiverPlan = null;
+        switch (assignment.Target.Location)
+        {
+            case FieldAccessExpressionSyntax field:
+            {
+                var receiverType = AnalyzeExpression(field.Receiver);
+                if (receiverType is not RecordTypeSymbol fieldRecord ||
+                    !fieldRecord.TryGetProperty(field.Field.Text, out var fieldProperty))
+                    return false;
+                record = fieldRecord;
+                property = fieldProperty;
+                memberToken = field.Field;
+                if (IsWritableRecordReceiver(field.Receiver))
+                    receiverPlan = new BoundInstanceReceiver(record, field.Receiver);
+                break;
+            }
+            case LeadingMemberAccessExpressionSyntax leading:
+            {
+                if (_withStack.Count == 0)
+                    return false;
+                var withBinding = _withStack[_withStack.Count - 1];
+                if (withBinding?.TargetType is not RecordTypeSymbol withRecord ||
+                    !withRecord.TryGetProperty(leading.Member.Text, out var leadingProperty))
+                    return false;
+                record = withRecord;
+                property = leadingProperty;
+                memberToken = leading.Member;
+                receiverPlan = new BoundInstanceReceiver(record, withBinding.Statement);
+                _withMembers[leading] = new WithMemberBinding(withBinding.Statement, record, property);
+                break;
+            }
+        }
+
+        if (record == null || property == null || memberToken == null)
+            return false;
+        _expressionTypes[assignment.Target.Location] = property.Type;
+        _properties[assignment.Target.Location] = property;
+        RegisterTypeMemberUse(assignment.Target.Location, memberToken, property);
+        if (!IsAccessible(property, record, memberToken))
+            return true;
+        if (property.Setter == null)
+        {
+            Report("SML3445", memberToken.Span,
+                $"Property '{record.Name}.{property.Name}' is read-only and cannot be assigned.");
+            return true;
+        }
+        if (receiverPlan == null)
+        {
+            Report("SML3444", assignment.Target.Span,
+                $"Property '{record.Name}.{property.Name}' requires an addressable Type receiver.");
+            return true;
+        }
+        if (valueType != SmileType.Error && valueType != property.Type)
+            Report("SML3304", assignment.Expression.Span,
+                $"Cannot assign {TypeName(valueType)} to {TypeName(property.Type)} Property '{property.Name}'.");
+        _routineCalls.Add(new RoutineCallSite(_currentRoutine, property.Setter, _currentSource,
+            memberToken.Span));
+        _boundCalls[assignment] = new BoundCall(property.Setter, Array.Empty<BoundCallArgument>(),
+            Array.Empty<BoundCallArgument>(), receiverPlan, assignment.Expression,
+            evaluateReceiverAfterImplicitValue: true);
+        return true;
+    }
+
     private SmileType BindField(SmileType receiverType, SyntaxToken fieldToken, TextSpan span,
         ExpressionSyntax? expression)
     {
@@ -2118,22 +2712,78 @@ internal sealed class SemanticAnalyzer
             Report("SML3406", span, $"Field access requires a record value; found {TypeName(receiverType)}.");
             return SmileType.Error;
         }
-        if (!record.TryGetField(fieldToken.Text, out var field))
+        if (!record.TryGetMember(fieldToken.Text, out var member))
         {
-            Report("SML3405", fieldToken.Span, $"Type '{record.Name}' does not contain field '{fieldToken.Text}'.");
+            Report("SML3405", fieldToken.Span,
+                $"Type '{record.Name}' does not contain member '{fieldToken.Text}'.");
             return SmileType.Error;
         }
+        if (!IsAccessible(member, record, fieldToken))
+            return SmileType.Error;
         if (expression != null)
+            RegisterTypeMemberUse(expression, fieldToken, member);
+        if (member is RecordFieldSymbol field)
         {
-            _fields[expression] = field;
-            if (!_fieldUses.TryGetValue(_currentSource, out var uses))
+            if (expression != null)
             {
-                uses = new Dictionary<int, RecordFieldSymbol>();
-                _fieldUses[_currentSource] = uses;
+                _fields[expression] = field;
+                if (!_fieldUses.TryGetValue(_currentSource, out var uses))
+                {
+                    uses = new Dictionary<int, RecordFieldSymbol>();
+                    _fieldUses[_currentSource] = uses;
+                }
+                uses[fieldToken.Position] = field;
             }
-            uses[fieldToken.Position] = field;
+            return field.Type;
         }
-        return field.Type;
+        if (member is TypeRoutineSymbol)
+        {
+            Report("SML3443", fieldToken.Span,
+                $"Method '{record.Name}.{member.Name}' must be called with parentheses.");
+            return SmileType.Error;
+        }
+
+        var property = (PropertySymbol)member;
+        if (expression != null)
+            _properties[expression] = property;
+        if (property.Getter == null)
+        {
+            Report("SML3445", fieldToken.Span,
+                $"Property '{record.Name}.{property.Name}' is write-only and cannot be read.");
+            return SmileType.Error;
+        }
+        if (expression == null || !TryCreateReceiverPlan(expression, record, out var receiverPlan))
+        {
+            Report("SML3444", span,
+                $"Property '{record.Name}.{property.Name}' requires an addressable Type receiver.");
+            return SmileType.Error;
+        }
+        BindRoutineCall(expression, property.Getter, fieldToken, Array.Empty<ArgumentSyntax>(),
+            requireFunction: true, receiverPlan);
+        return property.Type;
+    }
+
+    private bool IsAccessible(ITypeMemberSymbol member, RecordTypeSymbol record, SyntaxToken token)
+    {
+        if (member.Visibility != ModuleVisibility.Private ||
+            ReferenceEquals(_currentRoutine?.ContainingType, record))
+            return true;
+        Report("SML3446", token.Span,
+            $"Member '{record.Name}.{member.Name}' is Private and is available only inside Type '{record.Name}'.");
+        return false;
+    }
+
+    private void RegisterTypeMemberUse(ExpressionSyntax? expression, SyntaxToken token,
+        ITypeMemberSymbol member)
+    {
+        if (expression != null)
+            _typeMembers[expression] = member;
+        if (!_typeMemberUses.TryGetValue(_currentSource, out var uses))
+        {
+            uses = new Dictionary<int, ITypeMemberSymbol>();
+            _typeMemberUses[_currentSource] = uses;
+        }
+        uses[token.Position] = member;
     }
 
     private bool TryBindEnumMember(FieldAccessExpressionSyntax expression, out SmileType type)
@@ -2412,6 +3062,24 @@ internal sealed class SemanticAnalyzer
                     result = arraySymbol.Type;
                 }
                 break;
+            case MeExpressionSyntax me:
+                if (_currentRoutine?.Receiver == null)
+                {
+                    Report("SML3442", me.Span,
+                        "Me is available only inside a Type method or Property accessor.");
+                    result = SmileType.Error;
+                }
+                else
+                {
+                    result = _currentRoutine.Receiver.Type;
+                    if (!_meUses.TryGetValue(_currentSource, out var uses))
+                    {
+                        uses = new Dictionary<int, InstanceReceiverSymbol>();
+                        _meUses[_currentSource] = uses;
+                    }
+                    uses[me.MeKeyword.Position] = _currentRoutine.Receiver;
+                }
+                break;
             case FieldAccessExpressionSyntax field:
                 result = TryBindEnumMember(field, out var enumMemberType)
                     ? enumMemberType
@@ -2432,11 +3100,24 @@ internal sealed class SemanticAnalyzer
                     else
                     {
                         result = BindField(receiver.TargetType, leading.Member, leading.Span, leading);
-                        if (_fields.TryGetValue(leading, out var member))
-                            _withMembers[leading] = new WithMemberBinding(receiver.Statement,
-                                receiver.TargetType, member);
+                        if (receiver.TargetType is RecordTypeSymbol record)
+                        {
+                            if (_fields.TryGetValue(leading, out var member))
+                                _withMembers[leading] = new WithMemberBinding(receiver.Statement,
+                                    record, member);
+                            else if (_properties.TryGetValue(leading, out var property))
+                                _withMembers[leading] = new WithMemberBinding(receiver.Statement,
+                                    record, property);
+                        }
                     }
                 }
+                break;
+            case MemberInvocationExpressionSyntax call:
+                result = AnalyzeMemberCall(call, call.Receiver, call.Member, call.Arguments,
+                    requireFunction: true);
+                break;
+            case LeadingMemberInvocationExpressionSyntax call:
+                result = AnalyzeLeadingMemberInvocation(call, requireFunction: true);
                 break;
             case ParenthesizedExpressionSyntax parenthesized:
                 result = AnalyzeExpression(parenthesized.Expression);
@@ -2476,6 +3157,13 @@ internal sealed class SemanticAnalyzer
             Report("SML3021", identifier.Span, $"Unknown routine or built-in function '{identifier.Text}'.");
             return SmileType.Error;
         }
+        return BindRoutineCall(callSyntax, routine, identifier, arguments, requireFunction, null);
+    }
+
+    private SmileType BindRoutineCall(SyntaxNode callSyntax, RoutineSymbol routine, SyntaxToken identifier,
+        IReadOnlyList<ArgumentSyntax> arguments, bool requireFunction,
+        BoundInstanceReceiver? instanceReceiver)
+    {
         _routineCalls.Add(new RoutineCallSite(_currentRoutine, routine, _currentSource, identifier.Span));
 
         var parameterArguments = new BoundCallArgument?[routine.Parameters.Count];
@@ -2544,8 +3232,14 @@ internal sealed class SemanticAnalyzer
                     $"Argument for parameter '{parameter.Name}' in '{routine.Name}' must be {TypeName(parameter.Type)}, found {TypeName(argumentType)}.");
             if (parameter.ParameterMode == ParameterPassingMode.ByRef &&
                 !IsWritableLocation(argument.Expression, parameter.Type))
-                Report("SML3305", argument.Expression.Span,
-                    $"Argument for ByRef parameter '{parameter.Name}' must be a writable {TypeName(parameter.Type)} location.");
+            {
+                if (argument.Expression is MeExpressionSyntax)
+                    Report("SML3442", argument.Expression.Span,
+                        "Me is borrowed instance state and cannot be passed ByRef.");
+                else
+                    Report("SML3305", argument.Expression.Span,
+                        $"Argument for ByRef parameter '{parameter.Name}' must be a writable {TypeName(parameter.Type)} location.");
+            }
 
             var boundArgument = new BoundCallArgument(parameter, parameterIndex, argument, index);
             parameterArguments[parameterIndex] = boundArgument;
@@ -2569,7 +3263,8 @@ internal sealed class SemanticAnalyzer
         }
 
         _boundCalls[callSyntax] = new BoundCall(routine, sourceArguments,
-            parameterArguments.Where(argument => argument != null).Select(argument => argument!).ToArray());
+            parameterArguments.Where(argument => argument != null).Select(argument => argument!).ToArray(),
+            instanceReceiver, implicitValue: null, evaluateReceiverAfterImplicitValue: false);
         if (requireFunction && !routine.IsFunction)
         {
             Report("SML3020", identifier.Span, $"Sub '{routine.Name}' cannot be used as an expression.");
@@ -2578,6 +3273,86 @@ internal sealed class SemanticAnalyzer
         if (!requireFunction && routine.IsFunction)
             Report("SML3020", identifier.Span, $"Function '{routine.Name}' must be used in an expression.");
         return routine.IsFunction ? routine.ReturnType : SmileType.Error;
+    }
+
+    private SmileType AnalyzeMemberCall(SyntaxNode callSyntax, ExpressionSyntax receiverExpression,
+        SyntaxToken memberToken, IReadOnlyList<ArgumentSyntax> arguments, bool requireFunction)
+    {
+        var receiverType = AnalyzeExpression(receiverExpression);
+        if (receiverType is not RecordTypeSymbol record)
+        {
+            foreach (var argument in arguments)
+                AnalyzeExpression(argument.Expression);
+            if (receiverType != SmileType.Error)
+                Report("SML3443", receiverExpression.Span,
+                    $"Member calls require a Type receiver; found {TypeName(receiverType)}.");
+            return SmileType.Error;
+        }
+        var plan = IsWritableRecordReceiver(receiverExpression)
+            ? new BoundInstanceReceiver(record, receiverExpression) : null;
+        return AnalyzeMemberCall(callSyntax, record, memberToken, arguments, requireFunction, plan,
+            callSyntax as ExpressionSyntax);
+    }
+
+    private SmileType AnalyzeMemberCall(SyntaxNode callSyntax, RecordTypeSymbol record,
+        SyntaxToken memberToken, IReadOnlyList<ArgumentSyntax> arguments, bool requireFunction,
+        BoundInstanceReceiver? receiverPlan, ExpressionSyntax? useSyntax = null)
+    {
+        if (!record.TryGetMember(memberToken.Text, out var member))
+        {
+            foreach (var argument in arguments)
+                AnalyzeExpression(argument.Expression);
+            Report("SML3443", memberToken.Span,
+                $"Type '{record.Name}' does not contain callable member '{memberToken.Text}'.");
+            return SmileType.Error;
+        }
+        RegisterTypeMemberUse(useSyntax, memberToken, member);
+        if (!IsAccessible(member, record, memberToken))
+        {
+            foreach (var argument in arguments)
+                AnalyzeExpression(argument.Expression);
+            return SmileType.Error;
+        }
+        if (member is not TypeRoutineSymbol methodMember)
+        {
+            foreach (var argument in arguments)
+                AnalyzeExpression(argument.Expression);
+            Report("SML3443", memberToken.Span,
+                $"Member '{record.Name}.{member.Name}' is not a method and cannot be called.");
+            return SmileType.Error;
+        }
+        if (receiverPlan == null)
+        {
+            foreach (var argument in arguments)
+                AnalyzeExpression(argument.Expression);
+            Report("SML3444", memberToken.Span,
+                $"Method '{record.Name}.{member.Name}' requires an addressable Type receiver.");
+            return SmileType.Error;
+        }
+        return BindRoutineCall(callSyntax, methodMember.Routine, memberToken, arguments, requireFunction,
+            receiverPlan);
+    }
+
+    private SmileType AnalyzeLeadingMemberInvocation(LeadingMemberInvocationExpressionSyntax call,
+        bool requireFunction)
+    {
+        if (_withStack.Count == 0)
+        {
+            foreach (var argument in call.Arguments)
+                AnalyzeExpression(argument.Expression);
+            Report("SML3413", call.DotToken.Span,
+                "Leading-dot member access is valid only inside With...End With.");
+            return SmileType.Error;
+        }
+        var withBinding = _withStack[_withStack.Count - 1];
+        if (withBinding?.TargetType is not RecordTypeSymbol record)
+        {
+            foreach (var argument in call.Arguments)
+                AnalyzeExpression(argument.Expression);
+            return SmileType.Error;
+        }
+        return AnalyzeMemberCall(call, record, call.Member, call.Arguments, requireFunction,
+            new BoundInstanceReceiver(record, withBinding.Statement), call);
     }
 
     private void RegisterParameterUse(SyntaxToken token, ParameterSymbol parameter)
@@ -2599,9 +3374,11 @@ internal sealed class SemanticAnalyzer
             case ArrayAccessExpressionSyntax array when TryResolveExisting(array.Identifier.Text, out var symbol):
                 return symbol.IsArray && symbol.Type == requiredType && array.Indices.Count == symbol.ArrayRank;
             case FieldAccessExpressionSyntax field:
-                return AnalyzeExpression(field) == requiredType && IsWritableRecordReceiver(field.Receiver);
+                return AnalyzeExpression(field) == requiredType && !_properties.ContainsKey(field) &&
+                    IsWritableRecordReceiver(field.Receiver);
             case LeadingMemberAccessExpressionSyntax leading:
-                return AnalyzeExpression(leading) == requiredType && _withMembers.ContainsKey(leading);
+                return AnalyzeExpression(leading) == requiredType && _withMembers.TryGetValue(leading, out var binding) &&
+                    binding.Field != null;
             default:
                 return false;
         }
@@ -2616,12 +3393,46 @@ internal sealed class SemanticAnalyzer
             case ArrayAccessExpressionSyntax array when TryResolveExisting(array.Identifier.Text, out var symbol):
                 return symbol.IsArray && array.Indices.Count == symbol.ArrayRank;
             case FieldAccessExpressionSyntax field:
-                return IsWritableRecordReceiver(field.Receiver);
+                return !_properties.ContainsKey(field) && IsWritableRecordReceiver(field.Receiver);
             case LeadingMemberAccessExpressionSyntax leading:
-                return _withMembers.ContainsKey(leading);
+                return _withMembers.TryGetValue(leading, out var binding) && binding.Field != null;
+            case MeExpressionSyntax:
+                return _currentRoutine?.Receiver != null;
+            case ParenthesizedExpressionSyntax parenthesized:
+                return IsWritableRecordReceiver(parenthesized.Expression);
             default:
                 return false;
         }
+    }
+
+    private bool TryCreateReceiverPlan(ExpressionSyntax memberSyntax, RecordTypeSymbol record,
+        out BoundInstanceReceiver receiver)
+    {
+        ExpressionSyntax? expression = memberSyntax switch
+        {
+            FieldAccessExpressionSyntax field => field.Receiver,
+            MemberInvocationExpressionSyntax invocation => invocation.Receiver,
+            _ => null
+        };
+        if (expression != null)
+        {
+            if (AnalyzeExpression(expression) == record && IsWritableRecordReceiver(expression))
+            {
+                receiver = new BoundInstanceReceiver(record, expression);
+                return true;
+            }
+            receiver = null!;
+            return false;
+        }
+        if (memberSyntax is LeadingMemberAccessExpressionSyntax or LeadingMemberInvocationExpressionSyntax &&
+            _withStack.Count != 0 && _withStack[_withStack.Count - 1] is { } withBinding &&
+            ReferenceEquals(withBinding.TargetType, record))
+        {
+            receiver = new BoundInstanceReceiver(record, withBinding.Statement);
+            return true;
+        }
+        receiver = null!;
+        return false;
     }
 
     private SmileType AnalyzeBuiltInCall(SyntaxToken identifier, IReadOnlyList<ExpressionSyntax> arguments)
@@ -2842,7 +3653,7 @@ internal sealed class SemanticAnalyzer
 
     private DimStatementSyntax? FindLocalDeclaration(string name) => _currentRoutine == null
         ? null
-        : EnumerateStatements(_currentRoutine.Declaration.Statements).OfType<DimStatementSyntax>()
+        : EnumerateStatements(_currentRoutine.BodyStatements).OfType<DimStatementSyntax>()
             .FirstOrDefault(dim => string.Equals(dim.Identifier.Text, name, StringComparison.OrdinalIgnoreCase));
 
     private bool TryEvaluateConstant(ExpressionSyntax expression, out object value, out SmileType type) =>

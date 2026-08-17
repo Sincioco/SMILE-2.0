@@ -139,18 +139,19 @@ internal sealed class WebEmitter
     {
         _currentSource = routine.Source;
         _currentRoutine = routine;
-        var parameters = string.Join(", ", routine.Parameters.Select(parameter => _variableNames[parameter]));
+        var abiParameters = RoutineAbiParameters(routine).ToArray();
+        var parameters = string.Join(", ", abiParameters.Select(parameter => _variableNames[parameter]));
         Line($"async function {_routineNames[routine]}({parameters}) {{");
         _indent++;
         foreach (var local in routine.LocalSymbols.Values
-                     .Where(local => !routine.Parameters.Contains(local))
+                     .Where(local => !abiParameters.Contains(local))
                      .OrderBy(local => local.DeclarationSpan.Start))
         {
             Line($"let {_variableNames[local]} = {InitialValue(local)};");
         }
         Line("try {");
         _indent++;
-        EmitStatements(routine.Declaration.Statements, topLevel: false);
+        EmitStatements(routine.BodyStatements, topLevel: false);
         _indent--;
         Line("} finally {");
         _indent++;
@@ -162,6 +163,16 @@ internal sealed class WebEmitter
         _indent--;
         Line("}");
         _currentRoutine = null;
+    }
+
+    private static IEnumerable<VariableSymbol> RoutineAbiParameters(RoutineSymbol routine)
+    {
+        if (routine.Receiver != null)
+            yield return routine.Receiver;
+        if (routine.SetterValue != null)
+            yield return routine.SetterValue;
+        foreach (var parameter in routine.Parameters)
+            yield return parameter;
     }
 
     private string InitialValue(VariableSymbol symbol)
@@ -217,6 +228,12 @@ internal sealed class WebEmitter
                 return;
             case CallStatementSyntax call:
                 Line($"{RoutineCall(call, call.Identifier)};");
+                return;
+            case MemberCallStatementSyntax call:
+                Line($"{RoutineCall(call, call.Member)};");
+                return;
+            case LeadingMemberCallStatementSyntax call:
+                Line($"{RoutineCall(call, call.Member)};");
                 return;
             case ReturnStatementSyntax returnStatement:
                 Line(returnStatement.Expression == null ? "return;" :
@@ -293,6 +310,12 @@ internal sealed class WebEmitter
 
     private void EmitAssignment(AssignmentStatementSyntax assignment)
     {
+        if (_analysis.SemanticModel.TryGetBoundCall(assignment, out var boundCall) &&
+            boundCall.Routine.SymbolKind == RoutineSymbolKind.PropertySet)
+        {
+            Line($"{RoutineCall(assignment)};");
+            return;
+        }
         var targetType = TargetType(assignment.Target);
         var value = Temporary("value");
         if (targetType == SmileType.Image)
@@ -588,6 +611,10 @@ internal sealed class WebEmitter
                 var namedValue = ReadVariable(name.Identifier);
                 return _analysis.SemanticModel.GetType(name) == SmileType.Image
                     ? $"smile.imageRetain({namedValue})" : namedValue;
+            case MeExpressionSyntax:
+                if (_currentRoutine?.Receiver == null)
+                    throw UnsupportedExpression(expression, "Me outside an instance member");
+                return ReadVariable(_currentRoutine.Receiver);
             case ArrayAccessExpressionSyntax array:
                 var arrayValue = $"smile.get({_variableNames[ResolveVariable(array.Identifier)]}, [{Arguments(array.Indices)}])";
                 return _analysis.SemanticModel.GetType(array) == SmileType.Image
@@ -595,12 +622,14 @@ internal sealed class WebEmitter
             case FieldAccessExpressionSyntax field:
                 if (_analysis.SemanticModel.TryGetEnumMember(field, out var enumMember))
                     return EnumValue(enumMember.Value);
+                if (_analysis.SemanticModel.TryGetBoundCall(field, out _))
+                    return RoutineCall(field, field.Field);
                 if (!_analysis.SemanticModel.TryGetField(field, out var fieldSymbol))
                     throw UnsupportedExpression(field, "unbound record field");
-                var fieldValue = $"({Expression(field.Receiver)})[{Json(FieldKey(fieldSymbol))}]";
-                return _analysis.SemanticModel.GetType(field) == SmileType.Image
-                    ? $"smile.imageRetain({fieldValue})" : fieldValue;
+                return FieldValue(field, fieldSymbol);
             case LeadingMemberAccessExpressionSyntax leading:
+                if (_analysis.SemanticModel.TryGetBoundCall(leading, out _))
+                    return RoutineCall(leading, leading.Member);
                 var leadingValue = LeadingMemberLocation(leading);
                 return _analysis.SemanticModel.GetType(leading) == SmileType.Image
                     ? $"smile.imageRetain({leadingValue})" : leadingValue;
@@ -617,9 +646,34 @@ internal sealed class WebEmitter
                 return Binary(binary);
             case CallExpressionSyntax call:
                 return Call(call);
+            case MemberInvocationExpressionSyntax call:
+                return RoutineCall(call, call.Member);
+            case LeadingMemberInvocationExpressionSyntax call:
+                return RoutineCall(call, call.Member);
             default:
                 throw UnsupportedExpression(expression, expression.GetType().Name);
         }
+    }
+
+    private string FieldValue(FieldAccessExpressionSyntax field, RecordFieldSymbol fieldSymbol)
+    {
+        var receiverValue = Expression(field.Receiver);
+        var key = Json(FieldKey(fieldSymbol));
+        var fieldType = _analysis.SemanticModel.GetType(field);
+        if (!IsOwnedRecordExpression(field.Receiver))
+        {
+            var fieldValue = $"({receiverValue})[{key}]";
+            return fieldType == SmileType.Image ? $"smile.imageRetain({fieldValue})" : fieldValue;
+        }
+
+        var receiverType = (RecordTypeSymbol)_analysis.SemanticModel.GetType(field.Receiver);
+        var capturedReceiver = Temporary("record");
+        var capturedField = $"{capturedReceiver}[{key}]";
+        var result = fieldType is RecordTypeSymbol
+            ? CloneValue(fieldType, capturedField)
+            : fieldType == SmileType.Image ? $"smile.imageRetain({capturedField})" : capturedField;
+        return $"await (async () => {{ const {capturedReceiver} = {receiverValue}; " +
+               $"try {{ return {result}; }} finally {{ {_recordNames[receiverType]}_clear({capturedReceiver}); }} }})()";
     }
 
     private string Binary(BinaryExpressionSyntax binary)
@@ -690,43 +744,90 @@ internal sealed class WebEmitter
         ? _variableNames[symbol] + $".set({value})"
         : _variableNames[symbol] + $" = {value}";
 
-    private string RoutineCall(SyntaxNode callSyntax, SyntaxToken identifier)
+    private string RoutineCall(SyntaxNode callSyntax, SyntaxToken? identifier = null)
     {
         if (!_analysis.SemanticModel.TryGetBoundCall(callSyntax, out var call))
-            throw new WebTargetException(_currentSource, "SML5101", identifier.Span,
-                $"Web target could not bind routine call '{identifier.Text}'.");
+            throw new WebTargetException(_currentSource, "SML5101", identifier?.Span ?? callSyntax.Span,
+                $"Web target could not bind routine call '{identifier?.Text ?? "member"}'.");
 
         var captures = call.SourceArguments.ToDictionary(argument => argument,
             _ => Temporary("argument"));
         var capturedFlags = call.SourceArguments
             .Where(RequiresCapturedCleanup)
             .ToDictionary(argument => argument, _ => Temporary("captured"));
+        var receiver = call.InstanceReceiver == null ? null : Temporary("receiver");
+        var implicitValue = call.ImplicitValue == null ? null : Temporary("value");
+        var implicitType = call.Routine.SetterValue?.Type;
+        var implicitCaptured = implicitType != null && RequiresCapturedCleanup(implicitType)
+            ? Temporary("captured") : null;
         var transferred = Temporary("transferred");
+        var cleanup = new List<string>();
         var builder = new StringBuilder();
         builder.Append("await (async () => { ");
+        if (receiver != null)
+            builder.Append("let ").Append(receiver).Append("; ");
+        if (implicitValue != null)
+            builder.Append("let ").Append(implicitValue).Append("; ");
         foreach (var argument in call.SourceArguments)
             builder.Append("let ").Append(captures[argument]).Append("; ");
+        if (implicitCaptured != null)
+            builder.Append("let ").Append(implicitCaptured).Append(" = false; ");
         foreach (var flag in capturedFlags.Values)
             builder.Append("let ").Append(flag).Append(" = false; ");
         builder.Append("let ").Append(transferred).Append(" = false; try { ");
+
+        if (call.EvaluateReceiverAfterImplicitValue)
+        {
+            CaptureImplicitValue();
+            CaptureReceiver();
+        }
+        else
+        {
+            CaptureReceiver();
+            CaptureImplicitValue();
+        }
         foreach (var argument in call.SourceArguments)
         {
             builder.Append(captures[argument]).Append(" = ").Append(CapturedArgumentValue(argument)).Append("; ");
             if (capturedFlags.TryGetValue(argument, out var flag))
+            {
                 builder.Append(flag).Append(" = true; ");
+                cleanup.Add($"if ({flag}) {{ {CapturedCleanup(argument.Parameter.Type, captures[argument])} }} ");
+            }
         }
+        var abiArguments = new List<string>();
+        if (receiver != null)
+            abiArguments.Add(receiver);
+        if (implicitValue != null)
+            abiArguments.Add(implicitValue);
+        abiArguments.AddRange(call.ParameterArguments.Select(argument =>
+            argument.IsDefault ? OptionalDefaultValue(argument.Parameter) : captures[argument]));
         builder.Append(transferred).Append(" = true; return await ").Append(_routineNames[call.Routine])
-            .Append('(').Append(string.Join(", ", call.ParameterArguments.Select(argument =>
-                argument.IsDefault ? OptionalDefaultValue(argument.Parameter)
-                    : captures[argument]))).Append("); } catch (error) { if (!")
+            .Append('(').Append(string.Join(", ", abiArguments)).Append("); } catch (error) { if (!")
             .Append(transferred).Append(") { ");
-        foreach (var argument in call.SourceArguments.Reverse().Where(RequiresCapturedCleanup))
-        {
-            builder.Append("if (").Append(capturedFlags[argument]).Append(") { ")
-                .Append(CapturedCleanup(argument, captures[argument])).Append(" } ");
-        }
+        foreach (var action in cleanup.AsEnumerable().Reverse())
+            builder.Append(action);
         builder.Append("} throw error; } })()");
         return builder.ToString();
+
+        void CaptureReceiver()
+        {
+            if (receiver != null)
+                builder.Append(receiver).Append(" = ").Append(ReceiverReference(call)).Append("; ");
+        }
+
+        void CaptureImplicitValue()
+        {
+            if (implicitValue == null || call.ImplicitValue == null || implicitType == null)
+                return;
+            builder.Append(implicitValue).Append(" = ")
+                .Append(CapturedImplicitValue(call.ImplicitValue, implicitType)).Append("; ");
+            if (implicitCaptured != null)
+            {
+                builder.Append(implicitCaptured).Append(" = true; ");
+                cleanup.Add($"if ({implicitCaptured}) {{ {CapturedCleanup(implicitType, implicitValue)} }} ");
+            }
+        }
     }
 
     private string CapturedArgumentValue(BoundCallArgument argument)
@@ -745,13 +846,36 @@ internal sealed class WebEmitter
 
     private static bool RequiresCapturedCleanup(BoundCallArgument argument) =>
         argument.Parameter.ParameterMode == ParameterPassingMode.ByVal &&
-        (argument.Parameter.Type == SmileType.Image ||
-         argument.Parameter.Type is RecordTypeSymbol { RequiresCleanup: true });
+        RequiresCapturedCleanup(argument.Parameter.Type);
 
-    private string CapturedCleanup(BoundCallArgument argument, string value) =>
-        argument.Parameter.Type == SmileType.Image
+    private static bool RequiresCapturedCleanup(SmileType type) =>
+        type == SmileType.Image || type is RecordTypeSymbol { RequiresCleanup: true };
+
+    private string CapturedCleanup(SmileType type, string value) =>
+        type == SmileType.Image
             ? $"smile.imageRelease({value}); {value} = null;"
-            : $"{_recordNames[(RecordTypeSymbol)argument.Parameter.Type]}_clear({value});";
+            : $"{_recordNames[(RecordTypeSymbol)type]}_clear({value});";
+
+    private string CapturedImplicitValue(ExpressionSyntax expression, SmileType type)
+    {
+        var value = Expression(expression);
+        if (type is RecordTypeSymbol)
+            return RecordValue(expression, type, value);
+        return type == SmileType.Number ? $"smile.safe({value})" : value;
+    }
+
+    private string ReceiverReference(BoundCall call)
+    {
+        var receiver = call.InstanceReceiver!;
+        if (receiver.Kind == BoundInstanceReceiverKind.WithTarget)
+        {
+            if (receiver.WithTarget == null ||
+                !_withReferences.TryGetValue(receiver.WithTarget, out var withReference))
+                throw new InvalidOperationException("Bound With receiver does not have a captured Web reference.");
+            return withReference;
+        }
+        return receiver.Expression == null ? "smile.invalidRef()" : Reference(receiver.Expression);
+    }
 
     private string OptionalDefaultValue(ParameterSymbol parameter)
     {
@@ -767,6 +891,14 @@ internal sealed class WebEmitter
 
     private string Reference(ExpressionSyntax expression)
     {
+        if (expression is ParenthesizedExpressionSyntax parenthesized)
+            return Reference(parenthesized.Expression);
+        if (expression is MeExpressionSyntax)
+        {
+            if (_currentRoutine?.Receiver == null)
+                return "smile.invalidRef()";
+            return _variableNames[_currentRoutine.Receiver];
+        }
         if (expression is NameExpressionSyntax name)
         {
             var symbol = ResolveVariable(name.Identifier);
@@ -789,6 +921,7 @@ internal sealed class WebEmitter
         if (expression is LeadingMemberAccessExpressionSyntax leading)
         {
             if (!_analysis.SemanticModel.TryGetWithMember(leading, out var binding) ||
+                binding.Field == null ||
                 !_withReferences.TryGetValue(binding.ReceiverStatement, out var receiver))
                 return "smile.invalidRef()";
             return MemberReference(receiver, Json(FieldKey(binding.Field)));
@@ -829,7 +962,10 @@ internal sealed class WebEmitter
     private bool IsOwnedRecordExpression(ExpressionSyntax expression) => expression switch
     {
         ParenthesizedExpressionSyntax parenthesized => IsOwnedRecordExpression(parenthesized.Expression),
-        CallExpressionSyntax call => _analysis.SemanticModel.GetType(call) is RecordTypeSymbol,
+        _ when _analysis.SemanticModel.TryGetBoundCall(expression, out var call) &&
+               call.Routine.ReturnType is RecordTypeSymbol => true,
+        FieldAccessExpressionSyntax field when _analysis.SemanticModel.GetType(field) is RecordTypeSymbol =>
+            IsOwnedRecordExpression(field.Receiver),
         _ => false
     };
 
@@ -899,6 +1035,7 @@ internal sealed class WebEmitter
     private string LeadingMemberLocation(LeadingMemberAccessExpressionSyntax expression)
     {
         if (!_analysis.SemanticModel.TryGetWithMember(expression, out var binding) ||
+            binding.Field == null ||
             !_withReferences.TryGetValue(binding.ReceiverStatement, out var receiver))
             throw UnsupportedExpression(expression, "unbound With member");
         return $"{receiver}.get()[{Json(FieldKey(binding.Field))}]";
@@ -939,7 +1076,8 @@ internal sealed class WebEmitter
         _analysis.SemanticModel.Symbols.Values.OrderBy(item => item.SourceOrdinal).ThenBy(item => item.DeclarationSpan.Start);
 
     private IOrderedEnumerable<RoutineSymbol> OrderedRoutines() =>
-        _analysis.SemanticModel.Routines.Values.OrderBy(item => item.SourceOrdinal).ThenBy(item => item.Declaration.Span.Start);
+        _analysis.SemanticModel.AllRoutines.OrderBy(item => item.SourceOrdinal)
+            .ThenBy(item => item.DeclarationSyntax.Span.Start).ThenBy(item => item.SymbolKind);
 
     private IOrderedEnumerable<RecordTypeSymbol> OrderedRecordTypes() =>
         _analysis.SemanticModel.Types.Values.OrderBy(item => item.SourceOrdinal).ThenBy(item => item.DeclarationSpan.Start);

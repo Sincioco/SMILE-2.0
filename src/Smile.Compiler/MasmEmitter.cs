@@ -33,7 +33,7 @@ internal enum MasmStorageKind
 
 internal sealed class MasmTemporaryStorage
 {
-    public MasmTemporaryStorage(string name, SmileType type, RoutineDeclarationSyntax? owner,
+    public MasmTemporaryStorage(string name, SmileType type, RoutineSymbol? owner,
         int sizeOverride = 0)
     {
         Name = name;
@@ -45,7 +45,7 @@ internal sealed class MasmTemporaryStorage
 
     public string Name { get; }
     public SmileType Type { get; }
-    public RoutineDeclarationSyntax? Owner { get; }
+    public RoutineSymbol? Owner { get; }
     public MasmStorageKind Kind { get; }
     public int FrameOffset { get; set; }
     public int SizeOverride { get; }
@@ -94,9 +94,12 @@ internal sealed class MasmEmitter
     private readonly Dictionary<VariableSymbol, string> _symbolLabels = new();
     private readonly Dictionary<RoutineSymbol, string> _routineLabels = new();
     private readonly Dictionary<RecordTypeSymbol, string> _recordHelperLabels = new();
-    private readonly Dictionary<CallExpressionSyntax, MasmTemporaryStorage> _recordCallResults = new();
+    private readonly Dictionary<ExpressionSyntax, MasmTemporaryStorage> _recordCallResults = new();
     private readonly Dictionary<BoundCallArgument, MasmTemporaryStorage> _callArgumentTemporaries = new();
     private readonly Dictionary<BoundCallArgument, MasmTemporaryStorage> _callArgumentRegistrations = new();
+    private readonly Dictionary<SyntaxNode, MasmTemporaryStorage> _callReceiverTemporaries = new();
+    private readonly Dictionary<SyntaxNode, MasmTemporaryStorage> _implicitValueTemporaries = new();
+    private readonly Dictionary<SyntaxNode, MasmTemporaryStorage> _implicitValueRegistrations = new();
     private readonly Dictionary<LiteralExpressionSyntax, TextLiteral> _textLiterals = new();
     private readonly Dictionary<VariableSymbol, TextLiteral> _constantTextLiterals = new();
     private readonly Dictionary<ParameterSymbol, TextLiteral> _optionalDefaultTextLiterals = new();
@@ -122,7 +125,7 @@ internal sealed class MasmEmitter
     private bool _usesMusic;
     private int _dynamicStackSlots;
     private int _clipDepth;
-    private RoutineDeclarationSyntax? _collectRoutine;
+    private RoutineSymbol? _collectRoutine;
 
     public MasmEmitter(SmileAnalysisResult analysis, SmileGraphicsBackend graphicsBackend,
         bool vSync, bool emitDebugInformation, string? appIdentity = null,
@@ -147,6 +150,15 @@ internal sealed class MasmEmitter
             _currentSource = tree.Source;
             Collect(tree.Root.Statements);
         }
+        foreach (var routine in OrderedRoutines())
+        {
+            _currentSource = routine.Source;
+            _collectRoutine = routine;
+            foreach (var parameter in routine.Parameters)
+                CollectExpression(parameter.Declaration.DefaultValue);
+            Collect(routine.BodyStatements);
+        }
+        _collectRoutine = null;
         AssignLabels();
         BuildFrameLayouts();
 
@@ -276,7 +288,7 @@ internal sealed class MasmEmitter
         CallAligned("ExitProcess");
         Line("main ENDP");
 
-        foreach (var routine in _analysis.SemanticModel.Routines.Values)
+        foreach (var routine in OrderedRoutines())
             EmitRoutine(routine);
 
         EmitStagedCleanupHelper();
@@ -321,6 +333,7 @@ internal sealed class MasmEmitter
                 case AssignmentStatementSyntax assignment:
                     CollectExpression(assignment.Target.Location);
                     CollectExpression(assignment.Expression);
+                    CollectBoundCall(assignment);
                     break;
                 case DimStatementSyntax dim:
                     foreach (var size in dim.Sizes)
@@ -360,15 +373,20 @@ internal sealed class MasmEmitter
                     Collect(doStatement.Statements);
                     CollectExpression(doStatement.UntilCondition);
                     break;
-                case RoutineDeclarationSyntax routine:
-                    var previousRoutine = _collectRoutine;
-                    _collectRoutine = routine;
-                    foreach (var parameter in routine.Parameters)
-                        CollectExpression(parameter.DefaultValue);
-                    Collect(routine.Statements);
-                    _collectRoutine = previousRoutine;
+                case RoutineDeclarationSyntax:
                     break;
                 case CallStatementSyntax call:
+                    foreach (var argument in call.Arguments)
+                        CollectExpression(argument.Expression);
+                    CollectBoundCall(call);
+                    break;
+                case MemberCallStatementSyntax call:
+                    CollectExpression(call.Receiver);
+                    foreach (var argument in call.Arguments)
+                        CollectExpression(argument.Expression);
+                    CollectBoundCall(call);
+                    break;
+                case LeadingMemberCallStatementSyntax call:
                     foreach (var argument in call.Arguments)
                         CollectExpression(argument.Expression);
                     CollectBoundCall(call);
@@ -471,6 +489,12 @@ internal sealed class MasmEmitter
                 break;
             case FieldAccessExpressionSyntax field:
                 CollectExpression(field.Receiver);
+                CollectBoundCall(field);
+                CollectRecordCallResult(field);
+                break;
+            case LeadingMemberAccessExpressionSyntax leading:
+                CollectBoundCall(leading);
+                CollectRecordCallResult(leading);
                 break;
             case ParenthesizedExpressionSyntax parenthesized:
                 CollectExpression(parenthesized.Expression);
@@ -489,17 +513,45 @@ internal sealed class MasmEmitter
                 foreach (var argument in call.Arguments)
                     CollectExpression(argument.Expression);
                 CollectBoundCall(call);
-                if (_analysis.SemanticModel.TryGetRoutine(call.Identifier.Text, out var routine) &&
-                    routine.ReturnType is RecordTypeSymbol)
-                    _recordCallResults[call] = CreateTemporary("record_result", routine.ReturnType);
+                CollectRecordCallResult(call);
+                break;
+            case MemberInvocationExpressionSyntax call:
+                CollectExpression(call.Receiver);
+                foreach (var argument in call.Arguments)
+                    CollectExpression(argument.Expression);
+                CollectBoundCall(call);
+                CollectRecordCallResult(call);
+                break;
+            case LeadingMemberInvocationExpressionSyntax call:
+                foreach (var argument in call.Arguments)
+                    CollectExpression(argument.Expression);
+                CollectBoundCall(call);
+                CollectRecordCallResult(call);
                 break;
         }
+    }
+
+    private void CollectRecordCallResult(ExpressionSyntax expression)
+    {
+        if (!_recordCallResults.ContainsKey(expression) &&
+            _analysis.SemanticModel.TryGetBoundCall(expression, out var call) &&
+            call.Routine.ReturnType is RecordTypeSymbol record)
+            _recordCallResults[expression] = CreateTemporary("record_result", record);
     }
 
     private void CollectBoundCall(SyntaxNode callSyntax)
     {
         if (!_analysis.SemanticModel.TryGetBoundCall(callSyntax, out var call))
             return;
+        if (call.InstanceReceiver != null && !_callReceiverTemporaries.ContainsKey(callSyntax))
+            _callReceiverTemporaries[callSyntax] = CreateTemporary("call_receiver", SmileType.Number);
+        if (call.ImplicitValue != null && !_implicitValueTemporaries.ContainsKey(callSyntax))
+        {
+            var type = call.Routine.SetterValue?.Type ?? _analysis.SemanticModel.GetType(call.ImplicitValue);
+            _implicitValueTemporaries[callSyntax] = CreateTemporary("call_value", type);
+            if (type.RequiresCleanup)
+                _implicitValueRegistrations[callSyntax] = CreateTemporary("call_value_cleanup", SmileType.Number, 24);
+        }
         foreach (var argument in call.SourceArguments)
         {
             if (_callArgumentTemporaries.ContainsKey(argument))
@@ -528,7 +580,7 @@ internal sealed class MasmEmitter
                 _constantTextLiterals[symbol] = new TextLiteral($"constant_text_{_constantTextLiterals.Count}",
                     Encoding.UTF8.GetBytes(text));
         }
-        foreach (var routine in _analysis.SemanticModel.Routines.Values)
+        foreach (var routine in OrderedRoutines())
         {
             _routineLabels[routine] = "routine_" + _routineLabels.Count;
             foreach (var parameter in routine.Parameters.Where(parameter => parameter.IsOptional &&
@@ -544,7 +596,7 @@ internal sealed class MasmEmitter
 
     private void BuildFrameLayouts()
     {
-        foreach (var routine in _analysis.SemanticModel.Routines.Values)
+        foreach (var routine in OrderedRoutines())
         {
             var localOffsets = new Dictionary<VariableSymbol, int>();
             var offset = 0;
@@ -555,7 +607,7 @@ internal sealed class MasmEmitter
                 localOffsets[symbol] = offset;
             }
 
-            var temporaries = _temporaries.Where(temporary => ReferenceEquals(temporary.Owner, routine.Declaration))
+            var temporaries = _temporaries.Where(temporary => ReferenceEquals(temporary.Owner, routine))
                 .ToArray();
             foreach (var temporary in temporaries)
             {
@@ -588,27 +640,29 @@ internal sealed class MasmEmitter
         foreach (var temporary in _currentFrame.Temporaries.Where(temporary => temporary.RequiresCleanup))
             for (var index = 0; index < temporary.Size / 8; index++)
                 Line($"    mov QWORD PTR [rbp-{temporary.FrameOffset - index * 8}], 0");
-        var argumentShift = routine.ReturnType is RecordTypeSymbol ? 1 : 0;
-        if (argumentShift != 0)
+        var argumentIndex = 0;
+        if (routine.ReturnType is RecordTypeSymbol)
         {
             Line("    mov QWORD PTR [rbp-" + _currentFrame.ReturnOffset + "], rcx");
+            argumentIndex++;
         }
-        for (var index = 0; index < routine.Parameters.Count; index++)
+        if (routine.Receiver != null)
         {
-            var parameter = routine.Parameters[index];
-            var argumentIndex = index + argumentShift;
-            var source = argumentIndex switch
-            {
-                0 => "rcx", 1 => "rdx", 2 => "r8", 3 => "r9",
-                _ => $"QWORD PTR [rbp+{48 + (argumentIndex - 4) * 8}]"
-            };
-            if (argumentIndex >= 4)
-                Line($"    mov rax, {source}");
-            var sourceRegister = argumentIndex >= 4 ? "rax" : source;
-            Line($"    mov QWORD PTR [rbp-{_currentFrame.LocalOffsets[parameter]}], {sourceRegister}");
+            EmitIncomingArgument(routine.Receiver, argumentIndex);
+            argumentIndex++;
         }
-        foreach (var parameter in routine.Parameters.Where(parameter =>
-                     parameter.Type is RecordTypeSymbol && parameter.ParameterMode != ParameterPassingMode.ByRef))
+        if (routine.SetterValue != null)
+        {
+            EmitIncomingArgument(routine.SetterValue, argumentIndex);
+            argumentIndex++;
+        }
+        foreach (var parameter in routine.Parameters)
+            EmitIncomingArgument(parameter, argumentIndex++);
+        foreach (var parameter in routine.Parameters.Cast<VariableSymbol>()
+                     .Concat(routine.SetterValue == null
+                         ? Array.Empty<VariableSymbol>() : new VariableSymbol[] { routine.SetterValue })
+                     .Where(parameter => parameter.Type is RecordTypeSymbol &&
+                                         parameter.ParameterMode != ParameterPassingMode.ByRef))
         {
             var record = (RecordTypeSymbol)parameter.Type;
             var offset = _currentFrame.LocalOffsets[parameter];
@@ -617,9 +671,9 @@ internal sealed class MasmEmitter
             Line($"    lea rcx, [rbp-{offset}]");
             CallAligned(RecordCopy(record));
         }
-        if (argumentShift == 0)
+        if (routine.ReturnType is not RecordTypeSymbol)
             Line($"    mov QWORD PTR [rbp-{_currentFrame.ReturnOffset}], 0");
-        EmitStatements(routine.Declaration.Statements);
+        EmitStatements(routine.BodyStatements);
         if (!routine.IsFunction)
             Line("    xor eax, eax");
         if (routine.ReturnType is not RecordTypeSymbol)
@@ -639,6 +693,19 @@ internal sealed class MasmEmitter
         _currentRoutine = null;
         _currentFrame = null;
         _activeCleanups.Clear();
+    }
+
+    private void EmitIncomingArgument(VariableSymbol symbol, int argumentIndex)
+    {
+        var source = argumentIndex switch
+        {
+            0 => "rcx", 1 => "rdx", 2 => "r8", 3 => "r9",
+            _ => $"QWORD PTR [rbp+{48 + (argumentIndex - 4) * 8}]"
+        };
+        if (argumentIndex >= 4)
+            Line($"    mov rax, {source}");
+        var sourceRegister = argumentIndex >= 4 ? "rax" : source;
+        Line($"    mov QWORD PTR [rbp-{_currentFrame!.LocalOffsets[symbol]}], {sourceRegister}");
     }
 
     private void EmitStatements(IReadOnlyList<StatementSyntax> statements)
@@ -702,7 +769,13 @@ internal sealed class MasmEmitter
                 EmitDo(doStatement);
                 break;
             case CallStatementSyntax call:
-                EmitRoutineCall(call, call.Identifier.Text);
+                EmitRoutineCall(call);
+                break;
+            case MemberCallStatementSyntax call:
+                EmitRoutineCall(call);
+                break;
+            case LeadingMemberCallStatementSyntax call:
+                EmitRoutineCall(call);
                 break;
             case ReturnStatementSyntax returnStatement:
                 if (returnStatement.Expression != null)
@@ -1031,6 +1104,12 @@ internal sealed class MasmEmitter
 
     private void EmitAssignment(AssignmentStatementSyntax assignment)
     {
+        if (_analysis.SemanticModel.TryGetBoundCall(assignment, out var propertyCall) &&
+            propertyCall.Routine.SymbolKind == RoutineSymbolKind.PropertySet)
+        {
+            EmitRoutineCall(assignment);
+            return;
+        }
         EmitExpression(assignment.Expression);
         var targetType = _analysis.SemanticModel.GetType(assignment.Target.Location);
         PushRax();
@@ -1233,6 +1312,11 @@ internal sealed class MasmEmitter
                 var symbol = Resolve(name.Identifier.Text);
                 EmitLoad(symbol);
                 break;
+            case MeExpressionSyntax:
+                if (_currentRoutine?.Receiver == null)
+                    throw new InvalidOperationException("Me does not have a bound instance receiver.");
+                EmitLoad(_currentRoutine.Receiver);
+                break;
             case ArrayAccessExpressionSyntax array:
                 var arraySymbol = Resolve(array.Identifier.Text);
                 EmitArrayIndex(array.Indices, arraySymbol);
@@ -1257,6 +1341,12 @@ internal sealed class MasmEmitter
                     Line($"    mov rax, {QwordImmediate(enumMember.Value)}");
                     break;
                 }
+                if (_analysis.SemanticModel.TryGetBoundCall(field, out _))
+                {
+                    EmitRoutineCall(field,
+                        _recordCallResults.TryGetValue(field, out var fieldResult) ? fieldResult : null);
+                    break;
+                }
                 EmitWritableAddress(field);
                 if (_analysis.SemanticModel.GetType(field) is not RecordTypeSymbol)
                 {
@@ -1271,6 +1361,12 @@ internal sealed class MasmEmitter
                 }
                 break;
             case LeadingMemberAccessExpressionSyntax leading:
+                if (_analysis.SemanticModel.TryGetBoundCall(leading, out _))
+                {
+                    EmitRoutineCall(leading,
+                        _recordCallResults.TryGetValue(leading, out var leadingResult) ? leadingResult : null);
+                    break;
+                }
                 EmitWritableAddress(leading);
                 if (_analysis.SemanticModel.GetType(leading) is not RecordTypeSymbol)
                 {
@@ -1296,6 +1392,14 @@ internal sealed class MasmEmitter
                 break;
             case CallExpressionSyntax call:
                 EmitCallExpression(call);
+                break;
+            case MemberInvocationExpressionSyntax call:
+                EmitRoutineCall(call,
+                    _recordCallResults.TryGetValue(call, out var memberResult) ? memberResult : null);
+                break;
+            case LeadingMemberInvocationExpressionSyntax call:
+                EmitRoutineCall(call,
+                    _recordCallResults.TryGetValue(call, out var leadingMemberResult) ? leadingMemberResult : null);
                 break;
             default:
                 Line("    xor rax, rax");
@@ -1396,23 +1500,26 @@ internal sealed class MasmEmitter
                 EmitNativeCall("smile_text_slice", 3);
                 break;
             default:
-                if (_analysis.SemanticModel.TryGetRoutine(call.Identifier.Text, out var routine) &&
-                    routine.ReturnType is RecordTypeSymbol)
-                    EmitRoutineCall(call, call.Identifier.Text, _recordCallResults[call]);
-                else
-                    EmitRoutineCall(call, call.Identifier.Text);
+                EmitRoutineCall(call, _recordCallResults.TryGetValue(call, out var result) ? result : null);
                 break;
         }
     }
 
-    private void EmitRoutineCall(SyntaxNode callSyntax, string name,
-        MasmTemporaryStorage? recordResult = null)
+    private void EmitRoutineCall(SyntaxNode callSyntax, MasmTemporaryStorage? recordResult = null)
     {
-        if (!_analysis.SemanticModel.TryGetRoutine(name, out var routine))
-            throw new InvalidOperationException($"Unresolved routine '{name}'.");
         if (!_analysis.SemanticModel.TryGetBoundCall(callSyntax, out var call))
-            throw new InvalidOperationException($"Unbound routine call '{name}'.");
+            throw new InvalidOperationException("Unbound routine call.");
 
+        if (call.EvaluateReceiverAfterImplicitValue)
+        {
+            CaptureImplicitValue(callSyntax, call);
+            CaptureInstanceReceiver(callSyntax, call);
+        }
+        else
+        {
+            CaptureInstanceReceiver(callSyntax, call);
+            CaptureImplicitValue(callSyntax, call);
+        }
         foreach (var argument in call.SourceArguments)
         {
             var expression = argument.Expression!;
@@ -1444,6 +1551,20 @@ internal sealed class MasmEmitter
             EmitTemporaryAddress(recordResult, "rax");
             PushRax();
         }
+        if (call.InstanceReceiver != null)
+        {
+            Line($"    mov rax, {TemporaryMemory(_callReceiverTemporaries[callSyntax])}");
+            PushRax();
+        }
+        if (call.ImplicitValue != null)
+        {
+            var value = _implicitValueTemporaries[callSyntax];
+            if (value.Type is RecordTypeSymbol)
+                EmitTemporaryAddress(value, "rax");
+            else
+                Line($"    mov rax, {TemporaryMemory(value)}");
+            PushRax();
+        }
         foreach (var argument in call.ParameterArguments)
         {
             if (argument.IsDefault)
@@ -1460,11 +1581,21 @@ internal sealed class MasmEmitter
         {
             Line($"    mov {TemporaryMemory(_callArgumentTemporaries[argument])}, 0");
         }
-        EmitNativeCall(_routineLabels[routine], call.ParameterArguments.Count + (recordResult == null ? 0 : 1));
+        if (call.ImplicitValue != null && _implicitValueRegistrations.ContainsKey(callSyntax) &&
+            _implicitValueTemporaries[callSyntax].Type is not RecordTypeSymbol)
+            Line($"    mov {TemporaryMemory(_implicitValueTemporaries[callSyntax])}, 0");
+        var abiArgumentCount = call.ParameterArguments.Count +
+                               (recordResult == null ? 0 : 1) +
+                               (call.InstanceReceiver == null ? 0 : 1) +
+                               (call.ImplicitValue == null ? 0 : 1);
+        EmitNativeCall(_routineLabels[call.Routine], abiArgumentCount);
         var cleanupCaptures = call.SourceArguments.Where(argument =>
             RequiresStagedCleanup(argument) || argument.Parameter.ParameterMode == ParameterPassingMode.ByVal &&
             argument.Parameter.Type is RecordTypeSymbol).ToArray();
-        if (cleanupCaptures.Length != 0)
+        var cleanupImplicitValue = call.ImplicitValue != null &&
+                                   (_implicitValueRegistrations.ContainsKey(callSyntax) ||
+                                    _implicitValueTemporaries[callSyntax].Type is RecordTypeSymbol);
+        if (cleanupCaptures.Length != 0 || cleanupImplicitValue)
         {
             PushRax();
             foreach (var argument in cleanupCaptures.Reverse())
@@ -1477,14 +1608,72 @@ internal sealed class MasmEmitter
                     CallAligned(RecordClear(record));
                 }
             }
+            if (cleanupImplicitValue)
+            {
+                var value = _implicitValueTemporaries[callSyntax];
+                if (_implicitValueRegistrations.TryGetValue(callSyntax, out var registration))
+                    UnregisterStagedCleanup(registration);
+                if (value.Type is RecordTypeSymbol record)
+                {
+                    EmitTemporaryAddress(value, "rcx");
+                    CallAligned(RecordClear(record));
+                }
+            }
             PopRax();
         }
         if (recordResult != null)
             EmitTemporaryAddress(recordResult, "rax");
     }
 
+    private void CaptureInstanceReceiver(SyntaxNode callSyntax, BoundCall call)
+    {
+        if (call.InstanceReceiver == null)
+            return;
+        var receiver = call.InstanceReceiver;
+        if (receiver.Kind == BoundInstanceReceiverKind.WithTarget)
+        {
+            if (receiver.WithTarget == null || !_withLocations.TryGetValue(receiver.WithTarget, out var withLocation))
+                throw new InvalidOperationException("Bound With receiver does not have a captured native location.");
+            Line($"    mov rax, {TemporaryMemory(withLocation)}");
+        }
+        else if (receiver.Expression != null)
+            EmitWritableAddress(receiver.Expression);
+        else
+            throw new InvalidOperationException("Bound instance receiver does not have a native location.");
+        Line($"    mov {TemporaryMemory(_callReceiverTemporaries[callSyntax])}, rax");
+    }
+
+    private void CaptureImplicitValue(SyntaxNode callSyntax, BoundCall call)
+    {
+        if (call.ImplicitValue == null)
+            return;
+        var temporary = _implicitValueTemporaries[callSyntax];
+        if (temporary.Type is RecordTypeSymbol record)
+        {
+            EmitExpression(call.ImplicitValue);
+            Line("    mov rdx, rax");
+            EmitTemporaryAddress(temporary, "rcx");
+            CallAligned(RecordCopy(record));
+            ClearConsumedRecordResults(call.ImplicitValue);
+        }
+        else
+        {
+            EmitExpression(call.ImplicitValue);
+            Line($"    mov {TemporaryMemory(temporary)}, rax");
+        }
+        if (_implicitValueRegistrations.TryGetValue(callSyntax, out var registration))
+            RegisterStagedCleanup(temporary, registration, temporary.Type);
+    }
+
     private void ClearConsumedRecordResults(ExpressionSyntax expression)
     {
+        if (_recordCallResults.TryGetValue(expression, out var result) &&
+            result.Type is RecordTypeSymbol resultRecord)
+        {
+            EmitTemporaryAddress(result, "rcx");
+            CallAligned(RecordClear(resultRecord));
+            return;
+        }
         switch (expression)
         {
             case ParenthesizedExpressionSyntax parenthesized:
@@ -1493,10 +1682,8 @@ internal sealed class MasmEmitter
             case FieldAccessExpressionSyntax field:
                 ClearConsumedRecordResults(field.Receiver);
                 break;
-            case CallExpressionSyntax call when _recordCallResults.TryGetValue(call, out var result) &&
-                                                result.Type is RecordTypeSymbol record:
-                EmitTemporaryAddress(result, "rcx");
-                CallAligned(RecordClear(record));
+            case MemberInvocationExpressionSyntax member:
+                ClearConsumedRecordResults(member.Receiver);
                 break;
         }
     }
@@ -1520,15 +1707,21 @@ internal sealed class MasmEmitter
 
     private void RegisterStagedCleanup(BoundCallArgument argument)
     {
-        var registration = _callArgumentRegistrations[argument];
+        RegisterStagedCleanup(_callArgumentTemporaries[argument],
+            _callArgumentRegistrations[argument], argument.Parameter.Type);
+    }
+
+    private void RegisterStagedCleanup(MasmTemporaryStorage temporary,
+        MasmTemporaryStorage registration, SmileType type)
+    {
         EmitTemporaryAddress(registration, "rax");
         Line("    mov rdx, QWORD PTR [smile_staged_cleanup_head]");
         Line("    mov QWORD PTR [rax], rdx");
-        EmitTemporaryAddress(_callArgumentTemporaries[argument], "rdx");
+        EmitTemporaryAddress(temporary, "rdx");
         Line("    mov QWORD PTR [rax+8], rdx");
-        var cleanup = argument.Parameter.Type is RecordTypeSymbol record
+        var cleanup = type is RecordTypeSymbol record
             ? RecordClear(record)
-            : argument.Parameter.Type == SmileType.Text ? "smile_text_clear" : "smile_image_clear";
+            : type == SmileType.Text ? "smile_text_clear" : "smile_image_clear";
         Line($"    mov rdx, OFFSET {cleanup}");
         Line("    mov QWORD PTR [rax+16], rdx");
         Line("    mov QWORD PTR [smile_staged_cleanup_head], rax");
@@ -1536,7 +1729,12 @@ internal sealed class MasmEmitter
 
     private void UnregisterStagedCleanup(BoundCallArgument argument)
     {
-        EmitTemporaryAddress(_callArgumentRegistrations[argument], "rax");
+        UnregisterStagedCleanup(_callArgumentRegistrations[argument]);
+    }
+
+    private void UnregisterStagedCleanup(MasmTemporaryStorage registration)
+    {
+        EmitTemporaryAddress(registration, "rax");
         Line("    mov rdx, QWORD PTR [rax]");
         Line("    mov QWORD PTR [smile_staged_cleanup_head], rdx");
         Line("    mov QWORD PTR [rax], 0");
@@ -1546,6 +1744,19 @@ internal sealed class MasmEmitter
 
     private void EmitWritableAddress(ExpressionSyntax expression)
     {
+        if (_analysis.SemanticModel.TryGetBoundCall(expression, out var recordCall) &&
+            recordCall.Routine.ReturnType is RecordTypeSymbol)
+        {
+            EmitExpression(expression);
+            return;
+        }
+        if (expression is MeExpressionSyntax)
+        {
+            if (_currentRoutine?.Receiver == null)
+                throw new InvalidOperationException("Me does not have a bound instance receiver.");
+            EmitAddress(_currentRoutine.Receiver);
+            return;
+        }
         if (expression is NameExpressionSyntax name)
         {
             EmitAddress(Resolve(name.Identifier.Text));
@@ -1574,6 +1785,8 @@ internal sealed class MasmEmitter
         {
             if (!_analysis.SemanticModel.TryGetWithMember(leading, out var binding))
                 throw new InvalidOperationException($"Unbound With member '{leading.Member.Text}'.");
+            if (binding.Field == null)
+                throw new InvalidOperationException($"With property '{leading.Member.Text}' is not a writable field.");
             var storage = _withLocations[binding.ReceiverStatement];
             Line($"    mov rax, {TemporaryMemory(storage)}");
             if (binding.Field.Offset != 0)
@@ -1707,10 +1920,7 @@ internal sealed class MasmEmitter
     {
         var variables = new List<VariableSymbol>();
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var routine = _collectRoutine == null
-            ? null
-            : _analysis.SemanticModel.Routines.Values.FirstOrDefault(candidate =>
-                ReferenceEquals(candidate.Declaration, _collectRoutine));
+        var routine = _collectRoutine;
         var moduleName = routine?.ModuleName ?? _analysis.SemanticModel.Modules.Values
             .FirstOrDefault(module => module.SyntaxTrees.Any(tree => ReferenceEquals(tree.Source, _currentSource)))
             ?.Name;
@@ -2015,6 +2225,10 @@ internal sealed class MasmEmitter
     private string RecordCopy(RecordTypeSymbol record) => _recordHelperLabels[record] + "_copy";
     private string RecordClear(RecordTypeSymbol record) => _recordHelperLabels[record] + "_clear";
     private static string Offset(int offset) => offset == 0 ? string.Empty : $"+{offset}";
+
+    private IOrderedEnumerable<RoutineSymbol> OrderedRoutines() =>
+        _analysis.SemanticModel.AllRoutines.OrderBy(routine => routine.SourceOrdinal)
+            .ThenBy(routine => routine.DeclarationSyntax.Span.Start).ThenBy(routine => routine.SymbolKind);
 
     private IOrderedEnumerable<RecordTypeSymbol> OrderedRecordTypes() =>
         _analysis.SemanticModel.Types.Values.OrderBy(type => type.SourceOrdinal).ThenBy(type => type.DeclarationSpan.Start);

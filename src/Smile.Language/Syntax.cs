@@ -126,6 +126,9 @@ public enum SyntaxKind
     ByValKeyword,
     TypeKeyword,
     EnumKeyword,
+    PropertyKeyword,
+    SetKeyword,
+    MeKeyword,
     OptionalKeyword,
     ImageKeyword,
     UnloadKeyword,
@@ -299,6 +302,9 @@ public static class SyntaxFacts
         ["ByVal"] = SyntaxKind.ByValKeyword,
         ["Type"] = SyntaxKind.TypeKeyword,
         ["Enum"] = SyntaxKind.EnumKeyword,
+        ["Property"] = SyntaxKind.PropertyKeyword,
+        ["Set"] = SyntaxKind.SetKeyword,
+        ["Me"] = SyntaxKind.MeKeyword,
         ["Optional"] = SyntaxKind.OptionalKeyword,
         ["Image"] = SyntaxKind.ImageKeyword,
         ["Unload"] = SyntaxKind.UnloadKeyword,
@@ -554,6 +560,17 @@ public sealed class CompilationUnitSyntax : SyntaxNode
 
 public abstract class StatementSyntax : SyntaxNode { }
 public abstract class ExpressionSyntax : SyntaxNode { }
+
+public sealed class MeExpressionSyntax : ExpressionSyntax
+{
+    public MeExpressionSyntax(SyntaxToken meKeyword)
+    {
+        MeKeyword = meKeyword;
+    }
+
+    public SyntaxToken MeKeyword { get; }
+    public override TextSpan Span => MeKeyword.Span;
+}
 
 public sealed class FieldAccessExpressionSyntax : ExpressionSyntax
 {

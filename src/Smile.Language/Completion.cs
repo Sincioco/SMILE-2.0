@@ -16,6 +16,7 @@ public enum SmileCompletionKind
     Module,
     Type,
     Field,
+    Property,
     EnumMember,
     Parameter
 }
@@ -111,9 +112,7 @@ public static class SmileCompletionService
                 completions[symbol.Name] = VariableCompletion(symbol, analysis.DependencyContext);
         }
 
-        var currentRoutine = analysis.SemanticModel.Routines.Values.FirstOrDefault(routine =>
-            ReferenceEquals(routine.Source, syntaxTree.Source) &&
-            routine.Declaration.Span.Start <= position && position <= routine.Declaration.Span.End);
+        var currentRoutine = FindCurrentRoutine(analysis.SemanticModel, syntaxTree.Source, position);
         if (currentRoutine != null)
         {
             foreach (var symbol in currentRoutine.LocalSymbols.Values)
@@ -216,6 +215,12 @@ public static class SmileCompletionService
         else if (currentModule?.Members.TryGetValue(tokens[nameIndex].Text, out var ownMember) == true)
         {
             routine = ownMember.Routine;
+        }
+        else if (dotIndex >= 0 && tokens[dotIndex].Kind == SyntaxKind.DotToken &&
+                 TryResolveMethodReceiver(analysis, syntaxTree, position, currentModule, tokens, dotIndex,
+                     tokens[nameIndex].Text, out var method))
+        {
+            routine = method;
         }
         else
         {
@@ -385,14 +390,19 @@ public static class SmileCompletionService
             if (!analysis.SemanticModel.TryGetInnermostWithScope(syntaxTree.Source, position, out var scope))
                 return Array.Empty<SmileCompletion>();
             SmileType leadingType = scope.TargetType;
+            var leadingReceiverIsAddressable = true;
             foreach (var part in leadingParts)
             {
-                if (leadingType is not RecordTypeSymbol record || !record.TryGetField(part, out var field))
+                if (leadingType is not RecordTypeSymbol record ||
+                    !TryGetReadableValueMember(record, part,
+                        FindCurrentRoutine(analysis.SemanticModel, syntaxTree.Source, position), out leadingType,
+                        out var memberIsAddressable))
                     return Array.Empty<SmileCompletion>();
-                leadingType = field.Type;
+                leadingReceiverIsAddressable &= memberIsAddressable;
             }
             return leadingType is RecordTypeSymbol targetType
-                ? FieldCompletions(targetType, analysis.DependencyContext)
+                ? TypeMemberCompletions(targetType, FindCurrentRoutine(analysis.SemanticModel,
+                    syntaxTree.Source, position), analysis.DependencyContext, leadingReceiverIsAddressable)
                 : Array.Empty<SmileCompletion>();
         }
         var parts = ReceiverParts(tokens, tokens.Length - 1);
@@ -401,10 +411,9 @@ public static class SmileCompletionService
         if (TryResolveEnumReceiver(analysis, syntaxTree, currentModule, parts, out var enumReceiver))
             return EnumMemberCompletions(enumReceiver, analysis.DependencyContext);
         var root = parts[0];
-        var routine = analysis.SemanticModel.Routines.Values.FirstOrDefault(candidate =>
-            ReferenceEquals(candidate.Source, syntaxTree.Source) && candidate.Declaration.Span.Start <= position &&
-            position <= candidate.Declaration.Span.End);
+        var routine = FindCurrentRoutine(analysis.SemanticModel, syntaxTree.Source, position);
         SmileType type;
+        var receiverIsAddressable = true;
         var firstFieldIndex = 1;
         if (analysis.SemanticModel.GetImports(syntaxTree.Source).TryGetValue(root, out var imported) && parts.Count >= 2 &&
             imported.Members.TryGetValue(parts[1], out var importedMember) &&
@@ -415,7 +424,7 @@ public static class SmileCompletionService
         }
         else
         {
-            if (!analysis.SemanticModel.TryResolveVariable(root, routine?.Name, out var symbol))
+            if (!analysis.SemanticModel.TryResolveVariable(root, routine, out var symbol))
             {
                 if (currentModule?.Members.TryGetValue(root, out var moduleMember) != true ||
                     moduleMember.Variable == null)
@@ -426,22 +435,181 @@ public static class SmileCompletionService
         }
         for (var index = firstFieldIndex; index < parts.Count; index++)
         {
-            if (type is not RecordTypeSymbol record || !record.TryGetField(parts[index], out var field))
+            if (type is not RecordTypeSymbol record ||
+                !TryGetReadableValueMember(record, parts[index], routine, out type,
+                    out var memberIsAddressable))
                 return Array.Empty<SmileCompletion>();
-            type = field.Type;
+            receiverIsAddressable &= memberIsAddressable;
         }
         if (type is not RecordTypeSymbol target)
             return Array.Empty<SmileCompletion>();
-        return FieldCompletions(target, analysis.DependencyContext);
+        return TypeMemberCompletions(target, routine, analysis.DependencyContext, receiverIsAddressable);
     }
 
-    private static IReadOnlyList<SmileCompletion> FieldCompletions(RecordTypeSymbol target,
-        SmileCompilationDependencyContext dependencyContext) =>
-        target.Fields.OrderBy(field => field.Ordinal).Select(field => new SmileCompletion(field.Name,
-            $"{field.Name} As {field.Type.Name} field of Type {target.Name}" +
-            (target.ModuleName == null ? string.Empty :
-                $" from module {target.ModuleName} ({DescribeProvider(target.ProviderIdentity, dependencyContext)})"),
-            SmileCompletionKind.Field)).ToArray();
+    private static IReadOnlyList<SmileCompletion> TypeMemberCompletions(RecordTypeSymbol target,
+        RoutineSymbol? currentRoutine, SmileCompilationDependencyContext dependencyContext,
+        bool receiverIsAddressable = true)
+    {
+        var sameContainingType = ReferenceEquals(currentRoutine?.ContainingType, target) ||
+                                 currentRoutine?.ContainingType != null &&
+                                 string.Equals(currentRoutine.ContainingType.RuntimeIdentity, target.RuntimeIdentity,
+                                     StringComparison.Ordinal);
+        return target.Members
+            .Where(member => member.Visibility == ModuleVisibility.Public || sameContainingType)
+            .Where(member => receiverIsAddressable || member.MemberKind == SmileTypeMemberKind.Field)
+            .OrderBy(member => member.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(member => member.Name, StringComparer.Ordinal)
+            .ThenBy(member => member.MemberKind)
+            .Select(member => TypeMemberCompletion(target, member, dependencyContext))
+            .ToArray();
+    }
+
+    private static SmileCompletion TypeMemberCompletion(RecordTypeSymbol target, ITypeMemberSymbol member,
+        SmileCompilationDependencyContext dependencyContext)
+    {
+        var provider = target.ModuleName == null ? string.Empty :
+            $" from module {target.ModuleName} ({DescribeProvider(target.ProviderIdentity, dependencyContext)})";
+        return member switch
+        {
+            RecordFieldSymbol field => new SmileCompletion(field.Name,
+                $"{field.Name} As {field.Type.Name} field of Type {target.Name}" + provider,
+                SmileCompletionKind.Field),
+            TypeRoutineSymbol method => new SmileCompletion(method.Name,
+                SmileSymbolDisplayService.FormatRoutineSignature(method.Routine) +
+                (method.Routine.RequiresGameWindow ? " - requires Game Window" : string.Empty) + provider,
+                method.Routine.IsFunction ? SmileCompletionKind.Function : SmileCompletionKind.Subroutine),
+            PropertySymbol property => new SmileCompletion(property.Name,
+                SmileSymbolDisplayService.FormatPropertySignature(property) +
+                PropertyCapabilityDescription(property) + provider,
+                SmileCompletionKind.Property),
+            _ => new SmileCompletion(member.Name, member.Name + provider, SmileCompletionKind.Variable)
+        };
+    }
+
+    private static string PropertyCapabilityDescription(PropertySymbol property)
+    {
+        var getter = property.Getter?.RequiresGameWindow == true;
+        var setter = property.Setter?.RequiresGameWindow == true;
+        if (getter && setter)
+            return " - get and set require Game Window";
+        if (getter)
+            return " - get requires Game Window";
+        if (setter)
+            return " - set requires Game Window";
+        return string.Empty;
+    }
+
+    private static bool TryResolveMethodReceiver(SmileAnalysisResult analysis, SyntaxTree syntaxTree,
+        int position, ModuleSymbol? currentModule, IReadOnlyList<SyntaxToken> tokens, int methodDotIndex,
+        string methodName, out RoutineSymbol method)
+    {
+        method = null!;
+        var currentRoutine = FindCurrentRoutine(analysis.SemanticModel, syntaxTree.Source, position);
+        SmileType receiverType;
+        var receiverIsAddressable = true;
+        if (TryGetLeadingReceiverParts(syntaxTree, tokens, methodDotIndex, out var leadingParts))
+        {
+            if (!analysis.SemanticModel.TryGetInnermostWithScope(syntaxTree.Source, position, out var scope))
+                return false;
+            receiverType = scope.TargetType;
+            foreach (var part in leadingParts)
+            {
+                if (receiverType is not RecordTypeSymbol record ||
+                    !TryGetReadableValueMember(record, part, currentRoutine, out receiverType,
+                        out var memberIsAddressable))
+                    return false;
+                receiverIsAddressable &= memberIsAddressable;
+            }
+        }
+        else
+        {
+            var parts = ReceiverParts(tokens, methodDotIndex);
+            if (!TryResolveReceiverType(analysis, syntaxTree, currentModule, currentRoutine, parts,
+                    out receiverType, out receiverIsAddressable))
+                return false;
+        }
+
+        return receiverIsAddressable && receiverType is RecordTypeSymbol target &&
+               target.TryGetMethod(methodName, out method!) &&
+               IsAccessible(method.Visibility, target, currentRoutine);
+    }
+
+    private static bool TryResolveReceiverType(SmileAnalysisResult analysis, SyntaxTree syntaxTree,
+        ModuleSymbol? currentModule, RoutineSymbol? currentRoutine, IReadOnlyList<string> parts,
+        out SmileType type, out bool receiverIsAddressable)
+    {
+        type = SmileType.Error;
+        receiverIsAddressable = true;
+        if (parts.Count == 0)
+            return false;
+        var firstMemberIndex = 1;
+        if (analysis.SemanticModel.GetImports(syntaxTree.Source).TryGetValue(parts[0], out var imported) &&
+            parts.Count >= 2 && imported.Members.TryGetValue(parts[1], out var importedMember) &&
+            importedMember.Visibility == ModuleVisibility.Public && importedMember.Variable != null)
+        {
+            type = importedMember.Variable.Type;
+            firstMemberIndex = 2;
+        }
+        else
+        {
+            if (!analysis.SemanticModel.TryResolveVariable(parts[0], currentRoutine, out var variable))
+            {
+                if (currentModule?.Members.TryGetValue(parts[0], out var moduleMember) != true ||
+                    moduleMember.Variable == null)
+                    return false;
+                variable = moduleMember.Variable;
+            }
+            type = variable.Type;
+        }
+
+        for (var index = firstMemberIndex; index < parts.Count; index++)
+        {
+            if (type is not RecordTypeSymbol record ||
+                !TryGetReadableValueMember(record, parts[index], currentRoutine, out type,
+                    out var memberIsAddressable))
+                return false;
+            receiverIsAddressable &= memberIsAddressable;
+        }
+        return true;
+    }
+
+    private static bool TryGetReadableValueMember(RecordTypeSymbol type, string name,
+        RoutineSymbol? currentRoutine, out SmileType memberType, out bool memberIsAddressable)
+    {
+        memberType = SmileType.Error;
+        memberIsAddressable = false;
+        if (!type.TryGetMember(name, out var member) || !IsAccessible(member.Visibility, type, currentRoutine))
+            return false;
+        switch (member)
+        {
+            case RecordFieldSymbol field:
+                memberType = field.Type;
+                memberIsAddressable = true;
+                return true;
+            case PropertySymbol property when property.Getter != null:
+                memberType = property.Type;
+                memberIsAddressable = false;
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static bool IsAccessible(ModuleVisibility visibility, RecordTypeSymbol containingType,
+        RoutineSymbol? currentRoutine) =>
+        visibility == ModuleVisibility.Public || ReferenceEquals(currentRoutine?.ContainingType, containingType) ||
+        currentRoutine?.ContainingType != null &&
+        string.Equals(currentRoutine.ContainingType.RuntimeIdentity, containingType.RuntimeIdentity,
+            StringComparison.Ordinal);
+
+    private static RoutineSymbol? FindCurrentRoutine(SemanticModel semanticModel, SourceText source, int position) =>
+        semanticModel.AllRoutines
+            .Where(routine => ReferenceEquals(routine.Source, source) &&
+                              routine.DeclarationSyntax.Span.Start <= position &&
+                              position <= routine.DeclarationSyntax.Span.End)
+            .OrderBy(routine => routine.DeclarationSyntax.Span.Length)
+            .ThenBy(routine => routine.SymbolKind)
+            .FirstOrDefault();
 
     private static IReadOnlyList<SmileCompletion> EnumMemberCompletions(EnumTypeSymbol target,
         SmileCompilationDependencyContext dependencyContext) =>
@@ -519,7 +687,7 @@ public static class SmileCompletionService
     }
 
     private static bool IsMemberNameToken(SyntaxKind kind) =>
-        kind is SyntaxKind.IdentifierToken or SyntaxKind.KeyKeyword or SyntaxKind.WindowKeyword or
+        kind is SyntaxKind.IdentifierToken or SyntaxKind.MeKeyword or SyntaxKind.KeyKeyword or SyntaxKind.WindowKeyword or
             SyntaxKind.SizeKeyword or SyntaxKind.DrawKeyword or SyntaxKind.LineKeyword or SyntaxKind.TextKeyword or
             SyntaxKind.LeftKeyword or SyntaxKind.RightKeyword or SyntaxKind.NoneKeyword or SyntaxKind.UpKeyword or
             SyntaxKind.DownKeyword ||

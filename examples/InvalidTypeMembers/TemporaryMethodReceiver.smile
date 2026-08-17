@@ -1,0 +1,21 @@
+Type Counter
+
+    Value As Number
+
+    Public Sub Advance()
+
+        Me.Value = Me.Value + 1
+
+    End Sub
+
+End Type
+
+Call MakeCounter().Advance()
+
+Function MakeCounter() As Counter
+
+    Dim Result As Counter
+
+    Return Result
+
+End Function

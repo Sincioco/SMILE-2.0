@@ -16,6 +16,7 @@ public enum SmileResolvedSymbolKind
     Enum,
     EnumMember,
     Field,
+    Property,
     Parameter,
     NamedArgument,
     Local
@@ -28,7 +29,7 @@ public sealed class SmileResolvedSymbol
         string moduleName, string signature, SmileDocumentation documentation, bool requiresGameWindow,
         RoutineSymbol? routine = null, VariableSymbol? variable = null, NominalTypeSymbol? type = null,
         RecordFieldSymbol? field = null, RecordTypeSymbol? containingType = null,
-        EnumMemberSymbol? enumMember = null)
+        EnumMemberSymbol? enumMember = null, PropertySymbol? property = null)
     {
         Kind = kind;
         Name = name;
@@ -47,6 +48,7 @@ public sealed class SmileResolvedSymbol
         Field = field;
         ContainingType = containingType;
         EnumMember = enumMember;
+        Property = property;
     }
 
     public SmileResolvedSymbolKind Kind { get; }
@@ -66,6 +68,7 @@ public sealed class SmileResolvedSymbol
     internal RecordFieldSymbol? Field { get; }
     internal RecordTypeSymbol? ContainingType { get; }
     internal EnumMemberSymbol? EnumMember { get; }
+    internal PropertySymbol? Property { get; }
 }
 
 public sealed class SmileParameterPresentation
@@ -132,10 +135,13 @@ public static class SmileSymbolDisplayService
             }
         }
 
+        var capability = symbol.Property == null
+            ? symbol.RequiresGameWindow ? "Requires Game Window." : string.Empty
+            : FormatPropertyCapability(symbol.Property);
         return new SmileSymbolPresentation(symbol.Signature, symbol.Documentation.Summary, parameters,
             symbol.Kind == SmileResolvedSymbolKind.Function ? symbol.Documentation.Returns : string.Empty,
             symbol.Documentation.Remarks,
-            symbol.RequiresGameWindow ? "Requires Game Window." : string.Empty,
+            capability,
             DescribeProvider(symbol.ProviderIdentity, dependencies),
             symbol.DeclarationLocation?.FilePath ?? string.Empty, symbol.Alias);
     }
@@ -144,15 +150,36 @@ public static class SmileSymbolDisplayService
     {
         if (routine == null)
             throw new ArgumentNullException(nameof(routine));
-        var name = includeModuleName && !string.IsNullOrWhiteSpace(routine.ModuleName)
-            ? routine.ModuleName + "." + routine.Name
-            : routine.Name;
+        var name = routine.Name;
+        if (routine.ContainingType != null)
+        {
+            name = routine.ContainingType.Name + "." + name;
+            if (includeModuleName && !string.IsNullOrWhiteSpace(routine.ContainingType.ModuleName))
+                name = routine.ContainingType.ModuleName + "." + name;
+        }
+        else if (includeModuleName && !string.IsNullOrWhiteSpace(routine.ModuleName))
+        {
+            name = routine.ModuleName + "." + name;
+        }
         var parameters = string.Join(", ", Enumerable.Range(0, routine.Parameters.Count)
             .Select(index => FormatParameter(routine, index)));
         var returnType = routine.IsFunction
             ? " As " + FormatDeclaredType(routine.Source, routine.Declaration.ReturnTypeToken, routine.ReturnType)
             : string.Empty;
         return (routine.IsFunction ? "Function " : "Sub ") + name + "(" + parameters + ")" + returnType;
+    }
+
+    public static string FormatPropertySignature(PropertySymbol property, bool includeModuleName = true)
+    {
+        if (property == null)
+            throw new ArgumentNullException(nameof(property));
+        var owner = property.ContainingType.Name;
+        if (includeModuleName && !string.IsNullOrWhiteSpace(property.ContainingType.ModuleName))
+            owner = property.ContainingType.ModuleName + "." + owner;
+        var accessors = property.Getter != null && property.Setter != null ? "Get; Set" :
+            property.Getter != null ? "Get" : "Set";
+        return "Property " + owner + "." + property.Name + " As " + FormatType(property.Type) +
+               " { " + accessors + " }";
     }
 
     public static string FormatParameter(RoutineSymbol routine, int index)
@@ -191,6 +218,10 @@ public static class SmileSymbolDisplayService
                 ? " = " + FormatParameterDefault(parameter) : string.Empty;
             return optional + parameter.Name + " As " + FormatType(parameter.Type) + defaultValue;
         }
+        if (variable is InstanceReceiverSymbol)
+            return "Me As " + FormatType(variable.Type) + " (instance receiver)";
+        if (variable is PropertyValueSymbol)
+            return "Value As " + FormatType(variable.Type) + " (property setter value)";
         var keyword = variable.IsConstant ? "Const " : variable.IsParameter ? "Parameter " : "Dim ";
         var name = string.IsNullOrWhiteSpace(variable.ModuleName)
             ? variable.Name : variable.ModuleName + "." + variable.Name;
@@ -246,6 +277,19 @@ public static class SmileSymbolDisplayService
     private static string FormatType(SmileType type) => type is NominalTypeSymbol
         ? (string.IsNullOrWhiteSpace(type.ModuleName) ? type.Name : type.ModuleName + "." + type.Name)
         : type.Name;
+
+    private static string FormatPropertyCapability(PropertySymbol property)
+    {
+        var getter = property.Getter?.RequiresGameWindow == true;
+        var setter = property.Setter?.RequiresGameWindow == true;
+        if (getter && setter)
+            return "Property get and set require Game Window.";
+        if (getter)
+            return "Property get requires Game Window; set does not.";
+        if (setter)
+            return "Property set requires Game Window; get does not.";
+        return string.Empty;
+    }
 }
 
 public static class SmileSymbolService
@@ -275,9 +319,7 @@ public static class SmileSymbolService
 
         var currentModule = analysis.SemanticModel.Modules.Values.FirstOrDefault(module =>
             module.SyntaxTrees.Any(tree => ReferenceEquals(tree.Source, syntaxTree.Source)));
-        var currentRoutine = analysis.SemanticModel.Routines.Values.FirstOrDefault(routine =>
-            ReferenceEquals(routine.Source, syntaxTree.Source) &&
-            routine.Declaration.Span.Start <= token.Span.Start && token.Span.Start <= routine.Declaration.Span.End);
+        var currentRoutine = FindCurrentRoutine(analysis.SemanticModel, syntaxTree.Source, token.Span.Start);
 
         if (TryResolveDeclaration(analysis, syntaxTree, token, currentModule, out symbol))
             return true;
@@ -293,6 +335,19 @@ public static class SmileSymbolService
             analysis.SemanticModel.GetImports(syntaxTree.Source).TryGetValue(token.Text, out var importedModule))
         {
             symbol = CreateModule(importedModule, token.Text, token.Span);
+            return true;
+        }
+
+        if (analysis.SemanticModel.TryGetTypeMemberUse(syntaxTree.Source, token.Position,
+                out var boundTypeMember))
+        {
+            symbol = CreateTypeMember(boundTypeMember, token.Span);
+            return true;
+        }
+
+        if (analysis.SemanticModel.TryGetMeUse(syntaxTree.Source, token.Position, out var boundReceiver))
+        {
+            symbol = CreateVariable(boundReceiver, token.Span);
             return true;
         }
 
@@ -430,6 +485,14 @@ public static class SmileSymbolService
                 symbol = CreateField(type, field, token.Span);
                 return true;
             }
+            var typeMember = type.Members.FirstOrDefault(candidate =>
+                candidate.MemberKind != SmileTypeMemberKind.Field &&
+                SameSpan(candidate.DeclarationSpan, token.Span));
+            if (typeMember != null)
+            {
+                symbol = CreateTypeMember(typeMember, token.Span);
+                return true;
+            }
         }
 
 
@@ -448,7 +511,7 @@ public static class SmileSymbolService
             }
         }
 
-        foreach (var routine in analysis.SemanticModel.Routines.Values.Where(routine =>
+        foreach (var routine in analysis.SemanticModel.AllRoutines.Where(routine =>
                      ReferenceEquals(routine.Source, syntaxTree.Source)))
         {
             if (SameSpan(routine.DeclarationLocation.Span, token.Span))
@@ -587,9 +650,9 @@ public static class SmileSymbolService
 
         for (var index = firstField; index < receiver.Count; index++)
         {
-            if (type is not RecordTypeSymbol record || !record.TryGetField(receiver[index], out var nestedField))
+            if (type is not RecordTypeSymbol record ||
+                !TryGetReadableValueMember(record, receiver[index], currentRoutine, out type))
                 return false;
-            type = nestedField.Type;
         }
         if (type is not RecordTypeSymbol containingType || !containingType.TryGetField(token.Text, out field!))
             return false;
@@ -671,18 +734,24 @@ public static class SmileSymbolService
     private static SmileResolvedSymbol CreateRoutine(RoutineSymbol routine, TextSpan referenceSpan)
     {
         var kind = routine.IsFunction ? SmileResolvedSymbolKind.Function : SmileResolvedSymbolKind.Subroutine;
-        var qualifiedName = string.IsNullOrWhiteSpace(routine.ModuleName)
-            ? routine.Name : routine.ModuleName + "." + routine.Name;
+        var qualifiedName = routine.ContainingType == null
+            ? string.IsNullOrWhiteSpace(routine.ModuleName)
+                ? routine.Name : routine.ModuleName + "." + routine.Name
+            : (string.IsNullOrWhiteSpace(routine.ContainingType.ModuleName)
+                ? routine.ContainingType.Name
+                : routine.ContainingType.ModuleName + "." + routine.ContainingType.Name) + "." + routine.Name;
+        var documentationPosition = routine.DeclarationSyntax is PropertyAccessorDeclarationSyntax accessor
+            ? accessor.Keyword.Span.Start : routine.Declaration.Keyword.Span.Start;
         return new SmileResolvedSymbol(kind, routine.Name, qualifiedName, string.Empty, referenceSpan,
             routine.DeclarationLocation, routine.ProviderIdentity, routine.ModuleName ?? string.Empty,
             SmileSymbolDisplayService.FormatRoutineSignature(routine),
-            SmileDocumentationService.GetDocumentation(routine.Source, routine.Declaration.Keyword.Span.Start),
+            SmileDocumentationService.GetDocumentation(routine.Source, documentationPosition),
             routine.RequiresGameWindow, routine: routine);
     }
 
     private static SmileResolvedSymbol CreateVariable(VariableSymbol variable, TextSpan referenceSpan)
     {
-        var kind = variable.IsParameter ? SmileResolvedSymbolKind.Parameter :
+        var kind = variable is ParameterSymbol ? SmileResolvedSymbolKind.Parameter :
             variable.RoutineName != null ? SmileResolvedSymbolKind.Local :
             variable.IsConstant ? SmileResolvedSymbolKind.Constant :
             variable.IsArray ? SmileResolvedSymbolKind.Array : SmileResolvedSymbolKind.Variable;
@@ -737,6 +806,62 @@ public static class SmileSymbolService
             SmileDocumentationService.GetDocumentation(field.Source, field.DeclarationSpan.Start), false,
             field: field, containingType: owner);
     }
+
+    private static SmileResolvedSymbol CreateProperty(PropertySymbol property, TextSpan referenceSpan)
+    {
+        var owner = property.ContainingType;
+        var ownerName = string.IsNullOrWhiteSpace(owner.ModuleName)
+            ? owner.Name : owner.ModuleName + "." + owner.Name;
+        return new SmileResolvedSymbol(SmileResolvedSymbolKind.Property, property.Name,
+            ownerName + "." + property.Name, string.Empty, referenceSpan, property.DeclarationLocation,
+            property.ProviderIdentity, owner.ModuleName ?? string.Empty,
+            SmileSymbolDisplayService.FormatPropertySignature(property),
+            SmileDocumentationService.GetDocumentation(property.Source,
+                property.Declaration.PropertyKeyword.Span.Start),
+            property.Getter?.RequiresGameWindow == true || property.Setter?.RequiresGameWindow == true,
+            type: owner, containingType: property.RecordType, property: property);
+    }
+
+    private static SmileResolvedSymbol CreateTypeMember(ITypeMemberSymbol member, TextSpan referenceSpan) =>
+        member switch
+        {
+            RecordFieldSymbol field => CreateField(field.RecordType, field, referenceSpan),
+            TypeRoutineSymbol routine => CreateRoutine(routine.Routine, referenceSpan),
+            PropertySymbol property => CreateProperty(property, referenceSpan),
+            _ => throw new InvalidOperationException("Unsupported Type member symbol kind.")
+        };
+
+    private static bool TryGetReadableValueMember(RecordTypeSymbol type, string name,
+        RoutineSymbol? currentRoutine, out SmileType memberType)
+    {
+        memberType = SmileType.Error;
+        if (!type.TryGetMember(name, out var member) ||
+            member.Visibility == ModuleVisibility.Private &&
+            !ReferenceEquals(currentRoutine?.ContainingType, type) &&
+            !string.Equals(currentRoutine?.ContainingType?.RuntimeIdentity, type.RuntimeIdentity,
+                StringComparison.Ordinal))
+            return false;
+        switch (member)
+        {
+            case RecordFieldSymbol field:
+                memberType = field.Type;
+                return true;
+            case PropertySymbol property when property.Getter != null:
+                memberType = property.Type;
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static RoutineSymbol? FindCurrentRoutine(SemanticModel semanticModel, SourceText source, int position) =>
+        semanticModel.AllRoutines
+            .Where(routine => ReferenceEquals(routine.Source, source) &&
+                              routine.DeclarationSyntax.Span.Start <= position &&
+                              position <= routine.DeclarationSyntax.Span.End)
+            .OrderBy(routine => routine.DeclarationSyntax.Span.Length)
+            .ThenBy(routine => routine.SymbolKind)
+            .FirstOrDefault();
 
     private static bool SameSpan(TextSpan left, TextSpan right) =>
         left.Start == right.Start && left.Length == right.Length;

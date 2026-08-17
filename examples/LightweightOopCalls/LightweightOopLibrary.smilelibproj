@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ProjectKind>Library</ProjectKind>
     <LibraryName>Smile.Lightweight.Oop.Proof</LibraryName>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <OutputName>Smile.Lightweight.Oop.Proof</OutputName>
   </PropertyGroup>
   <ItemGroup>

@@ -1,0 +1,19 @@
+Type Counter
+
+    Value As Number
+
+    Private Property Secret As Number
+
+        Get
+
+            Return Me.Value
+
+        End Get
+
+    End Property
+
+End Type
+
+Dim Current As Counter
+
+Print Current.Secret

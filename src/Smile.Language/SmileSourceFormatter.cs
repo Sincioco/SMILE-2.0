@@ -56,7 +56,9 @@ public static class SmileSourceFormatter
             ["Key"] = "Key",
             ["None"] = "None",
             ["Up"] = "Up",
-            ["Down"] = "Down"
+            ["Down"] = "Down",
+            ["Me"] = "Me",
+            ["Value"] = "Value"
         };
 
     public static string Format(string sourceText, bool formatLongIf, int maximumLineLength,
@@ -204,7 +206,7 @@ public static class SmileSourceFormatter
             SmileResolvedSymbolKind.Subroutine or SmileResolvedSymbolKind.Variable or
             SmileResolvedSymbolKind.Array or SmileResolvedSymbolKind.Type or SmileResolvedSymbolKind.Enum or
             SmileResolvedSymbolKind.EnumMember or
-            SmileResolvedSymbolKind.Field or SmileResolvedSymbolKind.Parameter or
+            SmileResolvedSymbolKind.Field or SmileResolvedSymbolKind.Property or SmileResolvedSymbolKind.Parameter or
             SmileResolvedSymbolKind.NamedArgument or
             SmileResolvedSymbolKind.Local;
 
@@ -218,37 +220,57 @@ public static class SmileSourceFormatter
 
         foreach (var routine in EnumerateRoutines(analysis.SyntaxTree.Root.Statements).Where(item => item.IsFunction))
         {
-            var computedReturns = EnumerateReturns(routine.Statements)
-                .Where(statement => statement.Expression != null &&
-                    !IsDirectReturn(statement.Expression, resolutionAnalysis, resolutionTree))
-                .ToArray();
-            if (computedReturns.Length == 0)
-                continue;
-
-            var returnVariable = ChooseReturnVariable(analysis.SyntaxTree, routine);
             var returnType = GetReturnType(text, analysis, routine);
-            var declarationIndent = GetLineIndent(text, routine.Keyword.Span.Start);
-            var bodyIndent = declarationIndent + "    ";
-            var insertionPosition = FindLineEnd(text, RoutineHeaderEndToken(routine).Span.End);
-            if (insertionPosition < text.Length && text[insertionPosition] == '\n')
-                insertionPosition++;
-            var needsBlankAfter = insertionPosition >= text.Length || text[insertionPosition] != '\n';
-            var declarationText = "\n" + bodyIndent + "Dim " + returnVariable + " As " + returnType + "\n" +
-                (needsBlankAfter ? "\n" : string.Empty);
-            edits.Add(new TextEdit(insertionPosition, 0, declarationText));
+            RewriteComputedReturnBody(text, analysis.SyntaxTree, routine.Keyword, RoutineHeaderEndToken(routine),
+                routine.Span, routine.Statements, returnType,
+                resolutionAnalysis, resolutionTree, edits);
+        }
 
-            foreach (var statement in computedReturns)
-            {
-                var expression = statement.Expression!;
-                var indent = GetLineIndent(text, statement.ReturnKeyword.Span.Start);
-                var expressionText = text.Substring(expression.Span.Start, expression.Span.Length);
-                var replacement = returnVariable + " = " + expressionText + "\n\n" + indent +
-                    "Return " + returnVariable;
-                edits.Add(new TextEdit(statement.ReturnKeyword.Span.Start, statement.Span.Length, replacement));
-            }
+        foreach (var item in EnumeratePropertyGetters(analysis.SyntaxTree.Root.Statements))
+        {
+            var property = item.Property;
+            var getter = item.Getter;
+            var returnType = text.Substring(property.TypeToken.Span.Start, property.TypeToken.Span.Length).Trim();
+            RewriteComputedReturnBody(text, analysis.SyntaxTree, getter.Keyword, getter.Keyword,
+                getter.Span, getter.Statements, returnType,
+                resolutionAnalysis, resolutionTree, edits);
         }
 
         return ApplyEdits(text, edits);
+    }
+
+    private static void RewriteComputedReturnBody(string text, SyntaxTree syntaxTree, SyntaxToken keyword,
+        SyntaxToken headerEndToken, TextSpan scopeSpan, IReadOnlyList<StatementSyntax> statements,
+        string returnType, SmileAnalysisResult resolutionAnalysis, SyntaxTree resolutionTree,
+        ICollection<TextEdit> edits)
+    {
+        var computedReturns = EnumerateReturns(statements)
+            .Where(statement => statement.Expression != null &&
+                !IsDirectReturn(statement.Expression, resolutionAnalysis, resolutionTree))
+            .ToArray();
+        if (computedReturns.Length == 0)
+            return;
+
+        var returnVariable = ChooseReturnVariable(syntaxTree, scopeSpan);
+        var declarationIndent = GetLineIndent(text, keyword.Span.Start);
+        var bodyIndent = declarationIndent + "    ";
+        var insertionPosition = FindLineEnd(text, headerEndToken.Span.End);
+        if (insertionPosition < text.Length && text[insertionPosition] == '\n')
+            insertionPosition++;
+        var needsBlankAfter = insertionPosition >= text.Length || text[insertionPosition] != '\n';
+        var declarationText = "\n" + bodyIndent + "Dim " + returnVariable + " As " + returnType + "\n" +
+            (needsBlankAfter ? "\n" : string.Empty);
+        edits.Add(new TextEdit(insertionPosition, 0, declarationText));
+
+        foreach (var statement in computedReturns)
+        {
+            var expression = statement.Expression!;
+            var indent = GetLineIndent(text, statement.ReturnKeyword.Span.Start);
+            var expressionText = text.Substring(expression.Span.Start, expression.Span.Length);
+            var replacement = returnVariable + " = " + expressionText + "\n\n" + indent +
+                "Return " + returnVariable;
+            edits.Add(new TextEdit(statement.ReturnKeyword.Span.Start, statement.Span.Length, replacement));
+        }
     }
 
     private static bool IsDirectReturn(ExpressionSyntax expression, SmileAnalysisResult analysis,
@@ -304,12 +326,12 @@ public static class SmileSourceFormatter
         return line;
     }
 
-    private static string ChooseReturnVariable(SyntaxTree tree, RoutineDeclarationSyntax routine)
+    private static string ChooseReturnVariable(SyntaxTree tree, TextSpan scopeSpan)
     {
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var token in tree.Tokens)
         {
-            if (routine.Span.Start <= token.Span.Start && token.Span.End <= routine.Span.End &&
+            if (scopeSpan.Start <= token.Span.Start && token.Span.End <= scopeSpan.End &&
                 IsIdentifierText(token.Text))
             {
                 names.Add(token.Text);
@@ -336,7 +358,7 @@ public static class SmileSourceFormatter
         var hasRoutineError = analysis.Diagnostics.Any(diagnostic =>
             diagnostic.Severity == DiagnosticSeverity.Error &&
             routine.Span.Start <= diagnostic.Span.Start && diagnostic.Span.Start <= routine.Span.End);
-        var symbol = analysis.SemanticModel.Routines.Values.FirstOrDefault(candidate =>
+        var symbol = analysis.SemanticModel.AllRoutines.FirstOrDefault(candidate =>
             string.Equals(candidate.Name, routine.Identifier.Text, StringComparison.OrdinalIgnoreCase) &&
             candidate.Declaration.Identifier.Span.Start == routine.Identifier.Span.Start &&
             candidate.Declaration.Identifier.Span.Length == routine.Identifier.Span.Length);
@@ -440,6 +462,36 @@ public static class SmileSourceFormatter
                 foreach (var nested in EnumerateRoutines(module.Statements))
                     yield return nested;
             }
+            else if (statement is TypeDeclarationSyntax type)
+            {
+                foreach (var member in type.Members.OfType<TypeRoutineDeclarationSyntax>())
+                    yield return member.Declaration;
+            }
+        }
+    }
+
+    private static IEnumerable<(PropertyDeclarationSyntax Property,
+        PropertyAccessorDeclarationSyntax Getter)> EnumeratePropertyGetters(
+        IEnumerable<StatementSyntax> statements)
+    {
+        foreach (var statement in statements)
+        {
+            if (statement is VisibilityDeclarationSyntax visibility)
+            {
+                foreach (var nested in EnumeratePropertyGetters(new[] { visibility.Declaration }))
+                    yield return nested;
+            }
+            else if (statement is ModuleDeclarationSyntax module)
+            {
+                foreach (var nested in EnumeratePropertyGetters(module.Statements))
+                    yield return nested;
+            }
+            else if (statement is TypeDeclarationSyntax type)
+            {
+                foreach (var property in type.Members.OfType<PropertyDeclarationSyntax>())
+                    if (property.Getter != null)
+                        yield return (property, property.Getter);
+            }
         }
     }
 
@@ -479,6 +531,24 @@ public static class SmileSourceFormatter
             {
                 foreach (var nested in EnumerateIfStatements(module.Statements))
                     yield return nested;
+            }
+            else if (statement is TypeDeclarationSyntax type)
+            {
+                foreach (var member in type.Members)
+                {
+                    var bodies = member switch
+                    {
+                        TypeRoutineDeclarationSyntax typeRoutine =>
+                            new[] { typeRoutine.Declaration.Statements },
+                        PropertyDeclarationSyntax property => new[] { property.Getter?.Statements,
+                                property.Setter?.Statements }
+                            .Where(body => body != null).Select(body => body!).ToArray(),
+                        _ => Array.Empty<IReadOnlyList<StatementSyntax>>()
+                    };
+                    foreach (var body in bodies)
+                        foreach (var nested in EnumerateIfStatements(body))
+                            yield return nested;
+                }
             }
             else
             {

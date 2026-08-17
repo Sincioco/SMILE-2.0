@@ -1,0 +1,19 @@
+Type Counter
+
+    Value As Number
+
+    Public Property Total As Number
+
+        Set
+
+            Me.Value = Value
+
+        End Set
+
+    End Property
+
+End Type
+
+Dim Current As Counter
+
+Print Current.Total

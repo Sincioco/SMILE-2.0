@@ -1,0 +1,25 @@
+Type Counter
+
+    Value As Number
+
+    Public Property Total As Number
+
+        Get
+
+            Return Me.Value
+
+        End Get
+
+    End Property
+
+End Type
+
+Print MakeCounter().Total
+
+Function MakeCounter() As Counter
+
+    Dim Result As Counter
+
+    Return Result
+
+End Function

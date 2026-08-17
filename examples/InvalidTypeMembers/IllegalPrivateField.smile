@@ -1,0 +1,5 @@
+Type Counter
+
+    Private Hidden As Number
+
+End Type

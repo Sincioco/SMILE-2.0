@@ -1,0 +1,3 @@
+Dim Current As Number
+
+Call Current.Missing()

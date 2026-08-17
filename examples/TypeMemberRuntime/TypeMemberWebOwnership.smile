@@ -1,0 +1,56 @@
+Option Explicit
+
+Game Window "Type Member Ownership" Size 320 By 180
+
+Type MediaBox
+
+    Picture As Image
+
+End Type
+
+Type Holder
+
+    Item As MediaBox
+
+    Public Property Stored As MediaBox
+
+        Get
+
+            Dim ReturnValue As MediaBox
+
+            ReturnValue = Me.Item
+
+            Return ReturnValue
+
+        End Get
+
+        Set
+
+            Me.Item = Value
+
+        End Set
+
+    End Property
+
+End Type
+
+Dim Shared As MediaBox
+Dim Items[1] As Holder
+
+Load Image Shared.Picture From "Assets\PixelProof.png"
+
+Items[0].Stored = Shared
+
+Print Image_Width(Items[0].Stored.Picture)
+
+Items[StopNow()].Stored = Shared
+
+End Program
+
+Function StopNow() As Number
+
+    End Program
+
+    Return 0
+
+End Function

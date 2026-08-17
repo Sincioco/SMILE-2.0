@@ -180,6 +180,18 @@ function Assert-PackageParameter {
     }
 }
 
+function Assert-PackageAccessor {
+    param($Accessor, [string]$ExpectedIdentity, [string[]]$DeclaredSources, [string]$Description)
+
+    $propertyNames = [string[]]@($Accessor.PSObject.Properties | ForEach-Object { $_.Name })
+    if ([string]::Join("`n", $propertyNames) -cne "identity`nrequiresGameWindow`nlocation" -or
+        $Accessor.identity -cne $ExpectedIdentity -or
+        $Accessor.requiresGameWindow -isnot [bool]) {
+        throw "$Description does not use the canonical format-6 accessor shape."
+    }
+    Assert-PackageLocation $Accessor.location $DeclaredSources $Description
+}
+
 function Assert-SmileLibraryPackage {
     param(
         [string]$RelativePath,
@@ -287,24 +299,94 @@ function Assert-SmileLibraryPackage {
             }
             foreach ($member in @($module.members)) {
                 Assert-PackageLocation $member.location $declaredSources "$RelativePath member '$($member.name)'"
-                $parameterOrdinal = 0
-                foreach ($parameter in @($member.parameters | Where-Object { $null -ne $_ })) {
-                    Assert-PackageParameter $parameter $parameterOrdinal $declaredSources `
-                        "$RelativePath parameter '$($member.name).$($parameter.name)'"
-                    $parameterOrdinal++
+                $memberParameters = $member.PSObject.Properties['parameters']
+                if ($null -ne $memberParameters) {
+                    $parameterOrdinal = 0
+                    foreach ($parameter in @($memberParameters.Value | Where-Object { $null -ne $_ })) {
+                        Assert-PackageParameter $parameter $parameterOrdinal $declaredSources `
+                            "$RelativePath parameter '$($member.name).$($parameter.name)'"
+                        $parameterOrdinal++
+                    }
                 }
-                foreach ($field in @($member.fields | Where-Object { $null -ne $_ })) {
-                    Assert-PackageLocation $field.location $declaredSources `
-                        "$RelativePath field '$($member.name).$($field.name)'"
+                $memberFields = $member.PSObject.Properties['fields']
+                if ($null -ne $memberFields) {
+                    foreach ($field in @($memberFields.Value | Where-Object { $null -ne $_ })) {
+                        Assert-PackageLocation $field.location $declaredSources `
+                            "$RelativePath field '$($member.name).$($field.name)'"
+                    }
                 }
-                foreach ($nestedMember in @($member.members | Where-Object { $null -ne $_ })) {
+                $memberMembers = $member.PSObject.Properties['members']
+                if ($null -eq $memberMembers) {
+                    continue
+                }
+                foreach ($nestedMember in @($memberMembers.Value | Where-Object { $null -ne $_ })) {
                     Assert-PackageLocation $nestedMember.location $declaredSources `
                         "$RelativePath nested member '$($member.name).$($nestedMember.name)'"
-                    $nestedParameterOrdinal = 0
-                    foreach ($parameter in @($nestedMember.parameters | Where-Object { $null -ne $_ })) {
-                        Assert-PackageParameter $parameter $nestedParameterOrdinal $declaredSources `
-                            "$RelativePath nested parameter '$($member.name).$($nestedMember.name).$($parameter.name)'"
-                        $nestedParameterOrdinal++
+                    if ($member.kind -cne 'Type') {
+                        continue
+                    }
+                    if ($nestedMember.visibility -cne 'Public' -or
+                        [string]::IsNullOrWhiteSpace($nestedMember.identity) -or
+                        $nestedMember.PSObject.Properties.Name -ccontains 'provider') {
+                        throw "$RelativePath Type member '$($member.name).$($nestedMember.name)' has invalid identity, visibility, or provider metadata."
+                    }
+                    switch -CaseSensitive ($nestedMember.kind) {
+                        'Subroutine' {
+                            $propertyNames = [string[]]@($nestedMember.PSObject.Properties |
+                                ForEach-Object { $_.Name })
+                            if ([string]::Join("`n", $propertyNames) -cne
+                                "name`nkind`nvisibility`nidentity`nreturnType`nparameters`nrequiresGameWindow`nlocation" -or
+                                $nestedMember.identity -cne ($member.identity + '::member::' + $nestedMember.name) -or
+                                $null -ne $nestedMember.returnType -or
+                                $nestedMember.requiresGameWindow -isnot [bool]) {
+                                throw "$RelativePath Type Sub '$($member.name).$($nestedMember.name)' has invalid format-6 metadata."
+                            }
+                            $nestedParameterOrdinal = 0
+                            foreach ($parameter in @($nestedMember.parameters | Where-Object { $null -ne $_ })) {
+                                Assert-PackageParameter $parameter $nestedParameterOrdinal $declaredSources `
+                                    "$RelativePath nested parameter '$($member.name).$($nestedMember.name).$($parameter.name)'"
+                                $nestedParameterOrdinal++
+                            }
+                        }
+                        'Function' {
+                            $propertyNames = [string[]]@($nestedMember.PSObject.Properties |
+                                ForEach-Object { $_.Name })
+                            if ([string]::Join("`n", $propertyNames) -cne
+                                "name`nkind`nvisibility`nidentity`nreturnType`nparameters`nrequiresGameWindow`nlocation" -or
+                                $nestedMember.identity -cne ($member.identity + '::member::' + $nestedMember.name) -or
+                                $null -eq $nestedMember.returnType -or
+                                $nestedMember.requiresGameWindow -isnot [bool]) {
+                                throw "$RelativePath Type Function '$($member.name).$($nestedMember.name)' has invalid format-6 metadata."
+                            }
+                            $nestedParameterOrdinal = 0
+                            foreach ($parameter in @($nestedMember.parameters | Where-Object { $null -ne $_ })) {
+                                Assert-PackageParameter $parameter $nestedParameterOrdinal $declaredSources `
+                                    "$RelativePath nested parameter '$($member.name).$($nestedMember.name).$($parameter.name)'"
+                                $nestedParameterOrdinal++
+                            }
+                        }
+                        'Property' {
+                            $propertyNames = [string[]]@($nestedMember.PSObject.Properties |
+                                ForEach-Object { $_.Name })
+                            if ([string]::Join("`n", $propertyNames) -cne
+                                "name`nkind`nvisibility`nidentity`ntype`nget`nset`nlocation" -or
+                                $nestedMember.identity -cne ($member.identity + '::property::' + $nestedMember.name) -or
+                                $null -eq $nestedMember.type -or
+                                ($null -eq $nestedMember.get -and $null -eq $nestedMember.set)) {
+                                throw "$RelativePath Type Property '$($member.name).$($nestedMember.name)' has invalid format-6 metadata."
+                            }
+                            if ($null -ne $nestedMember.get) {
+                                Assert-PackageAccessor $nestedMember.get ($nestedMember.identity + '::get') `
+                                    $declaredSources "$RelativePath getter '$($member.name).$($nestedMember.name)'"
+                            }
+                            if ($null -ne $nestedMember.set) {
+                                Assert-PackageAccessor $nestedMember.set ($nestedMember.identity + '::set') `
+                                    $declaredSources "$RelativePath setter '$($member.name).$($nestedMember.name)'"
+                            }
+                        }
+                        default {
+                            throw "$RelativePath Type '$($member.name)' has unsupported nested member kind '$($nestedMember.kind)'."
+                        }
                     }
                 }
             }
@@ -322,18 +404,26 @@ function Assert-LightweightOopProofPackage {
     $path = Require-File $RelativePath
     $archive = [IO.Compression.ZipFile]::OpenRead($path)
     try {
-        $api = [Text.Encoding]::UTF8.GetString(
-            (Read-ZipEntryBytes ($archive.GetEntry('api/public-symbols.json')))) | ConvertFrom-Json
+        $apiText = [Text.Encoding]::UTF8.GetString(
+            (Read-ZipEntryBytes ($archive.GetEntry('api/public-symbols.json'))))
+        $api = $apiText | ConvertFrom-Json
         $module = @($api.modules | Where-Object { $_.name -ceq 'Smile.Lightweight.Oop.Proof' })
         if ($module.Count -ne 1) {
             throw "$RelativePath does not expose the proof Module exactly once."
         }
+        if ([string]::Join('|', @($module[0].members.name)) -cne
+            'Counter|CounterBox|DisplayMode|Report') {
+            throw "$RelativePath has an unexpected proof Module member order."
+        }
+        $counter = @($module[0].members | Where-Object { $_.name -ceq 'Counter' })
+        $counterBox = @($module[0].members | Where-Object { $_.name -ceq 'CounterBox' })
         $displayMode = @($module[0].members | Where-Object { $_.name -ceq 'DisplayMode' })
         $report = @($module[0].members | Where-Object { $_.name -ceq 'Report' })
-        if ($displayMode.Count -ne 1 -or $report.Count -ne 1 -or
+        if ($counter.Count -ne 1 -or $counterBox.Count -ne 1 -or
+            $displayMode.Count -ne 1 -or $report.Count -ne 1 -or
             [string]::Join('|', @($displayMode[0].members.name)) -cne 'Standard|Compact|CompactAlias' -or
             [string]::Join('|', @($displayMode[0].members.value)) -cne '1|2|2') {
-            throw "$RelativePath has an unexpected proof Enum or routine surface."
+            throw "$RelativePath has an unexpected proof Type, Enum, or routine surface."
         }
         $parameters = @($report[0].parameters)
         if ($parameters.Count -ne 5 -or
@@ -344,7 +434,7 @@ function Assert-LightweightOopProofPackage {
             $parameters[3].default.kind -cne 'text' -or $parameters[3].default.value -cne '!' -or
             $parameters[4].type.kind -cne 'enum' -or
             $parameters[4].type.identity -cne 'Smile.Lightweight.Oop.Proof::DisplayMode' -or
-            $parameters[4].type.provider -cne 'Smile.Lightweight.Oop.Proof@1.0.0' -or
+            $parameters[4].type.provider -cne 'Smile.Lightweight.Oop.Proof@1.1.0' -or
             $parameters[4].default.kind -cne 'enum' -or
             $parameters[4].default.member -cne 'CompactAlias' -or
             $parameters[4].default.value -ne 2 -or
@@ -358,7 +448,47 @@ function Assert-LightweightOopProofPackage {
         if ($declaredAlias.Count -ne 1) {
             throw "$RelativePath Enum default does not identify an exact declared member/value pair."
         }
-        Write-Host "Optional/default SMILE library metadata verified: $RelativePath"
+
+        $counterMembers = @($counter[0].members)
+        if ($counter[0].identity -cne 'Smile.Lightweight.Oop.Proof::Counter' -or
+            $counter[0].provider -cne 'Smile.Lightweight.Oop.Proof@1.1.0' -or
+            [string]::Join('|', @($counter[0].fields.name)) -cne 'Label|StoredValue|Enabled|Mode' -or
+            [string]::Join('|', @($counterMembers.name)) -cne
+                'Advance|Caption|Configure|Difference|DrawProbe|GameProbe|Shifted|Total' -or
+            [string]::Join('|', @($counterBox[0].fields.name)) -cne 'Item' -or
+            @($counterBox[0].members).Count -ne 0 -or
+            $apiText.IndexOf('::member::Hide', [StringComparison]::Ordinal) -ge 0 -or
+            $apiText.IndexOf('::property::Secret', [StringComparison]::Ordinal) -ge 0 -or
+            $apiText.IndexOf('::receiver', [StringComparison]::Ordinal) -ge 0 -or
+            $apiText.IndexOf('::value', [StringComparison]::Ordinal) -ge 0) {
+            throw "$RelativePath has incorrect public Type members or leaks private/implicit symbols."
+        }
+        $configure = @($counterMembers | Where-Object { $_.name -ceq 'Configure' })
+        $difference = @($counterMembers | Where-Object { $_.name -ceq 'Difference' })
+        $drawProbe = @($counterMembers | Where-Object { $_.name -ceq 'DrawProbe' })
+        $gameProbe = @($counterMembers | Where-Object { $_.name -ceq 'GameProbe' })
+        $shifted = @($counterMembers | Where-Object { $_.name -ceq 'Shifted' })
+        $caption = @($counterMembers | Where-Object { $_.name -ceq 'Caption' })
+        $total = @($counterMembers | Where-Object { $_.name -ceq 'Total' })
+        if ($configure.Count -ne 1 -or $difference.Count -ne 1 -or $drawProbe.Count -ne 1 -or
+            $gameProbe.Count -ne 1 -or $shifted.Count -ne 1 -or $caption.Count -ne 1 -or
+            $total.Count -ne 1 -or
+            [string]::Join('|', @($configure[0].parameters.name)) -cne 'Label|Start|Enabled|Mode' -or
+            $configure[0].parameters[3].type.provider -cne 'Smile.Lightweight.Oop.Proof@1.1.0' -or
+            $configure[0].parameters[3].default.member -cne 'Standard' -or
+            $configure[0].parameters[3].default.value -ne 1 -or
+            $difference[0].parameters[0].type.identity -cne 'Smile.Lightweight.Oop.Proof::Counter' -or
+            $difference[0].parameters[0].type.provider -cne 'Smile.Lightweight.Oop.Proof@1.1.0' -or
+            $shifted[0].returnType.identity -cne 'Smile.Lightweight.Oop.Proof::Counter' -or
+            $shifted[0].returnType.provider -cne 'Smile.Lightweight.Oop.Proof@1.1.0' -or
+            -not $drawProbe[0].requiresGameWindow -or
+            -not $gameProbe[0].get.requiresGameWindow -or $gameProbe[0].set.requiresGameWindow -or
+            $null -ne $caption[0].set -or $null -eq $caption[0].get -or
+            $null -eq $total[0].get -or $null -eq $total[0].set -or
+            $gameProbe[0].get.identity -ceq $gameProbe[0].set.identity) {
+            throw "$RelativePath has incorrect Type signatures, providers, properties, or capabilities."
+        }
+        Write-Host "Optional/default and Type-member SMILE library metadata verified: $RelativePath"
     }
     finally {
         $archive.Dispose()
@@ -381,7 +511,7 @@ Assert-SmileLibraryPackage 'artifacts\libraries\Smile.RPG.smilelib' `
     'libraries\Smile.RPG\Smile.RPG.smilelibproj' 'Smile.RPG' '1.2.0' 15 15 491
 Assert-SmileLibraryPackage 'artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib' `
     'examples\LightweightOopCalls\LightweightOopLibrary.smilelibproj' `
-    'Smile.Lightweight.Oop.Proof' '1.0.0' 1 1 2
+    'Smile.Lightweight.Oop.Proof' '1.1.0' 1 1 4
 Assert-LightweightOopProofPackage 'artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib'
 Require-File 'artifacts\games\LibraryConsumer.exe' | Out-Null
 Require-File 'artifacts\games\LibraryPackageConsumer.exe' | Out-Null

@@ -1,0 +1,9 @@
+Type Counter
+
+    Value As Number
+
+End Type
+
+Dim Current As Counter
+
+Call Current.Missing()

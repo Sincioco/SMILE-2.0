@@ -1,0 +1,9 @@
+Type Counter
+
+    Value As Number
+
+    Public Sub Value()
+
+    End Sub
+
+End Type

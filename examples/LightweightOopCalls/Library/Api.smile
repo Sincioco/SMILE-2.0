@@ -15,11 +15,161 @@ Public Sub Report(
     Optional Suffix As Text = "!",
     Optional Mode As DisplayMode = DisplayMode.CompactAlias
 )
+
     Print Label
     Print Copies
     Print Enabled
     Print Suffix
     Print Mode = DisplayMode.CompactAlias
+
 End Sub
+
+Public Type Counter
+
+    Label As Text
+    StoredValue As Number
+    Enabled As Boolean
+    Mode As DisplayMode
+
+    Public Sub Configure(
+        Label As Text,
+        Optional Start As Number = 0,
+        Optional Enabled As Boolean = True,
+        Optional Mode As DisplayMode = DisplayMode.Standard
+    )
+
+        Me.Label = Label
+        Me.StoredValue = Start
+        Me.Enabled = Enabled
+        Me.Mode = Mode
+
+    End Sub
+
+    Public Sub Advance(
+        Optional Delta As Number = 1
+    )
+
+        Me.StoredValue = Me.StoredValue + Delta
+
+    End Sub
+
+    Public Function Difference(
+        Other As Counter
+    ) As Number
+
+        Dim Result As Number
+
+        Result = Me.StoredValue - Other.StoredValue
+
+        Return Result
+
+    End Function
+
+    Public Function Shifted(
+        Optional Delta As Number = 1
+    ) As Counter
+
+        Dim Result As Counter
+
+        Result = Me
+
+        Call Result.Advance(Delta)
+
+        Return Result
+
+    End Function
+
+    Public Property Total As Number
+
+        Get
+
+            Dim ReturnValue As Number
+
+            ReturnValue = Me.StoredValue
+
+            Return ReturnValue
+
+        End Get
+
+        Set
+
+            Me.StoredValue = Value
+
+        End Set
+
+    End Property
+
+    Public Property Caption As Text
+
+        Get
+
+            Dim ReturnValue As Text
+
+            ReturnValue = Me.Label
+
+            Return ReturnValue
+
+        End Get
+
+    End Property
+
+    Public Sub DrawProbe(
+        Optional X As Number = 0,
+        Optional Y As Number = 0
+    )
+
+        Draw Line X, Y, X + 1, Y, WHITE
+
+    End Sub
+
+    Public Property GameProbe As Number
+
+        Get
+
+            Dim ReturnValue As Number
+
+            Draw Line 0, 0, 1, 0, WHITE
+
+            ReturnValue = Me.StoredValue
+
+            Return ReturnValue
+
+        End Get
+
+        Set
+
+            Me.StoredValue = Value
+
+        End Set
+
+    End Property
+
+    Private Sub Hide()
+
+        Me.StoredValue = -1
+
+    End Sub
+
+    Private Property Secret As Number
+
+        Get
+
+            Dim ReturnValue As Number
+
+            ReturnValue = Me.StoredValue
+
+            Return ReturnValue
+
+        End Get
+
+    End Property
+
+End Type
+
+Public Type CounterBox
+
+    Item As Counter
+
+End Type
 
 End Module

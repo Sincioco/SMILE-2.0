@@ -268,6 +268,23 @@ internal sealed class ModuleProcessingResult
                         diagnostics.Add(new Diagnostic("SML3409", DiagnosticSeverity.Error,
                             $"Public Type '{module.Name}.{member.Name}' exposes inaccessible type '{field.Type.Name}' through field '{field.Name}'.",
                             field.Source, field.TypeToken.Span));
+                    foreach (var method in publicRecord.Methods.Where(method =>
+                                 method.Visibility == ModuleVisibility.Public))
+                    {
+                        if (method.IsFunction && IsInaccessible(method.ReturnType))
+                            diagnostics.Add(new Diagnostic("SML3409", DiagnosticSeverity.Error,
+                                $"Public Function '{publicRecord.Name}.{method.Name}' returns inaccessible type '{method.ReturnType.Name}'.",
+                                method.Source, method.Declaration.ReturnTypeToken?.Span ?? method.DeclarationSpan));
+                        foreach (var parameter in method.Parameters.Where(parameter => IsInaccessible(parameter.Type)))
+                            diagnostics.Add(new Diagnostic("SML3409", DiagnosticSeverity.Error,
+                                $"Public method '{publicRecord.Name}.{method.Name}' exposes inaccessible parameter type '{parameter.Type.Name}'.",
+                                parameter.Source, parameter.DeclarationSpan));
+                    }
+                    foreach (var property in publicRecord.Properties.Where(property =>
+                                 property.Visibility == ModuleVisibility.Public && IsInaccessible(property.Type)))
+                        diagnostics.Add(new Diagnostic("SML3409", DiagnosticSeverity.Error,
+                            $"Public Property '{publicRecord.Name}.{property.Name}' exposes inaccessible type '{property.Type.Name}'.",
+                            property.Source, property.Declaration.TypeToken.Span));
                 }
                 if (member.Variable != null && IsInaccessible(member.Variable.Type))
                     diagnostics.Add(new Diagnostic("SML3409", DiagnosticSeverity.Error,
@@ -545,10 +562,86 @@ internal sealed class ModuleProcessor
                         $"Import alias '{import.Alias.Text}' conflicts with a declaration in module '{current.Name}'.");
                     continue;
                 }
+                if (!_moduleBySource.ContainsKey(tree.Source) && _trees
+                        .Where(candidate => !_moduleBySource.ContainsKey(candidate.Source))
+                        .SelectMany(candidate => ProjectDeclarationIdentifiers(candidate.Root.Statements,
+                            includeImplicit: !candidate.OptionExplicit))
+                        .Any(identifier => string.Equals(identifier.Text,
+                            import.Alias.Text, StringComparison.OrdinalIgnoreCase)))
+                {
+                    Report(tree.Source, "SML3106", import.Alias.Span,
+                        $"Import alias '{import.Alias.Text}' conflicts with a project-level declaration in this source.");
+                    continue;
+                }
                 aliases.Add(import.Alias.Text, imported);
             }
             _imports[tree.Source] = aliases;
             _importSyntax[tree.Source] = sourceImports;
+        }
+    }
+
+    private static SyntaxToken? DeclarationIdentifier(StatementSyntax statement) => statement switch
+    {
+        ConstStatementSyntax constant => constant.Identifier,
+        DimStatementSyntax variable => variable.Identifier,
+        TypeDeclarationSyntax type => type.Identifier,
+        EnumDeclarationSyntax enumDeclaration => enumDeclaration.Identifier,
+        RoutineDeclarationSyntax routine => routine.Identifier,
+        _ => null
+    };
+
+    private static IEnumerable<SyntaxToken> ProjectDeclarationIdentifiers(
+        IEnumerable<StatementSyntax> statements, bool includeImplicit)
+    {
+        foreach (var statement in statements)
+        {
+            if (DeclarationIdentifier(statement) is { } declaration)
+                yield return declaration;
+            if (!includeImplicit)
+                continue;
+            switch (statement)
+            {
+                case AssignmentStatementSyntax { Target.Location: NameExpressionSyntax name }:
+                    yield return name.Identifier;
+                    break;
+                case GetKeyStatementSyntax getKey:
+                    yield return getKey.Identifier;
+                    break;
+                case RandomStatementSyntax random:
+                    yield return random.Identifier;
+                    break;
+                case LoadStatementSyntax load:
+                    yield return load.Identifier;
+                    break;
+                case TextFileLoadStatementSyntax load:
+                    yield return load.CountIdentifier;
+                    break;
+                case ForStatementSyntax loop:
+                    yield return loop.Identifier;
+                    foreach (var nested in ProjectDeclarationIdentifiers(loop.Statements, true))
+                        yield return nested;
+                    break;
+                case WithStatementSyntax withStatement:
+                    foreach (var nested in ProjectDeclarationIdentifiers(withStatement.Statements, true))
+                        yield return nested;
+                    break;
+                case DoStatementSyntax loop:
+                    foreach (var nested in ProjectDeclarationIdentifiers(loop.Statements, true))
+                        yield return nested;
+                    break;
+                case IfStatementSyntax conditional:
+                    foreach (var clause in conditional.Clauses)
+                        foreach (var nested in ProjectDeclarationIdentifiers(clause.Statements, true))
+                            yield return nested;
+                    foreach (var nested in ProjectDeclarationIdentifiers(conditional.ElseStatements, true))
+                        yield return nested;
+                    break;
+                case SelectStatementSyntax select:
+                    foreach (var clause in select.Cases)
+                        foreach (var nested in ProjectDeclarationIdentifiers(clause.Statements, true))
+                            yield return nested;
+                    break;
+            }
         }
     }
 
@@ -638,8 +731,8 @@ internal sealed class ModuleProcessor
                     dim.AsKeyword, LowerTypeToken(dim.TypeToken, tree, module));
             case TypeDeclarationSyntax type:
                 return new TypeDeclarationSyntax(type.TypeKeyword, TypeDeclarationToken(type.Identifier, module),
-                    type.Fields.Select(field => new RecordFieldDeclarationSyntax(field.Identifier, field.AsKeyword,
-                        LowerTypeToken(field.TypeToken, tree, module)!)).ToArray(), type.EndKeyword, type.FinalTypeKeyword);
+                    type.Members.Select(member => LowerTypeMember(member, tree, module)).ToArray(),
+                    type.EndKeyword, type.FinalTypeKeyword);
             case EnumDeclarationSyntax enumDeclaration:
                 return new EnumDeclarationSyntax(enumDeclaration.EnumKeyword,
                     TypeDeclarationToken(enumDeclaration.Identifier, module),
@@ -709,6 +802,15 @@ internal sealed class ModuleProcessor
                     QualifiedToken(tree, call.Alias, call.Member,
                         member => member.Kind is SmileModuleMemberKind.Subroutine or SmileModuleMemberKind.Function),
                     call.Arguments.Select(item => LowerArgument(item, tree, module, locals)).ToArray(), call.CloseParenthesis);
+            case MemberCallStatementSyntax call:
+            {
+                var lowered = LowerExpression(call.Invocation, tree, module, locals);
+                if (lowered is CallExpressionSyntax moduleCall)
+                    return new CallStatementSyntax(call.CallKeyword, moduleCall.Identifier, moduleCall.Arguments,
+                        moduleCall.CloseParenthesis);
+                return new MemberCallStatementSyntax(call.CallKeyword,
+                    (MemberInvocationExpressionSyntax)lowered);
+            }
             case LeadingMemberCallStatementSyntax call:
                 return new LeadingMemberCallStatementSyntax(call.CallKeyword, call.DotToken, call.Member,
                     call.Arguments.Select(item => LowerArgument(item, tree, module, locals)).ToArray(), call.CloseParenthesis);
@@ -829,6 +931,24 @@ internal sealed class ModuleProcessor
                 return new CallExpressionSyntax(QualifiedToken(tree, call.Alias, call.Member,
                         member => member.Kind is SmileModuleMemberKind.Subroutine or SmileModuleMemberKind.Function),
                     call.Arguments.Select(item => LowerArgument(item, tree, module, locals)).ToArray(), call.CloseParenthesis);
+            case MemberInvocationExpressionSyntax call
+                when call.Receiver is NameExpressionSyntax alias &&
+                     (locals == null || !locals.Contains(alias.Identifier.Text)) &&
+                     _imports.TryGetValue(tree.Source, out var callAliases) &&
+                     callAliases.ContainsKey(alias.Identifier.Text):
+                return new CallExpressionSyntax(QualifiedToken(tree, alias.Identifier, call.Member,
+                        member => member.Kind is SmileModuleMemberKind.Subroutine or SmileModuleMemberKind.Function),
+                    call.Arguments.Select(item => LowerArgument(item, tree, module, locals)).ToArray(),
+                    call.CloseParenthesis);
+            case MemberInvocationExpressionSyntax call:
+                return new MemberInvocationExpressionSyntax(
+                    LowerExpression(call.Receiver, tree, module, locals), call.DotToken, call.Member,
+                    call.Arguments.Select(item => LowerArgument(item, tree, module, locals)).ToArray(),
+                    call.CloseParenthesis);
+            case LeadingMemberInvocationExpressionSyntax call:
+                return new LeadingMemberInvocationExpressionSyntax(call.DotToken, call.Member,
+                    call.Arguments.Select(item => LowerArgument(item, tree, module, locals)).ToArray(),
+                    call.CloseParenthesis);
             case FieldAccessExpressionSyntax field
                 when field.Receiver is QualifiedNameExpressionSyntax qualifiedType &&
                      _imports.TryGetValue(tree.Source, out var importedAliases) &&
@@ -839,11 +959,40 @@ internal sealed class ModuleProcessor
                     new NameExpressionSyntax(QualifiedToken(tree, qualifiedType.Alias, qualifiedType.Member,
                         member => member.Kind == SmileModuleMemberKind.Enum)),
                     field.DotToken, field.Field);
+            case FieldAccessExpressionSyntax field
+                when field.Receiver is FieldAccessExpressionSyntax importedType &&
+                     importedType.Receiver is NameExpressionSyntax importedAlias &&
+                     (locals == null || !locals.Contains(importedAlias.Identifier.Text)) &&
+                     _imports.TryGetValue(tree.Source, out var nestedAliases) &&
+                     nestedAliases.TryGetValue(importedAlias.Identifier.Text, out var nestedModule) &&
+                     nestedModule.Types.TryGetValue(importedType.Field.Text, out var nestedType) &&
+                     nestedType.Kind == SmileModuleMemberKind.Enum:
+                return new FieldAccessExpressionSyntax(
+                    new NameExpressionSyntax(QualifiedToken(tree, importedAlias.Identifier, importedType.Field,
+                        member => member.Kind == SmileModuleMemberKind.Enum)), field.DotToken, field.Field);
+            case FieldAccessExpressionSyntax field
+                when field.Receiver is NameExpressionSyntax importedAlias &&
+                     (locals == null || !locals.Contains(importedAlias.Identifier.Text)) &&
+                     _imports.TryGetValue(tree.Source, out var valueAliases) &&
+                     valueAliases.ContainsKey(importedAlias.Identifier.Text):
+                return new NameExpressionSyntax(QualifiedToken(tree, importedAlias.Identifier, field.Field,
+                    member => member.Kind is SmileModuleMemberKind.Constant or SmileModuleMemberKind.Variable or
+                        SmileModuleMemberKind.Array));
+            case FieldAccessExpressionSyntax field
+                when field.Receiver is NameExpressionSyntax ownTypeName && module != null &&
+                     (locals == null || !locals.Contains(ownTypeName.Identifier.Text)) &&
+                     module.Types.TryGetValue(ownTypeName.Identifier.Text, out var ownEnum) &&
+                     ownEnum.Kind == SmileModuleMemberKind.Enum:
+                return new FieldAccessExpressionSyntax(
+                    new NameExpressionSyntax(SemanticToken(ownTypeName.Identifier, ownEnum.SemanticName)),
+                    field.DotToken, field.Field);
             case FieldAccessExpressionSyntax field:
                 return new FieldAccessExpressionSyntax(LowerExpression(field.Receiver, tree, module, locals),
                     field.DotToken, field.Field);
             case LeadingMemberAccessExpressionSyntax leading:
                 return new LeadingMemberAccessExpressionSyntax(leading.DotToken, leading.Member);
+            case MeExpressionSyntax me:
+                return new MeExpressionSyntax(me.MeKeyword);
             case ParenthesizedExpressionSyntax parenthesized:
                 return new ParenthesizedExpressionSyntax(parenthesized.OpenParenthesis,
                     LowerExpression(parenthesized.Expression, tree, module, locals), parenthesized.CloseParenthesis);
@@ -857,6 +1006,53 @@ internal sealed class ModuleProcessor
                 return expression;
         }
     }
+
+    private TypeMemberDeclarationSyntax LowerTypeMember(TypeMemberDeclarationSyntax member, SyntaxTree tree,
+        ModuleSymbol? module)
+    {
+        switch (member)
+        {
+            case RecordFieldDeclarationSyntax field:
+                return new RecordFieldDeclarationSyntax(field.VisibilityKeyword, field.Identifier, field.AsKeyword,
+                    LowerTypeToken(field.TypeToken, tree, module)!);
+            case TypeRoutineDeclarationSyntax routine:
+            {
+                var locals = CollectRoutineLocals(routine.Declaration, module);
+                return new TypeRoutineDeclarationSyntax(routine.VisibilityKeyword,
+                    LowerNestedRoutine(routine.Declaration, tree, module, locals));
+            }
+            case PropertyDeclarationSyntax property:
+            {
+                var getter = property.Getter == null ? null : LowerAccessor(property.Getter, tree, module,
+                    CollectStatementLocals(property.Getter.Statements, module));
+                var setterLocals = property.Setter == null ? null : CollectStatementLocals(
+                    property.Setter.Statements, module, "Value");
+                var setter = property.Setter == null ? null : LowerAccessor(property.Setter, tree, module,
+                    setterLocals!);
+                return new PropertyDeclarationSyntax(property.VisibilityKeyword, property.PropertyKeyword,
+                    property.Identifier, property.AsKeyword, LowerTypeToken(property.TypeToken, tree, module)!,
+                    getter, setter, property.EndKeyword, property.FinalPropertyKeyword);
+            }
+            default:
+                return member;
+        }
+    }
+
+    private RoutineDeclarationSyntax LowerNestedRoutine(RoutineDeclarationSyntax routine, SyntaxTree tree,
+        ModuleSymbol? module, HashSet<string> locals) => new(routine.Keyword, routine.Identifier,
+        routine.OpenParenthesis, routine.Parameters.Select(parameter => new ParameterSyntax(
+            parameter.OptionalKeyword, parameter.ModeKeyword, parameter.Identifier, parameter.AsKeyword,
+            LowerTypeToken(parameter.TypeToken, tree, module), parameter.EqualsToken,
+            parameter.DefaultValue == null ? null : LowerExpression(parameter.DefaultValue, tree, module, null)))
+            .ToArray(), routine.CloseParenthesis, routine.AsKeyword,
+        LowerTypeToken(routine.ReturnTypeToken, tree, module),
+        routine.Statements.Select(item => LowerStatement(item, tree, module, locals)).ToArray(),
+        routine.EndKeyword, routine.FinalKeyword);
+
+    private PropertyAccessorDeclarationSyntax LowerAccessor(PropertyAccessorDeclarationSyntax accessor,
+        SyntaxTree tree, ModuleSymbol? module, HashSet<string> locals) => new(accessor.Kind, accessor.Keyword,
+        accessor.Statements.Select(item => LowerStatement(item, tree, module, locals)).ToArray(),
+        accessor.EndKeyword, accessor.FinalKeyword);
 
     private SyntaxToken DeclarationToken(SyntaxToken token, ModuleSymbol? module)
     {
@@ -978,8 +1174,21 @@ internal sealed class ModuleProcessor
     {
         var locals = new HashSet<string>(routine.Parameters.Select(parameter => parameter.Identifier.Text),
             StringComparer.OrdinalIgnoreCase);
-        Collect(routine.Statements);
+        CollectLocals(routine.Statements, module, locals);
         return locals;
+    }
+
+    private static HashSet<string> CollectStatementLocals(IEnumerable<StatementSyntax> statements,
+        ModuleSymbol? module, params string[] initialNames)
+    {
+        var locals = new HashSet<string>(initialNames, StringComparer.OrdinalIgnoreCase);
+        CollectLocals(statements, module, locals);
+        return locals;
+    }
+
+    private static void CollectLocals(IEnumerable<StatementSyntax> statements, ModuleSymbol? module,
+        HashSet<string> locals)
+    {
 
         void Add(SyntaxToken token)
         {
@@ -987,9 +1196,9 @@ internal sealed class ModuleProcessor
                 locals.Add(token.Text);
         }
 
-        void Collect(IEnumerable<StatementSyntax> statements)
+        void Collect(IEnumerable<StatementSyntax> nestedStatements)
         {
-            foreach (var statement in statements)
+            foreach (var statement in nestedStatements)
             {
                 switch (statement)
                 {
@@ -1012,6 +1221,8 @@ internal sealed class ModuleProcessor
                 }
             }
         }
+
+        Collect(statements);
     }
 
     private static SyntaxToken SemanticToken(SyntaxToken original, string semanticName, string? displayName = null) =>

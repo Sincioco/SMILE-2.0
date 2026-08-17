@@ -22,39 +22,140 @@ public sealed class OptionExplicitStatementSyntax : StatementSyntax
     public override TextSpan Span => TextSpan.FromBounds(OptionKeyword.Span.Start, ExplicitKeyword.Span.End);
 }
 
-public sealed class RecordFieldDeclarationSyntax : SyntaxNode
+public abstract class TypeMemberDeclarationSyntax : SyntaxNode
+{
+    public abstract SyntaxToken Identifier { get; }
+    public abstract ModuleVisibility Visibility { get; }
+}
+
+public sealed class RecordFieldDeclarationSyntax : TypeMemberDeclarationSyntax
 {
     public RecordFieldDeclarationSyntax(SyntaxToken identifier, SyntaxToken asKeyword, SyntaxToken typeToken)
+        : this(null, identifier, asKeyword, typeToken)
     {
+    }
+
+    public RecordFieldDeclarationSyntax(SyntaxToken? visibilityKeyword, SyntaxToken identifier,
+        SyntaxToken asKeyword, SyntaxToken typeToken)
+    {
+        VisibilityKeyword = visibilityKeyword;
         Identifier = identifier;
         AsKeyword = asKeyword;
         TypeToken = typeToken;
     }
 
-    public SyntaxToken Identifier { get; }
+    public SyntaxToken? VisibilityKeyword { get; }
+    public override SyntaxToken Identifier { get; }
     public SyntaxToken AsKeyword { get; }
     public SyntaxToken TypeToken { get; }
-    public override TextSpan Span => TextSpan.FromBounds(Identifier.Span.Start, TypeToken.Span.End);
+    public override ModuleVisibility Visibility => ModuleVisibility.Public;
+    public override TextSpan Span => TextSpan.FromBounds(VisibilityKeyword?.Span.Start ?? Identifier.Span.Start,
+        TypeToken.Span.End);
 }
 
 public sealed class TypeDeclarationSyntax : StatementSyntax
 {
     public TypeDeclarationSyntax(SyntaxToken typeKeyword, SyntaxToken identifier,
         IReadOnlyList<RecordFieldDeclarationSyntax> fields, SyntaxToken endKeyword, SyntaxToken finalTypeKeyword)
+        : this(typeKeyword, identifier, fields.Cast<TypeMemberDeclarationSyntax>().ToArray(), endKeyword,
+            finalTypeKeyword)
+    {
+    }
+
+    public TypeDeclarationSyntax(SyntaxToken typeKeyword, SyntaxToken identifier,
+        IReadOnlyList<TypeMemberDeclarationSyntax> members, SyntaxToken endKeyword, SyntaxToken finalTypeKeyword)
     {
         TypeKeyword = typeKeyword;
         Identifier = identifier;
-        Fields = fields;
+        Members = members;
+        Fields = members.OfType<RecordFieldDeclarationSyntax>().ToArray();
         EndKeyword = endKeyword;
         FinalTypeKeyword = finalTypeKeyword;
     }
 
     public SyntaxToken TypeKeyword { get; }
     public SyntaxToken Identifier { get; }
+    public IReadOnlyList<TypeMemberDeclarationSyntax> Members { get; }
     public IReadOnlyList<RecordFieldDeclarationSyntax> Fields { get; }
     public SyntaxToken EndKeyword { get; }
     public SyntaxToken FinalTypeKeyword { get; }
     public override TextSpan Span => TextSpan.FromBounds(TypeKeyword.Span.Start, FinalTypeKeyword.Span.End);
+}
+
+public sealed class TypeRoutineDeclarationSyntax : TypeMemberDeclarationSyntax
+{
+    public TypeRoutineDeclarationSyntax(SyntaxToken? visibilityKeyword, RoutineDeclarationSyntax declaration)
+    {
+        VisibilityKeyword = visibilityKeyword;
+        Declaration = declaration;
+    }
+
+    public SyntaxToken? VisibilityKeyword { get; }
+    public RoutineDeclarationSyntax Declaration { get; }
+    public override SyntaxToken Identifier => Declaration.Identifier;
+    public override ModuleVisibility Visibility => VisibilityKeyword?.Kind == SyntaxKind.PrivateKeyword
+        ? ModuleVisibility.Private : ModuleVisibility.Public;
+    public override TextSpan Span => TextSpan.FromBounds(VisibilityKeyword?.Span.Start ?? Declaration.Span.Start,
+        Declaration.Span.End);
+}
+
+public enum PropertyAccessorKind
+{
+    Get,
+    Set
+}
+
+public sealed class PropertyAccessorDeclarationSyntax : SyntaxNode
+{
+    public PropertyAccessorDeclarationSyntax(PropertyAccessorKind kind, SyntaxToken keyword,
+        IReadOnlyList<StatementSyntax> statements, SyntaxToken endKeyword, SyntaxToken finalKeyword)
+    {
+        Kind = kind;
+        Keyword = keyword;
+        Statements = statements;
+        EndKeyword = endKeyword;
+        FinalKeyword = finalKeyword;
+    }
+
+    public PropertyAccessorKind Kind { get; }
+    public SyntaxToken Keyword { get; }
+    public IReadOnlyList<StatementSyntax> Statements { get; }
+    public SyntaxToken EndKeyword { get; }
+    public SyntaxToken FinalKeyword { get; }
+    public override TextSpan Span => TextSpan.FromBounds(Keyword.Span.Start, FinalKeyword.Span.End);
+}
+
+public sealed class PropertyDeclarationSyntax : TypeMemberDeclarationSyntax
+{
+    public PropertyDeclarationSyntax(SyntaxToken? visibilityKeyword, SyntaxToken propertyKeyword,
+        SyntaxToken identifier, SyntaxToken asKeyword, SyntaxToken typeToken,
+        PropertyAccessorDeclarationSyntax? getter, PropertyAccessorDeclarationSyntax? setter,
+        SyntaxToken endKeyword, SyntaxToken finalPropertyKeyword)
+    {
+        VisibilityKeyword = visibilityKeyword;
+        PropertyKeyword = propertyKeyword;
+        Identifier = identifier;
+        AsKeyword = asKeyword;
+        TypeToken = typeToken;
+        Getter = getter;
+        Setter = setter;
+        EndKeyword = endKeyword;
+        FinalPropertyKeyword = finalPropertyKeyword;
+    }
+
+    public SyntaxToken? VisibilityKeyword { get; }
+    public SyntaxToken PropertyKeyword { get; }
+    public override SyntaxToken Identifier { get; }
+    public SyntaxToken AsKeyword { get; }
+    public SyntaxToken TypeToken { get; }
+    public PropertyAccessorDeclarationSyntax? Getter { get; }
+    public PropertyAccessorDeclarationSyntax? Setter { get; }
+    public SyntaxToken EndKeyword { get; }
+    public SyntaxToken FinalPropertyKeyword { get; }
+    public override ModuleVisibility Visibility => VisibilityKeyword?.Kind == SyntaxKind.PrivateKeyword
+        ? ModuleVisibility.Private : ModuleVisibility.Public;
+    public override TextSpan Span => TextSpan.FromBounds(VisibilityKeyword?.Span.Start ?? PropertyKeyword.Span.Start,
+        FinalPropertyKeyword.Span.End);
 }
 
 public sealed class EnumMemberDeclarationSyntax : SyntaxNode
@@ -299,6 +400,24 @@ public sealed class QualifiedCallStatementSyntax : StatementSyntax
     public override TextSpan Span => TextSpan.FromBounds(CallKeyword.Span.Start, CloseParenthesis.Span.End);
 }
 
+public sealed class MemberCallStatementSyntax : StatementSyntax
+{
+    public MemberCallStatementSyntax(SyntaxToken callKeyword, MemberInvocationExpressionSyntax invocation)
+    {
+        CallKeyword = callKeyword;
+        Invocation = invocation;
+    }
+
+    public SyntaxToken CallKeyword { get; }
+    public MemberInvocationExpressionSyntax Invocation { get; }
+    public ExpressionSyntax Receiver => Invocation.Receiver;
+    public SyntaxToken DotToken => Invocation.DotToken;
+    public SyntaxToken Member => Invocation.Member;
+    public IReadOnlyList<ArgumentSyntax> Arguments => Invocation.Arguments;
+    public SyntaxToken CloseParenthesis => Invocation.CloseParenthesis;
+    public override TextSpan Span => TextSpan.FromBounds(CallKeyword.Span.Start, Invocation.Span.End);
+}
+
 public sealed class LeadingMemberCallStatementSyntax : StatementSyntax
 {
     public LeadingMemberCallStatementSyntax(SyntaxToken callKeyword, SyntaxToken dotToken,
@@ -317,6 +436,24 @@ public sealed class LeadingMemberCallStatementSyntax : StatementSyntax
     public IReadOnlyList<ArgumentSyntax> Arguments { get; }
     public SyntaxToken CloseParenthesis { get; }
     public override TextSpan Span => TextSpan.FromBounds(CallKeyword.Span.Start, CloseParenthesis.Span.End);
+}
+
+public sealed class LeadingMemberInvocationExpressionSyntax : ExpressionSyntax
+{
+    public LeadingMemberInvocationExpressionSyntax(SyntaxToken dotToken, SyntaxToken member,
+        IReadOnlyList<ArgumentSyntax> arguments, SyntaxToken closeParenthesis)
+    {
+        DotToken = dotToken;
+        Member = member;
+        Arguments = arguments;
+        CloseParenthesis = closeParenthesis;
+    }
+
+    public SyntaxToken DotToken { get; }
+    public SyntaxToken Member { get; }
+    public IReadOnlyList<ArgumentSyntax> Arguments { get; }
+    public SyntaxToken CloseParenthesis { get; }
+    public override TextSpan Span => TextSpan.FromBounds(DotToken.Span.Start, CloseParenthesis.Span.End);
 }
 
 public sealed class ReturnStatementSyntax : StatementSyntax
@@ -485,4 +622,24 @@ public sealed class QualifiedCallExpressionSyntax : ExpressionSyntax
     public IReadOnlyList<ArgumentSyntax> Arguments { get; }
     public SyntaxToken CloseParenthesis { get; }
     public override TextSpan Span => TextSpan.FromBounds(Alias.Span.Start, CloseParenthesis.Span.End);
+}
+
+public sealed class MemberInvocationExpressionSyntax : ExpressionSyntax
+{
+    public MemberInvocationExpressionSyntax(ExpressionSyntax receiver, SyntaxToken dotToken, SyntaxToken member,
+        IReadOnlyList<ArgumentSyntax> arguments, SyntaxToken closeParenthesis)
+    {
+        Receiver = receiver;
+        DotToken = dotToken;
+        Member = member;
+        Arguments = arguments;
+        CloseParenthesis = closeParenthesis;
+    }
+
+    public ExpressionSyntax Receiver { get; }
+    public SyntaxToken DotToken { get; }
+    public SyntaxToken Member { get; }
+    public IReadOnlyList<ArgumentSyntax> Arguments { get; }
+    public SyntaxToken CloseParenthesis { get; }
+    public override TextSpan Span => TextSpan.FromBounds(Receiver.Span.Start, CloseParenthesis.Span.End);
 }

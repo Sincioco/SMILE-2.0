@@ -11,6 +11,7 @@ internal sealed class Parser
     private int _position;
     private int _declarationContinuationDepth;
     private int _expressionContinuationDepth;
+    private int _typeDeclarationDepth;
 
     public Parser(SourceText source, IReadOnlyList<SyntaxToken> tokens, IReadOnlyList<Diagnostic> lexerDiagnostics)
     {
@@ -105,6 +106,7 @@ internal sealed class Parser
             case SyntaxKind.SaveKeyword: return ParseSaveStatement();
             case SyntaxKind.IdentifierToken:
             case SyntaxKind.KeyKeyword: return ParseAssignmentStatement();
+            case SyntaxKind.MeKeyword: return ParseAssignmentStatement();
             case SyntaxKind.DotToken: return ParseAssignmentStatement();
             case var kind when IsContextualIdentifier(kind): return ParseAssignmentStatement();
             default:
@@ -203,47 +205,173 @@ internal sealed class Parser
         var typeKeyword = MatchToken(SyntaxKind.TypeKeyword);
         var identifier = MatchIdentifier();
         ConsumeLineEnd();
-        var fields = new List<RecordFieldDeclarationSyntax>();
-        while (Current.Kind != SyntaxKind.EndOfFileToken && !IsEndPair(SyntaxKind.TypeKeyword))
+        var members = new List<TypeMemberDeclarationSyntax>();
+        _typeDeclarationDepth++;
+        try
+        {
+            while (Current.Kind != SyntaxKind.EndOfFileToken && !IsEndPair(SyntaxKind.TypeKeyword))
+            {
+                if (Current.Kind == SyntaxKind.NewLineToken)
+                {
+                    NextToken();
+                    continue;
+                }
+                SyntaxToken? visibility = null;
+                if (Current.Kind is SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword)
+                    visibility = NextToken();
+
+                if (visibility != null && Current.Kind == SyntaxKind.NewLineToken &&
+                    Peek(1).Kind == SyntaxKind.EndKeyword && Peek(2).Kind == SyntaxKind.TypeKeyword)
+                {
+                    _diagnostics.Report("SML3440", visibility.Span,
+                        "A visibility modifier inside Type must precede a field, method, or Property.");
+                    NextToken();
+                    continue;
+                }
+                if (IsEndPair(SyntaxKind.TypeKeyword) || Current.Kind == SyntaxKind.EndOfFileToken)
+                {
+                    _diagnostics.Report("SML3440", visibility?.Span ?? Current.Span,
+                        "A visibility modifier inside Type must precede a field, method, or Property.");
+                    continue;
+                }
+
+                if (Current.Kind is SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword)
+                {
+                    members.Add(new TypeRoutineDeclarationSyntax(visibility, ParseRoutineDeclaration()));
+                    continue;
+                }
+
+                if (Current.Kind == SyntaxKind.PropertyKeyword)
+                {
+                    members.Add(ParsePropertyDeclaration(visibility));
+                    continue;
+                }
+
+                if (visibility?.Kind == SyntaxKind.PrivateKeyword)
+                {
+                    _diagnostics.Report("SML3440", visibility.Span,
+                        "Type fields are always Public and cannot be declared Private.");
+                }
+
+                if (!IsIdentifierLike(Current.Kind))
+                {
+                    _diagnostics.Report("SML3403", Current.Span,
+                        "Type members must be fields, Sub or Function methods, or Property declarations.");
+                    SynchronizeLine();
+                    continue;
+                }
+                var field = MatchIdentifier();
+                if (Current.Kind != SyntaxKind.AsKeyword)
+                {
+                    var unsupported = Current.Kind is SyntaxKind.OpenBracketToken or SyntaxKind.EqualsToken;
+                    _diagnostics.Report(unsupported ? "SML3403" : "SML3402", Current.Span, unsupported
+                        ? "Record fields cannot be arrays and cannot have initializers."
+                        : $"Field '{field.Text}' requires As and a field type.");
+                    SynchronizeLine();
+                    continue;
+                }
+                var asKeyword = MatchToken(SyntaxKind.AsKeyword);
+                var fieldType = MatchTypeToken();
+                members.Add(new RecordFieldDeclarationSyntax(visibility, field, asKeyword, fieldType));
+                if (!IsLineEnd(Current.Kind))
+                {
+                    _diagnostics.Report("SML3403", Current.Span,
+                        "Record fields cannot be arrays and cannot have initializers.");
+                    SynchronizeLine();
+                    continue;
+                }
+                ConsumeLineEnd();
+            }
+        }
+        finally
+        {
+            _typeDeclarationDepth--;
+        }
+        var end = MatchToken(SyntaxKind.EndKeyword);
+        var finalType = MatchToken(SyntaxKind.TypeKeyword);
+        ConsumeLineEnd();
+        return new TypeDeclarationSyntax(typeKeyword, identifier, members, end, finalType);
+    }
+
+    private PropertyDeclarationSyntax ParsePropertyDeclaration(SyntaxToken? visibility)
+    {
+        var propertyKeyword = NextToken();
+        var identifier = MatchIdentifier();
+        var asKeyword = MatchToken(SyntaxKind.AsKeyword);
+        var typeToken = MatchTypeToken();
+        ConsumeLineEnd();
+
+        PropertyAccessorDeclarationSyntax? getter = null;
+        PropertyAccessorDeclarationSyntax? setter = null;
+        while (Current.Kind != SyntaxKind.EndOfFileToken && !IsEndContextualPair("Property") &&
+               !IsEndPair(SyntaxKind.TypeKeyword) && !IsTypeMemberStart() && !IsTypeFieldStart())
         {
             if (Current.Kind == SyntaxKind.NewLineToken)
             {
                 NextToken();
                 continue;
             }
-            if (!IsIdentifierLike(Current.Kind))
+
+            if (Current.Kind == SyntaxKind.GetKeyword)
             {
-                _diagnostics.Report("SML3403", Current.Span,
-                    "Type fields must use 'Name As Type' and cannot be arrays, declarations, or initializers.");
-                SynchronizeLine();
+                var accessor = ParsePropertyAccessor(PropertyAccessorKind.Get, SyntaxKind.GetKeyword, "Get");
+                if (getter != null)
+                    _diagnostics.Report("SML3441", accessor.Keyword.Span,
+                        $"Property '{identifier.Text}' declares more than one Get accessor.");
+                else
+                    getter = accessor;
                 continue;
             }
-            var field = MatchIdentifier();
-            if (Current.Kind != SyntaxKind.AsKeyword)
+            if (Current.Kind == SyntaxKind.SetKeyword)
             {
-                var unsupported = Current.Kind is SyntaxKind.OpenBracketToken or SyntaxKind.EqualsToken;
-                _diagnostics.Report(unsupported ? "SML3403" : "SML3402", Current.Span, unsupported
-                    ? "Record fields cannot be arrays and cannot have initializers."
-                    : $"Field '{field.Text}' requires As and a field type.");
-                SynchronizeLine();
+                var accessor = ParsePropertyAccessor(PropertyAccessorKind.Set, null, "Set");
+                if (setter != null)
+                    _diagnostics.Report("SML3441", accessor.Keyword.Span,
+                        $"Property '{identifier.Text}' declares more than one Set accessor.");
+                else
+                    setter = accessor;
                 continue;
             }
-            var asKeyword = MatchToken(SyntaxKind.AsKeyword);
-            var fieldType = MatchTypeToken();
-            fields.Add(new RecordFieldDeclarationSyntax(field, asKeyword, fieldType));
-            if (!IsLineEnd(Current.Kind))
-            {
-                _diagnostics.Report("SML3403", Current.Span,
-                    "Record fields cannot be arrays and cannot have initializers.");
-                SynchronizeLine();
-                continue;
-            }
+
+            _diagnostics.Report("SML3441", Current.Span,
+                "A Property body may contain only Get and Set accessor blocks.");
+            SynchronizeLine();
+        }
+
+        var (endKeyword, finalProperty) = MatchContextualEndPair("Property");
+        return new PropertyDeclarationSyntax(visibility, propertyKeyword, identifier, asKeyword, typeToken,
+            getter, setter, endKeyword, finalProperty);
+    }
+
+    private PropertyAccessorDeclarationSyntax ParsePropertyAccessor(PropertyAccessorKind kind,
+        SyntaxKind? keywordKind, string keywordText)
+    {
+        var keyword = keywordKind.HasValue ? MatchToken(keywordKind.Value) : MatchContextualIdentifier(keywordText);
+        ConsumeLineEnd();
+        var statements = ParseStatementsUntil(() =>
+            (keywordKind.HasValue ? IsEndPair(keywordKind.Value) : IsEndContextualPair(keywordText)) ||
+            IsPropertyAccessorBoundary());
+        SyntaxToken endKeyword;
+        SyntaxToken finalKeyword;
+        if (keywordKind.HasValue && IsEndPair(keywordKind.Value))
+        {
+            endKeyword = NextToken();
+            finalKeyword = NextToken();
             ConsumeLineEnd();
         }
-        var end = MatchToken(SyntaxKind.EndKeyword);
-        var finalType = MatchToken(SyntaxKind.TypeKeyword);
-        ConsumeLineEnd();
-        return new TypeDeclarationSyntax(typeKeyword, identifier, fields, end, finalType);
+        else if (!keywordKind.HasValue && IsEndContextualPair(keywordText))
+        {
+            (endKeyword, finalKeyword) = MatchContextualEndPair(keywordText);
+        }
+        else
+        {
+            _diagnostics.Report("SML2001", Current.Span,
+                $"Expected End {keywordText} before '{Display(Current)}'.");
+            endKeyword = new SyntaxToken(SyntaxKind.EndKeyword, Current.Position, string.Empty);
+            finalKeyword = new SyntaxToken(keywordKind ?? SyntaxKind.IdentifierToken, Current.Position,
+                string.Empty);
+        }
+        return new PropertyAccessorDeclarationSyntax(kind, keyword, statements, endKeyword, finalKeyword);
     }
 
     private EnumDeclarationSyntax ParseEnumDeclaration()
@@ -346,7 +474,8 @@ internal sealed class Parser
                 return ParseFieldSuffix(new QualifiedArrayAccessExpressionSyntax(identifier, dot, member, indices,
                     MatchToken(SyntaxKind.CloseBracketToken)));
             }
-            return ParseFieldSuffix(new QualifiedNameExpressionSyntax(identifier, dot, member));
+            return ParseFieldSuffix(new FieldAccessExpressionSyntax(
+                new NameExpressionSyntax(identifier), dot, member));
         }
         if (Current.Kind == SyntaxKind.OpenBracketToken)
         {
@@ -993,10 +1122,23 @@ internal sealed class Parser
             !IsLineEnd(Current.Kind) && Current.Kind != SyntaxKind.AsKeyword;
         if (!recoveredAtBody)
             ConsumeLineEnd();
-        var statements = ParseStatementsUntil(() => IsEndPair(keyword.Kind));
-        var end = MatchToken(SyntaxKind.EndKeyword);
-        var final = MatchToken(keyword.Kind);
-        ConsumeLineEnd();
+        var statements = ParseStatementsUntil(() => IsEndPair(keyword.Kind) ||
+            (_typeDeclarationDepth > 0 && IsTypeRoutineRecoveryBoundary()));
+        SyntaxToken end;
+        SyntaxToken final;
+        if (IsEndPair(keyword.Kind))
+        {
+            end = NextToken();
+            final = NextToken();
+            ConsumeLineEnd();
+        }
+        else
+        {
+            _diagnostics.Report("SML2001", Current.Span,
+                $"Expected End {keyword.Text} before '{Display(Current)}'.");
+            end = new SyntaxToken(SyntaxKind.EndKeyword, Current.Position, string.Empty);
+            final = new SyntaxToken(keyword.Kind, Current.Position, string.Empty);
+        }
         return new RoutineDeclarationSyntax(keyword, identifier, openParenthesis, parameters, closeParenthesis,
             asKeyword, returnType, statements, end, final);
     }
@@ -1004,26 +1146,36 @@ internal sealed class Parser
     private StatementSyntax ParseCallStatement()
     {
         var call = MatchToken(SyntaxKind.CallKeyword);
-        if (Current.Kind == SyntaxKind.DotToken)
+        var invocation = ParsePrimaryExpression();
+        StatementSyntax result;
+        switch (invocation)
         {
-            var dot = NextToken();
-            var member = MatchIdentifier();
-            var (memberArguments, memberClose) = ParseParenthesizedArgumentList();
-            ConsumeLineEnd();
-            return new LeadingMemberCallStatementSyntax(call, dot, member, memberArguments, memberClose);
+            case CallExpressionSyntax direct:
+                result = new CallStatementSyntax(call, direct.Identifier, direct.Arguments, direct.CloseParenthesis);
+                break;
+            case QualifiedCallExpressionSyntax qualified:
+                result = new QualifiedCallStatementSyntax(call, qualified.Alias, qualified.DotToken,
+                    qualified.Member, qualified.Arguments, qualified.CloseParenthesis);
+                break;
+            case MemberInvocationExpressionSyntax member:
+                result = new MemberCallStatementSyntax(call, member);
+                break;
+            case LeadingMemberInvocationExpressionSyntax leading:
+                result = new LeadingMemberCallStatementSyntax(call, leading.DotToken, leading.Member,
+                    leading.Arguments, leading.CloseParenthesis);
+                break;
+            default:
+                _diagnostics.Report("SML2001", invocation.Span,
+                    "Call requires a routine invocation ending in parentheses.");
+                var close = new SyntaxToken(SyntaxKind.CloseParenthesisToken, invocation.Span.End, string.Empty);
+                var identifier = invocation is NameExpressionSyntax name
+                    ? name.Identifier
+                    : new SyntaxToken(SyntaxKind.IdentifierToken, invocation.Span.Start, string.Empty);
+                result = new CallStatementSyntax(call, identifier, Array.Empty<ArgumentSyntax>(), close);
+                break;
         }
-        var identifier = MatchIdentifier();
-        if (Current.Kind == SyntaxKind.DotToken)
-        {
-            var dot = NextToken();
-            var member = MatchIdentifier();
-            var (qualifiedArguments, qualifiedClose) = ParseParenthesizedArgumentList();
-            ConsumeLineEnd();
-            return new QualifiedCallStatementSyntax(call, identifier, dot, member, qualifiedArguments, qualifiedClose);
-        }
-        var (arguments, close) = ParseParenthesizedArgumentList();
         ConsumeLineEnd();
-        return new CallStatementSyntax(call, identifier, arguments, close);
+        return result;
     }
 
     private ReturnStatementSyntax ParseReturnStatement()
@@ -1177,8 +1329,19 @@ internal sealed class Parser
     {
         if (Current.Kind == SyntaxKind.DotToken)
         {
-            ExpressionSyntax leading = new LeadingMemberAccessExpressionSyntax(NextToken(), MatchMemberIdentifier());
-            return ParseFieldSuffix(leading);
+            var dot = NextToken();
+            var member = MatchMemberIdentifier();
+            ExpressionSyntax leading;
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                var (arguments, closeParenthesis) = ParseParenthesizedArgumentList();
+                leading = new LeadingMemberInvocationExpressionSyntax(dot, member, arguments, closeParenthesis);
+            }
+            else
+            {
+                leading = new LeadingMemberAccessExpressionSyntax(dot, member);
+            }
+            return ParsePostfixSuffix(leading);
         }
         if (Current.Kind == SyntaxKind.OpenParenthesisToken)
         {
@@ -1189,13 +1352,16 @@ internal sealed class Parser
             {
                 var expression = ParseExpression();
                 SkipExpressionNewLines();
-                return new ParenthesizedExpressionSyntax(open, expression, MatchToken(SyntaxKind.CloseParenthesisToken));
+                return ParsePostfixSuffix(new ParenthesizedExpressionSyntax(open, expression,
+                    MatchToken(SyntaxKind.CloseParenthesisToken)));
             }
             finally
             {
                 _expressionContinuationDepth--;
             }
         }
+        if (Current.Kind == SyntaxKind.MeKeyword)
+            return ParsePostfixSuffix(new MeExpressionSyntax(NextToken()));
         if (Current.Kind == SyntaxKind.TrueKeyword || Current.Kind == SyntaxKind.FalseKeyword)
         {
             var token = NextToken();
@@ -1226,48 +1392,34 @@ internal sealed class Parser
                 if (Current.Kind == SyntaxKind.OpenParenthesisToken)
                 {
                     var (qualifiedArguments, qualifiedClose) = ParseParenthesizedArgumentList();
-                    return ParseFieldSuffix(new QualifiedCallExpressionSyntax(identifier, dot, member, qualifiedArguments,
-                        qualifiedClose));
+                    return ParsePostfixSuffix(new MemberInvocationExpressionSyntax(
+                        new NameExpressionSyntax(identifier), dot, member, qualifiedArguments, qualifiedClose));
                 }
                 if (Current.Kind == SyntaxKind.OpenBracketToken)
                 {
                     NextToken();
                     var qualifiedIndices = ParseExpressionList(SyntaxKind.CloseBracketToken);
-                    return ParseFieldSuffix(new QualifiedArrayAccessExpressionSyntax(identifier, dot, member, qualifiedIndices,
+                    return ParsePostfixSuffix(new QualifiedArrayAccessExpressionSyntax(identifier, dot, member, qualifiedIndices,
                         MatchToken(SyntaxKind.CloseBracketToken)));
                 }
-                ExpressionSyntax qualified = new QualifiedNameExpressionSyntax(identifier, dot, member);
-                while (Current.Kind == SyntaxKind.DotToken)
-                {
-                    var fieldDot = NextToken();
-                    qualified = new FieldAccessExpressionSyntax(qualified, fieldDot, MatchMemberIdentifier());
-                }
-                return qualified;
+                ExpressionSyntax memberAccess = new FieldAccessExpressionSyntax(
+                    new NameExpressionSyntax(identifier), dot, member);
+                return ParsePostfixSuffix(memberAccess);
             }
             if (Current.Kind == SyntaxKind.OpenParenthesisToken)
             {
                 var (arguments, closeParenthesis) = ParseParenthesizedArgumentList();
-                return ParseFieldSuffix(new CallExpressionSyntax(identifier, arguments, closeParenthesis));
+                return ParsePostfixSuffix(new CallExpressionSyntax(identifier, arguments, closeParenthesis));
             }
             if (Current.Kind == SyntaxKind.OpenBracketToken)
             {
                 NextToken();
                 var indices = ParseExpressionList(SyntaxKind.CloseBracketToken);
                 ExpressionSyntax array = new ArrayAccessExpressionSyntax(identifier, indices, MatchToken(SyntaxKind.CloseBracketToken));
-                while (Current.Kind == SyntaxKind.DotToken)
-                {
-                    var fieldDot = NextToken();
-                    array = new FieldAccessExpressionSyntax(array, fieldDot, MatchMemberIdentifier());
-                }
-                return array;
+                return ParsePostfixSuffix(array);
             }
             ExpressionSyntax name = new NameExpressionSyntax(identifier);
-            while (Current.Kind == SyntaxKind.DotToken)
-            {
-                var fieldDot = NextToken();
-                name = new FieldAccessExpressionSyntax(name, fieldDot, MatchMemberIdentifier());
-            }
-            return name;
+            return ParsePostfixSuffix(name);
         }
         var missing = MatchToken(SyntaxKind.NumberToken);
         return new LiteralExpressionSyntax(missing, 0L);
@@ -1297,16 +1449,71 @@ internal sealed class Parser
     }
 
     private ExpressionSyntax ParseFieldSuffix(ExpressionSyntax expression)
+        => ParsePostfixSuffix(expression);
+
+    private ExpressionSyntax ParsePostfixSuffix(ExpressionSyntax expression)
     {
         while (Current.Kind == SyntaxKind.DotToken)
         {
             var dot = NextToken();
-            expression = new FieldAccessExpressionSyntax(expression, dot, MatchMemberIdentifier());
+            var member = MatchMemberIdentifier();
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                var (arguments, closeParenthesis) = ParseParenthesizedArgumentList();
+                expression = new MemberInvocationExpressionSyntax(expression, dot, member, arguments,
+                    closeParenthesis);
+            }
+            else
+            {
+                expression = new FieldAccessExpressionSyntax(expression, dot, member);
+            }
         }
         return expression;
     }
 
     private bool IsEndPair(SyntaxKind finalKind) => Current.Kind == SyntaxKind.EndKeyword && Peek(1).Kind == finalKind;
+
+    private bool IsEndContextualPair(string text) => Current.Kind == SyntaxKind.EndKeyword &&
+        IsContextualText(Peek(1), text);
+
+    private bool IsTypeMemberStart()
+    {
+        var offset = Current.Kind is SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword ? 1 : 0;
+        var kind = Peek(offset).Kind;
+        return kind is SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword or SyntaxKind.PropertyKeyword;
+    }
+
+    private bool IsPropertyAccessorBoundary() => Current.Kind is SyntaxKind.GetKeyword or SyntaxKind.SetKeyword ||
+        IsEndContextualPair("Property") || IsEndPair(SyntaxKind.TypeKeyword) || IsTypeFieldStart() ||
+        (Current.Kind == SyntaxKind.EndKeyword &&
+         Peek(1).Kind is SyntaxKind.GetKeyword or SyntaxKind.SetKeyword);
+
+    private bool IsTypeRoutineRecoveryBoundary() => IsTypeMemberStart() || IsTypeFieldStart() ||
+        IsEndPair(SyntaxKind.TypeKeyword) ||
+        IsEndContextualPair("Property") ||
+        (Current.Kind == SyntaxKind.EndKeyword &&
+         Peek(1).Kind is SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword or SyntaxKind.GetKeyword or
+             SyntaxKind.SetKeyword);
+
+    private bool IsTypeFieldStart()
+    {
+        var offset = Current.Kind is SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword ? 1 : 0;
+        return IsIdentifierLike(Peek(offset).Kind) && Peek(offset + 1).Kind == SyntaxKind.AsKeyword;
+    }
+
+    private (SyntaxToken EndKeyword, SyntaxToken FinalKeyword) MatchContextualEndPair(string text)
+    {
+        if (IsEndContextualPair(text))
+        {
+            var end = NextToken();
+            var final = NextToken();
+            ConsumeLineEnd();
+            return (end, final);
+        }
+        _diagnostics.Report("SML2001", Current.Span, $"Expected End {text} before '{Display(Current)}'.");
+        return (new SyntaxToken(SyntaxKind.EndKeyword, Current.Position, string.Empty),
+            new SyntaxToken(SyntaxKind.IdentifierToken, Current.Position, string.Empty));
+    }
 
     private void ConsumeLineEnd()
     {
@@ -1336,6 +1543,17 @@ internal sealed class Parser
         return MatchToken(SyntaxKind.IdentifierToken);
     }
 
+    private SyntaxToken MatchContextualIdentifier(string text)
+    {
+        if (IsContextualText(Current, text))
+            return NextToken();
+        _diagnostics.Report("SML2001", Current.Span, $"Expected {text}, found '{Display(Current)}'.");
+        return new SyntaxToken(SyntaxKind.IdentifierToken, Current.Position, string.Empty);
+    }
+
+    private static bool IsContextualText(SyntaxToken token, string text) =>
+        string.Equals(token.Text, text, StringComparison.OrdinalIgnoreCase);
+
     private SyntaxToken MatchMemberIdentifier()
     {
         if (IsMemberIdentifier(Current.Kind))
@@ -1348,7 +1566,8 @@ internal sealed class Parser
 
     private static bool IsContextualIdentifier(SyntaxKind kind) =>
         kind is SyntaxKind.WindowKeyword or SyntaxKind.SizeKeyword or SyntaxKind.DrawKeyword or SyntaxKind.LineKeyword or
-            SyntaxKind.TextKeyword or SyntaxKind.LeftKeyword or SyntaxKind.RightKeyword ||
+            SyntaxKind.TextKeyword or SyntaxKind.LeftKeyword or SyntaxKind.RightKeyword or SyntaxKind.SetKeyword or
+            SyntaxKind.PropertyKeyword ||
         kind >= SyntaxKind.UnloadKeyword && kind <= SyntaxKind.ChannelKeyword;
 
     private static bool IsIdentifierLike(SyntaxKind kind) =>

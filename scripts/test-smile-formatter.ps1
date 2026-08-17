@@ -197,6 +197,35 @@ try {
     Assert-Equal ([Convert]::ToBase64String($OptionalNamedFirstPass)) ([Convert]::ToBase64String($OptionalNamedSecondPass)) 'Optional/named formatting was not idempotent.'
     Pass 'Optional declaration traversal, named argument spacing, contextual casing, and idempotence'
 
+    $TypeMemberSource = "Option Explicit`n" +
+        "Type Counter`n" +
+        "    StoredValue As Number`n" +
+        "    Public Function Difference(Optional left As Number = 1) As Number`n" +
+        "        Return me.StoredValue + left`n" +
+        "    End Function`n" +
+        "    Public Property Total As Number`n" +
+        "        Get`n" +
+        "            Return me.StoredValue + 1`n" +
+        "        End Get`n" +
+        "        Set`n" +
+        "            me.StoredValue = value`n" +
+        "        End Set`n" +
+        "    End Property`n" +
+        "End Type`n"
+    $TypeMemberPath = Write-TestSource 'TypeMemberFormatting.smile' $TypeMemberSource
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'TypeMemberFormatting.smile')).ExitCode 'Type-member formatting failed.'
+    $TypeMemberFormatted = [IO.File]::ReadAllText($TypeMemberPath)
+    Assert-True ($TypeMemberFormatted.Contains('Optional Left As Number = 1')) 'Type-method parameter casing was not canonicalized.'
+    Assert-True ($TypeMemberFormatted.Contains('ReturnValue = Me.StoredValue + Left')) 'Type-method computed Return and Me/parameter casing were not formatted.'
+    Assert-True ($TypeMemberFormatted.Contains("Get`n`n            Dim ReturnValue As Number")) 'Property getter computed Return local was not placed after Get.'
+    Assert-True ($TypeMemberFormatted.Contains('ReturnValue = Me.StoredValue + 1')) 'Property getter computed Return was not rewritten.'
+    Assert-True ($TypeMemberFormatted.Contains('Me.StoredValue = Value')) 'Property setter Me/Value casing was not canonicalized.'
+    $TypeMemberFirstPass = [IO.File]::ReadAllBytes($TypeMemberPath)
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'TypeMemberFormatting.smile')).ExitCode 'Type-member second formatting pass failed.'
+    $TypeMemberSecondPass = [IO.File]::ReadAllBytes($TypeMemberPath)
+    Assert-Equal ([Convert]::ToBase64String($TypeMemberFirstPass)) ([Convert]::ToBase64String($TypeMemberSecondPass)) 'Type-member formatting was not idempotent.'
+    Pass 'Type methods, property accessors, Me/Value casing, computed Returns, and idempotence'
+
     $EnumSource = "Option Explicit`n`n" +
         "Enum Direction`n    none`n    up = 10`n    down`n    left = -5`n    right = -5`nEnd Enum`n`n" +
         "Function DefaultDirection() As Direction`n`n    Return Direction.left`n`nEnd Function`n"

@@ -1,0 +1,270 @@
+Option Explicit
+
+Type Counter
+
+    Label As Text
+    Total As Number
+
+    Public Sub Configure(
+        Label As Text,
+        Optional Start As Number = 0
+    )
+
+        Me.Label = Label
+        Me.Total = Start
+
+    End Sub
+
+    Public Sub Advance(
+        Optional Delta As Number = 1
+    )
+
+        Me.Total = Me.Total + Delta
+
+    End Sub
+
+    Public Sub AdvanceTwice(
+        Optional Delta As Number = 1
+    )
+
+        With Me
+
+            Call .Advance(Delta)
+            Call .Advance(Delta)
+
+        End With
+
+    End Sub
+
+    Public Sub Capture(
+        ByRef Target As Number,
+        Value As Number
+    )
+
+        Target = Me.Total + Value
+
+    End Sub
+
+    Public Function Shifted(
+        Optional Delta As Number = 1
+    ) As Counter
+
+        Dim Result As Counter
+
+        Result = Me
+
+        Call Result.Advance(Delta)
+
+        Return Result
+
+    End Function
+
+    Public Property Value As Number
+
+        Get
+
+            Dim ReturnValue As Number
+
+            ReturnValue = Me.Total
+
+            Return ReturnValue
+
+        End Get
+
+        Set
+
+            Me.Total = Value
+
+        End Set
+
+    End Property
+
+    Public Property Caption As Text
+
+        Get
+
+            Dim ReturnValue As Text
+
+            ReturnValue = Me.Label
+
+            Return ReturnValue
+
+        End Get
+
+        Set
+
+            Me.Label = Value
+
+        End Set
+
+    End Property
+
+End Type
+
+Type CounterBox
+
+    Item As Counter
+
+    Public Property Stored As Counter
+
+        Get
+
+            Dim ReturnValue As Counter
+
+            ReturnValue = Me.Item
+
+            Return ReturnValue
+
+        End Get
+
+        Set
+
+            Me.Item = Value
+
+        End Set
+
+    End Property
+
+End Type
+
+Dim Trace As Text
+Dim Primary As Counter
+Dim Copy As Counter
+Dim Holder As CounterBox
+Dim Items[2] As Counter
+Dim Slots[2] As Number
+
+Trace = ""
+
+Call Primary.Configure(
+    Start:=Mark("S", 10),
+    Label:=MarkText("L", "primary")
+)
+
+Print Trace
+Print Primary.Caption
+Print Primary.Value
+
+Call Primary.AdvanceTwice(2)
+
+Copy = Primary.Shifted(3)
+
+Print Primary.Value
+Print Copy.Value
+
+Call (Copy).Advance()
+
+Print Copy.Value
+
+Primary.Value = 20
+
+With Primary
+
+    .Value = .Value + 1
+
+    Call .Advance()
+
+    Print .Value
+
+End With
+
+Items[1] = Primary
+Trace = ""
+
+Call Items[Mark("I", 1)].Advance(Mark("D", 4))
+
+Print Trace
+Print Items[1].Value
+Print Primary.Value
+
+Trace = ""
+
+Call Primary.Capture(
+    Value:=Mark("V", 3),
+    Target:=Slots[Mark("T", 0)]
+)
+
+Print Trace
+Print Slots[0]
+
+Trace = ""
+
+Items[Mark("R", 1)].Value = Mark("V", 5)
+
+Print Trace
+Print Items[1].Value
+
+Holder.Item = Primary
+
+Call Holder.Item.Advance(ReplaceHolder(Holder))
+
+Print Holder.Item.Caption
+Print Holder.Item.Value
+
+Holder.Item.Value = ReplaceHolderValue(Holder)
+
+Print Holder.Item.Caption
+Print Holder.Item.Value
+
+Primary.Caption = "owned"
+Primary.Value = 30
+Holder.Stored = Primary
+Primary.Caption = "changed"
+Primary.Value = 31
+Copy = Holder.Stored
+
+Print Copy.Caption
+Print Copy.Value
+Print Primary.Shifted(2).Total
+Print Holder.Stored.Label
+
+Copy.Caption = MakeCaption()
+
+Print Copy.Caption
+Print Holder.Item.Caption
+
+End Program
+
+Function Mark(Tag As Text, Value As Number) As Number
+
+    Trace = Trace + Tag
+    Return Value
+
+End Function
+
+Function MarkText(Tag As Text, Value As Text) As Text
+
+    Trace = Trace + Tag
+    Return Value
+
+End Function
+
+Function ReplaceHolder(ByRef Value As CounterBox) As Number
+
+    Dim Replacement As CounterBox
+
+    Replacement.Item.Label = "method-root"
+    Replacement.Item.Total = 40
+    Value = Replacement
+
+    Return 2
+
+End Function
+
+Function ReplaceHolderValue(ByRef Value As CounterBox) As Number
+
+    Dim Replacement As CounterBox
+
+    Replacement.Item.Label = "property-root"
+    Replacement.Item.Total = 50
+    Value = Replacement
+
+    Return 7
+
+End Function
+
+Function MakeCaption() As Text
+
+    Return "caption"
+
+End Function

@@ -3,6 +3,10 @@ Option Explicit
 Import Smile.Lightweight.Oop.Proof As Proof
 
 Dim Trace As Text
+Dim Primary As Proof.Counter
+Dim Copy As Proof.Counter
+Dim Holder As Proof.CounterBox
+Dim Items[2] As Proof.Counter
 
 Call Proof.Report("defaults")
 
@@ -24,24 +28,132 @@ Call Proof.Report(
     Copies:=4
 )
 
+Trace = ""
+
+Call Primary.Configure(
+    Mode:=MarkMode("M", Proof.DisplayMode.Compact),
+    Label:=MarkText("L", "primary"),
+    Start:=MarkNumber("S", 10)
+)
+
+Print Trace
+Print Primary.Total
+Print Primary.Caption
+
+Call Primary.Advance(Delta:=2)
+
+Print Primary.Total
+
+Copy = Primary
+
+Call Copy.Advance()
+
+Print Primary.Total
+Print Copy.Total
+Print Copy.Difference(Other:=Primary)
+
+Copy = Primary.Shifted(Delta:=5)
+
+Print Primary.Total
+Print Copy.Total
+
+Holder.Item = Primary
+
+Call Holder.Item.Advance(3)
+
+Print Holder.Item.Total
+
+Items[1] = Primary
+
+Call Items[1].Advance(4)
+
+Print Items[1].Total
+Print Primary.Total
+
+Call MutateCopy(Primary)
+
+Print Primary.Total
+
+Call MutateOriginal(Primary)
+
+Print Primary.Total
+
+Primary.GameProbe = 21
+Print Primary.Total
+
+Holder.Item.Total = 2
+
+Call Holder.Item.Advance(ReplaceHolder(Holder))
+
+Print Holder.Item.Total
+
+Holder.Item.Total = ReplaceHolderValue(Holder)
+Print Holder.Item.Total
+
 End Program
 
 Function MarkNumber(Tag As Text, Value As Number) As Number
+
     Trace = Trace + Tag
     Return Value
+
 End Function
 
 Function MarkBoolean(Tag As Text, Value As Boolean) As Boolean
+
     Trace = Trace + Tag
     Return Value
+
 End Function
 
 Function MarkText(Tag As Text, Value As Text) As Text
+
     Trace = Trace + Tag
     Return Value
+
 End Function
 
 Function MarkMode(Tag As Text, Value As Proof.DisplayMode) As Proof.DisplayMode
+
     Trace = Trace + Tag
     Return Value
+
+End Function
+
+Sub MutateCopy(Value As Proof.Counter)
+
+    Call Value.Advance(100)
+
+    Print Value.Total
+
+End Sub
+
+Sub MutateOriginal(ByRef Value As Proof.Counter)
+
+    Call Value.Advance(2)
+
+End Sub
+
+Function ReplaceHolder(ByRef Value As Proof.CounterBox) As Number
+
+    Dim Replacement As Proof.CounterBox
+
+    Replacement.Item.Label = "method-root"
+    Replacement.Item.Total = 40
+    Value = Replacement
+
+    Return 2
+
+End Function
+
+Function ReplaceHolderValue(ByRef Value As Proof.CounterBox) As Number
+
+    Dim Replacement As Proof.CounterBox
+
+    Replacement.Item.Label = "property-root"
+    Replacement.Item.Total = 40
+    Value = Replacement
+
+    Return 7
+
 End Function

@@ -1,0 +1,11 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Console</ProjectKind>
+    <StartupFile>ProgramSafeSetter.smile</StartupFile>
+    <OutputName>TypeMemberSafeSetterPackage</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="ProgramSafeSetter.smile" StartupOnly="true" />
+    <SmileLibraryReference Include="..\..\artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib" />
+  </ItemGroup>
+</SmileProject>

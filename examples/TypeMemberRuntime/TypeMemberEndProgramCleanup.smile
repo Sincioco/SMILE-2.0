@@ -1,0 +1,49 @@
+Option Explicit
+
+Type Payload
+
+    Name As Text
+
+End Type
+
+Type Holder
+
+    Item As Payload
+
+    Public Property Stored As Payload
+
+        Set
+
+            Me.Item = Value
+
+        End Set
+
+    End Property
+
+End Type
+
+Dim Items[1] As Holder
+
+Items[StopNow()].Stored = MakePayload()
+
+End Program
+
+Function MakePayload() As Payload
+
+    Dim Result As Payload
+
+    Result.Name = "owned"
+
+    Return Result
+
+End Function
+
+Function StopNow() As Number
+
+    Print "Ending"
+
+    End Program
+
+    Return 0
+
+End Function
