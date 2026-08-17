@@ -33,6 +33,12 @@ Use KISS: Keep It Simple, Stupid.
 - Do not add CI, GitHub Actions, a large automated test suite, cross-platform support, a package manager, or speculative infrastructure.
 - Do not stop after planning or scaffolding. Continue through implementation, build, native compilation, execution, debugging, validation, commit, and push.
 
+### Permanent single-agent rule
+
+- Use exactly one Codex agent for all current and future SMILE 2.0 repository work.
+- Do not spawn, delegate to, or coordinate subagents or parallel agents for planning, implementation, review, testing, documentation, migrations, or release work.
+- The single active agent owns each task end to end, including investigation, edits, validation, commits, pushes, and the final report.
+
 ### Permanent SMILE capability flagging
 
 - Whenever a requested behavior is not currently supported by the SMILE language, compiler, native runtime, Web runtime, or an applicable SMILE module/library, call it out before extending or working around it.
