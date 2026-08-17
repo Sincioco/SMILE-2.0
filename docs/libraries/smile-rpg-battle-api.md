@@ -1,6 +1,11 @@
-# Smile.RPG 1.2.0 battle API
+# Smile.RPG 1.2.1 battle API
 
-Phase 9 adds four ordinary, source-authored modules. They are deterministic, bounded, headless, renderer-neutral, and owned by `Smile.RPG`; none imports `Smile.Game`, `Smile.UI`, images, audio, or drawing primitives. All definition IDs are caller-supplied stable positive Numbers. Runtime participant IDs are stable for one active battle.
+Phase 9 introduced these four ordinary, source-authored modules in 1.2.0. The
+1.2.1 format-6 package preserves that public API unchanged. They are
+deterministic, bounded, headless, renderer-neutral, and owned by `Smile.RPG`;
+none imports `Smile.Game`, `Smile.UI`, images, audio, or drawing primitives. All
+definition IDs are caller-supplied stable positive Numbers. Runtime participant
+IDs are stable for one active battle.
 
 ## `Smile.RPG.BattleCore`
 

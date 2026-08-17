@@ -121,6 +121,8 @@ The Phase 3A typed-text proof uses `libraries\Smile.Text.Extras`, `examples\Phas
 
 Smile.UI 2.0.0 supersedes the historical 1.x procedural surface described above. Its `Menu`, `MenuNavigator`, and `Dialogue` reference Classes expose constructors, methods, properties, named/default arguments, and idempotent destruction while retaining private fixed-capacity generation-safe engines; style and geometry records remain value Types.
 
+Smile.RPG 1.2.1 is the package-only lightweight-OOP compatibility release. It preserves the fifteen-module 1.2.0 public API and SRPG payload format 2, publishes exact `Smile.RPG@1.2.1` provider identity in deterministic `.smilelib` format 6, and adds no Smile.UI/Smile.Game dependency, Class façade, Enum migration, or inheritance model.
+
 Phase 6.2 advances Smile.RPG to 1.0.2 and makes `SaveGames.Exists` observational with respect to the public codec buffer and RPG state. It preserves SRPG payload format 1 and introduces no Phase 7 world features.
 
 Phase 7 originally added `Smile.Game` for reusable movement, animation, SMILE-MAP 1, camera, and collision mechanics, and advanced `Smile.RPG` with World, Story, Encounters, and SRPG format-2 persistence. Smile.Game 2.0.0 now exposes nominal `CardinalDirection` values plus `CardinalMover` and `CameraState` instance methods while retaining exact deep-copy value semantics. Animation and TileMap remain handle Modules, Collision2D remains stateless, and Smile.RPG retains no Smile.Game dependency. `examples\RpgWorldGallery` and `examples\Phase7WorldStateTests` prove the current project/package native/Web boundary. See `docs\language\phase7-rpg-world.md` and `docs\architecture\phase7-top-down-rpg-world.md`.

@@ -66,7 +66,7 @@ Remove/privatize old procedural public APIs after all repository consumers migra
 
 ## Current Baseline
 
-Current reviewed version:
+Current shipped version:
 
 ```text
 Smile.Game 2.0.0
@@ -115,7 +115,7 @@ Update every world/dungeon/battle gallery and project/package consumer.
 Current reviewed version:
 
 ```text
-Smile.RPG 1.2.0
+Smile.RPG 1.2.1
 ```
 
 The package contains fifteen bounded, generation-safe, transactional Modules covering management, world, story, encounters, saves, and battles.
@@ -141,7 +141,7 @@ Do not:
 
 ## Version
 
-Recommended package-only patch:
+Shipped package-only patch:
 
 ```text
 Smile.RPG 1.2.1

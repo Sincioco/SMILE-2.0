@@ -4485,7 +4485,7 @@ Run("Smile.Game 2.0 value Types and Smile.RPG remain independent built-in source
     var rpgAnalysis = SmileLanguage.Analyze(rpgCompilation.Sources, SmileCompilationKind.Library,
         rpgCompilation.DependencyContext);
     Equal(false, rpgAnalysis.HasErrors);
-    Equal("1.2.0", rpgProject.Version);
+    Equal("1.2.1", rpgProject.Version);
     Equal(15, rpgProject.CompilationSources.Count);
     Equal(true, SmileBuiltInLibraryCatalog.IsBuiltIn("Smile.RPG"));
     foreach (var module in new[] { "Smile.RPG.Core", "Smile.RPG.Characters", "Smile.RPG.Party",
@@ -4493,6 +4493,15 @@ Run("Smile.Game 2.0 value Types and Smile.RPG remain independent built-in source
         "Smile.RPG.BattleCore", "Smile.RPG.BattleStrategy", "Smile.RPG.BattleView", "Smile.RPG.Shops",
         "Smile.RPG.World", "Smile.RPG.Story", "Smile.RPG.Encounters", "Smile.RPG.SaveGames" })
         Equal(true, rpgAnalysis.SemanticModel.Modules.ContainsKey(module));
+    foreach (var module in rpgAnalysis.SemanticModel.Modules.Values)
+    {
+        Equal(true, rpgCompilation.DependencyContext.TryGetProviderDescriptor(module.ProviderIdentity,
+            out var rpgProvider));
+        Equal("Smile.RPG@1.2.1", rpgProvider.LogicalIdentity);
+    }
+    Equal(491, rpgAnalysis.SemanticModel.Modules.Values.Sum(module => module.PublicMembers.Count()));
+    Equal(false, rpgAnalysis.SemanticModel.NominalTypes.Values.Any(type =>
+        type is EnumTypeSymbol or ClassTypeSymbol));
     Equal(false, rpgProject.References.Any());
     Equal(false, rpgProject.CompilationSources.Any(source => File.ReadAllText(source.FullPath)
         .Contains("Game Window", StringComparison.OrdinalIgnoreCase)));

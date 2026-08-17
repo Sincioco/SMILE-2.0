@@ -1,5 +1,9 @@
 # Smile.RPG API
 
+Version 1.2.1 preserves the complete 1.2.0 module/handle surface in deterministic
+`.smilelib` format 6. SRPG save payload writing remains format 2 with format-1
+and format-2 reads.
+
 All IDs are caller-supplied stable positive Numbers. Invalid handles and arguments fail safely. Boolean mutations are atomic; shop and save operations return `RPG_RESULT_*` constants.
 
 ## `Smile.RPG.Core`
