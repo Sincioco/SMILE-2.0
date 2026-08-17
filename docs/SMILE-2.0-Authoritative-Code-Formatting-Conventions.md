@@ -1,6 +1,6 @@
 # SMILE 2.0 Authoritative Code Formatting Conventions
 
-Version: 2026-08-15
+Version: 2026-08-17
 Owner: Sin
 Authoritative implementation partner: Codex
 
@@ -39,8 +39,8 @@ Apply the style to new code and code being substantively edited or reorganized. 
 
 Use Visual Basic-style initial capitalization and readable BASIC conventions.
 
-- Write keywords as `Dim`, `As`, `If`, `Then`, `Else`, `End If`, `For`, `End For`, `Do`, `Loop`, `Sub`, `Function`, `Call`, and `Game Window`.
-- Use PascalCase for ordinary variables, parameters, routines, modules, and fields.
+- Write keywords as `Dim`, `As`, `If`, `Then`, `Else`, `End If`, `For`, `End For`, `Do`, `Loop`, `Sub`, `Function`, `Call`, `With`, `Enum`, `Type`, `Class`, `Property`, `Get`, `Set`, `Me`, `New`, `Nothing`, `Is Not`, `Optional`, and `Game Window`.
+- Use PascalCase for ordinary variables, parameters, routines, modules, fields, enum members, Types, and Classes.
 - Never write keywords, variables, or parameters in all uppercase.
 - Constants may remain uppercase, including `KEY_ENTER`, `KEY_ESCAPE`, and project constants such as `MAX_ITEMS`.
 - Preserve established brands and acronyms such as SMILE, UI, VSIX, API, and IDE.
@@ -167,6 +167,124 @@ Sub ResetGame()
 
 End Sub
 ```
+
+### Multiline declarations
+
+A routine declaration may continue across physical lines only while its parameter parentheses are balanced.
+
+- Keep a short declaration on one line when it remains readable.
+- For a multiline declaration, keep the opening `(` on the declaration line.
+- Put exactly one parameter on each following line, indented four spaces beyond the declaration.
+- Put a comma after every multiline parameter except the last one.
+- Put the closing `)` at the declaration's indentation level.
+- For a multiline `Function`, keep `As ReturnType` on the closing-parenthesis line.
+- Do not treat square brackets in an array declaration as a general line-continuation mechanism.
+
+```smile
+Function DescribeMove(
+    Direction As MoveDirection,
+    Optional Steps As Number = 1,
+    Optional Caption As Text = "Ready"
+) As Text
+
+    Dim ReturnValue As Text
+
+    ReturnValue = Caption
+
+    Return ReturnValue
+
+End Function
+```
+
+`Optional` parameters use the canonical form `Optional Name As Type = Default`. Required parameters precede Optional parameters, and Optional parameters are always `ByVal`; do not generate Optional `ByRef` parameters.
+
+Named arguments use `Name:=Expression` with no spaces around `:=`. Preserve the programmer's explicit argument order because SMILE evaluates explicit arguments exactly once in source order before arranging values into declaration and ABI order.
+
+```smile
+Call Present(Caption:="Named", Value:=1)
+```
+
+When a call is deliberately split across lines, use the same one-argument-per-line, four-space continuation, comma-between-arguments, and aligned-closing-parenthesis shape as a declaration.
+
+## With blocks
+
+- Write `With Expression` and `End With` at the same indentation level.
+- Indent the body four spaces.
+- Begin shorthand member access with exactly one leading dot and do not insert a space after it.
+- Indent nested `With` blocks normally; each leading-dot expression binds to its innermost active `With` target.
+- Use `With` when several nearby operations clearly share one Type location or Class object. Do not wrap a single ordinary member access merely to introduce the construct.
+
+```smile
+With SkinWindow
+    .UseSkin = True
+    .BorderThickness = 2
+
+    With .Padding
+        .Left = 34
+        .Top = 28
+    End With
+End With
+```
+
+## Enum, Type, and Class declarations
+
+- Put `Enum`, `Type`, and `Class` declarations at their surrounding indentation level, with `End Enum`, `End Type`, or `End Class` aligned to the declaration.
+- Indent every field, enum member, method, constructor, and Property four spaces inside its containing declaration.
+- Put one enum member on each line. Use `Name` or `Name = ConstantExpression` with one space on each side of `=`.
+- Group fields before routines and properties when practical. Separate the field group from the first routine or Property with one blank line.
+- Format Type/Class methods and Functions using the ordinary routine rules, including multiline declarations and computed Return handling.
+- Write a Class constructor as `Sub New(...)`; write instance access as `Me.Member`.
+- Write object creation as `New ClassName(...)` or `Dim Name As New ClassName(...)`.
+- Write identity checks as `Left Is Right` or `Left Is Not Right`; write the null reference literal as `Nothing`.
+
+```smile
+Enum MoveDirection
+    None
+    Up = 1
+    Down
+End Enum
+
+Class Counter
+
+    Private StoredValue As Number
+
+    Public Sub New(Optional Start As Number = 0)
+
+        Me.StoredValue = Start
+
+    End Sub
+
+    Public Property Total As Number
+
+        Get
+
+            Dim ReturnValue As Number
+
+            ReturnValue = Me.StoredValue
+
+            Return ReturnValue
+
+        End Get
+
+        Set
+
+            Me.StoredValue = Value
+
+        End Set
+
+    End Property
+
+End Class
+```
+
+### Properties
+
+- Align `Property` with other members of its Type or Class.
+- Indent `Get` and `Set` four spaces beyond `Property`; indent accessor bodies another four spaces.
+- Align `End Get` and `End Set` with their accessor keywords, and align `End Property` with `Property`.
+- A Property may contain `Get`, `Set`, or both. Keep `Get` before `Set` when both exist.
+- Treat `Value` as a PascalCase contextual setter local only inside `Set`; it is not a globally reserved identifier.
+- Apply the routine blank-line and computed Return rules to a getter. A setter follows ordinary Sub-style body spacing.
 
 ## Returning from functions
 
@@ -460,6 +578,9 @@ Before returning generated SMILE code, verify all of the following:
 - Call groups have correct surrounding spacing.
 - Play Sound groups have correct surrounding spacing and override compact branch spacing.
 - Functions directly return variables, constants, and literal values; computed or evaluated expressions are never returned directly and first go into named variables.
+- Multiline routine declarations use one parameter per line, commas after all but the final parameter, an aligned closing parenthesis, and `As ReturnType` on the closing line.
+- Optional parameters use `Optional Name As Type = Default`; named arguments use `Name:=Expression` without spaces and retain source order.
+- `With`, Enum, Type, Class, constructor, Property, `Me`, `Value`, `New`, `Nothing`, and `Is Not` layout follows the declaration and nesting rules above.
 - Routine declarations and endings have the required blank lines.
 - UI text uses title capitalization or normal sentence capitalization as appropriate.
 - Formatting did not alter program behavior.

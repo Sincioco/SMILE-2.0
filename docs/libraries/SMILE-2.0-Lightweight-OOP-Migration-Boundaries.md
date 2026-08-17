@@ -1,6 +1,6 @@
 # SMILE 2.0 Lightweight OOP Library Migration Boundaries
 
-**Status:** Approved library migration policy
+**Status:** Implemented lightweight-OOP migration policy
 
 ## Purpose
 
@@ -10,27 +10,26 @@ OOP is applied where it improves real call sites, not uniformly.
 
 # Smile.UI
 
-## Completed Migration
+## Current Result
 
-Current version:
+Current shipped version:
 
 ```text
-Smile.UI 1.1.3
+Smile.UI 2.0.0
 ```
 
-The current package uses generation-safe handle engines for Menu, MenuNavigator, Dialogue, and other resources.
+The package retains generation-safe handle engines internally while exposing Class façades for Menu, MenuNavigator, and Dialogue. Window and Text remain service Modules, and style/configuration records remain Types.
 
-## Approved Migration
+## Applied Migration
 
-- keep style/configuration records as Types;
-- use `With` for repeated style setup;
-- expose Menu as a Class façade over the existing handle engine;
-- use constructor, instance methods, properties, optional/named arguments;
-- expose explicit idempotent `Destroy()` for the underlying slot resource;
-- prefer one spanning `Smile.UI.Menu` Module for Menu and MenuNavigator Classes/private helpers;
-- migrate Dialogue only as a small façade;
-- keep Window/Text service Modules;
-- review BitmapFont separately rather than forcing migration.
+- style/configuration records remain Types;
+- repeated style setup uses `With` where it improves readability;
+- Menu is a Class façade over the existing handle engine;
+- constructors, instance methods, properties, and optional/named arguments form the public object API;
+- explicit `Destroy()` is idempotent for the underlying slot resource;
+- one spanning `Smile.UI.Menu` Module lets the Menu and MenuNavigator Classes share private helpers;
+- Dialogue is a small Class façade;
+- Window, Text, and BitmapFont remain service/handle Modules.
 
 ## Final Public Shape
 
@@ -54,13 +53,13 @@ RootMenu.SelectedIndex = StartIndex
 
 ## Version
 
-Recommended:
+Shipped:
 
 ```text
 Smile.UI 2.0.0
 ```
 
-Remove/privatize old procedural public APIs after all repository consumers migrate.
+Obsolete procedural Menu, MenuNavigator, and Dialogue entry points and raw-handle queries are no longer part of the public surface. Repository consumers use the Class façades, while explicit `Destroy()` remains idempotent for the bounded underlying resources.
 
 # Smile.Game
 
@@ -106,13 +105,13 @@ Shipped:
 Smile.Game 2.0.0
 ```
 
-Update every world/dungeon/battle gallery and project/package consumer.
+Every world/dungeon/battle gallery and project/package consumer uses the migrated API.
 
 # Smile.RPG
 
 ## Current Baseline
 
-Current reviewed version:
+Current shipped version:
 
 ```text
 Smile.RPG 1.2.1
@@ -120,17 +119,17 @@ Smile.RPG 1.2.1
 
 The package contains fifteen bounded, generation-safe, transactional Modules covering management, world, story, encounters, saves, and battles.
 
-## Approved Migration
+## Applied Compatibility Migration
 
 Do not redesign the public API during the lightweight OOP milestone.
 
-Required only:
+The applied compatibility work:
 
-- compile under the new language implementation;
-- rebuild as `.smilelib` format 6;
-- preserve every public module/signature/result code;
-- preserve all transactional/query/rollback/invariant behavior;
-- run all current native/Web/project/package/galleries/tests.
+- compiles under the new language implementation;
+- rebuilds as `.smilelib` format 6;
+- preserves every public module, signature, and result code;
+- preserves all transactional, query, rollback, and invariant behavior;
+- passes the current native, Web, project, package, gallery, and rollback matrix.
 
 Do not:
 
@@ -147,7 +146,7 @@ Shipped package-only patch:
 Smile.RPG 1.2.1
 ```
 
-Adjust if the current version advances before implementation.
+The fifteen-Module source API is unchanged from 1.2.0; 1.2.1 is the deterministic format-6 compatibility package.
 
 # `.smilelib` Format
 
@@ -178,7 +177,7 @@ Application-local Modules remain valid even when Classes exist.
 - private assets/state;
 - public lifecycle/input/draw routines.
 
-It should remain a Module. Its action constants may become an enum.
+It remains a Module. Its public `TitleAction` enum now gives the title selection, update result, and main scene dispatcher one exact nominal action type without forcing the custom screen through the generic Menu Class.
 
 # Decision Guide
 
