@@ -210,7 +210,8 @@ internal sealed class Parser
         _instanceDeclarationDepth++;
         try
         {
-            while (Current.Kind != SyntaxKind.EndOfFileToken && !IsEndPair(SyntaxKind.TypeKeyword))
+            while (Current.Kind != SyntaxKind.EndOfFileToken && !IsEndPair(SyntaxKind.TypeKeyword) &&
+                   !IsNominalDeclarationRecoveryBoundary())
             {
                 if (Current.Kind == SyntaxKind.NewLineToken)
                 {
@@ -288,9 +289,24 @@ internal sealed class Parser
         {
             _instanceDeclarationDepth--;
         }
-        var end = MatchToken(SyntaxKind.EndKeyword);
-        var finalType = MatchToken(SyntaxKind.TypeKeyword);
-        ConsumeLineEnd();
+        if (Current.Kind == SyntaxKind.DimKeyword)
+            _diagnostics.Report("SML3403", Current.Span,
+                "Type fields do not use Dim; End Type may be missing before this declaration.");
+        SyntaxToken end;
+        SyntaxToken finalType;
+        if (IsEndPair(SyntaxKind.TypeKeyword))
+        {
+            end = NextToken();
+            finalType = NextToken();
+            ConsumeLineEnd();
+        }
+        else
+        {
+            _diagnostics.Report("SML2001", Current.Span,
+                $"Expected End Type before '{Display(Current)}'.");
+            end = new SyntaxToken(SyntaxKind.EndKeyword, Current.Position, string.Empty);
+            finalType = new SyntaxToken(SyntaxKind.TypeKeyword, Current.Position, string.Empty);
+        }
         return new TypeDeclarationSyntax(typeKeyword, identifier, members, end, finalType);
     }
 
@@ -303,7 +319,8 @@ internal sealed class Parser
         _instanceDeclarationDepth++;
         try
         {
-            while (Current.Kind != SyntaxKind.EndOfFileToken && !IsEndPair(SyntaxKind.ClassKeyword))
+            while (Current.Kind != SyntaxKind.EndOfFileToken && !IsEndPair(SyntaxKind.ClassKeyword) &&
+                   !IsNominalDeclarationRecoveryBoundary())
             {
                 if (Current.Kind == SyntaxKind.NewLineToken)
                 {
@@ -383,10 +400,25 @@ internal sealed class Parser
         {
             _instanceDeclarationDepth--;
         }
+        if (Current.Kind == SyntaxKind.DimKeyword)
+            _diagnostics.Report("SML3450", Current.Span,
+                "Class fields do not use Dim; End Class may be missing before this declaration.");
 
-        var end = MatchToken(SyntaxKind.EndKeyword);
-        var finalClass = MatchToken(SyntaxKind.ClassKeyword);
-        ConsumeLineEnd();
+        SyntaxToken end;
+        SyntaxToken finalClass;
+        if (IsEndPair(SyntaxKind.ClassKeyword))
+        {
+            end = NextToken();
+            finalClass = NextToken();
+            ConsumeLineEnd();
+        }
+        else
+        {
+            _diagnostics.Report("SML2001", Current.Span,
+                $"Expected End Class before '{Display(Current)}'.");
+            end = new SyntaxToken(SyntaxKind.EndKeyword, Current.Position, string.Empty);
+            finalClass = new SyntaxToken(SyntaxKind.ClassKeyword, Current.Position, string.Empty);
+        }
         return new ClassDeclarationSyntax(classKeyword, identifier, members, end, finalClass);
     }
 
@@ -478,7 +510,8 @@ internal sealed class Parser
         var identifier = MatchIdentifier();
         ConsumeLineEnd();
         var members = new List<EnumMemberDeclarationSyntax>();
-        while (Current.Kind != SyntaxKind.EndOfFileToken && !IsEndPair(SyntaxKind.EnumKeyword))
+        while (Current.Kind != SyntaxKind.EndOfFileToken && !IsEndPair(SyntaxKind.EnumKeyword) &&
+               !IsEnumDeclarationRecoveryBoundary())
         {
             if (Current.Kind == SyntaxKind.NewLineToken)
             {
@@ -512,9 +545,21 @@ internal sealed class Parser
             }
             members.Add(new EnumMemberDeclarationSyntax(member, equals, value));
         }
-        var end = MatchToken(SyntaxKind.EndKeyword);
-        var finalEnum = MatchToken(SyntaxKind.EnumKeyword);
-        ConsumeLineEnd();
+        SyntaxToken end;
+        SyntaxToken finalEnum;
+        if (IsEndPair(SyntaxKind.EnumKeyword))
+        {
+            end = NextToken();
+            finalEnum = NextToken();
+            ConsumeLineEnd();
+        }
+        else
+        {
+            _diagnostics.Report("SML2001", Current.Span,
+                $"Expected End Enum before '{Display(Current)}'.");
+            end = new SyntaxToken(SyntaxKind.EndKeyword, Current.Position, string.Empty);
+            finalEnum = new SyntaxToken(SyntaxKind.EnumKeyword, Current.Position, string.Empty);
+        }
         return new EnumDeclarationSyntax(enumKeyword, identifier, members, end, finalEnum);
     }
 
@@ -600,10 +645,22 @@ internal sealed class Parser
         var withKeyword = MatchToken(SyntaxKind.WithKeyword);
         var target = ParseExpression();
         ConsumeLineEnd();
-        var statements = ParseStatementsUntil(() => IsEndPair(SyntaxKind.WithKeyword));
-        var endKeyword = MatchToken(SyntaxKind.EndKeyword);
-        var finalWithKeyword = MatchToken(SyntaxKind.WithKeyword);
-        ConsumeLineEnd();
+        var statements = ParseStatementsUntil(() => IsEndPair(SyntaxKind.WithKeyword) || IsWithRecoveryBoundary());
+        SyntaxToken endKeyword;
+        SyntaxToken finalWithKeyword;
+        if (IsEndPair(SyntaxKind.WithKeyword))
+        {
+            endKeyword = NextToken();
+            finalWithKeyword = NextToken();
+            ConsumeLineEnd();
+        }
+        else
+        {
+            _diagnostics.Report("SML2001", Current.Span,
+                $"Expected End With before '{Display(Current)}'.");
+            endKeyword = new SyntaxToken(SyntaxKind.EndKeyword, Current.Position, string.Empty);
+            finalWithKeyword = new SyntaxToken(SyntaxKind.WithKeyword, Current.Position, string.Empty);
+        }
         return new WithStatementSyntax(withKeyword, target, statements, endKeyword, finalWithKeyword);
     }
 
@@ -1612,6 +1669,24 @@ internal sealed class Parser
 
     private bool IsEndContextualPair(string text) => Current.Kind == SyntaxKind.EndKeyword &&
         IsContextualText(Peek(1), text);
+
+    private bool IsNominalDeclarationRecoveryBoundary() => Current.Kind is
+            SyntaxKind.OptionKeyword or SyntaxKind.ModuleKeyword or SyntaxKind.ImportKeyword or
+            SyntaxKind.ConstKeyword or SyntaxKind.TypeKeyword or SyntaxKind.ClassKeyword or
+            SyntaxKind.EnumKeyword or SyntaxKind.DimKeyword or SyntaxKind.GameKeyword ||
+        IsEndPair(SyntaxKind.ModuleKeyword) || IsEndPair(SyntaxKind.ProgramKeyword);
+
+    private bool IsEnumDeclarationRecoveryBoundary() => IsNominalDeclarationRecoveryBoundary() ||
+        Current.Kind is SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.SubKeyword or
+            SyntaxKind.FunctionKeyword;
+
+    private bool IsWithRecoveryBoundary() => Current.Kind is SyntaxKind.ElseKeyword or SyntaxKind.CaseKeyword or
+            SyntaxKind.LoopKeyword ||
+        (Current.Kind == SyntaxKind.EndKeyword && Peek(1).Kind is
+            SyntaxKind.ModuleKeyword or SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword or SyntaxKind.IfKeyword or
+            SyntaxKind.ForKeyword or SyntaxKind.SelectKeyword or SyntaxKind.TypeKeyword or SyntaxKind.ClassKeyword or
+            SyntaxKind.GetKeyword or SyntaxKind.SetKeyword) ||
+        IsEndContextualPair("Property");
 
     private bool IsInstanceMemberStart()
     {

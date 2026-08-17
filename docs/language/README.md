@@ -106,6 +106,8 @@ End Function
 
 The parser and semantic model retain each token's original physical source position. Diagnostics therefore point to the actual parameter line: for example, a missing comma is reported at the following parameter, while a missing `)` is reported at the first token that cannot belong to the declaration. CRLF and LF sources preserve the same physical line and column meanings.
 
+Recovery from an incomplete lightweight-OOP block is bounded by the next unambiguous declaration or executable-statement boundary. A missing `End Enum`, `End Type`, `End Class`, `End Property`, accessor terminator, or `End With` therefore produces a precise diagnostic without consuming later top-level declarations. Malformed constructors, Properties, accessors, multiline Optional parameters, named arguments, `New`, and `Is Not` expressions likewise resume at the nearest safe line boundary; every recovery diagnostic retains a valid span within the physical source.
+
 Declaration parentheses do not make the rest of SMILE free-form. Placing `(` on the next line, placing a Function's return `As Type` below `)`, or continuing an unparenthesized declaration remains invalid. Square brackets also retain their existing behavior: `[` alone never opens a continuation context, so array dimensions and indices do not become multiline merely because they are bracketed.
 
 ## Record types

@@ -52,6 +52,41 @@ Run("Comment Selection with an empty selection comments the caret line", () =>
         SmileCommentService.GetEdits(source, caret, 0, SmileCommentMode.Comment));
     Equal("Dim A As Number\n    'Dim B As Number\n", result);
 });
+Run("Comment commands round-trip complete and partial lightweight OOP block selections", () =>
+{
+    const string source = "Class Paladin\n" +
+                          "    Public Sub New(Optional Rank As Number = 1)\n" +
+                          "        Me.Level = Rank\n" +
+                          "    End Sub\n" +
+                          "    Public Property Power As Number\n" +
+                          "        Get\n" +
+                          "            Return Me.Level\n" +
+                          "        End Get\n" +
+                          "    End Property\n" +
+                          "End Class\n";
+    var selectionStart = source.IndexOf("Public Sub", StringComparison.Ordinal) + 3;
+    var selectionEnd = source.IndexOf("End Property", StringComparison.Ordinal) + "End Prop".Length;
+    var commented = ApplyCommentEdits(source, SmileCommentService.GetEdits(source, selectionStart,
+        selectionEnd - selectionStart, SmileCommentMode.Comment));
+    Equal(true, commented.StartsWith("Class Paladin\n", StringComparison.Ordinal));
+    Equal(true, commented.Contains("    'Public Sub New", StringComparison.Ordinal));
+    Equal(true, commented.Contains("    'End Property", StringComparison.Ordinal));
+    Equal(true, commented.EndsWith("End Class\n", StringComparison.Ordinal));
+
+    var commentedStart = commented.IndexOf("Public Sub", StringComparison.Ordinal) + 2;
+    var commentedEnd = commented.IndexOf("End Property", StringComparison.Ordinal) + "End Proper".Length;
+    var restored = ApplyCommentEdits(commented, SmileCommentService.GetEdits(commented, commentedStart,
+        commentedEnd - commentedStart, SmileCommentMode.Uncomment));
+    Equal(source, restored);
+
+    var toggled = ApplyCommentEdits(source, SmileCommentService.GetEdits(source, selectionStart,
+        selectionEnd - selectionStart, SmileCommentMode.Toggle));
+    var toggleStart = toggled.IndexOf("Public Sub", StringComparison.Ordinal) + 1;
+    var toggleEnd = toggled.IndexOf("End Property", StringComparison.Ordinal) + "End Property".Length;
+    var toggledBack = ApplyCommentEdits(toggled, SmileCommentService.GetEdits(toggled, toggleStart,
+        toggleEnd - toggleStart, SmileCommentMode.Toggle));
+    Equal(source, toggledBack);
+});
 Run("Unknown backend reports a clear diagnostic", () => Throws(
     () => Parse("<PropertyGroup><GraphicsBackend>Vulkan</GraphicsBackend></PropertyGroup>"),
     "Unknown GraphicsBackend value 'Vulkan'. Expected Auto, GDI, or DirectX."));
@@ -2382,6 +2417,193 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
         var packageSignature = AnalyzeConsumer("package-consumer",
             $"<SmileLibraryReference Include=\"{packageReference}\" />", packageReference: true);
         Equal(projectSignature, packageSignature);
+    }
+    finally { Directory.Delete(directory, true); }
+});
+Run("FormatVersion 6 rejects the dedicated malformed and tampered package matrix", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileFormat6TamperTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var projectPath = Path.GetFullPath("examples/LightweightOopCalls/LightweightOopLibrary.smilelibproj");
+        var compilation = SmileProjectCompilation.Load(projectPath, Path.Combine(directory, "build-cache"));
+        var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library,
+            compilation.DependencyContext);
+        Equal(false, analysis.HasErrors);
+        var baseline = Path.Combine(directory, "baseline.smilelib");
+        SmileLibraryPackage.Write(baseline, compilation.Graph.Root, analysis);
+
+        void RebuildArchive(string outputPath, Func<string, string?> mapName,
+            Action<System.IO.Compression.ZipArchive>? append = null)
+        {
+            using var source = System.IO.Compression.ZipFile.OpenRead(baseline);
+            using var output = System.IO.Compression.ZipFile.Open(outputPath,
+                System.IO.Compression.ZipArchiveMode.Create);
+            foreach (var sourceEntry in source.Entries)
+            {
+                var name = mapName(sourceEntry.FullName);
+                if (name == null)
+                    continue;
+                var outputEntry = output.CreateEntry(name, System.IO.Compression.CompressionLevel.NoCompression);
+                using var inputStream = sourceEntry.Open();
+                using var outputStream = outputEntry.Open();
+                inputStream.CopyTo(outputStream);
+            }
+            append?.Invoke(output);
+        }
+
+        void AssertEnvelope(string name, Func<string, string?> mapName,
+            Action<System.IO.Compression.ZipArchive>? append, string expected)
+        {
+            var package = Path.Combine(directory, name + ".smilelib");
+            RebuildArchive(package, mapName, append);
+            ThrowsContains(() => SmileLibraryPackage.Read(package, Path.Combine(directory, name + "-cache")), expected);
+        }
+
+        AssertEnvelope("missing-manifest", entry => entry == "manifest.json" ? null : entry, null,
+            "missing manifest.json");
+        AssertEnvelope("missing-api", entry => entry == "api/public-symbols.json" ? null : entry, null,
+            "missing api/public-symbols.json");
+        AssertEnvelope("duplicate-entry", entry => entry, archive =>
+        {
+            using var writer = new StreamWriter(archive.CreateEntry("manifest.json").Open());
+            writer.Write("{}");
+        }, "Duplicate SMILE library archive entry");
+        AssertEnvelope("unexpected-payload", entry => entry, archive =>
+        {
+            using var writer = new StreamWriter(archive.CreateEntry("bin/native.exe").Open());
+            writer.Write("payload");
+        }, "Unexpected executable or package payload entry");
+        AssertEnvelope("unsafe-traversal", entry => entry, archive =>
+        {
+            using var writer = new StreamWriter(archive.CreateEntry("src/../escape.smile").Open());
+            writer.Write("Module Escape\nEnd Module\n");
+        }, "Unsafe SMILE library archive path");
+        AssertEnvelope("absolute-source", entry => entry == "src/Library/Api.smile"
+                ? "C:/cache/Api.smile"
+                : entry,
+            null, "Unsafe SMILE library archive path");
+        AssertEnvelope("nonnormal-source", entry => entry == "src/Library/Api.smile"
+                ? "src//Api.smile"
+                : entry,
+            null, "Unsafe SMILE library archive path");
+
+        var unsupported = Path.Combine(directory, "unsupported-format.smilelib");
+        File.Copy(baseline, unsupported);
+        RewriteManifest(unsupported, text => ReplaceOnce(text, "\"formatVersion\": 6", "\"formatVersion\": 5"));
+        ThrowsContains(() => SmileLibraryPackage.Read(unsupported, Path.Combine(directory, "unsupported-cache")),
+            "no longer supported");
+
+        var wrongProvider = Path.Combine(directory, "wrong-provider.smilelib");
+        File.Copy(baseline, wrongProvider);
+        RewriteManifest(wrongProvider, text => ReplaceOnce(text,
+            "Smile.Lightweight.Oop.Proof@1.2.0", "Smile.Lightweight.Oop.Proof@9.9.9"));
+        ThrowsContains(() => SmileLibraryPackage.Read(wrongProvider, Path.Combine(directory, "provider-cache")),
+            "canonical identity");
+
+        var badHash = Path.Combine(directory, "bad-source-hash.smilelib");
+        File.Copy(baseline, badHash);
+        RewritePackageTextEntry(badHash, "src/Library/Api.smile", text => text + "\n' tampered\n");
+        ThrowsContains(() => SmileLibraryPackage.Read(badHash, Path.Combine(directory, "hash-cache")),
+            "source hash is invalid");
+
+        var mutations = new (string Name, string OldText, string NewText)[]
+        {
+            ("api-library-identity", "\"name\": \"Smile.Lightweight.Oop.Proof\", \"version\": \"1.2.0\"",
+                "\"name\": \"Foreign.Proof\", \"version\": \"1.2.0\""),
+            ("undeclared-provider", "\"provider\": \"Smile.Lightweight.Oop.Proof@1.2.0\"",
+                "\"provider\": \"Undeclared.Provider@1.0.0\""),
+            ("transitive-provider-as-direct", "Smile.Lightweight.Oop.Proof::Counter\", \"module\"",
+                "Transitive.Base::Counter\", \"module\""),
+            ("absolute-api-source", "\"source\": \"src/Library/Api.smile\"",
+                "\"source\": \"C:/cache/Api.smile\""),
+            ("extraction-cache-source", "\"source\": \"src/Library/Api.smile\"",
+                "\"source\": \"src/obj/packages/cache/Api.smile\""),
+            ("nonnormal-api-source", "\"source\": \"src/Library/Api.smile\"",
+                "\"source\": \"src/Library/../Api.smile\""),
+            ("outside-package-source", "\"source\": \"src/Library/Api.smile\"",
+                "\"source\": \"src/Missing.smile\""),
+            ("line-out-of-range", "\"line\": 29, \"column\": 5", "\"line\": 99999, \"column\": 5"),
+            ("column-out-of-range", "\"line\": 29, \"column\": 5", "\"line\": 29, \"column\": 99999"),
+
+            ("enum-duplicate-member", "\"name\": \"CompactAlias\", \"value\": 2",
+                "\"name\": \"Compact\", \"value\": 2"),
+            ("enum-malformed-signed-value", "\"name\": \"Standard\", \"value\": 1",
+                "\"name\": \"Standard\", \"value\": \"-1x\""),
+            ("enum-containing-identity", "Smile.Lightweight.Oop.Proof::DisplayMode\", \"module\"",
+                "Smile.Lightweight.Oop.Proof::OtherMode\", \"module\""),
+            ("enum-noncanonical-order", "\"name\": \"Standard\", \"value\": 1, \"ordinal\": 0",
+                "\"name\": \"Standard\", \"value\": 1, \"ordinal\": 2"),
+            ("enum-default-missing-member", "\"kind\": \"enum\", \"member\": \"Standard\", \"value\": 1",
+                "\"kind\": \"enum\", \"member\": \"Missing\", \"value\": 1"),
+            ("enum-default-value-mismatch", "\"kind\": \"enum\", \"member\": \"CompactAlias\", \"value\": 2",
+                "\"kind\": \"enum\", \"member\": \"CompactAlias\", \"value\": 99"),
+
+            ("type-duplicate-field", "\"name\": \"StoredValue\", \"visibility\": \"Public\"",
+                "\"name\": \"Label\", \"visibility\": \"Public\""),
+            ("type-field-ordinal", "\"ordinal\": 1, \"offset\": 8", "\"ordinal\": 7, \"offset\": 8"),
+            ("type-field-offset", "\"ordinal\": 1, \"offset\": 8", "\"ordinal\": 1, \"offset\": 9"),
+            ("type-size", "\"provider\": \"Smile.Lightweight.Oop.Proof@1.2.0\", \"size\": 32",
+                "\"provider\": \"Smile.Lightweight.Oop.Proof@1.2.0\", \"size\": 40"),
+            ("type-method-containing-type", "Counter::member::Configure", "CounterBox::member::Configure"),
+            ("type-private-member-leak", "\"name\": \"Advance\", \"kind\": \"Subroutine\"",
+                "\"name\": \"Hide\", \"kind\": \"Subroutine\""),
+            ("type-hidden-me-parameter", "\"name\": \"Delta\", \"type\": {\"kind\": \"primitive\", \"name\": \"Number\"}",
+                "\"name\": \"Me\", \"type\": {\"kind\": \"primitive\", \"name\": \"Number\"}"),
+            ("property-missing-getter", "\"get\": {\"identity\": \"Smile.Lightweight.Oop.Proof::Counter::property::Caption::get\"",
+                "\"missingGet\": {\"identity\": \"Smile.Lightweight.Oop.Proof::Counter::property::Caption::get\""),
+            ("property-missing-setter", "\"set\": {\"identity\": \"Smile.Lightweight.Oop.Proof::Counter::property::Total::set\"",
+                "\"missingSet\": {\"identity\": \"Smile.Lightweight.Oop.Proof::Counter::property::Total::set\""),
+            ("property-capability", "Counter::property::GameProbe::get\", \"requiresGameWindow\": true",
+                "Counter::property::GameProbe::get\", \"requiresGameWindow\": false"),
+
+            ("class-missing-constructor", "\"constructor\": {\"identity\": \"Smile.Lightweight.Oop.Proof::ReferenceCounter::constructor::New\"",
+                "\"missingConstructor\": {\"identity\": \"Smile.Lightweight.Oop.Proof::ReferenceCounter::constructor::New\""),
+            ("class-duplicate-constructor", "\"constructor\": {\"identity\": \"Smile.Lightweight.Oop.Proof::ReferenceCounter::constructor::New\"",
+                "\"constructor\": null, \"constructor\": {\"identity\": \"Smile.Lightweight.Oop.Proof::ReferenceCounter::constructor::New\""),
+            ("class-implicit-constructor", "EmptyReference::constructor::New\", \"visibility\": \"Public\", \"declared\": false",
+                "EmptyReference::constructor::New\", \"visibility\": \"Public\", \"declared\": true"),
+            ("class-field-layout", "\"dimensions\": [2], \"ordinal\": 1", "\"dimensions\": [3], \"ordinal\": 1"),
+            ("class-private-member-leak", "\"name\": \"Snapshot\", \"kind\": \"Function\"",
+                "\"name\": \"Hide\", \"kind\": \"Function\""),
+            ("class-hidden-me-parameter", "\"name\": \"Label\", \"type\": {\"kind\": \"primitive\", \"name\": \"Text\"}, \"mode\": \"ByVal\"",
+                "\"name\": \"Me\", \"type\": {\"kind\": \"primitive\", \"name\": \"Text\"}, \"mode\": \"ByVal\""),
+            ("class-setter-value-parameter", "ReferenceCounter::property::Total::set\", \"requiresGameWindow\": false",
+                "ReferenceCounter::property::Total::set\", \"parameters\": [{\"name\": \"Value\"}], \"requiresGameWindow\": false"),
+            ("class-runtime-identity-collision", "ReferenceCounter::member::Snapshot", "ReferenceCounter::member::Alias"),
+            ("class-wrong-declaration-kind", "\"name\": \"ReferenceCounter\", \"kind\": \"Class\"",
+                "\"name\": \"ReferenceCounter\", \"kind\": \"Type\""),
+            ("class-reference-field", "\"name\": \"Code\", \"visibility\": \"Public\", \"type\": {\"kind\": \"primitive\", \"name\": \"Number\"}",
+                "\"name\": \"Code\", \"visibility\": \"Public\", \"type\": {\"kind\": \"class\", \"name\": \"ReferenceCounter\"}"),
+
+            ("optional-required-after-optional", "\"name\": \"Enabled\", \"type\": {\"kind\": \"primitive\", \"name\": \"Boolean\"}, \"mode\": \"ByVal\", \"optional\": true",
+                "\"name\": \"Enabled\", \"type\": {\"kind\": \"primitive\", \"name\": \"Boolean\"}, \"mode\": \"ByVal\", \"optional\": false"),
+            ("optional-byref", "\"name\": \"Start\", \"type\": {\"kind\": \"primitive\", \"name\": \"Number\"}, \"mode\": \"ByVal\", \"optional\": true",
+                "\"name\": \"Start\", \"type\": {\"kind\": \"primitive\", \"name\": \"Number\"}, \"mode\": \"ByRef\", \"optional\": true"),
+            ("optional-default-type", "\"default\": {\"kind\": \"number\", \"value\": 0}, \"ordinal\": 1",
+                "\"default\": {\"kind\": \"text\", \"value\": \"zero\"}, \"ordinal\": 1"),
+            ("optional-default-missing", "\"optional\": true, \"default\": {\"kind\": \"number\", \"value\": 1}",
+                "\"optional\": true, \"default\": null"),
+            ("optional-text-encoding", "\"kind\": \"text\", \"value\": \"!\"",
+                "\"kind\": \"text\", \"value\": \"\\uD800\""),
+            ("optional-unsafe-web-number", "\"kind\": \"number\", \"value\": 3",
+                "\"kind\": \"number\", \"value\": 9007199254740992"),
+            ("parameter-name-mismatch", "\"name\": \"Copies\", \"type\": {\"kind\": \"primitive\", \"name\": \"Number\"}",
+                "\"name\": \"CopyCount\", \"type\": {\"kind\": \"primitive\", \"name\": \"Number\"}"),
+            ("parameter-order-mismatch", "\"name\": \"Copies\", \"type\": {\"kind\": \"primitive\", \"name\": \"Number\"}, \"mode\": \"ByVal\", \"optional\": true, \"default\": {\"kind\": \"number\", \"value\": 3}, \"ordinal\": 1",
+                "\"name\": \"Copies\", \"type\": {\"kind\": \"primitive\", \"name\": \"Number\"}, \"mode\": \"ByVal\", \"optional\": true, \"default\": {\"kind\": \"number\", \"value\": 3}, \"ordinal\": 9")
+        };
+
+        foreach (var mutation in mutations)
+        {
+            var package = Path.Combine(directory, mutation.Name + ".smilelib");
+            File.Copy(baseline, package);
+            RewritePackageTextEntry(package, "api/public-symbols.json", text =>
+                ReplaceOnce(text, mutation.OldText, mutation.NewText));
+            ThrowsProjectDiagnostic(() => SmileLibraryPackage.Read(package,
+                Path.Combine(directory, mutation.Name + "-cache")), "SML3207");
+        }
     }
     finally { Directory.Delete(directory, true); }
 });
@@ -4839,6 +5061,50 @@ Run("VSIX registers SMILE line comments with the Visual Studio editor", () =>
     Equal(true, handler.Contains("CommandState.Available", StringComparison.Ordinal));
 });
 
+Run("VSIX completion Quick Info and definition share one unchanged-snapshot analysis cache", () =>
+{
+    foreach (var file in new[]
+             {
+                 "src/Smile.VisualStudio/SmileCompletionSource.cs",
+                 "src/Smile.VisualStudio/SmileQuickInfoSource.cs",
+                 "src/Smile.VisualStudio/SmileGoToDefinitionCommandHandler.cs"
+             })
+    {
+        var source = File.ReadAllText(file);
+        Equal(true, source.Contains("GetOrCreateSingletonProperty", StringComparison.Ordinal));
+        Equal(true, source.Contains("TryGet(", StringComparison.Ordinal));
+        Equal(true, source.IndexOf("TryGet(", StringComparison.Ordinal) <
+                    source.IndexOf("SmileProjectWorkspace.Analyze", StringComparison.Ordinal));
+    }
+    var cache = File.ReadAllText("src/Smile.VisualStudio/SmileAnalysisCache.cs");
+    Equal(true, cache.Contains("ReferenceEquals(snapshot, _snapshot)", StringComparison.Ordinal));
+    Equal(true, cache.Contains("ReferenceEquals(snapshot, _buffer.CurrentSnapshot)", StringComparison.Ordinal));
+});
+
+Run("Property Quick Info is static and never executes the getter", () =>
+{
+    const string source = "Type Meter\nStored As Number\nProperty Reading As Number\nGet\nPrint \"GETTER EXECUTED\"\nReturn Me.Stored\nEnd Get\nEnd Property\nEnd Type\nDim Current As Meter\nPrint Current.Reading\n";
+    var output = new StringWriter();
+    var original = Console.Out;
+    SmileResolvedSymbol resolved;
+    SmileSymbolPresentation presentation;
+    try
+    {
+        Console.SetOut(output);
+        var analysis = Analyze(source);
+        var position = source.LastIndexOf("Reading", StringComparison.Ordinal);
+        Equal(true, SmileSymbolService.TryResolve(analysis, analysis.SyntaxTree, position + 1, out resolved));
+        presentation = SmileSymbolDisplayService.Present(resolved,
+            SmileCompilationDependencyContext.Create());
+    }
+    finally
+    {
+        Console.SetOut(original);
+    }
+    Equal(string.Empty, output.ToString());
+    Equal("Property Meter.Reading As Number { Get }", presentation.Signature);
+});
+
 Run("VSIX project builds release the Visual Studio UI thread while the compiler runs", () =>
 {
     var projectSystem = File.ReadAllText("src/Smile.VisualStudio/SmileProjectSystem.cs");
@@ -5355,6 +5621,58 @@ Run("Class diagnostics enforce scalar reference storage constructor and identity
     }
 });
 
+Run("Lightweight OOP parser recovery remains bounded and preserves later declarations", () =>
+{
+    var cases = new (string Name, string Source)[]
+    {
+        ("missing End With",
+            "Type Item\nValue As Number\nEnd Type\nDim Current As Item\nSub Broken()\nWith Current\nPrint .Value\nEnd Sub\nDim Later As Number\n"),
+        ("extra End With", "End With\nDim Later As Number\n"),
+        ("missing End Enum", "Enum Broken\nOne\nDim Later As Number\n"),
+        ("malformed enum initializer", "Enum Broken\nOne = )\nEnd Enum\nDim Later As Number\n"),
+        ("missing End Type", "Type Broken\nValue As Number\nDim Later As Number\n"),
+        ("missing End Class", "Class Broken\nValue As Number\nDim Later As Number\n"),
+        ("malformed Sub New",
+            "Class Broken\nSub New(\nOptional Start As Number = 1\nValue As Number\nEnd Class\nDim Later As Number\n"),
+        ("duplicate constructor",
+            "Class Broken\nSub New()\nEnd Sub\nSub New()\nEnd Sub\nEnd Class\nDim Later As Number\n"),
+        ("missing End Property",
+            "Type Broken\nValue As Number\nProperty Score As Number\nGet\nReturn Me.Value\nEnd Get\nNextValue As Number\nEnd Type\nDim Later As Number\n"),
+        ("missing End Get",
+            "Type Broken\nValue As Number\nProperty Score As Number\nGet\nReturn Me.Value\nSet\nMe.Value = Value\nEnd Set\nEnd Property\nEnd Type\nDim Later As Number\n"),
+        ("missing End Set",
+            "Type Broken\nValue As Number\nProperty Score As Number\nSet\nMe.Value = Value\nEnd Property\nEnd Type\nDim Later As Number\n"),
+        ("Value outside setter",
+            "Type Broken\nValue As Number\nSub Work()\nPrint Value\nEnd Sub\nEnd Type\nDim Later As Number\n"),
+        ("malformed Is Not",
+            "Class Item\nEnd Class\nDim First As Item\nDim Result As Boolean\nResult = First Is Not\nDim Later As Number\n"),
+        ("malformed New", "Class Item\nEnd Class\nDim First As Item\nFirst = New ()\nDim Later As Number\n"),
+        ("missing multiline Optional comma",
+            "Sub Broken(\nOptional First As Number = 1\nOptional Second As Number = 2\n)\nEnd Sub\nDim Later As Number\n"),
+        ("missing multiline declaration close",
+            "Sub Broken(\nOptional First As Number = 1\nPrint First\nEnd Sub\nDim Later As Number\n"),
+        ("malformed named argument",
+            "Sub Work(Value As Number)\nEnd Sub\nCall Work(Value:=)\nDim Later As Number\n"),
+        ("positional after named argument",
+            "Sub Work(First As Number, Second As Number)\nEnd Sub\nCall Work(First:=1, 2)\nDim Later As Number\n")
+    };
+
+    foreach (var (name, source) in cases)
+    {
+        var analysis = Analyze(source);
+        if (!analysis.Diagnostics.Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
+            throw new InvalidOperationException($"Parser recovery fixture '{name}' produced no error.");
+        if (!analysis.SyntaxTree.Root.Statements.OfType<DimStatementSyntax>()
+                .Any(dim => dim.Identifier.Text == "Later"))
+            throw new InvalidOperationException($"Parser recovery fixture '{name}' swallowed the later declaration.");
+        foreach (var diagnostic in analysis.Diagnostics)
+        {
+            if (diagnostic.Span.Start < 0 || diagnostic.Span.End > source.Length)
+                throw new InvalidOperationException($"Parser recovery fixture '{name}' produced an invalid span.");
+        }
+    }
+});
+
 if (failures.Count != 0)
 {
     Console.Error.WriteLine($"{failures.Count} SMILE project-option test(s) failed:");
@@ -5470,6 +5788,14 @@ SmileProjectDiagnosticException ThrowsProjectDiagnostic(Action action, string ex
 
 void RewriteManifest(string packagePath, Func<string, string> rewrite)
     => RewritePackageTextEntry(packagePath, "manifest.json", rewrite);
+
+string ReplaceOnce(string text, string oldText, string newText)
+{
+    var index = text.IndexOf(oldText, StringComparison.Ordinal);
+    if (index < 0)
+        throw new InvalidOperationException($"Package tamper fixture text was not found: {oldText}");
+    return text.Substring(0, index) + newText + text.Substring(index + oldText.Length);
+}
 
 void RewritePackageTextEntry(string packagePath, string entryName, Func<string, string> rewrite)
 {
