@@ -15,6 +15,12 @@ if errorlevel 1 exit /b %errorlevel%
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\format-smile-style.ps1" -Check -FormatLongIf
 if errorlevel 1 exit /b %errorlevel%
 
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-lightweight-oop-hardening.ps1"
+if errorlevel 1 exit /b %errorlevel%
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-rpg-systems-integration.ps1"
+if errorlevel 1 exit /b %errorlevel%
+
 "%SMILE_ROOT%\artifacts\tests\Smile.NativeGraphicsTests.exe"
 if errorlevel 1 exit /b %errorlevel%
 
@@ -802,18 +808,6 @@ if errorlevel 1 exit /b 1
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-phase6-rpg-rollback.ps1"
 if errorlevel 1 exit /b 1
 
-if not exist "%SMILE_ROOT%\artifacts\games\RPGSystems-DirectX" mkdir "%SMILE_ROOT%\artifacts\games\RPGSystems-DirectX"
-if not exist "%SMILE_ROOT%\artifacts\games\RPGSystems-GDI" mkdir "%SMILE_ROOT%\artifacts\games\RPGSystems-GDI"
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\RPGSystems\RPGSystems.smileproj" --target windows-x64 --configuration Release --graphics DirectX -o "%SMILE_ROOT%\artifacts\games\RPGSystems-DirectX\RPGSystems.exe" --debug
-if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\RPGSystems\RPGSystems.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\RPGSystems-GDI\RPGSystems.exe"
-if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\RPGSystems\RPGSystems.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\RPGSystems"
-if errorlevel 1 exit /b 1
-node --check "%SMILE_ROOT%\artifacts\web\RPGSystems\game.js"
-if errorlevel 1 exit /b 1
-node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\RPGSystems" --frames 40 --timeout 10000
-if errorlevel 1 exit /b 1
 for %%A in (Companion.png EncounterBackground.png Hero.png MireWarden.png Npc.png PanelOverlay.png TitleBackground.png WorldTiles.png LumenTheme.wav) do (
     fc /b "%SMILE_ROOT%\games\RPGSystems\Assets\World\%%A" "%SMILE_ROOT%\artifacts\web\RPGSystems\Assets\World\%%A" >nul
     if errorlevel 1 exit /b 1

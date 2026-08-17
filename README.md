@@ -135,6 +135,8 @@ Phase 8.1 hardens the gallery with one application-local workflow source consume
 
 Phase 9 advances `Smile.RPG` to 1.2.0 with deterministic, bounded, renderer-neutral BattleEffects, BattleCore, BattleStrategy, and BattleView modules. They provide formations, multi-group battles, Attack/Ability/Item/Defend/Run, targeting, agility rounds, battle statuses, revive, victory/defeat/escape, transactional Experience/Gold, Fight/Strategy/Order automation, deterministic enemy AI, event streams, and logical presentation cues without adding a battle keyword or runtime helper. Active battles block Save/Load and remain outside unchanged SRPG format 2. `examples\Phase9BattleStateTests` proves native/Web project/package parity; the Battle option in `games\RPGSystems` owns the original DirectX/GDI/Web art, audio, animation, and world/dungeon return presentation. See `docs\language\phase9-rpg-battles.md` and `docs\libraries\smile-rpg-battle-api.md`.
 
+Post-OOP RPGSystems integration hardening keeps those public packages unchanged while isolating Management, Dungeon, and World persistence domains inside the gallery's single ApplicationId. Battle, Dungeon, Management, and World now use cumulative initialization, fail-closed partial teardown, explicit audio/resource shutdown, and deterministic same-process re-entry. Run `scripts\test-rpg-systems-integration.ps1` after `scripts\build.cmd`; the normal smoke workflow runs it and the lightweight-OOP hardening gate exactly once. See `docs\architecture\rpg-systems-integration-hardening.md` and `docs\implementation\rpg-systems-post-oop-integration-review.md`.
+
 Build the Phase 7 packages, state proof, and consolidated RPG Systems gallery:
 
 ```bat
