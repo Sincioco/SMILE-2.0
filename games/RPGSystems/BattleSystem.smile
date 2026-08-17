@@ -63,6 +63,7 @@ Dim EventCursor As Number
 Dim LastCommandRound As Number
 Dim Result As Number
 Dim OperationSucceeded As Boolean
+Dim InitializationSucceeded As Boolean
 Dim Character As Characters.CharacterDefinition
 Dim Item As Inventory.ItemDefinition
 Dim Ability As Abilities.AbilityDefinition
@@ -81,24 +82,54 @@ Dim ViewSlot As BattleView.SlotDefinition
 
 Public Sub Run()
 
+Call ResetRunState()
+
+InitializationSucceeded = True
+
 Load Image OverworldBackground From "Assets\Battle\StarfallPlateau.png"
 Load Image TownBackground From "Assets\Battle\LumenPlaza.png"
 Load Image DungeonBackground From "Assets\Battle\PrismVault.png"
 Load Image PartyLineup From "Assets\Battle\PartyLineup.png"
 Load Image EnemyLineup From "Assets\Battle\EnemyLineup.png"
 
+Call RecordInitialization(Image_Width(OverworldBackground) > 0 And Image_Height(OverworldBackground) > 0)
+Call RecordInitialization(Image_Width(TownBackground) > 0 And Image_Height(TownBackground) > 0)
+Call RecordInitialization(Image_Width(DungeonBackground) > 0 And Image_Height(DungeonBackground) > 0)
+Call RecordInitialization(Image_Width(PartyLineup) > 0 And Image_Height(PartyLineup) > 0)
+Call RecordInitialization(Image_Width(EnemyLineup) > 0 And Image_Height(EnemyLineup) > 0)
+
 State = RPG.Create()
 
-Call InitializeRpg()
-Call InitializeWorld()
-Call ApplyStrategyPreset(1)
+Call RecordInitialization(State > 0)
+
+If InitializationSucceeded Then
+
+    OperationSucceeded = True
+
+    Call InitializeRpg()
+    Call RecordInitialization(OperationSucceeded)
+
+    OperationSucceeded = True
+
+    Call InitializeWorld()
+    Call RecordInitialization(OperationSucceeded)
+    Call ApplyStrategyPreset(1)
+    Call RecordInitialization(OperationSucceeded)
+
+End If
 
 Mode = MODE_TITLE
 TitleSelection = 1
 BattleSelection = 1
 Scenario = SCENE_OVERWORLD
 StatusText = "Choose one original battle presentation."
-Running = State > 0
+Running = InitializationSucceeded
+
+If Not InitializationSucceeded Then
+    Call Shutdown()
+
+    Return
+End If
 
 Play Music "Assets\Battle\OverworldTheme.wav" Loop
 
@@ -134,16 +165,59 @@ Do
 
 Loop Until Game_Closed() = True Or Not Running
 
-Stop Sound
-Stop Music
+Call Shutdown()
 
-Unload Image EnemyLineup
-Unload Image PartyLineup
-Unload Image DungeonBackground
-Unload Image TownBackground
-Unload Image OverworldBackground
+End Sub
 
-Call RPG.Destroy(State)
+Sub ResetRunState()
+
+    State = 0
+    Mode = 0
+    TitleSelection = 0
+    BattleSelection = 0
+    Scenario = 0
+    StrategyPreset = 0
+    LeadOrder = 0
+    Key = 0
+    Running = False
+    StatusText = ""
+    LastCueText = ""
+    NextBattleStep = 0
+    EventCursor = 0
+    LastCommandRound = 0
+    Result = 0
+    OperationSucceeded = False
+    InitializationSucceeded = False
+
+End Sub
+
+Sub Shutdown()
+
+    Stop Sound
+    Stop Music
+
+    Unload Image EnemyLineup
+    Unload Image PartyLineup
+    Unload Image DungeonBackground
+    Unload Image TownBackground
+    Unload Image OverworldBackground
+
+    Call RPG.Destroy(State)
+
+    State = 0
+    StatusText = ""
+    LastCueText = ""
+    Running = False
+    OperationSucceeded = False
+    InitializationSucceeded = False
+
+End Sub
+
+Sub RecordInitialization(Succeeded As Boolean)
+
+    If Not Succeeded Then
+        InitializationSucceeded = False
+    End If
 
 End Sub
 
@@ -612,7 +686,7 @@ Sub ApplyStrategyPreset(Preset As Number)
 
     End If
 
-    OperationSucceeded = Strategy.CommitOrderEdit(State)
+    OperationSucceeded = OperationSucceeded And Strategy.CommitOrderEdit(State)
     StrategyPreset = Preset
 
 End Sub
@@ -646,7 +720,7 @@ Sub CycleLeadOrder()
         StatusText = "Order: Arden will repeat Defend."
     End If
 
-    OperationSucceeded = Strategy.CommitOrderEdit(State)
+    OperationSucceeded = OperationSucceeded And Strategy.CommitOrderEdit(State)
 
 End Sub
 
@@ -656,7 +730,7 @@ Sub SetAttackOrder(PartyIndex As Number, RepeatPolicy As Number)
     Order.SourceId = 0
     Order.TargetSelector = Strategy.BATTLE_TARGET_FIRST
     Order.RepeatPolicy = RepeatPolicy
-    OperationSucceeded = Strategy.SetEditedOrder(State, PartyIndex, Order)
+    OperationSucceeded = OperationSucceeded And Strategy.SetEditedOrder(State, PartyIndex, Order)
 
 End Sub
 
@@ -666,7 +740,7 @@ Sub SetAbilityOrder(PartyIndex As Number, AbilityId As Number, TargetSelector As
     Order.SourceId = AbilityId
     Order.TargetSelector = TargetSelector
     Order.RepeatPolicy = RepeatPolicy
-    OperationSucceeded = Strategy.SetEditedOrder(State, PartyIndex, Order)
+    OperationSucceeded = OperationSucceeded And Strategy.SetEditedOrder(State, PartyIndex, Order)
 
 End Sub
 
@@ -676,7 +750,7 @@ Sub SetDefendOrder(PartyIndex As Number)
     Order.SourceId = 0
     Order.TargetSelector = Strategy.BATTLE_TARGET_SELF
     Order.RepeatPolicy = Strategy.BATTLE_REPEAT_DEFEND
-    OperationSucceeded = Strategy.SetEditedOrder(State, PartyIndex, Order)
+    OperationSucceeded = OperationSucceeded And Strategy.SetEditedOrder(State, PartyIndex, Order)
 
 End Sub
 
@@ -945,11 +1019,11 @@ Sub InitializeRpg()
     Call DefineCharacter(CHARACTER_KAI, "Kai", 84, 20, 18, 12, 12, 11, 24, 15)
     Call DefineCharacter(CHARACTER_ORA, "Ora", 92, 28, 15, 18, 17, 19, 12, 10)
 
-    OperationSucceeded = Party.AddCharacter(State, CHARACTER_ARDEN)
-    OperationSucceeded = Party.AddCharacter(State, CHARACTER_LYRA)
-    OperationSucceeded = Party.AddCharacter(State, CHARACTER_KAI)
-    OperationSucceeded = Party.AddCharacter(State, CHARACTER_ORA)
-    OperationSucceeded = Party.SetGold(State, 120)
+    OperationSucceeded = OperationSucceeded And Party.AddCharacter(State, CHARACTER_ARDEN)
+    OperationSucceeded = OperationSucceeded And Party.AddCharacter(State, CHARACTER_LYRA)
+    OperationSucceeded = OperationSucceeded And Party.AddCharacter(State, CHARACTER_KAI)
+    OperationSucceeded = OperationSucceeded And Party.AddCharacter(State, CHARACTER_ORA)
+    OperationSucceeded = OperationSucceeded And Party.SetGold(State, 120)
 
     Poison.Id = STATUS_POISON
     Poison.Name = "Poison"
@@ -957,7 +1031,7 @@ Sub InitializeRpg()
     Poison.Statistic = 0
     Poison.Value = 3
     Poison.TickTiming = Effects.BATTLE_STATUS_TICK_ROUND_END
-    OperationSucceeded = Effects.DefineStatus(State, Poison)
+    OperationSucceeded = OperationSucceeded And Effects.DefineStatus(State, Poison)
 
     Call DefineEffect(EFFECT_FLARE, "Flare Wave")
     Call AddComponent(EFFECT_FLARE, Effects.BATTLE_EFFECT_MAGIC_DAMAGE, 12, 0, 0)
@@ -983,8 +1057,8 @@ Sub InitializeRpg()
     Item.ResistanceBonus = 0
     Item.AgilityBonus = 0
     Item.LuckBonus = 0
-    OperationSucceeded = Inventory.DefineItem(State, Item)
-    OperationSucceeded = Inventory.AddItem(State, ITEM_POTION, 5)
+    OperationSucceeded = OperationSucceeded And Inventory.DefineItem(State, Item)
+    OperationSucceeded = OperationSucceeded And Inventory.AddItem(State, ITEM_POTION, 5)
 
     Ability.Id = ABILITY_FLARE
     Ability.Name = "Flare Wave"
@@ -992,7 +1066,7 @@ Sub InitializeRpg()
     Ability.Power = 12
     Ability.TargetMode = RPG.RPG_TARGET_ALL_ENEMIES
     Ability.EffectId = EFFECT_FLARE
-    OperationSucceeded = Abilities.DefineAbility(State, Ability)
+    OperationSucceeded = OperationSucceeded And Abilities.DefineAbility(State, Ability)
 
     Ability.Id = ABILITY_MEND
     Ability.Name = "Mend"
@@ -1000,9 +1074,9 @@ Sub InitializeRpg()
     Ability.Power = 24
     Ability.TargetMode = RPG.RPG_TARGET_ONE_ALLY
     Ability.EffectId = EFFECT_MEND
-    OperationSucceeded = Abilities.DefineAbility(State, Ability)
-    OperationSucceeded = Abilities.LearnAbility(State, CHARACTER_ARDEN, ABILITY_FLARE)
-    OperationSucceeded = Abilities.LearnAbility(State, CHARACTER_LYRA, ABILITY_MEND)
+    OperationSucceeded = OperationSucceeded And Abilities.DefineAbility(State, Ability)
+    OperationSucceeded = OperationSucceeded And Abilities.LearnAbility(State, CHARACTER_ARDEN, ABILITY_FLARE)
+    OperationSucceeded = OperationSucceeded And Abilities.LearnAbility(State, CHARACTER_LYRA, ABILITY_MEND)
 
     Call DefineEnemy(ENEMY_SLIME, "Prism Slime", 46, 12, 9, 6, 10, 7, 8, 7, 10, 5)
     Call DefineEnemy(ENEMY_WOLF, "Gale Wolf", 68, 16, 16, 10, 11, 9, 19, 10, 16, 8)
@@ -1011,7 +1085,7 @@ Sub InitializeRpg()
     Formation.Id = FORMATION_GALLERY
     Formation.Name = "Prism Vanguard"
     Formation.EscapeChance = 55
-    OperationSucceeded = Battle.DefineFormation(State, Formation)
+    OperationSucceeded = OperationSucceeded And Battle.DefineFormation(State, Formation)
 
     Call AddFormationMember(ENEMY_SLIME, 1, 1)
     Call AddFormationMember(ENEMY_WOLF, 2, 2)
@@ -1025,7 +1099,7 @@ Sub InitializeRpg()
     AiRule.ActionKind = Battle.BATTLE_ACTION_ATTACK
     AiRule.SourceId = 0
     AiRule.TargetSelector = Strategy.BATTLE_TARGET_LOWEST_HEALTH
-    OperationSucceeded = Strategy.DefineAiRule(State, AiRule)
+    OperationSucceeded = OperationSucceeded And Strategy.DefineAiRule(State, AiRule)
 
 End Sub
 
@@ -1042,7 +1116,7 @@ Sub DefineCharacter(Id As Number, Name As Text, Health As Number, MagicPoints As
     Character.Resistance = Resistance
     Character.Agility = Agility
     Character.Luck = Luck
-    OperationSucceeded = Characters.DefineCharacter(State, Character)
+    OperationSucceeded = OperationSucceeded And Characters.DefineCharacter(State, Character)
 
 End Sub
 
@@ -1050,7 +1124,7 @@ Sub DefineEffect(Id As Number, Name As Text)
 
     Effect.Id = Id
     Effect.Name = Name
-    OperationSucceeded = Effects.DefineEffect(State, Effect)
+    OperationSucceeded = OperationSucceeded And Effects.DefineEffect(State, Effect)
 
 End Sub
 
@@ -1061,7 +1135,7 @@ Sub AddComponent(EffectId As Number, Kind As Number, Power As Number, StatusId A
     Component.Power = Power
     Component.StatusId = StatusId
     Component.Duration = Duration
-    OperationSucceeded = Effects.AddComponent(State, Component)
+    OperationSucceeded = OperationSucceeded And Effects.AddComponent(State, Component)
 
 End Sub
 
@@ -1080,7 +1154,7 @@ Sub DefineEnemy(Id As Number, Name As Text, Health As Number, MagicPoints As Num
     Enemy.ExperienceReward = ExperienceReward
     Enemy.GoldReward = GoldReward
     Enemy.AiProfileId = 1
-    OperationSucceeded = Battle.DefineEnemy(State, Enemy)
+    OperationSucceeded = OperationSucceeded And Battle.DefineEnemy(State, Enemy)
 
 End Sub
 
@@ -1090,7 +1164,7 @@ Sub AddFormationMember(EnemyId As Number, GroupId As Number, SlotId As Number)
     FormationMember.EnemyId = EnemyId
     FormationMember.GroupId = GroupId
     FormationMember.SlotId = SlotId
-    OperationSucceeded = Battle.AddFormationMember(State, FormationMember)
+    OperationSucceeded = OperationSucceeded And Battle.AddFormationMember(State, FormationMember)
 
 End Sub
 
@@ -1113,9 +1187,9 @@ Sub InitializeWorld()
     Actor.Persistent = True
     Actor.AnimationSetId = 0
     Actor.InteractionId = 0
-    OperationSucceeded = World.DefineActor(State, Actor)
-    OperationSucceeded = World.SetCurrentScene(State, SCENE_OVERWORLD)
-    OperationSucceeded = World.SetControlledActor(State, ACTOR_PARTY)
+    OperationSucceeded = OperationSucceeded And World.DefineActor(State, Actor)
+    OperationSucceeded = OperationSucceeded And World.SetCurrentScene(State, SCENE_OVERWORLD)
+    OperationSucceeded = OperationSucceeded And World.SetControlledActor(State, ACTOR_PARTY)
 
 End Sub
 
@@ -1125,7 +1199,7 @@ Sub DefineScene(Id As Number, DefaultSpawnId As Number)
     Scene.MapId = Id
     Scene.DefaultSpawnId = DefaultSpawnId
     Scene.CameraMode = World.WORLD_CAMERA_FOLLOW
-    OperationSucceeded = World.DefineScene(State, Scene)
+    OperationSucceeded = OperationSucceeded And World.DefineScene(State, Scene)
 
 End Sub
 
@@ -1136,7 +1210,7 @@ Sub DefineSpawn(Id As Number, SceneId As Number)
     Spawn.CellX = 6
     Spawn.CellY = 5
     Spawn.Facing = World.WORLD_FACING_RIGHT
-    OperationSucceeded = World.DefineSpawn(State, Spawn)
+    OperationSucceeded = OperationSucceeded And World.DefineSpawn(State, Spawn)
 
 End Sub
 

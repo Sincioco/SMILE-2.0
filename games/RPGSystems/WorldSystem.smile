@@ -85,6 +85,7 @@ Dim TargetActor As Number
 Dim ItemIndex As Number
 Dim Running As Boolean
 Dim OperationSucceeded As Boolean
+Dim InitializationSucceeded As Boolean
 Dim Status As Text
 Dim NextMoveTime As Number
 Dim NextWanderTime As Number
@@ -102,6 +103,10 @@ Dim ZoneDefinition As Encounters.ZoneDefinition
 
 Public Sub Run()
 
+Call ResetRunState()
+
+InitializationSucceeded = True
+
 Load Image Tileset From "Assets\World\WorldTiles.png"
 Load Image HeroImage From "Assets\World\Hero.png"
 Load Image CompanionImage From "Assets\World\Companion.png"
@@ -111,19 +116,53 @@ Load Image EncounterBackground From "Assets\World\EncounterBackground.png"
 Load Image EnemyImage From "Assets\World\MireWarden.png"
 Load Image PanelImage From "Assets\World\PanelOverlay.png"
 
+Call RecordInitialization(Image_Width(Tileset) > 0 And Image_Height(Tileset) > 0)
+Call RecordInitialization(Image_Width(HeroImage) > 0 And Image_Height(HeroImage) > 0)
+Call RecordInitialization(Image_Width(CompanionImage) > 0 And Image_Height(CompanionImage) > 0)
+Call RecordInitialization(Image_Width(NpcImage) > 0 And Image_Height(NpcImage) > 0)
+Call RecordInitialization(Image_Width(TitleBackground) > 0 And Image_Height(TitleBackground) > 0)
+Call RecordInitialization(Image_Width(EncounterBackground) > 0 And Image_Height(EncounterBackground) > 0)
+Call RecordInitialization(Image_Width(EnemyImage) > 0 And Image_Height(EnemyImage) > 0)
+Call RecordInitialization(Image_Width(PanelImage) > 0 And Image_Height(PanelImage) > 0)
+
 State = RPG.Create()
 
-Call InitializeStyles()
-Call InitializeMenus()
-Call InitializeRpgDefinitions()
-Call InitializeWorldDefinitions()
-Call LoadWorldMaps()
-Call StartNewGame()
+Call RecordInitialization(State > 0)
+
+If InitializationSucceeded Then
+
+    Call InitializeStyles()
+    Call InitializeMenus()
+
+    OperationSucceeded = True
+
+    Call InitializeRpgDefinitions()
+    Call RecordInitialization(OperationSucceeded)
+
+    OperationSucceeded = True
+
+    Call InitializeWorldDefinitions()
+    Call RecordInitialization(OperationSucceeded)
+    Call LoadWorldMaps()
+
+    OperationSucceeded = True
+
+    Call StartNewGame()
+    Call RecordInitialization(OperationSucceeded)
+
+End If
 
 Mode = MODE_TITLE
 TitleSelection = 1
 Status = "Choose a title-screen action."
-Running = State > 0 And TownMap > 0 And ShopMap > 0 And OverworldMap > 0
+Running = InitializationSucceeded
+
+If Not InitializationSucceeded Then
+    Call Shutdown()
+
+    Return
+End If
+
 Play Music "Assets\World\LumenTheme.wav" Loop
 
 Do
@@ -206,34 +245,109 @@ Do
 
 Loop Until Game_Closed() = True Or Not Running
 
-Stop Music
+Call Shutdown()
 
-Call Message.Destroy()
-Call ShopNavigator.Destroy()
-Call FieldNavigator.Destroy()
-Call ShopMenu.Destroy()
-Call FieldMenu.Destroy()
+End Sub
 
-Message = Nothing
-ShopNavigator = Nothing
-FieldNavigator = Nothing
-ShopMenu = Nothing
-FieldMenu = Nothing
+Sub ResetRunState()
 
-Call TileMap.Unload(OverworldMap)
-Call TileMap.Unload(ShopMap)
-Call TileMap.Unload(TownMap)
+    TownMap = 0
+    ShopMap = 0
+    OverworldMap = 0
+    State = 0
+    FieldMenu = Nothing
+    FieldNavigator = Nothing
+    ShopMenu = Nothing
+    ShopNavigator = Nothing
+    Message = Nothing
+    Mode = 0
+    InfoMode = 0
+    TitleSelection = 0
+    Key = 0
+    Event = 0
+    Action = 0
+    Direction = 0
+    CurrentMap = 0
+    TransitionId = 0
+    RegionId = 0
+    Result = 0
+    TargetActor = 0
+    ItemIndex = 0
+    Running = False
+    OperationSucceeded = False
+    InitializationSucceeded = False
+    Status = ""
+    NextMoveTime = 0
+    NextWanderTime = 0
+    WanderDirection = 0
+    AnimationClock = 0
 
-Unload Image EnemyImage
-Unload Image PanelImage
-Unload Image EncounterBackground
-Unload Image TitleBackground
-Unload Image NpcImage
-Unload Image CompanionImage
-Unload Image HeroImage
-Unload Image Tileset
+End Sub
 
-Call RPG.Destroy(State)
+Sub Shutdown()
+
+    Stop Sound
+    Stop Music
+
+    If Message Is Not Nothing Then
+        Call Message.Destroy()
+    End If
+
+    If ShopNavigator Is Not Nothing Then
+        Call ShopNavigator.Destroy()
+    End If
+
+    If FieldNavigator Is Not Nothing Then
+        Call FieldNavigator.Destroy()
+    End If
+
+    If ShopMenu Is Not Nothing Then
+        Call ShopMenu.Destroy()
+    End If
+
+    If FieldMenu Is Not Nothing Then
+        Call FieldMenu.Destroy()
+    End If
+
+    Message = Nothing
+    ShopNavigator = Nothing
+    FieldNavigator = Nothing
+    ShopMenu = Nothing
+    FieldMenu = Nothing
+
+    Call TileMap.Unload(OverworldMap)
+    Call TileMap.Unload(ShopMap)
+    Call TileMap.Unload(TownMap)
+
+    OverworldMap = 0
+    ShopMap = 0
+    TownMap = 0
+    CurrentMap = 0
+
+    Unload Image EnemyImage
+    Unload Image PanelImage
+    Unload Image EncounterBackground
+    Unload Image TitleBackground
+    Unload Image NpcImage
+    Unload Image CompanionImage
+    Unload Image HeroImage
+    Unload Image Tileset
+
+    Call RPG.Destroy(State)
+
+    State = 0
+    Status = ""
+    Running = False
+    OperationSucceeded = False
+    InitializationSucceeded = False
+
+End Sub
+
+Sub RecordInitialization(Succeeded As Boolean)
+
+    If Not Succeeded Then
+        InitializationSucceeded = False
+    End If
 
 End Sub
 
@@ -294,25 +408,76 @@ End Sub
 Sub InitializeMenus()
 
     FieldMenu = New Menus.Menu(MenuStyle, 24, 48, 350, 450, 10)
+
+    Call RecordInitialization(FieldMenu.Valid)
+
     ItemIndex = FieldMenu.AddItem("Talk", 1, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = FieldMenu.AddItem("Character Stats", 2, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = FieldMenu.AddItem("Inventory", 3, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = FieldMenu.AddItem("Add / Remove Companion", 4, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = FieldMenu.AddItem("Reorder Party", 5, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = FieldMenu.AddItem("QA: Add Level", 6, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = FieldMenu.AddItem("QA: Add Strength", 7, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = FieldMenu.AddItem("Save World State", 8, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = FieldMenu.AddItem("Load World State", 9, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = FieldMenu.AddItem("Close", 10, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     FieldNavigator = New Menus.MenuNavigator(FieldMenu, NavigatorStyle)
 
+    Call RecordInitialization(FieldNavigator.Valid)
+
     ShopMenu = New Menus.Menu(MenuStyle, 525, 180, 390, 170, 3)
+
+    Call RecordInitialization(ShopMenu.Valid)
+
     ItemIndex = ShopMenu.AddItem("Buy Moonfruit - 30 Gold", 201, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = ShopMenu.AddItem("View Inventory", 202, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = ShopMenu.AddItem("Leave Counter", 203, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ShopNavigator = New Menus.MenuNavigator(ShopMenu, NavigatorStyle)
 
+    Call RecordInitialization(ShopNavigator.Valid)
+
     Message = New Dialogues.Dialogue(DialogueStyle, 40, 330, 880, 180)
+
+    Call RecordInitialization(Message.Valid)
 
 End Sub
 
@@ -472,10 +637,18 @@ Sub LoadWorldMaps()
 
     Path = "Maps\World\Town.smilemap"
     TownMap = TileMap.LoadMap(Path)
+
+    Call RecordInitialization(TownMap > 0)
+
     Path = "Maps\World\Shop.smilemap"
     ShopMap = TileMap.LoadMap(Path)
+
+    Call RecordInitialization(ShopMap > 0)
+
     Path = "Maps\World\Overworld.smilemap"
     OverworldMap = TileMap.LoadMap(Path)
+
+    Call RecordInitialization(OverworldMap > 0)
 
     Call DefineTiles(TownMap)
     Call DefineTiles(ShopMap)
@@ -485,16 +658,16 @@ End Sub
 
 Sub DefineTiles(MapHandle As Number)
 
-    OperationSucceeded = TileMap.DefineTile(MapHandle, 1, 0, 0, 128, 128, 100)
-    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 2, 128, 0, 128, 128, 100)
-    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 3, 256, 0, 128, 128, 100)
-    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 4, 384, 0, 128, 128, 100)
-    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 5, 512, 0, 128, 128, 100)
-    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 6, 0, 128, 128, 128, 100)
-    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 7, 128, 128, 128, 128, 100)
-    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 8, 256, 128, 128, 128, 100)
-    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 9, 384, 128, 128, 128, 100)
-    OperationSucceeded = OperationSucceeded And TileMap.DefineTile(MapHandle, 10, 512, 128, 128, 128, 100)
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 1, 0, 0, 128, 128, 100))
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 2, 128, 0, 128, 128, 100))
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 3, 256, 0, 128, 128, 100))
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 4, 384, 0, 128, 128, 100))
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 5, 512, 0, 128, 128, 100))
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 6, 0, 128, 128, 128, 100))
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 7, 128, 128, 128, 128, 100))
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 8, 256, 128, 128, 128, 100))
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 9, 384, 128, 128, 128, 100))
+    Call RecordInitialization(TileMap.DefineTile(MapHandle, 10, 512, 128, 128, 128, 100))
 
 End Sub
 
@@ -522,7 +695,7 @@ Sub SyncFieldState()
         GameDirection(World.ActorFacingDirection(State, ACTOR_HERO)))
 
     CurrentMap = MapForScene(World.CurrentScene(State))
-    OperationSucceeded = Camera.Configure(960, 540,
+    OperationSucceeded = OperationSucceeded And Camera.Configure(960, 540,
         TileMap.Width(CurrentMap) * 64, TileMap.Height(CurrentMap) * 64)
 
     Call Camera.Follow(PlayerMover.VisualX(64) + 32, PlayerMover.VisualY(64) + 32)

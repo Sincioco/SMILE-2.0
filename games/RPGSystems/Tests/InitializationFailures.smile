@@ -1,0 +1,246 @@
+''' Bounded-capacity integration checks for RPGSystems all-or-nothing initialization.
+
+Option Explicit
+
+Import Smile.RPG.Core As RPG
+Import Smile.UI.Core As UI
+Import Smile.UI.Menu As Menus
+Import RPGSystems.BattleSystem As BattleSystem
+Import RPGSystems.DungeonSystem As DungeonSystem
+Import RPGSystems.ManagementSystem As ManagementSystem
+Import RPGSystems.WorldSystem As WorldSystem
+
+Dim TestWindowStyle As UI.WindowStyle
+Dim TestTextStyle As UI.TextStyle
+Dim TestMenuStyle As UI.MenuStyle
+Dim Held0 As Menus.Menu
+Dim Held1 As Menus.Menu
+Dim Held2 As Menus.Menu
+Dim Held3 As Menus.Menu
+Dim Held4 As Menus.Menu
+Dim Held5 As Menus.Menu
+Dim Held6 As Menus.Menu
+Dim Held7 As Menus.Menu
+Dim Held8 As Menus.Menu
+Dim Held9 As Menus.Menu
+Dim Held10 As Menus.Menu
+Dim Held11 As Menus.Menu
+Dim Held12 As Menus.Menu
+Dim Held13 As Menus.Menu
+Dim Held14 As Menus.Menu
+Dim Recovery0 As Menus.Menu
+Dim Recovery1 As Menus.Menu
+Dim Recovery2 As Menus.Menu
+Dim Recovery3 As Menus.Menu
+Dim Recovery4 As Menus.Menu
+Dim Recovery5 As Menus.Menu
+Dim Overflow As Menus.Menu
+Dim FailureCount As Number
+
+Game Window "RPGSystems Initialization Tests" Size 64 By 64
+
+Do
+
+    Call InitializeTestStyle()
+    Call TestRpgStateCapacity()
+    Call TestManagementMenuCapacity()
+    Call TestWorldMenuCapacity()
+
+    If FailureCount = 0 Then
+        Print "RPGSystems initialization failure cleanup: PASS"
+    Else
+        Print "RPGSystems initialization failure cleanup: FAIL"
+        Print FailureCount
+    End If
+
+    Show Screen
+
+Loop Until True
+
+End Program
+
+Sub InitializeTestStyle()
+
+    TestWindowStyle.UseSkin = False
+    TestWindowStyle.FillColor = BLACK
+    TestWindowStyle.BorderColor = WHITE
+    TestWindowStyle.BorderThickness = 1
+    TestWindowStyle.Opacity = 100
+    TestWindowStyle.Padding.Left = 2
+    TestWindowStyle.Padding.Top = 2
+    TestWindowStyle.Padding.Right = 2
+    TestWindowStyle.Padding.Bottom = 2
+    TestTextStyle.Mode = UI.UI_TEXT_SYSTEM
+    TestTextStyle.SystemSize = 12
+    TestTextStyle.SystemColor = WHITE
+    TestMenuStyle.Window = TestWindowStyle
+    TestMenuStyle.NormalText = TestTextStyle
+    TestMenuStyle.SelectedText = TestTextStyle
+    TestMenuStyle.DisabledText = TestTextStyle
+    TestMenuStyle.RowHeight = 16
+    TestMenuStyle.WrapSelection = True
+    TestMenuStyle.ShowScrollbar = True
+    TestMenuStyle.ShowSubmenuIndicator = False
+    TestMenuStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_ELLIPSIS
+    TestMenuStyle.ItemTextMaxLines = 1
+
+End Sub
+
+Sub TestRpgStateCapacity()
+
+    Dim State0 As Number
+    Dim State1 As Number
+    Dim State2 As Number
+    Dim State3 As Number
+    Dim RecoveryState As Number
+    Dim Passed As Boolean
+
+    State0 = RPG.Create()
+    State1 = RPG.Create()
+    State2 = RPG.Create()
+    State3 = RPG.Create()
+    Passed = State0 > 0 And State1 > 0 And State2 > 0 And State3 > 0
+
+    Call BattleSystem.Run()
+    Call DungeonSystem.Run()
+    Call ManagementSystem.Run()
+    Call WorldSystem.Run()
+
+    Call RPG.Destroy(State3)
+    Call RPG.Destroy(State2)
+    Call RPG.Destroy(State1)
+    Call RPG.Destroy(State0)
+
+    RecoveryState = RPG.Create()
+    Passed = Passed And RecoveryState > 0
+
+    Call RPG.Destroy(RecoveryState)
+    Call CheckResult(Passed, "RPGSystems RPG capacity failure: PASS",
+        "RPGSystems RPG capacity failure: FAIL")
+
+End Sub
+
+Sub TestManagementMenuCapacity()
+
+    Dim Passed As Boolean
+
+    Call AllocateHeldMenus(10)
+
+    Passed = Held0.Valid And Held9.Valid And Held10 Is Nothing
+
+    Call ManagementSystem.Run()
+
+    Recovery0 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+    Recovery1 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+    Recovery2 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+    Recovery3 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+    Recovery4 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+    Recovery5 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+    Overflow = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+    Passed = Passed And Recovery0.Valid And Recovery5.Valid And Not Overflow.Valid
+
+    Call DestroyRecoveryMenus()
+    Call DestroyHeldMenus()
+    Call CheckResult(Passed, "RPGSystems Management UI failure: PASS",
+        "RPGSystems Management UI failure: FAIL")
+
+End Sub
+
+Sub TestWorldMenuCapacity()
+
+    Dim Passed As Boolean
+
+    Call AllocateHeldMenus(15)
+
+    Passed = Held0.Valid And Held14.Valid
+
+    Call WorldSystem.Run()
+
+    Recovery0 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+    Overflow = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+    Passed = Passed And Recovery0.Valid And Not Overflow.Valid
+
+    Call DestroyRecoveryMenus()
+    Call DestroyHeldMenus()
+    Call CheckResult(Passed, "RPGSystems World UI failure: PASS",
+        "RPGSystems World UI failure: FAIL")
+
+End Sub
+
+Sub AllocateHeldMenus(RequestedCount As Number)
+
+    Held0 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+    Held1 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+    Held2 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+    Held3 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+    Held4 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+    Held5 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+    Held6 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+    Held7 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+    Held8 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+    Held9 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+
+    If RequestedCount > 10 Then
+
+        Held10 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+        Held11 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+        Held12 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+        Held13 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+        Held14 = New Menus.Menu(TestMenuStyle, 0, 0, 32, 32, 1)
+
+    End If
+
+End Sub
+
+Sub DestroyHeldMenus()
+
+    Call DestroyMenu(Held14)
+    Call DestroyMenu(Held13)
+    Call DestroyMenu(Held12)
+    Call DestroyMenu(Held11)
+    Call DestroyMenu(Held10)
+    Call DestroyMenu(Held9)
+    Call DestroyMenu(Held8)
+    Call DestroyMenu(Held7)
+    Call DestroyMenu(Held6)
+    Call DestroyMenu(Held5)
+    Call DestroyMenu(Held4)
+    Call DestroyMenu(Held3)
+    Call DestroyMenu(Held2)
+    Call DestroyMenu(Held1)
+    Call DestroyMenu(Held0)
+
+End Sub
+
+Sub DestroyRecoveryMenus()
+
+    Call DestroyMenu(Overflow)
+    Call DestroyMenu(Recovery5)
+    Call DestroyMenu(Recovery4)
+    Call DestroyMenu(Recovery3)
+    Call DestroyMenu(Recovery2)
+    Call DestroyMenu(Recovery1)
+    Call DestroyMenu(Recovery0)
+
+End Sub
+
+Sub DestroyMenu(ByRef Value As Menus.Menu)
+
+    If Value Is Not Nothing Then
+        Call Value.Destroy()
+    End If
+
+    Value = Nothing
+
+End Sub
+
+Sub CheckResult(Passed As Boolean, SuccessText As Text, FailureText As Text)
+
+    If Passed Then
+        Print SuccessText
+    Else
+        Print FailureText
+        FailureCount = FailureCount + 1
+    End If
+
+End Sub

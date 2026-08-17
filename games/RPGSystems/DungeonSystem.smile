@@ -160,13 +160,22 @@ Const SAVE_SCHEMA_VERSION = 8
 
 Public Sub Run()
 
+Call ResetRunState()
+
+InitializationSucceeded = True
+
 Load Image Tileset From "Assets\Dungeon\WorldTiles.png"
 Load Image HeroImage From "Assets\Dungeon\Hero.png"
 Load Image CompanionImage From "Assets\Dungeon\Companion.png"
 Load Image NpcImage From "Assets\Dungeon\Npc.png"
 Load Image EnemyImage From "Assets\Dungeon\MireWarden.png"
 
-InitializationSucceeded = True
+Call RecordInitialization(Image_Width(Tileset) > 0 And Image_Height(Tileset) > 0)
+Call RecordInitialization(Image_Width(HeroImage) > 0 And Image_Height(HeroImage) > 0)
+Call RecordInitialization(Image_Width(CompanionImage) > 0 And Image_Height(CompanionImage) > 0)
+Call RecordInitialization(Image_Width(NpcImage) > 0 And Image_Height(NpcImage) > 0)
+Call RecordInitialization(Image_Width(EnemyImage) > 0 And Image_Height(EnemyImage) > 0)
+
 State = RPG.Create()
 
 Call RecordInitialization(State > 0)
@@ -195,6 +204,12 @@ Mode = MODE_TITLE
 TitleSelection = 1
 Status = "Choose an original dungeon presentation."
 Running = InitializationSucceeded
+
+If Not InitializationSucceeded Then
+    Call Shutdown()
+
+    Return
+End If
 
 Do
     Get Key Key
@@ -273,26 +288,91 @@ Do
 
 Loop Until Game_Closed() = True Or Not Running
 
-Call Message.Destroy()
-Call CommandNavigator.Destroy()
-Call CommandMenu.Destroy()
+Call Shutdown()
 
-Message = Nothing
-CommandNavigator = Nothing
-CommandMenu = Nothing
+End Sub
 
-For ItemIndex = 0 To 3
-    Call TileMap.Unload(FloorMaps[ItemIndex])
-    Call Animation.Destroy(WalkAnimations[ItemIndex])
-End For
+Sub ResetRunState()
 
-Unload Image EnemyImage
-Unload Image NpcImage
-Unload Image CompanionImage
-Unload Image HeroImage
-Unload Image Tileset
+    Dim Index As Number
 
-Call RPG.Destroy(State)
+    State = 0
+    CommandMenu = Nothing
+    CommandNavigator = Nothing
+    Message = Nothing
+    Mode = 0
+    PreviousMode = 0
+    InfoPage = 0
+    TitleSelection = 0
+    AnimationClock = 0
+    Key = 0
+    Event = 0
+    Action = 0
+    Result = 0
+    CurrentMap = 0
+    Direction = 0
+    RegionId = 0
+    TransitionId = 0
+    TargetActor = 0
+    ItemIndex = 0
+    Running = False
+    OperationSucceeded = False
+    InitializationSucceeded = False
+    Status = ""
+
+    For Index = 0 To 3
+        FloorMaps[Index] = 0
+        WalkAnimations[Index] = 0
+    End For
+
+End Sub
+
+Sub Shutdown()
+
+    Dim Index As Number
+
+    Stop Sound
+    Stop Music
+
+    If Message Is Not Nothing Then
+        Call Message.Destroy()
+    End If
+
+    If CommandNavigator Is Not Nothing Then
+        Call CommandNavigator.Destroy()
+    End If
+
+    If CommandMenu Is Not Nothing Then
+        Call CommandMenu.Destroy()
+    End If
+
+    Message = Nothing
+    CommandNavigator = Nothing
+    CommandMenu = Nothing
+
+    For Index = 0 To 3
+        Call TileMap.Unload(FloorMaps[Index])
+        Call Animation.Destroy(WalkAnimations[Index])
+
+        FloorMaps[Index] = 0
+        WalkAnimations[Index] = 0
+    End For
+
+    CurrentMap = 0
+
+    Unload Image EnemyImage
+    Unload Image NpcImage
+    Unload Image CompanionImage
+    Unload Image HeroImage
+    Unload Image Tileset
+
+    Call RPG.Destroy(State)
+
+    State = 0
+    Status = ""
+    Running = False
+    OperationSucceeded = False
+    InitializationSucceeded = False
 
 End Sub
 

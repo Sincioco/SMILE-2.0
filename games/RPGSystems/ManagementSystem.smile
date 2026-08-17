@@ -14,6 +14,8 @@ Import RPGSystems.Storage As Storage
 Import Smile.UI.Core As UI
 Import Smile.UI.Menu As Menus
 
+Const SAVE_SCHEMA_VERSION = 1
+
 Dim WindowStyle As UI.WindowStyle
 Dim NormalText As UI.TextStyle
 Dim SelectedText As UI.TextStyle
@@ -50,20 +52,34 @@ Dim Result As Number
 Dim Status As Text
 Dim Running As Boolean
 Dim OperationSucceeded As Boolean
-
-Const SAVE_SCHEMA_VERSION = 1
+Dim InitializationSucceeded As Boolean
 
 Public Sub Run()
 
+Call ResetRunState()
+
+InitializationSucceeded = True
 State = RPG.Create()
 
-Call InitializeDefinitions()
-Call InitializeProgress()
-Call InitializeStyles()
-Call InitializeMenus()
+Call RecordInitialization(State > 0)
+
+If InitializationSucceeded Then
+
+    Call InitializeDefinitions()
+    Call InitializeProgress()
+    Call InitializeStyles()
+    Call InitializeMenus()
+
+End If
 
 Status = "Choose a category, then run a management action."
-Running = State > 0 And Navigator.Valid
+Running = InitializationSucceeded
+
+If Not InitializationSucceeded Then
+    Call Shutdown()
+
+    Return
+End If
 
 Do
     Get Key Key
@@ -98,25 +114,97 @@ Do
 
 Loop Until Game_Closed() = True Or Not Running
 
-Call Navigator.Destroy()
-Call SaveMenu.Destroy()
-Call ShopMenu.Destroy()
-Call AbilityMenu.Destroy()
-Call EquipmentMenu.Destroy()
-Call InventoryMenu.Destroy()
-Call PartyMenu.Destroy()
-Call RootMenu.Destroy()
+Call Shutdown()
 
-Navigator = Nothing
-SaveMenu = Nothing
-ShopMenu = Nothing
-AbilityMenu = Nothing
-EquipmentMenu = Nothing
-InventoryMenu = Nothing
-PartyMenu = Nothing
-RootMenu = Nothing
+End Sub
 
-Call RPG.Destroy(State)
+Sub ResetRunState()
+
+    State = 0
+    RootMenu = Nothing
+    PartyMenu = Nothing
+    InventoryMenu = Nothing
+    EquipmentMenu = Nothing
+    AbilityMenu = Nothing
+    ShopMenu = Nothing
+    SaveMenu = Nothing
+    Navigator = Nothing
+    PartyIndex = 0
+    InventoryIndex = 0
+    EquipmentIndex = 0
+    AbilityIndex = 0
+    ShopIndex = 0
+    SaveIndex = 0
+    ItemIndex = 0
+    Event = 0
+    Action = 0
+    Key = 0
+    Result = 0
+    Status = ""
+    Running = False
+    OperationSucceeded = False
+    InitializationSucceeded = False
+
+End Sub
+
+Sub Shutdown()
+
+    If Navigator Is Not Nothing Then
+        Call Navigator.Destroy()
+    End If
+
+    If SaveMenu Is Not Nothing Then
+        Call SaveMenu.Destroy()
+    End If
+
+    If ShopMenu Is Not Nothing Then
+        Call ShopMenu.Destroy()
+    End If
+
+    If AbilityMenu Is Not Nothing Then
+        Call AbilityMenu.Destroy()
+    End If
+
+    If EquipmentMenu Is Not Nothing Then
+        Call EquipmentMenu.Destroy()
+    End If
+
+    If InventoryMenu Is Not Nothing Then
+        Call InventoryMenu.Destroy()
+    End If
+
+    If PartyMenu Is Not Nothing Then
+        Call PartyMenu.Destroy()
+    End If
+
+    If RootMenu Is Not Nothing Then
+        Call RootMenu.Destroy()
+    End If
+
+    Navigator = Nothing
+    SaveMenu = Nothing
+    ShopMenu = Nothing
+    AbilityMenu = Nothing
+    EquipmentMenu = Nothing
+    InventoryMenu = Nothing
+    PartyMenu = Nothing
+    RootMenu = Nothing
+
+    Call RPG.Destroy(State)
+
+    State = 0
+    Status = ""
+    Running = False
+    OperationSucceeded = False
+    InitializationSucceeded = False
+
+End Sub
+
+Sub RecordInitialization(Succeeded As Boolean)
+
+    If Not Succeeded Then
+        InitializationSucceeded = False
+    End If
 
 End Sub
 
@@ -172,25 +260,25 @@ Sub InitializeDefinitions()
     Store.Id = 1
     Store.Name = "General Store"
 
-    OperationSucceeded = Characters.DefineCharacter(State, Hero)
-    OperationSucceeded = OperationSucceeded And Characters.DefineCharacter(State, Mage)
-    OperationSucceeded = OperationSucceeded And Inventory.DefineItem(State, Potion)
-    OperationSucceeded = OperationSucceeded And Inventory.DefineItem(State, Sword)
-    OperationSucceeded = OperationSucceeded And Equipment.DefineSlot(State, Hand)
-    OperationSucceeded = OperationSucceeded And Abilities.DefineAbility(State, Fire)
-    OperationSucceeded = OperationSucceeded And Shops.DefineShop(State, Store)
-    OperationSucceeded = OperationSucceeded And Shops.AddShopItem(State, 1, 10, 25, 10, 12)
+    Call RecordInitialization(Characters.DefineCharacter(State, Hero))
+    Call RecordInitialization(Characters.DefineCharacter(State, Mage))
+    Call RecordInitialization(Inventory.DefineItem(State, Potion))
+    Call RecordInitialization(Inventory.DefineItem(State, Sword))
+    Call RecordInitialization(Equipment.DefineSlot(State, Hand))
+    Call RecordInitialization(Abilities.DefineAbility(State, Fire))
+    Call RecordInitialization(Shops.DefineShop(State, Store))
+    Call RecordInitialization(Shops.AddShopItem(State, 1, 10, 25, 10, 12))
 
 End Sub
 
 Sub InitializeProgress()
 
-    OperationSucceeded = Party.AddCharacter(State, 100)
-    OperationSucceeded = OperationSucceeded And Party.AddCharacter(State, 200)
-    OperationSucceeded = OperationSucceeded And Party.SetGold(State, 500)
-    OperationSucceeded = OperationSucceeded And Inventory.AddItem(State, 10, 4)
-    OperationSucceeded = OperationSucceeded And Inventory.AddItem(State, 20, 1)
-    OperationSucceeded = OperationSucceeded And Abilities.LearnAbility(State, 200, 50)
+    Call RecordInitialization(Party.AddCharacter(State, 100))
+    Call RecordInitialization(Party.AddCharacter(State, 200))
+    Call RecordInitialization(Party.SetGold(State, 500))
+    Call RecordInitialization(Inventory.AddItem(State, 10, 4))
+    Call RecordInitialization(Inventory.AddItem(State, 20, 1))
+    Call RecordInitialization(Abilities.LearnAbility(State, 200, 50))
 
 End Sub
 
@@ -252,37 +340,111 @@ Sub InitializeMenus()
     ShopMenu = New Menus.Menu(MenuStyle, 0, 0, 360, 270, 5)
     SaveMenu = New Menus.Menu(MenuStyle, 0, 0, 360, 230, 4)
 
+    Call RecordInitialization(RootMenu.Valid)
+    Call RecordInitialization(PartyMenu.Valid)
+    Call RecordInitialization(InventoryMenu.Valid)
+    Call RecordInitialization(EquipmentMenu.Valid)
+    Call RecordInitialization(AbilityMenu.Valid)
+    Call RecordInitialization(ShopMenu.Valid)
+    Call RecordInitialization(SaveMenu.Valid)
+
     PartyIndex = RootMenu.AddItem("Party", 1, True)
+
+    Call RecordInitialization(PartyIndex >= 0)
+
     InventoryIndex = RootMenu.AddItem("Inventory", 2, True)
+
+    Call RecordInitialization(InventoryIndex >= 0)
+
     EquipmentIndex = RootMenu.AddItem("Equipment", 3, True)
+
+    Call RecordInitialization(EquipmentIndex >= 0)
+
     AbilityIndex = RootMenu.AddItem("Abilities and Magic Points", 4, True)
+
+    Call RecordInitialization(AbilityIndex >= 0)
+
     ShopIndex = RootMenu.AddItem("Shops", 5, True)
+
+    Call RecordInitialization(ShopIndex >= 0)
+
     SaveIndex = RootMenu.AddItem("Save / Load", 6, True)
+
+    Call RecordInitialization(SaveIndex >= 0)
+
     ItemIndex = RootMenu.AddItem("Exit Gallery", 999, True)
 
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = PartyMenu.AddItem("Swap Party Order", 101, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = PartyMenu.AddItem("Add 100 Gold", 102, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = InventoryMenu.AddItem("Add Potion", 201, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = InventoryMenu.AddItem("Remove Potion", 202, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = InventoryMenu.AddItem("Add Bronze Sword", 203, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = InventoryMenu.AddItem("Remove Bronze Sword", 204, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = EquipmentMenu.AddItem("Equip Bronze Sword", 301, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = EquipmentMenu.AddItem("Unequip Bronze Sword", 302, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = AbilityMenu.AddItem("Cast Fire for 7 MP", 401, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = AbilityMenu.AddItem("Restore 10 MP", 402, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = ShopMenu.AddItem("Buy Potion", 501, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = ShopMenu.AddItem("Sell Potion", 502, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = ShopMenu.AddItem("Reset Stock", 503, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = SaveMenu.AddItem("Save Management State", 601, True)
+
+    Call RecordInitialization(ItemIndex >= 0)
+
     ItemIndex = SaveMenu.AddItem("Load Management State", 602, True)
 
+    Call RecordInitialization(ItemIndex >= 0)
+
     Navigator = New Menus.MenuNavigator(RootMenu, NavigatorStyle)
-    OperationSucceeded = Navigator.BindSubmenu(RootMenu, PartyIndex, PartyMenu, False)
-    OperationSucceeded = OperationSucceeded And Navigator.BindSubmenu(RootMenu, InventoryIndex, InventoryMenu, False)
-    OperationSucceeded = OperationSucceeded And Navigator.BindSubmenu(RootMenu, EquipmentIndex, EquipmentMenu, False)
-    OperationSucceeded = OperationSucceeded And Navigator.BindSubmenu(RootMenu, AbilityIndex, AbilityMenu, False)
-    OperationSucceeded = OperationSucceeded And Navigator.BindSubmenu(RootMenu, ShopIndex, ShopMenu, False)
-    OperationSucceeded = OperationSucceeded And Navigator.BindSubmenu(RootMenu, SaveIndex, SaveMenu, False)
+
+    Call RecordInitialization(Navigator.Valid)
+    Call RecordInitialization(Navigator.BindSubmenu(RootMenu, PartyIndex, PartyMenu, False))
+    Call RecordInitialization(Navigator.BindSubmenu(RootMenu, InventoryIndex, InventoryMenu, False))
+    Call RecordInitialization(Navigator.BindSubmenu(RootMenu, EquipmentIndex, EquipmentMenu, False))
+    Call RecordInitialization(Navigator.BindSubmenu(RootMenu, AbilityIndex, AbilityMenu, False))
+    Call RecordInitialization(Navigator.BindSubmenu(RootMenu, ShopIndex, ShopMenu, False))
+    Call RecordInitialization(Navigator.BindSubmenu(RootMenu, SaveIndex, SaveMenu, False))
 
 End Sub
 

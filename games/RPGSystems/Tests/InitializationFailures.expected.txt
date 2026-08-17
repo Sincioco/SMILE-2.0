@@ -1,0 +1,4 @@
+RPGSystems RPG capacity failure: PASS
+RPGSystems Management UI failure: PASS
+RPGSystems World UI failure: PASS
+RPGSystems initialization failure cleanup: PASS
