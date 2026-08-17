@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$OutputDirectory = (Join-Path $PSScriptRoot '..\examples\RpgBattleGallery\Assets')
+    [string]$OutputDirectory = (Join-Path $PSScriptRoot '..\games\RPGSystems\Assets\Battle')
 )
 
 $ErrorActionPreference = 'Stop'

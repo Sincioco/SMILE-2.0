@@ -8,7 +8,7 @@ Import Smile.RPG.World As World
 Import Smile.RPG.Story As Story
 Import Smile.RPG.Encounters As Encounters
 Import Smile.RPG.SaveGames As SaveGames
-Import RpgDungeonGallery.Workflow As DungeonWorkflow
+Import RPGSystems.DungeonWorkflow As DungeonWorkflow
 
 Const CHARACTER_HERO = 100
 Const CHARACTER_COMPANION = 200

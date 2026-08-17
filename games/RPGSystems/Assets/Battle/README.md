@@ -1,4 +1,4 @@
-# RpgBattleGallery asset provenance
+# RPG Systems Battle asset provenance
 
 Every asset in this directory is original work produced for the public Phase 9 gallery. No commercial game image, sprite, recording, extracted data, or derivative asset was used.
 

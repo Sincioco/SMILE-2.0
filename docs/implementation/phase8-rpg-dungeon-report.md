@@ -6,7 +6,7 @@ Phase 8 began from `65c00058e840b6ca2dfa67ec18c2c04c81340f13` on `main`, with `H
 
 The required pre-production [gap matrix](../architecture/phase8-rpg-dungeon-gap-matrix.md) found no missing generic API. Phase 8 reuses `World`, `Story`, `Inventory`, `Characters`, `Party`, `Encounters`, `SaveGames`, `CardinalMover`, `Animation`, `TileMap`, `Camera2D`, and `Smile.UI`. No second scene graph, actor system, movement stack, inventory, persistence system, quest DSL, pathfinding facility, or Phantasy-Star-specific public surface was created.
 
-The permanent new work consists of the original `examples\RpgDungeonGallery`, the presentation-independent `examples\Phase8DungeonStateTests`, the 62-check map topology validator, smoke/artifact integration, and documentation. No generic library module or API was added.
+The permanent new work now lives in the Dungeon option under `games\RPGSystems`, alongside the presentation-independent `examples\Phase8DungeonStateTests`, the 62-check map topology validator, smoke/artifact integration, and documentation. No generic library module or API was added.
 
 ## Versions and formats
 
@@ -58,7 +58,7 @@ Private provenance logs retain access dates, local filenames, hashes, commercial
 
 ## Copyright and repository safety
 
-The final SHA-256 audit hashed 145 private binary files and all five newly tracked public binary files and found zero matches. The five public PNG files are byte-identical reuse of the repository's existing original `RpgWorldGallery` art, not derivatives of private references. No private project is in the tracked solution; no private commercial asset, map, audio, screenshot, provenance log, evidence file, executable, or Web publication is tracked or copied into public artifacts.
+The final SHA-256 audit hashed 145 private binary files and all five newly tracked public binary files and found zero matches. The five public PNG files are byte-identical reuse of the repository's existing original RPG Systems World art, not derivatives of private references. No private project is in the tracked solution; no private commercial asset, map, audio, screenshot, provenance log, evidence file, executable, or Web publication is tracked or copied into public artifacts.
 
 ## Complete regression result
 

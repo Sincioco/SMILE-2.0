@@ -1,5 +1,5 @@
-''' Application-local transactional dungeon event workflows shared by the gallery and its tests.
-Module RpgDungeonGallery.Workflow
+''' Application-local transactional dungeon event workflows shared by RPGSystems and its tests.
+Module RPGSystems.DungeonWorkflow
 
 Option Explicit
 

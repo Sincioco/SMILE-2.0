@@ -5,9 +5,9 @@ param(
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 
-$galleryRoot = Join-Path $RepositoryRoot 'examples\RpgWorldGallery'
-$assetRoot = Join-Path $galleryRoot 'Assets'
-$mapRoot = Join-Path $galleryRoot 'Maps'
+$galleryRoot = Join-Path $RepositoryRoot 'games\RPGSystems'
+$assetRoot = Join-Path $galleryRoot 'Assets\World'
+$mapRoot = Join-Path $galleryRoot 'Maps\World'
 [IO.Directory]::CreateDirectory($assetRoot) | Out-Null
 [IO.Directory]::CreateDirectory($mapRoot) | Out-Null
 

@@ -1,3 +1,6 @@
+''' Top-down world, town, shop, story, encounter, and save systems hosted by RPGSystems.
+Module RPGSystems.WorldSystem
+
 Option Explicit
 
 Import Smile.Game.Core As GameCore
@@ -96,16 +99,16 @@ Dim TransitionDefinition As World.TransitionDefinition
 Dim ActorDefinition As World.ActorDefinition
 Dim ZoneDefinition As Encounters.ZoneDefinition
 
-Game Window "SMILE 2.0 RPG World Gallery" Size 960 By 540
+Public Sub Run()
 
-Load Image Tileset From "Assets\WorldTiles.png"
-Load Image HeroImage From "Assets\Hero.png"
-Load Image CompanionImage From "Assets\Companion.png"
-Load Image NpcImage From "Assets\Npc.png"
-Load Image TitleBackground From "Assets\TitleBackground.png"
-Load Image EncounterBackground From "Assets\EncounterBackground.png"
-Load Image EnemyImage From "Assets\MireWarden.png"
-Load Image PanelImage From "Assets\PanelOverlay.png"
+Load Image Tileset From "Assets\World\WorldTiles.png"
+Load Image HeroImage From "Assets\World\Hero.png"
+Load Image CompanionImage From "Assets\World\Companion.png"
+Load Image NpcImage From "Assets\World\Npc.png"
+Load Image TitleBackground From "Assets\World\TitleBackground.png"
+Load Image EncounterBackground From "Assets\World\EncounterBackground.png"
+Load Image EnemyImage From "Assets\World\MireWarden.png"
+Load Image PanelImage From "Assets\World\PanelOverlay.png"
 
 State = RPG.Create()
 
@@ -120,42 +123,49 @@ Mode = MODE_TITLE
 TitleSelection = 1
 Status = "Choose a title-screen action."
 Running = State > 0 And TownMap > 0 And ShopMap > 0 And OverworldMap > 0
-Play Music "Assets\LumenTheme.wav" Loop
+Play Music "Assets\World\LumenTheme.wav" Loop
 
 Do
     Get Key Key
     AnimationClock = AnimationClock + 1
 
-    Select Case Mode
-        Case MODE_TITLE
+    If Key = KEY_ESCAPE Then
 
-            Call HandleTitle(Key)
+        Running = False
 
-        Case MODE_FIELD
+    Else
+        Select Case Mode
+            Case MODE_TITLE
 
-            Call HandleField(Key)
+                Call HandleTitle(Key)
 
-        Case MODE_FIELD_MENU
+            Case MODE_FIELD
 
-            Call HandleFieldMenu(Key)
+                Call HandleField(Key)
 
-        Case MODE_DIALOGUE
+            Case MODE_FIELD_MENU
 
-            Call HandleDialogue(Key)
+                Call HandleFieldMenu(Key)
 
-        Case MODE_INFO
+            Case MODE_DIALOGUE
 
-            Call HandleInfo(Key)
+                Call HandleDialogue(Key)
 
-        Case MODE_SHOP
+            Case MODE_INFO
 
-            Call HandleShop(Key)
+                Call HandleInfo(Key)
 
-        Case MODE_ENCOUNTER
+            Case MODE_SHOP
 
-            Call HandleEncounter(Key)
+                Call HandleShop(Key)
 
-    End Select
+            Case MODE_ENCOUNTER
+
+                Call HandleEncounter(Key)
+
+        End Select
+
+    End If
 
     If Mode = MODE_FIELD Then
         Call UpdateMovement()
@@ -217,7 +227,7 @@ Unload Image Tileset
 
 Call RPG.Destroy(State)
 
-End Program
+End Sub
 
 Sub InitializeStyles()
 
@@ -452,11 +462,11 @@ Sub LoadWorldMaps()
 
     Dim Path As Text
 
-    Path = "Maps\Town.smilemap"
+    Path = "Maps\World\Town.smilemap"
     TownMap = TileMap.LoadMap(Path)
-    Path = "Maps\Shop.smilemap"
+    Path = "Maps\World\Shop.smilemap"
     ShopMap = TileMap.LoadMap(Path)
-    Path = "Maps\Overworld.smilemap"
+    Path = "Maps\World\Overworld.smilemap"
     OverworldMap = TileMap.LoadMap(Path)
 
     Call DefineTiles(TownMap)
@@ -1150,3 +1160,5 @@ Sub DrawEncounter()
     Draw Text "Enter / Space / Escape: return to exact overworld position" At 65, 466 Size 19 Color WHITE
 
 End Sub
+
+End Module

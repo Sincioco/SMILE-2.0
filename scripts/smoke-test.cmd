@@ -802,17 +802,39 @@ if errorlevel 1 exit /b 1
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-phase6-rpg-rollback.ps1"
 if errorlevel 1 exit /b 1
 
-if not exist "%SMILE_ROOT%\artifacts\games\RpgManagementGallery-DirectX" mkdir "%SMILE_ROOT%\artifacts\games\RpgManagementGallery-DirectX"
-if not exist "%SMILE_ROOT%\artifacts\games\RpgManagementGallery-GDI" mkdir "%SMILE_ROOT%\artifacts\games\RpgManagementGallery-GDI"
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgManagementGallery\RpgManagementGallery.smileproj" --target windows-x64 --configuration Release --graphics DirectX -o "%SMILE_ROOT%\artifacts\games\RpgManagementGallery-DirectX\RpgManagementGallery.exe" --debug
+if not exist "%SMILE_ROOT%\artifacts\games\RPGSystems-DirectX" mkdir "%SMILE_ROOT%\artifacts\games\RPGSystems-DirectX"
+if not exist "%SMILE_ROOT%\artifacts\games\RPGSystems-GDI" mkdir "%SMILE_ROOT%\artifacts\games\RPGSystems-GDI"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\RPGSystems\RPGSystems.smileproj" --target windows-x64 --configuration Release --graphics DirectX -o "%SMILE_ROOT%\artifacts\games\RPGSystems-DirectX\RPGSystems.exe" --debug
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgManagementGallery\RpgManagementGallery.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\RpgManagementGallery-GDI\RpgManagementGallery.exe"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\RPGSystems\RPGSystems.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\RPGSystems-GDI\RPGSystems.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgManagementGallery\RpgManagementGallery.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\RpgManagementGallery"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\RPGSystems\RPGSystems.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\RPGSystems"
 if errorlevel 1 exit /b 1
-node --check "%SMILE_ROOT%\artifacts\web\RpgManagementGallery\game.js"
+node --check "%SMILE_ROOT%\artifacts\web\RPGSystems\game.js"
 if errorlevel 1 exit /b 1
-echo Phase 6.2 ApplicationId, Smile.RPG package, state, save, query-purity, project/package, DirectX, GDI, and Web tests passed.
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\RPGSystems" --frames 40 --timeout 10000
+if errorlevel 1 exit /b 1
+for %%A in (Companion.png EncounterBackground.png Hero.png MireWarden.png Npc.png PanelOverlay.png TitleBackground.png WorldTiles.png LumenTheme.wav) do (
+    fc /b "%SMILE_ROOT%\games\RPGSystems\Assets\World\%%A" "%SMILE_ROOT%\artifacts\web\RPGSystems\Assets\World\%%A" >nul
+    if errorlevel 1 exit /b 1
+)
+for %%A in (Town.smilemap Shop.smilemap Overworld.smilemap) do (
+    fc /b "%SMILE_ROOT%\games\RPGSystems\Maps\World\%%A" "%SMILE_ROOT%\artifacts\web\RPGSystems\Maps\World\%%A" >nul
+    if errorlevel 1 exit /b 1
+)
+for %%A in (Companion.png Hero.png MireWarden.png Npc.png WorldTiles.png) do (
+    fc /b "%SMILE_ROOT%\games\RPGSystems\Assets\Dungeon\%%A" "%SMILE_ROOT%\artifacts\web\RPGSystems\Assets\Dungeon\%%A" >nul
+    if errorlevel 1 exit /b 1
+)
+for %%A in (Archive1.smilemap Archive2.smilemap Archive3.smilemap Archive4.smilemap) do (
+    fc /b "%SMILE_ROOT%\games\RPGSystems\Maps\Dungeon\%%A" "%SMILE_ROOT%\artifacts\web\RPGSystems\Maps\Dungeon\%%A" >nul
+    if errorlevel 1 exit /b 1
+)
+for %%A in (Ability.wav DungeonTheme.wav EnemyLineup.png LumenPlaza.png OverworldTheme.wav PartyLineup.png PrismVault.png StarfallPlateau.png Strike.wav TownTheme.wav Victory.wav) do (
+    fc /b "%SMILE_ROOT%\games\RPGSystems\Assets\Battle\%%A" "%SMILE_ROOT%\artifacts\web\RPGSystems\Assets\Battle\%%A" >nul
+    if errorlevel 1 exit /b 1
+)
+echo Phase 6.2 state tests and consolidated RPG Systems DirectX, GDI, Web, launcher, and asset tests passed.
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase7WorldStateTests\Phase7WorldStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase7WorldStateTests.exe"
 if errorlevel 1 exit /b 1
@@ -839,27 +861,7 @@ if errorlevel 1 exit /b 1
 node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase7WorldStateTestsPackage" --native-output "%SMILE_ROOT%\artifacts\temp\Phase7WorldStateTestsPackage.out" --timeout 10000
 if errorlevel 1 exit /b 1
 
-if not exist "%SMILE_ROOT%\artifacts\games\RpgWorldGallery-DirectX" mkdir "%SMILE_ROOT%\artifacts\games\RpgWorldGallery-DirectX"
-if not exist "%SMILE_ROOT%\artifacts\games\RpgWorldGallery-GDI" mkdir "%SMILE_ROOT%\artifacts\games\RpgWorldGallery-GDI"
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgWorldGallery\RpgWorldGallery.smileproj" --target windows-x64 --configuration Release --graphics DirectX -o "%SMILE_ROOT%\artifacts\games\RpgWorldGallery-DirectX\RpgWorldGallery.exe" --debug
-if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgWorldGallery\RpgWorldGallery.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\RpgWorldGallery-GDI\RpgWorldGallery.exe"
-if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgWorldGallery\RpgWorldGallery.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\RpgWorldGallery"
-if errorlevel 1 exit /b 1
-node --check "%SMILE_ROOT%\artifacts\web\RpgWorldGallery\game.js"
-if errorlevel 1 exit /b 1
-node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\RpgWorldGallery" --frames 40 --timeout 10000
-if errorlevel 1 exit /b 1
-for %%A in (Companion.png EncounterBackground.png Hero.png MireWarden.png Npc.png PanelOverlay.png TitleBackground.png WorldTiles.png LumenTheme.wav) do (
-    fc /b "%SMILE_ROOT%\examples\RpgWorldGallery\Assets\%%A" "%SMILE_ROOT%\artifacts\web\RpgWorldGallery\Assets\%%A" >nul
-    if errorlevel 1 exit /b 1
-)
-for %%A in (Town.smilemap Shop.smilemap Overworld.smilemap) do (
-    fc /b "%SMILE_ROOT%\examples\RpgWorldGallery\Maps\%%A" "%SMILE_ROOT%\artifacts\web\RpgWorldGallery\Maps\%%A" >nul
-    if errorlevel 1 exit /b 1
-)
-echo Phase 7 Smile.Game, Smile.RPG world state, format compatibility, package, gallery, DirectX, GDI, and Web tests passed.
+echo Phase 7 Smile.Game, Smile.RPG world state, format compatibility, package, and consolidated RPG Systems tests passed.
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase8DungeonStateTests\Phase8DungeonStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase8DungeonStateTests.exe"
 if errorlevel 1 exit /b 1
@@ -890,27 +892,7 @@ if errorlevel 1 exit /b 1
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-phase8-dungeon-maps.ps1"
 if errorlevel 1 exit /b 1
 
-if not exist "%SMILE_ROOT%\artifacts\games\RpgDungeonGallery-DirectX" mkdir "%SMILE_ROOT%\artifacts\games\RpgDungeonGallery-DirectX"
-if not exist "%SMILE_ROOT%\artifacts\games\RpgDungeonGallery-GDI" mkdir "%SMILE_ROOT%\artifacts\games\RpgDungeonGallery-GDI"
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgDungeonGallery\RpgDungeonGallery.smileproj" --target windows-x64 --configuration Release --graphics DirectX -o "%SMILE_ROOT%\artifacts\games\RpgDungeonGallery-DirectX\RpgDungeonGallery.exe" --debug
-if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgDungeonGallery\RpgDungeonGallery.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\RpgDungeonGallery-GDI\RpgDungeonGallery.exe"
-if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgDungeonGallery\RpgDungeonGallery.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\RpgDungeonGallery"
-if errorlevel 1 exit /b 1
-node --check "%SMILE_ROOT%\artifacts\web\RpgDungeonGallery\game.js"
-if errorlevel 1 exit /b 1
-node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\RpgDungeonGallery" --frames 40 --timeout 10000
-if errorlevel 1 exit /b 1
-for %%A in (Companion.png Hero.png MireWarden.png Npc.png WorldTiles.png) do (
-    fc /b "%SMILE_ROOT%\examples\RpgDungeonGallery\Assets\%%A" "%SMILE_ROOT%\artifacts\web\RpgDungeonGallery\Assets\%%A" >nul
-    if errorlevel 1 exit /b 1
-)
-for %%A in (Archive1.smilemap Archive2.smilemap Archive3.smilemap Archive4.smilemap) do (
-    fc /b "%SMILE_ROOT%\examples\RpgDungeonGallery\Maps\%%A" "%SMILE_ROOT%\artifacts\web\RpgDungeonGallery\Maps\%%A" >nul
-    if errorlevel 1 exit /b 1
-)
-echo Phase 8 dungeon composition, SRPG 2 state, package, DirectX, GDI, and DPR-2 Web tests passed.
+echo Phase 8 dungeon composition, SRPG 2 state, package, and consolidated RPG Systems tests passed.
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase9BattleStateTests\Phase9BattleStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase9BattleStateTests.exe"
 if errorlevel 1 exit /b 1
@@ -939,23 +921,7 @@ if errorlevel 1 exit /b 1
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-phase9-battle-rollback.ps1"
 if errorlevel 1 exit /b 1
 
-if not exist "%SMILE_ROOT%\artifacts\games\RpgBattleGallery-DirectX" mkdir "%SMILE_ROOT%\artifacts\games\RpgBattleGallery-DirectX"
-if not exist "%SMILE_ROOT%\artifacts\games\RpgBattleGallery-GDI" mkdir "%SMILE_ROOT%\artifacts\games\RpgBattleGallery-GDI"
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgBattleGallery\RpgBattleGallery.smileproj" --target windows-x64 --configuration Release --graphics DirectX -o "%SMILE_ROOT%\artifacts\games\RpgBattleGallery-DirectX\RpgBattleGallery.exe" --debug
-if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgBattleGallery\RpgBattleGallery.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\RpgBattleGallery-GDI\RpgBattleGallery.exe"
-if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\RpgBattleGallery\RpgBattleGallery.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\RpgBattleGallery"
-if errorlevel 1 exit /b 1
-node --check "%SMILE_ROOT%\artifacts\web\RpgBattleGallery\game.js"
-if errorlevel 1 exit /b 1
-node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\RpgBattleGallery" --frames 40 --timeout 10000
-if errorlevel 1 exit /b 1
-for %%A in (Ability.wav DungeonTheme.wav EnemyLineup.png LumenPlaza.png OverworldTheme.wav PartyLineup.png PrismVault.png StarfallPlateau.png Strike.wav TownTheme.wav Victory.wav) do (
-    fc /b "%SMILE_ROOT%\examples\RpgBattleGallery\Assets\%%A" "%SMILE_ROOT%\artifacts\web\RpgBattleGallery\Assets\%%A" >nul
-    if errorlevel 1 exit /b 1
-)
-echo Phase 9 battle modules, SRPG-2 active-session boundary, project/package parity, six rollback checkpoints, gallery, DirectX, GDI, and DPR-2 Web tests passed.
+echo Phase 9 battle modules, SRPG-2 active-session boundary, project/package parity, six rollback checkpoints, and consolidated RPG Systems tests passed.
 
 for %%P in (OptionExplicitLate:SML3300 OptionExplicitUndeclared:SML3303 ScalarDimWithoutAs:SML3302 UnknownBuiltInType:SML3401 NumberToTextAssignment:SML3304 TextToBooleanAssignment:SML3304 MixedTextAddition:SML3308 TextRelationalComparison:SML3308 InvalidByRefLiteral:SML3305 InvalidByRefConstant:SML3305 WrongArgumentType:SML3304 WrongReturnType:SML3304 InconsistentLegacyReturnTypes:SML3309 DuplicateLocal:SML3306 UseBeforeLocalDeclaration:SML3307) do (
     for /f "tokens=1,2 delims=:" %%F in ("%%P") do (
@@ -1236,9 +1202,9 @@ if errorlevel 1 (
 echo Snake model parity, synchronized tutorial, and demo/no-demo builds passed.
 
 if not exist "%SMILE_ROOT%\artifacts\games\SinStarI" mkdir "%SMILE_ROOT%\artifacts\games\SinStarI"
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\SinStarI\SinStarI.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\SinStarI\SinStarI.exe" --debug
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\SinStarI\SinStarI.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\SinStarI\SinStarI.exe" --debug
 if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\SinStarI\SinStarI.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\SinStarI"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\SinStarI\SinStarI.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\SinStarI"
 if errorlevel 1 exit /b %errorlevel%
 node --check "%SMILE_ROOT%\artifacts\web\SinStarI\game.js"
 if errorlevel 1 exit /b %errorlevel%

@@ -1,3 +1,6 @@
+''' Party, inventory, equipment, ability, shop, and save systems hosted by RPGSystems.
+Module RPGSystems.ManagementSystem
+
 Option Explicit
 
 Import Smile.RPG.Core As RPG
@@ -48,6 +51,8 @@ Dim Status As Text
 Dim Running As Boolean
 Dim OperationSucceeded As Boolean
 
+Public Sub Run()
+
 State = RPG.Create()
 
 Call InitializeDefinitions()
@@ -58,16 +63,22 @@ Call InitializeMenus()
 Status = "Choose a category, then run a management action."
 Running = State > 0 And Navigator.Valid
 
-Game Window "SMILE 2.0 RPG Management Gallery" Size 1120 By 700
-
 Do
     Get Key Key
-    Event = Navigator.Update(Key)
 
-    If Event = UI.UI_EVENT_ACCEPTED Then
-        Action = Navigator.LastAcceptedValue
+    If Key = KEY_ESCAPE Then
 
-        Call RunAction(Action)
+        Running = False
+
+    Else
+        Event = Navigator.Update(Key)
+
+        If Event = UI.UI_EVENT_ACCEPTED Then
+            Action = Navigator.LastAcceptedValue
+
+            Call RunAction(Action)
+        End If
+
     End If
 
     Clear Rgb(8, 14, 27)
@@ -95,7 +106,7 @@ Call PartyMenu.Destroy()
 Call RootMenu.Destroy()
 Call RPG.Destroy(State)
 
-End Program
+End Sub
 
 Sub InitializeDefinitions()
 
@@ -409,3 +420,5 @@ Sub DrawStateSummary()
     Draw Text "Values refresh after every action." At 790, 496 Size 15 Color CYAN
 
 End Sub
+
+End Module

@@ -1,9 +1,0 @@
-<Solution>
-  <Configurations>
-    <BuildType Name="Debug" />
-    <BuildType Name="Release" />
-    <Platform Name="Windows 64-bit .exe" />
-    <Platform Name="Web" />
-  </Configurations>
-  <Project Path="RpgWorldGallery.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="ea20fcad-4e88-b4d4-091c-b39d26b68fa6" />
-</Solution>

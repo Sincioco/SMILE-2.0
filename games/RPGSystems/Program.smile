@@ -1,0 +1,134 @@
+Option Explicit
+
+Import RPGSystems.BattleSystem As BattleSystem
+Import RPGSystems.DungeonSystem As DungeonSystem
+Import RPGSystems.ManagementSystem As ManagementSystem
+Import RPGSystems.WorldSystem As WorldSystem
+
+Const MENU_BATTLE = 1
+Const MENU_DUNGEON = 2
+Const MENU_MANAGEMENT = 3
+Const MENU_WORLD = 4
+Const MENU_COUNT = 4
+
+Dim Selection As Number
+Dim Key As Number
+Dim Running As Boolean
+
+Game Window "SMILE 2.0 RPG Systems" Size 1280 By 720
+
+Selection = MENU_BATTLE
+Running = True
+
+Do
+    Get Key Key
+
+    Call UpdateLauncher(Key)
+    Call DrawLauncher()
+
+    Show Screen
+    Wait 8 Milliseconds
+
+Loop Until Game_Closed() = True Or Not Running
+
+End Program
+
+Sub UpdateLauncher(PressedKey As Number)
+
+    If (PressedKey = KEY_UP Or
+        PressedKey = KEY_W Or
+        PressedKey = KEY_LEFT Or
+        PressedKey = KEY_A) Then
+
+        Selection = Selection - 1
+
+        If Selection < 1 Then
+            Selection = MENU_COUNT
+        End If
+
+    Else If (PressedKey = KEY_DOWN Or
+        PressedKey = KEY_S Or
+        PressedKey = KEY_RIGHT Or
+        PressedKey = KEY_D) Then
+
+        Selection = Selection + 1
+
+        If Selection > MENU_COUNT Then
+            Selection = 1
+        End If
+
+    Else If PressedKey = KEY_ENTER Or PressedKey = KEY_SPACE Then
+
+        Clear Rgb(5, 11, 24)
+        Show Screen
+
+        Select Case Selection
+            Case MENU_BATTLE
+
+                Call BattleSystem.Run()
+
+            Case MENU_DUNGEON
+
+                Call DungeonSystem.Run()
+
+            Case MENU_MANAGEMENT
+
+                Call ManagementSystem.Run()
+
+            Case MENU_WORLD
+
+                Call WorldSystem.Run()
+
+        End Select
+
+    Else If PressedKey = KEY_ESCAPE Then
+
+        Running = False
+
+    End If
+
+End Sub
+
+Sub DrawLauncher()
+
+    Clear Rgb(5, 11, 24)
+    Fill Rectangle 0, 0, 1280, 118, Rgb(11, 34, 57)
+    Fill Rectangle 0, 650, 1280, 70, Rgb(8, 25, 43)
+
+    Draw Text "SMILE 2.0 RPG Systems" At 640, 30 Size 42 Color CYAN Centered
+    Draw Text "Reusable battle, dungeon, management, and world capability galleries" At 640, 80 Size 19 Color WHITE Centered
+
+    Call DrawLauncherOption(MENU_BATTLE, 190, "Battle", "Formations, commands, strategy, effects, rewards, and battle presentation")
+    Call DrawLauncherOption(MENU_DUNGEON, 300, "Dungeon", "First-person and top-down exploration, events, traps, transitions, and encounters")
+    Call DrawLauncherOption(MENU_MANAGEMENT, 410, "Management", "Party, inventory, equipment, abilities, shops, and save/load state")
+    Call DrawLauncherOption(MENU_WORLD, 520, "World", "Town and overworld movement, actors, dialogue, shops, story, and encounters")
+
+    Draw Text "Arrow keys or WASD select | Enter or Space opens | Escape returns here from any system" At 640, 672 Size 18 Color LIGHT_GRAY Centered
+
+End Sub
+
+Sub DrawLauncherOption(Value As Number, Y As Number, Label As Text, Description As Text)
+
+    Dim FillColor As Number
+    Dim BorderColor As Number
+    Dim LabelColor As Number
+
+    If Selection = Value Then
+
+        FillColor = Rgb(20, 70, 91)
+        BorderColor = Rgb(102, 235, 220)
+        LabelColor = YELLOW
+
+    Else
+        FillColor = Rgb(12, 27, 47)
+        BorderColor = Rgb(45, 91, 116)
+        LabelColor = WHITE
+
+    End If
+
+    Fill Rectangle 180, Y, 920, 84, FillColor
+    Draw Rectangle 180, Y, 920, 84, BorderColor
+    Draw Text Label At 220, Y + 16 Size 28 Color LabelColor
+    Draw Text Description At 430, Y + 25 Size 17 Color LIGHT_GRAY
+
+End Sub

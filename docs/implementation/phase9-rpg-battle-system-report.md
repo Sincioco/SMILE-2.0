@@ -108,7 +108,7 @@ Each effect definition contains up to eight ordered components. Components cover
 
 A future renderer can consume the same participant identities, logical X/Y/Z slots, facing/layer/anchor data, event stream, and cue kinds. It can substitute cameras, meshes, particles, spatial audio, and animation graphs without changing battle mechanics. Phase 9 deliberately implements no 3D API or renderer.
 
-## RpgBattleGallery results
+## RPGSystems Battle results
 
 The original public gallery demonstrates a PSII-inspired rear-facing four-member party battle with multiple enemy groups, a PSI-inspired environmental overworld battle, and a first-person crystalline corridor battle. It includes Fight/Strategy/Order/Run, abilities, items, Defend, status UI, messages, floating damage/healing values, animation cues, battle effects, deterministic rewards, music, and sound effects.
 
@@ -116,7 +116,7 @@ The original public gallery demonstrates a PSII-inspired rear-facing four-member
 - GDI: compatibility builds and native launch verification passed with the same application-owned assets and battle authority.
 - Web/DPR-2: Web build, asset publication, deterministic execution, viewport/DPR checks, and a live browser launch passed. The final IDE Web launch used the installed 2.0.47 compiler and displayed the gallery title/menu and original Starfall Plateau art.
 
-The five public PNGs are original ImageGen assets created in the built-in design workflow from the tracked prompt set in `examples/RpgBattleGallery/Assets/README.md`: `StarfallPlateau.png`, `LumenPlaza.png`, `PrismVault.png`, `PartyLineup.png`, and `EnemyLineup.png`. This materially established an original, high-resolution public visual identity without using commercial game art. Six deterministic synthesized WAV files provide the three scene themes and Strike/Ability/Victory cues. The project publishes exactly eleven assets.
+The five public PNGs are original ImageGen assets created in the built-in design workflow from the tracked prompt set in `games/RPGSystems/Assets/Battle/README.md`: `StarfallPlateau.png`, `LumenPlaza.png`, `PrismVault.png`, `PartyLineup.png`, and `EnemyLineup.png`. This materially established an original, high-resolution public visual identity without using commercial game art. Six deterministic synthesized WAV files provide the three scene themes and Strike/Ability/Victory cues. The Battle system publishes exactly eleven assets.
 
 ## Exploration integration results
 
@@ -178,7 +178,7 @@ The final 2.0.47 VSIX was built, installed, and loaded into a fresh Visual Studi
 - Quick Info showed the `Smile.RPG.BattleCore.BeginBattle` signature, documentation, package path, and `Smile.RPG@1.2.0` identity.
 - F12 navigated from the gallery call to the `BattleCore.smile` definition.
 - Web build used the newly installed extension compiler, published eleven assets, succeeded, and launched the gallery in Chrome.
-- Native Windows x64 debug compiled, loaded symbols for `RpgBattleGallery.exe`, stopped on an enabled SMILE breakpoint at `Call InitializeRpg()`, and F10 advanced to mapped executable SMILE statements. The debug process then stopped and exited with code 0.
+- Native Windows x64 debug compiled, loaded symbols for `RPGSystems.exe`, stopped on an enabled SMILE breakpoint at `Call InitializeRpg()`, and F10 advanced to mapped executable SMILE statements. The debug process then stopped and exited with code 0.
 
 ## Known limitations
 

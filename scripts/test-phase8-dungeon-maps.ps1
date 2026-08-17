@@ -21,7 +21,7 @@ function Assert-Condition {
 }
 
 foreach ($MapIndex in 1..4) {
-    $Path = Join-Path $RepositoryRoot "examples\RpgDungeonGallery\Maps\Archive$MapIndex.smilemap"
+    $Path = Join-Path $RepositoryRoot "games\RPGSystems\Maps\Dungeon\Archive$MapIndex.smilemap"
     $Lines = @(Get-Content -LiteralPath $Path)
     Assert-Condition ($Lines[0] -eq 'SMILE-MAP 1') "Archive$MapIndex has the wrong format header."
 

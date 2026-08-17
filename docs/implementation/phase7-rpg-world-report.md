@@ -2,7 +2,7 @@
 
 > Phase 7.1 subsequently hardens the world-state and save invariants without beginning a later feature phase. See [the Phase 7.1 hardening report](phase7.1-world-state-invariant-hardening-report.md).
 
-Phase 7 introduces `Smile.Game` 1.0.0 and advances `Smile.RPG` to 1.1.0. The permanent `RpgWorldGallery` proves the complete reusable slice with original art: fixed-step walking, map and actor collision, exact camera clamping, wandering NPCs, menu-initiated multi-page/state-aware Talk, a walkable shop plus transactional purchase overlay, stats/inventory/party management, town/overworld scenes, visible followers, save/load, and a bounded Encounter Preview with exact return.
+Phase 7 introduces `Smile.Game` 1.0.0 and advances `Smile.RPG` to 1.1.0. The permanent RPGSystems World option proves the complete reusable slice with original art: fixed-step walking, map and actor collision, exact camera clamping, wandering NPCs, menu-initiated multi-page/state-aware Talk, a walkable shop plus transactional purchase overlay, stats/inventory/party management, town/overworld scenes, visible followers, save/load, and a bounded Encounter Preview with exact return.
 
 Focused state tests cover generation safety, invalid handles, capacity boundaries, one-shot/loop animation, small-map and edge camera math, collision helpers, required and optional map layers, coordinate conversions, transition destination validation, actor reservations, story enumeration, deterministic encounters, format-2 determinism, transactional rejection, persistent-only actors, and format-1 compatibility.
 
@@ -10,7 +10,7 @@ The language/runtime change generalizes `Load Text File` paths to `Text` express
 
 The maximum save fixture encodes 32,436 bytes against a 36,864-byte package buffer and the existing one-MiB Phase 4 Data envelope. `.smilelib` remains deterministic format 5.
 
-## RpgWorldGallery controls
+## RPGSystems World controls
 
 - On the title screen, use Up/Down and Enter or Space to start, load slot 1, or exit.
 - In a field scene, walk with the arrow keys or W/A/S/D. Enter or Space opens the command menu.

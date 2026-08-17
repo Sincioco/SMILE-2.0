@@ -1,3 +1,6 @@
+''' First-person and top-down dungeon systems hosted by RPGSystems.
+Module RPGSystems.DungeonSystem
+
 Option Explicit
 
 Import Smile.Game.Core As GameCore
@@ -14,7 +17,7 @@ Import Smile.RPG.Encounters As Encounters
 Import Smile.UI.Core As UI
 Import Smile.UI.Menu As Menus
 Import Smile.UI.Dialogue As Dialogues
-Import RpgDungeonGallery.Workflow As DungeonWorkflow
+Import RPGSystems.DungeonWorkflow As DungeonWorkflow
 
 Const MODE_TITLE = 1
 Const MODE_DUNGEON = 2
@@ -152,13 +155,13 @@ Dim CompanionDefinition As Characters.CharacterDefinition
 Dim ItemDefinition As Inventory.ItemDefinition
 Dim ZoneDefinition As Encounters.ZoneDefinition
 
-Game Window "SMILE 2.0 RPG Dungeon Gallery" Size 960 By 540
+Public Sub Run()
 
-Load Image Tileset From "Assets\WorldTiles.png"
-Load Image HeroImage From "Assets\Hero.png"
-Load Image CompanionImage From "Assets\Companion.png"
-Load Image NpcImage From "Assets\Npc.png"
-Load Image EnemyImage From "Assets\MireWarden.png"
+Load Image Tileset From "Assets\Dungeon\WorldTiles.png"
+Load Image HeroImage From "Assets\Dungeon\Hero.png"
+Load Image CompanionImage From "Assets\Dungeon\Companion.png"
+Load Image NpcImage From "Assets\Dungeon\Npc.png"
+Load Image EnemyImage From "Assets\Dungeon\MireWarden.png"
 
 InitializationSucceeded = True
 State = RPG.Create()
@@ -193,32 +196,39 @@ Running = InitializationSucceeded
 Do
     Get Key Key
 
-    Select Case Mode
-        Case MODE_TITLE
+    If Key = KEY_ESCAPE Then
 
-            Call HandleTitle(Key)
+        Running = False
 
-        Case MODE_DUNGEON
+    Else
+        Select Case Mode
+            Case MODE_TITLE
 
-            Call HandleDungeon(Key)
+                Call HandleTitle(Key)
 
-        Case MODE_MENU
+            Case MODE_DUNGEON
 
-            Call HandleMenu(Key)
+                Call HandleDungeon(Key)
 
-        Case MODE_DIALOGUE
+            Case MODE_MENU
 
-            Call HandleDialogue(Key)
+                Call HandleMenu(Key)
 
-        Case MODE_INFO
+            Case MODE_DIALOGUE
 
-            Call HandleInfo(Key)
+                Call HandleDialogue(Key)
 
-        Case MODE_ENCOUNTER
+            Case MODE_INFO
 
-            Call HandleEncounter(Key)
+                Call HandleInfo(Key)
 
-    End Select
+            Case MODE_ENCOUNTER
+
+                Call HandleEncounter(Key)
+
+        End Select
+
+    End If
 
     If Mode = MODE_DUNGEON And Not IsFirstPersonScene(World.CurrentScene(State)) Then
         Call UpdateTopDownMovement()
@@ -277,6 +287,8 @@ Unload Image Tileset
 
 Call RPG.Destroy(State)
 
+End Sub
+
 Sub RecordInitialization(Succeeded As Boolean)
 
     If Not Succeeded Then
@@ -284,8 +296,6 @@ Sub RecordInitialization(Succeeded As Boolean)
     End If
 
 End Sub
-
-End Program
 
 Sub InitializeProjection()
 
@@ -716,13 +726,13 @@ Sub LoadTopDownMaps()
     Dim Path As Text
     Dim Index As Number
 
-    Path = "Maps\Archive1.smilemap"
+    Path = "Maps\Dungeon\Archive1.smilemap"
     FloorMaps[0] = TileMap.LoadMap(Path)
-    Path = "Maps\Archive2.smilemap"
+    Path = "Maps\Dungeon\Archive2.smilemap"
     FloorMaps[1] = TileMap.LoadMap(Path)
-    Path = "Maps\Archive3.smilemap"
+    Path = "Maps\Dungeon\Archive3.smilemap"
     FloorMaps[2] = TileMap.LoadMap(Path)
-    Path = "Maps\Archive4.smilemap"
+    Path = "Maps\Dungeon\Archive4.smilemap"
     FloorMaps[3] = TileMap.LoadMap(Path)
 
     For Index = 0 To 3
@@ -2200,3 +2210,5 @@ Sub DrawEncounter()
     Draw Text "Enter / Space / Escape returns to the exact dungeon cell and facing" At 480, 470 Size 18 Color WHITE Centered
 
 End Sub
+
+End Module

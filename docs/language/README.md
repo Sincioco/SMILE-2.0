@@ -625,7 +625,7 @@ Phase 7 adds the ordinary `Smile.Game` source package and advances `Smile.RPG` w
 
 Phase 7.1 advances `Smile.RPG` to 1.1.1 with world-state invariant and transactional save hardening. It changes no language syntax, SMILE-MAP fields, SRPG fields, or `.smilelib` package format.
 
-Phase 8 adds no language syntax, native runtime primitive, package API, or file-format revision. It demonstrates dungeon exploration by composing the existing source-authored packages in `RpgDungeonGallery`; see [phase8-rpg-dungeons.md](phase8-rpg-dungeons.md).
+Phase 8 adds no language syntax, native runtime primitive, package API, or file-format revision. It demonstrates dungeon exploration by composing the existing source-authored packages in the `RPGSystems` Dungeon option; see [phase8-rpg-dungeons.md](phase8-rpg-dungeons.md).
 
 Phase 9 advances `Smile.RPG` to 1.2.0 with four ordinary deterministic battle modules and no new language syntax, compiler/runtime helper, rendering primitive, or persistence format. Active battles block Save/Load and remain transient. See [phase9-rpg-battles.md](phase9-rpg-battles.md).
 

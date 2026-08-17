@@ -21,7 +21,7 @@ SaveGames shipped the little-endian SRPG version-1 field order documented in `do
 
 - Project-reference and package-reference RPG state consumers passed on native Windows and Web with exact console parity.
 - The deterministic Smile.RPG package built twice with byte-identical output and published eight source modules with no `requiresGameWindow` member.
-- RpgManagementGallery compiled and ran with DirectX, GDI, and DPR-aware Web output while composing Smile.RPG with Smile.UI MenuNavigator.
+- The RPGSystems Management option compiled and ran with DirectX, GDI, and DPR-aware Web output while composing Smile.RPG with Smile.UI MenuNavigator.
 - ApplicationId validation, CLI/project agreement, persistence isolation, template generation, asset metadata, and native/Web propagation passed.
 - The full smoke suite passed 216 managed checks, 7 focused formatter groups, the 170-file tracked SMILE style gate, 39 native graphics/audio checks, 38 native Text checks, and all seven normal plus seven no-demo games on native and Web.
 - Visual Studio 2026 Enterprise accepted completion, Quick Info, F12, build, breakpoint, F10, and live game rendering with the installed 2.0.39 VSIX.

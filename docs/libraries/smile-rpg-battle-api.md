@@ -64,4 +64,4 @@ Twelve logical battlefield slots and 256 presentation cues form the renderer sea
 
 Battle definitions live with the in-memory RPG state, while participants, queued actions, statuses, events, cues, seed, and outcome are transient. `SaveGames.Encode`, `Decode`, `SaveGame`, and `LoadGame` return `RPG_RESULT_BATTLE_ACTIVE` while a battle is active. SRPG writing remains format 2, reading remains formats 1 and 2, and no battle-session fields were added.
 
-See `examples\Phase9BattleStateTests` for the headless contract and `examples\RpgBattleGallery` for application-owned DirectX, GDI, and Web presentation.
+See `examples\Phase9BattleStateTests` for the headless contract and the Battle option in `games\RPGSystems` for application-owned DirectX, GDI, and Web presentation.

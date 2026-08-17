@@ -14,4 +14,4 @@ The application supplies an explicit nonnegative seed to `BeginBattle`. Given th
 
 Only one battle can be active for an RPG state. Active battle sessions are transient and block Encode, Decode, Save, and Load with `RPG_RESULT_BATTLE_ACTIVE`; SRPG format 2 remains unchanged and formats 1 and 2 remain readable.
 
-`examples\Phase9BattleStateTests` is the project/package native/Web contract proof. `examples\RpgBattleGallery` combines the modules with original public artwork and audio in overworld, top-down town, and first-person corridor presentations. Detailed capacities and formulas are in [the battle API](../libraries/smile-rpg-battle-api.md).
+`examples\Phase9BattleStateTests` is the project/package native/Web contract proof. The Battle option in `games\RPGSystems` combines the modules with original public artwork and audio in overworld, top-down town, and first-person corridor presentations. Detailed capacities and formulas are in [the battle API](../libraries/smile-rpg-battle-api.md).

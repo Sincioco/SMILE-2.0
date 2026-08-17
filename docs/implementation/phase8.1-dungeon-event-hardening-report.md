@@ -27,7 +27,7 @@ The final executable regression source would fail those same baseline behaviors 
 
 ## Shared production/test workflow structure
 
-`examples/RpgDungeonGallery/DungeonWorkflow.smile` defines `RpgDungeonGallery.Workflow` and is compiled directly by the gallery, `Phase8DungeonStateTests.smileproj`, and `Phase8DungeonStateTests.Package.smileproj`. It is application-local and depends only on the existing Smile.RPG API. No public library module, compiler/runtime helper, persistence field, or fault-injection hook was introduced.
+`games/RPGSystems/DungeonWorkflow.smile` defines `RPGSystems.DungeonWorkflow` and is compiled directly by the consolidated gallery, `Phase8DungeonStateTests.smileproj`, and `Phase8DungeonStateTests.Package.smileproj`. It is application-local and depends only on the existing Smile.RPG API. No public library module, compiler/runtime helper, persistence field, or fault-injection hook was introduced.
 
 `scripts/test-phase8-dungeon-workflow-rollback.ps1` creates a GUID-named disposable directory under `artifacts/temp`, copies the real shared workflow and focused test program, instruments five private post-mutation failure points, executes native and Web parity tests, and removes the verified temporary directory.
 

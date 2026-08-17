@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="RPGSystems.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="7e78c860-2074-4c5a-96bc-75e24f3ca17d" />
+</Solution>

@@ -751,24 +751,15 @@ Require-File 'artifacts\games\Phase4AssetPublication\Phase4AssetPublication.smil
 Require-File 'artifacts\web\Phase4AssetPublication\smile-assets.json' | Out-Null
 Require-File 'artifacts\tests\Phase6RpgStateTests.exe' | Out-Null
 Require-File 'artifacts\tests\Phase6RpgStateTestsPackage.exe' | Out-Null
-Require-File 'artifacts\games\RpgManagementGallery-DirectX\smile.gallery.rpg-management.smile-assets.json' | Out-Null
-Require-File 'artifacts\games\RpgManagementGallery-GDI\smile.gallery.rpg-management.smile-assets.json' | Out-Null
-Require-File 'artifacts\web\RpgManagementGallery\smile-assets.json' | Out-Null
+Require-File 'artifacts\games\RPGSystems-DirectX\smile.gallery.rpg-systems.smile-assets.json' | Out-Null
+Require-File 'artifacts\games\RPGSystems-GDI\smile.gallery.rpg-systems.smile-assets.json' | Out-Null
+Require-File 'artifacts\web\RPGSystems\smile-assets.json' | Out-Null
 Require-File 'artifacts\tests\Phase7WorldStateTests.exe' | Out-Null
 Require-File 'artifacts\tests\Phase7WorldStateTestsPackage.exe' | Out-Null
-Require-File 'artifacts\games\RpgWorldGallery-DirectX\smile.gallery.rpg-world.smile-assets.json' | Out-Null
-Require-File 'artifacts\games\RpgWorldGallery-GDI\smile.gallery.rpg-world.smile-assets.json' | Out-Null
-Require-File 'artifacts\web\RpgWorldGallery\smile-assets.json' | Out-Null
 Require-File 'artifacts\tests\Phase8DungeonStateTests.exe' | Out-Null
 Require-File 'artifacts\tests\Phase8DungeonStateTestsPackage.exe' | Out-Null
-Require-File 'artifacts\games\RpgDungeonGallery-DirectX\smile.gallery.rpg-dungeon.smile-assets.json' | Out-Null
-Require-File 'artifacts\games\RpgDungeonGallery-GDI\smile.gallery.rpg-dungeon.smile-assets.json' | Out-Null
-Require-File 'artifacts\web\RpgDungeonGallery\smile-assets.json' | Out-Null
 Require-File 'artifacts\tests\Phase9BattleStateTests.exe' | Out-Null
 Require-File 'artifacts\tests\Phase9BattleStateTestsPackage.exe' | Out-Null
-Require-File 'artifacts\games\RpgBattleGallery-DirectX\smile.gallery.rpg-battle.smile-assets.json' | Out-Null
-Require-File 'artifacts\games\RpgBattleGallery-GDI\smile.gallery.rpg-battle.smile-assets.json' | Out-Null
-Require-File 'artifacts\web\RpgBattleGallery\smile-assets.json' | Out-Null
 Require-File 'artifacts\games\Phase5UIStateTests.exe' | Out-Null
 Require-File 'artifacts\games\Phase5UIStateTestsPackage.exe' | Out-Null
 Require-File 'artifacts\games\Phase5SubmenuStateTests.exe' | Out-Null
@@ -793,14 +784,8 @@ $nativePrograms = @(
     'artifacts\games\MenuGallery-DirectX\MenuGallery.exe',
     'artifacts\games\MenuGallery-GDI\MenuGallery.exe',
     'artifacts\games\MenuGalleryPackage.exe',
-    'artifacts\games\RpgManagementGallery-DirectX\RpgManagementGallery.exe',
-    'artifacts\games\RpgManagementGallery-GDI\RpgManagementGallery.exe',
-    'artifacts\games\RpgWorldGallery-DirectX\RpgWorldGallery.exe',
-    'artifacts\games\RpgWorldGallery-GDI\RpgWorldGallery.exe',
-    'artifacts\games\RpgDungeonGallery-DirectX\RpgDungeonGallery.exe',
-    'artifacts\games\RpgDungeonGallery-GDI\RpgDungeonGallery.exe',
-    'artifacts\games\RpgBattleGallery-DirectX\RpgBattleGallery.exe',
-    'artifacts\games\RpgBattleGallery-GDI\RpgBattleGallery.exe',
+    'artifacts\games\RPGSystems-DirectX\RPGSystems.exe',
+    'artifacts\games\RPGSystems-GDI\RPGSystems.exe',
     'artifacts\games\Phase5DialogueStateTests.exe',
     'artifacts\games\Phase5SubmenuViewport-DirectX\Phase5SubmenuViewport.exe',
     'artifacts\games\Phase5SubmenuViewport-GDI\Phase5SubmenuViewport.exe',
@@ -869,31 +854,31 @@ foreach ($asset in @('Cursor.png', 'BitmapFont.png')) {
 }
 foreach ($asset in @('Companion.png', 'EncounterBackground.png', 'Hero.png', 'MireWarden.png',
     'Npc.png', 'PanelOverlay.png', 'TitleBackground.png', 'WorldTiles.png', 'LumenTheme.wav')) {
-    Assert-AssetCopy "examples\RpgWorldGallery\Assets\$asset" "artifacts\games\RpgWorldGallery-DirectX\Assets\$asset"
-    Assert-AssetCopy "examples\RpgWorldGallery\Assets\$asset" "artifacts\games\RpgWorldGallery-GDI\Assets\$asset"
-    Assert-AssetCopy "examples\RpgWorldGallery\Assets\$asset" "artifacts\web\RpgWorldGallery\Assets\$asset"
+    Assert-AssetCopy "games\RPGSystems\Assets\World\$asset" "artifacts\games\RPGSystems-DirectX\Assets\World\$asset"
+    Assert-AssetCopy "games\RPGSystems\Assets\World\$asset" "artifacts\games\RPGSystems-GDI\Assets\World\$asset"
+    Assert-AssetCopy "games\RPGSystems\Assets\World\$asset" "artifacts\web\RPGSystems\Assets\World\$asset"
 }
 foreach ($map in @('Town.smilemap', 'Shop.smilemap', 'Overworld.smilemap')) {
-    Assert-AssetCopy "examples\RpgWorldGallery\Maps\$map" "artifacts\games\RpgWorldGallery-DirectX\Maps\$map"
-    Assert-AssetCopy "examples\RpgWorldGallery\Maps\$map" "artifacts\games\RpgWorldGallery-GDI\Maps\$map"
-    Assert-AssetCopy "examples\RpgWorldGallery\Maps\$map" "artifacts\web\RpgWorldGallery\Maps\$map"
+    Assert-AssetCopy "games\RPGSystems\Maps\World\$map" "artifacts\games\RPGSystems-DirectX\Maps\World\$map"
+    Assert-AssetCopy "games\RPGSystems\Maps\World\$map" "artifacts\games\RPGSystems-GDI\Maps\World\$map"
+    Assert-AssetCopy "games\RPGSystems\Maps\World\$map" "artifacts\web\RPGSystems\Maps\World\$map"
 }
 foreach ($asset in @('Companion.png', 'Hero.png', 'MireWarden.png', 'Npc.png', 'WorldTiles.png')) {
-    Assert-AssetCopy "examples\RpgDungeonGallery\Assets\$asset" "artifacts\games\RpgDungeonGallery-DirectX\Assets\$asset"
-    Assert-AssetCopy "examples\RpgDungeonGallery\Assets\$asset" "artifacts\games\RpgDungeonGallery-GDI\Assets\$asset"
-    Assert-AssetCopy "examples\RpgDungeonGallery\Assets\$asset" "artifacts\web\RpgDungeonGallery\Assets\$asset"
+    Assert-AssetCopy "games\RPGSystems\Assets\Dungeon\$asset" "artifacts\games\RPGSystems-DirectX\Assets\Dungeon\$asset"
+    Assert-AssetCopy "games\RPGSystems\Assets\Dungeon\$asset" "artifacts\games\RPGSystems-GDI\Assets\Dungeon\$asset"
+    Assert-AssetCopy "games\RPGSystems\Assets\Dungeon\$asset" "artifacts\web\RPGSystems\Assets\Dungeon\$asset"
 }
 foreach ($map in @('Archive1.smilemap', 'Archive2.smilemap', 'Archive3.smilemap', 'Archive4.smilemap')) {
-    Assert-AssetCopy "examples\RpgDungeonGallery\Maps\$map" "artifacts\games\RpgDungeonGallery-DirectX\Maps\$map"
-    Assert-AssetCopy "examples\RpgDungeonGallery\Maps\$map" "artifacts\games\RpgDungeonGallery-GDI\Maps\$map"
-    Assert-AssetCopy "examples\RpgDungeonGallery\Maps\$map" "artifacts\web\RpgDungeonGallery\Maps\$map"
+    Assert-AssetCopy "games\RPGSystems\Maps\Dungeon\$map" "artifacts\games\RPGSystems-DirectX\Maps\Dungeon\$map"
+    Assert-AssetCopy "games\RPGSystems\Maps\Dungeon\$map" "artifacts\games\RPGSystems-GDI\Maps\Dungeon\$map"
+    Assert-AssetCopy "games\RPGSystems\Maps\Dungeon\$map" "artifacts\web\RPGSystems\Maps\Dungeon\$map"
 }
 foreach ($asset in @('Ability.wav', 'DungeonTheme.wav', 'EnemyLineup.png', 'LumenPlaza.png',
     'OverworldTheme.wav', 'PartyLineup.png', 'PrismVault.png', 'StarfallPlateau.png', 'Strike.wav',
     'TownTheme.wav', 'Victory.wav')) {
-    Assert-AssetCopy "examples\RpgBattleGallery\Assets\$asset" "artifacts\games\RpgBattleGallery-DirectX\Assets\$asset"
-    Assert-AssetCopy "examples\RpgBattleGallery\Assets\$asset" "artifacts\games\RpgBattleGallery-GDI\Assets\$asset"
-    Assert-AssetCopy "examples\RpgBattleGallery\Assets\$asset" "artifacts\web\RpgBattleGallery\Assets\$asset"
+    Assert-AssetCopy "games\RPGSystems\Assets\Battle\$asset" "artifacts\games\RPGSystems-DirectX\Assets\Battle\$asset"
+    Assert-AssetCopy "games\RPGSystems\Assets\Battle\$asset" "artifacts\games\RPGSystems-GDI\Assets\Battle\$asset"
+    Assert-AssetCopy "games\RPGSystems\Assets\Battle\$asset" "artifacts\web\RPGSystems\Assets\Battle\$asset"
 }
 $phase42ExpectedPath = Join-Path $repositoryRoot 'examples\Phase4AssetPublication\ExpectedAssetPaths.txt'
 foreach ($asset in Get-Content -LiteralPath $phase42ExpectedPath) {

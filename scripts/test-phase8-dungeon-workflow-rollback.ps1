@@ -5,7 +5,7 @@ Set-StrictMode -Version Latest
 
 $RepositoryRoot = Split-Path -Parent $PSScriptRoot
 $Compiler = Join-Path $RepositoryRoot 'artifacts\compiler\smilec.exe'
-$WorkflowSource = Join-Path $RepositoryRoot 'examples\RpgDungeonGallery\DungeonWorkflow.smile'
+$WorkflowSource = Join-Path $RepositoryRoot 'games\RPGSystems\DungeonWorkflow.smile'
 $ProgramSource = Join-Path $RepositoryRoot 'examples\Phase8DungeonStateTests\Program.smile'
 $TestRoot = Join-Path $RepositoryRoot ('artifacts\temp\phase8.1-dungeon-workflow-' + [Guid]::NewGuid().ToString('N'))
 $Utf8WithoutBom = [Text.UTF8Encoding]::new($false)

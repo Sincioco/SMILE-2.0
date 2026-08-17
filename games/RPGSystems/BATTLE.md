@@ -1,6 +1,6 @@
 # RPG Battle Gallery
 
-`RpgBattleGallery` is the public Phase 9 presentation and integration proof for the renderer-neutral `Smile.RPG` battle modules.
+The Battle option in `RPGSystems` is the public Phase 9 presentation and integration proof for the renderer-neutral `Smile.RPG` battle modules.
 
 The title menu opens three original exploration/battle presentations:
 

@@ -1,6 +1,6 @@
 # RPG Dungeon Gallery
 
-`RpgDungeonGallery` is the permanent, original Phase 8 capability demo. Phase 8.1 hardens its event transactions and acceptance surface while continuing to compose the existing Smile.Game, Smile.RPG, and Smile.UI packages without introducing a second world model or a battle system.
+The Dungeon option in `RPGSystems` is the permanent, original Phase 8 capability demo. Phase 8.1 hardens its event transactions and acceptance surface while continuing to compose the existing Smile.Game, Smile.RPG, and Smile.UI packages without introducing a second world model or a battle system.
 
 The title starts either the three-floor cardinal first-person **Prism Vault** or the four-floor top-down **Sunken Archive**. Both routes use the same character, party, inventory, story, actor, encounter-preview, and SRPG 2 save state.
 
@@ -31,4 +31,4 @@ Top-down Escape and Interact commands are locked while the six-step movement int
 
 The focused suite proves project/package native and Web parity, transaction rollback, capacity behavior, idempotency, result mapping, movement policy, encounter return, load reconciliation, and invalid-load rollback. The topology validator models complete legal progression across all four top-down floors and all three first-person floors, including every interaction and transition source/destination.
 
-All images are reused from the repository's original `RpgWorldGallery` art set. No commercial game asset or reference data is included.
+All images are reused from the repository's original RPG Systems World art set. No commercial game asset or reference data is included.

@@ -4698,7 +4698,7 @@ Run("Snake shares one private Class model across both startup stories and editor
 
 Run("Sin Star I keeps its TitleScreen Module and exposes one typed action enum", () =>
 {
-    var project = SmileProjectSourceSet.Load("examples/SinStarI/SinStarI.smileproj");
+    var project = SmileProjectSourceSet.Load("games/SinStarI/SinStarI.smileproj");
     Equal(SmileProjectKind.Game, project.ProjectKind);
     Equal("smile.game.sin-star-i", project.ApplicationId);
     Equal("Program.smile", project.StartupFile);
@@ -4721,8 +4721,8 @@ Run("Sin Star I keeps its TitleScreen Module and exposes one typed action enum",
         name.StartsWith("TITLE_ACTION_", StringComparison.OrdinalIgnoreCase)));
     Equal(true, titleModule.Members["HandleInput"].Routine!.ReturnType.Equals(titleAction));
 
-    var titlePath = Path.GetFullPath("examples/SinStarI/TitleScreen.smile");
-    var programPath = Path.GetFullPath("examples/SinStarI/Program.smile");
+    var titlePath = Path.GetFullPath("games/SinStarI/TitleScreen.smile");
+    var programPath = Path.GetFullPath("games/SinStarI/Program.smile");
     var programText = File.ReadAllText(programPath);
     var tree = analysis.GetSyntaxTree(programPath);
 

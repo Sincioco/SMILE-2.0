@@ -1,3 +1,6 @@
+''' Battle presentation and integration system hosted by RPGSystems.
+Module RPGSystems.BattleSystem
+
 Option Explicit
 
 Import Smile.Game.Core As GameCore
@@ -76,13 +79,13 @@ Dim Spawn As World.SpawnDefinition
 Dim Actor As World.ActorDefinition
 Dim ViewSlot As BattleView.SlotDefinition
 
-Game Window "SMILE 2.0 RPG Battle Gallery" Size 1280 By 720
+Public Sub Run()
 
-Load Image OverworldBackground From "Assets\StarfallPlateau.png"
-Load Image TownBackground From "Assets\LumenPlaza.png"
-Load Image DungeonBackground From "Assets\PrismVault.png"
-Load Image PartyLineup From "Assets\PartyLineup.png"
-Load Image EnemyLineup From "Assets\EnemyLineup.png"
+Load Image OverworldBackground From "Assets\Battle\StarfallPlateau.png"
+Load Image TownBackground From "Assets\Battle\LumenPlaza.png"
+Load Image DungeonBackground From "Assets\Battle\PrismVault.png"
+Load Image PartyLineup From "Assets\Battle\PartyLineup.png"
+Load Image EnemyLineup From "Assets\Battle\EnemyLineup.png"
 
 State = RPG.Create()
 
@@ -97,12 +100,14 @@ Scenario = SCENE_OVERWORLD
 StatusText = "Choose one original battle presentation."
 Running = State > 0
 
-Play Music "Assets\OverworldTheme.wav" Loop
+Play Music "Assets\Battle\OverworldTheme.wav" Loop
 
 Do
     Get Key Key
 
-    If Mode = MODE_TITLE Then
+    If Key = KEY_ESCAPE Then
+        Running = False
+    Else If Mode = MODE_TITLE Then
         Call HandleTitle(Key)
     Else If Mode = MODE_EXPLORE Then
         Call HandleExploration(Key)
@@ -140,7 +145,7 @@ Unload Image OverworldBackground
 
 Call RPG.Destroy(State)
 
-End Program
+End Sub
 
 Sub HandleTitle(PressedKey As Number)
 
@@ -194,7 +199,7 @@ Sub HandleExploration(PressedKey As Number)
         StatusText = "Choose one original battle presentation."
 
         Stop Music
-        Play Music "Assets\OverworldTheme.wav" Loop
+        Play Music "Assets\Battle\OverworldTheme.wav" Loop
 
         Return
 
@@ -457,13 +462,13 @@ Sub StartExploration(SceneId As Number)
     Stop Music
 
     If Scenario = SCENE_OVERWORLD Then
-        Play Music "Assets\OverworldTheme.wav" Loop
+        Play Music "Assets\Battle\OverworldTheme.wav" Loop
         StatusText = "Starfall Plateau: side-view overworld battle staging."
     Else If Scenario = SCENE_TOWN Then
-        Play Music "Assets\TownTheme.wav" Loop
+        Play Music "Assets\Battle\TownTheme.wav" Loop
         StatusText = "Lumen Plaza: top-down exploration and compact battle staging."
     Else
-        Play Music "Assets\DungeonTheme.wav" Loop
+        Play Music "Assets\Battle\DungeonTheme.wav" Loop
         StatusText = "Prism Vault: cardinal first-person exploration and front battle staging."
     End If
 
@@ -550,17 +555,17 @@ Sub CaptureBattleEvents()
 
         If EventKind = Battle.BATTLE_EVENT_ATTACK Or EventKind = Battle.BATTLE_EVENT_DAMAGE Then
 
-            Play Sound "Assets\Strike.wav"
+            Play Sound "Assets\Battle\Strike.wav"
 
         Else If (EventKind = Battle.BATTLE_EVENT_ABILITY Or
             EventKind = Battle.BATTLE_EVENT_STATUS_APPLIED Or
             EventKind = Battle.BATTLE_EVENT_HEAL) Then
 
-            Play Sound "Assets\Ability.wav"
+            Play Sound "Assets\Battle\Ability.wav"
 
         Else If EventKind = Battle.BATTLE_EVENT_VICTORY Then
 
-            Play Sound "Assets\Victory.wav"
+            Play Sound "Assets\Battle\Victory.wav"
 
         End If
 
@@ -1134,3 +1139,5 @@ Sub DefineSpawn(Id As Number, SceneId As Number)
     OperationSucceeded = World.DefineSpawn(State, Spawn)
 
 End Sub
+
+End Module
