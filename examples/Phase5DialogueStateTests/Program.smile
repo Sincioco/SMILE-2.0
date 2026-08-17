@@ -197,6 +197,12 @@ Call Check(NarrowMessage.PageCount = 32)
 Call NarrowMessage.Destroy()
 Call Message.Destroy()
 
+Call CheckDialogueLifecycle(Style)
+
+GalleryMessage = Nothing
+NarrowMessage = Nothing
+Message = Nothing
+
 Save Failures To "Result"
 Print Failures
 
@@ -208,6 +214,89 @@ Sub Check(Condition As Boolean)
         Failures = Failures + 1
         Print CheckNumber
     End If
+
+End Sub
+
+Sub CheckDialogueLifecycle(ByRef ValidStyle As UI.DialogueStyle)
+
+    Dim InvalidStyle As UI.DialogueStyle
+    Dim Stale As Dialogues.Dialogue
+    Dim Slot0 As Dialogues.Dialogue
+    Dim Slot1 As Dialogues.Dialogue
+    Dim Slot2 As Dialogues.Dialogue
+    Dim Slot3 As Dialogues.Dialogue
+    Dim Slot4 As Dialogues.Dialogue
+    Dim Slot5 As Dialogues.Dialogue
+    Dim Slot6 As Dialogues.Dialogue
+    Dim Slot7 As Dialogues.Dialogue
+    Dim Overflow As Dialogues.Dialogue
+    Dim Recovery As Dialogues.Dialogue
+
+    InvalidStyle = ValidStyle
+    InvalidStyle.CharactersPerSecond = -1
+    Slot0 = New Dialogues.Dialogue(InvalidStyle, 0, 0, 300, 150)
+
+    Call Check(Not Slot0.Valid)
+    Call Check(Not Slot0.AddPage("Invalid") And Not Slot0.Start(0))
+    Call Check(Slot0.Update(0) = UI.UI_EVENT_NONE And Slot0.HandleKey(KEY_ENTER, 0) = UI.UI_EVENT_NONE)
+    Call Slot0.Destroy()
+    Call Slot0.Destroy()
+
+    Slot0 = New Dialogues.Dialogue(ValidStyle, 0, 0, 300, 150)
+    Stale = Slot0
+
+    Call Check(Slot0.AddPage("Stale alias"))
+    Call Slot0.Destroy()
+    Call Slot0.Destroy()
+    Call Check(Not Stale.Valid And Not Stale.AddPage("Rejected") And Not Stale.Start(0))
+    Call Check(Stale.Update(0) = UI.UI_EVENT_NONE And Stale.HandleKey(KEY_ENTER, 0) = UI.UI_EVENT_NONE)
+    Call Check(Not Stale.Active And Not Stale.Complete And Stale.PageCount = 0)
+    Call Check(Stale.CurrentPage = -1 And Stale.VisibleCharacters = 0)
+
+    Slot0 = New Dialogues.Dialogue(ValidStyle, 0, 0, 300, 150)
+    Slot1 = New Dialogues.Dialogue(ValidStyle, 0, 0, 300, 150)
+    Slot2 = New Dialogues.Dialogue(ValidStyle, 0, 0, 300, 150)
+    Slot3 = New Dialogues.Dialogue(ValidStyle, 0, 0, 300, 150)
+    Slot4 = New Dialogues.Dialogue(ValidStyle, 0, 0, 300, 150)
+    Slot5 = New Dialogues.Dialogue(ValidStyle, 0, 0, 300, 150)
+    Slot6 = New Dialogues.Dialogue(ValidStyle, 0, 0, 300, 150)
+    Slot7 = New Dialogues.Dialogue(ValidStyle, 0, 0, 300, 150)
+    Overflow = New Dialogues.Dialogue(ValidStyle, 0, 0, 300, 150)
+
+    Call Check(Slot0.Valid And Slot7.Valid And Not Overflow.Valid)
+    Call Overflow.Destroy()
+    Call Overflow.Destroy()
+
+    Stale = Slot7
+
+    Call Slot7.Destroy()
+
+    Recovery = New Dialogues.Dialogue(ValidStyle, 0, 0, 300, 150)
+
+    Call Check(Recovery.Valid And Not Stale.Valid And Not Stale.AddPage("Wrong generation"))
+    Call Check(Slot0.AddPage("Independent") And Slot0.PageCount = 1)
+
+    Call Recovery.Destroy()
+    Call Recovery.Destroy()
+    Call Slot6.Destroy()
+    Call Slot5.Destroy()
+    Call Slot4.Destroy()
+    Call Slot3.Destroy()
+    Call Slot2.Destroy()
+    Call Slot1.Destroy()
+    Call Slot0.Destroy()
+
+    Recovery = Nothing
+    Overflow = Nothing
+    Stale = Nothing
+    Slot7 = Nothing
+    Slot6 = Nothing
+    Slot5 = Nothing
+    Slot4 = Nothing
+    Slot3 = Nothing
+    Slot2 = Nothing
+    Slot1 = Nothing
+    Slot0 = Nothing
 
 End Sub
 

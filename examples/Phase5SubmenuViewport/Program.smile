@@ -250,6 +250,18 @@ Call FiveMenu.Destroy()
 Call Grandchild.Destroy()
 Call Child.Destroy()
 Call Root.Destroy()
+
+Navigator = Nothing
+TinyMenu = Nothing
+HiddenScrollbarMenu = Nothing
+AllVisibleMenu = Nothing
+SixtyFourMenu = Nothing
+TwentyMenu = Nothing
+FiveMenu = Nothing
+Grandchild = Nothing
+Child = Nothing
+Root = Nothing
+
 Call BitmapFont.Destroy(FontHandle)
 
 Unload Image FontAtlas

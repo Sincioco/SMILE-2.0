@@ -386,6 +386,12 @@ Call Check(ExtraNavigator0.Valid And ExtraNavigator7.Valid And Not OverflowNavig
 
 Call OverflowNavigator.Destroy()
 Call ExtraNavigator7.Destroy()
+
+OverflowNavigator = New Menus.MenuNavigator(Root, NavigatorStyle)
+
+Call Check(OverflowNavigator.Valid And Not ExtraNavigator7.Valid And ExtraNavigator7.Update(KEY_ENTER) = UI.UI_EVENT_NONE)
+Call OverflowNavigator.Destroy()
+Call OverflowNavigator.Destroy()
 Call ExtraNavigator6.Destroy()
 Call ExtraNavigator5.Destroy()
 Call ExtraNavigator4.Destroy()
@@ -592,5 +598,59 @@ Call Check(Not LongMenu.SetItemLabel(0, LongValue) And LongMenu.ItemCount = 1)
 Call Check(LongMenu.AddItem("", 3, True) = 1 And LongMenu.AddItem("Line One
 Line Two", 4, True) = 2)
 Call LongMenu.Destroy()
+
+' Destroyed roots, inactive children, accepted leaves, and shared markers repair safely.
+Root = New Menus.Menu(Style, 0, 0, 120, 100, 2)
+ItemIndex = Root.AddItem("Accepted Root Leaf", 901, True)
+Navigator = New Menus.MenuNavigator(Root, NavigatorStyle)
+Event = Navigator.Update(KEY_ENTER)
+
+Call Check(Event = UI.UI_EVENT_ACCEPTED And Navigator.LastAcceptedValue = 901)
+Call Root.Destroy()
+Call Check(Navigator.Update(KEY_NONE) = UI.UI_EVENT_NONE And Navigator.Depth = 0 And Navigator.LastAcceptedIndex = -1)
+Call Navigator.Destroy()
+Call Navigator.Destroy()
+
+Root = New Menus.Menu(Style, 0, 0, 120, 100, 2)
+Child = New Menus.Menu(Style, 0, 0, 120, 100, 2)
+ItemIndex = Root.AddItem("Leaf", 902, True)
+RootChild = Root.AddItem("Inactive Child", 903, True)
+ItemIndex = Child.AddItem("Child Leaf", 904, True)
+Navigator = New Menus.MenuNavigator(Root, NavigatorStyle)
+Result = Navigator.BindSubmenu(Root, RootChild, Child, False)
+
+Call Child.Destroy()
+
+Call Check(Result And Not Navigator.HasSubmenu(Root, RootChild) And Not Root.ItemHasSubmenu(RootChild))
+Call Navigator.Destroy()
+Call Root.Destroy()
+
+Root = New Menus.Menu(Style, 0, 0, 120, 100, 2)
+SharedChild = New Menus.Menu(Style, 0, 0, 120, 100, 2)
+ItemIndex = Root.AddItem("Shared Child", 905, True)
+ItemIndex = SharedChild.AddItem("Child Leaf", 906, True)
+Navigator = New Menus.MenuNavigator(Root, NavigatorStyle)
+OtherNavigator = New Menus.MenuNavigator(Root, NavigatorStyle)
+Result = Navigator.BindSubmenu(Root, 0, SharedChild, False)
+Result = Result And OtherNavigator.BindSubmenu(Root, 0, SharedChild, False)
+
+Call Check(Result And Root.ItemHasSubmenu(0))
+Call Navigator.Destroy()
+Call Check(Root.ItemHasSubmenu(0) And OtherNavigator.HasSubmenu(Root, 0))
+Call OtherNavigator.Destroy()
+Call Check(Not Root.ItemHasSubmenu(0))
+Call SharedChild.Destroy()
+Call Root.Destroy()
+
+Root = Nothing
+Child = Nothing
+Grandchild = Nothing
+DeepChild = Nothing
+SharedChild = Nothing
+Navigator = Nothing
+OtherNavigator = Nothing
+StaleNavigator = Nothing
+OverflowNavigator = Nothing
+LongMenu = Nothing
 
 End Program

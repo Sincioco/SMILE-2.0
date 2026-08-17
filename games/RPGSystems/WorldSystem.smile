@@ -212,6 +212,13 @@ Call ShopNavigator.Destroy()
 Call FieldNavigator.Destroy()
 Call ShopMenu.Destroy()
 Call FieldMenu.Destroy()
+
+Message = Nothing
+ShopNavigator = Nothing
+FieldNavigator = Nothing
+ShopMenu = Nothing
+FieldMenu = Nothing
+
 Call TileMap.Unload(OverworldMap)
 Call TileMap.Unload(ShopMap)
 Call TileMap.Unload(TownMap)

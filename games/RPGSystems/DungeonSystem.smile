@@ -274,6 +274,10 @@ Call Message.Destroy()
 Call CommandNavigator.Destroy()
 Call CommandMenu.Destroy()
 
+Message = Nothing
+CommandNavigator = Nothing
+CommandMenu = Nothing
+
 For ItemIndex = 0 To 3
     Call TileMap.Unload(FloorMaps[ItemIndex])
     Call Animation.Destroy(WalkAnimations[ItemIndex])

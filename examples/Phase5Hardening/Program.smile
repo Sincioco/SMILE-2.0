@@ -208,6 +208,8 @@ MenuProbe = New Menus.Menu(MenuStyle, 0, 0, 100, 100, 1)
 Call Check(MenuProbe.Valid)
 Call MenuProbe.Destroy()
 
+MenuProbe = Nothing
+
 BadMenuStyle = MenuStyle
 BadMenuStyle.NormalText.Mode = 9
 
@@ -215,6 +217,8 @@ MenuProbe = New Menus.Menu(BadMenuStyle, 0, 0, 100, 100, 1)
 
 Call Check(Not MenuProbe.Valid)
 Call MenuProbe.Destroy()
+
+MenuProbe = Nothing
 
 BadMenuStyle = MenuStyle
 BadMenuStyle.CursorWidth = 0
@@ -224,6 +228,8 @@ MenuProbe = New Menus.Menu(BadMenuStyle, 0, 0, 100, 100, 1)
 Call Check(Not MenuProbe.Valid)
 Call MenuProbe.Destroy()
 
+MenuProbe = Nothing
+
 BadMenuStyle = MenuStyle
 BadMenuStyle.CursorFilterMode = 7
 
@@ -231,6 +237,8 @@ MenuProbe = New Menus.Menu(BadMenuStyle, 0, 0, 100, 100, 1)
 
 Call Check(Not MenuProbe.Valid)
 Call MenuProbe.Destroy()
+
+MenuProbe = Nothing
 
 MainMenu = New Menus.Menu(MenuStyle, 10, 10, 280, 280, 6)
 
@@ -323,6 +331,8 @@ DialogueProbe = New Dialogues.Dialogue(DialogueStyle, 0, 0, 100, 100)
 Call Check(DialogueProbe.Valid)
 Call DialogueProbe.Destroy()
 
+DialogueProbe = Nothing
+
 BadDialogueStyle = DialogueStyle
 BadDialogueStyle.CharactersPerSecond = -1
 
@@ -330,6 +340,8 @@ DialogueProbe = New Dialogues.Dialogue(BadDialogueStyle, 0, 0, 100, 100)
 
 Call Check(Not DialogueProbe.Valid)
 Call DialogueProbe.Destroy()
+
+DialogueProbe = Nothing
 
 BadDialogueStyle = DialogueStyle
 BadDialogueStyle.UseContinueIndicator = True
@@ -341,6 +353,8 @@ DialogueProbe = New Dialogues.Dialogue(BadDialogueStyle, 0, 0, 100, 100)
 
 Call Check(Not DialogueProbe.Valid)
 Call DialogueProbe.Destroy()
+
+DialogueProbe = Nothing
 
 Message = New Dialogues.Dialogue(DialogueStyle, 310, 10, 320, 200)
 
@@ -483,6 +497,12 @@ Call LimitMessage.Destroy()
 Call Message.Destroy()
 Call TinyMenu.Destroy()
 Call MainMenu.Destroy()
+
+LimitMessage = Nothing
+Message = Nothing
+TinyMenu = Nothing
+MainMenu = Nothing
+
 Call BitmapFont.Destroy(FontHandle)
 
 Unload Image Cursor

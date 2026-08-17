@@ -12,6 +12,8 @@ Dim ItemIndex As Number
 Dim Index As Number
 Dim OperationSucceeded As Boolean
 Dim ReflowStyle As UI.MenuStyle
+Dim InvalidStyle As UI.MenuStyle
+Dim OtherMenu As Menus.Menu
 
 Style.RowHeight = 32
 Style.WrapSelection = True
@@ -57,8 +59,15 @@ Print OldMenu.SelectedIndex
 
 CurrentMenu = New Menus.Menu(Style, 0, 0, 320, 240, 2)
 Print CurrentMenu.Valid
+Print Not OldMenu.Valid And OldMenu.AddItem("Stale", 99) = -1 And OldMenu.Update(KEY_ENTER) = UI.UI_EVENT_NONE
+
+Call OldMenu.Destroy()
+Call OldMenu.Destroy()
 
 Call CurrentMenu.Destroy()
+Call CurrentMenu.Destroy()
+
+Print Not CurrentMenu.Valid And CurrentMenu.AddItem("Destroyed", 100) = -1 And CurrentMenu.ItemCount = 0
 
 CurrentMenu = New Menus.Menu(Style, 0, 0, 320, 240, 2)
 
@@ -113,6 +122,28 @@ Call CurrentMenu.Destroy()
 
 Call CheckCapacity(Style)
 
+InvalidStyle = Style
+InvalidStyle.SubmenuIndicatorPosition = 2
+CurrentMenu = New Menus.Menu(InvalidStyle, 0, 0, 320, 240, 2)
+Print Not CurrentMenu.Valid
+
+Call CurrentMenu.Destroy()
+Call CurrentMenu.Destroy()
+
+CurrentMenu = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+OtherMenu = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+ItemIndex = OtherMenu.AddItem("Independent", 77)
+
+Call CurrentMenu.Destroy()
+
+Print OtherMenu.Valid And OtherMenu.ItemCount = 1 And OtherMenu.SelectedValue = 77
+
+Call OtherMenu.Destroy()
+
+OldMenu = Nothing
+CurrentMenu = Nothing
+OtherMenu = Nothing
+
 End Program
 
 Sub CheckCapacity(ByRef Style As UI.MenuStyle)
@@ -134,6 +165,7 @@ Sub CheckCapacity(ByRef Style As UI.MenuStyle)
     Dim Slot14 As Menus.Menu
     Dim Slot15 As Menus.Menu
     Dim Overflow As Menus.Menu
+    Dim Recovery As Menus.Menu
 
     Slot0 = New Menus.Menu(Style, 0, 0, 320, 240, 2)
     Slot1 = New Menus.Menu(Style, 0, 0, 320, 240, 2)
@@ -153,9 +185,18 @@ Sub CheckCapacity(ByRef Style As UI.MenuStyle)
     Slot15 = New Menus.Menu(Style, 0, 0, 320, 240, 2)
     Overflow = New Menus.Menu(Style, 0, 0, 320, 240, 2)
 
-    Print Overflow.Valid
+    Print Slot0.Valid And Slot15.Valid And Not Overflow.Valid
+
+    Call Overflow.Destroy()
+    Call Overflow.Destroy()
 
     Call Slot15.Destroy()
+
+    Recovery = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+    Print Recovery.Valid And Not Slot15.Valid And Slot15.AddItem("Stale", 1) = -1
+
+    Call Recovery.Destroy()
+    Call Recovery.Destroy()
     Call Slot14.Destroy()
     Call Slot13.Destroy()
     Call Slot12.Destroy()

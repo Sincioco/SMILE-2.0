@@ -104,6 +104,16 @@ Call EquipmentMenu.Destroy()
 Call InventoryMenu.Destroy()
 Call PartyMenu.Destroy()
 Call RootMenu.Destroy()
+
+Navigator = Nothing
+SaveMenu = Nothing
+ShopMenu = Nothing
+AbilityMenu = Nothing
+EquipmentMenu = Nothing
+InventoryMenu = Nothing
+PartyMenu = Nothing
+RootMenu = Nothing
+
 Call RPG.Destroy(State)
 
 End Sub

@@ -467,6 +467,14 @@ Call DetailMenu.Destroy()
 Call OptionMenu.Destroy()
 Call CategoryMenu.Destroy()
 Call RootMenu.Destroy()
+
+Message = Nothing
+Navigator = Nothing
+DetailMenu = Nothing
+OptionMenu = Nothing
+CategoryMenu = Nothing
+RootMenu = Nothing
+
 Call BitmapFont.Destroy(FontHandle)
 
 Unload Image FontAtlas
