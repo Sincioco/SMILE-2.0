@@ -615,40 +615,50 @@ copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.UI.smilelib" "%SMILE_ROOT%\artif
 if errorlevel 1 exit /b 1
 fc /b "%SMILE_ROOT%\artifacts\temp\Smile.UI.first.smilelib" "%SMILE_ROOT%\artifacts\libraries\Smile.UI.smilelib" >nul
 if errorlevel 1 exit /b 1
-powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.UI.smilelib'); try { $manifest=([IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())).ReadToEnd() | ConvertFrom-Json; $api=([IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open())).ReadToEnd() | ConvertFrom-Json; $core=$api.modules | Where-Object name -eq 'Smile.UI.Core'; $menu=$api.modules | Where-Object name -eq 'Smile.UI.Menu'; $navigator=$api.modules | Where-Object name -eq 'Smile.UI.MenuNavigator'; $text=$api.modules | Where-Object name -eq 'Smile.UI.Text'; $dialogue=$api.modules | Where-Object name -eq 'Smile.UI.Dialogue'; $insets=$core.members | Where-Object name -eq 'Insets'; $draw=$menu.members | Where-Object name -eq 'Draw'; $drawFocused=$menu.members | Where-Object name -eq 'DrawFocused'; $key=$menu.members | Where-Object name -eq 'HandleKey'; $visibleRows=$menu.members | Where-Object name -eq 'VisibleRows'; $bounds=$menu.members | Where-Object name -eq 'Bounds'; $drawStack=$navigator.members | Where-Object name -eq 'DrawStack'; $drawActive=$navigator.members | Where-Object name -eq 'DrawActive'; $navigatorKey=$navigator.members | Where-Object name -eq 'HandleKey'; $relayout=$navigator.members | Where-Object name -eq 'Relayout'; $textValid=$text.members | Where-Object name -eq 'IsStyleValid'; $dialogueSet=$dialogue.members | Where-Object name -eq 'SetStyle'; if ($manifest.formatVersion -ne 6 -or $api.formatVersion -ne 6 -or $api.library.provider -ne $manifest.provider -or $manifest.version -ne '1.1.3' -or $insets.fields.name -cnotcontains 'Left' -or $insets.fields.name -cnotcontains 'Right' -or $insets.fields.name -ccontains 'LEFT' -or $insets.fields.name -ccontains 'RIGHT' -or !$draw.requiresGameWindow -or !$drawFocused.requiresGameWindow -or $key.requiresGameWindow -or $visibleRows.requiresGameWindow -or $bounds.requiresGameWindow -or !$drawStack.requiresGameWindow -or !$drawActive.requiresGameWindow -or $navigatorKey.requiresGameWindow -or $relayout.requiresGameWindow -or $textValid.requiresGameWindow -or !$dialogueSet.requiresGameWindow) { exit 1 } } finally { $zip.Dispose() }"
+powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.UI.smilelib'); try { $manifest=([IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())).ReadToEnd() | ConvertFrom-Json; $apiText=([IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open())).ReadToEnd(); $api=$apiText | ConvertFrom-Json; $core=$api.modules | Where-Object name -eq 'Smile.UI.Core'; $menuModule=$api.modules | Where-Object name -eq 'Smile.UI.Menu'; $dialogueModule=$api.modules | Where-Object name -eq 'Smile.UI.Dialogue'; $legacyNavigator=$api.modules | Where-Object name -eq 'Smile.UI.MenuNavigator'; $insets=$core.members | Where-Object name -eq 'Insets'; $menu=$menuModule.members | Where-Object name -eq 'Menu'; $navigator=$menuModule.members | Where-Object name -eq 'MenuNavigator'; $dialogue=$dialogueModule.members | Where-Object name -eq 'Dialogue'; $menuDraw=$menu.members | Where-Object name -eq 'Draw'; $menuUpdate=$menu.members | Where-Object name -eq 'Update'; $navDraw=$navigator.members | Where-Object name -eq 'Draw'; $navUpdate=$navigator.members | Where-Object name -eq 'Update'; $dialogueDraw=$dialogue.members | Where-Object name -eq 'Draw'; $dialogueSet=$dialogue.members | Where-Object name -eq 'SetStyle'; $addItem=$menu.members | Where-Object name -eq 'AddItem'; $bind=$navigator.members | Where-Object name -eq 'BindSubmenu'; if ($manifest.formatVersion -ne 6 -or $api.formatVersion -ne 6 -or $api.library.provider -ne 'Smile.UI@2.0.0' -or $manifest.version -ne '2.0.0' -or @($api.modules).Count -ne 6 -or $null -ne $legacyNavigator -or $menu.kind -ne 'Class' -or $navigator.kind -ne 'Class' -or $dialogue.kind -ne 'Class' -or $insets.fields.name -cnotcontains 'Left' -or $insets.fields.name -cnotcontains 'Right' -or !$menuDraw.requiresGameWindow -or $menuUpdate.requiresGameWindow -or !$navDraw.requiresGameWindow -or $navUpdate.requiresGameWindow -or !$dialogueDraw.requiresGameWindow -or !$dialogueSet.requiresGameWindow -or !$addItem.parameters[2].optional -or !$addItem.parameters[2].default.value -or !$bind.parameters[3].optional -or !$bind.parameters[3].default.value -or $apiText.Contains('MenuHandleCreate') -or $apiText.Contains('NavigatorHandleCreate') -or $apiText.Contains('DialogueHandleCreate') -or $apiText.Contains('InternalNavigationHandle')) { exit 1 } } finally { $zip.Dispose() }"
 if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5UIStateTests\Phase5UIStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase5UIStateTests.exe"
 if errorlevel 1 exit /b 1
+set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
 "%SMILE_ROOT%\artifacts\games\Phase5UIStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5UIStateTests.out"
 if errorlevel 1 exit /b 1
-powershell -NoProfile -Command "$expected=[IO.File]::ReadAllLines('%SMILE_ROOT%\examples\Phase5UIStateTests\Phase5UIStateTests.expected.txt',[Text.Encoding]::UTF8); $actual=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5UIStateTests.out',[Text.Encoding]::UTF8); if (Compare-Object $expected $actual) { exit 1 }"
+set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
+powershell -NoProfile -Command "$expected=[IO.File]::ReadAllLines('%SMILE_ROOT%\examples\Phase5UIStateTests\Phase5UIStateTests.expected.txt',[Text.Encoding]::UTF8); $raw=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5UIStateTests.out',[Text.Encoding]::UTF8); $actual=@($raw | Where-Object { $_ -notlike 'SMILE_CLASS_LIVE=*' }); $lifetime=@($raw | Where-Object { $_ -like 'SMILE_CLASS_LIVE=*' }); if ((Compare-Object $expected $actual) -or $lifetime.Count -ne 1 -or $lifetime[0] -cne 'SMILE_CLASS_LIVE=0') { exit 1 }"
 if errorlevel 1 exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5UIStateTests\Phase5UIStateTests.Package.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase5UIStateTestsPackage.exe"
 if errorlevel 1 exit /b 1
+set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
 "%SMILE_ROOT%\artifacts\games\Phase5UIStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5UIStateTestsPackage.out"
 if errorlevel 1 exit /b 1
+set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
 fc /b "%SMILE_ROOT%\artifacts\temp\Phase5UIStateTests.out" "%SMILE_ROOT%\artifacts\temp\Phase5UIStateTestsPackage.out" >nul
 if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5SubmenuStateTests\Phase5SubmenuStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase5SubmenuStateTests.exe"
 if errorlevel 1 exit /b 1
+set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
 "%SMILE_ROOT%\artifacts\games\Phase5SubmenuStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5SubmenuStateTests.out"
 if errorlevel 1 exit /b 1
-powershell -NoProfile -Command "$expected=[IO.File]::ReadAllLines('%SMILE_ROOT%\examples\Phase5SubmenuStateTests\Phase5SubmenuStateTests.expected.txt',[Text.Encoding]::UTF8); $actual=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5SubmenuStateTests.out',[Text.Encoding]::UTF8); if (Compare-Object $expected $actual) { exit 1 }"
+set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
+powershell -NoProfile -Command "$expected=[IO.File]::ReadAllLines('%SMILE_ROOT%\examples\Phase5SubmenuStateTests\Phase5SubmenuStateTests.expected.txt',[Text.Encoding]::UTF8); $raw=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5SubmenuStateTests.out',[Text.Encoding]::UTF8); $actual=@($raw | Where-Object { $_ -notlike 'SMILE_CLASS_LIVE=*' }); $lifetime=@($raw | Where-Object { $_ -like 'SMILE_CLASS_LIVE=*' }); if ((Compare-Object $expected $actual) -or $lifetime.Count -ne 1 -or $lifetime[0] -cne 'SMILE_CLASS_LIVE=0') { exit 1 }"
 if errorlevel 1 exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5SubmenuStateTests\Phase5SubmenuStateTests.Package.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase5SubmenuStateTestsPackage.exe"
 if errorlevel 1 exit /b 1
+set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
 "%SMILE_ROOT%\artifacts\games\Phase5SubmenuStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5SubmenuStateTestsPackage.out"
 if errorlevel 1 exit /b 1
+set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
 powershell -NoProfile -Command "$project=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5SubmenuStateTests.out',[Text.Encoding]::UTF8); $package=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5SubmenuStateTestsPackage.out',[Text.Encoding]::UTF8); if (Compare-Object $project $package) { exit 1 }"
 if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5DialogueStateTests\Phase5DialogueStateTests.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\Phase5DialogueStateTests.exe"
 if errorlevel 1 exit /b 1
+set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
 "%SMILE_ROOT%\artifacts\games\Phase5DialogueStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5DialogueStateTests.out"
 if errorlevel 1 exit /b 1
-powershell -NoProfile -Command "$expected=[IO.File]::ReadAllLines('%SMILE_ROOT%\examples\Phase5DialogueStateTests\Phase5DialogueStateTests.expected.txt',[Text.Encoding]::UTF8); $actual=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5DialogueStateTests.out',[Text.Encoding]::UTF8); if (Compare-Object $expected $actual) { exit 1 }"
+set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
+powershell -NoProfile -Command "$expected=[IO.File]::ReadAllLines('%SMILE_ROOT%\examples\Phase5DialogueStateTests\Phase5DialogueStateTests.expected.txt',[Text.Encoding]::UTF8); $raw=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5DialogueStateTests.out',[Text.Encoding]::UTF8); $actual=@($raw | Where-Object { $_ -notlike 'SMILE_CLASS_LIVE=*' }); $lifetime=@($raw | Where-Object { $_ -like 'SMILE_CLASS_LIVE=*' }); if ((Compare-Object $expected $actual) -or $lifetime.Count -ne 1 -or $lifetime[0] -cne 'SMILE_CLASS_LIVE=0') { exit 1 }"
 if errorlevel 1 exit /b 1
 powershell -NoProfile -Command "if ((Get-Content -Raw -LiteralPath '%LOCALAPPDATA%\SMILE 2.0\Games\Phase5DialogueStateTests\Result.txt').Trim() -ne '0') { exit 1 }"
 if errorlevel 1 exit /b 1
@@ -705,7 +715,7 @@ for %%P in (ConsoleCallsDialogueSetStyle.smileproj ConsoleCallsDialogueSetStyle.
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\InvalidPhase5Submenus\ConsoleDrawStack\ConsoleDrawStack.smileproj" -o "%SMILE_ROOT%\artifacts\temp\ConsoleDrawStack.exe" > "%SMILE_ROOT%\artifacts\temp\ConsoleDrawStack.log" 2>&1
 if not errorlevel 1 exit /b 1
 if errorlevel 2 exit /b 1
-powershell -NoProfile -Command "$matches=Select-String -LiteralPath '%SMILE_ROOT%\artifacts\temp\ConsoleDrawStack.log' -SimpleMatch 'SML3704'; if ($matches.Count -ne 1 -or $matches.Line -notmatch 'Program\.smile\(7,20\).*DrawStack.*requires a Game Window') { exit 1 }"
+powershell -NoProfile -Command "$matches=Select-String -LiteralPath '%SMILE_ROOT%\artifacts\temp\ConsoleDrawStack.log' -SimpleMatch 'SML3704'; if ($matches.Count -ne 1 -or $matches.Line -notmatch 'Program\.smile\(7,16\).*Draw.*requires a Game Window') { exit 1 }"
 if errorlevel 1 exit /b 1
 
 if not exist "%SMILE_ROOT%\artifacts\games\Phase5SubmenuViewport-DirectX" mkdir "%SMILE_ROOT%\artifacts\games\Phase5SubmenuViewport-DirectX"

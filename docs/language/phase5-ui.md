@@ -20,15 +20,14 @@ Format-version 5 packages serialize the flag on every public routine. Project an
 
 ## Smile.UI
 
-`libraries\Smile.UI` contains ordinary SMILE modules:
+`libraries\Smile.UI` contains ordinary SMILE value Types, service modules, and stateful Class facades:
 
 - `Smile.UI.Core` — constants and style/geometry record types.
 - `Smile.UI.Window` — vector fallback and high-resolution alpha nine-slice drawing.
 - `Smile.UI.BitmapFont` — fixed-grid atlas measurement/drawing with smooth or pixel filtering.
 - `Smile.UI.Text` — system/bitmap dispatch.
-- `Smile.UI.Menu` — fixed-capacity keyboard state, disabled-item skipping, wrapping, scrolling, drawing, and events.
-- `Smile.UI.MenuNavigator` — reusable hierarchical bindings, stack navigation, viewport placement, leaf acceptance, and painter-ordered drawing.
-- `Smile.UI.Dialogue` — measured Unicode wrapping, explicit newlines, long-word splitting, spill pagination, caller-time typewriter reveal, events, and continuation drawing.
+- `Smile.UI.Menu` — the `Menu` and `MenuNavigator` Classes over private fixed-capacity engines, including disabled-item skipping, wrapping, scrolling, hierarchical bindings, viewport placement, leaf acceptance, drawing, and events.
+- `Smile.UI.Dialogue` — the `Dialogue` Class over private measured Unicode wrapping, spill pagination, caller-time typewriter reveal, event, and continuation-drawing state.
 
 The library uses fixed module-owned arrays and generation-safe numeric handles. Destroy/reset paths clear owned text and image-containing styles. It owns no images or sounds, never plays event audio, and contains no game-specific inventory, battle, actor, tile-map, menu-flow, or camera rules.
 
@@ -75,3 +74,33 @@ The cursor begins at `RowY + Max(0, (RowDrawHeight - CursorHeight) / 2)`, applie
 ### Smile.UI 1.1.3 identifier presentation
 
 `Smile.UI` 1.1.3 presents the public inset fields as `Left`, `Top`, `Right`, and `Bottom`. The `Left` and `Right` casing update follows the SMILE 2.0 Visual Basic-style identifier convention in source, completion, Quick Info, definitions, project references, and package references. Name binding remains case-insensitive, and the `.smilelib` package format remains version 5.
+
+### Smile.UI 2.0.0 lightweight object migration
+
+Smile.UI 2.0 is a breaking source/API migration built as deterministic `.smilelib` format 6. The public procedural Menu, MenuNavigator, and Dialogue handle routines are now private implementation engines. Ordinary code holds `Menus.Menu`, `Menus.MenuNavigator`, and `Dialogues.Dialogue` Class references and uses constructors, methods, and properties:
+
+```smile
+Import Smile.UI.Menu As Menus
+
+Dim Root As New Menus.Menu(
+    MenuStyle,
+    X:=200,
+    Y:=250,
+    Width:=600,
+    Height:=200
+)
+
+Dim Navigator As New Menus.MenuNavigator(Root, NavigatorStyle)
+
+Index = Root.AddItem("Start", 1)
+DisabledIndex = Root.AddItem("Locked", 2, Enabled:=False)
+Root.SelectedIndex = Index
+Event = Navigator.Update(Key)
+Call Navigator.Draw()
+```
+
+Construction never throws: a facade whose bounded engine allocation fails reports `Valid = False`. `Destroy()` releases only the engine slot, sets the facade invalid, and is safe to call repeatedly; ARC owns the Class reference itself. Raw navigator-query APIs that returned numeric menu handles were removed. Style/geometry data remains value Types and is configured naturally with `With...End With`.
+
+Class-private fields remain exact-class-only and Class-reference fields remain unsupported. The spanning Menu module therefore uses a private bounded facade registry to translate object identity to generation-safe engine handles for `MenuNavigator`; no raw handle, registry entry, procedural helper, or engine state appears in format-6 public metadata.
+
+Capability propagation is member-specific. Draw members require a Game Window, while pure state, selection, binding, geometry, and update members remain valid in Console projects. Project and package consumers receive the same consumer-located `SML3704` diagnostics, completion, Quick Info, named arguments, properties, and definitions.

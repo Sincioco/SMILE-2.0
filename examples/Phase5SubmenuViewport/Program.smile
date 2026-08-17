@@ -2,8 +2,7 @@ Option Explicit
 
 Import Smile.UI.Core As UI
 Import Smile.UI.BitmapFont As BitmapFont
-Import Smile.UI.Menu As Menu
-Import Smile.UI.MenuNavigator As MenuNavigator
+Import Smile.UI.Menu As Menus
 
 Game Window "Phase 5.2.1 Submenu Viewport" Size 640 By 360
 
@@ -23,16 +22,16 @@ Dim WrapStyle As UI.MenuStyle
 Dim GeometryStyle As UI.MenuStyle
 Dim NoScrollbarStyle As UI.MenuStyle
 Dim NavigatorStyle As UI.MenuNavigatorStyle
-Dim Root As Number
-Dim Child As Number
-Dim Grandchild As Number
-Dim Navigator As Number
-Dim FiveMenu As Number
-Dim TwentyMenu As Number
-Dim SixtyFourMenu As Number
-Dim AllVisibleMenu As Number
-Dim HiddenScrollbarMenu As Number
-Dim TinyMenu As Number
+Dim Root As Menus.Menu
+Dim Child As Menus.Menu
+Dim Grandchild As Menus.Menu
+Dim Navigator As Menus.MenuNavigator
+Dim FiveMenu As Menus.Menu
+Dim TwentyMenu As Menus.Menu
+Dim SixtyFourMenu As Menus.Menu
+Dim AllVisibleMenu As Menus.Menu
+Dim HiddenScrollbarMenu As Menus.Menu
+Dim TinyMenu As Menus.Menu
 Dim RootLongShared As Number
 Dim RootDisabled As Number
 Dim RootSubmenu As Number
@@ -127,46 +126,46 @@ GeometryStyle.ItemTextOverflowMode = UI.UI_MENU_TEXT_CLIP
 NoScrollbarStyle = GeometryStyle
 NoScrollbarStyle.ShowScrollbar = False
 
-FiveMenu = Menu.Create(GeometryStyle, 8, 60, 90, 52, 4)
-TwentyMenu = Menu.Create(GeometryStyle, 106, 60, 90, 52, 4)
-SixtyFourMenu = Menu.Create(GeometryStyle, 204, 60, 90, 52, 4)
-AllVisibleMenu = Menu.Create(GeometryStyle, 302, 60, 90, 52, 4)
-HiddenScrollbarMenu = Menu.Create(NoScrollbarStyle, 400, 60, 90, 52, 4)
-TinyMenu = Menu.Create(GeometryStyle, 498, 60, 60, 7, 1)
+FiveMenu = New Menus.Menu(GeometryStyle, 8, 60, 90, 52, 4)
+TwentyMenu = New Menus.Menu(GeometryStyle, 106, 60, 90, 52, 4)
+SixtyFourMenu = New Menus.Menu(GeometryStyle, 204, 60, 90, 52, 4)
+AllVisibleMenu = New Menus.Menu(GeometryStyle, 302, 60, 90, 52, 4)
+HiddenScrollbarMenu = New Menus.Menu(NoScrollbarStyle, 400, 60, 90, 52, 4)
+TinyMenu = New Menus.Menu(GeometryStyle, 498, 60, 60, 7, 1)
 
 For I = 0 To 4
-    ItemIndex = Menu.AddItem(FiveMenu, "Five", I, True)
-    ItemIndex = Menu.AddItem(HiddenScrollbarMenu, "Hidden", I, True)
-    ItemIndex = Menu.AddItem(TinyMenu, "Tiny", I, True)
+    ItemIndex = FiveMenu.AddItem("Five", I, True)
+    ItemIndex = HiddenScrollbarMenu.AddItem("Hidden", I, True)
+    ItemIndex = TinyMenu.AddItem("Tiny", I, True)
 End For
 
 For I = 0 To 19
-    ItemIndex = Menu.AddItem(TwentyMenu, "Twenty", I, True)
+    ItemIndex = TwentyMenu.AddItem("Twenty", I, True)
 End For
 
 For I = 0 To 63
-    ItemIndex = Menu.AddItem(SixtyFourMenu, "Sixty Four", I, True)
+    ItemIndex = SixtyFourMenu.AddItem("Sixty Four", I, True)
 End For
 
 For I = 0 To 3
-    ItemIndex = Menu.AddItem(AllVisibleMenu, "Visible", I, True)
+    ItemIndex = AllVisibleMenu.AddItem("Visible", I, True)
 End For
 
-Root = Menu.Create(MenuStyle, 430, 185, 190, 160, 4)
-Child = Menu.Create(WrapStyle, 0, 0, 230, 165, 2)
-Grandchild = Menu.Create(MenuStyle, 0, 0, 245, 150, 4)
+Root = New Menus.Menu(MenuStyle, 430, 185, 190, 160, 4)
+Child = New Menus.Menu(WrapStyle, 0, 0, 230, 165, 2)
+Grandchild = New Menus.Menu(MenuStyle, 0, 0, 245, 150, 4)
 
-ItemIndex = Menu.AddItem(Root, "Short Leaf", 10, True)
-RootLongShared = Menu.AddItem(Root, "A Very Long Shared Category Name", 11, True)
-RootDisabled = Menu.AddItem(Root, "Disabled Category", 12, False)
-RootSubmenu = Menu.AddItem(Root, "Display And Accessibility Settings", 13, True)
+ItemIndex = Root.AddItem("Short Leaf", 10, True)
+RootLongShared = Root.AddItem("A Very Long Shared Category Name", 11, True)
+RootDisabled = Root.AddItem("Disabled Category", 12, False)
+RootSubmenu = Root.AddItem("Display And Accessibility Settings", 13, True)
 
-ChildSubmenu = Menu.AddItem(Child, "A Wrapped Child Option With Explicit
+ChildSubmenu = Child.AddItem("A Wrapped Child Option With Explicit
 Multiline Content And Final Overflow", 20, True)
-ItemIndex = Menu.AddItem(Child, "Child Leaf", 21, True)
+ItemIndex = Child.AddItem("Child Leaf", 21, True)
 
-ItemIndex = Menu.AddItem(Grandchild, "Deepest Accepted Leaf", 30, True)
-ItemIndex = Menu.AddItem(Grandchild, "Another Very Long Leaf That Ellipsizes", 31, True)
+ItemIndex = Grandchild.AddItem("Deepest Accepted Leaf", 30, True)
+ItemIndex = Grandchild.AddItem("Another Very Long Leaf That Ellipsizes", 31, True)
 
 NavigatorStyle.Viewport.X = 0
 NavigatorStyle.Viewport.Y = 0
@@ -179,14 +178,15 @@ NavigatorStyle.ViewportPadding.Bottom = 8
 NavigatorStyle.HorizontalGap = 8
 NavigatorStyle.PreferredDirection = UI.UI_SUBMENU_DIRECTION_AUTO
 
-Navigator = MenuNavigator.Create(Root, NavigatorStyle)
-Result = Navigator > 0
-Result = Result And MenuNavigator.BindSubmenu(Navigator, Root, RootLongShared, Child, False)
-Result = Result And MenuNavigator.BindSubmenu(Navigator, Root, RootDisabled, Grandchild, False)
-Result = Result And MenuNavigator.BindSubmenu(Navigator, Root, RootSubmenu, Child, True)
-Result = Result And MenuNavigator.BindSubmenu(Navigator, Child, ChildSubmenu, Grandchild, True)
-Result = Result And Menu.SetSelectedIndex(Root, RootSubmenu)
-Running = Result And FiveMenu > 0 And TwentyMenu > 0 And SixtyFourMenu > 0 And AllVisibleMenu > 0 And HiddenScrollbarMenu > 0 And TinyMenu > 0
+Navigator = New Menus.MenuNavigator(Root, NavigatorStyle)
+Result = Navigator.Valid
+Result = Result And Navigator.BindSubmenu(Root, RootLongShared, Child, False)
+Result = Result And Navigator.BindSubmenu(Root, RootDisabled, Grandchild, False)
+Result = Result And Navigator.BindSubmenu(Root, RootSubmenu, Child, True)
+Result = Result And Navigator.BindSubmenu(Child, ChildSubmenu, Grandchild, True)
+Root.SelectedIndex = RootSubmenu
+Result = Result And Root.SelectedIndex = RootSubmenu
+Running = Result And FiveMenu.Valid And TwentyMenu.Valid And SixtyFourMenu.Valid And AllVisibleMenu.Valid And HiddenScrollbarMenu.Valid And TinyMenu.Valid
 
 Do
     Get Key Key
@@ -200,9 +200,9 @@ Do
         WrapStyle.NormalText = SystemText
         WrapStyle.SelectedText = SystemSelected
         WrapStyle.DisabledText = SystemDisabled
-        Result = Menu.SetStyle(Root, MenuStyle)
-        Result = Result And Menu.SetStyle(Child, WrapStyle)
-        Result = Result And Menu.SetStyle(Grandchild, MenuStyle)
+        Result = Root.SetStyle(MenuStyle)
+        Result = Result And Child.SetStyle(WrapStyle)
+        Result = Result And Grandchild.SetStyle(MenuStyle)
         Running = Running And Result
 
     Else If Key = KEY_2 Then
@@ -213,26 +213,26 @@ Do
         WrapStyle.NormalText = BitmapText
         WrapStyle.SelectedText = BitmapSelected
         WrapStyle.DisabledText = BitmapDisabled
-        Result = Menu.SetStyle(Root, MenuStyle)
-        Result = Result And Menu.SetStyle(Child, WrapStyle)
-        Result = Result And Menu.SetStyle(Grandchild, MenuStyle)
+        Result = Root.SetStyle(MenuStyle)
+        Result = Result And Child.SetStyle(WrapStyle)
+        Result = Result And Grandchild.SetStyle(MenuStyle)
         Running = Running And Result
 
     Else
 
-        Event = MenuNavigator.HandleKey(Navigator, Key)
+        Event = Navigator.Update(Key)
 
     End If
 
     Clear Rgb(4, 8, 20)
 
-    Call Menu.Draw(FiveMenu)
-    Call Menu.Draw(TwentyMenu)
-    Call Menu.Draw(SixtyFourMenu)
-    Call Menu.Draw(AllVisibleMenu)
-    Call Menu.Draw(HiddenScrollbarMenu)
-    Call Menu.Draw(TinyMenu)
-    Call MenuNavigator.DrawStack(Navigator)
+    Call FiveMenu.Draw()
+    Call TwentyMenu.Draw()
+    Call SixtyFourMenu.Draw()
+    Call AllVisibleMenu.Draw()
+    Call HiddenScrollbarMenu.Draw()
+    Call TinyMenu.Draw()
+    Call Navigator.Draw()
 
     Draw Text "Right/Enter Open   Left/Esc Back   1 System   2 Bitmap" At 320, 12 Size 15 Color WHITE Centered
     Show Screen
@@ -240,16 +240,16 @@ Do
 
 Loop Until Game_Closed() = True Or Running = False
 
-Call MenuNavigator.Destroy(Navigator)
-Call Menu.Destroy(TinyMenu)
-Call Menu.Destroy(HiddenScrollbarMenu)
-Call Menu.Destroy(AllVisibleMenu)
-Call Menu.Destroy(SixtyFourMenu)
-Call Menu.Destroy(TwentyMenu)
-Call Menu.Destroy(FiveMenu)
-Call Menu.Destroy(Grandchild)
-Call Menu.Destroy(Child)
-Call Menu.Destroy(Root)
+Call Navigator.Destroy()
+Call TinyMenu.Destroy()
+Call HiddenScrollbarMenu.Destroy()
+Call AllVisibleMenu.Destroy()
+Call SixtyFourMenu.Destroy()
+Call TwentyMenu.Destroy()
+Call FiveMenu.Destroy()
+Call Grandchild.Destroy()
+Call Child.Destroy()
+Call Root.Destroy()
 Call BitmapFont.Destroy(FontHandle)
 
 Unload Image FontAtlas

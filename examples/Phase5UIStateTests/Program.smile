@@ -1,48 +1,47 @@
 Option Explicit
 
 Import Smile.UI.Core As UI
-Import Smile.UI.Menu As Menu
+Import Smile.UI.Menu As Menus
 
 Dim Style As UI.MenuStyle
-Dim Handle As Number
-Dim OldHandle As Number
+Dim CurrentMenu As Menus.Menu
+Dim OldMenu As Menus.Menu
 Dim Event As Number
 Dim Value As Text
 Dim ItemIndex As Number
 Dim Index As Number
-Dim Handles[16] As Number
 Dim OperationSucceeded As Boolean
 Dim ReflowStyle As UI.MenuStyle
 
 Style.RowHeight = 32
 Style.WrapSelection = True
 
-Handle = Menu.Create(Style, 0, 0, 320, 240, 2)
+CurrentMenu = New Menus.Menu(Style, 0, 0, 320, 240, 2)
 
-ItemIndex = Menu.AddItem(Handle, "First", 10, True)
-ItemIndex = Menu.AddItem(Handle, "Disabled", 20, False)
-ItemIndex = Menu.AddItem(Handle, "Third", 30, True)
-ItemIndex = Menu.AddItem(Handle, "Fourth", 40, True)
+ItemIndex = CurrentMenu.AddItem("First", 10)
+ItemIndex = CurrentMenu.AddItem("Disabled", 20, Enabled:=False)
+ItemIndex = CurrentMenu.AddItem("Third", 30)
+ItemIndex = CurrentMenu.AddItem("Fourth", 40)
 
-Print Menu.SelectedIndex(Handle)
+Print CurrentMenu.SelectedIndex
 
-Event = Menu.HandleKey(Handle, KEY_DOWN)
+Event = CurrentMenu.Update(KEY_DOWN)
 Print Event
-Print Menu.SelectedIndex(Handle)
-Print Menu.TopIndex(Handle)
+Print CurrentMenu.SelectedIndex
+Print CurrentMenu.TopIndex
 
-Event = Menu.HandleKey(Handle, KEY_ENTER)
+Event = CurrentMenu.Update(KEY_ENTER)
 Print Event
-Print Menu.SelectedValue(Handle)
+Print CurrentMenu.SelectedValue
 
-Event = Menu.HandleKey(Handle, KEY_DOWN)
-Print Menu.SelectedIndex(Handle)
-Print Menu.TopIndex(Handle)
+Event = CurrentMenu.Update(KEY_DOWN)
+Print CurrentMenu.SelectedIndex
+Print CurrentMenu.TopIndex
 
-Event = Menu.HandleKey(Handle, KEY_DOWN)
-Print Menu.SelectedIndex(Handle)
+Event = CurrentMenu.Update(KEY_DOWN)
+Print CurrentMenu.SelectedIndex
 
-Event = Menu.HandleKey(Handle, KEY_ESCAPE)
+Event = CurrentMenu.Update(KEY_ESCAPE)
 Print Event
 
 Value = "A😀B"
@@ -50,75 +49,127 @@ Print Text_Length(Value)
 Print Text_Code_At(Value, 1)
 Print Text_Slice(Value, 1, 1)
 
-OldHandle = Handle
+OldMenu = CurrentMenu
 
-Call Menu.Destroy(Handle)
+Call CurrentMenu.Destroy()
 
-Print Menu.SelectedIndex(OldHandle)
+Print OldMenu.SelectedIndex
 
-Handle = Menu.Create(Style, 0, 0, 320, 240, 2)
-Print Handle
+CurrentMenu = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+Print CurrentMenu.Valid
 
-Call Menu.Destroy(Handle)
+Call CurrentMenu.Destroy()
 
-Handle = Menu.Create(Style, 0, 0, 320, 240, 2)
+CurrentMenu = New Menus.Menu(Style, 0, 0, 320, 240, 2)
 
 For Index = 0 To 63
-    ItemIndex = Menu.AddItem(Handle, "Item", Index, True)
+    ItemIndex = CurrentMenu.AddItem("Item", Index)
 End For
-Print Menu.AddItem(Handle, "Overflow", 64, True)
-Print Menu.ItemCount(Handle)
+Print CurrentMenu.AddItem("Overflow", 64)
+Print CurrentMenu.ItemCount
 
-Call Menu.Destroy(Handle)
+Call CurrentMenu.Destroy()
 
-Handle = Menu.Create(Style, 0, 0, 320, 240, 2)
-ItemIndex = Menu.AddItem(Handle, "Off", 1, False)
-ItemIndex = Menu.AddItem(Handle, "Also Off", 2, False)
-Print Menu.SelectedIndex(Handle)
-Print Menu.HandleKey(Handle, KEY_DOWN)
+CurrentMenu = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+ItemIndex = CurrentMenu.AddItem("Off", 1, Enabled:=False)
+ItemIndex = CurrentMenu.AddItem("Also Off", 2, Enabled:=False)
+Print CurrentMenu.SelectedIndex
+Print CurrentMenu.Update(KEY_DOWN)
 
-Call Menu.Destroy(Handle)
+Call CurrentMenu.Destroy()
 
 Style.WrapSelection = False
-Handle = Menu.Create(Style, 0, 0, 320, 240, 2)
-ItemIndex = Menu.AddItem(Handle, "One", 1, True)
-ItemIndex = Menu.AddItem(Handle, "Two", 2, True)
-OperationSucceeded = Menu.SetSelectedIndex(Handle, 1)
-Print Menu.HandleKey(Handle, KEY_DOWN)
-Print Menu.SelectedIndex(Handle)
+CurrentMenu = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+ItemIndex = CurrentMenu.AddItem("One", 1)
+ItemIndex = CurrentMenu.AddItem("Two", 2)
+CurrentMenu.SelectedIndex = 1
+Print CurrentMenu.Update(KEY_DOWN)
+Print CurrentMenu.SelectedIndex
 
-Call Menu.Destroy(Handle)
+Call CurrentMenu.Destroy()
 
 Style.RowHeight = 24
-Handle = Menu.Create(Style, 0, 0, 300, 180, 6)
+CurrentMenu = New Menus.Menu(Style, 0, 0, 300, 180, 6)
 
 For Index = 0 To 11
-    ItemIndex = Menu.AddItem(Handle, "Item", Index, True)
+    ItemIndex = CurrentMenu.AddItem("Item", Index)
 End For
-Print Menu.VisibleRows(Handle)
-OperationSucceeded = Menu.SetSelectedIndex(Handle, 10)
-Print Menu.TopIndex(Handle)
+Print CurrentMenu.VisibleRows
+CurrentMenu.SelectedIndex = 10
+Print CurrentMenu.TopIndex
 ReflowStyle = Style
 ReflowStyle.RowHeight = 80
-OperationSucceeded = Menu.SetStyle(Handle, ReflowStyle)
-Print Menu.VisibleRows(Handle)
-Print Menu.TopIndex(Handle)
-OperationSucceeded = Menu.SetStyle(Handle, Style)
-Print Menu.VisibleRows(Handle)
-Print Menu.TopIndex(Handle)
-OperationSucceeded = Menu.SetSelectedIndex(Handle, 5)
-OperationSucceeded = Menu.SetSelectedIndex(Handle, 10)
-Print Menu.TopIndex(Handle)
+OperationSucceeded = CurrentMenu.SetStyle(ReflowStyle)
+Print CurrentMenu.VisibleRows
+Print CurrentMenu.TopIndex
+OperationSucceeded = CurrentMenu.SetStyle(Style)
+Print CurrentMenu.VisibleRows
+Print CurrentMenu.TopIndex
+CurrentMenu.SelectedIndex = 5
+CurrentMenu.SelectedIndex = 10
+Print CurrentMenu.TopIndex
 
-Call Menu.Destroy(Handle)
+Call CurrentMenu.Destroy()
 
-For Index = 0 To 15
-    Handles[Index] = Menu.Create(Style, 0, 0, 320, 240, 2)
-End For
-Print Menu.Create(Style, 0, 0, 320, 240, 2)
-
-For Index = 0 To 15
-    Call Menu.Destroy(Handles[Index])
-End For
+Call CheckCapacity(Style)
 
 End Program
+
+Sub CheckCapacity(ByRef Style As UI.MenuStyle)
+
+    Dim Slot0 As Menus.Menu
+    Dim Slot1 As Menus.Menu
+    Dim Slot2 As Menus.Menu
+    Dim Slot3 As Menus.Menu
+    Dim Slot4 As Menus.Menu
+    Dim Slot5 As Menus.Menu
+    Dim Slot6 As Menus.Menu
+    Dim Slot7 As Menus.Menu
+    Dim Slot8 As Menus.Menu
+    Dim Slot9 As Menus.Menu
+    Dim Slot10 As Menus.Menu
+    Dim Slot11 As Menus.Menu
+    Dim Slot12 As Menus.Menu
+    Dim Slot13 As Menus.Menu
+    Dim Slot14 As Menus.Menu
+    Dim Slot15 As Menus.Menu
+    Dim Overflow As Menus.Menu
+
+    Slot0 = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+    Slot1 = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+    Slot2 = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+    Slot3 = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+    Slot4 = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+    Slot5 = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+    Slot6 = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+    Slot7 = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+    Slot8 = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+    Slot9 = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+    Slot10 = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+    Slot11 = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+    Slot12 = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+    Slot13 = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+    Slot14 = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+    Slot15 = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+    Overflow = New Menus.Menu(Style, 0, 0, 320, 240, 2)
+
+    Print Overflow.Valid
+
+    Call Slot15.Destroy()
+    Call Slot14.Destroy()
+    Call Slot13.Destroy()
+    Call Slot12.Destroy()
+    Call Slot11.Destroy()
+    Call Slot10.Destroy()
+    Call Slot9.Destroy()
+    Call Slot8.Destroy()
+    Call Slot7.Destroy()
+    Call Slot6.Destroy()
+    Call Slot5.Destroy()
+    Call Slot4.Destroy()
+    Call Slot3.Destroy()
+    Call Slot2.Destroy()
+    Call Slot1.Destroy()
+    Call Slot0.Destroy()
+
+End Sub

@@ -1,12 +1,12 @@
 Option Explicit
 
 Import Smile.UI.Core As UI
-Import Smile.UI.Dialogue As Dialogue
+Import Smile.UI.Dialogue As Dialogues
 
-Dim Handle As Number
+Dim Message As Dialogues.Dialogue
 Dim Style As UI.DialogueStyle
 Dim Result As Boolean
 
-Result = Dialogue.SetStyle(Handle, Style)
+Result = Message.SetStyle(Style)
 
 End Program

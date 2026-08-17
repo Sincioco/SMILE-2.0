@@ -1,9 +1,8 @@
-Module Smile.UI.MenuNavigator
+Module Smile.UI.Menu
 
 Option Explicit
 
 Import Smile.UI.Core As Core
-Import Smile.UI.Menu As Menu
 
 Private Dim NavigatorUsed[8] As Boolean
 Private Dim NavigatorGeneration[8] As Number
@@ -30,7 +29,7 @@ Private Dim ScratchY[8] As Number
 Private Dim ScratchOldX[8] As Number
 Private Dim ScratchOldY[8] As Number
 
-Private Function SlotFromHandle(Handle As Number) As Number
+Private Function NavigatorSlotFromHandle(Handle As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
@@ -58,7 +57,7 @@ Private Function SlotFromHandle(Handle As Number) As Number
 
 End Function
 
-Public Function IsStyleValid(ByRef Style As Core.MenuNavigatorStyle) As Boolean
+Private Function NavigatorHandleIsStyleValid(ByRef Style As Core.MenuNavigatorStyle) As Boolean
 
     If (Style.Viewport.X < -Core.UI_MAX_LAYOUT_VALUE Or
         Style.Viewport.X > Core.UI_MAX_LAYOUT_VALUE Or
@@ -169,11 +168,11 @@ Private Function MenuFitsStyle(MenuHandle As Number, ByRef Style As Core.MenuNav
     Dim ReturnValue As Boolean
     Dim Value As Core.Rect
 
-    If Not Menu.IsValid(MenuHandle) Then
+    If Not MenuHandleIsValid(MenuHandle) Then
         Return False
     End If
 
-    Value = Menu.Bounds(MenuHandle)
+    Value = MenuHandleBounds(MenuHandle)
     ReturnValue = Value.Width > 0 And Value.Height > 0 And Value.Width <= InnerRight(Style) - InnerLeft(Style) And Value.Height <= InnerBottom(Style) - InnerTop(Style)
     Return ReturnValue
 
@@ -205,11 +204,11 @@ Private Function OtherBindingKeepsMarker(SkipNavigator As Number, SkipBinding As
                         BindingParentItems[NavigatorIndex, BindingIndex] = ParentItemIndex And
                         BindingParentRevisions[NavigatorIndex, BindingIndex] = ParentRevision) Then
 
-                        If (Menu.IsValid(ParentMenuHandle) And
-                            Menu.IsValid(BindingChildMenus[NavigatorIndex, BindingIndex]) And
-                            Menu.ItemRevision(ParentMenuHandle) = ParentRevision And
+                        If (MenuHandleIsValid(ParentMenuHandle) And
+                            MenuHandleIsValid(BindingChildMenus[NavigatorIndex, BindingIndex]) And
+                            MenuHandleItemRevision(ParentMenuHandle) = ParentRevision And
                             ParentItemIndex >= 0 And
-                            ParentItemIndex < Menu.ItemCount(ParentMenuHandle)) Then
+                            ParentItemIndex < MenuHandleItemCount(ParentMenuHandle)) Then
                             Return True
                         End If
 
@@ -241,13 +240,13 @@ Private Sub ClearBindingAt(Slot As Number, BindingIndex As Number)
     ParentItem = BindingParentItems[Slot, BindingIndex]
     ParentRevision = BindingParentRevisions[Slot, BindingIndex]
 
-    If (Menu.IsValid(ParentHandle) And
-        Menu.ItemRevision(ParentHandle) = ParentRevision And
+    If (MenuHandleIsValid(ParentHandle) And
+        MenuHandleItemRevision(ParentHandle) = ParentRevision And
         ParentItem >= 0 And
-        ParentItem < Menu.ItemCount(ParentHandle)) Then
+        ParentItem < MenuHandleItemCount(ParentHandle)) Then
 
         If Not OtherBindingKeepsMarker(Slot, BindingIndex, ParentHandle, ParentItem, ParentRevision) Then
-            Ignored = Menu.SetItemHasSubmenu(ParentHandle, ParentItem, False)
+            Ignored = MenuHandleSetItemHasSubmenu(ParentHandle, ParentItem, False)
         End If
 
     End If
@@ -308,13 +307,13 @@ Private Sub PruneBindings(Slot As Number)
             ParentRevision = BindingParentRevisions[Slot, BindingIndex]
             ChildHandle = BindingChildMenus[Slot, BindingIndex]
 
-            If (Not Menu.IsValid(ParentHandle) Or
-                Not Menu.IsValid(ChildHandle) Or
+            If (Not MenuHandleIsValid(ParentHandle) Or
+                Not MenuHandleIsValid(ChildHandle) Or
                 ParentHandle = ChildHandle) Then
                 Call ClearBindingAt(Slot, BindingIndex)
-            Else If (Menu.ItemRevision(ParentHandle) <> ParentRevision Or
+            Else If (MenuHandleItemRevision(ParentHandle) <> ParentRevision Or
                 ParentItem < 0 Or
-                ParentItem >= Menu.ItemCount(ParentHandle)) Then
+                ParentItem >= MenuHandleItemCount(ParentHandle)) Then
                 Call ClearBindingAt(Slot, BindingIndex)
             End If
 
@@ -338,7 +337,7 @@ Private Function RepairSlot(Slot As Number) As Boolean
 
     Call PruneBindings(Slot)
 
-    If Not Menu.IsValid(NavigatorRoot[Slot]) Then
+    If Not MenuHandleIsValid(NavigatorRoot[Slot]) Then
 
         NavigatorDepth[Slot] = 0
 
@@ -365,7 +364,7 @@ Private Function RepairSlot(Slot As Number) As Boolean
         ParentHandle = StackMenus[Slot, Level - 1]
         ChildHandle = StackMenus[Slot, Level]
 
-        If Menu.SelectedIndex(ParentHandle) <> StackParentItems[Slot, Level] Then
+        If MenuHandleSelectedIndex(ParentHandle) <> StackParentItems[Slot, Level] Then
 
             NavigatorDepth[Slot] = Level
 
@@ -380,7 +379,7 @@ Private Function RepairSlot(Slot As Number) As Boolean
 
         If (BindingIndex < 0 Or
             BindingChildMenus[Slot, BindingIndex] <> ChildHandle Or
-            Not Menu.IsValid(ChildHandle)) Then
+            Not MenuHandleIsValid(ChildHandle)) Then
 
             NavigatorDepth[Slot] = Level
 
@@ -407,7 +406,7 @@ Private Function RepairSlot(Slot As Number) As Boolean
         End For
     End For
 
-    If AcceptedMenus[Slot] <> 0 And Not Menu.IsValid(AcceptedMenus[Slot]) Then
+    If AcceptedMenus[Slot] <> 0 And Not MenuHandleIsValid(AcceptedMenus[Slot]) Then
         Call ClearAccepted(Slot)
     End If
 
@@ -582,7 +581,7 @@ Private Function CalculateLayout(Slot As Number, ByRef Style As Core.MenuNavigat
             Return False
         End If
 
-        ChildBounds = Menu.Bounds(StackMenus[Slot, Level])
+        ChildBounds = MenuHandleBounds(StackMenus[Slot, Level])
         ScratchOldX[Level] = ChildBounds.X
         ScratchOldY[Level] = ChildBounds.Y
 
@@ -593,8 +592,8 @@ Private Function CalculateLayout(Slot As Number, ByRef Style As Core.MenuNavigat
 
         Else
 
-            ParentBounds = Menu.Bounds(StackMenus[Slot, Level - 1])
-            RowBounds = Menu.SelectedRowRect(StackMenus[Slot, Level - 1])
+            ParentBounds = MenuHandleBounds(StackMenus[Slot, Level - 1])
+            RowBounds = MenuHandleSelectedRowRect(StackMenus[Slot, Level - 1])
             RowOffset = 0
 
             If RowBounds.Height > 0 Then
@@ -654,10 +653,10 @@ Private Function ApplyLayout(Slot As Number) As Boolean
 
     For Level = 0 To NavigatorDepth[Slot] - 1
 
-        If Not Menu.SetPosition(StackMenus[Slot, Level], ScratchX[Level], ScratchY[Level]) Then
+        If Not MenuHandleSetPosition(StackMenus[Slot, Level], ScratchX[Level], ScratchY[Level]) Then
 
             For Rollback = 0 To Level - 1
-                Ignored = Menu.SetPosition(StackMenus[Slot, Rollback], ScratchOldX[Rollback], ScratchOldY[Rollback])
+                Ignored = MenuHandleSetPosition(StackMenus[Slot, Rollback], ScratchOldX[Rollback], ScratchOldY[Rollback])
             End For
             Return False
 
@@ -681,15 +680,15 @@ Private Function RelayoutSlot(Slot As Number, ByRef Style As Core.MenuNavigatorS
 
 End Function
 
-Public Function Create(RootMenuHandle As Number, ByRef Style As Core.MenuNavigatorStyle) As Number
+Private Function NavigatorHandleCreate(RootMenuHandle As Number, ByRef Style As Core.MenuNavigatorStyle) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
     Dim Index As Number
     Dim EmptyStyle As Core.MenuNavigatorStyle
 
-    If (Not Menu.IsValid(RootMenuHandle) Or
-        Not IsStyleValid(Style) Or
+    If (Not MenuHandleIsValid(RootMenuHandle) Or
+        Not NavigatorHandleIsStyleValid(Style) Or
         Not MenuFitsStyle(RootMenuHandle, Style)) Then
         ReturnValue = 0
         Return ReturnValue
@@ -758,13 +757,13 @@ Public Function Create(RootMenuHandle As Number, ByRef Style As Core.MenuNavigat
 
 End Function
 
-Public Sub Destroy(NavigatorHandle As Number)
+Private Sub NavigatorHandleDestroy(NavigatorHandle As Number)
 
     Dim Slot As Number
     Dim BindingIndex As Number
     Dim EmptyStyle As Core.MenuNavigatorStyle
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
     If Slot < 0 Then
         Return
@@ -786,22 +785,22 @@ Public Sub Destroy(NavigatorHandle As Number)
 
 End Sub
 
-Public Function IsValid(NavigatorHandle As Number) As Boolean
+Private Function NavigatorHandleIsValid(NavigatorHandle As Number) As Boolean
 
     Dim ReturnValue As Boolean
 
-    ReturnValue = SlotFromHandle(NavigatorHandle) >= 0
+    ReturnValue = NavigatorSlotFromHandle(NavigatorHandle) >= 0
     Return ReturnValue
 
 End Function
 
-Public Function SetStyle(NavigatorHandle As Number, ByRef Style As Core.MenuNavigatorStyle) As Boolean
+Private Function NavigatorHandleSetStyle(NavigatorHandle As Number, ByRef Style As Core.MenuNavigatorStyle) As Boolean
 
     Dim Slot As Number
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
-    If Slot < 0 Or Not IsStyleValid(Style) Then
+    If Slot < 0 Or Not NavigatorHandleIsStyleValid(Style) Then
         Return False
     End If
 
@@ -818,12 +817,12 @@ Public Function SetStyle(NavigatorHandle As Number, ByRef Style As Core.MenuNavi
 
 End Function
 
-Public Function Relayout(NavigatorHandle As Number) As Boolean
+Private Function NavigatorHandleRelayout(NavigatorHandle As Number) As Boolean
 
     Dim ReturnValue As Boolean
     Dim Slot As Number
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
     If Slot < 0 Or Not RepairSlot(Slot) Then
         Return False
@@ -834,12 +833,12 @@ Public Function Relayout(NavigatorHandle As Number) As Boolean
 
 End Function
 
-Public Function Reset(NavigatorHandle As Number) As Boolean
+Private Function NavigatorHandleReset(NavigatorHandle As Number) As Boolean
 
     Dim Slot As Number
     Dim OldDepth As Number
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
     If Slot < 0 Or Not RepairSlot(Slot) Then
         Return False
@@ -860,7 +859,7 @@ Public Function Reset(NavigatorHandle As Number) As Boolean
 
 End Function
 
-Public Function BindSubmenu(NavigatorHandle As Number, ParentMenuHandle As Number, ParentItemIndex As Number, ChildMenuHandle As Number, ResetChildSelection As Boolean) As Boolean
+Private Function NavigatorHandleBindSubmenu(NavigatorHandle As Number, ParentMenuHandle As Number, ParentItemIndex As Number, ChildMenuHandle As Number, ResetChildSelection As Boolean) As Boolean
 
     Dim ReturnValue As Boolean
     Dim Slot As Number
@@ -869,20 +868,20 @@ Public Function BindSubmenu(NavigatorHandle As Number, ParentMenuHandle As Numbe
     Dim ExistingChild As Number
     Dim ParentRevision As Number
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
     If Slot < 0 Or Not RepairSlot(Slot) Then
         Return False
     End If
 
-    If (Not Menu.IsValid(ParentMenuHandle) Or
-        Not Menu.IsValid(ChildMenuHandle) Or
+    If (Not MenuHandleIsValid(ParentMenuHandle) Or
+        Not MenuHandleIsValid(ChildMenuHandle) Or
         ParentMenuHandle = ChildMenuHandle) Then
         Return False
     End If
 
     If (ParentItemIndex < 0 Or
-        ParentItemIndex >= Menu.ItemCount(ParentMenuHandle) Or
+        ParentItemIndex >= MenuHandleItemCount(ParentMenuHandle) Or
         Not MenuFitsStyle(ChildMenuHandle, NavigatorStyles[Slot])) Then
         Return False
     End If
@@ -918,10 +917,10 @@ Public Function BindSubmenu(NavigatorHandle As Number, ParentMenuHandle As Numbe
 
     End If
 
-    ParentRevision = Menu.ItemRevision(ParentMenuHandle)
+    ParentRevision = MenuHandleItemRevision(ParentMenuHandle)
 
     If (ParentRevision <= 0 Or
-        Not Menu.SetItemHasSubmenu(ParentMenuHandle, ParentItemIndex, True)) Then
+        Not MenuHandleSetItemHasSubmenu(ParentMenuHandle, ParentItemIndex, True)) Then
         Return False
     End If
 
@@ -940,13 +939,13 @@ Public Function BindSubmenu(NavigatorHandle As Number, ParentMenuHandle As Numbe
 
 End Function
 
-Public Function UnbindSubmenu(NavigatorHandle As Number, ParentMenuHandle As Number, ParentItemIndex As Number) As Boolean
+Private Function NavigatorHandleUnbindSubmenu(NavigatorHandle As Number, ParentMenuHandle As Number, ParentItemIndex As Number) As Boolean
 
     Dim Slot As Number
     Dim BindingIndex As Number
     Dim Ignored As Boolean
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
     If Slot < 0 Or Not RepairSlot(Slot) Then
         Return False
@@ -967,13 +966,13 @@ Public Function UnbindSubmenu(NavigatorHandle As Number, ParentMenuHandle As Num
 
 End Function
 
-Public Sub ClearBindings(NavigatorHandle As Number)
+Private Sub NavigatorHandleClearBindings(NavigatorHandle As Number)
 
     Dim Slot As Number
     Dim BindingIndex As Number
     Dim Ignored As Boolean
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
     If Slot < 0 Then
         Return
@@ -985,7 +984,7 @@ Public Sub ClearBindings(NavigatorHandle As Number)
         Call ClearBindingAt(Slot, BindingIndex)
     End For
 
-    If Menu.IsValid(NavigatorRoot[Slot]) Then
+    If MenuHandleIsValid(NavigatorRoot[Slot]) Then
 
         NavigatorDepth[Slot] = 1
         StackMenus[Slot, 0] = NavigatorRoot[Slot]
@@ -1007,12 +1006,12 @@ Public Sub ClearBindings(NavigatorHandle As Number)
 
 End Sub
 
-Public Function HasSubmenu(NavigatorHandle As Number, ParentMenuHandle As Number, ParentItemIndex As Number) As Boolean
+Private Function NavigatorHandleHasSubmenu(NavigatorHandle As Number, ParentMenuHandle As Number, ParentItemIndex As Number) As Boolean
 
     Dim ReturnValue As Boolean
     Dim Slot As Number
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
     If Slot < 0 Or Not RepairSlot(Slot) Then
         Return False
@@ -1023,7 +1022,7 @@ Public Function HasSubmenu(NavigatorHandle As Number, ParentMenuHandle As Number
 
 End Function
 
-Public Function OpenSelected(NavigatorHandle As Number) As Number
+Private Function NavigatorHandleOpenSelected(NavigatorHandle As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
@@ -1033,7 +1032,7 @@ Public Function OpenSelected(NavigatorHandle As Number) As Number
     Dim ChildHandle As Number
     Dim OldDepth As Number
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
     If Slot < 0 Or Not RepairSlot(Slot) Then
         ReturnValue = Core.UI_EVENT_NONE
@@ -1041,7 +1040,7 @@ Public Function OpenSelected(NavigatorHandle As Number) As Number
     End If
 
     CurrentHandle = StackMenus[Slot, NavigatorDepth[Slot] - 1]
-    SelectedItem = Menu.SelectedIndex(CurrentHandle)
+    SelectedItem = MenuHandleSelectedIndex(CurrentHandle)
 
     If SelectedItem < 0 Then
         ReturnValue = Core.UI_EVENT_NONE
@@ -1051,7 +1050,7 @@ Public Function OpenSelected(NavigatorHandle As Number) As Number
     BindingIndex = FindBinding(Slot, CurrentHandle, SelectedItem)
 
     If (BindingIndex < 0 Or
-        Menu.HandleKey(CurrentHandle, KEY_ENTER) <> Core.UI_EVENT_ACCEPTED Or
+        MenuHandleHandleKey(CurrentHandle, KEY_ENTER) <> Core.UI_EVENT_ACCEPTED Or
         NavigatorDepth[Slot] >= Core.UI_MAX_MENU_DEPTH) Then
         ReturnValue = Core.UI_EVENT_NONE
         Return ReturnValue
@@ -1059,14 +1058,14 @@ Public Function OpenSelected(NavigatorHandle As Number) As Number
 
     ChildHandle = BindingChildMenus[Slot, BindingIndex]
 
-    If Not Menu.IsValid(ChildHandle) Or ActiveContains(Slot, ChildHandle) Then
+    If Not MenuHandleIsValid(ChildHandle) Or ActiveContains(Slot, ChildHandle) Then
         ReturnValue = Core.UI_EVENT_NONE
         Return ReturnValue
     End If
 
     If BindingResetChild[Slot, BindingIndex] Then
 
-        If Not Menu.ResetSelection(ChildHandle) Then
+        If Not MenuHandleResetSelection(ChildHandle) Then
             ReturnValue = Core.UI_EVENT_NONE
             Return ReturnValue
         End If
@@ -1095,7 +1094,7 @@ Public Function OpenSelected(NavigatorHandle As Number) As Number
 
 End Function
 
-Public Function Back(NavigatorHandle As Number) As Number
+Private Function NavigatorHandleBack(NavigatorHandle As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
@@ -1103,7 +1102,7 @@ Public Function Back(NavigatorHandle As Number) As Number
     Dim RemovedMenu As Number
     Dim RemovedItem As Number
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
     If (Slot < 0 Or
         Not RepairSlot(Slot) Or
@@ -1135,7 +1134,7 @@ Public Function Back(NavigatorHandle As Number) As Number
 
 End Function
 
-Public Function HandleKey(NavigatorHandle As Number, Key As Number) As Number
+Private Function NavigatorHandleHandleKey(NavigatorHandle As Number, Key As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
@@ -1144,7 +1143,7 @@ Public Function HandleKey(NavigatorHandle As Number, Key As Number) As Number
     Dim BindingIndex As Number
     Dim Event As Number
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
     If Slot < 0 Or Not RepairSlot(Slot) Then
         ReturnValue = Core.UI_EVENT_NONE
@@ -1154,7 +1153,7 @@ Public Function HandleKey(NavigatorHandle As Number, Key As Number) As Number
     CurrentHandle = StackMenus[Slot, NavigatorDepth[Slot] - 1]
 
     If Key = KEY_UP Or Key = KEY_DOWN Then
-        ReturnValue = Menu.HandleKey(CurrentHandle, Key)
+        ReturnValue = MenuHandleHandleKey(CurrentHandle, Key)
         Return ReturnValue
     End If
 
@@ -1162,7 +1161,7 @@ Public Function HandleKey(NavigatorHandle As Number, Key As Number) As Number
         Key = KEY_ENTER Or
         Key = KEY_SPACE) Then
 
-        SelectedItem = Menu.SelectedIndex(CurrentHandle)
+        SelectedItem = MenuHandleSelectedIndex(CurrentHandle)
         BindingIndex = -1
 
         If SelectedItem >= 0 Then
@@ -1170,7 +1169,7 @@ Public Function HandleKey(NavigatorHandle As Number, Key As Number) As Number
         End If
 
         If BindingIndex >= 0 Then
-            ReturnValue = OpenSelected(NavigatorHandle)
+            ReturnValue = NavigatorHandleOpenSelected(NavigatorHandle)
             Return ReturnValue
         End If
 
@@ -1182,14 +1181,14 @@ Public Function HandleKey(NavigatorHandle As Number, Key As Number) As Number
     End If
 
     If Key = KEY_LEFT Then
-        ReturnValue = Back(NavigatorHandle)
+        ReturnValue = NavigatorHandleBack(NavigatorHandle)
         Return ReturnValue
     End If
 
     If Key = KEY_ESCAPE Then
 
         If NavigatorDepth[Slot] > 1 Then
-            ReturnValue = Back(NavigatorHandle)
+            ReturnValue = NavigatorHandleBack(NavigatorHandle)
             Return ReturnValue
         End If
 
@@ -1200,17 +1199,17 @@ Public Function HandleKey(NavigatorHandle As Number, Key As Number) As Number
 
     If Key = KEY_ENTER Or Key = KEY_SPACE Then
 
-        Event = Menu.HandleKey(CurrentHandle, Key)
+        Event = MenuHandleHandleKey(CurrentHandle, Key)
 
         If Event = Core.UI_EVENT_ACCEPTED Then
 
-            SelectedItem = Menu.SelectedIndex(CurrentHandle)
+            SelectedItem = MenuHandleSelectedIndex(CurrentHandle)
 
             If SelectedItem >= 0 Then
 
                 AcceptedMenus[Slot] = CurrentHandle
                 AcceptedIndices[Slot] = SelectedItem
-                AcceptedValues[Slot] = Menu.SelectedValue(CurrentHandle)
+                AcceptedValues[Slot] = MenuHandleSelectedValue(CurrentHandle)
                 ReturnValue = Core.UI_EVENT_ACCEPTED
                 Return ReturnValue
 
@@ -1225,12 +1224,12 @@ Public Function HandleKey(NavigatorHandle As Number, Key As Number) As Number
 
 End Function
 
-Public Function Depth(NavigatorHandle As Number) As Number
+Private Function NavigatorHandleDepth(NavigatorHandle As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
     If Slot < 0 Or Not RepairSlot(Slot) Then
         ReturnValue = 0
@@ -1242,12 +1241,12 @@ Public Function Depth(NavigatorHandle As Number) As Number
 
 End Function
 
-Public Function RootMenu(NavigatorHandle As Number) As Number
+Private Function NavigatorHandleRootMenu(NavigatorHandle As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
     If Slot < 0 Or Not RepairSlot(Slot) Then
         ReturnValue = 0
@@ -1259,12 +1258,12 @@ Public Function RootMenu(NavigatorHandle As Number) As Number
 
 End Function
 
-Public Function CurrentMenu(NavigatorHandle As Number) As Number
+Private Function NavigatorHandleCurrentMenu(NavigatorHandle As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
     If Slot < 0 Or Not RepairSlot(Slot) Then
         ReturnValue = 0
@@ -1276,12 +1275,12 @@ Public Function CurrentMenu(NavigatorHandle As Number) As Number
 
 End Function
 
-Public Function MenuAtDepth(NavigatorHandle As Number, DepthIndex As Number) As Number
+Private Function NavigatorHandleMenuAtDepth(NavigatorHandle As Number, DepthIndex As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
     If (Slot < 0 Or
         Not RepairSlot(Slot) Or
@@ -1296,12 +1295,12 @@ Public Function MenuAtDepth(NavigatorHandle As Number, DepthIndex As Number) As 
 
 End Function
 
-Public Function ParentMenu(NavigatorHandle As Number) As Number
+Private Function NavigatorHandleParentMenu(NavigatorHandle As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
     If (Slot < 0 Or
         Not RepairSlot(Slot) Or
@@ -1315,21 +1314,21 @@ Public Function ParentMenu(NavigatorHandle As Number) As Number
 
 End Function
 
-Public Function CanGoBack(NavigatorHandle As Number) As Boolean
+Private Function NavigatorHandleCanGoBack(NavigatorHandle As Number) As Boolean
 
     Dim ReturnValue As Boolean
 
-    ReturnValue = Depth(NavigatorHandle) > 1
+    ReturnValue = NavigatorHandleDepth(NavigatorHandle) > 1
     Return ReturnValue
 
 End Function
 
-Public Function LastAcceptedMenu(NavigatorHandle As Number) As Number
+Private Function NavigatorHandleLastAcceptedMenu(NavigatorHandle As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
     If Slot < 0 Or Not RepairSlot(Slot) Then
         ReturnValue = 0
@@ -1341,12 +1340,12 @@ Public Function LastAcceptedMenu(NavigatorHandle As Number) As Number
 
 End Function
 
-Public Function LastAcceptedIndex(NavigatorHandle As Number) As Number
+Private Function NavigatorHandleLastAcceptedIndex(NavigatorHandle As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
     If Slot < 0 Or Not RepairSlot(Slot) Then
         ReturnValue = -1
@@ -1358,12 +1357,12 @@ Public Function LastAcceptedIndex(NavigatorHandle As Number) As Number
 
 End Function
 
-Public Function LastAcceptedValue(NavigatorHandle As Number) As Number
+Private Function NavigatorHandleLastAcceptedValue(NavigatorHandle As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
     If Slot < 0 Or Not RepairSlot(Slot) Then
         ReturnValue = 0
@@ -1375,35 +1374,304 @@ Public Function LastAcceptedValue(NavigatorHandle As Number) As Number
 
 End Function
 
-Public Sub DrawActive(NavigatorHandle As Number)
+Private Sub NavigatorHandleDrawActive(NavigatorHandle As Number)
 
     Dim Slot As Number
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
-    If Slot < 0 Or Not Relayout(NavigatorHandle) Then
+    If Slot < 0 Or Not NavigatorHandleRelayout(NavigatorHandle) Then
         Return
     End If
 
-    Call Menu.DrawFocused(StackMenus[Slot, NavigatorDepth[Slot] - 1], True)
+    Call MenuHandleDrawFocused(StackMenus[Slot, NavigatorDepth[Slot] - 1], True)
 
 End Sub
 
-Public Sub DrawStack(NavigatorHandle As Number)
+Private Sub NavigatorHandleDrawStack(NavigatorHandle As Number)
 
     Dim Slot As Number
     Dim Level As Number
 
-    Slot = SlotFromHandle(NavigatorHandle)
+    Slot = NavigatorSlotFromHandle(NavigatorHandle)
 
-    If Slot < 0 Or Not Relayout(NavigatorHandle) Then
+    If Slot < 0 Or Not NavigatorHandleRelayout(NavigatorHandle) Then
         Return
     End If
 
     For Level = 0 To NavigatorDepth[Slot] - 1
-        Call Menu.DrawFocused(StackMenus[Slot, Level], True)
+        Call MenuHandleDrawFocused(StackMenus[Slot, Level], True)
     End For
 
 End Sub
+
+''' Stateful submenu navigator backed by bounded generation-safe menu handles.
+Public Class MenuNavigator
+
+    Private Handle As Number
+
+    ''' Creates a bounded navigator rooted at an existing valid Menu.
+    ''' @param RootMenu: Application-owned root menu.
+    ''' @param Style: Viewport and submenu placement configuration.
+    Public Sub New(
+        RootMenu As Menu,
+        ByRef Style As Core.MenuNavigatorStyle
+    )
+
+        Me.Handle = NavigatorHandleCreate(MenuFacadeRuntimeHandle(RootMenu), Style)
+
+    End Sub
+
+    ''' Reports whether this facade still owns a valid navigator slot.
+    Public Property Valid As Boolean
+
+        Get
+
+            Dim ReturnValue As Boolean
+
+            ReturnValue = NavigatorHandleIsValid(Me.Handle)
+
+            Return ReturnValue
+
+        End Get
+
+    End Property
+
+    ''' Releases navigator bindings and stack state. Repeated calls are safe.
+    Public Sub Destroy()
+
+        Call NavigatorHandleDestroy(Me.Handle)
+
+        Me.Handle = 0
+
+    End Sub
+
+    ''' Replaces viewport and placement style transactionally.
+    ''' @param Style: Candidate navigator style.
+    ''' @returns: True when the style and resulting layout were committed.
+    Public Function SetStyle(ByRef Style As Core.MenuNavigatorStyle) As Boolean
+
+        Dim ReturnValue As Boolean
+
+        ReturnValue = NavigatorHandleSetStyle(Me.Handle, Style)
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Recomputes and commits the active stack layout.
+    ''' @returns: True when every active menu fits a valid layout.
+    Public Function Relayout() As Boolean
+
+        Dim ReturnValue As Boolean
+
+        ReturnValue = NavigatorHandleRelayout(Me.Handle)
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Returns navigation to the root menu and clears accepted-leaf state.
+    ''' @returns: True when the root remains valid and layout succeeds.
+    Public Function Reset() As Boolean
+
+        Dim ReturnValue As Boolean
+
+        ReturnValue = NavigatorHandleReset(Me.Handle)
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Binds one parent item to an application-owned child menu.
+    ''' @param ParentMenu: Menu containing the parent item.
+    ''' @param ParentItemIndex: Zero-based item index to bind.
+    ''' @param ChildMenu: Menu opened by the binding.
+    ''' @param ResetChildSelection: Whether opening resets the child selection; defaults to True.
+    ''' @returns: True when the acyclic, generation-safe binding was committed.
+    Public Function BindSubmenu(
+        ParentMenu As Menu,
+        ParentItemIndex As Number,
+        ChildMenu As Menu,
+        Optional ResetChildSelection As Boolean = True
+    ) As Boolean
+
+        Dim ReturnValue As Boolean
+
+        ReturnValue = NavigatorHandleBindSubmenu(
+            Me.Handle,
+            MenuFacadeRuntimeHandle(ParentMenu),
+            ParentItemIndex,
+            MenuFacadeRuntimeHandle(ChildMenu),
+            ResetChildSelection
+        )
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Removes one navigator-owned submenu binding.
+    ''' @param ParentMenu: Menu containing the parent item.
+    ''' @param ParentItemIndex: Zero-based bound item index.
+    ''' @returns: True when an existing binding was removed.
+    Public Function UnbindSubmenu(
+        ParentMenu As Menu,
+        ParentItemIndex As Number
+    ) As Boolean
+
+        Dim ReturnValue As Boolean
+
+        ReturnValue = NavigatorHandleUnbindSubmenu(
+            Me.Handle,
+            MenuFacadeRuntimeHandle(ParentMenu),
+            ParentItemIndex
+        )
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Removes every binding and returns the active stack to its root.
+    Public Sub ClearBindings()
+
+        Call NavigatorHandleClearBindings(Me.Handle)
+
+    End Sub
+
+    ''' Reports whether this navigator owns a live binding for one item.
+    ''' @param ParentMenu: Menu containing the candidate item.
+    ''' @param ParentItemIndex: Zero-based item index.
+    ''' @returns: True when a live binding exists.
+    Public Function HasSubmenu(
+        ParentMenu As Menu,
+        ParentItemIndex As Number
+    ) As Boolean
+
+        Dim ReturnValue As Boolean
+
+        ReturnValue = NavigatorHandleHasSubmenu(
+            Me.Handle,
+            MenuFacadeRuntimeHandle(ParentMenu),
+            ParentItemIndex
+        )
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Attempts to open the submenu bound to the current selection.
+    ''' @returns: A UI_EVENT value describing the navigation result.
+    Public Function OpenSelected() As Number
+
+        Dim ReturnValue As Number
+
+        ReturnValue = NavigatorHandleOpenSelected(Me.Handle)
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Closes exactly one submenu level when possible.
+    ''' @returns: A UI_EVENT value describing the navigation result.
+    Public Function Back() As Number
+
+        Dim ReturnValue As Number
+
+        ReturnValue = NavigatorHandleBack(Me.Handle)
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Routes one keyboard input exclusively to the deepest active menu.
+    ''' @param Key: SMILE key code to process.
+    ''' @returns: A UI_EVENT value describing the navigation or leaf result.
+    Public Function Update(Key As Number) As Number
+
+        Dim ReturnValue As Number
+
+        ReturnValue = NavigatorHandleHandleKey(Me.Handle, Key)
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Returns the active stack depth, including the root menu.
+    Public Property Depth As Number
+
+        Get
+
+            Dim ReturnValue As Number
+
+            ReturnValue = NavigatorHandleDepth(Me.Handle)
+
+            Return ReturnValue
+
+        End Get
+
+    End Property
+
+    ''' Reports whether one submenu level can currently be closed.
+    Public Property CanGoBack As Boolean
+
+        Get
+
+            Dim ReturnValue As Boolean
+
+            ReturnValue = NavigatorHandleCanGoBack(Me.Handle)
+
+            Return ReturnValue
+
+        End Get
+
+    End Property
+
+    ''' Returns the last accepted leaf's item index, or -1 when none exists.
+    Public Property LastAcceptedIndex As Number
+
+        Get
+
+            Dim ReturnValue As Number
+
+            ReturnValue = NavigatorHandleLastAcceptedIndex(Me.Handle)
+
+            Return ReturnValue
+
+        End Get
+
+    End Property
+
+    ''' Returns the last accepted leaf's application value, or zero when none exists.
+    Public Property LastAcceptedValue As Number
+
+        Get
+
+            Dim ReturnValue As Number
+
+            ReturnValue = NavigatorHandleLastAcceptedValue(Me.Handle)
+
+            Return ReturnValue
+
+        End Get
+
+    End Property
+
+    ''' Draws only the deepest active menu with a visible cursor.
+    ''' @remarks: Requires Game Window.
+    Public Sub DrawActive()
+
+        Call NavigatorHandleDrawActive(Me.Handle)
+
+    End Sub
+
+    ''' Draws the active stack from root to leaf with every cursor visible.
+    ''' @remarks: Requires Game Window.
+    Public Sub Draw()
+
+        Call NavigatorHandleDrawStack(Me.Handle)
+
+    End Sub
+
+End Class
 
 End Module

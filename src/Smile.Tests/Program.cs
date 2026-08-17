@@ -1333,24 +1333,41 @@ Run("Ordinary comments blank gaps malformed tags and missing documentation stay 
         Equal(string.Empty, documentation.Returns);
     }
 });
-Run("Every public Smile.UI.Menu routine has complete educational documentation", () =>
+Run("Every public Smile.UI stateful facade member has educational documentation", () =>
 {
     var compilation = SmileProjectCompilation.Load("libraries/Smile.UI/Smile.UI.smilelibproj");
     var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library,
         compilation.DependencyContext);
     Equal(false, analysis.HasErrors);
-    var routines = analysis.SemanticModel.Modules["Smile.UI.Menu"].PublicMembers
-        .Where(member => member.Routine != null).Select(member => member.Routine!).ToArray();
-    Equal(26, routines.Length);
-    foreach (var routine in routines)
+    var facades = analysis.SemanticModel.NominalTypes.Values.OfType<ClassTypeSymbol>()
+        .Where(type => type.Name is "Menu" or "MenuNavigator" or "Dialogue")
+        .DistinctBy(type => type.RuntimeIdentity).OrderBy(type => type.RuntimeIdentity).ToArray();
+    Equal(3, facades.Length);
+    foreach (var facade in facades)
     {
-        var documentation = SmileDocumentationService.GetDocumentation(routine.Source,
-            routine.Declaration.Keyword.Span.Start);
-        Equal(false, string.IsNullOrWhiteSpace(documentation.Summary));
-        foreach (var parameter in routine.Parameters)
-            Equal(true, documentation.Parameters.ContainsKey(parameter.Name));
-        if (routine.IsFunction)
-            Equal(false, string.IsNullOrWhiteSpace(documentation.Returns));
+        var constructorDocumentation = SmileDocumentationService.GetDocumentation(facade.Constructor.Source,
+            facade.Constructor.Declaration.Keyword.Span.Start);
+        Equal(false, string.IsNullOrWhiteSpace(constructorDocumentation.Summary));
+        foreach (var parameter in facade.Constructor.Parameters)
+            Equal(true, constructorDocumentation.Parameters.ContainsKey(parameter.Name));
+        foreach (var member in facade.Members.Where(member => member.Visibility == ModuleVisibility.Public))
+        {
+            var position = member switch
+            {
+                TypeRoutineSymbol routine => routine.Routine.Declaration.Keyword.Span.Start,
+                PropertySymbol property => property.Declaration.PropertyKeyword.Span.Start,
+                _ => member.DeclarationSpan.Start
+            };
+            var documentation = SmileDocumentationService.GetDocumentation(member.Source, position);
+            Equal(false, string.IsNullOrWhiteSpace(documentation.Summary));
+            if (member is TypeRoutineSymbol routineMember)
+            {
+                foreach (var parameter in routineMember.Routine.Parameters)
+                    Equal(true, documentation.Parameters.ContainsKey(parameter.Name));
+                if (routineMember.Routine.IsFunction)
+                    Equal(false, string.IsNullOrWhiteSpace(documentation.Returns));
+            }
+        }
     }
 });
 Run("Imported aliases and qualified members resolve to exact declarations and documentation", () =>
@@ -2904,13 +2921,13 @@ Run("Project-reference debug sites retain the real library source path", () =>
 Run("Official SMILE libraries are labeled separately from student libraries", () =>
 {
     var context = SmileCompilationDependencyContext.Create();
-    context.AddProvider("official", SmileProviderKind.Package, "Smile.UI", "1.1.3", "Smile.UI.smilelib");
+    context.AddProvider("official", SmileProviderKind.Package, "Smile.UI", "2.0.0", "Smile.UI.smilelib");
     context.AddProvider("student", SmileProviderKind.Project, "Student.Tools", "1.0.0",
         "Student.Tools.smilelibproj");
     Equal(true, context.TryGetProviderDescriptor("official", out var official));
     Equal(true, official.IsBuiltIn);
     Equal(true, official.Describe().Contains("SMILE 2.0 built-in library", StringComparison.Ordinal));
-    Equal("SMILE 2.0 built-in library Smile.UI@1.1.3",
+    Equal("SMILE 2.0 built-in library Smile.UI@2.0.0",
         SmileSymbolDisplayService.DescribeProvider("official", context));
     Equal(true, context.TryGetProviderDescriptor("student", out var student));
     Equal(false, student.IsBuiltIn);
@@ -4588,13 +4605,14 @@ Run("Native compiler isolates intermediates and serializes identical output targ
         StringComparison.Ordinal));
 });
 
-Run("Smile.UI 1.1.3 publishes canonical Insets fields and the Phase 5.2.2 hardening", () =>
+Run("Smile.UI 2.0 publishes Class facades while keeping the hardened handle engines private", () =>
 {
     var project = File.ReadAllText("libraries/Smile.UI/Smile.UI.smilelibproj");
     var core = File.ReadAllText("libraries/Smile.UI/Core.smile");
     var menu = File.ReadAllText("libraries/Smile.UI/Menu.smile");
     var navigator = File.ReadAllText("libraries/Smile.UI/MenuNavigator.smile");
-    Equal(true, project.Contains("<Version>1.1.3</Version>", StringComparison.Ordinal));
+    var dialogue = File.ReadAllText("libraries/Smile.UI/Dialogue.smile");
+    Equal(true, project.Contains("<Version>2.0.0</Version>", StringComparison.Ordinal));
     Equal(true, project.Contains("<SmileSource Include=\"MenuNavigator.smile\" />", StringComparison.Ordinal));
     foreach (var constant in new[] { "UI_EVENT_SUBMENU_OPENED", "UI_EVENT_SUBMENU_CLOSED",
         "UI_MENU_TEXT_ELLIPSIS", "UI_MENU_TEXT_CLIP", "UI_MENU_TEXT_WRAP",
@@ -4605,33 +4623,103 @@ Run("Smile.UI 1.1.3 publishes canonical Insets fields and the Phase 5.2.2 harden
     Equal(true, core.Contains("    Right As Number", StringComparison.Ordinal));
     Equal(false, core.Contains("    LEFT As Number", StringComparison.Ordinal));
     Equal(false, core.Contains("    RIGHT As Number", StringComparison.Ordinal));
-    foreach (var member in new[] { "SetItemHasSubmenu", "ItemHasSubmenu", "ItemRevision", "Bounds",
-        "SetPosition", "SelectedRowRect", "ResetSelection", "DrawFocused" })
-        Equal(true, menu.Contains("Public ", StringComparison.Ordinal) &&
-            menu.Contains(member + "(", StringComparison.Ordinal));
+    Equal(true, menu.Contains("Public Class Menu", StringComparison.Ordinal));
+    Equal(true, navigator.Contains("Module Smile.UI.Menu", StringComparison.Ordinal));
+    Equal(true, navigator.Contains("Public Class MenuNavigator", StringComparison.Ordinal));
+    Equal(true, dialogue.Contains("Public Class Dialogue", StringComparison.Ordinal));
+    foreach (var member in new[] { "SetItemHasSubmenu", "ItemHasSubmenu", "SetPosition", "ResetSelection",
+        "Update", "DrawFocused" })
+        Equal(true, menu.Contains("Public Function " + member + "(", StringComparison.Ordinal) ||
+            menu.Contains("Public Sub " + member + "(", StringComparison.Ordinal));
+    foreach (var property in new[] { "Valid", "ItemRevision", "ItemCount", "SelectedIndex", "SelectedValue",
+        "TopIndex", "VisibleRows", "Bounds", "SelectedRowRect" })
+        Equal(true, menu.Contains("Public Property " + property, StringComparison.Ordinal));
     foreach (var member in new[] { "BindSubmenu", "UnbindSubmenu", "ClearBindings", "OpenSelected", "Back",
-        "HandleKey", "LastAcceptedValue", "Relayout", "DrawActive", "DrawStack" })
-        Equal(true, navigator.Contains(member + "(", StringComparison.Ordinal));
+        "Update", "Relayout", "DrawActive", "Draw" })
+        Equal(true, navigator.Contains("Public Function " + member + "(", StringComparison.Ordinal) ||
+            navigator.Contains("Public Sub " + member + "(", StringComparison.Ordinal));
+    foreach (var property in new[] { "Valid", "Depth", "CanGoBack", "LastAcceptedIndex", "LastAcceptedValue" })
+        Equal(true, navigator.Contains("Public Property " + property, StringComparison.Ordinal));
+    foreach (var oldPublicRoutine in new[] { "Create", "HandleKey", "DrawStack", "RootMenu",
+        "CurrentMenu", "MenuAtDepth", "ParentMenu", "LastAcceptedMenu" })
+        Equal(false, navigator.Contains("Public Function " + oldPublicRoutine + "(", StringComparison.Ordinal) ||
+            navigator.Contains("Public Sub " + oldPublicRoutine + "(", StringComparison.Ordinal));
+    Equal(true, menu.Contains("Private Function MenuHandleCreate(", StringComparison.Ordinal));
+    Equal(true, navigator.Contains("Private Function NavigatorHandleCreate(", StringComparison.Ordinal));
+    Equal(true, dialogue.Contains("Private Function DialogueHandleCreate(", StringComparison.Ordinal));
     Equal(true, core.Contains("ShowSubmenuIndicator As Boolean", StringComparison.Ordinal));
     Equal(true, core.Contains("SubmenuIndicatorPosition As Number", StringComparison.Ordinal));
-    Equal(true, navigator.Contains("Menu.SelectedIndex(ParentHandle) <> StackParentItems[Slot, Level]", StringComparison.Ordinal));
+    Equal(true, navigator.Contains("MenuHandleSelectedIndex(ParentHandle) <> StackParentItems[Slot, Level]", StringComparison.Ordinal));
     Equal(true, navigator.Contains("BindingIndex = FindBinding(Slot, CurrentHandle, SelectedItem)", StringComparison.Ordinal));
     Equal(true, menu.Contains("TextBlockHeight = PreparedLineCount * LineHeight", StringComparison.Ordinal));
     Equal(true, menu.Contains("CursorY = RowY + Max(0, (RowDrawHeight - MenuStyles[Slot].CursorHeight) / 2)", StringComparison.Ordinal));
     Equal(true, menu.Contains("MarkerY = DrawLabel", StringComparison.Ordinal));
-    Equal(true, navigator.Contains("Call Menu.DrawFocused(StackMenus[Slot, Level], True)", StringComparison.Ordinal));
+    Equal(true, navigator.Contains("Call MenuHandleDrawFocused(StackMenus[Slot, Level], True)", StringComparison.Ordinal));
 });
 
-Run("MenuGallery uses reusable hierarchical navigation without embedded markers", () =>
+Run("MenuGallery uses the Smile.UI 2.0 Class API, With, and named/default arguments", () =>
 {
     var gallery = File.ReadAllText("examples/MenuGallery/Program.smile");
-    Equal(true, gallery.Contains("Import Smile.UI.MenuNavigator As MenuNavigator", StringComparison.Ordinal));
-    Equal(true, gallery.Contains("MenuNavigator.HandleKey", StringComparison.Ordinal));
-    Equal(true, gallery.Contains("MenuNavigator.DrawStack", StringComparison.Ordinal));
-    Equal(true, gallery.Contains("MenuNavigator.LastAcceptedValue", StringComparison.Ordinal));
+    Equal(true, gallery.Contains("Import Smile.UI.Menu As Menus", StringComparison.Ordinal));
+    Equal(false, gallery.Contains("Import Smile.UI.MenuNavigator", StringComparison.Ordinal));
+    Equal(true, gallery.Contains("New Menus.Menu(", StringComparison.Ordinal));
+    Equal(true, gallery.Contains("New Menus.MenuNavigator(", StringComparison.Ordinal));
+    Equal(true, gallery.Contains("Navigator.Update(", StringComparison.Ordinal));
+    Equal(true, gallery.Contains("Call Navigator.Draw()", StringComparison.Ordinal));
+    Equal(true, gallery.Contains("Navigator.LastAcceptedValue", StringComparison.Ordinal));
+    Equal(true, gallery.Contains("With FontDefinition", StringComparison.Ordinal));
+    Equal(true, gallery.Contains("With SkinWindow", StringComparison.Ordinal));
+    Equal(true, gallery.Contains("Enabled:=False", StringComparison.Ordinal));
     Equal(false, gallery.Contains("MenuDepth", StringComparison.Ordinal));
-    Equal(false, gallery.Split('\n').Any(line => line.Contains("Menu.AddItem", StringComparison.Ordinal) &&
+    Equal(false, gallery.Split('\n').Any(line => line.Contains(".AddItem", StringComparison.Ordinal) &&
         line.Contains(" >", StringComparison.Ordinal)));
+});
+
+Run("Smile.UI 2.0 Class completion Quick Info and definitions use the official project provider", () =>
+{
+    var compilation = SmileProjectCompilation.Load("examples/MenuGallery/MenuGallery.smileproj");
+    var analysis = SmileLanguage.Analyze(compilation.Sources, compilation.CompilationKind,
+        compilation.DependencyContext);
+    Equal(false, analysis.HasErrors);
+    var programPath = Path.GetFullPath("examples/MenuGallery/Program.smile");
+    var program = File.ReadAllText(programPath);
+    var tree = analysis.GetSyntaxTree(programPath);
+
+    var memberPosition = program.IndexOf("RootMenu.AddItem", StringComparison.Ordinal) +
+                         "RootMenu.".Length;
+    var completions = SmileCompletionService.GetCompletions(analysis, tree, memberPosition);
+    foreach (var expected in new[] { "AddItem", "Destroy", "Draw", "SelectedIndex", "Valid" })
+        Equal(true, completions.Any(completion => completion.DisplayText == expected));
+    foreach (var obsolete in new[] { "Create", "HandleKey", "SetSelectedIndex" })
+        Equal(false, completions.Any(completion => completion.DisplayText == obsolete));
+
+    Equal(true, SmileSymbolService.TryResolve(analysis, tree, memberPosition + 2,
+        out var addItem));
+    Equal(SmileResolvedSymbolKind.Function, addItem.Kind);
+    var addItemPresentation = SmileSymbolDisplayService.Present(addItem, compilation.DependencyContext);
+    Equal(true, addItemPresentation.Signature.Contains(
+        "Menu.AddItem(Label As Text, UserValue As Number, Optional Enabled As Boolean = True) As Number",
+        StringComparison.Ordinal));
+    Equal("SMILE 2.0 built-in library Smile.UI@2.0.0", addItemPresentation.Provider);
+    Equal("Menu.smile", Path.GetFileName(addItem.DeclarationLocation!.FilePath));
+    Equal(false, string.IsNullOrWhiteSpace(addItem.Documentation.Summary));
+
+    var enabledPosition = program.IndexOf("Enabled:=False", StringComparison.Ordinal);
+    Equal(true, SmileSymbolService.TryResolve(analysis, tree, enabledPosition + 2,
+        out var enabled));
+    Equal(SmileResolvedSymbolKind.NamedArgument, enabled.Kind);
+    Equal("Enabled", enabled.Name);
+    Equal("SMILE 2.0 built-in library Smile.UI@2.0.0",
+        SmileSymbolDisplayService.Present(enabled, compilation.DependencyContext).Provider);
+
+    var selectedPosition = program.IndexOf("RootMenu.SelectedIndex", StringComparison.Ordinal) +
+                           "RootMenu.".Length;
+    Equal(true, SmileSymbolService.TryResolve(analysis, tree, selectedPosition + 2,
+        out var selected));
+    Equal(SmileResolvedSymbolKind.Property, selected.Kind);
+    Equal(true, SmileSymbolDisplayService.Present(selected, compilation.DependencyContext).Signature
+        .Contains("Menu.SelectedIndex As Number { Get; Set }", StringComparison.Ordinal));
+    Equal("Menu.smile", Path.GetFileName(selected.DeclarationLocation!.FilePath));
 });
 
 Run("Type members parse as structured declarations and true receiver invocations", () =>

@@ -12,9 +12,8 @@ Import Smile.RPG.World As World
 Import Smile.RPG.Story As Story
 Import Smile.RPG.Encounters As Encounters
 Import Smile.UI.Core As UI
-Import Smile.UI.Menu As Menu
-Import Smile.UI.MenuNavigator As MenuNavigator
-Import Smile.UI.Dialogue As Dialogue
+Import Smile.UI.Menu As Menus
+Import Smile.UI.Dialogue As Dialogues
 Import RpgDungeonGallery.Workflow As DungeonWorkflow
 
 Const MODE_TITLE = 1
@@ -122,9 +121,9 @@ Dim DisabledTextStyle As UI.TextStyle
 Dim MenuStyle As UI.MenuStyle
 Dim NavigatorStyle As UI.MenuNavigatorStyle
 Dim DialogueStyle As UI.DialogueStyle
-Dim CommandMenu As Number
-Dim CommandNavigator As Number
-Dim DialogueHandle As Number
+Dim CommandMenu As Menus.Menu
+Dim CommandNavigator As Menus.MenuNavigator
+Dim Message As Dialogues.Dialogue
 Dim Mode As Number
 Dim PreviousMode As Number
 Dim InfoPage As Number
@@ -245,11 +244,11 @@ Do
             Call DrawDungeon()
 
             If Mode = MODE_MENU Then
-                Call MenuNavigator.DrawStack(CommandNavigator)
+                Call CommandNavigator.Draw()
             Else If Mode = MODE_DIALOGUE Then
-                Event = Dialogue.Update(DialogueHandle, Timer())
+                Event = Message.Update(Timer())
 
-                Call Dialogue.Draw(DialogueHandle, Timer())
+                Call Message.Draw(Timer())
             Else If Mode = MODE_INFO Then
                 Call DrawInformation()
             End If
@@ -261,9 +260,9 @@ Do
 
 Loop Until Game_Closed() = True Or Not Running
 
-Call Dialogue.Destroy(DialogueHandle)
-Call MenuNavigator.Destroy(CommandNavigator)
-Call Menu.Destroy(CommandMenu)
+Call Message.Destroy()
+Call CommandNavigator.Destroy()
+Call CommandMenu.Destroy()
 
 For ItemIndex = 0 To 3
     Call TileMap.Unload(FloorMaps[ItemIndex])
@@ -470,41 +469,41 @@ End Sub
 
 Sub InitializeMenus()
 
-    CommandMenu = Menu.Create(MenuStyle, 570, 55, 350, 390, 8)
-    ItemIndex = Menu.AddItem(CommandMenu, "Interact", 1, True)
+    CommandMenu = New Menus.Menu(MenuStyle, 570, 55, 350, 390, 8)
+    ItemIndex = CommandMenu.AddItem("Interact", 1, True)
 
     Call RecordInitialization(ItemIndex >= 0)
 
-    ItemIndex = Menu.AddItem(CommandMenu, "Character and Party", 2, True)
+    ItemIndex = CommandMenu.AddItem("Character and Party", 2, True)
 
     Call RecordInitialization(ItemIndex >= 0)
 
-    ItemIndex = Menu.AddItem(CommandMenu, "Inventory", 3, True)
+    ItemIndex = CommandMenu.AddItem("Inventory", 3, True)
 
     Call RecordInitialization(ItemIndex >= 0)
 
-    ItemIndex = Menu.AddItem(CommandMenu, "Save Slot 1", 4, True)
+    ItemIndex = CommandMenu.AddItem("Save Slot 1", 4, True)
 
     Call RecordInitialization(ItemIndex >= 0)
 
-    ItemIndex = Menu.AddItem(CommandMenu, "Load Slot 1", 5, True)
+    ItemIndex = CommandMenu.AddItem("Load Slot 1", 5, True)
 
     Call RecordInitialization(ItemIndex >= 0)
 
-    ItemIndex = Menu.AddItem(CommandMenu, "Escape Dungeon", 6, True)
+    ItemIndex = CommandMenu.AddItem("Escape Dungeon", 6, True)
 
     Call RecordInitialization(ItemIndex >= 0)
 
-    ItemIndex = Menu.AddItem(CommandMenu, "Resume", 7, True)
+    ItemIndex = CommandMenu.AddItem("Resume", 7, True)
 
     Call RecordInitialization(ItemIndex >= 0)
 
-    CommandNavigator = MenuNavigator.Create(CommandMenu, NavigatorStyle)
-    DialogueHandle = Dialogue.Create(DialogueStyle, 35, 340, 890, 165)
+    CommandNavigator = New Menus.MenuNavigator(CommandMenu, NavigatorStyle)
+    Message = New Dialogues.Dialogue(DialogueStyle, 35, 340, 890, 165)
 
-    Call RecordInitialization(CommandMenu > 0)
-    Call RecordInitialization(CommandNavigator > 0)
-    Call RecordInitialization(DialogueHandle > 0)
+    Call RecordInitialization(CommandMenu.Valid)
+    Call RecordInitialization(CommandNavigator.Valid)
+    Call RecordInitialization(Message.Valid)
 
 End Sub
 
@@ -889,7 +888,8 @@ Sub HandleDungeon(PressedKey As Number)
 
     If PressedKey = KEY_ESCAPE Then
 
-        OperationSucceeded = Menu.SetSelectedIndex(CommandMenu, 0)
+        CommandMenu.SelectedIndex = 0
+        OperationSucceeded = CommandMenu.SelectedIndex = 0
         Mode = MODE_MENU
         Return
 
@@ -1503,28 +1503,28 @@ Sub OpenNpcDialogue(ActorId As Number)
 
     WasSpoken = Story.Flag(State, FlagId)
 
-    Call Dialogue.ClearPages(DialogueHandle)
+    Call Message.ClearPages()
 
     OperationSucceeded = True
 
     If WasSpoken Then
 
         If Inventory.Quantity(State, ITEM_VAULT_KEY) > 0 Then
-            OperationSucceeded = Dialogue.AddPage(DialogueHandle, "You returned with the Prism Key. The locked branch can now be opened without consuming it.")
+            OperationSucceeded = Message.AddPage("You returned with the Prism Key. The locked branch can now be opened without consuming it.")
         Else
-            OperationSucceeded = Dialogue.AddPage(DialogueHandle, "You returned without the Prism Key. Search the dead-end reward branch beyond the alternate stair.")
+            OperationSucceeded = Message.AddPage("You returned without the Prism Key. Search the dead-end reward branch beyond the alternate stair.")
         End If
 
-        OperationSucceeded = OperationSucceeded And Dialogue.AddPage(DialogueHandle, "Open doors, emptied chests, trap state, and our conversation all survive SRPG 2 save/load.")
+        OperationSucceeded = OperationSucceeded And Message.AddPage("Open doors, emptied chests, trap state, and our conversation all survive SRPG 2 save/load.")
 
     Else
-        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "The Prism Key opens either locked demonstration door. Search a chest before forcing the deeper route.")
-        OperationSucceeded = OperationSucceeded And Dialogue.AddPage(DialogueHandle, "Stairs are reciprocal. Chutes are one-way. The glowing seal is a warp, and suspicious walls may hide passages.")
+        OperationSucceeded = Message.AddPage("The Prism Key opens either locked demonstration door. Search a chest before forcing the deeper route.")
+        OperationSucceeded = OperationSucceeded And Message.AddPage("Stairs are reciprocal. Chutes are one-way. The glowing seal is a warp, and suspicious walls may hide passages.")
 
     End If
 
     If OperationSucceeded Then
-        OperationSucceeded = Dialogue.Start(DialogueHandle, Timer())
+        OperationSucceeded = Message.Start(Timer())
     End If
 
     Result = DungeonWorkflow.CompleteNpcDialogue(State, FlagId, OperationSucceeded)
@@ -1534,7 +1534,7 @@ Sub OpenNpcDialogue(ActorId As Number)
         Mode = MODE_DIALOGUE
     Else
 
-        Call Dialogue.ClearPages(DialogueHandle)
+        Call Message.ClearPages()
         Call SetWorkflowFailure(Result)
     End If
 
@@ -1542,11 +1542,11 @@ End Sub
 
 Sub HandleMenu(PressedKey As Number)
 
-    Event = MenuNavigator.HandleKey(CommandNavigator, PressedKey)
+    Event = CommandNavigator.Update(PressedKey)
 
     If Event = UI.UI_EVENT_ACCEPTED Then
 
-        Action = MenuNavigator.LastAcceptedValue(CommandNavigator)
+        Action = CommandNavigator.LastAcceptedValue
 
         Select Case Action
             Case 1
@@ -1644,7 +1644,7 @@ Sub HandleDialogue(PressedKey As Number)
         Return
     End If
 
-    Event = Dialogue.HandleKey(DialogueHandle, PressedKey, Timer())
+    Event = Message.HandleKey(PressedKey, Timer())
 
     If Event = UI.UI_EVENT_COMPLETED Or Event = UI.UI_EVENT_CANCELLED Then
         Mode = MODE_DUNGEON

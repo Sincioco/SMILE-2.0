@@ -572,6 +572,78 @@ function Assert-LightweightOopProofPackage {
     }
 }
 
+function Assert-SmileUiPackage {
+    param([string]$RelativePath)
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $path = Require-File $RelativePath
+    $archive = [IO.Compression.ZipFile]::OpenRead($path)
+    try {
+        $apiText = [Text.Encoding]::UTF8.GetString((Read-ZipEntryBytes `
+            $archive.GetEntry('api/public-symbols.json')))
+        $api = $apiText | ConvertFrom-Json
+        $menuModule = @($api.modules | Where-Object { $_.name -ceq 'Smile.UI.Menu' })
+        $dialogueModule = @($api.modules | Where-Object { $_.name -ceq 'Smile.UI.Dialogue' })
+        $legacyNavigatorModule = @($api.modules | Where-Object { $_.name -ceq 'Smile.UI.MenuNavigator' })
+        if ($menuModule.Count -ne 1 -or $dialogueModule.Count -ne 1 -or
+            $legacyNavigatorModule.Count -ne 0) {
+            throw "$RelativePath does not use the consolidated Smile.UI 2.0 module boundary."
+        }
+
+        $menu = @($menuModule[0].members | Where-Object { $_.name -ceq 'Menu' -and $_.kind -ceq 'Class' })
+        $navigator = @($menuModule[0].members |
+            Where-Object { $_.name -ceq 'MenuNavigator' -and $_.kind -ceq 'Class' })
+        $dialogue = @($dialogueModule[0].members |
+            Where-Object { $_.name -ceq 'Dialogue' -and $_.kind -ceq 'Class' })
+        if ($menu.Count -ne 1 -or $navigator.Count -ne 1 -or $dialogue.Count -ne 1 -or
+            [string]::Join('|', @($menuModule[0].members.name)) -cne 'Menu|MenuNavigator' -or
+            [string]::Join('|', @($dialogueModule[0].members.name)) -cne 'Dialogue') {
+            throw "$RelativePath does not publish the three expected UI Class facades."
+        }
+
+        $menuMembers = @($menu[0].members)
+        $navigatorMembers = @($navigator[0].members)
+        $dialogueMembers = @($dialogue[0].members)
+        $menuDraw = @($menuMembers | Where-Object { $_.name -ceq 'Draw' })
+        $menuUpdate = @($menuMembers | Where-Object { $_.name -ceq 'Update' })
+        $navigatorDraw = @($navigatorMembers | Where-Object { $_.name -ceq 'Draw' })
+        $navigatorUpdate = @($navigatorMembers | Where-Object { $_.name -ceq 'Update' })
+        $dialogueDraw = @($dialogueMembers | Where-Object { $_.name -ceq 'Draw' })
+        $dialogueSetStyle = @($dialogueMembers | Where-Object { $_.name -ceq 'SetStyle' })
+        $addItem = @($menuMembers | Where-Object { $_.name -ceq 'AddItem' })
+        $bindSubmenu = @($navigatorMembers | Where-Object { $_.name -ceq 'BindSubmenu' })
+        if ($menuDraw.Count -ne 1 -or -not $menuDraw[0].requiresGameWindow -or
+            $menuUpdate.Count -ne 1 -or $menuUpdate[0].requiresGameWindow -or
+            $navigatorDraw.Count -ne 1 -or -not $navigatorDraw[0].requiresGameWindow -or
+            $navigatorUpdate.Count -ne 1 -or $navigatorUpdate[0].requiresGameWindow -or
+            $dialogueDraw.Count -ne 1 -or -not $dialogueDraw[0].requiresGameWindow -or
+            $dialogueSetStyle.Count -ne 1 -or -not $dialogueSetStyle[0].requiresGameWindow -or
+            $addItem.Count -ne 1 -or $addItem[0].parameters[2].name -cne 'Enabled' -or
+            -not $addItem[0].parameters[2].optional -or
+            $addItem[0].parameters[2].default.kind -cne 'boolean' -or
+            -not $addItem[0].parameters[2].default.value -or
+            $bindSubmenu.Count -ne 1 -or
+            $bindSubmenu[0].parameters[3].name -cne 'ResetChildSelection' -or
+            -not $bindSubmenu[0].parameters[3].optional -or
+            $bindSubmenu[0].parameters[3].default.kind -cne 'boolean' -or
+            -not $bindSubmenu[0].parameters[3].default.value) {
+            throw "$RelativePath has incorrect UI member signatures, defaults, or capabilities."
+        }
+
+        foreach ($legacyName in @('MenuHandleCreate', 'NavigatorHandleCreate', 'DialogueHandleCreate',
+                'InternalNavigationHandle', 'RootMenu', 'CurrentMenu', 'MenuAtDepth', 'ParentMenu',
+                'LastAcceptedMenu')) {
+            if ($apiText.IndexOf('"name":"' + $legacyName + '"', [StringComparison]::Ordinal) -ge 0) {
+                throw "$RelativePath leaks obsolete or private UI member '$legacyName'."
+            }
+        }
+        Write-Host "Smile.UI 2.0 Class facade metadata verified: $RelativePath"
+    }
+    finally {
+        $archive.Dispose()
+    }
+}
+
 Require-File 'artifacts\compiler\smilec.exe' | Out-Null
 $vsixPath = Require-File 'artifacts\vsix\Smile.VisualStudio.vsix'
 Assert-SmileLibraryPackage 'artifacts\libraries\Smile.Math.Extras.smilelib' `
@@ -581,7 +653,8 @@ Assert-SmileLibraryPackage 'artifacts\libraries\Smile.Text.Extras.smilelib' `
 Assert-SmileLibraryPackage 'artifacts\libraries\Smile.Data.Models.smilelib' `
     'libraries\Smile.Data.Models\Smile.Data.Models.smilelibproj' 'Smile.Data.Models' '1.0.0' 1 2 7
 Assert-SmileLibraryPackage 'artifacts\libraries\Smile.UI.smilelib' `
-    'libraries\Smile.UI\Smile.UI.smilelibproj' 'Smile.UI' '1.1.3' 7 7 126
+    'libraries\Smile.UI\Smile.UI.smilelibproj' 'Smile.UI' '2.0.0' 6 7 62
+Assert-SmileUiPackage 'artifacts\libraries\Smile.UI.smilelib'
 Assert-SmileLibraryPackage 'artifacts\libraries\Smile.Game.smilelib' `
     'libraries\Smile.Game\Smile.Game.smilelibproj' 'Smile.Game' '1.0.0' 5 5 72
 Assert-SmileLibraryPackage 'artifacts\libraries\Smile.RPG.smilelib' `

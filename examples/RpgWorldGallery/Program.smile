@@ -14,9 +14,8 @@ Import Smile.RPG.Story As Story
 Import Smile.RPG.Encounters As Encounters
 Import Smile.RPG.SaveGames As SaveGames
 Import Smile.UI.Core As UI
-Import Smile.UI.Menu As Menu
-Import Smile.UI.MenuNavigator As MenuNavigator
-Import Smile.UI.Dialogue As Dialogue
+Import Smile.UI.Menu As Menus
+Import Smile.UI.Dialogue As Dialogues
 
 Const MODE_TITLE = 1
 Const MODE_FIELD = 2
@@ -62,11 +61,11 @@ Dim DisabledTextStyle As UI.TextStyle
 Dim MenuStyle As UI.MenuStyle
 Dim NavigatorStyle As UI.MenuNavigatorStyle
 Dim DialogueStyle As UI.DialogueStyle
-Dim FieldMenu As Number
-Dim FieldNavigator As Number
-Dim ShopMenu As Number
-Dim ShopNavigator As Number
-Dim DialogueHandle As Number
+Dim FieldMenu As Menus.Menu
+Dim FieldNavigator As Menus.MenuNavigator
+Dim ShopMenu As Menus.Menu
+Dim ShopNavigator As Menus.MenuNavigator
+Dim Message As Dialogues.Dialogue
 Dim Mode As Number
 Dim InfoMode As Number
 Dim TitleSelection As Number
@@ -177,16 +176,16 @@ Do
             Call DrawField()
 
             If Mode = MODE_FIELD_MENU Then
-                Call MenuNavigator.DrawStack(FieldNavigator)
+                Call FieldNavigator.Draw()
             Else If Mode = MODE_DIALOGUE Then
-                Event = Dialogue.Update(DialogueHandle, Timer())
+                Event = Message.Update(Timer())
 
-                Call Dialogue.Draw(DialogueHandle, Timer())
+                Call Message.Draw(Timer())
             Else If Mode = MODE_INFO Then
                 Call DrawInformation()
             Else If Mode = MODE_SHOP Then
                 Call DrawShopOverlay()
-                Call MenuNavigator.DrawStack(ShopNavigator)
+                Call ShopNavigator.Draw()
             End If
 
     End Select
@@ -198,11 +197,11 @@ Loop Until Game_Closed() = True Or Not Running
 
 Stop Music
 
-Call Dialogue.Destroy(DialogueHandle)
-Call MenuNavigator.Destroy(ShopNavigator)
-Call MenuNavigator.Destroy(FieldNavigator)
-Call Menu.Destroy(ShopMenu)
-Call Menu.Destroy(FieldMenu)
+Call Message.Destroy()
+Call ShopNavigator.Destroy()
+Call FieldNavigator.Destroy()
+Call ShopMenu.Destroy()
+Call FieldMenu.Destroy()
 Call TileMap.Unload(OverworldMap)
 Call TileMap.Unload(ShopMap)
 Call TileMap.Unload(TownMap)
@@ -276,26 +275,26 @@ End Sub
 
 Sub InitializeMenus()
 
-    FieldMenu = Menu.Create(MenuStyle, 24, 48, 350, 450, 10)
-    ItemIndex = Menu.AddItem(FieldMenu, "Talk", 1, True)
-    ItemIndex = Menu.AddItem(FieldMenu, "Character Stats", 2, True)
-    ItemIndex = Menu.AddItem(FieldMenu, "Inventory", 3, True)
-    ItemIndex = Menu.AddItem(FieldMenu, "Add / Remove Companion", 4, True)
-    ItemIndex = Menu.AddItem(FieldMenu, "Reorder Party", 5, True)
-    ItemIndex = Menu.AddItem(FieldMenu, "QA: Add Level", 6, True)
-    ItemIndex = Menu.AddItem(FieldMenu, "QA: Add Strength", 7, True)
-    ItemIndex = Menu.AddItem(FieldMenu, "Save Slot 1", 8, True)
-    ItemIndex = Menu.AddItem(FieldMenu, "Load Slot 1", 9, True)
-    ItemIndex = Menu.AddItem(FieldMenu, "Close", 10, True)
-    FieldNavigator = MenuNavigator.Create(FieldMenu, NavigatorStyle)
+    FieldMenu = New Menus.Menu(MenuStyle, 24, 48, 350, 450, 10)
+    ItemIndex = FieldMenu.AddItem("Talk", 1, True)
+    ItemIndex = FieldMenu.AddItem("Character Stats", 2, True)
+    ItemIndex = FieldMenu.AddItem("Inventory", 3, True)
+    ItemIndex = FieldMenu.AddItem("Add / Remove Companion", 4, True)
+    ItemIndex = FieldMenu.AddItem("Reorder Party", 5, True)
+    ItemIndex = FieldMenu.AddItem("QA: Add Level", 6, True)
+    ItemIndex = FieldMenu.AddItem("QA: Add Strength", 7, True)
+    ItemIndex = FieldMenu.AddItem("Save Slot 1", 8, True)
+    ItemIndex = FieldMenu.AddItem("Load Slot 1", 9, True)
+    ItemIndex = FieldMenu.AddItem("Close", 10, True)
+    FieldNavigator = New Menus.MenuNavigator(FieldMenu, NavigatorStyle)
 
-    ShopMenu = Menu.Create(MenuStyle, 525, 180, 390, 170, 3)
-    ItemIndex = Menu.AddItem(ShopMenu, "Buy Moonfruit - 30 Gold", 201, True)
-    ItemIndex = Menu.AddItem(ShopMenu, "View Inventory", 202, True)
-    ItemIndex = Menu.AddItem(ShopMenu, "Leave Counter", 203, True)
-    ShopNavigator = MenuNavigator.Create(ShopMenu, NavigatorStyle)
+    ShopMenu = New Menus.Menu(MenuStyle, 525, 180, 390, 170, 3)
+    ItemIndex = ShopMenu.AddItem("Buy Moonfruit - 30 Gold", 201, True)
+    ItemIndex = ShopMenu.AddItem("View Inventory", 202, True)
+    ItemIndex = ShopMenu.AddItem("Leave Counter", 203, True)
+    ShopNavigator = New Menus.MenuNavigator(ShopMenu, NavigatorStyle)
 
-    DialogueHandle = Dialogue.Create(DialogueStyle, 40, 330, 880, 180)
+    Message = New Dialogues.Dialogue(DialogueStyle, 40, 330, 880, 180)
 
 End Sub
 
@@ -571,7 +570,8 @@ Sub HandleField(PressedKey As Number)
 
     If PressedKey = KEY_ENTER Or PressedKey = KEY_SPACE Then
 
-        OperationSucceeded = Menu.SetSelectedIndex(FieldMenu, 0)
+        FieldMenu.SelectedIndex = 0
+        OperationSucceeded = FieldMenu.SelectedIndex = 0
         Mode = MODE_FIELD_MENU
         Return
 
@@ -724,10 +724,10 @@ End Sub
 
 Sub HandleFieldMenu(PressedKey As Number)
 
-    Event = MenuNavigator.HandleKey(FieldNavigator, PressedKey)
+    Event = FieldNavigator.Update(PressedKey)
 
     If Event = UI.UI_EVENT_ACCEPTED Then
-        Action = MenuNavigator.LastAcceptedValue(FieldNavigator)
+        Action = FieldNavigator.LastAcceptedValue
 
         Call RunFieldAction(Action)
     Else If Event = UI.UI_EVENT_CANCELLED Then
@@ -814,29 +814,30 @@ Sub OpenTalk()
 
     If World.ActorInteraction(State, TargetActor) = 2 Then
 
-        OperationSucceeded = Menu.SetSelectedIndex(ShopMenu, 0)
+        ShopMenu.SelectedIndex = 0
+        OperationSucceeded = ShopMenu.SelectedIndex = 0
         Mode = MODE_SHOP
         Status = "The merchant overlay owns input while the field is paused."
         Return
 
     End If
 
-    Call Dialogue.ClearPages(DialogueHandle)
+    Call Message.ClearPages()
 
     If Story.Flag(State, STORY_GUIDE_SPOKEN) Then
 
-        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "You returned. The road beyond the south gate still leads to the lantern fields.")
-        OperationSucceeded = OperationSucceeded And Dialogue.AddPage(DialogueHandle, "Your earlier conversation survived every scene transition and save cycle.")
+        OperationSucceeded = Message.AddPage("You returned. The road beyond the south gate still leads to the lantern fields.")
+        OperationSucceeded = OperationSucceeded And Message.AddPage("Your earlier conversation survived every scene transition and save cycle.")
 
     Else
-        OperationSucceeded = Dialogue.AddPage(DialogueHandle, "Welcome to Lumen Vale. Open the field menu and choose Talk whenever you stand beside a neighbor.")
-        OperationSucceeded = OperationSucceeded And Dialogue.AddPage(DialogueHandle, "The south gate reaches the overworld. The western market door leads to a walkable shop interior.")
+        OperationSucceeded = Message.AddPage("Welcome to Lumen Vale. Open the field menu and choose Talk whenever you stand beside a neighbor.")
+        OperationSucceeded = OperationSucceeded And Message.AddPage("The south gate reaches the overworld. The western market door leads to a walkable shop interior.")
         OperationSucceeded = OperationSucceeded And Story.SetFlag(State, STORY_GUIDE_SPOKEN, True)
         OperationSucceeded = OperationSucceeded And Story.SetValue(State, STORY_VISITS, Story.Value(State, STORY_VISITS) + 1)
 
     End If
 
-    OperationSucceeded = OperationSucceeded And Dialogue.Start(DialogueHandle, Timer())
+    OperationSucceeded = OperationSucceeded And Message.Start(Timer())
     Mode = MODE_DIALOGUE
 
 End Sub
@@ -847,7 +848,7 @@ Sub HandleDialogue(PressedKey As Number)
         Return
     End If
 
-    Event = Dialogue.HandleKey(DialogueHandle, PressedKey, Timer())
+    Event = Message.HandleKey(PressedKey, Timer())
 
     If Event = UI.UI_EVENT_COMPLETED Or Event = UI.UI_EVENT_CANCELLED Then
         Mode = MODE_FIELD
@@ -868,11 +869,11 @@ End Sub
 
 Sub HandleShop(PressedKey As Number)
 
-    Event = MenuNavigator.HandleKey(ShopNavigator, PressedKey)
+    Event = ShopNavigator.Update(PressedKey)
 
     If Event = UI.UI_EVENT_ACCEPTED Then
 
-        Action = MenuNavigator.LastAcceptedValue(ShopNavigator)
+        Action = ShopNavigator.LastAcceptedValue
 
         Select Case Action
             Case 201

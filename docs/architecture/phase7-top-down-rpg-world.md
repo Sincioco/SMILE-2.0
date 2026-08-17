@@ -4,7 +4,7 @@ Phase 7 keeps presentation, reusable movement mechanics, and RPG state separate:
 
 ```text
 RpgWorldGallery
-  -> Smile.UI 1.1.3       menus and dialogue presentation
+  -> Smile.UI 2.0.0       Menu/MenuNavigator/Dialogue Class presentation
   -> Smile.Game 1.0.0     movement, animation, maps, camera, collision
   -> Smile.RPG 1.1.1      characters, party, shops, world/story/encounters/save
 ```

@@ -9,8 +9,7 @@ Import Smile.RPG.Abilities As Abilities
 Import Smile.RPG.Shops As Shops
 Import Smile.RPG.SaveGames As SaveGames
 Import Smile.UI.Core As UI
-Import Smile.UI.Menu As Menu
-Import Smile.UI.MenuNavigator As MenuNavigator
+Import Smile.UI.Menu As Menus
 
 Dim WindowStyle As UI.WindowStyle
 Dim NormalText As UI.TextStyle
@@ -26,14 +25,14 @@ Dim Hand As Equipment.EquipmentSlotDefinition
 Dim Fire As Abilities.AbilityDefinition
 Dim Store As Shops.ShopDefinition
 Dim State As Number
-Dim RootMenu As Number
-Dim PartyMenu As Number
-Dim InventoryMenu As Number
-Dim EquipmentMenu As Number
-Dim AbilityMenu As Number
-Dim ShopMenu As Number
-Dim SaveMenu As Number
-Dim Navigator As Number
+Dim RootMenu As Menus.Menu
+Dim PartyMenu As Menus.Menu
+Dim InventoryMenu As Menus.Menu
+Dim EquipmentMenu As Menus.Menu
+Dim AbilityMenu As Menus.Menu
+Dim ShopMenu As Menus.Menu
+Dim SaveMenu As Menus.Menu
+Dim Navigator As Menus.MenuNavigator
 Dim PartyIndex As Number
 Dim InventoryIndex As Number
 Dim EquipmentIndex As Number
@@ -57,16 +56,16 @@ Call InitializeStyles()
 Call InitializeMenus()
 
 Status = "Choose a category, then run a management action."
-Running = State > 0 And Navigator > 0
+Running = State > 0 And Navigator.Valid
 
 Game Window "SMILE 2.0 RPG Management Gallery" Size 1120 By 700
 
 Do
     Get Key Key
-    Event = MenuNavigator.HandleKey(Navigator, Key)
+    Event = Navigator.Update(Key)
 
     If Event = UI.UI_EVENT_ACCEPTED Then
-        Action = MenuNavigator.LastAcceptedValue(Navigator)
+        Action = Navigator.LastAcceptedValue
 
         Call RunAction(Action)
     End If
@@ -79,21 +78,21 @@ Do
     Draw Text "Arrow keys navigate. Enter opens or runs. Left / Escape returns." At 42, 660 Size 15 Color LIGHT_GRAY
 
     Call DrawStateSummary()
-    Call MenuNavigator.DrawStack(Navigator)
+    Call Navigator.Draw()
 
     Show Screen
     Wait 8 Milliseconds
 
 Loop Until Game_Closed() = True Or Not Running
 
-Call MenuNavigator.Destroy(Navigator)
-Call Menu.Destroy(SaveMenu)
-Call Menu.Destroy(ShopMenu)
-Call Menu.Destroy(AbilityMenu)
-Call Menu.Destroy(EquipmentMenu)
-Call Menu.Destroy(InventoryMenu)
-Call Menu.Destroy(PartyMenu)
-Call Menu.Destroy(RootMenu)
+Call Navigator.Destroy()
+Call SaveMenu.Destroy()
+Call ShopMenu.Destroy()
+Call AbilityMenu.Destroy()
+Call EquipmentMenu.Destroy()
+Call InventoryMenu.Destroy()
+Call PartyMenu.Destroy()
+Call RootMenu.Destroy()
 Call RPG.Destroy(State)
 
 End Program
@@ -222,45 +221,45 @@ End Sub
 
 Sub InitializeMenus()
 
-    RootMenu = Menu.Create(MenuStyle, 30, 110, 320, 430, 8)
-    PartyMenu = Menu.Create(MenuStyle, 0, 0, 360, 230, 4)
-    InventoryMenu = Menu.Create(MenuStyle, 0, 0, 360, 230, 4)
-    EquipmentMenu = Menu.Create(MenuStyle, 0, 0, 360, 230, 4)
-    AbilityMenu = Menu.Create(MenuStyle, 0, 0, 360, 230, 4)
-    ShopMenu = Menu.Create(MenuStyle, 0, 0, 360, 270, 5)
-    SaveMenu = Menu.Create(MenuStyle, 0, 0, 360, 230, 4)
+    RootMenu = New Menus.Menu(MenuStyle, 30, 110, 320, 430, 8)
+    PartyMenu = New Menus.Menu(MenuStyle, 0, 0, 360, 230, 4)
+    InventoryMenu = New Menus.Menu(MenuStyle, 0, 0, 360, 230, 4)
+    EquipmentMenu = New Menus.Menu(MenuStyle, 0, 0, 360, 230, 4)
+    AbilityMenu = New Menus.Menu(MenuStyle, 0, 0, 360, 230, 4)
+    ShopMenu = New Menus.Menu(MenuStyle, 0, 0, 360, 270, 5)
+    SaveMenu = New Menus.Menu(MenuStyle, 0, 0, 360, 230, 4)
 
-    PartyIndex = Menu.AddItem(RootMenu, "Party", 1, True)
-    InventoryIndex = Menu.AddItem(RootMenu, "Inventory", 2, True)
-    EquipmentIndex = Menu.AddItem(RootMenu, "Equipment", 3, True)
-    AbilityIndex = Menu.AddItem(RootMenu, "Abilities and Magic Points", 4, True)
-    ShopIndex = Menu.AddItem(RootMenu, "Shops", 5, True)
-    SaveIndex = Menu.AddItem(RootMenu, "Save / Load", 6, True)
-    ItemIndex = Menu.AddItem(RootMenu, "Exit Gallery", 999, True)
+    PartyIndex = RootMenu.AddItem("Party", 1, True)
+    InventoryIndex = RootMenu.AddItem("Inventory", 2, True)
+    EquipmentIndex = RootMenu.AddItem("Equipment", 3, True)
+    AbilityIndex = RootMenu.AddItem("Abilities and Magic Points", 4, True)
+    ShopIndex = RootMenu.AddItem("Shops", 5, True)
+    SaveIndex = RootMenu.AddItem("Save / Load", 6, True)
+    ItemIndex = RootMenu.AddItem("Exit Gallery", 999, True)
 
-    ItemIndex = Menu.AddItem(PartyMenu, "Swap Party Order", 101, True)
-    ItemIndex = Menu.AddItem(PartyMenu, "Add 100 Gold", 102, True)
-    ItemIndex = Menu.AddItem(InventoryMenu, "Add Potion", 201, True)
-    ItemIndex = Menu.AddItem(InventoryMenu, "Remove Potion", 202, True)
-    ItemIndex = Menu.AddItem(InventoryMenu, "Add Bronze Sword", 203, True)
-    ItemIndex = Menu.AddItem(InventoryMenu, "Remove Bronze Sword", 204, True)
-    ItemIndex = Menu.AddItem(EquipmentMenu, "Equip Bronze Sword", 301, True)
-    ItemIndex = Menu.AddItem(EquipmentMenu, "Unequip Bronze Sword", 302, True)
-    ItemIndex = Menu.AddItem(AbilityMenu, "Cast Fire for 7 MP", 401, True)
-    ItemIndex = Menu.AddItem(AbilityMenu, "Restore 10 MP", 402, True)
-    ItemIndex = Menu.AddItem(ShopMenu, "Buy Potion", 501, True)
-    ItemIndex = Menu.AddItem(ShopMenu, "Sell Potion", 502, True)
-    ItemIndex = Menu.AddItem(ShopMenu, "Reset Stock", 503, True)
-    ItemIndex = Menu.AddItem(SaveMenu, "Save Slot 1", 601, True)
-    ItemIndex = Menu.AddItem(SaveMenu, "Load Slot 1", 602, True)
+    ItemIndex = PartyMenu.AddItem("Swap Party Order", 101, True)
+    ItemIndex = PartyMenu.AddItem("Add 100 Gold", 102, True)
+    ItemIndex = InventoryMenu.AddItem("Add Potion", 201, True)
+    ItemIndex = InventoryMenu.AddItem("Remove Potion", 202, True)
+    ItemIndex = InventoryMenu.AddItem("Add Bronze Sword", 203, True)
+    ItemIndex = InventoryMenu.AddItem("Remove Bronze Sword", 204, True)
+    ItemIndex = EquipmentMenu.AddItem("Equip Bronze Sword", 301, True)
+    ItemIndex = EquipmentMenu.AddItem("Unequip Bronze Sword", 302, True)
+    ItemIndex = AbilityMenu.AddItem("Cast Fire for 7 MP", 401, True)
+    ItemIndex = AbilityMenu.AddItem("Restore 10 MP", 402, True)
+    ItemIndex = ShopMenu.AddItem("Buy Potion", 501, True)
+    ItemIndex = ShopMenu.AddItem("Sell Potion", 502, True)
+    ItemIndex = ShopMenu.AddItem("Reset Stock", 503, True)
+    ItemIndex = SaveMenu.AddItem("Save Slot 1", 601, True)
+    ItemIndex = SaveMenu.AddItem("Load Slot 1", 602, True)
 
-    Navigator = MenuNavigator.Create(RootMenu, NavigatorStyle)
-    OperationSucceeded = MenuNavigator.BindSubmenu(Navigator, RootMenu, PartyIndex, PartyMenu, False)
-    OperationSucceeded = OperationSucceeded And MenuNavigator.BindSubmenu(Navigator, RootMenu, InventoryIndex, InventoryMenu, False)
-    OperationSucceeded = OperationSucceeded And MenuNavigator.BindSubmenu(Navigator, RootMenu, EquipmentIndex, EquipmentMenu, False)
-    OperationSucceeded = OperationSucceeded And MenuNavigator.BindSubmenu(Navigator, RootMenu, AbilityIndex, AbilityMenu, False)
-    OperationSucceeded = OperationSucceeded And MenuNavigator.BindSubmenu(Navigator, RootMenu, ShopIndex, ShopMenu, False)
-    OperationSucceeded = OperationSucceeded And MenuNavigator.BindSubmenu(Navigator, RootMenu, SaveIndex, SaveMenu, False)
+    Navigator = New Menus.MenuNavigator(RootMenu, NavigatorStyle)
+    OperationSucceeded = Navigator.BindSubmenu(RootMenu, PartyIndex, PartyMenu, False)
+    OperationSucceeded = OperationSucceeded And Navigator.BindSubmenu(RootMenu, InventoryIndex, InventoryMenu, False)
+    OperationSucceeded = OperationSucceeded And Navigator.BindSubmenu(RootMenu, EquipmentIndex, EquipmentMenu, False)
+    OperationSucceeded = OperationSucceeded And Navigator.BindSubmenu(RootMenu, AbilityIndex, AbilityMenu, False)
+    OperationSucceeded = OperationSucceeded And Navigator.BindSubmenu(RootMenu, ShopIndex, ShopMenu, False)
+    OperationSucceeded = OperationSucceeded And Navigator.BindSubmenu(RootMenu, SaveIndex, SaveMenu, False)
 
 End Sub
 

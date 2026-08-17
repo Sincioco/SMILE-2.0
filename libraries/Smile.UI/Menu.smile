@@ -29,8 +29,24 @@ Private Dim PreparedLineWidths[4] As Number
 Private Dim PreparedLineYs[4] As Number
 Private Dim PreparedLineCount As Number
 Private Dim PreparedOverflow As Boolean
+Private Dim MenuFacade0 As Menu
+Private Dim MenuFacade1 As Menu
+Private Dim MenuFacade2 As Menu
+Private Dim MenuFacade3 As Menu
+Private Dim MenuFacade4 As Menu
+Private Dim MenuFacade5 As Menu
+Private Dim MenuFacade6 As Menu
+Private Dim MenuFacade7 As Menu
+Private Dim MenuFacade8 As Menu
+Private Dim MenuFacade9 As Menu
+Private Dim MenuFacade10 As Menu
+Private Dim MenuFacade11 As Menu
+Private Dim MenuFacade12 As Menu
+Private Dim MenuFacade13 As Menu
+Private Dim MenuFacade14 As Menu
+Private Dim MenuFacade15 As Menu
 
-Private Function SlotFromHandle(Handle As Number) As Number
+Private Function MenuSlotFromHandle(Handle As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
@@ -59,10 +75,159 @@ Private Function SlotFromHandle(Handle As Number) As Number
 
 End Function
 
+Private Function MenuFacadeSlot(Value As Menu) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = -1
+
+    If Value Is Nothing Then
+        Return ReturnValue
+    End If
+
+    If Value Is MenuFacade0 Then
+        ReturnValue = 0
+    Else If Value Is MenuFacade1 Then
+        ReturnValue = 1
+    Else If Value Is MenuFacade2 Then
+        ReturnValue = 2
+    Else If Value Is MenuFacade3 Then
+        ReturnValue = 3
+    Else If Value Is MenuFacade4 Then
+        ReturnValue = 4
+    Else If Value Is MenuFacade5 Then
+        ReturnValue = 5
+    Else If Value Is MenuFacade6 Then
+        ReturnValue = 6
+    Else If Value Is MenuFacade7 Then
+        ReturnValue = 7
+    Else If Value Is MenuFacade8 Then
+        ReturnValue = 8
+    Else If Value Is MenuFacade9 Then
+        ReturnValue = 9
+    Else If Value Is MenuFacade10 Then
+        ReturnValue = 10
+    Else If Value Is MenuFacade11 Then
+        ReturnValue = 11
+    Else If Value Is MenuFacade12 Then
+        ReturnValue = 12
+    Else If Value Is MenuFacade13 Then
+        ReturnValue = 13
+    Else If Value Is MenuFacade14 Then
+        ReturnValue = 14
+    Else If Value Is MenuFacade15 Then
+        ReturnValue = 15
+    End If
+
+    Return ReturnValue
+
+End Function
+
+Private Sub RegisterMenuFacade(Value As Menu, Handle As Number)
+
+    Dim Slot As Number
+
+    Slot = MenuSlotFromHandle(Handle)
+
+    Select Case Slot
+        Case 0
+            MenuFacade0 = Value
+        Case 1
+            MenuFacade1 = Value
+        Case 2
+            MenuFacade2 = Value
+        Case 3
+            MenuFacade3 = Value
+        Case 4
+            MenuFacade4 = Value
+        Case 5
+            MenuFacade5 = Value
+        Case 6
+            MenuFacade6 = Value
+        Case 7
+            MenuFacade7 = Value
+        Case 8
+            MenuFacade8 = Value
+        Case 9
+            MenuFacade9 = Value
+        Case 10
+            MenuFacade10 = Value
+        Case 11
+            MenuFacade11 = Value
+        Case 12
+            MenuFacade12 = Value
+        Case 13
+            MenuFacade13 = Value
+        Case 14
+            MenuFacade14 = Value
+        Case 15
+            MenuFacade15 = Value
+    End Select
+
+End Sub
+
+Private Sub UnregisterMenuFacade(Value As Menu)
+
+    Dim Slot As Number
+
+    Slot = MenuFacadeSlot(Value)
+
+    Select Case Slot
+        Case 0
+            MenuFacade0 = Nothing
+        Case 1
+            MenuFacade1 = Nothing
+        Case 2
+            MenuFacade2 = Nothing
+        Case 3
+            MenuFacade3 = Nothing
+        Case 4
+            MenuFacade4 = Nothing
+        Case 5
+            MenuFacade5 = Nothing
+        Case 6
+            MenuFacade6 = Nothing
+        Case 7
+            MenuFacade7 = Nothing
+        Case 8
+            MenuFacade8 = Nothing
+        Case 9
+            MenuFacade9 = Nothing
+        Case 10
+            MenuFacade10 = Nothing
+        Case 11
+            MenuFacade11 = Nothing
+        Case 12
+            MenuFacade12 = Nothing
+        Case 13
+            MenuFacade13 = Nothing
+        Case 14
+            MenuFacade14 = Nothing
+        Case 15
+            MenuFacade15 = Nothing
+    End Select
+
+End Sub
+
+Private Function MenuFacadeRuntimeHandle(Value As Menu) As Number
+
+    Dim ReturnValue As Number
+    Dim Slot As Number
+
+    Slot = MenuFacadeSlot(Value)
+
+    If Slot >= 0 And MenuUsed[Slot] Then
+        ReturnValue = MenuGeneration[Slot] * 100 + Slot + 1
+    End If
+
+    Return ReturnValue
+
+End Function
+
 ''' Checks whether a menu style can be used safely by the menu services.
 ''' @param Style: Menu appearance, text, cursor, spacing, and overflow settings to validate. Passed by reference.
 ''' @returns: True when every nested style and layout value is supported; otherwise False.
-Public Function IsStyleValid(ByRef Style As Core.MenuStyle) As Boolean
+Private Function MenuHandleIsStyleValid(ByRef Style As Core.MenuStyle) As Boolean
 
     If (Not Window.IsStyleValid(Style.Window) Or
         Not Text.IsStyleValid(Style.NormalText) Or
@@ -157,13 +322,13 @@ End Sub
 ''' @param Height: Menu height in pixels. Values are clamped to the supported layout range.
 ''' @param VisibleRows: Requested number of rows visible at once. The effective count may be reduced to fit the content area.
 ''' @returns: A positive generation-safe menu handle, or 0 when the style is invalid or no menu slot is available.
-Public Function Create(ByRef Style As Core.MenuStyle, X As Number, Y As Number, Width As Number, Height As Number, VisibleRows As Number) As Number
+Private Function MenuHandleCreate(ByRef Style As Core.MenuStyle, X As Number, Y As Number, Width As Number, Height As Number, VisibleRows As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
     Dim Index As Number
 
-    If Not IsStyleValid(Style) Then
+    If Not MenuHandleIsStyleValid(Style) Then
         ReturnValue = 0
         Return ReturnValue
     End If
@@ -218,23 +383,23 @@ End Function
 ''' Checks whether a menu handle still identifies a live menu instance.
 ''' @param Handle: Generation-safe menu handle returned by Create.
 ''' @returns: True for a live handle; otherwise False.
-Public Function IsValid(Handle As Number) As Boolean
+Private Function MenuHandleIsValid(Handle As Number) As Boolean
 
     Dim ReturnValue As Boolean
 
-    ReturnValue = SlotFromHandle(Handle) >= 0
+    ReturnValue = MenuSlotFromHandle(Handle) >= 0
     Return ReturnValue
 
 End Function
 
 ''' Removes every item from a menu and resets its selection and scroll position.
 ''' @param Handle: Menu handle to clear. An invalid handle is ignored.
-Public Sub ClearItems(Handle As Number)
+Private Sub MenuHandleClearItems(Handle As Number)
 
     Dim Slot As Number
     Dim Index As Number
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If Slot < 0 Then
         Return
@@ -259,18 +424,18 @@ End Sub
 
 ''' Releases a menu instance and invalidates its current generation-safe handle.
 ''' @param Handle: Menu handle to destroy. An invalid handle is ignored.
-Public Sub Destroy(Handle As Number)
+Private Sub MenuHandleDestroy(Handle As Number)
 
     Dim Slot As Number
     Dim Empty As Core.MenuStyle
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If Slot < 0 Then
         Return
     End If
 
-    Call ClearItems(Handle)
+    Call MenuHandleClearItems(Handle)
 
     MenuItemRevision[Slot] = MenuItemRevision[Slot] + 1
 
@@ -287,13 +452,13 @@ End Sub
 ''' @param Handle: Menu handle whose style will change.
 ''' @param Style: Valid replacement menu style. Passed by reference.
 ''' @returns: True when the handle and style are valid; otherwise False.
-Public Function SetStyle(Handle As Number, ByRef Style As Core.MenuStyle) As Boolean
+Private Function MenuHandleSetStyle(Handle As Number, ByRef Style As Core.MenuStyle) As Boolean
 
     Dim Slot As Number
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
-    If Slot < 0 Or Not IsStyleValid(Style) Then
+    If Slot < 0 Or Not MenuHandleIsStyleValid(Style) Then
         Return False
     End If
 
@@ -312,13 +477,13 @@ End Function
 ''' @param UserValue: Application-defined numeric value returned when the item is selected.
 ''' @param Enabled: True when the item may be selected and accepted.
 ''' @returns: The zero-based item index, or -1 for an invalid handle, a full menu, or an overlong label.
-Public Function AddItem(Handle As Number, Label As Text, UserValue As Number, Enabled As Boolean) As Number
+Private Function MenuHandleAddItem(Handle As Number, Label As Text, UserValue As Number, Enabled As Boolean) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
     Dim Index As Number
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If (Slot < 0 Or
         MenuItemCount[Slot] >= Core.UI_MAX_MENU_ITEMS Or
@@ -349,11 +514,11 @@ End Function
 ''' @param Index: Zero-based item index.
 ''' @param Label: Replacement text, limited to the library's maximum scalar count.
 ''' @returns: True when the handle, index, and label are valid; otherwise False.
-Public Function SetItemLabel(Handle As Number, Index As Number, Label As Text) As Boolean
+Private Function MenuHandleSetItemLabel(Handle As Number, Index As Number, Label As Text) As Boolean
 
     Dim Slot As Number
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If (Slot < 0 Or
         Index < 0 Or
@@ -409,11 +574,11 @@ End Sub
 ''' @param Index: Zero-based item index.
 ''' @param Enabled: True to make the item selectable; False to disable it.
 ''' @returns: True when the handle and index are valid; otherwise False.
-Public Function SetItemEnabled(Handle As Number, Index As Number, Enabled As Boolean) As Boolean
+Private Function MenuHandleSetItemEnabled(Handle As Number, Index As Number, Enabled As Boolean) As Boolean
 
     Dim Slot As Number
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If (Slot < 0 Or
         Index < 0 Or
@@ -438,11 +603,11 @@ End Function
 ''' @param Index: Zero-based item index.
 ''' @param UserValue: Replacement numeric value returned for the item.
 ''' @returns: True when the handle and index are valid; otherwise False.
-Public Function SetItemValue(Handle As Number, Index As Number, UserValue As Number) As Boolean
+Private Function MenuHandleSetItemValue(Handle As Number, Index As Number, UserValue As Number) As Boolean
 
     Dim Slot As Number
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If (Slot < 0 Or
         Index < 0 Or
@@ -460,11 +625,11 @@ End Function
 ''' @param Index: Zero-based item index.
 ''' @param HasSubmenu: True when the item opens a submenu; otherwise False.
 ''' @returns: True when the handle and index are valid; otherwise False.
-Public Function SetItemHasSubmenu(Handle As Number, Index As Number, HasSubmenu As Boolean) As Boolean
+Private Function MenuHandleSetItemHasSubmenu(Handle As Number, Index As Number, HasSubmenu As Boolean) As Boolean
 
     Dim Slot As Number
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If (Slot < 0 Or
         Index < 0 Or
@@ -481,12 +646,12 @@ End Function
 ''' @param Handle: Menu handle containing the item.
 ''' @param Index: Zero-based item index.
 ''' @returns: True when the valid item has a submenu; False for no submenu or an invalid handle/index.
-Public Function ItemHasSubmenu(Handle As Number, Index As Number) As Boolean
+Private Function MenuHandleItemHasSubmenu(Handle As Number, Index As Number) As Boolean
 
     Dim ReturnValue As Boolean
     Dim Slot As Number
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If (Slot < 0 Or
         Index < 0 Or
@@ -502,12 +667,12 @@ End Function
 ''' Gets the revision that changes when the menu's item collection is reset or destroyed.
 ''' @param Handle: Menu handle to inspect.
 ''' @returns: A positive revision for a valid menu, or 0 for an invalid handle.
-Public Function ItemRevision(Handle As Number) As Number
+Private Function MenuHandleItemRevision(Handle As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If Slot < 0 Then
         ReturnValue = 0
@@ -522,12 +687,12 @@ End Function
 ''' Gets the number of items currently stored in a menu.
 ''' @param Handle: Menu handle to inspect.
 ''' @returns: The item count, or 0 for an invalid handle.
-Public Function ItemCount(Handle As Number) As Number
+Private Function MenuHandleItemCount(Handle As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If Slot < 0 Then
         ReturnValue = 0
@@ -542,12 +707,12 @@ End Function
 ''' Gets the currently selected item index.
 ''' @param Handle: Menu handle to inspect.
 ''' @returns: The zero-based selected index, or -1 for an invalid handle or no selection.
-Public Function SelectedIndex(Handle As Number) As Number
+Private Function MenuHandleSelectedIndex(Handle As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If Slot < 0 Then
         ReturnValue = -1
@@ -562,12 +727,12 @@ End Function
 ''' Gets the application-defined value associated with the selected item.
 ''' @param Handle: Menu handle to inspect.
 ''' @returns: The selected item's value, or 0 for an invalid handle or no selection.
-Public Function SelectedValue(Handle As Number) As Number
+Private Function MenuHandleSelectedValue(Handle As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If Slot < 0 Or MenuSelected[Slot] < 0 Then
         ReturnValue = 0
@@ -582,12 +747,12 @@ End Function
 ''' Gets the item index shown in the menu's first visible row.
 ''' @param Handle: Menu handle to inspect.
 ''' @returns: The zero-based top item index, or 0 for an invalid handle.
-Public Function TopIndex(Handle As Number) As Number
+Private Function MenuHandleTopIndex(Handle As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If Slot < 0 Then
         ReturnValue = 0
@@ -602,12 +767,12 @@ End Function
 ''' Gets the effective number of rows that fit in the menu's current content area.
 ''' @param Handle: Menu handle to inspect.
 ''' @returns: The effective visible-row count, or 0 for an invalid handle.
-Public Function VisibleRows(Handle As Number) As Number
+Private Function MenuHandleVisibleRows(Handle As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If Slot < 0 Then
         ReturnValue = 0
@@ -622,12 +787,12 @@ End Function
 ''' Gets the menu's outer position and size.
 ''' @param Handle: Menu handle to inspect.
 ''' @returns: The menu bounds, or an empty rectangle for an invalid handle.
-Public Function Bounds(Handle As Number) As Core.Rect
+Private Function MenuHandleBounds(Handle As Number) As Core.Rect
 
     Dim Slot As Number
     Dim Result As Core.Rect
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If Slot < 0 Then
         Return Result
@@ -646,11 +811,11 @@ End Function
 ''' @param X: New left edge in game-window coordinates.
 ''' @param Y: New top edge in game-window coordinates.
 ''' @returns: True when the handle and coordinates are supported; otherwise False.
-Public Function SetPosition(Handle As Number, X As Number, Y As Number) As Boolean
+Private Function MenuHandleSetPosition(Handle As Number, X As Number, Y As Number) As Boolean
 
     Dim Slot As Number
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If (Slot < 0 Or
         X < -Core.UI_MAX_LAYOUT_VALUE Or
@@ -669,7 +834,7 @@ End Function
 ''' Gets the visible content rectangle occupied by the selected row.
 ''' @param Handle: Menu handle to inspect.
 ''' @returns: The selected row rectangle, or an empty rectangle when the handle/selection is invalid or off-screen.
-Public Function SelectedRowRect(Handle As Number) As Core.Rect
+Private Function MenuHandleSelectedRowRect(Handle As Number) As Core.Rect
 
     Dim Slot As Number
     Dim Result As Core.Rect
@@ -677,7 +842,7 @@ Public Function SelectedRowRect(Handle As Number) As Core.Rect
     Dim Row As Number
     Dim Height As Number
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If Slot < 0 Then
         Return Result
@@ -709,11 +874,11 @@ End Function
 ''' @param Handle: Menu handle whose selection will change.
 ''' @param Index: Zero-based enabled item index to select.
 ''' @returns: True when the handle and enabled index are valid; otherwise False.
-Public Function SetSelectedIndex(Handle As Number, Index As Number) As Boolean
+Private Function MenuHandleSetSelectedIndex(Handle As Number, Index As Number) As Boolean
 
     Dim Slot As Number
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If (Slot < 0 Or
         Index < 0 Or
@@ -733,12 +898,12 @@ End Function
 ''' Selects the first enabled item and returns the menu to its top row.
 ''' @param Handle: Menu handle whose selection will reset.
 ''' @returns: True when an enabled item is selected; False for an invalid handle or a menu with no enabled items.
-Public Function ResetSelection(Handle As Number) As Boolean
+Private Function MenuHandleResetSelection(Handle As Number) As Boolean
 
     Dim ReturnValue As Boolean
     Dim Slot As Number
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If Slot < 0 Then
         Return False
@@ -800,13 +965,13 @@ End Function
 ''' @param Handle: Menu handle that receives the key.
 ''' @param Key: SMILE key constant such as KEY_UP, KEY_DOWN, KEY_ENTER, KEY_SPACE, or KEY_ESCAPE.
 ''' @returns: A UI_EVENT_* value describing cancellation, acceptance, selection change, or no action.
-Public Function HandleKey(Handle As Number, Key As Number) As Number
+Private Function MenuHandleHandleKey(Handle As Number, Key As Number) As Number
 
     Dim ReturnValue As Number
     Dim Slot As Number
     Dim NextIndex As Number
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If Slot < 0 Then
         ReturnValue = Core.UI_EVENT_NONE
@@ -1250,7 +1415,7 @@ End Function
 ''' @param Handle: Menu handle to draw. Invalid or zero-sized menus are ignored.
 ''' @param Focused: True to draw the selection cursor as focused; False for an unfocused menu.
 ''' @remarks: Requires Game Window because it draws window, text, image, clipping, and scrollbar primitives.
-Public Sub DrawFocused(Handle As Number, Focused As Boolean)
+Private Sub MenuHandleDrawFocused(Handle As Number, Focused As Boolean)
 
     Dim Slot As Number
     Dim Content As Core.Rect
@@ -1277,7 +1442,7 @@ Public Sub DrawFocused(Handle As Number, Focused As Boolean)
     Dim MarkerY As Number
     Dim RowStyle As Core.TextStyle
 
-    Slot = SlotFromHandle(Handle)
+    Slot = MenuSlotFromHandle(Handle)
 
     If (Slot < 0 Or
         MenuWidth[Slot] <= 0 Or
@@ -1442,10 +1607,357 @@ End Sub
 ''' Draws a menu using the normal focused appearance.
 ''' @param Handle: Menu handle to draw. Invalid or zero-sized menus are ignored.
 ''' @remarks: Requires Game Window. This is equivalent to DrawFocused with Focused set to True.
-Public Sub Draw(Handle As Number)
+Private Sub MenuHandleDraw(Handle As Number)
 
-    Call DrawFocused(Handle, True)
+    Call MenuHandleDrawFocused(Handle, True)
 
 End Sub
+
+''' Stateful menu facade backed by the bounded generation-safe menu runtime.
+Public Class Menu
+
+    Private Handle As Number
+
+    ''' Creates a bounded menu facade. Valid is False when validation or capacity allocation fails.
+    ''' @param Style: Menu appearance and layout configuration.
+    ''' @param X: Left edge in logical window coordinates.
+    ''' @param Y: Top edge in logical window coordinates.
+    ''' @param Width: Menu width in logical units.
+    ''' @param Height: Menu height in logical units.
+    ''' @param VisibleRows: Requested visible row count; defaults to five.
+    Public Sub New(
+        ByRef Style As Core.MenuStyle,
+        X As Number,
+        Y As Number,
+        Width As Number,
+        Height As Number,
+        Optional VisibleRows As Number = 5
+    )
+
+        Me.Handle = MenuHandleCreate(Style, X, Y, Width, Height, VisibleRows)
+
+        Call RegisterMenuFacade(Me, Me.Handle)
+
+    End Sub
+
+    ''' Reports whether this facade still owns a valid generation-safe menu slot.
+    Public Property Valid As Boolean
+
+        Get
+
+            Dim ReturnValue As Boolean
+
+            ReturnValue = MenuHandleIsValid(Me.Handle)
+
+            Return ReturnValue
+
+        End Get
+
+    End Property
+
+    ''' Releases the underlying bounded menu slot. Repeated calls are safe.
+    Public Sub Destroy()
+
+        Call MenuHandleDestroy(Me.Handle)
+
+        Me.Handle = 0
+
+        Call UnregisterMenuFacade(Me)
+
+    End Sub
+
+    ''' Removes every menu item while retaining the facade and its style.
+    Public Sub ClearItems()
+
+        Call MenuHandleClearItems(Me.Handle)
+
+    End Sub
+
+    ''' Replaces the menu style transactionally when the candidate is valid.
+    ''' @param Style: Candidate menu appearance and layout configuration.
+    ''' @returns: True when the candidate style was accepted.
+    Public Function SetStyle(ByRef Style As Core.MenuStyle) As Boolean
+
+        Dim ReturnValue As Boolean
+
+        ReturnValue = MenuHandleSetStyle(Me.Handle, Style)
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Appends one bounded item.
+    ''' @param Label: Unicode label shown for the item.
+    ''' @param UserValue: Application-owned value returned when the item is accepted.
+    ''' @param Enabled: Whether selection may land on the item; defaults to True.
+    ''' @returns: The zero-based item index, or -1 when the operation fails.
+    Public Function AddItem(
+        Label As Text,
+        UserValue As Number,
+        Optional Enabled As Boolean = True
+    ) As Number
+
+        Dim ReturnValue As Number
+
+        ReturnValue = MenuHandleAddItem(Me.Handle, Label, UserValue, Enabled)
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Replaces one item label and invalidates stale structural bindings.
+    ''' @param Index: Zero-based item index.
+    ''' @param Label: Replacement Unicode label.
+    ''' @returns: True when the item was updated.
+    Public Function SetItemLabel(Index As Number, Label As Text) As Boolean
+
+        Dim ReturnValue As Boolean
+
+        ReturnValue = MenuHandleSetItemLabel(Me.Handle, Index, Label)
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Changes whether one item can be selected or accepted.
+    ''' @param Index: Zero-based item index.
+    ''' @param Enabled: New enabled state.
+    ''' @returns: True when the item was updated.
+    Public Function SetItemEnabled(Index As Number, Enabled As Boolean) As Boolean
+
+        Dim ReturnValue As Boolean
+
+        ReturnValue = MenuHandleSetItemEnabled(Me.Handle, Index, Enabled)
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Replaces one application's item value.
+    ''' @param Index: Zero-based item index.
+    ''' @param UserValue: Replacement application-owned value.
+    ''' @returns: True when the item was updated.
+    Public Function SetItemValue(Index As Number, UserValue As Number) As Boolean
+
+        Dim ReturnValue As Boolean
+
+        ReturnValue = MenuHandleSetItemValue(Me.Handle, Index, UserValue)
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Changes the visual submenu marker state for one item.
+    ''' @param Index: Zero-based item index.
+    ''' @param HasSubmenu: Whether the item presents a submenu marker.
+    ''' @returns: True when the item was updated.
+    Public Function SetItemHasSubmenu(Index As Number, HasSubmenu As Boolean) As Boolean
+
+        Dim ReturnValue As Boolean
+
+        ReturnValue = MenuHandleSetItemHasSubmenu(Me.Handle, Index, HasSubmenu)
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Reports the visual submenu marker state for one item.
+    ''' @param Index: Zero-based item index.
+    ''' @returns: True when the indexed item is currently marked as a submenu.
+    Public Function ItemHasSubmenu(Index As Number) As Boolean
+
+        Dim ReturnValue As Boolean
+
+        ReturnValue = MenuHandleItemHasSubmenu(Me.Handle, Index)
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Returns the current structural item revision used to reject stale navigator bindings.
+    Public Property ItemRevision As Number
+
+        Get
+
+            Dim ReturnValue As Number
+
+            ReturnValue = MenuHandleItemRevision(Me.Handle)
+
+            Return ReturnValue
+
+        End Get
+
+    End Property
+
+    ''' Returns the number of items currently stored by this menu.
+    Public Property ItemCount As Number
+
+        Get
+
+            Dim ReturnValue As Number
+
+            ReturnValue = MenuHandleItemCount(Me.Handle)
+
+            Return ReturnValue
+
+        End Get
+
+    End Property
+
+    ''' Gets or safely attempts to set the zero-based selected item index.
+    Public Property SelectedIndex As Number
+
+        Get
+
+            Dim ReturnValue As Number
+
+            ReturnValue = MenuHandleSelectedIndex(Me.Handle)
+
+            Return ReturnValue
+
+        End Get
+
+        Set
+
+            Dim Ignored As Boolean
+
+            Ignored = MenuHandleSetSelectedIndex(Me.Handle, Value)
+
+        End Set
+
+    End Property
+
+    ''' Returns the application value of the selected item, or zero when unavailable.
+    Public Property SelectedValue As Number
+
+        Get
+
+            Dim ReturnValue As Number
+
+            ReturnValue = MenuHandleSelectedValue(Me.Handle)
+
+            Return ReturnValue
+
+        End Get
+
+    End Property
+
+    ''' Returns the zero-based first item currently visible in the viewport.
+    Public Property TopIndex As Number
+
+        Get
+
+            Dim ReturnValue As Number
+
+            ReturnValue = MenuHandleTopIndex(Me.Handle)
+
+            Return ReturnValue
+
+        End Get
+
+    End Property
+
+    ''' Returns the effective visible row count after style and window constraints.
+    Public Property VisibleRows As Number
+
+        Get
+
+            Dim ReturnValue As Number
+
+            ReturnValue = MenuHandleVisibleRows(Me.Handle)
+
+            Return ReturnValue
+
+        End Get
+
+    End Property
+
+    ''' Returns the menu's current logical bounds.
+    Public Property Bounds As Core.Rect
+
+        Get
+
+            Dim ReturnValue As Core.Rect
+
+            ReturnValue = MenuHandleBounds(Me.Handle)
+
+            Return ReturnValue
+
+        End Get
+
+    End Property
+
+    ''' Returns the clipped logical rectangle occupied by the selected row.
+    Public Property SelectedRowRect As Core.Rect
+
+        Get
+
+            Dim ReturnValue As Core.Rect
+
+            ReturnValue = MenuHandleSelectedRowRect(Me.Handle)
+
+            Return ReturnValue
+
+        End Get
+
+    End Property
+
+    ''' Moves the menu without changing its size or style.
+    ''' @param X: New left edge in logical window coordinates.
+    ''' @param Y: New top edge in logical window coordinates.
+    ''' @returns: True when the new position is valid and committed.
+    Public Function SetPosition(X As Number, Y As Number) As Boolean
+
+        Dim ReturnValue As Boolean
+
+        ReturnValue = MenuHandleSetPosition(Me.Handle, X, Y)
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Restores selection to the first enabled item and repairs scrolling.
+    ''' @returns: True when a selectable item exists.
+    Public Function ResetSelection() As Boolean
+
+        Dim ReturnValue As Boolean
+
+        ReturnValue = MenuHandleResetSelection(Me.Handle)
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Applies one keyboard input to this menu.
+    ''' @param Key: SMILE key code to process.
+    ''' @returns: A UI_EVENT value describing the state transition.
+    Public Function Update(Key As Number) As Number
+
+        Dim ReturnValue As Number
+
+        ReturnValue = MenuHandleHandleKey(Me.Handle, Key)
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Draws the menu and optionally shows its selection cursor.
+    ''' @param Focused: True to draw the cursor for the selected row.
+    ''' @remarks: Requires Game Window.
+    Public Sub DrawFocused(Focused As Boolean)
+
+        Call MenuHandleDrawFocused(Me.Handle, Focused)
+
+    End Sub
+
+    ''' Draws the menu with its selection cursor visible.
+    ''' @remarks: Requires Game Window.
+    Public Sub Draw()
+
+        Call MenuHandleDraw(Me.Handle)
+
+    End Sub
+
+End Class
 
 End Module

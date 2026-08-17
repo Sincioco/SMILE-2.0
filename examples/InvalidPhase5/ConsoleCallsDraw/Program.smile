@@ -1,9 +1,9 @@
 Option Explicit
 
-Import Smile.UI.Menu As Menu
+Import Smile.UI.Menu As Menus
 
-Dim Handle As Number
+Dim CurrentMenu As Menus.Menu
 
-Call Menu.Draw(Handle)
+Call CurrentMenu.Draw()
 
 End Program

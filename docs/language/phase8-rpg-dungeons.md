@@ -1,6 +1,6 @@
 # Phase 8 RPG dungeon composition
 
-Phase 8 is a capability proof rather than a language or library expansion. The permanent `examples\RpgDungeonGallery` project composes `Smile.Game` 1.0.0, `Smile.RPG` 1.1.1, and `Smile.UI` 1.1.3 through their existing project references. The same sources may instead consume the built packages; `examples\Phase8DungeonStateTests` verifies both dependency paths.
+Phase 8 is a capability proof rather than a language or library expansion. The permanent `examples\RpgDungeonGallery` project now composes `Smile.Game`, `Smile.RPG`, and the `Smile.UI` 2.0 Class facades through project references. The same sources may instead consume the built packages; `examples\Phase8DungeonStateTests` verifies both dependency paths.
 
 ## State model
 
