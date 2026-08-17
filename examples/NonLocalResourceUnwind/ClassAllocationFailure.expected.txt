@@ -1,0 +1,3 @@
+constructed first
+constructed second
+SMILE runtime error: Class allocation failed.

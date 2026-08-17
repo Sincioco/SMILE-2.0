@@ -252,11 +252,42 @@ typedef struct SmileClassHeader
 static volatile LONG64 smile_class_allocations;
 static volatile LONG64 smile_class_frees;
 static volatile LONG64 smile_class_live_objects;
+static volatile LONG smile_class_allocation_fault_initialized;
+static long long smile_class_allocation_fail_after = -1;
+
+static void smile_class_initialize_allocation_fault(void)
+{
+    WCHAR text[64];
+    DWORD length;
+    long long value = 0;
+    DWORD index;
+    if (InterlockedCompareExchange(&smile_class_allocation_fault_initialized, 1, 0) != 0)
+        return;
+    length = GetEnvironmentVariableW(L"SMILE_CLASS_ALLOCATION_FAIL_AFTER", text,
+        (DWORD)(sizeof(text) / sizeof(text[0])));
+    if (length == 0 || length >= (DWORD)(sizeof(text) / sizeof(text[0])))
+        return;
+    for (index = 0; index < length; index++)
+    {
+        long long digit;
+        if (text[index] < L'0' || text[index] > L'9')
+            return;
+        digit = (long long)(text[index] - L'0');
+        if (value > (LLONG_MAX - digit) / 10)
+            return;
+        value = value * 10 + digit;
+    }
+    smile_class_allocation_fail_after = value;
+}
 
 void* smile_class_allocate(long long payload_size, SmileClassFinalizer finalizer)
 {
     SIZE_T bytes;
     SmileClassHeader* header;
+    smile_class_initialize_allocation_fault();
+    if (smile_class_allocation_fail_after >= 0 &&
+        InterlockedCompareExchange64(&smile_class_allocations, 0, 0) >= smile_class_allocation_fail_after)
+        return 0;
     if (payload_size < 0 || (unsigned long long)payload_size >
         (unsigned long long)(SIZE_MAX - sizeof(SmileClassHeader)))
         return 0;
@@ -349,6 +380,24 @@ void smile_class_nothing_report(void)
 {
     static const char message[] = "SMILE runtime error: Object reference is Nothing.";
     smile_print_text(message, (long long)(sizeof(message) - 1));
+    smile_print_newline();
+}
+
+void smile_class_allocation_failure_report(void)
+{
+    static const char message[] = "SMILE runtime error: Class allocation failed.";
+    smile_print_text(message, (long long)(sizeof(message) - 1));
+    smile_print_newline();
+}
+
+void smile_image_lifetime_report(void)
+{
+    WCHAR enabled[2];
+    static const char prefix[] = "SMILE_IMAGE_LIVE=";
+    if (GetEnvironmentVariableW(L"SMILE_IMAGE_LIFETIME_DIAGNOSTICS", enabled, 2) == 0)
+        return;
+    smile_print_text(prefix, (long long)(sizeof(prefix) - 1));
+    smile_print_number(smile_image_resource_live_count());
     smile_print_newline();
 }
 

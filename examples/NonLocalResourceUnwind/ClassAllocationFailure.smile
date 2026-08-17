@@ -1,0 +1,57 @@
+Option Explicit
+
+Type ResourcePayload
+    Label As Text
+    Picture As Image
+End Type
+
+Class ResourceOwner
+    Private Label As Text
+    Private Payload As ResourcePayload
+
+    Public Sub New(Name As Text)
+
+        Me.Label = Name
+        Me.Payload.Label = Name + "-payload"
+        Load Image Me.Payload.Picture From "Assets\Cursor.png"
+        Print "constructed " + Name
+
+    End Sub
+
+End Class
+
+Game Window "Class Allocation Failure" Size 64 By 64
+
+Dim First As New ResourceOwner("first")
+Dim Second As New ResourceOwner("second")
+
+Call AllocateThird()
+
+Print "unreachable"
+
+Sub AllocateThird()
+
+    Dim LocalLabel As Text
+    Dim LocalPicture As Image
+    Dim LocalPayload As ResourcePayload
+    Dim Failed As ResourceOwner
+
+    LocalLabel = "local" + "-label"
+    Load Image LocalPicture From "Assets\Cursor.png"
+    LocalPayload.Label = "local" + "-payload"
+    Load Image LocalPayload.Picture From "Assets\Cursor.png"
+    Failed = New ResourceOwner(BuildName())
+
+    Print "unreachable"
+
+End Sub
+
+Function BuildName() As Text
+
+    Dim Name As Text
+
+    Name = "third" + ""
+
+    Return Name
+
+End Function

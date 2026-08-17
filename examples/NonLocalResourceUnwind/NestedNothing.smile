@@ -1,0 +1,60 @@
+Option Explicit
+
+Type ResourcePayload
+    Label As Text
+    Picture As Image
+End Type
+
+Class ResourceOwner
+    Private Label As Text
+    Private Payload As ResourcePayload
+
+    Public Sub New(Name As Text)
+
+        Me.Label = Name
+        Me.Payload.Label = Name + "-payload"
+        Load Image Me.Payload.Picture From "Assets\Cursor.png"
+
+    End Sub
+
+    Public Sub Ping()
+
+        Print "unreachable"
+
+    End Sub
+
+End Class
+
+Game Window "Nested Nothing" Size 64 By 64
+
+Call Recurse(2)
+
+Print "unreachable"
+
+Sub Recurse(Level As Number)
+
+    Dim LocalLabel As Text
+    Dim LocalPicture As Image
+    Dim LocalPayload As ResourcePayload
+    Dim LocalOwner As New ResourceOwner("owner")
+
+    LocalLabel = "local" + "-label"
+    Load Image LocalPicture From "Assets\Cursor.png"
+    LocalPayload.Label = "local" + "-payload"
+    Load Image LocalPayload.Picture From "Assets\Cursor.png"
+
+    If Level = 0 Then
+
+        Dim Missing As ResourceOwner
+
+        Print "nested Nothing"
+
+        Call Missing.Ping()
+
+        Print "unreachable"
+
+    End If
+
+    Call Recurse(Level - 1)
+
+End Sub

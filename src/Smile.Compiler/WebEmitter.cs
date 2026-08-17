@@ -146,32 +146,31 @@ internal sealed class WebEmitter
             Line($"function {name}_create() {{ return smile.classCreate({{ {defaults} }}, {name}_finalize); }}");
             Line($"function {name}_finalize(value) {{");
             _indent++;
-            foreach (var field in type.Fields.Where(field => !field.IsArray && field.Type == SmileType.Text)
-                         .OrderByDescending(field => field.Ordinal))
-                Line($"value[{Json(FieldKey(field))}] = \"\";");
-            foreach (var field in type.Fields.Where(field => !field.IsArray &&
-                             field.Type is RecordTypeSymbol { RequiresValueCleanup: true })
+            foreach (var field in type.Fields.Where(field => field.Type.RequiresValueCleanup)
                          .OrderByDescending(field => field.Ordinal))
             {
-                var record = (RecordTypeSymbol)field.Type;
-                Line($"{_recordNames[record]}_clear(value[{Json(FieldKey(field))}]);");
-                Line($"value[{Json(FieldKey(field))}] = {_recordNames[record]}_default();");
-            }
-            foreach (var field in type.Fields.Where(field => field.IsArray && field.Type.RequiresValueCleanup)
-                         .OrderByDescending(field => field.Ordinal))
-            {
-                var array = $"value[{Json(FieldKey(field))}].data";
-                Line($"for (let index = {field.ElementCount - 1}; index >= 0; index -= 1) {{");
-                _indent++;
-                if (field.Type is RecordTypeSymbol record)
+                if (field.IsArray)
                 {
-                    Line($"{_recordNames[record]}_clear({array}[index]);");
-                    Line($"{array}[index] = {_recordNames[record]}_default();");
+                    var array = $"value[{Json(FieldKey(field))}].data";
+                    Line($"for (let index = {field.ElementCount - 1}; index >= 0; index -= 1) {{");
+                    _indent++;
+                    if (field.Type is RecordTypeSymbol record)
+                    {
+                        Line($"{_recordNames[record]}_clear({array}[index]);");
+                        Line($"{array}[index] = {_recordNames[record]}_default();");
+                    }
+                    else
+                        Line($"{array}[index] = \"\";");
+                    _indent--;
+                    Line("}");
+                }
+                else if (field.Type is RecordTypeSymbol record)
+                {
+                    Line($"{_recordNames[record]}_clear(value[{Json(FieldKey(field))}]);");
+                    Line($"value[{Json(FieldKey(field))}] = {_recordNames[record]}_default();");
                 }
                 else
-                    Line($"{array}[index] = \"\";");
-                _indent--;
-                Line("}");
+                    Line($"value[{Json(FieldKey(field))}] = \"\";");
             }
             _indent--;
             Line("}");

@@ -5287,6 +5287,52 @@ Run("Classes link through modules with stable constructor identities and public 
     Equal(widget.ProviderIdentity, widget.Constructor.Receiver!.ProviderIdentity);
 });
 
+Run("Class finalizers preserve reverse declaration and array element order", () =>
+{
+    const string source = "Option Explicit\nType Payload\nName As Text\nEnd Type\nClass Owner\nPrivate FirstText As Text\nPrivate FirstPayload As Payload\nPrivate Notes[2] As Text\nPrivate LastText As Text\nPrivate Payloads[2] As Payload\nEnd Class\nDim Value As New Owner()\n";
+    var analysis = Analyze(source);
+    if (analysis.HasErrors)
+        throw new InvalidOperationException(string.Join(" | ", analysis.Diagnostics.Select(diagnostic =>
+            diagnostic.Code + ": " + diagnostic.Message)));
+
+    var owner = analysis.SemanticModel.Classes["Owner"];
+    var expectedOffsets = owner.Fields.Where(field => field.Type.RequiresValueCleanup)
+        .OrderByDescending(field => field.Ordinal)
+        .SelectMany(field => field.IsArray
+            ? Enumerable.Range(0, field.ElementCount).Reverse()
+                .Select(index => field.Offset + index * Math.Max(8, field.Type.Size))
+            : new[] { field.Offset })
+        .ToArray();
+    var native = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
+    var nativeStart = native.IndexOf("_finalize PROC", StringComparison.Ordinal);
+    var nativeEnd = native.IndexOf("_finalize ENDP", nativeStart, StringComparison.Ordinal);
+    var nativeFinalizer = native[nativeStart..nativeEnd];
+    var previousOffsetPosition = -1;
+    foreach (var offset in expectedOffsets)
+    {
+        var address = offset == 0 ? "lea rcx, [rax]" : $"lea rcx, [rax+{offset}]";
+        var position = nativeFinalizer.IndexOf(address, previousOffsetPosition + 1, StringComparison.Ordinal);
+        if (position < 0)
+            throw new InvalidOperationException($"Native finalizer did not clear offset {offset} in order.");
+        previousOffsetPosition = position;
+    }
+
+    var web = new WebEmitter(analysis).Emit();
+    var webStart = web.IndexOf("_finalize(value) {", StringComparison.Ordinal);
+    var webEnd = web.IndexOf("\n}", webStart, StringComparison.Ordinal);
+    var webFinalizer = web[webStart..webEnd];
+    var previousFieldPosition = -1;
+    foreach (var field in owner.Fields.Where(field => field.Type.RequiresValueCleanup)
+                 .OrderByDescending(field => field.Ordinal))
+    {
+        var key = $"__smile_c0_f{field.Ordinal}";
+        var position = webFinalizer.IndexOf(key, previousFieldPosition + 1, StringComparison.Ordinal);
+        if (position < 0)
+            throw new InvalidOperationException($"Web finalizer did not clear field {field.Name} in order.");
+        previousFieldPosition = position;
+    }
+});
+
 Run("Class diagnostics enforce scalar reference storage constructor and identity rules", () =>
 {
     var cases = new[]

@@ -1,0 +1,2 @@
+nested Nothing
+SMILE runtime error: Object reference is Nothing.

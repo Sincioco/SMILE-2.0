@@ -121,7 +121,7 @@ internal sealed class MasmEmitter
         _identityRegistrations = new();
     private readonly Dictionary<NewExpressionSyntax, MasmTemporaryStorage> _constructorResults = new();
     private readonly Dictionary<NewExpressionSyntax, MasmTemporaryStorage> _constructorRegistrations = new();
-    private readonly Dictionary<VariableSymbol, MasmTemporaryStorage> _classLocalRegistrations = new();
+    private readonly Dictionary<RoutineSymbol, MasmTemporaryStorage> _activeFrameRegistrations = new();
     private readonly List<MasmTemporaryStorage> _temporaries = new();
     private readonly Dictionary<RoutineSymbol, MasmFrameLayout> _frameLayouts = new();
     private readonly Stack<MasmLoopContext> _forExitLabels = new();
@@ -172,8 +172,7 @@ internal sealed class MasmEmitter
             foreach (var parameter in routine.Parameters)
                 CollectExpression(parameter.Declaration.DefaultValue);
             Collect(routine.BodyStatements);
-            foreach (var symbol in routine.LocalSymbols.Values.Where(IsOwnedClassLocal))
-                _classLocalRegistrations[symbol] = CreateTemporary("class_local_cleanup", SmileType.Number, 24);
+            _activeFrameRegistrations[routine] = CreateTemporary("active_frame_cleanup", SmileType.Number, 32);
         }
         _collectRoutine = null;
         AssignLabels();
@@ -203,6 +202,7 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_class_clear:PROC");
         Line("EXTERN smile_class_lifetime_report:PROC");
         Line("EXTERN smile_class_nothing_report:PROC");
+        Line("EXTERN smile_class_allocation_failure_report:PROC");
         Line("EXTERN smile_image_retain:PROC");
         Line("EXTERN smile_image_release:PROC");
         Line("EXTERN smile_image_move_assign:PROC");
@@ -212,6 +212,7 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_image_width_value:PROC");
         Line("EXTERN smile_image_height_value:PROC");
         Line("EXTERN smile_image_loaded_value:PROC");
+        Line("EXTERN smile_image_lifetime_report:PROC");
         Line("EXTERN smile_print_text_value:PROC");
         Line("EXTERN smile_draw_text_value:PROC");
         Line("EXTERN smile_get_key:PROC");
@@ -266,6 +267,7 @@ internal sealed class MasmEmitter
         Line();
         Line(".data");
         Line("smile_staged_cleanup_head QWORD 0");
+        Line("smile_active_frame_cleanup_head QWORD 0");
         EmitStorage(_analysis.SemanticModel.Symbols.Values);
         foreach (var temporary in _temporaries.Where(temporary => temporary.Kind == MasmStorageKind.Static))
             Line(temporary.Size == 8 ? $"{temporary.Name} QWORD 0" :
@@ -306,6 +308,7 @@ internal sealed class MasmEmitter
         CallAligned("smile_cleanup_staged_arguments");
         EmitProgramCleanup();
         CallAligned("smile_class_lifetime_report");
+        CallAligned("smile_image_lifetime_report");
         CallAligned("smile_media_shutdown");
         CallAligned("smile_text_lifetime_report");
         if (_usesMusic) CallAligned("smile_music_shutdown");
@@ -317,6 +320,7 @@ internal sealed class MasmEmitter
             EmitRoutine(routine);
 
         EmitStagedCleanupHelper();
+        EmitActiveFrameCleanupHelper();
 
         foreach (var record in OrderedRecordTypes())
             EmitRecordHelpers(record);
@@ -767,9 +771,7 @@ internal sealed class MasmEmitter
             Line($"    lea rcx, [rbp-{offset}]");
             CallAligned(RecordCopy(record));
         }
-        var ownedClassLocals = routine.LocalSymbols.Values.Where(IsOwnedClassLocal).ToArray();
-        foreach (var symbol in ownedClassLocals)
-            RegisterStagedCleanup(symbol, _classLocalRegistrations[symbol]);
+        RegisterActiveFrame(routine);
         if (routine.ReturnType is not RecordTypeSymbol)
             Line($"    mov QWORD PTR [rbp-{_currentFrame.ReturnOffset}], 0");
         EmitStatements(routine.BodyStatements);
@@ -780,18 +782,18 @@ internal sealed class MasmEmitter
         Line($"{_returnLabel}:");
         foreach (var temporary in _currentFrame.Temporaries.Where(temporary => temporary.RequiresCleanup))
             EmitCleanup(new MasmCleanupAction(temporary));
-        foreach (var symbol in ownedClassLocals.Reverse())
-            UnregisterStagedCleanup(_classLocalRegistrations[symbol]);
         foreach (var symbol in routine.LocalSymbols.Values.Where(symbol => symbol.Type.RequiresCleanup &&
                      !symbol.Type.IsClass && symbol.ParameterMode != ParameterPassingMode.ByRef))
             EmitReleaseSymbol(symbol);
-        foreach (var symbol in ownedClassLocals)
+        foreach (var symbol in routine.LocalSymbols.Values.Where(IsOwnedClassLocal))
             EmitReleaseSymbol(symbol);
+        UnregisterActiveFrame(routine);
         Line($"    mov rax, QWORD PTR [rbp-{_currentFrame.ReturnOffset}]");
         Line("    mov rsp, rbp");
         Line("    pop rbp");
         Line("    ret");
         Line($"{_routineLabels[routine]} ENDP");
+        EmitActiveFrameCleanup(routine);
         _returnLabel = null;
         _currentRoutine = null;
         _currentFrame = null;
@@ -926,23 +928,7 @@ internal sealed class MasmEmitter
             case EndProgramStatementSyntax:
                 EmitPopClipsTo(0);
                 EmitCleanupToDepth(0);
-                CallAligned("smile_cleanup_staged_arguments");
-                if (_currentRoutine != null)
-                {
-                    foreach (var temporary in _currentFrame!.Temporaries.Where(temporary => temporary.RequiresCleanup))
-                        EmitCleanup(new MasmCleanupAction(temporary));
-                    foreach (var symbol in _currentRoutine.LocalSymbols.Values.Where(symbol =>
-                                 symbol.Type.RequiresCleanup && !symbol.Type.IsClass &&
-                                 symbol.ParameterMode != ParameterPassingMode.ByRef))
-                        EmitReleaseSymbol(symbol);
-                }
-                EmitProgramCleanup();
-                CallAligned("smile_class_lifetime_report");
-                CallAligned("smile_media_shutdown");
-                CallAligned("smile_text_lifetime_report");
-                if (_usesMusic) CallAligned("smile_music_shutdown");
-                Line("    xor ecx, ecx");
-                CallAligned("ExitProcess");
+                EmitTermination(0);
                 break;
             case GameWindowStatementSyntax gameWindow:
                 EmitTextArgument(gameWindow.Title);
@@ -1182,8 +1168,10 @@ internal sealed class MasmEmitter
         }
         EmitNativeCall("smile_clip_push", 4);
         _clipDepth++;
+        UpdateActiveFrameClipCount(1);
         EmitStatements(clip.Statements);
         CallAligned("smile_clip_pop");
+        UpdateActiveFrameClipCount(-1);
         _clipDepth--;
     }
 
@@ -1767,7 +1755,7 @@ internal sealed class MasmEmitter
             Line($"    mov rcx, {classType.InstanceSize.ToString(CultureInfo.InvariantCulture)}");
             Line($"    lea rdx, {_classFinalizerLabels[classType]}");
             CallAligned("smile_class_allocate");
-            EmitRequireClassReference();
+            EmitRequireClassAllocation();
             Line($"    mov {TemporaryMemory(constructorResult)}, rax");
             RegisterStagedCleanup(constructorResult, constructorRegistration, classType);
         }
@@ -2018,18 +2006,6 @@ internal sealed class MasmEmitter
         Line("    mov QWORD PTR [smile_staged_cleanup_head], rax");
     }
 
-    private void RegisterStagedCleanup(VariableSymbol symbol, MasmTemporaryStorage registration)
-    {
-        EmitTemporaryAddress(registration, "r10");
-        Line("    mov rdx, QWORD PTR [smile_staged_cleanup_head]");
-        Line("    mov QWORD PTR [r10], rdx");
-        EmitAddress(symbol);
-        Line("    mov QWORD PTR [r10+8], rax");
-        Line("    mov rdx, OFFSET smile_class_clear");
-        Line("    mov QWORD PTR [r10+16], rdx");
-        Line("    mov QWORD PTR [smile_staged_cleanup_head], r10");
-    }
-
     private void UnregisterStagedCleanup(BoundCallArgument argument)
     {
         UnregisterStagedCleanup(_callArgumentRegistrations[argument]);
@@ -2043,6 +2019,38 @@ internal sealed class MasmEmitter
         Line("    mov QWORD PTR [rax], 0");
         Line("    mov QWORD PTR [rax+8], 0");
         Line("    mov QWORD PTR [rax+16], 0");
+    }
+
+    private void RegisterActiveFrame(RoutineSymbol routine)
+    {
+        var registration = _activeFrameRegistrations[routine];
+        EmitTemporaryAddress(registration, "rax");
+        Line("    mov rdx, QWORD PTR [smile_active_frame_cleanup_head]");
+        Line("    mov QWORD PTR [rax], rdx");
+        Line("    mov QWORD PTR [rax+8], rbp");
+        Line($"    mov rdx, OFFSET {ActiveFrameCleanupLabel(routine)}");
+        Line("    mov QWORD PTR [rax+16], rdx");
+        Line("    mov QWORD PTR [rax+24], 0");
+        Line("    mov QWORD PTR [smile_active_frame_cleanup_head], rax");
+    }
+
+    private void UnregisterActiveFrame(RoutineSymbol routine)
+    {
+        var registration = _activeFrameRegistrations[routine];
+        EmitTemporaryAddress(registration, "rax");
+        Line("    mov rdx, QWORD PTR [rax]");
+        Line("    mov QWORD PTR [smile_active_frame_cleanup_head], rdx");
+        for (var offset = 0; offset < registration.Size; offset += 8)
+            Line($"    mov QWORD PTR [rax{Offset(offset)}], 0");
+    }
+
+    private void UpdateActiveFrameClipCount(int delta)
+    {
+        if (_currentRoutine == null)
+            return;
+        var registration = _activeFrameRegistrations[_currentRoutine];
+        var operation = delta > 0 ? "add" : "sub";
+        Line($"    {operation} QWORD PTR [rbp-{registration.FrameOffset - 24}], 1");
     }
 
     private void EmitWritableAddress(ExpressionSyntax expression)
@@ -2536,24 +2544,34 @@ internal sealed class MasmEmitter
         Line("    test rax, rax");
         Line($"    jnz {valid}");
         CallAligned("smile_class_nothing_report");
+        EmitPopClipsTo(0);
+        EmitTermination(2);
+        Line($"{valid}:");
+    }
+
+    private void EmitRequireClassAllocation()
+    {
+        var valid = NewLabel("class_allocation_valid");
+        Line("    test rax, rax");
+        Line($"    jnz {valid}");
+        CallAligned("smile_class_allocation_failure_report");
+        EmitPopClipsTo(0);
+        EmitTermination(3);
+        Line($"{valid}:");
+    }
+
+    private void EmitTermination(int exitCode)
+    {
         CallAligned("smile_cleanup_staged_arguments");
-        if (_currentRoutine != null)
-        {
-            foreach (var temporary in _currentFrame!.Temporaries.Where(temporary => temporary.RequiresCleanup))
-                EmitCleanup(new MasmCleanupAction(temporary));
-            foreach (var symbol in _currentRoutine.LocalSymbols.Values.Where(symbol =>
-                         symbol.Type.RequiresCleanup && !symbol.Type.IsClass &&
-                         symbol.ParameterMode != ParameterPassingMode.ByRef))
-                EmitReleaseSymbol(symbol);
-        }
+        CallAligned("smile_cleanup_active_frames");
         EmitProgramCleanup();
         CallAligned("smile_class_lifetime_report");
+        CallAligned("smile_image_lifetime_report");
         CallAligned("smile_media_shutdown");
         CallAligned("smile_text_lifetime_report");
         if (_usesMusic) CallAligned("smile_music_shutdown");
-        Line("    mov ecx, 2");
+        Line($"    mov ecx, {exitCode.ToString(CultureInfo.InvariantCulture)}");
         CallAligned("ExitProcess");
-        Line($"{valid}:");
     }
 
     private void EmitCleanupToDepth(int cleanupDepth)
@@ -2565,7 +2583,10 @@ internal sealed class MasmEmitter
     private void EmitPopClipsTo(int clipDepth)
     {
         for (var index = _clipDepth; index > clipDepth; index--)
+        {
             CallAligned("smile_clip_pop");
+            UpdateActiveFrameClipCount(-1);
+        }
     }
 
     private void EmitStagedCleanupHelper()
@@ -2598,6 +2619,90 @@ internal sealed class MasmEmitter
         Line("    ret");
         Line("smile_cleanup_staged_arguments ENDP");
     }
+
+    private void EmitActiveFrameCleanupHelper()
+    {
+        var loop = NewLabel("active_frame_cleanup_loop");
+        var done = NewLabel("active_frame_cleanup_done");
+        Line();
+        Line("smile_cleanup_active_frames PROC");
+        Line("    push rbp");
+        Line("    mov rbp, rsp");
+        Line("    sub rsp, 48");
+        Line($"{loop}:");
+        Line("    mov rax, QWORD PTR [smile_active_frame_cleanup_head]");
+        Line("    test rax, rax");
+        Line($"    jz {done}");
+        Line("    mov QWORD PTR [rbp-8], rax");
+        Line("    mov rdx, QWORD PTR [rax]");
+        Line("    mov QWORD PTR [smile_active_frame_cleanup_head], rdx");
+        Line("    mov rcx, rax");
+        Line("    mov rax, QWORD PTR [rax+16]");
+        Line("    call rax");
+        Line("    mov rax, QWORD PTR [rbp-8]");
+        for (var offset = 0; offset < 32; offset += 8)
+            Line($"    mov QWORD PTR [rax{Offset(offset)}], 0");
+        Line($"    jmp {loop}");
+        Line($"{done}:");
+        Line("    mov rsp, rbp");
+        Line("    pop rbp");
+        Line("    ret");
+        Line("smile_cleanup_active_frames ENDP");
+    }
+
+    private void EmitActiveFrameCleanup(RoutineSymbol routine)
+    {
+        var popClip = NewLabel("active_frame_pop_clip");
+        var clearValues = NewLabel("active_frame_clear_values");
+        Line();
+        Line($"{ActiveFrameCleanupLabel(routine)} PROC");
+        Line("    push rbp");
+        Line("    mov rbp, rsp");
+        Line("    sub rsp, 48");
+        Line("    mov QWORD PTR [rbp-8], rcx");
+        Line("    mov rax, QWORD PTR [rcx+8]");
+        Line("    mov QWORD PTR [rbp-16], rax");
+        Line($"{popClip}:");
+        Line("    mov rax, QWORD PTR [rbp-8]");
+        Line("    cmp QWORD PTR [rax+24], 0");
+        Line($"    je {clearValues}");
+        CallAligned("smile_clip_pop");
+        Line("    mov rax, QWORD PTR [rbp-8]");
+        Line("    sub QWORD PTR [rax+24], 1");
+        Line($"    jmp {popClip}");
+        Line($"{clearValues}:");
+
+        foreach (var temporary in _frameLayouts[routine].Temporaries
+                     .Where(temporary => temporary.RequiresCleanup).Reverse())
+            EmitActiveFrameValueClear(temporary.Type, temporary.FrameOffset);
+        foreach (var symbol in routine.LocalSymbols.Values.Where(IsOwnedFrameValue)
+                     .OrderByDescending(symbol => symbol.DeclarationSpan.Start))
+        {
+            var elementSize = Math.Max(8, symbol.Type.Size);
+            for (var index = Math.Max(1, symbol.ArraySize) - 1; index >= 0; index--)
+                EmitActiveFrameValueClear(symbol.Type,
+                    _frameLayouts[routine].LocalOffsets[symbol] - index * elementSize);
+        }
+
+        Line("    mov rsp, rbp");
+        Line("    pop rbp");
+        Line("    ret");
+        Line($"{ActiveFrameCleanupLabel(routine)} ENDP");
+    }
+
+    private void EmitActiveFrameValueClear(SmileType type, int frameOffset)
+    {
+        Line("    mov rax, QWORD PTR [rbp-16]");
+        Line($"    lea rcx, [rax-{frameOffset.ToString(CultureInfo.InvariantCulture)}]");
+        CallAligned(CleanupRoutine(type));
+    }
+
+    private static bool IsOwnedFrameValue(VariableSymbol symbol) =>
+        !symbol.IsConstant && symbol.Type.RequiresCleanup &&
+        symbol.ParameterMode != ParameterPassingMode.ByRef && symbol is not InstanceReceiverSymbol;
+
+    private string ActiveFrameCleanupLabel(RoutineSymbol routine) =>
+        _routineLabels[routine] + "_active_frame_cleanup";
 
     private void EmitRecordHelpers(RecordTypeSymbol record)
     {
@@ -2698,19 +2803,17 @@ internal sealed class MasmEmitter
         Line("    sub rsp, 48");
         Line("    mov QWORD PTR [rbp-8], rcx");
 
-        foreach (var field in classType.Fields.Where(field => !field.IsArray && field.Type == SmileType.Text)
-                     .OrderByDescending(field => field.Ordinal))
-            EmitClassFieldClear(field, field.Offset);
-        foreach (var field in classType.Fields.Where(field => !field.IsArray &&
-                         field.Type is RecordTypeSymbol { RequiresValueCleanup: true })
-                     .OrderByDescending(field => field.Ordinal))
-            EmitClassFieldClear(field, field.Offset);
-        foreach (var field in classType.Fields.Where(field => field.IsArray && field.Type.RequiresValueCleanup)
+        foreach (var field in classType.Fields.Where(field => field.Type.RequiresValueCleanup)
                      .OrderByDescending(field => field.Ordinal))
         {
-            var elementSize = Math.Max(8, field.Type.Size);
-            for (var index = field.ElementCount - 1; index >= 0; index--)
-                EmitClassFieldClear(field, field.Offset + index * elementSize);
+            if (field.IsArray)
+            {
+                var elementSize = Math.Max(8, field.Type.Size);
+                for (var index = field.ElementCount - 1; index >= 0; index--)
+                    EmitClassFieldClear(field, field.Offset + index * elementSize);
+            }
+            else
+                EmitClassFieldClear(field, field.Offset);
         }
 
         Line("    mov rax, QWORD PTR [rbp-8]");
