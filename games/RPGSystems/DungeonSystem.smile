@@ -17,6 +17,7 @@ Import Smile.RPG.Encounters As Encounters
 Import Smile.UI.Core As UI
 Import Smile.UI.Menu As Menus
 Import Smile.UI.Dialogue As Dialogues
+Import RPGSystems.Storage As Storage
 Import RPGSystems.DungeonWorkflow As DungeonWorkflow
 
 Const MODE_TITLE = 1
@@ -154,6 +155,8 @@ Dim HeroDefinition As Characters.CharacterDefinition
 Dim CompanionDefinition As Characters.CharacterDefinition
 Dim ItemDefinition As Inventory.ItemDefinition
 Dim ZoneDefinition As Encounters.ZoneDefinition
+
+Const SAVE_SCHEMA_VERSION = 8
 
 Public Sub Run()
 
@@ -496,11 +499,11 @@ Sub InitializeMenus()
 
     Call RecordInitialization(ItemIndex >= 0)
 
-    ItemIndex = CommandMenu.AddItem("Save Slot 1", 4, True)
+    ItemIndex = CommandMenu.AddItem("Save Dungeon State", 4, True)
 
     Call RecordInitialization(ItemIndex >= 0)
 
-    ItemIndex = CommandMenu.AddItem("Load Slot 1", 5, True)
+    ItemIndex = CommandMenu.AddItem("Load Dungeon State", 5, True)
 
     Call RecordInitialization(ItemIndex >= 0)
 
@@ -903,7 +906,8 @@ Sub HandleTitle(PressedKey As Number)
                 End If
 
             Case 3
-                Result = DungeonWorkflow.LoadGame(State, 1, 8)
+                Result = DungeonWorkflow.LoadGame(State,
+                    Storage.PhysicalSlot(Storage.SaveDomain.Dungeon), SAVE_SCHEMA_VERSION)
 
                 If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
 
@@ -1611,7 +1615,8 @@ Sub HandleMenu(PressedKey As Number)
                 InfoPage = 2
                 Mode = MODE_INFO
             Case 4
-                Result = DungeonWorkflow.SaveGame(State, 1, 8)
+                Result = DungeonWorkflow.SaveGame(State,
+                    Storage.PhysicalSlot(Storage.SaveDomain.Dungeon), SAVE_SCHEMA_VERSION)
 
                 If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
                     Status = "Saved slot 1 inside the current dungeon floor."
@@ -1622,7 +1627,8 @@ Sub HandleMenu(PressedKey As Number)
 
                 Mode = MODE_DUNGEON
             Case 5
-                Result = DungeonWorkflow.LoadGame(State, 1, 8)
+                Result = DungeonWorkflow.LoadGame(State,
+                    Storage.PhysicalSlot(Storage.SaveDomain.Dungeon), SAVE_SCHEMA_VERSION)
 
                 If Result = DungeonWorkflow.DUNGEON_RESULT_OK Then
 

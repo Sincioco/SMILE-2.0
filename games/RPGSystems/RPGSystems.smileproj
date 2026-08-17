@@ -9,6 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <SmileSource Include="Program.smile" StartupOnly="true" />
+    <SmileSource Include="Storage.smile" />
     <SmileSource Include="BattleSystem.smile" />
     <SmileSource Include="DungeonSystem.smile" />
     <SmileSource Include="DungeonWorkflow.smile" />

@@ -1,0 +1,2 @@
+RPGSystems raw slot collision: REPRODUCED
+RPGSystems persistence isolation: PASS

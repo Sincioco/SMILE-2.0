@@ -1,0 +1,59 @@
+''' Application-local persistence domains for independently saved RPGSystems galleries.
+Module RPGSystems.Storage
+
+Option Explicit
+
+Import Smile.RPG.SaveGames As SaveGames
+
+Public Enum SaveDomain
+    Management = 1
+    Dungeon = 2
+    World = 3
+End Enum
+
+Public Function PhysicalSlot(Domain As SaveDomain) As Number
+
+    Select Case Domain
+        Case SaveDomain.Management
+            Return 1
+        Case SaveDomain.Dungeon
+            Return 2
+        Case SaveDomain.World
+            Return 3
+    End Select
+
+    Return 0
+
+End Function
+
+Public Function SaveState(StateHandle As Number, Domain As SaveDomain, SchemaVersion As Number) As Number
+
+    Dim Result As Number
+
+    Result = SaveGames.SaveGame(StateHandle, PhysicalSlot(Domain), SchemaVersion)
+
+    Return Result
+
+End Function
+
+Public Function LoadState(StateHandle As Number, Domain As SaveDomain, ExpectedSchemaVersion As Number) As Number
+
+    Dim Result As Number
+
+    Result = SaveGames.LoadGame(StateHandle, PhysicalSlot(Domain), ExpectedSchemaVersion)
+
+    Return Result
+
+End Function
+
+Public Function Exists(StateHandle As Number, Domain As SaveDomain) As Boolean
+
+    Dim Result As Boolean
+
+    Result = SaveGames.Exists(StateHandle, PhysicalSlot(Domain))
+
+    Return Result
+
+End Function
+
+End Module

@@ -10,7 +10,7 @@ Import Smile.RPG.Inventory As Inventory
 Import Smile.RPG.Equipment As Equipment
 Import Smile.RPG.Abilities As Abilities
 Import Smile.RPG.Shops As Shops
-Import Smile.RPG.SaveGames As SaveGames
+Import RPGSystems.Storage As Storage
 Import Smile.UI.Core As UI
 Import Smile.UI.Menu As Menus
 
@@ -50,6 +50,8 @@ Dim Result As Number
 Dim Status As Text
 Dim Running As Boolean
 Dim OperationSucceeded As Boolean
+
+Const SAVE_SCHEMA_VERSION = 1
 
 Public Sub Run()
 
@@ -271,8 +273,8 @@ Sub InitializeMenus()
     ItemIndex = ShopMenu.AddItem("Buy Potion", 501, True)
     ItemIndex = ShopMenu.AddItem("Sell Potion", 502, True)
     ItemIndex = ShopMenu.AddItem("Reset Stock", 503, True)
-    ItemIndex = SaveMenu.AddItem("Save Slot 1", 601, True)
-    ItemIndex = SaveMenu.AddItem("Load Slot 1", 602, True)
+    ItemIndex = SaveMenu.AddItem("Save Management State", 601, True)
+    ItemIndex = SaveMenu.AddItem("Load Management State", 602, True)
 
     Navigator = New Menus.MenuNavigator(RootMenu, NavigatorStyle)
     OperationSucceeded = Navigator.BindSubmenu(RootMenu, PartyIndex, PartyMenu, False)
@@ -355,15 +357,15 @@ Sub RunAction(Value As Number)
 
     Else If Value = 601 Then
 
-        Result = SaveGames.SaveGame(State, 1, 1)
+        Result = Storage.SaveState(State, Storage.SaveDomain.Management, SAVE_SCHEMA_VERSION)
         OperationSucceeded = Result = RPG.RPG_RESULT_OK
-        Status = "Slot 1 saved deterministic SRPG version-1 progress."
+        Status = "Management state saved as deterministic SRPG version-1 progress."
 
     Else If Value = 602 Then
 
-        Result = SaveGames.LoadGame(State, 1, 1)
+        Result = Storage.LoadState(State, Storage.SaveDomain.Management, SAVE_SCHEMA_VERSION)
         OperationSucceeded = Result = RPG.RPG_RESULT_OK
-        Status = "Slot 1 validated completely before transactional apply."
+        Status = "Management state validated completely before transactional apply."
 
     Else If Value = 999 Then
 
@@ -419,9 +421,9 @@ Sub DrawStateSummary()
     Draw Number Characters.MaximumMagicPoints(State, 200) At 970, 381 Size 18 Color YELLOW
     Draw Text "Potion Stock:" At 790, 415 Size 18 Color WHITE
     Draw Number Shops.Stock(State, 1, 10) At 980, 415 Size 18 Color YELLOW
-    Draw Text "Save Slot 1:" At 790, 449 Size 18 Color WHITE
+    Draw Text "Management Save:" At 790, 449 Size 18 Color WHITE
 
-    If SaveGames.Exists(State, 1) Then
+    If Storage.Exists(State, Storage.SaveDomain.Management) Then
         Draw Text "Saved" At 950, 449 Size 18 Color LIGHT_GREEN
     Else
         Draw Text "Empty" At 950, 449 Size 18 Color LIGHT_GRAY

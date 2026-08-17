@@ -1,0 +1,13 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Console</ProjectKind>
+    <StartupFile>Tests\PersistenceIsolation.smile</StartupFile>
+    <OutputName>RPGSystemsPersistenceTests</OutputName>
+    <ApplicationId>smile.tests.rpg-systems-storage</ApplicationId>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Tests\PersistenceIsolation.smile" StartupOnly="true" />
+    <SmileSource Include="Storage.smile" />
+    <SmileProjectReference Include="..\..\libraries\Smile.RPG\Smile.RPG.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

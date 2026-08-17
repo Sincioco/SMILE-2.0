@@ -1,0 +1,90 @@
+''' Non-destructive proof of raw collision behavior and RPGSystems domain isolation.
+
+Option Explicit
+
+Import Smile.RPG.Core As RPG
+Import Smile.RPG.Party As Party
+Import Smile.RPG.SaveGames As SaveGames
+Import RPGSystems.Storage As Storage
+
+Dim ManagementState As Number
+Dim DungeonState As Number
+Dim WorldState As Number
+Dim Result As Number
+Dim Passed As Boolean
+
+ManagementState = RPG.Create()
+DungeonState = RPG.Create()
+WorldState = RPG.Create()
+Passed = ManagementState > 0 And DungeonState > 0 And WorldState > 0
+Passed = Passed And Party.SetGold(ManagementState, 111)
+Passed = Passed And Party.SetGold(DungeonState, 222)
+Result = SaveGames.SaveGame(ManagementState, 7, 1)
+Passed = Passed And Result = RPG.RPG_RESULT_OK
+Result = SaveGames.SaveGame(DungeonState, 7, 1)
+Passed = Passed And Result = RPG.RPG_RESULT_OK
+Passed = Passed And Party.SetGold(ManagementState, 0)
+Result = SaveGames.LoadGame(ManagementState, 7, 1)
+Passed = Passed And Result = RPG.RPG_RESULT_OK
+Passed = Passed And Party.Gold(ManagementState) = 222
+
+If Passed Then
+    Print "RPGSystems raw slot collision: REPRODUCED"
+Else
+    Print "RPGSystems raw slot collision: FAILED"
+End If
+
+Passed = Storage.PhysicalSlot(Storage.SaveDomain.Management) = 1
+Passed = Passed And Storage.PhysicalSlot(Storage.SaveDomain.Dungeon) = 2
+Passed = Passed And Storage.PhysicalSlot(Storage.SaveDomain.World) = 3
+Passed = Passed And Party.SetGold(ManagementState, 111)
+Passed = Passed And Party.SetGold(DungeonState, 222)
+Passed = Passed And Party.SetGold(WorldState, 333)
+Result = Storage.SaveState(ManagementState, Storage.SaveDomain.Management, 1)
+Passed = Passed And Result = RPG.RPG_RESULT_OK
+Result = Storage.SaveState(DungeonState, Storage.SaveDomain.Dungeon, 8)
+Passed = Passed And Result = RPG.RPG_RESULT_OK
+Result = Storage.SaveState(WorldState, Storage.SaveDomain.World, 1)
+Passed = Passed And Result = RPG.RPG_RESULT_OK
+Passed = Passed And Storage.Exists(ManagementState, Storage.SaveDomain.Management)
+Passed = Passed And Storage.Exists(DungeonState, Storage.SaveDomain.Dungeon)
+Passed = Passed And Storage.Exists(WorldState, Storage.SaveDomain.World)
+Passed = Passed And Party.SetGold(ManagementState, 0)
+Passed = Passed And Party.SetGold(DungeonState, 0)
+Passed = Passed And Party.SetGold(WorldState, 0)
+Result = Storage.LoadState(ManagementState, Storage.SaveDomain.Management, 1)
+Passed = Passed And Result = RPG.RPG_RESULT_OK And Party.Gold(ManagementState) = 111
+Result = Storage.LoadState(DungeonState, Storage.SaveDomain.Dungeon, 8)
+Passed = Passed And Result = RPG.RPG_RESULT_OK And Party.Gold(DungeonState) = 222
+Result = Storage.LoadState(WorldState, Storage.SaveDomain.World, 1)
+Passed = Passed And Result = RPG.RPG_RESULT_OK And Party.Gold(WorldState) = 333
+Passed = Passed And Party.SetGold(ManagementState, 444)
+Passed = Passed And Party.SetGold(DungeonState, 555)
+Passed = Passed And Party.SetGold(WorldState, 666)
+Result = Storage.SaveState(WorldState, Storage.SaveDomain.World, 1)
+Passed = Passed And Result = RPG.RPG_RESULT_OK
+Result = Storage.SaveState(ManagementState, Storage.SaveDomain.Management, 1)
+Passed = Passed And Result = RPG.RPG_RESULT_OK
+Result = Storage.SaveState(DungeonState, Storage.SaveDomain.Dungeon, 8)
+Passed = Passed And Result = RPG.RPG_RESULT_OK
+Passed = Passed And Party.SetGold(ManagementState, 0)
+Passed = Passed And Party.SetGold(DungeonState, 0)
+Passed = Passed And Party.SetGold(WorldState, 0)
+Result = Storage.LoadState(WorldState, Storage.SaveDomain.World, 1)
+Passed = Passed And Result = RPG.RPG_RESULT_OK And Party.Gold(WorldState) = 666
+Result = Storage.LoadState(DungeonState, Storage.SaveDomain.Dungeon, 8)
+Passed = Passed And Result = RPG.RPG_RESULT_OK And Party.Gold(DungeonState) = 555
+Result = Storage.LoadState(ManagementState, Storage.SaveDomain.Management, 1)
+Passed = Passed And Result = RPG.RPG_RESULT_OK And Party.Gold(ManagementState) = 444
+
+Call RPG.Destroy(WorldState)
+Call RPG.Destroy(DungeonState)
+Call RPG.Destroy(ManagementState)
+
+If Passed Then
+    Print "RPGSystems persistence isolation: PASS"
+Else
+    Print "RPGSystems persistence isolation: FAIL"
+End If
+
+End Program

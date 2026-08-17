@@ -15,7 +15,7 @@ Import Smile.RPG.Shops As Shops
 Import Smile.RPG.World As World
 Import Smile.RPG.Story As Story
 Import Smile.RPG.Encounters As Encounters
-Import Smile.RPG.SaveGames As SaveGames
+Import RPGSystems.Storage As Storage
 Import Smile.UI.Core As UI
 Import Smile.UI.Menu As Menus
 Import Smile.UI.Dialogue As Dialogues
@@ -42,6 +42,7 @@ Const SHOP_GENERAL = 1
 Const STORY_GUIDE_SPOKEN = 1
 Const STORY_VISITS = 2
 Const ENCOUNTER_ZONE = 1
+Const SAVE_SCHEMA_VERSION = 1
 
 Dim Tileset As Image
 Dim HeroImage As Image
@@ -300,8 +301,8 @@ Sub InitializeMenus()
     ItemIndex = FieldMenu.AddItem("Reorder Party", 5, True)
     ItemIndex = FieldMenu.AddItem("QA: Add Level", 6, True)
     ItemIndex = FieldMenu.AddItem("QA: Add Strength", 7, True)
-    ItemIndex = FieldMenu.AddItem("Save Slot 1", 8, True)
-    ItemIndex = FieldMenu.AddItem("Load Slot 1", 9, True)
+    ItemIndex = FieldMenu.AddItem("Save World State", 8, True)
+    ItemIndex = FieldMenu.AddItem("Load World State", 9, True)
     ItemIndex = FieldMenu.AddItem("Close", 10, True)
     FieldNavigator = New Menus.MenuNavigator(FieldMenu, NavigatorStyle)
 
@@ -597,7 +598,7 @@ Sub HandleTitle(PressedKey As Number)
                 Mode = MODE_FIELD
                 Status = "Explore Lumen Vale. Enter opens the field command menu."
             Case 2
-                Result = SaveGames.LoadGame(State, 1, 1)
+                Result = Storage.LoadState(State, Storage.SaveDomain.World, SAVE_SCHEMA_VERSION)
 
                 If Result = RPG.RPG_RESULT_OK Then
 
@@ -607,7 +608,7 @@ Sub HandleTitle(PressedKey As Number)
                     Status = "Existing world, party, shop, and story state restored."
 
                 Else
-                    Status = "No valid save exists in slot 1 yet."
+                    Status = "No valid World save exists yet."
 
                 End If
 
@@ -833,18 +834,18 @@ Sub RunFieldAction(Value As Number)
             Status = "QA action increased Mira's Strength."
             Mode = MODE_FIELD
         Case 8
-            Result = SaveGames.SaveGame(State, 1, 1)
-            Status = "Slot 1 saved combined RPG, world, actor, story, shop, and encounter state."
+            Result = Storage.SaveState(State, Storage.SaveDomain.World, SAVE_SCHEMA_VERSION)
+            Status = "World state saved with RPG, actor, story, shop, and encounter progress."
             Mode = MODE_FIELD
         Case 9
-            Result = SaveGames.LoadGame(State, 1, 1)
+            Result = Storage.LoadState(State, Storage.SaveDomain.World, SAVE_SCHEMA_VERSION)
 
             If Result = RPG.RPG_RESULT_OK Then
                 Call SyncFieldState()
 
-                Status = "Slot 1 restored the complete combined state transactionally."
+                Status = "World state restored the complete combined state transactionally."
             Else
-                Status = "Slot 1 did not contain a valid matching save."
+                Status = "World storage did not contain a valid matching save."
             End If
 
             Mode = MODE_FIELD
