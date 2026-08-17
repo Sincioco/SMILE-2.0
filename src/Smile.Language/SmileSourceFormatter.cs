@@ -149,7 +149,29 @@ public static class SmileSourceFormatter
             result = RewriteComputedReturns(result, filePath, symbolAnalysis, symbolSyntaxTree);
         if (formatLongIf)
             result = RewriteLongIfStatements(result, maximumLineLength, filePath);
+        result = RewriteNamedArgumentSpacing(result, filePath);
         return result;
+    }
+
+    private static string RewriteNamedArgumentSpacing(string text, string? filePath)
+    {
+        var tree = SmileLanguage.Analyze(text, filePath).SyntaxTree;
+        var edits = new List<TextEdit>();
+        foreach (var token in tree.Tokens.Where(token => token.Kind == SyntaxKind.ColonEqualsToken))
+        {
+            var before = token.Span.Start;
+            while (before > 0 && text[before - 1] is ' ' or '\t')
+                before--;
+            if (before != token.Span.Start)
+                edits.Add(new TextEdit(before, token.Span.Start - before, string.Empty));
+
+            var after = token.Span.End;
+            while (after < text.Length && text[after] is ' ' or '\t')
+                after++;
+            if (after != token.Span.End)
+                edits.Add(new TextEdit(token.Span.End, after - token.Span.End, string.Empty));
+        }
+        return ApplyEdits(text, edits);
     }
 
     private static string RewriteContextualIdentifiers(string text, string? filePath)
@@ -183,6 +205,7 @@ public static class SmileSourceFormatter
             SmileResolvedSymbolKind.Array or SmileResolvedSymbolKind.Type or SmileResolvedSymbolKind.Enum or
             SmileResolvedSymbolKind.EnumMember or
             SmileResolvedSymbolKind.Field or SmileResolvedSymbolKind.Parameter or
+            SmileResolvedSymbolKind.NamedArgument or
             SmileResolvedSymbolKind.Local;
 
     private static string RewriteComputedReturns(string text, string? filePath,

@@ -1,0 +1,31 @@
+Option Explicit
+
+Game Window "Optional Named Ownership" Size 320 By 180
+
+Type MediaBox
+    Picture As Image
+End Type
+
+Dim Shared As MediaBox
+
+Load Image Shared.Picture From "Assets\PixelProof.png"
+
+Call Consume(
+    Value:=Shared,
+    Ignored:=StopNow()
+)
+
+End Program
+
+Function StopNow() As Number
+
+    End Program
+    Return 0
+
+End Function
+
+Sub Consume(Value As MediaBox, Ignored As Number)
+
+    Print Image_Width(Value.Picture)
+
+End Sub

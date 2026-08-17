@@ -30,6 +30,7 @@ public enum SyntaxKind
     CloseBracketToken,
     SemicolonToken,
     DotToken,
+    ColonEqualsToken,
 
     DimKeyword,
     IfKeyword,
@@ -125,6 +126,7 @@ public enum SyntaxKind
     ByValKeyword,
     TypeKeyword,
     EnumKeyword,
+    OptionalKeyword,
     ImageKeyword,
     UnloadKeyword,
     ClipKeyword,
@@ -297,6 +299,7 @@ public static class SyntaxFacts
         ["ByVal"] = SyntaxKind.ByValKeyword,
         ["Type"] = SyntaxKind.TypeKeyword,
         ["Enum"] = SyntaxKind.EnumKeyword,
+        ["Optional"] = SyntaxKind.OptionalKeyword,
         ["Image"] = SyntaxKind.ImageKeyword,
         ["Unload"] = SyntaxKind.UnloadKeyword,
         ["Clip"] = SyntaxKind.ClipKeyword,
@@ -366,7 +369,7 @@ public static class SyntaxFacts
     public static IReadOnlyList<string> GetKeywordTexts() => new List<string>(Keywords.Keys);
 
     public static bool IsKeyword(SyntaxKind kind) =>
-        (kind >= SyntaxKind.DimKeyword && kind <= SyntaxKind.EnumKeyword) ||
+        (kind >= SyntaxKind.DimKeyword && kind <= SyntaxKind.OptionalKeyword) ||
         (kind >= SyntaxKind.ImageKeyword && kind <= SyntaxKind.ChannelKeyword);
 
     public static bool IsBuiltInConstant(SyntaxKind kind) =>
@@ -419,6 +422,7 @@ public static class SyntaxFacts
             SyntaxKind.CloseBracketToken => "]",
             SyntaxKind.SemicolonToken => ";",
             SyntaxKind.DotToken => ".",
+            SyntaxKind.ColonEqualsToken => ":=",
             _ when IsKeyword(kind) || IsBuiltInConstant(kind) => GetCanonicalKeywordText(kind),
             _ => kind.ToString()
         };

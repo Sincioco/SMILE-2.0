@@ -1,0 +1,99 @@
+Option Explicit
+
+Enum Direction
+    Left = 3
+    Right = 4
+End Enum
+
+Type Payload
+    Name As Text
+    Total As Number
+End Type
+
+Const DEFAULT_DIRECTION = Direction.Left
+
+Dim Shared As Payload
+Dim Slot As Number
+Dim Values[2] As Number
+
+Shared.Name = "before"
+Shared.Total = 3
+
+Call Present(
+    DirectionValue:=Direction.Right,
+    Value:=1
+)
+
+Call Present(Value:=2)
+Call Observe(Shared, MutatePayload())
+
+Slot = 0
+
+Call SetCaptured(
+    Target:=Values[Slot],
+    NewValue:=MoveSlot()
+)
+
+Print Values[0]
+Print Values[1]
+
+Call Ordered(
+    Second:=Mark(2),
+    First:=Mark(1)
+)
+
+End Program
+
+Sub Present(
+    Value As Number,
+    Optional Caption As Text = "ready",
+    Optional DirectionValue As Direction = DEFAULT_DIRECTION
+)
+
+    Print Value
+    Print Caption
+    Print DirectionValue = Direction.Right
+
+End Sub
+
+Function MutatePayload() As Number
+
+    Shared.Name = "after"
+    Shared.Total = 8
+    Return 0
+
+End Function
+
+Sub Observe(Value As Payload, Ignored As Number)
+
+    Print Value.Name
+    Print Value.Total
+
+End Sub
+
+Function MoveSlot() As Number
+
+    Slot = 1
+    Return 9
+
+End Function
+
+Sub SetCaptured(ByRef Target As Number, NewValue As Number)
+
+    Target = NewValue
+
+End Sub
+
+Function Mark(Value As Number) As Number
+
+    Print Value
+    Return Value
+
+End Function
+
+Sub Ordered(First As Number, Second As Number)
+
+    Print First
+    Print Second
+
+End Sub

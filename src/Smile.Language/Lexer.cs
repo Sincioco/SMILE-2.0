@@ -143,6 +143,9 @@ internal sealed class Lexer
             case '.':
                 _position++;
                 return Token(SyntaxKind.DotToken, start);
+            case ':' when Peek(1) == '=':
+                _position += 2;
+                return Token(SyntaxKind.ColonEqualsToken, start);
         }
 
         _position++;

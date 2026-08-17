@@ -113,9 +113,70 @@ function Read-ZipEntryBytes {
 function Assert-PackageLocation {
     param($Location, [string[]]$DeclaredSources, [string]$Description)
 
-    if ($null -eq $Location -or $DeclaredSources -cnotcontains $Location.source -or
+    $propertyNames = [string[]]@($Location.PSObject.Properties | ForEach-Object { $_.Name })
+    if ($null -eq $Location -or
+        [string]::Join("`n", $propertyNames) -cne "source`nline`ncolumn`nlength" -or
+        $DeclaredSources -cnotcontains $Location.source -or
         $Location.line -lt 1 -or $Location.column -lt 1 -or $Location.length -lt 1) {
         throw "$Description has an invalid format-6 source location."
+    }
+}
+
+function Assert-PackageParameter {
+    param($Parameter, [int]$ExpectedOrdinal, [string[]]$DeclaredSources, [string]$Description)
+
+    $propertyNames = [string[]]@($Parameter.PSObject.Properties | ForEach-Object { $_.Name })
+    if ([string]::Join("`n", $propertyNames) -cne
+        "name`ntype`nmode`noptional`ndefault`nordinal`nlocation" -or
+        [string]::IsNullOrWhiteSpace($Parameter.name) -or
+        $Parameter.mode -notin @('ByVal', 'ByRef') -or $Parameter.optional -isnot [bool] -or
+        $Parameter.ordinal -ne $ExpectedOrdinal) {
+        throw "$Description does not use the canonical format-6 parameter shape."
+    }
+    Assert-PackageLocation $Parameter.location $DeclaredSources $Description
+
+    if (-not $Parameter.optional) {
+        if ($null -ne $Parameter.default) {
+            throw "$Description is required but has non-null default metadata."
+        }
+        return
+    }
+    if ($Parameter.mode -cne 'ByVal' -or $null -eq $Parameter.default) {
+        throw "$Description is Optional without a bound ByVal default."
+    }
+
+    $defaultNames = [string[]]@($Parameter.default.PSObject.Properties | ForEach-Object { $_.Name })
+    switch -CaseSensitive ($Parameter.default.kind) {
+        'number' {
+            if ([string]::Join("`n", $defaultNames) -cne "kind`nvalue" -or
+                $Parameter.type.kind -cne 'primitive' -or $Parameter.type.name -cne 'Number' -or
+                ($Parameter.default.value -isnot [int] -and $Parameter.default.value -isnot [long])) {
+                throw "$Description has invalid normalized Number default metadata."
+            }
+        }
+        'boolean' {
+            if ([string]::Join("`n", $defaultNames) -cne "kind`nvalue" -or
+                $Parameter.type.kind -cne 'primitive' -or $Parameter.type.name -cne 'Boolean' -or
+                $Parameter.default.value -isnot [bool]) {
+                throw "$Description has invalid normalized Boolean default metadata."
+            }
+        }
+        'text' {
+            if ([string]::Join("`n", $defaultNames) -cne "kind`nvalue" -or
+                $Parameter.type.kind -cne 'primitive' -or $Parameter.type.name -cne 'Text' -or
+                $Parameter.default.value -isnot [string]) {
+                throw "$Description has invalid normalized Text default metadata."
+            }
+        }
+        'enum' {
+            if ([string]::Join("`n", $defaultNames) -cne "kind`nmember`nvalue" -or
+                $Parameter.type.kind -cne 'enum' -or
+                [string]::IsNullOrWhiteSpace($Parameter.default.member) -or
+                ($Parameter.default.value -isnot [int] -and $Parameter.default.value -isnot [long])) {
+                throw "$Description has invalid normalized Enum default metadata."
+            }
+        }
+        default { throw "$Description has unsupported default kind '$($Parameter.default.kind)'." }
     }
 }
 
@@ -226,9 +287,11 @@ function Assert-SmileLibraryPackage {
             }
             foreach ($member in @($module.members)) {
                 Assert-PackageLocation $member.location $declaredSources "$RelativePath member '$($member.name)'"
+                $parameterOrdinal = 0
                 foreach ($parameter in @($member.parameters | Where-Object { $null -ne $_ })) {
-                    Assert-PackageLocation $parameter.location $declaredSources `
+                    Assert-PackageParameter $parameter $parameterOrdinal $declaredSources `
                         "$RelativePath parameter '$($member.name).$($parameter.name)'"
+                    $parameterOrdinal++
                 }
                 foreach ($field in @($member.fields | Where-Object { $null -ne $_ })) {
                     Assert-PackageLocation $field.location $declaredSources `
@@ -237,10 +300,65 @@ function Assert-SmileLibraryPackage {
                 foreach ($nestedMember in @($member.members | Where-Object { $null -ne $_ })) {
                     Assert-PackageLocation $nestedMember.location $declaredSources `
                         "$RelativePath nested member '$($member.name).$($nestedMember.name)'"
+                    $nestedParameterOrdinal = 0
+                    foreach ($parameter in @($nestedMember.parameters | Where-Object { $null -ne $_ })) {
+                        Assert-PackageParameter $parameter $nestedParameterOrdinal $declaredSources `
+                            "$RelativePath nested parameter '$($member.name).$($nestedMember.name).$($parameter.name)'"
+                        $nestedParameterOrdinal++
+                    }
                 }
             }
         }
         Write-Host "Format-6 SMILE library verified: $RelativePath"
+    }
+    finally {
+        $archive.Dispose()
+    }
+}
+
+function Assert-LightweightOopProofPackage {
+    param([string]$RelativePath)
+
+    $path = Require-File $RelativePath
+    $archive = [IO.Compression.ZipFile]::OpenRead($path)
+    try {
+        $api = [Text.Encoding]::UTF8.GetString(
+            (Read-ZipEntryBytes ($archive.GetEntry('api/public-symbols.json')))) | ConvertFrom-Json
+        $module = @($api.modules | Where-Object { $_.name -ceq 'Smile.Lightweight.Oop.Proof' })
+        if ($module.Count -ne 1) {
+            throw "$RelativePath does not expose the proof Module exactly once."
+        }
+        $displayMode = @($module[0].members | Where-Object { $_.name -ceq 'DisplayMode' })
+        $report = @($module[0].members | Where-Object { $_.name -ceq 'Report' })
+        if ($displayMode.Count -ne 1 -or $report.Count -ne 1 -or
+            [string]::Join('|', @($displayMode[0].members.name)) -cne 'Standard|Compact|CompactAlias' -or
+            [string]::Join('|', @($displayMode[0].members.value)) -cne '1|2|2') {
+            throw "$RelativePath has an unexpected proof Enum or routine surface."
+        }
+        $parameters = @($report[0].parameters)
+        if ($parameters.Count -ne 5 -or
+            [string]::Join('|', @($parameters.name)) -cne 'Label|Copies|Enabled|Suffix|Mode' -or
+            $parameters[0].optional -or $null -ne $parameters[0].default -or
+            $parameters[1].default.kind -cne 'number' -or $parameters[1].default.value -ne 3 -or
+            $parameters[2].default.kind -cne 'boolean' -or -not $parameters[2].default.value -or
+            $parameters[3].default.kind -cne 'text' -or $parameters[3].default.value -cne '!' -or
+            $parameters[4].type.kind -cne 'enum' -or
+            $parameters[4].type.identity -cne 'Smile.Lightweight.Oop.Proof::DisplayMode' -or
+            $parameters[4].type.provider -cne 'Smile.Lightweight.Oop.Proof@1.0.0' -or
+            $parameters[4].default.kind -cne 'enum' -or
+            $parameters[4].default.member -cne 'CompactAlias' -or
+            $parameters[4].default.value -ne 2 -or
+            $parameters[4].default.PSObject.Properties.Name -ccontains 'type' -or
+            $parameters[4].default.PSObject.Properties.Name -ccontains 'provider') {
+            throw "$RelativePath has incorrect normalized Optional/default metadata."
+        }
+        $declaredAlias = @($displayMode[0].members | Where-Object {
+            $_.name -ceq $parameters[4].default.member -and $_.value -eq $parameters[4].default.value
+        })
+        if ($declaredAlias.Count -ne 1) {
+            throw "$RelativePath Enum default does not identify an exact declared member/value pair."
+        }
+        Write-Host "Optional/default SMILE library metadata verified: $RelativePath"
     }
     finally {
         $archive.Dispose()
@@ -261,10 +379,18 @@ Assert-SmileLibraryPackage 'artifacts\libraries\Smile.Game.smilelib' `
     'libraries\Smile.Game\Smile.Game.smilelibproj' 'Smile.Game' '1.0.0' 5 5 72
 Assert-SmileLibraryPackage 'artifacts\libraries\Smile.RPG.smilelib' `
     'libraries\Smile.RPG\Smile.RPG.smilelibproj' 'Smile.RPG' '1.2.0' 15 15 491
+Assert-SmileLibraryPackage 'artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib' `
+    'examples\LightweightOopCalls\LightweightOopLibrary.smilelibproj' `
+    'Smile.Lightweight.Oop.Proof' '1.0.0' 1 1 2
+Assert-LightweightOopProofPackage 'artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib'
 Require-File 'artifacts\games\LibraryConsumer.exe' | Out-Null
 Require-File 'artifacts\games\LibraryPackageConsumer.exe' | Out-Null
+Require-File 'artifacts\games\LightweightOopCalls.exe' | Out-Null
+Require-File 'artifacts\games\LightweightOopCalls.Package.exe' | Out-Null
 Require-File 'artifacts\games\LocalModuleBasics.exe' | Out-Null
 Require-File 'artifacts\web\LibraryConsumer\game.js' | Out-Null
+Require-File 'artifacts\web\LightweightOopCalls\game.js' | Out-Null
+Require-File 'artifacts\web\LightweightOopCalls.Package\game.js' | Out-Null
 Require-File 'artifacts\web\LocalModuleBasics\game.js' | Out-Null
 Require-File 'artifacts\web\Phase4VisualSlice\game.js' | Out-Null
 Require-File 'artifacts\games\Phase4VisualSlice-DirectX\Phase4VisualSlice.smile-assets.json' | Out-Null

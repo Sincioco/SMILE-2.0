@@ -1,0 +1,16 @@
+defaults
+3
+True
+!
+True
+named
+7
+False
+?
+False
+BLMSN
+mixed
+4
+True
+.
+True

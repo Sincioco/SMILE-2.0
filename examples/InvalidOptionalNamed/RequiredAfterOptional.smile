@@ -1,0 +1,3 @@
+Sub Bad(Optional First As Number = 1, Second As Number)
+
+End Sub

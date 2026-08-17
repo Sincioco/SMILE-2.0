@@ -1639,6 +1639,198 @@ Run("FormatVersion 6 preserves enum metadata and project package consumer parity
     }
     finally { Directory.Delete(directory, true); }
 });
+Run("FormatVersion 6 preserves Optional defaults and named-call project package parity", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileOptionalPackageTests-" + Guid.NewGuid().ToString("N"));
+    var fixtureDirectory = Path.GetFullPath("examples/LightweightOopCalls");
+    var libraryProjectPath = Path.Combine(fixtureDirectory, "LightweightOopLibrary.smilelibproj");
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var compilation = SmileProjectCompilation.Load(libraryProjectPath,
+            Path.Combine(directory, "library-cache"));
+        var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library,
+            compilation.DependencyContext);
+        Equal(false, analysis.HasErrors);
+        var firstPackage = Path.Combine(directory, "first.smilelib");
+        var secondPackage = Path.Combine(directory, "second.smilelib");
+        SmileLibraryPackage.Write(firstPackage, compilation.Graph.Root, analysis);
+        SmileLibraryPackage.Write(secondPackage, compilation.Graph.Root, analysis);
+        Equal(true, File.ReadAllBytes(firstPackage).SequenceEqual(File.ReadAllBytes(secondPackage)));
+
+        var expectedFingerprint = SmileLibraryPackage.CreateBuildFingerprint(compilation.Graph.Root, analysis);
+        Equal(true, SmileLibraryPackage.ReadBuildFingerprint(firstPackage).Matches(expectedFingerprint));
+        var loaded = SmileLibraryPackage.Read(firstPackage, Path.Combine(directory, "read-cache"));
+        Equal("src/Library/Api.smile", loaded.SourceIds.Values.Single());
+        Equal(false, loaded.SourceIds.Keys.Any(path => path.Contains("src/Library/Api.smile",
+            StringComparison.Ordinal)));
+
+        string apiText;
+        using (var archive = System.IO.Compression.ZipFile.OpenRead(firstPackage))
+        using (var reader = new StreamReader(archive.GetEntry("api/public-symbols.json")!.Open()))
+            apiText = reader.ReadToEnd();
+        using (var document = System.Text.Json.JsonDocument.Parse(apiText))
+        {
+            var root = document.RootElement;
+            Equal("Smile.Lightweight.Oop.Proof@1.0.0",
+                root.GetProperty("library").GetProperty("provider").GetString());
+            var module = root.GetProperty("modules")[0];
+            Equal("src/Library/Api.smile", module.GetProperty("sources")[0].GetString());
+            var report = module.GetProperty("members").EnumerateArray()
+                .Single(member => member.GetProperty("name").GetString() == "Report");
+            var parameters = report.GetProperty("parameters").EnumerateArray().ToArray();
+            Equal("Label|Copies|Enabled|Suffix|Mode",
+                string.Join("|", parameters.Select(parameter => parameter.GetProperty("name").GetString())));
+            for (var index = 0; index < parameters.Length; index++)
+            {
+                var parameter = parameters[index];
+                Equal("name|type|mode|optional|default|ordinal|location",
+                    string.Join("|", parameter.EnumerateObject().Select(property => property.Name)));
+                Equal(index, parameter.GetProperty("ordinal").GetInt32());
+                Equal(parameter.GetProperty("name").GetString()!.Length,
+                    parameter.GetProperty("location").GetProperty("length").GetInt32());
+                Equal("src/Library/Api.smile",
+                    parameter.GetProperty("location").GetProperty("source").GetString());
+            }
+            Equal(false, parameters[0].GetProperty("optional").GetBoolean());
+            Equal(System.Text.Json.JsonValueKind.Null, parameters[0].GetProperty("default").ValueKind);
+
+            var numberDefault = parameters[1].GetProperty("default");
+            Equal("kind|value", string.Join("|", numberDefault.EnumerateObject().Select(property => property.Name)));
+            Equal("number", numberDefault.GetProperty("kind").GetString());
+            Equal(3L, numberDefault.GetProperty("value").GetInt64());
+            var booleanDefault = parameters[2].GetProperty("default");
+            Equal("boolean", booleanDefault.GetProperty("kind").GetString());
+            Equal(true, booleanDefault.GetProperty("value").GetBoolean());
+            var textDefault = parameters[3].GetProperty("default");
+            Equal("text", textDefault.GetProperty("kind").GetString());
+            Equal("!", textDefault.GetProperty("value").GetString());
+            var enumDefault = parameters[4].GetProperty("default");
+            Equal("kind|member|value",
+                string.Join("|", enumDefault.EnumerateObject().Select(property => property.Name)));
+            Equal("enum", enumDefault.GetProperty("kind").GetString());
+            Equal("CompactAlias", enumDefault.GetProperty("member").GetString());
+            Equal(2L, enumDefault.GetProperty("value").GetInt64());
+            var enumType = parameters[4].GetProperty("type");
+            Equal("enum", enumType.GetProperty("kind").GetString());
+            Equal("Smile.Lightweight.Oop.Proof::DisplayMode", enumType.GetProperty("identity").GetString());
+            Equal("Smile.Lightweight.Oop.Proof@1.0.0", enumType.GetProperty("provider").GetString());
+            Equal(false, enumDefault.TryGetProperty("type", out _));
+            Equal(false, enumDefault.TryGetProperty("provider", out _));
+            Equal(false, apiText.Contains(directory, StringComparison.OrdinalIgnoreCase));
+        }
+
+        void AssertApiTamper(string fileName, Func<string, string> rewrite)
+        {
+            var tampered = Path.Combine(directory, fileName);
+            File.Copy(firstPackage, tampered);
+            RewritePackageTextEntry(tampered, "api/public-symbols.json", rewrite);
+            Equal(false, SmileLibraryPackage.ReadBuildFingerprint(tampered).Matches(expectedFingerprint));
+            Equal(true, CompilerDriver.NeedsLibraryBuild(compilation.Graph.Root, tampered, analysis));
+            ThrowsProjectDiagnostic(() => SmileLibraryPackage.Read(tampered,
+                Path.Combine(directory, fileName + "-cache")), "SML3207");
+        }
+
+        AssertApiTamper("member-tampered.smilelib", text => text.Replace(
+            "{\"kind\": \"enum\", \"member\": \"CompactAlias\", \"value\": 2}",
+            "{\"kind\": \"enum\", \"member\": \"Compact\", \"value\": 2}",
+            StringComparison.Ordinal));
+        AssertApiTamper("value-tampered.smilelib", text => text.Replace(
+            "{\"kind\": \"enum\", \"member\": \"CompactAlias\", \"value\": 2}",
+            "{\"kind\": \"enum\", \"member\": \"CompactAlias\", \"value\": 99}",
+            StringComparison.Ordinal));
+
+        string AnalyzeConsumer(string name, string reference, bool packageReference)
+        {
+            var consumerDirectory = Path.Combine(directory, name);
+            Directory.CreateDirectory(consumerDirectory);
+            var programPath = Path.Combine(consumerDirectory, "Program.smile");
+            File.Copy(Path.Combine(fixtureDirectory, "Program.smile"), programPath);
+            var projectPath = Path.Combine(consumerDirectory, "Consumer.smileproj");
+            File.WriteAllText(projectPath,
+                "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup>" +
+                "<ItemGroup><SmileSource Include=\"Program.smile\" />" + reference +
+                "</ItemGroup></SmileProject>");
+            var consumerCompilation = SmileProjectCompilation.Load(projectPath,
+                Path.Combine(consumerDirectory, "cache"));
+            var consumerAnalysis = SmileLanguage.Analyze(consumerCompilation.Sources,
+                SmileCompilationKind.Program, consumerCompilation.DependencyContext);
+            Equal(false, consumerAnalysis.HasErrors);
+            var report = consumerAnalysis.SemanticModel.Modules["Smile.Lightweight.Oop.Proof"].PublicMembers
+                .Single(member => member.Name == "Report").Routine!;
+            Equal("false|true|true|true|true",
+                string.Join("|", report.Parameters.Select(parameter =>
+                    parameter.IsOptional.ToString().ToLowerInvariant())));
+            Equal("3|True|!|CompactAlias",
+                string.Join("|", report.Parameters.Skip(1).Select(parameter =>
+                    parameter.DefaultEnumMember?.Name ?? parameter.DefaultValue.ToString())));
+            Equal(true, consumerCompilation.DependencyContext.TryGetProviderDescriptor(
+                report.ProviderIdentity, out var descriptor));
+            Equal("Smile.Lightweight.Oop.Proof@1.0.0", descriptor.LogicalIdentity);
+
+            var sourceTree = consumerAnalysis.GetSyntaxTree(programPath);
+            var labelPosition = File.ReadAllText(programPath).IndexOf("Enabled:=", StringComparison.Ordinal);
+            Equal(true, SmileSymbolService.TryResolve(consumerAnalysis, sourceTree,
+                labelPosition + 2, out var resolvedLabel));
+            Equal(SmileResolvedSymbolKind.NamedArgument, resolvedLabel.Kind);
+            Equal("Enabled", resolvedLabel.Name);
+            Equal("Smile.Lightweight.Oop.Proof", resolvedLabel.ModuleName);
+            Equal(true, consumerCompilation.DependencyContext.TryGetProviderDescriptor(
+                resolvedLabel.ProviderIdentity, out var labelProvider));
+            Equal("Smile.Lightweight.Oop.Proof@1.0.0", labelProvider.LogicalIdentity);
+            var labelPresentation = SmileSymbolDisplayService.Present(resolvedLabel,
+                consumerCompilation.DependencyContext);
+            Equal("Optional Enabled As Boolean = True", labelPresentation.Signature);
+            Equal("Smile.Lightweight.Oop.Proof@1.0.0", labelPresentation.Provider);
+            Equal(resolvedLabel.DeclarationLocation!.FilePath, labelPresentation.SourcePath);
+            Equal("Api.smile", Path.GetFileName(labelPresentation.SourcePath));
+            if (packageReference)
+            {
+                var cachePrefix = Path.GetFullPath(Path.Combine(consumerDirectory, "cache"))
+                    .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                Equal(true, Path.GetFullPath(labelPresentation.SourcePath).StartsWith(cachePrefix,
+                    StringComparison.OrdinalIgnoreCase));
+                Equal(false, string.Equals(Path.GetFullPath(labelPresentation.SourcePath),
+                    Path.GetFullPath(Path.Combine(fixtureDirectory, "Library", "Api.smile")),
+                    StringComparison.OrdinalIgnoreCase));
+            }
+            else
+            {
+                Equal(Path.GetFullPath(Path.Combine(fixtureDirectory, "Library", "Api.smile")),
+                    Path.GetFullPath(labelPresentation.SourcePath));
+            }
+
+            var tree = consumerAnalysis.BoundSyntaxTrees.Single(candidate => string.Equals(
+                candidate.Source.FilePath, programPath, StringComparison.OrdinalIgnoreCase));
+            var calls = tree.Root.Statements.OfType<CallStatementSyntax>().ToArray();
+            Equal(3, calls.Length);
+            Equal(true, consumerAnalysis.SemanticModel.TryGetBoundCall(calls[0], out var omitted));
+            Equal("false|true|true|true|true", string.Join("|", omitted.ParameterArguments
+                .Select(argument => argument.IsDefault.ToString().ToLowerInvariant())));
+            Equal(true, consumerAnalysis.SemanticModel.TryGetBoundCall(calls[1], out var reordered));
+            Equal("Enabled|Label|Mode|Suffix|Copies", string.Join("|", reordered.SourceArguments
+                .Select(argument => argument.Syntax!.Name!.Text)));
+            Equal("Label|Copies|Enabled|Suffix|Mode", string.Join("|", reordered.ParameterArguments
+                .Select(argument => argument.Parameter.Name)));
+            Equal(true, consumerAnalysis.SemanticModel.TryGetBoundCall(calls[2], out var mixed));
+            Equal("false|false|true|false|true", string.Join("|", mixed.ParameterArguments
+                .Select(argument => argument.IsDefault.ToString().ToLowerInvariant())));
+            return string.Join("|", report.Parameters.Select(parameter => parameter.Name + ":" +
+                parameter.IsOptional + ":" + (parameter.DefaultEnumMember?.Name ?? parameter.DefaultValue)));
+        }
+
+        var projectReference = Path.GetRelativePath(Path.Combine(directory, "project-consumer"),
+            libraryProjectPath).Replace('/', '\\');
+        var packageReference = Path.GetRelativePath(Path.Combine(directory, "package-consumer"),
+            firstPackage).Replace('/', '\\');
+        var projectSignature = AnalyzeConsumer("project-consumer",
+            $"<SmileProjectReference Include=\"{projectReference}\" />", packageReference: false);
+        var packageSignature = AnalyzeConsumer("package-consumer",
+            $"<SmileLibraryReference Include=\"{packageReference}\" />", packageReference: true);
+        Equal(projectSignature, packageSignature);
+    }
+    finally { Directory.Delete(directory, true); }
+});
 Run("Dependent packages load with an explicitly supplied base package", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "SmileDependentPackageTests-" + Guid.NewGuid().ToString("N"));
@@ -2738,6 +2930,129 @@ Run("Enum completion Quick Info definition and implicit inference retain nominal
     Equal("None|Up|Down|Left|Right", string.Join("|", SmileCompletionService.GetCompletions(imported,
         "Program.smile", program.LastIndexOf("Enums.Direction.", StringComparison.Ordinal) +
         "Enums.Direction.".Length).Select(completion => completion.DisplayText)));
+});
+
+Run("Optional parameters bind typed defaults and named calls into source and declaration order", () =>
+{
+    const string source = "Option Explicit\nEnum Direction\nLeft = 3\nRight = 4\nEnd Enum\nConst DEFAULT_DIRECTION = Direction.Left\nSub Present(\nValue As Number,\nOptional Caption As Text = \"ready\",\nOptional DirectionValue As Direction = DEFAULT_DIRECTION\n)\nPrint Value\nPrint Caption\nEnd Sub\nCall Present(\nDirectionValue:=Direction.Right,\nValue:=1\n)\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var routine = analysis.SemanticModel.Routines["Present"];
+    Equal(3, routine.Parameters.Count);
+    Equal(false, routine.Parameters[0].IsOptional);
+    Equal(true, routine.Parameters[1].IsOptional);
+    Equal("ready", routine.Parameters[1].DefaultValue);
+    Equal(true, routine.Parameters[2].HasDefaultValue);
+    Equal("Left", routine.Parameters[2].DefaultEnumMember!.Name);
+    Equal(3L, routine.Parameters[2].DefaultValue);
+    Equal(ParameterPassingMode.ByVal, routine.Parameters[2].ParameterMode);
+
+    var syntax = analysis.BoundSyntaxTree.Root.Statements.OfType<CallStatementSyntax>().Single();
+    Equal(true, analysis.SemanticModel.TryGetBoundCall(syntax, out var call));
+    Equal("DirectionValue|Value", string.Join("|", call.SourceArguments.Select(argument => argument.Parameter.Name)));
+    Equal("Value|Caption|DirectionValue", string.Join("|",
+        call.ParameterArguments.Select(argument => argument.Parameter.Name)));
+    Equal(true, call.ParameterArguments[1].IsDefault);
+    Equal("ready", call.ParameterArguments[1].DefaultValue);
+});
+
+Run("Optional and named diagnostics are stable and suppress derivative binding cascades", () =>
+{
+    Equal(true, HasDiagnostic(Analyze(
+        "Sub Bad(Optional ByRef Value As Number = 1)\nEnd Sub\n"), "SML3430"));
+    Equal(true, HasDiagnostic(Analyze(
+        "Sub Bad(Optional First As Number = 1, Second As Number)\nEnd Sub\n"), "SML3430"));
+    Equal(true, HasDiagnostic(Analyze(
+        "Sub Bad(Optional Value As Boolean = 1)\nEnd Sub\n"), "SML3431"));
+    Equal(true, HasDiagnostic(Analyze(
+        "Sub Pair(First As Number, Second As Number)\nEnd Sub\nCall Pair(First:=1, 2)\n"), "SML3432"));
+    Equal(false, HasDiagnostic(Analyze(
+        "Sub Pair(First As Number, Second As Number)\nEnd Sub\nCall Pair(First:=1, 2)\n"), "SML3434"));
+    Equal(true, HasDiagnostic(Analyze(
+        "Sub Pair(First As Number, Second As Number)\nEnd Sub\nCall Pair(Missing:=1)\n"), "SML3433"));
+    Equal(true, HasDiagnostic(Analyze(
+        "Sub Pair(First As Number, Optional Second As Number = 2)\nEnd Sub\nCall Pair(1, First:=2)\n"), "SML3434"));
+    Equal(true, HasDiagnostic(Analyze(
+        "Sub Pair(First As Number, Second As Number)\nEnd Sub\nCall Pair(First:=1)\n"), "SML3435"));
+    Equal(true, HasDiagnostic(Analyze("Print Abs(Value:=1)\n"), "SML3433"));
+});
+
+Run("Named parameter completion insertion Quick Info and definition use label identity", () =>
+{
+    const string source = "Option Explicit\nEnum Direction\nLeft\nRight\nEnd Enum\nSub Present(Value As Number, Optional Caption As Text = \"ready\", Optional DirectionValue As Direction = Direction.Left)\nPrint Value\nEnd Sub\nCall Present(Value:=1, Caption:=\"set\")\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var labelStart = source.LastIndexOf("Caption:=", StringComparison.Ordinal);
+    var completions = SmileCompletionService.GetCompletions(analysis, labelStart);
+    Equal(false, completions.Any(completion => completion.DisplayText == "Value:="));
+    var caption = completions.Single(completion => completion.DisplayText == "Caption:=");
+    Equal(SmileCompletionKind.Parameter, caption.Kind);
+    Equal("Caption:=", caption.InsertionText);
+    Equal(true, completions.Any(completion => completion.DisplayText == "DirectionValue:=" &&
+        completion.InsertionText == "DirectionValue:="));
+    Equal(true, completions.Any(completion => completion.DisplayText == "Abs" &&
+        completion.Kind == SmileCompletionKind.BuiltInFunction));
+
+    var resolved = ResolveSymbol(analysis, analysis.SyntaxTree, labelStart + 2);
+    Equal(SmileResolvedSymbolKind.NamedArgument, resolved.Kind);
+    Equal("Optional Caption As Text = \"ready\"", resolved.Signature);
+    Equal(source.IndexOf("Caption As Text", StringComparison.Ordinal), resolved.DeclarationLocation!.Span.Start);
+    var signature = SmileSymbolDisplayService.FormatRoutineSignature(analysis.SemanticModel.Routines["Present"]);
+    Equal(true, signature.Contains("Optional DirectionValue As Direction = Direction.Left", StringComparison.Ordinal));
+
+    const string nested = "Sub Outer(First As Number, Optional Second As Number = 2)\nEnd Sub\nFunction Inner(Optional Value As Number = 1) As Number\nReturn Value\nEnd Function\nCall Outer(Inner(Value:=1), Second:=2)\n";
+    var nestedAnalysis = Analyze(nested);
+    var insideIndex = nested.IndexOf("Value:=", StringComparison.Ordinal);
+    Equal(false, SmileCompletionService.GetCompletions(nestedAnalysis, insideIndex + "Value:=".Length)
+        .Any(completion => completion.Kind == SmileCompletionKind.Parameter));
+
+    const string valueCompletionSource = "Dim Shared As Number\nDim Value As Number\nSub Present(Value As Number, Optional Caption As Text = \"ready\")\nEnd Sub\nCall Present(";
+    var valueCompletionAnalysis = Analyze(valueCompletionSource);
+    var valueCompletions = SmileCompletionService.GetCompletions(valueCompletionAnalysis,
+        valueCompletionSource.Length);
+    Equal(true, valueCompletions.Any(completion => completion.DisplayText == "Shared"));
+    Equal(true, valueCompletions.Any(completion => completion.DisplayText == "Value:=" &&
+        completion.Kind == SmileCompletionKind.Parameter));
+    Equal(true, valueCompletions.Any(completion => completion.DisplayText == "Value" &&
+        completion.InsertionText == "Value"));
+    Equal(true, valueCompletions.Any(completion => completion.DisplayText == "Shared" &&
+        completion.InsertionText == "Shared"));
+    const string builtInCompletionSource = "Dim Shared As Number\nPrint Abs(";
+    var builtInCompletions = SmileCompletionService.GetCompletions(Analyze(builtInCompletionSource),
+        builtInCompletionSource.Length);
+    Equal(true, builtInCompletions.Any(completion => completion.DisplayText == "Shared"));
+});
+
+Run("Bound calls stage ByRef locations and owned ByVal records for both emitters", () =>
+{
+    const string source = "Option Explicit\nType Payload\nName As Text\nArt As Image\nEnd Type\nDim Shared As Payload\nDim Slot As Number\nDim Values[2] As Number\nShared.Name = \"before\"\nSlot = 0\nCall Observe(Shared, Mutate(Shared))\nCall SetValue(Target:=Values[Slot], Value:=MoveSlot())\nSub Observe(Value As Payload, Ignored As Number)\nPrint Value.Name\nEnd Sub\nFunction Mutate(ByRef Value As Payload) As Number\nValue.Name = \"after\"\nReturn 0\nEnd Function\nFunction MoveSlot() As Number\nSlot = 1\nReturn 9\nEnd Function\nSub SetValue(ByRef Target As Number, Value As Number)\nTarget = Value\nEnd Sub\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var native = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
+    Equal(true, native.Contains("call_argument_", StringComparison.Ordinal));
+    var nativeCall = native.IndexOf("call routine_", StringComparison.Ordinal);
+    var captureClear = native.IndexOf("call record_0_payload_clear", nativeCall, StringComparison.Ordinal);
+    Equal(true, nativeCall >= 0 && captureClear > nativeCall);
+    Equal(true, native.Contains("call smile_image_clear", StringComparison.Ordinal));
+
+    var web = new WebEmitter(analysis).Emit();
+    Equal(true, web.Contains("transferred = false", StringComparison.Ordinal));
+    Equal(true, web.Contains("record_0_payload_clone", StringComparison.Ordinal));
+    Equal(true, web.Contains("record_0_payload_clear", StringComparison.Ordinal));
+    Equal(true, web.Contains("smile.refArray", StringComparison.Ordinal));
+
+    var unsafeDefault = Analyze(
+        "Sub Use(Optional Value As Number = 9007199254740992)\nEnd Sub\nCall Use()\n");
+    Equal(false, unsafeDefault.HasErrors);
+    try
+    {
+        _ = new WebEmitter(unsafeDefault).Emit();
+        throw new InvalidOperationException("Expected unsafe Optional Number default to fail Web emission.");
+    }
+    catch (WebTargetException exception)
+    {
+        Equal("SML5102", exception.Code);
+    }
 });
 
 Run("Record types bind nominal identities nested fields arrays and deterministic layouts", () =>

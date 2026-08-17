@@ -1,0 +1,47 @@
+Option Explicit
+
+Import Smile.Lightweight.Oop.Proof As Proof
+
+Dim Trace As Text
+
+Call Proof.Report("defaults")
+
+Trace = ""
+
+Call Proof.Report(
+    Enabled:=MarkBoolean("B", False),
+    Label:=MarkText("L", "named"),
+    Mode:=MarkMode("M", Proof.DisplayMode.Standard),
+    Suffix:=MarkText("S", "?"),
+    Copies:=MarkNumber("N", 7)
+)
+
+Print Trace
+
+Call Proof.Report(
+    "mixed",
+    Suffix:=".",
+    Copies:=4
+)
+
+End Program
+
+Function MarkNumber(Tag As Text, Value As Number) As Number
+    Trace = Trace + Tag
+    Return Value
+End Function
+
+Function MarkBoolean(Tag As Text, Value As Boolean) As Boolean
+    Trace = Trace + Tag
+    Return Value
+End Function
+
+Function MarkText(Tag As Text, Value As Text) As Text
+    Trace = Trace + Tag
+    Return Value
+End Function
+
+Function MarkMode(Tag As Text, Value As Proof.DisplayMode) As Proof.DisplayMode
+    Trace = Trace + Tag
+    Return Value
+End Function

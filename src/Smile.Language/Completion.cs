@@ -16,21 +16,25 @@ public enum SmileCompletionKind
     Module,
     Type,
     Field,
-    EnumMember
+    EnumMember,
+    Parameter
 }
 
 public sealed class SmileCompletion
 {
-    public SmileCompletion(string displayText, string description, SmileCompletionKind kind)
+    public SmileCompletion(string displayText, string description, SmileCompletionKind kind,
+        string? insertionText = null)
     {
         DisplayText = displayText;
         Description = description;
         Kind = kind;
+        InsertionText = insertionText ?? displayText;
     }
 
     public string DisplayText { get; }
     public string Description { get; }
     public SmileCompletionKind Kind { get; }
+    public string InsertionText { get; }
 }
 
 public static class SmileCompletionService
@@ -61,6 +65,8 @@ public static class SmileCompletionService
         var fieldCompletions = TryGetFieldCompletions(analysis, syntaxTree, position, currentModule);
         if (fieldCompletions != null)
             return fieldCompletions;
+
+        var parameterCompletions = TryGetNamedArgumentCompletions(analysis, syntaxTree, position, currentModule);
 
         var qualifiedAlias = AliasBeforeDot(syntaxTree.Source.Text, position);
         var qualifiedTypeContext = qualifiedAlias != null && IsQualifiedTypeContext(syntaxTree.Source.Text, position, qualifiedAlias);
@@ -153,8 +159,140 @@ public static class SmileCompletionService
             completions["As"] = new SmileCompletion("As", "Required import alias keyword", SmileCompletionKind.Keyword);
         }
 
+        if (parameterCompletions != null)
+        {
+            foreach (var completion in parameterCompletions)
+                completions[completion.DisplayText] = completion;
+        }
+
         return completions.Values.OrderBy(completion => completion.DisplayText, StringComparer.OrdinalIgnoreCase).ToArray();
     }
+
+    private static IReadOnlyList<SmileCompletion>? TryGetNamedArgumentCompletions(SmileAnalysisResult analysis,
+        SyntaxTree syntaxTree, int position, ModuleSymbol? currentModule)
+    {
+        var tokens = syntaxTree.Tokens.Where(token => token.Span.Start < position &&
+            token.Kind != SyntaxKind.EndOfFileToken).ToArray();
+        var openStack = new List<int>();
+        for (var index = 0; index < tokens.Length; index++)
+        {
+            if (tokens[index].Kind is SyntaxKind.OpenParenthesisToken or SyntaxKind.OpenBracketToken)
+            {
+                openStack.Add(index);
+                continue;
+            }
+            if (tokens[index].Kind is not (SyntaxKind.CloseParenthesisToken or SyntaxKind.CloseBracketToken) ||
+                openStack.Count == 0)
+                continue;
+            var expected = tokens[index].Kind == SyntaxKind.CloseParenthesisToken
+                ? SyntaxKind.OpenParenthesisToken : SyntaxKind.OpenBracketToken;
+            if (tokens[openStack[openStack.Count - 1]].Kind == expected)
+                openStack.RemoveAt(openStack.Count - 1);
+        }
+
+        if (openStack.Count == 0 ||
+            tokens[openStack[openStack.Count - 1]].Kind != SyntaxKind.OpenParenthesisToken)
+            return null;
+        var openIndex = openStack[openStack.Count - 1];
+        var nameIndex = PreviousSignificantToken(tokens, openIndex - 1);
+        if (nameIndex < 0 || !IsCompletionNameToken(tokens[nameIndex]))
+            return null;
+        var declarationIndex = PreviousSignificantToken(tokens, nameIndex - 1);
+        if (declarationIndex >= 0 && tokens[declarationIndex].Kind is SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword)
+            return null;
+
+        RoutineSymbol? routine = null;
+        if (SyntaxFacts.IsBuiltInFunction(tokens[nameIndex].Kind))
+            return null;
+        var dotIndex = PreviousSignificantToken(tokens, nameIndex - 1);
+        var aliasIndex = dotIndex >= 0 && tokens[dotIndex].Kind == SyntaxKind.DotToken
+            ? PreviousSignificantToken(tokens, dotIndex - 1) : -1;
+        if (aliasIndex >= 0 && analysis.SemanticModel.GetImports(syntaxTree.Source)
+                .TryGetValue(tokens[aliasIndex].Text, out var imported) &&
+            imported.Members.TryGetValue(tokens[nameIndex].Text, out var importedMember))
+        {
+            routine = importedMember.Visibility == ModuleVisibility.Public ? importedMember.Routine : null;
+        }
+        else if (currentModule?.Members.TryGetValue(tokens[nameIndex].Text, out var ownMember) == true)
+        {
+            routine = ownMember.Routine;
+        }
+        else
+        {
+            routine = analysis.SemanticModel.Routines.Values.FirstOrDefault(candidate =>
+                string.Equals(candidate.Name, tokens[nameIndex].Text, StringComparison.OrdinalIgnoreCase) &&
+                (candidate.ModuleName == null || string.Equals(candidate.ModuleName, currentModule?.Name,
+                    StringComparison.OrdinalIgnoreCase)));
+        }
+        if (routine == null)
+            return null;
+
+        var segments = new List<List<SyntaxToken>> { new() };
+        var depth = 0;
+        for (var index = openIndex + 1; index < tokens.Length; index++)
+        {
+            var token = tokens[index];
+            if (token.Kind is SyntaxKind.OpenParenthesisToken or SyntaxKind.OpenBracketToken)
+            {
+                if (depth == 0)
+                    segments[segments.Count - 1].Add(token);
+                depth++;
+                continue;
+            }
+            if (token.Kind is SyntaxKind.CloseParenthesisToken or SyntaxKind.CloseBracketToken)
+            {
+                depth = Math.Max(0, depth - 1);
+                if (depth == 0)
+                    segments[segments.Count - 1].Add(token);
+                continue;
+            }
+            if (depth == 0 && token.Kind == SyntaxKind.CommaToken)
+            {
+                segments.Add(new List<SyntaxToken>());
+                continue;
+            }
+            if (depth == 0 && token.Kind != SyntaxKind.NewLineToken)
+                segments[segments.Count - 1].Add(token);
+        }
+
+        var currentSegment = segments[segments.Count - 1];
+        if (currentSegment.Any(token => token.Kind == SyntaxKind.ColonEqualsToken) ||
+            currentSegment.Count > 1 ||
+            currentSegment.Count == 1 && !IsCompletionNameToken(currentSegment[0]))
+            return null;
+
+        var supplied = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var positionalCount = 0;
+        for (var index = 0; index < segments.Count; index++)
+        {
+            var segment = segments[index];
+            var colonEquals = segment.FindIndex(token => token.Kind == SyntaxKind.ColonEqualsToken);
+            if (colonEquals > 0)
+                supplied.Add(segment[colonEquals - 1].Text);
+            else if (index < segments.Count - 1 && segment.Count != 0)
+                positionalCount++;
+        }
+        for (var index = 0; index < Math.Min(positionalCount, routine.Parameters.Count); index++)
+            supplied.Add(routine.Parameters[index].Name);
+
+        return routine.Parameters.Select((parameter, index) => (parameter, index))
+            .Where(item => !supplied.Contains(item.parameter.Name))
+            .Select(item => new SmileCompletion(item.parameter.Name + ":=",
+                SmileSymbolDisplayService.FormatParameter(routine, item.index),
+                SmileCompletionKind.Parameter, item.parameter.Name + ":="))
+            .ToArray();
+    }
+
+    private static int PreviousSignificantToken(IReadOnlyList<SyntaxToken> tokens, int index)
+    {
+        while (index >= 0 && tokens[index].Kind == SyntaxKind.NewLineToken)
+            index--;
+        return index;
+    }
+
+    private static bool IsCompletionNameToken(SyntaxToken token) =>
+        token.Text.Length != 0 && (char.IsLetter(token.Text[0]) || token.Text[0] == '_') &&
+        token.Text.All(character => char.IsLetterOrDigit(character) || character == '_');
 
     private static IReadOnlyList<SmileCompletion> CreateLanguageCompletions()
     {

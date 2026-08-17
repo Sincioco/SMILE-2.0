@@ -1,0 +1,44 @@
+Option Explicit
+
+Type Payload
+    Name As Text
+End Type
+
+Print "Ending"
+
+Call Outer()
+
+Print "Unreachable"
+
+End Program
+
+Sub Outer()
+
+    Call Consume(
+        Value:=MakePayload(),
+        Ignored:=StopNow()
+    )
+
+End Sub
+
+Function MakePayload() As Payload
+
+    Dim Result As Payload
+
+    Result.Name = "owned"
+    Return Result
+
+End Function
+
+Function StopNow() As Number
+
+    End Program
+    Return 0
+
+End Function
+
+Sub Consume(Value As Payload, Ignored As Number)
+
+    Print Value.Name
+
+End Sub

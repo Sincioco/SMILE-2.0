@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.Language.Intellisense.AsyncCompletion;
 using Microsoft.VisualStudio.Language.Intellisense.AsyncCompletion.Data;
 using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Adornments;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
 using Smile.Language;
@@ -82,7 +83,10 @@ internal sealed class SmileCompletionSource : IAsyncCompletionSource
         foreach (var completion in completions)
         {
             _descriptions[completion.DisplayText] = completion.Description;
-            items.Add(new CompletionItem(completion.DisplayText, this, applicableToSpan));
+            items.Add(new CompletionItem(completion.DisplayText, this, ImageElement.Empty,
+                ImmutableArray<CompletionFilter>.Empty, string.Empty, completion.InsertionText,
+                completion.DisplayText, completion.DisplayText, completion.DisplayText,
+                ImmutableArray<ImageElement>.Empty, default, applicableToSpan, false, false));
         }
         return Task.FromResult(new CompletionContext(items.ToImmutable()));
     }
@@ -104,7 +108,7 @@ internal sealed class SmileCompletionSource : IAsyncCompletionSource
             CompletionTriggerReason.InvokeAndCommitIfUnique or
             CompletionTriggerReason.InvokeMatchingType ||
         trigger.Reason == CompletionTriggerReason.Insertion &&
-        (IsIdentifierStart(trigger.Character) || trigger.Character == '.');
+        (IsIdentifierStart(trigger.Character) || trigger.Character is '.' or '(' or ',');
 
     internal static bool IsIdentifierPart(char value) => char.IsLetterOrDigit(value) || value == '_';
 

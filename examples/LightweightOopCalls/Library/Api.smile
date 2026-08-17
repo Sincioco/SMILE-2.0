@@ -1,0 +1,25 @@
+Module Smile.Lightweight.Oop.Proof
+
+Option Explicit
+
+Public Enum DisplayMode
+    Standard = 1
+    Compact = 2
+    CompactAlias = 2
+End Enum
+
+Public Sub Report(
+    Label As Text,
+    Optional Copies As Number = 3,
+    Optional Enabled As Boolean = True,
+    Optional Suffix As Text = "!",
+    Optional Mode As DisplayMode = DisplayMode.CompactAlias
+)
+    Print Label
+    Print Copies
+    Print Enabled
+    Print Suffix
+    Print Mode = DisplayMode.CompactAlias
+End Sub
+
+End Module

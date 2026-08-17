@@ -254,12 +254,13 @@ public enum RoutineCapability
     RequiresGameWindow = 1
 }
 
-public sealed class VariableSymbol
+public class VariableSymbol
 {
     internal VariableSymbol(string name, SmileType type, IReadOnlyList<int> dimensions, SourceText source,
         int sourceOrdinal, TextSpan declarationSpan,
         bool isConstant = false, object? constantValue = null, string? routineName = null,
-        ParameterPassingMode? parameterMode = null, bool hasDeclaredType = true)
+        ParameterPassingMode? parameterMode = null, bool hasDeclaredType = true,
+        EnumMemberSymbol? constantEnumMember = null)
     {
         Name = name;
         SemanticName = name;
@@ -271,6 +272,7 @@ public sealed class VariableSymbol
         DeclarationSpan = declarationSpan;
         IsConstant = isConstant;
         ConstantValue = constantValue ?? 0L;
+        ConstantEnumMember = constantEnumMember;
         RoutineName = routineName;
         ParameterMode = parameterMode;
         HasDeclaredType = hasDeclaredType;
@@ -293,6 +295,7 @@ public sealed class VariableSymbol
     public IReadOnlyList<int> ArrayDimensions { get; }
     public bool IsConstant { get; }
     public object ConstantValue { get; }
+    public EnumMemberSymbol? ConstantEnumMember { get; }
     public string? RoutineName { get; }
     public ParameterPassingMode? ParameterMode { get; }
     public bool IsParameter => ParameterMode.HasValue;
@@ -313,9 +316,70 @@ public sealed class VariableSymbol
     }
 }
 
+public sealed class ParameterSymbol : VariableSymbol
+{
+    internal ParameterSymbol(ParameterSyntax declaration, SmileType type, SourceText source, int sourceOrdinal,
+        string routineName, ParameterPassingMode mode, bool hasDeclaredType)
+        : base(declaration.Identifier.Text, type, Array.Empty<int>(), source, sourceOrdinal,
+            declaration.Identifier.Span, routineName: routineName, parameterMode: mode,
+            hasDeclaredType: hasDeclaredType)
+    {
+        Declaration = declaration;
+    }
+
+    public ParameterSyntax Declaration { get; }
+    public bool IsOptional => Declaration.IsOptional;
+    public bool HasDefaultValue { get; private set; }
+    public object DefaultValue { get; private set; } = 0L;
+    public EnumMemberSymbol? DefaultEnumMember { get; private set; }
+
+    internal void BindDefault(object value, EnumMemberSymbol? enumMember)
+    {
+        DefaultValue = value;
+        DefaultEnumMember = enumMember;
+        HasDefaultValue = true;
+    }
+}
+
+public sealed class BoundCallArgument
+{
+    internal BoundCallArgument(ParameterSymbol parameter, int parameterIndex, ArgumentSyntax? syntax,
+        int sourceIndex)
+    {
+        Parameter = parameter;
+        ParameterIndex = parameterIndex;
+        Syntax = syntax;
+        SourceIndex = sourceIndex;
+    }
+
+    public ParameterSymbol Parameter { get; }
+    public int ParameterIndex { get; }
+    public ArgumentSyntax? Syntax { get; }
+    public ExpressionSyntax? Expression => Syntax?.Expression;
+    public int SourceIndex { get; }
+    public bool IsDefault => Syntax == null;
+    public object DefaultValue => Parameter.DefaultValue;
+    public EnumMemberSymbol? DefaultEnumMember => Parameter.DefaultEnumMember;
+}
+
+public sealed class BoundCall
+{
+    internal BoundCall(RoutineSymbol routine, IReadOnlyList<BoundCallArgument> sourceArguments,
+        IReadOnlyList<BoundCallArgument> parameterArguments)
+    {
+        Routine = routine;
+        SourceArguments = sourceArguments;
+        ParameterArguments = parameterArguments;
+    }
+
+    public RoutineSymbol Routine { get; }
+    public IReadOnlyList<BoundCallArgument> SourceArguments { get; }
+    public IReadOnlyList<BoundCallArgument> ParameterArguments { get; }
+}
+
 public sealed class RoutineSymbol
 {
-    internal RoutineSymbol(RoutineDeclarationSyntax declaration, IReadOnlyList<VariableSymbol> parameters,
+    internal RoutineSymbol(RoutineDeclarationSyntax declaration, IReadOnlyList<ParameterSymbol> parameters,
         SmileType returnType, bool hasDeclaredReturnType, SourceText source, int sourceOrdinal)
     {
         Declaration = declaration;
@@ -343,7 +407,7 @@ public sealed class RoutineSymbol
     public ModuleVisibility Visibility { get; private set; } = ModuleVisibility.Public;
     public string ProviderIdentity { get; private set; } = string.Empty;
     public bool IsFunction { get; }
-    public IReadOnlyList<VariableSymbol> Parameters { get; }
+    public IReadOnlyList<ParameterSymbol> Parameters { get; }
     public SmileType ReturnType { get; internal set; }
     public bool HasDeclaredReturnType { get; }
     public IReadOnlyDictionary<string, VariableSymbol> LocalSymbols => Locals;
@@ -366,6 +430,12 @@ public sealed class RoutineSymbol
         ProviderIdentity = providerIdentity;
         RuntimeIdentity = runtimeIdentity;
         DisplayName = moduleName + "." + name;
+        for (var index = 0; index < Parameters.Count; index++)
+        {
+            var parameter = Parameters[index];
+            parameter.ApplyModuleIdentity(parameter.Name, moduleName, visibility, providerIdentity,
+                runtimeIdentity + "::parameter::" + index.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
     }
 }
 
@@ -385,6 +455,8 @@ public sealed class SemanticModel
     private readonly Dictionary<SourceText, IReadOnlyList<InvalidWithScope>> _invalidWithScopes;
     private readonly Dictionary<SourceText, IReadOnlyDictionary<int, RecordFieldSymbol>> _fieldUses;
     private readonly Dictionary<SourceText, IReadOnlyDictionary<int, EnumMemberSymbol>> _enumMemberUses;
+    private readonly Dictionary<SyntaxNode, BoundCall> _boundCalls;
+    private readonly Dictionary<SourceText, IReadOnlyDictionary<int, ParameterSymbol>> _parameterUses;
     private IReadOnlyDictionary<string, ModuleSymbol> _modules =
         new Dictionary<string, ModuleSymbol>(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyDictionary<SourceText, IReadOnlyDictionary<string, ModuleSymbol>> _imports =
@@ -400,7 +472,9 @@ public sealed class SemanticModel
         Dictionary<SourceText, List<WithTargetBinding>> withScopes,
         Dictionary<SourceText, List<InvalidWithScope>> invalidWithScopes,
         Dictionary<SourceText, Dictionary<int, RecordFieldSymbol>> fieldUses,
-        Dictionary<SourceText, Dictionary<int, EnumMemberSymbol>> enumMemberUses)
+        Dictionary<SourceText, Dictionary<int, EnumMemberSymbol>> enumMemberUses,
+        Dictionary<SyntaxNode, BoundCall> boundCalls,
+        Dictionary<SourceText, Dictionary<int, ParameterSymbol>> parameterUses)
     {
         _symbols = symbols;
         _routines = routines;
@@ -421,6 +495,9 @@ public sealed class SemanticModel
             item => (IReadOnlyDictionary<int, RecordFieldSymbol>)item.Value);
         _enumMemberUses = enumMemberUses.ToDictionary(item => item.Key,
             item => (IReadOnlyDictionary<int, EnumMemberSymbol>)item.Value);
+        _boundCalls = boundCalls;
+        _parameterUses = parameterUses.ToDictionary(item => item.Key,
+            item => (IReadOnlyDictionary<int, ParameterSymbol>)item.Value);
     }
 
     public IReadOnlyDictionary<string, VariableSymbol> Symbols => _symbols;
@@ -452,6 +529,16 @@ public sealed class SemanticModel
     {
         member = null!;
         return _enumMemberUses.TryGetValue(source, out var uses) && uses.TryGetValue(position, out member!);
+    }
+
+    public bool TryGetBoundCall(SyntaxNode syntax, out BoundCall call) =>
+        _boundCalls.TryGetValue(syntax, out call!);
+
+    public bool TryGetParameterUse(SourceText source, int position, out ParameterSymbol parameter)
+    {
+        parameter = null!;
+        return _parameterUses.TryGetValue(source, out var uses) &&
+               uses.TryGetValue(position, out parameter!);
     }
 
     public bool TryGetInnermostWithScope(SourceText source, int position, out WithTargetBinding binding)
@@ -545,6 +632,8 @@ internal sealed class SemanticAnalyzer
     private readonly Dictionary<SourceText, List<InvalidWithScope>> _invalidWithScopes = new();
     private readonly Dictionary<SourceText, Dictionary<int, RecordFieldSymbol>> _fieldUses = new();
     private readonly Dictionary<SourceText, Dictionary<int, EnumMemberSymbol>> _enumMemberUses = new();
+    private readonly Dictionary<SyntaxNode, BoundCall> _boundCalls = new();
+    private readonly Dictionary<SourceText, Dictionary<int, ParameterSymbol>> _parameterUses = new();
     private readonly List<WithTargetBinding?> _withStack = new();
     private readonly List<RoutineCallSite> _routineCalls = new();
     private SourceText _currentSource = null!;
@@ -579,6 +668,7 @@ internal sealed class SemanticAnalyzer
         foreach (var tree in _syntaxTrees)
             CollectRoutineDeclarations(tree);
         CollectGlobalDeclarations();
+        BindOptionalParameterDefaults();
         InferLegacyRoutineReturnTypes();
         RefreshImplicitGlobalTypes();
         CollectFirstDeclarations(_startupTree.Root.Statements, _globalFirstDeclarations, skipRoutines: true);
@@ -606,7 +696,7 @@ internal sealed class SemanticAnalyzer
         DiagnoseTopLevelRoutineCapabilities();
         return new SemanticModel(_symbols, _routines, _expressionTypes, _types, _enumTypes, _fields,
             _enumMembers, _withTargets, _withMembers, _withScopes, _invalidWithScopes, _fieldUses,
-            _enumMemberUses);
+            _enumMemberUses, _boundCalls, _parameterUses);
     }
 
     private void InventoryNominalTypes()
@@ -732,18 +822,18 @@ internal sealed class SemanticAnalyzer
                     };
                     return true;
                 case CallExpressionSyntax call when call.Identifier.Kind == SyntaxKind.AbsKeyword &&
-                    call.Arguments.Count == 1 && TryEvaluateEnumIntegral(call.Arguments[0], out var absValue):
+                    call.Arguments.Count == 1 && TryEvaluateEnumIntegral(call.Arguments[0].Expression, out var absValue):
                     value = absValue == long.MinValue ? throw new OverflowException() : Math.Abs(absValue);
                     return true;
                 case CallExpressionSyntax call when call.Identifier.Kind is SyntaxKind.MinKeyword or SyntaxKind.MaxKeyword &&
-                    call.Arguments.Count == 2 && TryEvaluateEnumIntegral(call.Arguments[0], out var first) &&
-                    TryEvaluateEnumIntegral(call.Arguments[1], out var second):
+                    call.Arguments.Count == 2 && TryEvaluateEnumIntegral(call.Arguments[0].Expression, out var first) &&
+                    TryEvaluateEnumIntegral(call.Arguments[1].Expression, out var second):
                     value = call.Identifier.Kind == SyntaxKind.MinKeyword ? Math.Min(first, second) : Math.Max(first, second);
                     return true;
                 case CallExpressionSyntax call when call.Identifier.Kind == SyntaxKind.RgbKeyword &&
-                    call.Arguments.Count == 3 && TryEvaluateEnumIntegral(call.Arguments[0], out var red) &&
-                    TryEvaluateEnumIntegral(call.Arguments[1], out var green) &&
-                    TryEvaluateEnumIntegral(call.Arguments[2], out var blue):
+                    call.Arguments.Count == 3 && TryEvaluateEnumIntegral(call.Arguments[0].Expression, out var red) &&
+                    TryEvaluateEnumIntegral(call.Arguments[1].Expression, out var green) &&
+                    TryEvaluateEnumIntegral(call.Arguments[2].Expression, out var blue):
                     value = (red & 255) | ((green & 255) << 8) | ((blue & 255) << 16);
                     return true;
             }
@@ -992,8 +1082,9 @@ internal sealed class SemanticAnalyzer
             if (!_acceptedProjectDeclarations.Contains(declaration.Identifier))
                 continue;
             var name = declaration.Identifier.Text;
-            var parameters = new List<VariableSymbol>();
+            var parameters = new List<ParameterSymbol>();
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var sawOptional = false;
             foreach (var parameter in declaration.Parameters)
             {
                 var parameterName = parameter.Identifier.Text;
@@ -1002,12 +1093,32 @@ internal sealed class SemanticAnalyzer
                     Report("SML3306", parameter.Identifier.Span, $"Parameter '{parameterName}' is already declared.");
                     continue;
                 }
+                if (sawOptional && !parameter.IsOptional)
+                    Report("SML3430", parameter.Identifier.Span,
+                        "Required parameters must precede Optional parameters.");
+                sawOptional |= parameter.IsOptional;
+                if (parameter.IsOptional)
+                {
+                    if (parameter.ModeKeyword?.Kind == SyntaxKind.ByRefKeyword)
+                        Report("SML3430", parameter.ModeKeyword.Span,
+                            $"Optional parameter '{parameterName}' must be ByVal.");
+                    if (parameter.TypeToken == null)
+                        Report("SML3430", parameter.Identifier.Span,
+                            $"Optional parameter '{parameterName}' requires an explicit As Type.");
+                    if (parameter.DefaultValue == null || parameter.EqualsToken == null)
+                        Report("SML3430", parameter.Identifier.Span,
+                            $"Optional parameter '{parameterName}' requires a default value.");
+                }
+                else if (parameter.DefaultValue != null || parameter.EqualsToken != null)
+                {
+                    Report("SML3430", parameter.EqualsToken?.Span ?? parameter.Identifier.Span,
+                        $"Parameter '{parameterName}' must be Optional to declare a default value.");
+                }
                 var parameterType = ResolveType(parameter.TypeToken, SmileType.Number);
                 var mode = parameter.ModeKeyword?.Kind == SyntaxKind.ByRefKeyword
                     ? ParameterPassingMode.ByRef : ParameterPassingMode.ByVal;
-                parameters.Add(new VariableSymbol(parameterName, parameterType, Array.Empty<int>(),
-                    _currentSource, _currentSourceOrdinal, parameter.Identifier.Span, routineName: name,
-                    parameterMode: mode, hasDeclaredType: parameter.TypeToken != null));
+                parameters.Add(new ParameterSymbol(parameter, parameterType, _currentSource,
+                    _currentSourceOrdinal, name, mode, parameter.TypeToken != null));
             }
             var hasDeclaredReturnType = declaration.ReturnTypeToken != null;
             var returnType = declaration.IsFunction
@@ -1059,6 +1170,66 @@ internal sealed class SemanticAnalyzer
         }
     }
 
+    private void BindOptionalParameterDefaults()
+    {
+        foreach (var routine in _routines.Values
+                     .OrderBy(routine => routine.SourceOrdinal)
+                     .ThenBy(routine => routine.Declaration.Span.Start))
+        {
+            SetCurrentSource(routine.Source);
+            foreach (var parameter in routine.Parameters.Where(parameter => parameter.IsOptional))
+            {
+                var expression = parameter.Declaration.DefaultValue;
+                if (expression == null || parameter.ParameterMode == ParameterPassingMode.ByRef ||
+                    !parameter.HasDeclaredType || parameter.Type == SmileType.Error)
+                    continue;
+
+                if (parameter.Type != SmileType.Number && parameter.Type != SmileType.Boolean &&
+                    parameter.Type != SmileType.Text && !parameter.Type.IsEnum)
+                {
+                    Report("SML3431", expression.Span,
+                        $"Optional parameter '{parameter.Name}' has unsupported default type {TypeName(parameter.Type)}.");
+                    continue;
+                }
+
+                if (!TryEvaluateOptionalDefault(expression, out var value, out var type, out var enumMember) ||
+                    !ReferenceEquals(type, parameter.Type) ||
+                    (parameter.Type.IsEnum && (enumMember == null ||
+                                               !ReferenceEquals(enumMember.ContainingType, parameter.Type))))
+                {
+                    Report("SML3431", expression.Span,
+                        $"Default for Optional parameter '{parameter.Name}' must be a compile-time {TypeName(parameter.Type)} literal, Const, or Enum member of the exact declared type.");
+                    continue;
+                }
+
+                parameter.BindDefault(value, enumMember);
+                _expressionTypes[expression] = type;
+            }
+        }
+    }
+
+    private bool TryEvaluateOptionalDefault(ExpressionSyntax expression, out object value, out SmileType type,
+        out EnumMemberSymbol? enumMember)
+    {
+        switch (expression)
+        {
+            case LiteralExpressionSyntax:
+            case NameExpressionSyntax:
+            case FieldAccessExpressionSyntax:
+                return TryEvaluateConstant(expression, out value, out type, out enumMember);
+            case ParenthesizedExpressionSyntax parenthesized:
+                return TryEvaluateOptionalDefault(parenthesized.Expression, out value, out type, out enumMember);
+            case UnaryExpressionSyntax { OperatorToken.Kind: SyntaxKind.MinusToken,
+                Operand: LiteralExpressionSyntax { Value: long } }:
+                return TryEvaluateConstant(expression, out value, out type, out enumMember);
+            default:
+                value = 0L;
+                type = SmileType.Error;
+                enumMember = null;
+                return false;
+        }
+    }
+
     private bool ResolveConstant(string name)
     {
         if (_constantStates.TryGetValue(name, out var state))
@@ -1089,9 +1260,10 @@ internal sealed class SemanticAnalyzer
         bool resolved;
         object value;
         SmileType type;
+        EnumMemberSymbol? enumMember;
         try
         {
-            resolved = TryEvaluateConstant(constant.Statement.Expression, out value, out type);
+            resolved = TryEvaluateConstant(constant.Statement.Expression, out value, out type, out enumMember);
         }
         finally
         {
@@ -1112,7 +1284,7 @@ internal sealed class SemanticAnalyzer
 
         _symbols[name] = new VariableSymbol(constant.Statement.Identifier.Text, type, Array.Empty<int>(),
             constant.Source, constant.SourceOrdinal, constant.Statement.Identifier.Span,
-            isConstant: true, constantValue: value);
+            isConstant: true, constantValue: value, constantEnumMember: enumMember);
         _expressionTypes[constant.Statement.Expression] = type;
         _constantStates[name] = ConstantResolutionState.Resolved;
         return true;
@@ -1590,7 +1762,7 @@ internal sealed class SemanticAnalyzer
                 if (doStatement.UntilCondition != null)
                     RequireType(doStatement.UntilCondition, SmileType.Boolean, "SML3004", "Loop Until condition must be Boolean.");
                 break;
-            case CallStatementSyntax call: AnalyzeCall(call.Identifier, call.Arguments, requireFunction: false); break;
+            case CallStatementSyntax call: AnalyzeCall(call, call.Identifier, call.Arguments, requireFunction: false); break;
             case LeadingMemberCallStatementSyntax call: AnalyzeLeadingMemberCall(call); break;
             case ReturnStatementSyntax returnStatement: AnalyzeReturn(returnStatement); break;
             case SelectStatementSyntax select: AnalyzeSelect(select); break;
@@ -1740,7 +1912,12 @@ internal sealed class SemanticAnalyzer
     private void AnalyzeLeadingMemberCall(LeadingMemberCallStatementSyntax statement)
     {
         foreach (var argument in statement.Arguments)
-            AnalyzeExpression(argument);
+        {
+            if (argument.IsNamed)
+                Report("SML3433", argument.Name!.Span,
+                    "Named arguments are not available for record member calls.");
+            AnalyzeExpression(argument.Expression);
+        }
         if (_withStack.Count == 0)
         {
             Report("SML3413", statement.DotToken.Span,
@@ -2271,7 +2448,7 @@ internal sealed class SemanticAnalyzer
                 result = AnalyzeBinary(binary);
                 break;
             case CallExpressionSyntax call:
-                result = AnalyzeCall(call.Identifier, call.Arguments, requireFunction: true);
+                result = AnalyzeCall(call, call.Identifier, call.Arguments, requireFunction: true);
                 break;
             default:
                 result = SmileType.Error;
@@ -2281,36 +2458,118 @@ internal sealed class SemanticAnalyzer
         return result;
     }
 
-    private SmileType AnalyzeCall(SyntaxToken identifier, IReadOnlyList<ExpressionSyntax> arguments, bool requireFunction)
+    private SmileType AnalyzeCall(SyntaxNode callSyntax, SyntaxToken identifier,
+        IReadOnlyList<ArgumentSyntax> arguments, bool requireFunction)
     {
         if (SyntaxFacts.IsBuiltInFunction(identifier.Kind))
-            return AnalyzeBuiltInCall(identifier, arguments);
+        {
+            foreach (var argument in arguments.Where(argument => argument.IsNamed))
+                Report("SML3433", argument.Name!.Span,
+                    $"Built-in '{identifier.Text}' does not accept named arguments.");
+            return AnalyzeBuiltInCall(identifier, arguments.Select(argument => argument.Expression).ToArray());
+        }
 
         if (!_routines.TryGetValue(identifier.Text, out var routine))
         {
+            foreach (var argument in arguments)
+                AnalyzeExpression(argument.Expression);
             Report("SML3021", identifier.Span, $"Unknown routine or built-in function '{identifier.Text}'.");
             return SmileType.Error;
         }
         _routineCalls.Add(new RoutineCallSite(_currentRoutine, routine, _currentSource, identifier.Span));
-        if (routine.Parameters.Count != arguments.Count)
-            Report("SML3016", identifier.Span, $"Routine '{routine.Name}' expects {routine.Parameters.Count} argument(s), found {arguments.Count}.");
+
+        var parameterArguments = new BoundCallArgument?[routine.Parameters.Count];
+        var sourceArguments = new List<BoundCallArgument>();
+        var positionalIndex = 0;
+        var sawNamed = false;
+        var hasArgumentBindingError = false;
         for (var index = 0; index < arguments.Count; index++)
         {
             var argument = arguments[index];
-            var argumentType = AnalyzeExpression(argument);
-            if (index >= routine.Parameters.Count)
+            var argumentType = AnalyzeExpression(argument.Expression);
+            var parameterIndex = -1;
+            if (argument.IsNamed)
+            {
+                sawNamed = true;
+                parameterIndex = routine.Parameters
+                    .Select((parameter, parameterIndex) => (parameter, parameterIndex))
+                    .FirstOrDefault(item => string.Equals(item.parameter.Name, argument.Name!.Text,
+                        StringComparison.OrdinalIgnoreCase)).parameterIndex;
+                if (parameterIndex == 0 && !string.Equals(routine.Parameters.FirstOrDefault()?.Name,
+                        argument.Name!.Text, StringComparison.OrdinalIgnoreCase))
+                    parameterIndex = -1;
+                if (parameterIndex < 0)
+                {
+                    hasArgumentBindingError = true;
+                    Report("SML3433", argument.Name!.Span,
+                        $"Routine '{routine.Name}' does not contain parameter '{argument.Name.Text}'.");
+                    continue;
+                }
+                RegisterParameterUse(argument.Name!, routine.Parameters[parameterIndex]);
+            }
+            else
+            {
+                if (sawNamed)
+                {
+                    hasArgumentBindingError = true;
+                    Report("SML3432", argument.Span,
+                        "Positional arguments must precede named arguments.");
+                    continue;
+                }
+                parameterIndex = positionalIndex++;
+                if (parameterIndex >= routine.Parameters.Count)
+                {
+                    hasArgumentBindingError = true;
+                    Report("SML3016", argument.Span,
+                        $"Routine '{routine.Name}' received more positional arguments than declared parameters.");
+                    continue;
+                }
+            }
+
+            if (parameterArguments[parameterIndex] != null)
+            {
+                hasArgumentBindingError = true;
+                var duplicateSpan = argument.Name?.Span ?? argument.Span;
+                Report("SML3434", duplicateSpan,
+                    $"Parameter '{routine.Parameters[parameterIndex].Name}' is supplied more than once.");
                 continue;
-            var parameter = routine.Parameters[index];
+            }
+
+            var parameter = routine.Parameters[parameterIndex];
             var acceptsLegacyBoolean = !parameter.HasDeclaredType &&
                 parameter.ParameterMode == ParameterPassingMode.ByVal &&
                 parameter.Type == SmileType.Number && argumentType == SmileType.Boolean;
             if (argumentType != SmileType.Error && argumentType != parameter.Type && !acceptsLegacyBoolean)
-                Report("SML3304", argument.Span,
-                    $"Argument {index + 1} for '{routine.Name}' must be {TypeName(parameter.Type)}, found {TypeName(argumentType)}.");
-            if (parameter.ParameterMode == ParameterPassingMode.ByRef && !IsWritableLocation(argument, parameter.Type))
-                Report("SML3305", argument.Span,
-                    $"Argument {index + 1} for ByRef parameter '{parameter.Name}' must be a writable {TypeName(parameter.Type)} location.");
+                Report("SML3304", argument.Expression.Span,
+                    $"Argument for parameter '{parameter.Name}' in '{routine.Name}' must be {TypeName(parameter.Type)}, found {TypeName(argumentType)}.");
+            if (parameter.ParameterMode == ParameterPassingMode.ByRef &&
+                !IsWritableLocation(argument.Expression, parameter.Type))
+                Report("SML3305", argument.Expression.Span,
+                    $"Argument for ByRef parameter '{parameter.Name}' must be a writable {TypeName(parameter.Type)} location.");
+
+            var boundArgument = new BoundCallArgument(parameter, parameterIndex, argument, index);
+            parameterArguments[parameterIndex] = boundArgument;
+            sourceArguments.Add(boundArgument);
         }
+
+        for (var index = 0; index < routine.Parameters.Count; index++)
+        {
+            if (parameterArguments[index] != null)
+                continue;
+            var parameter = routine.Parameters[index];
+            if (parameter.IsOptional && parameter.HasDefaultValue)
+            {
+                parameterArguments[index] = new BoundCallArgument(parameter, index, syntax: null, sourceIndex: -1);
+                continue;
+            }
+            if (parameter.IsOptional || hasArgumentBindingError)
+                continue;
+            Report("SML3435", identifier.Span,
+                $"Required parameter '{parameter.Name}' is missing from call to '{routine.Name}'.");
+        }
+
+        _boundCalls[callSyntax] = new BoundCall(routine, sourceArguments,
+            parameterArguments.Where(argument => argument != null).Select(argument => argument!).ToArray());
         if (requireFunction && !routine.IsFunction)
         {
             Report("SML3020", identifier.Span, $"Sub '{routine.Name}' cannot be used as an expression.");
@@ -2319,6 +2578,16 @@ internal sealed class SemanticAnalyzer
         if (!requireFunction && routine.IsFunction)
             Report("SML3020", identifier.Span, $"Function '{routine.Name}' must be used in an expression.");
         return routine.IsFunction ? routine.ReturnType : SmileType.Error;
+    }
+
+    private void RegisterParameterUse(SyntaxToken token, ParameterSymbol parameter)
+    {
+        if (!_parameterUses.TryGetValue(_currentSource, out var uses))
+        {
+            uses = new Dictionary<int, ParameterSymbol>();
+            _parameterUses[_currentSource] = uses;
+        }
+        uses[token.Position] = parameter;
     }
 
     private bool IsWritableLocation(ExpressionSyntax expression, SmileType requiredType)
@@ -2576,8 +2845,13 @@ internal sealed class SemanticAnalyzer
         : EnumerateStatements(_currentRoutine.Declaration.Statements).OfType<DimStatementSyntax>()
             .FirstOrDefault(dim => string.Equals(dim.Identifier.Text, name, StringComparison.OrdinalIgnoreCase));
 
-    private bool TryEvaluateConstant(ExpressionSyntax expression, out object value, out SmileType type)
+    private bool TryEvaluateConstant(ExpressionSyntax expression, out object value, out SmileType type) =>
+        TryEvaluateConstant(expression, out value, out type, out _);
+
+    private bool TryEvaluateConstant(ExpressionSyntax expression, out object value, out SmileType type,
+        out EnumMemberSymbol? enumMember)
     {
+        enumMember = null;
         switch (expression)
         {
             case LiteralExpressionSyntax literal when literal.Value is long number:
@@ -2593,12 +2867,18 @@ internal sealed class SemanticAnalyzer
                         !_symbols.TryGetValue(name.Identifier.Text, out symbol) || !symbol.IsConstant)
                         break;
                 }
-                value = symbol.ConstantValue; type = symbol.Type; return true;
-            case FieldAccessExpressionSyntax field when TryResolveEnumMemberExpression(field, out var enumMember):
-                RegisterEnumMemberUse(_currentSource, field, enumMember);
-                value = enumMember.Value; type = enumMember.ContainingType; return true;
+                value = symbol.ConstantValue;
+                type = symbol.Type;
+                enumMember = symbol.ConstantEnumMember;
+                return true;
+            case FieldAccessExpressionSyntax field when TryResolveEnumMemberExpression(field, out var resolvedEnumMember):
+                RegisterEnumMemberUse(_currentSource, field, resolvedEnumMember);
+                value = resolvedEnumMember.Value;
+                type = resolvedEnumMember.ContainingType;
+                enumMember = resolvedEnumMember;
+                return true;
             case ParenthesizedExpressionSyntax parenthesized:
-                return TryEvaluateConstant(parenthesized.Expression, out value, out type);
+                return TryEvaluateConstant(parenthesized.Expression, out value, out type, out enumMember);
             case UnaryExpressionSyntax unary when TryEvaluateConstant(unary.Operand, out var operand, out var operandType):
                 if (unary.OperatorToken.Kind == SyntaxKind.MinusToken && operandType == SmileType.Number && operand is long numberOperand)
                 { value = -numberOperand; type = SmileType.Number; return true; }
@@ -2612,24 +2892,25 @@ internal sealed class SemanticAnalyzer
                     return true;
                 break;
             case CallExpressionSyntax call when call.Identifier.Kind == SyntaxKind.AbsKeyword && call.Arguments.Count == 1 &&
-                TryEvaluateConstant(call.Arguments[0], out var absObject, out var absType) && absType == SmileType.Number &&
+                TryEvaluateConstant(call.Arguments[0].Expression, out var absObject, out var absType) && absType == SmileType.Number &&
                 absObject is long absValue:
                 value = absValue == long.MinValue ? long.MaxValue : Math.Abs(absValue); type = SmileType.Number; return true;
             case CallExpressionSyntax call when call.Identifier.Kind is SyntaxKind.MinKeyword or SyntaxKind.MaxKeyword && call.Arguments.Count == 2 &&
-                TryEvaluateConstant(call.Arguments[0], out var firstObject, out var firstType) &&
-                TryEvaluateConstant(call.Arguments[1], out var secondObject, out var secondType) &&
+                TryEvaluateConstant(call.Arguments[0].Expression, out var firstObject, out var firstType) &&
+                TryEvaluateConstant(call.Arguments[1].Expression, out var secondObject, out var secondType) &&
                 firstType == SmileType.Number && secondType == SmileType.Number &&
                 firstObject is long first && secondObject is long second:
                 value = call.Identifier.Kind == SyntaxKind.MinKeyword ? Math.Min(first, second) : Math.Max(first, second);
                 type = SmileType.Number; return true;
             case CallExpressionSyntax call when call.Identifier.Kind == SyntaxKind.RgbKeyword && call.Arguments.Count == 3 &&
-                TryEvaluateConstant(call.Arguments[0], out var redObject, out _) && redObject is long red &&
-                TryEvaluateConstant(call.Arguments[1], out var greenObject, out _) && greenObject is long green &&
-                TryEvaluateConstant(call.Arguments[2], out var blueObject, out _) && blueObject is long blue:
+                TryEvaluateConstant(call.Arguments[0].Expression, out var redObject, out _) && redObject is long red &&
+                TryEvaluateConstant(call.Arguments[1].Expression, out var greenObject, out _) && greenObject is long green &&
+                TryEvaluateConstant(call.Arguments[2].Expression, out var blueObject, out _) && blueObject is long blue:
                 value = (red & 255) | ((green & 255) << 8) | ((blue & 255) << 16); type = SmileType.Number; return true;
         }
         value = 0L;
         type = SmileType.Error;
+        enumMember = null;
         return false;
     }
 

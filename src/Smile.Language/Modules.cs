@@ -651,8 +651,11 @@ internal sealed class ModuleProcessor
                 var routineLocals = CollectRoutineLocals(routine, module);
                 return new RoutineDeclarationSyntax(routine.Keyword, DeclarationToken(routine.Identifier, module),
                     routine.OpenParenthesis, routine.Parameters.Select(parameter => new ParameterSyntax(
-                        parameter.ModeKeyword, parameter.Identifier, parameter.AsKeyword,
-                        LowerTypeToken(parameter.TypeToken, tree, module))).ToArray(), routine.CloseParenthesis,
+                        parameter.OptionalKeyword, parameter.ModeKeyword, parameter.Identifier, parameter.AsKeyword,
+                        LowerTypeToken(parameter.TypeToken, tree, module), parameter.EqualsToken,
+                        parameter.DefaultValue == null ? null :
+                            LowerExpression(parameter.DefaultValue, tree, module, null))).ToArray(),
+                    routine.CloseParenthesis,
                     routine.AsKeyword, LowerTypeToken(routine.ReturnTypeToken, tree, module),
                     routine.Statements.Select(item => LowerStatement(item, tree, module, routineLocals)).ToArray(),
                     routine.EndKeyword, routine.FinalKeyword);
@@ -700,15 +703,15 @@ internal sealed class ModuleProcessor
                     loop.UntilCondition == null ? null : LowerExpression(loop.UntilCondition, tree, module, locals));
             case CallStatementSyntax call:
                 return new CallStatementSyntax(call.CallKeyword, ReferenceToken(call.Identifier, tree, module, locals),
-                    call.Arguments.Select(item => LowerExpression(item, tree, module, locals)).ToArray(), call.CloseParenthesis);
+                    call.Arguments.Select(item => LowerArgument(item, tree, module, locals)).ToArray(), call.CloseParenthesis);
             case QualifiedCallStatementSyntax call:
                 return new CallStatementSyntax(call.CallKeyword,
                     QualifiedToken(tree, call.Alias, call.Member,
                         member => member.Kind is SmileModuleMemberKind.Subroutine or SmileModuleMemberKind.Function),
-                    call.Arguments.Select(item => LowerExpression(item, tree, module, locals)).ToArray(), call.CloseParenthesis);
+                    call.Arguments.Select(item => LowerArgument(item, tree, module, locals)).ToArray(), call.CloseParenthesis);
             case LeadingMemberCallStatementSyntax call:
                 return new LeadingMemberCallStatementSyntax(call.CallKeyword, call.DotToken, call.Member,
-                    call.Arguments.Select(item => LowerExpression(item, tree, module, locals)).ToArray(), call.CloseParenthesis);
+                    call.Arguments.Select(item => LowerArgument(item, tree, module, locals)).ToArray(), call.CloseParenthesis);
             case ReturnStatementSyntax value:
                 return new ReturnStatementSyntax(value.ReturnKeyword,
                     value.Expression == null ? null : LowerExpression(value.Expression, tree, module, locals));
@@ -784,6 +787,10 @@ internal sealed class ModuleProcessor
     private ExpressionSyntax? LowerOptional(ExpressionSyntax? expression, SyntaxTree tree, ModuleSymbol? module,
         HashSet<string>? locals) => expression == null ? null : LowerExpression(expression, tree, module, locals);
 
+    private ArgumentSyntax LowerArgument(ArgumentSyntax argument, SyntaxTree tree, ModuleSymbol? module,
+        HashSet<string>? locals) => new(argument.Name, argument.ColonEqualsToken,
+        LowerExpression(argument.Expression, tree, module, locals));
+
     private AssignmentTargetSyntax LowerTarget(AssignmentTargetSyntax target, SyntaxTree tree, ModuleSymbol? module,
         HashSet<string>? locals)
     {
@@ -802,7 +809,7 @@ internal sealed class ModuleProcessor
                     array.Indices.Select(item => LowerExpression(item, tree, module, locals)).ToArray(), array.CloseBracket);
             case CallExpressionSyntax call:
                 return new CallExpressionSyntax(ReferenceToken(call.Identifier, tree, module, locals),
-                    call.Arguments.Select(item => LowerExpression(item, tree, module, locals)).ToArray(), call.CloseParenthesis);
+                    call.Arguments.Select(item => LowerArgument(item, tree, module, locals)).ToArray(), call.CloseParenthesis);
             case QualifiedNameExpressionSyntax name:
                 if (module != null && module.Types.TryGetValue(name.Alias.Text, out var ownType) &&
                     ownType.Kind == SmileModuleMemberKind.Enum)
@@ -821,7 +828,7 @@ internal sealed class ModuleProcessor
             case QualifiedCallExpressionSyntax call:
                 return new CallExpressionSyntax(QualifiedToken(tree, call.Alias, call.Member,
                         member => member.Kind is SmileModuleMemberKind.Subroutine or SmileModuleMemberKind.Function),
-                    call.Arguments.Select(item => LowerExpression(item, tree, module, locals)).ToArray(), call.CloseParenthesis);
+                    call.Arguments.Select(item => LowerArgument(item, tree, module, locals)).ToArray(), call.CloseParenthesis);
             case FieldAccessExpressionSyntax field
                 when field.Receiver is QualifiedNameExpressionSyntax qualifiedType &&
                      _imports.TryGetValue(tree.Source, out var importedAliases) &&

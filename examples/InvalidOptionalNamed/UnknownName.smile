@@ -1,0 +1,5 @@
+Sub Pair(First As Number, Second As Number)
+
+End Sub
+
+Call Pair(Missing:=1)

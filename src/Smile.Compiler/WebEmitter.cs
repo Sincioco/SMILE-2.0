@@ -216,7 +216,7 @@ internal sealed class WebEmitter
                 EmitDo(doStatement, topLevel);
                 return;
             case CallStatementSyntax call:
-                Line($"await {Routine(call.Identifier)}({RoutineArguments(call.Identifier, call.Arguments)});");
+                Line($"{RoutineCall(call, call.Identifier)};");
                 return;
             case ReturnStatementSyntax returnStatement:
                 Line(returnStatement.Expression == null ? "return;" :
@@ -648,7 +648,7 @@ internal sealed class WebEmitter
 
     private string Call(CallExpressionSyntax call)
     {
-        var arguments = Arguments(call.Arguments);
+        var arguments = Arguments(call.Arguments.Select(argument => argument.Expression));
         return call.Identifier.Kind switch
         {
             SyntaxKind.TimerKeyword => "smile.timer()",
@@ -666,7 +666,7 @@ internal sealed class WebEmitter
             SyntaxKind.TextLengthKeyword => $"smile.textLength({arguments})",
             SyntaxKind.TextCodeAtKeyword => $"smile.textCodeAt({arguments})",
             SyntaxKind.TextSliceKeyword => $"smile.textSlice({arguments})",
-            _ => $"await {Routine(call.Identifier)}({RoutineArguments(call.Identifier, call.Arguments)})"
+            _ => RoutineCall(call, call.Identifier)
         };
     }
 
@@ -690,25 +690,79 @@ internal sealed class WebEmitter
         ? _variableNames[symbol] + $".set({value})"
         : _variableNames[symbol] + $" = {value}";
 
-    private string RoutineArguments(SyntaxToken identifier, IReadOnlyList<ExpressionSyntax> arguments)
+    private string RoutineCall(SyntaxNode callSyntax, SyntaxToken identifier)
     {
-        if (!_analysis.SemanticModel.TryGetRoutine(identifier.Text, out var routine))
-            return Arguments(arguments);
-        return string.Join(", ", arguments.Select((argument, index) =>
+        if (!_analysis.SemanticModel.TryGetBoundCall(callSyntax, out var call))
+            throw new WebTargetException(_currentSource, "SML5101", identifier.Span,
+                $"Web target could not bind routine call '{identifier.Text}'.");
+
+        var captures = call.SourceArguments.ToDictionary(argument => argument,
+            _ => Temporary("argument"));
+        var capturedFlags = call.SourceArguments
+            .Where(RequiresCapturedCleanup)
+            .ToDictionary(argument => argument, _ => Temporary("captured"));
+        var transferred = Temporary("transferred");
+        var builder = new StringBuilder();
+        builder.Append("await (async () => { ");
+        foreach (var argument in call.SourceArguments)
+            builder.Append("let ").Append(captures[argument]).Append("; ");
+        foreach (var flag in capturedFlags.Values)
+            builder.Append("let ").Append(flag).Append(" = false; ");
+        builder.Append("let ").Append(transferred).Append(" = false; try { ");
+        foreach (var argument in call.SourceArguments)
         {
-            if (index >= routine.Parameters.Count)
-                return Expression(argument);
-            var parameter = routine.Parameters[index];
-            if (parameter.ParameterMode == ParameterPassingMode.ByRef)
-                return Reference(argument);
-            var value = Expression(argument);
-            if (parameter.Type is RecordTypeSymbol)
-                return RecordValue(argument, parameter.Type, value);
-            return !parameter.HasDeclaredType && parameter.Type == SmileType.Number &&
-                   _analysis.SemanticModel.GetType(argument) == SmileType.Boolean
-                ? $"(smile.isTrue({value}) ? 1 : 0)"
-                : value;
-        }));
+            builder.Append(captures[argument]).Append(" = ").Append(CapturedArgumentValue(argument)).Append("; ");
+            if (capturedFlags.TryGetValue(argument, out var flag))
+                builder.Append(flag).Append(" = true; ");
+        }
+        builder.Append(transferred).Append(" = true; return await ").Append(_routineNames[call.Routine])
+            .Append('(').Append(string.Join(", ", call.ParameterArguments.Select(argument =>
+                argument.IsDefault ? OptionalDefaultValue(argument.Parameter)
+                    : captures[argument]))).Append("); } catch (error) { if (!")
+            .Append(transferred).Append(") { ");
+        foreach (var argument in call.SourceArguments.Reverse().Where(RequiresCapturedCleanup))
+        {
+            builder.Append("if (").Append(capturedFlags[argument]).Append(") { ")
+                .Append(CapturedCleanup(argument, captures[argument])).Append(" } ");
+        }
+        builder.Append("} throw error; } })()");
+        return builder.ToString();
+    }
+
+    private string CapturedArgumentValue(BoundCallArgument argument)
+    {
+        var expression = argument.Expression!;
+        if (argument.Parameter.ParameterMode == ParameterPassingMode.ByRef)
+            return Reference(expression);
+        var value = Expression(expression);
+        if (argument.Parameter.Type is RecordTypeSymbol)
+            return RecordValue(expression, argument.Parameter.Type, value);
+        return !argument.Parameter.HasDeclaredType && argument.Parameter.Type == SmileType.Number &&
+               _analysis.SemanticModel.GetType(expression) == SmileType.Boolean
+            ? $"(smile.isTrue({value}) ? 1 : 0)"
+            : value;
+    }
+
+    private static bool RequiresCapturedCleanup(BoundCallArgument argument) =>
+        argument.Parameter.ParameterMode == ParameterPassingMode.ByVal &&
+        (argument.Parameter.Type == SmileType.Image ||
+         argument.Parameter.Type is RecordTypeSymbol { RequiresCleanup: true });
+
+    private string CapturedCleanup(BoundCallArgument argument, string value) =>
+        argument.Parameter.Type == SmileType.Image
+            ? $"smile.imageRelease({value}); {value} = null;"
+            : $"{_recordNames[(RecordTypeSymbol)argument.Parameter.Type]}_clear({value});";
+
+    private string OptionalDefaultValue(ParameterSymbol parameter)
+    {
+        if (parameter.Type == SmileType.Number && parameter.DefaultValue is long number &&
+            number is > MaxSafeInteger or < -MaxSafeInteger)
+        {
+            throw new WebTargetException(parameter.Source, "SML5102",
+                parameter.Declaration.DefaultValue?.Span ?? parameter.DeclarationSpan,
+                "Web target Optional Number defaults must be within JavaScript's safe integer range.");
+        }
+        return ConstantValue(parameter.DefaultValue, parameter.Type);
     }
 
     private string Reference(ExpressionSyntax expression)

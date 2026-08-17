@@ -926,6 +926,12 @@ internal sealed class Parser
                 {
                     while (true)
                     {
+                        SyntaxToken? optional = null;
+                        if (Current.Kind == SyntaxKind.OptionalKeyword)
+                        {
+                            optional = NextToken();
+                            continuedDeclaration |= SkipDeclarationNewLines();
+                        }
                         SyntaxToken? mode = null;
                         if (Current.Kind is SyntaxKind.ByRefKeyword or SyntaxKind.ByValKeyword)
                         {
@@ -942,7 +948,17 @@ internal sealed class Parser
                             parameterType = MatchTypeToken();
                             continuedDeclaration |= SkipDeclarationNewLines();
                         }
-                        parameters.Add(new ParameterSyntax(mode, parameter, parameterAs, parameterType));
+                        SyntaxToken? equals = null;
+                        ExpressionSyntax? defaultValue = null;
+                        if (Current.Kind == SyntaxKind.EqualsToken)
+                        {
+                            equals = NextToken();
+                            continuedDeclaration |= SkipDeclarationNewLines();
+                            defaultValue = ParseExpression();
+                            continuedDeclaration |= SkipDeclarationNewLines();
+                        }
+                        parameters.Add(new ParameterSyntax(optional, mode, parameter, parameterAs, parameterType,
+                            equals, defaultValue));
                         if (Current.Kind == SyntaxKind.CloseParenthesisToken)
                             break;
                         if (Current.Kind != SyntaxKind.CommaToken)
@@ -992,7 +1008,7 @@ internal sealed class Parser
         {
             var dot = NextToken();
             var member = MatchIdentifier();
-            var (memberArguments, memberClose) = ParseParenthesizedExpressionList();
+            var (memberArguments, memberClose) = ParseParenthesizedArgumentList();
             ConsumeLineEnd();
             return new LeadingMemberCallStatementSyntax(call, dot, member, memberArguments, memberClose);
         }
@@ -1001,11 +1017,11 @@ internal sealed class Parser
         {
             var dot = NextToken();
             var member = MatchIdentifier();
-            var (qualifiedArguments, qualifiedClose) = ParseParenthesizedExpressionList();
+            var (qualifiedArguments, qualifiedClose) = ParseParenthesizedArgumentList();
             ConsumeLineEnd();
             return new QualifiedCallStatementSyntax(call, identifier, dot, member, qualifiedArguments, qualifiedClose);
         }
-        var (arguments, close) = ParseParenthesizedExpressionList();
+        var (arguments, close) = ParseParenthesizedArgumentList();
         ConsumeLineEnd();
         return new CallStatementSyntax(call, identifier, arguments, close);
     }
@@ -1082,7 +1098,7 @@ internal sealed class Parser
         return expressions;
     }
 
-    private (IReadOnlyList<ExpressionSyntax> Arguments, SyntaxToken CloseParenthesis) ParseParenthesizedExpressionList()
+    private (IReadOnlyList<ArgumentSyntax> Arguments, SyntaxToken CloseParenthesis) ParseParenthesizedArgumentList()
     {
         var hasOpenParenthesis = Current.Kind == SyntaxKind.OpenParenthesisToken;
         MatchToken(SyntaxKind.OpenParenthesisToken);
@@ -1091,7 +1107,7 @@ internal sealed class Parser
 
         try
         {
-            var arguments = ParseExpressionList(SyntaxKind.CloseParenthesisToken);
+            var arguments = ParseArgumentList(SyntaxKind.CloseParenthesisToken);
             SkipExpressionNewLines();
             var closeParenthesis = MatchToken(SyntaxKind.CloseParenthesisToken);
             return (arguments, closeParenthesis);
@@ -1101,6 +1117,32 @@ internal sealed class Parser
             if (hasOpenParenthesis)
                 _expressionContinuationDepth--;
         }
+    }
+
+    private IReadOnlyList<ArgumentSyntax> ParseArgumentList(SyntaxKind closingKind)
+    {
+        var arguments = new List<ArgumentSyntax>();
+        SkipExpressionNewLines();
+        if (Current.Kind == closingKind)
+            return arguments;
+        while (true)
+        {
+            SyntaxToken? name = null;
+            SyntaxToken? colonEquals = null;
+            if (IsIdentifierLike(Current.Kind) && Peek(1).Kind == SyntaxKind.ColonEqualsToken)
+            {
+                name = NextToken();
+                colonEquals = NextToken();
+                SkipExpressionNewLines();
+            }
+            arguments.Add(new ArgumentSyntax(name, colonEquals, ParseExpression()));
+            SkipExpressionNewLines();
+            if (Current.Kind != SyntaxKind.CommaToken)
+                break;
+            NextToken();
+            SkipExpressionNewLines();
+        }
+        return arguments;
     }
 
     private ExpressionSyntax ParseExpression(int parentPrecedence = 0)
@@ -1183,7 +1225,7 @@ internal sealed class Parser
                 var member = MatchMemberIdentifier();
                 if (Current.Kind == SyntaxKind.OpenParenthesisToken)
                 {
-                    var (qualifiedArguments, qualifiedClose) = ParseParenthesizedExpressionList();
+                    var (qualifiedArguments, qualifiedClose) = ParseParenthesizedArgumentList();
                     return ParseFieldSuffix(new QualifiedCallExpressionSyntax(identifier, dot, member, qualifiedArguments,
                         qualifiedClose));
                 }
@@ -1204,7 +1246,7 @@ internal sealed class Parser
             }
             if (Current.Kind == SyntaxKind.OpenParenthesisToken)
             {
-                var (arguments, closeParenthesis) = ParseParenthesizedExpressionList();
+                var (arguments, closeParenthesis) = ParseParenthesizedArgumentList();
                 return ParseFieldSuffix(new CallExpressionSyntax(identifier, arguments, closeParenthesis));
             }
             if (Current.Kind == SyntaxKind.OpenBracketToken)
@@ -1313,7 +1355,8 @@ internal sealed class Parser
         kind is SyntaxKind.IdentifierToken or SyntaxKind.KeyKeyword || IsContextualIdentifier(kind);
 
     private static bool IsParameterStart(SyntaxKind kind) =>
-        kind is SyntaxKind.ByRefKeyword or SyntaxKind.ByValKeyword || IsIdentifierLike(kind);
+        kind is SyntaxKind.OptionalKeyword or SyntaxKind.ByRefKeyword or SyntaxKind.ByValKeyword ||
+        IsIdentifierLike(kind);
 
     private SyntaxToken MatchTypeToken()
     {

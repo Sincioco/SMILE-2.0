@@ -169,6 +169,87 @@ fc /b "%SMILE_ROOT%\artifacts\temp\Smile.Data.Models.first.smilelib" "%SMILE_ROO
 powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.Data.Models.smilelib'); try { $manifest=([IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())).ReadToEnd() | ConvertFrom-Json; $apiText=[IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open()).ReadToEnd(); $api=$apiText | ConvertFrom-Json; if ($manifest.formatVersion -ne 6 -or $api.formatVersion -ne 6 -or $manifest.name -ne 'Smile.Data.Models' -or $manifest.version -ne '1.0.0' -or $manifest.provider -ne 'Smile.Data.Models@1.0.0' -or @($manifest.modules).Count -ne 1 -or @($manifest.sources).Count -ne 2 -or @($manifest.dependencies).Count -ne 0 -or $api.library.provider -ne $manifest.provider -or !$apiText.Contains('Smile.Data.Models::Actor') -or !$apiText.Contains('\"fields\"') -or $apiText.Contains('InternalTag')) { exit 1 } } finally { $zip.Dispose() }"
 if errorlevel 1 exit /b 1
 
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\LightweightOopCalls\LightweightOopLibrary.smilelibproj" --target library --configuration Release -o "%SMILE_ROOT%\artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib"
+if errorlevel 1 exit /b %errorlevel%
+copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib" "%SMILE_ROOT%\artifacts\temp\Smile.Lightweight.Oop.Proof.first.smilelib" >nul
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\LightweightOopCalls\LightweightOopLibrary.smilelibproj" --target library --configuration Release -o "%SMILE_ROOT%\artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib"
+if errorlevel 1 exit /b %errorlevel%
+fc /b "%SMILE_ROOT%\artifacts\temp\Smile.Lightweight.Oop.Proof.first.smilelib" "%SMILE_ROOT%\artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib" >nul || exit /b 1
+powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib'); try { $manifest=([IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())).ReadToEnd() | ConvertFrom-Json; $apiText=[IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open()).ReadToEnd(); $api=$apiText | ConvertFrom-Json; $module=$api.modules | Where-Object name -eq 'Smile.Lightweight.Oop.Proof'; $report=$module.members | Where-Object name -eq 'Report'; $p=@($report.parameters); if ($manifest.formatVersion -ne 6 -or $api.formatVersion -ne 6 -or $manifest.provider -ne 'Smile.Lightweight.Oop.Proof@1.0.0' -or @($manifest.sources).Count -ne 1 -or $manifest.sources[0] -cne 'src/Library/Api.smile' -or @($module.members).Count -ne 2 -or $p.Count -ne 5 -or $p[0].optional -or $null -ne $p[0].default -or !$p[1].optional -or $p[1].default.kind -cne 'number' -or $p[1].default.value -ne 3 -or $p[2].default.kind -cne 'boolean' -or !$p[2].default.value -or $p[3].default.kind -cne 'text' -or $p[3].default.value -cne '!' -or $p[4].type.kind -cne 'enum' -or $p[4].type.provider -cne $manifest.provider -or $p[4].default.kind -cne 'enum' -or $p[4].default.member -cne 'CompactAlias' -or $p[4].default.value -ne 2 -or $p[4].location.source -cne 'src/Library/Api.smile' -or $apiText.IndexOf('%SMILE_ROOT%', [StringComparison]::OrdinalIgnoreCase) -ge 0) { exit 1 } } finally { $zip.Dispose() }"
+if errorlevel 1 exit /b 1
+
+for %%P in (LightweightOopCalls.smileproj LightweightOopCalls.Package.smileproj) do (
+    "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\LightweightOopCalls\%%P" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\%%~nP.exe" --debug
+    if errorlevel 1 exit /b 1
+    "%SMILE_ROOT%\artifacts\games\%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\%%~nP.out"
+    if errorlevel 1 exit /b 1
+    fc "%SMILE_ROOT%\examples\LightweightOopCalls\LightweightOopCalls.expected.txt" "%SMILE_ROOT%\artifacts\temp\%%~nP.out" >nul || exit /b 1
+    set "SMILE_TEXT_LIFETIME_DIAGNOSTICS=1"
+    "%SMILE_ROOT%\artifacts\games\%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\%%~nP.lifetime.out"
+    if errorlevel 1 exit /b 1
+    set "SMILE_TEXT_LIFETIME_DIAGNOSTICS="
+    findstr /x /c:"SMILE_TEXT_LIVE=0" "%SMILE_ROOT%\artifacts\temp\%%~nP.lifetime.out" >nul || exit /b 1
+    "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\LightweightOopCalls\%%P" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\%%~nP"
+    if errorlevel 1 exit /b 1
+    node --check "%SMILE_ROOT%\artifacts\web\%%~nP\game.js" || exit /b 1
+    node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\%%~nP" --expected "%SMILE_ROOT%\examples\LightweightOopCalls\LightweightOopCalls.expected.txt" --native-output "%SMILE_ROOT%\artifacts\temp\%%~nP.out" --timeout 10000
+    if errorlevel 1 exit /b 1
+)
+echo Optional/default package metadata and project/package named-call native/Web parity tests passed.
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\OptionalNamedStandalone.smile" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\OptionalNamedStandalone.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\games\OptionalNamedStandalone.exe" > "%SMILE_ROOT%\artifacts\temp\OptionalNamedStandalone.out"
+if errorlevel 1 exit /b 1
+fc "%SMILE_ROOT%\examples\OptionalNamedStandalone.expected.txt" "%SMILE_ROOT%\artifacts\temp\OptionalNamedStandalone.out" >nul || exit /b 1
+set "SMILE_TEXT_LIFETIME_DIAGNOSTICS=1"
+"%SMILE_ROOT%\artifacts\games\OptionalNamedStandalone.exe" > "%SMILE_ROOT%\artifacts\temp\OptionalNamedStandalone.lifetime.out"
+if errorlevel 1 exit /b 1
+set "SMILE_TEXT_LIFETIME_DIAGNOSTICS="
+findstr /x /c:"SMILE_TEXT_LIVE=0" "%SMILE_ROOT%\artifacts\temp\OptionalNamedStandalone.lifetime.out" >nul || exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\OptionalNamedStandalone.smile" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\OptionalNamedStandalone"
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\OptionalNamedStandalone\game.js" || exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\OptionalNamedStandalone" --expected "%SMILE_ROOT%\examples\OptionalNamedStandalone.expected.txt" --native-output "%SMILE_ROOT%\artifacts\temp\OptionalNamedStandalone.out" --timeout 10000
+if errorlevel 1 exit /b 1
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\OptionalNamedEndProgramCleanup.smile" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\OptionalNamedEndProgramCleanup.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\games\OptionalNamedEndProgramCleanup.exe" > "%SMILE_ROOT%\artifacts\temp\OptionalNamedEndProgramCleanup.out"
+if errorlevel 1 exit /b 1
+fc "%SMILE_ROOT%\examples\OptionalNamedEndProgramCleanup.expected.txt" "%SMILE_ROOT%\artifacts\temp\OptionalNamedEndProgramCleanup.out" >nul || exit /b 1
+set "SMILE_TEXT_LIFETIME_DIAGNOSTICS=1"
+"%SMILE_ROOT%\artifacts\games\OptionalNamedEndProgramCleanup.exe" > "%SMILE_ROOT%\artifacts\temp\OptionalNamedEndProgramCleanup.lifetime.out"
+if errorlevel 1 exit /b 1
+set "SMILE_TEXT_LIFETIME_DIAGNOSTICS="
+findstr /x /c:"SMILE_TEXT_LIVE=0" "%SMILE_ROOT%\artifacts\temp\OptionalNamedEndProgramCleanup.lifetime.out" >nul || exit /b 1
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\OptionalNamedWebOwnership.smile" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\OptionalNamedWebOwnership"
+if errorlevel 1 exit /b 1
+xcopy "%SMILE_ROOT%\examples\Phase4VisualSlice\Assets" "%SMILE_ROOT%\artifacts\web\OptionalNamedWebOwnership\Assets" /E /I /Y >nul
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\OptionalNamedWebOwnership\game.js" || exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\OptionalNamedWebOwnership" --frames 3 --timeout 10000 --phase4-ownership
+if errorlevel 1 exit /b 1
+
+for %%P in (DefaultTypeMismatch:SML3431 DuplicateArgument:SML3434 MissingRequired:SML3435 NamedBuiltIn:SML3433 OptionalByRef:SML3430 PositionalAfterNamed:SML3432 RequiredAfterOptional:SML3430 UnknownName:SML3433) do (
+    for /f "tokens=1,2 delims=:" %%F in ("%%P") do (
+        "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\InvalidOptionalNamed\%%F.smile" > "%SMILE_ROOT%\artifacts\temp\InvalidOptionalNamed-%%F.log" 2>&1
+        if not errorlevel 1 exit /b 1
+        if errorlevel 2 exit /b 1
+        powershell -NoProfile -Command "$codes=@(); foreach ($match in [regex]::Matches([IO.File]::ReadAllText('%SMILE_ROOT%\artifacts\temp\InvalidOptionalNamed-%%F.log'), 'error (SML\d+):')) { $codes += $match.Groups[1].Value }; $actual=$codes -join ','; if ($actual -ne '%%G') { Write-Error ('InvalidOptionalNamed %%F expected %%G, found ' + $actual); exit 1 }"
+        if errorlevel 1 exit /b 1
+        findstr /c:"%%F.smile(" "%SMILE_ROOT%\artifacts\temp\InvalidOptionalNamed-%%F.log" >nul || exit /b 1
+    )
+)
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\InvalidOptionalNamed\UnsafeWebDefault.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\InvalidOptionalNamed-UnsafeWebDefault" > "%SMILE_ROOT%\artifacts\temp\InvalidOptionalNamed-UnsafeWebDefault.log" 2>&1
+if not errorlevel 1 exit /b 1
+if errorlevel 2 exit /b 1
+powershell -NoProfile -Command "$codes=@(); foreach ($match in [regex]::Matches([IO.File]::ReadAllText('%SMILE_ROOT%\artifacts\temp\InvalidOptionalNamed-UnsafeWebDefault.log'), 'error (SML\d+):')) { $codes += $match.Groups[1].Value }; $actual=$codes -join ','; if ($actual -ne 'SML5102') { Write-Error ('InvalidOptionalNamed UnsafeWebDefault expected SML5102, found ' + $actual); exit 1 }"
+if errorlevel 1 exit /b 1
+findstr /c:"UnsafeWebDefault.smile(" "%SMILE_ROOT%\artifacts\temp\InvalidOptionalNamed-UnsafeWebDefault.log" >nul || exit /b 1
+echo Optional/named source-order capture, ByRef location, record ownership, End Program cleanup, and exact diagnostic tests passed.
+
 for %%P in (Phase3BRecords.smileproj Phase3BRecords.Package.smileproj) do (
     "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3BRecords\%%P" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\%%~nP.exe" --debug
     if errorlevel 1 exit /b 1
@@ -752,7 +833,7 @@ if errorlevel 2 (
     echo Invalid structured language smoke test failed: compiler returned infrastructure error.
     exit /b 1
 )
-for %%C in (SML3012 SML3006 SML3017 SML3016 SML3018 SML3019 SML3021) do (
+for %%C in (SML3012 SML3006 SML3017 SML3435 SML3018 SML3019 SML3021) do (
     findstr /c:"%%C" "%SMILE_ROOT%\artifacts\temp\InvalidStructuredLanguage.log" >nul
     if errorlevel 1 (
         echo Invalid structured language smoke test failed: missing %%C.

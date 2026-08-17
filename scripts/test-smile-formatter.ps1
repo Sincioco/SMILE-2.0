@@ -177,6 +177,26 @@ try {
     Assert-Equal ([Convert]::ToBase64String($MultilineRoutineFirstPass)) ([Convert]::ToBase64String($MultilineRoutineSecondPass)) 'Multiline routine formatting was not idempotent.'
     Pass 'multiline routine headers, computed Returns, blank lines, and idempotence'
 
+    $OptionalNamedSource = "Option Explicit`n" +
+        "Sub Present(`n" +
+        "    Value As Number,`n" +
+        "    Optional left As Number = 2,`n" +
+        "    Optional Caption As Text = `"ready`"`n" +
+        ")`n" +
+        "    Print Value, left, Caption`n" +
+        "End Sub`n" +
+        "Call Present(Caption := `"named`", Value := 1)`n"
+    $OptionalNamedPath = Write-TestSource 'OptionalNamedFormatting.smile' $OptionalNamedSource
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'OptionalNamedFormatting.smile')).ExitCode 'Optional/named formatting failed.'
+    $OptionalNamedFormatted = [IO.File]::ReadAllText($OptionalNamedPath)
+    Assert-True ($OptionalNamedFormatted.Contains('Optional Left As Number = 2')) 'Contextual Optional parameter casing was not canonicalized.'
+    Assert-True ($OptionalNamedFormatted.Contains('Call Present(Caption:="named", Value:=1)')) 'Named argument operators were not formatted as Name:=Value.'
+    $OptionalNamedFirstPass = [IO.File]::ReadAllBytes($OptionalNamedPath)
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'OptionalNamedFormatting.smile')).ExitCode 'Optional/named second formatting pass failed.'
+    $OptionalNamedSecondPass = [IO.File]::ReadAllBytes($OptionalNamedPath)
+    Assert-Equal ([Convert]::ToBase64String($OptionalNamedFirstPass)) ([Convert]::ToBase64String($OptionalNamedSecondPass)) 'Optional/named formatting was not idempotent.'
+    Pass 'Optional declaration traversal, named argument spacing, contextual casing, and idempotence'
+
     $EnumSource = "Option Explicit`n`n" +
         "Enum Direction`n    none`n    up = 10`n    down`n    left = -5`n    right = -5`nEnd Enum`n`n" +
         "Function DefaultDirection() As Direction`n`n    Return Direction.left`n`nEnd Function`n"

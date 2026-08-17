@@ -763,16 +763,50 @@ public static class SmileLibraryPackage
                span.Length.ToString(CultureInfo.InvariantCulture) + "}";
     }
 
-    private static string ParameterJson(VariableSymbol parameter, int ordinal,
+    private static string ParameterJson(ParameterSymbol parameter, int ordinal,
         SmileCompilationDependencyContext dependencyContext, IReadOnlyDictionary<string, string> sourceIds)
     {
         var builder = new StringBuilder("{\"name\": \"").Append(JsonEscape(parameter.Name))
             .Append("\", \"type\": ").Append(TypeReferenceJson(parameter.Type, dependencyContext))
             .Append(", \"mode\": \"").Append(parameter.ParameterMode)
-            .Append("\", \"optional\": false, \"default\": null, \"ordinal\": ")
+            .Append("\", \"optional\": ").Append(parameter.IsOptional ? "true" : "false")
+            .Append(", \"default\": ").Append(ParameterDefaultJson(parameter))
+            .Append(", \"ordinal\": ")
             .Append(ordinal.ToString(CultureInfo.InvariantCulture)).Append(", \"location\": ")
             .Append(LocationJson(parameter.Source, parameter.DeclarationSpan, sourceIds));
         return builder.Append('}').ToString();
+    }
+
+    private static string ParameterDefaultJson(ParameterSymbol parameter)
+    {
+        if (!parameter.IsOptional)
+            return "null";
+        if (parameter.ParameterMode != ParameterPassingMode.ByVal || !parameter.HasDefaultValue)
+            throw new InvalidDataException(
+                $"Optional public parameter '{parameter.Name}' has no valid bound ByVal default.");
+
+        if (parameter.DefaultEnumMember != null)
+        {
+            if (!parameter.Type.IsEnum || parameter.DefaultValue is not long enumValue ||
+                enumValue != parameter.DefaultEnumMember.Value ||
+                !ReferenceEquals(parameter.DefaultEnumMember.ContainingType, parameter.Type))
+                throw new InvalidDataException(
+                    $"Optional public parameter '{parameter.Name}' has inconsistent Enum default metadata.");
+            return "{\"kind\": \"enum\", \"member\": \"" +
+                   JsonEscape(parameter.DefaultEnumMember.Name) + "\", \"value\": " +
+                   enumValue.ToString(CultureInfo.InvariantCulture) + "}";
+        }
+
+        if (parameter.Type == SmileType.Number && parameter.DefaultValue is long number)
+            return "{\"kind\": \"number\", \"value\": " +
+                   number.ToString(CultureInfo.InvariantCulture) + "}";
+        if (parameter.Type == SmileType.Boolean && parameter.DefaultValue is bool boolean)
+            return "{\"kind\": \"boolean\", \"value\": " + (boolean ? "true" : "false") + "}";
+        if (parameter.Type == SmileType.Text && parameter.DefaultValue is string text)
+            return "{\"kind\": \"text\", \"value\": \"" + JsonEscape(text) + "\"}";
+
+        throw new InvalidDataException(
+            $"Optional public parameter '{parameter.Name}' has unsupported default type '{parameter.Type.Name}'.");
     }
 
     private static string FieldJson(RecordFieldSymbol field,

@@ -1,0 +1,5 @@
+Sub Pair(First As Number, Optional Second As Number = 2)
+
+End Sub
+
+Call Pair(1, First:=2)

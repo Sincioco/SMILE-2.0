@@ -17,6 +17,7 @@ public enum SmileResolvedSymbolKind
     EnumMember,
     Field,
     Parameter,
+    NamedArgument,
     Local
 }
 
@@ -157,10 +158,14 @@ public static class SmileSymbolDisplayService
     public static string FormatParameter(RoutineSymbol routine, int index)
     {
         var parameter = routine.Parameters[index];
-        var mode = parameter.ParameterMode == ParameterPassingMode.ByRef ? "ByRef " : string.Empty;
+        var mode = parameter.IsOptional ? "Optional " :
+            parameter.ParameterMode == ParameterPassingMode.ByRef ? "ByRef " : string.Empty;
         var typeToken = index < routine.Declaration.Parameters.Count
             ? routine.Declaration.Parameters[index].TypeToken : null;
-        return mode + parameter.Name + " As " + FormatDeclaredType(routine.Source, typeToken, parameter.Type);
+        var defaultValue = parameter.IsOptional && parameter.HasDefaultValue
+            ? " = " + FormatParameterDefault(parameter) : string.Empty;
+        return mode + parameter.Name + " As " + FormatDeclaredType(routine.Source, typeToken, parameter.Type) +
+               defaultValue;
     }
 
     public static string DescribeProvider(string providerIdentity,
@@ -178,6 +183,14 @@ public static class SmileSymbolDisplayService
 
     internal static string FormatVariableSignature(VariableSymbol variable)
     {
+        if (variable is ParameterSymbol parameter)
+        {
+            var optional = parameter.IsOptional ? "Optional " :
+                parameter.ParameterMode == ParameterPassingMode.ByRef ? "ByRef " : string.Empty;
+            var defaultValue = parameter.IsOptional && parameter.HasDefaultValue
+                ? " = " + FormatParameterDefault(parameter) : string.Empty;
+            return optional + parameter.Name + " As " + FormatType(parameter.Type) + defaultValue;
+        }
         var keyword = variable.IsConstant ? "Const " : variable.IsParameter ? "Parameter " : "Dim ";
         var name = string.IsNullOrWhiteSpace(variable.ModuleName)
             ? variable.Name : variable.ModuleName + "." + variable.Name;
@@ -215,6 +228,19 @@ public static class SmileSymbolDisplayService
                 return declared;
         }
         return FormatType(fallback);
+    }
+
+    private static string FormatParameterDefault(ParameterSymbol parameter)
+    {
+        if (parameter.DefaultEnumMember != null)
+            return parameter.DefaultEnumMember.ContainingType.Name + "." + parameter.DefaultEnumMember.Name;
+        return parameter.DefaultValue switch
+        {
+            string text => "\"" + text.Replace("\"", "\"\"") + "\"",
+            bool boolean => boolean ? "True" : "False",
+            long number => number.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            _ => string.Empty
+        };
     }
 
     private static string FormatType(SmileType type) => type is NominalTypeSymbol
@@ -255,6 +281,12 @@ public static class SmileSymbolService
 
         if (TryResolveDeclaration(analysis, syntaxTree, token, currentModule, out symbol))
             return true;
+
+        if (analysis.SemanticModel.TryGetParameterUse(syntaxTree.Source, token.Position, out var boundParameter))
+        {
+            symbol = CreateNamedArgument(boundParameter, token.Span);
+            return true;
+        }
 
         var tokens = syntaxTree.Tokens;
         if (tokenIndex + 1 < tokens.Count && tokens[tokenIndex + 1].Kind == SyntaxKind.DotToken &&
@@ -662,6 +694,13 @@ public static class SmileSymbolService
             SmileDocumentationService.GetDocumentation(variable.Source, variable.DeclarationSpan.Start), false,
             variable: variable);
     }
+
+    private static SmileResolvedSymbol CreateNamedArgument(ParameterSymbol parameter, TextSpan referenceSpan) =>
+        new(SmileResolvedSymbolKind.NamedArgument, parameter.Name, parameter.Name, string.Empty, referenceSpan,
+            parameter.DeclarationLocation, parameter.ProviderIdentity, parameter.ModuleName ?? string.Empty,
+            SmileSymbolDisplayService.FormatVariableSignature(parameter),
+            SmileDocumentationService.GetDocumentation(parameter.Source, parameter.DeclarationSpan.Start), false,
+            variable: parameter);
 
     private static SmileResolvedSymbol CreateType(NominalTypeSymbol type, TextSpan referenceSpan)
     {

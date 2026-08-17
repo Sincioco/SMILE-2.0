@@ -55,6 +55,35 @@ End Function
 
 Native and Web calls have no four-parameter language restriction; the regression matrix covers 0, 1, 4, 5, 8, and 16 parameters.
 
+## Optional parameters and named arguments
+
+An Optional parameter uses `Optional Name As Type = Default`. `Optional` implies `ByVal`; an explicit `Optional ByVal` is accepted, while `Optional ByRef` is rejected. Optional parameters require an explicit type and default, must follow every required parameter, and may use `Number`, `Boolean`, `Text`, or an enum type. A default is a compile-time literal, `Const`, or exact-type enum member. Enum defaults preserve the selected member name as well as its signed value, including when a `Const` names an alias.
+
+```smile
+Sub Present(
+    Value As Number,
+    Optional Caption As Text = "ready",
+    Optional DirectionValue As Direction = Direction.Left
+)
+
+    Print Value
+    Print Caption
+
+End Sub
+
+Call Present(Value:=3)
+Call Present(
+    DirectionValue:=Direction.Right,
+    Value:=4
+)
+```
+
+Calls may mix positional and named arguments, but every positional argument must precede the first named argument. Names are case-insensitive, identify declared parameters rather than new variables, and use the single canonical `Name:=Expression` spelling. A parameter may be supplied only once. Omitted required parameters, unknown names, duplicate arguments, and named arguments on built-in functions are diagnosed.
+
+Every explicit argument is evaluated exactly once in source order. The completed captures are then passed in parameter-declaration order, and omitted Optional values are supplied from their bound constants. A named `ByRef` argument captures its writable location when that argument is encountered, so a later argument cannot redirect an earlier array element or record field. A `ByVal` record is deep-copied at capture time, so later argument side effects cannot mutate the value the callee receives. Native and Web calls release already captured owned values if a later explicit argument terminates before the call; successful calls transfer their Text, Image, and record captures to the normal callee ownership path.
+
+The formatter removes whitespace around `:=` without changing expression layout. In the editor, named-label completion is offered alongside ordinary expression completion after `(` or a top-level comma. Labels display and insert as `Name:=`; Quick Info and F12 resolve them to the declared parameter without attempting to read a caller-frame variable of the same name.
+
 ## Multiline routine declarations
 
 A `Sub` or `Function` parameter list may span physical lines when its opening `(` remains on the declaration line and a matching `)` closes the list. Between those balanced declaration parentheses, newlines act as whitespace: they may appear after `(`, between complete parameter declarations, around commas, and between a parameter's mode, name, `As`, and type. The continuation context ends at `)`. For a typed `Function`, the return `As Type` remains on the same physical line as the closing `)`.
@@ -396,6 +425,19 @@ Enum-specific diagnostics are stable and source-located. Exact assignment, argum
 | `SML3422` | An explicit member value is not a checked compile-time signed 64-bit `Number`, or an implicit successor overflows. |
 | `SML3423` | A named member does not exist on the enum type. |
 | `SML3424` | An enum is used with an unsupported operator or compared with a different enum type. |
+
+Optional-parameter and named-argument diagnostics are stable and source-located. Exact argument-type and `ByRef` location mismatches continue to use `SML3304` and `SML3305`.
+
+| Code | Meaning |
+|---|---|
+| `SML3430` | An Optional declaration is malformed, uses `ByRef`, omits its explicit type/default, or precedes a required parameter. |
+| `SML3431` | An Optional default is unsupported or is not a compile-time value of the exact declared type. |
+| `SML3432` | A positional argument follows a named argument. |
+| `SML3433` | A named argument names no parameter, or a built-in function is called with a named argument. |
+| `SML3434` | A parameter is supplied more than once. |
+| `SML3435` | A required parameter is omitted. |
+
+The Web target additionally reports `SML5102` when an Optional `Number` default is outside JavaScript's exact safe-integer range. Enum defaults use `BigInt` and retain the complete signed 64-bit range.
 
 ### Arc drawing
 

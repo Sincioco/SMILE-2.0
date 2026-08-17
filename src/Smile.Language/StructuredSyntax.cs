@@ -98,21 +98,47 @@ public sealed class EnumDeclarationSyntax : StatementSyntax
 
 public sealed class ParameterSyntax : SyntaxNode
 {
-    public ParameterSyntax(SyntaxToken? modeKeyword, SyntaxToken identifier, SyntaxToken? asKeyword,
-        SyntaxToken? typeToken)
+    public ParameterSyntax(SyntaxToken? optionalKeyword, SyntaxToken? modeKeyword, SyntaxToken identifier,
+        SyntaxToken? asKeyword, SyntaxToken? typeToken, SyntaxToken? equalsToken,
+        ExpressionSyntax? defaultValue)
     {
+        OptionalKeyword = optionalKeyword;
         ModeKeyword = modeKeyword;
         Identifier = identifier;
         AsKeyword = asKeyword;
         TypeToken = typeToken;
+        EqualsToken = equalsToken;
+        DefaultValue = defaultValue;
     }
 
+    public SyntaxToken? OptionalKeyword { get; }
     public SyntaxToken? ModeKeyword { get; }
     public SyntaxToken Identifier { get; }
     public SyntaxToken? AsKeyword { get; }
     public SyntaxToken? TypeToken { get; }
-    public override TextSpan Span => TextSpan.FromBounds(ModeKeyword?.Span.Start ?? Identifier.Span.Start,
-        TypeToken?.Span.End ?? Identifier.Span.End);
+    public SyntaxToken? EqualsToken { get; }
+    public ExpressionSyntax? DefaultValue { get; }
+    public bool IsOptional => OptionalKeyword != null;
+    public override TextSpan Span => TextSpan.FromBounds(
+        OptionalKeyword?.Span.Start ?? ModeKeyword?.Span.Start ?? Identifier.Span.Start,
+        DefaultValue?.Span.End ?? TypeToken?.Span.End ?? Identifier.Span.End);
+}
+
+public sealed class ArgumentSyntax : SyntaxNode
+{
+    public ArgumentSyntax(SyntaxToken? name, SyntaxToken? colonEqualsToken, ExpressionSyntax expression)
+    {
+        Name = name;
+        ColonEqualsToken = colonEqualsToken;
+        Expression = expression;
+    }
+
+    public SyntaxToken? Name { get; }
+    public SyntaxToken? ColonEqualsToken { get; }
+    public ExpressionSyntax Expression { get; }
+    public bool IsNamed => Name != null;
+    public override TextSpan Span => TextSpan.FromBounds(Name?.Span.Start ?? Expression.Span.Start,
+        Expression.Span.End);
 }
 
 public sealed class DottedNameSyntax : SyntaxNode
@@ -235,7 +261,8 @@ public sealed class RoutineDeclarationSyntax : StatementSyntax
 
 public sealed class CallStatementSyntax : StatementSyntax
 {
-    public CallStatementSyntax(SyntaxToken callKeyword, SyntaxToken identifier, IReadOnlyList<ExpressionSyntax> arguments, SyntaxToken closeParenthesis)
+    public CallStatementSyntax(SyntaxToken callKeyword, SyntaxToken identifier,
+        IReadOnlyList<ArgumentSyntax> arguments, SyntaxToken closeParenthesis)
     {
         CallKeyword = callKeyword;
         Identifier = identifier;
@@ -245,7 +272,7 @@ public sealed class CallStatementSyntax : StatementSyntax
 
     public SyntaxToken CallKeyword { get; }
     public SyntaxToken Identifier { get; }
-    public IReadOnlyList<ExpressionSyntax> Arguments { get; }
+    public IReadOnlyList<ArgumentSyntax> Arguments { get; }
     public SyntaxToken CloseParenthesis { get; }
     public override TextSpan Span => TextSpan.FromBounds(CallKeyword.Span.Start, CloseParenthesis.Span.End);
 }
@@ -253,7 +280,7 @@ public sealed class CallStatementSyntax : StatementSyntax
 public sealed class QualifiedCallStatementSyntax : StatementSyntax
 {
     public QualifiedCallStatementSyntax(SyntaxToken callKeyword, SyntaxToken alias, SyntaxToken dotToken,
-        SyntaxToken member, IReadOnlyList<ExpressionSyntax> arguments, SyntaxToken closeParenthesis)
+        SyntaxToken member, IReadOnlyList<ArgumentSyntax> arguments, SyntaxToken closeParenthesis)
     {
         CallKeyword = callKeyword;
         Alias = alias;
@@ -267,7 +294,7 @@ public sealed class QualifiedCallStatementSyntax : StatementSyntax
     public SyntaxToken Alias { get; }
     public SyntaxToken DotToken { get; }
     public SyntaxToken Member { get; }
-    public IReadOnlyList<ExpressionSyntax> Arguments { get; }
+    public IReadOnlyList<ArgumentSyntax> Arguments { get; }
     public SyntaxToken CloseParenthesis { get; }
     public override TextSpan Span => TextSpan.FromBounds(CallKeyword.Span.Start, CloseParenthesis.Span.End);
 }
@@ -275,7 +302,7 @@ public sealed class QualifiedCallStatementSyntax : StatementSyntax
 public sealed class LeadingMemberCallStatementSyntax : StatementSyntax
 {
     public LeadingMemberCallStatementSyntax(SyntaxToken callKeyword, SyntaxToken dotToken,
-        SyntaxToken member, IReadOnlyList<ExpressionSyntax> arguments, SyntaxToken closeParenthesis)
+        SyntaxToken member, IReadOnlyList<ArgumentSyntax> arguments, SyntaxToken closeParenthesis)
     {
         CallKeyword = callKeyword;
         DotToken = dotToken;
@@ -287,7 +314,7 @@ public sealed class LeadingMemberCallStatementSyntax : StatementSyntax
     public SyntaxToken CallKeyword { get; }
     public SyntaxToken DotToken { get; }
     public SyntaxToken Member { get; }
-    public IReadOnlyList<ExpressionSyntax> Arguments { get; }
+    public IReadOnlyList<ArgumentSyntax> Arguments { get; }
     public SyntaxToken CloseParenthesis { get; }
     public override TextSpan Span => TextSpan.FromBounds(CallKeyword.Span.Start, CloseParenthesis.Span.End);
 }
@@ -391,7 +418,8 @@ public sealed class EndProgramStatementSyntax : StatementSyntax
 
 public sealed class CallExpressionSyntax : ExpressionSyntax
 {
-    public CallExpressionSyntax(SyntaxToken identifier, IReadOnlyList<ExpressionSyntax> arguments, SyntaxToken closeParenthesis)
+    public CallExpressionSyntax(SyntaxToken identifier, IReadOnlyList<ArgumentSyntax> arguments,
+        SyntaxToken closeParenthesis)
     {
         Identifier = identifier;
         Arguments = arguments;
@@ -399,7 +427,7 @@ public sealed class CallExpressionSyntax : ExpressionSyntax
     }
 
     public SyntaxToken Identifier { get; }
-    public IReadOnlyList<ExpressionSyntax> Arguments { get; }
+    public IReadOnlyList<ArgumentSyntax> Arguments { get; }
     public SyntaxToken CloseParenthesis { get; }
     public override TextSpan Span => TextSpan.FromBounds(Identifier.Span.Start, CloseParenthesis.Span.End);
 }
@@ -442,7 +470,7 @@ public sealed class QualifiedArrayAccessExpressionSyntax : ExpressionSyntax
 public sealed class QualifiedCallExpressionSyntax : ExpressionSyntax
 {
     public QualifiedCallExpressionSyntax(SyntaxToken alias, SyntaxToken dotToken, SyntaxToken member,
-        IReadOnlyList<ExpressionSyntax> arguments, SyntaxToken closeParenthesis)
+        IReadOnlyList<ArgumentSyntax> arguments, SyntaxToken closeParenthesis)
     {
         Alias = alias;
         DotToken = dotToken;
@@ -454,7 +482,7 @@ public sealed class QualifiedCallExpressionSyntax : ExpressionSyntax
     public SyntaxToken Alias { get; }
     public SyntaxToken DotToken { get; }
     public SyntaxToken Member { get; }
-    public IReadOnlyList<ExpressionSyntax> Arguments { get; }
+    public IReadOnlyList<ArgumentSyntax> Arguments { get; }
     public SyntaxToken CloseParenthesis { get; }
     public override TextSpan Span => TextSpan.FromBounds(Alias.Span.Start, CloseParenthesis.Span.End);
 }
