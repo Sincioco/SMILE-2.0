@@ -1,0 +1,7 @@
+Option Explicit
+
+Dim Value As Number
+
+With Value
+    Print Value
+End With

@@ -1,0 +1,17 @@
+Option Explicit
+
+Type Item
+    Value As Number
+End Type
+
+With CreateItem()
+    .Value = 1
+End With
+
+Function CreateItem() As Item
+
+    Dim Result As Item
+
+    Return Result
+
+End Function

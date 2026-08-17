@@ -97,6 +97,7 @@ internal sealed class MasmEmitter
     private readonly Dictionary<SyntaxToken, TextLiteral> _gameTextLiterals = new();
     private readonly Dictionary<ForStatementSyntax, MasmTemporaryStorage> _forLimits = new();
     private readonly Dictionary<SelectStatementSyntax, MasmTemporaryStorage> _selectValues = new();
+    private readonly Dictionary<WithStatementSyntax, MasmTemporaryStorage> _withLocations = new();
     private readonly List<MasmTemporaryStorage> _temporaries = new();
     private readonly Dictionary<RoutineSymbol, MasmFrameLayout> _frameLayouts = new();
     private readonly Stack<MasmLoopContext> _forExitLabels = new();
@@ -307,8 +308,7 @@ internal sealed class MasmEmitter
                     CollectExpression(constant.Expression);
                     break;
                 case AssignmentStatementSyntax assignment:
-                    foreach (var index in assignment.Target.Indices)
-                        CollectExpression(index);
+                    CollectExpression(assignment.Target.Location);
                     CollectExpression(assignment.Expression);
                     break;
                 case DimStatementSyntax dim:
@@ -333,6 +333,11 @@ internal sealed class MasmEmitter
                         Collect(clause.Statements);
                     }
                     Collect(ifStatement.ElseStatements);
+                    break;
+                case WithStatementSyntax withStatement:
+                    CollectExpression(withStatement.Target);
+                    _withLocations[withStatement] = CreateTemporary("with_location", SmileType.Number);
+                    Collect(withStatement.Statements);
                     break;
                 case ForStatementSyntax forStatement:
                     CollectExpression(forStatement.LowerBound);
@@ -385,7 +390,7 @@ internal sealed class MasmEmitter
                     foreach (var argument in ImageExpressions(image)) CollectExpression(argument);
                     break;
                 case ImageLoadStatementSyntax image:
-                    foreach (var index in image.Target.Indices) CollectExpression(index);
+                    CollectExpression(image.Target.Location);
                     CollectExpression(image.Path);
                     break;
                 case ClipRectangleStatementSyntax clip:
@@ -411,7 +416,7 @@ internal sealed class MasmEmitter
                     break;
                 case DataLoadStatementSyntax data:
                     CollectExpression(data.Key);
-                    foreach (var index in data.CountTarget.Indices) CollectExpression(index);
+                    CollectExpression(data.CountTarget.Location);
                     break;
                 case DataSaveStatementSyntax data:
                     CollectExpression(data.Count);
@@ -643,6 +648,9 @@ internal sealed class MasmEmitter
                 break;
             case IfStatementSyntax ifStatement:
                 EmitIf(ifStatement);
+                break;
+            case WithStatementSyntax withStatement:
+                EmitWith(withStatement);
                 break;
             case ForStatementSyntax forStatement:
                 EmitFor(forStatement);
@@ -980,60 +988,21 @@ internal sealed class MasmEmitter
     private void EmitAssignment(AssignmentStatementSyntax assignment)
     {
         EmitExpression(assignment.Expression);
-        var targetType = GetTargetType(assignment.Target);
+        var targetType = _analysis.SemanticModel.GetType(assignment.Target.Location);
+        PushRax();
+        EmitTargetAddress(assignment.Target);
+        Line("    mov rcx, rax");
+        PopRax();
         if (targetType is RecordTypeSymbol targetRecord)
         {
-            PushRax();
-            EmitTargetAddress(assignment.Target);
-            Line("    mov rcx, rax");
-            PopRax();
             Line("    mov rdx, rax");
             CallAligned(RecordCopy(targetRecord));
             return;
         }
-        if (assignment.Target.Fields.Count != 0)
-        {
-            PushRax();
-            EmitTargetAddress(assignment.Target);
-            Line("    mov rcx, rax");
-            PopRax();
-            if (targetType == SmileType.Text || targetType == SmileType.Image)
-            {
-                Line("    mov rdx, rax");
-                CallAligned(targetType == SmileType.Text ? "smile_text_move_assign" : "smile_image_move_assign");
-            }
-            else
-                Line("    mov QWORD PTR [rcx], rax");
-            return;
-        }
-        if (!assignment.Target.IsArrayElement)
-        {
-            var target = Resolve(assignment.Target.Identifier.Text);
-            if (target.Type == SmileType.Text || target.Type == SmileType.Image)
-            {
-                PushRax();
-                EmitAddress(target);
-                Line("    mov rcx, rax");
-                PopRax();
-                Line("    mov rdx, rax");
-                CallAligned(target.Type == SmileType.Text ? "smile_text_move_assign" : "smile_image_move_assign");
-            }
-            else
-                EmitStore(target);
-            return;
-        }
-        PushRax();
-        var symbol = Resolve(assignment.Target.Identifier.Text);
-        EmitArrayIndex(assignment.Target.Indices, symbol);
-        Line("    mov rcx, rax");
-        EmitAddress(symbol);
-        Line($"    imul rcx, {Math.Max(8, symbol.Type.Size).ToString(CultureInfo.InvariantCulture)}");
-        Line("    lea rcx, [rax+rcx]");
-        PopRax();
-        if (symbol.Type == SmileType.Text || symbol.Type == SmileType.Image)
+        if (targetType == SmileType.Text || targetType == SmileType.Image)
         {
             Line("    mov rdx, rax");
-            CallAligned(symbol.Type == SmileType.Text ? "smile_text_move_assign" : "smile_image_move_assign");
+            CallAligned(targetType == SmileType.Text ? "smile_text_move_assign" : "smile_image_move_assign");
         }
         else
             Line("    mov QWORD PTR [rcx], rax");
@@ -1052,41 +1021,9 @@ internal sealed class MasmEmitter
         Line("    add rax, rcx");
     }
 
-    private SmileType GetTargetType(AssignmentTargetSyntax target)
-    {
-        SmileType type = Resolve(target.Identifier.Text).Type;
-        foreach (var token in target.Fields)
-        {
-            if (type is not RecordTypeSymbol record || !record.TryGetField(token.Text, out var field))
-                throw new InvalidOperationException($"Unresolved record field '{token.Text}'.");
-            type = field.Type;
-        }
-        return type;
-    }
-
     private void EmitTargetAddress(AssignmentTargetSyntax target)
     {
-        var symbol = Resolve(target.Identifier.Text);
-        if (target.IsArrayElement)
-        {
-            EmitArrayIndex(target.Indices, symbol);
-            Line("    mov rcx, rax");
-            EmitAddress(symbol);
-            Line($"    imul rcx, {Math.Max(8, symbol.Type.Size).ToString(CultureInfo.InvariantCulture)}");
-            Line("    add rax, rcx");
-        }
-        else
-            EmitAddress(symbol);
-
-        SmileType type = symbol.Type;
-        foreach (var token in target.Fields)
-        {
-            var record = (RecordTypeSymbol)type;
-            record.TryGetField(token.Text, out var field);
-            if (field.Offset != 0)
-                Line($"    add rax, {field.Offset.ToString(CultureInfo.InvariantCulture)}");
-            type = field.Type;
-        }
+        EmitWritableAddress(target.Location);
     }
 
     private void EmitPrint(PrintStatementSyntax print)
@@ -1108,6 +1045,13 @@ internal sealed class MasmEmitter
         }
         if (!print.SuppressNewLine)
             CallAligned("smile_print_newline");
+    }
+
+    private void EmitWith(WithStatementSyntax statement)
+    {
+        EmitWritableAddress(statement.Target);
+        Line($"    mov {TemporaryMemory(_withLocations[statement])}, rax");
+        EmitStatements(statement.Statements);
     }
 
     private void EmitIf(IfStatementSyntax statement)
@@ -1273,6 +1217,20 @@ internal sealed class MasmEmitter
                     {
                         Line("    mov rcx, rax");
                         CallAligned(_analysis.SemanticModel.GetType(field) == SmileType.Text
+                            ? "smile_text_retain" : "smile_image_retain");
+                    }
+                }
+                break;
+            case LeadingMemberAccessExpressionSyntax leading:
+                EmitWritableAddress(leading);
+                if (_analysis.SemanticModel.GetType(leading) is not RecordTypeSymbol)
+                {
+                    Line("    mov rax, QWORD PTR [rax]");
+                    if (_analysis.SemanticModel.GetType(leading) == SmileType.Text ||
+                        _analysis.SemanticModel.GetType(leading) == SmileType.Image)
+                    {
+                        Line("    mov rcx, rax");
+                        CallAligned(_analysis.SemanticModel.GetType(leading) == SmileType.Text
                             ? "smile_text_retain" : "smile_image_retain");
                     }
                 }
@@ -1446,6 +1404,16 @@ internal sealed class MasmEmitter
                 throw new InvalidOperationException($"Unbound record field '{field.Field.Text}'.");
             if (fieldSymbol.Offset != 0)
                 Line($"    add rax, {fieldSymbol.Offset.ToString(CultureInfo.InvariantCulture)}");
+            return;
+        }
+        if (expression is LeadingMemberAccessExpressionSyntax leading)
+        {
+            if (!_analysis.SemanticModel.TryGetWithMember(leading, out var binding))
+                throw new InvalidOperationException($"Unbound With member '{leading.Member.Text}'.");
+            var storage = _withLocations[binding.ReceiverStatement];
+            Line($"    mov rax, {TemporaryMemory(storage)}");
+            if (binding.Field.Offset != 0)
+                Line($"    add rax, {binding.Field.Offset.ToString(CultureInfo.InvariantCulture)}");
             return;
         }
         if (expression is ParenthesizedExpressionSyntax parenthesized)

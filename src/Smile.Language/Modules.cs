@@ -369,6 +369,8 @@ internal sealed class ModuleProcessor
             }
             if (statement is ForStatementSyntax forStatement)
                 foreach (var nested in EnumerateOptions(forStatement.Statements)) yield return nested;
+            if (statement is WithStatementSyntax withStatement)
+                foreach (var nested in EnumerateOptions(withStatement.Statements)) yield return nested;
             if (statement is DoStatementSyntax doStatement)
                 foreach (var nested in EnumerateOptions(doStatement.Statements)) yield return nested;
             if (statement is SelectStatementSyntax select)
@@ -672,6 +674,11 @@ internal sealed class ModuleProcessor
                         clause.Statements.Select(item => LowerStatement(item, tree, module, locals)).ToArray())).ToArray(),
                     conditional.ElseStatements.Select(item => LowerStatement(item, tree, module, locals)).ToArray(),
                     conditional.EndKeyword, conditional.FinalIfKeyword);
+            case WithStatementSyntax withStatement:
+                return new WithStatementSyntax(withStatement.WithKeyword,
+                    LowerExpression(withStatement.Target, tree, module, locals),
+                    withStatement.Statements.Select(item => LowerStatement(item, tree, module, locals)).ToArray(),
+                    withStatement.EndKeyword, withStatement.FinalWithKeyword);
             case ForStatementSyntax loop:
                 return new ForStatementSyntax(loop.ForKeyword, ReferenceToken(loop.Identifier, tree, module, locals),
                     LowerExpression(loop.LowerBound, tree, module, locals), loop.IsDescending,
@@ -688,6 +695,9 @@ internal sealed class ModuleProcessor
                 return new CallStatementSyntax(call.CallKeyword,
                     QualifiedToken(tree, call.Alias, call.Member,
                         member => member.Kind is SmileModuleMemberKind.Subroutine or SmileModuleMemberKind.Function),
+                    call.Arguments.Select(item => LowerExpression(item, tree, module, locals)).ToArray(), call.CloseParenthesis);
+            case LeadingMemberCallStatementSyntax call:
+                return new LeadingMemberCallStatementSyntax(call.CallKeyword, call.DotToken, call.Member,
                     call.Arguments.Select(item => LowerExpression(item, tree, module, locals)).ToArray(), call.CloseParenthesis);
             case ReturnStatementSyntax value:
                 return new ReturnStatementSyntax(value.ReturnKeyword,
@@ -767,19 +777,7 @@ internal sealed class ModuleProcessor
     private AssignmentTargetSyntax LowerTarget(AssignmentTargetSyntax target, SyntaxTree tree, ModuleSymbol? module,
         HashSet<string>? locals)
     {
-        var importedQualifier = target.IsQualified && _imports.TryGetValue(tree.Source, out var aliases) &&
-            aliases.ContainsKey(target.Qualifier!.Text);
-        var identifier = importedQualifier
-            ? QualifiedToken(tree, target.Qualifier!, target.Identifier,
-                member => member.Kind is SmileModuleMemberKind.Constant or SmileModuleMemberKind.Variable or SmileModuleMemberKind.Array)
-            : ReferenceToken(target.IsQualified ? target.Qualifier! : target.Identifier, tree, module, locals);
-        var fields = importedQualifier ? target.Fields : target.IsQualified
-            ? new[] { target.Identifier }.Concat(target.Fields).ToArray() : target.Fields;
-        var fieldDots = importedQualifier ? target.FieldDots : target.IsQualified
-            ? new[] { target.DotToken! }.Concat(target.FieldDots).ToArray() : target.FieldDots;
-        return new AssignmentTargetSyntax(identifier, target.OpenBracket,
-            target.Indices.Select(item => LowerExpression(item, tree, module, locals)).ToArray(), target.CloseBracket,
-            fieldDots: fieldDots, fields: fields);
+        return new AssignmentTargetSyntax(LowerExpression(target.Location, tree, module, locals));
     }
 
     private ExpressionSyntax LowerExpression(ExpressionSyntax expression, SyntaxTree tree, ModuleSymbol? module,
@@ -812,6 +810,8 @@ internal sealed class ModuleProcessor
             case FieldAccessExpressionSyntax field:
                 return new FieldAccessExpressionSyntax(LowerExpression(field.Receiver, tree, module, locals),
                     field.DotToken, field.Field);
+            case LeadingMemberAccessExpressionSyntax leading:
+                return new LeadingMemberAccessExpressionSyntax(leading.DotToken, leading.Member);
             case ParenthesizedExpressionSyntax parenthesized:
                 return new ParenthesizedExpressionSyntax(parenthesized.OpenParenthesis,
                     LowerExpression(parenthesized.Expression, tree, module, locals), parenthesized.CloseParenthesis);
@@ -960,14 +960,15 @@ internal sealed class ModuleProcessor
             {
                 switch (statement)
                 {
-                    case AssignmentStatementSyntax assignment when !assignment.Target.IsQualified && !assignment.Target.IsArrayElement:
-                        Add(assignment.Target.Identifier); break;
+                    case AssignmentStatementSyntax { Target.Location: NameExpressionSyntax name }:
+                        Add(name.Identifier); break;
                     case DimStatementSyntax dim: Add(dim.Identifier); break;
                     case GetKeyStatementSyntax getKey: Add(getKey.Identifier); break;
                     case RandomStatementSyntax random: Add(random.Identifier); break;
                     case LoadStatementSyntax load: Add(load.Identifier); break;
                     case TextFileLoadStatementSyntax load: Add(load.CountIdentifier); break;
                     case ForStatementSyntax loop: Add(loop.Identifier); Collect(loop.Statements); break;
+                    case WithStatementSyntax withStatement: Collect(withStatement.Statements); break;
                     case DoStatementSyntax loop: Collect(loop.Statements); break;
                     case ClipRectangleStatementSyntax clip: Collect(clip.Statements); break;
                     case IfStatementSyntax conditional:

@@ -262,6 +262,17 @@ public static class SmileSymbolService
             return true;
         }
 
+        if (analysis.SemanticModel.TryGetFieldUse(syntaxTree.Source, token.Position, out var boundField))
+        {
+            var boundOwner = analysis.SemanticModel.Types.Values.FirstOrDefault(type =>
+                type.Fields.Contains(boundField));
+            if (boundOwner != null)
+            {
+                symbol = CreateField(boundOwner, boundField, token.Span);
+                return true;
+            }
+        }
+
         if (TryResolveFieldUse(analysis, syntaxTree, token, tokenIndex, currentRoutine, currentModule,
                 out var owner, out var field))
         {

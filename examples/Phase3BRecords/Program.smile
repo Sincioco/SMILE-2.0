@@ -6,6 +6,7 @@ Dim Hero As Models.Actor
 Dim Copy As Models.Actor
 Dim Party[2] As Models.Actor
 Dim OriginalName As Text
+Dim TargetEvaluations As Number
 
 Hero = Models.CreateActor("Alyssa", 10, 20, 35, 35)
 Copy = Hero
@@ -35,9 +36,32 @@ Call Change(Party[0])
 
 Print Party[0].Name
 
-Call RenameField(Party[1].Name, "Nei")
+With Party[SelectPartyIndex()]
+    .Active = False
 
-Print Party[1].Name
+    Print .Name
+
+    With .Position
+        .X = .X + 9
+
+        Print .X
+    End With
+
+    Call RenameField(.Name, "Nei")
+
+    Print .Name
+
+    Call ReplaceActor(Party[1])
+
+    Print .Name
+
+    .Active = ReplaceDuringAssignment(Party[1])
+
+    Print .Name
+    Print .Active
+End With
+
+Print TargetEvaluations
 
 Copy = Models.CopyActor(Party[0])
 Print Copy.Name
@@ -56,8 +80,30 @@ Sub Change(ByRef Value As Models.Actor)
 
 End Sub
 
+Sub ReplaceActor(ByRef Value As Models.Actor)
+
+    Value = Models.CreateActor("Replacement", 40, 50, 60, 70)
+
+End Sub
+
+Function ReplaceDuringAssignment(ByRef Value As Models.Actor) As Boolean
+
+    Value = Models.CreateActor("RHS Replacement", 70, 80, 90, 100)
+
+    Return False
+
+End Function
+
 Sub RenameField(ByRef Value As Text, NewValue As Text)
 
     Value = NewValue
 
 End Sub
+
+Function SelectPartyIndex() As Number
+
+    TargetEvaluations = TargetEvaluations + 1
+
+    Return 1
+
+End Function

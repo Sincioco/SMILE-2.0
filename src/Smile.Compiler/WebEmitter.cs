@@ -19,6 +19,7 @@ internal sealed class WebEmitter
     private readonly IReadOnlyList<string> _assetPaths;
     private readonly Stack<string> _forExitLabels = new();
     private readonly Stack<string> _doExitLabels = new();
+    private readonly Dictionary<WithStatementSyntax, string> _withReferences = new();
     private SourceText _currentSource;
     private RoutineSymbol? _currentRoutine;
     private int _indent;
@@ -205,6 +206,9 @@ internal sealed class WebEmitter
             case IfStatementSyntax ifStatement:
                 EmitIf(ifStatement, topLevel);
                 return;
+            case WithStatementSyntax withStatement:
+                EmitWith(withStatement, topLevel);
+                return;
             case ForStatementSyntax forStatement:
                 EmitFor(forStatement, topLevel);
                 return;
@@ -289,38 +293,49 @@ internal sealed class WebEmitter
 
     private void EmitAssignment(AssignmentStatementSyntax assignment)
     {
-        var value = Expression(assignment.Expression);
         var targetType = TargetType(assignment.Target);
+        var value = Temporary("value");
         if (targetType == SmileType.Image)
         {
-            Line(WriteTarget(assignment.Target,
-                $"smile.imageMoveAssign({ReadTarget(assignment.Target)}, {value})") + ";");
-            return;
+            Line($"const {value} = {Expression(assignment.Expression)};");
         }
-        if (targetType is RecordTypeSymbol record && record.RequiresCleanup)
+        else if (targetType is RecordTypeSymbol record && record.RequiresCleanup)
         {
-            var temporary = Temporary("record");
-            Line($"const {temporary} = {RecordValue(assignment.Expression, targetType, value)};");
-            Line($"{_recordNames[record]}_clear({ReadTarget(assignment.Target)});");
-            Line(WriteTarget(assignment.Target, temporary) + ";");
-            return;
+            Line($"const {value} = {RecordValue(assignment.Expression, targetType, Expression(assignment.Expression))};");
         }
-        if (assignment.Target.Fields.Count != 0)
+        else
         {
-            Line($"{TargetLocation(assignment.Target)} = {StoreValue(targetType, value)};");
-            return;
-        }
-        if (!assignment.Target.IsArrayElement)
-        {
-            var targetSymbol = ResolveVariable(assignment.Target.Identifier);
-            var stored = StoreValue(targetSymbol.Type, value);
-            Line(WriteVariable(targetSymbol, stored) + ";");
-            return;
+            Line($"const {value} = {StoreValue(targetType, Expression(assignment.Expression))};");
         }
 
-        var symbol = ResolveVariable(assignment.Target.Identifier);
-        var arrayValue = StoreValue(symbol.Type, value);
-        Line($"smile.set({_variableNames[symbol]}, [{Arguments(assignment.Target.Indices)}], {arrayValue});");
+        if (targetType == SmileType.Image)
+        {
+            var reference = Temporary("target");
+            Line($"const {reference} = {Reference(assignment.Target.Location)};");
+            Line($"{reference}.set(smile.imageMoveAssign({reference}.get(), {value}));");
+        }
+        else if (targetType is RecordTypeSymbol cleanupRecord && cleanupRecord.RequiresCleanup)
+        {
+            var reference = Temporary("target");
+            Line($"const {reference} = {Reference(assignment.Target.Location)};");
+            Line($"{_recordNames[cleanupRecord]}_clear({reference}.get());");
+            Line($"{reference}.set({value});");
+        }
+        else
+            Line(WriteTarget(assignment.Target, value) + ";");
+    }
+
+    private void EmitWith(WithStatementSyntax statement, bool topLevel)
+    {
+        var reference = Temporary("with");
+        Line("{");
+        _indent++;
+        Line($"const {reference} = {Reference(statement.Target)};");
+        _withReferences[statement] = reference;
+        EmitStatements(statement.Statements, topLevel);
+        _withReferences.Remove(statement);
+        _indent--;
+        Line("}");
     }
 
     private void EmitIf(IfStatementSyntax statement, bool topLevel)
@@ -583,6 +598,10 @@ internal sealed class WebEmitter
                 var fieldValue = $"({Expression(field.Receiver)})[{Json(FieldKey(fieldSymbol))}]";
                 return _analysis.SemanticModel.GetType(field) == SmileType.Image
                     ? $"smile.imageRetain({fieldValue})" : fieldValue;
+            case LeadingMemberAccessExpressionSyntax leading:
+                var leadingValue = LeadingMemberLocation(leading);
+                return _analysis.SemanticModel.GetType(leading) == SmileType.Image
+                    ? $"smile.imageRetain({leadingValue})" : leadingValue;
             case ParenthesizedExpressionSyntax parenthesized:
                 return $"({Expression(parenthesized.Expression)})";
             case UnaryExpressionSyntax unary:
@@ -708,12 +727,21 @@ internal sealed class WebEmitter
         {
             if (!_analysis.SemanticModel.TryGetField(field, out var fieldSymbol))
                 return "smile.invalidRef()";
-            var receiver = Expression(field.Receiver);
             var key = Json(FieldKey(fieldSymbol));
-            return $"(() => {{ const target = {receiver}; return smile.ref(() => target[{key}], value => {{ target[{key}] = value; }}); }})()";
+            return MemberReference(Reference(field.Receiver), key);
+        }
+        if (expression is LeadingMemberAccessExpressionSyntax leading)
+        {
+            if (!_analysis.SemanticModel.TryGetWithMember(leading, out var binding) ||
+                !_withReferences.TryGetValue(binding.ReceiverStatement, out var receiver))
+                return "smile.invalidRef()";
+            return MemberReference(receiver, Json(FieldKey(binding.Field)));
         }
         return "smile.invalidRef()";
     }
+
+    private static string MemberReference(string receiverReference, string key) =>
+        $"(() => {{ const target = {receiverReference}; return smile.ref(() => target.get()[{key}], value => {{ target.get()[{key}] = value; }}); }})()";
 
     private string DefaultValue(SmileType type) => type is RecordTypeSymbol record
         ? $"{_recordNames[record]}_default()"
@@ -755,12 +783,11 @@ internal sealed class WebEmitter
 
     private string WriteTarget(AssignmentTargetSyntax target, string value)
     {
-        if (target.Fields.Count != 0)
-            return $"{TargetLocation(target)} = {value}";
-        var symbol = ResolveVariable(target.Identifier);
-        if (!target.IsArrayElement)
-            return WriteVariable(symbol, value);
-        return $"smile.set({_variableNames[symbol]}, [{Arguments(target.Indices)}], {value})";
+        if (target.Location is NameExpressionSyntax name)
+            return WriteVariable(ResolveVariable(name.Identifier), value);
+        if (target.Location is ArrayAccessExpressionSyntax array)
+            return $"smile.set({_variableNames[ResolveVariable(array.Identifier)]}, [{Arguments(array.Indices)}], {value})";
+        return $"{Location(target.Location)} = {value}";
     }
 
     private void EmitRelease(VariableSymbol symbol)
@@ -792,32 +819,31 @@ internal sealed class WebEmitter
 
     private SmileType TargetType(AssignmentTargetSyntax target)
     {
-        SmileType type = ResolveVariable(target.Identifier).Type;
-        foreach (var token in target.Fields)
-        {
-            if (type is not RecordTypeSymbol record || !record.TryGetField(token.Text, out var field))
-                throw new WebTargetException(_currentSource, "SML5101", token.Span,
-                    $"Web target could not resolve record field '{token.Text}'.");
-            type = field.Type;
-        }
-        return type;
+        return _analysis.SemanticModel.GetType(target.Location);
     }
 
-    private string TargetLocation(AssignmentTargetSyntax target)
+    private string TargetLocation(AssignmentTargetSyntax target) => Location(target.Location);
+
+    private string Location(ExpressionSyntax expression)
     {
-        var symbol = ResolveVariable(target.Identifier);
-        var location = target.IsArrayElement
-            ? $"smile.get({_variableNames[symbol]}, [{Arguments(target.Indices)}])"
-            : ReadVariable(symbol);
-        SmileType type = symbol.Type;
-        foreach (var token in target.Fields)
-        {
-            var record = (RecordTypeSymbol)type;
-            record.TryGetField(token.Text, out var field);
-            location = $"({location})[{Json(FieldKey(field))}]";
-            type = field.Type;
-        }
-        return location;
+        if (expression is NameExpressionSyntax name)
+            return ReadVariable(ResolveVariable(name.Identifier));
+        if (expression is ArrayAccessExpressionSyntax array)
+            return $"smile.get({_variableNames[ResolveVariable(array.Identifier)]}, [{Arguments(array.Indices)}])";
+        if (expression is FieldAccessExpressionSyntax field &&
+            _analysis.SemanticModel.TryGetField(field, out var fieldSymbol))
+            return $"({Expression(field.Receiver)})[{Json(FieldKey(fieldSymbol))}]";
+        if (expression is LeadingMemberAccessExpressionSyntax leading)
+            return LeadingMemberLocation(leading);
+        throw UnsupportedExpression(expression, "non-location assignment target");
+    }
+
+    private string LeadingMemberLocation(LeadingMemberAccessExpressionSyntax expression)
+    {
+        if (!_analysis.SemanticModel.TryGetWithMember(expression, out var binding) ||
+            !_withReferences.TryGetValue(binding.ReceiverStatement, out var receiver))
+            throw UnsupportedExpression(expression, "unbound With member");
+        return $"{receiver}.get()[{Json(FieldKey(binding.Field))}]";
     }
 
     private static string ConstantValue(object value) => value switch

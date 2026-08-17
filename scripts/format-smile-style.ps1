@@ -304,7 +304,7 @@ function Test-CompactForBoundary {
     }
 
     $HasNestedControl = @($BodyStatements | Where-Object {
-        $_.Trim() -match '^(?:If\b|Else\b|End\s+If$|For\b|End\s+For$|Do\b|Loop\b)'
+        $_.Trim() -match '^(?:If\b|Else\b|End\s+If$|For\b|End\s+For$|Do\b|Loop\b|With\b|End\s+With$)'
     }).Count -gt 0
 
     return -not $HasNestedControl

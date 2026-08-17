@@ -1,0 +1,13 @@
+Option Explicit
+
+Type Item
+    Value As Number
+End Type
+
+Dim Current As Item
+
+With Current
+
+    Call .Reset()
+
+End With

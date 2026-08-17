@@ -233,6 +233,26 @@ public sealed class QualifiedCallStatementSyntax : StatementSyntax
     public override TextSpan Span => TextSpan.FromBounds(CallKeyword.Span.Start, CloseParenthesis.Span.End);
 }
 
+public sealed class LeadingMemberCallStatementSyntax : StatementSyntax
+{
+    public LeadingMemberCallStatementSyntax(SyntaxToken callKeyword, SyntaxToken dotToken,
+        SyntaxToken member, IReadOnlyList<ExpressionSyntax> arguments, SyntaxToken closeParenthesis)
+    {
+        CallKeyword = callKeyword;
+        DotToken = dotToken;
+        Member = member;
+        Arguments = arguments;
+        CloseParenthesis = closeParenthesis;
+    }
+
+    public SyntaxToken CallKeyword { get; }
+    public SyntaxToken DotToken { get; }
+    public SyntaxToken Member { get; }
+    public IReadOnlyList<ExpressionSyntax> Arguments { get; }
+    public SyntaxToken CloseParenthesis { get; }
+    public override TextSpan Span => TextSpan.FromBounds(CallKeyword.Span.Start, CloseParenthesis.Span.End);
+}
+
 public sealed class ReturnStatementSyntax : StatementSyntax
 {
     public ReturnStatementSyntax(SyntaxToken returnKeyword, ExpressionSyntax? expression)

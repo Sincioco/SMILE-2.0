@@ -67,6 +67,7 @@ internal sealed class Parser
             case SyntaxKind.TypeKeyword: return ParseTypeDeclaration();
             case SyntaxKind.DimKeyword: return ParseDimStatement();
             case SyntaxKind.IfKeyword: return ParseIfStatement();
+            case SyntaxKind.WithKeyword: return ParseWithStatement();
             case SyntaxKind.ForKeyword: return ParseForStatement();
             case SyntaxKind.DoKeyword: return ParseDoStatement();
             case SyntaxKind.PrintKeyword: return ParsePrintStatement();
@@ -103,6 +104,7 @@ internal sealed class Parser
             case SyntaxKind.SaveKeyword: return ParseSaveStatement();
             case SyntaxKind.IdentifierToken:
             case SyntaxKind.KeyKeyword: return ParseAssignmentStatement();
+            case SyntaxKind.DotToken: return ParseAssignmentStatement();
             case var kind when IsContextualIdentifier(kind): return ParseAssignmentStatement();
             default:
                 _diagnostics.Report("SML2002", Current.Span, $"Unexpected token '{Display(Current)}' at the start of a statement.");
@@ -278,35 +280,47 @@ internal sealed class Parser
 
     private AssignmentTargetSyntax ParseAssignmentTarget()
     {
-        var first = MatchIdentifier();
-        SyntaxToken? qualifier = null;
-        SyntaxToken? dot = null;
-        var identifier = first;
+        if (IsContextualIdentifier(Current.Kind))
+            return new AssignmentTargetSyntax(ParseAssignmentIdentifierLocation());
+        return new AssignmentTargetSyntax(ParsePrimaryExpression());
+    }
+
+    private ExpressionSyntax ParseAssignmentIdentifierLocation()
+    {
+        var identifier = NextToken();
         if (Current.Kind == SyntaxKind.DotToken)
         {
-            qualifier = first;
-            dot = NextToken();
-            identifier = MatchIdentifier();
+            var dot = NextToken();
+            var member = MatchIdentifier();
+            if (Current.Kind == SyntaxKind.OpenBracketToken)
+            {
+                NextToken();
+                var indices = ParseExpressionList(SyntaxKind.CloseBracketToken);
+                return ParseFieldSuffix(new QualifiedArrayAccessExpressionSyntax(identifier, dot, member, indices,
+                    MatchToken(SyntaxKind.CloseBracketToken)));
+            }
+            return ParseFieldSuffix(new QualifiedNameExpressionSyntax(identifier, dot, member));
         }
-        SyntaxToken? open = null;
-        SyntaxToken? close = null;
-        IReadOnlyList<ExpressionSyntax> indices = Array.Empty<ExpressionSyntax>();
         if (Current.Kind == SyntaxKind.OpenBracketToken)
         {
-            open = NextToken();
-            indices = ParseExpressionList(SyntaxKind.CloseBracketToken);
-            close = MatchToken(SyntaxKind.CloseBracketToken);
+            NextToken();
+            var indices = ParseExpressionList(SyntaxKind.CloseBracketToken);
+            return ParseFieldSuffix(new ArrayAccessExpressionSyntax(identifier, indices,
+                MatchToken(SyntaxKind.CloseBracketToken)));
         }
+        return ParseFieldSuffix(new NameExpressionSyntax(identifier));
+    }
 
-        var fieldDots = new List<SyntaxToken>();
-        var fields = new List<SyntaxToken>();
-        while (Current.Kind == SyntaxKind.DotToken)
-        {
-            fieldDots.Add(NextToken());
-            fields.Add(MatchIdentifier());
-        }
-
-        return new AssignmentTargetSyntax(identifier, open, indices, close, qualifier, dot, fieldDots, fields);
+    private WithStatementSyntax ParseWithStatement()
+    {
+        var withKeyword = MatchToken(SyntaxKind.WithKeyword);
+        var target = ParseExpression();
+        ConsumeLineEnd();
+        var statements = ParseStatementsUntil(() => IsEndPair(SyntaxKind.WithKeyword));
+        var endKeyword = MatchToken(SyntaxKind.EndKeyword);
+        var finalWithKeyword = MatchToken(SyntaxKind.WithKeyword);
+        ConsumeLineEnd();
+        return new WithStatementSyntax(withKeyword, target, statements, endKeyword, finalWithKeyword);
     }
 
     private PrintStatementSyntax ParsePrintStatement()
@@ -927,6 +941,14 @@ internal sealed class Parser
     private StatementSyntax ParseCallStatement()
     {
         var call = MatchToken(SyntaxKind.CallKeyword);
+        if (Current.Kind == SyntaxKind.DotToken)
+        {
+            var dot = NextToken();
+            var member = MatchIdentifier();
+            var (memberArguments, memberClose) = ParseParenthesizedExpressionList();
+            ConsumeLineEnd();
+            return new LeadingMemberCallStatementSyntax(call, dot, member, memberArguments, memberClose);
+        }
         var identifier = MatchIdentifier();
         if (Current.Kind == SyntaxKind.DotToken)
         {
@@ -1064,6 +1086,11 @@ internal sealed class Parser
 
     private ExpressionSyntax ParsePrimaryExpression()
     {
+        if (Current.Kind == SyntaxKind.DotToken)
+        {
+            ExpressionSyntax leading = new LeadingMemberAccessExpressionSyntax(NextToken(), MatchIdentifier());
+            return ParseFieldSuffix(leading);
+        }
         if (Current.Kind == SyntaxKind.OpenParenthesisToken)
         {
             var open = NextToken();

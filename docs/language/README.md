@@ -110,6 +110,40 @@ The native backend keeps routine-owned `For` limits and Number, Boolean, or Text
 
 `Print` preserves UTF-8 as the language representation. On an attached Windows console the runtime converts bounded complete UTF-8 chunks to UTF-16 and writes them with `WriteConsoleW`; redirected files and pipes receive the original UTF-8 bytes through chunked `WriteFile` calls without a BOM. Generated Web console output uses the same logical text and is compared against native output by the repository's dependency-free Node host.
 
+## With blocks
+
+`With Target` ... `End With` shortens repeated access to one writable record location. A leading-dot field starts from the innermost active `With` target, and ordinary field suffixes may continue from it. Blocks may be nested, including by using a leading-dot record field as the nested target:
+
+```smile
+With Party[SelectPartyIndex()]
+    .Active = False
+    .Position.X = .Position.X + 9
+
+    With .Health
+        .Current = Max(0, .Current - 7)
+    End With
+End With
+```
+
+The target must be a stable, writable record location: a record variable or parameter, a record array element, a writable record field, or a leading-dot record field from an enclosing block. A function result or other temporary value is not a valid target. The target location is evaluated exactly once on entry, so `SelectPartyIndex()` in the example runs once even though the block uses the target repeatedly.
+
+`With` retains that original location rather than copying its record value. If the root is a `ByRef` record parameter, replacing the root remains visible to the caller and to later leading-dot accesses in the same block:
+
+```smile
+Sub ReplaceCurrent(ByRef Value As Actor, Replacement As Actor)
+
+    With Value
+        Value = Replacement
+        Print .Name
+    End With
+
+End Sub
+```
+
+This slice exposes record fields only. A leading dot outside a `With` block, an unknown field, a non-record target, or a target that is not a stable writable location produces a diagnostic. `Call .Method(...)` is reserved syntax and is diagnosed until `Type` methods are implemented; it does not call a field or an unqualified routine.
+
+The syntax-aware formatter treats `With` as structured control flow, preserves `With Target`, `End With`, and body indentation, and applies its normal nested transformations idempotently. In the editor, completion after a leading dot offers fields from the innermost active record and follows chains such as `.Position.`. Quick Info and Go To Definition (F12) on a leading-dot field resolve to that field's declaration.
+
 ## Multi-file programs
 
 A compilation may contain one selected startup source and any number of support sources. Every file is parsed separately and retains its real path, lines, tokens, diagnostics, and debug locations; all files share one case-insensitive value/routine model and a separate type namespace.
@@ -317,6 +351,10 @@ Record-specific diagnostics are stable and source-located:
 | `SML3409` | A public API exposes an inaccessible record type. |
 | `SML3410` | A type is used as a value, or a value as a type. |
 | `SML3411` | A record layout exceeds the supported size. |
+| `SML3412` | A `With` target has a record type but is not a stable writable location. |
+| `SML3413` | Leading-dot member access is used outside `With...End With`. |
+| `SML3414` | `Call .Member(...)` names a record method, which is reserved until `Type` methods are available. |
+| `SML3415` | A `With` target does not have a record type. |
 
 ### Arc drawing
 

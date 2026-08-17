@@ -229,6 +229,21 @@ public static class SmileCompletionService
                                                       token.Span.End <= position).ToArray();
         if (tokens.Length == 0 || tokens[tokens.Length - 1].Kind != SyntaxKind.DotToken)
             return null;
+        if (TryGetLeadingReceiverParts(syntaxTree, tokens, tokens.Length - 1, out var leadingParts))
+        {
+            if (!analysis.SemanticModel.TryGetInnermostWithScope(syntaxTree.Source, position, out var scope))
+                return Array.Empty<SmileCompletion>();
+            SmileType leadingType = scope.TargetType;
+            foreach (var part in leadingParts)
+            {
+                if (leadingType is not RecordTypeSymbol record || !record.TryGetField(part, out var field))
+                    return Array.Empty<SmileCompletion>();
+                leadingType = field.Type;
+            }
+            return leadingType is RecordTypeSymbol targetType
+                ? FieldCompletions(targetType, analysis.DependencyContext)
+                : Array.Empty<SmileCompletion>();
+        }
         var parts = ReceiverParts(tokens, tokens.Length - 1);
         if (parts.Count == 0)
             return null;
@@ -264,12 +279,61 @@ public static class SmileCompletionService
         }
         if (type is not RecordTypeSymbol target)
             return Array.Empty<SmileCompletion>();
-        return target.Fields.OrderBy(field => field.Ordinal).Select(field => new SmileCompletion(field.Name,
+        return FieldCompletions(target, analysis.DependencyContext);
+    }
+
+    private static IReadOnlyList<SmileCompletion> FieldCompletions(RecordTypeSymbol target,
+        SmileCompilationDependencyContext dependencyContext) =>
+        target.Fields.OrderBy(field => field.Ordinal).Select(field => new SmileCompletion(field.Name,
             $"{field.Name} As {field.Type.Name} field of Type {target.Name}" +
             (target.ModuleName == null ? string.Empty :
-                $" from module {target.ModuleName} ({DescribeProvider(target.ProviderIdentity, analysis.DependencyContext)})"),
+                $" from module {target.ModuleName} ({DescribeProvider(target.ProviderIdentity, dependencyContext)})"),
             SmileCompletionKind.Field)).ToArray();
+
+    private static bool TryGetLeadingReceiverParts(SyntaxTree syntaxTree, IReadOnlyList<SyntaxToken> tokens,
+        int finalDotIndex, out IReadOnlyList<string> parts)
+    {
+        var text = syntaxTree.Source.Text;
+        var finalDot = tokens[finalDotIndex];
+        var lineStart = finalDot.Span.Start;
+        while (lineStart > 0 && text[lineStart - 1] is not ('\r' or '\n'))
+            lineStart--;
+        var reversed = new List<string>();
+        var index = finalDotIndex - 1;
+        while (true)
+        {
+            if (index < 0 || tokens[index].Span.Start < lineStart)
+            {
+                reversed.Reverse();
+                parts = reversed;
+                return true;
+            }
+            if (tokens[index].Kind == SyntaxKind.CloseBracketToken)
+            {
+                parts = Array.Empty<string>();
+                return false;
+            }
+            if (!IsMemberNameToken(tokens[index].Kind))
+            {
+                reversed.Reverse();
+                parts = reversed;
+                return true;
+            }
+            reversed.Add(tokens[index--].Text);
+            if (index < 0 || tokens[index].Span.Start < lineStart || tokens[index].Kind != SyntaxKind.DotToken)
+            {
+                parts = Array.Empty<string>();
+                return false;
+            }
+            index--;
+        }
     }
+
+    private static bool IsMemberNameToken(SyntaxKind kind) =>
+        kind is SyntaxKind.IdentifierToken or SyntaxKind.KeyKeyword or SyntaxKind.WindowKeyword or
+            SyntaxKind.SizeKeyword or SyntaxKind.DrawKeyword or SyntaxKind.LineKeyword or SyntaxKind.TextKeyword or
+            SyntaxKind.LeftKeyword or SyntaxKind.RightKeyword ||
+        kind >= SyntaxKind.UnloadKeyword && kind <= SyntaxKind.ChannelKeyword;
 
     private static IReadOnlyList<string> ReceiverParts(IReadOnlyList<SyntaxToken> tokens, int finalDotIndex)
     {
@@ -290,7 +354,7 @@ public static class SmileCompletionService
                 if (depth != 0)
                     return Array.Empty<string>();
             }
-            if (index < 0 || tokens[index].Kind is not (SyntaxKind.IdentifierToken or SyntaxKind.KeyKeyword))
+            if (index < 0 || !IsMemberNameToken(tokens[index].Kind))
                 return Array.Empty<string>();
             parts.Add(tokens[index--].Text);
             if (index < 0 || tokens[index].Kind != SyntaxKind.DotToken)

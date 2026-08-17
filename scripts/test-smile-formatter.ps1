@@ -189,6 +189,26 @@ try {
     Assert-True ($ClipFormatted.Contains("If (Value < 0 Or`n            Value > 100 Or`n            Value = 50) Then")) 'Long If inside Clip was not syntax-formatted.'
     Assert-True ($ClipFormatted.Contains('ReturnValue = Value + 1')) 'Computed Return inside Clip was not rewritten.'
 
+    $WithSource = "Option Explicit`n`n" +
+        "Type Holder`n    Value As Number`nEnd Type`n`nDim Current As Holder`n`n" +
+        "Function Calculate(Value As Holder) As Number`n`n" +
+        "    With Value`n" +
+        "        If (.Value < 0`n            Or .Value > 100`n            Or .Value = 50) Then`n" +
+        "            Return .Value + 1`n        End If`n    End With`n`n" +
+        "    Return 0`n`nEnd Function`n`n" +
+        "If True Then`n    With Current`n        .Value = 1`n    End With`nEnd If`n"
+    $WithPath = Write-TestSource 'WithTraversal.smile' $WithSource
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'WithTraversal.smile')).ExitCode 'Nested With formatting failed.'
+    $WithFormatted = [IO.File]::ReadAllText($WithPath)
+    Assert-True ($WithFormatted.Contains("If (.Value < 0 Or`n            .Value > 100 Or`n            .Value = 50) Then")) 'Long If inside With was not syntax-formatted.'
+    Assert-True ($WithFormatted.Contains('ReturnValue = .Value + 1')) 'Computed Return inside With was not rewritten.'
+    Assert-True ($WithFormatted.Contains("If True Then`n`n    With Current")) 'An If containing With was not expanded as nested control flow.'
+    Assert-True ($WithFormatted.Contains("    End With`n`nEnd If")) 'The expanded If did not preserve its End With boundary.'
+    $WithFirstPass = [IO.File]::ReadAllBytes($WithPath)
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'WithTraversal.smile')).ExitCode 'Nested With second formatting pass failed.'
+    $WithSecondPass = [IO.File]::ReadAllBytes($WithPath)
+    Assert-Equal ([Convert]::ToBase64String($WithFirstPass)) ([Convert]::ToBase64String($WithSecondPass)) 'Nested With formatting was not idempotent.'
+
     $CompactSource = "Option Explicit`r`n`r`nDim FirstCondition As Boolean`r`nDim SecondCondition As Boolean`r`n" +
         "Dim ThirdCondition As Boolean`r`n`r`nIf (FirstCondition`r`n    Or SecondCondition`r`n    Or ThirdCondition) Then`r`n`r`n" +
         "    Print `"Matched`"`r`n`r`nEnd If`r`n"
@@ -231,7 +251,7 @@ try {
     Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'Consumer\Consumer.smile')).ExitCode 'Qualified Return second pass failed.'
     $QualifiedSecondPass = [IO.File]::ReadAllBytes($QualifiedPath)
     Assert-Equal ([Convert]::ToBase64String($QualifiedFirstPass)) ([Convert]::ToBase64String($QualifiedSecondPass)) 'Qualified Return formatting was not idempotent.'
-    Pass 'Clip traversal, multiline If layout, and symbol-aware qualified Returns'
+    Pass 'Clip and With traversal, multiline If layout, and symbol-aware qualified Returns'
 
     Write-TestSource 'Context\TrackedProvider\Values.smile' "Module Context.Values`n`nOption Explicit`n`nPublic Dim Current As Number`n`nEnd Module`n" | Out-Null
     Write-TestSource 'Context\TrackedProvider\Provider.smilelibproj' '<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind><LibraryName>Context.TrackedProvider</LibraryName><Version>1.0.0</Version></PropertyGroup><ItemGroup><SmileSource Include="Values.smile" /></ItemGroup></SmileProject>' | Out-Null

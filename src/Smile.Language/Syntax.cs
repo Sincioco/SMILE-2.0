@@ -36,6 +36,7 @@ public enum SyntaxKind
     ThenKeyword,
     ElseKeyword,
     EndKeyword,
+    WithKeyword,
     ForKeyword,
     ToKeyword,
     DownKeyword,
@@ -206,6 +207,7 @@ public static class SyntaxFacts
         ["Then"] = SyntaxKind.ThenKeyword,
         ["Else"] = SyntaxKind.ElseKeyword,
         ["End"] = SyntaxKind.EndKeyword,
+        ["With"] = SyntaxKind.WithKeyword,
         ["For"] = SyntaxKind.ForKeyword,
         ["To"] = SyntaxKind.ToKeyword,
         ["Down"] = SyntaxKind.DownKeyword,
@@ -562,34 +564,28 @@ public sealed class FieldAccessExpressionSyntax : ExpressionSyntax
     public override TextSpan Span => TextSpan.FromBounds(Receiver.Span.Start, Field.Span.End);
 }
 
-public sealed class AssignmentTargetSyntax : SyntaxNode
+public sealed class LeadingMemberAccessExpressionSyntax : ExpressionSyntax
 {
-    public AssignmentTargetSyntax(SyntaxToken identifier, SyntaxToken? openBracket, IReadOnlyList<ExpressionSyntax> indices, SyntaxToken? closeBracket,
-        SyntaxToken? qualifier = null, SyntaxToken? dotToken = null,
-        IReadOnlyList<SyntaxToken>? fieldDots = null, IReadOnlyList<SyntaxToken>? fields = null)
+    public LeadingMemberAccessExpressionSyntax(SyntaxToken dotToken, SyntaxToken member)
     {
-        Identifier = identifier;
-        OpenBracket = openBracket;
-        Indices = indices;
-        CloseBracket = closeBracket;
-        Qualifier = qualifier;
         DotToken = dotToken;
-        FieldDots = fieldDots ?? Array.Empty<SyntaxToken>();
-        Fields = fields ?? Array.Empty<SyntaxToken>();
+        Member = member;
     }
 
-    public SyntaxToken? Qualifier { get; }
-    public SyntaxToken? DotToken { get; }
-    public SyntaxToken Identifier { get; }
-    public SyntaxToken? OpenBracket { get; }
-    public IReadOnlyList<ExpressionSyntax> Indices { get; }
-    public SyntaxToken? CloseBracket { get; }
-    public IReadOnlyList<SyntaxToken> FieldDots { get; }
-    public IReadOnlyList<SyntaxToken> Fields { get; }
-    public bool IsArrayElement => Indices.Count != 0;
-    public bool IsQualified => Qualifier != null;
-    public override TextSpan Span => TextSpan.FromBounds(Qualifier?.Span.Start ?? Identifier.Span.Start,
-        Fields.Count != 0 ? Fields[Fields.Count - 1].Span.End : CloseBracket?.Span.End ?? Identifier.Span.End);
+    public SyntaxToken DotToken { get; }
+    public SyntaxToken Member { get; }
+    public override TextSpan Span => TextSpan.FromBounds(DotToken.Span.Start, Member.Span.End);
+}
+
+public sealed class AssignmentTargetSyntax : SyntaxNode
+{
+    public AssignmentTargetSyntax(ExpressionSyntax location)
+    {
+        Location = location;
+    }
+
+    public ExpressionSyntax Location { get; }
+    public override TextSpan Span => Location.Span;
 }
 
 public sealed class AssignmentStatementSyntax : StatementSyntax
@@ -745,6 +741,26 @@ public sealed class IfStatementSyntax : StatementSyntax
     public SyntaxToken EndKeyword { get; }
     public SyntaxToken FinalIfKeyword { get; }
     public override TextSpan Span => TextSpan.FromBounds(IfKeyword.Span.Start, FinalIfKeyword.Span.End);
+}
+
+public sealed class WithStatementSyntax : StatementSyntax
+{
+    public WithStatementSyntax(SyntaxToken withKeyword, ExpressionSyntax target,
+        IReadOnlyList<StatementSyntax> statements, SyntaxToken endKeyword, SyntaxToken finalWithKeyword)
+    {
+        WithKeyword = withKeyword;
+        Target = target;
+        Statements = statements;
+        EndKeyword = endKeyword;
+        FinalWithKeyword = finalWithKeyword;
+    }
+
+    public SyntaxToken WithKeyword { get; }
+    public ExpressionSyntax Target { get; }
+    public IReadOnlyList<StatementSyntax> Statements { get; }
+    public SyntaxToken EndKeyword { get; }
+    public SyntaxToken FinalWithKeyword { get; }
+    public override TextSpan Span => TextSpan.FromBounds(WithKeyword.Span.Start, FinalWithKeyword.Span.End);
 }
 
 public sealed class ForStatementSyntax : StatementSyntax

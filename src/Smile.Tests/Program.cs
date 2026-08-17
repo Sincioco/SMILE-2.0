@@ -115,6 +115,23 @@ Run("Existing key constants retain their values", () =>
     Equal(21L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyTabKeyword));
     Equal(22L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.Key4Keyword));
 });
+Run("Left and Right prefer identifiers only in assignment-target context", () =>
+{
+    const string source = "Option Explicit\nDim Left As Number\nDim Right As Number\nLeft = 10\nRight = 20\nPrint LEFT\nPrint RIGHT\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var assignments = analysis.SyntaxTree.Root.Statements.OfType<AssignmentStatementSyntax>().ToArray();
+    Equal(2, assignments.Length);
+    Equal(true, assignments.All(statement => statement.Target.Location is NameExpressionSyntax));
+    Equal(SyntaxKind.LeftKeyword,
+        ((NameExpressionSyntax)assignments[0].Target.Location).Identifier.Kind);
+    Equal(SyntaxKind.RightKeyword,
+        ((NameExpressionSyntax)assignments[1].Target.Location).Identifier.Kind);
+    var constants = analysis.SyntaxTree.Root.Statements.OfType<PrintStatementSyntax>()
+        .Select(statement => statement.Items.Single()).ToArray();
+    Equal(SyntaxKind.LeftKeyword, ((LiteralExpressionSyntax)constants[0]).LiteralToken.Kind);
+    Equal(SyntaxKind.RightKeyword, ((LiteralExpressionSyntax)constants[1]).LiteralToken.Kind);
+});
 Run("KEY_4 is a shared named input constant", () =>
 {
     Equal(SyntaxKind.Key4Keyword, SyntaxFacts.GetKeywordKind("key_4"));
@@ -2466,6 +2483,105 @@ Run("Record types bind nominal identities nested fields arrays and deterministic
     Equal(actor, analysis.SemanticModel.Symbols["Party"].Type);
     Equal(2, analysis.SemanticModel.Symbols["Party"].ArrayRank);
     Equal(8, actor.Fields.Single(field => field.Name == "Position").Offset);
+});
+
+Run("With binds explicit nested syntax over writable record locations", () =>
+{
+    const string source = "Option Explicit\nType Position\nX As Number\nY As Number\nEnd Type\nType Actor\nName As Text\nPosition As Position\nEnd Type\nDim Hero As Actor\nDim Party[2] As Actor\nWith Hero\n.Name = \"A\"\nWith .Position\n.X = .X + 1\nCall SetNumber(.Y, 2)\nEnd With\nEnd With\nWith Party[Pick()]\n.Name = Hero.Name\nEnd With\nFunction Pick() As Number\nReturn 1\nEnd Function\nSub SetNumber(ByRef Value As Number, NewValue As Number)\nValue = NewValue\nEnd Sub\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var outer = analysis.BoundSyntaxTree.Root.Statements.OfType<WithStatementSyntax>().First();
+    var nested = outer.Statements.OfType<WithStatementSyntax>().Single();
+    var arrayTarget = analysis.BoundSyntaxTree.Root.Statements.OfType<WithStatementSyntax>().Last();
+    Equal(true, outer.Target is NameExpressionSyntax);
+    Equal(true, nested.Target is LeadingMemberAccessExpressionSyntax);
+    Equal(true, arrayTarget.Target is ArrayAccessExpressionSyntax);
+    Equal(true, analysis.SemanticModel.TryGetWithTarget(outer, out var outerBinding));
+    Equal("Actor", outerBinding.TargetType.Name);
+    Equal(0, outerBinding.Depth);
+    Equal(true, analysis.SemanticModel.TryGetWithTarget(nested, out var nestedBinding));
+    Equal("Position", nestedBinding.TargetType.Name);
+    Equal(1, nestedBinding.Depth);
+    var leadingAssignment = nested.Statements.OfType<AssignmentStatementSyntax>().First();
+    Equal(true, leadingAssignment.Target.Location is LeadingMemberAccessExpressionSyntax);
+    Equal(SmileType.Number, analysis.SemanticModel.GetType(leadingAssignment.Target.Location));
+});
+
+Run("With diagnostics distinguish scope type location field and unavailable record methods", () =>
+{
+    Equal(true, HasDiagnostic(Analyze(".Missing = 1\n"), "SML3413"));
+    Equal(true, HasDiagnostic(Analyze("Call .Reset()\n"), "SML3413"));
+    Equal(true, HasDiagnostic(Analyze("Dim Value As Number\nWith Value\nPrint Value\nEnd With\n"), "SML3415"));
+    Equal(true, HasDiagnostic(Analyze("With 1\nPrint 1\nEnd With\n"), "SML3415"));
+    Equal(true, HasDiagnostic(Analyze("Type Item\nValue As Number\nEnd Type\nWith Create()\n.Value = 1\nEnd With\nFunction Create() As Item\nDim Result As Item\nReturn Result\nEnd Function\n"), "SML3412"));
+    Equal(true, HasDiagnostic(Analyze("Type Item\nValue As Number\nEnd Type\nDim Current As Item\nWith Current\n.Missing = 1\nEnd With\n"), "SML3405"));
+    Equal(true, HasDiagnostic(Analyze("Type Item\nValue As Number\nEnd Type\nDim Current As Item\nWith Current\nCall .Reset()\nEnd With\n"), "SML3414"));
+
+    const string shadowSource = "Type Item\nName As Text\nEnd Type\nDim Current As Item\nWith Current\nWith 1\n.Name = \"Wrong\"\nEnd With\nEnd With\n";
+    var shadowAnalysis = Analyze(shadowSource);
+    Equal(true, HasDiagnostic(shadowAnalysis, "SML3415"));
+    var outer = shadowAnalysis.BoundSyntaxTree.Root.Statements.OfType<WithStatementSyntax>().Single();
+    var invalidInner = outer.Statements.OfType<WithStatementSyntax>().Single();
+    var leading = (LeadingMemberAccessExpressionSyntax)invalidInner.Statements
+        .OfType<AssignmentStatementSyntax>().Single().Target.Location;
+    Equal(false, shadowAnalysis.SemanticModel.TryGetWithMember(leading, out _));
+    Equal(false, shadowAnalysis.SemanticModel.TryGetInnermostWithScope(shadowAnalysis.SyntaxTree.Source,
+        leading.Span.Start, out _));
+
+    const string completionSource = "Type Item\nName As Text\nEnd Type\nDim Current As Item\nWith Current\nWith 1\nPrint .\nEnd With\nEnd With\n";
+    var completionAnalysis = Analyze(completionSource);
+    var completionPosition = completionSource.IndexOf("Print .", StringComparison.Ordinal) + "Print .".Length;
+    Equal(0, SmileCompletionService.GetCompletions(completionAnalysis, completionPosition).Count);
+});
+
+Run("With context drives legacy return inference completion and field navigation", () =>
+{
+    const string functionSource = "Type Actor\nName As Text\nEnd Type\nFunction NameOf(Value As Actor)\nWith Value\nReturn .Name\nEnd With\nEnd Function\nPrint NameOf(Make())\nFunction Make() As Actor\nDim Result As Actor\nReturn Result\nEnd Function\n";
+    var inferred = Analyze(functionSource);
+    Equal(false, inferred.HasErrors);
+    Equal(SmileType.Text, inferred.SemanticModel.Routines["NameOf"].ReturnType);
+
+    const string completionSource = "Type Position\nX As Number\nY As Number\nEnd Type\nType Actor\nName As Text\nPosition As Position\nEnd Type\nDim Hero As Actor\nWith Hero\nPrint .Position.\nPrint . Position .\nEnd With\n";
+    var completionAnalysis = Analyze(completionSource);
+    var completionPosition = completionSource.IndexOf(".Position.", StringComparison.Ordinal) + ".Position.".Length;
+    Equal("X|Y", string.Join("|", SmileCompletionService.GetCompletions(completionAnalysis,
+        completionPosition).Select(item => item.DisplayText)));
+    var spacedCompletionPosition = completionSource.IndexOf(". Position .", StringComparison.Ordinal) +
+                                   ". Position .".Length;
+    Equal("X|Y", string.Join("|", SmileCompletionService.GetCompletions(completionAnalysis,
+        spacedCompletionPosition).Select(item => item.DisplayText)));
+
+    const string contextualCompletionSource = "Type Insets\nLeft As Number\nRight As Number\nEnd Type\nType Style\nWindow As Insets\nEnd Type\nDim Current As Style\nWith Current\nPrint .Window.\nEnd With\n";
+    var contextualCompletionAnalysis = Analyze(contextualCompletionSource);
+    var contextualCompletionPosition = contextualCompletionSource.IndexOf(".Window.", StringComparison.Ordinal) +
+                                       ".Window.".Length;
+    Equal("Left|Right", string.Join("|", SmileCompletionService.GetCompletions(contextualCompletionAnalysis,
+        contextualCompletionPosition).Select(item => item.DisplayText)));
+
+    const string symbolSource = "Type Actor\nName As Text\nEnd Type\nDim Hero As Actor\nWith Hero\nPrint .Name\nEnd With\n";
+    var symbolAnalysis = Analyze(symbolSource);
+    var resolved = ResolveSymbol(symbolAnalysis, symbolAnalysis.SyntaxTree,
+        symbolSource.IndexOf(".Name", StringComparison.Ordinal) + 3);
+    Equal(SmileResolvedSymbolKind.Field, resolved.Kind);
+    Equal("Name", resolved.Name);
+    Equal("Field Actor.Name As Text", resolved.Signature);
+});
+
+Run("With emitters cache native addresses and Web writable root references", () =>
+{
+    const string source = "Type Actor\nName As Text\nEnd Type\nDim Party[2] As Actor\nDim Calls As Number\nWith Party[Choose()]\nCall Replace(Party[1])\n.Name = ReplaceDuringAssignment(Party[1])\nPrint .Name\nEnd With\nFunction Choose() As Number\nCalls = Calls + 1\nReturn 1\nEnd Function\nSub Replace(ByRef Value As Actor)\nDim NextValue As Actor\nNextValue.Name = \"Replacement\"\nValue = NextValue\nEnd Sub\nFunction ReplaceDuringAssignment(ByRef Value As Actor) As Text\nDim NextValue As Actor\nNextValue.Name = \"RHS Replacement\"\nValue = NextValue\nReturn \"Assigned\"\nEnd Function\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var native = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
+    Equal(true, native.Contains("with_location_", StringComparison.Ordinal));
+    Equal(true, native.Contains("mov QWORD PTR [with_location_", StringComparison.Ordinal));
+    var web = new WebEmitter(analysis).Emit();
+    Equal(true, web.Contains("const t_", StringComparison.Ordinal));
+    Equal(true, web.Contains(" = smile.refArray(", StringComparison.Ordinal));
+    Equal(true, web.Contains(".get()[\"__smile_r0_f0\"]", StringComparison.Ordinal));
+    var valueDeclaration = web.IndexOf("_value = ", StringComparison.Ordinal);
+    var targetDeclaration = web.IndexOf("_target = ", StringComparison.Ordinal);
+    Equal(true, valueDeclaration >= 0 && targetDeclaration > valueDeclaration);
 });
 
 Run("Record value semantics emit native helpers and Web defaults clones and fresh arrays", () =>

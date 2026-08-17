@@ -259,7 +259,7 @@ public static class SmileSourceFormatter
 
     private static bool IsNestedControlStatement(StatementSyntax statement) =>
         statement is IfStatementSyntax or ForStatementSyntax or DoStatementSyntax or
-            SelectStatementSyntax or ClipRectangleStatementSyntax;
+            SelectStatementSyntax or ClipRectangleStatementSyntax or WithStatementSyntax;
 
     private static SyntaxToken RoutineHeaderEndToken(RoutineDeclarationSyntax routine) =>
         routine.ReturnTypeToken ?? routine.CloseParenthesis ?? routine.Identifier;
@@ -478,6 +478,9 @@ public static class SmileSourceFormatter
                 break;
             case ClipRectangleStatementSyntax clipStatement:
                 yield return clipStatement.Statements;
+                break;
+            case WithStatementSyntax withStatement:
+                yield return withStatement.Statements;
                 break;
         }
     }

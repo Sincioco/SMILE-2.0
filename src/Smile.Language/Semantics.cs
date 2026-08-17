@@ -123,6 +123,58 @@ public sealed class RecordTypeSymbol : SmileType
     }
 }
 
+public enum WithStorageKind
+{
+    ValueLocation,
+    ObjectReference
+}
+
+public sealed class WithTargetBinding
+{
+    internal WithTargetBinding(WithStatementSyntax statement, RecordTypeSymbol targetType,
+        WithStorageKind storageKind, int depth, TextSpan activeBodySpan)
+    {
+        Statement = statement;
+        TargetType = targetType;
+        StorageKind = storageKind;
+        Depth = depth;
+        ActiveBodySpan = activeBodySpan;
+    }
+
+    public WithStatementSyntax Statement { get; }
+    public RecordTypeSymbol TargetType { get; }
+    public WithStorageKind StorageKind { get; }
+    public int Depth { get; }
+    public TextSpan ActiveBodySpan { get; }
+}
+
+public sealed class WithMemberBinding
+{
+    internal WithMemberBinding(WithStatementSyntax receiverStatement, RecordTypeSymbol containingType,
+        RecordFieldSymbol field)
+    {
+        ReceiverStatement = receiverStatement;
+        ContainingType = containingType;
+        Field = field;
+    }
+
+    public WithStatementSyntax ReceiverStatement { get; }
+    public RecordTypeSymbol ContainingType { get; }
+    public RecordFieldSymbol Field { get; }
+}
+
+internal sealed class InvalidWithScope
+{
+    public InvalidWithScope(int depth, TextSpan activeBodySpan)
+    {
+        Depth = depth;
+        ActiveBodySpan = activeBodySpan;
+    }
+
+    public int Depth { get; }
+    public TextSpan ActiveBodySpan { get; }
+}
+
 public enum ParameterPassingMode
 {
     ByVal,
@@ -257,7 +309,12 @@ public sealed class SemanticModel
     private readonly Dictionary<string, RoutineSymbol> _routines;
     private readonly Dictionary<ExpressionSyntax, SmileType> _expressionTypes;
     private readonly Dictionary<string, RecordTypeSymbol> _types;
-    private readonly Dictionary<FieldAccessExpressionSyntax, RecordFieldSymbol> _fields;
+    private readonly Dictionary<ExpressionSyntax, RecordFieldSymbol> _fields;
+    private readonly Dictionary<WithStatementSyntax, WithTargetBinding> _withTargets;
+    private readonly Dictionary<LeadingMemberAccessExpressionSyntax, WithMemberBinding> _withMembers;
+    private readonly Dictionary<SourceText, IReadOnlyList<WithTargetBinding>> _withScopes;
+    private readonly Dictionary<SourceText, IReadOnlyList<InvalidWithScope>> _invalidWithScopes;
+    private readonly Dictionary<SourceText, IReadOnlyDictionary<int, RecordFieldSymbol>> _fieldUses;
     private IReadOnlyDictionary<string, ModuleSymbol> _modules =
         new Dictionary<string, ModuleSymbol>(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyDictionary<SourceText, IReadOnlyDictionary<string, ModuleSymbol>> _imports =
@@ -265,13 +322,26 @@ public sealed class SemanticModel
 
     internal SemanticModel(Dictionary<string, VariableSymbol> symbols, Dictionary<string, RoutineSymbol> routines,
         Dictionary<ExpressionSyntax, SmileType> expressionTypes, Dictionary<string, RecordTypeSymbol> types,
-        Dictionary<FieldAccessExpressionSyntax, RecordFieldSymbol> fields)
+        Dictionary<ExpressionSyntax, RecordFieldSymbol> fields,
+        Dictionary<WithStatementSyntax, WithTargetBinding> withTargets,
+        Dictionary<LeadingMemberAccessExpressionSyntax, WithMemberBinding> withMembers,
+        Dictionary<SourceText, List<WithTargetBinding>> withScopes,
+        Dictionary<SourceText, List<InvalidWithScope>> invalidWithScopes,
+        Dictionary<SourceText, Dictionary<int, RecordFieldSymbol>> fieldUses)
     {
         _symbols = symbols;
         _routines = routines;
         _expressionTypes = expressionTypes;
         _types = types;
         _fields = fields;
+        _withTargets = withTargets;
+        _withMembers = withMembers;
+        _withScopes = withScopes.ToDictionary(item => item.Key,
+            item => (IReadOnlyList<WithTargetBinding>)item.Value.ToArray());
+        _invalidWithScopes = invalidWithScopes.ToDictionary(item => item.Key,
+            item => (IReadOnlyList<InvalidWithScope>)item.Value.ToArray());
+        _fieldUses = fieldUses.ToDictionary(item => item.Key,
+            item => (IReadOnlyDictionary<int, RecordFieldSymbol>)item.Value);
     }
 
     public IReadOnlyDictionary<string, VariableSymbol> Symbols => _symbols;
@@ -281,7 +351,42 @@ public sealed class SemanticModel
     public bool TryGetSymbol(string name, out VariableSymbol symbol) => _symbols.TryGetValue(name, out symbol!);
     public bool TryGetRoutine(string name, out RoutineSymbol routine) => _routines.TryGetValue(name, out routine!);
     public bool TryGetType(string name, out RecordTypeSymbol type) => _types.TryGetValue(name, out type!);
-    public bool TryGetField(FieldAccessExpressionSyntax expression, out RecordFieldSymbol field) => _fields.TryGetValue(expression, out field!);
+    public bool TryGetField(ExpressionSyntax expression, out RecordFieldSymbol field) => _fields.TryGetValue(expression, out field!);
+    public bool TryGetWithTarget(WithStatementSyntax statement, out WithTargetBinding binding) =>
+        _withTargets.TryGetValue(statement, out binding!);
+    public bool TryGetWithMember(LeadingMemberAccessExpressionSyntax expression, out WithMemberBinding binding) =>
+        _withMembers.TryGetValue(expression, out binding!);
+    public bool TryGetFieldUse(SourceText source, int position, out RecordFieldSymbol field)
+    {
+        field = null!;
+        return _fieldUses.TryGetValue(source, out var uses) && uses.TryGetValue(position, out field!);
+    }
+
+    public bool TryGetInnermostWithScope(SourceText source, int position, out WithTargetBinding binding)
+    {
+        binding = null!;
+        if (_withScopes.TryGetValue(source, out var scopes))
+        {
+            foreach (var candidate in scopes)
+            {
+                if (position < candidate.ActiveBodySpan.Start || position >= candidate.ActiveBodySpan.End)
+                    continue;
+                if (binding == null || candidate.Depth > binding.Depth)
+                    binding = candidate;
+            }
+        }
+
+        var validDepth = binding?.Depth ?? -1;
+        if (_invalidWithScopes.TryGetValue(source, out var invalidScopes) && invalidScopes.Any(candidate =>
+                candidate.Depth > validDepth && position >= candidate.ActiveBodySpan.Start &&
+                position < candidate.ActiveBodySpan.End))
+        {
+            binding = null!;
+            return false;
+        }
+
+        return binding != null;
+    }
 
     public bool TryResolveVariable(string name, string? routineName, out VariableSymbol symbol)
     {
@@ -336,7 +441,13 @@ internal sealed class SemanticAnalyzer
     private readonly List<string> _constantResolutionStack = new();
     private readonly Dictionary<ExpressionSyntax, SmileType> _expressionTypes = new();
     private readonly Dictionary<string, RecordTypeSymbol> _types = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<FieldAccessExpressionSyntax, RecordFieldSymbol> _fields = new();
+    private readonly Dictionary<ExpressionSyntax, RecordFieldSymbol> _fields = new();
+    private readonly Dictionary<WithStatementSyntax, WithTargetBinding> _withTargets = new();
+    private readonly Dictionary<LeadingMemberAccessExpressionSyntax, WithMemberBinding> _withMembers = new();
+    private readonly Dictionary<SourceText, List<WithTargetBinding>> _withScopes = new();
+    private readonly Dictionary<SourceText, List<InvalidWithScope>> _invalidWithScopes = new();
+    private readonly Dictionary<SourceText, Dictionary<int, RecordFieldSymbol>> _fieldUses = new();
+    private readonly List<WithTargetBinding?> _withStack = new();
     private readonly List<RoutineCallSite> _routineCalls = new();
     private SourceText _currentSource = null!;
     private int _currentSourceOrdinal;
@@ -393,7 +504,8 @@ internal sealed class SemanticAnalyzer
         _currentRoutine = null;
         PropagateRoutineCapabilities();
         DiagnoseTopLevelRoutineCapabilities();
-        return new SemanticModel(_symbols, _routines, _expressionTypes, _types, _fields);
+        return new SemanticModel(_symbols, _routines, _expressionTypes, _types, _fields,
+            _withTargets, _withMembers, _withScopes, _invalidWithScopes, _fieldUses);
     }
 
     private void InventoryRecordTypes()
@@ -569,8 +681,8 @@ internal sealed class SemanticAnalyzer
 
         switch (statement)
         {
-            case AssignmentStatementSyntax assignment when !assignment.Target.IsArrayElement && assignment.Target.Fields.Count == 0:
-                Add(assignment.Target.Identifier);
+            case AssignmentStatementSyntax { Target.Location: NameExpressionSyntax name }:
+                Add(name.Identifier);
                 break;
             case GetKeyStatementSyntax getKey:
                 Add(getKey.Identifier);
@@ -594,6 +706,10 @@ internal sealed class SemanticAnalyzer
                     foreach (var child in clause.Statements)
                         CollectImplicitDeclarationCandidates(child, source, sourceOrdinal, candidates);
                 foreach (var child in ifStatement.ElseStatements)
+                    CollectImplicitDeclarationCandidates(child, source, sourceOrdinal, candidates);
+                break;
+            case WithStatementSyntax withStatement:
+                foreach (var child in withStatement.Statements)
                     CollectImplicitDeclarationCandidates(child, source, sourceOrdinal, candidates);
                 break;
             case DoStatementSyntax doStatement:
@@ -755,8 +871,8 @@ internal sealed class SemanticAnalyzer
     {
         switch (statement)
         {
-            case AssignmentStatementSyntax assignment when !assignment.Target.IsArrayElement && assignment.Target.Fields.Count == 0:
-                DeclareImplicitGlobal(assignment.Target.Identifier, InferImplicitGlobalType(assignment.Expression));
+            case AssignmentStatementSyntax { Target.Location: NameExpressionSyntax name } assignment:
+                DeclareImplicitGlobal(name.Identifier, InferImplicitGlobalType(assignment.Expression));
                 break;
             case GetKeyStatementSyntax getKey:
                 DeclareImplicitGlobal(getKey.Identifier, SmileType.Number);
@@ -782,6 +898,10 @@ internal sealed class SemanticAnalyzer
                 foreach (var child in ifStatement.ElseStatements)
                     CollectImplicitGlobals(child);
                 break;
+            case WithStatementSyntax withStatement:
+                foreach (var child in withStatement.Statements)
+                    CollectImplicitGlobals(child);
+                break;
             case DoStatementSyntax doStatement:
                 foreach (var child in doStatement.Statements)
                     CollectImplicitGlobals(child);
@@ -798,9 +918,9 @@ internal sealed class SemanticAnalyzer
     {
         foreach (var statement in EnumerateStatements(_startupTree.Root.Statements))
         {
-            if (statement is AssignmentStatementSyntax assignment && !assignment.Target.IsArrayElement && assignment.Target.Fields.Count == 0 &&
-                _implicitGlobals.Contains(assignment.Target.Identifier.Text) &&
-                _symbols.TryGetValue(assignment.Target.Identifier.Text, out var symbol))
+            if (statement is AssignmentStatementSyntax { Target.Location: NameExpressionSyntax name } assignment &&
+                _implicitGlobals.Contains(name.Identifier.Text) &&
+                _symbols.TryGetValue(name.Identifier.Text, out var symbol))
                 symbol.Type = InferImplicitGlobalType(assignment.Expression);
         }
     }
@@ -890,9 +1010,9 @@ internal sealed class SemanticAnalyzer
             {
                 SetCurrentSource(routine.Source);
                 var localTypes = CollectDeclaredLocalTypes(routine);
-                var returns = EnumerateReturns(routine.Declaration.Statements)
-                    .Where(item => item.Expression != null).ToArray();
-                var inferred = returns.Select(item => InferLegacyExpressionType(item.Expression!, routine, localTypes))
+                var returns = InferLegacyReturns(routine.Declaration.Statements, routine, localTypes,
+                    Array.Empty<SmileType>()).ToArray();
+                var inferred = returns.Select(item => item.Type)
                     .Where(type => type != SmileType.Error).Distinct().ToArray();
                 var next = inferred.Length == 0 ? SmileType.Number : inferred[0];
                 if (routine.ReturnType != next)
@@ -909,9 +1029,8 @@ internal sealed class SemanticAnalyzer
         {
             SetCurrentSource(routine.Source);
             var localTypes = CollectDeclaredLocalTypes(routine);
-            var typedReturns = EnumerateReturns(routine.Declaration.Statements)
-                .Where(item => item.Expression != null)
-                .Select(item => new { Return = item, Type = InferLegacyExpressionType(item.Expression!, routine, localTypes) })
+            var typedReturns = InferLegacyReturns(routine.Declaration.Statements, routine, localTypes,
+                    Array.Empty<SmileType>())
                 .Where(item => item.Type != SmileType.Error).ToArray();
             var distinct = typedReturns.Select(item => item.Type).Distinct().ToArray();
             if (distinct.Length > 1)
@@ -931,7 +1050,7 @@ internal sealed class SemanticAnalyzer
     }
 
     private SmileType InferLegacyExpressionType(ExpressionSyntax expression, RoutineSymbol routine,
-        IReadOnlyDictionary<string, SmileType> locals)
+        IReadOnlyDictionary<string, SmileType> locals, IReadOnlyList<SmileType>? withTypes = null)
     {
         switch (expression)
         {
@@ -945,8 +1064,19 @@ internal sealed class SemanticAnalyzer
                 if (locals.TryGetValue(array.Identifier.Text, out var elementType)) return elementType;
                 if (_symbols.TryGetValue(array.Identifier.Text, out var arraySymbol)) return arraySymbol.Type;
                 return SmileType.Error;
+            case FieldAccessExpressionSyntax field:
+                var receiverType = InferLegacyExpressionType(field.Receiver, routine, locals, withTypes);
+                return receiverType is RecordTypeSymbol receiverRecord &&
+                       receiverRecord.TryGetField(field.Field.Text, out var fieldSymbol)
+                    ? fieldSymbol.Type : SmileType.Error;
+            case LeadingMemberAccessExpressionSyntax leading:
+                if (withTypes == null || withTypes.Count == 0 ||
+                    withTypes[withTypes.Count - 1] is not RecordTypeSymbol withRecord ||
+                    !withRecord.TryGetField(leading.Member.Text, out var withField))
+                    return SmileType.Error;
+                return withField.Type;
             case ParenthesizedExpressionSyntax parenthesized:
-                return InferLegacyExpressionType(parenthesized.Expression, routine, locals);
+                return InferLegacyExpressionType(parenthesized.Expression, routine, locals, withTypes);
             case UnaryExpressionSyntax unary:
                 return unary.OperatorToken.Kind == SyntaxKind.NotKeyword ? SmileType.Boolean : SmileType.Number;
             case BinaryExpressionSyntax binary:
@@ -954,8 +1084,8 @@ internal sealed class SemanticAnalyzer
                     SyntaxKind.GreaterToken or SyntaxKind.LessOrEqualsToken or SyntaxKind.GreaterOrEqualsToken or
                     SyntaxKind.AndKeyword or SyntaxKind.OrKeyword) return SmileType.Boolean;
                 if (binary.OperatorToken.Kind == SyntaxKind.PlusToken &&
-                    InferLegacyExpressionType(binary.Left, routine, locals) == SmileType.Text &&
-                    InferLegacyExpressionType(binary.Right, routine, locals) == SmileType.Text) return SmileType.Text;
+                    InferLegacyExpressionType(binary.Left, routine, locals, withTypes) == SmileType.Text &&
+                    InferLegacyExpressionType(binary.Right, routine, locals, withTypes) == SmileType.Text) return SmileType.Text;
                 return SmileType.Number;
             case CallExpressionSyntax call when call.Identifier.Kind == SyntaxKind.TextSliceKeyword:
                 return SmileType.Text;
@@ -968,8 +1098,59 @@ internal sealed class SemanticAnalyzer
         }
     }
 
-    private static IEnumerable<ReturnStatementSyntax> EnumerateReturns(IEnumerable<StatementSyntax> statements) =>
-        EnumerateStatements(statements).OfType<ReturnStatementSyntax>();
+    private IEnumerable<(ReturnStatementSyntax Return, SmileType Type)> InferLegacyReturns(
+        IReadOnlyList<StatementSyntax> statements, RoutineSymbol routine,
+        IReadOnlyDictionary<string, SmileType> locals, IReadOnlyList<SmileType> withTypes)
+    {
+        foreach (var statement in statements)
+        {
+            if (statement is ReturnStatementSyntax { Expression: not null } returnStatement)
+            {
+                yield return (returnStatement,
+                    InferLegacyExpressionType(returnStatement.Expression, routine, locals, withTypes));
+                continue;
+            }
+            if (statement is WithStatementSyntax withStatement)
+            {
+                var targetType = InferLegacyExpressionType(withStatement.Target, routine, locals, withTypes);
+                var nestedTypes = withTypes.Concat(new[] { targetType }).ToArray();
+                foreach (var item in InferLegacyReturns(withStatement.Statements, routine, locals, nestedTypes))
+                    yield return item;
+                continue;
+            }
+            if (statement is IfStatementSyntax conditional)
+            {
+                foreach (var clause in conditional.Clauses)
+                    foreach (var item in InferLegacyReturns(clause.Statements, routine, locals, withTypes))
+                        yield return item;
+                foreach (var item in InferLegacyReturns(conditional.ElseStatements, routine, locals, withTypes))
+                    yield return item;
+                continue;
+            }
+            if (statement is ForStatementSyntax forStatement)
+            {
+                foreach (var item in InferLegacyReturns(forStatement.Statements, routine, locals, withTypes))
+                    yield return item;
+                continue;
+            }
+            if (statement is DoStatementSyntax doStatement)
+            {
+                foreach (var item in InferLegacyReturns(doStatement.Statements, routine, locals, withTypes))
+                    yield return item;
+                continue;
+            }
+            if (statement is ClipRectangleStatementSyntax clip)
+            {
+                foreach (var item in InferLegacyReturns(clip.Statements, routine, locals, withTypes))
+                    yield return item;
+                continue;
+            }
+            if (statement is SelectStatementSyntax select)
+                foreach (var clause in select.Cases)
+                    foreach (var item in InferLegacyReturns(clause.Statements, routine, locals, withTypes))
+                        yield return item;
+        }
+    }
 
     private static IEnumerable<StatementSyntax> EnumerateStatements(IEnumerable<StatementSyntax> statements)
     {
@@ -984,6 +1165,8 @@ internal sealed class SemanticAnalyzer
             }
             else if (statement is ForStatementSyntax forStatement)
                 foreach (var child in EnumerateStatements(forStatement.Statements)) yield return child;
+            else if (statement is WithStatementSyntax withStatement)
+                foreach (var child in EnumerateStatements(withStatement.Statements)) yield return child;
             else if (statement is DoStatementSyntax doStatement)
                 foreach (var child in EnumerateStatements(doStatement.Statements)) yield return child;
             else if (statement is ClipRectangleStatementSyntax clip)
@@ -1002,8 +1185,8 @@ internal sealed class SemanticAnalyzer
             {
                 case RoutineDeclarationSyntax when skipRoutines:
                     break;
-                case AssignmentStatementSyntax assignment when !assignment.Target.IsArrayElement && assignment.Target.Fields.Count == 0:
-                    RecordFirst(declarations, assignment.Target.Identifier);
+                case AssignmentStatementSyntax { Target.Location: NameExpressionSyntax name }:
+                    RecordFirst(declarations, name.Identifier);
                     break;
                 case DimStatementSyntax dim:
                     RecordFirst(declarations, dim.Identifier);
@@ -1031,6 +1214,9 @@ internal sealed class SemanticAnalyzer
                     foreach (var clause in ifStatement.Clauses)
                         CollectFirstDeclarations(clause.Statements, declarations, skipRoutines);
                     CollectFirstDeclarations(ifStatement.ElseStatements, declarations, skipRoutines);
+                    break;
+                case WithStatementSyntax withStatement:
+                    CollectFirstDeclarations(withStatement.Statements, declarations, skipRoutines);
                     break;
                 case DoStatementSyntax doStatement:
                     CollectFirstDeclarations(doStatement.Statements, declarations, skipRoutines);
@@ -1091,6 +1277,9 @@ internal sealed class SemanticAnalyzer
                 }
                 AnalyzeStatements(ifStatement.ElseStatements, false);
                 break;
+            case WithStatementSyntax withStatement:
+                AnalyzeWith(withStatement);
+                break;
             case ForStatementSyntax forStatement:
                 RequireType(forStatement.LowerBound, SmileType.Number, "SML3008", "For lower bound must be Number.");
                 RequireType(forStatement.UpperBound, SmileType.Number, "SML3008", "For upper bound must be Number.");
@@ -1107,6 +1296,7 @@ internal sealed class SemanticAnalyzer
                     RequireType(doStatement.UntilCondition, SmileType.Boolean, "SML3004", "Loop Until condition must be Boolean.");
                 break;
             case CallStatementSyntax call: AnalyzeCall(call.Identifier, call.Arguments, requireFunction: false); break;
+            case LeadingMemberCallStatementSyntax call: AnalyzeLeadingMemberCall(call); break;
             case ReturnStatementSyntax returnStatement: AnalyzeReturn(returnStatement); break;
             case SelectStatementSyntax select: AnalyzeSelect(select); break;
             case ExitStatementSyntax exit: AnalyzeExit(exit); break;
@@ -1206,10 +1396,68 @@ internal sealed class SemanticAnalyzer
 
     private SmileType ResolveWritableTargetType(AssignmentTargetSyntax target)
     {
-        var type = ResolveTargetRootType(target);
-        foreach (var field in target.Fields)
-            type = BindField(type, field, target.Span, expression: null);
+        var type = AnalyzeExpression(target.Location);
+        if (type != SmileType.Error && !IsWritableLocation(target.Location, type))
+            Report("SML3305", target.Span, "Target must be a writable location.");
         return type;
+    }
+
+    private void AnalyzeWith(WithStatementSyntax statement)
+    {
+        var targetType = AnalyzeExpression(statement.Target);
+        var isWritable = targetType != SmileType.Error && IsWritableLocation(statement.Target, targetType);
+        if (!isWritable && targetType is RecordTypeSymbol)
+            Report("SML3412", statement.Target.Span,
+                "With target must be a stable writable record location.");
+        if (targetType != SmileType.Error && targetType is not RecordTypeSymbol)
+            Report("SML3415", statement.Target.Span,
+                $"With target must have a record type; found {TypeName(targetType)}.");
+
+        WithTargetBinding? binding = null;
+        var bodySpan = TextSpan.FromBounds(statement.Target.Span.End, statement.EndKeyword.Span.Start);
+        if (targetType is RecordTypeSymbol record)
+        {
+            binding = new WithTargetBinding(statement, record, WithStorageKind.ValueLocation,
+                _withStack.Count, bodySpan);
+            _withTargets[statement] = binding;
+            if (!_withScopes.TryGetValue(_currentSource, out var scopes))
+            {
+                scopes = new List<WithTargetBinding>();
+                _withScopes[_currentSource] = scopes;
+            }
+            scopes.Add(binding);
+        }
+        else
+        {
+            if (!_invalidWithScopes.TryGetValue(_currentSource, out var invalidScopes))
+            {
+                invalidScopes = new List<InvalidWithScope>();
+                _invalidWithScopes[_currentSource] = invalidScopes;
+            }
+            invalidScopes.Add(new InvalidWithScope(_withStack.Count, bodySpan));
+        }
+
+        _withStack.Add(binding);
+        AnalyzeStatements(statement.Statements, false);
+        _withStack.RemoveAt(_withStack.Count - 1);
+    }
+
+    private void AnalyzeLeadingMemberCall(LeadingMemberCallStatementSyntax statement)
+    {
+        foreach (var argument in statement.Arguments)
+            AnalyzeExpression(argument);
+        if (_withStack.Count == 0)
+        {
+            Report("SML3413", statement.DotToken.Span,
+                "Leading-dot member access is valid only inside With...End With.");
+            return;
+        }
+        var receiver = _withStack[_withStack.Count - 1];
+        if (receiver == null)
+            return;
+        var record = receiver.TargetType;
+        Report("SML3414", statement.Member.Span,
+            $"Type '{record.Name}' does not contain callable member '{statement.Member.Text}'; record methods are not declared by Type fields.");
     }
 
     private void AnalyzeDataLoad(DataLoadStatementSyntax statement)
@@ -1313,113 +1561,83 @@ internal sealed class SemanticAnalyzer
     private void AnalyzeAssignment(AssignmentStatementSyntax assignment)
     {
         var valueType = AnalyzeExpression(assignment.Expression);
-        var name = assignment.Target.Identifier.Text;
-        if (assignment.Target.Fields.Count != 0)
+        if (assignment.Target.Location is NameExpressionSyntax nameExpression)
         {
-            var targetType = ResolveTargetRootType(assignment.Target);
-            foreach (var fieldToken in assignment.Target.Fields)
-                targetType = BindField(targetType, fieldToken, assignment.Target.Span, expression: null);
-            if (valueType != SmileType.Error && targetType != SmileType.Error && valueType != targetType)
-                Report("SML3304", assignment.Expression.Span,
-                    $"Cannot assign {TypeName(valueType)} to {TypeName(targetType)} field '{assignment.Target.Fields.Last().Text}'.");
-            return;
-        }
-        if (assignment.Target.IsArrayElement)
-        {
-            foreach (var index in assignment.Target.Indices)
-                RequireType(index, SmileType.Number, "SML3007", "Array index must be Number.");
-            if (!TryResolve(name, assignment.Target.Identifier, out var array))
-                return;
-            if (!array.IsArray)
-            {
-                Report("SML3009", assignment.Target.Identifier.Span, $"'{name}' is not an array.");
-                return;
-            }
-            if (assignment.Target.Indices.Count != array.ArrayRank)
-                Report("SML3014", assignment.Target.Span, $"Array '{name}' requires {array.ArrayRank} index value(s).");
-            if (valueType != SmileType.Error && valueType != array.Type)
-                Report("SML3304", assignment.Expression.Span,
-                    $"Cannot assign {TypeName(valueType)} to {TypeName(array.Type)} array element '{name}'.");
+            AnalyzeSimpleAssignment(nameExpression, valueType, assignment.Expression.Span);
             return;
         }
 
-        if (_currentRoutine == null && _rejectedProjectDeclarations.Contains(assignment.Target.Identifier))
+        var targetType = AnalyzeExpression(assignment.Target.Location);
+        if (targetType != SmileType.Error && !IsWritableLocation(assignment.Target.Location, targetType))
+            Report("SML3305", assignment.Target.Span, "Assignment target must be a writable location.");
+        if (valueType != SmileType.Error && targetType != SmileType.Error && valueType != targetType)
+        {
+            var suffix = assignment.Target.Location switch
+            {
+                ArrayAccessExpressionSyntax array => $" array element '{array.Identifier.Text}'",
+                FieldAccessExpressionSyntax field => $" field '{field.Field.Text}'",
+                LeadingMemberAccessExpressionSyntax leading => $" field '{leading.Member.Text}'",
+                _ => " location"
+            };
+            Report("SML3304", assignment.Expression.Span,
+                $"Cannot assign {TypeName(valueType)} to {TypeName(targetType)}{suffix}.");
+        }
+    }
+
+    private void AnalyzeSimpleAssignment(NameExpressionSyntax target, SmileType valueType, TextSpan valueSpan)
+    {
+        var name = target.Identifier.Text;
+        if (_currentRoutine == null && _rejectedProjectDeclarations.Contains(target.Identifier))
             return;
 
         var futureLocal = _currentRoutine != null && !_currentRoutine.Locals.ContainsKey(name)
             ? FindLocalDeclaration(name) : null;
-        if (futureLocal != null && futureLocal.Identifier.Position > assignment.Target.Identifier.Position)
+        if (futureLocal != null && futureLocal.Identifier.Position > target.Identifier.Position)
         {
-            Report("SML3307", assignment.Target.Identifier.Span, $"Local '{name}' is used before its Dim declaration.");
+            Report("SML3307", target.Identifier.Span, $"Local '{name}' is used before its Dim declaration.");
             return;
         }
 
         if (TryResolveExisting(name, out var existing))
         {
+            _expressionTypes[target] = existing.Type;
             if (existing.IsConstant)
             {
-                Report("SML3012", assignment.Target.Identifier.Span, $"Constant '{name}' cannot be assigned.");
+                Report("SML3012", target.Identifier.Span, $"Constant '{name}' cannot be assigned.");
                 return;
             }
             if (existing.IsArray)
             {
-                Report("SML3009", assignment.Target.Identifier.Span, $"Array '{name}' requires an index.");
+                Report("SML3009", target.Identifier.Span, $"Array '{name}' requires an index.");
                 return;
             }
             if (valueType != SmileType.Error && existing.Type != valueType)
-                Report("SML3304", assignment.Expression.Span, $"Cannot assign {TypeName(valueType)} to {TypeName(existing.Type)} variable '{name}'.");
+                Report("SML3304", valueSpan,
+                    $"Cannot assign {TypeName(valueType)} to {TypeName(existing.Type)} variable '{name}'.");
             return;
         }
 
         if (_optionExplicit)
         {
             var later = FindLocalDeclaration(name);
-            if (later != null && later.Identifier.Position > assignment.Target.Identifier.Position)
+            if (later != null && later.Identifier.Position > target.Identifier.Position)
             {
-                Report("SML3307", assignment.Target.Identifier.Span,
+                Report("SML3307", target.Identifier.Span,
                     $"Local '{name}' is used before its Dim declaration.");
                 return;
             }
-            Report("SML3303", assignment.Target.Identifier.Span,
+            Report("SML3303", target.Identifier.Span,
                 $"Variable '{name}' must be declared because Option Explicit is enabled for this source.");
             return;
         }
         if (valueType == SmileType.Error)
             return;
-        DeclareVariable(name, valueType, Array.Empty<int>(), assignment.Target.Identifier.Span);
-    }
-
-    private SmileType ResolveTargetRootType(AssignmentTargetSyntax target)
-    {
-        foreach (var index in target.Indices)
-            RequireType(index, SmileType.Number, "SML3007", "Array index must be Number.");
-        if (!TryResolve(target.Identifier.Text, target.Identifier, out var symbol))
-            return SmileType.Error;
-        if (target.IsArrayElement)
-        {
-            if (!symbol.IsArray)
-            {
-                Report("SML3009", target.Identifier.Span, $"'{target.Identifier.Text}' is not an array.");
-                return SmileType.Error;
-            }
-            if (target.Indices.Count != symbol.ArrayRank)
-                Report("SML3014", target.Span, $"Array '{target.Identifier.Text}' requires {symbol.ArrayRank} index value(s).");
-        }
-        else if (symbol.IsArray)
-        {
-            Report("SML3009", target.Identifier.Span, $"Array '{target.Identifier.Text}' requires an index.");
-            return SmileType.Error;
-        }
-        if (symbol.IsConstant)
-        {
-            Report("SML3012", target.Identifier.Span, $"Constant '{target.Identifier.Text}' cannot be assigned.");
-            return SmileType.Error;
-        }
-        return symbol.Type;
+        DeclareVariable(name, valueType, Array.Empty<int>(), target.Identifier.Span);
+        _expressionTypes[target] = valueType;
     }
 
     private SmileType BindField(SmileType receiverType, SyntaxToken fieldToken, TextSpan span,
-        FieldAccessExpressionSyntax? expression)
+        ExpressionSyntax? expression)
     {
         if (receiverType == SmileType.Error)
             return SmileType.Error;
@@ -1434,7 +1652,15 @@ internal sealed class SemanticAnalyzer
             return SmileType.Error;
         }
         if (expression != null)
+        {
             _fields[expression] = field;
+            if (!_fieldUses.TryGetValue(_currentSource, out var uses))
+            {
+                uses = new Dictionary<int, RecordFieldSymbol>();
+                _fieldUses[_currentSource] = uses;
+            }
+            uses[fieldToken.Position] = field;
+        }
         return field.Type;
     }
 
@@ -1674,6 +1900,27 @@ internal sealed class SemanticAnalyzer
             case FieldAccessExpressionSyntax field:
                 result = BindField(AnalyzeExpression(field.Receiver), field.Field, field.Span, field);
                 break;
+            case LeadingMemberAccessExpressionSyntax leading:
+                if (_withStack.Count == 0)
+                {
+                    Report("SML3413", leading.DotToken.Span,
+                        "Leading-dot member access is valid only inside With...End With.");
+                    result = SmileType.Error;
+                }
+                else
+                {
+                    var receiver = _withStack[_withStack.Count - 1];
+                    if (receiver == null)
+                        result = SmileType.Error;
+                    else
+                    {
+                        result = BindField(receiver.TargetType, leading.Member, leading.Span, leading);
+                        if (_fields.TryGetValue(leading, out var member))
+                            _withMembers[leading] = new WithMemberBinding(receiver.Statement,
+                                receiver.TargetType, member);
+                    }
+                }
+                break;
             case ParenthesizedExpressionSyntax parenthesized:
                 result = AnalyzeExpression(parenthesized.Expression);
                 break;
@@ -1744,6 +1991,8 @@ internal sealed class SemanticAnalyzer
                 return symbol.IsArray && symbol.Type == requiredType && array.Indices.Count == symbol.ArrayRank;
             case FieldAccessExpressionSyntax field:
                 return AnalyzeExpression(field) == requiredType && IsWritableRecordReceiver(field.Receiver);
+            case LeadingMemberAccessExpressionSyntax leading:
+                return AnalyzeExpression(leading) == requiredType && _withMembers.ContainsKey(leading);
             default:
                 return false;
         }
@@ -1759,6 +2008,8 @@ internal sealed class SemanticAnalyzer
                 return symbol.IsArray && array.Indices.Count == symbol.ArrayRank;
             case FieldAccessExpressionSyntax field:
                 return IsWritableRecordReceiver(field.Receiver);
+            case LeadingMemberAccessExpressionSyntax leading:
+                return _withMembers.ContainsKey(leading);
             default:
                 return false;
         }
@@ -2104,6 +2355,9 @@ internal sealed class SemanticAnalyzer
                 if (all)
                     return true;
             }
+            if (statement is WithStatementSyntax withStatement &&
+                StatementsAlwaysReturn(withStatement.Statements))
+                return true;
             if (statement is SelectStatementSyntax select)
             {
                 var hasElse = false;
