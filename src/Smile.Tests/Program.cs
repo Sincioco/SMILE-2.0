@@ -5623,6 +5623,15 @@ Run("Class diagnostics enforce scalar reference storage constructor and identity
 
 Run("Lightweight OOP parser recovery remains bounded and preserves later declarations", () =>
 {
+    var terminatedInvalidClass = Analyze("Class Item\nDim Value As Number\nEnd Class\n");
+    var terminatedInvalidClassCodes = terminatedInvalidClass.Diagnostics
+        .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+        .Select(diagnostic => diagnostic.Code)
+        .ToArray();
+    if (!terminatedInvalidClassCodes.SequenceEqual(new[] { "SML3450" }))
+        throw new InvalidOperationException("A terminated invalid Class must retain exact SML3450 diagnostics; found " +
+            string.Join(",", terminatedInvalidClassCodes));
+
     var cases = new (string Name, string Source)[]
     {
         ("missing End With",

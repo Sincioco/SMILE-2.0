@@ -211,7 +211,7 @@ internal sealed class Parser
         try
         {
             while (Current.Kind != SyntaxKind.EndOfFileToken && !IsEndPair(SyntaxKind.TypeKeyword) &&
-                   !IsNominalDeclarationRecoveryBoundary())
+                   !IsNominalDeclarationRecoveryBoundary(SyntaxKind.TypeKeyword))
             {
                 if (Current.Kind == SyntaxKind.NewLineToken)
                 {
@@ -289,9 +289,6 @@ internal sealed class Parser
         {
             _instanceDeclarationDepth--;
         }
-        if (Current.Kind == SyntaxKind.DimKeyword)
-            _diagnostics.Report("SML3403", Current.Span,
-                "Type fields do not use Dim; End Type may be missing before this declaration.");
         SyntaxToken end;
         SyntaxToken finalType;
         if (IsEndPair(SyntaxKind.TypeKeyword))
@@ -320,7 +317,7 @@ internal sealed class Parser
         try
         {
             while (Current.Kind != SyntaxKind.EndOfFileToken && !IsEndPair(SyntaxKind.ClassKeyword) &&
-                   !IsNominalDeclarationRecoveryBoundary())
+                   !IsNominalDeclarationRecoveryBoundary(SyntaxKind.ClassKeyword))
             {
                 if (Current.Kind == SyntaxKind.NewLineToken)
                 {
@@ -400,10 +397,6 @@ internal sealed class Parser
         {
             _instanceDeclarationDepth--;
         }
-        if (Current.Kind == SyntaxKind.DimKeyword)
-            _diagnostics.Report("SML3450", Current.Span,
-                "Class fields do not use Dim; End Class may be missing before this declaration.");
-
         SyntaxToken end;
         SyntaxToken finalClass;
         if (IsEndPair(SyntaxKind.ClassKeyword))
@@ -1670,15 +1663,33 @@ internal sealed class Parser
     private bool IsEndContextualPair(string text) => Current.Kind == SyntaxKind.EndKeyword &&
         IsContextualText(Peek(1), text);
 
-    private bool IsNominalDeclarationRecoveryBoundary() => Current.Kind is
+    private bool IsNominalDeclarationRecoveryBoundary(SyntaxKind finalKind) => Current.Kind is
             SyntaxKind.OptionKeyword or SyntaxKind.ModuleKeyword or SyntaxKind.ImportKeyword or
             SyntaxKind.ConstKeyword or SyntaxKind.TypeKeyword or SyntaxKind.ClassKeyword or
-            SyntaxKind.EnumKeyword or SyntaxKind.DimKeyword or SyntaxKind.GameKeyword ||
+            SyntaxKind.EnumKeyword or SyntaxKind.GameKeyword ||
+        (Current.Kind == SyntaxKind.DimKeyword && !HasNominalTerminatorAhead(finalKind)) ||
         IsEndPair(SyntaxKind.ModuleKeyword) || IsEndPair(SyntaxKind.ProgramKeyword);
 
-    private bool IsEnumDeclarationRecoveryBoundary() => IsNominalDeclarationRecoveryBoundary() ||
+    private bool IsEnumDeclarationRecoveryBoundary() => IsNominalDeclarationRecoveryBoundary(SyntaxKind.EnumKeyword) ||
         Current.Kind is SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.SubKeyword or
             SyntaxKind.FunctionKeyword;
+
+    private bool HasNominalTerminatorAhead(SyntaxKind finalKind)
+    {
+        for (var index = _position + 1; index + 1 < _tokens.Count; index++)
+        {
+            var kind = _tokens[index].Kind;
+            var nextKind = _tokens[index + 1].Kind;
+            if (kind == SyntaxKind.EndKeyword && nextKind == finalKind)
+                return true;
+            if (kind is SyntaxKind.OptionKeyword or SyntaxKind.ModuleKeyword or SyntaxKind.ImportKeyword or
+                SyntaxKind.ConstKeyword or SyntaxKind.TypeKeyword or SyntaxKind.ClassKeyword or
+                SyntaxKind.EnumKeyword or SyntaxKind.GameKeyword ||
+                kind == SyntaxKind.EndKeyword && nextKind is SyntaxKind.ModuleKeyword or SyntaxKind.ProgramKeyword)
+                return false;
+        }
+        return false;
+    }
 
     private bool IsWithRecoveryBoundary() => Current.Kind is SyntaxKind.ElseKeyword or SyntaxKind.CaseKeyword or
             SyntaxKind.LoopKeyword ||
