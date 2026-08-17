@@ -1,0 +1,7 @@
+Class Item
+End Class
+
+Dim First As Item
+Dim Second As Item
+
+Print First = Second

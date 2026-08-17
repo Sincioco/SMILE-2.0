@@ -10,11 +10,12 @@ function fail(message) {
 }
 
 const args = process.argv.slice(2);
-if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio|--phase5-ui|--phase5-hardening|--phase5-submenus|--phase5-submenu-viewport]");
+if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--expected-runtime-error <text>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio|--phase5-ui|--phase5-hardening|--phase5-submenus|--phase5-submenu-viewport]");
 
 const webDirectory = path.resolve(args.shift());
 let expectedPath = null;
 let nativeOutputPath = null;
+let expectedRuntimeError = null;
 let expectedDrawText = null;
 let maximumFrames = 3;
 let timeoutMilliseconds = 5000;
@@ -43,6 +44,7 @@ while (args.length !== 0) {
     if (value === undefined) fail(`missing value for ${option}`);
     if (option === "--expected") expectedPath = path.resolve(value);
     else if (option === "--native-output") nativeOutputPath = path.resolve(value);
+    else if (option === "--expected-runtime-error") expectedRuntimeError = value;
     else if (option === "--draw-text") expectedDrawText = value;
     else if (option === "--draw-text-file") expectedDrawText = fs.readFileSync(path.resolve(value), "utf8").replace(/\r?\n$/, "");
     else if (option === "--frames") maximumFrames = Number(value);
@@ -312,8 +314,20 @@ const started = Date.now();
         await new Promise(resolve => setTimeout(resolve, 5));
     }
     if (!host.__smileWeb) fail("runtime did not publish window.__smileWeb");
-    if (host.__smileWeb.status === "error")
-        fail(errorElement.textContent || hostConsoleErrors.join("\n") || "runtime reported an unknown error");
+    if (host.__smileWeb.status === "error") {
+        const runtimeError = errorElement.textContent || hostConsoleErrors.join("\n") ||
+            "runtime reported an unknown error";
+        if (expectedRuntimeError === null) fail(runtimeError);
+        if (!runtimeError.includes(expectedRuntimeError))
+            fail(`runtime error did not contain ${JSON.stringify(expectedRuntimeError)}: ${runtimeError}`);
+        const failureDiagnostics = host.smile.mediaDiagnostics();
+        if (failureDiagnostics.classLiveCount !== 0 || host.smile.classLiveCount() !== 0)
+            fail(`SMILE Class ownership leaked on runtime failure: ${JSON.stringify(failureDiagnostics)}`);
+        process.stdout.write(`Web execution passed: ${webDirectory} (expected runtime failure)\n`);
+        return;
+    }
+    if (expectedRuntimeError !== null)
+        fail(`expected runtime error ${JSON.stringify(expectedRuntimeError)}, but execution completed`);
 
     const actual = normalizeNewlines(consoleElement.textContent);
     let expected = null;
@@ -376,6 +390,8 @@ const started = Date.now();
         }
     }
     const diagnostics = host.smile.mediaDiagnostics();
+    if (diagnostics.classLiveCount !== 0 || host.smile.classLiveCount() !== 0)
+        fail(`SMILE Class ownership leaked: ${JSON.stringify(diagnostics)}`);
     if (verifyPhase4Media || verifyPhase4Ownership || verifyPhase4Clip) {
         if (diagnostics.backingWidth !== visibleCanvas.width || diagnostics.backingHeight !== visibleCanvas.height ||
             diagnostics.backingWidth !== backCanvasElement.width || diagnostics.backingHeight !== backCanvasElement.height)

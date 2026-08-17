@@ -179,7 +179,61 @@ Game Window capability flows through methods and each Property accessor independ
 
 Completion after an addressable Type value lists accessible fields, methods, Functions, and properties; named-label completion for a method lists only its declared parameters. A record-valued Property result may still expose readable nested fields, but it does not offer invalid method/property calls because the result is not addressable. Quick Info shows the containing Type, exact project/package provider, signature, accessor availability, and separate getter/setter capability. F12 navigates to the original project declaration or extracted package source. Hovering a property does not invoke its getter. The formatter traverses Type routines and Property accessors, canonicalizes contextual `Me`/`Value`, safely rewrites computed Returns in Functions and getters, and remains idempotent.
 
-Diagnostics use `SML3440` for Type member collisions and illegal Private fields, `SML3441` for malformed Properties/accessors, `SML3442` for invalid `Me`, `SML3443` for a missing/noncallable member or non-Type receiver, `SML3444` for a nonaddressable receiver, `SML3445` for an unavailable accessor, and `SML3446` for access to a Private member from outside its Type. This value-Type slice does not add `Class`, `New`, `Nothing`, `Is`, constructors, destructors, inheritance, or reference identity.
+Diagnostics use `SML3440` for Type member collisions and illegal Private fields, `SML3441` for malformed Properties/accessors, `SML3442` for invalid `Me`, `SML3443` for a missing/noncallable member or non-instance receiver, `SML3444` for a nonaddressable Type receiver, `SML3445` for an unavailable accessor, and `SML3446` for access to a Private member from outside its containing Type or Class.
+
+## Class references
+
+`Class Name` ... `End Class` declares a nominal reference type. A module Class follows the same private-by-default module visibility rule as Type and Enum declarations. Class fields are Private by default and may be marked `Public`; methods and properties are Public by default and may be marked `Private`. All fields, methods, and properties share one case-insensitive member namespace.
+
+```smile
+Class Counter
+    Private Label As Text
+    Private StoredValue As Number
+    Public Samples[2] As Number
+
+    Public Sub New(Label As Text, Optional Start As Number = 0)
+        Me.Label = Label
+        Me.StoredValue = Start
+    End Sub
+
+    Public Sub Advance(Optional Delta As Number = 1)
+        Me.StoredValue = Me.StoredValue + Delta
+    End Sub
+
+    Public Property Total As Number
+        Get
+            Return Me.StoredValue
+        End Get
+        Set
+            Me.StoredValue = Value
+        End Set
+    End Property
+End Class
+
+Dim Current As New Counter("main", Start:=2)
+Dim Alias As Counter
+
+Alias = Current
+Call Alias.Advance()
+Print Alias Is Current
+
+Alias = Nothing
+Print Alias Is Nothing
+```
+
+`Sub New` is the one Public constructor and may use the normal required, Optional, positional, and named arguments. A Class without an explicit constructor receives an implicit Public parameterless constructor. `New Counter(...)` creates an object; `Dim Value As New Counter(...)` declares and initializes a scalar reference. Constructor arguments evaluate once in source order before allocation and declaration-order argument placement. Constructors have a hidden `Me` receiver, but it is not a source parameter, named argument, or package parameter.
+
+Only scalar Class references are supported. Class arrays, Class fields that directly contain another Class, Class fields inside a Type, and direct Image fields are rejected. A Class field may contain Number, Boolean, Text, Enum, or Type values, including fixed one- or two-dimensional arrays. A contained Type may itself own Text or Image resources. Class fields have deterministic native layouts and collision-safe generated Web keys; source names such as `__proto__`, `constructor`, `prototype`, `toString`, and `valueOf` remain ordinary SMILE fields.
+
+Class assignment and `ByVal` arguments preserve object identity by retaining the same reference. `ByRef` targets a writable scalar reference and may rebind it. Class-valued Functions transfer a reference under the same ownership contract. An uninitialized Class variable is `Nothing`; `Nothing` is assignable only to a Class reference. `Is` and `Is Not` compare exact-Class identity or a Class reference with `Nothing`; `=` and `<>` are not Class identity operators. Known literal `Nothing` member access is rejected at compile time, while a runtime `Nothing` receiver fails deterministically with `Object reference is Nothing`.
+
+A Class receiver captures and retains the object identity before method arguments. Unlike a Type location, a Class-valued Function or Property result may be a receiver. Property assignment preserves SMILE assignment order: the right-hand side is evaluated first, then the Class receiver is captured, while the accessor ABI still receives the receiver before hidden `Value`. `With` on a Class captures and retains one object identity for the whole block, so rebinding the source variable inside the block does not retarget leading-dot members.
+
+Native objects use deterministic reference counting and generated finalizers; Web uses matching manual ARC metadata rather than relying on garbage-collection timing. Finalization clears direct Text fields, contained Type fields, and fixed arrays in deterministic reverse declaration/element order before freeing the object. `End Program`, normal scope exits, returns, overwritten references, staged call failures, and null failures release owned references. Set `SMILE_CLASS_LIFETIME_DIAGNOSTICS=1` to require `SMILE_CLASS_LIVE=0`; the Web runner exposes the same count through `smile.classLiveCount()` and `smile.mediaDiagnostics().classLiveCount`.
+
+Format-version 6 packages serialize each Public Class with its stable identity, public fields, always-present explicit or synthesized constructor, public methods/properties, exact TypeRefs, locations, parameters, and accessor-specific capabilities. Instance size, offsets, private fields/members, hidden `Me`, and setter `Value` are implementation details and never appear in public API metadata. Completion distinguishes Classes and constructors, offers only Classes after `New`, includes constructor named labels, permits same-Class private members, and preserves exact project/package provider navigation. Quick Info never evaluates a Property getter. The formatter traverses constructors, methods, Functions, and accessors and remains idempotent.
+
+This milestone intentionally does not add inheritance, virtual dispatch, user-defined destructors/finalizers, static Class members, indexed/default properties, Class arrays, or general exception unwinding.
 
 ## Enum types
 
@@ -454,13 +508,13 @@ Record-specific diagnostics are stable and source-located:
 | `SML3406` | Field access is applied to a non-record value. |
 | `SML3407` | A whole record is used in an unsupported operation. |
 | `SML3408` | An imported record type is private or inaccessible. |
-| `SML3409` | A public API exposes an inaccessible record type. |
+| `SML3409` | A public API exposes an inaccessible nominal type. |
 | `SML3410` | A type is used as a value, or a value as a type. |
 | `SML3411` | A record layout exceeds the supported size. |
 | `SML3412` | A `With` target has a record type but is not a stable writable location. |
 | `SML3413` | Leading-dot member access is used outside `With...End With`. |
-| `SML3414` | `Call .Member(...)` names a record method, which is reserved until `Type` methods are available. |
-| `SML3415` | A `With` target does not have a record type. |
+| `SML3414` | `Call .Member(...)` names no callable member on the active `With` target. |
+| `SML3415` | A `With` target is neither a Type value nor a Class reference. |
 
 Enum-specific diagnostics are stable and source-located. Exact assignment, argument, case, return, and `ByRef` mismatches continue to use the shared `SML3304` and `SML3305` diagnostics; duplicate numeric aliases in one `Select Case` use `SML3019`.
 
@@ -484,6 +538,26 @@ Optional-parameter and named-argument diagnostics are stable and source-located.
 | `SML3435` | A required parameter is omitted. |
 
 The Web target additionally reports `SML5102` when an Optional `Number` default is outside JavaScript's exact safe-integer range. Enum defaults use `BigInt` and retain the complete signed 64-bit range.
+
+Type/Class member diagnostics are stable and source-located:
+
+| Code | Meaning |
+|---|---|
+| `SML3440` | A Type member collides, a Type field is Private, or visibility syntax is malformed. |
+| `SML3441` | A Type/Class Property or accessor is malformed. |
+| `SML3442` | `Me` is used outside an instance member or as an assignable/`ByRef` whole value. |
+| `SML3443` | An instance member is missing, noncallable, or used on a non-instance receiver. |
+| `SML3444` | A Type method/property receiver is not an addressable stable location. |
+| `SML3445` | A Property read lacks `Get`, or a Property assignment lacks `Set`. |
+| `SML3446` | A Private member is accessed outside its exact containing Type or Class. |
+| `SML3450` | A Class declaration or member statement is malformed or misplaced. |
+| `SML3451` | A constructor is invalid, duplicated, Private, or collides in the Class member namespace. |
+| `SML3452` | A Class field/layout or scalar-only Class storage form is unsupported. |
+| `SML3453` | `New` or `Dim As New` does not name a constructible Class. |
+| `SML3454` | `Nothing` is assigned or returned where the exact Class-compatible type is not allowed. |
+| `SML3455` | Class identity operands are incompatible, or `=`/`<>` is used instead of `Is`/`Is Not`. |
+| `SML3456` | Reserved for future Class storage diagnostics. |
+| `SML3457` | Member access is known at compile time to use literal `Nothing`. |
 
 ### Arc drawing
 

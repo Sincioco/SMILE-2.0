@@ -1,0 +1,6 @@
+Class Item
+End Class
+
+Type Holder
+    Value As Item
+End Type

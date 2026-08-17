@@ -1684,6 +1684,24 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
             throw new InvalidOperationException("Me was absent from Property-setter completion.");
         if (!setterCompletions.Any(completion => completion.DisplayText == "Value"))
             throw new InvalidOperationException("Value was absent from Property-setter completion.");
+        var classStartPosition = apiSourceText.IndexOf("Public Class ReferenceCounter", StringComparison.Ordinal);
+        var classMePosition = apiSourceText.IndexOf("Me.Label = Label", classStartPosition,
+            StringComparison.Ordinal);
+        Equal(true, SmileSymbolService.TryResolve(analysis, apiTree, classMePosition + 1,
+            out var resolvedClassMe));
+        Equal(SmileResolvedSymbolKind.Local, resolvedClassMe.Kind);
+        Equal("Me", resolvedClassMe.Name);
+        var insideClassMembers = SmileCompletionService.GetCompletions(analysis, apiTree,
+            classMePosition + "Me.".Length);
+        foreach (var expected in new[] { "Advance", "Caption", "Code", "CurrentMode", "Hide", "Label",
+                     "Notes", "Samples", "Secret", "State", "Total" })
+            Equal(true, insideClassMembers.Any(completion => completion.DisplayText == expected));
+        var classConstructorDeclarationPosition = apiSourceText.IndexOf("Sub New(", classStartPosition,
+                                                      StringComparison.Ordinal) + "Sub ".Length;
+        Equal(true, SmileSymbolService.TryResolve(analysis, apiTree,
+            classConstructorDeclarationPosition + 1, out var resolvedClassConstructorDeclaration));
+        Equal(SmileResolvedSymbolKind.Constructor, resolvedClassConstructorDeclaration.Kind);
+        Equal("New", resolvedClassConstructorDeclaration.Name);
         var firstPackage = Path.Combine(directory, "first.smilelib");
         var secondPackage = Path.Combine(directory, "second.smilelib");
         SmileLibraryPackage.Write(firstPackage, compilation.Graph.Root, analysis);
@@ -1701,18 +1719,22 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
         var gameProbeGetterLine = 0;
         var gameProbeGetterColumn = 0;
         var gameProbeGetterLength = 0;
+        var referenceConstructorLine = 0;
+        var referenceConstructorColumn = 0;
+        var referenceConstructorLength = 0;
         using (var archive = System.IO.Compression.ZipFile.OpenRead(firstPackage))
         using (var reader = new StreamReader(archive.GetEntry("api/public-symbols.json")!.Open()))
             apiText = reader.ReadToEnd();
         using (var document = System.Text.Json.JsonDocument.Parse(apiText))
         {
             var root = document.RootElement;
-            Equal("Smile.Lightweight.Oop.Proof@1.1.0",
+            Equal("Smile.Lightweight.Oop.Proof@1.2.0",
                 root.GetProperty("library").GetProperty("provider").GetString());
             var module = root.GetProperty("modules")[0];
             Equal("src/Library/Api.smile", module.GetProperty("sources")[0].GetString());
             var moduleMembers = module.GetProperty("members").EnumerateArray().ToArray();
-            Equal("Counter|CounterBox|DisplayMode|Report", string.Join("|", moduleMembers
+            Equal("Counter|CounterBox|DisplayMode|EmptyReference|GameConstructorProbe|GameReferenceProbe|ReferenceCounter|Report",
+                string.Join("|", moduleMembers
                 .Select(member => member.GetProperty("name").GetString())));
             var report = moduleMembers
                 .Single(member => member.GetProperty("name").GetString() == "Report");
@@ -1752,7 +1774,7 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
             var enumType = parameters[4].GetProperty("type");
             Equal("enum", enumType.GetProperty("kind").GetString());
             Equal("Smile.Lightweight.Oop.Proof::DisplayMode", enumType.GetProperty("identity").GetString());
-            Equal("Smile.Lightweight.Oop.Proof@1.1.0", enumType.GetProperty("provider").GetString());
+            Equal("Smile.Lightweight.Oop.Proof@1.2.0", enumType.GetProperty("provider").GetString());
             Equal(false, enumDefault.TryGetProperty("type", out _));
             Equal(false, enumDefault.TryGetProperty("provider", out _));
 
@@ -1766,7 +1788,7 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
             var counter = moduleMembers.Single(member =>
                 member.GetProperty("name").GetString() == "Counter");
             Equal("Smile.Lightweight.Oop.Proof::Counter", counter.GetProperty("identity").GetString());
-            Equal("Smile.Lightweight.Oop.Proof@1.1.0", counter.GetProperty("provider").GetString());
+            Equal("Smile.Lightweight.Oop.Proof@1.2.0", counter.GetProperty("provider").GetString());
             Equal("Label|StoredValue|Enabled|Mode", string.Join("|", counter.GetProperty("fields")
                 .EnumerateArray().Select(field => field.GetProperty("name").GetString())));
             AssertLocation(counter, "Counter");
@@ -1811,7 +1833,7 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
             for (var index = 0; index < configureParameters.Length; index++)
                 Equal(index, configureParameters[index].GetProperty("ordinal").GetInt32());
             var configureMode = configureParameters[3];
-            Equal("Smile.Lightweight.Oop.Proof@1.1.0",
+            Equal("Smile.Lightweight.Oop.Proof@1.2.0",
                 configureMode.GetProperty("type").GetProperty("provider").GetString());
             Equal("Standard", configureMode.GetProperty("default").GetProperty("member").GetString());
             Equal(1L, configureMode.GetProperty("default").GetProperty("value").GetInt64());
@@ -1819,11 +1841,11 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
                 .GetProperty("returnType");
             Equal("Smile.Lightweight.Oop.Proof::Counter", shiftedReturn.GetProperty("identity").GetString());
             Equal("Smile.Lightweight.Oop.Proof", shiftedReturn.GetProperty("module").GetString());
-            Equal("Smile.Lightweight.Oop.Proof@1.1.0", shiftedReturn.GetProperty("provider").GetString());
+            Equal("Smile.Lightweight.Oop.Proof@1.2.0", shiftedReturn.GetProperty("provider").GetString());
             var differenceOther = routines.Single(member => member.GetProperty("name").GetString() == "Difference")
                 .GetProperty("parameters")[0].GetProperty("type");
             Equal("Smile.Lightweight.Oop.Proof::Counter", differenceOther.GetProperty("identity").GetString());
-            Equal("Smile.Lightweight.Oop.Proof@1.1.0", differenceOther.GetProperty("provider").GetString());
+            Equal("Smile.Lightweight.Oop.Proof@1.2.0", differenceOther.GetProperty("provider").GetString());
 
             var properties = nestedMembers.Where(member => member.GetProperty("kind").GetString() == "Property")
                 .ToArray();
@@ -1863,6 +1885,78 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
             gameProbeGetterLine = gameProbeGetterLocation.GetProperty("line").GetInt32();
             gameProbeGetterColumn = gameProbeGetterLocation.GetProperty("column").GetInt32();
             gameProbeGetterLength = gameProbeGetterLocation.GetProperty("length").GetInt32();
+
+            var referenceCounter = moduleMembers.Single(member =>
+                member.GetProperty("name").GetString() == "ReferenceCounter");
+            Equal("name|kind|visibility|identity|module|provider|size|alignment|fields|constructor|members|location",
+                string.Join("|", referenceCounter.EnumerateObject().Select(property => property.Name)));
+            Equal("Class", referenceCounter.GetProperty("kind").GetString());
+            Equal("Smile.Lightweight.Oop.Proof::ReferenceCounter",
+                referenceCounter.GetProperty("identity").GetString());
+            Equal("Smile.Lightweight.Oop.Proof@1.2.0",
+                referenceCounter.GetProperty("provider").GetString());
+            Equal(8, referenceCounter.GetProperty("size").GetInt32());
+            Equal(8, referenceCounter.GetProperty("alignment").GetInt32());
+            Equal(false, referenceCounter.TryGetProperty("instanceSize", out _));
+            var classFields = referenceCounter.GetProperty("fields").EnumerateArray().ToArray();
+            Equal("Code|Samples", string.Join("|", classFields
+                .Select(field => field.GetProperty("name").GetString())));
+            Equal("name|visibility|type|ordinal|location",
+                string.Join("|", classFields[0].EnumerateObject().Select(property => property.Name)));
+            Equal("name|visibility|elementType|rank|dimensions|ordinal|location",
+                string.Join("|", classFields[1].EnumerateObject().Select(property => property.Name)));
+            Equal(1, classFields[1].GetProperty("rank").GetInt32());
+            Equal(2, classFields[1].GetProperty("dimensions")[0].GetInt32());
+            Equal(false, classFields.Any(field => field.TryGetProperty("offset", out _)));
+
+            var constructor = referenceCounter.GetProperty("constructor");
+            Equal("identity|visibility|declared|parameters|requiresGameWindow|location",
+                string.Join("|", constructor.EnumerateObject().Select(property => property.Name)));
+            Equal("Smile.Lightweight.Oop.Proof::ReferenceCounter::constructor::New",
+                constructor.GetProperty("identity").GetString());
+            Equal(true, constructor.GetProperty("declared").GetBoolean());
+            Equal(false, constructor.GetProperty("requiresGameWindow").GetBoolean());
+            var constructorParameters = constructor.GetProperty("parameters").EnumerateArray().ToArray();
+            Equal("Label|Start|Mode", string.Join("|", constructorParameters
+                .Select(parameter => parameter.GetProperty("name").GetString())));
+            Equal(false, constructorParameters.Any(parameter => parameter.GetProperty("name").GetString() == "Me"));
+            Equal("class", referenceCounter.GetProperty("members").EnumerateArray()
+                .Single(member => member.GetProperty("name").GetString() == "Alias")
+                .GetProperty("returnType").GetProperty("kind").GetString());
+            Equal("Smile.Lightweight.Oop.Proof@1.2.0", referenceCounter.GetProperty("members")
+                .EnumerateArray().Single(member => member.GetProperty("name").GetString() == "Same")
+                .GetProperty("parameters")[0].GetProperty("type").GetProperty("provider").GetString());
+            Equal("Advance|Alias|Caption|Same|Snapshot|Total", string.Join("|", referenceCounter
+                .GetProperty("members").EnumerateArray().Select(member => member.GetProperty("name").GetString())));
+            var referenceConstructorLocation = constructor.GetProperty("location");
+            referenceConstructorLine = referenceConstructorLocation.GetProperty("line").GetInt32();
+            referenceConstructorColumn = referenceConstructorLocation.GetProperty("column").GetInt32();
+            referenceConstructorLength = referenceConstructorLocation.GetProperty("length").GetInt32();
+            Equal(3, referenceConstructorLength);
+
+            var emptyReference = moduleMembers.Single(member =>
+                member.GetProperty("name").GetString() == "EmptyReference");
+            Equal(false, emptyReference.GetProperty("constructor").GetProperty("declared").GetBoolean());
+            Equal(0, emptyReference.GetProperty("constructor").GetProperty("parameters").GetArrayLength());
+            AssertLocation(emptyReference.GetProperty("constructor"), "EmptyReference");
+
+            var gameReference = moduleMembers.Single(member =>
+                member.GetProperty("name").GetString() == "GameReferenceProbe");
+            Equal(false, gameReference.GetProperty("constructor").GetProperty("requiresGameWindow").GetBoolean());
+            Equal(true, gameReference.GetProperty("members").EnumerateArray()
+                .Single(member => member.GetProperty("name").GetString() == "DrawProbe")
+                .GetProperty("requiresGameWindow").GetBoolean());
+            var classGameProperty = gameReference.GetProperty("members").EnumerateArray()
+                .Single(member => member.GetProperty("name").GetString() == "GameProbe");
+            Equal(true, classGameProperty.GetProperty("get").GetProperty("requiresGameWindow").GetBoolean());
+            Equal(false, classGameProperty.GetProperty("set").GetProperty("requiresGameWindow").GetBoolean());
+            var gameConstructor = moduleMembers.Single(member =>
+                member.GetProperty("name").GetString() == "GameConstructorProbe");
+            Equal(true, gameConstructor.GetProperty("constructor")
+                .GetProperty("requiresGameWindow").GetBoolean());
+            Equal(false, apiText.Contains("ReferenceCounter::member::Hide", StringComparison.Ordinal));
+            Equal(false, apiText.Contains("ReferenceCounter::property::Secret", StringComparison.Ordinal));
+            Equal(false, apiText.Contains("\"instanceSize\"", StringComparison.Ordinal));
             Equal(false, apiText.Contains(directory, StringComparison.OrdinalIgnoreCase));
         }
 
@@ -1897,6 +1991,18 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
             $"\"line\": {gameProbeGetterLine}, \"column\": {gameProbeGetterColumn}, \"length\": {gameProbeGetterLength}",
             $"\"line\": {gameProbeGetterLine + 1}, \"column\": {gameProbeGetterColumn}, \"length\": {gameProbeGetterLength}",
             StringComparison.Ordinal));
+        AssertApiTamper("class-constructor-identity-tampered.smilelib", text => text.Replace(
+            "Smile.Lightweight.Oop.Proof::ReferenceCounter::constructor::New",
+            "Smile.Lightweight.Oop.Proof::ReferenceCounter::constructor::Tampered",
+            StringComparison.Ordinal));
+        AssertApiTamper("class-constructor-location-tampered.smilelib", text => text.Replace(
+            $"\"line\": {referenceConstructorLine}, \"column\": {referenceConstructorColumn}, \"length\": {referenceConstructorLength}",
+            $"\"line\": {referenceConstructorLine + 1}, \"column\": {referenceConstructorColumn}, \"length\": {referenceConstructorLength}",
+            StringComparison.Ordinal));
+        AssertApiTamper("class-field-dimension-tampered.smilelib", text => text.Replace(
+            "\"dimensions\": [2], \"ordinal\": 1",
+            "\"dimensions\": [3], \"ordinal\": 1",
+            StringComparison.Ordinal));
 
         string AnalyzeConsumer(string name, string reference, bool packageReference)
         {
@@ -1925,13 +2031,13 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
                     parameter.DefaultEnumMember?.Name ?? parameter.DefaultValue.ToString())));
             Equal(true, consumerCompilation.DependencyContext.TryGetProviderDescriptor(
                 report.ProviderIdentity, out var descriptor));
-            Equal("Smile.Lightweight.Oop.Proof@1.1.0", descriptor.LogicalIdentity);
+            Equal("Smile.Lightweight.Oop.Proof@1.2.0", descriptor.LogicalIdentity);
 
             var counter = (RecordTypeSymbol)proofModule.Types["Counter"].Type!;
             Equal("Smile.Lightweight.Oop.Proof::Counter", counter.RuntimeIdentity);
             Equal(true, consumerCompilation.DependencyContext.TryGetProviderDescriptor(
                 counter.ProviderIdentity, out var counterProvider));
-            Equal("Smile.Lightweight.Oop.Proof@1.1.0", counterProvider.LogicalIdentity);
+            Equal("Smile.Lightweight.Oop.Proof@1.2.0", counterProvider.LogicalIdentity);
             var publicTypeMembers = counter.Members.Where(member => member.Visibility == ModuleVisibility.Public &&
                     member.MemberKind != SmileTypeMemberKind.Field)
                 .OrderBy(member => member.Name, StringComparer.Ordinal).ToArray();
@@ -1942,7 +2048,7 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
             Equal("Smile.Lightweight.Oop.Proof::Counter::member::Configure", configureMethod.RuntimeIdentity);
             Equal(true, consumerCompilation.DependencyContext.TryGetProviderDescriptor(
                 configureMethod.ProviderIdentity, out var configureProvider));
-            Equal("Smile.Lightweight.Oop.Proof@1.1.0", configureProvider.LogicalIdentity);
+            Equal("Smile.Lightweight.Oop.Proof@1.2.0", configureProvider.LogicalIdentity);
             Equal("Label|Start|Enabled|Mode", string.Join("|", configureMethod.Parameters
                 .Select(parameter => parameter.Name)));
             Equal(false, configureMethod.Parameters.Any(parameter => parameter.Name == "Me"));
@@ -1967,8 +2073,107 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
             Equal(true, gameProbeProperty.Getter!.RequiresGameWindow);
             Equal(false, gameProbeProperty.Setter!.RequiresGameWindow);
 
+            var referenceCounter = (ClassTypeSymbol)proofModule.Types["ReferenceCounter"].Type!;
+            Equal("Smile.Lightweight.Oop.Proof::ReferenceCounter", referenceCounter.RuntimeIdentity);
+            Equal(true, consumerCompilation.DependencyContext.TryGetProviderDescriptor(
+                referenceCounter.ProviderIdentity, out var referenceCounterProvider));
+            Equal("Smile.Lightweight.Oop.Proof@1.2.0", referenceCounterProvider.LogicalIdentity);
+            Equal("Code|Samples|Label|State|Notes|CurrentMode",
+                string.Join("|", referenceCounter.Fields.Select(field => field.Name)));
+            Equal("Code|Samples", string.Join("|", referenceCounter.Fields
+                .Where(field => field.Visibility == ModuleVisibility.Public).Select(field => field.Name)));
+            Equal(true, referenceCounter.Constructor.IsDeclared);
+            Equal("Smile.Lightweight.Oop.Proof::ReferenceCounter::constructor::New",
+                referenceCounter.Constructor.RuntimeIdentity);
+            Equal("Label|Start|Mode", string.Join("|", referenceCounter.Constructor.Parameters
+                .Select(parameter => parameter.Name)));
+            Equal(false, referenceCounter.Constructor.Parameters.Any(parameter => parameter.Name == "Me"));
+            Equal(true, referenceCounter.Constructor.Receiver != null);
+            Equal(false, referenceCounter.Constructor.RequiresGameWindow);
+            var publicClassMembers = referenceCounter.Members.Where(member =>
+                    member.Visibility == ModuleVisibility.Public && member.MemberKind != SmileTypeMemberKind.Field)
+                .OrderBy(member => member.Name, StringComparer.Ordinal).ToArray();
+            Equal("Advance|Alias|Caption|Same|Snapshot|Total",
+                string.Join("|", publicClassMembers.Select(member => member.Name)));
+            Equal(false, publicClassMembers.Any(member => member.Name is "Hide" or "Secret"));
+            Equal(referenceCounter.RuntimeIdentity, ((ClassTypeSymbol)referenceCounter.Methods
+                .Single(method => method.Name == "Alias").ReturnType).RuntimeIdentity);
+            Equal(referenceCounter.RuntimeIdentity, ((ClassTypeSymbol)referenceCounter.Methods
+                .Single(method => method.Name == "Same").Parameters[0].Type).RuntimeIdentity);
+            var emptyReference = (ClassTypeSymbol)proofModule.Types["EmptyReference"].Type!;
+            Equal(false, emptyReference.Constructor.IsDeclared);
+            Equal(0, emptyReference.Constructor.Parameters.Count);
+            var gameReference = (ClassTypeSymbol)proofModule.Types["GameReferenceProbe"].Type!;
+            Equal(false, gameReference.Constructor.RequiresGameWindow);
+            Equal(true, gameReference.Methods.Single(method => method.Name == "DrawProbe").RequiresGameWindow);
+            Equal(true, gameReference.Properties.Single(property => property.Name == "GameProbe")
+                .Getter!.RequiresGameWindow);
+            Equal(false, gameReference.Properties.Single(property => property.Name == "GameProbe")
+                .Setter!.RequiresGameWindow);
+            var gameConstructor = (ClassTypeSymbol)proofModule.Types["GameConstructorProbe"].Type!;
+            Equal(true, gameConstructor.Constructor.RequiresGameWindow);
+
             var sourceTree = consumerAnalysis.GetSyntaxTree(programPath);
             var programText = File.ReadAllText(programPath);
+            var qualifiedNewPosition = programText.IndexOf("New Proof.ReferenceCounter", StringComparison.Ordinal) +
+                                       "New Proof.".Length;
+            Equal(true, SmileSymbolService.TryResolve(consumerAnalysis, sourceTree,
+                qualifiedNewPosition + 2, out var resolvedConstructor));
+            Equal(SmileResolvedSymbolKind.Constructor, resolvedConstructor.Kind);
+            Equal("New", resolvedConstructor.Name);
+            Equal(referenceCounter.Constructor.DeclarationLocation.Line,
+                resolvedConstructor.DeclarationLocation!.Line);
+            var constructorPresentation = SmileSymbolDisplayService.Present(resolvedConstructor,
+                consumerCompilation.DependencyContext);
+            Equal("Sub Smile.Lightweight.Oop.Proof.ReferenceCounter.New(Label As Text, Optional Start As Number = 0, Optional Mode As DisplayMode = DisplayMode.Standard)",
+                constructorPresentation.Signature);
+            Equal("Smile.Lightweight.Oop.Proof@1.2.0", constructorPresentation.Provider);
+            var constructorNamedCompletions = SmileCompletionService.GetCompletions(consumerAnalysis, sourceTree,
+                    programText.IndexOf("New Proof.ReferenceCounter(", StringComparison.Ordinal) +
+                    "New Proof.ReferenceCounter(".Length)
+                .Where(completion => completion.Kind == SmileCompletionKind.Parameter &&
+                    completion.InsertionText.EndsWith(":=", StringComparison.Ordinal)).ToArray();
+            Equal("Label:=|Mode:=|Start:=", string.Join("|", constructorNamedCompletions
+                .Select(completion => completion.InsertionText)));
+            var qualifiedClassCompletions = SmileCompletionService.GetCompletions(consumerAnalysis, sourceTree,
+                programText.IndexOf("New Proof.ReferenceCounter", StringComparison.Ordinal) + "New Proof.".Length);
+            Equal(true, qualifiedClassCompletions.Any(completion => completion.DisplayText == "ReferenceCounter" &&
+                completion.Kind == SmileCompletionKind.Class));
+            Equal(true, qualifiedClassCompletions.Any(completion => completion.DisplayText == "EmptyReference" &&
+                completion.Kind == SmileCompletionKind.Class));
+            Equal(false, qualifiedClassCompletions.Any(completion => completion.DisplayText == "Counter"));
+
+            var implicitNewPosition = programText.IndexOf("New Proof.EmptyReference", StringComparison.Ordinal) +
+                                      "New Proof.".Length;
+            Equal(true, SmileSymbolService.TryResolve(consumerAnalysis, sourceTree,
+                implicitNewPosition + 2, out var resolvedImplicitConstructor));
+            Equal(SmileResolvedSymbolKind.Constructor, resolvedImplicitConstructor.Kind);
+            Equal(emptyReference.Constructor.DeclarationLocation.Line,
+                resolvedImplicitConstructor.DeclarationLocation!.Line);
+
+            var objectMemberPosition = programText.IndexOf("Object.Caption", StringComparison.Ordinal) +
+                                       "Object.".Length;
+            var objectMembers = SmileCompletionService.GetCompletions(consumerAnalysis, sourceTree,
+                objectMemberPosition);
+            foreach (var expected in new[] { "Advance", "Alias", "Caption", "Code", "Same", "Samples", "Snapshot", "Total" })
+                Equal(true, objectMembers.Any(completion => completion.DisplayText == expected));
+            Equal(false, objectMembers.Any(completion => completion.DisplayText is "Hide" or "Secret" or
+                "Label" or "State" or "Notes" or "CurrentMode"));
+            Equal(true, SmileSymbolService.TryResolve(consumerAnalysis, sourceTree,
+                objectMemberPosition + 2, out var resolvedClassProperty));
+            Equal(SmileResolvedSymbolKind.Property, resolvedClassProperty.Kind);
+            Equal("Property Smile.Lightweight.Oop.Proof.ReferenceCounter.Caption As Text { Get }",
+                SmileSymbolDisplayService.Present(resolvedClassProperty,
+                    consumerCompilation.DependencyContext).Signature);
+            var classFieldPosition = programText.IndexOf("Object.Samples", StringComparison.Ordinal) +
+                                     "Object.".Length;
+            Equal(true, SmileSymbolService.TryResolve(consumerAnalysis, sourceTree,
+                classFieldPosition + 2, out var resolvedClassField));
+            Equal(SmileResolvedSymbolKind.Field, resolvedClassField.Kind);
+            Equal("Field Smile.Lightweight.Oop.Proof.ReferenceCounter.Samples[2] As Number",
+                SmileSymbolDisplayService.Present(resolvedClassField,
+                    consumerCompilation.DependencyContext).Signature);
+
             var labelPosition = programText.IndexOf("Enabled:=", StringComparison.Ordinal);
             Equal(true, SmileSymbolService.TryResolve(consumerAnalysis, sourceTree,
                 labelPosition + 2, out var resolvedLabel));
@@ -1977,11 +2182,11 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
             Equal("Smile.Lightweight.Oop.Proof", resolvedLabel.ModuleName);
             Equal(true, consumerCompilation.DependencyContext.TryGetProviderDescriptor(
                 resolvedLabel.ProviderIdentity, out var labelProvider));
-            Equal("Smile.Lightweight.Oop.Proof@1.1.0", labelProvider.LogicalIdentity);
+            Equal("Smile.Lightweight.Oop.Proof@1.2.0", labelProvider.LogicalIdentity);
             var labelPresentation = SmileSymbolDisplayService.Present(resolvedLabel,
                 consumerCompilation.DependencyContext);
             Equal("Optional Enabled As Boolean = True", labelPresentation.Signature);
-            Equal("Smile.Lightweight.Oop.Proof@1.1.0", labelPresentation.Provider);
+            Equal("Smile.Lightweight.Oop.Proof@1.2.0", labelPresentation.Provider);
             Equal(resolvedLabel.DeclarationLocation!.FilePath, labelPresentation.SourcePath);
             Equal("Api.smile", Path.GetFileName(labelPresentation.SourcePath));
             if (packageReference)
@@ -2027,7 +2232,7 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
                 resolvedStartLabel.DeclarationLocation!.Line);
             Equal(configureMethod.Parameters[1].DeclarationLocation.Column,
                 resolvedStartLabel.DeclarationLocation.Column);
-            Equal("Smile.Lightweight.Oop.Proof@1.1.0",
+            Equal("Smile.Lightweight.Oop.Proof@1.2.0",
                 SmileSymbolDisplayService.Present(resolvedStartLabel,
                     consumerCompilation.DependencyContext).Provider);
 
@@ -2040,7 +2245,7 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
                 consumerCompilation.DependencyContext);
             Equal("Sub Smile.Lightweight.Oop.Proof.Counter.Configure(Label As Text, Optional Start As Number = 0, Optional Enabled As Boolean = True, Optional Mode As DisplayMode = DisplayMode.Standard)",
                 configurePresentation.Signature);
-            Equal("Smile.Lightweight.Oop.Proof@1.1.0", configurePresentation.Provider);
+            Equal("Smile.Lightweight.Oop.Proof@1.2.0", configurePresentation.Provider);
             Equal(configureMethod.DeclarationLocation.Line, resolvedConfigure.DeclarationLocation!.Line);
             Equal(configureMethod.DeclarationLocation.Column, resolvedConfigure.DeclarationLocation.Column);
 
@@ -2053,7 +2258,7 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
                 consumerCompilation.DependencyContext);
             Equal("Property Smile.Lightweight.Oop.Proof.Counter.Total As Number { Get; Set }",
                 totalPresentation.Signature);
-            Equal("Smile.Lightweight.Oop.Proof@1.1.0", totalPresentation.Provider);
+            Equal("Smile.Lightweight.Oop.Proof@1.2.0", totalPresentation.Provider);
             Equal(totalProperty.DeclarationLocation.Line, resolvedTotal.DeclarationLocation!.Line);
             Equal(totalProperty.DeclarationLocation.Column, resolvedTotal.DeclarationLocation.Column);
 
@@ -2065,9 +2270,11 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
             var gameProbePresentation = SmileSymbolDisplayService.Present(resolvedGameProbe,
                 consumerCompilation.DependencyContext);
             Equal("Property get requires Game Window; set does not.", gameProbePresentation.Capability);
-            Equal("Smile.Lightweight.Oop.Proof@1.1.0", gameProbePresentation.Provider);
+            Equal("Smile.Lightweight.Oop.Proof@1.2.0", gameProbePresentation.Provider);
 
-            foreach (var navigation in new[] { resolvedStartLabel, resolvedConfigure, resolvedTotal, resolvedGameProbe })
+            foreach (var navigation in new[] { resolvedStartLabel, resolvedConfigure, resolvedTotal,
+                         resolvedGameProbe, resolvedConstructor, resolvedImplicitConstructor,
+                         resolvedClassProperty, resolvedClassField })
             {
                 Equal("Api.smile", Path.GetFileName(navigation.DeclarationLocation!.FilePath));
                 var navigationPath = Path.GetFullPath(navigation.DeclarationLocation.FilePath);
@@ -2115,6 +2322,17 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
             Equal(true, boundConfigure.InstanceReceiver != null);
             Equal(false, boundConfigure.ParameterArguments.Any(argument => argument.Parameter.Name == "Me"));
 
+            var classInitializer = tree.Root.Statements.OfType<DimStatementSyntax>()
+                .Single(dim => dim.Identifier.Text == "Object").NewInitializer!;
+            Equal(true, consumerAnalysis.SemanticModel.TryGetBoundCall(classInitializer,
+                out var boundConstructor));
+            Equal(RoutineSymbolKind.Constructor, boundConstructor.Routine.SymbolKind);
+            Equal("Mode|Label|Start", string.Join("|", boundConstructor.SourceArguments
+                .Select(argument => argument.Syntax!.Name!.Text)));
+            Equal("Label|Start|Mode", string.Join("|", boundConstructor.ParameterArguments
+                .Select(argument => argument.Parameter.Name)));
+            Equal(false, boundConstructor.HasInstanceReceiver);
+
             static string SymbolLocation(SourceLocation location) =>
                 location.Line + ":" + location.Column + ":" + location.Span.Length;
             var nestedSignature = string.Join("|", publicTypeMembers.Select(member =>
@@ -2133,7 +2351,9 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
             }));
             return string.Join("|", report.Parameters.Select(parameter => parameter.Name + ":" +
                        parameter.IsOptional + ":" + (parameter.DefaultEnumMember?.Name ?? parameter.DefaultValue))) +
-                   "||" + counter.RuntimeIdentity + "||" + nestedSignature;
+                   "||" + counter.RuntimeIdentity + "||" + nestedSignature + "||" +
+                   referenceCounter.RuntimeIdentity + "||" + referenceCounter.Constructor.RuntimeIdentity + "||" +
+                   string.Join("|", publicClassMembers.Select(member => member.RuntimeIdentity));
         }
 
         var projectReference = Path.GetRelativePath(Path.Combine(directory, "project-consumer"),
@@ -3352,6 +3572,14 @@ Run("Bound calls stage ByRef locations and owned ByVal records for both emitters
     var captureClear = native.IndexOf("call record_0_payload_clear", nativeCall, StringComparison.Ordinal);
     Equal(true, nativeCall >= 0 && captureClear > nativeCall);
     Equal(true, native.Contains("call smile_image_clear", StringComparison.Ordinal));
+
+    const string byRefRecordSource = "Option Explicit\nType Payload\nName As Text\nEnd Type\nDim Shared As Payload\nShared.Name = \"before\"\nCall Rename(Shared)\nPrint Shared.Name\nSub Rename(ByRef Value As Payload)\nValue.Name = \"after\"\nEnd Sub\n";
+    var byRefRecordAnalysis = Analyze(byRefRecordSource);
+    Equal(false, byRefRecordAnalysis.HasErrors);
+    var byRefRecordNative = new MasmEmitter(byRefRecordAnalysis,
+        SmileGraphicsBackend.Auto, true, false).Emit();
+    Equal(1, byRefRecordNative.Split("call record_0_payload_clear",
+        StringSplitOptions.None).Length - 1);
 
     var web = new WebEmitter(analysis).Emit();
     Equal(true, web.Contains("transferred = false", StringComparison.Ordinal));
@@ -4613,6 +4841,106 @@ Run("Properties are values rather than writable locations and setter Value remai
 
     const string ordinaryValue = "Option Explicit\nDim Value As Number\nCall Use(Value)\nSub Use(Value As Number)\nPrint Value\nEnd Sub\n";
     Equal(false, Analyze(ordinaryValue).HasErrors);
+});
+
+Run("Classes bind constructors reference identity fields methods properties and fixed arrays", () =>
+{
+    const string source = "Option Explicit\nType Point\nX As Number\nEnd Type\nClass Counter\nPublic Current As Number\nPrivate Label As Text\nPublic Samples[2, 3] As Number\nPrivate Position As Point\nPublic Sub New(Optional Start As Number = 1, Optional Name As Text = \"Counter\")\nMe.Current = Start\nMe.Label = Name\nEnd Sub\nPublic Sub Add(Optional Delta As Number = 1)\nMe.Current = Me.Current + Delta\nMe.Samples[1, 2] = Me.Current\nEnd Sub\nPublic Function Alias() As Counter\nReturn Me\nEnd Function\nPublic Property Value As Number\nGet\nReturn Me.Current\nEnd Get\nSet\nMe.Current = Value\nEnd Set\nEnd Property\nEnd Class\nClass Empty\nEnd Class\nDim First As Counter\nDim Second As New Counter(Start := 4)\nFirst = New Counter(Name := \"First\", Start := 2)\nCall First.Add(Delta := 3)\nSecond = First\nPrint First Is Second\nSecond = Nothing\nPrint Second Is Nothing\nWith First\n.Value = 9\nCall .Add()\nPrint .Value\nEnd With\n";
+    var analysis = Analyze(source);
+    if (analysis.HasErrors)
+        throw new InvalidOperationException(string.Join(" | ", analysis.Diagnostics.Select(diagnostic =>
+            diagnostic.Code + ": " + diagnostic.Message)));
+
+    var counter = analysis.SemanticModel.Classes["Counter"];
+    Equal(8, counter.Size);
+    Equal(4, counter.Fields.Count);
+    Equal("Current|Label|Samples|Position", string.Join("|", counter.Fields.Select(field => field.Name)));
+    Equal(2, counter.Fields[2].ArrayRank);
+    Equal("2|3", string.Join("|", counter.Fields[2].Dimensions));
+    Equal(6, counter.Fields[2].ElementCount);
+    Equal(true, counter.InstanceContainsOwnedText);
+    Equal(true, counter.RequiresReferenceCleanup);
+    Equal(true, counter.Constructor.IsDeclared);
+    Equal(RoutineSymbolKind.Constructor, counter.Constructor.SymbolKind);
+    Equal(2, counter.Constructor.Parameters.Count);
+    Equal(2, counter.Methods.Count);
+    Equal(1, counter.Properties.Count);
+    Equal(false, counter.Constructor.Parameters.Any(parameter => parameter.Name == "Me"));
+    Equal(true, counter.Constructor.LocalSymbols.ContainsKey("Me"));
+    Equal(ParameterPassingMode.ByVal, counter.Constructor.Receiver!.ParameterMode);
+
+    var empty = analysis.SemanticModel.Classes["Empty"];
+    Equal(false, empty.Constructor.IsDeclared);
+    Equal(0, empty.Constructor.Parameters.Count);
+    Equal(empty.Declaration.Identifier.Span, empty.Constructor.DeclarationSpan);
+
+    var creations = analysis.BoundSyntaxTree.Root.Statements
+        .SelectMany(statement => statement switch
+        {
+            DimStatementSyntax { NewInitializer: not null } dim => new[] { dim.NewInitializer! },
+            AssignmentStatementSyntax { Expression: NewExpressionSyntax creation } => new[] { creation },
+            _ => Array.Empty<NewExpressionSyntax>()
+        }).ToArray();
+    Equal(2, creations.Length);
+    foreach (var creation in creations)
+    {
+        Equal(true, analysis.SemanticModel.TryGetBoundCall(creation, out var constructorCall));
+        Equal(RoutineSymbolKind.Constructor, constructorCall.Routine.SymbolKind);
+        Equal(false, constructorCall.HasInstanceReceiver);
+    }
+
+    var identities = analysis.BoundSyntaxTree.Root.Statements.OfType<PrintStatementSyntax>()
+        .Select(statement => statement.Items.Single()).OfType<IdentityExpressionSyntax>().ToArray();
+    Equal(2, identities.Length);
+    Equal(false, identities[0].IsNegated);
+    Equal(false, identities[1].IsNegated);
+    Equal(SmileType.Boolean, analysis.SemanticModel.GetType(identities[0]));
+
+    var indexed = counter.Methods.Single(method => method.Name == "Add").BodyStatements
+        .OfType<AssignmentStatementSyntax>().Single(statement => statement.Target.Location is IndexedExpressionSyntax)
+        .Target.Location;
+    Equal(true, analysis.SemanticModel.TryGetInstanceField(indexed, out var indexedField));
+    Equal("Samples", indexedField.Name);
+    Equal(true, analysis.SemanticModel.TryGetClassLocationOwner(indexed, out var owner));
+    Equal(counter, owner.RootType);
+});
+
+Run("Classes link through modules with stable constructor identities and public API validation", () =>
+{
+    const string program = "Option Explicit\nImport Example.Objects As Objects\nDim Item As New Objects.Widget(Start := 3)\nDim Other As Objects.Widget\nOther = New Objects.Widget()\nPrint Item Is Not Other\n";
+    const string module = "Module Example.Objects\nPrivate Type Hidden\nValue As Number\nEnd Type\nPublic Class Widget\nPublic Value As Number\nPrivate Secret As Hidden\nPublic Sub New(Optional Start As Number = 1)\nMe.Value = Start\nEnd Sub\nPublic Function Leak(Input As Hidden) As Hidden\nReturn Me.Secret\nEnd Function\nPublic Property HiddenValue As Hidden\nGet\nReturn Me.Secret\nEnd Get\nEnd Property\nEnd Class\nEnd Module\n";
+    var analysis = Multi(("Program.smile", true, program), ("Objects.smile", false, module));
+    Equal(3, analysis.Diagnostics.Count(diagnostic => diagnostic.Code == "SML3409"));
+    Equal(false, analysis.Diagnostics.Any(diagnostic => diagnostic.Code is "SML3101" or "SML3401"));
+    var widget = analysis.SemanticModel.Classes.Values.Single();
+    Equal("Example.Objects", widget.ModuleName);
+    Equal("<local>", widget.ProviderIdentity);
+    Equal("Example.Objects::Widget::constructor::New", widget.Constructor.RuntimeIdentity);
+    Equal(widget.ProviderIdentity, widget.Constructor.ProviderIdentity);
+    Equal(widget.ProviderIdentity, widget.Constructor.Parameters[0].ProviderIdentity);
+    Equal(widget.ProviderIdentity, widget.Constructor.Receiver!.ProviderIdentity);
+});
+
+Run("Class diagnostics enforce scalar reference storage constructor and identity rules", () =>
+{
+    var cases = new[]
+    {
+        ("SML3450", "Class Item\nDim Value As Number\nEnd Class\n"),
+        ("SML3451", "Class Item\nPrivate Sub New()\nEnd Sub\nEnd Class\n"),
+        ("SML3452", "Class Item\nOther As Item\nEnd Class\n"),
+        ("SML3453", "Dim Value As Number\nValue = New Number()\n"),
+        ("SML3454", "Dim Value As Number\nValue = Nothing\n"),
+        ("SML3455", "Class Item\nEnd Class\nDim A As Item\nDim B As Item\nPrint A = B\n"),
+        ("SML3452", "Class Item\nEnd Class\nDim Values[2] As Item\n"),
+        ("SML3457", "Print Nothing.Value\n")
+    };
+    foreach (var (code, source) in cases)
+    {
+        var analysis = Analyze(source);
+        if (!HasDiagnostic(analysis, code))
+            throw new InvalidOperationException($"Expected {code}; found " + string.Join(",",
+                analysis.Diagnostics.Select(diagnostic => diagnostic.Code)));
+    }
 });
 
 if (failures.Count != 0)

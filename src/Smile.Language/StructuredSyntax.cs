@@ -82,6 +82,77 @@ public sealed class TypeDeclarationSyntax : StatementSyntax
     public override TextSpan Span => TextSpan.FromBounds(TypeKeyword.Span.Start, FinalTypeKeyword.Span.End);
 }
 
+public sealed class ClassFieldDeclarationSyntax : TypeMemberDeclarationSyntax
+{
+    public ClassFieldDeclarationSyntax(SyntaxToken? visibilityKeyword, SyntaxToken identifier,
+        SyntaxToken? openBracket, IReadOnlyList<ExpressionSyntax> sizes, SyntaxToken? closeBracket,
+        SyntaxToken asKeyword, SyntaxToken typeToken)
+    {
+        VisibilityKeyword = visibilityKeyword;
+        Identifier = identifier;
+        OpenBracket = openBracket;
+        Sizes = sizes;
+        CloseBracket = closeBracket;
+        AsKeyword = asKeyword;
+        TypeToken = typeToken;
+    }
+
+    public SyntaxToken? VisibilityKeyword { get; }
+    public override SyntaxToken Identifier { get; }
+    public SyntaxToken? OpenBracket { get; }
+    public IReadOnlyList<ExpressionSyntax> Sizes { get; }
+    public SyntaxToken? CloseBracket { get; }
+    public SyntaxToken AsKeyword { get; }
+    public SyntaxToken TypeToken { get; }
+    public bool IsArray => OpenBracket != null;
+    public override ModuleVisibility Visibility => VisibilityKeyword?.Kind == SyntaxKind.PublicKeyword
+        ? ModuleVisibility.Public : ModuleVisibility.Private;
+    public override TextSpan Span => TextSpan.FromBounds(VisibilityKeyword?.Span.Start ?? Identifier.Span.Start,
+        TypeToken.Span.End);
+}
+
+public sealed class ClassRoutineDeclarationSyntax : TypeMemberDeclarationSyntax
+{
+    public ClassRoutineDeclarationSyntax(SyntaxToken? visibilityKeyword, RoutineDeclarationSyntax declaration)
+    {
+        VisibilityKeyword = visibilityKeyword;
+        Declaration = declaration;
+    }
+
+    public SyntaxToken? VisibilityKeyword { get; }
+    public RoutineDeclarationSyntax Declaration { get; }
+    public override SyntaxToken Identifier => Declaration.Identifier;
+    public bool IsConstructorName => Declaration.Identifier.Kind == SyntaxKind.NewKeyword;
+    public bool IsConstructor => Declaration.Keyword.Kind == SyntaxKind.SubKeyword && IsConstructorName;
+    public override ModuleVisibility Visibility => VisibilityKeyword?.Kind == SyntaxKind.PrivateKeyword
+        ? ModuleVisibility.Private : ModuleVisibility.Public;
+    public override TextSpan Span => TextSpan.FromBounds(VisibilityKeyword?.Span.Start ?? Declaration.Span.Start,
+        Declaration.Span.End);
+}
+
+public sealed class ClassDeclarationSyntax : StatementSyntax
+{
+    public ClassDeclarationSyntax(SyntaxToken classKeyword, SyntaxToken identifier,
+        IReadOnlyList<TypeMemberDeclarationSyntax> members, SyntaxToken endKeyword,
+        SyntaxToken finalClassKeyword)
+    {
+        ClassKeyword = classKeyword;
+        Identifier = identifier;
+        Members = members;
+        Fields = members.OfType<ClassFieldDeclarationSyntax>().ToArray();
+        EndKeyword = endKeyword;
+        FinalClassKeyword = finalClassKeyword;
+    }
+
+    public SyntaxToken ClassKeyword { get; }
+    public SyntaxToken Identifier { get; }
+    public IReadOnlyList<TypeMemberDeclarationSyntax> Members { get; }
+    public IReadOnlyList<ClassFieldDeclarationSyntax> Fields { get; }
+    public SyntaxToken EndKeyword { get; }
+    public SyntaxToken FinalClassKeyword { get; }
+    public override TextSpan Span => TextSpan.FromBounds(ClassKeyword.Span.Start, FinalClassKeyword.Span.End);
+}
+
 public sealed class TypeRoutineDeclarationSyntax : TypeMemberDeclarationSyntax
 {
     public TypeRoutineDeclarationSyntax(SyntaxToken? visibilityKeyword, RoutineDeclarationSyntax declaration)
@@ -567,6 +638,24 @@ public sealed class CallExpressionSyntax : ExpressionSyntax
     public IReadOnlyList<ArgumentSyntax> Arguments { get; }
     public SyntaxToken CloseParenthesis { get; }
     public override TextSpan Span => TextSpan.FromBounds(Identifier.Span.Start, CloseParenthesis.Span.End);
+}
+
+public sealed class NewExpressionSyntax : ExpressionSyntax
+{
+    public NewExpressionSyntax(SyntaxToken newKeyword, SyntaxToken typeToken,
+        IReadOnlyList<ArgumentSyntax> arguments, SyntaxToken closeParenthesis)
+    {
+        NewKeyword = newKeyword;
+        TypeToken = typeToken;
+        Arguments = arguments;
+        CloseParenthesis = closeParenthesis;
+    }
+
+    public SyntaxToken NewKeyword { get; }
+    public SyntaxToken TypeToken { get; }
+    public IReadOnlyList<ArgumentSyntax> Arguments { get; }
+    public SyntaxToken CloseParenthesis { get; }
+    public override TextSpan Span => TextSpan.FromBounds(NewKeyword.Span.Start, CloseParenthesis.Span.End);
 }
 
 public sealed class QualifiedNameExpressionSyntax : ExpressionSyntax

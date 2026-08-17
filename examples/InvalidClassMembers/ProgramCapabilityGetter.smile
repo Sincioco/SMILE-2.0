@@ -1,0 +1,7 @@
+Option Explicit
+
+Import Smile.Lightweight.Oop.Proof As Proof
+
+Dim Current As Proof.GameReferenceProbe
+
+Print Current.GameProbe

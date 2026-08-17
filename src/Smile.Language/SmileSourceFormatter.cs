@@ -203,8 +203,9 @@ public static class SmileSourceFormatter
 
     private static bool IsOrdinaryIdentifier(SmileResolvedSymbolKind kind) =>
         kind is SmileResolvedSymbolKind.Module or SmileResolvedSymbolKind.Function or
-            SmileResolvedSymbolKind.Subroutine or SmileResolvedSymbolKind.Variable or
-            SmileResolvedSymbolKind.Array or SmileResolvedSymbolKind.Type or SmileResolvedSymbolKind.Enum or
+            SmileResolvedSymbolKind.Subroutine or SmileResolvedSymbolKind.Constructor or
+            SmileResolvedSymbolKind.Variable or SmileResolvedSymbolKind.Array or SmileResolvedSymbolKind.Type or
+            SmileResolvedSymbolKind.Class or SmileResolvedSymbolKind.Enum or
             SmileResolvedSymbolKind.EnumMember or
             SmileResolvedSymbolKind.Field or SmileResolvedSymbolKind.Property or SmileResolvedSymbolKind.Parameter or
             SmileResolvedSymbolKind.NamedArgument or
@@ -467,6 +468,11 @@ public static class SmileSourceFormatter
                 foreach (var member in type.Members.OfType<TypeRoutineDeclarationSyntax>())
                     yield return member.Declaration;
             }
+            else if (statement is ClassDeclarationSyntax classDeclaration)
+            {
+                foreach (var member in classDeclaration.Members.OfType<ClassRoutineDeclarationSyntax>())
+                    yield return member.Declaration;
+            }
         }
     }
 
@@ -489,6 +495,12 @@ public static class SmileSourceFormatter
             else if (statement is TypeDeclarationSyntax type)
             {
                 foreach (var property in type.Members.OfType<PropertyDeclarationSyntax>())
+                    if (property.Getter != null)
+                        yield return (property, property.Getter);
+            }
+            else if (statement is ClassDeclarationSyntax classDeclaration)
+            {
+                foreach (var property in classDeclaration.Members.OfType<PropertyDeclarationSyntax>())
                     if (property.Getter != null)
                         yield return (property, property.Getter);
             }
@@ -534,21 +546,13 @@ public static class SmileSourceFormatter
             }
             else if (statement is TypeDeclarationSyntax type)
             {
-                foreach (var member in type.Members)
-                {
-                    var bodies = member switch
-                    {
-                        TypeRoutineDeclarationSyntax typeRoutine =>
-                            new[] { typeRoutine.Declaration.Statements },
-                        PropertyDeclarationSyntax property => new[] { property.Getter?.Statements,
-                                property.Setter?.Statements }
-                            .Where(body => body != null).Select(body => body!).ToArray(),
-                        _ => Array.Empty<IReadOnlyList<StatementSyntax>>()
-                    };
-                    foreach (var body in bodies)
-                        foreach (var nested in EnumerateIfStatements(body))
-                            yield return nested;
-                }
+                foreach (var nested in EnumerateInstanceMemberIfStatements(type.Members))
+                    yield return nested;
+            }
+            else if (statement is ClassDeclarationSyntax classDeclaration)
+            {
+                foreach (var nested in EnumerateInstanceMemberIfStatements(classDeclaration.Members))
+                    yield return nested;
             }
             else
             {
@@ -558,6 +562,26 @@ public static class SmileSourceFormatter
                         yield return nestedIf;
                 }
             }
+        }
+    }
+
+    private static IEnumerable<IfStatementSyntax> EnumerateInstanceMemberIfStatements(
+        IEnumerable<TypeMemberDeclarationSyntax> members)
+    {
+        foreach (var member in members)
+        {
+            var bodies = member switch
+            {
+                TypeRoutineDeclarationSyntax typeRoutine => new[] { typeRoutine.Declaration.Statements },
+                ClassRoutineDeclarationSyntax classRoutine => new[] { classRoutine.Declaration.Statements },
+                PropertyDeclarationSyntax property => new[] { property.Getter?.Statements,
+                        property.Setter?.Statements }
+                    .Where(body => body != null).Select(body => body!).ToArray(),
+                _ => Array.Empty<IReadOnlyList<StatementSyntax>>()
+            };
+            foreach (var body in bodies)
+                foreach (var nested in EnumerateIfStatements(body))
+                    yield return nested;
         }
     }
 

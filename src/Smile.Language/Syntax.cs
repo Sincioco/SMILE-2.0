@@ -130,6 +130,10 @@ public enum SyntaxKind
     SetKeyword,
     MeKeyword,
     OptionalKeyword,
+    ClassKeyword,
+    NewKeyword,
+    NothingKeyword,
+    IsKeyword,
     ImageKeyword,
     UnloadKeyword,
     ClipKeyword,
@@ -306,6 +310,10 @@ public static class SyntaxFacts
         ["Set"] = SyntaxKind.SetKeyword,
         ["Me"] = SyntaxKind.MeKeyword,
         ["Optional"] = SyntaxKind.OptionalKeyword,
+        ["Class"] = SyntaxKind.ClassKeyword,
+        ["New"] = SyntaxKind.NewKeyword,
+        ["Nothing"] = SyntaxKind.NothingKeyword,
+        ["Is"] = SyntaxKind.IsKeyword,
         ["Image"] = SyntaxKind.ImageKeyword,
         ["Unload"] = SyntaxKind.UnloadKeyword,
         ["Clip"] = SyntaxKind.ClipKeyword,
@@ -455,7 +463,7 @@ public static class SyntaxFacts
             SyntaxKind.StarToken or SyntaxKind.SlashToken or SyntaxKind.ModKeyword => 7,
             SyntaxKind.PlusToken or SyntaxKind.MinusToken => 6,
             SyntaxKind.LessToken or SyntaxKind.GreaterToken or SyntaxKind.LessOrEqualsToken or SyntaxKind.GreaterOrEqualsToken => 5,
-            SyntaxKind.EqualsToken or SyntaxKind.NotEqualsToken => 4,
+            SyntaxKind.EqualsToken or SyntaxKind.NotEqualsToken or SyntaxKind.IsKeyword => 4,
             SyntaxKind.AndKeyword => 3,
             SyntaxKind.OrKeyword => 2,
             _ => 0
@@ -630,7 +638,7 @@ public sealed class DimStatementSyntax : StatementSyntax
 {
     public DimStatementSyntax(SyntaxToken dimKeyword, SyntaxToken identifier, SyntaxToken? openBracket,
         IReadOnlyList<ExpressionSyntax> sizes, SyntaxToken? closeBracket, SyntaxToken? asKeyword = null,
-        SyntaxToken? typeToken = null)
+        SyntaxToken? typeToken = null, NewExpressionSyntax? newInitializer = null)
     {
         DimKeyword = dimKeyword;
         Identifier = identifier;
@@ -639,6 +647,7 @@ public sealed class DimStatementSyntax : StatementSyntax
         CloseBracket = closeBracket;
         AsKeyword = asKeyword;
         TypeToken = typeToken;
+        NewInitializer = newInitializer;
     }
 
     public SyntaxToken DimKeyword { get; }
@@ -648,9 +657,10 @@ public sealed class DimStatementSyntax : StatementSyntax
     public SyntaxToken? CloseBracket { get; }
     public SyntaxToken? AsKeyword { get; }
     public SyntaxToken? TypeToken { get; }
+    public NewExpressionSyntax? NewInitializer { get; }
     public bool IsArray => OpenBracket != null;
     public override TextSpan Span => TextSpan.FromBounds(DimKeyword.Span.Start,
-        TypeToken?.Span.End ?? CloseBracket?.Span.End ?? Identifier.Span.End);
+        NewInitializer?.Span.End ?? TypeToken?.Span.End ?? CloseBracket?.Span.End ?? Identifier.Span.End);
 }
 
 public sealed class PrintStatementSyntax : StatementSyntax
@@ -822,6 +832,13 @@ public sealed class LiteralExpressionSyntax : ExpressionSyntax
     public override TextSpan Span => LiteralToken.Span;
 }
 
+public sealed class NothingExpressionSyntax : ExpressionSyntax
+{
+    public NothingExpressionSyntax(SyntaxToken nothingKeyword) => NothingKeyword = nothingKeyword;
+    public SyntaxToken NothingKeyword { get; }
+    public override TextSpan Span => NothingKeyword.Span;
+}
+
 public sealed class NameExpressionSyntax : ExpressionSyntax
 {
     public NameExpressionSyntax(SyntaxToken identifier) => Identifier = identifier;
@@ -842,6 +859,24 @@ public sealed class ArrayAccessExpressionSyntax : ExpressionSyntax
     public IReadOnlyList<ExpressionSyntax> Indices { get; }
     public SyntaxToken CloseBracket { get; }
     public override TextSpan Span => TextSpan.FromBounds(Identifier.Span.Start, CloseBracket.Span.End);
+}
+
+public sealed class IndexedExpressionSyntax : ExpressionSyntax
+{
+    public IndexedExpressionSyntax(ExpressionSyntax receiver, SyntaxToken openBracket,
+        IReadOnlyList<ExpressionSyntax> indices, SyntaxToken closeBracket)
+    {
+        Receiver = receiver;
+        OpenBracket = openBracket;
+        Indices = indices;
+        CloseBracket = closeBracket;
+    }
+
+    public ExpressionSyntax Receiver { get; }
+    public SyntaxToken OpenBracket { get; }
+    public IReadOnlyList<ExpressionSyntax> Indices { get; }
+    public SyntaxToken CloseBracket { get; }
+    public override TextSpan Span => TextSpan.FromBounds(Receiver.Span.Start, CloseBracket.Span.End);
 }
 
 public sealed class UnaryExpressionSyntax : ExpressionSyntax
@@ -869,6 +904,25 @@ public sealed class BinaryExpressionSyntax : ExpressionSyntax
     public ExpressionSyntax Left { get; }
     public SyntaxToken OperatorToken { get; }
     public ExpressionSyntax Right { get; }
+    public override TextSpan Span => TextSpan.FromBounds(Left.Span.Start, Right.Span.End);
+}
+
+public sealed class IdentityExpressionSyntax : ExpressionSyntax
+{
+    public IdentityExpressionSyntax(ExpressionSyntax left, SyntaxToken isKeyword, SyntaxToken? notKeyword,
+        ExpressionSyntax right)
+    {
+        Left = left;
+        IsKeyword = isKeyword;
+        NotKeyword = notKeyword;
+        Right = right;
+    }
+
+    public ExpressionSyntax Left { get; }
+    public SyntaxToken IsKeyword { get; }
+    public SyntaxToken? NotKeyword { get; }
+    public ExpressionSyntax Right { get; }
+    public bool IsNegated => NotKeyword != null;
     public override TextSpan Span => TextSpan.FromBounds(Left.Span.Start, Right.Span.End);
 }
 

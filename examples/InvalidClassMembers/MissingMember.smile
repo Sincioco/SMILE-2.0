@@ -1,0 +1,6 @@
+Class Item
+End Class
+
+Dim Value As New Item()
+
+Call Value.Missing()

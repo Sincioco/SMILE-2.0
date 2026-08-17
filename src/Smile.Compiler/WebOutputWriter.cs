@@ -81,6 +81,8 @@ internal static class WebOutputWriter
             let backingHeight = 540;
             let imageDecodeCount = 0;
             let imageCacheHitCount = 0;
+            const classMetadata = new WeakMap();
+            let classLiveObjects = 0;
             let shutdownImageReferences = 0;
             let shutdownImageCacheEntries = 0;
             let sfxCompletionCount = 0;
@@ -174,12 +176,65 @@ internal static class WebOutputWriter
 
             function get(target, indices) { return target.data[arrayOffset(target, indices)]; }
             function set(target, indices, value) { target.data[arrayOffset(target, indices)] = value; }
-            function ref(getter, setter) { return { get: getter, set: setter }; }
+            function ref(getter, setter) { return { get: getter, set: setter, release() { } }; }
             function refArray(target, indices) {
                 const offset = arrayOffset(target, indices);
-                return { get: () => target.data[offset], set: value => { target.data[offset] = value; } };
+                return { get: () => target.data[offset], set: value => { target.data[offset] = value; }, release() { } };
             }
             function invalidRef() { throw new Error("Invalid SMILE ByRef argument."); }
+
+            function classCreate(payload, finalizer) {
+                if (!payload || typeof payload !== "object") throw new Error("SMILE Class allocation failed.");
+                classMetadata.set(payload, { references: 1, finalizer, disposed: false });
+                classLiveObjects += 1;
+                return payload;
+            }
+
+            function classRequire(value) {
+                const metadata = value && classMetadata.get(value);
+                if (!metadata || metadata.disposed)
+                    throw new Error("Object reference is Nothing.");
+                return value;
+            }
+
+            function classRetain(value) {
+                if (value === null || value === undefined) return null;
+                const metadata = classMetadata.get(value);
+                if (!metadata || metadata.disposed) throw new Error("Object reference is Nothing.");
+                metadata.references += 1;
+                return value;
+            }
+
+            function classRelease(value) {
+                if (value === null || value === undefined) return;
+                const metadata = classMetadata.get(value);
+                if (!metadata || metadata.disposed) return;
+                metadata.references -= 1;
+                if (metadata.references !== 0) return;
+                metadata.disposed = true;
+                try {
+                    if (typeof metadata.finalizer === "function") metadata.finalizer(value);
+                } finally {
+                    classMetadata.delete(value);
+                    classLiveObjects -= 1;
+                }
+            }
+
+            function classMoveAssign(previous, ownedValue) {
+                classRelease(previous);
+                return ownedValue;
+            }
+
+            function classOwnedRef(ownedRoot, getter, setter) {
+                let root = classRequire(ownedRoot);
+                return {
+                    get: () => { classRequire(root); return getter(root); },
+                    set: value => { classRequire(root); setter(root, value); },
+                    release: () => { const previous = root; root = null; classRelease(previous); }
+                };
+            }
+
+            function classLiveCount() { return classLiveObjects; }
 
             function color(value) {
                 value = safe(value);
@@ -972,6 +1027,7 @@ internal static class WebOutputWriter
                     clipDepth: clipStack.length,
                     imageCacheCount: imageCache.size,
                     imageReferenceCount: references,
+                    classLiveCount: classLiveObjects,
                     imageDecodeCount, imageCacheHitCount,
                     shutdownImageCacheEntries, shutdownImageReferences,
                     sfxActiveCount: sfxChannels.filter(Boolean).length,
@@ -1029,7 +1085,8 @@ internal static class WebOutputWriter
 
             return {
                 safe, add, sub, mul, div, mod, neg, isTrue, booleanText, abs, min, max, timer, rgb, random,
-                array, get, set, ref, refArray, invalidRef, configure, gameWindow, clear, fillRectangle, drawRectangle,
+                array, get, set, ref, refArray, invalidRef, classCreate, classRequire, classRetain, classRelease,
+                classMoveAssign, classOwnedRef, classLiveCount, configure, gameWindow, clear, fillRectangle, drawRectangle,
                 fillRoundedRectangle, drawRoundedRectangle, fillCircle, drawCircle, drawArc,
                 fillQuadrilateral, drawQuadrilateral, drawLine, drawText, drawNumber, loadImage, imageRetain,
                 imageRelease, imageAssign, imageMoveAssign, imageLoaded, imageWidth, imageHeight, drawImage,

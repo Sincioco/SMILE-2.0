@@ -1,0 +1,136 @@
+Option Explicit
+
+Type Pair
+    Value As Number
+    Name As Text
+End Type
+
+Class Counter
+    Public Current As Number
+    Private Label As Text
+    Private State As Pair
+    Private History[2, 2] As Number
+    Private Notes[2] As Text
+    Private Snapshots[2] As Pair
+    Private __proto__ As Number
+    Private constructor As Number
+    Private prototype As Number
+    Private toString As Number
+    Private valueOf As Number
+
+    Public Sub New(Optional Start As Number = 1, Optional Name As Text = "Counter")
+
+        Me.Current = Start
+        Me.Label = Name
+        Me.State.Value = Start
+        Me.State.Name = Name
+        Me.History[0, 0] = Start
+        Me.Notes[0] = Name
+        Me.Snapshots[0] = Me.State
+        Me.__proto__ = 1
+        Me.constructor = 2
+        Me.prototype = 3
+        Me.toString = 4
+        Me.valueOf = 5
+
+    End Sub
+
+    Public Sub Add(Optional Delta As Number = 1)
+
+        Me.Current = Me.Current + Delta
+        Me.State.Value = Me.Current
+        Me.History[1, 1] = Me.Current
+        Me.Snapshots[1] = Me.State
+
+    End Sub
+
+    Public Function Alias() As Counter
+
+        Dim ReturnValue As Counter
+
+        ReturnValue = Me
+
+        Return ReturnValue
+
+    End Function
+
+    Public Function CollisionScore() As Number
+
+        Dim ReturnValue As Number
+
+        ReturnValue = Me.__proto__ + Me.constructor + Me.prototype + Me.toString + Me.valueOf
+
+        Return ReturnValue
+
+    End Function
+
+    Public Property Value As Number
+        Get
+
+            Dim ReturnValue As Number
+
+            ReturnValue = Me.Current
+
+            Return ReturnValue
+        End Get
+        Set
+            Me.Current = Value
+            Me.State.Value = Value
+        End Set
+    End Property
+
+    Public Property Snapshot As Pair
+        Get
+
+            Dim ReturnValue As Pair
+
+            ReturnValue = Me.State
+
+            Return ReturnValue
+        End Get
+    End Property
+End Class
+
+Class OrderProbe
+    Public Sub New()
+
+        Print "Created"
+
+    End Sub
+
+End Class
+
+Print "Before"
+Dim Ordered As New OrderProbe()
+
+Print "After"
+
+Dim First As New Counter(Name:="First", Start:=2)
+Dim Second As Counter
+Dim Snapshot As Pair
+
+Second = First
+Print First Is Second
+
+Call Second.Add(Delta:=3)
+
+Print First.Value
+Print Second.Value
+Second = Nothing
+Print Second Is Nothing
+Print First Is Not Nothing
+Print First.CollisionScore()
+
+With First
+    .Value = 9
+
+    Call .Add()
+
+    Print .Value
+End With
+
+Second = First.Alias()
+Print Second Is First
+Snapshot = Second.Snapshot
+Print Snapshot.Value
+Print Snapshot.Name

@@ -1,0 +1,11 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Console</ProjectKind>
+    <StartupFile>ProgramCapabilityMethod.smile</StartupFile>
+    <OutputName>InvalidClassCapabilityMethodPackage</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="ProgramCapabilityMethod.smile" StartupOnly="true" />
+    <SmileLibraryReference Include="..\..\artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib" />
+  </ItemGroup>
+</SmileProject>

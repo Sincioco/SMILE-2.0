@@ -1,0 +1,5 @@
+Option Explicit
+
+Import Smile.Lightweight.Oop.Proof As Proof
+
+Dim Current As New Proof.GameConstructorProbe()

@@ -1,0 +1,32 @@
+Option Explicit
+
+Class Box
+    Private Name As Text
+
+    Public Sub New(Value As Text)
+
+        Me.Name = Value
+
+    End Sub
+
+    Public Sub HaltNow(ByVal Alias As Box)
+
+        Dim Local As New Box("callee")
+
+        With Alias
+            End Program
+        End With
+
+    End Sub
+
+End Class
+
+Sub Outer()
+
+    Dim Caller As New Box("caller")
+
+    Call Caller.HaltNow(Caller)
+
+End Sub
+
+Call Outer()

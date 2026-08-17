@@ -175,7 +175,7 @@ copy /y "%SMILE_ROOT%\artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib" 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\LightweightOopCalls\LightweightOopLibrary.smilelibproj" --target library --configuration Release -o "%SMILE_ROOT%\artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib"
 if errorlevel 1 exit /b %errorlevel%
 fc /b "%SMILE_ROOT%\artifacts\temp\Smile.Lightweight.Oop.Proof.first.smilelib" "%SMILE_ROOT%\artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib" >nul || exit /b 1
-powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib'); try { $manifest=([IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())).ReadToEnd() | ConvertFrom-Json; $apiText=[IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open()).ReadToEnd(); $api=$apiText | ConvertFrom-Json; $module=$api.modules | Where-Object name -eq 'Smile.Lightweight.Oop.Proof'; $report=$module.members | Where-Object name -eq 'Report'; $counter=$module.members | Where-Object name -eq 'Counter'; $configure=$counter.members | Where-Object name -eq 'Configure'; $difference=$counter.members | Where-Object name -eq 'Difference'; $drawProbe=$counter.members | Where-Object name -eq 'DrawProbe'; $gameProbe=$counter.members | Where-Object name -eq 'GameProbe'; $shifted=$counter.members | Where-Object name -eq 'Shifted'; $caption=$counter.members | Where-Object name -eq 'Caption'; $p=@($report.parameters); if ($manifest.formatVersion -ne 6 -or $api.formatVersion -ne 6 -or $manifest.version -ne '1.1.0' -or $manifest.provider -ne 'Smile.Lightweight.Oop.Proof@1.1.0' -or @($manifest.sources).Count -ne 1 -or $manifest.sources[0] -cne 'src/Library/Api.smile' -or @($module.members).Count -ne 4 -or (@($module.members.name) -join '|') -cne 'Counter|CounterBox|DisplayMode|Report' -or $p.Count -ne 5 -or $p[0].optional -or $null -ne $p[0].default -or !$p[1].optional -or $p[1].default.kind -cne 'number' -or $p[1].default.value -ne 3 -or $p[2].default.kind -cne 'boolean' -or !$p[2].default.value -or $p[3].default.kind -cne 'text' -or $p[3].default.value -cne '!' -or $p[4].type.kind -cne 'enum' -or $p[4].type.provider -cne $manifest.provider -or $p[4].default.kind -cne 'enum' -or $p[4].default.member -cne 'CompactAlias' -or $p[4].default.value -ne 2 -or $counter.identity -cne 'Smile.Lightweight.Oop.Proof::Counter' -or (@($counter.fields.name) -join '|') -cne 'Label|StoredValue|Enabled|Mode' -or (@($counter.members.name) -join '|') -cne 'Advance|Caption|Configure|Difference|DrawProbe|GameProbe|Shifted|Total' -or (@($configure.parameters.name) -join '|') -cne 'Label|Start|Enabled|Mode' -or $configure.parameters[3].type.provider -cne $manifest.provider -or $difference.parameters[0].type.identity -cne $counter.identity -or $difference.parameters[0].type.provider -cne $manifest.provider -or $shifted.returnType.identity -cne $counter.identity -or $shifted.returnType.provider -cne $manifest.provider -or !$drawProbe.requiresGameWindow -or !$gameProbe.get.requiresGameWindow -or $gameProbe.set.requiresGameWindow -or $null -ne $caption.set -or $gameProbe.get.identity -ceq $gameProbe.set.identity -or $p[4].location.source -cne 'src/Library/Api.smile' -or $apiText.Contains('::member::Hide') -or $apiText.Contains('::property::Secret') -or $apiText.Contains('::receiver') -or $apiText.Contains('::value') -or $apiText.IndexOf('%SMILE_ROOT%', [StringComparison]::OrdinalIgnoreCase) -ge 0) { exit 1 } } finally { $zip.Dispose() }"
+powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip=[IO.Compression.ZipFile]::OpenRead('%SMILE_ROOT%\artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib'); try { $manifest=([IO.StreamReader]::new($zip.GetEntry('manifest.json').Open())).ReadToEnd() | ConvertFrom-Json; $apiText=[IO.StreamReader]::new($zip.GetEntry('api/public-symbols.json').Open()).ReadToEnd(); $api=$apiText | ConvertFrom-Json; $module=$api.modules | Where-Object name -eq 'Smile.Lightweight.Oop.Proof'; $report=$module.members | Where-Object name -eq 'Report'; $counter=$module.members | Where-Object name -eq 'Counter'; $configure=$counter.members | Where-Object name -eq 'Configure'; $difference=$counter.members | Where-Object name -eq 'Difference'; $drawProbe=$counter.members | Where-Object name -eq 'DrawProbe'; $gameProbe=$counter.members | Where-Object name -eq 'GameProbe'; $shifted=$counter.members | Where-Object name -eq 'Shifted'; $caption=$counter.members | Where-Object name -eq 'Caption'; $reference=$module.members | Where-Object name -eq 'ReferenceCounter'; $empty=$module.members | Where-Object name -eq 'EmptyReference'; $gameConstructor=$module.members | Where-Object name -eq 'GameConstructorProbe'; $gameReference=$module.members | Where-Object name -eq 'GameReferenceProbe'; $classGameProbe=$gameReference.members | Where-Object name -eq 'GameProbe'; $classDrawProbe=$gameReference.members | Where-Object name -eq 'DrawProbe'; $p=@($report.parameters); if ($manifest.formatVersion -ne 6 -or $api.formatVersion -ne 6 -or $manifest.version -ne '1.2.0' -or $manifest.provider -ne 'Smile.Lightweight.Oop.Proof@1.2.0' -or @($manifest.sources).Count -ne 1 -or $manifest.sources[0] -cne 'src/Library/Api.smile' -or @($module.members).Count -ne 8 -or (@($module.members.name) -join '|') -cne 'Counter|CounterBox|DisplayMode|EmptyReference|GameConstructorProbe|GameReferenceProbe|ReferenceCounter|Report' -or $p.Count -ne 5 -or $p[0].optional -or $null -ne $p[0].default -or !$p[1].optional -or $p[1].default.kind -cne 'number' -or $p[1].default.value -ne 3 -or $p[2].default.kind -cne 'boolean' -or !$p[2].default.value -or $p[3].default.kind -cne 'text' -or $p[3].default.value -cne '!' -or $p[4].type.kind -cne 'enum' -or $p[4].type.provider -cne $manifest.provider -or $p[4].default.kind -cne 'enum' -or $p[4].default.member -cne 'CompactAlias' -or $p[4].default.value -ne 2 -or $counter.identity -cne 'Smile.Lightweight.Oop.Proof::Counter' -or (@($counter.fields.name) -join '|') -cne 'Label|StoredValue|Enabled|Mode' -or (@($counter.members.name) -join '|') -cne 'Advance|Caption|Configure|Difference|DrawProbe|GameProbe|Shifted|Total' -or (@($configure.parameters.name) -join '|') -cne 'Label|Start|Enabled|Mode' -or $configure.parameters[3].type.provider -cne $manifest.provider -or $difference.parameters[0].type.identity -cne $counter.identity -or $difference.parameters[0].type.provider -cne $manifest.provider -or $shifted.returnType.identity -cne $counter.identity -or $shifted.returnType.provider -cne $manifest.provider -or !$drawProbe.requiresGameWindow -or !$gameProbe.get.requiresGameWindow -or $gameProbe.set.requiresGameWindow -or $null -ne $caption.set -or $gameProbe.get.identity -ceq $gameProbe.set.identity -or $reference.kind -cne 'Class' -or (@($reference.fields.name) -join '|') -cne 'Code|Samples' -or $reference.fields[1].rank -ne 1 -or (@($reference.fields[1].dimensions) -join '|') -cne '2' -or $reference.constructor.identity -cne 'Smile.Lightweight.Oop.Proof::ReferenceCounter::constructor::New' -or !$reference.constructor.declared -or (@($reference.constructor.parameters.name) -join '|') -cne 'Label|Start|Mode' -or (@($reference.members.name) -join '|') -cne 'Advance|Alias|Caption|Same|Snapshot|Total' -or $reference.members[1].returnType.kind -cne 'class' -or $reference.members[1].returnType.provider -cne $manifest.provider -or $empty.constructor.declared -or @($empty.constructor.parameters).Count -ne 0 -or !$gameConstructor.constructor.requiresGameWindow -or $gameReference.constructor.requiresGameWindow -or !$classDrawProbe.requiresGameWindow -or !$classGameProbe.get.requiresGameWindow -or $classGameProbe.set.requiresGameWindow -or $reference.PSObject.Properties.Name -ccontains 'instanceSize' -or $reference.fields.PSObject.Properties.Name -ccontains 'offset' -or $p[4].location.source -cne 'src/Library/Api.smile' -or $apiText.Contains('::member::Hide') -or $apiText.Contains('::property::Secret') -or $apiText.Contains('::receiver') -or $apiText.Contains('::value') -or $apiText.IndexOf('%SMILE_ROOT%', [StringComparison]::OrdinalIgnoreCase) -ge 0) { exit 1 } } finally { $zip.Dispose() }"
 if errorlevel 1 exit /b 1
 
 for %%P in (LightweightOopCalls.smileproj LightweightOopCalls.Package.smileproj) do (
@@ -184,10 +184,13 @@ for %%P in (LightweightOopCalls.smileproj LightweightOopCalls.Package.smileproj)
     "%SMILE_ROOT%\artifacts\games\%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\%%~nP.out"
     if errorlevel 1 exit /b 1
     fc "%SMILE_ROOT%\examples\LightweightOopCalls\LightweightOopCalls.expected.txt" "%SMILE_ROOT%\artifacts\temp\%%~nP.out" >nul || exit /b 1
+    set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
     set "SMILE_TEXT_LIFETIME_DIAGNOSTICS=1"
     "%SMILE_ROOT%\artifacts\games\%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\%%~nP.lifetime.out"
     if errorlevel 1 exit /b 1
+    set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
     set "SMILE_TEXT_LIFETIME_DIAGNOSTICS="
+    findstr /x /c:"SMILE_CLASS_LIVE=0" "%SMILE_ROOT%\artifacts\temp\%%~nP.lifetime.out" >nul || exit /b 1
     findstr /x /c:"SMILE_TEXT_LIVE=0" "%SMILE_ROOT%\artifacts\temp\%%~nP.lifetime.out" >nul || exit /b 1
     "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\LightweightOopCalls\%%P" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\%%~nP"
     if errorlevel 1 exit /b 1
@@ -195,7 +198,67 @@ for %%P in (LightweightOopCalls.smileproj LightweightOopCalls.Package.smileproj)
     node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\%%~nP" --expected "%SMILE_ROOT%\examples\LightweightOopCalls\LightweightOopCalls.expected.txt" --native-output "%SMILE_ROOT%\artifacts\temp\%%~nP.out" --timeout 10000
     if errorlevel 1 exit /b 1
 )
-echo Optional/default and Type-member package metadata plus project/package native/Web parity tests passed.
+echo Optional/default, Type-member, and Class package metadata plus project/package native/Web parity tests passed.
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\ClassRuntime\ClassRuntime.smileproj" --target windows-x64 --configuration Release --debug -o "%SMILE_ROOT%\artifacts\games\ClassRuntime.exe"
+if errorlevel 1 exit /b 1
+"%SMILE_ROOT%\artifacts\games\ClassRuntime.exe" > "%SMILE_ROOT%\artifacts\temp\ClassRuntime.out"
+if errorlevel 1 exit /b 1
+fc "%SMILE_ROOT%\examples\ClassRuntime\ClassRuntime.expected.txt" "%SMILE_ROOT%\artifacts\temp\ClassRuntime.out" >nul || exit /b 1
+set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
+set "SMILE_TEXT_LIFETIME_DIAGNOSTICS=1"
+"%SMILE_ROOT%\artifacts\games\ClassRuntime.exe" > "%SMILE_ROOT%\artifacts\temp\ClassRuntime.lifetime.out"
+if errorlevel 1 exit /b 1
+set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
+set "SMILE_TEXT_LIFETIME_DIAGNOSTICS="
+findstr /x /c:"SMILE_CLASS_LIVE=0" "%SMILE_ROOT%\artifacts\temp\ClassRuntime.lifetime.out" >nul || exit /b 1
+findstr /x /c:"SMILE_TEXT_LIVE=0" "%SMILE_ROOT%\artifacts\temp\ClassRuntime.lifetime.out" >nul || exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\ClassRuntime\ClassRuntime.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\ClassRuntime"
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\ClassRuntime\game.js" || exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\ClassRuntime" --expected "%SMILE_ROOT%\examples\ClassRuntime\ClassRuntime.expected.txt" --native-output "%SMILE_ROOT%\artifacts\temp\ClassRuntime.out" --timeout 10000
+if errorlevel 1 exit /b 1
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\ClassRuntime\ClassEndProgramCleanup.smile" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\ClassEndProgramCleanup.exe"
+if errorlevel 1 exit /b 1
+set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
+set "SMILE_TEXT_LIFETIME_DIAGNOSTICS=1"
+"%SMILE_ROOT%\artifacts\games\ClassEndProgramCleanup.exe" > "%SMILE_ROOT%\artifacts\temp\ClassEndProgramCleanup.out"
+if errorlevel 1 exit /b 1
+set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
+set "SMILE_TEXT_LIFETIME_DIAGNOSTICS="
+findstr /x /c:"SMILE_CLASS_LIVE=0" "%SMILE_ROOT%\artifacts\temp\ClassEndProgramCleanup.out" >nul || exit /b 1
+findstr /x /c:"SMILE_TEXT_LIVE=0" "%SMILE_ROOT%\artifacts\temp\ClassEndProgramCleanup.out" >nul || exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\ClassRuntime\ClassEndProgramCleanup.smile" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\ClassEndProgramCleanup"
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\ClassEndProgramCleanup\game.js" || exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\ClassEndProgramCleanup" --timeout 10000
+if errorlevel 1 exit /b 1
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\ClassRuntime\ClassWebOwnership.smile" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\ClassWebOwnership"
+if errorlevel 1 exit /b 1
+if not exist "%SMILE_ROOT%\artifacts\web\ClassWebOwnership\Assets" mkdir "%SMILE_ROOT%\artifacts\web\ClassWebOwnership\Assets"
+copy /y "%SMILE_ROOT%\examples\Phase4VisualSlice\Assets\PixelProof.png" "%SMILE_ROOT%\artifacts\web\ClassWebOwnership\Assets\PixelProof.png" >nul
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\ClassWebOwnership\game.js" || exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\ClassWebOwnership" --frames 3 --timeout 10000 --phase4-ownership
+if errorlevel 1 exit /b 1
+
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\ClassRuntime\ClassNothingFailure.smile" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\ClassNothingFailure.exe"
+if errorlevel 1 exit /b 1
+set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
+"%SMILE_ROOT%\artifacts\games\ClassNothingFailure.exe" > "%SMILE_ROOT%\artifacts\temp\ClassNothingFailure.out" 2>&1
+if not errorlevel 2 exit /b 1
+if errorlevel 3 exit /b 1
+set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
+findstr /x /c:"SMILE runtime error: Object reference is Nothing." "%SMILE_ROOT%\artifacts\temp\ClassNothingFailure.out" >nul || exit /b 1
+findstr /x /c:"SMILE_CLASS_LIVE=0" "%SMILE_ROOT%\artifacts\temp\ClassNothingFailure.out" >nul || exit /b 1
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\ClassRuntime\ClassNothingFailure.smile" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\ClassNothingFailure"
+if errorlevel 1 exit /b 1
+node --check "%SMILE_ROOT%\artifacts\web\ClassNothingFailure\game.js" || exit /b 1
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\ClassNothingFailure" --expected-runtime-error "Object reference is Nothing." --timeout 10000
+if errorlevel 1 exit /b 1
+echo Class constructor, identity, evaluation-order, ARC, finalization, and null-failure tests passed.
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\TypeMemberRuntime\TypeMemberRuntime.smileproj" --target windows-x64 --configuration Release --debug -o "%SMILE_ROOT%\artifacts\games\TypeMemberRuntime.exe"
 if errorlevel 1 exit /b 1
@@ -264,6 +327,44 @@ for %%P in (SafeSetter.smileproj SafeSetter.Package.smileproj) do (
     if errorlevel 1 exit /b 1
 )
 echo Type-member runtime, ownership, exact diagnostics, capabilities, and accessor isolation tests passed.
+
+for %%P in (IllegalStatement:SML3450 PrivateConstructor:SML3451 FieldMethodCollision:SML3451 ClassField:SML3452 ClassInType:SML3452 ClassArray:SML3452 NewNonClass:SML3453 NothingNonClass:SML3454 IdentityWithEquality:SML3455 NothingAccess:SML3457 MissingMember:SML3443 ReadOnlyWrite:SML3445 PrivateMethodAccess:SML3446) do (
+    for /f "tokens=1,2 delims=:" %%F in ("%%P") do (
+        "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\InvalidClassMembers\%%F.smile" > "%SMILE_ROOT%\artifacts\temp\InvalidClassMembers-%%F.log" 2>&1
+        if not errorlevel 1 exit /b 1
+        if errorlevel 2 exit /b 1
+        powershell -NoProfile -Command "$codes=@(); foreach ($match in [regex]::Matches([IO.File]::ReadAllText('%SMILE_ROOT%\artifacts\temp\InvalidClassMembers-%%F.log'), 'error (SML\d+):')) { $codes += $match.Groups[1].Value }; $actual=$codes -join ','; if ($actual -ne '%%G') { Write-Error ('InvalidClassMembers %%F expected %%G, found ' + $actual); exit 1 }"
+        if errorlevel 1 exit /b 1
+        findstr /c:"%%F.smile(" "%SMILE_ROOT%\artifacts\temp\InvalidClassMembers-%%F.log" >nul || exit /b 1
+    )
+)
+
+for %%P in (CapabilityConstructor.smileproj CapabilityConstructor.Package.smileproj CapabilityMethod.smileproj CapabilityMethod.Package.smileproj CapabilityGetter.smileproj CapabilityGetter.Package.smileproj) do (
+    "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\InvalidClassMembers\%%P" -o "%SMILE_ROOT%\artifacts\temp\InvalidClass-%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\InvalidClassMembers-%%P.log" 2>&1
+    if not errorlevel 1 exit /b 1
+    if errorlevel 2 exit /b 1
+    powershell -NoProfile -Command "$codes=@(); foreach ($match in [regex]::Matches([IO.File]::ReadAllText('%SMILE_ROOT%\artifacts\temp\InvalidClassMembers-%%P.log'), 'error (SML\d+):')) { $codes += $match.Groups[1].Value }; if (($codes -join ',') -ne 'SML3704') { exit 1 }"
+    if errorlevel 1 exit /b 1
+)
+
+for %%P in (SafeSetter.smileproj SafeSetter.Package.smileproj) do (
+    "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\InvalidClassMembers\%%P" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\InvalidClass-%%~nP.exe"
+    if errorlevel 1 exit /b 1
+    "%SMILE_ROOT%\artifacts\games\InvalidClass-%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\InvalidClass-%%~nP.out"
+    if errorlevel 1 exit /b 1
+    fc "%SMILE_ROOT%\examples\InvalidClassMembers\SafeSetter.expected.txt" "%SMILE_ROOT%\artifacts\temp\InvalidClass-%%~nP.out" >nul || exit /b 1
+    set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
+    "%SMILE_ROOT%\artifacts\games\InvalidClass-%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\InvalidClass-%%~nP.lifetime.out"
+    if errorlevel 1 exit /b 1
+    set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
+    findstr /x /c:"SMILE_CLASS_LIVE=0" "%SMILE_ROOT%\artifacts\temp\InvalidClass-%%~nP.lifetime.out" >nul || exit /b 1
+    "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\InvalidClassMembers\%%P" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\InvalidClass-%%~nP"
+    if errorlevel 1 exit /b 1
+    node --check "%SMILE_ROOT%\artifacts\web\InvalidClass-%%~nP\game.js" || exit /b 1
+    node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\InvalidClass-%%~nP" --expected "%SMILE_ROOT%\examples\InvalidClassMembers\SafeSetter.expected.txt" --native-output "%SMILE_ROOT%\artifacts\temp\InvalidClass-%%~nP.out" --timeout 10000
+    if errorlevel 1 exit /b 1
+)
+echo Class exact diagnostics, constructor/member/accessor capabilities, and safe-setter isolation tests passed.
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\OptionalNamedStandalone.smile" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\OptionalNamedStandalone.exe"
 if errorlevel 1 exit /b 1

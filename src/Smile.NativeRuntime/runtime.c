@@ -62,6 +62,8 @@ static void smile_pump_messages(void);
 static void smile_toggle_fullscreen(void);
 static void smile_update_game_audio_active(void);
 void smile_print_text(const char* text, long long length);
+void smile_print_number(long long value);
+void smile_print_newline(void);
 int smile_resolve_asset_path_utf8(const char* path, long long length, WCHAR* resolved_path, int capacity);
 void smile_play_sound_channel(const char* path, long long length, long long channel);
 
@@ -238,6 +240,117 @@ typedef struct SmileText
 static volatile LONG64 smile_text_allocations;
 static volatile LONG64 smile_text_frees;
 static volatile LONG64 smile_text_live_objects;
+
+typedef void (*SmileClassFinalizer)(void* value);
+
+typedef struct SmileClassHeader
+{
+    volatile LONG64 references;
+    SmileClassFinalizer finalizer;
+} SmileClassHeader;
+
+static volatile LONG64 smile_class_allocations;
+static volatile LONG64 smile_class_frees;
+static volatile LONG64 smile_class_live_objects;
+
+void* smile_class_allocate(long long payload_size, SmileClassFinalizer finalizer)
+{
+    SIZE_T bytes;
+    SmileClassHeader* header;
+    if (payload_size < 0 || (unsigned long long)payload_size >
+        (unsigned long long)(SIZE_MAX - sizeof(SmileClassHeader)))
+        return 0;
+    bytes = sizeof(SmileClassHeader) + (SIZE_T)(payload_size == 0 ? 1 : payload_size);
+    header = (SmileClassHeader*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, bytes);
+    if (header == 0)
+        return 0;
+    header->references = 1;
+    header->finalizer = finalizer;
+    InterlockedIncrement64(&smile_class_allocations);
+    InterlockedIncrement64(&smile_class_live_objects);
+    return (void*)(header + 1);
+}
+
+void* smile_class_retain(void* value)
+{
+    SmileClassHeader* header;
+    if (value == 0)
+        return 0;
+    header = ((SmileClassHeader*)value) - 1;
+    InterlockedIncrement64(&header->references);
+    return value;
+}
+
+void smile_class_release(void* value)
+{
+    SmileClassHeader* header;
+    if (value == 0)
+        return;
+    header = ((SmileClassHeader*)value) - 1;
+    if (InterlockedDecrement64(&header->references) != 0)
+        return;
+    if (header->finalizer != 0)
+        header->finalizer(value);
+    InterlockedIncrement64(&smile_class_frees);
+    InterlockedDecrement64(&smile_class_live_objects);
+    HeapFree(GetProcessHeap(), 0, header);
+}
+
+void smile_class_move_assign(void** target, void* owned_value)
+{
+    void* previous;
+    if (target == 0)
+    {
+        smile_class_release(owned_value);
+        return;
+    }
+    previous = *target;
+    *target = owned_value;
+    smile_class_release(previous);
+}
+
+void smile_class_clear(void** target)
+{
+    void* previous;
+    if (target == 0)
+        return;
+    previous = *target;
+    *target = 0;
+    smile_class_release(previous);
+}
+
+long long smile_class_allocation_count(void)
+{
+    return InterlockedCompareExchange64(&smile_class_allocations, 0, 0);
+}
+
+long long smile_class_free_count(void)
+{
+    return InterlockedCompareExchange64(&smile_class_frees, 0, 0);
+}
+
+long long smile_class_live_count(void)
+{
+    return InterlockedCompareExchange64(&smile_class_live_objects, 0, 0);
+}
+
+void smile_class_lifetime_report(void)
+{
+    WCHAR enabled[2];
+    static const char prefix[] = "SMILE_CLASS_LIVE=";
+    if (GetEnvironmentVariableW(L"SMILE_CLASS_LIFETIME_DIAGNOSTICS", enabled, 2) == 0)
+        return;
+    smile_print_text(prefix, (long long)(sizeof(prefix) - 1));
+    smile_print_number(smile_class_live_count());
+    smile_print_newline();
+}
+
+void smile_class_nothing_report(void)
+{
+    static const char message[] = "SMILE runtime error: Object reference is Nothing.";
+    smile_print_text(message, (long long)(sizeof(message) - 1));
+    smile_print_newline();
+}
 
 static const char* smile_text_bytes(const SmileText* text)
 {

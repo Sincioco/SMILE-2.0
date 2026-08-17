@@ -1,0 +1,10 @@
+Class Item
+    Private Sub Hide()
+
+    End Sub
+
+End Class
+
+Dim Value As New Item()
+
+Call Value.Hide()

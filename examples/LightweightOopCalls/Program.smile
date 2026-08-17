@@ -90,6 +90,78 @@ Print Holder.Item.Total
 Holder.Item.Total = ReplaceHolderValue(Holder)
 Print Holder.Item.Total
 
+Dim EmptyReference As New Proof.EmptyReference()
+Dim Object As New Proof.ReferenceCounter(
+
+    Mode:=Proof.DisplayMode.Compact,
+    Label:="object",
+    Start:=5
+)
+Dim ObjectAlias As Proof.ReferenceCounter
+Dim CapturedObject As Proof.ReferenceCounter
+Dim ClassSnapshot As Proof.Counter
+
+Print Object.Caption
+Print Object.Total
+
+ObjectAlias = Object
+
+Print ObjectAlias Is Object
+
+Call ObjectAlias.Advance(Delta:=2)
+
+Print Object.Total
+Print Object.Same(Other:=ObjectAlias)
+
+Object.Samples[1] = 9
+
+Print Object.Samples[1]
+
+ClassSnapshot = Object.Snapshot()
+
+Print ClassSnapshot.Total
+Print ClassSnapshot.Caption
+
+Call MutateClassByVal(Object)
+
+Print Object.Total
+
+ObjectAlias = Object.Alias()
+
+Print ObjectAlias Is Object
+
+ObjectAlias = Nothing
+
+Print ObjectAlias Is Nothing
+
+CapturedObject = Object
+
+With Object
+
+    Call .Advance(ReplaceClass(Object))
+
+    Print .Total
+End With
+
+Print Object.Total
+Print CapturedObject.Total
+
+Object.Total = ReplaceClassValue(Object)
+
+Print Object.Total
+Print Object.Caption
+
+Object.Samples[1] = 13
+
+Print Object.Samples[1]
+
+CapturedObject = Object
+
+Call RebindClass(Object)
+
+Print CapturedObject Is Object
+Print Object.Total
+
 End Program
 
 Function MarkNumber(Tag As Text, Value As Number) As Number
@@ -157,3 +229,31 @@ Function ReplaceHolderValue(ByRef Value As Proof.CounterBox) As Number
     Return 7
 
 End Function
+
+Sub MutateClassByVal(Value As Proof.ReferenceCounter)
+
+    Call Value.Advance(3)
+
+End Sub
+
+Function ReplaceClass(ByRef Value As Proof.ReferenceCounter) As Number
+
+    Value = New Proof.ReferenceCounter("method-root", 40)
+
+    Return 2
+
+End Function
+
+Function ReplaceClassValue(ByRef Value As Proof.ReferenceCounter) As Number
+
+    Value = New Proof.ReferenceCounter("property-root", 50)
+
+    Return 7
+
+End Function
+
+Sub RebindClass(ByRef Value As Proof.ReferenceCounter)
+
+    Value = New Proof.ReferenceCounter("rebound", 60)
+
+End Sub

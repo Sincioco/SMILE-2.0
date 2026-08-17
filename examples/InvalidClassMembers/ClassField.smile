@@ -1,0 +1,6 @@
+Class Item
+End Class
+
+Class Holder
+    Private Value As Item
+End Class

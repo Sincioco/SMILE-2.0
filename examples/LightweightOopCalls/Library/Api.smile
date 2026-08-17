@@ -172,4 +172,179 @@ Public Type CounterBox
 
 End Type
 
+Public Class ReferenceCounter
+
+    Public Code As Number
+    Public Samples[2] As Number
+    Private Label As Text
+    Private State As Counter
+    Private Notes[2] As Text
+    Private CurrentMode As DisplayMode
+
+    Public Sub New(
+        Label As Text,
+        Optional Start As Number = 0,
+        Optional Mode As DisplayMode = DisplayMode.Standard
+    )
+
+        Me.Label = Label
+        Me.Code = Start
+        Me.State.Label = Label
+        Me.State.StoredValue = Start
+        Me.State.Mode = Mode
+        Me.CurrentMode = Mode
+        Me.Samples[0] = Start
+        Me.Notes[0] = Label
+
+    End Sub
+
+    Public Sub Advance(
+        Optional Delta As Number = 1
+    )
+
+        Me.Code = Me.Code + Delta
+        Me.State.StoredValue = Me.Code
+        Me.Samples[1] = Me.Code
+
+    End Sub
+
+    Public Function Alias() As ReferenceCounter
+
+        Dim ReturnValue As ReferenceCounter
+
+        ReturnValue = Me
+
+        Return ReturnValue
+
+    End Function
+
+    Public Function Same(
+        Other As ReferenceCounter
+    ) As Boolean
+
+        Dim ReturnValue As Boolean
+
+        ReturnValue = Me Is Other
+
+        Return ReturnValue
+
+    End Function
+
+    Public Function Snapshot() As Counter
+
+        Dim ReturnValue As Counter
+
+        ReturnValue = Me.State
+
+        Return ReturnValue
+
+    End Function
+
+    Public Property Total As Number
+
+        Get
+
+            Dim ReturnValue As Number
+
+            ReturnValue = Me.Code
+
+            Return ReturnValue
+
+        End Get
+
+        Set
+
+            Me.Code = Value
+            Me.State.StoredValue = Value
+
+        End Set
+
+    End Property
+
+    Public Property Caption As Text
+
+        Get
+
+            Dim ReturnValue As Text
+
+            ReturnValue = Me.Label
+
+            Return ReturnValue
+
+        End Get
+
+    End Property
+
+    Private Sub Hide()
+
+        Me.Code = -1
+
+    End Sub
+
+    Private Property Secret As Number
+
+        Get
+
+            Dim ReturnValue As Number
+
+            ReturnValue = Me.Code
+
+            Return ReturnValue
+
+        End Get
+
+    End Property
+
+End Class
+
+Public Class EmptyReference
+End Class
+
+Public Class GameReferenceProbe
+
+    Private StoredValue As Number
+
+    Public Sub New()
+
+    End Sub
+
+    Public Sub DrawProbe()
+
+        Draw Line 0, 0, 1, 0, WHITE
+
+    End Sub
+
+    Public Property GameProbe As Number
+
+        Get
+
+            Dim ReturnValue As Number
+
+            Draw Line 0, 0, 1, 0, WHITE
+            ReturnValue = Me.StoredValue
+
+            Return ReturnValue
+
+        End Get
+
+        Set
+
+            Me.StoredValue = Value
+
+        End Set
+
+    End Property
+
+End Class
+
+Public Class GameConstructorProbe
+
+    Public Sub New()
+
+        Draw Line 0, 0, 1, 0, WHITE
+
+    End Sub
+
+End Class
+
 End Module

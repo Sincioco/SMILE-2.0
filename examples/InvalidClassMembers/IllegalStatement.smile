@@ -1,0 +1,4 @@
+Class Item
+    Dim Value As Number
+
+End Class

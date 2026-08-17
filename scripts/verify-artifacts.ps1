@@ -315,6 +315,50 @@ function Assert-SmileLibraryPackage {
                             "$RelativePath field '$($member.name).$($field.name)'"
                     }
                 }
+                if ($member.kind -ceq 'Class') {
+                    $classPropertyNames = [string[]]@($member.PSObject.Properties | ForEach-Object { $_.Name })
+                    if ([string]::Join("`n", $classPropertyNames) -cne
+                        "name`nkind`nvisibility`nidentity`nmodule`nprovider`nsize`nalignment`nfields`nconstructor`nmembers`nlocation" -or
+                        $member.visibility -cne 'Public' -or $member.provider -cne $expectedProvider -or
+                        $member.size -ne 8 -or $member.alignment -ne 8 -or
+                        $member.PSObject.Properties.Name -ccontains 'instanceSize') {
+                        throw "$RelativePath Class '$($member.name)' has invalid format-6 metadata."
+                    }
+                    $fieldOrdinal = 0
+                    foreach ($field in @($member.fields | Where-Object { $null -ne $_ })) {
+                        $fieldPropertyNames = [string[]]@($field.PSObject.Properties | ForEach-Object { $_.Name })
+                        $expectedFieldProperties = if ($field.PSObject.Properties.Name -ccontains 'dimensions') {
+                            "name`nvisibility`nelementType`nrank`ndimensions`nordinal`nlocation"
+                        }
+                        else {
+                            "name`nvisibility`ntype`nordinal`nlocation"
+                        }
+                        if ([string]::Join("`n", $fieldPropertyNames) -cne $expectedFieldProperties -or
+                            $field.visibility -cne 'Public' -or $field.ordinal -ne $fieldOrdinal -or
+                            $field.PSObject.Properties.Name -ccontains 'offset') {
+                            throw "$RelativePath Class field '$($member.name).$($field.name)' has invalid metadata."
+                        }
+                        $fieldOrdinal++
+                    }
+                    $constructor = $member.constructor
+                    $constructorProperties = [string[]]@($constructor.PSObject.Properties |
+                        ForEach-Object { $_.Name })
+                    if ([string]::Join("`n", $constructorProperties) -cne
+                        "identity`nvisibility`ndeclared`nparameters`nrequiresGameWindow`nlocation" -or
+                        $constructor.identity -cne ($member.identity + '::constructor::New') -or
+                        $constructor.visibility -cne 'Public' -or $constructor.declared -isnot [bool] -or
+                        $constructor.requiresGameWindow -isnot [bool]) {
+                        throw "$RelativePath Class constructor '$($member.name).New' has invalid metadata."
+                    }
+                    Assert-PackageLocation $constructor.location $declaredSources `
+                        "$RelativePath constructor '$($member.name).New'"
+                    $constructorParameterOrdinal = 0
+                    foreach ($parameter in @($constructor.parameters | Where-Object { $null -ne $_ })) {
+                        Assert-PackageParameter $parameter $constructorParameterOrdinal $declaredSources `
+                            "$RelativePath constructor parameter '$($member.name).$($parameter.name)'"
+                        $constructorParameterOrdinal++
+                    }
+                }
                 $memberMembers = $member.PSObject.Properties['members']
                 if ($null -eq $memberMembers) {
                     continue
@@ -322,13 +366,13 @@ function Assert-SmileLibraryPackage {
                 foreach ($nestedMember in @($memberMembers.Value | Where-Object { $null -ne $_ })) {
                     Assert-PackageLocation $nestedMember.location $declaredSources `
                         "$RelativePath nested member '$($member.name).$($nestedMember.name)'"
-                    if ($member.kind -cne 'Type') {
+                    if ($member.kind -cne 'Type' -and $member.kind -cne 'Class') {
                         continue
                     }
                     if ($nestedMember.visibility -cne 'Public' -or
                         [string]::IsNullOrWhiteSpace($nestedMember.identity) -or
                         $nestedMember.PSObject.Properties.Name -ccontains 'provider') {
-                        throw "$RelativePath Type member '$($member.name).$($nestedMember.name)' has invalid identity, visibility, or provider metadata."
+                        throw "$RelativePath instance member '$($member.name).$($nestedMember.name)' has invalid identity, visibility, or provider metadata."
                     }
                     switch -CaseSensitive ($nestedMember.kind) {
                         'Subroutine' {
@@ -339,7 +383,7 @@ function Assert-SmileLibraryPackage {
                                 $nestedMember.identity -cne ($member.identity + '::member::' + $nestedMember.name) -or
                                 $null -ne $nestedMember.returnType -or
                                 $nestedMember.requiresGameWindow -isnot [bool]) {
-                                throw "$RelativePath Type Sub '$($member.name).$($nestedMember.name)' has invalid format-6 metadata."
+                                throw "$RelativePath instance Sub '$($member.name).$($nestedMember.name)' has invalid format-6 metadata."
                             }
                             $nestedParameterOrdinal = 0
                             foreach ($parameter in @($nestedMember.parameters | Where-Object { $null -ne $_ })) {
@@ -356,7 +400,7 @@ function Assert-SmileLibraryPackage {
                                 $nestedMember.identity -cne ($member.identity + '::member::' + $nestedMember.name) -or
                                 $null -eq $nestedMember.returnType -or
                                 $nestedMember.requiresGameWindow -isnot [bool]) {
-                                throw "$RelativePath Type Function '$($member.name).$($nestedMember.name)' has invalid format-6 metadata."
+                                throw "$RelativePath instance Function '$($member.name).$($nestedMember.name)' has invalid format-6 metadata."
                             }
                             $nestedParameterOrdinal = 0
                             foreach ($parameter in @($nestedMember.parameters | Where-Object { $null -ne $_ })) {
@@ -373,7 +417,7 @@ function Assert-SmileLibraryPackage {
                                 $nestedMember.identity -cne ($member.identity + '::property::' + $nestedMember.name) -or
                                 $null -eq $nestedMember.type -or
                                 ($null -eq $nestedMember.get -and $null -eq $nestedMember.set)) {
-                                throw "$RelativePath Type Property '$($member.name).$($nestedMember.name)' has invalid format-6 metadata."
+                                throw "$RelativePath instance Property '$($member.name).$($nestedMember.name)' has invalid format-6 metadata."
                             }
                             if ($null -ne $nestedMember.get) {
                                 Assert-PackageAccessor $nestedMember.get ($nestedMember.identity + '::get') `
@@ -385,7 +429,7 @@ function Assert-SmileLibraryPackage {
                             }
                         }
                         default {
-                            throw "$RelativePath Type '$($member.name)' has unsupported nested member kind '$($nestedMember.kind)'."
+                            throw "$RelativePath instance type '$($member.name)' has unsupported nested member kind '$($nestedMember.kind)'."
                         }
                     }
                 }
@@ -412,15 +456,21 @@ function Assert-LightweightOopProofPackage {
             throw "$RelativePath does not expose the proof Module exactly once."
         }
         if ([string]::Join('|', @($module[0].members.name)) -cne
-            'Counter|CounterBox|DisplayMode|Report') {
+            'Counter|CounterBox|DisplayMode|EmptyReference|GameConstructorProbe|GameReferenceProbe|ReferenceCounter|Report') {
             throw "$RelativePath has an unexpected proof Module member order."
         }
         $counter = @($module[0].members | Where-Object { $_.name -ceq 'Counter' })
         $counterBox = @($module[0].members | Where-Object { $_.name -ceq 'CounterBox' })
         $displayMode = @($module[0].members | Where-Object { $_.name -ceq 'DisplayMode' })
+        $emptyReference = @($module[0].members | Where-Object { $_.name -ceq 'EmptyReference' })
+        $gameConstructor = @($module[0].members | Where-Object { $_.name -ceq 'GameConstructorProbe' })
+        $gameReference = @($module[0].members | Where-Object { $_.name -ceq 'GameReferenceProbe' })
+        $referenceCounter = @($module[0].members | Where-Object { $_.name -ceq 'ReferenceCounter' })
         $report = @($module[0].members | Where-Object { $_.name -ceq 'Report' })
         if ($counter.Count -ne 1 -or $counterBox.Count -ne 1 -or
-            $displayMode.Count -ne 1 -or $report.Count -ne 1 -or
+            $displayMode.Count -ne 1 -or $emptyReference.Count -ne 1 -or
+            $gameConstructor.Count -ne 1 -or $gameReference.Count -ne 1 -or
+            $referenceCounter.Count -ne 1 -or $report.Count -ne 1 -or
             [string]::Join('|', @($displayMode[0].members.name)) -cne 'Standard|Compact|CompactAlias' -or
             [string]::Join('|', @($displayMode[0].members.value)) -cne '1|2|2') {
             throw "$RelativePath has an unexpected proof Type, Enum, or routine surface."
@@ -434,7 +484,7 @@ function Assert-LightweightOopProofPackage {
             $parameters[3].default.kind -cne 'text' -or $parameters[3].default.value -cne '!' -or
             $parameters[4].type.kind -cne 'enum' -or
             $parameters[4].type.identity -cne 'Smile.Lightweight.Oop.Proof::DisplayMode' -or
-            $parameters[4].type.provider -cne 'Smile.Lightweight.Oop.Proof@1.1.0' -or
+            $parameters[4].type.provider -cne 'Smile.Lightweight.Oop.Proof@1.2.0' -or
             $parameters[4].default.kind -cne 'enum' -or
             $parameters[4].default.member -cne 'CompactAlias' -or
             $parameters[4].default.value -ne 2 -or
@@ -451,7 +501,7 @@ function Assert-LightweightOopProofPackage {
 
         $counterMembers = @($counter[0].members)
         if ($counter[0].identity -cne 'Smile.Lightweight.Oop.Proof::Counter' -or
-            $counter[0].provider -cne 'Smile.Lightweight.Oop.Proof@1.1.0' -or
+            $counter[0].provider -cne 'Smile.Lightweight.Oop.Proof@1.2.0' -or
             [string]::Join('|', @($counter[0].fields.name)) -cne 'Label|StoredValue|Enabled|Mode' -or
             [string]::Join('|', @($counterMembers.name)) -cne
                 'Advance|Caption|Configure|Difference|DrawProbe|GameProbe|Shifted|Total' -or
@@ -474,13 +524,13 @@ function Assert-LightweightOopProofPackage {
             $gameProbe.Count -ne 1 -or $shifted.Count -ne 1 -or $caption.Count -ne 1 -or
             $total.Count -ne 1 -or
             [string]::Join('|', @($configure[0].parameters.name)) -cne 'Label|Start|Enabled|Mode' -or
-            $configure[0].parameters[3].type.provider -cne 'Smile.Lightweight.Oop.Proof@1.1.0' -or
+            $configure[0].parameters[3].type.provider -cne 'Smile.Lightweight.Oop.Proof@1.2.0' -or
             $configure[0].parameters[3].default.member -cne 'Standard' -or
             $configure[0].parameters[3].default.value -ne 1 -or
             $difference[0].parameters[0].type.identity -cne 'Smile.Lightweight.Oop.Proof::Counter' -or
-            $difference[0].parameters[0].type.provider -cne 'Smile.Lightweight.Oop.Proof@1.1.0' -or
+            $difference[0].parameters[0].type.provider -cne 'Smile.Lightweight.Oop.Proof@1.2.0' -or
             $shifted[0].returnType.identity -cne 'Smile.Lightweight.Oop.Proof::Counter' -or
-            $shifted[0].returnType.provider -cne 'Smile.Lightweight.Oop.Proof@1.1.0' -or
+            $shifted[0].returnType.provider -cne 'Smile.Lightweight.Oop.Proof@1.2.0' -or
             -not $drawProbe[0].requiresGameWindow -or
             -not $gameProbe[0].get.requiresGameWindow -or $gameProbe[0].set.requiresGameWindow -or
             $null -ne $caption[0].set -or $null -eq $caption[0].get -or
@@ -488,7 +538,34 @@ function Assert-LightweightOopProofPackage {
             $gameProbe[0].get.identity -ceq $gameProbe[0].set.identity) {
             throw "$RelativePath has incorrect Type signatures, providers, properties, or capabilities."
         }
-        Write-Host "Optional/default and Type-member SMILE library metadata verified: $RelativePath"
+        $referenceMembers = @($referenceCounter[0].members)
+        $referenceConstructor = $referenceCounter[0].constructor
+        $classGameProperty = @($gameReference[0].members | Where-Object { $_.name -ceq 'GameProbe' })
+        if ($referenceCounter[0].kind -cne 'Class' -or
+            $referenceCounter[0].provider -cne 'Smile.Lightweight.Oop.Proof@1.2.0' -or
+            [string]::Join('|', @($referenceCounter[0].fields.name)) -cne 'Code|Samples' -or
+            $referenceCounter[0].fields[1].rank -ne 1 -or
+            [string]::Join('|', @($referenceCounter[0].fields[1].dimensions)) -cne '2' -or
+            $referenceCounter[0].PSObject.Properties.Name -ccontains 'instanceSize' -or
+            $referenceConstructor.identity -cne
+                'Smile.Lightweight.Oop.Proof::ReferenceCounter::constructor::New' -or
+            -not $referenceConstructor.declared -or $referenceConstructor.requiresGameWindow -or
+            [string]::Join('|', @($referenceConstructor.parameters.name)) -cne 'Label|Start|Mode' -or
+            [string]::Join('|', @($referenceMembers.name)) -cne
+                'Advance|Alias|Caption|Same|Snapshot|Total' -or
+            $referenceMembers[1].returnType.kind -cne 'class' -or
+            $referenceMembers[1].returnType.provider -cne 'Smile.Lightweight.Oop.Proof@1.2.0' -or
+            $emptyReference[0].constructor.declared -or @($emptyReference[0].constructor.parameters).Count -ne 0 -or
+            -not $gameConstructor[0].constructor.requiresGameWindow -or
+            $gameReference[0].constructor.requiresGameWindow -or
+            -not (@($gameReference[0].members | Where-Object { $_.name -ceq 'DrawProbe' })[0].requiresGameWindow) -or
+            $classGameProperty.Count -ne 1 -or -not $classGameProperty[0].get.requiresGameWindow -or
+            $classGameProperty[0].set.requiresGameWindow -or
+            $apiText.IndexOf('ReferenceCounter::member::Hide', [StringComparison]::Ordinal) -ge 0 -or
+            $apiText.IndexOf('ReferenceCounter::property::Secret', [StringComparison]::Ordinal) -ge 0) {
+            throw "$RelativePath has incorrect Class constructors, fields, members, providers, or capabilities."
+        }
+        Write-Host "Optional/default, Type-member, and Class SMILE library metadata verified: $RelativePath"
     }
     finally {
         $archive.Dispose()
@@ -511,16 +588,22 @@ Assert-SmileLibraryPackage 'artifacts\libraries\Smile.RPG.smilelib' `
     'libraries\Smile.RPG\Smile.RPG.smilelibproj' 'Smile.RPG' '1.2.0' 15 15 491
 Assert-SmileLibraryPackage 'artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib' `
     'examples\LightweightOopCalls\LightweightOopLibrary.smilelibproj' `
-    'Smile.Lightweight.Oop.Proof' '1.1.0' 1 1 4
+    'Smile.Lightweight.Oop.Proof' '1.2.0' 1 1 8
 Assert-LightweightOopProofPackage 'artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib'
 Require-File 'artifacts\games\LibraryConsumer.exe' | Out-Null
 Require-File 'artifacts\games\LibraryPackageConsumer.exe' | Out-Null
 Require-File 'artifacts\games\LightweightOopCalls.exe' | Out-Null
 Require-File 'artifacts\games\LightweightOopCalls.Package.exe' | Out-Null
+Require-File 'artifacts\games\ClassRuntime.exe' | Out-Null
+Require-File 'artifacts\games\ClassEndProgramCleanup.exe' | Out-Null
+Require-File 'artifacts\games\ClassNothingFailure.exe' | Out-Null
 Require-File 'artifacts\games\LocalModuleBasics.exe' | Out-Null
 Require-File 'artifacts\web\LibraryConsumer\game.js' | Out-Null
 Require-File 'artifacts\web\LightweightOopCalls\game.js' | Out-Null
 Require-File 'artifacts\web\LightweightOopCalls.Package\game.js' | Out-Null
+Require-File 'artifacts\web\ClassRuntime\game.js' | Out-Null
+Require-File 'artifacts\web\ClassWebOwnership\game.js' | Out-Null
+Require-File 'artifacts\web\ClassNothingFailure\game.js' | Out-Null
 Require-File 'artifacts\web\LocalModuleBasics\game.js' | Out-Null
 Require-File 'artifacts\web\Phase4VisualSlice\game.js' | Out-Null
 Require-File 'artifacts\games\Phase4VisualSlice-DirectX\Phase4VisualSlice.smile-assets.json' | Out-Null

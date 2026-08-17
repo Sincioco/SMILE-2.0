@@ -226,6 +226,42 @@ try {
     Assert-Equal ([Convert]::ToBase64String($TypeMemberFirstPass)) ([Convert]::ToBase64String($TypeMemberSecondPass)) 'Type-member formatting was not idempotent.'
     Pass 'Type methods, property accessors, Me/Value casing, computed Returns, and idempotence'
 
+    $ClassMemberSource = "Option Explicit`n" +
+        "Class Counter`n" +
+        "    Private StoredValue As Number`n" +
+        "    Public Sub New(Optional left As Number = 1)`n" +
+        "        me.StoredValue = left`n" +
+        "    End Sub`n" +
+        "    Public Function Difference(Optional left As Number = 1) As Number`n" +
+        "        Return me.StoredValue + left`n" +
+        "    End Function`n" +
+        "    Public Property Total As Number`n" +
+        "        Get`n" +
+        "            Return me.StoredValue + 1`n" +
+        "        End Get`n" +
+        "        Set`n" +
+        "            me.StoredValue = value`n" +
+        "        End Set`n" +
+        "    End Property`n" +
+        "End Class`n" +
+        "Dim Current As New Counter(left := 2)`n" +
+        "Print Current Is Not Nothing`n"
+    $ClassMemberPath = Write-TestSource 'ClassMemberFormatting.smile' $ClassMemberSource
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'ClassMemberFormatting.smile')).ExitCode 'Class-member formatting failed.'
+    $ClassMemberFormatted = [IO.File]::ReadAllText($ClassMemberPath)
+    Assert-True ($ClassMemberFormatted.Contains('Optional Left As Number = 1')) 'Constructor parameter casing was not canonicalized.'
+    Assert-True ($ClassMemberFormatted.Contains('Me.StoredValue = Left')) 'Constructor Me/parameter casing was not canonicalized.'
+    Assert-True ($ClassMemberFormatted.Contains('ReturnValue = Me.StoredValue + Left')) 'Class Function computed Return was not rewritten.'
+    Assert-True ($ClassMemberFormatted.Contains("Get`n`n            Dim ReturnValue As Number")) 'Class Property getter computed Return local was not placed after Get.'
+    Assert-True ($ClassMemberFormatted.Contains('Me.StoredValue = Value')) 'Class Property setter Me/Value casing was not canonicalized.'
+    Assert-True ($ClassMemberFormatted.Contains('New Counter(Left:=2)')) 'Class constructor named argument was not canonicalized.'
+    Assert-True ($ClassMemberFormatted.Contains('Is Not Nothing')) 'Class identity syntax did not survive formatting.'
+    $ClassMemberFirstPass = [IO.File]::ReadAllBytes($ClassMemberPath)
+    Assert-Equal 0 (Invoke-Formatter @('-FormatLongIf', '-Files', 'ClassMemberFormatting.smile')).ExitCode 'Class-member second formatting pass failed.'
+    $ClassMemberSecondPass = [IO.File]::ReadAllBytes($ClassMemberPath)
+    Assert-Equal ([Convert]::ToBase64String($ClassMemberFirstPass)) ([Convert]::ToBase64String($ClassMemberSecondPass)) 'Class-member formatting was not idempotent.'
+    Pass 'Class constructors, methods, properties, New/Is Not, contextual casing, and idempotence'
+
     $EnumSource = "Option Explicit`n`n" +
         "Enum Direction`n    none`n    up = 10`n    down`n    left = -5`n    right = -5`nEnd Enum`n`n" +
         "Function DefaultDirection() As Direction`n`n    Return Direction.left`n`nEnd Function`n"

@@ -146,6 +146,7 @@ public enum SmileModuleMemberKind
     Variable,
     Array,
     Type,
+    Class,
     Enum,
     Subroutine,
     Function
@@ -239,7 +240,8 @@ internal sealed class ModuleProcessingResult
                         member.Variable = variable;
                     }
                 }
-                else if (member.Kind is SmileModuleMemberKind.Type or SmileModuleMemberKind.Enum)
+                else if (member.Kind is SmileModuleMemberKind.Type or SmileModuleMemberKind.Class or
+                         SmileModuleMemberKind.Enum)
                 {
                     if (model.NominalTypes.TryGetValue(member.SemanticName, out var type))
                     {
@@ -262,29 +264,37 @@ internal sealed class ModuleProcessingResult
         {
             foreach (var member in module.PublicMembers)
             {
-                if (member.Type is RecordTypeSymbol publicRecord)
+                if (member.Type is InstanceTypeSymbol publicType)
                 {
-                    foreach (var field in publicRecord.Fields.Where(field => IsInaccessible(field.Type)))
+                    foreach (var field in publicType.Members.OfType<IInstanceFieldSymbol>()
+                                 .Where(field => field.Visibility == ModuleVisibility.Public &&
+                                                 IsInaccessible(field.Type)))
                         diagnostics.Add(new Diagnostic("SML3409", DiagnosticSeverity.Error,
-                            $"Public Type '{module.Name}.{member.Name}' exposes inaccessible type '{field.Type.Name}' through field '{field.Name}'.",
+                            $"Public {InstanceKind(publicType)} '{module.Name}.{member.Name}' exposes inaccessible type '{field.Type.Name}' through field '{field.Name}'.",
                             field.Source, field.TypeToken.Span));
-                    foreach (var method in publicRecord.Methods.Where(method =>
+                    foreach (var method in publicType.Methods.Where(method =>
                                  method.Visibility == ModuleVisibility.Public))
                     {
                         if (method.IsFunction && IsInaccessible(method.ReturnType))
                             diagnostics.Add(new Diagnostic("SML3409", DiagnosticSeverity.Error,
-                                $"Public Function '{publicRecord.Name}.{method.Name}' returns inaccessible type '{method.ReturnType.Name}'.",
+                                $"Public Function '{publicType.Name}.{method.Name}' returns inaccessible type '{method.ReturnType.Name}'.",
                                 method.Source, method.Declaration.ReturnTypeToken?.Span ?? method.DeclarationSpan));
                         foreach (var parameter in method.Parameters.Where(parameter => IsInaccessible(parameter.Type)))
                             diagnostics.Add(new Diagnostic("SML3409", DiagnosticSeverity.Error,
-                                $"Public method '{publicRecord.Name}.{method.Name}' exposes inaccessible parameter type '{parameter.Type.Name}'.",
+                                $"Public method '{publicType.Name}.{method.Name}' exposes inaccessible parameter type '{parameter.Type.Name}'.",
                                 parameter.Source, parameter.DeclarationSpan));
                     }
-                    foreach (var property in publicRecord.Properties.Where(property =>
+                    foreach (var property in publicType.Properties.Where(property =>
                                  property.Visibility == ModuleVisibility.Public && IsInaccessible(property.Type)))
                         diagnostics.Add(new Diagnostic("SML3409", DiagnosticSeverity.Error,
-                            $"Public Property '{publicRecord.Name}.{property.Name}' exposes inaccessible type '{property.Type.Name}'.",
+                            $"Public Property '{publicType.Name}.{property.Name}' exposes inaccessible type '{property.Type.Name}'.",
                             property.Source, property.Declaration.TypeToken.Span));
+                    if (publicType is ClassTypeSymbol publicClass)
+                        foreach (var parameter in publicClass.Constructor.Parameters
+                                     .Where(parameter => IsInaccessible(parameter.Type)))
+                            diagnostics.Add(new Diagnostic("SML3409", DiagnosticSeverity.Error,
+                                $"Public constructor '{publicClass.Name}.New' exposes inaccessible parameter type '{parameter.Type.Name}'.",
+                                parameter.Source, parameter.DeclarationSpan));
                 }
                 if (member.Variable != null && IsInaccessible(member.Variable.Type))
                     diagnostics.Add(new Diagnostic("SML3409", DiagnosticSeverity.Error,
@@ -308,6 +318,8 @@ internal sealed class ModuleProcessingResult
         static bool IsInaccessible(SmileType type) =>
             type is NominalTypeSymbol nominal && nominal.ModuleName != null &&
             nominal.Visibility != ModuleVisibility.Public;
+
+        static string InstanceKind(InstanceTypeSymbol type) => type.IsClass ? "Class" : "Type";
     }
 }
 
@@ -468,6 +480,7 @@ internal sealed class ModuleProcessor
                 DimStatementSyntax variable => (variable.Identifier,
                     variable.IsArray ? SmileModuleMemberKind.Array : SmileModuleMemberKind.Variable),
                 TypeDeclarationSyntax type => (type.Identifier, SmileModuleMemberKind.Type),
+                ClassDeclarationSyntax classDeclaration => (classDeclaration.Identifier, SmileModuleMemberKind.Class),
                 EnumDeclarationSyntax enumDeclaration => (enumDeclaration.Identifier, SmileModuleMemberKind.Enum),
                 RoutineDeclarationSyntax routine when routine.IsFunction => (routine.Identifier, SmileModuleMemberKind.Function),
                 RoutineDeclarationSyntax routine => (routine.Identifier, SmileModuleMemberKind.Subroutine),
@@ -480,7 +493,8 @@ internal sealed class ModuleProcessor
                 continue;
             }
 
-            var memberTable = kind is SmileModuleMemberKind.Type or SmileModuleMemberKind.Enum
+            var memberTable = kind is SmileModuleMemberKind.Type or SmileModuleMemberKind.Class or
+                SmileModuleMemberKind.Enum
                 ? module.MutableTypes : module.MutableMembers;
             if (memberTable.ContainsKey(identifier.Text))
             {
@@ -585,6 +599,7 @@ internal sealed class ModuleProcessor
         ConstStatementSyntax constant => constant.Identifier,
         DimStatementSyntax variable => variable.Identifier,
         TypeDeclarationSyntax type => type.Identifier,
+        ClassDeclarationSyntax classDeclaration => classDeclaration.Identifier,
         EnumDeclarationSyntax enumDeclaration => enumDeclaration.Identifier,
         RoutineDeclarationSyntax routine => routine.Identifier,
         _ => null
@@ -711,7 +726,8 @@ internal sealed class ModuleProcessor
     {
         if (statement is VisibilityDeclarationSyntax visible)
             statement = visible.Declaration;
-        if (statement is not (ConstStatementSyntax or DimStatementSyntax or TypeDeclarationSyntax or EnumDeclarationSyntax or RoutineDeclarationSyntax))
+        if (statement is not (ConstStatementSyntax or DimStatementSyntax or TypeDeclarationSyntax or
+                              ClassDeclarationSyntax or EnumDeclarationSyntax or RoutineDeclarationSyntax))
             return null;
         return LowerStatement(statement, tree, module, null);
     }
@@ -728,11 +744,18 @@ internal sealed class ModuleProcessor
             case DimStatementSyntax dim:
                 return new DimStatementSyntax(dim.DimKeyword, DeclarationToken(dim.Identifier, module), dim.OpenBracket,
                     dim.Sizes.Select(item => LowerExpression(item, tree, module, locals)).ToArray(), dim.CloseBracket,
-                    dim.AsKeyword, LowerTypeToken(dim.TypeToken, tree, module));
+                    dim.AsKeyword, LowerTypeToken(dim.TypeToken, tree, module),
+                    dim.NewInitializer == null ? null : (NewExpressionSyntax)LowerExpression(
+                        dim.NewInitializer, tree, module, locals));
             case TypeDeclarationSyntax type:
                 return new TypeDeclarationSyntax(type.TypeKeyword, TypeDeclarationToken(type.Identifier, module),
                     type.Members.Select(member => LowerTypeMember(member, tree, module)).ToArray(),
                     type.EndKeyword, type.FinalTypeKeyword);
+            case ClassDeclarationSyntax classDeclaration:
+                return new ClassDeclarationSyntax(classDeclaration.ClassKeyword,
+                    TypeDeclarationToken(classDeclaration.Identifier, module),
+                    classDeclaration.Members.Select(member => LowerClassMember(member, tree, module)).ToArray(),
+                    classDeclaration.EndKeyword, classDeclaration.FinalClassKeyword);
             case EnumDeclarationSyntax enumDeclaration:
                 return new EnumDeclarationSyntax(enumDeclaration.EnumKeyword,
                     TypeDeclarationToken(enumDeclaration.Identifier, module),
@@ -993,6 +1016,18 @@ internal sealed class ModuleProcessor
                 return new LeadingMemberAccessExpressionSyntax(leading.DotToken, leading.Member);
             case MeExpressionSyntax me:
                 return new MeExpressionSyntax(me.MeKeyword);
+            case NewExpressionSyntax creation:
+                return new NewExpressionSyntax(creation.NewKeyword,
+                    LowerTypeToken(creation.TypeToken, tree, module)!,
+                    creation.Arguments.Select(item => LowerArgument(item, tree, module, locals)).ToArray(),
+                    creation.CloseParenthesis);
+            case NothingExpressionSyntax nothing:
+                return new NothingExpressionSyntax(nothing.NothingKeyword);
+            case IndexedExpressionSyntax indexed:
+                return new IndexedExpressionSyntax(LowerExpression(indexed.Receiver, tree, module, locals),
+                    indexed.OpenBracket,
+                    indexed.Indices.Select(item => LowerExpression(item, tree, module, locals)).ToArray(),
+                    indexed.CloseBracket);
             case ParenthesizedExpressionSyntax parenthesized:
                 return new ParenthesizedExpressionSyntax(parenthesized.OpenParenthesis,
                     LowerExpression(parenthesized.Expression, tree, module, locals), parenthesized.CloseParenthesis);
@@ -1002,8 +1037,45 @@ internal sealed class ModuleProcessor
             case BinaryExpressionSyntax binary:
                 return new BinaryExpressionSyntax(LowerExpression(binary.Left, tree, module, locals),
                     binary.OperatorToken, LowerExpression(binary.Right, tree, module, locals));
+            case IdentityExpressionSyntax identity:
+                return new IdentityExpressionSyntax(LowerExpression(identity.Left, tree, module, locals),
+                    identity.IsKeyword, identity.NotKeyword,
+                    LowerExpression(identity.Right, tree, module, locals));
             default:
                 return expression;
+        }
+    }
+
+    private TypeMemberDeclarationSyntax LowerClassMember(TypeMemberDeclarationSyntax member, SyntaxTree tree,
+        ModuleSymbol? module)
+    {
+        switch (member)
+        {
+            case ClassFieldDeclarationSyntax field:
+                return new ClassFieldDeclarationSyntax(field.VisibilityKeyword, field.Identifier,
+                    field.OpenBracket,
+                    field.Sizes.Select(size => LowerExpression(size, tree, module, null)).ToArray(),
+                    field.CloseBracket, field.AsKeyword, LowerTypeToken(field.TypeToken, tree, module)!);
+            case ClassRoutineDeclarationSyntax routine:
+            {
+                var locals = CollectRoutineLocals(routine.Declaration, module);
+                return new ClassRoutineDeclarationSyntax(routine.VisibilityKeyword,
+                    LowerNestedRoutine(routine.Declaration, tree, module, locals));
+            }
+            case PropertyDeclarationSyntax property:
+            {
+                var getter = property.Getter == null ? null : LowerAccessor(property.Getter, tree, module,
+                    CollectStatementLocals(property.Getter.Statements, module));
+                var setterLocals = property.Setter == null ? null : CollectStatementLocals(
+                    property.Setter.Statements, module, "Value");
+                var setter = property.Setter == null ? null : LowerAccessor(property.Setter, tree, module,
+                    setterLocals!);
+                return new PropertyDeclarationSyntax(property.VisibilityKeyword, property.PropertyKeyword,
+                    property.Identifier, property.AsKeyword, LowerTypeToken(property.TypeToken, tree, module)!,
+                    getter, setter, property.EndKeyword, property.FinalPropertyKeyword);
+            }
+            default:
+                return member;
         }
     }
 
@@ -1138,7 +1210,8 @@ internal sealed class ModuleProcessor
         }
         if (resolved.Visibility != ModuleVisibility.Public)
         {
-            var isType = resolved.Kind is SmileModuleMemberKind.Type or SmileModuleMemberKind.Enum;
+            var isType = resolved.Kind is SmileModuleMemberKind.Type or SmileModuleMemberKind.Class or
+                SmileModuleMemberKind.Enum;
             Report(tree.Source, isType ? "SML3408" : "SML3105", member.Span,
                 $"{(isType ? "Type" : "Member")} '{module.Name}.{resolved.Name}' is Private and cannot be accessed through an import.");
             return SemanticToken(member, "__smile_private_" + SafeIdentifier(member.Text));

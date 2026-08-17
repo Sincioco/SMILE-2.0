@@ -1,0 +1,11 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Console</ProjectKind>
+    <StartupFile>ProgramCapabilityConstructor.smile</StartupFile>
+    <OutputName>InvalidClassCapabilityConstructor</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="ProgramCapabilityConstructor.smile" StartupOnly="true" />
+    <SmileProjectReference Include="..\LightweightOopCalls\LightweightOopLibrary.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

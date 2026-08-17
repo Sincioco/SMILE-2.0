@@ -1,0 +1,7 @@
+Class Item
+    Private Value As Number
+    Public Sub Value()
+
+    End Sub
+
+End Class

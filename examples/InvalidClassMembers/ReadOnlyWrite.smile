@@ -1,0 +1,12 @@
+Class Item
+    Private Stored As Number
+    Public Property Value As Number
+        Get
+            Return Me.Stored
+        End Get
+    End Property
+End Class
+
+Dim Current As New Item()
+
+Current.Value = 1

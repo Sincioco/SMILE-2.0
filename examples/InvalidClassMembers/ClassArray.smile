@@ -1,0 +1,4 @@
+Class Item
+End Class
+
+Dim Items[2] As Item

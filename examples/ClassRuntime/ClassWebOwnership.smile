@@ -1,0 +1,50 @@
+Option Explicit
+
+Game Window "Class Ownership" Size 320 By 180
+
+Type MediaBox
+
+    Picture As Image
+
+End Type
+
+Class MediaOwner
+
+    Private Stored As MediaBox
+
+    Public Sub New(Value As MediaBox)
+
+        Me.Stored = Value
+
+    End Sub
+
+    Public Property Snapshot As MediaBox
+
+        Get
+
+            Dim ReturnValue As MediaBox
+
+            ReturnValue = Me.Stored
+
+            Return ReturnValue
+
+        End Get
+
+    End Property
+
+End Class
+
+Dim Shared As MediaBox
+Dim Owner As MediaOwner
+
+Load Image Shared.Picture From "Assets\PixelProof.png"
+
+Owner = New MediaOwner(Shared)
+
+Unload Image Shared.Picture
+
+Print Image_Width(Owner.Snapshot.Picture)
+
+Owner = Nothing
+
+End Program

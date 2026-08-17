@@ -18,7 +18,9 @@ public enum SmileCompletionKind
     Field,
     Property,
     EnumMember,
-    Parameter
+    Parameter,
+    Class,
+    Constructor
 }
 
 public sealed class SmileCompletion
@@ -62,6 +64,7 @@ public static class SmileCompletionService
         var currentModule = analysis.SemanticModel.Modules.Values.FirstOrDefault(module =>
             module.SyntaxTrees.Any(tree => ReferenceEquals(tree.Source, syntaxTree.Source)));
         var afterAs = IsAfterAs(syntaxTree.Source.Text, position);
+        var afterNew = IsAfterNew(syntaxTree.Source.Text, position);
 
         var fieldCompletions = TryGetFieldCompletions(analysis, syntaxTree, position, currentModule);
         if (fieldCompletions != null)
@@ -70,14 +73,19 @@ public static class SmileCompletionService
         var parameterCompletions = TryGetNamedArgumentCompletions(analysis, syntaxTree, position, currentModule);
 
         var qualifiedAlias = AliasBeforeDot(syntaxTree.Source.Text, position);
-        var qualifiedTypeContext = qualifiedAlias != null && IsQualifiedTypeContext(syntaxTree.Source.Text, position, qualifiedAlias);
+        var qualifiedNewContext = qualifiedAlias != null &&
+                                  IsQualifiedNewContext(syntaxTree.Source.Text, position, qualifiedAlias);
+        var qualifiedTypeContext = qualifiedAlias != null &&
+                                   IsQualifiedTypeContext(syntaxTree.Source.Text, position, qualifiedAlias);
         if (qualifiedAlias != null && analysis.SemanticModel.GetImports(syntaxTree.Source)
             .TryGetValue(qualifiedAlias, out var importedModule))
         {
-            var typeContext = afterAs || qualifiedTypeContext;
-            return importedModule.PublicMembers.Where(member => typeContext
-                    ? member.Kind is SmileModuleMemberKind.Type or SmileModuleMemberKind.Enum
-                    : member.Kind != SmileModuleMemberKind.Type)
+            return importedModule.PublicMembers.Where(member => qualifiedNewContext
+                    ? member.Kind == SmileModuleMemberKind.Class
+                    : afterAs || qualifiedTypeContext
+                        ? member.Kind is SmileModuleMemberKind.Type or SmileModuleMemberKind.Class or
+                            SmileModuleMemberKind.Enum
+                        : member.Kind is not (SmileModuleMemberKind.Type or SmileModuleMemberKind.Class))
                 .OrderBy(member => member.Name, StringComparer.OrdinalIgnoreCase)
                 .Select(member => MemberCompletion(member, analysis.DependencyContext)).ToArray();
         }
@@ -98,6 +106,21 @@ public static class SmileCompletionService
                 types[import.Key] = new SmileCompletion(import.Key,
                     $"Import alias for nominal types in module {import.Value.Name}", SmileCompletionKind.Module);
             return types.Values.OrderBy(item => item.DisplayText, StringComparer.OrdinalIgnoreCase).ToArray();
+        }
+
+        if (afterNew)
+        {
+            var classes = new Dictionary<string, SmileCompletion>(StringComparer.OrdinalIgnoreCase);
+            var availableClasses = currentModule == null
+                ? analysis.SemanticModel.Classes.Values.Where(type => type.ModuleName == null)
+                : currentModule.Types.Values.Where(member => member.Type is ClassTypeSymbol)
+                    .Select(member => (ClassTypeSymbol)member.Type!);
+            foreach (var type in availableClasses)
+                classes[type.Name] = TypeCompletion(type, analysis.DependencyContext);
+            foreach (var import in analysis.SemanticModel.GetImports(syntaxTree.Source))
+                classes[import.Key] = new SmileCompletion(import.Key,
+                    $"Import alias for Classes in module {import.Value.Name}", SmileCompletionKind.Module);
+            return classes.Values.OrderBy(item => item.DisplayText, StringComparer.OrdinalIgnoreCase).ToArray();
         }
 
         var completions = new Dictionary<string, SmileCompletion>(StringComparer.OrdinalIgnoreCase);
@@ -208,13 +231,18 @@ public static class SmileCompletionService
             ? PreviousSignificantToken(tokens, dotIndex - 1) : -1;
         if (aliasIndex >= 0 && analysis.SemanticModel.GetImports(syntaxTree.Source)
                 .TryGetValue(tokens[aliasIndex].Text, out var imported) &&
-            imported.Members.TryGetValue(tokens[nameIndex].Text, out var importedMember))
+            (imported.Members.TryGetValue(tokens[nameIndex].Text, out var importedMember) ||
+             imported.Types.TryGetValue(tokens[nameIndex].Text, out importedMember)))
         {
-            routine = importedMember.Visibility == ModuleVisibility.Public ? importedMember.Routine : null;
+            routine = importedMember.Visibility == ModuleVisibility.Public
+                ? importedMember.Routine ?? (importedMember.Type as ClassTypeSymbol)?.Constructor
+                : null;
         }
-        else if (currentModule?.Members.TryGetValue(tokens[nameIndex].Text, out var ownMember) == true)
+        else if ((currentModule?.Members.TryGetValue(tokens[nameIndex].Text, out var ownMember) == true ||
+                  currentModule?.Types.TryGetValue(tokens[nameIndex].Text, out ownMember) == true) &&
+                 ownMember != null)
         {
-            routine = ownMember.Routine;
+            routine = ownMember.Routine ?? (ownMember.Type as ClassTypeSymbol)?.Constructor;
         }
         else if (dotIndex >= 0 && tokens[dotIndex].Kind == SyntaxKind.DotToken &&
                  TryResolveMethodReceiver(analysis, syntaxTree, position, currentModule, tokens, dotIndex,
@@ -227,7 +255,11 @@ public static class SmileCompletionService
             routine = analysis.SemanticModel.Routines.Values.FirstOrDefault(candidate =>
                 string.Equals(candidate.Name, tokens[nameIndex].Text, StringComparison.OrdinalIgnoreCase) &&
                 (candidate.ModuleName == null || string.Equals(candidate.ModuleName, currentModule?.Name,
-                    StringComparison.OrdinalIgnoreCase)));
+                    StringComparison.OrdinalIgnoreCase))) ??
+                analysis.SemanticModel.Classes.Values.FirstOrDefault(candidate =>
+                    string.Equals(candidate.Name, tokens[nameIndex].Text, StringComparison.OrdinalIgnoreCase) &&
+                    (candidate.ModuleName == null || string.Equals(candidate.ModuleName, currentModule?.Name,
+                        StringComparison.OrdinalIgnoreCase)))?.Constructor;
         }
         if (routine == null)
             return null;
@@ -372,10 +404,12 @@ public static class SmileCompletionService
         var description = type switch
         {
             RecordTypeSymbol record => $"Type {record.Name} ({string.Join(", ", record.Fields.Select(field => $"{field.Name} As {field.Type.Name}"))})",
+            ClassTypeSymbol classType => $"Class {classType.Name} ({SmileSymbolDisplayService.FormatRoutineSignature(classType.Constructor)})",
             EnumTypeSymbol enumType => $"Enum {enumType.Name} ({string.Join(", ", enumType.Members.Select(member => $"{member.Name} = {member.Value}"))})",
             _ => $"Type {type.Name}"
         };
-        return new SmileCompletion(type.Name, description + provider, SmileCompletionKind.Type);
+        return new SmileCompletion(type.Name, description + provider,
+            type.IsClass ? SmileCompletionKind.Class : SmileCompletionKind.Type);
     }
 
     private static IReadOnlyList<SmileCompletion>? TryGetFieldCompletions(SmileAnalysisResult analysis,
@@ -393,14 +427,14 @@ public static class SmileCompletionService
             var leadingReceiverIsAddressable = true;
             foreach (var part in leadingParts)
             {
-                if (leadingType is not RecordTypeSymbol record ||
-                    !TryGetReadableValueMember(record, part,
+                if (leadingType is not InstanceTypeSymbol instance ||
+                    !TryGetReadableValueMember(instance, part,
                         FindCurrentRoutine(analysis.SemanticModel, syntaxTree.Source, position), out leadingType,
                         out var memberIsAddressable))
                     return Array.Empty<SmileCompletion>();
                 leadingReceiverIsAddressable &= memberIsAddressable;
             }
-            return leadingType is RecordTypeSymbol targetType
+            return leadingType is InstanceTypeSymbol targetType
                 ? TypeMemberCompletions(targetType, FindCurrentRoutine(analysis.SemanticModel,
                     syntaxTree.Source, position), analysis.DependencyContext, leadingReceiverIsAddressable)
                 : Array.Empty<SmileCompletion>();
@@ -435,18 +469,18 @@ public static class SmileCompletionService
         }
         for (var index = firstFieldIndex; index < parts.Count; index++)
         {
-            if (type is not RecordTypeSymbol record ||
-                !TryGetReadableValueMember(record, parts[index], routine, out type,
+            if (type is not InstanceTypeSymbol instance ||
+                !TryGetReadableValueMember(instance, parts[index], routine, out type,
                     out var memberIsAddressable))
                 return Array.Empty<SmileCompletion>();
             receiverIsAddressable &= memberIsAddressable;
         }
-        if (type is not RecordTypeSymbol target)
+        if (type is not InstanceTypeSymbol target)
             return Array.Empty<SmileCompletion>();
         return TypeMemberCompletions(target, routine, analysis.DependencyContext, receiverIsAddressable);
     }
 
-    private static IReadOnlyList<SmileCompletion> TypeMemberCompletions(RecordTypeSymbol target,
+    private static IReadOnlyList<SmileCompletion> TypeMemberCompletions(InstanceTypeSymbol target,
         RoutineSymbol? currentRoutine, SmileCompilationDependencyContext dependencyContext,
         bool receiverIsAddressable = true)
     {
@@ -456,7 +490,7 @@ public static class SmileCompletionService
                                      StringComparison.Ordinal);
         return target.Members
             .Where(member => member.Visibility == ModuleVisibility.Public || sameContainingType)
-            .Where(member => receiverIsAddressable || member.MemberKind == SmileTypeMemberKind.Field)
+            .Where(member => target.IsClass || receiverIsAddressable || member.MemberKind == SmileTypeMemberKind.Field)
             .OrderBy(member => member.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(member => member.Name, StringComparer.Ordinal)
             .ThenBy(member => member.MemberKind)
@@ -464,15 +498,16 @@ public static class SmileCompletionService
             .ToArray();
     }
 
-    private static SmileCompletion TypeMemberCompletion(RecordTypeSymbol target, ITypeMemberSymbol member,
+    private static SmileCompletion TypeMemberCompletion(InstanceTypeSymbol target, ITypeMemberSymbol member,
         SmileCompilationDependencyContext dependencyContext)
     {
         var provider = target.ModuleName == null ? string.Empty :
             $" from module {target.ModuleName} ({DescribeProvider(target.ProviderIdentity, dependencyContext)})";
         return member switch
         {
-            RecordFieldSymbol field => new SmileCompletion(field.Name,
-                $"{field.Name} As {field.Type.Name} field of Type {target.Name}" + provider,
+            IInstanceFieldSymbol field => new SmileCompletion(field.Name,
+                $"{field.Name} As {field.Type.Name} field of {(target.IsClass ? "Class" : "Type")} {target.Name}" +
+                provider,
                 SmileCompletionKind.Field),
             TypeRoutineSymbol method => new SmileCompletion(method.Name,
                 SmileSymbolDisplayService.FormatRoutineSignature(method.Routine) +
@@ -514,8 +549,8 @@ public static class SmileCompletionService
             receiverType = scope.TargetType;
             foreach (var part in leadingParts)
             {
-                if (receiverType is not RecordTypeSymbol record ||
-                    !TryGetReadableValueMember(record, part, currentRoutine, out receiverType,
+                if (receiverType is not InstanceTypeSymbol instance ||
+                    !TryGetReadableValueMember(instance, part, currentRoutine, out receiverType,
                         out var memberIsAddressable))
                     return false;
                 receiverIsAddressable &= memberIsAddressable;
@@ -529,7 +564,7 @@ public static class SmileCompletionService
                 return false;
         }
 
-        return receiverIsAddressable && receiverType is RecordTypeSymbol target &&
+        return receiverType is InstanceTypeSymbol target && (target.IsClass || receiverIsAddressable) &&
                target.TryGetMethod(methodName, out method!) &&
                IsAccessible(method.Visibility, target, currentRoutine);
     }
@@ -564,8 +599,8 @@ public static class SmileCompletionService
 
         for (var index = firstMemberIndex; index < parts.Count; index++)
         {
-            if (type is not RecordTypeSymbol record ||
-                !TryGetReadableValueMember(record, parts[index], currentRoutine, out type,
+            if (type is not InstanceTypeSymbol instance ||
+                !TryGetReadableValueMember(instance, parts[index], currentRoutine, out type,
                     out var memberIsAddressable))
                 return false;
             receiverIsAddressable &= memberIsAddressable;
@@ -573,7 +608,7 @@ public static class SmileCompletionService
         return true;
     }
 
-    private static bool TryGetReadableValueMember(RecordTypeSymbol type, string name,
+    private static bool TryGetReadableValueMember(InstanceTypeSymbol type, string name,
         RoutineSymbol? currentRoutine, out SmileType memberType, out bool memberIsAddressable)
     {
         memberType = SmileType.Error;
@@ -582,7 +617,7 @@ public static class SmileCompletionService
             return false;
         switch (member)
         {
-            case RecordFieldSymbol field:
+            case IInstanceFieldSymbol field:
                 memberType = field.Type;
                 memberIsAddressable = true;
                 return true;
@@ -595,7 +630,7 @@ public static class SmileCompletionService
         }
     }
 
-    private static bool IsAccessible(ModuleVisibility visibility, RecordTypeSymbol containingType,
+    private static bool IsAccessible(ModuleVisibility visibility, InstanceTypeSymbol containingType,
         RoutineSymbol? currentRoutine) =>
         visibility == ModuleVisibility.Public || ReferenceEquals(currentRoutine?.ContainingType, containingType) ||
         currentRoutine?.ContainingType != null &&
@@ -766,16 +801,42 @@ public static class SmileCompletionService
                string.Equals(before, "As", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsAfterNew(string text, int position)
+    {
+        var start = Math.Min(position, text.Length);
+        while (start > 0 && text[start - 1] is not ('\r' or '\n')) start--;
+        var before = text.Substring(start, Math.Min(position, text.Length) - start).TrimEnd();
+        return before.EndsWith(" New", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(before, "New", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool IsQualifiedTypeContext(string text, int position, string alias)
     {
         var start = Math.Min(position, text.Length);
         while (start > 0 && text[start - 1] is not ('\r' or '\n')) start--;
         var before = text.Substring(start, Math.Min(position, text.Length) - start);
-        var marker = before.LastIndexOf(" As ", StringComparison.OrdinalIgnoreCase);
-        if (marker < 0 && before.TrimStart().StartsWith("As ", StringComparison.OrdinalIgnoreCase))
-            marker = before.IndexOf("As ", StringComparison.OrdinalIgnoreCase) - 1;
-        var tail = marker < 0 ? string.Empty : before.Substring(marker + 4).TrimStart();
-        return tail.StartsWith(alias + ".", StringComparison.OrdinalIgnoreCase);
+        return QualifiedContextStartsWith(before, "As", alias) ||
+               QualifiedContextStartsWith(before, "New", alias);
+    }
+
+    private static bool IsQualifiedNewContext(string text, int position, string alias)
+    {
+        var start = Math.Min(position, text.Length);
+        while (start > 0 && text[start - 1] is not ('\r' or '\n')) start--;
+        var before = text.Substring(start, Math.Min(position, text.Length) - start);
+        return QualifiedContextStartsWith(before, "New", alias);
+    }
+
+    private static bool QualifiedContextStartsWith(string before, string keyword, string alias)
+    {
+        var marker = before.LastIndexOf(" " + keyword + " ", StringComparison.OrdinalIgnoreCase);
+        if (marker >= 0)
+            return before.Substring(marker + keyword.Length + 2).TrimStart()
+                .StartsWith(alias + ".", StringComparison.OrdinalIgnoreCase);
+        var trimmed = before.TrimStart();
+        return trimmed.StartsWith(keyword + " ", StringComparison.OrdinalIgnoreCase) &&
+               trimmed.Substring(keyword.Length + 1).TrimStart()
+                   .StartsWith(alias + ".", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsDeclarationBeingTyped(VariableSymbol symbol, SourceText source, int position) =>

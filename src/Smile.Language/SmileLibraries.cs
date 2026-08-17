@@ -511,6 +511,23 @@ public static class SmileLibraryPackage
                         .ThenBy(typeMember => typeMember.MemberKind)
                         .Select(typeMember => TypeMemberJson(typeMember, dependencyContext, sourceIds))))
                     .Append(']');
+            else if (member.Type is ClassTypeSymbol classType)
+                builder.Append(", \"fields\": [")
+                    .Append(string.Join(", ", classType.Fields
+                        .Where(field => field.Visibility == ModuleVisibility.Public)
+                        .OrderBy(field => field.Ordinal)
+                        .Select(field => ClassFieldJson(field, dependencyContext, sourceIds))))
+                    .Append("], \"constructor\": ")
+                    .Append(ConstructorJson(classType.Constructor, dependencyContext, sourceIds))
+                    .Append(", \"members\": [")
+                    .Append(string.Join(", ", classType.Members
+                        .Where(typeMember => typeMember.MemberKind != SmileTypeMemberKind.Field &&
+                                             typeMember.Visibility == ModuleVisibility.Public)
+                        .OrderBy(typeMember => typeMember.Name, StringComparer.OrdinalIgnoreCase)
+                        .ThenBy(typeMember => typeMember.Name, StringComparer.Ordinal)
+                        .ThenBy(typeMember => typeMember.MemberKind)
+                        .Select(typeMember => TypeMemberJson(typeMember, dependencyContext, sourceIds))))
+                    .Append(']');
             else if (member.Type is EnumTypeSymbol enumType)
                 builder.Append(", \"members\": [")
                     .Append(string.Join(", ", enumType.Members.OrderBy(enumMember => enumMember.Ordinal)
@@ -821,9 +838,9 @@ public static class SmileLibraryPackage
         SmileCompilationDependencyContext dependencyContext, IReadOnlyDictionary<string, string> sourceIds)
     {
         if (member.Visibility != ModuleVisibility.Public)
-            throw new InvalidDataException($"Private Type member '{member.Name}' cannot enter public API metadata.");
+            throw new InvalidDataException($"Private instance member '{member.Name}' cannot enter public API metadata.");
         if (string.IsNullOrWhiteSpace(member.RuntimeIdentity))
-            throw new InvalidDataException($"Public Type member '{member.Name}' has no stable runtime identity.");
+            throw new InvalidDataException($"Public instance member '{member.Name}' has no stable runtime identity.");
 
         var builder = new StringBuilder("{\"name\": \"").Append(JsonEscape(member.Name))
             .Append("\", \"kind\": \"").Append(member.MemberKind)
@@ -850,7 +867,7 @@ public static class SmileLibraryPackage
                 break;
             default:
                 throw new InvalidDataException(
-                    $"Unsupported public Type member metadata kind '{member.MemberKind}'.");
+                    $"Unsupported public instance member metadata kind '{member.MemberKind}'.");
         }
         return builder.Append(", \"location\": ")
             .Append(LocationJson(member.Source, member.DeclarationSpan, sourceIds)).Append('}').ToString();
@@ -877,6 +894,44 @@ public static class SmileLibraryPackage
             .Append(", \"ordinal\": ").Append(field.Ordinal.ToString(CultureInfo.InvariantCulture))
             .Append(", \"offset\": ").Append(field.Offset.ToString(CultureInfo.InvariantCulture))
             .Append(", \"location\": ").Append(LocationJson(field.Source, field.DeclarationSpan, sourceIds))
+            .Append('}').ToString();
+    }
+
+    private static string ClassFieldJson(ClassFieldSymbol field,
+        SmileCompilationDependencyContext dependencyContext, IReadOnlyDictionary<string, string> sourceIds)
+    {
+        if (field.Visibility != ModuleVisibility.Public)
+            throw new InvalidDataException($"Private Class field '{field.Name}' cannot enter public API metadata.");
+        var builder = new StringBuilder("{\"name\": \"").Append(JsonEscape(field.Name))
+            .Append("\", \"visibility\": \"Public\", ")
+            .Append(field.IsArray ? "\"elementType\": " : "\"type\": ")
+            .Append(TypeReferenceJson(field.Type, dependencyContext));
+        if (field.IsArray)
+            builder.Append(", \"rank\": ").Append(field.ArrayRank.ToString(CultureInfo.InvariantCulture))
+                .Append(", \"dimensions\": [")
+                .Append(string.Join(", ", field.Dimensions.Select(dimension =>
+                    dimension.ToString(CultureInfo.InvariantCulture)))).Append(']');
+        return builder.Append(", \"ordinal\": ").Append(field.Ordinal.ToString(CultureInfo.InvariantCulture))
+            .Append(", \"location\": ").Append(LocationJson(field.Source, field.DeclarationSpan, sourceIds))
+            .Append('}').ToString();
+    }
+
+    private static string ConstructorJson(RoutineSymbol constructor,
+        SmileCompilationDependencyContext dependencyContext, IReadOnlyDictionary<string, string> sourceIds)
+    {
+        if (!constructor.IsConstructor || constructor.ContainingType is not ClassTypeSymbol ||
+            constructor.Visibility != ModuleVisibility.Public || string.IsNullOrWhiteSpace(constructor.RuntimeIdentity))
+            throw new InvalidDataException("Public Class constructor metadata is incomplete.");
+        return new StringBuilder("{\"identity\": \"").Append(JsonEscape(constructor.RuntimeIdentity))
+            .Append("\", \"visibility\": \"Public\", \"declared\": ")
+            .Append(constructor.IsDeclared ? "true" : "false")
+            .Append(", \"parameters\": [")
+            .Append(string.Join(", ", constructor.Parameters.Select((parameter, ordinal) =>
+                ParameterJson(parameter, ordinal, dependencyContext, sourceIds))))
+            .Append("], \"requiresGameWindow\": ")
+            .Append(constructor.RequiresGameWindow ? "true" : "false")
+            .Append(", \"location\": ")
+            .Append(LocationJson(constructor.Source, constructor.DeclarationSpan, sourceIds))
             .Append('}').ToString();
     }
 

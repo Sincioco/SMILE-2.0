@@ -11,7 +11,7 @@ internal sealed class Parser
     private int _position;
     private int _declarationContinuationDepth;
     private int _expressionContinuationDepth;
-    private int _typeDeclarationDepth;
+    private int _instanceDeclarationDepth;
 
     public Parser(SourceText source, IReadOnlyList<SyntaxToken> tokens, IReadOnlyList<Diagnostic> lexerDiagnostics)
     {
@@ -66,6 +66,7 @@ internal sealed class Parser
             case SyntaxKind.PrivateKeyword: return ParseVisibilityDeclaration();
             case SyntaxKind.ConstKeyword: return ParseConstStatement();
             case SyntaxKind.TypeKeyword: return ParseTypeDeclaration();
+            case SyntaxKind.ClassKeyword: return ParseClassDeclaration();
             case SyntaxKind.EnumKeyword: return ParseEnumDeclaration();
             case SyntaxKind.DimKeyword: return ParseDimStatement();
             case SyntaxKind.IfKeyword: return ParseIfStatement();
@@ -161,11 +162,11 @@ internal sealed class Parser
     private VisibilityDeclarationSyntax ParseVisibilityDeclaration()
     {
         var visibility = NextToken();
-        if (Current.Kind is not (SyntaxKind.ConstKeyword or SyntaxKind.DimKeyword or SyntaxKind.TypeKeyword or SyntaxKind.EnumKeyword or
+        if (Current.Kind is not (SyntaxKind.ConstKeyword or SyntaxKind.DimKeyword or SyntaxKind.TypeKeyword or SyntaxKind.ClassKeyword or SyntaxKind.EnumKeyword or
             SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword))
         {
             _diagnostics.Report("SML2003", Current.Span,
-                "Public or Private must modify a module Const, Dim, Type, Enum, Sub, or Function declaration.");
+                "Public or Private must modify a module Const, Dim, Type, Class, Enum, Sub, or Function declaration.");
         }
         var declaration = ParseStatement();
         if (declaration == null)
@@ -206,7 +207,7 @@ internal sealed class Parser
         var identifier = MatchIdentifier();
         ConsumeLineEnd();
         var members = new List<TypeMemberDeclarationSyntax>();
-        _typeDeclarationDepth++;
+        _instanceDeclarationDepth++;
         try
         {
             while (Current.Kind != SyntaxKind.EndOfFileToken && !IsEndPair(SyntaxKind.TypeKeyword))
@@ -285,12 +286,108 @@ internal sealed class Parser
         }
         finally
         {
-            _typeDeclarationDepth--;
+            _instanceDeclarationDepth--;
         }
         var end = MatchToken(SyntaxKind.EndKeyword);
         var finalType = MatchToken(SyntaxKind.TypeKeyword);
         ConsumeLineEnd();
         return new TypeDeclarationSyntax(typeKeyword, identifier, members, end, finalType);
+    }
+
+    private ClassDeclarationSyntax ParseClassDeclaration()
+    {
+        var classKeyword = MatchToken(SyntaxKind.ClassKeyword);
+        var identifier = MatchIdentifier();
+        ConsumeLineEnd();
+        var members = new List<TypeMemberDeclarationSyntax>();
+        _instanceDeclarationDepth++;
+        try
+        {
+            while (Current.Kind != SyntaxKind.EndOfFileToken && !IsEndPair(SyntaxKind.ClassKeyword))
+            {
+                if (Current.Kind == SyntaxKind.NewLineToken)
+                {
+                    NextToken();
+                    continue;
+                }
+
+                SyntaxToken? visibility = null;
+                if (Current.Kind is SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword)
+                    visibility = NextToken();
+                if (visibility != null && Current.Kind == SyntaxKind.NewLineToken &&
+                    Peek(1).Kind == SyntaxKind.EndKeyword && Peek(2).Kind == SyntaxKind.ClassKeyword)
+                {
+                    _diagnostics.Report("SML3450", visibility.Span,
+                        "A visibility modifier inside Class must precede a field, method, constructor, or Property.");
+                    NextToken();
+                    continue;
+                }
+                if (IsEndPair(SyntaxKind.ClassKeyword) || Current.Kind == SyntaxKind.EndOfFileToken)
+                {
+                    _diagnostics.Report("SML3450", visibility?.Span ?? Current.Span,
+                        "A visibility modifier inside Class must precede a field, method, constructor, or Property.");
+                    continue;
+                }
+
+                if (Current.Kind is SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword)
+                {
+                    members.Add(new ClassRoutineDeclarationSyntax(visibility,
+                        ParseRoutineDeclaration(allowConstructorName: true)));
+                    continue;
+                }
+                if (Current.Kind == SyntaxKind.PropertyKeyword)
+                {
+                    members.Add(ParsePropertyDeclaration(visibility));
+                    continue;
+                }
+                if (!IsIdentifierLike(Current.Kind))
+                {
+                    _diagnostics.Report("SML3450", Current.Span,
+                        "Class members must be fields, Sub or Function methods, Sub New, or Property declarations.");
+                    SynchronizeLine();
+                    continue;
+                }
+
+                var field = MatchIdentifier();
+                SyntaxToken? openBracket = null;
+                SyntaxToken? closeBracket = null;
+                IReadOnlyList<ExpressionSyntax> sizes = Array.Empty<ExpressionSyntax>();
+                if (Current.Kind == SyntaxKind.OpenBracketToken)
+                {
+                    openBracket = NextToken();
+                    sizes = ParseExpressionList(SyntaxKind.CloseBracketToken);
+                    closeBracket = MatchToken(SyntaxKind.CloseBracketToken);
+                }
+                if (Current.Kind != SyntaxKind.AsKeyword)
+                {
+                    _diagnostics.Report("SML3450", Current.Span,
+                        $"Class field '{field.Text}' requires As and a field type.");
+                    SynchronizeLine();
+                    continue;
+                }
+                var asKeyword = NextToken();
+                var fieldType = MatchTypeToken();
+                members.Add(new ClassFieldDeclarationSyntax(visibility, field, openBracket, sizes, closeBracket,
+                    asKeyword, fieldType));
+                if (!IsLineEnd(Current.Kind))
+                {
+                    _diagnostics.Report("SML3450", Current.Span,
+                        "Class fields cannot have initializers; initialize fields in Sub New.");
+                    SynchronizeLine();
+                    continue;
+                }
+                ConsumeLineEnd();
+            }
+        }
+        finally
+        {
+            _instanceDeclarationDepth--;
+        }
+
+        var end = MatchToken(SyntaxKind.EndKeyword);
+        var finalClass = MatchToken(SyntaxKind.ClassKeyword);
+        ConsumeLineEnd();
+        return new ClassDeclarationSyntax(classKeyword, identifier, members, end, finalClass);
     }
 
     private PropertyDeclarationSyntax ParsePropertyDeclaration(SyntaxToken? visibility)
@@ -304,7 +401,8 @@ internal sealed class Parser
         PropertyAccessorDeclarationSyntax? getter = null;
         PropertyAccessorDeclarationSyntax? setter = null;
         while (Current.Kind != SyntaxKind.EndOfFileToken && !IsEndContextualPair("Property") &&
-               !IsEndPair(SyntaxKind.TypeKeyword) && !IsTypeMemberStart() && !IsTypeFieldStart())
+               !IsEndPair(SyntaxKind.TypeKeyword) && !IsEndPair(SyntaxKind.ClassKeyword) &&
+               !IsInstanceMemberStart() && !IsInstanceFieldStart())
         {
             if (Current.Kind == SyntaxKind.NewLineToken)
             {
@@ -435,13 +533,23 @@ internal sealed class Parser
         }
         SyntaxToken? asKeyword = null;
         SyntaxToken? typeToken = null;
+        NewExpressionSyntax? newInitializer = null;
         if (Current.Kind == SyntaxKind.AsKeyword)
         {
             asKeyword = NextToken();
-            typeToken = MatchTypeToken();
+            if (Current.Kind == SyntaxKind.NewKeyword)
+            {
+                newInitializer = ParseNewExpression();
+                typeToken = newInitializer.TypeToken;
+            }
+            else
+            {
+                typeToken = MatchTypeToken();
+            }
         }
         ConsumeLineEnd();
-        return new DimStatementSyntax(keyword, identifier, open, sizes, close, asKeyword, typeToken);
+        return new DimStatementSyntax(keyword, identifier, open, sizes, close, asKeyword, typeToken,
+            newInitializer);
     }
 
     private AssignmentStatementSyntax ParseAssignmentStatement()
@@ -1035,10 +1143,12 @@ internal sealed class Parser
         return new DoStatementSyntax(keyword, statements, loop, condition);
     }
 
-    private RoutineDeclarationSyntax ParseRoutineDeclaration()
+    private RoutineDeclarationSyntax ParseRoutineDeclaration(bool allowConstructorName = false)
     {
         var keyword = NextToken();
-        var identifier = MatchIdentifier();
+        var identifier = allowConstructorName && Current.Kind == SyntaxKind.NewKeyword
+            ? NextToken()
+            : MatchIdentifier();
         SyntaxToken? openParenthesis = null;
         SyntaxToken? closeParenthesis = null;
         var parameters = new List<ParameterSyntax>();
@@ -1123,7 +1233,7 @@ internal sealed class Parser
         if (!recoveredAtBody)
             ConsumeLineEnd();
         var statements = ParseStatementsUntil(() => IsEndPair(keyword.Kind) ||
-            (_typeDeclarationDepth > 0 && IsTypeRoutineRecoveryBoundary()));
+            (_instanceDeclarationDepth > 0 && IsInstanceRoutineRecoveryBoundary()));
         SyntaxToken end;
         SyntaxToken final;
         if (IsEndPair(keyword.Kind))
@@ -1320,7 +1430,21 @@ internal sealed class Parser
                 break;
             var operatorToken = NextToken();
             SkipExpressionNewLines();
-            left = new BinaryExpressionSyntax(left, operatorToken, ParseExpression(precedence));
+            if (operatorToken.Kind == SyntaxKind.IsKeyword)
+            {
+                SyntaxToken? notKeyword = null;
+                if (Current.Kind == SyntaxKind.NotKeyword)
+                {
+                    notKeyword = NextToken();
+                    SkipExpressionNewLines();
+                }
+                left = new IdentityExpressionSyntax(left, operatorToken, notKeyword,
+                    ParseExpression(precedence));
+            }
+            else
+            {
+                left = new BinaryExpressionSyntax(left, operatorToken, ParseExpression(precedence));
+            }
         }
         return left;
     }
@@ -1362,6 +1486,10 @@ internal sealed class Parser
         }
         if (Current.Kind == SyntaxKind.MeKeyword)
             return ParsePostfixSuffix(new MeExpressionSyntax(NextToken()));
+        if (Current.Kind == SyntaxKind.NothingKeyword)
+            return ParsePostfixSuffix(new NothingExpressionSyntax(NextToken()));
+        if (Current.Kind == SyntaxKind.NewKeyword)
+            return ParsePostfixSuffix(ParseNewExpression());
         if (Current.Kind == SyntaxKind.TrueKeyword || Current.Kind == SyntaxKind.FalseKeyword)
         {
             var token = NextToken();
@@ -1395,13 +1523,6 @@ internal sealed class Parser
                     return ParsePostfixSuffix(new MemberInvocationExpressionSyntax(
                         new NameExpressionSyntax(identifier), dot, member, qualifiedArguments, qualifiedClose));
                 }
-                if (Current.Kind == SyntaxKind.OpenBracketToken)
-                {
-                    NextToken();
-                    var qualifiedIndices = ParseExpressionList(SyntaxKind.CloseBracketToken);
-                    return ParsePostfixSuffix(new QualifiedArrayAccessExpressionSyntax(identifier, dot, member, qualifiedIndices,
-                        MatchToken(SyntaxKind.CloseBracketToken)));
-                }
                 ExpressionSyntax memberAccess = new FieldAccessExpressionSyntax(
                     new NameExpressionSyntax(identifier), dot, member);
                 return ParsePostfixSuffix(memberAccess);
@@ -1423,6 +1544,14 @@ internal sealed class Parser
         }
         var missing = MatchToken(SyntaxKind.NumberToken);
         return new LiteralExpressionSyntax(missing, 0L);
+    }
+
+    private NewExpressionSyntax ParseNewExpression()
+    {
+        var newKeyword = MatchToken(SyntaxKind.NewKeyword);
+        var typeToken = MatchTypeToken();
+        var (arguments, closeParenthesis) = ParseParenthesizedArgumentList();
+        return new NewExpressionSyntax(newKeyword, typeToken, arguments, closeParenthesis);
     }
 
     private void SkipExpressionNewLines()
@@ -1453,8 +1582,16 @@ internal sealed class Parser
 
     private ExpressionSyntax ParsePostfixSuffix(ExpressionSyntax expression)
     {
-        while (Current.Kind == SyntaxKind.DotToken)
+        while (Current.Kind is SyntaxKind.DotToken or SyntaxKind.OpenBracketToken)
         {
+            if (Current.Kind == SyntaxKind.OpenBracketToken)
+            {
+                var openBracket = NextToken();
+                var indices = ParseExpressionList(SyntaxKind.CloseBracketToken);
+                expression = new IndexedExpressionSyntax(expression, openBracket, indices,
+                    MatchToken(SyntaxKind.CloseBracketToken));
+                continue;
+            }
             var dot = NextToken();
             var member = MatchMemberIdentifier();
             if (Current.Kind == SyntaxKind.OpenParenthesisToken)
@@ -1476,7 +1613,7 @@ internal sealed class Parser
     private bool IsEndContextualPair(string text) => Current.Kind == SyntaxKind.EndKeyword &&
         IsContextualText(Peek(1), text);
 
-    private bool IsTypeMemberStart()
+    private bool IsInstanceMemberStart()
     {
         var offset = Current.Kind is SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword ? 1 : 0;
         var kind = Peek(offset).Kind;
@@ -1484,21 +1621,39 @@ internal sealed class Parser
     }
 
     private bool IsPropertyAccessorBoundary() => Current.Kind is SyntaxKind.GetKeyword or SyntaxKind.SetKeyword ||
-        IsEndContextualPair("Property") || IsEndPair(SyntaxKind.TypeKeyword) || IsTypeFieldStart() ||
+        IsEndContextualPair("Property") || IsEndPair(SyntaxKind.TypeKeyword) || IsEndPair(SyntaxKind.ClassKeyword) ||
+        IsInstanceMemberStart() || IsInstanceFieldStart() ||
         (Current.Kind == SyntaxKind.EndKeyword &&
          Peek(1).Kind is SyntaxKind.GetKeyword or SyntaxKind.SetKeyword);
 
-    private bool IsTypeRoutineRecoveryBoundary() => IsTypeMemberStart() || IsTypeFieldStart() ||
-        IsEndPair(SyntaxKind.TypeKeyword) ||
+    private bool IsInstanceRoutineRecoveryBoundary() => IsInstanceMemberStart() || IsInstanceFieldStart() ||
+        IsEndPair(SyntaxKind.TypeKeyword) || IsEndPair(SyntaxKind.ClassKeyword) ||
         IsEndContextualPair("Property") ||
         (Current.Kind == SyntaxKind.EndKeyword &&
          Peek(1).Kind is SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword or SyntaxKind.GetKeyword or
              SyntaxKind.SetKeyword);
 
-    private bool IsTypeFieldStart()
+    private bool IsInstanceFieldStart()
     {
         var offset = Current.Kind is SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword ? 1 : 0;
-        return IsIdentifierLike(Peek(offset).Kind) && Peek(offset + 1).Kind == SyntaxKind.AsKeyword;
+        if (!IsIdentifierLike(Peek(offset).Kind))
+            return false;
+        offset++;
+        if (Peek(offset).Kind == SyntaxKind.AsKeyword)
+            return true;
+        if (Peek(offset).Kind != SyntaxKind.OpenBracketToken)
+            return false;
+
+        var depth = 0;
+        while (Peek(offset).Kind is not (SyntaxKind.NewLineToken or SyntaxKind.EndOfFileToken))
+        {
+            if (Peek(offset).Kind == SyntaxKind.OpenBracketToken)
+                depth++;
+            else if (Peek(offset).Kind == SyntaxKind.CloseBracketToken && --depth == 0)
+                return Peek(offset + 1).Kind == SyntaxKind.AsKeyword;
+            offset++;
+        }
+        return false;
     }
 
     private (SyntaxToken EndKeyword, SyntaxToken FinalKeyword) MatchContextualEndPair(string text)

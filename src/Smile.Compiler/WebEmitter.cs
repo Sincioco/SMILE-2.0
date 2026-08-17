@@ -15,6 +15,8 @@ internal sealed class WebEmitter
     private readonly Dictionary<RoutineSymbol, string> _routineNames = new();
     private readonly Dictionary<RecordTypeSymbol, string> _recordNames = new();
     private readonly Dictionary<RecordFieldSymbol, string> _fieldNames = new();
+    private readonly Dictionary<ClassTypeSymbol, string> _classNames = new();
+    private readonly Dictionary<ClassFieldSymbol, string> _classFieldNames = new();
     private readonly string _appIdentity;
     private readonly IReadOnlyList<string> _assetPaths;
     private readonly Stack<string> _forExitLabels = new();
@@ -44,6 +46,7 @@ internal sealed class WebEmitter
         Line("\"use strict\";");
         Line();
         EmitRecordHelpers();
+        EmitClassHelpers();
         EmitGlobalDeclarations();
 
         foreach (var routine in OrderedRoutines())
@@ -99,6 +102,15 @@ internal sealed class WebEmitter
             foreach (var field in type.Fields.OrderBy(field => field.Ordinal))
                 _fieldNames[field] = $"__smile_r{typeId}_f{field.Ordinal}";
         }
+
+        id = 0;
+        foreach (var type in OrderedClassTypes())
+        {
+            var typeId = id++;
+            _classNames[type] = $"class_{typeId}_{Sanitize(type.RuntimeIdentity)}";
+            foreach (var field in type.Fields.OrderBy(field => field.Ordinal))
+                _classFieldNames[field] = $"__smile_c{typeId}_f{field.Ordinal}";
+        }
     }
 
     private void EmitRecordHelpers()
@@ -122,6 +134,59 @@ internal sealed class WebEmitter
         }
         if (_recordNames.Count != 0)
             Line();
+    }
+
+    private void EmitClassHelpers()
+    {
+        foreach (var type in OrderedClassTypes())
+        {
+            var name = _classNames[type];
+            var defaults = string.Join(", ", type.Fields.Select(field =>
+                $"{Json(FieldKey(field))}: {ClassFieldDefault(field)}"));
+            Line($"function {name}_create() {{ return smile.classCreate({{ {defaults} }}, {name}_finalize); }}");
+            Line($"function {name}_finalize(value) {{");
+            _indent++;
+            foreach (var field in type.Fields.Where(field => !field.IsArray && field.Type == SmileType.Text)
+                         .OrderByDescending(field => field.Ordinal))
+                Line($"value[{Json(FieldKey(field))}] = \"\";");
+            foreach (var field in type.Fields.Where(field => !field.IsArray &&
+                             field.Type is RecordTypeSymbol { RequiresValueCleanup: true })
+                         .OrderByDescending(field => field.Ordinal))
+            {
+                var record = (RecordTypeSymbol)field.Type;
+                Line($"{_recordNames[record]}_clear(value[{Json(FieldKey(field))}]);");
+                Line($"value[{Json(FieldKey(field))}] = {_recordNames[record]}_default();");
+            }
+            foreach (var field in type.Fields.Where(field => field.IsArray && field.Type.RequiresValueCleanup)
+                         .OrderByDescending(field => field.Ordinal))
+            {
+                var array = $"value[{Json(FieldKey(field))}].data";
+                Line($"for (let index = {field.ElementCount - 1}; index >= 0; index -= 1) {{");
+                _indent++;
+                if (field.Type is RecordTypeSymbol record)
+                {
+                    Line($"{_recordNames[record]}_clear({array}[index]);");
+                    Line($"{array}[index] = {_recordNames[record]}_default();");
+                }
+                else
+                    Line($"{array}[index] = \"\";");
+                _indent--;
+                Line("}");
+            }
+            _indent--;
+            Line("}");
+        }
+        if (_classNames.Count != 0)
+            Line();
+    }
+
+    private string ClassFieldDefault(ClassFieldSymbol field)
+    {
+        if (!field.IsArray)
+            return DefaultValue(field.Type);
+        var initial = field.Type is RecordTypeSymbol
+            ? $"() => {DefaultValue(field.Type)}" : DefaultValue(field.Type);
+        return $"smile.array([{string.Join(", ", field.Dimensions)}], {initial})";
     }
 
     private void EmitGlobalDeclarations()
@@ -156,7 +221,7 @@ internal sealed class WebEmitter
         Line("} finally {");
         _indent++;
         foreach (var local in routine.LocalSymbols.Values.Where(local => local.Type.RequiresCleanup &&
-                     local.ParameterMode != ParameterPassingMode.ByRef))
+                     local.ParameterMode != ParameterPassingMode.ByRef && local is not InstanceReceiverSymbol))
             EmitRelease(local);
         _indent--;
         Line("}");
@@ -202,7 +267,21 @@ internal sealed class WebEmitter
     {
         switch (statement)
         {
-            case ConstStatementSyntax or DimStatementSyntax or TypeDeclarationSyntax or EnumDeclarationSyntax:
+            case ConstStatementSyntax or TypeDeclarationSyntax or ClassDeclarationSyntax or EnumDeclarationSyntax:
+                return;
+            case DimStatementSyntax dim:
+                if (dim.NewInitializer != null)
+                {
+                    var initializer = _analysis.SemanticModel.ClassInitializers.SingleOrDefault(binding =>
+                        ReferenceEquals(binding.Declaration, dim));
+                    if (initializer != null)
+                    {
+                        var source = _currentSource;
+                        _currentSource = initializer.Source;
+                        EmitClassInitializer(initializer);
+                        _currentSource = source;
+                    }
+                }
                 return;
             case AssignmentStatementSyntax assignment:
                 EmitAssignment(assignment);
@@ -318,7 +397,7 @@ internal sealed class WebEmitter
         }
         var targetType = TargetType(assignment.Target);
         var value = Temporary("value");
-        if (targetType == SmileType.Image)
+        if (targetType == SmileType.Image || targetType.IsClass)
         {
             Line($"const {value} = {Expression(assignment.Expression)};");
         }
@@ -331,21 +410,55 @@ internal sealed class WebEmitter
             Line($"const {value} = {StoreValue(targetType, Expression(assignment.Expression))};");
         }
 
-        if (targetType == SmileType.Image)
+        if (targetType == SmileType.Image || targetType.IsClass)
         {
             var reference = Temporary("target");
-            Line($"const {reference} = {Reference(assignment.Target.Location)};");
-            Line($"{reference}.set(smile.imageMoveAssign({reference}.get(), {value}));");
+            var transferred = Temporary("transferred");
+            Line($"let {reference};");
+            Line($"let {transferred} = false;");
+            Line("try {");
+            _indent++;
+            Line($"{reference} = {Reference(assignment.Target.Location)};");
+            Line($"{reference}.set({(targetType.IsClass ? "smile.classMoveAssign" : "smile.imageMoveAssign")}({reference}.get(), {value}));");
+            Line($"{transferred} = true;");
+            _indent--;
+            var release = targetType.IsClass ? "smile.classRelease" : "smile.imageRelease";
+            Line($"}} finally {{ if ({reference}) {reference}.release(); if (!{transferred}) {release}({value}); }}");
         }
         else if (targetType is RecordTypeSymbol cleanupRecord && cleanupRecord.RequiresCleanup)
         {
             var reference = Temporary("target");
-            Line($"const {reference} = {Reference(assignment.Target.Location)};");
+            var transferred = Temporary("transferred");
+            Line($"let {reference};");
+            Line($"let {transferred} = false;");
+            Line("try {");
+            _indent++;
+            Line($"{reference} = {Reference(assignment.Target.Location)};");
             Line($"{_recordNames[cleanupRecord]}_clear({reference}.get());");
             Line($"{reference}.set({value});");
+            Line($"{transferred} = true;");
+            _indent--;
+            Line($"}} finally {{ if ({reference}) {reference}.release(); " +
+                 $"if (!{transferred}) {_recordNames[cleanupRecord]}_clear({value}); }}");
+        }
+        else if (_analysis.SemanticModel.TryGetClassLocationOwner(assignment.Target.Location, out _))
+        {
+            var reference = Temporary("target");
+            Line($"const {reference} = {Reference(assignment.Target.Location)};");
+            Line($"try {{ {reference}.set({value}); }} finally {{ {reference}.release(); }}");
         }
         else
             Line(WriteTarget(assignment.Target, value) + ";");
+    }
+
+    private void EmitClassInitializer(ClassInitializerBinding initializer)
+    {
+        var target = _variableNames[initializer.Target];
+        var value = Expression(initializer.Initializer);
+        if (initializer.Target.ParameterMode == ParameterPassingMode.ByRef)
+            Line($"{target}.set(smile.classMoveAssign({target}.get(), {value}));");
+        else
+            Line($"{target} = smile.classMoveAssign({target}, {value});");
     }
 
     private void EmitWith(WithStatementSyntax statement, bool topLevel)
@@ -353,10 +466,32 @@ internal sealed class WebEmitter
         var reference = Temporary("with");
         Line("{");
         _indent++;
+        if (_analysis.SemanticModel.TryGetWithTarget(statement, out var binding) &&
+            binding.TargetType is ClassTypeSymbol)
+        {
+            var value = Temporary("with_value");
+            Line($"const {value} = smile.classRequire({Expression(statement.Target)});");
+            Line($"const {reference} = smile.ref(() => {value}, () => {{ throw new Error(\"With Class roots cannot be rebound.\"); }});");
+            Line("try {");
+            _indent++;
+            _withReferences[statement] = reference;
+            EmitStatements(statement.Statements, topLevel);
+            _withReferences.Remove(statement);
+            _indent--;
+            Line($"}} finally {{ smile.classRelease({value}); }}");
+            _indent--;
+            Line("}");
+            return;
+        }
+
         Line($"const {reference} = {Reference(statement.Target)};");
+        Line("try {");
+        _indent++;
         _withReferences[statement] = reference;
         EmitStatements(statement.Statements, topLevel);
         _withReferences.Remove(statement);
+        _indent--;
+        Line($"}} finally {{ {reference}.release(); }}");
         _indent--;
         Line("}");
     }
@@ -605,34 +740,47 @@ internal sealed class WebEmitter
                 return boolean ? "true" : "false";
             case LiteralExpressionSyntax literal when literal.Value is string text:
                 return Json(text);
+            case NothingExpressionSyntax:
+                return "null";
+            case NewExpressionSyntax creation:
+                return RoutineCall(creation, creation.TypeToken);
             case NameExpressionSyntax name:
                 if (SyntaxFacts.IsBuiltInConstant(name.Identifier.Kind))
                     return SyntaxFacts.GetBuiltInConstantValue(name.Identifier.Kind).ToString(CultureInfo.InvariantCulture);
                 var namedValue = ReadVariable(name.Identifier);
-                return _analysis.SemanticModel.GetType(name) == SmileType.Image
-                    ? $"smile.imageRetain({namedValue})" : namedValue;
+                var namedType = _analysis.SemanticModel.GetType(name);
+                return namedType == SmileType.Image
+                    ? $"smile.imageRetain({namedValue})"
+                    : namedType.IsClass ? $"smile.classRetain({namedValue})" : namedValue;
             case MeExpressionSyntax:
                 if (_currentRoutine?.Receiver == null)
                     throw UnsupportedExpression(expression, "Me outside an instance member");
-                return ReadVariable(_currentRoutine.Receiver);
+                var meValue = ReadVariable(_currentRoutine.Receiver);
+                return _currentRoutine.Receiver.Type.IsClass ? $"smile.classRetain({meValue})" : meValue;
             case ArrayAccessExpressionSyntax array:
                 var arrayValue = $"smile.get({_variableNames[ResolveVariable(array.Identifier)]}, [{Arguments(array.Indices)}])";
                 return _analysis.SemanticModel.GetType(array) == SmileType.Image
                     ? $"smile.imageRetain({arrayValue})" : arrayValue;
+            case IndexedExpressionSyntax indexed:
+                if (!_analysis.SemanticModel.TryGetInstanceField(indexed, out var indexedField))
+                    throw UnsupportedExpression(indexed, "unbound fixed-array field");
+                return InstanceFieldValue(indexed, indexedField);
             case FieldAccessExpressionSyntax field:
                 if (_analysis.SemanticModel.TryGetEnumMember(field, out var enumMember))
                     return EnumValue(enumMember.Value);
                 if (_analysis.SemanticModel.TryGetBoundCall(field, out _))
                     return RoutineCall(field, field.Field);
-                if (!_analysis.SemanticModel.TryGetField(field, out var fieldSymbol))
-                    throw UnsupportedExpression(field, "unbound record field");
-                return FieldValue(field, fieldSymbol);
+                if (!_analysis.SemanticModel.TryGetInstanceField(field, out var fieldSymbol))
+                    throw UnsupportedExpression(field, "unbound instance field");
+                return InstanceFieldValue(field, fieldSymbol);
             case LeadingMemberAccessExpressionSyntax leading:
                 if (_analysis.SemanticModel.TryGetBoundCall(leading, out _))
                     return RoutineCall(leading, leading.Member);
                 var leadingValue = LeadingMemberLocation(leading);
-                return _analysis.SemanticModel.GetType(leading) == SmileType.Image
-                    ? $"smile.imageRetain({leadingValue})" : leadingValue;
+                var leadingType = _analysis.SemanticModel.GetType(leading);
+                return leadingType == SmileType.Image
+                    ? $"smile.imageRetain({leadingValue})"
+                    : leadingType.IsClass ? $"smile.classRetain({leadingValue})" : leadingValue;
             case ParenthesizedExpressionSyntax parenthesized:
                 return $"({Expression(parenthesized.Expression)})";
             case UnaryExpressionSyntax unary:
@@ -644,6 +792,8 @@ internal sealed class WebEmitter
                 };
             case BinaryExpressionSyntax binary:
                 return Binary(binary);
+            case IdentityExpressionSyntax identity:
+                return Identity(identity);
             case CallExpressionSyntax call:
                 return Call(call);
             case MemberInvocationExpressionSyntax call:
@@ -655,15 +805,35 @@ internal sealed class WebEmitter
         }
     }
 
-    private string FieldValue(FieldAccessExpressionSyntax field, RecordFieldSymbol fieldSymbol)
+    private string InstanceFieldValue(ExpressionSyntax expression, IInstanceFieldSymbol fieldSymbol)
     {
+        var fieldType = _analysis.SemanticModel.GetType(expression);
+        if (_analysis.SemanticModel.TryGetClassLocationOwner(expression, out _))
+        {
+            var reference = Temporary("class_field");
+            var value = $"{reference}.get()";
+            var ownedValue = fieldType is RecordTypeSymbol ? CloneValue(fieldType, value)
+                : fieldType == SmileType.Image ? $"smile.imageRetain({value})"
+                : fieldType.IsClass ? $"smile.classRetain({value})" : value;
+            return $"await (async () => {{ const {reference} = {Reference(expression)}; " +
+                   $"try {{ return {ownedValue}; }} finally {{ {reference}.release(); }} }})()";
+        }
+
+        if (expression is IndexedExpressionSyntax)
+        {
+            var indexedValue = Location(expression);
+            return fieldType == SmileType.Image ? $"smile.imageRetain({indexedValue})"
+                : fieldType.IsClass ? $"smile.classRetain({indexedValue})" : indexedValue;
+        }
+
+        var field = (FieldAccessExpressionSyntax)expression;
         var receiverValue = Expression(field.Receiver);
         var key = Json(FieldKey(fieldSymbol));
-        var fieldType = _analysis.SemanticModel.GetType(field);
         if (!IsOwnedRecordExpression(field.Receiver))
         {
             var fieldValue = $"({receiverValue})[{key}]";
-            return fieldType == SmileType.Image ? $"smile.imageRetain({fieldValue})" : fieldValue;
+            return fieldType == SmileType.Image ? $"smile.imageRetain({fieldValue})"
+                : fieldType.IsClass ? $"smile.classRetain({fieldValue})" : fieldValue;
         }
 
         var receiverType = (RecordTypeSymbol)_analysis.SemanticModel.GetType(field.Receiver);
@@ -671,9 +841,23 @@ internal sealed class WebEmitter
         var capturedField = $"{capturedReceiver}[{key}]";
         var result = fieldType is RecordTypeSymbol
             ? CloneValue(fieldType, capturedField)
-            : fieldType == SmileType.Image ? $"smile.imageRetain({capturedField})" : capturedField;
+            : fieldType == SmileType.Image ? $"smile.imageRetain({capturedField})"
+            : fieldType.IsClass ? $"smile.classRetain({capturedField})" : capturedField;
         return $"await (async () => {{ const {capturedReceiver} = {receiverValue}; " +
                $"try {{ return {result}; }} finally {{ {_recordNames[receiverType]}_clear({capturedReceiver}); }} }})()";
+    }
+
+    private string Identity(IdentityExpressionSyntax identity)
+    {
+        var left = Temporary("identity_left");
+        var right = Temporary("identity_right");
+        var leftType = _analysis.SemanticModel.GetType(identity.Left);
+        var rightType = _analysis.SemanticModel.GetType(identity.Right);
+        return $"await (async () => {{ const {left} = {Expression(identity.Left)}; " +
+               $"try {{ const {right} = {Expression(identity.Right)}; try {{ return {left} " +
+               $"{(identity.IsNegated ? "!==" : "===")} {right}; }} finally {{ " +
+               $"{(rightType.IsClass ? $"smile.classRelease({right});" : string.Empty)} }} }} finally {{ " +
+               $"{(leftType.IsClass ? $"smile.classRelease({left});" : string.Empty)} }} }})()";
     }
 
     private string Binary(BinaryExpressionSyntax binary)
@@ -755,24 +939,46 @@ internal sealed class WebEmitter
         var capturedFlags = call.SourceArguments
             .Where(RequiresCapturedCleanup)
             .ToDictionary(argument => argument, _ => Temporary("captured"));
+        var byRefFlags = call.SourceArguments
+            .Where(argument => argument.Parameter.ParameterMode == ParameterPassingMode.ByRef)
+            .ToDictionary(argument => argument, _ => Temporary("reference_captured"));
         var receiver = call.InstanceReceiver == null ? null : Temporary("receiver");
+        var receiverNeedsCleanup = call.InstanceReceiver != null &&
+                                   (call.InstanceReceiver.ContainingType.IsClass ||
+                                    call.InstanceReceiver.Kind == BoundInstanceReceiverKind.Expression);
+        var receiverCaptured = receiverNeedsCleanup ? Temporary("receiver_captured") : null;
         var implicitValue = call.ImplicitValue == null ? null : Temporary("value");
         var implicitType = call.Routine.SetterValue?.Type;
         var implicitCaptured = implicitType != null && RequiresCapturedCleanup(implicitType)
             ? Temporary("captured") : null;
+        var constructorType = call.Routine.IsConstructor
+            ? call.Routine.ContainingType as ClassTypeSymbol ??
+              throw new InvalidOperationException("A constructor must belong to a Class.")
+            : null;
+        var constructorResult = constructorType == null ? null : Temporary("instance");
+        var constructorCaptured = constructorType == null ? null : Temporary("instance_captured");
         var transferred = Temporary("transferred");
-        var cleanup = new List<string>();
+        var cleanupBeforeTransfer = new List<string>();
+        var cleanupAlways = new List<string>();
         var builder = new StringBuilder();
         builder.Append("await (async () => { ");
         if (receiver != null)
             builder.Append("let ").Append(receiver).Append("; ");
+        if (receiverCaptured != null)
+            builder.Append("let ").Append(receiverCaptured).Append(" = false; ");
         if (implicitValue != null)
             builder.Append("let ").Append(implicitValue).Append("; ");
         foreach (var argument in call.SourceArguments)
             builder.Append("let ").Append(captures[argument]).Append("; ");
+        if (constructorResult != null)
+            builder.Append("let ").Append(constructorResult).Append("; ");
+        if (constructorCaptured != null)
+            builder.Append("let ").Append(constructorCaptured).Append(" = false; ");
         if (implicitCaptured != null)
             builder.Append("let ").Append(implicitCaptured).Append(" = false; ");
         foreach (var flag in capturedFlags.Values)
+            builder.Append("let ").Append(flag).Append(" = false; ");
+        foreach (var flag in byRefFlags.Values)
             builder.Append("let ").Append(flag).Append(" = false; ");
         builder.Append("let ").Append(transferred).Append(" = false; try { ");
 
@@ -792,28 +998,71 @@ internal sealed class WebEmitter
             if (capturedFlags.TryGetValue(argument, out var flag))
             {
                 builder.Append(flag).Append(" = true; ");
-                cleanup.Add($"if ({flag}) {{ {CapturedCleanup(argument.Parameter.Type, captures[argument])} }} ");
+                cleanupBeforeTransfer.Add(
+                    $"if ({flag}) {{ {CapturedCleanup(argument.Parameter.Type, captures[argument])} }} ");
+            }
+            if (byRefFlags.TryGetValue(argument, out var referenceFlag))
+            {
+                builder.Append(referenceFlag).Append(" = true; ");
+                cleanupAlways.Add($"if ({referenceFlag}) {{ {captures[argument]}.release(); }} ");
             }
         }
+        if (constructorType != null && constructorResult != null && constructorCaptured != null)
+        {
+            builder.Append(constructorResult).Append(" = ")
+                .Append(_classNames[constructorType]).Append("_create(); ")
+                .Append(constructorCaptured).Append(" = true; ");
+        }
         var abiArguments = new List<string>();
-        if (receiver != null)
+        if (constructorResult != null)
+            abiArguments.Add(constructorResult);
+        else if (receiver != null)
             abiArguments.Add(receiver);
         if (implicitValue != null)
             abiArguments.Add(implicitValue);
         abiArguments.AddRange(call.ParameterArguments.Select(argument =>
             argument.IsDefault ? OptionalDefaultValue(argument.Parameter) : captures[argument]));
-        builder.Append(transferred).Append(" = true; return await ").Append(_routineNames[call.Routine])
-            .Append('(').Append(string.Join(", ", abiArguments)).Append("); } catch (error) { if (!")
-            .Append(transferred).Append(") { ");
-        foreach (var action in cleanup.AsEnumerable().Reverse())
+        builder.Append(transferred).Append(" = true; ");
+        if (constructorResult != null && constructorCaptured != null)
+        {
+            builder.Append("await ").Append(_routineNames[call.Routine])
+                .Append('(').Append(string.Join(", ", abiArguments)).Append("); ")
+                .Append(constructorCaptured).Append(" = false; return ").Append(constructorResult).Append("; ");
+        }
+        else
+        {
+            builder.Append("return await ").Append(_routineNames[call.Routine])
+                .Append('(').Append(string.Join(", ", abiArguments)).Append("); ");
+        }
+        builder.Append("} catch (error) { if (!").Append(transferred).Append(") { ");
+        foreach (var action in cleanupBeforeTransfer.AsEnumerable().Reverse())
             builder.Append(action);
-        builder.Append("} throw error; } })()");
+        builder.Append("} ");
+        if (constructorResult != null && constructorCaptured != null)
+            builder.Append("if (").Append(constructorCaptured).Append(") smile.classRelease(")
+                .Append(constructorResult).Append("); ");
+        builder.Append("throw error; } finally { ");
+        foreach (var action in cleanupAlways.AsEnumerable().Reverse())
+            builder.Append(action);
+        if (receiverCaptured != null && receiver != null)
+        {
+            builder.Append("if (").Append(receiverCaptured).Append(") { ")
+                .Append(call.InstanceReceiver!.ContainingType.IsClass
+                    ? $"smile.classRelease({receiver});"
+                    : $"{receiver}.release();")
+                .Append(" } ");
+        }
+        builder.Append("} })()");
         return builder.ToString();
 
         void CaptureReceiver()
         {
             if (receiver != null)
-                builder.Append(receiver).Append(" = ").Append(ReceiverReference(call)).Append("; ");
+            {
+                builder.Append(receiver).Append(" = ").Append(ReceiverCapture(call)).Append("; ");
+                if (receiverCaptured != null)
+                    builder.Append(receiverCaptured).Append(" = true; ");
+            }
         }
 
         void CaptureImplicitValue()
@@ -825,7 +1074,8 @@ internal sealed class WebEmitter
             if (implicitCaptured != null)
             {
                 builder.Append(implicitCaptured).Append(" = true; ");
-                cleanup.Add($"if ({implicitCaptured}) {{ {CapturedCleanup(implicitType, implicitValue)} }} ");
+                cleanupBeforeTransfer.Add(
+                    $"if ({implicitCaptured}) {{ {CapturedCleanup(implicitType, implicitValue)} }} ");
             }
         }
     }
@@ -849,12 +1099,14 @@ internal sealed class WebEmitter
         RequiresCapturedCleanup(argument.Parameter.Type);
 
     private static bool RequiresCapturedCleanup(SmileType type) =>
-        type == SmileType.Image || type is RecordTypeSymbol { RequiresCleanup: true };
+        type == SmileType.Image || type.IsClass || type is RecordTypeSymbol { RequiresCleanup: true };
 
     private string CapturedCleanup(SmileType type, string value) =>
         type == SmileType.Image
             ? $"smile.imageRelease({value}); {value} = null;"
-            : $"{_recordNames[(RecordTypeSymbol)type]}_clear({value});";
+            : type.IsClass
+                ? $"smile.classRelease({value}); {value} = null;"
+                : $"{_recordNames[(RecordTypeSymbol)type]}_clear({value});";
 
     private string CapturedImplicitValue(ExpressionSyntax expression, SmileType type)
     {
@@ -864,7 +1116,7 @@ internal sealed class WebEmitter
         return type == SmileType.Number ? $"smile.safe({value})" : value;
     }
 
-    private string ReceiverReference(BoundCall call)
+    private string ReceiverCapture(BoundCall call)
     {
         var receiver = call.InstanceReceiver!;
         if (receiver.Kind == BoundInstanceReceiverKind.WithTarget)
@@ -872,9 +1124,15 @@ internal sealed class WebEmitter
             if (receiver.WithTarget == null ||
                 !_withReferences.TryGetValue(receiver.WithTarget, out var withReference))
                 throw new InvalidOperationException("Bound With receiver does not have a captured Web reference.");
-            return withReference;
+            return receiver.ContainingType.IsClass
+                ? $"smile.classRequire(smile.classRetain({withReference}.get()))"
+                : withReference;
         }
-        return receiver.Expression == null ? "smile.invalidRef()" : Reference(receiver.Expression);
+        if (receiver.Expression == null)
+            return "smile.invalidRef()";
+        return receiver.ContainingType.IsClass
+            ? $"smile.classRequire({Expression(receiver.Expression)})"
+            : Reference(receiver.Expression);
     }
 
     private string OptionalDefaultValue(ParameterSymbol parameter)
@@ -891,19 +1149,21 @@ internal sealed class WebEmitter
 
     private string Reference(ExpressionSyntax expression)
     {
+        if (_analysis.SemanticModel.TryGetClassLocationOwner(expression, out var classOwner))
+            return ClassOwnedReference(expression, classOwner);
         if (expression is ParenthesizedExpressionSyntax parenthesized)
             return Reference(parenthesized.Expression);
         if (expression is MeExpressionSyntax)
         {
             if (_currentRoutine?.Receiver == null)
                 return "smile.invalidRef()";
-            return _variableNames[_currentRoutine.Receiver];
+            return BorrowedReference(_variableNames[_currentRoutine.Receiver]);
         }
         if (expression is NameExpressionSyntax name)
         {
             var symbol = ResolveVariable(name.Identifier);
             if (symbol.ParameterMode == ParameterPassingMode.ByRef)
-                return _variableNames[symbol];
+                return BorrowedReference(_variableNames[symbol]);
             return $"smile.ref(() => {_variableNames[symbol]}, value => {{ {_variableNames[symbol]} = value; }})";
         }
         if (expression is ArrayAccessExpressionSyntax array)
@@ -913,30 +1173,134 @@ internal sealed class WebEmitter
         }
         if (expression is FieldAccessExpressionSyntax field)
         {
-            if (!_analysis.SemanticModel.TryGetField(field, out var fieldSymbol))
+            if (!_analysis.SemanticModel.TryGetInstanceField(field, out var fieldSymbol))
                 return "smile.invalidRef()";
             var key = Json(FieldKey(fieldSymbol));
             return MemberReference(Reference(field.Receiver), key);
         }
+        if (expression is IndexedExpressionSyntax indexed)
+            return IndexedReference(Reference(indexed.Receiver), indexed.Indices);
         if (expression is LeadingMemberAccessExpressionSyntax leading)
         {
             if (!_analysis.SemanticModel.TryGetWithMember(leading, out var binding) ||
-                binding.Field == null ||
+                binding.InstanceField == null ||
                 !_withReferences.TryGetValue(binding.ReceiverStatement, out var receiver))
                 return "smile.invalidRef()";
-            return MemberReference(receiver, Json(FieldKey(binding.Field)));
+            return MemberReference(BorrowedReference(receiver), Json(FieldKey(binding.InstanceField)));
         }
         return "smile.invalidRef()";
     }
 
+    private string ClassOwnedReference(ExpressionSyntax expression, BoundClassLocationOwner owner)
+    {
+        var root = Temporary("class_owner");
+        var indexExpressions = new List<ExpressionSyntax>();
+        CollectIndices(expression, owner.RootExpression, indexExpressions);
+        var indexNames = indexExpressions.ToDictionary(index => index, _ => Temporary("index"));
+        var builder = new StringBuilder();
+        builder.Append("await (async () => { const ").Append(root).Append(" = smile.classRequire(")
+            .Append(Expression(owner.RootExpression)).Append("); try { ");
+        foreach (var index in indexExpressions)
+            builder.Append("const ").Append(indexNames[index]).Append(" = smile.safe(")
+                .Append(Expression(index)).Append("); ");
+        var access = ClassLocationAccess(expression, owner.RootExpression, root, indexNames);
+        var setter = ClassLocationSetter(expression, owner.RootExpression, root, indexNames);
+        builder.Append("return smile.classOwnedRef(").Append(root).Append(", root => ")
+            .Append(access).Append(", (root, value) => { ").Append(setter).Append(" }); ")
+            .Append("} catch (error) { smile.classRelease(").Append(root).Append("); throw error; } })()");
+        return builder.ToString();
+
+        void CollectIndices(ExpressionSyntax current, ExpressionSyntax rootExpression,
+            ICollection<ExpressionSyntax> indices)
+        {
+            if (ReferenceEquals(current, rootExpression))
+                return;
+            switch (current)
+            {
+                case ParenthesizedExpressionSyntax parenthesized:
+                    CollectIndices(parenthesized.Expression, rootExpression, indices);
+                    break;
+                case FieldAccessExpressionSyntax field:
+                    CollectIndices(field.Receiver, rootExpression, indices);
+                    break;
+                case IndexedExpressionSyntax indexed:
+                    CollectIndices(indexed.Receiver, rootExpression, indices);
+                    foreach (var index in indexed.Indices)
+                        indices.Add(index);
+                    break;
+            }
+        }
+    }
+
+    private string ClassLocationAccess(ExpressionSyntax expression, ExpressionSyntax rootExpression,
+        string rootName, IReadOnlyDictionary<ExpressionSyntax, string> indexNames)
+    {
+        if (ReferenceEquals(expression, rootExpression))
+            return rootName;
+        return expression switch
+        {
+            ParenthesizedExpressionSyntax parenthesized =>
+                ClassLocationAccess(parenthesized.Expression, rootExpression, rootName, indexNames),
+            FieldAccessExpressionSyntax field =>
+                $"({ClassLocationAccess(field.Receiver, rootExpression, rootName, indexNames)})" +
+                $"[{Json(FieldKey(RequireInstanceField(field)))}]",
+            IndexedExpressionSyntax indexed =>
+                $"smile.get({ClassLocationAccess(indexed.Receiver, rootExpression, rootName, indexNames)}, " +
+                $"[{string.Join(", ", indexed.Indices.Select(index => indexNames[index]))}])",
+            _ => throw new InvalidOperationException("Unsupported Class-rooted Web location.")
+        };
+    }
+
+    private string ClassLocationSetter(ExpressionSyntax expression, ExpressionSyntax rootExpression,
+        string rootName, IReadOnlyDictionary<ExpressionSyntax, string> indexNames)
+    {
+        while (expression is ParenthesizedExpressionSyntax parenthesized)
+            expression = parenthesized.Expression;
+        if (expression is IndexedExpressionSyntax indexed)
+        {
+            var receiver = ClassLocationAccess(indexed.Receiver, rootExpression, rootName, indexNames);
+            var indices = string.Join(", ", indexed.Indices.Select(index => indexNames[index]));
+            return $"smile.set({receiver}, [{indices}], value);";
+        }
+        return ClassLocationAccess(expression, rootExpression, rootName, indexNames) + " = value;";
+    }
+
+    private IInstanceFieldSymbol RequireInstanceField(ExpressionSyntax expression) =>
+        _analysis.SemanticModel.TryGetInstanceField(expression, out var field)
+            ? field
+            : throw new InvalidOperationException("Web location does not have a bound instance field.");
+
+    private string IndexedReference(string receiverReference, IReadOnlyList<ExpressionSyntax> indices)
+    {
+        var target = Temporary("indexed_target");
+        var indexNames = indices.Select(_ => Temporary("index")).ToArray();
+        var builder = new StringBuilder();
+        builder.Append("await (async () => { const ").Append(target).Append(" = ")
+            .Append(receiverReference).Append("; try { ");
+        for (var index = 0; index < indices.Count; index++)
+            builder.Append("const ").Append(indexNames[index]).Append(" = smile.safe(")
+                .Append(Expression(indices[index])).Append("); ");
+        var values = string.Join(", ", indexNames);
+        builder.Append("return { get: () => smile.get(").Append(target).Append(".get(), [")
+            .Append(values).Append("]), set: value => smile.set(").Append(target)
+            .Append(".get(), [").Append(values).Append("], value), release: () => ")
+            .Append(target).Append(".release() }; } catch (error) { ").Append(target)
+            .Append(".release(); throw error; } })()");
+        return builder.ToString();
+    }
+
+    private static string BorrowedReference(string reference) =>
+        $"smile.ref(() => {reference}.get(), value => {reference}.set(value))";
+
     private static string MemberReference(string receiverReference, string key) =>
-        $"(() => {{ const target = {receiverReference}; return smile.ref(() => target.get()[{key}], value => {{ target.get()[{key}] = value; }}); }})()";
+        $"(() => {{ const target = {receiverReference}; return {{ get: () => target.get()[{key}], " +
+        $"set: value => {{ target.get()[{key}] = value; }}, release: () => target.release() }}; }})()";
 
     private string DefaultValue(SmileType type) => type is RecordTypeSymbol record
         ? $"{_recordNames[record]}_default()"
         : type.IsEnum
         ? "0n"
-        : type == SmileType.Image
+        : type == SmileType.Image || type.IsClass
         ? "null"
         : type == SmileType.Text
         ? "\"\""
@@ -946,6 +1310,8 @@ internal sealed class WebEmitter
         ? $"{_recordNames[record]}_clone({value})"
         : type == SmileType.Image
         ? $"smile.imageRetain({value})"
+        : type.IsClass
+        ? $"smile.classRetain({value})"
         : value;
 
     private string ReturnValue(SmileType type, ExpressionSyntax expression)
@@ -962,6 +1328,8 @@ internal sealed class WebEmitter
     private bool IsOwnedRecordExpression(ExpressionSyntax expression) => expression switch
     {
         ParenthesizedExpressionSyntax parenthesized => IsOwnedRecordExpression(parenthesized.Expression),
+        _ when _analysis.SemanticModel.GetType(expression) is RecordTypeSymbol &&
+               _analysis.SemanticModel.TryGetClassLocationOwner(expression, out _) => true,
         _ when _analysis.SemanticModel.TryGetBoundCall(expression, out var call) &&
                call.Routine.ReturnType is RecordTypeSymbol => true,
         FieldAccessExpressionSyntax field when _analysis.SemanticModel.GetType(field) is RecordTypeSymbol =>
@@ -1007,6 +1375,12 @@ internal sealed class WebEmitter
             if (symbol.ParameterMode != ParameterPassingMode.ByRef)
                 Line($"{name} = null;");
         }
+        else if (symbol.Type.IsClass)
+        {
+            Line($"smile.classRelease({value});");
+            if (symbol.ParameterMode != ParameterPassingMode.ByRef)
+                Line($"{name} = null;");
+        }
         else if (symbol.Type is RecordTypeSymbol record)
             Line($"{_recordNames[record]}_clear({value});");
     }
@@ -1025,8 +1399,12 @@ internal sealed class WebEmitter
         if (expression is ArrayAccessExpressionSyntax array)
             return $"smile.get({_variableNames[ResolveVariable(array.Identifier)]}, [{Arguments(array.Indices)}])";
         if (expression is FieldAccessExpressionSyntax field &&
-            _analysis.SemanticModel.TryGetField(field, out var fieldSymbol))
+            _analysis.SemanticModel.TryGetInstanceField(field, out var fieldSymbol))
             return $"({Expression(field.Receiver)})[{Json(FieldKey(fieldSymbol))}]";
+        if (expression is IndexedExpressionSyntax indexed)
+            return $"smile.get({Location(indexed.Receiver)}, [{Arguments(indexed.Indices)}])";
+        if (expression is ParenthesizedExpressionSyntax parenthesized)
+            return Location(parenthesized.Expression);
         if (expression is LeadingMemberAccessExpressionSyntax leading)
             return LeadingMemberLocation(leading);
         throw UnsupportedExpression(expression, "non-location assignment target");
@@ -1035,10 +1413,10 @@ internal sealed class WebEmitter
     private string LeadingMemberLocation(LeadingMemberAccessExpressionSyntax expression)
     {
         if (!_analysis.SemanticModel.TryGetWithMember(expression, out var binding) ||
-            binding.Field == null ||
+            binding.InstanceField == null ||
             !_withReferences.TryGetValue(binding.ReceiverStatement, out var receiver))
             throw UnsupportedExpression(expression, "unbound With member");
-        return $"{receiver}.get()[{Json(FieldKey(binding.Field))}]";
+        return $"{receiver}.get()[{Json(FieldKey(binding.InstanceField))}]";
     }
 
     private static string ConstantValue(object value, SmileType type) => value switch
@@ -1082,9 +1460,17 @@ internal sealed class WebEmitter
     private IOrderedEnumerable<RecordTypeSymbol> OrderedRecordTypes() =>
         _analysis.SemanticModel.Types.Values.OrderBy(item => item.SourceOrdinal).ThenBy(item => item.DeclarationSpan.Start);
 
-    private string FieldKey(RecordFieldSymbol field) => _fieldNames.TryGetValue(field, out var key)
-        ? key
-        : throw new InvalidOperationException($"Web record field '{field.Name}' does not have a bound runtime key.");
+    private IOrderedEnumerable<ClassTypeSymbol> OrderedClassTypes() =>
+        _analysis.SemanticModel.Classes.Values.OrderBy(item => item.SourceOrdinal)
+            .ThenBy(item => item.DeclarationSpan.Start);
+
+    private string FieldKey(IInstanceFieldSymbol field) => field switch
+    {
+        RecordFieldSymbol record when _fieldNames.TryGetValue(record, out var key) => key,
+        ClassFieldSymbol classField when _classFieldNames.TryGetValue(classField, out var key) => key,
+        _ => throw new InvalidOperationException(
+            $"Web instance field '{field.Name}' does not have a bound runtime key.")
+    };
 
     private string Temporary(string purpose) => $"t_{_temporaryId++}_{purpose}";
 

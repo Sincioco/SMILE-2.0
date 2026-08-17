@@ -1,0 +1,15 @@
+Option Explicit
+
+Class Box
+
+    Public Sub Ping()
+
+        Print "unreachable"
+
+    End Sub
+
+End Class
+
+Dim Value As Box
+
+Call Value.Ping()
