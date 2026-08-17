@@ -15,7 +15,7 @@ Library compilation requires every source to declare a module. Application proje
 
 SMILE evolves only when current syntax cannot express a requirement clearly. New general-purpose features prefer readable, established BASIC wording; the smallest beginner-friendly C#-inspired concept is used only when BASIC has no suitable precedent. The language avoids aliases, multiple spellings, clever punctuation, and game-specific statements. Syntax, diagnostics, examples, and documentation change proportionally through the shared authority.
 
-SMILE is case-insensitive and line-oriented. An apostrophe starts a comment. Values include signed 64-bit `Number`, `Boolean`, mutable UTF-8 `Text`, and user-defined record types.
+SMILE is case-insensitive and normally line-oriented. Balanced expression parentheses and balanced routine-declaration parameter parentheses provide the documented continuation contexts; newlines remain significant everywhere else. An apostrophe starts a comment. Values include signed 64-bit `Number`, `Boolean`, mutable UTF-8 `Text`, and user-defined record types.
 
 ## Explicit declarations and built-in types
 
@@ -54,6 +54,30 @@ End Function
 ```
 
 Native and Web calls have no four-parameter language restriction; the regression matrix covers 0, 1, 4, 5, 8, and 16 parameters.
+
+## Multiline routine declarations
+
+A `Sub` or `Function` parameter list may span physical lines when its opening `(` remains on the declaration line and a matching `)` closes the list. Between those balanced declaration parentheses, newlines act as whitespace: they may appear after `(`, between complete parameter declarations, around commas, and between a parameter's mode, name, `As`, and type. The continuation context ends at `)`. For a typed `Function`, the return `As Type` remains on the same physical line as the closing `)`.
+
+Canonical repository formatting puts one parameter on each line, indents parameters by four spaces, uses a trailing comma on every parameter except the last, aligns `)` with the declaration, and leaves one blank line after the complete header:
+
+```smile
+Function Add(
+    LeftValue As Number,
+    RightValue As Number
+) As Number
+
+    Dim Result As Number
+
+    Result = LeftValue + RightValue
+    Return Result
+
+End Function
+```
+
+The parser and semantic model retain each token's original physical source position. Diagnostics therefore point to the actual parameter line: for example, a missing comma is reported at the following parameter, while a missing `)` is reported at the first token that cannot belong to the declaration. CRLF and LF sources preserve the same physical line and column meanings.
+
+Declaration parentheses do not make the rest of SMILE free-form. Placing `(` on the next line, placing a Function's return `As Type` below `)`, or continuing an unparenthesized declaration remains invalid. Square brackets also retain their existing behavior: `[` alone never opens a continuation context, so array dimensions and indices do not become multiline merely because they are bracketed.
 
 ## Record types
 
@@ -195,7 +219,7 @@ Call Menu.UpdateItem(
 )
 ```
 
-Newlines may appear after `(`, around arguments and commas, and before `)`. Routine declaration parameters and square-bracket array expressions remain line-oriented. These forms remain invalid because no opening expression parenthesis authorizes continuation:
+Newlines may appear after `(`, around arguments and commas, and before `)` in an expression continuation. Routine declaration parameters use the separate balanced declaration-parenthesis rule above. Square brackets alone remain line-oriented and do not authorize continuation. These forms remain invalid because no applicable opening parenthesis authorizes continuation:
 
 ```smile
 If IsVisible Or
@@ -205,6 +229,10 @@ End If
 
 Result = FirstValue +
     SecondValue
+
+Dim Values[
+    2
+]
 ```
 
 Functions may directly return a variable, constant, or literal value such as `True`, `False`, a number, or a string. A computed or evaluated expression must not be returned directly. Assign it to a correctly typed variable first, then return that variable. This keeps the evaluated value visible to Print, hover, and Watch while debugging.
