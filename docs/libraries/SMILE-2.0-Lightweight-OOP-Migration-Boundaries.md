@@ -10,9 +10,9 @@ OOP is applied where it improves real call sites, not uniformly.
 
 # Smile.UI
 
-## Current Baseline
+## Completed Migration
 
-Current reviewed version:
+Current version:
 
 ```text
 Smile.UI 1.1.3
@@ -69,7 +69,7 @@ Remove/privatize old procedural public APIs after all repository consumers migra
 Current reviewed version:
 
 ```text
-Smile.Game 1.0.0
+Smile.Game 2.0.0
 ```
 
 Modules:
@@ -82,7 +82,7 @@ Camera2D
 Collision2D
 ```
 
-## Approved Migration
+## Applied Migration
 
 ### Convert
 
@@ -100,7 +100,7 @@ Collision2D
 
 ## Version
 
-Recommended:
+Shipped:
 
 ```text
 Smile.Game 2.0.0
@@ -213,4 +213,3 @@ Use a Class when:
 - package dependency restructuring.
 
 These require separate evidence-based design reviews.
-

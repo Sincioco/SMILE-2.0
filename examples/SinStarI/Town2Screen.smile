@@ -111,7 +111,7 @@ End Sub
 ''' Advances movement, switches characters with 1/2, and runs while Space is held.
 Public Sub Update(PressedKey As Number)
 
-    Dim MoveDirection As Number
+    Dim MoveDirection As GameCore.CardinalDirection
     Dim MoveStarted As Boolean
 
     If Not TownReady Then
@@ -126,7 +126,7 @@ Public Sub Update(PressedKey As Number)
 
     MoveDirection = MovementDirection(PressedKey)
 
-    If MoveDirection <> 0 Then
+    If MoveDirection <> GameCore.CardinalDirection.None Then
 
         TourBlocked = False
 
@@ -135,7 +135,7 @@ Public Sub Update(PressedKey As Number)
             TourEnabled = False
 
             If PlayerMover.Moving Then
-                Call GameCore.CancelMove(PlayerMover)
+                Call PlayerMover.CancelMove()
             End If
 
         End If
@@ -148,12 +148,12 @@ Public Sub Update(PressedKey As Number)
 
     If PlayerMover.Moving Then
         AnimationClock = AnimationClock + 1
-        MoveStarted = GameCore.UpdateMove(PlayerMover, 1)
+        MoveStarted = PlayerMover.UpdateMove(1)
     End If
 
     If Not PlayerMover.Moving Then
 
-        If MoveDirection <> 0 Then
+        If MoveDirection <> GameCore.CardinalDirection.None Then
             MoveStarted = TryBeginPlayerMove(MoveDirection)
         Else If TourEnabled Then
             Call AdvanceTour()
@@ -165,7 +165,7 @@ Public Sub Update(PressedKey As Number)
 
         AnimationClock = 0
 
-        If MoveDirection = 0 And Not TourEnabled Then
+        If MoveDirection = GameCore.CardinalDirection.None And Not TourEnabled Then
             PlayerIsRunning = False
         End If
 
@@ -345,7 +345,7 @@ Private Sub LoadTown()
     End If
 
     If TownReady Then
-        TownReady = Camera2D.Configure(Camera, VIEW_WIDTH, VIEW_HEIGHT,
+        TownReady = Camera.Configure(VIEW_WIDTH, VIEW_HEIGHT,
             TOWN_PIXEL_WIDTH, TOWN_PIXEL_HEIGHT)
     End If
 
@@ -461,7 +461,7 @@ Private Function PlacePlayerAtSpawn() As Boolean
     PreferredY = Town2Tileset.SPAWN_CELL_Y
 
     If Not IsTownCellSolid(PreferredX, PreferredY) Then
-        Call GameCore.Place(PlayerMover, PreferredX, PreferredY, GameCore.GAME_DIRECTION_DOWN)
+        Call PlayerMover.Place(PreferredX, PreferredY, GameCore.CardinalDirection.Down)
 
         Return True
     End If
@@ -495,7 +495,7 @@ Private Function PlacePlayerAtSpawn() As Boolean
         Return False
     End If
 
-    Call GameCore.Place(PlayerMover, SpawnX, SpawnY, GameCore.GAME_DIRECTION_DOWN)
+    Call PlayerMover.Place(SpawnX, SpawnY, GameCore.CardinalDirection.Down)
 
     Return True
 
@@ -533,7 +533,7 @@ Private Sub ToggleTour()
     Dim Restarted As Boolean
 
     If PlayerMover.Moving Then
-        Call GameCore.CancelMove(PlayerMover)
+        Call PlayerMover.CancelMove()
 
         AnimationClock = 0
     End If
@@ -560,7 +560,7 @@ Private Sub AdvanceTour()
 
     Dim TargetX As Number
     Dim TargetY As Number
-    Dim MoveDirection As Number
+    Dim MoveDirection As GameCore.CardinalDirection
     Dim MoveStarted As Boolean
 
     TargetX = TourXs[TourWaypoint]
@@ -580,16 +580,16 @@ Private Sub AdvanceTour()
     End If
 
     If PlayerMover.CellX < TargetX Then
-        MoveDirection = GameCore.GAME_DIRECTION_RIGHT
+        MoveDirection = GameCore.CardinalDirection.Right
     Else If PlayerMover.CellX > TargetX Then
-        MoveDirection = GameCore.GAME_DIRECTION_LEFT
+        MoveDirection = GameCore.CardinalDirection.Left
     Else If PlayerMover.CellY < TargetY Then
-        MoveDirection = GameCore.GAME_DIRECTION_DOWN
+        MoveDirection = GameCore.CardinalDirection.Down
     Else If PlayerMover.CellY > TargetY Then
-        MoveDirection = GameCore.GAME_DIRECTION_UP
+        MoveDirection = GameCore.CardinalDirection.Up
     End If
 
-    If MoveDirection = 0 Then
+    If MoveDirection = GameCore.CardinalDirection.None Then
         Return
     End If
 
@@ -602,41 +602,41 @@ Private Sub AdvanceTour()
 
 End Sub
 
-Private Function MovementDirection(PressedKey As Number) As Number
+Private Function MovementDirection(PressedKey As Number) As GameCore.CardinalDirection
 
     If (PressedKey = KEY_UP Or
         PressedKey = KEY_W Or
         Key_Held(KEY_UP) Or
         Key_Held(KEY_W)) Then
-        Return GameCore.GAME_DIRECTION_UP
+        Return GameCore.CardinalDirection.Up
     End If
 
     If (PressedKey = KEY_RIGHT Or
         PressedKey = KEY_D Or
         Key_Held(KEY_RIGHT) Or
         Key_Held(KEY_D)) Then
-        Return GameCore.GAME_DIRECTION_RIGHT
+        Return GameCore.CardinalDirection.Right
     End If
 
     If (PressedKey = KEY_DOWN Or
         PressedKey = KEY_S Or
         Key_Held(KEY_DOWN) Or
         Key_Held(KEY_S)) Then
-        Return GameCore.GAME_DIRECTION_DOWN
+        Return GameCore.CardinalDirection.Down
     End If
 
     If (PressedKey = KEY_LEFT Or
         PressedKey = KEY_A Or
         Key_Held(KEY_LEFT) Or
         Key_Held(KEY_A)) Then
-        Return GameCore.GAME_DIRECTION_LEFT
+        Return GameCore.CardinalDirection.Left
     End If
 
-    Return 0
+    Return GameCore.CardinalDirection.None
 
 End Function
 
-Private Function TryBeginPlayerMove(MoveDirection As Number) As Boolean
+Private Function TryBeginPlayerMove(MoveDirection As GameCore.CardinalDirection) As Boolean
 
     Dim DestinationX As Number
     Dim DestinationY As Number
@@ -674,7 +674,7 @@ Private Function TryBeginPlayerMove(MoveDirection As Number) As Boolean
         MoveDuration = WALK_MOVE_DURATION
     End If
 
-    MoveStarted = GameCore.BeginMove(PlayerMover, MoveDirection, MoveDuration)
+    MoveStarted = PlayerMover.BeginMove(MoveDirection, MoveDuration)
 
     Return MoveStarted
 
@@ -685,12 +685,29 @@ Private Sub FollowPlayer()
     Dim TargetX As Number
     Dim TargetY As Number
 
-    TargetX = GameCore.VisualX(PlayerMover, CELL_WIDTH) + CELL_WIDTH / 2
-    TargetY = GameCore.VisualY(PlayerMover, CELL_HEIGHT) + CELL_HEIGHT / 2
+    TargetX = PlayerMover.VisualX(CELL_WIDTH) + CELL_WIDTH / 2
+    TargetY = PlayerMover.VisualY(CELL_HEIGHT) + CELL_HEIGHT / 2
 
-    Call Camera2D.Follow(Camera, TargetX, TargetY)
+    Call Camera.Follow(TargetX, TargetY)
 
 End Sub
+
+Private Function DirectionIndex(Direction As GameCore.CardinalDirection) As Number
+
+    Select Case Direction
+        Case GameCore.CardinalDirection.Up
+            Return 0
+        Case GameCore.CardinalDirection.Right
+            Return 1
+        Case GameCore.CardinalDirection.Down
+            Return 2
+        Case GameCore.CardinalDirection.Left
+            Return 3
+    End Select
+
+    Return 0
+
+End Function
 
 Private Sub ToggleDemoTile()
 
@@ -753,11 +770,11 @@ Private Sub DrawPlayer()
     Dim ScreenY As Number
 
     If ActiveCharacter = CHARACTER_ARMORED Then
-        WalkAnimation = Character2WalkAnimations[PlayerMover.Facing - 1]
+        WalkAnimation = Character2WalkAnimations[DirectionIndex(PlayerMover.Facing)]
     Else If PlayerIsRunning Then
-        WalkAnimation = Character1RunAnimations[PlayerMover.Facing - 1]
+        WalkAnimation = Character1RunAnimations[DirectionIndex(PlayerMover.Facing)]
     Else
-        WalkAnimation = Character1WalkAnimations[PlayerMover.Facing - 1]
+        WalkAnimation = Character1WalkAnimations[DirectionIndex(PlayerMover.Facing)]
     End If
 
     WalkFrame = 0
@@ -781,8 +798,8 @@ Private Sub DrawPlayer()
     SourceY = Animation.SourceY(WalkAnimation, WalkFrame)
     SourceWidth = Animation.SourceWidth(WalkAnimation, WalkFrame)
     SourceHeight = Animation.SourceHeight(WalkAnimation, WalkFrame)
-    ScreenX = GameCore.VisualX(PlayerMover, CELL_WIDTH) + CELL_WIDTH / 2 - Camera.X
-    ScreenY = GameCore.VisualY(PlayerMover, CELL_HEIGHT) + CELL_HEIGHT - Camera.Y
+    ScreenX = PlayerMover.VisualX(CELL_WIDTH) + CELL_WIDTH / 2 - Camera.X
+    ScreenY = PlayerMover.VisualY(CELL_HEIGHT) + CELL_HEIGHT - Camera.Y
 
     If ActiveCharacter = CHARACTER_ARMORED Then
         Draw Image ArmoredImage From SourceX, SourceY Size SourceWidth By SourceHeight At ScreenX, ScreenY Size ARMORED_DRAW_WIDTH By ARMORED_DRAW_HEIGHT Anchor ARMORED_ANCHOR_X, ARMORED_ANCHOR_Y Filter Smooth
@@ -847,8 +864,8 @@ Private Sub DrawMiniMap()
         Draw Text Town2Tileset.LandmarkLabel(Index) At LandmarkX + 12, LandmarkY - 5 Size 10 Color WHITE
     End For
 
-    PlayerX = MINIMAP_X + (GameCore.VisualX(PlayerMover, CELL_WIDTH) + CELL_WIDTH / 2) * MINIMAP_CELL_PIXELS / CELL_WIDTH
-    PlayerY = MINIMAP_Y + (GameCore.VisualY(PlayerMover, CELL_HEIGHT) + CELL_HEIGHT / 2) * MINIMAP_CELL_PIXELS / CELL_HEIGHT
+    PlayerX = MINIMAP_X + (PlayerMover.VisualX(CELL_WIDTH) + CELL_WIDTH / 2) * MINIMAP_CELL_PIXELS / CELL_WIDTH
+    PlayerY = MINIMAP_Y + (PlayerMover.VisualY(CELL_HEIGHT) + CELL_HEIGHT / 2) * MINIMAP_CELL_PIXELS / CELL_HEIGHT
 
     Fill Rectangle PlayerX - 5, PlayerY - 5, 10, 10, Rgb(255, 196, 28)
     Fill Rectangle PlayerX - 2, PlayerY - 2, 4, 4, Rgb(39, 207, 221)

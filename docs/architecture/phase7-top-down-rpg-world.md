@@ -5,7 +5,7 @@ Phase 7 keeps presentation, reusable movement mechanics, and RPG state separate:
 ```text
 RpgWorldGallery
   -> Smile.UI 2.0.0       Menu/MenuNavigator/Dialogue Class presentation
-  -> Smile.Game 1.0.0     movement, animation, maps, camera, collision
+  -> Smile.Game 2.0.0     typed value movement/camera, animation, maps, collision
   -> Smile.RPG 1.1.1      characters, party, shops, world/story/encounters/save
 ```
 
@@ -13,9 +13,9 @@ Neither source package opens a window, owns assets, or depends on `Smile.UI`. Ap
 
 ## Movement and camera
 
-`Smile.Game.Core.CardinalMover` keeps a cell-authoritative source and destination. A caller preflights map and actor collision, reserves the destination in `Smile.RPG.World`, then starts fixed-step integer interpolation. The authoritative cell changes only when interpolation completes. Cancelling preserves the source cell.
+`Smile.Game.Core.CardinalMover` keeps a cell-authoritative source and destination. A caller preflights map and actor collision, reserves the destination in `Smile.RPG.World`, then starts fixed-step integer interpolation with `Mover.BeginMove(...)`. The authoritative cell changes only when `Mover.UpdateMove(...)` completes. Cancelling with `Mover.CancelMove()` preserves the source cell. `CardinalDirection` provides exact nominal direction values; application adapters preserve Smile.RPG's independent Number-based facing boundary.
 
-`Camera2D` operates in caller-selected integer world units. Exact follow centers and clamps in one operation; smooth follow moves by a bounded step. A map smaller than its viewport produces offset zero. Visible-cell helpers clamp at map edges and accept explicit overscan.
+`CameraState` operates in caller-selected integer world units through `Camera.Configure(...)`, `Camera.Follow(...)`, and the visible-cell instance functions. Exact follow centers and clamps in one operation; smooth follow moves by a bounded step. A map smaller than its viewport produces offset zero. Visible-cell helpers clamp at map edges and accept explicit overscan.
 
 ## Maps and collision
 

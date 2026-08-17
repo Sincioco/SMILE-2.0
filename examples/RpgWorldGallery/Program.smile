@@ -500,12 +500,14 @@ End Sub
 
 Sub SyncFieldState()
 
-    Call GameCore.Place(PlayerMover, World.ActorX(State, ACTOR_HERO), World.ActorY(State, ACTOR_HERO), World.ActorFacingDirection(State, ACTOR_HERO))
+    Call PlayerMover.Place(World.ActorX(State, ACTOR_HERO), World.ActorY(State, ACTOR_HERO),
+        GameDirection(World.ActorFacingDirection(State, ACTOR_HERO)))
 
     CurrentMap = MapForScene(World.CurrentScene(State))
-    OperationSucceeded = Camera2D.Configure(Camera, 960, 540, TileMap.Width(CurrentMap) * 64, TileMap.Height(CurrentMap) * 64)
+    OperationSucceeded = Camera.Configure(960, 540,
+        TileMap.Width(CurrentMap) * 64, TileMap.Height(CurrentMap) * 64)
 
-    Call Camera2D.Follow(Camera, GameCore.VisualX(PlayerMover, 64) + 32, GameCore.VisualY(PlayerMover, 64) + 32)
+    Call Camera.Follow(PlayerMover.VisualX(64) + 32, PlayerMover.VisualY(64) + 32)
 
 End Sub
 
@@ -521,6 +523,40 @@ Function MapForScene(SceneId As Number) As Number
     End Select
 
     Return TownMap
+
+End Function
+
+Function GameDirection(Facing As Number) As GameCore.CardinalDirection
+
+    Select Case Facing
+        Case World.WORLD_FACING_UP
+            Return GameCore.CardinalDirection.Up
+        Case World.WORLD_FACING_RIGHT
+            Return GameCore.CardinalDirection.Right
+        Case World.WORLD_FACING_DOWN
+            Return GameCore.CardinalDirection.Down
+        Case World.WORLD_FACING_LEFT
+            Return GameCore.CardinalDirection.Left
+    End Select
+
+    Return GameCore.CardinalDirection.Down
+
+End Function
+
+Function WorldDirection(Direction As GameCore.CardinalDirection) As Number
+
+    Select Case Direction
+        Case GameCore.CardinalDirection.Up
+            Return World.WORLD_FACING_UP
+        Case GameCore.CardinalDirection.Right
+            Return World.WORLD_FACING_RIGHT
+        Case GameCore.CardinalDirection.Down
+            Return World.WORLD_FACING_DOWN
+        Case GameCore.CardinalDirection.Left
+            Return World.WORLD_FACING_LEFT
+    End Select
+
+    Return 0
 
 End Function
 
@@ -616,10 +652,10 @@ Sub TryBeginPlayerMove(MoveDirection As Number)
     Dim DestinationX As Number
     Dim DestinationY As Number
 
-    DestinationX = PlayerMover.CellX + GameCore.DirectionX(MoveDirection)
-    DestinationY = PlayerMover.CellY + GameCore.DirectionY(MoveDirection)
+    DestinationX = PlayerMover.CellX + GameCore.DirectionX(GameDirection(MoveDirection))
+    DestinationY = PlayerMover.CellY + GameCore.DirectionY(GameDirection(MoveDirection))
     OperationSucceeded = World.SetActorFacing(State, ACTOR_HERO, MoveDirection)
-    PlayerMover.Facing = MoveDirection
+    PlayerMover.Facing = GameDirection(MoveDirection)
 
     If TileMap.IsSolid(CurrentMap, DestinationX, DestinationY) Then
 
@@ -637,7 +673,7 @@ Sub TryBeginPlayerMove(MoveDirection As Number)
 
     End If
 
-    If Not GameCore.BeginMove(PlayerMover, MoveDirection, 8) Then
+    If Not PlayerMover.BeginMove(GameDirection(MoveDirection), 8) Then
         Call World.CancelReservedMove(State, ACTOR_HERO)
 
         Return
@@ -653,9 +689,9 @@ Sub UpdateMovement()
         Return
     End If
 
-    If GameCore.UpdateMove(PlayerMover, 1) Then
+    If PlayerMover.UpdateMove(1) Then
 
-        OperationSucceeded = World.CompleteReservedMove(State, ACTOR_HERO, PlayerMover.Facing)
+        OperationSucceeded = World.CompleteReservedMove(State, ACTOR_HERO, WorldDirection(PlayerMover.Facing))
         RegionId = TileMap.RegionAt(CurrentMap, PlayerMover.CellX, PlayerMover.CellY)
         TransitionId = World.TransitionAtRegion(State, RegionId)
 
@@ -673,7 +709,8 @@ Sub UpdateMovement()
 
             If Result <> 0 Then
 
-                OperationSucceeded = World.SetReturnLocation(State, SCENE_OVERWORLD, PlayerMover.CellX, PlayerMover.CellY, PlayerMover.Facing)
+                OperationSucceeded = World.SetReturnLocation(State, SCENE_OVERWORLD,
+                    PlayerMover.CellX, PlayerMover.CellY, WorldDirection(PlayerMover.Facing))
                 Mode = MODE_ENCOUNTER
                 Status = "Encounter Preview only - no attacks, damage, rewards, victory, or defeat."
 
@@ -684,7 +721,7 @@ Sub UpdateMovement()
     End If
 
     If Mode = MODE_FIELD Then
-        Call Camera2D.Follow(Camera, GameCore.VisualX(PlayerMover, 64) + 32, GameCore.VisualY(PlayerMover, 64) + 32)
+        Call Camera.Follow(PlayerMover.VisualX(64) + 32, PlayerMover.VisualY(64) + 32)
     End If
 
 End Sub
@@ -706,8 +743,8 @@ Sub UpdateWanderer()
         WanderDirection = World.WORLD_FACING_UP
     End If
 
-    DestinationX = World.ActorX(State, ACTOR_WANDERER) + GameCore.DirectionX(WanderDirection)
-    DestinationY = World.ActorY(State, ACTOR_WANDERER) + GameCore.DirectionY(WanderDirection)
+    DestinationX = World.ActorX(State, ACTOR_WANDERER) + GameCore.DirectionX(GameDirection(WanderDirection))
+    DestinationY = World.ActorY(State, ACTOR_WANDERER) + GameCore.DirectionY(GameDirection(WanderDirection))
 
     If (DestinationX >= 15 And
         DestinationX <= 17 And
@@ -981,7 +1018,8 @@ Sub DrawField()
                 Call DrawFollower()
             End If
 
-            Call DrawActor(ACTOR_HERO, GameCore.VisualX(PlayerMover, 64), GameCore.VisualY(PlayerMover, 64), PlayerMover.Facing, PlayerMover.Moving)
+            Call DrawActor(ACTOR_HERO, PlayerMover.VisualX(64), PlayerMover.VisualY(64),
+                WorldDirection(PlayerMover.Facing), PlayerMover.Moving)
 
         End If
 
@@ -1047,7 +1085,7 @@ Sub DrawFollower()
         Frame = (AnimationClock / 10) Mod 3
     End If
 
-    Draw Image CompanionImage From Frame * 96, (PlayerMover.Facing - 1) * 128 Size 96 By 128 At GameCore.VisualX(PlayerMover, 64) + OffsetX - Camera.X + 32, GameCore.VisualY(PlayerMover, 64) + OffsetY - Camera.Y + 64 Size 64 By 86 Anchor 32, 86 Filter Smooth
+    Draw Image CompanionImage From Frame * 96, (WorldDirection(PlayerMover.Facing) - 1) * 128 Size 96 By 128 At PlayerMover.VisualX(64) + OffsetX - Camera.X + 32, PlayerMover.VisualY(64) + OffsetY - Camera.Y + 64 Size 64 By 86 Anchor 32, 86 Filter Smooth
 
 End Sub
 

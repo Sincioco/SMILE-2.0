@@ -3,10 +3,14 @@ Module Smile.Game.Core
 
 Option Explicit
 
-Public Const GAME_DIRECTION_UP = 1
-Public Const GAME_DIRECTION_RIGHT = 2
-Public Const GAME_DIRECTION_DOWN = 3
-Public Const GAME_DIRECTION_LEFT = 4
+''' One exclusive direction in a four-way cardinal grid.
+Public Enum CardinalDirection
+    None = 0
+    Up = 1
+    Right = 2
+    Down = 3
+    Left = 4
+End Enum
 
 Public Const GAME_LAYER_GROUND = 1
 Public Const GAME_LAYER_DETAIL = 2
@@ -19,6 +23,7 @@ Public Const GAME_MAX_VALUE = 999999999
 
 ''' Tile-authoritative motion state. Position is interpolated from Source to Destination.
 Public Type CardinalMover
+
     CellX As Number
     CellY As Number
     SourceX As Number
@@ -27,157 +32,169 @@ Public Type CardinalMover
     DestinationY As Number
     Progress As Number
     Duration As Number
-    Facing As Number
+    Facing As CardinalDirection
     Moving As Boolean
+
+    ''' Initializes this mover at one legal cell.
+    Public Sub Place(
+        CellX As Number,
+        CellY As Number,
+        Facing As CardinalDirection
+    )
+
+        Me.CellX = CellX
+        Me.CellY = CellY
+        Me.SourceX = CellX
+        Me.SourceY = CellY
+        Me.DestinationX = CellX
+        Me.DestinationY = CellY
+        Me.Progress = 0
+        Me.Duration = 1
+        Me.Facing = Facing
+        Me.Moving = False
+
+    End Sub
+
+    ''' Begins interpolation after the caller has preflighted map and actor collision.
+    Public Function BeginMove(
+        Direction As CardinalDirection,
+        Duration As Number
+    ) As Boolean
+
+        If ((Direction <> CardinalDirection.Up And
+            Direction <> CardinalDirection.Right And
+            Direction <> CardinalDirection.Down And
+            Direction <> CardinalDirection.Left) Or
+            Me.Moving Or
+            Duration <= 0 Or
+            Duration > GAME_MAX_VALUE) Then
+            Return False
+        End If
+
+        Me.Facing = Direction
+        Me.SourceX = Me.CellX
+        Me.SourceY = Me.CellY
+        Me.DestinationX = Me.CellX + DirectionX(Direction)
+        Me.DestinationY = Me.CellY + DirectionY(Direction)
+        Me.Progress = 0
+        Me.Duration = Duration
+        Me.Moving = True
+        Return True
+
+    End Function
+
+    ''' Advances fixed-step interpolation and commits the destination only at completion.
+    Public Function UpdateMove(Steps As Number) As Boolean
+
+        If Not Me.Moving Or Steps <= 0 Then
+            Return False
+        End If
+
+        Me.Progress = Me.Progress + Steps
+
+        If Me.Progress >= Me.Duration Then
+
+            Me.CellX = Me.DestinationX
+            Me.CellY = Me.DestinationY
+            Me.SourceX = Me.CellX
+            Me.SourceY = Me.CellY
+            Me.Progress = Me.Duration
+            Me.Moving = False
+            Return True
+
+        End If
+
+        Return False
+
+    End Function
+
+    ''' Cancels an incomplete move without changing the authoritative source cell.
+    Public Sub CancelMove()
+
+        Me.DestinationX = Me.CellX
+        Me.DestinationY = Me.CellY
+        Me.SourceX = Me.CellX
+        Me.SourceY = Me.CellY
+        Me.Progress = 0
+        Me.Moving = False
+
+    End Sub
+
+    ''' Returns interpolated pixel X using integer fixed-point math.
+    Public Function VisualX(CellWidth As Number) As Number
+
+        Dim ReturnValue As Number
+
+        If Not Me.Moving Then
+            ReturnValue = Me.CellX * CellWidth
+
+            Return ReturnValue
+        End If
+
+        ReturnValue = (Me.SourceX * CellWidth * Me.Duration +
+            (Me.DestinationX - Me.SourceX) * CellWidth * Me.Progress) / Me.Duration
+
+        Return ReturnValue
+
+    End Function
+
+    ''' Returns interpolated pixel Y using integer fixed-point math.
+    Public Function VisualY(CellHeight As Number) As Number
+
+        Dim ReturnValue As Number
+
+        If Not Me.Moving Then
+            ReturnValue = Me.CellY * CellHeight
+
+            Return ReturnValue
+        End If
+
+        ReturnValue = (Me.SourceY * CellHeight * Me.Duration +
+            (Me.DestinationY - Me.SourceY) * CellHeight * Me.Progress) / Me.Duration
+
+        Return ReturnValue
+
+    End Function
+
 End Type
 
-''' Initializes a mover at one legal cell.
-Public Sub Place(ByRef Mover As CardinalMover, CellX As Number, CellY As Number, Facing As Number)
-
-    Mover.CellX = CellX
-    Mover.CellY = CellY
-    Mover.SourceX = CellX
-    Mover.SourceY = CellY
-    Mover.DestinationX = CellX
-    Mover.DestinationY = CellY
-    Mover.Progress = 0
-    Mover.Duration = 1
-    Mover.Facing = Facing
-    Mover.Moving = False
-
-End Sub
-
 ''' Returns the horizontal cell delta for a cardinal direction.
-Public Function DirectionX(Direction As Number) As Number
+Public Function DirectionX(Direction As CardinalDirection) As Number
 
     Dim ReturnValue As Number
 
-    If Direction = GAME_DIRECTION_RIGHT Then
-        Return 1
-    End If
+    Select Case Direction
+        Case CardinalDirection.Right
+            Return 1
 
-    If Direction = GAME_DIRECTION_LEFT Then
-        ReturnValue = -1
+        Case CardinalDirection.Left
+            ReturnValue = -1
 
-        Return ReturnValue
-    End If
+            Return ReturnValue
+
+    End Select
 
     Return 0
 
 End Function
 
 ''' Returns the vertical cell delta for a cardinal direction.
-Public Function DirectionY(Direction As Number) As Number
+Public Function DirectionY(Direction As CardinalDirection) As Number
 
     Dim ReturnValue As Number
 
-    If Direction = GAME_DIRECTION_DOWN Then
-        Return 1
-    End If
+    Select Case Direction
+        Case CardinalDirection.Down
+            Return 1
 
-    If Direction = GAME_DIRECTION_UP Then
-        ReturnValue = -1
+        Case CardinalDirection.Up
+            ReturnValue = -1
 
-        Return ReturnValue
-    End If
+            Return ReturnValue
+
+    End Select
 
     Return 0
-
-End Function
-
-''' Begins interpolation after the caller has preflighted map and actor collision.
-Public Function BeginMove(ByRef Mover As CardinalMover, Direction As Number, Duration As Number) As Boolean
-
-    If (Mover.Moving Or
-        Direction < GAME_DIRECTION_UP Or
-        Direction > GAME_DIRECTION_LEFT Or
-        Duration <= 0 Or
-        Duration > GAME_MAX_VALUE) Then
-        Return False
-    End If
-
-    Mover.Facing = Direction
-    Mover.SourceX = Mover.CellX
-    Mover.SourceY = Mover.CellY
-    Mover.DestinationX = Mover.CellX + DirectionX(Direction)
-    Mover.DestinationY = Mover.CellY + DirectionY(Direction)
-    Mover.Progress = 0
-    Mover.Duration = Duration
-    Mover.Moving = True
-    Return True
-
-End Function
-
-''' Advances fixed-step interpolation and commits the destination only at completion.
-Public Function UpdateMove(ByRef Mover As CardinalMover, Steps As Number) As Boolean
-
-    If Not Mover.Moving Or Steps <= 0 Then
-        Return False
-    End If
-
-    Mover.Progress = Mover.Progress + Steps
-
-    If Mover.Progress >= Mover.Duration Then
-
-        Mover.CellX = Mover.DestinationX
-        Mover.CellY = Mover.DestinationY
-        Mover.SourceX = Mover.CellX
-        Mover.SourceY = Mover.CellY
-        Mover.Progress = Mover.Duration
-        Mover.Moving = False
-        Return True
-
-    End If
-
-    Return False
-
-End Function
-
-''' Cancels an incomplete move without changing the authoritative source cell.
-Public Sub CancelMove(ByRef Mover As CardinalMover)
-
-    Mover.DestinationX = Mover.CellX
-    Mover.DestinationY = Mover.CellY
-    Mover.SourceX = Mover.CellX
-    Mover.SourceY = Mover.CellY
-    Mover.Progress = 0
-    Mover.Moving = False
-
-End Sub
-
-''' Returns interpolated pixel X using integer fixed-point math.
-Public Function VisualX(ByRef Mover As CardinalMover, CellWidth As Number) As Number
-
-    Dim ReturnValue As Number
-
-    If Not Mover.Moving Then
-        ReturnValue = Mover.CellX * CellWidth
-
-        Return ReturnValue
-    End If
-
-    ReturnValue = (Mover.SourceX * CellWidth * Mover.Duration +
-        (Mover.DestinationX - Mover.SourceX) * CellWidth * Mover.Progress) / Mover.Duration
-
-    Return ReturnValue
-
-End Function
-
-''' Returns interpolated pixel Y using integer fixed-point math.
-Public Function VisualY(ByRef Mover As CardinalMover, CellHeight As Number) As Number
-
-    Dim ReturnValue As Number
-
-    If Not Mover.Moving Then
-        ReturnValue = Mover.CellY * CellHeight
-
-        Return ReturnValue
-    End If
-
-    ReturnValue = (Mover.SourceY * CellHeight * Mover.Duration +
-        (Mover.DestinationY - Mover.SourceY) * CellHeight * Mover.Progress) / Mover.Duration
-
-    Return ReturnValue
 
 End Function
 

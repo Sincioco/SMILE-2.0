@@ -44,7 +44,7 @@ Private Dim ArmoredRunImage As Image
 Private Dim TankRunImage As Image
 Private Dim PetRunImage As Image
 Private Dim WalkAnimations[4] As Number
-Private Dim Facings[4] As Number
+Private Dim Facings[4] As GameCore.CardinalDirection
 Private Dim AnimationClocks[4] As Number
 Private Dim BackgroundXs[4] As Number
 Private Dim BackgroundYs[4] As Number
@@ -79,7 +79,7 @@ End Sub
 ''' Selects a cell and advances manual and autonomous character previews.
 Public Sub Update(PressedKey As Number)
 
-    Dim Direction As Number
+    Dim Direction As GameCore.CardinalDirection
     Dim Index As Number
     Dim IsWalking As Boolean
     Dim IsRunning As Boolean
@@ -123,7 +123,7 @@ Public Sub Update(PressedKey As Number)
         If Index = ActiveCell - 1 Then
 
             Direction = ManualDirection(PressedKey)
-            IsWalking = Direction <> 0
+            IsWalking = Direction <> GameCore.CardinalDirection.None
             IsRunning = IsWalking And ManualRunModes[Index]
 
         Else
@@ -264,7 +264,7 @@ Private Sub ResetCells()
 
     For Index = 0 To CELL_COUNT - 1
 
-        Facings[Index] = GameCore.GAME_DIRECTION_DOWN
+        Facings[Index] = GameCore.CardinalDirection.Down
         AnimationClocks[Index] = 0
         BackgroundXs[Index] = 0
         BackgroundYs[Index] = 0
@@ -276,15 +276,15 @@ Private Sub ResetCells()
 
 End Sub
 
-Private Function ManualDirection(PressedKey As Number) As Number
+Private Function ManualDirection(PressedKey As Number) As GameCore.CardinalDirection
 
-    Dim ReturnValue As Number
+    Dim ReturnValue As GameCore.CardinalDirection
 
     If (PressedKey = KEY_UP Or
         PressedKey = KEY_W Or
         Key_Held(KEY_UP) Or
         Key_Held(KEY_W)) Then
-        ReturnValue = GameCore.GAME_DIRECTION_UP
+        ReturnValue = GameCore.CardinalDirection.Up
 
         Return ReturnValue
     End If
@@ -293,7 +293,7 @@ Private Function ManualDirection(PressedKey As Number) As Number
         PressedKey = KEY_D Or
         Key_Held(KEY_RIGHT) Or
         Key_Held(KEY_D)) Then
-        ReturnValue = GameCore.GAME_DIRECTION_RIGHT
+        ReturnValue = GameCore.CardinalDirection.Right
 
         Return ReturnValue
     End If
@@ -302,7 +302,7 @@ Private Function ManualDirection(PressedKey As Number) As Number
         PressedKey = KEY_S Or
         Key_Held(KEY_DOWN) Or
         Key_Held(KEY_S)) Then
-        ReturnValue = GameCore.GAME_DIRECTION_DOWN
+        ReturnValue = GameCore.CardinalDirection.Down
 
         Return ReturnValue
     End If
@@ -311,18 +311,18 @@ Private Function ManualDirection(PressedKey As Number) As Number
         PressedKey = KEY_A Or
         Key_Held(KEY_LEFT) Or
         Key_Held(KEY_A)) Then
-        ReturnValue = GameCore.GAME_DIRECTION_LEFT
+        ReturnValue = GameCore.CardinalDirection.Left
 
         Return ReturnValue
     End If
 
-    Return 0
+    Return GameCore.CardinalDirection.None
 
 End Function
 
-Private Function AutomaticDirection(Index As Number) As Number
+Private Function AutomaticDirection(Index As Number) As GameCore.CardinalDirection
 
-    Dim ReturnValue As Number
+    Dim ReturnValue As GameCore.CardinalDirection
 
     Dim CycleStep As Number
 
@@ -332,40 +332,40 @@ Private Function AutomaticDirection(Index As Number) As Number
     If Index = 0 Then
 
         If CycleStep < AUTO_DIRECTION_STEPS Then
-            ReturnValue = GameCore.GAME_DIRECTION_RIGHT
+            ReturnValue = GameCore.CardinalDirection.Right
 
             Return ReturnValue
         Else If CycleStep < AUTO_DIRECTION_STEPS * 2 Then
-            ReturnValue = GameCore.GAME_DIRECTION_DOWN
+            ReturnValue = GameCore.CardinalDirection.Down
 
             Return ReturnValue
         Else If CycleStep < AUTO_DIRECTION_STEPS * 3 Then
-            ReturnValue = GameCore.GAME_DIRECTION_LEFT
+            ReturnValue = GameCore.CardinalDirection.Left
 
             Return ReturnValue
         End If
 
-        ReturnValue = GameCore.GAME_DIRECTION_UP
+        ReturnValue = GameCore.CardinalDirection.Up
 
         Return ReturnValue
 
     End If
 
     If CycleStep < AUTO_DIRECTION_STEPS Then
-        ReturnValue = GameCore.GAME_DIRECTION_LEFT
+        ReturnValue = GameCore.CardinalDirection.Left
 
         Return ReturnValue
     Else If CycleStep < AUTO_DIRECTION_STEPS * 2 Then
-        ReturnValue = GameCore.GAME_DIRECTION_UP
+        ReturnValue = GameCore.CardinalDirection.Up
 
         Return ReturnValue
     Else If CycleStep < AUTO_DIRECTION_STEPS * 3 Then
-        ReturnValue = GameCore.GAME_DIRECTION_RIGHT
+        ReturnValue = GameCore.CardinalDirection.Right
 
         Return ReturnValue
     End If
 
-    ReturnValue = GameCore.GAME_DIRECTION_DOWN
+    ReturnValue = GameCore.CardinalDirection.Down
 
     Return ReturnValue
 
@@ -385,7 +385,12 @@ Private Function AutomaticRunning(Index As Number) As Boolean
 
 End Function
 
-Private Sub UpdateCell(Index As Number, Direction As Number, IsWalking As Boolean, IsRunning As Boolean)
+Private Sub UpdateCell(
+    Index As Number,
+    Direction As GameCore.CardinalDirection,
+    IsWalking As Boolean,
+    IsRunning As Boolean
+)
 
     If Running[Index] <> IsRunning Then
         AnimationClocks[Index] = 0
@@ -413,6 +418,23 @@ Private Sub UpdateCell(Index As Number, Direction As Number, IsWalking As Boolea
     Call WrapBackground(Index)
 
 End Sub
+
+Private Function DirectionIndex(Direction As GameCore.CardinalDirection) As Number
+
+    Select Case Direction
+        Case GameCore.CardinalDirection.Up
+            Return 0
+        Case GameCore.CardinalDirection.Right
+            Return 1
+        Case GameCore.CardinalDirection.Down
+            Return 2
+        Case GameCore.CardinalDirection.Left
+            Return 3
+    End Select
+
+    Return 0
+
+End Function
 
 Private Sub WrapBackground(Index As Number)
 
@@ -521,7 +543,7 @@ Private Sub DrawCharacter(Index As Number, CellX As Number, CellY As Number)
     Dim WalkAnimation As Number
     Dim WalkFrame As Number
 
-    WalkAnimation = WalkAnimations[Facings[Index] - 1]
+    WalkAnimation = WalkAnimations[DirectionIndex(Facings[Index])]
 
     WalkFrame = 0
 

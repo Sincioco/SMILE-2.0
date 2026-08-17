@@ -93,7 +93,7 @@ Private Sub LoadTown()
     End If
 
     If TownReady Then
-        TownReady = Camera2D.Configure(Camera, VIEW_WIDTH, VIEW_HEIGHT, WorldWidth, WorldHeight)
+        TownReady = Camera.Configure(VIEW_WIDTH, VIEW_HEIGHT, WorldWidth, WorldHeight)
     End If
 
 End Sub
@@ -101,7 +101,7 @@ End Sub
 ''' Advances held or tapped cardinal movement against the map collision layer.
 Public Sub Update(PressedKey As Number)
 
-    Dim MoveDirection As Number
+    Dim MoveDirection As GameCore.CardinalDirection
     Dim MoveCompleted As Boolean
 
     If Not TownReady Then
@@ -116,14 +116,14 @@ Public Sub Update(PressedKey As Number)
 
     If PlayerMover.Moving Then
         AnimationClock = AnimationClock + 1
-        MoveCompleted = GameCore.UpdateMove(PlayerMover, 1)
+        MoveCompleted = PlayerMover.UpdateMove(1)
     End If
 
     If Not PlayerMover.Moving Then
 
         MoveDirection = MovementDirection(PressedKey)
 
-        If MoveDirection <> 0 Then
+        If MoveDirection <> GameCore.CardinalDirection.None Then
             Call TryBeginPlayerMove(MoveDirection)
         End If
 
@@ -271,47 +271,47 @@ Private Function PlacePlayerAtSpawn() As Boolean
         Return False
     End If
 
-    Call GameCore.Place(PlayerMover, SpawnX, SpawnY, GameCore.GAME_DIRECTION_DOWN)
+    Call PlayerMover.Place(SpawnX, SpawnY, GameCore.CardinalDirection.Down)
 
     Return True
 
 End Function
 
-Private Function MovementDirection(PressedKey As Number) As Number
+Private Function MovementDirection(PressedKey As Number) As GameCore.CardinalDirection
 
     If (PressedKey = KEY_UP Or
         PressedKey = KEY_W Or
         Key_Held(KEY_UP) Or
         Key_Held(KEY_W)) Then
-        Return GameCore.GAME_DIRECTION_UP
+        Return GameCore.CardinalDirection.Up
     End If
 
     If (PressedKey = KEY_RIGHT Or
         PressedKey = KEY_D Or
         Key_Held(KEY_RIGHT) Or
         Key_Held(KEY_D)) Then
-        Return GameCore.GAME_DIRECTION_RIGHT
+        Return GameCore.CardinalDirection.Right
     End If
 
     If (PressedKey = KEY_DOWN Or
         PressedKey = KEY_S Or
         Key_Held(KEY_DOWN) Or
         Key_Held(KEY_S)) Then
-        Return GameCore.GAME_DIRECTION_DOWN
+        Return GameCore.CardinalDirection.Down
     End If
 
     If (PressedKey = KEY_LEFT Or
         PressedKey = KEY_A Or
         Key_Held(KEY_LEFT) Or
         Key_Held(KEY_A)) Then
-        Return GameCore.GAME_DIRECTION_LEFT
+        Return GameCore.CardinalDirection.Left
     End If
 
-    Return 0
+    Return GameCore.CardinalDirection.None
 
 End Function
 
-Private Sub TryBeginPlayerMove(MoveDirection As Number)
+Private Sub TryBeginPlayerMove(MoveDirection As GameCore.CardinalDirection)
 
     Dim DestinationX As Number
     Dim DestinationY As Number
@@ -325,7 +325,7 @@ Private Sub TryBeginPlayerMove(MoveDirection As Number)
         Return
     End If
 
-    MoveStarted = GameCore.BeginMove(PlayerMover, MoveDirection, MOVE_DURATION)
+    MoveStarted = PlayerMover.BeginMove(MoveDirection, MOVE_DURATION)
 
 End Sub
 
@@ -338,12 +338,29 @@ Private Sub FollowPlayer()
 
     CellWidth = TileMap.CellWidth(TownMap)
     CellHeight = TileMap.CellHeight(TownMap)
-    TargetX = GameCore.VisualX(PlayerMover, CellWidth) + CellWidth / 2
-    TargetY = GameCore.VisualY(PlayerMover, CellHeight) + CellHeight / 2
+    TargetX = PlayerMover.VisualX(CellWidth) + CellWidth / 2
+    TargetY = PlayerMover.VisualY(CellHeight) + CellHeight / 2
 
-    Call Camera2D.Follow(Camera, TargetX, TargetY)
+    Call Camera.Follow(TargetX, TargetY)
 
 End Sub
+
+Private Function DirectionIndex(Direction As GameCore.CardinalDirection) As Number
+
+    Select Case Direction
+        Case GameCore.CardinalDirection.Up
+            Return 0
+        Case GameCore.CardinalDirection.Right
+            Return 1
+        Case GameCore.CardinalDirection.Down
+            Return 2
+        Case GameCore.CardinalDirection.Left
+            Return 3
+    End Select
+
+    Return 0
+
+End Function
 
 Private Sub DrawPlayer()
 
@@ -362,9 +379,9 @@ Private Sub DrawPlayer()
     CellHeight = TileMap.CellHeight(TownMap)
 
     If ActiveCharacter = CHARACTER_ARMORED Then
-        WalkAnimation = Character2WalkAnimations[PlayerMover.Facing - 1]
+        WalkAnimation = Character2WalkAnimations[DirectionIndex(PlayerMover.Facing)]
     Else
-        WalkAnimation = Character1WalkAnimations[PlayerMover.Facing - 1]
+        WalkAnimation = Character1WalkAnimations[DirectionIndex(PlayerMover.Facing)]
     End If
 
     WalkFrame = 0
@@ -377,8 +394,8 @@ Private Sub DrawPlayer()
     SourceY = Animation.SourceY(WalkAnimation, WalkFrame)
     SourceWidth = Animation.SourceWidth(WalkAnimation, WalkFrame)
     SourceHeight = Animation.SourceHeight(WalkAnimation, WalkFrame)
-    ScreenX = GameCore.VisualX(PlayerMover, CellWidth) + CellWidth / 2 - Camera.X
-    ScreenY = GameCore.VisualY(PlayerMover, CellHeight) + CellHeight - Camera.Y
+    ScreenX = PlayerMover.VisualX(CellWidth) + CellWidth / 2 - Camera.X
+    ScreenY = PlayerMover.VisualY(CellHeight) + CellHeight - Camera.Y
 
     If ActiveCharacter = CHARACTER_ARMORED Then
         Draw Image ArmoredImage From SourceX, SourceY Size SourceWidth By SourceHeight At ScreenX, ScreenY Size HERO_DRAW_WIDTH By HERO_DRAW_HEIGHT Anchor HERO_ANCHOR_X, HERO_ANCHOR_Y Filter Smooth

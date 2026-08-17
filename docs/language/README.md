@@ -139,6 +139,8 @@ Native records use deterministic inline 8-byte-aligned layouts and generated ini
 
 A `Type` may also contain instance `Sub` and `Function` members plus `Property` declarations. Members are Public by default and may be marked `Public` or `Private`. Fields are always Public: explicit `Public` is allowed, while `Private` is not. Fields, methods, and properties share one case-insensitive member namespace. An instance member uses `Me` to read or replace fields on its hidden `ByRef` receiver. `Me` is not a declared parameter and cannot be assigned or passed `ByRef` as a whole.
 
+Smile.Game 2.0.0 is the official value-Type migration: `CardinalMover.Place`, `BeginMove`, `UpdateMove`, `CancelMove`, `VisualX`, and `VisualY`, plus every `CameraState` operation, use instance syntax while preserving inline deep-copy assignment, ByVal isolation, ByRef mutation, and addressable array-element receivers. `CardinalDirection` provides nominal `None`, `Up`, `Right`, `Down`, and `Left` values. Animation and TileMap remain handle Modules, and Collision2D remains stateless.
+
 ```smile
 Type Counter
     Label As Text
@@ -619,7 +621,7 @@ Phase 5 adds `Text_Length`, `Text_Code_At`, and `Text_Slice`. Their zero-based i
 
 Phase 6 adds optional stable `ApplicationId` project identity and the source-authored `Smile.RPG` data/management package without adding syntax or RPG runtime helpers. Phase 6.1 advances Smile.RPG to 1.0.1 with save-boundary, rollback, asset-manifest identity, formatter-context, and Shop-result hardening. Phase 6.2 advances Smile.RPG to 1.0.2 with observational `SaveGames.Exists` query behavior while preserving SRPG format 1. See `phase6-rpg.md`.
 
-Phase 7 adds the ordinary `Smile.Game` source package and advances `Smile.RPG` to 1.1.0 with world, story, encounter-preview, and format-2 persistence modules. `Load Text File` accepts a `Text` expression path and dotted module names may contain the reserved `Game` segment; no RPG-specific syntax is added. See `phase7-rpg-world.md`.
+Phase 7 adds the ordinary `Smile.Game` source package and advances `Smile.RPG` with world, story, encounter-preview, and format-2 persistence modules. Smile.Game 2.0.0 now applies the shared Enum and Type-member language features to its cardinal movement and camera values without adding RPG-specific syntax or a Smile.RPG dependency. `Load Text File` accepts a `Text` expression path and dotted module names may contain the reserved `Game` segment. See `phase7-rpg-world.md`.
 
 Phase 7.1 advances `Smile.RPG` to 1.1.1 with world-state invariant and transactional save hardening. It changes no language syntax, SMILE-MAP fields, SRPG fields, or `.smilelib` package format.
 

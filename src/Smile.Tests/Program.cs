@@ -4444,14 +4444,14 @@ Run("ApplicationId CLI parses and rejects conflicting project overrides", () =>
     }
 });
 
-Run("Phase 9 Smile.Game and Smile.RPG are ordinary built-in source packages with bounded public modules", () =>
+Run("Smile.Game 2.0 value Types and Smile.RPG remain independent built-in source packages", () =>
 {
     var gameProject = SmileProjectSourceSet.Load("libraries/Smile.Game/Smile.Game.smilelibproj");
     var gameCompilation = SmileProjectCompilation.Load(gameProject.ProjectPath);
     var gameAnalysis = SmileLanguage.Analyze(gameCompilation.Sources, SmileCompilationKind.Library,
         gameCompilation.DependencyContext);
     Equal(false, gameAnalysis.HasErrors);
-    Equal("1.0.0", gameProject.Version);
+    Equal("2.0.0", gameProject.Version);
     Equal(5, gameProject.CompilationSources.Count);
     Equal(true, SmileBuiltInLibraryCatalog.IsBuiltIn("Smile.Game"));
     foreach (var module in new[] { "Smile.Game.Core", "Smile.Game.Animation", "Smile.Game.TileMap",
@@ -4460,6 +4460,25 @@ Run("Phase 9 Smile.Game and Smile.RPG are ordinary built-in source packages with
     Equal(false, gameProject.References.Any());
     Equal(false, gameProject.CompilationSources.Any(source => File.ReadAllText(source.FullPath)
         .Contains("Game Window", StringComparison.OrdinalIgnoreCase)));
+    var gameCore = gameAnalysis.SemanticModel.Modules["Smile.Game.Core"];
+    var direction = (EnumTypeSymbol)gameCore.Types["CardinalDirection"].Type!;
+    Equal("None|Up|Right|Down|Left", string.Join("|", direction.Members.Select(member => member.Name)));
+    Equal("0|1|2|3|4", string.Join("|", direction.Members.Select(member => member.Value)));
+    Equal(true, gameCompilation.DependencyContext.TryGetProviderDescriptor(direction.ProviderIdentity,
+        out var directionProvider));
+    Equal("Smile.Game@2.0.0", directionProvider.LogicalIdentity);
+    var mover = (RecordTypeSymbol)gameCore.Types["CardinalMover"].Type!;
+    Equal("BeginMove|CancelMove|Place|UpdateMove|VisualX|VisualY",
+        string.Join("|", mover.Methods.Select(method => method.Name).OrderBy(name => name,
+            StringComparer.Ordinal)));
+    Equal("Smile.Game.Core::CardinalDirection", mover.Fields.Single(field => field.Name == "Facing")
+        .Type.RuntimeIdentity);
+    Equal(false, mover.Methods.Any(method => method.Parameters.Any(parameter => parameter.Name == "Me")));
+    var cameraModule = gameAnalysis.SemanticModel.Modules["Smile.Game.Camera2D"];
+    var camera = (RecordTypeSymbol)cameraModule.Types["CameraState"].Type!;
+    Equal("Configure|FirstVisibleCellX|FirstVisibleCellY|Follow|LastVisibleCellX|LastVisibleCellY|SmoothFollow",
+        string.Join("|", camera.Methods.Select(method => method.Name).OrderBy(name => name,
+            StringComparer.Ordinal)));
 
     var rpgProject = SmileProjectSourceSet.Load("libraries/Smile.RPG/Smile.RPG.smilelibproj");
     var rpgCompilation = SmileProjectCompilation.Load(rpgProject.ProjectPath);
@@ -4486,6 +4505,111 @@ Run("Phase 9 Smile.Game and Smile.RPG are ordinary built-in source packages with
         4 + 128 * 2 * 4 + 4 + 64 * 2 * 4 + 2 * 4 + 16 * 3 * 4;
     Equal(true, phase7MaximumPayload < 36864);
     Equal(true, phase7MaximumPayload < 1024 * 1024);
+});
+
+Run("Smile.Game 2.0 project and package consumers share Type-member and Enum editor identity", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "smile-game-oop-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var gameProject = SmileProjectSourceSet.Load("libraries/Smile.Game/Smile.Game.smilelibproj");
+        var gameCompilation = SmileProjectCompilation.Load(gameProject.ProjectPath);
+        var gameAnalysis = SmileLanguage.Analyze(gameCompilation.Sources, SmileCompilationKind.Library,
+            gameCompilation.DependencyContext);
+        Equal(false, gameAnalysis.HasErrors);
+        var packagePath = Path.Combine(directory, "Smile.Game.smilelib");
+        SmileLibraryPackage.Write(packagePath, gameCompilation.Graph.Root, gameAnalysis);
+
+        const string source = "Option Explicit\n" +
+            "Import Smile.Game.Core As GameCore\n" +
+            "Dim Mover As GameCore.CardinalMover\n" +
+            "Dim Started As Boolean\n" +
+            "Call Mover.Place(1, 2, GameCore.CardinalDirection.Right)\n" +
+            "Started = Mover.BeginMove(Duration:=4, Direction:=GameCore.CardinalDirection.Down)\n" +
+            "Print Started\n";
+
+        void AssertConsumer(string name, string referencePath, bool packageReference)
+        {
+            var consumerDirectory = Path.Combine(directory, name);
+            Directory.CreateDirectory(consumerDirectory);
+            var programPath = Path.Combine(consumerDirectory, "Program.smile");
+            File.WriteAllText(programPath, source);
+            var projectPath = Path.Combine(consumerDirectory, "Consumer.smileproj");
+            var relativeReference = Path.GetRelativePath(consumerDirectory, referencePath);
+            var referenceElement = packageReference
+                ? $"<SmileLibraryReference Include=\"{relativeReference}\" />"
+                : $"<SmileProjectReference Include=\"{relativeReference}\" />";
+            File.WriteAllText(projectPath,
+                "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup>" +
+                "<ItemGroup><SmileSource Include=\"Program.smile\" />" + referenceElement +
+                "</ItemGroup></SmileProject>");
+            var compilation = SmileProjectCompilation.Load(projectPath,
+                Path.Combine(consumerDirectory, "cache"));
+            var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Program,
+                compilation.DependencyContext);
+            Equal(false, analysis.HasErrors);
+            var core = analysis.SemanticModel.Modules["Smile.Game.Core"];
+            var mover = (RecordTypeSymbol)core.Types["CardinalMover"].Type!;
+            Equal(true, compilation.DependencyContext.TryGetProviderDescriptor(mover.ProviderIdentity,
+                out var moverProvider));
+            Equal("Smile.Game@2.0.0", moverProvider.LogicalIdentity);
+            Equal("Smile.Game.Core::CardinalMover::member::BeginMove",
+                mover.Methods.Single(method => method.Name == "BeginMove").RuntimeIdentity);
+
+            var tree = analysis.GetSyntaxTree(programPath);
+            var memberPosition = source.IndexOf("Mover.BeginMove", StringComparison.Ordinal) +
+                                 "Mover.".Length;
+            var completions = SmileCompletionService.GetCompletions(analysis, tree, memberPosition);
+            foreach (var expected in new[] { "BeginMove", "CancelMove", "Place", "UpdateMove", "VisualX", "VisualY" })
+                Equal(true, completions.Any(completion => completion.DisplayText == expected));
+            Equal(true, SmileSymbolService.TryResolve(analysis, tree, memberPosition + 2,
+                out var resolvedMethod));
+            Equal(SmileResolvedSymbolKind.Function, resolvedMethod.Kind);
+            var methodPresentation = SmileSymbolDisplayService.Present(resolvedMethod,
+                compilation.DependencyContext);
+            Equal(true, methodPresentation.Provider.EndsWith("Smile.Game@2.0.0",
+                StringComparison.Ordinal));
+            Equal(mover.Methods.Single(method => method.Name == "BeginMove").DeclarationLocation.Line,
+                resolvedMethod.DeclarationLocation!.Line);
+
+            var labelPosition = source.IndexOf("Duration:=", StringComparison.Ordinal);
+            Equal(true, SmileSymbolService.TryResolve(analysis, tree, labelPosition + 2,
+                out var resolvedLabel));
+            Equal(SmileResolvedSymbolKind.NamedArgument, resolvedLabel.Kind);
+            Equal(true, SmileSymbolDisplayService.Present(resolvedLabel,
+                compilation.DependencyContext).Provider.EndsWith("Smile.Game@2.0.0",
+                StringComparison.Ordinal));
+
+            var enumPosition = source.IndexOf("CardinalDirection.Right", StringComparison.Ordinal) +
+                               "CardinalDirection.".Length;
+            Equal(true, SmileSymbolService.TryResolve(analysis, tree, enumPosition + 2,
+                out var resolvedEnumMember));
+            Equal(SmileResolvedSymbolKind.EnumMember, resolvedEnumMember.Kind);
+            Equal(true, SmileSymbolDisplayService.Present(resolvedEnumMember,
+                compilation.DependencyContext).Provider.EndsWith("Smile.Game@2.0.0",
+                StringComparison.Ordinal));
+
+            var resolvedPath = Path.GetFullPath(resolvedMethod.DeclarationLocation.FilePath);
+            if (packageReference)
+            {
+                var cachePrefix = Path.GetFullPath(Path.Combine(consumerDirectory, "cache"))
+                    .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                Equal(true, resolvedPath.StartsWith(cachePrefix, StringComparison.OrdinalIgnoreCase));
+            }
+            else
+            {
+                Equal(Path.GetFullPath("libraries/Smile.Game/Core.smile"), resolvedPath);
+            }
+        }
+
+        AssertConsumer("Project", gameProject.ProjectPath, false);
+        AssertConsumer("Package", packagePath, true);
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
 });
 
 Run("VSIX templates render localized identity metadata within the aligned header", () =>

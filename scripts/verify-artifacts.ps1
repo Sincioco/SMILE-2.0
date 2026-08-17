@@ -644,6 +644,68 @@ function Assert-SmileUiPackage {
     }
 }
 
+function Assert-SmileGamePackage {
+    param([string]$RelativePath)
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $path = Require-File $RelativePath
+    $archive = [IO.Compression.ZipFile]::OpenRead($path)
+    try {
+        $apiText = [Text.Encoding]::UTF8.GetString((Read-ZipEntryBytes `
+            $archive.GetEntry('api/public-symbols.json')))
+        $api = $apiText | ConvertFrom-Json
+        if ($api.library.provider -cne 'Smile.Game@2.0.0') {
+            throw "$RelativePath does not publish Smile.Game@2.0.0."
+        }
+
+        $core = @($api.modules | Where-Object { $_.name -ceq 'Smile.Game.Core' })
+        $cameraModule = @($api.modules | Where-Object { $_.name -ceq 'Smile.Game.Camera2D' })
+        if ($core.Count -ne 1 -or $cameraModule.Count -ne 1) {
+            throw "$RelativePath is missing the Smile.Game Core or Camera2D module."
+        }
+
+        $direction = @($core[0].members |
+            Where-Object { $_.name -ceq 'CardinalDirection' -and $_.kind -ceq 'Enum' })
+        $mover = @($core[0].members |
+            Where-Object { $_.name -ceq 'CardinalMover' -and $_.kind -ceq 'Type' })
+        $camera = @($cameraModule[0].members |
+            Where-Object { $_.name -ceq 'CameraState' -and $_.kind -ceq 'Type' })
+        if ($direction.Count -ne 1 -or $mover.Count -ne 1 -or $camera.Count -ne 1) {
+            throw "$RelativePath does not publish the typed direction, mover, and camera values."
+        }
+
+        $directionX = @($core[0].members | Where-Object { $_.name -ceq 'DirectionX' })
+        $directionY = @($core[0].members | Where-Object { $_.name -ceq 'DirectionY' })
+        $legacyProcedural = @($core[0].members | Where-Object {
+                $_.name -cin @('Place', 'BeginMove', 'UpdateMove', 'CancelMove', 'VisualX', 'VisualY')
+            })
+        if ([string]::Join('|', @($direction[0].members.name)) -cne 'None|Up|Right|Down|Left' -or
+            [string]::Join('|', @($direction[0].members.value)) -cne '0|1|2|3|4' -or
+            $direction[0].provider -cne 'Smile.Game@2.0.0' -or
+            [string]::Join('|', @($mover[0].members.name)) -cne
+                'BeginMove|CancelMove|Place|UpdateMove|VisualX|VisualY' -or
+            $mover[0].fields[8].name -cne 'Facing' -or
+            $mover[0].fields[8].type.kind -cne 'enum' -or
+            $mover[0].fields[8].type.identity -cne 'Smile.Game.Core::CardinalDirection' -or
+            $mover[0].fields[8].type.provider -cne 'Smile.Game@2.0.0' -or
+            $mover[0].members[0].parameters[0].type.identity -cne
+                'Smile.Game.Core::CardinalDirection' -or
+            $directionX.Count -ne 1 -or $directionY.Count -ne 1 -or
+            $directionX[0].parameters[0].type.kind -cne 'enum' -or
+            $directionY[0].parameters[0].type.provider -cne 'Smile.Game@2.0.0' -or
+            $legacyProcedural.Count -ne 0 -or
+            [string]::Join('|', @($camera[0].members.name)) -cne
+                'Configure|FirstVisibleCellX|FirstVisibleCellY|Follow|LastVisibleCellX|LastVisibleCellY|SmoothFollow' -or
+            $apiText.IndexOf('::receiver', [StringComparison]::Ordinal) -ge 0) {
+            throw "$RelativePath has incorrect Smile.Game Enum, Type-member, provider, or visibility metadata."
+        }
+        Write-Host "Smile.Game 2.0 value-Type metadata verified: $RelativePath"
+    }
+    finally {
+        $archive.Dispose()
+    }
+}
+
 Require-File 'artifacts\compiler\smilec.exe' | Out-Null
 $vsixPath = Require-File 'artifacts\vsix\Smile.VisualStudio.vsix'
 Assert-SmileLibraryPackage 'artifacts\libraries\Smile.Math.Extras.smilelib' `
@@ -656,7 +718,8 @@ Assert-SmileLibraryPackage 'artifacts\libraries\Smile.UI.smilelib' `
     'libraries\Smile.UI\Smile.UI.smilelibproj' 'Smile.UI' '2.0.0' 6 7 62
 Assert-SmileUiPackage 'artifacts\libraries\Smile.UI.smilelib'
 Assert-SmileLibraryPackage 'artifacts\libraries\Smile.Game.smilelib' `
-    'libraries\Smile.Game\Smile.Game.smilelibproj' 'Smile.Game' '1.0.0' 5 5 72
+    'libraries\Smile.Game\Smile.Game.smilelibproj' 'Smile.Game' '2.0.0' 5 5 56
+Assert-SmileGamePackage 'artifacts\libraries\Smile.Game.smilelib'
 Assert-SmileLibraryPackage 'artifacts\libraries\Smile.RPG.smilelib' `
     'libraries\Smile.RPG\Smile.RPG.smilelibproj' 'Smile.RPG' '1.2.0' 15 15 491
 Assert-SmileLibraryPackage 'artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib' `

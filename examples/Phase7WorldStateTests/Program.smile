@@ -36,20 +36,21 @@ Dim LegacyBytes[36864] As Number
 Dim LayoutBytes[36864] As Number
 Dim LayoutByteCount As Number
 
-Call GameCore.Place(Mover, 3, 4, GameCore.GAME_DIRECTION_DOWN)
-Call Check(GameCore.BeginMove(Mover, GameCore.GAME_DIRECTION_RIGHT, 4))
-Call Check(GameCore.VisualX(Mover, 32) = 96)
-Call Check(Not GameCore.UpdateMove(Mover, 2))
-Call Check(GameCore.VisualX(Mover, 32) = 112)
-Call Check(GameCore.UpdateMove(Mover, 2))
+Call Mover.Place(3, 4, GameCore.CardinalDirection.Down)
+Call Check(Mover.BeginMove(GameCore.CardinalDirection.Right, 4))
+Call Check(Mover.VisualX(32) = 96)
+Call Check(Not Mover.UpdateMove(2))
+Call Check(Mover.VisualX(32) = 112)
+Call Check(Mover.UpdateMove(2))
 Call Check(Mover.CellX = 4 And Mover.CellY = 4)
+Call TestMoverValueSemantics()
 
-Call Check(Camera2D.Configure(Camera, 320, 180, 1024, 768))
-Call Camera2D.Follow(Camera, 1000, 740)
+Call Check(Camera.Configure(320, 180, 1024, 768))
+Call Camera.Follow(1000, 740)
 Call Check(Camera.X = 704 And Camera.Y = 588)
-Call Check(Camera2D.LastVisibleCellX(Camera, 32, 32, 1) = 31)
-Call Check(Camera2D.Configure(Camera, 640, 480, 320, 200))
-Call Camera2D.Follow(Camera, 300, 190)
+Call Check(Camera.LastVisibleCellX(32, 32, 1) = 31)
+Call Check(Camera.Configure(640, 480, 320, 200))
+Call Camera.Follow(300, 190)
 Call Check(Camera.X = 0 And Camera.Y = 0)
 Call Check(Collision2D.OutsideMap(-1, 0, 10, 10))
 Call Check(Collision2D.CellsOverlap(2, 3, 2, 3))
@@ -330,6 +331,39 @@ Sub Check(Condition As Boolean)
         Print Checks
 
     End If
+
+End Sub
+
+Sub TestMoverValueSemantics()
+
+    Dim First As GameCore.CardinalMover
+    Dim Second As GameCore.CardinalMover
+    Dim Movers[2] As GameCore.CardinalMover
+
+    Call First.Place(1, 2, GameCore.CardinalDirection.Right)
+
+    Second = First
+
+    Call Check(Second.BeginMove(GameCore.CardinalDirection.Down, 4))
+    Call Check(Not First.Moving And First.CellX = 1 And First.CellY = 2)
+    Call MutateMoverByVal(First)
+    Call Check(First.CellX = 1 And First.CellY = 2)
+    Call MutateMoverByRef(First)
+    Call Check(First.CellX = 7 And First.CellY = 8 And First.Facing = GameCore.CardinalDirection.Left)
+    Call Movers[1].Place(9, 10, GameCore.CardinalDirection.Up)
+    Call Check(Movers[1].CellX = 9 And Movers[1].Facing = GameCore.CardinalDirection.Up)
+
+End Sub
+
+Sub MutateMoverByVal(Value As GameCore.CardinalMover)
+
+    Call Value.Place(5, 6, GameCore.CardinalDirection.Down)
+
+End Sub
+
+Sub MutateMoverByRef(ByRef Value As GameCore.CardinalMover)
+
+    Call Value.Place(7, 8, GameCore.CardinalDirection.Left)
 
 End Sub
 

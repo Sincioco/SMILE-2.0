@@ -226,13 +226,13 @@ Sub HandleExploration(PressedKey As Number)
 
         Else If PressedKey = KEY_UP Or PressedKey = KEY_W Then
 
-            DestinationX = X + GameCore.DirectionX(Facing)
-            DestinationY = Y + GameCore.DirectionY(Facing)
+            DestinationX = X + GameCore.DirectionX(GameDirection(Facing))
+            DestinationY = Y + GameCore.DirectionY(GameDirection(Facing))
 
         Else If PressedKey = KEY_DOWN Or PressedKey = KEY_S Then
 
-            DestinationX = X - GameCore.DirectionX(Facing)
-            DestinationY = Y - GameCore.DirectionY(Facing)
+            DestinationX = X - GameCore.DirectionX(GameDirection(Facing))
+            DestinationY = Y - GameCore.DirectionY(GameDirection(Facing))
 
         End If
 
@@ -279,6 +279,23 @@ Sub HandleExploration(PressedKey As Number)
     End If
 
 End Sub
+
+Function GameDirection(Facing As Number) As GameCore.CardinalDirection
+
+    Select Case Facing
+        Case World.WORLD_FACING_UP
+            Return GameCore.CardinalDirection.Up
+        Case World.WORLD_FACING_RIGHT
+            Return GameCore.CardinalDirection.Right
+        Case World.WORLD_FACING_DOWN
+            Return GameCore.CardinalDirection.Down
+        Case World.WORLD_FACING_LEFT
+            Return GameCore.CardinalDirection.Left
+    End Select
+
+    Return GameCore.CardinalDirection.Down
+
+End Function
 
 Sub HandleBattle(PressedKey As Number)
 

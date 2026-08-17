@@ -3,16 +3,6 @@ Module Smile.Game.Camera2D
 
 Option Explicit
 
-''' Camera offset plus viewport and world dimensions in caller-selected world units.
-Public Type CameraState
-    X As Number
-    Y As Number
-    ViewWidth As Number
-    ViewHeight As Number
-    WorldWidth As Number
-    WorldHeight As Number
-End Type
-
 Private Function MaximumOffset(WorldSize As Number, ViewSize As Number) As Number
 
     Dim ReturnValue As Number
@@ -41,111 +31,146 @@ Private Function ClampOffset(Value As Number, Maximum As Number) As Number
 
 End Function
 
-''' Configures the viewport/world sizes and clamps the current offset.
-Public Function Configure(ByRef Camera As CameraState, ViewWidth As Number, ViewHeight As Number, WorldWidth As Number, WorldHeight As Number) As Boolean
+''' Camera offset plus viewport and world dimensions in caller-selected world units.
+Public Type CameraState
 
-    If (ViewWidth <= 0 Or
-        ViewHeight <= 0 Or
-        WorldWidth <= 0 Or
-        WorldHeight <= 0) Then
-        Return False
-    End If
+    X As Number
+    Y As Number
+    ViewWidth As Number
+    ViewHeight As Number
+    WorldWidth As Number
+    WorldHeight As Number
 
-    Camera.ViewWidth = ViewWidth
-    Camera.ViewHeight = ViewHeight
-    Camera.WorldWidth = WorldWidth
-    Camera.WorldHeight = WorldHeight
-    Camera.X = ClampOffset(Camera.X, MaximumOffset(WorldWidth, ViewWidth))
-    Camera.Y = ClampOffset(Camera.Y, MaximumOffset(WorldHeight, ViewHeight))
-    Return True
+    ''' Configures the viewport/world sizes and clamps the current offset.
+    Public Function Configure(
+        ViewWidth As Number,
+        ViewHeight As Number,
+        WorldWidth As Number,
+        WorldHeight As Number
+    ) As Boolean
 
-End Function
+        If (ViewWidth <= 0 Or
+            ViewHeight <= 0 Or
+            WorldWidth <= 0 Or
+            WorldHeight <= 0) Then
+            Return False
+        End If
 
-''' Snaps the camera to center a target point while honoring every map edge.
-Public Sub Follow(ByRef Camera As CameraState, TargetX As Number, TargetY As Number)
+        Me.ViewWidth = ViewWidth
+        Me.ViewHeight = ViewHeight
+        Me.WorldWidth = WorldWidth
+        Me.WorldHeight = WorldHeight
+        Me.X = ClampOffset(Me.X, MaximumOffset(WorldWidth, ViewWidth))
+        Me.Y = ClampOffset(Me.Y, MaximumOffset(WorldHeight, ViewHeight))
+        Return True
 
-    Camera.X = ClampOffset(TargetX - Camera.ViewWidth / 2,
-        MaximumOffset(Camera.WorldWidth, Camera.ViewWidth))
-    Camera.Y = ClampOffset(TargetY - Camera.ViewHeight / 2,
-        MaximumOffset(Camera.WorldHeight, Camera.ViewHeight))
+    End Function
 
-End Sub
+    ''' Snaps the camera to center a target point while honoring every map edge.
+    Public Sub Follow(TargetX As Number, TargetY As Number)
 
-''' Moves toward the clamped follow target by a bounded integer step.
-Public Sub SmoothFollow(ByRef Camera As CameraState, TargetX As Number, TargetY As Number, MaximumStep As Number)
+        Me.X = ClampOffset(TargetX - Me.ViewWidth / 2,
+            MaximumOffset(Me.WorldWidth, Me.ViewWidth))
+        Me.Y = ClampOffset(TargetY - Me.ViewHeight / 2,
+            MaximumOffset(Me.WorldHeight, Me.ViewHeight))
 
-    Dim DesiredX As Number
-    Dim DesiredY As Number
+    End Sub
 
-    DesiredX = ClampOffset(TargetX - Camera.ViewWidth / 2,
-        MaximumOffset(Camera.WorldWidth, Camera.ViewWidth))
-    DesiredY = ClampOffset(TargetY - Camera.ViewHeight / 2,
-        MaximumOffset(Camera.WorldHeight, Camera.ViewHeight))
+    ''' Moves toward the clamped follow target by a bounded integer step.
+    Public Sub SmoothFollow(
+        TargetX As Number,
+        TargetY As Number,
+        MaximumStep As Number
+    )
 
-    If MaximumStep <= 0 Then
+        Dim DesiredX As Number
+        Dim DesiredY As Number
 
-        Camera.X = DesiredX
-        Camera.Y = DesiredY
-        Return
+        DesiredX = ClampOffset(TargetX - Me.ViewWidth / 2,
+            MaximumOffset(Me.WorldWidth, Me.ViewWidth))
+        DesiredY = ClampOffset(TargetY - Me.ViewHeight / 2,
+            MaximumOffset(Me.WorldHeight, Me.ViewHeight))
 
-    End If
+        If MaximumStep <= 0 Then
 
-    If Camera.X < DesiredX Then
-        Camera.X = Min(Camera.X + MaximumStep, DesiredX)
-    Else If Camera.X > DesiredX Then
-        Camera.X = Max(Camera.X - MaximumStep, DesiredX)
-    End If
+            Me.X = DesiredX
+            Me.Y = DesiredY
+            Return
 
-    If Camera.Y < DesiredY Then
-        Camera.Y = Min(Camera.Y + MaximumStep, DesiredY)
-    Else If Camera.Y > DesiredY Then
-        Camera.Y = Max(Camera.Y - MaximumStep, DesiredY)
-    End If
+        End If
 
-End Sub
+        If Me.X < DesiredX Then
+            Me.X = Min(Me.X + MaximumStep, DesiredX)
+        Else If Me.X > DesiredX Then
+            Me.X = Max(Me.X - MaximumStep, DesiredX)
+        End If
 
-''' Returns the first visible cell with a caller-selected overscan amount.
-Public Function FirstVisibleCellX(ByRef Camera As CameraState, CellWidth As Number, Overscan As Number) As Number
+        If Me.Y < DesiredY Then
+            Me.Y = Min(Me.Y + MaximumStep, DesiredY)
+        Else If Me.Y > DesiredY Then
+            Me.Y = Max(Me.Y - MaximumStep, DesiredY)
+        End If
 
-    Dim ReturnValue As Number
+    End Sub
 
-    ReturnValue = Max(0, Camera.X / CellWidth - Max(0, Overscan))
+    ''' Returns the first visible cell with a caller-selected overscan amount.
+    Public Function FirstVisibleCellX(
+        CellWidth As Number,
+        Overscan As Number
+    ) As Number
 
-    Return ReturnValue
+        Dim ReturnValue As Number
 
-End Function
+        ReturnValue = Max(0, Me.X / CellWidth - Max(0, Overscan))
 
-''' Returns the first visible row with a caller-selected nonnegative overscan.
-Public Function FirstVisibleCellY(ByRef Camera As CameraState, CellHeight As Number, Overscan As Number) As Number
+        Return ReturnValue
 
-    Dim ReturnValue As Number
+    End Function
 
-    ReturnValue = Max(0, Camera.Y / CellHeight - Max(0, Overscan))
+    ''' Returns the first visible row with a caller-selected nonnegative overscan.
+    Public Function FirstVisibleCellY(
+        CellHeight As Number,
+        Overscan As Number
+    ) As Number
 
-    Return ReturnValue
+        Dim ReturnValue As Number
 
-End Function
+        ReturnValue = Max(0, Me.Y / CellHeight - Max(0, Overscan))
 
-''' Returns the last visible column, clamped to the supplied map width.
-Public Function LastVisibleCellX(ByRef Camera As CameraState, CellWidth As Number, MapWidth As Number, Overscan As Number) As Number
+        Return ReturnValue
 
-    Dim ReturnValue As Number
+    End Function
 
-    ReturnValue = Min(MapWidth - 1, (Camera.X + Camera.ViewWidth - 1) / CellWidth + Max(0, Overscan))
+    ''' Returns the last visible column, clamped to the supplied map width.
+    Public Function LastVisibleCellX(
+        CellWidth As Number,
+        MapWidth As Number,
+        Overscan As Number
+    ) As Number
 
-    Return ReturnValue
+        Dim ReturnValue As Number
 
-End Function
+        ReturnValue = Min(MapWidth - 1, (Me.X + Me.ViewWidth - 1) / CellWidth + Max(0, Overscan))
 
-''' Returns the last visible row, clamped to the supplied map height.
-Public Function LastVisibleCellY(ByRef Camera As CameraState, CellHeight As Number, MapHeight As Number, Overscan As Number) As Number
+        Return ReturnValue
 
-    Dim ReturnValue As Number
+    End Function
 
-    ReturnValue = Min(MapHeight - 1, (Camera.Y + Camera.ViewHeight - 1) / CellHeight + Max(0, Overscan))
+    ''' Returns the last visible row, clamped to the supplied map height.
+    Public Function LastVisibleCellY(
+        CellHeight As Number,
+        MapHeight As Number,
+        Overscan As Number
+    ) As Number
 
-    Return ReturnValue
+        Dim ReturnValue As Number
 
-End Function
+        ReturnValue = Min(MapHeight - 1, (Me.Y + Me.ViewHeight - 1) / CellHeight + Max(0, Overscan))
+
+        Return ReturnValue
+
+    End Function
+
+End Type
 
 End Module

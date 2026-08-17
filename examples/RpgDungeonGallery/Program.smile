@@ -767,7 +767,8 @@ Function SyncPresentation() As Boolean
 
     SceneId = World.CurrentScene(State)
 
-    Call GameCore.Place(PlayerMover, World.ActorX(State, ACTOR_HERO), World.ActorY(State, ACTOR_HERO), World.ActorFacingDirection(State, ACTOR_HERO))
+    Call PlayerMover.Place(World.ActorX(State, ACTOR_HERO), World.ActorY(State, ACTOR_HERO),
+        GameDirection(World.ActorFacingDirection(State, ACTOR_HERO)))
 
     If Not IsFirstPersonScene(SceneId) Then
 
@@ -777,15 +778,50 @@ Function SyncPresentation() As Boolean
             Return False
         End If
 
-        If Not Camera2D.Configure(Camera, 960, 540, TileMap.Width(CurrentMap) * 64, TileMap.Height(CurrentMap) * 64) Then
+        If Not Camera.Configure(960, 540,
+            TileMap.Width(CurrentMap) * 64, TileMap.Height(CurrentMap) * 64) Then
             Return False
         End If
 
-        Call Camera2D.Follow(Camera, GameCore.VisualX(PlayerMover, 64) + 32, GameCore.VisualY(PlayerMover, 64) + 32)
+        Call Camera.Follow(PlayerMover.VisualX(64) + 32, PlayerMover.VisualY(64) + 32)
 
     End If
 
     Return True
+
+End Function
+
+Function GameDirection(Facing As Number) As GameCore.CardinalDirection
+
+    Select Case Facing
+        Case World.WORLD_FACING_UP
+            Return GameCore.CardinalDirection.Up
+        Case World.WORLD_FACING_RIGHT
+            Return GameCore.CardinalDirection.Right
+        Case World.WORLD_FACING_DOWN
+            Return GameCore.CardinalDirection.Down
+        Case World.WORLD_FACING_LEFT
+            Return GameCore.CardinalDirection.Left
+    End Select
+
+    Return GameCore.CardinalDirection.Down
+
+End Function
+
+Function WorldDirection(Direction As GameCore.CardinalDirection) As Number
+
+    Select Case Direction
+        Case GameCore.CardinalDirection.Up
+            Return World.WORLD_FACING_UP
+        Case GameCore.CardinalDirection.Right
+            Return World.WORLD_FACING_RIGHT
+        Case GameCore.CardinalDirection.Down
+            Return World.WORLD_FACING_DOWN
+        Case GameCore.CardinalDirection.Left
+            Return World.WORLD_FACING_LEFT
+    End Select
+
+    Return 0
 
 End Function
 
@@ -969,8 +1005,8 @@ Sub HandleFirstPersonMovement(PressedKey As Number)
         Return
     End If
 
-    DestinationX = World.ActorX(State, ACTOR_HERO) + GameCore.DirectionX(Facing) * StepValue
-    DestinationY = World.ActorY(State, ACTOR_HERO) + GameCore.DirectionY(Facing) * StepValue
+    DestinationX = World.ActorX(State, ACTOR_HERO) + GameCore.DirectionX(GameDirection(Facing)) * StepValue
+    DestinationY = World.ActorY(State, ACTOR_HERO) + GameCore.DirectionY(GameDirection(Facing)) * StepValue
 
     If FpCellAt(World.CurrentScene(State), DestinationX, DestinationY) = FP_WALL Then
         Status = "The vault wall blocks that cell."
@@ -1025,8 +1061,8 @@ Sub BeginTopDownMove(MoveDirection As Number)
     Dim DestinationY As Number
 
     CurrentMap = MapForScene(World.CurrentScene(State))
-    DestinationX = PlayerMover.CellX + GameCore.DirectionX(MoveDirection)
-    DestinationY = PlayerMover.CellY + GameCore.DirectionY(MoveDirection)
+    DestinationX = PlayerMover.CellX + GameCore.DirectionX(GameDirection(MoveDirection))
+    DestinationY = PlayerMover.CellY + GameCore.DirectionY(GameDirection(MoveDirection))
     OperationSucceeded = World.SetActorFacing(State, ACTOR_HERO, MoveDirection)
 
     If Not OperationSucceeded Then
@@ -1034,7 +1070,7 @@ Sub BeginTopDownMove(MoveDirection As Number)
         Return
     End If
 
-    PlayerMover.Facing = MoveDirection
+    PlayerMover.Facing = GameDirection(MoveDirection)
 
     If TileMap.IsSolid(CurrentMap, DestinationX, DestinationY) Then
         Status = "The archive collision layer blocks that cell."
@@ -1046,7 +1082,7 @@ Sub BeginTopDownMove(MoveDirection As Number)
         Return
     End If
 
-    If Not GameCore.BeginMove(PlayerMover, MoveDirection, 6) Then
+    If Not PlayerMover.BeginMove(GameDirection(MoveDirection), 6) Then
         Call World.CancelReservedMove(State, ACTOR_HERO)
 
         Status = "The visual move could not begin; the destination reservation was cancelled."
@@ -1060,9 +1096,9 @@ Sub UpdateTopDownMovement()
         Return
     End If
 
-    If GameCore.UpdateMove(PlayerMover, 1) Then
+    If PlayerMover.UpdateMove(1) Then
 
-        OperationSucceeded = World.CompleteReservedMove(State, ACTOR_HERO, PlayerMover.Facing)
+        OperationSucceeded = World.CompleteReservedMove(State, ACTOR_HERO, WorldDirection(PlayerMover.Facing))
 
         If OperationSucceeded Then
 
@@ -1082,7 +1118,7 @@ Sub UpdateTopDownMovement()
     If Mode = MODE_DUNGEON And Not IsFirstPersonScene(World.CurrentScene(State)) Then
         CurrentMap = MapForScene(World.CurrentScene(State))
 
-        Call Camera2D.Follow(Camera, GameCore.VisualX(PlayerMover, 64) + 32, GameCore.VisualY(PlayerMover, 64) + 32)
+        Call Camera.Follow(PlayerMover.VisualX(64) + 32, PlayerMover.VisualY(64) + 32)
     End If
 
 End Sub
@@ -2037,7 +2073,7 @@ Sub DrawTopDownDungeon()
 
     SceneId = World.CurrentScene(State)
     CurrentMap = MapForScene(SceneId)
-    WalkAnimation = WalkAnimations[PlayerMover.Facing - 1]
+    WalkAnimation = WalkAnimations[WorldDirection(PlayerMover.Facing) - 1]
     WalkFrame = 1
 
     If PlayerMover.Moving Then
@@ -2062,10 +2098,10 @@ Sub DrawTopDownDungeon()
     End For
 
     If Party.PartyCount(State) > 1 Then
-        Draw Image CompanionImage From Animation.SourceX(WalkAnimation, WalkFrame), Animation.SourceY(WalkAnimation, WalkFrame) Size Animation.SourceWidth(WalkAnimation, WalkFrame) By Animation.SourceHeight(WalkAnimation, WalkFrame) At GameCore.VisualX(PlayerMover, 64) - GameCore.DirectionX(PlayerMover.Facing) * 30 - Camera.X + 32, GameCore.VisualY(PlayerMover, 64) - GameCore.DirectionY(PlayerMover.Facing) * 30 - Camera.Y + 64 Size 58 By 78 Anchor 29, 78 Filter Smooth
+        Draw Image CompanionImage From Animation.SourceX(WalkAnimation, WalkFrame), Animation.SourceY(WalkAnimation, WalkFrame) Size Animation.SourceWidth(WalkAnimation, WalkFrame) By Animation.SourceHeight(WalkAnimation, WalkFrame) At PlayerMover.VisualX(64) - GameCore.DirectionX(PlayerMover.Facing) * 30 - Camera.X + 32, PlayerMover.VisualY(64) - GameCore.DirectionY(PlayerMover.Facing) * 30 - Camera.Y + 64 Size 58 By 78 Anchor 29, 78 Filter Smooth
     End If
 
-    Draw Image HeroImage From Animation.SourceX(WalkAnimation, WalkFrame), Animation.SourceY(WalkAnimation, WalkFrame) Size Animation.SourceWidth(WalkAnimation, WalkFrame) By Animation.SourceHeight(WalkAnimation, WalkFrame) At GameCore.VisualX(PlayerMover, 64) - Camera.X + 32, GameCore.VisualY(PlayerMover, 64) - Camera.Y + 64 Size 64 By 86 Anchor Animation.AnchorX(WalkAnimation), Animation.AnchorY(WalkAnimation) Filter Smooth
+    Draw Image HeroImage From Animation.SourceX(WalkAnimation, WalkFrame), Animation.SourceY(WalkAnimation, WalkFrame) Size Animation.SourceWidth(WalkAnimation, WalkFrame) By Animation.SourceHeight(WalkAnimation, WalkFrame) At PlayerMover.VisualX(64) - Camera.X + 32, PlayerMover.VisualY(64) - Camera.Y + 64 Size 64 By 86 Anchor Animation.AnchorX(WalkAnimation), Animation.AnchorY(WalkAnimation) Filter Smooth
 
     Call TileMap.DrawLayerSmooth(CurrentMap, GameCore.GAME_LAYER_FOREGROUND, Tileset, Camera.X, Camera.Y, 960, 540)
 
