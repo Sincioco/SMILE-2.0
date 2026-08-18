@@ -41,10 +41,19 @@ This policy is identical for DirectX and GDI and affects only the SMILE process.
 ## Prerequisites
 
 - Windows x64.
-- .NET SDK 10.
+- .NET SDK 10.0.302 (selected by `global.json`).
 - Visual Studio 2026 with **Desktop development with C++** and **Visual Studio extension development** installed.
+- Node.js 20 or newer for Web regression tests.
 
 The build scripts find the current Visual Studio installation through `vswhere.exe` and initialize its x64 C++ toolchain.
+Run the non-installing environment diagnosis before a first build or when setup changes:
+
+```text
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\doctor.ps1
+```
+
+The doctor reports every missing prerequisite with a remediation and returns a nonzero exit code without installing or
+changing developer tools.
 
 ## Build from a fresh clone
 
@@ -61,13 +70,17 @@ artifacts\compiler\smilec.exe
 artifacts\vsix\Smile.VisualStudio.vsix
 ```
 
+The VSIX and both template projects commit `packages.lock.json` and restore in locked mode. When an intentional
+package update changes one of those graphs, regenerate it once with `-p:RestoreLockedMode=false`, review the lock-file
+diff, and then return to the normal build command.
+
 Run the complete noninteractive regression and artifact verification suite with:
 
 ```text
 scripts\smoke-test.cmd
 ```
 
-The smoke suite builds the solution, runs console examples, checks invalid-program diagnostics, exercises native Text/Class lifetimes and reentrancy, executes generated Web programs in a dependency-free Node host, compares native/Web UTF-8 output exactly, validates Type/Class project-package parity and deterministic format-6 metadata, tests reusable Smile.UI and Smile.RPG state boundaries, validates ApplicationId isolation, asserts dynamic Canvas text, exercises save/reload and corrupt-value fallback, validates the supplied Dungeon Star I and Dungeon Star II maps, compiles the multi-file sample and both teaching variants of all seven games for Windows and Web, publishes and hashes declared project assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Graphical gameplay and audible playback remain hands-on acceptance steps.
+The smoke entry point normalizes its working directory, so it can be launched from outside the repository. It builds the solution, runs console examples, checks invalid-program diagnostics, exercises native Text/Class lifetimes and reentrancy, executes generated Web programs in a dependency-free Node host, compares native/Web UTF-8 output exactly, validates Type/Class project-package parity and deterministic format-6 metadata, tests reusable Smile.UI and Smile.RPG state boundaries, validates ApplicationId isolation, asserts dynamic Canvas text, exercises save/reload and corrupt-value fallback, validates the supplied Dungeon Star I and Dungeon Star II maps, compiles the multi-file sample and both teaching variants of all seven games for Windows and Web, publishes and hashes declared project assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Generated native test programs run through a 60-second process-tree-bounded launcher, while the Node host retains its own finite timeout. Graphical gameplay and audible playback remain hands-on acceptance steps.
 
 ## Compile projects and publish assets
 

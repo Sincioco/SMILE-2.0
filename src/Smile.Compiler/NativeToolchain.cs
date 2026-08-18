@@ -21,6 +21,10 @@ internal sealed class NativeToolchain
             return new ToolchainResult(false, $"vcvars64.bat was not found under {installationPath}.");
 
         var runtimeLibraries = " ucrt.lib msvcrt.lib msvcprt.lib vcruntime.lib";
+        // The generated debug helper is debugger metadata, not the program entry point. The custom
+        // /entry:main pipeline intentionally has no CRT startup to initialize a /GS security cookie,
+        // so /GS- is constrained to this generated, buffer-free helper instead of pretending the
+        // normal CRT protection is active.
         var debugCompile = debugSourcePath == null || debugObjectPath == null
             ? string.Empty
             : $"cl.exe /nologo /c /TC /utf-8 /Od /Z7 /JMC /GS- /Fo{Quote(debugObjectPath)} {Quote(debugSourcePath)} && ";

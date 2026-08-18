@@ -2,6 +2,22 @@
 setlocal
 
 set "SMILE_ROOT=%~dp0.."
+pushd "%SMILE_ROOT%" || exit /b 2
+set "SMILE_ROOT=%CD%"
+set "SMILE_REPOSITORY_ROOT=%SMILE_ROOT%"
+
+call :run_smoke
+set "SMILE_EXIT_CODE=%errorlevel%"
+popd
+exit /b %SMILE_EXIT_CODE%
+
+:run_smoke
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\doctor.ps1"
+if errorlevel 1 exit /b %errorlevel%
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-bounded-process.ps1"
+if errorlevel 1 exit /b %errorlevel%
 
 call "%SMILE_ROOT%\scripts\build.cmd"
 if errorlevel 1 exit /b %errorlevel%
@@ -21,16 +37,18 @@ if errorlevel 1 exit /b %errorlevel%
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-rpg-systems-integration.ps1"
 if errorlevel 1 exit /b %errorlevel%
 
-"%SMILE_ROOT%\artifacts\tests\Smile.NativeGraphicsTests.exe"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\tests\Smile.NativeGraphicsTests.exe"
 if errorlevel 1 exit /b %errorlevel%
 
-"%SMILE_ROOT%\artifacts\tests\Smile.NativeTextTests.exe"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\tests\Smile.NativeTextTests.exe"
 if errorlevel 1 exit /b %errorlevel%
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Hello.smile" -o "%SMILE_ROOT%\artifacts\games\Hello.exe"
 if errorlevel 1 exit /b %errorlevel%
 
-for /f "delims=" %%I in ('"%SMILE_ROOT%\artifacts\games\Hello.exe"') do set "SMILE_HELLO=%%I"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\Hello.exe" > "%SMILE_ROOT%\artifacts\temp\Hello.out"
+if errorlevel 1 exit /b %errorlevel%
+set /p SMILE_HELLO=<"%SMILE_ROOT%\artifacts\temp\Hello.out"
 if not "%SMILE_HELLO%"=="Hello World" (
     echo Hello smoke test failed: expected "Hello World", found "%SMILE_HELLO%".
     exit /b 1
@@ -39,7 +57,7 @@ echo Hello smoke test passed.
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\MultilineExpressionParity\MultilineExpressionParity.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\MultilineExpressionParity.exe" --debug
 if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\games\MultilineExpressionParity.exe" > "%SMILE_ROOT%\artifacts\temp\MultilineExpressionParity.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\MultilineExpressionParity.exe" > "%SMILE_ROOT%\artifacts\temp\MultilineExpressionParity.out"
 if errorlevel 1 exit /b %errorlevel%
 powershell -NoProfile -Command "$expected=[IO.File]::ReadAllLines('%SMILE_ROOT%\examples\MultilineExpressionParity\MultilineExpressionParity.expected.txt',[Text.Encoding]::UTF8); $actual=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\MultilineExpressionParity.out',[Text.Encoding]::UTF8); if (Compare-Object $expected $actual) { exit 1 }"
 if errorlevel 1 exit /b 1
@@ -66,7 +84,7 @@ if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\LibraryConsumer\LibraryConsumer.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\LibraryConsumer.exe" --debug
 if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\games\LibraryConsumer.exe" > "%SMILE_ROOT%\artifacts\temp\LibraryConsumer.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\LibraryConsumer.exe" > "%SMILE_ROOT%\artifacts\temp\LibraryConsumer.out"
 if errorlevel 1 exit /b %errorlevel%
 for %%V in ("100" "True" "1") do (
     findstr /x /c:%%V "%SMILE_ROOT%\artifacts\temp\LibraryConsumer.out" >nul
@@ -81,7 +99,7 @@ if errorlevel 1 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\LocalModuleBasics\LocalModuleBasics.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\LocalModuleBasics.exe"
 if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\games\LocalModuleBasics.exe" | findstr /x /c:"42" >nul
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\LocalModuleBasics.exe" | findstr /x /c:"42" >nul
 if errorlevel 1 exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\LocalModuleBasics\LocalModuleBasics.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\LocalModuleBasics"
 if errorlevel 1 exit /b %errorlevel%
@@ -101,7 +119,7 @@ if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3ABasics\Phase3ABasics.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase3ABasics.exe" --debug
 if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\games\Phase3ABasics.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3ABasics.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\Phase3ABasics.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3ABasics.out"
 if errorlevel 1 exit /b %errorlevel%
 for %%V in ("Changed" "True" "36" "1136" "Module Text" "Match") do (
     findstr /x /c:%%V "%SMILE_ROOT%\artifacts\temp\Phase3ABasics.out" >nul
@@ -116,7 +134,7 @@ if errorlevel 1 exit /b %errorlevel%
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3ABasics\Phase3ABasics.Package.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase3ABasicsPackage.exe"
 if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\games\Phase3ABasicsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3ABasicsPackage.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\Phase3ABasicsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3ABasicsPackage.out"
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3ABasics\Phase3ABasics.Package.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\Phase3ABasicsPackage"
 if errorlevel 1 exit /b %errorlevel%
@@ -127,7 +145,7 @@ if errorlevel 1 exit /b %errorlevel%
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase3ATextStress.smile" -o "%SMILE_ROOT%\artifacts\games\Phase3ATextStress.exe"
 if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\games\Phase3ATextStress.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3ATextStress.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\Phase3ATextStress.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3ATextStress.out"
 if errorlevel 1 exit /b %errorlevel%
 findstr /x /c:"False" "%SMILE_ROOT%\artifacts\temp\Phase3ATextStress.out" >nul || exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase3ATextStress.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\Phase3ATextStress"
@@ -149,10 +167,10 @@ if errorlevel 1 exit /b %errorlevel%
 for %%N in (RecursiveFor RecursiveTextSelect ExitCleanup NestedCleanup EndProgramCleanup Unicode WebParity) do (
     "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase3A1Hardening\%%N.smile" -o "%SMILE_ROOT%\artifacts\games\%%N.exe"
     if errorlevel 1 exit /b 1
-    "%SMILE_ROOT%\artifacts\games\%%N.exe" > "%SMILE_ROOT%\artifacts\temp\%%N.out"
+    call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\%%N.exe" > "%SMILE_ROOT%\artifacts\temp\%%N.out"
     if errorlevel 1 exit /b 1
     set "SMILE_TEXT_LIFETIME_DIAGNOSTICS=1"
-    "%SMILE_ROOT%\artifacts\games\%%N.exe" > "%SMILE_ROOT%\artifacts\temp\%%N.lifetime.out"
+    call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\%%N.exe" > "%SMILE_ROOT%\artifacts\temp\%%N.lifetime.out"
     if errorlevel 1 exit /b 1
     set "SMILE_TEXT_LIFETIME_DIAGNOSTICS="
     findstr /x /c:"SMILE_TEXT_LIVE=0" "%SMILE_ROOT%\artifacts\temp\%%N.lifetime.out" >nul
@@ -187,12 +205,12 @@ if errorlevel 1 exit /b 1
 for %%P in (LightweightOopCalls.smileproj LightweightOopCalls.Package.smileproj) do (
     "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\LightweightOopCalls\%%P" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\%%~nP.exe" --debug
     if errorlevel 1 exit /b 1
-    "%SMILE_ROOT%\artifacts\games\%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\%%~nP.out"
+    call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\%%~nP.out"
     if errorlevel 1 exit /b 1
     fc "%SMILE_ROOT%\examples\LightweightOopCalls\LightweightOopCalls.expected.txt" "%SMILE_ROOT%\artifacts\temp\%%~nP.out" >nul || exit /b 1
     set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
     set "SMILE_TEXT_LIFETIME_DIAGNOSTICS=1"
-    "%SMILE_ROOT%\artifacts\games\%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\%%~nP.lifetime.out"
+    call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\%%~nP.lifetime.out"
     if errorlevel 1 exit /b 1
     set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
     set "SMILE_TEXT_LIFETIME_DIAGNOSTICS="
@@ -208,12 +226,12 @@ echo Optional/default, Type-member, and Class package metadata plus project/pack
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\ClassRuntime\ClassRuntime.smileproj" --target windows-x64 --configuration Release --debug -o "%SMILE_ROOT%\artifacts\games\ClassRuntime.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\games\ClassRuntime.exe" > "%SMILE_ROOT%\artifacts\temp\ClassRuntime.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\ClassRuntime.exe" > "%SMILE_ROOT%\artifacts\temp\ClassRuntime.out"
 if errorlevel 1 exit /b 1
 fc "%SMILE_ROOT%\examples\ClassRuntime\ClassRuntime.expected.txt" "%SMILE_ROOT%\artifacts\temp\ClassRuntime.out" >nul || exit /b 1
 set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
 set "SMILE_TEXT_LIFETIME_DIAGNOSTICS=1"
-"%SMILE_ROOT%\artifacts\games\ClassRuntime.exe" > "%SMILE_ROOT%\artifacts\temp\ClassRuntime.lifetime.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\ClassRuntime.exe" > "%SMILE_ROOT%\artifacts\temp\ClassRuntime.lifetime.out"
 if errorlevel 1 exit /b 1
 set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
 set "SMILE_TEXT_LIFETIME_DIAGNOSTICS="
@@ -229,7 +247,7 @@ if errorlevel 1 exit /b 1
 if errorlevel 1 exit /b 1
 set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
 set "SMILE_TEXT_LIFETIME_DIAGNOSTICS=1"
-"%SMILE_ROOT%\artifacts\games\ClassEndProgramCleanup.exe" > "%SMILE_ROOT%\artifacts\temp\ClassEndProgramCleanup.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\ClassEndProgramCleanup.exe" > "%SMILE_ROOT%\artifacts\temp\ClassEndProgramCleanup.out"
 if errorlevel 1 exit /b 1
 set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
 set "SMILE_TEXT_LIFETIME_DIAGNOSTICS="
@@ -253,7 +271,7 @@ if errorlevel 1 exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\ClassRuntime\ClassNothingFailure.smile" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\ClassNothingFailure.exe"
 if errorlevel 1 exit /b 1
 set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
-"%SMILE_ROOT%\artifacts\games\ClassNothingFailure.exe" > "%SMILE_ROOT%\artifacts\temp\ClassNothingFailure.out" 2>&1
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\ClassNothingFailure.exe" > "%SMILE_ROOT%\artifacts\temp\ClassNothingFailure.out" 2>&1
 if not errorlevel 2 exit /b 1
 if errorlevel 3 exit /b 1
 set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
@@ -268,11 +286,11 @@ echo Class constructor, identity, evaluation-order, ARC, finalization, and null-
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\TypeMemberRuntime\TypeMemberRuntime.smileproj" --target windows-x64 --configuration Release --debug -o "%SMILE_ROOT%\artifacts\games\TypeMemberRuntime.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\games\TypeMemberRuntime.exe" > "%SMILE_ROOT%\artifacts\temp\TypeMemberRuntime.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\TypeMemberRuntime.exe" > "%SMILE_ROOT%\artifacts\temp\TypeMemberRuntime.out"
 if errorlevel 1 exit /b 1
 fc "%SMILE_ROOT%\examples\TypeMemberRuntime\TypeMemberRuntime.expected.txt" "%SMILE_ROOT%\artifacts\temp\TypeMemberRuntime.out" >nul || exit /b 1
 set "SMILE_TEXT_LIFETIME_DIAGNOSTICS=1"
-"%SMILE_ROOT%\artifacts\games\TypeMemberRuntime.exe" > "%SMILE_ROOT%\artifacts\temp\TypeMemberRuntime.lifetime.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\TypeMemberRuntime.exe" > "%SMILE_ROOT%\artifacts\temp\TypeMemberRuntime.lifetime.out"
 if errorlevel 1 exit /b 1
 set "SMILE_TEXT_LIFETIME_DIAGNOSTICS="
 findstr /x /c:"SMILE_TEXT_LIVE=0" "%SMILE_ROOT%\artifacts\temp\TypeMemberRuntime.lifetime.out" >nul || exit /b 1
@@ -284,11 +302,11 @@ if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\TypeMemberRuntime\TypeMemberEndProgramCleanup.smile" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\TypeMemberEndProgramCleanup.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\games\TypeMemberEndProgramCleanup.exe" > "%SMILE_ROOT%\artifacts\temp\TypeMemberEndProgramCleanup.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\TypeMemberEndProgramCleanup.exe" > "%SMILE_ROOT%\artifacts\temp\TypeMemberEndProgramCleanup.out"
 if errorlevel 1 exit /b 1
 fc "%SMILE_ROOT%\examples\TypeMemberRuntime\TypeMemberEndProgramCleanup.expected.txt" "%SMILE_ROOT%\artifacts\temp\TypeMemberEndProgramCleanup.out" >nul || exit /b 1
 set "SMILE_TEXT_LIFETIME_DIAGNOSTICS=1"
-"%SMILE_ROOT%\artifacts\games\TypeMemberEndProgramCleanup.exe" > "%SMILE_ROOT%\artifacts\temp\TypeMemberEndProgramCleanup.lifetime.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\TypeMemberEndProgramCleanup.exe" > "%SMILE_ROOT%\artifacts\temp\TypeMemberEndProgramCleanup.lifetime.out"
 if errorlevel 1 exit /b 1
 set "SMILE_TEXT_LIFETIME_DIAGNOSTICS="
 findstr /x /c:"SMILE_TEXT_LIVE=0" "%SMILE_ROOT%\artifacts\temp\TypeMemberEndProgramCleanup.lifetime.out" >nul || exit /b 1
@@ -323,7 +341,7 @@ for %%P in (CapabilityMethod.smileproj CapabilityMethod.Package.smileproj Capabi
 for %%P in (SafeSetter.smileproj SafeSetter.Package.smileproj) do (
     "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\InvalidTypeMembers\%%P" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\%%~nP.exe"
     if errorlevel 1 exit /b 1
-    "%SMILE_ROOT%\artifacts\games\%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\%%~nP.out"
+    call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\%%~nP.out"
     if errorlevel 1 exit /b 1
     fc "%SMILE_ROOT%\examples\InvalidTypeMembers\SafeSetter.expected.txt" "%SMILE_ROOT%\artifacts\temp\%%~nP.out" >nul || exit /b 1
     "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\InvalidTypeMembers\%%P" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\%%~nP"
@@ -356,11 +374,11 @@ for %%P in (CapabilityConstructor.smileproj CapabilityConstructor.Package.smilep
 for %%P in (SafeSetter.smileproj SafeSetter.Package.smileproj) do (
     "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\InvalidClassMembers\%%P" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\InvalidClass-%%~nP.exe"
     if errorlevel 1 exit /b 1
-    "%SMILE_ROOT%\artifacts\games\InvalidClass-%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\InvalidClass-%%~nP.out"
+    call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\InvalidClass-%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\InvalidClass-%%~nP.out"
     if errorlevel 1 exit /b 1
     fc "%SMILE_ROOT%\examples\InvalidClassMembers\SafeSetter.expected.txt" "%SMILE_ROOT%\artifacts\temp\InvalidClass-%%~nP.out" >nul || exit /b 1
     set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
-    "%SMILE_ROOT%\artifacts\games\InvalidClass-%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\InvalidClass-%%~nP.lifetime.out"
+    call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\InvalidClass-%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\InvalidClass-%%~nP.lifetime.out"
     if errorlevel 1 exit /b 1
     set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
     findstr /x /c:"SMILE_CLASS_LIVE=0" "%SMILE_ROOT%\artifacts\temp\InvalidClass-%%~nP.lifetime.out" >nul || exit /b 1
@@ -374,11 +392,11 @@ echo Class exact diagnostics, constructor/member/accessor capabilities, and safe
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\OptionalNamedStandalone.smile" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\OptionalNamedStandalone.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\games\OptionalNamedStandalone.exe" > "%SMILE_ROOT%\artifacts\temp\OptionalNamedStandalone.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\OptionalNamedStandalone.exe" > "%SMILE_ROOT%\artifacts\temp\OptionalNamedStandalone.out"
 if errorlevel 1 exit /b 1
 fc "%SMILE_ROOT%\examples\OptionalNamedStandalone.expected.txt" "%SMILE_ROOT%\artifacts\temp\OptionalNamedStandalone.out" >nul || exit /b 1
 set "SMILE_TEXT_LIFETIME_DIAGNOSTICS=1"
-"%SMILE_ROOT%\artifacts\games\OptionalNamedStandalone.exe" > "%SMILE_ROOT%\artifacts\temp\OptionalNamedStandalone.lifetime.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\OptionalNamedStandalone.exe" > "%SMILE_ROOT%\artifacts\temp\OptionalNamedStandalone.lifetime.out"
 if errorlevel 1 exit /b 1
 set "SMILE_TEXT_LIFETIME_DIAGNOSTICS="
 findstr /x /c:"SMILE_TEXT_LIVE=0" "%SMILE_ROOT%\artifacts\temp\OptionalNamedStandalone.lifetime.out" >nul || exit /b 1
@@ -390,11 +408,11 @@ if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\OptionalNamedEndProgramCleanup.smile" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\OptionalNamedEndProgramCleanup.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\games\OptionalNamedEndProgramCleanup.exe" > "%SMILE_ROOT%\artifacts\temp\OptionalNamedEndProgramCleanup.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\OptionalNamedEndProgramCleanup.exe" > "%SMILE_ROOT%\artifacts\temp\OptionalNamedEndProgramCleanup.out"
 if errorlevel 1 exit /b 1
 fc "%SMILE_ROOT%\examples\OptionalNamedEndProgramCleanup.expected.txt" "%SMILE_ROOT%\artifacts\temp\OptionalNamedEndProgramCleanup.out" >nul || exit /b 1
 set "SMILE_TEXT_LIFETIME_DIAGNOSTICS=1"
-"%SMILE_ROOT%\artifacts\games\OptionalNamedEndProgramCleanup.exe" > "%SMILE_ROOT%\artifacts\temp\OptionalNamedEndProgramCleanup.lifetime.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\OptionalNamedEndProgramCleanup.exe" > "%SMILE_ROOT%\artifacts\temp\OptionalNamedEndProgramCleanup.lifetime.out"
 if errorlevel 1 exit /b 1
 set "SMILE_TEXT_LIFETIME_DIAGNOSTICS="
 findstr /x /c:"SMILE_TEXT_LIVE=0" "%SMILE_ROOT%\artifacts\temp\OptionalNamedEndProgramCleanup.lifetime.out" >nul || exit /b 1
@@ -428,11 +446,11 @@ echo Optional/named source-order capture, ByRef location, record ownership, End 
 for %%P in (Phase3BRecords.smileproj Phase3BRecords.Package.smileproj) do (
     "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3BRecords\%%P" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\%%~nP.exe" --debug
     if errorlevel 1 exit /b 1
-    "%SMILE_ROOT%\artifacts\games\%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\%%~nP.out"
+    call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\%%~nP.out"
     if errorlevel 1 exit /b 1
     fc "%SMILE_ROOT%\examples\Phase3BRecords\Phase3BRecords.expected.txt" "%SMILE_ROOT%\artifacts\temp\%%~nP.out" >nul || exit /b 1
     set "SMILE_TEXT_LIFETIME_DIAGNOSTICS=1"
-    "%SMILE_ROOT%\artifacts\games\%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\%%~nP.lifetime.out"
+    call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\%%~nP.exe" > "%SMILE_ROOT%\artifacts\temp\%%~nP.lifetime.out"
     if errorlevel 1 exit /b 1
     set "SMILE_TEXT_LIFETIME_DIAGNOSTICS="
     findstr /x /c:"SMILE_TEXT_LIVE=0" "%SMILE_ROOT%\artifacts\temp\%%~nP.lifetime.out" >nul || exit /b 1
@@ -445,7 +463,7 @@ for %%P in (Phase3BRecords.smileproj Phase3BRecords.Package.smileproj) do (
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3BLocalRecords\Phase3BLocalRecords.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase3BLocalRecords.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\games\Phase3BLocalRecords.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3BLocalRecords.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\Phase3BLocalRecords.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3BLocalRecords.out"
 fc "%SMILE_ROOT%\examples\Phase3BLocalRecords\Phase3BLocalRecords.expected.txt" "%SMILE_ROOT%\artifacts\temp\Phase3BLocalRecords.out" >nul || exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase3BLocalRecords\Phase3BLocalRecords.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\Phase3BLocalRecords"
 if errorlevel 1 exit /b 1
@@ -453,10 +471,10 @@ node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase3BL
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase3BRecordMatrix.smile" -o "%SMILE_ROOT%\artifacts\games\Phase3BRecordMatrix.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\games\Phase3BRecordMatrix.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3BRecordMatrix.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\Phase3BRecordMatrix.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3BRecordMatrix.out"
 fc "%SMILE_ROOT%\examples\Phase3BRecordMatrix.expected.txt" "%SMILE_ROOT%\artifacts\temp\Phase3BRecordMatrix.out" >nul || exit /b 1
 set "SMILE_TEXT_LIFETIME_DIAGNOSTICS=1"
-"%SMILE_ROOT%\artifacts\games\Phase3BRecordMatrix.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3BRecordMatrix.lifetime.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\Phase3BRecordMatrix.exe" > "%SMILE_ROOT%\artifacts\temp\Phase3BRecordMatrix.lifetime.out"
 if errorlevel 1 exit /b 1
 set "SMILE_TEXT_LIFETIME_DIAGNOSTICS="
 findstr /x /c:"SMILE_TEXT_LIVE=0" "%SMILE_ROOT%\artifacts\temp\Phase3BRecordMatrix.lifetime.out" >nul || exit /b 1
@@ -489,7 +507,7 @@ echo Phase 3B record semantics, native ABI, Web parity, packages, diagnostics, c
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\EnumCore\EnumCore.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\EnumCore.exe" --debug
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\games\EnumCore.exe" > "%SMILE_ROOT%\artifacts\temp\EnumCore.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\EnumCore.exe" > "%SMILE_ROOT%\artifacts\temp\EnumCore.out"
 if errorlevel 1 exit /b 1
 fc "%SMILE_ROOT%\examples\EnumCore\EnumCore.expected.txt" "%SMILE_ROOT%\artifacts\temp\EnumCore.out" >nul || exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\EnumCore\EnumCore.smileproj" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\EnumCore"
@@ -499,7 +517,7 @@ node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\EnumCore
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\EnumCoreStandalone.smile" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\EnumCoreStandalone.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\games\EnumCoreStandalone.exe" > "%SMILE_ROOT%\artifacts\temp\EnumCoreStandalone.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\EnumCoreStandalone.exe" > "%SMILE_ROOT%\artifacts\temp\EnumCoreStandalone.out"
 if errorlevel 1 exit /b 1
 fc "%SMILE_ROOT%\examples\EnumCoreStandalone.expected.txt" "%SMILE_ROOT%\artifacts\temp\EnumCoreStandalone.out" >nul || exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\EnumCoreStandalone.smile" --target web --configuration Release --output-dir "%SMILE_ROOT%\artifacts\web\EnumCoreStandalone"
@@ -521,7 +539,7 @@ echo Enum nominal typing, checked values, native qword, Web BigInt, editor, pars
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase3B1Hardening\WebFieldKeys.smile" -o "%SMILE_ROOT%\artifacts\games\WebFieldKeys.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\games\WebFieldKeys.exe" > "%SMILE_ROOT%\artifacts\temp\WebFieldKeys.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\WebFieldKeys.exe" > "%SMILE_ROOT%\artifacts\temp\WebFieldKeys.out"
 if errorlevel 1 exit /b 1
 fc "%SMILE_ROOT%\examples\Phase3B1Hardening\WebFieldKeys.expected.txt" "%SMILE_ROOT%\artifacts\temp\WebFieldKeys.out" >nul || exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase3B1Hardening\WebFieldKeys.smile" --target web --output-dir "%SMILE_ROOT%\artifacts\web\WebFieldKeys"
@@ -566,7 +584,7 @@ if not exist "%SMILE_ROOT%\artifacts\games\Phase4Hardening" mkdir "%SMILE_ROOT%\
 if not exist "%SMILE_ROOT%\artifacts\web\Phase4Hardening" mkdir "%SMILE_ROOT%\artifacts\web\Phase4Hardening"
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase4Hardening\DataKeyIdentity.smileproj" --target windows-x64 -o "%SMILE_ROOT%\artifacts\games\Phase4Hardening\DataKeyIdentity.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\games\Phase4Hardening\DataKeyIdentity.exe" > "%SMILE_ROOT%\artifacts\temp\DataKeyIdentity.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\Phase4Hardening\DataKeyIdentity.exe" > "%SMILE_ROOT%\artifacts\temp\DataKeyIdentity.out"
 if errorlevel 1 exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase4Hardening\DataLoadCorrupt.smileproj" --target windows-x64 -o "%SMILE_ROOT%\artifacts\games\Phase4Hardening\DataLoadCorrupt.exe"
 if errorlevel 1 exit /b 1
@@ -606,7 +624,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\genera
 if errorlevel 1 exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase5TextPrimitives.smile" --target windows-x64 -o "%SMILE_ROOT%\artifacts\games\Phase5TextPrimitives.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\games\Phase5TextPrimitives.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5TextPrimitives.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\Phase5TextPrimitives.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5TextPrimitives.out"
 if errorlevel 1 exit /b 1
 powershell -NoProfile -Command "$expected=[IO.File]::ReadAllLines('%SMILE_ROOT%\examples\Phase5TextPrimitives.expected.txt',[Text.Encoding]::UTF8); $actual=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5TextPrimitives.out',[Text.Encoding]::UTF8); if (Compare-Object $expected $actual) { exit 1 }"
 if errorlevel 1 exit /b 1
@@ -627,7 +645,7 @@ if errorlevel 1 exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5UIStateTests\Phase5UIStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase5UIStateTests.exe"
 if errorlevel 1 exit /b 1
 set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
-"%SMILE_ROOT%\artifacts\games\Phase5UIStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5UIStateTests.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\Phase5UIStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5UIStateTests.out"
 if errorlevel 1 exit /b 1
 set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
 powershell -NoProfile -Command "$expected=[IO.File]::ReadAllLines('%SMILE_ROOT%\examples\Phase5UIStateTests\Phase5UIStateTests.expected.txt',[Text.Encoding]::UTF8); $raw=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5UIStateTests.out',[Text.Encoding]::UTF8); $actual=@($raw | Where-Object { $_ -notlike 'SMILE_CLASS_LIVE=*' }); $lifetime=@($raw | Where-Object { $_ -like 'SMILE_CLASS_LIVE=*' }); if ((Compare-Object $expected $actual) -or $lifetime.Count -ne 1 -or $lifetime[0] -cne 'SMILE_CLASS_LIVE=0') { exit 1 }"
@@ -635,7 +653,7 @@ if errorlevel 1 exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5UIStateTests\Phase5UIStateTests.Package.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase5UIStateTestsPackage.exe"
 if errorlevel 1 exit /b 1
 set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
-"%SMILE_ROOT%\artifacts\games\Phase5UIStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5UIStateTestsPackage.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\Phase5UIStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5UIStateTestsPackage.out"
 if errorlevel 1 exit /b 1
 set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
 fc /b "%SMILE_ROOT%\artifacts\temp\Phase5UIStateTests.out" "%SMILE_ROOT%\artifacts\temp\Phase5UIStateTestsPackage.out" >nul
@@ -644,7 +662,7 @@ if errorlevel 1 exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5SubmenuStateTests\Phase5SubmenuStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase5SubmenuStateTests.exe"
 if errorlevel 1 exit /b 1
 set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
-"%SMILE_ROOT%\artifacts\games\Phase5SubmenuStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5SubmenuStateTests.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\Phase5SubmenuStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5SubmenuStateTests.out"
 if errorlevel 1 exit /b 1
 set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
 powershell -NoProfile -Command "$expected=[IO.File]::ReadAllLines('%SMILE_ROOT%\examples\Phase5SubmenuStateTests\Phase5SubmenuStateTests.expected.txt',[Text.Encoding]::UTF8); $raw=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5SubmenuStateTests.out',[Text.Encoding]::UTF8); $actual=@($raw | Where-Object { $_ -notlike 'SMILE_CLASS_LIVE=*' }); $lifetime=@($raw | Where-Object { $_ -like 'SMILE_CLASS_LIVE=*' }); if ((Compare-Object $expected $actual) -or $lifetime.Count -ne 1 -or $lifetime[0] -cne 'SMILE_CLASS_LIVE=0') { exit 1 }"
@@ -652,7 +670,7 @@ if errorlevel 1 exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5SubmenuStateTests\Phase5SubmenuStateTests.Package.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\Phase5SubmenuStateTestsPackage.exe"
 if errorlevel 1 exit /b 1
 set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
-"%SMILE_ROOT%\artifacts\games\Phase5SubmenuStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5SubmenuStateTestsPackage.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\Phase5SubmenuStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5SubmenuStateTestsPackage.out"
 if errorlevel 1 exit /b 1
 set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
 powershell -NoProfile -Command "$project=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5SubmenuStateTests.out',[Text.Encoding]::UTF8); $package=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5SubmenuStateTestsPackage.out',[Text.Encoding]::UTF8); if (Compare-Object $project $package) { exit 1 }"
@@ -661,7 +679,7 @@ if errorlevel 1 exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5DialogueStateTests\Phase5DialogueStateTests.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\Phase5DialogueStateTests.exe"
 if errorlevel 1 exit /b 1
 set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
-"%SMILE_ROOT%\artifacts\games\Phase5DialogueStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5DialogueStateTests.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\Phase5DialogueStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5DialogueStateTests.out"
 if errorlevel 1 exit /b 1
 set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
 powershell -NoProfile -Command "$expected=[IO.File]::ReadAllLines('%SMILE_ROOT%\examples\Phase5DialogueStateTests\Phase5DialogueStateTests.expected.txt',[Text.Encoding]::UTF8); $raw=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\Phase5DialogueStateTests.out',[Text.Encoding]::UTF8); $actual=@($raw | Where-Object { $_ -notlike 'SMILE_CLASS_LIVE=*' }); $lifetime=@($raw | Where-Object { $_ -like 'SMILE_CLASS_LIVE=*' }); if ((Compare-Object $expected $actual) -or $lifetime.Count -ne 1 -or $lifetime[0] -cne 'SMILE_CLASS_LIVE=0') { exit 1 }"
@@ -679,11 +697,11 @@ if not exist "%SMILE_ROOT%\artifacts\games\Phase5Hardening-DirectX" mkdir "%SMIL
 if not exist "%SMILE_ROOT%\artifacts\games\Phase5Hardening-GDI" mkdir "%SMILE_ROOT%\artifacts\games\Phase5Hardening-GDI"
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5Hardening\Phase5Hardening.smileproj" --target windows-x64 --configuration Release --graphics DirectX -o "%SMILE_ROOT%\artifacts\games\Phase5Hardening-DirectX\Phase5Hardening.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\games\Phase5Hardening-DirectX\Phase5Hardening.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5Hardening-DirectX.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\Phase5Hardening-DirectX\Phase5Hardening.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5Hardening-DirectX.out"
 if errorlevel 1 exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5Hardening\Phase5Hardening.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\Phase5Hardening-GDI\Phase5Hardening.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\games\Phase5Hardening-GDI\Phase5Hardening.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5Hardening-GDI.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\Phase5Hardening-GDI\Phase5Hardening.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5Hardening-GDI.out"
 if errorlevel 1 exit /b 1
 for %%O in (Phase5Hardening-DirectX.out Phase5Hardening-GDI.out) do (
     powershell -NoProfile -Command "$expected=[IO.File]::ReadAllLines('%SMILE_ROOT%\examples\Phase5Hardening\Phase5Hardening.expected.txt',[Text.Encoding]::UTF8); $actual=[IO.File]::ReadAllLines('%SMILE_ROOT%\artifacts\temp\%%O',[Text.Encoding]::UTF8); if (Compare-Object $expected $actual) { exit 1 }"
@@ -691,7 +709,7 @@ for %%O in (Phase5Hardening-DirectX.out Phase5Hardening-GDI.out) do (
 )
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase5Hardening\Phase5Hardening.Package.smileproj" --target windows-x64 --configuration Release --graphics GDI -o "%SMILE_ROOT%\artifacts\games\Phase5HardeningPackage.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\games\Phase5HardeningPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5HardeningPackage.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\Phase5HardeningPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase5HardeningPackage.out"
 if errorlevel 1 exit /b 1
 fc /b "%SMILE_ROOT%\artifacts\temp\Phase5Hardening-GDI.out" "%SMILE_ROOT%\artifacts\temp\Phase5HardeningPackage.out" >nul
 if errorlevel 1 exit /b 1
@@ -783,13 +801,13 @@ if errorlevel 1 exit /b 1
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase6RpgStateTests\Phase6RpgStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase6RpgStateTests.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\tests\Phase6RpgStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase6RpgStateTests.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\tests\Phase6RpgStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase6RpgStateTests.out"
 if errorlevel 1 exit /b 1
 findstr /x /c:"Phase 6 RPG state tests: PASS" "%SMILE_ROOT%\artifacts\temp\Phase6RpgStateTests.out" >nul
 if errorlevel 1 exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase6RpgStateTests\Phase6RpgStateTests.Package.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase6RpgStateTestsPackage.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\tests\Phase6RpgStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase6RpgStateTestsPackage.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\tests\Phase6RpgStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase6RpgStateTestsPackage.out"
 if errorlevel 1 exit /b 1
 fc /b "%SMILE_ROOT%\artifacts\temp\Phase6RpgStateTests.out" "%SMILE_ROOT%\artifacts\temp\Phase6RpgStateTestsPackage.out" >nul
 if errorlevel 1 exit /b 1
@@ -832,13 +850,13 @@ echo Phase 6.2 state tests and consolidated RPG Systems DirectX, GDI, Web, launc
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase7WorldStateTests\Phase7WorldStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase7WorldStateTests.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\tests\Phase7WorldStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase7WorldStateTests.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\tests\Phase7WorldStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase7WorldStateTests.out"
 if errorlevel 1 exit /b 1
 findstr /x /c:"Phase 7 world state tests: PASS" "%SMILE_ROOT%\artifacts\temp\Phase7WorldStateTests.out" >nul
 if errorlevel 1 exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase7WorldStateTests\Phase7WorldStateTests.Package.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase7WorldStateTestsPackage.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\tests\Phase7WorldStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase7WorldStateTestsPackage.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\tests\Phase7WorldStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase7WorldStateTestsPackage.out"
 if errorlevel 1 exit /b 1
 fc /b "%SMILE_ROOT%\artifacts\temp\Phase7WorldStateTests.out" "%SMILE_ROOT%\artifacts\temp\Phase7WorldStateTestsPackage.out" >nul
 if errorlevel 1 exit /b 1
@@ -859,13 +877,13 @@ echo Phase 7 Smile.Game, Smile.RPG world state, format compatibility, package, a
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase8DungeonStateTests\Phase8DungeonStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase8DungeonStateTests.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\tests\Phase8DungeonStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase8DungeonStateTests.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\tests\Phase8DungeonStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase8DungeonStateTests.out"
 if errorlevel 1 exit /b 1
 findstr /x /c:"Phase 8 dungeon state tests: PASS" "%SMILE_ROOT%\artifacts\temp\Phase8DungeonStateTests.out" >nul
 if errorlevel 1 exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase8DungeonStateTests\Phase8DungeonStateTests.Package.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase8DungeonStateTestsPackage.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\tests\Phase8DungeonStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase8DungeonStateTestsPackage.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\tests\Phase8DungeonStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase8DungeonStateTestsPackage.out"
 if errorlevel 1 exit /b 1
 fc /b "%SMILE_ROOT%\artifacts\temp\Phase8DungeonStateTests.out" "%SMILE_ROOT%\artifacts\temp\Phase8DungeonStateTestsPackage.out" >nul
 if errorlevel 1 exit /b 1
@@ -890,13 +908,13 @@ echo Phase 8 dungeon composition, SRPG 2 state, package, and consolidated RPG Sy
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase9BattleStateTests\Phase9BattleStateTests.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase9BattleStateTests.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\tests\Phase9BattleStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase9BattleStateTests.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\tests\Phase9BattleStateTests.exe" > "%SMILE_ROOT%\artifacts\temp\Phase9BattleStateTests.out"
 if errorlevel 1 exit /b 1
 findstr /x /c:"Phase 9 battle state tests: PASS" "%SMILE_ROOT%\artifacts\temp\Phase9BattleStateTests.out" >nul
 if errorlevel 1 exit /b 1
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\Phase9BattleStateTests\Phase9BattleStateTests.Package.smileproj" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\tests\Phase9BattleStateTestsPackage.exe"
 if errorlevel 1 exit /b 1
-"%SMILE_ROOT%\artifacts\tests\Phase9BattleStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase9BattleStateTestsPackage.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\tests\Phase9BattleStateTestsPackage.exe" > "%SMILE_ROOT%\artifacts\temp\Phase9BattleStateTestsPackage.out"
 if errorlevel 1 exit /b 1
 fc /b "%SMILE_ROOT%\artifacts\temp\Phase9BattleStateTests.out" "%SMILE_ROOT%\artifacts\temp\Phase9BattleStateTestsPackage.out" >nul
 if errorlevel 1 exit /b 1
@@ -947,12 +965,12 @@ echo Phase 2 invalid module diagnostics passed.
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\LanguageBasics.smile" -o "%SMILE_ROOT%\artifacts\games\LanguageBasics.exe"
 if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\games\LanguageBasics.exe"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\LanguageBasics.exe"
 if errorlevel 1 exit /b %errorlevel%
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\StructuredLanguageBasics.smile" -o "%SMILE_ROOT%\artifacts\games\StructuredLanguageBasics.exe"
 if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\games\StructuredLanguageBasics.exe" > "%SMILE_ROOT%\artifacts\temp\StructuredLanguageBasics.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\StructuredLanguageBasics.exe" > "%SMILE_ROOT%\artifacts\temp\StructuredLanguageBasics.out"
 if errorlevel 1 exit /b %errorlevel%
 for %%V in ("Even" "12" "40" "1" "2" "200" "5" "3" "2022440" "16744576") do (
     findstr /x /c:%%V "%SMILE_ROOT%\artifacts\temp\StructuredLanguageBasics.out" >nul
@@ -1001,7 +1019,7 @@ echo Invalid game language diagnostics passed.
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\RuntimeBasics.smile" -o "%SMILE_ROOT%\artifacts\games\RuntimeBasics.exe"
 if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\games\RuntimeBasics.exe"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\RuntimeBasics.exe"
 if errorlevel 1 exit /b %errorlevel%
 
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\ConsoleSnake.smile" -o "%SMILE_ROOT%\artifacts\games\ConsoleSnake.exe"
@@ -1013,7 +1031,7 @@ if errorlevel 1 exit /b %errorlevel%
 set "SMILE_STORAGE_DIR=%LOCALAPPDATA%\SMILE 2.0\Games\StorageBasics"
 if not exist "%SMILE_STORAGE_DIR%" mkdir "%SMILE_STORAGE_DIR%"
 > "%SMILE_STORAGE_DIR%\SmokeValue.txt" echo corrupt-value
-"%SMILE_ROOT%\artifacts\games\StorageBasics.exe" > "%SMILE_ROOT%\artifacts\temp\StorageBasics.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\StorageBasics.exe" > "%SMILE_ROOT%\artifacts\temp\StorageBasics.out"
 if errorlevel 1 exit /b %errorlevel%
 findstr /x /c:"123" "%SMILE_ROOT%\artifacts\temp\StorageBasics.out" >nul
 if errorlevel 1 (
@@ -1031,7 +1049,7 @@ echo Storage default, save, and reload tests passed.
 if errorlevel 1 exit /b %errorlevel%
 powershell -NoProfile -Command "[IO.File]::WriteAllBytes('%SMILE_ROOT%\artifacts\games\TextFileLoadFixture.txt', [byte[]](0xEF,0xBB,0xBF,65,66,67,68,69,70))"
 if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\games\TextFileLoadBasics.exe" > "%SMILE_ROOT%\artifacts\temp\TextFileLoadBasics.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\TextFileLoadBasics.exe" > "%SMILE_ROOT%\artifacts\temp\TextFileLoadBasics.out"
 if errorlevel 1 exit /b %errorlevel%
 findstr /x /c:"5" "%SMILE_ROOT%\artifacts\temp\TextFileLoadBasics.out" >nul
 if errorlevel 1 (
@@ -1098,7 +1116,7 @@ echo MultiFileBasics native debug and Web versions compiled successfully.
 if not exist "%SMILE_ROOT%\artifacts\games\MultiFileDeclarationHardening" mkdir "%SMILE_ROOT%\artifacts\games\MultiFileDeclarationHardening"
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\MultiFileDeclarationHardening\Program.smile" --source "%SMILE_ROOT%\examples\MultiFileDeclarationHardening\Arrays.smile" --source "%SMILE_ROOT%\examples\MultiFileDeclarationHardening\Derived.smile" --source "%SMILE_ROOT%\examples\MultiFileDeclarationHardening\Base.smile" -o "%SMILE_ROOT%\artifacts\games\MultiFileDeclarationHardening\MultiFileDeclarationHardening.exe"
 if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\games\MultiFileDeclarationHardening\MultiFileDeclarationHardening.exe" > "%SMILE_ROOT%\artifacts\temp\MultiFileDeclarationHardening.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\MultiFileDeclarationHardening\MultiFileDeclarationHardening.exe" > "%SMILE_ROOT%\artifacts\temp\MultiFileDeclarationHardening.out"
 if errorlevel 1 exit /b %errorlevel%
 findstr /x /c:"8" "%SMILE_ROOT%\artifacts\temp\MultiFileDeclarationHardening.out" >nul
 if errorlevel 1 (
@@ -1162,11 +1180,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\sync-s
 if errorlevel 1 exit /b %errorlevel%
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\SnakeModelTests.smile" --source "%SMILE_ROOT%\games\Snake\SnakeModel.smile" --target windows-x64 --configuration Release -o "%SMILE_ROOT%\artifacts\games\SnakeModelTests.exe"
 if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\games\SnakeModelTests.exe" > "%SMILE_ROOT%\artifacts\temp\SnakeModelTests.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\SnakeModelTests.exe" > "%SMILE_ROOT%\artifacts\temp\SnakeModelTests.out"
 if errorlevel 1 exit /b %errorlevel%
 fc "%SMILE_ROOT%\examples\SnakeModelTests.expected.txt" "%SMILE_ROOT%\artifacts\temp\SnakeModelTests.out" >nul || exit /b 1
 set "SMILE_CLASS_LIFETIME_DIAGNOSTICS=1"
-"%SMILE_ROOT%\artifacts\games\SnakeModelTests.exe" > "%SMILE_ROOT%\artifacts\temp\SnakeModelTests.lifetime.out"
+call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\SnakeModelTests.exe" > "%SMILE_ROOT%\artifacts\temp\SnakeModelTests.lifetime.out"
 if errorlevel 1 exit /b %errorlevel%
 set "SMILE_CLASS_LIFETIME_DIAGNOSTICS="
 findstr /x /c:"SMILE_CLASS_LIVE=0" "%SMILE_ROOT%\artifacts\temp\SnakeModelTests.lifetime.out" >nul || exit /b 1

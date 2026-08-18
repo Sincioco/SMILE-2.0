@@ -1,0 +1,18 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>14.0</LangVersion>
+    <Deterministic>true</Deterministic>
+    <WarningLevel>5</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Smile.Language' Or
+                            '$(MSBuildProjectName)' == 'Smile.Compiler' Or
+                            '$(MSBuildProjectName)' == 'Smile.Tests'">
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Smile.VisualStudio' Or
+                            '$(MSBuildProjectName)' == 'Smile.ProjectTemplates' Or
+                            '$(MSBuildProjectName)' == 'Smile.ItemTemplates'">
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode>true</RestoreLockedMode>
+  </PropertyGroup>
+</Project>

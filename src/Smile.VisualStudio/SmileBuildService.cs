@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Shell;
@@ -17,10 +16,6 @@ internal static class SmileBuildService
 {
     internal static readonly TimeSpan CompilerTimeout = TimeSpan.FromMinutes(10);
     private static readonly Guid OutputPaneGuid = new("9315bdd2-9105-4c2b-82c1-5d28bdf89588");
-    private static readonly Regex DiagnosticPattern = new(
-        @"^(?<file>.+)\((?<line>\d+),(?<column>\d+)\): error (?<code>SML\d+): (?<message>.+)$",
-        RegexOptions.Compiled | RegexOptions.Multiline);
-
     private static AsyncPackage? _package;
     private static ErrorListProvider? _errors;
 
@@ -220,16 +215,18 @@ internal static class SmileBuildService
             return;
 
         _errors.Tasks.Clear();
-        foreach (Match match in DiagnosticPattern.Matches(output.Replace("\r\n", "\n")))
+        foreach (var diagnostic in SmileCompilerDiagnosticParser.Parse(output))
         {
             var task = new ErrorTask
             {
                 Category = TaskCategory.BuildCompile,
-                ErrorCategory = TaskErrorCategory.Error,
-                Document = match.Groups["file"].Value,
-                Line = Math.Max(0, int.Parse(match.Groups["line"].Value) - 1),
-                Column = Math.Max(0, int.Parse(match.Groups["column"].Value) - 1),
-                Text = $"{match.Groups["code"].Value}: {match.Groups["message"].Value}"
+                ErrorCategory = diagnostic.Severity == DiagnosticSeverity.Warning
+                    ? TaskErrorCategory.Warning
+                    : TaskErrorCategory.Error,
+                Document = diagnostic.FilePath,
+                Line = Math.Max(0, diagnostic.Line - 1),
+                Column = Math.Max(0, diagnostic.Column - 1),
+                Text = $"{diagnostic.Code}: {diagnostic.Message}"
             };
             task.Navigate += (_, _) => _errors.Navigate(task, Guid.Empty);
             _errors.Tasks.Add(task);

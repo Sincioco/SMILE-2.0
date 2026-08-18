@@ -3,8 +3,8 @@ using System.Xml.Linq;
 using Smile.Compiler;
 using Smile.Language;
 
-var failures = new List<string>();
-var passed = 0;
+Environment.CurrentDirectory = RepositoryTestContext.FindRepositoryRoot();
+var tests = new TestContext();
 
 Run("Missing GraphicsBackend defaults to Auto", () =>
 {
@@ -3108,6 +3108,38 @@ Run("Project diagnostics retain shared path formatting and compiler exit code on
         Equal(true, usageOutput.ToString().Contains("Usage: smilec", StringComparison.Ordinal));
     }
     finally { Directory.Delete(directory, true); }
+});
+Run("Compiler diagnostic parsing preserves warnings errors and Windows paths", () =>
+{
+    var output = "tool preamble\r\n" +
+                 "C:\\work area\\copy (1)\\Program.smile(12,34): warning SML1234: Check this value.\r\n" +
+                 "C:\\work area\\Program.smile(5,6): error SML5678: Build failed.\r\n" +
+                 "C:\\ignored.smile(x,1): warning SML9999: malformed\r\n";
+    var diagnostics = SmileCompilerDiagnosticParser.Parse(output);
+    Equal(2, diagnostics.Count);
+    Equal(Path.GetFullPath("C:\\work area\\copy (1)\\Program.smile"), diagnostics[0].FilePath);
+    Equal(12, diagnostics[0].Line);
+    Equal(34, diagnostics[0].Column);
+    Equal("SML1234", diagnostics[0].Code);
+    Equal("Check this value.", diagnostics[0].Message);
+    Equal(DiagnosticSeverity.Warning, diagnostics[0].Severity);
+    Equal(DiagnosticSeverity.Error, diagnostics[1].Severity);
+});
+Run("Native build flags keep runtime protection and constrain the custom-entry exception", () =>
+{
+    var project = File.ReadAllText("src/Smile.NativeRuntime/Smile.NativeRuntime.vcxproj");
+    Equal(2, project.Split("<BufferSecurityCheck>true</BufferSecurityCheck>",
+        StringSplitOptions.None).Length - 1);
+    Equal(true, project.Contains("<SDLCheck>true</SDLCheck>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>",
+        StringComparison.Ordinal));
+    Equal(true, project.Contains("custom-entry link uses the DLL CRT import libraries",
+        StringComparison.Ordinal));
+
+    var toolchain = File.ReadAllText("src/Smile.Compiler/NativeToolchain.cs");
+    Equal(true, toolchain.Contains("/GS- /Fo", StringComparison.Ordinal));
+    Equal(true, toolchain.Contains("constrained to this generated, buffer-free helper",
+        StringComparison.Ordinal));
 });
 Run("Project reference cycles are diagnosed with the dependency path", () =>
 {
@@ -6235,15 +6267,15 @@ Run("Lightweight OOP parser recovery remains bounded and preserves later declara
     }
 });
 
-if (failures.Count != 0)
+if (tests.Failures.Count != 0)
 {
-    Console.Error.WriteLine($"{failures.Count} SMILE project-option test(s) failed:");
-    foreach (var failure in failures)
+    Console.Error.WriteLine($"{tests.Failures.Count} SMILE test(s) failed:");
+    foreach (var failure in tests.Failures)
         Console.Error.WriteLine("- " + failure);
     return 1;
 }
 
-Console.WriteLine($"{passed} SMILE language, compiler, project, completion, and timing tests passed.");
+Console.WriteLine($"{tests.Passed} SMILE language, compiler, project, completion, and timing tests passed.");
 return 0;
 
 SmileProjectGraphicsOptions Parse(string xml) =>
@@ -6275,18 +6307,7 @@ MusicStatementSyntax Music(SmileAnalysisResult analysis) =>
 bool HasDiagnostic(SmileAnalysisResult analysis, string code) =>
     analysis.Diagnostics.Any(diagnostic => diagnostic.Code == code);
 
-void Run(string name, Action test)
-{
-    try
-    {
-        test();
-        passed++;
-    }
-    catch (Exception exception)
-    {
-        failures.Add($"{name}: {exception.Message}");
-    }
-}
+void Run(string name, Action test) => tests.Run(name, test);
 
 void Equal<T>(T expected, T actual)
 {

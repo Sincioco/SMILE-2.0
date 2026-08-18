@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "dependencies": {
+    ".NETFramework,Version=v4.7.2": {
+      "Microsoft.VSSDK.BuildTools": {
+        "type": "Direct",
+        "requested": "[18.5.40034, )",
+        "resolved": "18.5.40034",
+        "contentHash": "5g0HSWvzIunNqTlaHPRBnKo/zix5omWXBrJzLyrbJS9c7Xkpd34QMqVOk6WTqgt7yHqpGj4ajnBx82zGABdSew==",
+        "dependencies": {
+          "Microsoft.VisualStudio.SDK.Analyzers": "17.7.105",
+          "Microsoft.VsSDK.CompatibilityAnalyzer": "18.3.1108"
+        }
+      },
+      "Microsoft.VisualStudio.SDK.Analyzers": {
+        "type": "Transitive",
+        "resolved": "17.7.105",
+        "contentHash": "pQK/THPoNjzmfVGnjdP/13nR3bZViUwu4CsjPAFFvg2xMc6xhVcgprgKwrSDakTkd92n57iCy+AC58ZKKuoaKw=="
+      },
+      "Microsoft.VsSDK.CompatibilityAnalyzer": {
+        "type": "Transitive",
+        "resolved": "18.3.1108",
+        "contentHash": "ol/XAbRAkpZmpswNL1pV+Ey2dqcEZNe1tYT74lkD/+ow5r0rqC0XLq72rVyiz4w/oCIN+480PO1xO+7/4hrqKw=="
+      }
+    }
+  }
+}
