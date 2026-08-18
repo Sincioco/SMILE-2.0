@@ -3130,6 +3130,137 @@ Run("Malformed and unsafe packages are rejected before extraction", () =>
     }
     finally { Directory.Delete(directory, true); }
 });
+Run("SMILE library package resource limits reject every bounded package dimension", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileLibraryResourceTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var projectPath = Path.GetFullPath("libraries/Smile.Text.Extras/Smile.Text.Extras.smilelibproj");
+        var compilation = SmileProjectCompilation.Load(projectPath, Path.Combine(directory, "build-cache"));
+        var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library,
+            compilation.DependencyContext);
+        Equal(false, analysis.HasErrors);
+        var package = Path.Combine(directory, "Normal.smilelib");
+        SmileLibraryPackage.Write(package, compilation.Graph.Root, analysis);
+        Equal(compilation.Graph.Root.LibraryName,
+            SmileLibraryPackage.Read(package, Path.Combine(directory, "normal-cache")).Identity.Name);
+
+        long physicalBytes;
+        int entryCount;
+        int longestName;
+        int manifestBytes;
+        int publicApiBytes;
+        int maximumSourceBytes;
+        int sourceCount;
+        long expandedBytes;
+        using (var archive = System.IO.Compression.ZipFile.OpenRead(package))
+        {
+            physicalBytes = new FileInfo(package).Length;
+            entryCount = archive.Entries.Count;
+            longestName = archive.Entries.Max(entry => entry.FullName.Length);
+            manifestBytes = checked((int)archive.GetEntry("manifest.json")!.Length);
+            publicApiBytes = checked((int)archive.GetEntry("api/public-symbols.json")!.Length);
+            var sources = archive.Entries.Where(entry => entry.FullName.StartsWith("src/", StringComparison.Ordinal))
+                .ToArray();
+            maximumSourceBytes = checked((int)sources.Max(entry => entry.Length));
+            sourceCount = sources.Length;
+            expandedBytes = archive.Entries.Sum(entry => entry.Length);
+        }
+
+        SmileLibraryResourcePolicy Policy(long? physical = null, int? entries = null, int? name = null,
+            int? manifest = null, int? api = null, int? source = null, int? sources = null,
+            long? expanded = null) => new(
+            physical ?? physicalBytes, entries ?? entryCount, name ?? longestName,
+            manifest ?? manifestBytes, api ?? publicApiBytes, source ?? maximumSourceBytes,
+            sources ?? sourceCount, expanded ?? expandedBytes);
+
+        ThrowsProjectDiagnostic(() => SmileLibraryPackage.ReadIdentity(package,
+            Policy(physical: physicalBytes - 1)), SmileLibraryPackage.ResourceLimitDiagnosticCode);
+        ThrowsProjectDiagnostic(() => SmileLibraryPackage.ReadIdentity(package,
+            Policy(entries: entryCount - 1)), SmileLibraryPackage.ResourceLimitDiagnosticCode);
+        ThrowsProjectDiagnostic(() => SmileLibraryPackage.ReadIdentity(package,
+            Policy(name: longestName - 1)), SmileLibraryPackage.ResourceLimitDiagnosticCode);
+        ThrowsProjectDiagnostic(() => SmileLibraryPackage.ReadIdentity(package,
+            Policy(manifest: manifestBytes - 1)), SmileLibraryPackage.ResourceLimitDiagnosticCode);
+        ThrowsProjectDiagnostic(() => SmileLibraryPackage.ReadEnvelope(package,
+            Path.Combine(directory, "api-limit-cache"), Policy(api: publicApiBytes - 1)),
+            SmileLibraryPackage.ResourceLimitDiagnosticCode);
+        ThrowsProjectDiagnostic(() => SmileLibraryPackage.ReadEnvelope(package,
+            Path.Combine(directory, "source-limit-cache"), Policy(source: maximumSourceBytes - 1)),
+            SmileLibraryPackage.ResourceLimitDiagnosticCode);
+        ThrowsProjectDiagnostic(() => SmileLibraryPackage.ReadEnvelope(package,
+            Path.Combine(directory, "source-count-cache"), Policy(sources: sourceCount - 1)),
+            SmileLibraryPackage.ResourceLimitDiagnosticCode);
+        var rejectedCache = Path.Combine(directory, "expanded-limit-cache");
+        ThrowsProjectDiagnostic(() => SmileLibraryPackage.ReadEnvelope(package, rejectedCache,
+            Policy(expanded: expandedBytes - 1)), SmileLibraryPackage.ResourceLimitDiagnosticCode);
+        Equal(false, Directory.Exists(rejectedCache));
+
+        var boundary = SmileLibraryPackage.ReadEnvelope(package, Path.Combine(directory, "boundary-cache"),
+            Policy());
+        Equal(compilation.Graph.Root.LibraryName, boundary.Identity.Name);
+
+        var compressed = Path.Combine(directory, "CompressedOversize.smilelib");
+        using (var archive = System.IO.Compression.ZipFile.Open(compressed,
+                   System.IO.Compression.ZipArchiveMode.Create))
+        {
+            var entry = archive.CreateEntry("manifest.json", System.IO.Compression.CompressionLevel.Optimal);
+            using var writer = new StreamWriter(entry.Open());
+            writer.Write(new string('A', 4096));
+        }
+        var compressedPolicy = new SmileLibraryResourcePolicy(1024 * 1024, 3, 512, 128, 128, 128, 1, 384);
+        ThrowsProjectDiagnostic(() => SmileLibraryPackage.ReadIdentity(compressed, compressedPolicy),
+            SmileLibraryPackage.ResourceLimitDiagnosticCode);
+    }
+    finally { Directory.Delete(directory, true); }
+});
+Run("SMILE library publication preserves prior output and serializes same-target writers", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileLibraryPublishTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var projectPath = Path.GetFullPath("libraries/Smile.Text.Extras/Smile.Text.Extras.smilelibproj");
+        var compilation = SmileProjectCompilation.Load(projectPath, Path.Combine(directory, "build-cache"));
+        var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library,
+            compilation.DependencyContext);
+        var output = Path.Combine(directory, "Library.smilelib");
+        SmileLibraryPackage.Write(output, compilation.Graph.Root, analysis);
+        var priorBytes = File.ReadAllBytes(output);
+        ThrowsContains(() => SmileLibraryPackage.Write(output, compilation.Graph.Root, analysis,
+            SmileLibraryResourcePolicy.Production, TimeSpan.FromSeconds(5),
+            _ => throw new IOException("Synthetic package publication failure.")), "Synthetic package");
+        Equal(true, priorBytes.SequenceEqual(File.ReadAllBytes(output)));
+        Equal(0, Directory.EnumerateFiles(directory, "*.tmp").Count());
+
+        using var firstReady = new ManualResetEventSlim(false);
+        using var releaseFirst = new ManualResetEventSlim(false);
+        var firstWriter = Task.Run(() => SmileLibraryPackage.Write(output, compilation.Graph.Root, analysis,
+            SmileLibraryResourcePolicy.Production, TimeSpan.FromSeconds(5), _ =>
+            {
+                firstReady.Set();
+                releaseFirst.Wait(TimeSpan.FromSeconds(5));
+            }));
+        Equal(true, firstReady.Wait(TimeSpan.FromSeconds(5)));
+        try
+        {
+            ThrowsProjectDiagnostic(() => SmileLibraryPackage.Write(output, compilation.Graph.Root, analysis,
+                SmileLibraryResourcePolicy.Production, TimeSpan.FromMilliseconds(100)),
+                SmileLibraryPackage.OutputLockDiagnosticCode);
+            var independent = Path.Combine(directory, "Independent.smilelib");
+            SmileLibraryPackage.Write(independent, compilation.Graph.Root, analysis,
+                SmileLibraryResourcePolicy.Production, TimeSpan.FromSeconds(2));
+            Equal(true, File.Exists(independent));
+        }
+        finally
+        {
+            releaseFirst.Set();
+            firstWriter.GetAwaiter().GetResult();
+        }
+    }
+    finally { Directory.Delete(directory, true); }
+});
 Run("Project-reference debug sites retain the real library source path", () =>
 {
     var projectPath = Path.GetFullPath("examples/LibraryConsumer/LibraryConsumer.smileproj");

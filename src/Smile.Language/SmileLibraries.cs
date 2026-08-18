@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
+using System.Threading;
 using System.Xml;
 
 namespace Smile.Language;
@@ -190,13 +191,56 @@ public sealed class SmileLibraryBuildFingerprint
     }
 }
 
+internal sealed class SmileLibraryResourcePolicy
+{
+    public static readonly SmileLibraryResourcePolicy Production = new(
+        maximumPackageBytes: 64L * 1024 * 1024,
+        maximumEntries: 1026,
+        maximumEntryNameCharacters: 512,
+        maximumManifestBytes: 4 * 1024 * 1024,
+        maximumPublicApiBytes: 16 * 1024 * 1024,
+        maximumSourceBytes: 4 * 1024 * 1024,
+        maximumSourceCount: 1024,
+        maximumExpandedBytes: 64L * 1024 * 1024);
+
+    public SmileLibraryResourcePolicy(long maximumPackageBytes, int maximumEntries,
+        int maximumEntryNameCharacters, int maximumManifestBytes, int maximumPublicApiBytes,
+        int maximumSourceBytes, int maximumSourceCount, long maximumExpandedBytes)
+    {
+        MaximumPackageBytes = maximumPackageBytes;
+        MaximumEntries = maximumEntries;
+        MaximumEntryNameCharacters = maximumEntryNameCharacters;
+        MaximumManifestBytes = maximumManifestBytes;
+        MaximumPublicApiBytes = maximumPublicApiBytes;
+        MaximumSourceBytes = maximumSourceBytes;
+        MaximumSourceCount = maximumSourceCount;
+        MaximumExpandedBytes = maximumExpandedBytes;
+    }
+
+    public long MaximumPackageBytes { get; }
+    public int MaximumEntries { get; }
+    public int MaximumEntryNameCharacters { get; }
+    public int MaximumManifestBytes { get; }
+    public int MaximumPublicApiBytes { get; }
+    public int MaximumSourceBytes { get; }
+    public int MaximumSourceCount { get; }
+    public long MaximumExpandedBytes { get; }
+}
+
 public static class SmileLibraryPackage
 {
     public const int CurrentFormatVersion = 6;
+    internal const string ResourceLimitDiagnosticCode = "SML3210";
+    internal const string OutputLockDiagnosticCode = "SML3211";
     private static readonly DateTimeOffset DeterministicTimestamp =
         new(1980, 1, 1, 0, 0, 0, TimeSpan.Zero);
+    private static readonly TimeSpan OutputLockTimeout = TimeSpan.FromSeconds(30);
 
     public static void Write(string outputPath, SmileProjectSourceSet project, SmileAnalysisResult analysis)
+        => Write(outputPath, project, analysis, SmileLibraryResourcePolicy.Production, OutputLockTimeout);
+
+    internal static void Write(string outputPath, SmileProjectSourceSet project, SmileAnalysisResult analysis,
+        SmileLibraryResourcePolicy policy, TimeSpan outputLockTimeout, Action<string>? beforePublish = null)
     {
         if (project == null) throw new ArgumentNullException(nameof(project));
         if (analysis == null) throw new ArgumentNullException(nameof(analysis));
@@ -236,41 +280,73 @@ public static class SmileLibraryPackage
 
         var fullOutputPath = Path.GetFullPath(outputPath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullOutputPath)!);
-        using var bytesOutput = new MemoryStream();
-        using (var archive = new ZipArchive(bytesOutput, ZipArchiveMode.Create, leaveOpen: true, Encoding.UTF8))
+        ValidateGeneratedEntries(entries, fullOutputPath, policy);
+        using var outputLock = PackageOutputLock.Acquire(fullOutputPath, outputLockTimeout);
+        var temporaryPath = Path.Combine(Path.GetDirectoryName(fullOutputPath)!,
+            "." + Path.GetFileName(fullOutputPath) + "." + Guid.NewGuid().ToString("N") + ".tmp");
+        try
         {
-            foreach (var item in entries.OrderBy(entry => entry.Name, StringComparer.Ordinal))
+            using (var file = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
-                var entry = archive.CreateEntry(item.Name, CompressionLevel.NoCompression);
-                entry.LastWriteTime = DeterministicTimestamp;
-                using var stream = entry.Open();
-                stream.Write(item.Bytes, 0, item.Bytes.Length);
+                using (var archive = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true, Encoding.UTF8))
+                {
+                    foreach (var item in entries.OrderBy(entry => entry.Name, StringComparer.Ordinal))
+                    {
+                        var entry = archive.CreateEntry(item.Name, CompressionLevel.NoCompression);
+                        entry.LastWriteTime = DeterministicTimestamp;
+                        using var stream = entry.Open();
+                        stream.Write(item.Bytes, 0, item.Bytes.Length);
+                    }
+                }
+                file.Flush(flushToDisk: true);
             }
+
+            _ = ReadBuildFingerprint(temporaryPath, policy);
+            beforePublish?.Invoke(temporaryPath);
+            ReplaceFile(temporaryPath, fullOutputPath);
         }
-        File.WriteAllBytes(fullOutputPath, bytesOutput.ToArray());
+        finally
+        {
+            TryDelete(temporaryPath);
+        }
     }
 
     public static SmileLibraryIdentity ReadIdentity(string packagePath)
+        => ReadIdentity(packagePath, SmileLibraryResourcePolicy.Production);
+
+    internal static SmileLibraryIdentity ReadIdentity(string packagePath, SmileLibraryResourcePolicy policy)
     {
-        using var archive = ZipFile.OpenRead(Path.GetFullPath(packagePath));
-        ValidateEntries(archive);
+        var fullPackagePath = Path.GetFullPath(packagePath);
+        ValidatePhysicalPackage(fullPackagePath, policy);
+        using var file = File.OpenRead(fullPackagePath);
+        using var archive = new ZipArchive(file, ZipArchiveMode.Read, leaveOpen: false, Encoding.UTF8);
+        ValidateEntries(archive, fullPackagePath, policy);
+        var budget = new ExpandedReadBudget(fullPackagePath, policy.MaximumExpandedBytes);
         var manifest = archive.GetEntry("manifest.json")
             ?? throw new InvalidDataException("SMILE library package is missing manifest.json.");
-        using var stream = manifest.Open();
-        return ParseIdentity(ReadManifest(stream));
+        return ParseIdentity(ReadManifest(ReadEntryBytes(manifest, policy.MaximumManifestBytes,
+            "manifest.json", fullPackagePath, budget)));
     }
 
     public static SmileLibraryBuildFingerprint ReadBuildFingerprint(string packagePath)
+        => ReadBuildFingerprint(packagePath, SmileLibraryResourcePolicy.Production);
+
+    internal static SmileLibraryBuildFingerprint ReadBuildFingerprint(string packagePath,
+        SmileLibraryResourcePolicy policy)
     {
-        using var archive = ZipFile.OpenRead(Path.GetFullPath(packagePath));
-        ValidateEntries(archive);
+        var fullPackagePath = Path.GetFullPath(packagePath);
+        ValidatePhysicalPackage(fullPackagePath, policy);
+        using var file = File.OpenRead(fullPackagePath);
+        using var archive = new ZipArchive(file, ZipArchiveMode.Read, leaveOpen: false, Encoding.UTF8);
+        ValidateEntries(archive, fullPackagePath, policy);
+        var budget = new ExpandedReadBudget(fullPackagePath, policy.MaximumExpandedBytes);
         var manifestEntry = archive.GetEntry("manifest.json")
             ?? throw new InvalidDataException("SMILE library package is missing manifest.json.");
-        PackageManifest manifest;
-        using (var stream = manifestEntry.Open())
-            manifest = ReadManifest(stream);
+        var manifest = ReadManifest(ReadEntryBytes(manifestEntry, policy.MaximumManifestBytes,
+            "manifest.json", fullPackagePath, budget));
         var identity = ParseIdentity(manifest);
         var sources = RequiredValues(manifest.Sources, "sources");
+        ValidateSourceCount(sources.Count, fullPackagePath, policy);
         var declaredHashes = manifest.SourceHashes
             ?? throw new InvalidDataException("SMILE library manifest is missing sourceHashes.");
         ValidateSourceHashes(sources, declaredHashes);
@@ -282,7 +358,8 @@ public static class SmileLibraryPackage
                 throw new InvalidDataException($"SMILE library source entry is outside src/: {source}");
             var entry = archive.GetEntry(source)
                 ?? throw new InvalidDataException($"SMILE library declared source is missing: {source}");
-            var actualHash = Hash(ReadAllBytes(entry));
+            var actualHash = Hash(ReadEntryBytes(entry, policy.MaximumSourceBytes, "source entry",
+                fullPackagePath, budget));
             if (!declaredHashes.TryGetValue(source, out var declaredHash) ||
                 !string.Equals(actualHash, declaredHash, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException($"SMILE library source hash is invalid: {source}");
@@ -297,7 +374,8 @@ public static class SmileLibraryPackage
                 throw new InvalidDataException($"Unexpected executable or package payload entry: {entry.FullName}");
         var apiEntry = archive.GetEntry("api/public-symbols.json")
             ?? throw new InvalidDataException("SMILE library package is missing api/public-symbols.json.");
-        var publicApiHash = Hash(ReadAllBytes(apiEntry));
+        var publicApiHash = Hash(ReadEntryBytes(apiEntry, policy.MaximumPublicApiBytes,
+            "api/public-symbols.json", fullPackagePath, budget));
         return new SmileLibraryBuildFingerprint(manifest.FormatVersion, identity.Name, identity.Version,
             identity.Modules, verifiedHashes, identity.Dependencies, publicApiHash);
     }
@@ -347,34 +425,35 @@ public static class SmileLibraryPackage
     }
 
     internal static SmileLibraryLoadResult ReadEnvelope(string packagePath, string cacheRoot)
+        => ReadEnvelope(packagePath, cacheRoot, SmileLibraryResourcePolicy.Production);
+
+    internal static SmileLibraryLoadResult ReadEnvelope(string packagePath, string cacheRoot,
+        SmileLibraryResourcePolicy policy)
     {
         var fullPackagePath = Path.GetFullPath(packagePath);
         if (!File.Exists(fullPackagePath))
             throw new FileNotFoundException("Referenced SMILE library package was not found.", fullPackagePath);
-        var packageBytes = File.ReadAllBytes(fullPackagePath);
-        var packageHash = Hash(packageBytes);
-        using var archive = new ZipArchive(new MemoryStream(packageBytes, writable: false), ZipArchiveMode.Read,
-            leaveOpen: false, Encoding.UTF8);
-        ValidateEntries(archive);
+        ValidatePhysicalPackage(fullPackagePath, policy);
+        using var file = File.OpenRead(fullPackagePath);
+        var packageHash = Hash(file);
+        file.Position = 0;
+        using var archive = new ZipArchive(file, ZipArchiveMode.Read, leaveOpen: false, Encoding.UTF8);
+        ValidateEntries(archive, fullPackagePath, policy);
+        var budget = new ExpandedReadBudget(fullPackagePath, policy.MaximumExpandedBytes);
 
         var manifestEntry = archive.GetEntry("manifest.json")
             ?? throw new InvalidDataException("SMILE library package is missing manifest.json.");
-        PackageManifest manifest;
-        using (var stream = manifestEntry.Open())
-            manifest = ReadManifest(stream);
+        var manifest = ReadManifest(ReadEntryBytes(manifestEntry, policy.MaximumManifestBytes,
+            "manifest.json", fullPackagePath, budget));
         {
             var identity = ParseIdentity(manifest);
-            var extractionDirectory = Path.Combine(Path.GetFullPath(cacheRoot), Safe(identity.Name),
-                Safe(identity.Version), packageHash);
-            Directory.CreateDirectory(extractionDirectory);
-
-            var sources = new List<SmileSourceDocument>();
-            var sourceIds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var declaredSources = RequiredValues(manifest.Sources, "sources");
+            ValidateSourceCount(declaredSources.Count, fullPackagePath, policy);
             var sourceHashes = manifest.SourceHashes;
             if (sourceHashes == null)
                 throw new InvalidDataException("SMILE library manifest is missing sourceHashes.");
             ValidateSourceHashes(declaredSources, sourceHashes);
+            var sourcePayloads = new List<(string Name, byte[] Bytes)>();
             foreach (var sourceName in declaredSources.OrderBy(item => item, StringComparer.Ordinal))
             {
                 ValidateEntryName(sourceName);
@@ -382,21 +461,12 @@ public static class SmileLibraryPackage
                     throw new InvalidDataException($"SMILE library source entry is outside src/: {sourceName}");
                 var entry = archive.GetEntry(sourceName)
                     ?? throw new InvalidDataException($"SMILE library declared source is missing: {sourceName}");
-                var bytes = ReadAllBytes(entry);
+                var bytes = ReadEntryBytes(entry, policy.MaximumSourceBytes, "source entry",
+                    fullPackagePath, budget);
                 if (!sourceHashes.TryGetValue(sourceName, out var declaredHash) ||
                     !string.Equals(declaredHash, Hash(bytes), StringComparison.OrdinalIgnoreCase))
                     throw new InvalidDataException($"SMILE library source hash is invalid: {sourceName}");
-                var relative = sourceName.Substring("src/".Length).Replace('/', Path.DirectorySeparatorChar);
-                var extractedPath = Path.GetFullPath(Path.Combine(extractionDirectory, relative));
-                var extractionPrefix = extractionDirectory.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-                if (!extractedPath.StartsWith(extractionPrefix, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidDataException($"Unsafe SMILE library extraction path: {sourceName}");
-                Directory.CreateDirectory(Path.GetDirectoryName(extractedPath)!);
-                if (!File.Exists(extractedPath) || !File.ReadAllBytes(extractedPath).SequenceEqual(bytes))
-                    File.WriteAllBytes(extractedPath, bytes);
-                sources.Add(new SmileSourceDocument(Encoding.UTF8.GetString(bytes), extractedPath,
-                    providerIdentity: fullPackagePath));
-                sourceIds.Add(SmileSourceDocument.NormalizePath(extractedPath), sourceName);
+                sourcePayloads.Add((sourceName, bytes));
             }
 
             var allowed = new HashSet<string>(declaredSources, StringComparer.Ordinal)
@@ -411,7 +481,30 @@ public static class SmileLibraryPackage
 
             var apiEntry = archive.GetEntry("api/public-symbols.json")
                 ?? throw new InvalidDataException("SMILE library package is missing api/public-symbols.json.");
-            var actualApi = Encoding.UTF8.GetString(ReadAllBytes(apiEntry));
+            var actualApi = Encoding.UTF8.GetString(ReadEntryBytes(apiEntry, policy.MaximumPublicApiBytes,
+                "api/public-symbols.json", fullPackagePath, budget));
+
+            var extractionDirectory = Path.Combine(Path.GetFullPath(cacheRoot), Safe(identity.Name),
+                Safe(identity.Version), packageHash);
+            Directory.CreateDirectory(extractionDirectory);
+            var sources = new List<SmileSourceDocument>();
+            var sourceIds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var payload in sourcePayloads)
+            {
+                var sourceName = payload.Name;
+                var bytes = payload.Bytes;
+                var relative = sourceName.Substring("src/".Length).Replace('/', Path.DirectorySeparatorChar);
+                var extractedPath = Path.GetFullPath(Path.Combine(extractionDirectory, relative));
+                var extractionPrefix = extractionDirectory.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                if (!extractedPath.StartsWith(extractionPrefix, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException($"Unsafe SMILE library extraction path: {sourceName}");
+                Directory.CreateDirectory(Path.GetDirectoryName(extractedPath)!);
+                if (!File.Exists(extractedPath) || !File.ReadAllBytes(extractedPath).SequenceEqual(bytes))
+                    File.WriteAllBytes(extractedPath, bytes);
+                sources.Add(new SmileSourceDocument(Encoding.UTF8.GetString(bytes), extractedPath,
+                    providerIdentity: fullPackagePath));
+                sourceIds.Add(SmileSourceDocument.NormalizePath(extractedPath), sourceName);
+            }
             return new SmileLibraryLoadResult(identity, sources, sourceIds, packageHash, extractionDirectory,
                 fullPackagePath, actualApi);
         }
@@ -650,17 +743,71 @@ public static class SmileLibraryPackage
                 "SMILE library manifest sourceHashes must match the declared sources exactly.");
     }
 
-    private static void ValidateEntries(ZipArchive archive)
+    private static void ValidateGeneratedEntries(IReadOnlyList<PackageEntry> entries, string packagePath,
+        SmileLibraryResourcePolicy policy)
     {
+        if (entries.Count > policy.MaximumEntries)
+            ThrowResourceLimit(packagePath,
+                $"SMILE library package contains {entries.Count} entries; the maximum is {policy.MaximumEntries}.");
+        var sourceCount = entries.Count(entry => entry.Name.StartsWith("src/", StringComparison.Ordinal));
+        ValidateSourceCount(sourceCount, packagePath, policy);
+        long expanded = 0;
+        foreach (var entry in entries)
+        {
+            if (entry.Name.Length > policy.MaximumEntryNameCharacters)
+                ThrowResourceLimit(packagePath,
+                    $"SMILE library entry name exceeds the maximum {policy.MaximumEntryNameCharacters} characters: {entry.Name}");
+            var maximum = EntryMaximum(entry.Name, policy);
+            if (entry.Bytes.LongLength > maximum)
+                ThrowResourceLimit(packagePath,
+                    $"SMILE library {EntryDescription(entry.Name)} exceeds the maximum supported size of {maximum} bytes.");
+            try { expanded = checked(expanded + entry.Bytes.LongLength); }
+            catch (OverflowException) { ThrowResourceLimit(packagePath, "SMILE library expanded size overflowed."); }
+        }
+        if (expanded > policy.MaximumExpandedBytes)
+            ThrowResourceLimit(packagePath,
+                $"SMILE library expanded content exceeds the maximum supported size of {policy.MaximumExpandedBytes} bytes.");
+    }
+
+    private static void ValidatePhysicalPackage(string packagePath, SmileLibraryResourcePolicy policy)
+    {
+        var length = new FileInfo(packagePath).Length;
+        if (length > policy.MaximumPackageBytes)
+            ThrowResourceLimit(packagePath,
+                $"SMILE library package exceeds the maximum supported physical size of {policy.MaximumPackageBytes} bytes.");
+    }
+
+    private static void ValidateEntries(ZipArchive archive, string packagePath, SmileLibraryResourcePolicy policy)
+    {
+        if (archive.Entries.Count > policy.MaximumEntries)
+            ThrowResourceLimit(packagePath,
+                $"SMILE library package contains {archive.Entries.Count} entries; the maximum is {policy.MaximumEntries}.");
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var sourceCount = 0;
+        long declaredExpanded = 0;
         foreach (var entry in archive.Entries)
         {
+            if (entry.FullName.Length > policy.MaximumEntryNameCharacters)
+                ThrowResourceLimit(packagePath,
+                    $"SMILE library entry name exceeds the maximum {policy.MaximumEntryNameCharacters} characters: {entry.FullName}");
             ValidateEntryName(entry.FullName);
             if (!names.Add(entry.FullName))
                 throw new InvalidDataException($"Duplicate SMILE library archive entry: {entry.FullName}");
             if (entry.FullName.EndsWith("/", StringComparison.Ordinal))
                 throw new InvalidDataException($"Directory entries are not allowed in SMILE libraries: {entry.FullName}");
+            if (entry.FullName.StartsWith("src/", StringComparison.Ordinal))
+                sourceCount++;
+            var maximum = EntryMaximum(entry.FullName, policy);
+            if (entry.Length > maximum)
+                ThrowResourceLimit(packagePath,
+                    $"SMILE library {EntryDescription(entry.FullName)} exceeds the maximum supported size of {maximum} bytes.");
+            try { declaredExpanded = checked(declaredExpanded + entry.Length); }
+            catch (OverflowException) { ThrowResourceLimit(packagePath, "SMILE library expanded size overflowed."); }
         }
+        ValidateSourceCount(sourceCount, packagePath, policy);
+        if (declaredExpanded > policy.MaximumExpandedBytes)
+            ThrowResourceLimit(packagePath,
+                $"SMILE library expanded content exceeds the maximum supported size of {policy.MaximumExpandedBytes} bytes.");
     }
 
     private static void ValidateEntryName(string name)
@@ -670,13 +817,55 @@ public static class SmileLibraryPackage
             throw new InvalidDataException($"Unsafe SMILE library archive path: {name}");
     }
 
-    private static byte[] ReadAllBytes(ZipArchiveEntry entry)
+    private static byte[] ReadEntryBytes(ZipArchiveEntry entry, int maximumBytes, string description,
+        string packagePath, ExpandedReadBudget budget)
     {
+        if (entry.Length > maximumBytes)
+            ThrowResourceLimit(packagePath,
+                $"SMILE library {description} exceeds the maximum supported size of {maximumBytes} bytes.");
         using var stream = entry.Open();
-        using var output = new MemoryStream();
-        stream.CopyTo(output);
+        using var output = new MemoryStream((int)Math.Min(entry.Length, maximumBytes));
+        var buffer = new byte[81920];
+        while (true)
+        {
+            var count = stream.Read(buffer, 0, buffer.Length);
+            if (count == 0)
+                break;
+            if (output.Length > maximumBytes - count)
+                ThrowResourceLimit(packagePath,
+                    $"SMILE library {description} exceeds the maximum supported size of {maximumBytes} bytes.");
+            budget.Add(count);
+            output.Write(buffer, 0, count);
+        }
         return output.ToArray();
     }
+
+    private static int EntryMaximum(string entryName, SmileLibraryResourcePolicy policy) => entryName switch
+    {
+        "manifest.json" => policy.MaximumManifestBytes,
+        "api/public-symbols.json" => policy.MaximumPublicApiBytes,
+        _ when entryName.StartsWith("src/", StringComparison.Ordinal) => policy.MaximumSourceBytes,
+        _ => (int)Math.Min(int.MaxValue, policy.MaximumExpandedBytes)
+    };
+
+    private static string EntryDescription(string entryName) => entryName switch
+    {
+        "manifest.json" => "manifest.json",
+        "api/public-symbols.json" => "api/public-symbols.json",
+        _ when entryName.StartsWith("src/", StringComparison.Ordinal) => $"source entry '{entryName}'",
+        _ => $"entry '{entryName}'"
+    };
+
+    private static void ValidateSourceCount(int sourceCount, string packagePath,
+        SmileLibraryResourcePolicy policy)
+    {
+        if (sourceCount > policy.MaximumSourceCount)
+            ThrowResourceLimit(packagePath,
+                $"SMILE library package contains {sourceCount} source entries; the maximum is {policy.MaximumSourceCount}.");
+    }
+
+    private static void ThrowResourceLimit(string packagePath, string message) =>
+        throw new SmileProjectDiagnosticException(ResourceLimitDiagnosticCode, message, packagePath);
 
     private static string Normalize(string path) => path.Replace('\\', '/');
     private static string NormalizeText(string text) => text.Replace("\r\n", "\n").Replace('\r', '\n');
@@ -688,10 +877,17 @@ public static class SmileLibraryPackage
         return string.Concat(hash.ComputeHash(bytes).Select(value => value.ToString("x2", CultureInfo.InvariantCulture)));
     }
 
-    private static PackageManifest ReadManifest(Stream stream)
+    private static string Hash(Stream stream)
+    {
+        using var hash = SHA256.Create();
+        return string.Concat(hash.ComputeHash(stream).Select(value => value.ToString("x2", CultureInfo.InvariantCulture)));
+    }
+
+    private static PackageManifest ReadManifest(byte[] bytes)
     {
         try
         {
+            using var stream = new MemoryStream(bytes, writable: false);
             var serializer = new DataContractJsonSerializer(typeof(PackageManifest),
                 new DataContractJsonSerializerSettings { UseSimpleDictionaryFormat = true });
             return serializer.ReadObject(stream) as PackageManifest
@@ -700,6 +896,82 @@ public static class SmileLibraryPackage
         catch (Exception exception) when (exception is SerializationException or XmlException)
         {
             throw new InvalidDataException("SMILE library manifest is malformed JSON.", exception);
+        }
+    }
+
+    private static void ReplaceFile(string temporaryPath, string outputPath)
+    {
+        if (File.Exists(outputPath))
+            File.Replace(temporaryPath, outputPath, null);
+        else
+            File.Move(temporaryPath, outputPath);
+    }
+
+    private static void TryDelete(string path)
+    {
+        try { if (File.Exists(path)) File.Delete(path); }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    private sealed class ExpandedReadBudget
+    {
+        private readonly string _packagePath;
+        private readonly long _maximum;
+        private long _consumed;
+
+        public ExpandedReadBudget(string packagePath, long maximum)
+        {
+            _packagePath = packagePath;
+            _maximum = maximum;
+        }
+
+        public void Add(int count)
+        {
+            try { _consumed = checked(_consumed + count); }
+            catch (OverflowException) { ThrowResourceLimit(_packagePath, "SMILE library expanded size overflowed."); }
+            if (_consumed > _maximum)
+                ThrowResourceLimit(_packagePath,
+                    $"SMILE library expanded content exceeds the maximum supported size of {_maximum} bytes.");
+        }
+    }
+
+    private sealed class PackageOutputLock : IDisposable
+    {
+        private readonly Mutex _mutex;
+        private bool _ownsMutex;
+
+        private PackageOutputLock(string outputPath, TimeSpan timeout)
+        {
+            var normalizedPath = Path.GetFullPath(outputPath).ToUpperInvariant();
+            var hash = Hash(Encoding.UTF8.GetBytes(normalizedPath)).ToUpperInvariant();
+            _mutex = new Mutex(false, "Smile.Library.Output." + hash);
+            try
+            {
+                _ownsMutex = _mutex.WaitOne(timeout);
+            }
+            catch (AbandonedMutexException)
+            {
+                _ownsMutex = true;
+            }
+            if (!_ownsMutex)
+            {
+                _mutex.Dispose();
+                throw new SmileProjectDiagnosticException(OutputLockDiagnosticCode,
+                    $"Another build still owns the SMILE library output '{outputPath}'.", outputPath);
+            }
+        }
+
+        public static PackageOutputLock Acquire(string outputPath, TimeSpan timeout) => new(outputPath, timeout);
+
+        public void Dispose()
+        {
+            if (_ownsMutex)
+            {
+                _mutex.ReleaseMutex();
+                _ownsMutex = false;
+            }
+            _mutex.Dispose();
         }
     }
 
