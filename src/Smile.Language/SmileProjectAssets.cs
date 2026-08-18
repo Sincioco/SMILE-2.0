@@ -476,15 +476,19 @@ public static class SmileProjectAssetPublisher
     public static SmileProjectAssetPublishResult Publish(SmileProjectAssetManifest manifest, string outputRoot,
         string applicationIdentity, string target, string? nativeOutputBaseName = null,
         bool hasExplicitApplicationIdentity = false)
+        => Publish(manifest, outputRoot, applicationIdentity, target, nativeOutputBaseName,
+            hasExplicitApplicationIdentity, null);
+
+    internal static SmileProjectAssetPublishResult Publish(SmileProjectAssetManifest manifest, string outputRoot,
+        string applicationIdentity, string target, string? nativeOutputBaseName,
+        bool hasExplicitApplicationIdentity, Action<SmileAssetPublicationStage, string?>? testHook)
     {
         manifest.ValidateForBuild();
         var root = Path.GetFullPath(outputRoot);
         Directory.CreateDirectory(root);
         var isWeb = string.Equals(target, "web", StringComparison.OrdinalIgnoreCase);
-        var manifestName = isWeb
-            ? "smile-assets.json"
-            : SafeFileName(hasExplicitApplicationIdentity ? applicationIdentity :
-                nativeOutputBaseName ?? applicationIdentity) + ".smile-assets.json";
+        var manifestName = GetManifestName(applicationIdentity, isWeb, nativeOutputBaseName,
+            hasExplicitApplicationIdentity);
         var manifestPath = ContainedDestination(root, manifestName);
         var warnings = new List<SmileProjectDiagnostic>();
         var previous = ReadPreviousManifest(manifestPath, applicationIdentity, target, root, manifest.ProjectPath, warnings);
@@ -504,39 +508,140 @@ public static class SmileProjectAssetPublisher
         }
         var currentPaths = new HashSet<string>(manifest.AssetPaths, StringComparer.Ordinal);
 
+        var priorAssets = new HashSet<string>(StringComparer.Ordinal);
+        if (previous != null)
+            priorAssets.UnionWith(previous.Assets);
+        foreach (var legacy in legacyManifests)
+            priorAssets.UnionWith(legacy.Manifest.Assets);
+        var stagingRoot = Path.Combine(root, ".smile-assets-staging-" + Guid.NewGuid().ToString("N"));
+        var backupRoot = Path.Combine(root, ".smile-assets-backup-" + Guid.NewGuid().ToString("N"));
+        var committed = new List<string>();
+        var backedUp = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         try
         {
-            var priorAssets = new HashSet<string>(StringComparer.Ordinal);
-            if (previous != null)
-                priorAssets.UnionWith(previous.Assets);
-            foreach (var legacy in legacyManifests)
-                priorAssets.UnionWith(legacy.Manifest.Assets);
-            foreach (var stale in priorAssets.Where(asset => !currentPaths.Contains(asset)))
-            {
-                var stalePath = ContainedDestination(root, stale);
-                if (File.Exists(stalePath))
-                    File.Delete(stalePath);
-                RemoveEmptyParents(Path.GetDirectoryName(stalePath), root);
-            }
+            Directory.CreateDirectory(stagingRoot);
             foreach (var item in manifest.Items)
-                CopyAsset(item, ContainedDestination(root, item.LogicalPath));
-            WriteManifest(manifestPath, new PublicationManifest
+            {
+                testHook?.Invoke(SmileAssetPublicationStage.BeforeAssetStage, item.LogicalPath);
+                var staged = ContainedDestination(stagingRoot, item.LogicalPath);
+                Directory.CreateDirectory(Path.GetDirectoryName(staged)!);
+                File.Copy(item.FullPath, staged, overwrite: false);
+                File.SetLastWriteTimeUtc(staged, item.LastWriteTimeUtc);
+            }
+            WriteManifest(ContainedDestination(stagingRoot, manifestName), new PublicationManifest
             {
                 FormatVersion = 1,
                 ApplicationIdentity = applicationIdentity,
                 Target = target,
                 Assets = manifest.AssetPaths.ToList()
             });
+
+            var publicationPaths = manifest.AssetPaths.Concat(new[] { manifestName }).ToArray();
+            foreach (var relative in publicationPaths)
+            {
+                var destination = ContainedDestination(root, relative);
+                if (!File.Exists(destination))
+                    continue;
+                var backup = ContainedDestination(backupRoot, relative);
+                Directory.CreateDirectory(Path.GetDirectoryName(backup)!);
+                File.Copy(destination, backup, overwrite: false);
+                backedUp.Add(relative);
+            }
+
+            testHook?.Invoke(SmileAssetPublicationStage.BeforeCommit, null);
+            foreach (var relative in publicationPaths)
+            {
+                ReplaceFromCopy(ContainedDestination(stagingRoot, relative), ContainedDestination(root, relative));
+                committed.Add(relative);
+                testHook?.Invoke(SmileAssetPublicationStage.AfterFileCommit, relative);
+            }
+
+            testHook?.Invoke(SmileAssetPublicationStage.BeforeStaleCleanup, null);
+            foreach (var stale in priorAssets.Where(asset => !currentPaths.Contains(asset)))
+            {
+                var stalePath = ContainedDestination(root, stale);
+                try
+                {
+                    if (File.Exists(stalePath))
+                        File.Delete(stalePath);
+                    RemoveEmptyParents(Path.GetDirectoryName(stalePath), root);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                    warnings.Add(new SmileProjectDiagnostic("SML3605",
+                        $"The stale managed asset '{stale}' could not be removed after successful publication: {exception.Message}",
+                        manifest.ProjectPath, severity: DiagnosticSeverity.Warning));
+                }
+            }
             foreach (var legacy in legacyManifests)
-                File.Delete(legacy.Path);
+            {
+                try { File.Delete(legacy.Path); }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                    warnings.Add(new SmileProjectDiagnostic("SML3605",
+                        $"The legacy managed asset manifest '{legacy.Path}' could not be removed after successful publication: {exception.Message}",
+                        manifest.ProjectPath, severity: DiagnosticSeverity.Warning));
+                }
+            }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
+            foreach (var relative in committed.AsEnumerable().Reverse())
+            {
+                var destination = ContainedDestination(root, relative);
+                try
+                {
+                    if (backedUp.Contains(relative))
+                        ReplaceFromCopy(ContainedDestination(backupRoot, relative), destination);
+                    else if (File.Exists(destination))
+                        File.Delete(destination);
+                }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+            }
             throw new SmileProjectDiagnosticException("SML3604",
                 $"Project asset publication failed beneath '{root}': {exception.Message}", manifest.ProjectPath);
         }
+        finally
+        {
+            TryDeleteDirectory(stagingRoot);
+            TryDeleteDirectory(backupRoot);
+        }
 
         return new SmileProjectAssetPublishResult(manifest.Items.Count, manifestPath, warnings);
+    }
+
+    internal static SmilePublishedAssetSnapshot ReadPublishedAssets(string outputRoot, string applicationIdentity,
+        string target, string projectPath, string? nativeOutputBaseName = null,
+        bool hasExplicitApplicationIdentity = false)
+    {
+        var root = Path.GetFullPath(outputRoot);
+        var isWeb = string.Equals(target, "web", StringComparison.OrdinalIgnoreCase);
+        var manifestName = GetManifestName(applicationIdentity, isWeb, nativeOutputBaseName,
+            hasExplicitApplicationIdentity);
+        var warnings = new List<SmileProjectDiagnostic>();
+        var previous = ReadPreviousManifest(ContainedDestination(root, manifestName), applicationIdentity, target,
+            root, projectPath, warnings);
+        var assets = new HashSet<string>(previous?.Assets ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
+        var legacyManifestNames = new List<string>();
+        if (!isWeb && hasExplicitApplicationIdentity && Directory.Exists(root))
+        {
+            foreach (var candidatePath in Directory.EnumerateFiles(root, "*.smile-assets.json")
+                         .OrderBy(path => path, StringComparer.Ordinal))
+            {
+                if (string.Equals(candidatePath, ContainedDestination(root, manifestName),
+                        StringComparison.OrdinalIgnoreCase))
+                    continue;
+                var candidate = ReadPreviousManifest(candidatePath, applicationIdentity, target, root,
+                    projectPath, warnings, warnOnIdentityMismatch: false);
+                if (candidate == null)
+                    continue;
+                assets.UnionWith(candidate.Assets);
+                legacyManifestNames.Add(Path.GetFileName(candidatePath));
+            }
+        }
+        return new SmilePublishedAssetSnapshot(manifestName,
+            assets.OrderBy(path => path, StringComparer.Ordinal).ToArray(), legacyManifestNames, warnings);
     }
 
     private static PublicationManifest? ReadPreviousManifest(string manifestPath, string applicationIdentity,
@@ -596,6 +701,25 @@ public static class SmileProjectAssetPublisher
         {
             File.Copy(item.FullPath, temporary, overwrite: false);
             File.SetLastWriteTimeUtc(temporary, item.LastWriteTimeUtc);
+            ReplaceFile(temporary, destination);
+        }
+        finally
+        {
+            if (File.Exists(temporary))
+                File.Delete(temporary);
+        }
+    }
+
+    private static void ReplaceFromCopy(string source, string destination)
+    {
+        var destinationDirectory = Path.GetDirectoryName(destination)!;
+        Directory.CreateDirectory(destinationDirectory);
+        var temporary = Path.Combine(destinationDirectory,
+            "." + Path.GetFileName(destination) + "." + Guid.NewGuid().ToString("N") + ".tmp");
+        try
+        {
+            File.Copy(source, temporary, overwrite: false);
+            File.SetLastWriteTimeUtc(temporary, File.GetLastWriteTimeUtc(source));
             ReplaceFile(temporary, destination);
         }
         finally
@@ -668,6 +792,19 @@ public static class SmileProjectAssetPublisher
         return builder.Length == 0 ? "smile-output" : builder.ToString();
     }
 
+    private static string GetManifestName(string applicationIdentity, bool isWeb, string? nativeOutputBaseName,
+        bool hasExplicitApplicationIdentity) => isWeb
+        ? "smile-assets.json"
+        : SafeFileName(hasExplicitApplicationIdentity ? applicationIdentity :
+            nativeOutputBaseName ?? applicationIdentity) + ".smile-assets.json";
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try { if (Directory.Exists(path)) Directory.Delete(path, recursive: true); }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
     [DataContract]
     private sealed class PublicationManifest
     {
@@ -680,4 +817,29 @@ public static class SmileProjectAssetPublisher
         [DataMember(Name = "assets", Order = 3)]
         public List<string> Assets { get; set; } = new();
     }
+}
+
+internal enum SmileAssetPublicationStage
+{
+    BeforeAssetStage,
+    BeforeCommit,
+    AfterFileCommit,
+    BeforeStaleCleanup
+}
+
+internal sealed class SmilePublishedAssetSnapshot
+{
+    public SmilePublishedAssetSnapshot(string manifestName, IReadOnlyList<string> assetPaths,
+        IReadOnlyList<string> legacyManifestNames, IReadOnlyList<SmileProjectDiagnostic> warnings)
+    {
+        ManifestName = manifestName;
+        AssetPaths = assetPaths;
+        LegacyManifestNames = legacyManifestNames;
+        Warnings = warnings;
+    }
+
+    public string ManifestName { get; }
+    public IReadOnlyList<string> AssetPaths { get; }
+    public IReadOnlyList<string> LegacyManifestNames { get; }
+    public IReadOnlyList<SmileProjectDiagnostic> Warnings { get; }
 }

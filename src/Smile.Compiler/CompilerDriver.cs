@@ -6,6 +6,12 @@ namespace Smile.Compiler;
 
 internal sealed class CompilerDriver
 {
+    private readonly CompilerDriverTestHooks? _testHooks;
+
+    public CompilerDriver() { }
+
+    internal CompilerDriver(CompilerDriverTestHooks testHooks) => _testHooks = testHooks;
+
     public int Run(string[] args)
     {
         if (!CompilerOptions.TryParse(args, out var options, out var argumentError))
@@ -48,19 +54,49 @@ internal sealed class CompilerDriver
             if (options.Target == SmileCompilationTarget.Web)
             {
                 var outputDirectory = Path.GetFullPath(options.OutputDirectory!);
+                using var outputLock = OutputPublicationLock.Acquire(outputDirectory,
+                    _testHooks?.OutputLockTimeout);
+                var webStagingDirectory = TransactionalOutputPublisher.CreateStagingDirectory(outputDirectory);
                 SmileProjectAssetPublishResult? publication = null;
                 try
                 {
-                    WebOutputWriter.Write(outputDirectory, new WebEmitter(analysis, appIdentity,
-                        input.Project?.AssetPaths));
+                    var previousPaths = new List<string>(WebOutputWriter.ManagedFileNames);
+                    SmilePublishedAssetSnapshot? previousAssets = null;
                     if (input.Project != null)
+                    {
+                        previousAssets = SmileProjectAssetPublisher.ReadPublishedAssets(outputDirectory,
+                            appIdentity, "web", input.Project.ProjectPath);
+                        previousPaths.AddRange(previousAssets.AssetPaths);
+                        previousPaths.Add(previousAssets.ManifestName);
+                        previousPaths.AddRange(previousAssets.LegacyManifestNames);
+                    }
+
+                    WebOutputWriter.Write(webStagingDirectory, new WebEmitter(analysis, appIdentity,
+                        input.Project?.AssetPaths), _testHooks?.AfterWebStagedFile);
+                    var currentPaths = new List<string>(WebOutputWriter.ManagedFileNames);
+                    if (input.Project != null)
+                    {
                         publication = SmileProjectAssetPublisher.Publish(input.Project.AssetManifest,
-                            outputDirectory, appIdentity, "web");
+                            webStagingDirectory, appIdentity, "web", null, false,
+                            _testHooks?.AssetPublicationHook);
+                        currentPaths.AddRange(input.Project.AssetPaths);
+                        currentPaths.Add(Path.GetFileName(publication.ManifestPath));
+                    }
+                    TransactionalOutputPublisher.PublishDirectory(webStagingDirectory, outputDirectory,
+                        currentPaths, previousPaths, _testHooks?.OutputPublicationHook);
+                    if (publication != null && previousAssets != null && previousAssets.Warnings.Count != 0)
+                        publication = new SmileProjectAssetPublishResult(publication.PublishedCount,
+                            Path.Combine(outputDirectory, Path.GetFileName(publication.ManifestPath)),
+                            previousAssets.Warnings.Concat(publication.Warnings).ToArray());
                 }
                 catch (WebTargetException exception)
                 {
                     PrintWebDiagnostic(exception.SourceText, exception);
                     return 1;
+                }
+                finally
+                {
+                    TransactionalOutputPublisher.TryDeleteDirectory(webStagingDirectory);
                 }
 
                 if (publication != null)
@@ -77,19 +113,18 @@ internal sealed class CompilerDriver
                 ? input.DefaultNativeOutputPath
                 : Path.GetFullPath(options.OutputPath);
 
-            using var nativeOutputLock = NativeOutputLock.Acquire(outputPath);
-
-            var repositoryRoot = FindRepositoryRoot();
-            var tempDirectory = Path.Combine(repositoryRoot, "artifacts", "temp");
-            Directory.CreateDirectory(tempDirectory);
+            using var nativeOutputLock = OutputPublicationLock.Acquire(outputPath,
+                _testHooks?.OutputLockTimeout);
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 
             var baseName = Path.GetFileNameWithoutExtension(outputPath);
-            var intermediateBaseName = CreateIntermediateBaseName(baseName, options.KeepTemp);
-            var assemblyPath = Path.Combine(tempDirectory, intermediateBaseName + ".asm");
-            var objectPath = Path.Combine(tempDirectory, intermediateBaseName + ".obj");
-            var debugSourcePath = Path.Combine(tempDirectory, intermediateBaseName + ".debug.c");
-            var debugObjectPath = Path.Combine(tempDirectory, intermediateBaseName + ".debug.obj");
+            using var intermediates = new CompilerIntermediateDirectory(input.DisplayPath, baseName,
+                options.KeepTemp);
+            var assemblyPath = intermediates.AssemblyPath;
+            var objectPath = intermediates.ObjectPath;
+            var debugSourcePath = intermediates.DebugSourcePath;
+            var debugObjectPath = intermediates.DebugObjectPath;
+            var repositoryRoot = FindRepositoryRoot();
             var runtimePath = FindRuntimeLibrary(repositoryRoot);
 
             if (runtimePath == null)
@@ -98,58 +133,99 @@ internal sealed class CompilerDriver
                 return 2;
             }
 
-            var emitter = new MasmEmitter(analysis, options.GraphicsBackend, options.VSync,
-                options.EmitDebugInformation, appIdentity,
-                input.Project?.AssetPaths);
-            File.WriteAllText(assemblyPath, emitter.Emit());
-            if (options.EmitDebugInformation)
-                File.WriteAllText(debugSourcePath, BuildDebugSource(emitter.DebugSites));
-            var isGame = analysis.BoundSyntaxTrees.Any(tree => tree.Root.Statements.Any(statement => statement is GameWindowStatementSyntax));
-            var result = new NativeToolchain().AssembleAndLink(assemblyPath, objectPath, outputPath, runtimePath,
-                isGame, emitter.UsesMusic, options.EmitDebugInformation ? debugSourcePath : null,
-                options.EmitDebugInformation ? debugObjectPath : null);
-            if (!result.Success)
+            var stagingDirectory = TransactionalOutputPublisher.CreateStagingDirectory(outputPath);
+            try
             {
-                Console.Error.WriteLine($"{sourcePath}(1,1): error SML5003: Native toolchain failed.");
-                if (!string.IsNullOrWhiteSpace(result.Output))
-                    Console.Error.WriteLine(result.Output.TrimEnd());
-                return 2;
-            }
-
-            if (!options.KeepTemp)
-            {
-                TryDelete(assemblyPath);
-                TryDelete(objectPath);
-                TryDelete(debugSourcePath);
-                TryDelete(debugObjectPath);
-            }
-
-            SmileProjectAssetPublishResult? nativePublication = null;
-            if (input.Project != null)
-            {
-                nativePublication = SmileProjectAssetPublisher.Publish(input.Project.AssetManifest,
-                    Path.GetDirectoryName(outputPath)!, appIdentity, "windows-x64",
-                    Path.GetFileNameWithoutExtension(outputPath),
-                    options.ApplicationId != null || input.Project.ApplicationId != null);
-                foreach (var warning in nativePublication.Warnings)
-                    Console.Error.WriteLine(warning.FormatCompiler());
-            }
-
-            Console.WriteLine($"Compiled {sourcePath}");
-            Console.WriteLine($"Output: {outputPath}");
-            if (nativePublication != null)
-                Console.WriteLine($"Published {nativePublication.PublishedCount} project assets.");
-            if (options.KeepTemp)
-            {
-                Console.WriteLine($"Assembly: {assemblyPath}");
-                Console.WriteLine($"Object: {objectPath}");
+                var stagedOutputPath = Path.Combine(stagingDirectory, Path.GetFileName(outputPath));
+                var emitter = new MasmEmitter(analysis, options.GraphicsBackend, options.VSync,
+                    options.EmitDebugInformation, appIdentity,
+                    input.Project?.AssetPaths);
+                File.WriteAllText(assemblyPath, emitter.Emit());
+                _testHooks?.AfterAssemblyEmission?.Invoke(intermediates);
                 if (options.EmitDebugInformation)
+                    File.WriteAllText(debugSourcePath, BuildDebugSource(emitter.DebugSites),
+                        new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                var isGame = analysis.BoundSyntaxTrees.Any(tree => tree.Root.Statements.Any(statement => statement is GameWindowStatementSyntax));
+                var invocation = new NativeToolchainInvocation(assemblyPath, objectPath, stagedOutputPath,
+                    runtimePath, isGame, emitter.UsesMusic,
+                    options.EmitDebugInformation ? debugSourcePath : null,
+                    options.EmitDebugInformation ? debugObjectPath : null);
+                var result = _testHooks?.RunNativeToolchain?.Invoke(invocation) ??
+                    new NativeToolchain().AssembleAndLink(invocation.AssemblyPath, invocation.ObjectPath,
+                        invocation.OutputPath, invocation.RuntimePath, invocation.IsGame, invocation.UsesMusic,
+                        invocation.DebugSourcePath, invocation.DebugObjectPath);
+                if (!result.Success)
                 {
-                    Console.WriteLine($"Debug source map: {debugSourcePath}");
-                    Console.WriteLine($"Debug object: {debugObjectPath}");
+                    var code = result.Status == ProcessExecutionStatus.TimedOut ? "SML5005" :
+                        result.Status == ProcessExecutionStatus.Cancelled ? "SML5006" : "SML5003";
+                    var message = result.Status == ProcessExecutionStatus.TimedOut ? "Native toolchain timed out." :
+                        result.Status == ProcessExecutionStatus.Cancelled ? "Native toolchain was canceled." :
+                        "Native toolchain failed.";
+                    Console.Error.WriteLine($"{sourcePath}(1,1): error {code}: {message}");
+                    if (!string.IsNullOrWhiteSpace(result.Output))
+                        Console.Error.WriteLine(result.Output.TrimEnd());
+                    if (options.KeepTemp)
+                        PrintIntermediatePaths(intermediates, options.EmitDebugInformation);
+                    return 2;
                 }
+
+                if (!File.Exists(stagedOutputPath))
+                    throw new IOException("Native toolchain reported success without producing an executable.");
+                var stagedPdbPath = Path.ChangeExtension(stagedOutputPath, ".pdb");
+                if (options.EmitDebugInformation && !File.Exists(stagedPdbPath))
+                    throw new IOException("Native Debug toolchain reported success without producing a PDB.");
+
+                var outputRoot = Path.GetDirectoryName(outputPath)!;
+                var currentPaths = new List<string> { Path.GetFileName(outputPath) };
+                var previousPaths = new List<string> { Path.GetFileName(outputPath) };
+                var finalPdbPath = Path.ChangeExtension(outputPath, ".pdb");
+                if (options.EmitDebugInformation)
+                    currentPaths.Add(Path.GetFileName(finalPdbPath));
+                if (File.Exists(finalPdbPath))
+                    previousPaths.Add(Path.GetFileName(finalPdbPath));
+
+                SmileProjectAssetPublishResult? nativePublication = null;
+                SmilePublishedAssetSnapshot? previousAssets = null;
+                if (input.Project != null)
+                {
+                    var explicitIdentity = options.ApplicationId != null || input.Project.ApplicationId != null;
+                    previousAssets = SmileProjectAssetPublisher.ReadPublishedAssets(outputRoot, appIdentity,
+                        "windows-x64", input.Project.ProjectPath, Path.GetFileNameWithoutExtension(outputPath),
+                        explicitIdentity);
+                    previousPaths.AddRange(previousAssets.AssetPaths);
+                    previousPaths.Add(previousAssets.ManifestName);
+                    previousPaths.AddRange(previousAssets.LegacyManifestNames);
+                    nativePublication = SmileProjectAssetPublisher.Publish(input.Project.AssetManifest,
+                        stagingDirectory, appIdentity, "windows-x64", Path.GetFileNameWithoutExtension(outputPath),
+                        explicitIdentity, _testHooks?.AssetPublicationHook);
+                    currentPaths.AddRange(input.Project.AssetPaths);
+                    currentPaths.Add(Path.GetFileName(nativePublication.ManifestPath));
+                }
+
+                TransactionalOutputPublisher.PublishDirectory(stagingDirectory, outputRoot, currentPaths,
+                    previousPaths, _testHooks?.OutputPublicationHook);
+                if (nativePublication != null)
+                {
+                    var warnings = (previousAssets?.Warnings ?? Array.Empty<SmileProjectDiagnostic>())
+                        .Concat(nativePublication.Warnings);
+                    foreach (var warning in warnings)
+                        Console.Error.WriteLine(warning.FormatCompiler());
+                }
+
+                Console.WriteLine($"Compiled {sourcePath}");
+                Console.WriteLine($"Output: {outputPath}");
+                if (nativePublication != null)
+                    Console.WriteLine($"Published {nativePublication.PublishedCount} project assets.");
+                if (options.EmitDebugInformation)
+                    EqualFilePresence(stagedPdbPath, finalPdbPath);
+                if (options.KeepTemp)
+                    PrintIntermediatePaths(intermediates, options.EmitDebugInformation);
+                return 0;
             }
-            return 0;
+            finally
+            {
+                TransactionalOutputPublisher.TryDeleteDirectory(stagingDirectory);
+            }
         }
         catch (SmileProjectDiagnosticException exception)
         {
@@ -163,6 +239,12 @@ internal sealed class CompilerDriver
                 Path.GetFullPath(path)).FormatCompiler());
             return 1;
         }
+        catch (OutputLockTimeoutException exception)
+        {
+            var path = options.ProjectPath ?? options.SourcePath ?? exception.TargetPath;
+            Console.Error.WriteLine($"{Path.GetFullPath(path)}(1,1): error SML5008: {exception.Message}");
+            return 2;
+        }
         catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException ||
                                           exception is ArgumentException)
         {
@@ -174,43 +256,8 @@ internal sealed class CompilerDriver
     internal static string CreateIntermediateBaseName(string baseName, bool keepTemp) =>
         keepTemp ? baseName : $"{baseName}.{Environment.ProcessId}.{Guid.NewGuid():N}";
 
-    internal static string CreateNativeBuildMutexName(string outputPath)
-    {
-        var normalizedPath = Path.GetFullPath(outputPath).ToUpperInvariant();
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(normalizedPath));
-        return "Smile.Compiler.Native." + Convert.ToHexString(hash);
-    }
-
-    private sealed class NativeOutputLock : IDisposable
-    {
-        private readonly Mutex _mutex;
-        private bool _ownsMutex;
-
-        private NativeOutputLock(string outputPath)
-        {
-            _mutex = new Mutex(false, CreateNativeBuildMutexName(outputPath));
-            try
-            {
-                _ownsMutex = _mutex.WaitOne();
-            }
-            catch (AbandonedMutexException)
-            {
-                _ownsMutex = true;
-            }
-        }
-
-        public static NativeOutputLock Acquire(string outputPath) => new(outputPath);
-
-        public void Dispose()
-        {
-            if (_ownsMutex)
-            {
-                _mutex.ReleaseMutex();
-                _ownsMutex = false;
-            }
-            _mutex.Dispose();
-        }
-    }
+    internal static string CreateNativeBuildMutexName(string outputPath) =>
+        OutputPublicationLock.CreateMutexName(outputPath);
 
     private static CompilationInput LoadProject(CompilerOptions options)
     {
@@ -350,15 +397,22 @@ internal sealed class CompilerDriver
             var escapedPath = site.Source.FilePath.Replace("\\", "\\\\").Replace("\"", "\\\"");
             var parameters = site.Variables.Count == 0
                 ? "void"
-                : string.Join(", ", site.Variables.Select(DebugParameterDeclaration));
+                : string.Join(", ", site.Variables.Select((symbol, ordinal) =>
+                    DebugParameterDeclaration(symbol, ordinal)));
+            var aliases = string.Concat(site.Variables.Select((symbol, ordinal) =>
+                DebugAliasDeclaration(symbol, ordinal)));
             builder.Append("#line ").Append(site.Line).Append(" \"").Append(escapedPath).Append("\"\n")
                 .Append("__declspec(noinline) void ").Append(site.HelperName)
-                .Append('(').Append(parameters).Append(") { smile_debug_counter++; }\n");
+                .Append('(').Append(parameters).Append(") {").Append(aliases)
+                .Append(" smile_debug_counter++; }\n");
         }
         return builder.ToString();
     }
 
-    private static string DebugParameterDeclaration(VariableSymbol symbol)
+    private static string DebugParameterDeclaration(VariableSymbol symbol, int ordinal) =>
+        DebugParameterType(symbol) + " smile_debug_v" + ordinal;
+
+    private static string DebugParameterType(VariableSymbol symbol)
     {
         var type = symbol.IsArray
             ? symbol.Type.Kind switch
@@ -377,10 +431,35 @@ internal sealed class CompilerDriver
                 SmileTypeKind.Text => "const char*",
                 _ => "const void*"
             };
-        return type + " " + symbol.Name;
+        return type;
     }
 
-    private static string FindRepositoryRoot()
+    private static string DebugAliasDeclaration(VariableSymbol symbol, int ordinal)
+    {
+        if (!IsSafeDebugAlias(symbol.Name))
+            return string.Empty;
+        return " " + DebugParameterType(symbol) + " " + symbol.Name + " = smile_debug_v" + ordinal +
+               "; (void)" + symbol.Name + ";";
+    }
+
+    private static bool IsSafeDebugAlias(string name)
+    {
+        if (string.IsNullOrEmpty(name) || !(name[0] is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or '_') ||
+            name.Skip(1).Any(character => !(character is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9' or '_')))
+            return false;
+        return !name.StartsWith("smile_debug_", StringComparison.OrdinalIgnoreCase) && !CKeywords.Contains(name);
+    }
+
+    private static readonly HashSet<string> CKeywords = new(StringComparer.Ordinal)
+    {
+        "auto", "break", "case", "char", "const", "continue", "default", "do", "double", "else",
+        "enum", "extern", "float", "for", "goto", "if", "inline", "int", "long", "register",
+        "restrict", "return", "short", "signed", "sizeof", "static", "struct", "switch", "typedef",
+        "union", "unsigned", "void", "volatile", "while", "_Alignas", "_Alignof", "_Atomic", "_Bool",
+        "_Complex", "_Generic", "_Imaginary", "_Noreturn", "_Static_assert", "_Thread_local"
+    };
+
+    private static string? FindRepositoryRoot()
     {
         foreach (var start in new[] { Environment.CurrentDirectory, AppContext.BaseDirectory })
         {
@@ -393,16 +472,14 @@ internal sealed class CompilerDriver
             }
         }
 
-        return Environment.CurrentDirectory;
+        return null;
     }
 
-    private static string? FindRuntimeLibrary(string repositoryRoot)
+    private static string? FindRuntimeLibrary(string? repositoryRoot)
     {
-        var candidates = new[]
-        {
-            Path.Combine(AppContext.BaseDirectory, "Smile.NativeRuntime.lib"),
-            Path.Combine(repositoryRoot, "artifacts", "runtime", "Smile.NativeRuntime.lib")
-        };
+        var candidates = new List<string> { Path.Combine(AppContext.BaseDirectory, "Smile.NativeRuntime.lib") };
+        if (repositoryRoot != null)
+            candidates.Add(Path.Combine(repositoryRoot, "artifacts", "runtime", "Smile.NativeRuntime.lib"));
 
         foreach (var candidate in candidates)
         {
@@ -426,10 +503,56 @@ internal sealed class CompilerDriver
         Console.Error.WriteLine($"{path}({line},{column}): error {exception.Code}: {exception.Message}");
     }
 
-    private static void TryDelete(string path)
+    private static void PrintIntermediatePaths(CompilerIntermediateDirectory intermediates, bool includeDebug)
     {
-        try { File.Delete(path); }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
+        Console.WriteLine($"Intermediate directory: {intermediates.DirectoryPath}");
+        Console.WriteLine($"Assembly: {intermediates.AssemblyPath}");
+        Console.WriteLine($"Object: {intermediates.ObjectPath}");
+        if (includeDebug)
+        {
+            Console.WriteLine($"Debug source map: {intermediates.DebugSourcePath}");
+            Console.WriteLine($"Debug object: {intermediates.DebugObjectPath}");
+        }
     }
+
+    private static void EqualFilePresence(string stagedPath, string finalPath)
+    {
+        if (!File.Exists(finalPath))
+            throw new IOException($"Native Debug publication did not produce '{finalPath}' from '{stagedPath}'.");
+    }
+}
+
+internal sealed class NativeToolchainInvocation
+{
+    public NativeToolchainInvocation(string assemblyPath, string objectPath, string outputPath, string runtimePath,
+        bool isGame, bool usesMusic, string? debugSourcePath, string? debugObjectPath)
+    {
+        AssemblyPath = assemblyPath;
+        ObjectPath = objectPath;
+        OutputPath = outputPath;
+        RuntimePath = runtimePath;
+        IsGame = isGame;
+        UsesMusic = usesMusic;
+        DebugSourcePath = debugSourcePath;
+        DebugObjectPath = debugObjectPath;
+    }
+
+    public string AssemblyPath { get; }
+    public string ObjectPath { get; }
+    public string OutputPath { get; }
+    public string RuntimePath { get; }
+    public bool IsGame { get; }
+    public bool UsesMusic { get; }
+    public string? DebugSourcePath { get; }
+    public string? DebugObjectPath { get; }
+}
+
+internal sealed class CompilerDriverTestHooks
+{
+    public TimeSpan? OutputLockTimeout { get; init; }
+    public Action<CompilerIntermediateDirectory>? AfterAssemblyEmission { get; init; }
+    public Func<NativeToolchainInvocation, ToolchainResult>? RunNativeToolchain { get; init; }
+    public Action<string>? AfterWebStagedFile { get; init; }
+    public Action<SmileAssetPublicationStage, string?>? AssetPublicationHook { get; init; }
+    public Action<TransactionalPublicationStage, string?>? OutputPublicationHook { get; init; }
 }

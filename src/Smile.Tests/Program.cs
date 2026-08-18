@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Xml.Linq;
 using Smile.Compiler;
 using Smile.Language;
@@ -863,6 +864,43 @@ Run("Asset publication I/O failures report SML3604 and do not claim success", ()
         ThrowsProjectDiagnostic(() => SmileProjectAssetPublisher.Publish(manifest, output,
             "Failure", "web"), "SML3604");
         Equal(false, File.Exists(Path.Combine(output, "smile-assets.json")));
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
+});
+Run("Asset publication stages replacements and rolls back a failed commit", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileAssetRollbackTests-" + Guid.NewGuid().ToString("N"));
+    var output = Path.Combine(directory, "output");
+    Directory.CreateDirectory(Path.Combine(directory, "Assets"));
+    Directory.CreateDirectory(output);
+    try
+    {
+        File.WriteAllText(Path.Combine(directory, "Program.smile"), "End Program\n");
+        var assetPath = Path.Combine(directory, "Assets", "Current.txt");
+        File.WriteAllText(assetPath, "last-known-good");
+        var projectPath = Path.Combine(directory, "Rollback.smileproj");
+        File.WriteAllText(projectPath, "<SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /><Asset Include=\"Assets\\Current.txt\" /></ItemGroup></SmileProject>");
+        var manifest = SmileProjectSourceSet.Load(projectPath).AssetManifest;
+        SmileProjectAssetPublisher.Publish(manifest, output, "Rollback", "web");
+        var priorManifest = File.ReadAllBytes(Path.Combine(output, "smile-assets.json"));
+        File.WriteAllText(Path.Combine(output, "sentinel.txt"), "unrelated");
+        File.WriteAllText(assetPath, "replacement");
+        manifest = SmileProjectSourceSet.Load(projectPath).AssetManifest;
+
+        ThrowsProjectDiagnostic(() => SmileProjectAssetPublisher.Publish(manifest, output, "Rollback", "web",
+            null, false, (stage, relative) =>
+            {
+                if (stage == SmileAssetPublicationStage.AfterFileCommit &&
+                    string.Equals(relative, "Assets/Current.txt", StringComparison.Ordinal))
+                    throw new IOException("Synthetic asset commit failure.");
+            }), "SML3604");
+        Equal("last-known-good", File.ReadAllText(Path.Combine(output, "Assets", "Current.txt")));
+        Equal(true, priorManifest.SequenceEqual(File.ReadAllBytes(Path.Combine(output, "smile-assets.json"))));
+        Equal("unrelated", File.ReadAllText(Path.Combine(output, "sentinel.txt")));
+        Equal(0, Directory.EnumerateDirectories(output, ".smile-assets-*").Count());
     }
     finally
     {
@@ -5249,6 +5287,19 @@ Run("VSIX project builds release the Visual Studio UI thread while the compiler 
     Equal(true, projectSystem.Contains("callback.BuildEnd(success ? 1 : 0)", StringComparison.Ordinal));
 });
 
+Run("VSIX compiler execution has bounded timeout and real Stop cancellation", () =>
+{
+    var buildService = File.ReadAllText("src/Smile.VisualStudio/SmileBuildService.cs");
+    var projectSystem = File.ReadAllText("src/Smile.VisualStudio/SmileProjectSystem.cs");
+    Equal(true, buildService.Contains("CompilerTimeout = TimeSpan.FromMinutes(10)", StringComparison.Ordinal));
+    Equal(true, buildService.Contains("CancellationToken cancellationToken", StringComparison.Ordinal));
+    Equal(true, buildService.Contains("/T /F", StringComparison.Ordinal));
+    Equal(true, buildService.Contains("error {code}", StringComparison.Ordinal));
+    Equal(true, buildService.Contains("\"SML5006\" : \"SML5005\"", StringComparison.Ordinal));
+    Equal(true, projectSystem.Contains("_buildCancellation?.Cancel()", StringComparison.Ordinal));
+    Equal(true, projectSystem.Contains("buildCancellation.Token", StringComparison.Ordinal));
+});
+
 Run("VSIX launch performs one shell-coordinated build before starting the program", () =>
 {
     var projectSystem = File.ReadAllText("src/Smile.VisualStudio/SmileProjectSystem.cs");
@@ -5263,6 +5314,377 @@ Run("VSIX launch performs one shell-coordinated build before starting the progra
     var upToDateCheck = projectSystem.Substring(upToDateStart, statusStart - upToDateStart);
     Equal(false, upToDateCheck.Contains("StartOperation", StringComparison.Ordinal));
     Equal(true, upToDateCheck.Contains("VSConstants.E_NOTIMPL", StringComparison.Ordinal));
+});
+
+Run("Bounded process execution captures output, exit status, timeout, cancellation, and start failure", () =>
+{
+    var completed = BoundedProcessRunner.Run(new ProcessStartInfo("cmd.exe")
+    {
+        Arguments = "/d /s /c \"echo standard-output & echo standard-error 1>&2 & exit /b 7\"",
+        UseShellExecute = false,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        CreateNoWindow = true
+    }, TimeSpan.FromSeconds(5));
+    Equal(ProcessExecutionStatus.Completed, completed.Status);
+    Equal(7, completed.ExitCode!.Value);
+    Equal(true, completed.StandardOutput.Contains("standard-output", StringComparison.Ordinal));
+    Equal(true, completed.StandardError.Contains("standard-error", StringComparison.Ordinal));
+
+    var timedOut = BoundedProcessRunner.Run(new ProcessStartInfo("powershell.exe")
+    {
+        Arguments = "-NoProfile -Command Start-Sleep -Seconds 30",
+        UseShellExecute = false,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        CreateNoWindow = true
+    }, TimeSpan.FromMilliseconds(150));
+    Equal(ProcessExecutionStatus.TimedOut, timedOut.Status);
+
+    var childPidPath = Path.Combine(Path.GetTempPath(), "smile-child-pid-" + Guid.NewGuid().ToString("N") + ".txt");
+    try
+    {
+        var treeStart = new ProcessStartInfo("powershell.exe")
+        {
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+        treeStart.ArgumentList.Add("-NoProfile");
+        treeStart.ArgumentList.Add("-Command");
+        treeStart.ArgumentList.Add("$child = Start-Process powershell.exe -ArgumentList '-NoProfile'," +
+                                   "'-Command','Start-Sleep -Seconds 30' -PassThru; " +
+                                   "$child.Id | Set-Content -LiteralPath '" +
+                                   childPidPath.Replace("'", "''") + "'; Wait-Process -Id $child.Id");
+        var treeTimeout = BoundedProcessRunner.Run(treeStart, TimeSpan.FromSeconds(2));
+        Equal(ProcessExecutionStatus.TimedOut, treeTimeout.Status);
+        Equal(true, File.Exists(childPidPath));
+        var childPid = int.Parse(File.ReadAllText(childPidPath).Trim(), System.Globalization.CultureInfo.InvariantCulture);
+        var childExited = false;
+        try
+        {
+            using var child = Process.GetProcessById(childPid);
+            childExited = child.WaitForExit(2000);
+        }
+        catch (ArgumentException)
+        {
+            childExited = true;
+        }
+        Equal(true, childExited);
+    }
+    finally
+    {
+        if (File.Exists(childPidPath))
+            File.Delete(childPidPath);
+    }
+
+    using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(150));
+    var cancelled = BoundedProcessRunner.Run(new ProcessStartInfo("powershell.exe")
+    {
+        Arguments = "-NoProfile -Command Start-Sleep -Seconds 30",
+        UseShellExecute = false,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        CreateNoWindow = true
+    }, TimeSpan.FromSeconds(5), cancellation.Token);
+    Equal(ProcessExecutionStatus.Cancelled, cancelled.Status);
+
+    var startFailed = BoundedProcessRunner.Run(new ProcessStartInfo(
+        "smile-process-that-does-not-exist-" + Guid.NewGuid().ToString("N") + ".exe")
+    {
+        UseShellExecute = false,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        CreateNoWindow = true
+    }, TimeSpan.FromSeconds(1));
+    Equal(ProcessExecutionStatus.StartFailed, startFailed.Status);
+});
+
+Run("Output locks are bounded, case-insensitive, recover abandoned ownership, and keep targets independent", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileOutputLockTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var firstPath = Path.Combine(directory, "Game.exe");
+        Equal(OutputPublicationLock.CreateMutexName(firstPath),
+            OutputPublicationLock.CreateMutexName(firstPath.ToUpperInvariant()));
+        using var acquired = new ManualResetEventSlim(false);
+        using var release = new ManualResetEventSlim(false);
+        var holder = Task.Run(() =>
+        {
+            using var outputLock = OutputPublicationLock.Acquire(firstPath, TimeSpan.FromSeconds(2));
+            acquired.Set();
+            release.Wait(TimeSpan.FromSeconds(5));
+        });
+        Equal(true, acquired.Wait(TimeSpan.FromSeconds(2)));
+        try
+        {
+            ThrowsContains(() => OutputPublicationLock.Acquire(firstPath, TimeSpan.FromMilliseconds(100)),
+                "Another build still owns output");
+            using var independent = OutputPublicationLock.Acquire(Path.Combine(directory, "Other.exe"),
+                TimeSpan.FromMilliseconds(100));
+        }
+        finally
+        {
+            release.Set();
+            holder.GetAwaiter().GetResult();
+        }
+
+        var abandonedPath = Path.Combine(directory, "Abandoned.exe");
+        var abandonedName = OutputPublicationLock.CreateMutexName(abandonedPath);
+        var thread = new Thread(() =>
+        {
+            var mutex = new Mutex(false, abandonedName);
+            mutex.WaitOne();
+        });
+        thread.Start();
+        thread.Join();
+        using var recovered = OutputPublicationLock.Acquire(abandonedPath, TimeSpan.FromSeconds(1));
+    }
+    finally { Directory.Delete(directory, true); }
+});
+
+Run("Native intermediates are project-owned, Unicode-safe, and cleaned on every failure path", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "Smile Native 測試 " + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var sourcePath = Path.Combine(directory, "來源 Program.smile");
+        var outputPath = Path.Combine(directory, "bin", "Program.exe");
+        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+        File.WriteAllText(sourcePath, "Print \"Hello\"\n");
+        File.WriteAllText(outputPath, "last-known-good");
+
+        foreach (var scenario in new[] { "assembler", "linker", "debug-helper" })
+        {
+            CompilerIntermediateDirectory? captured = null;
+            var hooks = new CompilerDriverTestHooks
+            {
+                AfterAssemblyEmission = owner => captured = owner,
+                RunNativeToolchain = invocation =>
+                {
+                    File.WriteAllText(invocation.ObjectPath, scenario + " object");
+                    if (invocation.DebugObjectPath != null)
+                        File.WriteAllText(invocation.DebugObjectPath, scenario + " debug object");
+                    return new ToolchainResult(false, "Synthetic " + scenario + " failure.");
+                }
+            };
+            var arguments = new List<string> { sourcePath, "-o", outputPath };
+            if (scenario == "debug-helper")
+                arguments.Add("--debug");
+            Equal(2, new CompilerDriver(hooks).Run(arguments.ToArray()));
+            Equal("last-known-good", File.ReadAllText(outputPath));
+            Equal(true, captured != null);
+            Equal(false, Directory.Exists(captured!.DirectoryPath));
+            Equal(true, captured.DirectoryPath.StartsWith(
+                Path.Combine(directory, "obj", "Smile", "Compiler") + Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase));
+        }
+
+        CompilerIntermediateDirectory? emissionOwner = null;
+        var emissionFailure = new CompilerDriverTestHooks
+        {
+            AfterAssemblyEmission = owner =>
+            {
+                emissionOwner = owner;
+                throw new IOException("Synthetic emission failure.");
+            }
+        };
+        Equal(2, new CompilerDriver(emissionFailure).Run(new[] { sourcePath, "-o", outputPath }));
+        Equal(false, Directory.Exists(emissionOwner!.DirectoryPath));
+
+        CompilerIntermediateDirectory? kept = null;
+        var keepFailure = new CompilerDriverTestHooks
+        {
+            AfterAssemblyEmission = owner => kept = owner,
+            RunNativeToolchain = invocation =>
+            {
+                File.WriteAllText(invocation.ObjectPath, "kept object");
+                File.WriteAllText(invocation.DebugObjectPath!, "kept debug object");
+                return new ToolchainResult(false, "Synthetic kept failure.");
+            }
+        };
+        Equal(2, new CompilerDriver(keepFailure).Run(new[]
+            { sourcePath, "-o", outputPath, "--debug", "--keep-temp" }));
+        Equal(true, File.Exists(kept!.AssemblyPath));
+        Equal(true, File.Exists(kept.ObjectPath));
+        Equal(true, File.Exists(kept.DebugSourcePath));
+        Equal(true, File.Exists(kept.DebugObjectPath));
+        Directory.Delete(kept.DirectoryPath, true);
+    }
+    finally { Directory.Delete(directory, true); }
+});
+
+Run("Transactional managed publication rolls back failures and removes stale owned files only after success", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileOutputTransactionTests-" + Guid.NewGuid().ToString("N"));
+    var staging = Path.Combine(directory, "staging");
+    var output = Path.Combine(directory, "output");
+    Directory.CreateDirectory(staging);
+    Directory.CreateDirectory(output);
+    try
+    {
+        foreach (var relative in new[] { "Program.exe", "Program.pdb", "Assets/New.txt", "Program.smile-assets.json" })
+        {
+            var staged = Path.Combine(staging, relative);
+            Directory.CreateDirectory(Path.GetDirectoryName(staged)!);
+            File.WriteAllText(staged, "new-" + relative);
+            var prior = Path.Combine(output, relative);
+            Directory.CreateDirectory(Path.GetDirectoryName(prior)!);
+            File.WriteAllText(prior, "old-" + relative);
+        }
+        File.WriteAllText(Path.Combine(output, "Assets", "Stale.txt"), "stale-owned");
+        File.WriteAllText(Path.Combine(output, "sentinel.txt"), "unrelated");
+        var current = new[] { "Program.exe", "Program.pdb", "Assets/New.txt", "Program.smile-assets.json" };
+        var previous = current.Concat(new[] { "Assets/Stale.txt" }).ToArray();
+        ThrowsContains(() => TransactionalOutputPublisher.PublishDirectory(staging, output, current, previous,
+            (stage, relative) =>
+            {
+                if (stage == TransactionalPublicationStage.AfterFileCommit && relative == "Program.pdb")
+                    throw new IOException("Synthetic transactional commit failure.");
+            }), "Synthetic transactional");
+        foreach (var relative in current)
+            Equal("old-" + relative, File.ReadAllText(Path.Combine(output, relative)));
+        Equal("stale-owned", File.ReadAllText(Path.Combine(output, "Assets", "Stale.txt")));
+        Equal("unrelated", File.ReadAllText(Path.Combine(output, "sentinel.txt")));
+
+        TransactionalOutputPublisher.PublishDirectory(staging, output, current, previous);
+        foreach (var relative in current)
+            Equal("new-" + relative, File.ReadAllText(Path.Combine(output, relative)));
+        Equal(false, File.Exists(Path.Combine(output, "Assets", "Stale.txt")));
+        Equal("unrelated", File.ReadAllText(Path.Combine(output, "sentinel.txt")));
+    }
+    finally { Directory.Delete(directory, true); }
+});
+
+Run("Failed staged Web generation preserves the complete prior publication", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileWebTransactionTests-" + Guid.NewGuid().ToString("N"));
+    var sourcePath = Path.Combine(directory, "Program.smile");
+    var output = Path.Combine(directory, "Web");
+    Directory.CreateDirectory(output);
+    try
+    {
+        File.WriteAllText(sourcePath, "Print \"replacement\"\n");
+        foreach (var file in WebOutputWriter.ManagedFileNames)
+            File.WriteAllText(Path.Combine(output, file), "last-known-good-" + file);
+        File.WriteAllText(Path.Combine(output, "sentinel.txt"), "unrelated");
+        var hooks = new CompilerDriverTestHooks
+        {
+            AfterWebStagedFile = file =>
+            {
+                if (file == "smile-runtime.js")
+                    throw new IOException("Synthetic Web generation failure.");
+            }
+        };
+        Equal(2, new CompilerDriver(hooks).Run(new[]
+            { sourcePath, "--target", "web", "--output-dir", output }));
+        foreach (var file in WebOutputWriter.ManagedFileNames)
+            Equal("last-known-good-" + file, File.ReadAllText(Path.Combine(output, file)));
+        Equal("unrelated", File.ReadAllText(Path.Combine(output, "sentinel.txt")));
+        Equal(0, Directory.EnumerateDirectories(directory, ".Web.smile-staging-*").Count());
+    }
+    finally { Directory.Delete(directory, true); }
+});
+
+Run("Failed project asset staging preserves prior native and Web publications", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileProjectPublishRollbackTests-" +
+                                                  Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(Path.Combine(directory, "Assets"));
+    try
+    {
+        var sourcePath = Path.Combine(directory, "Program.smile");
+        var assetPath = Path.Combine(directory, "Assets", "Data.txt");
+        var projectPath = Path.Combine(directory, "Rollback.smileproj");
+        File.WriteAllText(sourcePath, "Print \"first\"\n");
+        File.WriteAllText(assetPath, "first-asset");
+        File.WriteAllText(projectPath,
+            "<SmileProject><PropertyGroup><ProjectKind>Console</ProjectKind><StartupFile>Program.smile</StartupFile><OutputName>Rollback</OutputName></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /><Asset Include=\"Assets\\Data.txt\" /></ItemGroup></SmileProject>");
+
+        var webOutput = Path.Combine(directory, "Web");
+        Equal(0, new CompilerDriver().Run(new[]
+            { "--project", projectPath, "--target", "web", "--output-dir", webOutput }));
+        var priorWeb = WebOutputWriter.ManagedFileNames.Concat(new[] { "Assets/Data.txt", "smile-assets.json" })
+            .ToDictionary(relative => relative,
+                relative => File.ReadAllBytes(Path.Combine(webOutput, relative.Replace('/', Path.DirectorySeparatorChar))),
+                StringComparer.Ordinal);
+        File.WriteAllText(Path.Combine(webOutput, "sentinel.txt"), "unrelated");
+
+        var nativeOutput = Path.Combine(directory, "bin", "Rollback.exe");
+        Directory.CreateDirectory(Path.GetDirectoryName(nativeOutput)!);
+        File.WriteAllText(nativeOutput, "prior-executable");
+        var project = SmileProjectSourceSet.Load(projectPath);
+        SmileProjectAssetPublisher.Publish(project.AssetManifest, Path.GetDirectoryName(nativeOutput)!,
+            project.EffectiveApplicationId, "windows-x64", Path.GetFileNameWithoutExtension(nativeOutput));
+        var priorNativeAsset = File.ReadAllBytes(Path.Combine(directory, "bin", "Assets", "Data.txt"));
+        var priorNativeManifest = File.ReadAllBytes(Path.Combine(directory, "bin", "Rollback.smile-assets.json"));
+
+        File.WriteAllText(sourcePath, "Print \"replacement\"\n");
+        File.WriteAllText(assetPath, "replacement-asset");
+        var failedAssetHooks = new CompilerDriverTestHooks
+        {
+            AssetPublicationHook = (stage, _) =>
+            {
+                if (stage == SmileAssetPublicationStage.BeforeAssetStage)
+                    throw new IOException("Synthetic staged asset copy failure.");
+            }
+        };
+        Equal(1, new CompilerDriver(failedAssetHooks).Run(new[]
+            { "--project", projectPath, "--target", "web", "--output-dir", webOutput }));
+        foreach (var prior in priorWeb)
+            Equal(true, prior.Value.SequenceEqual(File.ReadAllBytes(Path.Combine(webOutput,
+                prior.Key.Replace('/', Path.DirectorySeparatorChar)))));
+        Equal("unrelated", File.ReadAllText(Path.Combine(webOutput, "sentinel.txt")));
+
+        failedAssetHooks = new CompilerDriverTestHooks
+        {
+            RunNativeToolchain = invocation =>
+            {
+                File.WriteAllText(invocation.OutputPath, "replacement-executable");
+                return new ToolchainResult(true, string.Empty);
+            },
+            AssetPublicationHook = (stage, _) =>
+            {
+                if (stage == SmileAssetPublicationStage.BeforeAssetStage)
+                    throw new IOException("Synthetic staged asset copy failure.");
+            }
+        };
+        Equal(1, new CompilerDriver(failedAssetHooks).Run(new[]
+            { "--project", projectPath, "--target", "windows-x64", "-o", nativeOutput }));
+        Equal("prior-executable", File.ReadAllText(nativeOutput));
+        Equal(true, priorNativeAsset.SequenceEqual(
+            File.ReadAllBytes(Path.Combine(directory, "bin", "Assets", "Data.txt"))));
+        Equal(true, priorNativeManifest.SequenceEqual(
+            File.ReadAllBytes(Path.Combine(directory, "bin", "Rollback.smile-assets.json"))));
+        Equal(0, Directory.EnumerateDirectories(directory, ".*.smile-staging-*").Count());
+        Equal(0, Directory.EnumerateDirectories(Path.Combine(directory, "bin"), ".*.smile-staging-*").Count());
+    }
+    finally { Directory.Delete(directory, true); }
+});
+
+Run("Native Debug C uses deterministic ASCII identifiers while retaining safe aliases", () =>
+{
+    const string longName = "ThisIdentifierIsDeliberatelyLongEnoughToProveThereIsNoTruncationCollision";
+    var path = Path.Combine(Path.GetTempPath(), "SMILE 除錯 path", "來源.smile");
+    var source = "Option Explicit\nDim auto As Number\nDim MixedCase As Number\nDim Café As Number\n" +
+                 "Dim 變數 As Number\nDim " + longName + " As Number\nPrint auto + MixedCase\n";
+    var analysis = SmileLanguage.Analyze(new[] { new SmileSourceDocument(source, path, isStartup: true) });
+    Equal(false, analysis.HasErrors);
+    var emitter = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, emitDebugInformation: true);
+    _ = emitter.Emit();
+    var first = CompilerDriver.BuildDebugSource(emitter.DebugSites);
+    var second = CompilerDriver.BuildDebugSource(emitter.DebugSites);
+    Equal(first, second);
+    Equal(true, first.Contains("smile_debug_v0", StringComparison.Ordinal));
+    Equal(true, first.Contains("MixedCase = smile_debug_v", StringComparison.Ordinal));
+    Equal(false, first.Contains("long long auto", StringComparison.Ordinal));
+    Equal(false, first.Contains(" Café", StringComparison.Ordinal));
+    Equal(false, first.Contains(" 變數", StringComparison.Ordinal));
+    Equal(true, first.Contains(path.Replace("\\", "\\\\"), StringComparison.Ordinal));
 });
 
 Run("Native compiler isolates intermediates and serializes identical output targets", () =>

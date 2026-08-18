@@ -1,0 +1,14 @@
+Option Explicit
+
+Dim auto As Number
+Dim MixedCase As Number
+Dim Café As Number
+Dim 變數 As Number
+Dim ThisIdentifierIsDeliberatelyLongEnoughToProveThereIsNoTruncationCollision As Number
+
+auto = 1
+MixedCase = 2
+Café = 3
+變數 = 4
+ThisIdentifierIsDeliberatelyLongEnoughToProveThereIsNoTruncationCollision = 5
+Print auto + MixedCase + Café + 變數 + ThisIdentifierIsDeliberatelyLongEnoughToProveThereIsNoTruncationCollision

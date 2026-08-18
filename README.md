@@ -175,7 +175,7 @@ artifacts\compiler\smilec.exe examples\MultiFileBasics\Program.smile ^
 
 `examples\MultiFileBasics` is the small teaching example: `Program.smile` owns startup and the loop, while `GameState.smile` and `Drawing.smile` contribute shared declarations and routines.
 
-Use `--keep-temp` to retain generated MASM assembly and object files under `artifacts\temp`. Copy declared asset trees beside a loose-file executable before running it; Dungeon Star I needs both its `Assets` and editable `Maps` directories, while Dungeon Star II needs its editable `Maps` directory.
+Native compiler intermediates belong to the source or project being built under `obj\Smile\Compiler\<unique-build-id>`. Normal builds remove their unique directory after success or failure. Use `--keep-temp` to retain the MASM assembly, object, generated Debug C, and Debug object in that directory; the compiler prints the exact retained paths even when the native toolchain fails. Copy declared asset trees beside a loose-file executable before running it; Dungeon Star I needs both its `Assets` and editable `Maps` directories, while Dungeon Star II needs its editable `Maps` directory.
 
 Select the static browser target explicitly with `--target web` and an output directory:
 

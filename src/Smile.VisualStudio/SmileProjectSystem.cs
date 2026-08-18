@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
@@ -189,7 +190,8 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     public string GetWebOutputDirectory(string configuration) =>
         Path.Combine(ProjectDirectory, "bin", NormalizeConfiguration(configuration), "Web");
 
-    public async Task<bool> BuildAsync(string configuration, string platform, IVsOutputWindowPane? pane)
+    public async Task<bool> BuildAsync(string configuration, string platform, IVsOutputWindowPane? pane,
+        CancellationToken cancellationToken = default)
     {
         await _package.JoinableTaskFactory.SwitchToMainThreadAsync();
         _refreshCoordinator?.Refresh(SmileProjectRefreshReason.BuildValidation);
@@ -236,7 +238,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
             pane.OutputStringThreadSafe($"> \"{compilerPath}\" --project \"{ProjectPath}\" --target library -o \"{outputPath}\" --configuration \"{NormalizeConfiguration(configuration)}\"\r\n");
             result = await SmileBuildService.RunProjectAsync(compilerPath, ProjectPath, "library", outputPath,
-                NormalizeConfiguration(configuration));
+                NormalizeConfiguration(configuration), cancellationToken: cancellationToken);
         }
         else if (IsWeb(platform))
         {
@@ -244,7 +246,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             Directory.CreateDirectory(outputDirectory);
             pane.OutputStringThreadSafe($"> \"{compilerPath}\" --project \"{ProjectPath}\" --target web --output-dir \"{outputDirectory}\" --configuration \"{NormalizeConfiguration(configuration)}\"\r\n");
             result = await SmileBuildService.RunProjectAsync(compilerPath, ProjectPath, "web", outputDirectory,
-                NormalizeConfiguration(configuration));
+                NormalizeConfiguration(configuration), cancellationToken: cancellationToken);
             outputPath = Path.Combine(outputDirectory, "index.html");
         }
         else
@@ -254,7 +256,8 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
             pane.OutputStringThreadSafe($"> \"{compilerPath}\" --project \"{ProjectPath}\" --target windows-x64 -o \"{outputPath}\" --configuration \"{NormalizeConfiguration(configuration)}\" --graphics {GraphicsBackend} --vsync {VSync.ToString().ToLowerInvariant()}{(emitDebugInformation ? " --debug" : string.Empty)}\r\n");
             result = await SmileBuildService.RunProjectAsync(compilerPath, ProjectPath, "windows-x64", outputPath,
-                NormalizeConfiguration(configuration), GraphicsBackend, VSync, emitDebugInformation);
+                NormalizeConfiguration(configuration), GraphicsBackend, VSync, emitDebugInformation,
+                cancellationToken);
         }
 
         await _package.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -1737,6 +1740,7 @@ internal sealed class SmileProjectConfiguration : IVsProjectCfg2, IVsBuildablePr
     private readonly Dictionary<uint, IVsBuildStatusCallback> _callbacks = new();
     private uint _nextCookie = 1;
     private bool _building;
+    private CancellationTokenSource? _buildCancellation;
 
     public SmileProjectConfiguration(SmileConfigurationProvider provider, SmileProject project, string configuration, string platform)
     { _provider = provider; _project = project; _configuration = configuration; _platform = platform; }
@@ -1789,7 +1793,7 @@ internal sealed class SmileProjectConfiguration : IVsProjectCfg2, IVsBuildablePr
     public int StartUpToDateCheck(IVsOutputWindowPane pIVsOutputWindowPane, uint dwOptions) =>
         VSConstants.E_NOTIMPL;
     public int QueryStatus(out int pfBuildDone) { pfBuildDone = _building ? 0 : 1; return VSConstants.S_OK; }
-    public int Stop(int fSync) { _building = false; return VSConstants.S_OK; }
+    public int Stop(int fSync) { _buildCancellation?.Cancel(); return VSConstants.S_OK; }
     public int Wait(uint dwMilliseconds, int fTickWhenMessageQNotEmpty) => VSConstants.S_OK;
     public int get_ProjectCfg(out IVsProjectCfg ppIVsProjectCfg) { ppIVsProjectCfg = this; return VSConstants.S_OK; }
 
@@ -1820,6 +1824,8 @@ internal sealed class SmileProjectConfiguration : IVsProjectCfg2, IVsBuildablePr
             return VSConstants.E_PENDING;
 
         _building = true;
+        var buildCancellation = new CancellationTokenSource();
+        _buildCancellation = buildCancellation;
         var continueBuild = 1;
         var callbacks = _callbacks.Values.ToArray();
         foreach (var callback in callbacks)
@@ -1827,6 +1833,8 @@ internal sealed class SmileProjectConfiguration : IVsProjectCfg2, IVsBuildablePr
         if (continueBuild == 0)
         {
             _building = false;
+            _buildCancellation = null;
+            buildCancellation.Dispose();
             foreach (var callback in callbacks)
                 callback.BuildEnd(0);
             return VSConstants.S_OK;
@@ -1840,7 +1848,7 @@ internal sealed class SmileProjectConfiguration : IVsProjectCfg2, IVsBuildablePr
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 success = clean
                     ? _project.Clean(_configuration, _platform, pane)
-                    : await _project.BuildAsync(_configuration, _platform, pane);
+                    : await _project.BuildAsync(_configuration, _platform, pane, buildCancellation.Token);
             }
             catch (Exception exception)
             {
@@ -1852,6 +1860,9 @@ internal sealed class SmileProjectConfiguration : IVsProjectCfg2, IVsBuildablePr
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 _building = false;
+                if (ReferenceEquals(_buildCancellation, buildCancellation))
+                    _buildCancellation = null;
+                buildCancellation.Dispose();
                 foreach (var callback in callbacks)
                     callback.BuildEnd(success ? 1 : 0);
             }

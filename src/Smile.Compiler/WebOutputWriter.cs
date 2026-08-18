@@ -6,15 +6,24 @@ namespace Smile.Compiler;
 internal static class WebOutputWriter
 {
     private static readonly UTF8Encoding Utf8WithoutBom = new(false);
+    internal static readonly IReadOnlyList<string> ManagedFileNames =
+        new[] { "index.html", "smile-runtime.js", "game.js", "smile.css" };
 
     public static void Write(string outputDirectory, WebEmitter emitter)
+        => Write(outputDirectory, emitter, null);
+
+    internal static void Write(string outputDirectory, WebEmitter emitter, Action<string>? afterFileWrite)
     {
         var game = emitter.Emit();
         Directory.CreateDirectory(outputDirectory);
         File.WriteAllText(Path.Combine(outputDirectory, "index.html"), Index(emitter.Title), Utf8WithoutBom);
+        afterFileWrite?.Invoke("index.html");
         File.WriteAllText(Path.Combine(outputDirectory, "smile-runtime.js"), Runtime, Utf8WithoutBom);
+        afterFileWrite?.Invoke("smile-runtime.js");
         File.WriteAllText(Path.Combine(outputDirectory, "game.js"), game, Utf8WithoutBom);
+        afterFileWrite?.Invoke("game.js");
         File.WriteAllText(Path.Combine(outputDirectory, "smile.css"), Style, Utf8WithoutBom);
+        afterFileWrite?.Invoke("smile.css");
     }
 
     private static string Index(string title) => $$"""
