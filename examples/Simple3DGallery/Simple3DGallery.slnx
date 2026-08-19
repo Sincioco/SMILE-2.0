@@ -1,0 +1,9 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+    <Platform Name="Windows 64-bit .exe" />
+    <Platform Name="Web" />
+  </Configurations>
+  <Project Path="Simple3DGallery.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="5f7f175b-8ba7-42ba-8f08-88e12d02a46b" />
+</Solution>

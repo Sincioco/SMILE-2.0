@@ -1,0 +1,14 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>Simple3DGallery</OutputName>
+    <ApplicationId>smile.example.simple3d-gallery</ApplicationId>
+    <GraphicsBackend>Auto</GraphicsBackend>
+    <VSync>true</VSync>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

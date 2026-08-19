@@ -1,0 +1,238 @@
+' ------------------------------------------------------------
+' SMILE 2.0 Simple3D Gallery
+' Educational fixed-point wireframes rendered with Draw Line.
+' ------------------------------------------------------------
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Mesh As Mesh
+Import Smile.Simple3D.Primitives As Primitives
+Import Smile.Simple3D.Renderer As Renderer
+Import Smile.Simple3D.Interaction As Interaction
+
+Dim CubeMesh As Number
+Dim SphereMesh As Number
+Dim PyramidMesh As Number
+Dim DonutMesh As Number
+Dim AxesMesh As Number
+Dim GridMesh As Number
+Dim CurrentShape As Number
+Dim Key As Number
+Dim PreviousTime As Number
+Dim CurrentTime As Number
+Dim Elapsed As Number
+Dim Camera As Core.Camera3D
+Dim ObjectTransform As Core.Transform3D
+Dim FloorTransform As Core.Transform3D
+Dim Orbit As Core.OrbitState3D
+Dim AutoSpin As Boolean
+Dim ShowAxes As Boolean
+Dim ShowGrid As Boolean
+Dim Paused As Boolean
+Dim Running As Boolean
+
+Game Window "SMILE 2.0 Simple3D Gallery" Size 960 By 540
+
+Call CreateGallery()
+
+PreviousTime = Timer()
+Running = True
+
+Do
+
+    CurrentTime = Timer()
+    Elapsed = Min(50, Max(0, CurrentTime - PreviousTime))
+    PreviousTime = CurrentTime
+
+    Get Key Key
+
+    Call HandleGalleryKey(Key)
+
+    If Not Paused Then
+
+        Call Interaction.UpdateOrbitFromPointer(Orbit, Elapsed)
+
+        If Key_Held(KEY_LEFT) Then
+            Orbit.Yaw = Orbit.Yaw - 2
+        End If
+
+        If Key_Held(KEY_RIGHT) Then
+            Orbit.Yaw = Orbit.Yaw + 2
+        End If
+
+        If Key_Held(KEY_UP) Then
+            Orbit.Pitch = Max(-85, Orbit.Pitch - 2)
+        End If
+
+        If Key_Held(KEY_DOWN) Then
+            Orbit.Pitch = Min(85, Orbit.Pitch + 2)
+        End If
+
+        If AutoSpin Then
+            Orbit.Yaw = Orbit.Yaw + Max(1, Elapsed / 16)
+        End If
+
+    End If
+
+    Camera.Position.Z = -Orbit.Distance
+    ObjectTransform.Rotation.Y = Orbit.Yaw
+    ObjectTransform.Rotation.X = Orbit.Pitch
+
+    Call DrawGallery()
+
+    Show Screen
+
+    Running = Running And Not Game_Closed()
+
+Loop Until Not Running
+
+Call DestroyGallery()
+
+Sub CreateGallery()
+
+    CubeMesh = Primitives.CreateCube(280)
+    SphereMesh = Primitives.CreateSphere(160, 20, 10)
+    PyramidMesh = Primitives.CreatePyramid(300, 330)
+    DonutMesh = Primitives.CreateDonut(130, 48, 20, 10)
+    AxesMesh = Primitives.CreateAxes(230)
+    GridMesh = Primitives.CreateGrid(10, 55)
+    CurrentShape = 1
+    AutoSpin = True
+    ShowAxes = True
+    ShowGrid = True
+    Camera = Renderer.DefaultCamera(960, 540)
+    ObjectTransform = Renderer.IdentityTransform()
+    FloorTransform = Renderer.IdentityTransform()
+    FloorTransform.Position.Y = -190
+
+    Call Interaction.ResetOrbit(Orbit)
+
+End Sub
+
+Sub DestroyGallery()
+
+    Call Mesh.DestroyMesh(CubeMesh)
+    Call Mesh.DestroyMesh(SphereMesh)
+    Call Mesh.DestroyMesh(PyramidMesh)
+    Call Mesh.DestroyMesh(DonutMesh)
+    Call Mesh.DestroyMesh(AxesMesh)
+    Call Mesh.DestroyMesh(GridMesh)
+
+End Sub
+
+Sub HandleGalleryKey(PressedKey As Number)
+
+    If PressedKey = KEY_ESCAPE Then
+
+        Running = False
+
+    Else If PressedKey = KEY_1 Then
+
+        CurrentShape = 1
+
+    Else If PressedKey = KEY_2 Then
+
+        CurrentShape = 2
+
+    Else If PressedKey = KEY_3 Then
+
+        CurrentShape = 3
+
+    Else If PressedKey = KEY_4 Then
+
+        CurrentShape = 4
+
+    Else If PressedKey = KEY_A Then
+
+        AutoSpin = Not AutoSpin
+
+    Else If PressedKey = KEY_SPACE Then
+
+        Paused = Not Paused
+
+    Else If PressedKey = KEY_PAD_X Then
+
+        ShowAxes = Not ShowAxes
+
+    Else If PressedKey = KEY_PAD_Y Then
+
+        ShowGrid = Not ShowGrid
+
+    Else If PressedKey = KEY_PAD_B Then
+
+        If Camera.Projection = Core.PROJECTION_PERSPECTIVE Then
+            Camera.Projection = Core.PROJECTION_ORTHOGRAPHIC
+        Else
+            Camera.Projection = Core.PROJECTION_PERSPECTIVE
+        End If
+
+    Else If PressedKey = KEY_PAD_A Then
+
+        Call Interaction.ResetOrbit(Orbit)
+
+    End If
+
+End Sub
+
+Function CurrentMesh() As Number
+
+    Dim Result As Number
+
+    If CurrentShape = 1 Then
+        Result = CubeMesh
+    Else If CurrentShape = 2 Then
+        Result = SphereMesh
+    Else If CurrentShape = 3 Then
+        Result = PyramidMesh
+    Else
+        Result = DonutMesh
+    End If
+
+    Return Result
+
+End Function
+
+Function CurrentShapeName() As Text
+
+    Dim Result As Text
+
+    If CurrentShape = 1 Then
+        Result = "Cube"
+    Else If CurrentShape = 2 Then
+        Result = "Sphere"
+    Else If CurrentShape = 3 Then
+        Result = "Pyramid"
+    Else
+        Result = "Donut"
+    End If
+
+    Return Result
+
+End Function
+
+Sub DrawGallery()
+
+    Clear BLACK
+
+    Call Renderer.BeginFrame(Core.DEFAULT_LINE_BUDGET)
+
+    If ShowGrid Then
+        Call Renderer.DrawMesh(GridMesh, FloorTransform, Camera, DARK_BLUE, 0)
+    End If
+
+    Call Renderer.DrawMesh(CurrentMesh(), ObjectTransform, Camera, CYAN, 1)
+
+    If ShowAxes Then
+        Call Renderer.DrawMesh(AxesMesh, ObjectTransform, Camera, YELLOW, 0)
+    End If
+
+    Draw Text "SIMPLE3D OBJECT GALLERY" At 28, 22 Size 26 Color WHITE
+    Draw Text CurrentShapeName() At 28, 58 Size 20 Color CYAN
+    Draw Text "1 Cube   2 Sphere   3 Pyramid   4 Donut" At 28, 470 Size 16 Color LIGHT_GRAY
+    Draw Text "Drag / Throw: Rotate   Wheel: Zoom   Arrows: Rotate   A: Auto   Space: Pause" At 28, 494 Size 14 Color LIGHT_GRAY
+    Draw Text "Pad X: Axes   Pad Y: Grid   Pad B: Projection   Pad A: Reset" At 28, 516 Size 14 Color LIGHT_GRAY
+    Draw Text "Lines" At 822, 22 Size 14 Color LIGHT_GRAY
+    Draw Number Renderer.FrameLinesDrawn() At 884, 22 Size 14 Color CYAN
+
+End Sub
