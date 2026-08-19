@@ -9,9 +9,9 @@
 - Branch: `main`
 - Actual starting local SHA: `1d1f9d24e14ffdca62201b4bbe79f908240e2433`
 - Reviewed handoff baseline: older than the actual local/remote starting state; no reset or HEAD movement was performed
-- Ending implementation SHA: `a2e357b`
-- Report introduction SHA: recorded by the immediately following evidence-update commit so that this file can name its immutable introduction commit
-- Push result: every validated milestone through `a2e357b` was pushed successfully to `origin/main`
+- Ending implementation SHA: `a2e357b5336716160be278c86b6abf62091eac2d`
+- Report introduction SHA: `5b2fe62e0f6a280f32ce6e14361c292b14ff6e7f`
+- Push result: every validated implementation and report milestone through `5b2fe62e0f6a280f32ce6e14361c292b14ff6e7f` was pushed successfully to `origin/main`
 - Pre-existing user work: the user-authorized solution-file change was restored before implementation; no unrelated work was overwritten
 
 ## Scope delivered
@@ -119,6 +119,7 @@ The implementation changed 50 repository files through the ending implementation
 | `0f13974` | `Sin and Codex: feat(games): add complete Space Wars campaign` | Pushed |
 | `49e086f` | `Sin and Codex: feat(integration): register Simple3D and Space Wars` | Pushed |
 | `a2e357b` | `Sin and Codex: fix(space-wars): package no-demo audio assets` | Pushed |
+| `5b2fe62` | `Sin and Codex: docs(simple3d): record implementation evidence` | Pushed |
 
 All subjects begin with the required `Sin and Codex:` prefix.
 
