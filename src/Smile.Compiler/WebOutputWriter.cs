@@ -42,21 +42,15 @@ internal static class WebOutputWriter
             <pre id="smile-error" hidden></pre>
             <section id="smile-controls" hidden aria-hidden="true" aria-label="Game controls">
               <div class="smile-dpad" aria-label="Directional controls">
-                <button class="smile-control-up" type="button" data-smile-control="up" aria-label="Move up" aria-pressed="false">▲</button>
-                <button class="smile-control-left" type="button" data-smile-control="left" aria-label="Move left" aria-pressed="false">◀</button>
-                <button class="smile-control-right" type="button" data-smile-control="right" aria-label="Move right" aria-pressed="false">▶</button>
-                <button class="smile-control-down" type="button" data-smile-control="down" aria-label="Move down" aria-pressed="false">▼</button>
-              </div>
-              <div class="smile-utility-controls" aria-label="Number controls">
-                <button type="button" data-smile-control="one" aria-label="Number 1" aria-pressed="false">1</button>
-                <button type="button" data-smile-control="two" aria-label="Number 2" aria-pressed="false">2</button>
-                <button type="button" data-smile-control="three" aria-label="Number 3" aria-pressed="false">3</button>
-                <button type="button" data-smile-control="four" aria-label="Number 4" aria-pressed="false">4</button>
+                <button class="smile-control-up" type="button" data-smile-control="up" aria-label="Move up" aria-pressed="false"><span aria-hidden="true">▲</span></button>
+                <button class="smile-control-left" type="button" data-smile-control="left" aria-label="Move left" aria-pressed="false"><span aria-hidden="true">▲</span></button>
+                <button class="smile-control-right" type="button" data-smile-control="right" aria-label="Move right" aria-pressed="false"><span aria-hidden="true">▲</span></button>
+                <button class="smile-control-down" type="button" data-smile-control="down" aria-label="Move down" aria-pressed="false"><span aria-hidden="true">▲</span></button>
               </div>
               <div class="smile-action-controls" aria-label="Action controls">
                 <button class="smile-control-y" type="button" data-smile-control="y" aria-label="Y, menu or Tab" aria-pressed="false">Y</button>
                 <button class="smile-control-x" type="button" data-smile-control="x" aria-label="X, action or Space" aria-pressed="false">X</button>
-                <button class="smile-control-b" type="button" data-smile-control="b" aria-label="B, back or Escape" aria-pressed="false">B</button>
+                <button class="smile-control-b" type="button" data-smile-control="b" aria-label="B, secondary action or Space" aria-pressed="false">B</button>
                 <button class="smile-control-a" type="button" data-smile-control="a" aria-label="A, confirm or Enter" aria-pressed="false">A</button>
               </div>
             </section>
@@ -70,33 +64,40 @@ internal static class WebOutputWriter
     private const string Style = """
         :root { color-scheme: dark; font-family: "Segoe UI", Arial, sans-serif; }
         * { box-sizing: border-box; }
-        html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #05070c; }
+        html, body { width: 100%; height: 100%; min-height: 100dvh; margin: 0; overflow: hidden; background: #05070c; }
         body { display: grid; place-items: center; }
-        #smile-shell { position: relative; width: 100vw; height: 100vh; display: grid; place-items: center; background: #05070c; }
-        #smile-canvas { display: block; max-width: 100vw; max-height: 100vh; width: auto; height: auto; aspect-ratio: 16 / 9; background: #000; outline: none; }
+        #smile-shell { position: relative; width: 100vw; width: 100dvw; height: 100vh; height: 100dvh; display: grid; place-items: center; background: #05070c; }
+        #smile-canvas { display: block; max-width: 100vw; max-width: 100dvw; max-height: 100vh; max-height: 100dvh; width: auto; height: auto; aspect-ratio: 16 / 9; background: #000; outline: none; }
         #smile-canvas:focus-visible { box-shadow: inset 0 0 0 2px #46e6ff; }
         #smile-console { width: min(72rem, 100vw); height: 100vh; margin: 0; padding: 1rem; overflow: auto; color: #f2f4f8; background: #05070c; font: 16px/1.4 Consolas, monospace; white-space: pre-wrap; }
         #smile-error { position: absolute; z-index: 20; left: 1rem; right: 1rem; bottom: 1rem; max-height: 35vh; overflow: auto; margin: 0; padding: 1rem; color: #fff; background: #761b25; border: 1px solid #ff8794; white-space: pre-wrap; }
         #smile-controls[hidden] { display: none; }
         #smile-controls { position: absolute; z-index: 10; inset: 0; pointer-events: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-        #smile-controls button { pointer-events: auto; touch-action: none; min-width: 56px; min-height: 56px; padding: 0; border: 2px solid rgba(220, 247, 255, .82); border-radius: 50%; color: #fff; background: rgba(9, 20, 36, .66); box-shadow: 0 3px 12px rgba(0, 0, 0, .4); font: 700 clamp(18px, 4vmin, 28px)/1 "Segoe UI", Arial, sans-serif; }
+        #smile-controls button { pointer-events: auto; touch-action: none; min-width: 56px; min-height: 56px; padding: 0; border: 2px solid rgba(220, 247, 255, .56); border-radius: 50%; color: #fff; background: rgba(9, 20, 36, .66); box-shadow: 0 3px 12px rgba(0, 0, 0, .4); font: 700 clamp(18px, 4vmin, 28px)/1 "Segoe UI", Arial, sans-serif; }
         #smile-controls button:focus-visible { outline: 3px solid #46e6ff; outline-offset: 3px; }
         #smile-controls button.smile-control-active { background: rgba(27, 157, 190, .9); border-color: #fff; transform: translateY(2px) scale(.97); }
-        .smile-dpad, .smile-action-controls { position: absolute; bottom: max(14px, env(safe-area-inset-bottom, 0px)); display: grid; grid-template: repeat(3, clamp(56px, 12vmin, 78px)) / repeat(3, clamp(56px, 12vmin, 78px)); gap: 4px; }
+        .smile-dpad, .smile-action-controls { position: absolute; bottom: max(24px, env(safe-area-inset-bottom, 0px)); display: grid; grid-template: repeat(3, clamp(56px, 12vmin, 78px)) / repeat(3, clamp(56px, 12vmin, 78px)); gap: 4px; }
         .smile-dpad { left: max(14px, env(safe-area-inset-left, 0px)); }
         .smile-action-controls { right: max(14px, env(safe-area-inset-right, 0px)); }
         .smile-dpad button, .smile-action-controls button { width: clamp(56px, 12vmin, 78px); height: clamp(56px, 12vmin, 78px); }
+        .smile-dpad button span { display: block; }
+        .smile-control-left span { transform: rotate(-90deg); }
+        .smile-control-right span { transform: rotate(90deg); }
+        .smile-control-down span { transform: rotate(180deg); }
         .smile-control-up, .smile-control-y { grid-column: 2; grid-row: 1; }
         .smile-control-left, .smile-control-x { grid-column: 1; grid-row: 2; }
         .smile-control-right, .smile-control-b { grid-column: 3; grid-row: 2; }
         .smile-control-down, .smile-control-a { grid-column: 2; grid-row: 3; }
-        .smile-utility-controls { position: absolute; left: 50%; bottom: max(18px, env(safe-area-inset-bottom, 0px)); display: flex; gap: 6px; transform: translateX(-50%); }
-        .smile-utility-controls button { width: clamp(56px, 9vmin, 64px); height: clamp(56px, 9vmin, 64px); font-size: clamp(15px, 3vmin, 20px); }
         @media (orientation: portrait) {
+          #smile-shell.smile-controls-visible { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: clamp(8px, 2dvh, 18px); padding-top: max(8px, env(safe-area-inset-top, 0px)); padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)); }
+          #smile-shell.smile-controls-visible #smile-controls { position: relative; inset: auto; width: 100%; height: clamp(168px, 36vmin, 234px); flex: 0 0 clamp(168px, 36vmin, 234px); }
           .smile-dpad, .smile-action-controls { gap: 0; }
-          .smile-dpad { left: max(8px, env(safe-area-inset-left, 0px)); bottom: max(18px, env(safe-area-inset-bottom, 0px)); }
-          .smile-action-controls { right: max(8px, env(safe-area-inset-right, 0px)); bottom: calc(max(18px, env(safe-area-inset-bottom, 0px)) + 60px); }
-          .smile-utility-controls { bottom: calc(max(18px, env(safe-area-inset-bottom, 0px)) + clamp(232px, 52vmin, 280px)); }
+          #smile-shell.smile-controls-visible .smile-dpad { top: 0; bottom: auto; left: max(8px, env(safe-area-inset-left, 0px)); }
+          #smile-shell.smile-controls-visible .smile-action-controls { top: 0; right: max(8px, env(safe-area-inset-right, 0px)); bottom: auto; }
+        }
+        @media (orientation: portrait) and (max-width: 359px) {
+          #smile-shell.smile-controls-visible #smile-controls { height: 224px; flex-basis: 224px; }
+          #smile-shell.smile-controls-visible .smile-action-controls { top: 56px; }
         }
         """;
 
@@ -114,6 +115,7 @@ internal static class WebOutputWriter
             const back = backCanvas.getContext("2d", { alpha: false });
             const consoleOutput = document.getElementById("smile-console");
             const errorPanel = document.getElementById("smile-error");
+            const shell = document.getElementById("smile-shell");
             const virtualControls = document.getElementById("smile-controls");
             const virtualControlButtons = virtualControls
                 ? Array.from(virtualControls.querySelectorAll("button[data-smile-control]"))
@@ -136,8 +138,7 @@ internal static class WebOutputWriter
             const virtualControlProfiles = Object.freeze({
                 standard: Object.freeze({
                     up: 10, down: 11, left: 12, right: 13,
-                    a: 14, b: 15, x: 16, y: 21,
-                    one: 17, two: 18, three: 20, four: 22
+                    a: 14, b: 16, x: 16, y: 21
                 })
             });
             const activeVirtualControlProfile = virtualControlProfiles.standard;
@@ -254,6 +255,7 @@ internal static class WebOutputWriter
                     virtualControls.hidden = !next;
                     virtualControls.setAttribute("aria-hidden", next ? "false" : "true");
                 }
+                if (shell) shell.classList.toggle("smile-controls-visible", next);
             }
 
             function updateVirtualControlsVisibility() {

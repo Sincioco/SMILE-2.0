@@ -506,14 +506,25 @@ Run("Web output writer creates deterministic static files", () =>
         Equal(true, html.Contains("width=device-width, initial-scale=1, viewport-fit=cover", StringComparison.Ordinal));
         Equal(1, html.Split(new[] { "id=\"smile-controls\"" }, StringSplitOptions.None).Length - 1);
         Equal(true, html.Contains("id=\"smile-controls\" hidden aria-hidden=\"true\"", StringComparison.Ordinal));
-        foreach (var control in new[] { "up", "down", "left", "right", "a", "b", "x", "y", "one", "two", "three", "four" })
+        foreach (var control in new[] { "up", "down", "left", "right", "a", "b", "x", "y" })
             Equal(1, html.Split(new[] { $"data-smile-control=\"{control}\"" }, StringSplitOptions.None).Length - 1);
-        Equal(12, html.Split(new[] { "type=\"button\"" }, StringSplitOptions.None).Length - 1);
+        foreach (var removedControl in new[] { "one", "two", "three", "four" })
+            Equal(false, html.Contains($"data-smile-control=\"{removedControl}\"", StringComparison.Ordinal));
+        Equal(8, html.Split(new[] { "type=\"button\"" }, StringSplitOptions.None).Length - 1);
+        Equal(4, html.Split(new[] { "<span aria-hidden=\"true\">▲</span>" }, StringSplitOptions.None).Length - 1);
+        Equal(false, html.Contains("◀", StringComparison.Ordinal));
+        Equal(false, html.Contains("▶", StringComparison.Ordinal));
         Equal(true, css.Contains("#smile-controls[hidden] { display: none; }", StringComparison.Ordinal));
         Equal(true, css.Contains("#smile-controls button { pointer-events: auto; touch-action: none;", StringComparison.Ordinal));
+        Equal(true, css.Contains("border: 2px solid rgba(220, 247, 255, .56)", StringComparison.Ordinal));
+        Equal(true, css.Contains("height: 100dvh", StringComparison.Ordinal));
+        Equal(true, css.Contains("#smile-shell.smile-controls-visible { display: flex; flex-direction: column; justify-content: center;", StringComparison.Ordinal));
+        Equal(true, css.Contains(".smile-control-left span { transform: rotate(-90deg); }", StringComparison.Ordinal));
         Equal(false, css.Contains("#smile-canvas { touch-action: none", StringComparison.Ordinal));
         Equal(false, html.Contains("user-scalable=no", StringComparison.Ordinal));
         Equal(true, runtime.Contains("new URLSearchParams(search).getAll(\"smile-controls\")", StringComparison.Ordinal));
+        Equal(true, runtime.Contains("shell.classList.toggle(\"smile-controls-visible\", next)", StringComparison.Ordinal));
+        Equal(true, runtime.Contains("a: 14, b: 16, x: 16, y: 21", StringComparison.Ordinal));
         Equal(false, runtime.Contains("userAgent", StringComparison.Ordinal));
     }
     finally

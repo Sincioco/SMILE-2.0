@@ -131,7 +131,7 @@ function createMobileControlsHost(options = {}) {
     const errorElement = createMobileEventTarget({ hidden: true, textContent: "" });
     const shellElement = createMobileEventTarget();
     shellElement.requestFullscreen = async () => {};
-    const names = ["up", "down", "left", "right", "a", "b", "x", "y", "one", "two", "three", "four"];
+    const names = ["up", "down", "left", "right", "a", "b", "x", "y"];
     const buttons = new Map(names.map(name => {
         const button = createMobileEventTarget({ dataset: { smileControl: name } });
         button.setAttribute("aria-pressed", "false");
@@ -248,6 +248,8 @@ async function runMobileControlsTests() {
     touchFirst.host.smile.gameWindow("Touch", 960, 540);
     mobileEqual(touchFirst.controls.hidden, false, "touch-first Auto shows after Game Window");
     mobileEqual(touchFirst.controls.getAttribute("aria-hidden"), "false", "visible controls expose accessible state");
+    mobileEqual(touchFirst.host.document.getElementById("smile-shell").classList.contains("smile-controls-visible"), true,
+        "visible controls enable the portrait layout hook");
     touchFirst.pointer("a", "pointerdown", 1, "mouse", 0);
     mobileEqual(touchFirst.host.smile.getKey(), 14, "visible Auto controls accept primary mouse input");
     touchFirst.pointer("a", "pointerup", 1, "mouse", 0);
@@ -280,8 +282,7 @@ async function runMobileControlsTests() {
     mobileEqual(controls.controls.hidden, false, "Forced On shows after Game Window");
     const mapping = new Map([
         ["up", 10], ["down", 11], ["left", 12], ["right", 13],
-        ["a", 14], ["b", 15], ["x", 16], ["y", 21],
-        ["one", 17], ["two", 18], ["three", 20], ["four", 22]
+        ["a", 14], ["b", 16], ["x", 16], ["y", 21]
     ]);
     let pointerId = 20;
     for (const [controlName, key] of mapping) {
@@ -320,6 +321,21 @@ async function runMobileControlsTests() {
     controls.keyboard("keyup", "Enter");
     mobileEqual(controls.host.smile.keyHeld(14), 0, "final same-key owner release clears held state");
     drainKeys(controls.host.smile);
+
+    controls.pointer("x", "pointerdown", 113, "touch", 0);
+    controls.pointer("b", "pointerdown", 114, "touch", 0);
+    mobileAssert(JSON.stringify(drainKeys(controls.host.smile)) === JSON.stringify([16, 16]),
+        "B and X each queue one Space event");
+    controls.pointer("b", "pointerup", 114, "touch", 0);
+    mobileEqual(controls.host.smile.keyHeld(16), 1, "releasing B preserves the X Space owner");
+    controls.pointer("x", "pointerup", 113, "touch", 0);
+    mobileEqual(controls.host.smile.keyHeld(16), 0, "releasing the final Space owner clears held state");
+
+    controls.keyboard("keydown", "Escape");
+    mobileEqual(controls.host.smile.getKey(), 15, "physical Escape keeps its existing queue mapping");
+    mobileEqual(controls.host.smile.keyHeld(15), 1, "physical Escape keeps its existing held mapping");
+    controls.keyboard("keyup", "Escape");
+    mobileEqual(controls.host.smile.keyHeld(15), 0, "physical Escape release remains unchanged");
 
     controls.pointer("left", "pointerdown", 120, "touch", 0);
     controls.pointer("left", "pointercancel", 120, "touch", 0);
@@ -374,6 +390,8 @@ async function runMobileControlsTests() {
     pageHide.dispatchWindow("pagehide");
     assertReleased(pageHide, "pagehide");
     mobileEqual(pageHide.controls.hidden, true, "pagehide hides controls");
+    mobileEqual(pageHide.host.document.getElementById("smile-shell").classList.contains("smile-controls-visible"), false,
+        "hiding controls disables the portrait layout hook");
 
     const finish = createMobileControlsHost({ search: "?smile-controls=on" });
     finish.host.smile.gameWindow("Finish", 960, 540);

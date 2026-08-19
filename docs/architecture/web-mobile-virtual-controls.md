@@ -49,15 +49,12 @@ Controls remain hidden until `Game Window` is created. Console programs therefor
 | Left | `KEY_LEFT` |
 | Right | `KEY_RIGHT` |
 | A | `KEY_ENTER` |
-| B | `KEY_ESCAPE` |
+| B | `KEY_SPACE` |
 | X | `KEY_SPACE` |
 | Y | `KEY_TAB` |
-| 1 | `KEY_1` |
-| 2 | `KEY_2` |
-| 3 | `KEY_3` |
-| 4 | `KEY_4` |
 
 A virtual press queues one value and owns held state until release. It does not enqueue browser-style repeats or duplicate aliases.
+The compact default intentionally does not emit `KEY_ESCAPE`: several bundled games treat Escape as immediate program termination, which would make one B tap irreversibly stop a mobile session. B and X are two physical sources for the existing Space action; the source-aware broker preserves correct shared-key held state. Physical Escape and number keys retain their existing keyboard behavior.
 
 ## Shared input broker
 
@@ -86,7 +83,7 @@ The feature does not disable browser zoom globally and does not add `user-scalab
 
 ## Layout and accessibility
 
-The controller uses real buttons, descriptive ARIA labels, `aria-pressed`, visible focus styling, safe-area insets, and responsive portrait/landscape layouts. Every target is at least 56 by 56 CSS pixels. The controller uses CSS shapes and text, so it introduces no runtime asset.
+The controller uses real buttons, descriptive ARIA labels, `aria-pressed`, visible focus styling, a restrained translucent outline, safe-area insets, and responsive portrait/landscape layouts. Every target is at least 56 by 56 CSS pixels. Dynamic viewport units keep landscape controls inside the browser's visible viewport. In portrait, the canvas and a dedicated controls region form one vertically centered composition instead of placing controls against the page bottom. All D-pad directions use one text triangle rotated with CSS, preventing left/right arrows from selecting an emoji-style mobile glyph. The controller uses CSS shapes and text, so it introduces no runtime asset.
 
 ## Audio interaction
 
@@ -98,9 +95,9 @@ Web media diagnostics expose the selected controls mode, visibility, active virt
 
 ## Compatibility boundary
 
-The immutable `standard` profile covers normal single-player directional, confirm, cancel, action, menu, and number-selection input. The data-driven profile object is the internal seam for future explicit profiles.
+The immutable `standard` profile covers normal single-player directional, confirm, action, and menu input without exposing a destructive Escape control. The data-driven profile object is the internal seam for future explicit profiles.
 
-A fixed pad cannot infer arbitrary custom controls or same-device multiplayer mappings. The runtime does not branch on game names, change key numeric values, or enqueue duplicate aliases. A future explicit profile or game declaration would be needed for layouts such as one local player using `W`/`S` while another uses arrow keys.
+A fixed pad cannot infer arbitrary custom controls or same-device multiplayer mappings. It also cannot know whether a game's Escape key means safe cancel or immediate exit. The runtime does not branch on game names or change key numeric values. A future explicit profile or game declaration would be needed for a dedicated cancel control or layouts such as one local player using `W`/`S` while another uses arrow keys.
 
 ## Non-goals
 
