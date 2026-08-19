@@ -1,0 +1,17 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>NeonCycles</OutputName>
+    <ApplicationId>smile.game.neon-cycles</ApplicationId>
+    <GraphicsBackend>DirectX</GraphicsBackend>
+    <VSync>true</VSync>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" />
+    <SmileSource Include="NeonCyclesSimulation.smile" />
+    <SmileSource Include="NeonCyclesAI.smile" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+    <Asset Include="Assets\**\*" />
+  </ItemGroup>
+</SmileProject>

@@ -1,36 +1,45 @@
 # Smile.Simple3D
 
-Smile.Simple3D is SMILE 2.0's dependency-free educational wireframe 3D library. It uses bounded fixed-point math and the existing cross-target `Draw Line` path, so one SMILE program runs through Windows DirectX, Windows GDI, and Web Canvas.
+`Smile.Simple3D` 2.0.0 provides two compatible teaching layers:
 
-Reference it from a game project:
+- `Graphics3D` and `Math3D` use the true indexed-triangle `Renderer3D` on Windows DirectX and WebGL2.
+- `Renderer`, `Primitives`, `Mesh`, and `Interaction` preserve the original bounded wireframe lessons over Renderer2D, including GDI support.
+
+Reference the source library from a game project:
 
 ```xml
 <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
 ```
 
-Import the modules you need:
+The beginner true-3D path needs only two imports:
 
 ```smile
 Import Smile.Simple3D.Core As Core
-Import Smile.Simple3D.Primitives As Primitives
-Import Smile.Simple3D.Renderer As Renderer
+Import Smile.Simple3D.Graphics3D As Graphics3D
 ```
 
-Create geometry once, draw it each frame, then destroy it:
+Create objects once, update their transforms, draw the 3D pass, then draw the ordinary 2D HUD:
 
 ```smile
-Dim Cube As Number
 Dim Camera As Core.Camera3D
-Dim Transform As Core.Transform3D
+Dim Cube As Core.Object3D
+Dim FrameReady As Boolean
 
-Cube = Primitives.CreateCube(200)
-Camera = Renderer.DefaultCamera(960, 540)
-Transform = Renderer.IdentityTransform()
+Camera = Graphics3D.DefaultCamera()
+Cube = Graphics3D.CreateCube3D(200)
 
-Call Renderer.BeginFrame(Core.DEFAULT_LINE_BUDGET)
-Call Renderer.DrawMesh(Cube, Transform, Camera, CYAN, 1)
+Call Graphics3D.SetObjectColor(Cube, 30, 220, 255)
+FrameReady = Graphics3D.Begin3D(Camera, 2, 5, 14)
+
+If FrameReady Then
+    FrameReady = Graphics3D.DrawObject3D(Cube)
+    Call Graphics3D.End3D()
+End If
+
+Draw Text "Renderer2D HUD" At 20, 20 Size 20 Color WHITE
+Show Screen
 ```
 
-For drag/throw orbiting, initialize `Core.OrbitState3D` with `Interaction.ResetOrbit` and call `Interaction.UpdateOrbitFromPointer` before `Show Screen`. The lower-level `UpdateOrbit` accepts explicit input and is preferable in deterministic tests.
+`Graphics3D.RendererAvailable()` is `True` for Windows DirectX and WebGL2. It is `False` on the GDI fallback. Handles are bounded and validated; create geometry outside the frame loop, share meshes with `CreateObjectFromMesh3D`, destroy shared instances with `DestroyObjectInstance3D`, destroy owning objects with `DestroyObject3D`, and call `ResetRenderer3D` during final cleanup.
 
-Meshes are bounded generational handles. Check a returned handle for zero, reuse meshes instead of creating them every frame, and call `Mesh.DestroyMesh` during shutdown. See [API.md](API.md) for capacities, units, and every routine. See the [Simple3D Gallery](../../examples/Simple3DGallery/README.md) for a complete cube/sphere/pyramid/donut lesson.
+See [API.md](API.md), the [true Simple3D conformance sample](../../examples/Simple3DConformance/Program.smile), and [Neon Cycles](../../games/NeonCycles/README.md).

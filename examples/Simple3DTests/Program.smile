@@ -2,6 +2,7 @@ Option Explicit
 
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.FixedMath As Math3D
+Import Smile.Simple3D.Math3D As TrueMath3D
 Import Smile.Simple3D.Mesh As Mesh
 Import Smile.Simple3D.Primitives As Primitives
 Import Smile.Simple3D.Renderer As Renderer
@@ -15,6 +16,9 @@ Dim Point As Core.Vector3
 Dim Camera As Core.Camera3D
 Dim Projected As Core.ProjectedPoint3D
 Dim Orbit As Core.OrbitState3D
+Dim OtherPoint As Core.Vector3
+Dim VectorResult As Core.Vector3
+Dim Matrix As Core.Matrix4
 
 If Math3D.SinFixed(0) <> 0 Then
     Failures = Failures + 1
@@ -37,6 +41,157 @@ If Math3D.WrapDegrees(-90) <> 270 Then
 End If
 
 If Math3D.DivideFixed(100, 0) <> 0 Then
+    Failures = Failures + 1
+End If
+
+Point.X = 3
+Point.Y = 4
+OtherPoint.X = 1
+OtherPoint.Y = 2
+OtherPoint.Z = 3
+VectorResult = TrueMath3D.Add(Point, OtherPoint)
+
+If (VectorResult.X <> 4 Or
+    VectorResult.Y <> 6 Or
+    VectorResult.Z <> 3) Then
+    Failures = Failures + 1
+End If
+
+VectorResult = TrueMath3D.Subtract(Point, OtherPoint)
+
+If (VectorResult.X <> 2 Or
+    VectorResult.Y <> 2 Or
+    VectorResult.Z <> -3) Then
+    Failures = Failures + 1
+End If
+
+VectorResult = TrueMath3D.MultiplyScalar(OtherPoint, 3)
+
+If (VectorResult.X <> 3 Or
+    VectorResult.Y <> 6 Or
+    VectorResult.Z <> 9) Then
+    Failures = Failures + 1
+End If
+
+If TrueMath3D.Dot(Point, OtherPoint) <> 11 Or TrueMath3D.Length(Point) <> 5 Then
+    Failures = Failures + 1
+End If
+
+VectorResult = TrueMath3D.Cross(Point, OtherPoint)
+
+If (VectorResult.X <> 12 Or
+    VectorResult.Y <> -9 Or
+    VectorResult.Z <> 2) Then
+    Failures = Failures + 1
+End If
+
+VectorResult = TrueMath3D.Normalize(Point)
+
+If Abs(VectorResult.X - 9830) > 1 Or Abs(VectorResult.Y - 13107) > 1 Then
+    Failures = Failures + 1
+End If
+
+Point.X = 0
+Point.Y = 0
+Point.Z = 0
+VectorResult = TrueMath3D.Normalize(Point)
+
+If (VectorResult.X <> 0 Or
+    VectorResult.Y <> 0 Or
+    VectorResult.Z <> 0) Then
+    Failures = Failures + 1
+End If
+
+If TrueMath3D.Distance(Point, OtherPoint) <> 3 Then
+    Failures = Failures + 1
+End If
+
+Matrix = TrueMath3D.Identity()
+
+If (Matrix.M11 <> Core.FIXED_ONE Or
+    Matrix.M22 <> Core.FIXED_ONE Or
+    Matrix.M33 <> Core.FIXED_ONE Or
+    Matrix.M44 <> Core.FIXED_ONE) Then
+    Failures = Failures + 1
+End If
+
+Matrix = TrueMath3D.Translation(20, 30, 40)
+VectorResult = TrueMath3D.TransformPoint(Point, Matrix)
+
+If (VectorResult.X <> 20 Or
+    VectorResult.Y <> 30 Or
+    VectorResult.Z <> 40) Then
+    Failures = Failures + 1
+End If
+
+Point.X = 10
+Point.Y = 20
+Point.Z = 30
+Matrix = TrueMath3D.Scale(200, 50, 100)
+VectorResult = TrueMath3D.TransformPoint(Point, Matrix)
+
+If (VectorResult.X <> 20 Or
+    VectorResult.Y <> 10 Or
+    VectorResult.Z <> 30) Then
+    Failures = Failures + 1
+End If
+
+Matrix = TrueMath3D.RotationY(90)
+VectorResult = TrueMath3D.TransformPoint(Point, Matrix)
+
+If Abs(VectorResult.X - 30) > 1 Or Abs(VectorResult.Z + 10) > 1 Then
+    Failures = Failures + 1
+End If
+
+Point.X = 0
+Point.Y = 10
+Point.Z = 20
+Matrix = TrueMath3D.RotationX(90)
+VectorResult = TrueMath3D.TransformPoint(Point, Matrix)
+
+If Abs(VectorResult.Y + 20) > 1 Or Abs(VectorResult.Z - 10) > 1 Then
+    Failures = Failures + 1
+End If
+
+Point.X = 10
+Point.Y = 20
+Point.Z = 0
+Matrix = TrueMath3D.RotationZ(90)
+VectorResult = TrueMath3D.TransformPoint(Point, Matrix)
+
+If Abs(VectorResult.X + 20) > 1 Or Abs(VectorResult.Y - 10) > 1 Then
+    Failures = Failures + 1
+End If
+
+Point.X = 1
+Point.Y = 2
+Point.Z = 3
+Matrix = TrueMath3D.Multiply(TrueMath3D.Scale(200, 200, 200), TrueMath3D.Translation(10, 20, 30))
+VectorResult = TrueMath3D.TransformPoint(Point, Matrix)
+
+If (VectorResult.X <> 12 Or
+    VectorResult.Y <> 24 Or
+    VectorResult.Z <> 36) Then
+    Failures = Failures + 1
+End If
+
+Matrix = TrueMath3D.Perspective(60, 177, 1, 1000)
+
+If (Matrix.M11 = 0 Or
+    Matrix.M22 = 0 Or
+    Matrix.M34 <> Core.FIXED_ONE) Then
+    Failures = Failures + 1
+End If
+
+Point.X = 0
+Point.Y = 0
+Point.Z = -10
+OtherPoint.X = 0
+OtherPoint.Y = 0
+OtherPoint.Z = 0
+Matrix = TrueMath3D.LookAt(Point, OtherPoint)
+
+If Matrix.M43 <> 10 Or Matrix.M44 <> Core.FIXED_ONE Then
     Failures = Failures + 1
 End If
 
@@ -100,6 +255,9 @@ For Index = 0 To Core.MAX_MESHES - 1
     Call Mesh.DestroyMesh(Handles[Index])
 End For
 
+Point.X = 0
+Point.Y = 0
+Point.Z = 0
 Camera = Renderer.DefaultCamera(960, 540)
 Projected = Renderer.ProjectPoint(Point, Camera)
 

@@ -1,0 +1,629 @@
+''' Renderer-independent deterministic Neon Cycles rules and swept collision.
+Module NeonCycles.Simulation
+
+Option Explicit
+
+Public Const PLAYER_ONE = 1
+Public Const PLAYER_TWO = 2
+Public Const TURN_NONE = 0
+Public Const TURN_LEFT = -1
+Public Const TURN_RIGHT = 1
+Public Const DIRECTION_NORTH = 0
+Public Const DIRECTION_EAST = 1
+Public Const DIRECTION_SOUTH = 2
+Public Const DIRECTION_WEST = 3
+Public Const ROUND_ACTIVE = 0
+Public Const ROUND_PLAYER_ONE = 1
+Public Const ROUND_PLAYER_TWO = 2
+Public Const ROUND_DRAW = 3
+Public Const MAX_TRAIL_SEGMENTS = 64
+
+Private Const ARENA_HALF_SIZE = 430
+Private Const COLLISION_RADIUS = 10
+
+Private Dim PlayerOneX As Number
+Private Dim PlayerOneZ As Number
+Private Dim PlayerTwoX As Number
+Private Dim PlayerTwoZ As Number
+Private Dim PlayerOneDirection As Number
+Private Dim PlayerTwoDirection As Number
+Private Dim PlayerOneTurn As Number
+Private Dim PlayerTwoTurn As Number
+Private Dim PlayerOneAlive As Boolean
+Private Dim PlayerTwoAlive As Boolean
+Private Dim PlayerOneTrailStartX As Number
+Private Dim PlayerOneTrailStartZ As Number
+Private Dim PlayerTwoTrailStartX As Number
+Private Dim PlayerTwoTrailStartZ As Number
+Private Dim PlayerOneTrailCount As Number
+Private Dim PlayerTwoTrailCount As Number
+Private Dim PlayerOneTrailX1[MAX_TRAIL_SEGMENTS] As Number
+Private Dim PlayerOneTrailZ1[MAX_TRAIL_SEGMENTS] As Number
+Private Dim PlayerOneTrailX2[MAX_TRAIL_SEGMENTS] As Number
+Private Dim PlayerOneTrailZ2[MAX_TRAIL_SEGMENTS] As Number
+Private Dim PlayerTwoTrailX1[MAX_TRAIL_SEGMENTS] As Number
+Private Dim PlayerTwoTrailZ1[MAX_TRAIL_SEGMENTS] As Number
+Private Dim PlayerTwoTrailX2[MAX_TRAIL_SEGMENTS] As Number
+Private Dim PlayerTwoTrailZ2[MAX_TRAIL_SEGMENTS] As Number
+Private Dim PlayerOneScoreValue As Number
+Private Dim PlayerTwoScoreValue As Number
+Private Dim MatchTargetValue As Number
+Private Dim StepDistanceValue As Number
+Private Dim RoundResultValue As Number
+Private Dim MatchWinnerValue As Number
+
+Private Function DirectionX(Direction As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Direction = DIRECTION_EAST Then
+        Return 1
+    Else If Direction = DIRECTION_WEST Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Return 0
+
+End Function
+
+Private Function DirectionZ(Direction As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Direction = DIRECTION_SOUTH Then
+        Return 1
+    Else If Direction = DIRECTION_NORTH Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Return 0
+
+End Function
+
+Private Function Minimum(FirstValue As Number, SecondValue As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Min(FirstValue, SecondValue)
+
+    Return ReturnValue
+
+End Function
+
+Private Function Maximum(FirstValue As Number, SecondValue As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Max(FirstValue, SecondValue)
+
+    Return ReturnValue
+
+End Function
+
+Private Function PathHitsSegment(StartX As Number, StartZ As Number, EndX As Number, EndZ As Number, WallX1 As Number, WallZ1 As Number, WallX2 As Number, WallZ2 As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim PathMinX As Number
+    Dim PathMaxX As Number
+    Dim PathMinZ As Number
+    Dim PathMaxZ As Number
+    Dim WallMinX As Number
+    Dim WallMaxX As Number
+    Dim WallMinZ As Number
+    Dim WallMaxZ As Number
+
+    PathMinX = Minimum(StartX, EndX) - COLLISION_RADIUS
+    PathMaxX = Maximum(StartX, EndX) + COLLISION_RADIUS
+    PathMinZ = Minimum(StartZ, EndZ) - COLLISION_RADIUS
+    PathMaxZ = Maximum(StartZ, EndZ) + COLLISION_RADIUS
+    WallMinX = Minimum(WallX1, WallX2) - COLLISION_RADIUS
+    WallMaxX = Maximum(WallX1, WallX2) + COLLISION_RADIUS
+    WallMinZ = Minimum(WallZ1, WallZ2) - COLLISION_RADIUS
+    WallMaxZ = Maximum(WallZ1, WallZ2) + COLLISION_RADIUS
+    ReturnValue = PathMinX <= WallMaxX And PathMaxX >= WallMinX And PathMinZ <= WallMaxZ And PathMaxZ >= WallMinZ
+
+    Return ReturnValue
+
+End Function
+
+Private Function OutsideArena(X As Number, Z As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = X <= -ARENA_HALF_SIZE + COLLISION_RADIUS Or X >= ARENA_HALF_SIZE - COLLISION_RADIUS Or Z <= -ARENA_HALF_SIZE + COLLISION_RADIUS Or Z >= ARENA_HALF_SIZE - COLLISION_RADIUS
+
+    Return ReturnValue
+
+End Function
+
+Private Function HitsPlayerOneTrail(StartX As Number, StartZ As Number, EndX As Number, EndZ As Number, IgnoreNewest As Boolean) As Boolean
+
+    Dim Index As Number
+    Dim LastIndex As Number
+
+    LastIndex = PlayerOneTrailCount - 1
+
+    If IgnoreNewest Then
+        LastIndex = LastIndex - 1
+    End If
+
+    For Index = 0 To LastIndex
+
+        If PathHitsSegment(StartX, StartZ, EndX, EndZ, PlayerOneTrailX1[Index], PlayerOneTrailZ1[Index], PlayerOneTrailX2[Index], PlayerOneTrailZ2[Index]) Then
+            Return True
+        End If
+
+    End For
+    Return False
+
+End Function
+
+Private Function HitsPlayerTwoTrail(StartX As Number, StartZ As Number, EndX As Number, EndZ As Number, IgnoreNewest As Boolean) As Boolean
+
+    Dim Index As Number
+    Dim LastIndex As Number
+
+    LastIndex = PlayerTwoTrailCount - 1
+
+    If IgnoreNewest Then
+        LastIndex = LastIndex - 1
+    End If
+
+    For Index = 0 To LastIndex
+
+        If PathHitsSegment(StartX, StartZ, EndX, EndZ, PlayerTwoTrailX1[Index], PlayerTwoTrailZ1[Index], PlayerTwoTrailX2[Index], PlayerTwoTrailZ2[Index]) Then
+            Return True
+        End If
+
+    End For
+    Return False
+
+End Function
+
+Private Sub AddPlayerOneTrail(X1 As Number, Z1 As Number, X2 As Number, Z2 As Number)
+
+    Dim Index As Number
+
+    If X1 = X2 And Z1 = Z2 Then
+        Return
+    End If
+
+    If PlayerOneTrailCount >= MAX_TRAIL_SEGMENTS Then
+
+        For Index = 1 To MAX_TRAIL_SEGMENTS - 1
+            PlayerOneTrailX1[Index - 1] = PlayerOneTrailX1[Index]
+            PlayerOneTrailZ1[Index - 1] = PlayerOneTrailZ1[Index]
+            PlayerOneTrailX2[Index - 1] = PlayerOneTrailX2[Index]
+            PlayerOneTrailZ2[Index - 1] = PlayerOneTrailZ2[Index]
+        End For
+        PlayerOneTrailCount = MAX_TRAIL_SEGMENTS - 1
+
+    End If
+
+    PlayerOneTrailX1[PlayerOneTrailCount] = X1
+    PlayerOneTrailZ1[PlayerOneTrailCount] = Z1
+    PlayerOneTrailX2[PlayerOneTrailCount] = X2
+    PlayerOneTrailZ2[PlayerOneTrailCount] = Z2
+    PlayerOneTrailCount = PlayerOneTrailCount + 1
+
+End Sub
+
+Private Sub AddPlayerTwoTrail(X1 As Number, Z1 As Number, X2 As Number, Z2 As Number)
+
+    Dim Index As Number
+
+    If X1 = X2 And Z1 = Z2 Then
+        Return
+    End If
+
+    If PlayerTwoTrailCount >= MAX_TRAIL_SEGMENTS Then
+
+        For Index = 1 To MAX_TRAIL_SEGMENTS - 1
+            PlayerTwoTrailX1[Index - 1] = PlayerTwoTrailX1[Index]
+            PlayerTwoTrailZ1[Index - 1] = PlayerTwoTrailZ1[Index]
+            PlayerTwoTrailX2[Index - 1] = PlayerTwoTrailX2[Index]
+            PlayerTwoTrailZ2[Index - 1] = PlayerTwoTrailZ2[Index]
+        End For
+        PlayerTwoTrailCount = MAX_TRAIL_SEGMENTS - 1
+
+    End If
+
+    PlayerTwoTrailX1[PlayerTwoTrailCount] = X1
+    PlayerTwoTrailZ1[PlayerTwoTrailCount] = Z1
+    PlayerTwoTrailX2[PlayerTwoTrailCount] = X2
+    PlayerTwoTrailZ2[PlayerTwoTrailCount] = Z2
+    PlayerTwoTrailCount = PlayerTwoTrailCount + 1
+
+End Sub
+
+Private Sub ApplyTurn(Player As Number)
+
+    Dim Pending As Number
+    Dim Direction As Number
+
+    If Player = PLAYER_ONE Then
+
+        Pending = PlayerOneTurn
+        Direction = PlayerOneDirection
+
+        If Pending <> TURN_NONE Then
+
+            Call AddPlayerOneTrail(PlayerOneTrailStartX, PlayerOneTrailStartZ, PlayerOneX, PlayerOneZ)
+
+            PlayerOneTrailStartX = PlayerOneX
+            PlayerOneTrailStartZ = PlayerOneZ
+            PlayerOneDirection = (Direction + Pending + 4) Mod 4
+            PlayerOneTurn = TURN_NONE
+
+        End If
+
+    Else
+        Pending = PlayerTwoTurn
+        Direction = PlayerTwoDirection
+
+        If Pending <> TURN_NONE Then
+
+            Call AddPlayerTwoTrail(PlayerTwoTrailStartX, PlayerTwoTrailStartZ, PlayerTwoX, PlayerTwoZ)
+
+            PlayerTwoTrailStartX = PlayerTwoX
+            PlayerTwoTrailStartZ = PlayerTwoZ
+            PlayerTwoDirection = (Direction + Pending + 4) Mod 4
+            PlayerTwoTurn = TURN_NONE
+
+        End If
+
+    End If
+
+End Sub
+
+Public Sub Initialize(MatchTarget As Number)
+
+    MatchTargetValue = Max(1, MatchTarget)
+    StepDistanceValue = 6
+    PlayerOneScoreValue = 0
+    PlayerTwoScoreValue = 0
+    MatchWinnerValue = 0
+
+    Call ResetRound()
+
+End Sub
+
+Public Sub ResetRound()
+
+    PlayerOneX = -220
+    PlayerOneZ = 130
+    PlayerOneDirection = DIRECTION_NORTH
+    PlayerTwoX = 220
+    PlayerTwoZ = -130
+    PlayerTwoDirection = DIRECTION_SOUTH
+    PlayerOneTrailStartX = PlayerOneX
+    PlayerOneTrailStartZ = PlayerOneZ
+    PlayerTwoTrailStartX = PlayerTwoX
+    PlayerTwoTrailStartZ = PlayerTwoZ
+    PlayerOneTrailCount = 0
+    PlayerTwoTrailCount = 0
+    PlayerOneTurn = TURN_NONE
+    PlayerTwoTurn = TURN_NONE
+    PlayerOneAlive = True
+    PlayerTwoAlive = True
+    RoundResultValue = ROUND_ACTIVE
+
+End Sub
+
+Public Function RequestTurn(Player As Number, TurnCommand As Number) As Boolean
+
+    If (RoundResultValue <> ROUND_ACTIVE Or
+        (TurnCommand <> TURN_LEFT And TurnCommand <> TURN_RIGHT)) Then
+        Return False
+    End If
+
+    If Player = PLAYER_ONE And PlayerOneTurn = TURN_NONE Then
+        PlayerOneTurn = TurnCommand
+        Return True
+    Else If Player = PLAYER_TWO And PlayerTwoTurn = TURN_NONE Then
+        PlayerTwoTurn = TurnCommand
+        Return True
+    End If
+
+    Return False
+
+End Function
+
+Public Function WouldCollide(Player As Number, Direction As Number, DistanceValue As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim StartX As Number
+    Dim StartZ As Number
+    Dim EndX As Number
+    Dim EndZ As Number
+
+    If Player = PLAYER_ONE Then
+        StartX = PlayerOneX
+        StartZ = PlayerOneZ
+    Else
+        StartX = PlayerTwoX
+        StartZ = PlayerTwoZ
+    End If
+
+    EndX = StartX + DirectionX(Direction) * DistanceValue
+    EndZ = StartZ + DirectionZ(Direction) * DistanceValue
+
+    If OutsideArena(EndX, EndZ) Then
+        Return True
+    End If
+
+    If Player = PLAYER_ONE Then
+        ReturnValue = HitsPlayerOneTrail(StartX, StartZ, EndX, EndZ, True) Or HitsPlayerTwoTrail(StartX, StartZ, EndX, EndZ, False) Or PathHitsSegment(StartX, StartZ, EndX, EndZ, PlayerTwoTrailStartX, PlayerTwoTrailStartZ, PlayerTwoX, PlayerTwoZ)
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = HitsPlayerTwoTrail(StartX, StartZ, EndX, EndZ, True) Or HitsPlayerOneTrail(StartX, StartZ, EndX, EndZ, False) Or PathHitsSegment(StartX, StartZ, EndX, EndZ, PlayerOneTrailStartX, PlayerOneTrailStartZ, PlayerOneX, PlayerOneZ)
+
+    Return ReturnValue
+
+End Function
+
+Public Sub StepSimulation()
+
+    Dim PlayerOneNextX As Number
+    Dim PlayerOneNextZ As Number
+    Dim PlayerTwoNextX As Number
+    Dim PlayerTwoNextZ As Number
+    Dim PlayerOneCrash As Boolean
+    Dim PlayerTwoCrash As Boolean
+
+    If RoundResultValue <> ROUND_ACTIVE Then
+        Return
+    End If
+
+    Call ApplyTurn(PLAYER_ONE)
+    Call ApplyTurn(PLAYER_TWO)
+
+    PlayerOneNextX = PlayerOneX + DirectionX(PlayerOneDirection) * StepDistanceValue
+    PlayerOneNextZ = PlayerOneZ + DirectionZ(PlayerOneDirection) * StepDistanceValue
+    PlayerTwoNextX = PlayerTwoX + DirectionX(PlayerTwoDirection) * StepDistanceValue
+    PlayerTwoNextZ = PlayerTwoZ + DirectionZ(PlayerTwoDirection) * StepDistanceValue
+    PlayerOneCrash = OutsideArena(PlayerOneNextX, PlayerOneNextZ) Or HitsPlayerOneTrail(PlayerOneX, PlayerOneZ, PlayerOneNextX, PlayerOneNextZ, True) Or HitsPlayerTwoTrail(PlayerOneX, PlayerOneZ, PlayerOneNextX, PlayerOneNextZ, False) Or PathHitsSegment(PlayerOneX, PlayerOneZ, PlayerOneNextX, PlayerOneNextZ, PlayerTwoTrailStartX, PlayerTwoTrailStartZ, PlayerTwoX, PlayerTwoZ)
+    PlayerTwoCrash = OutsideArena(PlayerTwoNextX, PlayerTwoNextZ) Or HitsPlayerTwoTrail(PlayerTwoX, PlayerTwoZ, PlayerTwoNextX, PlayerTwoNextZ, True) Or HitsPlayerOneTrail(PlayerTwoX, PlayerTwoZ, PlayerTwoNextX, PlayerTwoNextZ, False) Or PathHitsSegment(PlayerTwoX, PlayerTwoZ, PlayerTwoNextX, PlayerTwoNextZ, PlayerOneTrailStartX, PlayerOneTrailStartZ, PlayerOneX, PlayerOneZ)
+
+    If PathHitsSegment(PlayerOneX, PlayerOneZ, PlayerOneNextX, PlayerOneNextZ, PlayerTwoX, PlayerTwoZ, PlayerTwoNextX, PlayerTwoNextZ) Then
+        PlayerOneCrash = True
+        PlayerTwoCrash = True
+    End If
+
+    PlayerOneX = PlayerOneNextX
+    PlayerOneZ = PlayerOneNextZ
+    PlayerTwoX = PlayerTwoNextX
+    PlayerTwoZ = PlayerTwoNextZ
+
+    If PlayerOneCrash Then
+        PlayerOneAlive = False
+    End If
+
+    If PlayerTwoCrash Then
+        PlayerTwoAlive = False
+    End If
+
+    If PlayerOneCrash And PlayerTwoCrash Then
+        RoundResultValue = ROUND_DRAW
+    Else If PlayerOneCrash Then
+        RoundResultValue = ROUND_PLAYER_TWO
+        PlayerTwoScoreValue = PlayerTwoScoreValue + 1
+    Else If PlayerTwoCrash Then
+        RoundResultValue = ROUND_PLAYER_ONE
+        PlayerOneScoreValue = PlayerOneScoreValue + 1
+    End If
+
+    If PlayerOneScoreValue >= MatchTargetValue Then
+        MatchWinnerValue = PLAYER_ONE
+    Else If PlayerTwoScoreValue >= MatchTargetValue Then
+        MatchWinnerValue = PLAYER_TWO
+    End If
+
+End Sub
+
+Public Function PlayerX(Player As Number) As Number
+
+    If Player = PLAYER_ONE Then
+        Return PlayerOneX
+    End If
+
+    Return PlayerTwoX
+
+End Function
+
+Public Function PlayerZ(Player As Number) As Number
+
+    If Player = PLAYER_ONE Then
+        Return PlayerOneZ
+    End If
+
+    Return PlayerTwoZ
+
+End Function
+
+Public Function PlayerDirection(Player As Number) As Number
+
+    If Player = PLAYER_ONE Then
+        Return PlayerOneDirection
+    End If
+
+    Return PlayerTwoDirection
+
+End Function
+
+Public Function PlayerAlive(Player As Number) As Boolean
+
+    If Player = PLAYER_ONE Then
+        Return PlayerOneAlive
+    End If
+
+    Return PlayerTwoAlive
+
+End Function
+
+Public Function PlayerScore(Player As Number) As Number
+
+    If Player = PLAYER_ONE Then
+        Return PlayerOneScoreValue
+    End If
+
+    Return PlayerTwoScoreValue
+
+End Function
+
+Public Function RoundResult() As Number
+
+    Return RoundResultValue
+
+End Function
+
+Public Function MatchWinner() As Number
+
+    Return MatchWinnerValue
+
+End Function
+
+Public Function TrailCount(Player As Number) As Number
+
+    If Player = PLAYER_ONE Then
+        Return PlayerOneTrailCount
+    End If
+
+    Return PlayerTwoTrailCount
+
+End Function
+
+Public Function TrailX1(Player As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Player = PLAYER_ONE Then
+        ReturnValue = PlayerOneTrailX1[Index]
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = PlayerTwoTrailX1[Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function TrailZ1(Player As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Player = PLAYER_ONE Then
+        ReturnValue = PlayerOneTrailZ1[Index]
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = PlayerTwoTrailZ1[Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function TrailX2(Player As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Player = PLAYER_ONE Then
+        ReturnValue = PlayerOneTrailX2[Index]
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = PlayerTwoTrailX2[Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function TrailZ2(Player As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Player = PLAYER_ONE Then
+        ReturnValue = PlayerOneTrailZ2[Index]
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = PlayerTwoTrailZ2[Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ActiveTrailStartX(Player As Number) As Number
+
+    If Player = PLAYER_ONE Then
+        Return PlayerOneTrailStartX
+    End If
+
+    Return PlayerTwoTrailStartX
+
+End Function
+
+Public Function ActiveTrailStartZ(Player As Number) As Number
+
+    If Player = PLAYER_ONE Then
+        Return PlayerOneTrailStartZ
+    End If
+
+    Return PlayerTwoTrailStartZ
+
+End Function
+
+''' Deterministic test hook; game code uses the default fixed step distance.
+Public Sub SetStepDistance(DistanceValue As Number)
+
+    StepDistanceValue = Max(1, DistanceValue)
+
+End Sub
+
+''' Deterministic test/setup hook for renderer-independent scenarios.
+Public Sub SetPlayerState(Player As Number, X As Number, Z As Number, Direction As Number)
+
+    If Player = PLAYER_ONE Then
+
+        PlayerOneX = X
+        PlayerOneZ = Z
+        PlayerOneDirection = Direction Mod 4
+        PlayerOneTrailStartX = X
+        PlayerOneTrailStartZ = Z
+
+    Else
+        PlayerTwoX = X
+        PlayerTwoZ = Z
+        PlayerTwoDirection = Direction Mod 4
+        PlayerTwoTrailStartX = X
+        PlayerTwoTrailStartZ = Z
+
+    End If
+
+End Sub
+
+''' Deterministic test/setup hook for collision scenarios.
+Public Sub AddTrail(Player As Number, X1 As Number, Z1 As Number, X2 As Number, Z2 As Number)
+
+    If Player = PLAYER_ONE Then
+        Call AddPlayerOneTrail(X1, Z1, X2, Z2)
+    Else
+
+        Call AddPlayerTwoTrail(X1, Z1, X2, Z2)
+    End If
+
+End Sub
+
+End Module

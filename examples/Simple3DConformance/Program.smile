@@ -1,0 +1,130 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Dim Camera As Core.Camera3D
+Dim FloorObject As Core.Object3D
+Dim CubeObject As Core.Object3D
+Dim NearCube As Core.Object3D
+Dim SphereObject As Core.Object3D
+Dim PyramidObject As Core.Object3D
+Dim CylinderObject As Core.Object3D
+Dim TorusObject As Core.Object3D
+Dim Running As Boolean
+Dim Available As Boolean
+Dim FrameReady As Boolean
+Dim Key As Number
+Dim Angle As Number
+
+Game Window "SMILE 2.0 True Simple3D Conformance" Size 960 By 540
+
+Available = Graphics3D.RendererAvailable()
+
+If Available Then
+
+    Camera = Graphics3D.DefaultCamera()
+    Camera.Position.Y = 360
+    Camera.Position.Z = -1050
+    Camera.Target.Y = 40
+    FloorObject = Graphics3D.CreatePlane3D(1400, 900)
+    CubeObject = Graphics3D.CreateCube3D(170)
+    NearCube = Graphics3D.CreateCube3D(130)
+    SphereObject = Graphics3D.CreateSphere3D(95)
+    PyramidObject = Graphics3D.CreatePyramid3D(190, 220)
+    CylinderObject = Graphics3D.CreateCylinder3D(75, 210)
+    TorusObject = Graphics3D.CreateTorus3D(100, 34)
+
+    Call Graphics3D.SetObjectPosition(FloorObject, 0, -120, 100)
+    Call Graphics3D.SetObjectColor(FloorObject, 18, 30, 54)
+    Call Graphics3D.SetObjectPosition(CubeObject, -300, 0, 80)
+    Call Graphics3D.SetObjectColor(CubeObject, 40, 220, 255)
+    Call Graphics3D.SetObjectPosition(NearCube, -260, 35, -15)
+    Call Graphics3D.SetObjectColor(NearCube, 255, 80, 170)
+    Call Graphics3D.SetObjectPosition(SphereObject, -80, 0, 120)
+    Call Graphics3D.SetObjectColor(SphereObject, 80, 255, 150)
+    Call Graphics3D.SetObjectPosition(PyramidObject, 150, -5, 90)
+    Call Graphics3D.SetObjectColor(PyramidObject, 255, 200, 55)
+    Call Graphics3D.SetObjectPosition(CylinderObject, 360, 0, 110)
+    Call Graphics3D.SetObjectColor(CylinderObject, 135, 115, 255)
+    Call Graphics3D.SetObjectPosition(TorusObject, 80, 175, 190)
+    Call Graphics3D.SetObjectColor(TorusObject, 255, 95, 60)
+
+End If
+
+Running = True
+
+Do
+    Get Key Key
+
+    If Key = KEY_ESCAPE Then
+        Running = False
+    Else If Key = KEY_W Or Key = KEY_UP Then
+        Camera.Position.Z = Camera.Position.Z + 20
+    Else If Key = KEY_S Or Key = KEY_DOWN Then
+        Camera.Position.Z = Camera.Position.Z - 20
+    Else If Key = KEY_A Or Key = KEY_LEFT Then
+        Camera.Position.X = Camera.Position.X - 20
+    Else If Key = KEY_D Or Key = KEY_RIGHT Then
+        Camera.Position.X = Camera.Position.X + 20
+    End If
+
+    If Available Then
+
+        Angle = (Angle + 1) Mod 360
+
+        Call Graphics3D.SetObjectRotation(CubeObject, Angle / 2, Angle, 0)
+        Call Graphics3D.SetObjectRotation(NearCube, -Angle, Angle / 2, 0)
+        Call Graphics3D.SetObjectRotation(SphereObject, 0, Angle, 0)
+        Call Graphics3D.SetObjectRotation(PyramidObject, 0, -Angle, 0)
+        Call Graphics3D.SetObjectRotation(CylinderObject, Angle, 0, Angle / 2)
+        Call Graphics3D.SetObjectRotation(TorusObject, 70, Angle, 0)
+
+        FrameReady = Graphics3D.Begin3D(Camera, 2, 5, 14)
+
+        If FrameReady Then
+
+            FrameReady = Graphics3D.DrawObject3D(FloorObject)
+            FrameReady = Graphics3D.DrawObject3D(CubeObject)
+            FrameReady = Graphics3D.DrawObject3D(SphereObject)
+            FrameReady = Graphics3D.DrawObject3D(PyramidObject)
+            FrameReady = Graphics3D.DrawObject3D(CylinderObject)
+            FrameReady = Graphics3D.DrawObject3D(TorusObject)
+            FrameReady = Graphics3D.DrawObject3D(NearCube)
+
+            Call Graphics3D.End3D()
+
+        End If
+
+    Else
+        Clear BLACK
+
+    End If
+
+    Fill Rectangle 0, 0, 960, 54, Rgb(4, 10, 24)
+    Draw Text "TRUE SIMPLE3D CONFORMANCE" At 24, 14 Size 24 Color CYAN
+
+    If Available Then
+        Draw Text "D3D11 / WebGL2 indexed triangles + depth + 2D overlay" At 520, 18 Size 14 Color LIGHT_GRAY
+        Draw Text "WASD / Arrows move camera" At 24, 500 Size 14 Color LIGHT_GRAY
+    Else
+        Draw Text "Renderer3D unavailable in this environment" At 240, 250 Size 24 Color YELLOW
+    End If
+
+    Show Screen
+    Running = Running And Not Game_Closed()
+
+Loop Until Not Running
+
+If Available Then
+
+    Call Graphics3D.DestroyObject3D(FloorObject)
+    Call Graphics3D.DestroyObject3D(CubeObject)
+    Call Graphics3D.DestroyObject3D(NearCube)
+    Call Graphics3D.DestroyObject3D(SphereObject)
+    Call Graphics3D.DestroyObject3D(PyramidObject)
+    Call Graphics3D.DestroyObject3D(CylinderObject)
+    Call Graphics3D.DestroyObject3D(TorusObject)
+    Call Graphics3D.ResetRenderer3D()
+
+End If

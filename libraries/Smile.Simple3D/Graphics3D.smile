@@ -1,0 +1,490 @@
+''' Beginner-facing true indexed-triangle 3D rendering for Windows and Web.
+Module Smile.Simple3D.Graphics3D
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+
+Private Const COMMAND_AVAILABLE = 1
+Private Const COMMAND_RESET = 2
+Private Const COMMAND_CREATE_MESH = 3
+Private Const COMMAND_SET_VERTEX = 4
+Private Const COMMAND_SET_TRIANGLE = 5
+Private Const COMMAND_COMMIT_MESH = 6
+Private Const COMMAND_CREATE_PRIMITIVE = 7
+Private Const COMMAND_CREATE_OBJECT = 8
+Private Const COMMAND_DESTROY = 9
+Private Const COMMAND_SET_CAMERA = 10
+Private Const COMMAND_SET_POSITION = 11
+Private Const COMMAND_SET_ROTATION = 12
+Private Const COMMAND_SET_SCALE = 13
+Private Const COMMAND_SET_COLOR = 14
+Private Const COMMAND_SET_VISIBLE = 15
+Private Const COMMAND_BEGIN = 16
+Private Const COMMAND_DRAW = 17
+Private Const COMMAND_END = 18
+Private Const COMMAND_VERTEX_COUNT = 19
+Private Const COMMAND_INDEX_COUNT = 20
+Private Const COMMAND_LAST_ERROR = 21
+
+Public Const PRIMITIVE_CUBE = 1
+Public Const PRIMITIVE_PLANE = 2
+Public Const PRIMITIVE_PYRAMID = 3
+Public Const PRIMITIVE_SPHERE = 4
+Public Const PRIMITIVE_CYLINDER = 5
+Public Const PRIMITIVE_TORUS = 6
+
+Private Function Dispatch(
+    Command As Number,
+    FirstValue As Number,
+    SecondValue As Number,
+    ThirdValue As Number,
+    FourthValue As Number,
+    FifthValue As Number,
+    SixthValue As Number,
+    SeventhValue As Number,
+    EighthValue As Number,
+    NinthValue As Number,
+    TenthValue As Number
+) As Number
+
+    Dim Result As Number
+
+    Result = Renderer3D(
+        Command,
+        FirstValue,
+        SecondValue,
+        ThirdValue,
+        FourthValue,
+        FifthValue,
+        SixthValue,
+        SeventhValue,
+        EighthValue,
+        NinthValue,
+        TenthValue
+    )
+    Return Result
+
+End Function
+
+Private Sub Execute(
+    Command As Number,
+    FirstValue As Number,
+    SecondValue As Number,
+    ThirdValue As Number,
+    FourthValue As Number,
+    FifthValue As Number,
+    SixthValue As Number,
+    SeventhValue As Number,
+    EighthValue As Number,
+    NinthValue As Number,
+    TenthValue As Number
+)
+
+    Dim Ignored As Number
+
+    Ignored = Renderer3D(
+        Command,
+        FirstValue,
+        SecondValue,
+        ThirdValue,
+        FourthValue,
+        FifthValue,
+        SixthValue,
+        SeventhValue,
+        EighthValue,
+        NinthValue,
+        TenthValue
+    )
+
+End Sub
+
+Public Function RendererAvailable() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_AVAILABLE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Function LastError() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_LAST_ERROR, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Sub ResetRenderer3D()
+
+    Call Execute(COMMAND_RESET, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+End Sub
+
+Public Function DefaultCamera() As Core.Camera3D
+
+    Dim Camera As Core.Camera3D
+
+    Camera.Position.Y = 300
+    Camera.Position.Z = -800
+    Camera.FovDegrees = 55
+    Camera.NearPlane = 1
+    Camera.FarPlane = 10000
+    Return Camera
+
+End Function
+
+Private Function CreatePrimitiveObject(
+    Kind As Number,
+    FirstValue As Number,
+    SecondValue As Number,
+    Segments As Number,
+    Rings As Number
+) As Core.Object3D
+
+    Dim Result As Core.Object3D
+
+    Result.MeshHandle = Dispatch(COMMAND_CREATE_PRIMITIVE, Kind, FirstValue, SecondValue, Segments, Rings, 0, 0, 0, 0, 0)
+
+    If Result.MeshHandle = 0 Then
+        Return Result
+    End If
+
+    Result.Handle = Dispatch(COMMAND_CREATE_OBJECT, Result.MeshHandle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+    If Result.Handle = 0 Then
+
+        Call Execute(COMMAND_DESTROY, Result.MeshHandle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+        Result.MeshHandle = 0
+        Return Result
+
+    End If
+
+    Result.ScaleX = 100
+    Result.ScaleY = 100
+    Result.ScaleZ = 100
+    Result.ColorRed = 255
+    Result.ColorGreen = 255
+    Result.ColorBlue = 255
+    Result.AlphaPercent = 100
+    Result.Visible = True
+    Return Result
+
+End Function
+
+Public Function CreateCube3D(Size As Number) As Core.Object3D
+
+    Dim Result As Core.Object3D
+
+    Result = CreatePrimitiveObject(PRIMITIVE_CUBE, Size, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function CreatePlane3D(Width As Number, Depth As Number) As Core.Object3D
+
+    Dim Result As Core.Object3D
+
+    Result = CreatePrimitiveObject(PRIMITIVE_PLANE, Width, Depth, 0, 0)
+    Return Result
+
+End Function
+
+Public Function CreatePyramid3D(Size As Number, Height As Number) As Core.Object3D
+
+    Dim Result As Core.Object3D
+
+    Result = CreatePrimitiveObject(PRIMITIVE_PYRAMID, Size, Height, 0, 0)
+    Return Result
+
+End Function
+
+Public Function CreateSphere3D(Radius As Number) As Core.Object3D
+
+    Dim Result As Core.Object3D
+
+    Result = CreatePrimitiveObject(PRIMITIVE_SPHERE, Radius, Radius, 20, 12)
+    Return Result
+
+End Function
+
+Public Function CreateCylinder3D(Radius As Number, Height As Number) As Core.Object3D
+
+    Dim Result As Core.Object3D
+
+    Result = CreatePrimitiveObject(PRIMITIVE_CYLINDER, Radius, Height, 20, 0)
+    Return Result
+
+End Function
+
+Public Function CreateTorus3D(MajorRadius As Number, MinorRadius As Number) As Core.Object3D
+
+    Dim Result As Core.Object3D
+
+    Result = CreatePrimitiveObject(PRIMITIVE_TORUS, MajorRadius, MinorRadius, 20, 10)
+    Return Result
+
+End Function
+
+Public Function CreateDonut3D(MajorRadius As Number, MinorRadius As Number) As Core.Object3D
+
+    Dim Result As Core.Object3D
+
+    Result = CreateTorus3D(MajorRadius, MinorRadius)
+    Return Result
+
+End Function
+
+Public Function CreateMesh3D(VertexCount As Number, IndexCount As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_CREATE_MESH, VertexCount, IndexCount, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function SetMeshVertex3D(
+    MeshHandle As Number,
+    Index As Number,
+    X As Number,
+    Y As Number,
+    Z As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_SET_VERTEX, MeshHandle, Index, X, Y, Z, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Function SetMeshTriangle3D(
+    MeshHandle As Number,
+    TriangleIndex As Number,
+    FirstVertex As Number,
+    SecondVertex As Number,
+    ThirdVertex As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_TRIANGLE,
+        MeshHandle,
+        TriangleIndex,
+        FirstVertex,
+        SecondVertex,
+        ThirdVertex,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+    Return Result
+
+End Function
+
+Public Function CommitMesh3D(MeshHandle As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_COMMIT_MESH, MeshHandle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Function CreateObjectFromMesh3D(MeshHandle As Number) As Core.Object3D
+
+    Dim Result As Core.Object3D
+
+    Result.MeshHandle = MeshHandle
+    Result.Handle = Dispatch(COMMAND_CREATE_OBJECT, MeshHandle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+    If Result.Handle <> 0 Then
+
+        Result.ScaleX = 100
+        Result.ScaleY = 100
+        Result.ScaleZ = 100
+        Result.ColorRed = 255
+        Result.ColorGreen = 255
+        Result.ColorBlue = 255
+        Result.AlphaPercent = 100
+        Result.Visible = True
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function MeshVertexCount3D(MeshHandle As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_VERTEX_COUNT, MeshHandle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function MeshIndexCount3D(MeshHandle As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_INDEX_COUNT, MeshHandle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Sub DestroyObject3D(ByRef Object As Core.Object3D)
+
+    If Object.Handle <> 0 Then
+        Call Execute(COMMAND_DESTROY, Object.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    End If
+
+    If Object.MeshHandle <> 0 Then
+        Call Execute(COMMAND_DESTROY, Object.MeshHandle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    End If
+
+    Object.Handle = 0
+    Object.MeshHandle = 0
+    Object.Visible = False
+
+End Sub
+
+''' Destroys an object instance while preserving a mesh shared by other objects.
+Public Sub DestroyObjectInstance3D(ByRef Object As Core.Object3D)
+
+    If Object.Handle <> 0 Then
+        Call Execute(COMMAND_DESTROY, Object.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    End If
+
+    Object.Handle = 0
+    Object.MeshHandle = 0
+    Object.Visible = False
+
+End Sub
+
+Public Sub SetObjectPosition(ByRef Object As Core.Object3D, X As Number, Y As Number, Z As Number)
+
+    Object.Position.X = X
+    Object.Position.Y = Y
+    Object.Position.Z = Z
+
+    Call Execute(COMMAND_SET_POSITION, Object.Handle, X, Y, Z, 0, 0, 0, 0, 0, 0)
+
+End Sub
+
+Public Sub MoveObject(ByRef Object As Core.Object3D, DX As Number, DY As Number, DZ As Number)
+
+    Call SetObjectPosition(Object, Object.Position.X + DX, Object.Position.Y + DY, Object.Position.Z + DZ)
+
+End Sub
+
+Public Sub SetObjectRotation(ByRef Object As Core.Object3D, XDegrees As Number, YDegrees As Number, ZDegrees As Number)
+
+    Object.Rotation.X = XDegrees
+    Object.Rotation.Y = YDegrees
+    Object.Rotation.Z = ZDegrees
+
+    Call Execute(COMMAND_SET_ROTATION, Object.Handle, XDegrees, YDegrees, ZDegrees, 0, 0, 0, 0, 0, 0)
+
+End Sub
+
+Public Sub RotateObject(ByRef Object As Core.Object3D, DXDegrees As Number, DYDegrees As Number, DZDegrees As Number)
+
+    Call SetObjectRotation(Object, Object.Rotation.X + DXDegrees, Object.Rotation.Y + DYDegrees, Object.Rotation.Z + DZDegrees)
+
+End Sub
+
+Public Sub SetObjectScale(ByRef Object As Core.Object3D, XPercent As Number, YPercent As Number, ZPercent As Number)
+
+    Object.ScaleX = XPercent
+    Object.ScaleY = YPercent
+    Object.ScaleZ = ZPercent
+
+    Call Execute(COMMAND_SET_SCALE, Object.Handle, XPercent, YPercent, ZPercent, 0, 0, 0, 0, 0, 0)
+
+End Sub
+
+Public Sub SetObjectColor(ByRef Object As Core.Object3D, RedValue As Number, GreenValue As Number, BlueValue As Number)
+
+    Object.ColorRed = RedValue
+    Object.ColorGreen = GreenValue
+    Object.ColorBlue = BlueValue
+
+    Call Execute(COMMAND_SET_COLOR, Object.Handle, RedValue, GreenValue, BlueValue, Object.AlphaPercent, 0, 0, 0, 0, 0)
+
+End Sub
+
+Public Sub SetObjectOpacity(ByRef Object As Core.Object3D, OpacityValue As Number)
+
+    Object.AlphaPercent = Max(0, Min(100, OpacityValue))
+
+    Call Execute(COMMAND_SET_COLOR, Object.Handle, Object.ColorRed, Object.ColorGreen, Object.ColorBlue, Object.AlphaPercent, 0, 0, 0, 0, 0)
+
+End Sub
+
+Public Sub SetObjectVisible(ByRef Object As Core.Object3D, Visible As Boolean)
+
+    Object.Visible = Visible
+
+    If Visible Then
+        Call Execute(COMMAND_SET_VISIBLE, Object.Handle, 1, 0, 0, 0, 0, 0, 0, 0, 0)
+    Else
+
+        Call Execute(COMMAND_SET_VISIBLE, Object.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    End If
+
+End Sub
+
+Public Function Begin3D(
+    Camera As Core.Camera3D,
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    If Dispatch(
+        COMMAND_SET_CAMERA,
+        Camera.Position.X,
+        Camera.Position.Y,
+        Camera.Position.Z,
+        Camera.Target.X,
+        Camera.Target.Y,
+        Camera.Target.Z,
+        Camera.FovDegrees,
+        Camera.NearPlane,
+        Camera.FarPlane,
+        0
+    ) = 0 Then
+        Return False
+    End If
+
+    Result = Dispatch(COMMAND_BEGIN, RedValue, GreenValue, BlueValue, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Function DrawObject3D(Object As Core.Object3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_DRAW, Object.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Sub End3D()
+
+    Call Execute(COMMAND_END, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+End Sub
+
+End Module

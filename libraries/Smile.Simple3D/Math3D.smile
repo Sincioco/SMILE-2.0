@@ -1,0 +1,391 @@
+''' Deterministic fixed-point vectors and matrices used by true Renderer3D.
+Module Smile.Simple3D.Math3D
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.FixedMath As Fixed
+
+Public Function Vector(X As Number, Y As Number, Z As Number) As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    Result.X = X
+    Result.Y = Y
+    Result.Z = Z
+    Return Result
+
+End Function
+
+Public Function Add(LeftValue As Core.Vector3, RightValue As Core.Vector3) As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    Result.X = LeftValue.X + RightValue.X
+    Result.Y = LeftValue.Y + RightValue.Y
+    Result.Z = LeftValue.Z + RightValue.Z
+    Return Result
+
+End Function
+
+Public Function Subtract(LeftValue As Core.Vector3, RightValue As Core.Vector3) As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    Result.X = LeftValue.X - RightValue.X
+    Result.Y = LeftValue.Y - RightValue.Y
+    Result.Z = LeftValue.Z - RightValue.Z
+    Return Result
+
+End Function
+
+Public Function MultiplyScalar(Value As Core.Vector3, Scalar As Number) As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    Result.X = Value.X * Scalar
+    Result.Y = Value.Y * Scalar
+    Result.Z = Value.Z * Scalar
+    Return Result
+
+End Function
+
+Public Function Dot(LeftValue As Core.Vector3, RightValue As Core.Vector3) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = LeftValue.X * RightValue.X + LeftValue.Y * RightValue.Y + LeftValue.Z * RightValue.Z
+
+    Return ReturnValue
+
+End Function
+
+Public Function Cross(LeftValue As Core.Vector3, RightValue As Core.Vector3) As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    Result.X = LeftValue.Y * RightValue.Z - LeftValue.Z * RightValue.Y
+    Result.Y = LeftValue.Z * RightValue.X - LeftValue.X * RightValue.Z
+    Result.Z = LeftValue.X * RightValue.Y - LeftValue.Y * RightValue.X
+    Return Result
+
+End Function
+
+Private Function CrossFixed(LeftValue As Core.Vector3, RightValue As Core.Vector3) As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    Result.X = (LeftValue.Y * RightValue.Z - LeftValue.Z * RightValue.Y) / Core.FIXED_ONE
+    Result.Y = (LeftValue.Z * RightValue.X - LeftValue.X * RightValue.Z) / Core.FIXED_ONE
+    Result.Z = (LeftValue.X * RightValue.Y - LeftValue.Y * RightValue.X) / Core.FIXED_ONE
+    Return Result
+
+End Function
+
+Public Function SquareRoot(Value As Number) As Number
+
+    Dim Guess As Number
+    Dim Previous As Number
+    Dim Iteration As Number
+
+    If Value <= 0 Then
+        Return 0
+    End If
+
+    Guess = Value
+
+    For Iteration = 0 To 31
+
+        Previous = Guess
+        Guess = (Guess + Value / Guess) / 2
+
+        If Guess = Previous Or Guess = Previous - 1 Then
+            Return Guess
+        End If
+
+    End For
+    Return Guess
+
+End Function
+
+Public Function Length(Value As Core.Vector3) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = SquareRoot(Dot(Value, Value))
+
+    Return ReturnValue
+
+End Function
+
+''' Returns a FIXED_ONE-length vector. Zero normalizes to the zero vector.
+Public Function Normalize(Value As Core.Vector3) As Core.Vector3
+
+    Dim Result As Core.Vector3
+    Dim Magnitude As Number
+
+    Magnitude = Length(Value)
+
+    If Magnitude = 0 Then
+        Return Result
+    End If
+
+    Result.X = Value.X * Core.FIXED_ONE / Magnitude
+    Result.Y = Value.Y * Core.FIXED_ONE / Magnitude
+    Result.Z = Value.Z * Core.FIXED_ONE / Magnitude
+    Return Result
+
+End Function
+
+Public Function Distance(LeftValue As Core.Vector3, RightValue As Core.Vector3) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Length(Subtract(LeftValue, RightValue))
+
+    Return ReturnValue
+
+End Function
+
+Public Function Identity() As Core.Matrix4
+
+    Dim Result As Core.Matrix4
+
+    Result.M11 = Core.FIXED_ONE
+    Result.M22 = Core.FIXED_ONE
+    Result.M33 = Core.FIXED_ONE
+    Result.M44 = Core.FIXED_ONE
+    Return Result
+
+End Function
+
+Public Function Translation(X As Number, Y As Number, Z As Number) As Core.Matrix4
+
+    Dim Result As Core.Matrix4
+
+    Result = Identity()
+    Result.M41 = X
+    Result.M42 = Y
+    Result.M43 = Z
+    Return Result
+
+End Function
+
+Public Function Scale(XPercent As Number, YPercent As Number, ZPercent As Number) As Core.Matrix4
+
+    Dim Result As Core.Matrix4
+
+    Result.M11 = XPercent * Core.FIXED_ONE / 100
+    Result.M22 = YPercent * Core.FIXED_ONE / 100
+    Result.M33 = ZPercent * Core.FIXED_ONE / 100
+    Result.M44 = Core.FIXED_ONE
+    Return Result
+
+End Function
+
+Public Function RotationX(Degrees As Number) As Core.Matrix4
+
+    Dim Result As Core.Matrix4
+
+    Result = Identity()
+    Result.M22 = Fixed.CosFixed(Degrees)
+    Result.M23 = Fixed.SinFixed(Degrees)
+    Result.M32 = -Fixed.SinFixed(Degrees)
+    Result.M33 = Fixed.CosFixed(Degrees)
+    Return Result
+
+End Function
+
+Public Function RotationY(Degrees As Number) As Core.Matrix4
+
+    Dim Result As Core.Matrix4
+
+    Result = Identity()
+    Result.M11 = Fixed.CosFixed(Degrees)
+    Result.M13 = -Fixed.SinFixed(Degrees)
+    Result.M31 = Fixed.SinFixed(Degrees)
+    Result.M33 = Fixed.CosFixed(Degrees)
+    Return Result
+
+End Function
+
+Public Function RotationZ(Degrees As Number) As Core.Matrix4
+
+    Dim Result As Core.Matrix4
+
+    Result = Identity()
+    Result.M11 = Fixed.CosFixed(Degrees)
+    Result.M12 = Fixed.SinFixed(Degrees)
+    Result.M21 = -Fixed.SinFixed(Degrees)
+    Result.M22 = Fixed.CosFixed(Degrees)
+    Return Result
+
+End Function
+
+Private Function Cell(LeftValue As Core.Matrix4, RightValue As Core.Matrix4, Row As Number, Column As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim A1 As Number
+    Dim A2 As Number
+    Dim A3 As Number
+    Dim A4 As Number
+    Dim B1 As Number
+    Dim B2 As Number
+    Dim B3 As Number
+    Dim B4 As Number
+
+    If Row = 1 Then
+
+        A1 = LeftValue.M11
+        A2 = LeftValue.M12
+        A3 = LeftValue.M13
+        A4 = LeftValue.M14
+
+    Else If Row = 2 Then
+
+        A1 = LeftValue.M21
+        A2 = LeftValue.M22
+        A3 = LeftValue.M23
+        A4 = LeftValue.M24
+
+    Else If Row = 3 Then
+
+        A1 = LeftValue.M31
+        A2 = LeftValue.M32
+        A3 = LeftValue.M33
+        A4 = LeftValue.M34
+
+    Else
+        A1 = LeftValue.M41
+        A2 = LeftValue.M42
+        A3 = LeftValue.M43
+        A4 = LeftValue.M44
+
+    End If
+
+    If Column = 1 Then
+
+        B1 = RightValue.M11
+        B2 = RightValue.M21
+        B3 = RightValue.M31
+        B4 = RightValue.M41
+
+    Else If Column = 2 Then
+
+        B1 = RightValue.M12
+        B2 = RightValue.M22
+        B3 = RightValue.M32
+        B4 = RightValue.M42
+
+    Else If Column = 3 Then
+
+        B1 = RightValue.M13
+        B2 = RightValue.M23
+        B3 = RightValue.M33
+        B4 = RightValue.M43
+
+    Else
+        B1 = RightValue.M14
+        B2 = RightValue.M24
+        B3 = RightValue.M34
+        B4 = RightValue.M44
+
+    End If
+
+    ReturnValue = (A1 * B1 + A2 * B2 + A3 * B3 + A4 * B4) / Core.FIXED_ONE
+
+    Return ReturnValue
+
+End Function
+
+Public Function Multiply(LeftValue As Core.Matrix4, RightValue As Core.Matrix4) As Core.Matrix4
+
+    Dim Result As Core.Matrix4
+
+    Result.M11 = Cell(LeftValue, RightValue, 1, 1)
+    Result.M12 = Cell(LeftValue, RightValue, 1, 2)
+    Result.M13 = Cell(LeftValue, RightValue, 1, 3)
+    Result.M14 = Cell(LeftValue, RightValue, 1, 4)
+    Result.M21 = Cell(LeftValue, RightValue, 2, 1)
+    Result.M22 = Cell(LeftValue, RightValue, 2, 2)
+    Result.M23 = Cell(LeftValue, RightValue, 2, 3)
+    Result.M24 = Cell(LeftValue, RightValue, 2, 4)
+    Result.M31 = Cell(LeftValue, RightValue, 3, 1)
+    Result.M32 = Cell(LeftValue, RightValue, 3, 2)
+    Result.M33 = Cell(LeftValue, RightValue, 3, 3)
+    Result.M34 = Cell(LeftValue, RightValue, 3, 4)
+    Result.M41 = Cell(LeftValue, RightValue, 4, 1)
+    Result.M42 = Cell(LeftValue, RightValue, 4, 2)
+    Result.M43 = Cell(LeftValue, RightValue, 4, 3)
+    Result.M44 = Cell(LeftValue, RightValue, 4, 4)
+    Return Result
+
+End Function
+
+Public Function TransformPoint(Value As Core.Vector3, Matrix As Core.Matrix4) As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    Result.X = (Value.X * Matrix.M11 + Value.Y * Matrix.M21 + Value.Z * Matrix.M31) / Core.FIXED_ONE + Matrix.M41
+    Result.Y = (Value.X * Matrix.M12 + Value.Y * Matrix.M22 + Value.Z * Matrix.M32) / Core.FIXED_ONE + Matrix.M42
+    Result.Z = (Value.X * Matrix.M13 + Value.Y * Matrix.M23 + Value.Z * Matrix.M33) / Core.FIXED_ONE + Matrix.M43
+    Return Result
+
+End Function
+
+Public Function Perspective(FovDegrees As Number, AspectPercent As Number, NearPlane As Number, FarPlane As Number) As Core.Matrix4
+
+    Dim Result As Core.Matrix4
+    Dim HalfFov As Number
+    Dim YScale As Number
+
+    If (FovDegrees <= 0 Or
+        FovDegrees >= 180 Or
+        AspectPercent <= 0 Or
+        NearPlane <= 0 Or
+        FarPlane <= NearPlane) Then
+        Return Result
+    End If
+
+    HalfFov = FovDegrees / 2
+    YScale = Fixed.CosFixed(HalfFov) * Core.FIXED_ONE / Max(1, Fixed.SinFixed(HalfFov))
+    Result.M11 = YScale * 100 / AspectPercent
+    Result.M22 = YScale
+    Result.M33 = FarPlane * Core.FIXED_ONE / (FarPlane - NearPlane)
+    Result.M34 = Core.FIXED_ONE
+    Result.M43 = -NearPlane * FarPlane / (FarPlane - NearPlane)
+    Return Result
+
+End Function
+
+Public Function LookAt(Eye As Core.Vector3, Target As Core.Vector3) As Core.Matrix4
+
+    Dim Result As Core.Matrix4
+    Dim Forward As Core.Vector3
+    Dim RightValue As Core.Vector3
+    Dim UpValue As Core.Vector3
+    Dim WorldUp As Core.Vector3
+
+    WorldUp.Y = Core.FIXED_ONE
+    Forward = Normalize(Subtract(Target, Eye))
+    RightValue = Normalize(CrossFixed(WorldUp, Forward))
+    UpValue = Normalize(CrossFixed(Forward, RightValue))
+    Result.M11 = RightValue.X
+    Result.M12 = UpValue.X
+    Result.M13 = Forward.X
+    Result.M21 = RightValue.Y
+    Result.M22 = UpValue.Y
+    Result.M23 = Forward.Y
+    Result.M31 = RightValue.Z
+    Result.M32 = UpValue.Z
+    Result.M33 = Forward.Z
+    Result.M41 = -Dot(RightValue, Eye) / Core.FIXED_ONE
+    Result.M42 = -Dot(UpValue, Eye) / Core.FIXED_ONE
+    Result.M43 = -Dot(Forward, Eye) / Core.FIXED_ONE
+    Result.M44 = Core.FIXED_ONE
+    Return Result
+
+End Function
+
+End Module

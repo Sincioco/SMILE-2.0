@@ -1,0 +1,562 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import NeonCycles.Simulation As Simulation
+Import NeonCycles.AI As AI
+
+Const STATE_MENU = 0
+Const STATE_HOW_TO_PLAY = 1
+Const STATE_COUNTDOWN = 2
+Const STATE_PLAYING = 3
+Const STATE_ROUND_OVER = 4
+Const STATE_MATCH_OVER = 5
+Const MODE_ONE_PLAYER = 1
+Const MODE_TWO_PLAYER = 2
+Const TRAIL_OBJECT_COUNT = 65
+
+Dim Camera As Core.Camera3D
+Dim FloorObject As Core.Object3D
+Dim TrailTemplate As Core.Object3D
+Dim PlayerOneCycle As Core.Object3D
+Dim PlayerTwoCycle As Core.Object3D
+Dim BoundaryNorth As Core.Object3D
+Dim BoundarySouth As Core.Object3D
+Dim BoundaryEast As Core.Object3D
+Dim BoundaryWest As Core.Object3D
+Dim PlayerOneTrailObjects[TRAIL_OBJECT_COUNT] As Core.Object3D
+Dim PlayerTwoTrailObjects[TRAIL_OBJECT_COUNT] As Core.Object3D
+Dim RendererAvailable As Boolean
+Dim Running As Boolean
+Dim Paused As Boolean
+Dim FrameReady As Boolean
+Dim KeyValue As Number
+Dim State As Number
+Dim GameMode As Number
+Dim PreviousTime As Number
+Dim CurrentTime As Number
+Dim Elapsed As Number
+Dim Accumulator As Number
+Dim CatchUpSteps As Number
+Dim CountdownSteps As Number
+Dim RoundEndedAt As Number
+Dim Index As Number
+Dim Accepted As Boolean
+
+Game Window "SMILE 2.0 Neon Cycles" Size 960 By 540
+
+RendererAvailable = Graphics3D.RendererAvailable()
+
+If RendererAvailable Then
+    Call CreateScene()
+End If
+
+State = STATE_MENU
+Running = True
+PreviousTime = Timer()
+
+Do
+    CurrentTime = Timer()
+    Elapsed = Max(0, Min(100, CurrentTime - PreviousTime))
+    PreviousTime = CurrentTime
+    Get Key KeyValue
+
+    Call HandleInput(KeyValue)
+
+    If State = STATE_COUNTDOWN Or State = STATE_PLAYING Then
+
+        Accumulator = Min(6000, Accumulator + Elapsed * 60)
+        CatchUpSteps = 0
+
+        Do
+
+            If Accumulator >= 1000 And CatchUpSteps < 6 Then
+
+                If State = STATE_COUNTDOWN Then
+
+                    CountdownSteps = CountdownSteps - 1
+
+                    If CountdownSteps <= 0 Then
+                        State = STATE_PLAYING
+                    End If
+
+                Else If Not Paused Then
+
+                    If GameMode = MODE_ONE_PLAYER Then
+                        Call AI.Update()
+                    End If
+
+                    Call Simulation.StepSimulation()
+
+                    If Simulation.RoundResult() <> Simulation.ROUND_ACTIVE Then
+
+                        State = STATE_ROUND_OVER
+                        RoundEndedAt = CurrentTime
+
+                        Play Sound "Assets\Crash.wav" On Channel 1
+
+                        If Simulation.RoundResult() <> Simulation.ROUND_DRAW Then
+
+                            Play Sound "Assets\Round.wav" On Channel 2
+
+                        End If
+
+                    End If
+
+                End If
+
+                Accumulator = Accumulator - 1000
+                CatchUpSteps = CatchUpSteps + 1
+
+            End If
+
+        Loop Until Accumulator < 1000 Or CatchUpSteps >= 6 Or State = STATE_ROUND_OVER
+
+    End If
+
+    If State = STATE_ROUND_OVER And CurrentTime - RoundEndedAt >= 1600 Then
+        Call ContinueAfterRound()
+    End If
+
+    Call DrawFrame()
+
+    Show Screen
+    Running = Running And Not Game_Closed()
+
+Loop Until Not Running
+
+Stop Music
+Stop Sound
+
+If RendererAvailable Then
+    Call DestroyScene()
+End If
+
+Sub CreateScene()
+
+    Camera = Graphics3D.DefaultCamera()
+    Camera.Position.Y = 680
+    Camera.Position.Z = -880
+    Camera.Target.Y = -100
+    Camera.Target.Z = 40
+    FloorObject = Graphics3D.CreatePlane3D(900, 900)
+    TrailTemplate = Graphics3D.CreateCube3D(100)
+    PlayerOneCycle = Graphics3D.CreateCube3D(100)
+    PlayerTwoCycle = Graphics3D.CreateCube3D(100)
+    BoundaryNorth = Graphics3D.CreateCube3D(100)
+    BoundarySouth = Graphics3D.CreateCube3D(100)
+    BoundaryEast = Graphics3D.CreateCube3D(100)
+    BoundaryWest = Graphics3D.CreateCube3D(100)
+
+    Call Graphics3D.SetObjectPosition(FloorObject, 0, -120, 0)
+    Call Graphics3D.SetObjectColor(FloorObject, 7, 14, 30)
+    Call Graphics3D.SetObjectVisible(TrailTemplate, False)
+    Call Graphics3D.SetObjectScale(PlayerOneCycle, 34, 34, 80)
+    Call Graphics3D.SetObjectScale(PlayerTwoCycle, 34, 34, 80)
+    Call Graphics3D.SetObjectColor(PlayerOneCycle, 20, 235, 255)
+    Call Graphics3D.SetObjectColor(PlayerTwoCycle, 255, 65, 190)
+    Call ConfigureWall(BoundaryNorth, 0, -430, 880, 18)
+    Call ConfigureWall(BoundarySouth, 0, 430, 880, 18)
+    Call ConfigureWall(BoundaryWest, -430, 0, 18, 880)
+    Call ConfigureWall(BoundaryEast, 430, 0, 18, 880)
+
+    For Index = 0 To TRAIL_OBJECT_COUNT - 1
+
+        PlayerOneTrailObjects[Index] = Graphics3D.CreateObjectFromMesh3D(TrailTemplate.MeshHandle)
+        PlayerTwoTrailObjects[Index] = Graphics3D.CreateObjectFromMesh3D(TrailTemplate.MeshHandle)
+
+        Call Graphics3D.SetObjectColor(PlayerOneTrailObjects[Index], 15, 210, 255)
+        Call Graphics3D.SetObjectColor(PlayerTwoTrailObjects[Index], 255, 40, 175)
+        Call Graphics3D.SetObjectVisible(PlayerOneTrailObjects[Index], False)
+        Call Graphics3D.SetObjectVisible(PlayerTwoTrailObjects[Index], False)
+    End For
+
+End Sub
+
+Sub ConfigureWall(ByRef WallObject As Core.Object3D, X As Number, Z As Number, Width As Number, Depth As Number)
+
+    Call Graphics3D.SetObjectPosition(WallObject, X, -82, Z)
+    Call Graphics3D.SetObjectScale(WallObject, Width, 76, Depth)
+    Call Graphics3D.SetObjectColor(WallObject, 45, 80, 145)
+
+End Sub
+
+Sub DestroyScene()
+
+    For Index = 0 To TRAIL_OBJECT_COUNT - 1
+        Call Graphics3D.DestroyObjectInstance3D(PlayerOneTrailObjects[Index])
+        Call Graphics3D.DestroyObjectInstance3D(PlayerTwoTrailObjects[Index])
+    End For
+
+    Call Graphics3D.DestroyObject3D(TrailTemplate)
+    Call Graphics3D.DestroyObject3D(FloorObject)
+    Call Graphics3D.DestroyObject3D(PlayerOneCycle)
+    Call Graphics3D.DestroyObject3D(PlayerTwoCycle)
+    Call Graphics3D.DestroyObject3D(BoundaryNorth)
+    Call Graphics3D.DestroyObject3D(BoundarySouth)
+    Call Graphics3D.DestroyObject3D(BoundaryEast)
+    Call Graphics3D.DestroyObject3D(BoundaryWest)
+    Call Graphics3D.ResetRenderer3D()
+
+End Sub
+
+Sub StartMatch(ModeValue As Number)
+
+    GameMode = ModeValue
+    Paused = False
+    Accumulator = 0
+    CountdownSteps = 120
+
+    Call Simulation.Initialize(5)
+    Call AI.Reset(2026)
+
+    State = STATE_COUNTDOWN
+    Play Music "Assets/Background.mp3" Loop
+
+End Sub
+
+Sub EnterMenu()
+
+    State = STATE_MENU
+    Paused = False
+    Stop Music
+
+End Sub
+
+Sub ContinueAfterRound()
+
+    If Simulation.MatchWinner() <> 0 Then
+
+        State = STATE_MATCH_OVER
+
+    Else
+
+        Call Simulation.ResetRound()
+        Call AI.Reset(2026 + Simulation.PlayerScore(Simulation.PLAYER_ONE) * 31 + Simulation.PlayerScore(Simulation.PLAYER_TWO))
+
+        CountdownSteps = 90
+        Accumulator = 0
+        State = STATE_COUNTDOWN
+
+    End If
+
+End Sub
+
+Sub HandleInput(PressedKey As Number)
+
+    If State = STATE_MENU Then
+
+        If PressedKey = KEY_1 Or PressedKey = KEY_PAD_A Then
+            Call StartMatch(MODE_ONE_PLAYER)
+        Else If PressedKey = KEY_2 Or PressedKey = KEY_PAD_B Then
+            Call StartMatch(MODE_TWO_PLAYER)
+        Else If PressedKey = KEY_3 Or PressedKey = KEY_PAD_Y Then
+            State = STATE_HOW_TO_PLAY
+        Else If PressedKey = KEY_ESCAPE Then
+            Running = False
+        End If
+
+        Return
+
+    End If
+
+    If State = STATE_HOW_TO_PLAY Then
+
+        If PressedKey <> KEY_NONE Then
+            State = STATE_MENU
+        End If
+
+        Return
+
+    End If
+
+    If State = STATE_MATCH_OVER Then
+
+        If PressedKey = KEY_ENTER Or PressedKey = KEY_PAD_A Then
+            Call StartMatch(GameMode)
+        Else If PressedKey = KEY_ESCAPE Or PressedKey = KEY_PAD_Y Then
+            Call EnterMenu()
+        End If
+
+        Return
+
+    End If
+
+    If State = STATE_ROUND_OVER Then
+
+        If PressedKey = KEY_ENTER Or PressedKey = KEY_PAD_A Then
+            Call ContinueAfterRound()
+        Else If PressedKey = KEY_ESCAPE Then
+            Call EnterMenu()
+        End If
+
+        Return
+
+    End If
+
+    If PressedKey = KEY_ESCAPE Then
+
+        Call EnterMenu()
+
+    Else If PressedKey = KEY_SPACE Then
+
+        Paused = Not Paused
+
+    Else If Not Paused And (PressedKey = KEY_LEFT Or PressedKey = KEY_PAD_X) Then
+
+        Accepted = Simulation.RequestTurn(Simulation.PLAYER_ONE, Simulation.TURN_LEFT)
+
+        If Accepted Then
+
+            Play Sound "Assets\Turn.wav" On Channel 0
+
+        End If
+
+    Else If Not Paused And (PressedKey = KEY_RIGHT Or PressedKey = KEY_PAD_B) Then
+
+        Accepted = Simulation.RequestTurn(Simulation.PLAYER_ONE, Simulation.TURN_RIGHT)
+
+        If Accepted Then
+
+            Play Sound "Assets\Turn.wav" On Channel 0
+
+        End If
+
+    Else If (Not Paused And
+        GameMode = MODE_TWO_PLAYER And
+        PressedKey = KEY_A) Then
+
+        Accepted = Simulation.RequestTurn(Simulation.PLAYER_TWO, Simulation.TURN_LEFT)
+
+    Else If (Not Paused And
+        GameMode = MODE_TWO_PLAYER And
+        PressedKey = KEY_D) Then
+
+        Accepted = Simulation.RequestTurn(Simulation.PLAYER_TWO, Simulation.TURN_RIGHT)
+
+    End If
+
+End Sub
+
+Sub ConfigureTrail(ByRef TrailObject As Core.Object3D, X1 As Number, Z1 As Number, X2 As Number, Z2 As Number)
+
+    Dim SegmentLength As Number
+    Dim CenterX As Number
+    Dim CenterZ As Number
+
+    CenterX = (X1 + X2) / 2
+    CenterZ = (Z1 + Z2) / 2
+
+    Call Graphics3D.SetObjectPosition(TrailObject, CenterX, -88, CenterZ)
+
+    If X1 = X2 Then
+        SegmentLength = Abs(Z2 - Z1) + 14
+
+        Call Graphics3D.SetObjectScale(TrailObject, 14, 64, SegmentLength)
+    Else
+        SegmentLength = Abs(X2 - X1) + 14
+
+        Call Graphics3D.SetObjectScale(TrailObject, SegmentLength, 64, 14)
+    End If
+
+    Call Graphics3D.SetObjectVisible(TrailObject, True)
+
+End Sub
+
+Sub UpdateTrailObjects(Player As Number)
+
+    Dim CountValue As Number
+    Dim X1 As Number
+    Dim Z1 As Number
+    Dim X2 As Number
+    Dim Z2 As Number
+
+    CountValue = Simulation.TrailCount(Player)
+
+    For Index = 0 To TRAIL_OBJECT_COUNT - 1
+
+        If Player = Simulation.PLAYER_ONE Then
+            Call Graphics3D.SetObjectVisible(PlayerOneTrailObjects[Index], False)
+        Else
+
+            Call Graphics3D.SetObjectVisible(PlayerTwoTrailObjects[Index], False)
+        End If
+
+    End For
+
+    For Index = 0 To CountValue - 1
+
+        X1 = Simulation.TrailX1(Player, Index)
+        Z1 = Simulation.TrailZ1(Player, Index)
+        X2 = Simulation.TrailX2(Player, Index)
+        Z2 = Simulation.TrailZ2(Player, Index)
+
+        If Player = Simulation.PLAYER_ONE Then
+            Call ConfigureTrail(PlayerOneTrailObjects[Index], X1, Z1, X2, Z2)
+        Else
+
+            Call ConfigureTrail(PlayerTwoTrailObjects[Index], X1, Z1, X2, Z2)
+        End If
+
+    End For
+
+    If CountValue < TRAIL_OBJECT_COUNT Then
+
+        X1 = Simulation.ActiveTrailStartX(Player)
+        Z1 = Simulation.ActiveTrailStartZ(Player)
+        X2 = Simulation.PlayerX(Player)
+        Z2 = Simulation.PlayerZ(Player)
+
+        If Player = Simulation.PLAYER_ONE Then
+            Call ConfigureTrail(PlayerOneTrailObjects[CountValue], X1, Z1, X2, Z2)
+        Else
+
+            Call ConfigureTrail(PlayerTwoTrailObjects[CountValue], X1, Z1, X2, Z2)
+        End If
+
+    End If
+
+End Sub
+
+Sub DrawArena3D()
+
+    Call UpdateTrailObjects(Simulation.PLAYER_ONE)
+    Call UpdateTrailObjects(Simulation.PLAYER_TWO)
+    Call Graphics3D.SetObjectPosition(PlayerOneCycle, Simulation.PlayerX(Simulation.PLAYER_ONE), -83, Simulation.PlayerZ(Simulation.PLAYER_ONE))
+    Call Graphics3D.SetObjectPosition(PlayerTwoCycle, Simulation.PlayerX(Simulation.PLAYER_TWO), -83, Simulation.PlayerZ(Simulation.PLAYER_TWO))
+    Call Graphics3D.SetObjectRotation(PlayerOneCycle, 0, Simulation.PlayerDirection(Simulation.PLAYER_ONE) * 90, 0)
+    Call Graphics3D.SetObjectRotation(PlayerTwoCycle, 0, Simulation.PlayerDirection(Simulation.PLAYER_TWO) * 90, 0)
+
+    FrameReady = Graphics3D.Begin3D(Camera, 1, 3, 12)
+
+    If Not FrameReady Then
+        Return
+    End If
+
+    FrameReady = Graphics3D.DrawObject3D(FloorObject)
+    FrameReady = Graphics3D.DrawObject3D(BoundaryNorth)
+    FrameReady = Graphics3D.DrawObject3D(BoundarySouth)
+    FrameReady = Graphics3D.DrawObject3D(BoundaryEast)
+    FrameReady = Graphics3D.DrawObject3D(BoundaryWest)
+
+    For Index = 0 To TRAIL_OBJECT_COUNT - 1
+
+        If PlayerOneTrailObjects[Index].Visible Then
+            FrameReady = Graphics3D.DrawObject3D(PlayerOneTrailObjects[Index])
+        End If
+
+        If PlayerTwoTrailObjects[Index].Visible Then
+            FrameReady = Graphics3D.DrawObject3D(PlayerTwoTrailObjects[Index])
+        End If
+
+    End For
+    FrameReady = Graphics3D.DrawObject3D(PlayerOneCycle)
+    FrameReady = Graphics3D.DrawObject3D(PlayerTwoCycle)
+
+    Call Graphics3D.End3D()
+
+End Sub
+
+Sub DrawFrame()
+
+    If State = STATE_MENU Then
+        Call DrawMenu()
+
+        Return
+    Else If State = STATE_HOW_TO_PLAY Then
+        Call DrawHowToPlay()
+
+        Return
+    End If
+
+    If RendererAvailable Then
+        Call DrawArena3D()
+    Else
+        Clear BLACK
+    End If
+
+    Fill Rectangle 0, 0, 960, 58, Rgb(3, 9, 24)
+    Draw Text "NEON CYCLES" At 20, 14 Size 28 Color CYAN
+    Draw Text "P1" At 360, 12 Size 18 Color CYAN
+    Draw Number Simulation.PlayerScore(Simulation.PLAYER_ONE) At 400, 10 Size 28 Color WHITE
+    Draw Text "P2" At 520, 12 Size 18 Color MAGENTA
+    Draw Number Simulation.PlayerScore(Simulation.PLAYER_TWO) At 560, 10 Size 28 Color WHITE
+    Draw Text "First to 5" At 785, 18 Size 16 Color LIGHT_GRAY
+
+    If State = STATE_COUNTDOWN Then
+
+        Fill Rounded Rectangle 350, 220, 260, 100, 14, Rgb(5, 15, 38)
+        Draw Text "GET READY" At 480, 238 Size 34 Color YELLOW Centered
+        Draw Number Max(1, (CountdownSteps + 59) / 60) At 480, 280 Size 28 Color WHITE
+
+    Else If Paused Then
+
+        Fill Rounded Rectangle 350, 230, 260, 80, 14, Rgb(5, 15, 38)
+        Draw Text "PAUSED" At 480, 248 Size 34 Color YELLOW Centered
+
+    Else If State = STATE_ROUND_OVER Then
+
+        Fill Rounded Rectangle 310, 210, 340, 120, 14, Rgb(5, 15, 38)
+
+        If Simulation.RoundResult() = Simulation.ROUND_DRAW Then
+            Draw Text "DOUBLE CRASH - DRAW" At 480, 232 Size 28 Color YELLOW Centered
+        Else If Simulation.RoundResult() = Simulation.ROUND_PLAYER_ONE Then
+            Draw Text "PLAYER 1 WINS ROUND" At 480, 232 Size 28 Color CYAN Centered
+        Else
+            Draw Text "PLAYER 2 WINS ROUND" At 480, 232 Size 28 Color MAGENTA Centered
+        End If
+
+        Draw Text "Enter / A: Continue" At 480, 286 Size 16 Color LIGHT_GRAY Centered
+
+    Else If State = STATE_MATCH_OVER Then
+
+        Fill Rounded Rectangle 310, 190, 340, 150, 14, Rgb(5, 15, 38)
+
+        If Simulation.MatchWinner() = Simulation.PLAYER_ONE Then
+            Draw Text "PLAYER 1 WINS" At 480, 214 Size 34 Color CYAN Centered
+        Else
+            Draw Text "PLAYER 2 WINS" At 480, 214 Size 34 Color MAGENTA Centered
+        End If
+
+        Draw Text "Enter / A: Rematch" At 480, 272 Size 17 Color WHITE Centered
+        Draw Text "Escape / Y: Menu" At 480, 302 Size 15 Color LIGHT_GRAY Centered
+
+    End If
+
+    If Not RendererAvailable Then
+        Draw Text "Renderer3D requires DirectX on Windows or WebGL2 on Web." At 480, 450 Size 18 Color YELLOW Centered
+    End If
+
+End Sub
+
+Sub DrawMenu()
+
+    Clear Rgb(1, 4, 15)
+    Draw Text "NEON CYCLES" At 480, 76 Size 58 Color CYAN Centered
+    Draw Text "TRUE SIMPLE 3D LIGHT-TRAIL ARENA" At 480, 144 Size 20 Color MAGENTA Centered
+    Fill Rounded Rectangle 250, 215, 460, 176, 16, Rgb(5, 15, 38)
+    Draw Text "1 / A   ONE PLAYER VS AI" At 480, 238 Size 24 Color WHITE Centered
+    Draw Text "2 / B   TWO LOCAL PLAYERS" At 480, 290 Size 24 Color WHITE Centered
+    Draw Text "3 / Y   HOW TO PLAY" At 480, 342 Size 24 Color WHITE Centered
+    Draw Text "First to 5 rounds wins" At 480, 425 Size 18 Color LIGHT_GRAY Centered
+
+    If Not RendererAvailable Then
+        Draw Text "Renderer3D unavailable: menu and simulation remain operational." At 480, 470 Size 16 Color YELLOW Centered
+    End If
+
+End Sub
+
+Sub DrawHowToPlay()
+
+    Clear Rgb(1, 4, 15)
+    Draw Text "HOW TO PLAY" At 480, 55 Size 42 Color CYAN Centered
+    Draw Text "Cycles move continuously. Turn exactly 90 degrees and never touch a wall or trail." At 480, 130 Size 18 Color WHITE Centered
+    Draw Text "PLAYER 1" At 270, 205 Size 25 Color CYAN Centered
+    Draw Text "Left / Right arrows" At 270, 250 Size 19 Color WHITE Centered
+    Draw Text "Virtual X / B" At 270, 282 Size 19 Color WHITE Centered
+    Draw Text "PLAYER 2" At 690, 205 Size 25 Color MAGENTA Centered
+    Draw Text "A / D keys" At 690, 250 Size 19 Color WHITE Centered
+    Draw Text "Space pauses   Escape returns to menu" At 480, 370 Size 18 Color LIGHT_GRAY Centered
+    Draw Text "Press any key to return" At 480, 450 Size 18 Color YELLOW Centered
+
+End Sub

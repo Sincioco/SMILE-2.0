@@ -1,12 +1,12 @@
 # Simple3D software-rendering architecture
 
-`Smile.Simple3D` is a bounded educational 3D source library. It transforms and projects integer wireframe geometry, then submits ordinary SMILE `Draw Line` commands. Windows DirectX, Windows GDI, and Web Canvas therefore share the same `.smile` geometry, camera, clipping, interaction, and game logic while the permanent 2D renderer remains responsible for final pixels and HUD overlays.
+The original `Smile.Simple3D` wireframe layer is a bounded educational source library. It transforms and projects integer wireframe geometry, then submits ordinary SMILE `Draw Line` commands. Windows DirectX, Windows GDI, and Web Canvas therefore share the same `.smile` geometry, camera, clipping, interaction, and game logic while the permanent 2D renderer remains responsible for final pixels and HUD overlays. Smile.Simple3D 2.0 preserves this API alongside the newer true [Renderer3D architecture](true-simple3d-renderer3d.md).
 
 ## Capability boundary
 
-The native and Web runtimes expose only generic logical-canvas pointer input. They know nothing about meshes, cameras, Space Wars, orbit controls, targets, or collision rules. Simple3D is ordinary reusable SMILE source. It adds no Direct3D 3D API, WebGL, WebGPU, dependency, model loader, material system, scene graph, physics engine, or hidden game helper.
+The wireframe modules consume only generic logical-canvas pointer input and ordinary Renderer2D calls. They know nothing about Space Wars, orbit policy, targets, or collision rules. Hardware rendering belongs to the separate Graphics3D/runtime contract and does not turn the permanent 2D backend vtable into a 3D abstraction.
 
-This provides an intentional seam for a future first-class `Renderer3D`: applications can later replace or supplement the software wireframe pass while preserving Simple3D's student-facing values and the existing 2D overlay path. It is not an attempt to make the current 2D backend vtable pretend to be a hardware 3D abstraction.
+This seam is now consumed by the separate first-class `Renderer3D`: applications may use the hardware path while preserving the wireframe lessons and existing 2D overlay path.
 
 ## Number model
 
@@ -39,4 +39,4 @@ The renderer transforms object vertices into world and then camera space. It cli
 
 ## Non-goals
 
-Simple3D does not provide filled faces, hidden-surface removal, textures, lighting, model import, animation, skeletal rigs, a scene graph, GPU shaders, floating-point language semantics, or general 3D collision. Those are future milestones, not implicit promises of this teaching library.
+The legacy wireframe modules do not provide filled faces or hidden-surface removal. The sibling `Graphics3D` module now provides filled indexed primitives, simple lighting, perspective, and depth testing; textures, model import, animation, skeletal rigs, a scene graph, physics engine, student shaders, and general 3D collision remain outside this teaching layer.

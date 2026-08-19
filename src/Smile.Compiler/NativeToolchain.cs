@@ -37,7 +37,7 @@ internal sealed class NativeToolchain
             debugCompile +
             $"ml64.exe /nologo /c /Fo{Quote(objectPath)} {Quote(assemblyPath)} && " +
             $"link.exe /nologo /subsystem:{(isGame ? "windows" : "console")} /entry:main /machine:x64 /out:{Quote(outputPath)}{debugLink} " +
-            $"{Quote(objectPath)}{debugObject} {Quote(runtimePath)} kernel32.lib user32.lib gdi32.lib gdiplus.lib dwmapi.lib d3d11.lib dxgi.lib d2d1.lib dwrite.lib windowscodecs.lib winmm.lib shell32.lib ole32.lib windowsapp.lib xaudio2.lib{runtimeLibraries}";
+            $"{Quote(objectPath)}{debugObject} {Quote(runtimePath)} kernel32.lib user32.lib gdi32.lib gdiplus.lib dwmapi.lib d3d11.lib d3dcompiler.lib dxgi.lib d2d1.lib dwrite.lib windowscodecs.lib winmm.lib shell32.lib ole32.lib windowsapp.lib xaudio2.lib{runtimeLibraries}";
 
         return RunCommandPrompt(command, cancellationToken);
     }

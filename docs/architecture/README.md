@@ -1,6 +1,6 @@
 # Compiler and tooling architecture
 
-The current educational software-rendered 3D layer is documented in [Simple3D software-rendering architecture](simple3d-software-rendering.md). It keeps generic pointer input in the native/Web runtimes and fixed-point mesh, camera, clipping, orbit, and wireframe projection logic in reusable SMILE source over the permanent 2D renderer.
+The original educational wireframe layer is documented in [Simple3D software-rendering architecture](simple3d-software-rendering.md). The current indexed-triangle milestone is documented in [true Simple3D Renderer3D architecture](true-simple3d-renderer3d.md). Renderer2D remains permanent while DirectX/WebGL2 Renderer3D provides filled meshes, perspective, depth testing, and 2D HUD composition.
 
 SMILE 2.0 uses one deliberately direct native pipeline:
 
@@ -34,15 +34,15 @@ Package loading is bounded by the supported format-6 resource ceilings documente
 
 The editor, formatter, compiler, native/Web emitters, and package validator consume this shared model. Completion, Quick Info, F12, diagnostics, formatter casing/rewrites, debug source mapping, and `requiresGameWindow` propagation therefore agree for project and package sources. Quick Info and debugger hover expose static Property information but never execute a getter. The shipped focused-library results are `Smile.UI` 2.0.0, `Smile.Game` 2.0.0, and the unchanged fifteen-Module `Smile.RPG` compatibility package 1.2.1.
 
-## Phase 4 and future 3D readiness
+## Renderer2D and Renderer3D coexistence
 
-Phase 4 remains a high-resolution 2D milestone. Its native `SmileGraphicsBackend` vtable is the stable current **2D** drawing layer despite the historical general name; DirectX and GDI implement that layer behind the compiler-facing C ABI. The Web Canvas 2D surface provides the same role for Web builds. These layers continue to own images, shapes, text, clipping, and painter-order overlays when a future 3D renderer is introduced.
+The native `SmileGraphicsBackend` vtable remains the stable **2D** drawing layer despite the historical general name; DirectX and GDI implement that layer behind the compiler-facing C ABI. Web Canvas 2D provides the same role for Web builds. These layers continue to own images, shapes, text, clipping, and painter-order overlays.
 
-A future renderer should sit beside this 2D capability rather than replace it or force 3D concepts into today's beginner-level commands. On a 3D-capable target, a future frame may render a 3D world and then composite the existing 2D HUD, menu, text, and image operations. Backend-specific DirectX, Canvas, WebGL, WebGPU, or similar objects remain internal.
+Renderer3D now sits beside that 2D capability. DirectX renders the 3D pass into the shared D3D11 target before restoring Direct2D; WebGL2 renders into an offscreen canvas before Canvas 2D composition. Backend objects and shaders remain internal, and GDI continues as an unchanged Renderer2D-only fallback.
 
 The shared project asset resolver and publisher are intentionally file-format-neutral: they validate, identify, copy, and clean declared project assets without assuming PNG, WAV, or any other media format. Runtime ownership and decoding remain type-specific (`SmileImageResource`, WAV caches, and music), so future model, material, or animation resources can add their own lifetime rules without replacing project asset publication or pretending every asset is an image.
 
-No Phase 4 transform, camera, mesh, material, shader, skeletal-animation, lighting, physics, particle, or model-import feature is implied by this direction. Add such systems only in their approved milestones, extending this compiler/runtime and preserving the 2D layer.
+The approved true-Simple3D milestone adds transforms, cameras, indexed meshes, primitive generation, simple tint lighting, perspective, and depth testing only. Textures, model import, skeletal animation, general physics, particles, and student shaders remain future work.
 
 The native backend emits MASM x64 and links `Smile.NativeRuntime.lib`. Console programs use the console subsystem. Programs containing `Game Window` use the Windows GUI subsystem and the generic Win32 runtime for:
 

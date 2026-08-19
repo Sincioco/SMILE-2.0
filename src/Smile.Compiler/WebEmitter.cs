@@ -912,6 +912,7 @@ internal sealed class WebEmitter
             SyntaxKind.TextLengthKeyword => $"smile.textLength({arguments})",
             SyntaxKind.TextCodeAtKeyword => $"smile.textCodeAt({arguments})",
             SyntaxKind.TextSliceKeyword => $"smile.textSlice({arguments})",
+            SyntaxKind.Renderer3DKeyword => $"smile.renderer3D({arguments})",
             _ => RoutineCall(call, call.Identifier)
         };
     }

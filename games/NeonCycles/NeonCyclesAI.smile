@@ -1,0 +1,85 @@
+''' Deterministic AI that uses the same legal turn command pathway as a human.
+Module NeonCycles.AI
+
+Option Explicit
+
+Import NeonCycles.Simulation As Simulation
+
+Private Dim SeedValue As Number
+Private Dim DecisionCooldown As Number
+
+Public Sub Reset(Seed As Number)
+
+    SeedValue = Abs(Seed) Mod 65536
+    DecisionCooldown = 0
+
+End Sub
+
+Private Function NextChoice() As Number
+
+    Dim ReturnValue As Number
+
+    SeedValue = (SeedValue * 25173 + 13849) Mod 65536
+    ReturnValue = SeedValue Mod 2
+
+    Return ReturnValue
+
+End Function
+
+Public Sub Update()
+
+    Dim Direction As Number
+    Dim LeftDirection As Number
+    Dim RightDirection As Number
+    Dim LeftSafe As Boolean
+    Dim RightSafe As Boolean
+    Dim Requested As Boolean
+
+    If Simulation.RoundResult() <> Simulation.ROUND_ACTIVE Then
+        Return
+    End If
+
+    If DecisionCooldown > 0 Then
+        DecisionCooldown = DecisionCooldown - 1
+        Return
+    End If
+
+    Direction = Simulation.PlayerDirection(Simulation.PLAYER_TWO)
+
+    If Not Simulation.WouldCollide(Simulation.PLAYER_TWO, Direction, 84) Then
+        DecisionCooldown = 3
+        Return
+    End If
+
+    LeftDirection = (Direction + 3) Mod 4
+    RightDirection = (Direction + 1) Mod 4
+    LeftSafe = Not Simulation.WouldCollide(Simulation.PLAYER_TWO, LeftDirection, 110)
+    RightSafe = Not Simulation.WouldCollide(Simulation.PLAYER_TWO, RightDirection, 110)
+
+    If LeftSafe And Not RightSafe Then
+
+        Requested = Simulation.RequestTurn(Simulation.PLAYER_TWO, Simulation.TURN_LEFT)
+
+    Else If RightSafe And Not LeftSafe Then
+
+        Requested = Simulation.RequestTurn(Simulation.PLAYER_TWO, Simulation.TURN_RIGHT)
+
+    Else If LeftSafe And RightSafe Then
+
+        If NextChoice() = 0 Then
+            Requested = Simulation.RequestTurn(Simulation.PLAYER_TWO, Simulation.TURN_LEFT)
+        Else
+            Requested = Simulation.RequestTurn(Simulation.PLAYER_TWO, Simulation.TURN_RIGHT)
+        End If
+
+    End If
+
+    If Requested Then
+        DecisionCooldown = 5
+    Else
+        DecisionCooldown = 1
+    End If
+
+End Sub
+
+End Module

@@ -10,7 +10,7 @@ function fail(message) {
 }
 
 const args = process.argv.slice(2);
-if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--expected-runtime-error <text>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio|--phase5-ui|--phase5-hardening|--phase5-submenus|--phase5-submenu-viewport|--mobile-controls]");
+if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--expected-runtime-error <text>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio|--phase5-ui|--phase5-hardening|--phase5-submenus|--phase5-submenu-viewport|--mobile-controls|--renderer3d|--neon-cycles-input]");
 
 const webDirectory = path.resolve(args.shift());
 let expectedPath = null;
@@ -28,6 +28,8 @@ let verifyPhase5Hardening = false;
 let verifyPhase5Submenus = false;
 let verifyPhase5SubmenuViewport = false;
 let verifyMobileControls = false;
+let verifyRenderer3D = false;
+let verifyNeonCyclesInput = false;
 while (args.length !== 0) {
     const option = args.shift();
     if (option === "--phase4-media") {
@@ -42,6 +44,8 @@ while (args.length !== 0) {
     if (option === "--phase5-submenus") { verifyPhase5Submenus = true; continue; }
     if (option === "--phase5-submenu-viewport") { verifyPhase5SubmenuViewport = true; continue; }
     if (option === "--mobile-controls") { verifyMobileControls = true; continue; }
+    if (option === "--renderer3d") { verifyRenderer3D = true; continue; }
+    if (option === "--neon-cycles-input") { verifyNeonCyclesInput = true; continue; }
     const value = args.shift();
     if (value === undefined) fail(`missing value for ${option}`);
     if (option === "--expected") expectedPath = path.resolve(value);
@@ -504,8 +508,35 @@ const textDraws = [];
 const fillRectangleDraws = [];
 let drawOrder = 0;
 let backCanvasElement = null;
+let renderer3DCanvasElement = null;
+let createdCanvasCount = 0;
 let virtualNow = 0;
 const phase5Keys = [];
+let renderer3DDepthEnables = 0;
+let renderer3DBufferUploads = 0;
+let renderer3DDrawCalls = 0;
+let renderer3DComposites = 0;
+
+function contextWebGL2() {
+    const noop = () => {};
+    return {
+        VERTEX_SHADER: 0x8b31, FRAGMENT_SHADER: 0x8b30, COMPILE_STATUS: 0x8b81, LINK_STATUS: 0x8b82,
+        DEPTH_TEST: 0x0b71, LESS: 0x0201, CULL_FACE: 0x0b44, ARRAY_BUFFER: 0x8892,
+        ELEMENT_ARRAY_BUFFER: 0x8893, STATIC_DRAW: 0x88e4, COLOR_BUFFER_BIT: 0x4000,
+        DEPTH_BUFFER_BIT: 0x0100, TRIANGLES: 0x0004, UNSIGNED_INT: 0x1405, FLOAT: 0x1406,
+        BLEND: 0x0be2, SRC_ALPHA: 0x0302, ONE_MINUS_SRC_ALPHA: 0x0303,
+        createShader: () => ({}), shaderSource: noop, compileShader: noop,
+        getShaderParameter: () => true, getShaderInfoLog: () => "", deleteShader: noop,
+        createProgram: () => ({}), attachShader: noop, linkProgram: noop,
+        getProgramParameter: () => true, getProgramInfoLog: () => "", getUniformLocation: () => ({}),
+        enable: value => { if (value === 0x0b71) renderer3DDepthEnables += 1; },
+        depthFunc: noop, disable: noop, blendFunc: noop, createBuffer: () => ({}), bindBuffer: noop,
+        bufferData: () => { renderer3DBufferUploads += 1; }, deleteBuffer: noop,
+        viewport: noop, clearColor: noop, clearDepth: noop, clear: noop, useProgram: noop,
+        enableVertexAttribArray: noop, vertexAttribPointer: noop, uniformMatrix4fv: noop,
+        uniform4fv: noop, drawElements: () => { renderer3DDrawCalls += 1; }
+    };
+}
 
 function addListener(target, type, listener) {
     if (!target.has(type)) target.set(type, []);
@@ -528,6 +559,8 @@ function context2d(name) {
         },
         strokeRect: noop, clearRect: noop,
         drawImage: (resource, ...values) => {
+            if (name === "back" && resource === renderer3DCanvasElement)
+                renderer3DComposites += 1;
             if (name === "back" && resource && typeof resource.src === "string") {
                 imageDraws.push({ source: resource.src, values, smoothing: context.imageSmoothingEnabled,
                     alpha: context.globalAlpha, frame: requestedFrames, order: ++drawOrder });
@@ -573,8 +606,18 @@ const host = {
         getElementById: id => elements.get(id) || null,
         createElement: tag => {
             if (tag !== "canvas") return {};
-            backCanvasElement = canvas("back");
-            return backCanvasElement;
+            createdCanvasCount += 1;
+            if (createdCanvasCount === 1) {
+                backCanvasElement = canvas("back");
+                return backCanvasElement;
+            }
+            renderer3DCanvasElement = canvas("renderer3d");
+            const fallbackDrawing = renderer3DCanvasElement.getContext();
+            const webGL2 = contextWebGL2();
+            renderer3DCanvasElement.getContext = type => verifyRenderer3D && type === "webgl2"
+                ? webGL2
+                : fallbackDrawing;
+            return renderer3DCanvasElement;
         },
         addEventListener: (type, listener) => addListener(documentListeners, type, listener),
         hasFocus: () => true,
@@ -673,6 +716,28 @@ const host = {
                 }
             }
             if (verifyPhase4Clip && requestedFrames === 2) {
+                host.innerWidth = 1000;
+                host.innerHeight = 700;
+                dispatch(windowListeners, "resize");
+            }
+            if (verifyRenderer3D && requestedFrames === 1) {
+                const event = { code: verifyNeonCyclesInput ? "Digit2" : "Digit1", repeat: false,
+                    ctrlKey: false, altKey: false,
+                    metaKey: false, preventDefault: () => {} };
+                dispatch(windowListeners, "keydown", event);
+                dispatch(windowListeners, "keyup", event);
+            }
+            if (verifyNeonCyclesInput) {
+                const code = new Map([[2, "KeyA"], [3, "KeyD"], [4, "Space"], [5, "Space"]])
+                    .get(requestedFrames);
+                if (code) {
+                    const event = { code, repeat: false, ctrlKey: false, altKey: false,
+                        metaKey: false, preventDefault: () => {} };
+                    dispatch(windowListeners, "keydown", event);
+                    dispatch(windowListeners, "keyup", event);
+                }
+            }
+            if (verifyRenderer3D && requestedFrames === 3) {
                 host.innerWidth = 1000;
                 host.innerHeight = 700;
                 dispatch(windowListeners, "resize");
@@ -816,6 +881,49 @@ const started = Date.now();
     const diagnostics = host.smile.mediaDiagnostics();
     if (diagnostics.classLiveCount !== 0 || host.smile.classLiveCount() !== 0)
         fail(`SMILE Class ownership leaked: ${JSON.stringify(diagnostics)}`);
+    if (verifyRenderer3D) {
+        if (renderer3DDepthEnables < 1)
+            fail("Renderer3D WebGL2 did not enable depth testing");
+        if (renderer3DBufferUploads < 2)
+            fail(`Renderer3D WebGL2 did not upload indexed mesh buffers (${renderer3DBufferUploads})`);
+        if (renderer3DDrawCalls < 1)
+            fail("Renderer3D WebGL2 did not issue indexed triangle draws");
+        if (renderer3DComposites < 1)
+            fail("Renderer3D WebGL2 canvas was not composited into Renderer2D");
+        if (hostConsoleErrors.length !== 0)
+            fail(`Renderer3D Web console reported errors: ${hostConsoleErrors.join("\n")}`);
+        if (verifyNeonCyclesInput && (!drawnText.includes("P1") || !drawnText.includes("P2")))
+            fail("Neon Cycles two-player input path did not reach the active HUD");
+
+        for (let lifecycle = 0; lifecycle < 2; lifecycle += 1) {
+            const meshes = [];
+            const objects = [];
+            for (let primitive = 1; primitive <= 6; primitive += 1) {
+                const mesh = host.smile.renderer3D(7, primitive, 100, 50, 8, 6, 0, 0, 0, 0, 0);
+                const vertexCount = host.smile.renderer3D(19, mesh, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                const indexCount = host.smile.renderer3D(20, mesh, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                if (mesh === 0 || vertexCount <= 0 || indexCount <= 0 || indexCount % 3 !== 0)
+                    fail(`Renderer3D primitive ${primitive} produced invalid indexed geometry`);
+                const object = host.smile.renderer3D(8, mesh, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                if (object === 0) fail(`Renderer3D primitive ${primitive} object allocation failed`);
+                meshes.push(mesh);
+                objects.push(object);
+            }
+            if (host.smile.renderer3D(16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) === 0)
+                fail("Renderer3D repeated lifecycle could not begin a frame");
+            for (const object of objects)
+                if (host.smile.renderer3D(17, object, 0, 0, 0, 0, 0, 0, 0, 0, 0) === 0)
+                    fail("Renderer3D repeated lifecycle could not draw an object");
+            host.smile.renderer3D(18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+            for (const object of objects)
+                host.smile.renderer3D(9, object, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+            for (const mesh of meshes)
+                host.smile.renderer3D(9, mesh, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+            if (host.smile.renderer3D(17, objects[0], 0, 0, 0, 0, 0, 0, 0, 0, 0) !== 0)
+                fail("Renderer3D accepted a deleted object handle");
+        }
+        host.smile.renderer3D(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    }
     if (verifyPhase4Media || verifyPhase4Ownership || verifyPhase4Clip) {
         if (diagnostics.backingWidth !== visibleCanvas.width || diagnostics.backingHeight !== visibleCanvas.height ||
             diagnostics.backingWidth !== backCanvasElement.width || diagnostics.backingHeight !== backCanvasElement.height)

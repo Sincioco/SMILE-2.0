@@ -1,0 +1,14 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>Simple3DConformance</OutputName>
+    <ApplicationId>smile.example.simple3d-conformance</ApplicationId>
+    <GraphicsBackend>DirectX</GraphicsBackend>
+    <VSync>true</VSync>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

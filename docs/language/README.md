@@ -363,7 +363,7 @@ End Select
 
 Implemented control flow comprises multiline `If`/`Else If`/`Else`, `For ... To`, `For ... Down To`, `Do ... Loop`, `Do ... Loop Until`, `Exit For`, `Exit Do`, and `Select Case`. Procedures and functions use `Sub`, `Function`, `Call`, and `Return`, including typed `ByVal`/`ByRef` parameters and typed returns.
 
-The expression surface includes `+`, `-`, `*`, integer `/`, `Mod`, comparisons, parentheses, unary `-` and `Not`, and boolean `And`/`Or`. Built-in functions are `Timer()`, `Rgb(r, g, b)`, `Abs(value)`, `Min(a, b)`, `Max(a, b)`, `Game_Closed()`, and `Key_Held(key)`.
+The expression surface includes `+`, `-`, `*`, integer `/`, `Mod`, comparisons, parentheses, unary `-` and `Not`, and boolean `And`/`Or`. Common built-in functions include `Timer()`, `Rgb(r, g, b)`, `Abs(value)`, `Min(a, b)`, `Max(a, b)`, `Game_Closed()`, and `Key_Held(key)`. The game-window-only `Renderer3D(command, a, b, c, d, e, f, g, h, i, j)` built-in is the narrow compiler/runtime bridge used internally by `Smile.Simple3D.Graphics3D`; student programs should use that module rather than command values.
 
 ## Multiline parenthesized expressions
 

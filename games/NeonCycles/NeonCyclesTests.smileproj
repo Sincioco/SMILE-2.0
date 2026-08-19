@@ -1,0 +1,12 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Console</ProjectKind>
+    <StartupFile>NeonCyclesTests.smile</StartupFile>
+    <OutputName>NeonCyclesTests</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="NeonCyclesTests.smile" />
+    <SmileSource Include="NeonCyclesSimulation.smile" />
+    <SmileSource Include="NeonCyclesAI.smile" />
+  </ItemGroup>
+</SmileProject>

@@ -57,6 +57,8 @@ struct SmileDirectXState
 
 static SmileDirectXState smile_directx;
 
+extern "C" void smile_graphics3d_on_device_lost(void);
+
 template<typename T>
 static void smile_directx_release(T*& object)
 {
@@ -491,6 +493,7 @@ static HRESULT smile_directx_create_swap_chain(SmileDirectXState* state, int wid
 
 static void smile_directx_shutdown_resources(SmileDirectXState* state)
 {
+    smile_graphics3d_on_device_lost();
     smile_image_resource_release_backend_resources();
     smile_directx_release_render_target(state);
     smile_directx_release_text_formats(state);
@@ -608,6 +611,7 @@ static void smile_directx_resize(SmileGraphicsBackend* backend, int physical_wid
     if (state->swap_chain == 0 ||
         (physical_width == state->physical_width && physical_height == state->physical_height))
         return;
+    smile_graphics3d_on_device_lost();
     smile_directx_release_render_target(state);
     if (state->context != 0)
         state->context->ClearState();
@@ -1192,4 +1196,36 @@ extern "C" void smile_graphics_directx_create(SmileGraphicsBackend* backend)
 {
     backend->operations = &smile_directx_operations;
     backend->state = &smile_directx;
+}
+
+extern "C" void* smile_graphics_directx_device(void) { return smile_directx.device; }
+extern "C" void* smile_graphics_directx_context(void) { return smile_directx.context; }
+extern "C" void* smile_graphics_directx_render_target(void) { return smile_directx.render_target; }
+extern "C" int smile_graphics_directx_physical_width(void) { return smile_directx.physical_width; }
+extern "C" int smile_graphics_directx_physical_height(void) { return smile_directx.physical_height; }
+extern "C" double smile_graphics_directx_viewport_x(void) { return smile_directx.viewport.x; }
+extern "C" double smile_graphics_directx_viewport_y(void) { return smile_directx.viewport.y; }
+extern "C" double smile_graphics_directx_viewport_width(void) { return smile_directx.viewport.width; }
+extern "C" double smile_graphics_directx_viewport_height(void) { return smile_directx.viewport.height; }
+
+extern "C" int smile_graphics_directx_suspend_2d(void)
+{
+    if (smile_directx.device == 0 || smile_directx.context == 0 || smile_directx.render_target == 0)
+        return 0;
+    return SUCCEEDED(smile_directx_end_frame(&smile_directx));
+}
+
+extern "C" void smile_graphics_directx_resume_2d(void)
+{
+    D2D1_RECT_F viewport;
+    if (smile_directx.frame_active || smile_directx.minimized || smile_directx.d2d_context == 0)
+        return;
+    smile_directx.d2d_context->BeginDraw();
+    smile_directx.frame_active = 1;
+    viewport.left = (FLOAT)smile_directx.viewport.x;
+    viewport.top = (FLOAT)smile_directx.viewport.y;
+    viewport.right = (FLOAT)(smile_directx.viewport.x + smile_directx.viewport.width);
+    viewport.bottom = (FLOAT)(smile_directx.viewport.y + smile_directx.viewport.height);
+    smile_directx.d2d_context->PushAxisAlignedClip(viewport, D2D1_ANTIALIAS_MODE_ALIASED);
+    smile_directx.viewport_clip_active = 1;
 }

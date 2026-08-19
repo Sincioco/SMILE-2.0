@@ -1,0 +1,234 @@
+Option Explicit
+
+Import NeonCycles.Simulation As Simulation
+Import NeonCycles.AI As AI
+
+Dim Failures As Number
+Dim Requested As Boolean
+Dim FirstDirection As Number
+Dim SecondDirection As Number
+Dim FirstX As Number
+Dim FirstZ As Number
+Dim Index As Number
+
+Call Simulation.Initialize(5)
+
+FirstX = Simulation.PlayerX(Simulation.PLAYER_ONE)
+FirstZ = Simulation.PlayerZ(Simulation.PLAYER_ONE)
+
+Call Simulation.StepSimulation()
+
+If (Simulation.PlayerX(Simulation.PLAYER_ONE) <> FirstX Or
+    Simulation.PlayerZ(Simulation.PLAYER_ONE) <> FirstZ - 6) Then
+    Failures = Failures + 1
+End If
+
+Call Simulation.ResetRound()
+
+Requested = Simulation.RequestTurn(Simulation.PLAYER_ONE, Simulation.TURN_LEFT)
+
+Call Simulation.StepSimulation()
+
+If (Not Requested Or
+    Simulation.PlayerDirection(Simulation.PLAYER_ONE) <> Simulation.DIRECTION_WEST) Then
+    Failures = Failures + 1
+End If
+
+Requested = Simulation.RequestTurn(Simulation.PLAYER_ONE, Simulation.TURN_RIGHT)
+
+Call Simulation.StepSimulation()
+
+If (Not Requested Or
+    Simulation.PlayerDirection(Simulation.PLAYER_ONE) <> Simulation.DIRECTION_NORTH) Then
+    Failures = Failures + 1
+End If
+
+Call Simulation.ResetRound()
+Call Simulation.SetPlayerState(Simulation.PLAYER_ONE, 415, 100, Simulation.DIRECTION_EAST)
+Call Simulation.StepSimulation()
+
+If (Simulation.RoundResult() <> Simulation.ROUND_PLAYER_TWO Or
+    Simulation.PlayerAlive(Simulation.PLAYER_ONE)) Then
+    Failures = Failures + 1
+End If
+
+Call Simulation.Initialize(5)
+Call Simulation.SetPlayerState(Simulation.PLAYER_ONE, 0, 30, Simulation.DIRECTION_NORTH)
+Call Simulation.SetPlayerState(Simulation.PLAYER_TWO, 250, 250, Simulation.DIRECTION_EAST)
+Call Simulation.SetStepDistance(40)
+Call Simulation.AddTrail(Simulation.PLAYER_TWO, -80, 0, 80, 0)
+Call Simulation.StepSimulation()
+
+If Simulation.PlayerAlive(Simulation.PLAYER_ONE) Then
+    Failures = Failures + 1
+End If
+
+Call Simulation.Initialize(5)
+Call Simulation.SetPlayerState(Simulation.PLAYER_ONE, 0, 30, Simulation.DIRECTION_NORTH)
+Call Simulation.SetPlayerState(Simulation.PLAYER_TWO, 250, 250, Simulation.DIRECTION_EAST)
+Call Simulation.SetStepDistance(40)
+Call Simulation.AddTrail(Simulation.PLAYER_ONE, -80, 0, 80, 0)
+Call Simulation.AddTrail(Simulation.PLAYER_ONE, 300, 300, 330, 300)
+Call Simulation.StepSimulation()
+
+If Simulation.PlayerAlive(Simulation.PLAYER_ONE) Then
+    Failures = Failures + 1
+End If
+
+Call Simulation.Initialize(5)
+Call Simulation.SetPlayerState(Simulation.PLAYER_ONE, 0, 90, Simulation.DIRECTION_NORTH)
+Call Simulation.SetPlayerState(Simulation.PLAYER_TWO, 250, 250, Simulation.DIRECTION_EAST)
+Call Simulation.SetStepDistance(180)
+Call Simulation.AddTrail(Simulation.PLAYER_TWO, -60, 0, 60, 0)
+Call Simulation.StepSimulation()
+
+If Simulation.PlayerAlive(Simulation.PLAYER_ONE) Then
+    Failures = Failures + 1
+End If
+
+Call Simulation.Initialize(5)
+
+FirstX = Simulation.PlayerX(Simulation.PLAYER_ONE)
+FirstZ = Simulation.PlayerZ(Simulation.PLAYER_ONE)
+Requested = Simulation.RequestTurn(Simulation.PLAYER_ONE, Simulation.TURN_RIGHT)
+
+Call Simulation.StepSimulation()
+
+If (Not Requested Or
+    Simulation.TrailCount(Simulation.PLAYER_ONE) <> 0 Or
+    Simulation.ActiveTrailStartX(Simulation.PLAYER_ONE) <> FirstX Or
+    Simulation.ActiveTrailStartZ(Simulation.PLAYER_ONE) <> FirstZ) Then
+    Failures = Failures + 1
+End If
+
+Call Simulation.StepSimulation()
+
+Requested = Simulation.RequestTurn(Simulation.PLAYER_ONE, Simulation.TURN_LEFT)
+
+Call Simulation.StepSimulation()
+
+If (Simulation.TrailCount(Simulation.PLAYER_ONE) <> 1 Or
+    Simulation.TrailX1(Simulation.PLAYER_ONE, 0) <> FirstX Or
+    Simulation.TrailZ1(Simulation.PLAYER_ONE, 0) <> FirstZ) Then
+    Failures = Failures + 1
+End If
+
+Call Simulation.Initialize(5)
+Call Simulation.SetPlayerState(Simulation.PLAYER_ONE, -20, 0, Simulation.DIRECTION_EAST)
+Call Simulation.SetPlayerState(Simulation.PLAYER_TWO, 20, 0, Simulation.DIRECTION_WEST)
+Call Simulation.SetStepDistance(20)
+Call Simulation.StepSimulation()
+
+If (Simulation.RoundResult() <> Simulation.ROUND_DRAW Or
+    Simulation.PlayerAlive(Simulation.PLAYER_ONE) Or
+    Simulation.PlayerAlive(Simulation.PLAYER_TWO)) Then
+    Failures = Failures + 1
+End If
+
+Call Simulation.Initialize(5)
+Call Simulation.SetPlayerState(Simulation.PLAYER_ONE, 415, 100, Simulation.DIRECTION_EAST)
+Call Simulation.StepSimulation()
+Call Simulation.StepSimulation()
+
+If Simulation.PlayerScore(Simulation.PLAYER_TWO) <> 1 Then
+    Failures = Failures + 1
+End If
+
+Call Simulation.AddTrail(Simulation.PLAYER_ONE, 0, 0, 50, 0)
+
+Requested = Simulation.RequestTurn(Simulation.PLAYER_ONE, Simulation.TURN_LEFT)
+
+Call Simulation.ResetRound()
+Call Simulation.StepSimulation()
+
+If (Simulation.TrailCount(Simulation.PLAYER_ONE) <> 0 Or
+    Simulation.PlayerDirection(Simulation.PLAYER_ONE) <> Simulation.DIRECTION_NORTH) Then
+    Failures = Failures + 1
+End If
+
+Call Simulation.Initialize(1)
+Call Simulation.SetPlayerState(Simulation.PLAYER_ONE, 415, 100, Simulation.DIRECTION_EAST)
+Call Simulation.StepSimulation()
+
+If Simulation.MatchWinner() <> Simulation.PLAYER_TWO Then
+    Failures = Failures + 1
+End If
+
+Call Simulation.Initialize(5)
+
+For Index = 0 To 12
+
+    If Index = 2 Or Index = 7 Then
+        Requested = Simulation.RequestTurn(Simulation.PLAYER_ONE, Simulation.TURN_RIGHT)
+    End If
+
+    Call Simulation.StepSimulation()
+End For
+FirstX = Simulation.PlayerX(Simulation.PLAYER_ONE)
+FirstZ = Simulation.PlayerZ(Simulation.PLAYER_ONE)
+
+Call Simulation.Initialize(5)
+
+For Index = 0 To 12
+
+    If Index = 2 Or Index = 7 Then
+        Requested = Simulation.RequestTurn(Simulation.PLAYER_ONE, Simulation.TURN_RIGHT)
+    End If
+
+    Call Simulation.StepSimulation()
+End For
+
+If (FirstX <> Simulation.PlayerX(Simulation.PLAYER_ONE) Or
+    FirstZ <> Simulation.PlayerZ(Simulation.PLAYER_ONE)) Then
+    Failures = Failures + 1
+End If
+
+Call Simulation.Initialize(5)
+Call Simulation.SetPlayerState(Simulation.PLAYER_TWO, 0, 60, Simulation.DIRECTION_NORTH)
+Call Simulation.SetPlayerState(Simulation.PLAYER_ONE, 250, 250, Simulation.DIRECTION_EAST)
+Call Simulation.AddTrail(Simulation.PLAYER_ONE, -100, 0, 100, 0)
+Call AI.Reset(77)
+Call AI.Update()
+Call Simulation.StepSimulation()
+
+FirstDirection = Simulation.PlayerDirection(Simulation.PLAYER_TWO)
+
+If (FirstDirection = Simulation.DIRECTION_NORTH Or
+    Not Simulation.PlayerAlive(Simulation.PLAYER_TWO)) Then
+    Failures = Failures + 1
+End If
+
+Call Simulation.Initialize(5)
+Call Simulation.SetPlayerState(Simulation.PLAYER_TWO, 0, 60, Simulation.DIRECTION_NORTH)
+Call Simulation.SetPlayerState(Simulation.PLAYER_ONE, 250, 250, Simulation.DIRECTION_EAST)
+Call Simulation.AddTrail(Simulation.PLAYER_ONE, -100, 0, 100, 0)
+Call AI.Reset(77)
+Call AI.Update()
+Call Simulation.StepSimulation()
+
+SecondDirection = Simulation.PlayerDirection(Simulation.PLAYER_TWO)
+
+If FirstDirection <> SecondDirection Then
+    Failures = Failures + 1
+End If
+
+Call Simulation.Initialize(5)
+Call Simulation.SetPlayerState(Simulation.PLAYER_TWO, 0, 60, Simulation.DIRECTION_NORTH)
+Call Simulation.SetPlayerState(Simulation.PLAYER_ONE, 250, 250, Simulation.DIRECTION_EAST)
+Call Simulation.AddTrail(Simulation.PLAYER_ONE, -100, 0, 100, 0)
+Call AI.Reset(77)
+
+For Index = 0 To 29
+    Call AI.Update()
+    Call Simulation.StepSimulation()
+End For
+
+If Not Simulation.PlayerAlive(Simulation.PLAYER_TWO) Then
+    Failures = Failures + 1
+End If
+
+If Failures = 0 Then
+    Print "Neon Cycles tests passed"
+Else
+    Print "Neon Cycles tests failed: "; Failures
+End If

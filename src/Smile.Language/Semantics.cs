@@ -4137,6 +4137,8 @@ internal sealed class SemanticAnalyzer
             SyntaxKind.PointerDeltaYKeyword or SyntaxKind.PointerWheelDeltaKeyword or SyntaxKind.PointerInsideKeyword or
             SyntaxKind.PointerHeldKeyword or SyntaxKind.PointerPressedKeyword or SyntaxKind.PointerReleasedKeyword)
             RequireGameWindow(identifier.Span, $"Built-in '{identifier.Text}'");
+        if (identifier.Kind == SyntaxKind.Renderer3DKeyword)
+            RequireGameWindow(identifier.Span, $"Built-in '{identifier.Text}'");
         if (arguments.Count != expected)
             Report("SML3016", identifier.Span, $"Built-in '{identifier.Text}' expects {expected} argument(s), found {arguments.Count}.");
         if (identifier.Kind is SyntaxKind.ImageWidthKeyword or SyntaxKind.ImageHeightKeyword or SyntaxKind.ImageLoadedKeyword)

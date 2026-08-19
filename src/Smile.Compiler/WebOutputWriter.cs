@@ -157,6 +157,7 @@ internal static class WebOutputWriter
             const visible = canvas.getContext("2d", { alpha: false });
             const backCanvas = document.createElement("canvas");
             const back = backCanvas.getContext("2d", { alpha: false });
+            const renderer3DCanvas = document.createElement("canvas");
             const consoleOutput = document.getElementById("smile-console");
             const errorPanel = document.getElementById("smile-error");
             const shell = document.getElementById("smile-shell");
@@ -224,6 +225,16 @@ internal static class WebOutputWriter
             let pointerHeldButtons = 0;
             let pointerPressedButtons = 0;
             let pointerReleasedButtons = 0;
+            let renderer3DGl = null;
+            let renderer3DProgram = null;
+            let renderer3DLastError = 0;
+            let renderer3DNextHandle = 1;
+            let renderer3DFrameActive = false;
+            const renderer3DMeshes = new Map();
+            const renderer3DObjects = new Map();
+            const renderer3DCamera = {
+                position: [0, 300, -800], target: [0, 0, 0], fov: 55, near: 1, far: 10000
+            };
 
             function readVirtualControlsMode() {
                 try {
@@ -692,8 +703,233 @@ internal static class WebOutputWriter
                     backingHeight = height;
                     canvas.width = backCanvas.width = width;
                     canvas.height = backCanvas.height = height;
+                    renderer3DCanvas.width = width;
+                    renderer3DCanvas.height = height;
                     restoreVisibleState();
                     restoreBackState();
+                }
+            }
+
+            function renderer3DContext() {
+                if (renderer3DGl) return renderer3DGl;
+                let context = null;
+                try {
+                    context = renderer3DCanvas.getContext("webgl2", {
+                        alpha: false, antialias: true, depth: true, preserveDrawingBuffer: true
+                    });
+                } catch (_) { }
+                if (!context || typeof context.createShader !== "function") return null;
+                renderer3DGl = context;
+                return context;
+            }
+
+            function renderer3DCompile(gl, type, source) {
+                const shader = gl.createShader(type);
+                gl.shaderSource(shader, source);
+                gl.compileShader(shader);
+                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                    const detail = gl.getShaderInfoLog(shader) || "unknown shader error";
+                    gl.deleteShader(shader);
+                    throw new Error(`Renderer3D WebGL2 shader compilation failed: ${detail}`);
+                }
+                return shader;
+            }
+
+            function renderer3DInitialize() {
+                const gl = renderer3DContext();
+                if (!gl) { renderer3DLastError = 20; return false; }
+                if (renderer3DProgram) return true;
+                const vertex = renderer3DCompile(gl, gl.VERTEX_SHADER, `#version 300 es
+                    precision highp float;
+                    layout(location=0) in vec3 position;
+                    layout(location=1) in vec3 normal;
+                    uniform mat4 model;
+                    uniform mat4 mvp;
+                    out vec3 surfaceNormal;
+                    void main(){gl_Position=mvp*vec4(position,1.0);surfaceNormal=normalize(mat3(model)*normal);}`);
+                const fragment = renderer3DCompile(gl, gl.FRAGMENT_SHADER, `#version 300 es
+                    precision highp float;
+                    in vec3 surfaceNormal;
+                    uniform vec4 tint;
+                    out vec4 outputColor;
+                    void main(){float light=.28+.72*max(0.0,dot(normalize(surfaceNormal),normalize(vec3(-.35,.8,-.45))));outputColor=vec4(tint.rgb*light,tint.a);}`);
+                const program = gl.createProgram();
+                gl.attachShader(program, vertex); gl.attachShader(program, fragment); gl.linkProgram(program);
+                gl.deleteShader(vertex); gl.deleteShader(fragment);
+                if (!gl.getProgramParameter(program, gl.LINK_STATUS))
+                    throw new Error(`Renderer3D WebGL2 program link failed: ${gl.getProgramInfoLog(program) || "unknown link error"}`);
+                renderer3DProgram = {
+                    handle: program,
+                    model: gl.getUniformLocation(program, "model"),
+                    mvp: gl.getUniformLocation(program, "mvp"),
+                    tint: gl.getUniformLocation(program, "tint")
+                };
+                gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS); gl.disable(gl.CULL_FACE);
+                gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+                return true;
+            }
+
+            function renderer3DHandle() { return safe(renderer3DNextHandle++); }
+
+            function renderer3DCreateMesh(vertexCount, indexCount) {
+                vertexCount = safe(vertexCount); indexCount = safe(indexCount);
+                if (renderer3DMeshes.size >= 128 || vertexCount <= 0 || vertexCount > 65535 ||
+                    indexCount <= 0 || indexCount > 196608 || indexCount % 3 !== 0) {
+                    renderer3DLastError = 2; return 0;
+                }
+                const handle = renderer3DHandle();
+                renderer3DMeshes.set(handle, {
+                    vertexCount, indexCount, vertices: new Float32Array(vertexCount * 6),
+                    indices: new Uint32Array(indexCount), committed: false, vertexBuffer: null, indexBuffer: null
+                });
+                return handle;
+            }
+
+            function renderer3DRequireMesh(handle) {
+                const mesh = renderer3DMeshes.get(safe(handle));
+                if (!mesh) renderer3DLastError = 5;
+                return mesh || null;
+            }
+
+            function renderer3DRequireObject(handle) {
+                const object = renderer3DObjects.get(safe(handle));
+                if (!object) renderer3DLastError = 5;
+                return object || null;
+            }
+
+            function renderer3DSetVertex(mesh, index, x, y, z) {
+                index = safe(index);
+                if (index < 0 || index >= mesh.vertexCount) { renderer3DLastError = 5; return false; }
+                const offset = index * 6;
+                mesh.vertices[offset] = safe(x); mesh.vertices[offset + 1] = safe(y); mesh.vertices[offset + 2] = safe(z);
+                mesh.committed = false;
+                return true;
+            }
+
+            function renderer3DSetTriangle(mesh, triangle, a, b, c) {
+                triangle = safe(triangle); a = safe(a); b = safe(b); c = safe(c);
+                const offset = triangle * 3;
+                if (triangle < 0 || offset + 2 >= mesh.indexCount || a < 0 || b < 0 || c < 0) {
+                    renderer3DLastError = 5; return false;
+                }
+                mesh.indices[offset] = a; mesh.indices[offset + 1] = b; mesh.indices[offset + 2] = c;
+                mesh.committed = false;
+                return true;
+            }
+
+            function renderer3DDeleteGpu(mesh) {
+                const gl = renderer3DGl;
+                if (gl && mesh.vertexBuffer) gl.deleteBuffer(mesh.vertexBuffer);
+                if (gl && mesh.indexBuffer) gl.deleteBuffer(mesh.indexBuffer);
+                mesh.vertexBuffer = null; mesh.indexBuffer = null;
+            }
+
+            function renderer3DCommit(mesh) {
+                mesh.vertices.forEach((_, index) => { if (index % 6 >= 3) mesh.vertices[index] = 0; });
+                for (let offset = 0; offset < mesh.indexCount; offset += 3) {
+                    const ia = mesh.indices[offset], ib = mesh.indices[offset + 1], ic = mesh.indices[offset + 2];
+                    if (ia >= mesh.vertexCount || ib >= mesh.vertexCount || ic >= mesh.vertexCount) {
+                        renderer3DLastError = 6; return false;
+                    }
+                    const a = ia * 6, b = ib * 6, c = ic * 6;
+                    const ux = mesh.vertices[b] - mesh.vertices[a], uy = mesh.vertices[b + 1] - mesh.vertices[a + 1], uz = mesh.vertices[b + 2] - mesh.vertices[a + 2];
+                    const vx = mesh.vertices[c] - mesh.vertices[a], vy = mesh.vertices[c + 1] - mesh.vertices[a + 1], vz = mesh.vertices[c + 2] - mesh.vertices[a + 2];
+                    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+                    for (const vertex of [a, b, c]) {
+                        mesh.vertices[vertex + 3] += nx; mesh.vertices[vertex + 4] += ny; mesh.vertices[vertex + 5] += nz;
+                    }
+                }
+                for (let index = 0; index < mesh.vertexCount; index += 1) {
+                    const offset = index * 6 + 3;
+                    const length = Math.hypot(mesh.vertices[offset], mesh.vertices[offset + 1], mesh.vertices[offset + 2]);
+                    if (length > .000001) {
+                        mesh.vertices[offset] /= length; mesh.vertices[offset + 1] /= length; mesh.vertices[offset + 2] /= length;
+                    } else mesh.vertices[offset + 1] = 1;
+                }
+                renderer3DDeleteGpu(mesh); mesh.committed = true; return true;
+            }
+
+            function renderer3DPrimitive(kind, first, second, segments, rings) {
+                kind = safe(kind); first = safe(first); second = safe(second); segments = safe(segments); rings = safe(rings);
+                let handle = 0, mesh = null, triangle = 0;
+                const vertex = (index, x, y, z) => renderer3DSetVertex(mesh, index, Math.round(x), Math.round(y), Math.round(z));
+                const face = (a, b, c) => renderer3DSetTriangle(mesh, triangle++, a, b, c);
+                if (first <= 0 || (kind !== 1 && second <= 0)) { renderer3DLastError = 7; return 0; }
+                if (kind === 1) {
+                    handle = renderer3DCreateMesh(24, 36); mesh = renderer3DRequireMesh(handle);
+                    const p = [-1,-1,-1,1,-1,-1,1,1,-1,-1,1,-1,-1,-1,1,-1,1,1,1,1,1,1,-1,1,
+                        -1,-1,-1,-1,1,-1,-1,1,1,-1,-1,1,1,-1,-1,1,-1,1,1,1,1,1,1,-1,
+                        -1,1,-1,1,1,-1,1,1,1,-1,1,1,-1,-1,-1,-1,-1,1,1,-1,1,1,-1,-1];
+                    for (let index = 0; index < 24; index += 1) vertex(index, p[index*3]*first/2, p[index*3+1]*first/2, p[index*3+2]*first/2);
+                    for (let side = 0; side < 6; side += 1) { face(side*4,side*4+1,side*4+2); face(side*4,side*4+2,side*4+3); }
+                } else if (kind === 2) {
+                    handle = renderer3DCreateMesh(4, 6); mesh = renderer3DRequireMesh(handle);
+                    vertex(0,-first/2,0,-second/2);vertex(1,-first/2,0,second/2);vertex(2,first/2,0,second/2);vertex(3,first/2,0,-second/2);face(0,1,2);face(0,2,3);
+                } else if (kind === 3) {
+                    handle = renderer3DCreateMesh(5, 18); mesh = renderer3DRequireMesh(handle);
+                    vertex(0,-first/2,-second/2,-first/2);vertex(1,first/2,-second/2,-first/2);vertex(2,first/2,-second/2,first/2);vertex(3,-first/2,-second/2,first/2);vertex(4,0,second/2,0);
+                    face(0,2,1);face(0,3,2);face(0,1,4);face(1,2,4);face(2,3,4);face(3,0,4);
+                } else if (kind === 4) {
+                    segments=Math.max(6,Math.min(48,segments));rings=Math.max(3,Math.min(32,rings));
+                    handle=renderer3DCreateMesh((rings+1)*(segments+1),rings*segments*6);mesh=renderer3DRequireMesh(handle);
+                    for(let ring=0;ring<=rings;ring+=1){const lat=-Math.PI/2+Math.PI*ring/rings,rr=Math.cos(lat)*first,y=Math.sin(lat)*first;for(let segment=0;segment<=segments;segment+=1){const lon=2*Math.PI*segment/segments;vertex(ring*(segments+1)+segment,Math.cos(lon)*rr,y,Math.sin(lon)*rr);}}
+                    for(let ring=0;ring<rings;ring+=1)for(let segment=0;segment<segments;segment+=1){const a=ring*(segments+1)+segment,b=a+1,c=a+segments+1,d=c+1;face(a,c,b);face(b,c,d);}
+                } else if (kind === 5) {
+                    segments=Math.max(6,Math.min(64,segments));handle=renderer3DCreateMesh(segments*2+2,segments*12);mesh=renderer3DRequireMesh(handle);
+                    for(let segment=0;segment<segments;segment+=1){const angle=2*Math.PI*segment/segments,x=Math.cos(angle)*first,z=Math.sin(angle)*first;vertex(segment,x,-second/2,z);vertex(segment+segments,x,second/2,z);}vertex(segments*2,0,-second/2,0);vertex(segments*2+1,0,second/2,0);
+                    for(let segment=0;segment<segments;segment+=1){const next=(segment+1)%segments,top=segment+segments,nextTop=next+segments;face(segment,top,next);face(next,top,nextTop);face(segments*2,next,segment);face(segments*2+1,top,nextTop);}
+                } else if (kind === 6) {
+                    segments=Math.max(6,Math.min(48,segments));rings=Math.max(4,Math.min(24,rings));handle=renderer3DCreateMesh((segments+1)*(rings+1),segments*rings*6);mesh=renderer3DRequireMesh(handle);
+                    for(let major=0;major<=segments;major+=1){const a=2*Math.PI*major/segments;for(let minor=0;minor<=rings;minor+=1){const b=2*Math.PI*minor/rings,rr=first+second*Math.cos(b);vertex(major*(rings+1)+minor,Math.cos(a)*rr,second*Math.sin(b),Math.sin(a)*rr);}}
+                    for(let major=0;major<segments;major+=1)for(let minor=0;minor<rings;minor+=1){const a=major*(rings+1)+minor,b=a+1,c=a+rings+1,d=c+1;face(a,c,b);face(b,c,d);}
+                } else { renderer3DLastError = 8; return 0; }
+                return mesh && renderer3DCommit(mesh) ? handle : 0;
+            }
+
+            function renderer3DIdentity() { return [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]; }
+            function renderer3DMultiply(a,b){const r=new Array(16).fill(0);for(let row=0;row<4;row+=1)for(let col=0;col<4;col+=1)for(let k=0;k<4;k+=1)r[row*4+col]+=a[row*4+k]*b[k*4+col];return r;}
+            function renderer3DNormalize(v){const l=Math.hypot(v[0],v[1],v[2]);return l>.000001?[v[0]/l,v[1]/l,v[2]/l]:[0,1,0];}
+            function renderer3DCross(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+            function renderer3DDot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+            function renderer3DModel(object){const [sx,sy,sz]=object.scale,[rx,ry,rz]=object.rotation.map(value=>value*Math.PI/180);let s=renderer3DIdentity(),x=renderer3DIdentity(),y=renderer3DIdentity(),z=renderer3DIdentity(),t=renderer3DIdentity();s[0]=sx;s[5]=sy;s[10]=sz;x[5]=Math.cos(rx);x[6]=-Math.sin(rx);x[9]=Math.sin(rx);x[10]=Math.cos(rx);y[0]=Math.cos(ry);y[2]=Math.sin(ry);y[8]=-Math.sin(ry);y[10]=Math.cos(ry);z[0]=Math.cos(rz);z[1]=-Math.sin(rz);z[4]=Math.sin(rz);z[5]=Math.cos(rz);t[12]=object.position[0];t[13]=object.position[1];t[14]=object.position[2];return renderer3DMultiply(t,renderer3DMultiply(z,renderer3DMultiply(y,renderer3DMultiply(x,s))));}
+            function renderer3DView(){const eye=renderer3DCamera.position,target=renderer3DCamera.target,z=renderer3DNormalize([target[0]-eye[0],target[1]-eye[1],target[2]-eye[2]]),x=renderer3DNormalize(renderer3DCross([0,1,0],z)),y=renderer3DCross(z,x);return[x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-renderer3DDot(x,eye),-renderer3DDot(y,eye),-renderer3DDot(z,eye),1];}
+            function renderer3DProjection(aspect){const f=1/Math.tan(renderer3DCamera.fov*Math.PI/360),near=renderer3DCamera.near,far=renderer3DCamera.far;return[f/aspect,0,0,0,0,f,0,0,0,0,(far+near)/(near-far),-1,0,0,2*far*near/(near-far),0];}
+
+            function renderer3DUpload(mesh) {
+                const gl=renderer3DGl;if(mesh.vertexBuffer&&mesh.indexBuffer)return true;if(!gl||!mesh.committed)return false;
+                mesh.vertexBuffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,mesh.vertexBuffer);gl.bufferData(gl.ARRAY_BUFFER,mesh.vertices,gl.STATIC_DRAW);
+                mesh.indexBuffer=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,mesh.indexBuffer);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,mesh.indices,gl.STATIC_DRAW);return true;
+            }
+
+            function renderer3DBegin(red,green,blue){if(!renderer3DInitialize())return 0;const gl=renderer3DGl;if(renderer3DCanvas.width!==backingWidth||renderer3DCanvas.height!==backingHeight){renderer3DCanvas.width=backingWidth;renderer3DCanvas.height=backingHeight;}gl.viewport(0,0,backingWidth,backingHeight);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.disable(gl.CULL_FACE);gl.clearColor((safe(red)&255)/255,(safe(green)&255)/255,(safe(blue)&255)/255,1);gl.clearDepth(1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(renderer3DProgram.handle);renderer3DFrameActive=true;return 1;}
+            function renderer3DDraw(handle){const object=renderer3DRequireObject(handle);if(!renderer3DFrameActive||!object){renderer3DLastError=14;return 0;}if(!object.visible)return 1;const mesh=renderer3DRequireMesh(object.mesh);if(!mesh||!renderer3DUpload(mesh))return 0;const gl=renderer3DGl,model=renderer3DModel(object),mvp=renderer3DMultiply(renderer3DProjection(backingWidth/backingHeight),renderer3DMultiply(renderer3DView(),model));gl.bindBuffer(gl.ARRAY_BUFFER,mesh.vertexBuffer);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,24,0);gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,3,gl.FLOAT,false,24,12);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,mesh.indexBuffer);gl.uniformMatrix4fv(renderer3DProgram.model,false,new Float32Array(model));gl.uniformMatrix4fv(renderer3DProgram.mvp,false,new Float32Array(mvp));gl.uniform4fv(renderer3DProgram.tint,new Float32Array(object.color));gl.drawElements(gl.TRIANGLES,mesh.indexCount,gl.UNSIGNED_INT,0);return 1;}
+            function renderer3DEnd(){if(!renderer3DFrameActive)return 1;renderer3DFrameActive=false;back.drawImage(renderer3DCanvas,0,0,logicalWidth,logicalHeight);return 1;}
+            function renderer3DReset(){renderer3DFrameActive=false;for(const mesh of renderer3DMeshes.values())renderer3DDeleteGpu(mesh);renderer3DMeshes.clear();renderer3DObjects.clear();renderer3DLastError=0;return 1;}
+
+            function renderer3D(command,a,b,c,d,e,f,g,h,i,j) {
+                [command,a,b,c,d,e,f,g,h,i,j]=[command,a,b,c,d,e,f,g,h,i,j].map(safe);
+                let mesh,object;
+                switch(command){
+                    case 1:return renderer3DInitialize()?1:0;
+                    case 2:return renderer3DReset();
+                    case 3:return renderer3DCreateMesh(a,b);
+                    case 4:mesh=renderer3DRequireMesh(a);return mesh&&renderer3DSetVertex(mesh,b,c,d,e)?1:0;
+                    case 5:mesh=renderer3DRequireMesh(a);return mesh&&renderer3DSetTriangle(mesh,b,c,d,e)?1:0;
+                    case 6:mesh=renderer3DRequireMesh(a);return mesh&&renderer3DCommit(mesh)?1:0;
+                    case 7:return renderer3DPrimitive(a,b,c,d,e);
+                    case 8:if(!renderer3DRequireMesh(a)||renderer3DObjects.size>=256){renderer3DLastError=9;return 0;}const handle=renderer3DHandle();renderer3DObjects.set(handle,{mesh:a,position:[0,0,0],rotation:[0,0,0],scale:[1,1,1],color:[1,1,1,1],visible:true});return handle;
+                    case 9:if(renderer3DObjects.delete(a))return 1;mesh=renderer3DMeshes.get(a);if(mesh){renderer3DDeleteGpu(mesh);renderer3DMeshes.delete(a);return 1;}renderer3DLastError=5;return 0;
+                    case 10:renderer3DCamera.position=[a,b,c];renderer3DCamera.target=[d,e,f];renderer3DCamera.fov=g;renderer3DCamera.near=h;renderer3DCamera.far=i;if(g<10||g>160||h<=0||i<=h){renderer3DLastError=15;return 0;}return 1;
+                    case 11:case 12:case 13:object=renderer3DRequireObject(a);if(!object)return 0;if(command===11)object.position=[b,c,d];else if(command===12)object.rotation=[b,c,d];else object.scale=[b/100,c/100,d/100];return 1;
+                    case 14:object=renderer3DRequireObject(a);if(!object)return 0;object.color=[(b&255)/255,(c&255)/255,(d&255)/255,Math.max(0,Math.min(100,e))/100];return 1;
+                    case 15:object=renderer3DRequireObject(a);if(!object)return 0;object.visible=b!==0;return 1;
+                    case 16:return renderer3DBegin(a,b,c);
+                    case 17:return renderer3DDraw(a);
+                    case 18:return renderer3DEnd();
+                    case 19:mesh=renderer3DRequireMesh(a);return mesh?mesh.vertexCount:0;
+                    case 20:mesh=renderer3DRequireMesh(a);return mesh?mesh.indexCount:0;
+                    case 21:return renderer3DLastError;
+                    default:renderer3DLastError=1;return 0;
                 }
             }
 
@@ -1536,7 +1772,7 @@ internal static class WebOutputWriter
                 print, clearScreen, wait, getKey, keyHeld, pointerX, pointerY, pointerDeltaX, pointerDeltaY,
                 pointerWheelDelta, pointerInside, pointerHeld, pointerPressed, pointerReleased, playSound, stopSound,
                 playMusic, pauseMusic, resumeMusic, stopMusic, setMusicVolume, loadTextFile,
-                loadInt, saveInt, loadData, saveData, gameClosed, endProgram, mediaShutdown, mediaDiagnostics, run
+                loadInt, saveInt, loadData, saveData, renderer3D, gameClosed, endProgram, mediaShutdown, mediaDiagnostics, run
             };
         })();
         """;

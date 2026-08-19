@@ -1,9 +1,9 @@
-''' Shared value types and public limits for educational software-rendered 3D.
+''' Shared value types and public limits for educational wireframe and true 3D.
 Module Smile.Simple3D.Core
 
 Option Explicit
 
-Public Const SIMPLE3D_VERSION_MAJOR = 1
+Public Const SIMPLE3D_VERSION_MAJOR = 2
 Public Const FIXED_ONE = 16384
 Public Const ANGLE_FULL = 360
 Public Const PROJECTION_PERSPECTIVE = 1
@@ -19,6 +19,26 @@ Public Type Vector3
     X As Number
     Y As Number
     Z As Number
+End Type
+
+''' Fixed-point 4 by 4 matrix. FIXED_ONE represents 1.0.
+Public Type Matrix4
+    M11 As Number
+    M12 As Number
+    M13 As Number
+    M14 As Number
+    M21 As Number
+    M22 As Number
+    M23 As Number
+    M24 As Number
+    M31 As Number
+    M32 As Number
+    M33 As Number
+    M34 As Number
+    M41 As Number
+    M42 As Number
+    M43 As Number
+    M44 As Number
 End Type
 
 ''' Euler angles in public integer degrees, applied X then Y then Z.
@@ -38,15 +58,34 @@ End Type
 ''' Camera values in world units and logical canvas pixels.
 Public Type Camera3D
     Position As Vector3
+    Target As Vector3
     Rotation As Rotation3D
     Projection As Number
     NearPlane As Number
+    FarPlane As Number
+    FovDegrees As Number
     FocalLength As Number
     OrthographicScale As Number
     ViewX As Number
     ViewY As Number
     ViewWidth As Number
     ViewHeight As Number
+End Type
+
+''' A bounded Renderer3D object and its owned indexed mesh.
+Public Type Object3D
+    Handle As Number
+    MeshHandle As Number
+    Position As Vector3
+    Rotation As Rotation3D
+    ScaleX As Number
+    ScaleY As Number
+    ScaleZ As Number
+    ColorRed As Number
+    ColorGreen As Number
+    ColorBlue As Number
+    AlphaPercent As Number
+    Visible As Boolean
 End Type
 
 ''' A projected logical-canvas point plus its camera-space depth.

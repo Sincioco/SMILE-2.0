@@ -1,61 +1,76 @@
-# Smile.Simple3D API
+# Smile.Simple3D 2.0 API
 
-Public units are integer world units, degrees, logical canvas pixels, percentages, and milliseconds. Zero is an invalid mesh handle. Boolean/query failures return `False`; numeric queries on invalid handles return zero except invalid edge indices, which return `-1`.
+Public 3D positions and sizes use integer world units. Rotations use integer degrees, scales and opacity use percentages, and `Matrix4` values use `Core.FIXED_ONE` fixed point. A zero handle means failure.
 
 ## `Smile.Simple3D.Core`
 
-Constants: `FIXED_ONE` (16384), `ANGLE_FULL` (360), `PROJECTION_PERSPECTIVE`, `PROJECTION_ORTHOGRAPHIC`, `MAX_MESHES` (32), `MAX_VERTICES` (768 per mesh), `MAX_EDGES` (1536 per mesh), `DEFAULT_LINE_BUDGET` (2500), and `MAX_WORLD_COORDINATE` (1,000,000).
+True-3D types:
 
-Types:
+- `Vector3`: `X`, `Y`, and `Z`.
+- `Matrix4`: `M11` through `M44`, scaled by `FIXED_ONE`.
+- `Camera3D`: position, target, projection fields, near/far planes, FOV, and the legacy wireframe viewport fields.
+- `Object3D`: validated object/mesh handles plus mirrored position, rotation, scale, color, opacity, and visibility values.
 
-- `Vector3`: `X`, `Y`, `Z` world values.
-- `Rotation3D`: `X`, `Y`, `Z` integer degrees.
-- `Transform3D`: `Position`, `Rotation`, `ScalePercent`.
-- `Camera3D`: position/rotation, projection mode, near plane, focal length, orthographic scale, and logical viewport.
-- `ProjectedPoint3D`: projected `X`, `Y`, camera-space `Depth`, and `Visible`.
-- `OrbitState3D`: yaw, pitch, inertial velocities, distance, and dragging state.
+The legacy wireframe types and limits remain source compatible.
 
-## `Smile.Simple3D.FixedMath`
+## `Smile.Simple3D.Math3D`
 
-- `WrapDegrees(Angle)`: wraps any integer angle to 0–359.
-- `SinFixed(Angle)`, `CosFixed(Angle)`: return values scaled by `FIXED_ONE`.
-- `MultiplyFixed(LeftValue, RightValue)`: fixed multiply.
-- `DivideFixed(Numerator, Denominator)`: fixed divide; zero denominator returns zero.
-- `RotateX`, `RotateY`, `RotateZ`, `Rotate`: rotate `Vector3` values; combined order is X/Y/Z.
+- `Vector`, `Add`, `Subtract`, `MultiplyScalar`, `Dot`, `Cross`, `Length`, `Normalize`, and `Distance`.
+- `Identity`, `Translation`, `Scale`, `RotationX`, `RotationY`, `RotationZ`, and `Multiply`.
+- `TransformPoint`, `Perspective`, and `LookAt`.
 
-## `Smile.Simple3D.Mesh`
+Normalization returns a vector with length `FIXED_ONE`; normalizing zero returns zero. Matrix operations are deterministic integer operations shared by Windows and Web.
 
-- `CreateMesh()`: allocates a clean bounded slot or returns zero.
-- `DestroyMesh(Handle)`, `ClearMesh(Handle)`: safe for invalid/stale handles.
-- `IsValid`, `VertexCount`, `EdgeCount`.
-- `AddVertex(Handle, X, Y, Z)`: returns the zero-based index or `-1`.
-- `AddEdge(Handle, StartVertex, EndVertex)`: validates both existing indices.
-- `VertexX`, `VertexY`, `VertexZ`, `EdgeStart`, `EdgeEnd`: checked renderer/lesson accessors.
+## `Smile.Simple3D.Graphics3D`
 
-## `Smile.Simple3D.Primitives`
+Availability and lifecycle:
 
-- `CreateCube(Size)`: 8 vertices, 12 edges.
-- `CreatePyramid(Size, Height)`: 5 vertices, 8 edges.
-- `CreateSphere(Radius, Segments, Rings)`: segments 6–32, rings 3–16.
-- `CreateDonut(MajorRadius, MinorRadius, MajorSegments, MinorSegments)`: major segments 6–32, minor segments 4–16.
-- `CreateAxes(Length)` and `CreateGrid(HalfLines, Spacing)`.
+- `RendererAvailable()`
+- `LastError()`
+- `ResetRenderer3D()`
+- `DestroyObject3D(ByRef Object)` for an object and its owned mesh
+- `DestroyObjectInstance3D(ByRef Object)` for an instance using a shared mesh
 
-Each returns zero on invalid arguments, capacity exhaustion, or partial construction failure. Partial meshes are destroyed before return.
+Camera and frame:
 
-## `Smile.Simple3D.Renderer`
+- `DefaultCamera()`
+- `Begin3D(Camera, Red, Green, Blue)`
+- `DrawObject3D(Object)`
+- `End3D()`
 
-- `DefaultCamera(ViewWidth, ViewHeight)` and `IdentityTransform()`.
-- `TransformPoint`, `WorldToCamera`, `ProjectPoint`.
-- `BeginFrame(MaximumLines)`: resets draw/drop counters; values outside 1–2500 select 2500.
-- `FrameLinesDrawn()`, `FrameLinesDropped()`.
-- `DrawLine3D(First, Second, Camera, LineColor, GlowPasses)`.
-- `DrawMesh(Handle, Transform, Camera, LineColor, GlowPasses)`.
-- `SphereVisible(Center, Radius, Camera)`: conservative near-plane visibility.
+Primitive objects:
 
-Perspective projection clips in camera space before division. Both modes clip in logical viewport space. Glow is clamped to 0–3 passes.
+- `CreateCube3D(Size)`
+- `CreatePlane3D(Width, Depth)`
+- `CreatePyramid3D(Size, Height)`
+- `CreateSphere3D(Radius)`
+- `CreateCylinder3D(Radius, Height)`
+- `CreateTorus3D(MajorRadius, MinorRadius)` and `CreateDonut3D(...)`
 
-## `Smile.Simple3D.Interaction`
+Custom indexed meshes:
 
-- `ResetOrbit(ByRef Orbit)` and `CancelOrbit(ByRef Orbit)`.
-- `UpdateOrbit(ByRef Orbit, Pressed, Held, Released, DeltaX, DeltaY, WheelDelta, ElapsedMilliseconds)`: pure bounded input update.
-- `UpdateOrbitFromPointer(ByRef Orbit, ElapsedMilliseconds)`: adapter over `POINTER_PRIMARY` and the pointer built-ins.
+- `CreateMesh3D(VertexCount, IndexCount)`
+- `SetMeshVertex3D(Mesh, Index, X, Y, Z)`
+- `SetMeshTriangle3D(Mesh, TriangleIndex, A, B, C)`
+- `CommitMesh3D(Mesh)`
+- `CreateObjectFromMesh3D(Mesh)`
+- `MeshVertexCount3D(Mesh)` and `MeshIndexCount3D(Mesh)`
+
+Transforms and appearance:
+
+- `SetObjectPosition` and `MoveObject`
+- `SetObjectRotation` and `RotateObject`
+- `SetObjectScale`
+- `SetObjectColor`
+- `SetObjectOpacity`
+- `SetObjectVisible`
+
+## Renderer contract
+
+Windows uses D3D11 indexed triangle lists, generated normals, model/view/perspective matrices, a resize-aware D24S8 depth buffer, and the existing Direct2D renderer for the following HUD pass. Web uses an offscreen WebGL2 canvas with the same indexed mesh and depth contract, then composites it into the Canvas 2D back buffer before ordinary 2D drawing.
+
+The native backend bounds live data to 128 meshes and 256 objects and uses generation-checked typed handles. The Web backend enforces the same live-resource limits and rejects deleted handles. Meshes support at most 65,535 vertices and 196,608 indices. Renderer3D does not include textures, model loading, a scene graph, skeletal animation, rigid-body physics, or user shaders.
+
+## Legacy wireframe modules
+
+`FixedMath`, `Mesh`, `Primitives`, `Renderer`, and `Interaction` remain available exactly for the original deterministic wireframe examples, pointer orbit lessons, GDI builds, and Space Wars. Their API is unchanged by 2.0.0.

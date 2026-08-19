@@ -202,6 +202,21 @@ Run("Pointer input built-ins and constants are shared and game-window scoped", (
         throw new InvalidOperationException(string.Join(" | ", analysis.Diagnostics.Select(diagnostic => diagnostic.Code + ": " + diagnostic.Message)));
     Equal(true, Analyze("Print Pointer_X()\n").HasErrors);
 });
+Run("Renderer3D is a bounded game-window bridge on both targets", () =>
+{
+    Equal(SyntaxKind.Renderer3DKeyword, SyntaxFacts.GetKeywordKind("renderer3d"));
+    Equal(11, SyntaxFacts.GetBuiltInFunctionParameters(SyntaxKind.Renderer3DKeyword).Count);
+    const string source = "Game Window \"Renderer3D\"\nDim Result As Number\nResult = Renderer3D(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    Equal(true, new MasmEmitter(analysis, SmileGraphicsBackend.DirectX, true, false).Emit()
+        .Contains("call smile_renderer3d_command", StringComparison.Ordinal));
+    Equal(true, new WebEmitter(analysis).Emit()
+        .Contains("smile.renderer3D(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)", StringComparison.Ordinal));
+    Equal(true, HasDiagnostic(Analyze("Print Renderer3D(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)\n"), "SML3023"));
+    Equal(true, HasDiagnostic(Analyze("Game Window \"Renderer3D\"\nPrint Renderer3D(1)\n"), "SML3016"));
+    Equal(true, HasDiagnostic(Analyze("Game Window \"Renderer3D\"\nPrint Renderer3D(True, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)\n"), "SML3003"));
+});
 Run("Existing graphics statements remain valid", () => Equal(false,
     Analyze("Game Window \"Existing\"\nFill Rectangle 1, 2, 3, 4, RED\nDraw Circle 10, 10, 4, WHITE\nDraw Line 0, 0, 20, 20, BLUE\n").HasErrors));
 Run("Music keywords are shared and case-insensitive", () =>
@@ -568,6 +583,12 @@ Run("Web output writer creates deterministic static files", () =>
         Equal(true, runtime.Contains("window.addEventListener(\"pageshow\", checkForWebUpdate)", StringComparison.Ordinal));
         Equal(true, runtime.Contains("fetch(request.toString(), { cache: \"no-store\" })", StringComparison.Ordinal));
         Equal(true, runtime.Contains("destination.searchParams.set(\"smile-version\"", StringComparison.Ordinal));
+        Equal(true, runtime.Contains("renderer3DCanvas.getContext(\"webgl2\"", StringComparison.Ordinal));
+        Equal(true, runtime.Contains("gl.enable(gl.DEPTH_TEST)", StringComparison.Ordinal));
+        Equal(true, runtime.Contains("gl.drawElements(gl.TRIANGLES", StringComparison.Ordinal));
+        Equal(true, runtime.Contains("renderer3DMeshes.size >= 128", StringComparison.Ordinal));
+        Equal(true, runtime.Contains("renderer3DObjects.size>=256", StringComparison.Ordinal));
+        Equal(true, runtime.Contains("back.drawImage(renderer3DCanvas", StringComparison.Ordinal));
         Equal(false, runtime.Contains("userAgent", StringComparison.Ordinal));
     }
     finally
