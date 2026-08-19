@@ -1,8 +1,14 @@
 <Solution>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+    <Platform Name="Windows 64-bit .exe" />
+    <Platform Name="Web" />
+  </Configurations>
   <Folder Name="/Games/">
-    <Project Path="SpaceWars.smileproj" />
+    <Project Path="SpaceWars.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="e6982ab5-eb50-69a7-09ea-064bcfaa18c0" />
   </Folder>
   <Folder Name="/Libraries/">
-    <Project Path="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+    <Project Path="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="a0c0a0b5-60ca-35eb-2d17-4b234176d63e" />
   </Folder>
 </Solution>
