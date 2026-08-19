@@ -81,7 +81,7 @@ internal static class WebOutputWriter
         html, body { width: 100%; height: 100%; min-height: 100dvh; margin: 0; overflow: hidden; background: #05070c; }
         body { display: grid; place-items: center; }
         #smile-shell { position: relative; width: 100vw; width: 100dvw; height: 100vh; height: 100dvh; display: grid; place-items: center; background: #05070c; }
-        #smile-canvas { display: block; max-width: 100vw; max-width: 100dvw; max-height: 100vh; max-height: 100dvh; width: auto; height: auto; aspect-ratio: 16 / 9; background: #000; outline: none; }
+        #smile-canvas { display: block; max-width: 100vw; max-width: 100dvw; max-height: 100vh; max-height: 100dvh; width: auto; height: auto; aspect-ratio: 16 / 9; background: #000; outline: none; touch-action: none; }
         #smile-canvas:focus-visible { box-shadow: inset 0 0 0 2px #46e6ff; }
         #smile-console { width: min(72rem, 100vw); height: 100vh; margin: 0; padding: 1rem; overflow: auto; color: #f2f4f8; background: #05070c; font: 16px/1.4 Consolas, monospace; white-space: pre-wrap; }
         #smile-error { position: absolute; z-index: 20; left: 1rem; right: 1rem; bottom: 1rem; max-height: 35vh; overflow: auto; margin: 0; padding: 1rem; color: #fff; background: #761b25; border: 1px solid #ff8794; white-space: pre-wrap; }
@@ -168,6 +168,7 @@ internal static class WebOutputWriter
             const inputSources = new Map();
             const heldKeyCounts = new Map();
             const activeVirtualPointers = new Map();
+            const activeCanvasPointers = new Map();
             const memoryStorage = new Map();
             const imageCache = new Map();
             const sfxCache = new Map();
@@ -213,6 +214,16 @@ internal static class WebOutputWriter
             let gameWindowCreated = false;
             let touchInteractionObserved = false;
             let virtualControlsVisible = false;
+            let pointerXValue = 0;
+            let pointerYValue = 0;
+            let pointerDeltaXValue = 0;
+            let pointerDeltaYValue = 0;
+            let pointerWheelDeltaValue = 0;
+            let pointerInsideValue = false;
+            let pointerPositionValid = false;
+            let pointerHeldButtons = 0;
+            let pointerPressedButtons = 0;
+            let pointerReleasedButtons = 0;
 
             function readVirtualControlsMode() {
                 try {
@@ -282,7 +293,124 @@ internal static class WebOutputWriter
                 heldKeyCounts.clear();
                 activeVirtualPointers.clear();
                 for (const button of virtualControlButtons) resetVirtualButton(button);
+                releaseCanvasPointers(false);
+                pointerDeltaXValue = 0;
+                pointerDeltaYValue = 0;
+                pointerWheelDeltaValue = 0;
+                pointerPressedButtons = 0;
+                pointerReleasedButtons = 0;
             }
+
+            function pointerButtonMask(button) {
+                button = safe(button);
+                return button >= 1 && button <= 3 ? 1 << (button - 1) : 0;
+            }
+
+            function canvasButton(event) {
+                if (event.pointerType === "touch" || event.pointerType === "pen") return 1;
+                if (event.button === 0) return 1;
+                if (event.button === 2) return 2;
+                if (event.button === 1) return 3;
+                return 0;
+            }
+
+            function updatePointerPosition(event) {
+                if (!Number.isFinite(event.clientX) || !Number.isFinite(event.clientY) ||
+                    typeof canvas.getBoundingClientRect !== "function") return;
+                const bounds = canvas.getBoundingClientRect();
+                if (!(bounds.width > 0) || !(bounds.height > 0)) return;
+                const nextX = Math.round((event.clientX - bounds.left) * logicalWidth / bounds.width);
+                const nextY = Math.round((event.clientY - bounds.top) * logicalHeight / bounds.height);
+                if (pointerPositionValid) {
+                    pointerDeltaXValue = safe(pointerDeltaXValue + nextX - pointerXValue);
+                    pointerDeltaYValue = safe(pointerDeltaYValue + nextY - pointerYValue);
+                }
+                pointerXValue = safe(nextX);
+                pointerYValue = safe(nextY);
+                pointerInsideValue = event.clientX >= bounds.left && event.clientY >= bounds.top &&
+                    event.clientX < bounds.right && event.clientY < bounds.bottom;
+                pointerPositionValid = true;
+            }
+
+            function refreshPointerButtons() {
+                let buttons = 0;
+                for (const entry of activeCanvasPointers.values()) buttons |= entry.mask;
+                pointerHeldButtons = buttons;
+            }
+
+            function releaseCanvasPointer(pointerId, releaseCapture = true) {
+                const entry = activeCanvasPointers.get(pointerId);
+                if (!entry) return false;
+                activeCanvasPointers.delete(pointerId);
+                const wasHeld = (pointerHeldButtons & entry.mask) !== 0;
+                refreshPointerButtons();
+                if (wasHeld && (pointerHeldButtons & entry.mask) === 0) pointerReleasedButtons |= entry.mask;
+                if (releaseCapture && typeof canvas.releasePointerCapture === "function") {
+                    try { canvas.releasePointerCapture(pointerId); } catch (_) { }
+                }
+                return true;
+            }
+
+            function releaseCanvasPointers(recordRelease = true) {
+                if (recordRelease) pointerReleasedButtons |= pointerHeldButtons;
+                activeCanvasPointers.clear();
+                pointerHeldButtons = 0;
+                pointerInsideValue = false;
+                pointerPositionValid = false;
+            }
+
+            function handleCanvasPointerDown(event) {
+                noteTouchInteraction(event);
+                if (!gameWindowCreated || closed || mediaStopped || !active ||
+                    !Number.isSafeInteger(event.pointerId) || activeCanvasPointers.has(event.pointerId)) return;
+                const button = canvasButton(event);
+                const mask = pointerButtonMask(button);
+                if (mask === 0 || activeCanvasPointers.size >= MAX_ACTIVE_INPUT_SOURCES) return;
+                updatePointerPosition(event);
+                const wasHeld = (pointerHeldButtons & mask) !== 0;
+                activeCanvasPointers.set(event.pointerId, { mask });
+                refreshPointerButtons();
+                if (!wasHeld) pointerPressedButtons |= mask;
+                if (typeof canvas.setPointerCapture === "function") {
+                    try { canvas.setPointerCapture(event.pointerId); } catch (_) { }
+                }
+                event.preventDefault();
+                userInteracted = true;
+                syncMusic();
+            }
+
+            function handleCanvasPointerMove(event) {
+                if (!gameWindowCreated || closed) return;
+                updatePointerPosition(event);
+                if (activeCanvasPointers.has(event.pointerId)) event.preventDefault();
+            }
+
+            function handleCanvasPointerEnd(event, releaseCapture = true) {
+                if (!Number.isSafeInteger(event.pointerId) || !activeCanvasPointers.has(event.pointerId)) return;
+                updatePointerPosition(event);
+                event.preventDefault();
+                releaseCanvasPointer(event.pointerId, releaseCapture);
+            }
+
+            function handleCanvasWheel(event) {
+                if (!gameWindowCreated || closed || !active) return;
+                updatePointerPosition(event);
+                const direction = event.deltaY < 0 ? 1 : event.deltaY > 0 ? -1 : 0;
+                pointerWheelDeltaValue = safe(pointerWheelDeltaValue + direction);
+                if (direction !== 0) event.preventDefault();
+                userInteracted = true;
+                syncMusic();
+            }
+
+            function pointerX() { return pointerXValue; }
+            function pointerY() { return pointerYValue; }
+            function pointerDeltaX() { return pointerDeltaXValue; }
+            function pointerDeltaY() { return pointerDeltaYValue; }
+            function pointerWheelDelta() { return pointerWheelDeltaValue; }
+            function pointerInside() { return pointerInsideValue ? 1 : 0; }
+            function pointerHeld(button) { const mask = pointerButtonMask(button); return mask !== 0 && (pointerHeldButtons & mask) !== 0 ? 1 : 0; }
+            function pointerPressed(button) { const mask = pointerButtonMask(button); return mask !== 0 && (pointerPressedButtons & mask) !== 0 ? 1 : 0; }
+            function pointerReleased(button) { const mask = pointerButtonMask(button); return mask !== 0 && (pointerReleasedButtons & mask) !== 0 ? 1 : 0; }
 
             function releaseVirtualPointers() {
                 releaseInputsByPrefix("pointer:");
@@ -969,6 +1097,11 @@ internal static class WebOutputWriter
                 visible.clearRect(0, 0, logicalWidth, logicalHeight);
                 visible.drawImage(backCanvas, 0, 0, logicalWidth, logicalHeight);
                 window.__smileWeb.frameCount += 1;
+                pointerDeltaXValue = 0;
+                pointerDeltaYValue = 0;
+                pointerWheelDeltaValue = 0;
+                pointerPressedButtons = 0;
+                pointerReleasedButtons = 0;
                 return new Promise(resolve => requestAnimationFrame(resolve));
             }
 
@@ -1024,6 +1157,13 @@ internal static class WebOutputWriter
             window.addEventListener("keyup", event => { releaseInput(`keyboard:${event.code}`); });
 
             canvas.addEventListener("click", () => { userInteracted = true; canvas.focus(); syncMusic(); });
+            canvas.addEventListener("pointerdown", handleCanvasPointerDown);
+            canvas.addEventListener("pointermove", handleCanvasPointerMove);
+            canvas.addEventListener("pointerup", event => handleCanvasPointerEnd(event));
+            canvas.addEventListener("pointercancel", event => handleCanvasPointerEnd(event));
+            canvas.addEventListener("lostpointercapture", event => handleCanvasPointerEnd(event, false));
+            canvas.addEventListener("pointerleave", () => { if (activeCanvasPointers.size === 0) pointerInsideValue = false; });
+            canvas.addEventListener("wheel", handleCanvasWheel, { passive: false });
             window.addEventListener("pointerdown", noteTouchInteraction);
             window.addEventListener("pointerup", event => handleVirtualPointerEnd(event));
             window.addEventListener("pointercancel", event => handleVirtualPointerEnd(event));
@@ -1325,6 +1465,7 @@ internal static class WebOutputWriter
                     virtualControlsMode,
                     virtualControlsVisible,
                     virtualActivePointerCount: activeVirtualPointers.size,
+                    canvasActivePointerCount: activeCanvasPointers.size,
                     activeInputSourceCount: inputSources.size,
                     queuedKeyCount: keys.length,
                     maximumQueuedKeyCount: MAX_QUEUED_KEYS,
@@ -1392,7 +1533,8 @@ internal static class WebOutputWriter
                 fillQuadrilateral, drawQuadrilateral, drawLine, drawText, drawNumber, loadImage, imageRetain,
                 imageRelease, imageAssign, imageMoveAssign, imageLoaded, imageWidth, imageHeight, drawImage,
                 pushClip, popClip, textWidth, textHeight, textLength, textCodeAt, textSlice, showScreen,
-                print, clearScreen, wait, getKey, keyHeld, playSound, stopSound,
+                print, clearScreen, wait, getKey, keyHeld, pointerX, pointerY, pointerDeltaX, pointerDeltaY,
+                pointerWheelDelta, pointerInside, pointerHeld, pointerPressed, pointerReleased, playSound, stopSound,
                 playMusic, pauseMusic, resumeMusic, stopMusic, setMusicVolume, loadTextFile,
                 loadInt, saveInt, loadData, saveData, gameClosed, endProgram, mediaShutdown, mediaDiagnostics, run
             };

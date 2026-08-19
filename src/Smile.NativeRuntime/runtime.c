@@ -1,6 +1,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define _WIN32_WINNT 0x0A00
 #include <windows.h>
+#include <windowsx.h>
 #include <mmsystem.h>
 #include <initguid.h>
 #include <knownfolders.h>
@@ -43,6 +44,16 @@ static unsigned char smile_held[256];
 static long long smile_key_queue[64];
 static int smile_key_head;
 static int smile_key_tail;
+static long long smile_pointer_x_value;
+static long long smile_pointer_y_value;
+static long long smile_pointer_delta_x_value;
+static long long smile_pointer_delta_y_value;
+static long long smile_pointer_wheel_delta_value;
+static unsigned int smile_pointer_held_buttons;
+static unsigned int smile_pointer_pressed_buttons;
+static unsigned int smile_pointer_released_buttons;
+static int smile_pointer_inside_value;
+static int smile_pointer_position_valid;
 static int smile_fullscreen;
 static DWORD smile_windowed_style;
 static DWORD smile_windowed_ex_style;
@@ -66,6 +77,83 @@ void smile_print_number(long long value);
 void smile_print_newline(void);
 int smile_resolve_asset_path_utf8(const char* path, long long length, WCHAR* resolved_path, int capacity);
 void smile_play_sound_channel(const char* path, long long length, long long channel);
+
+static unsigned int smile_pointer_button_mask(long long button)
+{
+    if (button < 1 || button > 3)
+        return 0;
+    return 1U << (unsigned int)(button - 1);
+}
+
+static void smile_pointer_position(LPARAM lparam)
+{
+    RECT client;
+    SmileGraphicsViewport viewport;
+    long long previous_x = smile_pointer_x_value;
+    long long previous_y = smile_pointer_y_value;
+    int physical_x = GET_X_LPARAM(lparam);
+    int physical_y = GET_Y_LPARAM(lparam);
+    if (smile_window == 0 || !GetClientRect(smile_window, &client))
+        return;
+    smile_graphics_calculate_viewport(smile_logical_width, smile_logical_height,
+        client.right - client.left, client.bottom - client.top, &viewport);
+    if (viewport.scale <= 0.0)
+        return;
+    smile_pointer_x_value = smile_graphics_round_pixel(((double)physical_x - viewport.x) / viewport.scale);
+    smile_pointer_y_value = smile_graphics_round_pixel(((double)physical_y - viewport.y) / viewport.scale);
+    smile_pointer_inside_value = physical_x >= viewport.x && physical_y >= viewport.y &&
+        physical_x < viewport.x + viewport.width && physical_y < viewport.y + viewport.height;
+    if (smile_pointer_position_valid)
+    {
+        smile_pointer_delta_x_value += smile_pointer_x_value - previous_x;
+        smile_pointer_delta_y_value += smile_pointer_y_value - previous_y;
+    }
+    smile_pointer_position_valid = 1;
+}
+
+static void smile_pointer_press(long long button)
+{
+    unsigned int mask = smile_pointer_button_mask(button);
+    if (mask == 0 || (smile_pointer_held_buttons & mask) != 0)
+        return;
+    smile_pointer_held_buttons |= mask;
+    smile_pointer_pressed_buttons |= mask;
+    if (smile_window != 0)
+        SetCapture(smile_window);
+}
+
+static void smile_pointer_release(long long button)
+{
+    unsigned int mask = smile_pointer_button_mask(button);
+    if (mask == 0 || (smile_pointer_held_buttons & mask) == 0)
+        return;
+    smile_pointer_held_buttons &= ~mask;
+    smile_pointer_released_buttons |= mask;
+    if (smile_pointer_held_buttons == 0 && GetCapture() == smile_window)
+        ReleaseCapture();
+}
+
+static void smile_pointer_cancel(void)
+{
+    smile_pointer_released_buttons |= smile_pointer_held_buttons;
+    smile_pointer_held_buttons = 0;
+    smile_pointer_inside_value = 0;
+    smile_pointer_position_valid = 0;
+}
+
+static void smile_pointer_reset(void)
+{
+    smile_pointer_x_value = 0;
+    smile_pointer_y_value = 0;
+    smile_pointer_delta_x_value = 0;
+    smile_pointer_delta_y_value = 0;
+    smile_pointer_wheel_delta_value = 0;
+    smile_pointer_held_buttons = 0;
+    smile_pointer_pressed_buttons = 0;
+    smile_pointer_released_buttons = 0;
+    smile_pointer_inside_value = 0;
+    smile_pointer_position_valid = 0;
+}
 
 static void smile_zero_memory(void* memory, SIZE_T length)
 {
@@ -919,6 +1007,31 @@ long long smile_key_held(long long key)
     return virtual_key > 0 && virtual_key < 256 && smile_held[virtual_key] != 0;
 }
 
+long long smile_pointer_x(void) { smile_pump_messages(); return smile_pointer_x_value; }
+long long smile_pointer_y(void) { smile_pump_messages(); return smile_pointer_y_value; }
+long long smile_pointer_delta_x(void) { smile_pump_messages(); return smile_pointer_delta_x_value; }
+long long smile_pointer_delta_y(void) { smile_pump_messages(); return smile_pointer_delta_y_value; }
+long long smile_pointer_wheel_delta(void) { smile_pump_messages(); return smile_pointer_wheel_delta_value; }
+long long smile_pointer_inside(void) { smile_pump_messages(); return smile_pointer_inside_value != 0; }
+long long smile_pointer_held(long long button)
+{
+    unsigned int mask = smile_pointer_button_mask(button);
+    smile_pump_messages();
+    return mask != 0 && (smile_pointer_held_buttons & mask) != 0;
+}
+long long smile_pointer_pressed(long long button)
+{
+    unsigned int mask = smile_pointer_button_mask(button);
+    smile_pump_messages();
+    return mask != 0 && (smile_pointer_pressed_buttons & mask) != 0;
+}
+long long smile_pointer_released(long long button)
+{
+    unsigned int mask = smile_pointer_button_mask(button);
+    smile_pump_messages();
+    return mask != 0 && (smile_pointer_released_buttons & mask) != 0;
+}
+
 void smile_clear_screen(void)
 {
     COORD origin;
@@ -1080,8 +1193,61 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
                 smile_held[virtual_key] = 0;
             return 0;
         }
+        case WM_MOUSEMOVE:
+        {
+            TRACKMOUSEEVENT tracking;
+            smile_pointer_position(lparam);
+            smile_zero_memory(&tracking, sizeof(tracking));
+            tracking.cbSize = sizeof(tracking);
+            tracking.dwFlags = TME_LEAVE;
+            tracking.hwndTrack = window;
+            TrackMouseEvent(&tracking);
+            return 0;
+        }
+        case WM_MOUSELEAVE:
+            smile_pointer_inside_value = 0;
+            return 0;
+        case WM_LBUTTONDOWN:
+            smile_pointer_position(lparam);
+            smile_pointer_press(1);
+            return 0;
+        case WM_RBUTTONDOWN:
+            smile_pointer_position(lparam);
+            smile_pointer_press(2);
+            return 0;
+        case WM_MBUTTONDOWN:
+            smile_pointer_position(lparam);
+            smile_pointer_press(3);
+            return 0;
+        case WM_LBUTTONUP:
+            smile_pointer_position(lparam);
+            smile_pointer_release(1);
+            return 0;
+        case WM_RBUTTONUP:
+            smile_pointer_position(lparam);
+            smile_pointer_release(2);
+            return 0;
+        case WM_MBUTTONUP:
+            smile_pointer_position(lparam);
+            smile_pointer_release(3);
+            return 0;
+        case WM_MOUSEWHEEL:
+        {
+            POINT point;
+            point.x = GET_X_LPARAM(lparam);
+            point.y = GET_Y_LPARAM(lparam);
+            ScreenToClient(window, &point);
+            smile_pointer_position(MAKELPARAM(point.x, point.y));
+            smile_pointer_wheel_delta_value += GET_WHEEL_DELTA_WPARAM(wparam) / WHEEL_DELTA;
+            return 0;
+        }
+        case WM_CANCELMODE:
+        case WM_CAPTURECHANGED:
+            smile_pointer_cancel();
+            return 0;
         case WM_KILLFOCUS:
             smile_zero_memory(smile_held, sizeof(smile_held));
+            smile_pointer_cancel();
             return 0;
         case WM_CLOSE:
             DestroyWindow(window);
@@ -1092,6 +1258,7 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
             smile_window = 0;
             smile_closed = 1;
             smile_zero_memory(smile_held, sizeof(smile_held));
+            smile_pointer_reset();
             smile_graphics_shutdown();
             smile_graphics_diagnostics_shutdown();
             PostQuitMessage(0);
@@ -1131,6 +1298,7 @@ void smile_game_open(const char* title, long long title_length, long long width,
     smile_key_head = 0;
     smile_key_tail = 0;
     smile_zero_memory(smile_held, sizeof(smile_held));
+    smile_pointer_reset();
     smile_audio_focus_initialize(&smile_audio_focus);
     smile_frame_clock_initialize(&smile_frame_clock);
     smile_graphics_diagnostics_initialize();
@@ -1201,6 +1369,11 @@ void smile_show_screen(void)
     if (smile_window == 0)
         return;
     smile_graphics_present();
+    smile_pointer_delta_x_value = 0;
+    smile_pointer_delta_y_value = 0;
+    smile_pointer_wheel_delta_value = 0;
+    smile_pointer_pressed_buttons = 0;
+    smile_pointer_released_buttons = 0;
     diagnostics_ready = smile_frame_clock_end_present(&smile_frame_clock);
     if (diagnostics_ready && smile_graphics_diagnostics_enabled())
     {

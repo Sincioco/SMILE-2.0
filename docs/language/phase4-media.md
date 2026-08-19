@@ -60,6 +60,24 @@ Each Web compilation places a deterministic content version in `index.html` and 
 
 The standard profile does not infer arbitrary custom or same-device multiplayer keyboard layouts. Such games need a future explicit profile or game-declared mapping; the runtime does not duplicate aliases or branch on game names.
 
+## Game-canvas pointer input
+
+Every `Game Window` program can read the mouse, pen, or touch contact over its logical canvas through the same cross-target API:
+
+```smile
+If Pointer_Pressed(POINTER_PRIMARY) Then
+    Print Pointer_X(); ","; Pointer_Y()
+End If
+
+If Pointer_Held(POINTER_PRIMARY) Then
+    Print Pointer_Delta_X(); ","; Pointer_Delta_Y()
+End If
+```
+
+`POINTER_PRIMARY`, `POINTER_SECONDARY`, and `POINTER_MIDDLE` identify the three supported button roles. `Pointer_X()` and `Pointer_Y()` use the logical `Game Window` pixel coordinates after native letterboxing or Web CSS/DPR scaling. `Pointer_Inside()` reports whether the latest position lies within that logical canvas. `Pointer_Delta_X()`, `Pointer_Delta_Y()`, and `Pointer_Wheel_Delta()` accumulate events during the current frame. `Pointer_Held(Button)` persists while at least one contact owns that button; `Pointer_Pressed(Button)` and `Pointer_Released(Button)` latch even when both transitions occur in one frame.
+
+`Show Screen` ends the input frame and clears pointer deltas, wheel movement, and pressed/released transitions. Held state and the last position remain. Native captures a pressed pointer until release. Web listens only on the game canvas, uses Pointer Events and canvas-scoped `touch-action: none`, and keeps virtual-controller button events isolated in the existing source-aware key broker. Capture loss, cancellation, focus loss, page hiding, runtime completion, and runtime failure release active contacts so a game cannot retain stuck input. Console programs are unchanged.
+
 ## Structured clipping and text measurement
 
 Clips can nest and intersect. The compiler restores each active clip on normal exit and before `Return`, `Exit For`, `Exit Do`, or `End Program` transfers control out of its scope.

@@ -2312,7 +2312,7 @@ internal sealed class SemanticAnalyzer
                 return SmileType.Text;
             case CallExpressionSyntax call when SyntaxFacts.IsBuiltInFunction(call.Identifier.Kind):
                 return call.Identifier.Kind == SyntaxKind.TextSliceKeyword ? SmileType.Text
-                    : call.Identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword or SyntaxKind.ImageLoadedKeyword
+                    : IsBooleanBuiltIn(call.Identifier.Kind)
                     ? SmileType.Boolean
                     : SmileType.Number;
             case CallExpressionSyntax call when _routines.TryGetValue(call.Identifier.Text, out var routine):
@@ -2490,7 +2490,7 @@ internal sealed class SemanticAnalyzer
                 return SmileType.Boolean;
             case CallExpressionSyntax call when call.Identifier.Kind == SyntaxKind.TextSliceKeyword:
                 return SmileType.Text;
-            case CallExpressionSyntax call when call.Identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword or SyntaxKind.ImageLoadedKeyword:
+            case CallExpressionSyntax call when IsBooleanBuiltIn(call.Identifier.Kind):
                 return SmileType.Boolean;
             case CallExpressionSyntax call when _routines.TryGetValue(call.Identifier.Text, out var called):
                 return called.ReturnType;
@@ -4132,7 +4132,10 @@ internal sealed class SemanticAnalyzer
             return SmileType.Error;
         }
         var expected = SyntaxFacts.GetBuiltInFunctionParameters(identifier.Kind).Count;
-        if (identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword)
+        if (identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword or
+            SyntaxKind.PointerXKeyword or SyntaxKind.PointerYKeyword or SyntaxKind.PointerDeltaXKeyword or
+            SyntaxKind.PointerDeltaYKeyword or SyntaxKind.PointerWheelDeltaKeyword or SyntaxKind.PointerInsideKeyword or
+            SyntaxKind.PointerHeldKeyword or SyntaxKind.PointerPressedKeyword or SyntaxKind.PointerReleasedKeyword)
             RequireGameWindow(identifier.Span, $"Built-in '{identifier.Text}'");
         if (arguments.Count != expected)
             Report("SML3016", identifier.Span, $"Built-in '{identifier.Text}' expects {expected} argument(s), found {arguments.Count}.");
@@ -4163,8 +4166,13 @@ internal sealed class SemanticAnalyzer
         }
         foreach (var argument in arguments)
             RequireType(argument, SmileType.Number, "SML3003", $"Built-in '{identifier.Text}' requires Number arguments.");
-        return identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword ? SmileType.Boolean : SmileType.Number;
+        return IsBooleanBuiltIn(identifier.Kind) ? SmileType.Boolean : SmileType.Number;
     }
+
+    private static bool IsBooleanBuiltIn(SyntaxKind kind) =>
+        kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword or SyntaxKind.ImageLoadedKeyword or
+            SyntaxKind.PointerInsideKeyword or SyntaxKind.PointerHeldKeyword or SyntaxKind.PointerPressedKeyword or
+            SyntaxKind.PointerReleasedKeyword;
 
     private void PropagateRoutineCapabilities()
     {

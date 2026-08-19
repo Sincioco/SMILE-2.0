@@ -127,6 +127,7 @@ function createMobileControlsHost(options = {}) {
     const canvas = createMobileEventTarget({ hidden: true, width: 960, height: 540 });
     canvas.getContext = () => drawing;
     canvas.focus = () => {};
+    canvas.getBoundingClientRect = () => ({ left: 100, top: 50, right: 1060, bottom: 590, width: 960, height: 540 });
     const consoleElement = createMobileEventTarget({ hidden: true, textContent: "", scrollTop: 0, scrollHeight: 0 });
     const errorElement = createMobileEventTarget({ hidden: true, textContent: "" });
     const shellElement = createMobileEventTarget();
@@ -207,9 +208,12 @@ function createMobileControlsHost(options = {}) {
     const keyboard = (type, code, extras = {}) => dispatchWindow(type, {
         code, repeat: false, ctrlKey: false, altKey: false, metaKey: false, ...extras
     });
+    const canvasPointer = (type, pointerId, clientX, clientY, pointerType = "mouse", button = 0) =>
+        canvas.dispatch(type, { pointerId, clientX, clientY, pointerType, button });
+    const canvasWheel = (clientX, clientY, deltaY) => canvas.dispatch("wheel", { clientX, clientY, deltaY });
     return {
-        host, controls, buttons, unknownButton, errorElement,
-        dispatchWindow, dispatchDocument, dispatchOrientation, pointer, keyboard,
+        host, canvas, controls, buttons, unknownButton, errorElement,
+        dispatchWindow, dispatchDocument, dispatchOrientation, pointer, keyboard, canvasPointer, canvasWheel,
         audioPlays: () => audioPlays, audioPauses: () => audioPauses
     };
 }
@@ -242,6 +246,49 @@ async function runMobileControlsTests() {
     desktop.keyboard("keyup", "ArrowUp");
     mobileEqual(desktop.host.smile.keyHeld(10), 0, "desktop keyboard release");
     mobileEqual(desktop.host.smile.mediaDiagnostics().virtualControlsMode, "auto", "Desktop Auto diagnostics mode");
+
+    desktop.canvasPointer("pointermove", 1, 580, 320);
+    mobileEqual(desktop.host.smile.pointerX(), 480, "canvas pointer maps center X to logical pixels");
+    mobileEqual(desktop.host.smile.pointerY(), 270, "canvas pointer maps center Y to logical pixels");
+    mobileEqual(desktop.host.smile.pointerInside(), 1, "canvas pointer reports inside");
+    desktop.canvasPointer("pointermove", 1, 1060, 590);
+    mobileEqual(desktop.host.smile.pointerDeltaX(), 480, "canvas pointer accumulates X delta");
+    mobileEqual(desktop.host.smile.pointerDeltaY(), 270, "canvas pointer accumulates Y delta");
+    mobileEqual(desktop.host.smile.pointerInside(), 0, "bottom-right exclusive edge reports outside");
+    desktop.canvasPointer("pointerdown", 2, 300, 200, "mouse", 0);
+    mobileEqual(desktop.host.smile.pointerHeld(1), 1, "primary canvas pointer held state");
+    mobileEqual(desktop.host.smile.pointerPressed(1), 1, "primary canvas pointer pressed transition");
+    desktop.canvasPointer("pointerup", 2, 320, 210, "mouse", 0);
+    mobileEqual(desktop.host.smile.pointerHeld(1), 0, "primary canvas pointer release clears held state");
+    mobileEqual(desktop.host.smile.pointerReleased(1), 1, "primary canvas pointer released transition");
+    desktop.canvasPointer("pointerdown", 3, 320, 210, "mouse", 2);
+    desktop.canvasPointer("pointerdown", 4, 340, 220, "mouse", 1);
+    mobileEqual(desktop.host.smile.pointerHeld(2), 1, "secondary canvas pointer held state");
+    mobileEqual(desktop.host.smile.pointerHeld(3), 1, "middle canvas pointer held state");
+    desktop.canvasPointer("pointercancel", 3, 320, 210, "mouse", 2);
+    desktop.canvasPointer("lostpointercapture", 4, 340, 220, "mouse", 1);
+    mobileEqual(desktop.host.smile.pointerHeld(2), 0, "canvas pointercancel clears secondary");
+    mobileEqual(desktop.host.smile.pointerHeld(3), 0, "canvas lost capture clears middle");
+    desktop.canvasWheel(580, 320, -100);
+    desktop.canvasWheel(580, 320, 100);
+    desktop.canvasWheel(580, 320, -100);
+    mobileEqual(desktop.host.smile.pointerWheelDelta(), 1, "canvas wheel accumulates signed steps");
+    await desktop.host.smile.showScreen();
+    mobileEqual(desktop.host.smile.pointerDeltaX(), 0, "Show Screen clears canvas X delta");
+    mobileEqual(desktop.host.smile.pointerDeltaY(), 0, "Show Screen clears canvas Y delta");
+    mobileEqual(desktop.host.smile.pointerWheelDelta(), 0, "Show Screen clears canvas wheel delta");
+    mobileEqual(desktop.host.smile.pointerPressed(1), 0, "Show Screen clears pressed transitions");
+    mobileEqual(desktop.host.smile.pointerReleased(1), 0, "Show Screen clears released transitions");
+
+    desktop.canvasPointer("pointerdown", 5, 400, 300, "touch", 0);
+    desktop.pointer("a", "pointerdown", 6, "touch", 0);
+    mobileEqual(desktop.host.smile.pointerHeld(1), 1, "canvas touch is tracked as pointer input");
+    mobileEqual(desktop.host.smile.getKey(), 23, "virtual button remains isolated as key input");
+    desktop.pointer("a", "pointerup", 6, "touch", 0);
+    desktop.dispatchWindow("blur");
+    mobileEqual(desktop.host.smile.pointerHeld(1), 0, "window blur clears canvas pointer state");
+    mobileEqual(desktop.host.smile.mediaDiagnostics().canvasActivePointerCount, 0,
+        "window blur clears active canvas pointers");
 
     const touchFirst = createMobileControlsHost({ maxTouchPoints: 5, coarsePointer: true, noHover: true });
     mobileEqual(touchFirst.controls.hidden, true, "touch-first Auto starts hidden before Game Window");

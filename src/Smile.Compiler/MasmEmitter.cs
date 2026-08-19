@@ -222,6 +222,15 @@ internal sealed class MasmEmitter
         if (_usesTimer) Line("EXTERN smile_timer:PROC");
         if (_usesGameClosed) Line("EXTERN smile_game_closed:PROC");
         if (_usesKeyHeld) Line("EXTERN smile_key_held:PROC");
+        Line("EXTERN smile_pointer_x:PROC");
+        Line("EXTERN smile_pointer_y:PROC");
+        Line("EXTERN smile_pointer_delta_x:PROC");
+        Line("EXTERN smile_pointer_delta_y:PROC");
+        Line("EXTERN smile_pointer_wheel_delta:PROC");
+        Line("EXTERN smile_pointer_inside:PROC");
+        Line("EXTERN smile_pointer_held:PROC");
+        Line("EXTERN smile_pointer_pressed:PROC");
+        Line("EXTERN smile_pointer_released:PROC");
         Line("EXTERN smile_game_open:PROC");
         Line("EXTERN smile_graphics_configure:PROC");
         Line("EXTERN smile_game_clear:PROC");
@@ -1652,6 +1661,34 @@ internal sealed class MasmEmitter
                 EmitExpression(call.Arguments[0].Expression);
                 Line("    mov rcx, rax");
                 CallAligned("smile_key_held");
+                break;
+            case SyntaxKind.PointerXKeyword:
+            case SyntaxKind.PointerYKeyword:
+            case SyntaxKind.PointerDeltaXKeyword:
+            case SyntaxKind.PointerDeltaYKeyword:
+            case SyntaxKind.PointerWheelDeltaKeyword:
+            case SyntaxKind.PointerInsideKeyword:
+                CallAligned(call.Identifier.Kind switch
+                {
+                    SyntaxKind.PointerXKeyword => "smile_pointer_x",
+                    SyntaxKind.PointerYKeyword => "smile_pointer_y",
+                    SyntaxKind.PointerDeltaXKeyword => "smile_pointer_delta_x",
+                    SyntaxKind.PointerDeltaYKeyword => "smile_pointer_delta_y",
+                    SyntaxKind.PointerWheelDeltaKeyword => "smile_pointer_wheel_delta",
+                    _ => "smile_pointer_inside"
+                });
+                break;
+            case SyntaxKind.PointerHeldKeyword:
+            case SyntaxKind.PointerPressedKeyword:
+            case SyntaxKind.PointerReleasedKeyword:
+                EmitExpression(call.Arguments[0].Expression);
+                Line("    mov rcx, rax");
+                CallAligned(call.Identifier.Kind switch
+                {
+                    SyntaxKind.PointerHeldKeyword => "smile_pointer_held",
+                    SyntaxKind.PointerPressedKeyword => "smile_pointer_pressed",
+                    _ => "smile_pointer_released"
+                });
                 break;
             case SyntaxKind.ImageWidthKeyword:
             case SyntaxKind.ImageHeightKeyword:
