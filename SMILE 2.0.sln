@@ -1,4 +1,3 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.8.12021.73
@@ -23,19 +22,19 @@ Project("{4FBC4E72-6B0F-40D8-B758-BF8932926D5D}") = "Smile.Game", "libraries\Smi
 EndProject
 Project("{4FBC4E72-6B0F-40D8-B758-BF8932926D5D}") = "Smile.RPG", "libraries\Smile.RPG\Smile.RPG.smilelibproj", "{86CE4D22-4D26-1894-CF79-16CB2D250796}"
 EndProject
-Project("{4FBC4E72-6B0F-40D8-B758-BF8932926D5D}") = "Smile.Simple3D", "libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj", "{18A67218-D53E-438F-BE15-C3B99D28F056}"
+Project("{4FBC4E72-6B0F-40D8-B758-BF8932926D5D}") = "Smile.Simple3D", "libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj", "{A0C0A0B5-60CA-35EB-2D17-4B234176D63E}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{891FB07A-D3B4-411A-95A4-BBE6EE635621}"
 EndProject
-Project("{4FBC4E72-6B0F-40D8-B758-BF8932926D5D}") = "Simple3DGallery", "examples\Simple3DGallery\Simple3DGallery.smileproj", "{D5466940-8903-40F7-B7F1-41D085431D07}"
+Project("{4FBC4E72-6B0F-40D8-B758-BF8932926D5D}") = "Simple3DGallery", "examples\Simple3DGallery\Simple3DGallery.smileproj", "{CD2C1BE9-94DF-0CBE-576C-4A23CACB8A8B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "games", "games", "{5B9E1ED5-AE9A-409D-BD86-7102751D8FC8}"
 EndProject
-Project("{4FBC4E72-6B0F-40D8-B758-BF8932926D5D}") = "SpaceWars", "games\SpaceWars\SpaceWars.smileproj", "{06D4C99A-B6BE-4EC7-835F-73FF16A0E63D}"
+Project("{4FBC4E72-6B0F-40D8-B758-BF8932926D5D}") = "SpaceWars", "games\SpaceWars\SpaceWars.smileproj", "{E6982AB5-EB50-69A7-09EA-064BCFAA18C0}"
 EndProject
 Project("{4FBC4E72-6B0F-40D8-B758-BF8932926D5D}") = "Phase7WorldStateTests", "examples\Phase7WorldStateTests\Phase7WorldStateTests.smileproj", "{5996C933-BE43-5E19-3CDB-4B32D697BEB9}"
 EndProject
-Project("{4FBC4E72-6B0F-40D8-B758-BF8932926D5D}") = "RPGSystems", "games\RPGSystems\RPGSystems.smileproj", "{EA20FCAD-4E88-B4D4-091C-B39D26B68FA6}"
+Project("{4FBC4E72-6B0F-40D8-B758-BF8932926D5D}") = "RPGSystems", "games\RPGSystems\RPGSystems.smileproj", "{2C35845D-5BE6-C84A-2DC5-8D4FEEFEFE47}"
 EndProject
 Project("{4FBC4E72-6B0F-40D8-B758-BF8932926D5D}") = "Phase8DungeonStateTests", "examples\Phase8DungeonStateTests\Phase8DungeonStateTests.smileproj", "{3E79D708-2407-0B1B-DF35-0EB2FD2506B3}"
 EndProject
@@ -119,36 +118,36 @@ Global
 		{86CE4D22-4D26-1894-CF79-16CB2D250796}.Release|Any CPU.ActiveCfg = Release|Windows 64-bit .exe
 		{86CE4D22-4D26-1894-CF79-16CB2D250796}.Release|x64.ActiveCfg = Release|Windows 64-bit .exe
 		{86CE4D22-4D26-1894-CF79-16CB2D250796}.Release|x86.ActiveCfg = Release|Windows 64-bit .exe
-		{18A67218-D53E-438F-BE15-C3B99D28F056}.Debug|Any CPU.ActiveCfg = Debug|Windows 64-bit .exe
-		{18A67218-D53E-438F-BE15-C3B99D28F056}.Debug|x64.ActiveCfg = Debug|Windows 64-bit .exe
-		{18A67218-D53E-438F-BE15-C3B99D28F056}.Debug|x86.ActiveCfg = Debug|Windows 64-bit .exe
-		{18A67218-D53E-438F-BE15-C3B99D28F056}.Release|Any CPU.ActiveCfg = Release|Windows 64-bit .exe
-		{18A67218-D53E-438F-BE15-C3B99D28F056}.Release|x64.ActiveCfg = Release|Windows 64-bit .exe
-		{18A67218-D53E-438F-BE15-C3B99D28F056}.Release|x86.ActiveCfg = Release|Windows 64-bit .exe
-		{D5466940-8903-40F7-B7F1-41D085431D07}.Debug|Any CPU.ActiveCfg = Debug|Windows 64-bit .exe
-		{D5466940-8903-40F7-B7F1-41D085431D07}.Debug|x64.ActiveCfg = Debug|Windows 64-bit .exe
-		{D5466940-8903-40F7-B7F1-41D085431D07}.Debug|x86.ActiveCfg = Debug|Windows 64-bit .exe
-		{D5466940-8903-40F7-B7F1-41D085431D07}.Release|Any CPU.ActiveCfg = Release|Windows 64-bit .exe
-		{D5466940-8903-40F7-B7F1-41D085431D07}.Release|x64.ActiveCfg = Release|Windows 64-bit .exe
-		{D5466940-8903-40F7-B7F1-41D085431D07}.Release|x86.ActiveCfg = Release|Windows 64-bit .exe
-		{06D4C99A-B6BE-4EC7-835F-73FF16A0E63D}.Debug|Any CPU.ActiveCfg = Debug|Windows 64-bit .exe
-		{06D4C99A-B6BE-4EC7-835F-73FF16A0E63D}.Debug|x64.ActiveCfg = Debug|Windows 64-bit .exe
-		{06D4C99A-B6BE-4EC7-835F-73FF16A0E63D}.Debug|x86.ActiveCfg = Debug|Windows 64-bit .exe
-		{06D4C99A-B6BE-4EC7-835F-73FF16A0E63D}.Release|Any CPU.ActiveCfg = Release|Windows 64-bit .exe
-		{06D4C99A-B6BE-4EC7-835F-73FF16A0E63D}.Release|x64.ActiveCfg = Release|Windows 64-bit .exe
-		{06D4C99A-B6BE-4EC7-835F-73FF16A0E63D}.Release|x86.ActiveCfg = Release|Windows 64-bit .exe
+		{A0C0A0B5-60CA-35EB-2D17-4B234176D63E}.Debug|Any CPU.ActiveCfg = Debug|Windows 64-bit .exe
+		{A0C0A0B5-60CA-35EB-2D17-4B234176D63E}.Debug|x64.ActiveCfg = Debug|Windows 64-bit .exe
+		{A0C0A0B5-60CA-35EB-2D17-4B234176D63E}.Debug|x86.ActiveCfg = Debug|Windows 64-bit .exe
+		{A0C0A0B5-60CA-35EB-2D17-4B234176D63E}.Release|Any CPU.ActiveCfg = Release|Windows 64-bit .exe
+		{A0C0A0B5-60CA-35EB-2D17-4B234176D63E}.Release|x64.ActiveCfg = Release|Windows 64-bit .exe
+		{A0C0A0B5-60CA-35EB-2D17-4B234176D63E}.Release|x86.ActiveCfg = Release|Windows 64-bit .exe
+		{CD2C1BE9-94DF-0CBE-576C-4A23CACB8A8B}.Debug|Any CPU.ActiveCfg = Debug|Windows 64-bit .exe
+		{CD2C1BE9-94DF-0CBE-576C-4A23CACB8A8B}.Debug|x64.ActiveCfg = Debug|Windows 64-bit .exe
+		{CD2C1BE9-94DF-0CBE-576C-4A23CACB8A8B}.Debug|x86.ActiveCfg = Debug|Windows 64-bit .exe
+		{CD2C1BE9-94DF-0CBE-576C-4A23CACB8A8B}.Release|Any CPU.ActiveCfg = Release|Windows 64-bit .exe
+		{CD2C1BE9-94DF-0CBE-576C-4A23CACB8A8B}.Release|x64.ActiveCfg = Release|Windows 64-bit .exe
+		{CD2C1BE9-94DF-0CBE-576C-4A23CACB8A8B}.Release|x86.ActiveCfg = Release|Windows 64-bit .exe
+		{E6982AB5-EB50-69A7-09EA-064BCFAA18C0}.Debug|Any CPU.ActiveCfg = Debug|Windows 64-bit .exe
+		{E6982AB5-EB50-69A7-09EA-064BCFAA18C0}.Debug|x64.ActiveCfg = Debug|Windows 64-bit .exe
+		{E6982AB5-EB50-69A7-09EA-064BCFAA18C0}.Debug|x86.ActiveCfg = Debug|Windows 64-bit .exe
+		{E6982AB5-EB50-69A7-09EA-064BCFAA18C0}.Release|Any CPU.ActiveCfg = Release|Windows 64-bit .exe
+		{E6982AB5-EB50-69A7-09EA-064BCFAA18C0}.Release|x64.ActiveCfg = Release|Windows 64-bit .exe
+		{E6982AB5-EB50-69A7-09EA-064BCFAA18C0}.Release|x86.ActiveCfg = Release|Windows 64-bit .exe
 		{5996C933-BE43-5E19-3CDB-4B32D697BEB9}.Debug|Any CPU.ActiveCfg = Debug|Windows 64-bit .exe
 		{5996C933-BE43-5E19-3CDB-4B32D697BEB9}.Debug|x64.ActiveCfg = Debug|Windows 64-bit .exe
 		{5996C933-BE43-5E19-3CDB-4B32D697BEB9}.Debug|x86.ActiveCfg = Debug|Windows 64-bit .exe
 		{5996C933-BE43-5E19-3CDB-4B32D697BEB9}.Release|Any CPU.ActiveCfg = Release|Windows 64-bit .exe
 		{5996C933-BE43-5E19-3CDB-4B32D697BEB9}.Release|x64.ActiveCfg = Release|Windows 64-bit .exe
 		{5996C933-BE43-5E19-3CDB-4B32D697BEB9}.Release|x86.ActiveCfg = Release|Windows 64-bit .exe
-		{EA20FCAD-4E88-B4D4-091C-B39D26B68FA6}.Debug|Any CPU.ActiveCfg = Debug|Windows 64-bit .exe
-		{EA20FCAD-4E88-B4D4-091C-B39D26B68FA6}.Debug|x64.ActiveCfg = Debug|Windows 64-bit .exe
-		{EA20FCAD-4E88-B4D4-091C-B39D26B68FA6}.Debug|x86.ActiveCfg = Debug|Windows 64-bit .exe
-		{EA20FCAD-4E88-B4D4-091C-B39D26B68FA6}.Release|Any CPU.ActiveCfg = Release|Windows 64-bit .exe
-		{EA20FCAD-4E88-B4D4-091C-B39D26B68FA6}.Release|x64.ActiveCfg = Release|Windows 64-bit .exe
-		{EA20FCAD-4E88-B4D4-091C-B39D26B68FA6}.Release|x86.ActiveCfg = Release|Windows 64-bit .exe
+		{2C35845D-5BE6-C84A-2DC5-8D4FEEFEFE47}.Debug|Any CPU.ActiveCfg = Debug|Windows 64-bit .exe
+		{2C35845D-5BE6-C84A-2DC5-8D4FEEFEFE47}.Debug|x64.ActiveCfg = Debug|Windows 64-bit .exe
+		{2C35845D-5BE6-C84A-2DC5-8D4FEEFEFE47}.Debug|x86.ActiveCfg = Debug|Windows 64-bit .exe
+		{2C35845D-5BE6-C84A-2DC5-8D4FEEFEFE47}.Release|Any CPU.ActiveCfg = Release|Windows 64-bit .exe
+		{2C35845D-5BE6-C84A-2DC5-8D4FEEFEFE47}.Release|x64.ActiveCfg = Release|Windows 64-bit .exe
+		{2C35845D-5BE6-C84A-2DC5-8D4FEEFEFE47}.Release|x86.ActiveCfg = Release|Windows 64-bit .exe
 		{3E79D708-2407-0B1B-DF35-0EB2FD2506B3}.Debug|Any CPU.ActiveCfg = Debug|Windows 64-bit .exe
 		{3E79D708-2407-0B1B-DF35-0EB2FD2506B3}.Debug|x64.ActiveCfg = Debug|Windows 64-bit .exe
 		{3E79D708-2407-0B1B-DF35-0EB2FD2506B3}.Debug|x86.ActiveCfg = Debug|Windows 64-bit .exe
@@ -167,11 +166,11 @@ Global
 		{31A5C147-2EE9-B5EF-DED3-5273D229ADEF} = {5AA683E6-7816-4657-B06F-9F74A9CC2442}
 		{028C124F-0C98-40DD-BA5F-4FF59580E5EF} = {74066D38-9478-4BA7-B835-1ED66B291B2C}
 		{86CE4D22-4D26-1894-CF79-16CB2D250796} = {74066D38-9478-4BA7-B835-1ED66B291B2C}
-		{18A67218-D53E-438F-BE15-C3B99D28F056} = {74066D38-9478-4BA7-B835-1ED66B291B2C}
-		{D5466940-8903-40F7-B7F1-41D085431D07} = {891FB07A-D3B4-411A-95A4-BBE6EE635621}
-		{06D4C99A-B6BE-4EC7-835F-73FF16A0E63D} = {5B9E1ED5-AE9A-409D-BD86-7102751D8FC8}
+		{A0C0A0B5-60CA-35EB-2D17-4B234176D63E} = {74066D38-9478-4BA7-B835-1ED66B291B2C}
+		{CD2C1BE9-94DF-0CBE-576C-4A23CACB8A8B} = {891FB07A-D3B4-411A-95A4-BBE6EE635621}
+		{E6982AB5-EB50-69A7-09EA-064BCFAA18C0} = {5B9E1ED5-AE9A-409D-BD86-7102751D8FC8}
 		{5996C933-BE43-5E19-3CDB-4B32D697BEB9} = {891FB07A-D3B4-411A-95A4-BBE6EE635621}
-		{EA20FCAD-4E88-B4D4-091C-B39D26B68FA6} = {891FB07A-D3B4-411A-95A4-BBE6EE635621}
+		{2C35845D-5BE6-C84A-2DC5-8D4FEEFEFE47} = {891FB07A-D3B4-411A-95A4-BBE6EE635621}
 		{3E79D708-2407-0B1B-DF35-0EB2FD2506B3} = {891FB07A-D3B4-411A-95A4-BBE6EE635621}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
