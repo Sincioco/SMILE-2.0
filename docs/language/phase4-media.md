@@ -40,6 +40,24 @@ Rotation is not part of Phase 4 because it could not be added with the same simp
 
 Web canvases keep logical SMILE coordinates while allocating equal visible/back-buffer physical dimensions from CSS size and `devicePixelRatio`, capped at 8192 pixels per dimension and 33,554,432 pixels total. Canvas transforms are restored after resize, fullscreen, orientation, and DPR changes. Smooth sampling remains the default and high-resolution sources rasterize directly into the physical backing store.
 
+## Web virtual controls
+
+Graphical Web output includes a reusable on-screen controller for touch-first play. It remains hidden until `Game Window` runs, so Console programs are unchanged. Its default `Auto` policy uses `navigator.maxTouchPoints`, the `pointer: coarse` and `hover: none` media features, and an observed touch or pen Pointer Event. It does not parse the browser user agent.
+
+The generated page accepts deterministic visibility overrides:
+
+```text
+?smile-controls=on
+?smile-controls=off
+?smile-controls=auto
+```
+
+The D-pad maps to `KEY_UP`, `KEY_DOWN`, `KEY_LEFT`, and `KEY_RIGHT`. A/B/X/Y map to `KEY_ENTER`, `KEY_ESCAPE`, `KEY_SPACE`, and `KEY_TAB`. Utility buttons 1 through 4 map to `KEY_1` through `KEY_4`. Touch, pen, and primary mouse presses on a visible controller enter the same bounded, source-aware broker as keyboard input, so each press creates one `Get Key` event and `Key_Held(...)` remains true until every owning source releases. Multi-touch direction-plus-action input is supported.
+
+The controller uses real accessible buttons, safe-area-aware portrait and landscape layouts, and at least 56-by-56 CSS-pixel targets. Gesture suppression is limited to the controls; browser zoom is not disabled globally. The published Web output remains exactly `index.html`, `smile-runtime.js`, `game.js`, and `smile.css`, and the same `.smile` source continues to target Windows and Web.
+
+The standard profile does not infer arbitrary custom or same-device multiplayer keyboard layouts. Such games need a future explicit profile or game-declared mapping; the runtime does not duplicate aliases or branch on game names.
+
 ## Structured clipping and text measurement
 
 Clips can nest and intersect. The compiler restores each active clip on normal exit and before `Return`, `Exit For`, `Exit Do`, or `End Program` transfers control out of its scope.

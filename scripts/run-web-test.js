@@ -10,7 +10,7 @@ function fail(message) {
 }
 
 const args = process.argv.slice(2);
-if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--expected-runtime-error <text>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio|--phase5-ui|--phase5-hardening|--phase5-submenus|--phase5-submenu-viewport]");
+if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--expected-runtime-error <text>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio|--phase5-ui|--phase5-hardening|--phase5-submenus|--phase5-submenu-viewport|--mobile-controls]");
 
 const webDirectory = path.resolve(args.shift());
 let expectedPath = null;
@@ -27,6 +27,7 @@ let verifyPhase5Ui = false;
 let verifyPhase5Hardening = false;
 let verifyPhase5Submenus = false;
 let verifyPhase5SubmenuViewport = false;
+let verifyMobileControls = false;
 while (args.length !== 0) {
     const option = args.shift();
     if (option === "--phase4-media") {
@@ -40,6 +41,7 @@ while (args.length !== 0) {
     if (option === "--phase5-hardening") { verifyPhase5Hardening = true; continue; }
     if (option === "--phase5-submenus") { verifyPhase5Submenus = true; continue; }
     if (option === "--phase5-submenu-viewport") { verifyPhase5SubmenuViewport = true; continue; }
+    if (option === "--mobile-controls") { verifyMobileControls = true; continue; }
     const value = args.shift();
     if (value === undefined) fail(`missing value for ${option}`);
     if (option === "--expected") expectedPath = path.resolve(value);
@@ -58,6 +60,346 @@ const runtimePath = path.join(webDirectory, "smile-runtime.js");
 const gamePath = path.join(webDirectory, "game.js");
 if (!fs.existsSync(runtimePath) || !fs.existsSync(gamePath)) fail(`generated Web files were not found under ${webDirectory}`);
 
+function mobileAssert(condition, message) {
+    if (!condition) throw new Error(`mobile-controls: ${message}`);
+}
+
+function mobileEqual(actual, expected, message) {
+    if (actual !== expected)
+        throw new Error(`mobile-controls: ${message}; expected ${JSON.stringify(expected)}, found ${JSON.stringify(actual)}`);
+}
+
+function createMobileEventTarget(initial = {}) {
+    const listeners = new Map();
+    const attributes = new Map();
+    const classes = new Set();
+    const captures = new Set();
+    const target = { hidden: false, style: {}, dataset: {}, ...initial };
+    target.addEventListener = (type, listener) => {
+        if (!listeners.has(type)) listeners.set(type, []);
+        listeners.get(type).push(listener);
+    };
+    target.dispatch = (type, event = {}) => {
+        const payload = { type, target, currentTarget: target, defaultPrevented: false, ...event };
+        payload.preventDefault = () => { payload.defaultPrevented = true; };
+        for (const listener of listeners.get(type) || []) listener(payload);
+        return payload;
+    };
+    target.setAttribute = (name, value) => attributes.set(name, String(value));
+    target.getAttribute = name => attributes.has(name) ? attributes.get(name) : null;
+    target.classList = {
+        add: name => classes.add(name),
+        remove: name => classes.delete(name),
+        contains: name => classes.has(name),
+        toggle: (name, force) => {
+            const enabled = force === undefined ? !classes.has(name) : Boolean(force);
+            if (enabled) classes.add(name); else classes.delete(name);
+            return enabled;
+        }
+    };
+    target.setPointerCapture = pointerId => captures.add(pointerId);
+    target.releasePointerCapture = pointerId => captures.delete(pointerId);
+    target.hasPointerCapture = pointerId => captures.has(pointerId);
+    return target;
+}
+
+function createMobileControlsHost(options = {}) {
+    const windowListeners = new Map();
+    const documentListeners = new Map();
+    const orientationListeners = new Map();
+    const add = (listeners, type, listener) => {
+        if (!listeners.has(type)) listeners.set(type, []);
+        listeners.get(type).push(listener);
+    };
+    const dispatch = (listeners, target, type, event = {}) => {
+        const payload = { type, target, currentTarget: target, defaultPrevented: false, ...event };
+        payload.preventDefault = () => { payload.defaultPrevented = true; };
+        for (const listener of listeners.get(type) || []) listener(payload);
+        return payload;
+    };
+    const drawing = {
+        setTransform() {}, clearRect() {}, drawImage() {}, save() {}, beginPath() {}, rect() {}, clip() {},
+        restore() {}, fillRect() {}, strokeRect() {}, moveTo() {}, lineTo() {}, quadraticCurveTo() {},
+        closePath() {}, fill() {}, stroke() {}, arc() {}, translate() {}, scale() {}, fillText() {},
+        measureText: value => ({ width: String(value).length * 8, actualBoundingBoxAscent: 12, actualBoundingBoxDescent: 4 }),
+        globalAlpha: 1, imageSmoothingEnabled: true
+    };
+    const canvas = createMobileEventTarget({ hidden: true, width: 960, height: 540 });
+    canvas.getContext = () => drawing;
+    canvas.focus = () => {};
+    const consoleElement = createMobileEventTarget({ hidden: true, textContent: "", scrollTop: 0, scrollHeight: 0 });
+    const errorElement = createMobileEventTarget({ hidden: true, textContent: "" });
+    const shellElement = createMobileEventTarget();
+    shellElement.requestFullscreen = async () => {};
+    const names = ["up", "down", "left", "right", "a", "b", "x", "y", "one", "two", "three", "four"];
+    const buttons = new Map(names.map(name => {
+        const button = createMobileEventTarget({ dataset: { smileControl: name } });
+        button.setAttribute("aria-pressed", "false");
+        return [name, button];
+    }));
+    const unknownButton = createMobileEventTarget({ dataset: { smileControl: "unknown" } });
+    unknownButton.setAttribute("aria-pressed", "false");
+    const controls = createMobileEventTarget({ hidden: true });
+    controls.setAttribute("aria-hidden", "true");
+    controls.querySelectorAll = selector => selector === "button[data-smile-control]"
+        ? [...buttons.values(), unknownButton]
+        : [];
+    const elements = new Map([
+        ["smile-canvas", canvas], ["smile-console", consoleElement], ["smile-error", errorElement],
+        ["smile-shell", shellElement], ["smile-controls", controls]
+    ]);
+    let audioPlays = 0;
+    let audioPauses = 0;
+    const host = {
+        console: { log() {}, warn() {}, error() {} },
+        document: {
+            title: "", hidden: false, fullscreenElement: null,
+            getElementById: id => elements.get(id) || null,
+            createElement: tag => {
+                if (tag !== "canvas") return createMobileEventTarget();
+                const offscreen = createMobileEventTarget({ width: 0, height: 0 });
+                offscreen.getContext = () => drawing;
+                return offscreen;
+            },
+            addEventListener: (type, listener) => add(documentListeners, type, listener),
+            hasFocus: () => !host.document.hidden,
+            exitFullscreen: async () => {}
+        },
+        navigator: { maxTouchPoints: options.maxTouchPoints || 0 },
+        location: { search: options.search || "" },
+        matchMedia: query => ({
+            matches: query === "(pointer: coarse)" ? Boolean(options.coarsePointer) :
+                query === "(hover: none)" ? Boolean(options.noHover) : false
+        }),
+        localStorage: { getItem: () => null, setItem() {} },
+        performance: { now: () => 0 },
+        Audio: class {
+            constructor(source) { this.src = source; this.loop = false; this.volume = 1; this.currentTime = 0; }
+            addEventListener() {}
+            play() { audioPlays += 1; return Promise.resolve(); }
+            pause() { audioPauses += 1; }
+        },
+        Image: class {},
+        fetch: async () => ({ ok: false, arrayBuffer: async () => new ArrayBuffer(0) }),
+        btoa: value => Buffer.from(value, "binary").toString("base64"),
+        atob: value => Buffer.from(value, "base64").toString("binary"),
+        URLSearchParams,
+        setTimeout, clearTimeout, setImmediate, Promise, Map, Set, Uint8Array, Uint32Array, ArrayBuffer, DataView,
+        innerWidth: 1280, innerHeight: 720, devicePixelRatio: 2,
+        screen: { orientation: { addEventListener: (type, listener) => add(orientationListeners, type, listener) } },
+        visualViewport: { addEventListener() {} },
+        addEventListener: (type, listener) => add(windowListeners, type, listener),
+        requestAnimationFrame: callback => setImmediate(() => callback(0))
+    };
+    host.window = host;
+    const context = vm.createContext(host);
+    vm.runInContext(fs.readFileSync(runtimePath, "utf8"), context, { filename: runtimePath });
+    const dispatchWindow = (type, event = {}) => dispatch(windowListeners, host, type, event);
+    const dispatchDocument = (type, event = {}) => dispatch(documentListeners, host.document, type, event);
+    const dispatchOrientation = () => dispatch(orientationListeners, host.screen.orientation, "change");
+    const pointer = (controlName, type, pointerId, pointerType = "touch", button = 0) => {
+        const control = controlName === "unknown" ? unknownButton : buttons.get(controlName);
+        const event = control.dispatch(type, { pointerId, pointerType, button });
+        if (type === "pointerdown" || type === "pointerup" || type === "pointercancel")
+            dispatchWindow(type, { target: control, pointerId, pointerType, button });
+        return event;
+    };
+    const keyboard = (type, code, extras = {}) => dispatchWindow(type, {
+        code, repeat: false, ctrlKey: false, altKey: false, metaKey: false, ...extras
+    });
+    return {
+        host, controls, buttons, unknownButton, errorElement,
+        dispatchWindow, dispatchDocument, dispatchOrientation, pointer, keyboard,
+        audioPlays: () => audioPlays, audioPauses: () => audioPauses
+    };
+}
+
+function drainKeys(smile) {
+    const values = [];
+    for (;;) {
+        const value = smile.getKey();
+        if (value === 0) return values;
+        values.push(value);
+    }
+}
+
+function assertReleased(environment, message) {
+    const diagnostics = environment.host.smile.mediaDiagnostics();
+    mobileEqual(diagnostics.virtualActivePointerCount, 0, `${message} active pointer count`);
+    mobileEqual(diagnostics.activeInputSourceCount, 0, `${message} active source count`);
+    for (const button of environment.buttons.values())
+        mobileEqual(button.getAttribute("aria-pressed"), "false", `${message} aria-pressed state`);
+}
+
+async function runMobileControlsTests() {
+    const desktop = createMobileControlsHost();
+    mobileEqual(desktop.controls.hidden, true, "Desktop Auto starts hidden before Game Window");
+    desktop.host.smile.gameWindow("Desktop", 960, 540);
+    mobileEqual(desktop.controls.hidden, true, "Desktop Auto remains hidden after Game Window");
+    desktop.keyboard("keydown", "ArrowUp");
+    mobileEqual(desktop.host.smile.keyHeld(10), 1, "desktop keyboard held state");
+    mobileEqual(desktop.host.smile.getKey(), 10, "desktop keyboard queue value");
+    desktop.keyboard("keyup", "ArrowUp");
+    mobileEqual(desktop.host.smile.keyHeld(10), 0, "desktop keyboard release");
+    mobileEqual(desktop.host.smile.mediaDiagnostics().virtualControlsMode, "auto", "Desktop Auto diagnostics mode");
+
+    const touchFirst = createMobileControlsHost({ maxTouchPoints: 5, coarsePointer: true, noHover: true });
+    mobileEqual(touchFirst.controls.hidden, true, "touch-first Auto starts hidden before Game Window");
+    touchFirst.host.smile.gameWindow("Touch", 960, 540);
+    mobileEqual(touchFirst.controls.hidden, false, "touch-first Auto shows after Game Window");
+    mobileEqual(touchFirst.controls.getAttribute("aria-hidden"), "false", "visible controls expose accessible state");
+    touchFirst.pointer("a", "pointerdown", 1, "mouse", 0);
+    mobileEqual(touchFirst.host.smile.getKey(), 14, "visible Auto controls accept primary mouse input");
+    touchFirst.pointer("a", "pointerup", 1, "mouse", 0);
+
+    const forcedOff = createMobileControlsHost({ search: "?smile-controls=off", maxTouchPoints: 5, coarsePointer: true });
+    forcedOff.host.smile.gameWindow("Off", 960, 540);
+    forcedOff.dispatchWindow("pointerdown", { pointerId: 1, pointerType: "touch", button: 0 });
+    mobileEqual(forcedOff.controls.hidden, true, "Forced Off wins over capabilities and observed touch");
+    forcedOff.pointer("up", "pointerdown", 2, "touch", 0);
+    mobileEqual(forcedOff.host.smile.getKey(), 0, "Forced Off cannot create virtual input");
+
+    const hybrid = createMobileControlsHost({ maxTouchPoints: 5 });
+    hybrid.host.smile.gameWindow("Hybrid", 960, 540);
+    mobileEqual(hybrid.controls.hidden, true, "hybrid Auto initially hides controls");
+    hybrid.dispatchWindow("pointerdown", { pointerId: 8, pointerType: "pen", button: 0 });
+    mobileEqual(hybrid.controls.hidden, false, "observed touch or pen reveals hybrid controls");
+    mobileEqual(hybrid.host.smile.getKey(), 0, "hybrid reveal does not enqueue input");
+
+    const unknownMode = createMobileControlsHost({ search: "?smile-controls=unexpected" });
+    unknownMode.host.smile.gameWindow("Unknown", 960, 540);
+    mobileEqual(unknownMode.controls.hidden, true, "unknown visibility mode falls back to Auto");
+    mobileEqual(unknownMode.host.smile.mediaDiagnostics().virtualControlsMode, "auto", "unknown mode diagnostics fallback");
+    const duplicateMode = createMobileControlsHost({ search: "?smile-controls=on&smile-controls=off" });
+    duplicateMode.host.smile.gameWindow("Duplicate", 960, 540);
+    mobileEqual(duplicateMode.controls.hidden, true, "duplicated visibility mode falls back to Auto");
+
+    const controls = createMobileControlsHost({ search: "?smile-controls=on" });
+    mobileEqual(controls.controls.hidden, true, "Forced On starts hidden before Game Window");
+    controls.host.smile.gameWindow("Controls", 960, 540);
+    mobileEqual(controls.controls.hidden, false, "Forced On shows after Game Window");
+    const mapping = new Map([
+        ["up", 10], ["down", 11], ["left", 12], ["right", 13],
+        ["a", 14], ["b", 15], ["x", 16], ["y", 21],
+        ["one", 17], ["two", 18], ["three", 20], ["four", 22]
+    ]);
+    let pointerId = 20;
+    for (const [controlName, key] of mapping) {
+        const down = controls.pointer(controlName, "pointerdown", pointerId, "touch", 0);
+        mobileEqual(down.defaultPrevented, true, `${controlName} pointerdown gesture containment`);
+        mobileEqual(controls.host.smile.keyHeld(key), 1, `${controlName} held state`);
+        mobileEqual(controls.host.smile.getKey(), key, `${controlName} queue mapping`);
+        controls.pointer(controlName, "pointerdown", pointerId, "touch", 0);
+        mobileEqual(controls.host.smile.getKey(), 0, `${controlName} duplicate pointerdown is idempotent`);
+        controls.pointer(controlName, "pointerup", pointerId, "touch", 0);
+        mobileEqual(controls.host.smile.keyHeld(key), 0, `${controlName} release state`);
+        pointerId += 1;
+    }
+    controls.pointer("unknown", "pointerdown", 100, "touch", 0);
+    mobileEqual(controls.host.smile.getKey(), 0, "unknown symbolic control is ignored");
+    controls.controls.dispatch("pointerdown", { pointerId: 101, pointerType: "touch", button: 0 });
+    mobileEqual(controls.host.smile.getKey(), 0, "blank overlay space does not enqueue input");
+    controls.pointer("a", "pointerdown", 102, "mouse", 2);
+    mobileEqual(controls.host.smile.getKey(), 0, "non-primary mouse button is ignored");
+
+    controls.pointer("up", "pointerdown", 110, "touch", 0);
+    controls.pointer("a", "pointerdown", 111, "touch", 0);
+    mobileEqual(controls.host.smile.keyHeld(10), 1, "multi-touch direction held");
+    mobileEqual(controls.host.smile.keyHeld(14), 1, "multi-touch action held");
+    mobileAssert(JSON.stringify(drainKeys(controls.host.smile)) === JSON.stringify([10, 14]), "multi-touch queue order");
+    controls.pointer("up", "pointerup", 110, "touch", 0);
+    mobileEqual(controls.host.smile.keyHeld(14), 1, "releasing direction preserves action");
+    controls.pointer("a", "pointerup", 111, "touch", 0);
+    assertReleased(controls, "multi-touch release");
+
+    controls.keyboard("keydown", "Enter");
+    controls.pointer("a", "pointerdown", 112, "touch", 0);
+    mobileEqual(controls.host.smile.keyHeld(14), 1, "keyboard and pointer share a held key");
+    controls.pointer("a", "pointerup", 112, "touch", 0);
+    mobileEqual(controls.host.smile.keyHeld(14), 1, "pointer release preserves keyboard ownership");
+    controls.keyboard("keyup", "Enter");
+    mobileEqual(controls.host.smile.keyHeld(14), 0, "final same-key owner release clears held state");
+    drainKeys(controls.host.smile);
+
+    controls.pointer("left", "pointerdown", 120, "touch", 0);
+    controls.pointer("left", "pointercancel", 120, "touch", 0);
+    assertReleased(controls, "pointercancel");
+    drainKeys(controls.host.smile);
+    controls.pointer("right", "pointerdown", 121, "touch", 0);
+    controls.pointer("right", "lostpointercapture", 121, "touch", 0);
+    assertReleased(controls, "lostpointercapture");
+    drainKeys(controls.host.smile);
+    controls.pointer("up", "pointerdown", 122, "touch", 0);
+    controls.dispatchWindow("blur");
+    assertReleased(controls, "window blur");
+    controls.dispatchWindow("focus");
+    controls.pointer("down", "pointerdown", 123, "touch", 0);
+    controls.host.document.hidden = true;
+    controls.dispatchDocument("visibilitychange");
+    assertReleased(controls, "document visibility loss");
+    controls.host.document.hidden = false;
+    controls.dispatchWindow("focus");
+    controls.pointer("x", "pointerdown", 124, "touch", 0);
+    controls.dispatchOrientation();
+    assertReleased(controls, "orientation change");
+
+    const queueBounds = createMobileControlsHost({ search: "?smile-controls=on" });
+    queueBounds.host.smile.gameWindow("Bounds", 960, 540);
+    for (let index = 0; index < 300; index += 1) {
+        queueBounds.keyboard("keydown", "Digit1");
+        queueBounds.keyboard("keyup", "Digit1");
+    }
+    let diagnostics = queueBounds.host.smile.mediaDiagnostics();
+    mobileEqual(diagnostics.queuedKeyCount, 256, "Get Key queue remains bounded");
+    mobileEqual(drainKeys(queueBounds.host.smile).length, 256, "bounded queue keeps exactly the newest capacity");
+    for (let index = 0; index < 33; index += 1)
+        queueBounds.pointer("up", "pointerdown", 200 + index, "touch", 0);
+    diagnostics = queueBounds.host.smile.mediaDiagnostics();
+    mobileEqual(diagnostics.activeInputSourceCount, 32, "active input source count remains bounded");
+    mobileEqual(diagnostics.virtualActivePointerCount, 32, "excess virtual pointers are ignored");
+    queueBounds.dispatchWindow("blur");
+    assertReleased(queueBounds, "bounded-source blur cleanup");
+
+    const audio = createMobileControlsHost({ search: "?smile-controls=on" });
+    audio.host.smile.gameWindow("Audio", 960, 540);
+    audio.host.smile.playMusic("Music.ogg", 1);
+    mobileEqual(audio.audioPlays(), 0, "showing controls does not unlock music");
+    audio.pointer("a", "pointerdown", 300, "mouse", 0);
+    mobileAssert(audio.audioPlays() > 0, "accepted primary mouse/touch control press follows music synchronization");
+    audio.pointer("a", "pointerup", 300, "mouse", 0);
+
+    const pageHide = createMobileControlsHost({ search: "?smile-controls=on" });
+    pageHide.host.smile.gameWindow("Page hide", 960, 540);
+    pageHide.pointer("a", "pointerdown", 310, "touch", 0);
+    pageHide.dispatchWindow("pagehide");
+    assertReleased(pageHide, "pagehide");
+    mobileEqual(pageHide.controls.hidden, true, "pagehide hides controls");
+
+    const finish = createMobileControlsHost({ search: "?smile-controls=on" });
+    finish.host.smile.gameWindow("Finish", 960, 540);
+    finish.pointer("a", "pointerdown", 320, "touch", 0);
+    finish.host.smile.run(() => {});
+    await new Promise(resolve => setImmediate(resolve));
+    assertReleased(finish, "runtime finish");
+    mobileEqual(finish.controls.hidden, true, "runtime finish hides controls");
+    mobileEqual(finish.host.__smileWeb.status, "stopped", "runtime finish status");
+
+    const failure = createMobileControlsHost({ search: "?smile-controls=on" });
+    failure.host.smile.gameWindow("Failure", 960, 540);
+    failure.pointer("a", "pointerdown", 330, "touch", 0);
+    failure.host.smile.run(() => { throw new Error("expected mobile-controls failure"); });
+    await new Promise(resolve => setImmediate(resolve));
+    assertReleased(failure, "runtime failure");
+    mobileEqual(failure.controls.hidden, true, "runtime failure hides controls");
+    mobileEqual(failure.host.__smileWeb.status, "error", "runtime failure status");
+    mobileEqual(failure.errorElement.hidden, false, "runtime failure displays the error panel");
+}
+
+if (verifyMobileControls) {
+    runMobileControlsTests()
+        .then(() => process.stdout.write(`Web execution passed: ${webDirectory} (mobile virtual controls)\n`))
+        .catch(error => fail(error && error.stack ? error.stack : String(error)));
+} else {
 const drawnText = [];
 const windowListeners = new Map();
 const documentListeners = new Map();
@@ -715,3 +1057,4 @@ const started = Date.now();
     if (verifyPhase5Hardening) process.stdout.write(" (Phase 5.1 validation/reflow/multiline/high-DPI/ownership parity)");
     process.stdout.write("\n");
 })().catch(error => fail(error && error.stack ? error.stack : String(error)));
+}

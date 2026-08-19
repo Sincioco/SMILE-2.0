@@ -163,6 +163,10 @@ node --check "%SMILE_ROOT%\artifacts\web\Phase3ATextGame\game.js"
 if errorlevel 1 exit /b %errorlevel%
 node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase3ATextGame" --draw-text-file "%SMILE_ROOT%\examples\Phase3ATextGame\Caption.expected.txt" --frames 2 --timeout 10000
 if errorlevel 1 exit /b %errorlevel%
+node --check "%SMILE_ROOT%\artifacts\web\Phase3ATextGame\smile-runtime.js"
+if errorlevel 1 exit /b %errorlevel%
+node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\Phase3ATextGame" --mobile-controls --timeout 10000
+if errorlevel 1 exit /b %errorlevel%
 
 for %%N in (RecursiveFor RecursiveTextSelect ExitCleanup NestedCleanup EndProgramCleanup Unicode WebParity) do (
     "%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\examples\Phase3A1Hardening\%%N.smile" -o "%SMILE_ROOT%\artifacts\games\%%N.exe"

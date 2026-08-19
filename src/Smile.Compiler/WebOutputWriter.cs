@@ -31,7 +31,7 @@ internal static class WebOutputWriter
         <html lang="en">
         <head>
           <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
           <title>{{WebUtility.HtmlEncode(title)}}</title>
           <link rel="stylesheet" href="smile.css">
         </head>
@@ -40,6 +40,26 @@ internal static class WebOutputWriter
             <canvas id="smile-canvas" width="960" height="540" tabindex="0" aria-label="{{WebUtility.HtmlEncode(title)}}"></canvas>
             <pre id="smile-console" hidden aria-live="polite"></pre>
             <pre id="smile-error" hidden></pre>
+            <section id="smile-controls" hidden aria-hidden="true" aria-label="Game controls">
+              <div class="smile-dpad" aria-label="Directional controls">
+                <button class="smile-control-up" type="button" data-smile-control="up" aria-label="Move up" aria-pressed="false">▲</button>
+                <button class="smile-control-left" type="button" data-smile-control="left" aria-label="Move left" aria-pressed="false">◀</button>
+                <button class="smile-control-right" type="button" data-smile-control="right" aria-label="Move right" aria-pressed="false">▶</button>
+                <button class="smile-control-down" type="button" data-smile-control="down" aria-label="Move down" aria-pressed="false">▼</button>
+              </div>
+              <div class="smile-utility-controls" aria-label="Number controls">
+                <button type="button" data-smile-control="one" aria-label="Number 1" aria-pressed="false">1</button>
+                <button type="button" data-smile-control="two" aria-label="Number 2" aria-pressed="false">2</button>
+                <button type="button" data-smile-control="three" aria-label="Number 3" aria-pressed="false">3</button>
+                <button type="button" data-smile-control="four" aria-label="Number 4" aria-pressed="false">4</button>
+              </div>
+              <div class="smile-action-controls" aria-label="Action controls">
+                <button class="smile-control-y" type="button" data-smile-control="y" aria-label="Y, menu or Tab" aria-pressed="false">Y</button>
+                <button class="smile-control-x" type="button" data-smile-control="x" aria-label="X, action or Space" aria-pressed="false">X</button>
+                <button class="smile-control-b" type="button" data-smile-control="b" aria-label="B, back or Escape" aria-pressed="false">B</button>
+                <button class="smile-control-a" type="button" data-smile-control="a" aria-label="A, confirm or Enter" aria-pressed="false">A</button>
+              </div>
+            </section>
           </main>
           <script src="smile-runtime.js"></script>
           <script src="game.js"></script>
@@ -56,7 +76,28 @@ internal static class WebOutputWriter
         #smile-canvas { display: block; max-width: 100vw; max-height: 100vh; width: auto; height: auto; aspect-ratio: 16 / 9; background: #000; outline: none; }
         #smile-canvas:focus-visible { box-shadow: inset 0 0 0 2px #46e6ff; }
         #smile-console { width: min(72rem, 100vw); height: 100vh; margin: 0; padding: 1rem; overflow: auto; color: #f2f4f8; background: #05070c; font: 16px/1.4 Consolas, monospace; white-space: pre-wrap; }
-        #smile-error { position: absolute; left: 1rem; right: 1rem; bottom: 1rem; max-height: 35vh; overflow: auto; margin: 0; padding: 1rem; color: #fff; background: #761b25; border: 1px solid #ff8794; white-space: pre-wrap; }
+        #smile-error { position: absolute; z-index: 20; left: 1rem; right: 1rem; bottom: 1rem; max-height: 35vh; overflow: auto; margin: 0; padding: 1rem; color: #fff; background: #761b25; border: 1px solid #ff8794; white-space: pre-wrap; }
+        #smile-controls[hidden] { display: none; }
+        #smile-controls { position: absolute; z-index: 10; inset: 0; pointer-events: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+        #smile-controls button { pointer-events: auto; touch-action: none; min-width: 56px; min-height: 56px; padding: 0; border: 2px solid rgba(220, 247, 255, .82); border-radius: 50%; color: #fff; background: rgba(9, 20, 36, .66); box-shadow: 0 3px 12px rgba(0, 0, 0, .4); font: 700 clamp(18px, 4vmin, 28px)/1 "Segoe UI", Arial, sans-serif; }
+        #smile-controls button:focus-visible { outline: 3px solid #46e6ff; outline-offset: 3px; }
+        #smile-controls button.smile-control-active { background: rgba(27, 157, 190, .9); border-color: #fff; transform: translateY(2px) scale(.97); }
+        .smile-dpad, .smile-action-controls { position: absolute; bottom: max(14px, env(safe-area-inset-bottom, 0px)); display: grid; grid-template: repeat(3, clamp(56px, 12vmin, 78px)) / repeat(3, clamp(56px, 12vmin, 78px)); gap: 4px; }
+        .smile-dpad { left: max(14px, env(safe-area-inset-left, 0px)); }
+        .smile-action-controls { right: max(14px, env(safe-area-inset-right, 0px)); }
+        .smile-dpad button, .smile-action-controls button { width: clamp(56px, 12vmin, 78px); height: clamp(56px, 12vmin, 78px); }
+        .smile-control-up, .smile-control-y { grid-column: 2; grid-row: 1; }
+        .smile-control-left, .smile-control-x { grid-column: 1; grid-row: 2; }
+        .smile-control-right, .smile-control-b { grid-column: 3; grid-row: 2; }
+        .smile-control-down, .smile-control-a { grid-column: 2; grid-row: 3; }
+        .smile-utility-controls { position: absolute; left: 50%; bottom: max(18px, env(safe-area-inset-bottom, 0px)); display: flex; gap: 6px; transform: translateX(-50%); }
+        .smile-utility-controls button { width: clamp(56px, 9vmin, 64px); height: clamp(56px, 9vmin, 64px); font-size: clamp(15px, 3vmin, 20px); }
+        @media (orientation: portrait) {
+          .smile-dpad, .smile-action-controls { gap: 0; }
+          .smile-dpad { left: max(8px, env(safe-area-inset-left, 0px)); bottom: max(18px, env(safe-area-inset-bottom, 0px)); }
+          .smile-action-controls { right: max(8px, env(safe-area-inset-right, 0px)); bottom: calc(max(18px, env(safe-area-inset-bottom, 0px)) + 60px); }
+          .smile-utility-controls { bottom: calc(max(18px, env(safe-area-inset-bottom, 0px)) + clamp(232px, 52vmin, 280px)); }
+        }
         """;
 
     private const string Runtime = """
@@ -73,8 +114,14 @@ internal static class WebOutputWriter
             const back = backCanvas.getContext("2d", { alpha: false });
             const consoleOutput = document.getElementById("smile-console");
             const errorPanel = document.getElementById("smile-error");
+            const virtualControls = document.getElementById("smile-controls");
+            const virtualControlButtons = virtualControls
+                ? Array.from(virtualControls.querySelectorAll("button[data-smile-control]"))
+                : [];
             const keys = [];
-            const heldKeys = new Set();
+            const inputSources = new Map();
+            const heldKeyCounts = new Map();
+            const activeVirtualPointers = new Map();
             const memoryStorage = new Map();
             const imageCache = new Map();
             const sfxCache = new Map();
@@ -82,8 +129,20 @@ internal static class WebOutputWriter
             const sfxGenerations = new Array(16).fill(0);
             const clipStack = [];
             const assetPaths = new Set();
+            const MAX_QUEUED_KEYS = 256;
+            const MAX_ACTIVE_INPUT_SOURCES = 32;
             const MAX_BACKING_DIMENSION = 8192;
             const MAX_BACKING_PIXELS = 33554432;
+            const virtualControlProfiles = Object.freeze({
+                standard: Object.freeze({
+                    up: 10, down: 11, left: 12, right: 13,
+                    a: 14, b: 15, x: 16, y: 21,
+                    one: 17, two: 18, three: 20, four: 22
+                })
+            });
+            const activeVirtualControlProfile = virtualControlProfiles.standard;
+            const virtualControlsMode = readVirtualControlsMode();
+            const initiallyTouchFirst = initialTouchFirstCapability();
             let logicalWidth = 960;
             let logicalHeight = 540;
             let backingWidth = 960;
@@ -106,6 +165,162 @@ internal static class WebOutputWriter
             let musicPaused = false;
             let consoleText = "";
             let storageNamespace = "smile2:web";
+            let gameWindowCreated = false;
+            let touchInteractionObserved = false;
+            let virtualControlsVisible = false;
+
+            function readVirtualControlsMode() {
+                try {
+                    const search = globalThis.location && typeof globalThis.location.search === "string"
+                        ? globalThis.location.search
+                        : "";
+                    const values = new URLSearchParams(search).getAll("smile-controls");
+                    if (values.length !== 1) return "auto";
+                    const value = values[0].toLowerCase();
+                    return value === "on" || value === "off" || value === "auto" ? value : "auto";
+                } catch (_) { return "auto"; }
+            }
+
+            function mediaMatches(query) {
+                try { return typeof globalThis.matchMedia === "function" && Boolean(globalThis.matchMedia(query).matches); }
+                catch (_) { return false; }
+            }
+
+            function initialTouchFirstCapability() {
+                let touchPoints = 0;
+                try { touchPoints = Number(globalThis.navigator && globalThis.navigator.maxTouchPoints || 0); }
+                catch (_) { }
+                return touchPoints > 0 && (mediaMatches("(pointer: coarse)") || mediaMatches("(hover: none)"));
+            }
+
+            function enqueueKey(key) {
+                if (!Number.isSafeInteger(key)) return false;
+                keys.push(key);
+                if (keys.length > MAX_QUEUED_KEYS) keys.shift();
+                return true;
+            }
+
+            function pressInput(sourceId, key, enqueue = true) {
+                if (typeof sourceId !== "string" || sourceId.length === 0 || !Number.isSafeInteger(key)) return false;
+                const previous = inputSources.get(sourceId);
+                if (previous === key) return false;
+                if (previous !== undefined) releaseInput(sourceId);
+                if (inputSources.size >= MAX_ACTIVE_INPUT_SOURCES) return false;
+                inputSources.set(sourceId, key);
+                heldKeyCounts.set(key, (heldKeyCounts.get(key) || 0) + 1);
+                if (enqueue) enqueueKey(key);
+                return true;
+            }
+
+            function releaseInput(sourceId) {
+                const key = inputSources.get(sourceId);
+                if (key === undefined) return false;
+                inputSources.delete(sourceId);
+                const count = heldKeyCounts.get(key) || 0;
+                if (count <= 1) heldKeyCounts.delete(key);
+                else heldKeyCounts.set(key, count - 1);
+                return true;
+            }
+
+            function releaseInputsByPrefix(prefix) {
+                for (const sourceId of Array.from(inputSources.keys()))
+                    if (sourceId.startsWith(prefix)) releaseInput(sourceId);
+            }
+
+            function resetVirtualButton(button) {
+                button.classList.remove("smile-control-active");
+                button.setAttribute("aria-pressed", "false");
+            }
+
+            function releaseAllInputs() {
+                inputSources.clear();
+                heldKeyCounts.clear();
+                activeVirtualPointers.clear();
+                for (const button of virtualControlButtons) resetVirtualButton(button);
+            }
+
+            function releaseVirtualPointers() {
+                releaseInputsByPrefix("pointer:");
+                activeVirtualPointers.clear();
+                for (const button of virtualControlButtons) resetVirtualButton(button);
+            }
+
+            function setVirtualControlsVisible(visibleState) {
+                const next = Boolean(visibleState && gameWindowCreated && !closed && virtualControls);
+                if (virtualControlsVisible === next) return;
+                if (!next) releaseVirtualPointers();
+                virtualControlsVisible = next;
+                if (virtualControls) {
+                    virtualControls.hidden = !next;
+                    virtualControls.setAttribute("aria-hidden", next ? "false" : "true");
+                }
+            }
+
+            function updateVirtualControlsVisibility() {
+                const shouldShow = virtualControlsMode === "on" ||
+                    (virtualControlsMode === "auto" && (initiallyTouchFirst || touchInteractionObserved));
+                setVirtualControlsVisible(virtualControlsMode !== "off" && shouldShow);
+            }
+
+            function noteTouchInteraction(event) {
+                if (virtualControlsMode !== "auto" || touchInteractionObserved) return;
+                if (event.pointerType !== "touch" && event.pointerType !== "pen") return;
+                touchInteractionObserved = true;
+                updateVirtualControlsVisibility();
+            }
+
+            function refreshVirtualButton(button) {
+                const pressed = Array.from(activeVirtualPointers.values()).some(pointer => pointer.button === button);
+                button.classList.toggle("smile-control-active", pressed);
+                button.setAttribute("aria-pressed", pressed ? "true" : "false");
+            }
+
+            function releaseVirtualPointer(pointerId, releaseCapture = true) {
+                const pointer = activeVirtualPointers.get(pointerId);
+                if (!pointer) return false;
+                activeVirtualPointers.delete(pointerId);
+                releaseInput(pointer.sourceId);
+                if (releaseCapture && typeof pointer.button.releasePointerCapture === "function") {
+                    try { pointer.button.releasePointerCapture(pointerId); } catch (_) { }
+                }
+                refreshVirtualButton(pointer.button);
+                return true;
+            }
+
+            function handleVirtualPointerDown(event, button) {
+                noteTouchInteraction(event);
+                if (!active || closed || mediaStopped || !virtualControlsVisible ||
+                    !Number.isSafeInteger(event.pointerId) || activeVirtualPointers.has(event.pointerId)) return;
+                const isTouchOrPen = event.pointerType === "touch" || event.pointerType === "pen";
+                const isPrimaryMouse = event.pointerType === "mouse" && event.button === 0;
+                if (!isTouchOrPen && !isPrimaryMouse) return;
+                const controlName = button.dataset.smileControl;
+                if (!Object.prototype.hasOwnProperty.call(activeVirtualControlProfile, controlName)) return;
+                const key = activeVirtualControlProfile[controlName];
+                const sourceId = `pointer:${event.pointerId}`;
+                if (!pressInput(sourceId, key, true)) return;
+                event.preventDefault();
+                if (typeof button.setPointerCapture === "function") {
+                    try { button.setPointerCapture(event.pointerId); } catch (_) { }
+                }
+                activeVirtualPointers.set(event.pointerId, { sourceId, button });
+                refreshVirtualButton(button);
+                userInteracted = true;
+                syncMusic();
+            }
+
+            function handleVirtualPointerEnd(event, releaseCapture = true) {
+                if (!Number.isSafeInteger(event.pointerId) || !activeVirtualPointers.has(event.pointerId)) return;
+                event.preventDefault();
+                releaseVirtualPointer(event.pointerId, releaseCapture);
+            }
+
+            for (const button of virtualControlButtons) {
+                button.addEventListener("pointerdown", event => handleVirtualPointerDown(event, button));
+                button.addEventListener("pointerup", event => handleVirtualPointerEnd(event));
+                button.addEventListener("pointercancel", event => handleVirtualPointerEnd(event));
+                button.addEventListener("lostpointercapture", event => handleVirtualPointerEnd(event, false));
+            }
 
             function configure(appIdentity, manifest) {
                 storageNamespace = `smile2:${sha256Hex(utf8(String(appIdentity)))}`;
@@ -257,11 +472,13 @@ internal static class WebOutputWriter
                 logicalWidth = safe(width);
                 logicalHeight = safe(height);
                 if (logicalWidth <= 0 || logicalHeight <= 0) throw new Error("Game Window dimensions must be positive.");
+                gameWindowCreated = true;
                 canvas.style.aspectRatio = `${logicalWidth} / ${logicalHeight}`;
                 document.title = title;
                 canvas.setAttribute("aria-label", title);
                 canvas.hidden = false;
                 consoleOutput.hidden = true;
+                updateVirtualControlsVisibility();
                 resizeCanvas();
             }
 
@@ -745,7 +962,8 @@ internal static class WebOutputWriter
 
             window.addEventListener("keydown", event => {
                 userInteracted = true;
-                heldKeys.add(mapKey(event));
+                const key = mapKey(event);
+                const newlyPressed = pressInput(`keyboard:${event.code}`, key, false);
                 syncMusic();
                 if (event.altKey && event.code === "Enter") {
                     event.preventDefault();
@@ -754,28 +972,39 @@ internal static class WebOutputWriter
                 }
                 if (event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
                 if (controlledKey(event)) event.preventDefault();
-                keys.push(mapKey(event));
-                if (keys.length > 256) keys.shift();
+                if (newlyPressed) enqueueKey(key);
             });
 
-            window.addEventListener("keyup", event => { heldKeys.delete(mapKey(event)); });
+            window.addEventListener("keyup", event => { releaseInput(`keyboard:${event.code}`); });
 
             canvas.addEventListener("click", () => { userInteracted = true; canvas.focus(); syncMusic(); });
+            window.addEventListener("pointerdown", noteTouchInteraction);
+            window.addEventListener("pointerup", event => handleVirtualPointerEnd(event));
+            window.addEventListener("pointercancel", event => handleVirtualPointerEnd(event));
             window.addEventListener("resize", resizeCanvas);
             if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
-            if (window.screen && window.screen.orientation) window.screen.orientation.addEventListener("change", resizeCanvas);
+            if (window.screen && window.screen.orientation) window.screen.orientation.addEventListener("change", () => {
+                releaseVirtualPointers();
+                resizeCanvas();
+            });
             document.addEventListener("fullscreenchange", resizeCanvas);
             window.addEventListener("focus", () => { active = !document.hidden; syncMusic(); });
-            window.addEventListener("blur", () => { active = false; keys.length = 0; heldKeys.clear(); stopSound(); syncMusic(); });
+            window.addEventListener("blur", () => { active = false; keys.length = 0; releaseAllInputs(); stopSound(); syncMusic(); });
             document.addEventListener("visibilitychange", () => {
                 active = !document.hidden && document.hasFocus();
-                if (!active) { keys.length = 0; heldKeys.clear(); stopSound(); }
+                if (!active) { keys.length = 0; releaseAllInputs(); stopSound(); }
                 syncMusic();
             });
-            window.addEventListener("pagehide", () => { closed = true; mediaShutdown(); });
+            window.addEventListener("pagehide", () => {
+                closed = true;
+                keys.length = 0;
+                releaseAllInputs();
+                setVirtualControlsVisible(false);
+                mediaShutdown();
+            });
 
             function getKey() { return keys.length === 0 ? 0 : keys.shift(); }
-            function keyHeld(key) { return heldKeys.has(safe(key)) ? 1 : 0; }
+            function keyHeld(key) { return (heldKeyCounts.get(safe(key)) || 0) > 0 ? 1 : 0; }
 
             function checkedChannel(channel) {
                 channel = safe(channel);
@@ -1043,6 +1272,13 @@ internal static class WebOutputWriter
                     sfxCacheCount: sfxCache.size,
                     sfxCompletionCount,
                     mediaStopped,
+                    virtualControlsMode,
+                    virtualControlsVisible,
+                    virtualActivePointerCount: activeVirtualPointers.size,
+                    activeInputSourceCount: inputSources.size,
+                    queuedKeyCount: keys.length,
+                    maximumQueuedKeyCount: MAX_QUEUED_KEYS,
+                    maximumActiveInputSourceCount: MAX_ACTIVE_INPUT_SOURCES,
                     storageNamespace
                 };
             }
@@ -1072,6 +1308,9 @@ internal static class WebOutputWriter
 
             function finish() {
                 closed = true;
+                keys.length = 0;
+                releaseAllInputs();
+                setVirtualControlsVisible(false);
                 mediaShutdown();
                 window.__smileWeb.status = "stopped";
             }
@@ -1079,6 +1318,9 @@ internal static class WebOutputWriter
             function fail(error) {
                 if (error === STOP) { finish(); return; }
                 closed = true;
+                keys.length = 0;
+                releaseAllInputs();
+                setVirtualControlsVisible(false);
                 mediaShutdown();
                 window.__smileWeb.status = "error";
                 const message = error && error.stack ? error.stack : String(error);

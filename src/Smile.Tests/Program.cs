@@ -492,10 +492,29 @@ Run("Web output writer creates deterministic static files", () =>
     var directory = Path.Combine(Path.GetTempPath(), "smile-web-output-test-" + Guid.NewGuid().ToString("N"));
     try
     {
+        var expectedNames = new[] { "index.html", "smile-runtime.js", "game.js", "smile.css" };
         var analysis = Analyze("Game Window \"Test\"\nShow Screen\nEnd Program\n");
         WebOutputWriter.Write(directory, new WebEmitter(analysis));
-        foreach (var name in new[] { "index.html", "smile-runtime.js", "game.js", "smile.css" })
+        Equal(true, WebOutputWriter.ManagedFileNames.SequenceEqual(expectedNames));
+        Equal(expectedNames.Length, Directory.EnumerateFiles(directory).Count());
+        foreach (var name in expectedNames)
             Equal(true, File.Exists(Path.Combine(directory, name)));
+
+        var html = File.ReadAllText(Path.Combine(directory, "index.html"));
+        var css = File.ReadAllText(Path.Combine(directory, "smile.css"));
+        var runtime = File.ReadAllText(Path.Combine(directory, "smile-runtime.js"));
+        Equal(true, html.Contains("width=device-width, initial-scale=1, viewport-fit=cover", StringComparison.Ordinal));
+        Equal(1, html.Split(new[] { "id=\"smile-controls\"" }, StringSplitOptions.None).Length - 1);
+        Equal(true, html.Contains("id=\"smile-controls\" hidden aria-hidden=\"true\"", StringComparison.Ordinal));
+        foreach (var control in new[] { "up", "down", "left", "right", "a", "b", "x", "y", "one", "two", "three", "four" })
+            Equal(1, html.Split(new[] { $"data-smile-control=\"{control}\"" }, StringSplitOptions.None).Length - 1);
+        Equal(12, html.Split(new[] { "type=\"button\"" }, StringSplitOptions.None).Length - 1);
+        Equal(true, css.Contains("#smile-controls[hidden] { display: none; }", StringComparison.Ordinal));
+        Equal(true, css.Contains("#smile-controls button { pointer-events: auto; touch-action: none;", StringComparison.Ordinal));
+        Equal(false, css.Contains("#smile-canvas { touch-action: none", StringComparison.Ordinal));
+        Equal(false, html.Contains("user-scalable=no", StringComparison.Ordinal));
+        Equal(true, runtime.Contains("new URLSearchParams(search).getAll(\"smile-controls\")", StringComparison.Ordinal));
+        Equal(false, runtime.Contains("userAgent", StringComparison.Ordinal));
     }
     finally
     {
