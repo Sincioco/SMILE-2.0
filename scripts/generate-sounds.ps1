@@ -144,10 +144,10 @@ New-SmileTone -RelativePath 'examples\Assets\Graphics.wav' -Frequency 660 -Durat
 New-SmileTone -RelativePath 'games\Snake\Assets\Eat.wav' -Frequency 880 -DurationMilliseconds 90
 New-SmileTone -RelativePath 'games\Snake\Assets\GameOver.wav' -Frequency 180 -DurationMilliseconds 360
 New-SmileTone -RelativePath 'games\Snake\Assets\Start.wav' -Frequency 523 -DurationMilliseconds 140
-New-SmileTone -RelativePath 'games\FallingBlocks\Assets\Move.wav' -Frequency 420 -DurationMilliseconds 45
-New-SmileTone -RelativePath 'games\FallingBlocks\Assets\Rotate.wav' -Frequency 620 -DurationMilliseconds 70
-New-SmileTone -RelativePath 'games\FallingBlocks\Assets\LineClear.wav' -Frequency 920 -DurationMilliseconds 180
-New-SmileTone -RelativePath 'games\FallingBlocks\Assets\GameOver.wav' -Frequency 150 -DurationMilliseconds 400
+New-SmileTone -RelativePath 'games\Tetris\Assets\Move.wav' -Frequency 420 -DurationMilliseconds 45
+New-SmileTone -RelativePath 'games\Tetris\Assets\Rotate.wav' -Frequency 620 -DurationMilliseconds 70
+New-SmileTone -RelativePath 'games\Tetris\Assets\LineClear.wav' -Frequency 920 -DurationMilliseconds 180
+New-SmileTone -RelativePath 'games\Tetris\Assets\GameOver.wav' -Frequency 150 -DurationMilliseconds 400
 New-SmileTone -RelativePath 'games\PaddleBall\Assets\Paddle.wav' -Frequency 720 -DurationMilliseconds 65
 New-SmileTone -RelativePath 'games\PaddleBall\Assets\Wall.wav' -Frequency 440 -DurationMilliseconds 50
 New-SmileTone -RelativePath 'games\PaddleBall\Assets\Score.wav' -Frequency 920 -DurationMilliseconds 160

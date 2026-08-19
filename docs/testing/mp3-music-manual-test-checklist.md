@@ -5,8 +5,8 @@ Automated tests prove syntax, diagnostics, emitted calls, executable linking, as
 Run both variants with an adjacent copy of `Assets\Background.mp3`:
 
 ```text
-artifacts\games\FallingBlocks\FallingBlocks-DirectX.exe
-artifacts\games\FallingBlocks\FallingBlocks-GDI.exe
+artifacts\games\Tetris\Tetris-DirectX.exe
+artifacts\games\Tetris\Tetris-GDI.exe
 ```
 
 For each backend:

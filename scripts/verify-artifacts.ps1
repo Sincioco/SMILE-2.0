@@ -794,8 +794,8 @@ $nativePrograms = @(
     'artifacts\games\Phase5HardeningPackage.exe',
     'artifacts\games\Snake\Snake.exe',
     'artifacts\games\Snake\Snake-NoDemo.exe',
-    'artifacts\games\FallingBlocks\FallingBlocks.exe',
-    'artifacts\games\FallingBlocks\FallingBlocks-NoDemo.exe',
+    'artifacts\games\Tetris\Tetris.exe',
+    'artifacts\games\Tetris\Tetris-NoDemo.exe',
     'artifacts\games\PaddleBall\PaddleBall.exe',
     'artifacts\games\PaddleBall\PaddleBall-NoDemo.exe',
     'artifacts\games\BrickBreaker\BrickBreaker.exe',
@@ -813,7 +813,7 @@ foreach ($program in $nativePrograms) {
 
 $assetSets = @{
     Snake = @('Eat.wav', 'GameOver.wav', 'Start.wav')
-    FallingBlocks = @('GameOver.wav', 'LineClear.wav', 'Move.wav', 'Rotate.wav')
+    Tetris = @('GameOver.wav', 'LineClear.wav', 'Move.wav', 'Rotate.wav')
     PaddleBall = @('GameOver.wav', 'Paddle.wav', 'Score.wav', 'Wall.wav')
     BrickBreaker = @('Brick.wav', 'GameOver.wav', 'LevelClear.wav', 'LoseLife.wav', 'Paddle.wav', 'Wall.wav')
     MazeMuncher = @('EnemyEaten.wav', 'GameOver.wav', 'LevelClear.wav', 'Pellet.wav', 'PlayerCaught.wav', 'Power.wav', 'Start.wav')
@@ -823,12 +823,12 @@ foreach ($game in $assetSets.Keys) {
         Assert-WaveCopy $game $asset
     }
 }
-foreach ($game in @('Snake', 'FallingBlocks', 'PaddleBall', 'BrickBreaker', 'DungeonStarI',
+foreach ($game in @('Snake', 'Tetris', 'PaddleBall', 'BrickBreaker', 'DungeonStarI',
     'DungeonStarII', 'MazeMuncher')) {
     Require-File "artifacts\games\$game\$game.smile-assets.json" | Out-Null
     Require-File "artifacts\web\$game\smile-assets.json" | Out-Null
 }
-Assert-AssetCopy 'games\FallingBlocks\Assets\Background.mp3' 'artifacts\games\FallingBlocks\Assets\Background.mp3'
+Assert-AssetCopy 'games\Tetris\Assets\Background.mp3' 'artifacts\games\Tetris\Assets\Background.mp3'
 Assert-AssetCopy 'games\PaddleBall\Assets\Background.mp3' 'artifacts\games\PaddleBall\Assets\Background.mp3'
 Assert-AssetCopy 'games\Snake\Assets\Background.mp3' 'artifacts\games\Snake\Assets\Background.mp3'
 Assert-AssetCopy 'games\DungeonStarI\Assets\Background.mp3' 'artifacts\games\DungeonStarI\Assets\Background.mp3'

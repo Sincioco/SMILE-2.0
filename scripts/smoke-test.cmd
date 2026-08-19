@@ -1238,25 +1238,25 @@ findstr /c:"smile.game.sin-star-i" "%SMILE_ROOT%\artifacts\games\SinStarI\smile.
 findstr /c:"smile.game.sin-star-i" "%SMILE_ROOT%\artifacts\web\SinStarI\smile-assets.json" >nul || exit /b 1
 echo Sin Star I local Module/Enum project compiled for native and Web with accepted assets.
 
-if not exist "%SMILE_ROOT%\artifacts\games\FallingBlocks" mkdir "%SMILE_ROOT%\artifacts\games\FallingBlocks"
-if not exist "%SMILE_ROOT%\games\FallingBlocks\Assets\Background.mp3" (
-    echo Falling Blocks background music source asset is missing.
+if not exist "%SMILE_ROOT%\artifacts\games\Tetris" mkdir "%SMILE_ROOT%\artifacts\games\Tetris"
+if not exist "%SMILE_ROOT%\games\Tetris\Assets\Background.mp3" (
+    echo SMILE 2.0 Tetris background music source asset is missing.
     exit /b 1
 )
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\FallingBlocks\FallingBlocks.smileproj" -o "%SMILE_ROOT%\artifacts\games\FallingBlocks\FallingBlocks.exe" --keep-temp
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\Tetris\Tetris.smileproj" -o "%SMILE_ROOT%\artifacts\games\Tetris\Tetris.exe" --keep-temp
 if errorlevel 1 exit /b %errorlevel%
-"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\FallingBlocks\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\FallingBlocks\FallingBlocks-NoDemo.exe"
+"%SMILE_ROOT%\artifacts\compiler\smilec.exe" "%SMILE_ROOT%\games\Tetris\Program-NoDemo.smile" -o "%SMILE_ROOT%\artifacts\games\Tetris\Tetris-NoDemo.exe"
 if errorlevel 1 exit /b %errorlevel%
-if not exist "%SMILE_ROOT%\artifacts\games\FallingBlocks\Assets\Background.mp3" (
-    echo Falling Blocks background music output asset is missing.
+if not exist "%SMILE_ROOT%\artifacts\games\Tetris\Assets\Background.mp3" (
+    echo SMILE 2.0 Tetris background music output asset is missing.
     exit /b 1
 )
-fc /b "%SMILE_ROOT%\games\FallingBlocks\Assets\Background.mp3" "%SMILE_ROOT%\artifacts\games\FallingBlocks\Assets\Background.mp3" >nul
+fc /b "%SMILE_ROOT%\games\Tetris\Assets\Background.mp3" "%SMILE_ROOT%\artifacts\games\Tetris\Assets\Background.mp3" >nul
 if errorlevel 1 (
-    echo Falling Blocks background music output does not match its project asset.
+    echo SMILE 2.0 Tetris background music output does not match its project asset.
     exit /b 1
 )
-echo Falling Blocks demo and no-demo versions compiled successfully.
+echo SMILE 2.0 Tetris demo and no-demo versions compiled successfully.
 
 if not exist "%SMILE_ROOT%\artifacts\games\PaddleBall" mkdir "%SMILE_ROOT%\artifacts\games\PaddleBall"
 if not exist "%SMILE_ROOT%\games\PaddleBall\Assets\Background.mp3" (
@@ -1355,7 +1355,7 @@ for %%M in (default.map custom.map) do (
 )
 echo Dungeon Star II demo and no-demo versions compiled successfully.
 
-for %%G in (Snake FallingBlocks PaddleBall BrickBreaker DungeonStarI DungeonStarII MazeMuncher) do (
+for %%G in (Snake Tetris PaddleBall BrickBreaker DungeonStarI DungeonStarII MazeMuncher) do (
     "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\games\%%G\%%G.smileproj" --target web --output-dir "%SMILE_ROOT%\artifacts\web\%%G"
     if errorlevel 1 exit /b 1
     node --check "%SMILE_ROOT%\artifacts\web\%%G\game.js"

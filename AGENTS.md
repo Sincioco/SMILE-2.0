@@ -152,7 +152,7 @@ When SMILE needs to evolve:
 
 ## Games prove the language
 
-Snake, Falling Blocks, Paddle Ball, Brick Breaker, Dungeon Star I, Dungeon Star II, and Maze Muncher must be implemented in `.smile` source.
+Snake, SMILE 2.0 Tetris, Paddle Ball, Brick Breaker, Dungeon Star I, Dungeon Star II, and Maze Muncher must be implemented in `.smile` source.
 
 The native and Web runtimes may provide only generic services shared by SMILE programs:
 

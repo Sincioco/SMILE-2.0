@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ProjectKind>Game</ProjectKind>
     <StartupFile>Program.smile</StartupFile>
-    <OutputName>FallingBlocks</OutputName>
+    <OutputName>Tetris</OutputName>
     <GraphicsBackend>Auto</GraphicsBackend>
     <VSync>true</VSync>
   </PropertyGroup>

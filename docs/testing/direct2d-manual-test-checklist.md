@@ -55,7 +55,7 @@ For every tested size, verify uniform letterboxing/pillarboxing, round circles, 
 ## Bundled game regression
 
 - [ ] Snake: start, turn in several directions, and verify timer-driven movement.
-- [ ] Smile 2.0 Tetris: move, rotate, soft drop, and hard drop.
+- [ ] SMILE 2.0 Tetris: move, rotate left and right, soft drop, and hard drop.
 - [ ] Paddle Ball: start one-player mode, move the paddle, and complete scoring exchanges.
 - [ ] Brick Breaker: start, launch, move the paddle, and hit at least one brick.
 

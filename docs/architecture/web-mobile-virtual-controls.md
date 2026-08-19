@@ -26,6 +26,8 @@ game.js
 smile.css
 ```
 
+`index.html` carries a deterministic content build marker and versioned CSS/JavaScript references. The shared runtime performs a no-store same-page freshness check on `pageshow`; if a newly deployed marker differs, it reloads through a versioned URL without changing the four generated filenames.
+
 No additional script, image, font, package, or framework is required.
 
 ## Visibility
@@ -48,13 +50,13 @@ Controls remain hidden until `Game Window` is created. Console programs therefor
 | Down | `KEY_DOWN` |
 | Left | `KEY_LEFT` |
 | Right | `KEY_RIGHT` |
-| A | `KEY_ENTER` |
-| B | `KEY_SPACE` |
-| X | `KEY_SPACE` |
-| Y | `KEY_TAB` |
+| A | `KEY_PAD_A` |
+| B | `KEY_PAD_B` |
+| X | `KEY_PAD_X` |
+| Y | `KEY_PAD_Y` |
 
-A virtual press queues one value and owns held state until release. It does not enqueue browser-style repeats or duplicate aliases.
-The compact default intentionally does not emit `KEY_ESCAPE`: several bundled games treat Escape as immediate program termination, which would make one B tap irreversibly stop a mobile session. B and X are two physical sources for the existing Space action; the source-aware broker preserves correct shared-key held state. Physical Escape and number keys retain their existing keyboard behavior.
+A virtual press queues one value and owns held state until release. It does not enqueue browser-style repeats or duplicate aliases. The four action buttons have independent pad-only values, so games can assign them independently without colliding with physical keyboard controls.
+The compact default intentionally does not emit `KEY_ESCAPE`: several bundled games treat Escape as immediate program termination, which would make one action-button tap irreversibly stop a mobile session. Physical keyboard keys retain their existing behavior.
 
 ## Shared input broker
 
@@ -83,11 +85,11 @@ The feature does not disable browser zoom globally and does not add `user-scalab
 
 ## Layout and accessibility
 
-The controller uses real buttons, descriptive ARIA labels, `aria-pressed`, visible focus styling, a restrained translucent outline, safe-area insets, and responsive portrait/landscape layouts. Every target is at least 56 by 56 CSS pixels. Dynamic viewport units keep landscape controls inside the browser's visible viewport. In portrait, the canvas and a dedicated controls region form one vertically centered composition instead of placing controls against the page bottom. All D-pad directions use one text triangle rotated with CSS, preventing left/right arrows from selecting an emoji-style mobile glyph. The controller uses CSS shapes and text, so it introduces no runtime asset.
+The controller uses real buttons, descriptive ARIA labels, `aria-pressed`, visible focus styling, a restrained translucent outline, safe-area insets, and responsive portrait/landscape layouts. Every target is at least 56 by 56 CSS pixels. Dynamic viewport units keep landscape controls inside the browser's visible viewport. In portrait, the canvas and a dedicated controls region form one vertically centered composition instead of placing controls against the page bottom. All D-pad directions use one geometrically centered CSS triangle rotated around its center, avoiding both font-baseline drift and emoji-style mobile glyph substitution. The controller uses CSS shapes and text, so it introduces no runtime asset.
 
 ## Audio interaction
 
-An accepted virtual press counts as user interaction and follows the existing music synchronization path. Merely displaying controls does not start media.
+Every accepted D-pad or action-button press counts as user interaction and follows the same music synchronization path. Merely displaying controls does not start media. When the page loses visibility, requested Web music pauses; foreground focus resumes it unless the program explicitly paused or stopped it.
 
 ## Diagnostics
 

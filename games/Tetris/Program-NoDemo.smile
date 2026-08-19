@@ -1,4 +1,4 @@
-' Smile 2.0 Tetris - student edition without attract/demo code.
+' SMILE 2.0 Tetris - student edition without attract/demo code.
 Const CanvasWidth = 960
 Const CanvasHeight = 540
 Const BoardWidth = 10
@@ -107,7 +107,7 @@ PendingClearCount = 0
 
 Load HighScore From "HighScore" Default 0
 
-Game Window "Smile 2.0 Tetris"
+Game Window "SMILE 2.0 Tetris"
 
 Call EnterTitle()
 
@@ -119,7 +119,7 @@ Do
         If Key = KEY_ESCAPE Then
             Stop Sound
             End Program
-        Else If Key = KEY_ENTER Then
+        Else If Key = KEY_ENTER Or Key = KEY_PAD_A Then
             Call ResetGame()
         End If
 
@@ -161,16 +161,15 @@ Do
 
                     End If
 
-                Else If Key = KEY_W Or Key = KEY_UP Then
+                Else If Key = KEY_PAD_X Then
 
-                    NewRotation = (Rotation + 1) Mod 4
+                    Call RotatePieceLeft()
 
-                    If CanMove(0, 0, NewRotation) = True Then
-                        Rotation = NewRotation
+                Else If (Key = KEY_W Or
+                    Key = KEY_UP Or
+                    Key = KEY_PAD_B) Then
 
-                        Play Sound "Assets\Rotate.wav"
-
-                    End If
+                    Call RotatePieceRight()
 
                 Else If Key = KEY_S Or Key = KEY_DOWN Then
 
@@ -183,19 +182,11 @@ Do
 
                     NextFallTime = Timer() + FallDelay
 
-                Else If Key = KEY_SPACE Then
+                Else If (Key = KEY_SPACE Or
+                    Key = KEY_PAD_A Or
+                    Key = KEY_PAD_Y) Then
 
-                    Do
-
-                        If CanMove(0, 1, Rotation) = True Then
-                            PieceY = PieceY + 1
-                        Else
-                            Exit Do
-                        End If
-
-                    Loop
-
-                    Call LockPiece()
+                    Call DropPiece()
 
                 End If
 
@@ -222,7 +213,7 @@ Do
 
     Else
 
-        If Key = KEY_ENTER Then
+        If Key = KEY_ENTER Or Key = KEY_PAD_A Then
             Call ResetGame()
         End If
 
@@ -333,6 +324,48 @@ Function CanMove(OffsetX, OffsetY, TestRotation)
     Return True
 
 End Function
+
+Sub RotatePieceLeft()
+
+    NewRotation = (Rotation + 3) Mod 4
+
+    If CanMove(0, 0, NewRotation) = True Then
+        Rotation = NewRotation
+
+        Play Sound "Assets\Rotate.wav"
+
+    End If
+
+End Sub
+
+Sub RotatePieceRight()
+
+    NewRotation = (Rotation + 1) Mod 4
+
+    If CanMove(0, 0, NewRotation) = True Then
+        Rotation = NewRotation
+
+        Play Sound "Assets\Rotate.wav"
+
+    End If
+
+End Sub
+
+Sub DropPiece()
+
+    Do
+
+        If CanMove(0, 1, Rotation) = True Then
+            PieceY = PieceY + 1
+        Else
+            Exit Do
+        End If
+
+    Loop
+
+    Call LockPiece()
+
+End Sub
 
 Sub ClearBoard()
 
@@ -557,19 +590,20 @@ End Sub
 Sub DrawGame()
 
     Clear Rgb(8, 12, 22)
-    Draw Text "Falling" At 175, 62 Size 36 Color CYAN Centered
-    Draw Text "Blocks" At 175, 102 Size 36 Color MAGENTA Centered
+    Draw Text "SMILE 2.0" At 175, 62 Size 31 Color CYAN Centered
+    Draw Text "Tetris" At 175, 102 Size 36 Color MAGENTA Centered
     Draw Text "Next" At 175, 175 Size 20 Color LIGHT_GRAY Centered
 
     For Cell = 0 To 3
         Call DrawBlock(125 + BlockX(NextPiece, 0, Cell) * 18, 205 + BlockY(NextPiece, 0, Cell) * 18, 18, PieceColor(NextPiece))
     End For
 
-    Draw Text "A / D   Move" At 175, 340 Size 15 Color WHITE Centered
-    Draw Text "W / Up  Rotate" At 175, 365 Size 15 Color WHITE Centered
-    Draw Text "S / Down  Drop" At 175, 390 Size 15 Color WHITE Centered
-    Draw Text "Space  Hard Drop" At 175, 415 Size 15 Color WHITE Centered
-    Draw Text "Escape  Exit" At 175, 455 Size 15 Color LIGHT_GRAY Centered
+    Draw Text "A / D  Move" At 175, 330 Size 14 Color WHITE Centered
+    Draw Text "W / Up / B  Rotate Right" At 175, 354 Size 14 Color WHITE Centered
+    Draw Text "X  Rotate Left" At 175, 378 Size 14 Color WHITE Centered
+    Draw Text "S / Down  Soft Drop" At 175, 402 Size 14 Color WHITE Centered
+    Draw Text "Space / A / Y  Hard Drop" At 175, 426 Size 14 Color WHITE Centered
+    Draw Text "Escape  Exit" At 175, 462 Size 14 Color LIGHT_GRAY Centered
 
     Fill Rectangle BoardX, BoardY, BoardWidth * CellSize, BoardHeight * CellSize, BLACK
     Draw Rectangle BoardX, BoardY, BoardWidth * CellSize, BoardHeight * CellSize, Rgb(80, 90, 115)
@@ -664,7 +698,7 @@ End Sub
 Sub DrawTitle()
 
     Clear Rgb(8, 12, 22)
-    Draw Text "Smile 2.0 Tetris" At 480, 125 Size 54 Color CYAN Centered
+    Draw Text "SMILE 2.0 Tetris" At 480, 125 Size 54 Color CYAN Centered
 
     Call DrawBlock(386, 210, 30, Rgb(35, 220, 235))
     Call DrawBlock(416, 210, 30, Rgb(245, 215, 45))

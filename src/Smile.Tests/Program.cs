@@ -178,6 +178,20 @@ Run("KEY_TAB is a shared named input constant", () =>
     Equal(SyntaxKind.KeyTabKeyword, SyntaxFacts.GetKeywordKind("key_tab"));
     Equal(21L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyTabKeyword));
 });
+Run("Virtual controller buttons have distinct shared constants", () =>
+{
+    Equal(SyntaxKind.KeyPadAKeyword, SyntaxFacts.GetKeywordKind("key_pad_a"));
+    Equal(SyntaxKind.KeyPadBKeyword, SyntaxFacts.GetKeywordKind("key_pad_b"));
+    Equal(SyntaxKind.KeyPadXKeyword, SyntaxFacts.GetKeywordKind("key_pad_x"));
+    Equal(SyntaxKind.KeyPadYKeyword, SyntaxFacts.GetKeywordKind("key_pad_y"));
+    Equal(23L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyPadAKeyword));
+    Equal(24L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyPadBKeyword));
+    Equal(25L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyPadXKeyword));
+    Equal(26L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyPadYKeyword));
+    var padAnalysis = Analyze("Dim Key As Number\nGame Window \"Pad\"\nGet Key Key\nIf Key = KEY_PAD_A Then\nPrint KEY_PAD_B + KEY_PAD_X + KEY_PAD_Y\nEnd If\n");
+    if (padAnalysis.HasErrors)
+        throw new InvalidOperationException(string.Join(" | ", padAnalysis.Diagnostics.Select(diagnostic => diagnostic.Code + ": " + diagnostic.Message)));
+});
 Run("Existing graphics statements remain valid", () => Equal(false,
     Analyze("Game Window \"Existing\"\nFill Rectangle 1, 2, 3, 4, RED\nDraw Circle 10, 10, 4, WHITE\nDraw Line 0, 0, 20, 20, BLUE\n").HasErrors));
 Run("Music keywords are shared and case-insensitive", () =>
@@ -504,27 +518,46 @@ Run("Web output writer creates deterministic static files", () =>
         var css = File.ReadAllText(Path.Combine(directory, "smile.css"));
         var runtime = File.ReadAllText(Path.Combine(directory, "smile-runtime.js"));
         Equal(true, html.Contains("width=device-width, initial-scale=1, viewport-fit=cover", StringComparison.Ordinal));
+        Equal(true, html.Contains("http-equiv=\"Cache-Control\" content=\"no-cache, no-store, must-revalidate\"", StringComparison.Ordinal));
+        const string buildMarker = "<meta name=\"smile-build\" content=\"";
+        var buildStart = html.IndexOf(buildMarker, StringComparison.Ordinal) + buildMarker.Length;
+        var buildEnd = html.IndexOf('"', buildStart);
+        var buildVersion = html[buildStart..buildEnd];
+        Equal(16, buildVersion.Length);
+        Equal(true, buildVersion.All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f'));
+        Equal(true, html.Contains($"href=\"smile.css?v={buildVersion}\"", StringComparison.Ordinal));
+        Equal(true, html.Contains($"src=\"smile-runtime.js?v={buildVersion}\"", StringComparison.Ordinal));
+        Equal(true, html.Contains($"src=\"game.js?v={buildVersion}\"", StringComparison.Ordinal));
         Equal(1, html.Split(new[] { "id=\"smile-controls\"" }, StringSplitOptions.None).Length - 1);
         Equal(true, html.Contains("id=\"smile-controls\" hidden aria-hidden=\"true\"", StringComparison.Ordinal));
         foreach (var control in new[] { "up", "down", "left", "right", "a", "b", "x", "y" })
             Equal(1, html.Split(new[] { $"data-smile-control=\"{control}\"" }, StringSplitOptions.None).Length - 1);
+        foreach (var control in new[] { "A", "B", "X", "Y" })
+            Equal(true, html.Contains($"aria-label=\"Gamepad {control} button\"", StringComparison.Ordinal));
         foreach (var removedControl in new[] { "one", "two", "three", "four" })
             Equal(false, html.Contains($"data-smile-control=\"{removedControl}\"", StringComparison.Ordinal));
         Equal(8, html.Split(new[] { "type=\"button\"" }, StringSplitOptions.None).Length - 1);
-        Equal(4, html.Split(new[] { "<span aria-hidden=\"true\">▲</span>" }, StringSplitOptions.None).Length - 1);
+        Equal(4, html.Split(new[] { "<span aria-hidden=\"true\"></span>" }, StringSplitOptions.None).Length - 1);
+        Equal(false, html.Contains("▲", StringComparison.Ordinal));
         Equal(false, html.Contains("◀", StringComparison.Ordinal));
         Equal(false, html.Contains("▶", StringComparison.Ordinal));
         Equal(true, css.Contains("#smile-controls[hidden] { display: none; }", StringComparison.Ordinal));
-        Equal(true, css.Contains("#smile-controls button { pointer-events: auto; touch-action: none;", StringComparison.Ordinal));
+        Equal(true, css.Contains("#smile-controls button { pointer-events: auto; touch-action: none; display: grid; place-items: center;", StringComparison.Ordinal));
         Equal(true, css.Contains("border: 2px solid rgba(220, 247, 255, .56)", StringComparison.Ordinal));
         Equal(true, css.Contains("height: 100dvh", StringComparison.Ordinal));
         Equal(true, css.Contains("#smile-shell.smile-controls-visible { display: flex; flex-direction: column; justify-content: center;", StringComparison.Ordinal));
+        Equal(true, css.Contains(".smile-dpad button span { display: block; width: 0; height: 0;", StringComparison.Ordinal));
+        Equal(true, css.Contains("border-bottom: clamp(12px, 2.6vmin, 17px) solid currentColor", StringComparison.Ordinal));
         Equal(true, css.Contains(".smile-control-left span { transform: rotate(-90deg); }", StringComparison.Ordinal));
         Equal(false, css.Contains("#smile-canvas { touch-action: none", StringComparison.Ordinal));
         Equal(false, html.Contains("user-scalable=no", StringComparison.Ordinal));
         Equal(true, runtime.Contains("new URLSearchParams(search).getAll(\"smile-controls\")", StringComparison.Ordinal));
         Equal(true, runtime.Contains("shell.classList.toggle(\"smile-controls-visible\", next)", StringComparison.Ordinal));
-        Equal(true, runtime.Contains("a: 14, b: 16, x: 16, y: 21", StringComparison.Ordinal));
+        Equal(true, runtime.Contains("a: 23, b: 24, x: 25, y: 26", StringComparison.Ordinal));
+        Equal(true, runtime.Contains("if (!active || !musicRequested || musicPaused)", StringComparison.Ordinal));
+        Equal(true, runtime.Contains("window.addEventListener(\"pageshow\", checkForWebUpdate)", StringComparison.Ordinal));
+        Equal(true, runtime.Contains("fetch(request.toString(), { cache: \"no-store\" })", StringComparison.Ordinal));
+        Equal(true, runtime.Contains("destination.searchParams.set(\"smile-version\"", StringComparison.Ordinal));
         Equal(false, runtime.Contains("userAgent", StringComparison.Ordinal));
     }
     finally

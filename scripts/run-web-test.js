@@ -251,7 +251,7 @@ async function runMobileControlsTests() {
     mobileEqual(touchFirst.host.document.getElementById("smile-shell").classList.contains("smile-controls-visible"), true,
         "visible controls enable the portrait layout hook");
     touchFirst.pointer("a", "pointerdown", 1, "mouse", 0);
-    mobileEqual(touchFirst.host.smile.getKey(), 14, "visible Auto controls accept primary mouse input");
+    mobileEqual(touchFirst.host.smile.getKey(), 23, "visible Auto controls accept primary mouse input");
     touchFirst.pointer("a", "pointerup", 1, "mouse", 0);
 
     const forcedOff = createMobileControlsHost({ search: "?smile-controls=off", maxTouchPoints: 5, coarsePointer: true });
@@ -282,7 +282,7 @@ async function runMobileControlsTests() {
     mobileEqual(controls.controls.hidden, false, "Forced On shows after Game Window");
     const mapping = new Map([
         ["up", 10], ["down", 11], ["left", 12], ["right", 13],
-        ["a", 14], ["b", 16], ["x", 16], ["y", 21]
+        ["a", 23], ["b", 24], ["x", 25], ["y", 26]
     ]);
     let pointerId = 20;
     for (const [controlName, key] of mapping) {
@@ -306,30 +306,31 @@ async function runMobileControlsTests() {
     controls.pointer("up", "pointerdown", 110, "touch", 0);
     controls.pointer("a", "pointerdown", 111, "touch", 0);
     mobileEqual(controls.host.smile.keyHeld(10), 1, "multi-touch direction held");
-    mobileEqual(controls.host.smile.keyHeld(14), 1, "multi-touch action held");
-    mobileAssert(JSON.stringify(drainKeys(controls.host.smile)) === JSON.stringify([10, 14]), "multi-touch queue order");
+    mobileEqual(controls.host.smile.keyHeld(23), 1, "multi-touch action held");
+    mobileAssert(JSON.stringify(drainKeys(controls.host.smile)) === JSON.stringify([10, 23]), "multi-touch queue order");
     controls.pointer("up", "pointerup", 110, "touch", 0);
-    mobileEqual(controls.host.smile.keyHeld(14), 1, "releasing direction preserves action");
+    mobileEqual(controls.host.smile.keyHeld(23), 1, "releasing direction preserves action");
     controls.pointer("a", "pointerup", 111, "touch", 0);
     assertReleased(controls, "multi-touch release");
 
-    controls.keyboard("keydown", "Enter");
     controls.pointer("a", "pointerdown", 112, "touch", 0);
-    mobileEqual(controls.host.smile.keyHeld(14), 1, "keyboard and pointer share a held key");
+    controls.pointer("a", "pointerdown", 115, "touch", 0);
+    mobileEqual(controls.host.smile.keyHeld(23), 1, "two pointers share a held pad key");
     controls.pointer("a", "pointerup", 112, "touch", 0);
-    mobileEqual(controls.host.smile.keyHeld(14), 1, "pointer release preserves keyboard ownership");
-    controls.keyboard("keyup", "Enter");
-    mobileEqual(controls.host.smile.keyHeld(14), 0, "final same-key owner release clears held state");
+    mobileEqual(controls.host.smile.keyHeld(23), 1, "one pointer release preserves the second pointer owner");
+    controls.pointer("a", "pointerup", 115, "touch", 0);
+    mobileEqual(controls.host.smile.keyHeld(23), 0, "final same-pad-key owner release clears held state");
     drainKeys(controls.host.smile);
 
     controls.pointer("x", "pointerdown", 113, "touch", 0);
     controls.pointer("b", "pointerdown", 114, "touch", 0);
-    mobileAssert(JSON.stringify(drainKeys(controls.host.smile)) === JSON.stringify([16, 16]),
-        "B and X each queue one Space event");
+    mobileAssert(JSON.stringify(drainKeys(controls.host.smile)) === JSON.stringify([25, 24]),
+        "X and B queue distinct virtual-controller key values");
     controls.pointer("b", "pointerup", 114, "touch", 0);
-    mobileEqual(controls.host.smile.keyHeld(16), 1, "releasing B preserves the X Space owner");
+    mobileEqual(controls.host.smile.keyHeld(24), 0, "releasing B clears only the B key");
+    mobileEqual(controls.host.smile.keyHeld(25), 1, "releasing B preserves the distinct X key");
     controls.pointer("x", "pointerup", 113, "touch", 0);
-    mobileEqual(controls.host.smile.keyHeld(16), 0, "releasing the final Space owner clears held state");
+    mobileEqual(controls.host.smile.keyHeld(25), 0, "releasing X clears the X key");
 
     controls.keyboard("keydown", "Escape");
     mobileEqual(controls.host.smile.getKey(), 15, "physical Escape keeps its existing queue mapping");
@@ -376,13 +377,29 @@ async function runMobileControlsTests() {
     queueBounds.dispatchWindow("blur");
     assertReleased(queueBounds, "bounded-source blur cleanup");
 
+    for (const [index, controlName] of ["up", "down", "left", "right", "a", "b", "x", "y"].entries()) {
+        const buttonAudio = createMobileControlsHost({ search: "?smile-controls=on" });
+        buttonAudio.host.smile.gameWindow(`Audio ${controlName}`, 960, 540);
+        buttonAudio.host.smile.playMusic("Music.ogg", 1);
+        mobileEqual(buttonAudio.audioPlays(), 0, `showing controls does not unlock music before ${controlName}`);
+        buttonAudio.pointer(controlName, "pointerdown", 300 + index, "touch", 0);
+        mobileAssert(buttonAudio.audioPlays() > 0, `${controlName} press unlocks requested music`);
+        buttonAudio.pointer(controlName, "pointerup", 300 + index, "touch", 0);
+    }
+
     const audio = createMobileControlsHost({ search: "?smile-controls=on" });
-    audio.host.smile.gameWindow("Audio", 960, 540);
+    audio.host.smile.gameWindow("Audio lifecycle", 960, 540);
     audio.host.smile.playMusic("Music.ogg", 1);
-    mobileEqual(audio.audioPlays(), 0, "showing controls does not unlock music");
-    audio.pointer("a", "pointerdown", 300, "mouse", 0);
-    mobileAssert(audio.audioPlays() > 0, "accepted primary mouse/touch control press follows music synchronization");
-    audio.pointer("a", "pointerup", 300, "mouse", 0);
+    audio.pointer("b", "pointerdown", 320, "touch", 0);
+    audio.pointer("b", "pointerup", 320, "touch", 0);
+    const playsBeforeBackground = audio.audioPlays();
+    audio.host.document.hidden = true;
+    audio.dispatchDocument("visibilitychange");
+    mobileAssert(audio.audioPauses() > 0, "visibility loss pauses requested background music");
+    mobileEqual(audio.audioPlays(), playsBeforeBackground, "visibility loss does not restart background music");
+    audio.host.document.hidden = false;
+    audio.dispatchWindow("focus");
+    mobileEqual(audio.audioPlays(), playsBeforeBackground + 1, "foreground focus resumes requested background music");
 
     const pageHide = createMobileControlsHost({ search: "?smile-controls=on" });
     pageHide.host.smile.gameWindow("Page hide", 960, 540);

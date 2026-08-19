@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Smile.Compiler;
@@ -15,8 +16,9 @@ internal static class WebOutputWriter
     internal static void Write(string outputDirectory, WebEmitter emitter, Action<string>? afterFileWrite)
     {
         var game = emitter.Emit();
+        var buildVersion = BuildVersion(emitter.Title, game);
         Directory.CreateDirectory(outputDirectory);
-        File.WriteAllText(Path.Combine(outputDirectory, "index.html"), Index(emitter.Title), Utf8WithoutBom);
+        File.WriteAllText(Path.Combine(outputDirectory, "index.html"), Index(emitter.Title, buildVersion), Utf8WithoutBom);
         afterFileWrite?.Invoke("index.html");
         File.WriteAllText(Path.Combine(outputDirectory, "smile-runtime.js"), Runtime, Utf8WithoutBom);
         afterFileWrite?.Invoke("smile-runtime.js");
@@ -26,14 +28,25 @@ internal static class WebOutputWriter
         afterFileWrite?.Invoke("smile.css");
     }
 
-    private static string Index(string title) => $$"""
+    private static string BuildVersion(string title, string game)
+    {
+        var content = string.Join('\0', title, Runtime, game, Style);
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(content));
+        return Convert.ToHexString(hash)[..16].ToLowerInvariant();
+    }
+
+    private static string Index(string title, string buildVersion) => $$"""
         <!doctype html>
         <html lang="en">
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+          <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+          <meta http-equiv="Pragma" content="no-cache">
+          <meta http-equiv="Expires" content="0">
+          <meta name="smile-build" content="{{buildVersion}}">
           <title>{{WebUtility.HtmlEncode(title)}}</title>
-          <link rel="stylesheet" href="smile.css">
+          <link rel="stylesheet" href="smile.css?v={{buildVersion}}">
         </head>
         <body>
           <main id="smile-shell">
@@ -42,21 +55,21 @@ internal static class WebOutputWriter
             <pre id="smile-error" hidden></pre>
             <section id="smile-controls" hidden aria-hidden="true" aria-label="Game controls">
               <div class="smile-dpad" aria-label="Directional controls">
-                <button class="smile-control-up" type="button" data-smile-control="up" aria-label="Move up" aria-pressed="false"><span aria-hidden="true">▲</span></button>
-                <button class="smile-control-left" type="button" data-smile-control="left" aria-label="Move left" aria-pressed="false"><span aria-hidden="true">▲</span></button>
-                <button class="smile-control-right" type="button" data-smile-control="right" aria-label="Move right" aria-pressed="false"><span aria-hidden="true">▲</span></button>
-                <button class="smile-control-down" type="button" data-smile-control="down" aria-label="Move down" aria-pressed="false"><span aria-hidden="true">▲</span></button>
+                <button class="smile-control-up" type="button" data-smile-control="up" aria-label="Move up" aria-pressed="false"><span aria-hidden="true"></span></button>
+                <button class="smile-control-left" type="button" data-smile-control="left" aria-label="Move left" aria-pressed="false"><span aria-hidden="true"></span></button>
+                <button class="smile-control-right" type="button" data-smile-control="right" aria-label="Move right" aria-pressed="false"><span aria-hidden="true"></span></button>
+                <button class="smile-control-down" type="button" data-smile-control="down" aria-label="Move down" aria-pressed="false"><span aria-hidden="true"></span></button>
               </div>
               <div class="smile-action-controls" aria-label="Action controls">
-                <button class="smile-control-y" type="button" data-smile-control="y" aria-label="Y, menu or Tab" aria-pressed="false">Y</button>
-                <button class="smile-control-x" type="button" data-smile-control="x" aria-label="X, action or Space" aria-pressed="false">X</button>
-                <button class="smile-control-b" type="button" data-smile-control="b" aria-label="B, secondary action or Space" aria-pressed="false">B</button>
-                <button class="smile-control-a" type="button" data-smile-control="a" aria-label="A, confirm or Enter" aria-pressed="false">A</button>
+                <button class="smile-control-y" type="button" data-smile-control="y" aria-label="Gamepad Y button" aria-pressed="false">Y</button>
+                <button class="smile-control-x" type="button" data-smile-control="x" aria-label="Gamepad X button" aria-pressed="false">X</button>
+                <button class="smile-control-b" type="button" data-smile-control="b" aria-label="Gamepad B button" aria-pressed="false">B</button>
+                <button class="smile-control-a" type="button" data-smile-control="a" aria-label="Gamepad A button" aria-pressed="false">A</button>
               </div>
             </section>
           </main>
-          <script src="smile-runtime.js"></script>
-          <script src="game.js"></script>
+          <script src="smile-runtime.js?v={{buildVersion}}"></script>
+          <script src="game.js?v={{buildVersion}}"></script>
         </body>
         </html>
         """;
@@ -73,14 +86,14 @@ internal static class WebOutputWriter
         #smile-error { position: absolute; z-index: 20; left: 1rem; right: 1rem; bottom: 1rem; max-height: 35vh; overflow: auto; margin: 0; padding: 1rem; color: #fff; background: #761b25; border: 1px solid #ff8794; white-space: pre-wrap; }
         #smile-controls[hidden] { display: none; }
         #smile-controls { position: absolute; z-index: 10; inset: 0; pointer-events: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-        #smile-controls button { pointer-events: auto; touch-action: none; min-width: 56px; min-height: 56px; padding: 0; border: 2px solid rgba(220, 247, 255, .56); border-radius: 50%; color: #fff; background: rgba(9, 20, 36, .66); box-shadow: 0 3px 12px rgba(0, 0, 0, .4); font: 700 clamp(18px, 4vmin, 28px)/1 "Segoe UI", Arial, sans-serif; }
+        #smile-controls button { pointer-events: auto; touch-action: none; display: grid; place-items: center; min-width: 56px; min-height: 56px; padding: 0; border: 2px solid rgba(220, 247, 255, .56); border-radius: 50%; color: #fff; background: rgba(9, 20, 36, .66); box-shadow: 0 3px 12px rgba(0, 0, 0, .4); font: 700 clamp(18px, 4vmin, 28px)/1 "Segoe UI", Arial, sans-serif; }
         #smile-controls button:focus-visible { outline: 3px solid #46e6ff; outline-offset: 3px; }
         #smile-controls button.smile-control-active { background: rgba(27, 157, 190, .9); border-color: #fff; transform: translateY(2px) scale(.97); }
         .smile-dpad, .smile-action-controls { position: absolute; bottom: max(24px, env(safe-area-inset-bottom, 0px)); display: grid; grid-template: repeat(3, clamp(56px, 12vmin, 78px)) / repeat(3, clamp(56px, 12vmin, 78px)); gap: 4px; }
         .smile-dpad { left: max(14px, env(safe-area-inset-left, 0px)); }
         .smile-action-controls { right: max(14px, env(safe-area-inset-right, 0px)); }
         .smile-dpad button, .smile-action-controls button { width: clamp(56px, 12vmin, 78px); height: clamp(56px, 12vmin, 78px); }
-        .smile-dpad button span { display: block; }
+        .smile-dpad button span { display: block; width: 0; height: 0; border-right: clamp(7px, 1.5vmin, 10px) solid transparent; border-bottom: clamp(12px, 2.6vmin, 17px) solid currentColor; border-left: clamp(7px, 1.5vmin, 10px) solid transparent; transform-origin: center; }
         .smile-control-left span { transform: rotate(-90deg); }
         .smile-control-right span { transform: rotate(90deg); }
         .smile-control-down span { transform: rotate(180deg); }
@@ -103,6 +116,36 @@ internal static class WebOutputWriter
 
     private const string Runtime = """
         "use strict";
+
+        let webFreshnessCheckPending = false;
+
+        function checkForWebUpdate() {
+            if (webFreshnessCheckPending || !window.location || !window.location.href) return;
+            const marker = document.querySelector && document.querySelector('meta[name="smile-build"]');
+            const currentBuild = marker && marker.content;
+            if (!/^[a-f0-9]{16}$/.test(currentBuild || "")) return;
+            webFreshnessCheckPending = true;
+            try {
+                const request = new URL(window.location.href);
+                request.hash = "";
+                request.searchParams.set("smile-cache-check", String(Date.now()));
+                fetch(request.toString(), { cache: "no-store" })
+                    .then(response => response.ok ? response.text() : "")
+                    .then(html => {
+                        const latest = html.match(/<meta name="smile-build" content="([a-f0-9]{16})">/i);
+                        if (!latest || latest[1].toLowerCase() === currentBuild) return;
+                        const destination = new URL(window.location.href);
+                        destination.searchParams.set("smile-version", latest[1].toLowerCase());
+                        window.location.replace(destination.toString());
+                    })
+                    .catch(() => { })
+                    .finally(() => { webFreshnessCheckPending = false; });
+            } catch (_) {
+                webFreshnessCheckPending = false;
+            }
+        }
+
+        window.addEventListener("pageshow", checkForWebUpdate);
 
         window.__smileWeb = { status: "starting", frameCount: 0 };
 
@@ -138,7 +181,7 @@ internal static class WebOutputWriter
             const virtualControlProfiles = Object.freeze({
                 standard: Object.freeze({
                     up: 10, down: 11, left: 12, right: 13,
-                    a: 14, b: 16, x: 16, y: 21
+                    a: 23, b: 24, x: 25, y: 26
                 })
             });
             const activeVirtualControlProfile = virtualControlProfiles.standard;
@@ -990,7 +1033,11 @@ internal static class WebOutputWriter
                 resizeCanvas();
             });
             document.addEventListener("fullscreenchange", resizeCanvas);
-            window.addEventListener("focus", () => { active = !document.hidden; syncMusic(); });
+            window.addEventListener("focus", () => {
+                active = !document.hidden;
+                if (active) checkForWebUpdate();
+                syncMusic();
+            });
             window.addEventListener("blur", () => { active = false; keys.length = 0; releaseAllInputs(); stopSound(); syncMusic(); });
             document.addEventListener("visibilitychange", () => {
                 active = !document.hidden && document.hasFocus();
@@ -1098,7 +1145,7 @@ internal static class WebOutputWriter
             function syncMusic() {
                 if (!currentMusic) return;
                 currentMusic.volume = active ? Math.max(0, Math.min(100, musicVolume)) / 100 : 0;
-                if (!musicRequested || musicPaused) {
+                if (!active || !musicRequested || musicPaused) {
                     currentMusic.pause();
                     return;
                 }
