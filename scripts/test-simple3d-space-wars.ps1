@@ -80,9 +80,17 @@ try {
         & $compiler "games\SpaceWars\Program-NoDemo.smile" @noDemoSources --target windows-x64 --graphics GDI -o "artifacts\games\SpaceWars-NoDemo-GDI\SpaceWars-NoDemo.exe"
     } "Space Wars no-demo native build"
 
+    $noDemoNativeAssets = "artifacts\games\SpaceWars-NoDemo-GDI\Assets"
+    New-Item -ItemType Directory -Force -Path $noDemoNativeAssets | Out-Null
+    Copy-Item "games\SpaceWars\Assets\*.wav" $noDemoNativeAssets -Force
+
     Invoke-Checked {
         & $compiler "games\SpaceWars\Program-NoDemo.smile" @noDemoSources --target web --output-dir "artifacts\web\SpaceWars-NoDemo"
     } "Space Wars no-demo Web build"
+
+    $noDemoWebAssets = "artifacts\web\SpaceWars-NoDemo\Assets"
+    New-Item -ItemType Directory -Force -Path $noDemoWebAssets | Out-Null
+    Copy-Item "games\SpaceWars\Assets\*.wav" $noDemoWebAssets -Force
 
     Invoke-Checked {
         node "scripts\run-web-test.js" "artifacts\web\SpaceWars-NoDemo" --frames 8 --timeout 10000
