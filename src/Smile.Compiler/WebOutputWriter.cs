@@ -30,7 +30,8 @@ internal static class WebOutputWriter
 
     private static string BuildVersion(string title, string game)
     {
-        var content = string.Join('\0', title, Runtime, game, Style);
+        var unversionedIndex = Index(title, string.Empty);
+        var content = string.Join('\0', unversionedIndex, Runtime, game, Style);
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(content));
         return Convert.ToHexString(hash)[..16].ToLowerInvariant();
     }
