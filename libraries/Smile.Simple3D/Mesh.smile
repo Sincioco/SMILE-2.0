@@ -1,0 +1,316 @@
+''' Bounded generational mesh storage shared by every Simple3D consumer.
+Module Smile.Simple3D.Mesh
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+
+Private Const HANDLE_FACTOR = 100
+Private Const MAX_GENERATION = 90000000
+
+Private Dim Used[32] As Boolean
+Private Dim Generations[32] As Number
+Private Dim VertexCounts[32] As Number
+Private Dim EdgeCounts[32] As Number
+Private Dim VertexXValues[32, 768] As Number
+Private Dim VertexYValues[32, 768] As Number
+Private Dim VertexZValues[32, 768] As Number
+Private Dim EdgeStartValues[32, 1536] As Number
+Private Dim EdgeEndValues[32, 1536] As Number
+
+Private Function Slot(MeshHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Result As Number
+    Dim Index As Number
+    Dim Generation As Number
+
+    If MeshHandle <= 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Index = (MeshHandle Mod HANDLE_FACTOR) - 1
+    Generation = MeshHandle / HANDLE_FACTOR
+
+    If (Index < 0 Or
+        Index >= Core.MAX_MESHES Or
+        Not Used[Index] Or
+        Generations[Index] <> Generation) Then
+        Result = -1
+    Else
+        Result = Index
+    End If
+
+    Return Result
+
+End Function
+
+Public Function CreateMesh() As Number
+
+    Dim Index As Number
+    Dim Result As Number
+
+    For Index = 0 To Core.MAX_MESHES - 1
+
+        If Not Used[Index] Then
+
+            Generations[Index] = Generations[Index] + 1
+
+            If Generations[Index] <= 0 Or Generations[Index] > MAX_GENERATION Then
+                Generations[Index] = 1
+            End If
+
+            Used[Index] = True
+            VertexCounts[Index] = 0
+            EdgeCounts[Index] = 0
+            Result = Generations[Index] * HANDLE_FACTOR + Index + 1
+
+            Return Result
+
+        End If
+
+    End For
+
+    Return 0
+
+End Function
+
+Public Sub DestroyMesh(MeshHandle As Number)
+
+    Dim Index As Number
+
+    Index = Slot(MeshHandle)
+
+    If Index < 0 Then
+        Return
+    End If
+
+    Used[Index] = False
+    VertexCounts[Index] = 0
+    EdgeCounts[Index] = 0
+
+End Sub
+
+Public Sub ClearMesh(MeshHandle As Number)
+
+    Dim Index As Number
+
+    Index = Slot(MeshHandle)
+
+    If Index < 0 Then
+        Return
+    End If
+
+    VertexCounts[Index] = 0
+    EdgeCounts[Index] = 0
+
+End Sub
+
+Public Function IsValid(MeshHandle As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Slot(MeshHandle) >= 0
+
+    Return Result
+
+End Function
+
+Public Function VertexCount(MeshHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    Index = Slot(MeshHandle)
+
+    If Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = VertexCounts[Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function EdgeCount(MeshHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    Index = Slot(MeshHandle)
+
+    If Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = EdgeCounts[Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function AddVertex(MeshHandle As Number, X As Number, Y As Number, Z As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+    Dim VertexIndex As Number
+
+    Index = Slot(MeshHandle)
+
+    If (Index < 0 Or
+        VertexCounts[Index] >= Core.MAX_VERTICES Or
+        Abs(X) > Core.MAX_WORLD_COORDINATE Or
+        Abs(Y) > Core.MAX_WORLD_COORDINATE Or
+        Abs(Z) > Core.MAX_WORLD_COORDINATE) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    VertexIndex = VertexCounts[Index]
+    VertexXValues[Index, VertexIndex] = X
+    VertexYValues[Index, VertexIndex] = Y
+    VertexZValues[Index, VertexIndex] = Z
+    VertexCounts[Index] = VertexIndex + 1
+
+    Return VertexIndex
+
+End Function
+
+Public Function AddEdge(MeshHandle As Number, StartVertex As Number, EndVertex As Number) As Boolean
+
+    Dim Index As Number
+    Dim EdgeIndex As Number
+
+    Index = Slot(MeshHandle)
+
+    If (Index < 0 Or
+        EdgeCounts[Index] >= Core.MAX_EDGES Or
+        StartVertex < 0 Or
+        EndVertex < 0 Or
+        StartVertex >= VertexCounts[Index] Or
+        EndVertex >= VertexCounts[Index]) Then
+        Return False
+    End If
+
+    EdgeIndex = EdgeCounts[Index]
+    EdgeStartValues[Index, EdgeIndex] = StartVertex
+    EdgeEndValues[Index, EdgeIndex] = EndVertex
+    EdgeCounts[Index] = EdgeIndex + 1
+
+    Return True
+
+End Function
+
+Public Function VertexX(MeshHandle As Number, VertexIndex As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    Index = Slot(MeshHandle)
+
+    If (Index < 0 Or
+        VertexIndex < 0 Or
+        VertexIndex >= VertexCounts[Index]) Then
+        Return 0
+    End If
+
+    ReturnValue = VertexXValues[Index, VertexIndex]
+
+    Return ReturnValue
+
+End Function
+
+Public Function VertexY(MeshHandle As Number, VertexIndex As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    Index = Slot(MeshHandle)
+
+    If (Index < 0 Or
+        VertexIndex < 0 Or
+        VertexIndex >= VertexCounts[Index]) Then
+        Return 0
+    End If
+
+    ReturnValue = VertexYValues[Index, VertexIndex]
+
+    Return ReturnValue
+
+End Function
+
+Public Function VertexZ(MeshHandle As Number, VertexIndex As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    Index = Slot(MeshHandle)
+
+    If (Index < 0 Or
+        VertexIndex < 0 Or
+        VertexIndex >= VertexCounts[Index]) Then
+        Return 0
+    End If
+
+    ReturnValue = VertexZValues[Index, VertexIndex]
+
+    Return ReturnValue
+
+End Function
+
+Public Function EdgeStart(MeshHandle As Number, EdgeIndex As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    Index = Slot(MeshHandle)
+
+    If (Index < 0 Or
+        EdgeIndex < 0 Or
+        EdgeIndex >= EdgeCounts[Index]) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = EdgeStartValues[Index, EdgeIndex]
+
+    Return ReturnValue
+
+End Function
+
+Public Function EdgeEnd(MeshHandle As Number, EdgeIndex As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    Index = Slot(MeshHandle)
+
+    If (Index < 0 Or
+        EdgeIndex < 0 Or
+        EdgeIndex >= EdgeCounts[Index]) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = EdgeEndValues[Index, EdgeIndex]
+
+    Return ReturnValue
+
+End Function
+
+End Module

@@ -1,0 +1,358 @@
+''' Deterministic bounded wireframe primitive generators.
+Module Smile.Simple3D.Primitives
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.FixedMath As Math3D
+Import Smile.Simple3D.Mesh As Mesh
+
+Private Function AddCheckedVertex(MeshHandle As Number, X As Number, Y As Number, Z As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Mesh.AddVertex(MeshHandle, X, Y, Z) >= 0
+
+    Return Result
+
+End Function
+
+Private Function AddCheckedEdge(MeshHandle As Number, StartVertex As Number, EndVertex As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Mesh.AddEdge(MeshHandle, StartVertex, EndVertex)
+
+    Return Result
+
+End Function
+
+Public Function CreateCube(Size As Number) As Number
+
+    Dim Handle As Number
+    Dim HalfSize As Number
+    Dim Index As Number
+    Dim NextIndex As Number
+
+    If Size <= 0 Or Size > Core.MAX_WORLD_COORDINATE Then
+        Return 0
+    End If
+
+    Handle = Mesh.CreateMesh()
+
+    If Handle = 0 Then
+        Return 0
+    End If
+
+    HalfSize = Size / 2
+
+    If (Not AddCheckedVertex(Handle, -HalfSize, -HalfSize, -HalfSize) Or
+        Not AddCheckedVertex(Handle, HalfSize, -HalfSize, -HalfSize) Or
+        Not AddCheckedVertex(Handle, HalfSize, HalfSize, -HalfSize) Or
+        Not AddCheckedVertex(Handle, -HalfSize, HalfSize, -HalfSize) Or
+        Not AddCheckedVertex(Handle, -HalfSize, -HalfSize, HalfSize) Or
+        Not AddCheckedVertex(Handle, HalfSize, -HalfSize, HalfSize) Or
+        Not AddCheckedVertex(Handle, HalfSize, HalfSize, HalfSize) Or
+        Not AddCheckedVertex(Handle, -HalfSize, HalfSize, HalfSize)) Then
+        Call Mesh.DestroyMesh(Handle)
+
+        Return 0
+    End If
+
+    For Index = 0 To 3
+
+        NextIndex = (Index + 1) Mod 4
+
+        If (Not AddCheckedEdge(Handle, Index, NextIndex) Or
+            Not AddCheckedEdge(Handle, Index + 4, NextIndex + 4) Or
+            Not AddCheckedEdge(Handle, Index, Index + 4)) Then
+            Call Mesh.DestroyMesh(Handle)
+
+            Return 0
+        End If
+
+    End For
+
+    Return Handle
+
+End Function
+
+Public Function CreatePyramid(Size As Number, Height As Number) As Number
+
+    Dim Handle As Number
+    Dim HalfSize As Number
+    Dim Index As Number
+    Dim NextIndex As Number
+
+    If Size <= 0 Or Height <= 0 Then
+        Return 0
+    End If
+
+    Handle = Mesh.CreateMesh()
+
+    If Handle = 0 Then
+        Return 0
+    End If
+
+    HalfSize = Size / 2
+
+    If (Not AddCheckedVertex(Handle, -HalfSize, -Height / 2, -HalfSize) Or
+        Not AddCheckedVertex(Handle, HalfSize, -Height / 2, -HalfSize) Or
+        Not AddCheckedVertex(Handle, HalfSize, -Height / 2, HalfSize) Or
+        Not AddCheckedVertex(Handle, -HalfSize, -Height / 2, HalfSize) Or
+        Not AddCheckedVertex(Handle, 0, Height / 2, 0)) Then
+        Call Mesh.DestroyMesh(Handle)
+
+        Return 0
+    End If
+
+    For Index = 0 To 3
+
+        NextIndex = (Index + 1) Mod 4
+
+        If Not AddCheckedEdge(Handle, Index, NextIndex) Or Not AddCheckedEdge(Handle, Index, 4) Then
+            Call Mesh.DestroyMesh(Handle)
+
+            Return 0
+        End If
+
+    End For
+
+    Return Handle
+
+End Function
+
+Public Function CreateSphere(Radius As Number, Segments As Number, Rings As Number) As Number
+
+    Dim Handle As Number
+    Dim Ring As Number
+    Dim Segment As Number
+    Dim Latitude As Number
+    Dim Longitude As Number
+    Dim RingRadius As Number
+    Dim X As Number
+    Dim Y As Number
+    Dim Z As Number
+    Dim Current As Number
+    Dim Around As Number
+
+    If (Radius <= 0 Or
+        Segments < 6 Or
+        Segments > 32 Or
+        Rings < 3 Or
+        Rings > 16 Or
+        (Rings + 1) * Segments > Core.MAX_VERTICES) Then
+        Return 0
+    End If
+
+    Handle = Mesh.CreateMesh()
+
+    If Handle = 0 Then
+        Return 0
+    End If
+
+    For Ring = 0 To Rings
+
+        Latitude = -90 + Ring * 180 / Rings
+        RingRadius = Radius * Math3D.CosFixed(Latitude) / Core.FIXED_ONE
+        Y = Radius * Math3D.SinFixed(Latitude) / Core.FIXED_ONE
+
+        For Segment = 0 To Segments - 1
+
+            Longitude = Segment * 360 / Segments
+            X = RingRadius * Math3D.CosFixed(Longitude) / Core.FIXED_ONE
+            Z = RingRadius * Math3D.SinFixed(Longitude) / Core.FIXED_ONE
+            Current = Mesh.AddVertex(Handle, X, Y, Z)
+
+            If Current < 0 Then
+                Call Mesh.DestroyMesh(Handle)
+
+                Return 0
+            End If
+
+        End For
+    End For
+
+    For Ring = 0 To Rings
+
+        For Segment = 0 To Segments - 1
+
+            Current = Ring * Segments + Segment
+            Around = Ring * Segments + (Segment + 1) Mod Segments
+
+            If Not Mesh.AddEdge(Handle, Current, Around) Then
+                Call Mesh.DestroyMesh(Handle)
+
+                Return 0
+            End If
+
+            If Ring < Rings And Not Mesh.AddEdge(Handle, Current, Current + Segments) Then
+                Call Mesh.DestroyMesh(Handle)
+
+                Return 0
+            End If
+
+        End For
+    End For
+
+    Return Handle
+
+End Function
+
+Public Function CreateDonut(MajorRadius As Number, MinorRadius As Number, MajorSegments As Number, MinorSegments As Number) As Number
+
+    Dim Handle As Number
+    Dim MajorIndex As Number
+    Dim MinorIndex As Number
+    Dim MajorAngle As Number
+    Dim MinorAngle As Number
+    Dim Radius As Number
+    Dim X As Number
+    Dim Y As Number
+    Dim Z As Number
+    Dim Current As Number
+    Dim AroundMajor As Number
+    Dim AroundMinor As Number
+
+    If (MajorRadius <= 0 Or
+        MinorRadius <= 0 Or
+        MajorSegments < 6 Or
+        MajorSegments > 32 Or
+        MinorSegments < 4 Or
+        MinorSegments > 16 Or
+        MajorSegments * MinorSegments > Core.MAX_VERTICES) Then
+        Return 0
+    End If
+
+    Handle = Mesh.CreateMesh()
+
+    If Handle = 0 Then
+        Return 0
+    End If
+
+    For MajorIndex = 0 To MajorSegments - 1
+
+        MajorAngle = MajorIndex * 360 / MajorSegments
+
+        For MinorIndex = 0 To MinorSegments - 1
+
+            MinorAngle = MinorIndex * 360 / MinorSegments
+            Radius = MajorRadius + MinorRadius * Math3D.CosFixed(MinorAngle) / Core.FIXED_ONE
+            X = Radius * Math3D.CosFixed(MajorAngle) / Core.FIXED_ONE
+            Y = MinorRadius * Math3D.SinFixed(MinorAngle) / Core.FIXED_ONE
+            Z = Radius * Math3D.SinFixed(MajorAngle) / Core.FIXED_ONE
+            Current = Mesh.AddVertex(Handle, X, Y, Z)
+
+            If Current < 0 Then
+                Call Mesh.DestroyMesh(Handle)
+
+                Return 0
+            End If
+
+        End For
+    End For
+
+    For MajorIndex = 0 To MajorSegments - 1
+
+        For MinorIndex = 0 To MinorSegments - 1
+
+            Current = MajorIndex * MinorSegments + MinorIndex
+            AroundMajor = ((MajorIndex + 1) Mod MajorSegments) * MinorSegments + MinorIndex
+            AroundMinor = MajorIndex * MinorSegments + (MinorIndex + 1) Mod MinorSegments
+
+            If (Not Mesh.AddEdge(Handle, Current, AroundMajor) Or
+                Not Mesh.AddEdge(Handle, Current, AroundMinor)) Then
+                Call Mesh.DestroyMesh(Handle)
+
+                Return 0
+            End If
+
+        End For
+    End For
+
+    Return Handle
+
+End Function
+
+Public Function CreateAxes(Length As Number) As Number
+
+    Dim Handle As Number
+
+    If Length <= 0 Then
+        Return 0
+    End If
+
+    Handle = Mesh.CreateMesh()
+
+    If Handle = 0 Then
+        Return 0
+    End If
+
+    If (Mesh.AddVertex(Handle, 0, 0, 0) < 0 Or
+        Mesh.AddVertex(Handle, Length, 0, 0) < 0 Or
+        Mesh.AddVertex(Handle, 0, Length, 0) < 0 Or
+        Mesh.AddVertex(Handle, 0, 0, Length) < 0 Or
+        Not Mesh.AddEdge(Handle, 0, 1) Or
+        Not Mesh.AddEdge(Handle, 0, 2) Or
+        Not Mesh.AddEdge(Handle, 0, 3)) Then
+        Call Mesh.DestroyMesh(Handle)
+
+        Return 0
+    End If
+
+    Return Handle
+
+End Function
+
+Public Function CreateGrid(HalfLines As Number, Spacing As Number) As Number
+
+    Dim Handle As Number
+    Dim Index As Number
+    Dim Offset As Number
+    Dim Extent As Number
+    Dim Vertex As Number
+
+    If (HalfLines < 1 Or
+        HalfLines > 20 Or
+        Spacing <= 0) Then
+        Return 0
+    End If
+
+    Handle = Mesh.CreateMesh()
+
+    If Handle = 0 Then
+        Return 0
+    End If
+
+    Extent = HalfLines * Spacing
+
+    For Index = -HalfLines To HalfLines
+
+        Offset = Index * Spacing
+        Vertex = Mesh.AddVertex(Handle, -Extent, 0, Offset)
+
+        If (Vertex < 0 Or
+            Mesh.AddVertex(Handle, Extent, 0, Offset) < 0 Or
+            Not Mesh.AddEdge(Handle, Vertex, Vertex + 1)) Then
+            Call Mesh.DestroyMesh(Handle)
+
+            Return 0
+        End If
+
+        Vertex = Mesh.AddVertex(Handle, Offset, 0, -Extent)
+
+        If (Vertex < 0 Or
+            Mesh.AddVertex(Handle, Offset, 0, Extent) < 0 Or
+            Not Mesh.AddEdge(Handle, Vertex, Vertex + 1)) Then
+            Call Mesh.DestroyMesh(Handle)
+
+            Return 0
+        End If
+
+    End For
+
+    Return Handle
+
+End Function
+
+End Module

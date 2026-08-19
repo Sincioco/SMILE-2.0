@@ -1,0 +1,11 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Console</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>Simple3DTests</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

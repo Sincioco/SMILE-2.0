@@ -1,0 +1,70 @@
+''' Shared value types and public limits for educational software-rendered 3D.
+Module Smile.Simple3D.Core
+
+Option Explicit
+
+Public Const SIMPLE3D_VERSION_MAJOR = 1
+Public Const FIXED_ONE = 16384
+Public Const ANGLE_FULL = 360
+Public Const PROJECTION_PERSPECTIVE = 1
+Public Const PROJECTION_ORTHOGRAPHIC = 2
+Public Const MAX_MESHES = 32
+Public Const MAX_VERTICES = 768
+Public Const MAX_EDGES = 1536
+Public Const DEFAULT_LINE_BUDGET = 2500
+Public Const MAX_WORLD_COORDINATE = 1000000
+
+''' A point or direction in integer world units.
+Public Type Vector3
+    X As Number
+    Y As Number
+    Z As Number
+End Type
+
+''' Euler angles in public integer degrees, applied X then Y then Z.
+Public Type Rotation3D
+    X As Number
+    Y As Number
+    Z As Number
+End Type
+
+''' Object translation, rotation, and integer percentage scale.
+Public Type Transform3D
+    Position As Vector3
+    Rotation As Rotation3D
+    ScalePercent As Number
+End Type
+
+''' Camera values in world units and logical canvas pixels.
+Public Type Camera3D
+    Position As Vector3
+    Rotation As Rotation3D
+    Projection As Number
+    NearPlane As Number
+    FocalLength As Number
+    OrthographicScale As Number
+    ViewX As Number
+    ViewY As Number
+    ViewWidth As Number
+    ViewHeight As Number
+End Type
+
+''' A projected logical-canvas point plus its camera-space depth.
+Public Type ProjectedPoint3D
+    X As Number
+    Y As Number
+    Depth As Number
+    Visible As Boolean
+End Type
+
+''' Pointer-orbit state with bounded inertial velocity.
+Public Type OrbitState3D
+    Yaw As Number
+    Pitch As Number
+    YawVelocity As Number
+    PitchVelocity As Number
+    Distance As Number
+    Dragging As Boolean
+End Type
+
+End Module

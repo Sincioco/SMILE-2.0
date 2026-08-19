@@ -1,0 +1,414 @@
+''' Fixed-point transforms, near-plane clipping, projection, and bounded 2D line output.
+Module Smile.Simple3D.Renderer
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.FixedMath As Math3D
+Import Smile.Simple3D.Mesh As Mesh
+
+Private Dim LineBudget As Number
+Private Dim LinesDrawn As Number
+Private Dim LinesDropped As Number
+
+Private Function ValidCamera(Camera As Core.Camera3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Camera.ViewWidth > 0 And Camera.ViewHeight > 0 And Camera.NearPlane > 0 And (
+        (Camera.Projection = Core.PROJECTION_PERSPECTIVE And Camera.FocalLength > 0) Or
+        (Camera.Projection = Core.PROJECTION_ORTHOGRAPHIC And Camera.OrthographicScale > 0))
+
+    Return Result
+
+End Function
+
+Public Function DefaultCamera(ViewWidth As Number, ViewHeight As Number) As Core.Camera3D
+
+    Dim Camera As Core.Camera3D
+
+    Camera.Position.Z = -800
+    Camera.Projection = Core.PROJECTION_PERSPECTIVE
+    Camera.NearPlane = 10
+    Camera.FocalLength = 520
+    Camera.OrthographicScale = 100
+    Camera.ViewWidth = ViewWidth
+    Camera.ViewHeight = ViewHeight
+
+    Return Camera
+
+End Function
+
+Public Function IdentityTransform() As Core.Transform3D
+
+    Dim Transform As Core.Transform3D
+
+    Transform.ScalePercent = 100
+
+    Return Transform
+
+End Function
+
+Public Function TransformPoint(Point As Core.Vector3, Transform As Core.Transform3D) As Core.Vector3
+
+    Dim Result As Core.Vector3
+    Dim ScaleValue As Number
+
+    ScaleValue = Transform.ScalePercent
+
+    If ScaleValue = 0 Then
+        ScaleValue = 100
+    End If
+
+    Result.X = Point.X * ScaleValue / 100
+    Result.Y = Point.Y * ScaleValue / 100
+    Result.Z = Point.Z * ScaleValue / 100
+    Result = Math3D.Rotate(Result, Transform.Rotation)
+    Result.X = Result.X + Transform.Position.X
+    Result.Y = Result.Y + Transform.Position.Y
+    Result.Z = Result.Z + Transform.Position.Z
+
+    Return Result
+
+End Function
+
+Public Function WorldToCamera(Point As Core.Vector3, Camera As Core.Camera3D) As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    Result.X = Point.X - Camera.Position.X
+    Result.Y = Point.Y - Camera.Position.Y
+    Result.Z = Point.Z - Camera.Position.Z
+    Result = Math3D.RotateZ(Result, -Camera.Rotation.Z)
+    Result = Math3D.RotateY(Result, -Camera.Rotation.Y)
+    Result = Math3D.RotateX(Result, -Camera.Rotation.X)
+
+    Return Result
+
+End Function
+
+Private Function ProjectCameraPoint(Point As Core.Vector3, Camera As Core.Camera3D) As Core.ProjectedPoint3D
+
+    Dim Result As Core.ProjectedPoint3D
+    Dim CenterX As Number
+    Dim CenterY As Number
+
+    If Not ValidCamera(Camera) Or Point.Z < Camera.NearPlane Then
+        Return Result
+    End If
+
+    CenterX = Camera.ViewX + Camera.ViewWidth / 2
+    CenterY = Camera.ViewY + Camera.ViewHeight / 2
+
+    If Camera.Projection = Core.PROJECTION_PERSPECTIVE Then
+        Result.X = CenterX + Point.X * Camera.FocalLength / Point.Z
+        Result.Y = CenterY - Point.Y * Camera.FocalLength / Point.Z
+    Else
+        Result.X = CenterX + Point.X * Camera.OrthographicScale / 100
+        Result.Y = CenterY - Point.Y * Camera.OrthographicScale / 100
+    End If
+
+    Result.Depth = Point.Z
+    Result.Visible = True
+
+    Return Result
+
+End Function
+
+Public Function ProjectPoint(Point As Core.Vector3, Camera As Core.Camera3D) As Core.ProjectedPoint3D
+
+    Dim CameraPoint As Core.Vector3
+    Dim Result As Core.ProjectedPoint3D
+
+    CameraPoint = WorldToCamera(Point, Camera)
+    Result = ProjectCameraPoint(CameraPoint, Camera)
+
+    Return Result
+
+End Function
+
+Private Function OutCode(X As Number, Y As Number, LeftValue As Number, TopValue As Number, RightValue As Number, BottomValue As Number) As Number
+
+    Dim Code As Number
+
+    If X < LeftValue Then
+        Code = 1
+    Else If X > RightValue Then
+        Code = 2
+    Else If Y < TopValue Then
+        Code = 4
+    Else If Y > BottomValue Then
+        Code = 8
+    End If
+
+    Return Code
+
+End Function
+
+Private Function ClipViewport(ByRef X1 As Number, ByRef Y1 As Number, ByRef X2 As Number, ByRef Y2 As Number, Camera As Core.Camera3D) As Boolean
+
+    Dim LeftValue As Number
+    Dim TopValue As Number
+    Dim RightValue As Number
+    Dim BottomValue As Number
+    Dim Code1 As Number
+    Dim Code2 As Number
+    Dim OutsideCode As Number
+    Dim X As Number
+    Dim Y As Number
+    Dim Iteration As Number
+
+    LeftValue = Camera.ViewX
+    TopValue = Camera.ViewY
+    RightValue = Camera.ViewX + Camera.ViewWidth - 1
+    BottomValue = Camera.ViewY + Camera.ViewHeight - 1
+
+    For Iteration = 0 To 8
+
+        Code1 = OutCode(X1, Y1, LeftValue, TopValue, RightValue, BottomValue)
+        Code2 = OutCode(X2, Y2, LeftValue, TopValue, RightValue, BottomValue)
+
+        If Code1 = 0 And Code2 = 0 Then
+            Return True
+        End If
+
+        If ((X1 < LeftValue And X2 < LeftValue) Or
+            (X1 > RightValue And X2 > RightValue) Or
+            (Y1 < TopValue And Y2 < TopValue) Or
+            (Y1 > BottomValue And Y2 > BottomValue)) Then
+            Return False
+        End If
+
+        If Code1 <> 0 Then
+            OutsideCode = Code1
+        Else
+            OutsideCode = Code2
+        End If
+
+        If OutsideCode = 4 Then
+
+            If Y2 = Y1 Then
+                Return False
+            End If
+
+            X = X1 + (X2 - X1) * (TopValue - Y1) / (Y2 - Y1)
+            Y = TopValue
+
+        Else If OutsideCode = 8 Then
+
+            If Y2 = Y1 Then
+                Return False
+            End If
+
+            X = X1 + (X2 - X1) * (BottomValue - Y1) / (Y2 - Y1)
+            Y = BottomValue
+
+        Else If OutsideCode = 2 Then
+
+            If X2 = X1 Then
+                Return False
+            End If
+
+            Y = Y1 + (Y2 - Y1) * (RightValue - X1) / (X2 - X1)
+            X = RightValue
+
+        Else
+
+            If X2 = X1 Then
+                Return False
+            End If
+
+            Y = Y1 + (Y2 - Y1) * (LeftValue - X1) / (X2 - X1)
+            X = LeftValue
+
+        End If
+
+        If OutsideCode = Code1 Then
+            X1 = X
+            Y1 = Y
+        Else
+            X2 = X
+            Y2 = Y
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+Private Function ClipNear(ByRef First As Core.Vector3, ByRef Second As Core.Vector3, NearPlane As Number) As Boolean
+
+    Dim RatioNumerator As Number
+    Dim RatioDenominator As Number
+
+    If First.Z < NearPlane And Second.Z < NearPlane Then
+        Return False
+    End If
+
+    If First.Z >= NearPlane And Second.Z >= NearPlane Then
+        Return True
+    End If
+
+    RatioDenominator = Second.Z - First.Z
+
+    If RatioDenominator = 0 Then
+        Return False
+    End If
+
+    If First.Z < NearPlane Then
+
+        RatioNumerator = NearPlane - First.Z
+        First.X = First.X + (Second.X - First.X) * RatioNumerator / RatioDenominator
+        First.Y = First.Y + (Second.Y - First.Y) * RatioNumerator / RatioDenominator
+        First.Z = NearPlane
+
+    Else
+        RatioNumerator = NearPlane - Second.Z
+        Second.X = Second.X + (First.X - Second.X) * RatioNumerator / (First.Z - Second.Z)
+        Second.Y = Second.Y + (First.Y - Second.Y) * RatioNumerator / (First.Z - Second.Z)
+        Second.Z = NearPlane
+
+    End If
+
+    Return True
+
+End Function
+
+Public Sub BeginFrame(MaximumLines As Number)
+
+    LineBudget = MaximumLines
+
+    If LineBudget <= 0 Or LineBudget > Core.DEFAULT_LINE_BUDGET Then
+        LineBudget = Core.DEFAULT_LINE_BUDGET
+    End If
+
+    LinesDrawn = 0
+    LinesDropped = 0
+
+End Sub
+
+Public Function FrameLinesDrawn() As Number
+
+    Return LinesDrawn
+
+End Function
+
+Public Function FrameLinesDropped() As Number
+
+    Return LinesDropped
+
+End Function
+
+Private Sub DrawProjectedLine(First As Core.ProjectedPoint3D, Second As Core.ProjectedPoint3D, Camera As Core.Camera3D, LineColor As Number, GlowPasses As Number)
+
+    Dim X1 As Number
+    Dim Y1 As Number
+    Dim X2 As Number
+    Dim Y2 As Number
+    Dim Pass As Number
+
+    X1 = First.X
+    Y1 = First.Y
+    X2 = Second.X
+    Y2 = Second.Y
+
+    If Not ClipViewport(X1, Y1, X2, Y2, Camera) Then
+        Return
+    End If
+
+    GlowPasses = Min(3, Max(0, GlowPasses))
+
+    For Pass = GlowPasses Down To 0
+
+        If LinesDrawn >= LineBudget Then
+            LinesDropped = LinesDropped + 1
+
+            Return
+        End If
+
+        If Pass > 0 Then
+            Draw Line X1 + Pass, Y1, X2 + Pass, Y2, LineColor
+        Else
+            Draw Line X1, Y1, X2, Y2, LineColor
+        End If
+
+        LinesDrawn = LinesDrawn + 1
+    End For
+
+End Sub
+
+Private Sub DrawCameraLine(First As Core.Vector3, Second As Core.Vector3, Camera As Core.Camera3D, LineColor As Number, GlowPasses As Number)
+
+    Dim ProjectedFirst As Core.ProjectedPoint3D
+    Dim ProjectedSecond As Core.ProjectedPoint3D
+
+    If Not ValidCamera(Camera) Or Not ClipNear(First, Second, Camera.NearPlane) Then
+        Return
+    End If
+
+    ProjectedFirst = ProjectCameraPoint(First, Camera)
+    ProjectedSecond = ProjectCameraPoint(Second, Camera)
+
+    If Not ProjectedFirst.Visible Or Not ProjectedSecond.Visible Then
+        Return
+    End If
+
+    Call DrawProjectedLine(ProjectedFirst, ProjectedSecond, Camera, LineColor, GlowPasses)
+
+End Sub
+
+Public Sub DrawLine3D(First As Core.Vector3, Second As Core.Vector3, Camera As Core.Camera3D, LineColor As Number, GlowPasses As Number)
+
+    First = WorldToCamera(First, Camera)
+    Second = WorldToCamera(Second, Camera)
+
+    Call DrawCameraLine(First, Second, Camera, LineColor, GlowPasses)
+
+End Sub
+
+Public Sub DrawMesh(MeshHandle As Number, Transform As Core.Transform3D, Camera As Core.Camera3D, LineColor As Number, GlowPasses As Number)
+
+    Dim EdgeIndex As Number
+    Dim StartIndex As Number
+    Dim EndIndex As Number
+    Dim First As Core.Vector3
+    Dim Second As Core.Vector3
+
+    If Not Mesh.IsValid(MeshHandle) Then
+        Return
+    End If
+
+    For EdgeIndex = 0 To Mesh.EdgeCount(MeshHandle) - 1
+
+        StartIndex = Mesh.EdgeStart(MeshHandle, EdgeIndex)
+        EndIndex = Mesh.EdgeEnd(MeshHandle, EdgeIndex)
+        First.X = Mesh.VertexX(MeshHandle, StartIndex)
+        First.Y = Mesh.VertexY(MeshHandle, StartIndex)
+        First.Z = Mesh.VertexZ(MeshHandle, StartIndex)
+        Second.X = Mesh.VertexX(MeshHandle, EndIndex)
+        Second.Y = Mesh.VertexY(MeshHandle, EndIndex)
+        Second.Z = Mesh.VertexZ(MeshHandle, EndIndex)
+        First = TransformPoint(First, Transform)
+        Second = TransformPoint(Second, Transform)
+        First = WorldToCamera(First, Camera)
+        Second = WorldToCamera(Second, Camera)
+
+        Call DrawCameraLine(First, Second, Camera, LineColor, GlowPasses)
+    End For
+
+End Sub
+
+Public Function SphereVisible(Center As Core.Vector3, Radius As Number, Camera As Core.Camera3D) As Boolean
+
+    Dim CameraPoint As Core.Vector3
+    Dim Result As Boolean
+
+    CameraPoint = WorldToCamera(Center, Camera)
+    Result = Radius >= 0 And CameraPoint.Z + Radius >= Camera.NearPlane
+
+    Return Result
+
+End Function
+
+End Module

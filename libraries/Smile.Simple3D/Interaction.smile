@@ -1,0 +1,100 @@
+''' Pure bounded orbit interaction plus a convenience adapter for game-canvas pointer input.
+Module Smile.Simple3D.Interaction
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.FixedMath As Math3D
+
+Private Const MAX_VELOCITY = 24
+Private Const MIN_DISTANCE = 200
+Private Const MAX_DISTANCE = 2400
+
+Public Sub ResetOrbit(ByRef Orbit As Core.OrbitState3D)
+
+    Orbit.Yaw = 25
+    Orbit.Pitch = 18
+    Orbit.YawVelocity = 0
+    Orbit.PitchVelocity = 0
+    Orbit.Distance = 850
+    Orbit.Dragging = False
+
+End Sub
+
+Public Sub CancelOrbit(ByRef Orbit As Core.OrbitState3D)
+
+    Orbit.Dragging = False
+    Orbit.YawVelocity = 0
+    Orbit.PitchVelocity = 0
+
+End Sub
+
+Public Sub UpdateOrbit(
+    ByRef Orbit As Core.OrbitState3D,
+    Pressed As Boolean,
+    Held As Boolean,
+    Released As Boolean,
+    DeltaX As Number,
+    DeltaY As Number,
+    WheelDelta As Number,
+    ElapsedMilliseconds As Number
+)
+
+    ElapsedMilliseconds = Min(50, Max(0, ElapsedMilliseconds))
+
+    If Pressed Then
+
+        Orbit.Dragging = True
+        Orbit.YawVelocity = 0
+        Orbit.PitchVelocity = 0
+
+    End If
+
+    If Orbit.Dragging And Held Then
+
+        Orbit.Yaw = Math3D.WrapDegrees(Orbit.Yaw + DeltaX)
+        Orbit.Pitch = Min(85, Max(-85, Orbit.Pitch + DeltaY))
+        Orbit.YawVelocity = Min(MAX_VELOCITY, Max(-MAX_VELOCITY, DeltaX))
+        Orbit.PitchVelocity = Min(MAX_VELOCITY, Max(-MAX_VELOCITY, DeltaY))
+
+    End If
+
+    If Released Then
+        Orbit.Dragging = False
+    End If
+
+    If Not Orbit.Dragging And ElapsedMilliseconds > 0 Then
+
+        Orbit.Yaw = Math3D.WrapDegrees(Orbit.Yaw + Orbit.YawVelocity * ElapsedMilliseconds / 16)
+        Orbit.Pitch = Min(85, Max(-85, Orbit.Pitch + Orbit.PitchVelocity * ElapsedMilliseconds / 16))
+        Orbit.YawVelocity = Orbit.YawVelocity * 88 / 100
+        Orbit.PitchVelocity = Orbit.PitchVelocity * 88 / 100
+
+        If Abs(Orbit.YawVelocity) <= 1 Then
+            Orbit.YawVelocity = 0
+        End If
+
+        If Abs(Orbit.PitchVelocity) <= 1 Then
+            Orbit.PitchVelocity = 0
+        End If
+
+    End If
+
+    Orbit.Distance = Min(MAX_DISTANCE, Max(MIN_DISTANCE, Orbit.Distance - WheelDelta * 70))
+
+End Sub
+
+Public Sub UpdateOrbitFromPointer(ByRef Orbit As Core.OrbitState3D, ElapsedMilliseconds As Number)
+
+    Call UpdateOrbit(Orbit,
+        Pointer_Pressed(POINTER_PRIMARY),
+        Pointer_Held(POINTER_PRIMARY),
+        Pointer_Released(POINTER_PRIMARY),
+        Pointer_Delta_X(),
+        Pointer_Delta_Y(),
+        Pointer_Wheel_Delta(),
+        ElapsedMilliseconds)
+
+End Sub
+
+End Module

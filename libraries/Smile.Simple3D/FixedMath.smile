@@ -1,0 +1,146 @@
+''' Deterministic bounded fixed-point trigonometry and vector rotation.
+Module Smile.Simple3D.FixedMath
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+
+Public Function WrapDegrees(Angle As Number) As Number
+
+    Dim Result As Number
+
+    Result = Angle Mod 360
+
+    If Result < 0 Then
+        Result = Result + 360
+    End If
+
+    Return Result
+
+End Function
+
+''' Returns sine scaled by Core.FIXED_ONE using a deterministic rational approximation.
+Public Function SinFixed(Angle As Number) As Number
+
+    Dim Wrapped As Number
+    Dim Sign As Number
+    Dim Product As Number
+    Dim Denominator As Number
+    Dim Result As Number
+
+    Wrapped = WrapDegrees(Angle)
+    Sign = 1
+
+    If Wrapped > 180 Then
+        Wrapped = Wrapped - 180
+        Sign = -1
+    End If
+
+    Product = Wrapped * (180 - Wrapped)
+    Denominator = 40500 - Product
+
+    If Denominator <= 0 Then
+        Return 0
+    End If
+
+    Result = Sign * 4 * Product * Core.FIXED_ONE / Denominator
+
+    Return Result
+
+End Function
+
+Public Function CosFixed(Angle As Number) As Number
+
+    Dim Result As Number
+
+    Result = SinFixed(Angle + 90)
+
+    Return Result
+
+End Function
+
+Public Function MultiplyFixed(LeftValue As Number, RightValue As Number) As Number
+
+    Dim Result As Number
+
+    Result = LeftValue * RightValue / Core.FIXED_ONE
+
+    Return Result
+
+End Function
+
+Public Function DivideFixed(Numerator As Number, Denominator As Number) As Number
+
+    Dim Result As Number
+
+    If Denominator = 0 Then
+        Return 0
+    End If
+
+    Result = Numerator * Core.FIXED_ONE / Denominator
+
+    Return Result
+
+End Function
+
+Public Function RotateX(Point As Core.Vector3, Angle As Number) As Core.Vector3
+
+    Dim Result As Core.Vector3
+    Dim Sine As Number
+    Dim Cosine As Number
+
+    Sine = SinFixed(Angle)
+    Cosine = CosFixed(Angle)
+    Result.X = Point.X
+    Result.Y = (Point.Y * Cosine - Point.Z * Sine) / Core.FIXED_ONE
+    Result.Z = (Point.Y * Sine + Point.Z * Cosine) / Core.FIXED_ONE
+
+    Return Result
+
+End Function
+
+Public Function RotateY(Point As Core.Vector3, Angle As Number) As Core.Vector3
+
+    Dim Result As Core.Vector3
+    Dim Sine As Number
+    Dim Cosine As Number
+
+    Sine = SinFixed(Angle)
+    Cosine = CosFixed(Angle)
+    Result.X = (Point.X * Cosine + Point.Z * Sine) / Core.FIXED_ONE
+    Result.Y = Point.Y
+    Result.Z = (-Point.X * Sine + Point.Z * Cosine) / Core.FIXED_ONE
+
+    Return Result
+
+End Function
+
+Public Function RotateZ(Point As Core.Vector3, Angle As Number) As Core.Vector3
+
+    Dim Result As Core.Vector3
+    Dim Sine As Number
+    Dim Cosine As Number
+
+    Sine = SinFixed(Angle)
+    Cosine = CosFixed(Angle)
+    Result.X = (Point.X * Cosine - Point.Y * Sine) / Core.FIXED_ONE
+    Result.Y = (Point.X * Sine + Point.Y * Cosine) / Core.FIXED_ONE
+    Result.Z = Point.Z
+
+    Return Result
+
+End Function
+
+Public Function Rotate(Point As Core.Vector3, Rotation As Core.Rotation3D) As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    Result = RotateX(Point, Rotation.X)
+    Result = RotateY(Result, Rotation.Y)
+    Result = RotateZ(Result, Rotation.Z)
+
+    Return Result
+
+End Function
+
+End Module

@@ -1,0 +1,138 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.FixedMath As Math3D
+Import Smile.Simple3D.Mesh As Mesh
+Import Smile.Simple3D.Primitives As Primitives
+Import Smile.Simple3D.Renderer As Renderer
+Import Smile.Simple3D.Interaction As Interaction
+
+Dim Failures As Number
+Dim Handle As Number
+Dim Handles[32] As Number
+Dim Index As Number
+Dim Point As Core.Vector3
+Dim Camera As Core.Camera3D
+Dim Projected As Core.ProjectedPoint3D
+Dim Orbit As Core.OrbitState3D
+
+If Math3D.SinFixed(0) <> 0 Then
+    Failures = Failures + 1
+End If
+
+If Math3D.SinFixed(90) <> Core.FIXED_ONE Then
+    Failures = Failures + 1
+End If
+
+If Math3D.SinFixed(180) <> 0 Then
+    Failures = Failures + 1
+End If
+
+If Math3D.SinFixed(270) <> -Core.FIXED_ONE Then
+    Failures = Failures + 1
+End If
+
+If Math3D.WrapDegrees(-90) <> 270 Then
+    Failures = Failures + 1
+End If
+
+If Math3D.DivideFixed(100, 0) <> 0 Then
+    Failures = Failures + 1
+End If
+
+Handle = Primitives.CreateCube(200)
+
+If Mesh.VertexCount(Handle) <> 8 Or Mesh.EdgeCount(Handle) <> 12 Then
+    Failures = Failures + 1
+End If
+
+Call Mesh.DestroyMesh(Handle)
+
+Handle = Primitives.CreatePyramid(200, 240)
+
+If Mesh.VertexCount(Handle) <> 5 Or Mesh.EdgeCount(Handle) <> 8 Then
+    Failures = Failures + 1
+End If
+
+Call Mesh.DestroyMesh(Handle)
+
+Handle = Primitives.CreateSphere(100, 8, 4)
+
+If Mesh.VertexCount(Handle) <> 40 Or Mesh.EdgeCount(Handle) <> 72 Then
+    Failures = Failures + 1
+End If
+
+Call Mesh.DestroyMesh(Handle)
+
+Handle = Primitives.CreateDonut(100, 30, 8, 6)
+
+If Mesh.VertexCount(Handle) <> 48 Or Mesh.EdgeCount(Handle) <> 96 Then
+    Failures = Failures + 1
+End If
+
+Call Mesh.DestroyMesh(Handle)
+
+For Index = 0 To Core.MAX_MESHES - 1
+
+    Handles[Index] = Mesh.CreateMesh()
+
+    If Handles[Index] = 0 Then
+        Failures = Failures + 1
+    End If
+
+End For
+
+If Mesh.CreateMesh() <> 0 Then
+    Failures = Failures + 1
+End If
+
+Call Mesh.DestroyMesh(Handles[10])
+
+Handle = Mesh.CreateMesh()
+
+If Handle = 0 Then
+    Failures = Failures + 1
+End If
+
+Call Mesh.DestroyMesh(Handle)
+
+For Index = 0 To Core.MAX_MESHES - 1
+    Call Mesh.DestroyMesh(Handles[Index])
+End For
+
+Camera = Renderer.DefaultCamera(960, 540)
+Projected = Renderer.ProjectPoint(Point, Camera)
+
+If (Not Projected.Visible Or
+    Projected.X <> 480 Or
+    Projected.Y <> 270) Then
+    Failures = Failures + 1
+End If
+
+Point.Z = -900
+Projected = Renderer.ProjectPoint(Point, Camera)
+
+If Projected.Visible Then
+    Failures = Failures + 1
+End If
+
+Call Interaction.ResetOrbit(Orbit)
+Call Interaction.UpdateOrbit(Orbit, True, True, False, 12, -8, 1, 16)
+
+If (Orbit.Yaw <> 37 Or
+    Orbit.Pitch <> 10 Or
+    Orbit.Distance <> 780) Then
+    Failures = Failures + 1
+End If
+
+Call Interaction.UpdateOrbit(Orbit, False, False, True, 0, 0, 0, 16)
+
+If Orbit.Dragging Then
+    Failures = Failures + 1
+End If
+
+If Failures = 0 Then
+    Print "Simple3D tests passed"
+Else
+    Print "Simple3D tests failed: "; Failures
+End If
