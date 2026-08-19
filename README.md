@@ -1,6 +1,6 @@
 # SMILE 2.0
 
-SMILE 2.0 is a small, structured BASIC-style language with a complete native Windows x64 target and a browser target. It includes explicit built-in types, first-class UTF-8 text, typed `ByVal`/`ByRef` routines, modules, enums, value Types with methods/properties, reference Classes with constructors/`Nothing`/identity, Optional and named arguments, reusable target-neutral libraries, true multi-file compilation, optional stable application identity, multiline parenthesized expressions and calls, a MASM-based native compiler, a Win32 game runtime, Canvas 2D Web publication, Visual Studio 2026 language and project support, console examples, and seven complete games written in SMILE. Windows x64 remains the default target, and every included application project exposes both native and Web publication.
+SMILE 2.0 is a small, structured BASIC-style language with a complete native Windows x64 target and a browser target. It includes explicit built-in types, first-class UTF-8 text, typed `ByVal`/`ByRef` routines, modules, enums, value Types with methods/properties, reference Classes with constructors/`Nothing`/identity, Optional and named arguments, reusable target-neutral libraries, true multi-file compilation, optional stable application identity, multiline parenthesized expressions and calls, a MASM-based native compiler, a Win32 game runtime, Canvas 2D Web publication, Visual Studio 2026 language and project support, console examples, and eight complete games written in SMILE. Windows x64 remains the default target, and every included application project exposes both native and Web publication.
 
 The repository has one language authority: `src\Smile.Language`. The command-line compiler and Visual Studio extension use the same lexer, parser, syntax model, diagnostics, symbols, types, and semantic model. Game rules remain in `.smile` source; the C runtime provides only generic Windows graphics, input, sound, timing, and storage services.
 
@@ -27,6 +27,13 @@ Attract demos always return directly to the title screen when their run ends or 
 - `games\DungeonStarI` — an original three-floor pseudo-3D dungeon with student-editable external maps, validated pipe-style random generation, a blue map-selection title, doors, stairs, attract mode, and green, blue, and red floor palettes.
 - `games\DungeonStarII` — an original continuous fixed-point raycasting walkaround with editable room-and-corridor maps, DDA projection, colorful stable wall materials, rising doors, collision and wall sliding, random generation, and demo/no-demo teaching sources.
 - `games\MazeMuncher` — an original neon maze chase with pellets, power mode, four geometric enemies, wrap tunnels, levels, a persistent high score, demo and no-demo teaching sources, and an attract demo.
+- `games\SpaceWars` — an original three-mission vector rail shooter using bounded fixed-point source-level 3D, generic pointer/touch input, a recycled starfield, pooled combat entities, generated original WAV effects, and demo/no-demo teaching sources.
+
+## Simple3D educational visualization
+
+`libraries\Smile.Simple3D` is a reusable target-neutral SMILE package for bounded fixed-point wireframe transformation, perspective/orthographic projection, near-plane and viewport clipping, and pointer-driven orbit interaction. It projects into ordinary `Draw Line` calls, so Windows DirectX, Windows GDI, and Web Canvas run the same source without an external 3D framework, GPU API, npm package, or browser dependency.
+
+`examples\Simple3DGallery` demonstrates a cube, sphere, pyramid, donut, axes, grid, drag/throw inertia, wheel zoom, and projection switching. `games\SpaceWars` uses the same public package for a complete game rather than a runtime-specific shortcut. See `docs\architecture\simple3d-software-rendering.md` and `libraries\Smile.Simple3D\API.md`.
 
 All games use a logical 960-by-540 canvas. A 16:9 output such as 1920-by-1080 fills the complete screen without letterboxing; other aspect ratios use centered letterboxing to preserve geometry. Alt+Enter toggles borderless full screen.
 
@@ -83,6 +90,17 @@ scripts\smoke-test.cmd
 The smoke entry point normalizes its working directory, so it can be launched from outside the repository. It builds the solution, runs console examples, checks invalid-program diagnostics, exercises native Text/Class lifetimes and reentrancy, executes generated Web programs in a dependency-free Node host, compares native/Web UTF-8 output exactly, validates Type/Class project-package parity and deterministic format-6 metadata, tests reusable Smile.UI and Smile.RPG state boundaries, validates ApplicationId isolation, asserts dynamic Canvas text, exercises save/reload and corrupt-value fallback, validates the supplied Dungeon Star I and Dungeon Star II maps, compiles the multi-file sample and both teaching variants of all seven games for Windows and Web, publishes and hashes declared project assets, verifies the VSIX contents, and confirms every graphical executable is a native x64 Windows GUI with no CLR header. Generated native test programs run through a 60-second process-tree-bounded launcher, while the Node host retains its own finite timeout. Graphical gameplay and audible playback remain hands-on acceptance steps.
 
 ## Compile projects and publish assets
+
+Build the Simple3D package, object gallery, and Space Wars for Windows or Web:
+
+```text
+artifacts\compiler\smilec.exe --project libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj --target library --configuration Release
+artifacts\compiler\smilec.exe --project examples\Simple3DGallery\Simple3DGallery.smileproj --target windows-x64 -o artifacts\games\Simple3DGallery\Simple3DGallery.exe
+artifacts\compiler\smilec.exe --project games\SpaceWars\SpaceWars.smileproj --target windows-x64 -o artifacts\games\SpaceWars\SpaceWars.exe
+artifacts\compiler\smilec.exe --project games\SpaceWars\SpaceWars.smileproj --target web --output-dir artifacts\web\SpaceWars
+```
+
+Run their focused native GDI/Web test gate with `powershell -ExecutionPolicy Bypass -File scripts\test-simple3d-space-wars.ps1`.
 
 An application `.smileproj` is the publication contract for native and Web assets. A successful project build automatically copies the exact resolved `<Asset Include="..." />` set beside the executable or Web files; no second copy step is required:
 

@@ -29,6 +29,7 @@ Do
     Get Key Key
 
     Call SpaceGame.HandleInput(Key)
+    Call SpaceGame.HandlePointerPress()
     Call SpaceGame.Update(Elapsed)
     Call SpaceGame.Draw()
 

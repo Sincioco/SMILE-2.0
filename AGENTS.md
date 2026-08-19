@@ -22,6 +22,8 @@ SMILE must evolve incrementally from the current SMILE 2.0 compiler and runtime 
 - Let future 3D rendering, assets, transforms, and cameras coexist with the current 2D systems instead of forcing them into one permanently 2D abstraction.
 - Keep project asset publication format-neutral so future models, materials, and animations can use the same project-level declaration and publication path without making every runtime resource an image.
 - During 2D milestones, add only inexpensive architectural guardrails. Do not implement speculative 3D features or generalize stable code without a current requirement.
+- Keep `Smile.Simple3D` a bounded source-level educational layer projected through the permanent 2D renderer. Do not turn it into a game-specific runtime helper or treat it as the future hardware `Renderer3D` API.
+- Keep logical-canvas pointer input generic and cross-target. Mouse, pen, touch, virtual controls, cameras, orbit behavior, and game actions must remain distinct source-level concerns.
 
 ## KISS and velocity
 
@@ -152,7 +154,7 @@ When SMILE needs to evolve:
 
 ## Games prove the language
 
-Snake, SMILE 2.0 Tetris, Paddle Ball, Brick Breaker, Dungeon Star I, Dungeon Star II, and Maze Muncher must be implemented in `.smile` source.
+Snake, SMILE 2.0 Tetris, Paddle Ball, Brick Breaker, Dungeon Star I, Dungeon Star II, Maze Muncher, and Space Wars must be implemented in `.smile` source.
 
 The native and Web runtimes may provide only generic services shared by SMILE programs:
 

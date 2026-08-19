@@ -1,5 +1,7 @@
 # Compiler and tooling architecture
 
+The current educational software-rendered 3D layer is documented in [Simple3D software-rendering architecture](simple3d-software-rendering.md). It keeps generic pointer input in the native/Web runtimes and fixed-point mesh, camera, clipping, orbit, and wireframe projection logic in reusable SMILE source over the permanent 2D renderer.
+
 SMILE 2.0 uses one deliberately direct native pipeline:
 
 ```text

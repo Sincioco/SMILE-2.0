@@ -15,8 +15,9 @@ The game includes score and persistent high score, six shields with hit invulner
 | Input | Action |
 |---|---|
 | Pointer movement, arrows, or WASD | Aim |
-| Primary pointer, Space, or virtual X | Fire |
-| Enter or virtual A | Start / confirm |
+| Primary pointer | Confirm outside a mission; fire during a mission |
+| Space or virtual X | Fire during a mission |
+| Enter, Space, or virtual A | Start / confirm |
 | Tab or virtual B | Pause / resume |
 | Virtual Y | Shield pulse |
 | Escape | Pause in a mission; back on other screens; exit at title |

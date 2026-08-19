@@ -347,9 +347,12 @@ Public Sub HandleInput(PressedKey As Number)
 
     If GameState = Types.STATE_TITLE Then
 
-        If PressedKey = KEY_ENTER Or PressedKey = KEY_PAD_A Then
+        If (PressedKey = KEY_ENTER Or
+            PressedKey = KEY_SPACE Or
+            PressedKey = KEY_PAD_A) Then
             Call StartGame()
-        Else If PressedKey = KEY_TAB Or PressedKey = KEY_PAD_Y Then
+        Else If (PressedKey = KEY_TAB Or
+            PressedKey = KEY_PAD_Y) Then
             GameState = Types.STATE_HELP
         End If
 
@@ -369,7 +372,9 @@ Public Sub HandleInput(PressedKey As Number)
 
     If GameState = Types.STATE_BRIEFING Then
 
-        If PressedKey = KEY_ENTER Or PressedKey = KEY_PAD_A Then
+        If (PressedKey = KEY_ENTER Or
+            PressedKey = KEY_SPACE Or
+            PressedKey = KEY_PAD_A) Then
             Call StartCurrentMission()
         End If
 
@@ -379,7 +384,8 @@ Public Sub HandleInput(PressedKey As Number)
 
     If GameState = Types.STATE_MISSION Then
 
-        If PressedKey = KEY_TAB Or PressedKey = KEY_PAD_B Then
+        If (PressedKey = KEY_TAB Or
+            PressedKey = KEY_PAD_B) Then
             PausedFromState = GameState
             GameState = Types.STATE_PAUSED
         Else If PressedKey = KEY_SPACE Or PressedKey = KEY_PAD_X Then
@@ -408,7 +414,9 @@ Public Sub HandleInput(PressedKey As Number)
 
     If GameState = Types.STATE_MISSION_COMPLETE Then
 
-        If PressedKey = KEY_ENTER Or PressedKey = KEY_PAD_A Then
+        If (PressedKey = KEY_ENTER Or
+            PressedKey = KEY_SPACE Or
+            PressedKey = KEY_PAD_A) Then
 
             Mission = Mission + 1
 
@@ -427,10 +435,29 @@ Public Sub HandleInput(PressedKey As Number)
 
     If GameState = Types.STATE_VICTORY Or GameState = Types.STATE_GAME_OVER Then
 
-        If PressedKey = KEY_ENTER Or PressedKey = KEY_PAD_A Then
+        If (PressedKey = KEY_ENTER Or
+            PressedKey = KEY_SPACE Or
+            PressedKey = KEY_PAD_A) Then
             Call EnterTitle()
         End If
 
+    End If
+
+End Sub
+
+Public Sub HandlePointerPress()
+
+    If Not Pointer_Pressed(POINTER_PRIMARY) Then
+        Return
+    End If
+
+    If GameState = Types.STATE_MISSION Then
+        Call Fire()
+    Else If GameState = Types.STATE_PAUSED Then
+        Call HandleInput(KEY_PAD_B)
+    Else
+
+        Call HandleInput(KEY_PAD_A)
     End If
 
 End Sub
@@ -446,7 +473,7 @@ Public Sub Update(ElapsedMilliseconds As Number)
     Call UpdateAim()
     Call UpdateStarfield(ElapsedMilliseconds)
 
-    If Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Held(POINTER_PRIMARY) Then
+    If Pointer_Held(POINTER_PRIMARY) Then
         Call Fire()
     End If
 
@@ -983,7 +1010,7 @@ Private Sub DrawTitle()
     Draw Text "SPACE WARS" At 480, 105 Size 58 Color WHITE Centered
     Draw Text "VECTOR ASSAULT" At 480, 172 Size 25 Color CYAN Centered
     Draw Text "The Obsidian Array is draining the frontier systems." At 480, 335 Size 18 Color LIGHT_GRAY Centered
-    Draw Text "Enter / A: Launch    Tab / Y: Help    Escape: Exit" At 480, 390 Size 18 Color WHITE Centered
+    Draw Text "Enter / Space / A: Launch    Tab / Y: Help    Escape: Exit" At 480, 390 Size 18 Color WHITE Centered
     Draw Text "Original SMILE 2.0 software-rendered vector game" At 480, 472 Size 14 Color DARK_GRAY Centered
 
 End Sub

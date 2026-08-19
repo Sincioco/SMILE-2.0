@@ -78,6 +78,7 @@ Do
     Else
 
         Call SpaceGame.HandleInput(Key)
+        Call SpaceGame.HandlePointerPress()
 
         If (SpaceGame.CurrentState() = Types.STATE_TITLE And
             CurrentTime - TitleStartedAt >= DEMO_DELAY) Then
