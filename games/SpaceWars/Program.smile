@@ -1,0 +1,113 @@
+' ------------------------------------------------------------
+' SMILE 2.0 Space Wars: Vector Assault
+' Includes an attract-mode demonstration after title inactivity.
+' ------------------------------------------------------------
+
+Option Explicit
+
+Import SpaceWars.Game As SpaceGame
+Import SpaceWars.Types As Types
+
+Const DEMO_DELAY = 5000
+Const DEMO_STEP_TIME = 3500
+
+Dim Key As Number
+Dim PreviousTime As Number
+Dim CurrentTime As Number
+Dim Elapsed As Number
+Dim Running As Boolean
+Dim DemoMode As Boolean
+Dim TitleStartedAt As Number
+Dim DemoStepAt As Number
+Dim DemoAim As Number
+
+Game Window "Space Wars: Vector Assault" Size 960 By 540
+
+Call SpaceGame.Initialize()
+
+PreviousTime = Timer()
+TitleStartedAt = PreviousTime
+Running = True
+
+Do
+
+    CurrentTime = Timer()
+    Elapsed = Min(50, Max(0, CurrentTime - PreviousTime))
+    PreviousTime = CurrentTime
+
+    Get Key Key
+
+    If DemoMode Then
+
+        If (Key <> KEY_NONE Or
+            Pointer_Pressed(POINTER_PRIMARY) Or
+            Pointer_Pressed(POINTER_SECONDARY)) Then
+
+            DemoMode = False
+
+            Call SpaceGame.EnterTitle()
+
+            TitleStartedAt = CurrentTime
+
+        Else
+            DemoAim = ((CurrentTime / 8) Mod 560) - 280
+
+            Call SpaceGame.SetAim(DemoAim, DemoAim / 3)
+            Call SpaceGame.Fire()
+
+            If CurrentTime >= DemoStepAt Then
+
+                Call SpaceGame.DebugAdvance()
+
+                DemoStepAt = CurrentTime + DEMO_STEP_TIME
+
+                If SpaceGame.CurrentState() = Types.STATE_VICTORY Then
+
+                    DemoMode = False
+
+                    Call SpaceGame.EnterTitle()
+
+                    TitleStartedAt = CurrentTime
+
+                End If
+
+            End If
+
+        End If
+
+    Else
+
+        Call SpaceGame.HandleInput(Key)
+
+        If (SpaceGame.CurrentState() = Types.STATE_TITLE And
+            CurrentTime - TitleStartedAt >= DEMO_DELAY) Then
+
+            DemoMode = True
+
+            Call SpaceGame.StartGame()
+            Call SpaceGame.DebugAdvance()
+
+            DemoStepAt = CurrentTime + DEMO_STEP_TIME
+
+        Else If SpaceGame.CurrentState() <> Types.STATE_TITLE Then
+
+            TitleStartedAt = CurrentTime
+
+        End If
+
+    End If
+
+    Call SpaceGame.Update(Elapsed)
+    Call SpaceGame.Draw()
+
+    If DemoMode Then
+        Draw Text "DEMONSTRATION - ANY INPUT RETURNS" At 480, 510 Size 13 Color LIGHT_GRAY Centered
+    End If
+
+    Show Screen
+
+    Running = Running And Not SpaceGame.ExitRequested() And Not Game_Closed()
+
+Loop Until Not Running
+
+Call SpaceGame.Shutdown()

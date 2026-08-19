@@ -1,0 +1,41 @@
+' ------------------------------------------------------------
+' SMILE 2.0 Space Wars: Vector Assault
+' Genuine no-demo startup path for production and validation.
+' ------------------------------------------------------------
+
+Option Explicit
+
+Import SpaceWars.Game As SpaceGame
+
+Dim Key As Number
+Dim PreviousTime As Number
+Dim CurrentTime As Number
+Dim Elapsed As Number
+Dim Running As Boolean
+
+Game Window "Space Wars: Vector Assault" Size 960 By 540
+
+Call SpaceGame.Initialize()
+
+PreviousTime = Timer()
+Running = True
+
+Do
+
+    CurrentTime = Timer()
+    Elapsed = Min(50, Max(0, CurrentTime - PreviousTime))
+    PreviousTime = CurrentTime
+
+    Get Key Key
+
+    Call SpaceGame.HandleInput(Key)
+    Call SpaceGame.Update(Elapsed)
+    Call SpaceGame.Draw()
+
+    Show Screen
+
+    Running = Running And Not SpaceGame.ExitRequested() And Not Game_Closed()
+
+Loop Until Not Running
+
+Call SpaceGame.Shutdown()

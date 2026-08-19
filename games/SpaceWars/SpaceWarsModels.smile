@@ -1,0 +1,217 @@
+''' Original vector models for Space Wars. Coordinates were authored for this repository.
+Module SpaceWars.Models
+
+Option Explicit
+
+Import Smile.Simple3D.Mesh As Mesh
+
+Public Function CreateFighter() As Number
+
+    Dim Handle As Number
+
+    Handle = Mesh.CreateMesh()
+
+    If Handle = 0 Then
+        Return 0
+    End If
+
+    If (Mesh.AddVertex(Handle, 0, 0, -45) < 0 Or
+        Mesh.AddVertex(Handle, -58, -8, 28) < 0 Or
+        Mesh.AddVertex(Handle, -18, 0, 16) < 0 Or
+        Mesh.AddVertex(Handle, 0, 20, 22) < 0 Or
+        Mesh.AddVertex(Handle, 18, 0, 16) < 0 Or
+        Mesh.AddVertex(Handle, 58, -8, 28) < 0 Or
+        Mesh.AddVertex(Handle, 0, -18, 30) < 0 Or
+        Not Mesh.AddEdge(Handle, 0, 1) Or
+        Not Mesh.AddEdge(Handle, 1, 2) Or
+        Not Mesh.AddEdge(Handle, 2, 3) Or
+        Not Mesh.AddEdge(Handle, 3, 4) Or
+        Not Mesh.AddEdge(Handle, 4, 5) Or
+        Not Mesh.AddEdge(Handle, 5, 0) Or
+        Not Mesh.AddEdge(Handle, 2, 6) Or
+        Not Mesh.AddEdge(Handle, 6, 4) Or
+        Not Mesh.AddEdge(Handle, 0, 6)) Then
+        Call Mesh.DestroyMesh(Handle)
+
+        Return 0
+    End If
+
+    Return Handle
+
+End Function
+
+Public Function CreateWingFighter() As Number
+
+    Dim Handle As Number
+
+    Handle = Mesh.CreateMesh()
+
+    If Handle = 0 Then
+        Return 0
+    End If
+
+    If (Mesh.AddVertex(Handle, 0, -24, -52) < 0 Or
+        Mesh.AddVertex(Handle, -72, 14, 18) < 0 Or
+        Mesh.AddVertex(Handle, -22, 4, 8) < 0 Or
+        Mesh.AddVertex(Handle, 0, 26, 24) < 0 Or
+        Mesh.AddVertex(Handle, 22, 4, 8) < 0 Or
+        Mesh.AddVertex(Handle, 72, 14, 18) < 0 Or
+        Mesh.AddVertex(Handle, 0, -12, 38) < 0 Or
+        Not Mesh.AddEdge(Handle, 0, 1) Or
+        Not Mesh.AddEdge(Handle, 1, 2) Or
+        Not Mesh.AddEdge(Handle, 2, 3) Or
+        Not Mesh.AddEdge(Handle, 3, 4) Or
+        Not Mesh.AddEdge(Handle, 4, 5) Or
+        Not Mesh.AddEdge(Handle, 5, 0) Or
+        Not Mesh.AddEdge(Handle, 0, 6) Or
+        Not Mesh.AddEdge(Handle, 2, 6) Or
+        Not Mesh.AddEdge(Handle, 4, 6)) Then
+        Call Mesh.DestroyMesh(Handle)
+
+        Return 0
+    End If
+
+    Return Handle
+
+End Function
+
+Public Function CreateTurret() As Number
+
+    Dim Handle As Number
+
+    Handle = Mesh.CreateMesh()
+
+    If Handle = 0 Then
+        Return 0
+    End If
+
+    If (Mesh.AddVertex(Handle, -42, -32, -42) < 0 Or
+        Mesh.AddVertex(Handle, 42, -32, -42) < 0 Or
+        Mesh.AddVertex(Handle, 42, -32, 42) < 0 Or
+        Mesh.AddVertex(Handle, -42, -32, 42) < 0 Or
+        Mesh.AddVertex(Handle, 0, 34, 0) < 0 Or
+        Mesh.AddVertex(Handle, 0, 34, -92) < 0 Or
+        Not Mesh.AddEdge(Handle, 0, 1) Or
+        Not Mesh.AddEdge(Handle, 1, 2) Or
+        Not Mesh.AddEdge(Handle, 2, 3) Or
+        Not Mesh.AddEdge(Handle, 3, 0) Or
+        Not Mesh.AddEdge(Handle, 0, 4) Or
+        Not Mesh.AddEdge(Handle, 1, 4) Or
+        Not Mesh.AddEdge(Handle, 2, 4) Or
+        Not Mesh.AddEdge(Handle, 3, 4) Or
+        Not Mesh.AddEdge(Handle, 4, 5)) Then
+        Call Mesh.DestroyMesh(Handle)
+
+        Return 0
+    End If
+
+    Return Handle
+
+End Function
+
+Public Function CreateRelay() As Number
+
+    Dim Handle As Number
+
+    Handle = Mesh.CreateMesh()
+
+    If Handle = 0 Then
+        Return 0
+    End If
+
+    If (Mesh.AddVertex(Handle, -28, -48, -28) < 0 Or
+        Mesh.AddVertex(Handle, 28, -48, -28) < 0 Or
+        Mesh.AddVertex(Handle, 28, -48, 28) < 0 Or
+        Mesh.AddVertex(Handle, -28, -48, 28) < 0 Or
+        Mesh.AddVertex(Handle, 0, 58, 0) < 0 Or
+        Mesh.AddVertex(Handle, -45, 0, 0) < 0 Or
+        Mesh.AddVertex(Handle, 45, 0, 0) < 0 Or
+        Not Mesh.AddEdge(Handle, 0, 1) Or
+        Not Mesh.AddEdge(Handle, 1, 2) Or
+        Not Mesh.AddEdge(Handle, 2, 3) Or
+        Not Mesh.AddEdge(Handle, 3, 0) Or
+        Not Mesh.AddEdge(Handle, 0, 4) Or
+        Not Mesh.AddEdge(Handle, 1, 4) Or
+        Not Mesh.AddEdge(Handle, 2, 4) Or
+        Not Mesh.AddEdge(Handle, 3, 4) Or
+        Not Mesh.AddEdge(Handle, 5, 6) Or
+        Not Mesh.AddEdge(Handle, 5, 4) Or
+        Not Mesh.AddEdge(Handle, 6, 4)) Then
+        Call Mesh.DestroyMesh(Handle)
+
+        Return 0
+    End If
+
+    Return Handle
+
+End Function
+
+Public Function CreateGate() As Number
+
+    Dim Handle As Number
+
+    Handle = Mesh.CreateMesh()
+
+    If Handle = 0 Then
+        Return 0
+    End If
+
+    If (Mesh.AddVertex(Handle, -180, -110, 0) < 0 Or
+        Mesh.AddVertex(Handle, -70, -110, 0) < 0 Or
+        Mesh.AddVertex(Handle, -70, 70, 0) < 0 Or
+        Mesh.AddVertex(Handle, 70, 70, 0) < 0 Or
+        Mesh.AddVertex(Handle, 70, -110, 0) < 0 Or
+        Mesh.AddVertex(Handle, 180, -110, 0) < 0 Or
+        Mesh.AddVertex(Handle, 180, 130, 0) < 0 Or
+        Mesh.AddVertex(Handle, -180, 130, 0) < 0 Or
+        Not Mesh.AddEdge(Handle, 0, 1) Or
+        Not Mesh.AddEdge(Handle, 1, 2) Or
+        Not Mesh.AddEdge(Handle, 2, 3) Or
+        Not Mesh.AddEdge(Handle, 3, 4) Or
+        Not Mesh.AddEdge(Handle, 4, 5) Or
+        Not Mesh.AddEdge(Handle, 5, 6) Or
+        Not Mesh.AddEdge(Handle, 6, 7) Or
+        Not Mesh.AddEdge(Handle, 7, 0)) Then
+        Call Mesh.DestroyMesh(Handle)
+
+        Return 0
+    End If
+
+    Return Handle
+
+End Function
+
+Public Function CreateCorePrism() As Number
+
+    Dim Handle As Number
+
+    Handle = Mesh.CreateMesh()
+
+    If Handle = 0 Then
+        Return 0
+    End If
+
+    If (Mesh.AddVertex(Handle, 0, 85, 0) < 0 Or
+        Mesh.AddVertex(Handle, -74, -42, 0) < 0 Or
+        Mesh.AddVertex(Handle, 74, -42, 0) < 0 Or
+        Mesh.AddVertex(Handle, 0, 0, 100) < 0 Or
+        Mesh.AddVertex(Handle, 0, 0, -100) < 0 Or
+        Not Mesh.AddEdge(Handle, 0, 1) Or
+        Not Mesh.AddEdge(Handle, 1, 2) Or
+        Not Mesh.AddEdge(Handle, 2, 0) Or
+        Not Mesh.AddEdge(Handle, 0, 3) Or
+        Not Mesh.AddEdge(Handle, 1, 3) Or
+        Not Mesh.AddEdge(Handle, 2, 3) Or
+        Not Mesh.AddEdge(Handle, 0, 4) Or
+        Not Mesh.AddEdge(Handle, 1, 4) Or
+        Not Mesh.AddEdge(Handle, 2, 4)) Then
+        Call Mesh.DestroyMesh(Handle)
+
+        Return 0
+    End If
+
+    Return Handle
+
+End Function
+
+End Module

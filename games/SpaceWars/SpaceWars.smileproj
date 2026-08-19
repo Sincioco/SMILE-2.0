@@ -1,0 +1,19 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>SpaceWars</OutputName>
+    <ApplicationId>smile.game.space-wars</ApplicationId>
+    <GraphicsBackend>Auto</GraphicsBackend>
+    <VSync>true</VSync>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <SmileSource Include="Program-NoDemo.smile" StartupOnly="true" />
+    <SmileSource Include="SpaceWarsTypes.smile" />
+    <SmileSource Include="SpaceWarsModels.smile" />
+    <SmileSource Include="SpaceWarsGameplay.smile" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+    <Asset Include="Assets\**\*" />
+  </ItemGroup>
+</SmileProject>

@@ -1,0 +1,1212 @@
+''' Complete bounded gameplay, missions, HUD, and rendering for Space Wars.
+Module SpaceWars.Game
+
+Option Explicit
+
+Import SpaceWars.Types As Types
+Import SpaceWars.Models As Models
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Mesh As Mesh
+Import Smile.Simple3D.Primitives As Primitives
+Import Smile.Simple3D.Renderer As Renderer
+
+Private Const CANVAS_WIDTH = 960
+Private Const CANVAS_HEIGHT = 540
+Private Const STARTING_SHIELDS = 6
+Private Const FIRE_COOLDOWN = 150
+Private Const INVULNERABILITY_TIME = 900
+
+Private Dim GameState As Number
+Private Dim PausedFromState As Number
+Private Dim Mission As Number
+Private Dim Score As Number
+Private Dim HighScore As Number
+Private Dim Shields As Number
+Private Dim Objective As Number
+Private Dim ObjectiveGoal As Number
+Private Dim AimX As Number
+Private Dim AimY As Number
+Private Dim NextFireAt As Number
+Private Dim NextEnemyAt As Number
+Private Dim NextEnemyShotAt As Number
+Private Dim MissionStartedAt As Number
+Private Dim InvulnerableUntil As Number
+Private Dim SpawnSequence As Number
+Private Dim ExitRequestedValue As Boolean
+Private Dim AssistMode As Boolean
+
+Private Dim EnemyActive[12] As Boolean
+Private Dim EnemyKind[12] As Number
+Private Dim EnemyX[12] As Number
+Private Dim EnemyY[12] As Number
+Private Dim EnemyZ[12] As Number
+Private Dim EnemyHealth[12] As Number
+Private Dim EnemyPhase[12] As Number
+
+Private Dim ProjectileActive[64] As Boolean
+Private Dim ProjectileFriendly[64] As Boolean
+Private Dim ProjectileX[64] As Number
+Private Dim ProjectileY[64] As Number
+Private Dim ProjectileZ[64] As Number
+Private Dim ProjectileVelocityX[64] As Number
+Private Dim ProjectileVelocityY[64] As Number
+Private Dim ProjectileVelocityZ[64] As Number
+
+Private Dim ExplosionActive[16] As Boolean
+Private Dim ExplosionX[16] As Number
+Private Dim ExplosionY[16] As Number
+Private Dim ExplosionZ[16] As Number
+Private Dim ExplosionStartedAt[16] As Number
+
+Private Dim SectionActive[24] As Boolean
+Private Dim SectionX[24] As Number
+Private Dim SectionY[24] As Number
+Private Dim SectionZ[24] As Number
+
+Private Dim StarX[64] As Number
+Private Dim StarY[64] As Number
+Private Dim StarZ[64] As Number
+
+Private Dim FighterMesh As Number
+Private Dim WingFighterMesh As Number
+Private Dim RelayMesh As Number
+Private Dim TurretMesh As Number
+Private Dim GateMesh As Number
+Private Dim CoreMesh As Number
+Private Dim GridMesh As Number
+Private Dim Camera As Core.Camera3D
+Private Dim EntityTransform As Core.Transform3D
+Private Dim GridTransform As Core.Transform3D
+
+Public Sub Initialize()
+
+    FighterMesh = Models.CreateFighter()
+    WingFighterMesh = Models.CreateWingFighter()
+    RelayMesh = Models.CreateRelay()
+    TurretMesh = Models.CreateTurret()
+    GateMesh = Models.CreateGate()
+    CoreMesh = Models.CreateCorePrism()
+    GridMesh = Primitives.CreateGrid(12, 90)
+    Camera = Renderer.DefaultCamera(CANVAS_WIDTH, CANVAS_HEIGHT)
+    Camera.Position.Z = 0
+    Camera.NearPlane = 20
+    Camera.FocalLength = 520
+    EntityTransform = Renderer.IdentityTransform()
+    GridTransform = Renderer.IdentityTransform()
+    GridTransform.Position.Y = -170
+    GridTransform.Position.Z = 800
+    GridTransform.Rotation.X = 0
+
+    Call ResetStarfield()
+
+    Load HighScore From "HighScore" Default 0
+
+    Call EnterTitle()
+
+End Sub
+
+Public Sub Shutdown()
+
+    Stop Sound
+
+    Call Mesh.DestroyMesh(FighterMesh)
+    Call Mesh.DestroyMesh(WingFighterMesh)
+    Call Mesh.DestroyMesh(RelayMesh)
+    Call Mesh.DestroyMesh(TurretMesh)
+    Call Mesh.DestroyMesh(GateMesh)
+    Call Mesh.DestroyMesh(CoreMesh)
+    Call Mesh.DestroyMesh(GridMesh)
+
+End Sub
+
+Public Sub EnterTitle()
+
+    GameState = Types.STATE_TITLE
+    Mission = 0
+    Objective = 0
+    ObjectiveGoal = 0
+    ExitRequestedValue = False
+    AimX = 0
+    AimY = 0
+
+    Call ClearPools()
+
+End Sub
+
+Public Sub StartGame()
+
+    Score = 0
+    Shields = STARTING_SHIELDS
+    Mission = Types.MISSION_OUTER_DEFENSE
+    AssistMode = False
+
+    Call EnterBriefing()
+
+End Sub
+
+Private Sub EnterBriefing()
+
+    GameState = Types.STATE_BRIEFING
+    AimX = 0
+    AimY = 0
+
+    Call ClearPools()
+
+End Sub
+
+Public Sub StartCurrentMission()
+
+    Dim Index As Number
+
+    GameState = Types.STATE_MISSION
+    MissionStartedAt = Timer()
+    NextFireAt = MissionStartedAt
+    NextEnemyAt = MissionStartedAt + 500
+    NextEnemyShotAt = MissionStartedAt + 1300
+    InvulnerableUntil = MissionStartedAt
+    Objective = 0
+
+    Call ClearPools()
+
+    If Mission = Types.MISSION_OUTER_DEFENSE Then
+
+        ObjectiveGoal = 8
+
+    Else If Mission = Types.MISSION_ARRAY_SURFACE Then
+
+        ObjectiveGoal = 5
+
+        For Index = 0 To ObjectiveGoal - 1
+            Call SpawnTarget(Types.ENTITY_RELAY, (Index - 2) * 150, -80 + (Index Mod 2) * 100, 900 + Index * 230, 2)
+        End For
+
+    Else
+        ObjectiveGoal = 1
+
+        For Index = 0 To Types.MAX_SECTIONS - 1
+            SectionActive[Index] = True
+            SectionX[Index] = ((Index * 173) Mod 300) - 150
+            SectionY[Index] = ((Index * 97) Mod 180) - 90
+            SectionZ[Index] = 500 + Index * 260
+        End For
+
+    End If
+
+    Play Sound "Assets\MissionStart.wav" On Channel 3
+
+End Sub
+
+Private Sub ClearPools()
+
+    Dim Index As Number
+
+    For Index = 0 To Types.MAX_ENEMIES - 1
+        EnemyActive[Index] = False
+    End For
+
+    For Index = 0 To Types.MAX_PROJECTILES - 1
+        ProjectileActive[Index] = False
+    End For
+
+    For Index = 0 To Types.MAX_EXPLOSIONS - 1
+        ExplosionActive[Index] = False
+    End For
+
+    For Index = 0 To Types.MAX_SECTIONS - 1
+        SectionActive[Index] = False
+    End For
+
+End Sub
+
+Public Function CurrentState() As Number
+
+    Return GameState
+
+End Function
+
+Public Function CurrentMission() As Number
+
+    Return Mission
+
+End Function
+
+Public Function ExitRequested() As Boolean
+
+    Return ExitRequestedValue
+
+End Function
+
+Public Function CurrentScore() As Number
+
+    Return Score
+
+End Function
+
+Public Function CurrentHighScore() As Number
+
+    Return HighScore
+
+End Function
+
+Public Function CurrentShields() As Number
+
+    Return Shields
+
+End Function
+
+Public Function ActiveEnemyCount() As Number
+
+    Dim Index As Number
+    Dim ActiveTotal As Number
+
+    For Index = 0 To Types.MAX_ENEMIES - 1
+
+        If EnemyActive[Index] Then
+            ActiveTotal = ActiveTotal + 1
+        End If
+
+    End For
+
+    Return ActiveTotal
+
+End Function
+
+Public Function ActiveProjectileCount() As Number
+
+    Dim Index As Number
+    Dim ActiveTotal As Number
+
+    For Index = 0 To Types.MAX_PROJECTILES - 1
+
+        If ProjectileActive[Index] Then
+            ActiveTotal = ActiveTotal + 1
+        End If
+
+    End For
+
+    Return ActiveTotal
+
+End Function
+
+Public Sub SetAim(NewAimX As Number, NewAimY As Number)
+
+    AimX = Min(380, Max(-380, NewAimX))
+    AimY = Min(210, Max(-210, NewAimY))
+
+End Sub
+
+Public Sub Fire()
+
+    Dim Index As Number
+
+    If GameState <> Types.STATE_MISSION Or Timer() < NextFireAt Then
+        Return
+    End If
+
+    For Index = 0 To Types.MAX_PROJECTILES - 1
+
+        If Not ProjectileActive[Index] Then
+
+            ProjectileActive[Index] = True
+            ProjectileFriendly[Index] = True
+            ProjectileX[Index] = 0
+            ProjectileY[Index] = -40
+            ProjectileZ[Index] = 35
+            ProjectileVelocityX[Index] = AimX * 2
+            ProjectileVelocityY[Index] = -AimY * 2
+            ProjectileVelocityZ[Index] = 1200
+            NextFireAt = Timer() + FIRE_COOLDOWN
+
+            Play Sound "Assets\Laser.wav" On Channel 0
+
+            Return
+
+        End If
+
+    End For
+
+End Sub
+
+Public Sub HandleInput(PressedKey As Number)
+
+    If PressedKey = KEY_ESCAPE Then
+
+        If GameState = Types.STATE_TITLE Then
+            ExitRequestedValue = True
+        Else If GameState = Types.STATE_MISSION Then
+            PausedFromState = GameState
+            GameState = Types.STATE_PAUSED
+        Else
+
+            Call EnterTitle()
+        End If
+
+        Return
+
+    End If
+
+    If GameState = Types.STATE_TITLE Then
+
+        If PressedKey = KEY_ENTER Or PressedKey = KEY_PAD_A Then
+            Call StartGame()
+        Else If PressedKey = KEY_TAB Or PressedKey = KEY_PAD_Y Then
+            GameState = Types.STATE_HELP
+        End If
+
+        Return
+
+    End If
+
+    If GameState = Types.STATE_HELP Then
+
+        If PressedKey <> KEY_NONE Then
+            GameState = Types.STATE_TITLE
+        End If
+
+        Return
+
+    End If
+
+    If GameState = Types.STATE_BRIEFING Then
+
+        If PressedKey = KEY_ENTER Or PressedKey = KEY_PAD_A Then
+            Call StartCurrentMission()
+        End If
+
+        Return
+
+    End If
+
+    If GameState = Types.STATE_MISSION Then
+
+        If PressedKey = KEY_TAB Or PressedKey = KEY_PAD_B Then
+            PausedFromState = GameState
+            GameState = Types.STATE_PAUSED
+        Else If PressedKey = KEY_SPACE Or PressedKey = KEY_PAD_X Then
+            Call Fire()
+        Else If PressedKey = KEY_PAD_Y Then
+            InvulnerableUntil = Max(InvulnerableUntil, Timer() + 350)
+        Else If PressedKey = KEY_4 Then
+            AssistMode = Not AssistMode
+        End If
+
+        Return
+
+    End If
+
+    If GameState = Types.STATE_PAUSED Then
+
+        If (PressedKey = KEY_TAB Or
+            PressedKey = KEY_PAD_B Or
+            PressedKey = KEY_ENTER) Then
+            GameState = PausedFromState
+        End If
+
+        Return
+
+    End If
+
+    If GameState = Types.STATE_MISSION_COMPLETE Then
+
+        If PressedKey = KEY_ENTER Or PressedKey = KEY_PAD_A Then
+
+            Mission = Mission + 1
+
+            If Mission > Types.MISSION_REACTOR_CONDUIT Then
+                Call EnterVictory()
+            Else
+
+                Call EnterBriefing()
+            End If
+
+        End If
+
+        Return
+
+    End If
+
+    If GameState = Types.STATE_VICTORY Or GameState = Types.STATE_GAME_OVER Then
+
+        If PressedKey = KEY_ENTER Or PressedKey = KEY_PAD_A Then
+            Call EnterTitle()
+        End If
+
+    End If
+
+End Sub
+
+Public Sub Update(ElapsedMilliseconds As Number)
+
+    If GameState <> Types.STATE_MISSION Then
+        Return
+    End If
+
+    ElapsedMilliseconds = Min(50, Max(0, ElapsedMilliseconds))
+
+    Call UpdateAim()
+    Call UpdateStarfield(ElapsedMilliseconds)
+
+    If Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Held(POINTER_PRIMARY) Then
+        Call Fire()
+    End If
+
+    If Mission = Types.MISSION_OUTER_DEFENSE Then
+        Call UpdateOuterDefense()
+    Else If Mission = Types.MISSION_ARRAY_SURFACE Then
+        Call UpdateArraySurface()
+    Else
+
+        Call UpdateConduit(ElapsedMilliseconds)
+    End If
+
+    Call UpdateEnemies(ElapsedMilliseconds)
+    Call UpdateProjectiles(ElapsedMilliseconds)
+    Call UpdateExplosions()
+
+    If Objective >= ObjectiveGoal Then
+        Call CompleteMission()
+    End If
+
+End Sub
+
+Private Sub ResetStarfield()
+
+    Dim Index As Number
+
+    For Index = 0 To Types.MAX_STARS - 1
+        StarX[Index] = ((Index * 193) Mod 1100) - 550
+        StarY[Index] = ((Index * 107) Mod 620) - 310
+        StarZ[Index] = 100 + (Index * 149) Mod 2200
+    End For
+
+End Sub
+
+Private Sub UpdateStarfield(ElapsedMilliseconds As Number)
+
+    Dim Index As Number
+    Dim Speed As Number
+
+    Speed = 360
+
+    If Mission = Types.MISSION_REACTOR_CONDUIT Then
+        Speed = 650
+    End If
+
+    For Index = 0 To Types.MAX_STARS - 1
+
+        StarZ[Index] = StarZ[Index] - Speed * ElapsedMilliseconds / 1000
+
+        If StarZ[Index] < Camera.NearPlane Then
+
+            StarZ[Index] = StarZ[Index] + 2200
+            StarX[Index] = ((Index * 211 + SpawnSequence * 13) Mod 1100) - 550
+            StarY[Index] = ((Index * 127 + SpawnSequence * 7) Mod 620) - 310
+
+        End If
+
+    End For
+
+End Sub
+
+Private Sub UpdateAim()
+
+    If Pointer_Inside() Then
+        AimX = Min(380, Max(-380, Pointer_X() - CANVAS_WIDTH / 2))
+        AimY = Min(210, Max(-210, Pointer_Y() - CANVAS_HEIGHT / 2))
+    End If
+
+    If Key_Held(KEY_LEFT) Then
+        AimX = Max(-380, AimX - 8)
+    End If
+
+    If Key_Held(KEY_A) Then
+        AimX = Max(-380, AimX - 8)
+    End If
+
+    If Key_Held(KEY_RIGHT) Then
+        AimX = Min(380, AimX + 8)
+    End If
+
+    If Key_Held(KEY_D) Then
+        AimX = Min(380, AimX + 8)
+    End If
+
+    If Key_Held(KEY_UP) Then
+        AimY = Max(-210, AimY - 8)
+    End If
+
+    If Key_Held(KEY_W) Then
+        AimY = Max(-210, AimY - 8)
+    End If
+
+    If Key_Held(KEY_DOWN) Then
+        AimY = Min(210, AimY + 8)
+    End If
+
+    If Key_Held(KEY_S) Then
+        AimY = Min(210, AimY + 8)
+    End If
+
+End Sub
+
+Private Sub UpdateOuterDefense()
+
+    If Timer() >= NextEnemyAt And ActiveEnemyCount() < 6 Then
+
+        Call SpawnTarget(Types.ENTITY_FIGHTER + (SpawnSequence Mod 2) * 4,
+            ((SpawnSequence * 137) Mod 520) - 260,
+            ((SpawnSequence * 83) Mod 280) - 140,
+            1200 + (SpawnSequence Mod 3) * 260,
+            1)
+
+        SpawnSequence = SpawnSequence + 1
+        NextEnemyAt = Timer() + 650
+
+    End If
+
+End Sub
+
+Private Sub UpdateArraySurface()
+
+    If Timer() >= NextEnemyAt And ActiveEnemyCount() < 8 Then
+
+        Call SpawnTarget(Types.ENTITY_TURRET,
+            ((SpawnSequence * 157) Mod 500) - 250,
+            -30,
+            1300,
+            1)
+
+        SpawnSequence = SpawnSequence + 1
+        NextEnemyAt = Timer() + 1400
+
+    End If
+
+End Sub
+
+Private Sub UpdateConduit(ElapsedMilliseconds As Number)
+
+    Dim Index As Number
+
+    For Index = 0 To Types.MAX_SECTIONS - 1
+
+        If SectionActive[Index] Then
+
+            SectionZ[Index] = SectionZ[Index] - 550 * ElapsedMilliseconds / 1000
+
+            If SectionZ[Index] < 30 Then
+
+                SectionZ[Index] = SectionZ[Index] + Types.MAX_SECTIONS * 260
+
+                If Abs(SectionX[Index] - AimX / 2) < 55 And Timer() >= InvulnerableUntil Then
+                    Call DamagePlayer()
+                End If
+
+            End If
+
+        End If
+
+    End For
+
+    If Timer() - MissionStartedAt >= 9000 And ActiveEnemyCount() = 0 Then
+        Call SpawnTarget(Types.ENTITY_CORE, 0, 0, 1450, 8)
+    End If
+
+End Sub
+
+Private Sub SpawnTarget(Kind As Number, X As Number, Y As Number, Z As Number, Health As Number)
+
+    Dim Index As Number
+
+    For Index = 0 To Types.MAX_ENEMIES - 1
+
+        If Not EnemyActive[Index] Then
+
+            EnemyActive[Index] = True
+            EnemyKind[Index] = Kind
+            EnemyX[Index] = X
+            EnemyY[Index] = Y
+            EnemyZ[Index] = Z
+            EnemyHealth[Index] = Health
+            EnemyPhase[Index] = SpawnSequence * 31
+
+            Return
+
+        End If
+
+    End For
+
+End Sub
+
+Private Sub UpdateEnemies(ElapsedMilliseconds As Number)
+
+    Dim Index As Number
+
+    For Index = 0 To Types.MAX_ENEMIES - 1
+
+        If EnemyActive[Index] Then
+
+            EnemyPhase[Index] = EnemyPhase[Index] + ElapsedMilliseconds
+
+            If (EnemyKind[Index] = Types.ENTITY_FIGHTER Or
+                EnemyKind[Index] = Types.ENTITY_FIGHTER_WING) Then
+
+                EnemyX[Index] = EnemyX[Index] + ((EnemyPhase[Index] / 250) Mod 3 - 1) * 2
+                EnemyZ[Index] = EnemyZ[Index] - 135 * ElapsedMilliseconds / 1000
+
+                If EnemyZ[Index] < 35 Then
+                    EnemyActive[Index] = False
+
+                    Call DamagePlayer()
+                End If
+
+            End If
+
+        End If
+
+    End For
+
+    If Timer() >= NextEnemyShotAt Then
+
+        For Index = 0 To Types.MAX_ENEMIES - 1
+
+            If (EnemyActive[Index] And
+                (EnemyKind[Index] = Types.ENTITY_FIGHTER Or
+                EnemyKind[Index] = Types.ENTITY_FIGHTER_WING Or
+                EnemyKind[Index] = Types.ENTITY_TURRET)) Then
+
+                Call SpawnProjectile(False, EnemyX[Index], EnemyY[Index], EnemyZ[Index], 0, 0, -700)
+
+                NextEnemyShotAt = Timer() + 1400
+
+                Return
+
+            End If
+
+        End For
+
+    End If
+
+End Sub
+
+Private Sub SpawnProjectile(Friendly As Boolean, X As Number, Y As Number, Z As Number, VelocityX As Number, VelocityY As Number, VelocityZ As Number)
+
+    Dim Index As Number
+
+    For Index = 0 To Types.MAX_PROJECTILES - 1
+
+        If Not ProjectileActive[Index] Then
+
+            ProjectileActive[Index] = True
+            ProjectileFriendly[Index] = Friendly
+            ProjectileX[Index] = X
+            ProjectileY[Index] = Y
+            ProjectileZ[Index] = Z
+            ProjectileVelocityX[Index] = VelocityX
+            ProjectileVelocityY[Index] = VelocityY
+            ProjectileVelocityZ[Index] = VelocityZ
+
+            Return
+
+        End If
+
+    End For
+
+End Sub
+
+Private Sub UpdateProjectiles(ElapsedMilliseconds As Number)
+
+    Dim ProjectileIndex As Number
+    Dim EnemyIndex As Number
+
+    For ProjectileIndex = 0 To Types.MAX_PROJECTILES - 1
+
+        If ProjectileActive[ProjectileIndex] Then
+
+            ProjectileX[ProjectileIndex] = ProjectileX[ProjectileIndex] + ProjectileVelocityX[ProjectileIndex] * ElapsedMilliseconds / 1000
+            ProjectileY[ProjectileIndex] = ProjectileY[ProjectileIndex] + ProjectileVelocityY[ProjectileIndex] * ElapsedMilliseconds / 1000
+            ProjectileZ[ProjectileIndex] = ProjectileZ[ProjectileIndex] + ProjectileVelocityZ[ProjectileIndex] * ElapsedMilliseconds / 1000
+
+            If ProjectileFriendly[ProjectileIndex] Then
+
+                For EnemyIndex = 0 To Types.MAX_ENEMIES - 1
+
+                    If (EnemyActive[EnemyIndex] And
+                        Abs(ProjectileX[ProjectileIndex] - EnemyX[EnemyIndex]) < 85 And
+                        Abs(ProjectileY[ProjectileIndex] - EnemyY[EnemyIndex]) < 85 And
+                        Abs(ProjectileZ[ProjectileIndex] - EnemyZ[EnemyIndex]) < 110) Then
+
+                        ProjectileActive[ProjectileIndex] = False
+                        EnemyHealth[EnemyIndex] = EnemyHealth[EnemyIndex] - 1
+
+                        If EnemyHealth[EnemyIndex] <= 0 Then
+                            Call DestroyEnemy(EnemyIndex)
+                        End If
+
+                    End If
+
+                End For
+
+                If ProjectileZ[ProjectileIndex] > 2600 Then
+                    ProjectileActive[ProjectileIndex] = False
+                End If
+
+            Else If ProjectileZ[ProjectileIndex] < 30 Then
+
+                ProjectileActive[ProjectileIndex] = False
+
+                If (Abs(ProjectileX[ProjectileIndex]) < 100 And
+                    Abs(ProjectileY[ProjectileIndex]) < 100) Then
+                    Call DamagePlayer()
+                End If
+
+            End If
+
+        End If
+
+    End For
+
+End Sub
+
+Private Sub DestroyEnemy(Index As Number)
+
+    Dim Kind As Number
+
+    Kind = EnemyKind[Index]
+    EnemyActive[Index] = False
+    Score = Score + 100
+
+    If (Mission = Types.MISSION_OUTER_DEFENSE And
+        (Kind = Types.ENTITY_FIGHTER Or Kind = Types.ENTITY_FIGHTER_WING)) Then
+        Objective = Objective + 1
+    Else If Kind = Types.ENTITY_RELAY Then
+        Objective = Objective + 1
+        Score = Score + 150
+    Else If Kind = Types.ENTITY_CORE Then
+        Objective = 1
+        Score = Score + 1000
+    End If
+
+    Call SpawnExplosion(EnemyX[Index], EnemyY[Index], EnemyZ[Index])
+
+    Play Sound "Assets\Explosion.wav" On Channel 1
+
+End Sub
+
+Private Sub SpawnExplosion(X As Number, Y As Number, Z As Number)
+
+    Dim Index As Number
+
+    For Index = 0 To Types.MAX_EXPLOSIONS - 1
+
+        If Not ExplosionActive[Index] Then
+
+            ExplosionActive[Index] = True
+            ExplosionX[Index] = X
+            ExplosionY[Index] = Y
+            ExplosionZ[Index] = Z
+            ExplosionStartedAt[Index] = Timer()
+
+            Return
+
+        End If
+
+    End For
+
+End Sub
+
+Private Sub UpdateExplosions()
+
+    Dim Index As Number
+
+    For Index = 0 To Types.MAX_EXPLOSIONS - 1
+
+        If ExplosionActive[Index] And Timer() - ExplosionStartedAt[Index] > 650 Then
+            ExplosionActive[Index] = False
+        End If
+
+    End For
+
+End Sub
+
+Private Sub DamagePlayer()
+
+    If Timer() < InvulnerableUntil Or GameState <> Types.STATE_MISSION Then
+        Return
+    End If
+
+    If Not AssistMode Then
+        Shields = Max(0, Shields - 1)
+    End If
+
+    InvulnerableUntil = Timer() + INVULNERABILITY_TIME
+
+    Play Sound "Assets\ShieldHit.wav" On Channel 2
+
+    If Shields = 0 Then
+        Call EnterGameOver()
+    End If
+
+End Sub
+
+Private Sub CompleteMission()
+
+    GameState = Types.STATE_MISSION_COMPLETE
+    Score = Score + Shields * 50
+
+    Play Sound "Assets\MissionComplete.wav" On Channel 3
+    Call UpdateHighScore()
+
+End Sub
+
+Private Sub EnterVictory()
+
+    GameState = Types.STATE_VICTORY
+    Score = Score + 2000
+
+    Play Sound "Assets\Victory.wav" On Channel 3
+    Call UpdateHighScore()
+
+End Sub
+
+Private Sub EnterGameOver()
+
+    GameState = Types.STATE_GAME_OVER
+
+    Call UpdateHighScore()
+
+End Sub
+
+Private Sub UpdateHighScore()
+
+    If Score > HighScore Then
+        HighScore = Score
+        Save HighScore To "HighScore"
+    End If
+
+End Sub
+
+Public Sub DebugAdvance()
+
+    If GameState = Types.STATE_BRIEFING Then
+
+        Call StartCurrentMission()
+
+    Else If GameState = Types.STATE_MISSION Then
+
+        Objective = ObjectiveGoal
+
+        Call CompleteMission()
+
+    Else If GameState = Types.STATE_MISSION_COMPLETE Then
+
+        Mission = Mission + 1
+
+        If Mission > Types.MISSION_REACTOR_CONDUIT Then
+            Call EnterVictory()
+        Else
+
+            Call EnterBriefing()
+        End If
+
+    End If
+
+End Sub
+
+Public Sub DebugDamage()
+
+    InvulnerableUntil = 0
+
+    Call DamagePlayer()
+
+End Sub
+
+Public Sub DebugSaturatePools()
+
+    Dim Index As Number
+
+    For Index = 0 To Types.MAX_ENEMIES + 3
+        Call SpawnTarget(Types.ENTITY_FIGHTER, Index * 5, 0, 900, 1)
+    End For
+
+    For Index = 0 To Types.MAX_PROJECTILES + 3
+        Call SpawnProjectile(True, 0, 0, 100, 0, 0, 100)
+    End For
+
+End Sub
+
+Public Sub Draw()
+
+    Clear BLACK
+
+    If GameState = Types.STATE_TITLE Then
+
+        Call DrawTitle()
+
+    Else If GameState = Types.STATE_HELP Then
+
+        Call DrawHelp()
+
+    Else If GameState = Types.STATE_BRIEFING Then
+
+        Call DrawBriefing()
+
+    Else
+
+        Call DrawWorld()
+        Call DrawHud()
+
+        If GameState = Types.STATE_PAUSED Then
+            Call DrawOverlay("PAUSED", "Tab / B / Enter To Resume")
+        Else If GameState = Types.STATE_MISSION_COMPLETE Then
+            Call DrawOverlay("SECTOR SECURED", "Enter / A To Continue")
+        Else If GameState = Types.STATE_VICTORY Then
+            Call DrawOverlay("OBSIDIAN ARRAY DISABLED", "Frontier Systems Restored")
+        Else If GameState = Types.STATE_GAME_OVER Then
+            Call DrawOverlay("INTERCEPTOR LOST", "Enter / A To Return")
+        End If
+
+    End If
+
+End Sub
+
+Private Sub DrawTitle()
+
+    Dim TitleTransform As Core.Transform3D
+
+    TitleTransform = Renderer.IdentityTransform()
+    TitleTransform.Position.Z = 900
+    TitleTransform.Rotation.Y = Timer() / 20
+
+    Call Renderer.BeginFrame(800)
+    Call Renderer.DrawMesh(CoreMesh, TitleTransform, Camera, CYAN, 2)
+
+    Draw Text "SPACE WARS" At 480, 105 Size 58 Color WHITE Centered
+    Draw Text "VECTOR ASSAULT" At 480, 172 Size 25 Color CYAN Centered
+    Draw Text "The Obsidian Array is draining the frontier systems." At 480, 335 Size 18 Color LIGHT_GRAY Centered
+    Draw Text "Enter / A: Launch    Tab / Y: Help    Escape: Exit" At 480, 390 Size 18 Color WHITE Centered
+    Draw Text "Original SMILE 2.0 software-rendered vector game" At 480, 472 Size 14 Color DARK_GRAY Centered
+
+End Sub
+
+Private Sub DrawHelp()
+
+    Draw Text "FLIGHT MANUAL" At 480, 55 Size 36 Color CYAN Centered
+    Draw Text "Aim: Mouse / Pen / Touch / Arrow Keys" At 480, 140 Size 20 Color WHITE Centered
+    Draw Text "Fire: Primary Pointer / Space / X" At 480, 180 Size 20 Color WHITE Centered
+    Draw Text "Shield Pulse: Y    Pause: Tab / B" At 480, 220 Size 20 Color WHITE Centered
+    Draw Text "Destroy targets before they reach your interceptor." At 480, 300 Size 18 Color LIGHT_GRAY Centered
+    Draw Text "Any Key Returns" At 480, 420 Size 18 Color YELLOW Centered
+
+End Sub
+
+Private Sub DrawBriefing()
+
+    Draw Text "MISSION BRIEFING" At 480, 60 Size 34 Color WHITE Centered
+    Draw Text MissionName() At 480, 120 Size 30 Color CYAN Centered
+
+    If Mission = Types.MISSION_OUTER_DEFENSE Then
+        Draw Text "Break the three-pronged interceptor screen." At 480, 210 Size 20 Color LIGHT_GRAY Centered
+    Else If Mission = Types.MISSION_ARRAY_SURFACE Then
+        Draw Text "Skim the array and destroy five lattice relays." At 480, 210 Size 20 Color LIGHT_GRAY Centered
+    Else
+        Draw Text "Thread the conduit and shatter the reactor prism." At 480, 210 Size 20 Color LIGHT_GRAY Centered
+    End If
+
+    Draw Text "Enter / A To Deploy" At 480, 400 Size 22 Color YELLOW Centered
+
+End Sub
+
+Private Function MissionName() As Text
+
+    Dim Result As Text
+
+    If Mission = Types.MISSION_OUTER_DEFENSE Then
+        Result = "OUTER DEFENSE"
+    Else If Mission = Types.MISSION_ARRAY_SURFACE Then
+        Result = "ARRAY SURFACE"
+    Else
+        Result = "REACTOR CONDUIT"
+    End If
+
+    Return Result
+
+End Function
+
+Private Sub DrawWorld()
+
+    Dim Index As Number
+    Dim ProjectileStart As Core.Vector3
+    Dim ProjectileEnd As Core.Vector3
+    Dim Projected As Core.ProjectedPoint3D
+    Dim ExplosionPoint As Core.Vector3
+    Dim ExplosionRadius As Number
+
+    Call Renderer.BeginFrame(Core.DEFAULT_LINE_BUDGET)
+    Call DrawStarfield()
+
+    If Mission = Types.MISSION_ARRAY_SURFACE Then
+        Call Renderer.DrawMesh(GridMesh, GridTransform, Camera, DARK_BLUE, 0)
+    End If
+
+    If Mission = Types.MISSION_REACTOR_CONDUIT Then
+
+        For Index = 0 To Types.MAX_SECTIONS - 1
+
+            If SectionActive[Index] Then
+
+                EntityTransform = Renderer.IdentityTransform()
+                EntityTransform.Position.X = SectionX[Index]
+                EntityTransform.Position.Y = SectionY[Index]
+                EntityTransform.Position.Z = SectionZ[Index]
+
+                Call Renderer.DrawMesh(GateMesh, EntityTransform, Camera, DARK_BLUE, 0)
+
+            End If
+
+        End For
+
+    End If
+
+    For Index = 0 To Types.MAX_ENEMIES - 1
+
+        If EnemyActive[Index] Then
+
+            EntityTransform = Renderer.IdentityTransform()
+            EntityTransform.Position.X = EnemyX[Index]
+            EntityTransform.Position.Y = EnemyY[Index]
+            EntityTransform.Position.Z = EnemyZ[Index]
+            EntityTransform.Rotation.Y = EnemyPhase[Index] / 10
+
+            If EnemyKind[Index] = Types.ENTITY_FIGHTER Then
+                Call Renderer.DrawMesh(FighterMesh, EntityTransform, Camera, LIGHT_RED, 1)
+            Else If EnemyKind[Index] = Types.ENTITY_FIGHTER_WING Then
+                Call Renderer.DrawMesh(WingFighterMesh, EntityTransform, Camera, MAGENTA, 1)
+            Else If EnemyKind[Index] = Types.ENTITY_RELAY Then
+                Call Renderer.DrawMesh(RelayMesh, EntityTransform, Camera, YELLOW, 1)
+            Else If EnemyKind[Index] = Types.ENTITY_TURRET Then
+                Call Renderer.DrawMesh(TurretMesh, EntityTransform, Camera, LIGHT_RED, 1)
+            Else
+
+                Call Renderer.DrawMesh(CoreMesh, EntityTransform, Camera, CYAN, 2)
+            End If
+
+        End If
+
+    End For
+
+    For Index = 0 To Types.MAX_PROJECTILES - 1
+
+        If ProjectileActive[Index] Then
+
+            ProjectileStart.X = ProjectileX[Index]
+            ProjectileStart.Y = ProjectileY[Index]
+            ProjectileStart.Z = ProjectileZ[Index]
+            ProjectileEnd = ProjectileStart
+            ProjectileEnd.Z = ProjectileEnd.Z - ProjectileVelocityZ[Index] / 8
+
+            If ProjectileFriendly[Index] Then
+                Call Renderer.DrawLine3D(ProjectileStart, ProjectileEnd, Camera, CYAN, 1)
+            Else
+
+                Call Renderer.DrawLine3D(ProjectileStart, ProjectileEnd, Camera, LIGHT_RED, 1)
+            End If
+
+        End If
+
+    End For
+
+    For Index = 0 To Types.MAX_EXPLOSIONS - 1
+
+        If ExplosionActive[Index] Then
+
+            ExplosionPoint.X = ExplosionX[Index]
+            ExplosionPoint.Y = ExplosionY[Index]
+            ExplosionPoint.Z = ExplosionZ[Index]
+            Projected = Renderer.ProjectPoint(ExplosionPoint, Camera)
+
+            If Projected.Visible Then
+
+                ExplosionRadius = 8 + (Timer() - ExplosionStartedAt[Index]) / 25
+                Draw Line Projected.X - ExplosionRadius, Projected.Y, Projected.X + ExplosionRadius, Projected.Y, YELLOW
+                Draw Line Projected.X, Projected.Y - ExplosionRadius, Projected.X, Projected.Y + ExplosionRadius, YELLOW
+                Draw Line Projected.X - ExplosionRadius, Projected.Y - ExplosionRadius, Projected.X + ExplosionRadius, Projected.Y + ExplosionRadius, WHITE
+                Draw Line Projected.X - ExplosionRadius, Projected.Y + ExplosionRadius, Projected.X + ExplosionRadius, Projected.Y - ExplosionRadius, WHITE
+
+            End If
+
+        End If
+
+    End For
+
+    Call DrawCrosshair()
+
+End Sub
+
+Private Sub DrawStarfield()
+
+    Dim Index As Number
+    Dim StarStart As Core.Vector3
+    Dim StarEnd As Core.Vector3
+
+    For Index = 0 To Types.MAX_STARS - 1
+
+        StarStart.X = StarX[Index]
+        StarStart.Y = StarY[Index]
+        StarStart.Z = StarZ[Index]
+        StarEnd = StarStart
+        StarEnd.Z = StarEnd.Z + 18
+
+        Call Renderer.DrawLine3D(StarStart, StarEnd, Camera, DARK_GRAY, 0)
+    End For
+
+End Sub
+
+Private Sub DrawCrosshair()
+
+    Dim CenterX As Number
+    Dim CenterY As Number
+
+    CenterX = CANVAS_WIDTH / 2 + AimX
+    CenterY = CANVAS_HEIGHT / 2 + AimY
+    Draw Line CenterX - 14, CenterY, CenterX - 4, CenterY, CYAN
+    Draw Line CenterX + 4, CenterY, CenterX + 14, CenterY, CYAN
+    Draw Line CenterX, CenterY - 14, CenterX, CenterY - 4, CYAN
+    Draw Line CenterX, CenterY + 4, CenterX, CenterY + 14, CYAN
+    Draw Circle CenterX, CenterY, 20, DARK_BLUE
+
+End Sub
+
+Private Sub DrawHud()
+
+    Draw Line 24, 448, 205, 448, DARK_BLUE
+    Draw Line 755, 448, 936, 448, DARK_BLUE
+    Draw Text MissionName() At 24, 18 Size 18 Color CYAN
+    Draw Text "Score" At 24, 50 Size 14 Color LIGHT_GRAY
+    Draw Number Score At 88, 50 Size 14 Color WHITE
+    Draw Text "High" At 24, 72 Size 14 Color LIGHT_GRAY
+    Draw Number HighScore At 88, 72 Size 14 Color WHITE
+    Draw Text "Shields" At 790, 18 Size 15 Color LIGHT_GRAY
+    Draw Number Shields At 890, 18 Size 18 Color CYAN
+    Draw Text "Objective" At 790, 50 Size 14 Color LIGHT_GRAY
+    Draw Number Objective At 874, 50 Size 14 Color YELLOW
+    Draw Text "/" At 895, 50 Size 14 Color LIGHT_GRAY
+    Draw Number ObjectiveGoal At 910, 50 Size 14 Color YELLOW
+
+    If AssistMode Then
+        Draw Text "TRAINING SHIELDS" At 480, 18 Size 14 Color YELLOW Centered
+    End If
+
+End Sub
+
+Private Sub DrawOverlay(Heading As Text, Detail As Text)
+
+    Fill Rounded Rectangle 180, 180, 600, 180, 18, DARK_BLUE
+    Draw Rounded Rectangle 180, 180, 600, 180, 18, CYAN
+    Draw Text Heading At 480, 222 Size 32 Color WHITE Centered
+    Draw Text Detail At 480, 282 Size 18 Color LIGHT_GRAY Centered
+    Draw Text "Score" At 400, 322 Size 15 Color LIGHT_GRAY
+    Draw Number Score At 535, 322 Size 15 Color YELLOW
+
+End Sub
+
+End Module

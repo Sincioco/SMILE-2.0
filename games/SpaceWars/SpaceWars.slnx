@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/Games/">
+    <Project Path="SpaceWars.smileproj" />
+  </Folder>
+  <Folder Name="/Libraries/">
+    <Project Path="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </Folder>
+</Solution>

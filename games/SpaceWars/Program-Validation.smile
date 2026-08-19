@@ -1,0 +1,70 @@
+Option Explicit
+
+Import SpaceWars.Game As SpaceGame
+Import SpaceWars.Types As Types
+
+Dim Failures As Number
+
+Game Window "Space Wars State Tests" Size 320 By 180
+
+Call SpaceGame.Initialize()
+
+Call Check(SpaceGame.CurrentState() = Types.STATE_TITLE)
+Call Check(SpaceGame.CurrentHighScore() >= 0)
+
+Call SpaceGame.StartGame()
+Call Check(SpaceGame.CurrentState() = Types.STATE_BRIEFING)
+Call Check(SpaceGame.CurrentMission() = Types.MISSION_OUTER_DEFENSE)
+Call Check(SpaceGame.CurrentShields() = 6)
+
+Call SpaceGame.DebugAdvance()
+Call Check(SpaceGame.CurrentState() = Types.STATE_MISSION)
+
+Call SpaceGame.DebugSaturatePools()
+Call Check(SpaceGame.ActiveEnemyCount() = Types.MAX_ENEMIES)
+Call Check(SpaceGame.ActiveProjectileCount() = Types.MAX_PROJECTILES)
+
+Call SpaceGame.DebugAdvance()
+Call Check(SpaceGame.CurrentState() = Types.STATE_MISSION_COMPLETE)
+
+Call SpaceGame.DebugAdvance()
+Call Check(SpaceGame.CurrentState() = Types.STATE_BRIEFING)
+Call Check(SpaceGame.CurrentMission() = Types.MISSION_ARRAY_SURFACE)
+
+Call SpaceGame.DebugAdvance()
+Call SpaceGame.DebugAdvance()
+Call SpaceGame.DebugAdvance()
+Call Check(SpaceGame.CurrentState() = Types.STATE_BRIEFING)
+Call Check(SpaceGame.CurrentMission() = Types.MISSION_REACTOR_CONDUIT)
+
+Call SpaceGame.DebugAdvance()
+Call SpaceGame.DebugAdvance()
+Call SpaceGame.DebugAdvance()
+Call Check(SpaceGame.CurrentState() = Types.STATE_VICTORY)
+
+Call SpaceGame.EnterTitle()
+Call SpaceGame.StartGame()
+Call SpaceGame.DebugAdvance()
+Call SpaceGame.DebugDamage()
+Call SpaceGame.DebugDamage()
+Call SpaceGame.DebugDamage()
+Call SpaceGame.DebugDamage()
+Call SpaceGame.DebugDamage()
+Call SpaceGame.DebugDamage()
+Call Check(SpaceGame.CurrentShields() = 0)
+Call Check(SpaceGame.CurrentState() = Types.STATE_GAME_OVER)
+
+Call SpaceGame.Shutdown()
+
+Save Failures To "Result"
+Print Failures
+
+Sub Check(Condition As Boolean)
+
+    If Not Condition Then
+        Failures = Failures + 1
+    End If
+
+End Sub
+
+End Program

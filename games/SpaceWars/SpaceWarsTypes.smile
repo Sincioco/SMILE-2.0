@@ -1,0 +1,32 @@
+''' Public game-state and mission constants for the original Space Wars campaign.
+Module SpaceWars.Types
+
+Option Explicit
+
+Public Const STATE_TITLE = 1
+Public Const STATE_HELP = 2
+Public Const STATE_BRIEFING = 3
+Public Const STATE_MISSION = 4
+Public Const STATE_PAUSED = 5
+Public Const STATE_MISSION_COMPLETE = 6
+Public Const STATE_VICTORY = 7
+Public Const STATE_GAME_OVER = 8
+
+Public Const MISSION_OUTER_DEFENSE = 1
+Public Const MISSION_ARRAY_SURFACE = 2
+Public Const MISSION_REACTOR_CONDUIT = 3
+
+Public Const MAX_ENEMIES = 12
+Public Const MAX_PROJECTILES = 64
+Public Const MAX_EXPLOSIONS = 16
+Public Const MAX_SECTIONS = 24
+Public Const MAX_STARS = 64
+
+Public Const ENTITY_FIGHTER = 1
+Public Const ENTITY_RELAY = 2
+Public Const ENTITY_GATE = 3
+Public Const ENTITY_CORE = 4
+Public Const ENTITY_FIGHTER_WING = 5
+Public Const ENTITY_TURRET = 6
+
+End Module
