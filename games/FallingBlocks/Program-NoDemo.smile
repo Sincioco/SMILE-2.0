@@ -1,4 +1,4 @@
-' SMILE 2.0 Falling Blocks - student edition without attract/demo code.
+' Smile 2.0 Tetris - student edition without attract/demo code.
 Const CanvasWidth = 960
 Const CanvasHeight = 540
 Const BoardWidth = 10
@@ -107,7 +107,7 @@ PendingClearCount = 0
 
 Load HighScore From "HighScore" Default 0
 
-Game Window "SMILE 2.0 Falling Blocks"
+Game Window "Smile 2.0 Tetris"
 
 Call EnterTitle()
 
@@ -664,7 +664,7 @@ End Sub
 Sub DrawTitle()
 
     Clear Rgb(8, 12, 22)
-    Draw Text "Falling Blocks" At 480, 125 Size 54 Color CYAN Centered
+    Draw Text "Smile 2.0 Tetris" At 480, 125 Size 54 Color CYAN Centered
 
     Call DrawBlock(386, 210, 30, Rgb(35, 220, 235))
     Call DrawBlock(416, 210, 30, Rgb(245, 215, 45))

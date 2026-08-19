@@ -21,7 +21,7 @@ Attract demos always return directly to the title screen when their run ends or 
 ## Included games
 
 - `games\Snake` — graphical Snake with a shared focused `Snake` Class, typed states/directions, score, progressive speed, and a persistent high score.
-- `games\FallingBlocks` — a seven-piece falling-block puzzle with rotation, row clearing, levels, and a persistent high score.
+- `games\FallingBlocks` — Smile 2.0 Tetris, a seven-piece falling-block puzzle with rotation, row clearing, levels, and a persistent high score.
 - `games\PaddleBall` — one-player AI and local two-player paddle modes with a persistent best rally.
 - `games\BrickBreaker` — a 7-by-12 colored brick field, three lives, three levels, row scoring, and a persistent high score.
 - `games\DungeonStarI` — an original three-floor pseudo-3D dungeon with student-editable external maps, validated pipe-style random generation, a blue map-selection title, doors, stairs, attract mode, and green, blue, and red floor palettes.
