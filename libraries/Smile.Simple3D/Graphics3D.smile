@@ -33,6 +33,22 @@ Private Const COMMAND_MAX_OBJECT_COUNT = 25
 Private Const COMMAND_MESH_VALID = 26
 Private Const COMMAND_OBJECT_VALID = 27
 Private Const COMMAND_MESH_REFERENCE_COUNT = 28
+Private Const COMMAND_CREATE_MATERIAL = 29
+Private Const COMMAND_SET_OBJECT_MATERIAL = 30
+Private Const COMMAND_SET_MESH_UV = 31
+Private Const COMMAND_LIVE_TEXTURE_COUNT = 32
+Private Const COMMAND_LIVE_MATERIAL_COUNT = 33
+Private Const COMMAND_MAX_TEXTURE_COUNT = 34
+Private Const COMMAND_MAX_MATERIAL_COUNT = 35
+Private Const COMMAND_TEXTURE_VALID = 36
+Private Const COMMAND_MATERIAL_VALID = 37
+Private Const COMMAND_TEXTURE_WIDTH = 38
+Private Const COMMAND_TEXTURE_HEIGHT = 39
+Private Const COMMAND_TEXTURE_REFERENCE_COUNT = 40
+Private Const COMMAND_MATERIAL_REFERENCE_COUNT = 41
+Private Const COMMAND_SET_MATERIAL = 42
+
+Private Const IMAGE_COMMAND_CREATE_TEXTURE = 1
 
 Public Const PRIMITIVE_CUBE = 1
 Public Const PRIMITIVE_PLANE = 2
@@ -40,6 +56,13 @@ Public Const PRIMITIVE_PYRAMID = 3
 Public Const PRIMITIVE_SPHERE = 4
 Public Const PRIMITIVE_CYLINDER = 5
 Public Const PRIMITIVE_TORUS = 6
+Public Const TEXTURE_FILTER_NEAREST = 0
+Public Const TEXTURE_FILTER_LINEAR = 1
+Public Const TEXTURE_WRAP_CLAMP = 0
+Public Const TEXTURE_WRAP_REPEAT = 1
+Public Const MATERIAL_ALPHA_OPAQUE = 0
+Public Const MATERIAL_ALPHA_CUTOUT = 1
+Public Const MATERIAL_ALPHA_BLEND = 2
 
 Private Function Dispatch(
     Command As Number,
@@ -187,6 +210,258 @@ Public Function MeshReferenceCount3D(MeshHandle As Number) As Number
 
 End Function
 
+Public Function LiveTextureCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_LIVE_TEXTURE_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function LiveMaterialCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_LIVE_MATERIAL_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function MaximumTextureCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MAX_TEXTURE_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function MaximumMaterialCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MAX_MATERIAL_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function TextureHandleValid3D(TextureHandle As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_TEXTURE_VALID, TextureHandle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Function MaterialHandleValid3D(MaterialHandle As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_MATERIAL_VALID, MaterialHandle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Function TextureReferenceCount3D(TextureHandle As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_TEXTURE_REFERENCE_COUNT, TextureHandle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function MaterialReferenceCount3D(MaterialHandle As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MATERIAL_REFERENCE_COUNT, MaterialHandle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function LoadTexture3D(
+    Path As Text,
+    Optional FilterMode As Number = TEXTURE_FILTER_LINEAR,
+    Optional WrapMode As Number = TEXTURE_WRAP_CLAMP
+) As Core.Texture3D
+
+    Dim Result As Core.Texture3D
+    Dim SourceImage As Image
+
+    Load Image SourceImage From Path
+
+    Result.Handle = Renderer3DImage(
+        IMAGE_COMMAND_CREATE_TEXTURE,
+        SourceImage,
+        FilterMode,
+        WrapMode,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    )
+
+    If Result.Handle <> 0 Then
+
+        Result.Width = Dispatch(COMMAND_TEXTURE_WIDTH, Result.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        Result.Height = Dispatch(COMMAND_TEXTURE_HEIGHT, Result.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        Result.FilterMode = FilterMode
+        Result.WrapMode = WrapMode
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub DestroyTexture3D(ByRef Texture As Core.Texture3D)
+
+    Dim Destroyed As Boolean
+
+    Destroyed = Dispatch(COMMAND_DESTROY, Texture.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+
+    If Destroyed Then
+
+        Texture.Handle = 0
+        Texture.Width = 0
+        Texture.Height = 0
+
+    End If
+
+End Sub
+
+Public Function CreateMaterial3D(
+    Texture As Core.Texture3D,
+    AlphaMode As Number,
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number,
+    OpacityValue As Number,
+    Unlit As Boolean,
+    EmissiveValue As Number,
+    CutoutValue As Number
+) As Core.Material3D
+
+    Dim Result As Core.Material3D
+    Dim UnlitValue As Number
+
+    If Unlit Then
+        UnlitValue = 1
+    Else
+        UnlitValue = 0
+    End If
+
+    Result.Handle = Dispatch(
+        COMMAND_CREATE_MATERIAL,
+        Texture.Handle,
+        AlphaMode,
+        RedValue,
+        GreenValue,
+        BlueValue,
+        OpacityValue,
+        UnlitValue,
+        EmissiveValue,
+        CutoutValue,
+        0
+    )
+
+    If Result.Handle <> 0 Then
+
+        Result.TextureHandle = Texture.Handle
+        Result.AlphaMode = AlphaMode
+        Result.ColorRed = RedValue
+        Result.ColorGreen = GreenValue
+        Result.ColorBlue = BlueValue
+        Result.OpacityPercent = OpacityValue
+        Result.Unlit = Unlit
+        Result.EmissivePercent = EmissiveValue
+        Result.CutoutPercent = CutoutValue
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function DefaultMaterial3D(Texture As Core.Texture3D) As Core.Material3D
+
+    Dim Result As Core.Material3D
+
+    Result = CreateMaterial3D(Texture, MATERIAL_ALPHA_OPAQUE, 255, 255, 255, 100, False, 0, 50)
+    Return Result
+
+End Function
+
+Public Function SetMaterial3D(
+    ByRef Material As Core.Material3D,
+    AlphaMode As Number,
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number,
+    OpacityValue As Number,
+    Unlit As Boolean,
+    EmissiveValue As Number,
+    CutoutValue As Number
+) As Boolean
+
+    Dim Result As Boolean
+    Dim UnlitValue As Number
+
+    If Unlit Then
+        UnlitValue = 1
+    Else
+        UnlitValue = 0
+    End If
+
+    Result = Dispatch(
+        COMMAND_SET_MATERIAL,
+        Material.Handle,
+        AlphaMode,
+        RedValue,
+        GreenValue,
+        BlueValue,
+        OpacityValue,
+        UnlitValue,
+        EmissiveValue,
+        CutoutValue,
+        0
+    ) <> 0
+
+    If Result Then
+
+        Material.AlphaMode = AlphaMode
+        Material.ColorRed = RedValue
+        Material.ColorGreen = GreenValue
+        Material.ColorBlue = BlueValue
+        Material.OpacityPercent = OpacityValue
+        Material.Unlit = Unlit
+        Material.EmissivePercent = EmissiveValue
+        Material.CutoutPercent = CutoutValue
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub DestroyMaterial3D(ByRef Material As Core.Material3D)
+
+    Dim Destroyed As Boolean
+
+    Destroyed = Dispatch(COMMAND_DESTROY, Material.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+
+    If Destroyed Then
+        Material.Handle = 0
+        Material.TextureHandle = 0
+    End If
+
+End Sub
+
 Public Sub ResetRenderer3D()
 
     Call Execute(COMMAND_RESET, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
@@ -332,6 +607,21 @@ Public Function SetMeshVertex3D(
 
 End Function
 
+''' Sets texture coordinates in thousandths, where 0 is 0.0 and 1000 is 1.0.
+Public Function SetMeshUv3D(
+    MeshHandle As Number,
+    Index As Number,
+    UValue As Number,
+    VValue As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_SET_MESH_UV, MeshHandle, Index, UValue, VValue, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
 Public Function SetMeshTriangle3D(
     MeshHandle As Number,
     TriangleIndex As Number,
@@ -422,6 +712,7 @@ Public Sub DestroyObject3D(ByRef Object As Core.Object3D)
 
     Object.Handle = 0
     Object.MeshHandle = 0
+    Object.MaterialHandle = 0
     Object.Visible = False
 
 End Sub
@@ -435,9 +726,38 @@ Public Sub DestroyObjectInstance3D(ByRef Object As Core.Object3D)
 
     Object.Handle = 0
     Object.MeshHandle = 0
+    Object.MaterialHandle = 0
     Object.Visible = False
 
 End Sub
+
+Public Function SetObjectMaterial3D(ByRef Object As Core.Object3D, Material As Core.Material3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_SET_OBJECT_MATERIAL, Object.Handle, Material.Handle, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+
+    If Result Then
+        Object.MaterialHandle = Material.Handle
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ClearObjectMaterial3D(ByRef Object As Core.Object3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_SET_OBJECT_MATERIAL, Object.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+
+    If Result Then
+        Object.MaterialHandle = 0
+    End If
+
+    Return Result
+
+End Function
 
 Public Sub SetObjectPosition(ByRef Object As Core.Object3D, X As Number, Y As Number, Z As Number)
 

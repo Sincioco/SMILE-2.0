@@ -1,0 +1,183 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Dim Camera As Core.Camera3D
+Dim Texture As Core.Texture3D
+Dim BadTexture As Core.Texture3D
+Dim EmptyTexture As Core.Texture3D
+Dim Materials[4] As Core.Material3D
+Dim BadMaterial As Core.Material3D
+Dim Objects[4] As Core.Object3D
+Dim Failures As Number
+Dim FrameReady As Boolean
+Dim Index As Number
+
+Game Window "Renderer3D Material Tests" Size 480 By 270
+
+Call Graphics3D.ResetRenderer3D()
+
+Texture = Graphics3D.LoadTexture3D("Assets\TestTexture.png")
+BadTexture = Graphics3D.LoadTexture3D(
+    "Assets\TestTexture.png",
+    99,
+    Graphics3D.TEXTURE_WRAP_CLAMP
+)
+
+If (Texture.Handle = 0 Or
+    Texture.Width <= 0 Or
+    Texture.Height <= 0 Or
+    Not Graphics3D.TextureHandleValid3D(Texture.Handle) Or
+    BadTexture.Handle <> 0) Then
+    Failures = Failures + 1
+End If
+
+Materials[0] = Graphics3D.CreateMaterial3D(
+    Texture,
+    Graphics3D.MATERIAL_ALPHA_OPAQUE,
+    255,
+    255,
+    255,
+    100,
+    False,
+    0,
+    50
+)
+Materials[1] = Graphics3D.CreateMaterial3D(
+    Texture,
+    Graphics3D.MATERIAL_ALPHA_CUTOUT,
+    255,
+    192,
+    96,
+    100,
+    False,
+    25,
+    40
+)
+Materials[2] = Graphics3D.CreateMaterial3D(
+    Texture,
+    Graphics3D.MATERIAL_ALPHA_BLEND,
+    96,
+    192,
+    255,
+    55,
+    False,
+    50,
+    50
+)
+Materials[3] = Graphics3D.CreateMaterial3D(
+    Texture,
+    Graphics3D.MATERIAL_ALPHA_OPAQUE,
+    255,
+    96,
+    192,
+    100,
+    True,
+    175,
+    50
+)
+BadMaterial = Graphics3D.CreateMaterial3D(
+    EmptyTexture,
+    99,
+    255,
+    255,
+    255,
+    100,
+    False,
+    0,
+    50
+)
+
+If (Graphics3D.LiveTextureCount3D() <> 1 Or
+    Graphics3D.LiveMaterialCount3D() <> 4 Or
+    Graphics3D.TextureReferenceCount3D(Texture.Handle) <> 4 Or
+    BadMaterial.Handle <> 0) Then
+    Failures = Failures + 1
+End If
+
+For Index = 0 To 3
+
+    Objects[Index] = Graphics3D.CreateCube3D(36)
+
+    Call Graphics3D.SetObjectPosition(Objects[Index], -72 + Index * 48, 0, 0)
+
+    If (Objects[Index].Handle = 0 Or
+        Not Graphics3D.SetObjectMaterial3D(Objects[Index], Materials[Index]) Or
+        Graphics3D.MaterialReferenceCount3D(Materials[Index].Handle) <> 1) Then
+        Failures = Failures + 1
+    End If
+
+End For
+
+Call Graphics3D.DestroyTexture3D(Texture)
+Call Graphics3D.DestroyMaterial3D(Materials[0])
+
+If (Texture.Handle = 0 Or
+    Materials[0].Handle = 0 Or
+    Graphics3D.LiveTextureCount3D() <> 1 Or
+    Graphics3D.LiveMaterialCount3D() <> 4) Then
+    Failures = Failures + 1
+End If
+
+If Not Graphics3D.SetMaterial3D(
+    Materials[3],
+    Graphics3D.MATERIAL_ALPHA_OPAQUE,
+    255,
+    128,
+    64,
+    100,
+    True,
+    200,
+    50
+) Then
+    Failures = Failures + 1
+End If
+
+If Graphics3D.RendererAvailable() Then
+
+    Camera = Graphics3D.DefaultCamera()
+    FrameReady = Graphics3D.Begin3D(Camera, 2, 4, 12)
+
+    If FrameReady Then
+
+        For Index = 0 To 3
+            FrameReady = FrameReady And Graphics3D.DrawObject3D(Objects[Index])
+        End For
+
+    End If
+
+    If Not FrameReady Then
+        Failures = Failures + 1
+    End If
+
+    Call Graphics3D.End3D()
+
+End If
+
+Fill Rectangle 0, 0, 480, 270, Rgb(2, 4, 12)
+Draw Text "MATERIAL PIPELINE" At 136, 118 Size 20 Color WHITE
+Show Screen
+
+For Index = 0 To 3
+    Call Graphics3D.DestroyObject3D(Objects[Index])
+End For
+
+For Index = 0 To 3
+    Call Graphics3D.DestroyMaterial3D(Materials[Index])
+End For
+
+Call Graphics3D.DestroyTexture3D(Texture)
+
+If (Graphics3D.LiveMeshCount3D() <> 0 Or
+    Graphics3D.LiveObjectCount3D() <> 0 Or
+    Graphics3D.LiveTextureCount3D() <> 0 Or
+    Graphics3D.LiveMaterialCount3D() <> 0) Then
+    Failures = Failures + 1
+End If
+
+If Failures = 0 Then
+    Print "Renderer3D material tests passed"
+Else
+    Print "Renderer3D material tests failed: "; Failures
+End If

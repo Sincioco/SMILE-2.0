@@ -76,6 +76,8 @@ int main(void)
     WCHAR character_path[MAX_PATH];
     WCHAR background_path[MAX_PATH];
     WCHAR pixel_path[MAX_PATH];
+    WCHAR invalid_image_path[MAX_PATH];
+    WCHAR missing_image_path[MAX_PATH];
     WCHAR tone_one_path[MAX_PATH];
     WCHAR tone_two_path[MAX_PATH];
     WCHAR resolved_asset[MAX_PATH * 2];
@@ -154,6 +156,14 @@ int main(void)
     GetFullPathNameW(L"examples\\Phase4VisualSlice\\Assets\\CharacterSheet.png", MAX_PATH, character_path, 0);
     GetFullPathNameW(L"examples\\Phase4VisualSlice\\Assets\\Background.png", MAX_PATH, background_path, 0);
     GetFullPathNameW(L"examples\\Phase4VisualSlice\\Assets\\PixelProof.png", MAX_PATH, pixel_path, 0);
+    GetFullPathNameW(L"examples\\Renderer3DMaterialTests\\Assets\\Invalid.png", MAX_PATH, invalid_image_path, 0);
+    GetFullPathNameW(L"examples\\Renderer3DMaterialTests\\Assets\\Missing.png", MAX_PATH, missing_image_path, 0);
+    check(smile_image_resource_load(invalid_image_path) == 0 &&
+        smile_image_resource_load(missing_image_path) == 0,
+        "WIC rejects malformed and missing PNG texture sources without publishing a resource");
+    check(smile_image_resource_cache_count() == 0 &&
+        smile_image_resource_live_count() == initial_image_live,
+        "failed PNG loads leave Image cache ownership unchanged");
     first_image = smile_image_resource_load(character_path);
     second_image = smile_image_resource_load(character_path);
     check(first_image != 0 && second_image == first_image, "duplicate Image paths share one cached resource");

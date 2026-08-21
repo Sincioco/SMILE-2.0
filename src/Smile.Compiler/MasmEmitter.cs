@@ -247,6 +247,7 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_draw_text:PROC");
         Line("EXTERN smile_draw_number:PROC");
         Line("EXTERN smile_renderer3d_command:PROC");
+        Line("EXTERN smile_renderer3d_image_command:PROC");
         Line("EXTERN smile_clip_push:PROC");
         Line("EXTERN smile_clip_pop:PROC");
         Line("EXTERN smile_text_width_value:PROC");
@@ -1734,12 +1735,14 @@ internal sealed class MasmEmitter
                 EmitNativeCall("smile_text_slice", 3);
                 break;
             case SyntaxKind.Renderer3DKeyword:
+            case SyntaxKind.Renderer3DImageKeyword:
                 foreach (var argument in call.Arguments)
                 {
                     EmitExpression(argument.Expression);
                     PushRax();
                 }
-                EmitNativeCall("smile_renderer3d_command", call.Arguments.Count);
+                EmitNativeCall(call.Identifier.Kind == SyntaxKind.Renderer3DKeyword
+                    ? "smile_renderer3d_command" : "smile_renderer3d_image_command", call.Arguments.Count);
                 break;
             default:
                 EmitRoutineCall(call, _recordCallResults.TryGetValue(call, out var result) ? result : null);

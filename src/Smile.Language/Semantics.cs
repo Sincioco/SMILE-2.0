@@ -4137,7 +4137,7 @@ internal sealed class SemanticAnalyzer
             SyntaxKind.PointerDeltaYKeyword or SyntaxKind.PointerWheelDeltaKeyword or SyntaxKind.PointerInsideKeyword or
             SyntaxKind.PointerHeldKeyword or SyntaxKind.PointerPressedKeyword or SyntaxKind.PointerReleasedKeyword)
             RequireGameWindow(identifier.Span, $"Built-in '{identifier.Text}'");
-        if (identifier.Kind == SyntaxKind.Renderer3DKeyword)
+        if (identifier.Kind is SyntaxKind.Renderer3DKeyword or SyntaxKind.Renderer3DImageKeyword)
             RequireGameWindow(identifier.Span, $"Built-in '{identifier.Text}'");
         if (arguments.Count != expected)
             Report("SML3016", identifier.Span, $"Built-in '{identifier.Text}' expects {expected} argument(s), found {arguments.Count}.");
@@ -4146,6 +4146,19 @@ internal sealed class SemanticAnalyzer
             if (arguments.Count != 0)
                 RequireType(arguments[0], SmileType.Image, "SML3501", $"Built-in '{identifier.Text}' requires Image.");
             return identifier.Kind == SyntaxKind.ImageLoadedKeyword ? SmileType.Boolean : SmileType.Number;
+        }
+        if (identifier.Kind == SyntaxKind.Renderer3DImageKeyword)
+        {
+            if (arguments.Count > 0)
+                RequireType(arguments[0], SmileType.Number, "SML3003",
+                    $"Built-in '{identifier.Text}' requires a Number command.");
+            if (arguments.Count > 1)
+                RequireType(arguments[1], SmileType.Image, "SML3501",
+                    $"Built-in '{identifier.Text}' requires Image as its second argument.");
+            for (var index = 2; index < arguments.Count; index++)
+                RequireType(arguments[index], SmileType.Number, "SML3003",
+                    $"Built-in '{identifier.Text}' requires Number arguments after Image.");
+            return SmileType.Number;
         }
         if (identifier.Kind is SyntaxKind.TextWidthKeyword or SyntaxKind.TextHeightKeyword)
         {

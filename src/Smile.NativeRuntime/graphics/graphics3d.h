@@ -34,7 +34,26 @@ enum SmileRenderer3DCommand
     SMILE_3D_MAX_OBJECT_COUNT = 25,
     SMILE_3D_MESH_VALID = 26,
     SMILE_3D_OBJECT_VALID = 27,
-    SMILE_3D_MESH_REFERENCE_COUNT = 28
+    SMILE_3D_MESH_REFERENCE_COUNT = 28,
+    SMILE_3D_CREATE_MATERIAL = 29,
+    SMILE_3D_SET_OBJECT_MATERIAL = 30,
+    SMILE_3D_SET_MESH_UV = 31,
+    SMILE_3D_LIVE_TEXTURE_COUNT = 32,
+    SMILE_3D_LIVE_MATERIAL_COUNT = 33,
+    SMILE_3D_MAX_TEXTURE_COUNT = 34,
+    SMILE_3D_MAX_MATERIAL_COUNT = 35,
+    SMILE_3D_TEXTURE_VALID = 36,
+    SMILE_3D_MATERIAL_VALID = 37,
+    SMILE_3D_TEXTURE_WIDTH = 38,
+    SMILE_3D_TEXTURE_HEIGHT = 39,
+    SMILE_3D_TEXTURE_REFERENCE_COUNT = 40,
+    SMILE_3D_MATERIAL_REFERENCE_COUNT = 41,
+    SMILE_3D_SET_MATERIAL = 42
+};
+
+enum SmileRenderer3DImageCommand
+{
+    SMILE_3D_IMAGE_CREATE_TEXTURE = 1
 };
 
 enum SmilePrimitive3D
@@ -50,6 +69,9 @@ enum SmilePrimitive3D
 long long smile_renderer3d_command(long long command,
     long long a, long long b, long long c, long long d, long long e,
     long long f, long long g, long long h, long long i, long long j);
+long long smile_renderer3d_image_command(long long command, void* image,
+    long long a, long long b, long long c, long long d,
+    long long e, long long f, long long g, long long h);
 void smile_graphics3d_on_device_lost(void);
 
 #ifdef __cplusplus

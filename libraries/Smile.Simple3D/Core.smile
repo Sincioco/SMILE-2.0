@@ -13,6 +13,13 @@ Public Const MAX_VERTICES = 768
 Public Const MAX_EDGES = 1536
 Public Const DEFAULT_LINE_BUDGET = 2500
 Public Const MAX_WORLD_COORDINATE = 1000000
+Public Const TEXTURE_FILTER_NEAREST = 0
+Public Const TEXTURE_FILTER_LINEAR = 1
+Public Const TEXTURE_WRAP_CLAMP = 0
+Public Const TEXTURE_WRAP_REPEAT = 1
+Public Const MATERIAL_ALPHA_OPAQUE = 0
+Public Const MATERIAL_ALPHA_CUTOUT = 1
+Public Const MATERIAL_ALPHA_BLEND = 2
 
 ''' A point or direction in integer world units.
 Public Type Vector3
@@ -76,6 +83,7 @@ End Type
 Public Type Object3D
     Handle As Number
     MeshHandle As Number
+    MaterialHandle As Number
     Position As Vector3
     Rotation As Rotation3D
     ScaleX As Number
@@ -86,6 +94,29 @@ Public Type Object3D
     ColorBlue As Number
     AlphaPercent As Number
     Visible As Boolean
+End Type
+
+''' A generation-safe GPU texture sourced from a declared PNG Image asset.
+Public Type Texture3D
+    Handle As Number
+    Width As Number
+    Height As Number
+    FilterMode As Number
+    WrapMode As Number
+End Type
+
+''' A reusable texture, tint, opacity, lighting, and alpha-mode binding.
+Public Type Material3D
+    Handle As Number
+    TextureHandle As Number
+    AlphaMode As Number
+    ColorRed As Number
+    ColorGreen As Number
+    ColorBlue As Number
+    OpacityPercent As Number
+    Unlit As Boolean
+    EmissivePercent As Number
+    CutoutPercent As Number
 End Type
 
 ''' A projected logical-canvas point plus its camera-space depth.

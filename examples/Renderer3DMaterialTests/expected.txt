@@ -1,0 +1,1 @@
+Renderer3D material tests passed

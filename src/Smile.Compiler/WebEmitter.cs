@@ -913,6 +913,7 @@ internal sealed class WebEmitter
             SyntaxKind.TextCodeAtKeyword => $"smile.textCodeAt({arguments})",
             SyntaxKind.TextSliceKeyword => $"smile.textSlice({arguments})",
             SyntaxKind.Renderer3DKeyword => $"smile.renderer3D({arguments})",
+            SyntaxKind.Renderer3DImageKeyword => $"smile.renderer3DImage({arguments})",
             _ => RoutineCall(call, call.Identifier)
         };
     }

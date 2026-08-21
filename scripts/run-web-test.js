@@ -525,16 +525,24 @@ function contextWebGL2() {
         ELEMENT_ARRAY_BUFFER: 0x8893, STATIC_DRAW: 0x88e4, COLOR_BUFFER_BIT: 0x4000,
         DEPTH_BUFFER_BIT: 0x0100, TRIANGLES: 0x0004, UNSIGNED_INT: 0x1405, FLOAT: 0x1406,
         BLEND: 0x0be2, SRC_ALPHA: 0x0302, ONE_MINUS_SRC_ALPHA: 0x0303,
+        TEXTURE_2D: 0x0de1, TEXTURE0: 0x84c0, RGBA: 0x1908, UNSIGNED_BYTE: 0x1401,
+        TEXTURE_MIN_FILTER: 0x2801, TEXTURE_MAG_FILTER: 0x2800,
+        TEXTURE_WRAP_S: 0x2802, TEXTURE_WRAP_T: 0x2803,
+        NEAREST: 0x2600, LINEAR: 0x2601, CLAMP_TO_EDGE: 0x812f, REPEAT: 0x2901,
+        UNPACK_FLIP_Y_WEBGL: 0x9240,
         createShader: () => ({}), shaderSource: noop, compileShader: noop,
         getShaderParameter: () => true, getShaderInfoLog: () => "", deleteShader: noop,
         createProgram: () => ({}), attachShader: noop, linkProgram: noop,
         getProgramParameter: () => true, getProgramInfoLog: () => "", getUniformLocation: () => ({}),
         enable: value => { if (value === 0x0b71) renderer3DDepthEnables += 1; },
-        depthFunc: noop, disable: noop, blendFunc: noop, createBuffer: () => ({}), bindBuffer: noop,
+        depthFunc: noop, depthMask: noop, disable: noop, blendFunc: noop,
+        createBuffer: () => ({}), bindBuffer: noop,
         bufferData: () => { renderer3DBufferUploads += 1; }, deleteBuffer: noop,
+        createTexture: () => ({}), bindTexture: noop, deleteTexture: noop, activeTexture: noop,
+        pixelStorei: noop, texImage2D: noop, texParameteri: noop,
         viewport: noop, clearColor: noop, clearDepth: noop, clear: noop, useProgram: noop,
         enableVertexAttribArray: noop, vertexAttribPointer: noop, uniformMatrix4fv: noop,
-        uniform4fv: noop, drawElements: () => { renderer3DDrawCalls += 1; }
+        uniform4fv: noop, uniform1i: noop, drawElements: () => { renderer3DDrawCalls += 1; }
     };
 }
 
