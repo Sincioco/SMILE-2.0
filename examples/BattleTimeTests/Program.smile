@@ -1,0 +1,186 @@
+Option Explicit
+
+Import Smile.RPG.Core As RPG
+Import Smile.RPG.Characters As Characters
+Import Smile.RPG.Party As Party
+Import Smile.RPG.BattleCore As Battle
+Import Smile.RPG.BattleTime As BattleTime
+
+Const CHARACTER_HERO = 100
+Const ENEMY_SENTINEL = 200
+Const FORMATION_TEST = 300
+
+Dim Checks As Number
+Dim Failures As Number
+Dim StateA As Number
+Dim StateB As Number
+Dim Index As Number
+Dim BeforeGauge As Number
+
+StateA = RPG.Create()
+StateB = RPG.Create()
+
+Call Check(StateA > 0)
+Call Check(StateB > 0)
+Call SetupBattle(StateA, 11)
+Call SetupBattle(StateB, 11)
+
+' Equivalent fixed-tick chunks produce identical gauges on independent battle states.
+
+Call Check(BattleTime.Begin(StateA, BattleTime.BATTLE_TIME_MODE_ACTIVE, 1))
+Call Check(BattleTime.Begin(StateB, BattleTime.BATTLE_TIME_MODE_ACTIVE, 1))
+Call Check(BattleTime.Advance(StateA, 10, False))
+
+For Index = 1 To 10
+    Call Check(BattleTime.Advance(StateB, 1, False))
+End For
+
+Call Check(BattleTime.Gauge(StateA, 1) = BattleTime.Gauge(StateB, 1))
+Call Check(BattleTime.Gauge(StateA, 2) = BattleTime.Gauge(StateB, 2))
+
+' Wait mode freezes during presentation; Active mode continues from the same fixed clock.
+
+Call Check(BattleTime.Configure(StateB, BattleTime.BATTLE_TIME_MODE_WAIT, 1))
+
+BeforeGauge = BattleTime.Gauge(StateB, 1)
+
+Call Check(BattleTime.Advance(StateB, 5, True))
+Call Check(BattleTime.Gauge(StateB, 1) = BeforeGauge)
+Call Check(BattleTime.Configure(StateB, BattleTime.BATTLE_TIME_MODE_ACTIVE, 1))
+Call Check(BattleTime.Advance(StateB, 1, True))
+Call Check(BattleTime.Gauge(StateB, 1) > BeforeGauge)
+
+' Speed scales effective agility without changing deterministic same-tick participant order.
+
+Call Check(BattleTime.Finish(StateA))
+Call Check(BattleTime.Begin(StateA, BattleTime.BATTLE_TIME_MODE_ACTIVE, 2))
+Call Check(BattleTime.Advance(StateA, 1, False))
+Call Check(BattleTime.Gauge(StateA, 1) = 40)
+Call Check(BattleTime.Gauge(StateA, 2) = 60)
+Call Check(BattleTime.SetGauge(StateA, 1, 9960))
+Call Check(BattleTime.SetGauge(StateA, 2, 9940))
+Call Check(BattleTime.Advance(StateA, 1, False))
+Call Check(BattleTime.IsReady(StateA, 1))
+Call Check(BattleTime.IsReady(StateA, 2))
+Call Check(BattleTime.NextReadyParticipant(StateA) = 1)
+Call Check(BattleTime.NextReadyPlayer(StateA) = 1)
+Call Check(BattleTime.NextReadyEnemy(StateA) = 2)
+
+' Ready player and reusable enemy-AI submissions flow through unchanged BattleCore actions.
+
+Call Check(BattleTime.SubmitAction(StateA, 1, Battle.BATTLE_ACTION_ATTACK, 0, 2))
+Call Check(BattleTime.ActionPending(StateA, 1))
+Call Check(BattleTime.SubmitReadyEnemyAttack(StateA, 2, 1))
+Call Check(BattleTime.ActionPending(StateA, 2))
+Call Check(BattleTime.CanStartRound(StateA))
+Call Check(BattleTime.TryStartRound(StateA))
+Call Check(Battle.Phase(StateA) = Battle.BATTLE_PHASE_RESOLVING)
+
+For Index = 1 To 32
+
+    If Battle.Phase(StateA) <> Battle.BATTLE_PHASE_RESOLVING Then
+        Exit For
+    End If
+
+    Call Check(Battle.Advance(StateA))
+End For
+
+Call Check(Battle.Phase(StateA) = Battle.BATTLE_PHASE_COMMAND)
+Call Check(Battle.RoundNumber(StateA) = 1)
+Call Check(BattleTime.Gauge(StateA, 1) = 0)
+Call Check(BattleTime.Gauge(StateA, 2) = 0)
+
+' The ATB adapter can finish while the ordinary round battle remains valid and active.
+
+Call Check(BattleTime.Finish(StateA))
+Call Check(Not BattleTime.IsRunning(StateA))
+Call Check(Battle.IsActive(StateA))
+Call Check(Battle.CancelBattle(StateA))
+Call Check(Battle.CancelBattle(StateB))
+Call RPG.Destroy(StateA)
+Call RPG.Destroy(StateB)
+
+' RPG generation changes invalidate every old clock and gauge.
+StateA = RPG.Create()
+
+Call Check(StateA > 0)
+Call Check(Not BattleTime.IsRunning(StateA))
+Call Check(BattleTime.Gauge(StateA, 1) = 0)
+Call RPG.Destroy(StateA)
+
+If Failures = 0 Then
+    Print "BattleTime tests: PASS"
+Else
+    Print "BattleTime tests: FAIL"
+    Print Failures
+End If
+
+End Program
+
+Sub SetupBattle(State As Number, Seed As Number)
+
+    Dim Character As Characters.CharacterDefinition
+    Dim Enemy As Battle.EnemyDefinition
+    Dim Formation As Battle.FormationDefinition
+    Dim Member As Battle.FormationMemberDefinition
+
+    Character.Id = CHARACTER_HERO
+    Character.Name = "Aster"
+    Character.StartingLevel = 1
+    Character.StartingMaximumHealth = 300
+    Character.StartingMaximumMagicPoints = 20
+    Character.Strength = 20
+    Character.Defense = 15
+    Character.Magic = 10
+    Character.Resistance = 10
+    Character.Agility = 20
+    Character.Luck = 5
+
+    Call Check(Characters.DefineCharacter(State, Character))
+    Call Check(Party.AddCharacter(State, CHARACTER_HERO))
+
+    Enemy.Id = ENEMY_SENTINEL
+    Enemy.Name = "Clockwork Sentinel"
+    Enemy.MaximumHealth = 500
+    Enemy.MaximumMagicPoints = 0
+    Enemy.Strength = 15
+    Enemy.Defense = 12
+    Enemy.Magic = 8
+    Enemy.Resistance = 10
+    Enemy.Agility = 30
+    Enemy.Luck = 4
+    Enemy.ExperienceReward = 5
+    Enemy.GoldReward = 2
+    Enemy.AiProfileId = 1
+
+    Call Check(Battle.DefineEnemy(State, Enemy))
+
+    Formation.Id = FORMATION_TEST
+    Formation.Name = "ATB Test"
+    Formation.EscapeChance = 0
+
+    Call Check(Battle.DefineFormation(State, Formation))
+
+    Member.FormationId = FORMATION_TEST
+    Member.EnemyId = ENEMY_SENTINEL
+    Member.GroupId = 1
+    Member.SlotId = 1
+
+    Call Check(Battle.AddFormationMember(State, Member))
+    Call Check(Battle.BeginBattle(State, FORMATION_TEST, Seed) > 0)
+
+End Sub
+
+Sub Check(Condition As Boolean)
+
+    Checks = Checks + 1
+
+    If Not Condition Then
+
+        Failures = Failures + 1
+        Print "Failed check"
+        Print Checks
+
+    End If
+
+End Sub

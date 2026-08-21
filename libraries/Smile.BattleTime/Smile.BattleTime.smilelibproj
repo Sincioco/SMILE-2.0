@@ -1,0 +1,12 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Library</ProjectKind>
+    <LibraryName>Smile.BattleTime</LibraryName>
+    <Version>1.0.0</Version>
+    <OutputName>Smile.BattleTime</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="BattleTime.smile" />
+    <SmileProjectReference Include="..\Smile.RPG\Smile.RPG.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

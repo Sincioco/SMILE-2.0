@@ -1,0 +1,539 @@
+''' Deterministic fixed-step active-time adapter for Smile.RPG.BattleCore.
+Module Smile.RPG.BattleTime
+
+Option Explicit
+
+Import Smile.RPG.Core As RPG
+Import Smile.RPG.BattleCore As Battle
+
+Public Const BATTLE_TIME_MODE_ACTIVE = 1
+Public Const BATTLE_TIME_MODE_WAIT = 2
+Public Const BATTLE_TIME_MIN_SPEED = 1
+Public Const BATTLE_TIME_MAX_SPEED = 5
+Public Const BATTLE_TIME_GAUGE_MAXIMUM = 10000
+Public Const BATTLE_TIME_MAX_TICKS = 10000
+
+Private Dim StateGeneration[4] As Number
+Private Dim Running[4] As Boolean
+Private Dim BattleHandles[4] As Number
+Private Dim ParticipantCounts[4] As Number
+Private Dim Modes[4] As Number
+Private Dim Speeds[4] As Number
+Private Dim NextReadySerials[4] As Number
+Private Dim Gauges[4, 12] As Number
+Private Dim Ready[4, 12] As Boolean
+Private Dim ReadySerials[4, 12] As Number
+Private Dim PendingActions[4, 12] As Boolean
+
+Private Sub ResetSlot(Slot As Number)
+
+    Dim Index As Number
+
+    For Index = 0 To Battle.BATTLE_MAX_PARTICIPANTS - 1
+        Gauges[Slot, Index] = 0
+        Ready[Slot, Index] = False
+        ReadySerials[Slot, Index] = 0
+        PendingActions[Slot, Index] = False
+    End For
+
+    Running[Slot] = False
+    BattleHandles[Slot] = 0
+    ParticipantCounts[Slot] = 0
+    Modes[Slot] = BATTLE_TIME_MODE_ACTIVE
+    Speeds[Slot] = BATTLE_TIME_MIN_SPEED
+    NextReadySerials[Slot] = 1
+
+End Sub
+
+Private Function StateSlot(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Generation As Number
+
+    Slot = RPG.StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Generation = RPG.StateGeneration(StateHandle)
+
+    If StateGeneration[Slot] <> Generation Then
+        Call ResetSlot(Slot)
+
+        StateGeneration[Slot] = Generation
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function IsSessionValid(StateHandle As Number, Slot As Number) As Boolean
+
+    If Slot < 0 Or Not Running[Slot] Then
+        Return False
+    End If
+
+    If (Not Battle.IsBattleHandleValid(StateHandle, BattleHandles[Slot]) Or
+        Battle.ParticipantCount(StateHandle) <> ParticipantCounts[Slot]) Then
+        Call ResetSlot(Slot)
+
+        Return False
+    End If
+
+    Return True
+
+End Function
+
+Private Function ParticipantIndex(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Not IsSessionValid(StateHandle, Slot) Or
+        ParticipantId <= 0 Or
+        ParticipantId > ParticipantCounts[Slot]) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = ParticipantId - 1
+
+    Return ReturnValue
+
+End Function
+
+''' Starts a new ATB clock for the currently active BattleCore encounter.
+Public Function Begin(StateHandle As Number, Mode As Number, Speed As Number) As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not Battle.IsActive(StateHandle) Or
+        Battle.Phase(StateHandle) <> Battle.BATTLE_PHASE_COMMAND Or
+        Mode < BATTLE_TIME_MODE_ACTIVE Or
+        Mode > BATTLE_TIME_MODE_WAIT Or
+        Speed < BATTLE_TIME_MIN_SPEED Or
+        Speed > BATTLE_TIME_MAX_SPEED) Then
+        Return False
+    End If
+
+    Call ResetSlot(Slot)
+
+    Running[Slot] = True
+    BattleHandles[Slot] = Battle.CurrentBattleHandle(StateHandle)
+    ParticipantCounts[Slot] = Battle.ParticipantCount(StateHandle)
+    Modes[Slot] = Mode
+    Speeds[Slot] = Speed
+    Return True
+
+End Function
+
+Public Function IsRunning(StateHandle As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    ReturnValue = IsSessionValid(StateHandle, Slot)
+
+    Return ReturnValue
+
+End Function
+
+Public Function Mode(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not IsSessionValid(StateHandle, Slot) Then
+        Return 0
+    End If
+
+    ReturnValue = Modes[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Speed(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not IsSessionValid(StateHandle, Slot) Then
+        Return 0
+    End If
+
+    ReturnValue = Speeds[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Configure(StateHandle As Number, ModeValue As Number, SpeedValue As Number) As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Not IsSessionValid(StateHandle, Slot) Or
+        ModeValue < BATTLE_TIME_MODE_ACTIVE Or
+        ModeValue > BATTLE_TIME_MODE_WAIT Or
+        SpeedValue < BATTLE_TIME_MIN_SPEED Or
+        SpeedValue > BATTLE_TIME_MAX_SPEED) Then
+        Return False
+    End If
+
+    Modes[Slot] = ModeValue
+    Speeds[Slot] = SpeedValue
+    Return True
+
+End Function
+
+Private Function FillAmount(StateHandle As Number, ParticipantId As Number, SpeedValue As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Battle.Agility(StateHandle, ParticipantId) * SpeedValue
+
+    If ReturnValue < 1 Then
+        ReturnValue = 1
+    End If
+
+    Return ReturnValue
+
+End Function
+
+''' Advances gauges by exact simulation ticks, independently of rendered frames.
+Public Function Advance(StateHandle As Number, Ticks As Number, PresentationBusy As Boolean) As Boolean
+
+    Dim Slot As Number
+    Dim TickIndex As Number
+    Dim ParticipantId As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Not IsSessionValid(StateHandle, Slot) Or
+        Ticks < 0 Or
+        Ticks > BATTLE_TIME_MAX_TICKS) Then
+        Return False
+    End If
+
+    If Battle.Phase(StateHandle) <> Battle.BATTLE_PHASE_COMMAND Then
+        Return True
+    End If
+
+    If Modes[Slot] = BATTLE_TIME_MODE_WAIT And PresentationBusy Then
+        Return True
+    End If
+
+    For TickIndex = 1 To Ticks
+
+        For ParticipantId = 1 To ParticipantCounts[Slot]
+
+            Index = ParticipantId - 1
+
+            If Not Battle.IsAlive(StateHandle, ParticipantId) Then
+
+                Gauges[Slot, Index] = 0
+                Ready[Slot, Index] = False
+                ReadySerials[Slot, Index] = 0
+
+            Else If Not Ready[Slot, Index] And Not PendingActions[Slot, Index] Then
+
+                Gauges[Slot, Index] = Gauges[Slot, Index] + FillAmount(StateHandle, ParticipantId, Speeds[Slot])
+
+                If Gauges[Slot, Index] >= BATTLE_TIME_GAUGE_MAXIMUM Then
+
+                    Gauges[Slot, Index] = BATTLE_TIME_GAUGE_MAXIMUM
+                    Ready[Slot, Index] = True
+                    ReadySerials[Slot, Index] = NextReadySerials[Slot]
+                    NextReadySerials[Slot] = NextReadySerials[Slot] + 1
+
+                End If
+
+            End If
+
+        End For
+    End For
+
+    Return True
+
+End Function
+
+Public Function Gauge(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = Gauges[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Sets a deterministic starting gauge for encounter pacing, tests, or saved battle modes.
+Public Function SetGauge(StateHandle As Number, ParticipantId As Number, Value As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Value < 0 Or
+        Value > BATTLE_TIME_GAUGE_MAXIMUM Or
+        PendingActions[Slot, Index]) Then
+        Return False
+    End If
+
+    Gauges[Slot, Index] = Value
+    Ready[Slot, Index] = Value = BATTLE_TIME_GAUGE_MAXIMUM
+
+    If Ready[Slot, Index] Then
+        ReadySerials[Slot, Index] = NextReadySerials[Slot]
+        NextReadySerials[Slot] = NextReadySerials[Slot] + 1
+    Else
+        ReadySerials[Slot, Index] = 0
+    End If
+
+    Return True
+
+End Function
+
+Public Function IsReady(StateHandle As Number, ParticipantId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return False
+    End If
+
+    ReturnValue = Ready[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Private Function NextReadyOnSide(StateHandle As Number, Side As Number) As Number
+
+    Dim Slot As Number
+    Dim ParticipantId As Number
+    Dim Index As Number
+    Dim BestParticipantId As Number
+    Dim BestSerial As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not IsSessionValid(StateHandle, Slot) Then
+        Return 0
+    End If
+
+    For ParticipantId = 1 To ParticipantCounts[Slot]
+
+        Index = ParticipantId - 1
+
+        If (Ready[Slot, Index] And
+            (Side = 0 Or Battle.ParticipantSide(StateHandle, ParticipantId) = Side) And
+            (BestSerial = 0 Or ReadySerials[Slot, Index] < BestSerial)) Then
+            BestParticipantId = ParticipantId
+            BestSerial = ReadySerials[Slot, Index]
+        End If
+
+    End For
+
+    Return BestParticipantId
+
+End Function
+
+Public Function NextReadyParticipant(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = NextReadyOnSide(StateHandle, 0)
+
+    Return ReturnValue
+
+End Function
+
+Public Function NextReadyPlayer(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = NextReadyOnSide(StateHandle, Battle.BATTLE_SIDE_PARTY)
+
+    Return ReturnValue
+
+End Function
+
+Public Function NextReadyEnemy(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = NextReadyOnSide(StateHandle, Battle.BATTLE_SIDE_ENEMY)
+
+    Return ReturnValue
+
+End Function
+
+Public Function ActionPending(StateHandle As Number, ParticipantId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return False
+    End If
+
+    ReturnValue = PendingActions[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Submits one ready actor through the unchanged BattleCore action API.
+Public Function SubmitAction(StateHandle As Number, ParticipantId As Number, ActionKind As Number, SourceId As Number, TargetParticipantId As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Not Ready[Slot, Index] Or
+        PendingActions[Slot, Index] Or
+        Battle.Phase(StateHandle) <> Battle.BATTLE_PHASE_COMMAND) Then
+        Return False
+    End If
+
+    If Not Battle.QueueAction(StateHandle, ParticipantId, ActionKind, SourceId, TargetParticipantId) Then
+        Return False
+    End If
+
+    Gauges[Slot, Index] = 0
+    Ready[Slot, Index] = False
+    ReadySerials[Slot, Index] = 0
+    PendingActions[Slot, Index] = True
+    Return True
+
+End Function
+
+''' Minimal reusable enemy policy: submit a basic attack when the requested enemy is ready.
+Public Function SubmitReadyEnemyAttack(StateHandle As Number, EnemyParticipantId As Number, TargetParticipantId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    If Battle.ParticipantSide(StateHandle, EnemyParticipantId) <> Battle.BATTLE_SIDE_ENEMY Then
+        Return False
+    End If
+
+    ReturnValue = SubmitAction(StateHandle, EnemyParticipantId, Battle.BATTLE_ACTION_ATTACK, 0, TargetParticipantId)
+
+    Return ReturnValue
+
+End Function
+
+Public Function CanStartRound(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim ParticipantId As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not IsSessionValid(StateHandle, Slot) Or Battle.Phase(StateHandle) <> Battle.BATTLE_PHASE_COMMAND Then
+        Return False
+    End If
+
+    For ParticipantId = 1 To ParticipantCounts[Slot]
+
+        If Battle.IsAlive(StateHandle, ParticipantId) And Not PendingActions[Slot, ParticipantId - 1] Then
+            Return False
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+''' Starts BattleCore resolution once every living participant has an ATB-submitted action.
+Public Function TryStartRound(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not CanStartRound(StateHandle) Or Not Battle.StartRound(StateHandle) Then
+        Return False
+    End If
+
+    For Index = 0 To ParticipantCounts[Slot] - 1
+        PendingActions[Slot, Index] = False
+    End For
+
+    Return True
+
+End Function
+
+Public Function Finish(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Not Running[Slot] Then
+        Return False
+    End If
+
+    Call ResetSlot(Slot)
+
+    Return True
+
+End Function
+
+End Module
