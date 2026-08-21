@@ -38,6 +38,8 @@ Cube, plane, pyramid, sphere, cylinder, and torus geometry is generated inside e
 
 Geometry should be created outside the frame loop. An owning `Object3D` destroys both its object and mesh; shared-mesh instances destroy only the object slot. Neon Cycles preallocates bounded trail objects once, updates their transforms/visibility, and performs no resource allocation per simulation step or round.
 
+The public diagnostics expose live mesh/object counts, fixed capacities, handle validity, and mesh reference counts. Mesh deletion fails while any live object references it. An owning object must therefore outlive its shared instances. `ResetRenderer3D` ends any active 3D pass, invalidates every mesh/object handle, releases backend resources, and leaves the normal Renderer2D frame path available. Native handles use typed generation counters; Web handles are never reused and deleted handles remain invalid.
+
 ## Deliberate limits
 
 This milestone does not add textures, model loading, a scene graph, skeletal animation, rigid-body physics, shadows, particles, student shaders, networking, or a GDI 3D rasterizer. Renderer3D colors are simple lit RGBA tints. Logical gameplay/collision geometry remains application-owned and independent from render objects.

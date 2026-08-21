@@ -1,0 +1,181 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Const EXPECTED_MAX_MESHES = 128
+Const EXPECTED_MAX_OBJECTS = 256
+Const FRAME_CYCLES = 2000
+Const RESTART_CYCLES = 100
+
+Dim Camera As Core.Camera3D
+Dim FrameReady As Boolean
+Dim MeshHandles[EXPECTED_MAX_MESHES] As Number
+Dim Objects[EXPECTED_MAX_OBJECTS] As Core.Object3D
+Dim PrimaryObject As Core.Object3D
+Dim SharedObject As Core.Object3D
+Dim OverflowObject As Core.Object3D
+Dim RestartObject As Core.Object3D
+Dim Failures As Number
+Dim FrameIndex As Number
+Dim Index As Number
+Dim MeshHandle As Number
+Dim NewMeshHandle As Number
+Dim StaleMeshHandle As Number
+Dim StaleObjectHandle As Number
+
+Game Window "Renderer3D Lifecycle Tests" Size 320 By 180
+
+Call Graphics3D.ResetRenderer3D()
+
+If (Graphics3D.LiveMeshCount3D() <> 0 Or
+    Graphics3D.LiveObjectCount3D() <> 0 Or
+    Graphics3D.MaximumMeshCount3D() <> EXPECTED_MAX_MESHES Or
+    Graphics3D.MaximumObjectCount3D() <> EXPECTED_MAX_OBJECTS) Then
+    Failures = Failures + 1
+End If
+
+MeshHandle = Graphics3D.CreateMesh3D(3, 3)
+
+If (MeshHandle = 0 Or
+    Not Graphics3D.SetMeshVertex3D(MeshHandle, 0, -10, 0, 0) Or
+    Not Graphics3D.SetMeshVertex3D(MeshHandle, 1, 10, 0, 0) Or
+    Not Graphics3D.SetMeshVertex3D(MeshHandle, 2, 0, 10, 0) Or
+    Not Graphics3D.SetMeshTriangle3D(MeshHandle, 0, 0, 1, 2) Or
+    Not Graphics3D.CommitMesh3D(MeshHandle)) Then
+    Failures = Failures + 1
+End If
+
+PrimaryObject = Graphics3D.CreateObjectFromMesh3D(MeshHandle)
+SharedObject = Graphics3D.CreateObjectFromMesh3D(MeshHandle)
+StaleMeshHandle = MeshHandle
+StaleObjectHandle = SharedObject.Handle
+
+If (Graphics3D.LiveMeshCount3D() <> 1 Or
+    Graphics3D.LiveObjectCount3D() <> 2 Or
+    Graphics3D.MeshReferenceCount3D(MeshHandle) <> 2 Or
+    Not Graphics3D.MeshHandleValid3D(MeshHandle) Or
+    Not Graphics3D.ObjectHandleValid3D(StaleObjectHandle)) Then
+    Failures = Failures + 1
+End If
+
+Call Graphics3D.DestroyObjectInstance3D(SharedObject)
+
+If (Graphics3D.LiveObjectCount3D() <> 1 Or
+    Graphics3D.MeshReferenceCount3D(MeshHandle) <> 1 Or
+    Graphics3D.ObjectHandleValid3D(StaleObjectHandle)) Then
+    Failures = Failures + 1
+End If
+
+Call Graphics3D.DestroyObject3D(PrimaryObject)
+
+If (Graphics3D.LiveMeshCount3D() <> 0 Or
+    Graphics3D.LiveObjectCount3D() <> 0 Or
+    Graphics3D.MeshHandleValid3D(StaleMeshHandle)) Then
+    Failures = Failures + 1
+End If
+
+For Index = 0 To EXPECTED_MAX_MESHES - 1
+
+    MeshHandles[Index] = Graphics3D.CreateMesh3D(3, 3)
+
+    If MeshHandles[Index] = 0 Then
+        Failures = Failures + 1
+    End If
+
+End For
+
+If (Graphics3D.CreateMesh3D(3, 3) <> 0 Or
+    Graphics3D.LiveMeshCount3D() <> EXPECTED_MAX_MESHES) Then
+    Failures = Failures + 1
+End If
+
+StaleMeshHandle = MeshHandles[0]
+
+Call Graphics3D.ResetRenderer3D()
+
+If (Graphics3D.LiveMeshCount3D() <> 0 Or
+    Graphics3D.LiveObjectCount3D() <> 0 Or
+    Graphics3D.MeshHandleValid3D(StaleMeshHandle)) Then
+    Failures = Failures + 1
+End If
+
+NewMeshHandle = Graphics3D.CreateMesh3D(3, 3)
+
+If NewMeshHandle = 0 Or NewMeshHandle = StaleMeshHandle Then
+    Failures = Failures + 1
+End If
+
+For Index = 0 To EXPECTED_MAX_OBJECTS - 1
+
+    Objects[Index] = Graphics3D.CreateObjectFromMesh3D(NewMeshHandle)
+
+    If Objects[Index].Handle = 0 Then
+        Failures = Failures + 1
+    End If
+
+End For
+
+OverflowObject = Graphics3D.CreateObjectFromMesh3D(NewMeshHandle)
+
+If (OverflowObject.Handle <> 0 Or
+    Graphics3D.LiveObjectCount3D() <> EXPECTED_MAX_OBJECTS Or
+    Graphics3D.MeshReferenceCount3D(NewMeshHandle) <> EXPECTED_MAX_OBJECTS) Then
+    Failures = Failures + 1
+End If
+
+Call Graphics3D.ResetRenderer3D()
+
+For Index = 0 To RESTART_CYCLES - 1
+
+    RestartObject = Graphics3D.CreateCube3D(20)
+
+    If (RestartObject.Handle = 0 Or
+        Graphics3D.LiveMeshCount3D() <> 1 Or
+        Graphics3D.LiveObjectCount3D() <> 1) Then
+        Failures = Failures + 1
+    End If
+
+    Call Graphics3D.DestroyObject3D(RestartObject)
+
+    If Graphics3D.LiveMeshCount3D() <> 0 Or Graphics3D.LiveObjectCount3D() <> 0 Then
+        Failures = Failures + 1
+    End If
+
+End For
+
+If Graphics3D.RendererAvailable() Then
+
+    Camera = Graphics3D.DefaultCamera()
+    RestartObject = Graphics3D.CreateCube3D(20)
+
+    For FrameIndex = 0 To FRAME_CYCLES - 1
+
+        FrameReady = Graphics3D.Begin3D(Camera, 1, 2, 4)
+
+        If FrameReady Then
+            FrameReady = Graphics3D.DrawObject3D(RestartObject)
+        End If
+
+        If Not FrameReady Then
+            Failures = Failures + 1
+        End If
+
+        Call Graphics3D.End3D()
+    End For
+
+    Call Graphics3D.DestroyObject3D(RestartObject)
+
+End If
+
+Fill Rectangle 0, 0, 320, 180, Rgb(4, 8, 16)
+Draw Text "2D AFTER 3D" At 90, 76 Size 18 Color WHITE
+Show Screen
+
+Call Graphics3D.ResetRenderer3D()
+
+If Failures = 0 Then
+    Print "Renderer3D lifecycle tests passed"
+Else
+    Print "Renderer3D lifecycle tests failed: "; Failures
+End If

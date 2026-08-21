@@ -26,6 +26,13 @@ Private Const COMMAND_END = 18
 Private Const COMMAND_VERTEX_COUNT = 19
 Private Const COMMAND_INDEX_COUNT = 20
 Private Const COMMAND_LAST_ERROR = 21
+Private Const COMMAND_LIVE_MESH_COUNT = 22
+Private Const COMMAND_LIVE_OBJECT_COUNT = 23
+Private Const COMMAND_MAX_MESH_COUNT = 24
+Private Const COMMAND_MAX_OBJECT_COUNT = 25
+Private Const COMMAND_MESH_VALID = 26
+Private Const COMMAND_OBJECT_VALID = 27
+Private Const COMMAND_MESH_REFERENCE_COUNT = 28
 
 Public Const PRIMITIVE_CUBE = 1
 Public Const PRIMITIVE_PLANE = 2
@@ -113,6 +120,69 @@ Public Function LastError() As Number
     Dim Result As Number
 
     Result = Dispatch(COMMAND_LAST_ERROR, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function LiveMeshCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_LIVE_MESH_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function LiveObjectCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_LIVE_OBJECT_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function MaximumMeshCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MAX_MESH_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function MaximumObjectCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MAX_OBJECT_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function MeshHandleValid3D(MeshHandle As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_MESH_VALID, MeshHandle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Function ObjectHandleValid3D(ObjectHandle As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_OBJECT_VALID, ObjectHandle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Function MeshReferenceCount3D(MeshHandle As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MESH_REFERENCE_COUNT, MeshHandle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
     Return Result
 
 End Function

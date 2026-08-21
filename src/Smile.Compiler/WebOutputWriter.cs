@@ -797,6 +797,14 @@ internal static class WebOutputWriter
                 return object || null;
             }
 
+            function renderer3DMeshReferenceCount(handle) {
+                handle = safe(handle);
+                if (!renderer3DMeshes.has(handle)) return 0;
+                let count = 0;
+                for (const object of renderer3DObjects.values()) if (object.mesh === handle) count += 1;
+                return count;
+            }
+
             function renderer3DSetVertex(mesh, index, x, y, z) {
                 index = safe(index);
                 if (index < 0 || index >= mesh.vertexCount) { renderer3DLastError = 5; return false; }
@@ -901,7 +909,7 @@ internal static class WebOutputWriter
                 mesh.indexBuffer=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,mesh.indexBuffer);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,mesh.indices,gl.STATIC_DRAW);return true;
             }
 
-            function renderer3DBegin(red,green,blue){if(!renderer3DInitialize())return 0;const gl=renderer3DGl;if(renderer3DCanvas.width!==backingWidth||renderer3DCanvas.height!==backingHeight){renderer3DCanvas.width=backingWidth;renderer3DCanvas.height=backingHeight;}gl.viewport(0,0,backingWidth,backingHeight);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.disable(gl.CULL_FACE);gl.clearColor((safe(red)&255)/255,(safe(green)&255)/255,(safe(blue)&255)/255,1);gl.clearDepth(1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(renderer3DProgram.handle);renderer3DFrameActive=true;return 1;}
+            function renderer3DBegin(red,green,blue){if(renderer3DFrameActive)return 1;if(!renderer3DInitialize())return 0;const gl=renderer3DGl;if(renderer3DCanvas.width!==backingWidth||renderer3DCanvas.height!==backingHeight){renderer3DCanvas.width=backingWidth;renderer3DCanvas.height=backingHeight;}gl.viewport(0,0,backingWidth,backingHeight);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.disable(gl.CULL_FACE);gl.clearColor((safe(red)&255)/255,(safe(green)&255)/255,(safe(blue)&255)/255,1);gl.clearDepth(1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(renderer3DProgram.handle);renderer3DFrameActive=true;return 1;}
             function renderer3DDraw(handle){const object=renderer3DRequireObject(handle);if(!renderer3DFrameActive||!object){renderer3DLastError=14;return 0;}if(!object.visible)return 1;const mesh=renderer3DRequireMesh(object.mesh);if(!mesh||!renderer3DUpload(mesh))return 0;const gl=renderer3DGl,model=renderer3DModel(object),mvp=renderer3DMultiply(renderer3DProjection(backingWidth/backingHeight),renderer3DMultiply(renderer3DView(),model));gl.bindBuffer(gl.ARRAY_BUFFER,mesh.vertexBuffer);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,24,0);gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,3,gl.FLOAT,false,24,12);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,mesh.indexBuffer);gl.uniformMatrix4fv(renderer3DProgram.model,false,new Float32Array(model));gl.uniformMatrix4fv(renderer3DProgram.mvp,false,new Float32Array(mvp));gl.uniform4fv(renderer3DProgram.tint,new Float32Array(object.color));gl.drawElements(gl.TRIANGLES,mesh.indexCount,gl.UNSIGNED_INT,0);return 1;}
             function renderer3DEnd(){if(!renderer3DFrameActive)return 1;renderer3DFrameActive=false;back.drawImage(renderer3DCanvas,0,0,logicalWidth,logicalHeight);return 1;}
             function renderer3DReset(){renderer3DFrameActive=false;for(const mesh of renderer3DMeshes.values())renderer3DDeleteGpu(mesh);renderer3DMeshes.clear();renderer3DObjects.clear();renderer3DLastError=0;return 1;}
@@ -918,7 +926,7 @@ internal static class WebOutputWriter
                     case 6:mesh=renderer3DRequireMesh(a);return mesh&&renderer3DCommit(mesh)?1:0;
                     case 7:return renderer3DPrimitive(a,b,c,d,e);
                     case 8:if(!renderer3DRequireMesh(a)||renderer3DObjects.size>=256){renderer3DLastError=9;return 0;}const handle=renderer3DHandle();renderer3DObjects.set(handle,{mesh:a,position:[0,0,0],rotation:[0,0,0],scale:[1,1,1],color:[1,1,1,1],visible:true});return handle;
-                    case 9:if(renderer3DObjects.delete(a))return 1;mesh=renderer3DMeshes.get(a);if(mesh){renderer3DDeleteGpu(mesh);renderer3DMeshes.delete(a);return 1;}renderer3DLastError=5;return 0;
+                    case 9:if(renderer3DObjects.delete(a))return 1;mesh=renderer3DMeshes.get(a);if(mesh){if(renderer3DMeshReferenceCount(a)!==0){renderer3DLastError=16;return 0;}renderer3DDeleteGpu(mesh);renderer3DMeshes.delete(a);return 1;}renderer3DLastError=5;return 0;
                     case 10:renderer3DCamera.position=[a,b,c];renderer3DCamera.target=[d,e,f];renderer3DCamera.fov=g;renderer3DCamera.near=h;renderer3DCamera.far=i;if(g<10||g>160||h<=0||i<=h){renderer3DLastError=15;return 0;}return 1;
                     case 11:case 12:case 13:object=renderer3DRequireObject(a);if(!object)return 0;if(command===11)object.position=[b,c,d];else if(command===12)object.rotation=[b,c,d];else object.scale=[b/100,c/100,d/100];return 1;
                     case 14:object=renderer3DRequireObject(a);if(!object)return 0;object.color=[(b&255)/255,(c&255)/255,(d&255)/255,Math.max(0,Math.min(100,e))/100];return 1;
@@ -929,6 +937,13 @@ internal static class WebOutputWriter
                     case 19:mesh=renderer3DRequireMesh(a);return mesh?mesh.vertexCount:0;
                     case 20:mesh=renderer3DRequireMesh(a);return mesh?mesh.indexCount:0;
                     case 21:return renderer3DLastError;
+                    case 22:return renderer3DMeshes.size;
+                    case 23:return renderer3DObjects.size;
+                    case 24:return 128;
+                    case 25:return 256;
+                    case 26:return renderer3DMeshes.has(a)?1:0;
+                    case 27:return renderer3DObjects.has(a)?1:0;
+                    case 28:return renderer3DMeshReferenceCount(a);
                     default:renderer3DLastError=1;return 0;
                 }
             }

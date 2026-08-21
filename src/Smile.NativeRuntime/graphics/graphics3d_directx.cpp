@@ -127,6 +127,34 @@ static SmileObject3D* smile_3d_object(long long handle)
     return &smile_objects3d[slot];
 }
 
+static int smile_3d_live_mesh_count(void)
+{
+    int count = 0;
+    int index;
+    for (index = 0; index < SMILE_3D_MAX_MESHES; ++index)
+        if (smile_meshes3d[index].active) count++;
+    return count;
+}
+
+static int smile_3d_live_object_count(void)
+{
+    int count = 0;
+    int index;
+    for (index = 0; index < SMILE_3D_MAX_OBJECTS; ++index)
+        if (smile_objects3d[index].active) count++;
+    return count;
+}
+
+static int smile_3d_mesh_reference_count(long long mesh_handle)
+{
+    int count = 0;
+    int index;
+    if (smile_3d_mesh(mesh_handle) == 0) return 0;
+    for (index = 0; index < SMILE_3D_MAX_OBJECTS; ++index)
+        if (smile_objects3d[index].active && smile_objects3d[index].mesh_handle == mesh_handle) count++;
+    return count;
+}
+
 static void smile_3d_delete_mesh(SmileMesh3D* mesh)
 {
     void* vertices = mesh->vertices;
@@ -711,7 +739,12 @@ extern "C" long long smile_renderer3d_command(long long command,
         case SMILE_3D_CREATE_PRIMITIVE: return smile_3d_create_primitive((int)a, (float)b, (float)c, (int)d, (int)e);
         case SMILE_3D_CREATE_OBJECT: return smile_3d_create_object(a);
         case SMILE_3D_DESTROY:
-            mesh = smile_3d_mesh(a); if (mesh != 0) { smile_3d_delete_mesh(mesh); return 1; }
+            mesh = smile_3d_mesh(a);
+            if (mesh != 0)
+            {
+                if (smile_3d_mesh_reference_count(a) != 0) { smile_last_error3d = 16; return 0; }
+                smile_3d_delete_mesh(mesh); return 1;
+            }
             object = smile_3d_object(a); if (object != 0) { object->active = 0; object->generation++; if (object->generation == 0) object->generation = 1; return 1; }
             smile_last_error3d = 5; return 0;
         case SMILE_3D_SET_CAMERA:
@@ -740,6 +773,13 @@ extern "C" long long smile_renderer3d_command(long long command,
         case SMILE_3D_MESH_VERTEX_COUNT: mesh = smile_3d_mesh(a); return mesh == 0 ? 0 : mesh->vertex_count;
         case SMILE_3D_MESH_INDEX_COUNT: mesh = smile_3d_mesh(a); return mesh == 0 ? 0 : mesh->index_count;
         case SMILE_3D_LAST_ERROR: return smile_last_error3d;
+        case SMILE_3D_LIVE_MESH_COUNT: return smile_3d_live_mesh_count();
+        case SMILE_3D_LIVE_OBJECT_COUNT: return smile_3d_live_object_count();
+        case SMILE_3D_MAX_MESH_COUNT: return SMILE_3D_MAX_MESHES;
+        case SMILE_3D_MAX_OBJECT_COUNT: return SMILE_3D_MAX_OBJECTS;
+        case SMILE_3D_MESH_VALID: return smile_3d_mesh(a) != 0 ? 1 : 0;
+        case SMILE_3D_OBJECT_VALID: return smile_3d_object(a) != 0 ? 1 : 0;
+        case SMILE_3D_MESH_REFERENCE_COUNT: return smile_3d_mesh_reference_count(a);
         default: smile_last_error3d = 1; return 0;
     }
 }
