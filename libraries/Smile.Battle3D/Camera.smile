@@ -1,0 +1,533 @@
+''' Data-driven deterministic camera shots and shake timelines.
+Module Smile.Battle3D.Camera
+
+Option Explicit
+
+Import Smile.RPG.Core As RPG
+
+Public Const BATTLE3D_MAX_CAMERA_SHOTS = 32
+Public Const BATTLE3D_MAX_CAMERA_STEPS = 10000
+
+Public Type ShotDefinition
+    Id As Number
+    Name As Text
+    PositionX As Number
+    PositionY As Number
+    PositionZ As Number
+    TargetX As Number
+    TargetY As Number
+    TargetZ As Number
+    FovDegrees As Number
+    Duration As Number
+End Type
+
+Private Dim StateGeneration[4] As Number
+Private Dim ShotCounts[4] As Number
+Private Dim ShotIds[4, 32] As Number
+Private Dim ShotNames[4, 32] As Text
+Private Dim ShotPositionX[4, 32] As Number
+Private Dim ShotPositionY[4, 32] As Number
+Private Dim ShotPositionZ[4, 32] As Number
+Private Dim ShotTargetX[4, 32] As Number
+Private Dim ShotTargetY[4, 32] As Number
+Private Dim ShotTargetZ[4, 32] As Number
+Private Dim ShotFov[4, 32] As Number
+Private Dim ShotDurations[4, 32] As Number
+Private Dim CurrentShotIds[4] As Number
+Private Dim StartPositionX[4] As Number
+Private Dim StartPositionY[4] As Number
+Private Dim StartPositionZ[4] As Number
+Private Dim StartTargetX[4] As Number
+Private Dim StartTargetY[4] As Number
+Private Dim StartTargetZ[4] As Number
+Private Dim StartFov[4] As Number
+Private Dim CurrentPositionX[4] As Number
+Private Dim CurrentPositionY[4] As Number
+Private Dim CurrentPositionZ[4] As Number
+Private Dim CurrentTargetX[4] As Number
+Private Dim CurrentTargetY[4] As Number
+Private Dim CurrentTargetZ[4] As Number
+Private Dim CurrentFov[4] As Number
+Private Dim TargetPositionX[4] As Number
+Private Dim TargetPositionY[4] As Number
+Private Dim TargetPositionZ[4] As Number
+Private Dim TargetTargetX[4] As Number
+Private Dim TargetTargetY[4] As Number
+Private Dim TargetTargetZ[4] As Number
+Private Dim TargetFov[4] As Number
+Private Dim TimelineSteps[4] As Number
+Private Dim TimelineDurations[4] As Number
+Private Dim ShakeAmplitudes[4] As Number
+Private Dim ShakeSteps[4] As Number
+Private Dim ShakeDurations[4] As Number
+Private Dim ShakeSeeds[4] As Number
+Private Dim ShakeOffsetX[4] As Number
+Private Dim ShakeOffsetY[4] As Number
+Private Dim ShakeOffsetZ[4] As Number
+
+Private Sub ResetSlot(Slot As Number)
+
+    Dim Index As Number
+
+    For Index = 0 To BATTLE3D_MAX_CAMERA_SHOTS - 1
+        ShotIds[Slot, Index] = 0
+        ShotNames[Slot, Index] = ""
+    End For
+
+    ShotCounts[Slot] = 0
+    CurrentShotIds[Slot] = 0
+    TimelineSteps[Slot] = 0
+    TimelineDurations[Slot] = 0
+    ShakeAmplitudes[Slot] = 0
+    ShakeSteps[Slot] = 0
+    ShakeDurations[Slot] = 0
+    ShakeOffsetX[Slot] = 0
+    ShakeOffsetY[Slot] = 0
+    ShakeOffsetZ[Slot] = 0
+
+End Sub
+
+Private Function StateSlot(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Generation As Number
+
+    Slot = RPG.StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Generation = RPG.StateGeneration(StateHandle)
+
+    If StateGeneration[Slot] <> Generation Then
+        Call ResetSlot(Slot)
+
+        StateGeneration[Slot] = Generation
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function ShotIndex(StateHandle As Number, ShotId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To ShotCounts[Slot] - 1
+
+        If ShotIds[Slot, Index] = ShotId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Public Function DefineShot(StateHandle As Number, ByRef Definition As ShotDefinition) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ShotIndex(StateHandle, Definition.Id)
+
+    If (Slot < 0 Or
+        Definition.Id <= 0 Or
+        Definition.Name = "" Or
+        Definition.FovDegrees < 10 Or
+        Definition.FovDegrees > 150 Or
+        Definition.Duration < 0 Or
+        Definition.Duration > BATTLE3D_MAX_CAMERA_STEPS) Then
+        Return False
+    End If
+
+    If Index < 0 Then
+
+        If ShotCounts[Slot] >= BATTLE3D_MAX_CAMERA_SHOTS Then
+            Return False
+        End If
+
+        Index = ShotCounts[Slot]
+        ShotCounts[Slot] = Index + 1
+
+    End If
+
+    ShotIds[Slot, Index] = Definition.Id
+    ShotNames[Slot, Index] = Definition.Name
+    ShotPositionX[Slot, Index] = Definition.PositionX
+    ShotPositionY[Slot, Index] = Definition.PositionY
+    ShotPositionZ[Slot, Index] = Definition.PositionZ
+    ShotTargetX[Slot, Index] = Definition.TargetX
+    ShotTargetY[Slot, Index] = Definition.TargetY
+    ShotTargetZ[Slot, Index] = Definition.TargetZ
+    ShotFov[Slot, Index] = Definition.FovDegrees
+    ShotDurations[Slot, Index] = Definition.Duration
+    Return True
+
+End Function
+
+Private Sub CaptureStart(Slot As Number)
+
+    StartPositionX[Slot] = CurrentPositionX[Slot]
+    StartPositionY[Slot] = CurrentPositionY[Slot]
+    StartPositionZ[Slot] = CurrentPositionZ[Slot]
+    StartTargetX[Slot] = CurrentTargetX[Slot]
+    StartTargetY[Slot] = CurrentTargetY[Slot]
+    StartTargetZ[Slot] = CurrentTargetZ[Slot]
+    StartFov[Slot] = CurrentFov[Slot]
+
+End Sub
+
+Private Sub ApplyTarget(Slot As Number)
+
+    CurrentPositionX[Slot] = TargetPositionX[Slot]
+    CurrentPositionY[Slot] = TargetPositionY[Slot]
+    CurrentPositionZ[Slot] = TargetPositionZ[Slot]
+    CurrentTargetX[Slot] = TargetTargetX[Slot]
+    CurrentTargetY[Slot] = TargetTargetY[Slot]
+    CurrentTargetZ[Slot] = TargetTargetZ[Slot]
+    CurrentFov[Slot] = TargetFov[Slot]
+
+End Sub
+
+''' Starts a shot, using its data duration when DurationOverride is zero.
+Public Function PlayShot(StateHandle As Number, ShotId As Number, DurationOverride As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ShotIndex(StateHandle, ShotId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        DurationOverride < 0 Or
+        DurationOverride > BATTLE3D_MAX_CAMERA_STEPS) Then
+        Return False
+    End If
+
+    Call CaptureStart(Slot)
+
+    TargetPositionX[Slot] = ShotPositionX[Slot, Index]
+    TargetPositionY[Slot] = ShotPositionY[Slot, Index]
+    TargetPositionZ[Slot] = ShotPositionZ[Slot, Index]
+    TargetTargetX[Slot] = ShotTargetX[Slot, Index]
+    TargetTargetY[Slot] = ShotTargetY[Slot, Index]
+    TargetTargetZ[Slot] = ShotTargetZ[Slot, Index]
+    TargetFov[Slot] = ShotFov[Slot, Index]
+    TimelineSteps[Slot] = 0
+    TimelineDurations[Slot] = DurationOverride
+
+    If DurationOverride = 0 Then
+        TimelineDurations[Slot] = ShotDurations[Slot, Index]
+    End If
+
+    CurrentShotIds[Slot] = ShotId
+
+    If TimelineDurations[Slot] = 0 Then
+        Call ApplyTarget(Slot)
+    End If
+
+    Return True
+
+End Function
+
+Public Function StartShake(StateHandle As Number, Amplitude As Number, Duration As Number, Seed As Number) As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Amplitude < 0 Or
+        Duration < 0 Or
+        Duration > BATTLE3D_MAX_CAMERA_STEPS) Then
+        Return False
+    End If
+
+    ShakeAmplitudes[Slot] = Amplitude
+    ShakeSteps[Slot] = 0
+    ShakeDurations[Slot] = Duration
+    ShakeSeeds[Slot] = Seed Mod 65536
+    ShakeOffsetX[Slot] = 0
+    ShakeOffsetY[Slot] = 0
+    ShakeOffsetZ[Slot] = 0
+    Return True
+
+End Function
+
+Private Function Interpolate(StartValue As Number, EndValue As Number, Elapsed As Number, Duration As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Duration <= 0 Or Elapsed >= Duration Then
+        Return EndValue
+    End If
+
+    ReturnValue = StartValue + (EndValue - StartValue) * Elapsed / Duration
+
+    Return ReturnValue
+
+End Function
+
+Private Function NextShakeValue(Slot As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ShakeSeeds[Slot] = (ShakeSeeds[Slot] * 25173 + 13849) Mod 65536
+
+    ReturnValue = ShakeSeeds[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Update(StateHandle As Number, Steps As Number) As Boolean
+
+    Dim Slot As Number
+    Dim StepIndex As Number
+    Dim CurrentAmplitude As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Steps < 0 Or Steps > BATTLE3D_MAX_CAMERA_STEPS Then
+        Return False
+    End If
+
+    For StepIndex = 1 To Steps
+
+        If TimelineSteps[Slot] < TimelineDurations[Slot] Then
+
+            TimelineSteps[Slot] = TimelineSteps[Slot] + 1
+            CurrentPositionX[Slot] = Interpolate(StartPositionX[Slot], TargetPositionX[Slot], TimelineSteps[Slot], TimelineDurations[Slot])
+            CurrentPositionY[Slot] = Interpolate(StartPositionY[Slot], TargetPositionY[Slot], TimelineSteps[Slot], TimelineDurations[Slot])
+            CurrentPositionZ[Slot] = Interpolate(StartPositionZ[Slot], TargetPositionZ[Slot], TimelineSteps[Slot], TimelineDurations[Slot])
+            CurrentTargetX[Slot] = Interpolate(StartTargetX[Slot], TargetTargetX[Slot], TimelineSteps[Slot], TimelineDurations[Slot])
+            CurrentTargetY[Slot] = Interpolate(StartTargetY[Slot], TargetTargetY[Slot], TimelineSteps[Slot], TimelineDurations[Slot])
+            CurrentTargetZ[Slot] = Interpolate(StartTargetZ[Slot], TargetTargetZ[Slot], TimelineSteps[Slot], TimelineDurations[Slot])
+            CurrentFov[Slot] = Interpolate(StartFov[Slot], TargetFov[Slot], TimelineSteps[Slot], TimelineDurations[Slot])
+
+        End If
+
+        If ShakeSteps[Slot] < ShakeDurations[Slot] Then
+
+            ShakeSteps[Slot] = ShakeSteps[Slot] + 1
+            CurrentAmplitude = ShakeAmplitudes[Slot] * (ShakeDurations[Slot] - ShakeSteps[Slot]) / ShakeDurations[Slot]
+            ShakeOffsetX[Slot] = (NextShakeValue(Slot) Mod (CurrentAmplitude * 2 + 1)) - CurrentAmplitude
+            ShakeOffsetY[Slot] = (NextShakeValue(Slot) Mod (CurrentAmplitude * 2 + 1)) - CurrentAmplitude
+            ShakeOffsetZ[Slot] = (NextShakeValue(Slot) Mod (CurrentAmplitude * 2 + 1)) - CurrentAmplitude
+
+        Else
+            ShakeOffsetX[Slot] = 0
+            ShakeOffsetY[Slot] = 0
+            ShakeOffsetZ[Slot] = 0
+
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Public Function PositionX(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CurrentPositionX[Slot] + ShakeOffsetX[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function PositionY(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CurrentPositionY[Slot] + ShakeOffsetY[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function PositionZ(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CurrentPositionZ[Slot] + ShakeOffsetZ[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function TargetX(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CurrentTargetX[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function TargetY(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CurrentTargetY[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function TargetZ(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CurrentTargetZ[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function FovDegrees(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CurrentFov[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function CurrentShotId(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CurrentShotIds[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function CurrentShotName(StateHandle As Number) As Text
+
+    Dim ReturnValue As Text
+
+    Dim Index As Number
+
+    Index = ShotIndex(StateHandle, CurrentShotId(StateHandle))
+
+    If Index < 0 Then
+        Return ""
+    End If
+
+    ReturnValue = ShotNames[StateSlot(StateHandle), Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function IsComplete(StateHandle As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    ReturnValue = TimelineSteps[Slot] >= TimelineDurations[Slot] And ShakeSteps[Slot] >= ShakeDurations[Slot]
+
+    Return ReturnValue
+
+End Function
+
+End Module

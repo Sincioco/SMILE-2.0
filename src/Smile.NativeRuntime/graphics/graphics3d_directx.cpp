@@ -175,6 +175,7 @@ static ID3D11DepthStencilState* smile_depth_state3d;
 static ID3D11DepthStencilState* smile_depth_read_state3d;
 static ID3D11RasterizerState* smile_raster_state3d;
 static ID3D11BlendState* smile_blend_state3d;
+static ID3D11BlendState* smile_additive_blend_state3d;
 static ID3D11Texture2D* smile_depth_texture3d;
 static ID3D11DepthStencilView* smile_depth_view3d;
 static int smile_depth_width3d;
@@ -647,7 +648,7 @@ static int smile_3d_set_material(SmileMaterial3D* material, int alpha_mode,
     long long red, long long green, long long blue, long long opacity,
     int unlit, long long emissive, long long cutoff)
 {
-    if (material == 0 || alpha_mode < 0 || alpha_mode > 2 || opacity < 0 || opacity > 100 ||
+    if (material == 0 || alpha_mode < 0 || alpha_mode > 3 || opacity < 0 || opacity > 100 ||
         emissive < 0 || emissive > 400 || cutoff < 0 || cutoff > 100)
     {
         smile_last_error3d = 19;
@@ -1479,6 +1480,9 @@ static int smile_3d_create_pipeline(void)
     blend.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
     blend.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
     if (SUCCEEDED(result)) result = device->CreateBlendState(&blend, &smile_blend_state3d);
+    blend.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;
+    blend.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
+    if (SUCCEEDED(result)) result = device->CreateBlendState(&blend, &smile_additive_blend_state3d);
     smile_3d_release(vs); smile_3d_release(ps);
     if (FAILED(result)) { smile_last_error3d = 10; smile_graphics3d_on_device_lost(); return 0; }
     return 1;
@@ -1650,8 +1654,15 @@ static int smile_3d_draw(long long handle)
         constants.bones[bone] = animator == 0 ? smile_3d_identity() : animator->bones[bone];
     alpha_mode = material == 0 ? (constants.color[3] < 0.999f ? 2 : 0) : material->alpha_mode;
     context->UpdateSubresource(smile_constant_buffer3d, 0, 0, &constants, 0, 0);
-    context->OMSetBlendState(alpha_mode == 2 ? smile_blend_state3d : 0, 0, 0xffffffff);
-    context->OMSetDepthStencilState(alpha_mode == 2 ? smile_depth_read_state3d : smile_depth_state3d, 0);
+    context->OMSetBlendState(
+        alpha_mode == 3 ? smile_additive_blend_state3d : (alpha_mode == 2 ? smile_blend_state3d : 0),
+        0,
+        0xffffffff
+    );
+    context->OMSetDepthStencilState(
+        alpha_mode == 2 || alpha_mode == 3 ? smile_depth_read_state3d : smile_depth_state3d,
+        0
+    );
     context->IASetVertexBuffers(0, 1, &mesh->vertex_buffer, &stride, &offset);
     context->IASetIndexBuffer(mesh->index_buffer, DXGI_FORMAT_R32_UINT, 0);
     context->PSSetShaderResources(0, 1, &texture_view);
@@ -1690,7 +1701,8 @@ extern "C" void smile_graphics3d_on_device_lost(void)
         smile_3d_release(smile_textures3d[index].sampler);
     }
     smile_3d_release(smile_depth_view3d); smile_3d_release(smile_depth_texture3d);
-    smile_3d_release(smile_blend_state3d); smile_3d_release(smile_raster_state3d);
+    smile_3d_release(smile_additive_blend_state3d); smile_3d_release(smile_blend_state3d);
+    smile_3d_release(smile_raster_state3d);
     smile_3d_release(smile_depth_read_state3d); smile_3d_release(smile_depth_state3d);
     smile_3d_release(smile_constant_buffer3d); smile_3d_release(smile_input_layout3d);
     smile_3d_release(smile_pixel_shader3d); smile_3d_release(smile_vertex_shader3d);

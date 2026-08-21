@@ -7,9 +7,9 @@ Dim Camera As Core.Camera3D
 Dim Texture As Core.Texture3D
 Dim BadTexture As Core.Texture3D
 Dim EmptyTexture As Core.Texture3D
-Dim Materials[4] As Core.Material3D
+Dim Materials[5] As Core.Material3D
 Dim BadMaterial As Core.Material3D
-Dim Objects[4] As Core.Object3D
+Dim Objects[5] As Core.Object3D
 Dim Failures As Number
 Dim FrameReady As Boolean
 Dim Index As Number
@@ -77,6 +77,17 @@ Materials[3] = Graphics3D.CreateMaterial3D(
     175,
     50
 )
+Materials[4] = Graphics3D.CreateMaterial3D(
+    Texture,
+    Graphics3D.MATERIAL_ALPHA_ADDITIVE,
+    80,
+    180,
+    255,
+    75,
+    True,
+    200,
+    50
+)
 BadMaterial = Graphics3D.CreateMaterial3D(
     EmptyTexture,
     99,
@@ -90,17 +101,17 @@ BadMaterial = Graphics3D.CreateMaterial3D(
 )
 
 If (Graphics3D.LiveTextureCount3D() <> 1 Or
-    Graphics3D.LiveMaterialCount3D() <> 4 Or
-    Graphics3D.TextureReferenceCount3D(Texture.Handle) <> 4 Or
+    Graphics3D.LiveMaterialCount3D() <> 5 Or
+    Graphics3D.TextureReferenceCount3D(Texture.Handle) <> 5 Or
     BadMaterial.Handle <> 0) Then
     Failures = Failures + 1
 End If
 
-For Index = 0 To 3
+For Index = 0 To 4
 
     Objects[Index] = Graphics3D.CreateCube3D(36)
 
-    Call Graphics3D.SetObjectPosition(Objects[Index], -72 + Index * 48, 0, 0)
+    Call Graphics3D.SetObjectPosition(Objects[Index], -96 + Index * 48, 0, 0)
 
     If (Objects[Index].Handle = 0 Or
         Not Graphics3D.SetObjectMaterial3D(Objects[Index], Materials[Index]) Or
@@ -116,7 +127,7 @@ Call Graphics3D.DestroyMaterial3D(Materials[0])
 If (Texture.Handle = 0 Or
     Materials[0].Handle = 0 Or
     Graphics3D.LiveTextureCount3D() <> 1 Or
-    Graphics3D.LiveMaterialCount3D() <> 4) Then
+    Graphics3D.LiveMaterialCount3D() <> 5) Then
     Failures = Failures + 1
 End If
 
@@ -141,7 +152,7 @@ If Graphics3D.RendererAvailable() Then
 
     If FrameReady Then
 
-        For Index = 0 To 3
+        For Index = 0 To 4
             FrameReady = FrameReady And Graphics3D.DrawObject3D(Objects[Index])
         End For
 
@@ -159,11 +170,11 @@ Fill Rectangle 0, 0, 480, 270, Rgb(2, 4, 12)
 Draw Text "MATERIAL PIPELINE" At 136, 118 Size 20 Color WHITE
 Show Screen
 
-For Index = 0 To 3
+For Index = 0 To 4
     Call Graphics3D.DestroyObject3D(Objects[Index])
 End For
 
-For Index = 0 To 3
+For Index = 0 To 4
     Call Graphics3D.DestroyMaterial3D(Materials[Index])
 End For
 

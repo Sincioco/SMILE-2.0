@@ -1,0 +1,1 @@
+Battle camera and VFX tests: PASS

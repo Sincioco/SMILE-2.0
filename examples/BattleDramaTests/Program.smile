@@ -1,0 +1,229 @@
+Option Explicit
+
+Import Smile.RPG.Core As RPG
+Import Smile.Battle3D.Camera As BattleCamera
+Import Smile.Battle3D.Effects As Effects
+
+Const SHOT_DEFAULT = 1
+Const SHOT_IMPACT = 2
+Const EFFECT_FIRE = 1
+Const EFFECT_MIST = 2
+Const EFFECT_STORM = 3
+
+Dim Checks As Number
+Dim Failures As Number
+Dim StateA As Number
+Dim StateB As Number
+Dim Index As Number
+Dim FirstParticle As Number
+Dim Shot As BattleCamera.ShotDefinition
+Dim Preset As Effects.EffectPreset
+
+StateA = RPG.Create()
+StateB = RPG.Create()
+
+Call Check(StateA > 0)
+Call Check(StateB > 0)
+Call DefineContent(StateA)
+Call DefineContent(StateB)
+
+' Camera interpolation and shake produce identical state for equivalent fixed-step chunks.
+
+Call Check(BattleCamera.PlayShot(StateA, SHOT_DEFAULT, 0))
+Call Check(BattleCamera.PlayShot(StateB, SHOT_DEFAULT, 0))
+Call Check(BattleCamera.PositionY(StateA) = 220)
+Call Check(BattleCamera.FovDegrees(StateA) = 55)
+Call Check(BattleCamera.PlayShot(StateA, SHOT_IMPACT, 10))
+Call Check(BattleCamera.PlayShot(StateB, SHOT_IMPACT, 10))
+Call Check(BattleCamera.Update(StateA, 10))
+
+For Index = 1 To 10
+    Call Check(BattleCamera.Update(StateB, 1))
+End For
+
+Call Check(BattleCamera.PositionX(StateA) = BattleCamera.PositionX(StateB))
+Call Check(BattleCamera.PositionY(StateA) = BattleCamera.PositionY(StateB))
+Call Check(BattleCamera.PositionZ(StateA) = BattleCamera.PositionZ(StateB))
+Call Check(BattleCamera.CurrentShotName(StateA) = "TargetImpact")
+Call Check(BattleCamera.IsComplete(StateA))
+Call Check(BattleCamera.StartShake(StateA, 18, 6, 77))
+Call Check(BattleCamera.StartShake(StateB, 18, 6, 77))
+Call Check(BattleCamera.Update(StateA, 3))
+
+For Index = 1 To 3
+    Call Check(BattleCamera.Update(StateB, 1))
+End For
+
+Call Check(BattleCamera.PositionX(StateA) = BattleCamera.PositionX(StateB))
+Call Check(BattleCamera.PositionY(StateA) = BattleCamera.PositionY(StateB))
+Call Check(BattleCamera.PositionZ(StateA) = BattleCamera.PositionZ(StateB))
+
+' Seeded additive billboard particles, flash, color/size fades, and expiry are deterministic.
+
+Call Check(Effects.Spawn(StateA, EFFECT_FIRE, 10, 20, 30, 99))
+Call Check(Effects.Spawn(StateB, EFFECT_FIRE, 10, 20, 30, 99))
+Call Check(Effects.ActiveCount(StateA) = 8)
+Call Check(Effects.FlashOpacity(StateA) = 100)
+Call Check(Effects.ShakeAmplitude(StateA, EFFECT_FIRE) = 14)
+
+FirstParticle = FirstActiveParticle(StateA)
+
+Call Check(FirstParticle >= 0)
+Call Check(Effects.BlendMode(StateA, FirstParticle) = Effects.BATTLE3D_BLEND_ADDITIVE)
+Call Check(Effects.IsBillboard(StateA, FirstParticle))
+Call Check(Effects.BillboardYaw(StateA, FirstParticle, 15) = 195)
+Call Check(Effects.Update(StateA, 5))
+
+For Index = 1 To 5
+    Call Check(Effects.Update(StateB, 1))
+End For
+
+Call Check(Effects.ActiveCount(StateA) = Effects.ActiveCount(StateB))
+Call Check(Effects.X(StateA, FirstParticle) = Effects.X(StateB, FirstParticle))
+Call Check(Effects.Y(StateA, FirstParticle) = Effects.Y(StateB, FirstParticle))
+Call Check(Effects.Z(StateA, FirstParticle) = Effects.Z(StateB, FirstParticle))
+Call Check(Effects.ParticleRedValue(StateA, FirstParticle) = Effects.ParticleRedValue(StateB, FirstParticle))
+Call Check(Effects.Size(StateA, FirstParticle) = Effects.Size(StateB, FirstParticle))
+Call Check(Effects.Opacity(StateA, FirstParticle) < 100)
+Call Check(Effects.FlashOpacity(StateA) = 0)
+Call Check(Effects.Update(StateA, 20))
+Call Check(Effects.ActiveCount(StateA) = 0)
+
+' Alpha presets and the bounded pool reject overflow atomically and cleanly restart.
+
+Call Check(Effects.Spawn(StateA, EFFECT_MIST, 0, 0, 0, 12))
+
+FirstParticle = FirstActiveParticle(StateA)
+
+Call Check(Effects.BlendMode(StateA, FirstParticle) = Effects.BATTLE3D_BLEND_ALPHA)
+Call Check(Effects.ClearParticles(StateA))
+Call Check(Effects.Spawn(StateA, EFFECT_STORM, 0, 0, 0, 4))
+Call Check(Effects.ActiveCount(StateA) = Effects.MaximumParticleCount())
+Call Check(Not Effects.Spawn(StateA, EFFECT_FIRE, 0, 0, 0, 5))
+Call Check(Effects.ActiveCount(StateA) = Effects.MaximumParticleCount())
+Call Check(Effects.ClearParticles(StateA))
+Call Check(Effects.ActiveCount(StateA) = 0)
+
+Call RPG.Destroy(StateA)
+Call RPG.Destroy(StateB)
+
+StateA = RPG.Create()
+
+Call Check(StateA > 0)
+Call Check(Effects.ActiveCount(StateA) = 0)
+Call Check(BattleCamera.CurrentShotId(StateA) = 0)
+Call RPG.Destroy(StateA)
+
+If Failures = 0 Then
+    Print "Battle camera and VFX tests: PASS"
+Else
+    Print "Battle camera and VFX tests: FAIL"
+    Print Failures
+End If
+
+End Program
+
+Sub DefineContent(State As Number)
+
+    Shot.Id = SHOT_DEFAULT
+    Shot.Name = "BattleDefault"
+    Shot.PositionX = 0
+    Shot.PositionY = 220
+    Shot.PositionZ = -850
+    Shot.TargetX = 0
+    Shot.TargetY = 100
+    Shot.TargetZ = 0
+    Shot.FovDegrees = 55
+    Shot.Duration = 0
+
+    Call Check(BattleCamera.DefineShot(State, Shot))
+
+    Shot.Id = SHOT_IMPACT
+    Shot.Name = "TargetImpact"
+    Shot.PositionX = 180
+    Shot.PositionY = 280
+    Shot.PositionZ = -520
+    Shot.TargetX = 120
+    Shot.TargetY = 140
+    Shot.TargetZ = 0
+    Shot.FovDegrees = 42
+    Shot.Duration = 10
+
+    Call Check(BattleCamera.DefineShot(State, Shot))
+
+    Preset.Id = EFFECT_FIRE
+    Preset.Name = "Fire Burst"
+    Preset.ParticleCount = 8
+    Preset.Lifetime = 12
+    Preset.Speed = 4
+    Preset.Spread = 3
+    Preset.Gravity = -1
+    Preset.StartRed = 255
+    Preset.StartGreen = 240
+    Preset.StartBlue = 96
+    Preset.EndRed = 255
+    Preset.EndGreen = 32
+    Preset.EndBlue = 8
+    Preset.StartSize = 20
+    Preset.EndSize = 2
+    Preset.BlendMode = Effects.BATTLE3D_BLEND_ADDITIVE
+    Preset.Billboard = True
+    Preset.FlashPercent = 100
+    Preset.FlashDuration = 4
+    Preset.ShakeAmplitude = 14
+
+    Call Check(Effects.DefinePreset(State, Preset))
+
+    Preset.Id = EFFECT_MIST
+    Preset.Name = "Healing Mist"
+    Preset.ParticleCount = 3
+    Preset.BlendMode = Effects.BATTLE3D_BLEND_ALPHA
+    Preset.Billboard = True
+    Preset.FlashPercent = 0
+    Preset.FlashDuration = 0
+    Preset.ShakeAmplitude = 0
+
+    Call Check(Effects.DefinePreset(State, Preset))
+
+    Preset.Id = EFFECT_STORM
+    Preset.Name = "Bounded Storm"
+    Preset.ParticleCount = Effects.BATTLE3D_MAX_PARTICLES
+    Preset.BlendMode = Effects.BATTLE3D_BLEND_ADDITIVE
+
+    Call Check(Effects.DefinePreset(State, Preset))
+
+End Sub
+
+Function FirstActiveParticle(State As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim ParticleIndex As Number
+
+    For ParticleIndex = 0 To Effects.MaximumParticleCount() - 1
+
+        If Effects.IsActive(State, ParticleIndex) Then
+            Return ParticleIndex
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Sub Check(Condition As Boolean)
+
+    Checks = Checks + 1
+
+    If Not Condition Then
+
+        Failures = Failures + 1
+        Print "Failed check"
+        Print Checks
+
+    End If
+
+End Sub

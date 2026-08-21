@@ -99,6 +99,7 @@ Public Const TEXTURE_WRAP_REPEAT = 1
 Public Const MATERIAL_ALPHA_OPAQUE = 0
 Public Const MATERIAL_ALPHA_CUTOUT = 1
 Public Const MATERIAL_ALPHA_BLEND = 2
+Public Const MATERIAL_ALPHA_ADDITIVE = 3
 
 Private Function Dispatch(
     Command As Number,

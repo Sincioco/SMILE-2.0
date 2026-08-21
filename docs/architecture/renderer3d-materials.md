@@ -6,7 +6,7 @@
 
 - `LoadTexture3D(path, filter, wrap)` loads a declared PNG asset through SMILE's existing `Image` cache and retains it for Renderer3D.
 - `DestroyTexture3D` releases the texture only when no material still refers to it.
-- `CreateMaterial3D` and `SetMaterial3D` configure a texture, opaque/cutout/alpha-blend mode, RGB tint, opacity, unlit lighting, emissive intensity, and cutout threshold.
+- `CreateMaterial3D` and `SetMaterial3D` configure a texture, opaque/cutout/alpha/additive blend mode, RGB tint, opacity, unlit lighting, emissive intensity, and cutout threshold.
 - `DefaultMaterial3D` creates a white opaque material.
 - `SetObjectMaterial3D` binds a material to an object; `ClearObjectMaterial3D` returns to the built-in untextured lit material.
 - `SetMeshUv3D` writes normalized UV coordinates as integer thousandths before `CommitMesh3D`.

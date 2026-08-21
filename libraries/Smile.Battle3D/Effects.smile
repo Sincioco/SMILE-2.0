@@ -1,0 +1,732 @@
+''' Bounded data-driven particles, billboards, flash, and effect presets.
+Module Smile.Battle3D.Effects
+
+Option Explicit
+
+Import Smile.RPG.Core As RPG
+
+Public Const BATTLE3D_MAX_EFFECT_PRESETS = 32
+Public Const BATTLE3D_MAX_PARTICLES = 128
+Public Const BATTLE3D_BLEND_ALPHA = 2
+Public Const BATTLE3D_BLEND_ADDITIVE = 3
+Public Const BATTLE3D_MAX_EFFECT_STEPS = 10000
+
+Public Type EffectPreset
+    Id As Number
+    Name As Text
+    ParticleCount As Number
+    Lifetime As Number
+    Speed As Number
+    Spread As Number
+    Gravity As Number
+    StartRed As Number
+    StartGreen As Number
+    StartBlue As Number
+    EndRed As Number
+    EndGreen As Number
+    EndBlue As Number
+    StartSize As Number
+    EndSize As Number
+    BlendMode As Number
+    Billboard As Boolean
+    FlashPercent As Number
+    FlashDuration As Number
+    ShakeAmplitude As Number
+End Type
+
+Private Dim StateGeneration[4] As Number
+Private Dim PresetCounts[4] As Number
+Private Dim PresetIds[4, 32] As Number
+Private Dim PresetNames[4, 32] As Text
+Private Dim PresetParticleCounts[4, 32] As Number
+Private Dim PresetLifetimes[4, 32] As Number
+Private Dim PresetSpeeds[4, 32] As Number
+Private Dim PresetSpreads[4, 32] As Number
+Private Dim PresetGravity[4, 32] As Number
+Private Dim PresetStartRed[4, 32] As Number
+Private Dim PresetStartGreen[4, 32] As Number
+Private Dim PresetStartBlue[4, 32] As Number
+Private Dim PresetEndRed[4, 32] As Number
+Private Dim PresetEndGreen[4, 32] As Number
+Private Dim PresetEndBlue[4, 32] As Number
+Private Dim PresetStartSize[4, 32] As Number
+Private Dim PresetEndSize[4, 32] As Number
+Private Dim PresetBlendModes[4, 32] As Number
+Private Dim PresetBillboard[4, 32] As Boolean
+Private Dim PresetFlashPercent[4, 32] As Number
+Private Dim PresetFlashDuration[4, 32] As Number
+Private Dim PresetShakeAmplitude[4, 32] As Number
+
+Private Dim ParticleActive[4, 128] As Boolean
+Private Dim ParticleXValues[4, 128] As Number
+Private Dim ParticleYValues[4, 128] As Number
+Private Dim ParticleZValues[4, 128] As Number
+Private Dim ParticleVelocityX[4, 128] As Number
+Private Dim ParticleVelocityY[4, 128] As Number
+Private Dim ParticleVelocityZ[4, 128] As Number
+Private Dim ParticleGravity[4, 128] As Number
+Private Dim ParticleAge[4, 128] As Number
+Private Dim ParticleLifetime[4, 128] As Number
+Private Dim ParticleStartRed[4, 128] As Number
+Private Dim ParticleStartGreen[4, 128] As Number
+Private Dim ParticleStartBlue[4, 128] As Number
+Private Dim ParticleEndRed[4, 128] As Number
+Private Dim ParticleEndGreen[4, 128] As Number
+Private Dim ParticleEndBlue[4, 128] As Number
+Private Dim ParticleStartSize[4, 128] As Number
+Private Dim ParticleEndSize[4, 128] As Number
+Private Dim ParticleBlendMode[4, 128] As Number
+Private Dim ParticleBillboard[4, 128] As Boolean
+Private Dim ActiveCounts[4] As Number
+Private Dim FlashPercents[4] As Number
+Private Dim FlashSteps[4] As Number
+Private Dim FlashDurations[4] As Number
+
+Private Sub ResetSlot(Slot As Number)
+
+    Dim Index As Number
+
+    For Index = 0 To BATTLE3D_MAX_EFFECT_PRESETS - 1
+        PresetIds[Slot, Index] = 0
+        PresetNames[Slot, Index] = ""
+    End For
+
+    For Index = 0 To BATTLE3D_MAX_PARTICLES - 1
+        ParticleActive[Slot, Index] = False
+    End For
+
+    PresetCounts[Slot] = 0
+    ActiveCounts[Slot] = 0
+    FlashPercents[Slot] = 0
+    FlashSteps[Slot] = 0
+    FlashDurations[Slot] = 0
+
+End Sub
+
+Private Function StateSlot(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Generation As Number
+
+    Slot = RPG.StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Generation = RPG.StateGeneration(StateHandle)
+
+    If StateGeneration[Slot] <> Generation Then
+        Call ResetSlot(Slot)
+
+        StateGeneration[Slot] = Generation
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function PresetIndex(StateHandle As Number, PresetId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To PresetCounts[Slot] - 1
+
+        If PresetIds[Slot, Index] = PresetId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function IsColor(Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Value >= 0 And Value <= 255
+
+    Return ReturnValue
+
+End Function
+
+Public Function DefinePreset(StateHandle As Number, ByRef Preset As EffectPreset) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = PresetIndex(StateHandle, Preset.Id)
+
+    If (Slot < 0 Or
+        Preset.Id <= 0 Or
+        Preset.Name = "" Or
+        Preset.ParticleCount < 0 Or
+        Preset.ParticleCount > BATTLE3D_MAX_PARTICLES Or
+        Preset.Lifetime <= 0 Or
+        Preset.Lifetime > BATTLE3D_MAX_EFFECT_STEPS Or
+        Preset.Speed < 0 Or
+        Preset.Spread < 0 Or
+        Not IsColor(Preset.StartRed) Or
+        Not IsColor(Preset.StartGreen) Or
+        Not IsColor(Preset.StartBlue) Or
+        Not IsColor(Preset.EndRed) Or
+        Not IsColor(Preset.EndGreen) Or
+        Not IsColor(Preset.EndBlue) Or
+        Preset.StartSize < 0 Or
+        Preset.EndSize < 0 Or
+        Preset.BlendMode < BATTLE3D_BLEND_ALPHA Or
+        Preset.BlendMode > BATTLE3D_BLEND_ADDITIVE Or
+        Preset.FlashPercent < 0 Or
+        Preset.FlashPercent > 100 Or
+        Preset.FlashDuration < 0 Or
+        Preset.FlashDuration > BATTLE3D_MAX_EFFECT_STEPS Or
+        Preset.ShakeAmplitude < 0) Then
+        Return False
+    End If
+
+    If Index < 0 Then
+
+        If PresetCounts[Slot] >= BATTLE3D_MAX_EFFECT_PRESETS Then
+            Return False
+        End If
+
+        Index = PresetCounts[Slot]
+        PresetCounts[Slot] = Index + 1
+
+    End If
+
+    PresetIds[Slot, Index] = Preset.Id
+    PresetNames[Slot, Index] = Preset.Name
+    PresetParticleCounts[Slot, Index] = Preset.ParticleCount
+    PresetLifetimes[Slot, Index] = Preset.Lifetime
+    PresetSpeeds[Slot, Index] = Preset.Speed
+    PresetSpreads[Slot, Index] = Preset.Spread
+    PresetGravity[Slot, Index] = Preset.Gravity
+    PresetStartRed[Slot, Index] = Preset.StartRed
+    PresetStartGreen[Slot, Index] = Preset.StartGreen
+    PresetStartBlue[Slot, Index] = Preset.StartBlue
+    PresetEndRed[Slot, Index] = Preset.EndRed
+    PresetEndGreen[Slot, Index] = Preset.EndGreen
+    PresetEndBlue[Slot, Index] = Preset.EndBlue
+    PresetStartSize[Slot, Index] = Preset.StartSize
+    PresetEndSize[Slot, Index] = Preset.EndSize
+    PresetBlendModes[Slot, Index] = Preset.BlendMode
+    PresetBillboard[Slot, Index] = Preset.Billboard
+    PresetFlashPercent[Slot, Index] = Preset.FlashPercent
+    PresetFlashDuration[Slot, Index] = Preset.FlashDuration
+    PresetShakeAmplitude[Slot, Index] = Preset.ShakeAmplitude
+    Return True
+
+End Function
+
+Private Function NextRandom(ByRef Seed As Number) As Number
+
+    Seed = (Seed * 25173 + 13849) Mod 65536
+
+    Return Seed
+
+End Function
+
+Private Function RandomSpread(ByRef Seed As Number, Spread As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = (NextRandom(Seed) Mod (Spread * 2 + 1)) - Spread
+
+    Return ReturnValue
+
+End Function
+
+Private Function FreeParticleSlot(Slot As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    For Index = 0 To BATTLE3D_MAX_PARTICLES - 1
+
+        If Not ParticleActive[Slot, Index] Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Sub InitializeParticle(Slot As Number, ParticleIndex As Number, Preset As Number, X As Number, Y As Number, Z As Number, ByRef Seed As Number)
+
+    ParticleActive[Slot, ParticleIndex] = True
+    ParticleXValues[Slot, ParticleIndex] = X
+    ParticleYValues[Slot, ParticleIndex] = Y
+    ParticleZValues[Slot, ParticleIndex] = Z
+    ParticleVelocityX[Slot, ParticleIndex] = RandomSpread(Seed, PresetSpreads[Slot, Preset])
+    ParticleVelocityY[Slot, ParticleIndex] = PresetSpeeds[Slot, Preset] + RandomSpread(Seed, PresetSpreads[Slot, Preset])
+    ParticleVelocityZ[Slot, ParticleIndex] = RandomSpread(Seed, PresetSpreads[Slot, Preset])
+    ParticleGravity[Slot, ParticleIndex] = PresetGravity[Slot, Preset]
+    ParticleAge[Slot, ParticleIndex] = 0
+    ParticleLifetime[Slot, ParticleIndex] = PresetLifetimes[Slot, Preset]
+    ParticleStartRed[Slot, ParticleIndex] = PresetStartRed[Slot, Preset]
+    ParticleStartGreen[Slot, ParticleIndex] = PresetStartGreen[Slot, Preset]
+    ParticleStartBlue[Slot, ParticleIndex] = PresetStartBlue[Slot, Preset]
+    ParticleEndRed[Slot, ParticleIndex] = PresetEndRed[Slot, Preset]
+    ParticleEndGreen[Slot, ParticleIndex] = PresetEndGreen[Slot, Preset]
+    ParticleEndBlue[Slot, ParticleIndex] = PresetEndBlue[Slot, Preset]
+    ParticleStartSize[Slot, ParticleIndex] = PresetStartSize[Slot, Preset]
+    ParticleEndSize[Slot, ParticleIndex] = PresetEndSize[Slot, Preset]
+    ParticleBlendMode[Slot, ParticleIndex] = PresetBlendModes[Slot, Preset]
+    ParticleBillboard[Slot, ParticleIndex] = PresetBillboard[Slot, Preset]
+
+End Sub
+
+''' Spawns a complete deterministic preset atomically from one seed and world origin.
+Public Function Spawn(StateHandle As Number, PresetId As Number, X As Number, Y As Number, Z As Number, Seed As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Preset As Number
+    Dim ParticleIndex As Number
+    Dim SpawnIndex As Number
+
+    Slot = StateSlot(StateHandle)
+    Preset = PresetIndex(StateHandle, PresetId)
+
+    If (Slot < 0 Or
+        Preset < 0 Or
+        ActiveCounts[Slot] > BATTLE3D_MAX_PARTICLES - PresetParticleCounts[Slot, Preset]) Then
+        Return False
+    End If
+
+    Seed = Seed Mod 65536
+
+    For SpawnIndex = 1 To PresetParticleCounts[Slot, Preset]
+        ParticleIndex = FreeParticleSlot(Slot)
+
+        Call InitializeParticle(Slot, ParticleIndex, Preset, X, Y, Z, Seed)
+
+        ActiveCounts[Slot] = ActiveCounts[Slot] + 1
+    End For
+
+    FlashPercents[Slot] = PresetFlashPercent[Slot, Preset]
+    FlashSteps[Slot] = 0
+    FlashDurations[Slot] = PresetFlashDuration[Slot, Preset]
+    Return True
+
+End Function
+
+Public Function Update(StateHandle As Number, Steps As Number) As Boolean
+
+    Dim Slot As Number
+    Dim StepIndex As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Steps < 0 Or Steps > BATTLE3D_MAX_EFFECT_STEPS Then
+        Return False
+    End If
+
+    For StepIndex = 1 To Steps
+
+        For Index = 0 To BATTLE3D_MAX_PARTICLES - 1
+
+            If ParticleActive[Slot, Index] Then
+
+                ParticleAge[Slot, Index] = ParticleAge[Slot, Index] + 1
+
+                If ParticleAge[Slot, Index] >= ParticleLifetime[Slot, Index] Then
+
+                    ParticleActive[Slot, Index] = False
+                    ActiveCounts[Slot] = ActiveCounts[Slot] - 1
+
+                Else
+                    ParticleXValues[Slot, Index] = ParticleXValues[Slot, Index] + ParticleVelocityX[Slot, Index]
+                    ParticleYValues[Slot, Index] = ParticleYValues[Slot, Index] + ParticleVelocityY[Slot, Index]
+                    ParticleZValues[Slot, Index] = ParticleZValues[Slot, Index] + ParticleVelocityZ[Slot, Index]
+                    ParticleVelocityY[Slot, Index] = ParticleVelocityY[Slot, Index] + ParticleGravity[Slot, Index]
+
+                End If
+
+            End If
+
+        End For
+
+        If FlashSteps[Slot] < FlashDurations[Slot] Then
+            FlashSteps[Slot] = FlashSteps[Slot] + 1
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Private Function IsParticleIndex(Index As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Index >= 0 And Index < BATTLE3D_MAX_PARTICLES
+
+    Return ReturnValue
+
+End Function
+
+Public Function IsActive(StateHandle As Number, Index As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Not IsParticleIndex(Index) Then
+        Return False
+    End If
+
+    ReturnValue = ParticleActive[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ActiveCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ActiveCounts[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function MaximumParticleCount() As Number
+
+    Return BATTLE3D_MAX_PARTICLES
+
+End Function
+
+Private Function ParticleValue(StateHandle As Number, Index As Number, Kind As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Not IsParticleIndex(Index) Or Not ParticleActive[Slot, Index] Then
+        Return 0
+    End If
+
+    If Kind = 1 Then
+        ReturnValue = ParticleXValues[Slot, Index]
+
+        Return ReturnValue
+    Else If Kind = 2 Then
+        ReturnValue = ParticleYValues[Slot, Index]
+
+        Return ReturnValue
+    Else If Kind = 3 Then
+        ReturnValue = ParticleZValues[Slot, Index]
+
+        Return ReturnValue
+    Else If Kind = 4 Then
+        ReturnValue = ParticleBlendMode[Slot, Index]
+
+        Return ReturnValue
+    Else If Kind = 5 Then
+        ReturnValue = ParticleAge[Slot, Index]
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = ParticleLifetime[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function X(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = ParticleValue(StateHandle, Index, 1)
+
+    Return ReturnValue
+
+End Function
+
+Public Function Y(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = ParticleValue(StateHandle, Index, 2)
+
+    Return ReturnValue
+
+End Function
+
+Public Function Z(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = ParticleValue(StateHandle, Index, 3)
+
+    Return ReturnValue
+
+End Function
+
+Public Function BlendMode(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = ParticleValue(StateHandle, Index, 4)
+
+    Return ReturnValue
+
+End Function
+
+Public Function Age(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = ParticleValue(StateHandle, Index, 5)
+
+    Return ReturnValue
+
+End Function
+
+Public Function Lifetime(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = ParticleValue(StateHandle, Index, 6)
+
+    Return ReturnValue
+
+End Function
+
+Private Function Interpolate(StartValue As Number, EndValue As Number, AgeValue As Number, LifetimeValue As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If LifetimeValue <= 0 Then
+        Return EndValue
+    End If
+
+    ReturnValue = StartValue + (EndValue - StartValue) * AgeValue / LifetimeValue
+
+    Return ReturnValue
+
+End Function
+
+Public Function ParticleRedValue(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not IsActive(StateHandle, Index) Then
+        Return 0
+    End If
+
+    ReturnValue = Interpolate(ParticleStartRed[Slot, Index], ParticleEndRed[Slot, Index], ParticleAge[Slot, Index], ParticleLifetime[Slot, Index])
+
+    Return ReturnValue
+
+End Function
+
+Public Function ParticleGreenValue(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not IsActive(StateHandle, Index) Then
+        Return 0
+    End If
+
+    ReturnValue = Interpolate(ParticleStartGreen[Slot, Index], ParticleEndGreen[Slot, Index], ParticleAge[Slot, Index], ParticleLifetime[Slot, Index])
+
+    Return ReturnValue
+
+End Function
+
+Public Function ParticleBlueValue(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not IsActive(StateHandle, Index) Then
+        Return 0
+    End If
+
+    ReturnValue = Interpolate(ParticleStartBlue[Slot, Index], ParticleEndBlue[Slot, Index], ParticleAge[Slot, Index], ParticleLifetime[Slot, Index])
+
+    Return ReturnValue
+
+End Function
+
+Public Function Size(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not IsActive(StateHandle, Index) Then
+        Return 0
+    End If
+
+    ReturnValue = Interpolate(ParticleStartSize[Slot, Index], ParticleEndSize[Slot, Index], ParticleAge[Slot, Index], ParticleLifetime[Slot, Index])
+
+    Return ReturnValue
+
+End Function
+
+Public Function Opacity(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Not IsActive(StateHandle, Index) Then
+        Return 0
+    End If
+
+    ReturnValue = 100 * (Lifetime(StateHandle, Index) - Age(StateHandle, Index)) / Lifetime(StateHandle, Index)
+
+    Return ReturnValue
+
+End Function
+
+Public Function IsBillboard(StateHandle As Number, Index As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not IsActive(StateHandle, Index) Then
+        Return False
+    End If
+
+    ReturnValue = ParticleBillboard[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Returns a plane yaw that faces a caller-provided camera yaw.
+Public Function BillboardYaw(StateHandle As Number, Index As Number, CameraYaw As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Not IsBillboard(StateHandle, Index) Then
+        Return 0
+    End If
+
+    ReturnValue = (CameraYaw + 180) Mod 360
+
+    Return ReturnValue
+
+End Function
+
+Public Function FlashOpacity(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or FlashDurations[Slot] <= 0 Or FlashSteps[Slot] >= FlashDurations[Slot] Then
+        Return 0
+    End If
+
+    ReturnValue = FlashPercents[Slot] * (FlashDurations[Slot] - FlashSteps[Slot]) / FlashDurations[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ShakeAmplitude(StateHandle As Number, PresetId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Preset As Number
+
+    Slot = StateSlot(StateHandle)
+    Preset = PresetIndex(StateHandle, PresetId)
+
+    If Slot < 0 Or Preset < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = PresetShakeAmplitude[Slot, Preset]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ClearParticles(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    For Index = 0 To BATTLE3D_MAX_PARTICLES - 1
+        ParticleActive[Slot, Index] = False
+    End For
+
+    ActiveCounts[Slot] = 0
+    FlashPercents[Slot] = 0
+    FlashSteps[Slot] = 0
+    FlashDurations[Slot] = 0
+    Return True
+
+End Function
+
+End Module
