@@ -11,6 +11,7 @@ Import Dragonfall.Scene As Scene
 Dim Running As Boolean
 Dim Paused As Boolean
 Dim RendererAvailable As Boolean
+Dim SceneReady As Boolean
 Dim EncounterReady As Boolean
 Dim KeyValue As Number
 Dim PreviousTime As Number
@@ -96,7 +97,13 @@ Sub StartEncounter()
     EncounterReady = Battle.Initialize()
 
     If EncounterReady And RendererAvailable Then
-        EncounterReady = Scene.Initialize(Battle.StateHandle())
+
+        SceneReady = Scene.Initialize(Battle.StateHandle())
+
+        If Not SceneReady Then
+            RendererAvailable = False
+        End If
+
     End If
 
     If EncounterReady Then
@@ -241,6 +248,15 @@ Sub DrawFrame()
 
     If Paused Then
         Draw Text "PAUSED" At 480, 276 Size 34 Color YELLOW Centered
+    End If
+
+    If Not RendererAvailable Then
+
+        Fill Rectangle 170, 300, 620, 58, Rgb(8, 3, 18)
+        Draw Rectangle 170, 300, 620, 58, ORANGE
+        Draw Text "RENDERER3D UNAVAILABLE // BATTLE CONTINUES IN 2D" At 480, 312 Size 17 Color YELLOW Centered
+        Draw Text "DirectX on Windows or WebGL2 in the browser is required for the arena." At 480, 338 Size 13 Color WHITE Centered
+
     End If
 
     Draw Text "SPACE PAUSE  //  W RESTART  //  ESC EXIT" At 480, 518 Size 13 Color LIGHT_GRAY Centered
