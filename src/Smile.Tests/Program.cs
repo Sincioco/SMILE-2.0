@@ -206,8 +206,10 @@ Run("Renderer3D is a bounded game-window bridge on both targets", () =>
 {
     Equal(SyntaxKind.Renderer3DKeyword, SyntaxFacts.GetKeywordKind("renderer3d"));
     Equal(SyntaxKind.Renderer3DImageKeyword, SyntaxFacts.GetKeywordKind("renderer3dimage"));
+    Equal(SyntaxKind.Renderer3DTextKeyword, SyntaxFacts.GetKeywordKind("renderer3dtext"));
     Equal(11, SyntaxFacts.GetBuiltInFunctionParameters(SyntaxKind.Renderer3DKeyword).Count);
     Equal(10, SyntaxFacts.GetBuiltInFunctionParameters(SyntaxKind.Renderer3DImageKeyword).Count);
+    Equal(10, SyntaxFacts.GetBuiltInFunctionParameters(SyntaxKind.Renderer3DTextKeyword).Count);
     const string source = "Game Window \"Renderer3D\"\nDim Result As Number\nResult = Renderer3D(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)\n";
     var analysis = Analyze(source);
     Equal(false, analysis.HasErrors);
@@ -219,6 +221,7 @@ Run("Renderer3D is a bounded game-window bridge on both targets", () =>
     Equal(true, HasDiagnostic(Analyze("Game Window \"Renderer3D\"\nPrint Renderer3D(1)\n"), "SML3016"));
     Equal(true, HasDiagnostic(Analyze("Game Window \"Renderer3D\"\nPrint Renderer3D(True, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)\n"), "SML3003"));
     Equal(true, HasDiagnostic(Analyze("Game Window \"Renderer3D\"\nPrint Renderer3DImage(1, 0, 0, 0, 0, 0, 0, 0, 0, 0)\n"), "SML3501"));
+    Equal(true, HasDiagnostic(Analyze("Game Window \"Renderer3D\"\nPrint Renderer3DText(1, 0, 0, 0, 0, 0, 0, 0, 0, 0)\n"), "SML3003"));
 });
 Run("Existing graphics statements remain valid", () => Equal(false,
     Analyze("Game Window \"Existing\"\nFill Rectangle 1, 2, 3, 4, RED\nDraw Circle 10, 10, 4, WHITE\nDraw Line 0, 0, 20, 20, BLUE\n").HasErrors));

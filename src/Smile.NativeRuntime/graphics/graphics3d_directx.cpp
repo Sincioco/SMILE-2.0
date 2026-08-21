@@ -3,6 +3,7 @@
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <math.h>
+#include <stdint.h>
 #include "graphics3d.h"
 #include "graphics_common.h"
 #include "graphics_directx.h"
@@ -12,10 +13,14 @@
 #define SMILE_3D_MAX_OBJECTS 256
 #define SMILE_3D_MAX_TEXTURES 128
 #define SMILE_3D_MAX_MATERIALS 128
+#define SMILE_3D_MAX_MODELS 64
+#define SMILE_3D_MAX_MODEL_PARTS 16
+#define SMILE_3D_MAX_MODEL_BYTES (16 * 1024 * 1024)
 #define SMILE_3D_MESH_HANDLE 0x10000000LL
 #define SMILE_3D_OBJECT_HANDLE 0x20000000LL
 #define SMILE_3D_TEXTURE_HANDLE 0x30000000LL
 #define SMILE_3D_MATERIAL_HANDLE 0x40000000LL
+#define SMILE_3D_MODEL_HANDLE 0x50000000LL
 #define SMILE_3D_HANDLE_KIND 0xF0000000LL
 #define SMILE_3D_PI 3.14159265358979323846f
 
@@ -31,6 +36,7 @@ struct SmileMesh3D
     unsigned short generation;
     unsigned char active;
     unsigned char committed;
+    unsigned char explicit_normals;
     unsigned int vertex_count;
     unsigned int index_count;
     SmileVertex3D* vertices;
@@ -76,6 +82,16 @@ struct SmileMaterial3D
     float cutoff;
 };
 
+struct SmileModel3D
+{
+    unsigned short generation;
+    unsigned char active;
+    unsigned char part_count;
+    unsigned short material_count;
+    long long mesh_handles[SMILE_3D_MAX_MODEL_PARTS];
+    unsigned short material_slots[SMILE_3D_MAX_MODEL_PARTS];
+};
+
 struct SmileMatrix3D { float m[16]; };
 
 struct SmileConstants3D
@@ -90,6 +106,7 @@ static SmileMesh3D smile_meshes3d[SMILE_3D_MAX_MESHES];
 static SmileObject3D smile_objects3d[SMILE_3D_MAX_OBJECTS];
 static SmileTexture3D smile_textures3d[SMILE_3D_MAX_TEXTURES];
 static SmileMaterial3D smile_materials3d[SMILE_3D_MAX_MATERIALS];
+static SmileModel3D smile_models3d[SMILE_3D_MAX_MODELS];
 static ID3D11VertexShader* smile_vertex_shader3d;
 static ID3D11PixelShader* smile_pixel_shader3d;
 static ID3D11InputLayout* smile_input_layout3d;
@@ -186,6 +203,18 @@ static SmileMaterial3D* smile_3d_material(long long handle)
     return &smile_materials3d[slot];
 }
 
+static SmileModel3D* smile_3d_model_resource(long long handle)
+{
+    int slot;
+    unsigned short generation;
+    if ((handle & SMILE_3D_HANDLE_KIND) != SMILE_3D_MODEL_HANDLE) return 0;
+    slot = (int)(handle & 255LL) - 1;
+    generation = (unsigned short)((handle >> 8) & 65535LL);
+    if (slot < 0 || slot >= SMILE_3D_MAX_MODELS || !smile_models3d[slot].active ||
+        smile_models3d[slot].generation != generation) return 0;
+    return &smile_models3d[slot];
+}
+
 static int smile_3d_live_mesh_count(void)
 {
     int count = 0;
@@ -219,6 +248,15 @@ static int smile_3d_live_material_count(void)
     int index;
     for (index = 0; index < SMILE_3D_MAX_MATERIALS; ++index)
         if (smile_materials3d[index].active) count++;
+    return count;
+}
+
+static int smile_3d_live_model_count(void)
+{
+    int count = 0;
+    int index;
+    for (index = 0; index < SMILE_3D_MAX_MODELS; ++index)
+        if (smile_models3d[index].active) count++;
     return count;
 }
 
@@ -266,8 +304,30 @@ static void smile_3d_delete_mesh(SmileMesh3D* mesh)
     mesh->index_count = 0;
     mesh->active = 0;
     mesh->committed = 0;
+    mesh->explicit_normals = 0;
     mesh->generation++;
     if (mesh->generation == 0) mesh->generation = 1;
+}
+
+static int smile_3d_delete_model(SmileModel3D* model)
+{
+    int index;
+    if (model == 0) return 0;
+    for (index = 0; index < model->part_count; ++index)
+        if (smile_3d_mesh_reference_count(model->mesh_handles[index]) != 0) return 0;
+    for (index = 0; index < model->part_count; ++index)
+    {
+        SmileMesh3D* mesh = smile_3d_mesh(model->mesh_handles[index]);
+        if (mesh != 0) smile_3d_delete_mesh(mesh);
+        model->mesh_handles[index] = 0;
+        model->material_slots[index] = 0;
+    }
+    model->active = 0;
+    model->part_count = 0;
+    model->material_count = 0;
+    model->generation++;
+    if (model->generation == 0) model->generation = 1;
+    return 1;
 }
 
 static void smile_3d_delete_texture(SmileTexture3D* texture)
@@ -405,6 +465,7 @@ static long long smile_3d_create_mesh(unsigned int vertex_count, unsigned int in
     mesh->index_count = index_count;
     mesh->active = 1;
     mesh->committed = 0;
+    mesh->explicit_normals = 0;
     return smile_3d_handle(SMILE_3D_MESH_HANDLE, slot, mesh->generation);
 }
 
@@ -427,8 +488,9 @@ static int smile_3d_commit_mesh(SmileMesh3D* mesh)
 {
     unsigned int index;
     if (mesh == 0) { smile_last_error3d = 5; return 0; }
-    for (index = 0; index < mesh->vertex_count; ++index)
-        mesh->vertices[index].nx = mesh->vertices[index].ny = mesh->vertices[index].nz = 0.0f;
+    if (!mesh->explicit_normals)
+        for (index = 0; index < mesh->vertex_count; ++index)
+            mesh->vertices[index].nx = mesh->vertices[index].ny = mesh->vertices[index].nz = 0.0f;
     for (index = 0; index < mesh->index_count; index += 3)
     {
         unsigned int ia = mesh->indices[index], ib = mesh->indices[index + 1], ic = mesh->indices[index + 2];
@@ -444,13 +506,24 @@ static int smile_3d_commit_mesh(SmileMesh3D* mesh)
         vx = mesh->vertices[ic].x - mesh->vertices[ia].x;
         vy = mesh->vertices[ic].y - mesh->vertices[ia].y;
         vz = mesh->vertices[ic].z - mesh->vertices[ia].z;
-        smile_3d_cross(ux, uy, uz, vx, vy, vz, &nx, &ny, &nz);
-        mesh->vertices[ia].nx += nx; mesh->vertices[ia].ny += ny; mesh->vertices[ia].nz += nz;
-        mesh->vertices[ib].nx += nx; mesh->vertices[ib].ny += ny; mesh->vertices[ib].nz += nz;
-        mesh->vertices[ic].nx += nx; mesh->vertices[ic].ny += ny; mesh->vertices[ic].nz += nz;
+        if (!mesh->explicit_normals)
+        {
+            smile_3d_cross(ux, uy, uz, vx, vy, vz, &nx, &ny, &nz);
+            mesh->vertices[ia].nx += nx; mesh->vertices[ia].ny += ny; mesh->vertices[ia].nz += nz;
+            mesh->vertices[ib].nx += nx; mesh->vertices[ib].ny += ny; mesh->vertices[ib].nz += nz;
+            mesh->vertices[ic].nx += nx; mesh->vertices[ic].ny += ny; mesh->vertices[ic].nz += nz;
+        }
     }
     for (index = 0; index < mesh->vertex_count; ++index)
+    {
+        if (!isfinite(mesh->vertices[index].nx) || !isfinite(mesh->vertices[index].ny) ||
+            !isfinite(mesh->vertices[index].nz))
+        {
+            smile_last_error3d = 6;
+            return 0;
+        }
         smile_3d_normalize(&mesh->vertices[index].nx, &mesh->vertices[index].ny, &mesh->vertices[index].nz);
+    }
     smile_3d_release(mesh->vertex_buffer);
     smile_3d_release(mesh->index_buffer);
     mesh->committed = 1;
@@ -466,6 +539,14 @@ static void smile_3d_uv(SmileMesh3D* mesh, unsigned int index, float u, float v)
 {
     mesh->vertices[index].u = u;
     mesh->vertices[index].v = v;
+}
+
+static void smile_3d_normal(SmileMesh3D* mesh, unsigned int index, float x, float y, float z)
+{
+    mesh->vertices[index].nx = x;
+    mesh->vertices[index].ny = y;
+    mesh->vertices[index].nz = z;
+    mesh->explicit_normals = 1;
 }
 
 static void smile_3d_triangle(SmileMesh3D* mesh, unsigned int triangle,
@@ -675,6 +756,192 @@ static long long smile_3d_create_object(long long mesh_handle)
     object->scale[0] = object->scale[1] = object->scale[2] = 1.0f;
     object->color[0] = object->color[1] = object->color[2] = 1.0f; object->color[3] = 1.0f;
     return smile_3d_handle(SMILE_3D_OBJECT_HANDLE, slot, object->generation);
+}
+
+static unsigned int smile_3d_read_u32(const unsigned char* value)
+{
+    return (unsigned int)value[0] | ((unsigned int)value[1] << 8) |
+        ((unsigned int)value[2] << 16) | ((unsigned int)value[3] << 24);
+}
+
+static unsigned short smile_3d_read_u16(const unsigned char* value)
+{
+    return (unsigned short)((unsigned int)value[0] | ((unsigned int)value[1] << 8));
+}
+
+static float smile_3d_read_float(const unsigned char* value)
+{
+    union { unsigned int bits; float number; } result;
+    result.bits = smile_3d_read_u32(value);
+    return result.number;
+}
+
+static unsigned int smile_3d_checksum(const unsigned char* value, unsigned int length)
+{
+    unsigned int result = 2166136261U;
+    unsigned int index;
+    for (index = 0; index < length; ++index)
+    {
+        result ^= value[index];
+        result *= 16777619U;
+    }
+    return result;
+}
+
+extern "C" long long smile_renderer3d_load_model_path(const wchar_t* path)
+{
+    HANDLE file = INVALID_HANDLE_VALUE;
+    LARGE_INTEGER file_size;
+    DWORD bytes_read = 0;
+    unsigned char* bytes = 0;
+    unsigned int size;
+    unsigned int part_count, vertex_count, index_count, material_count;
+    unsigned int part_table_bytes, vertex_bytes, expected_size;
+    unsigned int part_index, model_slot;
+    long long mesh_handles[SMILE_3D_MAX_MODEL_PARTS] = {};
+    long long result = 0;
+
+    if (path == 0) { smile_last_error3d = 26; return 0; }
+    file = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    if (file == INVALID_HANDLE_VALUE || !GetFileSizeEx(file, &file_size) ||
+        file_size.QuadPart < 32 || file_size.QuadPart > SMILE_3D_MAX_MODEL_BYTES)
+    {
+        if (file != INVALID_HANDLE_VALUE) CloseHandle(file);
+        smile_last_error3d = 26;
+        return 0;
+    }
+    size = (unsigned int)file_size.QuadPart;
+    bytes = (unsigned char*)smile_3d_allocate(size);
+    if (bytes == 0 || !ReadFile(file, bytes, size, &bytes_read, 0) || bytes_read != size)
+    {
+        CloseHandle(file);
+        { void* allocation = bytes; smile_3d_free(allocation); }
+        smile_last_error3d = 26;
+        return 0;
+    }
+    CloseHandle(file);
+
+    part_count = smile_3d_read_u32(bytes + 8);
+    vertex_count = smile_3d_read_u32(bytes + 12);
+    index_count = smile_3d_read_u32(bytes + 16);
+    material_count = smile_3d_read_u32(bytes + 20);
+    part_table_bytes = part_count * 24U;
+    vertex_bytes = vertex_count * 32U;
+    expected_size = 32U + part_table_bytes + vertex_bytes + index_count * 4U;
+    if (bytes[0] != 'S' || bytes[1] != 'M' || bytes[2] != '3' || bytes[3] != 'D' ||
+        smile_3d_read_u16(bytes + 4) != 1 || smile_3d_read_u16(bytes + 6) != 32 ||
+        part_count == 0 || part_count > SMILE_3D_MAX_MODEL_PARTS ||
+        vertex_count == 0 || vertex_count > SMILE_3D_MAX_MODEL_PARTS * 65535U ||
+        index_count == 0 || index_count > SMILE_3D_MAX_MODEL_PARTS * 196608U ||
+        material_count == 0 || material_count > 64 || smile_3d_read_u32(bytes + 24) != size ||
+        expected_size != size || smile_3d_read_u32(bytes + 28) != smile_3d_checksum(bytes + 32, size - 32))
+    {
+        smile_last_error3d = 24;
+        goto cleanup;
+    }
+
+    for (part_index = 0; part_index < part_count; ++part_index)
+    {
+        const unsigned char* part = bytes + 32 + part_index * 24U;
+        unsigned int first_vertex = smile_3d_read_u32(part);
+        unsigned int part_vertices = smile_3d_read_u32(part + 4);
+        unsigned int first_index = smile_3d_read_u32(part + 8);
+        unsigned int part_indices = smile_3d_read_u32(part + 12);
+        unsigned int material_slot = smile_3d_read_u32(part + 16);
+        unsigned int index;
+        if (part_vertices == 0 || part_vertices > 65535 || part_indices == 0 ||
+            part_indices > 196608 || part_indices % 3 != 0 ||
+            first_vertex > vertex_count || part_vertices > vertex_count - first_vertex ||
+            first_index > index_count || part_indices > index_count - first_index ||
+            material_slot >= material_count || smile_3d_read_u32(part + 20) != 0)
+        {
+            smile_last_error3d = 24;
+            goto cleanup;
+        }
+        for (index = 0; index < part_vertices * 8U; ++index)
+            if (!isfinite(smile_3d_read_float(bytes + 32 + part_table_bytes +
+                (first_vertex * 8U + index) * 4U)))
+            {
+                smile_last_error3d = 24;
+                goto cleanup;
+            }
+        for (index = 0; index < part_indices; ++index)
+            if (smile_3d_read_u32(bytes + 32 + part_table_bytes + vertex_bytes +
+                (first_index + index) * 4U) >= part_vertices)
+            {
+                smile_last_error3d = 24;
+                goto cleanup;
+            }
+    }
+    if (smile_3d_live_mesh_count() + (int)part_count > SMILE_3D_MAX_MESHES)
+    {
+        smile_last_error3d = 3;
+        goto cleanup;
+    }
+    for (model_slot = 0; model_slot < SMILE_3D_MAX_MODELS; ++model_slot)
+        if (!smile_models3d[model_slot].active) break;
+    if (model_slot == SMILE_3D_MAX_MODELS)
+    {
+        smile_last_error3d = 25;
+        goto cleanup;
+    }
+
+    for (part_index = 0; part_index < part_count; ++part_index)
+    {
+        const unsigned char* part = bytes + 32 + part_index * 24U;
+        unsigned int first_vertex = smile_3d_read_u32(part);
+        unsigned int part_vertices = smile_3d_read_u32(part + 4);
+        unsigned int first_index = smile_3d_read_u32(part + 8);
+        unsigned int part_indices = smile_3d_read_u32(part + 12);
+        unsigned int vertex_index, index;
+        SmileMesh3D* mesh;
+        mesh_handles[part_index] = smile_3d_create_mesh(part_vertices, part_indices);
+        mesh = smile_3d_mesh(mesh_handles[part_index]);
+        if (mesh == 0) goto rollback;
+        for (vertex_index = 0; vertex_index < part_vertices; ++vertex_index)
+        {
+            const unsigned char* vertex = bytes + 32 + part_table_bytes +
+                (first_vertex + vertex_index) * 32U;
+            mesh->vertices[vertex_index].x = smile_3d_read_float(vertex);
+            mesh->vertices[vertex_index].y = smile_3d_read_float(vertex + 4);
+            mesh->vertices[vertex_index].z = smile_3d_read_float(vertex + 8);
+            mesh->vertices[vertex_index].nx = smile_3d_read_float(vertex + 12);
+            mesh->vertices[vertex_index].ny = smile_3d_read_float(vertex + 16);
+            mesh->vertices[vertex_index].nz = smile_3d_read_float(vertex + 20);
+            mesh->vertices[vertex_index].u = smile_3d_read_float(vertex + 24);
+            mesh->vertices[vertex_index].v = smile_3d_read_float(vertex + 28);
+        }
+        mesh->explicit_normals = 1;
+        for (index = 0; index < part_indices; ++index)
+            mesh->indices[index] = smile_3d_read_u32(bytes + 32 + part_table_bytes + vertex_bytes +
+                (first_index + index) * 4U);
+        if (!smile_3d_commit_mesh(mesh)) goto rollback;
+    }
+    {
+        SmileModel3D* model = &smile_models3d[model_slot];
+        if (model->generation == 0) model->generation = 1;
+        model->active = 1;
+        model->part_count = (unsigned char)part_count;
+        model->material_count = (unsigned short)material_count;
+        for (part_index = 0; part_index < part_count; ++part_index)
+        {
+            const unsigned char* part = bytes + 32 + part_index * 24U;
+            model->mesh_handles[part_index] = mesh_handles[part_index];
+            model->material_slots[part_index] = (unsigned short)smile_3d_read_u32(part + 16);
+        }
+        result = smile_3d_handle(SMILE_3D_MODEL_HANDLE, (int)model_slot, model->generation);
+    }
+    goto cleanup;
+
+rollback:
+    for (part_index = 0; part_index < SMILE_3D_MAX_MODEL_PARTS; ++part_index)
+    {
+        SmileMesh3D* mesh = smile_3d_mesh(mesh_handles[part_index]);
+        if (mesh != 0) smile_3d_delete_mesh(mesh);
+    }
+cleanup:
+    { void* allocation = bytes; smile_3d_free(allocation); }
+    return result;
 }
 
 static SmileMatrix3D smile_3d_identity(void)
@@ -1019,6 +1286,8 @@ static void smile_3d_reset(void)
             smile_objects3d[index].active = 0; smile_objects3d[index].generation++;
             if (smile_objects3d[index].generation == 0) smile_objects3d[index].generation = 1;
         }
+    for (index = 0; index < SMILE_3D_MAX_MODELS; ++index)
+        if (smile_models3d[index].active) smile_3d_delete_model(&smile_models3d[index]);
     for (index = 0; index < SMILE_3D_MAX_MATERIALS; ++index)
         if (smile_materials3d[index].active) smile_3d_delete_material(&smile_materials3d[index]);
     for (index = 0; index < SMILE_3D_MAX_TEXTURES; ++index)
@@ -1037,6 +1306,7 @@ extern "C" long long smile_renderer3d_command(long long command,
     SmileObject3D* object;
     SmileTexture3D* texture;
     SmileMaterial3D* material;
+    SmileModel3D* model;
     (void)j;
     switch (command)
     {
@@ -1060,6 +1330,12 @@ extern "C" long long smile_renderer3d_command(long long command,
                 smile_3d_delete_mesh(mesh); return 1;
             }
             object = smile_3d_object(a); if (object != 0) { object->active = 0; object->generation++; if (object->generation == 0) object->generation = 1; return 1; }
+            model = smile_3d_model_resource(a);
+            if (model != 0)
+            {
+                if (!smile_3d_delete_model(model)) { smile_last_error3d = 27; return 0; }
+                return 1;
+            }
             material = smile_3d_material(a);
             if (material != 0)
             {
@@ -1133,6 +1409,42 @@ extern "C" long long smile_renderer3d_command(long long command,
         case SMILE_3D_MATERIAL_REFERENCE_COUNT: return smile_3d_material_reference_count(a);
         case SMILE_3D_SET_MATERIAL:
             return smile_3d_set_material(smile_3d_material(a), (int)b, c, d, e, f, (int)g, h, i);
+        case SMILE_3D_SET_MESH_NORMAL:
+            mesh = smile_3d_mesh(a);
+            if (mesh == 0 || b < 0 || b >= mesh->vertex_count)
+            {
+                smile_last_error3d = 5;
+                return 0;
+            }
+            smile_3d_normal(mesh, (unsigned int)b, (float)c / 1000.0f,
+                (float)d / 1000.0f, (float)e / 1000.0f);
+            mesh->committed = 0;
+            return 1;
+        case SMILE_3D_LIVE_MODEL_COUNT: return smile_3d_live_model_count();
+        case SMILE_3D_MAX_MODEL_COUNT: return SMILE_3D_MAX_MODELS;
+        case SMILE_3D_MODEL_VALID: return smile_3d_model_resource(a) != 0 ? 1 : 0;
+        case SMILE_3D_MODEL_PART_COUNT:
+            model = smile_3d_model_resource(a);
+            return model == 0 ? 0 : model->part_count;
+        case SMILE_3D_MODEL_MATERIAL_COUNT:
+            model = smile_3d_model_resource(a);
+            return model == 0 ? 0 : model->material_count;
+        case SMILE_3D_CREATE_MODEL_PART_OBJECT:
+            model = smile_3d_model_resource(a);
+            if (model == 0 || b < 0 || b >= model->part_count)
+            {
+                smile_last_error3d = 5;
+                return 0;
+            }
+            return smile_3d_create_object(model->mesh_handles[b]);
+        case SMILE_3D_MODEL_PART_MATERIAL:
+            model = smile_3d_model_resource(a);
+            if (model == 0 || b < 0 || b >= model->part_count)
+            {
+                smile_last_error3d = 5;
+                return -1;
+            }
+            return model->material_slots[b];
         default: smile_last_error3d = 1; return 0;
     }
 }

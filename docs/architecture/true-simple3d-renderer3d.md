@@ -10,7 +10,7 @@ Students use ordinary modules from `Smile.Simple3D` 2.0.0:
 - `Math3D` owns deterministic vector and matrix helpers.
 - `Graphics3D` owns primitive/custom-mesh creation, transforms, appearance, frame submission, and explicit lifecycle.
 
-The compiler has narrow game-window-only `Renderer3D(command, a, ..., j)` and image-owning `Renderer3DImage(command, image, a, ..., h)` built-in bridges. `Graphics3D` is the public teaching surface and hides their command values. The image bridge lets Renderer3D retain the existing decoded `Image` resource instead of duplicating PNG decoding or asset-path rules. This avoids new statement grammar, backend-specific APIs, game-specific runtime calls, and duplicate parser rules. The existing wireframe modules remain supported for GDI and older lessons.
+The compiler has narrow game-window-only numeric, image-owning, and text-path Renderer3D bridges. `Graphics3D` is the public teaching surface and hides their command values. The image bridge lets Renderer3D retain the existing decoded `Image` resource instead of duplicating PNG decoding, while the text bridge resolves model paths through the existing exact asset manifest. This avoids new statement grammar, backend-specific APIs, game-specific runtime calls, and duplicate parser rules. The existing wireframe modules remain supported for GDI and older lessons.
 
 ## Windows DirectX backend
 
@@ -44,4 +44,4 @@ Texture and material details are documented in [Renderer3D textures and material
 
 ## Deliberate limits
 
-This milestone does not add runtime model import, a scene graph, skeletal animation, rigid-body physics, shadows, particles, student shaders, networking, or a GDI 3D rasterizer. Logical gameplay/collision geometry remains application-owned and independent from render objects.
+This milestone does not add runtime glTF import, a scene graph, skeletal animation, rigid-body physics, shadows, particles, student shaders, networking, or a GDI 3D rasterizer. glTF is converted offline to the bounded SM3D runtime format. Logical gameplay/collision geometry remains application-owned and independent from render objects.

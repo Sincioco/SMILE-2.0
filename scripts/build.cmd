@@ -35,6 +35,9 @@ if errorlevel 1 exit /b %errorlevel%
 dotnet publish "%SMILE_ROOT%\src\Smile.Compiler\Smile.Compiler.csproj" -c Release -r win-x64 --self-contained false -o "%SMILE_ROOT%\artifacts\compiler"
 if errorlevel 1 exit /b %errorlevel%
 
+dotnet publish "%SMILE_ROOT%\src\Smile.AssetTool\Smile.AssetTool.csproj" -c Release -r win-x64 --self-contained false -o "%SMILE_ROOT%\artifacts\assettool"
+if errorlevel 1 exit /b %errorlevel%
+
 copy /y "%SMILE_ROOT%\artifacts\runtime\Smile.NativeRuntime.lib" "%SMILE_ROOT%\artifacts\compiler\Smile.NativeRuntime.lib" >nul
 
 msbuild "%SMILE_ROOT%\SMILE 2.0.sln" /m /nr:false /p:Configuration=Release /p:Platform=x64 /v:minimal
@@ -45,5 +48,6 @@ copy /y "%SMILE_ROOT%\src\Smile.VisualStudio\bin\Release\net472\Smile.VisualStud
 if errorlevel 1 exit /b %errorlevel%
 
 echo Compiler: %SMILE_ROOT%\artifacts\compiler\smilec.exe
+echo Asset tool: %SMILE_ROOT%\artifacts\assettool\smileasset.exe
 echo VSIX: %SMILE_ROOT%\artifacts\vsix\Smile.VisualStudio.vsix
 exit /b 0

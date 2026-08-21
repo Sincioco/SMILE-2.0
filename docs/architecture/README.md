@@ -1,6 +1,6 @@
 # Compiler and tooling architecture
 
-The original educational wireframe layer is documented in [Simple3D software-rendering architecture](simple3d-software-rendering.md). The current indexed-triangle milestone is documented in [true Simple3D Renderer3D architecture](true-simple3d-renderer3d.md), with the reusable [texture and material contract](renderer3d-materials.md) documented separately. Renderer2D remains permanent while DirectX/WebGL2 Renderer3D provides filled meshes, textured materials, perspective, depth testing, and 2D HUD composition.
+The original educational wireframe layer is documented in [Simple3D software-rendering architecture](simple3d-software-rendering.md). The current indexed-triangle milestone is documented in [true Simple3D Renderer3D architecture](true-simple3d-renderer3d.md), with the reusable [texture and material contract](renderer3d-materials.md) and deterministic [SM3D model pipeline](sm3d-model-format.md) documented separately. Renderer2D remains permanent while DirectX/WebGL2 Renderer3D provides filled meshes, textured materials, offline-authored models, perspective, depth testing, and 2D HUD composition.
 
 SMILE 2.0 uses one deliberately direct native pipeline:
 
@@ -42,7 +42,7 @@ Renderer3D now sits beside that 2D capability. DirectX renders the 3D pass into 
 
 The shared project asset resolver and publisher are intentionally file-format-neutral: they validate, identify, copy, and clean declared project assets without assuming PNG, WAV, or any other media format. Runtime ownership and decoding remain type-specific (`SmileImageResource`, WAV caches, and music), so future model, material, or animation resources can add their own lifetime rules without replacing project asset publication or pretending every asset is an image.
 
-True Simple3D now includes transforms, cameras, UV-capable indexed meshes, primitive generation, textured materials, simple tint lighting, perspective, and depth testing. Model import, skeletal animation, general physics, particles, and student shaders remain separate higher milestones.
+True Simple3D now includes transforms, cameras, UV-capable indexed meshes, primitive generation, textured materials, deterministic offline glTF conversion/runtime models, simple tint lighting, perspective, and depth testing. Skeletal animation, general physics, particles, and student shaders remain separate higher milestones.
 
 The native backend emits MASM x64 and links `Smile.NativeRuntime.lib`. Console programs use the console subsystem. Programs containing `Game Window` use the Windows GUI subsystem and the generic Win32 runtime for:
 

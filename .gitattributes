@@ -33,3 +33,4 @@
 *.vsix binary
 *.zip binary
 *.smilelib binary
+*.sm3d binary

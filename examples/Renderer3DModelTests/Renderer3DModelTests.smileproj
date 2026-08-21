@@ -1,0 +1,13 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>Renderer3DModelTests</OutputName>
+    <ApplicationId>smile.tests.renderer3d-models</ApplicationId>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <Asset Include="Assets\*.sm3d" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

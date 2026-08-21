@@ -9,6 +9,7 @@
 #include <limits.h>
 #include <stdint.h>
 #include "graphics/graphics_common.h"
+#include "graphics/graphics3d.h"
 #include "graphics/image_resource.h"
 #include "graphics/graphics_diagnostics.h"
 #include "timing/frame_clock_win32.h"
@@ -1561,6 +1562,22 @@ void smile_load_image_value(void** target, void* owned_path)
         ExitProcess(2);
     }
     smile_image_move_assign(target, image);
+}
+
+long long smile_renderer3d_text_command(long long command, void* owned_text,
+    long long a, long long b, long long c, long long d,
+    long long e, long long f, long long g, long long h)
+{
+    SmileText* text = (SmileText*)owned_text;
+    WCHAR full_path[2048];
+    long long result = 0;
+    (void)a; (void)b; (void)c; (void)d; (void)e; (void)f; (void)g; (void)h;
+    if (command == SMILE_3D_TEXT_LOAD_MODEL && text != 0 &&
+        smile_resolve_asset_path_utf8(smile_text_bytes(text), smile_text_length(text), full_path,
+            (int)(sizeof(full_path) / sizeof(full_path[0]))))
+        result = smile_renderer3d_load_model_path(full_path);
+    smile_text_release(text);
+    return result;
 }
 
 long long smile_image_width_value(void* owned_image)

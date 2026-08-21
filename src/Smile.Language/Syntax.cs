@@ -94,6 +94,7 @@ public enum SyntaxKind
     TextSliceKeyword,
     Renderer3DKeyword,
     Renderer3DImageKeyword,
+    Renderer3DTextKeyword,
     GameKeyword,
     WindowKeyword,
     SizeKeyword,
@@ -235,6 +236,10 @@ public static class SyntaxFacts
     {
         "command", "image", "a", "b", "c", "d", "e", "f", "g", "h"
     };
+    private static readonly IReadOnlyList<string> Renderer3DTextParameters = new[]
+    {
+        "command", "text", "a", "b", "c", "d", "e", "f", "g", "h"
+    };
 
     private static readonly Dictionary<string, SyntaxKind> Keywords = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -300,6 +305,7 @@ public static class SyntaxFacts
         ["Text_Slice"] = SyntaxKind.TextSliceKeyword,
         ["Renderer3D"] = SyntaxKind.Renderer3DKeyword,
         ["Renderer3DImage"] = SyntaxKind.Renderer3DImageKeyword,
+        ["Renderer3DText"] = SyntaxKind.Renderer3DTextKeyword,
         ["Game"] = SyntaxKind.GameKeyword,
         ["Window"] = SyntaxKind.WindowKeyword,
         ["Size"] = SyntaxKind.SizeKeyword,
@@ -434,7 +440,7 @@ public static class SyntaxFacts
         kind >= SyntaxKind.NoneKeyword && kind <= SyntaxKind.DataBlockMaxBytesKeyword || kind == SyntaxKind.DownKeyword;
 
     public static bool IsBuiltInFunction(SyntaxKind kind) =>
-        kind >= SyntaxKind.TimerKeyword && kind <= SyntaxKind.Renderer3DImageKeyword;
+        kind >= SyntaxKind.TimerKeyword && kind <= SyntaxKind.Renderer3DTextKeyword;
 
     public static IReadOnlyList<string> GetBuiltInFunctionParameters(SyntaxKind kind)
     {
@@ -454,6 +460,7 @@ public static class SyntaxFacts
             SyntaxKind.TextSliceKeyword => TextSliceParameters,
             SyntaxKind.Renderer3DKeyword => Renderer3DParameters,
             SyntaxKind.Renderer3DImageKeyword => Renderer3DImageParameters,
+            SyntaxKind.Renderer3DTextKeyword => Renderer3DTextParameters,
             SyntaxKind.MinKeyword or SyntaxKind.MaxKeyword => TwoValueParameters,
             SyntaxKind.RgbKeyword => ColorParameters,
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Not a built-in SMILE function.")

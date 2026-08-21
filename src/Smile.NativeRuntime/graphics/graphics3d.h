@@ -1,6 +1,8 @@
 #ifndef SMILE_GRAPHICS3D_H
 #define SMILE_GRAPHICS3D_H
 
+#include <wchar.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -48,12 +50,25 @@ enum SmileRenderer3DCommand
     SMILE_3D_TEXTURE_HEIGHT = 39,
     SMILE_3D_TEXTURE_REFERENCE_COUNT = 40,
     SMILE_3D_MATERIAL_REFERENCE_COUNT = 41,
-    SMILE_3D_SET_MATERIAL = 42
+    SMILE_3D_SET_MATERIAL = 42,
+    SMILE_3D_SET_MESH_NORMAL = 43,
+    SMILE_3D_LIVE_MODEL_COUNT = 44,
+    SMILE_3D_MAX_MODEL_COUNT = 45,
+    SMILE_3D_MODEL_VALID = 46,
+    SMILE_3D_MODEL_PART_COUNT = 47,
+    SMILE_3D_MODEL_MATERIAL_COUNT = 48,
+    SMILE_3D_CREATE_MODEL_PART_OBJECT = 49,
+    SMILE_3D_MODEL_PART_MATERIAL = 50
 };
 
 enum SmileRenderer3DImageCommand
 {
     SMILE_3D_IMAGE_CREATE_TEXTURE = 1
+};
+
+enum SmileRenderer3DTextCommand
+{
+    SMILE_3D_TEXT_LOAD_MODEL = 1
 };
 
 enum SmilePrimitive3D
@@ -72,6 +87,10 @@ long long smile_renderer3d_command(long long command,
 long long smile_renderer3d_image_command(long long command, void* image,
     long long a, long long b, long long c, long long d,
     long long e, long long f, long long g, long long h);
+long long smile_renderer3d_text_command(long long command, void* text,
+    long long a, long long b, long long c, long long d,
+    long long e, long long f, long long g, long long h);
+long long smile_renderer3d_load_model_path(const wchar_t* path);
 void smile_graphics3d_on_device_lost(void);
 
 #ifdef __cplusplus

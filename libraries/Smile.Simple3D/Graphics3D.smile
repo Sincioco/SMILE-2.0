@@ -47,8 +47,17 @@ Private Const COMMAND_TEXTURE_HEIGHT = 39
 Private Const COMMAND_TEXTURE_REFERENCE_COUNT = 40
 Private Const COMMAND_MATERIAL_REFERENCE_COUNT = 41
 Private Const COMMAND_SET_MATERIAL = 42
+Private Const COMMAND_SET_MESH_NORMAL = 43
+Private Const COMMAND_LIVE_MODEL_COUNT = 44
+Private Const COMMAND_MAX_MODEL_COUNT = 45
+Private Const COMMAND_MODEL_VALID = 46
+Private Const COMMAND_MODEL_PART_COUNT = 47
+Private Const COMMAND_MODEL_MATERIAL_COUNT = 48
+Private Const COMMAND_CREATE_MODEL_PART_OBJECT = 49
+Private Const COMMAND_MODEL_PART_MATERIAL = 50
 
 Private Const IMAGE_COMMAND_CREATE_TEXTURE = 1
+Private Const TEXT_COMMAND_LOAD_MODEL = 1
 
 Public Const PRIMITIVE_CUBE = 1
 Public Const PRIMITIVE_PLANE = 2
@@ -281,6 +290,96 @@ Public Function MaterialReferenceCount3D(MaterialHandle As Number) As Number
     Return Result
 
 End Function
+
+Public Function LiveModelCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_LIVE_MODEL_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function MaximumModelCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MAX_MODEL_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function ModelHandleValid3D(ModelHandle As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_MODEL_VALID, ModelHandle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Function LoadModel3D(Path As Text) As Core.Model3D
+
+    Dim Result As Core.Model3D
+
+    Result.Handle = Renderer3DText(TEXT_COMMAND_LOAD_MODEL, Path, 0, 0, 0, 0, 0, 0, 0, 0)
+
+    If Result.Handle <> 0 Then
+        Result.PartCount = Dispatch(COMMAND_MODEL_PART_COUNT, Result.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        Result.MaterialCount = Dispatch(COMMAND_MODEL_MATERIAL_COUNT, Result.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ModelPartMaterial3D(Model As Core.Model3D, PartIndex As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_PART_MATERIAL, Model.Handle, PartIndex, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function CreateModelPart3D(Model As Core.Model3D, PartIndex As Number) As Core.Object3D
+
+    Dim Result As Core.Object3D
+
+    Result.Handle = Dispatch(COMMAND_CREATE_MODEL_PART_OBJECT, Model.Handle, PartIndex, 0, 0, 0, 0, 0, 0, 0, 0)
+
+    If Result.Handle <> 0 Then
+
+        Result.ScaleX = 100
+        Result.ScaleY = 100
+        Result.ScaleZ = 100
+        Result.ColorRed = 255
+        Result.ColorGreen = 255
+        Result.ColorBlue = 255
+        Result.AlphaPercent = 100
+        Result.Visible = True
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub DestroyModel3D(ByRef Model As Core.Model3D)
+
+    Dim Destroyed As Boolean
+
+    Destroyed = Dispatch(COMMAND_DESTROY, Model.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+
+    If Destroyed Then
+
+        Model.Handle = 0
+        Model.PartCount = 0
+        Model.MaterialCount = 0
+
+    End If
+
+End Sub
 
 Public Function LoadTexture3D(
     Path As Text,
@@ -618,6 +717,34 @@ Public Function SetMeshUv3D(
     Dim Result As Boolean
 
     Result = Dispatch(COMMAND_SET_MESH_UV, MeshHandle, Index, UValue, VValue, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+''' Sets a normal in thousandths before committing the mesh.
+Public Function SetMeshNormal3D(
+    MeshHandle As Number,
+    Index As Number,
+    XValue As Number,
+    YValue As Number,
+    ZValue As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_MESH_NORMAL,
+        MeshHandle,
+        Index,
+        XValue,
+        YValue,
+        ZValue,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
     Return Result
 
 End Function

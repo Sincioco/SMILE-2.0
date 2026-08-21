@@ -234,6 +234,7 @@ internal static class WebOutputWriter
             const renderer3DObjects = new Map();
             const renderer3DTextures = new Map();
             const renderer3DMaterials = new Map();
+            const renderer3DModels = new Map();
             const renderer3DCamera = {
                 position: [0, 300, -800], target: [0, 0, 0], fov: 55, near: 1, far: 10000
             };
@@ -789,7 +790,8 @@ internal static class WebOutputWriter
                 const handle = renderer3DHandle();
                 renderer3DMeshes.set(handle, {
                     vertexCount, indexCount, vertices: new Float32Array(vertexCount * 8),
-                    indices: new Uint32Array(indexCount), committed: false, vertexBuffer: null, indexBuffer: null
+                    indices: new Uint32Array(indexCount), committed: false, explicitNormals: false,
+                    vertexBuffer: null, indexBuffer: null
                 });
                 return handle;
             }
@@ -861,6 +863,18 @@ internal static class WebOutputWriter
                 return true;
             }
 
+            function renderer3DSetNormal(mesh, index, x, y, z) {
+                index = safe(index);
+                if (index < 0 || index >= mesh.vertexCount) { renderer3DLastError = 5; return false; }
+                const offset = index * 8;
+                mesh.vertices[offset + 3] = safe(x) / 1000;
+                mesh.vertices[offset + 4] = safe(y) / 1000;
+                mesh.vertices[offset + 5] = safe(z) / 1000;
+                mesh.explicitNormals = true;
+                mesh.committed = false;
+                return true;
+            }
+
             function renderer3DDeleteTextureGpu(texture) {
                 const gl = renderer3DGl;
                 if (gl && texture.gpu) gl.deleteTexture(texture.gpu);
@@ -919,7 +933,8 @@ internal static class WebOutputWriter
             }
 
             function renderer3DCommit(mesh) {
-                mesh.vertices.forEach((_, index) => { if (index % 8 >= 3 && index % 8 < 6) mesh.vertices[index] = 0; });
+                if (!mesh.explicitNormals)
+                    mesh.vertices.forEach((_, index) => { if (index % 8 >= 3 && index % 8 < 6) mesh.vertices[index] = 0; });
                 for (let offset = 0; offset < mesh.indexCount; offset += 3) {
                     const ia = mesh.indices[offset], ib = mesh.indices[offset + 1], ic = mesh.indices[offset + 2];
                     if (ia >= mesh.vertexCount || ib >= mesh.vertexCount || ic >= mesh.vertexCount) {
@@ -928,19 +943,98 @@ internal static class WebOutputWriter
                     const a = ia * 8, b = ib * 8, c = ic * 8;
                     const ux = mesh.vertices[b] - mesh.vertices[a], uy = mesh.vertices[b + 1] - mesh.vertices[a + 1], uz = mesh.vertices[b + 2] - mesh.vertices[a + 2];
                     const vx = mesh.vertices[c] - mesh.vertices[a], vy = mesh.vertices[c + 1] - mesh.vertices[a + 1], vz = mesh.vertices[c + 2] - mesh.vertices[a + 2];
-                    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
-                    for (const vertex of [a, b, c]) {
-                        mesh.vertices[vertex + 3] += nx; mesh.vertices[vertex + 4] += ny; mesh.vertices[vertex + 5] += nz;
+                    if (!mesh.explicitNormals) {
+                        const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+                        for (const vertex of [a, b, c]) {
+                            mesh.vertices[vertex + 3] += nx; mesh.vertices[vertex + 4] += ny; mesh.vertices[vertex + 5] += nz;
+                        }
                     }
                 }
                 for (let index = 0; index < mesh.vertexCount; index += 1) {
                     const offset = index * 8 + 3;
+                    if (![mesh.vertices[offset],mesh.vertices[offset+1],mesh.vertices[offset+2]].every(Number.isFinite)) {
+                        renderer3DLastError = 6; return false;
+                    }
                     const length = Math.hypot(mesh.vertices[offset], mesh.vertices[offset + 1], mesh.vertices[offset + 2]);
                     if (length > .000001) {
                         mesh.vertices[offset] /= length; mesh.vertices[offset + 1] /= length; mesh.vertices[offset + 2] /= length;
                     } else mesh.vertices[offset + 1] = 1;
                 }
                 renderer3DDeleteGpu(mesh); mesh.committed = true; return true;
+            }
+
+            function renderer3DChecksum(bytes, start) {
+                let result = 2166136261;
+                for (let index = start; index < bytes.length; index += 1)
+                    result = Math.imul((result ^ bytes[index]) >>> 0, 16777619) >>> 0;
+                return result;
+            }
+
+            async function renderer3DLoadModel(path) {
+                if (renderer3DModels.size >= 64) { renderer3DLastError = 25; return 0; }
+                let buffer;
+                try {
+                    const response = await fetch(logicalPath(path), { cache: "no-store" });
+                    if (!response.ok) { renderer3DLastError = 26; return 0; }
+                    buffer = await response.arrayBuffer();
+                } catch (_) { renderer3DLastError = 26; return 0; }
+                if (!(buffer instanceof ArrayBuffer) || buffer.byteLength < 32 || buffer.byteLength > 16*1024*1024) {
+                    renderer3DLastError = 24; return 0;
+                }
+                const bytes = new Uint8Array(buffer), view = new DataView(buffer);
+                const u16 = offset => view.getUint16(offset, true), u32 = offset => view.getUint32(offset, true);
+                const partCount=u32(8),vertexCount=u32(12),indexCount=u32(16),materialCount=u32(20);
+                const partBytes=partCount*24,vertexBytes=vertexCount*32,expected=32+partBytes+vertexBytes+indexCount*4;
+                if(bytes[0]!==83||bytes[1]!==77||bytes[2]!==51||bytes[3]!==68||u16(4)!==1||u16(6)!==32||
+                    partCount<1||partCount>16||vertexCount<1||vertexCount>16*65535||
+                    indexCount<1||indexCount>16*196608||materialCount<1||materialCount>64||
+                    u32(24)!==buffer.byteLength||expected!==buffer.byteLength||u32(28)!==renderer3DChecksum(bytes,32)) {
+                    renderer3DLastError=24;return 0;
+                }
+                const parts=[];
+                for(let partIndex=0;partIndex<partCount;partIndex+=1){
+                    const offset=32+partIndex*24,firstVertex=u32(offset),partVertices=u32(offset+4),
+                        firstIndex=u32(offset+8),partIndices=u32(offset+12),material=u32(offset+16);
+                    if(partVertices<1||partVertices>65535||partIndices<1||partIndices>196608||partIndices%3!==0||
+                        firstVertex>vertexCount||partVertices>vertexCount-firstVertex||firstIndex>indexCount||
+                        partIndices>indexCount-firstIndex||material>=materialCount||u32(offset+20)!==0){
+                        renderer3DLastError=24;return 0;
+                    }
+                    for(let index=0;index<partVertices*8;index+=1)
+                        if(!Number.isFinite(view.getFloat32(32+partBytes+(firstVertex*8+index)*4,true))){
+                            renderer3DLastError=24;return 0;
+                        }
+                    for(let index=0;index<partIndices;index+=1)
+                        if(u32(32+partBytes+vertexBytes+(firstIndex+index)*4)>=partVertices){
+                            renderer3DLastError=24;return 0;
+                        }
+                    parts.push({firstVertex,vertexCount:partVertices,firstIndex,indexCount:partIndices,material});
+                }
+                if(renderer3DMeshes.size+partCount>128){renderer3DLastError=3;return 0;}
+                const meshHandles=[];
+                for(const part of parts){
+                    const handle=renderer3DCreateMesh(part.vertexCount,part.indexCount),mesh=renderer3DMeshes.get(handle);
+                    if(!mesh){for(const value of meshHandles){const old=renderer3DMeshes.get(value);if(old)renderer3DDeleteGpu(old);renderer3DMeshes.delete(value);}return 0;}
+                    for(let vertex=0;vertex<part.vertexCount;vertex+=1){
+                        const source=32+partBytes+(part.firstVertex+vertex)*32,target=vertex*8;
+                        for(let field=0;field<8;field+=1)mesh.vertices[target+field]=view.getFloat32(source+field*4,true);
+                    }
+                    mesh.explicitNormals=true;
+                    for(let index=0;index<part.indexCount;index+=1)
+                        mesh.indices[index]=u32(32+partBytes+vertexBytes+(part.firstIndex+index)*4);
+                    if(!renderer3DCommit(mesh)){renderer3DDeleteGpu(mesh);renderer3DMeshes.delete(handle);for(const value of meshHandles){const old=renderer3DMeshes.get(value);if(old)renderer3DDeleteGpu(old);renderer3DMeshes.delete(value);}return 0;}
+                    meshHandles.push(handle);
+                }
+                const handle=renderer3DHandle();
+                renderer3DModels.set(handle,{parts:meshHandles,materials:parts.map(part=>part.material),materialCount});
+                return handle;
+            }
+
+            function renderer3DDeleteModel(handle) {
+                const model=renderer3DModels.get(handle);if(!model)return false;
+                for(const mesh of model.parts)if(renderer3DMeshReferenceCount(mesh)!==0)return false;
+                for(const handle of model.parts){const mesh=renderer3DMeshes.get(handle);if(mesh)renderer3DDeleteGpu(mesh);renderer3DMeshes.delete(handle);}
+                renderer3DModels.delete(handle);return true;
             }
 
             function renderer3DPrimitive(kind, first, second, segments, rings) {
@@ -1010,11 +1104,11 @@ internal static class WebOutputWriter
             function renderer3DBegin(red,green,blue){if(renderer3DFrameActive)return 1;if(!renderer3DInitialize())return 0;const gl=renderer3DGl;if(renderer3DCanvas.width!==backingWidth||renderer3DCanvas.height!==backingHeight){renderer3DCanvas.width=backingWidth;renderer3DCanvas.height=backingHeight;}gl.viewport(0,0,backingWidth,backingHeight);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.depthMask(true);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);gl.clearColor((safe(red)&255)/255,(safe(green)&255)/255,(safe(blue)&255)/255,1);gl.clearDepth(1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(renderer3DProgram.handle);renderer3DFrameActive=true;return 1;}
             function renderer3DDraw(handle){const object=renderer3DRequireObject(handle);if(!renderer3DFrameActive||!object){renderer3DLastError=14;return 0;}if(!object.visible)return 1;const mesh=renderer3DRequireMesh(object.mesh);if(!mesh||!renderer3DUpload(mesh))return 0;const material=object.material?renderer3DRequireMaterial(object.material):null,texture=material&&material.texture?renderer3DRequireTexture(material.texture):null;if(texture&&!renderer3DUploadTexture(texture))return 0;const gl=renderer3DGl,model=renderer3DModel(object),mvp=renderer3DMultiply(renderer3DProjection(backingWidth/backingHeight),renderer3DMultiply(renderer3DView(),model)),tint=object.color.map((value,index)=>value*(material?material.color[index]:1)),alphaMode=material?material.alphaMode:(tint[3]<.999?2:0);if(alphaMode===2){gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);}else{gl.disable(gl.BLEND);gl.depthMask(true);}gl.bindBuffer(gl.ARRAY_BUFFER,mesh.vertexBuffer);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,32,0);gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,3,gl.FLOAT,false,32,12);gl.enableVertexAttribArray(2);gl.vertexAttribPointer(2,2,gl.FLOAT,false,32,24);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,mesh.indexBuffer);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture?texture.gpu:null);gl.uniform1i(renderer3DProgram.baseTexture,0);gl.uniformMatrix4fv(renderer3DProgram.model,false,new Float32Array(model));gl.uniformMatrix4fv(renderer3DProgram.mvp,false,new Float32Array(mvp));gl.uniform4fv(renderer3DProgram.tint,new Float32Array(tint));gl.uniform4fv(renderer3DProgram.material,new Float32Array([texture?1:0,material&&material.unlit?1:0,material?material.emissive:0,material&&material.alphaMode===1?material.cutoff:-1]));gl.drawElements(gl.TRIANGLES,mesh.indexCount,gl.UNSIGNED_INT,0);return 1;}
             function renderer3DEnd(){if(!renderer3DFrameActive)return 1;const gl=renderer3DGl;gl.depthMask(true);gl.bindTexture(gl.TEXTURE_2D,null);renderer3DFrameActive=false;back.drawImage(renderer3DCanvas,0,0,logicalWidth,logicalHeight);return 1;}
-            function renderer3DReset(){renderer3DFrameActive=false;for(const mesh of renderer3DMeshes.values())renderer3DDeleteGpu(mesh);for(const texture of renderer3DTextures.values()){renderer3DDeleteTextureGpu(texture);imageRelease(texture.image);}renderer3DMeshes.clear();renderer3DObjects.clear();renderer3DMaterials.clear();renderer3DTextures.clear();renderer3DLastError=0;return 1;}
+            function renderer3DReset(){renderer3DFrameActive=false;renderer3DObjects.clear();for(const model of [...renderer3DModels.keys()])renderer3DDeleteModel(model);for(const mesh of renderer3DMeshes.values())renderer3DDeleteGpu(mesh);for(const texture of renderer3DTextures.values()){renderer3DDeleteTextureGpu(texture);imageRelease(texture.image);}renderer3DMeshes.clear();renderer3DModels.clear();renderer3DMaterials.clear();renderer3DTextures.clear();renderer3DLastError=0;return 1;}
 
             function renderer3D(command,a,b,c,d,e,f,g,h,i,j) {
                 [command,a,b,c,d,e,f,g,h,i,j]=[command,a,b,c,d,e,f,g,h,i,j].map(safe);
-                let mesh,object,texture,material;
+                let mesh,object,texture,material,model;
                 switch(command){
                     case 1:return renderer3DInitialize()?1:0;
                     case 2:return renderer3DReset();
@@ -1024,7 +1118,7 @@ internal static class WebOutputWriter
                     case 6:mesh=renderer3DRequireMesh(a);return mesh&&renderer3DCommit(mesh)?1:0;
                     case 7:return renderer3DPrimitive(a,b,c,d,e);
                     case 8:if(!renderer3DRequireMesh(a)||renderer3DObjects.size>=256){renderer3DLastError=9;return 0;}const handle=renderer3DHandle();renderer3DObjects.set(handle,{mesh:a,material:0,position:[0,0,0],rotation:[0,0,0],scale:[1,1,1],color:[1,1,1,1],visible:true});return handle;
-                    case 9:if(renderer3DObjects.delete(a))return 1;mesh=renderer3DMeshes.get(a);if(mesh){if(renderer3DMeshReferenceCount(a)!==0){renderer3DLastError=16;return 0;}renderer3DDeleteGpu(mesh);renderer3DMeshes.delete(a);return 1;}material=renderer3DMaterials.get(a);if(material){if(renderer3DMaterialReferenceCount(a)!==0){renderer3DLastError=22;return 0;}renderer3DMaterials.delete(a);return 1;}texture=renderer3DTextures.get(a);if(texture){if(renderer3DTextureReferenceCount(a)!==0){renderer3DLastError=23;return 0;}renderer3DDeleteTextureGpu(texture);imageRelease(texture.image);renderer3DTextures.delete(a);return 1;}renderer3DLastError=5;return 0;
+                    case 9:if(renderer3DObjects.delete(a))return 1;if(renderer3DModels.has(a)){if(!renderer3DDeleteModel(a)){renderer3DLastError=27;return 0;}return 1;}mesh=renderer3DMeshes.get(a);if(mesh){if(renderer3DMeshReferenceCount(a)!==0){renderer3DLastError=16;return 0;}renderer3DDeleteGpu(mesh);renderer3DMeshes.delete(a);return 1;}material=renderer3DMaterials.get(a);if(material){if(renderer3DMaterialReferenceCount(a)!==0){renderer3DLastError=22;return 0;}renderer3DMaterials.delete(a);return 1;}texture=renderer3DTextures.get(a);if(texture){if(renderer3DTextureReferenceCount(a)!==0){renderer3DLastError=23;return 0;}renderer3DDeleteTextureGpu(texture);imageRelease(texture.image);renderer3DTextures.delete(a);return 1;}renderer3DLastError=5;return 0;
                     case 10:renderer3DCamera.position=[a,b,c];renderer3DCamera.target=[d,e,f];renderer3DCamera.fov=g;renderer3DCamera.near=h;renderer3DCamera.far=i;if(g<10||g>160||h<=0||i<=h){renderer3DLastError=15;return 0;}return 1;
                     case 11:case 12:case 13:object=renderer3DRequireObject(a);if(!object)return 0;if(command===11)object.position=[b,c,d];else if(command===12)object.rotation=[b,c,d];else object.scale=[b/100,c/100,d/100];return 1;
                     case 14:object=renderer3DRequireObject(a);if(!object)return 0;object.color=[(b&255)/255,(c&255)/255,(d&255)/255,Math.max(0,Math.min(100,e))/100];return 1;
@@ -1056,6 +1150,14 @@ internal static class WebOutputWriter
                     case 40:return renderer3DTextureReferenceCount(a);
                     case 41:return renderer3DMaterialReferenceCount(a);
                     case 42:material=renderer3DRequireMaterial(a);return renderer3DSetMaterial(material,b,c,d,e,f,g,h,i)?1:0;
+                    case 43:mesh=renderer3DRequireMesh(a);return mesh&&renderer3DSetNormal(mesh,b,c,d,e)?1:0;
+                    case 44:return renderer3DModels.size;
+                    case 45:return 64;
+                    case 46:return renderer3DModels.has(a)?1:0;
+                    case 47:model=renderer3DModels.get(a);return model?model.parts.length:0;
+                    case 48:model=renderer3DModels.get(a);return model?model.materialCount:0;
+                    case 49:model=renderer3DModels.get(a);if(!model||b<0||b>=model.parts.length||renderer3DObjects.size>=256){renderer3DLastError=9;return 0;}const partHandle=renderer3DHandle();renderer3DObjects.set(partHandle,{mesh:model.parts[b],material:0,position:[0,0,0],rotation:[0,0,0],scale:[1,1,1],color:[1,1,1,1],visible:true});return partHandle;
+                    case 50:model=renderer3DModels.get(a);if(!model||b<0||b>=model.parts.length){renderer3DLastError=5;return -1;}return model.materials[b];
                     default:renderer3DLastError=1;return 0;
                 }
             }
@@ -1064,6 +1166,12 @@ internal static class WebOutputWriter
                 [command,a,b,c,d,e,f,g,h]=[command,a,b,c,d,e,f,g,h].map(safe);
                 if(command===1)return renderer3DCreateTexture(image,a,b);
                 imageRelease(image);renderer3DLastError=1;return 0;
+            }
+
+            async function renderer3DText(command,value,a,b,c,d,e,f,g,h) {
+                [command,a,b,c,d,e,f,g,h]=[command,a,b,c,d,e,f,g,h].map(safe);
+                if(command===1)return renderer3DLoadModel(String(value));
+                renderer3DLastError=1;return 0;
             }
 
             function clear(fillColor) {
@@ -1905,7 +2013,7 @@ internal static class WebOutputWriter
                 print, clearScreen, wait, getKey, keyHeld, pointerX, pointerY, pointerDeltaX, pointerDeltaY,
                 pointerWheelDelta, pointerInside, pointerHeld, pointerPressed, pointerReleased, playSound, stopSound,
                 playMusic, pauseMusic, resumeMusic, stopMusic, setMusicVolume, loadTextFile,
-                loadInt, saveInt, loadData, saveData, renderer3D, renderer3DImage,
+                loadInt, saveInt, loadData, saveData, renderer3D, renderer3DImage, renderer3DText,
                 gameClosed, endProgram, mediaShutdown, mediaDiagnostics, run
             };
         })();

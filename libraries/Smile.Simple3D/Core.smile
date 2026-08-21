@@ -119,6 +119,13 @@ Public Type Material3D
     CutoutPercent As Number
 End Type
 
+''' A validated deterministic model asset whose meshes are shared by part instances.
+Public Type Model3D
+    Handle As Number
+    PartCount As Number
+    MaterialCount As Number
+End Type
+
 ''' A projected logical-canvas point plus its camera-space depth.
 Public Type ProjectedPoint3D
     X As Number
