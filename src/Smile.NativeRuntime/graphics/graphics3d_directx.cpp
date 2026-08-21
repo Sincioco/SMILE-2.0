@@ -16,11 +16,19 @@
 #define SMILE_3D_MAX_MODELS 64
 #define SMILE_3D_MAX_MODEL_PARTS 16
 #define SMILE_3D_MAX_MODEL_BYTES (16 * 1024 * 1024)
+#define SMILE_3D_MAX_SKELETONS 64
+#define SMILE_3D_MAX_CLIPS 128
+#define SMILE_3D_MAX_ANIMATORS 128
+#define SMILE_3D_MAX_BONES 32
+#define SMILE_3D_MAX_ANIMATION_EVENTS 16
 #define SMILE_3D_MESH_HANDLE 0x10000000LL
 #define SMILE_3D_OBJECT_HANDLE 0x20000000LL
 #define SMILE_3D_TEXTURE_HANDLE 0x30000000LL
 #define SMILE_3D_MATERIAL_HANDLE 0x40000000LL
 #define SMILE_3D_MODEL_HANDLE 0x50000000LL
+#define SMILE_3D_SKELETON_HANDLE 0x60000000LL
+#define SMILE_3D_CLIP_HANDLE 0x70000000LL
+#define SMILE_3D_ANIMATOR_HANDLE 0x80000000LL
 #define SMILE_3D_HANDLE_KIND 0xF0000000LL
 #define SMILE_3D_PI 3.14159265358979323846f
 
@@ -29,6 +37,8 @@ struct SmileVertex3D
     float x, y, z;
     float nx, ny, nz;
     float u, v;
+    float joints[4];
+    float weights[4];
 };
 
 struct SmileMesh3D
@@ -37,6 +47,7 @@ struct SmileMesh3D
     unsigned char active;
     unsigned char committed;
     unsigned char explicit_normals;
+    unsigned char max_joint;
     unsigned int vertex_count;
     unsigned int index_count;
     SmileVertex3D* vertices;
@@ -52,6 +63,7 @@ struct SmileObject3D
     unsigned char visible;
     long long mesh_handle;
     long long material_handle;
+    long long animator_handle;
     float position[3];
     float rotation[3];
     float scale[3];
@@ -92,7 +104,50 @@ struct SmileModel3D
     unsigned short material_slots[SMILE_3D_MAX_MODEL_PARTS];
 };
 
+struct SmileSkeleton3D
+{
+    unsigned short generation;
+    unsigned char active;
+    unsigned char committed;
+    unsigned char bone_count;
+    signed char parents[SMILE_3D_MAX_BONES];
+    float bind_translation[SMILE_3D_MAX_BONES][3];
+    float inverse_bind_translation[SMILE_3D_MAX_BONES][3];
+};
+
+struct SmileAnimationClip3D
+{
+    unsigned short generation;
+    unsigned char active;
+    unsigned char event_count;
+    long long skeleton_handle;
+    unsigned int duration_ms;
+    unsigned char translation_tracks[SMILE_3D_MAX_BONES];
+    unsigned char rotation_tracks[SMILE_3D_MAX_BONES];
+    unsigned char scale_tracks[SMILE_3D_MAX_BONES];
+    float translation[SMILE_3D_MAX_BONES][2][3];
+    float rotation[SMILE_3D_MAX_BONES][2][4];
+    float scale[SMILE_3D_MAX_BONES][2][3];
+    unsigned int event_time[SMILE_3D_MAX_ANIMATION_EVENTS];
+    unsigned int event_id[SMILE_3D_MAX_ANIMATION_EVENTS];
+};
+
 struct SmileMatrix3D { float m[16]; };
+
+struct SmileAnimator3D
+{
+    unsigned short generation;
+    unsigned char active;
+    unsigned char loop;
+    unsigned char complete;
+    long long skeleton_handle;
+    long long clip_handle;
+    unsigned int time_ms;
+    unsigned int previous_time_ms;
+    unsigned int speed_percent;
+    unsigned int pending_event;
+    SmileMatrix3D bones[SMILE_3D_MAX_BONES];
+};
 
 struct SmileConstants3D
 {
@@ -100,6 +155,8 @@ struct SmileConstants3D
     SmileMatrix3D mvp;
     float color[4];
     float material[4];
+    float animation[4];
+    SmileMatrix3D bones[SMILE_3D_MAX_BONES];
 };
 
 static SmileMesh3D smile_meshes3d[SMILE_3D_MAX_MESHES];
@@ -107,6 +164,9 @@ static SmileObject3D smile_objects3d[SMILE_3D_MAX_OBJECTS];
 static SmileTexture3D smile_textures3d[SMILE_3D_MAX_TEXTURES];
 static SmileMaterial3D smile_materials3d[SMILE_3D_MAX_MATERIALS];
 static SmileModel3D smile_models3d[SMILE_3D_MAX_MODELS];
+static SmileSkeleton3D smile_skeletons3d[SMILE_3D_MAX_SKELETONS];
+static SmileAnimationClip3D smile_clips3d[SMILE_3D_MAX_CLIPS];
+static SmileAnimator3D smile_animators3d[SMILE_3D_MAX_ANIMATORS];
 static ID3D11VertexShader* smile_vertex_shader3d;
 static ID3D11PixelShader* smile_pixel_shader3d;
 static ID3D11InputLayout* smile_input_layout3d;
@@ -126,6 +186,8 @@ static float smile_camera_target3d[3] = { 0.0f, 0.0f, 0.0f };
 static float smile_camera_fov3d = 55.0f;
 static float smile_camera_near3d = 1.0f;
 static float smile_camera_far3d = 10000.0f;
+
+static SmileMatrix3D smile_3d_identity(void);
 
 template<typename T> static void smile_3d_release(T*& value)
 {
@@ -215,6 +277,42 @@ static SmileModel3D* smile_3d_model_resource(long long handle)
     return &smile_models3d[slot];
 }
 
+static SmileSkeleton3D* smile_3d_skeleton(long long handle)
+{
+    int slot;
+    unsigned short generation;
+    if ((handle & SMILE_3D_HANDLE_KIND) != SMILE_3D_SKELETON_HANDLE) return 0;
+    slot = (int)(handle & 255LL) - 1;
+    generation = (unsigned short)((handle >> 8) & 65535LL);
+    if (slot < 0 || slot >= SMILE_3D_MAX_SKELETONS || !smile_skeletons3d[slot].active ||
+        smile_skeletons3d[slot].generation != generation) return 0;
+    return &smile_skeletons3d[slot];
+}
+
+static SmileAnimationClip3D* smile_3d_clip(long long handle)
+{
+    int slot;
+    unsigned short generation;
+    if ((handle & SMILE_3D_HANDLE_KIND) != SMILE_3D_CLIP_HANDLE) return 0;
+    slot = (int)(handle & 255LL) - 1;
+    generation = (unsigned short)((handle >> 8) & 65535LL);
+    if (slot < 0 || slot >= SMILE_3D_MAX_CLIPS || !smile_clips3d[slot].active ||
+        smile_clips3d[slot].generation != generation) return 0;
+    return &smile_clips3d[slot];
+}
+
+static SmileAnimator3D* smile_3d_animator(long long handle)
+{
+    int slot;
+    unsigned short generation;
+    if ((handle & SMILE_3D_HANDLE_KIND) != SMILE_3D_ANIMATOR_HANDLE) return 0;
+    slot = (int)(handle & 255LL) - 1;
+    generation = (unsigned short)((handle >> 8) & 65535LL);
+    if (slot < 0 || slot >= SMILE_3D_MAX_ANIMATORS || !smile_animators3d[slot].active ||
+        smile_animators3d[slot].generation != generation) return 0;
+    return &smile_animators3d[slot];
+}
+
 static int smile_3d_live_mesh_count(void)
 {
     int count = 0;
@@ -257,6 +355,56 @@ static int smile_3d_live_model_count(void)
     int index;
     for (index = 0; index < SMILE_3D_MAX_MODELS; ++index)
         if (smile_models3d[index].active) count++;
+    return count;
+}
+
+static int smile_3d_live_skeleton_count(void)
+{
+    int count = 0;
+    for (int index = 0; index < SMILE_3D_MAX_SKELETONS; ++index)
+        if (smile_skeletons3d[index].active) count++;
+    return count;
+}
+
+static int smile_3d_live_clip_count(void)
+{
+    int count = 0;
+    for (int index = 0; index < SMILE_3D_MAX_CLIPS; ++index)
+        if (smile_clips3d[index].active) count++;
+    return count;
+}
+
+static int smile_3d_live_animator_count(void)
+{
+    int count = 0;
+    for (int index = 0; index < SMILE_3D_MAX_ANIMATORS; ++index)
+        if (smile_animators3d[index].active) count++;
+    return count;
+}
+
+static int smile_3d_skeleton_reference_count(long long handle)
+{
+    int count = 0;
+    for (int index = 0; index < SMILE_3D_MAX_CLIPS; ++index)
+        if (smile_clips3d[index].active && smile_clips3d[index].skeleton_handle == handle) count++;
+    for (int index = 0; index < SMILE_3D_MAX_ANIMATORS; ++index)
+        if (smile_animators3d[index].active && smile_animators3d[index].skeleton_handle == handle) count++;
+    return count;
+}
+
+static int smile_3d_clip_reference_count(long long handle)
+{
+    int count = 0;
+    for (int index = 0; index < SMILE_3D_MAX_ANIMATORS; ++index)
+        if (smile_animators3d[index].active && smile_animators3d[index].clip_handle == handle) count++;
+    return count;
+}
+
+static int smile_3d_animator_reference_count(long long handle)
+{
+    int count = 0;
+    for (int index = 0; index < SMILE_3D_MAX_OBJECTS; ++index)
+        if (smile_objects3d[index].active && smile_objects3d[index].animator_handle == handle) count++;
     return count;
 }
 
@@ -305,6 +453,7 @@ static void smile_3d_delete_mesh(SmileMesh3D* mesh)
     mesh->active = 0;
     mesh->committed = 0;
     mesh->explicit_normals = 0;
+    mesh->max_joint = 0;
     mesh->generation++;
     if (mesh->generation == 0) mesh->generation = 1;
 }
@@ -328,6 +477,117 @@ static int smile_3d_delete_model(SmileModel3D* model)
     model->generation++;
     if (model->generation == 0) model->generation = 1;
     return 1;
+}
+
+static void smile_3d_delete_skeleton(SmileSkeleton3D* skeleton)
+{
+    skeleton->active = 0;
+    skeleton->committed = 0;
+    skeleton->bone_count = 0;
+    skeleton->generation++;
+    if (skeleton->generation == 0) skeleton->generation = 1;
+}
+
+static void smile_3d_delete_clip(SmileAnimationClip3D* clip)
+{
+    clip->active = 0;
+    clip->skeleton_handle = 0;
+    clip->event_count = 0;
+    clip->duration_ms = 0;
+    clip->generation++;
+    if (clip->generation == 0) clip->generation = 1;
+}
+
+static void smile_3d_delete_animator(SmileAnimator3D* animator)
+{
+    animator->active = 0;
+    animator->skeleton_handle = 0;
+    animator->clip_handle = 0;
+    animator->pending_event = 0;
+    animator->generation++;
+    if (animator->generation == 0) animator->generation = 1;
+}
+
+static long long smile_3d_create_skeleton(int bone_count)
+{
+    int slot;
+    if (bone_count <= 0 || bone_count > SMILE_3D_MAX_BONES) { smile_last_error3d = 28; return 0; }
+    for (slot = 0; slot < SMILE_3D_MAX_SKELETONS; ++slot)
+        if (!smile_skeletons3d[slot].active) break;
+    if (slot == SMILE_3D_MAX_SKELETONS) { smile_last_error3d = 29; return 0; }
+    SmileSkeleton3D* skeleton = &smile_skeletons3d[slot];
+    unsigned short generation = skeleton->generation == 0 ? 1 : skeleton->generation;
+    ZeroMemory(skeleton, sizeof(*skeleton));
+    skeleton->generation = generation;
+    skeleton->active = 1;
+    skeleton->bone_count = (unsigned char)bone_count;
+    for (int index = 0; index < bone_count; ++index) skeleton->parents[index] = -2;
+    return smile_3d_handle(SMILE_3D_SKELETON_HANDLE, slot, skeleton->generation);
+}
+
+static int smile_3d_commit_skeleton(SmileSkeleton3D* skeleton)
+{
+    if (skeleton == 0) { smile_last_error3d = 5; return 0; }
+    for (int bone = 0; bone < skeleton->bone_count; ++bone)
+    {
+        int parent = skeleton->parents[bone];
+        float x = skeleton->bind_translation[bone][0];
+        float y = skeleton->bind_translation[bone][1];
+        float z = skeleton->bind_translation[bone][2];
+        if (parent < -1 || parent >= bone) { smile_last_error3d = 30; return 0; }
+        if (parent >= 0)
+        {
+            x -= skeleton->inverse_bind_translation[parent][0];
+            y -= skeleton->inverse_bind_translation[parent][1];
+            z -= skeleton->inverse_bind_translation[parent][2];
+        }
+        skeleton->inverse_bind_translation[bone][0] = -x;
+        skeleton->inverse_bind_translation[bone][1] = -y;
+        skeleton->inverse_bind_translation[bone][2] = -z;
+    }
+    skeleton->committed = 1;
+    return 1;
+}
+
+static long long smile_3d_create_clip(long long skeleton_handle, unsigned int duration_ms)
+{
+    int slot;
+    SmileSkeleton3D* skeleton = smile_3d_skeleton(skeleton_handle);
+    if (skeleton == 0 || !skeleton->committed || duration_ms == 0 || duration_ms > 600000)
+    {
+        smile_last_error3d = 31;
+        return 0;
+    }
+    for (slot = 0; slot < SMILE_3D_MAX_CLIPS; ++slot)
+        if (!smile_clips3d[slot].active) break;
+    if (slot == SMILE_3D_MAX_CLIPS) { smile_last_error3d = 32; return 0; }
+    SmileAnimationClip3D* clip = &smile_clips3d[slot];
+    unsigned short generation = clip->generation == 0 ? 1 : clip->generation;
+    ZeroMemory(clip, sizeof(*clip));
+    clip->generation = generation;
+    clip->active = 1;
+    clip->skeleton_handle = skeleton_handle;
+    clip->duration_ms = duration_ms;
+    return smile_3d_handle(SMILE_3D_CLIP_HANDLE, slot, clip->generation);
+}
+
+static long long smile_3d_create_animator(long long skeleton_handle)
+{
+    int slot;
+    SmileSkeleton3D* skeleton = smile_3d_skeleton(skeleton_handle);
+    if (skeleton == 0 || !skeleton->committed) { smile_last_error3d = 31; return 0; }
+    for (slot = 0; slot < SMILE_3D_MAX_ANIMATORS; ++slot)
+        if (!smile_animators3d[slot].active) break;
+    if (slot == SMILE_3D_MAX_ANIMATORS) { smile_last_error3d = 33; return 0; }
+    SmileAnimator3D* animator = &smile_animators3d[slot];
+    unsigned short generation = animator->generation == 0 ? 1 : animator->generation;
+    ZeroMemory(animator, sizeof(*animator));
+    animator->generation = generation;
+    animator->active = 1;
+    animator->skeleton_handle = skeleton_handle;
+    animator->speed_percent = 100;
+    for (int bone = 0; bone < SMILE_3D_MAX_BONES; ++bone) animator->bones[bone] = smile_3d_identity();
+    return smile_3d_handle(SMILE_3D_ANIMATOR_HANDLE, slot, animator->generation);
 }
 
 static void smile_3d_delete_texture(SmileTexture3D* texture)
@@ -466,6 +726,8 @@ static long long smile_3d_create_mesh(unsigned int vertex_count, unsigned int in
     mesh->active = 1;
     mesh->committed = 0;
     mesh->explicit_normals = 0;
+    mesh->max_joint = 0;
+    for (unsigned int index = 0; index < vertex_count; ++index) mesh->vertices[index].weights[0] = 1.0f;
     return smile_3d_handle(SMILE_3D_MESH_HANDLE, slot, mesh->generation);
 }
 
@@ -547,6 +809,35 @@ static void smile_3d_normal(SmileMesh3D* mesh, unsigned int index, float x, floa
     mesh->vertices[index].ny = y;
     mesh->vertices[index].nz = z;
     mesh->explicit_normals = 1;
+}
+
+static int smile_3d_skin(SmileMesh3D* mesh, unsigned int index,
+    long long joint0, long long joint1, long long joint2, long long joint3,
+    long long weight0, long long weight1, long long weight2, long long weight3)
+{
+    long long joints[4] = { joint0, joint1, joint2, joint3 };
+    long long weights[4] = { weight0, weight1, weight2, weight3 };
+    long long total = weight0 + weight1 + weight2 + weight3;
+    if (mesh == 0 || index >= mesh->vertex_count || total != 1000)
+    {
+        smile_last_error3d = 34;
+        return 0;
+    }
+    for (int influence = 0; influence < 4; ++influence)
+    {
+        if (joints[influence] < 0 || joints[influence] >= SMILE_3D_MAX_BONES ||
+            weights[influence] < 0 || weights[influence] > 1000)
+        {
+            smile_last_error3d = 34;
+            return 0;
+        }
+        mesh->vertices[index].joints[influence] = (float)joints[influence];
+        mesh->vertices[index].weights[influence] = (float)weights[influence] / 1000.0f;
+        if (weights[influence] != 0 && joints[influence] > mesh->max_joint)
+            mesh->max_joint = (unsigned char)joints[influence];
+    }
+    mesh->committed = 0;
+    return 1;
 }
 
 static void smile_3d_triangle(SmileMesh3D* mesh, unsigned int triangle,
@@ -750,7 +1041,8 @@ static long long smile_3d_create_object(long long mesh_handle)
     if (slot == SMILE_3D_MAX_OBJECTS) { smile_last_error3d = 9; return 0; }
     object = &smile_objects3d[slot];
     if (object->generation == 0) object->generation = 1;
-    object->active = 1; object->visible = 1; object->mesh_handle = mesh_handle; object->material_handle = 0;
+    object->active = 1; object->visible = 1; object->mesh_handle = mesh_handle;
+    object->material_handle = 0; object->animator_handle = 0;
     object->position[0] = object->position[1] = object->position[2] = 0.0f;
     object->rotation[0] = object->rotation[1] = object->rotation[2] = 0.0f;
     object->scale[0] = object->scale[1] = object->scale[2] = 1.0f;
@@ -978,6 +1270,117 @@ static SmileMatrix3D smile_3d_model(const SmileObject3D* object)
     return smile_3d_multiply(smile_3d_multiply(smile_3d_multiply(smile_3d_multiply(scale, rx), ry), rz), translation);
 }
 
+static SmileMatrix3D smile_3d_pose(float tx, float ty, float tz,
+    float qx, float qy, float qz, float qw, float sx, float sy, float sz)
+{
+    SmileMatrix3D result = smile_3d_identity();
+    float length = sqrtf(qx*qx + qy*qy + qz*qz + qw*qw);
+    if (length <= 0.000001f) { qx = qy = qz = 0.0f; qw = 1.0f; }
+    else { qx /= length; qy /= length; qz /= length; qw /= length; }
+    result.m[0] = (1 - 2*qy*qy - 2*qz*qz) * sx;
+    result.m[1] = (2*qx*qy + 2*qw*qz) * sx;
+    result.m[2] = (2*qx*qz - 2*qw*qy) * sx;
+    result.m[4] = (2*qx*qy - 2*qw*qz) * sy;
+    result.m[5] = (1 - 2*qx*qx - 2*qz*qz) * sy;
+    result.m[6] = (2*qy*qz + 2*qw*qx) * sy;
+    result.m[8] = (2*qx*qz + 2*qw*qy) * sz;
+    result.m[9] = (2*qy*qz - 2*qw*qx) * sz;
+    result.m[10] = (1 - 2*qx*qx - 2*qy*qy) * sz;
+    result.m[12] = tx; result.m[13] = ty; result.m[14] = tz;
+    return result;
+}
+
+static float smile_3d_lerp(float first, float second, float amount)
+{
+    return first + (second - first) * amount;
+}
+
+static void smile_3d_update_animation_pose(SmileAnimator3D* animator)
+{
+    SmileSkeleton3D* skeleton = smile_3d_skeleton(animator->skeleton_handle);
+    SmileAnimationClip3D* clip = smile_3d_clip(animator->clip_handle);
+    SmileMatrix3D global[SMILE_3D_MAX_BONES];
+    float amount = clip == 0 || clip->duration_ms == 0 ? 0.0f :
+        (float)animator->time_ms / (float)clip->duration_ms;
+    if (skeleton == 0) return;
+    for (int bone = 0; bone < skeleton->bone_count; ++bone)
+    {
+        float tx = skeleton->bind_translation[bone][0];
+        float ty = skeleton->bind_translation[bone][1];
+        float tz = skeleton->bind_translation[bone][2];
+        float qx = 0, qy = 0, qz = 0, qw = 1;
+        float sx = 1, sy = 1, sz = 1;
+        if (clip != 0 && clip->translation_tracks[bone])
+        {
+            tx = smile_3d_lerp(clip->translation[bone][0][0], clip->translation[bone][1][0], amount);
+            ty = smile_3d_lerp(clip->translation[bone][0][1], clip->translation[bone][1][1], amount);
+            tz = smile_3d_lerp(clip->translation[bone][0][2], clip->translation[bone][1][2], amount);
+        }
+        if (clip != 0 && clip->rotation_tracks[bone])
+        {
+            float dot = 0;
+            for (int component = 0; component < 4; ++component)
+                dot += clip->rotation[bone][0][component] * clip->rotation[bone][1][component];
+            float direction = dot < 0 ? -1.0f : 1.0f;
+            qx = smile_3d_lerp(clip->rotation[bone][0][0], clip->rotation[bone][1][0] * direction, amount);
+            qy = smile_3d_lerp(clip->rotation[bone][0][1], clip->rotation[bone][1][1] * direction, amount);
+            qz = smile_3d_lerp(clip->rotation[bone][0][2], clip->rotation[bone][1][2] * direction, amount);
+            qw = smile_3d_lerp(clip->rotation[bone][0][3], clip->rotation[bone][1][3] * direction, amount);
+        }
+        if (clip != 0 && clip->scale_tracks[bone])
+        {
+            sx = smile_3d_lerp(clip->scale[bone][0][0], clip->scale[bone][1][0], amount);
+            sy = smile_3d_lerp(clip->scale[bone][0][1], clip->scale[bone][1][1], amount);
+            sz = smile_3d_lerp(clip->scale[bone][0][2], clip->scale[bone][1][2], amount);
+        }
+        SmileMatrix3D local = smile_3d_pose(tx, ty, tz, qx, qy, qz, qw, sx, sy, sz);
+        int parent = skeleton->parents[bone];
+        global[bone] = parent < 0 ? local : smile_3d_multiply(local, global[parent]);
+        SmileMatrix3D inverse = smile_3d_identity();
+        inverse.m[12] = skeleton->inverse_bind_translation[bone][0];
+        inverse.m[13] = skeleton->inverse_bind_translation[bone][1];
+        inverse.m[14] = skeleton->inverse_bind_translation[bone][2];
+        animator->bones[bone] = smile_3d_multiply(inverse, global[bone]);
+    }
+    for (int bone = skeleton->bone_count; bone < SMILE_3D_MAX_BONES; ++bone)
+        animator->bones[bone] = smile_3d_identity();
+}
+
+static int smile_3d_update_animator(SmileAnimator3D* animator, unsigned int delta_ms)
+{
+    SmileAnimationClip3D* clip;
+    unsigned long long advance;
+    unsigned long long total;
+    int wrapped;
+    if (animator == 0 || delta_ms > 600000) { smile_last_error3d = 35; return 0; }
+    clip = smile_3d_clip(animator->clip_handle);
+    if (clip == 0) { smile_3d_update_animation_pose(animator); return 1; }
+    animator->previous_time_ms = animator->time_ms;
+    advance = (unsigned long long)delta_ms * animator->speed_percent / 100U;
+    total = (unsigned long long)animator->time_ms + advance;
+    wrapped = animator->loop && total >= clip->duration_ms;
+    if (animator->loop)
+    {
+        animator->time_ms = (unsigned int)(total % clip->duration_ms);
+        animator->complete = 0;
+    }
+    else
+    {
+        animator->time_ms = (unsigned int)(total >= clip->duration_ms ? clip->duration_ms : total);
+        animator->complete = total >= clip->duration_ms;
+    }
+    for (int event = 0; event < clip->event_count; ++event)
+    {
+        unsigned int time = clip->event_time[event];
+        if ((!wrapped && time > animator->previous_time_ms && time <= animator->time_ms) ||
+            (wrapped && (time > animator->previous_time_ms || time <= animator->time_ms)) ||
+            (animator->loop && advance >= clip->duration_ms))
+            animator->pending_event = clip->event_id[event];
+    }
+    smile_3d_update_animation_pose(animator);
+    return 1;
+}
+
 static SmileMatrix3D smile_3d_view(void)
 {
     float zx = smile_camera_target3d[0] - smile_camera_position3d[0];
@@ -1024,12 +1427,14 @@ static HRESULT smile_3d_compile(ID3D11Device* device, const char* source, const 
 static int smile_3d_create_pipeline(void)
 {
     static const char* vertex_source =
-        "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;}"
-        "struct I{float3 p:POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;};"
+        "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;float4 animation;row_major float4x4 bones[32];}"
+        "struct I{float3 p:POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;float4 j:BLENDINDICES;float4 w:BLENDWEIGHT;};"
         "struct O{float4 p:SV_POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;};"
-        "O main(I i){O o;o.p=mul(float4(i.p,1),mvp);o.n=normalize(mul(float4(i.n,0),model).xyz);o.uv=i.uv;return o;}";
+        "O main(I i){O o;float4 p=float4(i.p,1);float3 n=i.n;if(animation.x>.5){"
+        "float4x4 s=bones[(uint)i.j.x]*i.w.x+bones[(uint)i.j.y]*i.w.y+bones[(uint)i.j.z]*i.w.z+bones[(uint)i.j.w]*i.w.w;"
+        "p=mul(p,s);n=mul(float4(n,0),s).xyz;}o.p=mul(p,mvp);o.n=normalize(mul(float4(n,0),model).xyz);o.uv=i.uv;return o;}";
     static const char* pixel_source =
-        "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;}"
+        "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;float4 animation;row_major float4x4 bones[32];}"
         "Texture2D baseTexture:register(t0);SamplerState baseSampler:register(s0);"
         "float4 main(float4 p:SV_POSITION,float3 n:NORMAL,float2 uv:TEXCOORD0):SV_TARGET{"
         "float4 base=tint;if(material.x>.5){float4 sample=baseTexture.Sample(baseSampler,uv);"
@@ -1038,7 +1443,7 @@ static int smile_3d_create_pipeline(void)
         "float light=material.y>.5?1:l+material.z;return float4(base.rgb*light,base.a);}";
     ID3D11Device* device = (ID3D11Device*)smile_graphics_directx_device();
     ID3DBlob* vs = 0; ID3DBlob* ps = 0;
-    D3D11_INPUT_ELEMENT_DESC elements[3] = {};
+    D3D11_INPUT_ELEMENT_DESC elements[5] = {};
     D3D11_BUFFER_DESC buffer = {};
     D3D11_DEPTH_STENCIL_DESC depth = {};
     D3D11_DEPTH_STENCIL_DESC depth_read = {};
@@ -1054,7 +1459,9 @@ static int smile_3d_create_pipeline(void)
     elements[0].SemanticName = "POSITION"; elements[0].Format = DXGI_FORMAT_R32G32B32_FLOAT; elements[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
     elements[1].SemanticName = "NORMAL"; elements[1].Format = DXGI_FORMAT_R32G32B32_FLOAT; elements[1].AlignedByteOffset = 12; elements[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
     elements[2].SemanticName = "TEXCOORD"; elements[2].Format = DXGI_FORMAT_R32G32_FLOAT; elements[2].AlignedByteOffset = 24; elements[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-    if (SUCCEEDED(result)) result = device->CreateInputLayout(elements, 3, vs->GetBufferPointer(), vs->GetBufferSize(), &smile_input_layout3d);
+    elements[3].SemanticName = "BLENDINDICES"; elements[3].Format = DXGI_FORMAT_R32G32B32A32_FLOAT; elements[3].AlignedByteOffset = 32; elements[3].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+    elements[4].SemanticName = "BLENDWEIGHT"; elements[4].Format = DXGI_FORMAT_R32G32B32A32_FLOAT; elements[4].AlignedByteOffset = 48; elements[4].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+    if (SUCCEEDED(result)) result = device->CreateInputLayout(elements, 5, vs->GetBufferPointer(), vs->GetBufferSize(), &smile_input_layout3d);
     buffer.ByteWidth = sizeof(SmileConstants3D); buffer.Usage = D3D11_USAGE_DEFAULT; buffer.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     if (SUCCEEDED(result)) result = device->CreateBuffer(&buffer, 0, &smile_constant_buffer3d);
     depth.DepthEnable = TRUE; depth.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL; depth.DepthFunc = D3D11_COMPARISON_LESS;
@@ -1190,10 +1597,11 @@ static int smile_3d_draw(long long handle)
     SmileMesh3D* mesh;
     SmileMaterial3D* material = 0;
     SmileTexture3D* texture = 0;
+    SmileAnimator3D* animator = 0;
     ID3D11DeviceContext* context = (ID3D11DeviceContext*)smile_graphics_directx_context();
     ID3D11ShaderResourceView* texture_view = 0;
     ID3D11SamplerState* texture_sampler = 0;
-    SmileConstants3D constants;
+    SmileConstants3D constants = {};
     SmileMatrix3D view, projection;
     UINT stride = sizeof(SmileVertex3D), offset = 0;
     float aspect;
@@ -1214,6 +1622,16 @@ static int smile_3d_draw(long long handle)
             texture_sampler = texture->sampler;
         }
     }
+    if (object->animator_handle != 0)
+    {
+        animator = smile_3d_animator(object->animator_handle);
+        SmileSkeleton3D* skeleton = animator == 0 ? 0 : smile_3d_skeleton(animator->skeleton_handle);
+        if (animator == 0 || skeleton == 0 || mesh->max_joint >= skeleton->bone_count)
+        {
+            smile_last_error3d = 36;
+            return 0;
+        }
+    }
     constants.model = smile_3d_model(object);
     view = smile_3d_view();
     aspect = (float)smile_graphics_directx_viewport_width() / (float)smile_graphics_directx_viewport_height();
@@ -1227,6 +1645,9 @@ static int smile_3d_draw(long long handle)
     constants.material[1] = material == 0 ? 0.0f : (float)material->unlit;
     constants.material[2] = material == 0 ? 0.0f : material->emissive;
     constants.material[3] = material != 0 && material->alpha_mode == 1 ? material->cutoff : -1.0f;
+    constants.animation[0] = animator == 0 ? 0.0f : 1.0f;
+    for (int bone = 0; bone < SMILE_3D_MAX_BONES; ++bone)
+        constants.bones[bone] = animator == 0 ? smile_3d_identity() : animator->bones[bone];
     alpha_mode = material == 0 ? (constants.color[3] < 0.999f ? 2 : 0) : material->alpha_mode;
     context->UpdateSubresource(smile_constant_buffer3d, 0, 0, &constants, 0, 0);
     context->OMSetBlendState(alpha_mode == 2 ? smile_blend_state3d : 0, 0, 0xffffffff);
@@ -1288,6 +1709,12 @@ static void smile_3d_reset(void)
         }
     for (index = 0; index < SMILE_3D_MAX_MODELS; ++index)
         if (smile_models3d[index].active) smile_3d_delete_model(&smile_models3d[index]);
+    for (index = 0; index < SMILE_3D_MAX_ANIMATORS; ++index)
+        if (smile_animators3d[index].active) smile_3d_delete_animator(&smile_animators3d[index]);
+    for (index = 0; index < SMILE_3D_MAX_CLIPS; ++index)
+        if (smile_clips3d[index].active) smile_3d_delete_clip(&smile_clips3d[index]);
+    for (index = 0; index < SMILE_3D_MAX_SKELETONS; ++index)
+        if (smile_skeletons3d[index].active) smile_3d_delete_skeleton(&smile_skeletons3d[index]);
     for (index = 0; index < SMILE_3D_MAX_MATERIALS; ++index)
         if (smile_materials3d[index].active) smile_3d_delete_material(&smile_materials3d[index]);
     for (index = 0; index < SMILE_3D_MAX_TEXTURES; ++index)
@@ -1307,6 +1734,9 @@ extern "C" long long smile_renderer3d_command(long long command,
     SmileTexture3D* texture;
     SmileMaterial3D* material;
     SmileModel3D* model;
+    SmileSkeleton3D* skeleton;
+    SmileAnimationClip3D* clip;
+    SmileAnimator3D* animator;
     (void)j;
     switch (command)
     {
@@ -1335,6 +1765,24 @@ extern "C" long long smile_renderer3d_command(long long command,
             {
                 if (!smile_3d_delete_model(model)) { smile_last_error3d = 27; return 0; }
                 return 1;
+            }
+            animator = smile_3d_animator(a);
+            if (animator != 0)
+            {
+                if (smile_3d_animator_reference_count(a) != 0) { smile_last_error3d = 37; return 0; }
+                smile_3d_delete_animator(animator); return 1;
+            }
+            clip = smile_3d_clip(a);
+            if (clip != 0)
+            {
+                if (smile_3d_clip_reference_count(a) != 0) { smile_last_error3d = 37; return 0; }
+                smile_3d_delete_clip(clip); return 1;
+            }
+            skeleton = smile_3d_skeleton(a);
+            if (skeleton != 0)
+            {
+                if (smile_3d_skeleton_reference_count(a) != 0) { smile_last_error3d = 37; return 0; }
+                smile_3d_delete_skeleton(skeleton); return 1;
             }
             material = smile_3d_material(a);
             if (material != 0)
@@ -1445,6 +1893,79 @@ extern "C" long long smile_renderer3d_command(long long command,
                 return -1;
             }
             return model->material_slots[b];
+        case SMILE_3D_SET_MESH_SKIN:
+            mesh = smile_3d_mesh(a);
+            return b < 0 ? 0 : smile_3d_skin(mesh, (unsigned int)b, c, d, e, f, g, h, i, j);
+        case SMILE_3D_CREATE_SKELETON: return smile_3d_create_skeleton((int)a);
+        case SMILE_3D_SET_SKELETON_BONE:
+            skeleton = smile_3d_skeleton(a);
+            if (skeleton == 0 || b < 0 || b >= skeleton->bone_count || c < -1 || c >= b)
+            {
+                smile_last_error3d = 30; return 0;
+            }
+            skeleton->parents[b] = (signed char)c;
+            skeleton->bind_translation[b][0] = (float)d;
+            skeleton->bind_translation[b][1] = (float)e;
+            skeleton->bind_translation[b][2] = (float)f;
+            skeleton->committed = 0; return 1;
+        case SMILE_3D_COMMIT_SKELETON: return smile_3d_commit_skeleton(smile_3d_skeleton(a));
+        case SMILE_3D_CREATE_CLIP: return b < 0 ? 0 : smile_3d_create_clip(a, (unsigned int)b);
+        case SMILE_3D_SET_CLIP_TRANSLATION:
+            clip = smile_3d_clip(a); skeleton = clip == 0 ? 0 : smile_3d_skeleton(clip->skeleton_handle);
+            if (clip == 0 || skeleton == 0 || b < 0 || b >= skeleton->bone_count) { smile_last_error3d = 31; return 0; }
+            clip->translation_tracks[b] = 1;
+            clip->translation[b][0][0]=(float)c;clip->translation[b][0][1]=(float)d;clip->translation[b][0][2]=(float)e;
+            clip->translation[b][1][0]=(float)f;clip->translation[b][1][1]=(float)g;clip->translation[b][1][2]=(float)h;return 1;
+        case SMILE_3D_SET_CLIP_ROTATION:
+            clip = smile_3d_clip(a); skeleton = clip == 0 ? 0 : smile_3d_skeleton(clip->skeleton_handle);
+            if (clip == 0 || skeleton == 0 || b < 0 || b >= skeleton->bone_count) { smile_last_error3d = 31; return 0; }
+            clip->rotation_tracks[b] = 1;
+            clip->rotation[b][0][0]=(float)c/1000;clip->rotation[b][0][1]=(float)d/1000;clip->rotation[b][0][2]=(float)e/1000;clip->rotation[b][0][3]=(float)f/1000;
+            clip->rotation[b][1][0]=(float)g/1000;clip->rotation[b][1][1]=(float)h/1000;clip->rotation[b][1][2]=(float)i/1000;clip->rotation[b][1][3]=(float)j/1000;return 1;
+        case SMILE_3D_SET_CLIP_SCALE:
+            clip = smile_3d_clip(a); skeleton = clip == 0 ? 0 : smile_3d_skeleton(clip->skeleton_handle);
+            if (clip == 0 || skeleton == 0 || b < 0 || b >= skeleton->bone_count ||
+                c <= 0 || d <= 0 || e <= 0 || f <= 0 || g <= 0 || h <= 0) { smile_last_error3d = 31; return 0; }
+            clip->scale_tracks[b] = 1;
+            clip->scale[b][0][0]=(float)c/100;clip->scale[b][0][1]=(float)d/100;clip->scale[b][0][2]=(float)e/100;
+            clip->scale[b][1][0]=(float)f/100;clip->scale[b][1][1]=(float)g/100;clip->scale[b][1][2]=(float)h/100;return 1;
+        case SMILE_3D_ADD_CLIP_EVENT:
+            clip = smile_3d_clip(a);
+            if (clip == 0 || b <= 0 || b > clip->duration_ms || c <= 0 ||
+                clip->event_count >= SMILE_3D_MAX_ANIMATION_EVENTS ||
+                (clip->event_count > 0 && b < clip->event_time[clip->event_count-1])) { smile_last_error3d = 31; return 0; }
+            clip->event_time[clip->event_count]=(unsigned int)b;clip->event_id[clip->event_count]=(unsigned int)c;clip->event_count++;return 1;
+        case SMILE_3D_CREATE_ANIMATOR: return smile_3d_create_animator(a);
+        case SMILE_3D_PLAY_ANIMATOR:
+            animator=smile_3d_animator(a);clip=smile_3d_clip(b);
+            if(animator==0||clip==0||clip->skeleton_handle!=animator->skeleton_handle||d<=0||d>1000){smile_last_error3d=35;return 0;}
+            animator->clip_handle=b;animator->loop=c!=0;animator->complete=0;animator->time_ms=0;
+            animator->previous_time_ms=0;animator->speed_percent=(unsigned int)d;animator->pending_event=0;
+            smile_3d_update_animation_pose(animator);return 1;
+        case SMILE_3D_UPDATE_ANIMATOR:
+            return b < 0 ? 0 : smile_3d_update_animator(smile_3d_animator(a),(unsigned int)b);
+        case SMILE_3D_ANIMATOR_COMPLETE: animator=smile_3d_animator(a);return animator==0?0:animator->complete;
+        case SMILE_3D_ANIMATOR_TIME: animator=smile_3d_animator(a);return animator==0?0:animator->time_ms;
+        case SMILE_3D_TAKE_ANIMATOR_EVENT:
+            animator=smile_3d_animator(a);if(animator==0)return 0;{unsigned int value=animator->pending_event;animator->pending_event=0;return value;}
+        case SMILE_3D_SET_OBJECT_ANIMATOR:
+            object=smile_3d_object(a);animator=b==0?0:smile_3d_animator(b);mesh=object==0?0:smile_3d_mesh(object->mesh_handle);
+            skeleton=animator==0?0:smile_3d_skeleton(animator->skeleton_handle);
+            if(object==0||mesh==0||(b!=0&&(animator==0||skeleton==0||mesh->max_joint>=skeleton->bone_count))){smile_last_error3d=36;return 0;}
+            object->animator_handle=b;return 1;
+        case SMILE_3D_LIVE_SKELETON_COUNT:return smile_3d_live_skeleton_count();
+        case SMILE_3D_LIVE_CLIP_COUNT:return smile_3d_live_clip_count();
+        case SMILE_3D_LIVE_ANIMATOR_COUNT:return smile_3d_live_animator_count();
+        case SMILE_3D_MAX_BONE_COUNT:return SMILE_3D_MAX_BONES;
+        case SMILE_3D_SKELETON_VALID:return smile_3d_skeleton(a)!=0;
+        case SMILE_3D_CLIP_VALID:return smile_3d_clip(a)!=0;
+        case SMILE_3D_ANIMATOR_VALID:return smile_3d_animator(a)!=0;
+        case SMILE_3D_STOP_ANIMATOR:
+            animator=smile_3d_animator(a);if(animator==0)return 0;animator->clip_handle=0;animator->time_ms=0;
+            animator->previous_time_ms=0;animator->complete=0;animator->pending_event=0;smile_3d_update_animation_pose(animator);return 1;
+        case SMILE_3D_MAX_SKELETON_COUNT:return SMILE_3D_MAX_SKELETONS;
+        case SMILE_3D_MAX_CLIP_COUNT:return SMILE_3D_MAX_CLIPS;
+        case SMILE_3D_MAX_ANIMATOR_COUNT:return SMILE_3D_MAX_ANIMATORS;
         default: smile_last_error3d = 1; return 0;
     }
 }

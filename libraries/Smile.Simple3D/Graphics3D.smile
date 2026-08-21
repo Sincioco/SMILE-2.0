@@ -55,6 +55,33 @@ Private Const COMMAND_MODEL_PART_COUNT = 47
 Private Const COMMAND_MODEL_MATERIAL_COUNT = 48
 Private Const COMMAND_CREATE_MODEL_PART_OBJECT = 49
 Private Const COMMAND_MODEL_PART_MATERIAL = 50
+Private Const COMMAND_SET_MESH_SKIN = 51
+Private Const COMMAND_CREATE_SKELETON = 52
+Private Const COMMAND_SET_SKELETON_BONE = 53
+Private Const COMMAND_COMMIT_SKELETON = 54
+Private Const COMMAND_CREATE_CLIP = 55
+Private Const COMMAND_SET_CLIP_TRANSLATION = 56
+Private Const COMMAND_SET_CLIP_ROTATION = 57
+Private Const COMMAND_SET_CLIP_SCALE = 58
+Private Const COMMAND_ADD_CLIP_EVENT = 59
+Private Const COMMAND_CREATE_ANIMATOR = 60
+Private Const COMMAND_PLAY_ANIMATOR = 61
+Private Const COMMAND_UPDATE_ANIMATOR = 62
+Private Const COMMAND_ANIMATOR_COMPLETE = 63
+Private Const COMMAND_ANIMATOR_TIME = 64
+Private Const COMMAND_TAKE_ANIMATOR_EVENT = 65
+Private Const COMMAND_SET_OBJECT_ANIMATOR = 66
+Private Const COMMAND_LIVE_SKELETON_COUNT = 67
+Private Const COMMAND_LIVE_CLIP_COUNT = 68
+Private Const COMMAND_LIVE_ANIMATOR_COUNT = 69
+Private Const COMMAND_MAX_BONE_COUNT = 70
+Private Const COMMAND_SKELETON_VALID = 71
+Private Const COMMAND_CLIP_VALID = 72
+Private Const COMMAND_ANIMATOR_VALID = 73
+Private Const COMMAND_STOP_ANIMATOR = 74
+Private Const COMMAND_MAX_SKELETON_COUNT = 75
+Private Const COMMAND_MAX_CLIP_COUNT = 76
+Private Const COMMAND_MAX_ANIMATOR_COUNT = 77
 
 Private Const IMAGE_COMMAND_CREATE_TEXTURE = 1
 Private Const TEXT_COMMAND_LOAD_MODEL = 1
@@ -376,6 +403,450 @@ Public Sub DestroyModel3D(ByRef Model As Core.Model3D)
         Model.Handle = 0
         Model.PartCount = 0
         Model.MaterialCount = 0
+
+    End If
+
+End Sub
+
+Public Function LiveSkeletonCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_LIVE_SKELETON_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function LiveAnimationClipCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_LIVE_CLIP_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function LiveAnimatorCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_LIVE_ANIMATOR_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function MaximumBoneCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MAX_BONE_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function MaximumSkeletonCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MAX_SKELETON_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function MaximumAnimationClipCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MAX_CLIP_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function MaximumAnimatorCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MAX_ANIMATOR_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function SkeletonHandleValid3D(Handle As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_SKELETON_VALID, Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Function AnimationClipHandleValid3D(Handle As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_CLIP_VALID, Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Function AnimatorHandleValid3D(Handle As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_ANIMATOR_VALID, Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Function CreateSkeleton3D(BoneCount As Number) As Core.Skeleton3D
+
+    Dim Result As Core.Skeleton3D
+
+    Result.Handle = Dispatch(COMMAND_CREATE_SKELETON, BoneCount, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+    If Result.Handle <> 0 Then
+        Result.BoneCount = BoneCount
+    End If
+
+    Return Result
+
+End Function
+
+Public Function SetSkeletonBone3D(
+    ByRef Skeleton As Core.Skeleton3D,
+    BoneIndex As Number,
+    ParentIndex As Number,
+    BindX As Number,
+    BindY As Number,
+    BindZ As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_SKELETON_BONE,
+        Skeleton.Handle,
+        BoneIndex,
+        ParentIndex,
+        BindX,
+        BindY,
+        BindZ,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+    Return Result
+
+End Function
+
+Public Function CommitSkeleton3D(Skeleton As Core.Skeleton3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_COMMIT_SKELETON, Skeleton.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Sub DestroySkeleton3D(ByRef Skeleton As Core.Skeleton3D)
+
+    Dim Destroyed As Boolean
+
+    Destroyed = Dispatch(COMMAND_DESTROY, Skeleton.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+
+    If Destroyed Then
+        Skeleton.Handle = 0
+        Skeleton.BoneCount = 0
+    End If
+
+End Sub
+
+Public Function CreateAnimationClip3D(
+    Skeleton As Core.Skeleton3D,
+    DurationMilliseconds As Number
+) As Core.AnimationClip3D
+
+    Dim Result As Core.AnimationClip3D
+
+    Result.Handle = Dispatch(
+        COMMAND_CREATE_CLIP,
+        Skeleton.Handle,
+        DurationMilliseconds,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    )
+
+    If Result.Handle <> 0 Then
+        Result.SkeletonHandle = Skeleton.Handle
+        Result.DurationMilliseconds = DurationMilliseconds
+    End If
+
+    Return Result
+
+End Function
+
+Public Function SetAnimationTranslation3D(
+    Clip As Core.AnimationClip3D,
+    BoneIndex As Number,
+    StartX As Number,
+    StartY As Number,
+    StartZ As Number,
+    EndX As Number,
+    EndY As Number,
+    EndZ As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_CLIP_TRANSLATION,
+        Clip.Handle,
+        BoneIndex,
+        StartX,
+        StartY,
+        StartZ,
+        EndX,
+        EndY,
+        EndZ,
+        0,
+        0
+    ) <> 0
+    Return Result
+
+End Function
+
+''' Quaternion components use thousandths, so W=1000 is the identity rotation.
+Public Function SetAnimationRotation3D(
+    Clip As Core.AnimationClip3D,
+    BoneIndex As Number,
+    StartX As Number,
+    StartY As Number,
+    StartZ As Number,
+    StartW As Number,
+    EndX As Number,
+    EndY As Number,
+    EndZ As Number,
+    EndW As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_CLIP_ROTATION,
+        Clip.Handle,
+        BoneIndex,
+        StartX,
+        StartY,
+        StartZ,
+        StartW,
+        EndX,
+        EndY,
+        EndZ,
+        EndW
+    ) <> 0
+    Return Result
+
+End Function
+
+Public Function SetAnimationScale3D(
+    Clip As Core.AnimationClip3D,
+    BoneIndex As Number,
+    StartXPercent As Number,
+    StartYPercent As Number,
+    StartZPercent As Number,
+    EndXPercent As Number,
+    EndYPercent As Number,
+    EndZPercent As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_CLIP_SCALE,
+        Clip.Handle,
+        BoneIndex,
+        StartXPercent,
+        StartYPercent,
+        StartZPercent,
+        EndXPercent,
+        EndYPercent,
+        EndZPercent,
+        0,
+        0
+    ) <> 0
+    Return Result
+
+End Function
+
+Public Function AddAnimationEvent3D(
+    Clip As Core.AnimationClip3D,
+    TimeMilliseconds As Number,
+    EventId As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_ADD_CLIP_EVENT,
+        Clip.Handle,
+        TimeMilliseconds,
+        EventId,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+    Return Result
+
+End Function
+
+Public Sub DestroyAnimationClip3D(ByRef Clip As Core.AnimationClip3D)
+
+    Dim Destroyed As Boolean
+
+    Destroyed = Dispatch(COMMAND_DESTROY, Clip.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+
+    If Destroyed Then
+
+        Clip.Handle = 0
+        Clip.SkeletonHandle = 0
+        Clip.DurationMilliseconds = 0
+
+    End If
+
+End Sub
+
+Public Function CreateAnimator3D(Skeleton As Core.Skeleton3D) As Core.Animator3D
+
+    Dim Result As Core.Animator3D
+
+    Result.Handle = Dispatch(COMMAND_CREATE_ANIMATOR, Skeleton.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+    If Result.Handle <> 0 Then
+        Result.SkeletonHandle = Skeleton.Handle
+        Result.SpeedPercent = 100
+    End If
+
+    Return Result
+
+End Function
+
+Public Function PlayAnimation3D(
+    ByRef Animator As Core.Animator3D,
+    Clip As Core.AnimationClip3D,
+    Looping As Boolean,
+    Optional SpeedPercent As Number = 100
+) As Boolean
+
+    Dim LoopValue As Number
+    Dim Result As Boolean
+
+    If Looping Then
+        LoopValue = 1
+    Else
+        LoopValue = 0
+    End If
+
+    Result = Dispatch(
+        COMMAND_PLAY_ANIMATOR,
+        Animator.Handle,
+        Clip.Handle,
+        LoopValue,
+        SpeedPercent,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+
+        Animator.ClipHandle = Clip.Handle
+        Animator.Looping = Looping
+        Animator.SpeedPercent = SpeedPercent
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function UpdateAnimator3D(Animator As Core.Animator3D, DeltaMilliseconds As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_UPDATE_ANIMATOR, Animator.Handle, DeltaMilliseconds, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Function AnimatorComplete3D(Animator As Core.Animator3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_ANIMATOR_COMPLETE, Animator.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Function AnimatorTime3D(Animator As Core.Animator3D) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_ANIMATOR_TIME, Animator.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function TakeAnimationEvent3D(Animator As Core.Animator3D) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_TAKE_ANIMATOR_EVENT, Animator.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function StopAnimator3D(ByRef Animator As Core.Animator3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_STOP_ANIMATOR, Animator.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+
+    If Result Then
+        Animator.ClipHandle = 0
+        Animator.Looping = False
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub DestroyAnimator3D(ByRef Animator As Core.Animator3D)
+
+    Dim Destroyed As Boolean
+
+    Destroyed = Dispatch(COMMAND_DESTROY, Animator.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+
+    If Destroyed Then
+
+        Animator.Handle = 0
+        Animator.SkeletonHandle = 0
+        Animator.ClipHandle = 0
+        Animator.Looping = False
+        Animator.SpeedPercent = 0
 
     End If
 
@@ -749,6 +1220,39 @@ Public Function SetMeshNormal3D(
 
 End Function
 
+''' Assigns four bone influences; weights are thousandths and must total 1000.
+Public Function SetMeshSkin3D(
+    MeshHandle As Number,
+    Index As Number,
+    Joint0 As Number,
+    Joint1 As Number,
+    Joint2 As Number,
+    Joint3 As Number,
+    Weight0 As Number,
+    Weight1 As Number,
+    Weight2 As Number,
+    Weight3 As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_MESH_SKIN,
+        MeshHandle,
+        Index,
+        Joint0,
+        Joint1,
+        Joint2,
+        Joint3,
+        Weight0,
+        Weight1,
+        Weight2,
+        Weight3
+    ) <> 0
+    Return Result
+
+End Function
+
 Public Function SetMeshTriangle3D(
     MeshHandle As Number,
     TriangleIndex As Number,
@@ -840,6 +1344,7 @@ Public Sub DestroyObject3D(ByRef Object As Core.Object3D)
     Object.Handle = 0
     Object.MeshHandle = 0
     Object.MaterialHandle = 0
+    Object.AnimatorHandle = 0
     Object.Visible = False
 
 End Sub
@@ -854,6 +1359,7 @@ Public Sub DestroyObjectInstance3D(ByRef Object As Core.Object3D)
     Object.Handle = 0
     Object.MeshHandle = 0
     Object.MaterialHandle = 0
+    Object.AnimatorHandle = 0
     Object.Visible = False
 
 End Sub
@@ -880,6 +1386,34 @@ Public Function ClearObjectMaterial3D(ByRef Object As Core.Object3D) As Boolean
 
     If Result Then
         Object.MaterialHandle = 0
+    End If
+
+    Return Result
+
+End Function
+
+Public Function SetObjectAnimator3D(ByRef Object As Core.Object3D, Animator As Core.Animator3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_SET_OBJECT_ANIMATOR, Object.Handle, Animator.Handle, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+
+    If Result Then
+        Object.AnimatorHandle = Animator.Handle
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ClearObjectAnimator3D(ByRef Object As Core.Object3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_SET_OBJECT_ANIMATOR, Object.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+
+    If Result Then
+        Object.AnimatorHandle = 0
     End If
 
     Return Result

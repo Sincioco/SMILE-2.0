@@ -1,0 +1,257 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Dim Camera As Core.Camera3D
+Dim Skeleton As Core.Skeleton3D
+Dim InvalidSkeleton As Core.Skeleton3D
+Dim DragonSkeleton As Core.Skeleton3D
+Dim Idle As Core.AnimationClip3D
+Dim Attack As Core.AnimationClip3D
+Dim Hit As Core.AnimationClip3D
+Dim Victory As Core.AnimationClip3D
+Dim DragonClip As Core.AnimationClip3D
+Dim Animator As Core.Animator3D
+Dim Animator30 As Core.Animator3D
+Dim Animator60 As Core.Animator3D
+Dim Animator120 As Core.Animator3D
+Dim DragonAnimator As Core.Animator3D
+Dim Actor As Core.Object3D
+Dim MeshHandle As Number
+Dim Failures As Number
+Dim FrameReady As Boolean
+Dim Index As Number
+Dim Ready As Boolean
+Dim StaleAnimatorHandle As Number
+
+Game Window "Renderer3D Animation Tests" Size 480 By 270
+
+Call Graphics3D.ResetRenderer3D()
+
+InvalidSkeleton = Graphics3D.CreateSkeleton3D(2)
+
+If Graphics3D.SetSkeletonBone3D(InvalidSkeleton, 0, 0, 0, 0, 0) Then
+    Failures = Failures + 1
+End If
+
+Call Graphics3D.DestroySkeleton3D(InvalidSkeleton)
+
+Skeleton = Graphics3D.CreateSkeleton3D(2)
+Ready = Graphics3D.SetSkeletonBone3D(Skeleton, 0, -1, 0, 0, 0)
+Ready = Ready And Graphics3D.SetSkeletonBone3D(Skeleton, 1, 0, 0, 40, 0)
+Ready = Ready And Graphics3D.CommitSkeleton3D(Skeleton)
+
+If (Not Ready Or
+    Skeleton.Handle = 0 Or
+    Skeleton.BoneCount <> 2 Or
+    Graphics3D.MaximumBoneCount3D() <> 32) Then
+    Failures = Failures + 1
+End If
+
+MeshHandle = Graphics3D.CreateMesh3D(4, 6)
+Ready = Graphics3D.SetMeshVertex3D(MeshHandle, 0, -20, 0, 0)
+Ready = Ready And Graphics3D.SetMeshVertex3D(MeshHandle, 1, 20, 0, 0)
+Ready = Ready And Graphics3D.SetMeshVertex3D(MeshHandle, 2, -20, 80, 0)
+Ready = Ready And Graphics3D.SetMeshVertex3D(MeshHandle, 3, 20, 80, 0)
+Ready = Ready And Graphics3D.SetMeshUv3D(MeshHandle, 0, 0, 1000)
+Ready = Ready And Graphics3D.SetMeshUv3D(MeshHandle, 1, 1000, 1000)
+Ready = Ready And Graphics3D.SetMeshUv3D(MeshHandle, 2, 0, 0)
+Ready = Ready And Graphics3D.SetMeshUv3D(MeshHandle, 3, 1000, 0)
+Ready = Ready And Graphics3D.SetMeshSkin3D(MeshHandle, 0, 0, 0, 0, 0, 1000, 0, 0, 0)
+Ready = Ready And Graphics3D.SetMeshSkin3D(MeshHandle, 1, 0, 0, 0, 0, 1000, 0, 0, 0)
+Ready = Ready And Graphics3D.SetMeshSkin3D(MeshHandle, 2, 1, 0, 0, 0, 1000, 0, 0, 0)
+Ready = Ready And Graphics3D.SetMeshSkin3D(MeshHandle, 3, 1, 0, 0, 0, 1000, 0, 0, 0)
+Ready = Ready And Graphics3D.SetMeshTriangle3D(MeshHandle, 0, 0, 1, 2)
+Ready = Ready And Graphics3D.SetMeshTriangle3D(MeshHandle, 1, 1, 3, 2)
+Ready = Ready And Graphics3D.CommitMesh3D(MeshHandle)
+
+If (Not Ready Or
+    Graphics3D.SetMeshSkin3D(MeshHandle, 0, 33, 0, 0, 0, 1000, 0, 0, 0)) Then
+    Failures = Failures + 1
+End If
+
+Actor = Graphics3D.CreateObjectFromMesh3D(MeshHandle)
+
+Call Graphics3D.SetObjectColor(Actor, 64, 192, 255)
+
+Idle = Graphics3D.CreateAnimationClip3D(Skeleton, 1000)
+Ready = Graphics3D.SetAnimationTranslation3D(Idle, 1, 0, 40, 0, 0, 42, 0)
+Ready = Ready And Graphics3D.SetAnimationRotation3D(Idle, 1, 0, 0, 0, 1000, 0, 0, 130, 991)
+
+Attack = Graphics3D.CreateAnimationClip3D(Skeleton, 1000)
+Ready = Ready And Graphics3D.SetAnimationTranslation3D(Attack, 1, 0, 40, 0, 30, 40, 0)
+Ready = Ready And Graphics3D.SetAnimationRotation3D(Attack, 1, 0, 0, 0, 1000, 0, 0, 707, 707)
+Ready = Ready And Graphics3D.SetAnimationScale3D(Attack, 1, 100, 100, 100, 120, 90, 100)
+Ready = Ready And Graphics3D.AddAnimationEvent3D(Attack, 500, 77)
+
+Hit = Graphics3D.CreateAnimationClip3D(Skeleton, 300)
+Ready = Ready And Graphics3D.SetAnimationTranslation3D(Hit, 0, 0, 0, 0, -10, 0, 0)
+
+Victory = Graphics3D.CreateAnimationClip3D(Skeleton, 800)
+Ready = Ready And Graphics3D.SetAnimationScale3D(Victory, 1, 100, 100, 100, 115, 115, 115)
+
+If (Not Ready Or
+    Idle.Handle = 0 Or
+    Attack.Handle = 0 Or
+    Hit.Handle = 0 Or
+    Victory.Handle = 0) Then
+    Failures = Failures + 1
+End If
+
+Animator = Graphics3D.CreateAnimator3D(Skeleton)
+Ready = Graphics3D.PlayAnimation3D(Animator, Attack, False)
+Ready = Ready And Graphics3D.SetObjectAnimator3D(Actor, Animator)
+Ready = Ready And Graphics3D.UpdateAnimator3D(Animator, 499)
+
+If (Not Ready Or
+    Graphics3D.AnimatorTime3D(Animator) <> 499 Or
+    Graphics3D.AnimatorComplete3D(Animator) Or
+    Graphics3D.TakeAnimationEvent3D(Animator) <> 0) Then
+    Failures = Failures + 1
+End If
+
+Ready = Graphics3D.UpdateAnimator3D(Animator, 1)
+
+If (Graphics3D.AnimatorTime3D(Animator) <> 500 Or
+    Graphics3D.TakeAnimationEvent3D(Animator) <> 77 Or
+    Graphics3D.TakeAnimationEvent3D(Animator) <> 0) Then
+    Failures = Failures + 1
+End If
+
+Ready = Graphics3D.UpdateAnimator3D(Animator, 500)
+Ready = Graphics3D.UpdateAnimator3D(Animator, 500)
+
+If Graphics3D.AnimatorTime3D(Animator) <> 1000 Or Not Graphics3D.AnimatorComplete3D(Animator) Then
+    Failures = Failures + 1
+End If
+
+Animator30 = Graphics3D.CreateAnimator3D(Skeleton)
+Animator60 = Graphics3D.CreateAnimator3D(Skeleton)
+Animator120 = Graphics3D.CreateAnimator3D(Skeleton)
+Ready = Graphics3D.PlayAnimation3D(Animator30, Attack, False)
+Ready = Graphics3D.PlayAnimation3D(Animator60, Attack, False)
+Ready = Graphics3D.PlayAnimation3D(Animator120, Attack, False)
+Ready = Graphics3D.UpdateAnimator3D(Animator30, 1000)
+
+For Index = 0 To 9
+    Ready = Graphics3D.UpdateAnimator3D(Animator60, 100)
+End For
+
+For Index = 0 To 19
+    Ready = Graphics3D.UpdateAnimator3D(Animator120, 50)
+End For
+
+If (Graphics3D.AnimatorTime3D(Animator30) <> 1000 Or
+    Graphics3D.AnimatorTime3D(Animator60) <> 1000 Or
+    Graphics3D.AnimatorTime3D(Animator120) <> 1000) Then
+    Failures = Failures + 1
+End If
+
+Ready = Graphics3D.PlayAnimation3D(Animator60, Hit, False)
+Ready = Ready And Graphics3D.UpdateAnimator3D(Animator60, 600)
+Ready = Ready And Graphics3D.UpdateAnimator3D(Animator60, 300)
+
+If (Not Ready Or
+    Graphics3D.AnimatorTime3D(Animator60) <> 300 Or
+    Not Graphics3D.AnimatorComplete3D(Animator60)) Then
+    Failures = Failures + 1
+End If
+
+Ready = Graphics3D.PlayAnimation3D(Animator120, Victory, True)
+Ready = Ready And Graphics3D.UpdateAnimator3D(Animator120, 1000)
+
+If (Not Ready Or
+    Graphics3D.AnimatorTime3D(Animator120) <> 200 Or
+    Graphics3D.AnimatorComplete3D(Animator120)) Then
+    Failures = Failures + 1
+End If
+
+DragonSkeleton = Graphics3D.CreateSkeleton3D(4)
+Ready = Graphics3D.SetSkeletonBone3D(DragonSkeleton, 0, -1, 0, 0, 0)
+Ready = Ready And Graphics3D.SetSkeletonBone3D(DragonSkeleton, 1, 0, 0, 30, 0)
+Ready = Ready And Graphics3D.SetSkeletonBone3D(DragonSkeleton, 2, 1, 0, 25, 0)
+Ready = Ready And Graphics3D.SetSkeletonBone3D(DragonSkeleton, 3, 1, 0, -25, 0)
+Ready = Ready And Graphics3D.CommitSkeleton3D(DragonSkeleton)
+DragonClip = Graphics3D.CreateAnimationClip3D(DragonSkeleton, 1200)
+Ready = Ready And Graphics3D.SetAnimationRotation3D(DragonClip, 2, 0, 0, -383, 924, 0, 0, 383, 924)
+Ready = Ready And Graphics3D.SetAnimationRotation3D(DragonClip, 3, 0, 0, 383, 924, 0, 0, -383, 924)
+DragonAnimator = Graphics3D.CreateAnimator3D(DragonSkeleton)
+Ready = Ready And Graphics3D.PlayAnimation3D(DragonAnimator, DragonClip, True)
+Ready = Ready And Graphics3D.UpdateAnimator3D(DragonAnimator, 300)
+
+If Not Ready Or Graphics3D.AnimatorTime3D(DragonAnimator) <> 300 Then
+    Failures = Failures + 1
+End If
+
+Ready = Graphics3D.PlayAnimation3D(Animator, Idle, True)
+Ready = Graphics3D.UpdateAnimator3D(Animator, 1250)
+
+If Graphics3D.AnimatorTime3D(Animator) <> 250 Or Graphics3D.AnimatorComplete3D(Animator) Then
+    Failures = Failures + 1
+End If
+
+If Graphics3D.RendererAvailable() Then
+
+    Camera = Graphics3D.DefaultCamera()
+    FrameReady = Graphics3D.Begin3D(Camera, 2, 4, 14)
+    FrameReady = FrameReady And Graphics3D.DrawObject3D(Actor)
+
+    If Not FrameReady Then
+        Failures = Failures + 1
+    End If
+
+    Call Graphics3D.End3D()
+
+End If
+
+Fill Rectangle 0, 0, 480, 270, Rgb(2, 4, 14)
+Draw Text "GPU SKELETAL ANIMATION" At 110, 118 Size 20 Color WHITE
+Show Screen
+
+StaleAnimatorHandle = Animator.Handle
+
+Call Graphics3D.DestroyAnimator3D(Animator)
+
+If Animator.Handle = 0 Then
+    Failures = Failures + 1
+End If
+
+Call Graphics3D.DestroySkeleton3D(Skeleton)
+
+If Skeleton.Handle = 0 Then
+    Failures = Failures + 1
+End If
+
+Ready = Graphics3D.ClearObjectAnimator3D(Actor)
+
+Call Graphics3D.DestroyObject3D(Actor)
+Call Graphics3D.DestroyAnimator3D(Animator)
+Call Graphics3D.DestroyAnimator3D(Animator30)
+Call Graphics3D.DestroyAnimator3D(Animator60)
+Call Graphics3D.DestroyAnimator3D(Animator120)
+Call Graphics3D.DestroyAnimator3D(DragonAnimator)
+Call Graphics3D.DestroyAnimationClip3D(Idle)
+Call Graphics3D.DestroyAnimationClip3D(Attack)
+Call Graphics3D.DestroyAnimationClip3D(Hit)
+Call Graphics3D.DestroyAnimationClip3D(Victory)
+Call Graphics3D.DestroyAnimationClip3D(DragonClip)
+Call Graphics3D.DestroySkeleton3D(Skeleton)
+Call Graphics3D.DestroySkeleton3D(DragonSkeleton)
+
+If (Graphics3D.AnimatorHandleValid3D(StaleAnimatorHandle) Or
+    Graphics3D.LiveSkeletonCount3D() <> 0 Or
+    Graphics3D.LiveAnimationClipCount3D() <> 0 Or
+    Graphics3D.LiveAnimatorCount3D() <> 0 Or
+    Graphics3D.LiveMeshCount3D() <> 0 Or
+    Graphics3D.LiveObjectCount3D() <> 0) Then
+    Failures = Failures + 1
+End If
+
+Call Graphics3D.ResetRenderer3D()
+
+If Failures = 0 Then
+    Print "Renderer3D animation tests passed"
+Else
+    Print "Renderer3D animation tests failed: "; Failures
+End If

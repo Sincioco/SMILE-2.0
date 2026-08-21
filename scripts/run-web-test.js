@@ -542,7 +542,7 @@ function contextWebGL2() {
         pixelStorei: noop, texImage2D: noop, texParameteri: noop,
         viewport: noop, clearColor: noop, clearDepth: noop, clear: noop, useProgram: noop,
         enableVertexAttribArray: noop, vertexAttribPointer: noop, uniformMatrix4fv: noop,
-        uniform4fv: noop, uniform1i: noop, drawElements: () => { renderer3DDrawCalls += 1; }
+        uniform4fv: noop, uniform1i: noop, uniform1f: noop, drawElements: () => { renderer3DDrawCalls += 1; }
     };
 }
 

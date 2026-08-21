@@ -84,6 +84,7 @@ Public Type Object3D
     Handle As Number
     MeshHandle As Number
     MaterialHandle As Number
+    AnimatorHandle As Number
     Position As Vector3
     Rotation As Rotation3D
     ScaleX As Number
@@ -124,6 +125,28 @@ Public Type Model3D
     Handle As Number
     PartCount As Number
     MaterialCount As Number
+End Type
+
+''' A committed hierarchy of bind-pose bone pivots.
+Public Type Skeleton3D
+    Handle As Number
+    BoneCount As Number
+End Type
+
+''' A deterministic two-key translation, rotation, and scale animation.
+Public Type AnimationClip3D
+    Handle As Number
+    SkeletonHandle As Number
+    DurationMilliseconds As Number
+End Type
+
+''' Independent playback state and GPU bone palette for one or more objects.
+Public Type Animator3D
+    Handle As Number
+    SkeletonHandle As Number
+    ClipHandle As Number
+    Looping As Boolean
+    SpeedPercent As Number
 End Type
 
 ''' A projected logical-canvas point plus its camera-space depth.

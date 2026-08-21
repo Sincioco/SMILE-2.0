@@ -16,7 +16,7 @@ The compiler has narrow game-window-only numeric, image-owning, and text-path Re
 
 `graphics3d_directx.cpp` shares the active D3D11 device, context, swap chain render target, and resize lifecycle already owned by `graphics_directx.cpp`. It provides:
 
-- immutable position/normal/UV vertex and index buffers with generated averaged normals;
+- immutable position/normal/UV/joint/weight vertex and index buffers with generated or explicit normals;
 - model, look-at view, and perspective matrices;
 - a small built-in HLSL shader pair compiled with `d3dcompiler.lib`;
 - an output-size D24S8 depth texture recreated after device/size changes;
@@ -44,4 +44,4 @@ Texture and material details are documented in [Renderer3D textures and material
 
 ## Deliberate limits
 
-This milestone does not add runtime glTF import, a scene graph, skeletal animation, rigid-body physics, shadows, particles, student shaders, networking, or a GDI 3D rasterizer. glTF is converted offline to the bounded SM3D runtime format. Logical gameplay/collision geometry remains application-owned and independent from render objects.
+This milestone does not add runtime glTF import, a scene graph, rigid-body physics, shadows, particles, student shaders, networking, or a GDI 3D rasterizer. glTF is converted offline to the bounded SM3D runtime format. Skeletal animation is an explicit bounded resource layer rather than a general scene graph. Logical gameplay/collision geometry remains application-owned and independent from render objects.
