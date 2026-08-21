@@ -1,0 +1,191 @@
+Option Explicit
+
+Import Smile.RPG.BattleCore As BattleCore
+Import Dragonfall.Battle As Battle
+
+Const STRATEGY_WIN = 1
+Const STRATEGY_LOSE = 2
+Const MAX_BATTLE_STEPS = 30000
+Const RESTART_COUNT = 100
+Const SOAK_TICKS = 108000
+
+Dim Failures As Number
+Dim Outcome As Number
+Dim Index As Number
+Dim TotalSoakTicks As Number
+Dim SawAttack As Boolean
+Dim SawSpell As Boolean
+Dim SawHeal As Boolean
+Dim SawDefend As Boolean
+Dim SawClaw As Boolean
+Dim SawBreath As Boolean
+Dim SawTail As Boolean
+Dim SawEnrage As Boolean
+Dim SawVictory As Boolean
+Dim SawDefeat As Boolean
+
+Outcome = RunBattle(STRATEGY_WIN, True, MAX_BATTLE_STEPS)
+
+Call Check(Outcome = BattleCore.BATTLE_OUTCOME_VICTORY)
+Call Check(SawAttack And SawSpell And SawHeal And SawDefend)
+Call Check(SawClaw And SawBreath And SawTail)
+Call Check(SawEnrage And SawVictory)
+
+Outcome = RunBattle(STRATEGY_LOSE, True, 150000)
+
+Call Check(Outcome = BattleCore.BATTLE_OUTCOME_DEFEAT)
+Call Check(SawDefeat)
+
+For Index = 1 To RESTART_COUNT
+    Outcome = RunBattle(STRATEGY_WIN, False, MAX_BATTLE_STEPS)
+
+    Call Check(Outcome = BattleCore.BATTLE_OUTCOME_VICTORY)
+End For
+
+Do
+    Outcome = RunBattle(STRATEGY_WIN, False, MAX_BATTLE_STEPS)
+
+    Call Check(Outcome = BattleCore.BATTLE_OUTCOME_VICTORY)
+
+    TotalSoakTicks = TotalSoakTicks + MAX_BATTLE_STEPS
+
+Loop Until TotalSoakTicks >= SOAK_TICKS
+
+If Failures = 0 Then
+    Print "Dragonfall mechanics, restart, and accelerated 30-minute soak passed"
+Else
+    Print "Dragonfall tests failed: "; Failures
+End If
+
+Sub Check(Condition As Boolean)
+
+    If Not Condition Then
+        Failures = Failures + 1
+    End If
+
+End Sub
+
+Sub ObserveVisual()
+
+    If Battle.Visual() = Battle.VISUAL_ARIN_ATTACK Then
+        SawAttack = True
+    Else If (Battle.Visual() = Battle.VISUAL_ARIN_EMBER Or
+        Battle.Visual() = Battle.VISUAL_MIRA_FLAME Or
+        Battle.Visual() = Battle.VISUAL_MIRA_FROST Or
+        Battle.Visual() = Battle.VISUAL_TOR_BASH) Then
+        SawSpell = True
+    Else If Battle.Visual() = Battle.VISUAL_MIRA_MEND Then
+        SawHeal = True
+    Else If Battle.Visual() = Battle.VISUAL_DEFEND Then
+        SawDefend = True
+    Else If Battle.Visual() = Battle.VISUAL_DRAGON_CLAW Then
+        SawClaw = True
+    Else If Battle.Visual() = Battle.VISUAL_DRAGON_BREATH Then
+        SawBreath = True
+    Else If Battle.Visual() = Battle.VISUAL_DRAGON_TAIL Then
+        SawTail = True
+    Else If Battle.Visual() = Battle.VISUAL_ENRAGE Then
+        SawEnrage = True
+    Else If Battle.Visual() = Battle.VISUAL_VICTORY Then
+        SawVictory = True
+    Else If Battle.Visual() = Battle.VISUAL_DEFEAT Then
+        SawDefeat = True
+    End If
+
+End Sub
+
+Function RunBattle(Strategy As Number, Observe As Boolean, MaximumSteps As Number) As Number
+
+    Dim ReturnValue2 As Number
+
+    Dim ReturnValue As Number
+
+    Dim StepValue As Number
+    Dim ReadyPlayer As Number
+    Dim Decision As Number
+    Dim ArinDecision As Number
+    Dim MiraDecision As Number
+    Dim TorDecision As Number
+    Dim Command As Number
+    Dim Lowest As Number
+    Dim Accepted As Boolean
+
+    If Not Battle.Initialize() Then
+        ReturnValue2 = -1
+
+        Return ReturnValue2
+    End If
+
+    Do
+        ReadyPlayer = Battle.NextReadyPlayer()
+
+        If ReadyPlayer > 0 Then
+
+            Decision = Decision + 1
+            Command = Battle.COMMAND_ATTACK
+
+            If Strategy = STRATEGY_LOSE Then
+
+                Command = Battle.COMMAND_ATTACK
+
+            Else If ReadyPlayer = Battle.PARTICIPANT_ARIN Then
+
+                ArinDecision = ArinDecision + 1
+
+                If ArinDecision = 1 Then
+                    Command = Battle.COMMAND_ATTACK
+                Else
+                    Command = Battle.COMMAND_SPECIAL
+                End If
+
+            Else If ReadyPlayer = Battle.PARTICIPANT_MIRA Then
+
+                MiraDecision = MiraDecision + 1
+
+                Lowest = Battle.LowestHealthParty()
+
+                If (MiraDecision = 2 Or
+                    (Lowest > 0 And
+                        Battle.Health(Lowest) * 100 < Battle.MaximumHealth(Lowest) * 70)) Then
+                    Command = Battle.COMMAND_HEAL
+                Else
+                    Command = Battle.COMMAND_SPECIAL
+                End If
+
+            Else If ReadyPlayer = Battle.PARTICIPANT_TOR Then
+
+                TorDecision = TorDecision + 1
+
+                If TorDecision = 1 Then
+                    Command = Battle.COMMAND_DEFEND
+                Else
+                    Command = Battle.COMMAND_SPECIAL
+                End If
+
+            End If
+
+            Accepted = Battle.SubmitPlayerCommand(ReadyPlayer, Command)
+
+            If Not Accepted Then
+                Accepted = Battle.SubmitPlayerCommand(ReadyPlayer, Battle.COMMAND_ATTACK)
+            End If
+
+        End If
+
+        Call Battle.Update()
+
+        If Observe Then
+            Call ObserveVisual()
+        End If
+
+        StepValue = StepValue + 1
+
+    Loop Until Battle.IsResultSequenceComplete() Or StepValue >= MaximumSteps
+
+    ReturnValue = Battle.Outcome()
+
+    Call Battle.Shutdown()
+
+    Return ReturnValue
+
+End Function

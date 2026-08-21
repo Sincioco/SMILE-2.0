@@ -1,0 +1,20 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Program-NoDemo.smile</StartupFile>
+    <OutputName>Dragonfall-NoDemo</OutputName>
+    <ApplicationId>smile.game.dragonfall.playable</ApplicationId>
+    <GraphicsBackend>DirectX</GraphicsBackend>
+    <VSync>true</VSync>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program-NoDemo.smile" />
+    <SmileSource Include="DragonfallBattle.smile" />
+    <SmileSource Include="DragonfallScene.smile" />
+    <SmileProjectReference Include="..\..\libraries\Smile.RPG\Smile.RPG.smilelibproj" />
+    <SmileProjectReference Include="..\..\libraries\Smile.BattleTime\Smile.BattleTime.smilelibproj" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Battle3D\Smile.Battle3D.smilelibproj" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+    <Asset Include="Assets\**\*" />
+  </ItemGroup>
+</SmileProject>

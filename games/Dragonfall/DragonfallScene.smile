@@ -1,0 +1,1007 @@
+''' Procedural Dragonfall arena, actors, cameras, and battle effects.
+Module Dragonfall.Scene
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Battle3D.Camera As BattleCamera
+Import Smile.Battle3D.Effects As BattleEffects
+Import Dragonfall.Battle As Battle
+
+Public Const SHOT_WIDE = 1
+Public Const SHOT_PARTY = 2
+Public Const SHOT_DRAGON = 3
+Public Const SHOT_ATTACK = 4
+Public Const SHOT_MAGIC = 5
+Public Const SHOT_IMPACT = 6
+Public Const SHOT_BREATH = 7
+Public Const SHOT_ENRAGE = 8
+Public Const SHOT_DEATH = 9
+Public Const SHOT_VICTORY = 10
+
+Private Const ARENA_OBJECT_COUNT = 12
+Private Const PARTY_OBJECT_COUNT = 24
+Private Const DRAGON_OBJECT_COUNT = 22
+Private Const PARTICLE_OBJECT_COUNT = 64
+
+Private Dim State As Number
+Private Dim Ready As Boolean
+Private Dim Camera As Core.Camera3D
+Private Dim FloorTexture As Core.Texture3D
+Private Dim EmptyTexture As Core.Texture3D
+Private Dim FloorMaterial As Core.Material3D
+Private Dim StoneMaterial As Core.Material3D
+Private Dim BronzeMaterial As Core.Material3D
+Private Dim LavaMaterial As Core.Material3D
+Private Dim ArinMaterial As Core.Material3D
+Private Dim SteelMaterial As Core.Material3D
+Private Dim MiraMaterial As Core.Material3D
+Private Dim FrostMaterial As Core.Material3D
+Private Dim TorMaterial As Core.Material3D
+Private Dim DragonMaterial As Core.Material3D
+Private Dim DragonGlowMaterial As Core.Material3D
+Private Dim ParticleMaterial As Core.Material3D
+Private Dim Arena[12] As Core.Object3D
+Private Dim PartyParts[24] As Core.Object3D
+Private Dim DragonParts[22] As Core.Object3D
+Private Dim ParticleTemplate As Core.Object3D
+Private Dim ParticleObjects[64] As Core.Object3D
+Private Dim LastVisual As Number
+Private Dim LastVisualStep As Number
+Private Dim GlobalStep As Number
+Private Dim OperationAccepted As Boolean
+Private Dim LastArinOffset As Number
+Private Dim LastTorOffset As Number
+Private Dim LastDragonOffset As Number
+
+Private Function Material(
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number,
+    EmissiveValue As Number,
+    Additive As Boolean
+) As Core.Material3D
+
+    Dim ReturnValue As Core.Material3D
+
+    Dim AlphaMode As Number
+
+    AlphaMode = Graphics3D.MATERIAL_ALPHA_OPAQUE
+
+    If Additive Then
+        AlphaMode = Graphics3D.MATERIAL_ALPHA_ADDITIVE
+    End If
+
+    ReturnValue = Graphics3D.CreateMaterial3D(
+        EmptyTexture,
+        AlphaMode,
+        RedValue,
+        GreenValue,
+        BlueValue,
+        100,
+        EmissiveValue > 0,
+        EmissiveValue,
+        50
+    )
+
+    Return ReturnValue
+
+End Function
+
+Private Sub Configure(
+    ByRef Object As Core.Object3D,
+    MaterialValue As Core.Material3D,
+    X As Number,
+    Y As Number,
+    Z As Number,
+    ScaleX As Number,
+    ScaleY As Number,
+    ScaleZ As Number
+)
+
+    OperationAccepted = Graphics3D.SetObjectMaterial3D(Object, MaterialValue)
+
+    Call Graphics3D.SetObjectPosition(Object, X, Y, Z)
+    Call Graphics3D.SetObjectScale(Object, ScaleX, ScaleY, ScaleZ)
+
+End Sub
+
+Private Sub DefineCameraShot(
+    Id As Number,
+    Name As Text,
+    X As Number,
+    Y As Number,
+    Z As Number,
+    TargetX As Number,
+    TargetY As Number,
+    TargetZ As Number,
+    Fov As Number,
+    Duration As Number
+)
+
+    Dim Shot As BattleCamera.ShotDefinition
+
+    Shot.Id = Id
+    Shot.Name = Name
+    Shot.PositionX = X
+    Shot.PositionY = Y
+    Shot.PositionZ = Z
+    Shot.TargetX = TargetX
+    Shot.TargetY = TargetY
+    Shot.TargetZ = TargetZ
+    Shot.FovDegrees = Fov
+    Shot.Duration = Duration
+    OperationAccepted = BattleCamera.DefineShot(State, Shot)
+
+End Sub
+
+Private Sub DefineEffect(
+    Id As Number,
+    Name As Text,
+    ParticleCountValue As Number,
+    LifetimeValue As Number,
+    SpeedValue As Number,
+    SpreadValue As Number,
+    GravityValue As Number,
+    StartRedValue As Number,
+    StartGreenValue As Number,
+    StartBlueValue As Number,
+    EndRedValue As Number,
+    EndGreenValue As Number,
+    EndBlueValue As Number,
+    StartSizeValue As Number,
+    EndSizeValue As Number,
+    FlashValue As Number,
+    ShakeValue As Number
+)
+
+    Dim Preset As BattleEffects.EffectPreset
+
+    Preset.Id = Id
+    Preset.Name = Name
+    Preset.ParticleCount = ParticleCountValue
+    Preset.Lifetime = LifetimeValue
+    Preset.Speed = SpeedValue
+    Preset.Spread = SpreadValue
+    Preset.Gravity = GravityValue
+    Preset.StartRed = StartRedValue
+    Preset.StartGreen = StartGreenValue
+    Preset.StartBlue = StartBlueValue
+    Preset.EndRed = EndRedValue
+    Preset.EndGreen = EndGreenValue
+    Preset.EndBlue = EndBlueValue
+    Preset.StartSize = StartSizeValue
+    Preset.EndSize = EndSizeValue
+    Preset.BlendMode = BattleEffects.BATTLE3D_BLEND_ADDITIVE
+    Preset.Billboard = True
+    Preset.FlashPercent = FlashValue
+    Preset.FlashDuration = 8
+    Preset.ShakeAmplitude = ShakeValue
+    OperationAccepted = BattleEffects.DefinePreset(State, Preset)
+
+End Sub
+
+Private Sub CreateArena()
+
+    Arena[0] = Graphics3D.CreatePlane3D(920, 720)
+    OperationAccepted = Graphics3D.SetObjectMaterial3D(Arena[0], FloorMaterial)
+
+    Call Graphics3D.SetObjectPosition(Arena[0], 0, -55, 30)
+
+    Arena[1] = Graphics3D.CreateTorus3D(330, 11)
+
+    Call Configure(Arena[1], LavaMaterial, 0, -42, 30, 100, 100, 100)
+
+    Arena[2] = Graphics3D.CreateTorus3D(265, 5)
+
+    Call Configure(Arena[2], BronzeMaterial, 0, -38, 30, 100, 100, 100)
+
+    Arena[3] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(Arena[3], LavaMaterial, 0, -43, 30, 690, 8, 5)
+
+    Arena[4] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(Arena[4], LavaMaterial, 0, -43, 30, 5, 8, 560)
+
+    Arena[5] = Graphics3D.CreateCylinder3D(28, 180)
+
+    Call Configure(Arena[5], StoneMaterial, -365, 30, -235, 100, 100, 100)
+
+    Arena[6] = Graphics3D.CreateCylinder3D(28, 180)
+
+    Call Configure(Arena[6], StoneMaterial, 365, 30, -235, 100, 100, 100)
+
+    Arena[7] = Graphics3D.CreateCylinder3D(28, 180)
+
+    Call Configure(Arena[7], StoneMaterial, -365, 30, 295, 100, 100, 100)
+
+    Arena[8] = Graphics3D.CreateCylinder3D(28, 180)
+
+    Call Configure(Arena[8], StoneMaterial, 365, 30, 295, 100, 100, 100)
+
+    Arena[9] = Graphics3D.CreateSphere3D(20)
+
+    Call Configure(Arena[9], LavaMaterial, -365, 135, -235, 100, 100, 100)
+
+    Arena[10] = Graphics3D.CreateSphere3D(20)
+
+    Call Configure(Arena[10], LavaMaterial, 365, 135, -235, 100, 100, 100)
+
+    Arena[11] = Graphics3D.CreateTorus3D(430, 3)
+
+    Call Configure(Arena[11], LavaMaterial, 0, -48, 30, 100, 100, 100)
+
+End Sub
+
+Private Sub CreateParty()
+
+    ''' Arin: crimson coat, impossible sword, heroic hair.
+    PartyParts[0] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(PartyParts[0], SteelMaterial, -255, -7, -65, 14, 46, 14)
+
+    PartyParts[1] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(PartyParts[1], SteelMaterial, -225, -7, -65, 14, 46, 14)
+
+    PartyParts[2] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(PartyParts[2], ArinMaterial, -240, 47, -65, 48, 58, 25)
+
+    PartyParts[3] = Graphics3D.CreateSphere3D(25)
+
+    Call Configure(PartyParts[3], ArinMaterial, -240, 95, -65, 100, 100, 100)
+
+    PartyParts[4] = Graphics3D.CreatePyramid3D(46, 70)
+
+    Call Configure(PartyParts[4], SteelMaterial, -240, 130, -65, 100, 100, 100)
+
+    PartyParts[5] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(PartyParts[5], SteelMaterial, -174, 54, -58, 9, 115, 8)
+    Call Graphics3D.SetObjectRotation(PartyParts[5], 0, 0, -24)
+
+    PartyParts[6] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(PartyParts[6], ArinMaterial, -275, 52, -65, 13, 50, 13)
+
+    PartyParts[7] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(PartyParts[7], ArinMaterial, -205, 52, -65, 13, 50, 13)
+
+    ''' Mira: star-robed battle mage with a luminous staff.
+    PartyParts[8] = Graphics3D.CreatePyramid3D(88, 120)
+
+    Call Configure(PartyParts[8], MiraMaterial, -285, 12, 75, 100, 100, 100)
+
+    PartyParts[9] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(PartyParts[9], MiraMaterial, -285, 68, 75, 37, 45, 28)
+
+    PartyParts[10] = Graphics3D.CreateSphere3D(23)
+
+    Call Configure(PartyParts[10], FrostMaterial, -285, 112, 75, 100, 100, 100)
+
+    PartyParts[11] = Graphics3D.CreatePyramid3D(72, 100)
+
+    Call Configure(PartyParts[11], MiraMaterial, -285, 155, 75, 100, 100, 100)
+
+    PartyParts[12] = Graphics3D.CreateCylinder3D(7, 160)
+
+    Call Configure(PartyParts[12], BronzeMaterial, -225, 58, 75, 100, 100, 100)
+
+    PartyParts[13] = Graphics3D.CreateSphere3D(19)
+
+    Call Configure(PartyParts[13], FrostMaterial, -225, 150, 75, 100, 100, 100)
+
+    PartyParts[14] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(PartyParts[14], MiraMaterial, -315, 70, 75, 11, 44, 11)
+
+    PartyParts[15] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(PartyParts[15], MiraMaterial, -255, 70, 75, 11, 44, 11)
+
+    ''' Tor: living fortress, tower shield, and meteor hammer.
+    PartyParts[16] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(PartyParts[16], SteelMaterial, -210, -3, 195, 23, 48, 23)
+
+    PartyParts[17] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(PartyParts[17], SteelMaterial, -164, -3, 195, 23, 48, 23)
+
+    PartyParts[18] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(PartyParts[18], TorMaterial, -187, 58, 195, 68, 68, 40)
+
+    PartyParts[19] = Graphics3D.CreateSphere3D(29)
+
+    Call Configure(PartyParts[19], SteelMaterial, -187, 112, 195, 100, 100, 100)
+
+    PartyParts[20] = Graphics3D.CreatePyramid3D(62, 78)
+
+    Call Configure(PartyParts[20], TorMaterial, -187, 151, 195, 100, 100, 100)
+
+    PartyParts[21] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(PartyParts[21], TorMaterial, -263, 62, 195, 18, 96, 82)
+
+    PartyParts[22] = Graphics3D.CreateCylinder3D(14, 118)
+
+    Call Configure(PartyParts[22], SteelMaterial, -105, 66, 195, 100, 100, 100)
+    Call Graphics3D.SetObjectRotation(PartyParts[22], 0, 0, -55)
+
+    PartyParts[23] = Graphics3D.CreateSphere3D(31)
+
+    Call Configure(PartyParts[23], TorMaterial, -72, 106, 195, 100, 100, 100)
+
+End Sub
+
+Private Sub CreateDragon()
+
+    DragonParts[0] = Graphics3D.CreateSphere3D(105)
+
+    Call Configure(DragonParts[0], DragonMaterial, 210, 95, 45, 150, 100, 100)
+
+    DragonParts[1] = Graphics3D.CreateSphere3D(76)
+
+    Call Configure(DragonParts[1], DragonGlowMaterial, 135, 105, 25, 100, 120, 100)
+
+    DragonParts[2] = Graphics3D.CreateCylinder3D(45, 155)
+
+    Call Configure(DragonParts[2], DragonMaterial, 92, 170, 7, 100, 100, 100)
+    Call Graphics3D.SetObjectRotation(DragonParts[2], 0, 0, 54)
+
+    DragonParts[3] = Graphics3D.CreateSphere3D(66)
+
+    Call Configure(DragonParts[3], DragonMaterial, 28, 224, -18, 125, 92, 100)
+
+    DragonParts[4] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(DragonParts[4], DragonGlowMaterial, -35, 205, -18, 74, 34, 52)
+
+    DragonParts[5] = Graphics3D.CreatePyramid3D(40, 105)
+
+    Call Configure(DragonParts[5], BronzeMaterial, 15, 294, -50, 100, 100, 100)
+    Call Graphics3D.SetObjectRotation(DragonParts[5], 22, 0, -25)
+
+    DragonParts[6] = Graphics3D.CreatePyramid3D(40, 105)
+
+    Call Configure(DragonParts[6], BronzeMaterial, 15, 294, 15, 100, 100, 100)
+    Call Graphics3D.SetObjectRotation(DragonParts[6], -22, 0, -25)
+
+    DragonParts[7] = Graphics3D.CreateSphere3D(10)
+
+    Call Configure(DragonParts[7], LavaMaterial, -19, 240, -55, 100, 100, 100)
+
+    DragonParts[8] = Graphics3D.CreateSphere3D(10)
+
+    Call Configure(DragonParts[8], LavaMaterial, -19, 240, 16, 100, 100, 100)
+
+    DragonParts[9] = Graphics3D.CreatePyramid3D(255, 210)
+
+    Call Configure(DragonParts[9], DragonMaterial, 190, 165, -122, 100, 100, 100)
+    Call Graphics3D.SetObjectRotation(DragonParts[9], 72, 0, -20)
+
+    DragonParts[10] = Graphics3D.CreatePyramid3D(255, 210)
+
+    Call Configure(DragonParts[10], DragonMaterial, 190, 165, 212, 100, 100, 100)
+    Call Graphics3D.SetObjectRotation(DragonParts[10], -72, 0, -20)
+
+    DragonParts[11] = Graphics3D.CreateCylinder3D(50, 150)
+
+    Call Configure(DragonParts[11], DragonMaterial, 320, 88, 62, 100, 100, 100)
+    Call Graphics3D.SetObjectRotation(DragonParts[11], 0, 0, -72)
+
+    DragonParts[12] = Graphics3D.CreateCylinder3D(38, 150)
+
+    Call Configure(DragonParts[12], DragonMaterial, 418, 72, 76, 100, 100, 100)
+    Call Graphics3D.SetObjectRotation(DragonParts[12], 0, 0, -82)
+
+    DragonParts[13] = Graphics3D.CreateCylinder3D(25, 125)
+
+    Call Configure(DragonParts[13], DragonGlowMaterial, 505, 64, 92, 100, 100, 100)
+    Call Graphics3D.SetObjectRotation(DragonParts[13], 0, 0, -86)
+
+    DragonParts[14] = Graphics3D.CreatePyramid3D(55, 130)
+
+    Call Configure(DragonParts[14], DragonGlowMaterial, 578, 62, 103, 100, 100, 100)
+    Call Graphics3D.SetObjectRotation(DragonParts[14], 0, 0, -90)
+
+    DragonParts[15] = Graphics3D.CreateCylinder3D(38, 115)
+
+    Call Configure(DragonParts[15], DragonMaterial, 155, 4, -12, 100, 100, 100)
+
+    DragonParts[16] = Graphics3D.CreateCylinder3D(38, 115)
+
+    Call Configure(DragonParts[16], DragonMaterial, 155, 4, 102, 100, 100, 100)
+
+    DragonParts[17] = Graphics3D.CreateCylinder3D(42, 120)
+
+    Call Configure(DragonParts[17], DragonMaterial, 285, 1, -8, 100, 100, 100)
+
+    DragonParts[18] = Graphics3D.CreateCylinder3D(42, 120)
+
+    Call Configure(DragonParts[18], DragonMaterial, 285, 1, 108, 100, 100, 100)
+
+    DragonParts[19] = Graphics3D.CreatePyramid3D(35, 75)
+
+    Call Configure(DragonParts[19], BronzeMaterial, 125, -47, -12, 100, 100, 100)
+
+    DragonParts[20] = Graphics3D.CreatePyramid3D(35, 75)
+
+    Call Configure(DragonParts[20], BronzeMaterial, 125, -47, 102, 100, 100, 100)
+
+    DragonParts[21] = Graphics3D.CreateSphere3D(36)
+
+    Call Configure(DragonParts[21], LavaMaterial, 37, 196, -18, 100, 100, 100)
+
+End Sub
+
+Private Sub CreateParticles()
+
+    Dim Index As Number
+
+    ParticleTemplate = Graphics3D.CreateSphere3D(10)
+    OperationAccepted = Graphics3D.SetObjectMaterial3D(ParticleTemplate, ParticleMaterial)
+
+    Call Graphics3D.SetObjectVisible(ParticleTemplate, False)
+
+    For Index = 0 To PARTICLE_OBJECT_COUNT - 1
+        ParticleObjects[Index] = Graphics3D.CreateObjectFromMesh3D(ParticleTemplate.MeshHandle)
+        OperationAccepted = Graphics3D.SetObjectMaterial3D(ParticleObjects[Index], ParticleMaterial)
+
+        Call Graphics3D.SetObjectVisible(ParticleObjects[Index], False)
+    End For
+
+End Sub
+
+Private Sub DefinePresentation()
+
+    Call DefineCameraShot(SHOT_WIDE, "EMBER OBSERVATORY", 0, 270, -760, 35, 75, 40, 54, 0)
+    Call DefineCameraShot(SHOT_PARTY, "THE LAST LIGHT", -410, 170, -370, -190, 65, 70, 48, 24)
+    Call DefineCameraShot(SHOT_DRAGON, "ASHWING", 410, 260, -330, 125, 125, 40, 42, 24)
+    Call DefineCameraShot(SHOT_ATTACK, "HEROIC CHARGE", -330, 120, -250, 85, 80, 5, 50, 14)
+    Call DefineCameraShot(SHOT_MAGIC, "ARCANE STORM", -210, 230, -440, 40, 120, 25, 45, 18)
+    Call DefineCameraShot(SHOT_IMPACT, "TITAN IMPACT", 240, 120, -290, 105, 100, 25, 37, 8)
+    Call DefineCameraShot(SHOT_BREATH, "WORLD IN FLAME", 80, 130, -310, -135, 75, 40, 58, 10)
+    Call DefineCameraShot(SHOT_ENRAGE, "CROWN OF CINDERS", 300, 260, -350, 115, 135, 40, 39, 14)
+    Call DefineCameraShot(SHOT_DEATH, "DRAGONFALL", 490, 305, -570, 115, 70, 45, 48, 50)
+    Call DefineCameraShot(SHOT_VICTORY, "DAWN RETURNS", -360, 240, -500, -105, 85, 70, 46, 55)
+
+    Call DefineEffect(Battle.EFFECT_SLASH, "STARFIRE SLASH", 28, 32, 9, 18, -1, 255, 248, 215, 255, 70, 20, 18, 2, 72, 10)
+    Call DefineEffect(Battle.EFFECT_FIRE, "EMBER NOVA", 42, 52, 11, 24, -1, 255, 205, 35, 220, 15, 3, 22, 3, 78, 13)
+    Call DefineEffect(Battle.EFFECT_FROST, "ABSOLUTE ZERO", 46, 58, 9, 26, 0, 215, 250, 255, 40, 120, 255, 19, 4, 70, 11)
+    Call DefineEffect(Battle.EFFECT_HEAL, "PHOENIX HYMN", 36, 62, 7, 23, 0, 255, 245, 125, 45, 255, 130, 17, 5, 52, 6)
+    Call DefineEffect(Battle.EFFECT_BREATH, "CALAMITY BREATH", 64, 70, 14, 34, -1, 255, 250, 100, 180, 5, 0, 28, 5, 100, 24)
+    Call DefineEffect(Battle.EFFECT_ENRAGE, "CINDER CROWN", 64, 96, 13, 38, 0, 255, 225, 55, 150, 0, 20, 26, 8, 100, 28)
+    Call DefineEffect(Battle.EFFECT_DEATH, "DRAGONFALL", 64, 130, 16, 48, -2, 255, 245, 190, 65, 8, 5, 30, 2, 100, 35)
+    Call DefineEffect(Battle.EFFECT_BASH, "TITAN BREAKER", 34, 42, 10, 25, -1, 255, 230, 120, 255, 45, 5, 24, 3, 88, 20)
+
+    OperationAccepted = BattleCamera.PlayShot(State, SHOT_WIDE, 0)
+
+End Sub
+
+Public Function Initialize(StateHandle As Number) As Boolean
+
+    If StateHandle = 0 Or Not Graphics3D.RendererAvailable() Then
+        Return False
+    End If
+
+    State = StateHandle
+    Camera = Graphics3D.DefaultCamera()
+    FloorTexture = Graphics3D.LoadTexture3D(
+        "Assets\EmberObservatory.png",
+        Graphics3D.TEXTURE_FILTER_LINEAR,
+        Graphics3D.TEXTURE_WRAP_REPEAT
+    )
+
+    FloorMaterial = Graphics3D.CreateMaterial3D(
+        FloorTexture,
+        Graphics3D.MATERIAL_ALPHA_OPAQUE,
+        105,
+        88,
+        82,
+        100,
+        False,
+        12,
+        50
+    )
+    StoneMaterial = Material(52, 55, 68, 0, False)
+    BronzeMaterial = Material(205, 110, 38, 22, False)
+    LavaMaterial = Material(255, 62, 7, 100, True)
+    ArinMaterial = Material(210, 30, 42, 12, False)
+    SteelMaterial = Material(205, 220, 235, 18, False)
+    MiraMaterial = Material(85, 35, 185, 20, False)
+    FrostMaterial = Material(75, 205, 255, 90, False)
+    TorMaterial = Material(220, 135, 25, 18, False)
+    DragonMaterial = Material(86, 16, 22, 16, False)
+    DragonGlowMaterial = Material(220, 45, 13, 70, False)
+    ParticleMaterial = Material(255, 255, 255, 100, True)
+
+    Call CreateArena()
+    Call CreateParty()
+    Call CreateDragon()
+    Call CreateParticles()
+    Call DefinePresentation()
+
+    LastVisual = -1
+    LastVisualStep = -1
+    GlobalStep = 0
+    LastArinOffset = 0
+    LastTorOffset = 0
+    LastDragonOffset = 0
+    Ready = True
+    Return True
+
+End Function
+
+Private Sub TriggerVisual(Visual As Number, StepValue As Number)
+
+    Dim X As Number
+    Dim Y As Number
+    Dim Z As Number
+    Dim EffectId As Number
+    Dim Shot As Number
+    Dim Shake As Number
+
+    X = 95
+    Y = 120
+    Z = 30
+    Shot = SHOT_IMPACT
+    Shake = 12
+
+    If Visual = Battle.VISUAL_ARIN_ATTACK Or Visual = Battle.VISUAL_ARIN_EMBER Then
+
+        EffectId = Battle.EFFECT_SLASH
+        Shot = SHOT_ATTACK
+
+    Else If Visual = Battle.VISUAL_MIRA_FLAME Then
+
+        EffectId = Battle.EFFECT_FIRE
+        Shot = SHOT_MAGIC
+
+    Else If Visual = Battle.VISUAL_MIRA_FROST Then
+
+        EffectId = Battle.EFFECT_FROST
+        Shot = SHOT_MAGIC
+
+    Else If Visual = Battle.VISUAL_MIRA_MEND Then
+
+        EffectId = Battle.EFFECT_HEAL
+        Shot = SHOT_PARTY
+        X = -230
+        Y = 80
+        Z = 70
+        Shake = 3
+
+    Else If Visual = Battle.VISUAL_TOR_ATTACK Or Visual = Battle.VISUAL_TOR_BASH Then
+
+        EffectId = Battle.EFFECT_BASH
+        Shot = SHOT_ATTACK
+
+    Else If Visual = Battle.VISUAL_DRAGON_BREATH Then
+
+        EffectId = Battle.EFFECT_BREATH
+        Shot = SHOT_BREATH
+        X = -60
+        Y = 105
+        Z = 25
+        Shake = 24
+
+    Else If Visual = Battle.VISUAL_DRAGON_CLAW Or Visual = Battle.VISUAL_DRAGON_TAIL Then
+
+        EffectId = Battle.EFFECT_SLASH
+        Shot = SHOT_DRAGON
+        X = -210
+        Y = 65
+        Z = 65
+        Shake = 18
+
+    Else If Visual = Battle.VISUAL_ENRAGE Then
+
+        EffectId = Battle.EFFECT_ENRAGE
+        Shot = SHOT_ENRAGE
+        X = 145
+        Y = 130
+        Z = 40
+        Shake = 28
+
+    Else If Visual = Battle.VISUAL_VICTORY Then
+
+        EffectId = Battle.EFFECT_DEATH
+        Shot = SHOT_DEATH
+        X = 160
+        Y = 125
+        Z = 45
+        Shake = 35
+
+    Else If Visual = Battle.VISUAL_DEFEAT Then
+
+        EffectId = Battle.EFFECT_BREATH
+        Shot = SHOT_DRAGON
+        X = -200
+        Y = 75
+        Z = 60
+        Shake = 30
+
+    End If
+
+    If EffectId > 0 Then
+
+        OperationAccepted = BattleEffects.Spawn(State, EffectId, X, Y, Z, GlobalStep + Visual * 997 + StepValue)
+        OperationAccepted = BattleCamera.PlayShot(State, Shot, 0)
+        OperationAccepted = BattleCamera.StartShake(State, Shake, 30, GlobalStep + 177)
+
+    End If
+
+End Sub
+
+Private Sub UpdateCamera()
+
+    OperationAccepted = BattleCamera.Update(State, 1)
+    Camera.Position.X = BattleCamera.PositionX(State)
+    Camera.Position.Y = BattleCamera.PositionY(State)
+    Camera.Position.Z = BattleCamera.PositionZ(State)
+    Camera.Target.X = BattleCamera.TargetX(State)
+    Camera.Target.Y = BattleCamera.TargetY(State)
+    Camera.Target.Z = BattleCamera.TargetZ(State)
+    Camera.FovDegrees = BattleCamera.FovDegrees(State)
+    Camera.NearPlane = 1
+    Camera.FarPlane = 10000
+
+End Sub
+
+Private Sub OffsetParty(IndexStart As Number, IndexEnd As Number, DeltaX As Number, DeltaY As Number)
+
+    Dim Index As Number
+
+    For Index = IndexStart To IndexEnd
+        Call Graphics3D.MoveObject(PartyParts[Index], DeltaX, DeltaY, 0)
+    End For
+
+End Sub
+
+Private Sub OffsetDragon(DeltaY As Number)
+
+    Dim Index As Number
+
+    For Index = 0 To DRAGON_OBJECT_COUNT - 1
+        Call Graphics3D.MoveObject(DragonParts[Index], 0, DeltaY, 0)
+    End For
+
+End Sub
+
+Private Sub UpdateActors()
+
+    Dim Visual As Number
+    Dim StepValue As Number
+    Dim Pulse As Number
+    Dim Wing As Number
+    Dim Lunge As Number
+    Dim Rise As Number
+    Dim ArinOffset As Number
+    Dim TorOffset As Number
+    Dim DragonOffset As Number
+
+    Visual = Battle.Visual()
+    StepValue = Battle.VisualStep()
+    Pulse = (GlobalStep Mod 30) - 15
+    Wing = (GlobalStep Mod 48) - 24
+    ArinOffset = 0
+    TorOffset = 0
+    DragonOffset = 0
+
+    ''' Ambient motion makes the tableau alive even between attacks.
+
+    Call Graphics3D.SetObjectRotation(DragonParts[9], 72 + Wing, 0, -20)
+    Call Graphics3D.SetObjectRotation(DragonParts[10], -72 - Wing, 0, -20)
+    Call Graphics3D.SetObjectRotation(DragonParts[0], 0, 0, 0)
+    Call Graphics3D.SetObjectScale(DragonParts[0], 150, 100, 100)
+    Call Graphics3D.SetObjectRotation(DragonParts[11], 0, 0, -72)
+    Call Graphics3D.SetObjectRotation(DragonParts[12], 0, 0, -82)
+    Call Graphics3D.SetObjectRotation(DragonParts[13], 0, 0, -86)
+    Call Graphics3D.SetObjectRotation(DragonParts[15], 0, 0, 0)
+    Call Graphics3D.SetObjectRotation(PartyParts[2], 0, 0, 0)
+    Call Graphics3D.SetObjectRotation(PartyParts[5], 0, 0, -24)
+    Call Graphics3D.SetObjectRotation(PartyParts[9], 0, 0, 0)
+    Call Graphics3D.SetObjectRotation(PartyParts[12], 0, 0, 0)
+    Call Graphics3D.SetObjectRotation(PartyParts[18], 0, 0, 0)
+    Call Graphics3D.SetObjectRotation(PartyParts[22], 0, 0, -55)
+    Call Graphics3D.SetObjectScale(DragonParts[21], 90 + Abs(Pulse), 90 + Abs(Pulse), 90 + Abs(Pulse))
+    Call Graphics3D.SetObjectScale(PartyParts[13], 88 + Abs(Pulse), 88 + Abs(Pulse), 88 + Abs(Pulse))
+
+    If StepValue < 36 Then
+        Lunge = StepValue * 6
+    Else
+        Lunge = (72 - StepValue) * 6
+    End If
+
+    Lunge = Max(0, Lunge)
+
+    If Visual = Battle.VISUAL_ARIN_ATTACK Or Visual = Battle.VISUAL_ARIN_EMBER Then
+
+        ArinOffset = Lunge
+
+        Call Graphics3D.SetObjectRotation(PartyParts[5], 0, StepValue * 20, -24 - StepValue * 9)
+
+    Else If Visual = Battle.VISUAL_TOR_ATTACK Or Visual = Battle.VISUAL_TOR_BASH Then
+
+        TorOffset = Lunge
+
+        Call Graphics3D.SetObjectRotation(PartyParts[22], 0, StepValue * 16, -55)
+
+    Else If (Visual = Battle.VISUAL_MIRA_FLAME Or
+        Visual = Battle.VISUAL_MIRA_FROST Or
+        Visual = Battle.VISUAL_MIRA_MEND) Then
+
+        Rise = Min(55, StepValue * 3)
+
+        Call Graphics3D.SetObjectPosition(PartyParts[13], -225 + Rise, 150 + Abs(Pulse), 75)
+        Call Graphics3D.SetObjectRotation(PartyParts[12], 0, StepValue * 9, StepValue * 2)
+
+    Else If Visual = Battle.VISUAL_DRAGON_CLAW Then
+
+        Call Graphics3D.SetObjectRotation(DragonParts[15], 0, 0, StepValue * 11)
+
+    Else If Visual = Battle.VISUAL_DRAGON_TAIL Then
+
+        Call Graphics3D.SetObjectRotation(DragonParts[11], 0, StepValue * 16, -72)
+        Call Graphics3D.SetObjectRotation(DragonParts[12], 0, StepValue * 20, -82)
+        Call Graphics3D.SetObjectRotation(DragonParts[13], 0, StepValue * 24, -86)
+
+    Else If Visual = Battle.VISUAL_DRAGON_BREATH Then
+
+        Call Graphics3D.SetObjectScale(DragonParts[21], 110 + StepValue * 3, 110 + StepValue * 3, 110 + StepValue * 3)
+
+    Else If Visual = Battle.VISUAL_ENRAGE Then
+
+        Call Graphics3D.SetObjectRotation(DragonParts[0], Pulse / 2, StepValue * 5, 0)
+        Call Graphics3D.SetObjectScale(DragonParts[0], 150 + Abs(Pulse), 100 + Abs(Pulse), 100 + Abs(Pulse))
+
+    Else If Visual = Battle.VISUAL_VICTORY Then
+
+        Rise = Min(210, StepValue * 2)
+
+        Call Graphics3D.SetObjectRotation(DragonParts[0], 0, 0, Min(90, StepValue / 3))
+
+        DragonOffset = 0 - Rise
+
+        Call Graphics3D.SetObjectScale(PartyParts[3], 110 + Abs(Pulse), 110 + Abs(Pulse), 110 + Abs(Pulse))
+        Call Graphics3D.SetObjectScale(PartyParts[10], 110 + Abs(Pulse), 110 + Abs(Pulse), 110 + Abs(Pulse))
+        Call Graphics3D.SetObjectScale(PartyParts[19], 110 + Abs(Pulse), 110 + Abs(Pulse), 110 + Abs(Pulse))
+
+        If StepValue = 145 Then
+            OperationAccepted = BattleCamera.PlayShot(State, SHOT_VICTORY, 0)
+        End If
+
+    Else If Visual = Battle.VISUAL_DEFEAT Then
+
+        Call Graphics3D.SetObjectRotation(PartyParts[2], 0, 0, Min(90, StepValue))
+        Call Graphics3D.SetObjectRotation(PartyParts[9], 0, 0, Min(90, StepValue))
+        Call Graphics3D.SetObjectRotation(PartyParts[18], 0, 0, Min(90, StepValue))
+
+    End If
+
+    Call OffsetParty(0, 7, ArinOffset - LastArinOffset, 0)
+    Call OffsetParty(16, 23, TorOffset - LastTorOffset, 0)
+    Call OffsetDragon(DragonOffset - LastDragonOffset)
+
+    LastArinOffset = ArinOffset
+    LastTorOffset = TorOffset
+    LastDragonOffset = DragonOffset
+
+End Sub
+
+Private Sub UpdateParticles()
+
+    Dim Index As Number
+    Dim SizeValue As Number
+    Dim LifetimeValue As Number
+
+    OperationAccepted = BattleEffects.Update(State, 1)
+
+    For Index = 0 To PARTICLE_OBJECT_COUNT - 1
+
+        If BattleEffects.IsActive(State, Index) Then
+
+            LifetimeValue = Max(1, BattleEffects.Lifetime(State, Index))
+            SizeValue = BattleEffects.Size(State, Index)
+
+            Call Graphics3D.SetObjectVisible(ParticleObjects[Index], True)
+            Call Graphics3D.SetObjectPosition(
+                ParticleObjects[Index],
+                BattleEffects.X(State, Index),
+                BattleEffects.Y(State, Index),
+                BattleEffects.Z(State, Index)
+            )
+            Call Graphics3D.SetObjectScale(ParticleObjects[Index], SizeValue, SizeValue, SizeValue)
+            Call Graphics3D.SetObjectColor(
+                ParticleObjects[Index],
+                BattleEffects.ParticleRedValue(State, Index),
+                BattleEffects.ParticleGreenValue(State, Index),
+                BattleEffects.ParticleBlueValue(State, Index)
+            )
+            Call Graphics3D.SetObjectOpacity(
+                ParticleObjects[Index],
+                100 - BattleEffects.Age(State, Index) * 100 / LifetimeValue
+            )
+
+        Else
+
+            Call Graphics3D.SetObjectVisible(ParticleObjects[Index], False)
+
+        End If
+
+    End For
+
+End Sub
+
+Public Sub Update(StateHandle As Number, StepValue As Number)
+
+    Dim VisualValue As Number
+    Dim VisualStepValue As Number
+
+    If Not Ready Or StateHandle <> State Then
+        Return
+    End If
+
+    GlobalStep = StepValue
+    VisualValue = Battle.Visual()
+    VisualStepValue = Battle.VisualStep()
+
+    If VisualStepValue = 1 And (VisualValue <> LastVisual Or LastVisualStep <> VisualStepValue) Then
+        Call TriggerVisual(VisualValue, VisualStepValue)
+    End If
+
+    LastVisual = VisualValue
+    LastVisualStep = VisualStepValue
+
+    Call UpdateCamera()
+    Call UpdateActors()
+    Call UpdateParticles()
+
+End Sub
+
+Public Sub Draw()
+
+    Dim Index As Number
+    Dim FrameReady As Boolean
+
+    If Not Ready Then
+        Return
+    End If
+
+    FrameReady = Graphics3D.Begin3D(Camera, 3, 2, 10)
+
+    If Not FrameReady Then
+        Return
+    End If
+
+    For Index = 0 To ARENA_OBJECT_COUNT - 1
+        FrameReady = Graphics3D.DrawObject3D(Arena[Index])
+    End For
+
+    For Index = 0 To PARTY_OBJECT_COUNT - 1
+        FrameReady = Graphics3D.DrawObject3D(PartyParts[Index])
+    End For
+
+    For Index = 0 To DRAGON_OBJECT_COUNT - 1
+        FrameReady = Graphics3D.DrawObject3D(DragonParts[Index])
+    End For
+
+    ''' Additive particles deliberately render last.
+
+    For Index = 0 To PARTICLE_OBJECT_COUNT - 1
+
+        If BattleEffects.IsActive(State, Index) Then
+            FrameReady = Graphics3D.DrawObject3D(ParticleObjects[Index])
+        End If
+
+    End For
+
+    Call Graphics3D.End3D()
+
+End Sub
+
+Public Function IsReady() As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Ready
+
+    Return ReturnValue
+
+End Function
+
+Public Function FlashOpacity() As Number
+
+    Dim ReturnValue As Number
+
+    If Not Ready Then
+        Return 0
+    End If
+
+    ReturnValue = BattleEffects.FlashOpacity(State)
+
+    Return ReturnValue
+
+End Function
+
+Public Function ActiveParticleCount() As Number
+
+    Dim ReturnValue As Number
+
+    If Not Ready Then
+        Return 0
+    End If
+
+    ReturnValue = BattleEffects.ActiveCount(State)
+
+    Return ReturnValue
+
+End Function
+
+Public Function CurrentCameraName() As Text
+
+    Dim ReturnValue As Text
+
+    If Not Ready Then
+        Return "2D FALLBACK"
+    End If
+
+    ReturnValue = BattleCamera.CurrentShotName(State)
+
+    Return ReturnValue
+
+End Function
+
+Public Sub Shutdown()
+
+    Dim Index As Number
+
+    If Not Ready Then
+        Return
+    End If
+
+    For Index = 0 To PARTICLE_OBJECT_COUNT - 1
+        Call Graphics3D.DestroyObjectInstance3D(ParticleObjects[Index])
+    End For
+
+    Call Graphics3D.DestroyObject3D(ParticleTemplate)
+
+    For Index = 0 To DRAGON_OBJECT_COUNT - 1
+        Call Graphics3D.DestroyObject3D(DragonParts[Index])
+    End For
+
+    For Index = 0 To PARTY_OBJECT_COUNT - 1
+        Call Graphics3D.DestroyObject3D(PartyParts[Index])
+    End For
+
+    For Index = 0 To ARENA_OBJECT_COUNT - 1
+        Call Graphics3D.DestroyObject3D(Arena[Index])
+    End For
+
+    Call Graphics3D.DestroyMaterial3D(ParticleMaterial)
+    Call Graphics3D.DestroyMaterial3D(DragonGlowMaterial)
+    Call Graphics3D.DestroyMaterial3D(DragonMaterial)
+    Call Graphics3D.DestroyMaterial3D(TorMaterial)
+    Call Graphics3D.DestroyMaterial3D(FrostMaterial)
+    Call Graphics3D.DestroyMaterial3D(MiraMaterial)
+    Call Graphics3D.DestroyMaterial3D(SteelMaterial)
+    Call Graphics3D.DestroyMaterial3D(ArinMaterial)
+    Call Graphics3D.DestroyMaterial3D(LavaMaterial)
+    Call Graphics3D.DestroyMaterial3D(BronzeMaterial)
+    Call Graphics3D.DestroyMaterial3D(StoneMaterial)
+    Call Graphics3D.DestroyMaterial3D(FloorMaterial)
+    Call Graphics3D.DestroyTexture3D(FloorTexture)
+
+    Ready = False
+    State = 0
+
+End Sub
+
+End Module

@@ -1,0 +1,92 @@
+Option Explicit
+
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Dragonfall.Battle As Battle
+Import Dragonfall.Scene As Scene
+
+Const RESTART_COUNT = 100
+
+Dim Failures As Number
+Dim Cycle As Number
+Dim StepValue As Number
+Dim StableMeshes As Number
+Dim StableObjects As Number
+Dim StableMaterials As Number
+Dim StableTextures As Number
+Dim Ready As Boolean
+
+Game Window "Dragonfall Lifecycle Tests" Size 480 By 270
+
+Call Graphics3D.ResetRenderer3D()
+
+For Cycle = 1 To RESTART_COUNT
+
+    Ready = Battle.Initialize()
+
+    If Ready Then
+        Ready = Scene.Initialize(Battle.StateHandle())
+    End If
+
+    If Not Ready Then
+
+        Failures = Failures + 1
+
+    Else
+
+        If Cycle = 1 Then
+
+            StableMeshes = Graphics3D.LiveMeshCount3D()
+            StableObjects = Graphics3D.LiveObjectCount3D()
+            StableMaterials = Graphics3D.LiveMaterialCount3D()
+            StableTextures = Graphics3D.LiveTextureCount3D()
+
+        End If
+
+        If (StableMeshes <= 0 Or
+            StableObjects <= 0 Or
+            StableObjects >= Graphics3D.MaximumObjectCount3D() Or
+            StableMaterials <= 0 Or
+            StableTextures <> 1 Or
+            Graphics3D.LiveMeshCount3D() <> StableMeshes Or
+            Graphics3D.LiveObjectCount3D() <> StableObjects Or
+            Graphics3D.LiveMaterialCount3D() <> StableMaterials Or
+            Graphics3D.LiveTextureCount3D() <> StableTextures) Then
+            Failures = Failures + 1
+        End If
+
+        For StepValue = 1 To 6
+            Call Battle.Update()
+            Call Scene.Update(Battle.StateHandle(), Cycle * 10 + StepValue)
+        End For
+
+        Call Scene.Draw()
+
+    End If
+
+    Call Scene.Shutdown()
+    Call Battle.Shutdown()
+
+    If (Graphics3D.LiveMeshCount3D() <> 0 Or
+        Graphics3D.LiveObjectCount3D() <> 0 Or
+        Graphics3D.LiveMaterialCount3D() <> 0 Or
+        Graphics3D.LiveTextureCount3D() <> 0 Or
+        Graphics3D.LiveSkeletonCount3D() <> 0 Or
+        Graphics3D.LiveAnimationClipCount3D() <> 0 Or
+        Graphics3D.LiveAnimatorCount3D() <> 0) Then
+        Failures = Failures + 1
+    End If
+
+End For
+
+Fill Rectangle 0, 0, 480, 270, Rgb(3, 2, 10)
+Draw Text "2D AFTER DRAGONFALL 3D" At 240, 105 Size 20 Color WHITE Centered
+Draw Text "100 CLEAN RESTARTS" At 240, 145 Size 17 Color ORANGE Centered
+Show Screen
+
+Call Graphics3D.ResetRenderer3D()
+
+If Failures = 0 Then
+    Print "Dragonfall 3D lifecycle tests passed"
+Else
+    Print "Dragonfall 3D lifecycle tests failed: "; Failures
+End If

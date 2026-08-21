@@ -1,0 +1,733 @@
+''' Original deterministic boss encounter built on Smile.RPG and BattleTime.
+Module Dragonfall.Battle
+
+Option Explicit
+
+Import Smile.RPG.Core As RPG
+Import Smile.RPG.Characters As Characters
+Import Smile.RPG.Party As Party
+Import Smile.RPG.Inventory As Inventory
+Import Smile.RPG.Abilities As Abilities
+Import Smile.RPG.BattleEffects As Effects
+Import Smile.RPG.BattleCore As BattleCore
+Import Smile.RPG.BattleTime As BattleTime
+
+Public Const PARTICIPANT_ARIN = 1
+Public Const PARTICIPANT_MIRA = 2
+Public Const PARTICIPANT_TOR = 3
+Public Const PARTICIPANT_ASHWING = 4
+
+Public Const VISUAL_IDLE = 0
+Public Const VISUAL_ARIN_ATTACK = 1
+Public Const VISUAL_ARIN_EMBER = 2
+Public Const VISUAL_MIRA_FLAME = 3
+Public Const VISUAL_MIRA_FROST = 4
+Public Const VISUAL_MIRA_MEND = 5
+Public Const VISUAL_TOR_ATTACK = 6
+Public Const VISUAL_TOR_BASH = 7
+Public Const VISUAL_DEFEND = 8
+Public Const VISUAL_DRAGON_CLAW = 9
+Public Const VISUAL_DRAGON_BREATH = 10
+Public Const VISUAL_DRAGON_TAIL = 11
+Public Const VISUAL_ENRAGE = 12
+Public Const VISUAL_VICTORY = 13
+Public Const VISUAL_DEFEAT = 14
+
+Public Const COMMAND_ATTACK = 1
+Public Const COMMAND_SPECIAL = 2
+Public Const COMMAND_HEAL = 3
+Public Const COMMAND_DEFEND = 4
+Public Const COMMAND_ITEM = 5
+
+Public Const EFFECT_SLASH = 1
+Public Const EFFECT_FIRE = 2
+Public Const EFFECT_FROST = 3
+Public Const EFFECT_HEAL = 4
+Public Const EFFECT_BREATH = 5
+Public Const EFFECT_ENRAGE = 6
+Public Const EFFECT_DEATH = 7
+Public Const EFFECT_BASH = 8
+
+Private Const CHARACTER_ARIN = 100
+Private Const CHARACTER_MIRA = 101
+Private Const CHARACTER_TOR = 102
+Private Const ENEMY_ASHWING = 200
+Private Const FORMATION_ASHWING = 300
+Private Const ITEM_CINDER_TONIC = 400
+Private Const ABILITY_EMBER_EDGE = 500
+Private Const ABILITY_FLAME = 501
+Private Const ABILITY_FROST = 502
+Private Const ABILITY_MEND = 503
+Private Const ABILITY_SHIELD_BASH = 504
+Private Const ABILITY_FIRE_BREATH = 505
+Private Const ABILITY_TAIL_SWEEP = 506
+Private Const MECHANIC_EMBER = 600
+Private Const MECHANIC_FLAME = 601
+Private Const MECHANIC_FROST = 602
+Private Const MECHANIC_MEND = 603
+Private Const MECHANIC_BASH = 604
+Private Const MECHANIC_BREATH = 605
+Private Const MECHANIC_TAIL = 606
+Private Const MECHANIC_TONIC = 607
+Private Const ACTION_VISUAL_STEPS = 72
+Private Const ENRAGE_VISUAL_STEPS = 150
+Private Const RESULT_VISUAL_STEPS = 360
+
+Private Dim State As Number
+Private Dim CurrentVisual As Number
+Private Dim CurrentVisualStep As Number
+Private Dim CurrentVisualDuration As Number
+Private Dim CurrentActor As Number
+Private Dim CurrentTarget As Number
+Private Dim CurrentDamage As Number
+Private Dim CurrentMessage As Text
+Private Dim PhaseTwo As Boolean
+Private Dim PhaseTwoPending As Boolean
+Private Dim ResultShown As Boolean
+Private Dim EventStart As Number
+Private Dim Character As Characters.CharacterDefinition
+Private Dim Enemy As BattleCore.EnemyDefinition
+Private Dim Formation As BattleCore.FormationDefinition
+Private Dim Member As BattleCore.FormationMemberDefinition
+Private Dim Effect As Effects.EffectDefinition
+Private Dim Component As Effects.EffectComponentDefinition
+Private Dim Ability As Abilities.AbilityDefinition
+Private Dim Item As Inventory.ItemDefinition
+
+Public Function Initialize() As Boolean
+
+    State = RPG.Create()
+
+    If State = 0 Then
+        Return False
+    End If
+
+    If (Not DefineParty() Or
+        Not DefineMechanics() Or
+        Not DefineBoss() Or
+        BattleCore.BeginBattle(State, FORMATION_ASHWING, 7301) = 0 Or
+        Not BattleTime.Begin(State, BattleTime.BATTLE_TIME_MODE_WAIT, 4)) Then
+        Call Shutdown()
+
+        Return False
+    End If
+
+    CurrentVisual = VISUAL_IDLE
+    CurrentVisualStep = 0
+    CurrentMessage = "ASHWING DESCENDS"
+    PhaseTwo = False
+    PhaseTwoPending = False
+    ResultShown = False
+    Return True
+
+End Function
+
+Private Function DefineCharacter(Id As Number, Name As Text, Health As Number, MagicPoints As Number, Strength As Number, Defense As Number, Magic As Number, Resistance As Number, Agility As Number, Luck As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Character.Id = Id
+    Character.Name = Name
+    Character.StartingLevel = 12
+    Character.StartingMaximumHealth = Health
+    Character.StartingMaximumMagicPoints = MagicPoints
+    Character.Strength = Strength
+    Character.Defense = Defense
+    Character.Magic = Magic
+    Character.Resistance = Resistance
+    Character.Agility = Agility
+    Character.Luck = Luck
+    ReturnValue = Characters.DefineCharacter(State, Character)
+
+    Return ReturnValue
+
+End Function
+
+Private Function DefineParty() As Boolean
+
+    If (Not DefineCharacter(CHARACTER_ARIN, "Arin", 520, 80, 52, 35, 30, 28, 38, 18) Or
+        Not DefineCharacter(CHARACTER_MIRA, "Mira", 390, 160, 24, 24, 62, 48, 44, 22) Or
+        Not DefineCharacter(CHARACTER_TOR, "Tor", 680, 55, 48, 58, 20, 42, 29, 14) Or
+        Not Party.AddCharacter(State, CHARACTER_ARIN) Or
+        Not Party.AddCharacter(State, CHARACTER_MIRA) Or
+        Not Party.AddCharacter(State, CHARACTER_TOR)) Then
+        Return False
+    End If
+
+    Return True
+
+End Function
+
+Private Function AddEffect(Id As Number, Name As Text, Kind As Number, Power As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Effect.Id = Id
+    Effect.Name = Name
+
+    If Not Effects.DefineEffect(State, Effect) Then
+        Return False
+    End If
+
+    Component.EffectId = Id
+    Component.Kind = Kind
+    Component.Power = Power
+    Component.StatusId = 0
+    Component.Duration = 0
+    ReturnValue = Effects.AddComponent(State, Component)
+
+    Return ReturnValue
+
+End Function
+
+Private Function AddAbility(Id As Number, Name As Text, Cost As Number, Power As Number, TargetMode As Number, EffectId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Ability.Id = Id
+    Ability.Name = Name
+    Ability.MagicPointCost = Cost
+    Ability.Power = Power
+    Ability.TargetMode = TargetMode
+    Ability.EffectId = EffectId
+    ReturnValue = Abilities.DefineAbility(State, Ability)
+
+    Return ReturnValue
+
+End Function
+
+Private Function DefineMechanics() As Boolean
+
+    Dim ReturnValue As Boolean
+
+    If (Not AddEffect(MECHANIC_EMBER, "Ember Edge", Effects.BATTLE_EFFECT_MAGIC_DAMAGE, 118) Or
+        Not AddEffect(MECHANIC_FLAME, "Astral Flame", Effects.BATTLE_EFFECT_MAGIC_DAMAGE, 135) Or
+        Not AddEffect(MECHANIC_FROST, "Comet Frost", Effects.BATTLE_EFFECT_MAGIC_DAMAGE, 128) Or
+        Not AddEffect(MECHANIC_MEND, "Starlight Mend", Effects.BATTLE_EFFECT_HEAL_HEALTH, 155) Or
+        Not AddEffect(MECHANIC_BASH, "Meteor Bash", Effects.BATTLE_EFFECT_PHYSICAL_DAMAGE, 105) Or
+        Not AddEffect(MECHANIC_BREATH, "Cataclysm Breath", Effects.BATTLE_EFFECT_MAGIC_DAMAGE, 108) Or
+        Not AddEffect(MECHANIC_TAIL, "Volcanic Tail", Effects.BATTLE_EFFECT_PHYSICAL_DAMAGE, 82) Or
+        Not AddEffect(MECHANIC_TONIC, "Cinder Tonic", Effects.BATTLE_EFFECT_HEAL_HEALTH, 180)) Then
+        Return False
+    End If
+
+    If (Not AddAbility(ABILITY_EMBER_EDGE, "Ember Edge", 8, 118, RPG.RPG_TARGET_ONE_ENEMY, MECHANIC_EMBER) Or
+        Not AddAbility(ABILITY_FLAME, "Astral Flame", 10, 135, RPG.RPG_TARGET_ONE_ENEMY, MECHANIC_FLAME) Or
+        Not AddAbility(ABILITY_FROST, "Comet Frost", 9, 128, RPG.RPG_TARGET_ONE_ENEMY, MECHANIC_FROST) Or
+        Not AddAbility(ABILITY_MEND, "Starlight Mend", 8, 155, RPG.RPG_TARGET_ONE_ALLY, MECHANIC_MEND) Or
+        Not AddAbility(ABILITY_SHIELD_BASH, "Meteor Bash", 6, 105, RPG.RPG_TARGET_ONE_ENEMY, MECHANIC_BASH) Or
+        Not AddAbility(ABILITY_FIRE_BREATH, "Cataclysm Breath", 0, 48, RPG.RPG_TARGET_ALL_ENEMIES, MECHANIC_BREATH) Or
+        Not AddAbility(ABILITY_TAIL_SWEEP, "Volcanic Tail", 0, 42, RPG.RPG_TARGET_ALL_ENEMIES, MECHANIC_TAIL)) Then
+        Return False
+    End If
+
+    If (Not Abilities.LearnAbility(State, CHARACTER_ARIN, ABILITY_EMBER_EDGE) Or
+        Not Abilities.LearnAbility(State, CHARACTER_MIRA, ABILITY_FLAME) Or
+        Not Abilities.LearnAbility(State, CHARACTER_MIRA, ABILITY_FROST) Or
+        Not Abilities.LearnAbility(State, CHARACTER_MIRA, ABILITY_MEND) Or
+        Not Abilities.LearnAbility(State, CHARACTER_TOR, ABILITY_SHIELD_BASH)) Then
+        Return False
+    End If
+
+    Item.Id = ITEM_CINDER_TONIC
+    Item.Name = "Cinder Tonic"
+    Item.Kind = RPG.RPG_ITEM_CONSUMABLE
+    Item.MaximumStack = 9
+    Item.BasePrice = 25
+    Item.CanSell = True
+    Item.EffectId = MECHANIC_TONIC
+    Item.EquipmentSlotId = 0
+
+    ReturnValue = Inventory.DefineItem(State, Item) And Inventory.AddItem(State, ITEM_CINDER_TONIC, 3)
+
+    Return ReturnValue
+
+End Function
+
+Private Function DefineBoss() As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Enemy.Id = ENEMY_ASHWING
+    Enemy.Name = "Ashwing, Caldera Tyrant"
+    Enemy.MaximumHealth = 1650
+    Enemy.MaximumMagicPoints = 999
+    Enemy.Strength = 62
+    Enemy.Defense = 24
+    Enemy.Magic = 68
+    Enemy.Resistance = 24
+    Enemy.Agility = 34
+    Enemy.Luck = 12
+    Enemy.ExperienceReward = 950
+    Enemy.GoldReward = 700
+    Enemy.AiProfileId = 1
+
+    If Not BattleCore.DefineEnemy(State, Enemy) Then
+        Return False
+    End If
+
+    Formation.Id = FORMATION_ASHWING
+    Formation.Name = "The Ember Observatory"
+    Formation.EscapeChance = 0
+
+    If Not BattleCore.DefineFormation(State, Formation) Then
+        Return False
+    End If
+
+    Member.FormationId = FORMATION_ASHWING
+    Member.EnemyId = ENEMY_ASHWING
+    Member.GroupId = 1
+    Member.SlotId = 1
+    ReturnValue = BattleCore.AddFormationMember(State, Member)
+
+    Return ReturnValue
+
+End Function
+
+Private Sub StartVisual(Visual As Number, ActorId As Number, TargetId As Number, Message As Text, Duration As Number)
+
+    CurrentVisual = Visual
+    CurrentVisualStep = 1
+    CurrentVisualDuration = Duration
+    CurrentActor = ActorId
+    CurrentTarget = TargetId
+    CurrentDamage = 0
+    CurrentMessage = Message
+
+End Sub
+
+Private Sub BuildActionVisual(FirstEvent As Number)
+
+    Dim Index As Number
+    Dim Kind As Number
+    Dim ActorId As Number
+    Dim TargetId As Number
+    Dim SourceId As Number
+
+    For Index = FirstEvent To BattleCore.EventCount(State) - 1
+
+        Kind = BattleCore.EventKindAt(State, Index)
+        ActorId = BattleCore.EventActorIdAt(State, Index)
+        TargetId = BattleCore.EventTargetIdAt(State, Index)
+
+        If Kind = BattleCore.BATTLE_EVENT_ATTACK Then
+
+            If ActorId = PARTICIPANT_ARIN Then
+                Call StartVisual(VISUAL_ARIN_ATTACK, ActorId, TargetId, "ARIN // STARFALL STRIKE", ACTION_VISUAL_STEPS)
+            Else If ActorId = PARTICIPANT_TOR Then
+                Call StartVisual(VISUAL_TOR_ATTACK, ActorId, TargetId, "TOR // IRON COMET", ACTION_VISUAL_STEPS)
+            Else If ActorId = PARTICIPANT_MIRA Then
+                Call StartVisual(VISUAL_MIRA_FLAME, ActorId, TargetId, "MIRA // ARCANE BOLT", ACTION_VISUAL_STEPS)
+            Else
+
+                Call StartVisual(VISUAL_DRAGON_CLAW, ActorId, TargetId, "ASHWING // OBSIDIAN CLAW", ACTION_VISUAL_STEPS)
+            End If
+
+        Else If Kind = BattleCore.BATTLE_EVENT_ABILITY Then
+
+            SourceId = BattleCore.EventValueOneAt(State, Index)
+
+            If SourceId = ABILITY_EMBER_EDGE Then
+                Call StartVisual(VISUAL_ARIN_EMBER, ActorId, TargetId, "ARIN // EMBER EDGE", ACTION_VISUAL_STEPS)
+            Else If SourceId = ABILITY_FLAME Then
+                Call StartVisual(VISUAL_MIRA_FLAME, ActorId, TargetId, "MIRA // ASTRAL FLAME", ACTION_VISUAL_STEPS)
+            Else If SourceId = ABILITY_FROST Then
+                Call StartVisual(VISUAL_MIRA_FROST, ActorId, TargetId, "MIRA // COMET FROST", ACTION_VISUAL_STEPS)
+            Else If SourceId = ABILITY_MEND Then
+                Call StartVisual(VISUAL_MIRA_MEND, ActorId, TargetId, "MIRA // STARLIGHT MEND", ACTION_VISUAL_STEPS)
+            Else If SourceId = ABILITY_SHIELD_BASH Then
+                Call StartVisual(VISUAL_TOR_BASH, ActorId, TargetId, "TOR // METEOR BASH", ACTION_VISUAL_STEPS)
+            Else If SourceId = ABILITY_FIRE_BREATH Then
+                Call StartVisual(VISUAL_DRAGON_BREATH, ActorId, TargetId, "ASHWING // CATACLYSM BREATH", ACTION_VISUAL_STEPS + 24)
+            Else If SourceId = ABILITY_TAIL_SWEEP Then
+                Call StartVisual(VISUAL_DRAGON_TAIL, ActorId, TargetId, "ASHWING // VOLCANIC TAIL", ACTION_VISUAL_STEPS)
+            End If
+
+        Else If Kind = BattleCore.BATTLE_EVENT_DEFEND Then
+
+            Call StartVisual(VISUAL_DEFEND, ActorId, 0, BattleCore.EventTextAt(State, Index), 48)
+
+        Else If Kind = BattleCore.BATTLE_EVENT_ITEM Then
+
+            Call StartVisual(VISUAL_MIRA_MEND, ActorId, TargetId, "CINDER TONIC", 56)
+
+        Else If Kind = BattleCore.BATTLE_EVENT_DAMAGE Then
+
+            CurrentDamage = BattleCore.EventValueOneAt(State, Index)
+            CurrentTarget = TargetId
+
+        Else If Kind = BattleCore.BATTLE_EVENT_HEAL Then
+
+            CurrentDamage = -BattleCore.EventValueOneAt(State, Index)
+            CurrentTarget = TargetId
+
+        End If
+
+    End For
+
+End Sub
+
+Private Sub SubmitBossIfReady()
+
+    Dim EnemyParticipant As Number
+    Dim Round As Number
+    Dim Accepted As Boolean
+
+    EnemyParticipant = BattleTime.NextReadyEnemy(State)
+
+    If EnemyParticipant = 0 Then
+        Return
+    End If
+
+    Round = BattleCore.RoundNumber(State) + 1
+
+    If PhaseTwo And Round Mod 2 = 0 Then
+        Accepted = BattleTime.SubmitAction(State, EnemyParticipant, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_TAIL_SWEEP, PARTICIPANT_ARIN)
+    Else If Round Mod 3 = 0 Or PhaseTwo Then
+        Accepted = BattleTime.SubmitAction(State, EnemyParticipant, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_FIRE_BREATH, PARTICIPANT_ARIN)
+    Else
+        Accepted = BattleTime.SubmitReadyEnemyAttack(State, EnemyParticipant, LowestLivingParty())
+    End If
+
+End Sub
+
+''' Advances one deterministic battle tick. Player command decisions stay in the startup program.
+Public Sub Update()
+
+    Dim Accepted As Boolean
+
+    If CurrentVisualStep > 0 Then
+
+        CurrentVisualStep = CurrentVisualStep + 1
+
+        If CurrentVisualStep > CurrentVisualDuration Then
+
+            CurrentVisualStep = 0
+            CurrentVisual = VISUAL_IDLE
+            CurrentDamage = 0
+
+        End If
+
+        Return
+
+    End If
+
+    If PhaseTwoPending Then
+
+        PhaseTwoPending = False
+        PhaseTwo = True
+        Accepted = BattleTime.Configure(State, BattleTime.BATTLE_TIME_MODE_ACTIVE, 5)
+
+        Call StartVisual(VISUAL_ENRAGE, PARTICIPANT_ASHWING, 0, "ASHWING IS ENRAGED!", ENRAGE_VISUAL_STEPS)
+
+        Return
+
+    End If
+
+    If BattleCore.Outcome(State) <> BattleCore.BATTLE_OUTCOME_NONE Then
+
+        If Not ResultShown Then
+
+            ResultShown = True
+
+            If BattleCore.Outcome(State) = BattleCore.BATTLE_OUTCOME_VICTORY Then
+                Call StartVisual(VISUAL_VICTORY, 0, 0, "DRAGONFALL // VICTORY", RESULT_VISUAL_STEPS)
+            Else
+
+                Call StartVisual(VISUAL_DEFEAT, 0, 0, "THE OBSERVATORY FALLS SILENT", RESULT_VISUAL_STEPS)
+            End If
+
+        End If
+
+        Return
+
+    End If
+
+    If BattleCore.Phase(State) = BattleCore.BATTLE_PHASE_RESOLVING Then
+
+        EventStart = BattleCore.EventCount(State)
+
+        If BattleCore.Advance(State) Then
+
+            Call BuildActionVisual(EventStart)
+
+            If (Not PhaseTwo And
+                BattleCore.Health(State, PARTICIPANT_ASHWING) * 2 <= BattleCore.MaximumHealth(State, PARTICIPANT_ASHWING) And
+                BattleCore.IsAlive(State, PARTICIPANT_ASHWING)) Then
+                PhaseTwoPending = True
+            End If
+
+        End If
+
+        Return
+
+    End If
+
+    Accepted = BattleTime.Advance(State, 1, False)
+
+    Call SubmitBossIfReady()
+
+    If BattleTime.CanStartRound(State) Then
+        Accepted = BattleTime.TryStartRound(State)
+    End If
+
+End Sub
+
+Public Function SubmitPlayerCommand(ParticipantId As Number, Command As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    If (ParticipantId <= 0 Or
+        ParticipantId > PARTICIPANT_TOR Or
+        Not BattleTime.IsReady(State, ParticipantId)) Then
+        Return False
+    End If
+
+    If Command = COMMAND_DEFEND Then
+
+        ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_DEFEND, 0, 0)
+
+        Return ReturnValue
+
+    Else If Command = COMMAND_ITEM Then
+
+        ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ITEM, ITEM_CINDER_TONIC, LowestLivingParty())
+
+        Return ReturnValue
+
+    Else If Command = COMMAND_HEAL And ParticipantId = PARTICIPANT_MIRA Then
+
+        ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_MEND, LowestHealthParty())
+
+        Return ReturnValue
+
+    Else If Command = COMMAND_SPECIAL Then
+
+        If ParticipantId = PARTICIPANT_ARIN Then
+
+            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_EMBER_EDGE, PARTICIPANT_ASHWING)
+
+            Return ReturnValue
+
+        Else If ParticipantId = PARTICIPANT_MIRA Then
+
+            If BattleCore.RoundNumber(State) Mod 2 = 0 Then
+                ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_FLAME, PARTICIPANT_ASHWING)
+
+                Return ReturnValue
+            End If
+
+            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_FROST, PARTICIPANT_ASHWING)
+
+            Return ReturnValue
+
+        Else
+            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_SHIELD_BASH, PARTICIPANT_ASHWING)
+
+            Return ReturnValue
+
+        End If
+
+    End If
+
+    ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ATTACK, 0, PARTICIPANT_ASHWING)
+
+    Return ReturnValue
+
+End Function
+
+Public Function NextReadyPlayer() As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = BattleTime.NextReadyPlayer(State)
+
+    Return ReturnValue
+
+End Function
+
+Public Function LowestHealthParty() As Number
+
+    Dim ParticipantId As Number
+    Dim BestParticipant As Number
+    Dim BestRatio As Number
+    Dim Ratio As Number
+
+    BestRatio = 1001
+
+    For ParticipantId = PARTICIPANT_ARIN To PARTICIPANT_TOR
+
+        If BattleCore.IsAlive(State, ParticipantId) Then
+
+            Ratio = BattleCore.Health(State, ParticipantId) * 1000 / BattleCore.MaximumHealth(State, ParticipantId)
+
+            If Ratio < BestRatio Then
+                BestRatio = Ratio
+                BestParticipant = ParticipantId
+            End If
+
+        End If
+
+    End For
+
+    Return BestParticipant
+
+End Function
+
+Public Function LowestLivingParty() As Number
+
+    Dim ParticipantId As Number
+
+    For ParticipantId = PARTICIPANT_ARIN To PARTICIPANT_TOR
+
+        If BattleCore.IsAlive(State, ParticipantId) Then
+            Return ParticipantId
+        End If
+
+    End For
+
+    Return 0
+
+End Function
+
+Public Function StateHandle() As Number
+
+    Return State
+
+End Function
+
+Public Function Visual() As Number
+
+    Return CurrentVisual
+
+End Function
+
+Public Function VisualStep() As Number
+
+    Return CurrentVisualStep
+
+End Function
+
+Public Function VisualActor() As Number
+
+    Return CurrentActor
+
+End Function
+
+Public Function VisualTarget() As Number
+
+    Return CurrentTarget
+
+End Function
+
+Public Function DamageNumber() As Number
+
+    Return CurrentDamage
+
+End Function
+
+Public Function Message() As Text
+
+    Return CurrentMessage
+
+End Function
+
+Public Function IsPhaseTwo() As Boolean
+
+    Return PhaseTwo
+
+End Function
+
+Public Function Health(ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = BattleCore.Health(State, ParticipantId)
+
+    Return ReturnValue
+
+End Function
+
+Public Function MaximumHealth(ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = BattleCore.MaximumHealth(State, ParticipantId)
+
+    Return ReturnValue
+
+End Function
+
+Public Function MagicPoints(ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = BattleCore.MagicPoints(State, ParticipantId)
+
+    Return ReturnValue
+
+End Function
+
+Public Function MaximumMagicPoints(ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = BattleCore.MaximumMagicPoints(State, ParticipantId)
+
+    Return ReturnValue
+
+End Function
+
+Public Function Gauge(ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = BattleTime.Gauge(State, ParticipantId)
+
+    Return ReturnValue
+
+End Function
+
+Public Function Outcome() As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = BattleCore.Outcome(State)
+
+    Return ReturnValue
+
+End Function
+
+Public Function IsResultSequenceComplete() As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = ResultShown And CurrentVisualStep = 0
+
+    Return ReturnValue
+
+End Function
+
+Public Sub Shutdown()
+
+    Dim Accepted As Boolean
+
+    If State = 0 Then
+        Return
+    End If
+
+    If BattleTime.IsRunning(State) Then
+        Accepted = BattleTime.Finish(State)
+    End If
+
+    If BattleCore.IsActive(State) Then
+        Accepted = BattleCore.CancelBattle(State)
+    End If
+
+    Call RPG.Destroy(State)
+
+    State = 0
+
+End Sub
+
+End Module

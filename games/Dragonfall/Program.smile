@@ -1,0 +1,412 @@
+''' Dragonfall crowd demo: a complete deterministic battle plays hands-free.
+
+Option Explicit
+
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.RPG.BattleCore As BattleCore
+Import Smile.RPG.BattleTime As BattleTime
+Import Dragonfall.Battle As Battle
+Import Dragonfall.Scene As Scene
+
+Const INTRO_DURATION = 210
+Const RESTART_DELAY = 300
+
+Dim Running As Boolean
+Dim Paused As Boolean
+Dim ShowDebug As Boolean
+Dim ShowHud As Boolean
+Dim RendererAvailable As Boolean
+Dim EncounterReady As Boolean
+Dim KeyValue As Number
+Dim PreviousTime As Number
+Dim CurrentTime As Number
+Dim Elapsed As Number
+Dim Accumulator As Number
+Dim CatchUpSteps As Number
+Dim GlobalStep As Number
+Dim IntroSteps As Number
+Dim ResultSteps As Number
+Dim ReadyPlayer As Number
+Dim DecisionIndex As Number
+Dim Command As Number
+Dim Accepted As Boolean
+
+Game Window "SMILE 2.0 Dragonfall: The Ember Observatory" Size 960 By 540
+
+RendererAvailable = Graphics3D.RendererAvailable()
+ShowHud = True
+Running = True
+
+Call StartEncounter()
+
+PreviousTime = Timer()
+
+Do
+    CurrentTime = Timer()
+    Elapsed = Max(0, Min(100, CurrentTime - PreviousTime))
+    PreviousTime = CurrentTime
+    Get Key KeyValue
+
+    If KeyValue = KEY_ESCAPE Then
+        Running = False
+    Else If KeyValue = KEY_SPACE Then
+        Paused = Not Paused
+    Else If KeyValue = KEY_1 Then
+        Call RestartEncounter()
+    Else If KeyValue = KEY_2 Then
+        ShowHud = Not ShowHud
+    Else If KeyValue = KEY_D Then
+        ShowDebug = Not ShowDebug
+    End If
+
+    If EncounterReady And Not Paused Then
+
+        Accumulator = Min(6000, Accumulator + Elapsed * 60)
+        CatchUpSteps = 0
+
+        Do
+
+            If Accumulator >= 1000 And CatchUpSteps < 6 Then
+
+                GlobalStep = GlobalStep + 1
+
+                If IntroSteps > 0 Then
+
+                    IntroSteps = IntroSteps - 1
+
+                Else
+
+                    Call SubmitDemoDecision()
+                    Call Battle.Update()
+                    Call PlayVisualSound()
+
+                End If
+
+                If RendererAvailable Then
+                    Call Scene.Update(Battle.StateHandle(), GlobalStep)
+                End If
+
+                If Battle.IsResultSequenceComplete() Then
+
+                    ResultSteps = ResultSteps + 1
+
+                    If ResultSteps >= RESTART_DELAY Then
+                        Call RestartEncounter()
+                    End If
+
+                End If
+
+                Accumulator = Accumulator - 1000
+                CatchUpSteps = CatchUpSteps + 1
+
+            End If
+
+        Loop Until Accumulator < 1000 Or CatchUpSteps >= 6
+
+    End If
+
+    Call DrawFrame()
+
+    Show Screen
+    Running = Running And Not Game_Closed()
+
+Loop Until Not Running
+
+If RendererAvailable Then
+    Call Scene.Shutdown()
+End If
+
+Stop Music
+Stop Sound
+
+Call Battle.Shutdown()
+
+Sub StartEncounter()
+
+    EncounterReady = Battle.Initialize()
+
+    If EncounterReady And RendererAvailable Then
+        EncounterReady = Scene.Initialize(Battle.StateHandle())
+    End If
+
+    If EncounterReady Then
+        Play Music "Assets\BattleTheme.wav" Loop
+    End If
+
+    IntroSteps = INTRO_DURATION
+    ResultSteps = 0
+    GlobalStep = 0
+    DecisionIndex = 0
+    Accumulator = 0
+
+End Sub
+
+Sub RestartEncounter()
+
+    Stop Music
+    Stop Sound
+
+    If RendererAvailable Then
+        Call Scene.Shutdown()
+    End If
+
+    Call Battle.Shutdown()
+    Call StartEncounter()
+
+End Sub
+
+Sub PlayVisualSound()
+
+    If Battle.VisualStep() <> 1 Then
+        Return
+    End If
+
+    If (Battle.Visual() = Battle.VISUAL_ARIN_ATTACK Or
+        Battle.Visual() = Battle.VISUAL_TOR_ATTACK Or
+        Battle.Visual() = Battle.VISUAL_DRAGON_CLAW Or
+        Battle.Visual() = Battle.VISUAL_DRAGON_TAIL) Then
+
+        Play Sound "Assets\Impact.wav" On Channel 0
+
+    Else If (Battle.Visual() = Battle.VISUAL_ARIN_EMBER Or
+        Battle.Visual() = Battle.VISUAL_MIRA_FLAME Or
+        Battle.Visual() = Battle.VISUAL_MIRA_FROST Or
+        Battle.Visual() = Battle.VISUAL_MIRA_MEND Or
+        Battle.Visual() = Battle.VISUAL_TOR_BASH) Then
+
+        Play Sound "Assets\Spell.wav" On Channel 1
+
+    Else If Battle.Visual() = Battle.VISUAL_DRAGON_BREATH Then
+
+        Play Sound "Assets\Breath.wav" On Channel 2
+
+    Else If Battle.Visual() = Battle.VISUAL_ENRAGE Then
+
+        Play Sound "Assets\Enrage.wav" On Channel 3
+
+    Else If Battle.Visual() = Battle.VISUAL_VICTORY Then
+        Stop Music
+
+        Play Sound "Assets\Victory.wav" On Channel 3
+
+    Else If Battle.Visual() = Battle.VISUAL_DEFEAT Then
+        Stop Music
+
+        Play Sound "Assets\Breath.wav" On Channel 3
+
+    End If
+
+End Sub
+
+Sub SubmitDemoDecision()
+
+    Dim Lowest As Number
+
+    ReadyPlayer = Battle.NextReadyPlayer()
+
+    If ReadyPlayer = 0 Then
+        Return
+    End If
+
+    DecisionIndex = DecisionIndex + 1
+    Command = Battle.COMMAND_ATTACK
+
+    If ReadyPlayer = Battle.PARTICIPANT_ARIN Then
+
+        If DecisionIndex Mod 4 <> 0 Then
+            Command = Battle.COMMAND_SPECIAL
+        End If
+
+    Else If ReadyPlayer = Battle.PARTICIPANT_MIRA Then
+
+        Lowest = Battle.LowestHealthParty()
+
+        If (Lowest > 0 And
+            Battle.Health(Lowest) * 100 < Battle.MaximumHealth(Lowest) * 58) Then
+            Command = Battle.COMMAND_HEAL
+        Else
+            Command = Battle.COMMAND_SPECIAL
+        End If
+
+    Else If ReadyPlayer = Battle.PARTICIPANT_TOR Then
+
+        If DecisionIndex Mod 5 = 0 Then
+            Command = Battle.COMMAND_DEFEND
+        Else
+            Command = Battle.COMMAND_SPECIAL
+        End If
+
+    End If
+
+    Accepted = Battle.SubmitPlayerCommand(ReadyPlayer, Command)
+
+    If Not Accepted Then
+        Accepted = Battle.SubmitPlayerCommand(ReadyPlayer, Battle.COMMAND_ATTACK)
+    End If
+
+End Sub
+
+Sub DrawFrame()
+
+    If RendererAvailable And EncounterReady Then
+        Call Scene.Draw()
+    Else
+        Clear Screen
+        Fill Rectangle 0, 0, 960, 540, Rgb(3, 2, 10)
+    End If
+
+    If Scene.FlashOpacity() > 72 Then
+        Fill Rectangle 0, 0, 960, 540, Rgb(255, 238, 180)
+    Else If Scene.FlashOpacity() > 38 Then
+        Draw Rectangle 6, 6, 948, 528, Rgb(255, 102, 18)
+    End If
+
+    If ShowHud Then
+        Call DrawHud()
+    End If
+
+    If IntroSteps > 0 Then
+        Call DrawIntro()
+    Else
+
+        Call DrawBattleCaption()
+    End If
+
+    If Paused Then
+
+        Fill Rectangle 340, 225, 280, 82, Rgb(12, 7, 25)
+        Draw Rectangle 340, 225, 280, 82, ORANGE
+        Draw Text "TIME SUSPENDED" At 480, 244 Size 28 Color YELLOW Centered
+        Draw Text "SPACE TO RESUME" At 480, 280 Size 14 Color WHITE Centered
+
+    End If
+
+    If ShowDebug Then
+        Call DrawDiagnostics()
+    End If
+
+    Draw Text "HANDS-FREE CROWD DEMO  //  SPACE PAUSE  1 RESTART  2 HUD  D DIAGNOSTICS  ESC EXIT" At 480, 518 Size 12 Color LIGHT_GRAY Centered
+
+End Sub
+
+Sub DrawIntro()
+
+    Dim Reveal As Number
+
+    Reveal = INTRO_DURATION - IntroSteps
+    Fill Rectangle 0, 0, 960, 68, Rgb(8, 3, 18)
+
+    If Reveal < 70 Then
+
+        Draw Text "WHEN THE LAST STAR FELL..." At 480, 228 Size 26 Color LIGHT_GRAY Centered
+
+    Else If Reveal < 140 Then
+
+        Draw Text "THREE HEROES STOOD AGAINST THE END" At 480, 220 Size 28 Color WHITE Centered
+        Draw Text "THE EMBER OBSERVATORY // FINAL NIGHT" At 480, 260 Size 18 Color ORANGE Centered
+
+    Else
+        Draw Text "DRAGONFALL" At 480, 186 Size 66 Color ORANGE Centered
+        Draw Text "ASHWING, CALDERA TYRANT" At 480, 258 Size 24 Color YELLOW Centered
+        Draw Text "BATTLE ENGAGED" At 480, 300 Size 19 Color WHITE Centered
+
+    End If
+
+End Sub
+
+Sub DrawBattleCaption()
+
+    Dim Damage As Number
+
+    Fill Rectangle 205, 68, 550, 46, Rgb(8, 3, 18)
+    Draw Rectangle 205, 68, 550, 46, Rgb(226, 82, 20)
+    Draw Text Battle.Message() At 480, 79 Size 20 Color WHITE Centered
+    Damage = Battle.DamageNumber()
+
+    If Damage > 0 Then
+
+        Draw Text "IMPACT" At 482, 128 Size 17 Color ORANGE Centered
+        Draw Number Damage At 450, 145 Size 40 Color YELLOW
+
+    Else If Damage < 0 Then
+
+        Draw Text "RECOVERY" At 482, 128 Size 17 Color LIGHT_GREEN Centered
+        Damage = 0 - Damage
+        Draw Number Damage At 450, 145 Size 40 Color LIGHT_GREEN
+
+    End If
+
+    If Battle.IsPhaseTwo() And Battle.Outcome() = BattleCore.BATTLE_OUTCOME_NONE Then
+        Draw Text "LIMITER SHATTERED // ACTIVE TIME OVERDRIVE" At 480, 190 Size 15 Color ORANGE Centered
+    End If
+
+    If Battle.Outcome() = BattleCore.BATTLE_OUTCOME_VICTORY Then
+        Draw Text "VICTORY // THE DRAGON HAS FALLEN" At 480, 208 Size 32 Color YELLOW Centered
+    Else If Battle.Outcome() = BattleCore.BATTLE_OUTCOME_DEFEAT Then
+        Draw Text "ASHES CLAIM THE OBSERVATORY" At 480, 208 Size 30 Color ORANGE Centered
+    End If
+
+End Sub
+
+Sub DrawHud()
+
+    Dim BossWidth As Number
+
+    Fill Rectangle 0, 0, 960, 62, Rgb(8, 3, 18)
+    Draw Text "ASHWING // CALDERA TYRANT" At 480, 7 Size 19 Color ORANGE Centered
+    Fill Rectangle 175, 35, 610, 16, Rgb(52, 12, 19)
+    BossWidth = Max(0, Battle.Health(Battle.PARTICIPANT_ASHWING) * 606 / Battle.MaximumHealth(Battle.PARTICIPANT_ASHWING))
+    Fill Rectangle 177, 37, BossWidth, 12, Rgb(255, 52, 16)
+    Draw Rectangle 175, 35, 610, 16, Rgb(255, 174, 50)
+
+    Call DrawHeroPanel(Battle.PARTICIPANT_ARIN, "ARIN", 18, Rgb(220, 35, 48))
+    Call DrawHeroPanel(Battle.PARTICIPANT_MIRA, "MIRA", 230, Rgb(106, 68, 230))
+    Call DrawHeroPanel(Battle.PARTICIPANT_TOR, "TOR", 442, Rgb(232, 145, 26))
+
+    Fill Rectangle 665, 424, 277, 78, Rgb(8, 3, 18)
+    Draw Rectangle 665, 424, 277, 78, Rgb(232, 145, 26)
+    Draw Text "DEMO TACTICIAN" At 680, 435 Size 15 Color ORANGE
+    Draw Text "Adaptive healing // limit attacks" At 680, 462 Size 13 Color WHITE
+    Draw Text Scene.CurrentCameraName() At 680, 482 Size 12 Color LIGHT_GRAY
+
+End Sub
+
+Sub DrawHeroPanel(Participant As Number, Name As Text, X As Number, Accent As Number)
+
+    Dim HealthWidth As Number
+    Dim GaugeWidth As Number
+
+    Fill Rectangle X, 424, 198, 78, Rgb(8, 3, 18)
+    Draw Rectangle X, 424, 198, 78, Accent
+    Draw Text Name At X + 12, 433 Size 17 Color WHITE
+    Draw Number Battle.Health(Participant) At X + 112, 432 Size 17 Color WHITE
+    Draw Text "HP" At X + 166, 438 Size 11 Color LIGHT_GRAY
+    Draw Text "MP" At X + 12, 447 Size 10 Color LIGHT_BLUE
+    Draw Number Battle.MagicPoints(Participant) At X + 42, 444 Size 13 Color LIGHT_BLUE
+    HealthWidth = Max(0, Battle.Health(Participant) * 174 / Battle.MaximumHealth(Participant))
+    Fill Rectangle X + 12, 459, 174, 9, Rgb(42, 20, 30)
+    Fill Rectangle X + 12, 459, HealthWidth, 9, Accent
+    GaugeWidth = Max(0, Battle.Gauge(Participant) * 174 / BattleTime.BATTLE_TIME_GAUGE_MAXIMUM)
+    Fill Rectangle X + 12, 478, 174, 8, Rgb(18, 34, 54)
+    Fill Rectangle X + 12, 478, GaugeWidth, 8, Rgb(75, 220, 255)
+
+End Sub
+
+Sub DrawDiagnostics()
+
+    Fill Rectangle 704, 118, 242, 174, Rgb(4, 8, 18)
+    Draw Rectangle 704, 118, 242, 174, CYAN
+    Draw Text "DRAGONFALL DIAGNOSTICS" At 716, 128 Size 14 Color CYAN
+    Draw Text "SIM TICK" At 716, 156 Size 12 Color LIGHT_GRAY
+    Draw Number GlobalStep At 842, 151 Size 17 Color WHITE
+    Draw Text "PARTICLES" At 716, 180 Size 12 Color LIGHT_GRAY
+    Draw Number Scene.ActiveParticleCount() At 842, 175 Size 17 Color ORANGE
+    Draw Text "MESHES" At 716, 204 Size 12 Color LIGHT_GRAY
+    Draw Number Graphics3D.LiveMeshCount3D() At 842, 199 Size 17 Color WHITE
+    Draw Text "OBJECTS" At 716, 228 Size 12 Color LIGHT_GRAY
+    Draw Number Graphics3D.LiveObjectCount3D() At 842, 223 Size 17 Color WHITE
+    Draw Text "MATERIALS" At 716, 252 Size 12 Color LIGHT_GRAY
+    Draw Number Graphics3D.LiveMaterialCount3D() At 842, 247 Size 17 Color WHITE
+    Draw Text Scene.CurrentCameraName() At 716, 272 Size 12 Color YELLOW
+
+End Sub
