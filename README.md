@@ -1,6 +1,6 @@
 # SMILE 2.0
 
-SMILE 2.0 is a small, structured BASIC-style language with a complete native Windows x64 target and a browser target. It includes explicit built-in types, first-class UTF-8 text, typed `ByVal`/`ByRef` routines, modules, enums, value Types with methods/properties, reference Classes with constructors/`Nothing`/identity, Optional and named arguments, reusable target-neutral libraries, true multi-file compilation, optional stable application identity, multiline parenthesized expressions and calls, a MASM-based native compiler, a Win32 game runtime, Canvas 2D Web publication, Visual Studio 2026 language and project support, console examples, and eight complete games written in SMILE. Windows x64 remains the default target, and every included application project exposes both native and Web publication.
+SMILE 2.0 is a small, structured BASIC-style language with a complete native Windows x64 target and a browser target. It includes explicit built-in types, first-class UTF-8 text, typed `ByVal`/`ByRef` routines, modules, enums, value Types with methods/properties, reference Classes with constructors/`Nothing`/identity, Optional and named arguments, reusable target-neutral libraries, true multi-file compilation, optional stable application identity, multiline parenthesized expressions and calls, a MASM-based native compiler, a Win32 game runtime, Canvas 2D/WebGL2 Web publication, Visual Studio 2026 language and project support, console examples, and nine complete games written in SMILE. Windows x64 remains the default target, and every included application project exposes both native and Web publication.
 
 The repository has one language authority: `src\Smile.Language`. The command-line compiler and Visual Studio extension use the same lexer, parser, syntax model, diagnostics, symbols, types, and semantic model. Game rules remain in `.smile` source; the C runtime provides only generic Windows graphics, input, sound, timing, and storage services.
 
@@ -28,6 +28,7 @@ Attract demos always return directly to the title screen when their run ends or 
 - `games\DungeonStarII` — an original continuous fixed-point raycasting walkaround with editable room-and-corridor maps, DDA projection, colorful stable wall materials, rising doors, collision and wall sliding, random generation, and demo/no-demo teaching sources.
 - `games\MazeMuncher` — an original neon maze chase with pellets, power mode, four geometric enemies, wrap tunnels, levels, a persistent high score, demo and no-demo teaching sources, and an attract demo.
 - `games\SpaceWars` — an original three-mission vector rail shooter using bounded fixed-point source-level 3D, generic pointer/touch input, a recycled starfield, pooled combat entities, generated original WAV effects, and demo/no-demo teaching sources.
+- `games\Dragonfall` — an original low-poly Renderer3D boss battle with three heroes, deterministic ATB, a two-phase dragon, cinematic cameras, bounded additive effects, original art/audio, a hands-free crowd demo, and a complete manual-command teaching source.
 
 ## Simple3D educational visualization
 
@@ -36,6 +37,18 @@ Attract demos always return directly to the title screen when their run ends or 
 `examples\Simple3DGallery` demonstrates a cube, sphere, pyramid, donut, axes, grid, drag/throw inertia, wheel zoom, and projection switching. `games\SpaceWars` uses the same public package for a complete game rather than a runtime-specific shortcut. See `docs\architecture\simple3d-software-rendering.md` and `libraries\Smile.Simple3D\API.md`.
 
 All games use a logical 960-by-540 canvas. A 16:9 output such as 1920-by-1080 fills the complete screen without letterboxing; other aspect ratios use centered letterboxing to preserve geometry. Alt+Enter toggles borderless full screen.
+
+## Renderer3D and Dragonfall
+
+DirectX and WebGL2 provide an optional indexed-triangle Renderer3D beside the permanent Renderer2D layer. The reusable `Smile.Simple3D`, `Smile.Battle3D`, and `Smile.BattleTime` packages provide generation-safe resources, textures/materials, deterministic SM3D models, skeletal animation, battle presentation, cameras/VFX, and fixed-step ATB without placing Dragonfall rules in the compiler or runtime.
+
+Build and validate the complete native/Web demonstration with:
+
+```text
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test-dragonfall.ps1
+```
+
+Launch `artifacts\games\Dragonfall.exe` for the hands-free crowd fight or `artifacts\games\Dragonfall-NoDemo.exe` for manual commands. See `games\Dragonfall\README.md` and `docs\implementation\dragonfall-3d-battle-delivery.md` for controls, architecture, original-asset provenance, and acceptance evidence.
 
 ## Automatic game-audio focus
 
