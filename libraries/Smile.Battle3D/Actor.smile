@@ -1,0 +1,411 @@
+''' Participant bindings and logical-slot to world-transform mapping.
+Module Smile.Battle3D.Actor
+
+Option Explicit
+
+Import Smile.Battle3D.Core As Battle3D
+Import Smile.RPG.Core As RPG
+Import Smile.RPG.BattleCore As Battle
+Import Smile.RPG.BattleView As BattleView
+
+Private Const MAX_OFFSET = 999999
+
+Public Type ActorBinding
+    ParticipantId As Number
+    ActorHandle As Number
+    AnimatorHandle As Number
+    FootOffsetY As Number
+    HeadOffsetY As Number
+End Type
+
+Private Dim StateGeneration[4] As Number
+Private Dim Bound[4, 12] As Boolean
+Private Dim ActorHandles[4, 12] As Number
+Private Dim AnimatorHandles[4, 12] As Number
+Private Dim FootOffsets[4, 12] As Number
+Private Dim HeadOffsets[4, 12] As Number
+Private Dim WorldX[4, 12] As Number
+Private Dim WorldY[4, 12] As Number
+Private Dim WorldZ[4, 12] As Number
+Private Dim WorldYaw[4, 12] As Number
+
+Private Function StateSlot(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim Generation As Number
+
+    Slot = RPG.StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Generation = RPG.StateGeneration(StateHandle)
+
+    If StateGeneration[Slot] <> Generation Then
+
+        For Index = 0 To Battle3D.BATTLE3D_MAX_ACTORS - 1
+
+            Bound[Slot, Index] = False
+            ActorHandles[Slot, Index] = 0
+            AnimatorHandles[Slot, Index] = 0
+            FootOffsets[Slot, Index] = 0
+            HeadOffsets[Slot, Index] = 0
+            WorldX[Slot, Index] = 0
+            WorldY[Slot, Index] = 0
+            WorldZ[Slot, Index] = 0
+            WorldYaw[Slot, Index] = 0
+        End For
+
+        StateGeneration[Slot] = Generation
+
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function ParticipantIndex(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not Battle.IsActive(StateHandle) Or
+        ParticipantId <= 0 Or
+        ParticipantId > Battle.ParticipantCount(StateHandle) Or
+        ParticipantId > Battle3D.BATTLE3D_MAX_ACTORS) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = ParticipantId - 1
+
+    Return ReturnValue
+
+End Function
+
+Private Function IsOffsetValid(Value As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Value >= -MAX_OFFSET And Value <= MAX_OFFSET
+
+    Return ReturnValue
+
+End Function
+
+''' Associates one battle participant with caller-owned renderer and animator handles.
+Public Function Bind(StateHandle As Number, ByRef Binding As ActorBinding) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, Binding.ParticipantId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        Binding.ActorHandle <= 0 Or
+        Binding.AnimatorHandle < 0 Or
+        Not IsOffsetValid(Binding.FootOffsetY) Or
+        Not IsOffsetValid(Binding.HeadOffsetY) Or
+        Binding.HeadOffsetY < Binding.FootOffsetY) Then
+        Return False
+    End If
+
+    Bound[Slot, Index] = True
+    ActorHandles[Slot, Index] = Binding.ActorHandle
+    AnimatorHandles[Slot, Index] = Binding.AnimatorHandle
+    FootOffsets[Slot, Index] = Binding.FootOffsetY
+    HeadOffsets[Slot, Index] = Binding.HeadOffsetY
+    Return True
+
+End Function
+
+Public Function Unbind(StateHandle As Number, ParticipantId As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Or Not Bound[Slot, Index] Then
+        Return False
+    End If
+
+    Bound[Slot, Index] = False
+    ActorHandles[Slot, Index] = 0
+    AnimatorHandles[Slot, Index] = 0
+    Return True
+
+End Function
+
+Public Function IsBound(StateHandle As Number, ParticipantId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return False
+    End If
+
+    ReturnValue = Bound[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Handle(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Or Not Bound[Slot, Index] Then
+        Return 0
+    End If
+
+    ReturnValue = ActorHandles[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Animator(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Or Not Bound[Slot, Index] Then
+        Return 0
+    End If
+
+    ReturnValue = AnimatorHandles[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Private Function FacingYaw(Facing As Number) As Number
+
+    If Facing = BattleView.BATTLE_FACING_EAST Then
+        Return 90
+    Else If Facing = BattleView.BATTLE_FACING_SOUTH Then
+        Return 180
+    Else If Facing = BattleView.BATTLE_FACING_WEST Then
+        Return 270
+    End If
+
+    Return 0
+
+End Function
+
+''' Copies every defined BattleView slot into a stable world transform snapshot.
+Public Function SyncSlots(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim ParticipantId As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Not Battle.IsActive(StateHandle) Then
+        Return False
+    End If
+
+    For ParticipantId = 1 To Battle.ParticipantCount(StateHandle)
+
+        If BattleView.IsSlotDefined(StateHandle, ParticipantId) Then
+
+            Index = ParticipantId - 1
+            WorldX[Slot, Index] = BattleView.SlotX(StateHandle, ParticipantId)
+            WorldY[Slot, Index] = BattleView.SlotY(StateHandle, ParticipantId)
+            WorldZ[Slot, Index] = BattleView.SlotZ(StateHandle, ParticipantId)
+            WorldYaw[Slot, Index] = FacingYaw(BattleView.SlotFacing(StateHandle, ParticipantId))
+
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Public Function X(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Or Not BattleView.IsSlotDefined(StateHandle, ParticipantId) Then
+        Return 0
+    End If
+
+    ReturnValue = WorldX[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Y(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Or Not BattleView.IsSlotDefined(StateHandle, ParticipantId) Then
+        Return 0
+    End If
+
+    ReturnValue = WorldY[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Z(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Or Not BattleView.IsSlotDefined(StateHandle, ParticipantId) Then
+        Return 0
+    End If
+
+    ReturnValue = WorldZ[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Yaw(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Or Not BattleView.IsSlotDefined(StateHandle, ParticipantId) Then
+        Return 0
+    End If
+
+    ReturnValue = WorldYaw[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function AnchorX(StateHandle As Number, ParticipantId As Number, Anchor As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = X(StateHandle, ParticipantId)
+
+    If Anchor = Battle3D.BATTLE3D_ANCHOR_LEFT Then
+        ReturnValue = ReturnValue - 1
+    Else If Anchor = Battle3D.BATTLE3D_ANCHOR_RIGHT Then
+        ReturnValue = ReturnValue + 1
+    End If
+
+    Return ReturnValue
+
+End Function
+
+Public Function AnchorY(StateHandle As Number, ParticipantId As Number, Anchor As Number) As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim ReturnValue As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = Y(StateHandle, ParticipantId)
+
+    If Anchor = Battle3D.BATTLE3D_ANCHOR_FEET Then
+        ReturnValue = ReturnValue + FootOffsets[Slot, Index]
+    Else If Anchor = Battle3D.BATTLE3D_ANCHOR_HEAD Then
+        ReturnValue = ReturnValue + HeadOffsets[Slot, Index]
+    End If
+
+    Return ReturnValue
+
+End Function
+
+Public Function AnchorZ(StateHandle As Number, ParticipantId As Number, Anchor As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Z(StateHandle, ParticipantId)
+
+    Return ReturnValue
+
+End Function
+
+Public Function ClearBindings(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    For Index = 0 To Battle3D.BATTLE3D_MAX_ACTORS - 1
+        Bound[Slot, Index] = False
+        ActorHandles[Slot, Index] = 0
+        AnimatorHandles[Slot, Index] = 0
+    End For
+
+    Return True
+
+End Function
+
+End Module

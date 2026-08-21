@@ -1,0 +1,13 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Console</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>Battle3DTests</OutputName>
+    <ApplicationId>smile.tests.battle3d</ApplicationId>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <SmileProjectReference Include="..\..\libraries\Smile.RPG\Smile.RPG.smilelibproj" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Battle3D\Smile.Battle3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

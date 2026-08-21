@@ -1,0 +1,33 @@
+''' Shared constants for deterministic 3D battle presentation.
+Module Smile.Battle3D.Core
+
+Option Explicit
+
+Public Const BATTLE3D_MAX_ACTORS = 12
+Public Const BATTLE3D_MAX_COMMANDS = 256
+
+Public Const BATTLE3D_COMMAND_ANIMATE = 1
+Public Const BATTLE3D_COMMAND_MOVE = 2
+Public Const BATTLE3D_COMMAND_EFFECT = 3
+Public Const BATTLE3D_COMMAND_NUMBER = 4
+Public Const BATTLE3D_COMMAND_MESSAGE = 5
+Public Const BATTLE3D_COMMAND_CAMERA_SHAKE = 6
+Public Const BATTLE3D_COMMAND_SOUND = 7
+Public Const BATTLE3D_COMMAND_WAIT = 8
+Public Const BATTLE3D_COMMAND_VISIBILITY = 9
+Public Const BATTLE3D_COMMAND_REWARD = 10
+
+Public Const BATTLE3D_SHOT_NONE = 0
+Public Const BATTLE3D_SHOT_WIDE = 1
+Public Const BATTLE3D_SHOT_ACTOR = 2
+Public Const BATTLE3D_SHOT_TARGET = 3
+Public Const BATTLE3D_SHOT_IMPACT = 4
+Public Const BATTLE3D_SHOT_RESULT = 5
+
+Public Const BATTLE3D_ANCHOR_CENTER = 1
+Public Const BATTLE3D_ANCHOR_FEET = 2
+Public Const BATTLE3D_ANCHOR_HEAD = 3
+Public Const BATTLE3D_ANCHOR_LEFT = 4
+Public Const BATTLE3D_ANCHOR_RIGHT = 5
+
+End Module

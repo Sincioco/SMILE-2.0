@@ -1,0 +1,493 @@
+''' Converts BattleView cues into inspectable, deterministic 3D presentation commands.
+Module Smile.Battle3D.Presentation
+
+Option Explicit
+
+Import Smile.Battle3D.Core As Battle3D
+Import Smile.RPG.Core As RPG
+Import Smile.RPG.BattleView As BattleView
+
+Private Const MAX_TIMELINE_STEPS = 999999
+
+Private Dim StateGeneration[4] As Number
+Private Dim CommandCounts[4] As Number
+Private Dim TimelineSteps[4] As Number
+Private Dim TotalDurations[4] As Number
+Private Dim CommandKinds[4, 256] As Number
+Private Dim CommandActors[4, 256] As Number
+Private Dim CommandTargets[4, 256] As Number
+Private Dim CommandValuesOne[4, 256] As Number
+Private Dim CommandValuesTwo[4, 256] As Number
+Private Dim CommandStarts[4, 256] As Number
+Private Dim CommandDurations[4, 256] As Number
+Private Dim CommandAnchors[4, 256] As Number
+Private Dim CommandShots[4, 256] As Number
+Private Dim CommandTexts[4, 256] As Text
+
+Private Function StateSlot(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim Generation As Number
+
+    Slot = RPG.StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Generation = RPG.StateGeneration(StateHandle)
+
+    If StateGeneration[Slot] <> Generation Then
+
+        For Index = 0 To Battle3D.BATTLE3D_MAX_COMMANDS - 1
+            CommandKinds[Slot, Index] = 0
+            CommandTexts[Slot, Index] = ""
+        End For
+
+        CommandCounts[Slot] = 0
+        TimelineSteps[Slot] = 0
+        TotalDurations[Slot] = 0
+        StateGeneration[Slot] = Generation
+
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function CommandKindForCue(CueKind As Number) As Number
+
+    If CueKind = BattleView.BATTLE_CUE_SET_POSE Then
+        Return Battle3D.BATTLE3D_COMMAND_ANIMATE
+    Else If CueKind = BattleView.BATTLE_CUE_MOVE Then
+        Return Battle3D.BATTLE3D_COMMAND_MOVE
+    Else If CueKind = BattleView.BATTLE_CUE_EFFECT Then
+        Return Battle3D.BATTLE3D_COMMAND_EFFECT
+    Else If CueKind = BattleView.BATTLE_CUE_NUMBER Then
+        Return Battle3D.BATTLE3D_COMMAND_NUMBER
+    Else If CueKind = BattleView.BATTLE_CUE_MESSAGE Then
+        Return Battle3D.BATTLE3D_COMMAND_MESSAGE
+    Else If CueKind = BattleView.BATTLE_CUE_SHAKE Then
+        Return Battle3D.BATTLE3D_COMMAND_CAMERA_SHAKE
+    Else If CueKind = BattleView.BATTLE_CUE_SOUND Then
+        Return Battle3D.BATTLE3D_COMMAND_SOUND
+    Else If CueKind = BattleView.BATTLE_CUE_WAIT Then
+        Return Battle3D.BATTLE3D_COMMAND_WAIT
+    Else If CueKind = BattleView.BATTLE_CUE_HIDE Then
+        Return Battle3D.BATTLE3D_COMMAND_VISIBILITY
+    Else If CueKind = BattleView.BATTLE_CUE_REWARD Then
+        Return Battle3D.BATTLE3D_COMMAND_REWARD
+    End If
+
+    Return 0
+
+End Function
+
+Private Function AnchorForCommand(CommandKind As Number) As Number
+
+    If CommandKind = Battle3D.BATTLE3D_COMMAND_NUMBER Then
+        Return Battle3D.BATTLE3D_ANCHOR_HEAD
+    Else If (CommandKind = Battle3D.BATTLE3D_COMMAND_MOVE Or
+        CommandKind = Battle3D.BATTLE3D_COMMAND_EFFECT Or
+        CommandKind = Battle3D.BATTLE3D_COMMAND_CAMERA_SHAKE) Then
+        Return Battle3D.BATTLE3D_ANCHOR_CENTER
+    End If
+
+    Return Battle3D.BATTLE3D_ANCHOR_FEET
+
+End Function
+
+Private Function ShotForCommand(CommandKind As Number, TextValue As Text) As Number
+
+    If CommandKind = Battle3D.BATTLE3D_COMMAND_MOVE Or CommandKind = Battle3D.BATTLE3D_COMMAND_ANIMATE Then
+
+        Return Battle3D.BATTLE3D_SHOT_ACTOR
+
+    Else If CommandKind = Battle3D.BATTLE3D_COMMAND_EFFECT Then
+
+        Return Battle3D.BATTLE3D_SHOT_TARGET
+
+    Else If (CommandKind = Battle3D.BATTLE3D_COMMAND_NUMBER Or
+        CommandKind = Battle3D.BATTLE3D_COMMAND_CAMERA_SHAKE) Then
+
+        Return Battle3D.BATTLE3D_SHOT_IMPACT
+
+    Else If CommandKind = Battle3D.BATTLE3D_COMMAND_MESSAGE Or CommandKind = Battle3D.BATTLE3D_COMMAND_REWARD Then
+
+        If TextValue = "Victory" Or TextValue = "Defeat" Or TextValue = "Escaped" Then
+            Return Battle3D.BATTLE3D_SHOT_RESULT
+        End If
+
+        Return Battle3D.BATTLE3D_SHOT_WIDE
+
+    End If
+
+    Return Battle3D.BATTLE3D_SHOT_NONE
+
+End Function
+
+''' Appends a suffix of BattleView cues atomically to the presentation timeline.
+Public Function AppendCues(StateHandle As Number, FirstCueIndex As Number) As Boolean
+
+    Dim Slot As Number
+    Dim CueIndex As Number
+    Dim CommandIndex As Number
+    Dim Kind As Number
+    Dim Duration As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        FirstCueIndex < 0 Or
+        FirstCueIndex > BattleView.CueCount(StateHandle) Or
+        CommandCounts[Slot] > Battle3D.BATTLE3D_MAX_COMMANDS - (BattleView.CueCount(StateHandle) - FirstCueIndex)) Then
+        Return False
+    End If
+
+    For CueIndex = FirstCueIndex To BattleView.CueCount(StateHandle) - 1
+
+        Kind = CommandKindForCue(BattleView.CueKindAt(StateHandle, CueIndex))
+
+        If Kind = 0 Then
+            Return False
+        End If
+
+    End For
+
+    For CueIndex = FirstCueIndex To BattleView.CueCount(StateHandle) - 1
+
+        CommandIndex = CommandCounts[Slot]
+        Kind = CommandKindForCue(BattleView.CueKindAt(StateHandle, CueIndex))
+        Duration = BattleView.CueDurationAt(StateHandle, CueIndex)
+        CommandKinds[Slot, CommandIndex] = Kind
+        CommandActors[Slot, CommandIndex] = BattleView.CueActorIdAt(StateHandle, CueIndex)
+        CommandTargets[Slot, CommandIndex] = BattleView.CueTargetIdAt(StateHandle, CueIndex)
+        CommandValuesOne[Slot, CommandIndex] = BattleView.CueValueOneAt(StateHandle, CueIndex)
+        CommandValuesTwo[Slot, CommandIndex] = BattleView.CueValueTwoAt(StateHandle, CueIndex)
+        CommandStarts[Slot, CommandIndex] = TotalDurations[Slot]
+        CommandDurations[Slot, CommandIndex] = Duration
+        CommandAnchors[Slot, CommandIndex] = AnchorForCommand(Kind)
+        CommandTexts[Slot, CommandIndex] = BattleView.CueTextAt(StateHandle, CueIndex)
+        CommandShots[Slot, CommandIndex] = ShotForCommand(Kind, CommandTexts[Slot, CommandIndex])
+        CommandCounts[Slot] = CommandIndex + 1
+        TotalDurations[Slot] = TotalDurations[Slot] + Duration
+    End For
+
+    Return True
+
+End Function
+
+Public Function CommandCount(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = CommandCounts[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Private Function IsCommandIndexValid(Slot As Number, Index As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Slot >= 0 And Index >= 0 And Index < CommandCounts[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function KindAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not IsCommandIndexValid(Slot, Index) Then
+        Return 0
+    End If
+
+    ReturnValue = CommandKinds[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ActorAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not IsCommandIndexValid(Slot, Index) Then
+        Return 0
+    End If
+
+    ReturnValue = CommandActors[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function TargetAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not IsCommandIndexValid(Slot, Index) Then
+        Return 0
+    End If
+
+    ReturnValue = CommandTargets[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ValueOneAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not IsCommandIndexValid(Slot, Index) Then
+        Return 0
+    End If
+
+    ReturnValue = CommandValuesOne[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ValueTwoAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not IsCommandIndexValid(Slot, Index) Then
+        Return 0
+    End If
+
+    ReturnValue = CommandValuesTwo[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function StartAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not IsCommandIndexValid(Slot, Index) Then
+        Return 0
+    End If
+
+    ReturnValue = CommandStarts[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function DurationAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not IsCommandIndexValid(Slot, Index) Then
+        Return 0
+    End If
+
+    ReturnValue = CommandDurations[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function AnchorAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not IsCommandIndexValid(Slot, Index) Then
+        Return 0
+    End If
+
+    ReturnValue = CommandAnchors[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function SuggestedShotAt(StateHandle As Number, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not IsCommandIndexValid(Slot, Index) Then
+        Return 0
+    End If
+
+    ReturnValue = CommandShots[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function TextAt(StateHandle As Number, Index As Number) As Text
+
+    Dim ReturnValue As Text
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Not IsCommandIndexValid(Slot, Index) Then
+        Return ""
+    End If
+
+    ReturnValue = CommandTexts[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function CurrentCommand(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    If TimelineSteps[Slot] >= TotalDurations[Slot] Then
+        ReturnValue = CommandCounts[Slot]
+
+        Return ReturnValue
+    End If
+
+    For Index = 0 To CommandCounts[Slot] - 1
+
+        If TimelineSteps[Slot] < CommandStarts[Slot, Index] + CommandDurations[Slot, Index] Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = CommandCounts[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Advances BattleView and its compiled timeline by deterministic caller-supplied steps.
+Public Function Update(StateHandle As Number, Steps As Number) As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or Steps < 0 Or Steps > MAX_TIMELINE_STEPS Then
+        Return False
+    End If
+
+    If Not BattleView.Update(StateHandle, Steps) Then
+        Return False
+    End If
+
+    TimelineSteps[Slot] = TimelineSteps[Slot] + Steps
+
+    If TimelineSteps[Slot] > TotalDurations[Slot] Then
+        TimelineSteps[Slot] = TotalDurations[Slot]
+    End If
+
+    Return True
+
+End Function
+
+Public Function IsComplete(StateHandle As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    ReturnValue = TimelineSteps[Slot] >= TotalDurations[Slot] And BattleView.IsComplete(StateHandle)
+
+    Return ReturnValue
+
+End Function
+
+''' Clears compiled commands without mutating BattleCore mechanics or events.
+Public Function ClearCommands(StateHandle As Number) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    For Index = 0 To CommandCounts[Slot] - 1
+        CommandKinds[Slot, Index] = 0
+        CommandTexts[Slot, Index] = ""
+    End For
+
+    CommandCounts[Slot] = 0
+    TimelineSteps[Slot] = 0
+    TotalDurations[Slot] = 0
+    Return True
+
+End Function
+
+End Module

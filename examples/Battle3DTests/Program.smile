@@ -1,0 +1,267 @@
+Option Explicit
+
+Import Smile.RPG.Core As RPG
+Import Smile.RPG.Characters As Characters
+Import Smile.RPG.Party As Party
+Import Smile.RPG.BattleCore As Battle
+Import Smile.RPG.BattleView As BattleView
+Import Smile.Battle3D.Core As Battle3D
+Import Smile.Battle3D.Actor As Actor3D
+Import Smile.Battle3D.Presentation As Presentation
+
+Const CHARACTER_HERO = 100
+Const ENEMY_GOLEM = 200
+Const FORMATION_DUEL = 300
+
+Dim Checks As Number
+Dim Failures As Number
+Dim State As Number
+Dim BattleHandle As Number
+Dim EventStart As Number
+Dim Index As Number
+Dim Character As Characters.CharacterDefinition
+Dim Enemy As Battle.EnemyDefinition
+Dim Formation As Battle.FormationDefinition
+Dim FormationMember As Battle.FormationMemberDefinition
+Dim Slot As BattleView.SlotDefinition
+Dim Binding As Actor3D.ActorBinding
+
+State = RPG.Create()
+
+Call Check(State > 0)
+
+Character.Id = CHARACTER_HERO
+Character.Name = "Aster"
+Character.StartingLevel = 1
+Character.StartingMaximumHealth = 120
+Character.StartingMaximumMagicPoints = 20
+Character.Strength = 28
+Character.Defense = 14
+Character.Magic = 12
+Character.Resistance = 10
+Character.Agility = 18
+Character.Luck = 7
+
+Call Check(Characters.DefineCharacter(State, Character))
+Call Check(Party.AddCharacter(State, CHARACTER_HERO))
+
+Enemy.Id = ENEMY_GOLEM
+Enemy.Name = "Sky Golem"
+Enemy.MaximumHealth = 180
+Enemy.MaximumMagicPoints = 0
+Enemy.Strength = 18
+Enemy.Defense = 8
+Enemy.Magic = 5
+Enemy.Resistance = 8
+Enemy.Agility = 12
+Enemy.Luck = 4
+Enemy.ExperienceReward = 5
+Enemy.GoldReward = 3
+Enemy.AiProfileId = 1
+
+Call Check(Battle.DefineEnemy(State, Enemy))
+
+Formation.Id = FORMATION_DUEL
+Formation.Name = "Presentation Duel"
+Formation.EscapeChance = 0
+
+Call Check(Battle.DefineFormation(State, Formation))
+
+FormationMember.FormationId = FORMATION_DUEL
+FormationMember.EnemyId = ENEMY_GOLEM
+FormationMember.GroupId = 1
+FormationMember.SlotId = 1
+
+Call Check(Battle.AddFormationMember(State, FormationMember))
+
+BattleHandle = Battle.BeginBattle(State, FORMATION_DUEL, 41)
+
+Call Check(BattleHandle > 0)
+Call Check(Battle.ParticipantCount(State) = 2)
+
+Slot.ParticipantId = 1
+Slot.X = -4
+Slot.Y = 0
+Slot.Z = 1
+Slot.Facing = BattleView.BATTLE_FACING_EAST
+Slot.Layer = 1
+Slot.Anchor = BattleView.BATTLE_ANCHOR_FEET
+
+Call Check(BattleView.SetSlot(State, Slot))
+
+Slot.ParticipantId = 2
+Slot.X = 6
+Slot.Y = 0
+Slot.Z = -2
+Slot.Facing = BattleView.BATTLE_FACING_WEST
+Slot.Layer = 1
+Slot.Anchor = BattleView.BATTLE_ANCHOR_FEET
+
+Call Check(BattleView.SetSlot(State, Slot))
+
+Binding.ParticipantId = 1
+Binding.ActorHandle = 101
+Binding.AnimatorHandle = 201
+Binding.FootOffsetY = 0
+Binding.HeadOffsetY = 2
+
+Call Check(Actor3D.Bind(State, Binding))
+
+Binding.ParticipantId = 2
+Binding.ActorHandle = 102
+Binding.AnimatorHandle = 202
+Binding.FootOffsetY = 0
+Binding.HeadOffsetY = 4
+
+Call Check(Actor3D.Bind(State, Binding))
+Call Check(Actor3D.SyncSlots(State))
+Call Check(Actor3D.IsBound(State, 1))
+Call Check(Actor3D.Handle(State, 2) = 102)
+Call Check(Actor3D.Animator(State, 1) = 201)
+Call Check(Actor3D.X(State, 1) = -4)
+Call Check(Actor3D.Z(State, 2) = -2)
+Call Check(Actor3D.Yaw(State, 1) = 90)
+Call Check(Actor3D.Yaw(State, 2) = 270)
+Call Check(Actor3D.AnchorY(State, 1, Battle3D.BATTLE3D_ANCHOR_HEAD) = 2)
+Call Check(Actor3D.AnchorY(State, 2, Battle3D.BATTLE3D_ANCHOR_HEAD) = 4)
+
+Binding.ActorHandle = 0
+
+Call Check(Not Actor3D.Bind(State, Binding))
+
+' The battle-start event becomes a renderer-inspectable wide shot without changing BattleCore.
+
+Call Check(BattleView.AppendEvents(State, 0))
+Call Check(Presentation.AppendCues(State, 0))
+Call Check(Presentation.CommandCount(State) = BattleView.CueCount(State))
+Call Check(Presentation.KindAt(State, 0) = Battle3D.BATTLE3D_COMMAND_MESSAGE)
+Call Check(Presentation.SuggestedShotAt(State, 0) = Battle3D.BATTLE3D_SHOT_WIDE)
+Call Check(Presentation.Update(State, 24))
+Call Check(Presentation.IsComplete(State))
+Call Check(Presentation.ClearCommands(State))
+Call Check(BattleView.ClearCues(State))
+
+' A complete BattleCore round compiles to animation, movement, impact, number, and wait commands.
+EventStart = Battle.EventCount(State)
+
+Call Check(Battle.QueueAction(State, 1, Battle.BATTLE_ACTION_ATTACK, 0, 2))
+Call Check(Battle.QueueAction(State, 2, Battle.BATTLE_ACTION_ATTACK, 0, 1))
+Call Check(Battle.StartRound(State))
+
+For Index = 1 To 32
+
+    If Battle.Phase(State) <> Battle.BATTLE_PHASE_RESOLVING Then
+        Exit For
+    End If
+
+    Call Check(Battle.Advance(State))
+End For
+
+Call Check(Battle.Phase(State) = Battle.BATTLE_PHASE_COMMAND)
+Call Check(BattleView.AppendEvents(State, EventStart))
+Call Check(Presentation.AppendCues(State, 0))
+Call Check(Presentation.CommandCount(State) = BattleView.CueCount(State))
+Call Check(HasCommand(Battle3D.BATTLE3D_COMMAND_ANIMATE))
+Call Check(HasCommand(Battle3D.BATTLE3D_COMMAND_MOVE))
+Call Check(HasCommand(Battle3D.BATTLE3D_COMMAND_NUMBER))
+Call Check(HasCommand(Battle3D.BATTLE3D_COMMAND_CAMERA_SHAKE))
+Call Check(HasCommand(Battle3D.BATTLE3D_COMMAND_WAIT))
+Call Check(NumberCommandsUseHeadAnchors())
+Call Check(TimelineIsOrdered())
+Call Check(Presentation.Update(State, 999))
+Call Check(Presentation.IsComplete(State))
+
+Call Check(Presentation.ClearCommands(State))
+Call Check(BattleView.ClearCues(State))
+Call Check(Actor3D.ClearBindings(State))
+Call Check(Battle.CancelBattle(State))
+Call RPG.Destroy(State)
+
+' RPG state generation changes invalidate all Battle3D bindings and commands.
+State = RPG.Create()
+
+Call Check(State > 0)
+Call Check(Presentation.CommandCount(State) = 0)
+Call Check(Not Actor3D.IsBound(State, 1))
+Call RPG.Destroy(State)
+
+If Failures = 0 Then
+    Print "Battle3D tests: PASS"
+Else
+    Print "Battle3D tests: FAIL"
+    Print Failures
+End If
+
+End Program
+
+Sub Check(Condition As Boolean)
+
+    Checks = Checks + 1
+
+    If Not Condition Then
+
+        Failures = Failures + 1
+        Print "Failed check"
+        Print Checks
+
+    End If
+
+End Sub
+
+Function HasCommand(Kind As Number) As Boolean
+
+    Dim CommandIndex As Number
+
+    For CommandIndex = 0 To Presentation.CommandCount(State) - 1
+
+        If Presentation.KindAt(State, CommandIndex) = Kind Then
+            Return True
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+Function NumberCommandsUseHeadAnchors() As Boolean
+
+    Dim CommandIndex As Number
+
+    For CommandIndex = 0 To Presentation.CommandCount(State) - 1
+
+        If Presentation.KindAt(State, CommandIndex) = Battle3D.BATTLE3D_COMMAND_NUMBER Then
+
+            If Presentation.AnchorAt(State, CommandIndex) <> Battle3D.BATTLE3D_ANCHOR_HEAD Then
+                Return False
+            End If
+
+            If Presentation.SuggestedShotAt(State, CommandIndex) <> Battle3D.BATTLE3D_SHOT_IMPACT Then
+                Return False
+            End If
+
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Function TimelineIsOrdered() As Boolean
+
+    Dim CommandIndex As Number
+    Dim PreviousEnd As Number
+
+    For CommandIndex = 0 To Presentation.CommandCount(State) - 1
+
+        If Presentation.StartAt(State, CommandIndex) <> PreviousEnd Then
+            Return False
+        End If
+
+        PreviousEnd = Presentation.StartAt(State, CommandIndex) + Presentation.DurationAt(State, CommandIndex)
+    End For
+
+    Return True
+
+End Function
