@@ -21,7 +21,7 @@ Public Const SHOT_DEATH = 9
 Public Const SHOT_VICTORY = 10
 
 Private Const ARENA_OBJECT_COUNT = 12
-Private Const PARTY_OBJECT_COUNT = 24
+Private Const PARTY_OBJECT_COUNT = 32
 Private Const DRAGON_OBJECT_COUNT = 22
 Private Const PARTICLE_OBJECT_COUNT = 64
 
@@ -39,11 +39,12 @@ Private Dim SteelMaterial As Core.Material3D
 Private Dim MiraMaterial As Core.Material3D
 Private Dim FrostMaterial As Core.Material3D
 Private Dim TorMaterial As Core.Material3D
+Private Dim LyraMaterial As Core.Material3D
 Private Dim DragonMaterial As Core.Material3D
 Private Dim DragonGlowMaterial As Core.Material3D
 Private Dim ParticleMaterial As Core.Material3D
 Private Dim Arena[12] As Core.Object3D
-Private Dim PartyParts[24] As Core.Object3D
+Private Dim PartyParts[32] As Core.Object3D
 Private Dim DragonParts[22] As Core.Object3D
 Private Dim ParticleTemplate As Core.Object3D
 Private Dim ParticleObjects[64] As Core.Object3D
@@ -53,6 +54,7 @@ Private Dim GlobalStep As Number
 Private Dim OperationAccepted As Boolean
 Private Dim LastArinOffset As Number
 Private Dim LastTorOffset As Number
+Private Dim LastLyraOffset As Number
 Private Dim LastDragonOffset As Number
 
 Private Function Material(
@@ -338,6 +340,40 @@ Private Sub CreateParty()
 
     Call Configure(PartyParts[23], TorMaterial, -72, 106, 195, 100, 100, 100)
 
+    ''' Lyra: emerald field healer with a crystal-tipped staff.
+    PartyParts[24] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(PartyParts[24], SteelMaterial, -292, -7, 305, 14, 46, 14)
+
+    PartyParts[25] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(PartyParts[25], SteelMaterial, -262, -7, 305, 14, 46, 14)
+
+    PartyParts[26] = Graphics3D.CreateCylinder3D(28, 64)
+
+    Call Configure(PartyParts[26], LyraMaterial, -277, 50, 305, 100, 100, 72)
+
+    PartyParts[27] = Graphics3D.CreateSphere3D(24)
+
+    Call Configure(PartyParts[27], FrostMaterial, -277, 101, 305, 100, 100, 100)
+
+    PartyParts[28] = Graphics3D.CreatePyramid3D(48, 76)
+
+    Call Configure(PartyParts[28], LyraMaterial, -277, 145, 305, 100, 100, 100)
+
+    PartyParts[29] = Graphics3D.CreateCylinder3D(7, 185)
+
+    Call Configure(PartyParts[29], SteelMaterial, -205, 69, 305, 100, 100, 100)
+    Call Graphics3D.SetObjectRotation(PartyParts[29], 0, 0, -48)
+
+    PartyParts[30] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(PartyParts[30], LyraMaterial, -308, 63, 305, 11, 44, 11)
+
+    PartyParts[31] = Graphics3D.CreateCube3D(100)
+
+    Call Configure(PartyParts[31], LyraMaterial, -246, 63, 305, 11, 44, 11)
+
 End Sub
 
 Private Sub CreateDragon()
@@ -483,6 +519,7 @@ Private Sub DefinePresentation()
     Call DefineEffect(Battle.EFFECT_ENRAGE, "CINDER CROWN", 64, 96, 13, 38, 0, 255, 225, 55, 150, 0, 20, 26, 8, 100, 28)
     Call DefineEffect(Battle.EFFECT_DEATH, "DRAGONFALL", 64, 130, 16, 48, -2, 255, 245, 190, 65, 8, 5, 30, 2, 100, 35)
     Call DefineEffect(Battle.EFFECT_BASH, "TITAN BREAKER", 34, 42, 10, 25, -1, 255, 230, 120, 255, 45, 5, 24, 3, 88, 20)
+    Call DefineEffect(Battle.EFFECT_AURORA, "AURORA STAFF", 48, 58, 13, 30, 0, 170, 255, 245, 15, 120, 255, 18, 3, 84, 18)
 
     OperationAccepted = BattleCamera.PlayShot(State, SHOT_WIDE, 0)
 
@@ -521,6 +558,7 @@ Public Function Initialize(StateHandle As Number) As Boolean
     MiraMaterial = Material(85, 35, 185, 20, False)
     FrostMaterial = Material(75, 205, 255, 90, False)
     TorMaterial = Material(220, 135, 25, 18, False)
+    LyraMaterial = Material(25, 188, 172, 38, False)
     DragonMaterial = Material(86, 16, 22, 16, False)
     DragonGlowMaterial = Material(220, 45, 13, 70, False)
     ParticleMaterial = Material(255, 255, 255, 100, True)
@@ -536,6 +574,7 @@ Public Function Initialize(StateHandle As Number) As Boolean
     GlobalStep = 0
     LastArinOffset = 0
     LastTorOffset = 0
+    LastLyraOffset = 0
     LastDragonOffset = 0
     Ready = True
     Return True
@@ -572,7 +611,7 @@ Private Sub TriggerVisual(Visual As Number, StepValue As Number)
         EffectId = Battle.EFFECT_FROST
         Shot = SHOT_MAGIC
 
-    Else If Visual = Battle.VISUAL_MIRA_MEND Then
+    Else If Visual = Battle.VISUAL_ITEM Or Visual = Battle.VISUAL_LYRA_MEND Then
 
         EffectId = Battle.EFFECT_HEAL
         Shot = SHOT_PARTY
@@ -585,6 +624,15 @@ Private Sub TriggerVisual(Visual As Number, StepValue As Number)
 
         EffectId = Battle.EFFECT_BASH
         Shot = SHOT_ATTACK
+
+    Else If Visual = Battle.VISUAL_LYRA_ATTACK Then
+
+        EffectId = Battle.EFFECT_AURORA
+        Shot = SHOT_ATTACK
+        X = 85
+        Y = 110
+        Z = 80
+        Shake = 16
 
     Else If Visual = Battle.VISUAL_DRAGON_BREATH Then
 
@@ -688,6 +736,7 @@ Private Sub UpdateActors()
     Dim Rise As Number
     Dim ArinOffset As Number
     Dim TorOffset As Number
+    Dim LyraOffset As Number
     Dim DragonOffset As Number
 
     Visual = Battle.Visual()
@@ -696,6 +745,7 @@ Private Sub UpdateActors()
     Wing = (GlobalStep Mod 48) - 24
     ArinOffset = 0
     TorOffset = 0
+    LyraOffset = 0
     DragonOffset = 0
 
     ''' Ambient motion makes the tableau alive even between attacks.
@@ -714,6 +764,8 @@ Private Sub UpdateActors()
     Call Graphics3D.SetObjectRotation(PartyParts[12], 0, 0, 0)
     Call Graphics3D.SetObjectRotation(PartyParts[18], 0, 0, 0)
     Call Graphics3D.SetObjectRotation(PartyParts[22], 0, 0, -55)
+    Call Graphics3D.SetObjectRotation(PartyParts[26], 0, 0, 0)
+    Call Graphics3D.SetObjectRotation(PartyParts[29], 0, 0, -48)
     Call Graphics3D.SetObjectScale(DragonParts[21], 90 + Abs(Pulse), 90 + Abs(Pulse), 90 + Abs(Pulse))
     Call Graphics3D.SetObjectScale(PartyParts[13], 88 + Abs(Pulse), 88 + Abs(Pulse), 88 + Abs(Pulse))
 
@@ -739,12 +791,26 @@ Private Sub UpdateActors()
 
     Else If (Visual = Battle.VISUAL_MIRA_FLAME Or
         Visual = Battle.VISUAL_MIRA_FROST Or
-        Visual = Battle.VISUAL_MIRA_MEND) Then
+        Visual = Battle.VISUAL_LYRA_MEND) Then
 
         Rise = Min(55, StepValue * 3)
 
         Call Graphics3D.SetObjectPosition(PartyParts[13], -225 + Rise, 150 + Abs(Pulse), 75)
         Call Graphics3D.SetObjectRotation(PartyParts[12], 0, StepValue * 9, StepValue * 2)
+
+    Else If Visual = Battle.VISUAL_LYRA_ATTACK Then
+
+        LyraOffset = Lunge
+
+        Call Graphics3D.SetObjectRotation(PartyParts[26], 0, 0, Min(35, StepValue))
+        Call Graphics3D.SetObjectRotation(PartyParts[29], StepValue * 13, StepValue * 17, -48 + StepValue * 7)
+
+    Else If Visual = Battle.VISUAL_LYRA_MEND Then
+
+        Rise = Min(48, StepValue * 3)
+
+        Call Graphics3D.SetObjectPosition(PartyParts[27], -277, 101 + Rise + Abs(Pulse), 305)
+        Call Graphics3D.SetObjectRotation(PartyParts[29], 0, StepValue * 11, -48 - Min(60, StepValue * 3))
 
     Else If Visual = Battle.VISUAL_DRAGON_CLAW Then
 
@@ -776,6 +842,7 @@ Private Sub UpdateActors()
         Call Graphics3D.SetObjectScale(PartyParts[3], 110 + Abs(Pulse), 110 + Abs(Pulse), 110 + Abs(Pulse))
         Call Graphics3D.SetObjectScale(PartyParts[10], 110 + Abs(Pulse), 110 + Abs(Pulse), 110 + Abs(Pulse))
         Call Graphics3D.SetObjectScale(PartyParts[19], 110 + Abs(Pulse), 110 + Abs(Pulse), 110 + Abs(Pulse))
+        Call Graphics3D.SetObjectScale(PartyParts[27], 110 + Abs(Pulse), 110 + Abs(Pulse), 110 + Abs(Pulse))
 
         If StepValue = 145 Then
             OperationAccepted = BattleCamera.PlayShot(State, SHOT_VICTORY, 0)
@@ -786,15 +853,18 @@ Private Sub UpdateActors()
         Call Graphics3D.SetObjectRotation(PartyParts[2], 0, 0, Min(90, StepValue))
         Call Graphics3D.SetObjectRotation(PartyParts[9], 0, 0, Min(90, StepValue))
         Call Graphics3D.SetObjectRotation(PartyParts[18], 0, 0, Min(90, StepValue))
+        Call Graphics3D.SetObjectRotation(PartyParts[26], 0, 0, Min(90, StepValue))
 
     End If
 
     Call OffsetParty(0, 7, ArinOffset - LastArinOffset, 0)
     Call OffsetParty(16, 23, TorOffset - LastTorOffset, 0)
+    Call OffsetParty(24, 31, LyraOffset - LastLyraOffset, 0)
     Call OffsetDragon(DragonOffset - LastDragonOffset)
 
     LastArinOffset = ArinOffset
     LastTorOffset = TorOffset
+    LastLyraOffset = LyraOffset
     LastDragonOffset = DragonOffset
 
 End Sub
@@ -992,6 +1062,7 @@ Public Sub Shutdown()
     Call Graphics3D.DestroyMaterial3D(DragonGlowMaterial)
     Call Graphics3D.DestroyMaterial3D(DragonMaterial)
     Call Graphics3D.DestroyMaterial3D(TorMaterial)
+    Call Graphics3D.DestroyMaterial3D(LyraMaterial)
     Call Graphics3D.DestroyMaterial3D(FrostMaterial)
     Call Graphics3D.DestroyMaterial3D(MiraMaterial)
     Call Graphics3D.DestroyMaterial3D(SteelMaterial)

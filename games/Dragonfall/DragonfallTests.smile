@@ -17,6 +17,7 @@ Dim SawAttack As Boolean
 Dim SawSpell As Boolean
 Dim SawHeal As Boolean
 Dim SawDefend As Boolean
+Dim SawLyraAttack As Boolean
 Dim SawClaw As Boolean
 Dim SawBreath As Boolean
 Dim SawTail As Boolean
@@ -28,6 +29,7 @@ Outcome = RunBattle(STRATEGY_WIN, True, MAX_BATTLE_STEPS)
 
 Call Check(Outcome = BattleCore.BATTLE_OUTCOME_VICTORY)
 Call Check(SawAttack And SawSpell And SawHeal And SawDefend)
+Call Check(SawLyraAttack)
 Call Check(SawClaw And SawBreath And SawTail)
 Call Check(SawEnrage And SawVictory)
 
@@ -74,8 +76,10 @@ Sub ObserveVisual()
         Battle.Visual() = Battle.VISUAL_MIRA_FROST Or
         Battle.Visual() = Battle.VISUAL_TOR_BASH) Then
         SawSpell = True
-    Else If Battle.Visual() = Battle.VISUAL_MIRA_MEND Then
+    Else If Battle.Visual() = Battle.VISUAL_LYRA_MEND Then
         SawHeal = True
+    Else If Battle.Visual() = Battle.VISUAL_LYRA_ATTACK Then
+        SawLyraAttack = True
     Else If Battle.Visual() = Battle.VISUAL_DEFEND Then
         SawDefend = True
     Else If Battle.Visual() = Battle.VISUAL_DRAGON_CLAW Then
@@ -106,6 +110,7 @@ Function RunBattle(Strategy As Number, Observe As Boolean, MaximumSteps As Numbe
     Dim ArinDecision As Number
     Dim MiraDecision As Number
     Dim TorDecision As Number
+    Dim LyraDecision As Number
     Dim Command As Number
     Dim Lowest As Number
     Dim Accepted As Boolean
@@ -134,6 +139,8 @@ Function RunBattle(Strategy As Number, Observe As Boolean, MaximumSteps As Numbe
 
                 If ArinDecision = 1 Then
                     Command = Battle.COMMAND_ATTACK
+                Else If ArinDecision = 2 Then
+                    Command = Battle.COMMAND_DEFEND
                 Else
                     Command = Battle.COMMAND_SPECIAL
                 End If
@@ -142,22 +149,29 @@ Function RunBattle(Strategy As Number, Observe As Boolean, MaximumSteps As Numbe
 
                 MiraDecision = MiraDecision + 1
 
-                Lowest = Battle.LowestHealthParty()
-
-                If (MiraDecision = 2 Or
-                    (Lowest > 0 And
-                        Battle.Health(Lowest) * 100 < Battle.MaximumHealth(Lowest) * 70)) Then
-                    Command = Battle.COMMAND_HEAL
-                Else
-                    Command = Battle.COMMAND_SPECIAL
-                End If
+                Command = Battle.COMMAND_SPECIAL
 
             Else If ReadyPlayer = Battle.PARTICIPANT_TOR Then
 
                 TorDecision = TorDecision + 1
 
                 If TorDecision = 1 Then
-                    Command = Battle.COMMAND_DEFEND
+                    Command = Battle.COMMAND_ATTACK
+                Else
+                    Command = Battle.COMMAND_SPECIAL
+                End If
+
+            Else If ReadyPlayer = Battle.PARTICIPANT_LYRA Then
+
+                LyraDecision = LyraDecision + 1
+
+                Lowest = Battle.LowestHealthParty()
+
+                If LyraDecision = 1 Then
+                    Command = Battle.COMMAND_ATTACK
+                Else If (Lowest > 0 And
+                    Battle.Health(Lowest) * 100 < Battle.MaximumHealth(Lowest) * 75) Then
+                    Command = Battle.COMMAND_HEAL
                 Else
                     Command = Battle.COMMAND_SPECIAL
                 End If

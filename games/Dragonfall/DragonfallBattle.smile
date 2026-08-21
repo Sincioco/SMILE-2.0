@@ -13,16 +13,17 @@ Import Smile.RPG.BattleCore As BattleCore
 Import Smile.RPG.BattleTime As BattleTime
 
 Public Const PARTICIPANT_ARIN = 1
-Public Const PARTICIPANT_MIRA = 2
-Public Const PARTICIPANT_TOR = 3
-Public Const PARTICIPANT_ASHWING = 4
+Public Const PARTICIPANT_TOR = 2
+Public Const PARTICIPANT_LYRA = 3
+Public Const PARTICIPANT_MIRA = 4
+Public Const PARTICIPANT_ASHWING = 5
 
 Public Const VISUAL_IDLE = 0
 Public Const VISUAL_ARIN_ATTACK = 1
 Public Const VISUAL_ARIN_EMBER = 2
 Public Const VISUAL_MIRA_FLAME = 3
 Public Const VISUAL_MIRA_FROST = 4
-Public Const VISUAL_MIRA_MEND = 5
+Public Const VISUAL_ITEM = 5
 Public Const VISUAL_TOR_ATTACK = 6
 Public Const VISUAL_TOR_BASH = 7
 Public Const VISUAL_DEFEND = 8
@@ -32,6 +33,8 @@ Public Const VISUAL_DRAGON_TAIL = 11
 Public Const VISUAL_ENRAGE = 12
 Public Const VISUAL_VICTORY = 13
 Public Const VISUAL_DEFEAT = 14
+Public Const VISUAL_LYRA_ATTACK = 15
+Public Const VISUAL_LYRA_MEND = 16
 
 Public Const COMMAND_ATTACK = 1
 Public Const COMMAND_SPECIAL = 2
@@ -47,21 +50,23 @@ Public Const EFFECT_BREATH = 5
 Public Const EFFECT_ENRAGE = 6
 Public Const EFFECT_DEATH = 7
 Public Const EFFECT_BASH = 8
+Public Const EFFECT_AURORA = 9
 
 Private Const CHARACTER_ARIN = 100
 Private Const CHARACTER_MIRA = 101
 Private Const CHARACTER_TOR = 102
+Private Const CHARACTER_LYRA = 103
 Private Const ENEMY_ASHWING = 200
 Private Const FORMATION_ASHWING = 300
 Private Const ITEM_CINDER_TONIC = 400
-Private Const ABILITY_EMBER_EDGE = 500
+Private Const ABILITY_AEGIS_BREAK = 500
 Private Const ABILITY_FLAME = 501
 Private Const ABILITY_FROST = 502
 Private Const ABILITY_MEND = 503
-Private Const ABILITY_SHIELD_BASH = 504
+Private Const ABILITY_METEOR_BARRAGE = 504
 Private Const ABILITY_FIRE_BREATH = 505
 Private Const ABILITY_TAIL_SWEEP = 506
-Private Const MECHANIC_EMBER = 600
+Private Const MECHANIC_AEGIS = 600
 Private Const MECHANIC_FLAME = 601
 Private Const MECHANIC_FROST = 602
 Private Const MECHANIC_MEND = 603
@@ -145,12 +150,14 @@ End Function
 
 Private Function DefineParty() As Boolean
 
-    If (Not DefineCharacter(CHARACTER_ARIN, "Arin", 520, 80, 52, 35, 30, 28, 38, 18) Or
-        Not DefineCharacter(CHARACTER_MIRA, "Mira", 390, 160, 24, 24, 62, 48, 44, 22) Or
-        Not DefineCharacter(CHARACTER_TOR, "Tor", 680, 55, 48, 58, 20, 42, 29, 14) Or
+    If (Not DefineCharacter(CHARACTER_ARIN, "Arin", 620, 70, 46, 58, 25, 42, 34, 18) Or
+        Not DefineCharacter(CHARACTER_TOR, "Tor", 650, 60, 64, 38, 24, 32, 31, 14) Or
+        Not DefineCharacter(CHARACTER_LYRA, "Lyra", 440, 170, 24, 30, 54, 56, 43, 25) Or
+        Not DefineCharacter(CHARACTER_MIRA, "Mira", 380, 180, 22, 22, 68, 46, 47, 22) Or
         Not Party.AddCharacter(State, CHARACTER_ARIN) Or
-        Not Party.AddCharacter(State, CHARACTER_MIRA) Or
-        Not Party.AddCharacter(State, CHARACTER_TOR)) Then
+        Not Party.AddCharacter(State, CHARACTER_TOR) Or
+        Not Party.AddCharacter(State, CHARACTER_LYRA) Or
+        Not Party.AddCharacter(State, CHARACTER_MIRA)) Then
         Return False
     End If
 
@@ -200,32 +207,32 @@ Private Function DefineMechanics() As Boolean
 
     Dim ReturnValue As Boolean
 
-    If (Not AddEffect(MECHANIC_EMBER, "Ember Edge", Effects.BATTLE_EFFECT_MAGIC_DAMAGE, 118) Or
+    If (Not AddEffect(MECHANIC_AEGIS, "Aegis Break", Effects.BATTLE_EFFECT_PHYSICAL_DAMAGE, 108) Or
         Not AddEffect(MECHANIC_FLAME, "Astral Flame", Effects.BATTLE_EFFECT_MAGIC_DAMAGE, 135) Or
         Not AddEffect(MECHANIC_FROST, "Comet Frost", Effects.BATTLE_EFFECT_MAGIC_DAMAGE, 128) Or
         Not AddEffect(MECHANIC_MEND, "Starlight Mend", Effects.BATTLE_EFFECT_HEAL_HEALTH, 155) Or
-        Not AddEffect(MECHANIC_BASH, "Meteor Bash", Effects.BATTLE_EFFECT_PHYSICAL_DAMAGE, 105) Or
+        Not AddEffect(MECHANIC_BASH, "Meteor Barrage", Effects.BATTLE_EFFECT_PHYSICAL_DAMAGE, 142) Or
         Not AddEffect(MECHANIC_BREATH, "Cataclysm Breath", Effects.BATTLE_EFFECT_MAGIC_DAMAGE, 108) Or
         Not AddEffect(MECHANIC_TAIL, "Volcanic Tail", Effects.BATTLE_EFFECT_PHYSICAL_DAMAGE, 82) Or
         Not AddEffect(MECHANIC_TONIC, "Cinder Tonic", Effects.BATTLE_EFFECT_HEAL_HEALTH, 180)) Then
         Return False
     End If
 
-    If (Not AddAbility(ABILITY_EMBER_EDGE, "Ember Edge", 8, 118, RPG.RPG_TARGET_ONE_ENEMY, MECHANIC_EMBER) Or
+    If (Not AddAbility(ABILITY_AEGIS_BREAK, "Aegis Break", 7, 108, RPG.RPG_TARGET_ONE_ENEMY, MECHANIC_AEGIS) Or
         Not AddAbility(ABILITY_FLAME, "Astral Flame", 10, 135, RPG.RPG_TARGET_ONE_ENEMY, MECHANIC_FLAME) Or
         Not AddAbility(ABILITY_FROST, "Comet Frost", 9, 128, RPG.RPG_TARGET_ONE_ENEMY, MECHANIC_FROST) Or
         Not AddAbility(ABILITY_MEND, "Starlight Mend", 8, 155, RPG.RPG_TARGET_ONE_ALLY, MECHANIC_MEND) Or
-        Not AddAbility(ABILITY_SHIELD_BASH, "Meteor Bash", 6, 105, RPG.RPG_TARGET_ONE_ENEMY, MECHANIC_BASH) Or
+        Not AddAbility(ABILITY_METEOR_BARRAGE, "Meteor Barrage", 7, 142, RPG.RPG_TARGET_ONE_ENEMY, MECHANIC_BASH) Or
         Not AddAbility(ABILITY_FIRE_BREATH, "Cataclysm Breath", 0, 48, RPG.RPG_TARGET_ALL_ENEMIES, MECHANIC_BREATH) Or
         Not AddAbility(ABILITY_TAIL_SWEEP, "Volcanic Tail", 0, 42, RPG.RPG_TARGET_ALL_ENEMIES, MECHANIC_TAIL)) Then
         Return False
     End If
 
-    If (Not Abilities.LearnAbility(State, CHARACTER_ARIN, ABILITY_EMBER_EDGE) Or
+    If (Not Abilities.LearnAbility(State, CHARACTER_ARIN, ABILITY_AEGIS_BREAK) Or
         Not Abilities.LearnAbility(State, CHARACTER_MIRA, ABILITY_FLAME) Or
         Not Abilities.LearnAbility(State, CHARACTER_MIRA, ABILITY_FROST) Or
-        Not Abilities.LearnAbility(State, CHARACTER_MIRA, ABILITY_MEND) Or
-        Not Abilities.LearnAbility(State, CHARACTER_TOR, ABILITY_SHIELD_BASH)) Then
+        Not Abilities.LearnAbility(State, CHARACTER_LYRA, ABILITY_MEND) Or
+        Not Abilities.LearnAbility(State, CHARACTER_TOR, ABILITY_METEOR_BARRAGE)) Then
         Return False
     End If
 
@@ -250,7 +257,7 @@ Private Function DefineBoss() As Boolean
 
     Enemy.Id = ENEMY_ASHWING
     Enemy.Name = "Ashwing, Caldera Tyrant"
-    Enemy.MaximumHealth = 1650
+    Enemy.MaximumHealth = 3000
     Enemy.MaximumMagicPoints = 999
     Enemy.Strength = 62
     Enemy.Defense = 24
@@ -318,6 +325,8 @@ Private Sub BuildActionVisual(FirstEvent As Number)
                 Call StartVisual(VISUAL_TOR_ATTACK, ActorId, TargetId, "TOR // IRON COMET", ACTION_VISUAL_STEPS)
             Else If ActorId = PARTICIPANT_MIRA Then
                 Call StartVisual(VISUAL_MIRA_FLAME, ActorId, TargetId, "MIRA // ARCANE BOLT", ACTION_VISUAL_STEPS)
+            Else If ActorId = PARTICIPANT_LYRA Then
+                Call StartVisual(VISUAL_LYRA_ATTACK, ActorId, TargetId, "LYRA // GALE LANCE", ACTION_VISUAL_STEPS)
             Else
 
                 Call StartVisual(VISUAL_DRAGON_CLAW, ActorId, TargetId, "ASHWING // OBSIDIAN CLAW", ACTION_VISUAL_STEPS)
@@ -327,16 +336,16 @@ Private Sub BuildActionVisual(FirstEvent As Number)
 
             SourceId = BattleCore.EventValueOneAt(State, Index)
 
-            If SourceId = ABILITY_EMBER_EDGE Then
-                Call StartVisual(VISUAL_ARIN_EMBER, ActorId, TargetId, "ARIN // EMBER EDGE", ACTION_VISUAL_STEPS)
+            If SourceId = ABILITY_AEGIS_BREAK Then
+                Call StartVisual(VISUAL_ARIN_EMBER, ActorId, TargetId, "ARIN // AEGIS BREAK", ACTION_VISUAL_STEPS)
             Else If SourceId = ABILITY_FLAME Then
                 Call StartVisual(VISUAL_MIRA_FLAME, ActorId, TargetId, "MIRA // ASTRAL FLAME", ACTION_VISUAL_STEPS)
             Else If SourceId = ABILITY_FROST Then
                 Call StartVisual(VISUAL_MIRA_FROST, ActorId, TargetId, "MIRA // COMET FROST", ACTION_VISUAL_STEPS)
             Else If SourceId = ABILITY_MEND Then
-                Call StartVisual(VISUAL_MIRA_MEND, ActorId, TargetId, "MIRA // STARLIGHT MEND", ACTION_VISUAL_STEPS)
-            Else If SourceId = ABILITY_SHIELD_BASH Then
-                Call StartVisual(VISUAL_TOR_BASH, ActorId, TargetId, "TOR // METEOR BASH", ACTION_VISUAL_STEPS)
+                Call StartVisual(VISUAL_LYRA_MEND, ActorId, TargetId, "LYRA // AURORA MEND", ACTION_VISUAL_STEPS)
+            Else If SourceId = ABILITY_METEOR_BARRAGE Then
+                Call StartVisual(VISUAL_TOR_BASH, ActorId, TargetId, "TOR // METEOR BARRAGE", ACTION_VISUAL_STEPS)
             Else If SourceId = ABILITY_FIRE_BREATH Then
                 Call StartVisual(VISUAL_DRAGON_BREATH, ActorId, TargetId, "ASHWING // CATACLYSM BREATH", ACTION_VISUAL_STEPS + 24)
             Else If SourceId = ABILITY_TAIL_SWEEP Then
@@ -349,7 +358,7 @@ Private Sub BuildActionVisual(FirstEvent As Number)
 
         Else If Kind = BattleCore.BATTLE_EVENT_ITEM Then
 
-            Call StartVisual(VISUAL_MIRA_MEND, ActorId, TargetId, "CINDER TONIC", 56)
+            Call StartVisual(VISUAL_ITEM, ActorId, TargetId, "CINDER TONIC", 56)
 
         Else If Kind = BattleCore.BATTLE_EVENT_DAMAGE Then
 
@@ -452,7 +461,7 @@ Public Sub Update()
             Call BuildActionVisual(EventStart)
 
             If (Not PhaseTwo And
-                BattleCore.Health(State, PARTICIPANT_ASHWING) * 2 <= BattleCore.MaximumHealth(State, PARTICIPANT_ASHWING) And
+                BattleCore.Health(State, PARTICIPANT_ASHWING) * 10 <= BattleCore.MaximumHealth(State, PARTICIPANT_ASHWING) * 7 And
                 BattleCore.IsAlive(State, PARTICIPANT_ASHWING)) Then
                 PhaseTwoPending = True
             End If
@@ -478,7 +487,7 @@ Public Function SubmitPlayerCommand(ParticipantId As Number, Command As Number) 
     Dim ReturnValue As Boolean
 
     If (ParticipantId <= 0 Or
-        ParticipantId > PARTICIPANT_TOR Or
+        ParticipantId > PARTICIPANT_MIRA Or
         Not BattleTime.IsReady(State, ParticipantId)) Then
         Return False
     End If
@@ -495,7 +504,7 @@ Public Function SubmitPlayerCommand(ParticipantId As Number, Command As Number) 
 
         Return ReturnValue
 
-    Else If Command = COMMAND_HEAL And ParticipantId = PARTICIPANT_MIRA Then
+    Else If Command = COMMAND_HEAL And ParticipantId = PARTICIPANT_LYRA Then
 
         ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_MEND, LowestHealthParty())
 
@@ -505,7 +514,19 @@ Public Function SubmitPlayerCommand(ParticipantId As Number, Command As Number) 
 
         If ParticipantId = PARTICIPANT_ARIN Then
 
-            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_EMBER_EDGE, PARTICIPANT_ASHWING)
+            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_AEGIS_BREAK, PARTICIPANT_ASHWING)
+
+            Return ReturnValue
+
+        Else If ParticipantId = PARTICIPANT_TOR Then
+
+            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_METEOR_BARRAGE, PARTICIPANT_ASHWING)
+
+            Return ReturnValue
+
+        Else If ParticipantId = PARTICIPANT_LYRA Then
+
+            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_MEND, LowestHealthParty())
 
             Return ReturnValue
 
@@ -518,11 +539,6 @@ Public Function SubmitPlayerCommand(ParticipantId As Number, Command As Number) 
             End If
 
             ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_FROST, PARTICIPANT_ASHWING)
-
-            Return ReturnValue
-
-        Else
-            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_SHIELD_BASH, PARTICIPANT_ASHWING)
 
             Return ReturnValue
 
@@ -555,7 +571,7 @@ Public Function LowestHealthParty() As Number
 
     BestRatio = 1001
 
-    For ParticipantId = PARTICIPANT_ARIN To PARTICIPANT_TOR
+    For ParticipantId = PARTICIPANT_ARIN To PARTICIPANT_MIRA
 
         If BattleCore.IsAlive(State, ParticipantId) Then
 
@@ -578,7 +594,7 @@ Public Function LowestLivingParty() As Number
 
     Dim ParticipantId As Number
 
-    For ParticipantId = PARTICIPANT_ARIN To PARTICIPANT_TOR
+    For ParticipantId = PARTICIPANT_ARIN To PARTICIPANT_MIRA
 
         If BattleCore.IsAlive(State, ParticipantId) Then
             Return ParticipantId
