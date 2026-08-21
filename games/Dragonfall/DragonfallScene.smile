@@ -463,11 +463,14 @@ Private Sub DefinePresentation()
 
     Call DefineCameraShot(SHOT_WIDE, "EMBER OBSERVATORY", 0, 270, -760, 35, 75, 40, 54, 0)
     Call DefineCameraShot(SHOT_PARTY, "THE LAST LIGHT", -410, 170, -370, -190, 65, 70, 48, 24)
-    Call DefineCameraShot(SHOT_DRAGON, "ASHWING", 410, 260, -330, 125, 125, 40, 42, 24)
+
+    ''' Boss attacks remain beyond the wing span on the party-facing side.
+
+    Call DefineCameraShot(SHOT_DRAGON, "ASHWING", -120, 250, -760, 60, 105, 40, 55, 24)
     Call DefineCameraShot(SHOT_ATTACK, "HEROIC CHARGE", -410, 155, -360, 55, 78, 18, 55, 14)
     Call DefineCameraShot(SHOT_MAGIC, "ARCANE STORM", -210, 230, -440, 40, 120, 25, 45, 18)
     Call DefineCameraShot(SHOT_IMPACT, "TITAN IMPACT", 300, 150, -410, 80, 88, 22, 48, 8)
-    Call DefineCameraShot(SHOT_BREATH, "WORLD IN FLAME", 80, 130, -310, -135, 75, 40, 58, 10)
+    Call DefineCameraShot(SHOT_BREATH, "WORLD IN FLAME", -260, 165, -620, -15, 90, 40, 60, 10)
     Call DefineCameraShot(SHOT_ENRAGE, "CROWN OF CINDERS", 300, 260, -350, 115, 135, 40, 39, 14)
     Call DefineCameraShot(SHOT_DEATH, "DRAGONFALL", 490, 305, -570, 115, 70, 45, 48, 50)
     Call DefineCameraShot(SHOT_VICTORY, "DAWN RETURNS", -360, 240, -500, -105, 85, 70, 46, 55)

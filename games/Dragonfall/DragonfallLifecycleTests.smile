@@ -1,6 +1,7 @@
 Option Explicit
 
 Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Battle3D.Camera As BattleCamera
 Import Dragonfall.Battle As Battle
 Import Dragonfall.Scene As Scene
 
@@ -14,6 +15,7 @@ Dim StableObjects As Number
 Dim StableMaterials As Number
 Dim StableTextures As Number
 Dim Ready As Boolean
+Dim CameraReady As Boolean
 
 Game Window "Dragonfall Lifecycle Tests" Size 480 By 270
 
@@ -39,6 +41,32 @@ For Cycle = 1 To RESTART_COUNT
             StableObjects = Graphics3D.LiveObjectCount3D()
             StableMaterials = Graphics3D.LiveMaterialCount3D()
             StableTextures = Graphics3D.LiveTextureCount3D()
+
+            CameraReady = BattleCamera.PlayShot(Battle.StateHandle(), Scene.SHOT_DRAGON, 1)
+
+            If CameraReady Then
+                CameraReady = BattleCamera.Update(Battle.StateHandle(), 1)
+            End If
+
+            If (Not CameraReady Or
+                BattleCamera.PositionX(Battle.StateHandle()) >= 0 Or
+                BattleCamera.PositionZ(Battle.StateHandle()) > -600 Or
+                BattleCamera.FovDegrees(Battle.StateHandle()) < 50) Then
+                Failures = Failures + 1
+            End If
+
+            CameraReady = BattleCamera.PlayShot(Battle.StateHandle(), Scene.SHOT_BREATH, 1)
+
+            If CameraReady Then
+                CameraReady = BattleCamera.Update(Battle.StateHandle(), 1)
+            End If
+
+            If (Not CameraReady Or
+                BattleCamera.PositionX(Battle.StateHandle()) >= 0 Or
+                BattleCamera.PositionZ(Battle.StateHandle()) > -600 Or
+                BattleCamera.FovDegrees(Battle.StateHandle()) < 50) Then
+                Failures = Failures + 1
+            End If
 
         End If
 
