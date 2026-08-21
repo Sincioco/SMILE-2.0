@@ -310,7 +310,9 @@ Public Function Update(StateHandle As Number, Steps As Number) As Boolean
 
     Slot = StateSlot(StateHandle)
 
-    If Slot < 0 Or Steps < 0 Or Steps > BATTLE3D_MAX_CAMERA_STEPS Then
+    If (Slot < 0 Or
+        Steps < 0 Or
+        Steps > BATTLE3D_MAX_CAMERA_STEPS) Then
         Return False
     End If
 

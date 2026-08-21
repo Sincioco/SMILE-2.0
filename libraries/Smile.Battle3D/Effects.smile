@@ -344,7 +344,9 @@ Public Function Update(StateHandle As Number, Steps As Number) As Boolean
 
     Slot = StateSlot(StateHandle)
 
-    If Slot < 0 Or Steps < 0 Or Steps > BATTLE3D_MAX_EFFECT_STEPS Then
+    If (Slot < 0 Or
+        Steps < 0 Or
+        Steps > BATTLE3D_MAX_EFFECT_STEPS) Then
         Return False
     End If
 
@@ -443,7 +445,9 @@ Private Function ParticleValue(StateHandle As Number, Index As Number, Kind As N
 
     Slot = StateSlot(StateHandle)
 
-    If Slot < 0 Or Not IsParticleIndex(Index) Or Not ParticleActive[Slot, Index] Then
+    If (Slot < 0 Or
+        Not IsParticleIndex(Index) Or
+        Not ParticleActive[Slot, Index]) Then
         Return 0
     End If
 
@@ -676,7 +680,9 @@ Public Function FlashOpacity(StateHandle As Number) As Number
 
     Slot = StateSlot(StateHandle)
 
-    If Slot < 0 Or FlashDurations[Slot] <= 0 Or FlashSteps[Slot] >= FlashDurations[Slot] Then
+    If (Slot < 0 Or
+        FlashDurations[Slot] <= 0 Or
+        FlashSteps[Slot] >= FlashDurations[Slot]) Then
         Return 0
     End If
 

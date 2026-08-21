@@ -104,7 +104,8 @@ End Function
 
 Private Function ShotForCommand(CommandKind As Number, TextValue As Text) As Number
 
-    If CommandKind = Battle3D.BATTLE3D_COMMAND_MOVE Or CommandKind = Battle3D.BATTLE3D_COMMAND_ANIMATE Then
+    If (CommandKind = Battle3D.BATTLE3D_COMMAND_MOVE Or
+        CommandKind = Battle3D.BATTLE3D_COMMAND_ANIMATE) Then
 
         Return Battle3D.BATTLE3D_SHOT_ACTOR
 
@@ -117,9 +118,12 @@ Private Function ShotForCommand(CommandKind As Number, TextValue As Text) As Num
 
         Return Battle3D.BATTLE3D_SHOT_IMPACT
 
-    Else If CommandKind = Battle3D.BATTLE3D_COMMAND_MESSAGE Or CommandKind = Battle3D.BATTLE3D_COMMAND_REWARD Then
+    Else If (CommandKind = Battle3D.BATTLE3D_COMMAND_MESSAGE Or
+        CommandKind = Battle3D.BATTLE3D_COMMAND_REWARD) Then
 
-        If TextValue = "Victory" Or TextValue = "Defeat" Or TextValue = "Escaped" Then
+        If (TextValue = "Victory" Or
+            TextValue = "Defeat" Or
+            TextValue = "Escaped") Then
             Return Battle3D.BATTLE3D_SHOT_RESULT
         End If
 
@@ -430,7 +434,9 @@ Public Function Update(StateHandle As Number, Steps As Number) As Boolean
 
     Slot = StateSlot(StateHandle)
 
-    If Slot < 0 Or Steps < 0 Or Steps > MAX_TIMELINE_STEPS Then
+    If (Slot < 0 Or
+        Steps < 0 Or
+        Steps > MAX_TIMELINE_STEPS) Then
         Return False
     End If
 

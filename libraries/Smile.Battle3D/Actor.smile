@@ -140,7 +140,9 @@ Public Function Unbind(StateHandle As Number, ParticipantId As Number) As Boolea
     Slot = StateSlot(StateHandle)
     Index = ParticipantIndex(StateHandle, ParticipantId)
 
-    If Slot < 0 Or Index < 0 Or Not Bound[Slot, Index] Then
+    If (Slot < 0 Or
+        Index < 0 Or
+        Not Bound[Slot, Index]) Then
         Return False
     End If
 
@@ -181,7 +183,9 @@ Public Function Handle(StateHandle As Number, ParticipantId As Number) As Number
     Slot = StateSlot(StateHandle)
     Index = ParticipantIndex(StateHandle, ParticipantId)
 
-    If Slot < 0 Or Index < 0 Or Not Bound[Slot, Index] Then
+    If (Slot < 0 Or
+        Index < 0 Or
+        Not Bound[Slot, Index]) Then
         Return 0
     End If
 
@@ -201,7 +205,9 @@ Public Function Animator(StateHandle As Number, ParticipantId As Number) As Numb
     Slot = StateSlot(StateHandle)
     Index = ParticipantIndex(StateHandle, ParticipantId)
 
-    If Slot < 0 Or Index < 0 Or Not Bound[Slot, Index] Then
+    If (Slot < 0 Or
+        Index < 0 Or
+        Not Bound[Slot, Index]) Then
         Return 0
     End If
 
@@ -266,7 +272,9 @@ Public Function X(StateHandle As Number, ParticipantId As Number) As Number
     Slot = StateSlot(StateHandle)
     Index = ParticipantIndex(StateHandle, ParticipantId)
 
-    If Slot < 0 Or Index < 0 Or Not BattleView.IsSlotDefined(StateHandle, ParticipantId) Then
+    If (Slot < 0 Or
+        Index < 0 Or
+        Not BattleView.IsSlotDefined(StateHandle, ParticipantId)) Then
         Return 0
     End If
 
@@ -286,7 +294,9 @@ Public Function Y(StateHandle As Number, ParticipantId As Number) As Number
     Slot = StateSlot(StateHandle)
     Index = ParticipantIndex(StateHandle, ParticipantId)
 
-    If Slot < 0 Or Index < 0 Or Not BattleView.IsSlotDefined(StateHandle, ParticipantId) Then
+    If (Slot < 0 Or
+        Index < 0 Or
+        Not BattleView.IsSlotDefined(StateHandle, ParticipantId)) Then
         Return 0
     End If
 
@@ -306,7 +316,9 @@ Public Function Z(StateHandle As Number, ParticipantId As Number) As Number
     Slot = StateSlot(StateHandle)
     Index = ParticipantIndex(StateHandle, ParticipantId)
 
-    If Slot < 0 Or Index < 0 Or Not BattleView.IsSlotDefined(StateHandle, ParticipantId) Then
+    If (Slot < 0 Or
+        Index < 0 Or
+        Not BattleView.IsSlotDefined(StateHandle, ParticipantId)) Then
         Return 0
     End If
 
@@ -326,7 +338,9 @@ Public Function Yaw(StateHandle As Number, ParticipantId As Number) As Number
     Slot = StateSlot(StateHandle)
     Index = ParticipantIndex(StateHandle, ParticipantId)
 
-    If Slot < 0 Or Index < 0 Or Not BattleView.IsSlotDefined(StateHandle, ParticipantId) Then
+    If (Slot < 0 Or
+        Index < 0 Or
+        Not BattleView.IsSlotDefined(StateHandle, ParticipantId)) Then
         Return 0
     End If
 

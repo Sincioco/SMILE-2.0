@@ -484,13 +484,15 @@ Public Function CanStartRound(StateHandle As Number) As Boolean
 
     Slot = StateSlot(StateHandle)
 
-    If Not IsSessionValid(StateHandle, Slot) Or Battle.Phase(StateHandle) <> Battle.BATTLE_PHASE_COMMAND Then
+    If (Not IsSessionValid(StateHandle, Slot) Or
+        Battle.Phase(StateHandle) <> Battle.BATTLE_PHASE_COMMAND) Then
         Return False
     End If
 
     For ParticipantId = 1 To ParticipantCounts[Slot]
 
-        If Battle.IsAlive(StateHandle, ParticipantId) And Not PendingActions[Slot, ParticipantId - 1] Then
+        If (Battle.IsAlive(StateHandle, ParticipantId) And
+            Not PendingActions[Slot, ParticipantId - 1]) Then
             Return False
         End If
 
