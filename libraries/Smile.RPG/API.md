@@ -1,8 +1,9 @@
 # Smile.RPG API
 
-Version 1.2.1 preserves the complete 1.2.0 module/handle surface in deterministic
-`.smilelib` format 6. SRPG save payload writing remains format 2 with format-1
-and format-2 reads.
+Version 1.3.0 preserves the complete 1.2.1 module/handle surface and adds
+opt-in, progression-aware basic-Attack accuracy in deterministic `.smilelib`
+format 6. SRPG save payload writing remains format 2 with format-1 and format-2
+reads.
 
 All IDs are caller-supplied stable positive Numbers. Invalid handles and arguments fail safely. Boolean mutations are atomic; shop and save operations return `RPG_RESULT_*` constants.
 
@@ -88,6 +89,6 @@ SaveGames writes SRPG format 2, reads formats 1 and 2, and transactionally inclu
 
 ## Phase 9 battle modules
 
-`Smile.RPG` 1.2.0 adds deterministic, bounded, renderer-neutral `BattleEffects`, `BattleCore`, `BattleStrategy`, and `BattleView` modules. They support enemy definitions/formations, four party members, eight enemies in four groups, Attack/Ability/Item/Defend/Run, targeting and retargeting, agility rounds, damage/healing/revive, battle statuses, victory/defeat/escape, atomic Experience/Gold rewards, PSII-style standing orders and deterministic AI, mechanics events, logical X/Y/Z slots, and presentation cues.
+`Smile.RPG` 1.2.0 added deterministic, bounded, renderer-neutral `BattleEffects`, `BattleCore`, `BattleStrategy`, and `BattleView` modules. Version 1.3.0 adds side-configurable basic-Attack baselines, progression-derived effective hit chances, and explicit miss events/cues while preserving guaranteed hits by default. The modules support enemy definitions/formations, four party members, eight enemies in four groups, Attack/Ability/Item/Defend/Run, targeting and retargeting, agility rounds, damage/healing/revive, battle statuses, victory/defeat/escape, atomic Experience/Gold rewards, PSII-style standing orders and deterministic AI, mechanics events, logical X/Y/Z slots, and presentation cues.
 
 Only one battle may be active per RPG state. An active battle is transient and makes `Encode`, `Decode`, `SaveGame`, and `LoadGame` return `RPG_RESULT_BATTLE_ACTIVE`; SRPG format 2 is unchanged. See [the battle API](../../docs/libraries/smile-rpg-battle-api.md).

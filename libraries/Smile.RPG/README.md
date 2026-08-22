@@ -1,4 +1,4 @@
-# Smile.RPG 1.2.1
+# Smile.RPG 1.3.0
 
 `Smile.RPG` is the official source-authored package for reusable RPG data,
 management, bounded world state, transactional saves, encounters, and battle
@@ -19,11 +19,17 @@ The package manages:
 - bounded renderer-neutral battle definitions, effects, strategy, state, events,
   rewards, and logical presentation cues.
 
-Version 1.2.1 preserves the complete 1.2.0 public module/handle API while
-rebuilding it with exact `Smile.RPG@1.2.1` provider identity in deterministic
-`.smilelib` format 6. It introduces no public Class or Enum façade and does not
-change SRPG save payload format 2. Only actors marked persistent are serialized;
-transient actor progress, reservations, and active battles remain transient.
+Version 1.3.0 preserves the complete 1.2.1 module/handle API and adds optional,
+progression-aware basic-Attack accuracy. Games can configure a baseline per
+battle side and a weapon/class proficiency bonus per participant; Level, battle
+statistics, and equipped statistic bonuses then derive the effective chance,
+while misses produce renderer-neutral mechanics events and presentation cues
+without applying damage. The default remains 100% and consumes no accuracy
+roll, preserving every existing game. The package has
+exact `Smile.RPG@1.3.0` provider identity in deterministic `.smilelib` format 6.
+It introduces no public Class or Enum façade and does not change SRPG save
+payload format 2. Only actors marked persistent are serialized; transient actor
+progress, reservations, and active battles remain transient.
 
 Reference `Smile.RPG.smilelibproj` during development or a deterministic `Smile.RPG.smilelib` package for distribution. Register all stable definitions before loading a save.
 

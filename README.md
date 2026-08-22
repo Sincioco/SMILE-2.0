@@ -165,7 +165,7 @@ The Phase 3A typed-text proof uses `libraries\Smile.Text.Extras`, `examples\Phas
 
 Smile.UI 2.0.0 supersedes the historical 1.x procedural surface described above. Its `Menu`, `MenuNavigator`, and `Dialogue` reference Classes expose constructors, methods, properties, named/default arguments, and idempotent destruction while retaining private fixed-capacity generation-safe engines; style and geometry records remain value Types.
 
-Smile.RPG 1.2.1 is the package-only lightweight-OOP compatibility release. It preserves the fifteen-module 1.2.0 public API and SRPG payload format 2, publishes exact `Smile.RPG@1.2.1` provider identity in deterministic `.smilelib` format 6, and adds no Smile.UI/Smile.Game dependency, Class façade, Enum migration, or inheritance model.
+Smile.RPG 1.3.0 preserves the fifteen-module 1.2.1 API and SRPG payload format 2, adds opt-in progression-aware basic-Attack accuracy with explicit miss events/cues, publishes exact `Smile.RPG@1.3.0` provider identity in deterministic `.smilelib` format 6, and adds no Smile.UI/Smile.Game dependency, Class façade, Enum migration, or inheritance model. The default 100% baseline preserves existing games without consuming an extra random value.
 
 Phase 6.2 advances Smile.RPG to 1.0.2 and makes `SaveGames.Exists` observational with respect to the public codec buffer and RPG state. It preserves SRPG payload format 1 and introduces no Phase 7 world features.
 

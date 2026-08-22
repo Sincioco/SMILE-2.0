@@ -721,7 +721,7 @@ Assert-SmileLibraryPackage 'artifacts\libraries\Smile.Game.smilelib' `
     'libraries\Smile.Game\Smile.Game.smilelibproj' 'Smile.Game' '2.0.0' 5 5 56
 Assert-SmileGamePackage 'artifacts\libraries\Smile.Game.smilelib'
 Assert-SmileLibraryPackage 'artifacts\libraries\Smile.RPG.smilelib' `
-    'libraries\Smile.RPG\Smile.RPG.smilelibproj' 'Smile.RPG' '1.2.1' 15 15 491
+    'libraries\Smile.RPG\Smile.RPG.smilelibproj' 'Smile.RPG' '1.3.0' 15 15 497
 Assert-SmileLibraryPackage 'artifacts\libraries\Smile.Lightweight.Oop.Proof.smilelib' `
     'examples\LightweightOopCalls\LightweightOopLibrary.smilelibproj' `
     'Smile.Lightweight.Oop.Proof' '1.2.0' 1 1 8

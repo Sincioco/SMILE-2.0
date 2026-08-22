@@ -202,6 +202,34 @@ Call Check(Ignored)
 Call Check(Not Battle.IsActive(State))
 Call Check(Not Battle.IsBattleHandleValid(State, BattleHandle))
 
+' Basic Attack accuracy is side-configurable, deterministic, and reports a
+' renderer-neutral miss without applying damage or impact cues.
+
+BattleHandle = Battle.BeginBattle(State, FORMATION_NO_ESCAPE, 31)
+EventStart = Battle.EventCount(State)
+
+Call Check(BattleHandle > 0)
+Call Check(Battle.AttackBaseHitChance(State, Battle.BATTLE_SIDE_PARTY) = 100)
+Call Check(Battle.ConfigureAttackBaseHitChance(State, Battle.BATTLE_SIDE_PARTY, 0))
+Call Check(Battle.AttackBaseHitChance(State, Battle.BATTLE_SIDE_PARTY) = 0)
+Call Check(Battle.CalculatedAttackHitChance(State, 1, 3) = 5)
+Call Check(Battle.ConfigureAttackProficiencyBonus(State, 1, 25))
+Call Check(Battle.AttackProficiencyBonus(State, 1) = 25)
+Call Check(Battle.CalculatedAttackHitChance(State, 1, 3) > 5)
+Call Check(Battle.ConfigureAttackProficiencyBonus(State, 1, 0))
+Call Check(Not Battle.ConfigureAttackBaseHitChance(State, 0, 100))
+
+PreviousExperience = Battle.Health(State, 3)
+
+Call Check(Battle.QueueAction(State, 1, Battle.BATTLE_ACTION_ATTACK, 0, 3))
+Call Check(Battle.StartRound(State))
+Call ResolveRound()
+Call Check(Battle.Health(State, 3) = PreviousExperience)
+Call Check(HasEventKind(Battle.BATTLE_EVENT_MISS, EventStart))
+Call Check(BattleView.ClearCues(State))
+Call Check(BattleView.AppendEvents(State, EventStart))
+Call Check(Battle.CancelBattle(State))
+
 ' A revive effect can target a defeated active party member and consumes exactly one Item.
 
 Call Check(Characters.SetHealth(State, CHARACTER_MAGE, 0))

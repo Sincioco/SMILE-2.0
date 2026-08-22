@@ -373,6 +373,12 @@ Private Function AppendEvent(StateHandle As Number, EventIndex As Number) As Boo
 
         Return ReturnValue
 
+    Else If Kind = Battle.BATTLE_EVENT_MISS Then
+
+        ReturnValue = AddCue(StateHandle, BATTLE_CUE_MESSAGE, ActorId, TargetId, ValueOne, ValueTwo, 12, Message)
+
+        Return ReturnValue
+
     Else If Kind = Battle.BATTLE_EVENT_ABILITY Then
 
         If Not AddCue(StateHandle, BATTLE_CUE_EFFECT, ActorId, TargetId, ValueOne, ValueTwo, 14, Message) Then

@@ -632,7 +632,8 @@ Phase 8 adds no language syntax, native runtime primitive, package API, or file-
 Phase 9 advances `Smile.RPG` to 1.2.0 with four ordinary deterministic battle modules and no new language syntax, compiler/runtime helper, rendering primitive, or persistence format. Active battles block Save/Load and remain transient. See [phase9-rpg-battles.md](phase9-rpg-battles.md).
 
 The lightweight-OOP compatibility release rebuilds that unchanged fifteen-Module
-surface as `Smile.RPG` 1.2.1 in deterministic `.smilelib` format 6. It adds no
+surface as `Smile.RPG` 1.3.0 in deterministic `.smilelib` format 6. Version
+1.3.0 adds opt-in progression-aware basic-Attack accuracy and miss cues. It adds no
 RPG Class façade or Enum conversion, no Smile.UI/Smile.Game dependency, and no
 SRPG save-payload revision.
 

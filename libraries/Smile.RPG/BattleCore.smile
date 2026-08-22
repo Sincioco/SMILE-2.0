@@ -65,6 +65,7 @@ Public Const BATTLE_EVENT_DEFEAT = 20
 Public Const BATTLE_EVENT_ESCAPE = 21
 Public Const BATTLE_EVENT_REWARD = 22
 Public Const BATTLE_EVENT_MESSAGE = 23
+Public Const BATTLE_EVENT_MISS = 24
 
 Private Const CHECKPOINT_MAGIC_POINT_PAYMENT = 1
 Private Const CHECKPOINT_ITEM_REMOVAL = 2
@@ -140,6 +141,8 @@ Private Dim ActiveParticipantCounts[4] As Number
 Private Dim RewardExperience[4] As Number
 Private Dim RewardGold[4] As Number
 Private Dim RewardsCommitted[4] As Boolean
+Private Dim PartyAttackBaseHitChances[4] As Number
+Private Dim EnemyAttackBaseHitChances[4] As Number
 
 Private Dim ParticipantSides[4, 12] As Number
 Private Dim ParticipantReferenceIds[4, 12] As Number
@@ -157,6 +160,7 @@ Private Dim ParticipantMagic[4, 12] As Number
 Private Dim ParticipantResistance[4, 12] As Number
 Private Dim ParticipantAgility[4, 12] As Number
 Private Dim ParticipantLuck[4, 12] As Number
+Private Dim ParticipantAttackProficiencyBonuses[4, 12] As Number
 Private Dim ParticipantDefending[4, 12] As Boolean
 Private Dim ParticipantAiProfileIds[4, 12] As Number
 
@@ -583,6 +587,7 @@ Private Sub ClearParticipant(Slot As Number, Index As Number)
     ParticipantResistance[Slot, Index] = 0
     ParticipantAgility[Slot, Index] = 0
     ParticipantLuck[Slot, Index] = 0
+    ParticipantAttackProficiencyBonuses[Slot, Index] = 0
     ParticipantDefending[Slot, Index] = False
     ParticipantAiProfileIds[Slot, Index] = 0
     ParticipantStatusCounts[Slot, Index] = 0
@@ -616,6 +621,8 @@ Private Sub ResetSession(Slot As Number)
     RewardExperience[Slot] = 0
     RewardGold[Slot] = 0
     RewardsCommitted[Slot] = False
+    PartyAttackBaseHitChances[Slot] = 100
+    EnemyAttackBaseHitChances[Slot] = 100
     ScheduleCounts[Slot] = 0
     SchedulePositions[Slot] = 0
     EventCounts[Slot] = 0
@@ -652,6 +659,172 @@ Private Function AddPartyParticipant(StateHandle As Number, CharacterId As Numbe
     ParticipantLuck[Slot, Index] = Characters.Luck(StateHandle, CharacterId) + Equipment.LuckBonus(StateHandle, CharacterId)
     ActiveParticipantCounts[Slot] = Index + 1
     Return True
+
+End Function
+
+''' Sets the basic-Attack baseline for one side of the active battle. The final
+''' chance also incorporates character growth, combat stats, and equipped bonuses.
+Public Function ConfigureAttackBaseHitChance(
+    StateHandle As Number,
+    Side As Number,
+    HitChancePercent As Number
+) As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not BattleActive[Slot] Or
+        (Side <> BATTLE_SIDE_PARTY And Side <> BATTLE_SIDE_ENEMY) Or
+        HitChancePercent < 0 Or
+        HitChancePercent > 100) Then
+        Return False
+    End If
+
+    If Side = BATTLE_SIDE_PARTY Then
+        PartyAttackBaseHitChances[Slot] = HitChancePercent
+    Else
+
+        EnemyAttackBaseHitChances[Slot] = HitChancePercent
+    End If
+
+    Return True
+
+End Function
+
+''' Returns the configured basic-Attack baseline for one side.
+Public Function AttackBaseHitChance(StateHandle As Number, Side As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Not BattleActive[Slot] Or
+        (Side <> BATTLE_SIDE_PARTY And Side <> BATTLE_SIDE_ENEMY)) Then
+        Return 0
+    End If
+
+    If Side = BATTLE_SIDE_PARTY Then
+        ReturnValue = PartyAttackBaseHitChances[Slot]
+
+        Return ReturnValue
+    End If
+
+    ReturnValue = EnemyAttackBaseHitChances[Slot]
+
+    Return ReturnValue
+
+End Function
+
+''' Supplies an application-owned weapon-skill or class-proficiency adjustment
+''' for one active participant. Equipment statistic bonuses are already automatic.
+Public Function ConfigureAttackProficiencyBonus(
+    StateHandle As Number,
+    ParticipantId As Number,
+    BonusPercent As Number
+) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If (Slot < 0 Or
+        Not BattleActive[Slot] Or
+        Index < 0 Or
+        BonusPercent < -100 Or
+        BonusPercent > 100) Then
+        Return False
+    End If
+
+    ParticipantAttackProficiencyBonuses[Slot, Index] = BonusPercent
+
+    Return True
+
+End Function
+
+''' Returns one participant's application-owned weapon/class proficiency bonus.
+Public Function AttackProficiencyBonus(StateHandle As Number, ParticipantId As Number) As Number
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim ReturnValue As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ParticipantIndex(StateHandle, ParticipantId)
+
+    If Slot < 0 Or Not BattleActive[Slot] Or Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ParticipantAttackProficiencyBonuses[Slot, Index]
+
+    Return ReturnValue
+
+End Function
+
+''' Calculates the effective chance for one basic Attack. Party growth comes from
+''' Level; Agility, Luck, Strength, Defense, and all equipped bonuses are already
+''' frozen into the active participants. The PRNG only resolves this derived chance.
+Public Function CalculatedAttackHitChance(
+    StateHandle As Number,
+    ActorId As Number,
+    TargetId As Number
+) As Number
+
+    Dim Slot As Number
+    Dim ActorIndex As Number
+    Dim TargetIndex As Number
+    Dim BaseChance As Number
+    Dim LevelBonus As Number
+    Dim StatisticAdjustment As Number
+    Dim ReturnValue As Number
+
+    Slot = StateSlot(StateHandle)
+    ActorIndex = ParticipantIndex(StateHandle, ActorId)
+    TargetIndex = ParticipantIndex(StateHandle, TargetId)
+
+    If (Slot < 0 Or
+        Not BattleActive[Slot] Or
+        ActorIndex < 0 Or
+        TargetIndex < 0 Or
+        ParticipantSides[Slot, ActorIndex] = ParticipantSides[Slot, TargetIndex]) Then
+        Return 0
+    End If
+
+    If ParticipantSides[Slot, ActorIndex] = BATTLE_SIDE_PARTY Then
+        BaseChance = PartyAttackBaseHitChances[Slot]
+        LevelBonus = Characters.Level(StateHandle, ParticipantReferenceIds[Slot, ActorIndex]) / 3
+    Else
+
+        BaseChance = EnemyAttackBaseHitChances[Slot]
+    End If
+
+    ''' A default 100 baseline preserves legacy guaranteed-hit behavior and does
+    ''' not consume a PRNG value. Lower baselines opt into progression-aware accuracy.
+
+    If BaseChance >= 100 Then
+        Return 100
+    End If
+
+    StatisticAdjustment = (
+        (ParticipantAgility[Slot, ActorIndex] - ParticipantAgility[Slot, TargetIndex]) / 6 +
+        (ParticipantLuck[Slot, ActorIndex] - ParticipantLuck[Slot, TargetIndex]) / 8 +
+        (ParticipantStrength[Slot, ActorIndex] - ParticipantDefense[Slot, TargetIndex]) / 20
+    )
+    ReturnValue = (
+        BaseChance +
+        LevelBonus +
+        ParticipantAttackProficiencyBonuses[Slot, ActorIndex] +
+        StatisticAdjustment
+    )
+    ReturnValue = Max(5, Min(100, ReturnValue))
+    Return ReturnValue
 
 End Function
 
@@ -2194,6 +2367,8 @@ Private Function ExecuteAttack(StateHandle As Number, ActorIndex As Number, Targ
     Dim ReturnValue As Boolean
 
     Dim ActualTarget As Number
+    Dim HitChance As Number
+    Dim Roll As Number
 
     ActualTarget = Retarget(StateHandle, ActorIndex, TargetIndex, Core.RPG_TARGET_ONE_ENEMY, 0)
 
@@ -2203,6 +2378,20 @@ Private Function ExecuteAttack(StateHandle As Number, ActorIndex As Number, Targ
 
     If Not AddEvent(StateHandle, BATTLE_EVENT_ATTACK, ActorIndex + 1, ActualTarget + 1, 0, 0, "Attack") Then
         Return False
+    End If
+
+    HitChance = CalculatedAttackHitChance(StateHandle, ActorIndex + 1, ActualTarget + 1)
+
+    If HitChance < 100 Then
+
+        Roll = NextRandom(StateHandle) Mod 100
+
+        If Roll >= HitChance Then
+            ReturnValue = AddEvent(StateHandle, BATTLE_EVENT_MISS, ActorIndex + 1, ActualTarget + 1, Roll, HitChance, "Miss")
+
+            Return ReturnValue
+        End If
+
     End If
 
     ReturnValue = ApplyDamage(StateHandle, ActorIndex, ActualTarget, 0, False)
