@@ -137,11 +137,17 @@ internal static class TransactionalOutputPublisher
 
         var backupRoot = Path.Combine(Path.GetDirectoryName(output)!,
             "." + Path.GetFileName(output) + ".smile-backup-" + Guid.NewGuid().ToString("N"));
+        var changed = current.Where(relative =>
+        {
+            var destination = ContainedPath(output, relative);
+            return !File.Exists(destination) ||
+                   !FilesHaveSameContent(ContainedPath(stage, relative), destination);
+        }).ToArray();
         var backedUp = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var committed = new List<string>();
         try
         {
-            foreach (var relative in current)
+            foreach (var relative in changed)
             {
                 var destination = ContainedPath(output, relative);
                 if (!File.Exists(destination))
@@ -153,7 +159,7 @@ internal static class TransactionalOutputPublisher
             }
 
             testHook?.Invoke(TransactionalPublicationStage.BeforeCommit, null);
-            foreach (var relative in current)
+            foreach (var relative in changed)
             {
                 ReplaceFromCopy(ContainedPath(stage, relative), ContainedPath(output, relative));
                 committed.Add(relative);
@@ -196,6 +202,24 @@ internal static class TransactionalOutputPublisher
         {
             TryDeleteDirectory(backupRoot);
         }
+    }
+
+    private static bool FilesHaveSameContent(string leftPath, string rightPath)
+    {
+        var leftLength = new FileInfo(leftPath).Length;
+        var rightLength = new FileInfo(rightPath).Length;
+        if (leftLength != rightLength)
+            return false;
+        if (leftLength == 0)
+            return true;
+
+        using var left = new FileStream(leftPath, FileMode.Open, FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete, 128 * 1024, FileOptions.SequentialScan);
+        using var right = new FileStream(rightPath, FileMode.Open, FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete, 128 * 1024, FileOptions.SequentialScan);
+        var leftHash = SHA256.HashData(left);
+        var rightHash = SHA256.HashData(right);
+        return leftHash.AsSpan().SequenceEqual(rightHash);
     }
 
     internal static string CreateStagingDirectory(string targetPath)

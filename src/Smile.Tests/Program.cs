@@ -5694,6 +5694,36 @@ Run("Transactional managed publication rolls back failures and removes stale own
     finally { Directory.Delete(directory, true); }
 });
 
+Run("Transactional managed publication skips byte-identical files and replaces same-length changes", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileOutputIdentityTests-" + Guid.NewGuid().ToString("N"));
+    var staging = Path.Combine(directory, "staging");
+    var output = Path.Combine(directory, "output");
+    Directory.CreateDirectory(Path.Combine(staging, "Assets"));
+    Directory.CreateDirectory(Path.Combine(output, "Assets"));
+    try
+    {
+        File.WriteAllText(Path.Combine(staging, "Assets", "Stable.bin"), "same-content");
+        File.WriteAllText(Path.Combine(output, "Assets", "Stable.bin"), "same-content");
+        File.WriteAllText(Path.Combine(staging, "Assets", "Changed.bin"), "new!");
+        File.WriteAllText(Path.Combine(output, "Assets", "Changed.bin"), "old!");
+        var committed = new List<string>();
+        var current = new[] { "Assets/Stable.bin", "Assets/Changed.bin" };
+
+        TransactionalOutputPublisher.PublishDirectory(staging, output, current, current,
+            (stage, relative) =>
+            {
+                if (stage == TransactionalPublicationStage.AfterFileCommit)
+                    committed.Add(relative!);
+            });
+
+        Equal(Path.Combine("Assets", "Changed.bin"), string.Join("|", committed));
+        Equal("same-content", File.ReadAllText(Path.Combine(output, "Assets", "Stable.bin")));
+        Equal("new!", File.ReadAllText(Path.Combine(output, "Assets", "Changed.bin")));
+    }
+    finally { Directory.Delete(directory, true); }
+});
+
 Run("Failed staged Web generation preserves the complete prior publication", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "SmileWebTransactionTests-" + Guid.NewGuid().ToString("N"));
