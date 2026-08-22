@@ -188,12 +188,15 @@ Private Sub CreateRigTemplates()
     ''' A shallow triangular prism stays visible from oblique action cameras and
     ''' gives broad low-poly wings a solid, connected silhouette.
     WingMesh = Graphics3D.CreateMesh3D(6, 24)
-    OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 0, -50, 50, -50)
-    OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 1, 50, 50, -50)
-    OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 2, 0, -50, -50)
-    OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 3, -50, 50, 50)
-    OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 4, 50, 50, 50)
-    OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 5, 0, -50, 50)
+    ''' Segment transforms map local negative Y to the parent joint. Keep the
+    ''' broad membrane edge there and taper toward positive Y so every span is
+    ''' rooted in its parent mass instead of flaring away from it.
+    OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 0, -50, -50, -50)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 1, 50, -50, -50)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 2, 0, 50, -50)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 3, -50, -50, 50)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 4, 50, -50, 50)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 5, 0, 50, 50)
     OperationAccepted = Graphics3D.SetMeshTriangle3D(WingMesh, 0, 0, 1, 2)
     OperationAccepted = Graphics3D.SetMeshTriangle3D(WingMesh, 1, 5, 4, 3)
     OperationAccepted = Graphics3D.SetMeshTriangle3D(WingMesh, 2, 0, 3, 4)
@@ -1640,13 +1643,13 @@ Private Sub PoseDragon(
     RightWingTip = Articulation.SolveHangingSegment(RightWing.EndX, RightWing.EndY, RightWing.EndZ, 236, -70 + WingFlap / 4, Min(82, WingSpread + 22))
 
     Call ApplySegment(DragonParts[11], LeftWing, 25)
-    Call ApplyPart(DragonParts[12], LeftWing.CenterX, LeftWing.CenterY, LeftWing.CenterZ, 176, LeftWing.Length + 64, 18, LeftWing.RotationX, LeftWing.RotationY, LeftWing.RotationZ)
+    Call ApplyPart(DragonParts[12], LeftWing.CenterX, LeftWing.CenterY, LeftWing.CenterZ, 204, LeftWing.Length + 92, 20, LeftWing.RotationX, LeftWing.RotationY, LeftWing.RotationZ)
     Call ApplySegment(DragonParts[13], RightWing, 25)
-    Call ApplyPart(DragonParts[14], RightWing.CenterX, RightWing.CenterY, RightWing.CenterZ, 176, RightWing.Length + 64, 18, RightWing.RotationX, RightWing.RotationY, RightWing.RotationZ)
+    Call ApplyPart(DragonParts[14], RightWing.CenterX, RightWing.CenterY, RightWing.CenterZ, 204, RightWing.Length + 92, 20, RightWing.RotationX, RightWing.RotationY, RightWing.RotationZ)
     Call ApplySegment(DragonParts[50], LeftWingTip, 17)
-    Call ApplyPart(DragonParts[51], LeftWingTip.CenterX, LeftWingTip.CenterY, LeftWingTip.CenterZ, 132, LeftWingTip.Length + 58, 15, LeftWingTip.RotationX, LeftWingTip.RotationY, LeftWingTip.RotationZ)
+    Call ApplyPart(DragonParts[51], LeftWingTip.CenterX, LeftWingTip.CenterY, LeftWingTip.CenterZ, 158, LeftWingTip.Length + 82, 17, LeftWingTip.RotationX, LeftWingTip.RotationY, LeftWingTip.RotationZ)
     Call ApplySegment(DragonParts[52], RightWingTip, 17)
-    Call ApplyPart(DragonParts[53], RightWingTip.CenterX, RightWingTip.CenterY, RightWingTip.CenterZ, 132, RightWingTip.Length + 58, 15, RightWingTip.RotationX, RightWingTip.RotationY, RightWingTip.RotationZ)
+    Call ApplyPart(DragonParts[53], RightWingTip.CenterX, RightWingTip.CenterY, RightWingTip.CenterZ, 158, RightWingTip.Length + 82, 17, RightWingTip.RotationX, RightWingTip.RotationY, RightWingTip.RotationZ)
 
     FrontLeftUpper = Articulation.SolveHangingSegment(RootX - 92, RootY - 34 - LandingCompression, RootZ - 78, 104, -20 - LegTuck + ClawReach, -8)
     FrontLeftLower = Articulation.SolveHangingSegment(FrontLeftUpper.EndX, FrontLeftUpper.EndY, FrontLeftUpper.EndZ, 92, 13 + LegTuck - ClawReach / 3, -5)
