@@ -112,14 +112,14 @@ Do
 
                         ''' Keep automatic decisions cinematic instead of chaining
                         ''' at apparent fast-forward speed. Presentation and VFX
-                        ''' still update every frame; only one battle tick in six
-                        ''' becomes a short recovery beat.
+                        ''' still update every frame; five of every eight frames
+                        ''' advance battle mechanics, a further 25% pace reduction.
 
                         AutoPacePhase = AutoPacePhase + 1
 
-                        If AutoPacePhase >= 6 Then
+                        If AutoPacePhase >= 8 Then
                             AutoPacePhase = 0
-                        Else
+                        Else If AutoPacePhase <= 5 Then
                             Call SubmitDemoDecision()
                             Call Battle.Update()
                             Call Audio.Update()
