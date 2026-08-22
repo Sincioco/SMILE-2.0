@@ -28,6 +28,7 @@ Dim FpsFrames As Number
 Dim FpsElapsed As Number
 Dim DisplayedFps As Number
 Dim InterfacePointerBlocked As Boolean
+Dim AudioUnlocked As Boolean
 
 Game Window "SMILE 2.0 Dragonfall: Playable Battle" Size 960 By 540
 
@@ -60,6 +61,8 @@ Do
 
         Call HandleBattleCommand(KeyValue)
     End If
+
+    Call UpdateAudioUnlock(KeyValue)
 
     ReadyPlayer = Battle.NextReadyPlayer()
     InterfacePointerBlocked = (ReadyPlayer > 0 And
@@ -134,6 +137,24 @@ Sub StartEncounter()
 
     GlobalStep = 0
     Accumulator = 0
+
+End Sub
+
+Sub UpdateAudioUnlock(PressedKey As Number)
+
+    If AudioUnlocked Then
+        Return
+    End If
+
+    If (PressedKey > 0 Or
+        Pointer_Pressed(POINTER_PRIMARY) Or
+        Pointer_Pressed(POINTER_MIDDLE) Or
+        Pointer_Pressed(POINTER_SECONDARY)) Then
+
+        AudioUnlocked = True
+        Call Audio.PlayReadyCue()
+
+    End If
 
 End Sub
 
@@ -267,7 +288,11 @@ Sub DrawFrame()
 
     End If
 
-    Draw Text "D FPS  //  LEFT DRAG PAN  MIDDLE DRAG ORBIT  WHEEL ZOOM  //  SPACE PAUSE  W RESTART" At 480, 518 Size 12 Color LIGHT_GRAY Centered
+    If AudioUnlocked Then
+        Draw Text "D FPS  //  LEFT DRAG PAN  MIDDLE DRAG ORBIT  WHEEL ZOOM  //  SPACE PAUSE  W RESTART" At 480, 518 Size 12 Color LIGHT_GRAY Centered
+    Else
+        Draw Text "CLICK ARENA OR PRESS A KEY TO ENABLE SAMPLED SFX" At 480, 518 Size 12 Color CYAN Centered
+    End If
 
 End Sub
 

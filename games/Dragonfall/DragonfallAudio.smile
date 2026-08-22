@@ -18,6 +18,15 @@ Public Sub Reset()
 
 End Sub
 
+''' A short sampled acknowledgement for Web audio-unlock gestures. Calling it
+''' from the first player input makes browser autoplay requirements explicit
+''' without changing combat timing or relying on synthesized tones.
+Public Sub PlayReadyCue()
+
+    Play Sound "Assets\SFX\MagicCast.wav" On Channel CHANNEL_MAGIC
+
+End Sub
+
 Private Function IsHeroMagic(Visual As Number) As Boolean
 
     Dim ReturnValue As Boolean
