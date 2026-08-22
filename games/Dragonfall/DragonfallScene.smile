@@ -46,7 +46,7 @@ Private Const ROLE_ATTACKER = 2
 Private Const ROLE_HEALER = 3
 Private Const ROLE_WIZARD = 4
 Private Const DRAGON_ROOT_X = 820
-Private Const DRAGON_ROOT_Y = 280
+Private Const DRAGON_ROOT_Y = 225
 Private Const DRAGON_ROOT_Z = 45
 Private Const DRAGON_SCALE_PERCENT = 200
 Private Const DRAGON_GROUND_Y = -49
@@ -1423,16 +1423,16 @@ Private Sub CreateDragon()
     Call InitializeRigPart(DragonParts[14], RIG_WING, DragonWingMaterial)
     Call InitializeRigPart(DragonParts[15], RIG_CYLINDER, DragonMaterial)
     Call InitializeRigPart(DragonParts[16], RIG_CYLINDER, DragonMaterial)
-    Call InitializeRigPart(DragonParts[17], RIG_PYRAMID, DragonUnderbellyMaterial)
+    Call InitializeRigPart(DragonParts[17], RIG_CUBE, DragonUnderbellyMaterial)
     Call InitializeRigPart(DragonParts[18], RIG_CYLINDER, DragonMaterial)
     Call InitializeRigPart(DragonParts[19], RIG_CYLINDER, DragonMaterial)
-    Call InitializeRigPart(DragonParts[20], RIG_PYRAMID, DragonUnderbellyMaterial)
+    Call InitializeRigPart(DragonParts[20], RIG_CUBE, DragonUnderbellyMaterial)
     Call InitializeRigPart(DragonParts[21], RIG_CYLINDER, DragonMaterial)
     Call InitializeRigPart(DragonParts[22], RIG_CYLINDER, DragonMaterial)
-    Call InitializeRigPart(DragonParts[23], RIG_PYRAMID, DragonUnderbellyMaterial)
+    Call InitializeRigPart(DragonParts[23], RIG_CUBE, DragonUnderbellyMaterial)
     Call InitializeRigPart(DragonParts[24], RIG_CYLINDER, DragonMaterial)
     Call InitializeRigPart(DragonParts[25], RIG_CYLINDER, DragonMaterial)
-    Call InitializeRigPart(DragonParts[26], RIG_PYRAMID, DragonUnderbellyMaterial)
+    Call InitializeRigPart(DragonParts[26], RIG_CUBE, DragonUnderbellyMaterial)
     Call InitializeRigPart(DragonParts[27], RIG_CYLINDER, DragonMaterial)
     Call InitializeRigPart(DragonParts[28], RIG_CYLINDER, DragonMaterial)
     Call InitializeRigPart(DragonParts[29], RIG_CYLINDER, DragonMaterial)
@@ -1503,13 +1503,13 @@ Private Function GroundDragonPose() As Number
     Dim FootBottom As Number
     Dim Correction As Number
 
-    LowestY = DragonParts[17].Position.Y - DragonParts[17].ScaleX / 2
+    LowestY = DragonParts[17].Position.Y - DragonParts[17].ScaleY / 2
 
-    FootBottom = DragonParts[20].Position.Y - DragonParts[20].ScaleX / 2
+    FootBottom = DragonParts[20].Position.Y - DragonParts[20].ScaleY / 2
     LowestY = Min(LowestY, FootBottom)
-    FootBottom = DragonParts[23].Position.Y - DragonParts[23].ScaleX / 2
+    FootBottom = DragonParts[23].Position.Y - DragonParts[23].ScaleY / 2
     LowestY = Min(LowestY, FootBottom)
-    FootBottom = DragonParts[26].Position.Y - DragonParts[26].ScaleX / 2
+    FootBottom = DragonParts[26].Position.Y - DragonParts[26].ScaleY / 2
     LowestY = Min(LowestY, FootBottom)
     FootBottom = DragonParts[46].Position.Y - DragonParts[46].ScaleX / 2
     LowestY = Min(LowestY, FootBottom)
@@ -1737,20 +1737,20 @@ Private Sub PoseDragon(
 
     Call ApplySegment(DragonParts[15], FrontLeftUpper, 31)
     Call ApplySegment(DragonParts[16], FrontLeftLower, 25)
-    Call ApplyPart(DragonParts[17], FrontLeftLower.EndX - 22, FrontLeftLower.EndY, FrontLeftLower.EndZ, 58, 44, 58, 0, 0, -90)
-    Call ApplyPart(DragonParts[46], FrontLeftLower.EndX - 30, FrontLeftLower.EndY - 3, FrontLeftLower.EndZ - 22, 22, 54, 22, 0, 0, -90)
+    Call ApplyPart(DragonParts[17], FrontLeftLower.EndX - 24, FrontLeftLower.EndY + 10, FrontLeftLower.EndZ, 74, 24, 62, 0, 0, 0)
+    Call ApplyPart(DragonParts[46], FrontLeftLower.EndX - 44, FrontLeftLower.EndY + 8, FrontLeftLower.EndZ - 22, 20, 56, 20, 0, 0, -90)
     Call ApplySegment(DragonParts[18], FrontRightUpper, 31)
     Call ApplySegment(DragonParts[19], FrontRightLower, 25)
-    Call ApplyPart(DragonParts[20], FrontRightLower.EndX - 22, FrontRightLower.EndY, FrontRightLower.EndZ, 58, 44, 58, 0, 0, -90)
-    Call ApplyPart(DragonParts[47], FrontRightLower.EndX - 30, FrontRightLower.EndY - 3, FrontRightLower.EndZ + 22, 22, 54, 22, 0, 0, -90)
+    Call ApplyPart(DragonParts[20], FrontRightLower.EndX - 24, FrontRightLower.EndY + 10, FrontRightLower.EndZ, 74, 24, 62, 0, 0, 0)
+    Call ApplyPart(DragonParts[47], FrontRightLower.EndX - 44, FrontRightLower.EndY + 8, FrontRightLower.EndZ + 22, 20, 56, 20, 0, 0, -90)
     Call ApplySegment(DragonParts[21], RearLeftUpper, 36)
     Call ApplySegment(DragonParts[22], RearLeftLower, 28)
-    Call ApplyPart(DragonParts[23], RearLeftLower.EndX - 18, RearLeftLower.EndY, RearLeftLower.EndZ, 64, 48, 64, 0, 0, -90)
-    Call ApplyPart(DragonParts[48], RearLeftLower.EndX - 27, RearLeftLower.EndY - 3, RearLeftLower.EndZ - 24, 24, 58, 24, 0, 0, -90)
+    Call ApplyPart(DragonParts[23], RearLeftLower.EndX - 24, RearLeftLower.EndY + 10, RearLeftLower.EndZ, 82, 24, 68, 0, 0, 0)
+    Call ApplyPart(DragonParts[48], RearLeftLower.EndX - 48, RearLeftLower.EndY + 8, RearLeftLower.EndZ - 24, 22, 60, 22, 0, 0, -90)
     Call ApplySegment(DragonParts[24], RearRightUpper, 36)
     Call ApplySegment(DragonParts[25], RearRightLower, 28)
-    Call ApplyPart(DragonParts[26], RearRightLower.EndX - 18, RearRightLower.EndY, RearRightLower.EndZ, 64, 48, 64, 0, 0, -90)
-    Call ApplyPart(DragonParts[49], RearRightLower.EndX - 27, RearRightLower.EndY - 3, RearRightLower.EndZ + 24, 24, 58, 24, 0, 0, -90)
+    Call ApplyPart(DragonParts[26], RearRightLower.EndX - 24, RearRightLower.EndY + 10, RearRightLower.EndZ, 82, 24, 68, 0, 0, 0)
+    Call ApplyPart(DragonParts[49], RearRightLower.EndX - 48, RearRightLower.EndY + 8, RearRightLower.EndZ + 24, 22, 60, 22, 0, 0, -90)
 
     TailBase = Articulation.SolveHangingSegment(RootX + 140, RootY + 18 - LandingCompression, RootZ, 182, 72, TailSweep / 3)
     TailMiddle = Articulation.SolveHangingSegment(TailBase.EndX, TailBase.EndY, TailBase.EndZ, 164, 82, 0 - TailSweep / 2)
