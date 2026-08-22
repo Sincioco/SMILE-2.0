@@ -1465,6 +1465,9 @@ void smile_game_clear(long long color)
 void smile_fill_rectangle(long long x, long long y, long long width, long long height, long long color)
 { smile_graphics_fill_rectangle(x, y, width, height, color); }
 
+void smile_fill_rectangle_opacity(long long x, long long y, long long width, long long height, long long color, long long opacity)
+{ smile_graphics_fill_rectangle_opacity(x, y, width, height, color, opacity); }
+
 void smile_draw_rectangle(long long x, long long y, long long width, long long height, long long color)
 { smile_graphics_draw_rectangle(x, y, width, height, color); }
 

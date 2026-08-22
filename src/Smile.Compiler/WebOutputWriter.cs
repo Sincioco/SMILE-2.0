@@ -1249,6 +1249,14 @@ internal static class WebOutputWriter
                 back.fillRect(safe(x), safe(y), safe(width), safe(height));
             }
 
+            function fillRectangleOpacity(x, y, width, height, fillColor, opacity) {
+                back.save();
+                back.globalAlpha = Math.max(0, Math.min(100, safe(opacity))) / 100;
+                back.fillStyle = color(fillColor);
+                back.fillRect(safe(x), safe(y), safe(width), safe(height));
+                back.restore();
+            }
+
             function drawRectangle(x, y, width, height, strokeColor) {
                 back.strokeStyle = color(strokeColor);
                 back.lineWidth = 1;
@@ -2070,7 +2078,7 @@ internal static class WebOutputWriter
             return {
                 safe, add, sub, mul, div, mod, neg, isTrue, booleanText, abs, min, max, timer, rgb, random,
                 array, get, set, ref, refArray, invalidRef, classCreate, classRequire, classRetain, classRelease,
-                classMoveAssign, classOwnedRef, classLiveCount, configure, gameWindow, clear, fillRectangle, drawRectangle,
+                classMoveAssign, classOwnedRef, classLiveCount, configure, gameWindow, clear, fillRectangle, fillRectangleOpacity, drawRectangle,
                 fillRoundedRectangle, drawRoundedRectangle, fillCircle, drawCircle, drawArc,
                 fillQuadrilateral, drawQuadrilateral, drawLine, drawText, drawNumber, loadImage, imageRetain,
                 imageRelease, imageAssign, imageMoveAssign, imageLoaded, imageWidth, imageHeight, drawImage,

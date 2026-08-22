@@ -37,6 +37,7 @@ typedef struct SmileGdiState
     HWND window;
     HDC back_dc;
     HBITMAP back_bitmap;
+    unsigned char* back_bits;
     HGDIOBJ old_bitmap;
     long long logical_width;
     long long logical_height;
@@ -125,6 +126,7 @@ static void smile_gdi_release_buffer(SmileGdiState* state)
         DeleteDC(state->back_dc);
     state->back_dc = 0;
     state->back_bitmap = 0;
+    state->back_bits = 0;
     state->old_bitmap = 0;
     state->physical_width = 0;
     state->physical_height = 0;
@@ -268,6 +270,7 @@ static int smile_gdi_create_back_buffer(SmileGdiState* state, int width, int hei
     smile_gdi_release_buffer(state);
     state->back_dc = new_dc;
     state->back_bitmap = new_bitmap;
+    state->back_bits = (unsigned char*)bits;
     state->old_bitmap = new_old_bitmap;
     state->physical_width = width;
     state->physical_height = height;
@@ -395,6 +398,59 @@ static void smile_gdi_rectangle(SmileGraphicsBackend* backend, long long x, long
 static void smile_gdi_fill_rectangle(SmileGraphicsBackend* backend, long long x, long long y,
     long long width, long long height, long long color)
 { smile_gdi_rectangle(backend, x, y, width, height, 0, color, 1, 0); }
+
+static void smile_gdi_fill_rectangle_opacity(SmileGraphicsBackend* backend, long long x,
+    long long y, long long width, long long height, long long color, long long opacity)
+{
+    SmileGdiState* state = (SmileGdiState*)backend->state;
+    RECT clip;
+    int left;
+    int top;
+    int right;
+    int bottom;
+    int row;
+    int column;
+    int alpha;
+    int red;
+    int green;
+    int blue;
+    unsigned char* pixel;
+    if (state->back_bits == 0 || opacity <= 0)
+        return;
+    if (opacity >= 100)
+    {
+        smile_gdi_fill_rectangle(backend, x, y, width, height, color);
+        return;
+    }
+    left = smile_graphics_round_pixel(smile_graphics_map_x(&state->viewport, (double)x));
+    top = smile_graphics_round_pixel(smile_graphics_map_y(&state->viewport, (double)y));
+    right = smile_graphics_round_pixel(smile_graphics_map_x(&state->viewport, (double)(x + width)));
+    bottom = smile_graphics_round_pixel(smile_graphics_map_y(&state->viewport, (double)(y + height)));
+    GetClipBox(state->back_dc, &clip);
+    if (left < clip.left) left = clip.left;
+    if (top < clip.top) top = clip.top;
+    if (right > clip.right) right = clip.right;
+    if (bottom > clip.bottom) bottom = clip.bottom;
+    if (left < 0) left = 0;
+    if (top < 0) top = 0;
+    if (right > state->physical_width) right = state->physical_width;
+    if (bottom > state->physical_height) bottom = state->physical_height;
+    alpha = (int)opacity;
+    red = (int)(color & 255LL);
+    green = (int)((color >> 8) & 255LL);
+    blue = (int)((color >> 16) & 255LL);
+    for (row = top; row < bottom; row++)
+    {
+        pixel = state->back_bits + ((row * state->physical_width + left) * 4);
+        for (column = left; column < right; column++)
+        {
+            pixel[0] = (unsigned char)((blue * alpha + pixel[0] * (100 - alpha)) / 100);
+            pixel[1] = (unsigned char)((green * alpha + pixel[1] * (100 - alpha)) / 100);
+            pixel[2] = (unsigned char)((red * alpha + pixel[2] * (100 - alpha)) / 100);
+            pixel += 4;
+        }
+    }
+}
 
 static void smile_gdi_draw_rectangle(SmileGraphicsBackend* backend, long long x, long long y,
     long long width, long long height, long long color)
@@ -770,6 +826,7 @@ static const SmileGraphicsBackendVTable smile_gdi_operations =
     smile_gdi_begin_frame,
     smile_gdi_clear,
     smile_gdi_fill_rectangle,
+    smile_gdi_fill_rectangle_opacity,
     smile_gdi_draw_rectangle,
     smile_gdi_fill_rounded_rectangle,
     smile_gdi_draw_rounded_rectangle,

@@ -40,6 +40,7 @@ Dim FpsElapsed As Number
 Dim DisplayedFps As Number
 Dim DemoCatastropheRun As Boolean
 Dim CatastropheRoll As Number
+Dim AutoPacePhase As Number
 
 Game Window "SMILE 2.0 Dragonfall: The Ember Observatory" Size 960 By 540
 
@@ -102,12 +103,29 @@ Do
 
                 Else
 
-                    If Not ManualBattle Then
-                        Call SubmitDemoDecision()
-                    End If
+                    If ManualBattle Then
 
-                    Call Battle.Update()
-                    Call Audio.Update()
+                        Call Battle.Update()
+                        Call Audio.Update()
+
+                    Else
+
+                        ''' Keep automatic decisions cinematic instead of chaining
+                        ''' at apparent fast-forward speed. Presentation and VFX
+                        ''' still update every frame; only one battle tick in six
+                        ''' becomes a short recovery beat.
+
+                        AutoPacePhase = AutoPacePhase + 1
+
+                        If AutoPacePhase >= 6 Then
+                            AutoPacePhase = 0
+                        Else
+                            Call SubmitDemoDecision()
+                            Call Battle.Update()
+                            Call Audio.Update()
+                        End If
+
+                    End If
 
                 End If
 
@@ -182,6 +200,7 @@ Sub StartEncounter()
     DecisionIndex = 0
     Accumulator = 0
     ManualBattle = False
+    AutoPacePhase = 0
 
 End Sub
 
@@ -218,6 +237,7 @@ Sub ToggleBattleMode()
 
     ManualBattle = Not ManualBattle
     ResultSteps = 0
+    AutoPacePhase = 0
 
     If ManualBattle Then
         IntroSteps = 0
@@ -281,7 +301,7 @@ Function HandleInterfacePointer() As Boolean
 
     Blocked = (Pointer_Y() < 116 Or Pointer_Y() >= 420)
 
-    If (ManualBattle And
+    If (ManualCommandVisible() And
         Pointer_Y() >= 315 And
         Pointer_Y() < 420) Then
         Blocked = True
@@ -303,7 +323,7 @@ Function HandleInterfacePointer() As Boolean
         Return True
     End If
 
-    If Not ManualBattle Or Battle.NextReadyPlayer() = 0 Then
+    If Not ManualCommandVisible() Then
         Return Blocked
     End If
 
@@ -442,7 +462,7 @@ Sub DrawFrame()
         Call DrawBattleCaption()
     End If
 
-    If ManualBattle Then
+    If ManualCommandVisible() Then
         Call DrawManualCommandPanel()
     End If
 
@@ -553,7 +573,7 @@ Sub DrawCommandButton(
     Accent As Number
 )
 
-    Fill Rectangle X, 350, 140, 50, Rgb(8, 3, 18)
+    Call FillTranslucentPanel(X, 350, 140, 50, Rgb(8, 3, 18))
 
     If Enabled Then
 
@@ -577,21 +597,34 @@ Sub DrawManualCommandPanel()
         Return
     End If
 
-    Fill Rectangle 76, 312, 798, 100, Rgb(4, 7, 18)
+    Call FillTranslucentPanel(76, 312, 798, 100, Rgb(4, 7, 18))
     Draw Rectangle 76, 312, 798, 100, CYAN
     Draw Text "PLAYER COMMAND // " + HeroName(ReadyPlayer) At 480, 320 Size 16 Color CYAN Centered
-
-    If ReadyPlayer = 0 Then
-        Draw Text "ACTIVE TIME IS ADVANCING..." At 480, 365 Size 17 Color LIGHT_GRAY Centered
-
-        Return
-    End If
 
     Call DrawCommandButton(90, "1", "ATTACK", True, ORANGE)
     Call DrawCommandButton(245, "2", SkillOneName(ReadyPlayer), True, CYAN)
     Call DrawCommandButton(400, "3", "DEFEND", True, LIGHT_GREEN)
     Call DrawCommandButton(555, "4", "CINDER TONIC", True, YELLOW)
     Call DrawCommandButton(710, "S", "SPELL CYCLE", ReadyPlayer = Battle.PARTICIPANT_MIRA, LIGHT_BLUE)
+
+End Sub
+
+Function ManualCommandVisible() As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = (ManualBattle And
+        Battle.Outcome() = BattleCore.BATTLE_OUTCOME_NONE And
+        Battle.Visual() = Battle.VISUAL_IDLE And
+        Battle.NextReadyPlayer() > 0)
+
+    Return ReturnValue
+
+End Function
+
+Sub FillTranslucentPanel(X As Number, Y As Number, Width As Number, Height As Number, ColorValue As Number)
+
+    Fill Rectangle X, Y, Width, Height, ColorValue Opacity 80
 
 End Sub
 
@@ -767,6 +800,14 @@ Sub DrawHeroPanel(Participant As Number, Name As Text, X As Number, Accent As Nu
 
     Dim LevelValue As Number
     Dim LevelX As Number
+
+    If (ManualCommandVisible() And
+        Battle.NextReadyPlayer() = Participant) Then
+
+        Draw Rectangle X - 2, 422, 154, 82, CYAN
+        Draw Rectangle X - 1, 423, 152, 80, WHITE
+
+    End If
 
     Fill Rectangle X, 424, 150, 78, Rgb(8, 3, 18)
     Draw Rectangle X, 424, 150, 78, Accent

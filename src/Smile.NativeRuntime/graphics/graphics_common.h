@@ -30,6 +30,7 @@ void smile_graphics_resize(int physical_width, int physical_height);
 void smile_graphics_begin_frame(void);
 void smile_graphics_clear(long long color);
 void smile_graphics_fill_rectangle(long long x, long long y, long long width, long long height, long long color);
+void smile_graphics_fill_rectangle_opacity(long long x, long long y, long long width, long long height, long long color, long long opacity);
 void smile_graphics_draw_rectangle(long long x, long long y, long long width, long long height, long long color);
 void smile_graphics_fill_rounded_rectangle(long long x, long long y, long long width, long long height, long long radius, long long color);
 void smile_graphics_draw_rounded_rectangle(long long x, long long y, long long width, long long height, long long radius, long long color);

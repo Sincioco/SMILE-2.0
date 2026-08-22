@@ -752,6 +752,16 @@ internal sealed class Parser
                 : (isFill ? GraphicsOperation.FillRectangle : GraphicsOperation.DrawRectangle);
             arguments = ParseFixedArguments(rounded ? 6 : 5);
             end = arguments.Count == 0 ? keyword.Span.End : arguments[arguments.Count - 1].Span.End;
+
+            if (isFill && !rounded && Current.Kind == SyntaxKind.OpacityKeyword)
+            {
+                NextToken();
+                var values = new List<ExpressionSyntax>(arguments);
+                values.Add(ParseExpression());
+                arguments = values;
+                operation = GraphicsOperation.FillRectangleOpacity;
+                end = values[values.Count - 1].Span.End;
+            }
         }
         else if (Current.Kind == SyntaxKind.CircleKeyword)
         {

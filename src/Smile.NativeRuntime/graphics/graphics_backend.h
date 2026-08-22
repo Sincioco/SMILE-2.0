@@ -43,6 +43,8 @@ typedef struct SmileGraphicsBackendVTable
     void (*clear)(SmileGraphicsBackend* backend, long long color);
     void (*fill_rectangle)(SmileGraphicsBackend* backend, long long x, long long y,
         long long width, long long height, long long color);
+    void (*fill_rectangle_opacity)(SmileGraphicsBackend* backend, long long x, long long y,
+        long long width, long long height, long long color, long long opacity);
     void (*draw_rectangle)(SmileGraphicsBackend* backend, long long x, long long y,
         long long width, long long height, long long color);
     void (*fill_rounded_rectangle)(SmileGraphicsBackend* backend, long long x, long long y,

@@ -236,6 +236,12 @@ void smile_graphics_fill_rectangle(long long x, long long y, long long width, lo
     if (smile_graphics_available()) smile_active_backend.operations->fill_rectangle(&smile_active_backend, x, y, width, height, color);
 }
 
+void smile_graphics_fill_rectangle_opacity(long long x, long long y, long long width, long long height, long long color, long long opacity)
+{
+    smile_graphics_ensure_frame();
+    if (smile_graphics_available()) smile_active_backend.operations->fill_rectangle_opacity(&smile_active_backend, x, y, width, height, color, opacity);
+}
+
 void smile_graphics_draw_rectangle(long long x, long long y, long long width, long long height, long long color)
 {
     smile_graphics_ensure_frame();

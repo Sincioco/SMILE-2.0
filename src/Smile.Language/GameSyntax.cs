@@ -37,6 +37,7 @@ public sealed class ClearColorStatementSyntax : StatementSyntax
 public enum GraphicsOperation
 {
     FillRectangle,
+    FillRectangleOpacity,
     DrawRectangle,
     FillRoundedRectangle,
     DrawRoundedRectangle,

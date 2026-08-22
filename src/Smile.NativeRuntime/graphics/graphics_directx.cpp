@@ -697,6 +697,21 @@ static void smile_directx_fill_rectangle(SmileGraphicsBackend* backend, long lon
         state->d2d_context->FillRectangle(rectangle, brush);
 }
 
+static void smile_directx_fill_rectangle_opacity(SmileGraphicsBackend* backend, long long x,
+    long long y, long long width, long long height, long long color, long long opacity)
+{
+    SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
+    ID2D1SolidColorBrush* brush = smile_directx_brush(state, color);
+    D2D1_RECT_F rectangle = smile_directx_rectangle(state, x, y, width, height);
+    FLOAT alpha = (FLOAT)(opacity < 0 ? 0 : opacity > 100 ? 100 : opacity) / 100.0f;
+    if (state->frame_active && brush != 0)
+    {
+        brush->SetOpacity(alpha);
+        state->d2d_context->FillRectangle(rectangle, brush);
+        brush->SetOpacity(1.0f);
+    }
+}
+
 static void smile_directx_draw_rectangle(SmileGraphicsBackend* backend, long long x,
     long long y, long long width, long long height, long long color)
 {
@@ -1167,6 +1182,7 @@ static const SmileGraphicsBackendVTable smile_directx_operations =
     smile_directx_begin_frame,
     smile_directx_clear,
     smile_directx_fill_rectangle,
+    smile_directx_fill_rectangle_opacity,
     smile_directx_draw_rectangle,
     smile_directx_fill_rounded_rectangle,
     smile_directx_draw_rounded_rectangle,

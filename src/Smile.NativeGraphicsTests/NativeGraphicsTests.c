@@ -69,6 +69,9 @@ static void mock_clear(SmileGraphicsBackend* backend, long long color) { (void)b
 static void mock_rectangle(SmileGraphicsBackend* backend, long long x, long long y,
     long long width, long long height, long long color)
 { (void)backend; (void)x; (void)y; (void)width; (void)height; (void)color; }
+static void mock_rectangle_opacity(SmileGraphicsBackend* backend, long long x, long long y,
+    long long width, long long height, long long color, long long opacity)
+{ (void)backend; (void)x; (void)y; (void)width; (void)height; (void)color; (void)opacity; }
 static void mock_rounded(SmileGraphicsBackend* backend, long long x, long long y,
     long long width, long long height, long long radius, long long color)
 { (void)backend; (void)x; (void)y; (void)width; (void)height; (void)radius; (void)color; }
@@ -157,7 +160,7 @@ static void mock_dpi(SmileGraphicsBackend* backend, unsigned int value)
 static const SmileGraphicsBackendVTable mock_operations =
 {
     mock_initialize, mock_resize, mock_begin, mock_clear,
-    mock_rectangle, mock_rectangle, mock_rounded, mock_rounded,
+    mock_rectangle, mock_rectangle_opacity, mock_rectangle, mock_rounded, mock_rounded,
     mock_circle, mock_circle, mock_arc, mock_fill_quadrilateral, mock_draw_quadrilateral,
     mock_line, mock_text, mock_number, mock_image, mock_push_clip, mock_pop_clip,
     mock_text_width, mock_text_height,

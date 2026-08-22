@@ -235,6 +235,7 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_graphics_configure:PROC");
         Line("EXTERN smile_game_clear:PROC");
         Line("EXTERN smile_fill_rectangle:PROC");
+        Line("EXTERN smile_fill_rectangle_opacity:PROC");
         Line("EXTERN smile_draw_rectangle:PROC");
         Line("EXTERN smile_fill_rounded_rectangle:PROC");
         Line("EXTERN smile_draw_rounded_rectangle:PROC");
@@ -1100,6 +1101,7 @@ internal sealed class MasmEmitter
         var name = statement.Operation switch
         {
             GraphicsOperation.FillRectangle => "smile_fill_rectangle",
+            GraphicsOperation.FillRectangleOpacity => "smile_fill_rectangle_opacity",
             GraphicsOperation.DrawRectangle => "smile_draw_rectangle",
             GraphicsOperation.FillRoundedRectangle => "smile_fill_rounded_rectangle",
             GraphicsOperation.DrawRoundedRectangle => "smile_draw_rounded_rectangle",

@@ -600,6 +600,9 @@ internal sealed class WebEmitter
             case GraphicsOperation.FillRectangle:
                 Line($"smile.fillRectangle({arguments});");
                 return;
+            case GraphicsOperation.FillRectangleOpacity:
+                Line($"smile.fillRectangleOpacity({arguments});");
+                return;
             case GraphicsOperation.DrawRectangle:
                 Line($"smile.drawRectangle({arguments});");
                 return;
