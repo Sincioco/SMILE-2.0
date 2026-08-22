@@ -27,7 +27,7 @@ Public Const SHOT_IDLE_PARTY_BACK = 12
 Private Const ARENA_OBJECT_COUNT = 39
 Private Const HERO_PART_COUNT = 56
 Private Const PARTY_OBJECT_COUNT = 224
-Private Const DRAGON_OBJECT_COUNT = 93
+Private Const DRAGON_OBJECT_COUNT = 97
 Private Const CINDERLING_COUNT = 3
 Private Const CINDERLING_PARTS_PER_ENEMY = 30
 Private Const CINDERLING_OBJECT_COUNT = 90
@@ -100,7 +100,7 @@ Private Dim ParticleMaterial As Core.Material3D
 Private Dim RigTemplates[8] As Core.Object3D
 Private Dim Arena[39] As Core.Object3D
 Private Dim PartyParts[224] As Core.Object3D
-Private Dim DragonParts[93] As Core.Object3D
+Private Dim DragonParts[97] As Core.Object3D
 Private Dim CinderlingParts[90] As Core.Object3D
 Private Dim ParticleTemplate As Core.Object3D
 Private Dim ParticleObjects[128] As Core.Object3D
@@ -1650,6 +1650,10 @@ Private Sub CreateDragon()
     Call InitializeRigPart(DragonParts[90], RIG_PYRAMID, DragonWingMaterial)
     Call InitializeRigPart(DragonParts[91], RIG_PYRAMID, DragonWingMaterial)
     Call InitializeRigPart(DragonParts[92], RIG_PYRAMID, DragonWingMaterial)
+    Call InitializeRigPart(DragonParts[93], RIG_CYLINDER, DragonMaterial)
+    Call InitializeRigPart(DragonParts[94], RIG_CYLINDER, DragonMaterial)
+    Call InitializeRigPart(DragonParts[95], RIG_CYLINDER, DragonMaterial)
+    Call InitializeRigPart(DragonParts[96], RIG_CYLINDER, DragonMaterial)
 
     Call PoseDragon(DRAGON_ROOT_X, DRAGON_ROOT_Y, DRAGON_ROOT_Z, Battle.VISUAL_IDLE, 0, 0)
 
@@ -1763,6 +1767,10 @@ Private Sub PoseDragon(
     Dim LeftWingTip As Articulation.SegmentPose3D
     Dim RightWing As Articulation.SegmentPose3D
     Dim RightWingTip As Articulation.SegmentPose3D
+    Dim LeftWingFinger As Articulation.SegmentPose3D
+    Dim LeftWingTipFinger As Articulation.SegmentPose3D
+    Dim RightWingFinger As Articulation.SegmentPose3D
+    Dim RightWingTipFinger As Articulation.SegmentPose3D
     Dim NeckBase As Articulation.SegmentPose3D
     Dim NeckUpper As Articulation.SegmentPose3D
     Dim FrontLeftUpper As Articulation.SegmentPose3D
@@ -1930,6 +1938,10 @@ Private Sub PoseDragon(
     RightWing = Articulation.SolveHangingSegment(RootX + 18, RootY + 72 - LandingCompression, RootZ + 68, 272, -124 - WingFlap / 3, WingSpread)
     LeftWingTip = Articulation.SolveHangingSegment(LeftWing.EndX, LeftWing.EndY, LeftWing.EndZ, 252, -104 + WingFlap / 5, 0 - Min(82, WingSpread + 22))
     RightWingTip = Articulation.SolveHangingSegment(RightWing.EndX, RightWing.EndY, RightWing.EndZ, 252, -104 + WingFlap / 5, Min(82, WingSpread + 22))
+    LeftWingFinger = Articulation.SolveSegmentBetweenPoints(RootX + 6, RootY + 55 - LandingCompression, RootZ - 72, LeftWing.EndX - 38, LeftWing.EndY - 58, LeftWing.EndZ + 12)
+    RightWingFinger = Articulation.SolveSegmentBetweenPoints(RootX + 6, RootY + 55 - LandingCompression, RootZ + 72, RightWing.EndX - 38, RightWing.EndY - 58, RightWing.EndZ - 12)
+    LeftWingTipFinger = Articulation.SolveSegmentBetweenPoints(LeftWing.EndX - 22, LeftWing.EndY - 18, LeftWing.EndZ, LeftWingTip.EndX - 26, LeftWingTip.EndY - 42, LeftWingTip.EndZ + 10)
+    RightWingTipFinger = Articulation.SolveSegmentBetweenPoints(RightWing.EndX - 22, RightWing.EndY - 18, RightWing.EndZ, RightWingTip.EndX - 26, RightWingTip.EndY - 42, RightWingTip.EndZ - 10)
 
     Call ApplySegment(DragonParts[11], LeftWing, 34)
     Call ApplyPart(DragonParts[66], RootX + 2, RootY + 64 - LandingCompression, RootZ - 70, 158, 146, 132, 0, 0, -18)
@@ -1943,6 +1955,10 @@ Private Sub PoseDragon(
     Call ApplySegment(DragonParts[52], RightWingTip, 18)
     Call ApplyPart(DragonParts[72], RightWing.EndX, RightWing.EndY, RightWing.EndZ, 98, 90, 98, 0, 0, 0)
     Call ApplyPart(DragonParts[53], RightWingTip.CenterX, RightWingTip.CenterY, RightWingTip.CenterZ, 172, RightWingTip.Length + 120, 14, RightWingTip.RotationX, RightWingTip.RotationY, RightWingTip.RotationZ)
+    Call ApplySegment(DragonParts[93], LeftWingFinger, 11)
+    Call ApplySegment(DragonParts[94], RightWingFinger, 11)
+    Call ApplySegment(DragonParts[95], LeftWingTipFinger, 8)
+    Call ApplySegment(DragonParts[96], RightWingTipFinger, 8)
 
     FrontLeftUpper = Articulation.SolveHangingSegment(RootX - 92, RootY - 34 - LandingCompression, RootZ - 78, 104, -20 - LegTuck + ClawReach, -8)
     FrontLeftLower = Articulation.SolveHangingSegment(FrontLeftUpper.EndX, FrontLeftUpper.EndY, FrontLeftUpper.EndZ, 92, 13 + LegTuck - ClawReach / 3, -5)
@@ -2482,6 +2498,11 @@ Private Sub DefineActionFocusShot(Shot As Number, Actor As Number, Target As Num
     Bounds.MaxY = Max(ActorY + ActorRadius, TargetY + TargetRadius)
     Bounds.MaxZ = Max(ActorZ + ActorRadius, TargetZ + TargetRadius)
 
+    ''' Reserve vertical framing below the fighters for the persistent battle
+    ''' HUD. This shifts both silhouettes into the unobstructed playfield while
+    ''' preserving their complete feet-to-head bounds during the impact cut.
+    Bounds.MinY = Bounds.MinY - 140
+
     ViewX = -18
     ViewY = 14
     ViewZ = 92
@@ -2577,7 +2598,7 @@ Private Sub DefineActorAnticipationShot(Shot As Number, Actor As Number)
         ViewZ = 22
         AnticipationFov = 42
         Padding = 0
-        Bounds.MinY = Y - Radius
+        Bounds.MinY = Y - Radius - 60
 
     End If
 
@@ -3697,6 +3718,44 @@ Private Sub UpdateEnemyVisibility()
 
 End Sub
 
+''' The first beat of a party action is a clean hero close-up. Restore every
+''' model before applying the crop so the impact cut can reveal the full party
+''' immediately without leaving stale visibility behind.
+Private Sub UpdatePartyCinematicVisibility(Visual As Number, StepValue As Number)
+
+    Dim Index As Number
+    Dim Actor As Number
+    Dim ActorBaseIndex As Number
+    Dim IsAnticipation As Boolean
+
+    For Index = 0 To PARTY_OBJECT_COUNT - 1
+        Call Graphics3D.SetObjectVisible(PartyParts[Index], True)
+    End For
+
+    Actor = Battle.VisualActor()
+    IsAnticipation = (StepValue >= 1 And
+        StepValue < 20 And
+        Actor >= Battle.PARTICIPANT_ARIN And
+        Actor <= Battle.PARTICIPANT_MIRA And
+        Visual <> Battle.VISUAL_VICTORY And
+        Visual <> Battle.VISUAL_DEFEAT)
+
+    If Not IsAnticipation Then
+        Return
+    End If
+
+    ActorBaseIndex = (Actor - Battle.PARTICIPANT_ARIN) * HERO_PART_COUNT
+
+    For Index = 0 To PARTY_OBJECT_COUNT - 1
+
+        If Index < ActorBaseIndex Or Index >= ActorBaseIndex + HERO_PART_COUNT Then
+            Call Graphics3D.SetObjectVisible(PartyParts[Index], False)
+        End If
+
+    End For
+
+End Sub
+
 Private Sub ApplyResultOrbit(StepValue As Number)
 
     Dim Angle As Number
@@ -4013,6 +4072,7 @@ Private Sub UpdateActors()
     ''' when the next encounter arrives and cannot be re-enabled by a pose.
 
     Call UpdateEnemyVisibility()
+    Call UpdatePartyCinematicVisibility(Visual, StepValue)
 
     LastArinOffset = ArinX - ARIN_FORMATION_X
     LastTorOffset = TorX - TOR_FORMATION_X
