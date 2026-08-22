@@ -481,10 +481,10 @@ Sub DrawCenteredGaugeValue(
     CurrentDigits = GaugeDigitCount(Current)
     MaximumDigits = GaugeDigitCount(Maximum)
     CharacterWidth = FontSize * 3 / 5
-    ValueWidth = (CurrentDigits + MaximumDigits + 1) * CharacterWidth
+    ValueWidth = (CurrentDigits + MaximumDigits + 3) * CharacterWidth
     ValueX = BarX + (BarWidth - ValueWidth) / 2
-    SlashX = ValueX + CurrentDigits * CharacterWidth
-    MaximumX = SlashX + CharacterWidth
+    SlashX = ValueX + (CurrentDigits + 1) * CharacterWidth
+    MaximumX = SlashX + CharacterWidth * 2
 
     Draw Number Current At ValueX + 1, Y + 1 Size FontSize Color BLACK
     Draw Text "/" At SlashX + 1, Y + 1 Size FontSize Color BLACK
