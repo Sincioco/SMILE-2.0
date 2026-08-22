@@ -595,7 +595,7 @@ Run("Web output writer creates deterministic static files", () =>
         Equal(true, runtime.Contains("r[col*4+row]+=a[k*4+row]*b[col*4+k]", StringComparison.Ordinal));
         Equal(true, runtime.Contains("(far+near)/(far-near),1", StringComparison.Ordinal));
         Equal(true, runtime.Contains("renderer3DMeshes.size >= 128", StringComparison.Ordinal));
-        Equal(true, runtime.Contains("renderer3DObjects.size>=256", StringComparison.Ordinal));
+        Equal(true, runtime.Contains("renderer3DObjects.size>=512", StringComparison.Ordinal));
         Equal(true, runtime.Contains("back.drawImage(renderer3DCanvas", StringComparison.Ordinal));
         Equal(false, runtime.Contains("userAgent", StringComparison.Ordinal));
     }

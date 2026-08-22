@@ -4,7 +4,7 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 
 Const EXPECTED_MAX_MESHES = 128
-Const EXPECTED_MAX_OBJECTS = 256
+Const EXPECTED_MAX_OBJECTS = 512
 Const FRAME_CYCLES = 2000
 Const RESTART_CYCLES = 100
 

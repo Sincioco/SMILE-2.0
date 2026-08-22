@@ -21,7 +21,7 @@ The compiler has narrow game-window-only numeric, image-owning, and text-path Re
 - a small built-in HLSL shader pair compiled with `d3dcompiler.lib`;
 - an output-size D24S8 depth texture recreated after device/size changes;
 - indexed triangle lists with depth testing;
-- 128 mesh, 256 object, 128 texture, and 128 material slots with typed generation-checked handles;
+- 128 mesh, 512 object, 128 texture, and 128 material slots with typed generation-checked handles;
 - explicit cleanup on destroy, reset, resize, and graphics shutdown.
 
 `Begin3D` suspends the current Direct2D draw, binds D3D11/depth state, and clears the 3D target. `End3D` unbinds depth and resumes Direct2D on the same target. The 2D backend vtable and GDI renderer are unchanged. `RendererAvailable()` is false when DirectX is unavailable.

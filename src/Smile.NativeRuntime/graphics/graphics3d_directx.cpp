@@ -10,7 +10,7 @@
 #include "image_resource.h"
 
 #define SMILE_3D_MAX_MESHES 128
-#define SMILE_3D_MAX_OBJECTS 256
+#define SMILE_3D_MAX_OBJECTS 512
 #define SMILE_3D_MAX_TEXTURES 128
 #define SMILE_3D_MAX_MATERIALS 128
 #define SMILE_3D_MAX_MODELS 64
