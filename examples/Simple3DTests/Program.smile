@@ -16,6 +16,9 @@ Dim Point As Core.Vector3
 Dim Camera As Core.Camera3D
 Dim Projected As Core.ProjectedPoint3D
 Dim Orbit As Core.OrbitState3D
+Dim CameraControls As Core.CameraControl3D
+Dim ControlledCamera As Core.Camera3D
+Dim ControlAccepted As Boolean
 Dim OtherPoint As Core.Vector3
 Dim VectorResult As Core.Vector3
 Dim Matrix As Core.Matrix4
@@ -286,6 +289,46 @@ End If
 Call Interaction.UpdateOrbit(Orbit, False, False, True, 0, 0, 0, 16)
 
 If Orbit.Dragging Then
+    Failures = Failures + 1
+End If
+
+Call Interaction.ResetCameraControls(CameraControls)
+
+Camera.FovDegrees = 55
+
+If (Not Interaction.UpdatePanZoomControls(CameraControls, True, True, False, 10, -5, 2) Or
+    Not Interaction.UpdateOrbitControls(CameraControls, True, True, False, 12, -6) Or
+    CameraControls.PanX <> -20 Or
+    CameraControls.PanY <> -10 Or
+    CameraControls.Zoom <> -8 Or
+    CameraControls.OrbitYaw <> 36 Or
+    CameraControls.OrbitPitch <> -12 Or
+    Not Interaction.CameraControlsDragging(CameraControls)) Then
+    Failures = Failures + 1
+End If
+
+ControlledCamera = Interaction.ApplyCameraControls(Camera, CameraControls)
+
+If (ControlledCamera.Position.X = Camera.Position.X Or
+    ControlledCamera.Position.Y = Camera.Position.Y Or
+    ControlledCamera.Target.X <> Camera.Target.X - 20 Or
+    ControlledCamera.Target.Y <> Camera.Target.Y - 10 Or
+    ControlledCamera.FovDegrees <> Camera.FovDegrees - 8) Then
+    Failures = Failures + 1
+End If
+
+ControlAccepted = Interaction.UpdatePanZoomControls(CameraControls, False, False, True, 0, 0, 0)
+ControlAccepted = Interaction.UpdateOrbitControls(CameraControls, False, False, True, 0, 0)
+ControlAccepted = Interaction.AdvanceCameraControls(CameraControls, 120)
+
+If Interaction.CameraControlsActive(CameraControls) Then
+    Failures = Failures + 1
+End If
+
+ControlAccepted = Interaction.UpdateOrbitControls(CameraControls, True, True, False, 2, 2)
+ControlAccepted = Interaction.UpdateOrbitControls(CameraControls, False, False, False, 0, 0)
+
+If CameraControls.Orbiting Then
     Failures = Failures + 1
 End If
 

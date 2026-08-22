@@ -4,6 +4,8 @@ Module Smile.Battle3D.Camera
 Option Explicit
 
 Import Smile.RPG.Core As RPG
+Import Smile.Simple3D.Core As SimpleCore
+Import Smile.Simple3D.Interaction As Interaction
 
 Public Const BATTLE3D_MAX_CAMERA_SHOTS = 32
 Public Const BATTLE3D_MAX_CAMERA_STEPS = 10000
@@ -19,6 +21,24 @@ Public Type ShotDefinition
     TargetZ As Number
     FovDegrees As Number
     Duration As Number
+End Type
+
+''' World-space extents used to frame any combat group without actor-specific camera coordinates.
+Public Type FramingBounds3D
+    MinX As Number
+    MinY As Number
+    MinZ As Number
+    MaxX As Number
+    MaxY As Number
+    MaxZ As Number
+End Type
+
+''' Logical-canvas projection used for screen-space interaction and actor exclusion.
+Public Type ProjectedPoint3D
+    X As Number
+    Y As Number
+    Depth As Number
+    Visible As Boolean
 End Type
 
 Private Dim StateGeneration[4] As Number
@@ -64,6 +84,7 @@ Private Dim ShakeSeeds[4] As Number
 Private Dim ShakeOffsetX[4] As Number
 Private Dim ShakeOffsetY[4] As Number
 Private Dim ShakeOffsetZ[4] As Number
+Private Dim ManualControls[4] As SimpleCore.CameraControl3D
 
 Private Sub ResetSlot(Slot As Number)
 
@@ -84,6 +105,8 @@ Private Sub ResetSlot(Slot As Number)
     ShakeOffsetX[Slot] = 0
     ShakeOffsetY[Slot] = 0
     ShakeOffsetZ[Slot] = 0
+
+    Call Interaction.ResetCameraControls(ManualControls[Slot])
 
 End Sub
 
@@ -111,6 +134,82 @@ Private Function StateSlot(StateHandle As Number) As Number
     End If
 
     Return Slot
+
+End Function
+
+Private Sub UpdateManualReturn(Slot As Number)
+
+    Dim Accepted As Boolean
+
+    Accepted = Interaction.AdvanceCameraControls(ManualControls[Slot], 1)
+
+End Sub
+
+''' Applies simultaneous drag-pan and wheel-zoom input without interrupting the active shot.
+Public Function UpdateManualInput(
+    StateHandle As Number,
+    Pressed As Boolean,
+    Held As Boolean,
+    Released As Boolean,
+    DeltaX As Number,
+    DeltaY As Number,
+    WheelDelta As Number
+) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    ReturnValue = Interaction.UpdatePanZoomControls(
+        ManualControls[Slot],
+        Pressed,
+        Held,
+        Released,
+        DeltaX,
+        DeltaY,
+        WheelDelta
+    )
+
+    Return ReturnValue
+
+End Function
+
+''' Applies middle-drag orbit input alongside independent pan and wheel zoom input.
+Public Function UpdateManualOrbitInput(
+    StateHandle As Number,
+    Pressed As Boolean,
+    Held As Boolean,
+    Released As Boolean,
+    DeltaX As Number,
+    DeltaY As Number
+) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    ReturnValue = Interaction.UpdateOrbitControls(
+        ManualControls[Slot],
+        Pressed,
+        Held,
+        Released,
+        DeltaX,
+        DeltaY
+    )
+
+    Return ReturnValue
 
 End Function
 
@@ -186,6 +285,113 @@ Public Function DefineShot(StateHandle As Number, ByRef Definition As ShotDefini
 
 End Function
 
+''' Defines a shot whose distance adapts to world bounds and the logical viewport aspect ratio.
+Public Function DefineFramedShot(
+    StateHandle As Number,
+    ShotId As Number,
+    Name As Text,
+    ByRef Bounds As FramingBounds3D,
+    ViewXPercent As Number,
+    ViewYPercent As Number,
+    ViewZPercent As Number,
+    ViewportWidth As Number,
+    ViewportHeight As Number,
+    FovDegrees As Number,
+    PaddingPercent As Number,
+    Duration As Number
+) As Boolean
+
+    Dim Definition As ShotDefinition
+    Dim CenterX As Number
+    Dim CenterY As Number
+    Dim CenterZ As Number
+    Dim SpanX As Number
+    Dim SpanY As Number
+    Dim SpanZ As Number
+    Dim HorizontalSpan As Number
+    Dim FramingSpan As Number
+    Dim Distance As Number
+    Dim Accepted As Boolean
+
+    If (Bounds.MaxX <= Bounds.MinX Or
+        Bounds.MaxY <= Bounds.MinY Or
+        Bounds.MaxZ <= Bounds.MinZ Or
+        ViewportWidth <= 0 Or
+        ViewportHeight <= 0 Or
+        FovDegrees < 10 Or
+        FovDegrees > 150 Or
+        PaddingPercent < 0 Or
+        PaddingPercent > 300 Or
+        (ViewXPercent = 0 And ViewYPercent = 0 And ViewZPercent = 0)) Then
+        Return False
+    End If
+
+    CenterX = (Bounds.MinX + Bounds.MaxX) / 2
+    CenterY = (Bounds.MinY + Bounds.MaxY) / 2
+    CenterZ = (Bounds.MinZ + Bounds.MaxZ) / 2
+    SpanX = Bounds.MaxX - Bounds.MinX
+    SpanY = Bounds.MaxY - Bounds.MinY
+    SpanZ = Bounds.MaxZ - Bounds.MinZ
+    HorizontalSpan = SpanX * ViewportHeight / ViewportWidth
+    FramingSpan = Max(SpanY, HorizontalSpan) + SpanZ / 2
+    Distance = Max(100, FramingSpan * (100 + PaddingPercent) * 70 / (100 * FovDegrees))
+
+    Definition.Id = ShotId
+    Definition.Name = Name
+    Definition.PositionX = CenterX + ViewXPercent * Distance / 100
+    Definition.PositionY = CenterY + ViewYPercent * Distance / 100
+    Definition.PositionZ = CenterZ + ViewZPercent * Distance / 100
+    Definition.TargetX = CenterX
+    Definition.TargetY = CenterY
+    Definition.TargetZ = CenterZ
+    Definition.FovDegrees = FovDegrees
+    Definition.Duration = Duration
+    Accepted = DefineShot(StateHandle, Definition)
+
+    Return Accepted
+
+End Function
+
+''' Immediately tracks a moving world point while retaining the active shot identity and manual offsets.
+Public Function FollowPoint(
+    StateHandle As Number,
+    PointX As Number,
+    PointY As Number,
+    PointZ As Number,
+    OffsetX As Number,
+    OffsetY As Number,
+    OffsetZ As Number,
+    FovDegrees As Number
+) As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Or FovDegrees < 10 Or FovDegrees > 150 Then
+        Return False
+    End If
+
+    CurrentPositionX[Slot] = PointX + OffsetX
+    CurrentPositionY[Slot] = PointY + OffsetY
+    CurrentPositionZ[Slot] = PointZ + OffsetZ
+    CurrentTargetX[Slot] = PointX
+    CurrentTargetY[Slot] = PointY
+    CurrentTargetZ[Slot] = PointZ
+    CurrentFov[Slot] = FovDegrees
+    TargetPositionX[Slot] = CurrentPositionX[Slot]
+    TargetPositionY[Slot] = CurrentPositionY[Slot]
+    TargetPositionZ[Slot] = CurrentPositionZ[Slot]
+    TargetTargetX[Slot] = PointX
+    TargetTargetY[Slot] = PointY
+    TargetTargetZ[Slot] = PointZ
+    TargetFov[Slot] = FovDegrees
+    TimelineSteps[Slot] = 0
+    TimelineDurations[Slot] = 0
+    Return True
+
+End Function
+
 Private Sub CaptureStart(Slot As Number)
 
     StartPositionX[Slot] = CurrentPositionX[Slot]
@@ -235,6 +441,67 @@ Public Function PlayShot(StateHandle As Number, ShotId As Number, DurationOverri
     TargetTargetY[Slot] = ShotTargetY[Slot, Index]
     TargetTargetZ[Slot] = ShotTargetZ[Slot, Index]
     TargetFov[Slot] = ShotFov[Slot, Index]
+    TimelineSteps[Slot] = 0
+    TimelineDurations[Slot] = DurationOverride
+
+    If DurationOverride = 0 Then
+        TimelineDurations[Slot] = ShotDurations[Slot, Index]
+    End If
+
+    CurrentShotIds[Slot] = ShotId
+
+    If TimelineDurations[Slot] = 0 Then
+        Call ApplyTarget(Slot)
+    End If
+
+    Return True
+
+End Function
+
+''' Starts a shot with bounded positional, target, and lens variation.
+Public Function PlayShotVariation(
+    StateHandle As Number,
+    ShotId As Number,
+    DurationOverride As Number,
+    PositionOffsetX As Number,
+    PositionOffsetY As Number,
+    PositionOffsetZ As Number,
+    TargetOffsetX As Number,
+    TargetOffsetY As Number,
+    TargetOffsetZ As Number,
+    FovOffset As Number
+) As Boolean
+
+    Dim Slot As Number
+    Dim Index As Number
+
+    Slot = StateSlot(StateHandle)
+    Index = ShotIndex(StateHandle, ShotId)
+
+    If (Slot < 0 Or
+        Index < 0 Or
+        DurationOverride < 0 Or
+        DurationOverride > BATTLE3D_MAX_CAMERA_STEPS Or
+        Abs(PositionOffsetX) > 1000 Or
+        Abs(PositionOffsetY) > 1000 Or
+        Abs(PositionOffsetZ) > 1000 Or
+        Abs(TargetOffsetX) > 1000 Or
+        Abs(TargetOffsetY) > 1000 Or
+        Abs(TargetOffsetZ) > 1000 Or
+        ShotFov[Slot, Index] + FovOffset < 10 Or
+        ShotFov[Slot, Index] + FovOffset > 150) Then
+        Return False
+    End If
+
+    Call CaptureStart(Slot)
+
+    TargetPositionX[Slot] = ShotPositionX[Slot, Index] + PositionOffsetX
+    TargetPositionY[Slot] = ShotPositionY[Slot, Index] + PositionOffsetY
+    TargetPositionZ[Slot] = ShotPositionZ[Slot, Index] + PositionOffsetZ
+    TargetTargetX[Slot] = ShotTargetX[Slot, Index] + TargetOffsetX
+    TargetTargetY[Slot] = ShotTargetY[Slot, Index] + TargetOffsetY
+    TargetTargetZ[Slot] = ShotTargetZ[Slot, Index] + TargetOffsetZ
+    TargetFov[Slot] = ShotFov[Slot, Index] + FovOffset
     TimelineSteps[Slot] = 0
     TimelineDurations[Slot] = DurationOverride
 
@@ -346,9 +613,66 @@ Public Function Update(StateHandle As Number, Steps As Number) As Boolean
 
         End If
 
+        Call UpdateManualReturn(Slot)
     End For
 
     Return True
+
+End Function
+
+''' Advances only the manual return spring, allowing camera control while simulation is paused.
+Public Function UpdateManualReturnOnly(StateHandle As Number, Steps As Number) As Boolean
+
+    Dim Slot As Number
+    Dim StepIndex As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If (Slot < 0 Or
+        Steps < 0 Or
+        Steps > BATTLE3D_MAX_CAMERA_STEPS) Then
+        Return False
+    End If
+
+    For StepIndex = 1 To Steps
+        Call UpdateManualReturn(Slot)
+    End For
+
+    Return True
+
+End Function
+
+Private Function OrbitDenominator(Slot As Number) As Number
+
+    Dim DeltaX As Number
+    Dim DeltaZ As Number
+    Dim ReturnValue As Number
+
+    DeltaX = CurrentPositionX[Slot] - CurrentTargetX[Slot]
+    DeltaZ = CurrentPositionZ[Slot] - CurrentTargetZ[Slot]
+    ReturnValue = Max(1, Max(Abs(DeltaX), Abs(DeltaZ)))
+
+    Return ReturnValue
+
+End Function
+
+Private Function OrbitOffsetX(Slot As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = (0 - (CurrentPositionZ[Slot] - CurrentTargetZ[Slot])) * ManualControls[Slot].OrbitYaw / OrbitDenominator(Slot)
+
+    Return ReturnValue
+
+End Function
+
+Private Function OrbitOffsetZ(Slot As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = (CurrentPositionX[Slot] - CurrentTargetX[Slot]) * ManualControls[Slot].OrbitYaw / OrbitDenominator(Slot)
+
+    Return ReturnValue
 
 End Function
 
@@ -364,7 +688,7 @@ Public Function PositionX(StateHandle As Number) As Number
         Return 0
     End If
 
-    ReturnValue = CurrentPositionX[Slot] + ShakeOffsetX[Slot]
+    ReturnValue = CurrentPositionX[Slot] + ShakeOffsetX[Slot] + ManualControls[Slot].PanX + OrbitOffsetX(Slot)
 
     Return ReturnValue
 
@@ -382,7 +706,7 @@ Public Function PositionY(StateHandle As Number) As Number
         Return 0
     End If
 
-    ReturnValue = CurrentPositionY[Slot] + ShakeOffsetY[Slot]
+    ReturnValue = CurrentPositionY[Slot] + ShakeOffsetY[Slot] + ManualControls[Slot].PanY + ManualControls[Slot].OrbitPitch
 
     Return ReturnValue
 
@@ -400,7 +724,7 @@ Public Function PositionZ(StateHandle As Number) As Number
         Return 0
     End If
 
-    ReturnValue = CurrentPositionZ[Slot] + ShakeOffsetZ[Slot]
+    ReturnValue = CurrentPositionZ[Slot] + ShakeOffsetZ[Slot] + OrbitOffsetZ(Slot)
 
     Return ReturnValue
 
@@ -418,7 +742,7 @@ Public Function TargetX(StateHandle As Number) As Number
         Return 0
     End If
 
-    ReturnValue = CurrentTargetX[Slot]
+    ReturnValue = CurrentTargetX[Slot] + ManualControls[Slot].PanX
 
     Return ReturnValue
 
@@ -436,7 +760,7 @@ Public Function TargetY(StateHandle As Number) As Number
         Return 0
     End If
 
-    ReturnValue = CurrentTargetY[Slot]
+    ReturnValue = CurrentTargetY[Slot] + ManualControls[Slot].PanY
 
     Return ReturnValue
 
@@ -472,9 +796,261 @@ Public Function FovDegrees(StateHandle As Number) As Number
         Return 0
     End If
 
-    ReturnValue = CurrentFov[Slot]
+    ReturnValue = Min(120, Max(18, CurrentFov[Slot] + ManualControls[Slot].Zoom))
 
     Return ReturnValue
+
+End Function
+
+Public Function ManualPanX(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ManualControls[Slot].PanX
+
+    Return ReturnValue
+
+End Function
+
+Public Function ManualPanY(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ManualControls[Slot].PanY
+
+    Return ReturnValue
+
+End Function
+
+Public Function ManualZoom(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ManualControls[Slot].Zoom
+
+    Return ReturnValue
+
+End Function
+
+Public Function ManualOrbitYaw(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ManualControls[Slot].OrbitYaw
+
+    Return ReturnValue
+
+End Function
+
+Public Function ManualOrbitPitch(StateHandle As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ManualControls[Slot].OrbitPitch
+
+    Return ReturnValue
+
+End Function
+
+Public Function IsManualOrbiting(StateHandle As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    ReturnValue = ManualControls[Slot].Orbiting
+
+    Return ReturnValue
+
+End Function
+
+Public Function IsManualDragging(StateHandle As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    ReturnValue = Interaction.CameraControlsDragging(ManualControls[Slot])
+
+    Return ReturnValue
+
+End Function
+
+Public Function IsManualActive(StateHandle As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+
+    Slot = StateSlot(StateHandle)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    ReturnValue = Interaction.CameraControlsActive(ManualControls[Slot])
+
+    Return ReturnValue
+
+End Function
+
+Private Function IntegerSquareRoot(Value As Number) As Number
+
+    Dim Guess As Number
+    Dim NextGuess As Number
+    Dim Index As Number
+
+    If Value <= 0 Then
+        Return 0
+    End If
+
+    Guess = Value
+
+    For Index = 1 To 32
+
+        NextGuess = (Guess + Value / Guess) / 2
+
+        If NextGuess >= Guess Then
+            Return Guess
+        End If
+
+        Guess = NextGuess
+    End For
+
+    Return Guess
+
+End Function
+
+''' Projects a world-space anchor to logical-canvas pixels using the active shot and manual offsets.
+Public Function ProjectWorldPoint(
+    StateHandle As Number,
+    WorldX As Number,
+    WorldY As Number,
+    WorldZ As Number,
+    ViewWidth As Number,
+    ViewHeight As Number
+) As ProjectedPoint3D
+
+    Dim Result As ProjectedPoint3D
+    Dim CameraX As Number
+    Dim CameraY As Number
+    Dim CameraZ As Number
+    Dim ForwardX As Number
+    Dim ForwardY As Number
+    Dim ForwardZ As Number
+    Dim ForwardLength As Number
+    Dim HorizontalLength As Number
+    Dim RightX As Number
+    Dim RightZ As Number
+    Dim UpX As Number
+    Dim UpY As Number
+    Dim UpZ As Number
+    Dim DeltaX As Number
+    Dim DeltaY As Number
+    Dim DeltaZ As Number
+    Dim ViewX As Number
+    Dim ViewY As Number
+    Dim FocalLength As Number
+
+    If (StateSlot(StateHandle) < 0 Or
+        ViewWidth <= 0 Or
+        ViewHeight <= 0) Then
+        Return Result
+    End If
+
+    CameraX = PositionX(StateHandle)
+    CameraY = PositionY(StateHandle)
+    CameraZ = PositionZ(StateHandle)
+    ForwardX = TargetX(StateHandle) - CameraX
+    ForwardY = TargetY(StateHandle) - CameraY
+    ForwardZ = TargetZ(StateHandle) - CameraZ
+    ForwardLength = IntegerSquareRoot(ForwardX * ForwardX + ForwardY * ForwardY + ForwardZ * ForwardZ)
+    HorizontalLength = IntegerSquareRoot(ForwardX * ForwardX + ForwardZ * ForwardZ)
+
+    If ForwardLength <= 0 Or HorizontalLength <= 0 Then
+        Return Result
+    End If
+
+    RightX = ForwardZ * 1000 / HorizontalLength
+    RightZ = (0 - ForwardX) * 1000 / HorizontalLength
+    UpX = (0 - ForwardY) * ForwardX * 1000 / (ForwardLength * HorizontalLength)
+    UpY = HorizontalLength * 1000 / ForwardLength
+    UpZ = (0 - ForwardY) * ForwardZ * 1000 / (ForwardLength * HorizontalLength)
+    ForwardX = ForwardX * 1000 / ForwardLength
+    ForwardY = ForwardY * 1000 / ForwardLength
+    ForwardZ = ForwardZ * 1000 / ForwardLength
+    DeltaX = WorldX - CameraX
+    DeltaY = WorldY - CameraY
+    DeltaZ = WorldZ - CameraZ
+    ViewX = (DeltaX * RightX + DeltaZ * RightZ) / 1000
+    ViewY = (DeltaX * UpX + DeltaY * UpY + DeltaZ * UpZ) / 1000
+    Result.Depth = (DeltaX * ForwardX + DeltaY * ForwardY + DeltaZ * ForwardZ) / 1000
+
+    If Result.Depth <= 1 Then
+        Return Result
+    End If
+
+    FocalLength = ViewHeight * 50 / Max(10, FovDegrees(StateHandle))
+    Result.X = ViewWidth / 2 + ViewX * FocalLength / Result.Depth
+    Result.Y = ViewHeight / 2 - ViewY * FocalLength / Result.Depth
+    Result.Visible = (Result.X >= 0 And
+        Result.X < ViewWidth And
+        Result.Y >= 0 And
+        Result.Y < ViewHeight)
+
+    Return Result
 
 End Function
 

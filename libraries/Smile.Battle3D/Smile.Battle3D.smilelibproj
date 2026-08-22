@@ -12,5 +12,6 @@
     <SmileSource Include="Camera.smile" />
     <SmileSource Include="Effects.smile" />
     <SmileProjectReference Include="..\Smile.RPG\Smile.RPG.smilelibproj" />
+    <SmileProjectReference Include="..\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
   </ItemGroup>
 </SmileProject>

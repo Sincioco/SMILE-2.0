@@ -9,6 +9,7 @@ True-3D types:
 - `Vector3`: `X`, `Y`, and `Z`.
 - `Matrix4`: `M11` through `M44`, scaled by `FIXED_ONE`.
 - `Camera3D`: position, target, projection fields, near/far planes, FOV, and the legacy wireframe viewport fields.
+- `CameraControl3D`: composable pan, wheel-zoom, middle-drag orbit, and return-spring state.
 - `Object3D`: validated object/mesh handles plus mirrored position, rotation, scale, color, opacity, and visibility values.
 
 The legacy wireframe types and limits remain source compatible.
@@ -69,6 +70,20 @@ Transforms and appearance:
 - `SetObjectOpacity`
 - `SetObjectVisible`
 
+## `Smile.Simple3D.Interaction`
+
+The standard 3D camera-control contract is renderer-independent and deterministic:
+
+- `ResetCameraControls`
+- `UpdatePanZoomControls` for simultaneous primary-drag pan and wheel zoom
+- `UpdateOrbitControls` for independent middle-drag orbit
+- `UpdateCameraControlsFromPointer` for the conventional primary/middle/wheel binding
+- `AdvanceCameraControls` for the bounded slow return spring, including paused scenes
+- `ApplyCameraControls` to compose an override over an authored `Camera3D` without drift
+- `CameraControlsDragging` and `CameraControlsActive`
+
+Games decide whether a press started on valid world geometry and pass that decision through `AllowPanStart` or `AllowOrbitStart`. Once accepted, the gesture retains capture until release; a missing Web-canvas release is recovered when the button is no longer held. Pan, zoom, and orbit remain mutually composable.
+
 ## Renderer contract
 
 Windows uses D3D11 indexed triangle lists, generated normals, model/view/perspective matrices, a resize-aware D24S8 depth buffer, and the existing Direct2D renderer for the following HUD pass. Web uses an offscreen WebGL2 canvas with the same indexed mesh and depth contract, then composites it into the Canvas 2D back buffer before ordinary 2D drawing.
@@ -79,4 +94,4 @@ An object returned by a primitive creator or chosen as the owner of a custom mes
 
 ## Legacy wireframe modules
 
-`FixedMath`, `Mesh`, `Primitives`, `Renderer`, and `Interaction` remain available exactly for the original deterministic wireframe examples, pointer orbit lessons, GDI builds, and Space Wars. Their API is unchanged by 2.0.0.
+`FixedMath`, `Mesh`, `Primitives`, `Renderer`, and the original `OrbitState3D` interaction calls remain source compatible with the deterministic wireframe examples, GDI builds, and Space Wars. `Interaction` also exposes the reusable true-3D camera-control contract above.

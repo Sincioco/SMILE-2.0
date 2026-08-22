@@ -6,6 +6,7 @@ Import Smile.Battle3D.Effects As Effects
 
 Const SHOT_DEFAULT = 1
 Const SHOT_IMPACT = 2
+Const SHOT_FRAMED = 3
 Const EFFECT_FIRE = 1
 Const EFFECT_MIST = 2
 Const EFFECT_STORM = 3
@@ -17,7 +18,12 @@ Dim StateB As Number
 Dim Index As Number
 Dim FirstParticle As Number
 Dim Shot As BattleCamera.ShotDefinition
+Dim Bounds As BattleCamera.FramingBounds3D
 Dim Preset As Effects.EffectPreset
+Dim Projected As BattleCamera.ProjectedPoint3D
+Dim ManualPanBeforeReturn As Number
+Dim FramingDistanceBefore As Number
+Dim OrbitPositionBefore As Number
 
 StateA = RPG.Create()
 StateB = RPG.Create()
@@ -44,8 +50,39 @@ End For
 Call Check(BattleCamera.PositionX(StateA) = BattleCamera.PositionX(StateB))
 Call Check(BattleCamera.PositionY(StateA) = BattleCamera.PositionY(StateB))
 Call Check(BattleCamera.PositionZ(StateA) = BattleCamera.PositionZ(StateB))
+
 Call Check(BattleCamera.CurrentShotName(StateA) = "TargetImpact")
 Call Check(BattleCamera.IsComplete(StateA))
+
+' Bounds-driven framing centers arbitrary groups and backs up as their footprint grows.
+
+Bounds.MinX = -200
+Bounds.MinY = 0
+Bounds.MinZ = -100
+Bounds.MaxX = 400
+Bounds.MaxY = 300
+Bounds.MaxZ = 100
+
+Call Check(BattleCamera.DefineFramedShot(StateA, SHOT_FRAMED, "GroupFrame", Bounds, -25, 30, -100, 960, 540, 55, 20, 0))
+Call Check(BattleCamera.PlayShot(StateA, SHOT_FRAMED, 0))
+Call Check(BattleCamera.TargetX(StateA) = 100)
+Call Check(BattleCamera.TargetY(StateA) = 150)
+Call Check(BattleCamera.TargetZ(StateA) = 0)
+
+FramingDistanceBefore = Abs(BattleCamera.PositionZ(StateA) - BattleCamera.TargetZ(StateA))
+Bounds.MaxX = 1000
+
+Call Check(BattleCamera.DefineFramedShot(StateA, SHOT_FRAMED, "GroupFrame", Bounds, -25, 30, -100, 960, 540, 55, 20, 0))
+Call Check(BattleCamera.PlayShot(StateA, SHOT_FRAMED, 0))
+Call Check(Abs(BattleCamera.PositionZ(StateA) - BattleCamera.TargetZ(StateA)) > FramingDistanceBefore)
+Call Check(Not BattleCamera.DefineFramedShot(StateA, SHOT_FRAMED, "Invalid", Bounds, 0, 0, 0, 960, 540, 55, 20, 0))
+Call Check(BattleCamera.FollowPoint(StateA, 450, 320, -75, -380, 190, -720, 62))
+Call Check(BattleCamera.TargetX(StateA) = 450)
+Call Check(BattleCamera.TargetY(StateA) = 320)
+Call Check(BattleCamera.PositionZ(StateA) = -795)
+Call Check(BattleCamera.FovDegrees(StateA) = 62)
+Call Check(Not BattleCamera.FollowPoint(StateA, 0, 0, 0, 0, 0, -100, 5))
+Call Check(BattleCamera.FollowPoint(StateB, 450, 320, -75, -380, 190, -720, 62))
 Call Check(BattleCamera.StartShake(StateA, 18, 6, 77))
 Call Check(BattleCamera.StartShake(StateB, 18, 6, 77))
 Call Check(BattleCamera.Update(StateA, 3))
@@ -57,6 +94,70 @@ End For
 Call Check(BattleCamera.PositionX(StateA) = BattleCamera.PositionX(StateB))
 Call Check(BattleCamera.PositionY(StateA) = BattleCamera.PositionY(StateB))
 Call Check(BattleCamera.PositionZ(StateA) = BattleCamera.PositionZ(StateB))
+Call Check(BattleCamera.StartShake(StateA, 0, 0, 0))
+
+' Bounded shot variation changes composition without mutating the stored shot.
+
+Call Check(BattleCamera.PlayShotVariation(StateA, SHOT_DEFAULT, 0, 25, 10, -15, 5, -3, 7, 2))
+Call Check(BattleCamera.PositionX(StateA) = 25)
+Call Check(BattleCamera.PositionY(StateA) = 230)
+Call Check(BattleCamera.PositionZ(StateA) = -865)
+Call Check(BattleCamera.TargetX(StateA) = 5)
+Call Check(BattleCamera.TargetY(StateA) = 97)
+Call Check(BattleCamera.TargetZ(StateA) = 7)
+Call Check(BattleCamera.FovDegrees(StateA) = 57)
+Call Check(Not BattleCamera.PlayShotVariation(StateA, SHOT_DEFAULT, 0, 0, 0, 0, 0, 0, 0, 200))
+
+' Manual pan and wheel zoom compose over cinematic shots, then ease back after release.
+
+Call Check(BattleCamera.UpdateManualInput(StateA, True, True, False, 18, -9, 2))
+Call Check(BattleCamera.IsManualDragging(StateA))
+Call Check(BattleCamera.ManualPanX(StateA) = -36)
+Call Check(BattleCamera.ManualPanY(StateA) = -18)
+Call Check(BattleCamera.ManualZoom(StateA) = -8)
+Call Check(BattleCamera.IsManualActive(StateA))
+
+Projected = BattleCamera.ProjectWorldPoint(StateA,
+    BattleCamera.TargetX(StateA),
+    BattleCamera.TargetY(StateA),
+    BattleCamera.TargetZ(StateA),
+    960,
+    540)
+
+Call Check(Projected.Visible)
+Call Check(Abs(Projected.X - 480) <= 1)
+Call Check(Abs(Projected.Y - 270) <= 1)
+Call Check(BattleCamera.UpdateManualInput(StateA, False, False, True, 0, 0, 0))
+Call Check(Not BattleCamera.IsManualDragging(StateA))
+
+ManualPanBeforeReturn = Abs(BattleCamera.ManualPanX(StateA))
+
+Call Check(BattleCamera.Update(StateA, 14))
+Call Check(Abs(BattleCamera.ManualPanX(StateA)) < ManualPanBeforeReturn)
+Call Check(BattleCamera.Update(StateA, 100))
+Call Check(Not BattleCamera.IsManualActive(StateA))
+Call Check(BattleCamera.UpdateManualInput(StateA, True, True, False, 2, 2, 0))
+Call Check(BattleCamera.UpdateManualInput(StateA, False, False, False, 0, 0, 0))
+Call Check(Not BattleCamera.IsManualDragging(StateA))
+Call Check(Not BattleCamera.UpdateManualInput(StateA, True, True, False, 10001, 0, 0))
+
+' Middle-drag orbit composes with pan/zoom and has the same missed-release fail-safe.
+
+OrbitPositionBefore = BattleCamera.PositionX(StateA)
+
+Call Check(BattleCamera.UpdateManualOrbitInput(StateA, True, True, False, 20, -10))
+Call Check(BattleCamera.IsManualOrbiting(StateA))
+Call Check(BattleCamera.ManualOrbitYaw(StateA) = 60)
+Call Check(BattleCamera.ManualOrbitPitch(StateA) = -20)
+Call Check(BattleCamera.PositionX(StateA) <> OrbitPositionBefore)
+Call Check(BattleCamera.UpdateManualOrbitInput(StateA, False, False, True, 0, 0))
+Call Check(Not BattleCamera.IsManualOrbiting(StateA))
+Call Check(BattleCamera.Update(StateA, 120))
+Call Check(Not BattleCamera.IsManualActive(StateA))
+Call Check(BattleCamera.UpdateManualOrbitInput(StateA, True, True, False, 3, 2))
+Call Check(BattleCamera.UpdateManualOrbitInput(StateA, False, False, False, 0, 0))
+Call Check(Not BattleCamera.IsManualOrbiting(StateA))
+Call Check(Not BattleCamera.UpdateManualOrbitInput(StateA, True, True, False, 10001, 0))
 
 ' Seeded additive billboard particles, flash, color/size fades, and expiry are deterministic.
 

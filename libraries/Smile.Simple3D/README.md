@@ -11,11 +11,12 @@ Reference the source library from a game project:
 <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
 ```
 
-The beginner true-3D path needs only two imports:
+The beginner true-3D path needs only two imports; add `Smile.Simple3D.Interaction` when the game needs standard camera controls:
 
 ```smile
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Interaction As Interaction
 ```
 
 Create objects once, update their transforms, draw the 3D pass, then draw the ordinary 2D HUD:
@@ -41,5 +42,7 @@ Show Screen
 ```
 
 `Graphics3D.RendererAvailable()` is `True` for Windows DirectX and WebGL2. It is `False` on the GDI fallback. Handles are bounded and validated; create geometry outside the frame loop, share meshes with `CreateObjectFromMesh3D`, destroy shared instances with `DestroyObjectInstance3D`, destroy owning objects with `DestroyObject3D`, and call `ResetRenderer3D` during final cleanup.
+
+`Core.CameraControl3D` plus `Interaction.UpdateCameraControlsFromPointer` provides the shared primary-drag pan, middle-drag orbit, wheel zoom, lost-release recovery, and slow return behavior used by Dragonfall. Games retain control over which screen/world regions may start a gesture.
 
 See [API.md](API.md), the [true Simple3D conformance sample](../../examples/Simple3DConformance/Program.smile), and [Neon Cycles](../../games/NeonCycles/README.md).

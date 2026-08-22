@@ -9,6 +9,18 @@ Import Smile.Simple3D.FixedMath As Math3D
 Private Const MAX_VELOCITY = 24
 Private Const MIN_DISTANCE = 200
 Private Const MAX_DISTANCE = 2400
+Private Const CAMERA_PAN_SCALE = 2
+Private Const CAMERA_PAN_X_LIMIT = 360
+Private Const CAMERA_PAN_Y_LIMIT = 220
+Private Const CAMERA_ZOOM_IN_LIMIT = -24
+Private Const CAMERA_ZOOM_OUT_LIMIT = 36
+Private Const CAMERA_ORBIT_YAW_SCALE = 3
+Private Const CAMERA_ORBIT_PITCH_SCALE = 2
+Private Const CAMERA_ORBIT_YAW_LIMIT = 320
+Private Const CAMERA_ORBIT_PITCH_LIMIT = 180
+Private Const CAMERA_RETURN_HOLD_STEPS = 12
+Private Const CAMERA_ZOOM_HOLD_STEPS = 45
+Private Const CAMERA_RETURN_PERCENT = 88
 
 Public Sub ResetOrbit(ByRef Orbit As Core.OrbitState3D)
 
@@ -20,6 +32,256 @@ Public Sub ResetOrbit(ByRef Orbit As Core.OrbitState3D)
     Orbit.Dragging = False
 
 End Sub
+
+''' Restores the standard reusable 3D camera override to its authored shot.
+Public Sub ResetCameraControls(ByRef Controls As Core.CameraControl3D)
+
+    Controls.PanX = 0
+    Controls.PanY = 0
+    Controls.Zoom = 0
+    Controls.OrbitYaw = 0
+    Controls.OrbitPitch = 0
+    Controls.ReturnSteps = 0
+    Controls.Panning = False
+    Controls.Orbiting = False
+
+End Sub
+
+Private Function EaseCameraControl(Value As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Abs(Value) <= 1 Then
+        Return 0
+    End If
+
+    ReturnValue = Value * CAMERA_RETURN_PERCENT / 100
+
+    Return ReturnValue
+
+End Function
+
+''' Advances the slow return spring without advancing any gameplay timeline.
+Public Function AdvanceCameraControls(ByRef Controls As Core.CameraControl3D, Steps As Number) As Boolean
+
+    Dim Index As Number
+
+    If Steps < 0 Or Steps > 10000 Then
+        Return False
+    End If
+
+    For Index = 1 To Steps
+
+        If Not Controls.Panning And Not Controls.Orbiting Then
+
+            If Controls.ReturnSteps > 0 Then
+
+                Controls.ReturnSteps = Controls.ReturnSteps - 1
+
+            Else
+                Controls.PanX = EaseCameraControl(Controls.PanX)
+                Controls.PanY = EaseCameraControl(Controls.PanY)
+                Controls.Zoom = EaseCameraControl(Controls.Zoom)
+                Controls.OrbitYaw = EaseCameraControl(Controls.OrbitYaw)
+                Controls.OrbitPitch = EaseCameraControl(Controls.OrbitPitch)
+
+            End If
+
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+''' Applies primary-drag pan and wheel zoom; both inputs may be used together.
+Public Function UpdatePanZoomControls(
+    ByRef Controls As Core.CameraControl3D,
+    Pressed As Boolean,
+    Held As Boolean,
+    Released As Boolean,
+    DeltaX As Number,
+    DeltaY As Number,
+    WheelDelta As Number
+) As Boolean
+
+    If Abs(DeltaX) > 10000 Or Abs(DeltaY) > 10000 Or Abs(WheelDelta) > 1000 Then
+        Return False
+    End If
+
+    If Pressed Then
+        Controls.Panning = True
+        Controls.ReturnSteps = CAMERA_RETURN_HOLD_STEPS
+    End If
+
+    If Controls.Panning And Not Held And Not Pressed Then
+        Controls.Panning = False
+        Controls.ReturnSteps = CAMERA_RETURN_HOLD_STEPS
+    End If
+
+    If Controls.Panning And Held Then
+
+        Controls.PanX = Min(CAMERA_PAN_X_LIMIT,
+            Max(0 - CAMERA_PAN_X_LIMIT, Controls.PanX - DeltaX * CAMERA_PAN_SCALE))
+        Controls.PanY = Min(CAMERA_PAN_Y_LIMIT,
+            Max(0 - CAMERA_PAN_Y_LIMIT, Controls.PanY + DeltaY * CAMERA_PAN_SCALE))
+        Controls.ReturnSteps = CAMERA_RETURN_HOLD_STEPS
+
+    End If
+
+    If Released Then
+        Controls.Panning = False
+        Controls.ReturnSteps = CAMERA_RETURN_HOLD_STEPS
+    End If
+
+    If WheelDelta <> 0 Then
+        Controls.Zoom = Min(CAMERA_ZOOM_OUT_LIMIT,
+            Max(CAMERA_ZOOM_IN_LIMIT, Controls.Zoom - WheelDelta * 4))
+        Controls.ReturnSteps = Max(Controls.ReturnSteps, CAMERA_ZOOM_HOLD_STEPS)
+    End If
+
+    Return True
+
+End Function
+
+''' Applies auxiliary-button drag orbit independently of pan and wheel zoom.
+Public Function UpdateOrbitControls(
+    ByRef Controls As Core.CameraControl3D,
+    Pressed As Boolean,
+    Held As Boolean,
+    Released As Boolean,
+    DeltaX As Number,
+    DeltaY As Number
+) As Boolean
+
+    If Abs(DeltaX) > 10000 Or Abs(DeltaY) > 10000 Then
+        Return False
+    End If
+
+    If Pressed Then
+        Controls.Orbiting = True
+        Controls.ReturnSteps = CAMERA_RETURN_HOLD_STEPS
+    End If
+
+    If Controls.Orbiting And Not Held And Not Pressed Then
+        Controls.Orbiting = False
+        Controls.ReturnSteps = CAMERA_RETURN_HOLD_STEPS
+    End If
+
+    If Controls.Orbiting And Held Then
+
+        Controls.OrbitYaw = Min(CAMERA_ORBIT_YAW_LIMIT,
+            Max(0 - CAMERA_ORBIT_YAW_LIMIT,
+                Controls.OrbitYaw + DeltaX * CAMERA_ORBIT_YAW_SCALE))
+        Controls.OrbitPitch = Min(CAMERA_ORBIT_PITCH_LIMIT,
+            Max(0 - CAMERA_ORBIT_PITCH_LIMIT,
+                Controls.OrbitPitch + DeltaY * CAMERA_ORBIT_PITCH_SCALE))
+        Controls.ReturnSteps = CAMERA_RETURN_HOLD_STEPS
+
+    End If
+
+    If Released Then
+        Controls.Orbiting = False
+        Controls.ReturnSteps = CAMERA_RETURN_HOLD_STEPS
+    End If
+
+    Return True
+
+End Function
+
+''' Standard game-canvas binding: primary pan, middle orbit, and wheel zoom.
+Public Function UpdateCameraControlsFromPointer(
+    ByRef Controls As Core.CameraControl3D,
+    AllowPanStart As Boolean,
+    AllowOrbitStart As Boolean,
+    AllowWheel As Boolean
+) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim WheelDelta As Number
+    Dim PanAccepted As Boolean
+    Dim OrbitAccepted As Boolean
+
+    If AllowWheel Then
+        WheelDelta = Pointer_Wheel_Delta()
+    End If
+
+    PanAccepted = UpdatePanZoomControls(
+        Controls,
+        AllowPanStart And Pointer_Pressed(POINTER_PRIMARY),
+        Pointer_Held(POINTER_PRIMARY),
+        Pointer_Released(POINTER_PRIMARY),
+        Pointer_Delta_X(),
+        Pointer_Delta_Y(),
+        WheelDelta
+    )
+    OrbitAccepted = UpdateOrbitControls(
+        Controls,
+        AllowOrbitStart And Pointer_Pressed(POINTER_MIDDLE),
+        Pointer_Held(POINTER_MIDDLE),
+        Pointer_Released(POINTER_MIDDLE),
+        Pointer_Delta_X(),
+        Pointer_Delta_Y()
+    )
+
+    ReturnValue = PanAccepted And OrbitAccepted
+
+    Return ReturnValue
+
+End Function
+
+Public Function CameraControlsDragging(ByRef Controls As Core.CameraControl3D) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Controls.Panning Or Controls.Orbiting
+
+    Return ReturnValue
+
+End Function
+
+Public Function CameraControlsActive(ByRef Controls As Core.CameraControl3D) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = (CameraControlsDragging(Controls) Or
+        Controls.PanX <> 0 Or
+        Controls.PanY <> 0 Or
+        Controls.Zoom <> 0 Or
+        Controls.OrbitYaw <> 0 Or
+        Controls.OrbitPitch <> 0)
+
+    Return ReturnValue
+
+End Function
+
+''' Composes the standard override over an authored camera without accumulating drift.
+Public Function ApplyCameraControls(
+    BaseCamera As Core.Camera3D,
+    ByRef Controls As Core.CameraControl3D
+) As Core.Camera3D
+
+    Dim Result As Core.Camera3D
+    Dim DeltaX As Number
+    Dim DeltaZ As Number
+    Dim Denominator As Number
+
+    Result = BaseCamera
+    DeltaX = BaseCamera.Position.X - BaseCamera.Target.X
+    DeltaZ = BaseCamera.Position.Z - BaseCamera.Target.Z
+    Denominator = Max(1, Max(Abs(DeltaX), Abs(DeltaZ)))
+    Result.Position.X = BaseCamera.Position.X + Controls.PanX - DeltaZ * Controls.OrbitYaw / Denominator
+    Result.Position.Y = BaseCamera.Position.Y + Controls.PanY + Controls.OrbitPitch
+    Result.Position.Z = BaseCamera.Position.Z + DeltaX * Controls.OrbitYaw / Denominator
+    Result.Target.X = BaseCamera.Target.X + Controls.PanX
+    Result.Target.Y = BaseCamera.Target.Y + Controls.PanY
+    Result.FovDegrees = Min(120, Max(18, BaseCamera.FovDegrees + Controls.Zoom))
+
+    Return Result
+
+End Function
 
 Public Sub CancelOrbit(ByRef Orbit As Core.OrbitState3D)
 

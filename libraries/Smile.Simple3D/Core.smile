@@ -167,4 +167,16 @@ Public Type OrbitState3D
     Dragging As Boolean
 End Type
 
+''' Standard pan, wheel-zoom, and middle-drag orbit override for any 3D camera.
+Public Type CameraControl3D
+    PanX As Number
+    PanY As Number
+    Zoom As Number
+    OrbitYaw As Number
+    OrbitPitch As Number
+    ReturnSteps As Number
+    Panning As Boolean
+    Orbiting As Boolean
+End Type
+
 End Module
