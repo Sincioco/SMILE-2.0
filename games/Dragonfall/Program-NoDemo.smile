@@ -7,8 +7,7 @@ Import Smile.RPG.BattleCore As BattleCore
 Import Smile.RPG.BattleTime As BattleTime
 Import Dragonfall.Battle As Battle
 Import Dragonfall.Scene As Scene
-
-Const PREVIEW_SYNTHETIC_SFX_ENABLED = False
+Import Dragonfall.Audio As Audio
 
 Dim Running As Boolean
 Dim Paused As Boolean
@@ -83,7 +82,7 @@ Do
                 GlobalStep = GlobalStep + 1
 
                 Call Battle.Update()
-                Call PlayVisualSound()
+                Call Audio.Update()
 
                 If RendererAvailable Then
                     Call Scene.Update(Battle.StateHandle(), GlobalStep)
@@ -117,6 +116,7 @@ Call Battle.Shutdown()
 Sub StartEncounter()
 
     EncounterReady = Battle.Initialize()
+    Call Audio.Reset()
 
     If EncounterReady And RendererAvailable Then
 
@@ -163,59 +163,6 @@ Sub RestartEncounter()
 
     Call Battle.Shutdown()
     Call StartEncounter()
-
-End Sub
-
-Sub PlayVisualSound()
-
-    ''' Keep generated tones muted until the sampled effects package lands.
-
-    If Not PREVIEW_SYNTHETIC_SFX_ENABLED Then
-        Return
-    End If
-
-    If Battle.VisualStep() <> 1 Then
-        Return
-    End If
-
-    If (Battle.Visual() = Battle.VISUAL_ARIN_ATTACK Or
-        Battle.Visual() = Battle.VISUAL_TOR_ATTACK Or
-        Battle.Visual() = Battle.VISUAL_LYRA_ATTACK Or
-        Battle.Visual() = Battle.VISUAL_DRAGON_CLAW Or
-        Battle.Visual() = Battle.VISUAL_DRAGON_TAIL) Then
-
-        Play Sound "Assets\Impact.wav" On Channel 0
-
-    Else If (Battle.Visual() = Battle.VISUAL_ARIN_EMBER Or
-        Battle.Visual() = Battle.VISUAL_MIRA_FLAME Or
-        Battle.Visual() = Battle.VISUAL_MIRA_FROST Or
-        Battle.Visual() = Battle.VISUAL_MIRA_LIGHTNING Or
-        Battle.Visual() = Battle.VISUAL_ITEM Or
-        Battle.Visual() = Battle.VISUAL_TOR_BASH Or
-        Battle.Visual() = Battle.VISUAL_LYRA_MEND) Then
-
-        Play Sound "Assets\Spell.wav" On Channel 1
-
-    Else If (Battle.Visual() = Battle.VISUAL_DRAGON_BREATH Or
-        Battle.Visual() = Battle.VISUAL_DRAGON_CATASTROPHE) Then
-
-        Play Sound "Assets\Breath.wav" On Channel 2
-
-    Else If Battle.Visual() = Battle.VISUAL_ENRAGE Then
-
-        Play Sound "Assets\Enrage.wav" On Channel 3
-
-    Else If Battle.Visual() = Battle.VISUAL_VICTORY Then
-        Stop Music
-
-        Play Sound "Assets\Victory.wav" On Channel 3
-
-    Else If Battle.Visual() = Battle.VISUAL_DEFEAT Then
-        Stop Music
-
-        Play Sound "Assets\Breath.wav" On Channel 3
-
-    End If
 
 End Sub
 

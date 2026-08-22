@@ -56,7 +56,7 @@ The render path performs no impact-time asset loads: all assets load before the 
 
 ## Content hygiene
 
-No Final Fantasy names, characters, story, dialogue, models, textures, UI, logos, fonts, music, or effects are distributed. The environment texture is an original generated asset documented in `games/Dragonfall/README.md`. Every WAV is generated from mathematical waveforms by `scripts/generate-dragonfall-audio.ps1` and contains no samples. Final Fantasy VII is mentioned only as non-distributable design inspiration in project documentation.
+No Final Fantasy names, characters, story, dialogue, models, textures, UI, logos, fonts, music, or effects are distributed. The environment texture is an original generated asset documented in `games/Dragonfall/README.md`. Combat WAV files are processed from CC0 audio packs with exact provenance recorded in `games/Dragonfall/Assets/SFX/LICENSE.md`. Final Fantasy VII is mentioned only as non-distributable design inspiration in project documentation.
 
 ## Release artifacts
 

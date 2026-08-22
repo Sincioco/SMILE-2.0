@@ -1,6 +1,6 @@
 # Dragonfall: The Ember Observatory
 
-Dragonfall is an original low-poly 3D battle built entirely with reusable SMILE 2.0 systems. Four heroes—Arin the sword-and-shield defender, Tor the heavy gun attacker, Lyra the staff healer, and Mira the pointy-hat wizard—defeat three Cinderlings before Ashwing, the Caldera Tyrant, swoops into the enlarged arena. The encounter uses deterministic ATB rounds, a 70% health enrage transition, cinematic cameras, additive particles, equal-width multi-enemy HP/MP rows, three-gauge HP/MP/ATB party cards, soundtrack playback, and complete victory or defeat sequences.
+Dragonfall is an original low-poly 3D battle built entirely with reusable SMILE 2.0 systems. Four heroes—Arin the sword-and-shield defender, Tor the heavy gun attacker, Lyra the staff healer, and Mira the staff wizard—defeat three Cinderlings before Ashwing, the Caldera Tyrant, swoops into the enlarged arena. The encounter uses deterministic ATB rounds, a 70% health enrage transition, cinematic cameras, additive particles, equal-width multi-enemy HP/MP rows, three-gauge HP/MP/ATB party cards, sampled combat audio, soundtrack playback, and complete victory or defeat sequences.
 
 No Final Fantasy assets, names, music, dialogue, fonts, models, or UI artwork are included. The delivery uses the broad staging language of cinematic console RPG battles as design inspiration while keeping all distributable content original.
 
@@ -45,6 +45,7 @@ Build `Dragonfall-NoDemo.smileproj` or launch `artifacts\games\Dragonfall-NoDemo
 - `DragonfallBattle.smile` owns deterministic definitions, ATB submissions, boss policy, phase transitions, and presentation-neutral visual events.
 - `Smile.Battle3D.Articulation` provides reusable deterministic segment solving, locomotion cycles, and action envelopes for rigid characters and creatures.
 - `DragonfallScene.smile` owns the original procedural arena, articulated cast composition, bounds-driven and two-stage action cameras, fly-in/result tracking, bounded effect presets, transforms, rendering, and exact resource teardown.
+- `DragonfallAudio.smile` maps presentation events to layered, four-channel sampled cues without affecting battle mechanics.
 - `Program.smile` is the crowd demo and is the only file containing player-command demo AI and automatic replay.
 - `Program-NoDemo.smile` is the complete manual-command startup with that demo implementation removed.
 - `DragonfallTests.smile` proves win/loss routes, all commands, boss action variety, phase transition, 100 mechanics restarts, and 108,000 accelerated fixed ticks in native and Web.
@@ -52,11 +53,11 @@ Build `Dragonfall-NoDemo.smileproj` or launch `artifacts\games\Dragonfall-NoDemo
 
 All combat assets are preloaded. Particle objects are preallocated and draw after opaque geometry. Presentation can advance independently without altering mechanics.
 
-## Original assets
+## Assets
 
 `EmberObservatory.png` was generated with OpenAI's built-in image generation tool using the prompt: “Use case: stylized-concept; Asset type: tileable game texture; a seamless top-down volcanic obsidian floor with ancient circular bronze inlays and glowing magma cracks; dramatic warm orange emission against charcoal stone; hand-painted low-poly RPG style; square composition; no text, logos, characters, or copyrighted game imagery.”
 
-The six WAV files are generated from mathematical waveforms by `scripts\generate-dragonfall-audio.ps1`. They have no sampled or copied source material.
+Combat WAV files under `Assets\SFX` are processed from the CC0 packs and source files listed in `Assets\SFX\LICENSE.md`. The battle soundtrack uses the MP3 selected in `Program.smile` and `Program-NoDemo.smile`.
 
 ## Validation
 

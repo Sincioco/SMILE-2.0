@@ -1,0 +1,252 @@
+''' Sampled, presentation-only combat audio shared by both Dragonfall startups.
+Module Dragonfall.Audio
+
+Option Explicit
+
+Import Dragonfall.Battle As Battle
+
+Private Const CHANNEL_MOVEMENT = 0
+Private Const CHANNEL_IMPACT = 1
+Private Const CHANNEL_MAGIC = 2
+Private Const CHANNEL_CREATURE = 3
+
+Private Dim ImpactSequence As Number
+
+Public Sub Reset()
+
+    ImpactSequence = 0
+
+End Sub
+
+Private Function IsHeroMagic(Visual As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = (Visual = Battle.VISUAL_ARIN_EMBER Or
+        Visual = Battle.VISUAL_MIRA_FLAME Or
+        Visual = Battle.VISUAL_MIRA_FROST Or
+        Visual = Battle.VISUAL_MIRA_LIGHTNING)
+    Return ReturnValue
+
+End Function
+
+Private Function IsWeaponWindup(Visual As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = (Visual = Battle.VISUAL_ARIN_ATTACK Or
+        Visual = Battle.VISUAL_ARIN_EMBER Or
+        Visual = Battle.VISUAL_LYRA_ATTACK Or
+        Visual = Battle.VISUAL_DRAGON_CLAW Or
+        Visual = Battle.VISUAL_DRAGON_TAIL)
+    Return ReturnValue
+
+End Function
+
+Private Function IsDragonFire(Visual As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = (Visual = Battle.VISUAL_DRAGON_BREATH Or
+        Visual = Battle.VISUAL_DRAGON_CATASTROPHE)
+    Return ReturnValue
+
+End Function
+
+Private Sub PlayConfirmedImpact(Visual As Number)
+
+    If Not Battle.VisualImpactLanded() Then
+        Return
+    End If
+
+    ImpactSequence = ImpactSequence + 1
+
+    If (Visual = Battle.VISUAL_ARIN_ATTACK Or
+        Visual = Battle.VISUAL_ARIN_EMBER Or
+        Visual = Battle.VISUAL_LYRA_ATTACK) Then
+
+        Play Sound "Assets\SFX\BladeImpact.wav" On Channel CHANNEL_IMPACT
+
+    Else If Visual = Battle.VISUAL_MIRA_FLAME Then
+
+        Play Sound "Assets\SFX\FireBlast.wav" On Channel CHANNEL_MAGIC
+
+    Else If Visual = Battle.VISUAL_MIRA_FROST Then
+
+        Play Sound "Assets\SFX\FrostBurst.wav" On Channel CHANNEL_MAGIC
+
+    Else If Visual = Battle.VISUAL_MIRA_LIGHTNING Then
+
+        Play Sound "Assets\SFX\LightningStrike.wav" On Channel CHANNEL_MAGIC
+
+    Else If (Visual = Battle.VISUAL_TOR_ATTACK Or
+        Visual = Battle.VISUAL_TOR_BASH Or
+        Visual = Battle.VISUAL_DRAGON_CLAW Or
+        Visual = Battle.VISUAL_DRAGON_BREATH Or
+        Visual = Battle.VISUAL_DRAGON_CATASTROPHE Or
+        Visual = Battle.VISUAL_DRAGON_TAIL) Then
+
+        Play Sound "Assets\SFX\HeavyImpact.wav" On Channel CHANNEL_IMPACT
+
+    Else If Visual = Battle.VISUAL_CINDERLING_ATTACK Then
+
+        If Battle.VisualActor() = Battle.PARTICIPANT_CINDERLING_TWO Then
+            Play Sound "Assets\SFX\FrostBurst.wav" On Channel CHANNEL_MAGIC
+        Else
+            Play Sound "Assets\SFX\BladeImpact.wav" On Channel CHANNEL_IMPACT
+        End If
+
+    End If
+
+End Sub
+
+Private Sub PlayEnemyReaction()
+
+    Dim Target As Number
+
+    If Not Battle.VisualImpactLanded() Then
+        Return
+    End If
+
+    Target = Battle.VisualTarget()
+
+    If (Target >= Battle.PARTICIPANT_CINDERLING_ONE And
+        Target <= Battle.PARTICIPANT_CINDERLING_THREE And
+        Battle.Health(Target) <= 0) Then
+
+        Play Sound "Assets\SFX\CreatureDeath.wav" On Channel CHANNEL_CREATURE
+
+    Else If (Target >= Battle.PARTICIPANT_CINDERLING_ONE And
+        Target <= Battle.PARTICIPANT_ASHWING And
+        Battle.Health(Target) > 0 And
+        ImpactSequence Mod 2 = 0) Then
+
+        Play Sound "Assets\SFX\CreatureHurt.wav" On Channel CHANNEL_CREATURE
+
+    End If
+
+End Sub
+
+''' Routes one visual tick to layered sampled cues. Battle mechanics never
+''' depend on this module, and a miss deliberately omits contact and hurt audio.
+Public Sub Update()
+
+    Dim Visual As Number
+    Dim StepValue As Number
+
+    Visual = Battle.Visual()
+    StepValue = Battle.VisualStep()
+
+    If StepValue <= 0 Then
+        Return
+    End If
+
+    If Visual = Battle.VISUAL_VICTORY Then
+
+        If StepValue = 1 Then
+            Stop Music
+
+            Play Sound "Assets\SFX\DragonDeath.wav" On Channel CHANNEL_CREATURE
+
+        Else If StepValue = 84 Then
+
+            Play Sound "Assets\SFX\VictoryFlourish.wav" On Channel CHANNEL_MAGIC
+
+        End If
+
+        Return
+
+    Else If Visual = Battle.VISUAL_DEFEAT Then
+
+        If StepValue = 1 Then
+            Stop Music
+
+            Play Sound "Assets\SFX\DragonRoar.wav" On Channel CHANNEL_CREATURE
+
+        Else If StepValue = 29 Then
+
+            Play Sound "Assets\SFX\HeavyImpact.wav" On Channel CHANNEL_IMPACT
+
+        End If
+
+        Return
+
+    Else If Visual = Battle.VISUAL_BOSS_ENTRANCE Then
+
+        If StepValue = 44 Then
+
+            Play Sound "Assets\SFX\DragonRoar.wav" On Channel CHANNEL_CREATURE
+
+        Else If StepValue = 188 Then
+
+            Play Sound "Assets\SFX\HeavyImpact.wav" On Channel CHANNEL_IMPACT
+
+        End If
+
+        Return
+
+    Else If Visual = Battle.VISUAL_ENRAGE Then
+
+        If StepValue = 1 Then
+
+            Play Sound "Assets\SFX\DragonRoar.wav" On Channel CHANNEL_CREATURE
+
+        End If
+
+        Return
+
+    End If
+
+    If StepValue = 2 And IsDragonFire(Visual) Then
+
+        Play Sound "Assets\SFX\DragonRoar.wav" On Channel CHANNEL_CREATURE
+
+    Else If StepValue = 6 And IsDragonFire(Visual) Then
+
+        Play Sound "Assets\SFX\FireBlast.wav" On Channel CHANNEL_MAGIC
+
+    Else If StepValue = 4 And IsHeroMagic(Visual) Then
+
+        Play Sound "Assets\SFX\MagicCast.wav" On Channel CHANNEL_MAGIC
+
+    Else If (StepValue = 4 And
+        Visual = Battle.VISUAL_CINDERLING_ATTACK And
+        Battle.VisualActor() = Battle.PARTICIPANT_CINDERLING_TWO) Then
+
+        Play Sound "Assets\SFX\MagicCast.wav" On Channel CHANNEL_MAGIC
+
+    Else If (StepValue = 8 And
+        (Visual = Battle.VISUAL_ITEM Or
+        Visual = Battle.VISUAL_LYRA_MEND)) Then
+
+        Play Sound "Assets\SFX\HealAura.wav" On Channel CHANNEL_MAGIC
+
+    Else If StepValue = 18 And IsWeaponWindup(Visual) Then
+
+        Play Sound "Assets\SFX\WeaponWhoosh.wav" On Channel CHANNEL_MOVEMENT
+
+    Else If (StepValue = 18 And
+        Visual = Battle.VISUAL_CINDERLING_ATTACK And
+        Battle.VisualActor() <> Battle.PARTICIPANT_CINDERLING_TWO) Then
+
+        Play Sound "Assets\SFX\WeaponWhoosh.wav" On Channel CHANNEL_MOVEMENT
+
+    Else If (StepValue = 23 And
+        (Visual = Battle.VISUAL_TOR_ATTACK Or
+        Visual = Battle.VISUAL_TOR_BASH)) Then
+
+        Play Sound "Assets\SFX\GunBurst.wav" On Channel CHANNEL_MOVEMENT
+
+    Else If StepValue = 29 Then
+
+        Call PlayConfirmedImpact(Visual)
+
+    Else If StepValue = 36 Then
+
+        Call PlayEnemyReaction()
+
+    End If
+
+End Sub
+
+End Module
