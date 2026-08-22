@@ -4,6 +4,8 @@ Dragonfall is an original low-poly 3D battle built entirely with reusable SMILE 
 
 No Final Fantasy assets, names, music, dialogue, fonts, models, or UI artwork are included. The delivery uses the broad staging language of cinematic console RPG battles as design inspiration while keeping all distributable content original.
 
+The four heroes use reusable 26-part rigid rigs with independently posed thighs, shins, boots, upper and lower arms, hands, shoulders, facial details, hair or wizard hat, and role equipment. Ashwing uses a 36-part creature rig rendered at twice its original scale, with a two-link neck, articulated jaw, four two-link legs, wing bones and membranes, a three-link tail, horns, eyes, armor, and dorsal spikes. Shared primitive meshes keep the expanded cast within the bounded Renderer3D object and mesh budgets. Impact flashes, target recoil, persistent grounded bodies, extinguished dragon eyes, distinct survivor dances, and the rotating result camera make damage, death, victory, and defeat visually unambiguous.
+
 ## Run the crowd demo
 
 Build `Dragonfall.smileproj` or launch `artifacts\games\Dragonfall.exe`. The battle starts hands-free, adapts its healing and attacks, and automatically restarts after the ending sequence. Select `TAKE COMMAND` at any time to pause party automation; select `RESUME AUTO` to restore it without restarting the encounter.
@@ -41,7 +43,8 @@ Build `Dragonfall-NoDemo.smileproj` or launch `artifacts\games\Dragonfall-NoDemo
 ## Architecture
 
 - `DragonfallBattle.smile` owns deterministic definitions, ATB submissions, boss policy, phase transitions, and presentation-neutral visual events.
-- `DragonfallScene.smile` owns the original procedural arena/actors, bounds-driven and two-stage action cameras, fly-in/result tracking, bounded effect presets, transforms, rendering, and exact resource teardown.
+- `Smile.Battle3D.Articulation` provides reusable deterministic segment solving, locomotion cycles, and action envelopes for rigid characters and creatures.
+- `DragonfallScene.smile` owns the original procedural arena, articulated cast composition, bounds-driven and two-stage action cameras, fly-in/result tracking, bounded effect presets, transforms, rendering, and exact resource teardown.
 - `Program.smile` is the crowd demo and is the only file containing player-command demo AI and automatic replay.
 - `Program-NoDemo.smile` is the complete manual-command startup with that demo implementation removed.
 - `DragonfallTests.smile` proves win/loss routes, all commands, boss action variety, phase transition, 100 mechanics restarts, and 108,000 accelerated fixed ticks in native and Web.

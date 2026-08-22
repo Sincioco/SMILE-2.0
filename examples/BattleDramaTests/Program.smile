@@ -60,6 +60,23 @@ Segment = Articulation.SolveHangingSegment(10, 200, 30, 100, 0, 90)
 Call Check(Segment.CenterZ = 80)
 Call Check(Segment.EndZ = 130)
 Call Check(Segment.RotationX = -90)
+
+Segment = Articulation.SolveSegmentBetweenPoints(0, 0, 0, 30, 40, 0)
+
+Call Check(Segment.CenterX = 15)
+Call Check(Segment.CenterY = 20)
+Call Check(Segment.CenterZ = 0)
+Call Check(Segment.EndX = 30)
+Call Check(Segment.EndY = 40)
+Call Check(Segment.EndZ = 0)
+Call Check(Segment.Length = 50)
+
+Segment = Articulation.SolveSegmentBetweenPoints(0, 0, 0, 0, 0, 100)
+
+Call Check(Segment.CenterZ = 50)
+Call Check(Segment.EndZ = 100)
+Call Check(Segment.Length = 100)
+Call Check(Segment.RotationX = -90)
 Call Check(Articulation.CycleAngle(1, 4, 30, 0) = 30)
 Call Check(Articulation.CycleAngle(3, 4, 30, 0) = -30)
 Call Check(Articulation.PositiveCycle(3, 4, 30, 0) = 0)

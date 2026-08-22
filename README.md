@@ -28,7 +28,7 @@ Attract demos always return directly to the title screen when their run ends or 
 - `games\DungeonStarII` — an original continuous fixed-point raycasting walkaround with editable room-and-corridor maps, DDA projection, colorful stable wall materials, rising doors, collision and wall sliding, random generation, and demo/no-demo teaching sources.
 - `games\MazeMuncher` — an original neon maze chase with pellets, power mode, four geometric enemies, wrap tunnels, levels, a persistent high score, demo and no-demo teaching sources, and an attract demo.
 - `games\SpaceWars` — an original three-mission vector rail shooter using bounded fixed-point source-level 3D, generic pointer/touch input, a recycled starfield, pooled combat entities, generated original WAV effects, and demo/no-demo teaching sources.
-- `games\Dragonfall` — an original low-poly Renderer3D boss battle with three heroes, deterministic ATB, a two-phase dragon, cinematic cameras, bounded additive effects, original art/audio, a hands-free crowd demo, and a complete manual-command teaching source.
+- `games\Dragonfall` — an original low-poly Renderer3D battle with four articulated role-specific heroes, a three-enemy opening wave, a segmented two-phase dragon, deterministic ATB, cinematic cameras, bounded additive effects, original art/audio, a hands-free crowd demo, and complete manual control.
 
 ## Simple3D educational visualization
 

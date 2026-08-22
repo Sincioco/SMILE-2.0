@@ -5,6 +5,7 @@ Option Explicit
 
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.FixedMath As Math3D
+Import Smile.Simple3D.Math3D As Geometry3D
 
 ''' A cylinder-like segment solved from a joint toward its child joint.
 Public Type SegmentPose3D
@@ -60,6 +61,95 @@ Public Function SolveHangingSegment(
     Result.RotationX = 0 - SideAngle
     Result.RotationY = 0
     Result.RotationZ = ForwardAngle
+    Result.Length = Length
+    Return Result
+
+End Function
+
+''' Solves a cylinder-like segment between arbitrary world-space endpoints. The
+''' returned center and endpoint are exact; whole-degree rotations are chosen
+''' deterministically for Renderer3D rigid-part alignment.
+Public Function SolveSegmentBetweenPoints(
+    StartX As Number,
+    StartY As Number,
+    StartZ As Number,
+    EndX As Number,
+    EndY As Number,
+    EndZ As Number
+) As SegmentPose3D
+
+    Dim Result As SegmentPose3D
+    Dim DeltaX As Number
+    Dim DeltaY As Number
+    Dim DeltaZ As Number
+    Dim HorizontalLength As Number
+    Dim Length As Number
+    Dim ExpectedForwardSine As Number
+    Dim ExpectedForwardCosine As Number
+    Dim ExpectedSideSine As Number
+    Dim ForwardAngle As Number
+    Dim SideAngle As Number
+    Dim CandidateAngle As Number
+    Dim CandidateError As Number
+    Dim BestError As Number
+
+    DeltaX = EndX - StartX
+    DeltaY = EndY - StartY
+    DeltaZ = EndZ - StartZ
+    HorizontalLength = Geometry3D.SquareRoot(DeltaX * DeltaX + DeltaY * DeltaY)
+    Length = Geometry3D.SquareRoot(
+        DeltaX * DeltaX +
+        DeltaY * DeltaY +
+        DeltaZ * DeltaZ
+    )
+
+    If Length <= 0 Then
+        Return Result
+    End If
+
+    ExpectedSideSine = DeltaZ * Core.FIXED_ONE / Length
+    BestError = Core.FIXED_ONE * 4
+
+    For CandidateAngle = -90 To 90
+
+        CandidateError = Abs(Math3D.SinFixed(CandidateAngle) - ExpectedSideSine)
+
+        If CandidateError < BestError Then
+            BestError = CandidateError
+            SideAngle = CandidateAngle
+        End If
+
+    End For
+
+    If HorizontalLength > 0 Then
+
+        ExpectedForwardSine = DeltaX * Core.FIXED_ONE / HorizontalLength
+        ExpectedForwardCosine = (0 - DeltaY) * Core.FIXED_ONE / HorizontalLength
+        BestError = Core.FIXED_ONE * 8
+
+        For CandidateAngle = -180 To 180
+
+            CandidateError = (
+                Abs(Math3D.SinFixed(CandidateAngle) - ExpectedForwardSine) +
+                Abs(Math3D.CosFixed(CandidateAngle) - ExpectedForwardCosine)
+            )
+
+            If CandidateError < BestError Then
+                BestError = CandidateError
+                ForwardAngle = CandidateAngle
+            End If
+
+        End For
+
+    End If
+
+    Result = SolveHangingSegment(StartX, StartY, StartZ, Length, ForwardAngle, SideAngle)
+    Result.CenterX = (StartX + EndX) / 2
+    Result.CenterY = (StartY + EndY) / 2
+    Result.CenterZ = (StartZ + EndZ) / 2
+    Result.EndX = EndX
+    Result.EndY = EndY
+    Result.EndZ = EndZ
     Result.Length = Length
     Return Result
 

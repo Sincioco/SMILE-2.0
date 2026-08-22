@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ProjectKind>Library</ProjectKind>
     <LibraryName>Smile.Battle3D</LibraryName>
-    <Version>1.2.0</Version>
+    <Version>1.2.1</Version>
     <OutputName>Smile.Battle3D</OutputName>
   </PropertyGroup>
   <ItemGroup>
