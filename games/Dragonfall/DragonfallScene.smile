@@ -74,6 +74,7 @@ Private Dim DragonScaleTexture As Core.Texture3D
 Private Dim DragonWingTexture As Core.Texture3D
 Private Dim HeroClothTexture As Core.Texture3D
 Private Dim ForgedSteelTexture As Core.Texture3D
+Private Dim VfxTexture As Core.Texture3D
 Private Dim EmptyTexture As Core.Texture3D
 Private Dim FloorMaterial As Core.Material3D
 Private Dim GridMaterial As Core.Material3D
@@ -188,6 +189,31 @@ Private Function TexturedMaterial(
         False,
         EmissiveValue,
         50
+    )
+
+    Return ReturnValue
+
+End Function
+
+Private Function AdditiveTexturedMaterial(
+    Texture As Core.Texture3D,
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number
+) As Core.Material3D
+
+    Dim ReturnValue As Core.Material3D
+
+    ReturnValue = Graphics3D.CreateMaterial3D(
+        Texture,
+        Graphics3D.MATERIAL_ALPHA_ADDITIVE,
+        RedValue,
+        GreenValue,
+        BlueValue,
+        100,
+        True,
+        100,
+        20
     )
 
     Return ReturnValue
@@ -2229,6 +2255,11 @@ Public Function Initialize(StateHandle As Number) As Boolean
         Graphics3D.TEXTURE_FILTER_LINEAR,
         Graphics3D.TEXTURE_WRAP_REPEAT
     )
+    VfxTexture = Graphics3D.LoadTexture3D(
+        "Assets\Textures\ArcaneEnergy.png",
+        Graphics3D.TEXTURE_FILTER_LINEAR,
+        Graphics3D.TEXTURE_WRAP_REPEAT
+    )
 
     FloorMaterial = Material(3, 7, 18, 0, False)
     GridMaterial = Material(24, 126, 255, 90, False)
@@ -2256,14 +2287,14 @@ Public Function Initialize(StateHandle As Number) As Boolean
     HairMaterial = Material(92, 58, 28, 8, False)
     ArinHairMaterial = Material(232, 186, 72, 20, False)
     TorHairMaterial = Material(38, 24, 19, 5, False)
-    LeatherMaterial = Material(76, 42, 28, 5, False)
-    BoneMaterial = Material(220, 224, 216, 12, False)
+    LeatherMaterial = TexturedMaterial(ForgedSteelTexture, 108, 62, 38, 5)
+    BoneMaterial = TexturedMaterial(ForgedSteelTexture, 235, 226, 205, 10)
     VoidMaterial = Material(7, 5, 12, 0, False)
     DragonMaterial = TexturedMaterial(DragonScaleTexture, 255, 255, 255, 20)
     DragonGlowMaterial = Material(238, 55, 12, 68, False)
     DragonWingMaterial = TexturedMaterial(DragonWingTexture, 255, 225, 205, 24)
     DragonUnderbellyMaterial = Material(226, 108, 35, 20, False)
-    ParticleMaterial = Material(255, 255, 255, 100, True)
+    ParticleMaterial = AdditiveTexturedMaterial(VfxTexture, 255, 255, 255)
 
     Call CreateArena()
     Call CreateRigTemplates()
@@ -4405,6 +4436,7 @@ Public Sub Shutdown()
     Call Graphics3D.DestroyMaterial3D(GridMaterial)
     Call Graphics3D.DestroyMaterial3D(FloorMaterial)
     Call Graphics3D.DestroyTexture3D(ForgedSteelTexture)
+    Call Graphics3D.DestroyTexture3D(VfxTexture)
     Call Graphics3D.DestroyTexture3D(HeroClothTexture)
     Call Graphics3D.DestroyTexture3D(DragonWingTexture)
     Call Graphics3D.DestroyTexture3D(DragonScaleTexture)
