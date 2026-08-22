@@ -40,6 +40,8 @@ Public Const VISUAL_LYRA_ATTACK = 15
 Public Const VISUAL_LYRA_MEND = 16
 Public Const VISUAL_CINDERLING_ATTACK = 17
 Public Const VISUAL_BOSS_ENTRANCE = 18
+Public Const VISUAL_MIRA_LIGHTNING = 19
+Public Const VISUAL_DRAGON_CATASTROPHE = 20
 
 Public Const COMMAND_ATTACK = 1
 Public Const COMMAND_SPECIAL = 2
@@ -48,6 +50,7 @@ Public Const COMMAND_DEFEND = 4
 Public Const COMMAND_ITEM = 5
 Public Const COMMAND_SKILL_ONE = 6
 Public Const COMMAND_SKILL_TWO = 7
+Public Const COMMAND_SKILL_THREE = 8
 
 Public Const EFFECT_SLASH = 1
 Public Const EFFECT_FIRE = 2
@@ -58,12 +61,16 @@ Public Const EFFECT_ENRAGE = 6
 Public Const EFFECT_DEATH = 7
 Public Const EFFECT_BASH = 8
 Public Const EFFECT_AURORA = 9
+Public Const EFFECT_LIGHTNING = 10
+Public Const EFFECT_BURNING = 11
+Public Const EFFECT_CATASTROPHE = 12
 
 Private Const CHARACTER_ARIN = 100
 Private Const CHARACTER_MIRA = 101
 Private Const CHARACTER_TOR = 102
 Private Const CHARACTER_LYRA = 103
 Private Const ENEMY_CINDERLING = 199
+Private Const ENEMY_CINDER_WARDEN = 198
 Private Const ENEMY_ASHWING = 200
 Private Const FORMATION_ASHWING = 300
 Private Const ITEM_CINDER_TONIC = 400
@@ -74,6 +81,8 @@ Private Const ABILITY_MEND = 503
 Private Const ABILITY_METEOR_BARRAGE = 504
 Private Const ABILITY_FIRE_BREATH = 505
 Private Const ABILITY_TAIL_SWEEP = 506
+Private Const ABILITY_LIGHTNING = 507
+Private Const ABILITY_CALDERA_ANNIHILATION = 508
 Private Const MECHANIC_AEGIS = 600
 Private Const MECHANIC_FLAME = 601
 Private Const MECHANIC_FROST = 602
@@ -82,10 +91,16 @@ Private Const MECHANIC_BASH = 604
 Private Const MECHANIC_BREATH = 605
 Private Const MECHANIC_TAIL = 606
 Private Const MECHANIC_TONIC = 607
+Private Const MECHANIC_LIGHTNING = 608
+Private Const MECHANIC_CATASTROPHE = 609
+Private Const STATUS_BURNING = 700
 Private Const ACTION_VISUAL_STEPS = 72
 Private Const ENRAGE_VISUAL_STEPS = 150
 Private Const BOSS_ENTRANCE_VISUAL_STEPS = 240
 Private Const RESULT_VISUAL_STEPS = 360
+Private Const LEVEL_INFERNAL_SENTINEL = 17
+Private Const LEVEL_CINDER_WARDEN = 20
+Private Const LEVEL_ASHWING = 24
 
 Private Dim State As Number
 Private Dim CurrentVisual As Number
@@ -95,11 +110,14 @@ Private Dim CurrentActor As Number
 Private Dim CurrentTarget As Number
 Private Dim CurrentDamage As Number
 Private Dim CurrentMessage As Text
+Private Dim CurrentImpactLanded As Boolean
 Private Dim PhaseTwo As Boolean
 Private Dim PhaseTwoPending As Boolean
 Private Dim BossIntroduced As Boolean
 Private Dim BossIntroductionPending As Boolean
 Private Dim ResultShown As Boolean
+Private Dim DemoCatastropheEnabled As Boolean
+Private Dim CatastropheUsed As Boolean
 Private Dim EventStart As Number
 Private Dim Character As Characters.CharacterDefinition
 Private Dim Enemy As BattleCore.EnemyDefinition
@@ -109,6 +127,7 @@ Private Dim Effect As Effects.EffectDefinition
 Private Dim Component As Effects.EffectComponentDefinition
 Private Dim Ability As Abilities.AbilityDefinition
 Private Dim Item As Inventory.ItemDefinition
+Private Dim Status As Effects.StatusDefinition
 
 Public Function Initialize() As Boolean
 
@@ -128,15 +147,52 @@ Public Function Initialize() As Boolean
         Return False
     End If
 
+    ''' Dragonfall opts into the reusable progression-aware accuracy system. The
+    ''' proficiency values represent each role's weapon training; Level, combat
+    ''' statistics, and future equipment bonuses are added by Smile.RPG.
+
+    If (Not BattleCore.ConfigureAttackBaseHitChance(State, BattleCore.BATTLE_SIDE_PARTY, 91) Or
+        Not BattleCore.ConfigureAttackProficiencyBonus(State, PARTICIPANT_ARIN, 2) Or
+        Not BattleCore.ConfigureAttackProficiencyBonus(State, PARTICIPANT_TOR, 4) Or
+        Not BattleCore.ConfigureAttackProficiencyBonus(State, PARTICIPANT_LYRA, 1) Or
+        Not BattleCore.ConfigureAttackProficiencyBonus(State, PARTICIPANT_MIRA, 3)) Then
+        Call Shutdown()
+
+        Return False
+    End If
+
     CurrentVisual = VISUAL_IDLE
     CurrentVisualStep = 0
-    CurrentMessage = "THREE CINDERLINGS BLOCK THE WAY"
+    CurrentMessage = "THE BONEGUARD, NECROMANCER, AND DREAD ARCHER BLOCK THE WAY"
     PhaseTwo = False
     PhaseTwoPending = False
     BossIntroduced = False
     BossIntroductionPending = False
     ResultShown = False
+    DemoCatastropheEnabled = False
+    CatastropheUsed = False
     Return True
+
+End Function
+
+Private Function AddEffectComponent(
+    EffectId As Number,
+    Kind As Number,
+    Power As Number,
+    StatusId As Number,
+    Duration As Number
+) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Component.EffectId = EffectId
+    Component.Kind = Kind
+    Component.Power = Power
+    Component.StatusId = StatusId
+    Component.Duration = Duration
+    ReturnValue = Effects.AddComponent(State, Component)
+
+    Return ReturnValue
 
 End Function
 
@@ -146,7 +202,7 @@ Private Function DefineCharacter(Id As Number, Name As Text, Health As Number, M
 
     Character.Id = Id
     Character.Name = Name
-    Character.StartingLevel = 12
+    Character.StartingLevel = 18
     Character.StartingMaximumHealth = Health
     Character.StartingMaximumMagicPoints = MagicPoints
     Character.Strength = Strength
@@ -163,10 +219,10 @@ End Function
 
 Private Function DefineParty() As Boolean
 
-    If (Not DefineCharacter(CHARACTER_ARIN, "Arin", 620, 70, 46, 58, 25, 42, 34, 18) Or
-        Not DefineCharacter(CHARACTER_TOR, "Tor", 650, 60, 64, 38, 24, 32, 31, 14) Or
-        Not DefineCharacter(CHARACTER_LYRA, "Lyra", 440, 170, 24, 30, 54, 56, 43, 25) Or
-        Not DefineCharacter(CHARACTER_MIRA, "Mira", 380, 180, 22, 22, 68, 46, 47, 22) Or
+    If (Not DefineCharacter(CHARACTER_ARIN, "Arin", 780, 85, 56, 72, 30, 52, 40, 24) Or
+        Not DefineCharacter(CHARACTER_TOR, "Tor", 820, 75, 78, 48, 28, 40, 38, 20) Or
+        Not DefineCharacter(CHARACTER_LYRA, "Lyra", 600, 210, 30, 40, 70, 72, 52, 32) Or
+        Not DefineCharacter(CHARACTER_MIRA, "Mira", 540, 230, 28, 34, 88, 58, 58, 30) Or
         Not Party.AddCharacter(State, CHARACTER_ARIN) Or
         Not Party.AddCharacter(State, CHARACTER_TOR) Or
         Not Party.AddCharacter(State, CHARACTER_LYRA) Or
@@ -220,23 +276,43 @@ Private Function DefineMechanics() As Boolean
 
     Dim ReturnValue As Boolean
 
+    Status.Id = STATUS_BURNING
+    Status.Name = "Burning"
+    Status.Kind = Effects.BATTLE_STATUS_POISON
+    Status.Statistic = 0
+    Status.Value = 24
+    Status.TickTiming = Effects.BATTLE_STATUS_TICK_ROUND_END
+
+    If Not Effects.DefineStatus(State, Status) Then
+        Return False
+    End If
+
     If (Not AddEffect(MECHANIC_AEGIS, "Aegis Break", Effects.BATTLE_EFFECT_PHYSICAL_DAMAGE, 108) Or
         Not AddEffect(MECHANIC_FLAME, "Astral Flame", Effects.BATTLE_EFFECT_MAGIC_DAMAGE, 135) Or
         Not AddEffect(MECHANIC_FROST, "Comet Frost", Effects.BATTLE_EFFECT_MAGIC_DAMAGE, 128) Or
+        Not AddEffect(MECHANIC_LIGHTNING, "Skybreaker Arc", Effects.BATTLE_EFFECT_MAGIC_DAMAGE, 148) Or
         Not AddEffect(MECHANIC_MEND, "Starlight Mend", Effects.BATTLE_EFFECT_HEAL_HEALTH, 155) Or
         Not AddEffect(MECHANIC_BASH, "Meteor Barrage", Effects.BATTLE_EFFECT_PHYSICAL_DAMAGE, 142) Or
         Not AddEffect(MECHANIC_BREATH, "Cataclysm Breath", Effects.BATTLE_EFFECT_MAGIC_DAMAGE, 108) Or
+        Not AddEffect(MECHANIC_CATASTROPHE, "Caldera Annihilation", Effects.BATTLE_EFFECT_MAGIC_DAMAGE, 1400) Or
         Not AddEffect(MECHANIC_TAIL, "Volcanic Tail", Effects.BATTLE_EFFECT_PHYSICAL_DAMAGE, 82) Or
         Not AddEffect(MECHANIC_TONIC, "Cinder Tonic", Effects.BATTLE_EFFECT_HEAL_HEALTH, 180)) Then
+        Return False
+    End If
+
+    If (Not AddEffectComponent(MECHANIC_BREATH, Effects.BATTLE_EFFECT_APPLY_STATUS, 0, STATUS_BURNING, 3) Or
+        Not AddEffectComponent(MECHANIC_CATASTROPHE, Effects.BATTLE_EFFECT_APPLY_STATUS, 0, STATUS_BURNING, 3)) Then
         Return False
     End If
 
     If (Not AddAbility(ABILITY_AEGIS_BREAK, "Aegis Break", 7, 108, RPG.RPG_TARGET_ONE_ENEMY, MECHANIC_AEGIS) Or
         Not AddAbility(ABILITY_FLAME, "Astral Flame", 10, 135, RPG.RPG_TARGET_ONE_ENEMY, MECHANIC_FLAME) Or
         Not AddAbility(ABILITY_FROST, "Comet Frost", 9, 128, RPG.RPG_TARGET_ONE_ENEMY, MECHANIC_FROST) Or
+        Not AddAbility(ABILITY_LIGHTNING, "Skybreaker Arc", 12, 148, RPG.RPG_TARGET_ONE_ENEMY, MECHANIC_LIGHTNING) Or
         Not AddAbility(ABILITY_MEND, "Starlight Mend", 8, 155, RPG.RPG_TARGET_ONE_ALLY, MECHANIC_MEND) Or
         Not AddAbility(ABILITY_METEOR_BARRAGE, "Meteor Barrage", 7, 142, RPG.RPG_TARGET_ONE_ENEMY, MECHANIC_BASH) Or
         Not AddAbility(ABILITY_FIRE_BREATH, "Cataclysm Breath", 0, 48, RPG.RPG_TARGET_ALL_ENEMIES, MECHANIC_BREATH) Or
+        Not AddAbility(ABILITY_CALDERA_ANNIHILATION, "Caldera Annihilation", 0, 1400, RPG.RPG_TARGET_ALL_ENEMIES, MECHANIC_CATASTROPHE) Or
         Not AddAbility(ABILITY_TAIL_SWEEP, "Volcanic Tail", 0, 42, RPG.RPG_TARGET_ALL_ENEMIES, MECHANIC_TAIL)) Then
         Return False
     End If
@@ -244,6 +320,7 @@ Private Function DefineMechanics() As Boolean
     If (Not Abilities.LearnAbility(State, CHARACTER_ARIN, ABILITY_AEGIS_BREAK) Or
         Not Abilities.LearnAbility(State, CHARACTER_MIRA, ABILITY_FLAME) Or
         Not Abilities.LearnAbility(State, CHARACTER_MIRA, ABILITY_FROST) Or
+        Not Abilities.LearnAbility(State, CHARACTER_MIRA, ABILITY_LIGHTNING) Or
         Not Abilities.LearnAbility(State, CHARACTER_LYRA, ABILITY_MEND) Or
         Not Abilities.LearnAbility(State, CHARACTER_TOR, ABILITY_METEOR_BARRAGE)) Then
         Return False
@@ -286,6 +363,24 @@ Private Function DefineBoss() As Boolean
         Return False
     End If
 
+    Enemy.Id = ENEMY_CINDER_WARDEN
+    Enemy.Name = "Cinder Warden"
+    Enemy.MaximumHealth = 560
+    Enemy.MaximumMagicPoints = 80
+    Enemy.Strength = 38
+    Enemy.Defense = 22
+    Enemy.Magic = 24
+    Enemy.Resistance = 20
+    Enemy.Agility = 34
+    Enemy.Luck = 9
+    Enemy.ExperienceReward = 110
+    Enemy.GoldReward = 75
+    Enemy.AiProfileId = 1
+
+    If Not BattleCore.DefineEnemy(State, Enemy) Then
+        Return False
+    End If
+
     Enemy.Id = ENEMY_ASHWING
     Enemy.Name = "Ashwing, Caldera Tyrant"
     Enemy.MaximumHealth = 3000
@@ -321,12 +416,14 @@ Private Function DefineBoss() As Boolean
         Return False
     End If
 
+    Member.EnemyId = ENEMY_CINDER_WARDEN
     Member.SlotId = 2
 
     If Not BattleCore.AddFormationMember(State, Member) Then
         Return False
     End If
 
+    Member.EnemyId = ENEMY_CINDERLING
     Member.SlotId = 3
 
     If Not BattleCore.AddFormationMember(State, Member) Then
@@ -351,6 +448,7 @@ Private Sub StartVisual(Visual As Number, ActorId As Number, TargetId As Number,
     CurrentTarget = TargetId
     CurrentDamage = 0
     CurrentMessage = Message
+    CurrentImpactLanded = True
 
 End Sub
 
@@ -378,9 +476,12 @@ Private Sub BuildActionVisual(FirstEvent As Number)
                 Call StartVisual(VISUAL_MIRA_FLAME, ActorId, TargetId, "MIRA // ARCANE BOLT", ACTION_VISUAL_STEPS)
             Else If ActorId = PARTICIPANT_LYRA Then
                 Call StartVisual(VISUAL_LYRA_ATTACK, ActorId, TargetId, "LYRA // GALE LANCE", ACTION_VISUAL_STEPS)
-            Else If (ActorId >= PARTICIPANT_CINDERLING_ONE And
-                ActorId <= PARTICIPANT_CINDERLING_THREE) Then
-                Call StartVisual(VISUAL_CINDERLING_ATTACK, ActorId, TargetId, "CINDERLING // ASHEN RUSH", ACTION_VISUAL_STEPS)
+            Else If ActorId = PARTICIPANT_CINDERLING_ONE Then
+                Call StartVisual(VISUAL_CINDERLING_ATTACK, ActorId, TargetId, "BONEGUARD // GRAVE CLEAVE", ACTION_VISUAL_STEPS)
+            Else If ActorId = PARTICIPANT_CINDERLING_TWO Then
+                Call StartVisual(VISUAL_CINDERLING_ATTACK, ActorId, TargetId, "NECROMANCER // SOUL HEX", ACTION_VISUAL_STEPS)
+            Else If ActorId = PARTICIPANT_CINDERLING_THREE Then
+                Call StartVisual(VISUAL_CINDERLING_ATTACK, ActorId, TargetId, "DREAD ARCHER // BLACK ARROW", ACTION_VISUAL_STEPS)
             Else
 
                 Call StartVisual(VISUAL_DRAGON_CLAW, ActorId, TargetId, "ASHWING // OBSIDIAN CLAW", ACTION_VISUAL_STEPS)
@@ -396,12 +497,16 @@ Private Sub BuildActionVisual(FirstEvent As Number)
                 Call StartVisual(VISUAL_MIRA_FLAME, ActorId, TargetId, "MIRA // ASTRAL FLAME", ACTION_VISUAL_STEPS)
             Else If SourceId = ABILITY_FROST Then
                 Call StartVisual(VISUAL_MIRA_FROST, ActorId, TargetId, "MIRA // COMET FROST", ACTION_VISUAL_STEPS)
+            Else If SourceId = ABILITY_LIGHTNING Then
+                Call StartVisual(VISUAL_MIRA_LIGHTNING, ActorId, TargetId, "MIRA // SKYBREAKER ARC", ACTION_VISUAL_STEPS + 12)
             Else If SourceId = ABILITY_MEND Then
                 Call StartVisual(VISUAL_LYRA_MEND, ActorId, TargetId, "LYRA // AURORA MEND", ACTION_VISUAL_STEPS)
             Else If SourceId = ABILITY_METEOR_BARRAGE Then
                 Call StartVisual(VISUAL_TOR_BASH, ActorId, TargetId, "TOR // METEOR BARRAGE", ACTION_VISUAL_STEPS)
             Else If SourceId = ABILITY_FIRE_BREATH Then
                 Call StartVisual(VISUAL_DRAGON_BREATH, ActorId, TargetId, "ASHWING // CATACLYSM BREATH", ACTION_VISUAL_STEPS + 24)
+            Else If SourceId = ABILITY_CALDERA_ANNIHILATION Then
+                Call StartVisual(VISUAL_DRAGON_CATASTROPHE, ActorId, TargetId, "ASHWING // CALDERA ANNIHILATION", ENRAGE_VISUAL_STEPS)
             Else If SourceId = ABILITY_TAIL_SWEEP Then
                 Call StartVisual(VISUAL_DRAGON_TAIL, ActorId, TargetId, "ASHWING // VOLCANIC TAIL", ACTION_VISUAL_STEPS)
             End If
@@ -425,6 +530,13 @@ Private Sub BuildActionVisual(FirstEvent As Number)
 
             CurrentDamage = -BattleCore.EventValueOneAt(State, Index)
             CurrentTarget = TargetId
+
+        Else If Kind = BattleCore.BATTLE_EVENT_MISS Then
+
+            CurrentImpactLanded = False
+            CurrentDamage = 0
+            CurrentTarget = TargetId
+            CurrentMessage = CurrentMessage + " // MISS"
 
         End If
 
@@ -459,6 +571,24 @@ Private Sub SubmitBossIfReady()
 
     Round = BattleCore.RoundNumber(State) + 1
     TargetParticipant = LowestLivingParty()
+
+    If DemoCatastropheEnabled And Not CatastropheUsed And PhaseTwo Then
+
+        Accepted = BattleTime.SubmitAction(
+            State,
+            EnemyParticipant,
+            BattleCore.BATTLE_ACTION_ABILITY,
+            ABILITY_CALDERA_ANNIHILATION,
+            TargetParticipant
+        )
+
+        If Accepted Then
+            CatastropheUsed = True
+        End If
+
+        Return
+
+    End If
 
     If PhaseTwo And Round Mod 2 = 0 Then
         Accepted = BattleTime.SubmitAction(State, EnemyParticipant, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_TAIL_SWEEP, TargetParticipant)
@@ -579,15 +709,19 @@ End Sub
 
 Private Function FirstLivingEnemy() As Number
 
-    Dim ParticipantId As Number
+    ''' Clear the warden's two escorts before focusing the Wave 1 mini-boss.
 
-    For ParticipantId = PARTICIPANT_CINDERLING_ONE To PARTICIPANT_CINDERLING_THREE
+    If BattleCore.IsAlive(State, PARTICIPANT_CINDERLING_ONE) Then
+        Return PARTICIPANT_CINDERLING_ONE
+    End If
 
-        If BattleCore.IsAlive(State, ParticipantId) Then
-            Return ParticipantId
-        End If
+    If BattleCore.IsAlive(State, PARTICIPANT_CINDERLING_THREE) Then
+        Return PARTICIPANT_CINDERLING_THREE
+    End If
 
-    End For
+    If BattleCore.IsAlive(State, PARTICIPANT_CINDERLING_TWO) Then
+        Return PARTICIPANT_CINDERLING_TWO
+    End If
 
     If BossIntroduced And BattleCore.IsAlive(State, PARTICIPANT_ASHWING) Then
         Return PARTICIPANT_ASHWING
@@ -650,13 +784,17 @@ Public Function SubmitPlayerCommand(ParticipantId As Number, Command As Number) 
 
         Else If ParticipantId = PARTICIPANT_MIRA Then
 
-            If BattleCore.RoundNumber(State) Mod 2 = 0 Then
+            If BattleCore.RoundNumber(State) Mod 3 = 0 Then
                 ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_FLAME, EnemyTarget)
+
+                Return ReturnValue
+            Else If BattleCore.RoundNumber(State) Mod 3 = 1 Then
+                ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_FROST, EnemyTarget)
 
                 Return ReturnValue
             End If
 
-            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_FROST, EnemyTarget)
+            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_LIGHTNING, EnemyTarget)
 
             Return ReturnValue
 
@@ -685,6 +823,12 @@ Public Function SubmitPlayerCommand(ParticipantId As Number, Command As Number) 
     Else If Command = COMMAND_SKILL_TWO And ParticipantId = PARTICIPANT_MIRA Then
 
         ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_FROST, EnemyTarget)
+
+        Return ReturnValue
+
+    Else If Command = COMMAND_SKILL_THREE And ParticipantId = PARTICIPANT_MIRA Then
+
+        ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_LIGHTNING, EnemyTarget)
 
         Return ReturnValue
 
@@ -790,6 +934,24 @@ Public Function DamageNumber() As Number
 
 End Function
 
+Public Function VisualImpactLanded() As Boolean
+
+    Return CurrentImpactLanded
+
+End Function
+
+Public Sub SetDemoCatastropheEnabled(Enabled As Boolean)
+
+    DemoCatastropheEnabled = Enabled
+
+End Sub
+
+Public Function DemoCatastropheWasUsed() As Boolean
+
+    Return CatastropheUsed
+
+End Function
+
 Public Function Message() As Text
 
     Return CurrentMessage
@@ -879,6 +1041,29 @@ Public Function MaximumMagicPoints(ParticipantId As Number) As Number
     Dim ReturnValue As Number
 
     ReturnValue = BattleCore.MaximumMagicPoints(State, ParticipantId)
+
+    Return ReturnValue
+
+End Function
+
+Public Function Level(ParticipantId As Number) As Number
+
+    Dim CharacterId As Number
+    Dim ReturnValue As Number
+
+    If (ParticipantId = PARTICIPANT_CINDERLING_ONE Or
+        ParticipantId = PARTICIPANT_CINDERLING_THREE) Then
+        Return LEVEL_INFERNAL_SENTINEL
+    Else If ParticipantId = PARTICIPANT_CINDERLING_TWO Then
+        Return LEVEL_CINDER_WARDEN
+    Else If ParticipantId = PARTICIPANT_ASHWING Then
+        Return LEVEL_ASHWING
+    Else If ParticipantId < PARTICIPANT_ARIN Or ParticipantId > PARTICIPANT_MIRA Then
+        Return 0
+    End If
+
+    CharacterId = BattleCore.ParticipantReferenceId(State, ParticipantId)
+    ReturnValue = Characters.Level(State, CharacterId)
 
     Return ReturnValue
 

@@ -24,21 +24,22 @@ Public Const SHOT_VICTORY = 10
 Public Const SHOT_BOSS_ENTRANCE = 11
 Public Const SHOT_IDLE_PARTY_BACK = 12
 
-Private Const ARENA_OBJECT_COUNT = 12
-Private Const HERO_PART_COUNT = 26
-Private Const PARTY_OBJECT_COUNT = 104
-Private Const DRAGON_OBJECT_COUNT = 36
+Private Const ARENA_OBJECT_COUNT = 39
+Private Const HERO_PART_COUNT = 40
+Private Const PARTY_OBJECT_COUNT = 160
+Private Const DRAGON_OBJECT_COUNT = 60
 Private Const CINDERLING_COUNT = 3
-Private Const CINDERLING_PARTS_PER_ENEMY = 10
-Private Const CINDERLING_OBJECT_COUNT = 30
-Private Const PARTICLE_OBJECT_COUNT = 64
-Private Const IMPACT_OBJECT_COUNT = 2
-Private Const RIG_TEMPLATE_COUNT = 5
+Private Const CINDERLING_PARTS_PER_ENEMY = 30
+Private Const CINDERLING_OBJECT_COUNT = 90
+Private Const PARTICLE_OBJECT_COUNT = 128
+Private Const IMPACT_OBJECT_COUNT = 20
+Private Const RIG_TEMPLATE_COUNT = 6
 Private Const RIG_CUBE = 0
 Private Const RIG_SPHERE = 1
 Private Const RIG_CYLINDER = 2
 Private Const RIG_PYRAMID = 3
 Private Const RIG_TORUS = 4
+Private Const RIG_WING = 5
 Private Const ROLE_DEFENDER = 1
 Private Const ROLE_ATTACKER = 2
 Private Const ROLE_HEALER = 3
@@ -47,6 +48,14 @@ Private Const DRAGON_ROOT_X = 820
 Private Const DRAGON_ROOT_Y = 145
 Private Const DRAGON_ROOT_Z = 45
 Private Const DRAGON_SCALE_PERCENT = 200
+Private Const CINDERLING_MINION_SCALE_PERCENT = 135
+Private Const CINDER_WARDEN_SCALE_PERCENT = 165
+Private Const PARTY_CENTER_X = -960
+Private Const PARTY_CENTER_Z = 30
+Private Const ARIN_FORMATION_X = -930
+Private Const MIRA_FORMATION_X = -990
+Private Const TOR_FORMATION_X = -900
+Private Const LYRA_FORMATION_X = -1020
 Private Const ARIN_FORMATION_Z = -330
 Private Const MIRA_FORMATION_Z = -90
 Private Const TOR_FORMATION_Z = 150
@@ -55,9 +64,11 @@ Private Const LYRA_FORMATION_Z = 390
 Private Dim State As Number
 Private Dim Ready As Boolean
 Private Dim Camera As Core.Camera3D
-Private Dim FloorTexture As Core.Texture3D
+Private Dim CosmicTexture As Core.Texture3D
 Private Dim EmptyTexture As Core.Texture3D
 Private Dim FloorMaterial As Core.Material3D
+Private Dim GridMaterial As Core.Material3D
+Private Dim CosmicMaterial As Core.Material3D
 Private Dim StoneMaterial As Core.Material3D
 Private Dim BronzeMaterial As Core.Material3D
 Private Dim LavaMaterial As Core.Material3D
@@ -69,18 +80,25 @@ Private Dim TorMaterial As Core.Material3D
 Private Dim LyraMaterial As Core.Material3D
 Private Dim SkinMaterial As Core.Material3D
 Private Dim HairMaterial As Core.Material3D
+Private Dim ArinHairMaterial As Core.Material3D
+Private Dim TorHairMaterial As Core.Material3D
 Private Dim LeatherMaterial As Core.Material3D
+Private Dim BoneMaterial As Core.Material3D
+Private Dim VoidMaterial As Core.Material3D
 Private Dim DragonMaterial As Core.Material3D
 Private Dim DragonGlowMaterial As Core.Material3D
+Private Dim DragonWingMaterial As Core.Material3D
+Private Dim DragonUnderbellyMaterial As Core.Material3D
 Private Dim ParticleMaterial As Core.Material3D
-Private Dim RigTemplates[5] As Core.Object3D
-Private Dim Arena[12] As Core.Object3D
-Private Dim PartyParts[104] As Core.Object3D
-Private Dim DragonParts[36] As Core.Object3D
-Private Dim CinderlingParts[30] As Core.Object3D
+Private Dim RigTemplates[6] As Core.Object3D
+Private Dim Arena[39] As Core.Object3D
+Private Dim PartyParts[160] As Core.Object3D
+Private Dim DragonParts[60] As Core.Object3D
+Private Dim CinderlingParts[90] As Core.Object3D
 Private Dim ParticleTemplate As Core.Object3D
-Private Dim ParticleObjects[64] As Core.Object3D
-Private Dim ImpactObjects[2] As Core.Object3D
+Private Dim ParticleObjects[128] As Core.Object3D
+Private Dim ImpactObjects[20] As Core.Object3D
+Private Dim BurningSteps[4] As Number
 Private Dim LastVisual As Number
 Private Dim LastVisualStep As Number
 Private Dim GlobalStep As Number
@@ -88,9 +106,17 @@ Private Dim OperationAccepted As Boolean
 Private Dim LastArinOffset As Number
 Private Dim LastTorOffset As Number
 Private Dim LastLyraOffset As Number
+Private Dim LastMiraOffset As Number
+Private Dim LastArinOffsetZ As Number
+Private Dim LastTorOffsetZ As Number
+Private Dim LastLyraOffsetZ As Number
+Private Dim LastMiraOffsetZ As Number
 Private Dim LastDragonOffsetX As Number
 Private Dim LastDragonOffsetY As Number
 Private Dim LastDragonOffsetZ As Number
+Private Dim LastDragonMouthX As Number
+Private Dim LastDragonMouthY As Number
+Private Dim LastDragonMouthZ As Number
 Private Dim LastCinderlingOffset[3] As Number
 Private Dim CameraInputAccepted As Boolean
 Private Dim LastFramedEnemyCount As Number
@@ -152,12 +178,32 @@ End Sub
 Private Sub CreateRigTemplates()
 
     Dim Index As Number
+    Dim WingMesh As Number
 
     RigTemplates[RIG_CUBE] = Graphics3D.CreateCube3D(100)
     RigTemplates[RIG_SPHERE] = Graphics3D.CreateSphere3D(50)
     RigTemplates[RIG_CYLINDER] = Graphics3D.CreateCylinder3D(10, 100)
     RigTemplates[RIG_PYRAMID] = Graphics3D.CreatePyramid3D(100, 100)
     RigTemplates[RIG_TORUS] = Graphics3D.CreateTorus3D(50, 8)
+    ''' A shallow triangular prism stays visible from oblique action cameras and
+    ''' gives broad low-poly wings a solid, connected silhouette.
+    WingMesh = Graphics3D.CreateMesh3D(6, 24)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 0, -50, 50, -50)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 1, 50, 50, -50)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 2, 0, -50, -50)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 3, -50, 50, 50)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 4, 50, 50, 50)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 5, 0, -50, 50)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(WingMesh, 0, 0, 1, 2)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(WingMesh, 1, 5, 4, 3)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(WingMesh, 2, 0, 3, 4)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(WingMesh, 3, 0, 4, 1)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(WingMesh, 4, 1, 4, 5)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(WingMesh, 5, 1, 5, 2)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(WingMesh, 6, 2, 5, 3)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(WingMesh, 7, 2, 3, 0)
+    OperationAccepted = Graphics3D.CommitMesh3D(WingMesh)
+    RigTemplates[RIG_WING] = Graphics3D.CreateObjectFromMesh3D(WingMesh)
 
     For Index = 0 To RIG_TEMPLATE_COUNT - 1
         Call Graphics3D.SetObjectVisible(RigTemplates[Index], False)
@@ -297,54 +343,60 @@ End Sub
 
 Private Sub CreateArena()
 
-    Arena[0] = Graphics3D.CreatePlane3D(4600, 3000)
+    Dim LineIndex As Number
+    Dim ObjectIndex As Number
+    Dim Coordinate As Number
+
+    ''' Oversized near-black ground and emissive blue lines keep every camera
+    ''' frustum inside the grid, so orbiting and wide shots never reveal an edge.
+
+    Arena[0] = Graphics3D.CreatePlane3D(10000, 10000)
     OperationAccepted = Graphics3D.SetObjectMaterial3D(Arena[0], FloorMaterial)
 
     Call Graphics3D.SetObjectPosition(Arena[0], 0, -55, 30)
 
-    Arena[1] = Graphics3D.CreateTorus3D(1200, 18)
+    ObjectIndex = 1
 
-    Call Configure(Arena[1], LavaMaterial, 0, -42, 30, 100, 100, 100)
+    For LineIndex = 0 To 16
+        Coordinate = -3200 + LineIndex * 400
+        Arena[ObjectIndex] = Graphics3D.CreateCube3D(100)
 
-    Arena[2] = Graphics3D.CreateTorus3D(960, 9)
+        Call Configure(Arena[ObjectIndex], GridMaterial, 0, -51, Coordinate + 30, 9000, 3, 7)
 
-    Call Configure(Arena[2], BronzeMaterial, 0, -38, 30, 100, 100, 100)
+        ObjectIndex = ObjectIndex + 1
+    End For
 
-    Arena[3] = Graphics3D.CreateCube3D(100)
+    For LineIndex = 0 To 16
+        Coordinate = -3200 + LineIndex * 400
+        Arena[ObjectIndex] = Graphics3D.CreateCube3D(100)
 
-    Call Configure(Arena[3], LavaMaterial, 0, -43, 30, 2800, 8, 5)
+        Call Configure(Arena[ObjectIndex], GridMaterial, Coordinate, -51, 30, 7, 3, 9000)
 
-    Arena[4] = Graphics3D.CreateCube3D(100)
+        ObjectIndex = ObjectIndex + 1
+    End For
 
-    Call Configure(Arena[4], LavaMaterial, 0, -43, 30, 5, 8, 2100)
+    ''' Four distant textured walls surround the grid. Each wall is far beyond
+    ''' combat bounds and tall enough for low, wide, close-up, and orbit shots,
+    ''' creating a static cosmic panorama without adding runtime particles.
 
-    Arena[5] = Graphics3D.CreateCylinder3D(28, 180)
+    Arena[ObjectIndex] = Graphics3D.CreateCube3D(100)
 
-    Call Configure(Arena[5], StoneMaterial, -1350, 30, -900, 125, 150, 125)
+    Call Configure(Arena[ObjectIndex], CosmicMaterial, 4500, 1100, 30, 18, 2500, 9000)
 
-    Arena[6] = Graphics3D.CreateCylinder3D(28, 180)
+    ObjectIndex = ObjectIndex + 1
+    Arena[ObjectIndex] = Graphics3D.CreateCube3D(100)
 
-    Call Configure(Arena[6], StoneMaterial, 1350, 30, -900, 125, 150, 125)
+    Call Configure(Arena[ObjectIndex], CosmicMaterial, -4500, 1100, 30, 18, 2500, 9000)
 
-    Arena[7] = Graphics3D.CreateCylinder3D(28, 180)
+    ObjectIndex = ObjectIndex + 1
+    Arena[ObjectIndex] = Graphics3D.CreateCube3D(100)
 
-    Call Configure(Arena[7], StoneMaterial, -1350, 30, 900, 125, 150, 125)
+    Call Configure(Arena[ObjectIndex], CosmicMaterial, 0, 1100, 4530, 9000, 2500, 18)
 
-    Arena[8] = Graphics3D.CreateCylinder3D(28, 180)
+    ObjectIndex = ObjectIndex + 1
+    Arena[ObjectIndex] = Graphics3D.CreateCube3D(100)
 
-    Call Configure(Arena[8], StoneMaterial, 1350, 30, 900, 125, 150, 125)
-
-    Arena[9] = Graphics3D.CreateSphere3D(20)
-
-    Call Configure(Arena[9], LavaMaterial, -1350, 188, -900, 130, 130, 130)
-
-    Arena[10] = Graphics3D.CreateSphere3D(20)
-
-    Call Configure(Arena[10], LavaMaterial, 1350, 188, -900, 130, 130, 130)
-
-    Arena[11] = Graphics3D.CreateTorus3D(1400, 5)
-
-    Call Configure(Arena[11], LavaMaterial, 0, -48, 30, 100, 100, 100)
+    Call Configure(Arena[ObjectIndex], CosmicMaterial, 0, 1100, -4470, 9000, 2500, 18)
 
 End Sub
 
@@ -354,6 +406,16 @@ Private Sub CreateHero(
     AccentMaterial As Core.Material3D,
     Role As Number
 )
+
+    Dim RoleHairMaterial As Core.Material3D
+
+    RoleHairMaterial = HairMaterial
+
+    If Role = ROLE_DEFENDER Then
+        RoleHairMaterial = ArinHairMaterial
+    Else If Role = ROLE_ATTACKER Then
+        RoleHairMaterial = TorHairMaterial
+    End If
 
     Call InitializeRigPart(PartyParts[BaseIndex], RIG_CYLINDER, BodyMaterial)
     Call InitializeRigPart(PartyParts[BaseIndex + 1], RIG_CYLINDER, BodyMaterial)
@@ -366,16 +428,16 @@ Private Sub CreateHero(
     Call InitializeRigPart(PartyParts[BaseIndex + 8], RIG_SPHERE, AccentMaterial)
     Call InitializeRigPart(PartyParts[BaseIndex + 9], RIG_SPHERE, SkinMaterial)
 
-    If Role = ROLE_WIZARD Then
-        Call InitializeRigPart(PartyParts[BaseIndex + 10], RIG_TORUS, BodyMaterial)
-        Call InitializeRigPart(PartyParts[BaseIndex + 11], RIG_PYRAMID, BodyMaterial)
-    Else If Role = ROLE_HEALER Then
-        Call InitializeRigPart(PartyParts[BaseIndex + 10], RIG_SPHERE, HairMaterial)
-        Call InitializeRigPart(PartyParts[BaseIndex + 11], RIG_CYLINDER, HairMaterial)
+    If Role = ROLE_WIZARD Or Role = ROLE_HEALER Then
+        Call InitializeRigPart(PartyParts[BaseIndex + 10], RIG_SPHERE, RoleHairMaterial)
+        Call InitializeRigPart(PartyParts[BaseIndex + 11], RIG_CYLINDER, RoleHairMaterial)
+    Else If Role = ROLE_ATTACKER Then
+        Call InitializeRigPart(PartyParts[BaseIndex + 10], RIG_SPHERE, RoleHairMaterial)
+        Call InitializeRigPart(PartyParts[BaseIndex + 11], RIG_CUBE, RoleHairMaterial)
     Else
 
-        Call InitializeRigPart(PartyParts[BaseIndex + 10], RIG_SPHERE, HairMaterial)
-        Call InitializeRigPart(PartyParts[BaseIndex + 11], RIG_PYRAMID, HairMaterial)
+        Call InitializeRigPart(PartyParts[BaseIndex + 10], RIG_SPHERE, RoleHairMaterial)
+        Call InitializeRigPart(PartyParts[BaseIndex + 11], RIG_PYRAMID, RoleHairMaterial)
     End If
 
     Call InitializeRigPart(PartyParts[BaseIndex + 12], RIG_CYLINDER, BodyMaterial)
@@ -384,10 +446,49 @@ Private Sub CreateHero(
     Call InitializeRigPart(PartyParts[BaseIndex + 15], RIG_CYLINDER, BodyMaterial)
     Call InitializeRigPart(PartyParts[BaseIndex + 16], RIG_CYLINDER, AccentMaterial)
     Call InitializeRigPart(PartyParts[BaseIndex + 17], RIG_SPHERE, SkinMaterial)
-    Call InitializeRigPart(PartyParts[BaseIndex + 22], RIG_SPHERE, AccentMaterial)
-    Call InitializeRigPart(PartyParts[BaseIndex + 23], RIG_SPHERE, AccentMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 22], RIG_PYRAMID, AccentMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 23], RIG_PYRAMID, AccentMaterial)
     Call InitializeRigPart(PartyParts[BaseIndex + 24], RIG_SPHERE, FrostMaterial)
     Call InitializeRigPart(PartyParts[BaseIndex + 25], RIG_SPHERE, FrostMaterial)
+
+    If Role = ROLE_DEFENDER Then
+
+        Call InitializeRigPart(PartyParts[BaseIndex + 26], RIG_PYRAMID, RoleHairMaterial)
+        Call InitializeRigPart(PartyParts[BaseIndex + 27], RIG_PYRAMID, RoleHairMaterial)
+        Call InitializeRigPart(PartyParts[BaseIndex + 28], RIG_PYRAMID, RoleHairMaterial)
+        Call InitializeRigPart(PartyParts[BaseIndex + 29], RIG_PYRAMID, RoleHairMaterial)
+
+    Else If Role = ROLE_ATTACKER Then
+
+        Call InitializeRigPart(PartyParts[BaseIndex + 26], RIG_CUBE, RoleHairMaterial)
+        Call InitializeRigPart(PartyParts[BaseIndex + 27], RIG_CUBE, RoleHairMaterial)
+        Call InitializeRigPart(PartyParts[BaseIndex + 28], RIG_CUBE, RoleHairMaterial)
+        Call InitializeRigPart(PartyParts[BaseIndex + 29], RIG_CUBE, RoleHairMaterial)
+
+    Else
+
+        Call InitializeRigPart(PartyParts[BaseIndex + 26], RIG_PYRAMID, RoleHairMaterial)
+        Call InitializeRigPart(PartyParts[BaseIndex + 27], RIG_PYRAMID, RoleHairMaterial)
+        Call InitializeRigPart(PartyParts[BaseIndex + 28], RIG_PYRAMID, RoleHairMaterial)
+        Call InitializeRigPart(PartyParts[BaseIndex + 29], RIG_PYRAMID, RoleHairMaterial)
+
+    End If
+
+    ''' Shared stylized-RPG detail layer: belt and buckle, independent boot
+    ''' cuffs and bracers, split coat panels, angular nose, and raised collar.
+    ''' These parts inherit each role palette rather than encoding one game's
+    ''' character art in the renderer.
+
+    Call InitializeRigPart(PartyParts[BaseIndex + 30], RIG_CUBE, LeatherMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 31], RIG_CUBE, BronzeMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 32], RIG_CUBE, LeatherMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 33], RIG_CUBE, LeatherMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 34], RIG_CUBE, AccentMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 35], RIG_CUBE, AccentMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 36], RIG_PYRAMID, BodyMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 37], RIG_PYRAMID, AccentMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 38], RIG_PYRAMID, SkinMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 39], RIG_TORUS, AccentMaterial)
 
     If Role = ROLE_DEFENDER Then
 
@@ -424,13 +525,13 @@ End Sub
 Private Sub CreateParty()
 
     Call CreateHero(0, ArinMaterial, SteelMaterial, ROLE_DEFENDER)
-    Call CreateHero(26, TorMaterial, SteelMaterial, ROLE_ATTACKER)
-    Call CreateHero(52, LyraMaterial, FrostMaterial, ROLE_HEALER)
-    Call CreateHero(78, MiraMaterial, FrostMaterial, ROLE_WIZARD)
-    Call PoseHero(0, Battle.PARTICIPANT_ARIN, -390, ARIN_FORMATION_Z, ROLE_DEFENDER, Battle.VISUAL_IDLE, 0, 0)
-    Call PoseHero(26, Battle.PARTICIPANT_TOR, -307, TOR_FORMATION_Z, ROLE_ATTACKER, Battle.VISUAL_IDLE, 0, 0)
-    Call PoseHero(52, Battle.PARTICIPANT_LYRA, -517, LYRA_FORMATION_Z, ROLE_HEALER, Battle.VISUAL_IDLE, 0, 0)
-    Call PoseHero(78, Battle.PARTICIPANT_MIRA, -545, MIRA_FORMATION_Z, ROLE_WIZARD, Battle.VISUAL_IDLE, 0, 0)
+    Call CreateHero(40, TorMaterial, SteelMaterial, ROLE_ATTACKER)
+    Call CreateHero(80, LyraMaterial, FrostMaterial, ROLE_HEALER)
+    Call CreateHero(120, MiraMaterial, FrostMaterial, ROLE_WIZARD)
+    Call PoseHero(0, Battle.PARTICIPANT_ARIN, ARIN_FORMATION_X, ARIN_FORMATION_Z, ROLE_DEFENDER, Battle.VISUAL_IDLE, 0, 0)
+    Call PoseHero(40, Battle.PARTICIPANT_TOR, TOR_FORMATION_X, TOR_FORMATION_Z, ROLE_ATTACKER, Battle.VISUAL_IDLE, 0, 0)
+    Call PoseHero(80, Battle.PARTICIPANT_LYRA, LYRA_FORMATION_X, LYRA_FORMATION_Z, ROLE_HEALER, Battle.VISUAL_IDLE, 0, 0)
+    Call PoseHero(120, Battle.PARTICIPANT_MIRA, MIRA_FORMATION_X, MIRA_FORMATION_Z, ROLE_WIZARD, Battle.VISUAL_IDLE, 0, 0)
 
 End Sub
 
@@ -497,8 +598,13 @@ Private Sub PoseHero(
     Dim RightUpperArm As Articulation.SegmentPose3D
     Dim RightLowerArm As Articulation.SegmentPose3D
     Dim WeaponPose As Articulation.SegmentPose3D
+    Dim Index As Number
 
     IsActor = Battle.VisualActor() = Participant
+
+    For Index = BaseIndex To BaseIndex + HERO_PART_COUNT - 1
+        Call Graphics3D.SetObjectColor(PartyParts[Index], 255, 255, 255)
+    End For
     ''' Battle actions use cinematic snap-staging, so feet stay planted instead of
     ''' playing a walk cycle while the actor is being repositioned.
 
@@ -508,16 +614,37 @@ Private Sub PoseHero(
     If (Defeated And
         VisualHasImpact(Visual) And
         StepValue < 33 And
-        (Battle.VisualTarget() = Participant Or Visual = Battle.VISUAL_DRAGON_BREATH)) Then
+        (Battle.VisualTarget() = Participant Or VisualHitsWholeParty(Visual))) Then
         Defeated = False
     End If
 
     TargetRecoil = 0
 
-    If ((Battle.VisualTarget() = Participant Or Visual = Battle.VISUAL_DRAGON_BREATH) And
+    If ((Battle.VisualTarget() = Participant Or VisualHitsWholeParty(Visual)) And
         VisualHasImpact(Visual)) Then
-        TargetRecoil = Articulation.ActionEnvelope(StepValue, 28, 33, 45, 28)
+
+        If Visual = Battle.VISUAL_DRAGON_CATASTROPHE Then
+            TargetRecoil = Articulation.ActionEnvelope(StepValue, 25, 34, 62, 220)
+        Else If Visual = Battle.VISUAL_DRAGON_BREATH Then
+            TargetRecoil = Articulation.ActionEnvelope(StepValue, 25, 34, 62, 135)
+        Else
+
+            TargetRecoil = Articulation.ActionEnvelope(StepValue, 28, 33, 45, 28)
+        End If
+
         RootX = RootX - TargetRecoil
+
+    End If
+
+    If ((Battle.VisualTarget() = Participant Or VisualHitsWholeParty(Visual)) And
+        VisualHasImpact(Visual) And
+        StepValue >= 29 And
+        StepValue <= 35) Then
+
+        For Index = BaseIndex To BaseIndex + HERO_PART_COUNT - 1
+            Call Graphics3D.SetObjectColor(PartyParts[Index], 255, 138, 82)
+        End For
+
     End If
 
     HipY = 48
@@ -626,7 +753,9 @@ Private Sub PoseHero(
         WeaponAngle = RightLowerArmAngle + 10
 
     Else If (IsActor And
-        (Visual = Battle.VISUAL_MIRA_FLAME Or Visual = Battle.VISUAL_MIRA_FROST)) Then
+        (Visual = Battle.VISUAL_MIRA_FLAME Or
+        Visual = Battle.VISUAL_MIRA_FROST Or
+        Visual = Battle.VISUAL_MIRA_LIGHTNING)) Then
 
         Raise = Articulation.ActionEnvelope(StepValue, 1, 22, 66, 126)
         LeftUpperArmAngle = Raise - 28
@@ -768,19 +897,71 @@ Private Sub PoseHero(
     Call ApplyPart(PartyParts[BaseIndex + 8], TorsoX + 4, TorsoY + 8, RootZ, 18, TorsoHeight - 18, TorsoDepth + 5, 0, 0, BodyLean)
     Call ApplyPart(PartyParts[BaseIndex + 9], HeadX, HeadY, RootZ, HeadRadius * 2, HeadRadius * 2, HeadRadius * 2, 0, 0, BodyLean / 2)
 
-    If Role = ROLE_WIZARD Then
-        Call ApplyPart(PartyParts[BaseIndex + 10], HeadX, HeadY + 24, RootZ, 62, 42, 62, 0, 0, BodyLean)
-        Call ApplyPart(PartyParts[BaseIndex + 11], HeadX - 3, HeadY + 66, RootZ, 68, 92, 68, 0, 0, BodyLean - 8)
-    Else If Role = ROLE_HEALER Then
-        Call ApplyPart(PartyParts[BaseIndex + 10], HeadX - 7, HeadY + 8, RootZ, 48, 48, 52, 0, 0, BodyLean / 2)
-        Call ApplyPart(PartyParts[BaseIndex + 11], HeadX - 18, HeadY - 27, RootZ, 110, 66, 110, 0, 0, BodyLean + 4)
-    Else If Role = ROLE_DEFENDER Then
-        Call ApplyPart(PartyParts[BaseIndex + 10], HeadX - 5, HeadY + 15, RootZ, 46, 28, 50, 0, 0, BodyLean - 6)
-        Call ApplyPart(PartyParts[BaseIndex + 11], HeadX + 11, HeadY + 29, RootZ - 8, 24, 34, 24, 0, 0, BodyLean - 32)
+    ''' Layered costume geometry reads in both party-back and actor close-up
+    ''' shots: a dimensional belt, metal buckle, boots, split coat, face plane,
+    ''' and collar replace the old uninterrupted primitive silhouette.
+
+    Call ApplyPart(PartyParts[BaseIndex + 30], TorsoX, TorsoY - TorsoHeight / 2 + 20, RootZ, TorsoWidth + 5, 10, TorsoDepth + 6, 0, 0, BodyLean)
+    Call ApplyPart(PartyParts[BaseIndex + 31], TorsoX + TorsoWidth / 2 + 3, TorsoY - TorsoHeight / 2 + 20, RootZ, 7, 13, 15, 0, 0, BodyLean)
+    Call ApplyPart(PartyParts[BaseIndex + 32], LeftShin.EndX, LeftShin.EndY + 10, LeftShin.EndZ, (LegRadius + 4) * 2, 20, (LegRadius + 5) * 2, LeftShin.RotationX, LeftShin.RotationY, LeftShin.RotationZ)
+    Call ApplyPart(PartyParts[BaseIndex + 33], RightShin.EndX, RightShin.EndY + 10, RightShin.EndZ, (LegRadius + 4) * 2, 20, (LegRadius + 5) * 2, RightShin.RotationX, RightShin.RotationY, RightShin.RotationZ)
+
+    If Role = ROLE_HEALER Or Role = ROLE_WIZARD Then
+        Call ApplyPart(PartyParts[BaseIndex + 36], TorsoX + TorsoWidth / 2 - 3, TorsoY - TorsoHeight / 2 - 5, RootZ - TorsoDepth / 4, 11, 56, TorsoDepth / 2 + 3, 0, 0, BodyLean + 180)
+        Call ApplyPart(PartyParts[BaseIndex + 37], TorsoX + TorsoWidth / 2 - 3, TorsoY - TorsoHeight / 2 - 5, RootZ + TorsoDepth / 4, 11, 56, TorsoDepth / 2 + 3, 0, 0, BodyLean + 180)
     Else
 
-        Call ApplyPart(PartyParts[BaseIndex + 10], HeadX - 6, HeadY + 14, RootZ, 50, 27, 52, 0, 0, BodyLean + 5)
-        Call ApplyPart(PartyParts[BaseIndex + 11], HeadX + 12, HeadY + 28, RootZ + 8, 25, 32, 25, 0, 0, BodyLean - 26)
+        Call ApplyPart(PartyParts[BaseIndex + 36], TorsoX + TorsoWidth / 2 - 3, TorsoY - TorsoHeight / 2 - 1, RootZ - TorsoDepth / 4, 11, 44, TorsoDepth / 2 + 3, 0, 0, BodyLean + 180)
+        Call ApplyPart(PartyParts[BaseIndex + 37], TorsoX + TorsoWidth / 2 - 3, TorsoY - TorsoHeight / 2 - 1, RootZ + TorsoDepth / 4, 11, 44, TorsoDepth / 2 + 3, 0, 0, BodyLean + 180)
+    End If
+
+    Call ApplyPart(PartyParts[BaseIndex + 38], HeadX + HeadRadius - 1, HeadY, RootZ, 9, 14, 9, 0, 0, -90 + BodyLean / 2)
+    Call ApplyPart(PartyParts[BaseIndex + 39], HeadX - 3, HeadY - HeadRadius + 1, RootZ, TorsoDepth + 8, 8, TorsoDepth + 8, 0, 0, BodyLean / 2)
+
+    If Role = ROLE_WIZARD Then
+
+        ''' Mira now has a layered shoulder-length cut instead of a pointy hat.
+
+        Call ApplyPart(PartyParts[BaseIndex + 10], HeadX - 6, HeadY + 9, RootZ, 51, 48, 54, 0, 0, BodyLean / 2)
+        Call ApplyPart(PartyParts[BaseIndex + 11], HeadX + 7, HeadY - 19, RootZ, 42, 58, 50, 0, 0, BodyLean + 8)
+        Call ApplyPart(PartyParts[BaseIndex + 26], HeadX - 5, HeadY - 12, RootZ - 27, 18, 48, 18, -15, 0, BodyLean + 174)
+        Call ApplyPart(PartyParts[BaseIndex + 27], HeadX - 5, HeadY - 12, RootZ + 27, 18, 48, 18, 15, 0, BodyLean + 174)
+        Call ApplyPart(PartyParts[BaseIndex + 28], HeadX - 20, HeadY - 20, RootZ - 14, 19, 52, 19, -8, 0, BodyLean + 178)
+        Call ApplyPart(PartyParts[BaseIndex + 29], HeadX - 20, HeadY - 20, RootZ + 14, 19, 52, 19, 8, 0, BodyLean + 178)
+
+    Else If Role = ROLE_HEALER Then
+
+        Call ApplyPart(PartyParts[BaseIndex + 10], HeadX - 7, HeadY + 8, RootZ, 48, 44, 52, 0, 0, BodyLean / 2)
+        Call ApplyPart(PartyParts[BaseIndex + 11], HeadX - 15, HeadY - 16, RootZ, 42, 48, 48, 0, 0, BodyLean + 4)
+        Call ApplyPart(PartyParts[BaseIndex + 26], HeadX - 5, HeadY - 8, RootZ - 26, 17, 42, 17, -12, 0, BodyLean + 170)
+        Call ApplyPart(PartyParts[BaseIndex + 27], HeadX - 5, HeadY - 8, RootZ + 26, 17, 42, 17, 12, 0, BodyLean + 170)
+        Call ApplyPart(PartyParts[BaseIndex + 28], HeadX - 18, HeadY - 14, RootZ - 13, 18, 44, 18, -6, 0, BodyLean + 176)
+        Call ApplyPart(PartyParts[BaseIndex + 29], HeadX - 18, HeadY - 14, RootZ + 13, 18, 44, 18, 6, 0, BodyLean + 176)
+
+    Else If Role = ROLE_DEFENDER Then
+
+        ''' Arin's layered hero cut uses a fitted crown plus five independent
+        ''' spikes, preserving a youthful silhouette from the party-back camera.
+
+        Call ApplyPart(PartyParts[BaseIndex + 10], HeadX - 5, HeadY + 15, RootZ, 50, 30, 54, 0, 0, BodyLean - 6)
+        Call ApplyPart(PartyParts[BaseIndex + 11], HeadX + 13, HeadY + 34, RootZ, 25, 48, 25, 0, 0, BodyLean - 28)
+        Call ApplyPart(PartyParts[BaseIndex + 26], HeadX - 9, HeadY + 36, RootZ - 16, 22, 42, 22, -15, 0, BodyLean + 13)
+        Call ApplyPart(PartyParts[BaseIndex + 27], HeadX - 9, HeadY + 36, RootZ + 16, 22, 42, 22, 15, 0, BodyLean + 13)
+        Call ApplyPart(PartyParts[BaseIndex + 28], HeadX + 16, HeadY + 28, RootZ - 18, 20, 39, 20, -18, 0, BodyLean - 43)
+        Call ApplyPart(PartyParts[BaseIndex + 29], HeadX + 16, HeadY + 28, RootZ + 18, 20, 39, 20, 18, 0, BodyLean - 43)
+
+    Else
+
+        ''' Tor's close military fade covers the scalp and sides, with a short
+        ''' squared textured top instead of the old isolated bald-looking tuft.
+
+        Call ApplyPart(PartyParts[BaseIndex + 10], HeadX - 5, HeadY + 12, RootZ, 54, 24, 57, 0, 0, BodyLean)
+        Call ApplyPart(PartyParts[BaseIndex + 11], HeadX - 2, HeadY + 25, RootZ, 36, 14, 42, 0, 0, BodyLean - 3)
+        Call ApplyPart(PartyParts[BaseIndex + 26], HeadX - 18, HeadY + 6, RootZ, 10, 28, 40, 0, 0, BodyLean)
+        Call ApplyPart(PartyParts[BaseIndex + 27], HeadX - 2, HeadY + 8, RootZ - 23, 38, 25, 8, 0, 0, BodyLean)
+        Call ApplyPart(PartyParts[BaseIndex + 28], HeadX - 2, HeadY + 8, RootZ + 23, 38, 25, 8, 0, 0, BodyLean)
+        Call ApplyPart(PartyParts[BaseIndex + 29], HeadX + 9, HeadY + 29, RootZ, 18, 12, 34, 0, 0, BodyLean - 8)
+
     End If
 
     LeftUpperArm = Articulation.SolveHangingSegment(ShoulderX, ShoulderY, RootZ - ShoulderSpacing, UpperArmLength, LeftUpperArmAngle, -4)
@@ -794,10 +975,12 @@ Private Sub PoseHero(
     Call ApplySegment(PartyParts[BaseIndex + 15], RightUpperArm, ArmRadius)
     Call ApplySegment(PartyParts[BaseIndex + 16], RightLowerArm, ArmRadius - 1)
     Call ApplyPart(PartyParts[BaseIndex + 17], RightLowerArm.EndX, RightLowerArm.EndY, RightLowerArm.EndZ, 20, 20, 20, 0, 0, 0)
-    Call ApplyPart(PartyParts[BaseIndex + 22], ShoulderX, ShoulderY, RootZ - ShoulderSpacing, (ArmRadius + 6) * 2, (ArmRadius + 6) * 2, (ArmRadius + 7) * 2, 0, 0, BodyLean)
-    Call ApplyPart(PartyParts[BaseIndex + 23], ShoulderX, ShoulderY, RootZ + ShoulderSpacing, (ArmRadius + 6) * 2, (ArmRadius + 6) * 2, (ArmRadius + 7) * 2, 0, 0, BodyLean)
+    Call ApplyPart(PartyParts[BaseIndex + 22], ShoulderX, ShoulderY + 2, RootZ - ShoulderSpacing, (ArmRadius + 9) * 2, (ArmRadius + 7) * 2, (ArmRadius + 10) * 2, 58, 0, BodyLean - 8)
+    Call ApplyPart(PartyParts[BaseIndex + 23], ShoulderX, ShoulderY + 2, RootZ + ShoulderSpacing, (ArmRadius + 9) * 2, (ArmRadius + 7) * 2, (ArmRadius + 10) * 2, -58, 0, BodyLean - 8)
     Call ApplyPart(PartyParts[BaseIndex + 24], HeadX + HeadRadius - 2, HeadY + 5, RootZ - 10, 7, 7, 7, 0, 0, BodyLean)
     Call ApplyPart(PartyParts[BaseIndex + 25], HeadX + HeadRadius - 2, HeadY + 5, RootZ + 10, 7, 7, 7, 0, 0, BodyLean)
+    Call ApplyPart(PartyParts[BaseIndex + 34], LeftLowerArm.CenterX, LeftLowerArm.CenterY, LeftLowerArm.CenterZ, (ArmRadius + 3) * 2, LowerArmLength / 2, (ArmRadius + 3) * 2, LeftLowerArm.RotationX, LeftLowerArm.RotationY, LeftLowerArm.RotationZ)
+    Call ApplyPart(PartyParts[BaseIndex + 35], RightLowerArm.CenterX, RightLowerArm.CenterY, RightLowerArm.CenterZ, (ArmRadius + 3) * 2, LowerArmLength / 2, (ArmRadius + 3) * 2, RightLowerArm.RotationX, RightLowerArm.RotationY, RightLowerArm.RotationZ)
 
     If Role = ROLE_DEFENDER Then
 
@@ -845,48 +1028,80 @@ Private Sub CreateCinderling(EnemyIndex As Number, X As Number, Z As Number)
     Dim BaseIndex As Number
 
     BaseIndex = EnemyIndex * CINDERLING_PARTS_PER_ENEMY
-    CinderlingParts[BaseIndex] = Graphics3D.CreateSphere3D(55)
 
-    Call Configure(CinderlingParts[BaseIndex], DragonMaterial, X, 36, Z, 125, 82, 100)
+    ''' Shared anatomical skeleton: pelvis, skull and jaw, articulated long bones,
+    ''' hands and boots, paired pauldrons and ribs, spine/neck, plus eye sockets.
 
-    CinderlingParts[BaseIndex + 1] = Graphics3D.CreateSphere3D(34)
+    Call InitializeRigPart(CinderlingParts[BaseIndex], RIG_CUBE, LeatherMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 1], RIG_SPHERE, BoneMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 2], RIG_CYLINDER, BoneMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 3], RIG_CYLINDER, BoneMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 4], RIG_CYLINDER, BoneMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 5], RIG_CYLINDER, BoneMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 6], RIG_CYLINDER, BoneMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 7], RIG_CUBE, BoneMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 8], RIG_CYLINDER, BoneMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 9], RIG_CYLINDER, BoneMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 10], RIG_CYLINDER, BoneMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 11], RIG_CYLINDER, BoneMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 12], RIG_SPHERE, BoneMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 13], RIG_SPHERE, BoneMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 14], RIG_CUBE, LeatherMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 15], RIG_CUBE, LeatherMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 18], RIG_TORUS, BoneMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 19], RIG_TORUS, BoneMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 20], RIG_CYLINDER, BoneMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 28], RIG_SPHERE, VoidMaterial)
+    Call InitializeRigPart(CinderlingParts[BaseIndex + 29], RIG_SPHERE, VoidMaterial)
 
-    Call Configure(CinderlingParts[BaseIndex + 1], DragonGlowMaterial, X - 52, 78, Z, 120, 90, 100)
+    If EnemyIndex = 0 Then
 
-    CinderlingParts[BaseIndex + 2] = Graphics3D.CreateCylinder3D(12, 76)
+        ''' Armored Boneguard: sword, crossguard, shield/boss, helmet/crest,
+        ''' leather battle skirt, and asymmetric metal pauldrons.
 
-    Call Configure(CinderlingParts[BaseIndex + 2], DragonMaterial, X - 23, -18, Z - 30, 100, 100, 100)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 16], RIG_PYRAMID, SteelMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 17], RIG_PYRAMID, BronzeMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 21], RIG_CUBE, SteelMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 22], RIG_CUBE, BronzeMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 23], RIG_CYLINDER, SteelMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 24], RIG_SPHERE, BronzeMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 25], RIG_SPHERE, SteelMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 26], RIG_PYRAMID, SteelMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 27], RIG_PYRAMID, LeatherMaterial)
 
-    CinderlingParts[BaseIndex + 3] = Graphics3D.CreateCylinder3D(12, 76)
+    Else If EnemyIndex = 1 Then
 
-    Call Configure(CinderlingParts[BaseIndex + 3], DragonMaterial, X - 23, -18, Z + 30, 100, 100, 100)
+        ''' Necromancer mini-boss: layered hood, mantle, robe, belt, staff and
+        ''' luminous orb/rune provide the imposing central silhouette.
 
-    CinderlingParts[BaseIndex + 4] = Graphics3D.CreateCylinder3D(12, 76)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 16], RIG_PYRAMID, MiraMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 17], RIG_PYRAMID, MiraMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 21], RIG_CYLINDER, BronzeMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 22], RIG_SPHERE, FrostMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 23], RIG_SPHERE, MiraMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 24], RIG_PYRAMID, MiraMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 25], RIG_PYRAMID, MiraMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 26], RIG_CUBE, BronzeMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 27], RIG_TORUS, FrostMaterial)
 
-    Call Configure(CinderlingParts[BaseIndex + 4], DragonMaterial, X + 28, -18, Z - 30, 100, 100, 100)
+    Else
 
-    CinderlingParts[BaseIndex + 5] = Graphics3D.CreateCylinder3D(12, 76)
+        ''' Dread Archer: segmented bow, taut string, nocked arrow, broad hat,
+        ''' quiver, dark leather mantle and green metal shoulder guard.
 
-    Call Configure(CinderlingParts[BaseIndex + 5], DragonMaterial, X + 28, -18, Z + 30, 100, 100, 100)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 16], RIG_PYRAMID, LyraMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 17], RIG_PYRAMID, LeatherMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 21], RIG_CYLINDER, LeatherMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 22], RIG_CYLINDER, LeatherMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 23], RIG_CYLINDER, SteelMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 24], RIG_CYLINDER, SteelMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 25], RIG_CYLINDER, LeatherMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 26], RIG_PYRAMID, LeatherMaterial)
+        Call InitializeRigPart(CinderlingParts[BaseIndex + 27], RIG_CUBE, LeatherMaterial)
 
-    CinderlingParts[BaseIndex + 6] = Graphics3D.CreatePyramid3D(88, 72)
+    End If
 
-    Call Configure(CinderlingParts[BaseIndex + 6], DragonMaterial, X + 15, 82, Z - 68, 100, 100, 100)
-    Call Graphics3D.SetObjectRotation(CinderlingParts[BaseIndex + 6], 68, 0, -12)
-
-    CinderlingParts[BaseIndex + 7] = Graphics3D.CreatePyramid3D(88, 72)
-
-    Call Configure(CinderlingParts[BaseIndex + 7], DragonMaterial, X + 15, 82, Z + 68, 100, 100, 100)
-    Call Graphics3D.SetObjectRotation(CinderlingParts[BaseIndex + 7], -68, 0, -12)
-
-    CinderlingParts[BaseIndex + 8] = Graphics3D.CreateSphere3D(8)
-
-    Call Configure(CinderlingParts[BaseIndex + 8], LavaMaterial, X - 78, 88, Z - 16, 100, 100, 100)
-
-    CinderlingParts[BaseIndex + 9] = Graphics3D.CreateCylinder3D(16, 105)
-
-    Call Configure(CinderlingParts[BaseIndex + 9], DragonGlowMaterial, X + 82, 42, Z, 100, 100, 100)
-    Call Graphics3D.SetObjectRotation(CinderlingParts[BaseIndex + 9], 0, 0, -72)
+    Call PoseCinderling(EnemyIndex, X, Z, False, 0)
 
 End Sub
 
@@ -895,6 +1110,38 @@ Private Sub CreateCinderlings()
     Call CreateCinderling(0, 250, -280)
     Call CreateCinderling(1, 390, 40)
     Call CreateCinderling(2, 270, 380)
+
+End Sub
+
+Private Sub ScaleCinderlingPose(EnemyIndex As Number, PivotX As Number, PivotZ As Number)
+
+    Dim BaseIndex As Number
+    Dim Index As Number
+    Dim ScalePercent As Number
+
+    ScalePercent = CINDERLING_MINION_SCALE_PERCENT
+
+    If EnemyIndex = 1 Then
+        ScalePercent = CINDER_WARDEN_SCALE_PERCENT
+    End If
+
+    BaseIndex = EnemyIndex * CINDERLING_PARTS_PER_ENEMY
+
+    For Index = BaseIndex To BaseIndex + CINDERLING_PARTS_PER_ENEMY - 1
+
+        Call Graphics3D.SetObjectPosition(
+            CinderlingParts[Index],
+            PivotX + (CinderlingParts[Index].Position.X - PivotX) * ScalePercent / 100,
+            -55 + (CinderlingParts[Index].Position.Y + 55) * ScalePercent / 100,
+            PivotZ + (CinderlingParts[Index].Position.Z - PivotZ) * ScalePercent / 100
+        )
+        Call Graphics3D.SetObjectScale(
+            CinderlingParts[Index],
+            CinderlingParts[Index].ScaleX * ScalePercent / 100,
+            CinderlingParts[Index].ScaleY * ScalePercent / 100,
+            CinderlingParts[Index].ScaleZ * ScalePercent / 100
+        )
+    End For
 
 End Sub
 
@@ -908,92 +1155,286 @@ Private Sub PoseCinderling(
 
     Dim Index As Number
     Dim BaseIndex As Number
-    Dim Wing As Number
     Dim Pulse As Number
+    Dim AttackSwing As Number
+    Dim LeftThigh As Articulation.SegmentPose3D
+    Dim LeftShin As Articulation.SegmentPose3D
+    Dim RightThigh As Articulation.SegmentPose3D
+    Dim RightShin As Articulation.SegmentPose3D
+    Dim Spine As Articulation.SegmentPose3D
+    Dim Neck As Articulation.SegmentPose3D
+    Dim LeftUpperArm As Articulation.SegmentPose3D
+    Dim LeftLowerArm As Articulation.SegmentPose3D
+    Dim RightUpperArm As Articulation.SegmentPose3D
+    Dim RightLowerArm As Articulation.SegmentPose3D
+    Dim WeaponPose As Articulation.SegmentPose3D
+    Dim BowUpper As Articulation.SegmentPose3D
+    Dim BowLower As Articulation.SegmentPose3D
+    Dim HipY As Number
+    Dim ShoulderY As Number
+    Dim HeadY As Number
+    Dim LeftUpperAngle As Number
+    Dim LeftLowerAngle As Number
+    Dim RightUpperAngle As Number
+    Dim RightLowerAngle As Number
 
     BaseIndex = EnemyIndex * CINDERLING_PARTS_PER_ENEMY
-    Wing = Articulation.CycleAngle(AnimationStep, 48, 22, EnemyIndex * 70)
-    Pulse = Articulation.CycleAngle(AnimationStep, 36, 8, EnemyIndex * 45)
+    Pulse = Articulation.CycleAngle(AnimationStep, 72, 3, EnemyIndex * 45)
+    AttackSwing = 0
+
+    If (Battle.Visual() = Battle.VISUAL_CINDERLING_ATTACK And
+        Battle.VisualActor() = Battle.PARTICIPANT_CINDERLING_ONE + EnemyIndex) Then
+        AttackSwing = Articulation.ActionEnvelope(Battle.VisualStep(), 2, 28, 58, -78)
+    End If
 
     For Index = BaseIndex To BaseIndex + CINDERLING_PARTS_PER_ENEMY - 1
         Call Graphics3D.SetObjectVisible(CinderlingParts[Index], True)
         Call Graphics3D.SetObjectColor(CinderlingParts[Index], 255, 255, 255)
     End For
 
-    If Defeated Then
-
-        Call ApplyPart(CinderlingParts[BaseIndex], X, -25, Z, 125, 82, 100, 0, 0, 90)
-        Call ApplyPart(CinderlingParts[BaseIndex + 1], X - 48, -32, Z + 8, 120, 90, 100, 0, 0, 96)
-        Call ApplyPart(CinderlingParts[BaseIndex + 2], X - 32, -42, Z - 38, 100, 100, 100, 0, 0, 90)
-        Call ApplyPart(CinderlingParts[BaseIndex + 3], X - 32, -42, Z + 38, 100, 100, 100, 0, 0, 90)
-        Call ApplyPart(CinderlingParts[BaseIndex + 4], X + 24, -42, Z - 35, 100, 100, 100, 0, 0, 90)
-        Call ApplyPart(CinderlingParts[BaseIndex + 5], X + 24, -42, Z + 35, 100, 100, 100, 0, 0, 90)
-        Call ApplyPart(CinderlingParts[BaseIndex + 6], X + 2, -36, Z - 52, 100, 100, 100, 88, 0, 78)
-        Call ApplyPart(CinderlingParts[BaseIndex + 7], X + 2, -36, Z + 52, 100, 100, 100, -88, 0, 78)
-        Call ApplyPart(CinderlingParts[BaseIndex + 8], X - 78, -25, Z - 7, 100, 100, 100, 0, 0, 0)
-        Call ApplyPart(CinderlingParts[BaseIndex + 9], X + 78, -34, Z, 100, 100, 100, 0, 0, -90)
+    If (Not Defeated And
+        Battle.VisualTarget() = Battle.PARTICIPANT_CINDERLING_ONE + EnemyIndex And
+        VisualHasImpact(Battle.Visual()) And
+        Battle.VisualStep() >= 29 And
+        Battle.VisualStep() <= 35) Then
 
         For Index = BaseIndex To BaseIndex + CINDERLING_PARTS_PER_ENEMY - 1
-            Call Graphics3D.SetObjectColor(CinderlingParts[Index], 105, 72, 72)
+            Call Graphics3D.SetObjectColor(CinderlingParts[Index], 255, 225, 190)
         End For
 
-        Call Graphics3D.SetObjectColor(CinderlingParts[BaseIndex + 8], 38, 12, 12)
+    End If
+
+    If Defeated Then
+
+        ''' A readable bone pile remains for the rest of the wave. Equipment
+        ''' stays beside the collapsed anatomy so each defeated role is still
+        ''' identifiable until the scene clears it at the next wave boundary.
+
+        Call ApplyPart(CinderlingParts[BaseIndex], X, -46, Z, 64, 20, 50, 0, 0, 88)
+        Call ApplyPart(CinderlingParts[BaseIndex + 1], X - 74, -42, Z + 8, 54, 48, 50, 0, 0, 96)
+        Call ApplyPart(CinderlingParts[BaseIndex + 2], X - 18, -48, Z - 36, 14, 76, 14, 0, 0, 88)
+        Call ApplyPart(CinderlingParts[BaseIndex + 3], X - 48, -49, Z - 39, 12, 66, 12, 0, 0, 93)
+        Call ApplyPart(CinderlingParts[BaseIndex + 4], X + 26, -48, Z + 34, 14, 76, 14, 0, 0, 94)
+        Call ApplyPart(CinderlingParts[BaseIndex + 5], X + 60, -49, Z + 37, 12, 66, 12, 0, 0, 87)
+        Call ApplyPart(CinderlingParts[BaseIndex + 6], X - 18, -39, Z, 14, 82, 14, 0, 0, 91)
+        Call ApplyPart(CinderlingParts[BaseIndex + 7], X - 88, -47, Z + 8, 34, 13, 38, 0, 0, 97)
+        Call ApplyPart(CinderlingParts[BaseIndex + 8], X - 24, -43, Z - 68, 12, 62, 12, 0, 0, 82)
+        Call ApplyPart(CinderlingParts[BaseIndex + 9], X - 47, -43, Z - 72, 10, 54, 10, 0, 0, 99)
+        Call ApplyPart(CinderlingParts[BaseIndex + 10], X + 8, -43, Z + 69, 12, 62, 12, 0, 0, 98)
+        Call ApplyPart(CinderlingParts[BaseIndex + 11], X + 36, -43, Z + 72, 10, 54, 10, 0, 0, 81)
+        Call ApplyPart(CinderlingParts[BaseIndex + 12], X - 61, -38, Z - 72, 20, 20, 20, 0, 0, 0)
+        Call ApplyPart(CinderlingParts[BaseIndex + 13], X + 52, -38, Z + 72, 20, 20, 20, 0, 0, 0)
+        Call ApplyPart(CinderlingParts[BaseIndex + 14], X - 76, -48, Z - 33, 30, 18, 24, 0, 0, 86)
+        Call ApplyPart(CinderlingParts[BaseIndex + 15], X + 78, -48, Z + 32, 30, 18, 24, 0, 0, 94)
+        Call ApplyPart(CinderlingParts[BaseIndex + 16], X - 6, -42, Z - 56, 36, 28, 42, 77, 0, 83)
+        Call ApplyPart(CinderlingParts[BaseIndex + 17], X + 15, -42, Z + 53, 36, 28, 42, -77, 0, 97)
+        Call ApplyPart(CinderlingParts[BaseIndex + 18], X - 20, -40, Z - 16, 54, 54, 18, 90, 0, 90)
+        Call ApplyPart(CinderlingParts[BaseIndex + 19], X + 18, -40, Z + 15, 54, 54, 18, 90, 0, 90)
+        Call ApplyPart(CinderlingParts[BaseIndex + 20], X - 42, -45, Z + 1, 11, 34, 11, 0, 0, 91)
+
+        For Index = BaseIndex + 21 To BaseIndex + 29
+            Call ApplyPart(CinderlingParts[Index], X + ((Index - BaseIndex) Mod 5) * 27 - 54, -39, Z + ((Index - BaseIndex) Mod 4) * 32 - 48, 24, 31, 24, 90, 0, (Index - BaseIndex) * 19)
+        End For
+
+        For Index = BaseIndex To BaseIndex + CINDERLING_PARTS_PER_ENEMY - 1
+            Call Graphics3D.SetObjectColor(CinderlingParts[Index], 128, 112, 116)
+        End For
+
+        Call Graphics3D.SetObjectColor(CinderlingParts[BaseIndex + 28], 18, 7, 24)
+        Call Graphics3D.SetObjectColor(CinderlingParts[BaseIndex + 29], 18, 7, 24)
+
+        Call ScaleCinderlingPose(EnemyIndex, X, Z)
 
         Return
 
     End If
 
-    Call ApplyPart(CinderlingParts[BaseIndex], X, 36 + Pulse / 5, Z, 125, 82, 100, 0, 0, 0)
-    Call ApplyPart(CinderlingParts[BaseIndex + 1], X - 52, 78 + Pulse / 4, Z, 120, 90, 100, 0, Pulse / 3, 0)
-    Call ApplyPart(CinderlingParts[BaseIndex + 2], X - 23, -18, Z - 30, 100, 100, 100, 0, 0, 0)
-    Call ApplyPart(CinderlingParts[BaseIndex + 3], X - 23, -18, Z + 30, 100, 100, 100, 0, 0, 0)
-    Call ApplyPart(CinderlingParts[BaseIndex + 4], X + 28, -18, Z - 30, 100, 100, 100, 0, 0, 0)
-    Call ApplyPart(CinderlingParts[BaseIndex + 5], X + 28, -18, Z + 30, 100, 100, 100, 0, 0, 0)
-    Call ApplyPart(CinderlingParts[BaseIndex + 6], X + 15, 82, Z - 68, 100, 100, 100, 68 + Wing, 0, -12)
-    Call ApplyPart(CinderlingParts[BaseIndex + 7], X + 15, 82, Z + 68, 100, 100, 100, -68 - Wing, 0, -12)
-    Call ApplyPart(CinderlingParts[BaseIndex + 8], X - 78, 88, Z - 16, 100, 100, 100, 0, 0, 0)
-    Call ApplyPart(CinderlingParts[BaseIndex + 9], X + 82, 42, Z, 100, 100, 100, 0, 0, -72)
+    HipY = 42 + Pulse / 6
+    ShoulderY = 132 + Pulse / 6
+    HeadY = 178 + Pulse / 6
+
+    LeftUpperAngle = -12
+    LeftLowerAngle = 8
+    RightUpperAngle = 12
+    RightLowerAngle = -8
+
+    If EnemyIndex = 0 Then
+
+        RightUpperAngle = -22 + AttackSwing
+        RightLowerAngle = -16 + AttackSwing / 2
+        LeftUpperAngle = 14 - AttackSwing / 5
+        LeftLowerAngle = -5
+
+    Else If EnemyIndex = 1 Then
+
+        LeftUpperAngle = 142 - AttackSwing / 3
+        LeftLowerAngle = 166 - AttackSwing / 4
+        RightUpperAngle = 28 + AttackSwing / 4
+        RightLowerAngle = 5 + AttackSwing / 3
+
+    Else
+
+        LeftUpperAngle = 72 + AttackSwing / 5
+        LeftLowerAngle = 84 + AttackSwing / 5
+        RightUpperAngle = 68 - AttackSwing / 6
+        RightLowerAngle = 82 - AttackSwing / 5
+
+    End If
+
+    LeftThigh = Articulation.SolveHangingSegment(X, HipY, Z - 24, 48, 5, -3)
+    LeftShin = Articulation.SolveHangingSegment(LeftThigh.EndX, LeftThigh.EndY, LeftThigh.EndZ, 46, -6, 0)
+    RightThigh = Articulation.SolveHangingSegment(X, HipY, Z + 24, 48, -5, 3)
+    RightShin = Articulation.SolveHangingSegment(RightThigh.EndX, RightThigh.EndY, RightThigh.EndZ, 46, 6, 0)
+    Spine = Articulation.SolveHangingSegment(X, HipY + 8, Z, 82, 180, 0)
+    Neck = Articulation.SolveHangingSegment(Spine.EndX, Spine.EndY, Spine.EndZ, 18, 180, 0)
+    LeftUpperArm = Articulation.SolveHangingSegment(X, ShoulderY, Z - 43, 42, LeftUpperAngle, -5)
+    LeftLowerArm = Articulation.SolveHangingSegment(LeftUpperArm.EndX, LeftUpperArm.EndY, LeftUpperArm.EndZ, 38, LeftLowerAngle, -2)
+    RightUpperArm = Articulation.SolveHangingSegment(X, ShoulderY, Z + 43, 42, RightUpperAngle, 5)
+    RightLowerArm = Articulation.SolveHangingSegment(RightUpperArm.EndX, RightUpperArm.EndY, RightUpperArm.EndZ, 38, RightLowerAngle, 2)
+
+    Call ApplyPart(CinderlingParts[BaseIndex], X, HipY + 8, Z, 54, 28, 54, 0, 0, 0)
+    Call ApplyPart(CinderlingParts[BaseIndex + 1], X - 4, HeadY, Z, 55, 58, 52, 0, 0, -4)
+    Call ApplySegment(CinderlingParts[BaseIndex + 2], LeftThigh, 12)
+    Call ApplySegment(CinderlingParts[BaseIndex + 3], LeftShin, 10)
+    Call ApplySegment(CinderlingParts[BaseIndex + 4], RightThigh, 12)
+    Call ApplySegment(CinderlingParts[BaseIndex + 5], RightShin, 10)
+    Call ApplySegment(CinderlingParts[BaseIndex + 6], Spine, 8)
+    Call ApplyPart(CinderlingParts[BaseIndex + 7], X - 30, HeadY - 16, Z, 31, 14, 42, 0, 0, 0)
+    Call ApplySegment(CinderlingParts[BaseIndex + 8], LeftUpperArm, 7)
+    Call ApplySegment(CinderlingParts[BaseIndex + 9], LeftLowerArm, 6)
+    Call ApplySegment(CinderlingParts[BaseIndex + 10], RightUpperArm, 7)
+    Call ApplySegment(CinderlingParts[BaseIndex + 11], RightLowerArm, 6)
+    Call ApplyPart(CinderlingParts[BaseIndex + 12], LeftLowerArm.EndX, LeftLowerArm.EndY, LeftLowerArm.EndZ, 17, 18, 17, 0, 0, 0)
+    Call ApplyPart(CinderlingParts[BaseIndex + 13], RightLowerArm.EndX, RightLowerArm.EndY, RightLowerArm.EndZ, 17, 18, 17, 0, 0, 0)
+    Call ApplyPart(CinderlingParts[BaseIndex + 14], LeftShin.EndX + 7, LeftShin.EndY - 2, LeftShin.EndZ, 29, 18, 25, 0, 0, 0)
+    Call ApplyPart(CinderlingParts[BaseIndex + 15], RightShin.EndX + 7, RightShin.EndY - 2, RightShin.EndZ, 29, 18, 25, 0, 0, 0)
+    Call ApplyPart(CinderlingParts[BaseIndex + 18], X - 5, HipY + 56, Z, 61, 54, 18, 90, 0, 90)
+    Call ApplyPart(CinderlingParts[BaseIndex + 19], X - 5, HipY + 78, Z, 68, 58, 18, 90, 0, 90)
+    Call ApplySegment(CinderlingParts[BaseIndex + 20], Neck, 7)
+    Call ApplyPart(CinderlingParts[BaseIndex + 28], X - 30, HeadY + 7, Z - 11, 12, 15, 10, 0, 0, 0)
+    Call ApplyPart(CinderlingParts[BaseIndex + 29], X - 30, HeadY + 7, Z + 11, 12, 15, 10, 0, 0, 0)
+
+    If EnemyIndex = 0 Then
+
+        ''' Boneguard: heavy asymmetric armor, crested helm, sword and shield.
+
+        WeaponPose = Articulation.SolveHangingSegment(RightLowerArm.EndX, RightLowerArm.EndY, RightLowerArm.EndZ, 105, -76 + AttackSwing / 3, 0)
+
+        Call ApplyPart(CinderlingParts[BaseIndex + 16], X, ShoulderY + 2, Z - 44, 50, 42, 52, 70, 0, 18)
+        Call ApplyPart(CinderlingParts[BaseIndex + 17], X, ShoulderY + 1, Z + 44, 43, 36, 47, -70, 0, 18)
+        Call ApplySegment(CinderlingParts[BaseIndex + 21], WeaponPose, 7)
+        Call ApplyPart(CinderlingParts[BaseIndex + 22], RightLowerArm.EndX, RightLowerArm.EndY, RightLowerArm.EndZ, 8, 8, 42, 0, 0, WeaponPose.RotationZ)
+        Call ApplyPart(CinderlingParts[BaseIndex + 23], LeftLowerArm.EndX - 4, LeftLowerArm.EndY + 9, LeftLowerArm.EndZ, 82, 15, 82, 0, 0, 90)
+        Call ApplyPart(CinderlingParts[BaseIndex + 24], LeftLowerArm.EndX - 8, LeftLowerArm.EndY + 9, LeftLowerArm.EndZ, 27, 27, 27, 0, 0, 0)
+        Call ApplyPart(CinderlingParts[BaseIndex + 25], X - 3, HeadY + 9, Z, 64, 48, 60, 0, 0, 0)
+        Call ApplyPart(CinderlingParts[BaseIndex + 26], X + 2, HeadY + 43, Z, 21, 43, 22, 0, 0, 0)
+        Call ApplyPart(CinderlingParts[BaseIndex + 27], X, HipY - 2, Z, 72, 52, 64, 0, 0, 180)
+
+    Else If EnemyIndex = 1 Then
+
+        ''' Necromancer: layered hood and robe with an elevated glowing staff.
+
+        WeaponPose = Articulation.SolveHangingSegment(LeftLowerArm.EndX, LeftLowerArm.EndY, LeftLowerArm.EndZ, 166, 168 - AttackSwing / 5, 0)
+
+        Call ApplyPart(CinderlingParts[BaseIndex + 16], X - 1, HeadY + 10, Z, 90, 102, 90, 0, 0, 180)
+        Call ApplyPart(CinderlingParts[BaseIndex + 17], X + 3, ShoulderY + 1, Z, 124, 55, 108, 0, 0, 180)
+        Call ApplySegment(CinderlingParts[BaseIndex + 21], WeaponPose, 6)
+        Call ApplyPart(CinderlingParts[BaseIndex + 22], WeaponPose.EndX, WeaponPose.EndY, WeaponPose.EndZ, 38, 38, 38, 0, AnimationStep * 4, 0)
+        Call ApplyPart(CinderlingParts[BaseIndex + 23], WeaponPose.EndX, WeaponPose.EndY, WeaponPose.EndZ, 52, 52, 52, 90, AnimationStep * 6, 0)
+        Call ApplyPart(CinderlingParts[BaseIndex + 24], X, HipY + 25, Z - 23, 73, 124, 55, 0, 0, 180)
+        Call ApplyPart(CinderlingParts[BaseIndex + 25], X, HipY + 25, Z + 23, 73, 124, 55, 0, 0, 180)
+        Call ApplyPart(CinderlingParts[BaseIndex + 26], X - 2, HipY + 12, Z, 75, 10, 61, 0, 0, 0)
+        Call ApplyPart(CinderlingParts[BaseIndex + 27], X - 38, HipY + 65, Z, 49, 49, 49, 90, AnimationStep * 3, 0)
+
+    Else
+
+        ''' Dread Archer: broad hat, quiver, segmented bow and nocked arrow.
+
+        BowUpper = Articulation.SolveHangingSegment(LeftLowerArm.EndX - 4, LeftLowerArm.EndY, LeftLowerArm.EndZ, 72, 145, 0)
+        BowLower = Articulation.SolveHangingSegment(LeftLowerArm.EndX - 4, LeftLowerArm.EndY, LeftLowerArm.EndZ, 72, 35, 0)
+
+        Call ApplyPart(CinderlingParts[BaseIndex + 16], X, ShoulderY, Z - 43, 44, 38, 46, 70, 0, 16)
+        Call ApplyPart(CinderlingParts[BaseIndex + 17], X + 4, ShoulderY - 8, Z + 20, 91, 48, 80, -28, 0, 178)
+        Call ApplySegment(CinderlingParts[BaseIndex + 21], BowUpper, 5)
+        Call ApplySegment(CinderlingParts[BaseIndex + 22], BowLower, 5)
+        Call ApplyPart(CinderlingParts[BaseIndex + 23], LeftLowerArm.EndX - 46, LeftLowerArm.EndY, LeftLowerArm.EndZ, 3, 136, 3, 0, 0, 0)
+        Call ApplyPart(CinderlingParts[BaseIndex + 24], LeftLowerArm.EndX - 50, LeftLowerArm.EndY, LeftLowerArm.EndZ, 4, 112, 4, 0, 0, 90)
+        Call ApplyPart(CinderlingParts[BaseIndex + 25], X + 24, ShoulderY + 2, Z + 39, 39, 108, 39, 15, 0, -28)
+        Call ApplyPart(CinderlingParts[BaseIndex + 26], X - 2, HeadY + 27, Z, 104, 47, 104, 0, 0, 180)
+        Call ApplyPart(CinderlingParts[BaseIndex + 27], X + 20, ShoulderY - 20, Z + 37, 34, 92, 34, 12, 0, -25)
+
+    End If
+
+    Call ScaleCinderlingPose(EnemyIndex, X, Z)
 
 End Sub
 
 Private Sub CreateDragon()
 
+    ''' Sixty-piece faceted boss rig. The broad masses stay readable at arena
+    ''' distance, while the articulated outer wings, jaw, teeth, brow blades,
+    ''' layered belly, extra talons, and tail fins hold up during close shots.
+
     Call InitializeRigPart(DragonParts[0], RIG_SPHERE, DragonMaterial)
-    Call InitializeRigPart(DragonParts[1], RIG_SPHERE, DragonGlowMaterial)
+    Call InitializeRigPart(DragonParts[1], RIG_SPHERE, DragonMaterial)
     Call InitializeRigPart(DragonParts[2], RIG_CYLINDER, DragonMaterial)
     Call InitializeRigPart(DragonParts[3], RIG_CYLINDER, DragonMaterial)
     Call InitializeRigPart(DragonParts[4], RIG_SPHERE, DragonMaterial)
-    Call InitializeRigPart(DragonParts[5], RIG_CUBE, DragonGlowMaterial)
+    Call InitializeRigPart(DragonParts[5], RIG_CUBE, DragonMaterial)
     Call InitializeRigPart(DragonParts[6], RIG_CUBE, DragonMaterial)
-    Call InitializeRigPart(DragonParts[7], RIG_PYRAMID, BronzeMaterial)
-    Call InitializeRigPart(DragonParts[8], RIG_PYRAMID, BronzeMaterial)
+    Call InitializeRigPart(DragonParts[7], RIG_PYRAMID, DragonUnderbellyMaterial)
+    Call InitializeRigPart(DragonParts[8], RIG_PYRAMID, DragonUnderbellyMaterial)
     Call InitializeRigPart(DragonParts[9], RIG_SPHERE, LavaMaterial)
     Call InitializeRigPart(DragonParts[10], RIG_SPHERE, LavaMaterial)
     Call InitializeRigPart(DragonParts[11], RIG_CYLINDER, DragonMaterial)
-    Call InitializeRigPart(DragonParts[12], RIG_PYRAMID, DragonGlowMaterial)
+    Call InitializeRigPart(DragonParts[12], RIG_WING, DragonWingMaterial)
     Call InitializeRigPart(DragonParts[13], RIG_CYLINDER, DragonMaterial)
-    Call InitializeRigPart(DragonParts[14], RIG_PYRAMID, DragonGlowMaterial)
+    Call InitializeRigPart(DragonParts[14], RIG_WING, DragonWingMaterial)
     Call InitializeRigPart(DragonParts[15], RIG_CYLINDER, DragonMaterial)
-    Call InitializeRigPart(DragonParts[16], RIG_CYLINDER, DragonGlowMaterial)
-    Call InitializeRigPart(DragonParts[17], RIG_PYRAMID, BronzeMaterial)
+    Call InitializeRigPart(DragonParts[16], RIG_CYLINDER, DragonMaterial)
+    Call InitializeRigPart(DragonParts[17], RIG_PYRAMID, DragonUnderbellyMaterial)
     Call InitializeRigPart(DragonParts[18], RIG_CYLINDER, DragonMaterial)
-    Call InitializeRigPart(DragonParts[19], RIG_CYLINDER, DragonGlowMaterial)
-    Call InitializeRigPart(DragonParts[20], RIG_PYRAMID, BronzeMaterial)
+    Call InitializeRigPart(DragonParts[19], RIG_CYLINDER, DragonMaterial)
+    Call InitializeRigPart(DragonParts[20], RIG_PYRAMID, DragonUnderbellyMaterial)
     Call InitializeRigPart(DragonParts[21], RIG_CYLINDER, DragonMaterial)
-    Call InitializeRigPart(DragonParts[22], RIG_CYLINDER, DragonGlowMaterial)
-    Call InitializeRigPart(DragonParts[23], RIG_PYRAMID, BronzeMaterial)
+    Call InitializeRigPart(DragonParts[22], RIG_CYLINDER, DragonMaterial)
+    Call InitializeRigPart(DragonParts[23], RIG_PYRAMID, DragonUnderbellyMaterial)
     Call InitializeRigPart(DragonParts[24], RIG_CYLINDER, DragonMaterial)
-    Call InitializeRigPart(DragonParts[25], RIG_CYLINDER, DragonGlowMaterial)
-    Call InitializeRigPart(DragonParts[26], RIG_PYRAMID, BronzeMaterial)
+    Call InitializeRigPart(DragonParts[25], RIG_CYLINDER, DragonMaterial)
+    Call InitializeRigPart(DragonParts[26], RIG_PYRAMID, DragonUnderbellyMaterial)
     Call InitializeRigPart(DragonParts[27], RIG_CYLINDER, DragonMaterial)
     Call InitializeRigPart(DragonParts[28], RIG_CYLINDER, DragonMaterial)
-    Call InitializeRigPart(DragonParts[29], RIG_CYLINDER, DragonGlowMaterial)
-    Call InitializeRigPart(DragonParts[30], RIG_PYRAMID, BronzeMaterial)
+    Call InitializeRigPart(DragonParts[29], RIG_CYLINDER, DragonMaterial)
+    Call InitializeRigPart(DragonParts[30], RIG_PYRAMID, DragonUnderbellyMaterial)
     Call InitializeRigPart(DragonParts[31], RIG_SPHERE, LavaMaterial)
-    Call InitializeRigPart(DragonParts[32], RIG_PYRAMID, BronzeMaterial)
-    Call InitializeRigPart(DragonParts[33], RIG_PYRAMID, BronzeMaterial)
-    Call InitializeRigPart(DragonParts[34], RIG_PYRAMID, BronzeMaterial)
-    Call InitializeRigPart(DragonParts[35], RIG_CUBE, BronzeMaterial)
+    Call InitializeRigPart(DragonParts[32], RIG_PYRAMID, DragonMaterial)
+    Call InitializeRigPart(DragonParts[33], RIG_PYRAMID, DragonMaterial)
+    Call InitializeRigPart(DragonParts[34], RIG_PYRAMID, DragonMaterial)
+    Call InitializeRigPart(DragonParts[35], RIG_SPHERE, DragonUnderbellyMaterial)
+    Call InitializeRigPart(DragonParts[36], RIG_PYRAMID, DragonUnderbellyMaterial)
+    Call InitializeRigPart(DragonParts[37], RIG_PYRAMID, DragonUnderbellyMaterial)
+    Call InitializeRigPart(DragonParts[38], RIG_PYRAMID, DragonMaterial)
+    Call InitializeRigPart(DragonParts[39], RIG_PYRAMID, DragonMaterial)
+    Call InitializeRigPart(DragonParts[40], RIG_PYRAMID, SteelMaterial)
+    Call InitializeRigPart(DragonParts[41], RIG_PYRAMID, SteelMaterial)
+    Call InitializeRigPart(DragonParts[42], RIG_PYRAMID, SteelMaterial)
+    Call InitializeRigPart(DragonParts[43], RIG_PYRAMID, SteelMaterial)
+    Call InitializeRigPart(DragonParts[44], RIG_PYRAMID, SteelMaterial)
+    Call InitializeRigPart(DragonParts[45], RIG_PYRAMID, SteelMaterial)
+    Call InitializeRigPart(DragonParts[46], RIG_PYRAMID, DragonUnderbellyMaterial)
+    Call InitializeRigPart(DragonParts[47], RIG_PYRAMID, DragonUnderbellyMaterial)
+    Call InitializeRigPart(DragonParts[48], RIG_PYRAMID, DragonUnderbellyMaterial)
+    Call InitializeRigPart(DragonParts[49], RIG_PYRAMID, DragonUnderbellyMaterial)
+    Call InitializeRigPart(DragonParts[50], RIG_CYLINDER, DragonMaterial)
+    Call InitializeRigPart(DragonParts[51], RIG_WING, DragonWingMaterial)
+    Call InitializeRigPart(DragonParts[52], RIG_CYLINDER, DragonMaterial)
+    Call InitializeRigPart(DragonParts[53], RIG_WING, DragonWingMaterial)
+    Call InitializeRigPart(DragonParts[54], RIG_PYRAMID, DragonMaterial)
+    Call InitializeRigPart(DragonParts[55], RIG_PYRAMID, DragonMaterial)
+    Call InitializeRigPart(DragonParts[56], RIG_PYRAMID, DragonMaterial)
+    Call InitializeRigPart(DragonParts[57], RIG_PYRAMID, DragonMaterial)
+    Call InitializeRigPart(DragonParts[58], RIG_PYRAMID, DragonMaterial)
+    Call InitializeRigPart(DragonParts[59], RIG_PYRAMID, DragonMaterial)
 
     Call PoseDragon(DRAGON_ROOT_X, DRAGON_ROOT_Y, DRAGON_ROOT_Z, Battle.VISUAL_IDLE, 0, 0)
 
@@ -1049,7 +1490,9 @@ Private Sub PoseDragon(
     Dim HeadY As Number
     Dim HeadZ As Number
     Dim LeftWing As Articulation.SegmentPose3D
+    Dim LeftWingTip As Articulation.SegmentPose3D
     Dim RightWing As Articulation.SegmentPose3D
+    Dim RightWingTip As Articulation.SegmentPose3D
     Dim NeckBase As Articulation.SegmentPose3D
     Dim NeckUpper As Articulation.SegmentPose3D
     Dim FrontLeftUpper As Articulation.SegmentPose3D
@@ -1065,12 +1508,23 @@ Private Sub PoseDragon(
     Dim TailTip As Articulation.SegmentPose3D
 
     WingFlap = Articulation.CycleAngle(AnimationStep, 48, 10, 0)
-    WingSpread = 78 + WingFlap
+    WingSpread = 52 + WingFlap / 3
     BodyPulse = Abs(Articulation.CycleAngle(AnimationStep, 54, 8, 0))
 
     For Index = 0 To DRAGON_OBJECT_COUNT - 1
         Call Graphics3D.SetObjectColor(DragonParts[Index], 255, 255, 255)
     End For
+
+    If (Battle.VisualTarget() = Battle.PARTICIPANT_ASHWING And
+        VisualHasImpact(Visual) And
+        StepValue >= 29 And
+        StepValue <= 35) Then
+
+        For Index = 0 To DRAGON_OBJECT_COUNT - 1
+            Call Graphics3D.SetObjectColor(DragonParts[Index], 255, 185, 155)
+        End For
+
+    End If
 
     If (Battle.VisualTarget() = Battle.PARTICIPANT_ASHWING And
         VisualHasImpact(Visual)) Then
@@ -1080,7 +1534,7 @@ Private Sub PoseDragon(
     If Visual = Battle.VISUAL_BOSS_ENTRANCE Then
 
         WingFlap = Articulation.CycleAngle(StepValue, 20, 26, 0)
-        WingSpread = 80 + WingFlap
+        WingSpread = 56 + WingFlap / 2
         LegTuck = Max(0, 64 - StepValue / 3)
         LandingCompression = Articulation.ActionEnvelope(StepValue, 164, 190, 222, 34)
 
@@ -1094,11 +1548,21 @@ Private Sub PoseDragon(
         TailSweep = Articulation.ActionEnvelope(StepValue, 2, 28, 64, 58)
         BodyTilt = Articulation.ActionEnvelope(StepValue, 2, 28, 64, -12)
 
-    Else If Visual = Battle.VISUAL_DRAGON_BREATH Then
+    Else If (Visual = Battle.VISUAL_DRAGON_BREATH Or
+        Visual = Battle.VISUAL_DRAGON_CATASTROPHE) Then
 
         JawOpen = Articulation.ActionEnvelope(StepValue, 2, 22, 68, 34)
         RoarLift = Articulation.ActionEnvelope(StepValue, 2, 22, 68, 24)
         BodyPulse = BodyPulse + Articulation.ActionEnvelope(StepValue, 10, 35, 68, 24)
+
+        If Visual = Battle.VISUAL_DRAGON_CATASTROPHE Then
+
+            JawOpen = JawOpen + 12
+            RoarLift = RoarLift + 12
+            WingSpread = WingSpread + 18
+            BodyPulse = BodyPulse + 28
+
+        End If
 
     Else If Visual = Battle.VISUAL_ENRAGE Then
 
@@ -1111,9 +1575,9 @@ Private Sub PoseDragon(
 
         WingFlap = 0
         BodyPulse = 0
-        BodyTilt = Min(82, StepValue / 3)
+        BodyTilt = 0
         JawOpen = Min(30, StepValue / 5)
-        WingSpread = 112
+        WingSpread = 38
         TailSweep = 28
         NeckBaseFall = Min(74, StepValue * 2)
         NeckUpperFall = Min(28, StepValue)
@@ -1123,42 +1587,66 @@ Private Sub PoseDragon(
 
         JawOpen = Articulation.ActionEnvelope(StepValue, 2, 30, 84, 38)
         RoarLift = Articulation.ActionEnvelope(StepValue, 2, 30, 84, 32)
-        WingSpread = 96 + WingFlap
+        WingSpread = 58 + WingFlap / 2
 
     End If
 
     RootX = RootX + HitRecoil
 
-    Call ApplyPart(DragonParts[0], RootX, RootY - LandingCompression, RootZ, 350 + BodyPulse, 220 + BodyPulse, 220 + BodyPulse, 0, 0, BodyTilt)
-    Call ApplyPart(DragonParts[1], RootX - 92, RootY - 2 - LandingCompression, RootZ, 190 + BodyPulse, 180 + BodyPulse, 186 + BodyPulse, 0, 0, BodyTilt)
-    Call ApplyPart(DragonParts[35], RootX - 124, RootY - 5 - LandingCompression, RootZ, 62, 132, 180, 0, 0, BodyTilt - 8)
+    Call ApplyPart(DragonParts[0], RootX, RootY - LandingCompression, RootZ, 372 + BodyPulse, 216 + BodyPulse, 224 + BodyPulse, 0, 0, BodyTilt)
+    Call ApplyPart(DragonParts[1], RootX - 112, RootY + 8 - LandingCompression, RootZ, 224 + BodyPulse, 224 + BodyPulse, 210 + BodyPulse, 0, 0, BodyTilt - 4)
+    Call ApplyPart(DragonParts[35], RootX - 146, RootY - 20 - LandingCompression, RootZ, 92, 166, 184, 0, 0, -10)
 
-    NeckBase = Articulation.SolveHangingSegment(RootX - 112, RootY + 72 - LandingCompression, RootZ, 158, -112 - RoarLift / 2 + NeckBaseFall, 0)
-    NeckUpper = Articulation.SolveHangingSegment(NeckBase.EndX, NeckBase.EndY, NeckBase.EndZ, 132, -120 - RoarLift + NeckUpperFall, 0)
+    NeckBase = Articulation.SolveHangingSegment(RootX - 126, RootY + 82 - LandingCompression, RootZ, 178, -138 - RoarLift / 3 + NeckBaseFall, 0)
+    NeckUpper = Articulation.SolveHangingSegment(NeckBase.EndX, NeckBase.EndY, NeckBase.EndZ, 154, -148 - RoarLift / 2 + NeckUpperFall, 0)
 
-    Call ApplySegment(DragonParts[2], NeckBase, 48)
-    Call ApplySegment(DragonParts[3], NeckUpper, 40)
+    Call ApplySegment(DragonParts[2], NeckBase, 44)
+    Call ApplySegment(DragonParts[3], NeckUpper, 36)
 
     HeadX = NeckUpper.EndX - 10
     HeadY = NeckUpper.EndY
     HeadZ = NeckUpper.EndZ
 
-    Call ApplyPart(DragonParts[4], HeadX, HeadY, HeadZ, 170, 132, 150, 0, 0, HeadTilt - RoarLift / 3)
-    Call ApplyPart(DragonParts[5], HeadX - 84, HeadY - 12, HeadZ, 112, 54, 94, 0, 0, HeadTilt - JawOpen / 4)
-    Call ApplyPart(DragonParts[6], HeadX - 69, HeadY - 47 - JawOpen / 2, HeadZ, 106, 36, 88, 0, 0, HeadTilt - JawOpen)
-    Call ApplyPart(DragonParts[7], HeadX + 12, HeadY + 86, HeadZ - 47, 48, 122, 48, 12, 0, -28)
-    Call ApplyPart(DragonParts[8], HeadX + 12, HeadY + 86, HeadZ + 47, 48, 122, 48, -12, 0, -28)
-    Call ApplyPart(DragonParts[9], HeadX - 48, HeadY + 24, HeadZ - 58, 24, 24, 24, 0, 0, 0)
-    Call ApplyPart(DragonParts[10], HeadX - 48, HeadY + 24, HeadZ + 58, 24, 24, 24, 0, 0, 0)
-    Call ApplyPart(DragonParts[31], HeadX - 56, HeadY - 35 - JawOpen / 3, HeadZ, 72 + BodyPulse, 72 + BodyPulse, 72 + BodyPulse, 0, 0, 0)
+    Call ApplyPart(DragonParts[4], HeadX, HeadY, HeadZ, 158, 120, 142, 0, 0, HeadTilt - RoarLift / 3)
+    Call ApplyPart(DragonParts[5], HeadX - 104, HeadY - 11, HeadZ, 152, 56, 92, 0, 0, HeadTilt - JawOpen / 4)
+    Call ApplyPart(DragonParts[6], HeadX - 94, HeadY - 47 - JawOpen / 2, HeadZ, 138, 34, 84, 0, 0, HeadTilt - JawOpen)
+    Call ApplyPart(DragonParts[7], HeadX + 20, HeadY + 62, HeadZ - 38, 38, 124, 38, 10, 0, -42)
+    Call ApplyPart(DragonParts[8], HeadX + 20, HeadY + 62, HeadZ + 38, 38, 124, 38, -10, 0, -42)
+    Call ApplyPart(DragonParts[9], HeadX - 48, HeadY + 22, HeadZ - 54, 22, 18, 22, 0, 0, 0)
+    Call ApplyPart(DragonParts[10], HeadX - 48, HeadY + 22, HeadZ + 54, 22, 18, 22, 0, 0, 0)
+    Call ApplyPart(DragonParts[31], HeadX - 75, HeadY - 34 - JawOpen / 3, HeadZ, 68 + BodyPulse, 68 + BodyPulse, 68 + BodyPulse, 0, 0, 0)
 
-    LeftWing = Articulation.SolveHangingSegment(RootX + 5, RootY + 78 - LandingCompression, RootZ - 70, 300, -16, 0 - WingSpread)
-    RightWing = Articulation.SolveHangingSegment(RootX + 5, RootY + 78 - LandingCompression, RootZ + 70, 300, -16, WingSpread)
+    ''' Layered orange throat plates and swept brow fins reproduce the angular
+    ''' red/orange silhouette of the visual reference without relying on a
+    ''' single rounded primitive.
+
+    Call ApplyPart(DragonParts[36], NeckBase.CenterX - 12, NeckBase.CenterY - 30, NeckBase.CenterZ, 76, 112, 102, 0, 0, NeckBase.RotationZ + 180)
+    Call ApplyPart(DragonParts[37], NeckUpper.CenterX - 10, NeckUpper.CenterY - 26, NeckUpper.CenterZ, 64, 96, 88, 0, 0, NeckUpper.RotationZ + 180)
+    Call ApplyPart(DragonParts[38], HeadX - 8, HeadY + 34, HeadZ - 44, 44, 72, 24, 22, 0, -62)
+    Call ApplyPart(DragonParts[39], HeadX - 8, HeadY + 34, HeadZ + 44, 44, 72, 24, -22, 0, -62)
+
+    ''' Six individually posed teeth remain visible as the lower jaw opens.
+
+    Call ApplyPart(DragonParts[40], HeadX - 128, HeadY - 30, HeadZ - 31, 12, 30, 12, 0, 0, 180)
+    Call ApplyPart(DragonParts[41], HeadX - 128, HeadY - 30, HeadZ + 31, 12, 30, 12, 0, 0, 180)
+    Call ApplyPart(DragonParts[42], HeadX - 82, HeadY - 30, HeadZ - 38, 11, 26, 11, 0, 0, 180)
+    Call ApplyPart(DragonParts[43], HeadX - 82, HeadY - 30, HeadZ + 38, 11, 26, 11, 0, 0, 180)
+    Call ApplyPart(DragonParts[44], HeadX - 111, HeadY - 51 - JawOpen / 2, HeadZ - 27, 12, 27, 12, 0, 0, 0)
+    Call ApplyPart(DragonParts[45], HeadX - 111, HeadY - 51 - JawOpen / 2, HeadZ + 27, 12, 27, 12, 0, 0, 0)
+
+    LeftWing = Articulation.SolveHangingSegment(RootX + 18, RootY + 72 - LandingCompression, RootZ - 68, 272, -132 - WingFlap / 3, 0 - WingSpread)
+    RightWing = Articulation.SolveHangingSegment(RootX + 18, RootY + 72 - LandingCompression, RootZ + 68, 272, -132 - WingFlap / 3, WingSpread)
+    LeftWingTip = Articulation.SolveHangingSegment(LeftWing.EndX, LeftWing.EndY, LeftWing.EndZ, 236, -70 + WingFlap / 4, 0 - Min(82, WingSpread + 22))
+    RightWingTip = Articulation.SolveHangingSegment(RightWing.EndX, RightWing.EndY, RightWing.EndZ, 236, -70 + WingFlap / 4, Min(82, WingSpread + 22))
 
     Call ApplySegment(DragonParts[11], LeftWing, 25)
-    Call ApplyPart(DragonParts[12], LeftWing.CenterX + 5, LeftWing.CenterY - 34, LeftWing.CenterZ, 330, 220, 24, 72 + WingFlap, 0, -18)
+    Call ApplyPart(DragonParts[12], LeftWing.CenterX, LeftWing.CenterY, LeftWing.CenterZ, 176, LeftWing.Length + 64, 18, LeftWing.RotationX, LeftWing.RotationY, LeftWing.RotationZ)
     Call ApplySegment(DragonParts[13], RightWing, 25)
-    Call ApplyPart(DragonParts[14], RightWing.CenterX + 5, RightWing.CenterY - 34, RightWing.CenterZ, 330, 220, 24, -72 - WingFlap, 0, -18)
+    Call ApplyPart(DragonParts[14], RightWing.CenterX, RightWing.CenterY, RightWing.CenterZ, 176, RightWing.Length + 64, 18, RightWing.RotationX, RightWing.RotationY, RightWing.RotationZ)
+    Call ApplySegment(DragonParts[50], LeftWingTip, 17)
+    Call ApplyPart(DragonParts[51], LeftWingTip.CenterX, LeftWingTip.CenterY, LeftWingTip.CenterZ, 132, LeftWingTip.Length + 58, 15, LeftWingTip.RotationX, LeftWingTip.RotationY, LeftWingTip.RotationZ)
+    Call ApplySegment(DragonParts[52], RightWingTip, 17)
+    Call ApplyPart(DragonParts[53], RightWingTip.CenterX, RightWingTip.CenterY, RightWingTip.CenterZ, 132, RightWingTip.Length + 58, 15, RightWingTip.RotationX, RightWingTip.RotationY, RightWingTip.RotationZ)
 
     FrontLeftUpper = Articulation.SolveHangingSegment(RootX - 92, RootY - 34 - LandingCompression, RootZ - 78, 104, -20 - LegTuck + ClawReach, -8)
     FrontLeftLower = Articulation.SolveHangingSegment(FrontLeftUpper.EndX, FrontLeftUpper.EndY, FrontLeftUpper.EndZ, 92, 13 + LegTuck - ClawReach / 3, -5)
@@ -1172,15 +1660,19 @@ Private Sub PoseDragon(
     Call ApplySegment(DragonParts[15], FrontLeftUpper, 31)
     Call ApplySegment(DragonParts[16], FrontLeftLower, 25)
     Call ApplyPart(DragonParts[17], FrontLeftLower.EndX - 22, FrontLeftLower.EndY, FrontLeftLower.EndZ, 58, 44, 58, 0, 0, -90)
+    Call ApplyPart(DragonParts[46], FrontLeftLower.EndX - 30, FrontLeftLower.EndY - 3, FrontLeftLower.EndZ - 22, 22, 54, 22, 0, 0, -90)
     Call ApplySegment(DragonParts[18], FrontRightUpper, 31)
     Call ApplySegment(DragonParts[19], FrontRightLower, 25)
     Call ApplyPart(DragonParts[20], FrontRightLower.EndX - 22, FrontRightLower.EndY, FrontRightLower.EndZ, 58, 44, 58, 0, 0, -90)
+    Call ApplyPart(DragonParts[47], FrontRightLower.EndX - 30, FrontRightLower.EndY - 3, FrontRightLower.EndZ + 22, 22, 54, 22, 0, 0, -90)
     Call ApplySegment(DragonParts[21], RearLeftUpper, 36)
     Call ApplySegment(DragonParts[22], RearLeftLower, 28)
     Call ApplyPart(DragonParts[23], RearLeftLower.EndX - 18, RearLeftLower.EndY, RearLeftLower.EndZ, 64, 48, 64, 0, 0, -90)
+    Call ApplyPart(DragonParts[48], RearLeftLower.EndX - 27, RearLeftLower.EndY - 3, RearLeftLower.EndZ - 24, 24, 58, 24, 0, 0, -90)
     Call ApplySegment(DragonParts[24], RearRightUpper, 36)
     Call ApplySegment(DragonParts[25], RearRightLower, 28)
     Call ApplyPart(DragonParts[26], RearRightLower.EndX - 18, RearRightLower.EndY, RearRightLower.EndZ, 64, 48, 64, 0, 0, -90)
+    Call ApplyPart(DragonParts[49], RearRightLower.EndX - 27, RearRightLower.EndY - 3, RearRightLower.EndZ + 24, 24, 58, 24, 0, 0, -90)
 
     TailBase = Articulation.SolveHangingSegment(RootX + 140, RootY + 18 - LandingCompression, RootZ, 182, 72, TailSweep / 3)
     TailMiddle = Articulation.SolveHangingSegment(TailBase.EndX, TailBase.EndY, TailBase.EndZ, 164, 82, 0 - TailSweep / 2)
@@ -1191,10 +1683,23 @@ Private Sub PoseDragon(
     Call ApplySegment(DragonParts[29], TailTip, 21)
     Call ApplyPart(DragonParts[30], TailTip.EndX + 22, TailTip.EndY, TailTip.EndZ, 58, 112, 58, 0, 0, -90)
 
-    Call ApplyPart(DragonParts[32], RootX - 35, RootY + 124 - LandingCompression, RootZ, 54, 108, 54, 0, 0, -7)
-    Call ApplyPart(DragonParts[33], RootX + 46, RootY + 120 - LandingCompression, RootZ, 48, 96, 48, 0, 0, 4)
-    Call ApplyPart(DragonParts[34], RootX + 118, RootY + 94 - LandingCompression, RootZ, 42, 82, 42, 0, 0, 15)
+    Call ApplyPart(DragonParts[32], RootX - 58, RootY + 124 - LandingCompression, RootZ, 52, 110, 52, 0, 0, -12)
+    Call ApplyPart(DragonParts[33], RootX + 20, RootY + 126 - LandingCompression, RootZ, 48, 102, 48, 0, 0, 0)
+    Call ApplyPart(DragonParts[34], RootX + 96, RootY + 112 - LandingCompression, RootZ, 44, 92, 44, 0, 0, 12)
+    Call ApplyPart(DragonParts[54], NeckBase.CenterX + 4, NeckBase.CenterY + 28, NeckBase.CenterZ, 34, 62, 34, 0, 0, NeckBase.RotationZ - 8)
+    Call ApplyPart(DragonParts[55], NeckUpper.CenterX + 3, NeckUpper.CenterY + 24, NeckUpper.CenterZ, 30, 54, 30, 0, 0, NeckUpper.RotationZ - 10)
+    Call ApplyPart(DragonParts[56], RootX + 155, RootY + 78 - LandingCompression, RootZ, 38, 80, 38, 0, 0, 28)
+    Call ApplyPart(DragonParts[57], TailBase.CenterX + 4, TailBase.CenterY + 38, TailBase.CenterZ, 32, 70, 32, 0, 0, TailBase.RotationZ - 8)
+    Call ApplyPart(DragonParts[58], TailMiddle.CenterX, TailMiddle.CenterY + 30, TailMiddle.CenterZ, 28, 58, 28, 0, 0, TailMiddle.RotationZ - 8)
+    Call ApplyPart(DragonParts[59], TailTip.CenterX, TailTip.CenterY + 22, TailTip.CenterZ, 22, 46, 22, 0, 0, TailTip.RotationZ - 8)
     Call ScaleDragonPose(RootX, RootY - 200, RootZ)
+
+    ''' Keep attack effects attached to the animated mouth, including entrance,
+    ''' recoil, roar, death, and future dragon rigs that change proportions.
+
+    LastDragonMouthX = RootX + (HeadX - 148 - RootX) * DRAGON_SCALE_PERCENT / 100
+    LastDragonMouthY = RootY - 200 + (HeadY - 28 - JawOpen / 4 - (RootY - 200)) * DRAGON_SCALE_PERCENT / 100
+    LastDragonMouthZ = RootZ + (HeadZ - RootZ) * DRAGON_SCALE_PERCENT / 100
 
     If Visual = Battle.VISUAL_VICTORY Then
 
@@ -1233,10 +1738,32 @@ End Sub
 
 Private Sub CreateImpactObjects()
 
+    Dim Index As Number
+
     Call InitializeRigPart(ImpactObjects[0], RIG_SPHERE, ParticleMaterial)
     Call InitializeRigPart(ImpactObjects[1], RIG_CYLINDER, ParticleMaterial)
-    Call Graphics3D.SetObjectVisible(ImpactObjects[0], False)
-    Call Graphics3D.SetObjectVisible(ImpactObjects[1], False)
+    Call InitializeRigPart(ImpactObjects[2], RIG_TORUS, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[3], RIG_TORUS, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[4], RIG_CYLINDER, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[5], RIG_CYLINDER, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[6], RIG_CYLINDER, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[7], RIG_PYRAMID, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[8], RIG_PYRAMID, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[9], RIG_PYRAMID, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[10], RIG_CYLINDER, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[11], RIG_SPHERE, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[12], RIG_TORUS, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[13], RIG_TORUS, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[14], RIG_SPHERE, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[15], RIG_CYLINDER, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[16], RIG_CYLINDER, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[17], RIG_PYRAMID, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[18], RIG_PYRAMID, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[19], RIG_SPHERE, ParticleMaterial)
+
+    For Index = 0 To IMPACT_OBJECT_COUNT - 1
+        Call Graphics3D.SetObjectVisible(ImpactObjects[Index], False)
+    End For
 
 End Sub
 
@@ -1248,10 +1775,10 @@ Private Sub DefineActiveCameraShots()
     ''' These are group extents, not boss-specific camera coordinates. The reusable
     ''' framing API derives distance from the current encounter's occupied volume.
 
-    Bounds.MinX = -640
+    Bounds.MinX = LYRA_FORMATION_X - 140
     Bounds.MinY = -70
     Bounds.MinZ = -340
-    Bounds.MaxX = 510
+    Bounds.MaxX = 650
     Bounds.MaxY = 210
     Bounds.MaxZ = 610
     CombatBounds.MinX = Bounds.MinX
@@ -1263,13 +1790,13 @@ Private Sub DefineActiveCameraShots()
 
     If Battle.BossIsIntroduced() Then
 
-        Bounds.MinX = -700
+        Bounds.MinX = LYRA_FORMATION_X - 180
         Bounds.MaxX = 2200
         Bounds.MaxY = 1020
         Bounds.MinZ = -1200
         Bounds.MaxZ = 1250
-        CombatBounds.MinX = -700
-        CombatBounds.MaxX = 1250
+        CombatBounds.MinX = LYRA_FORMATION_X - 180
+        CombatBounds.MaxX = 1500
         CombatBounds.MaxY = 1020
         CombatBounds.MinZ = -760
         CombatBounds.MaxZ = 850
@@ -1301,12 +1828,15 @@ Private Sub DefinePresentation()
     Call DefineEffect(Battle.EFFECT_SLASH, "STARFIRE SLASH", 28, 32, 9, 18, -1, 255, 248, 215, 255, 70, 20, 18, 2, 72, 10)
     Call DefineEffect(Battle.EFFECT_FIRE, "EMBER NOVA", 42, 52, 11, 24, -1, 255, 205, 35, 220, 15, 3, 22, 3, 78, 13)
     Call DefineEffect(Battle.EFFECT_FROST, "ABSOLUTE ZERO", 46, 58, 9, 26, 0, 215, 250, 255, 40, 120, 255, 19, 4, 70, 11)
-    Call DefineEffect(Battle.EFFECT_HEAL, "PHOENIX HYMN", 36, 62, 7, 23, 0, 255, 245, 125, 45, 255, 130, 17, 5, 52, 6)
+    Call DefineEffect(Battle.EFFECT_HEAL, "PHOENIX HYMN", 30, 62, 7, 23, 0, 255, 245, 125, 45, 255, 130, 11, 3, 40, 5)
     Call DefineEffect(Battle.EFFECT_BREATH, "CALAMITY BREATH", 64, 70, 14, 34, -1, 255, 250, 100, 180, 5, 0, 28, 5, 100, 24)
     Call DefineEffect(Battle.EFFECT_ENRAGE, "CINDER CROWN", 64, 96, 13, 38, 0, 255, 225, 55, 150, 0, 20, 26, 8, 100, 28)
     Call DefineEffect(Battle.EFFECT_DEATH, "DRAGONFALL", 64, 130, 16, 48, -2, 255, 245, 190, 65, 8, 5, 30, 2, 100, 35)
     Call DefineEffect(Battle.EFFECT_BASH, "TITAN BREAKER", 34, 42, 10, 25, -1, 255, 230, 120, 255, 45, 5, 24, 3, 88, 20)
     Call DefineEffect(Battle.EFFECT_AURORA, "AURORA STAFF", 48, 58, 13, 30, 0, 170, 255, 245, 15, 120, 255, 18, 3, 84, 18)
+    Call DefineEffect(Battle.EFFECT_LIGHTNING, "SKYBREAKER ARC", 44, 42, 18, 22, -1, 245, 250, 255, 38, 105, 255, 18, 3, 92, 22)
+    Call DefineEffect(Battle.EFFECT_BURNING, "LINGERING FLAME", 4, 30, 5, 16, -1, 255, 168, 30, 180, 8, 0, 13, 3, 20, 2)
+    Call DefineEffect(Battle.EFFECT_CATASTROPHE, "CALDERA ANNIHILATION", 64, 96, 18, 52, -1, 255, 245, 170, 145, 0, 18, 34, 6, 100, 38)
 
     OperationAccepted = BattleCamera.PlayShot(State, SHOT_WIDE, 0)
 
@@ -1320,21 +1850,23 @@ Public Function Initialize(StateHandle As Number) As Boolean
 
     State = StateHandle
     Camera = Graphics3D.DefaultCamera()
-    FloorTexture = Graphics3D.LoadTexture3D(
-        "Assets\EmberObservatory.png",
+    CosmicTexture = Graphics3D.LoadTexture3D(
+        "Assets\CosmicBackdrop.png",
         Graphics3D.TEXTURE_FILTER_LINEAR,
         Graphics3D.TEXTURE_WRAP_REPEAT
     )
 
-    FloorMaterial = Graphics3D.CreateMaterial3D(
-        FloorTexture,
+    FloorMaterial = Material(3, 7, 18, 0, False)
+    GridMaterial = Material(24, 126, 255, 90, False)
+    CosmicMaterial = Graphics3D.CreateMaterial3D(
+        CosmicTexture,
         Graphics3D.MATERIAL_ALPHA_OPAQUE,
-        105,
-        88,
-        82,
+        92,
+        96,
+        118,
         100,
-        False,
-        12,
+        True,
+        32,
         50
     )
     StoneMaterial = Material(52, 55, 68, 0, False)
@@ -1348,9 +1880,15 @@ Public Function Initialize(StateHandle As Number) As Boolean
     LyraMaterial = Material(25, 188, 172, 38, False)
     SkinMaterial = Material(232, 155, 112, 4, False)
     HairMaterial = Material(92, 58, 28, 8, False)
+    ArinHairMaterial = Material(232, 186, 72, 20, False)
+    TorHairMaterial = Material(38, 24, 19, 5, False)
     LeatherMaterial = Material(76, 42, 28, 5, False)
-    DragonMaterial = Material(86, 16, 22, 16, False)
-    DragonGlowMaterial = Material(220, 45, 13, 70, False)
+    BoneMaterial = Material(220, 224, 216, 12, False)
+    VoidMaterial = Material(7, 5, 12, 0, False)
+    DragonMaterial = Material(154, 20, 27, 20, False)
+    DragonGlowMaterial = Material(238, 55, 12, 68, False)
+    DragonWingMaterial = Material(190, 48, 19, 24, False)
+    DragonUnderbellyMaterial = Material(226, 108, 35, 20, False)
     ParticleMaterial = Material(255, 255, 255, 100, True)
 
     Call CreateArena()
@@ -1368,12 +1906,21 @@ Public Function Initialize(StateHandle As Number) As Boolean
     LastArinOffset = 0
     LastTorOffset = 0
     LastLyraOffset = 0
+    LastMiraOffset = 0
+    LastArinOffsetZ = 0
+    LastTorOffsetZ = 0
+    LastLyraOffsetZ = 0
+    LastMiraOffsetZ = 0
     LastDragonOffsetX = 0
     LastDragonOffsetY = 0
     LastDragonOffsetZ = 0
     LastCinderlingOffset[0] = 0
     LastCinderlingOffset[1] = 0
     LastCinderlingOffset[2] = 0
+    BurningSteps[0] = 0
+    BurningSteps[1] = 0
+    BurningSteps[2] = 0
+    BurningSteps[3] = 0
     CurrentActionShot = 0
     CameraInputAccepted = False
     Ready = True
@@ -1389,44 +1936,44 @@ Private Sub ParticipantAnchor(Participant As Number, ByRef X As Number, ByRef Y 
 
     If Participant = Battle.PARTICIPANT_ARIN Then
 
-        X = -390 + LastArinOffset
+        X = ARIN_FORMATION_X + LastArinOffset
         Y = 72
-        Z = ARIN_FORMATION_Z
+        Z = ARIN_FORMATION_Z + LastArinOffsetZ
 
     Else If Participant = Battle.PARTICIPANT_MIRA Then
 
-        X = -545
+        X = MIRA_FORMATION_X + LastMiraOffset
         Y = 88
-        Z = MIRA_FORMATION_Z
+        Z = MIRA_FORMATION_Z + LastMiraOffsetZ
 
     Else If Participant = Battle.PARTICIPANT_TOR Then
 
-        X = -307 + LastTorOffset
+        X = TOR_FORMATION_X + LastTorOffset
         Y = 78
-        Z = TOR_FORMATION_Z
+        Z = TOR_FORMATION_Z + LastTorOffsetZ
 
     Else If Participant = Battle.PARTICIPANT_LYRA Then
 
-        X = -517 + LastLyraOffset
+        X = LYRA_FORMATION_X + LastLyraOffset
         Y = 82
-        Z = LYRA_FORMATION_Z
+        Z = LYRA_FORMATION_Z + LastLyraOffsetZ
 
     Else If Participant = Battle.PARTICIPANT_CINDERLING_ONE Then
 
-        X = 225 + LastCinderlingOffset[0]
-        Y = 72
+        X = 250 + LastCinderlingOffset[0]
+        Y = 110
         Z = -280
 
     Else If Participant = Battle.PARTICIPANT_CINDERLING_TWO Then
 
-        X = 365 + LastCinderlingOffset[1]
-        Y = 72
+        X = 390 + LastCinderlingOffset[1]
+        Y = 185
         Z = 40
 
     Else If Participant = Battle.PARTICIPANT_CINDERLING_THREE Then
 
-        X = 245 + LastCinderlingOffset[2]
-        Y = 72
+        X = 270 + LastCinderlingOffset[2]
+        Y = 110
         Z = 380
 
     Else If Participant = Battle.PARTICIPANT_ASHWING Then
@@ -1467,7 +2014,13 @@ Private Function ParticipantFramingRadius(Participant As Number) As Number
 
     If (Participant >= Battle.PARTICIPANT_CINDERLING_ONE And
         Participant <= Battle.PARTICIPANT_CINDERLING_THREE) Then
-        Return 82
+
+        If Participant = Battle.PARTICIPANT_CINDERLING_TWO Then
+            Return 170
+        End If
+
+        Return 112
+
     End If
 
     Return 78
@@ -1484,6 +2037,11 @@ Private Sub DefineActionFocusShot(Shot As Number, Actor As Number, Target As Num
     Dim TargetZ As Number
     Dim ActorRadius As Number
     Dim TargetRadius As Number
+    Dim ViewX As Number
+    Dim ViewY As Number
+    Dim ViewZ As Number
+    Dim FocusFov As Number
+    Dim Padding As Number
     Dim Bounds As BattleCamera.FramingBounds3D
 
     If Actor <= 0 Or Target <= 0 Then
@@ -1492,6 +2050,12 @@ Private Sub DefineActionFocusShot(Shot As Number, Actor As Number, Target As Num
 
     Call ParticipantAnchor(Actor, ActorX, ActorY, ActorZ)
     Call ParticipantAnchor(Target, TargetX, TargetY, TargetZ)
+
+    If (Actor >= Battle.PARTICIPANT_ARIN And
+        Actor <= Battle.PARTICIPANT_MIRA And
+        IsPartyOffensiveVisual(Battle.Visual())) Then
+        Call ActionStagePosition(Actor, Target, ActorX, ActorZ)
+    End If
 
     ActorRadius = ParticipantFramingRadius(Actor)
     TargetRadius = ParticipantFramingRadius(Target)
@@ -1502,6 +2066,40 @@ Private Sub DefineActionFocusShot(Shot As Number, Actor As Number, Target As Num
     Bounds.MaxY = Max(ActorY + ActorRadius, TargetY + TargetRadius)
     Bounds.MaxZ = Max(ActorZ + ActorRadius, TargetZ + TargetRadius)
 
+    ViewX = -18
+    ViewY = 14
+    ViewZ = 92
+    FocusFov = 58
+    Padding = 14
+
+    If (Actor + Battle.Visual()) Mod 2 = 0 Then
+        ViewZ = -92
+    End If
+
+    ''' Enemy attacks use a wider, more lateral view so a large creature never
+    ''' occludes its target with its back while lunging toward the party.
+
+    If Actor >= Battle.PARTICIPANT_CINDERLING_ONE Then
+
+        ViewX = -14
+        ViewY = 24
+        ViewZ = -100
+        FocusFov = 68
+        Padding = 36
+
+    End If
+
+    If VisualHitsWholeParty(Battle.Visual()) Then
+
+        Bounds.MinX = Min(Bounds.MinX, LYRA_FORMATION_X - 120)
+        Bounds.MinY = Min(Bounds.MinY, -65)
+        Bounds.MinZ = Min(Bounds.MinZ, -420)
+        Bounds.MaxX = Max(Bounds.MaxX, TOR_FORMATION_X + 120)
+        Bounds.MaxY = Max(Bounds.MaxY, 175)
+        Bounds.MaxZ = Max(Bounds.MaxZ, 480)
+
+    End If
+
     ''' The negative-X, negative-Z view stays on the heroes' side of every encounter.
 
     OperationAccepted = BattleCamera.DefineFramedShot(
@@ -1509,13 +2107,13 @@ Private Sub DefineActionFocusShot(Shot As Number, Actor As Number, Target As Num
         Shot,
         "ACTOR + TARGET FOCUS",
         Bounds,
-        -28,
-        18,
-        -72,
+        ViewX,
+        ViewY,
+        ViewZ,
         960,
         540,
-        62,
-        10,
+        FocusFov,
+        Padding,
         12
     )
 
@@ -1527,6 +2125,11 @@ Private Sub DefineActorAnticipationShot(Shot As Number, Actor As Number)
     Dim Y As Number
     Dim Z As Number
     Dim Radius As Number
+    Dim ViewX As Number
+    Dim ViewY As Number
+    Dim ViewZ As Number
+    Dim AnticipationFov As Number
+    Dim Padding As Number
     Dim Bounds As BattleCamera.FramingBounds3D
 
     If Actor <= 0 Then
@@ -1536,6 +2139,11 @@ Private Sub DefineActorAnticipationShot(Shot As Number, Actor As Number)
     Call ParticipantAnchor(Actor, X, Y, Z)
 
     Radius = ParticipantFramingRadius(Actor)
+    ViewX = -35
+    ViewY = 18
+    ViewZ = -85
+    AnticipationFov = 55
+    Padding = 30
     Bounds.MinX = X - Radius
     Bounds.MinY = Min(-65, Y - Radius)
     Bounds.MinZ = Z - Radius
@@ -1543,18 +2151,32 @@ Private Sub DefineActorAnticipationShot(Shot As Number, Actor As Number)
     Bounds.MaxY = Y + Radius
     Bounds.MaxZ = Z + Radius
 
+    If Actor >= Battle.PARTICIPANT_ARIN And Actor <= Battle.PARTICIPANT_MIRA Then
+
+        ''' Look back from the enemy side so the hero's face, weapon pose, and
+        ''' casting gesture dominate a centered close-up before the impact cut.
+
+        ViewX = 100
+        ViewY = 15
+        ViewZ = 22
+        AnticipationFov = 42
+        Padding = 0
+        Bounds.MinY = Y - Radius
+
+    End If
+
     OperationAccepted = BattleCamera.DefineFramedShot(
         State,
         Shot,
         "ACTION ANTICIPATION",
         Bounds,
-        -35,
-        18,
-        -85,
+        ViewX,
+        ViewY,
+        ViewZ,
         960,
         540,
-        55,
-        30,
+        AnticipationFov,
+        Padding,
         8
     )
 
@@ -1564,23 +2186,42 @@ Private Function VisualHasImpact(Visual As Number) As Boolean
 
     Dim ReturnValue As Boolean
 
+    If Not Battle.VisualImpactLanded() Then
+        Return False
+    End If
+
     ReturnValue = (Visual = Battle.VISUAL_ARIN_ATTACK Or
         Visual = Battle.VISUAL_ARIN_EMBER Or
         Visual = Battle.VISUAL_MIRA_FLAME Or
         Visual = Battle.VISUAL_MIRA_FROST Or
+        Visual = Battle.VISUAL_MIRA_LIGHTNING Or
         Visual = Battle.VISUAL_TOR_ATTACK Or
         Visual = Battle.VISUAL_TOR_BASH Or
         Visual = Battle.VISUAL_LYRA_ATTACK Or
         Visual = Battle.VISUAL_CINDERLING_ATTACK Or
         Visual = Battle.VISUAL_DRAGON_CLAW Or
         Visual = Battle.VISUAL_DRAGON_BREATH Or
+        Visual = Battle.VISUAL_DRAGON_CATASTROPHE Or
         Visual = Battle.VISUAL_DRAGON_TAIL)
+    Return ReturnValue
+
+End Function
+
+Private Function VisualHitsWholeParty(Visual As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = (Visual = Battle.VISUAL_DRAGON_BREATH Or
+        Visual = Battle.VISUAL_DRAGON_CATASTROPHE Or
+        Visual = Battle.VISUAL_DRAGON_TAIL)
+
     Return ReturnValue
 
 End Function
 
 Private Sub TriggerImpactCue(Visual As Number)
 
+    Dim EffectId As Number
     Dim X As Number
     Dim Y As Number
     Dim Z As Number
@@ -1596,8 +2237,57 @@ Private Sub TriggerImpactCue(Visual As Number)
 
     If (Visual = Battle.VISUAL_TOR_BASH Or
         Visual = Battle.VISUAL_DRAGON_BREATH Or
+        Visual = Battle.VISUAL_DRAGON_CATASTROPHE Or
         Visual = Battle.VISUAL_DRAGON_TAIL) Then
         Shake = 24
+    End If
+
+    If Visual = Battle.VISUAL_DRAGON_CATASTROPHE Then
+        Shake = 38
+    End If
+
+    If Visual = Battle.VISUAL_ARIN_ATTACK Or Visual = Battle.VISUAL_ARIN_EMBER Then
+
+        EffectId = Battle.EFFECT_SLASH
+
+    Else If Visual = Battle.VISUAL_TOR_ATTACK Or Visual = Battle.VISUAL_TOR_BASH Then
+
+        EffectId = Battle.EFFECT_BASH
+
+    Else If Visual = Battle.VISUAL_LYRA_ATTACK Then
+
+        EffectId = Battle.EFFECT_AURORA
+
+    Else If Visual = Battle.VISUAL_MIRA_FLAME Then
+
+        EffectId = Battle.EFFECT_FIRE
+
+    Else If Visual = Battle.VISUAL_MIRA_FROST Then
+
+        EffectId = Battle.EFFECT_FROST
+
+    Else If Visual = Battle.VISUAL_MIRA_LIGHTNING Then
+
+        EffectId = Battle.EFFECT_LIGHTNING
+
+    Else If Visual = Battle.VISUAL_DRAGON_BREATH Then
+
+        EffectId = Battle.EFFECT_BREATH
+
+    Else If Visual = Battle.VISUAL_DRAGON_CATASTROPHE Then
+
+        EffectId = Battle.EFFECT_CATASTROPHE
+        X = PARTY_CENTER_X
+        Y = 82
+        Z = 30
+
+    Else
+        EffectId = Battle.EFFECT_SLASH
+
+    End If
+
+    If EffectId > 0 Then
+        OperationAccepted = BattleEffects.Spawn(State, EffectId, X, Y, Z, GlobalStep + Visual * 1613)
     End If
 
     OperationAccepted = BattleCamera.StartShake(State, Shake, 18, GlobalStep + Visual * 313)
@@ -1606,6 +2296,7 @@ End Sub
 
 Private Sub UpdateImpactObjects()
 
+    Dim Index As Number
     Dim Visual As Number
     Dim StepValue As Number
     Dim Age As Number
@@ -1629,13 +2320,80 @@ Private Sub UpdateImpactObjects()
     Dim BeamEndZ As Number
     Dim BeamRadius As Number
     Dim BeamPose As Articulation.SegmentPose3D
+    Dim ArcOne As Articulation.SegmentPose3D
+    Dim ArcTwo As Articulation.SegmentPose3D
+    Dim ArcThree As Articulation.SegmentPose3D
+    Dim ArcFour As Articulation.SegmentPose3D
+    Dim ArcFive As Articulation.SegmentPose3D
+    Dim OrbitAngle As Number
+    Dim OrbitRadius As Number
 
-    Call Graphics3D.SetObjectVisible(ImpactObjects[0], False)
-    Call Graphics3D.SetObjectVisible(ImpactObjects[1], False)
+    For Index = 0 To IMPACT_OBJECT_COUNT - 1
+        Call Graphics3D.SetObjectVisible(ImpactObjects[Index], False)
+    End For
 
     Visual = Battle.Visual()
     StepValue = Battle.VisualStep()
     Target = Battle.VisualTarget()
+
+    If ((Visual = Battle.VISUAL_ITEM Or Visual = Battle.VISUAL_LYRA_MEND) And
+        Target > 0 And
+        StepValue >= 8 And
+        StepValue <= 58) Then
+
+        Call ParticipantAnchor(Target, X, Y, Z)
+
+        Age = StepValue - 8
+        RingSize = 64 + Age * 2
+        Opacity = Max(0, 100 - Max(0, Age - 30) * 4)
+        OrbitAngle = GlobalStep * 12
+        OrbitRadius = 54 + Age / 2
+
+        If StepValue = 24 Then
+            OperationAccepted = BattleEffects.Spawn(State, Battle.EFFECT_HEAL, X, Y, Z, GlobalStep + Target * 1709)
+        End If
+
+        Call Graphics3D.SetObjectVisible(ImpactObjects[0], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[7], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[8], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[9], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[2], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[3], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[12], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[13], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[14], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[17], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[18], True)
+        Call ApplyPart(ImpactObjects[0], X, Y + 18, Z, 42 + Age, 68 + Age, 42 + Age, 0, 0, 0)
+        Call ApplyPart(ImpactObjects[2], X, Y - 55 + (Age Mod 24) * 8, Z, RingSize, RingSize, RingSize, 90, GlobalStep * 5, 0)
+        Call ApplyPart(ImpactObjects[3], X, Y - 55 + ((Age + 12) Mod 24) * 8, Z, RingSize + 35, RingSize + 35, RingSize + 35, 90, 0 - GlobalStep * 4, 0)
+        Call ApplyPart(ImpactObjects[12], X, Y - 46 + (Age Mod 18) * 8, Z, RingSize + 38, RingSize + 38, RingSize + 38, 90, GlobalStep * 8, 0)
+        Call ApplyPart(ImpactObjects[13], X, Y + 58, Z, RingSize + 52, RingSize + 52, RingSize + 52, 0, GlobalStep * 6, 0)
+        Call ApplyPart(ImpactObjects[14], X, Y + 42, Z, 28, 112, 28, 0, 0, 0)
+        Call ApplyPart(ImpactObjects[7], X + Math3D.CosFixed(OrbitAngle) * OrbitRadius / Core.FIXED_ONE, Y + 20 + (Age Mod 16) * 7, Z + Math3D.SinFixed(OrbitAngle) * OrbitRadius / Core.FIXED_ONE, 17, 31, 17, 0, OrbitAngle, 0)
+        Call ApplyPart(ImpactObjects[8], X + Math3D.CosFixed(OrbitAngle + 120) * OrbitRadius / Core.FIXED_ONE, Y + 45 + ((Age + 5) Mod 16) * 7, Z + Math3D.SinFixed(OrbitAngle + 120) * OrbitRadius / Core.FIXED_ONE, 15, 27, 15, 0, OrbitAngle + 120, 0)
+        Call ApplyPart(ImpactObjects[9], X + Math3D.CosFixed(OrbitAngle + 240) * OrbitRadius / Core.FIXED_ONE, Y + 30 + ((Age + 10) Mod 16) * 7, Z + Math3D.SinFixed(OrbitAngle + 240) * OrbitRadius / Core.FIXED_ONE, 14, 25, 14, 0, OrbitAngle + 240, 0)
+        Call ApplyPart(ImpactObjects[17], X + Math3D.CosFixed(0 - OrbitAngle) * (OrbitRadius + 22) / Core.FIXED_ONE, Y + 75, Z + Math3D.SinFixed(0 - OrbitAngle) * (OrbitRadius + 22) / Core.FIXED_ONE, 13, 23, 13, 0, 0 - OrbitAngle, 0)
+        Call ApplyPart(ImpactObjects[18], X + Math3D.CosFixed(180 - OrbitAngle) * (OrbitRadius + 22) / Core.FIXED_ONE, Y + 105, Z + Math3D.SinFixed(180 - OrbitAngle) * (OrbitRadius + 22) / Core.FIXED_ONE, 12, 21, 12, 0, 180 - OrbitAngle, 0)
+
+        For Index = 0 To IMPACT_OBJECT_COUNT - 1
+            Call Graphics3D.SetObjectColor(ImpactObjects[Index], 95, 255, 178)
+            Call Graphics3D.SetObjectOpacity(ImpactObjects[Index], Opacity)
+        End For
+
+        ''' Keep a brilliant core and readable orbiting motes, while the larger
+        ''' aura volumes remain translucent enough to preserve actor silhouettes.
+
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[0], Opacity * 2 / 5)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[2], Opacity * 3 / 5)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[3], Opacity * 2 / 5)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[12], Opacity / 2)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[13], Opacity * 2 / 5)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[14], Opacity / 2)
+
+        Return
+
+    End If
 
     If Not VisualHasImpact(Visual) Or Target <= 0 Then
         Return
@@ -1643,18 +2401,28 @@ Private Sub UpdateImpactObjects()
 
     Call ParticipantAnchor(Target, X, Y, Z)
 
-    If (Visual = Battle.VISUAL_DRAGON_BREATH And
+    If ((Visual = Battle.VISUAL_DRAGON_BREATH Or
+        Visual = Battle.VISUAL_DRAGON_CATASTROPHE) And
         StepValue >= 8 And
-        StepValue <= 48) Then
+        StepValue <= 64) Then
 
-        MouthX = DRAGON_ROOT_X - 952 + LastDragonOffsetX
-        MouthY = DRAGON_ROOT_Y + 570 + LastDragonOffsetY
-        MouthZ = DRAGON_ROOT_Z + LastDragonOffsetZ
+        X = PARTY_CENTER_X
+        Y = 82
+        Z = 30
+
+        MouthX = LastDragonMouthX
+        MouthY = LastDragonMouthY
+        MouthZ = LastDragonMouthZ
         Progress = Min(100, (StepValue - 7) * 8)
         BeamEndX = MouthX + (X - MouthX) * Progress / 100
         BeamEndY = MouthY + (Y - MouthY) * Progress / 100
         BeamEndZ = MouthZ + (Z - MouthZ) * Progress / 100
         BeamRadius = 22 + Abs(Articulation.CycleAngle(GlobalStep, 12, 8, 0))
+
+        If Visual = Battle.VISUAL_DRAGON_CATASTROPHE Then
+            BeamRadius = BeamRadius + 34
+        End If
+
         BeamPose = Articulation.SolveSegmentBetweenPoints(
             MouthX,
             MouthY,
@@ -1671,6 +2439,17 @@ Private Sub UpdateImpactObjects()
 
         Call Graphics3D.SetObjectVisible(ImpactObjects[0], True)
         Call Graphics3D.SetObjectVisible(ImpactObjects[1], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[2], StepValue >= 24)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[3], StepValue >= 28)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[10], StepValue >= 29)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[11], StepValue >= 29)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[12], StepValue >= 22)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[13], StepValue >= 26)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[14], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[15], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[17], StepValue >= 27)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[18], StepValue >= 27)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[19], StepValue >= 29)
         Call Graphics3D.SetObjectPosition(ImpactObjects[0], BeamEndX, BeamEndY, BeamEndZ)
         Call Graphics3D.SetObjectScale(ImpactObjects[0], SphereSize, SphereSize, SphereSize)
         Call Graphics3D.SetObjectColor(ImpactObjects[0], 255, 92, 18)
@@ -1678,6 +2457,105 @@ Private Sub UpdateImpactObjects()
         Call Graphics3D.SetObjectOpacity(ImpactObjects[0], 100)
         Call Graphics3D.SetObjectOpacity(ImpactObjects[1], 88)
         Call ApplySegment(ImpactObjects[1], BeamPose, BeamRadius)
+        Call ApplySegment(ImpactObjects[15], BeamPose, Max(6, BeamRadius / 3))
+        Call ApplyPart(ImpactObjects[2], X, -38, Z, SphereSize * 2, SphereSize * 2, SphereSize * 2, 90, GlobalStep * 9, 0)
+        Call ApplyPart(ImpactObjects[3], X, -32, Z, SphereSize * 3, SphereSize * 3, SphereSize * 3, 90, 0 - GlobalStep * 7, 0)
+        Call ApplyPart(ImpactObjects[10], X, Y + 55, Z, SphereSize, 390, SphereSize, 0, 0, 0)
+        Call ApplyPart(ImpactObjects[11], X, Y, Z, SphereSize * 2, SphereSize * 2, SphereSize * 2, 0, 0, 0)
+        Call ApplyPart(ImpactObjects[12], X, -34, Z, SphereSize * 4, SphereSize * 4, SphereSize * 4, 90, GlobalStep * 14, 0)
+        Call ApplyPart(ImpactObjects[13], X, Y + 10, Z, SphereSize * 3, SphereSize * 3, SphereSize * 3, 0, 0 - GlobalStep * 11, 0)
+        Call ApplyPart(ImpactObjects[14], BeamEndX, BeamEndY, BeamEndZ, SphereSize * 2, SphereSize * 2, SphereSize * 2, 0, 0, 0)
+        Call ApplyPart(ImpactObjects[17], X - SphereSize, Y + 42, Z - SphereSize / 2, SphereSize / 2, SphereSize * 2, SphereSize / 2, 0, GlobalStep * 9, -18)
+        Call ApplyPart(ImpactObjects[18], X + SphereSize, Y + 55, Z + SphereSize / 2, SphereSize / 2, SphereSize * 2, SphereSize / 2, 0, 0 - GlobalStep * 8, 16)
+        Call ApplyPart(ImpactObjects[19], X, Y + 20, Z, SphereSize * 3, SphereSize * 2, SphereSize * 3, 0, 0, 0)
+        Call Graphics3D.SetObjectColor(ImpactObjects[2], 255, 68, 8)
+        Call Graphics3D.SetObjectColor(ImpactObjects[3], 255, 220, 70)
+        Call Graphics3D.SetObjectColor(ImpactObjects[10], 255, 62, 10)
+        Call Graphics3D.SetObjectColor(ImpactObjects[11], 255, 178, 42)
+        Call Graphics3D.SetObjectColor(ImpactObjects[12], 255, 52, 6)
+        Call Graphics3D.SetObjectColor(ImpactObjects[13], 255, 235, 110)
+        Call Graphics3D.SetObjectColor(ImpactObjects[14], 255, 245, 175)
+        Call Graphics3D.SetObjectColor(ImpactObjects[15], 255, 255, 225)
+        Call Graphics3D.SetObjectColor(ImpactObjects[17], 255, 88, 8)
+        Call Graphics3D.SetObjectColor(ImpactObjects[18], 255, 180, 24)
+        Call Graphics3D.SetObjectColor(ImpactObjects[19], 255, 66, 8)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[2], 86)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[3], 72)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[10], 68)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[11], 70)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[12], 78)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[13], 74)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[14], 76)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[15], 100)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[17], 82)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[18], 82)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[19], 55)
+
+        Return
+
+    End If
+
+    If (Visual = Battle.VISUAL_MIRA_LIGHTNING And
+        StepValue >= 18 And
+        StepValue <= 46) Then
+
+        ArcOne = Articulation.SolveSegmentBetweenPoints(X - 28, Y + 620, Z + 45, X + 55, Y + 390, Z - 50)
+        ArcTwo = Articulation.SolveSegmentBetweenPoints(X + 55, Y + 390, Z - 50, X - 46, Y + 185, Z + 38)
+        ArcThree = Articulation.SolveSegmentBetweenPoints(X - 46, Y + 185, Z + 38, X, Y, Z)
+        ArcFour = Articulation.SolveSegmentBetweenPoints(X + 55, Y + 390, Z - 50, X + 225, Y + 255, Z + 150)
+        ArcFive = Articulation.SolveSegmentBetweenPoints(X - 46, Y + 185, Z + 38, X - 195, Y + 95, Z - 135)
+
+        Call Graphics3D.SetObjectVisible(ImpactObjects[0], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[2], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[3], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[4], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[5], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[6], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[12], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[13], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[14], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[15], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[16], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[17], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[18], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[19], True)
+        Call ApplySegment(ImpactObjects[4], ArcOne, 9)
+        Call ApplySegment(ImpactObjects[5], ArcTwo, 12)
+        Call ApplySegment(ImpactObjects[6], ArcThree, 16)
+        Call ApplySegment(ImpactObjects[15], ArcFour, 8)
+        Call ApplySegment(ImpactObjects[16], ArcFive, 7)
+        Call ApplyPart(ImpactObjects[0], X, Y, Z, 170, 170, 170, 0, 0, 0)
+        Call ApplyPart(ImpactObjects[2], X, Y, Z, 210, 210, 210, 90, GlobalStep * 18, 0)
+        Call ApplyPart(ImpactObjects[3], X, Y, Z, 320, 320, 320, 0, GlobalStep * 13, 0)
+        Call ApplyPart(ImpactObjects[12], X, Y, Z, 430, 430, 430, 90, GlobalStep * 23, 0)
+        Call ApplyPart(ImpactObjects[13], X, Y + 35, Z, 560, 560, 560, 0, 0 - GlobalStep * 19, 0)
+        Call ApplyPart(ImpactObjects[14], X, Y, Z, 280, 280, 280, 0, 0, 0)
+        Call ApplyPart(ImpactObjects[17], X - 155, Y + 75, Z - 75, 52, 235, 52, 0, GlobalStep * 15, -34)
+        Call ApplyPart(ImpactObjects[18], X + 145, Y + 115, Z + 90, 46, 210, 46, 0, 0 - GlobalStep * 14, 31)
+        Call ApplyPart(ImpactObjects[19], X, Y, Z, 420, 420, 420, 0, 0, 0)
+
+        For Index = 0 To IMPACT_OBJECT_COUNT - 1
+            Call Graphics3D.SetObjectColor(ImpactObjects[Index], 190, 225, 255)
+            Call Graphics3D.SetObjectOpacity(ImpactObjects[Index], 92)
+        End For
+
+        Call Graphics3D.SetObjectColor(ImpactObjects[4], 255, 255, 255)
+        Call Graphics3D.SetObjectColor(ImpactObjects[6], 80, 145, 255)
+        Call Graphics3D.SetObjectColor(ImpactObjects[14], 255, 255, 255)
+        Call Graphics3D.SetObjectColor(ImpactObjects[15], 105, 155, 255)
+        Call Graphics3D.SetObjectColor(ImpactObjects[16], 225, 245, 255)
+        Call Graphics3D.SetObjectColor(ImpactObjects[19], 95, 75, 255)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[0], 62)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[2], 58)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[3], 42)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[12], 55)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[13], 38)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[14], 88)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[15], 74)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[16], 68)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[17], 62)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[18], 62)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[19], 24)
 
         Return
 
@@ -1723,6 +2601,12 @@ Private Sub UpdateImpactObjects()
 
     Call Graphics3D.SetObjectVisible(ImpactObjects[0], True)
     Call Graphics3D.SetObjectVisible(ImpactObjects[1], True)
+    Call Graphics3D.SetObjectVisible(ImpactObjects[2], True)
+    Call Graphics3D.SetObjectVisible(ImpactObjects[3], True)
+    Call Graphics3D.SetObjectVisible(ImpactObjects[12], True)
+    Call Graphics3D.SetObjectVisible(ImpactObjects[13], True)
+    Call Graphics3D.SetObjectVisible(ImpactObjects[14], True)
+    Call Graphics3D.SetObjectVisible(ImpactObjects[19], True)
     Call Graphics3D.SetObjectPosition(ImpactObjects[0], X, Y, Z)
     Call Graphics3D.SetObjectPosition(ImpactObjects[1], X, Y, Z)
     Call Graphics3D.SetObjectScale(ImpactObjects[0], SphereSize, SphereSize, SphereSize)
@@ -1732,6 +2616,100 @@ Private Sub UpdateImpactObjects()
     Call Graphics3D.SetObjectColor(ImpactObjects[1], 255, 255, 255)
     Call Graphics3D.SetObjectOpacity(ImpactObjects[0], Opacity)
     Call Graphics3D.SetObjectOpacity(ImpactObjects[1], Opacity)
+    Call ApplyPart(ImpactObjects[2], X, Y, Z, RingSize, RingSize, RingSize, 90, GlobalStep * 12, 0)
+    Call ApplyPart(ImpactObjects[3], X, Y, Z, RingSize + 80, RingSize + 80, RingSize + 80, 0, GlobalStep * 9, 0)
+    Call Graphics3D.SetObjectColor(ImpactObjects[2], RedValue, GreenValue, BlueValue)
+    Call Graphics3D.SetObjectColor(ImpactObjects[3], 255, 255, 255)
+    Call Graphics3D.SetObjectOpacity(ImpactObjects[2], Opacity)
+    Call Graphics3D.SetObjectOpacity(ImpactObjects[3], Opacity * 3 / 4)
+    Call ApplyPart(ImpactObjects[12], X, Y, Z, RingSize + 150, RingSize + 150, RingSize + 150, 90, 0 - GlobalStep * 19, 0)
+    Call ApplyPart(ImpactObjects[13], X, Y + 15, Z, RingSize + 230, RingSize + 230, RingSize + 230, 0, GlobalStep * 15, 0)
+    Call ApplyPart(ImpactObjects[14], X, Y, Z, SphereSize * 2, SphereSize * 2, SphereSize * 2, 0, 0, 0)
+    Call ApplyPart(ImpactObjects[19], X, Y, Z, SphereSize * 3, SphereSize * 3, SphereSize * 3, 0, 0, 0)
+    Call Graphics3D.SetObjectColor(ImpactObjects[12], RedValue, GreenValue, BlueValue)
+    Call Graphics3D.SetObjectColor(ImpactObjects[13], 255, 255, 255)
+    Call Graphics3D.SetObjectColor(ImpactObjects[14], 255, 255, 255)
+    Call Graphics3D.SetObjectColor(ImpactObjects[19], RedValue, GreenValue, BlueValue)
+    Call Graphics3D.SetObjectOpacity(ImpactObjects[12], Opacity * 4 / 5)
+    Call Graphics3D.SetObjectOpacity(ImpactObjects[13], Opacity / 2)
+    Call Graphics3D.SetObjectOpacity(ImpactObjects[14], Opacity * 2 / 3)
+    Call Graphics3D.SetObjectOpacity(ImpactObjects[19], Opacity / 3)
+
+    If Visual = Battle.VISUAL_MIRA_FLAME Then
+
+        Call Graphics3D.SetObjectVisible(ImpactObjects[10], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[11], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[15], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[16], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[17], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[18], True)
+        Call ApplyPart(ImpactObjects[10], X, Y + 75, Z, BaseSize, 360 + Age * 18, BaseSize, 0, 0, 0)
+        Call ApplyPart(ImpactObjects[11], X, Y + 45, Z, SphereSize * 2, SphereSize * 2, SphereSize * 2, 0, 0, 0)
+        Call Graphics3D.SetObjectColor(ImpactObjects[10], 255, 62, 8)
+        Call Graphics3D.SetObjectColor(ImpactObjects[11], 255, 185, 32)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[10], Opacity)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[11], Opacity * 4 / 5)
+        Call ApplyPart(ImpactObjects[15], X - 48, Y + 105, Z - 42, 28, 340 + Age * 14, 28, 0, GlobalStep * 12, -15)
+        Call ApplyPart(ImpactObjects[16], X + 56, Y + 85, Z + 38, 24, 290 + Age * 12, 24, 0, 0 - GlobalStep * 10, 18)
+        Call ApplyPart(ImpactObjects[17], X - 72, Y + 35, Z + 46, 48, 165, 48, 0, GlobalStep * 11, -22)
+        Call ApplyPart(ImpactObjects[18], X + 80, Y + 60, Z - 35, 42, 145, 42, 0, 0 - GlobalStep * 9, 20)
+        Call Graphics3D.SetObjectColor(ImpactObjects[15], 255, 238, 145)
+        Call Graphics3D.SetObjectColor(ImpactObjects[16], 255, 105, 12)
+        Call Graphics3D.SetObjectColor(ImpactObjects[17], 255, 186, 35)
+        Call Graphics3D.SetObjectColor(ImpactObjects[18], 255, 72, 8)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[15], Opacity)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[16], Opacity)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[17], Opacity * 4 / 5)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[18], Opacity * 4 / 5)
+
+    Else If Visual = Battle.VISUAL_MIRA_FROST Then
+
+        For Index = 7 To 9
+            Call Graphics3D.SetObjectVisible(ImpactObjects[Index], True)
+            Call Graphics3D.SetObjectColor(ImpactObjects[Index], 125, 235, 255)
+            Call Graphics3D.SetObjectOpacity(ImpactObjects[Index], Opacity)
+        End For
+
+        Call Graphics3D.SetObjectVisible(ImpactObjects[17], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[18], True)
+        Call Graphics3D.SetObjectColor(ImpactObjects[17], 205, 250, 255)
+        Call Graphics3D.SetObjectColor(ImpactObjects[18], 80, 175, 255)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[17], Opacity)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[18], Opacity)
+
+        Call ApplyPart(ImpactObjects[7], X - 55, Y + 40, Z - 48, 105, 280, 105, 0, 0, -12)
+        Call ApplyPart(ImpactObjects[8], X + 30, Y + 65, Z + 52, 125, 360, 125, 0, 0, 9)
+        Call ApplyPart(ImpactObjects[9], X + 78, Y + 25, Z - 8, 88, 235, 88, 0, 0, 18)
+        Call ApplyPart(ImpactObjects[17], X - 95, Y + 85, Z + 38, 74, 205, 74, 0, GlobalStep * 8, -28)
+        Call ApplyPart(ImpactObjects[18], X + 105, Y + 105, Z - 55, 68, 190, 68, 0, 0 - GlobalStep * 7, 26)
+
+    Else If (Visual = Battle.VISUAL_ARIN_ATTACK Or
+        Visual = Battle.VISUAL_ARIN_EMBER Or
+        Visual = Battle.VISUAL_LYRA_ATTACK) Then
+
+        For Index = 4 To 6
+            Call Graphics3D.SetObjectVisible(ImpactObjects[Index], True)
+            Call Graphics3D.SetObjectColor(ImpactObjects[Index], 255, 248, 218)
+            Call Graphics3D.SetObjectOpacity(ImpactObjects[Index], Opacity)
+        End For
+
+        Call Graphics3D.SetObjectVisible(ImpactObjects[15], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[16], True)
+        Call Graphics3D.SetObjectColor(ImpactObjects[15], 255, 185, 55)
+        Call Graphics3D.SetObjectColor(ImpactObjects[16], 255, 255, 255)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[15], Opacity * 4 / 5)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[16], Opacity * 3 / 5)
+
+        ''' Three luminous contact marks make a confirmed sword/staff strike
+        ''' unmistakable. The entire branch is skipped for a mechanics miss.
+
+        Call ApplyPart(ImpactObjects[4], X, Y + 8, Z, 14, BaseSize + 140, 14, 0, 0, 52)
+        Call ApplyPart(ImpactObjects[5], X, Y + 8, Z, 11, BaseSize + 105, 11, 0, 0, -48)
+        Call ApplyPart(ImpactObjects[6], X, Y + 8, Z, 9, BaseSize + 75, 9, 72, 0, 12)
+        Call ApplyPart(ImpactObjects[15], X - 32, Y + 8, Z, 8, BaseSize + 210, 8, 0, 0, 67)
+        Call ApplyPart(ImpactObjects[16], X + 30, Y + 8, Z, 7, BaseSize + 185, 7, 0, 0, -66)
+
+    End If
 
 End Sub
 
@@ -1777,13 +2755,16 @@ Private Sub TriggerVisual(Visual As Number, StepValue As Number)
         EffectId = Battle.EFFECT_FROST
         Shot = SHOT_MAGIC
 
+    Else If Visual = Battle.VISUAL_MIRA_LIGHTNING Then
+
+        EffectId = Battle.EFFECT_LIGHTNING
+        Shot = SHOT_MAGIC
+        Shake = 22
+
     Else If Visual = Battle.VISUAL_ITEM Or Visual = Battle.VISUAL_LYRA_MEND Then
 
         EffectId = Battle.EFFECT_HEAL
         Shot = SHOT_PARTY
-        X = -230
-        Y = 80
-        Z = 70
         Shake = 3
 
     Else If Visual = Battle.VISUAL_TOR_ATTACK Or Visual = Battle.VISUAL_TOR_BASH Then
@@ -1810,16 +2791,25 @@ Private Sub TriggerVisual(Visual As Number, StepValue As Number)
 
         EffectId = Battle.EFFECT_BREATH
         Shot = SHOT_BREATH
-        X = -60
+        X = PARTY_CENTER_X
         Y = 105
         Z = 25
         Shake = 24
+
+    Else If Visual = Battle.VISUAL_DRAGON_CATASTROPHE Then
+
+        EffectId = Battle.EFFECT_CATASTROPHE
+        Shot = SHOT_BREATH
+        X = PARTY_CENTER_X
+        Y = 82
+        Z = 30
+        Shake = 38
 
     Else If Visual = Battle.VISUAL_DRAGON_CLAW Or Visual = Battle.VISUAL_DRAGON_TAIL Then
 
         EffectId = Battle.EFFECT_SLASH
         Shot = SHOT_DRAGON
-        X = -210
+        X = PARTY_CENTER_X
         Y = 65
         Z = 65
         Shake = 18
@@ -1857,17 +2847,32 @@ Private Sub TriggerVisual(Visual As Number, StepValue As Number)
 
     If EffectId > 0 Then
 
-        OperationAccepted = BattleEffects.Spawn(State, EffectId, X, Y, Z, GlobalStep + Visual * 997 + StepValue)
+        If Battle.VisualImpactLanded() Then
+            OperationAccepted = BattleEffects.Spawn(State, EffectId, X, Y, Z, GlobalStep + Visual * 997 + StepValue)
+        End If
 
-        Call DefineActorAnticipationShot(Shot, Battle.VisualActor())
+        If (Battle.VisualActor() >= Battle.PARTICIPANT_ARIN And
+            Battle.VisualActor() <= Battle.PARTICIPANT_MIRA) Then
+            Call DefineActorAnticipationShot(Shot, Battle.VisualActor())
+        Else If Battle.VisualActor() >= Battle.PARTICIPANT_CINDERLING_ONE Then
+            Call DefineActionFocusShot(Shot, Battle.VisualActor(), Battle.VisualTarget())
+        End If
 
         If Battle.VisualActor() > 0 And Battle.VisualTarget() > 0 Then
             CurrentActionShot = Shot
         End If
 
-        Call PlayVariedShot(Shot)
+        If (Battle.VisualActor() >= Battle.PARTICIPANT_ARIN And
+            Battle.VisualActor() <= Battle.PARTICIPANT_MIRA) Then
+            OperationAccepted = BattleCamera.PlayShot(State, Shot, 0)
+        Else
 
-        OperationAccepted = BattleCamera.StartShake(State, Shake, 30, GlobalStep + 177)
+            Call PlayVariedShot(Shot)
+        End If
+
+        If Battle.VisualImpactLanded() Then
+            OperationAccepted = BattleCamera.StartShake(State, Shake, 30, GlobalStep + 177)
+        End If
 
     End If
 
@@ -1942,25 +2947,25 @@ End Function
 
 Private Function PointerHitsActor(PointerX As Number, PointerY As Number) As Boolean
 
-    If (PointerHitsSphere(PointerX, PointerY, -390 + LastArinOffset, 72, ARIN_FORMATION_Z, 65) Or
-        PointerHitsSphere(PointerX, PointerY, -307 + LastTorOffset, 76, TOR_FORMATION_Z, 75) Or
-        PointerHitsSphere(PointerX, PointerY, -517 + LastLyraOffset, 78, LYRA_FORMATION_Z, 65) Or
-        PointerHitsSphere(PointerX, PointerY, -545, 86, MIRA_FORMATION_Z, 68)) Then
+    If (PointerHitsSphere(PointerX, PointerY, ARIN_FORMATION_X + LastArinOffset, 72, ARIN_FORMATION_Z + LastArinOffsetZ, 65) Or
+        PointerHitsSphere(PointerX, PointerY, TOR_FORMATION_X + LastTorOffset, 76, TOR_FORMATION_Z + LastTorOffsetZ, 75) Or
+        PointerHitsSphere(PointerX, PointerY, LYRA_FORMATION_X + LastLyraOffset, 78, LYRA_FORMATION_Z + LastLyraOffsetZ, 65) Or
+        PointerHitsSphere(PointerX, PointerY, MIRA_FORMATION_X + LastMiraOffset, 86, MIRA_FORMATION_Z + LastMiraOffsetZ, 68)) Then
         Return True
     End If
 
     If (Battle.EnemyIsActive(Battle.PARTICIPANT_CINDERLING_ONE) And
-        PointerHitsSphere(PointerX, PointerY, 250 + LastCinderlingOffset[0], 45, -280, 76)) Then
+        PointerHitsSphere(PointerX, PointerY, 250 + LastCinderlingOffset[0], 105, -280, 118)) Then
         Return True
     End If
 
     If (Battle.EnemyIsActive(Battle.PARTICIPANT_CINDERLING_TWO) And
-        PointerHitsSphere(PointerX, PointerY, 390 + LastCinderlingOffset[1], 45, 40, 76)) Then
+        PointerHitsSphere(PointerX, PointerY, 390 + LastCinderlingOffset[1], 185, 40, 205)) Then
         Return True
     End If
 
     If (Battle.EnemyIsActive(Battle.PARTICIPANT_CINDERLING_THREE) And
-        PointerHitsSphere(PointerX, PointerY, 270 + LastCinderlingOffset[2], 45, 380, 76)) Then
+        PointerHitsSphere(PointerX, PointerY, 270 + LastCinderlingOffset[2], 105, 380, 118)) Then
         Return True
     End If
 
@@ -2080,10 +3085,13 @@ Private Sub UpdateEnemyVisibility()
 
     Dim Index As Number
     Dim DragonVisible As Boolean
+    Dim WaveOneVisible As Boolean
 
-    Call SetCinderlingVisible(0, True)
-    Call SetCinderlingVisible(1, True)
-    Call SetCinderlingVisible(2, True)
+    WaveOneVisible = Not Battle.BossIsIntroduced()
+
+    Call SetCinderlingVisible(0, WaveOneVisible)
+    Call SetCinderlingVisible(1, WaveOneVisible)
+    Call SetCinderlingVisible(2, WaveOneVisible)
 
     DragonVisible = Battle.BossIsIntroduced()
 
@@ -2119,6 +3127,100 @@ Private Sub ApplyResultOrbit(StepValue As Number)
 
 End Sub
 
+Private Function IsPartyOffensiveVisual(Visual As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = (Visual = Battle.VISUAL_ARIN_ATTACK Or
+        Visual = Battle.VISUAL_ARIN_EMBER Or
+        Visual = Battle.VISUAL_TOR_ATTACK Or
+        Visual = Battle.VISUAL_TOR_BASH Or
+        Visual = Battle.VISUAL_LYRA_ATTACK Or
+        Visual = Battle.VISUAL_MIRA_FLAME Or
+        Visual = Battle.VISUAL_MIRA_FROST Or
+        Visual = Battle.VISUAL_MIRA_LIGHTNING)
+
+    Return ReturnValue
+
+End Function
+
+Private Sub ActionStagePosition(
+    Actor As Number,
+    Target As Number,
+    ByRef X As Number,
+    ByRef Z As Number
+)
+
+    Dim TargetX As Number
+    Dim TargetY As Number
+    Dim TargetZ As Number
+    Dim StandOff As Number
+
+    If Target <= 0 Then
+        Return
+    End If
+
+    Call ParticipantAnchor(Target, TargetX, TargetY, TargetZ)
+
+    ''' An instantaneous, target-relative staging point keeps this reusable for
+    ''' small enemies, large bosses, and future formations without interpolating
+    ''' through the arena. The slight lane offset preserves both silhouettes.
+
+    StandOff = Max(170, ParticipantFramingRadius(Target) + 40)
+    X = TargetX - StandOff
+    Z = TargetZ - 34
+
+    If Actor = Battle.PARTICIPANT_TOR Or Actor = Battle.PARTICIPANT_MIRA Then
+        Z = TargetZ + 34
+    End If
+
+End Sub
+
+Private Sub StartPartyBurning()
+
+    Dim Index As Number
+
+    For Index = 0 To 3
+        BurningSteps[Index] = 180
+    End For
+
+End Sub
+
+Private Sub UpdateBurningEffects()
+
+    Dim Index As Number
+    Dim Participant As Number
+    Dim X As Number
+    Dim Y As Number
+    Dim Z As Number
+
+    For Index = 0 To 3
+
+        If BurningSteps[Index] > 0 Then
+
+            Participant = Battle.PARTICIPANT_ARIN + Index
+
+            If BurningSteps[Index] Mod 15 = 0 Then
+                Call ParticipantAnchor(Participant, X, Y, Z)
+
+                OperationAccepted = BattleEffects.Spawn(
+                    State,
+                    Battle.EFFECT_BURNING,
+                    X,
+                    Y - 22,
+                    Z,
+                    GlobalStep + Participant * 1709
+                )
+            End If
+
+            BurningSteps[Index] = BurningSteps[Index] - 1
+
+        End If
+
+    End For
+
+End Sub
+
 Private Sub UpdateActors()
 
     Dim Visual As Number
@@ -2126,9 +3228,14 @@ Private Sub UpdateActors()
     Dim Wing As Number
     Dim Lunge As Number
     Dim Rise As Number
-    Dim ArinOffset As Number
-    Dim TorOffset As Number
-    Dim LyraOffset As Number
+    Dim ArinX As Number
+    Dim ArinZ As Number
+    Dim TorX As Number
+    Dim TorZ As Number
+    Dim LyraX As Number
+    Dim LyraZ As Number
+    Dim MiraX As Number
+    Dim MiraZ As Number
     Dim DragonOffsetX As Number
     Dim DragonOffsetY As Number
     Dim DragonOffsetZ As Number
@@ -2144,9 +3251,14 @@ Private Sub UpdateActors()
     Visual = Battle.Visual()
     StepValue = Battle.VisualStep()
     Wing = (GlobalStep Mod 48) - 24
-    ArinOffset = 0
-    TorOffset = 0
-    LyraOffset = 0
+    ArinX = ARIN_FORMATION_X
+    ArinZ = ARIN_FORMATION_Z
+    TorX = TOR_FORMATION_X
+    TorZ = TOR_FORMATION_Z
+    LyraX = LYRA_FORMATION_X
+    LyraZ = LYRA_FORMATION_Z
+    MiraX = MIRA_FORMATION_X
+    MiraZ = MIRA_FORMATION_Z
     DragonOffsetX = 0
     DragonOffsetY = 0
     DragonOffsetZ = 0
@@ -2154,15 +3266,15 @@ Private Sub UpdateActors()
     CinderlingOffsetTwo = 0
     CinderlingOffsetThree = 0
 
-    Call UpdateEnemyVisibility()
-
-    If StepValue = 18 And CurrentActionShot > 0 Then
-        Call DefineActionFocusShot(CurrentActionShot, Battle.VisualActor(), Battle.VisualTarget())
-        Call PlayVariedShot(CurrentActionShot)
-    End If
-
     If StepValue = 30 And VisualHasImpact(Visual) Then
+
         Call TriggerImpactCue(Visual)
+
+        If (Visual = Battle.VISUAL_DRAGON_BREATH Or
+            Visual = Battle.VISUAL_DRAGON_CATASTROPHE) Then
+            Call StartPartyBurning()
+        End If
+
     End If
 
     If StepValue < 36 Then
@@ -2173,17 +3285,19 @@ Private Sub UpdateActors()
 
     Lunge = Max(0, Lunge)
 
-    If Visual = Battle.VISUAL_ARIN_ATTACK Or Visual = Battle.VISUAL_ARIN_EMBER Then
+    If (IsPartyOffensiveVisual(Visual) And
+        StepValue >= 20 And
+        StepValue <= 54) Then
 
-        ArinOffset = Lunge
-
-    Else If Visual = Battle.VISUAL_TOR_ATTACK Or Visual = Battle.VISUAL_TOR_BASH Then
-
-        TorOffset = Lunge
-
-    Else If Visual = Battle.VISUAL_LYRA_ATTACK Then
-
-        LyraOffset = Lunge
+        If Battle.VisualActor() = Battle.PARTICIPANT_ARIN Then
+            Call ActionStagePosition(Battle.PARTICIPANT_ARIN, Battle.VisualTarget(), ArinX, ArinZ)
+        Else If Battle.VisualActor() = Battle.PARTICIPANT_TOR Then
+            Call ActionStagePosition(Battle.PARTICIPANT_TOR, Battle.VisualTarget(), TorX, TorZ)
+        Else If Battle.VisualActor() = Battle.PARTICIPANT_LYRA Then
+            Call ActionStagePosition(Battle.PARTICIPANT_LYRA, Battle.VisualTarget(), LyraX, LyraZ)
+        Else If Battle.VisualActor() = Battle.PARTICIPANT_MIRA Then
+            Call ActionStagePosition(Battle.PARTICIPANT_MIRA, Battle.VisualTarget(), MiraX, MiraZ)
+        End If
 
     Else If Visual = Battle.VISUAL_CINDERLING_ATTACK Then
 
@@ -2277,10 +3391,10 @@ Private Sub UpdateActors()
     Call PoseCinderling(0, 250 + CinderlingOffsetOne, -280, CinderlingOneDefeated, GlobalStep)
     Call PoseCinderling(1, 390 + CinderlingOffsetTwo, 40, CinderlingTwoDefeated, GlobalStep)
     Call PoseCinderling(2, 270 + CinderlingOffsetThree, 380, CinderlingThreeDefeated, GlobalStep)
-    Call PoseHero(0, Battle.PARTICIPANT_ARIN, -390 + ArinOffset, ARIN_FORMATION_Z, ROLE_DEFENDER, Visual, StepValue, GlobalStep)
-    Call PoseHero(26, Battle.PARTICIPANT_TOR, -307 + TorOffset, TOR_FORMATION_Z, ROLE_ATTACKER, Visual, StepValue, GlobalStep)
-    Call PoseHero(52, Battle.PARTICIPANT_LYRA, -517 + LyraOffset, LYRA_FORMATION_Z, ROLE_HEALER, Visual, StepValue, GlobalStep)
-    Call PoseHero(78, Battle.PARTICIPANT_MIRA, -545, MIRA_FORMATION_Z, ROLE_WIZARD, Visual, StepValue, GlobalStep)
+    Call PoseHero(0, Battle.PARTICIPANT_ARIN, ArinX, ArinZ, ROLE_DEFENDER, Visual, StepValue, GlobalStep)
+    Call PoseHero(40, Battle.PARTICIPANT_TOR, TorX, TorZ, ROLE_ATTACKER, Visual, StepValue, GlobalStep)
+    Call PoseHero(80, Battle.PARTICIPANT_LYRA, LyraX, LyraZ, ROLE_HEALER, Visual, StepValue, GlobalStep)
+    Call PoseHero(120, Battle.PARTICIPANT_MIRA, MiraX, MiraZ, ROLE_WIZARD, Visual, StepValue, GlobalStep)
     Call PoseDragon(
         DRAGON_ROOT_X + DragonOffsetX,
         DRAGON_ROOT_Y + DragonOffsetY,
@@ -2290,9 +3404,20 @@ Private Sub UpdateActors()
         GlobalStep
     )
 
-    LastArinOffset = ArinOffset
-    LastTorOffset = TorOffset
-    LastLyraOffset = LyraOffset
+    ''' Posing enables every component while assembling the current frame.
+    ''' Apply wave ownership afterwards so old-wave corpses disappear exactly
+    ''' when the next encounter arrives and cannot be re-enabled by a pose.
+
+    Call UpdateEnemyVisibility()
+
+    LastArinOffset = ArinX - ARIN_FORMATION_X
+    LastTorOffset = TorX - TOR_FORMATION_X
+    LastLyraOffset = LyraX - LYRA_FORMATION_X
+    LastMiraOffset = MiraX - MIRA_FORMATION_X
+    LastArinOffsetZ = ArinZ - ARIN_FORMATION_Z
+    LastTorOffsetZ = TorZ - TOR_FORMATION_Z
+    LastLyraOffsetZ = LyraZ - LYRA_FORMATION_Z
+    LastMiraOffsetZ = MiraZ - MIRA_FORMATION_Z
     LastCinderlingOffset[0] = CinderlingOffsetOne
     LastCinderlingOffset[1] = CinderlingOffsetTwo
     LastCinderlingOffset[2] = CinderlingOffsetThree
@@ -2370,12 +3495,34 @@ Public Sub Update(StateHandle As Number, StepValue As Number)
         Call PlayVariedShot(SHOT_IDLE_PARTY_BACK)
     End If
 
+    ''' Party actions cut and teleport on the same simulation step. After the
+    ''' impact/recovery beat, the actor snaps home while the camera eases back to
+    ''' the party-versus-enemy composition. No interpolated actor travel occurs.
+
+    If (VisualStepValue = 20 And
+        CurrentActionShot > 0 And
+        Battle.VisualActor() >= Battle.PARTICIPANT_ARIN And
+        Battle.VisualActor() <= Battle.PARTICIPANT_MIRA) Then
+        Call DefineActionFocusShot(CurrentActionShot, Battle.VisualActor(), Battle.VisualTarget())
+
+        OperationAccepted = BattleCamera.PlayShot(State, CurrentActionShot, 0)
+    Else If (VisualStepValue = 55 And
+        CurrentActionShot > 0 And
+        Battle.VisualActor() >= Battle.PARTICIPANT_ARIN And
+        Battle.VisualActor() <= Battle.PARTICIPANT_MIRA) Then
+        ''' Cut directly to the party-back composition. Interpolating between
+        ''' opposing hemispheres can travel through the dragon's back and briefly
+        ''' fill the screen with its body, obscuring the battlefield.
+        OperationAccepted = BattleCamera.PlayShot(State, SHOT_IDLE_PARTY_BACK, 0)
+    End If
+
     LastVisual = VisualValue
     LastVisualStep = VisualStepValue
 
     Call UpdateCamera()
     Call UpdateActors()
     Call UpdateImpactObjects()
+    Call UpdateBurningEffects()
     Call UpdateParticles()
 
 End Sub
@@ -2512,7 +3659,7 @@ Public Sub Shutdown()
     End For
 
     For Index = 0 To CINDERLING_OBJECT_COUNT - 1
-        Call Graphics3D.DestroyObject3D(CinderlingParts[Index])
+        Call Graphics3D.DestroyObjectInstance3D(CinderlingParts[Index])
     End For
 
     For Index = 0 To PARTY_OBJECT_COUNT - 1
@@ -2528,9 +3675,15 @@ Public Sub Shutdown()
     End For
 
     Call Graphics3D.DestroyMaterial3D(ParticleMaterial)
+    Call Graphics3D.DestroyMaterial3D(DragonUnderbellyMaterial)
+    Call Graphics3D.DestroyMaterial3D(DragonWingMaterial)
     Call Graphics3D.DestroyMaterial3D(DragonGlowMaterial)
     Call Graphics3D.DestroyMaterial3D(DragonMaterial)
+    Call Graphics3D.DestroyMaterial3D(VoidMaterial)
+    Call Graphics3D.DestroyMaterial3D(BoneMaterial)
     Call Graphics3D.DestroyMaterial3D(LeatherMaterial)
+    Call Graphics3D.DestroyMaterial3D(TorHairMaterial)
+    Call Graphics3D.DestroyMaterial3D(ArinHairMaterial)
     Call Graphics3D.DestroyMaterial3D(HairMaterial)
     Call Graphics3D.DestroyMaterial3D(SkinMaterial)
     Call Graphics3D.DestroyMaterial3D(TorMaterial)
@@ -2542,8 +3695,10 @@ Public Sub Shutdown()
     Call Graphics3D.DestroyMaterial3D(LavaMaterial)
     Call Graphics3D.DestroyMaterial3D(BronzeMaterial)
     Call Graphics3D.DestroyMaterial3D(StoneMaterial)
+    Call Graphics3D.DestroyMaterial3D(CosmicMaterial)
+    Call Graphics3D.DestroyMaterial3D(GridMaterial)
     Call Graphics3D.DestroyMaterial3D(FloorMaterial)
-    Call Graphics3D.DestroyTexture3D(FloorTexture)
+    Call Graphics3D.DestroyTexture3D(CosmicTexture)
 
     Ready = False
     State = 0

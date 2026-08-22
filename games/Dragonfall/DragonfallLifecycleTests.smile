@@ -75,7 +75,7 @@ For Cycle = 1 To RESTART_COUNT
                 CameraReady = BattleCamera.Update(Battle.StateHandle(), 1)
             End If
 
-            Projected = BattleCamera.ProjectWorldPoint(Battle.StateHandle(), -390, 72, -225, 960, 540)
+            Projected = BattleCamera.ProjectWorldPoint(Battle.StateHandle(), -930, 72, -330, 960, 540)
 
             If (Not CameraReady Or
                 Not Projected.Visible Or

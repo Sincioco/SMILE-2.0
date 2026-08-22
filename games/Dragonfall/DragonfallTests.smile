@@ -5,6 +5,7 @@ Import Dragonfall.Battle As Battle
 
 Const STRATEGY_WIN = 1
 Const STRATEGY_LOSE = 2
+Const STRATEGY_CATASTROPHE = 3
 Const MAX_BATTLE_STEPS = 30000
 Const RESTART_COUNT = 100
 Const SOAK_TICKS = 108000
@@ -29,16 +30,26 @@ Dim SawVictory As Boolean
 Dim SawDefeat As Boolean
 Dim SawCinderling As Boolean
 Dim SawBossEntrance As Boolean
+Dim SawLightning As Boolean
+Dim SawCatastrophe As Boolean
+Dim SawWaveComposition As Boolean
 
 Outcome = RunBattle(STRATEGY_WIN, True, MAX_BATTLE_STEPS)
 
 Call Check(Outcome = BattleCore.BATTLE_OUTCOME_VICTORY)
 Call Check(SawCinderling And SawBossEntrance)
+Call Check(SawWaveComposition)
 Call Check(SawAttack And SawSpell And SawHeal And SawDefend And SawItem)
 Call Check(SawFlame And SawFrost)
+Call Check(SawLightning)
 Call Check(SawLyraAttack)
 Call Check(SawClaw And SawBreath And SawTail)
 Call Check(SawEnrage And SawVictory)
+
+Outcome = RunBattle(STRATEGY_CATASTROPHE, True, 150000)
+
+Call Check(Outcome = BattleCore.BATTLE_OUTCOME_DEFEAT)
+Call Check(SawCatastrophe)
 
 Outcome = RunBattle(STRATEGY_LOSE, True, 150000)
 
@@ -84,6 +95,9 @@ Sub ObserveVisual()
     Else If Battle.Visual() = Battle.VISUAL_MIRA_FROST Then
         SawSpell = True
         SawFrost = True
+    Else If Battle.Visual() = Battle.VISUAL_MIRA_LIGHTNING Then
+        SawSpell = True
+        SawLightning = True
     Else If (Battle.Visual() = Battle.VISUAL_ARIN_EMBER Or
         Battle.Visual() = Battle.VISUAL_TOR_BASH) Then
         SawSpell = True
@@ -103,6 +117,8 @@ Sub ObserveVisual()
         SawBossEntrance = True
     Else If Battle.Visual() = Battle.VISUAL_DRAGON_BREATH Then
         SawBreath = True
+    Else If Battle.Visual() = Battle.VISUAL_DRAGON_CATASTROPHE Then
+        SawCatastrophe = True
     Else If Battle.Visual() = Battle.VISUAL_DRAGON_TAIL Then
         SawTail = True
     Else If Battle.Visual() = Battle.VISUAL_ENRAGE Then
@@ -136,6 +152,25 @@ Function RunBattle(Strategy As Number, Observe As Boolean, MaximumSteps As Numbe
         ReturnValue2 = -1
 
         Return ReturnValue2
+    End If
+
+    If (Battle.Level(Battle.PARTICIPANT_ARIN) = 18 And
+        Battle.Level(Battle.PARTICIPANT_TOR) = 18 And
+        Battle.Level(Battle.PARTICIPANT_LYRA) = 18 And
+        Battle.Level(Battle.PARTICIPANT_MIRA) = 18 And
+        Battle.Level(Battle.PARTICIPANT_CINDERLING_ONE) = 17 And
+        Battle.Level(Battle.PARTICIPANT_CINDERLING_TWO) = 20 And
+        Battle.Level(Battle.PARTICIPANT_CINDERLING_THREE) = 17 And
+        Battle.Level(Battle.PARTICIPANT_ASHWING) = 24 And
+        Battle.MaximumHealth(Battle.PARTICIPANT_CINDERLING_TWO) >
+        Battle.MaximumHealth(Battle.PARTICIPANT_CINDERLING_ONE) * 2 And
+        Battle.MaximumHealth(Battle.PARTICIPANT_CINDERLING_TWO) >
+        Battle.MaximumHealth(Battle.PARTICIPANT_CINDERLING_THREE) * 2) Then
+        SawWaveComposition = True
+    End If
+
+    If Strategy = STRATEGY_CATASTROPHE Then
+        Call Battle.SetDemoCatastropheEnabled(True)
     End If
 
     Do
@@ -172,6 +207,8 @@ Function RunBattle(Strategy As Number, Observe As Boolean, MaximumSteps As Numbe
                     Command = Battle.COMMAND_SKILL_ONE
                 Else If MiraDecision = 2 Then
                     Command = Battle.COMMAND_SKILL_TWO
+                Else If MiraDecision = 3 Then
+                    Command = Battle.COMMAND_SKILL_THREE
                 Else
                     Command = Battle.COMMAND_SPECIAL
                 End If

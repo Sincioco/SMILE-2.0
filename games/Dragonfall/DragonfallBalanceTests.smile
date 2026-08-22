@@ -1,0 +1,146 @@
+Option Explicit
+
+Import Smile.RPG.BattleCore As BattleCore
+Import Dragonfall.Battle As Battle
+
+Const BALANCE_RUN_COUNT = 500
+Const MAX_BATTLE_STEPS = 150000
+
+Dim BalanceVictories As Number
+Dim BalanceWinPercent As Number
+Dim Failures As Number
+Dim Index As Number
+Dim LastSurvivalPercent As Number
+Dim Outcome As Number
+
+For Index = 1 To BALANCE_RUN_COUNT
+
+    Outcome = RunDemoBattle(Index Mod 5 = 0)
+
+    If Outcome = BattleCore.BATTLE_OUTCOME_VICTORY Then
+        BalanceVictories = BalanceVictories + 1
+    End If
+
+End For
+
+BalanceWinPercent = BalanceVictories * 100 / BALANCE_RUN_COUNT
+
+If BalanceWinPercent < 70 Or BalanceWinPercent > 85 Then
+    Failures = Failures + 1
+End If
+
+If LastSurvivalPercent < 15 Or LastSurvivalPercent > 70 Then
+    Failures = Failures + 1
+End If
+
+If Failures = 0 Then
+    Print "Dragonfall balance simulation: "; BalanceVictories; "/"; BALANCE_RUN_COUNT; " victories; survivors at "; LastSurvivalPercent; "% HP"
+Else
+
+    Print "Dragonfall balance simulation failed: "; Failures
+End If
+
+Function RunDemoBattle(Catastrophe As Boolean) As Number
+
+    Dim ReturnValue2 As Number
+
+    Dim Accepted As Boolean
+    Dim Command As Number
+    Dim Decision As Number
+    Dim Lowest As Number
+    Dim ReadyPlayer As Number
+    Dim ReturnValue As Number
+    Dim StepValue As Number
+
+    If Not Battle.Initialize() Then
+        ReturnValue2 = -1
+
+        Return ReturnValue2
+    End If
+
+    Call Battle.SetDemoCatastropheEnabled(Catastrophe)
+
+    Do
+        ReadyPlayer = Battle.NextReadyPlayer()
+
+        If ReadyPlayer > 0 Then
+
+            Decision = Decision + 1
+            Command = Battle.COMMAND_ATTACK
+
+            If ReadyPlayer = Battle.PARTICIPANT_ARIN Then
+
+                If Decision Mod 4 = 0 Then
+                    Command = Battle.COMMAND_DEFEND
+                Else
+
+                    Command = Battle.COMMAND_SPECIAL
+                End If
+
+            Else If ReadyPlayer = Battle.PARTICIPANT_TOR Then
+
+                If Decision Mod 3 = 0 Then
+                    Command = Battle.COMMAND_ATTACK
+                Else
+
+                    Command = Battle.COMMAND_SPECIAL
+                End If
+
+            Else If ReadyPlayer = Battle.PARTICIPANT_LYRA Then
+
+                Lowest = Battle.LowestHealthParty()
+
+                If (Battle.Health(Battle.PARTICIPANT_ASHWING) * 100 <
+                    Battle.MaximumHealth(Battle.PARTICIPANT_ASHWING) * 10) Then
+                    Command = Battle.COMMAND_ATTACK
+                Else If (Lowest > 0 And
+                    Battle.Health(Lowest) * 100 < Battle.MaximumHealth(Lowest) * 58) Then
+                    Command = Battle.COMMAND_HEAL
+                Else If Decision Mod 3 = 0 Then
+                    Command = Battle.COMMAND_ATTACK
+                Else
+
+                    Command = Battle.COMMAND_SPECIAL
+                End If
+
+            Else If ReadyPlayer = Battle.PARTICIPANT_MIRA Then
+
+                Command = Battle.COMMAND_SPECIAL
+
+            End If
+
+            Accepted = Battle.SubmitPlayerCommand(ReadyPlayer, Command)
+
+            If Not Accepted Then
+                Accepted = Battle.SubmitPlayerCommand(ReadyPlayer, Battle.COMMAND_ATTACK)
+            End If
+
+        End If
+
+        Call Battle.Update()
+
+        StepValue = StepValue + 1
+
+    Loop Until Battle.IsResultSequenceComplete() Or StepValue >= MAX_BATTLE_STEPS
+
+    ReturnValue = Battle.Outcome()
+
+    If Not Catastrophe And ReturnValue = BattleCore.BATTLE_OUTCOME_VICTORY Then
+        LastSurvivalPercent = (
+            Battle.Health(Battle.PARTICIPANT_ARIN) +
+            Battle.Health(Battle.PARTICIPANT_TOR) +
+            Battle.Health(Battle.PARTICIPANT_LYRA) +
+            Battle.Health(Battle.PARTICIPANT_MIRA)
+        ) * 100 / (
+            Battle.MaximumHealth(Battle.PARTICIPANT_ARIN) +
+            Battle.MaximumHealth(Battle.PARTICIPANT_TOR) +
+            Battle.MaximumHealth(Battle.PARTICIPANT_LYRA) +
+            Battle.MaximumHealth(Battle.PARTICIPANT_MIRA)
+        )
+    End If
+
+    Call Battle.Shutdown()
+
+    Return ReturnValue
+
+End Function

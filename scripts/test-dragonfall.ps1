@@ -69,6 +69,20 @@ if ($LASTEXITCODE -ne 0) {
     throw 'Dragonfall Web mechanics execution failed.'
 }
 
+$balanceProject = Join-Path $GameDirectory 'DragonfallBalanceTests.smileproj'
+$balanceExpected = Join-Path $GameDirectory 'DragonfallBalanceTests.expected.txt'
+$balanceNative = Join-Path $Artifacts 'tests\DragonfallBalanceTests.exe'
+$balanceOutput = Join-Path $Artifacts 'temp\DragonfallBalanceTests.out'
+
+Compile-Project $balanceProject $balanceNative
+& $balanceNative | Set-Content -LiteralPath $balanceOutput -Encoding utf8
+
+if ($LASTEXITCODE -ne 0) {
+    throw 'Dragonfall native balance simulation failed.'
+}
+
+Assert-ExactOutput $balanceOutput $balanceExpected
+
 $lifecycleProject = Join-Path $GameDirectory 'DragonfallLifecycleTests.smileproj'
 $lifecycleExpected = Join-Path $GameDirectory 'DragonfallLifecycleTests.expected.txt'
 $lifecycleNative = Join-Path $Artifacts 'tests\DragonfallLifecycleTests.exe'

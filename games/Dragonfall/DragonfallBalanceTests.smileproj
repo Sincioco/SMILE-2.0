@@ -1,0 +1,14 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Console</ProjectKind>
+    <StartupFile>DragonfallBalanceTests.smile</StartupFile>
+    <OutputName>DragonfallBalanceTests</OutputName>
+    <ApplicationId>smile.tests.dragonfall.balance</ApplicationId>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="DragonfallBalanceTests.smile" />
+    <SmileSource Include="DragonfallBattle.smile" />
+    <SmileProjectReference Include="..\..\libraries\Smile.RPG\Smile.RPG.smilelibproj" />
+    <SmileProjectReference Include="..\..\libraries\Smile.BattleTime\Smile.BattleTime.smilelibproj" />
+  </ItemGroup>
+</SmileProject>
