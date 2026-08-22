@@ -25,8 +25,8 @@ Public Const SHOT_BOSS_ENTRANCE = 11
 Public Const SHOT_IDLE_PARTY_BACK = 12
 
 Private Const ARENA_OBJECT_COUNT = 39
-Private Const HERO_PART_COUNT = 40
-Private Const PARTY_OBJECT_COUNT = 160
+Private Const HERO_PART_COUNT = 48
+Private Const PARTY_OBJECT_COUNT = 192
 Private Const DRAGON_OBJECT_COUNT = 60
 Private Const CINDERLING_COUNT = 3
 Private Const CINDERLING_PARTS_PER_ENEMY = 30
@@ -94,7 +94,7 @@ Private Dim DragonUnderbellyMaterial As Core.Material3D
 Private Dim ParticleMaterial As Core.Material3D
 Private Dim RigTemplates[7] As Core.Object3D
 Private Dim Arena[39] As Core.Object3D
-Private Dim PartyParts[160] As Core.Object3D
+Private Dim PartyParts[192] As Core.Object3D
 Private Dim DragonParts[60] As Core.Object3D
 Private Dim CinderlingParts[90] As Core.Object3D
 Private Dim ParticleTemplate As Core.Object3D
@@ -520,6 +520,14 @@ Private Sub CreateHero(
     Call InitializeRigPart(PartyParts[BaseIndex + 37], RIG_PYRAMID, AccentMaterial)
     Call InitializeRigPart(PartyParts[BaseIndex + 38], RIG_PYRAMID, SkinMaterial)
     Call InitializeRigPart(PartyParts[BaseIndex + 39], RIG_TORUS, AccentMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 40], RIG_SPHERE, SkinMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 41], RIG_SPHERE, SkinMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 42], RIG_SPHERE, AccentMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 43], RIG_SPHERE, AccentMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 44], RIG_CUBE, LeatherMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 45], RIG_CUBE, LeatherMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 46], RIG_PYRAMID, AccentMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 47], RIG_PYRAMID, BodyMaterial)
 
     If Role = ROLE_DEFENDER Then
 
@@ -556,13 +564,13 @@ End Sub
 Private Sub CreateParty()
 
     Call CreateHero(0, ArinMaterial, SteelMaterial, ROLE_DEFENDER)
-    Call CreateHero(40, TorMaterial, SteelMaterial, ROLE_ATTACKER)
-    Call CreateHero(80, LyraMaterial, FrostMaterial, ROLE_HEALER)
-    Call CreateHero(120, MiraMaterial, FrostMaterial, ROLE_WIZARD)
+    Call CreateHero(48, TorMaterial, SteelMaterial, ROLE_ATTACKER)
+    Call CreateHero(96, LyraMaterial, FrostMaterial, ROLE_HEALER)
+    Call CreateHero(144, MiraMaterial, FrostMaterial, ROLE_WIZARD)
     Call PoseHero(0, Battle.PARTICIPANT_ARIN, ARIN_FORMATION_X, ARIN_FORMATION_Z, ROLE_DEFENDER, Battle.VISUAL_IDLE, 0, 0)
-    Call PoseHero(40, Battle.PARTICIPANT_TOR, TOR_FORMATION_X, TOR_FORMATION_Z, ROLE_ATTACKER, Battle.VISUAL_IDLE, 0, 0)
-    Call PoseHero(80, Battle.PARTICIPANT_LYRA, LYRA_FORMATION_X, LYRA_FORMATION_Z, ROLE_HEALER, Battle.VISUAL_IDLE, 0, 0)
-    Call PoseHero(120, Battle.PARTICIPANT_MIRA, MIRA_FORMATION_X, MIRA_FORMATION_Z, ROLE_WIZARD, Battle.VISUAL_IDLE, 0, 0)
+    Call PoseHero(48, Battle.PARTICIPANT_TOR, TOR_FORMATION_X, TOR_FORMATION_Z, ROLE_ATTACKER, Battle.VISUAL_IDLE, 0, 0)
+    Call PoseHero(96, Battle.PARTICIPANT_LYRA, LYRA_FORMATION_X, LYRA_FORMATION_Z, ROLE_HEALER, Battle.VISUAL_IDLE, 0, 0)
+    Call PoseHero(144, Battle.PARTICIPANT_MIRA, MIRA_FORMATION_X, MIRA_FORMATION_Z, ROLE_WIZARD, Battle.VISUAL_IDLE, 0, 0)
 
 End Sub
 
@@ -948,6 +956,19 @@ Private Sub PoseHero(
 
     Call ApplyPart(PartyParts[BaseIndex + 38], HeadX + HeadRadius - 1, HeadY, RootZ, 9, 14, 9, 0, 0, -90 + BodyLean / 2)
     Call ApplyPart(PartyParts[BaseIndex + 39], HeadX - 3, HeadY - HeadRadius + 1, RootZ, TorsoDepth + 8, 8, TorsoDepth + 8, 0, 0, BodyLean / 2)
+
+    ''' Secondary anatomy and costume layers keep close-ups readable: ears,
+    ''' articulated knee caps, separate boot toes, and overlapping lapels all
+    ''' follow the existing skeleton instead of floating as static decoration.
+
+    Call ApplyPart(PartyParts[BaseIndex + 40], HeadX, HeadY, RootZ - HeadRadius + 1, 9, 13, 8, 0, 0, BodyLean / 2)
+    Call ApplyPart(PartyParts[BaseIndex + 41], HeadX, HeadY, RootZ + HeadRadius - 1, 9, 13, 8, 0, 0, BodyLean / 2)
+    Call ApplyPart(PartyParts[BaseIndex + 42], LeftThigh.EndX + 4, LeftThigh.EndY + 2, LeftThigh.EndZ, (LegRadius + 3) * 2, (LegRadius + 2) * 2, (LegRadius + 4) * 2, 0, 0, LeftUpperLegAngle / 2)
+    Call ApplyPart(PartyParts[BaseIndex + 43], RightThigh.EndX + 4, RightThigh.EndY + 2, RightThigh.EndZ, (LegRadius + 3) * 2, (LegRadius + 2) * 2, (LegRadius + 4) * 2, 0, 0, RightUpperLegAngle / 2)
+    Call ApplyPart(PartyParts[BaseIndex + 44], LeftShin.EndX + 17, LeftShin.EndY - 1, LeftShin.EndZ, 34, 14, 24, 0, 0, LeftLowerLegAngle / 2)
+    Call ApplyPart(PartyParts[BaseIndex + 45], RightShin.EndX + 17, RightShin.EndY - 1, RightShin.EndZ, 34, 14, 24, 0, 0, RightLowerLegAngle / 2)
+    Call ApplyPart(PartyParts[BaseIndex + 46], TorsoX + TorsoWidth / 2 + 2, ShoulderY - 17, RootZ - TorsoDepth / 4, 13, 36, 17, -12, 0, BodyLean + 180)
+    Call ApplyPart(PartyParts[BaseIndex + 47], TorsoX + TorsoWidth / 2 + 1, ShoulderY - 17, RootZ + TorsoDepth / 4, 12, 34, 16, 12, 0, BodyLean + 180)
 
     If Role = ROLE_WIZARD Then
 
@@ -3614,9 +3635,9 @@ Private Sub UpdateActors()
     Call PoseCinderling(1, 390 + CinderlingOffsetTwo, 40, CinderlingTwoDefeated, GlobalStep)
     Call PoseCinderling(2, 270 + CinderlingOffsetThree, 380, CinderlingThreeDefeated, GlobalStep)
     Call PoseHero(0, Battle.PARTICIPANT_ARIN, ArinX, ArinZ, ROLE_DEFENDER, Visual, StepValue, GlobalStep)
-    Call PoseHero(40, Battle.PARTICIPANT_TOR, TorX, TorZ, ROLE_ATTACKER, Visual, StepValue, GlobalStep)
-    Call PoseHero(80, Battle.PARTICIPANT_LYRA, LyraX, LyraZ, ROLE_HEALER, Visual, StepValue, GlobalStep)
-    Call PoseHero(120, Battle.PARTICIPANT_MIRA, MiraX, MiraZ, ROLE_WIZARD, Visual, StepValue, GlobalStep)
+    Call PoseHero(48, Battle.PARTICIPANT_TOR, TorX, TorZ, ROLE_ATTACKER, Visual, StepValue, GlobalStep)
+    Call PoseHero(96, Battle.PARTICIPANT_LYRA, LyraX, LyraZ, ROLE_HEALER, Visual, StepValue, GlobalStep)
+    Call PoseHero(144, Battle.PARTICIPANT_MIRA, MiraX, MiraZ, ROLE_WIZARD, Visual, StepValue, GlobalStep)
     Call PoseDragon(
         DRAGON_ROOT_X + DragonOffsetX,
         DRAGON_ROOT_Y + DragonOffsetY,
