@@ -229,7 +229,12 @@ Sub DrawFrame()
     End If
 
     If Scene.FlashOpacity() > 72 Then
-        Fill Rectangle 0, 0, 960, 540, Rgb(255, 238, 180)
+        Fill Rectangle 0, 0, 960, 540, Rgb(255, 238, 180) Opacity 28
+        Draw Rectangle 4, 4, 952, 532, Rgb(255, 248, 218)
+        Draw Rectangle 9, 9, 942, 522, Rgb(255, 168, 42)
+    Else If Scene.FlashOpacity() > 38 Then
+        Fill Rectangle 0, 0, 960, 540, Rgb(255, 104, 24) Opacity 12
+        Draw Rectangle 6, 6, 948, 528, Rgb(255, 102, 18)
     End If
 
     Call DrawCombatText()

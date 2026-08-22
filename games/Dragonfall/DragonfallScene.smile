@@ -112,6 +112,7 @@ Private Dim ImpactObjects[24] As Core.Object3D
 Private Dim BurningSteps[4] As Number
 Private Dim LastVisual As Number
 Private Dim LastVisualStep As Number
+Private Dim VisualStepChanged As Boolean
 Private Dim GlobalStep As Number
 Private Dim OperationAccepted As Boolean
 Private Dim LastArinOffset As Number
@@ -3984,7 +3985,7 @@ Private Sub UpdateActors()
     CinderlingOffsetTwo = 0
     CinderlingOffsetThree = 0
 
-    If StepValue = 30 And VisualHasImpact(Visual) Then
+    If StepValue = 30 And VisualStepChanged And VisualHasImpact(Visual) Then
 
         Call TriggerImpactCue(Visual)
 
@@ -4210,15 +4211,16 @@ Public Sub Update(StateHandle As Number, StepValue As Number)
     GlobalStep = StepValue
     VisualValue = Battle.Visual()
     VisualStepValue = Battle.VisualStep()
+    VisualStepChanged = (VisualValue <> LastVisual Or VisualStepValue <> LastVisualStep)
 
     If (Battle.ActiveEnemyCount() <> LastFramedEnemyCount Or
         Battle.BossIsIntroduced() <> LastBossFramed) Then
         Call DefineActiveCameraShots()
     End If
 
-    If VisualStepValue = 1 And (VisualValue <> LastVisual Or LastVisualStep <> VisualStepValue) Then
+    If VisualStepValue = 1 And VisualStepChanged Then
         Call TriggerVisual(VisualValue, VisualStepValue)
-    Else If VisualStepValue = 29 Then
+    Else If VisualStepValue = 29 And VisualStepChanged Then
         Call TriggerImpactCue(VisualValue)
     Else If VisualValue = Battle.VISUAL_IDLE And LastVisual > Battle.VISUAL_IDLE Then
         Call PlayVariedShot(SHOT_IDLE_PARTY_BACK)
