@@ -1,0 +1,133 @@
+''' Deterministic helpers for rigid articulated characters and creatures.
+Module Smile.Battle3D.Articulation
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.FixedMath As Math3D
+
+''' A cylinder-like segment solved from a joint toward its child joint.
+Public Type SegmentPose3D
+    CenterX As Number
+    CenterY As Number
+    CenterZ As Number
+    EndX As Number
+    EndY As Number
+    EndZ As Number
+    RotationX As Number
+    RotationY As Number
+    RotationZ As Number
+    Length As Number
+End Type
+
+''' Solves a segment whose zero pose hangs down the Y axis. ForwardAngle swings
+''' in the X/Y plane; SideAngle swings toward positive or negative Z.
+Public Function SolveHangingSegment(
+    JointX As Number,
+    JointY As Number,
+    JointZ As Number,
+    Length As Number,
+    ForwardAngle As Number,
+    SideAngle As Number
+) As SegmentPose3D
+
+    Dim Result As SegmentPose3D
+    Dim ForwardSine As Number
+    Dim ForwardCosine As Number
+    Dim SideSine As Number
+    Dim SideCosine As Number
+    Dim DirectionX As Number
+    Dim DirectionY As Number
+    Dim DirectionZ As Number
+
+    If Length <= 0 Then
+        Return Result
+    End If
+
+    ForwardSine = Math3D.SinFixed(ForwardAngle)
+    ForwardCosine = Math3D.CosFixed(ForwardAngle)
+    SideSine = Math3D.SinFixed(SideAngle)
+    SideCosine = Math3D.CosFixed(SideAngle)
+    DirectionX = ForwardSine * SideCosine / Core.FIXED_ONE
+    DirectionY = 0 - ForwardCosine * SideCosine / Core.FIXED_ONE
+    DirectionZ = SideSine
+    Result.CenterX = JointX + DirectionX * Length / (Core.FIXED_ONE * 2)
+    Result.CenterY = JointY + DirectionY * Length / (Core.FIXED_ONE * 2)
+    Result.CenterZ = JointZ + DirectionZ * Length / (Core.FIXED_ONE * 2)
+    Result.EndX = JointX + DirectionX * Length / Core.FIXED_ONE
+    Result.EndY = JointY + DirectionY * Length / Core.FIXED_ONE
+    Result.EndZ = JointZ + DirectionZ * Length / Core.FIXED_ONE
+    Result.RotationX = 0 - SideAngle
+    Result.RotationY = 0
+    Result.RotationZ = ForwardAngle
+    Result.Length = Length
+    Return Result
+
+End Function
+
+''' Returns a deterministic sinusoidal joint angle for idle and locomotion loops.
+Public Function CycleAngle(
+    StepValue As Number,
+    Period As Number,
+    Amplitude As Number,
+    PhaseDegrees As Number
+) As Number
+
+    Dim Angle As Number
+    Dim ReturnValue As Number
+
+    If Period <= 0 Or Amplitude = 0 Then
+        Return 0
+    End If
+
+    Angle = (StepValue Mod Period) * 360 / Period + PhaseDegrees
+    ReturnValue = Math3D.SinFixed(Angle) * Amplitude / Core.FIXED_ONE
+    Return ReturnValue
+
+End Function
+
+''' Returns only the positive half of a cycle, useful for alternating foot lift.
+Public Function PositiveCycle(
+    StepValue As Number,
+    Period As Number,
+    Amplitude As Number,
+    PhaseDegrees As Number
+) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Max(0, CycleAngle(StepValue, Period, Amplitude, PhaseDegrees))
+    Return ReturnValue
+
+End Function
+
+''' Produces a bounded linear anticipation/release envelope around one peak step.
+Public Function ActionEnvelope(
+    StepValue As Number,
+    StartStep As Number,
+    PeakStep As Number,
+    EndStep As Number,
+    PeakValue As Number
+) As Number
+
+    Dim ReturnValue As Number
+
+    If (StartStep < 0 Or
+        PeakStep <= StartStep Or
+        EndStep <= PeakStep Or
+        StepValue <= StartStep Or
+        StepValue >= EndStep) Then
+        Return 0
+    End If
+
+    If StepValue <= PeakStep Then
+        ReturnValue = PeakValue * (StepValue - StartStep) / (PeakStep - StartStep)
+    Else
+        ReturnValue = PeakValue * (EndStep - StepValue) / (EndStep - PeakStep)
+    End If
+
+    Return ReturnValue
+
+End Function
+
+End Module

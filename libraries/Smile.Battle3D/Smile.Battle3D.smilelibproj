@@ -2,11 +2,12 @@
   <PropertyGroup>
     <ProjectKind>Library</ProjectKind>
     <LibraryName>Smile.Battle3D</LibraryName>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <OutputName>Smile.Battle3D</OutputName>
   </PropertyGroup>
   <ItemGroup>
     <SmileSource Include="Core.smile" />
+    <SmileSource Include="Articulation.smile" />
     <SmileSource Include="Actor.smile" />
     <SmileSource Include="Presentation.smile" />
     <SmileSource Include="Camera.smile" />

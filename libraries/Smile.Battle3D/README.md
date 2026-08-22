@@ -3,6 +3,7 @@
 `Smile.Battle3D` is a deterministic presentation bridge between `Smile.RPG.BattleView` and any 3D renderer. It owns no combat rules.
 
 - `Actor` binds participants to caller-owned actor/animator handles and snapshots logical slots as world transforms.
+- `Articulation` solves deterministic chained rigid-body limb poses, locomotion cycles, foot lift, and action envelopes without adding character-specific concepts to Renderer3D.
 - `Presentation` compiles BattleView cues into bounded timed commands for animation, movement, effects, numbers, messages, shake, sound, visibility, and rewards.
 - `Camera` interpolates named position/target/FOV shots and seeded shake using fixed integer steps.
 - `Effects` supplies data-driven alpha/additive billboard particles, color/size fades, flash, and requested shake from a bounded pool.
@@ -10,4 +11,4 @@
 
 The library keys all storage to the generation-safe RPG state handle. Destroying and recreating a state invalidates every prior binding and command timeline.
 
-Run `scripts/test-battle3d.ps1` for cue mechanics parity and `scripts/test-battle-drama.ps1` for camera/VFX/material parity.
+Run `scripts/test-battle3d.ps1` for cue mechanics parity and `scripts/test-battle-drama.ps1` for articulation/camera/VFX/material parity.

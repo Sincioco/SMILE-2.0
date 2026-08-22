@@ -1,6 +1,7 @@
 Option Explicit
 
 Import Smile.RPG.Core As RPG
+Import Smile.Battle3D.Articulation As Articulation
 Import Smile.Battle3D.Camera As BattleCamera
 Import Smile.Battle3D.Effects As Effects
 
@@ -24,6 +25,7 @@ Dim Projected As BattleCamera.ProjectedPoint3D
 Dim ManualPanBeforeReturn As Number
 Dim FramingDistanceBefore As Number
 Dim OrbitPositionBefore As Number
+Dim Segment As Articulation.SegmentPose3D
 
 StateA = RPG.Create()
 StateB = RPG.Create()
@@ -32,6 +34,39 @@ Call Check(StateA > 0)
 Call Check(StateB > 0)
 Call DefineContent(StateA)
 Call DefineContent(StateB)
+
+' Rigid articulation solves exact joint chains and deterministic motion envelopes.
+
+Segment = Articulation.SolveHangingSegment(10, 200, 30, 100, 0, 0)
+
+Call Check(Segment.CenterX = 10)
+Call Check(Segment.CenterY = 150)
+Call Check(Segment.CenterZ = 30)
+Call Check(Segment.EndX = 10)
+Call Check(Segment.EndY = 100)
+Call Check(Segment.EndZ = 30)
+Call Check(Segment.RotationZ = 0)
+
+Segment = Articulation.SolveHangingSegment(10, 200, 30, 100, 90, 0)
+
+Call Check(Segment.CenterX = 60)
+Call Check(Segment.CenterY = 200)
+Call Check(Segment.EndX = 110)
+Call Check(Segment.EndY = 200)
+Call Check(Segment.RotationZ = 90)
+
+Segment = Articulation.SolveHangingSegment(10, 200, 30, 100, 0, 90)
+
+Call Check(Segment.CenterZ = 80)
+Call Check(Segment.EndZ = 130)
+Call Check(Segment.RotationX = -90)
+Call Check(Articulation.CycleAngle(1, 4, 30, 0) = 30)
+Call Check(Articulation.CycleAngle(3, 4, 30, 0) = -30)
+Call Check(Articulation.PositiveCycle(3, 4, 30, 0) = 0)
+Call Check(Articulation.ActionEnvelope(5, 0, 10, 20, 90) = 45)
+Call Check(Articulation.ActionEnvelope(10, 0, 10, 20, 90) = 90)
+Call Check(Articulation.ActionEnvelope(15, 0, 10, 20, 90) = 45)
+Call Check(Articulation.ActionEnvelope(20, 0, 10, 20, 90) = 0)
 
 ' Camera interpolation and shake produce identical state for equivalent fixed-step chunks.
 
