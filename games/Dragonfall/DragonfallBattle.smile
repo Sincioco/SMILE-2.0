@@ -536,7 +536,6 @@ Private Sub BuildActionVisual(FirstEvent As Number)
             CurrentImpactLanded = False
             CurrentDamage = 0
             CurrentTarget = TargetId
-            CurrentMessage = CurrentMessage + " // MISS"
 
         End If
 

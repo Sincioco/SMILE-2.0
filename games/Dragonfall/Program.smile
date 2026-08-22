@@ -629,13 +629,13 @@ Sub DrawBattleCaption()
     Draw Text Battle.Message() At 28, 81 Size 13 Color WHITE
     Damage = Battle.DamageNumber()
 
-    If Damage > 0 Then
+    If Damage > 0 And Battle.VisualStep() >= 29 Then
 
         Fill Rectangle 16, 108, 132, 24, Rgb(8, 3, 18)
         Draw Text "IMPACT" At 27, 114 Size 11 Color ORANGE
         Draw Number Damage At 99, 111 Size 15 Color YELLOW
 
-    Else If Damage < 0 Then
+    Else If Damage < 0 And Battle.VisualStep() >= 29 Then
 
         Damage = 0 - Damage
         Fill Rectangle 16, 108, 148, 24, Rgb(8, 3, 18)

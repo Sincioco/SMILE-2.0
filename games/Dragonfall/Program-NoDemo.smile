@@ -238,7 +238,7 @@ Sub DrawFrame()
 
     End If
 
-    If Battle.DamageNumber() <> 0 Then
+    If Battle.DamageNumber() <> 0 And Battle.VisualStep() >= 29 Then
 
         Fill Rectangle 16, 108, 132, 24, Rgb(8, 3, 18)
         Draw Text "IMPACT" At 27, 114 Size 11 Color ORANGE
