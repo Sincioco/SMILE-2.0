@@ -8,7 +8,7 @@ The four heroes use reusable 26-part rigid rigs with independently posed thighs,
 
 ## Run the crowd demo
 
-Build `Dragonfall.smileproj` or launch `artifacts\games\Dragonfall.exe`. The battle starts hands-free, adapts its healing and attacks, and automatically restarts after the ending sequence. Select `TAKE COMMAND` at any time to pause party automation; select `RESUME AUTO` to restore it without restarting the encounter.
+Open `Dragonfall.sln` in Visual Studio, then choose either `Windows 64-bit .exe` or `Web` from the platform dropdown. The solution declares both target platforms explicitly so `Web` publishes WebGL2 output and `Windows 64-bit .exe` builds the native DirectX executable. You may also build `Dragonfall.smileproj` directly from the command line or launch `artifacts\games\Dragonfall.exe`. The battle starts hands-free, adapts its healing and attacks, and automatically restarts after the ending sequence. Select `TAKE COMMAND` at any time to pause party automation; select `RESUME AUTO` to restore it without restarting the encounter.
 
 - `Space`: pause or resume.
 - `Tab`: switch between automatic demo and manual party control.
