@@ -2497,6 +2497,59 @@ Private Sub UpdateImpactObjects()
     StepValue = Battle.VisualStep()
     Target = Battle.VisualTarget()
 
+    If (Visual = Battle.VISUAL_BOSS_ENTRANCE And
+        StepValue >= 188 And
+        StepValue <= 226) Then
+
+        Age = StepValue - 188
+        X = DRAGON_ROOT_X - 70
+        Y = DRAGON_GROUND_Y + 4
+        Z = DRAGON_ROOT_Z
+        RingSize = 280 + Age * 24
+        SphereSize = 170 + Age * 13
+        Opacity = Max(0, 100 - Age * 3)
+
+        Call Graphics3D.SetObjectVisible(ImpactObjects[0], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[2], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[3], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[7], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[8], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[9], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[12], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[13], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[19], True)
+        Call ApplyPart(ImpactObjects[0], X, Y + 8, Z, SphereSize * 2, 24, SphereSize * 2, 0, 0, 0)
+        Call ApplyPart(ImpactObjects[2], X, Y + 6, Z, RingSize, RingSize, RingSize, 90, GlobalStep * 13, 0)
+        Call ApplyPart(ImpactObjects[3], X, Y + 8, Z, RingSize + 260, RingSize + 260, RingSize + 260, 90, 0 - GlobalStep * 9, 0)
+        Call ApplyPart(ImpactObjects[12], X, Y + 10, Z, RingSize + 520, RingSize + 520, RingSize + 520, 90, GlobalStep * 7, 0)
+        Call ApplyPart(ImpactObjects[13], X, Y + 12, Z, RingSize + 760, RingSize + 760, RingSize + 760, 90, 0 - GlobalStep * 5, 0)
+        Call ApplyPart(ImpactObjects[19], X, Y + 15, Z, SphereSize * 3, 36, SphereSize * 3, 0, 0, 0)
+        Call ApplyPart(ImpactObjects[7], X - 260, Y + 70 + Age * 3, Z - 145, 48, 220, 48, 0, GlobalStep * 11, -28)
+        Call ApplyPart(ImpactObjects[8], X + 120, Y + 95 + Age * 4, Z + 185, 55, 270, 55, 0, 0 - GlobalStep * 9, 24)
+        Call ApplyPart(ImpactObjects[9], X + 290, Y + 55 + Age * 3, Z - 95, 42, 190, 42, 0, GlobalStep * 8, 31)
+
+        Call Graphics3D.SetObjectColor(ImpactObjects[0], 255, 132, 22)
+        Call Graphics3D.SetObjectColor(ImpactObjects[2], 255, 238, 145)
+        Call Graphics3D.SetObjectColor(ImpactObjects[3], 255, 92, 12)
+        Call Graphics3D.SetObjectColor(ImpactObjects[12], 255, 55, 8)
+        Call Graphics3D.SetObjectColor(ImpactObjects[13], 255, 190, 38)
+        Call Graphics3D.SetObjectColor(ImpactObjects[19], 255, 42, 5)
+        Call Graphics3D.SetObjectColor(ImpactObjects[7], 255, 225, 105)
+        Call Graphics3D.SetObjectColor(ImpactObjects[8], 255, 98, 10)
+        Call Graphics3D.SetObjectColor(ImpactObjects[9], 255, 168, 24)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[0], Opacity * 2 / 5)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[2], Opacity)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[3], Opacity * 4 / 5)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[12], Opacity * 3 / 5)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[13], Opacity * 2 / 5)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[19], Opacity / 3)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[7], Opacity * 4 / 5)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[8], Opacity * 4 / 5)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[9], Opacity * 4 / 5)
+        Return
+
+    End If
+
     If ((Visual = Battle.VISUAL_ITEM Or Visual = Battle.VISUAL_LYRA_MEND) And
         Target > 0 And
         StepValue >= 8 And
@@ -3498,6 +3551,14 @@ Private Sub UpdateActors()
             Call PlayVariedShot(SHOT_WIDE)
 
             OperationAccepted = BattleCamera.StartShake(State, 34, 42, GlobalStep + 991)
+            OperationAccepted = BattleEffects.Spawn(
+                State,
+                Battle.EFFECT_ENRAGE,
+                DRAGON_ROOT_X - 70,
+                DRAGON_GROUND_Y + 8,
+                DRAGON_ROOT_Z,
+                GlobalStep + 19091
+            )
 
         End If
 
