@@ -25,9 +25,9 @@ Public Const SHOT_BOSS_ENTRANCE = 11
 Public Const SHOT_IDLE_PARTY_BACK = 12
 
 Private Const ARENA_OBJECT_COUNT = 39
-Private Const HERO_PART_COUNT = 48
-Private Const PARTY_OBJECT_COUNT = 192
-Private Const DRAGON_OBJECT_COUNT = 85
+Private Const HERO_PART_COUNT = 56
+Private Const PARTY_OBJECT_COUNT = 224
+Private Const DRAGON_OBJECT_COUNT = 93
 Private Const CINDERLING_COUNT = 3
 Private Const CINDERLING_PARTS_PER_ENEMY = 30
 Private Const CINDERLING_OBJECT_COUNT = 90
@@ -94,8 +94,8 @@ Private Dim DragonUnderbellyMaterial As Core.Material3D
 Private Dim ParticleMaterial As Core.Material3D
 Private Dim RigTemplates[7] As Core.Object3D
 Private Dim Arena[39] As Core.Object3D
-Private Dim PartyParts[192] As Core.Object3D
-Private Dim DragonParts[85] As Core.Object3D
+Private Dim PartyParts[224] As Core.Object3D
+Private Dim DragonParts[93] As Core.Object3D
 Private Dim CinderlingParts[90] As Core.Object3D
 Private Dim ParticleTemplate As Core.Object3D
 Private Dim ParticleObjects[128] As Core.Object3D
@@ -528,6 +528,14 @@ Private Sub CreateHero(
     Call InitializeRigPart(PartyParts[BaseIndex + 45], RIG_CUBE, LeatherMaterial)
     Call InitializeRigPart(PartyParts[BaseIndex + 46], RIG_PYRAMID, AccentMaterial)
     Call InitializeRigPart(PartyParts[BaseIndex + 47], RIG_PYRAMID, BodyMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 48], RIG_SPHERE, LeatherMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 49], RIG_SPHERE, LeatherMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 50], RIG_PYRAMID, AccentMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 51], RIG_PYRAMID, AccentMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 52], RIG_PYRAMID, RoleHairMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 53], RIG_PYRAMID, RoleHairMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 54], RIG_CUBE, SteelMaterial)
+    Call InitializeRigPart(PartyParts[BaseIndex + 55], RIG_PYRAMID, AccentMaterial)
 
     If Role = ROLE_DEFENDER Then
 
@@ -564,13 +572,13 @@ End Sub
 Private Sub CreateParty()
 
     Call CreateHero(0, ArinMaterial, SteelMaterial, ROLE_DEFENDER)
-    Call CreateHero(48, TorMaterial, SteelMaterial, ROLE_ATTACKER)
-    Call CreateHero(96, LyraMaterial, FrostMaterial, ROLE_HEALER)
-    Call CreateHero(144, MiraMaterial, FrostMaterial, ROLE_WIZARD)
+    Call CreateHero(56, TorMaterial, SteelMaterial, ROLE_ATTACKER)
+    Call CreateHero(112, LyraMaterial, FrostMaterial, ROLE_HEALER)
+    Call CreateHero(168, MiraMaterial, FrostMaterial, ROLE_WIZARD)
     Call PoseHero(0, Battle.PARTICIPANT_ARIN, ARIN_FORMATION_X, ARIN_FORMATION_Z, ROLE_DEFENDER, Battle.VISUAL_IDLE, 0, 0)
-    Call PoseHero(48, Battle.PARTICIPANT_TOR, TOR_FORMATION_X, TOR_FORMATION_Z, ROLE_ATTACKER, Battle.VISUAL_IDLE, 0, 0)
-    Call PoseHero(96, Battle.PARTICIPANT_LYRA, LYRA_FORMATION_X, LYRA_FORMATION_Z, ROLE_HEALER, Battle.VISUAL_IDLE, 0, 0)
-    Call PoseHero(144, Battle.PARTICIPANT_MIRA, MIRA_FORMATION_X, MIRA_FORMATION_Z, ROLE_WIZARD, Battle.VISUAL_IDLE, 0, 0)
+    Call PoseHero(56, Battle.PARTICIPANT_TOR, TOR_FORMATION_X, TOR_FORMATION_Z, ROLE_ATTACKER, Battle.VISUAL_IDLE, 0, 0)
+    Call PoseHero(112, Battle.PARTICIPANT_LYRA, LYRA_FORMATION_X, LYRA_FORMATION_Z, ROLE_HEALER, Battle.VISUAL_IDLE, 0, 0)
+    Call PoseHero(168, Battle.PARTICIPANT_MIRA, MIRA_FORMATION_X, MIRA_FORMATION_Z, ROLE_WIZARD, Battle.VISUAL_IDLE, 0, 0)
 
 End Sub
 
@@ -969,6 +977,12 @@ Private Sub PoseHero(
     Call ApplyPart(PartyParts[BaseIndex + 45], RightShin.EndX + 17, RightShin.EndY - 1, RightShin.EndZ, 34, 14, 24, 0, 0, RightLowerLegAngle / 2)
     Call ApplyPart(PartyParts[BaseIndex + 46], TorsoX + TorsoWidth / 2 + 2, ShoulderY - 17, RootZ - TorsoDepth / 4, 13, 36, 17, -12, 0, BodyLean + 180)
     Call ApplyPart(PartyParts[BaseIndex + 47], TorsoX + TorsoWidth / 2 + 1, ShoulderY - 17, RootZ + TorsoDepth / 4, 12, 34, 16, 12, 0, BodyLean + 180)
+    Call ApplyPart(PartyParts[BaseIndex + 50], LeftShin.CenterX + 5, LeftShin.CenterY, LeftShin.CenterZ, 15, LowerLegLength / 2 + 6, 18, 0, 0, LeftShin.RotationZ + 180)
+    Call ApplyPart(PartyParts[BaseIndex + 51], RightShin.CenterX + 5, RightShin.CenterY, RightShin.CenterZ, 15, LowerLegLength / 2 + 6, 18, 0, 0, RightShin.RotationZ + 180)
+    Call ApplyPart(PartyParts[BaseIndex + 52], HeadX - 9, HeadY - 7, RootZ - HeadRadius + 2, 13, 34, 13, -12, 0, BodyLean + 174)
+    Call ApplyPart(PartyParts[BaseIndex + 53], HeadX - 9, HeadY - 7, RootZ + HeadRadius - 2, 13, 34, 13, 12, 0, BodyLean + 174)
+    Call ApplyPart(PartyParts[BaseIndex + 54], TorsoX + TorsoWidth / 2 + 6, TorsoY - TorsoHeight / 2 + 20, RootZ, 8, 13, 15, 0, 0, BodyLean)
+    Call ApplyPart(PartyParts[BaseIndex + 55], TorsoX - TorsoWidth / 2 - 2, TorsoY - 6, RootZ, 12, TorsoHeight - 12, TorsoDepth + 10, 0, 0, BodyLean + 180)
 
     If Role = ROLE_WIZARD Then
 
@@ -1033,6 +1047,8 @@ Private Sub PoseHero(
     Call ApplyPart(PartyParts[BaseIndex + 25], HeadX + HeadRadius - 2, HeadY + 5, RootZ + 10, 7, 7, 7, 0, 0, BodyLean)
     Call ApplyPart(PartyParts[BaseIndex + 34], LeftLowerArm.CenterX, LeftLowerArm.CenterY, LeftLowerArm.CenterZ, (ArmRadius + 3) * 2, LowerArmLength / 2, (ArmRadius + 3) * 2, LeftLowerArm.RotationX, LeftLowerArm.RotationY, LeftLowerArm.RotationZ)
     Call ApplyPart(PartyParts[BaseIndex + 35], RightLowerArm.CenterX, RightLowerArm.CenterY, RightLowerArm.CenterZ, (ArmRadius + 3) * 2, LowerArmLength / 2, (ArmRadius + 3) * 2, RightLowerArm.RotationX, RightLowerArm.RotationY, RightLowerArm.RotationZ)
+    Call ApplyPart(PartyParts[BaseIndex + 48], LeftLowerArm.EndX, LeftLowerArm.EndY + 4, LeftLowerArm.EndZ, (ArmRadius + 5) * 2, 15, (ArmRadius + 5) * 2, 0, 0, LeftLowerArm.RotationZ)
+    Call ApplyPart(PartyParts[BaseIndex + 49], RightLowerArm.EndX, RightLowerArm.EndY + 4, RightLowerArm.EndZ, (ArmRadius + 5) * 2, 15, (ArmRadius + 5) * 2, 0, 0, RightLowerArm.RotationZ)
 
     If Role = ROLE_DEFENDER Then
 
@@ -1423,7 +1439,7 @@ End Sub
 
 Private Sub CreateDragon()
 
-    ''' Eighty-five-piece faceted boss rig. Overlapping joint hulls make the body
+    ''' Ninety-three-piece faceted boss rig. Overlapping joint hulls make the body
     ''' read as one continuous creature while the articulated wings, jaw, teeth,
     ''' brow blades, layered belly, talons, and tail retain close-shot detail.
 
@@ -1512,6 +1528,14 @@ Private Sub CreateDragon()
     Call InitializeRigPart(DragonParts[82], RIG_PYRAMID, DragonMaterial)
     Call InitializeRigPart(DragonParts[83], RIG_CUBE, VoidMaterial)
     Call InitializeRigPart(DragonParts[84], RIG_CUBE, DragonUnderbellyMaterial)
+    Call InitializeRigPart(DragonParts[85], RIG_PYRAMID, SteelMaterial)
+    Call InitializeRigPart(DragonParts[86], RIG_PYRAMID, SteelMaterial)
+    Call InitializeRigPart(DragonParts[87], RIG_PYRAMID, SteelMaterial)
+    Call InitializeRigPart(DragonParts[88], RIG_PYRAMID, SteelMaterial)
+    Call InitializeRigPart(DragonParts[89], RIG_PYRAMID, DragonWingMaterial)
+    Call InitializeRigPart(DragonParts[90], RIG_PYRAMID, DragonWingMaterial)
+    Call InitializeRigPart(DragonParts[91], RIG_PYRAMID, DragonWingMaterial)
+    Call InitializeRigPart(DragonParts[92], RIG_PYRAMID, DragonWingMaterial)
 
     Call PoseDragon(DRAGON_ROOT_X, DRAGON_ROOT_Y, DRAGON_ROOT_Z, Battle.VISUAL_IDLE, 0, 0)
 
@@ -1766,6 +1790,18 @@ Private Sub PoseDragon(
     Call ApplyPart(DragonParts[82], HeadX - 76, HeadY + 28, HeadZ, 40, 74, 50, 0, 0, -78 + HeadTilt)
     Call ApplyPart(DragonParts[83], HeadX - 151, HeadY - 31 - JawOpen / 4, HeadZ, 12, 10, 78, 0, 0, HeadTilt - JawOpen / 2)
     Call ApplyPart(DragonParts[84], HeadX - 108, HeadY - 54 - JawOpen / 2, HeadZ, 104, 16, 82, 0, 0, HeadTilt - JawOpen)
+
+    ''' Front-facing teeth and darker facial planes remain readable when the
+    ''' party camera looks straight down the snout instead of relying on profile.
+
+    Call ApplyPart(DragonParts[85], HeadX - 160, HeadY - 20, HeadZ - 31, 14, 34, 14, 0, 0, 180 + HeadTilt)
+    Call ApplyPart(DragonParts[86], HeadX - 160, HeadY - 20, HeadZ + 31, 14, 34, 14, 0, 0, 180 + HeadTilt)
+    Call ApplyPart(DragonParts[87], HeadX - 162, HeadY - 44 - JawOpen / 2, HeadZ - 27, 13, 31, 13, 0, 0, HeadTilt - JawOpen)
+    Call ApplyPart(DragonParts[88], HeadX - 162, HeadY - 44 - JawOpen / 2, HeadZ + 27, 13, 31, 13, 0, 0, HeadTilt - JawOpen)
+    Call ApplyPart(DragonParts[89], HeadX - 124, HeadY + 27, HeadZ - 39, 24, 52, 21, 18, 0, -66 + HeadTilt)
+    Call ApplyPart(DragonParts[90], HeadX - 124, HeadY + 27, HeadZ + 39, 24, 52, 21, -18, 0, -66 + HeadTilt)
+    Call ApplyPart(DragonParts[91], HeadX - 154, HeadY + 2, HeadZ - 25, 20, 36, 18, 12, 0, -88 + HeadTilt)
+    Call ApplyPart(DragonParts[92], HeadX - 154, HeadY + 2, HeadZ + 25, 20, 36, 18, -12, 0, -88 + HeadTilt)
 
     ''' Six individually posed teeth remain visible as the lower jaw opens.
 
@@ -3695,9 +3731,9 @@ Private Sub UpdateActors()
     Call PoseCinderling(1, 390 + CinderlingOffsetTwo, 40, CinderlingTwoDefeated, GlobalStep)
     Call PoseCinderling(2, 270 + CinderlingOffsetThree, 380, CinderlingThreeDefeated, GlobalStep)
     Call PoseHero(0, Battle.PARTICIPANT_ARIN, ArinX, ArinZ, ROLE_DEFENDER, Visual, StepValue, GlobalStep)
-    Call PoseHero(48, Battle.PARTICIPANT_TOR, TorX, TorZ, ROLE_ATTACKER, Visual, StepValue, GlobalStep)
-    Call PoseHero(96, Battle.PARTICIPANT_LYRA, LyraX, LyraZ, ROLE_HEALER, Visual, StepValue, GlobalStep)
-    Call PoseHero(144, Battle.PARTICIPANT_MIRA, MiraX, MiraZ, ROLE_WIZARD, Visual, StepValue, GlobalStep)
+    Call PoseHero(56, Battle.PARTICIPANT_TOR, TorX, TorZ, ROLE_ATTACKER, Visual, StepValue, GlobalStep)
+    Call PoseHero(112, Battle.PARTICIPANT_LYRA, LyraX, LyraZ, ROLE_HEALER, Visual, StepValue, GlobalStep)
+    Call PoseHero(168, Battle.PARTICIPANT_MIRA, MiraX, MiraZ, ROLE_WIZARD, Visual, StepValue, GlobalStep)
     Call PoseDragon(
         DRAGON_ROOT_X + DragonOffsetX,
         DRAGON_ROOT_Y + DragonOffsetY,
