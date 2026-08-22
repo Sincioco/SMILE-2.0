@@ -32,7 +32,7 @@ Private Const CINDERLING_COUNT = 3
 Private Const CINDERLING_PARTS_PER_ENEMY = 30
 Private Const CINDERLING_OBJECT_COUNT = 90
 Private Const PARTICLE_OBJECT_COUNT = 128
-Private Const IMPACT_OBJECT_COUNT = 20
+Private Const IMPACT_OBJECT_COUNT = 24
 Private Const RIG_TEMPLATE_COUNT = 7
 Private Const RIG_CUBE = 0
 Private Const RIG_SPHERE = 1
@@ -99,7 +99,7 @@ Private Dim DragonParts[93] As Core.Object3D
 Private Dim CinderlingParts[90] As Core.Object3D
 Private Dim ParticleTemplate As Core.Object3D
 Private Dim ParticleObjects[128] As Core.Object3D
-Private Dim ImpactObjects[20] As Core.Object3D
+Private Dim ImpactObjects[24] As Core.Object3D
 Private Dim BurningSteps[4] As Number
 Private Dim LastVisual As Number
 Private Dim LastVisualStep As Number
@@ -1962,6 +1962,10 @@ Private Sub CreateImpactObjects()
     Call InitializeRigPart(ImpactObjects[17], RIG_PYRAMID, ParticleMaterial)
     Call InitializeRigPart(ImpactObjects[18], RIG_PYRAMID, ParticleMaterial)
     Call InitializeRigPart(ImpactObjects[19], RIG_SPHERE, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[20], RIG_TORUS, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[21], RIG_TORUS, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[22], RIG_CYLINDER, ParticleMaterial)
+    Call InitializeRigPart(ImpactObjects[23], RIG_CYLINDER, ParticleMaterial)
 
     For Index = 0 To IMPACT_OBJECT_COUNT - 1
         Call Graphics3D.SetObjectVisible(ImpactObjects[Index], False)
@@ -2695,6 +2699,10 @@ Private Sub UpdateImpactObjects()
         Call Graphics3D.SetObjectVisible(ImpactObjects[14], True)
         Call Graphics3D.SetObjectVisible(ImpactObjects[17], True)
         Call Graphics3D.SetObjectVisible(ImpactObjects[18], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[20], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[21], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[22], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[23], True)
         Call ApplyPart(ImpactObjects[0], X, Y + 18, Z, 42 + Age, 68 + Age, 42 + Age, 0, 0, 0)
         Call ApplyPart(ImpactObjects[2], X, Y - 55 + (Age Mod 24) * 8, Z, RingSize, RingSize, RingSize, 90, GlobalStep * 5, 0)
         Call ApplyPart(ImpactObjects[3], X, Y - 55 + ((Age + 12) Mod 24) * 8, Z, RingSize + 35, RingSize + 35, RingSize + 35, 90, 0 - GlobalStep * 4, 0)
@@ -2706,6 +2714,10 @@ Private Sub UpdateImpactObjects()
         Call ApplyPart(ImpactObjects[9], X + Math3D.CosFixed(OrbitAngle + 240) * OrbitRadius / Core.FIXED_ONE, Y + 30 + ((Age + 10) Mod 16) * 7, Z + Math3D.SinFixed(OrbitAngle + 240) * OrbitRadius / Core.FIXED_ONE, 14, 25, 14, 0, OrbitAngle + 240, 0)
         Call ApplyPart(ImpactObjects[17], X + Math3D.CosFixed(0 - OrbitAngle) * (OrbitRadius + 22) / Core.FIXED_ONE, Y + 75, Z + Math3D.SinFixed(0 - OrbitAngle) * (OrbitRadius + 22) / Core.FIXED_ONE, 13, 23, 13, 0, 0 - OrbitAngle, 0)
         Call ApplyPart(ImpactObjects[18], X + Math3D.CosFixed(180 - OrbitAngle) * (OrbitRadius + 22) / Core.FIXED_ONE, Y + 105, Z + Math3D.SinFixed(180 - OrbitAngle) * (OrbitRadius + 22) / Core.FIXED_ONE, 12, 21, 12, 0, 180 - OrbitAngle, 0)
+        Call ApplyPart(ImpactObjects[20], X, Y + 8, Z, RingSize + 92, RingSize + 92, RingSize + 92, 90, GlobalStep * 11, 0)
+        Call ApplyPart(ImpactObjects[21], X, Y + 92, Z, RingSize + 74, RingSize + 74, RingSize + 74, 0, 0 - GlobalStep * 9, 0)
+        Call ApplyPart(ImpactObjects[22], X - 24, Y + 82, Z, 7, 235, 7, 0, 0, -7)
+        Call ApplyPart(ImpactObjects[23], X + 28, Y + 104, Z, 5, 195, 5, 0, 0, 9)
 
         For Index = 0 To IMPACT_OBJECT_COUNT - 1
             Call Graphics3D.SetObjectColor(ImpactObjects[Index], 95, 255, 178)
@@ -2721,6 +2733,76 @@ Private Sub UpdateImpactObjects()
         Call Graphics3D.SetObjectOpacity(ImpactObjects[12], Opacity / 2)
         Call Graphics3D.SetObjectOpacity(ImpactObjects[13], Opacity * 2 / 5)
         Call Graphics3D.SetObjectOpacity(ImpactObjects[14], Opacity / 2)
+        Call Graphics3D.SetObjectColor(ImpactObjects[20], 190, 255, 222)
+        Call Graphics3D.SetObjectColor(ImpactObjects[21], 255, 248, 175)
+        Call Graphics3D.SetObjectColor(ImpactObjects[22], 235, 255, 245)
+        Call Graphics3D.SetObjectColor(ImpactObjects[23], 125, 255, 195)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[20], Opacity * 3 / 5)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[21], Opacity / 2)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[22], Opacity * 2 / 3)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[23], Opacity / 2)
+
+        Return
+
+    End If
+
+    ''' A readable anticipation aura now builds around the acting hero before
+    ''' contact. Its palette identifies the technique while two rotating glyph
+    ''' rings and crossed energy strokes frame, rather than obscure, the model.
+
+    If (Battle.VisualActor() >= Battle.PARTICIPANT_ARIN And
+        Battle.VisualActor() <= Battle.PARTICIPANT_MIRA And
+        VisualHasImpact(Visual) And
+        StepValue >= 8 And
+        StepValue <= 27) Then
+
+        Call ParticipantAnchor(Battle.VisualActor(), X, Y, Z)
+
+        Age = StepValue - 8
+        RingSize = 92 + Age * 5
+        Opacity = Min(88, 42 + Age * 3)
+        RedValue = 255
+        GreenValue = 222
+        BlueValue = 125
+
+        If Visual = Battle.VISUAL_MIRA_FLAME Then
+            RedValue = 255
+            GreenValue = 92
+            BlueValue = 12
+        Else If Visual = Battle.VISUAL_MIRA_FROST Then
+            RedValue = 85
+            GreenValue = 225
+            BlueValue = 255
+        Else If Visual = Battle.VISUAL_MIRA_LIGHTNING Then
+            RedValue = 125
+            GreenValue = 178
+            BlueValue = 255
+        Else If Visual = Battle.VISUAL_LYRA_ATTACK Then
+            RedValue = 95
+            GreenValue = 255
+            BlueValue = 192
+        Else If Visual = Battle.VISUAL_TOR_ATTACK Or Visual = Battle.VISUAL_TOR_BASH Then
+            RedValue = 255
+            GreenValue = 152
+            BlueValue = 32
+        End If
+
+        Call Graphics3D.SetObjectVisible(ImpactObjects[20], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[21], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[22], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[23], True)
+        Call ApplyPart(ImpactObjects[20], X, Y + 68, Z, RingSize, RingSize, RingSize, 90, GlobalStep * 15, 0)
+        Call ApplyPart(ImpactObjects[21], X, Y + 105, Z, RingSize + 44, RingSize + 44, RingSize + 44, 0, 0 - GlobalStep * 12, 0)
+        Call ApplyPart(ImpactObjects[22], X - 14, Y + 82, Z, 5, 145 + Age * 3, 5, 18, 0, 42)
+        Call ApplyPart(ImpactObjects[23], X + 17, Y + 82, Z, 4, 125 + Age * 3, 4, -16, 0, -44)
+        Call Graphics3D.SetObjectColor(ImpactObjects[20], RedValue, GreenValue, BlueValue)
+        Call Graphics3D.SetObjectColor(ImpactObjects[21], 245, 250, 255)
+        Call Graphics3D.SetObjectColor(ImpactObjects[22], 255, 255, 255)
+        Call Graphics3D.SetObjectColor(ImpactObjects[23], RedValue, GreenValue, BlueValue)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[20], Opacity * 3 / 5)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[21], Opacity * 2 / 5)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[22], Opacity)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[23], Opacity * 4 / 5)
 
         Return
 
@@ -2740,6 +2822,7 @@ Private Sub UpdateImpactObjects()
         X = PARTY_CENTER_X
         Y = 82
         Z = 30
+        Age = StepValue - 8
 
         MouthX = LastDragonMouthX
         MouthY = LastDragonMouthY
@@ -2781,6 +2864,10 @@ Private Sub UpdateImpactObjects()
         Call Graphics3D.SetObjectVisible(ImpactObjects[17], StepValue >= 27)
         Call Graphics3D.SetObjectVisible(ImpactObjects[18], StepValue >= 27)
         Call Graphics3D.SetObjectVisible(ImpactObjects[19], StepValue >= 29)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[20], StepValue >= 22)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[21], StepValue >= 25)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[22], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[23], StepValue >= 27)
         Call Graphics3D.SetObjectPosition(ImpactObjects[0], BeamEndX, BeamEndY, BeamEndZ)
         Call Graphics3D.SetObjectScale(ImpactObjects[0], SphereSize, SphereSize, SphereSize)
         Call Graphics3D.SetObjectColor(ImpactObjects[0], 255, 92, 18)
@@ -2799,6 +2886,10 @@ Private Sub UpdateImpactObjects()
         Call ApplyPart(ImpactObjects[17], X - SphereSize, Y + 42, Z - SphereSize / 2, SphereSize / 2, SphereSize * 2, SphereSize / 2, 0, GlobalStep * 9, -18)
         Call ApplyPart(ImpactObjects[18], X + SphereSize, Y + 55, Z + SphereSize / 2, SphereSize / 2, SphereSize * 2, SphereSize / 2, 0, 0 - GlobalStep * 8, 16)
         Call ApplyPart(ImpactObjects[19], X, Y + 20, Z, SphereSize * 3, SphereSize * 2, SphereSize * 3, 0, 0, 0)
+        Call ApplyPart(ImpactObjects[20], X, -30, Z, SphereSize * 5, SphereSize * 5, SphereSize * 5, 90, GlobalStep * 17, 0)
+        Call ApplyPart(ImpactObjects[21], X, Y + 42, Z, SphereSize * 4, SphereSize * 4, SphereSize * 4, 0, 0 - GlobalStep * 15, 0)
+        Call ApplySegment(ImpactObjects[22], BeamPose, Max(4, BeamRadius / 5))
+        Call ApplyPart(ImpactObjects[23], X, Y + 80, Z, Max(8, SphereSize / 7), 470 + Age * 12, Max(8, SphereSize / 7), 0, GlobalStep * 12, 0)
         Call Graphics3D.SetObjectColor(ImpactObjects[2], 255, 68, 8)
         Call Graphics3D.SetObjectColor(ImpactObjects[3], 255, 220, 70)
         Call Graphics3D.SetObjectColor(ImpactObjects[10], 255, 62, 10)
@@ -2810,6 +2901,10 @@ Private Sub UpdateImpactObjects()
         Call Graphics3D.SetObjectColor(ImpactObjects[17], 255, 88, 8)
         Call Graphics3D.SetObjectColor(ImpactObjects[18], 255, 180, 24)
         Call Graphics3D.SetObjectColor(ImpactObjects[19], 255, 66, 8)
+        Call Graphics3D.SetObjectColor(ImpactObjects[20], 255, 244, 165)
+        Call Graphics3D.SetObjectColor(ImpactObjects[21], 255, 78, 6)
+        Call Graphics3D.SetObjectColor(ImpactObjects[22], 255, 255, 242)
+        Call Graphics3D.SetObjectColor(ImpactObjects[23], 255, 138, 18)
         Call Graphics3D.SetObjectOpacity(ImpactObjects[2], 86)
         Call Graphics3D.SetObjectOpacity(ImpactObjects[3], 72)
         Call Graphics3D.SetObjectOpacity(ImpactObjects[10], 68)
@@ -2821,6 +2916,10 @@ Private Sub UpdateImpactObjects()
         Call Graphics3D.SetObjectOpacity(ImpactObjects[17], 82)
         Call Graphics3D.SetObjectOpacity(ImpactObjects[18], 82)
         Call Graphics3D.SetObjectOpacity(ImpactObjects[19], 55)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[20], 68)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[21], 46)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[22], 100)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[23], 78)
 
         Return
 
@@ -2850,6 +2949,10 @@ Private Sub UpdateImpactObjects()
         Call Graphics3D.SetObjectVisible(ImpactObjects[17], True)
         Call Graphics3D.SetObjectVisible(ImpactObjects[18], True)
         Call Graphics3D.SetObjectVisible(ImpactObjects[19], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[20], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[21], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[22], True)
+        Call Graphics3D.SetObjectVisible(ImpactObjects[23], True)
         Call ApplySegment(ImpactObjects[4], ArcOne, 9)
         Call ApplySegment(ImpactObjects[5], ArcTwo, 12)
         Call ApplySegment(ImpactObjects[6], ArcThree, 16)
@@ -2864,6 +2967,10 @@ Private Sub UpdateImpactObjects()
         Call ApplyPart(ImpactObjects[17], X - 155, Y + 75, Z - 75, 52, 235, 52, 0, GlobalStep * 15, -34)
         Call ApplyPart(ImpactObjects[18], X + 145, Y + 115, Z + 90, 46, 210, 46, 0, 0 - GlobalStep * 14, 31)
         Call ApplyPart(ImpactObjects[19], X, Y, Z, 420, 420, 420, 0, 0, 0)
+        Call ApplyPart(ImpactObjects[20], X, Y + 12, Z, 660, 660, 660, 90, GlobalStep * 29, 0)
+        Call ApplyPart(ImpactObjects[21], X, Y + 70, Z, 790, 790, 790, 0, 0 - GlobalStep * 27, 0)
+        Call ApplyPart(ImpactObjects[22], X, Y + 340, Z, 6, 720, 6, 0, 0, 0)
+        Call ApplyPart(ImpactObjects[23], X + 42, Y + 245, Z - 32, 5, 510, 5, 28, 0, -16)
 
         For Index = 0 To IMPACT_OBJECT_COUNT - 1
             Call Graphics3D.SetObjectColor(ImpactObjects[Index], 190, 225, 255)
@@ -2876,6 +2983,10 @@ Private Sub UpdateImpactObjects()
         Call Graphics3D.SetObjectColor(ImpactObjects[15], 105, 155, 255)
         Call Graphics3D.SetObjectColor(ImpactObjects[16], 225, 245, 255)
         Call Graphics3D.SetObjectColor(ImpactObjects[19], 95, 75, 255)
+        Call Graphics3D.SetObjectColor(ImpactObjects[20], 225, 245, 255)
+        Call Graphics3D.SetObjectColor(ImpactObjects[21], 92, 145, 255)
+        Call Graphics3D.SetObjectColor(ImpactObjects[22], 255, 255, 255)
+        Call Graphics3D.SetObjectColor(ImpactObjects[23], 145, 195, 255)
         Call Graphics3D.SetObjectOpacity(ImpactObjects[0], 62)
         Call Graphics3D.SetObjectOpacity(ImpactObjects[2], 58)
         Call Graphics3D.SetObjectOpacity(ImpactObjects[3], 42)
@@ -2887,6 +2998,10 @@ Private Sub UpdateImpactObjects()
         Call Graphics3D.SetObjectOpacity(ImpactObjects[17], 62)
         Call Graphics3D.SetObjectOpacity(ImpactObjects[18], 62)
         Call Graphics3D.SetObjectOpacity(ImpactObjects[19], 24)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[20], 55)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[21], 42)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[22], 100)
+        Call Graphics3D.SetObjectOpacity(ImpactObjects[23], 78)
 
         Return
 
@@ -2938,6 +3053,10 @@ Private Sub UpdateImpactObjects()
     Call Graphics3D.SetObjectVisible(ImpactObjects[13], True)
     Call Graphics3D.SetObjectVisible(ImpactObjects[14], True)
     Call Graphics3D.SetObjectVisible(ImpactObjects[19], True)
+    Call Graphics3D.SetObjectVisible(ImpactObjects[20], True)
+    Call Graphics3D.SetObjectVisible(ImpactObjects[21], True)
+    Call Graphics3D.SetObjectVisible(ImpactObjects[22], True)
+    Call Graphics3D.SetObjectVisible(ImpactObjects[23], True)
     Call Graphics3D.SetObjectPosition(ImpactObjects[0], X, Y, Z)
     Call Graphics3D.SetObjectPosition(ImpactObjects[1], X, Y, Z)
     Call Graphics3D.SetObjectScale(ImpactObjects[0], SphereSize, SphereSize, SphereSize)
@@ -2945,26 +3064,38 @@ Private Sub UpdateImpactObjects()
     Call Graphics3D.SetObjectRotation(ImpactObjects[1], GlobalStep * 17, 0, 55 + Age * 11)
     Call Graphics3D.SetObjectColor(ImpactObjects[0], RedValue, GreenValue, BlueValue)
     Call Graphics3D.SetObjectColor(ImpactObjects[1], 255, 255, 255)
-    Call Graphics3D.SetObjectOpacity(ImpactObjects[0], Opacity)
-    Call Graphics3D.SetObjectOpacity(ImpactObjects[1], Opacity)
+    Call Graphics3D.SetObjectOpacity(ImpactObjects[0], Opacity * 7 / 10)
+    Call Graphics3D.SetObjectOpacity(ImpactObjects[1], Opacity * 4 / 5)
     Call ApplyPart(ImpactObjects[2], X, Y, Z, RingSize, RingSize, RingSize, 90, GlobalStep * 12, 0)
     Call ApplyPart(ImpactObjects[3], X, Y, Z, RingSize + 80, RingSize + 80, RingSize + 80, 0, GlobalStep * 9, 0)
     Call Graphics3D.SetObjectColor(ImpactObjects[2], RedValue, GreenValue, BlueValue)
     Call Graphics3D.SetObjectColor(ImpactObjects[3], 255, 255, 255)
-    Call Graphics3D.SetObjectOpacity(ImpactObjects[2], Opacity)
-    Call Graphics3D.SetObjectOpacity(ImpactObjects[3], Opacity * 3 / 4)
+    Call Graphics3D.SetObjectOpacity(ImpactObjects[2], Opacity * 3 / 4)
+    Call Graphics3D.SetObjectOpacity(ImpactObjects[3], Opacity * 2 / 5)
     Call ApplyPart(ImpactObjects[12], X, Y, Z, RingSize + 150, RingSize + 150, RingSize + 150, 90, 0 - GlobalStep * 19, 0)
     Call ApplyPart(ImpactObjects[13], X, Y + 15, Z, RingSize + 230, RingSize + 230, RingSize + 230, 0, GlobalStep * 15, 0)
     Call ApplyPart(ImpactObjects[14], X, Y, Z, SphereSize * 2, SphereSize * 2, SphereSize * 2, 0, 0, 0)
     Call ApplyPart(ImpactObjects[19], X, Y, Z, SphereSize * 3, SphereSize * 3, SphereSize * 3, 0, 0, 0)
+    Call ApplyPart(ImpactObjects[20], X, Y, Z, RingSize + 320, RingSize + 320, RingSize + 320, 55, GlobalStep * 21, 32)
+    Call ApplyPart(ImpactObjects[21], X, Y + 12, Z, RingSize + 430, RingSize + 430, RingSize + 430, -45, 0 - GlobalStep * 17, -28)
+    Call ApplyPart(ImpactObjects[22], X - 24, Y + 8, Z, 7, BaseSize + 260, 7, 18, 0, 72)
+    Call ApplyPart(ImpactObjects[23], X + 28, Y + 8, Z, 5, BaseSize + 220, 5, -22, 0, -68)
     Call Graphics3D.SetObjectColor(ImpactObjects[12], RedValue, GreenValue, BlueValue)
     Call Graphics3D.SetObjectColor(ImpactObjects[13], 255, 255, 255)
     Call Graphics3D.SetObjectColor(ImpactObjects[14], 255, 255, 255)
     Call Graphics3D.SetObjectColor(ImpactObjects[19], RedValue, GreenValue, BlueValue)
-    Call Graphics3D.SetObjectOpacity(ImpactObjects[12], Opacity * 4 / 5)
-    Call Graphics3D.SetObjectOpacity(ImpactObjects[13], Opacity / 2)
-    Call Graphics3D.SetObjectOpacity(ImpactObjects[14], Opacity * 2 / 3)
-    Call Graphics3D.SetObjectOpacity(ImpactObjects[19], Opacity / 3)
+    Call Graphics3D.SetObjectColor(ImpactObjects[20], RedValue, GreenValue, BlueValue)
+    Call Graphics3D.SetObjectColor(ImpactObjects[21], 255, 255, 255)
+    Call Graphics3D.SetObjectColor(ImpactObjects[22], 255, 255, 255)
+    Call Graphics3D.SetObjectColor(ImpactObjects[23], RedValue, GreenValue, BlueValue)
+    Call Graphics3D.SetObjectOpacity(ImpactObjects[12], Opacity * 11 / 20)
+    Call Graphics3D.SetObjectOpacity(ImpactObjects[13], Opacity / 4)
+    Call Graphics3D.SetObjectOpacity(ImpactObjects[14], Opacity / 4)
+    Call Graphics3D.SetObjectOpacity(ImpactObjects[19], Opacity / 10)
+    Call Graphics3D.SetObjectOpacity(ImpactObjects[20], Opacity * 9 / 20)
+    Call Graphics3D.SetObjectOpacity(ImpactObjects[21], Opacity / 4)
+    Call Graphics3D.SetObjectOpacity(ImpactObjects[22], Opacity)
+    Call Graphics3D.SetObjectOpacity(ImpactObjects[23], Opacity * 4 / 5)
 
     If Visual = Battle.VISUAL_MIRA_FLAME Then
 
