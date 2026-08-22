@@ -726,14 +726,12 @@ Sub DrawEnemyHealthRow(
     Dim BarWidth As Number
     Dim HealthWidth As Number
     Dim MagicWidth As Number
-    Dim ValueX As Number
     Dim LevelX As Number
 
     Y = 8 + Row * 18
     BarX = 14 + NameWidth
     BarWidth = 780 - BarX
     HealthWidth = Max(0, Battle.Health(Participant) * (BarWidth - 4) / Battle.MaximumHealth(Participant))
-    ValueX = BarX + BarWidth - 92
 
     Draw Text Name At 14, Y Size 12 Color Accent
     LevelX = BarX - 32
@@ -746,12 +744,14 @@ Sub DrawEnemyHealthRow(
 
     ''' The numeric value is deliberately drawn over the gauge, like a classic RPG boss HUD.
 
-    Draw Number Battle.Health(Participant) At ValueX + 1, Y + 3 Size 10 Color BLACK
-    Draw Text "/" At ValueX + 37, Y + 3 Size 10 Color BLACK
-    Draw Number Battle.MaximumHealth(Participant) At ValueX + 49, Y + 3 Size 10 Color BLACK
-    Draw Number Battle.Health(Participant) At ValueX, Y + 2 Size 10 Color WHITE
-    Draw Text "/" At ValueX + 36, Y + 2 Size 10 Color WHITE
-    Draw Number Battle.MaximumHealth(Participant) At ValueX + 48, Y + 2 Size 10 Color WHITE
+    Call DrawCenteredGaugeValue(
+        Battle.Health(Participant),
+        Battle.MaximumHealth(Participant),
+        BarX,
+        Y + 2,
+        BarWidth,
+        10
+    )
 
     If Battle.MaximumMagicPoints(Participant) > 0 Then
 
@@ -793,28 +793,86 @@ Sub DrawHeroGauge(Label As Text, X As Number, Y As Number, Current As Number, Ma
     Dim BarX As Number
     Dim BarWidth As Number
     Dim FilledWidth As Number
-    Dim LabelX As Number
-    Dim ValueX As Number
 
-    BarX = X + 10
-    BarWidth = 130
+    BarX = X + 34
+    BarWidth = 106
     FilledWidth = 0
 
     If Maximum > 0 Then
         FilledWidth = Max(0, Min(BarWidth, Current * BarWidth / Maximum))
     End If
 
-    LabelX = BarX + (BarWidth - Text_Length(Label) * 5) / 2
-    ValueX = BarX + BarWidth - 34
     Fill Rectangle BarX, Y, BarWidth, 9, Rgb(18, 20, 34)
     Fill Rectangle BarX + 1, Y + 1, Max(0, FilledWidth - 2), 7, FillColor
     Draw Rectangle BarX, Y, BarWidth, 9, Rgb(80, 88, 112)
-    Draw Text Label At LabelX + 1, Y + 1 Size 8 Color BLACK
-    Draw Text Label At LabelX, Y Size 8 Color WHITE
-    Draw Number Current At ValueX + 1, Y + 1 Size 8 Color BLACK
-    Draw Number Current At ValueX, Y Size 8 Color WHITE
+    Draw Text Label At X + 10, Y Size 8 Color WHITE
+    Call DrawCenteredGaugeValue(Current, Maximum, BarX, Y, BarWidth, 8)
 
 End Sub
+
+Sub DrawCenteredGaugeValue(
+    Current As Number,
+    Maximum As Number,
+    BarX As Number,
+    Y As Number,
+    BarWidth As Number,
+    FontSize As Number
+)
+
+    Dim CurrentDigits As Number
+    Dim MaximumDigits As Number
+    Dim CharacterWidth As Number
+    Dim ValueWidth As Number
+    Dim ValueX As Number
+    Dim SlashX As Number
+    Dim MaximumX As Number
+
+    CurrentDigits = GaugeDigitCount(Current)
+    MaximumDigits = GaugeDigitCount(Maximum)
+    CharacterWidth = FontSize * 3 / 5
+    ValueWidth = (CurrentDigits + MaximumDigits + 1) * CharacterWidth
+    ValueX = BarX + (BarWidth - ValueWidth) / 2
+    SlashX = ValueX + CurrentDigits * CharacterWidth
+    MaximumX = SlashX + CharacterWidth
+
+    Draw Number Current At ValueX + 1, Y + 1 Size FontSize Color BLACK
+    Draw Text "/" At SlashX + 1, Y + 1 Size FontSize Color BLACK
+    Draw Number Maximum At MaximumX + 1, Y + 1 Size FontSize Color BLACK
+    Draw Number Current At ValueX, Y Size FontSize Color WHITE
+    Draw Text "/" At SlashX, Y Size FontSize Color WHITE
+    Draw Number Maximum At MaximumX, Y Size FontSize Color WHITE
+
+End Sub
+
+Function GaugeDigitCount(Value As Number) As Number
+
+    If Value >= 1000000 Then
+        Return 7
+    End If
+
+    If Value >= 100000 Then
+        Return 6
+    End If
+
+    If Value >= 10000 Then
+        Return 5
+    End If
+
+    If Value >= 1000 Then
+        Return 4
+    End If
+
+    If Value >= 100 Then
+        Return 3
+    End If
+
+    If Value >= 10 Then
+        Return 2
+    End If
+
+    Return 1
+
+End Function
 
 Sub DrawDiagnostics()
 
