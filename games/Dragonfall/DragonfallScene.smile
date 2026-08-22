@@ -3520,6 +3520,8 @@ Public Sub Update(StateHandle As Number, StepValue As Number)
 
     If VisualStepValue = 1 And (VisualValue <> LastVisual Or LastVisualStep <> VisualStepValue) Then
         Call TriggerVisual(VisualValue, VisualStepValue)
+    Else If VisualStepValue = 29 Then
+        Call TriggerImpactCue(VisualValue)
     Else If VisualValue = Battle.VISUAL_IDLE And LastVisual > Battle.VISUAL_IDLE Then
         Call PlayVariedShot(SHOT_IDLE_PARTY_BACK)
     End If
