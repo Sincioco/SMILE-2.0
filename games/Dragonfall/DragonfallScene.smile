@@ -27,6 +27,8 @@ Public Const SHOT_IDLE_PARTY_BACK = 12
 Private Const ARENA_OBJECT_COUNT = 39
 Private Const HERO_PART_COUNT = 56
 Private Const PARTY_OBJECT_COUNT = 224
+Private Const HERO_FACE_PART_COUNT = 5
+Private Const PARTY_FACE_OBJECT_COUNT = 20
 Private Const DRAGON_OBJECT_COUNT = 97
 Private Const CINDERLING_COUNT = 3
 Private Const CINDERLING_PARTS_PER_ENEMY = 30
@@ -100,6 +102,7 @@ Private Dim ParticleMaterial As Core.Material3D
 Private Dim RigTemplates[8] As Core.Object3D
 Private Dim Arena[39] As Core.Object3D
 Private Dim PartyParts[224] As Core.Object3D
+Private Dim PartyFaceParts[20] As Core.Object3D
 Private Dim DragonParts[97] As Core.Object3D
 Private Dim CinderlingParts[90] As Core.Object3D
 Private Dim ParticleTemplate As Core.Object3D
@@ -553,6 +556,7 @@ Private Sub CreateHero(
 )
 
     Dim RoleHairMaterial As Core.Material3D
+    Dim FaceBaseIndex As Number
 
     RoleHairMaterial = HairMaterial
 
@@ -561,6 +565,13 @@ Private Sub CreateHero(
     Else If Role = ROLE_ATTACKER Then
         RoleHairMaterial = TorHairMaterial
     End If
+
+    FaceBaseIndex = BaseIndex * HERO_FACE_PART_COUNT / HERO_PART_COUNT
+    Call InitializeRigPart(PartyFaceParts[FaceBaseIndex], RIG_CUBE, RoleHairMaterial)
+    Call InitializeRigPart(PartyFaceParts[FaceBaseIndex + 1], RIG_CUBE, RoleHairMaterial)
+    Call InitializeRigPart(PartyFaceParts[FaceBaseIndex + 2], RIG_SPHERE, VoidMaterial)
+    Call InitializeRigPart(PartyFaceParts[FaceBaseIndex + 3], RIG_SPHERE, VoidMaterial)
+    Call InitializeRigPart(PartyFaceParts[FaceBaseIndex + 4], RIG_CUBE, VoidMaterial)
 
     Call InitializeRigPart(PartyParts[BaseIndex], RIG_CYLINDER, BodyMaterial)
     Call InitializeRigPart(PartyParts[BaseIndex + 1], RIG_CYLINDER, BodyMaterial)
@@ -750,6 +761,7 @@ Private Sub PoseHero(
     Dim EquipmentX As Number
     Dim EquipmentY As Number
     Dim EquipmentZ As Number
+    Dim FaceBaseIndex As Number
     Dim LeftThigh As Articulation.SegmentPose3D
     Dim LeftShin As Articulation.SegmentPose3D
     Dim RightThigh As Articulation.SegmentPose3D
@@ -762,6 +774,7 @@ Private Sub PoseHero(
     Dim Index As Number
 
     IsActor = Battle.VisualActor() = Participant
+    FaceBaseIndex = BaseIndex * HERO_FACE_PART_COUNT / HERO_PART_COUNT
 
     For Index = BaseIndex To BaseIndex + HERO_PART_COUNT - 1
         Call Graphics3D.SetObjectColor(PartyParts[Index], 255, 255, 255)
@@ -1159,6 +1172,11 @@ Private Sub PoseHero(
     Call ApplyPart(PartyParts[BaseIndex + 23], ShoulderX, ShoulderY + 2, RootZ + ShoulderSpacing, (ArmRadius + 9) * 2, (ArmRadius + 7) * 2, (ArmRadius + 10) * 2, -58, 0, BodyLean - 8)
     Call ApplyPart(PartyParts[BaseIndex + 24], HeadX + HeadRadius - 2, HeadY + 5, RootZ - 10, 7, 7, 7, 0, 0, BodyLean)
     Call ApplyPart(PartyParts[BaseIndex + 25], HeadX + HeadRadius - 2, HeadY + 5, RootZ + 10, 7, 7, 7, 0, 0, BodyLean)
+    Call ApplyPart(PartyFaceParts[FaceBaseIndex], HeadX + HeadRadius, HeadY + 14, RootZ - 10, 5, 4, 15, -10, 0, BodyLean)
+    Call ApplyPart(PartyFaceParts[FaceBaseIndex + 1], HeadX + HeadRadius, HeadY + 14, RootZ + 10, 5, 4, 15, 10, 0, BodyLean)
+    Call ApplyPart(PartyFaceParts[FaceBaseIndex + 2], HeadX + HeadRadius + 2, HeadY + 5, RootZ - 10, 4, 4, 4, 0, 0, BodyLean)
+    Call ApplyPart(PartyFaceParts[FaceBaseIndex + 3], HeadX + HeadRadius + 2, HeadY + 5, RootZ + 10, 4, 4, 4, 0, 0, BodyLean)
+    Call ApplyPart(PartyFaceParts[FaceBaseIndex + 4], HeadX + HeadRadius + 1, HeadY - 10, RootZ, 5, 3, 14, 0, 0, BodyLean)
     Call ApplyPart(PartyParts[BaseIndex + 34], LeftLowerArm.CenterX, LeftLowerArm.CenterY, LeftLowerArm.CenterZ, (ArmRadius + 3) * 2, LowerArmLength / 2, (ArmRadius + 3) * 2, LeftLowerArm.RotationX, LeftLowerArm.RotationY, LeftLowerArm.RotationZ)
     Call ApplyPart(PartyParts[BaseIndex + 35], RightLowerArm.CenterX, RightLowerArm.CenterY, RightLowerArm.CenterZ, (ArmRadius + 3) * 2, LowerArmLength / 2, (ArmRadius + 3) * 2, RightLowerArm.RotationX, RightLowerArm.RotationY, RightLowerArm.RotationZ)
     Call ApplyPart(PartyParts[BaseIndex + 48], LeftLowerArm.EndX, LeftLowerArm.EndY + 4, LeftLowerArm.EndZ, (ArmRadius + 5) * 2, 15, (ArmRadius + 5) * 2, 0, 0, LeftLowerArm.RotationZ)
@@ -3726,10 +3744,15 @@ Private Sub UpdatePartyCinematicVisibility(Visual As Number, StepValue As Number
     Dim Index As Number
     Dim Actor As Number
     Dim ActorBaseIndex As Number
+    Dim ActorFaceBaseIndex As Number
     Dim IsAnticipation As Boolean
 
     For Index = 0 To PARTY_OBJECT_COUNT - 1
         Call Graphics3D.SetObjectVisible(PartyParts[Index], True)
+    End For
+
+    For Index = 0 To PARTY_FACE_OBJECT_COUNT - 1
+        Call Graphics3D.SetObjectVisible(PartyFaceParts[Index], True)
     End For
 
     Actor = Battle.VisualActor()
@@ -3745,11 +3768,20 @@ Private Sub UpdatePartyCinematicVisibility(Visual As Number, StepValue As Number
     End If
 
     ActorBaseIndex = (Actor - Battle.PARTICIPANT_ARIN) * HERO_PART_COUNT
+    ActorFaceBaseIndex = (Actor - Battle.PARTICIPANT_ARIN) * HERO_FACE_PART_COUNT
 
     For Index = 0 To PARTY_OBJECT_COUNT - 1
 
         If Index < ActorBaseIndex Or Index >= ActorBaseIndex + HERO_PART_COUNT Then
             Call Graphics3D.SetObjectVisible(PartyParts[Index], False)
+        End If
+
+    End For
+
+    For Index = 0 To PARTY_FACE_OBJECT_COUNT - 1
+
+        If Index < ActorFaceBaseIndex Or Index >= ActorFaceBaseIndex + HERO_FACE_PART_COUNT Then
+            Call Graphics3D.SetObjectVisible(PartyFaceParts[Index], False)
         End If
 
     End For
@@ -4216,6 +4248,10 @@ Public Sub Draw()
         FrameReady = Graphics3D.DrawObject3D(PartyParts[Index])
     End For
 
+    For Index = 0 To PARTY_FACE_OBJECT_COUNT - 1
+        FrameReady = Graphics3D.DrawObject3D(PartyFaceParts[Index])
+    End For
+
     For Index = 0 To CINDERLING_OBJECT_COUNT - 1
         FrameReady = Graphics3D.DrawObject3D(CinderlingParts[Index])
     End For
@@ -4330,6 +4366,10 @@ Public Sub Shutdown()
 
     For Index = 0 To PARTY_OBJECT_COUNT - 1
         Call Graphics3D.DestroyObjectInstance3D(PartyParts[Index])
+    End For
+
+    For Index = 0 To PARTY_FACE_OBJECT_COUNT - 1
+        Call Graphics3D.DestroyObjectInstance3D(PartyFaceParts[Index])
     End For
 
     For Index = 0 To RIG_TEMPLATE_COUNT - 1
