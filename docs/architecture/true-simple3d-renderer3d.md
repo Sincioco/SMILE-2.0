@@ -24,7 +24,7 @@ The compiler has narrow game-window-only numeric, image-owning, and text-path Re
 - 128 mesh, 512 object, 128 texture, and 128 material slots with typed generation-checked handles;
 - explicit cleanup on destroy, reset, resize, and graphics shutdown.
 
-`Begin3D` suspends the current Direct2D draw, binds D3D11/depth state, and clears the 3D target. `End3D` unbinds depth and resumes Direct2D on the same target. The 2D backend vtable and GDI renderer are unchanged. `RendererAvailable()` is false when DirectX is unavailable.
+`Begin3D` suspends the current Direct2D draw, binds D3D11/depth state, and clears the 3D target. The native renderer prefers a 4x multisampled color/depth pair, falls back to 2x or 1x according to device support, and keeps the flip-model swap chain single-sampled. `End3D` resolves the multisampled 3D image into the swap-chain back buffer before resuming Direct2D, so the HUD remains sharp and ordinary 2D painter order is unchanged. The 2D backend vtable and GDI renderer are unchanged. `RendererAvailable()` is false when DirectX is unavailable.
 
 ## Web backend
 

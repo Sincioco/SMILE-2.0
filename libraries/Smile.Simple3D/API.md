@@ -86,7 +86,7 @@ Games decide whether a press started on valid world geometry and pass that decis
 
 ## Renderer contract
 
-Windows uses D3D11 indexed triangle lists, generated normals, model/view/perspective matrices, a resize-aware D24S8 depth buffer, and the existing Direct2D renderer for the following HUD pass. Web uses an offscreen WebGL2 canvas with the same indexed mesh and depth contract, then composites it into the Canvas 2D back buffer before ordinary 2D drawing.
+Windows uses D3D11 indexed triangle lists, generated normals, model/view/perspective matrices, a resize-aware D24S8 depth buffer, and hardware-selected 4x/2x/1x multisample anti-aliasing before the existing Direct2D HUD pass. Web uses an antialiased offscreen WebGL2 canvas with the same indexed mesh and depth contract, then composites it into the Canvas 2D back buffer before ordinary 2D drawing.
 
 Both backends bound live data to 128 meshes and 512 objects and reject stale or deleted handles. Mesh destruction is rejected while a live object still references that mesh. Meshes support at most 65,535 vertices and 196,608 indices.
 

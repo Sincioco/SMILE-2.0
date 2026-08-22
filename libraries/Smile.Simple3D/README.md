@@ -3,6 +3,7 @@
 `Smile.Simple3D` 2.0.0 provides two compatible teaching layers:
 
 - `Graphics3D` and `Math3D` use the true indexed-triangle `Renderer3D` on Windows DirectX and WebGL2.
+- Windows Renderer3D automatically prefers 4x MSAA and safely falls back to 2x or 1x; WebGL2 requests browser-provided anti-aliasing.
 - `Renderer`, `Primitives`, `Mesh`, and `Interaction` preserve the original bounded wireframe lessons over Renderer2D, including GDI support.
 
 Reference the source library from a game project:
