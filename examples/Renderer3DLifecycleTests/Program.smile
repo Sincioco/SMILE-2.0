@@ -23,6 +23,7 @@ Dim MeshHandle As Number
 Dim NewMeshHandle As Number
 Dim StaleMeshHandle As Number
 Dim StaleObjectHandle As Number
+Dim HighObjectHandle As Number
 
 Game Window "Renderer3D Lifecycle Tests" Size 320 By 180
 
@@ -121,6 +122,34 @@ OverflowObject = Graphics3D.CreateObjectFromMesh3D(NewMeshHandle)
 If (OverflowObject.Handle <> 0 Or
     Graphics3D.LiveObjectCount3D() <> EXPECTED_MAX_OBJECTS Or
     Graphics3D.MeshReferenceCount3D(NewMeshHandle) <> EXPECTED_MAX_OBJECTS) Then
+    Failures = Failures + 1
+End If
+
+''' The 512-entry native pool needs nine slot bits. Exercise the highest slot
+''' through normal handle validation and destruction so capacity-only tests
+''' cannot hide an unreachable upper half.
+
+HighObjectHandle = Objects[EXPECTED_MAX_OBJECTS - 1].Handle
+
+If Not Graphics3D.ObjectHandleValid3D(HighObjectHandle) Then
+    Failures = Failures + 1
+End If
+
+Call Graphics3D.SetObjectPosition(Objects[EXPECTED_MAX_OBJECTS - 1], 17, 23, 31)
+
+Call Graphics3D.DestroyObjectInstance3D(Objects[EXPECTED_MAX_OBJECTS - 1])
+
+If (Graphics3D.ObjectHandleValid3D(HighObjectHandle) Or
+    Graphics3D.LiveObjectCount3D() <> EXPECTED_MAX_OBJECTS - 1 Or
+    Graphics3D.MeshReferenceCount3D(NewMeshHandle) <> EXPECTED_MAX_OBJECTS - 1) Then
+    Failures = Failures + 1
+End If
+
+Objects[EXPECTED_MAX_OBJECTS - 1] = Graphics3D.CreateObjectFromMesh3D(NewMeshHandle)
+
+If (Objects[EXPECTED_MAX_OBJECTS - 1].Handle = 0 Or
+    Objects[EXPECTED_MAX_OBJECTS - 1].Handle = HighObjectHandle Or
+    Graphics3D.LiveObjectCount3D() <> EXPECTED_MAX_OBJECTS) Then
     Failures = Failures + 1
 End If
 

@@ -218,6 +218,14 @@ static long long smile_3d_handle(long long kind, int slot, unsigned short genera
     return kind | ((long long)generation << 8) | (long long)(slot + 1);
 }
 
+static long long smile_3d_object_handle(int slot, unsigned short generation)
+{
+    /* Objects own a 512-entry pool, so their generation-safe handle reserves
+       nine low bits for the zero-based slot. Other resource pools remain at 128 or fewer and
+       retain their existing eight-bit layout. */
+    return SMILE_3D_OBJECT_HANDLE | ((long long)generation << 9) | (long long)slot;
+}
+
 static SmileMesh3D* smile_3d_mesh(long long handle)
 {
     int slot;
@@ -235,8 +243,8 @@ static SmileObject3D* smile_3d_object(long long handle)
     int slot;
     unsigned short generation;
     if ((handle & SMILE_3D_HANDLE_KIND) != SMILE_3D_OBJECT_HANDLE) return 0;
-    slot = (int)(handle & 255LL) - 1;
-    generation = (unsigned short)((handle >> 8) & 65535LL);
+    slot = (int)(handle & 511LL);
+    generation = (unsigned short)((handle >> 9) & 65535LL);
     if (slot < 0 || slot >= SMILE_3D_MAX_OBJECTS || !smile_objects3d[slot].active ||
         smile_objects3d[slot].generation != generation) return 0;
     return &smile_objects3d[slot];
@@ -1048,7 +1056,7 @@ static long long smile_3d_create_object(long long mesh_handle)
     object->rotation[0] = object->rotation[1] = object->rotation[2] = 0.0f;
     object->scale[0] = object->scale[1] = object->scale[2] = 1.0f;
     object->color[0] = object->color[1] = object->color[2] = 1.0f; object->color[3] = 1.0f;
-    return smile_3d_handle(SMILE_3D_OBJECT_HANDLE, slot, object->generation);
+    return smile_3d_object_handle(slot, object->generation);
 }
 
 static unsigned int smile_3d_read_u32(const unsigned char* value)
