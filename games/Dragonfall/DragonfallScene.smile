@@ -2113,6 +2113,81 @@ Private Function ParticipantFramingRadius(Participant As Number) As Number
 
 End Function
 
+Private Function CombatTextActive() As Boolean
+
+    If Battle.VisualTarget() <= 0 Then
+        Return False
+    End If
+
+    If Battle.VisualStep() < 29 Or Battle.VisualStep() > 52 Then
+        Return False
+    End If
+
+    If Battle.DamageNumber() = 0 And Battle.VisualImpactLanded() Then
+        Return False
+    End If
+
+    Return True
+
+End Function
+
+Private Function ProjectCombatText() As BattleCamera.ProjectedPoint3D
+
+    Dim X As Number
+    Dim Y As Number
+    Dim Z As Number
+    Dim Height As Number
+    Dim Rise As Number
+    Dim ReturnValue As BattleCamera.ProjectedPoint3D
+
+    If Not CombatTextActive() Then
+        Return ReturnValue
+    End If
+
+    Call ParticipantAnchor(Battle.VisualTarget(), X, Y, Z)
+    Height = 92
+
+    If Battle.VisualTarget() = Battle.PARTICIPANT_ASHWING Then
+        Height = 250
+    Else If Battle.VisualTarget() = Battle.PARTICIPANT_CINDERLING_TWO Then
+        Height = 165
+    End If
+
+    Rise = Max(0, Battle.VisualStep() - 29) * 4
+    ReturnValue = BattleCamera.ProjectWorldPoint(State, X, Y + Height + Rise, Z, 960, 540)
+    Return ReturnValue
+
+End Function
+
+''' Screen-space combat feedback follows its 3D target through automatic and
+''' manually adjusted cameras without coupling the battle rules to rendering.
+Public Function CombatTextVisible() As Boolean
+
+    Dim Projected As BattleCamera.ProjectedPoint3D
+
+    Projected = ProjectCombatText()
+    Return Projected.Visible
+
+End Function
+
+Public Function CombatTextX() As Number
+
+    Dim Projected As BattleCamera.ProjectedPoint3D
+
+    Projected = ProjectCombatText()
+    Return Max(32, Min(928, Projected.X))
+
+End Function
+
+Public Function CombatTextY() As Number
+
+    Dim Projected As BattleCamera.ProjectedPoint3D
+
+    Projected = ProjectCombatText()
+    Return Max(72, Min(390, Projected.Y))
+
+End Function
+
 Private Sub DefineActionFocusShot(Shot As Number, Actor As Number, Target As Number)
 
     Dim ActorX As Number

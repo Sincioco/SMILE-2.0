@@ -429,6 +429,8 @@ Sub DrawFrame()
         Draw Rectangle 6, 6, 948, 528, Rgb(255, 102, 18)
     End If
 
+    Call DrawCombatText()
+
     If ShowHud Then
         Call DrawHud()
     End If
@@ -473,6 +475,51 @@ Sub DrawFrame()
     End If
 
     Draw Text "TAB AUTO/MANUAL  D FPS  //  LEFT DRAG PAN  MIDDLE DRAG ORBIT  WHEEL ZOOM" At 480, 518 Size 12 Color LIGHT_GRAY Centered
+
+End Sub
+
+Sub DrawCombatText()
+
+    Dim Damage As Number
+    Dim X As Number
+    Dim Y As Number
+    Dim OffsetX As Number
+
+    If Not RendererAvailable Or Not Scene.CombatTextVisible() Then
+        Return
+    End If
+
+    Damage = Battle.DamageNumber()
+    X = Scene.CombatTextX()
+    Y = Scene.CombatTextY()
+
+    If Not Battle.VisualImpactLanded() Then
+        Draw Text "MISS" At X + 2, Y + 2 Size 26 Color BLACK Centered
+        Draw Text "MISS" At X, Y Size 26 Color LIGHT_GRAY Centered
+        Return
+    End If
+
+    OffsetX = 8
+
+    If Abs(Damage) >= 10 Then
+        OffsetX = 15
+    End If
+
+    If Abs(Damage) >= 100 Then
+        OffsetX = 23
+    End If
+
+    If Abs(Damage) >= 1000 Then
+        OffsetX = 31
+    End If
+
+    Draw Number Abs(Damage) At X - OffsetX + 2, Y + 2 Size 30 Color BLACK
+
+    If Damage < 0 Then
+        Draw Number Abs(Damage) At X - OffsetX, Y Size 30 Color LIGHT_GREEN
+    Else
+        Draw Number Damage At X - OffsetX, Y Size 30 Color YELLOW
+    End If
 
 End Sub
 
