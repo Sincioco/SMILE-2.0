@@ -83,6 +83,8 @@ Private Const ABILITY_FIRE_BREATH = 505
 Private Const ABILITY_TAIL_SWEEP = 506
 Private Const ABILITY_LIGHTNING = 507
 Private Const ABILITY_CALDERA_ANNIHILATION = 508
+Private Const MP_COST_FIRE_BREATH = 120
+Private Const MP_COST_CALDERA_ANNIHILATION = 360
 Private Const MECHANIC_AEGIS = 600
 Private Const MECHANIC_FLAME = 601
 Private Const MECHANIC_FROST = 602
@@ -311,8 +313,8 @@ Private Function DefineMechanics() As Boolean
         Not AddAbility(ABILITY_LIGHTNING, "Skybreaker Arc", 12, 148, RPG.RPG_TARGET_ONE_ENEMY, MECHANIC_LIGHTNING) Or
         Not AddAbility(ABILITY_MEND, "Starlight Mend", 8, 155, RPG.RPG_TARGET_ONE_ALLY, MECHANIC_MEND) Or
         Not AddAbility(ABILITY_METEOR_BARRAGE, "Meteor Barrage", 7, 142, RPG.RPG_TARGET_ONE_ENEMY, MECHANIC_BASH) Or
-        Not AddAbility(ABILITY_FIRE_BREATH, "Cataclysm Breath", 0, 48, RPG.RPG_TARGET_ALL_ENEMIES, MECHANIC_BREATH) Or
-        Not AddAbility(ABILITY_CALDERA_ANNIHILATION, "Caldera Annihilation", 0, 1400, RPG.RPG_TARGET_ALL_ENEMIES, MECHANIC_CATASTROPHE) Or
+        Not AddAbility(ABILITY_FIRE_BREATH, "Cataclysm Breath", MP_COST_FIRE_BREATH, 48, RPG.RPG_TARGET_ALL_ENEMIES, MECHANIC_BREATH) Or
+        Not AddAbility(ABILITY_CALDERA_ANNIHILATION, "Caldera Annihilation", MP_COST_CALDERA_ANNIHILATION, 1400, RPG.RPG_TARGET_ALL_ENEMIES, MECHANIC_CATASTROPHE) Or
         Not AddAbility(ABILITY_TAIL_SWEEP, "Volcanic Tail", 0, 42, RPG.RPG_TARGET_ALL_ENEMIES, MECHANIC_TAIL)) Then
         Return False
     End If
@@ -549,6 +551,7 @@ Private Sub SubmitBossIfReady()
     Dim Round As Number
     Dim TargetParticipant As Number
     Dim Accepted As Boolean
+    Dim BossMagicPoints As Number
 
     EnemyParticipant = BattleTime.NextReadyEnemy(State)
 
@@ -570,8 +573,12 @@ Private Sub SubmitBossIfReady()
 
     Round = BattleCore.RoundNumber(State) + 1
     TargetParticipant = LowestLivingParty()
+    BossMagicPoints = BattleCore.MagicPoints(State, EnemyParticipant)
 
-    If DemoCatastropheEnabled And Not CatastropheUsed And PhaseTwo Then
+    If (DemoCatastropheEnabled And
+        Not CatastropheUsed And
+        PhaseTwo And
+        BossMagicPoints >= MP_COST_CALDERA_ANNIHILATION) Then
 
         Accepted = BattleTime.SubmitAction(
             State,
@@ -591,7 +598,8 @@ Private Sub SubmitBossIfReady()
 
     If PhaseTwo And Round Mod 2 = 0 Then
         Accepted = BattleTime.SubmitAction(State, EnemyParticipant, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_TAIL_SWEEP, TargetParticipant)
-    Else If Round Mod 3 = 0 Or PhaseTwo Then
+    Else If ((Round Mod 3 = 0 Or PhaseTwo) And
+        BossMagicPoints >= MP_COST_FIRE_BREATH) Then
         Accepted = BattleTime.SubmitAction(State, EnemyParticipant, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_FIRE_BREATH, TargetParticipant)
     Else
         Accepted = BattleTime.SubmitReadyEnemyAttack(State, EnemyParticipant, TargetParticipant)
