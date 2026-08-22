@@ -46,9 +46,10 @@ Private Const ROLE_ATTACKER = 2
 Private Const ROLE_HEALER = 3
 Private Const ROLE_WIZARD = 4
 Private Const DRAGON_ROOT_X = 820
-Private Const DRAGON_ROOT_Y = 145
+Private Const DRAGON_ROOT_Y = 280
 Private Const DRAGON_ROOT_Z = 45
 Private Const DRAGON_SCALE_PERCENT = 200
+Private Const DRAGON_GROUND_Y = -49
 Private Const CINDERLING_MINION_SCALE_PERCENT = 135
 Private Const CINDER_WARDEN_SCALE_PERCENT = 165
 Private Const PARTY_CENTER_X = -960
@@ -115,6 +116,7 @@ Private Dim LastMiraOffsetZ As Number
 Private Dim LastDragonOffsetX As Number
 Private Dim LastDragonOffsetY As Number
 Private Dim LastDragonOffsetZ As Number
+Private Dim LastDragonGroundCorrection As Number
 Private Dim LastDragonMouthX As Number
 Private Dim LastDragonMouthY As Number
 Private Dim LastDragonMouthZ As Number
@@ -1491,6 +1493,52 @@ Private Sub ScaleDragonPose(PivotX As Number, PivotY As Number, PivotZ As Number
 
 End Sub
 
+''' Keeps Ashwing's articulated feet on or above the visible grid. Airborne
+''' poses remain untouched; correction begins only when a modeled foot would
+''' penetrate the arena, so landing compression still reads without sinking.
+Private Function GroundDragonPose() As Number
+
+    Dim Index As Number
+    Dim LowestY As Number
+    Dim FootBottom As Number
+    Dim Correction As Number
+
+    LowestY = DragonParts[17].Position.Y - DragonParts[17].ScaleX / 2
+
+    FootBottom = DragonParts[20].Position.Y - DragonParts[20].ScaleX / 2
+    LowestY = Min(LowestY, FootBottom)
+    FootBottom = DragonParts[23].Position.Y - DragonParts[23].ScaleX / 2
+    LowestY = Min(LowestY, FootBottom)
+    FootBottom = DragonParts[26].Position.Y - DragonParts[26].ScaleX / 2
+    LowestY = Min(LowestY, FootBottom)
+    FootBottom = DragonParts[46].Position.Y - DragonParts[46].ScaleX / 2
+    LowestY = Min(LowestY, FootBottom)
+    FootBottom = DragonParts[47].Position.Y - DragonParts[47].ScaleX / 2
+    LowestY = Min(LowestY, FootBottom)
+    FootBottom = DragonParts[48].Position.Y - DragonParts[48].ScaleX / 2
+    LowestY = Min(LowestY, FootBottom)
+    FootBottom = DragonParts[49].Position.Y - DragonParts[49].ScaleX / 2
+    LowestY = Min(LowestY, FootBottom)
+
+    If LowestY >= DRAGON_GROUND_Y Then
+        Return 0
+    End If
+
+    Correction = DRAGON_GROUND_Y - LowestY
+
+    For Index = 0 To DRAGON_OBJECT_COUNT - 1
+        Call Graphics3D.SetObjectPosition(
+            DragonParts[Index],
+            DragonParts[Index].Position.X,
+            DragonParts[Index].Position.Y + Correction,
+            DragonParts[Index].Position.Z
+        )
+    End For
+
+    Return Correction
+
+End Function
+
 Private Sub PoseDragon(
     RootX As Number,
     RootY As Number,
@@ -1515,6 +1563,7 @@ Private Sub PoseDragon(
     Dim NeckUpperFall As Number
     Dim HeadTilt As Number
     Dim HitRecoil As Number
+    Dim GroundCorrection As Number
     Dim HeadX As Number
     Dim HeadY As Number
     Dim HeadZ As Number
@@ -1723,12 +1772,19 @@ Private Sub PoseDragon(
     Call ApplyPart(DragonParts[59], TailTip.CenterX, TailTip.CenterY + 22, TailTip.CenterZ, 22, 46, 22, 0, 0, TailTip.RotationZ - 8)
     Call ScaleDragonPose(RootX, RootY - 200, RootZ)
 
+    GroundCorrection = 0
+
+    If Visual <> Battle.VISUAL_VICTORY Then
+        GroundCorrection = GroundDragonPose()
+    End If
+
     ''' Keep attack effects attached to the animated mouth, including entrance,
     ''' recoil, roar, death, and future dragon rigs that change proportions.
 
     LastDragonMouthX = RootX + (HeadX - 148 - RootX) * DRAGON_SCALE_PERCENT / 100
-    LastDragonMouthY = RootY - 200 + (HeadY - 28 - JawOpen / 4 - (RootY - 200)) * DRAGON_SCALE_PERCENT / 100
+    LastDragonMouthY = RootY - 200 + (HeadY - 28 - JawOpen / 4 - (RootY - 200)) * DRAGON_SCALE_PERCENT / 100 + GroundCorrection
     LastDragonMouthZ = RootZ + (HeadZ - RootZ) * DRAGON_SCALE_PERCENT / 100
+    LastDragonGroundCorrection = GroundCorrection
 
     If Visual = Battle.VISUAL_VICTORY Then
 
@@ -1943,6 +1999,7 @@ Public Function Initialize(StateHandle As Number) As Boolean
     LastDragonOffsetX = 0
     LastDragonOffsetY = 0
     LastDragonOffsetZ = 0
+    LastDragonGroundCorrection = 0
     LastCinderlingOffset[0] = 0
     LastCinderlingOffset[1] = 0
     LastCinderlingOffset[2] = 0
@@ -2008,7 +2065,7 @@ Private Sub ParticipantAnchor(Participant As Number, ByRef X As Number, ByRef Y 
     Else If Participant = Battle.PARTICIPANT_ASHWING Then
 
         X = 420 + LastDragonOffsetX
-        Y = 450 + LastDragonOffsetY
+        Y = DRAGON_ROOT_Y + 305 + LastDragonOffsetY + LastDragonGroundCorrection
         Z = DRAGON_ROOT_Z + LastDragonOffsetZ
 
     End If
@@ -2999,10 +3056,10 @@ Private Function PointerHitsActor(PointerX As Number, PointerY As Number) As Boo
     End If
 
     If (Battle.BossIsIntroduced() And
-        (PointerHitsSphere(PointerX, PointerY, 360 + LastDragonOffsetX, 148 + LastDragonOffsetY, 45 + LastDragonOffsetZ, 210) Or
-        PointerHitsSphere(PointerX, PointerY, 114 + LastDragonOffsetX, 322 + LastDragonOffsetY, -40 + LastDragonOffsetZ, 115) Or
-        PointerHitsSphere(PointerX, PointerY, 333 + LastDragonOffsetX, 243 + LastDragonOffsetY, -180 + LastDragonOffsetZ, 180) Or
-        PointerHitsSphere(PointerX, PointerY, 333 + LastDragonOffsetX, 243 + LastDragonOffsetY, 270 + LastDragonOffsetZ, 180))) Then
+        (PointerHitsSphere(PointerX, PointerY, 360 + LastDragonOffsetX, DRAGON_ROOT_Y + 3 + LastDragonOffsetY + LastDragonGroundCorrection, 45 + LastDragonOffsetZ, 210) Or
+        PointerHitsSphere(PointerX, PointerY, 114 + LastDragonOffsetX, DRAGON_ROOT_Y + 177 + LastDragonOffsetY + LastDragonGroundCorrection, -40 + LastDragonOffsetZ, 115) Or
+        PointerHitsSphere(PointerX, PointerY, 333 + LastDragonOffsetX, DRAGON_ROOT_Y + 98 + LastDragonOffsetY + LastDragonGroundCorrection, -180 + LastDragonOffsetZ, 180) Or
+        PointerHitsSphere(PointerX, PointerY, 333 + LastDragonOffsetX, DRAGON_ROOT_Y + 98 + LastDragonOffsetY + LastDragonGroundCorrection, 270 + LastDragonOffsetZ, 180))) Then
         Return True
     End If
 
