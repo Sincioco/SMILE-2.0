@@ -778,6 +778,9 @@ Private Sub PoseHero(
     Dim Strike As Number
     Dim Recoil As Number
     Dim TargetRecoil As Number
+    Dim BrowIntensity As Number
+    Dim EyeHeight As Number
+    Dim MouthHeight As Number
     Dim CheerCycle As Number
     Dim TorsoX As Number
     Dim ShoulderX As Number
@@ -820,6 +823,16 @@ Private Sub PoseHero(
     End If
 
     TargetRecoil = 0
+    BrowIntensity = 2
+    EyeHeight = 4
+    MouthHeight = 3
+
+    ''' A short deterministic blink keeps the face alive in idle close-ups.
+    ''' Action, pain, victory, and defeat expressions override it below.
+
+    If (AnimationStep + Participant * 17) Mod 140 >= 134 Then
+        EyeHeight = 1
+    End If
 
     If ((Battle.VisualTarget() = Participant Or VisualHitsWholeParty(Visual)) And
         VisualHasImpact(Visual)) Then
@@ -994,9 +1007,39 @@ Private Sub PoseHero(
         BodyLean = 0 - TargetRecoil / 2
     End If
 
+    ''' Reuse the action envelope already driving the body to keep facial acting
+    ''' synchronized with anticipation and contact instead of running a separate
+    ''' animation clock. Squashed eyes read as lids; opposing brow rotations and
+    ''' mouth height remain legible in the tight actor camera.
+
+    If (VisualHasImpact(Visual) And
+        (Battle.VisualTarget() = Participant Or VisualHitsWholeParty(Visual)) And
+        StepValue >= 27 And StepValue <= 40) Then
+
+        BrowIntensity = 22
+        EyeHeight = 2
+        MouthHeight = 9
+
+    Else If IsActor And Visual <> Battle.VISUAL_IDLE Then
+
+        BrowIntensity = 14
+        MouthHeight = 5
+
+        If (Visual = Battle.VISUAL_MIRA_FLAME Or
+            Visual = Battle.VISUAL_MIRA_FROST Or
+            Visual = Battle.VISUAL_MIRA_LIGHTNING Or
+            Visual = Battle.VISUAL_LYRA_MEND) Then
+            MouthHeight = 7
+        End If
+
+    End If
+
     If Defeated Then
 
         CorpsePose = True
+        BrowIntensity = -10
+        EyeHeight = 1
+        MouthHeight = 2
         HipY = -18
         BodyBob = 0
         BodyLean = 86
@@ -1011,6 +1054,9 @@ Private Sub PoseHero(
 
     Else If Visual = Battle.VISUAL_VICTORY Then
 
+        BrowIntensity = -6
+        EyeHeight = 5
+        MouthHeight = 8
         CheerCycle = Articulation.CycleAngle(AnimationStep, 32, 28, Participant * 47)
         BodyBob = Articulation.PositiveCycle(AnimationStep, 24, 13, Participant * 50)
 
@@ -1050,6 +1096,9 @@ Private Sub PoseHero(
 
     Else If Visual = Battle.VISUAL_DEFEAT Then
 
+        BrowIntensity = 18
+        EyeHeight = 2
+        MouthHeight = 7
         BodyBob = 0 - Min(38, StepValue)
         BodyLean = Min(78, StepValue * 2)
         LeftUpperArmAngle = 30
@@ -1199,11 +1248,11 @@ Private Sub PoseHero(
     Call ApplyPart(PartyParts[BaseIndex + 23], ShoulderX, ShoulderY + 2, RootZ + ShoulderSpacing, (ArmRadius + 9) * 2, (ArmRadius + 7) * 2, (ArmRadius + 10) * 2, -58, 0, BodyLean - 8)
     Call ApplyPart(PartyParts[BaseIndex + 24], HeadX + HeadRadius - 2, HeadY + 5, RootZ - 10, 7, 7, 7, 0, 0, BodyLean)
     Call ApplyPart(PartyParts[BaseIndex + 25], HeadX + HeadRadius - 2, HeadY + 5, RootZ + 10, 7, 7, 7, 0, 0, BodyLean)
-    Call ApplyPart(PartyFaceParts[FaceBaseIndex], HeadX + HeadRadius, HeadY + 14, RootZ - 10, 5, 4, 15, -10, 0, BodyLean)
-    Call ApplyPart(PartyFaceParts[FaceBaseIndex + 1], HeadX + HeadRadius, HeadY + 14, RootZ + 10, 5, 4, 15, 10, 0, BodyLean)
-    Call ApplyPart(PartyFaceParts[FaceBaseIndex + 2], HeadX + HeadRadius + 2, HeadY + 5, RootZ - 10, 4, 4, 4, 0, 0, BodyLean)
-    Call ApplyPart(PartyFaceParts[FaceBaseIndex + 3], HeadX + HeadRadius + 2, HeadY + 5, RootZ + 10, 4, 4, 4, 0, 0, BodyLean)
-    Call ApplyPart(PartyFaceParts[FaceBaseIndex + 4], HeadX + HeadRadius + 1, HeadY - 10, RootZ, 5, 3, 14, 0, 0, BodyLean)
+    Call ApplyPart(PartyFaceParts[FaceBaseIndex], HeadX + HeadRadius, HeadY + 14, RootZ - 10, 5, 4, 15, -8 - BrowIntensity, 0, BodyLean)
+    Call ApplyPart(PartyFaceParts[FaceBaseIndex + 1], HeadX + HeadRadius, HeadY + 14, RootZ + 10, 5, 4, 15, 8 + BrowIntensity, 0, BodyLean)
+    Call ApplyPart(PartyFaceParts[FaceBaseIndex + 2], HeadX + HeadRadius + 2, HeadY + 5, RootZ - 10, 4, EyeHeight, 4, 0, 0, BodyLean)
+    Call ApplyPart(PartyFaceParts[FaceBaseIndex + 3], HeadX + HeadRadius + 2, HeadY + 5, RootZ + 10, 4, EyeHeight, 4, 0, 0, BodyLean)
+    Call ApplyPart(PartyFaceParts[FaceBaseIndex + 4], HeadX + HeadRadius + 1, HeadY - 10, RootZ, 5, MouthHeight, 14 + MouthHeight, 0, 0, BodyLean)
     Call ApplyPart(PartyParts[BaseIndex + 34], LeftLowerArm.CenterX, LeftLowerArm.CenterY, LeftLowerArm.CenterZ, (ArmRadius + 3) * 2, LowerArmLength / 2, (ArmRadius + 3) * 2, LeftLowerArm.RotationX, LeftLowerArm.RotationY, LeftLowerArm.RotationZ)
     Call ApplyPart(PartyParts[BaseIndex + 35], RightLowerArm.CenterX, RightLowerArm.CenterY, RightLowerArm.CenterZ, (ArmRadius + 3) * 2, LowerArmLength / 2, (ArmRadius + 3) * 2, RightLowerArm.RotationX, RightLowerArm.RotationY, RightLowerArm.RotationZ)
     Call ApplyPart(PartyParts[BaseIndex + 48], LeftLowerArm.EndX, LeftLowerArm.EndY + 4, LeftLowerArm.EndZ, (ArmRadius + 5) * 2, 15, (ArmRadius + 5) * 2, 0, 0, LeftLowerArm.RotationZ)
