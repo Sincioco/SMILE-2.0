@@ -33,7 +33,7 @@ Private Const CINDERLING_PARTS_PER_ENEMY = 30
 Private Const CINDERLING_OBJECT_COUNT = 90
 Private Const PARTICLE_OBJECT_COUNT = 128
 Private Const IMPACT_OBJECT_COUNT = 24
-Private Const RIG_TEMPLATE_COUNT = 7
+Private Const RIG_TEMPLATE_COUNT = 8
 Private Const RIG_CUBE = 0
 Private Const RIG_SPHERE = 1
 Private Const RIG_CYLINDER = 2
@@ -41,6 +41,7 @@ Private Const RIG_PYRAMID = 3
 Private Const RIG_TORUS = 4
 Private Const RIG_WING = 5
 Private Const RIG_WING_TIP = 6
+Private Const RIG_SNOUT = 7
 Private Const ROLE_DEFENDER = 1
 Private Const ROLE_ATTACKER = 2
 Private Const ROLE_HEALER = 3
@@ -67,6 +68,10 @@ Private Dim State As Number
 Private Dim Ready As Boolean
 Private Dim Camera As Core.Camera3D
 Private Dim CosmicTexture As Core.Texture3D
+Private Dim DragonScaleTexture As Core.Texture3D
+Private Dim DragonWingTexture As Core.Texture3D
+Private Dim HeroClothTexture As Core.Texture3D
+Private Dim ForgedSteelTexture As Core.Texture3D
 Private Dim EmptyTexture As Core.Texture3D
 Private Dim FloorMaterial As Core.Material3D
 Private Dim GridMaterial As Core.Material3D
@@ -92,7 +97,7 @@ Private Dim DragonGlowMaterial As Core.Material3D
 Private Dim DragonWingMaterial As Core.Material3D
 Private Dim DragonUnderbellyMaterial As Core.Material3D
 Private Dim ParticleMaterial As Core.Material3D
-Private Dim RigTemplates[7] As Core.Object3D
+Private Dim RigTemplates[8] As Core.Object3D
 Private Dim Arena[39] As Core.Object3D
 Private Dim PartyParts[224] As Core.Object3D
 Private Dim DragonParts[93] As Core.Object3D
@@ -151,7 +156,33 @@ Private Function Material(
         GreenValue,
         BlueValue,
         100,
-        EmissiveValue > 0,
+        Additive,
+        EmissiveValue,
+        50
+    )
+
+    Return ReturnValue
+
+End Function
+
+Private Function TexturedMaterial(
+    Texture As Core.Texture3D,
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number,
+    EmissiveValue As Number
+) As Core.Material3D
+
+    Dim ReturnValue As Core.Material3D
+
+    ReturnValue = Graphics3D.CreateMaterial3D(
+        Texture,
+        Graphics3D.MATERIAL_ALPHA_OPAQUE,
+        RedValue,
+        GreenValue,
+        BlueValue,
+        100,
+        False,
         EmissiveValue,
         50
     )
@@ -183,6 +214,7 @@ Private Sub CreateRigTemplates()
     Dim Index As Number
     Dim WingMesh As Number
     Dim WingTipMesh As Number
+    Dim SnoutMesh As Number
 
     RigTemplates[RIG_CUBE] = Graphics3D.CreateCube3D(100)
     RigTemplates[RIG_SPHERE] = Graphics3D.CreateSphere3D(50)
@@ -201,6 +233,14 @@ Private Sub CreateRigTemplates()
     OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 5, 50, 50, 50)
     OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 6, 30, -50, 50)
     OperationAccepted = Graphics3D.SetMeshVertex3D(WingMesh, 7, -30, -50, 50)
+    OperationAccepted = Graphics3D.SetMeshUv3D(WingMesh, 0, 0, 0)
+    OperationAccepted = Graphics3D.SetMeshUv3D(WingMesh, 1, 1000, 0)
+    OperationAccepted = Graphics3D.SetMeshUv3D(WingMesh, 2, 800, 1000)
+    OperationAccepted = Graphics3D.SetMeshUv3D(WingMesh, 3, 200, 1000)
+    OperationAccepted = Graphics3D.SetMeshUv3D(WingMesh, 4, 0, 0)
+    OperationAccepted = Graphics3D.SetMeshUv3D(WingMesh, 5, 1000, 0)
+    OperationAccepted = Graphics3D.SetMeshUv3D(WingMesh, 6, 800, 1000)
+    OperationAccepted = Graphics3D.SetMeshUv3D(WingMesh, 7, 200, 1000)
     OperationAccepted = Graphics3D.SetMeshTriangle3D(WingMesh, 0, 0, 1, 2)
     OperationAccepted = Graphics3D.SetMeshTriangle3D(WingMesh, 1, 0, 2, 3)
     OperationAccepted = Graphics3D.SetMeshTriangle3D(WingMesh, 2, 7, 6, 5)
@@ -225,6 +265,12 @@ Private Sub CreateRigTemplates()
     OperationAccepted = Graphics3D.SetMeshVertex3D(WingTipMesh, 3, -50, 50, 50)
     OperationAccepted = Graphics3D.SetMeshVertex3D(WingTipMesh, 4, 50, 50, 50)
     OperationAccepted = Graphics3D.SetMeshVertex3D(WingTipMesh, 5, 0, -50, 50)
+    OperationAccepted = Graphics3D.SetMeshUv3D(WingTipMesh, 0, 0, 0)
+    OperationAccepted = Graphics3D.SetMeshUv3D(WingTipMesh, 1, 1000, 0)
+    OperationAccepted = Graphics3D.SetMeshUv3D(WingTipMesh, 2, 500, 1000)
+    OperationAccepted = Graphics3D.SetMeshUv3D(WingTipMesh, 3, 0, 0)
+    OperationAccepted = Graphics3D.SetMeshUv3D(WingTipMesh, 4, 1000, 0)
+    OperationAccepted = Graphics3D.SetMeshUv3D(WingTipMesh, 5, 500, 1000)
     OperationAccepted = Graphics3D.SetMeshTriangle3D(WingTipMesh, 0, 0, 1, 2)
     OperationAccepted = Graphics3D.SetMeshTriangle3D(WingTipMesh, 1, 5, 4, 3)
     OperationAccepted = Graphics3D.SetMeshTriangle3D(WingTipMesh, 2, 0, 3, 4)
@@ -235,6 +281,58 @@ Private Sub CreateRigTemplates()
     OperationAccepted = Graphics3D.SetMeshTriangle3D(WingTipMesh, 7, 2, 3, 0)
     OperationAccepted = Graphics3D.CommitMesh3D(WingTipMesh)
     RigTemplates[RIG_WING_TIP] = Graphics3D.CreateObjectFromMesh3D(WingTipMesh)
+
+    ''' A six-sided tapered prism gives the muzzle a faceted dragon profile.
+    ''' Its broad rear overlaps the head while the smaller front eliminates the
+    ''' rectangular toy-block silhouette of the previous cube shells.
+
+    SnoutMesh = Graphics3D.CreateMesh3D(12, 60)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(SnoutMesh, 0, 50, 0, -50)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(SnoutMesh, 1, 50, 45, -28)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(SnoutMesh, 2, 50, 45, 28)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(SnoutMesh, 3, 50, 0, 50)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(SnoutMesh, 4, 50, -45, 28)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(SnoutMesh, 5, 50, -45, -28)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(SnoutMesh, 6, -50, 0, -32)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(SnoutMesh, 7, -50, 28, -18)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(SnoutMesh, 8, -50, 28, 18)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(SnoutMesh, 9, -50, 0, 32)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(SnoutMesh, 10, -50, -28, 18)
+    OperationAccepted = Graphics3D.SetMeshVertex3D(SnoutMesh, 11, -50, -28, -18)
+    OperationAccepted = Graphics3D.SetMeshUv3D(SnoutMesh, 0, 1000, 0)
+    OperationAccepted = Graphics3D.SetMeshUv3D(SnoutMesh, 1, 1000, 200)
+    OperationAccepted = Graphics3D.SetMeshUv3D(SnoutMesh, 2, 1000, 400)
+    OperationAccepted = Graphics3D.SetMeshUv3D(SnoutMesh, 3, 1000, 600)
+    OperationAccepted = Graphics3D.SetMeshUv3D(SnoutMesh, 4, 1000, 800)
+    OperationAccepted = Graphics3D.SetMeshUv3D(SnoutMesh, 5, 1000, 1000)
+    OperationAccepted = Graphics3D.SetMeshUv3D(SnoutMesh, 6, 0, 0)
+    OperationAccepted = Graphics3D.SetMeshUv3D(SnoutMesh, 7, 0, 200)
+    OperationAccepted = Graphics3D.SetMeshUv3D(SnoutMesh, 8, 0, 400)
+    OperationAccepted = Graphics3D.SetMeshUv3D(SnoutMesh, 9, 0, 600)
+    OperationAccepted = Graphics3D.SetMeshUv3D(SnoutMesh, 10, 0, 800)
+    OperationAccepted = Graphics3D.SetMeshUv3D(SnoutMesh, 11, 0, 1000)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 0, 0, 1, 2)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 1, 0, 2, 3)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 2, 0, 3, 4)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 3, 0, 4, 5)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 4, 6, 8, 7)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 5, 6, 9, 8)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 6, 6, 10, 9)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 7, 6, 11, 10)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 8, 0, 6, 7)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 9, 0, 7, 1)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 10, 1, 7, 8)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 11, 1, 8, 2)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 12, 2, 8, 9)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 13, 2, 9, 3)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 14, 3, 9, 10)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 15, 3, 10, 4)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 16, 4, 10, 11)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 17, 4, 11, 5)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 18, 5, 11, 6)
+    OperationAccepted = Graphics3D.SetMeshTriangle3D(SnoutMesh, 19, 5, 6, 0)
+    OperationAccepted = Graphics3D.CommitMesh3D(SnoutMesh)
+    RigTemplates[RIG_SNOUT] = Graphics3D.CreateObjectFromMesh3D(SnoutMesh)
 
     For Index = 0 To RIG_TEMPLATE_COUNT - 1
         Call Graphics3D.SetObjectVisible(RigTemplates[Index], False)
@@ -1448,8 +1546,8 @@ Private Sub CreateDragon()
     Call InitializeRigPart(DragonParts[2], RIG_CYLINDER, DragonMaterial)
     Call InitializeRigPart(DragonParts[3], RIG_CYLINDER, DragonMaterial)
     Call InitializeRigPart(DragonParts[4], RIG_SPHERE, DragonMaterial)
-    Call InitializeRigPart(DragonParts[5], RIG_CUBE, DragonMaterial)
-    Call InitializeRigPart(DragonParts[6], RIG_CUBE, DragonMaterial)
+    Call InitializeRigPart(DragonParts[5], RIG_SNOUT, DragonMaterial)
+    Call InitializeRigPart(DragonParts[6], RIG_SNOUT, DragonMaterial)
     Call InitializeRigPart(DragonParts[7], RIG_PYRAMID, DragonUnderbellyMaterial)
     Call InitializeRigPart(DragonParts[8], RIG_PYRAMID, DragonUnderbellyMaterial)
     Call InitializeRigPart(DragonParts[9], RIG_SPHERE, LavaMaterial)
@@ -1527,7 +1625,7 @@ Private Sub CreateDragon()
     Call InitializeRigPart(DragonParts[81], RIG_SPHERE, LavaMaterial)
     Call InitializeRigPart(DragonParts[82], RIG_PYRAMID, DragonMaterial)
     Call InitializeRigPart(DragonParts[83], RIG_CUBE, VoidMaterial)
-    Call InitializeRigPart(DragonParts[84], RIG_CUBE, DragonUnderbellyMaterial)
+    Call InitializeRigPart(DragonParts[84], RIG_SNOUT, DragonUnderbellyMaterial)
     Call InitializeRigPart(DragonParts[85], RIG_PYRAMID, SteelMaterial)
     Call InitializeRigPart(DragonParts[86], RIG_PYRAMID, SteelMaterial)
     Call InitializeRigPart(DragonParts[87], RIG_PYRAMID, SteelMaterial)
@@ -2061,6 +2159,26 @@ Public Function Initialize(StateHandle As Number) As Boolean
         Graphics3D.TEXTURE_FILTER_LINEAR,
         Graphics3D.TEXTURE_WRAP_REPEAT
     )
+    DragonScaleTexture = Graphics3D.LoadTexture3D(
+        "Assets\Textures\DragonScales.png",
+        Graphics3D.TEXTURE_FILTER_LINEAR,
+        Graphics3D.TEXTURE_WRAP_REPEAT
+    )
+    DragonWingTexture = Graphics3D.LoadTexture3D(
+        "Assets\Textures\DragonWingMembrane.png",
+        Graphics3D.TEXTURE_FILTER_LINEAR,
+        Graphics3D.TEXTURE_WRAP_REPEAT
+    )
+    HeroClothTexture = Graphics3D.LoadTexture3D(
+        "Assets\Textures\HeroClothV2.png",
+        Graphics3D.TEXTURE_FILTER_LINEAR,
+        Graphics3D.TEXTURE_WRAP_REPEAT
+    )
+    ForgedSteelTexture = Graphics3D.LoadTexture3D(
+        "Assets\Textures\ForgedSteel.png",
+        Graphics3D.TEXTURE_FILTER_LINEAR,
+        Graphics3D.TEXTURE_WRAP_REPEAT
+    )
 
     FloorMaterial = Material(3, 7, 18, 0, False)
     GridMaterial = Material(24, 126, 255, 90, False)
@@ -2078,22 +2196,22 @@ Public Function Initialize(StateHandle As Number) As Boolean
     StoneMaterial = Material(52, 55, 68, 0, False)
     BronzeMaterial = Material(205, 110, 38, 22, False)
     LavaMaterial = Material(255, 62, 7, 100, True)
-    ArinMaterial = Material(210, 30, 42, 12, False)
-    SteelMaterial = Material(205, 220, 235, 18, False)
-    MiraMaterial = Material(85, 35, 185, 20, False)
+    ArinMaterial = TexturedMaterial(HeroClothTexture, 220, 38, 52, 12)
+    SteelMaterial = TexturedMaterial(ForgedSteelTexture, 255, 255, 255, 18)
+    MiraMaterial = TexturedMaterial(HeroClothTexture, 100, 48, 215, 20)
     FrostMaterial = Material(75, 205, 255, 90, False)
-    TorMaterial = Material(220, 135, 25, 18, False)
-    LyraMaterial = Material(25, 188, 172, 38, False)
-    SkinMaterial = Material(232, 155, 112, 4, False)
+    TorMaterial = TexturedMaterial(HeroClothTexture, 235, 150, 35, 18)
+    LyraMaterial = TexturedMaterial(HeroClothTexture, 35, 210, 195, 38)
+    SkinMaterial = Material(245, 184, 145, 30, False)
     HairMaterial = Material(92, 58, 28, 8, False)
     ArinHairMaterial = Material(232, 186, 72, 20, False)
     TorHairMaterial = Material(38, 24, 19, 5, False)
     LeatherMaterial = Material(76, 42, 28, 5, False)
     BoneMaterial = Material(220, 224, 216, 12, False)
     VoidMaterial = Material(7, 5, 12, 0, False)
-    DragonMaterial = Material(154, 20, 27, 20, False)
+    DragonMaterial = TexturedMaterial(DragonScaleTexture, 255, 255, 255, 20)
     DragonGlowMaterial = Material(238, 55, 12, 68, False)
-    DragonWingMaterial = Material(190, 48, 19, 24, False)
+    DragonWingMaterial = TexturedMaterial(DragonWingTexture, 255, 225, 205, 24)
     DragonUnderbellyMaterial = Material(226, 108, 35, 20, False)
     ParticleMaterial = Material(255, 255, 255, 100, True)
 
@@ -4170,6 +4288,10 @@ Public Sub Shutdown()
     Call Graphics3D.DestroyMaterial3D(CosmicMaterial)
     Call Graphics3D.DestroyMaterial3D(GridMaterial)
     Call Graphics3D.DestroyMaterial3D(FloorMaterial)
+    Call Graphics3D.DestroyTexture3D(ForgedSteelTexture)
+    Call Graphics3D.DestroyTexture3D(HeroClothTexture)
+    Call Graphics3D.DestroyTexture3D(DragonWingTexture)
+    Call Graphics3D.DestroyTexture3D(DragonScaleTexture)
     Call Graphics3D.DestroyTexture3D(CosmicTexture)
 
     Ready = False
