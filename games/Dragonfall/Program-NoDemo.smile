@@ -8,8 +8,11 @@ Import Smile.RPG.BattleTime As BattleTime
 Import Dragonfall.Battle As Battle
 Import Dragonfall.Scene As Scene
 
+Const PREVIEW_SYNTHETIC_SFX_ENABLED = False
+
 Dim Running As Boolean
 Dim Paused As Boolean
+Dim ShowFps As Boolean
 Dim RendererAvailable As Boolean
 Dim SceneReady As Boolean
 Dim EncounterReady As Boolean
@@ -22,10 +25,15 @@ Dim CatchUpSteps As Number
 Dim GlobalStep As Number
 Dim ReadyPlayer As Number
 Dim Accepted As Boolean
+Dim FpsFrames As Number
+Dim FpsElapsed As Number
+Dim DisplayedFps As Number
+Dim InterfacePointerBlocked As Boolean
 
 Game Window "SMILE 2.0 Dragonfall: Playable Battle" Size 960 By 540
 
 RendererAvailable = Graphics3D.RendererAvailable()
+ShowFps = True
 Running = True
 
 Call StartEncounter()
@@ -36,6 +44,9 @@ Do
     CurrentTime = Timer()
     Elapsed = Max(0, Min(100, CurrentTime - PreviousTime))
     PreviousTime = CurrentTime
+
+    Call UpdateFrameRate(Elapsed)
+
     Get Key KeyValue
 
     If KeyValue = KEY_ESCAPE Then
@@ -44,9 +55,20 @@ Do
         Paused = Not Paused
     Else If KeyValue = KEY_W Then
         Call RestartEncounter()
+    Else If KeyValue = KEY_D Then
+        ShowFps = Not ShowFps
     Else
 
         Call HandleBattleCommand(KeyValue)
+    End If
+
+    ReadyPlayer = Battle.NextReadyPlayer()
+    InterfacePointerBlocked = (ReadyPlayer > 0 And
+        Pointer_Y() >= 335 And
+        Pointer_Y() < 414)
+
+    If RendererAvailable And EncounterReady Then
+        Call Scene.HandleCameraPointer(InterfacePointerBlocked, Paused)
     End If
 
     If EncounterReady And Not Paused Then
@@ -107,11 +129,26 @@ Sub StartEncounter()
     End If
 
     If EncounterReady Then
-        Play Music "Assets\BattleTheme.wav" Loop
+        Play Music "Assets\Music\Starforge Ascend.mp3" Loop
     End If
 
     GlobalStep = 0
     Accumulator = 0
+
+End Sub
+
+Sub UpdateFrameRate(FrameMilliseconds As Number)
+
+    FpsFrames = FpsFrames + 1
+    FpsElapsed = FpsElapsed + FrameMilliseconds
+
+    If FpsElapsed >= 500 Then
+
+        DisplayedFps = FpsFrames * 1000 / Max(1, FpsElapsed)
+        FpsFrames = 0
+        FpsElapsed = 0
+
+    End If
 
 End Sub
 
@@ -130,6 +167,12 @@ Sub RestartEncounter()
 End Sub
 
 Sub PlayVisualSound()
+
+    ''' Keep generated tones muted until the sampled effects package lands.
+
+    If Not PREVIEW_SYNTHETIC_SFX_ENABLED Then
+        Return
+    End If
 
     If Battle.VisualStep() <> 1 Then
         Return
@@ -221,9 +264,17 @@ Sub DrawFrame()
 
     Call DrawHud()
 
-    Fill Rectangle 175, 68, 610, 46, Rgb(8, 3, 18)
-    Draw Rectangle 175, 68, 610, 46, ORANGE
-    Draw Text Battle.Message() At 480, 79 Size 20 Color WHITE Centered
+    If ShowFps Then
+
+        Fill Rectangle 860, 6, 90, 24, Rgb(8, 3, 18)
+        Draw Text "FPS" At 870, 11 Size 12 Color LIGHT_GRAY
+        Draw Number DisplayedFps At 918, 8 Size 16 Color LIGHT_GREEN
+
+    End If
+
+    Fill Rectangle 16, 72, 300, 32, Rgb(8, 3, 18)
+    Draw Rectangle 16, 72, 300, 32, ORANGE
+    Draw Text Battle.Message() At 28, 81 Size 13 Color WHITE
 
     ReadyPlayer = Battle.NextReadyPlayer()
 
@@ -237,7 +288,11 @@ Sub DrawFrame()
     End If
 
     If Battle.DamageNumber() <> 0 Then
-        Draw Number Abs(Battle.DamageNumber()) At 450, 140 Size 42 Color YELLOW
+
+        Fill Rectangle 16, 108, 132, 24, Rgb(8, 3, 18)
+        Draw Text "IMPACT" At 27, 114 Size 11 Color ORANGE
+        Draw Number Abs(Battle.DamageNumber()) At 99, 111 Size 15 Color YELLOW
+
     End If
 
     If Battle.Outcome() = BattleCore.BATTLE_OUTCOME_VICTORY Then
@@ -261,20 +316,45 @@ Sub DrawFrame()
 
     End If
 
-    Draw Text "SPACE PAUSE  //  W RESTART  //  ESC EXIT" At 480, 518 Size 13 Color LIGHT_GRAY Centered
+    Draw Text "D FPS  //  LEFT DRAG PAN  MIDDLE DRAG ORBIT  WHEEL ZOOM  //  SPACE PAUSE  W RESTART" At 480, 518 Size 12 Color LIGHT_GRAY Centered
 
 End Sub
 
 Sub DrawHud()
 
-    Dim BossWidth As Number
+    Dim EnemyRow As Number
+    Dim EnemyLabelWidth As Number
 
     Fill Rectangle 0, 0, 960, 62, Rgb(8, 3, 18)
-    Draw Text "ASHWING // CALDERA TYRANT" At 480, 7 Size 19 Color ORANGE Centered
-    Fill Rectangle 175, 35, 610, 16, Rgb(52, 12, 19)
-    BossWidth = Max(0, Battle.Health(Battle.PARTICIPANT_ASHWING) * 606 / Battle.MaximumHealth(Battle.PARTICIPANT_ASHWING))
-    Fill Rectangle 177, 37, BossWidth, 12, Rgb(255, 52, 16)
-    Draw Rectangle 175, 35, 610, 16, Rgb(255, 174, 50)
+
+    EnemyRow = 0
+    EnemyLabelWidth = 140
+
+    If Battle.EnemyIsActive(Battle.PARTICIPANT_ASHWING) Then
+        EnemyLabelWidth = 216
+    End If
+
+    If Battle.EnemyIsActive(Battle.PARTICIPANT_CINDERLING_ONE) Then
+        Call DrawEnemyHealthRow(Battle.PARTICIPANT_CINDERLING_ONE, "CINDERLING ALPHA", EnemyRow, EnemyLabelWidth, Rgb(255, 118, 38))
+
+        EnemyRow = EnemyRow + 1
+    End If
+
+    If Battle.EnemyIsActive(Battle.PARTICIPANT_CINDERLING_TWO) Then
+        Call DrawEnemyHealthRow(Battle.PARTICIPANT_CINDERLING_TWO, "CINDERLING BETA", EnemyRow, EnemyLabelWidth, Rgb(255, 145, 46))
+
+        EnemyRow = EnemyRow + 1
+    End If
+
+    If Battle.EnemyIsActive(Battle.PARTICIPANT_CINDERLING_THREE) Then
+        Call DrawEnemyHealthRow(Battle.PARTICIPANT_CINDERLING_THREE, "CINDERLING GAMMA", EnemyRow, EnemyLabelWidth, Rgb(255, 174, 50))
+
+        EnemyRow = EnemyRow + 1
+    End If
+
+    If Battle.EnemyIsActive(Battle.PARTICIPANT_ASHWING) Then
+        Call DrawEnemyHealthRow(Battle.PARTICIPANT_ASHWING, "ASHWING // CALDERA TYRANT", EnemyRow, EnemyLabelWidth, Rgb(255, 174, 50))
+    End If
 
     Call DrawHeroPanel(Battle.PARTICIPANT_ARIN, "ARIN", 8, Rgb(220, 35, 48))
     Call DrawHeroPanel(Battle.PARTICIPANT_TOR, "TOR", 165, Rgb(232, 145, 26))
@@ -290,22 +370,82 @@ Sub DrawHud()
 
 End Sub
 
-Sub DrawHeroPanel(Participant As Number, Name As Text, X As Number, Accent As Number)
+Sub DrawEnemyHealthRow(
+    Participant As Number,
+    Name As Text,
+    Row As Number,
+    NameWidth As Number,
+    Accent As Number
+)
 
+    Dim Y As Number
+    Dim BarX As Number
+    Dim BarWidth As Number
     Dim HealthWidth As Number
-    Dim GaugeWidth As Number
+    Dim MagicWidth As Number
+    Dim ValueX As Number
+
+    Y = 8 + Row * 18
+    BarX = 14 + NameWidth
+    BarWidth = 780 - BarX
+    HealthWidth = Max(0, Battle.Health(Participant) * (BarWidth - 4) / Battle.MaximumHealth(Participant))
+    ValueX = BarX + BarWidth - 92
+
+    Draw Text Name At 14, Y Size 12 Color Accent
+    Fill Rectangle BarX, Y + 1, BarWidth, 13, Rgb(52, 12, 19)
+    Fill Rectangle BarX + 2, Y + 3, HealthWidth, 9, Rgb(255, 52, 16)
+    Draw Rectangle BarX, Y + 1, BarWidth, 13, Accent
+
+    Draw Number Battle.Health(Participant) At ValueX + 1, Y + 3 Size 10 Color BLACK
+    Draw Text "/" At ValueX + 37, Y + 3 Size 10 Color BLACK
+    Draw Number Battle.MaximumHealth(Participant) At ValueX + 49, Y + 3 Size 10 Color BLACK
+    Draw Number Battle.Health(Participant) At ValueX, Y + 2 Size 10 Color WHITE
+    Draw Text "/" At ValueX + 36, Y + 2 Size 10 Color WHITE
+    Draw Number Battle.MaximumHealth(Participant) At ValueX + 48, Y + 2 Size 10 Color WHITE
+
+    If Battle.MaximumMagicPoints(Participant) > 0 Then
+
+        MagicWidth = Max(0, Battle.MagicPoints(Participant) * BarWidth / Battle.MaximumMagicPoints(Participant))
+        Fill Rectangle BarX, Y + 15, BarWidth, 2, Rgb(8, 26, 62)
+        Fill Rectangle BarX, Y + 15, MagicWidth, 2, Rgb(35, 145, 255)
+
+    End If
+
+End Sub
+
+Sub DrawHeroPanel(Participant As Number, Name As Text, X As Number, Accent As Number)
 
     Fill Rectangle X, 424, 150, 78, Rgb(8, 3, 18)
     Draw Rectangle X, 424, 150, 78, Accent
-    Draw Text Name At X + 12, 433 Size 17 Color WHITE
-    Draw Number Battle.Health(Participant) At X + 79, 432 Size 16 Color WHITE
-    Draw Text "MP" At X + 12, 447 Size 10 Color LIGHT_BLUE
-    Draw Number Battle.MagicPoints(Participant) At X + 42, 444 Size 13 Color LIGHT_BLUE
-    HealthWidth = Max(0, Battle.Health(Participant) * 126 / Battle.MaximumHealth(Participant))
-    Fill Rectangle X + 12, 459, 126, 9, Rgb(42, 20, 30)
-    Fill Rectangle X + 12, 459, HealthWidth, 9, Accent
-    GaugeWidth = Max(0, Battle.Gauge(Participant) * 126 / BattleTime.BATTLE_TIME_GAUGE_MAXIMUM)
-    Fill Rectangle X + 12, 478, 126, 8, Rgb(18, 34, 54)
-    Fill Rectangle X + 12, 478, GaugeWidth, 8, Rgb(75, 220, 255)
+    Draw Text Name At X + 10, 430 Size 14 Color WHITE
+
+    Call DrawHeroGauge("HP", X, 448, Battle.Health(Participant), Battle.MaximumHealth(Participant), Accent)
+    Call DrawHeroGauge("MP", X, 463, Battle.MagicPoints(Participant), Battle.MaximumMagicPoints(Participant), Rgb(35, 145, 255))
+    Call DrawHeroGauge("ATB", X, 478, Battle.Gauge(Participant), BattleTime.BATTLE_TIME_GAUGE_MAXIMUM, Rgb(75, 220, 255))
+
+End Sub
+
+Sub DrawHeroGauge(Label As Text, X As Number, Y As Number, Current As Number, Maximum As Number, FillColor As Number)
+
+    Dim BarX As Number
+    Dim BarWidth As Number
+    Dim FilledWidth As Number
+    Dim ValueX As Number
+
+    BarX = X + 36
+    BarWidth = 104
+    FilledWidth = 0
+
+    If Maximum > 0 Then
+        FilledWidth = Max(0, Min(BarWidth, Current * BarWidth / Maximum))
+    End If
+
+    ValueX = BarX + BarWidth - 34
+    Draw Text Label At X + 8, Y Size 8 Color LIGHT_GRAY
+    Fill Rectangle BarX, Y, BarWidth, 9, Rgb(18, 20, 34)
+    Fill Rectangle BarX + 1, Y + 1, Max(0, FilledWidth - 2), 7, FillColor
+    Draw Rectangle BarX, Y, BarWidth, 9, Rgb(80, 88, 112)
+    Draw Number Current At ValueX + 1, Y + 1 Size 8 Color BLACK
+    Draw Number Current At ValueX, Y Size 8 Color WHITE
 
 End Sub

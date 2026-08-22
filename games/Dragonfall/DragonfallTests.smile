@@ -17,6 +17,9 @@ Dim SawAttack As Boolean
 Dim SawSpell As Boolean
 Dim SawHeal As Boolean
 Dim SawDefend As Boolean
+Dim SawItem As Boolean
+Dim SawFlame As Boolean
+Dim SawFrost As Boolean
 Dim SawLyraAttack As Boolean
 Dim SawClaw As Boolean
 Dim SawBreath As Boolean
@@ -24,11 +27,15 @@ Dim SawTail As Boolean
 Dim SawEnrage As Boolean
 Dim SawVictory As Boolean
 Dim SawDefeat As Boolean
+Dim SawCinderling As Boolean
+Dim SawBossEntrance As Boolean
 
 Outcome = RunBattle(STRATEGY_WIN, True, MAX_BATTLE_STEPS)
 
 Call Check(Outcome = BattleCore.BATTLE_OUTCOME_VICTORY)
-Call Check(SawAttack And SawSpell And SawHeal And SawDefend)
+Call Check(SawCinderling And SawBossEntrance)
+Call Check(SawAttack And SawSpell And SawHeal And SawDefend And SawItem)
+Call Check(SawFlame And SawFrost)
 Call Check(SawLyraAttack)
 Call Check(SawClaw And SawBreath And SawTail)
 Call Check(SawEnrage And SawVictory)
@@ -71,19 +78,29 @@ Sub ObserveVisual()
 
     If Battle.Visual() = Battle.VISUAL_ARIN_ATTACK Then
         SawAttack = True
+    Else If Battle.Visual() = Battle.VISUAL_MIRA_FLAME Then
+        SawSpell = True
+        SawFlame = True
+    Else If Battle.Visual() = Battle.VISUAL_MIRA_FROST Then
+        SawSpell = True
+        SawFrost = True
     Else If (Battle.Visual() = Battle.VISUAL_ARIN_EMBER Or
-        Battle.Visual() = Battle.VISUAL_MIRA_FLAME Or
-        Battle.Visual() = Battle.VISUAL_MIRA_FROST Or
         Battle.Visual() = Battle.VISUAL_TOR_BASH) Then
         SawSpell = True
     Else If Battle.Visual() = Battle.VISUAL_LYRA_MEND Then
         SawHeal = True
     Else If Battle.Visual() = Battle.VISUAL_LYRA_ATTACK Then
         SawLyraAttack = True
+    Else If Battle.Visual() = Battle.VISUAL_ITEM Then
+        SawItem = True
     Else If Battle.Visual() = Battle.VISUAL_DEFEND Then
         SawDefend = True
     Else If Battle.Visual() = Battle.VISUAL_DRAGON_CLAW Then
         SawClaw = True
+    Else If Battle.Visual() = Battle.VISUAL_CINDERLING_ATTACK Then
+        SawCinderling = True
+    Else If Battle.Visual() = Battle.VISUAL_BOSS_ENTRANCE Then
+        SawBossEntrance = True
     Else If Battle.Visual() = Battle.VISUAL_DRAGON_BREATH Then
         SawBreath = True
     Else If Battle.Visual() = Battle.VISUAL_DRAGON_TAIL Then
@@ -141,15 +158,23 @@ Function RunBattle(Strategy As Number, Observe As Boolean, MaximumSteps As Numbe
                     Command = Battle.COMMAND_ATTACK
                 Else If ArinDecision = 2 Then
                     Command = Battle.COMMAND_DEFEND
-                Else
+                Else If ArinDecision = 3 Then
                     Command = Battle.COMMAND_SPECIAL
+                Else
+                    Command = Battle.COMMAND_SKILL_ONE
                 End If
 
             Else If ReadyPlayer = Battle.PARTICIPANT_MIRA Then
 
                 MiraDecision = MiraDecision + 1
 
-                Command = Battle.COMMAND_SPECIAL
+                If MiraDecision = 1 Then
+                    Command = Battle.COMMAND_SKILL_ONE
+                Else If MiraDecision = 2 Then
+                    Command = Battle.COMMAND_SKILL_TWO
+                Else
+                    Command = Battle.COMMAND_SPECIAL
+                End If
 
             Else If ReadyPlayer = Battle.PARTICIPANT_TOR Then
 
@@ -157,8 +182,12 @@ Function RunBattle(Strategy As Number, Observe As Boolean, MaximumSteps As Numbe
 
                 If TorDecision = 1 Then
                     Command = Battle.COMMAND_ATTACK
-                Else
+                Else If TorDecision = 2 Then
                     Command = Battle.COMMAND_SPECIAL
+                Else If TorDecision = 3 Then
+                    Command = Battle.COMMAND_SKILL_ONE
+                Else
+                    Command = Battle.COMMAND_SKILL_ONE
                 End If
 
             Else If ReadyPlayer = Battle.PARTICIPANT_LYRA Then
@@ -169,11 +198,20 @@ Function RunBattle(Strategy As Number, Observe As Boolean, MaximumSteps As Numbe
 
                 If LyraDecision = 1 Then
                     Command = Battle.COMMAND_ATTACK
+                Else If LyraDecision = 2 Then
+                    Command = Battle.COMMAND_ITEM
+                Else If LyraDecision = 3 Then
+                    Command = Battle.COMMAND_SKILL_ONE
+                Else If (Battle.Health(Battle.PARTICIPANT_ASHWING) * 100 <
+                    Battle.MaximumHealth(Battle.PARTICIPANT_ASHWING) * 10) Then
+                    Command = Battle.COMMAND_ATTACK
                 Else If (Lowest > 0 And
                     Battle.Health(Lowest) * 100 < Battle.MaximumHealth(Lowest) * 75) Then
                     Command = Battle.COMMAND_HEAL
+                Else If LyraDecision Mod 3 = 0 Then
+                    Command = Battle.COMMAND_ATTACK
                 Else
-                    Command = Battle.COMMAND_SPECIAL
+                    Command = Battle.COMMAND_SKILL_ONE
                 End If
 
             End If

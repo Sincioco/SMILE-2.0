@@ -9,7 +9,7 @@ IDs are stable for one active battle.
 
 ## `Smile.RPG.BattleCore`
 
-Capacities are four active party members, eight enemy instances, four enemy groups, twelve total participants, 64 enemy definitions, 32 formations, eight enemies per formation, eight statuses per participant, and 256 events. One RPG state can own at most one active battle.
+Capacities are four active party members, eight enemy instances, four enemy groups, twelve total participants, 64 enemy definitions, 32 formations, eight enemies per formation, eight statuses per participant, and 1,024 events. One RPG state can own at most one active battle.
 
 `EnemyDefinition` supplies HP, MP, six battle statistics, Experience, Gold, and an AI profile ID. `FormationDefinition` supplies a stable ID, name, and escape chance from 0 through 100. `FormationMemberDefinition` assigns an enemy definition to one formation group and logical slot.
 

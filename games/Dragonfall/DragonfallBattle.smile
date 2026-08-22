@@ -16,7 +16,10 @@ Public Const PARTICIPANT_ARIN = 1
 Public Const PARTICIPANT_TOR = 2
 Public Const PARTICIPANT_LYRA = 3
 Public Const PARTICIPANT_MIRA = 4
-Public Const PARTICIPANT_ASHWING = 5
+Public Const PARTICIPANT_CINDERLING_ONE = 5
+Public Const PARTICIPANT_CINDERLING_TWO = 6
+Public Const PARTICIPANT_CINDERLING_THREE = 7
+Public Const PARTICIPANT_ASHWING = 8
 
 Public Const VISUAL_IDLE = 0
 Public Const VISUAL_ARIN_ATTACK = 1
@@ -35,12 +38,16 @@ Public Const VISUAL_VICTORY = 13
 Public Const VISUAL_DEFEAT = 14
 Public Const VISUAL_LYRA_ATTACK = 15
 Public Const VISUAL_LYRA_MEND = 16
+Public Const VISUAL_CINDERLING_ATTACK = 17
+Public Const VISUAL_BOSS_ENTRANCE = 18
 
 Public Const COMMAND_ATTACK = 1
 Public Const COMMAND_SPECIAL = 2
 Public Const COMMAND_HEAL = 3
 Public Const COMMAND_DEFEND = 4
 Public Const COMMAND_ITEM = 5
+Public Const COMMAND_SKILL_ONE = 6
+Public Const COMMAND_SKILL_TWO = 7
 
 Public Const EFFECT_SLASH = 1
 Public Const EFFECT_FIRE = 2
@@ -56,6 +63,7 @@ Private Const CHARACTER_ARIN = 100
 Private Const CHARACTER_MIRA = 101
 Private Const CHARACTER_TOR = 102
 Private Const CHARACTER_LYRA = 103
+Private Const ENEMY_CINDERLING = 199
 Private Const ENEMY_ASHWING = 200
 Private Const FORMATION_ASHWING = 300
 Private Const ITEM_CINDER_TONIC = 400
@@ -76,6 +84,7 @@ Private Const MECHANIC_TAIL = 606
 Private Const MECHANIC_TONIC = 607
 Private Const ACTION_VISUAL_STEPS = 72
 Private Const ENRAGE_VISUAL_STEPS = 150
+Private Const BOSS_ENTRANCE_VISUAL_STEPS = 240
 Private Const RESULT_VISUAL_STEPS = 360
 
 Private Dim State As Number
@@ -88,6 +97,8 @@ Private Dim CurrentDamage As Number
 Private Dim CurrentMessage As Text
 Private Dim PhaseTwo As Boolean
 Private Dim PhaseTwoPending As Boolean
+Private Dim BossIntroduced As Boolean
+Private Dim BossIntroductionPending As Boolean
 Private Dim ResultShown As Boolean
 Private Dim EventStart As Number
 Private Dim Character As Characters.CharacterDefinition
@@ -119,9 +130,11 @@ Public Function Initialize() As Boolean
 
     CurrentVisual = VISUAL_IDLE
     CurrentVisualStep = 0
-    CurrentMessage = "ASHWING DESCENDS"
+    CurrentMessage = "THREE CINDERLINGS BLOCK THE WAY"
     PhaseTwo = False
     PhaseTwoPending = False
+    BossIntroduced = False
+    BossIntroductionPending = False
     ResultShown = False
     Return True
 
@@ -255,6 +268,24 @@ Private Function DefineBoss() As Boolean
 
     Dim ReturnValue As Boolean
 
+    Enemy.Id = ENEMY_CINDERLING
+    Enemy.Name = "Cinderling"
+    Enemy.MaximumHealth = 210
+    Enemy.MaximumMagicPoints = 0
+    Enemy.Strength = 26
+    Enemy.Defense = 12
+    Enemy.Magic = 8
+    Enemy.Resistance = 10
+    Enemy.Agility = 38
+    Enemy.Luck = 5
+    Enemy.ExperienceReward = 35
+    Enemy.GoldReward = 20
+    Enemy.AiProfileId = 1
+
+    If Not BattleCore.DefineEnemy(State, Enemy) Then
+        Return False
+    End If
+
     Enemy.Id = ENEMY_ASHWING
     Enemy.Name = "Ashwing, Caldera Tyrant"
     Enemy.MaximumHealth = 3000
@@ -282,9 +313,29 @@ Private Function DefineBoss() As Boolean
     End If
 
     Member.FormationId = FORMATION_ASHWING
-    Member.EnemyId = ENEMY_ASHWING
+    Member.EnemyId = ENEMY_CINDERLING
     Member.GroupId = 1
     Member.SlotId = 1
+
+    If Not BattleCore.AddFormationMember(State, Member) Then
+        Return False
+    End If
+
+    Member.SlotId = 2
+
+    If Not BattleCore.AddFormationMember(State, Member) Then
+        Return False
+    End If
+
+    Member.SlotId = 3
+
+    If Not BattleCore.AddFormationMember(State, Member) Then
+        Return False
+    End If
+
+    Member.EnemyId = ENEMY_ASHWING
+    Member.GroupId = 2
+    Member.SlotId = 4
     ReturnValue = BattleCore.AddFormationMember(State, Member)
 
     Return ReturnValue
@@ -327,6 +378,9 @@ Private Sub BuildActionVisual(FirstEvent As Number)
                 Call StartVisual(VISUAL_MIRA_FLAME, ActorId, TargetId, "MIRA // ARCANE BOLT", ACTION_VISUAL_STEPS)
             Else If ActorId = PARTICIPANT_LYRA Then
                 Call StartVisual(VISUAL_LYRA_ATTACK, ActorId, TargetId, "LYRA // GALE LANCE", ACTION_VISUAL_STEPS)
+            Else If (ActorId >= PARTICIPANT_CINDERLING_ONE And
+                ActorId <= PARTICIPANT_CINDERLING_THREE) Then
+                Call StartVisual(VISUAL_CINDERLING_ATTACK, ActorId, TargetId, "CINDERLING // ASHEN RUSH", ACTION_VISUAL_STEPS)
             Else
 
                 Call StartVisual(VISUAL_DRAGON_CLAW, ActorId, TargetId, "ASHWING // OBSIDIAN CLAW", ACTION_VISUAL_STEPS)
@@ -354,7 +408,9 @@ Private Sub BuildActionVisual(FirstEvent As Number)
 
         Else If Kind = BattleCore.BATTLE_EVENT_DEFEND Then
 
-            Call StartVisual(VISUAL_DEFEND, ActorId, 0, BattleCore.EventTextAt(State, Index), 48)
+            If ActorId <> PARTICIPANT_ASHWING Or BossIntroduced Then
+                Call StartVisual(VISUAL_DEFEND, ActorId, 0, BattleCore.EventTextAt(State, Index), 48)
+            End If
 
         Else If Kind = BattleCore.BATTLE_EVENT_ITEM Then
 
@@ -380,6 +436,7 @@ Private Sub SubmitBossIfReady()
 
     Dim EnemyParticipant As Number
     Dim Round As Number
+    Dim TargetParticipant As Number
     Dim Accepted As Boolean
 
     EnemyParticipant = BattleTime.NextReadyEnemy(State)
@@ -388,14 +445,27 @@ Private Sub SubmitBossIfReady()
         Return
     End If
 
+    If EnemyParticipant <= PARTICIPANT_CINDERLING_THREE Then
+        Accepted = BattleTime.SubmitReadyEnemyAttack(State, EnemyParticipant, LowestLivingParty())
+
+        Return
+    End If
+
+    If Not BossIntroduced Then
+        Accepted = BattleTime.SubmitAction(State, EnemyParticipant, BattleCore.BATTLE_ACTION_DEFEND, 0, 0)
+
+        Return
+    End If
+
     Round = BattleCore.RoundNumber(State) + 1
+    TargetParticipant = LowestLivingParty()
 
     If PhaseTwo And Round Mod 2 = 0 Then
-        Accepted = BattleTime.SubmitAction(State, EnemyParticipant, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_TAIL_SWEEP, PARTICIPANT_ARIN)
+        Accepted = BattleTime.SubmitAction(State, EnemyParticipant, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_TAIL_SWEEP, TargetParticipant)
     Else If Round Mod 3 = 0 Or PhaseTwo Then
-        Accepted = BattleTime.SubmitAction(State, EnemyParticipant, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_FIRE_BREATH, PARTICIPANT_ARIN)
+        Accepted = BattleTime.SubmitAction(State, EnemyParticipant, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_FIRE_BREATH, TargetParticipant)
     Else
-        Accepted = BattleTime.SubmitReadyEnemyAttack(State, EnemyParticipant, LowestLivingParty())
+        Accepted = BattleTime.SubmitReadyEnemyAttack(State, EnemyParticipant, TargetParticipant)
     End If
 
 End Sub
@@ -416,6 +486,23 @@ Public Sub Update()
             CurrentDamage = 0
 
         End If
+
+        Return
+
+    End If
+
+    If BossIntroductionPending Then
+
+        BossIntroductionPending = False
+        BossIntroduced = True
+
+        Call StartVisual(
+            VISUAL_BOSS_ENTRANCE,
+            PARTICIPANT_ASHWING,
+            0,
+            "ASHWING // THE SKY BREAKS OPEN",
+            BOSS_ENTRANCE_VISUAL_STEPS
+        )
 
         Return
 
@@ -460,7 +547,15 @@ Public Sub Update()
 
             Call BuildActionVisual(EventStart)
 
-            If (Not PhaseTwo And
+            If (Not BossIntroduced And
+                Not BattleCore.IsAlive(State, PARTICIPANT_CINDERLING_ONE) And
+                Not BattleCore.IsAlive(State, PARTICIPANT_CINDERLING_TWO) And
+                Not BattleCore.IsAlive(State, PARTICIPANT_CINDERLING_THREE)) Then
+                BossIntroductionPending = True
+            End If
+
+            If (BossIntroduced And
+                Not PhaseTwo And
                 BattleCore.Health(State, PARTICIPANT_ASHWING) * 10 <= BattleCore.MaximumHealth(State, PARTICIPANT_ASHWING) * 7 And
                 BattleCore.IsAlive(State, PARTICIPANT_ASHWING)) Then
                 PhaseTwoPending = True
@@ -482,15 +577,38 @@ Public Sub Update()
 
 End Sub
 
+Private Function FirstLivingEnemy() As Number
+
+    Dim ParticipantId As Number
+
+    For ParticipantId = PARTICIPANT_CINDERLING_ONE To PARTICIPANT_CINDERLING_THREE
+
+        If BattleCore.IsAlive(State, ParticipantId) Then
+            Return ParticipantId
+        End If
+
+    End For
+
+    If BossIntroduced And BattleCore.IsAlive(State, PARTICIPANT_ASHWING) Then
+        Return PARTICIPANT_ASHWING
+    End If
+
+    Return 0
+
+End Function
+
 Public Function SubmitPlayerCommand(ParticipantId As Number, Command As Number) As Boolean
 
     Dim ReturnValue As Boolean
+    Dim EnemyTarget As Number
 
     If (ParticipantId <= 0 Or
         ParticipantId > PARTICIPANT_MIRA Or
         Not BattleTime.IsReady(State, ParticipantId)) Then
         Return False
     End If
+
+    EnemyTarget = FirstLivingEnemy()
 
     If Command = COMMAND_DEFEND Then
 
@@ -514,13 +632,13 @@ Public Function SubmitPlayerCommand(ParticipantId As Number, Command As Number) 
 
         If ParticipantId = PARTICIPANT_ARIN Then
 
-            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_AEGIS_BREAK, PARTICIPANT_ASHWING)
+            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_AEGIS_BREAK, EnemyTarget)
 
             Return ReturnValue
 
         Else If ParticipantId = PARTICIPANT_TOR Then
 
-            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_METEOR_BARRAGE, PARTICIPANT_ASHWING)
+            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_METEOR_BARRAGE, EnemyTarget)
 
             Return ReturnValue
 
@@ -533,20 +651,50 @@ Public Function SubmitPlayerCommand(ParticipantId As Number, Command As Number) 
         Else If ParticipantId = PARTICIPANT_MIRA Then
 
             If BattleCore.RoundNumber(State) Mod 2 = 0 Then
-                ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_FLAME, PARTICIPANT_ASHWING)
+                ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_FLAME, EnemyTarget)
 
                 Return ReturnValue
             End If
 
-            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_FROST, PARTICIPANT_ASHWING)
+            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_FROST, EnemyTarget)
 
             Return ReturnValue
 
         End If
 
+    Else If Command = COMMAND_SKILL_ONE Then
+
+        If ParticipantId = PARTICIPANT_ARIN Then
+            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_AEGIS_BREAK, EnemyTarget)
+
+            Return ReturnValue
+        Else If ParticipantId = PARTICIPANT_TOR Then
+            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_METEOR_BARRAGE, EnemyTarget)
+
+            Return ReturnValue
+        Else If ParticipantId = PARTICIPANT_LYRA Then
+            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_MEND, LowestHealthParty())
+
+            Return ReturnValue
+        Else If ParticipantId = PARTICIPANT_MIRA Then
+            ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_FLAME, EnemyTarget)
+
+            Return ReturnValue
+        End If
+
+    Else If Command = COMMAND_SKILL_TWO And ParticipantId = PARTICIPANT_MIRA Then
+
+        ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ABILITY, ABILITY_FROST, EnemyTarget)
+
+        Return ReturnValue
+
     End If
 
-    ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ATTACK, 0, PARTICIPANT_ASHWING)
+    If EnemyTarget = 0 Then
+        Return False
+    End If
+
+    ReturnValue = BattleTime.SubmitAction(State, ParticipantId, BattleCore.BATTLE_ACTION_ATTACK, 0, EnemyTarget)
 
     Return ReturnValue
 
@@ -651,6 +799,48 @@ End Function
 Public Function IsPhaseTwo() As Boolean
 
     Return PhaseTwo
+
+End Function
+
+Public Function BossIsIntroduced() As Boolean
+
+    Return BossIntroduced
+
+End Function
+
+Public Function EnemyIsActive(ParticipantId As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    If (ParticipantId < PARTICIPANT_CINDERLING_ONE Or
+        ParticipantId > PARTICIPANT_ASHWING) Then
+        Return False
+    End If
+
+    If ParticipantId = PARTICIPANT_ASHWING And Not BossIntroduced Then
+        Return False
+    End If
+
+    ReturnValue = BattleCore.IsAlive(State, ParticipantId)
+
+    Return ReturnValue
+
+End Function
+
+Public Function ActiveEnemyCount() As Number
+
+    Dim ParticipantId As Number
+    Dim EnemyCount As Number
+
+    For ParticipantId = PARTICIPANT_CINDERLING_ONE To PARTICIPANT_ASHWING
+
+        If EnemyIsActive(ParticipantId) Then
+            EnemyCount = EnemyCount + 1
+        End If
+
+    End For
+
+    Return EnemyCount
 
 End Function
 

@@ -16,6 +16,7 @@ Dim StableMaterials As Number
 Dim StableTextures As Number
 Dim Ready As Boolean
 Dim CameraReady As Boolean
+Dim Projected As BattleCamera.ProjectedPoint3D
 
 Game Window "Dragonfall Lifecycle Tests" Size 480 By 270
 
@@ -65,6 +66,21 @@ For Cycle = 1 To RESTART_COUNT
                 BattleCamera.PositionX(Battle.StateHandle()) >= 0 Or
                 BattleCamera.PositionZ(Battle.StateHandle()) > -600 Or
                 BattleCamera.FovDegrees(Battle.StateHandle()) < 50) Then
+                Failures = Failures + 1
+            End If
+
+            CameraReady = BattleCamera.PlayShot(Battle.StateHandle(), Scene.SHOT_WIDE, 1)
+
+            If CameraReady Then
+                CameraReady = BattleCamera.Update(Battle.StateHandle(), 1)
+            End If
+
+            Projected = BattleCamera.ProjectWorldPoint(Battle.StateHandle(), -390, 72, -225, 960, 540)
+
+            If (Not CameraReady Or
+                Not Projected.Visible Or
+                Scene.ArenaPointerAvailable(Projected.X, Projected.Y) Or
+                Scene.ArenaPointerAvailable(480, 50)) Then
                 Failures = Failures + 1
             End If
 

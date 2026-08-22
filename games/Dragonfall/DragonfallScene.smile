@@ -4,6 +4,7 @@ Module Dragonfall.Scene
 Option Explicit
 
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.FixedMath As Math3D
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Battle3D.Camera As BattleCamera
 Import Smile.Battle3D.Effects As BattleEffects
@@ -19,10 +20,15 @@ Public Const SHOT_BREATH = 7
 Public Const SHOT_ENRAGE = 8
 Public Const SHOT_DEATH = 9
 Public Const SHOT_VICTORY = 10
+Public Const SHOT_BOSS_ENTRANCE = 11
+Public Const SHOT_IDLE_PARTY_BACK = 12
 
 Private Const ARENA_OBJECT_COUNT = 12
 Private Const PARTY_OBJECT_COUNT = 32
 Private Const DRAGON_OBJECT_COUNT = 22
+Private Const CINDERLING_COUNT = 3
+Private Const CINDERLING_PARTS_PER_ENEMY = 10
+Private Const CINDERLING_OBJECT_COUNT = 30
 Private Const PARTICLE_OBJECT_COUNT = 64
 
 Private Dim State As Number
@@ -46,6 +52,7 @@ Private Dim ParticleMaterial As Core.Material3D
 Private Dim Arena[12] As Core.Object3D
 Private Dim PartyParts[32] As Core.Object3D
 Private Dim DragonParts[22] As Core.Object3D
+Private Dim CinderlingParts[30] As Core.Object3D
 Private Dim ParticleTemplate As Core.Object3D
 Private Dim ParticleObjects[64] As Core.Object3D
 Private Dim LastVisual As Number
@@ -55,7 +62,14 @@ Private Dim OperationAccepted As Boolean
 Private Dim LastArinOffset As Number
 Private Dim LastTorOffset As Number
 Private Dim LastLyraOffset As Number
-Private Dim LastDragonOffset As Number
+Private Dim LastDragonOffsetX As Number
+Private Dim LastDragonOffsetY As Number
+Private Dim LastDragonOffsetZ As Number
+Private Dim LastCinderlingOffset[3] As Number
+Private Dim CameraInputAccepted As Boolean
+Private Dim LastFramedEnemyCount As Number
+Private Dim LastBossFramed As Boolean
+Private Dim CurrentActionShot As Number
 
 Private Function Material(
     RedValue As Number,
@@ -186,54 +200,64 @@ End Sub
 
 Private Sub CreateArena()
 
-    Arena[0] = Graphics3D.CreatePlane3D(920, 720)
+    Arena[0] = Graphics3D.CreatePlane3D(2100, 1450)
     OperationAccepted = Graphics3D.SetObjectMaterial3D(Arena[0], FloorMaterial)
 
     Call Graphics3D.SetObjectPosition(Arena[0], 0, -55, 30)
 
-    Arena[1] = Graphics3D.CreateTorus3D(330, 11)
+    Arena[1] = Graphics3D.CreateTorus3D(690, 15)
 
     Call Configure(Arena[1], LavaMaterial, 0, -42, 30, 100, 100, 100)
 
-    Arena[2] = Graphics3D.CreateTorus3D(265, 5)
+    Arena[2] = Graphics3D.CreateTorus3D(555, 7)
 
     Call Configure(Arena[2], BronzeMaterial, 0, -38, 30, 100, 100, 100)
 
     Arena[3] = Graphics3D.CreateCube3D(100)
 
-    Call Configure(Arena[3], LavaMaterial, 0, -43, 30, 690, 8, 5)
+    Call Configure(Arena[3], LavaMaterial, 0, -43, 30, 1500, 8, 5)
 
     Arena[4] = Graphics3D.CreateCube3D(100)
 
-    Call Configure(Arena[4], LavaMaterial, 0, -43, 30, 5, 8, 560)
+    Call Configure(Arena[4], LavaMaterial, 0, -43, 30, 5, 8, 1120)
 
     Arena[5] = Graphics3D.CreateCylinder3D(28, 180)
 
-    Call Configure(Arena[5], StoneMaterial, -365, 30, -235, 100, 100, 100)
+    Call Configure(Arena[5], StoneMaterial, -780, 30, -520, 125, 150, 125)
 
     Arena[6] = Graphics3D.CreateCylinder3D(28, 180)
 
-    Call Configure(Arena[6], StoneMaterial, 365, 30, -235, 100, 100, 100)
+    Call Configure(Arena[6], StoneMaterial, 780, 30, -520, 125, 150, 125)
 
     Arena[7] = Graphics3D.CreateCylinder3D(28, 180)
 
-    Call Configure(Arena[7], StoneMaterial, -365, 30, 295, 100, 100, 100)
+    Call Configure(Arena[7], StoneMaterial, -780, 30, 580, 125, 150, 125)
 
     Arena[8] = Graphics3D.CreateCylinder3D(28, 180)
 
-    Call Configure(Arena[8], StoneMaterial, 365, 30, 295, 100, 100, 100)
+    Call Configure(Arena[8], StoneMaterial, 780, 30, 580, 125, 150, 125)
 
     Arena[9] = Graphics3D.CreateSphere3D(20)
 
-    Call Configure(Arena[9], LavaMaterial, -365, 135, -235, 100, 100, 100)
+    Call Configure(Arena[9], LavaMaterial, -780, 188, -520, 130, 130, 130)
 
     Arena[10] = Graphics3D.CreateSphere3D(20)
 
-    Call Configure(Arena[10], LavaMaterial, 365, 135, -235, 100, 100, 100)
+    Call Configure(Arena[10], LavaMaterial, 780, 188, -520, 130, 130, 130)
 
-    Arena[11] = Graphics3D.CreateTorus3D(430, 3)
+    Arena[11] = Graphics3D.CreateTorus3D(845, 4)
 
     Call Configure(Arena[11], LavaMaterial, 0, -48, 30, 100, 100, 100)
+
+End Sub
+
+Private Sub MovePartyFormation(IndexStart As Number, IndexEnd As Number, DeltaX As Number, DeltaZ As Number)
+
+    Dim Index As Number
+
+    For Index = IndexStart To IndexEnd
+        Call Graphics3D.MoveObject(PartyParts[Index], DeltaX, 0, DeltaZ)
+    End For
 
 End Sub
 
@@ -374,6 +398,104 @@ Private Sub CreateParty()
 
     Call Configure(PartyParts[31], LyraMaterial, -246, 63, 305, 11, 44, 11)
 
+    ''' A wide staggered formation gives every silhouette and attack lane room to read.
+
+    Call MovePartyFormation(0, 7, -150, -160)
+    Call MovePartyFormation(8, 15, -260, 20)
+    Call MovePartyFormation(16, 23, -120, 110)
+    Call MovePartyFormation(24, 31, -240, 210)
+
+End Sub
+
+Private Sub CreateCinderling(EnemyIndex As Number, X As Number, Z As Number)
+
+    Dim BaseIndex As Number
+
+    BaseIndex = EnemyIndex * CINDERLING_PARTS_PER_ENEMY
+    CinderlingParts[BaseIndex] = Graphics3D.CreateSphere3D(55)
+
+    Call Configure(CinderlingParts[BaseIndex], DragonMaterial, X, 36, Z, 125, 82, 100)
+
+    CinderlingParts[BaseIndex + 1] = Graphics3D.CreateSphere3D(34)
+
+    Call Configure(CinderlingParts[BaseIndex + 1], DragonGlowMaterial, X - 52, 78, Z, 120, 90, 100)
+
+    CinderlingParts[BaseIndex + 2] = Graphics3D.CreateCylinder3D(12, 76)
+
+    Call Configure(CinderlingParts[BaseIndex + 2], DragonMaterial, X - 23, -18, Z - 30, 100, 100, 100)
+
+    CinderlingParts[BaseIndex + 3] = Graphics3D.CreateCylinder3D(12, 76)
+
+    Call Configure(CinderlingParts[BaseIndex + 3], DragonMaterial, X - 23, -18, Z + 30, 100, 100, 100)
+
+    CinderlingParts[BaseIndex + 4] = Graphics3D.CreateCylinder3D(12, 76)
+
+    Call Configure(CinderlingParts[BaseIndex + 4], DragonMaterial, X + 28, -18, Z - 30, 100, 100, 100)
+
+    CinderlingParts[BaseIndex + 5] = Graphics3D.CreateCylinder3D(12, 76)
+
+    Call Configure(CinderlingParts[BaseIndex + 5], DragonMaterial, X + 28, -18, Z + 30, 100, 100, 100)
+
+    CinderlingParts[BaseIndex + 6] = Graphics3D.CreatePyramid3D(88, 72)
+
+    Call Configure(CinderlingParts[BaseIndex + 6], DragonMaterial, X + 15, 82, Z - 68, 100, 100, 100)
+    Call Graphics3D.SetObjectRotation(CinderlingParts[BaseIndex + 6], 68, 0, -12)
+
+    CinderlingParts[BaseIndex + 7] = Graphics3D.CreatePyramid3D(88, 72)
+
+    Call Configure(CinderlingParts[BaseIndex + 7], DragonMaterial, X + 15, 82, Z + 68, 100, 100, 100)
+    Call Graphics3D.SetObjectRotation(CinderlingParts[BaseIndex + 7], -68, 0, -12)
+
+    CinderlingParts[BaseIndex + 8] = Graphics3D.CreateSphere3D(8)
+
+    Call Configure(CinderlingParts[BaseIndex + 8], LavaMaterial, X - 78, 88, Z - 16, 100, 100, 100)
+
+    CinderlingParts[BaseIndex + 9] = Graphics3D.CreateCylinder3D(16, 105)
+
+    Call Configure(CinderlingParts[BaseIndex + 9], DragonGlowMaterial, X + 82, 42, Z, 100, 100, 100)
+    Call Graphics3D.SetObjectRotation(CinderlingParts[BaseIndex + 9], 0, 0, -72)
+
+End Sub
+
+Private Sub CreateCinderlings()
+
+    Call CreateCinderling(0, 250, -280)
+    Call CreateCinderling(1, 390, 40)
+    Call CreateCinderling(2, 270, 380)
+
+End Sub
+
+Private Sub EnlargeAndPlaceDragon()
+
+    Dim Index As Number
+    Dim PivotX As Number
+    Dim PivotY As Number
+    Dim PivotZ As Number
+    Dim TargetX As Number
+    Dim ScalePercent As Number
+
+    PivotX = 210
+    PivotY = -55
+    PivotZ = 45
+    TargetX = 360
+    ScalePercent = 135
+
+    For Index = 0 To DRAGON_OBJECT_COUNT - 1
+
+        Call Graphics3D.SetObjectPosition(
+            DragonParts[Index],
+            TargetX + (DragonParts[Index].Position.X - PivotX) * ScalePercent / 100,
+            PivotY + (DragonParts[Index].Position.Y - PivotY) * ScalePercent / 100,
+            PivotZ + (DragonParts[Index].Position.Z - PivotZ) * ScalePercent / 100
+        )
+        Call Graphics3D.SetObjectScale(
+            DragonParts[Index],
+            DragonParts[Index].ScaleX * ScalePercent / 100,
+            DragonParts[Index].ScaleY * ScalePercent / 100,
+            DragonParts[Index].ScaleZ * ScalePercent / 100
+        )
+    End For
+
 End Sub
 
 Private Sub CreateDragon()
@@ -475,6 +597,8 @@ Private Sub CreateDragon()
 
     Call Configure(DragonParts[21], LavaMaterial, 37, 196, -18, 100, 100, 100)
 
+    Call EnlargeAndPlaceDragon()
+
 End Sub
 
 Private Sub CreateParticles()
@@ -495,21 +619,50 @@ Private Sub CreateParticles()
 
 End Sub
 
+Private Sub DefineActiveCameraShots()
+
+    Dim Bounds As BattleCamera.FramingBounds3D
+
+    ''' These are group extents, not boss-specific camera coordinates. The reusable
+    ''' framing API derives distance from the current encounter's occupied volume.
+
+    Bounds.MinX = -640
+    Bounds.MinY = -70
+    Bounds.MinZ = -340
+    Bounds.MaxX = 510
+    Bounds.MaxY = 210
+    Bounds.MaxZ = 610
+
+    If Battle.BossIsIntroduced() Then
+
+        Bounds.MaxX = 940
+        Bounds.MaxY = 510
+        Bounds.MinZ = -390
+        Bounds.MaxZ = 650
+
+    End If
+
+    OperationAccepted = BattleCamera.DefineFramedShot(State, SHOT_WIDE, "EMBER OBSERVATORY", Bounds, -32, 25, -100, 960, 540, 54, 42, 28)
+    OperationAccepted = BattleCamera.DefineFramedShot(State, SHOT_PARTY, "THE LAST LIGHT", Bounds, -58, 22, -100, 960, 540, 55, 35, 24)
+    OperationAccepted = BattleCamera.DefineFramedShot(State, SHOT_DRAGON, "ENEMY PRESSURE", Bounds, -24, 28, -108, 960, 540, 59, 30, 24)
+    OperationAccepted = BattleCamera.DefineFramedShot(State, SHOT_ATTACK, "HEROIC CHARGE", Bounds, -46, 19, -100, 960, 540, 60, 28, 14)
+    OperationAccepted = BattleCamera.DefineFramedShot(State, SHOT_MAGIC, "ARCANE STORM", Bounds, -31, 35, -105, 960, 540, 58, 34, 18)
+    OperationAccepted = BattleCamera.DefineFramedShot(State, SHOT_IMPACT, "TITAN IMPACT", Bounds, -12, 21, -104, 960, 540, 58, 30, 8)
+    OperationAccepted = BattleCamera.DefineFramedShot(State, SHOT_BREATH, "WORLD IN FLAME", Bounds, -48, 24, -112, 960, 540, 62, 36, 10)
+    OperationAccepted = BattleCamera.DefineFramedShot(State, SHOT_ENRAGE, "CROWN OF CINDERS", Bounds, -22, 39, -104, 960, 540, 55, 38, 14)
+    OperationAccepted = BattleCamera.DefineFramedShot(State, SHOT_DEATH, "DRAGONFALL", Bounds, -34, 32, -114, 960, 540, 56, 45, 50)
+    OperationAccepted = BattleCamera.DefineFramedShot(State, SHOT_VICTORY, "DAWN RETURNS", Bounds, -55, 31, -104, 960, 540, 54, 42, 55)
+    OperationAccepted = BattleCamera.DefineFramedShot(State, SHOT_BOSS_ENTRANCE, "THE SKY BREAKS OPEN", Bounds, -44, 38, -118, 960, 540, 58, 45, 12)
+    OperationAccepted = BattleCamera.DefineFramedShot(State, SHOT_IDLE_PARTY_BACK, "PARTY LINE // OVERWATCH", Bounds, -100, 24, -12, 960, 540, 60, 18, 28)
+
+    LastFramedEnemyCount = Battle.ActiveEnemyCount()
+    LastBossFramed = Battle.BossIsIntroduced()
+
+End Sub
+
 Private Sub DefinePresentation()
 
-    Call DefineCameraShot(SHOT_WIDE, "EMBER OBSERVATORY", 0, 270, -760, 35, 75, 40, 54, 0)
-    Call DefineCameraShot(SHOT_PARTY, "THE LAST LIGHT", -410, 170, -370, -190, 65, 70, 48, 24)
-
-    ''' Boss attacks remain beyond the wing span on the party-facing side.
-
-    Call DefineCameraShot(SHOT_DRAGON, "ASHWING", -120, 250, -760, 60, 105, 40, 55, 24)
-    Call DefineCameraShot(SHOT_ATTACK, "HEROIC CHARGE", -410, 155, -360, 55, 78, 18, 55, 14)
-    Call DefineCameraShot(SHOT_MAGIC, "ARCANE STORM", -210, 230, -440, 40, 120, 25, 45, 18)
-    Call DefineCameraShot(SHOT_IMPACT, "TITAN IMPACT", 300, 150, -410, 80, 88, 22, 48, 8)
-    Call DefineCameraShot(SHOT_BREATH, "WORLD IN FLAME", -260, 165, -620, -15, 90, 40, 60, 10)
-    Call DefineCameraShot(SHOT_ENRAGE, "CROWN OF CINDERS", 300, 260, -350, 115, 135, 40, 39, 14)
-    Call DefineCameraShot(SHOT_DEATH, "DRAGONFALL", 490, 305, -570, 115, 70, 45, 48, 50)
-    Call DefineCameraShot(SHOT_VICTORY, "DAWN RETURNS", -360, 240, -500, -105, 85, 70, 46, 55)
+    Call DefineActiveCameraShots()
 
     Call DefineEffect(Battle.EFFECT_SLASH, "STARFIRE SLASH", 28, 32, 9, 18, -1, 255, 248, 215, 255, 70, 20, 18, 2, 72, 10)
     Call DefineEffect(Battle.EFFECT_FIRE, "EMBER NOVA", 42, 52, 11, 24, -1, 255, 205, 35, 220, 15, 3, 22, 3, 78, 13)
@@ -565,6 +718,7 @@ Public Function Initialize(StateHandle As Number) As Boolean
 
     Call CreateArena()
     Call CreateParty()
+    Call CreateCinderlings()
     Call CreateDragon()
     Call CreateParticles()
     Call DefinePresentation()
@@ -575,11 +729,197 @@ Public Function Initialize(StateHandle As Number) As Boolean
     LastArinOffset = 0
     LastTorOffset = 0
     LastLyraOffset = 0
-    LastDragonOffset = 0
+    LastDragonOffsetX = 0
+    LastDragonOffsetY = 0
+    LastDragonOffsetZ = 0
+    LastCinderlingOffset[0] = 0
+    LastCinderlingOffset[1] = 0
+    LastCinderlingOffset[2] = 0
+    CurrentActionShot = 0
+    CameraInputAccepted = False
     Ready = True
     Return True
 
 End Function
+
+Private Sub ParticipantAnchor(Participant As Number, ByRef X As Number, ByRef Y As Number, ByRef Z As Number)
+
+    X = 0
+    Y = 80
+    Z = 30
+
+    If Participant = Battle.PARTICIPANT_ARIN Then
+
+        X = -390 + LastArinOffset
+        Y = 72
+        Z = -225
+
+    Else If Participant = Battle.PARTICIPANT_MIRA Then
+
+        X = -545
+        Y = 88
+        Z = 95
+
+    Else If Participant = Battle.PARTICIPANT_TOR Then
+
+        X = -307 + LastTorOffset
+        Y = 78
+        Z = 305
+
+    Else If Participant = Battle.PARTICIPANT_LYRA Then
+
+        X = -517 + LastLyraOffset
+        Y = 82
+        Z = 515
+
+    Else If Participant = Battle.PARTICIPANT_CINDERLING_ONE Then
+
+        X = 225 + LastCinderlingOffset[0]
+        Y = 72
+        Z = -280
+
+    Else If Participant = Battle.PARTICIPANT_CINDERLING_TWO Then
+
+        X = 365 + LastCinderlingOffset[1]
+        Y = 72
+        Z = 40
+
+    Else If Participant = Battle.PARTICIPANT_CINDERLING_THREE Then
+
+        X = 245 + LastCinderlingOffset[2]
+        Y = 72
+        Z = 380
+
+    Else If Participant = Battle.PARTICIPANT_ASHWING Then
+
+        X = 230 + LastDragonOffsetX
+        Y = 260 + LastDragonOffsetY
+        Z = 10 + LastDragonOffsetZ
+
+    End If
+
+End Sub
+
+Private Sub PlayVariedShot(Shot As Number)
+
+    Dim Variation As Number
+
+    Variation = ((GlobalStep / 73 + Shot + Battle.Visual()) Mod 3) - 1
+    OperationAccepted = BattleCamera.PlayShotVariation(
+        State,
+        Shot,
+        0,
+        Variation * 48,
+        Abs(Variation) * 20,
+        Variation * 26,
+        0,
+        Variation * 8,
+        0 - Variation * 24,
+        Variation * 2
+    )
+
+End Sub
+
+Private Function ParticipantFramingRadius(Participant As Number) As Number
+
+    If Participant = Battle.PARTICIPANT_ASHWING Then
+        Return 270
+    End If
+
+    If (Participant >= Battle.PARTICIPANT_CINDERLING_ONE And
+        Participant <= Battle.PARTICIPANT_CINDERLING_THREE) Then
+        Return 82
+    End If
+
+    Return 78
+
+End Function
+
+Private Sub DefineActionFocusShot(Shot As Number, Actor As Number, Target As Number)
+
+    Dim ActorX As Number
+    Dim ActorY As Number
+    Dim ActorZ As Number
+    Dim TargetX As Number
+    Dim TargetY As Number
+    Dim TargetZ As Number
+    Dim ActorRadius As Number
+    Dim TargetRadius As Number
+    Dim Bounds As BattleCamera.FramingBounds3D
+
+    If Actor <= 0 Or Target <= 0 Then
+        Return
+    End If
+
+    Call ParticipantAnchor(Actor, ActorX, ActorY, ActorZ)
+    Call ParticipantAnchor(Target, TargetX, TargetY, TargetZ)
+
+    ActorRadius = ParticipantFramingRadius(Actor)
+    TargetRadius = ParticipantFramingRadius(Target)
+    Bounds.MinX = Min(ActorX - ActorRadius, TargetX - TargetRadius)
+    Bounds.MinY = Min(-65, Min(ActorY - ActorRadius, TargetY - TargetRadius))
+    Bounds.MinZ = Min(ActorZ - ActorRadius, TargetZ - TargetRadius)
+    Bounds.MaxX = Max(ActorX + ActorRadius, TargetX + TargetRadius)
+    Bounds.MaxY = Max(ActorY + ActorRadius, TargetY + TargetRadius)
+    Bounds.MaxZ = Max(ActorZ + ActorRadius, TargetZ + TargetRadius)
+
+    ''' The negative-X, negative-Z view stays on the heroes' side of every encounter.
+
+    OperationAccepted = BattleCamera.DefineFramedShot(
+        State,
+        Shot,
+        "ACTOR + TARGET FOCUS",
+        Bounds,
+        -28,
+        18,
+        -72,
+        960,
+        540,
+        62,
+        10,
+        12
+    )
+
+End Sub
+
+Private Sub DefineActorAnticipationShot(Shot As Number, Actor As Number)
+
+    Dim X As Number
+    Dim Y As Number
+    Dim Z As Number
+    Dim Radius As Number
+    Dim Bounds As BattleCamera.FramingBounds3D
+
+    If Actor <= 0 Then
+        Return
+    End If
+
+    Call ParticipantAnchor(Actor, X, Y, Z)
+
+    Radius = ParticipantFramingRadius(Actor)
+    Bounds.MinX = X - Radius
+    Bounds.MinY = Min(-65, Y - Radius)
+    Bounds.MinZ = Z - Radius
+    Bounds.MaxX = X + Radius
+    Bounds.MaxY = Y + Radius
+    Bounds.MaxZ = Z + Radius
+
+    OperationAccepted = BattleCamera.DefineFramedShot(
+        State,
+        Shot,
+        "ACTION ANTICIPATION",
+        Bounds,
+        -35,
+        18,
+        -85,
+        960,
+        540,
+        55,
+        30,
+        8
+    )
+
+End Sub
 
 Private Sub TriggerVisual(Visual As Number, StepValue As Number)
 
@@ -595,6 +935,18 @@ Private Sub TriggerVisual(Visual As Number, StepValue As Number)
     Z = 30
     Shot = SHOT_IMPACT
     Shake = 12
+    CurrentActionShot = 0
+
+    Call ParticipantAnchor(Battle.VisualTarget(), X, Y, Z)
+
+    If Visual = Battle.VISUAL_BOSS_ENTRANCE Then
+
+        Call DefineActiveCameraShots()
+        Call PlayVariedShot(SHOT_BOSS_ENTRANCE)
+
+        Return
+
+    End If
 
     If Visual = Battle.VISUAL_ARIN_ATTACK Or Visual = Battle.VISUAL_ARIN_EMBER Then
 
@@ -634,6 +986,12 @@ Private Sub TriggerVisual(Visual As Number, StepValue As Number)
         Z = 80
         Shake = 16
 
+    Else If Visual = Battle.VISUAL_CINDERLING_ATTACK Then
+
+        EffectId = Battle.EFFECT_SLASH
+        Shot = SHOT_DRAGON
+        Shake = 8
+
     Else If Visual = Battle.VISUAL_DRAGON_BREATH Then
 
         EffectId = Battle.EFFECT_BREATH
@@ -661,6 +1019,8 @@ Private Sub TriggerVisual(Visual As Number, StepValue As Number)
         Z = 40
         Shake = 28
 
+        Call ParticipantAnchor(Battle.PARTICIPANT_ASHWING, X, Y, Z)
+
     Else If Visual = Battle.VISUAL_VICTORY Then
 
         EffectId = Battle.EFFECT_DEATH
@@ -684,16 +1044,23 @@ Private Sub TriggerVisual(Visual As Number, StepValue As Number)
     If EffectId > 0 Then
 
         OperationAccepted = BattleEffects.Spawn(State, EffectId, X, Y, Z, GlobalStep + Visual * 997 + StepValue)
-        OperationAccepted = BattleCamera.PlayShot(State, Shot, 0)
+
+        Call DefineActorAnticipationShot(Shot, Battle.VisualActor())
+
+        If Battle.VisualActor() > 0 And Battle.VisualTarget() > 0 Then
+            CurrentActionShot = Shot
+        End If
+
+        Call PlayVariedShot(Shot)
+
         OperationAccepted = BattleCamera.StartShake(State, Shake, 30, GlobalStep + 177)
 
     End If
 
 End Sub
 
-Private Sub UpdateCamera()
+Private Sub ApplyCameraView()
 
-    OperationAccepted = BattleCamera.Update(State, 1)
     Camera.Position.X = BattleCamera.PositionX(State)
     Camera.Position.Y = BattleCamera.PositionY(State)
     Camera.Position.Z = BattleCamera.PositionZ(State)
@@ -706,6 +1073,182 @@ Private Sub UpdateCamera()
 
 End Sub
 
+Private Sub UpdateCamera()
+
+    OperationAccepted = BattleCamera.Update(State, 1)
+
+    Call ApplyCameraView()
+
+End Sub
+
+Private Function PointerHitsSphere(
+    PointerX As Number,
+    PointerY As Number,
+    WorldX As Number,
+    WorldY As Number,
+    WorldZ As Number,
+    Radius As Number
+) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Center As BattleCamera.ProjectedPoint3D
+    Dim HorizontalEdge As BattleCamera.ProjectedPoint3D
+    Dim VerticalEdge As BattleCamera.ProjectedPoint3D
+    Dim PixelRadius As Number
+    Dim DeltaX As Number
+    Dim DeltaY As Number
+
+    Center = BattleCamera.ProjectWorldPoint(State, WorldX, WorldY, WorldZ, 960, 540)
+
+    If Not Center.Visible Then
+        Return False
+    End If
+
+    HorizontalEdge = BattleCamera.ProjectWorldPoint(State, WorldX + Radius, WorldY, WorldZ, 960, 540)
+    VerticalEdge = BattleCamera.ProjectWorldPoint(State, WorldX, WorldY + Radius, WorldZ, 960, 540)
+    PixelRadius = 12
+
+    If HorizontalEdge.Visible Then
+        PixelRadius = Max(PixelRadius, Abs(HorizontalEdge.X - Center.X))
+    End If
+
+    If VerticalEdge.Visible Then
+        PixelRadius = Max(PixelRadius, Abs(VerticalEdge.Y - Center.Y))
+    End If
+
+    DeltaX = PointerX - Center.X
+    DeltaY = PointerY - Center.Y
+
+    ReturnValue = DeltaX * DeltaX + DeltaY * DeltaY <= PixelRadius * PixelRadius
+
+    Return ReturnValue
+
+End Function
+
+Private Function PointerHitsActor(PointerX As Number, PointerY As Number) As Boolean
+
+    If (PointerHitsSphere(PointerX, PointerY, -390 + LastArinOffset, 72, -225, 65) Or
+        PointerHitsSphere(PointerX, PointerY, -307 + LastTorOffset, 76, 305, 75) Or
+        PointerHitsSphere(PointerX, PointerY, -517 + LastLyraOffset, 78, 515, 65) Or
+        PointerHitsSphere(PointerX, PointerY, -545, 86, 95, 68)) Then
+        Return True
+    End If
+
+    If (Battle.EnemyIsActive(Battle.PARTICIPANT_CINDERLING_ONE) And
+        PointerHitsSphere(PointerX, PointerY, 250 + LastCinderlingOffset[0], 45, -280, 76)) Then
+        Return True
+    End If
+
+    If (Battle.EnemyIsActive(Battle.PARTICIPANT_CINDERLING_TWO) And
+        PointerHitsSphere(PointerX, PointerY, 390 + LastCinderlingOffset[1], 45, 40, 76)) Then
+        Return True
+    End If
+
+    If (Battle.EnemyIsActive(Battle.PARTICIPANT_CINDERLING_THREE) And
+        PointerHitsSphere(PointerX, PointerY, 270 + LastCinderlingOffset[2], 45, 380, 76)) Then
+        Return True
+    End If
+
+    If (Battle.BossIsIntroduced() And
+        (PointerHitsSphere(PointerX, PointerY, 360 + LastDragonOffsetX, 148 + LastDragonOffsetY, 45 + LastDragonOffsetZ, 210) Or
+        PointerHitsSphere(PointerX, PointerY, 114 + LastDragonOffsetX, 322 + LastDragonOffsetY, -40 + LastDragonOffsetZ, 115) Or
+        PointerHitsSphere(PointerX, PointerY, 333 + LastDragonOffsetX, 243 + LastDragonOffsetY, -180 + LastDragonOffsetZ, 180) Or
+        PointerHitsSphere(PointerX, PointerY, 333 + LastDragonOffsetX, 243 + LastDragonOffsetY, 270 + LastDragonOffsetZ, 180))) Then
+        Return True
+    End If
+
+    Return False
+
+End Function
+
+''' Returns true only for visible arena pixels that are not occupied by a combatant.
+Public Function ArenaPointerAvailable(PointerX As Number, PointerY As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    If (Not Ready Or
+        PointerX < 0 Or
+        PointerX >= 960 Or
+        PointerY < 116 Or
+        PointerY >= 420) Then
+        Return False
+    End If
+
+    ReturnValue = Not PointerHitsActor(PointerX, PointerY)
+
+    Return ReturnValue
+
+End Function
+
+''' Routes cross-target pointer input to the reusable camera override.
+Public Sub HandleCameraPointer(BlockedByInterface As Boolean, AdvancePausedReturn As Boolean)
+
+    Dim StartDrag As Boolean
+    Dim StartOrbit As Boolean
+    Dim WheelDelta As Number
+
+    If Not Ready Then
+        Return
+    End If
+
+    StartDrag = (Pointer_Pressed(POINTER_PRIMARY) And
+        Not BlockedByInterface And
+        ArenaPointerAvailable(Pointer_X(), Pointer_Y()))
+    StartOrbit = (Pointer_Pressed(POINTER_MIDDLE) And
+        Not BlockedByInterface And
+        ArenaPointerAvailable(Pointer_X(), Pointer_Y()))
+    WheelDelta = 0
+
+    If (Not BlockedByInterface And
+        Pointer_Inside() And
+        Pointer_Y() >= 116 And
+        Pointer_Y() < 420) Then
+        WheelDelta = Pointer_Wheel_Delta()
+    End If
+
+    CameraInputAccepted = BattleCamera.UpdateManualInput(State,
+        StartDrag,
+        Pointer_Held(POINTER_PRIMARY),
+        Pointer_Released(POINTER_PRIMARY),
+        Pointer_Delta_X(),
+        Pointer_Delta_Y(),
+        WheelDelta)
+    CameraInputAccepted = BattleCamera.UpdateManualOrbitInput(State,
+        StartOrbit,
+        Pointer_Held(POINTER_MIDDLE),
+        Pointer_Released(POINTER_MIDDLE),
+        Pointer_Delta_X(),
+        Pointer_Delta_Y())
+
+    If AdvancePausedReturn Then
+        CameraInputAccepted = BattleCamera.UpdateManualReturnOnly(State, 1)
+    End If
+
+    Call ApplyCameraView()
+
+End Sub
+
+Public Function CameraOverrideActive() As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Ready And BattleCamera.IsManualActive(State)
+
+    Return ReturnValue
+
+End Function
+
+Public Function CameraDragging() As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Ready And BattleCamera.IsManualDragging(State)
+
+    Return ReturnValue
+
+End Function
+
 Private Sub OffsetParty(IndexStart As Number, IndexEnd As Number, DeltaX As Number, DeltaY As Number)
 
     Dim Index As Number
@@ -716,13 +1259,82 @@ Private Sub OffsetParty(IndexStart As Number, IndexEnd As Number, DeltaX As Numb
 
 End Sub
 
-Private Sub OffsetDragon(DeltaY As Number)
+Private Sub OffsetDragon(DeltaX As Number, DeltaY As Number, DeltaZ As Number)
 
     Dim Index As Number
 
     For Index = 0 To DRAGON_OBJECT_COUNT - 1
-        Call Graphics3D.MoveObject(DragonParts[Index], 0, DeltaY, 0)
+        Call Graphics3D.MoveObject(DragonParts[Index], DeltaX, DeltaY, DeltaZ)
     End For
+
+End Sub
+
+Private Sub OffsetCinderling(EnemyIndex As Number, DeltaX As Number)
+
+    Dim Index As Number
+    Dim BaseIndex As Number
+
+    BaseIndex = EnemyIndex * CINDERLING_PARTS_PER_ENEMY
+
+    For Index = BaseIndex To BaseIndex + CINDERLING_PARTS_PER_ENEMY - 1
+        Call Graphics3D.MoveObject(CinderlingParts[Index], DeltaX, 0, 0)
+    End For
+
+End Sub
+
+Private Sub SetCinderlingVisible(EnemyIndex As Number, Visible As Boolean)
+
+    Dim Index As Number
+    Dim BaseIndex As Number
+
+    BaseIndex = EnemyIndex * CINDERLING_PARTS_PER_ENEMY
+
+    For Index = BaseIndex To BaseIndex + CINDERLING_PARTS_PER_ENEMY - 1
+        Call Graphics3D.SetObjectVisible(CinderlingParts[Index], Visible)
+    End For
+
+End Sub
+
+Private Sub UpdateEnemyVisibility()
+
+    Dim Index As Number
+    Dim DragonVisible As Boolean
+
+    Call SetCinderlingVisible(0, Battle.EnemyIsActive(Battle.PARTICIPANT_CINDERLING_ONE))
+    Call SetCinderlingVisible(1, Battle.EnemyIsActive(Battle.PARTICIPANT_CINDERLING_TWO))
+    Call SetCinderlingVisible(2, Battle.EnemyIsActive(Battle.PARTICIPANT_CINDERLING_THREE))
+
+    DragonVisible = Battle.BossIsIntroduced()
+
+    For Index = 0 To DRAGON_OBJECT_COUNT - 1
+        Call Graphics3D.SetObjectVisible(DragonParts[Index], DragonVisible)
+    End For
+
+End Sub
+
+Private Sub ApplyResultOrbit(StepValue As Number)
+
+    Dim Angle As Number
+    Dim Radius As Number
+    Dim OffsetX As Number
+    Dim OffsetY As Number
+    Dim OffsetZ As Number
+
+    If BattleCamera.IsManualActive(State) Then
+        Return
+    End If
+
+    ''' One degree per simulation step completes exactly one revolution in the
+    ''' 360-step result sequence, with a small vertical breathing arc.
+
+    Angle = 180 + StepValue - 1
+    Radius = 1850
+    OffsetX = Math3D.CosFixed(Angle) * Radius / Core.FIXED_ONE
+    OffsetY = 520 + Math3D.SinFixed(Angle * 2) * 55 / Core.FIXED_ONE
+    OffsetZ = Math3D.SinFixed(Angle) * Radius / Core.FIXED_ONE
+    OperationAccepted = BattleCamera.FollowPoint(State, 30, 105, 120, OffsetX, OffsetY, OffsetZ, 56)
+
+    Call ApplyCameraView()
 
 End Sub
 
@@ -737,7 +1349,15 @@ Private Sub UpdateActors()
     Dim ArinOffset As Number
     Dim TorOffset As Number
     Dim LyraOffset As Number
-    Dim DragonOffset As Number
+    Dim DragonOffsetX As Number
+    Dim DragonOffsetY As Number
+    Dim DragonOffsetZ As Number
+    Dim CinderlingOffsetOne As Number
+    Dim CinderlingOffsetTwo As Number
+    Dim CinderlingOffsetThree As Number
+    Dim Approach As Number
+    Dim EnemyIndex As Number
+    Dim BaseIndex As Number
 
     Visual = Battle.Visual()
     StepValue = Battle.VisualStep()
@@ -746,14 +1366,26 @@ Private Sub UpdateActors()
     ArinOffset = 0
     TorOffset = 0
     LyraOffset = 0
-    DragonOffset = 0
+    DragonOffsetX = 0
+    DragonOffsetY = 0
+    DragonOffsetZ = 0
+    CinderlingOffsetOne = 0
+    CinderlingOffsetTwo = 0
+    CinderlingOffsetThree = 0
+
+    Call UpdateEnemyVisibility()
+
+    If StepValue = 18 And CurrentActionShot > 0 Then
+        Call DefineActionFocusShot(CurrentActionShot, Battle.VisualActor(), Battle.VisualTarget())
+        Call PlayVariedShot(CurrentActionShot)
+    End If
 
     ''' Ambient motion makes the tableau alive even between attacks.
 
     Call Graphics3D.SetObjectRotation(DragonParts[9], 72 + Wing, 0, -20)
     Call Graphics3D.SetObjectRotation(DragonParts[10], -72 - Wing, 0, -20)
     Call Graphics3D.SetObjectRotation(DragonParts[0], 0, 0, 0)
-    Call Graphics3D.SetObjectScale(DragonParts[0], 150, 100, 100)
+    Call Graphics3D.SetObjectScale(DragonParts[0], 203, 135, 135)
     Call Graphics3D.SetObjectRotation(DragonParts[11], 0, 0, -72)
     Call Graphics3D.SetObjectRotation(DragonParts[12], 0, 0, -82)
     Call Graphics3D.SetObjectRotation(DragonParts[13], 0, 0, -86)
@@ -766,8 +1398,16 @@ Private Sub UpdateActors()
     Call Graphics3D.SetObjectRotation(PartyParts[22], 0, 0, -55)
     Call Graphics3D.SetObjectRotation(PartyParts[26], 0, 0, 0)
     Call Graphics3D.SetObjectRotation(PartyParts[29], 0, 0, -48)
-    Call Graphics3D.SetObjectScale(DragonParts[21], 90 + Abs(Pulse), 90 + Abs(Pulse), 90 + Abs(Pulse))
+    Call Graphics3D.SetObjectScale(DragonParts[21], 135 + Abs(Pulse), 135 + Abs(Pulse), 135 + Abs(Pulse))
     Call Graphics3D.SetObjectScale(PartyParts[13], 88 + Abs(Pulse), 88 + Abs(Pulse), 88 + Abs(Pulse))
+
+    For EnemyIndex = 0 To CINDERLING_COUNT - 1
+        BaseIndex = EnemyIndex * CINDERLING_PARTS_PER_ENEMY
+
+        Call Graphics3D.SetObjectRotation(CinderlingParts[BaseIndex + 6], 68 + Wing / 2, 0, -12)
+        Call Graphics3D.SetObjectRotation(CinderlingParts[BaseIndex + 7], -68 - Wing / 2, 0, -12)
+        Call Graphics3D.SetObjectRotation(CinderlingParts[BaseIndex + 1], 0, Pulse / 3, 0)
+    End For
 
     If StepValue < 36 Then
         Lunge = StepValue * 6
@@ -795,7 +1435,7 @@ Private Sub UpdateActors()
 
         Rise = Min(55, StepValue * 3)
 
-        Call Graphics3D.SetObjectPosition(PartyParts[13], -225 + Rise, 150 + Abs(Pulse), 75)
+        Call Graphics3D.SetObjectPosition(PartyParts[13], -485 + Rise, 150 + Abs(Pulse), 95)
         Call Graphics3D.SetObjectRotation(PartyParts[12], 0, StepValue * 9, StepValue * 2)
 
     Else If Visual = Battle.VISUAL_LYRA_ATTACK Then
@@ -809,7 +1449,7 @@ Private Sub UpdateActors()
 
         Rise = Min(48, StepValue * 3)
 
-        Call Graphics3D.SetObjectPosition(PartyParts[27], -277, 101 + Rise + Abs(Pulse), 305)
+        Call Graphics3D.SetObjectPosition(PartyParts[27], -517, 101 + Rise + Abs(Pulse), 515)
         Call Graphics3D.SetObjectRotation(PartyParts[29], 0, StepValue * 11, -48 - Min(60, StepValue * 3))
 
     Else If Visual = Battle.VISUAL_DRAGON_CLAW Then
@@ -824,12 +1464,56 @@ Private Sub UpdateActors()
 
     Else If Visual = Battle.VISUAL_DRAGON_BREATH Then
 
-        Call Graphics3D.SetObjectScale(DragonParts[21], 110 + StepValue * 3, 110 + StepValue * 3, 110 + StepValue * 3)
+        Call Graphics3D.SetObjectScale(DragonParts[21], 150 + StepValue * 3, 150 + StepValue * 3, 150 + StepValue * 3)
+
+    Else If Visual = Battle.VISUAL_CINDERLING_ATTACK Then
+
+        If Battle.VisualActor() = Battle.PARTICIPANT_CINDERLING_ONE Then
+            CinderlingOffsetOne = 0 - Lunge / 2
+        Else If Battle.VisualActor() = Battle.PARTICIPANT_CINDERLING_TWO Then
+            CinderlingOffsetTwo = 0 - Lunge / 2
+        Else If Battle.VisualActor() = Battle.PARTICIPANT_CINDERLING_THREE Then
+            CinderlingOffsetThree = 0 - Lunge / 2
+        End If
+
+    Else If Visual = Battle.VISUAL_BOSS_ENTRANCE Then
+
+        Approach = Max(0, 190 - StepValue)
+        DragonOffsetX = Approach * 720 / 190
+        DragonOffsetY = Approach * 760 / 190 + Abs(Wing) * Approach / 190
+        DragonOffsetZ = 0 - Approach * 920 / 190
+
+        Call Graphics3D.SetObjectRotation(DragonParts[9], 72 + Wing * 2, 0, -20)
+        Call Graphics3D.SetObjectRotation(DragonParts[10], -72 - Wing * 2, 0, -20)
+
+        If Not BattleCamera.IsManualActive(State) Then
+            OperationAccepted = BattleCamera.FollowPoint(
+                State,
+                360 + DragonOffsetX,
+                210 + DragonOffsetY,
+                45 + DragonOffsetZ,
+                -1050,
+                420,
+                -1500,
+                62
+            )
+
+            Call ApplyCameraView()
+        End If
+
+        If StepValue = 190 Then
+
+            Call DefineActiveCameraShots()
+            Call PlayVariedShot(SHOT_WIDE)
+
+            OperationAccepted = BattleCamera.StartShake(State, 34, 42, GlobalStep + 991)
+
+        End If
 
     Else If Visual = Battle.VISUAL_ENRAGE Then
 
         Call Graphics3D.SetObjectRotation(DragonParts[0], Pulse / 2, StepValue * 5, 0)
-        Call Graphics3D.SetObjectScale(DragonParts[0], 150 + Abs(Pulse), 100 + Abs(Pulse), 100 + Abs(Pulse))
+        Call Graphics3D.SetObjectScale(DragonParts[0], 203 + Abs(Pulse), 135 + Abs(Pulse), 135 + Abs(Pulse))
 
     Else If Visual = Battle.VISUAL_VICTORY Then
 
@@ -837,7 +1521,7 @@ Private Sub UpdateActors()
 
         Call Graphics3D.SetObjectRotation(DragonParts[0], 0, 0, Min(90, StepValue / 3))
 
-        DragonOffset = 0 - Rise
+        DragonOffsetY = 0 - Rise
 
         Call Graphics3D.SetObjectScale(PartyParts[3], 110 + Abs(Pulse), 110 + Abs(Pulse), 110 + Abs(Pulse))
         Call Graphics3D.SetObjectScale(PartyParts[10], 110 + Abs(Pulse), 110 + Abs(Pulse), 110 + Abs(Pulse))
@@ -848,24 +1532,39 @@ Private Sub UpdateActors()
             OperationAccepted = BattleCamera.PlayShot(State, SHOT_VICTORY, 0)
         End If
 
+        Call ApplyResultOrbit(StepValue)
+
     Else If Visual = Battle.VISUAL_DEFEAT Then
 
         Call Graphics3D.SetObjectRotation(PartyParts[2], 0, 0, Min(90, StepValue))
         Call Graphics3D.SetObjectRotation(PartyParts[9], 0, 0, Min(90, StepValue))
         Call Graphics3D.SetObjectRotation(PartyParts[18], 0, 0, Min(90, StepValue))
         Call Graphics3D.SetObjectRotation(PartyParts[26], 0, 0, Min(90, StepValue))
+        Call ApplyResultOrbit(StepValue)
 
     End If
 
     Call OffsetParty(0, 7, ArinOffset - LastArinOffset, 0)
     Call OffsetParty(16, 23, TorOffset - LastTorOffset, 0)
     Call OffsetParty(24, 31, LyraOffset - LastLyraOffset, 0)
-    Call OffsetDragon(DragonOffset - LastDragonOffset)
+    Call OffsetCinderling(0, CinderlingOffsetOne - LastCinderlingOffset[0])
+    Call OffsetCinderling(1, CinderlingOffsetTwo - LastCinderlingOffset[1])
+    Call OffsetCinderling(2, CinderlingOffsetThree - LastCinderlingOffset[2])
+    Call OffsetDragon(
+        DragonOffsetX - LastDragonOffsetX,
+        DragonOffsetY - LastDragonOffsetY,
+        DragonOffsetZ - LastDragonOffsetZ
+    )
 
     LastArinOffset = ArinOffset
     LastTorOffset = TorOffset
     LastLyraOffset = LyraOffset
-    LastDragonOffset = DragonOffset
+    LastCinderlingOffset[0] = CinderlingOffsetOne
+    LastCinderlingOffset[1] = CinderlingOffsetTwo
+    LastCinderlingOffset[2] = CinderlingOffsetThree
+    LastDragonOffsetX = DragonOffsetX
+    LastDragonOffsetY = DragonOffsetY
+    LastDragonOffsetZ = DragonOffsetZ
 
 End Sub
 
@@ -926,8 +1625,15 @@ Public Sub Update(StateHandle As Number, StepValue As Number)
     VisualValue = Battle.Visual()
     VisualStepValue = Battle.VisualStep()
 
+    If (Battle.ActiveEnemyCount() <> LastFramedEnemyCount Or
+        Battle.BossIsIntroduced() <> LastBossFramed) Then
+        Call DefineActiveCameraShots()
+    End If
+
     If VisualStepValue = 1 And (VisualValue <> LastVisual Or LastVisualStep <> VisualStepValue) Then
         Call TriggerVisual(VisualValue, VisualStepValue)
+    Else If VisualValue = Battle.VISUAL_IDLE And LastVisual > Battle.VISUAL_IDLE Then
+        Call PlayVariedShot(SHOT_IDLE_PARTY_BACK)
     End If
 
     LastVisual = VisualValue
@@ -960,6 +1666,10 @@ Public Sub Draw()
 
     For Index = 0 To PARTY_OBJECT_COUNT - 1
         FrameReady = Graphics3D.DrawObject3D(PartyParts[Index])
+    End For
+
+    For Index = 0 To CINDERLING_OBJECT_COUNT - 1
+        FrameReady = Graphics3D.DrawObject3D(CinderlingParts[Index])
     End For
 
     For Index = 0 To DRAGON_OBJECT_COUNT - 1
@@ -1028,6 +1738,14 @@ Public Function CurrentCameraName() As Text
 
     ReturnValue = BattleCamera.CurrentShotName(State)
 
+    If BattleCamera.IsManualOrbiting(State) Then
+        ReturnValue = ReturnValue + " // PLAYER ORBIT"
+    Else If BattleCamera.IsManualDragging(State) Then
+        ReturnValue = ReturnValue + " // PLAYER CAMERA"
+    Else If BattleCamera.IsManualActive(State) Then
+        ReturnValue = ReturnValue + " // RETURNING"
+    End If
+
     Return ReturnValue
 
 End Function
@@ -1048,6 +1766,10 @@ Public Sub Shutdown()
 
     For Index = 0 To DRAGON_OBJECT_COUNT - 1
         Call Graphics3D.DestroyObject3D(DragonParts[Index])
+    End For
+
+    For Index = 0 To CINDERLING_OBJECT_COUNT - 1
+        Call Graphics3D.DestroyObject3D(CinderlingParts[Index])
     End For
 
     For Index = 0 To PARTY_OBJECT_COUNT - 1

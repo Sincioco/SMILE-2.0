@@ -10,11 +10,14 @@ Import Dragonfall.Scene As Scene
 
 Const INTRO_DURATION = 210
 Const RESTART_DELAY = 300
+Const PREVIEW_SYNTHETIC_SFX_ENABLED = False
 
 Dim Running As Boolean
 Dim Paused As Boolean
 Dim ShowDebug As Boolean
 Dim ShowHud As Boolean
+Dim ShowFps As Boolean
+Dim ManualBattle As Boolean
 Dim RendererAvailable As Boolean
 Dim SceneReady As Boolean
 Dim EncounterReady As Boolean
@@ -31,11 +34,16 @@ Dim ReadyPlayer As Number
 Dim DecisionIndex As Number
 Dim Command As Number
 Dim Accepted As Boolean
+Dim InterfacePointerBlocked As Boolean
+Dim FpsFrames As Number
+Dim FpsElapsed As Number
+Dim DisplayedFps As Number
 
 Game Window "SMILE 2.0 Dragonfall: The Ember Observatory" Size 960 By 540
 
 RendererAvailable = Graphics3D.RendererAvailable()
 ShowHud = True
+ShowFps = True
 Running = True
 
 Call StartEncounter()
@@ -46,18 +54,33 @@ Do
     CurrentTime = Timer()
     Elapsed = Max(0, Min(100, CurrentTime - PreviousTime))
     PreviousTime = CurrentTime
+
+    Call UpdateFrameRate(Elapsed)
+
     Get Key KeyValue
 
     If KeyValue = KEY_ESCAPE Then
         Running = False
     Else If KeyValue = KEY_SPACE Then
         Paused = Not Paused
-    Else If KeyValue = KEY_1 Then
+    Else If KeyValue = KEY_W Then
         Call RestartEncounter()
-    Else If KeyValue = KEY_2 Then
+    Else If KeyValue = KEY_A And Not ManualBattle Then
         ShowHud = Not ShowHud
     Else If KeyValue = KEY_D Then
+        ShowFps = Not ShowFps
+    Else If KeyValue = KEY_TAB Then
+        Call ToggleBattleMode()
+    Else If KeyValue = KEY_S And Not ManualBattle Then
         ShowDebug = Not ShowDebug
+    Else If ManualBattle Then
+        Call HandleManualBattleKey(KeyValue)
+    End If
+
+    InterfacePointerBlocked = HandleInterfacePointer()
+
+    If RendererAvailable And EncounterReady Then
+        Call Scene.HandleCameraPointer(InterfacePointerBlocked, Paused)
     End If
 
     If EncounterReady And Not Paused Then
@@ -77,7 +100,10 @@ Do
 
                 Else
 
-                    Call SubmitDemoDecision()
+                    If Not ManualBattle Then
+                        Call SubmitDemoDecision()
+                    End If
+
                     Call Battle.Update()
                     Call PlayVisualSound()
 
@@ -91,7 +117,7 @@ Do
 
                     ResultSteps = ResultSteps + 1
 
-                    If ResultSteps >= RESTART_DELAY Then
+                    If Not ManualBattle And ResultSteps >= RESTART_DELAY Then
                         Call RestartEncounter()
                     End If
 
@@ -137,7 +163,7 @@ Sub StartEncounter()
     End If
 
     If EncounterReady Then
-        Play Music "Assets\BattleTheme.wav" Loop
+        Play Music "Assets\Music\Starforge Ascend.mp3" Loop
     End If
 
     IntroSteps = INTRO_DURATION
@@ -145,6 +171,7 @@ Sub StartEncounter()
     GlobalStep = 0
     DecisionIndex = 0
     Accumulator = 0
+    ManualBattle = False
 
 End Sub
 
@@ -162,7 +189,164 @@ Sub RestartEncounter()
 
 End Sub
 
+Sub UpdateFrameRate(FrameMilliseconds As Number)
+
+    FpsFrames = FpsFrames + 1
+    FpsElapsed = FpsElapsed + FrameMilliseconds
+
+    If FpsElapsed >= 500 Then
+
+        DisplayedFps = FpsFrames * 1000 / Max(1, FpsElapsed)
+        FpsFrames = 0
+        FpsElapsed = 0
+
+    End If
+
+End Sub
+
+Sub ToggleBattleMode()
+
+    ManualBattle = Not ManualBattle
+    ResultSteps = 0
+
+    If ManualBattle Then
+        IntroSteps = 0
+    End If
+
+End Sub
+
+Sub SubmitManualCommand(CommandValue As Number)
+
+    ReadyPlayer = Battle.NextReadyPlayer()
+
+    If ReadyPlayer > 0 And Battle.Outcome() = BattleCore.BATTLE_OUTCOME_NONE Then
+        Accepted = Battle.SubmitPlayerCommand(ReadyPlayer, CommandValue)
+    End If
+
+End Sub
+
+Sub HandleManualBattleKey(PressedKey As Number)
+
+    If (PressedKey = KEY_1 Or
+        PressedKey = KEY_A Or
+        PressedKey = KEY_PAD_A) Then
+        Call SubmitManualCommand(Battle.COMMAND_ATTACK)
+    Else If PressedKey = KEY_2 Or PressedKey = KEY_PAD_X Then
+        Call SubmitManualCommand(Battle.COMMAND_SKILL_ONE)
+    Else If PressedKey = KEY_3 Or PressedKey = KEY_PAD_Y Then
+        Call SubmitManualCommand(Battle.COMMAND_DEFEND)
+    Else If PressedKey = KEY_4 Or PressedKey = KEY_PAD_B Then
+        Call SubmitManualCommand(Battle.COMMAND_ITEM)
+    Else If PressedKey = KEY_S Then
+        Call SubmitManualCommand(Battle.COMMAND_SKILL_TWO)
+    End If
+
+End Sub
+
+Function PointerInRectangle(X As Number, Y As Number, Width As Number, Height As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = (Pointer_X() >= X And
+        Pointer_X() < X + Width And
+        Pointer_Y() >= Y And
+        Pointer_Y() < Y + Height)
+
+    Return ReturnValue
+
+End Function
+
+Function HandleInterfacePointer() As Boolean
+
+    Dim Blocked As Boolean
+
+    If Not Pointer_Inside() Then
+        Return False
+    End If
+
+    Blocked = (Pointer_Y() < 116 Or Pointer_Y() >= 420)
+
+    If (ManualBattle And
+        Pointer_Y() >= 315 And
+        Pointer_Y() < 420) Then
+        Blocked = True
+    End If
+
+    If Not Pointer_Pressed(POINTER_PRIMARY) Then
+        Return Blocked
+    End If
+
+    If PointerInRectangle(778, 72, 168, 36) Then
+        Call ToggleBattleMode()
+
+        Return True
+    End If
+
+    If PointerInRectangle(860, 6, 90, 24) Then
+        ShowFps = Not ShowFps
+
+        Return True
+    End If
+
+    If Not ManualBattle Or Battle.NextReadyPlayer() = 0 Then
+        Return Blocked
+    End If
+
+    If PointerInRectangle(90, 350, 140, 50) Then
+        Call SubmitManualCommand(Battle.COMMAND_ATTACK)
+    Else If PointerInRectangle(245, 350, 140, 50) Then
+        Call SubmitManualCommand(Battle.COMMAND_SKILL_ONE)
+    Else If PointerInRectangle(400, 350, 140, 50) Then
+        Call SubmitManualCommand(Battle.COMMAND_DEFEND)
+    Else If PointerInRectangle(555, 350, 140, 50) Then
+        Call SubmitManualCommand(Battle.COMMAND_ITEM)
+    Else If PointerInRectangle(710, 350, 140, 50) Then
+        Call SubmitManualCommand(Battle.COMMAND_SKILL_TWO)
+    End If
+
+    Return Blocked
+
+End Function
+
+Function HeroName(Participant As Number) As Text
+
+    If Participant = Battle.PARTICIPANT_ARIN Then
+        Return "ARIN // DEFENDER"
+    Else If Participant = Battle.PARTICIPANT_TOR Then
+        Return "TOR // GUN ATTACKER"
+    Else If Participant = Battle.PARTICIPANT_LYRA Then
+        Return "LYRA // HEALER"
+    Else If Participant = Battle.PARTICIPANT_MIRA Then
+        Return "MIRA // WIZARD"
+    End If
+
+    Return "WAITING FOR ACTIVE HERO"
+
+End Function
+
+Function SkillOneName(Participant As Number) As Text
+
+    If Participant = Battle.PARTICIPANT_ARIN Then
+        Return "AEGIS BREAK"
+    Else If Participant = Battle.PARTICIPANT_TOR Then
+        Return "BARRAGE"
+    Else If Participant = Battle.PARTICIPANT_LYRA Then
+        Return "AURORA MEND"
+    Else If Participant = Battle.PARTICIPANT_MIRA Then
+        Return "ASTRAL FLAME"
+    End If
+
+    Return "SKILL"
+
+End Function
+
 Sub PlayVisualSound()
+
+    ''' Live-stream guard: sampled replacement effects will re-enable this path.
+
+    If Not PREVIEW_SYNTHETIC_SFX_ENABLED Then
+        Return
+    End If
 
     If Battle.VisualStep() <> 1 Then
         Return
@@ -240,7 +424,10 @@ Sub SubmitDemoDecision()
 
         Lowest = Battle.LowestHealthParty()
 
-        If (Lowest > 0 And
+        If (Battle.Health(Battle.PARTICIPANT_ASHWING) * 100 <
+            Battle.MaximumHealth(Battle.PARTICIPANT_ASHWING) * 10) Then
+            Command = Battle.COMMAND_ATTACK
+        Else If (Lowest > 0 And
             Battle.Health(Lowest) * 100 < Battle.MaximumHealth(Lowest) * 58) Then
             Command = Battle.COMMAND_HEAL
         Else If DecisionIndex Mod 3 = 0 Then
@@ -289,6 +476,12 @@ Sub DrawFrame()
         Call DrawBattleCaption()
     End If
 
+    If ManualBattle Then
+        Call DrawManualCommandPanel()
+    End If
+
+    Call DrawModeToggle()
+
     If Paused Then
 
         Fill Rectangle 340, 225, 280, 82, Rgb(12, 7, 25)
@@ -302,6 +495,10 @@ Sub DrawFrame()
         Call DrawDiagnostics()
     End If
 
+    If ShowFps Then
+        Call DrawFps()
+    End If
+
     If Not RendererAvailable Then
 
         Fill Rectangle 170, 300, 620, 58, Rgb(8, 3, 18)
@@ -311,7 +508,79 @@ Sub DrawFrame()
 
     End If
 
-    Draw Text "HANDS-FREE CROWD DEMO  //  SPACE PAUSE  1 RESTART  2 HUD  D DIAGNOSTICS  ESC EXIT" At 480, 518 Size 12 Color LIGHT_GRAY Centered
+    Draw Text "TAB AUTO/MANUAL  D FPS  //  LEFT DRAG PAN  MIDDLE DRAG ORBIT  WHEEL ZOOM" At 480, 518 Size 12 Color LIGHT_GRAY Centered
+
+End Sub
+
+Sub DrawModeToggle()
+
+    Fill Rectangle 778, 72, 168, 36, Rgb(8, 3, 18)
+
+    If ManualBattle Then
+        Draw Rectangle 778, 72, 168, 36, LIGHT_GREEN
+        Draw Text "RESUME AUTO" At 862, 82 Size 14 Color LIGHT_GREEN Centered
+    Else
+        Draw Rectangle 778, 72, 168, 36, CYAN
+        Draw Text "TAKE COMMAND" At 862, 82 Size 14 Color CYAN Centered
+    End If
+
+End Sub
+
+Sub DrawFps()
+
+    Fill Rectangle 860, 6, 90, 24, Rgb(8, 3, 18)
+    Draw Text "FPS" At 870, 11 Size 12 Color LIGHT_GRAY
+    Draw Number DisplayedFps At 918, 8 Size 16 Color LIGHT_GREEN
+
+End Sub
+
+Sub DrawCommandButton(
+    X As Number,
+    KeyLabel As Text,
+    Label As Text,
+    Enabled As Boolean,
+    Accent As Number
+)
+
+    Fill Rectangle X, 350, 140, 50, Rgb(8, 3, 18)
+
+    If Enabled Then
+
+        Draw Rectangle X, 350, 140, 50, Accent
+        Draw Text KeyLabel At X + 10, 357 Size 12 Color LIGHT_GRAY
+        Draw Text Label At X + 70, 376 Size 13 Color WHITE Centered
+
+    Else
+        Draw Rectangle X, 350, 140, 50, Rgb(60, 55, 70)
+        Draw Text "--" At X + 70, 370 Size 16 Color Rgb(90, 85, 100) Centered
+
+    End If
+
+End Sub
+
+Sub DrawManualCommandPanel()
+
+    ReadyPlayer = Battle.NextReadyPlayer()
+
+    If Battle.Outcome() <> BattleCore.BATTLE_OUTCOME_NONE Then
+        Return
+    End If
+
+    Fill Rectangle 76, 312, 798, 100, Rgb(4, 7, 18)
+    Draw Rectangle 76, 312, 798, 100, CYAN
+    Draw Text "PLAYER COMMAND // " + HeroName(ReadyPlayer) At 480, 320 Size 16 Color CYAN Centered
+
+    If ReadyPlayer = 0 Then
+        Draw Text "ACTIVE TIME IS ADVANCING..." At 480, 365 Size 17 Color LIGHT_GRAY Centered
+
+        Return
+    End If
+
+    Call DrawCommandButton(90, "1", "ATTACK", True, ORANGE)
+    Call DrawCommandButton(245, "2", SkillOneName(ReadyPlayer), True, CYAN)
+    Call DrawCommandButton(400, "3", "DEFEND", True, LIGHT_GREEN)
+    Call DrawCommandButton(555, "4", "CINDER TONIC", True, YELLOW)
+    Call DrawCommandButton(710, "S", "COMET FROST", ReadyPlayer = Battle.PARTICIPANT_MIRA, LIGHT_BLUE)
 
 End Sub
 
@@ -344,26 +613,29 @@ Sub DrawBattleCaption()
 
     Dim Damage As Number
 
-    Fill Rectangle 205, 68, 550, 46, Rgb(8, 3, 18)
-    Draw Rectangle 205, 68, 550, 46, Rgb(226, 82, 20)
-    Draw Text Battle.Message() At 480, 79 Size 20 Color WHITE Centered
+    Fill Rectangle 16, 72, 300, 32, Rgb(8, 3, 18)
+    Draw Rectangle 16, 72, 300, 32, Rgb(226, 82, 20)
+    Draw Text Battle.Message() At 28, 81 Size 13 Color WHITE
     Damage = Battle.DamageNumber()
 
     If Damage > 0 Then
 
-        Draw Text "IMPACT" At 482, 128 Size 17 Color ORANGE Centered
-        Draw Number Damage At 450, 145 Size 40 Color YELLOW
+        Fill Rectangle 16, 108, 132, 24, Rgb(8, 3, 18)
+        Draw Text "IMPACT" At 27, 114 Size 11 Color ORANGE
+        Draw Number Damage At 99, 111 Size 15 Color YELLOW
 
     Else If Damage < 0 Then
 
-        Draw Text "RECOVERY" At 482, 128 Size 17 Color LIGHT_GREEN Centered
         Damage = 0 - Damage
-        Draw Number Damage At 450, 145 Size 40 Color LIGHT_GREEN
+        Fill Rectangle 16, 108, 148, 24, Rgb(8, 3, 18)
+        Draw Text "RECOVERY" At 27, 114 Size 11 Color LIGHT_GREEN
+        Draw Number Damage At 116, 111 Size 15 Color LIGHT_GREEN
 
     End If
 
     If Battle.IsPhaseTwo() And Battle.Outcome() = BattleCore.BATTLE_OUTCOME_NONE Then
-        Draw Text "LIMITER SHATTERED // ACTIVE TIME OVERDRIVE" At 480, 190 Size 15 Color ORANGE Centered
+        Fill Rectangle 16, 136, 300, 23, Rgb(8, 3, 18)
+        Draw Text "LIMITER SHATTERED // OVERDRIVE" At 28, 142 Size 11 Color ORANGE
     End If
 
     If Battle.Outcome() = BattleCore.BATTLE_OUTCOME_VICTORY Then
@@ -376,14 +648,39 @@ End Sub
 
 Sub DrawHud()
 
-    Dim BossWidth As Number
+    Dim EnemyRow As Number
+    Dim EnemyLabelWidth As Number
 
     Fill Rectangle 0, 0, 960, 62, Rgb(8, 3, 18)
-    Draw Text "ASHWING // CALDERA TYRANT" At 480, 7 Size 19 Color ORANGE Centered
-    Fill Rectangle 175, 35, 610, 16, Rgb(52, 12, 19)
-    BossWidth = Max(0, Battle.Health(Battle.PARTICIPANT_ASHWING) * 606 / Battle.MaximumHealth(Battle.PARTICIPANT_ASHWING))
-    Fill Rectangle 177, 37, BossWidth, 12, Rgb(255, 52, 16)
-    Draw Rectangle 175, 35, 610, 16, Rgb(255, 174, 50)
+
+    EnemyRow = 0
+    EnemyLabelWidth = 140
+
+    If Battle.EnemyIsActive(Battle.PARTICIPANT_ASHWING) Then
+        EnemyLabelWidth = 216
+    End If
+
+    If Battle.EnemyIsActive(Battle.PARTICIPANT_CINDERLING_ONE) Then
+        Call DrawEnemyHealthRow(Battle.PARTICIPANT_CINDERLING_ONE, "CINDERLING ALPHA", EnemyRow, EnemyLabelWidth, Rgb(255, 118, 38))
+
+        EnemyRow = EnemyRow + 1
+    End If
+
+    If Battle.EnemyIsActive(Battle.PARTICIPANT_CINDERLING_TWO) Then
+        Call DrawEnemyHealthRow(Battle.PARTICIPANT_CINDERLING_TWO, "CINDERLING BETA", EnemyRow, EnemyLabelWidth, Rgb(255, 145, 46))
+
+        EnemyRow = EnemyRow + 1
+    End If
+
+    If Battle.EnemyIsActive(Battle.PARTICIPANT_CINDERLING_THREE) Then
+        Call DrawEnemyHealthRow(Battle.PARTICIPANT_CINDERLING_THREE, "CINDERLING GAMMA", EnemyRow, EnemyLabelWidth, Rgb(255, 174, 50))
+
+        EnemyRow = EnemyRow + 1
+    End If
+
+    If Battle.EnemyIsActive(Battle.PARTICIPANT_ASHWING) Then
+        Call DrawEnemyHealthRow(Battle.PARTICIPANT_ASHWING, "ASHWING // CALDERA TYRANT", EnemyRow, EnemyLabelWidth, Rgb(255, 174, 50))
+    End If
 
     Call DrawHeroPanel(Battle.PARTICIPANT_ARIN, "ARIN", 8, Rgb(220, 35, 48))
     Call DrawHeroPanel(Battle.PARTICIPANT_TOR, "TOR", 165, Rgb(232, 145, 26))
@@ -392,30 +689,98 @@ Sub DrawHud()
 
     Fill Rectangle 636, 424, 306, 78, Rgb(8, 3, 18)
     Draw Rectangle 636, 424, 306, 78, Rgb(232, 145, 26)
-    Draw Text "DEMO TACTICIAN" At 651, 435 Size 15 Color ORANGE
-    Draw Text "Four-hero adaptive assault" At 651, 462 Size 13 Color WHITE
+
+    If ManualBattle Then
+        Draw Text "PLAYER COMMAND" At 651, 435 Size 15 Color CYAN
+        Draw Text HeroName(Battle.NextReadyPlayer()) At 651, 462 Size 13 Color WHITE
+    Else
+        Draw Text "AUTO TACTICIAN" At 651, 435 Size 15 Color ORANGE
+        Draw Text "Four-hero adaptive assault" At 651, 462 Size 13 Color WHITE
+    End If
+
     Draw Text Scene.CurrentCameraName() At 651, 482 Size 12 Color LIGHT_GRAY
+
+End Sub
+
+Sub DrawEnemyHealthRow(
+    Participant As Number,
+    Name As Text,
+    Row As Number,
+    NameWidth As Number,
+    Accent As Number
+)
+
+    Dim Y As Number
+    Dim BarX As Number
+    Dim BarWidth As Number
+    Dim HealthWidth As Number
+    Dim MagicWidth As Number
+    Dim ValueX As Number
+
+    Y = 8 + Row * 18
+    BarX = 14 + NameWidth
+    BarWidth = 780 - BarX
+    HealthWidth = Max(0, Battle.Health(Participant) * (BarWidth - 4) / Battle.MaximumHealth(Participant))
+    ValueX = BarX + BarWidth - 92
+
+    Draw Text Name At 14, Y Size 12 Color Accent
+    Fill Rectangle BarX, Y + 1, BarWidth, 13, Rgb(52, 12, 19)
+    Fill Rectangle BarX + 2, Y + 3, HealthWidth, 9, Rgb(255, 52, 16)
+    Draw Rectangle BarX, Y + 1, BarWidth, 13, Accent
+
+    ''' The numeric value is deliberately drawn over the gauge, like a classic RPG boss HUD.
+
+    Draw Number Battle.Health(Participant) At ValueX + 1, Y + 3 Size 10 Color BLACK
+    Draw Text "/" At ValueX + 37, Y + 3 Size 10 Color BLACK
+    Draw Number Battle.MaximumHealth(Participant) At ValueX + 49, Y + 3 Size 10 Color BLACK
+    Draw Number Battle.Health(Participant) At ValueX, Y + 2 Size 10 Color WHITE
+    Draw Text "/" At ValueX + 36, Y + 2 Size 10 Color WHITE
+    Draw Number Battle.MaximumHealth(Participant) At ValueX + 48, Y + 2 Size 10 Color WHITE
+
+    If Battle.MaximumMagicPoints(Participant) > 0 Then
+
+        MagicWidth = Max(0, Battle.MagicPoints(Participant) * BarWidth / Battle.MaximumMagicPoints(Participant))
+        Fill Rectangle BarX, Y + 15, BarWidth, 2, Rgb(8, 26, 62)
+        Fill Rectangle BarX, Y + 15, MagicWidth, 2, Rgb(35, 145, 255)
+
+    End If
 
 End Sub
 
 Sub DrawHeroPanel(Participant As Number, Name As Text, X As Number, Accent As Number)
 
-    Dim HealthWidth As Number
-    Dim GaugeWidth As Number
-
     Fill Rectangle X, 424, 150, 78, Rgb(8, 3, 18)
     Draw Rectangle X, 424, 150, 78, Accent
-    Draw Text Name At X + 12, 433 Size 17 Color WHITE
-    Draw Number Battle.Health(Participant) At X + 79, 432 Size 16 Color WHITE
-    Draw Text "HP" At X + 126, 438 Size 10 Color LIGHT_GRAY
-    Draw Text "MP" At X + 12, 447 Size 10 Color LIGHT_BLUE
-    Draw Number Battle.MagicPoints(Participant) At X + 42, 444 Size 13 Color LIGHT_BLUE
-    HealthWidth = Max(0, Battle.Health(Participant) * 126 / Battle.MaximumHealth(Participant))
-    Fill Rectangle X + 12, 459, 126, 9, Rgb(42, 20, 30)
-    Fill Rectangle X + 12, 459, HealthWidth, 9, Accent
-    GaugeWidth = Max(0, Battle.Gauge(Participant) * 126 / BattleTime.BATTLE_TIME_GAUGE_MAXIMUM)
-    Fill Rectangle X + 12, 478, 126, 8, Rgb(18, 34, 54)
-    Fill Rectangle X + 12, 478, GaugeWidth, 8, Rgb(75, 220, 255)
+    Draw Text Name At X + 10, 430 Size 14 Color WHITE
+
+    Call DrawHeroGauge("HP", X, 448, Battle.Health(Participant), Battle.MaximumHealth(Participant), Accent)
+    Call DrawHeroGauge("MP", X, 463, Battle.MagicPoints(Participant), Battle.MaximumMagicPoints(Participant), Rgb(35, 145, 255))
+    Call DrawHeroGauge("ATB", X, 478, Battle.Gauge(Participant), BattleTime.BATTLE_TIME_GAUGE_MAXIMUM, Rgb(75, 220, 255))
+
+End Sub
+
+Sub DrawHeroGauge(Label As Text, X As Number, Y As Number, Current As Number, Maximum As Number, FillColor As Number)
+
+    Dim BarX As Number
+    Dim BarWidth As Number
+    Dim FilledWidth As Number
+    Dim ValueX As Number
+
+    BarX = X + 36
+    BarWidth = 104
+    FilledWidth = 0
+
+    If Maximum > 0 Then
+        FilledWidth = Max(0, Min(BarWidth, Current * BarWidth / Maximum))
+    End If
+
+    ValueX = BarX + BarWidth - 34
+    Draw Text Label At X + 8, Y Size 8 Color LIGHT_GRAY
+    Fill Rectangle BarX, Y, BarWidth, 9, Rgb(18, 20, 34)
+    Fill Rectangle BarX + 1, Y + 1, Max(0, FilledWidth - 2), 7, FillColor
+    Draw Rectangle BarX, Y, BarWidth, 9, Rgb(80, 88, 112)
+    Draw Number Current At ValueX + 1, Y + 1 Size 8 Color BLACK
+    Draw Number Current At ValueX, Y Size 8 Color WHITE
 
 End Sub
 

@@ -19,7 +19,7 @@ Public Const BATTLE_MAX_ENEMY_DEFINITIONS = 64
 Public Const BATTLE_MAX_FORMATIONS = 32
 Public Const BATTLE_MAX_FORMATION_MEMBERS = 8
 Public Const BATTLE_MAX_STATUSES_PER_PARTICIPANT = 8
-Public Const BATTLE_MAX_EVENTS = 256
+Public Const BATTLE_MAX_EVENTS = 1024
 
 Public Const BATTLE_SIDE_PARTY = 1
 Public Const BATTLE_SIDE_ENEMY = 2
@@ -173,12 +173,12 @@ Private Dim SchedulePositions[4] As Number
 Private Dim ScheduleParticipantIndexes[4, 12] As Number
 
 Private Dim EventCounts[4] As Number
-Private Dim EventKinds[4, 256] As Number
-Private Dim EventActorIds[4, 256] As Number
-Private Dim EventTargetIds[4, 256] As Number
-Private Dim EventValueOne[4, 256] As Number
-Private Dim EventValueTwo[4, 256] As Number
-Private Dim EventTexts[4, 256] As Text
+Private Dim EventKinds[4, 1024] As Number
+Private Dim EventActorIds[4, 1024] As Number
+Private Dim EventTargetIds[4, 1024] As Number
+Private Dim EventValueOne[4, 1024] As Number
+Private Dim EventValueTwo[4, 1024] As Number
+Private Dim EventTexts[4, 1024] As Text
 
 Private Dim BackupHealth[4, 12] As Number
 Private Dim BackupMagicPoints[4, 12] As Number
