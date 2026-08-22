@@ -16,7 +16,6 @@ Private Const CAMERA_ZOOM_IN_LIMIT = -24
 Private Const CAMERA_ZOOM_OUT_LIMIT = 36
 Private Const CAMERA_ORBIT_YAW_SCALE = 3
 Private Const CAMERA_ORBIT_PITCH_SCALE = 2
-Private Const CAMERA_ORBIT_YAW_LIMIT = 320
 Private Const CAMERA_ORBIT_PITCH_LIMIT = 180
 Private Const CAMERA_RETURN_HOLD_STEPS = 12
 Private Const CAMERA_ZOOM_HOLD_STEPS = 45
@@ -56,6 +55,22 @@ Private Function EaseCameraControl(Value As Number) As Number
     End If
 
     ReturnValue = Value * CAMERA_RETURN_PERCENT / 100
+
+    Return ReturnValue
+
+End Function
+
+Private Function NormalizeOrbitYaw(Value As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Value Mod 360
+
+    If ReturnValue > 180 Then
+        ReturnValue = ReturnValue - 360
+    Else If ReturnValue < -180 Then
+        ReturnValue = ReturnValue + 360
+    End If
 
     Return ReturnValue
 
@@ -171,9 +186,10 @@ Public Function UpdateOrbitControls(
 
     If Controls.Orbiting And Held Then
 
-        Controls.OrbitYaw = Min(CAMERA_ORBIT_YAW_LIMIT,
-            Max(0 - CAMERA_ORBIT_YAW_LIMIT,
-                Controls.OrbitYaw + DeltaX * CAMERA_ORBIT_YAW_SCALE))
+        ''' Yaw is deliberately unbounded while held. Trigonometric camera
+        ''' composition wraps it naturally, allowing any number of full turns.
+
+        Controls.OrbitYaw = Controls.OrbitYaw + DeltaX * CAMERA_ORBIT_YAW_SCALE
         Controls.OrbitPitch = Min(CAMERA_ORBIT_PITCH_LIMIT,
             Max(0 - CAMERA_ORBIT_PITCH_LIMIT,
                 Controls.OrbitPitch + DeltaY * CAMERA_ORBIT_PITCH_SCALE))
@@ -183,6 +199,7 @@ Public Function UpdateOrbitControls(
 
     If Released Then
         Controls.Orbiting = False
+        Controls.OrbitYaw = NormalizeOrbitYaw(Controls.OrbitYaw)
         Controls.ReturnSteps = CAMERA_RETURN_HOLD_STEPS
     End If
 
@@ -266,15 +283,17 @@ Public Function ApplyCameraControls(
     Dim Result As Core.Camera3D
     Dim DeltaX As Number
     Dim DeltaZ As Number
-    Dim Denominator As Number
+    Dim CosYaw As Number
+    Dim SinYaw As Number
 
     Result = BaseCamera
     DeltaX = BaseCamera.Position.X - BaseCamera.Target.X
     DeltaZ = BaseCamera.Position.Z - BaseCamera.Target.Z
-    Denominator = Max(1, Max(Abs(DeltaX), Abs(DeltaZ)))
-    Result.Position.X = BaseCamera.Position.X + Controls.PanX - DeltaZ * Controls.OrbitYaw / Denominator
+    CosYaw = Math3D.CosFixed(Controls.OrbitYaw)
+    SinYaw = Math3D.SinFixed(Controls.OrbitYaw)
+    Result.Position.X = BaseCamera.Target.X + Controls.PanX + (DeltaX * CosYaw - DeltaZ * SinYaw) / Core.FIXED_ONE
     Result.Position.Y = BaseCamera.Position.Y + Controls.PanY + Controls.OrbitPitch
-    Result.Position.Z = BaseCamera.Position.Z + DeltaX * Controls.OrbitYaw / Denominator
+    Result.Position.Z = BaseCamera.Target.Z + (DeltaX * SinYaw + DeltaZ * CosYaw) / Core.FIXED_ONE
     Result.Target.X = BaseCamera.Target.X + Controls.PanX
     Result.Target.Y = BaseCamera.Target.Y + Controls.PanY
     Result.FovDegrees = Min(120, Max(18, BaseCamera.FovDegrees + Controls.Zoom))

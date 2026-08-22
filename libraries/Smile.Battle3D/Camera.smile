@@ -6,6 +6,7 @@ Option Explicit
 Import Smile.RPG.Core As RPG
 Import Smile.Simple3D.Core As SimpleCore
 Import Smile.Simple3D.Interaction As Interaction
+Import Smile.Simple3D.FixedMath As Math3D
 
 Public Const BATTLE3D_MAX_CAMERA_SHOTS = 32
 Public Const BATTLE3D_MAX_CAMERA_STEPS = 10000
@@ -642,35 +643,37 @@ Public Function UpdateManualReturnOnly(StateHandle As Number, Steps As Number) A
 
 End Function
 
-Private Function OrbitDenominator(Slot As Number) As Number
+Private Function OrbitPositionX(Slot As Number) As Number
 
+    Dim ReturnValue As Number
     Dim DeltaX As Number
     Dim DeltaZ As Number
-    Dim ReturnValue As Number
+    Dim CosYaw As Number
+    Dim SinYaw As Number
 
     DeltaX = CurrentPositionX[Slot] - CurrentTargetX[Slot]
     DeltaZ = CurrentPositionZ[Slot] - CurrentTargetZ[Slot]
-    ReturnValue = Max(1, Max(Abs(DeltaX), Abs(DeltaZ)))
+    CosYaw = Math3D.CosFixed(ManualControls[Slot].OrbitYaw)
+    SinYaw = Math3D.SinFixed(ManualControls[Slot].OrbitYaw)
+    ReturnValue = CurrentTargetX[Slot] + (DeltaX * CosYaw - DeltaZ * SinYaw) / SimpleCore.FIXED_ONE
 
     Return ReturnValue
 
 End Function
 
-Private Function OrbitOffsetX(Slot As Number) As Number
+Private Function OrbitPositionZ(Slot As Number) As Number
 
     Dim ReturnValue As Number
+    Dim DeltaX As Number
+    Dim DeltaZ As Number
+    Dim CosYaw As Number
+    Dim SinYaw As Number
 
-    ReturnValue = (0 - (CurrentPositionZ[Slot] - CurrentTargetZ[Slot])) * ManualControls[Slot].OrbitYaw / OrbitDenominator(Slot)
-
-    Return ReturnValue
-
-End Function
-
-Private Function OrbitOffsetZ(Slot As Number) As Number
-
-    Dim ReturnValue As Number
-
-    ReturnValue = (CurrentPositionX[Slot] - CurrentTargetX[Slot]) * ManualControls[Slot].OrbitYaw / OrbitDenominator(Slot)
+    DeltaX = CurrentPositionX[Slot] - CurrentTargetX[Slot]
+    DeltaZ = CurrentPositionZ[Slot] - CurrentTargetZ[Slot]
+    CosYaw = Math3D.CosFixed(ManualControls[Slot].OrbitYaw)
+    SinYaw = Math3D.SinFixed(ManualControls[Slot].OrbitYaw)
+    ReturnValue = CurrentTargetZ[Slot] + (DeltaX * SinYaw + DeltaZ * CosYaw) / SimpleCore.FIXED_ONE
 
     Return ReturnValue
 
@@ -688,7 +691,7 @@ Public Function PositionX(StateHandle As Number) As Number
         Return 0
     End If
 
-    ReturnValue = CurrentPositionX[Slot] + ShakeOffsetX[Slot] + ManualControls[Slot].PanX + OrbitOffsetX(Slot)
+    ReturnValue = OrbitPositionX(Slot) + ShakeOffsetX[Slot] + ManualControls[Slot].PanX
 
     Return ReturnValue
 
@@ -724,7 +727,7 @@ Public Function PositionZ(StateHandle As Number) As Number
         Return 0
     End If
 
-    ReturnValue = CurrentPositionZ[Slot] + ShakeOffsetZ[Slot] + OrbitOffsetZ(Slot)
+    ReturnValue = OrbitPositionZ(Slot) + ShakeOffsetZ[Slot]
 
     Return ReturnValue
 
