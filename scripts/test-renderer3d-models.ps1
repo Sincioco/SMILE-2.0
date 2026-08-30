@@ -14,6 +14,8 @@ $nativeOutput = Join-Path $repositoryRoot 'artifacts\tests\Renderer3DModelTests.
 $nativeLog = Join-Path $repositoryRoot 'artifacts\temp\Renderer3DModelTests.out'
 $webOutput = Join-Path $repositoryRoot 'artifacts\web\Renderer3DModelTests'
 $invalidOutput = Join-Path $repositoryRoot 'artifacts\temp\InvalidModel.sm3d'
+$glbGenerator = Join-Path $repositoryRoot 'scripts\generate-renderer3d-glb-fixture.ps1'
+$glbFixture = Join-Path $testRoot 'Source\M0Triangle.glb'
 
 function Convert-TestModel([string]$Name) {
     & $assetTool model (Join-Path $testRoot "Source\$Name.gltf") -o (Join-Path $testRoot "Assets\$Name.sm3d")
@@ -22,6 +24,8 @@ function Convert-TestModel([string]$Name) {
 
 Push-Location $repositoryRoot
 try {
+    & $glbGenerator -OutputPath $glbFixture -Check
+
     Convert-TestModel 'Humanoid'
     Convert-TestModel 'Dragon'
     $firstHashes = @(

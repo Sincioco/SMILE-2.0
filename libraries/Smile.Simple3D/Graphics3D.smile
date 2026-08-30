@@ -82,6 +82,8 @@ Private Const COMMAND_STOP_ANIMATOR = 74
 Private Const COMMAND_MAX_SKELETON_COUNT = 75
 Private Const COMMAND_MAX_CLIP_COUNT = 76
 Private Const COMMAND_MAX_ANIMATOR_COUNT = 77
+Private Const COMMAND_DRAW_CALL_COUNT = 78
+Private Const COMMAND_SUBMITTED_TRIANGLE_COUNT = 79
 
 Private Const IMAGE_COMMAND_CREATE_TEXTURE = 1
 Private Const TEXT_COMMAND_LOAD_MODEL = 1
@@ -468,6 +470,26 @@ Public Function MaximumAnimatorCount3D() As Number
     Dim Result As Number
 
     Result = Dispatch(COMMAND_MAX_ANIMATOR_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Returns successful visible draw submissions in the current or most recently ended 3D frame.
+Public Function DrawCallCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_DRAW_CALL_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Returns indexed triangles submitted by successful visible draws in the current or most recently ended 3D frame.
+Public Function SubmittedTriangleCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_SUBMITTED_TRIANGLE_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
     Return Result
 
 End Function

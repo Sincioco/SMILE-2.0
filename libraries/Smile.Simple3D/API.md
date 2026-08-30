@@ -31,6 +31,7 @@ Availability and lifecycle:
 - `ResetRenderer3D()`
 - `LiveMeshCount3D()` and `LiveObjectCount3D()`
 - `MaximumMeshCount3D()` and `MaximumObjectCount3D()`
+- `DrawCallCount3D()` and `SubmittedTriangleCount3D()` for the current or most recently ended 3D frame; a successful new `Begin3D` resets both to zero
 - `MeshHandleValid3D(Mesh)` and `ObjectHandleValid3D(Object)`
 - `MeshReferenceCount3D(Mesh)`
 - `DestroyObject3D(ByRef Object)` for an object and its owned mesh

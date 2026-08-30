@@ -32,7 +32,9 @@ Call Graphics3D.ResetRenderer3D()
 If (Graphics3D.LiveMeshCount3D() <> 0 Or
     Graphics3D.LiveObjectCount3D() <> 0 Or
     Graphics3D.MaximumMeshCount3D() <> EXPECTED_MAX_MESHES Or
-    Graphics3D.MaximumObjectCount3D() <> EXPECTED_MAX_OBJECTS) Then
+    Graphics3D.MaximumObjectCount3D() <> EXPECTED_MAX_OBJECTS Or
+    Graphics3D.DrawCallCount3D() <> 0 Or
+    Graphics3D.SubmittedTriangleCount3D() <> 0) Then
     Failures = Failures + 1
 End If
 
@@ -182,8 +184,20 @@ If Graphics3D.RendererAvailable() Then
 
         FrameReady = Graphics3D.Begin3D(Camera, 1, 2, 4)
 
+        If (FrameReady And
+            (Graphics3D.DrawCallCount3D() <> 0 Or
+            Graphics3D.SubmittedTriangleCount3D() <> 0)) Then
+            Failures = Failures + 1
+        End If
+
         If FrameReady Then
             FrameReady = Graphics3D.DrawObject3D(RestartObject)
+        End If
+
+        If (FrameReady And
+            (Graphics3D.DrawCallCount3D() <> 1 Or
+            Graphics3D.SubmittedTriangleCount3D() <> 12)) Then
+            Failures = Failures + 1
         End If
 
         If Not FrameReady Then

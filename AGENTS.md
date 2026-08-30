@@ -261,6 +261,11 @@ Do not use vague messages such as `chore: update files`, `fix: changes`, or `fea
 - Do not amend, rebase, force-push, or rewrite pushed history unless Sin explicitly directs it.
 - Never discard uncommitted user work.
 
+## Permanent VSIX installation rule
+
+- Whenever a change affects the SMILE Visual Studio extension, its bundled compiler, templates, language services, or any other VSIX payload or behavior, rebuild the validated VSIX and install it into Visual Studio before completing the task.
+- Use the repository installation and verification scripts so the installed extension matches the newly built artifact.
+
 ## Final report
 
 Report commit hashes, files changed, syntax added, generated executables, VSIX path, validation results, and remaining manual checks.

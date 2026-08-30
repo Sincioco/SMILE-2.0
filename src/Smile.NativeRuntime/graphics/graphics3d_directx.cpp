@@ -186,6 +186,8 @@ static UINT smile_sample_count3d = 1;
 static UINT smile_sample_quality3d;
 static int smile_frame_active3d;
 static int smile_last_error3d;
+static long long smile_draw_call_count3d;
+static long long smile_submitted_triangle_count3d;
 static float smile_camera_position3d[3] = { 0.0f, 300.0f, -800.0f };
 static float smile_camera_target3d[3] = { 0.0f, 0.0f, 0.0f };
 static float smile_camera_fov3d = 55.0f;
@@ -1656,6 +1658,8 @@ static int smile_3d_begin(long long red, long long green, long long blue)
     context->IASetInputLayout(smile_input_layout3d); context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     context->VSSetShader(smile_vertex_shader3d, 0, 0); context->PSSetShader(smile_pixel_shader3d, 0, 0);
     context->VSSetConstantBuffers(0, 1, &smile_constant_buffer3d); context->PSSetConstantBuffers(0, 1, &smile_constant_buffer3d);
+    smile_draw_call_count3d = 0;
+    smile_submitted_triangle_count3d = 0;
     smile_frame_active3d = 1;
     return 1;
 }
@@ -1733,6 +1737,8 @@ static int smile_3d_draw(long long handle)
     context->PSSetShaderResources(0, 1, &texture_view);
     context->PSSetSamplers(0, 1, &texture_sampler);
     context->DrawIndexed(mesh->index_count, 0, 0);
+    smile_draw_call_count3d++;
+    smile_submitted_triangle_count3d += mesh->index_count / 3;
     return 1;
 }
 
@@ -1816,6 +1822,8 @@ static void smile_3d_reset(void)
         if (smile_meshes3d[index].active) smile_3d_delete_mesh(&smile_meshes3d[index]);
     smile_graphics3d_on_device_lost();
     smile_last_error3d = 0;
+    smile_draw_call_count3d = 0;
+    smile_submitted_triangle_count3d = 0;
 }
 
 extern "C" long long smile_renderer3d_command(long long command,
@@ -2059,6 +2067,8 @@ extern "C" long long smile_renderer3d_command(long long command,
         case SMILE_3D_MAX_SKELETON_COUNT:return SMILE_3D_MAX_SKELETONS;
         case SMILE_3D_MAX_CLIP_COUNT:return SMILE_3D_MAX_CLIPS;
         case SMILE_3D_MAX_ANIMATOR_COUNT:return SMILE_3D_MAX_ANIMATORS;
+        case SMILE_3D_DRAW_CALL_COUNT:return smile_draw_call_count3d;
+        case SMILE_3D_SUBMITTED_TRIANGLE_COUNT:return smile_submitted_triangle_count3d;
         default: smile_last_error3d = 1; return 0;
     }
 }
