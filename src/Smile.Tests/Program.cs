@@ -3207,6 +3207,8 @@ Run("Project diagnostics retain shared path formatting and compiler exit code on
         {
             Console.SetError(previousError);
         }
+        Equal(true, usageOutput.ToString().Contains(
+            "SMILE 2.0: Simple Modern and Intuitive Language for Everyone", StringComparison.Ordinal));
         Equal(true, usageOutput.ToString().Contains("Usage: smilec", StringComparison.Ordinal));
     }
     finally { Directory.Delete(directory, true); }

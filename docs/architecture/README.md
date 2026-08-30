@@ -1,5 +1,7 @@
 # Compiler and tooling architecture
 
+SMILE stands for **Simple Modern and Intuitive Language for Everyone**.
+
 The original educational wireframe layer is documented in [Simple3D software-rendering architecture](simple3d-software-rendering.md). The current indexed-triangle milestone is documented in [true Simple3D Renderer3D architecture](true-simple3d-renderer3d.md), with the reusable [texture and material contract](renderer3d-materials.md), deterministic [SM3D model pipeline](sm3d-model-format.md), [skeletal animation contract](renderer3d-skeletal-animation.md), renderer-neutral [Battle3D presentation bridge](battle3d.md), optional deterministic [BattleTime ATB scheduler](battle-time.md), and reusable [battle camera/VFX layer](battle-camera-vfx.md) documented separately. Renderer2D remains permanent while DirectX/WebGL2 Renderer3D provides filled meshes, textured materials, offline-authored models, GPU-skinned animation, perspective, depth testing, and 2D HUD composition. The [Dragonfall delivery report](../implementation/dragonfall-3d-battle-delivery.md) traces those layers to the complete native/Web boss-fight acceptance evidence.
 
 SMILE 2.0 uses one deliberately direct native pipeline:

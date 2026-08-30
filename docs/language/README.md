@@ -1,5 +1,7 @@
 # SMILE 2.0 language
 
+SMILE stands for **Simple Modern and Intuitive Language for Everyone**.
+
 `src\Smile.Language` is the sole authority for SMILE source documents, tokens, keyword facts, syntax, diagnostics, symbols, types, and semantic analysis. Both `smilec` and the Visual Studio extension consume the same `SmileLanguage.Analyze` result, whether a compilation contains one source file or several.
 
 ## Modules and imports

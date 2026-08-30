@@ -2,7 +2,7 @@
 <VSTemplate Version="3.0.0" Type="Project" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005">
   <TemplateData>
     <Name>SMILE 2.0 Console Application</Name>
-    <Description>A SMILE 2.0 console program with Windows 64-bit .exe and Web targets.</Description>
+    <Description>A console program in SMILE 2.0—Simple Modern and Intuitive Language for Everyone—with Windows 64-bit .exe and Web targets.</Description>
     <ProjectType>Smile</ProjectType>
     <LanguageTag>SMILE</LanguageTag>
     <PlatformTag>Windows</PlatformTag>

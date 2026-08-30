@@ -1,5 +1,7 @@
-SMILE 2.0 (SinBASIC) — Snake Visual Tutorial Website
-==========================================================
+SMILE 2.0 — Simple Modern and Intuitive Language for Everyone
+==============================================================
+Snake Visual Tutorial Website
+=============================
 
 Installation
 ------------

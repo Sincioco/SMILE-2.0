@@ -18,6 +18,7 @@ internal sealed class CompilerDriver
         {
             if (!string.IsNullOrWhiteSpace(argumentError))
                 Console.Error.WriteLine($"error SML5007: {argumentError}");
+            Console.Error.WriteLine("SMILE 2.0: Simple Modern and Intuitive Language for Everyone");
             Console.Error.WriteLine("Usage: smilec <startup.smile> [--source <support.smile>]... [--library <package.smilelib>]... [--application-id <id>] [--target windows-x64 -o <output.exe>] [--target web --output-dir <directory>] | smilec --project <project> [--target windows-x64|web|library] [-o <output>] [--configuration <name>] [--application-id <id>]");
             return 2;
         }

@@ -439,7 +439,7 @@ Set-ExpectedText $ProjectSnapshotPath ([IO.File]::ReadAllText($ProjectPath))
 
 $ManifestJson = @"
 {
-  "product": "SMILE 2.0 (SinBASIC)",
+  "product": "SMILE 2.0 - Simple Modern and Intuitive Language for Everyone",
   "tutorial": "Snake Visual Tutorial",
   "tutorialPath": "<SMILE-2.0-root>\\tutorials\\Snake",
   "gamePath": "<SMILE-2.0-root>\\games\\Snake",

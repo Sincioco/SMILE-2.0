@@ -81,7 +81,7 @@ Normalized destination locks serialize same-target native, Web, and library publ
 
 `scripts\smoke-test.cmd` derives its repository root from its own location, `pushd`s before any gate, exports `SMILE_REPOSITORY_ROOT`, invokes the unchanged ordered gate as a subroutine, and guarantees `popd` through the single outer exit path. Managed source-contract tests validate that environment value or locate `SMILE 2.0.sln` plus `AGENTS.md` by walking upward from `AppContext.BaseDirectory`; caller `Environment.CurrentDirectory` is no longer an input.
 
-The complete smoke gate passed from `D:\SMILE 2.0`, `D:\`, and `C:\Users\louie\Documents\SMILE 2.0 - SinBASIC`.
+The complete smoke gate passed from `D:\SMILE 2.0`, `D:\`, and a legacy alternate repository path under `C:\Users\louie\Documents`.
 
 ### Doctor/prerequisite validation
 
@@ -195,7 +195,7 @@ dotnet restore src\Smile.VisualStudio\Smile.VisualStudio.csproj --locked-mode
 Passed with the committed VSIX/template lock graphs.
 
 scripts\smoke-test.cmd
-Passed from D:\SMILE 2.0, D:\, and C:\Users\louie\Documents\SMILE 2.0 - SinBASIC.
+Passed from `D:\SMILE 2.0`, `D:\`, and a legacy alternate repository path under `C:\Users\louie\Documents`.
 Each run selected 284 managed tests, 13 formatter tests, 278 style files,
 39 native graphics/audio-focus checks, and 38 native Text checks, then passed the full native/Web/package/game gate.
 

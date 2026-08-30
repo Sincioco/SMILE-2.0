@@ -2,7 +2,7 @@
 <VSTemplate Version="3.0.0" Type="Project" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005">
   <TemplateData>
     <Name>SMILE 2.0 Library</Name>
-    <Description>A reusable SMILE 2.0 module library that builds a deterministic .smilelib package.</Description>
+    <Description>A reusable module library for SMILE 2.0—Simple Modern and Intuitive Language for Everyone—that builds a deterministic .smilelib package.</Description>
     <ProjectType>Smile</ProjectType>
     <LanguageTag>SMILE</LanguageTag>
     <PlatformTag>Windows</PlatformTag>

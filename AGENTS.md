@@ -4,7 +4,7 @@ These instructions apply to the entire SMILE 2.0 repository.
 
 ## Project identity
 
-- `SMILE` always means **SMILE 2.0**, the new native compiler project.
+- `SMILE` stands for **Simple Modern and Intuitive Language for Everyone** and always means **SMILE 2.0**, the new native compiler project.
 - Do not maintain SMILE 1.0 compatibility unless Sin explicitly requests it.
 - Local repository: `D:\SMILE 2.0`
 - Public GitHub repository: `Sincioco/SMILE-2.0`
