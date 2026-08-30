@@ -11,6 +11,7 @@ True-3D types:
 - `Camera3D`: position, target, projection fields, near/far planes, FOV, and the legacy wireframe viewport fields.
 - `CameraControl3D`: composable pan, wheel-zoom, middle-drag orbit, and return-spring state.
 - `Object3D`: validated object/mesh handles plus mirrored position, rotation, scale, color, opacity, and visibility values.
+- `Model3D`: validated model handle plus part, material, format-version, vertex, index, and texture-reference counts.
 
 The legacy wireframe types and limits remain source compatible.
 
@@ -61,6 +62,18 @@ Custom indexed meshes:
 - `CommitMesh3D(Mesh)`
 - `CreateObjectFromMesh3D(Mesh)`
 - `MeshVertexCount3D(Mesh)` and `MeshIndexCount3D(Mesh)`
+
+Offline static models:
+
+- `LoadModel3D(Path)`, `DestroyModel3D(ByRef Model)`, and `CreateModelPart3D(Model, PartIndex)`
+- `ModelPartMaterial3D`, `ModelHandleValid3D`, `LiveModelCount3D`, and `MaximumModelCount3D`
+- `ModelTangentHandednessCount3D(Model, Handedness)`
+- `ModelMaterialValue3D(Model, MaterialIndex, Property)` using the public `MODEL_MATERIAL_*` property constants; finite factors are returned in thousandths, texture references are one-based with zero meaning absent, and name hashes are unsigned FNV-1a values
+- `ModelTextureValue3D(Model, TextureIndex, Property)` using `MODEL_TEXTURE_SEMANTIC` or `MODEL_TEXTURE_PATH_HASH`
+- `ModelBoundsValue3D(Model, PartIndex, Component)` using part `-1` for model bounds and the public `MODEL_BOUNDS_*` components; values are returned in thousandths
+- `ModelPartNameHash3D` and `ModelNameHash3D`
+
+SM3D v1 remains supported. SM3D v2 adds static tangents, deterministic names/bounds, PBR metadata, and safe external texture references; M1 does not automatically load those textures or create PBR materials.
 
 Transforms and appearance:
 

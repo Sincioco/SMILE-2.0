@@ -125,6 +125,10 @@ Public Type Model3D
     Handle As Number
     PartCount As Number
     MaterialCount As Number
+    FormatVersion As Number
+    VertexCount As Number
+    IndexCount As Number
+    TextureReferenceCount As Number
 End Type
 
 ''' A committed hierarchy of bind-pose bone pivots.

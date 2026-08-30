@@ -8,16 +8,38 @@ Const RELOAD_CYCLES = 100
 Dim Camera As Core.Camera3D
 Dim Humanoid As Core.Model3D
 Dim Dragon As Core.Model3D
+Dim BoundaryMetadata As Core.Model3D
+Dim BoundaryMetadata2 As Core.Model3D
+Dim BoundaryMetadata3 As Core.Model3D
+Dim BoundaryMetadata4 As Core.Model3D
+Dim BoundaryMetadata5 As Core.Model3D
+Dim BoundaryMetadata6 As Core.Model3D
+Dim BoundaryMetadata7 As Core.Model3D
+Dim BoundaryCapacityFailure As Core.Model3D
 Dim BadMagic As Core.Model3D
 Dim BadVersion As Core.Model3D
+Dim BadV2Header As Core.Model3D
+Dim BadV2Size As Core.Model3D
+Dim BadV2Checksum As Core.Model3D
+Dim BadV2Directory As Core.Model3D
+Dim BadV2ChunkRange As Core.Model3D
+Dim BadV2Count As Core.Model3D
+Dim BadV2Stride As Core.Model3D
+Dim MissingRequiredV2 As Core.Model3D
+Dim UnknownRequiredV2 As Core.Model3D
 Dim Missing As Core.Model3D
 Dim Reloaded As Core.Model3D
+Dim M0Triangle As Core.Model3D
+Dim PbrTriangle As Core.Model3D
+Dim UnknownOptionalV2 As Core.Model3D
 Dim EmptyTexture As Core.Texture3D
 Dim Armor As Core.Material3D
 Dim Scales As Core.Material3D
 Dim HumanoidPart As Core.Object3D
 Dim DragonBody As Core.Object3D
 Dim DragonWings As Core.Object3D
+Dim M0TrianglePart As Core.Object3D
+Dim PbrTrianglePart As Core.Object3D
 Dim Failures As Number
 Dim FrameReady As Boolean
 Dim MaterialBindingsReady As Boolean
@@ -28,12 +50,77 @@ Game Window "Renderer3D Model Tests" Size 480 By 270
 
 Call Graphics3D.ResetRenderer3D()
 
+BoundaryMetadata = Graphics3D.LoadModel3D("Assets\BoundaryMetadataV2.sm3d")
+BoundaryMetadata2 = Graphics3D.LoadModel3D("Assets\BoundaryMetadataV2.sm3d")
+BoundaryMetadata3 = Graphics3D.LoadModel3D("Assets\BoundaryMetadataV2.sm3d")
+BoundaryMetadata4 = Graphics3D.LoadModel3D("Assets\BoundaryMetadataV2.sm3d")
+BoundaryMetadata5 = Graphics3D.LoadModel3D("Assets\BoundaryMetadataV2.sm3d")
+BoundaryMetadata6 = Graphics3D.LoadModel3D("Assets\BoundaryMetadataV2.sm3d")
+BoundaryMetadata7 = Graphics3D.LoadModel3D("Assets\BoundaryMetadataV2.sm3d")
+M0Triangle = Graphics3D.LoadModel3D("Assets\M0TriangleV2.sm3d")
+
+If (BoundaryMetadata.Handle = 0 Or
+    BoundaryMetadata.FormatVersion <> 2 Or
+    BoundaryMetadata.PartCount <> 16 Or
+    BoundaryMetadata.MaterialCount <> 64 Or
+    BoundaryMetadata.TextureReferenceCount <> 128 Or
+    BoundaryMetadata2.Handle = 0 Or
+    BoundaryMetadata3.Handle = 0 Or
+    BoundaryMetadata4.Handle = 0 Or
+    BoundaryMetadata5.Handle = 0 Or
+    BoundaryMetadata6.Handle = 0 Or
+    BoundaryMetadata7.Handle = 0 Or
+    M0Triangle.Handle = 0 Or
+    Graphics3D.LiveModelCount3D() <> 8 Or
+    Graphics3D.LiveMeshCount3D() <> 113) Then
+    Failures = Failures + 1
+End If
+
+BoundaryCapacityFailure = Graphics3D.LoadModel3D("Assets\BoundaryMetadataV2.sm3d")
+
+If (BoundaryCapacityFailure.Handle <> 0 Or
+    Graphics3D.LiveModelCount3D() <> 8 Or
+    Graphics3D.LiveMeshCount3D() <> 113) Then
+    Failures = Failures + 1
+End If
+
+Call Graphics3D.DestroyModel3D(BoundaryMetadata)
+Call Graphics3D.DestroyModel3D(BoundaryMetadata2)
+Call Graphics3D.DestroyModel3D(BoundaryMetadata3)
+Call Graphics3D.DestroyModel3D(BoundaryMetadata4)
+Call Graphics3D.DestroyModel3D(BoundaryMetadata5)
+Call Graphics3D.DestroyModel3D(BoundaryMetadata6)
+Call Graphics3D.DestroyModel3D(BoundaryMetadata7)
+Call Graphics3D.DestroyModel3D(M0Triangle)
+
+If Graphics3D.LiveModelCount3D() <> 0 Or Graphics3D.LiveMeshCount3D() <> 0 Then
+    Failures = Failures + 1
+End If
+
 BadMagic = Graphics3D.LoadModel3D("Assets\BadMagic.sm3d")
 BadVersion = Graphics3D.LoadModel3D("Assets\BadVersion.sm3d")
+BadV2Header = Graphics3D.LoadModel3D("Assets\BadV2Header.sm3d")
+BadV2Size = Graphics3D.LoadModel3D("Assets\BadV2Size.sm3d")
+BadV2Checksum = Graphics3D.LoadModel3D("Assets\BadV2Checksum.sm3d")
+BadV2Directory = Graphics3D.LoadModel3D("Assets\BadV2Directory.sm3d")
+BadV2ChunkRange = Graphics3D.LoadModel3D("Assets\BadV2ChunkRange.sm3d")
+BadV2Count = Graphics3D.LoadModel3D("Assets\BadV2Count.sm3d")
+BadV2Stride = Graphics3D.LoadModel3D("Assets\BadV2Stride.sm3d")
+MissingRequiredV2 = Graphics3D.LoadModel3D("Assets\MissingRequiredV2.sm3d")
+UnknownRequiredV2 = Graphics3D.LoadModel3D("Assets\UnknownRequiredV2.sm3d")
 Missing = Graphics3D.LoadModel3D("Assets\Missing.sm3d")
 
 If (BadMagic.Handle <> 0 Or
     BadVersion.Handle <> 0 Or
+    BadV2Header.Handle <> 0 Or
+    BadV2Size.Handle <> 0 Or
+    BadV2Checksum.Handle <> 0 Or
+    BadV2Directory.Handle <> 0 Or
+    BadV2ChunkRange.Handle <> 0 Or
+    BadV2Count.Handle <> 0 Or
+    BadV2Stride.Handle <> 0 Or
+    MissingRequiredV2.Handle <> 0 Or
+    UnknownRequiredV2.Handle <> 0 Or
     Missing.Handle <> 0 Or
     Graphics3D.LiveModelCount3D() <> 0 Or
     Graphics3D.LiveMeshCount3D() <> 0) Then
@@ -42,8 +129,12 @@ End If
 
 Humanoid = Graphics3D.LoadModel3D("Assets\Humanoid.sm3d")
 Dragon = Graphics3D.LoadModel3D("Assets\Dragon.sm3d")
+M0Triangle = Graphics3D.LoadModel3D("Assets\M0TriangleV2.sm3d")
+PbrTriangle = Graphics3D.LoadModel3D("Assets\PbrTriangleV2.sm3d")
+UnknownOptionalV2 = Graphics3D.LoadModel3D("Assets\UnknownOptionalV2.sm3d")
 
 If (Humanoid.Handle = 0 Or
+    Humanoid.FormatVersion <> 1 Or
     Humanoid.PartCount <> 1 Or
     Humanoid.MaterialCount <> 1 Or
     Dragon.Handle = 0 Or
@@ -52,8 +143,72 @@ If (Humanoid.Handle = 0 Or
     Graphics3D.ModelPartMaterial3D(Humanoid, 0) <> 0 Or
     Graphics3D.ModelPartMaterial3D(Dragon, 0) <> 0 Or
     Graphics3D.ModelPartMaterial3D(Dragon, 1) <> 1 Or
-    Graphics3D.LiveModelCount3D() <> 2 Or
-    Graphics3D.LiveMeshCount3D() <> 3) Then
+    M0Triangle.Handle = 0 Or
+    M0Triangle.FormatVersion <> 2 Or
+    M0Triangle.VertexCount <> 3 Or
+    M0Triangle.IndexCount <> 3 Or
+    M0Triangle.TextureReferenceCount <> 0 Or
+    PbrTriangle.Handle = 0 Or
+    PbrTriangle.FormatVersion <> 2 Or
+    PbrTriangle.VertexCount <> 3 Or
+    PbrTriangle.IndexCount <> 3 Or
+    PbrTriangle.TextureReferenceCount <> 4 Or
+    UnknownOptionalV2.Handle = 0 Or
+    UnknownOptionalV2.FormatVersion <> 2 Or
+    Graphics3D.LiveModelCount3D() <> 5 Or
+    Graphics3D.LiveMeshCount3D() <> 6) Then
+    Failures = Failures + 1
+End If
+
+If (Graphics3D.ModelTangentHandednessCount3D(M0Triangle, -1) <> 3 Or
+    Graphics3D.ModelTangentHandednessCount3D(M0Triangle, 1) <> 0 Or
+    Graphics3D.ModelBoundsValue3D(M0Triangle, -1, Graphics3D.MODEL_BOUNDS_MINIMUM_X) <> -1000 Or
+    Graphics3D.ModelBoundsValue3D(M0Triangle, -1, Graphics3D.MODEL_BOUNDS_MAXIMUM_X) <> 1000 Or
+    Graphics3D.ModelBoundsValue3D(M0Triangle, 0, Graphics3D.MODEL_BOUNDS_MAXIMUM_Y) <> 1000 Or
+    Graphics3D.ModelNameHash3D(M0Triangle) <> 2857009948 Or
+    Graphics3D.ModelPartNameHash3D(M0Triangle, 0) <> 2857009948 Or
+    Graphics3D.ModelTangentHandednessCount3D(PbrTriangle, -1) <> 3 Or
+    Graphics3D.ModelTangentHandednessCount3D(PbrTriangle, 1) <> 0 Or
+    Graphics3D.ModelNameHash3D(PbrTriangle) <> 100590386 Or
+    Graphics3D.ModelPartNameHash3D(PbrTriangle, 0) <> 100590386) Then
+    Failures = Failures + 1
+End If
+
+If (Graphics3D.ModelMaterialValue3D(PbrTriangle, 0, Graphics3D.MODEL_MATERIAL_BASE_COLOR_RED) <> 200 Or
+    Graphics3D.ModelMaterialValue3D(PbrTriangle, 0, Graphics3D.MODEL_MATERIAL_BASE_COLOR_GREEN) <> 400 Or
+    Graphics3D.ModelMaterialValue3D(PbrTriangle, 0, Graphics3D.MODEL_MATERIAL_BASE_COLOR_BLUE) <> 600 Or
+    Graphics3D.ModelMaterialValue3D(PbrTriangle, 0, Graphics3D.MODEL_MATERIAL_BASE_COLOR_ALPHA) <> 800 Or
+    Graphics3D.ModelMaterialValue3D(PbrTriangle, 0, Graphics3D.MODEL_MATERIAL_METALLIC) <> 350 Or
+    Graphics3D.ModelMaterialValue3D(PbrTriangle, 0, Graphics3D.MODEL_MATERIAL_ROUGHNESS) <> 650 Or
+    Graphics3D.ModelMaterialValue3D(PbrTriangle, 0, Graphics3D.MODEL_MATERIAL_NORMAL_STRENGTH) <> 750 Or
+    Graphics3D.ModelMaterialValue3D(PbrTriangle, 0, Graphics3D.MODEL_MATERIAL_OCCLUSION_STRENGTH) <> 500 Or
+    Graphics3D.ModelMaterialValue3D(PbrTriangle, 0, Graphics3D.MODEL_MATERIAL_ALPHA_MODE) <> 1 Or
+    Graphics3D.ModelMaterialValue3D(PbrTriangle, 0, Graphics3D.MODEL_MATERIAL_ALPHA_CUTOFF) <> 375 Or
+    Graphics3D.ModelMaterialValue3D(PbrTriangle, 0, Graphics3D.MODEL_MATERIAL_DOUBLE_SIDED) <> 1 Or
+    Graphics3D.ModelMaterialValue3D(PbrTriangle, 0, Graphics3D.MODEL_MATERIAL_NAME_HASH) <> 66001318) Then
+    Failures = Failures + 1
+End If
+
+If (Graphics3D.ModelMaterialValue3D(PbrTriangle, 0, Graphics3D.MODEL_MATERIAL_BASE_COLOR_TEXTURE) <> 1 Or
+    Graphics3D.ModelMaterialValue3D(PbrTriangle, 0, Graphics3D.MODEL_MATERIAL_NORMAL_TEXTURE) <> 2 Or
+    Graphics3D.ModelMaterialValue3D(PbrTriangle, 0, Graphics3D.MODEL_MATERIAL_ORM_TEXTURE) <> 3 Or
+    Graphics3D.ModelMaterialValue3D(PbrTriangle, 0, Graphics3D.MODEL_MATERIAL_EMISSIVE_TEXTURE) <> 4 Or
+    Graphics3D.ModelTextureValue3D(PbrTriangle, 0, Graphics3D.MODEL_TEXTURE_SEMANTIC) <> 1 Or
+    Graphics3D.ModelTextureValue3D(PbrTriangle, 1, Graphics3D.MODEL_TEXTURE_SEMANTIC) <> 2 Or
+    Graphics3D.ModelTextureValue3D(PbrTriangle, 2, Graphics3D.MODEL_TEXTURE_SEMANTIC) <> 3 Or
+    Graphics3D.ModelTextureValue3D(PbrTriangle, 3, Graphics3D.MODEL_TEXTURE_SEMANTIC) <> 4 Or
+    Graphics3D.ModelTextureValue3D(PbrTriangle, 0, Graphics3D.MODEL_TEXTURE_PATH_HASH) <> 213417483 Or
+    Graphics3D.ModelTextureValue3D(PbrTriangle, 1, Graphics3D.MODEL_TEXTURE_PATH_HASH) <> 661518239 Or
+    Graphics3D.ModelTextureValue3D(PbrTriangle, 2, Graphics3D.MODEL_TEXTURE_PATH_HASH) <> 572059502 Or
+    Graphics3D.ModelTextureValue3D(PbrTriangle, 3, Graphics3D.MODEL_TEXTURE_PATH_HASH) <> 1809373059) Then
+    Failures = Failures + 1
+End If
+
+BadV2Checksum = Graphics3D.LoadModel3D("Assets\BadV2Checksum.sm3d")
+
+If (BadV2Checksum.Handle <> 0 Or
+    Graphics3D.LiveModelCount3D() <> 5 Or
+    Graphics3D.LiveMeshCount3D() <> 6) Then
     Failures = Failures + 1
 End If
 
@@ -83,6 +238,8 @@ Scales = Graphics3D.CreateMaterial3D(
 HumanoidPart = Graphics3D.CreateModelPart3D(Humanoid, 0)
 DragonBody = Graphics3D.CreateModelPart3D(Dragon, 0)
 DragonWings = Graphics3D.CreateModelPart3D(Dragon, 1)
+M0TrianglePart = Graphics3D.CreateModelPart3D(M0Triangle, 0)
+PbrTrianglePart = Graphics3D.CreateModelPart3D(PbrTriangle, 0)
 
 MaterialBindingsReady = Graphics3D.SetObjectMaterial3D(HumanoidPart, Armor)
 MaterialBindingsReady = MaterialBindingsReady And Graphics3D.SetObjectMaterial3D(DragonBody, Scales)
@@ -91,15 +248,21 @@ MaterialBindingsReady = MaterialBindingsReady And Graphics3D.SetObjectMaterial3D
 Call Graphics3D.SetObjectPosition(HumanoidPart, -55, 0, 0)
 Call Graphics3D.SetObjectPosition(DragonBody, 55, 0, 0)
 Call Graphics3D.SetObjectPosition(DragonWings, 55, 0, 2)
+Call Graphics3D.SetObjectPosition(M0TrianglePart, -20, -20, 4)
+Call Graphics3D.SetObjectPosition(PbrTrianglePart, 20, -20, 4)
 Call Graphics3D.SetObjectScale(HumanoidPart, 3500, 7000, 3500)
 Call Graphics3D.SetObjectScale(DragonBody, 6000, 4000, 6000)
 Call Graphics3D.SetObjectScale(DragonWings, 9000, 3000, 6000)
+Call Graphics3D.SetObjectScale(M0TrianglePart, 1500, 1500, 1500)
+Call Graphics3D.SetObjectScale(PbrTrianglePart, 1500, 1500, 1500)
 
 If (HumanoidPart.Handle = 0 Or
     DragonBody.Handle = 0 Or
     DragonWings.Handle = 0 Or
+    M0TrianglePart.Handle = 0 Or
+    PbrTrianglePart.Handle = 0 Or
     Not MaterialBindingsReady Or
-    Graphics3D.LiveObjectCount3D() <> 3 Or
+    Graphics3D.LiveObjectCount3D() <> 5 Or
     Graphics3D.MaterialReferenceCount3D(Scales.Handle) <> 2) Then
     Failures = Failures + 1
 End If
@@ -119,6 +282,8 @@ If Graphics3D.RendererAvailable() Then
     FrameReady = FrameReady And Graphics3D.DrawObject3D(HumanoidPart)
     FrameReady = FrameReady And Graphics3D.DrawObject3D(DragonBody)
     FrameReady = FrameReady And Graphics3D.DrawObject3D(DragonWings)
+    FrameReady = FrameReady And Graphics3D.DrawObject3D(M0TrianglePart)
+    FrameReady = FrameReady And Graphics3D.DrawObject3D(PbrTrianglePart)
 
     If Not FrameReady Then
         Failures = Failures + 1
@@ -135,8 +300,13 @@ Show Screen
 Call Graphics3D.DestroyObjectInstance3D(HumanoidPart)
 Call Graphics3D.DestroyObjectInstance3D(DragonBody)
 Call Graphics3D.DestroyObjectInstance3D(DragonWings)
+Call Graphics3D.DestroyObjectInstance3D(M0TrianglePart)
+Call Graphics3D.DestroyObjectInstance3D(PbrTrianglePart)
 Call Graphics3D.DestroyModel3D(Humanoid)
 Call Graphics3D.DestroyModel3D(Dragon)
+Call Graphics3D.DestroyModel3D(M0Triangle)
+Call Graphics3D.DestroyModel3D(PbrTriangle)
+Call Graphics3D.DestroyModel3D(UnknownOptionalV2)
 Call Graphics3D.DestroyMaterial3D(Armor)
 Call Graphics3D.DestroyMaterial3D(Scales)
 

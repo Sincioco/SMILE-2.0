@@ -26,7 +26,7 @@ Animation evaluation is CPU-side and deterministic; deformation is GPU-side on b
 
 Objects refer to animators; animators refer to skeletons and the currently playing clip; clips refer to skeletons. Destroy operations refuse while a live dependent exists and leave the public record intact. Reset clears objects, then animators, clips, and skeletons. Diagnostic APIs expose live/fixed maximum counts and handle validity.
 
-The version-1 SM3D converter remains a static-model interchange. Skinned meshes can be authored through the same public custom-mesh API today; bundled skeleton/clip sections in a later SM3D version are a future authoring convenience, not a runtime requirement.
+SM3D v1 and the v2 M1 core remain static-model interchanges. V2 reserves later skeleton/clip/event/root-motion/socket chunks but does not emit or interpret them yet. Skinned meshes can still be authored through the same public custom-mesh API; bundled M3 sections are an authoring convenience rather than a replacement for the bounded runtime resource API.
 
 ## Verification
 

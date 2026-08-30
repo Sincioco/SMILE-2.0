@@ -803,8 +803,12 @@ internal static class WebOutputWriter
                     renderer3DLastError = 2; return 0;
                 }
                 const handle = renderer3DHandle();
-                const vertices = new Float32Array(vertexCount * 16);
-                for (let index = 0; index < vertexCount; index += 1) vertices[index * 16 + 12] = 1;
+                const vertices = new Float32Array(vertexCount * 20);
+                for (let index = 0; index < vertexCount; index += 1) {
+                    vertices[index * 20 + 12] = 1;
+                    vertices[index * 20 + 16] = 1;
+                    vertices[index * 20 + 19] = 1;
+                }
                 renderer3DMeshes.set(handle, {
                     vertexCount, indexCount, vertices,
                     indices: new Uint32Array(indexCount), committed: false, explicitNormals: false,
@@ -864,7 +868,7 @@ internal static class WebOutputWriter
             function renderer3DSetVertex(mesh, index, x, y, z) {
                 index = safe(index);
                 if (index < 0 || index >= mesh.vertexCount) { renderer3DLastError = 5; return false; }
-                const offset = index * 16;
+                const offset = index * 20;
                 mesh.vertices[offset] = safe(x); mesh.vertices[offset + 1] = safe(y); mesh.vertices[offset + 2] = safe(z);
                 mesh.committed = false;
                 return true;
@@ -873,7 +877,7 @@ internal static class WebOutputWriter
             function renderer3DSetUv(mesh, index, u, v) {
                 index = safe(index);
                 if (index < 0 || index >= mesh.vertexCount) { renderer3DLastError = 5; return false; }
-                const offset = index * 16;
+                const offset = index * 20;
                 mesh.vertices[offset + 6] = safe(u) / 1000;
                 mesh.vertices[offset + 7] = safe(v) / 1000;
                 mesh.committed = false;
@@ -883,7 +887,7 @@ internal static class WebOutputWriter
             function renderer3DSetNormal(mesh, index, x, y, z) {
                 index = safe(index);
                 if (index < 0 || index >= mesh.vertexCount) { renderer3DLastError = 5; return false; }
-                const offset = index * 16;
+                const offset = index * 20;
                 mesh.vertices[offset + 3] = safe(x) / 1000;
                 mesh.vertices[offset + 4] = safe(y) / 1000;
                 mesh.vertices[offset + 5] = safe(z) / 1000;
@@ -899,7 +903,7 @@ internal static class WebOutputWriter
                     joints.some(value=>value<0||value>=32)||weights.some(value=>value<0||value>1000)){
                     renderer3DLastError=34;return false;
                 }
-                const offset=index*16;
+                const offset=index*20;
                 for(let influence=0;influence<4;influence+=1){mesh.vertices[offset+8+influence]=joints[influence];mesh.vertices[offset+12+influence]=weights[influence]/1000;if(weights[influence]!==0)mesh.maxJoint=Math.max(mesh.maxJoint,joints[influence]);}
                 mesh.committed=false;return true;
             }
@@ -963,13 +967,13 @@ internal static class WebOutputWriter
 
             function renderer3DCommit(mesh) {
                 if (!mesh.explicitNormals)
-                    mesh.vertices.forEach((_, index) => { if (index % 16 >= 3 && index % 16 < 6) mesh.vertices[index] = 0; });
+                    mesh.vertices.forEach((_, index) => { if (index % 20 >= 3 && index % 20 < 6) mesh.vertices[index] = 0; });
                 for (let offset = 0; offset < mesh.indexCount; offset += 3) {
                     const ia = mesh.indices[offset], ib = mesh.indices[offset + 1], ic = mesh.indices[offset + 2];
                     if (ia >= mesh.vertexCount || ib >= mesh.vertexCount || ic >= mesh.vertexCount) {
                         renderer3DLastError = 6; return false;
                     }
-                    const a = ia * 16, b = ib * 16, c = ic * 16;
+                    const a = ia * 20, b = ib * 20, c = ic * 20;
                     const ux = mesh.vertices[b] - mesh.vertices[a], uy = mesh.vertices[b + 1] - mesh.vertices[a + 1], uz = mesh.vertices[b + 2] - mesh.vertices[a + 2];
                     const vx = mesh.vertices[c] - mesh.vertices[a], vy = mesh.vertices[c + 1] - mesh.vertices[a + 1], vz = mesh.vertices[c + 2] - mesh.vertices[a + 2];
                     if (!mesh.explicitNormals) {
@@ -980,7 +984,7 @@ internal static class WebOutputWriter
                     }
                 }
                 for (let index = 0; index < mesh.vertexCount; index += 1) {
-                    const offset = index * 16 + 3;
+                    const offset = index * 20 + 3;
                     if (![mesh.vertices[offset],mesh.vertices[offset+1],mesh.vertices[offset+2]].every(Number.isFinite)) {
                         renderer3DLastError = 6; return false;
                     }
@@ -999,6 +1003,136 @@ internal static class WebOutputWriter
                 return result;
             }
 
+            function renderer3DTextHash(value) {
+                let result=2166136261;
+                for(const byte of utf8(value))result=Math.imul((result^byte)>>>0,16777619)>>>0;
+                return result;
+            }
+
+            function renderer3DDecodeUtf8(bytes,start,end) {
+                let result="";
+                for(let index=start;index<end;){
+                    const first=bytes[index++];let code=0,remaining=0,minimum=0;
+                    if(first<=0x7f){code=first;}
+                    else if(first>=0xc2&&first<=0xdf){code=first&0x1f;remaining=1;minimum=0x80;}
+                    else if(first>=0xe0&&first<=0xef){code=first&0x0f;remaining=2;minimum=0x800;}
+                    else if(first>=0xf0&&first<=0xf4){code=first&7;remaining=3;minimum=0x10000;}
+                    else return null;
+                    if(index+remaining>end)return null;
+                    for(let count=0;count<remaining;count+=1){const next=bytes[index++];if((next&0xc0)!==0x80)return null;code=(code<<6)|(next&0x3f);}
+                    if(code<minimum||code>0x10ffff||(code>=0xd800&&code<=0xdfff))return null;
+                    result+=String.fromCodePoint(code);
+                }
+                return result;
+            }
+
+            function renderer3DTexturePath(path,byteLength) {
+                if(!path||byteLength<1||byteLength>1024||path.startsWith("/")||path.startsWith("//")||
+                    path.includes("\\")||path.includes(":")||/[\x00-\x1f\x7f*?\[\]{}!;"<>|]/u.test(path))return false;
+                return path.split("/").every(segment=>segment&&segment!=="."&&segment!=="..");
+            }
+
+            function renderer3DParseModelV1(buffer) {
+                const bytes=new Uint8Array(buffer),view=new DataView(buffer),u16=offset=>view.getUint16(offset,true),u32=offset=>view.getUint32(offset,true);
+                const partCount=u32(8),vertexCount=u32(12),indexCount=u32(16),materialCount=u32(20);
+                const partBytes=partCount*24,vertexBytes=vertexCount*32,expected=32+partBytes+vertexBytes+indexCount*4;
+                if(bytes[0]!==83||bytes[1]!==77||bytes[2]!==51||bytes[3]!==68||u16(4)!==1||u16(6)!==32||
+                    partCount<1||partCount>16||vertexCount<1||vertexCount>16*65535||
+                    indexCount<1||indexCount>16*196608||materialCount<1||materialCount>64||
+                    u32(24)!==buffer.byteLength||expected!==buffer.byteLength||u32(28)!==renderer3DChecksum(bytes,32))return null;
+                const parts=[];
+                for(let partIndex=0;partIndex<partCount;partIndex+=1){
+                    const offset=32+partIndex*24,firstVertex=u32(offset),partVertices=u32(offset+4),
+                        firstIndex=u32(offset+8),partIndices=u32(offset+12),material=u32(offset+16);
+                    if(partVertices<1||partVertices>65535||partIndices<1||partIndices>196608||partIndices%3!==0||
+                        firstVertex>vertexCount||partVertices>vertexCount-firstVertex||firstIndex>indexCount||
+                        partIndices>indexCount-firstIndex||material>=materialCount||u32(offset+20)!==0)return null;
+                    for(let index=0;index<partVertices*8;index+=1)
+                        if(!Number.isFinite(view.getFloat32(32+partBytes+(firstVertex*8+index)*4,true)))return null;
+                    for(let index=0;index<partIndices;index+=1)
+                        if(u32(32+partBytes+vertexBytes+(firstIndex+index)*4)>=partVertices)return null;
+                    parts.push({firstVertex,vertexCount:partVertices,firstIndex,indexCount:partIndices,material});
+                }
+                return {version:1,parts,vertexCount,indexCount,materialCount,textureMetadata:[],materialMetadata:[],
+                    name:"",partNames:[],bounds:null,partBounds:[],tangentPositive:0,tangentNegative:0,
+                    vertexOffset:32+partBytes,indexOffset:32+partBytes+vertexBytes};
+            }
+
+            function renderer3DParseModelV2(buffer) {
+                const bytes=new Uint8Array(buffer),view=new DataView(buffer),u16=offset=>view.getUint16(offset,true),u32=offset=>view.getUint32(offset,true),f32=offset=>view.getFloat32(offset,true);
+                if(buffer.byteLength<64||bytes[0]!==83||bytes[1]!==77||bytes[2]!==51||bytes[3]!==68||u16(4)!==2||u16(6)!==64||
+                    u32(8)!==0||u32(12)!==buffer.byteLength||u32(16)!==renderer3DChecksum(bytes,64)||u32(24)!==64||u32(28)!==32||
+                    u32(56)!==0||u32(60)!==0)return null;
+                const chunkCount=u32(20),directoryEnd=64+chunkCount*32;
+                if(chunkCount<1||chunkCount>32||directoryEnd>buffer.byteLength)return null;
+                const chunks=new Map(),known=new Set(["STR0","PART","VERT","INDX","MATL","TEXR","BOND"]),ranges=[];
+                for(let index=0;index<chunkCount;index+=1){
+                    const entry=64+index*32,id=String.fromCharCode(bytes[entry],bytes[entry+1],bytes[entry+2],bytes[entry+3]),
+                        flags=u32(entry+4),offset=u32(entry+8),length=u32(entry+12),count=u32(entry+16),stride=u32(entry+20);
+                    if(chunks.has(id)||(flags&~1)!==0||u32(entry+24)!==0||u32(entry+28)!==0||offset<((directoryEnd+3)&~3)||
+                        offset%4!==0||offset>buffer.byteLength||length>buffer.byteLength-offset||(!known.has(id)&&(flags&1)===0))return null;
+                    const chunk={id,flags,offset,length,count,stride};chunks.set(id,chunk);if(length)ranges.push(chunk);
+                }
+                ranges.sort((left,right)=>left.offset-right.offset);
+                for(let index=1;index<ranges.length;index+=1)if(ranges[index-1].offset+ranges[index-1].length>ranges[index].offset)return null;
+                for(const id of known)if(!chunks.has(id)||chunks.get(id).flags!==0)return null;
+                const strings=chunks.get("STR0"),partChunk=chunks.get("PART"),vertexChunk=chunks.get("VERT"),indexChunk=chunks.get("INDX"),
+                    materialChunk=chunks.get("MATL"),textureChunk=chunks.get("TEXR"),boundsChunk=chunks.get("BOND");
+                const partCount=u32(36),vertexCount=u32(40),indexCount=u32(44),materialCount=u32(48),textureCount=u32(52);
+                if(partCount<1||partCount>16||vertexCount<1||vertexCount>131072||indexCount<3||indexCount>393216||indexCount%3!==0||
+                    materialCount<1||materialCount>64||textureCount>128||strings.count<1||strings.stride!==0||strings.length<1||
+                    partChunk.count!==partCount||partChunk.stride!==32||partChunk.length!==partCount*32||
+                    vertexChunk.count!==vertexCount||vertexChunk.stride!==48||vertexChunk.length!==vertexCount*48||
+                    indexChunk.count!==indexCount||indexChunk.stride!==4||indexChunk.length!==indexCount*4||
+                    materialChunk.count!==materialCount||materialChunk.stride!==80||materialChunk.length!==materialCount*80||
+                    textureChunk.count!==textureCount||textureChunk.stride!==16||textureChunk.length!==textureCount*16||
+                    boundsChunk.count!==partCount+1||boundsChunk.stride!==32||boundsChunk.length!==(partCount+1)*32)return null;
+                const stringValues=new Map();let stringOffset=0,stringCount=0;
+                while(stringOffset<strings.length){let end=stringOffset;while(end<strings.length&&bytes[strings.offset+end]!==0)end+=1;if(end>=strings.length)return null;
+                    const value=renderer3DDecodeUtf8(bytes,strings.offset+stringOffset,strings.offset+end);if(value===null)return null;
+                    stringValues.set(stringOffset,value);stringCount+=1;stringOffset=end+1;}
+                if(stringOffset!==strings.length||stringCount!==strings.count||stringValues.get(0)!=="")return null;
+                const stringAt=offset=>stringValues.has(offset)?stringValues.get(offset):null,name=stringAt(u32(32));if(name===null)return null;
+                const textureMetadata=[],textureKeys=new Set();
+                for(let index=0;index<textureCount;index+=1){const offset=textureChunk.offset+index*16,pathOffset=u32(offset),path=stringAt(pathOffset),semantic=u32(offset+4);
+                    if(path===null||semantic<1||semantic>4||u32(offset+8)!==0||u32(offset+12)!==0||
+                        !renderer3DTexturePath(path,utf8(path).length)||textureKeys.has(`${semantic}\0${path}`))return null;
+                    textureKeys.add(`${semantic}\0${path}`);textureMetadata.push({path,semantic});}
+                const reference=(offset,semantic)=>{const value=u32(offset);if(value===0xffffffff)return -1;if(value>=textureCount||textureMetadata[value].semantic!==semantic)return -2;return value;};
+                const finite=(offset,minimum,maximum)=>{const value=f32(offset);return Number.isFinite(value)&&value>=minimum&&value<=maximum?value:null;};
+                const materialMetadata=[];
+                for(let index=0;index<materialCount;index+=1){const offset=materialChunk.offset+index*80,materialName=stringAt(u32(offset)),
+                    refs=[reference(offset+4,1),reference(offset+8,2),reference(offset+12,3),reference(offset+16,4)],alphaMode=u32(offset+20),flags=u32(offset+24);
+                    if(materialName===null||refs.some(value=>value===-2)||alphaMode>2||flags>1||u32(offset+28)!==0)return null;
+                    const baseColor=[0,1,2,3].map(component=>finite(offset+32+component*4,0,1)),metallic=finite(offset+48,0,1),roughness=finite(offset+52,0,1),
+                        normalStrength=finite(offset+56,0,8),occlusionStrength=finite(offset+60,0,1),
+                        emissive=[0,1,2].map(component=>finite(offset+64+component*4,0,64)),alphaCutoff=finite(offset+76,0,1);
+                    if(baseColor.some(value=>value===null)||emissive.some(value=>value===null)||[metallic,roughness,normalStrength,occlusionStrength,alphaCutoff].some(value=>value===null))return null;
+                    materialMetadata.push({name:materialName,refs,alphaMode,doubleSided:flags,baseColor,metallic,roughness,normalStrength,occlusionStrength,emissive,alphaCutoff});}
+                const readBounds=offset=>{const values=[0,1,2,3,4,5].map(component=>f32(offset+component*4));return values.every(Number.isFinite)&&u32(offset+24)===0&&u32(offset+28)===0&&
+                    values[0]<=values[3]&&values[1]<=values[4]&&values[2]<=values[5]?values:null;};
+                const bounds=readBounds(boundsChunk.offset);if(!bounds)return null;
+                const parts=[],partNames=[],partBounds=[];let expectedVertex=0,expectedIndex=0,tangentPositive=0,tangentNegative=0;
+                const modelComputed=[Infinity,Infinity,Infinity,-Infinity,-Infinity,-Infinity];
+                for(let partIndex=0;partIndex<partCount;partIndex+=1){const offset=partChunk.offset+partIndex*32,partName=stringAt(u32(offset)),firstVertex=u32(offset+4),
+                    partVertices=u32(offset+8),firstIndex=u32(offset+12),partIndices=u32(offset+16),material=u32(offset+20),declared=readBounds(boundsChunk.offset+(partIndex+1)*32);
+                    if(partName===null||firstVertex!==expectedVertex||firstIndex!==expectedIndex||partVertices<1||partVertices>65535||partIndices<3||partIndices>196608||partIndices%3!==0||
+                        partVertices>vertexCount-firstVertex||partIndices>indexCount-firstIndex||material>=materialCount||u32(offset+24)!==partIndex+1||u32(offset+28)!==0||!declared)return null;
+                    const computed=[Infinity,Infinity,Infinity,-Infinity,-Infinity,-Infinity];
+                    for(let vertex=0;vertex<partVertices;vertex+=1){const source=vertexChunk.offset+(firstVertex+vertex)*48,values=[...Array(12)].map((_,field)=>f32(source+field*4));
+                        if(!values.every(Number.isFinite)||Math.hypot(values[3],values[4],values[5])<.000001||Math.hypot(values[6],values[7],values[8])<.000001||Math.abs(Math.abs(values[9])-1)>.0001)return null;
+                        if(values[9]<0)tangentNegative+=1;else tangentPositive+=1;for(let axis=0;axis<3;axis+=1){computed[axis]=Math.min(computed[axis],values[axis]);computed[axis+3]=Math.max(computed[axis+3],values[axis]);}}
+                    for(let index=0;index<partIndices;index+=1)if(u32(indexChunk.offset+(firstIndex+index)*4)>=partVertices)return null;
+                    for(let triangle=0;triangle<partIndices;triangle+=3){const ids=[0,1,2].map(value=>u32(indexChunk.offset+(firstIndex+triangle+value)*4)),positions=ids.map(id=>{const source=vertexChunk.offset+(firstVertex+id)*48;return[f32(source),f32(source+4),f32(source+8)];}),
+                        u=positions[1].map((value,axis)=>value-positions[0][axis]),v=positions[2].map((value,axis)=>value-positions[0][axis]),cross=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
+                        if(cross.reduce((sum,value)=>sum+value*value,0)<=1e-12)return null;}
+                    if(computed.some((value,index)=>value!==declared[index]))return null;for(let axis=0;axis<3;axis+=1){modelComputed[axis]=Math.min(modelComputed[axis],computed[axis]);modelComputed[axis+3]=Math.max(modelComputed[axis+3],computed[axis+3]);}
+                    parts.push({firstVertex,vertexCount:partVertices,firstIndex,indexCount:partIndices,material});partNames.push(partName);partBounds.push(declared);expectedVertex+=partVertices;expectedIndex+=partIndices;}
+                if(expectedVertex!==vertexCount||expectedIndex!==indexCount||modelComputed.some((value,index)=>value!==bounds[index]))return null;
+                return {version:2,parts,vertexCount,indexCount,materialCount,textureMetadata,materialMetadata,name,partNames,bounds,partBounds,tangentPositive,tangentNegative,
+                    vertexOffset:vertexChunk.offset,indexOffset:indexChunk.offset};
+            }
+
             async function renderer3DLoadModel(path) {
                 if (renderer3DModels.size >= 64) { renderer3DLastError = 25; return 0; }
                 let buffer;
@@ -1010,53 +1144,65 @@ internal static class WebOutputWriter
                 if (!(buffer instanceof ArrayBuffer) || buffer.byteLength < 32 || buffer.byteLength > 16*1024*1024) {
                     renderer3DLastError = 24; return 0;
                 }
-                const bytes = new Uint8Array(buffer), view = new DataView(buffer);
-                const u16 = offset => view.getUint16(offset, true), u32 = offset => view.getUint32(offset, true);
-                const partCount=u32(8),vertexCount=u32(12),indexCount=u32(16),materialCount=u32(20);
-                const partBytes=partCount*24,vertexBytes=vertexCount*32,expected=32+partBytes+vertexBytes+indexCount*4;
-                if(bytes[0]!==83||bytes[1]!==77||bytes[2]!==51||bytes[3]!==68||u16(4)!==1||u16(6)!==32||
-                    partCount<1||partCount>16||vertexCount<1||vertexCount>16*65535||
-                    indexCount<1||indexCount>16*196608||materialCount<1||materialCount>64||
-                    u32(24)!==buffer.byteLength||expected!==buffer.byteLength||u32(28)!==renderer3DChecksum(bytes,32)) {
-                    renderer3DLastError=24;return 0;
-                }
-                const parts=[];
-                for(let partIndex=0;partIndex<partCount;partIndex+=1){
-                    const offset=32+partIndex*24,firstVertex=u32(offset),partVertices=u32(offset+4),
-                        firstIndex=u32(offset+8),partIndices=u32(offset+12),material=u32(offset+16);
-                    if(partVertices<1||partVertices>65535||partIndices<1||partIndices>196608||partIndices%3!==0||
-                        firstVertex>vertexCount||partVertices>vertexCount-firstVertex||firstIndex>indexCount||
-                        partIndices>indexCount-firstIndex||material>=materialCount||u32(offset+20)!==0){
-                        renderer3DLastError=24;return 0;
-                    }
-                    for(let index=0;index<partVertices*8;index+=1)
-                        if(!Number.isFinite(view.getFloat32(32+partBytes+(firstVertex*8+index)*4,true))){
-                            renderer3DLastError=24;return 0;
-                        }
-                    for(let index=0;index<partIndices;index+=1)
-                        if(u32(32+partBytes+vertexBytes+(firstIndex+index)*4)>=partVertices){
-                            renderer3DLastError=24;return 0;
-                        }
-                    parts.push({firstVertex,vertexCount:partVertices,firstIndex,indexCount:partIndices,material});
-                }
-                if(renderer3DMeshes.size+partCount>128){renderer3DLastError=3;return 0;}
+                const bytes = new Uint8Array(buffer), view = new DataView(buffer), version=buffer.byteLength>=6?view.getUint16(4,true):0;
+                const descriptor=version===1?renderer3DParseModelV1(buffer):version===2?renderer3DParseModelV2(buffer):null;
+                if(!descriptor){renderer3DLastError=24;return 0;}
+                if(renderer3DMeshes.size+descriptor.parts.length>128){renderer3DLastError=3;return 0;}
                 const meshHandles=[];
-                for(const part of parts){
-                    const handle=renderer3DCreateMesh(part.vertexCount,part.indexCount),mesh=renderer3DMeshes.get(handle);
-                    if(!mesh){for(const value of meshHandles){const old=renderer3DMeshes.get(value);if(old)renderer3DDeleteGpu(old);renderer3DMeshes.delete(value);}return 0;}
-                    for(let vertex=0;vertex<part.vertexCount;vertex+=1){
-                        const source=32+partBytes+(part.firstVertex+vertex)*32,target=vertex*16;
-                        for(let field=0;field<8;field+=1)mesh.vertices[target+field]=view.getFloat32(source+field*4,true);
+                const rollback=()=>{for(const value of meshHandles){const old=renderer3DMeshes.get(value);if(old)renderer3DDeleteGpu(old);renderer3DMeshes.delete(value);}};
+                try{
+                    for(const part of descriptor.parts){
+                        const handle=renderer3DCreateMesh(part.vertexCount,part.indexCount),mesh=renderer3DMeshes.get(handle);
+                        if(!mesh){rollback();return 0;}
+                        for(let vertex=0;vertex<part.vertexCount;vertex+=1){
+                            const source=descriptor.vertexOffset+(part.firstVertex+vertex)*(descriptor.version===1?32:48),target=vertex*20;
+                            if(descriptor.version===1)for(let field=0;field<8;field+=1)mesh.vertices[target+field]=view.getFloat32(source+field*4,true);
+                            else{for(let field=0;field<6;field+=1)mesh.vertices[target+field]=view.getFloat32(source+field*4,true);for(let field=0;field<4;field+=1)mesh.vertices[target+16+field]=view.getFloat32(source+(6+field)*4,true);mesh.vertices[target+6]=view.getFloat32(source+40,true);mesh.vertices[target+7]=view.getFloat32(source+44,true);}
+                        }
+                        mesh.explicitNormals=true;
+                        for(let index=0;index<part.indexCount;index+=1)
+                            mesh.indices[index]=view.getUint32(descriptor.indexOffset+(part.firstIndex+index)*4,true);
+                        if(!renderer3DCommit(mesh)){renderer3DDeleteGpu(mesh);renderer3DMeshes.delete(handle);rollback();return 0;}
+                        meshHandles.push(handle);
                     }
-                    mesh.explicitNormals=true;
-                    for(let index=0;index<part.indexCount;index+=1)
-                        mesh.indices[index]=u32(32+partBytes+vertexBytes+(part.firstIndex+index)*4);
-                    if(!renderer3DCommit(mesh)){renderer3DDeleteGpu(mesh);renderer3DMeshes.delete(handle);for(const value of meshHandles){const old=renderer3DMeshes.get(value);if(old)renderer3DDeleteGpu(old);renderer3DMeshes.delete(value);}return 0;}
-                    meshHandles.push(handle);
-                }
+                }catch(_){rollback();renderer3DLastError=4;return 0;}
                 const handle=renderer3DHandle();
-                renderer3DModels.set(handle,{parts:meshHandles,materials:parts.map(part=>part.material),materialCount});
+                renderer3DModels.set(handle,{parts:meshHandles,materials:descriptor.parts.map(part=>part.material),materialCount:descriptor.materialCount,
+                    version:descriptor.version,vertexCount:descriptor.vertexCount,indexCount:descriptor.indexCount,textureMetadata:descriptor.textureMetadata,
+                    materialMetadata:descriptor.materialMetadata,name:descriptor.name,partNames:descriptor.partNames,bounds:descriptor.bounds,partBounds:descriptor.partBounds,
+                    tangentPositive:descriptor.tangentPositive,tangentNegative:descriptor.tangentNegative});
                 return handle;
+            }
+
+            function renderer3DModelStaticValue(model,query,index,property) {
+                if(!model){renderer3DLastError=5;return 0;}
+                const rounded=value=>value<0?-Math.floor(-value*1000+.5):Math.floor(value*1000+.5);
+                if(query===1)return model.version;
+                if(query===2)return model.vertexCount;
+                if(query===3)return model.indexCount;
+                if(query===4)return model.textureMetadata.length;
+                if(query===5)return model.version===2?model.tangentPositive:0;
+                if(query===6)return model.version===2?model.tangentNegative:0;
+                if(query===7){
+                    const material=model.version===2&&index>=0&&index<model.materialMetadata.length?model.materialMetadata[index]:null;
+                    if(!material){renderer3DLastError=5;return 0;}
+                    if(property>=1&&property<=4)return rounded(material.baseColor[property-1]);
+                    if(property===5)return rounded(material.metallic);if(property===6)return rounded(material.roughness);
+                    if(property===7)return rounded(material.normalStrength);if(property===8)return rounded(material.occlusionStrength);
+                    if(property>=9&&property<=11)return rounded(material.emissive[property-9]);
+                    if(property===12)return material.alphaMode;if(property===13)return rounded(material.alphaCutoff);
+                    if(property===14)return material.doubleSided;if(property>=15&&property<=18)return material.refs[property-15]+1;
+                    if(property===19)return renderer3DTextHash(material.name);
+                }else if(query===8){
+                    const texture=model.version===2&&index>=0&&index<model.textureMetadata.length?model.textureMetadata[index]:null;
+                    if(!texture){renderer3DLastError=5;return 0;}if(property===1)return texture.semantic;if(property===2)return renderer3DTextHash(texture.path);
+                }else if(query===9){
+                    const bounds=model.version===2&&(index===-1||index>=0&&index<model.partBounds.length)?(index===-1?model.bounds:model.partBounds[index]):null;
+                    if(!bounds||property<0||property>=6){renderer3DLastError=5;return 0;}return rounded(bounds[property]);
+                }else if(query===10){
+                    if(model.version!==2||index<0||index>=model.partNames.length){renderer3DLastError=5;return 0;}return renderer3DTextHash(model.partNames[index]);
+                }else if(query===11){if(model.version!==2){renderer3DLastError=5;return 0;}return renderer3DTextHash(model.name);}
+                renderer3DLastError=5;return 0;
             }
 
             function renderer3DDeleteModel(handle) {
@@ -1142,7 +1288,7 @@ internal static class WebOutputWriter
             }
 
             function renderer3DBegin(red,green,blue){if(renderer3DFrameActive)return 1;if(!renderer3DInitialize())return 0;const gl=renderer3DGl;if(renderer3DCanvas.width!==backingWidth||renderer3DCanvas.height!==backingHeight){renderer3DCanvas.width=backingWidth;renderer3DCanvas.height=backingHeight;}gl.viewport(0,0,backingWidth,backingHeight);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.depthMask(true);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);gl.clearColor((safe(red)&255)/255,(safe(green)&255)/255,(safe(blue)&255)/255,1);gl.clearDepth(1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(renderer3DProgram.handle);renderer3DDrawCallCount=0;renderer3DSubmittedTriangleCount=0;renderer3DFrameActive=true;return 1;}
-            function renderer3DDraw(handle){const object=renderer3DRequireObject(handle);if(!renderer3DFrameActive||!object){renderer3DLastError=14;return 0;}if(!object.visible)return 1;const mesh=renderer3DRequireMesh(object.mesh);if(!mesh||!renderer3DUpload(mesh))return 0;const material=object.material?renderer3DRequireMaterial(object.material):null,texture=material&&material.texture?renderer3DRequireTexture(material.texture):null,animator=object.animator?renderer3DAnimators.get(object.animator):null,skeleton=animator?renderer3DSkeletons.get(animator.skeleton):null;if(texture&&!renderer3DUploadTexture(texture))return 0;if(object.animator&&(!animator||!skeleton||mesh.maxJoint>=skeleton.boneCount)){renderer3DLastError=36;return 0;}const gl=renderer3DGl,model=renderer3DModel(object),mvp=renderer3DMultiply(renderer3DProjection(backingWidth/backingHeight),renderer3DMultiply(renderer3DView(),model)),tint=object.color.map((value,index)=>value*(material?material.color[index]:1)),alphaMode=material?material.alphaMode:(tint[3]<.999?2:0);if(alphaMode===2||alphaMode===3){gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,alphaMode===3?gl.ONE:gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);}else{gl.disable(gl.BLEND);gl.depthMask(true);}gl.bindBuffer(gl.ARRAY_BUFFER,mesh.vertexBuffer);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,64,0);gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,3,gl.FLOAT,false,64,12);gl.enableVertexAttribArray(2);gl.vertexAttribPointer(2,2,gl.FLOAT,false,64,24);gl.enableVertexAttribArray(3);gl.vertexAttribPointer(3,4,gl.FLOAT,false,64,32);gl.enableVertexAttribArray(4);gl.vertexAttribPointer(4,4,gl.FLOAT,false,64,48);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,mesh.indexBuffer);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture?texture.gpu:null);gl.uniform1i(renderer3DProgram.baseTexture,0);gl.uniformMatrix4fv(renderer3DProgram.model,false,new Float32Array(model));gl.uniformMatrix4fv(renderer3DProgram.mvp,false,new Float32Array(mvp));gl.uniformMatrix4fv(renderer3DProgram.bones,false,animator?animator.palette:renderer3DStaticBones);gl.uniform1f(renderer3DProgram.skinning,animator?1:0);gl.uniform4fv(renderer3DProgram.tint,new Float32Array(tint));gl.uniform4fv(renderer3DProgram.material,new Float32Array([texture?1:0,material&&material.unlit?1:0,material?material.emissive:0,material&&material.alphaMode===1?material.cutoff:-1]));gl.drawElements(gl.TRIANGLES,mesh.indexCount,gl.UNSIGNED_INT,0);renderer3DDrawCallCount+=1;renderer3DSubmittedTriangleCount+=mesh.indexCount/3;return 1;}
+            function renderer3DDraw(handle){const object=renderer3DRequireObject(handle);if(!renderer3DFrameActive||!object){renderer3DLastError=14;return 0;}if(!object.visible)return 1;const mesh=renderer3DRequireMesh(object.mesh);if(!mesh||!renderer3DUpload(mesh))return 0;const material=object.material?renderer3DRequireMaterial(object.material):null,texture=material&&material.texture?renderer3DRequireTexture(material.texture):null,animator=object.animator?renderer3DAnimators.get(object.animator):null,skeleton=animator?renderer3DSkeletons.get(animator.skeleton):null;if(texture&&!renderer3DUploadTexture(texture))return 0;if(object.animator&&(!animator||!skeleton||mesh.maxJoint>=skeleton.boneCount)){renderer3DLastError=36;return 0;}const gl=renderer3DGl,model=renderer3DModel(object),mvp=renderer3DMultiply(renderer3DProjection(backingWidth/backingHeight),renderer3DMultiply(renderer3DView(),model)),tint=object.color.map((value,index)=>value*(material?material.color[index]:1)),alphaMode=material?material.alphaMode:(tint[3]<.999?2:0);if(alphaMode===2||alphaMode===3){gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,alphaMode===3?gl.ONE:gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);}else{gl.disable(gl.BLEND);gl.depthMask(true);}gl.bindBuffer(gl.ARRAY_BUFFER,mesh.vertexBuffer);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,80,0);gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,3,gl.FLOAT,false,80,12);gl.enableVertexAttribArray(2);gl.vertexAttribPointer(2,2,gl.FLOAT,false,80,24);gl.enableVertexAttribArray(3);gl.vertexAttribPointer(3,4,gl.FLOAT,false,80,32);gl.enableVertexAttribArray(4);gl.vertexAttribPointer(4,4,gl.FLOAT,false,80,48);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,mesh.indexBuffer);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture?texture.gpu:null);gl.uniform1i(renderer3DProgram.baseTexture,0);gl.uniformMatrix4fv(renderer3DProgram.model,false,new Float32Array(model));gl.uniformMatrix4fv(renderer3DProgram.mvp,false,new Float32Array(mvp));gl.uniformMatrix4fv(renderer3DProgram.bones,false,animator?animator.palette:renderer3DStaticBones);gl.uniform1f(renderer3DProgram.skinning,animator?1:0);gl.uniform4fv(renderer3DProgram.tint,new Float32Array(tint));gl.uniform4fv(renderer3DProgram.material,new Float32Array([texture?1:0,material&&material.unlit?1:0,material?material.emissive:0,material&&material.alphaMode===1?material.cutoff:-1]));gl.drawElements(gl.TRIANGLES,mesh.indexCount,gl.UNSIGNED_INT,0);renderer3DDrawCallCount+=1;renderer3DSubmittedTriangleCount+=mesh.indexCount/3;return 1;}
             function renderer3DEnd(){if(!renderer3DFrameActive)return 1;const gl=renderer3DGl;gl.depthMask(true);gl.bindTexture(gl.TEXTURE_2D,null);renderer3DFrameActive=false;back.drawImage(renderer3DCanvas,0,0,logicalWidth,logicalHeight);return 1;}
             function renderer3DReset(){renderer3DFrameActive=false;renderer3DObjects.clear();for(const model of [...renderer3DModels.keys()])renderer3DDeleteModel(model);renderer3DAnimators.clear();renderer3DClips.clear();renderer3DSkeletons.clear();for(const mesh of renderer3DMeshes.values())renderer3DDeleteGpu(mesh);for(const texture of renderer3DTextures.values()){renderer3DDeleteTextureGpu(texture);imageRelease(texture.image);}renderer3DMeshes.clear();renderer3DModels.clear();renderer3DMaterials.clear();renderer3DTextures.clear();renderer3DLastError=0;renderer3DDrawCallCount=0;renderer3DSubmittedTriangleCount=0;return 1;}
 
@@ -1227,6 +1373,7 @@ internal static class WebOutputWriter
                     case 77:return 128;
                     case 78:return renderer3DDrawCallCount;
                     case 79:return renderer3DSubmittedTriangleCount;
+                    case 80:return renderer3DModelStaticValue(renderer3DModels.get(a),b,c,d);
                     default:renderer3DLastError=1;return 0;
                 }
             }

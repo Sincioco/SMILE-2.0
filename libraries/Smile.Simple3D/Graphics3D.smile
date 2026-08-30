@@ -84,6 +84,19 @@ Private Const COMMAND_MAX_CLIP_COUNT = 76
 Private Const COMMAND_MAX_ANIMATOR_COUNT = 77
 Private Const COMMAND_DRAW_CALL_COUNT = 78
 Private Const COMMAND_SUBMITTED_TRIANGLE_COUNT = 79
+Private Const COMMAND_MODEL_STATIC_VALUE = 80
+
+Private Const MODEL_QUERY_FORMAT_VERSION = 1
+Private Const MODEL_QUERY_VERTEX_COUNT = 2
+Private Const MODEL_QUERY_INDEX_COUNT = 3
+Private Const MODEL_QUERY_TEXTURE_COUNT = 4
+Private Const MODEL_QUERY_TANGENT_POSITIVE = 5
+Private Const MODEL_QUERY_TANGENT_NEGATIVE = 6
+Private Const MODEL_QUERY_MATERIAL = 7
+Private Const MODEL_QUERY_TEXTURE = 8
+Private Const MODEL_QUERY_BOUNDS = 9
+Private Const MODEL_QUERY_PART_NAME_HASH = 10
+Private Const MODEL_QUERY_NAME_HASH = 11
 
 Private Const IMAGE_COMMAND_CREATE_TEXTURE = 1
 Private Const TEXT_COMMAND_LOAD_MODEL = 1
@@ -102,6 +115,37 @@ Public Const MATERIAL_ALPHA_OPAQUE = 0
 Public Const MATERIAL_ALPHA_CUTOUT = 1
 Public Const MATERIAL_ALPHA_BLEND = 2
 Public Const MATERIAL_ALPHA_ADDITIVE = 3
+Public Const MODEL_MATERIAL_BASE_COLOR_RED = 1
+Public Const MODEL_MATERIAL_BASE_COLOR_GREEN = 2
+Public Const MODEL_MATERIAL_BASE_COLOR_BLUE = 3
+Public Const MODEL_MATERIAL_BASE_COLOR_ALPHA = 4
+Public Const MODEL_MATERIAL_METALLIC = 5
+Public Const MODEL_MATERIAL_ROUGHNESS = 6
+Public Const MODEL_MATERIAL_NORMAL_STRENGTH = 7
+Public Const MODEL_MATERIAL_OCCLUSION_STRENGTH = 8
+Public Const MODEL_MATERIAL_EMISSIVE_RED = 9
+Public Const MODEL_MATERIAL_EMISSIVE_GREEN = 10
+Public Const MODEL_MATERIAL_EMISSIVE_BLUE = 11
+Public Const MODEL_MATERIAL_ALPHA_MODE = 12
+Public Const MODEL_MATERIAL_ALPHA_CUTOFF = 13
+Public Const MODEL_MATERIAL_DOUBLE_SIDED = 14
+Public Const MODEL_MATERIAL_BASE_COLOR_TEXTURE = 15
+Public Const MODEL_MATERIAL_NORMAL_TEXTURE = 16
+Public Const MODEL_MATERIAL_ORM_TEXTURE = 17
+Public Const MODEL_MATERIAL_EMISSIVE_TEXTURE = 18
+Public Const MODEL_MATERIAL_NAME_HASH = 19
+Public Const MODEL_TEXTURE_SEMANTIC = 1
+Public Const MODEL_TEXTURE_PATH_HASH = 2
+Public Const MODEL_TEXTURE_BASE_COLOR = 1
+Public Const MODEL_TEXTURE_NORMAL = 2
+Public Const MODEL_TEXTURE_ORM = 3
+Public Const MODEL_TEXTURE_EMISSIVE = 4
+Public Const MODEL_BOUNDS_MINIMUM_X = 0
+Public Const MODEL_BOUNDS_MINIMUM_Y = 1
+Public Const MODEL_BOUNDS_MINIMUM_Z = 2
+Public Const MODEL_BOUNDS_MAXIMUM_X = 3
+Public Const MODEL_BOUNDS_MAXIMUM_Y = 4
+Public Const MODEL_BOUNDS_MAXIMUM_Z = 5
 
 Private Function Dispatch(
     Command As Number,
@@ -355,10 +399,95 @@ Public Function LoadModel3D(Path As Text) As Core.Model3D
     Result.Handle = Renderer3DText(TEXT_COMMAND_LOAD_MODEL, Path, 0, 0, 0, 0, 0, 0, 0, 0)
 
     If Result.Handle <> 0 Then
+
         Result.PartCount = Dispatch(COMMAND_MODEL_PART_COUNT, Result.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
         Result.MaterialCount = Dispatch(COMMAND_MODEL_MATERIAL_COUNT, Result.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        Result.FormatVersion = Dispatch(COMMAND_MODEL_STATIC_VALUE, Result.Handle, MODEL_QUERY_FORMAT_VERSION, 0, 0, 0, 0, 0, 0, 0, 0)
+        Result.VertexCount = Dispatch(COMMAND_MODEL_STATIC_VALUE, Result.Handle, MODEL_QUERY_VERTEX_COUNT, 0, 0, 0, 0, 0, 0, 0, 0)
+        Result.IndexCount = Dispatch(COMMAND_MODEL_STATIC_VALUE, Result.Handle, MODEL_QUERY_INDEX_COUNT, 0, 0, 0, 0, 0, 0, 0, 0)
+        Result.TextureReferenceCount = Dispatch(COMMAND_MODEL_STATIC_VALUE, Result.Handle, MODEL_QUERY_TEXTURE_COUNT, 0, 0, 0, 0, 0, 0, 0, 0)
+
     End If
 
+    Return Result
+
+End Function
+
+''' Returns the number of SM3D v2 tangents with the requested -1 or +1 handedness.
+Public Function ModelTangentHandednessCount3D(Model As Core.Model3D, Handedness As Number) As Number
+
+    Dim Query As Number
+    Dim Result As Number
+
+    If Handedness < 0 Then
+        Query = MODEL_QUERY_TANGENT_NEGATIVE
+    Else
+        Query = MODEL_QUERY_TANGENT_POSITIVE
+    End If
+
+    Result = Dispatch(COMMAND_MODEL_STATIC_VALUE, Model.Handle, Query, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Returns a thousandths-scaled SM3D v2 material value or an integer property.
+Public Function ModelMaterialValue3D(
+    Model As Core.Model3D,
+    MaterialIndex As Number,
+    Property As Number
+) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_STATIC_VALUE, Model.Handle, MODEL_QUERY_MATERIAL, MaterialIndex, Property, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Returns an SM3D v2 texture semantic or the FNV-1a hash of its exact project-relative path.
+Public Function ModelTextureValue3D(
+    Model As Core.Model3D,
+    TextureIndex As Number,
+    Property As Number
+) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_STATIC_VALUE, Model.Handle, MODEL_QUERY_TEXTURE, TextureIndex, Property, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Returns a thousandths-scaled model or part bound. Use part -1 for model bounds.
+Public Function ModelBoundsValue3D(
+    Model As Core.Model3D,
+    PartIndex As Number,
+    Component As Number
+) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_STATIC_VALUE, Model.Handle, MODEL_QUERY_BOUNDS, PartIndex, Component, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Returns the deterministic FNV-1a hash of an SM3D v2 part name.
+Public Function ModelPartNameHash3D(Model As Core.Model3D, PartIndex As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_STATIC_VALUE, Model.Handle, MODEL_QUERY_PART_NAME_HASH, PartIndex, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Returns the deterministic FNV-1a hash of the SM3D v2 model name.
+Public Function ModelNameHash3D(Model As Core.Model3D) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_STATIC_VALUE, Model.Handle, MODEL_QUERY_NAME_HASH, 0, 0, 0, 0, 0, 0, 0, 0)
     Return Result
 
 End Function
@@ -406,6 +535,10 @@ Public Sub DestroyModel3D(ByRef Model As Core.Model3D)
         Model.Handle = 0
         Model.PartCount = 0
         Model.MaterialCount = 0
+        Model.FormatVersion = 0
+        Model.VertexCount = 0
+        Model.IndexCount = 0
+        Model.TextureReferenceCount = 0
 
     End If
 

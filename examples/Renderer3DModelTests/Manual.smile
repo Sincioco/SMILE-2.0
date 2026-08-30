@@ -1,0 +1,48 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Dim Camera As Core.Camera3D
+Dim M0Triangle As Core.Model3D
+Dim PbrTriangle As Core.Model3D
+Dim M0Part As Core.Object3D
+Dim PbrPart As Core.Object3D
+Dim FrameReady As Boolean
+
+Game Window "Renderer3D SM3D V2 Manual Check" Size 640 By 360
+
+Call Graphics3D.ResetRenderer3D()
+
+M0Triangle = Graphics3D.LoadModel3D("Assets\M0TriangleV2.sm3d")
+PbrTriangle = Graphics3D.LoadModel3D("Assets\PbrTriangleV2.sm3d")
+M0Part = Graphics3D.CreateModelPart3D(M0Triangle, 0)
+PbrPart = Graphics3D.CreateModelPart3D(PbrTriangle, 0)
+Camera = Graphics3D.DefaultCamera()
+
+Call Graphics3D.SetObjectPosition(M0Part, -25, 0, 0)
+Call Graphics3D.SetObjectPosition(PbrPart, 25, 0, 0)
+Call Graphics3D.SetObjectScale(M0Part, 2500, 2500, 2500)
+Call Graphics3D.SetObjectScale(PbrPart, 2500, 2500, 2500)
+Call Graphics3D.SetObjectColor(M0Part, 64, 192, 255)
+Call Graphics3D.SetObjectColor(PbrPart, 255, 144, 64)
+
+Do
+
+    FrameReady = Graphics3D.Begin3D(Camera, 2, 5, 14)
+    FrameReady = FrameReady And Graphics3D.DrawObject3D(M0Part)
+    FrameReady = FrameReady And Graphics3D.DrawObject3D(PbrPart)
+
+    Call Graphics3D.End3D()
+
+    Draw Text "SM3D V2: GENERATED TANGENT + IMPORTED TANGENT" At 66, 24 Size 18 Color WHITE
+    Draw Text "Cyan: GLB    Orange: GLTF + PBR Metadata" At 116, 316 Size 16 Color WHITE
+    Show Screen
+
+Loop Until Game_Closed() = True
+
+Call Graphics3D.DestroyObjectInstance3D(M0Part)
+Call Graphics3D.DestroyObjectInstance3D(PbrPart)
+Call Graphics3D.DestroyModel3D(M0Triangle)
+Call Graphics3D.DestroyModel3D(PbrTriangle)
+Call Graphics3D.ResetRenderer3D()

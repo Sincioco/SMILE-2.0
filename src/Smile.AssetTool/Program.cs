@@ -18,14 +18,42 @@ internal static class AssetTool
     {
         try
         {
-            if (arguments.Length != 4 || !arguments[0].Equals("model", StringComparison.OrdinalIgnoreCase) ||
-                arguments[2] != "-o")
-                throw new InvalidDataException("usage: smileasset model <input.gltf> -o <output.sm3d>");
+            if (arguments.Length == 2 && arguments[0].Equals("inspect", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.Write(Sm3dV2.Inspect(Path.GetFullPath(arguments[1])));
+                return 0;
+            }
+
+            if (arguments.Length is not (4 or 6) ||
+                !arguments[0].Equals("model", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException(
+                    "usage: smileasset model <input.gltf|input.glb> [--format-version 2] -o <output.sm3d>\n" +
+                    "       smileasset inspect <input.sm3d>");
+
+            var outputOption = Array.IndexOf(arguments, "-o");
+            if (outputOption < 2 || outputOption != arguments.Length - 2)
+                throw new InvalidDataException("SMA1001: model conversion requires '-o <output.sm3d>'.");
+
             var input = Path.GetFullPath(arguments[1]);
-            var output = Path.GetFullPath(arguments[3]);
-            if (!Path.GetExtension(input).Equals(".gltf", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException("SMA1001: model input must be a textual glTF 2.0 .gltf file.");
-            var bytes = ConvertModel(input);
+            var output = Path.GetFullPath(arguments[outputOption + 1]);
+            var extension = Path.GetExtension(input);
+            var requestedV2 = extension.Equals(".glb", StringComparison.OrdinalIgnoreCase);
+
+            if (arguments.Length == 6)
+            {
+                if (!arguments[2].Equals("--format-version", StringComparison.OrdinalIgnoreCase) ||
+                    arguments[3] != "2")
+                    throw new InvalidDataException("SMA1001: the only supported format option is '--format-version 2'.");
+                requestedV2 = true;
+            }
+
+            if (!extension.Equals(".gltf", StringComparison.OrdinalIgnoreCase) &&
+                !extension.Equals(".glb", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("SMA1001: model input must be glTF 2.0 .gltf or .glb.");
+            if (extension.Equals(".glb", StringComparison.OrdinalIgnoreCase) && !requestedV2)
+                throw new InvalidDataException("SMA1001: GLB input requires SM3D version 2 output.");
+
+            var bytes = requestedV2 ? Sm3dV2.Convert(input) : ConvertModel(input);
             var parent = Path.GetDirectoryName(output);
             if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
             var temporary = output + ".tmp-" + Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture);
@@ -33,6 +61,7 @@ internal static class AssetTool
             File.Move(temporary, output, true);
             Console.WriteLine($"Converted {input}");
             Console.WriteLine($"Output: {output}");
+            Console.WriteLine($"Version: {(requestedV2 ? 2 : 1)}");
             Console.WriteLine($"Bytes: {bytes.Length}");
             return 0;
         }

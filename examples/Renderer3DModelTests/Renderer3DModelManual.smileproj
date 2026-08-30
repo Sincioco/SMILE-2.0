@@ -1,0 +1,14 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Manual.smile</StartupFile>
+    <OutputName>Renderer3DModelManual</OutputName>
+    <ApplicationId>smile.manual.renderer3d-models</ApplicationId>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Manual.smile" StartupOnly="true" />
+    <Asset Include="Assets\M0TriangleV2.sm3d" />
+    <Asset Include="Assets\PbrTriangleV2.sm3d" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>
