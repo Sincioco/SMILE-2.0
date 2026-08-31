@@ -154,6 +154,9 @@ Public Type Model3D
     ClipCount As Number
     SocketCount As Number
     AnimationBytes As Number
+    AnimationFileBytes As Number
+    AnimationResidentBytes As Number
+    AnimatorMutableBytes As Number
 End Type
 
 ''' A committed hierarchy of bind-pose bone pivots.

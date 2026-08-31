@@ -8,8 +8,10 @@ Dim BaseCamera As Core.Camera3D
 Dim Camera As Core.Camera3D
 Dim CameraControls As Core.CameraControl3D
 Dim ActorModel As Core.Model3D
-Dim ActorObject As Core.Object3D
-Dim ReferenceObject As Core.Object3D
+Dim ActorBody As Core.Object3D
+Dim ActorArm As Core.Object3D
+Dim ReferenceBody As Core.Object3D
+Dim ReferenceArm As Core.Object3D
 Dim ActorAnimator As Core.Animator3D
 Dim ReferenceAnimator As Core.Animator3D
 Dim SocketMarker As Core.Object3D
@@ -126,7 +128,13 @@ Do
     If ApplyRootMotion Then
 
         Call Graphics3D.MoveObject(
-            ActorObject,
+            ActorBody,
+            RootDelta.X / 5,
+            RootDelta.Y / 5,
+            RootDelta.Z / 5
+        )
+        Call Graphics3D.MoveObject(
+            ActorArm,
             RootDelta.X / 5,
             RootDelta.Y / 5,
             RootDelta.Z / 5
@@ -138,9 +146,9 @@ Do
 
             Call Graphics3D.SetObjectPosition(
                 RootMarkers[RootMarkerIndex],
-                ActorObject.Position.X,
+                ActorBody.Position.X,
                 2,
-                ActorObject.Position.Z
+                ActorBody.Position.Z
             )
 
             RootMarkerIndex = (RootMarkerIndex + 1) Mod 8
@@ -166,8 +174,10 @@ Do
     If FrameReady Then
 
         FrameReady = Graphics3D.DrawObject3D(Ground)
-        FrameReady = Graphics3D.DrawObject3D(ActorObject)
-        FrameReady = Graphics3D.DrawObject3D(ReferenceObject)
+        FrameReady = Graphics3D.DrawObject3D(ActorBody)
+        FrameReady = Graphics3D.DrawObject3D(ActorArm)
+        FrameReady = Graphics3D.DrawObject3D(ReferenceBody)
+        FrameReady = Graphics3D.DrawObject3D(ReferenceArm)
 
         For Index = 0 To 7
             FrameReady = Graphics3D.DrawObject3D(RootMarkers[Index])
@@ -200,21 +210,29 @@ Sub LoadAnimationLab()
 
     Call Interaction.ResetCameraControls(CameraControls)
 
-    ActorModel = Graphics3D.LoadModel3D("Assets\AnimationActor68.sm3d")
-    ActorObject = Graphics3D.CreateModelPart3D(ActorModel, 0)
-    ReferenceObject = Graphics3D.CreateModelPart3D(ActorModel, 0)
+    ActorModel = Graphics3D.LoadModel3D("Assets\AnimationArticulated.sm3d")
+    ActorBody = Graphics3D.CreateModelPart3D(ActorModel, 0)
+    ActorArm = Graphics3D.CreateModelPart3D(ActorModel, 1)
+    ReferenceBody = Graphics3D.CreateModelPart3D(ActorModel, 0)
+    ReferenceArm = Graphics3D.CreateModelPart3D(ActorModel, 1)
     ActorAnimator = Graphics3D.CreateModelAnimator3D(ActorModel)
     ReferenceAnimator = Graphics3D.CreateModelAnimator3D(ActorModel)
     SocketMarker = Graphics3D.CreateCube3D(18)
     Ground = Graphics3D.CreatePlane3D(820, 420)
 
-    FrameReady = Graphics3D.SetObjectAnimator3D(ActorObject, ActorAnimator)
-    FrameReady = Graphics3D.SetObjectAnimator3D(ReferenceObject, ReferenceAnimator)
+    FrameReady = Graphics3D.SetObjectAnimator3D(ActorBody, ActorAnimator)
+    FrameReady = Graphics3D.SetObjectAnimator3D(ActorArm, ActorAnimator)
+    FrameReady = Graphics3D.SetObjectAnimator3D(ReferenceBody, ReferenceAnimator)
+    FrameReady = Graphics3D.SetObjectAnimator3D(ReferenceArm, ReferenceAnimator)
 
-    Call Graphics3D.SetObjectScale(ActorObject, 20000, 20000, 20000)
-    Call Graphics3D.SetObjectScale(ReferenceObject, 20000, 20000, 20000)
-    Call Graphics3D.SetObjectColor(ActorObject, 160, 218, 255)
-    Call Graphics3D.SetObjectColor(ReferenceObject, 245, 156, 92)
+    Call Graphics3D.SetObjectScale(ActorBody, 20000, 20000, 20000)
+    Call Graphics3D.SetObjectScale(ActorArm, 20000, 20000, 20000)
+    Call Graphics3D.SetObjectScale(ReferenceBody, 20000, 20000, 20000)
+    Call Graphics3D.SetObjectScale(ReferenceArm, 20000, 20000, 20000)
+    Call Graphics3D.SetObjectColor(ActorBody, 160, 218, 255)
+    Call Graphics3D.SetObjectColor(ActorArm, 255, 132, 68)
+    Call Graphics3D.SetObjectColor(ReferenceBody, 120, 186, 255)
+    Call Graphics3D.SetObjectColor(ReferenceArm, 245, 156, 92)
     Call Graphics3D.SetObjectColor(SocketMarker, 255, 236, 80)
     Call Graphics3D.SetObjectColor(Ground, 28, 48, 78)
     Call Graphics3D.SetObjectPosition(Ground, 0, -4, 120)
@@ -243,8 +261,10 @@ Sub ResetActors()
     RootMarkerIndex = 0
     RootMarkerClock = 0
 
-    Call Graphics3D.SetObjectPosition(ActorObject, -140, 0, 80)
-    Call Graphics3D.SetObjectPosition(ReferenceObject, 140, 0, 80)
+    Call Graphics3D.SetObjectPosition(ActorBody, -140, 0, 80)
+    Call Graphics3D.SetObjectPosition(ActorArm, -140, 0, 80)
+    Call Graphics3D.SetObjectPosition(ReferenceBody, 140, 0, 80)
+    Call Graphics3D.SetObjectPosition(ReferenceArm, 140, 0, 80)
 
     FrameReady = Graphics3D.PlayModelAnimatorNamed3D(
         ActorAnimator,
@@ -254,7 +274,7 @@ Sub ResetActors()
     )
     FrameReady = Graphics3D.PlayModelAnimatorNamed3D(
         ReferenceAnimator,
-        "Victory",
+        "Bend",
         Graphics3D.ANIMATION_LOOP,
         72
     )
@@ -270,13 +290,13 @@ Sub SelectClipName()
     If SelectedClip = 0 Then
         SelectedName = "Idle"
     Else If SelectedClip = 1 Then
-        SelectedName = "Walk"
+        SelectedName = "Bend"
     Else If SelectedClip = 2 Then
-        SelectedName = "Attack"
+        SelectedName = "WalkLike"
     Else If SelectedClip = 3 Then
-        SelectedName = "Hit"
+        SelectedName = "AttackLike"
     Else
-        SelectedName = "Victory"
+        SelectedName = "RootMove"
     End If
 
 End Sub
@@ -285,7 +305,9 @@ Function PlaybackMode(ClipIndex As Number) As Number
 
     Dim Result As Number
 
-    If ClipIndex <= 1 Then
+    If (ClipIndex = 0 Or
+        ClipIndex = 2 Or
+        ClipIndex = 4) Then
         Result = Graphics3D.ANIMATION_LOOP
     Else
         Result = Graphics3D.ANIMATION_HOLD
@@ -326,19 +348,19 @@ Sub UpdateSocketMarker()
 
     SocketX = Graphics3D.AnimatorSocketWorldValue3D(
         ActorAnimator,
-        ActorObject,
+        ActorBody,
         0,
         Graphics3D.ANIMATOR_SOCKET_POSITION_X
     )
     SocketY = Graphics3D.AnimatorSocketWorldValue3D(
         ActorAnimator,
-        ActorObject,
+        ActorBody,
         0,
         Graphics3D.ANIMATOR_SOCKET_POSITION_Y
     )
     SocketZ = Graphics3D.AnimatorSocketWorldValue3D(
         ActorAnimator,
-        ActorObject,
+        ActorBody,
         0,
         Graphics3D.ANIMATOR_SOCKET_POSITION_Z
     )
@@ -402,7 +424,7 @@ Sub DrawAnimationDiagnostics()
         Draw Number RootDelta.X At 846, 270 Size 13 Color WHITE
         Draw Number RootDelta.Z At 902, 270 Size 13 Color WHITE
         Draw Text "Socket Y" At 712, 295 Size 13 Color LIGHT_GRAY
-        Draw Number Graphics3D.AnimatorSocketWorldValue3D(ActorAnimator, ActorObject, 0, Graphics3D.ANIMATOR_SOCKET_POSITION_Y) At 846, 295 Size 13 Color YELLOW
+        Draw Number Graphics3D.AnimatorSocketWorldValue3D(ActorAnimator, ActorBody, 0, Graphics3D.ANIMATOR_SOCKET_POSITION_Y) At 846, 295 Size 13 Color YELLOW
         Draw Text "Palette Uploads" At 712, 320 Size 13 Color LIGHT_GRAY
         Draw Number Graphics3D.ModelPaletteUploadCount3D() At 846, 320 Size 13 Color WHITE
         Draw Text "Draws / Triangles" At 712, 345 Size 13 Color LIGHT_GRAY
@@ -422,7 +444,7 @@ Sub DrawAnimationDiagnostics()
 
     Draw Text "ACTIVE ACTOR" At 150, 466 Size 14 Color CYAN
     Draw Text "INDEPENDENT ANIMATOR" At 390, 466 Size 14 Color ORANGE
-    Draw Text "SwordTip" At 20, 510 Size 13 Color YELLOW
+    Draw Text "HandTip" At 20, 510 Size 13 Color YELLOW
     Draw Text "Root path" At 120, 510 Size 13 Color LIGHT_GREEN
 
 End Sub
@@ -436,8 +458,10 @@ Sub DestroyAnimationLab()
         Call Graphics3D.DestroyObject3D(RootMarkers[Index])
     End For
 
-    Call Graphics3D.DestroyObjectInstance3D(ActorObject)
-    Call Graphics3D.DestroyObjectInstance3D(ReferenceObject)
+    Call Graphics3D.DestroyObjectInstance3D(ActorBody)
+    Call Graphics3D.DestroyObjectInstance3D(ActorArm)
+    Call Graphics3D.DestroyObjectInstance3D(ReferenceBody)
+    Call Graphics3D.DestroyObjectInstance3D(ReferenceArm)
     Call Graphics3D.DestroyAnimator3D(ActorAnimator)
     Call Graphics3D.DestroyAnimator3D(ReferenceAnimator)
     Call Graphics3D.DestroyModel3D(ActorModel)

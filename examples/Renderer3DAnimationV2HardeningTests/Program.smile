@@ -1,0 +1,281 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Dim Camera As Core.Camera3D
+Dim Actor As Core.Model3D
+Dim FirstAnimator As Core.Animator3D
+Dim SecondAnimator As Core.Animator3D
+Dim StaleAnimator As Core.Animator3D
+Dim Body As Core.Object3D
+Dim Arm As Core.Object3D
+Dim RootDelta As Core.RootMotionDelta3D
+Dim BeforeSocket As Number
+Dim FinalSocket As Number
+Dim UploadsBefore As Number
+Dim FrameReady As Boolean
+Dim Cycle As Number
+Dim Failures As Number
+Dim CheckIndex As Number
+
+Game Window "Renderer3D Animation V2 Hardening Tests" Size 640 By 360
+
+Call Graphics3D.ResetRenderer3D()
+
+Actor = Graphics3D.LoadModel3D("Assets\AnimationArticulated.sm3d")
+
+Call Check(Actor.Handle <> 0)
+Call Check(Actor.PartCount = 2)
+Call Check(Actor.VertexCount = 32)
+Call Check(Actor.IndexCount = 108)
+Call Check(Actor.MaterialCount = 2)
+Call Check(Actor.BoneCount = 8)
+Call Check(Actor.ClipCount = 5)
+Call Check(Actor.SocketCount = 1)
+Call Check(Actor.AnimationBytes = 6544)
+Call Check(Actor.AnimationFileBytes = 9712)
+Call Check(Actor.AnimationResidentBytes >= Actor.AnimationBytes)
+Call Check(Actor.AnimationResidentBytes < Actor.AnimationFileBytes)
+Call Check(Actor.AnimatorMutableBytes > 0)
+Call Check(Graphics3D.ModelClipDuration3D(Actor, 1) = 1010)
+Call Check(Graphics3D.ModelClipDuration3D(Actor, 2) = 1017)
+Call Check(Graphics3D.ModelClipSampleRate3D(Actor, 0) = 15)
+Call Check(Graphics3D.ModelClipSampleRate3D(Actor, 1) = 30)
+Call Check(Graphics3D.ModelClipSampleRate3D(Actor, 2) = 60)
+Call Check(Graphics3D.ModelClipIndex3D(Actor, "Idle") = 0)
+Call Check(Graphics3D.ModelClipIndex3D(Actor, "Bend") = 1)
+Call Check(Graphics3D.ModelClipIndex3D(Actor, "WalkLike") = 2)
+Call Check(Graphics3D.ModelClipIndex3D(Actor, "AttackLike") = 3)
+Call Check(Graphics3D.ModelClipIndex3D(Actor, "RootMove") = 4)
+Call Check(Graphics3D.ModelSocketIndex3D(Actor, "HandTip") = 0)
+
+Call CheckPartition(1)
+Call CheckPartition(33)
+Call CheckPartition(50)
+Call CheckPartition(75)
+Call CheckPartition(125)
+Call CheckPartition(175)
+Call CheckPartition(333)
+Call CheckPartition(1000)
+
+FirstAnimator = Graphics3D.CreateModelAnimator3D(Actor)
+SecondAnimator = Graphics3D.CreateModelAnimator3D(Actor)
+
+Call Check(FirstAnimator.Handle <> 0)
+Call Check(SecondAnimator.Handle <> 0)
+Call Check(Graphics3D.AnimatorMutableBytes3D(FirstAnimator) = Actor.AnimatorMutableBytes)
+Call Check(Graphics3D.PlayModelAnimatorNamed3D(FirstAnimator, "Idle", Graphics3D.ANIMATION_LOOP, 1))
+Call Check(Graphics3D.AnimatorPendingEventCount3D(FirstAnimator) = 1)
+Call Check(Graphics3D.UpdateAnimator3D(FirstAnimator, 0))
+Call Check(Graphics3D.AnimatorPendingEventCount3D(FirstAnimator) = 1)
+Call Check(Graphics3D.UpdateAnimator3D(FirstAnimator, 33))
+Call Check(Graphics3D.AnimatorTime3D(FirstAnimator) = 0)
+Call Check(Graphics3D.AnimatorTimeRemainder3D(FirstAnimator) = 33)
+Call Check(Graphics3D.UpdateAnimator3D(FirstAnimator, 67))
+Call Check(Graphics3D.AnimatorTime3D(FirstAnimator) = 1)
+Call Check(Graphics3D.AnimatorTimeRemainder3D(FirstAnimator) = 0)
+
+Call Check(Graphics3D.PlayModelAnimatorNamed3D(FirstAnimator, "Bend", Graphics3D.ANIMATION_HOLD, 100))
+Call Check(Graphics3D.UpdateAnimator3D(FirstAnimator, 1000))
+
+BeforeSocket = Graphics3D.AnimatorSocketValue3D(
+    FirstAnimator,
+    0,
+    Graphics3D.ANIMATOR_SOCKET_POSITION_Y
+)
+
+Call Check(Not Graphics3D.AnimatorComplete3D(FirstAnimator))
+Call Check(Graphics3D.UpdateAnimator3D(FirstAnimator, 10))
+
+FinalSocket = Graphics3D.AnimatorSocketValue3D(
+    FirstAnimator,
+    0,
+    Graphics3D.ANIMATOR_SOCKET_POSITION_Y
+)
+
+Call Check(Graphics3D.AnimatorComplete3D(FirstAnimator))
+Call Check(FinalSocket <> BeforeSocket)
+Call Check(Graphics3D.UpdateAnimator3D(FirstAnimator, 100))
+Call Check(Graphics3D.AnimatorSocketValue3D(
+    FirstAnimator,
+    0,
+    Graphics3D.ANIMATOR_SOCKET_POSITION_Y
+) = FinalSocket)
+
+Call Check(Graphics3D.PlayModelAnimatorNamed3D(FirstAnimator, "Idle", Graphics3D.ANIMATION_LOOP, 50))
+Call Check(Graphics3D.UpdateAnimator3D(FirstAnimator, 100))
+Call Check(Graphics3D.CrossFadeModelAnimatorNamed3D(
+    FirstAnimator,
+    "Bend",
+    100,
+    Graphics3D.ANIMATION_HOLD
+))
+Call Check(Graphics3D.UpdateAnimator3D(FirstAnimator, 50))
+Call Check(Graphics3D.AnimatorClipIndex3D(FirstAnimator) = 0)
+Call Check(Graphics3D.AnimatorDestinationClipIndex3D(FirstAnimator) = 1)
+Call Check(Graphics3D.AnimatorTime3D(FirstAnimator) = 75)
+Call Check(Graphics3D.AnimatorDestinationTime3D(FirstAnimator) = 25)
+Call Check(Graphics3D.AnimatorFadePercent3D(FirstAnimator) = 50)
+Call Check(Graphics3D.AnimatorPlaybackMode3D(FirstAnimator) = Graphics3D.ANIMATION_LOOP)
+Call Check(Graphics3D.AnimatorDestinationMode3D(FirstAnimator) = Graphics3D.ANIMATION_HOLD)
+Call Check(FirstAnimator.PlaybackMode = Graphics3D.ANIMATION_LOOP)
+Call Check(Graphics3D.CrossFadeModelAnimatorNamed3D(
+    FirstAnimator,
+    "AttackLike",
+    100,
+    Graphics3D.ANIMATION_ONCE
+))
+Call Check(Graphics3D.AnimatorClipIndex3D(FirstAnimator) = 1)
+Call Check(Graphics3D.AnimatorTime3D(FirstAnimator) = 25)
+Call Check(Graphics3D.AnimatorDestinationClipIndex3D(FirstAnimator) = 3)
+Call Check(Graphics3D.UpdateAnimator3D(FirstAnimator, 100))
+Call Check(Graphics3D.AnimatorClipIndex3D(FirstAnimator) = 3)
+Call Check(Graphics3D.AnimatorTime3D(FirstAnimator) = 50)
+
+Call Check(Graphics3D.PlayModelAnimatorNamed3D(FirstAnimator, "RootMove", Graphics3D.ANIMATION_LOOP, 100))
+Call Check(Graphics3D.SetAnimatorRootMotion3D(FirstAnimator, Graphics3D.ROOT_MOTION_EXTRACT))
+Call Check(Graphics3D.UpdateAnimator3D(FirstAnimator, 300))
+
+RootDelta = Graphics3D.TakeAnimatorRootDelta3D(FirstAnimator)
+
+Call Check(RootDelta.X = 200)
+Call Check(RootDelta.Y = 0)
+Call Check(RootDelta.Z = 0)
+Call Check(RootDelta.Yaw = 0)
+Call Check(Graphics3D.PlayModelAnimatorNamed3D(FirstAnimator, "RootMove", Graphics3D.ANIMATION_LOOP, 100))
+Call Check(Graphics3D.UpdateAnimator3D(FirstAnimator, 600000))
+Call Check(Graphics3D.AnimatorPendingEventCount3D(FirstAnimator) = 32)
+Call Check(Graphics3D.AnimatorEventOverflowed3D(FirstAnimator))
+Call Check(Graphics3D.AnimatorDroppedEventCount3D(FirstAnimator) > 0)
+Call Check(Graphics3D.ClearAnimatorEvents3D(FirstAnimator))
+Call Check(Graphics3D.AnimatorPendingEventCount3D(FirstAnimator) = 0)
+Call Check(Not Graphics3D.AnimatorEventOverflowed3D(FirstAnimator))
+Call Check(Graphics3D.AnimatorDroppedEventCount3D(FirstAnimator) = 0)
+Call Check(Graphics3D.UpdateAnimator3D(FirstAnimator, 300))
+Call Check(Graphics3D.AnimatorPendingEventCount3D(FirstAnimator) = 1)
+Call Check(Graphics3D.StopAnimator3D(FirstAnimator))
+Call Check(Graphics3D.AnimatorClipIndex3D(FirstAnimator) = -1)
+Call Check(Graphics3D.AnimatorDestinationClipIndex3D(FirstAnimator) = -1)
+Call Check(Graphics3D.AnimatorPendingEventCount3D(FirstAnimator) = 0)
+Call Check(Not Graphics3D.AnimatorEventOverflowed3D(FirstAnimator))
+
+Body = Graphics3D.CreateModelPart3D(Actor, 0)
+Arm = Graphics3D.CreateModelPart3D(Actor, 1)
+
+Call Check(Graphics3D.SetObjectAnimator3D(Body, SecondAnimator))
+Call Check(Graphics3D.SetObjectAnimator3D(Arm, SecondAnimator))
+Call Check(Graphics3D.PlayModelAnimatorNamed3D(SecondAnimator, "Bend", Graphics3D.ANIMATION_LOOP, 100))
+Call Check(Graphics3D.UpdateAnimator3D(SecondAnimator, 505))
+
+Camera = Graphics3D.DefaultCamera()
+UploadsBefore = Graphics3D.ModelPaletteUploadCount3D()
+FrameReady = Graphics3D.Begin3D(Camera, 4, 8, 20)
+
+If FrameReady Then
+    FrameReady = Graphics3D.DrawObject3D(Body)
+    FrameReady = Graphics3D.DrawObject3D(Arm)
+End If
+
+Call Graphics3D.End3D()
+Call Check(FrameReady)
+Call Check(Graphics3D.DrawCallCount3D() = 2)
+Call Check(Graphics3D.SubmittedTriangleCount3D() = 36)
+Call Check(Graphics3D.ModelPaletteUploadCount3D() - UploadsBefore = 1)
+
+Fill Rectangle 0, 0, 640, 360, Rgb(4, 8, 20)
+Draw Text "ARTICULATED ANIMATION HARDENING" At 118, 154 Size 20 Color WHITE
+Show Screen
+
+Call Graphics3D.DestroyObjectInstance3D(Body)
+Call Graphics3D.DestroyObjectInstance3D(Arm)
+
+StaleAnimator = FirstAnimator
+
+Call Graphics3D.DestroyAnimator3D(FirstAnimator)
+Call Graphics3D.DestroyAnimator3D(SecondAnimator)
+Call Check(FirstAnimator.ClipIndex = -1)
+Call Check(Not Graphics3D.AnimatorHandleValid3D(StaleAnimator.Handle))
+Call Graphics3D.DestroyModel3D(Actor)
+
+For Cycle = 1 To 10
+
+    Actor = Graphics3D.LoadModelGeometry3D("Assets\AnimationArticulated.sm3d")
+
+    Call Check(Actor.Handle <> 0)
+
+    FirstAnimator = Graphics3D.CreateModelAnimator3D(Actor)
+
+    Call Check(FirstAnimator.Handle <> 0)
+
+    Call Graphics3D.DestroyAnimator3D(FirstAnimator)
+    Call Graphics3D.DestroyModel3D(Actor)
+End For
+
+Call Check(Graphics3D.LiveModelCount3D() = 0)
+Call Check(Graphics3D.LiveMeshCount3D() = 0)
+Call Check(Graphics3D.LiveObjectCount3D() = 0)
+Call Check(Graphics3D.LiveAnimatorCount3D() = 0)
+
+Call Graphics3D.ResetRenderer3D()
+
+If Failures = 0 Then
+    Print "Renderer3D animation v2 hardening tests passed"
+Else
+    Print "Renderer3D animation v2 hardening tests failed: "; Failures
+End If
+
+Sub CheckPartition(Speed As Number)
+
+    Dim Partitioned As Core.Animator3D
+    Dim Combined As Core.Animator3D
+    Dim StepIndex As Number
+
+    Partitioned = Graphics3D.CreateModelAnimator3D(Actor)
+    Combined = Graphics3D.CreateModelAnimator3D(Actor)
+
+    Call Check(Graphics3D.PlayModelAnimatorNamed3D(
+        Partitioned,
+        "Bend",
+        Graphics3D.ANIMATION_HOLD,
+        Speed
+    ))
+    Call Check(Graphics3D.PlayModelAnimatorNamed3D(
+        Combined,
+        "Bend",
+        Graphics3D.ANIMATION_HOLD,
+        Speed
+    ))
+
+    For StepIndex = 1 To 100
+        Call Check(Graphics3D.UpdateAnimator3D(Partitioned, 1))
+    End For
+
+    Call Check(Graphics3D.UpdateAnimator3D(Combined, 100))
+    Call Check(Graphics3D.AnimatorTime3D(Partitioned) = Graphics3D.AnimatorTime3D(Combined))
+    Call Check(Graphics3D.AnimatorTimeRemainder3D(Partitioned) = Graphics3D.AnimatorTimeRemainder3D(Combined))
+    Call Check(Graphics3D.AnimatorSocketValue3D(
+        Partitioned,
+        0,
+        Graphics3D.ANIMATOR_SOCKET_POSITION_X
+    ) = Graphics3D.AnimatorSocketValue3D(
+        Combined,
+        0,
+        Graphics3D.ANIMATOR_SOCKET_POSITION_X
+    ))
+
+    Call Graphics3D.DestroyAnimator3D(Partitioned)
+    Call Graphics3D.DestroyAnimator3D(Combined)
+
+End Sub
+
+Sub Check(Condition As Boolean)
+
+    CheckIndex = CheckIndex + 1
+
+    If Not Condition Then
+        Failures = Failures + 1
+        Print "Renderer3D animation v2 hardening failed check "; CheckIndex
+    End If
+
+End Sub
