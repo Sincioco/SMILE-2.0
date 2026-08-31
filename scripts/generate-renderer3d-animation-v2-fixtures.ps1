@@ -9,6 +9,8 @@ $sourceRoot = Join-Path $repositoryRoot 'examples\Renderer3DAnimationV2Tests\Sou
 $assetRoot = Join-Path $repositoryRoot 'examples\Renderer3DAnimationV2Tests\Assets'
 $labAssetRoot = Join-Path $repositoryRoot 'examples\Renderer3DAnimationLab\Assets'
 $hardeningAssetRoot = Join-Path $repositoryRoot 'examples\Renderer3DAnimationV2HardeningTests\Assets'
+$characterTestAssetRoot = Join-Path $repositoryRoot 'examples\Character3DTests\Assets'
+$characterLabAssetRoot = Join-Path $repositoryRoot 'examples\Character3DLab\Assets'
 $assetTool = Join-Path $repositoryRoot 'artifacts\assettool\smileasset.exe'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 
@@ -174,7 +176,7 @@ function New-ActorGlb([int]$BoneCount) {
     }
 }
 
-function New-ArticulatedActorGlb {
+function New-ArticulatedActorGlb([switch]$MissingTexture) {
     $stream = [System.IO.MemoryStream]::new()
     $writer = [System.IO.BinaryWriter]::new($stream)
     $views = [System.Collections.Generic.List[object]]::new()
@@ -324,6 +326,12 @@ function New-ArticulatedActorGlb {
             )
             skins = @([ordered]@{ name = 'ArticulatedSkin'; inverseBindMatrices = $inverseBind; skeleton = 0; joints = @(0..7) })
             animations = $animations; buffers = @([ordered]@{ byteLength = $binary.Length }); bufferViews = $views.ToArray(); accessors = $accessors.ToArray()
+        }
+        if ($MissingTexture) {
+            $jsonObject.materials[0].pbrMetallicRoughness.baseColorTexture = [ordered]@{ index = 0 }
+            $jsonObject.samplers = @([ordered]@{ magFilter = 9729; minFilter = 9987; wrapS = 10497; wrapT = 10497 })
+            $jsonObject.images = @([ordered]@{ uri = 'Missing.png' })
+            $jsonObject.textures = @([ordered]@{ sampler = 0; source = 0 })
         }
         $jsonBytes = $utf8.GetBytes(($jsonObject | ConvertTo-Json -Depth 24 -Compress))
         $jsonPadding = (4 - ($jsonBytes.Length % 4)) % 4
@@ -475,6 +483,7 @@ Publish-Bytes (Join-Path $sourceRoot 'AnimationActor128.glb') (New-ActorGlb 128)
 Publish-Bytes (Join-Path $sourceRoot 'AnimationActor129.glb') (New-ActorGlb 129)
 Publish-Bytes (Join-Path $sourceRoot 'AnimationActor68.sm3d.json') $descriptorBytes
 Publish-Bytes (Join-Path $sourceRoot 'AnimationArticulated.glb') (New-ArticulatedActorGlb)
+Publish-Bytes (Join-Path $sourceRoot 'AnimationArticulatedMissingTexture.glb') (New-ArticulatedActorGlb -MissingTexture)
 Publish-Bytes (Join-Path $sourceRoot 'AnimationArticulated.sm3d.json') $articulatedDescriptorBytes
 
 if (-not (Test-Path -LiteralPath $assetTool)) { throw "Build smileasset first: $assetTool" }
@@ -487,11 +496,18 @@ if (-not $Check) {
     if ($LASTEXITCODE -ne 0) { throw 'The 128-bone animation fixture conversion failed.' }
     & $assetTool model (Join-Path $sourceRoot 'AnimationArticulated.glb') --descriptor (Join-Path $sourceRoot 'AnimationArticulated.sm3d.json') -o (Join-Path $assetRoot 'AnimationArticulated.sm3d')
     if ($LASTEXITCODE -ne 0) { throw 'The articulated animation fixture conversion failed.' }
+    & $assetTool model (Join-Path $sourceRoot 'AnimationArticulatedMissingTexture.glb') --descriptor (Join-Path $sourceRoot 'AnimationArticulated.sm3d.json') -o (Join-Path $assetRoot 'AnimationArticulatedMissingTexture.sm3d')
+    if ($LASTEXITCODE -ne 0) { throw 'The articulated missing-texture fixture conversion failed.' }
     [System.IO.Directory]::CreateDirectory($labAssetRoot) | Out-Null
     Copy-Item -LiteralPath (Join-Path $assetRoot 'AnimationActor68.sm3d') -Destination (Join-Path $labAssetRoot 'AnimationActor68.sm3d') -Force
     Copy-Item -LiteralPath (Join-Path $assetRoot 'AnimationArticulated.sm3d') -Destination (Join-Path $labAssetRoot 'AnimationArticulated.sm3d') -Force
     [System.IO.Directory]::CreateDirectory($hardeningAssetRoot) | Out-Null
     Copy-Item -LiteralPath (Join-Path $assetRoot 'AnimationArticulated.sm3d') -Destination (Join-Path $hardeningAssetRoot 'AnimationArticulated.sm3d') -Force
+    [System.IO.Directory]::CreateDirectory($characterTestAssetRoot) | Out-Null
+    Copy-Item -LiteralPath (Join-Path $assetRoot 'AnimationArticulated.sm3d') -Destination (Join-Path $characterTestAssetRoot 'AnimationArticulated.sm3d') -Force
+    Copy-Item -LiteralPath (Join-Path $assetRoot 'AnimationArticulatedMissingTexture.sm3d') -Destination (Join-Path $characterTestAssetRoot 'AnimationArticulatedMissingTexture.sm3d') -Force
+    [System.IO.Directory]::CreateDirectory($characterLabAssetRoot) | Out-Null
+    Copy-Item -LiteralPath (Join-Path $assetRoot 'AnimationArticulated.sm3d') -Destination (Join-Path $characterLabAssetRoot 'AnimationArticulated.sm3d') -Force
 }
 else {
     $temporaryRoot = Join-Path (Join-Path $repositoryRoot 'artifacts\temp') ([System.IO.Path]::GetRandomFileName())
@@ -500,18 +516,25 @@ else {
         $temporary68 = Join-Path $temporaryRoot 'AnimationActor68.sm3d'
         $temporary128 = Join-Path $temporaryRoot 'AnimationActor128.sm3d'
         $temporaryArticulated = Join-Path $temporaryRoot 'AnimationArticulated.sm3d'
+        $temporaryMissingTexture = Join-Path $temporaryRoot 'AnimationArticulatedMissingTexture.sm3d'
         & $assetTool model (Join-Path $sourceRoot 'AnimationActor68.glb') --descriptor (Join-Path $sourceRoot 'AnimationActor68.sm3d.json') -o $temporary68
         if ($LASTEXITCODE -ne 0) { throw 'The 68-bone deterministic check conversion failed.' }
         & $assetTool model (Join-Path $sourceRoot 'AnimationActor128.glb') -o $temporary128
         if ($LASTEXITCODE -ne 0) { throw 'The 128-bone deterministic check conversion failed.' }
         & $assetTool model (Join-Path $sourceRoot 'AnimationArticulated.glb') --descriptor (Join-Path $sourceRoot 'AnimationArticulated.sm3d.json') -o $temporaryArticulated
         if ($LASTEXITCODE -ne 0) { throw 'The articulated deterministic check conversion failed.' }
+        & $assetTool model (Join-Path $sourceRoot 'AnimationArticulatedMissingTexture.glb') --descriptor (Join-Path $sourceRoot 'AnimationArticulated.sm3d.json') -o $temporaryMissingTexture
+        if ($LASTEXITCODE -ne 0) { throw 'The articulated missing-texture deterministic check conversion failed.' }
         Assert-EqualFiles (Join-Path $assetRoot 'AnimationActor68.sm3d') $temporary68
         Assert-EqualFiles (Join-Path $assetRoot 'AnimationActor128.sm3d') $temporary128
         Assert-EqualFiles (Join-Path $assetRoot 'AnimationArticulated.sm3d') $temporaryArticulated
+        Assert-EqualFiles (Join-Path $assetRoot 'AnimationArticulatedMissingTexture.sm3d') $temporaryMissingTexture
         Assert-EqualFiles (Join-Path $assetRoot 'AnimationActor68.sm3d') (Join-Path $labAssetRoot 'AnimationActor68.sm3d')
         Assert-EqualFiles (Join-Path $assetRoot 'AnimationArticulated.sm3d') (Join-Path $labAssetRoot 'AnimationArticulated.sm3d')
         Assert-EqualFiles (Join-Path $assetRoot 'AnimationArticulated.sm3d') (Join-Path $hardeningAssetRoot 'AnimationArticulated.sm3d')
+        Assert-EqualFiles (Join-Path $assetRoot 'AnimationArticulated.sm3d') (Join-Path $characterTestAssetRoot 'AnimationArticulated.sm3d')
+        Assert-EqualFiles (Join-Path $assetRoot 'AnimationArticulatedMissingTexture.sm3d') (Join-Path $characterTestAssetRoot 'AnimationArticulatedMissingTexture.sm3d')
+        Assert-EqualFiles (Join-Path $assetRoot 'AnimationArticulated.sm3d') (Join-Path $characterLabAssetRoot 'AnimationArticulated.sm3d')
     }
     finally {
         Remove-Item -LiteralPath $temporaryRoot -Recurse -Force

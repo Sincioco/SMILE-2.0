@@ -1,0 +1,356 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Interaction As Interaction
+Import Smile.Simple3D.Scene3D As Scene3D
+Import Smile.Simple3D.Character3D As Character3D
+
+Dim BaseCamera As Core.Camera3D
+Dim Camera As Core.Camera3D
+Dim CameraControls As Core.CameraControl3D
+Dim Hero As Character3D.Actor
+Dim Partner As Character3D.Actor
+Dim SocketMarker As Core.Object3D
+Dim Ground As Core.Object3D
+Dim Socket As Core.Vector3
+Dim Running As Boolean
+Dim FrameReady As Boolean
+Dim DiagnosticsVisible As Boolean
+Dim SocketVisible As Boolean
+Dim RootMotionApplied As Boolean
+Dim SelectedClip As Number
+Dim LightingIndex As Number
+Dim QualityIndex As Number
+Dim Key As Number
+Dim PreviousTime As Number
+Dim CurrentTime As Number
+Dim FrameMilliseconds As Number
+
+Game Window "SMILE Character3D Lab" Size 960 By 540
+
+Call Graphics3D.ResetRenderer3D()
+
+FrameReady = Scene3D.SetQuality(Scene3D.QUALITY_AUTO)
+FrameReady = Scene3D.UseLighting("CharacterStudio") And FrameReady
+
+Call LoadLab()
+
+Running = True
+DiagnosticsVisible = True
+SocketVisible = True
+RootMotionApplied = False
+SelectedClip = 0
+PreviousTime = Timer()
+
+Do
+
+    Get Key Key
+
+    If Key = KEY_ESCAPE Then
+        Running = False
+    Else If Key >= KEY_1 And Key <= KEY_4 Then
+        SelectedClip = Key - KEY_1
+
+        Call PlaySelected()
+    Else If Key = KEY_TAB Then
+        SelectedClip = 4
+
+        Call PlaySelected()
+    Else If Key = KEY_SPACE Then
+        FrameReady = Character3D.CrossFade(
+            Hero,
+            SelectedClipName(),
+            180,
+            SelectedPlaybackMode()
+        )
+    Else If Key = KEY_W Then
+        RootMotionApplied = Not RootMotionApplied
+
+        Call ApplyRootMotionMode()
+    Else If Key = KEY_S Then
+        SocketVisible = Not SocketVisible
+    Else If Key = KEY_A Then
+        LightingIndex = (LightingIndex + 1) Mod 5
+
+        Call SelectLighting()
+    Else If Key = KEY_UP Then
+        QualityIndex = (QualityIndex + 1) Mod 4
+
+        Call SelectQuality()
+    Else If Key = KEY_DOWN Then
+        Call ReloadActors()
+    Else If Key = KEY_D Then
+        DiagnosticsVisible = Not DiagnosticsVisible
+    End If
+
+    CurrentTime = Timer()
+    FrameMilliseconds = Min(50, Max(0, CurrentTime - PreviousTime))
+    PreviousTime = CurrentTime
+
+    FrameReady = Character3D.Update(Hero, FrameMilliseconds)
+    FrameReady = Character3D.Update(Partner, FrameMilliseconds) And FrameReady
+    FrameReady = Interaction.UpdateCameraControlsFromPointer(CameraControls, True, True, True)
+    FrameReady = Interaction.AdvanceCameraControls(CameraControls, 1)
+
+    Camera = Interaction.ApplyCameraControls(BaseCamera, CameraControls)
+    Socket = Character3D.SocketPosition(Hero, "HandTip")
+
+    Call Graphics3D.SetObjectPosition(SocketMarker, Socket.X, Socket.Y, Socket.Z)
+
+    FrameReady = Scene3D.Begin(Camera, 4, 8, 20)
+
+    If FrameReady Then
+
+        FrameReady = Graphics3D.DrawObject3D(Ground)
+        FrameReady = Character3D.Draw(Hero) And FrameReady
+        FrameReady = Character3D.Draw(Partner) And FrameReady
+
+        If SocketVisible Then
+            FrameReady = Graphics3D.DrawObject3D(SocketMarker) And FrameReady
+        End If
+
+        FrameReady = Scene3D.EndScene() And FrameReady
+
+    End If
+
+    Call DrawLabOverlay()
+
+    Show Screen
+
+    Running = Running And Not Game_Closed()
+
+Loop Until Not Running
+
+Call DestroyLab()
+
+Sub LoadLab()
+
+    BaseCamera = Graphics3D.DefaultCamera()
+    BaseCamera.Position.Y = 180
+    BaseCamera.Position.Z = -720
+    BaseCamera.Target.Y = 120
+
+    Call Interaction.ResetCameraControls(CameraControls)
+
+    Ground = Graphics3D.CreatePlane3D(760, 470)
+    SocketMarker = Graphics3D.CreateSphere3D(12)
+
+    Call Graphics3D.SetObjectPosition(Ground, 0, -5, 120)
+    Call Graphics3D.SetObjectColor(Ground, 22, 34, 58)
+    Call Graphics3D.SetObjectColor(SocketMarker, 255, 226, 72)
+
+    Call ReloadActors()
+
+End Sub
+
+Sub ReloadActors()
+
+    Call Character3D.Destroy(Hero)
+    Call Character3D.Destroy(Partner)
+
+    Hero = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
+    Partner = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
+
+    FrameReady = Character3D.Place(Hero, -140, 0, 80)
+    FrameReady = Character3D.Place(Partner, 140, 0, 80)
+    FrameReady = Character3D.SetScale(Hero, 20000)
+    FrameReady = Character3D.SetScale(Partner, 20000)
+    FrameReady = Character3D.Rotate(Hero, 0, 10, 0)
+    FrameReady = Character3D.Rotate(Partner, 0, -10, 0)
+    FrameReady = Character3D.PlayAnimation(Hero, "Bend", True)
+    FrameReady = Character3D.PlayAnimation(Partner, "AttackLike", False)
+
+    Call ApplyRootMotionMode()
+
+End Sub
+
+Sub PlaySelected()
+
+    FrameReady = Character3D.PlayMode(
+        Hero,
+        SelectedClipName(),
+        SelectedPlaybackMode(),
+        100
+    )
+
+End Sub
+
+Sub ApplyRootMotionMode()
+
+    If RootMotionApplied Then
+        FrameReady = Character3D.SetRootMotion(Hero, Character3D.ROOT_MOTION_APPLY)
+    Else
+        FrameReady = Character3D.SetRootMotion(Hero, Character3D.ROOT_MOTION_IGNORE)
+    End If
+
+End Sub
+
+Sub SelectLighting()
+
+    If LightingIndex = 0 Then
+        FrameReady = Scene3D.UseLighting("CharacterStudio")
+    Else If LightingIndex = 1 Then
+        FrameReady = Scene3D.UseLighting("Daylight")
+    Else If LightingIndex = 2 Then
+        FrameReady = Scene3D.UseLighting("Dungeon")
+    Else If LightingIndex = 3 Then
+        FrameReady = Scene3D.UseLighting("Moonlight")
+    Else
+        FrameReady = Scene3D.UseLighting("EmberObservatory")
+    End If
+
+End Sub
+
+Sub SelectQuality()
+
+    If QualityIndex = 0 Then
+        FrameReady = Scene3D.SetQuality(Scene3D.QUALITY_AUTO)
+    Else If QualityIndex = 1 Then
+        FrameReady = Scene3D.SetQuality(Scene3D.QUALITY_LOW)
+    Else If QualityIndex = 2 Then
+        FrameReady = Scene3D.SetQuality(Scene3D.QUALITY_MEDIUM)
+    Else
+        FrameReady = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
+    End If
+
+End Sub
+
+Function SelectedClipName() As Text
+
+    Dim Result As Text
+
+    If SelectedClip = 0 Then
+        Result = "Idle"
+    Else If SelectedClip = 1 Then
+        Result = "Bend"
+    Else If SelectedClip = 2 Then
+        Result = "WalkLike"
+    Else If SelectedClip = 3 Then
+        Result = "AttackLike"
+    Else
+        Result = "RootMove"
+    End If
+
+    Return Result
+
+End Function
+
+Function SelectedPlaybackMode() As Number
+
+    Dim Result As Number
+
+    If SelectedClip = 1 Or SelectedClip = 3 Then
+        Result = Graphics3D.ANIMATION_HOLD
+    Else
+        Result = Graphics3D.ANIMATION_LOOP
+    End If
+
+    Return Result
+
+End Function
+
+Function LightingName() As Text
+
+    Dim Result As Text
+
+    If LightingIndex = 0 Then
+        Result = "CharacterStudio"
+    Else If LightingIndex = 1 Then
+        Result = "Daylight"
+    Else If LightingIndex = 2 Then
+        Result = "Dungeon"
+    Else If LightingIndex = 3 Then
+        Result = "Moonlight"
+    Else
+        Result = "EmberObservatory"
+    End If
+
+    Return Result
+
+End Function
+
+Sub DrawLabOverlay()
+
+    Dim RootValue As Number
+    Dim Fallback As Number
+    Dim FramesPerSecond As Number
+
+    If RootMotionApplied Then
+        RootValue = 1
+    End If
+
+    If Character3D.ActorUsesFallback(Hero) Then
+        Fallback = 1
+    End If
+
+    If FrameMilliseconds > 0 Then
+        FramesPerSecond = 1000 / FrameMilliseconds
+    End If
+
+    Fill Rectangle 0, 0, 960, 68, Rgb(3, 8, 22)
+    Draw Text "SMILE CHARACTER3D LAB" At 18, 10 Size 22 Color CYAN
+    Draw Text "1-4/Tab Clip  Space Fade  W Root  S Socket  A Light  Up Quality  Down Reload  D Details" At 18, 40 Size 13 Color LIGHT_GRAY
+    Fill Rectangle 16, 80, 280, 70, Rgb(5, 12, 30)
+    Draw Text "SELECTED CLIP" At 30, 92 Size 13 Color LIGHT_GRAY
+    Draw Text SelectedClipName() At 30, 116 Size 19 Color WHITE
+    Draw Text "LEFT: HIGH-LEVEL ACTOR" At 196, 468 Size 14 Color CYAN
+    Draw Text "RIGHT: SHARED MODEL" At 520, 468 Size 14 Color ORANGE
+
+    If DiagnosticsVisible Then
+
+        Fill Rectangle 708, 80, 236, 350, Rgb(5, 12, 30)
+        Draw Text "CHARACTER / SCENE" At 724, 94 Size 16 Color WHITE
+        Draw Text "Lighting" At 724, 124 Size 13 Color LIGHT_GRAY
+        Draw Text LightingName() At 792, 124 Size 13 Color CYAN
+        Draw Text "Quality Requested" At 724, 150 Size 13 Color LIGHT_GRAY
+        Draw Number Scene3D.RequestedQuality() At 880, 150 Size 13 Color WHITE
+        Draw Text "Quality Effective" At 724, 174 Size 13 Color LIGHT_GRAY
+        Draw Number Scene3D.EffectiveQuality() At 880, 174 Size 13 Color WHITE
+        Draw Text "Actors / Assets" At 724, 202 Size 13 Color LIGHT_GRAY
+        Draw Number Character3D.LiveActorCount() At 858, 202 Size 13 Color CYAN
+        Draw Number Character3D.CachedAssetCount() At 900, 202 Size 13 Color CYAN
+        Draw Text "Asset References" At 724, 226 Size 13 Color LIGHT_GRAY
+        Draw Number Character3D.AssetReferenceCount(Hero) At 880, 226 Size 13 Color WHITE
+        Draw Text "Models / Animators" At 724, 250 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.LiveModelCount3D() At 880, 250 Size 13 Color WHITE
+        Draw Number Graphics3D.LiveAnimatorCount3D() At 914, 250 Size 13 Color WHITE
+        Draw Text "Objects / Parts" At 724, 274 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.LiveObjectCount3D() At 858, 274 Size 13 Color WHITE
+        Draw Number Character3D.PartCount(Hero) At 908, 274 Size 13 Color WHITE
+        Draw Text "Draws / Triangles" At 724, 298 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.DrawCallCount3D() At 858, 298 Size 13 Color WHITE
+        Draw Number Graphics3D.SubmittedTriangleCount3D() At 908, 298 Size 13 Color WHITE
+        Draw Text "Root Apply / Fallback" At 724, 322 Size 13 Color LIGHT_GRAY
+        Draw Number RootValue At 878, 322 Size 13 Color WHITE
+        Draw Number Fallback At 914, 322 Size 13 Color WHITE
+        Draw Text "Socket HandTip" At 724, 346 Size 13 Color LIGHT_GRAY
+        Draw Number Socket.X At 842, 346 Size 13 Color YELLOW
+        Draw Number Socket.Y At 878, 346 Size 13 Color YELLOW
+        Draw Number Socket.Z At 914, 346 Size 13 Color YELLOW
+        Draw Text "Renderer Error" At 724, 370 Size 13 Color LIGHT_GRAY
+        Draw Number Character3D.LastRendererError() At 880, 370 Size 13 Color WHITE
+        Draw Text "PBR" At 724, 394 Size 13 Color LIGHT_GRAY
+
+        If Character3D.ActorUsesPbr(Hero) Then
+            Draw Text "READY" At 880, 394 Size 13 Color GREEN
+        Else
+            Draw Text "SIMPLE FALLBACK" At 814, 394 Size 13 Color YELLOW
+        End If
+
+        Draw Text "Frame Ms / FPS" At 724, 418 Size 13 Color LIGHT_GRAY
+        Draw Number FrameMilliseconds At 858, 418 Size 13 Color WHITE
+        Draw Number FramesPerSecond At 908, 418 Size 13 Color GREEN
+
+    End If
+
+End Sub
+
+Sub DestroyLab()
+
+    Call Character3D.Shutdown()
+    Call Graphics3D.DestroyObject3D(SocketMarker)
+    Call Graphics3D.DestroyObject3D(Ground)
+    Call Graphics3D.ResetRenderer3D()
+
+End Sub

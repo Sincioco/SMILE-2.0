@@ -1,0 +1,488 @@
+''' Beginner-facing scene quality, lighting presets, and balanced 3D frame ownership.
+Module Smile.Simple3D.Scene3D
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Public Const QUALITY_AUTO = 0
+Public Const QUALITY_LOW = 1
+Public Const QUALITY_MEDIUM = 2
+Public Const QUALITY_HIGH = 3
+
+Public Const SCENE_FALLBACK_NONE = 0
+Public Const SCENE_FALLBACK_PBR_UNAVAILABLE = 1
+Public Const SCENE_FALLBACK_ANISOTROPY_REDUCED = 2
+Public Const SCENE_FALLBACK_LOW_PROFILE = 3
+
+Public Const SCENE_ERROR_NONE = 0
+Public Const SCENE_ERROR_INVALID_QUALITY = 1
+Public Const SCENE_ERROR_UNKNOWN_LIGHTING = 2
+Public Const SCENE_ERROR_ALREADY_OPEN = 3
+Public Const SCENE_ERROR_NOT_OPEN = 4
+Public Const SCENE_ERROR_LIGHTING = 5
+Public Const SCENE_ERROR_BEGIN = 6
+
+Private Dim RequestedProfile As Number
+Private Dim EffectiveProfile As Number
+Private Dim FallbackReason As Number
+Private Dim ErrorValue As Number
+Private Dim RendererErrorValue As Number
+Private Dim LightingName As Text
+Private Dim CustomLighting As Boolean
+Private Dim FrameOpen As Boolean
+Private Dim Initialized As Boolean
+
+Private Sub EnsureInitialized()
+
+    If Initialized Then
+        Return
+    End If
+
+    RequestedProfile = QUALITY_AUTO
+
+    If Graphics3D.PbrShaderAvailable3D() Then
+        EffectiveProfile = QUALITY_HIGH
+        FallbackReason = SCENE_FALLBACK_NONE
+    Else
+        EffectiveProfile = QUALITY_LOW
+        FallbackReason = SCENE_FALLBACK_PBR_UNAVAILABLE
+    End If
+
+    LightingName = "CharacterStudio"
+    Initialized = True
+
+End Sub
+
+Private Function LocalLightLimit() As Number
+
+    Dim Result As Number
+
+    Call EnsureInitialized()
+
+    If EffectiveProfile = QUALITY_LOW Then
+        Result = 1
+    Else If EffectiveProfile = QUALITY_MEDIUM Then
+        Result = 2
+    Else
+        Result = 4
+    End If
+
+    Return Result
+
+End Function
+
+Private Function ApplyCharacterStudio() As Boolean
+
+    Dim Result As Boolean
+    Dim Limit As Number
+
+    Limit = LocalLightLimit()
+
+    Call Graphics3D.ClearAdditionalLights3D()
+
+    Result = Graphics3D.SetAmbientLight3D(54, 62, 82, 34)
+    Result = Graphics3D.SetDirectionalLight3D(-3, -7, 4, 255, 242, 224, 125) And Result
+
+    If Limit >= 1 Then
+        Result = Graphics3D.SetPointLight3D(0, 260, 240, -180, 255, 174, 112, 150, 850) And Result
+    End If
+
+    If Limit >= 2 Then
+        Result = Graphics3D.SetPointLight3D(1, -280, 150, 40, 112, 174, 255, 105, 700) And Result
+    End If
+
+    Return Result
+
+End Function
+
+Private Function ApplyDaylight() As Boolean
+
+    Dim Result As Boolean
+    Dim Limit As Number
+
+    Limit = LocalLightLimit()
+
+    Call Graphics3D.ClearAdditionalLights3D()
+
+    Result = Graphics3D.SetAmbientLight3D(166, 194, 226, 42)
+    Result = Graphics3D.SetDirectionalLight3D(-4, -8, 3, 255, 249, 232, 130) And Result
+
+    If Limit >= 1 Then
+        Result = Graphics3D.SetPointLight3D(0, -220, 180, -120, 180, 214, 255, 65, 900) And Result
+    End If
+
+    Return Result
+
+End Function
+
+Private Function ApplyDungeon() As Boolean
+
+    Dim Result As Boolean
+    Dim Limit As Number
+
+    Limit = LocalLightLimit()
+
+    Call Graphics3D.ClearAdditionalLights3D()
+
+    Result = Graphics3D.SetAmbientLight3D(22, 28, 42, 20)
+    Result = Graphics3D.SetDirectionalLight3D(2, -7, 5, 116, 142, 188, 72) And Result
+
+    If Limit >= 1 Then
+        Result = Graphics3D.SetPointLight3D(0, 230, 90, -80, 255, 92, 36, 165, 620) And Result
+    End If
+
+    If Limit >= 2 Then
+        Result = Graphics3D.SetPointLight3D(1, -260, 60, 100, 60, 104, 188, 90, 540) And Result
+    End If
+
+    Return Result
+
+End Function
+
+Private Function ApplyMoonlight() As Boolean
+
+    Dim Result As Boolean
+    Dim Limit As Number
+
+    Limit = LocalLightLimit()
+
+    Call Graphics3D.ClearAdditionalLights3D()
+
+    Result = Graphics3D.SetAmbientLight3D(48, 64, 108, 28)
+    Result = Graphics3D.SetDirectionalLight3D(3, -8, 5, 158, 190, 255, 96) And Result
+
+    If Limit >= 1 Then
+        Result = Graphics3D.SetPointLight3D(0, -180, 120, 80, 86, 132, 255, 72, 760) And Result
+    End If
+
+    Return Result
+
+End Function
+
+Private Function ApplyEmberObservatory() As Boolean
+
+    Dim Result As Boolean
+    Dim Limit As Number
+
+    Limit = LocalLightLimit()
+
+    Call Graphics3D.ClearAdditionalLights3D()
+
+    Result = Graphics3D.SetAmbientLight3D(62, 30, 20, 26)
+    Result = Graphics3D.SetDirectionalLight3D(-3, -7, 4, 255, 140, 74, 92) And Result
+
+    If Limit >= 1 Then
+        Result = Graphics3D.SetPointLight3D(0, 220, 100, -100, 255, 72, 22, 185, 700) And Result
+    End If
+
+    If Limit >= 2 Then
+        Result = Graphics3D.SetPointLight3D(1, -240, 160, 90, 255, 174, 62, 125, 760) And Result
+    End If
+
+    If Limit >= 3 Then
+        Result = Graphics3D.SetSpotLight3D(2, 0, 300, -260, 108, 154, 255, 115, 900) And Result
+        Result = Graphics3D.SetSpotLightCone3D(2, 0, -3, 5, 18, 38) And Result
+    End If
+
+    Return Result
+
+End Function
+
+''' Selects AUTO, LOW, MEDIUM, or HIGH for subsequently loaded assets.
+Public Function SetQuality(Profile As Number) As Boolean
+
+    Call EnsureInitialized()
+
+    If Profile < QUALITY_AUTO Or Profile > QUALITY_HIGH Then
+        ErrorValue = SCENE_ERROR_INVALID_QUALITY
+        Return False
+    End If
+
+    RequestedProfile = Profile
+    FallbackReason = SCENE_FALLBACK_NONE
+
+    If Profile = QUALITY_AUTO Then
+
+        If Graphics3D.PbrShaderAvailable3D() Then
+            EffectiveProfile = QUALITY_HIGH
+        Else
+            EffectiveProfile = QUALITY_LOW
+            FallbackReason = SCENE_FALLBACK_PBR_UNAVAILABLE
+        End If
+
+    Else
+        EffectiveProfile = Profile
+
+    End If
+
+    ErrorValue = SCENE_ERROR_NONE
+    RendererErrorValue = 0
+
+    Return True
+
+End Function
+
+Public Function RequestedQuality() As Number
+
+    Call EnsureInitialized()
+
+    Return RequestedProfile
+
+End Function
+
+Public Function EffectiveQuality() As Number
+
+    Call EnsureInitialized()
+
+    Return EffectiveProfile
+
+End Function
+
+Public Function LastFallback() As Number
+
+    Call EnsureInitialized()
+
+    Return FallbackReason
+
+End Function
+
+Public Function TextureFilter() As Number
+
+    Dim Result As Number
+
+    Call EnsureInitialized()
+
+    If EffectiveProfile = QUALITY_LOW Then
+        Result = Graphics3D.TEXTURE_FILTER_LINEAR
+    Else If EffectiveProfile = QUALITY_MEDIUM Then
+        Result = Graphics3D.TEXTURE_FILTER_MIP_LINEAR
+    Else
+        Result = Graphics3D.TEXTURE_FILTER_ANISOTROPIC
+    End If
+
+    Return Result
+
+End Function
+
+Public Function TextureWrap() As Number
+
+    Return Graphics3D.TEXTURE_WRAP_REPEAT
+
+End Function
+
+Public Function RequestedAnisotropy() As Number
+
+    Dim Result As Number
+
+    Call EnsureInitialized()
+
+    If EffectiveProfile = QUALITY_LOW Then
+        Result = 1
+    Else If EffectiveProfile = QUALITY_MEDIUM Then
+        Result = 4
+    Else
+        Result = 8
+    End If
+
+    Return Result
+
+End Function
+
+Public Function PbrPreferred() As Boolean
+
+    Return True
+
+End Function
+
+Public Function SimpleFallbackAllowed() As Boolean
+
+    Dim Result As Boolean
+
+    Call EnsureInitialized()
+
+    Result = EffectiveProfile <> QUALITY_HIGH Or RequestedProfile = QUALITY_AUTO
+
+    Return Result
+
+End Function
+
+''' Stable cache identity for all settings that affect newly prepared model assets.
+Public Function AssetProfileKey() As Number
+
+    Dim Result As Number
+
+    Call EnsureInitialized()
+
+    Result = EffectiveProfile * 10000
+    Result = Result + TextureFilter() * 1000
+    Result = Result + TextureWrap() * 100
+    Result = Result + RequestedAnisotropy()
+
+    Return Result
+
+End Function
+
+''' Selects one exact built-in lighting name without changing the current lights yet.
+Public Function UseLighting(Name As Text) As Boolean
+
+    Call EnsureInitialized()
+
+    If (Name <> "CharacterStudio" And
+        Name <> "Daylight" And
+        Name <> "Dungeon" And
+        Name <> "Moonlight" And
+        Name <> "EmberObservatory") Then
+        ErrorValue = SCENE_ERROR_UNKNOWN_LIGHTING
+        Return False
+    End If
+
+    LightingName = Name
+    CustomLighting = False
+    ErrorValue = SCENE_ERROR_NONE
+    RendererErrorValue = 0
+
+    Return True
+
+End Function
+
+Public Function CurrentLightingMatches(Name As Text) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Call EnsureInitialized()
+
+    ReturnValue = Not CustomLighting And LightingName = Name
+
+    Return ReturnValue
+
+End Function
+
+''' Reapplies the selected deterministic preset using the current local-light limit.
+Public Function ApplyLighting() As Boolean
+
+    Dim Result As Boolean
+
+    Call EnsureInitialized()
+
+    If CustomLighting Then
+        Return True
+    End If
+
+    If LightingName = "CharacterStudio" Then
+        Result = ApplyCharacterStudio()
+    Else If LightingName = "Daylight" Then
+        Result = ApplyDaylight()
+    Else If LightingName = "Dungeon" Then
+        Result = ApplyDungeon()
+    Else If LightingName = "Moonlight" Then
+        Result = ApplyMoonlight()
+    Else If LightingName = "EmberObservatory" Then
+        Result = ApplyEmberObservatory()
+    End If
+
+    If Not Result Then
+        ErrorValue = SCENE_ERROR_LIGHTING
+        RendererErrorValue = Graphics3D.LastError()
+    Else
+        ErrorValue = SCENE_ERROR_NONE
+        RendererErrorValue = 0
+    End If
+
+    Return Result
+
+End Function
+
+''' Keeps advanced caller-configured Graphics3D lights unchanged on Begin.
+Public Sub UseCustomLighting()
+
+    Call EnsureInitialized()
+
+    CustomLighting = True
+
+End Sub
+
+''' Applies lighting and opens one balanced Graphics3D frame.
+Public Function Begin(
+    Camera As Core.Camera3D,
+    ClearRed As Number,
+    ClearGreen As Number,
+    ClearBlue As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Call EnsureInitialized()
+
+    If FrameOpen Then
+        ErrorValue = SCENE_ERROR_ALREADY_OPEN
+        Return False
+    End If
+
+    If Not ApplyLighting() Then
+        Return False
+    End If
+
+    Result = Graphics3D.Begin3D(Camera, ClearRed, ClearGreen, ClearBlue)
+
+    If Result Then
+
+        FrameOpen = True
+        ErrorValue = SCENE_ERROR_NONE
+        RendererErrorValue = 0
+
+    Else
+        ErrorValue = SCENE_ERROR_BEGIN
+        RendererErrorValue = Graphics3D.LastError()
+
+    End If
+
+    Return Result
+
+End Function
+
+''' Closes the current 3D frame and makes ordinary Renderer2D drawing available again.
+Public Function EndScene() As Boolean
+
+    If Not FrameOpen Then
+        ErrorValue = SCENE_ERROR_NOT_OPEN
+        Return False
+    End If
+
+    Call Graphics3D.End3D()
+
+    FrameOpen = False
+    ErrorValue = SCENE_ERROR_NONE
+    RendererErrorValue = 0
+
+    Return True
+
+End Function
+
+Public Function IsOpen() As Boolean
+
+    Return FrameOpen
+
+End Function
+
+Public Function LastError() As Number
+
+    Return ErrorValue
+
+End Function
+
+Public Function LastRendererError() As Number
+
+    Return RendererErrorValue
+
+End Function
+
+Public Sub ClearError()
+
+    ErrorValue = SCENE_ERROR_NONE
+    RendererErrorValue = 0
+
+End Sub
+
+End Module

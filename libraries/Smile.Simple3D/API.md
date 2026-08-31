@@ -155,6 +155,46 @@ The standard 3D camera-control contract is renderer-independent and deterministi
 
 Games decide whether a press started on valid world geometry and pass that decision through `AllowPanStart` or `AllowOrbitStart`. Once accepted, the gesture retains capture until release; a missing Web-canvas release is recovered when the button is no longer held. Pan, zoom, and orbit remain mutually composable.
 
+## `Smile.Simple3D.Scene3D`
+
+Quality profiles affect only newly loaded assets. `QUALITY_LOW` uses linear filtering and anisotropy 1, `QUALITY_MEDIUM` uses mip-linear filtering and anisotropy 4, and `QUALITY_HIGH` uses anisotropic filtering requested at 8. `QUALITY_AUTO` selects High when PBR is available and Low with `SCENE_FALLBACK_PBR_UNAVAILABLE` otherwise. Existing actors are never silently rebuilt when quality changes.
+
+- `SetQuality`, `RequestedQuality`, `EffectiveQuality`, and `LastFallback`.
+- `TextureFilter`, `TextureWrap`, `RequestedAnisotropy`, `PbrPreferred`, `SimpleFallbackAllowed`, and `AssetProfileKey` are deterministic read-only asset-policy helpers.
+- `UseLighting`, `CurrentLightingMatches`, and `ApplyLighting` select exact built-in names: `CharacterStudio`, `Daylight`, `Dungeon`, `Moonlight`, or `EmberObservatory`.
+- `UseCustomLighting` preserves advanced lights configured directly through `Graphics3D`.
+- `Begin`, `EndScene`, and `IsOpen` reject nested/unmatched frames and leave Renderer2D available after the 3D pass.
+- `LastError`, `LastRendererError`, and `ClearError` expose stable high-level and low-level failure information.
+
+## `Smile.Simple3D.Character3D`
+
+`Actor` contains only a generation-safe `Handle`. The module owns fixed pools of 16 exact path/profile/policy cache entries, 32 actors, and at most 16 model parts per actor. A cache entry exists only while at least one actor references it; two same-key actors share one model and own separate animator/part instances.
+
+Loading and lifecycle:
+
+- `LoadActor(Path)` and `LoadWithPolicy(Path, Policy)`.
+- `CHARACTER_LOAD_AUTO`, `CHARACTER_LOAD_REQUIRE_PBR`, and `CHARACTER_LOAD_ALLOW_SIMPLE_FALLBACK`.
+- `Destroy(ByRef Actor)` and idempotent `Shutdown()`.
+- PBR content errors remain errors. Simple fallback is allowed only for unavailable PBR capability according to policy; it does not hide a missing declared texture when PBR validation is available.
+
+Transforms and animation:
+
+- `Place`, `Rotate`, `SetScale`, `SetVisible`, and yaw-only `LookAt` update every model part.
+- `PlayAnimation`, `PlayMode`, `CrossFade`, `StopAnimation`, `Update`, `IsPlaying`, `AnimationComplete`, and `CurrentClipNameMatches` use exact case-sensitive clip names.
+- `SetRootMotion` accepts `ROOT_MOTION_IGNORE` or `ROOT_MOTION_APPLY`. Apply mode drains the combined low-level delta once per update and retains position/yaw subunits in thousandths.
+- `LastRootDelta`, `PositionX`, `PositionY`, `PositionZ`, and `RotationY` expose deterministic actor motion diagnostics.
+
+Events, sockets, drawing, and diagnostics:
+
+- `TakeEvent`, `PendingEventCount`, `EventOverflowed`, `DroppedEventCount`, and `ClearEvents` preserve the bounded chronological animator FIFO.
+- `HasSocket`, `SocketPosition`, and `SocketValueThousandths` use the primary bound part for world-space socket evaluation.
+- `Draw`, `IsValid`, `PartCount`, `BoundsValueThousandths`, and `Height`.
+- `PrimaryObjectHandle`, `AnimatorHandle`, and `ModelHandle` are the advanced Battle3D interop seam; Character3D does not depend on Battle3D.
+- `LiveActorCount`, `MaximumActorCount`, `CachedAssetCount`, `AssetReferenceCount`, `ActorUsesPbr`, `ActorUsesFallback`, and `AnimationResidentBytes`.
+- `LastError`, `LastRendererError`, `LastFallback`, and `ClearError`.
+
+`Load`, `Play`, `Stop`, and `End` are reserved SMILE keywords and cannot currently be routine identifiers. M4 therefore uses the explicit source-level names `LoadActor`, `PlayAnimation`, `StopAnimation`, and `EndScene` without changing the language grammar.
+
 ## Renderer contract
 
 Windows uses D3D11 indexed triangle lists, generated normals, model/view/perspective matrices, a resize-aware D24S8 depth buffer, and hardware-selected 4x/2x/1x multisample anti-aliasing before the existing Direct2D HUD pass. Web uses an antialiased offscreen WebGL2 canvas with the same indexed mesh and depth contract, then composites it into the Canvas 2D back buffer before ordinary 2D drawing.

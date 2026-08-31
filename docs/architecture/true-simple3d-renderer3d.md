@@ -9,6 +9,8 @@ Students use ordinary modules from `Smile.Simple3D` 2.0.0:
 - `Core` owns `Vector3`, `Matrix4`, `Camera3D`, `Object3D`, `Model3D`, `Animator3D`, and `RootMotionDelta3D` value types.
 - `Math3D` owns deterministic vector and matrix helpers.
 - `Graphics3D` owns primitive/custom-mesh creation, transforms, appearance, frame submission, and explicit lifecycle.
+- `Scene3D` owns quality profiles, named lighting presets, and balanced 3D-frame entry/exit.
+- `Character3D` owns a bounded shared-model cache plus generation-safe animated actor instances.
 
 The compiler has narrow game-window-only numeric, image-owning, and text-path Renderer3D bridges. `Graphics3D` is the public teaching surface and hides their command values. The image bridge lets Renderer3D retain the existing decoded `Image` resource instead of duplicating PNG decoding, while the text bridge resolves model paths through the existing exact asset manifest. This avoids new statement grammar, backend-specific APIs, game-specific runtime calls, and duplicate parser rules. The existing wireframe modules remain supported for GDI and older lessons.
 
@@ -46,8 +48,8 @@ Texture and material details are documented in [Renderer3D textures and material
 
 ## Command ABI allocation
 
-The compiler bridge is append-only. Numeric commands currently occupy 1-109, image commands 1-2, and text commands 1-9. M3 adds numeric 98-109 for model animation metadata, model animators, playback/crossfade state, FIFO/root/socket operations, capability, and palette diagnostics. It adds no image command. Text commands 4-9 provide exact clip/socket/event names plus named play, crossfade, and event take. The next free IDs are numeric 110, image 3, and text 10. The positional mapping and native/Web dispatch paths are recorded in the M3 implementation report.
+The compiler bridge is append-only. Numeric commands currently occupy 1-111, image commands 1-2, and text commands 1-9. M3 adds numeric 98-109 for model animation metadata, model animators, playback/crossfade state, FIFO/root/socket operations, capability, and palette diagnostics. M3.1 adds numeric 110 for production animator diagnostics and 111 for atomic event-state clearing. Neither milestone adds an image command. Text commands 4-9 provide exact clip/socket/event names plus named play, crossfade, and event take. M4 adds no command because `Scene3D` and `Character3D` compose the public `Graphics3D` API in ordinary SMILE source. The next free IDs are numeric 112, image 3, and text 10. The positional mapping and native/Web dispatch paths are recorded in the M3 and M3.1 implementation reports.
 
 ## Deliberate limits
 
-This milestone does not add runtime glTF import, a scene graph, rigid-body physics, shadows, HDR, tone mapping, bloom, IBL, particles, student shaders, networking, or a GDI 3D rasterizer. glTF is converted offline to the bounded SM3D runtime format. Skeletal animation is an explicit bounded resource layer rather than a general scene graph. Logical gameplay/collision geometry remains application-owned and independent from render objects.
+This milestone does not add runtime glTF import, a general scene graph, rigid-body physics, shadows, HDR, tone mapping, bloom, IBL, particles, student shaders, networking, or a GDI 3D rasterizer. glTF is converted offline to the bounded SM3D runtime format. `Scene3D` is a small frame/quality/lighting facade, not a replacement renderer. Skeletal animation is an explicit bounded resource layer rather than a general scene graph. Logical gameplay/collision geometry remains application-owned and independent from render objects.
