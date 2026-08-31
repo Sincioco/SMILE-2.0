@@ -116,7 +116,9 @@ enum SmileRenderer3DImageCommand
 
 enum SmileRenderer3DTextCommand
 {
-    SMILE_3D_TEXT_LOAD_MODEL = 1
+    SMILE_3D_TEXT_LOAD_MODEL = 1,
+    SMILE_3D_TEXT_LOAD_MODEL_GEOMETRY = 2,
+    SMILE_3D_TEXT_PREPARE_MODEL_PBR = 3
 };
 
 enum SmilePrimitive3D
@@ -139,6 +141,9 @@ long long smile_renderer3d_text_command(long long command, void* text,
     long long a, long long b, long long c, long long d,
     long long e, long long f, long long g, long long h);
 long long smile_renderer3d_load_model_path(const wchar_t* path);
+long long smile_renderer3d_load_model_geometry_path(const wchar_t* path);
+long long smile_renderer3d_prepare_model_pbr(long long model_handle,
+    long long filter, long long wrap, long long anisotropy);
 void smile_graphics3d_on_device_lost(void);
 
 #ifdef __cplusplus

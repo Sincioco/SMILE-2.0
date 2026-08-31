@@ -144,7 +144,9 @@ Public Type Model3D
     VertexCount As Number
     IndexCount As Number
     TextureReferenceCount As Number
+    GeometryReady As Boolean
     PbrReady As Boolean
+    PbrFailure As Number
     OwnedMaterialCount As Number
     OwnedTextureCount As Number
 End Type

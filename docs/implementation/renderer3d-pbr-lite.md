@@ -1,5 +1,7 @@
 # Renderer3D M2 PBR-Lite Materials and Lighting
 
+> Historical milestone record: M2.1 changes the current runtime contract for pipeline failure caching, geometry-only/explicit model preparation, texture-reference deduplication, native image planes, and PBR transform/animation-scale validation. See `renderer3d-pbr-hardening.md` for the authoritative current behavior and command additions.
+
 ## Status and reconciliation
 
 M2 started from `ba46ab37c3400560e75ee880cf2f524ea6523214` on `main`, with `origin/main` at the same commit. That commit is the separately validated and pushed M1.1 milestone. The pre-existing untracked `docs/plans/` input remains untouched and excluded from this milestone.

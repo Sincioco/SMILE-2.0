@@ -10,6 +10,8 @@ A mesh vertex can receive four bone indices and four normalized thousandth weigh
 
 An `AnimationClip3D` contains optional two-key translation, quaternion-rotation, and scale tracks per bone. Missing tracks use the bind translation, identity rotation, or unit scale. Translation/scale use linear interpolation. Quaternion keys use normalized shortest-path interpolation. Two-key clips deliberately keep the student API small while supporting idle, attack, cast, hit, KO/hold, victory, and creature motion.
 
+The simple shader retains existing support for nonuniform bone-scale keys. The current PBR tangent/normal skinning profile supports uniform scale only: setting or replacing any scale track recomputes a cached clip-safety bit, and a PBR draw using an unsafe active clip fails before submission with Renderer3D error 45. This keeps animation resources reusable across both paths without rejecting legacy/simple animation creation. A future inverse-transpose or dual-quaternion skinning milestone may broaden the PBR profile.
+
 Clips may contain up to 16 time-ordered integer event IDs. `TakeAnimationEvent3D` consumes a pending event exactly once. Events cross correctly during ordinary and looping updates.
 
 An `Animator3D` owns independent playback time, speed, loop/completion state, event state, and a fixed 32-matrix palette. `UpdateAnimator3D(deltaMilliseconds)` advances integer time independently of visual frames. Once clips clamp and hold the final pose; loops wrap deterministically. Any number of objects may share an animator when their meshes use the same skeleton, while separate actors normally use separate animators.

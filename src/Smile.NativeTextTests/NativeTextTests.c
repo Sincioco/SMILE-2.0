@@ -85,6 +85,7 @@ int main(void)
     SmileImageResource* second_image;
     SmileImageResource* background_image;
     SmileImageResource* pixel_image;
+    const unsigned char* premultiplied_pixels;
     ImageRaceState race_states[2];
     HANDLE race_threads[2];
     long long initial_image_decodes = smile_image_resource_decode_count();
@@ -169,8 +170,24 @@ int main(void)
     check(first_image != 0 && second_image == first_image, "duplicate Image paths share one cached resource");
     check(smile_image_resource_width(first_image) == 2048 && smile_image_resource_height(first_image) == 1024,
         "WIC preserves high-resolution sprite-sheet dimensions");
-    check(smile_image_resource_pixels(first_image) != 0 && smile_image_resource_pixels(first_image)[3] == 0,
-        "WIC preserves fully transparent PNG pixels");
+    check(smile_image_resource_straight_pixels(first_image) != 0 &&
+        smile_image_resource_straight_pixels(first_image)[3] == 0,
+        "WIC preserves fully transparent straight-alpha PNG pixels");
+    check(smile_image_resource_straight_byte_count() == 2048LL * 1024LL * 4LL &&
+        smile_image_resource_premultiplied_byte_count() == 0 &&
+        smile_image_resource_cpu_byte_count() == 2048LL * 1024LL * 4LL,
+        "native Image decode retains only the canonical straight-alpha CPU plane");
+    premultiplied_pixels = smile_image_resource_acquire_premultiplied_pixels(first_image);
+    check(premultiplied_pixels != 0 && premultiplied_pixels[0] == 0 &&
+        premultiplied_pixels[1] == 0 && premultiplied_pixels[2] == 0 && premultiplied_pixels[3] == 0,
+        "lazy premultiplication clears RGB under a fully transparent pixel");
+    check(smile_image_resource_premultiplied_byte_count() == 2048LL * 1024LL * 4LL &&
+        smile_image_resource_cpu_byte_count() == 2048LL * 1024LL * 8LL,
+        "native Image byte diagnostics include a temporarily acquired premultiplied plane");
+    smile_image_resource_release_premultiplied_pixels(first_image);
+    check(smile_image_resource_premultiplied_byte_count() == 0 &&
+        smile_image_resource_cpu_byte_count() == smile_image_resource_straight_byte_count(),
+        "temporary native premultiplied pixels are released after the backend upload window");
     check(smile_image_resource_decode_count() == initial_image_decodes + 1 &&
         smile_image_resource_cache_hit_count() == initial_image_hits + 1,
         "Image cache records one decode and one hit");
@@ -221,8 +238,11 @@ int main(void)
         "WIC loads arbitrary non-square image dimensions");
     smile_image_resource_release(background_image);
     smile_image_resource_release(pixel_image);
-    check(smile_image_resource_live_count() == initial_image_live,
-        "all focused Image resources return to zero live owners");
+    check(smile_image_resource_live_count() == initial_image_live &&
+        smile_image_resource_straight_byte_count() == 0 &&
+        smile_image_resource_premultiplied_byte_count() == 0 &&
+        smile_image_resource_cpu_byte_count() == 0,
+        "all focused Image resources and retained CPU pixel bytes return to zero");
     smile_image_resource_shutdown();
     smile_image_resource_shutdown();
 

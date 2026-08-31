@@ -40,6 +40,9 @@
 #define SMILE_3D_ANIMATOR_HANDLE 0x80000000LL
 #define SMILE_3D_HANDLE_KIND 0xF0000000LL
 #define SMILE_3D_PI 3.14159265358979323846f
+#define SMILE_3D_PBR_PIPELINE_NOT_ATTEMPTED 0
+#define SMILE_3D_PBR_PIPELINE_AVAILABLE 1
+#define SMILE_3D_PBR_PIPELINE_UNAVAILABLE 2
 
 extern "C" int smile_resolve_asset_path_utf8(const char* path, long long length,
     WCHAR* resolved_path, int capacity);
@@ -130,6 +133,7 @@ struct SmileModel3D
     unsigned short texture_count;
     unsigned char format_version;
     unsigned char prepared_pbr;
+    unsigned char pbr_failure;
     unsigned int vertex_count;
     unsigned int index_count;
     unsigned int model_name_offset;
@@ -160,9 +164,11 @@ struct SmileModel3D
         unsigned char semantic;
     } textures[SMILE_3D_MAX_MODEL_TEXTURES];
     unsigned char prepared_material_count;
-    unsigned char prepared_texture_count;
+    unsigned char prepared_reference_count;
+    unsigned char owned_texture_count;
     long long prepared_material_handles[SMILE_3D_MAX_MODEL_MATERIALS];
-    long long prepared_texture_handles[SMILE_3D_MAX_MODEL_TEXTURES];
+    long long prepared_texture_by_reference[SMILE_3D_MAX_MODEL_TEXTURES];
+    long long owned_texture_handles[SMILE_3D_MAX_MODEL_TEXTURES];
 };
 
 struct SmileModelChunkV2
@@ -223,6 +229,7 @@ struct SmileAnimationClip3D
     unsigned short generation;
     unsigned char active;
     unsigned char event_count;
+    unsigned char pbr_scale_safe;
     long long skeleton_handle;
     unsigned int duration_ms;
     unsigned char translation_tracks[SMILE_3D_MAX_BONES];
@@ -342,6 +349,9 @@ static long long smile_pbr_draw_count3d;
 static long long smile_simple_draw_count3d;
 static long long smile_pbr_triangle_count3d;
 static int smile_pbr_shader_available3d;
+static int smile_pbr_pipeline_state3d;
+static int smile_pbr_pipeline_failure3d;
+static long long smile_pbr_pipeline_attempt_count3d;
 static float smile_camera_position3d[3] = { 0.0f, 300.0f, -800.0f };
 static float smile_camera_target3d[3] = { 0.0f, 0.0f, 0.0f };
 static float smile_camera_fov3d = 55.0f;
@@ -839,9 +849,30 @@ static long long smile_3d_create_clip(long long skeleton_handle, unsigned int du
     ZeroMemory(clip, sizeof(*clip));
     clip->generation = generation;
     clip->active = 1;
+    clip->pbr_scale_safe = 1;
     clip->skeleton_handle = skeleton_handle;
     clip->duration_ms = duration_ms;
     return smile_3d_handle(SMILE_3D_CLIP_HANDLE, slot, clip->generation);
+}
+
+static void smile_3d_update_clip_pbr_scale_safety(SmileAnimationClip3D* clip)
+{
+    clip->pbr_scale_safe = 1;
+    for (int bone = 0; bone < SMILE_3D_MAX_BONES; ++bone)
+    {
+        if (!clip->scale_tracks[bone]) continue;
+        for (int key = 0; key < 2; ++key)
+        {
+            float x = clip->scale[bone][key][0];
+            float y = clip->scale[bone][key][1];
+            float z = clip->scale[bone][key][2];
+            if (fabsf(x - y) > 0.0001f || fabsf(y - z) > 0.0001f)
+            {
+                clip->pbr_scale_safe = 0;
+                return;
+            }
+        }
+    }
 }
 
 static long long smile_3d_create_animator(long long skeleton_handle)
@@ -891,7 +922,7 @@ static long long smile_3d_create_texture(SmileImageResource* image, int filter, 
     SmileTexture3D* texture;
     long long width = smile_image_resource_width(image);
     long long height = smile_image_resource_height(image);
-    if (image == 0 || smile_image_resource_pixels(image) == 0 || width <= 0 || height <= 0 ||
+    if (image == 0 || smile_image_resource_straight_pixels(image) == 0 || width <= 0 || height <= 0 ||
         width > 8192 || height > 8192 || filter < 0 || filter > 1 || wrap < 0 || wrap > 1)
     {
         smile_image_resource_release(image);
@@ -995,7 +1026,7 @@ static long long smile_3d_create_pbr_texture(SmileImageResource* image, int sema
     int slot;
     long long width = smile_image_resource_width(image);
     long long height = smile_image_resource_height(image);
-    if (image == 0 || smile_image_resource_pixels(image) == 0 || width <= 0 || height <= 0 ||
+    if (image == 0 || smile_image_resource_straight_pixels(image) == 0 || width <= 0 || height <= 0 ||
         width > 8192 || height > 8192 || semantic < 1 || semantic > 2 ||
         filter < 0 || filter > 3 || wrap < 0 || wrap > 1 || anisotropy < 1 || anisotropy > 16)
     {
@@ -1142,14 +1173,16 @@ static int smile_3d_clear_model_pbr(SmileModel3D* model)
         if (material != 0) smile_3d_delete_material(material);
         model->prepared_material_handles[index] = 0;
     }
-    for (int index = 0; index < model->prepared_texture_count; ++index)
+    for (int index = 0; index < model->owned_texture_count; ++index)
     {
-        SmileTexture3D* texture = smile_3d_texture(model->prepared_texture_handles[index]);
+        SmileTexture3D* texture = smile_3d_texture(model->owned_texture_handles[index]);
         if (texture != 0) smile_3d_delete_texture(texture);
-        model->prepared_texture_handles[index] = 0;
+        model->owned_texture_handles[index] = 0;
     }
+    ZeroMemory(model->prepared_texture_by_reference, sizeof(model->prepared_texture_by_reference));
     model->prepared_material_count = 0;
-    model->prepared_texture_count = 0;
+    model->prepared_reference_count = 0;
+    model->owned_texture_count = 0;
     model->prepared_pbr = 0;
     return 1;
 }
@@ -1330,13 +1363,17 @@ static long long smile_3d_model_pbr_value(SmileModel3D* model, long long propert
     if (model == 0) { smile_last_error3d = 5; return 0; }
     if (property == 1) return model->prepared_pbr;
     if (property == 2) return model->prepared_material_count;
-    if (property == 3) return model->prepared_texture_count;
+    if (property == 3) return model->owned_texture_count;
     if (property == 4 && index >= 0 && index < model->part_count)
     {
+        if (!model->prepared_pbr) return 0;
         int slot = model->material_slots[index];
         if (slot >= model->prepared_material_count) { smile_last_error3d = 5; return 0; }
         return smile_3d_material(model->prepared_material_handles[slot]) != 0 ? 1 : 0;
     }
+    if (property == 5) return 1;
+    if (property == 6) return model->pbr_failure;
+    if (property == 7) return model->texture_count;
     smile_last_error3d = 5;
     return 0;
 }
@@ -2146,9 +2183,6 @@ static long long smile_3d_load_model_v2(const unsigned char* bytes, unsigned int
 
     if (smile_3d_live_mesh_count() + (int)part_count > SMILE_3D_MAX_MESHES)
     { smile_last_error3d = 3; return 0; }
-    if (smile_3d_live_texture_count() + (int)texture_count > SMILE_3D_MAX_TEXTURES ||
-        smile_3d_live_material_count() + (int)material_count > SMILE_3D_MAX_MATERIALS)
-    { smile_last_error3d = 41; return 0; }
     for (model_slot = 0; model_slot < SMILE_3D_MAX_MODELS; ++model_slot)
         if (!smile_models3d[model_slot].active) break;
     if (model_slot == SMILE_3D_MAX_MODELS) { smile_last_error3d = 25; return 0; }
@@ -2242,7 +2276,7 @@ rollback_v2:
     return 0;
 }
 
-extern "C" long long smile_renderer3d_load_model_path(const wchar_t* path)
+static long long smile_3d_load_model_path(const wchar_t* path, int prepare_pbr)
 {
     HANDLE file = INVALID_HANDLE_VALUE;
     LARGE_INTEGER file_size;
@@ -2279,7 +2313,7 @@ extern "C" long long smile_renderer3d_load_model_path(const wchar_t* path)
         smile_3d_read_u16(bytes + 4) == 2)
     {
         result = smile_3d_load_model_v2(bytes, size);
-        if (result != 0 && !smile_3d_prepare_model_pbr(result, 3, 1, 8))
+        if (prepare_pbr && result != 0 && !smile_3d_prepare_model_pbr(result, 3, 1, 8))
         {
             int failure = smile_last_error3d;
             SmileModel3D* model = smile_3d_model_resource(result);
@@ -2418,37 +2452,83 @@ cleanup:
     return result;
 }
 
+extern "C" long long smile_renderer3d_load_model_path(const wchar_t* path)
+{
+    return smile_3d_load_model_path(path, 1);
+}
+
+extern "C" long long smile_renderer3d_load_model_geometry_path(const wchar_t* path)
+{
+    return smile_3d_load_model_path(path, 0);
+}
+
 static int smile_3d_prepare_model_pbr(long long model_handle,
     long long filter, long long wrap, long long anisotropy)
 {
     SmileModel3D* model = smile_3d_model_resource(model_handle);
     SmileImageResource* decoded[SMILE_3D_MAX_MODEL_TEXTURES] = {};
-    long long texture_handles[SMILE_3D_MAX_MODEL_TEXTURES] = {};
+    long long texture_by_reference[SMILE_3D_MAX_MODEL_TEXTURES] = {};
+    long long owned_texture_handles[SMILE_3D_MAX_MODEL_TEXTURES] = {};
     long long material_handles[SMILE_3D_MAX_MODEL_MATERIALS] = {};
+    unsigned char unique_for_reference[SMILE_3D_MAX_MODEL_TEXTURES] = {};
+    unsigned char first_reference[SMILE_3D_MAX_MODEL_TEXTURES] = {};
+    unsigned char usage_by_unique[SMILE_3D_MAX_MODEL_TEXTURES] = {};
+    int unique_textures = 0;
     int created_textures = 0;
     int created_materials = 0;
     if (model == 0 || model->format_version != 2 || filter < 0 || filter > 3 ||
         wrap < 0 || wrap > 1 || anisotropy < 1 || anisotropy > 16)
     {
         smile_last_error3d = 40;
+        if (model != 0) model->pbr_failure = 40;
         return 0;
+    }
+    if (model->prepared_pbr)
+    {
+        model->pbr_failure = 0;
+        return 1;
     }
     if (!smile_3d_create_pipeline() || !smile_pbr_shader_available3d)
     {
         smile_last_error3d = 44;
+        model->pbr_failure = 44;
         return 0;
     }
-    if (model->prepared_pbr) return 1;
-    if (smile_3d_live_texture_count() + model->texture_count > SMILE_3D_MAX_TEXTURES ||
+
+    for (int reference = 0; reference < model->texture_count; ++reference)
+    {
+        const char* path = model->strings + model->textures[reference].path_offset;
+        int source_semantic = model->textures[reference].semantic;
+        int usage = source_semantic == 1 || source_semantic == 4 ? 1 : 2;
+        int unique;
+        for (unique = 0; unique < unique_textures; ++unique)
+        {
+            const char* existing = model->strings +
+                model->textures[first_reference[unique]].path_offset;
+            if (usage_by_unique[unique] == usage && strcmp(existing, path) == 0) break;
+        }
+        if (unique == unique_textures)
+        {
+            first_reference[unique] = (unsigned char)reference;
+            usage_by_unique[unique] = (unsigned char)usage;
+            unique_textures++;
+        }
+        unique_for_reference[reference] = (unsigned char)unique;
+    }
+
+    if (smile_3d_live_texture_count() + unique_textures > SMILE_3D_MAX_TEXTURES ||
         smile_3d_live_material_count() + model->material_count > SMILE_3D_MAX_MATERIALS)
     {
         smile_last_error3d = 41;
+        model->pbr_failure = 41;
         return 0;
     }
-    for (int index = 0; index < model->texture_count; ++index)
+
+    for (int unique = 0; unique < unique_textures; ++unique)
     {
         WCHAR resolved[2048];
-        const char* path = model->strings + model->textures[index].path_offset;
+        int reference = first_reference[unique];
+        const char* path = model->strings + model->textures[reference].path_offset;
         int length = lstrlenA(path);
         if (!smile_resolve_asset_path_utf8(path, length, resolved,
             (int)(sizeof(resolved) / sizeof(resolved[0]))))
@@ -2456,30 +2536,30 @@ static int smile_3d_prepare_model_pbr(long long model_handle,
             smile_last_error3d = 42;
             goto rollback_prepare;
         }
-        decoded[index] = smile_image_resource_load(resolved);
-        if (decoded[index] == 0)
+        decoded[unique] = smile_image_resource_load(resolved);
+        if (decoded[unique] == 0)
         {
             smile_last_error3d = 42;
             goto rollback_prepare;
         }
-    }
-    for (int index = 0; index < model->texture_count; ++index)
-    {
-        int source_semantic = model->textures[index].semantic;
-        int data_semantic = source_semantic == 1 || source_semantic == 4 ? 1 : 2;
-        texture_handles[index] = smile_3d_create_pbr_texture(decoded[index], data_semantic,
+        owned_texture_handles[unique] = smile_3d_create_pbr_texture(decoded[unique],
+            usage_by_unique[unique],
             (int)filter, (int)wrap, (int)anisotropy);
-        decoded[index] = 0;
-        if (texture_handles[index] == 0) goto rollback_prepare;
+        decoded[unique] = 0;
+        if (owned_texture_handles[unique] == 0) goto rollback_prepare;
         created_textures++;
     }
+
+    for (int reference = 0; reference < model->texture_count; ++reference)
+        texture_by_reference[reference] = owned_texture_handles[unique_for_reference[reference]];
+
     for (int index = 0; index < model->material_count; ++index)
     {
         long long selected[4] = {};
         for (int semantic = 0; semantic < 4; ++semantic)
         {
             int reference = model->materials[index].texture_references[semantic];
-            if (reference >= 0) selected[semantic] = texture_handles[reference];
+            if (reference >= 0) selected[semantic] = texture_by_reference[reference];
         }
         material_handles[index] = smile_3d_create_pbr_material(selected[0], selected[1],
             selected[2], selected[3], model->materials[index].alpha_mode,
@@ -2498,17 +2578,21 @@ static int smile_3d_prepare_model_pbr(long long model_handle,
             material->cutoff = model->materials[index].alpha_cutoff;
         }
     }
-    memcpy(model->prepared_texture_handles, texture_handles,
+    memcpy(model->prepared_texture_by_reference, texture_by_reference,
         sizeof(long long) * model->texture_count);
+    memcpy(model->owned_texture_handles, owned_texture_handles,
+        sizeof(long long) * unique_textures);
     memcpy(model->prepared_material_handles, material_handles,
         sizeof(long long) * model->material_count);
-    model->prepared_texture_count = (unsigned char)model->texture_count;
+    model->prepared_reference_count = (unsigned char)model->texture_count;
+    model->owned_texture_count = (unsigned char)unique_textures;
     model->prepared_material_count = (unsigned char)model->material_count;
     model->prepared_pbr = 1;
+    model->pbr_failure = 0;
     return 1;
 
 rollback_prepare:
-    for (int index = 0; index < model->texture_count; ++index)
+    for (int index = 0; index < unique_textures; ++index)
         smile_image_resource_release(decoded[index]);
     for (int index = 0; index < created_materials; ++index)
     {
@@ -2517,10 +2601,17 @@ rollback_prepare:
     }
     for (int index = 0; index < created_textures; ++index)
     {
-        SmileTexture3D* texture = smile_3d_texture(texture_handles[index]);
+        SmileTexture3D* texture = smile_3d_texture(owned_texture_handles[index]);
         if (texture != 0) smile_3d_delete_texture(texture);
     }
+    model->pbr_failure = (unsigned char)smile_last_error3d;
     return 0;
+}
+
+extern "C" long long smile_renderer3d_prepare_model_pbr(long long model_handle,
+    long long filter, long long wrap, long long anisotropy)
+{
+    return smile_3d_prepare_model_pbr(model_handle, filter, wrap, anisotropy);
 }
 
 static SmileMatrix3D smile_3d_identity(void)
@@ -2781,7 +2872,7 @@ static int smile_3d_create_pipeline(void)
         "float3 f0=lerp(float3(.04,.04,.04),base,metal);float3 fresnel=F(f0,vh);float geometry=G1(nv,rough)*G1(nl,rough);"
         "float3 spec=D(nh,rough)*geometry*fresnel/max(4*nv*nl,.0001);float3 kd=(1-fresnel)*(1-metal);"
         "return (kd*base/PI+spec)*radiance*nl;}"
-        "float3 Encode(float3 c){float3 low=c*12.92;float3 high=1.055*pow(max(c,0),1.0/2.4)-.055;return lerp(low,high,step(.0031308,c));}"
+        "float3 ApplyLdrOutputTransfer(float3 c){float3 low=c*12.92;float3 high=1.055*pow(max(c,0),1.0/2.4)-.055;return lerp(low,high,step(.0031308,c));}"
         "float4 main(float4 p:SV_POSITION,float3 world:TEXCOORD1,float3 inputNormal:NORMAL,float4 inputTangent:TANGENT,float2 uv:TEXCOORD0,bool front:SV_IsFrontFace):SV_TARGET{"
         "float4 sampled=textureFlags.x>.5?baseTexture.Sample(baseSampler,uv):float4(1,1,1,1);float4 base=baseFactor*objectColor*sampled;"
         "if(emissiveAlpha.w>=0&&base.a<emissiveAlpha.w)discard;float3 N=normalize(inputNormal);if(!front)N=-N;"
@@ -2797,7 +2888,7 @@ static int smile_3d_create_pipeline(void)
         "if(type>1.5){float spot=dot(-L,normalize(localDirectionRange[light].xyz));attenuation*=smoothstep(localCone[light].y,localCone[light].x,spot);}"
         "color+=Shade(N,V,L,localColorIntensity[light].rgb*localColorIntensity[light].w*attenuation,base.rgb,metal,rough);}}}"
         "float3 emissive=emissiveAlpha.rgb*(textureFlags.w>.5?emissiveTexture.Sample(emissiveSampler,uv).rgb:float3(1,1,1));"
-        "return float4(saturate(Encode(max(color+emissive,0))),base.a);}";
+        "return float4(saturate(ApplyLdrOutputTransfer(max(color+emissive,0))),base.a);}";
     ID3D11Device* device = (ID3D11Device*)smile_graphics_directx_device();
     ID3DBlob* vs = 0;
     ID3DBlob* ps = 0;
@@ -2871,9 +2962,14 @@ static int smile_3d_create_pipeline(void)
             return 0;
         }
     }
-    if (smile_pbr_vertex_shader3d == 0)
+    if (smile_pbr_pipeline_state3d == SMILE_3D_PBR_PIPELINE_NOT_ATTEMPTED)
     {
-        pbr_result = smile_3d_compile(device, pbr_vertex_source, "main", "vs_4_0", &pbr_vs);
+        WCHAR forced_failure[2];
+        smile_pbr_pipeline_attempt_count3d++;
+        pbr_result = GetEnvironmentVariableW(
+            L"SMILE_TEST_RENDERER3D_FORCE_PBR_FAILURE", forced_failure, 2) != 0
+            ? E_FAIL
+            : smile_3d_compile(device, pbr_vertex_source, "main", "vs_4_0", &pbr_vs);
         if (SUCCEEDED(pbr_result))
             pbr_result = smile_3d_compile(device, pbr_pixel_source, "main", "ps_4_0", &pbr_ps);
         if (SUCCEEDED(pbr_result)) pbr_result = device->CreateVertexShader(
@@ -2902,12 +2998,25 @@ static int smile_3d_create_pipeline(void)
             smile_3d_release(smile_pbr_pixel_shader3d);
             smile_3d_release(smile_pbr_vertex_shader3d);
             smile_pbr_shader_available3d = 0;
+            smile_pbr_pipeline_state3d = SMILE_3D_PBR_PIPELINE_UNAVAILABLE;
+            smile_pbr_pipeline_failure3d = 44;
             smile_last_error3d = 44;
             return 1;
         }
+        smile_pbr_pipeline_state3d = SMILE_3D_PBR_PIPELINE_AVAILABLE;
+        smile_pbr_pipeline_failure3d = 0;
     }
-    smile_pbr_shader_available3d = 1;
+    smile_pbr_shader_available3d =
+        smile_pbr_pipeline_state3d == SMILE_3D_PBR_PIPELINE_AVAILABLE;
     return 1;
+}
+
+static float smile_3d_linear_determinant(const SmileMatrix3D& model)
+{
+    float a = model.m[0], b = model.m[1], c = model.m[2];
+    float d = model.m[4], e = model.m[5], f = model.m[6];
+    float g = model.m[8], h = model.m[9], i = model.m[10];
+    return a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
 }
 
 static int smile_3d_create_targets(void)
@@ -3020,11 +3129,12 @@ static int smile_3d_upload_texture(SmileTexture3D* texture)
     }
     data.pSysMem = texture->pbr
         ? smile_image_resource_straight_pixels(texture->image)
-        : smile_image_resource_pixels(texture->image);
+        : smile_image_resource_acquire_premultiplied_pixels(texture->image);
     data.SysMemPitch = smile_image_resource_stride(texture->image);
     if (data.pSysMem == 0) { smile_last_error3d = 21; return 0; }
     result = device->CreateTexture2D(&description,
         texture->pbr && texture->mip_levels > 1 ? 0 : &data, &texture->texture);
+    if (!texture->pbr) smile_image_resource_release_premultiplied_pixels(texture->image);
     if (SUCCEEDED(result) && texture->pbr)
     {
         view.Format = texture->semantic == 1
@@ -3120,6 +3230,25 @@ static int smile_3d_draw_pbr(SmileObject3D* object, SmileMesh3D* mesh, SmileMate
         smile_last_error3d = 44;
         return 0;
     }
+    constants.model = smile_3d_model(object);
+    if (smile_3d_linear_determinant(constants.model) <= 0.0000001f)
+    {
+        smile_last_error3d = 46;
+        return 0;
+    }
+    if (object->animator_handle != 0)
+    {
+        animator = smile_3d_animator(object->animator_handle);
+        SmileSkeleton3D* skeleton = animator == 0 ? 0 : smile_3d_skeleton(animator->skeleton_handle);
+        if (animator == 0 || skeleton == 0 || mesh->max_joint >= skeleton->bone_count)
+        { smile_last_error3d = 36; return 0; }
+        SmileAnimationClip3D* clip = smile_3d_clip(animator->clip_handle);
+        if (clip != 0 && !clip->pbr_scale_safe)
+        {
+            smile_last_error3d = 45;
+            return 0;
+        }
+    }
     for (int semantic = 0; semantic < 4; ++semantic)
     {
         if (material->texture_handles[semantic] == 0) continue;
@@ -3128,14 +3257,6 @@ static int smile_3d_draw_pbr(SmileObject3D* object, SmileMesh3D* mesh, SmileMate
         views[semantic] = textures[semantic]->view;
         samplers[semantic] = textures[semantic]->sampler;
     }
-    if (object->animator_handle != 0)
-    {
-        animator = smile_3d_animator(object->animator_handle);
-        SmileSkeleton3D* skeleton = animator == 0 ? 0 : smile_3d_skeleton(animator->skeleton_handle);
-        if (animator == 0 || skeleton == 0 || mesh->max_joint >= skeleton->bone_count)
-        { smile_last_error3d = 36; return 0; }
-    }
-    constants.model = smile_3d_model(object);
     constants.normal_matrix = smile_3d_normal_matrix(constants.model);
     view = smile_3d_view();
     aspect = (float)smile_graphics_directx_viewport_width() /
@@ -3340,6 +3461,9 @@ extern "C" void smile_graphics3d_on_device_lost(void)
     smile_target_width3d = smile_target_height3d = 0;
     smile_sample_count3d = 1; smile_sample_quality3d = 0;
     smile_pbr_shader_available3d = 0;
+    smile_pbr_pipeline_state3d = SMILE_3D_PBR_PIPELINE_NOT_ATTEMPTED;
+    smile_pbr_pipeline_failure3d = 0;
+    smile_pbr_pipeline_attempt_count3d = 0;
 }
 
 static void smile_3d_reset(void)
@@ -3585,7 +3709,8 @@ extern "C" long long smile_renderer3d_command(long long command,
                 c <= 0 || d <= 0 || e <= 0 || f <= 0 || g <= 0 || h <= 0) { smile_last_error3d = 31; return 0; }
             clip->scale_tracks[b] = 1;
             clip->scale[b][0][0]=(float)c/100;clip->scale[b][0][1]=(float)d/100;clip->scale[b][0][2]=(float)e/100;
-            clip->scale[b][1][0]=(float)f/100;clip->scale[b][1][1]=(float)g/100;clip->scale[b][1][2]=(float)h/100;return 1;
+            clip->scale[b][1][0]=(float)f/100;clip->scale[b][1][1]=(float)g/100;clip->scale[b][1][2]=(float)h/100;
+            smile_3d_update_clip_pbr_scale_safety(clip);return 1;
         case SMILE_3D_ADD_CLIP_EVENT:
             clip = smile_3d_clip(a);
             if (clip == 0 || b <= 0 || b > clip->duration_ms || c <= 0 ||
@@ -3651,6 +3776,9 @@ extern "C" long long smile_renderer3d_command(long long command,
         case SMILE_3D_SIMPLE_DRAW_COUNT: return smile_simple_draw_count3d;
         case SMILE_3D_PBR_TRIANGLE_COUNT: return smile_pbr_triangle_count3d;
         case SMILE_3D_PBR_SHADER_AVAILABLE:
+            if (a == 1) return smile_pbr_pipeline_state3d;
+            if (a == 2) return smile_pbr_pipeline_failure3d;
+            if (a == 3) return smile_pbr_pipeline_attempt_count3d;
             return smile_3d_create_pipeline() && smile_pbr_shader_available3d ? 1 : 0;
         case SMILE_3D_MODEL_PBR_VALUE:
             return smile_3d_model_pbr_value(smile_3d_model_resource(a), b, c);

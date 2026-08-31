@@ -10,7 +10,7 @@ function fail(message) {
 }
 
 const args = process.argv.slice(2);
-if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--expected-runtime-error <text>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio|--phase5-ui|--phase5-hardening|--phase5-submenus|--phase5-submenu-viewport|--mobile-controls|--renderer3d|--neon-cycles-input]");
+if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--expected-runtime-error <text>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio|--phase5-ui|--phase5-hardening|--phase5-submenus|--phase5-submenu-viewport|--mobile-controls|--renderer3d|--force-renderer3d-pbr-failure|--neon-cycles-input]");
 
 const webDirectory = path.resolve(args.shift());
 let expectedPath = null;
@@ -29,6 +29,7 @@ let verifyPhase5Submenus = false;
 let verifyPhase5SubmenuViewport = false;
 let verifyMobileControls = false;
 let verifyRenderer3D = false;
+let forceRenderer3DPbrFailure = false;
 let verifyNeonCyclesInput = false;
 while (args.length !== 0) {
     const option = args.shift();
@@ -45,6 +46,7 @@ while (args.length !== 0) {
     if (option === "--phase5-submenu-viewport") { verifyPhase5SubmenuViewport = true; continue; }
     if (option === "--mobile-controls") { verifyMobileControls = true; continue; }
     if (option === "--renderer3d") { verifyRenderer3D = true; continue; }
+    if (option === "--force-renderer3d-pbr-failure") { forceRenderer3DPbrFailure = true; continue; }
     if (option === "--neon-cycles-input") { verifyNeonCyclesInput = true; continue; }
     const value = args.shift();
     if (value === undefined) fail(`missing value for ${option}`);
@@ -535,7 +537,7 @@ function contextWebGL2() {
         UNPACK_COLORSPACE_CONVERSION_WEBGL: 0x9243,
         createShader: () => ({}), shaderSource: noop, compileShader: noop,
         getShaderParameter: () => true, getShaderInfoLog: () => "", deleteShader: noop,
-        createProgram: () => ({}), attachShader: noop, linkProgram: noop,
+        createProgram: () => ({}), attachShader: noop, linkProgram: noop, deleteProgram: noop,
         getProgramParameter: () => true, getProgramInfoLog: () => "", getUniformLocation: () => ({}),
         enable: value => { if (value === 0x0b71) renderer3DDepthEnables += 1; },
         depthFunc: noop, depthMask: noop, disable: noop, blendFunc: noop, cullFace: noop,
@@ -786,6 +788,7 @@ if (verifyPhase4Audio) {
     };
 }
 host.window = host;
+if (forceRenderer3DPbrFailure) host.SMILE_TEST_RENDERER3D_FORCE_PBR_FAILURE = true;
 
 const context = vm.createContext(host);
 try {

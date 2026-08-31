@@ -118,6 +118,8 @@ Private Const MODEL_QUERY_NAME_HASH = 11
 Private Const IMAGE_COMMAND_CREATE_TEXTURE = 1
 Private Const IMAGE_COMMAND_CREATE_PBR_TEXTURE = 2
 Private Const TEXT_COMMAND_LOAD_MODEL = 1
+Private Const TEXT_COMMAND_LOAD_MODEL_GEOMETRY = 2
+Private Const TEXT_COMMAND_PREPARE_MODEL_PBR = 3
 
 Public Const PRIMITIVE_CUBE = 1
 Public Const PRIMITIVE_PLANE = 2
@@ -139,6 +141,9 @@ Public Const MATERIAL_ALPHA_OPAQUE = 0
 Public Const MATERIAL_ALPHA_CUTOUT = 1
 Public Const MATERIAL_ALPHA_BLEND = 2
 Public Const MATERIAL_ALPHA_ADDITIVE = 3
+Public Const PBR_PIPELINE_NOT_ATTEMPTED = 0
+Public Const PBR_PIPELINE_AVAILABLE = 1
+Public Const PBR_PIPELINE_UNAVAILABLE = 2
 Public Const MODEL_MATERIAL_BASE_COLOR_RED = 1
 Public Const MODEL_MATERIAL_BASE_COLOR_GREEN = 2
 Public Const MODEL_MATERIAL_BASE_COLOR_BLUE = 3
@@ -445,6 +450,22 @@ Public Function ModelHandleValid3D(ModelHandle As Number) As Boolean
 
 End Function
 
+Private Sub DescribeModel3D(ByRef Model As Core.Model3D)
+
+    Model.PartCount = Dispatch(COMMAND_MODEL_PART_COUNT, Model.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Model.MaterialCount = Dispatch(COMMAND_MODEL_MATERIAL_COUNT, Model.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Model.FormatVersion = Dispatch(COMMAND_MODEL_STATIC_VALUE, Model.Handle, MODEL_QUERY_FORMAT_VERSION, 0, 0, 0, 0, 0, 0, 0, 0)
+    Model.VertexCount = Dispatch(COMMAND_MODEL_STATIC_VALUE, Model.Handle, MODEL_QUERY_VERTEX_COUNT, 0, 0, 0, 0, 0, 0, 0, 0)
+    Model.IndexCount = Dispatch(COMMAND_MODEL_STATIC_VALUE, Model.Handle, MODEL_QUERY_INDEX_COUNT, 0, 0, 0, 0, 0, 0, 0, 0)
+    Model.TextureReferenceCount = Dispatch(COMMAND_MODEL_PBR_VALUE, Model.Handle, 7, 0, 0, 0, 0, 0, 0, 0, 0)
+    Model.GeometryReady = Dispatch(COMMAND_MODEL_PBR_VALUE, Model.Handle, 5, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Model.PbrReady = Dispatch(COMMAND_MODEL_PBR_VALUE, Model.Handle, 1, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Model.PbrFailure = Dispatch(COMMAND_MODEL_PBR_VALUE, Model.Handle, 6, 0, 0, 0, 0, 0, 0, 0, 0)
+    Model.OwnedMaterialCount = Dispatch(COMMAND_MODEL_PBR_VALUE, Model.Handle, 2, 0, 0, 0, 0, 0, 0, 0, 0)
+    Model.OwnedTextureCount = Dispatch(COMMAND_MODEL_PBR_VALUE, Model.Handle, 3, 0, 0, 0, 0, 0, 0, 0, 0)
+
+End Sub
+
 Public Function LoadModel3D(Path As Text) As Core.Model3D
 
     Dim Result As Core.Model3D
@@ -452,20 +473,56 @@ Public Function LoadModel3D(Path As Text) As Core.Model3D
     Result.Handle = Renderer3DText(TEXT_COMMAND_LOAD_MODEL, Path, 0, 0, 0, 0, 0, 0, 0, 0)
 
     If Result.Handle <> 0 Then
-
-        Result.PartCount = Dispatch(COMMAND_MODEL_PART_COUNT, Result.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-        Result.MaterialCount = Dispatch(COMMAND_MODEL_MATERIAL_COUNT, Result.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-        Result.FormatVersion = Dispatch(COMMAND_MODEL_STATIC_VALUE, Result.Handle, MODEL_QUERY_FORMAT_VERSION, 0, 0, 0, 0, 0, 0, 0, 0)
-        Result.VertexCount = Dispatch(COMMAND_MODEL_STATIC_VALUE, Result.Handle, MODEL_QUERY_VERTEX_COUNT, 0, 0, 0, 0, 0, 0, 0, 0)
-        Result.IndexCount = Dispatch(COMMAND_MODEL_STATIC_VALUE, Result.Handle, MODEL_QUERY_INDEX_COUNT, 0, 0, 0, 0, 0, 0, 0, 0)
-        Result.TextureReferenceCount = Dispatch(COMMAND_MODEL_STATIC_VALUE, Result.Handle, MODEL_QUERY_TEXTURE_COUNT, 0, 0, 0, 0, 0, 0, 0, 0)
-        Result.PbrReady = Dispatch(COMMAND_MODEL_PBR_VALUE, Result.Handle, 1, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
-        Result.OwnedMaterialCount = Dispatch(COMMAND_MODEL_PBR_VALUE, Result.Handle, 2, 0, 0, 0, 0, 0, 0, 0, 0)
-        Result.OwnedTextureCount = Dispatch(COMMAND_MODEL_PBR_VALUE, Result.Handle, 3, 0, 0, 0, 0, 0, 0, 0, 0)
-
+        Call DescribeModel3D(Result)
     End If
 
     Return Result
+
+End Function
+
+''' Loads validated SM3D geometry and metadata without resolving PBR image dependencies.
+Public Function LoadModelGeometry3D(Path As Text) As Core.Model3D
+
+    Dim Result As Core.Model3D
+
+    Result.Handle = Renderer3DText(TEXT_COMMAND_LOAD_MODEL_GEOMETRY, Path, 0, 0, 0, 0, 0, 0, 0, 0)
+
+    If Result.Handle <> 0 Then
+        Call DescribeModel3D(Result)
+    End If
+
+    Return Result
+
+End Function
+
+''' Atomically resolves and owns the imported PBR textures and materials for SM3D v2 geometry.
+Public Function PrepareModelPbr3D(
+    ByRef Model As Core.Model3D,
+    FilterMode As Number,
+    WrapMode As Number,
+    RequestedAnisotropy As Number
+) As Boolean
+
+    Dim Prepared As Boolean
+
+    Prepared = Renderer3DText(
+        TEXT_COMMAND_PREPARE_MODEL_PBR,
+        "",
+        Model.Handle,
+        FilterMode,
+        WrapMode,
+        RequestedAnisotropy,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Model.Handle <> 0 Then
+        Call DescribeModel3D(Model)
+    End If
+
+    Return Prepared
 
 End Function
 
@@ -595,7 +652,9 @@ Public Sub DestroyModel3D(ByRef Model As Core.Model3D)
         Model.VertexCount = 0
         Model.IndexCount = 0
         Model.TextureReferenceCount = 0
+        Model.GeometryReady = False
         Model.PbrReady = False
+        Model.PbrFailure = 0
         Model.OwnedMaterialCount = 0
         Model.OwnedTextureCount = 0
 
@@ -726,12 +785,62 @@ Public Function PbrShaderAvailable3D() As Boolean
 
 End Function
 
+''' Returns the cached PBR pipeline state without causing a new compilation attempt.
+Public Function PbrPipelineState3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_PBR_SHADER_AVAILABLE, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Returns the stable failure code for the current PBR pipeline generation.
+Public Function PbrPipelineFailure3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_PBR_SHADER_AVAILABLE, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Returns the number of PBR pipeline compile attempts in the current generation.
+Public Function PbrPipelineAttemptCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_PBR_SHADER_AVAILABLE, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
 ''' Reports whether one imported model part has an automatically assigned PBR material.
 Public Function ModelPartUsesPbr3D(Model As Core.Model3D, PartIndex As Number) As Boolean
 
     Dim Result As Boolean
 
     Result = Dispatch(COMMAND_MODEL_PBR_VALUE, Model.Handle, 4, PartIndex, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+''' Reports whether validated model geometry remains available independently of PBR preparation.
+Public Function ModelGeometryReady3D(Model As Core.Model3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_MODEL_PBR_VALUE, Model.Handle, 5, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+''' Returns the stable failure code from the model's latest PBR preparation attempt.
+Public Function ModelPbrFailure3D(Model As Core.Model3D) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_PBR_VALUE, Model.Handle, 6, 0, 0, 0, 0, 0, 0, 0, 0)
     Return Result
 
 End Function

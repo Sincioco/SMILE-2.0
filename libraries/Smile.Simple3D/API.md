@@ -13,7 +13,7 @@ True-3D types:
 - `Object3D`: validated object/mesh handles plus mirrored position, rotation, scale, color, opacity, and visibility values.
 - `Texture3D`: dimensions, usage, requested filter/wrap/anisotropy, effective anisotropy, and mip count.
 - `Material3D`: simple/PBR kind, texture bindings, alpha/culling state, and mirrored factors.
-- `Model3D`: validated model handle plus part, material, format-version, vertex, index, texture-reference, and model-owned PBR resource counts.
+- `Model3D`: validated model handle plus part, material, format-version, vertex, index, metadata texture-reference, geometry/PBR readiness, PBR failure, and model-owned PBR resource counts.
 
 The legacy wireframe types and limits remain source compatible.
 
@@ -37,6 +37,7 @@ Availability and lifecycle:
 - `DrawCallCount3D()` and `SubmittedTriangleCount3D()` for the current or most recently ended 3D frame; a successful new `Begin3D` resets both to zero
 - `PbrDrawCount3D()`, `SimpleDrawCount3D()`, and `PbrTriangleCount3D()`
 - `PbrShaderAvailable3D()`
+- `PbrPipelineState3D()`, `PbrPipelineFailure3D()`, and `PbrPipelineAttemptCount3D()` inspect the cached generation state without causing another compile attempt
 - `MeshHandleValid3D(Mesh)` and `ObjectHandleValid3D(Object)`
 - `MeshReferenceCount3D(Mesh)`
 - `DestroyObject3D(ByRef Object)` for an object and its owned mesh
@@ -69,15 +70,21 @@ Custom indexed meshes:
 
 Offline static models:
 
-- `LoadModel3D(Path)`, `DestroyModel3D(ByRef Model)`, and `CreateModelPart3D(Model, PartIndex)`
+- `LoadModel3D(Path)` keeps the atomic all-in-one geometry-plus-PBR behavior
+- `LoadModelGeometry3D(Path)` publishes validated v1/v2 geometry and metadata without resolving any PBR image
+- `PrepareModelPbr3D(ByRef Model, Filter, Wrap, Anisotropy)` atomically prepares a geometry-only SM3D v2 model
+- `DestroyModel3D(ByRef Model)` and `CreateModelPart3D(Model, PartIndex)`
 - `ModelPartMaterial3D`, `ModelHandleValid3D`, `LiveModelCount3D`, and `MaximumModelCount3D`
+- `ModelGeometryReady3D`, `ModelPbrFailure3D`, and `ModelPartUsesPbr3D`
 - `ModelTangentHandednessCount3D(Model, Handedness)`
 - `ModelMaterialValue3D(Model, MaterialIndex, Property)` using the public `MODEL_MATERIAL_*` property constants; finite factors are returned in thousandths, texture references are one-based with zero meaning absent, and name hashes are unsigned FNV-1a values
 - `ModelTextureValue3D(Model, TextureIndex, Property)` using `MODEL_TEXTURE_SEMANTIC` or `MODEL_TEXTURE_PATH_HASH`
 - `ModelBoundsValue3D(Model, PartIndex, Component)` using part `-1` for model bounds and the public `MODEL_BOUNDS_*` components; values are returned in thousandths
 - `ModelPartNameHash3D` and `ModelNameHash3D`
 
-SM3D v1 remains supported. Loading an SM3D v2 model atomically resolves its exact declared texture paths, creates model-owned PBR textures/materials, and assigns each imported material to its model-part object. `ModelPartUsesPbr3D` reports this assignment without exposing model-owned handles. Clearing an explicit override on an imported part restores its imported material. Model destruction refuses while a part object is live and returns every owned mesh, material, texture, and image reference on success.
+SM3D v1 remains supported. `LoadModel3D` loads geometry, resolves exact declared texture paths, creates model-owned PBR textures/materials, and returns zero unless the complete operation succeeds. `LoadModelGeometry3D` is the reusable fallback path: geometry remains valid even when `PrepareModelPbr3D` later fails. Preparation preflights unique texture identities and publishes all textures/materials at once; failure leaves the model handle, meshes, and prior live counts unchanged and records the reason in `Model3D.PbrFailure` and `LastError()`.
+
+Prepare a model before creating its part objects. Objects created before preparation retain their simple/default-zero material; objects created afterward receive the imported PBR default. Texture metadata references remain separate, but exact references with the same path, color/data usage, filter, wrap, anisotropy, and mip policy share one model-owned texture. Clearing an explicit override on a prepared imported part restores its imported material. Model destruction refuses while a part object is live and returns every owned mesh, material, unique texture, and image reference on success.
 
 PBR textures:
 
@@ -94,6 +101,8 @@ PBR materials:
 - `SetPbrMaterialFactors3D(Material, Red, Green, Blue, Opacity, Metallic, Roughness, NormalStrength, OcclusionStrength, Cutout)` uses RGB `0`–`255`, opacity/metallic/roughness/occlusion/cutout percentages `0`–`100`, and normal strength `0`–`400` percent.
 - `SetPbrMaterialEmissive3D` uses independent linear RGB percentages from `0` through `400`.
 - `MaterialKind3D` returns `MATERIAL_KIND_SIMPLE` or `MATERIAL_KIND_PBR`; `PbrMaterialValue3D` exposes the documented integer/thousandths diagnostics.
+
+PBR blend draws use straight source alpha, read depth, do not write depth, and are submitted in caller order. Draw opaque/masked geometry first, then submit blended objects from farthest to nearest when overlap matters. Renderer3D does not add a hidden transparent sort.
 
 PBR lighting:
 
@@ -130,7 +139,9 @@ Games decide whether a press started on valid world geometry and pass that decis
 
 Windows uses D3D11 indexed triangle lists, generated normals, model/view/perspective matrices, a resize-aware D24S8 depth buffer, and hardware-selected 4x/2x/1x multisample anti-aliasing before the existing Direct2D HUD pass. Web uses an antialiased offscreen WebGL2 canvas with the same indexed mesh and depth contract, then composites it into the Canvas 2D back buffer before ordinary 2D drawing.
 
-Both backends bound live data to 128 meshes, 512 objects, 64 models, 128 textures, 128 materials, 64 skeletons, 128 clips, and 128 animators, and reject stale or deleted handles. Mesh destruction is rejected while a live object still references that mesh. Meshes support at most 65,535 vertices and 196,608 indices. One SM3D v2 model may own up to 16 part meshes, 64 imported materials, and 128 imported textures, subject to those same global pools.
+Both backends bound live data to 128 meshes, 512 objects, 64 models, 128 textures, 128 materials, 64 skeletons, 128 clips, and 128 animators, and reject stale or deleted handles. Mesh destruction is rejected while a live object still references that mesh. Meshes support at most 65,535 vertices and 196,608 indices. One SM3D v2 model may contain up to 16 part meshes, 64 imported materials, and 128 metadata texture references; its deduplicated owned textures and materials must fit the same global pools.
+
+The supported PBR production transform profile uses positive, nonsingular object scale. A singular or mirrored PBR object draw is rejected before submission with error 46, leaving draw/triangle counters unchanged; the simple path retains its existing behavior. Two-key clips may use nonuniform bone scale on simple materials. A PBR draw using a clip with any nonuniform scale key is rejected with error 45; uniform animation scale remains supported.
 
 An object returned by a primitive creator or chosen as the owner of a custom mesh must outlive every shared instance. Destroy shared instances with `DestroyObjectInstance3D` before destroying the owning object with `DestroyObject3D`. `ResetRenderer3D` is the scene/battle ownership boundary and invalidates every outstanding Renderer3D handle without changing Renderer2D state.
 

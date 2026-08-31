@@ -14,6 +14,8 @@ struct SmileImageResource
     UINT stride;
     unsigned char* pixels;
     unsigned char* straight_pixels;
+    LONG premultiplied_users;
+    unsigned char premultiplied_persistent;
     ID2D1Bitmap1* d2d_bitmap;
     ID2D1DeviceContext* d2d_owner;
     SmileImageResource* next;
@@ -51,6 +53,28 @@ static void smile_image_destroy(SmileImageResource* image)
     HeapFree(GetProcessHeap(), 0, image);
 }
 
+static const unsigned char* smile_image_ensure_premultiplied_locked(SmileImageResource* image)
+{
+    SIZE_T bytes;
+    unsigned char* pixels;
+    if (image == 0) return 0;
+    if (image->pixels != 0) return image->pixels;
+    bytes = (SIZE_T)image->stride * image->height;
+    if (bytes == 0 || image->straight_pixels == 0) return 0;
+    pixels = static_cast<unsigned char*>(HeapAlloc(GetProcessHeap(), 0, bytes));
+    if (pixels == 0) return 0;
+    for (SIZE_T offset = 0; offset < bytes; offset += 4)
+    {
+        unsigned int alpha = image->straight_pixels[offset + 3];
+        pixels[offset] = (unsigned char)((image->straight_pixels[offset] * alpha + 127U) / 255U);
+        pixels[offset + 1] = (unsigned char)((image->straight_pixels[offset + 1] * alpha + 127U) / 255U);
+        pixels[offset + 2] = (unsigned char)((image->straight_pixels[offset + 2] * alpha + 127U) / 255U);
+        pixels[offset + 3] = (unsigned char)alpha;
+    }
+    image->pixels = pixels;
+    return pixels;
+}
+
 static SmileImageResource* smile_image_decode(const WCHAR* path)
 {
     IWICBitmapDecoder* decoder = 0;
@@ -84,24 +108,12 @@ static SmileImageResource* smile_image_decode(const WCHAR* path)
     }
     if (SUCCEEDED(result))
     {
-        image->pixels = static_cast<unsigned char*>(HeapAlloc(GetProcessHeap(), 0, bytes));
         image->straight_pixels = static_cast<unsigned char*>(HeapAlloc(GetProcessHeap(), 0, bytes));
         image->path = smile_image_copy_path(path);
-        if (image->pixels == 0 || image->straight_pixels == 0 || image->path == 0)
+        if (image->straight_pixels == 0 || image->path == 0)
             result = E_OUTOFMEMORY;
     }
     if (SUCCEEDED(result)) result = converter->CopyPixels(0, stride, bytes, image->straight_pixels);
-    if (SUCCEEDED(result))
-    {
-        for (UINT offset = 0; offset < bytes; offset += 4)
-        {
-            unsigned int alpha = image->straight_pixels[offset + 3];
-            image->pixels[offset] = (unsigned char)((image->straight_pixels[offset] * alpha + 127U) / 255U);
-            image->pixels[offset + 1] = (unsigned char)((image->straight_pixels[offset + 1] * alpha + 127U) / 255U);
-            image->pixels[offset + 2] = (unsigned char)((image->straight_pixels[offset + 2] * alpha + 127U) / 255U);
-            image->pixels[offset + 3] = (unsigned char)alpha;
-        }
-    }
     if (SUCCEEDED(result))
     {
         image->references = 1;
@@ -196,10 +208,42 @@ extern "C" void smile_image_resource_release(SmileImageResource* image)
 
 extern "C" long long smile_image_resource_width(const SmileImageResource* image) { return image == 0 ? 0 : image->width; }
 extern "C" long long smile_image_resource_height(const SmileImageResource* image) { return image == 0 ? 0 : image->height; }
-extern "C" const unsigned char* smile_image_resource_pixels(const SmileImageResource* image) { return image == 0 ? 0 : image->pixels; }
+extern "C" const unsigned char* smile_image_resource_pixels(const SmileImageResource* image)
+{
+    const unsigned char* pixels;
+    SmileImageResource* mutable_image = const_cast<SmileImageResource*>(image);
+    if (mutable_image == 0) return 0;
+    AcquireSRWLockExclusive(&smile_image_lock);
+    pixels = smile_image_ensure_premultiplied_locked(mutable_image);
+    if (pixels != 0) mutable_image->premultiplied_persistent = 1;
+    ReleaseSRWLockExclusive(&smile_image_lock);
+    return pixels;
+}
 extern "C" const unsigned char* smile_image_resource_straight_pixels(const SmileImageResource* image)
 {
     return image == 0 ? 0 : image->straight_pixels;
+}
+extern "C" const unsigned char* smile_image_resource_acquire_premultiplied_pixels(SmileImageResource* image)
+{
+    const unsigned char* pixels;
+    if (image == 0) return 0;
+    AcquireSRWLockExclusive(&smile_image_lock);
+    pixels = smile_image_ensure_premultiplied_locked(image);
+    if (pixels != 0) image->premultiplied_users++;
+    ReleaseSRWLockExclusive(&smile_image_lock);
+    return pixels;
+}
+extern "C" void smile_image_resource_release_premultiplied_pixels(SmileImageResource* image)
+{
+    if (image == 0) return;
+    AcquireSRWLockExclusive(&smile_image_lock);
+    if (image->premultiplied_users > 0) image->premultiplied_users--;
+    if (image->premultiplied_users == 0 && !image->premultiplied_persistent && image->pixels != 0)
+    {
+        HeapFree(GetProcessHeap(), 0, image->pixels);
+        image->pixels = 0;
+    }
+    ReleaseSRWLockExclusive(&smile_image_lock);
 }
 extern "C" unsigned int smile_image_resource_stride(const SmileImageResource* image) { return image == 0 ? 0 : image->stride; }
 
@@ -216,8 +260,12 @@ extern "C" void* smile_image_resource_d2d_bitmap(SmileImageResource* image, void
     properties.dpiY = 96.0f;
     properties.bitmapOptions = D2D1_BITMAP_OPTIONS_NONE;
     properties.colorContext = 0;
-    if (FAILED(context->CreateBitmap(D2D1::SizeU(image->width, image->height), image->pixels,
-        image->stride, &properties, &image->d2d_bitmap))) return 0;
+    const unsigned char* pixels = smile_image_resource_acquire_premultiplied_pixels(image);
+    if (pixels == 0) return 0;
+    HRESULT result = context->CreateBitmap(D2D1::SizeU(image->width, image->height), pixels,
+        image->stride, &properties, &image->d2d_bitmap);
+    smile_image_resource_release_premultiplied_pixels(image);
+    if (FAILED(result)) return 0;
     image->d2d_owner = context;
     return image->d2d_bitmap;
 }
@@ -256,4 +304,26 @@ extern "C" long long smile_image_resource_reference_count(void)
     for (SmileImageResource* image = smile_image_cache; image != 0; image = image->next) count += image->references;
     ReleaseSRWLockShared(&smile_image_lock);
     return count;
+}
+extern "C" long long smile_image_resource_straight_byte_count(void)
+{
+    long long count = 0;
+    AcquireSRWLockShared(&smile_image_lock);
+    for (SmileImageResource* image = smile_image_cache; image != 0; image = image->next)
+        if (image->straight_pixels != 0) count += (long long)image->stride * image->height;
+    ReleaseSRWLockShared(&smile_image_lock);
+    return count;
+}
+extern "C" long long smile_image_resource_premultiplied_byte_count(void)
+{
+    long long count = 0;
+    AcquireSRWLockShared(&smile_image_lock);
+    for (SmileImageResource* image = smile_image_cache; image != 0; image = image->next)
+        if (image->pixels != 0) count += (long long)image->stride * image->height;
+    ReleaseSRWLockShared(&smile_image_lock);
+    return count;
+}
+extern "C" long long smile_image_resource_cpu_byte_count(void)
+{
+    return smile_image_resource_straight_byte_count() + smile_image_resource_premultiplied_byte_count();
 }

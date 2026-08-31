@@ -1575,10 +1575,15 @@ long long smile_renderer3d_text_command(long long command, void* owned_text,
     WCHAR full_path[2048];
     long long result = 0;
     (void)a; (void)b; (void)c; (void)d; (void)e; (void)f; (void)g; (void)h;
-    if (command == SMILE_3D_TEXT_LOAD_MODEL && text != 0 &&
+    if ((command == SMILE_3D_TEXT_LOAD_MODEL ||
+        command == SMILE_3D_TEXT_LOAD_MODEL_GEOMETRY) && text != 0 &&
         smile_resolve_asset_path_utf8(smile_text_bytes(text), smile_text_length(text), full_path,
             (int)(sizeof(full_path) / sizeof(full_path[0]))))
-        result = smile_renderer3d_load_model_path(full_path);
+        result = command == SMILE_3D_TEXT_LOAD_MODEL
+            ? smile_renderer3d_load_model_path(full_path)
+            : smile_renderer3d_load_model_geometry_path(full_path);
+    else if (command == SMILE_3D_TEXT_PREPARE_MODEL_PBR)
+        result = smile_renderer3d_prepare_model_pbr(a, b, c, d);
     smile_text_release(text);
     return result;
 }

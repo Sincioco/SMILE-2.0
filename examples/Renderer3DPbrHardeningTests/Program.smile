@@ -1,0 +1,470 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Dim Failures As Number
+Dim Checks As Number
+Dim PbrAvailable As Boolean
+
+Game Window "Renderer3D PBR Hardening Tests" Size 480 By 270
+
+Do
+
+    Call Graphics3D.ResetRenderer3D()
+    Call Check(Graphics3D.PbrPipelineState3D() = Graphics3D.PBR_PIPELINE_NOT_ATTEMPTED)
+    Call Check(Graphics3D.PbrPipelineAttemptCount3D() = 0)
+    Call Check(Graphics3D.RendererAvailable())
+
+    PbrAvailable = Graphics3D.PbrShaderAvailable3D()
+
+    If PbrAvailable Then
+        Call RunNormalTests()
+    Else
+
+        Call RunForcedFailureTests()
+    End If
+
+Loop Until True
+
+If Failures = 0 Then
+
+    If PbrAvailable Then
+        Print "Renderer3D PBR hardening tests passed"
+    Else
+        Print "Renderer3D PBR forced-failure tests passed"
+    End If
+
+Else
+    Print "Renderer3D PBR hardening tests failed: "; Failures
+
+End If
+
+Sub RunNormalTests()
+
+    Dim Camera As Core.Camera3D
+    Dim MissingModel As Core.Model3D
+    Dim WrongCaseModel As Core.Model3D
+    Dim DeduplicatedModel As Core.Model3D
+    Dim SamplerModel As Core.Model3D
+    Dim EarlyPart As Core.Object3D
+    Dim LatePart As Core.Object3D
+    Dim TransformObject As Core.Object3D
+    Dim SimpleObject As Core.Object3D
+    Dim EmptyTexture As Core.Texture3D
+    Dim PbrMaterial As Core.Material3D
+    Dim Skeleton As Core.Skeleton3D
+    Dim Clip As Core.AnimationClip3D
+    Dim Animator As Core.Animator3D
+    Dim FillTextures[127] As Core.Texture3D
+    Dim FrameReady As Boolean
+    Dim Drawn As Boolean
+    Dim Prepared As Boolean
+    Dim BeforeMeshes As Number
+    Dim BeforeTextures As Number
+    Dim BeforeMaterials As Number
+    Dim Index As Number
+    Dim Cycle As Number
+
+    Camera = Graphics3D.DefaultCamera()
+
+    Call Check(Graphics3D.PbrPipelineState3D() = Graphics3D.PBR_PIPELINE_AVAILABLE)
+    Call Check(Graphics3D.PbrPipelineFailure3D() = 0)
+    Call Check(Graphics3D.PbrPipelineAttemptCount3D() = 1)
+
+    MissingModel = Graphics3D.LoadModelGeometry3D("Assets\PbrMissingTexture.sm3d")
+
+    Call Check(MissingModel.Handle <> 0)
+    Call Check(MissingModel.GeometryReady)
+    Call Check(Graphics3D.ModelGeometryReady3D(MissingModel))
+    Call Check(Not MissingModel.PbrReady)
+    Call Check(MissingModel.PbrFailure = 0)
+    Call Check(MissingModel.TextureReferenceCount = 4)
+    Call Check(MissingModel.OwnedTextureCount = 0)
+    Call Check(MissingModel.OwnedMaterialCount = 0)
+    Call Check(Not Graphics3D.ModelPartUsesPbr3D(MissingModel, 0))
+
+    EarlyPart = Graphics3D.CreateModelPart3D(MissingModel, 0)
+    FrameReady = Graphics3D.Begin3D(Camera, 2, 4, 12)
+
+    If FrameReady Then
+        Drawn = Graphics3D.DrawObject3D(EarlyPart)
+    End If
+
+    Call Graphics3D.End3D()
+    Call Check(FrameReady And Drawn)
+    Call Check(Graphics3D.SimpleDrawCount3D() = 1)
+    Call Check(Graphics3D.PbrDrawCount3D() = 0)
+
+    BeforeMeshes = Graphics3D.LiveMeshCount3D()
+    BeforeTextures = Graphics3D.LiveTextureCount3D()
+    BeforeMaterials = Graphics3D.LiveMaterialCount3D()
+    Prepared = Graphics3D.PrepareModelPbr3D(
+        MissingModel,
+        Graphics3D.TEXTURE_FILTER_ANISOTROPIC,
+        Graphics3D.TEXTURE_WRAP_REPEAT,
+        8
+    )
+
+    Call Check(Not Prepared)
+    Call Check(MissingModel.Handle <> 0 And MissingModel.GeometryReady)
+    Call Check(Not MissingModel.PbrReady)
+    Call Check(MissingModel.PbrFailure = 42)
+    Call Check(Graphics3D.ModelPbrFailure3D(MissingModel) = 42)
+    Call Check(Graphics3D.LiveMeshCount3D() = BeforeMeshes)
+    Call Check(Graphics3D.LiveTextureCount3D() = BeforeTextures)
+    Call Check(Graphics3D.LiveMaterialCount3D() = BeforeMaterials)
+
+    Call Graphics3D.DestroyObjectInstance3D(EarlyPart)
+    Call Graphics3D.DestroyModel3D(MissingModel)
+
+    WrongCaseModel = Graphics3D.LoadModelGeometry3D("Assets\PbrWrongCase.sm3d")
+    BeforeMeshes = Graphics3D.LiveMeshCount3D()
+    BeforeTextures = Graphics3D.LiveTextureCount3D()
+    BeforeMaterials = Graphics3D.LiveMaterialCount3D()
+    Prepared = Graphics3D.PrepareModelPbr3D(
+        WrongCaseModel,
+        Graphics3D.TEXTURE_FILTER_ANISOTROPIC,
+        Graphics3D.TEXTURE_WRAP_REPEAT,
+        8
+    )
+
+    Call Check(Not Prepared)
+    Call Check(WrongCaseModel.Handle <> 0 And WrongCaseModel.GeometryReady)
+    Call Check(WrongCaseModel.PbrFailure = 42)
+    Call Check(Graphics3D.LiveMeshCount3D() = BeforeMeshes)
+    Call Check(Graphics3D.LiveTextureCount3D() = BeforeTextures)
+    Call Check(Graphics3D.LiveMaterialCount3D() = BeforeMaterials)
+    Call Graphics3D.DestroyModel3D(WrongCaseModel)
+
+    DeduplicatedModel = Graphics3D.LoadModelGeometry3D("Assets\PbrDeduplicated.sm3d")
+    EarlyPart = Graphics3D.CreateModelPart3D(DeduplicatedModel, 0)
+    Prepared = Graphics3D.PrepareModelPbr3D(
+        DeduplicatedModel,
+        Graphics3D.TEXTURE_FILTER_ANISOTROPIC,
+        Graphics3D.TEXTURE_WRAP_REPEAT,
+        8
+    )
+    LatePart = Graphics3D.CreateModelPart3D(DeduplicatedModel, 1)
+
+    Call Check(Prepared)
+    Call Check(DeduplicatedModel.TextureReferenceCount = 4)
+    Call Check(DeduplicatedModel.OwnedTextureCount = 2)
+    Call Check(DeduplicatedModel.OwnedMaterialCount = 2)
+    Call Check(DeduplicatedModel.PbrReady And DeduplicatedModel.PbrFailure = 0)
+    Call Check(Graphics3D.ModelPartUsesPbr3D(DeduplicatedModel, 0))
+    Call Check(Graphics3D.ModelPartUsesPbr3D(DeduplicatedModel, 1))
+    Call Check(Graphics3D.PrepareModelPbr3D(
+        DeduplicatedModel,
+        Graphics3D.TEXTURE_FILTER_NEAREST,
+        Graphics3D.TEXTURE_WRAP_CLAMP,
+        1
+    ))
+    Call Check(Graphics3D.LiveTextureCount3D() = 2)
+    Call Check(Graphics3D.LiveMaterialCount3D() = 2)
+
+    SamplerModel = Graphics3D.LoadModelGeometry3D("Assets\PbrDeduplicated.sm3d")
+    Prepared = Graphics3D.PrepareModelPbr3D(
+        SamplerModel,
+        Graphics3D.TEXTURE_FILTER_NEAREST,
+        Graphics3D.TEXTURE_WRAP_CLAMP,
+        1
+    )
+
+    Call Check(Prepared)
+    Call Check(SamplerModel.OwnedTextureCount = 2)
+    Call Check(Graphics3D.LiveTextureCount3D() = 4)
+    Call Check(Graphics3D.LiveMaterialCount3D() = 4)
+    Call Graphics3D.DestroyModel3D(SamplerModel)
+    Call Check(Graphics3D.LiveTextureCount3D() = 2)
+    Call Check(Graphics3D.LiveMaterialCount3D() = 2)
+
+    FrameReady = Graphics3D.Begin3D(Camera, 2, 4, 12)
+
+    If FrameReady Then
+        Drawn = Graphics3D.DrawObject3D(EarlyPart)
+        Drawn = Graphics3D.DrawObject3D(LatePart) And Drawn
+    End If
+
+    Call Graphics3D.End3D()
+    Call Check(FrameReady And Drawn)
+    Call Check(Graphics3D.SimpleDrawCount3D() = 1)
+    Call Check(Graphics3D.PbrDrawCount3D() = 1)
+
+    Call Graphics3D.DestroyObjectInstance3D(EarlyPart)
+    Call Graphics3D.DestroyObjectInstance3D(LatePart)
+    Call Graphics3D.DestroyModel3D(DeduplicatedModel)
+
+    For Cycle = 1 To 10
+
+        DeduplicatedModel = Graphics3D.LoadModelGeometry3D("Assets\PbrDeduplicated.sm3d")
+        Prepared = Graphics3D.PrepareModelPbr3D(
+            DeduplicatedModel,
+            Graphics3D.TEXTURE_FILTER_LINEAR,
+            Graphics3D.TEXTURE_WRAP_CLAMP,
+            1
+        )
+
+        Call Check(Prepared)
+        Call Check(DeduplicatedModel.OwnedTextureCount = 2)
+        Call Graphics3D.DestroyModel3D(DeduplicatedModel)
+        Call Check(Graphics3D.LiveModelCount3D() = 0)
+        Call Check(Graphics3D.LiveMeshCount3D() = 0)
+        Call Check(Graphics3D.LiveTextureCount3D() = 0)
+        Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+    End For
+
+    For Index = 0 To 125
+
+        FillTextures[Index] = Graphics3D.LoadTexture3DEx(
+            "Assets\Textures\Pbr-base-color.png",
+            Graphics3D.TEXTURE_USAGE_COLOR,
+            Graphics3D.TEXTURE_FILTER_LINEAR,
+            Graphics3D.TEXTURE_WRAP_CLAMP,
+            1
+        )
+    End For
+
+    DeduplicatedModel = Graphics3D.LoadModelGeometry3D("Assets\PbrDeduplicated.sm3d")
+    Prepared = Graphics3D.PrepareModelPbr3D(
+        DeduplicatedModel,
+        Graphics3D.TEXTURE_FILTER_LINEAR,
+        Graphics3D.TEXTURE_WRAP_CLAMP,
+        1
+    )
+
+    Call Check(Prepared)
+    Call Check(Graphics3D.LiveTextureCount3D() = 128)
+    Call Check(DeduplicatedModel.OwnedTextureCount = 2)
+    Call Graphics3D.DestroyModel3D(DeduplicatedModel)
+    Call Check(Graphics3D.LiveTextureCount3D() = 126)
+
+    FillTextures[126] = Graphics3D.LoadTexture3DEx(
+        "Assets\Textures\Pbr-base-color.png",
+        Graphics3D.TEXTURE_USAGE_COLOR,
+        Graphics3D.TEXTURE_FILTER_LINEAR,
+        Graphics3D.TEXTURE_WRAP_CLAMP,
+        1
+    )
+    DeduplicatedModel = Graphics3D.LoadModelGeometry3D("Assets\PbrDeduplicated.sm3d")
+    BeforeMeshes = Graphics3D.LiveMeshCount3D()
+    BeforeTextures = Graphics3D.LiveTextureCount3D()
+    BeforeMaterials = Graphics3D.LiveMaterialCount3D()
+    Prepared = Graphics3D.PrepareModelPbr3D(
+        DeduplicatedModel,
+        Graphics3D.TEXTURE_FILTER_LINEAR,
+        Graphics3D.TEXTURE_WRAP_CLAMP,
+        1
+    )
+
+    Call Check(Not Prepared)
+    Call Check(DeduplicatedModel.Handle <> 0 And DeduplicatedModel.GeometryReady)
+    Call Check(DeduplicatedModel.PbrFailure = 41)
+    Call Check(Graphics3D.LiveMeshCount3D() = BeforeMeshes)
+    Call Check(Graphics3D.LiveTextureCount3D() = BeforeTextures)
+    Call Check(Graphics3D.LiveMaterialCount3D() = BeforeMaterials)
+    Call Graphics3D.DestroyModel3D(DeduplicatedModel)
+
+    For Index = 0 To 126
+        Call Graphics3D.DestroyTexture3D(FillTextures[Index])
+    End For
+
+    PbrMaterial = Graphics3D.CreatePbrMaterial3D(
+        EmptyTexture,
+        EmptyTexture,
+        EmptyTexture,
+        EmptyTexture
+    )
+    TransformObject = Graphics3D.CreateCube3D(80)
+    SimpleObject = Graphics3D.CreateCube3D(80)
+
+    Call Check(PbrMaterial.Handle <> 0)
+    Call Check(Graphics3D.SetObjectMaterial3D(TransformObject, PbrMaterial))
+    Call Graphics3D.SetObjectScale(TransformObject, 0, 100, 100)
+
+    FrameReady = Graphics3D.Begin3D(Camera, 2, 4, 12)
+
+    If FrameReady Then
+        Drawn = Graphics3D.DrawObject3D(TransformObject)
+    End If
+
+    Call Graphics3D.End3D()
+    Call Check(FrameReady And Not Drawn)
+    Call Check(Graphics3D.LastError() = 46)
+    Call Check(Graphics3D.DrawCallCount3D() = 0)
+    Call Check(Graphics3D.SubmittedTriangleCount3D() = 0)
+    Call Graphics3D.SetObjectScale(TransformObject, -100, 100, 100)
+
+    FrameReady = Graphics3D.Begin3D(Camera, 2, 4, 12)
+
+    If FrameReady Then
+        Drawn = Graphics3D.DrawObject3D(TransformObject)
+    End If
+
+    Call Graphics3D.End3D()
+    Call Check(FrameReady And Not Drawn)
+    Call Check(Graphics3D.LastError() = 46)
+    Call Check(Graphics3D.PbrDrawCount3D() = 0)
+    Call Graphics3D.SetObjectScale(TransformObject, 100, 100, 100)
+
+    FrameReady = Graphics3D.Begin3D(Camera, 2, 4, 12)
+
+    If FrameReady Then
+        Drawn = Graphics3D.DrawObject3D(TransformObject)
+    End If
+
+    Call Graphics3D.End3D()
+    Call Check(FrameReady And Drawn)
+    Call Check(Graphics3D.PbrDrawCount3D() = 1)
+
+    Skeleton = Graphics3D.CreateSkeleton3D(1)
+
+    Call Check(Graphics3D.SetSkeletonBone3D(Skeleton, 0, -1, 0, 0, 0))
+    Call Check(Graphics3D.CommitSkeleton3D(Skeleton))
+
+    Clip = Graphics3D.CreateAnimationClip3D(Skeleton, 1000)
+
+    Call Check(Graphics3D.SetAnimationScale3D(Clip, 0, 100, 125, 100, 100, 125, 100))
+
+    Animator = Graphics3D.CreateAnimator3D(Skeleton)
+
+    Call Check(Graphics3D.PlayAnimation3D(Animator, Clip, True))
+    Call Check(Graphics3D.SetObjectAnimator3D(TransformObject, Animator))
+    Call Check(Graphics3D.SetObjectAnimator3D(SimpleObject, Animator))
+
+    FrameReady = Graphics3D.Begin3D(Camera, 2, 4, 12)
+
+    If FrameReady Then
+        Drawn = Graphics3D.DrawObject3D(SimpleObject)
+        Drawn = Graphics3D.DrawObject3D(TransformObject) And Drawn
+    End If
+
+    Call Graphics3D.End3D()
+    Call Check(FrameReady And Not Drawn)
+    Call Check(Graphics3D.LastError() = 45)
+    Call Check(Graphics3D.SimpleDrawCount3D() = 1)
+    Call Check(Graphics3D.PbrDrawCount3D() = 0)
+    Call Check(Graphics3D.SetAnimationScale3D(Clip, 0, 100, 100, 100, 125, 125, 125))
+
+    FrameReady = Graphics3D.Begin3D(Camera, 2, 4, 12)
+
+    If FrameReady Then
+        Drawn = Graphics3D.DrawObject3D(SimpleObject)
+        Drawn = Graphics3D.DrawObject3D(TransformObject) And Drawn
+    End If
+
+    Call Graphics3D.End3D()
+    Call Check(FrameReady And Drawn)
+    Call Check(Graphics3D.SimpleDrawCount3D() = 1)
+    Call Check(Graphics3D.PbrDrawCount3D() = 1)
+    Call Check(Graphics3D.ClearObjectAnimator3D(TransformObject))
+    Call Check(Graphics3D.ClearObjectAnimator3D(SimpleObject))
+    Call Graphics3D.DestroyAnimator3D(Animator)
+    Call Graphics3D.DestroyAnimationClip3D(Clip)
+    Call Graphics3D.DestroySkeleton3D(Skeleton)
+    Call Graphics3D.DestroyObject3D(TransformObject)
+    Call Graphics3D.DestroyObject3D(SimpleObject)
+    Call Graphics3D.DestroyMaterial3D(PbrMaterial)
+    Call Check(Graphics3D.LiveMeshCount3D() = 0)
+    Call Check(Graphics3D.LiveObjectCount3D() = 0)
+    Call Check(Graphics3D.LiveModelCount3D() = 0)
+    Call Check(Graphics3D.LiveTextureCount3D() = 0)
+    Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+    Call Check(Graphics3D.LiveSkeletonCount3D() = 0)
+    Call Check(Graphics3D.LiveAnimationClipCount3D() = 0)
+    Call Check(Graphics3D.LiveAnimatorCount3D() = 0)
+
+End Sub
+
+Sub RunForcedFailureTests()
+
+    Dim Camera As Core.Camera3D
+    Dim Model As Core.Model3D
+    Dim Part As Core.Object3D
+    Dim SimpleObject As Core.Object3D
+    Dim EmptyTexture As Core.Texture3D
+    Dim PbrMaterial As Core.Material3D
+    Dim FrameReady As Boolean
+    Dim Drawn As Boolean
+    Dim Frame As Number
+
+    Camera = Graphics3D.DefaultCamera()
+
+    Call Check(Graphics3D.PbrPipelineState3D() = Graphics3D.PBR_PIPELINE_UNAVAILABLE)
+    Call Check(Graphics3D.PbrPipelineFailure3D() = 44)
+    Call Check(Graphics3D.PbrPipelineAttemptCount3D() = 1)
+
+    Model = Graphics3D.LoadModelGeometry3D("Assets\PbrDeduplicated.sm3d")
+    Part = Graphics3D.CreateModelPart3D(Model, 0)
+
+    Call Check(Not Graphics3D.PrepareModelPbr3D(
+        Model,
+        Graphics3D.TEXTURE_FILTER_ANISOTROPIC,
+        Graphics3D.TEXTURE_WRAP_REPEAT,
+        8
+    ))
+    Call Check(Model.Handle <> 0 And Model.GeometryReady)
+    Call Check(Not Model.PbrReady And Model.PbrFailure = 44)
+    Call Check(Graphics3D.LiveTextureCount3D() = 0)
+    Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+
+    FrameReady = Graphics3D.Begin3D(Camera, 2, 4, 12)
+
+    If FrameReady Then
+        Drawn = Graphics3D.DrawObject3D(Part)
+    End If
+
+    Call Graphics3D.End3D()
+    Call Check(FrameReady And Drawn)
+    Call Check(Graphics3D.SimpleDrawCount3D() = 1)
+    Call Graphics3D.DestroyObjectInstance3D(Part)
+    Call Graphics3D.DestroyModel3D(Model)
+
+    SimpleObject = Graphics3D.CreateCube3D(80)
+
+    For Frame = 1 To 100
+
+        FrameReady = Graphics3D.Begin3D(Camera, 2, 4, 12)
+
+        If FrameReady Then
+            Drawn = Graphics3D.DrawObject3D(SimpleObject)
+        End If
+
+        Call Graphics3D.End3D()
+        Call Check(FrameReady And Drawn)
+    End For
+
+    Call Check(Graphics3D.PbrPipelineAttemptCount3D() = 1)
+    Call Check(Graphics3D.SimpleDrawCount3D() = 1)
+
+    PbrMaterial = Graphics3D.CreatePbrMaterial3D(
+        EmptyTexture,
+        EmptyTexture,
+        EmptyTexture,
+        EmptyTexture
+    )
+
+    Call Check(PbrMaterial.Handle = 0)
+    Call Check(Graphics3D.LastError() = 44)
+    Call Check(Graphics3D.PbrPipelineAttemptCount3D() = 1)
+    Call Graphics3D.DestroyObject3D(SimpleObject)
+    Call Graphics3D.ResetRenderer3D()
+    Call Check(Graphics3D.PbrPipelineState3D() = Graphics3D.PBR_PIPELINE_NOT_ATTEMPTED)
+    Call Check(Graphics3D.PbrPipelineFailure3D() = 0)
+    Call Check(Graphics3D.PbrPipelineAttemptCount3D() = 0)
+    Call Check(Not Graphics3D.PbrShaderAvailable3D())
+    Call Check(Graphics3D.PbrPipelineState3D() = Graphics3D.PBR_PIPELINE_UNAVAILABLE)
+    Call Check(Graphics3D.PbrPipelineAttemptCount3D() = 1)
+
+End Sub
+
+Sub Check(Condition As Boolean)
+
+    Checks = Checks + 1
+
+    If Not Condition Then
+        Failures = Failures + 1
+        Print "Failed check "; Checks
+    End If
+
+End Sub

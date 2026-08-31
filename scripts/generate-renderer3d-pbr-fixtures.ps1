@@ -9,6 +9,7 @@ $assetTool = Join-Path $repositoryRoot 'artifacts\assettool\smileasset.exe'
 $temporaryRoot = Join-Path $repositoryRoot 'artifacts\temp\renderer3d-pbr-fixtures'
 $labRoot = Join-Path $repositoryRoot 'examples\Renderer3DPbrLab\Assets'
 $testRoot = Join-Path $repositoryRoot 'examples\Renderer3DPbrTests\Assets'
+$hardeningRoot = Join-Path $repositoryRoot 'examples\Renderer3DPbrHardeningTests\Assets'
 $modelTestRoot = Join-Path $repositoryRoot 'examples\Renderer3DModelTests\Assets'
 
 function Write-Texture([string]$Path, [string]$Kind) {
@@ -44,7 +45,13 @@ function Write-Texture([string]$Path, [string]$Kind) {
     }
 }
 
-function Write-ModelSource([string]$Path, [string]$BaseColorPath) {
+function Write-ModelSource(
+    [string]$Path,
+    [string]$BaseColorPath,
+    [string]$NormalPath,
+    [string]$OrmPath,
+    [string]$EmissivePath
+) {
     $stream = [System.IO.MemoryStream]::new()
     $writer = [System.IO.BinaryWriter]::new($stream)
 
@@ -83,9 +90,13 @@ function Write-ModelSource([string]$Path, [string]$BaseColorPath) {
     }
 
     $json = @'
-{"asset":{"version":"2.0","generator":"SMILE 2.0 M2 PBR fixture"},"scene":0,"scenes":[{"nodes":[0]}],"nodes":[{"name":"PbrLab","mesh":0}],"meshes":[{"name":"PbrLabMesh","primitives":[{"attributes":{"POSITION":0,"NORMAL":1,"TEXCOORD_0":2,"TANGENT":4},"indices":3,"material":0,"mode":4},{"attributes":{"POSITION":0,"NORMAL":1,"TEXCOORD_0":2,"TANGENT":4},"indices":3,"material":1,"mode":4}]}],"materials":[{"name":"MaskedDoubleSided","doubleSided":true,"alphaMode":"MASK","alphaCutoff":0.5,"emissiveFactor":[0.15,0.5,0.7],"pbrMetallicRoughness":{"baseColorFactor":[1,1,1,1],"metallicFactor":0.1,"roughnessFactor":0.7,"baseColorTexture":{"index":0},"metallicRoughnessTexture":{"index":2}},"normalTexture":{"index":1,"scale":1},"occlusionTexture":{"index":2,"strength":1},"emissiveTexture":{"index":3}},{"name":"SmoothMetal","doubleSided":false,"alphaMode":"OPAQUE","emissiveFactor":[0,0.1,0.15],"pbrMetallicRoughness":{"baseColorFactor":[0.65,0.8,1,1],"metallicFactor":0.9,"roughnessFactor":0.18,"baseColorTexture":{"index":0},"metallicRoughnessTexture":{"index":2}},"normalTexture":{"index":1,"scale":0.65},"occlusionTexture":{"index":2,"strength":0.8},"emissiveTexture":{"index":3}}],"textures":[{"source":0},{"source":1},{"source":2},{"source":3}],"images":[{"uri":"__BASE__"},{"uri":"Assets/Textures/Pbr-normal.png"},{"uri":"Assets/Textures/Pbr-orm.png"},{"uri":"Assets/Textures/Pbr-emissive.png"}],"buffers":[{"byteLength":204,"uri":"data:application/octet-stream;base64,__BUFFER__"}],"bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":48,"target":34962},{"buffer":0,"byteOffset":48,"byteLength":48,"target":34962},{"buffer":0,"byteOffset":96,"byteLength":32,"target":34962},{"buffer":0,"byteOffset":128,"byteLength":12,"target":34963},{"buffer":0,"byteOffset":140,"byteLength":64,"target":34962}],"accessors":[{"bufferView":0,"componentType":5126,"count":4,"type":"VEC3","min":[-1,-1,0],"max":[1,1,0]},{"bufferView":1,"componentType":5126,"count":4,"type":"VEC3"},{"bufferView":2,"componentType":5126,"count":4,"type":"VEC2"},{"bufferView":3,"componentType":5123,"count":6,"type":"SCALAR","min":[0],"max":[3]},{"bufferView":4,"componentType":5126,"count":4,"type":"VEC4"}]}
+{"asset":{"version":"2.0","generator":"SMILE 2.0 M2 PBR fixture"},"scene":0,"scenes":[{"nodes":[0]}],"nodes":[{"name":"PbrLab","mesh":0}],"meshes":[{"name":"PbrLabMesh","primitives":[{"attributes":{"POSITION":0,"NORMAL":1,"TEXCOORD_0":2,"TANGENT":4},"indices":3,"material":0,"mode":4},{"attributes":{"POSITION":0,"NORMAL":1,"TEXCOORD_0":2,"TANGENT":4},"indices":3,"material":1,"mode":4}]}],"materials":[{"name":"MaskedDoubleSided","doubleSided":true,"alphaMode":"MASK","alphaCutoff":0.5,"emissiveFactor":[0.15,0.5,0.7],"pbrMetallicRoughness":{"baseColorFactor":[1,1,1,1],"metallicFactor":0.1,"roughnessFactor":0.7,"baseColorTexture":{"index":0},"metallicRoughnessTexture":{"index":2}},"normalTexture":{"index":1,"scale":1},"occlusionTexture":{"index":2,"strength":1},"emissiveTexture":{"index":3}},{"name":"SmoothMetal","doubleSided":false,"alphaMode":"OPAQUE","emissiveFactor":[0,0.1,0.15],"pbrMetallicRoughness":{"baseColorFactor":[0.65,0.8,1,1],"metallicFactor":0.9,"roughnessFactor":0.18,"baseColorTexture":{"index":0},"metallicRoughnessTexture":{"index":2}},"normalTexture":{"index":1,"scale":0.65},"occlusionTexture":{"index":2,"strength":0.8},"emissiveTexture":{"index":3}}],"textures":[{"source":0},{"source":1},{"source":2},{"source":3}],"images":[{"uri":"__BASE__"},{"uri":"__NORMAL__"},{"uri":"__ORM__"},{"uri":"__EMISSIVE__"}],"buffers":[{"byteLength":204,"uri":"data:application/octet-stream;base64,__BUFFER__"}],"bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":48,"target":34962},{"buffer":0,"byteOffset":48,"byteLength":48,"target":34962},{"buffer":0,"byteOffset":96,"byteLength":32,"target":34962},{"buffer":0,"byteOffset":128,"byteLength":12,"target":34963},{"buffer":0,"byteOffset":140,"byteLength":64,"target":34962}],"accessors":[{"bufferView":0,"componentType":5126,"count":4,"type":"VEC3","min":[-1,-1,0],"max":[1,1,0]},{"bufferView":1,"componentType":5126,"count":4,"type":"VEC3"},{"bufferView":2,"componentType":5126,"count":4,"type":"VEC2"},{"bufferView":3,"componentType":5123,"count":6,"type":"SCALAR","min":[0],"max":[3]},{"bufferView":4,"componentType":5126,"count":4,"type":"VEC4"}]}
 '@
-    $json = $json.Replace('__BASE__', $BaseColorPath).Replace('__BUFFER__', $buffer)
+    $json = $json.Replace('__BASE__', $BaseColorPath)
+    $json = $json.Replace('__NORMAL__', $NormalPath)
+    $json = $json.Replace('__ORM__', $OrmPath)
+    $json = $json.Replace('__EMISSIVE__', $EmissivePath)
+    $json = $json.Replace('__BUFFER__', $buffer)
     [System.IO.File]::WriteAllText($Path, $json, [System.Text.UTF8Encoding]::new($false))
 }
 
@@ -132,17 +143,26 @@ foreach ($entry in $textures.GetEnumerator()) {
 $validSource = Join-Path $temporaryRoot 'PbrLab.gltf'
 $missingSource = Join-Path $temporaryRoot 'PbrMissingTexture.gltf'
 $wrongCaseSource = Join-Path $temporaryRoot 'PbrWrongCase.gltf'
+$deduplicatedSource = Join-Path $temporaryRoot 'PbrDeduplicated.gltf'
 $validModel = Join-Path $temporaryRoot 'PbrLab.sm3d'
 $missingModel = Join-Path $temporaryRoot 'PbrMissingTexture.sm3d'
 $wrongCaseModel = Join-Path $temporaryRoot 'PbrWrongCase.sm3d'
-Write-ModelSource $validSource 'Assets/Textures/Pbr-base-color.png'
-Write-ModelSource $missingSource 'Assets/Textures/Pbr-missing.png'
-Write-ModelSource $wrongCaseSource 'Assets/Textures/pbr-base-color.png'
+$deduplicatedModel = Join-Path $temporaryRoot 'PbrDeduplicated.sm3d'
+$normalPath = 'Assets/Textures/Pbr-normal.png'
+$ormPath = 'Assets/Textures/Pbr-orm.png'
+$emissivePath = 'Assets/Textures/Pbr-emissive.png'
+Write-ModelSource $validSource 'Assets/Textures/Pbr-base-color.png' $normalPath $ormPath $emissivePath
+Write-ModelSource $missingSource 'Assets/Textures/Pbr-missing.png' $normalPath $ormPath $emissivePath
+Write-ModelSource $wrongCaseSource 'Assets/Textures/pbr-base-color.png' $normalPath $ormPath $emissivePath
+Write-ModelSource $deduplicatedSource 'Assets/Textures/Pbr-base-color.png' `
+    'Assets/Textures/Pbr-base-color.png' 'Assets/Textures/Pbr-base-color.png' `
+    'Assets/Textures/Pbr-base-color.png'
 
 foreach ($conversion in @(
     @($validSource, $validModel),
     @($missingSource, $missingModel),
-    @($wrongCaseSource, $wrongCaseModel)
+    @($wrongCaseSource, $wrongCaseModel),
+    @($deduplicatedSource, $deduplicatedModel)
 )) {
     & $assetTool model $conversion[0] --format-version 2 -o $conversion[1]
     if ($LASTEXITCODE -ne 0) { throw "PBR fixture conversion failed: $($conversion[0])" }
@@ -166,3 +186,14 @@ Assert-Or-Publish $missingModel (Join-Path $testRoot 'PbrMissingTexture.sm3d')
 Assert-Or-Publish $wrongCaseModel (Join-Path $testRoot 'PbrWrongCase.sm3d')
 Assert-Or-Publish (Join-Path $repositoryRoot 'examples\Renderer3DModelTests\Assets\Humanoid.sm3d') `
     (Join-Path $testRoot 'LegacyV1.sm3d')
+
+foreach ($name in $textures.Keys) {
+    Assert-Or-Publish (Join-Path $textureRoot $name) (Join-Path $hardeningRoot "Textures\$name")
+}
+
+Assert-Or-Publish $validModel (Join-Path $hardeningRoot 'PbrLab.sm3d')
+Assert-Or-Publish $missingModel (Join-Path $hardeningRoot 'PbrMissingTexture.sm3d')
+Assert-Or-Publish $wrongCaseModel (Join-Path $hardeningRoot 'PbrWrongCase.sm3d')
+Assert-Or-Publish $deduplicatedModel (Join-Path $hardeningRoot 'PbrDeduplicated.sm3d')
+Assert-Or-Publish (Join-Path $repositoryRoot 'examples\Renderer3DModelTests\Assets\Humanoid.sm3d') `
+    (Join-Path $hardeningRoot 'LegacyV1.sm3d')
