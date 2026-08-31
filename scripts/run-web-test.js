@@ -544,7 +544,7 @@ function contextWebGL2() {
         createBuffer: () => ({}), bindBuffer: noop,
         bufferData: () => { renderer3DBufferUploads += 1; }, deleteBuffer: noop,
         createTexture: () => ({}), bindTexture: noop, deleteTexture: noop, activeTexture: noop,
-        pixelStorei: noop, texImage2D: noop, texParameteri: noop, texParameterf: noop,
+        pixelStorei: noop, texImage2D: noop, texSubImage2D: noop, texParameteri: noop, texParameterf: noop,
         generateMipmap: noop, getError: () => 0,
         getExtension: name => name.includes("texture_filter_anisotropic")
             ? { MAX_TEXTURE_MAX_ANISOTROPY_EXT: 0x84ff, TEXTURE_MAX_ANISOTROPY_EXT: 0x84fe }

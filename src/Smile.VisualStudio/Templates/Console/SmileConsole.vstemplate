@@ -18,7 +18,7 @@
     </Project>
   </TemplateContent>
   <WizardExtension>
-      <Assembly>Smile.VisualStudio, Version=2.0.48.0, Culture=neutral, PublicKeyToken=null</Assembly>
+      <Assembly>Smile.VisualStudio, Version=2.0.49.0, Culture=neutral, PublicKeyToken=null</Assembly>
     <FullClassName>Smile.VisualStudio.SmileProjectTemplateWizard</FullClassName>
   </WizardExtension>
 </VSTemplate>

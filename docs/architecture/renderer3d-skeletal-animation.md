@@ -1,8 +1,8 @@
 # Renderer3D skeletal animation
 
-Renderer3D provides bounded, generation-safe skeleton, animation-clip, and animator resources. The system is generic: it has no character, battle, action, or game-specific concepts.
+Renderer3D provides bounded, generation-safe legacy authoring resources and production model-owned animation. The system is generic: it has no character, battle, action, or game-specific concepts.
 
-## Data model
+## Legacy low-level data model
 
 A `Skeleton3D` has 1-32 parent-ordered bones. Each bone declares a parent index and a local bind-pivot translation. Root bones use parent `-1`; a child parent must precede it. `CommitSkeleton3D` validates the complete acyclic hierarchy and derives inverse global bind translations before the skeleton can create clips or animators.
 
@@ -20,16 +20,30 @@ An `Animator3D` owns independent playback time, speed, loop/completion state, ev
 
 The vertex format is position, normal, UV, four float joint indices, and four weights. Static meshes default to bone zero with full weight, but skinning is disabled unless an animator is bound.
 
-DirectX uploads a fixed row-major 32-matrix palette in the existing constant buffer. The D3D11 vertex shader blends four bone matrices and skins position/normal before applying model/view/projection transforms. WebGL2 uses the equivalent `mat4 bones[32]` uniform palette and vertex attributes. Thirty-two bones remain beneath the WebGL2 minimum vertex-uniform budget after camera/model uniforms and are enough for the intentionally low-poly actors.
+The legacy path remains unchanged: DirectX uploads a fixed row-major 32-matrix palette in the existing constant buffer, and WebGL2 uses the equivalent `mat4 bones[32]` uniform palette. This preserves every command and public behavior used by existing custom-mesh lessons.
 
-Animation evaluation is CPU-side and deterministic; deformation is GPU-side on both targets. The Web animator reuses a preallocated `Float32Array` palette, and the native animator uses inline fixed storage. No animation resource allocates inside its update path.
+Production SM3D v2 model animators use a separate fixed 128-bone path. Direct3D 11 uploads 128 row-major matrices through vertex constant buffer slot b1. WebGL2 stores the shared palette in an RGBA32F 4-by-128 vertex texture and fetches four texels per matrix; it does not depend on oversized vertex-uniform arrays. Both the simple and PBR vertex shaders blend the same four joint/weight influences. Palette transport is cached by animator handle and pose revision, so repeated draws of the same unchanged animator do not re-upload it. `ModelPaletteUploadCount3D` exposes the current generation's uploads.
+
+Animation evaluation is CPU-side and deterministic; deformation is GPU-side on both targets. The Web production animator reuses preallocated local, destination, global, palette, root, socket, and time-result typed arrays. The native animator uses fixed bounded storage. Neither production update path allocates per update or draw.
+
+## Production model animation
+
+An animated `Model3D` owns up to 256 retained nodes, 128 bones with full inverse-bind matrices, 64 sampled clips, 64 named sockets, and all tracks, sample floats, events, and root-motion records from its optional SM3D v2 animation group. `CreateModelAnimator3D` creates independent mutable playback state over that immutable payload. Two objects can therefore draw one model at different clips, times, speeds, fades, and root-motion policies without copying the asset.
+
+Clip lookup uses exact case-sensitive names. Playback modes are `ANIMATION_LOOP`, `ANIMATION_ONCE`, and `ANIMATION_HOLD`; once and hold retain the final pose, while completion and replay remain explicit. One bounded base-layer crossfade blends local translation and scale linearly and normalized quaternions by shortest path. The destination clip owns events and root motion during a fade. Event traversal is chronological across ordinary updates and multiple loop wraps. The pending FIFO holds 32 entries; overflow retains the first 32 and sets Renderer3D error 49. Equal-time events preserve descriptor order.
+
+Root motion can extract any descriptor-selected XYZ axes plus yaw. Translation is returned in thousandths and yaw in thousandths of a degree through one atomic `RootMotionDelta3D` take; the final yaw component clears the accumulated delta. Optional removal restores extracted translation to bind values and removes the yaw twist from the visual pose. Loop and multi-loop updates include end-to-start motion exactly once per wrap.
+
+A named socket stores local TRS on one retained node. Raw queries return the animated model-space transform. World queries additionally apply the attached object's current position, rotation, and positive scale, and reject an object not bound to that animator. Position and 3-by-3 orientation values use thousandths. Names remain exact strings rather than hashes.
+
+Production PBR animation uses positive uniform node/socket/animation scale and the existing positive nonsingular object-transform contract. The converter rejects nonuniform production scale before publication; the legacy low-level simple path retains its existing nonuniform clip support and its PBR error-45 protection.
 
 ## Ownership
 
-Objects refer to animators; animators refer to skeletons and the currently playing clip; clips refer to skeletons. Destroy operations refuse while a live dependent exists and leave the public record intact. Reset clears objects, then animators, clips, and skeletons. Diagnostic APIs expose live/fixed maximum counts and handle validity.
+Objects refer to animators. Legacy animators refer to skeletons and the currently playing clip; clips refer to skeletons. Production animators instead refer to a model-owned immutable animation payload. Destroy operations refuse while a live dependent exists and leave the public record intact: a bound object blocks animator destruction, and any live part object or model animator blocks model destruction. Reset clears objects, animators, models, materials, textures, meshes, clips, and skeletons in dependency order. Diagnostic APIs expose live/fixed maximum counts, handle validity, and production capability/palette uploads.
 
-SM3D v1 and the v2 M1 core remain static-model interchanges. V2 reserves later skeleton/clip/event/root-motion/socket chunks but does not emit or interpret them yet. Skinned meshes can still be authored through the same public custom-mesh API; bundled M3 sections are an authoring convenience rather than a replacement for the bounded runtime resource API.
+SM3D v1 and static v2 files remain unchanged and load without animation. Animated v2 files add one wholly present optional nine-chunk group while preserving the static `VERT` stride. Skinned meshes can still be authored through the same public custom-mesh API; imported model animation is a production asset path, not a replacement for the bounded teaching API.
 
 ## Verification
 
-`scripts/test-renderer3d-animation.ps1` performs the same mechanics and draw assertions on DirectX and Web. It covers hierarchy validation, invalid bone references, bind pose, four-weight skin data, translation/rotation/scale interpolation, idle looping, attack completion, hit final-pose hold, victory looping, dragon-wing bones, exact-once events, independent animators, invariant 30/60/120-style update totals, live-owner refusal, stale handles, GPU drawing, and zero-count cleanup.
+`scripts/test-renderer3d-animation.ps1` preserves the legacy native/Web contract. `scripts/test-renderer3d-animation-v2.ps1` verifies deterministic animated import, 68- and 128-bone boundaries, 129-bone rejection, complete optional groups, exact uint16 weights, fixed sampling, independent production animators, loop/once/hold, crossfade, equal-time and multi-wrap FIFO events, root translation/yaw, raw/world sockets, PBR palette drawing and upload caching, ownership refusal, stale handles, malformed rollback, native/Web exact parity, and Animation Lab builds.

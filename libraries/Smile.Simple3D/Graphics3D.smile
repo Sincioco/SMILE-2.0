@@ -102,6 +102,18 @@ Private Const COMMAND_SIMPLE_DRAW_COUNT = 94
 Private Const COMMAND_PBR_TRIANGLE_COUNT = 95
 Private Const COMMAND_PBR_SHADER_AVAILABLE = 96
 Private Const COMMAND_MODEL_PBR_VALUE = 97
+Private Const COMMAND_MODEL_ANIMATION_VALUE = 98
+Private Const COMMAND_CREATE_MODEL_ANIMATOR = 99
+Private Const COMMAND_PLAY_MODEL_ANIMATOR = 100
+Private Const COMMAND_CROSSFADE_MODEL_ANIMATOR = 101
+Private Const COMMAND_ANIMATOR_CLIP_INDEX = 102
+Private Const COMMAND_ANIMATOR_FADE_PERCENT = 103
+Private Const COMMAND_ANIMATOR_PENDING_EVENT_COUNT = 104
+Private Const COMMAND_SET_ANIMATOR_ROOT_MOTION = 105
+Private Const COMMAND_TAKE_ANIMATOR_ROOT_DELTA = 106
+Private Const COMMAND_ANIMATOR_SOCKET_VALUE = 107
+Private Const COMMAND_MODEL_ANIMATION_AVAILABLE = 108
+Private Const COMMAND_MODEL_PALETTE_UPLOAD_COUNT = 109
 
 Private Const MODEL_QUERY_FORMAT_VERSION = 1
 Private Const MODEL_QUERY_VERTEX_COUNT = 2
@@ -120,6 +132,12 @@ Private Const IMAGE_COMMAND_CREATE_PBR_TEXTURE = 2
 Private Const TEXT_COMMAND_LOAD_MODEL = 1
 Private Const TEXT_COMMAND_LOAD_MODEL_GEOMETRY = 2
 Private Const TEXT_COMMAND_PREPARE_MODEL_PBR = 3
+Private Const TEXT_COMMAND_MODEL_CLIP_INDEX = 4
+Private Const TEXT_COMMAND_MODEL_SOCKET_INDEX = 5
+Private Const TEXT_COMMAND_MODEL_EVENT_NAME_MATCHES = 6
+Private Const TEXT_COMMAND_PLAY_MODEL_ANIMATOR = 7
+Private Const TEXT_COMMAND_CROSSFADE_MODEL_ANIMATOR = 8
+Private Const TEXT_COMMAND_TAKE_MODEL_ANIMATOR_EVENT = 9
 
 Public Const PRIMITIVE_CUBE = 1
 Public Const PRIMITIVE_PLANE = 2
@@ -204,6 +222,23 @@ Public Const PBR_MATERIAL_EMISSIVE_GREEN = 13
 Public Const PBR_MATERIAL_EMISSIVE_BLUE = 14
 Public Const PBR_MATERIAL_ALPHA_CUTOFF = 15
 Public Const PBR_MATERIAL_MODEL_OWNED = 16
+Public Const ANIMATION_LOOP = 1
+Public Const ANIMATION_ONCE = 2
+Public Const ANIMATION_HOLD = 3
+Public Const ROOT_MOTION_NONE = 0
+Public Const ROOT_MOTION_EXTRACT = 1
+Public Const ANIMATOR_SOCKET_POSITION_X = 1
+Public Const ANIMATOR_SOCKET_POSITION_Y = 2
+Public Const ANIMATOR_SOCKET_POSITION_Z = 3
+Public Const ANIMATOR_SOCKET_MATRIX_M11 = 4
+Public Const ANIMATOR_SOCKET_MATRIX_M12 = 5
+Public Const ANIMATOR_SOCKET_MATRIX_M13 = 6
+Public Const ANIMATOR_SOCKET_MATRIX_M21 = 7
+Public Const ANIMATOR_SOCKET_MATRIX_M22 = 8
+Public Const ANIMATOR_SOCKET_MATRIX_M23 = 9
+Public Const ANIMATOR_SOCKET_MATRIX_M31 = 10
+Public Const ANIMATOR_SOCKET_MATRIX_M32 = 11
+Public Const ANIMATOR_SOCKET_MATRIX_M33 = 12
 
 Private Function Dispatch(
     Command As Number,
@@ -463,6 +498,11 @@ Private Sub DescribeModel3D(ByRef Model As Core.Model3D)
     Model.PbrFailure = Dispatch(COMMAND_MODEL_PBR_VALUE, Model.Handle, 6, 0, 0, 0, 0, 0, 0, 0, 0)
     Model.OwnedMaterialCount = Dispatch(COMMAND_MODEL_PBR_VALUE, Model.Handle, 2, 0, 0, 0, 0, 0, 0, 0, 0)
     Model.OwnedTextureCount = Dispatch(COMMAND_MODEL_PBR_VALUE, Model.Handle, 3, 0, 0, 0, 0, 0, 0, 0, 0)
+    Model.HasAnimation = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 1, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Model.BoneCount = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 2, 0, 0, 0, 0, 0, 0, 0, 0)
+    Model.ClipCount = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 3, 0, 0, 0, 0, 0, 0, 0, 0)
+    Model.SocketCount = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 4, 0, 0, 0, 0, 0, 0, 0, 0)
+    Model.AnimationBytes = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 5, 0, 0, 0, 0, 0, 0, 0, 0)
 
 End Sub
 
@@ -605,6 +645,158 @@ Public Function ModelNameHash3D(Model As Core.Model3D) As Number
 
 End Function
 
+''' Reports whether an SM3D v2 model owns the complete optional animation chunk group.
+Public Function ModelHasAnimation3D(Model As Core.Model3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 1, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Function ModelBoneCount3D(Model As Core.Model3D) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 2, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function ModelClipCount3D(Model As Core.Model3D) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 3, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function ModelSocketCount3D(Model As Core.Model3D) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 4, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function ModelAnimationBytes3D(Model As Core.Model3D) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 5, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function ModelClipDuration3D(Model As Core.Model3D, ClipIndex As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 6, ClipIndex, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function ModelClipSampleRate3D(Model As Core.Model3D, ClipIndex As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 7, ClipIndex, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function ModelAnimationEventCount3D(Model As Core.Model3D) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 8, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function ModelAnimationNodeCount3D(Model As Core.Model3D) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 9, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Event indexes returned by an animator are one-based so zero remains "no event".
+Public Function ModelAnimationEventValue3D(Model As Core.Model3D, EventIndex As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 10, EventIndex, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function ModelClipIndex3D(Model As Core.Model3D, Name As Text) As Number
+
+    Dim Result As Number
+
+    Result = Renderer3DText(TEXT_COMMAND_MODEL_CLIP_INDEX, Name, Model.Handle, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function ModelSocketIndex3D(Model As Core.Model3D, Name As Text) As Number
+
+    Dim Result As Number
+
+    Result = Renderer3DText(TEXT_COMMAND_MODEL_SOCKET_INDEX, Name, Model.Handle, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function ModelEventNameMatches3D(
+    Model As Core.Model3D,
+    EventIndex As Number,
+    Name As Text
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Renderer3DText(
+        TEXT_COMMAND_MODEL_EVENT_NAME_MATCHES,
+        Name,
+        Model.Handle,
+        EventIndex,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+    Return Result
+
+End Function
+
+Public Function ModelAnimationAvailable3D() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_MODEL_ANIMATION_AVAILABLE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Function ModelPaletteUploadCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_PALETTE_UPLOAD_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
 Public Function ModelPartMaterial3D(Model As Core.Model3D, PartIndex As Number) As Number
 
     Dim Result As Number
@@ -657,6 +849,11 @@ Public Sub DestroyModel3D(ByRef Model As Core.Model3D)
         Model.PbrFailure = 0
         Model.OwnedMaterialCount = 0
         Model.OwnedTextureCount = 0
+        Model.HasAnimation = False
+        Model.BoneCount = 0
+        Model.ClipCount = 0
+        Model.SocketCount = 0
+        Model.AnimationBytes = 0
 
     End If
 
@@ -1115,6 +1312,26 @@ Public Function CreateAnimator3D(Skeleton As Core.Skeleton3D) As Core.Animator3D
 
 End Function
 
+''' Creates independent playback state for the animation payload owned by one model.
+Public Function CreateModelAnimator3D(Model As Core.Model3D) As Core.Animator3D
+
+    Dim Result As Core.Animator3D
+
+    Result.Handle = Dispatch(COMMAND_CREATE_MODEL_ANIMATOR, Model.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+    If Result.Handle <> 0 Then
+
+        Result.ModelHandle = Model.Handle
+        Result.ClipIndex = -1
+        Result.SpeedPercent = 100
+        Result.ModelAnimator = True
+
+    End If
+
+    Return Result
+
+End Function
+
 Public Function PlayAnimation3D(
     ByRef Animator As Core.Animator3D,
     Clip As Core.AnimationClip3D,
@@ -1157,6 +1374,140 @@ Public Function PlayAnimation3D(
 
 End Function
 
+Public Function PlayModelAnimator3D(
+    ByRef Animator As Core.Animator3D,
+    ClipIndex As Number,
+    Mode As Number,
+    Optional SpeedPercent As Number = 100
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_PLAY_MODEL_ANIMATOR,
+        Animator.Handle,
+        ClipIndex,
+        Mode,
+        SpeedPercent,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+
+        Animator.ClipIndex = ClipIndex
+        Animator.PlaybackMode = Mode
+        Animator.Looping = Mode = ANIMATION_LOOP
+        Animator.SpeedPercent = SpeedPercent
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function PlayModelAnimatorNamed3D(
+    ByRef Animator As Core.Animator3D,
+    ClipName As Text,
+    Mode As Number,
+    Optional SpeedPercent As Number = 100
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Renderer3DText(
+        TEXT_COMMAND_PLAY_MODEL_ANIMATOR,
+        ClipName,
+        Animator.Handle,
+        Mode,
+        SpeedPercent,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+
+        Animator.ClipIndex = AnimatorClipIndex3D(Animator)
+        Animator.PlaybackMode = Mode
+        Animator.Looping = Mode = ANIMATION_LOOP
+        Animator.SpeedPercent = SpeedPercent
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function CrossFadeModelAnimator3D(
+    ByRef Animator As Core.Animator3D,
+    ClipIndex As Number,
+    FadeMilliseconds As Number,
+    Mode As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_CROSSFADE_MODEL_ANIMATOR,
+        Animator.Handle,
+        ClipIndex,
+        FadeMilliseconds,
+        Mode,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+        Animator.PlaybackMode = Mode
+        Animator.Looping = Mode = ANIMATION_LOOP
+    End If
+
+    Return Result
+
+End Function
+
+Public Function CrossFadeModelAnimatorNamed3D(
+    ByRef Animator As Core.Animator3D,
+    ClipName As Text,
+    FadeMilliseconds As Number,
+    Mode As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Renderer3DText(
+        TEXT_COMMAND_CROSSFADE_MODEL_ANIMATOR,
+        ClipName,
+        Animator.Handle,
+        FadeMilliseconds,
+        Mode,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+        Animator.PlaybackMode = Mode
+        Animator.Looping = Mode = ANIMATION_LOOP
+    End If
+
+    Return Result
+
+End Function
+
 Public Function UpdateAnimator3D(Animator As Core.Animator3D, DeltaMilliseconds As Number) As Boolean
 
     Dim Result As Boolean
@@ -1184,11 +1535,213 @@ Public Function AnimatorTime3D(Animator As Core.Animator3D) As Number
 
 End Function
 
+Public Function AnimatorClipIndex3D(Animator As Core.Animator3D) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_ANIMATOR_CLIP_INDEX, Animator.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function AnimatorFadePercent3D(Animator As Core.Animator3D) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_ANIMATOR_FADE_PERCENT, Animator.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function AnimatorPendingEventCount3D(Animator As Core.Animator3D) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_ANIMATOR_PENDING_EVENT_COUNT, Animator.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
 Public Function TakeAnimationEvent3D(Animator As Core.Animator3D) As Number
 
     Dim Result As Number
 
     Result = Dispatch(COMMAND_TAKE_ANIMATOR_EVENT, Animator.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function TakeAnimatorEvent3D(Animator As Core.Animator3D) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_TAKE_ANIMATOR_EVENT, Animator.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function TakeAnimatorEventNamed3D(Animator As Core.Animator3D, Name As Text) As Number
+
+    Dim Result As Number
+
+    Result = Renderer3DText(
+        TEXT_COMMAND_TAKE_MODEL_ANIMATOR_EVENT,
+        Name,
+        Animator.Handle,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    )
+    Return Result
+
+End Function
+
+Public Function SetAnimatorRootMotion3D(
+    ByRef Animator As Core.Animator3D,
+    Mode As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_ANIMATOR_ROOT_MOTION,
+        Animator.Handle,
+        Mode,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+        Animator.RootMotionMode = Mode
+    End If
+
+    Return Result
+
+End Function
+
+Public Function TakeAnimatorRootDeltaX3D(Animator As Core.Animator3D) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_TAKE_ANIMATOR_ROOT_DELTA, Animator.Handle, 1, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function TakeAnimatorRootDeltaY3D(Animator As Core.Animator3D) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_TAKE_ANIMATOR_ROOT_DELTA, Animator.Handle, 2, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function TakeAnimatorRootDeltaZ3D(Animator As Core.Animator3D) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_TAKE_ANIMATOR_ROOT_DELTA, Animator.Handle, 3, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Read Yaw last; this completes and clears the four-component runtime delta.
+Public Function TakeAnimatorRootDeltaYaw3D(Animator As Core.Animator3D) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_TAKE_ANIMATOR_ROOT_DELTA, Animator.Handle, 4, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function TakeAnimatorRootDelta3D(Animator As Core.Animator3D) As Core.RootMotionDelta3D
+
+    Dim Result As Core.RootMotionDelta3D
+
+    Result.X = TakeAnimatorRootDeltaX3D(Animator)
+    Result.Y = TakeAnimatorRootDeltaY3D(Animator)
+    Result.Z = TakeAnimatorRootDeltaZ3D(Animator)
+    Result.Yaw = TakeAnimatorRootDeltaYaw3D(Animator)
+    Return Result
+
+End Function
+
+''' Returns a thousandths-scaled position or 3 by 3 orientation-matrix component.
+Public Function AnimatorSocketValue3D(
+    Animator As Core.Animator3D,
+    SocketIndex As Number,
+    Property As Number
+) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(
+        COMMAND_ANIMATOR_SOCKET_VALUE,
+        Animator.Handle,
+        SocketIndex,
+        Property,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    )
+    Return Result
+
+End Function
+
+''' Applies the attached object's position, rotation, and scale to the animated socket transform.
+Public Function AnimatorSocketWorldValue3D(
+    Animator As Core.Animator3D,
+    Object As Core.Object3D,
+    SocketIndex As Number,
+    Property As Number
+) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(
+        COMMAND_ANIMATOR_SOCKET_VALUE,
+        Animator.Handle,
+        SocketIndex,
+        Property,
+        Object.Handle,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    )
+    Return Result
+
+End Function
+
+Public Function AnimatorHasSocketNamed3D(
+    Animator As Core.Animator3D,
+    Model As Core.Model3D,
+    Name As Text
+) As Boolean
+
+    Dim SocketIndex As Number
+    Dim Result As Boolean
+
+    SocketIndex = ModelSocketIndex3D(Model, Name)
+    Result = Animator.ModelHandle = Model.Handle And SocketIndex >= 0
     Return Result
 
 End Function
@@ -1200,8 +1753,11 @@ Public Function StopAnimator3D(ByRef Animator As Core.Animator3D) As Boolean
     Result = Dispatch(COMMAND_STOP_ANIMATOR, Animator.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
 
     If Result Then
+
         Animator.ClipHandle = 0
+        Animator.ClipIndex = -1
         Animator.Looping = False
+
     End If
 
     Return Result
@@ -1219,8 +1775,13 @@ Public Sub DestroyAnimator3D(ByRef Animator As Core.Animator3D)
         Animator.Handle = 0
         Animator.SkeletonHandle = 0
         Animator.ClipHandle = 0
+        Animator.ModelHandle = 0
+        Animator.ClipIndex = 0
         Animator.Looping = False
         Animator.SpeedPercent = 0
+        Animator.PlaybackMode = 0
+        Animator.RootMotionMode = 0
+        Animator.ModelAnimator = False
 
     End If
 

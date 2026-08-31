@@ -4,7 +4,7 @@ using System.Numerics;
 using System.Text;
 using System.Text.Json;
 
-internal static class Sm3dV2
+internal static partial class Sm3dV2
 {
     private const int HeaderSize = 64;
     private const int DirectoryEntrySize = 32;
@@ -31,6 +31,13 @@ internal static class Sm3dV2
     private const int MaximumTextures = 128;
     private const int MaximumTexturePathBytes = 1024;
     private const int MaximumChunks = 32;
+    private const int MaximumAnimationNodes = 256;
+    private const int MaximumAnimationBones = 128;
+    private const int MaximumAnimationClips = 64;
+    private const int MaximumAnimationEventsPerClip = 64;
+    private const int MaximumAnimationSockets = 64;
+    private const int MaximumAnimationSampleRate = 60;
+    private const int MaximumAnimationDurationMilliseconds = 120000;
     private const uint NoReference = uint.MaxValue;
     private const uint GlbMagic = 0x46546C67;
     private const uint GlbJson = 0x4E4F534A;
@@ -39,6 +46,7 @@ internal static class Sm3dV2
     private const float BasisTolerance = 0.0001f;
 
     private static readonly string[] RequiredChunkIds = ["STR0", "PART", "VERT", "INDX", "MATL", "TEXR", "BOND"];
+    private static readonly string[] AnimationChunkIds = ["NODE", "SKIN", "SKEL", "CLIP", "TRAK", "AFRM", "EVNT", "SOCK", "ROOT"];
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
 
     private sealed record SourceBuffer(byte[] Bytes, int Length);
@@ -71,6 +79,9 @@ internal static class Sm3dV2
         public required uint Material { get; init; }
         public required Vector3 Minimum { get; init; }
         public required Vector3 Maximum { get; init; }
+        public int Skin { get; set; } = -1;
+        public ushort[]? Joints { get; set; }
+        public ushort[]? Weights { get; set; }
     }
 
     private sealed class Model
@@ -81,6 +92,7 @@ internal static class Sm3dV2
         public required List<TextureReference> Textures { get; init; }
         public required Vector3 Minimum { get; init; }
         public required Vector3 Maximum { get; init; }
+        public AnimationModel? Animation { get; init; }
     }
 
     private sealed class Input : IDisposable
@@ -125,12 +137,12 @@ internal static class Sm3dV2
         }
     }
 
-    public static byte[] Convert(string path)
+    public static byte[] Convert(string path, string? descriptorPath = null)
     {
         try
         {
             using var input = ReadInput(path);
-            var model = ReadModel(input);
+            var model = ReadModel(input, descriptorPath);
             return Write(model);
         }
         catch (Exception error) when (error is InvalidOperationException or ArgumentException or DecoderFallbackException or FormatException)
@@ -247,13 +259,13 @@ internal static class Sm3dV2
         }
     }
 
-    private static Model ReadModel(Input input)
+    private static Model ReadModel(Input input, string? descriptorPath)
     {
         var root = input.Document.RootElement;
         Require(root.ValueKind == JsonValueKind.Object, "SMA1112: glTF root must be an object.");
         Require(Required(Required(root, "asset"), "version").GetString() == "2.0",
             "SMA1113: only glTF 2.0 is supported.");
-        ValidateStaticProfile(root);
+        var animationProfile = ValidateProfile(root);
         var scenes = Required(root, "scenes");
         Require(scenes.ValueKind == JsonValueKind.Array && scenes.GetArrayLength() is >= 1 and <= MaximumScenes,
             $"SMA1114: the SM3D v2 static profile requires 1 to {MaximumScenes} scenes.");
@@ -335,6 +347,11 @@ internal static class Sm3dV2
         var fallbackName = firstRootIndex >= 0 && firstRootIndex < nodes.GetArrayLength()
             ? OptionalName(nodes[firstRootIndex], "Model") : "Model";
         var name = OptionalName(scenes[activeScene], fallbackName);
+        var animation = animationProfile
+            ? ReadAnimation(root, descriptorPath, nodes, activeNodes, accessors, views, parts)
+            : null;
+        Require(animationProfile || parts.All(part => part.Skin < 0 && part.Joints == null && part.Weights == null),
+            "SMA1300: static models may not contain skin attributes.");
         return new Model
         {
             Name = name,
@@ -342,7 +359,8 @@ internal static class Sm3dV2
             Materials = materials,
             Textures = textures,
             Minimum = minimum,
-            Maximum = maximum
+            Maximum = maximum,
+            Animation = animation
         };
     }
 
@@ -373,7 +391,7 @@ internal static class Sm3dV2
             var attributes = Required(primitive, "attributes");
             Require(attributes.ValueKind == JsonValueKind.Object, "SMA1256: primitive attributes must be an object.");
             foreach (var attribute in attributes.EnumerateObject())
-                Require(attribute.Name is "POSITION" or "NORMAL" or "TEXCOORD_0" or "TANGENT",
+                Require(attribute.Name is "POSITION" or "NORMAL" or "TEXCOORD_0" or "TANGENT" or "JOINTS_0" or "WEIGHTS_0",
                     $"SMA1257: unsupported primitive attribute '{attribute.Name}' would be lost.");
 
             var positions = ReadFloatAccessor(accessors, views, RequiredIndex(attributes, "POSITION"), 3,
@@ -382,6 +400,18 @@ internal static class Sm3dV2
                 "NORMAL", MaximumVerticesPerPart);
             var uvs = ReadFloatAccessor(accessors, views, RequiredIndex(attributes, "TEXCOORD_0"), 2,
                 "TEXCOORD_0", MaximumVerticesPerPart);
+            var hasJoints = attributes.TryGetProperty("JOINTS_0", out var jointsValue);
+            var hasWeights = attributes.TryGetProperty("WEIGHTS_0", out var weightsValue);
+            Require(hasJoints == hasWeights, "SMA1301: JOINTS_0 and WEIGHTS_0 must be supplied together.");
+            var skinIndex = node.TryGetProperty("skin", out var skinValue) ? skinValue.GetInt32() : -1;
+            Require((skinIndex >= 0) == hasJoints,
+                "SMA1302: a skinned mesh node must provide JOINTS_0 and WEIGHTS_0, and static nodes must not.");
+            var jointIndices = hasJoints
+                ? ReadJointAccessor(accessors, views, jointsValue.GetInt32(), positions.Length / 3)
+                : null;
+            var jointWeights = hasWeights
+                ? ReadWeightAccessor(accessors, views, weightsValue.GetInt32(), positions.Length / 3)
+                : null;
             var vertexCount = positions.Length / 3;
             Require(vertexCount == normals.Length / 3 && vertexCount == uvs.Length / 2,
                 "SMA1120: vertex attribute counts must match.");
@@ -471,16 +501,29 @@ internal static class Sm3dV2
                 Indices = indices,
                 Material = material,
                 Minimum = partMinimum,
-                Maximum = partMaximum
+                Maximum = partMaximum,
+                Skin = skinIndex,
+                Joints = jointIndices,
+                Weights = jointWeights
             });
             primitiveIndex++;
         }
     }
 
-    private static void ValidateStaticProfile(JsonElement root)
+    private static bool ValidateProfile(JsonElement root)
     {
-        RejectProperty(root, "skins", "skins");
-        RejectProperty(root, "animations", "animations");
+        var hasSkins = root.TryGetProperty("skins", out var skins);
+        var hasAnimations = root.TryGetProperty("animations", out var animations);
+        Require(hasSkins == hasAnimations,
+            "SMA1303: the production animation profile requires both skins and animations, or neither.");
+        if (hasSkins)
+        {
+            Require(skins.ValueKind == JsonValueKind.Array && skins.GetArrayLength() == 1,
+                "SMA1304: the production animation profile requires exactly one skin.");
+            Require(animations.ValueKind == JsonValueKind.Array &&
+                animations.GetArrayLength() is >= 1 and <= MaximumAnimationClips,
+                $"SMA1305: the production animation profile requires 1 to {MaximumAnimationClips} animations.");
+        }
         if (root.TryGetProperty("extensionsRequired", out var required))
         {
             Require(required.ValueKind == JsonValueKind.Array, "SMA1260: extensionsRequired must be an array.");
@@ -493,6 +536,7 @@ internal static class Sm3dV2
         ValidateOptionalCollection(root, "images", MaximumImages);
         ValidateOptionalCollection(root, "samplers", MaximumTextures);
         ValidateOptionalCollection(root, "extensionsUsed", 64);
+        return hasSkins;
     }
 
     private static void ValidateOptionalCollection(JsonElement root, string property, int maximum)
@@ -519,7 +563,6 @@ internal static class Sm3dV2
 
     private static Matrix4x4 ReadNodeTransform(JsonElement node)
     {
-        RejectProperty(node, "skin", "node skinning");
         RejectProperty(node, "weights", "node morph weights");
         RejectExtensions(node, "node");
         var hasMatrix = node.TryGetProperty("matrix", out var matrixValue);
@@ -1026,6 +1069,9 @@ internal static class Sm3dV2
         var partNames = model.Parts.Select(part => strings.Add(part.Name)).ToArray();
         var materialNames = model.Materials.Select(material => strings.Add(material.Name)).ToArray();
         var texturePaths = model.Textures.Select(texture => strings.Add(texture.Path)).ToArray();
+        var animationChunks = model.Animation == null
+            ? new List<AnimationChunkOutput>()
+            : BuildAnimationChunks(model.Animation, model.Parts, strings);
         var stringBytes = strings.Finish();
         var partBytes = new byte[model.Parts.Count * 32];
         var vertexCount = model.Parts.Sum(part => part.Vertices.Length / 12);
@@ -1089,10 +1135,15 @@ internal static class Sm3dV2
             Write32(textureBytes, offset + 4, model.Textures[index].Semantic);
         }
 
-        var chunkData = new[] { stringBytes, partBytes, vertexBytes, indexBytes, materialBytes, textureBytes, boundsBytes };
-        var chunkCounts = new[] { strings.Count, model.Parts.Count, vertexCount, indexCount, model.Materials.Count, model.Textures.Count, model.Parts.Count + 1 };
-        var chunkStrides = new[] { 0, 32, 48, 4, 80, 16, 32 };
-        var directoryBytes = checked(RequiredChunkIds.Length * DirectoryEntrySize);
+        var chunkIds = RequiredChunkIds.Concat(animationChunks.Select(chunk => chunk.Id)).ToArray();
+        var chunkData = new List<byte[]> { stringBytes, partBytes, vertexBytes, indexBytes, materialBytes, textureBytes, boundsBytes };
+        chunkData.AddRange(animationChunks.Select(chunk => chunk.Data));
+        var chunkCounts = new List<int> { strings.Count, model.Parts.Count, vertexCount, indexCount,
+            model.Materials.Count, model.Textures.Count, model.Parts.Count + 1 };
+        chunkCounts.AddRange(animationChunks.Select(chunk => chunk.Count));
+        var chunkStrides = new List<int> { 0, 32, 48, 4, 80, 16, 32 };
+        chunkStrides.AddRange(animationChunks.Select(chunk => chunk.Stride));
+        var directoryBytes = checked(chunkIds.Length * DirectoryEntrySize);
         var dataOffset = Align4(HeaderSize + directoryBytes);
         var fileSize = dataOffset + chunkData.Sum(value => Align4(value.Length));
         Require(fileSize <= MaximumFileBytes, "SMA1174: converted SM3D v2 model exceeds the 16 MiB limit.");
@@ -1101,7 +1152,7 @@ internal static class Sm3dV2
         Write16(output, 4, 2);
         Write16(output, 6, HeaderSize);
         Write32(output, 12, (uint)fileSize);
-        Write32(output, 20, (uint)RequiredChunkIds.Length);
+        Write32(output, 20, (uint)chunkIds.Length);
         Write32(output, 24, HeaderSize);
         Write32(output, 28, DirectoryEntrySize);
         Write32(output, 32, modelName);
@@ -1112,10 +1163,11 @@ internal static class Sm3dV2
         Write32(output, 52, (uint)model.Textures.Count);
 
         var current = dataOffset;
-        for (var index = 0; index < RequiredChunkIds.Length; index++)
+        for (var index = 0; index < chunkIds.Length; index++)
         {
             var directory = HeaderSize + index * DirectoryEntrySize;
-            Encoding.ASCII.GetBytes(RequiredChunkIds[index]).CopyTo(output, directory);
+            Encoding.ASCII.GetBytes(chunkIds[index]).CopyTo(output, directory);
+            Write32(output, directory + 4, index >= RequiredChunkIds.Length ? ChunkOptional : 0U);
             Write32(output, directory + 8, (uint)current);
             Write32(output, directory + 12, (uint)chunkData[index].Length);
             Write32(output, directory + 16, (uint)chunkCounts[index]);
@@ -1214,6 +1266,43 @@ internal static class Sm3dV2
             $"Bounds: {Vector(model.Minimum)} | {Vector(model.Maximum)}",
             $"Tangents: +{positive} -{negative}"
         };
+        if (model.Animation == null)
+        {
+            lines.Add("Bones: 0");
+            lines.Add("Nodes: 0");
+            lines.Add("Clips: 0");
+            lines.Add("AnimationBytes: 0");
+            lines.Add("Events: 0");
+            lines.Add("Sockets: 0");
+            lines.Add("RootMotionClips: 0");
+            lines.Add($"StaticBytes: {bytes.Length}");
+            lines.Add($"TotalBytes: {bytes.Length}");
+        }
+        else
+        {
+            var animation = model.Animation;
+            lines.Add($"Bones: {animation.Bones.Count}");
+            lines.Add($"Nodes: {animation.Nodes.Count}");
+            lines.Add($"Clips: {animation.Clips.Count}");
+            lines.Add($"AnimationBytes: {animation.PayloadBytes}");
+            for (var clipIndex = 0; clipIndex < animation.Clips.Count; clipIndex++)
+            {
+                var clip = animation.Clips[clipIndex];
+                var clipTracks = animation.Tracks.Skip(clip.FirstTrack).Take(clip.TrackCount).ToArray();
+                var clipBytes = 40 + clip.TrackCount * 48 + clip.EventCount * 20 +
+                    clipTracks.Sum(track => (track.Translation?.Length ?? 0) * 4 +
+                        (track.Rotation?.Length ?? 0) * 4 + (track.Scale?.Length ?? 0) * 4) +
+                    (clip.RootIndex < 0 ? 0 : 24);
+                lines.Add($"Clip {clipIndex}: {clip.Name} | DurationMs {clip.DurationMilliseconds} | " +
+                    $"SampleRate {clip.SampleRate} | Samples {clip.SampleCount} | Tracks {clip.TrackCount} | " +
+                    $"Bytes {clipBytes} | Loop {clip.Loop}");
+            }
+            lines.Add($"Events: {animation.Events.Count}");
+            lines.Add($"Sockets: {animation.Sockets.Count}");
+            lines.Add($"RootMotionClips: {animation.Roots.Count}");
+            lines.Add($"StaticBytes: {bytes.Length - animation.PayloadBytes}");
+            lines.Add($"TotalBytes: {bytes.Length}");
+        }
         for (var index = 0; index < model.Parts.Count; index++)
         {
             var part = model.Parts[index];
@@ -1279,6 +1368,13 @@ internal static class Sm3dV2
         foreach (var id in RequiredChunkIds)
             Require(chunks.TryGetValue(id, out var chunk) && chunk.Flags == 0,
                 $"SMA1217: required chunk '{id}' is missing or optional.");
+        var animationChunkCount = AnimationChunkIds.Count(chunks.ContainsKey);
+        Require(animationChunkCount == 0 || animationChunkCount == AnimationChunkIds.Length,
+            "SMA1417: the SM3D v2 animation chunk group must be wholly present or wholly absent.");
+        if (animationChunkCount != 0)
+            foreach (var id in AnimationChunkIds)
+                Require(chunks[id].Flags == ChunkOptional,
+                    $"SMA1418: animation chunk '{id}' must use the optional directory flag.");
 
         var strings = chunks["STR0"];
         var parts = chunks["PART"];
@@ -1422,6 +1518,9 @@ internal static class Sm3dV2
         var computedModelMaximum = new Vector3(partValues.Max(part => part.Maximum.X), partValues.Max(part => part.Maximum.Y), partValues.Max(part => part.Maximum.Z));
         Require(modelBounds.Minimum == computedModelMinimum && modelBounds.Maximum == computedModelMaximum,
             "SMA1228: model bounds do not match part bounds.");
+        var animation = animationChunkCount == 0
+            ? null
+            : ParseAnimationChunks(bytes, chunks, strings, partValues, vertexCount);
         return new Model
         {
             Name = modelName,
@@ -1429,7 +1528,8 @@ internal static class Sm3dV2
             Materials = materialValues,
             Textures = textureValues,
             Minimum = modelBounds.Minimum,
-            Maximum = modelBounds.Maximum
+            Maximum = modelBounds.Maximum,
+            Animation = animation
         };
     }
 

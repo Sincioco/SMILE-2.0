@@ -149,6 +149,11 @@ Public Type Model3D
     PbrFailure As Number
     OwnedMaterialCount As Number
     OwnedTextureCount As Number
+    HasAnimation As Boolean
+    BoneCount As Number
+    ClipCount As Number
+    SocketCount As Number
+    AnimationBytes As Number
 End Type
 
 ''' A committed hierarchy of bind-pose bone pivots.
@@ -169,8 +174,21 @@ Public Type Animator3D
     Handle As Number
     SkeletonHandle As Number
     ClipHandle As Number
+    ModelHandle As Number
+    ClipIndex As Number
     Looping As Boolean
     SpeedPercent As Number
+    PlaybackMode As Number
+    RootMotionMode As Number
+    ModelAnimator As Boolean
+End Type
+
+''' One atomically drained model-animation root-motion delta in thousandths.
+Public Type RootMotionDelta3D
+    X As Number
+    Y As Number
+    Z As Number
+    Yaw As Number
 End Type
 
 ''' A projected logical-canvas point plus its camera-space depth.

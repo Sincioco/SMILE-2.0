@@ -1,0 +1,446 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Interaction As Interaction
+
+Dim BaseCamera As Core.Camera3D
+Dim Camera As Core.Camera3D
+Dim CameraControls As Core.CameraControl3D
+Dim ActorModel As Core.Model3D
+Dim ActorObject As Core.Object3D
+Dim ReferenceObject As Core.Object3D
+Dim ActorAnimator As Core.Animator3D
+Dim ReferenceAnimator As Core.Animator3D
+Dim SocketMarker As Core.Object3D
+Dim Ground As Core.Object3D
+Dim RootMarkers[8] As Core.Object3D
+Dim RootDelta As Core.RootMotionDelta3D
+Dim Running As Boolean
+Dim FrameReady As Boolean
+Dim DiagnosticsVisible As Boolean
+Dim RootExtraction As Boolean
+Dim ApplyRootMotion As Boolean
+Dim SocketVisible As Boolean
+Dim Key As Number
+Dim SelectedClip As Number
+Dim SelectedName As Text
+Dim DestinationName As Text
+Dim LastEvent As Number
+Dim PreviousTime As Number
+Dim CurrentTime As Number
+Dim FrameMilliseconds As Number
+Dim RootMarkerIndex As Number
+Dim RootMarkerClock As Number
+Dim Index As Number
+
+Game Window "Renderer3D Animation Lab" Size 960 By 540
+
+Call Graphics3D.ResetRenderer3D()
+Call LoadAnimationLab()
+Call ResetActors()
+
+Running = True
+DiagnosticsVisible = True
+RootExtraction = True
+ApplyRootMotion = True
+SocketVisible = True
+PreviousTime = Timer()
+
+Do
+
+    Get Key Key
+
+    If Key = KEY_ESCAPE Then
+
+        Running = False
+
+    Else If Key >= KEY_1 And Key <= KEY_4 Then
+
+        SelectedClip = Key - KEY_1
+
+        Call SelectClipName()
+
+    Else If Key = KEY_TAB Then
+
+        SelectedClip = 4
+
+        Call SelectClipName()
+
+    Else If Key = KEY_ENTER Then
+
+        FrameReady = Graphics3D.PlayModelAnimator3D(
+            ActorAnimator,
+            SelectedClip,
+            PlaybackMode(SelectedClip),
+            100
+        )
+        DestinationName = ""
+
+    Else If Key = KEY_SPACE Then
+
+        FrameReady = Graphics3D.CrossFadeModelAnimator3D(
+            ActorAnimator,
+            SelectedClip,
+            240,
+            PlaybackMode(SelectedClip)
+        )
+        DestinationName = SelectedName
+
+    Else If Key = KEY_W Then
+
+        RootExtraction = Not RootExtraction
+
+        If RootExtraction Then
+            FrameReady = Graphics3D.SetAnimatorRootMotion3D(ActorAnimator, Graphics3D.ROOT_MOTION_EXTRACT)
+        Else
+            FrameReady = Graphics3D.SetAnimatorRootMotion3D(ActorAnimator, Graphics3D.ROOT_MOTION_NONE)
+        End If
+
+    Else If Key = KEY_A Then
+
+        ApplyRootMotion = Not ApplyRootMotion
+
+    Else If Key = KEY_S Then
+
+        SocketVisible = Not SocketVisible
+
+    Else If Key = KEY_D Then
+
+        DiagnosticsVisible = Not DiagnosticsVisible
+
+    Else If Key = KEY_DOWN Then
+
+        Call ResetActors()
+
+    End If
+
+    CurrentTime = Timer()
+    FrameMilliseconds = Min(50, Max(0, CurrentTime - PreviousTime))
+    PreviousTime = CurrentTime
+
+    FrameReady = Graphics3D.UpdateAnimator3D(ActorAnimator, FrameMilliseconds)
+    FrameReady = Graphics3D.UpdateAnimator3D(ReferenceAnimator, FrameMilliseconds)
+    RootDelta = Graphics3D.TakeAnimatorRootDelta3D(ActorAnimator)
+
+    If ApplyRootMotion Then
+
+        Call Graphics3D.MoveObject(
+            ActorObject,
+            RootDelta.X / 5,
+            RootDelta.Y / 5,
+            RootDelta.Z / 5
+        )
+
+        RootMarkerClock = RootMarkerClock + FrameMilliseconds
+
+        If RootMarkerClock >= 120 Then
+
+            Call Graphics3D.SetObjectPosition(
+                RootMarkers[RootMarkerIndex],
+                ActorObject.Position.X,
+                2,
+                ActorObject.Position.Z
+            )
+
+            RootMarkerIndex = (RootMarkerIndex + 1) Mod 8
+            RootMarkerClock = 0
+
+        End If
+
+    End If
+
+    LastEvent = DrainEvents(LastEvent)
+
+    If Graphics3D.AnimatorFadePercent3D(ActorAnimator) = 0 Then
+        DestinationName = ""
+    End If
+
+    Call UpdateSocketMarker()
+
+    FrameReady = Interaction.UpdateCameraControlsFromPointer(CameraControls, True, True, True)
+    FrameReady = Interaction.AdvanceCameraControls(CameraControls, 1)
+    Camera = Interaction.ApplyCameraControls(BaseCamera, CameraControls)
+    FrameReady = Graphics3D.Begin3D(Camera, 3, 6, 16)
+
+    If FrameReady Then
+
+        FrameReady = Graphics3D.DrawObject3D(Ground)
+        FrameReady = Graphics3D.DrawObject3D(ActorObject)
+        FrameReady = Graphics3D.DrawObject3D(ReferenceObject)
+
+        For Index = 0 To 7
+            FrameReady = Graphics3D.DrawObject3D(RootMarkers[Index])
+        End For
+
+        If SocketVisible Then
+            FrameReady = Graphics3D.DrawObject3D(SocketMarker)
+        End If
+
+        Call Graphics3D.End3D()
+
+    End If
+
+    Call DrawAnimationDiagnostics()
+
+    Show Screen
+
+    Running = Running And Not Game_Closed()
+
+Loop Until Not Running
+
+Call DestroyAnimationLab()
+
+Sub LoadAnimationLab()
+
+    BaseCamera = Graphics3D.DefaultCamera()
+    BaseCamera.Position.Y = 180
+    BaseCamera.Position.Z = -720
+    BaseCamera.Target.Y = 120
+
+    Call Interaction.ResetCameraControls(CameraControls)
+
+    ActorModel = Graphics3D.LoadModel3D("Assets\AnimationActor68.sm3d")
+    ActorObject = Graphics3D.CreateModelPart3D(ActorModel, 0)
+    ReferenceObject = Graphics3D.CreateModelPart3D(ActorModel, 0)
+    ActorAnimator = Graphics3D.CreateModelAnimator3D(ActorModel)
+    ReferenceAnimator = Graphics3D.CreateModelAnimator3D(ActorModel)
+    SocketMarker = Graphics3D.CreateCube3D(18)
+    Ground = Graphics3D.CreatePlane3D(820, 420)
+
+    FrameReady = Graphics3D.SetObjectAnimator3D(ActorObject, ActorAnimator)
+    FrameReady = Graphics3D.SetObjectAnimator3D(ReferenceObject, ReferenceAnimator)
+
+    Call Graphics3D.SetObjectScale(ActorObject, 20000, 20000, 20000)
+    Call Graphics3D.SetObjectScale(ReferenceObject, 20000, 20000, 20000)
+    Call Graphics3D.SetObjectColor(ActorObject, 160, 218, 255)
+    Call Graphics3D.SetObjectColor(ReferenceObject, 245, 156, 92)
+    Call Graphics3D.SetObjectColor(SocketMarker, 255, 236, 80)
+    Call Graphics3D.SetObjectColor(Ground, 28, 48, 78)
+    Call Graphics3D.SetObjectPosition(Ground, 0, -4, 120)
+
+    For Index = 0 To 7
+        RootMarkers[Index] = Graphics3D.CreateCube3D(9)
+
+        Call Graphics3D.SetObjectColor(RootMarkers[Index], 80, 230, 190)
+        Call Graphics3D.SetObjectPosition(RootMarkers[Index], -140, 2, 0)
+    End For
+
+    Call Graphics3D.ResetLights3D()
+
+    FrameReady = Graphics3D.SetAmbientLight3D(35, 45, 70, 40)
+    FrameReady = Graphics3D.SetDirectionalLight3D(-35, -70, 30, 255, 235, 205, 135)
+    FrameReady = Graphics3D.SetPointLight3D(0, 0, 260, -80, 80, 160, 255, 120, 850)
+
+End Sub
+
+Sub ResetActors()
+
+    SelectedClip = 0
+    SelectedName = "Idle"
+    DestinationName = ""
+    LastEvent = 0
+    RootMarkerIndex = 0
+    RootMarkerClock = 0
+
+    Call Graphics3D.SetObjectPosition(ActorObject, -140, 0, 80)
+    Call Graphics3D.SetObjectPosition(ReferenceObject, 140, 0, 80)
+
+    FrameReady = Graphics3D.PlayModelAnimatorNamed3D(
+        ActorAnimator,
+        "Idle",
+        Graphics3D.ANIMATION_LOOP,
+        100
+    )
+    FrameReady = Graphics3D.PlayModelAnimatorNamed3D(
+        ReferenceAnimator,
+        "Victory",
+        Graphics3D.ANIMATION_LOOP,
+        72
+    )
+    FrameReady = Graphics3D.SetAnimatorRootMotion3D(
+        ActorAnimator,
+        Graphics3D.ROOT_MOTION_EXTRACT
+    )
+
+End Sub
+
+Sub SelectClipName()
+
+    If SelectedClip = 0 Then
+        SelectedName = "Idle"
+    Else If SelectedClip = 1 Then
+        SelectedName = "Walk"
+    Else If SelectedClip = 2 Then
+        SelectedName = "Attack"
+    Else If SelectedClip = 3 Then
+        SelectedName = "Hit"
+    Else
+        SelectedName = "Victory"
+    End If
+
+End Sub
+
+Function PlaybackMode(ClipIndex As Number) As Number
+
+    Dim Result As Number
+
+    If ClipIndex <= 1 Then
+        Result = Graphics3D.ANIMATION_LOOP
+    Else
+        Result = Graphics3D.ANIMATION_HOLD
+    End If
+
+    Return Result
+
+End Function
+
+Function DrainEvents(PreviousEvent As Number) As Number
+
+    Dim EventIndex As Number
+    Dim Result As Number
+
+    Result = PreviousEvent
+    EventIndex = Graphics3D.TakeAnimatorEvent3D(ActorAnimator)
+
+    If EventIndex <> 0 Then
+
+        Do
+
+            Result = Graphics3D.ModelAnimationEventValue3D(ActorModel, EventIndex)
+            EventIndex = Graphics3D.TakeAnimatorEvent3D(ActorAnimator)
+
+        Loop Until EventIndex = 0
+
+    End If
+
+    Return Result
+
+End Function
+
+Sub UpdateSocketMarker()
+
+    Dim SocketX As Number
+    Dim SocketY As Number
+    Dim SocketZ As Number
+
+    SocketX = Graphics3D.AnimatorSocketWorldValue3D(
+        ActorAnimator,
+        ActorObject,
+        0,
+        Graphics3D.ANIMATOR_SOCKET_POSITION_X
+    )
+    SocketY = Graphics3D.AnimatorSocketWorldValue3D(
+        ActorAnimator,
+        ActorObject,
+        0,
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Y
+    )
+    SocketZ = Graphics3D.AnimatorSocketWorldValue3D(
+        ActorAnimator,
+        ActorObject,
+        0,
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Z
+    )
+
+    Call Graphics3D.SetObjectPosition(
+        SocketMarker,
+        SocketX / 1000,
+        SocketY / 1000,
+        SocketZ / 1000
+    )
+
+End Sub
+
+Sub DrawAnimationDiagnostics()
+
+    Dim ApplyValue As Number
+    Dim ExtractValue As Number
+    Dim PbrValue As Number
+
+    If ActorModel.PbrReady Then
+        PbrValue = 1
+    End If
+
+    If RootExtraction Then
+        ExtractValue = 1
+    End If
+
+    If ApplyRootMotion Then
+        ApplyValue = 1
+    End If
+
+    Fill Rectangle 0, 0, 960, 64, Rgb(3, 8, 22)
+    Draw Text "RENDERER3D ANIMATION LAB" At 18, 10 Size 21 Color CYAN
+    Draw Text "1-4/Tab Select  Enter Play  Space Crossfade  W Extract  A Apply  S Socket" At 18, 38 Size 13 Color LIGHT_GRAY
+    Draw Text "SELECTED" At 20, 82 Size 14 Color LIGHT_GRAY
+    Draw Text SelectedName At 105, 82 Size 18 Color WHITE
+
+    If DestinationName <> "" Then
+        Draw Text "CROSSFADING TO" At 20, 108 Size 14 Color LIGHT_GRAY
+        Draw Text DestinationName At 145, 108 Size 18 Color YELLOW
+    End If
+
+    If DiagnosticsVisible Then
+
+        Fill Rectangle 698, 76, 250, 364, Rgb(4, 10, 26)
+        Draw Text "MODEL / PLAYBACK" At 712, 90 Size 16 Color WHITE
+        Draw Text "Bones / Clips" At 712, 120 Size 13 Color LIGHT_GRAY
+        Draw Number ActorModel.BoneCount At 846, 120 Size 13 Color CYAN
+        Draw Number ActorModel.ClipCount At 900, 120 Size 13 Color CYAN
+        Draw Text "Current Clip" At 712, 145 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.AnimatorClipIndex3D(ActorAnimator) At 846, 145 Size 13 Color WHITE
+        Draw Text "Time Ms" At 712, 170 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.AnimatorTime3D(ActorAnimator) At 846, 170 Size 13 Color WHITE
+        Draw Text "Fade Percent" At 712, 195 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.AnimatorFadePercent3D(ActorAnimator) At 846, 195 Size 13 Color YELLOW
+        Draw Text "Pending Events" At 712, 220 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.AnimatorPendingEventCount3D(ActorAnimator) At 846, 220 Size 13 Color WHITE
+        Draw Text "Last Event Value" At 712, 245 Size 13 Color LIGHT_GRAY
+        Draw Number LastEvent At 846, 245 Size 13 Color LIGHT_GREEN
+        Draw Text "Root X / Z" At 712, 270 Size 13 Color LIGHT_GRAY
+        Draw Number RootDelta.X At 846, 270 Size 13 Color WHITE
+        Draw Number RootDelta.Z At 902, 270 Size 13 Color WHITE
+        Draw Text "Socket Y" At 712, 295 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.AnimatorSocketWorldValue3D(ActorAnimator, ActorObject, 0, Graphics3D.ANIMATOR_SOCKET_POSITION_Y) At 846, 295 Size 13 Color YELLOW
+        Draw Text "Palette Uploads" At 712, 320 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.ModelPaletteUploadCount3D() At 846, 320 Size 13 Color WHITE
+        Draw Text "Draws / Triangles" At 712, 345 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.DrawCallCount3D() At 846, 345 Size 13 Color WHITE
+        Draw Number Graphics3D.SubmittedTriangleCount3D() At 902, 345 Size 13 Color WHITE
+        Draw Text "Models / Objects" At 712, 370 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.LiveModelCount3D() At 846, 370 Size 13 Color WHITE
+        Draw Number Graphics3D.LiveObjectCount3D() At 902, 370 Size 13 Color WHITE
+        Draw Text "Animators / PBR" At 712, 395 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.LiveAnimatorCount3D() At 846, 395 Size 13 Color WHITE
+        Draw Number PbrValue At 902, 395 Size 13 Color LIGHT_GREEN
+        Draw Text "Extract / Apply" At 712, 420 Size 13 Color LIGHT_GRAY
+        Draw Number ExtractValue At 846, 420 Size 13 Color WHITE
+        Draw Number ApplyValue At 902, 420 Size 13 Color WHITE
+
+    End If
+
+    Draw Text "ACTIVE ACTOR" At 150, 466 Size 14 Color CYAN
+    Draw Text "INDEPENDENT ANIMATOR" At 390, 466 Size 14 Color ORANGE
+    Draw Text "SwordTip" At 20, 510 Size 13 Color YELLOW
+    Draw Text "Root path" At 120, 510 Size 13 Color LIGHT_GREEN
+
+End Sub
+
+Sub DestroyAnimationLab()
+
+    Call Graphics3D.DestroyObject3D(SocketMarker)
+    Call Graphics3D.DestroyObject3D(Ground)
+
+    For Index = 0 To 7
+        Call Graphics3D.DestroyObject3D(RootMarkers[Index])
+    End For
+
+    Call Graphics3D.DestroyObjectInstance3D(ActorObject)
+    Call Graphics3D.DestroyObjectInstance3D(ReferenceObject)
+    Call Graphics3D.DestroyAnimator3D(ActorAnimator)
+    Call Graphics3D.DestroyAnimator3D(ReferenceAnimator)
+    Call Graphics3D.DestroyModel3D(ActorModel)
+    Call Graphics3D.ResetRenderer3D()
+
+End Sub

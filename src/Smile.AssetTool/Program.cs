@@ -24,10 +24,9 @@ internal static class AssetTool
                 return 0;
             }
 
-            if (arguments.Length is not (4 or 6) ||
-                !arguments[0].Equals("model", StringComparison.OrdinalIgnoreCase))
+            if (arguments.Length < 4 || !arguments[0].Equals("model", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException(
-                    "usage: smileasset model <input.gltf|input.glb> [--format-version 2] -o <output.sm3d>\n" +
+                    "usage: smileasset model <input.gltf|input.glb> [--format-version 2] [--descriptor <input.sm3d.json>] -o <output.sm3d>\n" +
                     "       smileasset inspect <input.sm3d>");
 
             var outputOption = Array.IndexOf(arguments, "-o");
@@ -40,13 +39,26 @@ internal static class AssetTool
                 throw new InvalidDataException("SMA1001: model input and output must resolve to different files.");
             var extension = Path.GetExtension(input);
             var requestedV2 = extension.Equals(".glb", StringComparison.OrdinalIgnoreCase);
-
-            if (arguments.Length == 6)
+            string? descriptor = null;
+            for (var option = 2; option < outputOption;)
             {
-                if (!arguments[2].Equals("--format-version", StringComparison.OrdinalIgnoreCase) ||
-                    arguments[3] != "2")
-                    throw new InvalidDataException("SMA1001: the only supported format option is '--format-version 2'.");
-                requestedV2 = true;
+                if (arguments[option].Equals("--format-version", StringComparison.OrdinalIgnoreCase) &&
+                    option + 1 < outputOption && arguments[option + 1] == "2")
+                {
+                    requestedV2 = true;
+                    option += 2;
+                    continue;
+                }
+                if (arguments[option].Equals("--descriptor", StringComparison.OrdinalIgnoreCase) &&
+                    option + 1 < outputOption && descriptor == null)
+                {
+                    descriptor = Path.GetFullPath(arguments[option + 1]);
+                    requestedV2 = true;
+                    option += 2;
+                    continue;
+                }
+                throw new InvalidDataException(
+                    "SMA1001: supported model options are '--format-version 2' and '--descriptor <input.sm3d.json>'.");
             }
 
             if (!extension.Equals(".gltf", StringComparison.OrdinalIgnoreCase) &&
@@ -55,7 +67,7 @@ internal static class AssetTool
             if (extension.Equals(".glb", StringComparison.OrdinalIgnoreCase) && !requestedV2)
                 throw new InvalidDataException("SMA1001: GLB input requires SM3D version 2 output.");
 
-            var bytes = requestedV2 ? Sm3dV2.Convert(input) : ConvertModel(input);
+            var bytes = requestedV2 ? Sm3dV2.Convert(input, descriptor) : ConvertModel(input);
             var parent = Path.GetDirectoryName(output);
             if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
             var temporary = output + ".tmp-" + Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture);

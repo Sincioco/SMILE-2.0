@@ -36,7 +36,7 @@ Missing maps use neutral constants. Roughness is clamped to 0.045 in the shader.
 
 Blend submission order is caller order. Draw opaque and masked objects first, then submit overlapping blended objects from farthest to nearest; Renderer3D does not hide a transparent sort. PBR object transforms use a bounded positive-determinant profile: singular or mirrored transforms fail before submission with error 46 and do not increment draw or triangle counters. Positive nonsingular object scale is the M2/M3 production profile. The simple path retains its prior transform behavior.
 
-PBR and simple materials use separate built-in shader pipelines but share objects, meshes, camera, depth, animation palette, and frame lifecycle. PBR shader creation has a cached not-attempted/available/unavailable state and is attempted at most once per graphics-device/context generation. A PBR compile failure sets stable Renderer3D error 44 and leaves the simple pipeline available without per-frame retries. Reset or device/context restoration starts a new generation; retained image/material/model metadata lazily recreates GPU objects.
+PBR and simple materials use separate built-in shader pipelines but share objects, meshes, camera, depth, animation palettes, and frame lifecycle. Imported M3 animation uses the same four joint/weight influences in both pipelines: Direct3D reads the 128-matrix b1 palette and WebGL2 fetches the shared RGBA32F 4-by-128 palette texture. Palette uploads are cached by animator/revision. PBR shader creation has a cached not-attempted/available/unavailable state and is attempted at most once per graphics-device/context generation. A PBR compile failure sets stable Renderer3D error 44 and leaves the simple pipeline available without per-frame retries. Reset or device/context restoration starts a new generation; retained image/material/model metadata lazily recreates GPU objects.
 
 ## Lighting
 
@@ -61,9 +61,9 @@ A prepared texture identity is the exact retained path plus color/data usage, fi
 
 ## Limits and diagnostics
 
-The global live limits remain 128 meshes, 512 objects, 64 models, 128 textures, 128 materials, 64 skeletons, 128 clips, and 128 animators. SM3D v2 remains limited to 16 parts, 64 materials, and 128 metadata texture references; only the deduplicated owned texture count consumes the global texture pool.
+The global live limits remain 128 meshes, 512 objects, 64 models, 128 textures, 128 materials, 64 legacy skeletons, 128 legacy clips, and 128 total animators. SM3D v2 remains limited to 16 parts, 64 materials, and 128 metadata texture references; only the deduplicated owned texture count consumes the global texture pool. An animated model additionally owns at most 256 nodes, 128 bones, 64 clips, 64 events per clip, and 64 sockets inside the unchanged 16 MiB file ceiling.
 
-Numeric commands 90–97 expose PBR texture/material/light/model state, PBR/simple draw counts, PBR triangle counts, and cached pipeline/model preparation diagnostics. Text commands 2 and 3 provide geometry-only load and asynchronous-compatible explicit preparation without renumbering numeric commands 1–97. A successful `Begin3D` resets frame counters. These diagnostics are for tests and student-visible lab output; they do not expose model-owned handles or alter ownership.
+Numeric commands 90–97 expose PBR texture/material/light/model state, PBR/simple draw counts, PBR triangle counts, and cached pipeline/model preparation diagnostics. M3 appends numeric 98–109 and text 4–9 for model-owned animation; it does not renumber the PBR ABI or allocate an image command. A successful `Begin3D` resets frame counters. These diagnostics are for tests and student-visible lab output; they do not expose model-owned handles or alter ownership.
 
 ## Verification
 

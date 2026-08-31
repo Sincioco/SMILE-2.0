@@ -6,7 +6,7 @@ SMILE 2.0 keeps Renderer2D as a permanent first-class layer and adds Renderer3D 
 
 Students use ordinary modules from `Smile.Simple3D` 2.0.0:
 
-- `Core` owns `Vector3`, `Matrix4`, `Camera3D`, and `Object3D` value types.
+- `Core` owns `Vector3`, `Matrix4`, `Camera3D`, `Object3D`, `Model3D`, `Animator3D`, and `RootMotionDelta3D` value types.
 - `Math3D` owns deterministic vector and matrix helpers.
 - `Graphics3D` owns primitive/custom-mesh creation, transforms, appearance, frame submission, and explicit lifecycle.
 
@@ -18,6 +18,7 @@ The compiler has narrow game-window-only numeric, image-owning, and text-path Re
 
 - immutable position/normal/UV/joint/weight vertex and index buffers with generated or explicit normals;
 - model, look-at view, and perspective matrices;
+- legacy 32-matrix and production 128-matrix animation palettes, with the production palette in vertex constant-buffer slot b1;
 - a small built-in HLSL shader pair compiled with `d3dcompiler.lib`;
 - a separately compiled PBR-lite HLSL pipeline with tangent input, four texture channels, bounded lights, blend/depth policy, and single/double-sided raster states;
 - an output-size D24S8 depth texture recreated after device/size changes;
@@ -29,7 +30,7 @@ The compiler has narrow game-window-only numeric, image-owning, and text-path Re
 
 ## Web backend
 
-The generated four-file Web package remains exactly `index.html`, `smile-runtime.js`, `game.js`, and `smile.css`. The runtime lazily creates one offscreen WebGL2 canvas, compiles the simple and optional PBR-lite GLSL programs once, uploads the same indexed vertices, enables `DEPTH_TEST`, and draws triangle lists. PBR drawing reuses fixed matrices/light arrays, creates no typed arrays in the draw path, and restores explicit blend/depth/cull/program state before a following simple draw. `End3D` composites that canvas into the existing Canvas 2D back buffer; subsequent SMILE 2D commands therefore remain painter-order overlays.
+The generated four-file Web package remains exactly `index.html`, `smile-runtime.js`, `game.js`, and `smile.css`. The runtime lazily creates one offscreen WebGL2 canvas, compiles the simple and optional PBR-lite GLSL programs once, uploads the same indexed vertices, enables `DEPTH_TEST`, and draws triangle lists. PBR drawing reuses fixed matrices/light arrays, creates no typed arrays in the draw path, and restores explicit blend/depth/cull/program state before a following simple draw. Production animation uses one shared RGBA32F 4-by-128 vertex palette texture with cached animator/revision uploads; legacy 32-bone uniforms remain unchanged. `End3D` composites the canvas into the existing Canvas 2D back buffer; subsequent SMILE 2D commands therefore remain painter-order overlays.
 
 The Web renderer enforces the same live resource limits, rejects deleted handles, regenerates its backing dimensions with the logical canvas, and recomputes perspective aspect from the current backing width and height. WebGL2 absence returns unavailable without changing Console programs or Renderer2D behavior.
 
@@ -39,9 +40,13 @@ Cube, plane, pyramid, sphere, cylinder, and torus geometry is generated inside e
 
 Geometry should be created outside the frame loop. An owning `Object3D` destroys both its object and mesh; shared-mesh instances destroy only the object slot. Neon Cycles preallocates bounded trail objects once, updates their transforms/visibility, and performs no resource allocation per simulation step or round.
 
-The public diagnostics expose live counts, fixed capacities, handle validity, reference counts, PBR/simple draw counts, PBR triangles, bounded light state, effective sampler state, and imported ownership counts. A resource cannot be destroyed while a live dependent refers to it: objects retain meshes and materials, materials retain textures, and an SM3D v2 model atomically owns its part meshes/imported materials/imported textures. An owning object must therefore outlive its shared instances, and model-part objects must be destroyed before their model. `ResetRenderer3D` ends any active 3D pass, destroys dependents before dependencies, invalidates every handle, releases backend resources, and leaves the normal Renderer2D frame path available. Native object handles reserve nine slot bits so every entry in the 512-object pool remains reachable while retaining generation-based stale-handle rejection; smaller resource pools keep the original eight-bit layout. Web handles are never reused and deleted handles remain invalid.
+The public diagnostics expose live counts, fixed capacities, handle validity, reference counts, PBR/simple draw counts, PBR triangles, bounded light state, effective sampler state, imported ownership counts, animation capability, and palette uploads. A resource cannot be destroyed while a live dependent refers to it: objects retain meshes, materials, and optional animators; materials retain textures; and an SM3D v2 model atomically owns its part meshes, imported materials/textures, and immutable animation payload. An owning object must outlive its shared instances. Model-part objects and production model animators must be destroyed before their model. `ResetRenderer3D` ends any active 3D pass, destroys objects before animators and models, then releases materials, textures, meshes, legacy clips, and skeletons; it invalidates every handle and leaves Renderer2D available. Native object handles reserve nine slot bits so every entry in the 512-object pool remains reachable while retaining generation-based stale-handle rejection; smaller resource pools keep the original eight-bit layout. Web handles are never reused and deleted handles remain invalid.
 
 Texture and material details are documented in [Renderer3D textures and materials](renderer3d-materials.md).
+
+## Command ABI allocation
+
+The compiler bridge is append-only. Numeric commands currently occupy 1-109, image commands 1-2, and text commands 1-9. M3 adds numeric 98-109 for model animation metadata, model animators, playback/crossfade state, FIFO/root/socket operations, capability, and palette diagnostics. It adds no image command. Text commands 4-9 provide exact clip/socket/event names plus named play, crossfade, and event take. The next free IDs are numeric 110, image 3, and text 10. The positional mapping and native/Web dispatch paths are recorded in the M3 implementation report.
 
 ## Deliberate limits
 

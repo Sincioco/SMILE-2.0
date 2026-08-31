@@ -29,6 +29,11 @@
 #define SMILE_3D_MAX_ANIMATORS 128
 #define SMILE_3D_MAX_BONES 32
 #define SMILE_3D_MAX_ANIMATION_EVENTS 16
+#define SMILE_3D_MAX_MODEL_ANIMATION_NODES 256
+#define SMILE_3D_MAX_MODEL_ANIMATION_BONES 128
+#define SMILE_3D_MAX_MODEL_ANIMATION_CLIPS 64
+#define SMILE_3D_MAX_MODEL_ANIMATION_SOCKETS 64
+#define SMILE_3D_MAX_PENDING_MODEL_EVENTS 32
 #define SMILE_3D_MAX_LOCAL_LIGHTS 4
 #define SMILE_3D_MESH_HANDLE 0x10000000LL
 #define SMILE_3D_OBJECT_HANDLE 0x20000000LL
@@ -124,6 +129,8 @@ struct SmileMaterial3D
     float emissive_color[3];
 };
 
+struct SmileModelChunkV2;
+
 struct SmileModel3D
 {
     unsigned short generation;
@@ -169,6 +176,16 @@ struct SmileModel3D
     long long prepared_material_handles[SMILE_3D_MAX_MODEL_MATERIALS];
     long long prepared_texture_by_reference[SMILE_3D_MAX_MODEL_TEXTURES];
     long long owned_texture_handles[SMILE_3D_MAX_MODEL_TEXTURES];
+    unsigned char has_animation;
+    unsigned char animation_bone_count;
+    unsigned char animation_clip_count;
+    unsigned char animation_socket_count;
+    unsigned short animation_node_count;
+    unsigned short animation_event_count;
+    unsigned int animation_bytes;
+    unsigned int animation_file_bytes;
+    unsigned char* animation_data;
+    SmileModelChunkV2* animation_chunks;
 };
 
 struct SmileModelChunkV2
@@ -256,7 +273,23 @@ struct SmileAnimator3D
     unsigned int previous_time_ms;
     unsigned int speed_percent;
     unsigned int pending_event;
-    SmileMatrix3D bones[SMILE_3D_MAX_BONES];
+    unsigned char model_animation;
+    unsigned char playback_mode;
+    unsigned char destination_mode;
+    unsigned char root_motion_mode;
+    signed char clip_index;
+    signed char destination_clip;
+    unsigned char event_head;
+    unsigned char event_count;
+    long long model_handle;
+    unsigned int destination_time_ms;
+    unsigned int fade_elapsed_ms;
+    unsigned int fade_duration_ms;
+    unsigned int pose_revision;
+    unsigned int pending_events[SMILE_3D_MAX_PENDING_MODEL_EVENTS];
+    float root_delta[4];
+    SmileMatrix3D node_global[SMILE_3D_MAX_MODEL_ANIMATION_NODES];
+    SmileMatrix3D bones[SMILE_3D_MAX_MODEL_ANIMATION_BONES];
 };
 
 struct SmileConstants3D
@@ -327,6 +360,7 @@ static ID3D11VertexShader* smile_pbr_vertex_shader3d;
 static ID3D11PixelShader* smile_pbr_pixel_shader3d;
 static ID3D11InputLayout* smile_pbr_input_layout3d;
 static ID3D11Buffer* smile_pbr_constant_buffer3d;
+static ID3D11Buffer* smile_model_palette_buffer3d;
 static ID3D11DepthStencilState* smile_depth_state3d;
 static ID3D11DepthStencilState* smile_depth_read_state3d;
 static ID3D11RasterizerState* smile_raster_state3d;
@@ -352,6 +386,9 @@ static int smile_pbr_shader_available3d;
 static int smile_pbr_pipeline_state3d;
 static int smile_pbr_pipeline_failure3d;
 static long long smile_pbr_pipeline_attempt_count3d;
+static long long smile_model_palette_upload_count3d;
+static long long smile_model_palette_cached_animator3d;
+static unsigned int smile_model_palette_cached_revision3d;
 static float smile_camera_position3d[3] = { 0.0f, 300.0f, -800.0f };
 static float smile_camera_target3d[3] = { 0.0f, 0.0f, 0.0f };
 static float smile_camera_fov3d = 55.0f;
@@ -601,6 +638,16 @@ static int smile_3d_animator_reference_count(long long handle)
     return count;
 }
 
+static int smile_3d_model_animator_reference_count(const SmileModel3D* model)
+{
+    int count = 0;
+    if (model == 0) return 0;
+    for (int index = 0; index < SMILE_3D_MAX_ANIMATORS; ++index)
+        if (smile_animators3d[index].active && smile_animators3d[index].model_animation &&
+            smile_3d_model_resource(smile_animators3d[index].model_handle) == model) count++;
+    return count;
+}
+
 static int smile_3d_mesh_reference_count(long long mesh_handle)
 {
     int count = 0;
@@ -733,6 +780,7 @@ static int smile_3d_delete_model(SmileModel3D* model)
 {
     int index;
     if (model == 0) return 0;
+    if (smile_3d_model_animator_reference_count(model) != 0) return 0;
     for (index = 0; index < model->part_count; ++index)
         if (smile_3d_mesh_reference_count(model->mesh_handles[index]) != 0) return 0;
     for (index = 0; index < model->prepared_material_count; ++index)
@@ -746,7 +794,11 @@ static int smile_3d_delete_model(SmileModel3D* model)
         model->material_slots[index] = 0;
     }
     { void* strings = model->strings; smile_3d_free(strings); }
+    { void* animation = model->animation_data; smile_3d_free(animation); }
+    { void* chunks = model->animation_chunks; smile_3d_free(chunks); }
     model->strings = 0;
+    model->animation_data = 0;
+    model->animation_chunks = 0;
     model->string_bytes = 0;
     model->active = 0;
     model->part_count = 0;
@@ -787,6 +839,9 @@ static void smile_3d_delete_animator(SmileAnimator3D* animator)
     animator->skeleton_handle = 0;
     animator->clip_handle = 0;
     animator->pending_event = 0;
+    animator->model_animation = 0;
+    animator->model_handle = 0;
+    animator->event_count = 0;
     animator->generation++;
     if (animator->generation == 0) animator->generation = 1;
 }
@@ -1184,6 +1239,7 @@ static int smile_3d_clear_model_pbr(SmileModel3D* model)
     model->prepared_reference_count = 0;
     model->owned_texture_count = 0;
     model->prepared_pbr = 0;
+    model->has_animation = 0;
     return 1;
 }
 
@@ -1790,7 +1846,11 @@ static int smile_3d_model_v2_known_chunk(unsigned int id)
     return id == smile_3d_fourcc('S','T','R','0') || id == smile_3d_fourcc('P','A','R','T') ||
         id == smile_3d_fourcc('V','E','R','T') || id == smile_3d_fourcc('I','N','D','X') ||
         id == smile_3d_fourcc('M','A','T','L') || id == smile_3d_fourcc('T','E','X','R') ||
-        id == smile_3d_fourcc('B','O','N','D');
+        id == smile_3d_fourcc('B','O','N','D') || id == smile_3d_fourcc('N','O','D','E') ||
+        id == smile_3d_fourcc('S','K','I','N') || id == smile_3d_fourcc('S','K','E','L') ||
+        id == smile_3d_fourcc('C','L','I','P') || id == smile_3d_fourcc('T','R','A','K') ||
+        id == smile_3d_fourcc('A','F','R','M') || id == smile_3d_fourcc('E','V','N','T') ||
+        id == smile_3d_fourcc('S','O','C','K') || id == smile_3d_fourcc('R','O','O','T');
 }
 
 static const SmileModelChunkV2* smile_3d_model_v2_chunk(
@@ -1912,16 +1972,201 @@ static int smile_3d_model_v2_bounds(const unsigned char* value, float* output)
         output[0] <= output[3] && output[1] <= output[4] && output[2] <= output[5];
 }
 
+static int smile_3d_model_v2_animation(const unsigned char* bytes,
+    const SmileModelChunkV2* chunks, unsigned int chunk_count,
+    const SmileModelChunkV2* strings, unsigned int vertex_count,
+    SmileModelChunkV2* output, unsigned int* animation_bytes)
+{
+    const unsigned int ids[9] = {
+        smile_3d_fourcc('N','O','D','E'), smile_3d_fourcc('S','K','I','N'),
+        smile_3d_fourcc('S','K','E','L'), smile_3d_fourcc('C','L','I','P'),
+        smile_3d_fourcc('T','R','A','K'), smile_3d_fourcc('A','F','R','M'),
+        smile_3d_fourcc('E','V','N','T'), smile_3d_fourcc('S','O','C','K'),
+        smile_3d_fourcc('R','O','O','T')
+    };
+    const unsigned int strides[9] = { 64, 16, 80, 40, 48, 4, 20, 64, 24 };
+    unsigned int present = 0;
+    unsigned int index;
+    *animation_bytes = 0;
+    for (index = 0; index < 9; ++index)
+    {
+        const SmileModelChunkV2* chunk = smile_3d_model_v2_chunk(chunks, chunk_count, ids[index]);
+        if (chunk == 0) continue;
+        output[index] = *chunk;
+        present++;
+        if (chunk->flags != 1 || chunk->stride != strides[index] ||
+            chunk->count > UINT_MAX / strides[index] || chunk->length != chunk->count * strides[index]) return -1;
+        *animation_bytes += chunk->length;
+    }
+    if (present == 0) return 0;
+    if (present != 9 || output[0].count == 0 || output[0].count > SMILE_3D_MAX_MODEL_ANIMATION_NODES ||
+        output[1].count != vertex_count || output[2].count == 0 ||
+        output[2].count > SMILE_3D_MAX_MODEL_ANIMATION_BONES || output[3].count == 0 ||
+        output[3].count > SMILE_3D_MAX_MODEL_ANIMATION_CLIPS ||
+        output[4].count > SMILE_3D_MAX_MODEL_ANIMATION_NODES * SMILE_3D_MAX_MODEL_ANIMATION_CLIPS ||
+        output[5].count == 0 || output[6].count > SMILE_3D_MAX_MODEL_ANIMATION_CLIPS * 64 ||
+        output[7].count > SMILE_3D_MAX_MODEL_ANIMATION_SOCKETS ||
+        output[8].count > SMILE_3D_MAX_MODEL_ANIMATION_CLIPS) return -1;
+
+    for (index = 0; index < output[0].count; ++index)
+    {
+        const unsigned char* record = bytes + output[0].offset + index * 64;
+        int parent = (int)smile_3d_read_u32(record + 4);
+        unsigned int flags = smile_3d_read_u32(record + 8);
+        float quaternion_length = 0.0f;
+        if (smile_3d_model_v2_string(bytes, strings, smile_3d_read_u32(record), 0) == 0 ||
+            parent < -1 || parent >= (int)index || (flags & ~3U) != 0 ||
+            smile_3d_read_u32(record + 12) != 0 || smile_3d_read_u32(record + 56) != 0 ||
+            smile_3d_read_u32(record + 60) != 0) return -1;
+        for (unsigned int component = 0; component < 10; ++component)
+        {
+            float value = smile_3d_read_float(record + 16 + component * 4);
+            if (!isfinite(value)) return -1;
+            if (component >= 3 && component < 7) quaternion_length += value * value;
+        }
+        if (fabsf(quaternion_length - 1.0f) > 0.0001f ||
+            smile_3d_read_float(record + 44) <= 0.0f ||
+            fabsf(smile_3d_read_float(record + 44) - smile_3d_read_float(record + 48)) > 0.0001f ||
+            fabsf(smile_3d_read_float(record + 44) - smile_3d_read_float(record + 52)) > 0.0001f) return -1;
+    }
+
+    {
+        unsigned int root_bones = 0;
+        for (index = 0; index < output[2].count; ++index)
+        {
+            const unsigned char* record = bytes + output[2].offset + index * 80;
+            unsigned int node = smile_3d_read_u32(record);
+            int parent = (int)smile_3d_read_u32(record + 4);
+            if (node >= output[0].count || parent < -1 || parent >= (int)index ||
+                smile_3d_read_u32(record + 8) != 0 || smile_3d_read_u32(record + 12) != 0) return -1;
+            if (parent < 0) root_bones++;
+            for (unsigned int component = 0; component < 16; ++component)
+                if (!isfinite(smile_3d_read_float(record + 16 + component * 4))) return -1;
+        }
+        if (root_bones != 1) return -1;
+    }
+
+    for (index = 0; index < output[1].count; ++index)
+    {
+        const unsigned char* record = bytes + output[1].offset + index * 16;
+        unsigned int total = 0;
+        for (unsigned int influence = 0; influence < 4; ++influence)
+        {
+            unsigned int joint = smile_3d_read_u16(record + influence * 2);
+            unsigned int weight = smile_3d_read_u16(record + 8 + influence * 2);
+            if (joint >= output[2].count || (weight == 0 && joint != 0)) return -1;
+            total += weight;
+        }
+        if (total != 65535U) return -1;
+    }
+
+    for (index = 0; index < output[3].count; ++index)
+    {
+        const unsigned char* record = bytes + output[3].offset + index * 40;
+        unsigned int duration = smile_3d_read_u32(record + 4);
+        unsigned int rate = smile_3d_read_u32(record + 8);
+        unsigned int samples = smile_3d_read_u32(record + 12);
+        unsigned int first_track = smile_3d_read_u32(record + 16);
+        unsigned int tracks = smile_3d_read_u32(record + 20);
+        unsigned int first_event = smile_3d_read_u32(record + 24);
+        unsigned int events = smile_3d_read_u32(record + 28);
+        unsigned int flags = smile_3d_read_u32(record + 32);
+        unsigned int root = smile_3d_read_u32(record + 36);
+        if (smile_3d_model_v2_string(bytes, strings, smile_3d_read_u32(record), 0) == 0 ||
+            duration == 0 || duration > 120000 || rate < 15 || rate > 60 ||
+            samples != ((duration * rate + 999U) / 1000U + 1U) ||
+            first_track > output[4].count || tracks > output[4].count - first_track ||
+            first_event > output[6].count || events > 64 || events > output[6].count - first_event ||
+            flags > 1 || (root != 0xFFFFFFFFU && root >= output[8].count)) return -1;
+    }
+
+    for (index = 0; index < output[4].count; ++index)
+    {
+        const unsigned char* record = bytes + output[4].offset + index * 48;
+        unsigned int clip = smile_3d_read_u32(record);
+        unsigned int node = smile_3d_read_u32(record + 4);
+        unsigned int flags = smile_3d_read_u32(record + 8);
+        if (clip >= output[3].count || node >= output[0].count || (flags & ~63U) != 0 ||
+            smile_3d_read_u32(record + 12) != 0 || smile_3d_read_u32(record + 40) != 0 ||
+            smile_3d_read_u32(record + 44) != 0) return -1;
+        const unsigned char* clip_record = bytes + output[3].offset + clip * 40;
+        unsigned int sample_count = smile_3d_read_u32(clip_record + 12);
+        unsigned int first_track = smile_3d_read_u32(clip_record + 16);
+        unsigned int track_count = smile_3d_read_u32(clip_record + 20);
+        if (index < first_track || index >= first_track + track_count) return -1;
+        const unsigned int component_counts[3] = { 3, 4, 3 };
+        const unsigned int present_flags[3] = { 1, 4, 16 };
+        const unsigned int sampled_flags[3] = { 2, 8, 32 };
+        for (unsigned int channel = 0; channel < 3; ++channel)
+        {
+            unsigned int first = smile_3d_read_u32(record + 16 + channel * 8);
+            unsigned int count = smile_3d_read_u32(record + 20 + channel * 8);
+            unsigned int expected = (flags & sampled_flags[channel]) != 0 ? sample_count : 1;
+            if ((flags & present_flags[channel]) == 0)
+            {
+                if (first != 0xFFFFFFFFU || count != 0) return -1;
+            }
+            else if (count != expected || first > output[5].count ||
+                count > (output[5].count - first) / component_counts[channel]) return -1;
+        }
+    }
+    for (index = 0; index < output[5].count; ++index)
+        if (!isfinite(smile_3d_read_float(bytes + output[5].offset + index * 4))) return -1;
+
+    {
+        int prior_clip = -1;
+        unsigned int prior_time = 0, prior_order = 0;
+        for (index = 0; index < output[6].count; ++index)
+        {
+            const unsigned char* record = bytes + output[6].offset + index * 20;
+            unsigned int clip = smile_3d_read_u32(record);
+            unsigned int time = smile_3d_read_u32(record + 4);
+            unsigned int order = smile_3d_read_u32(record + 16);
+            if (clip >= output[3].count || time > smile_3d_read_u32(bytes + output[3].offset + clip * 40 + 4) ||
+                smile_3d_model_v2_string(bytes, strings, smile_3d_read_u32(record + 8), 0) == 0 ||
+                (prior_clip == (int)clip && (time < prior_time || (time == prior_time && order <= prior_order))) ||
+                prior_clip > (int)clip) return -1;
+            prior_clip = (int)clip; prior_time = time; prior_order = order;
+        }
+    }
+    for (index = 0; index < output[7].count; ++index)
+    {
+        const unsigned char* record = bytes + output[7].offset + index * 64;
+        if (smile_3d_model_v2_string(bytes, strings, smile_3d_read_u32(record), 0) == 0 ||
+            smile_3d_read_u32(record + 4) >= output[0].count || smile_3d_read_u32(record + 8) != 0 ||
+            smile_3d_read_u32(record + 12) != 0 || smile_3d_read_u32(record + 56) != 0 ||
+            smile_3d_read_u32(record + 60) != 0) return -1;
+        for (unsigned int component = 0; component < 10; ++component)
+            if (!isfinite(smile_3d_read_float(record + 16 + component * 4))) return -1;
+    }
+    for (index = 0; index < output[8].count; ++index)
+    {
+        const unsigned char* record = bytes + output[8].offset + index * 24;
+        unsigned int clip = smile_3d_read_u32(record);
+        if (clip >= output[3].count || smile_3d_read_u32(record + 4) >= output[0].count ||
+            smile_3d_read_u32(record + 8) < 1 || smile_3d_read_u32(record + 8) > 7 ||
+            smile_3d_read_u32(record + 12) > 1 || smile_3d_read_u32(record + 16) > 1 ||
+            smile_3d_read_u32(record + 20) != 0 ||
+            smile_3d_read_u32(bytes + output[3].offset + clip * 40 + 36) != index) return -1;
+    }
+    return 1;
+}
+
 static long long smile_3d_load_model_v2(const unsigned char* bytes, unsigned int size)
 {
     SmileModelChunkV2 chunks[SMILE_3D_MAX_MODEL_CHUNKS] = {};
     SmileModelPartV2 parts[SMILE_3D_MAX_MODEL_PARTS] = {};
     SmileModelMaterialV2 materials[SMILE_3D_MAX_MODEL_MATERIALS] = {};
     SmileModelTextureV2 textures[SMILE_3D_MAX_MODEL_TEXTURES] = {};
+    SmileModelChunkV2 animation_chunks[9] = {};
     float bounds[6] = {};
     float part_bounds[SMILE_3D_MAX_MODEL_PARTS][6] = {};
     long long mesh_handles[SMILE_3D_MAX_MODEL_PARTS] = {};
     char* strings_copy = 0;
+    unsigned char* animation_copy = 0;
+    SmileModelChunkV2* animation_chunk_copy = 0;
+    unsigned int animation_bytes = 0;
+    int animation_status = 0;
     unsigned int chunk_count, directory_end, part_count, vertex_count, index_count, material_count, texture_count;
     unsigned int model_name_offset, part_index, model_slot;
     const SmileModelChunkV2* strings;
@@ -2181,6 +2426,10 @@ static long long smile_3d_load_model_v2(const unsigned char* bytes, unsigned int
             if (computed_model[component] != bounds[component]) { smile_last_error3d = 24; return 0; }
     }
 
+    animation_status = smile_3d_model_v2_animation(bytes, chunks, chunk_count, strings,
+        vertex_count, animation_chunks, &animation_bytes);
+    if (animation_status < 0) { smile_last_error3d = 47; return 0; }
+
     if (smile_3d_live_mesh_count() + (int)part_count > SMILE_3D_MAX_MESHES)
     { smile_last_error3d = 3; return 0; }
     for (model_slot = 0; model_slot < SMILE_3D_MAX_MODELS; ++model_slot)
@@ -2189,6 +2438,15 @@ static long long smile_3d_load_model_v2(const unsigned char* bytes, unsigned int
     strings_copy = (char*)smile_3d_allocate(strings->length);
     if (strings_copy == 0) { smile_last_error3d = 4; return 0; }
     memcpy(strings_copy, bytes + strings->offset, strings->length);
+    if (animation_status > 0)
+    {
+        animation_copy = (unsigned char*)smile_3d_allocate(size);
+        animation_chunk_copy = (SmileModelChunkV2*)smile_3d_allocate(sizeof(animation_chunks));
+        if (animation_copy == 0 || animation_chunk_copy == 0)
+        { smile_last_error3d = 4; goto rollback_v2; }
+        memcpy(animation_copy, bytes, size);
+        memcpy(animation_chunk_copy, animation_chunks, sizeof(animation_chunks));
+    }
 
     for (part_index = 0; part_index < part_count; ++part_index)
     {
@@ -2212,6 +2470,19 @@ static long long smile_3d_load_model_v2(const unsigned char* bytes, unsigned int
             mesh->vertices[vertex].tangent[3] = smile_3d_read_float(source + 36);
             mesh->vertices[vertex].u = smile_3d_read_float(source + 40);
             mesh->vertices[vertex].v = smile_3d_read_float(source + 44);
+            if (animation_status > 0)
+            {
+                const unsigned char* skin = bytes + animation_chunks[1].offset +
+                    (part->first_vertex + vertex) * 16;
+                for (unsigned int influence = 0; influence < 4; ++influence)
+                {
+                    unsigned int joint = smile_3d_read_u16(skin + influence * 2);
+                    mesh->vertices[vertex].joints[influence] = (float)joint;
+                    mesh->vertices[vertex].weights[influence] =
+                        (float)smile_3d_read_u16(skin + 8 + influence * 2) / 65535.0f;
+                    if (joint > mesh->max_joint) mesh->max_joint = (unsigned char)joint;
+                }
+            }
         }
         mesh->explicit_normals = 1;
         for (unsigned int index = 0; index < part->index_count; ++index)
@@ -2234,6 +2505,21 @@ static long long smile_3d_load_model_v2(const unsigned char* bytes, unsigned int
         model->string_bytes = strings->length;
         model->strings = strings_copy;
         strings_copy = 0;
+        if (animation_status > 0)
+        {
+            model->has_animation = 1;
+            model->animation_node_count = (unsigned short)animation_chunks[0].count;
+            model->animation_bone_count = (unsigned char)animation_chunks[2].count;
+            model->animation_clip_count = (unsigned char)animation_chunks[3].count;
+            model->animation_event_count = (unsigned short)animation_chunks[6].count;
+            model->animation_socket_count = (unsigned char)animation_chunks[7].count;
+            model->animation_bytes = animation_bytes;
+            model->animation_file_bytes = size;
+            model->animation_data = animation_copy;
+            model->animation_chunks = animation_chunk_copy;
+            animation_copy = 0;
+            animation_chunk_copy = 0;
+        }
         memcpy(model->bounds, bounds, sizeof(bounds));
         for (part_index = 0; part_index < part_count; ++part_index)
         {
@@ -2273,6 +2559,8 @@ rollback_v2:
         if (mesh != 0) smile_3d_delete_mesh(mesh);
     }
     { void* allocation = strings_copy; smile_3d_free(allocation); }
+    { void* allocation = animation_copy; smile_3d_free(allocation); }
+    { void* allocation = animation_chunk_copy; smile_3d_free(allocation); }
     return 0;
 }
 
@@ -2828,10 +3116,12 @@ static int smile_3d_create_pipeline(void)
 {
     static const char* vertex_source =
         "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;float4 animation;row_major float4x4 bones[32];}"
+        "cbuffer B:register(b1){row_major float4x4 modelBones[128];}"
         "struct I{float3 p:POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;float4 j:BLENDINDICES;float4 w:BLENDWEIGHT;};"
         "struct O{float4 p:SV_POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;};"
-        "O main(I i){O o;float4 p=float4(i.p,1);float3 n=i.n;if(animation.x>.5){"
-        "float4x4 s=bones[(uint)i.j.x]*i.w.x+bones[(uint)i.j.y]*i.w.y+bones[(uint)i.j.z]*i.w.z+bones[(uint)i.j.w]*i.w.w;"
+        "O main(I i){O o;float4 p=float4(i.p,1);float3 n=i.n;if(animation.x>.5){float4x4 s;"
+        "if(animation.x>1.5)s=modelBones[(uint)i.j.x]*i.w.x+modelBones[(uint)i.j.y]*i.w.y+modelBones[(uint)i.j.z]*i.w.z+modelBones[(uint)i.j.w]*i.w.w;"
+        "else s=bones[(uint)i.j.x]*i.w.x+bones[(uint)i.j.y]*i.w.y+bones[(uint)i.j.z]*i.w.z+bones[(uint)i.j.w]*i.w.w;"
         "p=mul(p,s);n=mul(float4(n,0),s).xyz;}o.p=mul(p,mvp);o.n=normalize(mul(float4(n,0),model).xyz);o.uv=i.uv;return o;}";
     static const char* pixel_source =
         "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;float4 animation;row_major float4x4 bones[32];}"
@@ -2847,10 +3137,12 @@ static int smile_3d_create_pipeline(void)
         "float4 cameraPosition;float4 ambientLight;float4 directionalDirection;float4 directionalColor;"
         "float4 localPositionType[4];float4 localDirectionRange[4];float4 localColorIntensity[4];float4 localCone[4];"
         "float4 animation;row_major float4x4 bones[32];}"
+        "cbuffer B:register(b1){row_major float4x4 modelBones[128];}"
         "struct I{float3 p:POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;float4 j:BLENDINDICES;float4 w:BLENDWEIGHT;float4 t:TANGENT;};"
         "struct O{float4 p:SV_POSITION;float3 world:TEXCOORD1;float3 n:NORMAL;float4 t:TANGENT;float2 uv:TEXCOORD0;};"
-        "O main(I i){O o;float4 p=float4(i.p,1);float3 n=i.n;float4 t=i.t;if(animation.x>.5){"
-        "float4x4 s=bones[(uint)i.j.x]*i.w.x+bones[(uint)i.j.y]*i.w.y+bones[(uint)i.j.z]*i.w.z+bones[(uint)i.j.w]*i.w.w;"
+        "O main(I i){O o;float4 p=float4(i.p,1);float3 n=i.n;float4 t=i.t;if(animation.x>.5){float4x4 s;"
+        "if(animation.x>1.5)s=modelBones[(uint)i.j.x]*i.w.x+modelBones[(uint)i.j.y]*i.w.y+modelBones[(uint)i.j.z]*i.w.z+modelBones[(uint)i.j.w]*i.w.w;"
+        "else s=bones[(uint)i.j.x]*i.w.x+bones[(uint)i.j.y]*i.w.y+bones[(uint)i.j.z]*i.w.z+bones[(uint)i.j.w]*i.w.w;"
         "p=mul(p,s);n=mul(float4(n,0),s).xyz;t.xyz=mul(float4(t.xyz,0),s).xyz;}"
         "float4 world=mul(p,model);o.p=mul(p,mvp);o.world=world.xyz;"
         "o.n=normalize(mul(float4(n,0),normalMatrix).xyz);float3 wt=mul(float4(t.xyz,0),model).xyz;"
@@ -2923,6 +3215,8 @@ static int smile_3d_create_pipeline(void)
         buffer.Usage = D3D11_USAGE_DEFAULT;
         buffer.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         if (SUCCEEDED(result)) result = device->CreateBuffer(&buffer, 0, &smile_constant_buffer3d);
+        buffer.ByteWidth = sizeof(SmileMatrix3D) * SMILE_3D_MAX_MODEL_ANIMATION_BONES;
+        if (SUCCEEDED(result)) result = device->CreateBuffer(&buffer, 0, &smile_model_palette_buffer3d);
         depth.DepthEnable = TRUE;
         depth.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
         depth.DepthFunc = D3D11_COMPARISON_LESS;
@@ -3009,6 +3303,565 @@ static int smile_3d_create_pipeline(void)
     smile_pbr_shader_available3d =
         smile_pbr_pipeline_state3d == SMILE_3D_PBR_PIPELINE_AVAILABLE;
     return 1;
+}
+
+static const unsigned char* smile_3d_model_animation_record(
+    const SmileModel3D* model, int chunk, unsigned int index)
+{
+    if (model == 0 || !model->has_animation || model->animation_data == 0 ||
+        model->animation_chunks == 0 || chunk < 0 || chunk >= 9 ||
+        index >= model->animation_chunks[chunk].count) return 0;
+    return model->animation_data + model->animation_chunks[chunk].offset +
+        index * model->animation_chunks[chunk].stride;
+}
+
+static int smile_3d_model_clip_index(const SmileModel3D* model, const char* name)
+{
+    if (model == 0 || !model->has_animation || name == 0) return -1;
+    for (unsigned int index = 0; index < model->animation_clip_count; ++index)
+    {
+        const unsigned char* record = smile_3d_model_animation_record(model, 3, index);
+        unsigned int offset = smile_3d_read_u32(record);
+        if (offset < model->string_bytes && strcmp(model->strings + offset, name) == 0) return (int)index;
+    }
+    return -1;
+}
+
+static int smile_3d_model_socket_index(const SmileModel3D* model, const char* name)
+{
+    if (model == 0 || !model->has_animation || name == 0) return -1;
+    for (unsigned int index = 0; index < model->animation_socket_count; ++index)
+    {
+        const unsigned char* record = smile_3d_model_animation_record(model, 7, index);
+        unsigned int offset = smile_3d_read_u32(record);
+        if (offset < model->string_bytes && strcmp(model->strings + offset, name) == 0) return (int)index;
+    }
+    return -1;
+}
+
+static void smile_3d_model_channel(const SmileModel3D* model, const unsigned char* track,
+    int channel, unsigned int time_ms, unsigned int duration_ms, unsigned int rate,
+    unsigned int sample_count, float* output, unsigned int components)
+{
+    unsigned int first = smile_3d_read_u32(track + 16 + channel * 8);
+    unsigned int count = smile_3d_read_u32(track + 20 + channel * 8);
+    const unsigned char* frames = model->animation_data + model->animation_chunks[5].offset;
+    if (count == 0 || first == 0xFFFFFFFFU) return;
+    if (count == 1)
+    {
+        for (unsigned int component = 0; component < components; ++component)
+            output[component] = smile_3d_read_float(frames + (first + component) * 4);
+        return;
+    }
+    unsigned long long scaled = (unsigned long long)time_ms * rate;
+    unsigned int first_sample = (unsigned int)(scaled / 1000U);
+    float amount = (float)(scaled % 1000U) / 1000.0f;
+    if (time_ms >= duration_ms || first_sample >= sample_count - 1)
+    { first_sample = sample_count - 1; amount = 0.0f; }
+    unsigned int second_sample = first_sample + 1 < sample_count ? first_sample + 1 : first_sample;
+    if (channel == 1)
+    {
+        float dot = 0.0f;
+        for (unsigned int component = 0; component < 4; ++component)
+            dot += smile_3d_read_float(frames + (first + first_sample * 4 + component) * 4) *
+                smile_3d_read_float(frames + (first + second_sample * 4 + component) * 4);
+        float direction = dot < 0.0f ? -1.0f : 1.0f;
+        float length = 0.0f;
+        for (unsigned int component = 0; component < 4; ++component)
+        {
+            float a = smile_3d_read_float(frames + (first + first_sample * 4 + component) * 4);
+            float b = smile_3d_read_float(frames + (first + second_sample * 4 + component) * 4) * direction;
+            output[component] = smile_3d_lerp(a, b, amount);
+            length += output[component] * output[component];
+        }
+        length = sqrtf(length);
+        if (length > 0.000001f)
+            for (unsigned int component = 0; component < 4; ++component) output[component] /= length;
+    }
+    else
+    {
+        for (unsigned int component = 0; component < components; ++component)
+        {
+            float a = smile_3d_read_float(frames + (first + first_sample * components + component) * 4);
+            float b = smile_3d_read_float(frames + (first + second_sample * components + component) * 4);
+            output[component] = smile_3d_lerp(a, b, amount);
+        }
+    }
+}
+
+static void smile_3d_model_locals(const SmileModel3D* model, int clip_index, unsigned int time_ms,
+    float translation[SMILE_3D_MAX_MODEL_ANIMATION_NODES][3],
+    float rotation[SMILE_3D_MAX_MODEL_ANIMATION_NODES][4],
+    float scale[SMILE_3D_MAX_MODEL_ANIMATION_NODES][3])
+{
+    for (unsigned int node = 0; node < model->animation_node_count; ++node)
+    {
+        const unsigned char* record = smile_3d_model_animation_record(model, 0, node);
+        for (unsigned int component = 0; component < 3; ++component)
+        {
+            translation[node][component] = smile_3d_read_float(record + 16 + component * 4);
+            scale[node][component] = smile_3d_read_float(record + 44 + component * 4);
+        }
+        for (unsigned int component = 0; component < 4; ++component)
+            rotation[node][component] = smile_3d_read_float(record + 28 + component * 4);
+    }
+    if (clip_index < 0 || clip_index >= model->animation_clip_count) return;
+    const unsigned char* clip = smile_3d_model_animation_record(model, 3, (unsigned int)clip_index);
+    unsigned int duration = smile_3d_read_u32(clip + 4);
+    unsigned int rate = smile_3d_read_u32(clip + 8);
+    unsigned int samples = smile_3d_read_u32(clip + 12);
+    unsigned int first = smile_3d_read_u32(clip + 16);
+    unsigned int count = smile_3d_read_u32(clip + 20);
+    for (unsigned int index = first; index < first + count; ++index)
+    {
+        const unsigned char* track = smile_3d_model_animation_record(model, 4, index);
+        unsigned int node = smile_3d_read_u32(track + 4);
+        unsigned int flags = smile_3d_read_u32(track + 8);
+        if ((flags & 1U) != 0) smile_3d_model_channel(model, track, 0, time_ms, duration,
+            rate, samples, translation[node], 3);
+        if ((flags & 4U) != 0) smile_3d_model_channel(model, track, 1, time_ms, duration,
+            rate, samples, rotation[node], 4);
+        if ((flags & 16U) != 0) smile_3d_model_channel(model, track, 2, time_ms, duration,
+            rate, samples, scale[node], 3);
+    }
+}
+
+static void smile_3d_update_model_pose(SmileAnimator3D* animator)
+{
+    SmileModel3D* model = smile_3d_model_resource(animator->model_handle);
+    float translation[SMILE_3D_MAX_MODEL_ANIMATION_NODES][3] = {};
+    float rotation[SMILE_3D_MAX_MODEL_ANIMATION_NODES][4] = {};
+    float scale[SMILE_3D_MAX_MODEL_ANIMATION_NODES][3] = {};
+    float destination_translation[SMILE_3D_MAX_MODEL_ANIMATION_NODES][3] = {};
+    float destination_rotation[SMILE_3D_MAX_MODEL_ANIMATION_NODES][4] = {};
+    float destination_scale[SMILE_3D_MAX_MODEL_ANIMATION_NODES][3] = {};
+    if (model == 0 || !model->has_animation) return;
+    smile_3d_model_locals(model, animator->clip_index, animator->time_ms,
+        translation, rotation, scale);
+    if (animator->destination_clip >= 0)
+    {
+        smile_3d_model_locals(model, animator->destination_clip, animator->destination_time_ms,
+            destination_translation, destination_rotation, destination_scale);
+        float amount = animator->fade_duration_ms == 0 ? 1.0f :
+            (float)animator->fade_elapsed_ms / (float)animator->fade_duration_ms;
+        if (amount > 1.0f) amount = 1.0f;
+        for (unsigned int node = 0; node < model->animation_node_count; ++node)
+        {
+            for (unsigned int component = 0; component < 3; ++component)
+            {
+                translation[node][component] = smile_3d_lerp(translation[node][component],
+                    destination_translation[node][component], amount);
+                scale[node][component] = smile_3d_lerp(scale[node][component],
+                    destination_scale[node][component], amount);
+            }
+            float dot = 0.0f;
+            for (unsigned int component = 0; component < 4; ++component)
+                dot += rotation[node][component] * destination_rotation[node][component];
+            float direction = dot < 0.0f ? -1.0f : 1.0f;
+            float length = 0.0f;
+            for (unsigned int component = 0; component < 4; ++component)
+            {
+                rotation[node][component] = smile_3d_lerp(rotation[node][component],
+                    destination_rotation[node][component] * direction, amount);
+                length += rotation[node][component] * rotation[node][component];
+            }
+            length = sqrtf(length);
+            if (length > 0.000001f)
+                for (unsigned int component = 0; component < 4; ++component)
+                    rotation[node][component] /= length;
+        }
+    }
+    if (animator->root_motion_mode != 0 && animator->clip_index >= 0)
+    {
+        const unsigned char* clip = smile_3d_model_animation_record(model, 3, animator->clip_index);
+        unsigned int root_index = smile_3d_read_u32(clip + 36);
+        if (root_index != 0xFFFFFFFFU)
+        {
+            const unsigned char* root = smile_3d_model_animation_record(model, 8, root_index);
+            unsigned int node = smile_3d_read_u32(root + 4);
+            unsigned int axes = smile_3d_read_u32(root + 8);
+            if (smile_3d_read_u32(root + 16) != 0)
+            {
+                const unsigned char* bind = smile_3d_model_animation_record(model, 0, node);
+                for (unsigned int component = 0; component < 3; ++component)
+                    if ((axes & (1U << component)) != 0)
+                        translation[node][component] = smile_3d_read_float(bind + 16 + component * 4);
+                if (smile_3d_read_u32(root + 12) != 0)
+                {
+                    float twist_length = sqrtf(rotation[node][1] * rotation[node][1] +
+                        rotation[node][3] * rotation[node][3]);
+                    float twist_y = twist_length > 0.000001f ? rotation[node][1] / twist_length : 0.0f;
+                    float twist_w = twist_length > 0.000001f ? rotation[node][3] / twist_length : 1.0f;
+                    float swing[4] = {
+                        rotation[node][0] * twist_w + rotation[node][2] * twist_y,
+                        -rotation[node][3] * twist_y + rotation[node][1] * twist_w,
+                        -rotation[node][0] * twist_y + rotation[node][2] * twist_w,
+                        rotation[node][3] * twist_w + rotation[node][1] * twist_y
+                    };
+                    float bind_y = smile_3d_read_float(bind + 32);
+                    float bind_w = smile_3d_read_float(bind + 40);
+                    float bind_length = sqrtf(bind_y * bind_y + bind_w * bind_w);
+                    bind_y = bind_length > 0.000001f ? bind_y / bind_length : 0.0f;
+                    bind_w = bind_length > 0.000001f ? bind_w / bind_length : 1.0f;
+                    rotation[node][0] = swing[0] * bind_w - swing[2] * bind_y;
+                    rotation[node][1] = swing[3] * bind_y + swing[1] * bind_w;
+                    rotation[node][2] = swing[0] * bind_y + swing[2] * bind_w;
+                    rotation[node][3] = swing[3] * bind_w - swing[1] * bind_y;
+                }
+            }
+        }
+    }
+    for (unsigned int node = 0; node < model->animation_node_count; ++node)
+    {
+        const unsigned char* record = smile_3d_model_animation_record(model, 0, node);
+        int parent = (int)smile_3d_read_u32(record + 4);
+        SmileMatrix3D local = smile_3d_pose(translation[node][0], translation[node][1], translation[node][2],
+            rotation[node][0], rotation[node][1], rotation[node][2], rotation[node][3],
+            scale[node][0], scale[node][1], scale[node][2]);
+        animator->node_global[node] = parent < 0 ? local : smile_3d_multiply(local, animator->node_global[parent]);
+    }
+    for (unsigned int bone = 0; bone < model->animation_bone_count; ++bone)
+    {
+        const unsigned char* record = smile_3d_model_animation_record(model, 2, bone);
+        unsigned int node = smile_3d_read_u32(record);
+        SmileMatrix3D inverse = {};
+        for (unsigned int component = 0; component < 16; ++component)
+            inverse.m[component] = smile_3d_read_float(record + 16 + component * 4);
+        animator->bones[bone] = smile_3d_multiply(inverse, animator->node_global[node]);
+    }
+    for (unsigned int bone = model->animation_bone_count;
+        bone < SMILE_3D_MAX_MODEL_ANIMATION_BONES; ++bone) animator->bones[bone] = smile_3d_identity();
+    animator->pose_revision++;
+    if (animator->pose_revision == 0) animator->pose_revision = 1;
+}
+
+static int smile_3d_queue_model_event_range(SmileAnimator3D* animator, SmileModel3D* model,
+    unsigned int first, unsigned int count, unsigned int minimum, unsigned int maximum,
+    int include_zero)
+{
+    for (unsigned int ordinal = 0; ordinal < count; ++ordinal)
+    {
+        unsigned int event_index = first + ordinal;
+        const unsigned char* event_record = smile_3d_model_animation_record(model, 6, event_index);
+        unsigned int time = smile_3d_read_u32(event_record + 4);
+        if (!((include_zero && time == 0) || (time > minimum && time <= maximum))) continue;
+        if (animator->event_count >= SMILE_3D_MAX_PENDING_MODEL_EVENTS)
+        { smile_last_error3d = 49; return 0; }
+        unsigned int tail = (animator->event_head + animator->event_count) % SMILE_3D_MAX_PENDING_MODEL_EVENTS;
+        animator->pending_events[tail] = event_index;
+        animator->event_count++;
+    }
+    return 1;
+}
+
+static void smile_3d_queue_model_events(SmileAnimator3D* animator, SmileModel3D* model,
+    int clip_index, unsigned int previous, unsigned int current, unsigned int advance, int mode)
+{
+    if (clip_index < 0) return;
+    const unsigned char* clip = smile_3d_model_animation_record(model, 3, clip_index);
+    unsigned int duration = smile_3d_read_u32(clip + 4);
+    unsigned int first = smile_3d_read_u32(clip + 24);
+    unsigned int count = smile_3d_read_u32(clip + 28);
+    if (count == 0) return;
+    unsigned int wraps = mode == 1
+        ? (unsigned int)(((unsigned long long)previous + advance) / duration) : 0;
+    if (wraps == 0)
+    {
+        smile_3d_queue_model_event_range(animator, model, first, count, previous, current, 0);
+        return;
+    }
+    if (!smile_3d_queue_model_event_range(animator, model, first, count, previous, duration, 0)) return;
+    for (unsigned int wrap = 1; wrap <= wraps; ++wrap)
+    {
+        unsigned int maximum = wrap < wraps ? duration : current;
+        if (!smile_3d_queue_model_event_range(animator, model, first, count, 0, maximum, 1)) return;
+    }
+}
+
+static long long smile_3d_create_model_animator(long long model_handle)
+{
+    SmileModel3D* model = smile_3d_model_resource(model_handle);
+    if (model == 0 || !model->has_animation || !smile_3d_create_pipeline() ||
+        smile_model_palette_buffer3d == 0) { smile_last_error3d = 48; return 0; }
+    int slot;
+    for (slot = 0; slot < SMILE_3D_MAX_ANIMATORS; ++slot)
+        if (!smile_animators3d[slot].active) break;
+    if (slot == SMILE_3D_MAX_ANIMATORS) { smile_last_error3d = 34; return 0; }
+    SmileAnimator3D* animator = &smile_animators3d[slot];
+    unsigned short generation = animator->generation == 0 ? 1 : animator->generation;
+    ZeroMemory(animator, sizeof(*animator));
+    animator->generation = generation;
+    animator->active = 1;
+    animator->model_animation = 1;
+    animator->model_handle = model_handle;
+    animator->clip_index = -1;
+    animator->destination_clip = -1;
+    animator->speed_percent = 100;
+    smile_3d_update_model_pose(animator);
+    return smile_3d_handle(SMILE_3D_ANIMATOR_HANDLE, slot, animator->generation);
+}
+
+static int smile_3d_play_model_animator(SmileAnimator3D* animator, int clip_index,
+    int mode, unsigned int speed_percent)
+{
+    SmileModel3D* model = animator == 0 ? 0 : smile_3d_model_resource(animator->model_handle);
+    if (animator == 0 || !animator->model_animation || model == 0 || clip_index < 0 ||
+        clip_index >= model->animation_clip_count || mode < 1 || mode > 3 ||
+        speed_percent == 0 || speed_percent > 1000) { smile_last_error3d = 48; return 0; }
+    animator->clip_index = (signed char)clip_index;
+    animator->destination_clip = -1;
+    animator->playback_mode = (unsigned char)mode;
+    animator->speed_percent = speed_percent;
+    animator->time_ms = 0;
+    animator->previous_time_ms = 0;
+    animator->complete = 0;
+    animator->fade_elapsed_ms = animator->fade_duration_ms = 0;
+    ZeroMemory(animator->root_delta, sizeof(animator->root_delta));
+    smile_3d_update_model_pose(animator);
+    return 1;
+}
+
+static int smile_3d_crossfade_model_animator(SmileAnimator3D* animator, int clip_index,
+    unsigned int fade_ms, int mode)
+{
+    SmileModel3D* model = animator == 0 ? 0 : smile_3d_model_resource(animator->model_handle);
+    if (animator == 0 || !animator->model_animation || model == 0 || clip_index < 0 ||
+        clip_index >= model->animation_clip_count || fade_ms > 600000 || mode < 1 || mode > 3)
+    { smile_last_error3d = 48; return 0; }
+    if (animator->clip_index < 0 || fade_ms == 0)
+        return smile_3d_play_model_animator(animator, clip_index, mode, animator->speed_percent);
+    animator->destination_clip = (signed char)clip_index;
+    animator->destination_mode = (unsigned char)mode;
+    animator->destination_time_ms = 0;
+    animator->fade_elapsed_ms = 0;
+    animator->fade_duration_ms = fade_ms;
+    animator->complete = 0;
+    ZeroMemory(animator->root_delta, sizeof(animator->root_delta));
+    smile_3d_update_model_pose(animator);
+    return 1;
+}
+
+static unsigned int smile_3d_advance_model_time(const SmileModel3D* model, int clip_index,
+    unsigned int time, unsigned int advance, int mode, unsigned char* complete, unsigned int* wraps)
+{
+    const unsigned char* clip = smile_3d_model_animation_record(model, 3, clip_index);
+    unsigned int duration = smile_3d_read_u32(clip + 4);
+    unsigned long long total = (unsigned long long)time + advance;
+    *wraps = 0;
+    if (mode == 1)
+    {
+        *wraps = (unsigned int)(total / duration);
+        *complete = 0;
+        return (unsigned int)(total % duration);
+    }
+    *complete = total >= duration;
+    return (unsigned int)(total >= duration ? duration : total);
+}
+
+static int smile_3d_model_root_sample(const SmileModel3D* model, int clip_index,
+    unsigned int time_ms, float* value, unsigned int* components)
+{
+    if (model == 0 || clip_index < 0 || clip_index >= model->animation_clip_count) return 0;
+    const unsigned char* clip = smile_3d_model_animation_record(model, 3, clip_index);
+    unsigned int root_index = smile_3d_read_u32(clip + 36);
+    if (root_index == 0xFFFFFFFFU) return 0;
+    const unsigned char* root = smile_3d_model_animation_record(model, 8, root_index);
+    unsigned int node = smile_3d_read_u32(root + 4);
+    const unsigned char* node_record = smile_3d_model_animation_record(model, 0, node);
+    for (unsigned int component = 0; component < 3; ++component)
+        value[component] = smile_3d_read_float(node_record + 16 + component * 4);
+    float rotation[4] = {
+        smile_3d_read_float(node_record + 28), smile_3d_read_float(node_record + 32),
+        smile_3d_read_float(node_record + 36), smile_3d_read_float(node_record + 40)
+    };
+    unsigned int first = smile_3d_read_u32(clip + 16);
+    unsigned int count = smile_3d_read_u32(clip + 20);
+    for (unsigned int index = first; index < first + count; ++index)
+    {
+        const unsigned char* track = smile_3d_model_animation_record(model, 4, index);
+        if (smile_3d_read_u32(track + 4) == node && (smile_3d_read_u32(track + 8) & 1U) != 0)
+            smile_3d_model_channel(model, track, 0, time_ms, smile_3d_read_u32(clip + 4),
+                smile_3d_read_u32(clip + 8), smile_3d_read_u32(clip + 12), value, 3);
+        if (smile_3d_read_u32(track + 4) == node && (smile_3d_read_u32(track + 8) & 4U) != 0)
+            smile_3d_model_channel(model, track, 1, time_ms, smile_3d_read_u32(clip + 4),
+                smile_3d_read_u32(clip + 8), smile_3d_read_u32(clip + 12), rotation, 4);
+    }
+    value[3] = smile_3d_read_u32(root + 12) == 0 ? 0.0f :
+        atan2f(2.0f * (rotation[3] * rotation[1] + rotation[0] * rotation[2]),
+            1.0f - 2.0f * (rotation[1] * rotation[1] + rotation[2] * rotation[2])) *
+        180.0f / SMILE_3D_PI;
+    *components = smile_3d_read_u32(root + 8) |
+        (smile_3d_read_u32(root + 12) == 0 ? 0U : 8U);
+    return 1;
+}
+
+static float smile_3d_root_delta(float current, float previous, int angle)
+{
+    float result = current - previous;
+    if (angle)
+    {
+        while (result > 180.0f) result -= 360.0f;
+        while (result < -180.0f) result += 360.0f;
+    }
+    return result;
+}
+
+static int smile_3d_update_model_animator(SmileAnimator3D* animator, unsigned int delta_ms)
+{
+    SmileModel3D* model = animator == 0 ? 0 : smile_3d_model_resource(animator->model_handle);
+    if (animator == 0 || !animator->model_animation || model == 0 || delta_ms > 600000)
+    { smile_last_error3d = 48; return 0; }
+    if (animator->clip_index < 0) { smile_3d_update_model_pose(animator); return 1; }
+    unsigned int advance = (unsigned int)((unsigned long long)delta_ms * animator->speed_percent / 100U);
+    int motion_clip = animator->destination_clip >= 0 ? animator->destination_clip : animator->clip_index;
+    unsigned int motion_previous_time = animator->destination_clip >= 0
+        ? animator->destination_time_ms : animator->time_ms;
+    float root_previous[4] = {}, root_current[4] = {}, root_start[4] = {}, root_end[4] = {};
+    unsigned int root_components = 0;
+    int has_root = animator->root_motion_mode != 0 &&
+        smile_3d_model_root_sample(model, motion_clip, motion_previous_time, root_previous, &root_components);
+    unsigned int motion_wraps = 0;
+    if (animator->destination_clip >= 0)
+    {
+        unsigned int previous = animator->destination_time_ms;
+        unsigned int wraps = 0;
+        unsigned char complete = 0;
+        animator->destination_time_ms = smile_3d_advance_model_time(model, animator->destination_clip,
+            animator->destination_time_ms, advance, animator->destination_mode, &complete, &wraps);
+        motion_wraps = wraps;
+        smile_3d_queue_model_events(animator, model, animator->destination_clip, previous,
+            animator->destination_time_ms, advance, animator->destination_mode);
+        animator->fade_elapsed_ms = animator->fade_elapsed_ms > UINT_MAX - delta_ms
+            ? UINT_MAX : animator->fade_elapsed_ms + delta_ms;
+        if (animator->fade_elapsed_ms >= animator->fade_duration_ms)
+        {
+            animator->clip_index = animator->destination_clip;
+            animator->playback_mode = animator->destination_mode;
+            animator->time_ms = animator->destination_time_ms;
+            animator->destination_clip = -1;
+            animator->fade_elapsed_ms = animator->fade_duration_ms = 0;
+            animator->complete = complete;
+        }
+    }
+    else
+    {
+        animator->previous_time_ms = animator->time_ms;
+        unsigned int wraps = 0;
+        animator->time_ms = smile_3d_advance_model_time(model, animator->clip_index,
+            animator->time_ms, advance, animator->playback_mode, &animator->complete, &wraps);
+        motion_wraps = wraps;
+        smile_3d_queue_model_events(animator, model, animator->clip_index, animator->previous_time_ms,
+            animator->time_ms, advance, animator->playback_mode);
+    }
+    if (has_root)
+    {
+        unsigned int motion_current_time = animator->destination_clip >= 0
+            ? animator->destination_time_ms : animator->time_ms;
+        unsigned int ignored_axes = 0;
+        smile_3d_model_root_sample(model, motion_clip, motion_current_time, root_current, &ignored_axes);
+        if (motion_wraps != 0)
+        {
+            const unsigned char* clip = smile_3d_model_animation_record(model, 3, motion_clip);
+            smile_3d_model_root_sample(model, motion_clip, 0, root_start, &ignored_axes);
+            smile_3d_model_root_sample(model, motion_clip, smile_3d_read_u32(clip + 4), root_end, &ignored_axes);
+        }
+        for (unsigned int component = 0; component < 4; ++component)
+            if ((root_components & (1U << component)) != 0)
+                animator->root_delta[component] += motion_wraps != 0
+                    ? smile_3d_root_delta(root_end[component], root_previous[component], component == 3) +
+                        (motion_wraps - 1U) * smile_3d_root_delta(root_end[component],
+                            root_start[component], component == 3) +
+                        smile_3d_root_delta(root_current[component], root_start[component], component == 3)
+                    : smile_3d_root_delta(root_current[component], root_previous[component], component == 3);
+    }
+    smile_3d_update_model_pose(animator);
+    return 1;
+}
+
+static long long smile_3d_model_animation_value(SmileModel3D* model,
+    long long property, long long index)
+{
+    if (model == 0) { smile_last_error3d = 5; return 0; }
+    if (property == 1) return model->has_animation;
+    if (property == 2) return model->animation_bone_count;
+    if (property == 3) return model->animation_clip_count;
+    if (property == 4) return model->animation_socket_count;
+    if (property == 5) return model->animation_bytes;
+    if (!model->has_animation) return 0;
+    if (property == 6 || property == 7)
+    {
+        if (index < 0 || index >= model->animation_clip_count) { smile_last_error3d = 48; return 0; }
+        const unsigned char* clip = smile_3d_model_animation_record(model, 3, (unsigned int)index);
+        return property == 6 ? smile_3d_read_u32(clip + 4) : smile_3d_read_u32(clip + 8);
+    }
+    if (property == 8) return model->animation_event_count;
+    if (property == 9) return model->animation_node_count;
+    if (property == 10)
+    {
+        if (index <= 0 || index > model->animation_event_count) { smile_last_error3d = 48; return 0; }
+        return (int)smile_3d_read_u32(smile_3d_model_animation_record(model, 6,
+            (unsigned int)index - 1) + 12);
+    }
+    smile_last_error3d = 48;
+    return 0;
+}
+
+static long long smile_3d_take_model_event(SmileAnimator3D* animator, const char* name)
+{
+    SmileModel3D* model = animator == 0 ? 0 : smile_3d_model_resource(animator->model_handle);
+    if (animator == 0 || !animator->model_animation || model == 0) return 0;
+    for (unsigned int ordinal = 0; ordinal < animator->event_count; ++ordinal)
+    {
+        unsigned int queue = (animator->event_head + ordinal) % SMILE_3D_MAX_PENDING_MODEL_EVENTS;
+        unsigned int event_index = animator->pending_events[queue];
+        const unsigned char* record = smile_3d_model_animation_record(model, 6, event_index);
+        unsigned int name_offset = smile_3d_read_u32(record + 8);
+        if (name != 0 && strcmp(model->strings + name_offset, name) != 0) continue;
+        for (unsigned int move = ordinal; move + 1 < animator->event_count; ++move)
+        {
+            unsigned int destination = (animator->event_head + move) % SMILE_3D_MAX_PENDING_MODEL_EVENTS;
+            unsigned int source = (animator->event_head + move + 1) % SMILE_3D_MAX_PENDING_MODEL_EVENTS;
+            animator->pending_events[destination] = animator->pending_events[source];
+        }
+        animator->event_count--;
+        return event_index + 1;
+    }
+    return 0;
+}
+
+static long long smile_3d_model_socket_value(SmileAnimator3D* animator,
+    long long socket_index, long long property, long long object_handle)
+{
+    SmileModel3D* model = animator == 0 ? 0 : smile_3d_model_resource(animator->model_handle);
+    if (animator == 0 || !animator->model_animation || model == 0 || socket_index < 0 ||
+        socket_index >= model->animation_socket_count) { smile_last_error3d = 48; return 0; }
+    const unsigned char* socket = smile_3d_model_animation_record(model, 7, (unsigned int)socket_index);
+    unsigned int node = smile_3d_read_u32(socket + 4);
+    SmileMatrix3D local = smile_3d_pose(smile_3d_read_float(socket + 16),
+        smile_3d_read_float(socket + 20), smile_3d_read_float(socket + 24),
+        smile_3d_read_float(socket + 28), smile_3d_read_float(socket + 32),
+        smile_3d_read_float(socket + 36), smile_3d_read_float(socket + 40),
+        smile_3d_read_float(socket + 44), smile_3d_read_float(socket + 48),
+        smile_3d_read_float(socket + 52));
+    SmileMatrix3D value = smile_3d_multiply(local, animator->node_global[node]);
+    if (object_handle != 0)
+    {
+        SmileObject3D* object = smile_3d_object(object_handle);
+        if (object == 0 || object->animator_handle !=
+            smile_3d_handle(SMILE_3D_ANIMATOR_HANDLE,
+                (int)(animator - smile_animators3d), animator->generation))
+        { smile_last_error3d = 48; return 0; }
+        value = smile_3d_multiply(value, smile_3d_model(object));
+    }
+    if (property >= 1 && property <= 3)
+        return (long long)llroundf(value.m[11 + property] * 1000.0f);
+    if (property >= 4 && property <= 12)
+    {
+        static const unsigned int fields[9] = { 0, 1, 2, 4, 5, 6, 8, 9, 10 };
+        return (long long)llroundf(value.m[fields[property - 4]] * 1000.0f);
+    }
+    smile_last_error3d = 48;
+    return 0;
 }
 
 static float smile_3d_linear_determinant(const SmileMatrix3D& model)
@@ -3171,6 +4024,31 @@ static int smile_3d_upload_texture(SmileTexture3D* texture)
     return 1;
 }
 
+static int smile_3d_model_owns_mesh(const SmileModel3D* model, const SmileMesh3D* mesh)
+{
+    if (model == 0 || mesh == 0) return 0;
+    for (unsigned int part = 0; part < model->part_count; ++part)
+        if (smile_3d_mesh(model->mesh_handles[part]) == mesh) return 1;
+    return 0;
+}
+
+static int smile_3d_upload_model_palette(ID3D11DeviceContext* context,
+    long long animator_handle, SmileAnimator3D* animator)
+{
+    if (animator == 0 || !animator->model_animation) return 1;
+    if (context == 0 || smile_model_palette_buffer3d == 0) { smile_last_error3d = 48; return 0; }
+    if (smile_model_palette_cached_animator3d != animator_handle ||
+        smile_model_palette_cached_revision3d != animator->pose_revision)
+    {
+        context->UpdateSubresource(smile_model_palette_buffer3d, 0, 0, animator->bones, 0, 0);
+        smile_model_palette_cached_animator3d = animator_handle;
+        smile_model_palette_cached_revision3d = animator->pose_revision;
+        smile_model_palette_upload_count3d++;
+    }
+    context->VSSetConstantBuffers(1, 1, &smile_model_palette_buffer3d);
+    return 1;
+}
+
 static int smile_3d_begin(long long red, long long green, long long blue)
 {
     ID3D11DeviceContext* context;
@@ -3239,14 +4117,21 @@ static int smile_3d_draw_pbr(SmileObject3D* object, SmileMesh3D* mesh, SmileMate
     if (object->animator_handle != 0)
     {
         animator = smile_3d_animator(object->animator_handle);
-        SmileSkeleton3D* skeleton = animator == 0 ? 0 : smile_3d_skeleton(animator->skeleton_handle);
-        if (animator == 0 || skeleton == 0 || mesh->max_joint >= skeleton->bone_count)
-        { smile_last_error3d = 36; return 0; }
-        SmileAnimationClip3D* clip = smile_3d_clip(animator->clip_handle);
-        if (clip != 0 && !clip->pbr_scale_safe)
+        if (animator != 0 && animator->model_animation)
         {
-            smile_last_error3d = 45;
-            return 0;
+            SmileModel3D* model = smile_3d_model_resource(animator->model_handle);
+            if (model == 0 || !smile_3d_model_owns_mesh(model, mesh) ||
+                mesh->max_joint >= model->animation_bone_count)
+            { smile_last_error3d = 36; return 0; }
+        }
+        else
+        {
+            SmileSkeleton3D* skeleton = animator == 0 ? 0 : smile_3d_skeleton(animator->skeleton_handle);
+            if (animator == 0 || skeleton == 0 || mesh->max_joint >= skeleton->bone_count)
+            { smile_last_error3d = 36; return 0; }
+            SmileAnimationClip3D* clip = smile_3d_clip(animator->clip_handle);
+            if (clip != 0 && !clip->pbr_scale_safe)
+            { smile_last_error3d = 45; return 0; }
         }
     }
     for (int semantic = 0; semantic < 4; ++semantic)
@@ -3296,7 +4181,7 @@ static int smile_3d_draw_pbr(SmileObject3D* object, SmileMesh3D* mesh, SmileMate
         constants.local_cone[light][0] = smile_local_lights3d[light].inner_cosine;
         constants.local_cone[light][1] = smile_local_lights3d[light].outer_cosine;
     }
-    constants.animation[0] = animator == 0 ? 0.0f : 1.0f;
+    constants.animation[0] = animator == 0 ? 0.0f : (animator->model_animation ? 2.0f : 1.0f);
     for (int bone = 0; bone < SMILE_3D_MAX_BONES; ++bone)
         constants.bones[bone] = animator == 0 ? smile_3d_identity() : animator->bones[bone];
     context->UpdateSubresource(smile_pbr_constant_buffer3d, 0, 0, &constants, 0, 0);
@@ -3310,6 +4195,7 @@ static int smile_3d_draw_pbr(SmileObject3D* object, SmileMesh3D* mesh, SmileMate
     context->PSSetShader(smile_pbr_pixel_shader3d, 0, 0);
     context->VSSetConstantBuffers(0, 1, &smile_pbr_constant_buffer3d);
     context->PSSetConstantBuffers(0, 1, &smile_pbr_constant_buffer3d);
+    if (!smile_3d_upload_model_palette(context, object->animator_handle, animator)) return 0;
     context->PSSetShaderResources(0, 4, views);
     context->PSSetSamplers(0, 4, samplers);
     context->DrawIndexed(mesh->index_count, 0, 0);
@@ -3355,11 +4241,18 @@ static int smile_3d_draw(long long handle)
     if (object->animator_handle != 0)
     {
         animator = smile_3d_animator(object->animator_handle);
-        SmileSkeleton3D* skeleton = animator == 0 ? 0 : smile_3d_skeleton(animator->skeleton_handle);
-        if (animator == 0 || skeleton == 0 || mesh->max_joint >= skeleton->bone_count)
+        if (animator != 0 && animator->model_animation)
         {
-            smile_last_error3d = 36;
-            return 0;
+            SmileModel3D* model = smile_3d_model_resource(animator->model_handle);
+            if (model == 0 || !smile_3d_model_owns_mesh(model, mesh) ||
+                mesh->max_joint >= model->animation_bone_count)
+            { smile_last_error3d = 36; return 0; }
+        }
+        else
+        {
+            SmileSkeleton3D* skeleton = animator == 0 ? 0 : smile_3d_skeleton(animator->skeleton_handle);
+            if (animator == 0 || skeleton == 0 || mesh->max_joint >= skeleton->bone_count)
+            { smile_last_error3d = 36; return 0; }
         }
     }
     constants.model = smile_3d_model(object);
@@ -3375,7 +4268,7 @@ static int smile_3d_draw(long long handle)
     constants.material[1] = material == 0 ? 0.0f : (float)material->unlit;
     constants.material[2] = material == 0 ? 0.0f : material->emissive;
     constants.material[3] = material != 0 && material->alpha_mode == 1 ? material->cutoff : -1.0f;
-    constants.animation[0] = animator == 0 ? 0.0f : 1.0f;
+    constants.animation[0] = animator == 0 ? 0.0f : (animator->model_animation ? 2.0f : 1.0f);
     for (int bone = 0; bone < SMILE_3D_MAX_BONES; ++bone)
         constants.bones[bone] = animator == 0 ? smile_3d_identity() : animator->bones[bone];
     alpha_mode = material == 0 ? (constants.color[3] < 0.999f ? 2 : 0) : material->alpha_mode;
@@ -3386,6 +4279,7 @@ static int smile_3d_draw(long long handle)
     context->PSSetShader(smile_pixel_shader3d, 0, 0);
     context->VSSetConstantBuffers(0, 1, &smile_constant_buffer3d);
     context->PSSetConstantBuffers(0, 1, &smile_constant_buffer3d);
+    if (!smile_3d_upload_model_palette(context, object->animator_handle, animator)) return 0;
     context->OMSetBlendState(
         alpha_mode == 3 ? smile_additive_blend_state3d : (alpha_mode == 2 ? smile_blend_state3d : 0),
         0,
@@ -3456,11 +4350,14 @@ extern "C" void smile_graphics3d_on_device_lost(void)
     smile_3d_release(smile_depth_read_state3d); smile_3d_release(smile_depth_state3d);
     smile_3d_release(smile_pbr_constant_buffer3d); smile_3d_release(smile_pbr_input_layout3d);
     smile_3d_release(smile_pbr_pixel_shader3d); smile_3d_release(smile_pbr_vertex_shader3d);
+    smile_3d_release(smile_model_palette_buffer3d);
     smile_3d_release(smile_constant_buffer3d); smile_3d_release(smile_input_layout3d);
     smile_3d_release(smile_pixel_shader3d); smile_3d_release(smile_vertex_shader3d);
     smile_target_width3d = smile_target_height3d = 0;
     smile_sample_count3d = 1; smile_sample_quality3d = 0;
     smile_pbr_shader_available3d = 0;
+    smile_model_palette_cached_animator3d = 0;
+    smile_model_palette_cached_revision3d = 0;
     smile_pbr_pipeline_state3d = SMILE_3D_PBR_PIPELINE_NOT_ATTEMPTED;
     smile_pbr_pipeline_failure3d = 0;
     smile_pbr_pipeline_attempt_count3d = 0;
@@ -3476,10 +4373,10 @@ static void smile_3d_reset(void)
             smile_objects3d[index].active = 0; smile_objects3d[index].generation++;
             if (smile_objects3d[index].generation == 0) smile_objects3d[index].generation = 1;
         }
-    for (index = 0; index < SMILE_3D_MAX_MODELS; ++index)
-        if (smile_models3d[index].active) smile_3d_delete_model(&smile_models3d[index]);
     for (index = 0; index < SMILE_3D_MAX_ANIMATORS; ++index)
         if (smile_animators3d[index].active) smile_3d_delete_animator(&smile_animators3d[index]);
+    for (index = 0; index < SMILE_3D_MAX_MODELS; ++index)
+        if (smile_models3d[index].active) smile_3d_delete_model(&smile_models3d[index]);
     for (index = 0; index < SMILE_3D_MAX_CLIPS; ++index)
         if (smile_clips3d[index].active) smile_3d_delete_clip(&smile_clips3d[index]);
     for (index = 0; index < SMILE_3D_MAX_SKELETONS; ++index)
@@ -3497,6 +4394,7 @@ static void smile_3d_reset(void)
     smile_pbr_draw_count3d = 0;
     smile_simple_draw_count3d = 0;
     smile_pbr_triangle_count3d = 0;
+    smile_model_palette_upload_count3d = 0;
     smile_3d_reset_lights();
 }
 
@@ -3725,15 +4623,22 @@ extern "C" long long smile_renderer3d_command(long long command,
             animator->previous_time_ms=0;animator->speed_percent=(unsigned int)d;animator->pending_event=0;
             smile_3d_update_animation_pose(animator);return 1;
         case SMILE_3D_UPDATE_ANIMATOR:
-            return b < 0 ? 0 : smile_3d_update_animator(smile_3d_animator(a),(unsigned int)b);
+            animator = smile_3d_animator(a);
+            return b < 0 ? 0 : (animator != 0 && animator->model_animation
+                ? smile_3d_update_model_animator(animator, (unsigned int)b)
+                : smile_3d_update_animator(animator, (unsigned int)b));
         case SMILE_3D_ANIMATOR_COMPLETE: animator=smile_3d_animator(a);return animator==0?0:animator->complete;
         case SMILE_3D_ANIMATOR_TIME: animator=smile_3d_animator(a);return animator==0?0:animator->time_ms;
         case SMILE_3D_TAKE_ANIMATOR_EVENT:
-            animator=smile_3d_animator(a);if(animator==0)return 0;{unsigned int value=animator->pending_event;animator->pending_event=0;return value;}
+            animator=smile_3d_animator(a);if(animator==0)return 0;
+            if(animator->model_animation)return smile_3d_take_model_event(animator,0);
+            {unsigned int value=animator->pending_event;animator->pending_event=0;return value;}
         case SMILE_3D_SET_OBJECT_ANIMATOR:
             object=smile_3d_object(a);animator=b==0?0:smile_3d_animator(b);mesh=object==0?0:smile_3d_mesh(object->mesh_handle);
-            skeleton=animator==0?0:smile_3d_skeleton(animator->skeleton_handle);
-            if(object==0||mesh==0||(b!=0&&(animator==0||skeleton==0||mesh->max_joint>=skeleton->bone_count))){smile_last_error3d=36;return 0;}
+            skeleton=animator==0||animator->model_animation?0:smile_3d_skeleton(animator->skeleton_handle);
+            if(object==0||mesh==0||(b!=0&&(animator==0||
+                (animator->model_animation?!smile_3d_model_owns_mesh(smile_3d_model_resource(animator->model_handle),mesh):
+                 (skeleton==0||mesh->max_joint>=skeleton->bone_count))))){smile_last_error3d=36;return 0;}
             object->animator_handle=b;return 1;
         case SMILE_3D_LIVE_SKELETON_COUNT:return smile_3d_live_skeleton_count();
         case SMILE_3D_LIVE_CLIP_COUNT:return smile_3d_live_clip_count();
@@ -3743,8 +4648,13 @@ extern "C" long long smile_renderer3d_command(long long command,
         case SMILE_3D_CLIP_VALID:return smile_3d_clip(a)!=0;
         case SMILE_3D_ANIMATOR_VALID:return smile_3d_animator(a)!=0;
         case SMILE_3D_STOP_ANIMATOR:
-            animator=smile_3d_animator(a);if(animator==0)return 0;animator->clip_handle=0;animator->time_ms=0;
-            animator->previous_time_ms=0;animator->complete=0;animator->pending_event=0;smile_3d_update_animation_pose(animator);return 1;
+            animator=smile_3d_animator(a);if(animator==0)return 0;
+            if(animator->model_animation){animator->clip_index=-1;animator->destination_clip=-1;
+                animator->time_ms=animator->destination_time_ms=0;animator->complete=0;
+                animator->event_head=animator->event_count=0;ZeroMemory(animator->root_delta,sizeof(animator->root_delta));
+                smile_3d_update_model_pose(animator);return 1;}
+            animator->clip_handle=0;animator->time_ms=0;animator->previous_time_ms=0;animator->complete=0;
+            animator->pending_event=0;smile_3d_update_animation_pose(animator);return 1;
         case SMILE_3D_MAX_SKELETON_COUNT:return SMILE_3D_MAX_SKELETONS;
         case SMILE_3D_MAX_CLIP_COUNT:return SMILE_3D_MAX_CLIPS;
         case SMILE_3D_MAX_ANIMATOR_COUNT:return SMILE_3D_MAX_ANIMATORS;
@@ -3782,6 +4692,47 @@ extern "C" long long smile_renderer3d_command(long long command,
             return smile_3d_create_pipeline() && smile_pbr_shader_available3d ? 1 : 0;
         case SMILE_3D_MODEL_PBR_VALUE:
             return smile_3d_model_pbr_value(smile_3d_model_resource(a), b, c);
+        case SMILE_3D_MODEL_ANIMATION_VALUE:
+            return smile_3d_model_animation_value(smile_3d_model_resource(a), b, c);
+        case SMILE_3D_CREATE_MODEL_ANIMATOR:
+            return smile_3d_create_model_animator(a);
+        case SMILE_3D_PLAY_MODEL_ANIMATOR:
+            return smile_3d_play_model_animator(smile_3d_animator(a), (int)b, (int)c,
+                d < 0 ? 0U : (unsigned int)d);
+        case SMILE_3D_CROSSFADE_MODEL_ANIMATOR:
+            return c < 0 ? 0 : smile_3d_crossfade_model_animator(smile_3d_animator(a),
+                (int)b, (unsigned int)c, (int)d);
+        case SMILE_3D_ANIMATOR_CLIP_INDEX:
+            animator = smile_3d_animator(a);
+            return animator == 0 || !animator->model_animation ? -1 : animator->clip_index;
+        case SMILE_3D_ANIMATOR_FADE_PERCENT:
+            animator = smile_3d_animator(a);
+            return animator == 0 || !animator->model_animation || animator->destination_clip < 0 ? 0 :
+                (long long)((unsigned long long)animator->fade_elapsed_ms * 100U / animator->fade_duration_ms);
+        case SMILE_3D_ANIMATOR_PENDING_EVENT_COUNT:
+            animator = smile_3d_animator(a);
+            return animator == 0 || !animator->model_animation ? 0 : animator->event_count;
+        case SMILE_3D_SET_ANIMATOR_ROOT_MOTION:
+            animator = smile_3d_animator(a);
+            if (animator == 0 || !animator->model_animation || b < 0 || b > 1)
+            { smile_last_error3d = 48; return 0; }
+            animator->root_motion_mode = (unsigned char)b;
+            ZeroMemory(animator->root_delta, sizeof(animator->root_delta));
+            smile_3d_update_model_pose(animator);
+            return 1;
+        case SMILE_3D_TAKE_ANIMATOR_ROOT_DELTA:
+            animator = smile_3d_animator(a);
+            if (animator == 0 || !animator->model_animation || b < 1 || b > 4)
+            { smile_last_error3d = 48; return 0; }
+            { long long value = (long long)llroundf(animator->root_delta[b - 1] * 1000.0f);
+              if (b == 4) ZeroMemory(animator->root_delta, sizeof(animator->root_delta));
+              return value; }
+        case SMILE_3D_ANIMATOR_SOCKET_VALUE:
+            return smile_3d_model_socket_value(smile_3d_animator(a), b, c, d);
+        case SMILE_3D_MODEL_ANIMATION_AVAILABLE:
+            return smile_3d_create_pipeline() && smile_model_palette_buffer3d != 0 ? 1 : 0;
+        case SMILE_3D_MODEL_PALETTE_UPLOAD_COUNT:
+            return smile_model_palette_upload_count3d;
         default: smile_last_error3d = 1; return 0;
     }
 }
@@ -3797,6 +4748,52 @@ extern "C" long long smile_renderer3d_image_command(long long command, void* ima
         return smile_3d_create_pbr_texture((SmileImageResource*)image, (int)a, (int)b,
             (int)c, (int)d);
     smile_image_resource_release((SmileImageResource*)image);
+    smile_last_error3d = 1;
+    return 0;
+}
+
+extern "C" long long smile_renderer3d_model_text_operation(long long command,
+    const char* text, long long length, long long a, long long b, long long c)
+{
+    char name[1025];
+    if (text == 0 || length <= 0 || length > 1024) { smile_last_error3d = 48; return 0; }
+    memcpy(name, text, (size_t)length);
+    name[length] = 0;
+    if (command == SMILE_3D_TEXT_MODEL_CLIP_INDEX)
+    {
+        int result = smile_3d_model_clip_index(smile_3d_model_resource(a), name);
+        if (result < 0) smile_last_error3d = 48;
+        return result;
+    }
+    if (command == SMILE_3D_TEXT_MODEL_SOCKET_INDEX)
+    {
+        int result = smile_3d_model_socket_index(smile_3d_model_resource(a), name);
+        if (result < 0) smile_last_error3d = 48;
+        return result;
+    }
+    if (command == SMILE_3D_TEXT_MODEL_EVENT_NAME_MATCHES)
+    {
+        SmileModel3D* model = smile_3d_model_resource(a);
+        if (model == 0 || b <= 0 || b > model->animation_event_count) return 0;
+        const unsigned char* record = smile_3d_model_animation_record(model, 6, (unsigned int)b - 1);
+        return strcmp(model->strings + smile_3d_read_u32(record + 8), name) == 0;
+    }
+    if (command == SMILE_3D_TEXT_PLAY_MODEL_ANIMATOR)
+    {
+        SmileAnimator3D* animator = smile_3d_animator(a);
+        SmileModel3D* model = animator == 0 ? 0 : smile_3d_model_resource(animator->model_handle);
+        int clip = smile_3d_model_clip_index(model, name);
+        return smile_3d_play_model_animator(animator, clip, (int)b, c < 0 ? 0U : (unsigned int)c);
+    }
+    if (command == SMILE_3D_TEXT_CROSSFADE_MODEL_ANIMATOR)
+    {
+        SmileAnimator3D* animator = smile_3d_animator(a);
+        SmileModel3D* model = animator == 0 ? 0 : smile_3d_model_resource(animator->model_handle);
+        int clip = smile_3d_model_clip_index(model, name);
+        return b < 0 ? 0 : smile_3d_crossfade_model_animator(animator, clip, (unsigned int)b, (int)c);
+    }
+    if (command == SMILE_3D_TEXT_TAKE_MODEL_ANIMATOR_EVENT)
+        return smile_3d_take_model_event(smile_3d_animator(a), name);
     smile_last_error3d = 1;
     return 0;
 }

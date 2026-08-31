@@ -13,7 +13,9 @@ True-3D types:
 - `Object3D`: validated object/mesh handles plus mirrored position, rotation, scale, color, opacity, and visibility values.
 - `Texture3D`: dimensions, usage, requested filter/wrap/anisotropy, effective anisotropy, and mip count.
 - `Material3D`: simple/PBR kind, texture bindings, alpha/culling state, and mirrored factors.
-- `Model3D`: validated model handle plus part, material, format-version, vertex, index, metadata texture-reference, geometry/PBR readiness, PBR failure, and model-owned PBR resource counts.
+- `Model3D`: validated model handle plus part, material, format-version, vertex, index, metadata texture-reference, geometry/PBR readiness, PBR failure, model-owned PBR resource counts, and imported animation/bone/clip/socket/byte counts.
+- `Animator3D`: independent legacy or model-owned playback state, including model/clip, mode, speed, and root-motion policy.
+- `RootMotionDelta3D`: one atomically drained XYZ/yaw result in thousandths.
 
 The legacy wireframe types and limits remain source compatible.
 
@@ -34,6 +36,7 @@ Availability and lifecycle:
 - `ResetRenderer3D()`
 - `LiveMeshCount3D()` and `LiveObjectCount3D()`
 - `MaximumMeshCount3D()` and `MaximumObjectCount3D()`
+- `LiveModelCount3D()`, `LiveAnimatorCount3D()`, and their fixed maximum-count queries
 - `DrawCallCount3D()` and `SubmittedTriangleCount3D()` for the current or most recently ended 3D frame; a successful new `Begin3D` resets both to zero
 - `PbrDrawCount3D()`, `SimpleDrawCount3D()`, and `PbrTriangleCount3D()`
 - `PbrShaderAvailable3D()`
@@ -85,6 +88,23 @@ Offline static models:
 SM3D v1 remains supported. `LoadModel3D` loads geometry, resolves exact declared texture paths, creates model-owned PBR textures/materials, and returns zero unless the complete operation succeeds. `LoadModelGeometry3D` is the reusable fallback path: geometry remains valid even when `PrepareModelPbr3D` later fails. Preparation preflights unique texture identities and publishes all textures/materials at once; failure leaves the model handle, meshes, and prior live counts unchanged and records the reason in `Model3D.PbrFailure` and `LastError()`.
 
 Prepare a model before creating its part objects. Objects created before preparation retain their simple/default-zero material; objects created afterward receive the imported PBR default. Texture metadata references remain separate, but exact references with the same path, color/data usage, filter, wrap, anisotropy, and mip policy share one model-owned texture. Clearing an explicit override on a prepared imported part restores its imported material. Model destruction refuses while a part object is live and returns every owned mesh, material, unique texture, and image reference on success.
+
+Imported SM3D v2 animation:
+
+- `ModelHasAnimation3D`, `ModelBoneCount3D`, `ModelClipCount3D`, `ModelSocketCount3D`, `ModelAnimationBytes3D`, `ModelAnimationNodeCount3D`, and `ModelAnimationEventCount3D` expose immutable model metadata.
+- `ModelClipDuration3D` and `ModelClipSampleRate3D` inspect one zero-based clip.
+- `ModelClipIndex3D` and `ModelSocketIndex3D` perform exact case-sensitive name lookup. `ModelEventNameMatches3D` compares the exact event name; hashes are not identity.
+- `ModelAnimationEventValue3D` accepts a one-based event index returned by an animator; zero remains “no event.”
+- `CreateModelAnimator3D(Model)` creates independent playback state. `SetObjectAnimator3D` binds it to a compatible model part; `ClearObjectAnimator3D` releases that object dependency.
+- `PlayModelAnimator3D`/`PlayModelAnimatorNamed3D` select zero-based/exact-named clips, `ANIMATION_LOOP`, `ANIMATION_ONCE`, or `ANIMATION_HOLD`, and speed `1`–`1000` percent.
+- `CrossFadeModelAnimator3D`/`CrossFadeModelAnimatorNamed3D` provide one base-layer fade. `AnimatorClipIndex3D` and `AnimatorFadePercent3D` expose its state.
+- `AnimatorPendingEventCount3D`, `TakeAnimatorEvent3D`, and `TakeAnimatorEventNamed3D` consume the bounded chronological FIFO. The queue holds 32 entries and reports error 49 when a multi-wrap update has more events.
+- `SetAnimatorRootMotion3D` selects `ROOT_MOTION_NONE` or `ROOT_MOTION_EXTRACT`. `TakeAnimatorRootDelta3D` returns one atomic XYZ/yaw result; translation and degrees are scaled by 1000.
+- `AnimatorSocketValue3D` queries animated model space. `AnimatorSocketWorldValue3D` additionally applies the bound object's position, rotation, and scale. Position and 3-by-3 orientation properties use thousandths.
+- `ModelAnimationAvailable3D` reports whether the production 128-bone palette transport is available. `ModelPaletteUploadCount3D` exposes cached native/Web uploads.
+- `StopAnimator3D` clears playback and pending events. `DestroyAnimator3D` refuses while an object remains bound. `DestroyModel3D` refuses while a model animator or part object remains live.
+
+The production importer accepts one skin with 1–128 bones, 1–64 clips, 1–256 retained nodes, up to 64 events per clip, and up to 64 sockets. Direct3D uses a 128-matrix vertex constant buffer; WebGL2 uses one shared RGBA32F 4-by-128 palette texture. Existing custom-mesh animation remains the separate 32-bone teaching API.
 
 PBR textures:
 
@@ -139,7 +159,7 @@ Games decide whether a press started on valid world geometry and pass that decis
 
 Windows uses D3D11 indexed triangle lists, generated normals, model/view/perspective matrices, a resize-aware D24S8 depth buffer, and hardware-selected 4x/2x/1x multisample anti-aliasing before the existing Direct2D HUD pass. Web uses an antialiased offscreen WebGL2 canvas with the same indexed mesh and depth contract, then composites it into the Canvas 2D back buffer before ordinary 2D drawing.
 
-Both backends bound live data to 128 meshes, 512 objects, 64 models, 128 textures, 128 materials, 64 skeletons, 128 clips, and 128 animators, and reject stale or deleted handles. Mesh destruction is rejected while a live object still references that mesh. Meshes support at most 65,535 vertices and 196,608 indices. One SM3D v2 model may contain up to 16 part meshes, 64 imported materials, and 128 metadata texture references; its deduplicated owned textures and materials must fit the same global pools.
+Both backends bound live data to 128 meshes, 512 objects, 64 models, 128 textures, 128 materials, 64 legacy skeletons, 128 legacy clips, and 128 total animators, and reject stale or deleted handles. Mesh destruction is rejected while a live object still references that mesh. Meshes support at most 65,535 vertices and 196,608 indices. One SM3D v2 model may contain up to 16 part meshes, 64 imported materials, 128 metadata texture references, 256 animation nodes, 128 production bones, 64 imported clips, 64 events per clip, and 64 sockets; its complete file remains at most 16 MiB, and its deduplicated owned textures/materials must fit the global pools.
 
 The supported PBR production transform profile uses positive, nonsingular object scale. A singular or mirrored PBR object draw is rejected before submission with error 46, leaving draw/triangle counters unchanged; the simple path retains its existing behavior. Two-key clips may use nonuniform bone scale on simple materials. A PBR draw using a clip with any nonuniform scale key is rejected with error 45; uniform animation scale remains supported.
 

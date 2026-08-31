@@ -105,7 +105,19 @@ enum SmileRenderer3DCommand
     SMILE_3D_SIMPLE_DRAW_COUNT = 94,
     SMILE_3D_PBR_TRIANGLE_COUNT = 95,
     SMILE_3D_PBR_SHADER_AVAILABLE = 96,
-    SMILE_3D_MODEL_PBR_VALUE = 97
+    SMILE_3D_MODEL_PBR_VALUE = 97,
+    SMILE_3D_MODEL_ANIMATION_VALUE = 98,
+    SMILE_3D_CREATE_MODEL_ANIMATOR = 99,
+    SMILE_3D_PLAY_MODEL_ANIMATOR = 100,
+    SMILE_3D_CROSSFADE_MODEL_ANIMATOR = 101,
+    SMILE_3D_ANIMATOR_CLIP_INDEX = 102,
+    SMILE_3D_ANIMATOR_FADE_PERCENT = 103,
+    SMILE_3D_ANIMATOR_PENDING_EVENT_COUNT = 104,
+    SMILE_3D_SET_ANIMATOR_ROOT_MOTION = 105,
+    SMILE_3D_TAKE_ANIMATOR_ROOT_DELTA = 106,
+    SMILE_3D_ANIMATOR_SOCKET_VALUE = 107,
+    SMILE_3D_MODEL_ANIMATION_AVAILABLE = 108,
+    SMILE_3D_MODEL_PALETTE_UPLOAD_COUNT = 109
 };
 
 enum SmileRenderer3DImageCommand
@@ -118,7 +130,13 @@ enum SmileRenderer3DTextCommand
 {
     SMILE_3D_TEXT_LOAD_MODEL = 1,
     SMILE_3D_TEXT_LOAD_MODEL_GEOMETRY = 2,
-    SMILE_3D_TEXT_PREPARE_MODEL_PBR = 3
+    SMILE_3D_TEXT_PREPARE_MODEL_PBR = 3,
+    SMILE_3D_TEXT_MODEL_CLIP_INDEX = 4,
+    SMILE_3D_TEXT_MODEL_SOCKET_INDEX = 5,
+    SMILE_3D_TEXT_MODEL_EVENT_NAME_MATCHES = 6,
+    SMILE_3D_TEXT_PLAY_MODEL_ANIMATOR = 7,
+    SMILE_3D_TEXT_CROSSFADE_MODEL_ANIMATOR = 8,
+    SMILE_3D_TEXT_TAKE_MODEL_ANIMATOR_EVENT = 9
 };
 
 enum SmilePrimitive3D
@@ -144,6 +162,8 @@ long long smile_renderer3d_load_model_path(const wchar_t* path);
 long long smile_renderer3d_load_model_geometry_path(const wchar_t* path);
 long long smile_renderer3d_prepare_model_pbr(long long model_handle,
     long long filter, long long wrap, long long anisotropy);
+long long smile_renderer3d_model_text_operation(long long command,
+    const char* text, long long length, long long a, long long b, long long c);
 void smile_graphics3d_on_device_lost(void);
 
 #ifdef __cplusplus
