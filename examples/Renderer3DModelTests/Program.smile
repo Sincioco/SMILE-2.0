@@ -27,11 +27,13 @@ Dim BadV2Count As Core.Model3D
 Dim BadV2Stride As Core.Model3D
 Dim MissingRequiredV2 As Core.Model3D
 Dim UnknownRequiredV2 As Core.Model3D
+Dim InvalidCorpus As Core.Model3D
 Dim Missing As Core.Model3D
 Dim Reloaded As Core.Model3D
 Dim M0Triangle As Core.Model3D
 Dim PbrTriangle As Core.Model3D
 Dim UnknownOptionalV2 As Core.Model3D
+Dim StaleModel As Core.Model3D
 Dim EmptyTexture As Core.Texture3D
 Dim Armor As Core.Material3D
 Dim Scales As Core.Material3D
@@ -45,6 +47,7 @@ Dim FrameReady As Boolean
 Dim MaterialBindingsReady As Boolean
 Dim Index As Number
 Dim StaleHandle As Number
+Dim InvalidQueryValue As Number
 
 Game Window "Renderer3D Model Tests" Size 480 By 270
 
@@ -127,11 +130,68 @@ If (BadMagic.Handle <> 0 Or
     Failures = Failures + 1
 End If
 
+InvalidCorpus = Graphics3D.LoadModel3D("Assets\NonPrintableNulV2.sm3d")
+
+If InvalidCorpus.Handle <> 0 Then
+    Failures = Failures + 1
+End If
+
+InvalidCorpus = Graphics3D.LoadModel3D("Assets\NonPrintableHighV2.sm3d")
+
+If InvalidCorpus.Handle <> 0 Then
+    Failures = Failures + 1
+End If
+
+InvalidCorpus = Graphics3D.LoadModel3D("Assets\NonPrintableControlV2.sm3d")
+
+If InvalidCorpus.Handle <> 0 Then
+    Failures = Failures + 1
+End If
+
+InvalidCorpus = Graphics3D.LoadModel3D("Assets\DuplicateChunkV2.sm3d")
+
+If InvalidCorpus.Handle <> 0 Then
+    Failures = Failures + 1
+End If
+
+InvalidCorpus = Graphics3D.LoadModel3D("Assets\InvalidNormalBasisV2.sm3d")
+
+If InvalidCorpus.Handle <> 0 Then
+    Failures = Failures + 1
+End If
+
+InvalidCorpus = Graphics3D.LoadModel3D("Assets\InvalidTangentBasisV2.sm3d")
+
+If InvalidCorpus.Handle <> 0 Then
+    Failures = Failures + 1
+End If
+
+InvalidCorpus = Graphics3D.LoadModel3D("Assets\InvalidOrthogonalBasisV2.sm3d")
+
+If InvalidCorpus.Handle <> 0 Then
+    Failures = Failures + 1
+End If
+
+InvalidCorpus = Graphics3D.LoadModel3D("Assets\InvalidHandednessV2.sm3d")
+
+If InvalidCorpus.Handle <> 0 Then
+    Failures = Failures + 1
+End If
+
+InvalidCorpus = Graphics3D.LoadModel3D("Assets\InvalidStructureV1.sm3d")
+
+If (InvalidCorpus.Handle <> 0 Or
+    Graphics3D.LiveModelCount3D() <> 0 Or
+    Graphics3D.LiveMeshCount3D() <> 0) Then
+    Failures = Failures + 1
+End If
+
 Humanoid = Graphics3D.LoadModel3D("Assets\Humanoid.sm3d")
 Dragon = Graphics3D.LoadModel3D("Assets\Dragon.sm3d")
 M0Triangle = Graphics3D.LoadModel3D("Assets\M0TriangleV2.sm3d")
 PbrTriangle = Graphics3D.LoadModel3D("Assets\PbrTriangleV2.sm3d")
 UnknownOptionalV2 = Graphics3D.LoadModel3D("Assets\UnknownOptionalV2.sm3d")
+StaleModel = Dragon
 
 If (Humanoid.Handle = 0 Or
     Humanoid.FormatVersion <> 1 Or
@@ -166,11 +226,17 @@ If (Graphics3D.ModelTangentHandednessCount3D(M0Triangle, -1) <> 3 Or
     Graphics3D.ModelBoundsValue3D(M0Triangle, -1, Graphics3D.MODEL_BOUNDS_MAXIMUM_X) <> 1000 Or
     Graphics3D.ModelBoundsValue3D(M0Triangle, 0, Graphics3D.MODEL_BOUNDS_MAXIMUM_Y) <> 1000 Or
     Graphics3D.ModelNameHash3D(M0Triangle) <> 2857009948 Or
-    Graphics3D.ModelPartNameHash3D(M0Triangle, 0) <> 2857009948 Or
+    Graphics3D.ModelPartNameHash3D(M0Triangle, 0) <> 3250840144 Or
     Graphics3D.ModelTangentHandednessCount3D(PbrTriangle, -1) <> 3 Or
     Graphics3D.ModelTangentHandednessCount3D(PbrTriangle, 1) <> 0 Or
-    Graphics3D.ModelNameHash3D(PbrTriangle) <> 100590386 Or
-    Graphics3D.ModelPartNameHash3D(PbrTriangle, 0) <> 100590386) Then
+    Graphics3D.ModelNameHash3D(PbrTriangle) <> 1687710659 Or
+    Graphics3D.ModelPartNameHash3D(PbrTriangle, 0) <> 819355085) Then
+    Failures = Failures + 1
+End If
+
+InvalidQueryValue = Graphics3D.ModelMaterialValue3D(M0Triangle, 0, 999)
+
+If InvalidQueryValue <> 0 Or Graphics3D.LastError() = 0 Then
     Failures = Failures + 1
 End If
 
@@ -310,7 +376,11 @@ Call Graphics3D.DestroyModel3D(UnknownOptionalV2)
 Call Graphics3D.DestroyMaterial3D(Armor)
 Call Graphics3D.DestroyMaterial3D(Scales)
 
+InvalidQueryValue = Graphics3D.ModelNameHash3D(StaleModel)
+
 If (Graphics3D.ModelHandleValid3D(StaleHandle) Or
+    InvalidQueryValue <> 0 Or
+    Graphics3D.LastError() = 0 Or
     Graphics3D.LiveModelCount3D() <> 0 Or
     Graphics3D.LiveMeshCount3D() <> 0 Or
     Graphics3D.LiveObjectCount3D() <> 0 Or

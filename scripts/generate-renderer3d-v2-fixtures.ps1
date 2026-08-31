@@ -28,6 +28,32 @@ function Update-Checksum([byte[]]$Bytes) {
     Write-UInt32 $Bytes 16 $checksum
 }
 
+function Update-V1Checksum([byte[]]$Bytes) {
+    [uint32]$checksum = 2166136261
+
+    for ($index = 32; $index -lt $Bytes.Length; $index++) {
+        $product = [uint64]($checksum -bxor $Bytes[$index]) * 16777619
+        $checksum = [uint32]($product -band [uint64]4294967295)
+    }
+
+    Write-UInt32 $Bytes 28 $checksum
+}
+
+function Find-ChunkOffset([byte[]]$Bytes, [string]$Id) {
+    $chunkCount = [System.BitConverter]::ToUInt32($Bytes, 20)
+
+    for ($index = 0; $index -lt $chunkCount; $index++) {
+        $entry = 64 + $index * 32
+        $entryId = [System.Text.Encoding]::ASCII.GetString($Bytes, $entry, 4)
+
+        if ($entryId -ceq $Id) {
+            return [int][System.BitConverter]::ToUInt32($Bytes, $entry + 8)
+        }
+    }
+
+    throw "SM3D chunk '$Id' was not found."
+}
+
 function Copy-Bytes([byte[]]$Bytes) {
     $copy = [byte[]]::new($Bytes.Length)
     [System.Buffer]::BlockCopy($Bytes, 0, $copy, 0, $Bytes.Length)
@@ -199,6 +225,60 @@ $unknownRequired = Copy-Bytes $optional
 Write-UInt32 $unknownRequired ($unknownEntry + 4) 0
 Update-Checksum $unknownRequired
 Publish-Fixture (Join-Path $assetRoot 'UnknownRequiredV2.sm3d') $unknownRequired
+
+$nonPrintableNul = Copy-Bytes $optional
+$nonPrintableNul[$unknownEntry] = 0
+Update-Checksum $nonPrintableNul
+Publish-Fixture (Join-Path $assetRoot 'NonPrintableNulV2.sm3d') $nonPrintableNul
+
+$nonPrintableHigh = Copy-Bytes $optional
+$nonPrintableHigh[$unknownEntry] = 128
+Update-Checksum $nonPrintableHigh
+Publish-Fixture (Join-Path $assetRoot 'NonPrintableHighV2.sm3d') $nonPrintableHigh
+
+$nonPrintableControl = Copy-Bytes $optional
+$nonPrintableControl[$unknownEntry] = 31
+Update-Checksum $nonPrintableControl
+Publish-Fixture (Join-Path $assetRoot 'NonPrintableControlV2.sm3d') $nonPrintableControl
+
+$duplicateChunk = Copy-Bytes $optional
+[System.Text.Encoding]::ASCII.GetBytes('STR0').CopyTo($duplicateChunk, $unknownEntry)
+Update-Checksum $duplicateChunk
+Publish-Fixture (Join-Path $assetRoot 'DuplicateChunkV2.sm3d') $duplicateChunk
+
+$vertexOffset = Find-ChunkOffset $m0 'VERT'
+$invalidNormal = Copy-Bytes $m0
+[System.BitConverter]::GetBytes([single]2).CopyTo($invalidNormal, $vertexOffset + 20)
+Update-Checksum $invalidNormal
+Publish-Fixture (Join-Path $assetRoot 'InvalidNormalBasisV2.sm3d') $invalidNormal
+
+$invalidTangent = Copy-Bytes $m0
+[System.BitConverter]::GetBytes([single]2).CopyTo($invalidTangent, $vertexOffset + 24)
+Update-Checksum $invalidTangent
+Publish-Fixture (Join-Path $assetRoot 'InvalidTangentBasisV2.sm3d') $invalidTangent
+
+$invalidOrthogonal = Copy-Bytes $m0
+[System.BitConverter]::GetBytes([single]0).CopyTo($invalidOrthogonal, $vertexOffset + 24)
+[System.BitConverter]::GetBytes([single]0).CopyTo($invalidOrthogonal, $vertexOffset + 28)
+[System.BitConverter]::GetBytes([single]-1).CopyTo($invalidOrthogonal, $vertexOffset + 32)
+Update-Checksum $invalidOrthogonal
+Publish-Fixture (Join-Path $assetRoot 'InvalidOrthogonalBasisV2.sm3d') $invalidOrthogonal
+
+$invalidHandedness = Copy-Bytes $m0
+[System.BitConverter]::GetBytes([single]0).CopyTo($invalidHandedness, $vertexOffset + 36)
+Update-Checksum $invalidHandedness
+Publish-Fixture (Join-Path $assetRoot 'InvalidHandednessV2.sm3d') $invalidHandedness
+
+$v1Source = Join-Path $assetRoot 'Humanoid.sm3d'
+
+if (-not (Test-Path -LiteralPath $v1Source)) {
+    throw "The SM3D v1 source fixture is missing: $v1Source"
+}
+
+$invalidV1 = Copy-Bytes ([System.IO.File]::ReadAllBytes($v1Source))
+Write-UInt32 $invalidV1 52 1
+Update-V1Checksum $invalidV1
+Publish-Fixture (Join-Path $assetRoot 'InvalidStructureV1.sm3d') $invalidV1
 
 $glb = [System.IO.File]::ReadAllBytes((Join-Path $sourceRoot 'M0Triangle.glb'))
 $badGlbMagic = Copy-Bytes $glb

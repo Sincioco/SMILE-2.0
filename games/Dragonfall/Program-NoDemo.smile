@@ -119,6 +119,7 @@ Call Battle.Shutdown()
 Sub StartEncounter()
 
     EncounterReady = Battle.Initialize()
+
     Call Audio.Reset()
 
     If EncounterReady And RendererAvailable Then
@@ -150,10 +151,9 @@ Sub UpdateAudioUnlock(PressedKey As Number)
         Pointer_Pressed(POINTER_PRIMARY) Or
         Pointer_Pressed(POINTER_MIDDLE) Or
         Pointer_Pressed(POINTER_SECONDARY)) Then
-
         AudioUnlocked = True
-        Call Audio.PlayReadyCue()
 
+        Call Audio.PlayReadyCue()
     End If
 
 End Sub
@@ -229,12 +229,16 @@ Sub DrawFrame()
     End If
 
     If Scene.FlashOpacity() > 72 Then
+
         Fill Rectangle 0, 0, 960, 540, Rgb(255, 238, 180) Opacity 28
         Draw Rectangle 4, 4, 952, 532, Rgb(255, 248, 218)
         Draw Rectangle 9, 9, 942, 522, Rgb(255, 168, 42)
+
     Else If Scene.FlashOpacity() > 38 Then
+
         Fill Rectangle 0, 0, 960, 540, Rgb(255, 104, 24) Opacity 12
         Draw Rectangle 6, 6, 948, 528, Rgb(255, 102, 18)
+
     End If
 
     Call DrawCombatText()
@@ -317,9 +321,11 @@ Sub DrawCombatText()
     Y = Scene.CombatTextY()
 
     If Not Battle.VisualImpactLanded() Then
+
         Draw Text "MISS" At X + 2, Y + 2 Size 26 Color BLACK Centered
         Draw Text "MISS" At X, Y Size 26 Color LIGHT_GRAY Centered
         Return
+
     End If
 
     OffsetX = 8
@@ -487,6 +493,7 @@ Sub DrawHeroGauge(Label As Text, X As Number, Y As Number, Current As Number, Ma
     Fill Rectangle BarX + 1, Y + 1, Max(0, FilledWidth - 2), 7, FillColor
     Draw Rectangle BarX, Y, BarWidth, 9, Rgb(80, 88, 112)
     Draw Text Label At X + 10, Y Size 8 Color WHITE
+
     Call DrawCenteredGaugeValue(Current, Maximum, BarX, Y, BarWidth, 8)
 
 End Sub

@@ -1,5 +1,6 @@
 Option Explicit
 
+Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Battle3D.Camera As BattleCamera
 Import Dragonfall.Battle As Battle
@@ -17,9 +18,42 @@ Dim StableTextures As Number
 Dim Ready As Boolean
 Dim CameraReady As Boolean
 Dim Projected As BattleCamera.ProjectedPoint3D
+Dim BlockerTemplate As Core.Object3D
+Dim Blockers[80] As Core.Object3D
 
 Game Window "Dragonfall Lifecycle Tests" Size 480 By 270
 
+Call Graphics3D.ResetRenderer3D()
+
+BlockerTemplate = Graphics3D.CreateCube3D(10)
+
+For Cycle = 0 To 79
+    Blockers[Cycle] = Graphics3D.CreateObjectFromMesh3D(BlockerTemplate.MeshHandle)
+End For
+
+Ready = Battle.Initialize()
+
+If Ready Then
+    Ready = Scene.Initialize(Battle.StateHandle())
+End If
+
+If (Ready Or
+    Graphics3D.LiveMeshCount3D() <> 1 Or
+    Graphics3D.LiveObjectCount3D() <> 81 Or
+    Graphics3D.LiveMaterialCount3D() <> 0 Or
+    Graphics3D.LiveTextureCount3D() <> 0 Or
+    Graphics3D.LastError() = 0) Then
+    Failures = Failures + 1
+End If
+
+Call Scene.Shutdown()
+Call Battle.Shutdown()
+
+For Cycle = 0 To 79
+    Call Graphics3D.DestroyObjectInstance3D(Blockers[Cycle])
+End For
+
+Call Graphics3D.DestroyObject3D(BlockerTemplate)
 Call Graphics3D.ResetRenderer3D()
 
 For Cycle = 1 To RESTART_COUNT
@@ -90,7 +124,12 @@ For Cycle = 1 To RESTART_COUNT
             StableObjects <= 0 Or
             StableObjects >= Graphics3D.MaximumObjectCount3D() Or
             StableMaterials <= 0 Or
-            StableTextures <> 1 Or
+            StableObjects <> 441 Or
+            Graphics3D.MaximumObjectCount3D() - StableObjects < 64 Or
+            StableMeshes <> 48 Or
+            StableMaterials <> 24 Or
+            StableTextures <> 6 Or
+            Graphics3D.LastError() <> 0 Or
             Graphics3D.LiveMeshCount3D() <> StableMeshes Or
             Graphics3D.LiveObjectCount3D() <> StableObjects Or
             Graphics3D.LiveMaterialCount3D() <> StableMaterials Or

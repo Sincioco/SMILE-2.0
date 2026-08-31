@@ -17,11 +17,37 @@ artifacts\assettool\smileasset.exe model Assets\Source\Hero.glb -o Assets\Models
 artifacts\assettool\smileasset.exe inspect Assets\Models\Hero.sm3d
 ```
 
-The original command remains the v1 textual-glTF compatibility path. `--format-version 2` selects v2 for textual glTF; GLB input always selects v2. The strict GLB reader accepts version 2, one JSON chunk followed by at most one BIN chunk, four-byte chunk alignment, exact declared length, and no trailing bytes. The v2 static profile accepts one scene, indexed triangle primitives, POSITION/NORMAL/TEXCOORD_0, optional TANGENT, unsigned indices, PBR metallic/roughness metadata, embedded data buffers, confined relative external buffers, or GLB buffer zero. It converts glTF right-handed Z coordinates and winding to Renderer3D's convention.
+The original command remains the v1 textual-glTF compatibility path. `--format-version 2` selects v2 for textual glTF; GLB input always selects v2. The strict GLB reader accepts version 2, one JSON chunk followed by at most one BIN chunk, four-byte chunk alignment, exact declared length, and no trailing bytes. The v2 static profile selects the declared active scene and traverses its nodes depth-first in declared order. It accepts indexed triangle primitives, POSITION/NORMAL/TEXCOORD_0, optional TANGENT, unsigned indices, PBR metallic/roughness metadata, embedded data buffers, confined relative external buffers, or GLB buffer zero. Unreachable meshes are ignored. A reachable mesh used by multiple nodes becomes one deterministic SM3D part per instance, with node/mesh/primitive/instance identity in the part name.
 
-Sparse accessors, morph targets, multiple UV sets, non-triangle modes, compressed geometry, runtime glTF/GLB parsing, and runtime Blender dependencies are rejected or deferred. M1 stores no texture bytes. Animation-related v2 chunks are reserved for M3 and are not emitted or interpreted by the static loader.
+Static node `matrix` or TRS transforms are composed from parent to child and baked into positions. Quaternions with usable nonzero length are normalized. Normals use the inverse-transpose linear transform; tangents are transformed and re-orthogonalized. Singular/non-finite transforms and matrix-plus-TRS nodes fail. Node and coordinate reflections update winding and tangent handedness, and the glTF-to-SMILE coordinate conversion is applied exactly once. Bounds are computed from the final transformed geometry.
 
-Every accessor range, stride, count, numeric value, index, and material reference is validated before output. The writer uses little-endian values, stable traversal order, no timestamps or source paths, an exact byte length, and an FNV-1a payload checksum. Identical input produces byte-identical output. Publication uses an atomic temporary-file replacement.
+Sparse accessors, skins, animations, joint/weight attributes, morph targets/weights, multiple UV sets, non-triangle modes, compressed geometry, embedded image bytes, runtime glTF/GLB parsing, and runtime Blender dependencies are rejected rather than discarded. The only accepted extension is `KHR_materials_emissive_strength`; unknown required extensions and output-changing node, primitive, material, texture, sampler, or texture-info extensions fail. Texture info must use UV0. An absent sampler uses the glTF repeat/trilinear defaults; an explicit sampler must use linear magnification (`9729`), trilinear minification (`9987`), and repeat S/T (`10497`). M1 stores no texture bytes. Animation-related v2 chunks are reserved for M3 and are not emitted or interpreted by the static loader.
+
+Every accessor range, alignment, target, stride, count, numeric value, index, and material reference is validated before output against the buffer's declared logical length. A primitive without a material receives an implicit `Default` material; it never aliases declared material zero, and the implicit entry counts against the 64-material limit. The writer uses little-endian values, stable traversal order, no timestamps or source paths, an exact byte length, and an FNV-1a payload checksum. Identical input produces byte-identical output. Publication uses a unique temporary file, flushes before atomic replacement, preserves an existing output on failure, and removes temporary residue in `finally`. Input and output may not resolve to the same file.
+
+### Converter source limits
+
+The converter rejects excessive input before expensive allocation or whole-file reads:
+
+| Source item | Limit |
+|---|---:|
+| Textual glTF JSON | 4 MiB |
+| GLB container | 64 MiB |
+| One declared buffer | 32 MiB |
+| Aggregate declared buffers | 64 MiB |
+| Buffers | 16 |
+| Buffer views | 512 |
+| Accessors | 512 |
+| Scenes | 16 |
+| Nodes | 4,096 |
+| Meshes | 256 |
+| Reachable source primitives | 4,096 |
+| Materials | 64 |
+| Textures/samplers | 128 each |
+| Images | 128 |
+| Source and emitted names | 1,024 UTF-8 bytes |
+
+Base64 encoded size is preflighted before decoding. Physical bytes beyond an external/data buffer's declared length are not addressable; a GLB BIN chunk may contain only its normal zero-to-three bytes of alignment padding. `inspect` checks the 16 MiB SM3D limit before reading the file.
 
 ## Binary format 1
 
@@ -88,7 +114,7 @@ Unknown required chunks fail. Unknown optional chunks are checksum-, flag-, alig
 
 `PART` uses uint32 fields: name string offset +0, first vertex +4, vertex count +8, first index +12, index count +16, material index +20, bounds index +24, reserved zero +28. Part ranges are contiguous, indices are local to the part, and bounds index is part index + 1.
 
-`VERT` uses twelve float32 fields: position XYZ +0, normal XYZ +12, tangent XYZW +24, and UV0 +40. Normal and tangent XYZ must be finite and nonzero; tangent W must be -1 or +1 within 0.0001. `INDX` contains local uint32 indices and complete nondegenerate triangles.
+`VERT` uses twelve float32 fields: position XYZ +0, normal XYZ +12, tangent XYZW +24, and UV0 +40. Normal and tangent XYZ must be finite, unit length, and mutually orthogonal within a squared-length/dot-product tolerance of `0.0001`; tangent W must be exactly -1 or +1. AssetTool, native, and Web enforce the same rule. `INDX` contains local uint32 indices and complete nondegenerate triangles.
 
 `MATL` uses uint32 name/base-color/normal/ORM/emissive references at +0 through +16, alpha mode at +20 (`0` opaque, `1` mask, `2` blend), double-sided bit at +24, and reserved zero at +28. A missing texture reference is `0xFFFFFFFF`. Float32 metadata is base-color RGBA +32, metallic +48, roughness +52, normal strength +56, occlusion strength +60, emissive RGB +64, and alpha cutoff +76. Factors are finite and range-checked; M1 preserves them but does not shade with them.
 
@@ -102,7 +128,7 @@ V2 retains the 16 MiB file, 16-part, 65,535-vertex-per-part, 196,608-index-per-p
 
 Texture references are case-preserving project-relative UTF-8 paths of 1-1,024 bytes with forward slashes. Absolute, drive, UNC, URI, backslash, empty/dot/parent, wildcard, control-character, and network paths fail conversion and loading. Runtime resolution remains the existing exact declared-asset manifest contract.
 
-Valid glTF tangent `VEC4` data is normalized and imported; the Z reflection also flips handedness. Otherwise the converter deterministically accumulates triangle tangent/bitangent vectors in source order, Gram-Schmidt orthogonalizes against the normal, and derives handedness offline. Non-finite data, zero vectors, degenerate geometry, and degenerate UV derivatives fail conversion.
+Valid glTF tangent `VEC4` data is normalized, Gram-Schmidt orthogonalized, normalized again, and imported; the Z reflection also flips handedness. Otherwise the converter deterministically accumulates triangle tangent/bitangent vectors in source order, Gram-Schmidt orthogonalizes against the normal, and derives handedness offline. Non-finite data, zero vectors, degenerate geometry, and degenerate UV derivatives fail conversion.
 
 ## Runtime API and ownership
 
@@ -110,8 +136,8 @@ Valid glTF tangent `VEC4` data is normalized and imported; the Z reflection also
 
 Objects must be destroyed before their model. `DestroyModel3D` refuses while any part object is live and leaves the public record unchanged. Successful model destruction releases every owned mesh. Model handles are generation-checked natively and never reused on Web. Reset destroys objects before models and returns all model-owned mesh counts to zero.
 
-`LoadModel3D` returns a zero handle for an undeclared/missing, malformed, oversized, unsupported, or exhausted asset. `LastError` distinguishes malformed data, missing/read failure, capacity exhaustion, and a live-owner destruction refusal.
+`LoadModel3D` returns a zero handle for an undeclared/missing, malformed, oversized, unsupported, or exhausted asset. `LastError` distinguishes malformed data, missing/read failure, capacity exhaustion, and a live-owner destruction refusal. Command 80 name/path values are FNV-1a diagnostics for tests and inspection, not unique identifiers or texture-resolution keys. Invalid command 80 queries, indices, properties, and stale model handles return zero and set `LastError` on both native and Web. M2 material resolution must use the exact retained internal path.
 
 ## Verification
 
-`scripts/test-renderer3d-models.ps1` verifies v1 byte compatibility; equivalent GLB/glTF v2 output; deterministic imported/generated tangents; inspection; PBR metadata and path survival; malformed GLB, glTF, and SM3D rejection; required/optional chunk policy; exact and over-limit capacities; unchanged live counts on capacity failure; native/Web semantic parity and drawing; and complete teardown. `scripts/test-renderer3d-v2-boundaries.ps1` generates exact 131,072-vertex/393,216-index input plus over-limit part, per-part geometry, material, texture-reference, and file-size cases.
+`scripts/test-renderer3d-m11-hardening.ps1` owns the generated scene/material/unsupported-feature/source-safety/publication corpus. `scripts/test-renderer3d-models.ps1` verifies v1 byte compatibility and structural inspection; equivalent GLB/glTF v2 output; deterministic imported/generated tangents; PBR metadata and path survival; the shared malformed SM3D corpus through inspect/native/Web; invalid command 80 use; required/optional chunk policy; unchanged live counts on failure; native/Web semantic parity and drawing; and complete teardown. `scripts/test-renderer3d-v2-boundaries.ps1` generates exact 131,072-vertex/393,216-index input plus over-limit part, per-part geometry, material, texture-reference, and file-size cases.

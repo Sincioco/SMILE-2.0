@@ -42,6 +42,8 @@ Renderer3D commands 1–79, image command 1, and text command 1 remain unchanged
 
 Command 80 arguments are model handle, query, index, and property in numeric bridge positions A-D. Query IDs are: 1 format version, 2 vertex count, 3 index count, 4 texture-reference count, 5 positive tangent handedness count, 6 negative tangent handedness count, 7 material property, 8 texture property, 9 model/part bounds, 10 part-name FNV-1a hash, and 11 model-name FNV-1a hash. Bounds and finite material factors are returned in thousandths. Texture references in material properties are returned one-based so zero remains “not present.”
 
+Command 80 is a read-only diagnostic surface, not an asset-identity or lookup API. Its model, material, part, texture-name, and texture-path hashes are FNV-1a diagnostics and are not globally unique. M2 must resolve model textures through the exact internal path retained by the model resource. Native and Web return zero and set `LastError` for a stale model handle or an invalid command 80 query, index, or property; callers distinguish a valid zero-valued property through the known property semantics.
+
 The native path remains `Graphics3D.smile` -> numeric/text built-ins -> generated call -> `runtime.c` -> `graphics3d_directx.cpp`. The Web path remains `Graphics3D.smile` -> awaited `renderer3DText`/numeric `renderer3D` -> the generated pure-JavaScript Renderer3D in `WebOutputWriter.cs`. M1 extends those existing dispatches; it does not add a second runtime or touch the image bridge.
 
 ## Implemented ownership and failure behavior

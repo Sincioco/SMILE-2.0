@@ -758,7 +758,9 @@ Public Function AttackProficiencyBonus(StateHandle As Number, ParticipantId As N
     Slot = StateSlot(StateHandle)
     Index = ParticipantIndex(StateHandle, ParticipantId)
 
-    If Slot < 0 Or Not BattleActive[Slot] Or Index < 0 Then
+    If (Slot < 0 Or
+        Not BattleActive[Slot] Or
+        Index < 0) Then
         Return 0
     End If
 

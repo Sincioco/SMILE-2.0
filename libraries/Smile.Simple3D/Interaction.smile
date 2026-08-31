@@ -121,7 +121,9 @@ Public Function UpdatePanZoomControls(
     WheelDelta As Number
 ) As Boolean
 
-    If Abs(DeltaX) > 10000 Or Abs(DeltaY) > 10000 Or Abs(WheelDelta) > 1000 Then
+    If (Abs(DeltaX) > 10000 Or
+        Abs(DeltaY) > 10000 Or
+        Abs(WheelDelta) > 1000) Then
         Return False
     End If
 
@@ -130,7 +132,9 @@ Public Function UpdatePanZoomControls(
         Controls.ReturnSteps = CAMERA_RETURN_HOLD_STEPS
     End If
 
-    If Controls.Panning And Not Held And Not Pressed Then
+    If (Controls.Panning And
+        Not Held And
+        Not Pressed) Then
         Controls.Panning = False
         Controls.ReturnSteps = CAMERA_RETURN_HOLD_STEPS
     End If
@@ -179,7 +183,9 @@ Public Function UpdateOrbitControls(
         Controls.ReturnSteps = CAMERA_RETURN_HOLD_STEPS
     End If
 
-    If Controls.Orbiting And Not Held And Not Pressed Then
+    If (Controls.Orbiting And
+        Not Held And
+        Not Pressed) Then
         Controls.Orbiting = False
         Controls.ReturnSteps = CAMERA_RETURN_HOLD_STEPS
     End If
@@ -198,9 +204,11 @@ Public Function UpdateOrbitControls(
     End If
 
     If Released Then
+
         Controls.Orbiting = False
         Controls.OrbitYaw = NormalizeOrbitYaw(Controls.OrbitYaw)
         Controls.ReturnSteps = CAMERA_RETURN_HOLD_STEPS
+
     End If
 
     Return True

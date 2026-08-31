@@ -127,7 +127,16 @@ try {
         'BadV2Count',
         'BadV2Stride',
         'MissingRequiredV2',
-        'UnknownRequiredV2'
+        'UnknownRequiredV2',
+        'NonPrintableNulV2',
+        'NonPrintableHighV2',
+        'NonPrintableControlV2',
+        'DuplicateChunkV2',
+        'InvalidNormalBasisV2',
+        'InvalidTangentBasisV2',
+        'InvalidOrthogonalBasisV2',
+        'InvalidHandednessV2',
+        'InvalidStructureV1'
     )) {
         Invoke-ExpectedAssetFailure "$fixture.sm3d inspection" @(
             'inspect', (Join-Path $testRoot "Assets\$fixture.sm3d")
@@ -136,6 +145,20 @@ try {
 
     & $assetTool inspect (Join-Path $testRoot 'Assets\UnknownOptionalV2.sm3d') | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'SM3D v2 inspection rejected an unknown optional chunk.' }
+
+    $webSource = Get-Content -LiteralPath (Join-Path $repositoryRoot 'src\Smile.Compiler\WebOutputWriter.cs') -Raw
+    $drawStart = $webSource.IndexOf('function renderer3DDraw(handle)', [System.StringComparison]::Ordinal)
+    $drawEnd = $webSource.IndexOf('function renderer3DEnd()', $drawStart, [System.StringComparison]::Ordinal)
+
+    if ($drawStart -lt 0 -or $drawEnd -le $drawStart) {
+        throw 'Renderer3D Web draw function was not found for hot-path inspection.'
+    }
+
+    $drawSource = $webSource.Substring($drawStart, $drawEnd - $drawStart)
+
+    if ($drawSource.Contains('new Float32Array') -or $drawSource.Contains('.map(') -or $drawSource.Contains('...')) {
+        throw 'Renderer3D Web draw path still contains per-draw array or typed-array construction.'
+    }
 
     $pbrJson = Get-Content -LiteralPath $pbrFixture -Raw
     $invalidSources = [ordered]@{

@@ -36,6 +36,8 @@ internal static class AssetTool
 
             var input = Path.GetFullPath(arguments[1]);
             var output = Path.GetFullPath(arguments[outputOption + 1]);
+            if (string.Equals(input, output, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("SMA1001: model input and output must resolve to different files.");
             var extension = Path.GetExtension(input);
             var requestedV2 = extension.Equals(".glb", StringComparison.OrdinalIgnoreCase);
 
@@ -57,8 +59,20 @@ internal static class AssetTool
             var parent = Path.GetDirectoryName(output);
             if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
             var temporary = output + ".tmp-" + Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture);
-            File.WriteAllBytes(temporary, bytes);
-            File.Move(temporary, output, true);
+            try
+            {
+                using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                    65536, FileOptions.WriteThrough))
+                {
+                    stream.Write(bytes);
+                    stream.Flush(true);
+                }
+                File.Move(temporary, output, true);
+            }
+            finally
+            {
+                if (File.Exists(temporary)) File.Delete(temporary);
+            }
             Console.WriteLine($"Converted {input}");
             Console.WriteLine($"Output: {output}");
             Console.WriteLine($"Version: {(requestedV2 ? 2 : 1)}");

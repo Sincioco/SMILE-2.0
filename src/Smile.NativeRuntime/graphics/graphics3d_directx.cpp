@@ -1434,6 +1434,12 @@ static long long smile_3d_load_model_v2(const unsigned char* bytes, unsigned int
     {
         const unsigned char* entry = bytes + 64 + chunk_index * 32;
         SmileModelChunkV2* chunk = &chunks[chunk_index];
+        for (unsigned int character = 0; character < 4; ++character)
+            if (entry[character] < 32 || entry[character] > 126)
+            {
+                smile_last_error3d = 24;
+                return 0;
+            }
         chunk->id = smile_3d_read_u32(entry);
         chunk->flags = smile_3d_read_u32(entry + 4);
         chunk->offset = smile_3d_read_u32(entry + 8);
@@ -1610,8 +1616,11 @@ static long long smile_3d_load_model_v2(const unsigned char* bytes, unsigned int
                     values[field] = smile_3d_read_float(source + field * 4);
                     if (!isfinite(values[field])) { smile_last_error3d = 24; return 0; }
                 }
-                if (values[3]*values[3]+values[4]*values[4]+values[5]*values[5] <= 0.000000000001f ||
-                    values[6]*values[6]+values[7]*values[7]+values[8]*values[8] <= 0.000000000001f ||
+                float normal_length = values[3]*values[3]+values[4]*values[4]+values[5]*values[5];
+                float tangent_length = values[6]*values[6]+values[7]*values[7]+values[8]*values[8];
+                float basis_dot = values[3]*values[6]+values[4]*values[7]+values[5]*values[8];
+                if (fabsf(normal_length - 1.0f) > 0.0001f ||
+                    fabsf(tangent_length - 1.0f) > 0.0001f || fabsf(basis_dot) > 0.0001f ||
                     fabsf(fabsf(values[9]) - 1.0f) > 0.0001f)
                 { smile_last_error3d = 24; return 0; }
                 for (unsigned int component = 0; component < 3; ++component)

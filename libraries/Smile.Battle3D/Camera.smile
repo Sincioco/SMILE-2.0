@@ -369,7 +369,9 @@ Public Function FollowPoint(
 
     Slot = StateSlot(StateHandle)
 
-    If Slot < 0 Or FovDegrees < 10 Or FovDegrees > 150 Then
+    If (Slot < 0 Or
+        FovDegrees < 10 Or
+        FovDegrees > 150) Then
         Return False
     End If
 

@@ -100,9 +100,13 @@ Private Sub PlayConfirmedImpact(Visual As Number)
     Else If Visual = Battle.VISUAL_CINDERLING_ATTACK Then
 
         If Battle.VisualActor() = Battle.PARTICIPANT_CINDERLING_TWO Then
+
             Play Sound "Assets\SFX\FrostBurst.wav" On Channel CHANNEL_MAGIC
+
         Else
+
             Play Sound "Assets\SFX\BladeImpact.wav" On Channel CHANNEL_IMPACT
+
         End If
 
     End If
@@ -247,13 +251,9 @@ Public Sub Update()
         Play Sound "Assets\SFX\GunBurst.wav" On Channel CHANNEL_MOVEMENT
 
     Else If StepValue = 29 Then
-
         Call PlayConfirmedImpact(Visual)
-
     Else If StepValue = 36 Then
-
         Call PlayEnemyReaction()
-
     End If
 
 End Sub

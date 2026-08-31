@@ -33,9 +33,15 @@ Private Const DRAGON_OBJECT_COUNT = 97
 Private Const CINDERLING_COUNT = 3
 Private Const CINDERLING_PARTS_PER_ENEMY = 30
 Private Const CINDERLING_OBJECT_COUNT = 90
-Private Const PARTICLE_OBJECT_COUNT = 128
+Private Const PARTICLE_OBJECT_COUNT = 35
 Private Const IMPACT_OBJECT_COUNT = 24
 Private Const RIG_TEMPLATE_COUNT = 8
+Private Const INITIAL_OBJECT_COUNT = 441
+Private Const BOSS_OBJECT_COUNT = 448
+Private Const INITIAL_MESH_COUNT = 48
+Private Const MATERIAL_COUNT = 24
+Private Const TEXTURE_COUNT = 6
+Private Const MINIMUM_OBJECT_HEADROOM = 64
 Private Const RIG_CUBE = 0
 Private Const RIG_SPHERE = 1
 Private Const RIG_CYLINDER = 2
@@ -68,6 +74,8 @@ Private Const LYRA_FORMATION_Z = 390
 
 Private Dim State As Number
 Private Dim Ready As Boolean
+Private Dim CinderlingsCreated As Boolean
+Private Dim DragonCreated As Boolean
 Private Dim Camera As Core.Camera3D
 Private Dim CosmicTexture As Core.Texture3D
 Private Dim DragonScaleTexture As Core.Texture3D
@@ -107,7 +115,7 @@ Private Dim PartyFaceParts[20] As Core.Object3D
 Private Dim DragonParts[97] As Core.Object3D
 Private Dim CinderlingParts[90] As Core.Object3D
 Private Dim ParticleTemplate As Core.Object3D
-Private Dim ParticleObjects[128] As Core.Object3D
+Private Dim ParticleObjects[35] As Core.Object3D
 Private Dim ImpactObjects[24] As Core.Object3D
 Private Dim BurningSteps[4] As Number
 Private Dim LastVisual As Number
@@ -494,7 +502,7 @@ Private Sub DefineEffect(
 
     Preset.Id = Id
     Preset.Name = Name
-    Preset.ParticleCount = ParticleCountValue
+    Preset.ParticleCount = Min(ParticleCountValue, PARTICLE_OBJECT_COUNT)
     Preset.Lifetime = LifetimeValue
     Preset.Speed = SpeedValue
     Preset.Spread = SpreadValue
@@ -594,6 +602,7 @@ Private Sub CreateHero(
     End If
 
     FaceBaseIndex = BaseIndex * HERO_FACE_PART_COUNT / HERO_PART_COUNT
+
     Call InitializeRigPart(PartyFaceParts[FaceBaseIndex], RIG_CUBE, RoleHairMaterial)
     Call InitializeRigPart(PartyFaceParts[FaceBaseIndex + 1], RIG_CUBE, RoleHairMaterial)
     Call InitializeRigPart(PartyFaceParts[FaceBaseIndex + 2], RIG_SPHERE, VoidMaterial)
@@ -1014,7 +1023,8 @@ Private Sub PoseHero(
 
     If (VisualHasImpact(Visual) And
         (Battle.VisualTarget() = Participant Or VisualHitsWholeParty(Visual)) And
-        StepValue >= 27 And StepValue <= 40) Then
+        StepValue >= 27 And
+        StepValue <= 40) Then
 
         BrowIntensity = 22
         EyeHeight = 2
@@ -1387,6 +1397,20 @@ Private Sub CreateCinderlings()
     Call CreateCinderling(1, 390, 40)
     Call CreateCinderling(2, 270, 380)
 
+    CinderlingsCreated = True
+
+End Sub
+
+Private Sub DestroyCinderlings()
+
+    Dim Index As Number
+
+    For Index = 0 To CINDERLING_OBJECT_COUNT - 1
+        Call Graphics3D.DestroyObjectInstance3D(CinderlingParts[Index])
+    End For
+
+    CinderlingsCreated = False
+
 End Sub
 
 Private Sub ScaleCinderlingPose(EnemyIndex As Number, PivotX As Number, PivotZ As Number)
@@ -1751,6 +1775,20 @@ Private Sub CreateDragon()
 
     Call PoseDragon(DRAGON_ROOT_X, DRAGON_ROOT_Y, DRAGON_ROOT_Z, Battle.VISUAL_IDLE, 0, 0)
 
+    DragonCreated = True
+
+End Sub
+
+Private Sub DestroyDragon()
+
+    Dim Index As Number
+
+    For Index = 0 To DRAGON_OBJECT_COUNT - 1
+        Call Graphics3D.DestroyObjectInstance3D(DragonParts[Index])
+    End For
+
+    DragonCreated = False
+
 End Sub
 
 Private Sub ScaleDragonPose(PivotX As Number, PivotY As Number, PivotZ As Number)
@@ -1817,6 +1855,7 @@ Private Function GroundDragonPose() As Number
     Correction = DRAGON_GROUND_Y - LowestY
 
     For Index = 0 To DRAGON_OBJECT_COUNT - 1
+
         Call Graphics3D.SetObjectPosition(
             DragonParts[Index],
             DragonParts[Index].Position.X,
@@ -2162,6 +2201,125 @@ Private Sub CreateParticles()
 
 End Sub
 
+Private Function InitialResourcesReady() As Boolean
+
+    Dim Index As Number
+    Dim ResourcesReady As Boolean
+
+    ResourcesReady = (CosmicTexture.Handle <> 0 And
+        DragonScaleTexture.Handle <> 0 And
+        DragonWingTexture.Handle <> 0 And
+        HeroClothTexture.Handle <> 0 And
+        ForgedSteelTexture.Handle <> 0 And
+        VfxTexture.Handle <> 0 And
+        FloorMaterial.Handle <> 0 And
+        GridMaterial.Handle <> 0 And
+        CosmicMaterial.Handle <> 0 And
+        StoneMaterial.Handle <> 0 And
+        BronzeMaterial.Handle <> 0 And
+        LavaMaterial.Handle <> 0 And
+        ArinMaterial.Handle <> 0 And
+        SteelMaterial.Handle <> 0 And
+        MiraMaterial.Handle <> 0 And
+        FrostMaterial.Handle <> 0 And
+        TorMaterial.Handle <> 0 And
+        LyraMaterial.Handle <> 0 And
+        SkinMaterial.Handle <> 0 And
+        HairMaterial.Handle <> 0 And
+        ArinHairMaterial.Handle <> 0 And
+        TorHairMaterial.Handle <> 0 And
+        LeatherMaterial.Handle <> 0 And
+        BoneMaterial.Handle <> 0 And
+        VoidMaterial.Handle <> 0 And
+        DragonMaterial.Handle <> 0 And
+        DragonGlowMaterial.Handle <> 0 And
+        DragonWingMaterial.Handle <> 0 And
+        DragonUnderbellyMaterial.Handle <> 0 And
+        ParticleMaterial.Handle <> 0 And
+        ParticleTemplate.Handle <> 0 And
+        ParticleTemplate.MeshHandle <> 0)
+
+    For Index = 0 To RIG_TEMPLATE_COUNT - 1
+        ResourcesReady = ResourcesReady And RigTemplates[Index].Handle <> 0 And RigTemplates[Index].MeshHandle <> 0
+    End For
+
+    For Index = 0 To ARENA_OBJECT_COUNT - 1
+        ResourcesReady = ResourcesReady And Arena[Index].Handle <> 0 And Arena[Index].MeshHandle <> 0
+    End For
+
+    For Index = 0 To PARTY_OBJECT_COUNT - 1
+        ResourcesReady = ResourcesReady And PartyParts[Index].Handle <> 0
+    End For
+
+    For Index = 0 To PARTY_FACE_OBJECT_COUNT - 1
+        ResourcesReady = ResourcesReady And PartyFaceParts[Index].Handle <> 0
+    End For
+
+    For Index = 0 To CINDERLING_OBJECT_COUNT - 1
+        ResourcesReady = ResourcesReady And CinderlingParts[Index].Handle <> 0
+    End For
+
+    For Index = 0 To PARTICLE_OBJECT_COUNT - 1
+        ResourcesReady = ResourcesReady And ParticleObjects[Index].Handle <> 0
+    End For
+
+    For Index = 0 To IMPACT_OBJECT_COUNT - 1
+        ResourcesReady = ResourcesReady And ImpactObjects[Index].Handle <> 0
+    End For
+
+    ResourcesReady = (ResourcesReady And
+        CinderlingsCreated And
+        Not DragonCreated And
+        Graphics3D.LiveObjectCount3D() = INITIAL_OBJECT_COUNT And
+        Graphics3D.LiveMeshCount3D() = INITIAL_MESH_COUNT And
+        Graphics3D.LiveMaterialCount3D() = MATERIAL_COUNT And
+        Graphics3D.LiveTextureCount3D() = TEXTURE_COUNT And
+        Graphics3D.MaximumObjectCount3D() - Graphics3D.LiveObjectCount3D() >= MINIMUM_OBJECT_HEADROOM And
+        Graphics3D.LastError() = 0)
+
+    Return ResourcesReady
+
+End Function
+
+Private Function DragonResourcesReady() As Boolean
+
+    Dim Index As Number
+    Dim ResourcesReady As Boolean
+
+    ResourcesReady = DragonCreated And Not CinderlingsCreated
+
+    For Index = 0 To DRAGON_OBJECT_COUNT - 1
+        ResourcesReady = ResourcesReady And DragonParts[Index].Handle <> 0
+    End For
+
+    ResourcesReady = (ResourcesReady And
+        Graphics3D.LiveObjectCount3D() = BOSS_OBJECT_COUNT And
+        Graphics3D.MaximumObjectCount3D() - Graphics3D.LiveObjectCount3D() >= MINIMUM_OBJECT_HEADROOM And
+        Graphics3D.LastError() = 0)
+
+    Return ResourcesReady
+
+End Function
+
+Private Function EnsureEncounterObjects() As Boolean
+
+    If Battle.BossIsIntroduced() And Not DragonCreated Then
+
+        Call DestroyCinderlings()
+        Call CreateDragon()
+
+        If Not DragonResourcesReady() Then
+            Call Shutdown()
+
+            Return False
+        End If
+
+    End If
+
+    Return True
+
+End Function
+
 Private Sub CreateImpactObjects()
 
     Dim Index As Number
@@ -2278,6 +2436,9 @@ Public Function Initialize(StateHandle As Number) As Boolean
         Return False
     End If
 
+    Ready = False
+    CinderlingsCreated = False
+    DragonCreated = False
     State = StateHandle
     Camera = Graphics3D.DefaultCamera()
     CosmicTexture = Graphics3D.LoadTexture3D(
@@ -2351,8 +2512,14 @@ Public Function Initialize(StateHandle As Number) As Boolean
     Call CreateImpactObjects()
     Call CreateParty()
     Call CreateCinderlings()
-    Call CreateDragon()
     Call CreateParticles()
+
+    If Not InitialResourcesReady() Then
+        Call Shutdown()
+
+        Return False
+    End If
+
     Call DefinePresentation()
 
     LastVisual = -1
@@ -2515,6 +2682,7 @@ Private Function ProjectCombatText() As BattleCamera.ProjectedPoint3D
     End If
 
     Call ParticipantAnchor(Battle.VisualTarget(), X, Y, Z)
+
     Height = 92
 
     If Battle.VisualTarget() = Battle.PARTICIPANT_ASHWING Then
@@ -2533,28 +2701,40 @@ End Function
 ''' manually adjusted cameras without coupling the battle rules to rendering.
 Public Function CombatTextVisible() As Boolean
 
+    Dim ReturnValue As Boolean
+
     Dim Projected As BattleCamera.ProjectedPoint3D
 
     Projected = ProjectCombatText()
-    Return Projected.Visible
+    ReturnValue = Projected.Visible
+
+    Return ReturnValue
 
 End Function
 
 Public Function CombatTextX() As Number
 
+    Dim ReturnValue As Number
+
     Dim Projected As BattleCamera.ProjectedPoint3D
 
     Projected = ProjectCombatText()
-    Return Max(32, Min(928, Projected.X))
+    ReturnValue = Max(32, Min(928, Projected.X))
+
+    Return ReturnValue
 
 End Function
 
 Public Function CombatTextY() As Number
 
+    Dim ReturnValue As Number
+
     Dim Projected As BattleCamera.ProjectedPoint3D
 
     Projected = ProjectCombatText()
-    Return Max(72, Min(390, Projected.Y))
+    ReturnValue = Max(72, Min(390, Projected.Y))
+
+    Return ReturnValue
 
 End Function
 
@@ -2921,6 +3101,7 @@ Private Sub UpdateImpactObjects()
         Call Graphics3D.SetObjectOpacity(ImpactObjects[7], Opacity * 4 / 5)
         Call Graphics3D.SetObjectOpacity(ImpactObjects[8], Opacity * 4 / 5)
         Call Graphics3D.SetObjectOpacity(ImpactObjects[9], Opacity * 4 / 5)
+
         Return
 
     End If
@@ -3020,25 +3201,35 @@ Private Sub UpdateImpactObjects()
         BlueValue = 125
 
         If Visual = Battle.VISUAL_MIRA_FLAME Then
+
             RedValue = 255
             GreenValue = 92
             BlueValue = 12
+
         Else If Visual = Battle.VISUAL_MIRA_FROST Then
+
             RedValue = 85
             GreenValue = 225
             BlueValue = 255
+
         Else If Visual = Battle.VISUAL_MIRA_LIGHTNING Then
+
             RedValue = 125
             GreenValue = 178
             BlueValue = 255
+
         Else If Visual = Battle.VISUAL_LYRA_ATTACK Then
+
             RedValue = 95
             GreenValue = 255
             BlueValue = 192
+
         Else If Visual = Battle.VISUAL_TOR_ATTACK Or Visual = Battle.VISUAL_TOR_BASH Then
+
             RedValue = 255
             GreenValue = 152
             BlueValue = 32
+
         End If
 
         Call Graphics3D.SetObjectVisible(ImpactObjects[20], True)
@@ -3800,20 +3991,22 @@ End Sub
 Private Sub UpdateEnemyVisibility()
 
     Dim Index As Number
-    Dim DragonVisible As Boolean
-    Dim WaveOneVisible As Boolean
 
-    WaveOneVisible = Not Battle.BossIsIntroduced()
+    If CinderlingsCreated Then
 
-    Call SetCinderlingVisible(0, WaveOneVisible)
-    Call SetCinderlingVisible(1, WaveOneVisible)
-    Call SetCinderlingVisible(2, WaveOneVisible)
+        Call SetCinderlingVisible(0, True)
+        Call SetCinderlingVisible(1, True)
+        Call SetCinderlingVisible(2, True)
 
-    DragonVisible = Battle.BossIsIntroduced()
+    End If
 
-    For Index = 0 To DRAGON_OBJECT_COUNT - 1
-        Call Graphics3D.SetObjectVisible(DragonParts[Index], DragonVisible)
-    End For
+    If DragonCreated Then
+
+        For Index = 0 To DRAGON_OBJECT_COUNT - 1
+            Call Graphics3D.SetObjectVisible(DragonParts[Index], True)
+        End For
+
+    End If
 
 End Sub
 
@@ -4034,7 +4227,9 @@ Private Sub UpdateActors()
     CinderlingOffsetTwo = 0
     CinderlingOffsetThree = 0
 
-    If StepValue = 30 And VisualStepChanged And VisualHasImpact(Visual) Then
+    If (StepValue = 30 And
+        VisualStepChanged And
+        VisualHasImpact(Visual)) Then
 
         Call TriggerImpactCue(Visual)
 
@@ -4164,21 +4359,29 @@ Private Sub UpdateActors()
 
     End If
 
-    Call PoseCinderling(0, 250 + CinderlingOffsetOne, -280, CinderlingOneDefeated, GlobalStep)
-    Call PoseCinderling(1, 390 + CinderlingOffsetTwo, 40, CinderlingTwoDefeated, GlobalStep)
-    Call PoseCinderling(2, 270 + CinderlingOffsetThree, 380, CinderlingThreeDefeated, GlobalStep)
+    If CinderlingsCreated Then
+
+        Call PoseCinderling(0, 250 + CinderlingOffsetOne, -280, CinderlingOneDefeated, GlobalStep)
+        Call PoseCinderling(1, 390 + CinderlingOffsetTwo, 40, CinderlingTwoDefeated, GlobalStep)
+        Call PoseCinderling(2, 270 + CinderlingOffsetThree, 380, CinderlingThreeDefeated, GlobalStep)
+
+    End If
+
     Call PoseHero(0, Battle.PARTICIPANT_ARIN, ArinX, ArinZ, ROLE_DEFENDER, Visual, StepValue, GlobalStep)
     Call PoseHero(56, Battle.PARTICIPANT_TOR, TorX, TorZ, ROLE_ATTACKER, Visual, StepValue, GlobalStep)
     Call PoseHero(112, Battle.PARTICIPANT_LYRA, LyraX, LyraZ, ROLE_HEALER, Visual, StepValue, GlobalStep)
     Call PoseHero(168, Battle.PARTICIPANT_MIRA, MiraX, MiraZ, ROLE_WIZARD, Visual, StepValue, GlobalStep)
-    Call PoseDragon(
-        DRAGON_ROOT_X + DragonOffsetX,
-        DRAGON_ROOT_Y + DragonOffsetY,
-        DRAGON_ROOT_Z + DragonOffsetZ,
-        Visual,
-        StepValue,
-        GlobalStep
-    )
+
+    If DragonCreated Then
+        Call PoseDragon(
+            DRAGON_ROOT_X + DragonOffsetX,
+            DRAGON_ROOT_Y + DragonOffsetY,
+            DRAGON_ROOT_Z + DragonOffsetZ,
+            Visual,
+            StepValue,
+            GlobalStep
+        )
+    End If
 
     ''' Posing enables every component while assembling the current frame.
     ''' Apply wave ownership afterwards so old-wave corpses disappear exactly
@@ -4262,6 +4465,10 @@ Public Sub Update(StateHandle As Number, StepValue As Number)
     VisualStepValue = Battle.VisualStep()
     VisualStepChanged = (VisualValue <> LastVisual Or VisualStepValue <> LastVisualStep)
 
+    If Not EnsureEncounterObjects() Then
+        Return
+    End If
+
     If (Battle.ActiveEnemyCount() <> LastFramedEnemyCount Or
         Battle.BossIsIntroduced() <> LastBossFramed) Then
         Call DefineActiveCameraShots()
@@ -4334,13 +4541,21 @@ Public Sub Draw()
         FrameReady = Graphics3D.DrawObject3D(PartyFaceParts[Index])
     End For
 
-    For Index = 0 To CINDERLING_OBJECT_COUNT - 1
-        FrameReady = Graphics3D.DrawObject3D(CinderlingParts[Index])
-    End For
+    If CinderlingsCreated Then
 
-    For Index = 0 To DRAGON_OBJECT_COUNT - 1
-        FrameReady = Graphics3D.DrawObject3D(DragonParts[Index])
-    End For
+        For Index = 0 To CINDERLING_OBJECT_COUNT - 1
+            FrameReady = Graphics3D.DrawObject3D(CinderlingParts[Index])
+        End For
+
+    End If
+
+    If DragonCreated Then
+
+        For Index = 0 To DRAGON_OBJECT_COUNT - 1
+            FrameReady = Graphics3D.DrawObject3D(DragonParts[Index])
+        End For
+
+    End If
 
     ''' Additive particles deliberately render last.
 
@@ -4424,10 +4639,6 @@ Public Sub Shutdown()
 
     Dim Index As Number
 
-    If Not Ready Then
-        Return
-    End If
-
     For Index = 0 To PARTICLE_OBJECT_COUNT - 1
         Call Graphics3D.DestroyObjectInstance3D(ParticleObjects[Index])
     End For
@@ -4438,13 +4649,8 @@ Public Sub Shutdown()
 
     Call Graphics3D.DestroyObject3D(ParticleTemplate)
 
-    For Index = 0 To DRAGON_OBJECT_COUNT - 1
-        Call Graphics3D.DestroyObjectInstance3D(DragonParts[Index])
-    End For
-
-    For Index = 0 To CINDERLING_OBJECT_COUNT - 1
-        Call Graphics3D.DestroyObjectInstance3D(CinderlingParts[Index])
-    End For
+    Call DestroyDragon()
+    Call DestroyCinderlings()
 
     For Index = 0 To PARTY_OBJECT_COUNT - 1
         Call Graphics3D.DestroyObjectInstance3D(PartyParts[Index])

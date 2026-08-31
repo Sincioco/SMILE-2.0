@@ -9,6 +9,19 @@ internal static class Sm3dV2
     private const int HeaderSize = 64;
     private const int DirectoryEntrySize = 32;
     private const int MaximumFileBytes = 16 * 1024 * 1024;
+    private const int MaximumGltfJsonBytes = 4 * 1024 * 1024;
+    private const int MaximumGlbBytes = 64 * 1024 * 1024;
+    private const int MaximumBufferBytes = 32 * 1024 * 1024;
+    private const int MaximumAggregateBufferBytes = 64 * 1024 * 1024;
+    private const int MaximumBuffers = 16;
+    private const int MaximumBufferViews = 512;
+    private const int MaximumAccessors = 512;
+    private const int MaximumScenes = 16;
+    private const int MaximumNodes = 4096;
+    private const int MaximumMeshes = 256;
+    private const int MaximumSourcePrimitives = 4096;
+    private const int MaximumImages = 128;
+    private const int MaximumNameBytes = 1024;
     private const int MaximumParts = 16;
     private const int MaximumVertices = 131072;
     private const int MaximumIndices = 393216;
@@ -23,11 +36,13 @@ internal static class Sm3dV2
     private const uint GlbJson = 0x4E4F534A;
     private const uint GlbBin = 0x004E4942;
     private const uint ChunkOptional = 1;
+    private const float BasisTolerance = 0.0001f;
 
     private static readonly string[] RequiredChunkIds = ["STR0", "PART", "VERT", "INDX", "MATL", "TEXR", "BOND"];
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
 
-    private sealed record BufferView(byte[] Buffer, int Offset, int Length, int Stride);
+    private sealed record SourceBuffer(byte[] Bytes, int Length);
+    private sealed record BufferView(byte[] Buffer, int Offset, int Length, int Stride, int Target);
     private sealed record TextureReference(string Path, uint Semantic);
 
     private sealed class Material
@@ -112,13 +127,27 @@ internal static class Sm3dV2
 
     public static byte[] Convert(string path)
     {
-        using var input = ReadInput(path);
-        var model = ReadModel(input);
-        return Write(model);
+        try
+        {
+            using var input = ReadInput(path);
+            var model = ReadModel(input);
+            return Write(model);
+        }
+        catch (Exception error) when (error is InvalidOperationException or ArgumentException or DecoderFallbackException or FormatException)
+        {
+            throw new InvalidDataException("SMA1241: glTF contains a malformed value.", error);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            throw new InvalidDataException("SMA1292: a glTF source file or external buffer could not be read.", error);
+        }
     }
 
     public static string Inspect(string path)
     {
+        var length = new FileInfo(path).Length;
+        Require(length is >= 32 and <= MaximumFileBytes,
+            "SMA1200: SM3D file size is outside the supported range.");
         var bytes = File.ReadAllBytes(path);
         Require(bytes.Length >= 32 && bytes.Length <= MaximumFileBytes,
             "SMA1200: SM3D file size is outside the supported range.");
@@ -136,6 +165,9 @@ internal static class Sm3dV2
         var extension = Path.GetExtension(path);
         if (extension.Equals(".gltf", StringComparison.OrdinalIgnoreCase))
         {
+            var length = new FileInfo(path).Length;
+            Require(length is >= 1 and <= MaximumGltfJsonBytes,
+                $"SMA1242: textual glTF JSON must use 1 to {MaximumGltfJsonBytes} bytes.");
             return new Input
             {
                 Document = ParseJson(File.ReadAllBytes(path)),
@@ -145,6 +177,9 @@ internal static class Sm3dV2
 
         Require(extension.Equals(".glb", StringComparison.OrdinalIgnoreCase),
             "SMA1100: SM3D v2 input must be .gltf or .glb.");
+        var fileLength = new FileInfo(path).Length;
+        Require(fileLength is >= 20 and <= MaximumGlbBytes,
+            $"SMA1243: GLB input must use 20 to {MaximumGlbBytes} bytes.");
         var bytes = File.ReadAllBytes(path);
         Require(bytes.Length >= 20, "SMA1101: GLB header is truncated.");
         Require(Read32(bytes, 0) == GlbMagic, "SMA1102: GLB magic is invalid.");
@@ -167,11 +202,15 @@ internal static class Sm3dV2
             if (type == GlbJson)
             {
                 Require(chunkIndex == 0 && json == null, "SMA1107: GLB requires exactly one first JSON chunk.");
+                Require(length <= MaximumGltfJsonBytes,
+                    $"SMA1242: textual glTF JSON must use at most {MaximumGltfJsonBytes} bytes.");
                 json = content;
             }
             else if (type == GlbBin)
             {
                 Require(json != null && binary == null, "SMA1108: GLB permits at most one BIN chunk after JSON.");
+                Require(length <= MaximumBufferBytes + 3,
+                    $"SMA1244: an individual source buffer must use at most {MaximumBufferBytes} bytes plus GLB padding.");
                 binary = content;
             }
             else
@@ -214,108 +253,76 @@ internal static class Sm3dV2
         Require(root.ValueKind == JsonValueKind.Object, "SMA1112: glTF root must be an object.");
         Require(Required(Required(root, "asset"), "version").GetString() == "2.0",
             "SMA1113: only glTF 2.0 is supported.");
+        ValidateStaticProfile(root);
         var scenes = Required(root, "scenes");
-        Require(scenes.ValueKind == JsonValueKind.Array && scenes.GetArrayLength() == 1,
-            "SMA1114: the SM3D v2 static profile requires exactly one scene.");
-        if (root.TryGetProperty("scene", out var sceneIndex))
-            Require(sceneIndex.GetInt32() == 0, "SMA1115: the active scene must be scene zero.");
+        Require(scenes.ValueKind == JsonValueKind.Array && scenes.GetArrayLength() is >= 1 and <= MaximumScenes,
+            $"SMA1114: the SM3D v2 static profile requires 1 to {MaximumScenes} scenes.");
+        var activeScene = root.TryGetProperty("scene", out var sceneIndex) ? sceneIndex.GetInt32() : 0;
+        Require(activeScene >= 0 && activeScene < scenes.GetArrayLength(), "SMA1115: the active scene index is invalid.");
+
+        var nodes = Required(root, "nodes");
+        Require(nodes.ValueKind == JsonValueKind.Array && nodes.GetArrayLength() is >= 1 and <= MaximumNodes,
+            $"SMA1245: glTF requires 1 to {MaximumNodes} nodes.");
+        var meshes = Required(root, "meshes");
+        Require(meshes.ValueKind == JsonValueKind.Array && meshes.GetArrayLength() is >= 1 and <= MaximumMeshes,
+            $"SMA1117: glTF requires 1 to {MaximumMeshes} meshes.");
 
         var buffers = ReadBuffers(root, input.BaseDirectory, input.BinaryChunk);
         var views = ReadViews(root, buffers);
         var accessors = Required(root, "accessors");
-        Require(accessors.ValueKind == JsonValueKind.Array, "SMA1116: accessors must be an array.");
+        Require(accessors.ValueKind == JsonValueKind.Array && accessors.GetArrayLength() is >= 1 and <= MaximumAccessors,
+            $"SMA1116: glTF requires 1 to {MaximumAccessors} accessors.");
         var textures = new List<TextureReference>();
         var materials = ReadMaterials(root, textures);
-        var meshes = Required(root, "meshes");
-        Require(meshes.ValueKind == JsonValueKind.Array, "SMA1117: meshes must be an array.");
+        var implicitMaterial = -1;
+        if (materials.Count == 0)
+        {
+            materials.Add(new Material { Name = "Default" });
+            implicitMaterial = 0;
+        }
 
         var parts = new List<Part>();
-        var meshIndex = 0;
-        foreach (var mesh in meshes.EnumerateArray())
+        var activeNodes = Required(scenes[activeScene], "nodes");
+        Require(activeNodes.ValueKind == JsonValueKind.Array && activeNodes.GetArrayLength() <= MaximumNodes,
+            "SMA1246: active scene nodes must be an array within the node limit.");
+        var traversalPath = new bool[nodes.GetArrayLength()];
+        var instanceOrdinal = 0;
+        var sourcePrimitiveCount = 0;
+
+        void TraverseNode(int nodeIndex, Matrix4x4 parentTransform)
         {
-            var meshName = OptionalName(mesh, $"Mesh {meshIndex + 1}");
-            var primitives = Required(mesh, "primitives");
-            Require(primitives.ValueKind == JsonValueKind.Array && primitives.GetArrayLength() > 0,
-                "SMA1118: mesh primitives must be a nonempty array.");
-            var primitiveIndex = 0;
-            foreach (var primitive in primitives.EnumerateArray())
+            Require(nodeIndex >= 0 && nodeIndex < nodes.GetArrayLength(), "SMA1247: scene or child node index is invalid.");
+            Require(!traversalPath[nodeIndex], "SMA1248: node hierarchy contains a cycle.");
+            var node = nodes[nodeIndex];
+            Require(node.ValueKind == JsonValueKind.Object, "SMA1249: each node must be an object.");
+            traversalPath[nodeIndex] = true;
+            var worldTransform = ReadNodeTransform(node) * parentTransform;
+            var determinant = worldTransform.GetDeterminant();
+            var invertible = Matrix4x4.Invert(worldTransform, out var inverse);
+            Require(float.IsFinite(determinant) && MathF.Abs(determinant) > 1e-8f && invertible,
+                "SMA1250: reachable node transform is singular or non-finite.");
+            var inverseTranspose = Matrix4x4.Transpose(inverse);
+
+            if (node.TryGetProperty("mesh", out var meshValue))
             {
-                Require(!primitive.TryGetProperty("mode", out var mode) || mode.GetInt32() == 4,
-                    "SMA1119: only indexed triangle primitives are supported.");
-                var attributes = Required(primitive, "attributes");
-                var positions = ReadFloatAccessor(accessors, views, RequiredIndex(attributes, "POSITION"), 3, "POSITION");
-                var normals = ReadFloatAccessor(accessors, views, RequiredIndex(attributes, "NORMAL"), 3, "NORMAL");
-                var uvs = ReadFloatAccessor(accessors, views, RequiredIndex(attributes, "TEXCOORD_0"), 2, "TEXCOORD_0");
-                var vertexCount = positions.Length / 3;
-                Require(vertexCount == normals.Length / 3 && vertexCount == uvs.Length / 2,
-                    "SMA1120: vertex attribute counts must match.");
-                Require(vertexCount is >= 1 and <= MaximumVerticesPerPart,
-                    $"SMA1121: each primitive supports 1 to {MaximumVerticesPerPart} vertices.");
-                Require(primitive.TryGetProperty("indices", out var indexValue),
-                    "SMA1122: indexed triangle primitives are required.");
-                var indices = ReadIndexAccessor(accessors, views, indexValue.GetInt32());
-                Require(indices.Length is >= 3 and <= MaximumIndicesPerPart && indices.Length % 3 == 0,
-                    $"SMA1123: index counts must be triangular and at most {MaximumIndicesPerPart}.");
-                Require(indices.All(index => index < vertexCount), "SMA1124: an index is outside its primitive vertex range.");
-                for (var index = 0; index < indices.Length; index += 3)
-                    (indices[index + 1], indices[index + 2]) = (indices[index + 2], indices[index + 1]);
-
-                var vertices = new float[vertexCount * 12];
-                for (var index = 0; index < vertexCount; index++)
-                {
-                    var normal = Normalize(new Vector3(normals[index * 3], normals[index * 3 + 1], -normals[index * 3 + 2]),
-                        "SMA1125: NORMAL contains a zero-length vector.");
-                    vertices[index * 12] = positions[index * 3];
-                    vertices[index * 12 + 1] = positions[index * 3 + 1];
-                    vertices[index * 12 + 2] = -positions[index * 3 + 2];
-                    vertices[index * 12 + 3] = normal.X;
-                    vertices[index * 12 + 4] = normal.Y;
-                    vertices[index * 12 + 5] = normal.Z;
-                    vertices[index * 12 + 10] = uvs[index * 2];
-                    vertices[index * 12 + 11] = uvs[index * 2 + 1];
-                }
-
-                ValidateTriangles(vertices, indices);
-                if (attributes.TryGetProperty("TANGENT", out var tangentAccessor))
-                {
-                    var tangents = ReadFloatAccessor(accessors, views, tangentAccessor.GetInt32(), 4, "TANGENT");
-                    Require(tangents.Length / 4 == vertexCount, "SMA1126: TANGENT count must match POSITION.");
-                    for (var index = 0; index < vertexCount; index++)
-                    {
-                        var tangent = Normalize(new Vector3(tangents[index * 4], tangents[index * 4 + 1],
-                            -tangents[index * 4 + 2]), "SMA1127: TANGENT contains a zero-length vector.");
-                        var handedness = tangents[index * 4 + 3];
-                        Require(MathF.Abs(MathF.Abs(handedness) - 1) <= 0.0001f,
-                            "SMA1128: TANGENT handedness must be -1 or 1.");
-                        vertices[index * 12 + 6] = tangent.X;
-                        vertices[index * 12 + 7] = tangent.Y;
-                        vertices[index * 12 + 8] = tangent.Z;
-                        vertices[index * 12 + 9] = handedness < 0 ? 1 : -1;
-                    }
-                }
-                else
-                {
-                    GenerateTangents(vertices, indices);
-                }
-
-                var material = primitive.TryGetProperty("material", out var materialValue)
-                    ? materialValue.GetUInt32() : 0;
-                Require(material < materials.Count, "SMA1129: material reference is outside the material table.");
-                var (partMinimum, partMaximum) = Bounds(vertices);
-                var partName = primitives.GetArrayLength() == 1 ? meshName : $"{meshName} Part {primitiveIndex + 1}";
-                parts.Add(new Part
-                {
-                    Name = partName,
-                    Vertices = vertices,
-                    Indices = indices,
-                    Material = material,
-                    Minimum = partMinimum,
-                    Maximum = partMaximum
-                });
-                primitiveIndex++;
+                var meshIndex = meshValue.GetInt32();
+                Require(meshIndex >= 0 && meshIndex < meshes.GetArrayLength(), "SMA1251: node mesh index is invalid.");
+                instanceOrdinal++;
+                ReadMeshInstance(node, nodeIndex, meshes[meshIndex], meshIndex, instanceOrdinal, worldTransform,
+                    inverseTranspose, determinant, accessors, views, materials, textures, ref implicitMaterial,
+                    parts, ref sourcePrimitiveCount);
             }
-            meshIndex++;
+
+            if (node.TryGetProperty("children", out var children))
+            {
+                Require(children.ValueKind == JsonValueKind.Array && children.GetArrayLength() <= MaximumNodes,
+                    "SMA1252: node children must be an array within the node limit.");
+                foreach (var child in children.EnumerateArray()) TraverseNode(child.GetInt32(), worldTransform);
+            }
+            traversalPath[nodeIndex] = false;
         }
+
+        foreach (var nodeIndex in activeNodes.EnumerateArray()) TraverseNode(nodeIndex.GetInt32(), Matrix4x4.Identity);
 
         Require(parts.Count is >= 1 and <= MaximumParts, $"SMA1131: models require 1 to {MaximumParts} parts.");
         Require(parts.Sum(part => part.Vertices.Length / 12) <= MaximumVertices,
@@ -324,7 +331,10 @@ internal static class Sm3dV2
             $"SMA1133: models support at most {MaximumIndices} total indices.");
         var minimum = new Vector3(parts.Min(part => part.Minimum.X), parts.Min(part => part.Minimum.Y), parts.Min(part => part.Minimum.Z));
         var maximum = new Vector3(parts.Max(part => part.Maximum.X), parts.Max(part => part.Maximum.Y), parts.Max(part => part.Maximum.Z));
-        var name = OptionalName(meshes[0], "Model");
+        var firstRootIndex = activeNodes.GetArrayLength() > 0 ? activeNodes[0].GetInt32() : -1;
+        var fallbackName = firstRootIndex >= 0 && firstRootIndex < nodes.GetArrayLength()
+            ? OptionalName(nodes[firstRootIndex], "Model") : "Model";
+        var name = OptionalName(scenes[activeScene], fallbackName);
         return new Model
         {
             Name = name,
@@ -336,16 +346,251 @@ internal static class Sm3dV2
         };
     }
 
-    private static List<byte[]> ReadBuffers(JsonElement root, string baseDirectory, byte[]? binaryChunk)
+    private static void ReadMeshInstance(JsonElement node, int nodeIndex, JsonElement mesh, int meshIndex,
+        int instanceOrdinal, Matrix4x4 worldTransform, Matrix4x4 inverseTranspose, float determinant,
+        JsonElement accessors, IReadOnlyList<BufferView> views, List<Material> materials,
+        List<TextureReference> textures, ref int implicitMaterial, List<Part> parts, ref int sourcePrimitiveCount)
+    {
+        Require(mesh.ValueKind == JsonValueKind.Object, "SMA1253: each mesh must be an object.");
+        RejectProperty(mesh, "weights", "mesh weights");
+        var meshName = OptionalName(mesh, $"Mesh {meshIndex + 1}");
+        var nodeName = OptionalName(node, $"Node {nodeIndex + 1}");
+        var primitives = Required(mesh, "primitives");
+        Require(primitives.ValueKind == JsonValueKind.Array && primitives.GetArrayLength() > 0,
+            "SMA1118: mesh primitives must be a nonempty array.");
+        sourcePrimitiveCount = checked(sourcePrimitiveCount + primitives.GetArrayLength());
+        Require(sourcePrimitiveCount <= MaximumSourcePrimitives,
+            $"SMA1254: reachable scene supports at most {MaximumSourcePrimitives} source primitives.");
+
+        var primitiveIndex = 0;
+        foreach (var primitive in primitives.EnumerateArray())
+        {
+            Require(primitive.ValueKind == JsonValueKind.Object, "SMA1255: each primitive must be an object.");
+            RejectProperty(primitive, "targets", "morph targets");
+            RejectExtensions(primitive, "primitive");
+            Require(!primitive.TryGetProperty("mode", out var mode) || mode.GetInt32() == 4,
+                "SMA1119: only indexed triangle primitives are supported.");
+            var attributes = Required(primitive, "attributes");
+            Require(attributes.ValueKind == JsonValueKind.Object, "SMA1256: primitive attributes must be an object.");
+            foreach (var attribute in attributes.EnumerateObject())
+                Require(attribute.Name is "POSITION" or "NORMAL" or "TEXCOORD_0" or "TANGENT",
+                    $"SMA1257: unsupported primitive attribute '{attribute.Name}' would be lost.");
+
+            var positions = ReadFloatAccessor(accessors, views, RequiredIndex(attributes, "POSITION"), 3,
+                "POSITION", MaximumVerticesPerPart);
+            var normals = ReadFloatAccessor(accessors, views, RequiredIndex(attributes, "NORMAL"), 3,
+                "NORMAL", MaximumVerticesPerPart);
+            var uvs = ReadFloatAccessor(accessors, views, RequiredIndex(attributes, "TEXCOORD_0"), 2,
+                "TEXCOORD_0", MaximumVerticesPerPart);
+            var vertexCount = positions.Length / 3;
+            Require(vertexCount == normals.Length / 3 && vertexCount == uvs.Length / 2,
+                "SMA1120: vertex attribute counts must match.");
+            Require(primitive.TryGetProperty("indices", out var indexValue),
+                "SMA1122: indexed triangle primitives are required.");
+            var indices = ReadIndexAccessor(accessors, views, indexValue.GetInt32(), MaximumIndicesPerPart);
+            Require(indices.Length >= 3 && indices.Length % 3 == 0,
+                $"SMA1123: index counts must be triangular and at most {MaximumIndicesPerPart}.");
+            Require(indices.All(index => index < vertexCount), "SMA1124: an index is outside its primitive vertex range.");
+            if (determinant >= 0)
+                for (var index = 0; index < indices.Length; index += 3)
+                    (indices[index + 1], indices[index + 2]) = (indices[index + 2], indices[index + 1]);
+
+            var vertices = new float[checked(vertexCount * 12)];
+            for (var index = 0; index < vertexCount; index++)
+            {
+                var sourcePosition = new Vector3(positions[index * 3], positions[index * 3 + 1], positions[index * 3 + 2]);
+                var position = ToSmile(Vector3.Transform(sourcePosition, worldTransform));
+                var sourceNormal = new Vector3(normals[index * 3], normals[index * 3 + 1], normals[index * 3 + 2]);
+                var normal = Normalize(ToSmile(Vector3.TransformNormal(sourceNormal, inverseTranspose)),
+                    "SMA1125: NORMAL contains a zero-length or unusable vector.");
+                vertices[index * 12] = position.X;
+                vertices[index * 12 + 1] = position.Y;
+                vertices[index * 12 + 2] = position.Z;
+                vertices[index * 12 + 3] = normal.X;
+                vertices[index * 12 + 4] = normal.Y;
+                vertices[index * 12 + 5] = normal.Z;
+                vertices[index * 12 + 10] = uvs[index * 2];
+                vertices[index * 12 + 11] = uvs[index * 2 + 1];
+            }
+
+            ValidateTriangles(vertices, indices);
+            if (attributes.TryGetProperty("TANGENT", out var tangentAccessor))
+            {
+                var tangents = ReadFloatAccessor(accessors, views, tangentAccessor.GetInt32(), 4,
+                    "TANGENT", MaximumVerticesPerPart);
+                Require(tangents.Length / 4 == vertexCount, "SMA1126: TANGENT count must match POSITION.");
+                for (var index = 0; index < vertexCount; index++)
+                {
+                    var sourceTangent = new Vector3(tangents[index * 4], tangents[index * 4 + 1], tangents[index * 4 + 2]);
+                    var normal = new Vector3(vertices[index * 12 + 3], vertices[index * 12 + 4], vertices[index * 12 + 5]);
+                    var tangent = ToSmile(Vector3.TransformNormal(sourceTangent, worldTransform));
+                    tangent -= normal * Vector3.Dot(normal, tangent);
+                    tangent = Normalize(tangent, "SMA1127: TANGENT is unusable after orthogonalization.");
+                    var handedness = tangents[index * 4 + 3];
+                    Require(MathF.Abs(MathF.Abs(handedness) - 1) <= BasisTolerance,
+                        "SMA1128: TANGENT handedness must be -1 or 1.");
+                    vertices[index * 12 + 6] = tangent.X;
+                    vertices[index * 12 + 7] = tangent.Y;
+                    vertices[index * 12 + 8] = tangent.Z;
+                    vertices[index * 12 + 9] = (handedness < 0 ? -1f : 1f) * (determinant < 0 ? 1f : -1f);
+                }
+            }
+            else
+            {
+                GenerateTangents(vertices, indices);
+            }
+            ValidateBasis(vertices, "SMA1258: emitted tangent basis is not canonical.");
+
+            uint material;
+            if (primitive.TryGetProperty("material", out var materialValue))
+            {
+                material = materialValue.GetUInt32();
+            }
+            else
+            {
+                if (implicitMaterial < 0)
+                {
+                    Require(materials.Count < MaximumMaterials,
+                        "SMA1259: an unassigned primitive requires an implicit material beyond the 64-material limit.");
+                    implicitMaterial = materials.Count;
+                    materials.Add(new Material { Name = "Default" });
+                }
+                material = checked((uint)implicitMaterial);
+            }
+            Require(material < materials.Count, "SMA1129: material reference is outside the material table.");
+            Require(parts.Count < MaximumParts, $"SMA1131: models require 1 to {MaximumParts} parts.");
+            Require(parts.Sum(part => part.Vertices.Length / 12) <= MaximumVertices - vertexCount,
+                $"SMA1132: models support at most {MaximumVertices} total vertices.");
+            Require(parts.Sum(part => part.Indices.Length) <= MaximumIndices - indices.Length,
+                $"SMA1133: models support at most {MaximumIndices} total indices.");
+            var (partMinimum, partMaximum) = Bounds(vertices);
+            parts.Add(new Part
+            {
+                Name = $"{nodeName}/{meshName} [Node {nodeIndex}, Mesh {meshIndex}, Primitive {primitiveIndex}, Instance {instanceOrdinal}]",
+                Vertices = vertices,
+                Indices = indices,
+                Material = material,
+                Minimum = partMinimum,
+                Maximum = partMaximum
+            });
+            primitiveIndex++;
+        }
+    }
+
+    private static void ValidateStaticProfile(JsonElement root)
+    {
+        RejectProperty(root, "skins", "skins");
+        RejectProperty(root, "animations", "animations");
+        if (root.TryGetProperty("extensionsRequired", out var required))
+        {
+            Require(required.ValueKind == JsonValueKind.Array, "SMA1260: extensionsRequired must be an array.");
+            foreach (var extension in required.EnumerateArray())
+                Require(extension.GetString() == "KHR_materials_emissive_strength",
+                    $"SMA1261: required extension '{extension.GetString()}' is unsupported by the static profile.");
+        }
+        ValidateOptionalCollection(root, "materials", MaximumMaterials);
+        ValidateOptionalCollection(root, "textures", MaximumTextures);
+        ValidateOptionalCollection(root, "images", MaximumImages);
+        ValidateOptionalCollection(root, "samplers", MaximumTextures);
+        ValidateOptionalCollection(root, "extensionsUsed", 64);
+    }
+
+    private static void ValidateOptionalCollection(JsonElement root, string property, int maximum)
+    {
+        if (!root.TryGetProperty(property, out var values)) return;
+        Require(values.ValueKind == JsonValueKind.Array && values.GetArrayLength() <= maximum,
+            $"SMA1288: {property} must be an array of at most {maximum} entries.");
+    }
+
+    private static void RejectProperty(JsonElement owner, string property, string feature)
+    {
+        if (owner.ValueKind == JsonValueKind.Object && owner.TryGetProperty(property, out _))
+            throw new InvalidDataException($"SMA1262: unsupported {feature} would be lost during static conversion.");
+    }
+
+    private static void RejectExtensions(JsonElement owner, string context, string? allowed = null)
+    {
+        if (!owner.TryGetProperty("extensions", out var extensions)) return;
+        Require(extensions.ValueKind == JsonValueKind.Object, $"SMA1263: {context} extensions must be an object.");
+        foreach (var extension in extensions.EnumerateObject())
+            Require(extension.Name == allowed,
+                $"SMA1264: unsupported {context} extension '{extension.Name}' would change static output.");
+    }
+
+    private static Matrix4x4 ReadNodeTransform(JsonElement node)
+    {
+        RejectProperty(node, "skin", "node skinning");
+        RejectProperty(node, "weights", "node morph weights");
+        RejectExtensions(node, "node");
+        var hasMatrix = node.TryGetProperty("matrix", out var matrixValue);
+        var hasTrs = node.TryGetProperty("translation", out _) || node.TryGetProperty("rotation", out _) ||
+            node.TryGetProperty("scale", out _);
+        Require(!hasMatrix || !hasTrs, "SMA1265: a node may not combine matrix and TRS transforms.");
+        if (hasMatrix)
+        {
+            var values = ReadTransformValues(matrixValue, 16, "node matrix");
+            var result = new Matrix4x4(
+                values[0], values[1], values[2], values[3],
+                values[4], values[5], values[6], values[7],
+                values[8], values[9], values[10], values[11],
+                values[12], values[13], values[14], values[15]);
+            Require(MathF.Abs(result.M14) <= 1e-6f && MathF.Abs(result.M24) <= 1e-6f &&
+                MathF.Abs(result.M34) <= 1e-6f && MathF.Abs(result.M44 - 1) <= 1e-6f,
+                "SMA1266: node matrix must be a finite affine transform.");
+            return result;
+        }
+
+        var translation = node.TryGetProperty("translation", out var translationValue)
+            ? ReadTransformValues(translationValue, 3, "node translation") : [0f, 0f, 0f];
+        var scale = node.TryGetProperty("scale", out var scaleValue)
+            ? ReadTransformValues(scaleValue, 3, "node scale") : [1f, 1f, 1f];
+        var rotation = node.TryGetProperty("rotation", out var rotationValue)
+            ? ReadTransformValues(rotationValue, 4, "node rotation") : [0f, 0f, 0f, 1f];
+        var quaternion = new Quaternion(rotation[0], rotation[1], rotation[2], rotation[3]);
+        Require(quaternion.LengthSquared() > 1e-12f, "SMA1267: node rotation quaternion is zero or unusable.");
+        quaternion = Quaternion.Normalize(quaternion);
+        return Matrix4x4.CreateScale(scale[0], scale[1], scale[2]) *
+            Matrix4x4.CreateFromQuaternion(quaternion) *
+            Matrix4x4.CreateTranslation(translation[0], translation[1], translation[2]);
+    }
+
+    private static float[] ReadTransformValues(JsonElement value, int count, string name)
+    {
+        Require(value.ValueKind == JsonValueKind.Array && value.GetArrayLength() == count,
+            $"SMA1268: {name} must contain exactly {count} numbers.");
+        var result = new float[count];
+        for (var index = 0; index < count; index++)
+        {
+            result[index] = value[index].GetSingle();
+            Require(float.IsFinite(result[index]), $"SMA1269: {name} contains a non-finite value.");
+        }
+        return result;
+    }
+
+    private static Vector3 ToSmile(Vector3 value)
+    {
+        Require(Finite(value), "SMA1270: transformed geometry contains a non-finite value.");
+        return new Vector3(value.X, value.Y, -value.Z);
+    }
+
+    private static List<SourceBuffer> ReadBuffers(JsonElement root, string baseDirectory, byte[]? binaryChunk)
     {
         var values = Required(root, "buffers");
-        Require(values.ValueKind == JsonValueKind.Array && values.GetArrayLength() > 0,
-            "SMA1134: buffers must be a nonempty array.");
-        var result = new List<byte[]>();
+        Require(values.ValueKind == JsonValueKind.Array && values.GetArrayLength() is >= 1 and <= MaximumBuffers,
+            $"SMA1134: glTF requires 1 to {MaximumBuffers} buffers.");
+        var result = new List<SourceBuffer>();
         var usedBinary = false;
         var bufferIndex = 0;
+        var aggregateBytes = 0;
         foreach (var value in values.EnumerateArray())
         {
+            Require(value.ValueKind == JsonValueKind.Object, "SMA1271: each buffer must be an object.");
+            var declared = Required(value, "byteLength").GetInt32();
+            Require(declared >= 0 && declared <= MaximumBufferBytes,
+                $"SMA1244: an individual source buffer must use at most {MaximumBufferBytes} bytes.");
+            aggregateBytes = checked(aggregateBytes + declared);
+            Require(aggregateBytes <= MaximumAggregateBufferBytes,
+                $"SMA1272: aggregate declared source buffers exceed {MaximumAggregateBufferBytes} bytes.");
             byte[] bytes;
             var isBinary = false;
             if (!value.TryGetProperty("uri", out var uriValue))
@@ -362,7 +607,10 @@ internal static class Sm3dV2
                 const string prefix = "data:application/octet-stream;base64,";
                 if (uri.StartsWith(prefix, StringComparison.Ordinal))
                 {
-                    bytes = System.Convert.FromBase64String(uri[prefix.Length..]);
+                    var encoded = uri[prefix.Length..];
+                    Require(encoded.Length <= checked((MaximumBufferBytes + 2) / 3 * 4),
+                        "SMA1273: Base64 source buffer exceeds the encoded-size limit.");
+                    bytes = System.Convert.FromBase64String(encoded);
                 }
                 else
                 {
@@ -371,24 +619,27 @@ internal static class Sm3dV2
                     var rootPath = Path.GetFullPath(baseDirectory) + Path.DirectorySeparatorChar;
                     Require(candidate.StartsWith(rootPath, StringComparison.OrdinalIgnoreCase),
                         "SMA1137: external buffer escapes the model directory.");
+                    var externalLength = new FileInfo(candidate).Length;
+                    Require(externalLength <= MaximumBufferBytes,
+                        $"SMA1244: an individual source buffer must use at most {MaximumBufferBytes} bytes.");
                     bytes = File.ReadAllBytes(candidate);
                 }
             }
 
-            var declared = Required(value, "byteLength").GetInt32();
             Require(declared >= 0 && bytes.Length >= declared && (!isBinary || bytes.Length - declared <= 3),
                 "SMA1138: buffer length does not match its declared size.");
-            result.Add(bytes);
+            result.Add(new SourceBuffer(bytes.AsSpan(0, declared).ToArray(), declared));
             bufferIndex++;
         }
         Require(binaryChunk == null || usedBinary, "SMA1139: GLB BIN chunk is not referenced by buffer zero.");
         return result;
     }
 
-    private static List<BufferView> ReadViews(JsonElement root, IReadOnlyList<byte[]> buffers)
+    private static List<BufferView> ReadViews(JsonElement root, IReadOnlyList<SourceBuffer> buffers)
     {
         var values = Required(root, "bufferViews");
-        Require(values.ValueKind == JsonValueKind.Array, "SMA1140: bufferViews must be an array.");
+        Require(values.ValueKind == JsonValueKind.Array && values.GetArrayLength() <= MaximumBufferViews,
+            $"SMA1140: bufferViews must be an array of at most {MaximumBufferViews} entries.");
         var result = new List<BufferView>();
         foreach (var value in values.EnumerateArray())
         {
@@ -397,29 +648,37 @@ internal static class Sm3dV2
             var offset = value.TryGetProperty("byteOffset", out var offsetValue) ? offsetValue.GetInt32() : 0;
             var length = Required(value, "byteLength").GetInt32();
             var stride = value.TryGetProperty("byteStride", out var strideValue) ? strideValue.GetInt32() : 0;
+            var target = value.TryGetProperty("target", out var targetValue) ? targetValue.GetInt32() : 0;
             Require(offset >= 0 && length >= 0 && offset <= buffers[bufferIndex].Length &&
-                length <= buffers[bufferIndex].Length - offset, "SMA1142: bufferView range is invalid.");
+                length <= buffers[bufferIndex].Length - offset, "SMA1142: bufferView range exceeds the declared buffer length.");
             Require(stride == 0 || (stride is >= 4 and <= 252 && stride % 4 == 0),
                 "SMA1143: bufferView stride must be zero or an aligned value from 4 through 252.");
-            result.Add(new BufferView(buffers[bufferIndex], offset, length, stride));
+            Require(target is 0 or 34962 or 34963, "SMA1274: bufferView target is unsupported.");
+            Require(stride == 0 || target != 34963, "SMA1275: index bufferViews may not declare byteStride.");
+            result.Add(new BufferView(buffers[bufferIndex].Bytes, offset, length, stride, target));
         }
         return result;
     }
 
     private static float[] ReadFloatAccessor(JsonElement accessors, IReadOnlyList<BufferView> views,
-        int accessorIndex, int components, string semantic)
+        int accessorIndex, int components, string semantic, int maximumCount)
     {
         var accessor = Accessor(accessors, accessorIndex, views, out var view, out var offset, out var count);
+        Require(count <= maximumCount, $"SMA1276: {semantic} accessor count exceeds {maximumCount}.");
         var type = components switch { 2 => "VEC2", 3 => "VEC3", 4 => "VEC4", _ => string.Empty };
         var normalized = accessor.TryGetProperty("normalized", out var normalizedValue) && normalizedValue.ValueKind == JsonValueKind.True;
         Require(Required(accessor, "componentType").GetInt32() == 5126 &&
             Required(accessor, "type").GetString() == type && !normalized,
             $"SMA1144: {semantic} must use non-normalized float {type} data.");
         var stride = view.Stride == 0 ? components * 4 : view.Stride;
-        Require(offset % 4 == 0 && stride >= components * 4 &&
+        Require((view.Offset + offset) % 4 == 0 && stride >= components * 4 &&
+            view.Target is 0 or 34962 &&
             offset + (long)Math.Max(0, count - 1) * stride + components * 4 <= view.Length,
             $"SMA1145: {semantic} accessor range or stride is invalid.");
-        var result = new float[checked(count * components)];
+        var valueCount = checked(count * components);
+        Require(checked((long)valueCount * sizeof(float)) <= MaximumFileBytes,
+            $"SMA1277: {semantic} accessor allocation exceeds the model-memory limit.");
+        var result = new float[valueCount];
         for (var index = 0; index < count; index++)
         {
             for (var component = 0; component < components; component++)
@@ -434,15 +693,18 @@ internal static class Sm3dV2
         return result;
     }
 
-    private static uint[] ReadIndexAccessor(JsonElement accessors, IReadOnlyList<BufferView> views, int accessorIndex)
+    private static uint[] ReadIndexAccessor(JsonElement accessors, IReadOnlyList<BufferView> views,
+        int accessorIndex, int maximumCount)
     {
         var accessor = Accessor(accessors, accessorIndex, views, out var view, out var offset, out var count);
+        Require(count <= maximumCount, $"SMA1278: index accessor count exceeds {maximumCount}.");
         var componentType = Required(accessor, "componentType").GetInt32();
-        Require(Required(accessor, "type").GetString() == "SCALAR" && componentType is 5121 or 5123 or 5125,
+        var normalized = accessor.TryGetProperty("normalized", out var normalizedValue) && normalizedValue.ValueKind == JsonValueKind.True;
+        Require(Required(accessor, "type").GetString() == "SCALAR" && componentType is 5121 or 5123 or 5125 && !normalized,
             "SMA1147: indices must be unsigned byte, unsigned short, or unsigned int scalars.");
         var size = componentType == 5121 ? 1 : componentType == 5123 ? 2 : 4;
-        var stride = view.Stride == 0 ? size : view.Stride;
-        Require(offset % size == 0 && stride >= size && stride % size == 0 &&
+        var stride = size;
+        Require(view.Stride == 0 && view.Target is 0 or 34963 && (view.Offset + offset) % size == 0 &&
             offset + (long)Math.Max(0, count - 1) * stride + size <= view.Length,
             "SMA1148: index accessor range or stride is invalid.");
         var result = new uint[count];
@@ -473,14 +735,18 @@ internal static class Sm3dV2
     private static List<Material> ReadMaterials(JsonElement root, List<TextureReference> textures)
     {
         if (!root.TryGetProperty("materials", out var values))
-            return [new Material { Name = "Default" }];
-        Require(values.ValueKind == JsonValueKind.Array && values.GetArrayLength() is >= 1 and <= MaximumMaterials,
-            $"SMA1153: models require 1 to {MaximumMaterials} materials.");
+            return [];
+        Require(values.ValueKind == JsonValueKind.Array && values.GetArrayLength() <= MaximumMaterials,
+            $"SMA1153: models support at most {MaximumMaterials} declared materials.");
         var result = new List<Material>();
         var materialIndex = 0;
         foreach (var value in values.EnumerateArray())
         {
+            Require(value.ValueKind == JsonValueKind.Object, "SMA1279: each material must be an object.");
+            RejectExtensions(value, "material", "KHR_materials_emissive_strength");
             var pbr = value.TryGetProperty("pbrMetallicRoughness", out var pbrValue) ? pbrValue : default;
+            if (pbr.ValueKind != JsonValueKind.Undefined)
+                Require(pbr.ValueKind == JsonValueKind.Object, "SMA1280: pbrMetallicRoughness must be an object.");
             var baseColor = pbr.ValueKind == JsonValueKind.Object && pbr.TryGetProperty("baseColorFactor", out var baseValue)
                 ? ReadFactor(baseValue, 4, 0, 1, "baseColorFactor") : new float[] { 1, 1, 1, 1 };
             var metallic = OptionalNumber(pbr, "metallicFactor", 1, 0, 1);
@@ -503,7 +769,11 @@ internal static class Sm3dV2
             var emissiveStrength = 1f;
             if (value.TryGetProperty("extensions", out var extensions) &&
                 extensions.TryGetProperty("KHR_materials_emissive_strength", out var emissiveExtension))
+            {
+                Require(emissiveExtension.ValueKind == JsonValueKind.Object,
+                    "SMA1281: KHR_materials_emissive_strength must be an object.");
                 emissiveStrength = OptionalNumber(emissiveExtension, "emissiveStrength", 1, 0, 64);
+            }
             for (var component = 0; component < emissive.Length; component++) emissive[component] *= emissiveStrength;
 
             var alphaText = value.TryGetProperty("alphaMode", out var alphaValue) ? alphaValue.GetString() : "OPAQUE";
@@ -554,17 +824,45 @@ internal static class Sm3dV2
     {
         if (owner.ValueKind != JsonValueKind.Object || !owner.TryGetProperty(property, out var info)) return null;
         Require(info.ValueKind == JsonValueKind.Object, $"SMA1157: {property} must be an object.");
+        if (info.TryGetProperty("texCoord", out var texCoord))
+            Require(texCoord.GetInt32() == 0, $"SMA1282: {property} requires unsupported texture coordinate set {texCoord.GetInt32()}.");
+        RejectExtensions(info, property);
         var textureIndex = Required(info, "index").GetInt32();
         var textureValues = Required(root, "textures");
-        Require(textureValues.ValueKind == JsonValueKind.Array && textureIndex >= 0 &&
+        Require(textureValues.ValueKind == JsonValueKind.Array && textureValues.GetArrayLength() <= MaximumTextures && textureIndex >= 0 &&
             textureIndex < textureValues.GetArrayLength(), $"SMA1158: {property} texture index is invalid.");
-        var imageIndex = Required(textureValues[textureIndex], "source").GetInt32();
+        var texture = textureValues[textureIndex];
+        Require(texture.ValueKind == JsonValueKind.Object, "SMA1283: each texture must be an object.");
+        RejectExtensions(texture, "texture");
+        ValidateSampler(root, texture, property);
+        var imageIndex = Required(texture, "source").GetInt32();
         var images = Required(root, "images");
-        Require(images.ValueKind == JsonValueKind.Array && imageIndex >= 0 && imageIndex < images.GetArrayLength(),
+        Require(images.ValueKind == JsonValueKind.Array && images.GetArrayLength() <= MaximumImages &&
+            imageIndex >= 0 && imageIndex < images.GetArrayLength(),
             $"SMA1159: {property} image index is invalid.");
+        Require(images[imageIndex].ValueKind == JsonValueKind.Object, "SMA1284: each image must be an object.");
         Require(images[imageIndex].TryGetProperty("uri", out var uriValue),
             "SMA1160: embedded image bytes are not supported in SM3D v2 M1.");
         return ValidateTexturePath(uriValue.GetString() ?? string.Empty);
+    }
+
+    private static void ValidateSampler(JsonElement root, JsonElement texture, string property)
+    {
+        if (!texture.TryGetProperty("sampler", out var samplerValue)) return;
+        var samplerIndex = samplerValue.GetInt32();
+        var samplers = Required(root, "samplers");
+        Require(samplers.ValueKind == JsonValueKind.Array && samplers.GetArrayLength() <= MaximumTextures &&
+            samplerIndex >= 0 && samplerIndex < samplers.GetArrayLength(),
+            $"SMA1285: {property} sampler index is invalid.");
+        var sampler = samplers[samplerIndex];
+        Require(sampler.ValueKind == JsonValueKind.Object, "SMA1286: each sampler must be an object.");
+        var magFilter = sampler.TryGetProperty("magFilter", out var magValue) ? magValue.GetInt32() : 9729;
+        var minFilter = sampler.TryGetProperty("minFilter", out var minValue) ? minValue.GetInt32() : 9987;
+        var wrapS = sampler.TryGetProperty("wrapS", out var wrapSValue) ? wrapSValue.GetInt32() : 10497;
+        var wrapT = sampler.TryGetProperty("wrapT", out var wrapTValue) ? wrapTValue.GetInt32() : 10497;
+        Require(magFilter == 9729 && minFilter == 9987 && wrapS == 10497 && wrapT == 10497,
+            $"SMA1287: {property} sampler is not representable by the imported repeat/trilinear policy.");
+        RejectExtensions(sampler, "sampler");
     }
 
     private static int AddTexture(List<TextureReference> textures, string path, uint semantic)
@@ -677,6 +975,21 @@ internal static class Sm3dV2
             vertices[index * 12 + 7] = direction.Y;
             vertices[index * 12 + 8] = direction.Z;
             vertices[index * 12 + 9] = handedness;
+        }
+    }
+
+    private static void ValidateBasis(float[] vertices, string error)
+    {
+        for (var index = 0; index < vertices.Length / 12; index++)
+        {
+            var normal = new Vector3(vertices[index * 12 + 3], vertices[index * 12 + 4], vertices[index * 12 + 5]);
+            var tangent = new Vector3(vertices[index * 12 + 6], vertices[index * 12 + 7], vertices[index * 12 + 8]);
+            var handedness = vertices[index * 12 + 9];
+            Require(Finite(normal) && Finite(tangent) &&
+                MathF.Abs(normal.LengthSquared() - 1) <= BasisTolerance &&
+                MathF.Abs(tangent.LengthSquared() - 1) <= BasisTolerance &&
+                MathF.Abs(Vector3.Dot(normal, tangent)) <= BasisTolerance &&
+                MathF.Abs(MathF.Abs(handedness) - 1) <= BasisTolerance, error);
         }
     }
 
@@ -835,6 +1148,30 @@ internal static class Sm3dV2
         Require(expected == bytes.Length && Read32(bytes, 24) == bytes.Length,
             "SMA1205: SM3D v1 exact size is invalid.");
         Require(Read32(bytes, 28) == Checksum(bytes.AsSpan(32)), "SMA1206: SM3D v1 checksum is invalid.");
+        var partTableBytes = checked(parts * 24);
+        var vertexBytes = checked(vertices * 32);
+        for (var partIndex = 0; partIndex < parts; partIndex++)
+        {
+            var partOffset = 32 + partIndex * 24;
+            var firstVertex = checked((int)Read32(bytes, partOffset));
+            var partVertices = checked((int)Read32(bytes, partOffset + 4));
+            var firstIndex = checked((int)Read32(bytes, partOffset + 8));
+            var partIndices = checked((int)Read32(bytes, partOffset + 12));
+            var material = Read32(bytes, partOffset + 16);
+            Require(partVertices is >= 1 and <= MaximumVerticesPerPart &&
+                partIndices is >= 3 and <= MaximumIndicesPerPart && partIndices % 3 == 0 &&
+                firstVertex >= 0 && firstVertex <= vertices && partVertices <= vertices - firstVertex &&
+                firstIndex >= 0 && firstIndex <= indices && partIndices <= indices - firstIndex &&
+                material < materials && Read32(bytes, partOffset + 20) == 0,
+                "SMA1289: SM3D v1 part record, range, material, or reserved field is invalid.");
+            for (var value = 0; value < partVertices * 8; value++)
+                Require(float.IsFinite(BitConverter.Int32BitsToSingle(unchecked((int)Read32(bytes,
+                    32 + partTableBytes + (firstVertex * 8 + value) * 4)))),
+                    "SMA1290: SM3D v1 vertex contains a non-finite value.");
+            for (var index = 0; index < partIndices; index++)
+                Require(Read32(bytes, 32 + partTableBytes + vertexBytes + (firstIndex + index) * 4) < partVertices,
+                    "SMA1291: SM3D v1 index is outside its local vertex range.");
+        }
         return string.Join('\n',
         [
             "SM3D",
@@ -1049,8 +1386,10 @@ internal static class Sm3dV2
                 var normal = new Vector3(partVertexValues[vertex * 12 + 3], partVertexValues[vertex * 12 + 4], partVertexValues[vertex * 12 + 5]);
                 var tangent = new Vector3(partVertexValues[vertex * 12 + 6], partVertexValues[vertex * 12 + 7], partVertexValues[vertex * 12 + 8]);
                 var handedness = partVertexValues[vertex * 12 + 9];
-                Require(normal.LengthSquared() > 1e-12f && tangent.LengthSquared() > 1e-12f &&
-                    MathF.Abs(MathF.Abs(handedness) - 1) <= 0.0001f,
+                Require(MathF.Abs(normal.LengthSquared() - 1) <= BasisTolerance &&
+                    MathF.Abs(tangent.LengthSquared() - 1) <= BasisTolerance &&
+                    MathF.Abs(Vector3.Dot(normal, tangent)) <= BasisTolerance &&
+                    MathF.Abs(MathF.Abs(handedness) - 1) <= BasisTolerance,
                     "SMA1224: vertex normal, tangent, or handedness is invalid.");
             }
             var partIndexValues = new uint[partIndices];
@@ -1176,8 +1515,8 @@ internal static class Sm3dV2
     {
         if (!value.TryGetProperty("name", out var name)) return fallback;
         var result = name.GetString() ?? string.Empty;
-        Require(result.Length > 0 && !result.Contains('\0'), "SMA1239: names must be nonempty and may not contain NUL.");
-        StrictUtf8.GetBytes(result);
+        Require(result.Length > 0 && !result.Contains('\0') && StrictUtf8.GetByteCount(result) <= MaximumNameBytes,
+            $"SMA1239: names must be nonempty, contain no NUL, and use at most {MaximumNameBytes} UTF-8 bytes.");
         return result;
     }
 
