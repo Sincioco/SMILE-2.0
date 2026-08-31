@@ -1,0 +1,405 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Dim Camera As Core.Camera3D
+Dim EmptyTexture As Core.Texture3D
+Dim BaseTexture As Core.Texture3D
+Dim NormalTexture As Core.Texture3D
+Dim OrmTexture As Core.Texture3D
+Dim EmissiveTexture As Core.Texture3D
+Dim StaleTexture As Core.Texture3D
+Dim Material As Core.Material3D
+Dim BadMaterial As Core.Material3D
+Dim OverrideMaterial As Core.Material3D
+Dim StaleMaterial As Core.Material3D
+Dim PbrObject As Core.Object3D
+Dim SimpleObject As Core.Object3D
+Dim Model As Core.Model3D
+Dim FailedModel As Core.Model3D
+Dim LegacyModel As Core.Model3D
+Dim ModelPart0 As Core.Object3D
+Dim ModelPart1 As Core.Object3D
+Dim FillTextures[125] As Core.Texture3D
+Dim FillMaterials[127] As Core.Material3D
+Dim FillObjects[127] As Core.Object3D
+Dim Failures As Number
+Dim FrameReady As Boolean
+Dim Index As Number
+Dim Cycle As Number
+
+Game Window "Renderer3D PBR Tests" Size 480 By 270
+
+Call Graphics3D.ResetRenderer3D()
+Call Check(Graphics3D.RendererAvailable())
+Call Check(Graphics3D.PbrShaderAvailable3D())
+Call Check(Graphics3D.LiveMeshCount3D() = 0)
+Call Check(Graphics3D.LiveObjectCount3D() = 0)
+Call Check(Graphics3D.LiveModelCount3D() = 0)
+Call Check(Graphics3D.LiveTextureCount3D() = 0)
+Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+
+BaseTexture = Graphics3D.LoadTexture3DEx(
+    "Assets\Textures\Pbr-base-color.png",
+    Graphics3D.TEXTURE_USAGE_COLOR,
+    Graphics3D.TEXTURE_FILTER_ANISOTROPIC,
+    Graphics3D.TEXTURE_WRAP_REPEAT,
+    8
+)
+NormalTexture = Graphics3D.LoadTexture3DEx(
+    "Assets\Textures\Pbr-normal.png",
+    Graphics3D.TEXTURE_USAGE_DATA,
+    Graphics3D.TEXTURE_FILTER_ANISOTROPIC,
+    Graphics3D.TEXTURE_WRAP_REPEAT,
+    16
+)
+OrmTexture = Graphics3D.LoadTexture3DEx(
+    "Assets\Textures\Pbr-orm.png",
+    Graphics3D.TEXTURE_USAGE_DATA,
+    Graphics3D.TEXTURE_FILTER_MIP_LINEAR,
+    Graphics3D.TEXTURE_WRAP_CLAMP,
+    1
+)
+EmissiveTexture = Graphics3D.LoadTexture3DEx(
+    "Assets\Textures\Pbr-emissive.png",
+    Graphics3D.TEXTURE_USAGE_COLOR,
+    Graphics3D.TEXTURE_FILTER_NEAREST,
+    Graphics3D.TEXTURE_WRAP_CLAMP,
+    1
+)
+
+Call Check(BaseTexture.Handle <> 0)
+Call Check(BaseTexture.Usage = Graphics3D.TEXTURE_USAGE_COLOR)
+Call Check(BaseTexture.FilterMode = Graphics3D.TEXTURE_FILTER_ANISOTROPIC)
+Call Check(BaseTexture.WrapMode = Graphics3D.TEXTURE_WRAP_REPEAT)
+Call Check(BaseTexture.RequestedAnisotropy = 8)
+Call Check(BaseTexture.EffectiveAnisotropy >= 1 And BaseTexture.EffectiveAnisotropy <= 8)
+Call Check(BaseTexture.MipLevels = 3)
+Call Check(NormalTexture.Usage = Graphics3D.TEXTURE_USAGE_DATA)
+Call Check(NormalTexture.EffectiveAnisotropy >= 1 And NormalTexture.EffectiveAnisotropy <= 16)
+Call Check(OrmTexture.FilterMode = Graphics3D.TEXTURE_FILTER_MIP_LINEAR)
+Call Check(OrmTexture.MipLevels = 3)
+Call Check(EmissiveTexture.FilterMode = Graphics3D.TEXTURE_FILTER_NEAREST)
+Call Check(EmissiveTexture.MipLevels = 1)
+
+Material = Graphics3D.CreatePbrMaterial3D(
+    BaseTexture,
+    NormalTexture,
+    OrmTexture,
+    EmissiveTexture,
+    Graphics3D.MATERIAL_ALPHA_CUTOUT,
+    True
+)
+BadMaterial = Graphics3D.CreatePbrMaterial3D(
+    NormalTexture,
+    NormalTexture,
+    OrmTexture,
+    EmissiveTexture
+)
+
+Call Check(Material.Handle <> 0)
+Call Check(BadMaterial.Handle = 0)
+Call Check(Graphics3D.MaterialKind3D(Material) = Graphics3D.MATERIAL_KIND_PBR)
+Call Check(Graphics3D.PbrMaterialValue3D(Material, Graphics3D.PBR_MATERIAL_METALLIC) = 0)
+Call Check(Graphics3D.PbrMaterialValue3D(Material, Graphics3D.PBR_MATERIAL_ROUGHNESS) = 1000)
+Call Check(Graphics3D.PbrMaterialValue3D(Material, Graphics3D.PBR_MATERIAL_DOUBLE_SIDED) = 1)
+Call Check(Graphics3D.TextureReferenceCount3D(BaseTexture.Handle) = 1)
+Call Check(Graphics3D.TextureReferenceCount3D(NormalTexture.Handle) = 1)
+Call Check(Graphics3D.TextureReferenceCount3D(OrmTexture.Handle) = 1)
+Call Check(Graphics3D.TextureReferenceCount3D(EmissiveTexture.Handle) = 1)
+Call Check(Graphics3D.SetPbrMaterialFactors3D(Material, 51, 102, 153, 80, 35, 65, 75, 50, 38))
+Call Check(Graphics3D.SetPbrMaterialEmissive3D(Material, 10, 20, 30))
+Call Check(Graphics3D.PbrMaterialValue3D(Material, Graphics3D.PBR_MATERIAL_METALLIC) = 350)
+Call Check(Graphics3D.PbrMaterialValue3D(Material, Graphics3D.PBR_MATERIAL_ROUGHNESS) = 650)
+Call Check(Graphics3D.PbrMaterialValue3D(Material, Graphics3D.PBR_MATERIAL_NORMAL_STRENGTH) = 750)
+Call Check(Graphics3D.PbrMaterialValue3D(Material, Graphics3D.PBR_MATERIAL_OCCLUSION_STRENGTH) = 500)
+Call Check(Graphics3D.PbrMaterialValue3D(Material, Graphics3D.PBR_MATERIAL_EMISSIVE_RED) = 100)
+Call Check(Graphics3D.PbrMaterialValue3D(Material, Graphics3D.PBR_MATERIAL_EMISSIVE_GREEN) = 200)
+Call Check(Graphics3D.PbrMaterialValue3D(Material, Graphics3D.PBR_MATERIAL_EMISSIVE_BLUE) = 300)
+Call Check(Graphics3D.PbrMaterialValue3D(Material, Graphics3D.PBR_MATERIAL_ALPHA_CUTOFF) = 380)
+Call Check(Not Graphics3D.SetPbrMaterialFactors3D(Material, 255, 255, 255, 101, 0, 50, 100, 100))
+Call Check(Graphics3D.SetPbrMaterialTextures3D(
+    Material,
+    BaseTexture,
+    NormalTexture,
+    OrmTexture,
+    EmissiveTexture,
+    Graphics3D.MATERIAL_ALPHA_BLEND,
+    False
+))
+Call Check(Graphics3D.PbrMaterialValue3D(Material, Graphics3D.PBR_MATERIAL_ALPHA_MODE) = Graphics3D.MATERIAL_ALPHA_BLEND)
+Call Check(Graphics3D.PbrMaterialValue3D(Material, Graphics3D.PBR_MATERIAL_DOUBLE_SIDED) = 0)
+
+Call Graphics3D.ResetLights3D()
+Call Check(Graphics3D.ActiveLightCount3D() = 2)
+Call Check(Graphics3D.LightValue3D(Graphics3D.LIGHT_QUERY_AMBIENT, 0, 4) = 250)
+Call Check(Graphics3D.SetAmbientLight3D(32, 36, 48, 60))
+Call Check(Graphics3D.LightValue3D(Graphics3D.LIGHT_QUERY_AMBIENT, 0, 4) = 600)
+Call Check(Not Graphics3D.SetDirectionalLight3D(0, 0, 0, 255, 255, 255, 100))
+Call Check(Graphics3D.SetDirectionalLight3D(-40, -70, 25, 255, 238, 214, 125))
+Call Check(Graphics3D.SetPointLight3D(0, 180, 160, 20, 255, 90, 24, 140, 700))
+Call Check(Graphics3D.SetSpotLight3D(1, -180, 260, -120, 96, 156, 255, 120, 900))
+Call Check(Graphics3D.SetSpotLightCone3D(1, 0, -70, 40, 20, 36))
+Call Check(Graphics3D.ActiveLightCount3D() = 4)
+Call Check(Graphics3D.LightValue3D(Graphics3D.LIGHT_QUERY_LOCAL, 0, 1) = Graphics3D.LIGHT_POINT)
+Call Check(Graphics3D.LightValue3D(Graphics3D.LIGHT_QUERY_LOCAL, 0, 11) = 1400)
+Call Check(Graphics3D.LightValue3D(Graphics3D.LIGHT_QUERY_LOCAL, 0, 12) = 700)
+Call Check(Not Graphics3D.SetSpotLightCone3D(0, 0, -1, 0, 20, 36))
+Call Check(Not Graphics3D.SetSpotLightCone3D(1, 0, -1, 0, 50, 40))
+Call Check(Graphics3D.DisableLight3D(1))
+Call Check(Graphics3D.ActiveLightCount3D() = 3)
+
+PbrObject = Graphics3D.CreateCube3D(80)
+SimpleObject = Graphics3D.CreateCube3D(80)
+
+Call Graphics3D.SetObjectPosition(PbrObject, -60, 0, 0)
+Call Graphics3D.SetObjectPosition(SimpleObject, 60, 0, 0)
+Call Graphics3D.SetObjectColor(PbrObject, 220, 240, 255)
+Call Graphics3D.SetObjectOpacity(PbrObject, 75)
+Call Check(Graphics3D.SetObjectMaterial3D(PbrObject, Material))
+
+Camera = Graphics3D.DefaultCamera()
+FrameReady = Graphics3D.Begin3D(Camera, 2, 4, 12)
+
+If FrameReady Then
+    FrameReady = Graphics3D.DrawObject3D(PbrObject)
+    FrameReady = Graphics3D.DrawObject3D(SimpleObject)
+End If
+
+Call Graphics3D.End3D()
+Call Check(FrameReady)
+Call Check(Graphics3D.DrawCallCount3D() = 2)
+Call Check(Graphics3D.PbrDrawCount3D() = 1)
+Call Check(Graphics3D.SimpleDrawCount3D() = 1)
+Call Check(Graphics3D.SubmittedTriangleCount3D() = 24)
+Call Check(Graphics3D.PbrTriangleCount3D() = 12)
+
+Fill Rectangle 0, 0, 480, 270, Rgb(2, 4, 12)
+Draw Text "PBR + SIMPLE + 2D" At 130, 118 Size 18 Color WHITE
+Show Screen
+
+Call Graphics3D.DestroyObject3D(PbrObject)
+Call Graphics3D.DestroyObject3D(SimpleObject)
+
+StaleMaterial = Material
+StaleTexture = BaseTexture
+
+Call Graphics3D.DestroyMaterial3D(Material)
+Call Check(Material.Handle = 0)
+Call Graphics3D.DestroyTexture3D(BaseTexture)
+Call Graphics3D.DestroyTexture3D(NormalTexture)
+Call Graphics3D.DestroyTexture3D(OrmTexture)
+Call Graphics3D.DestroyTexture3D(EmissiveTexture)
+Call Check(Not Graphics3D.MaterialHandleValid3D(StaleMaterial.Handle))
+Call Check(Not Graphics3D.TextureHandleValid3D(StaleTexture.Handle))
+Call Check(Graphics3D.LiveMeshCount3D() = 0)
+Call Check(Graphics3D.LiveTextureCount3D() = 0)
+Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+
+LegacyModel = Graphics3D.LoadModel3D("Assets\LegacyV1.sm3d")
+
+Call Check(LegacyModel.Handle <> 0)
+Call Check(LegacyModel.FormatVersion = 1)
+Call Check(Not LegacyModel.PbrReady)
+Call Check(LegacyModel.OwnedMaterialCount = 0)
+Call Check(LegacyModel.OwnedTextureCount = 0)
+
+Call Graphics3D.DestroyModel3D(LegacyModel)
+
+FailedModel = Graphics3D.LoadModel3D("Assets\PbrMissingTexture.sm3d")
+
+Call Check(FailedModel.Handle = 0)
+Call Check(Graphics3D.LiveModelCount3D() = 0)
+Call Check(Graphics3D.LiveMeshCount3D() = 0)
+Call Check(Graphics3D.LiveTextureCount3D() = 0)
+Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+
+FailedModel = Graphics3D.LoadModel3D("Assets\PbrWrongCase.sm3d")
+
+Call Check(FailedModel.Handle = 0)
+Call Check(Graphics3D.LiveModelCount3D() = 0)
+Call Check(Graphics3D.LiveMeshCount3D() = 0)
+Call Check(Graphics3D.LiveTextureCount3D() = 0)
+Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+
+Model = Graphics3D.LoadModel3D("Assets\PbrLab.sm3d")
+
+Call Check(Model.Handle <> 0)
+Call Check(Model.PbrReady)
+Call Check(Model.PartCount = 2)
+Call Check(Model.OwnedMaterialCount = 2)
+Call Check(Model.OwnedTextureCount = 4)
+Call Check(Graphics3D.ModelPartUsesPbr3D(Model, 0))
+Call Check(Graphics3D.ModelPartUsesPbr3D(Model, 1))
+Call Check(Graphics3D.LiveModelCount3D() = 1)
+Call Check(Graphics3D.LiveMeshCount3D() = 2)
+Call Check(Graphics3D.LiveMaterialCount3D() = 2)
+Call Check(Graphics3D.LiveTextureCount3D() = 4)
+
+ModelPart0 = Graphics3D.CreateModelPart3D(Model, 0)
+ModelPart1 = Graphics3D.CreateModelPart3D(Model, 1)
+OverrideMaterial = Graphics3D.CreateMaterial3D(
+    EmptyTexture,
+    Graphics3D.MATERIAL_ALPHA_OPAQUE,
+    255,
+    255,
+    255,
+    100,
+    False,
+    0,
+    50
+)
+
+Call Check(ModelPart0.Handle <> 0 And ModelPart1.Handle <> 0)
+Call Check(OverrideMaterial.Handle <> 0)
+Call Check(Graphics3D.SetObjectMaterial3D(ModelPart1, OverrideMaterial))
+Call Graphics3D.DestroyModel3D(Model)
+Call Check(Model.Handle <> 0)
+
+FrameReady = Graphics3D.Begin3D(Camera, 2, 4, 12)
+
+If FrameReady Then
+    FrameReady = Graphics3D.DrawObject3D(ModelPart0)
+    FrameReady = Graphics3D.DrawObject3D(ModelPart1)
+End If
+
+Call Graphics3D.End3D()
+Call Check(FrameReady)
+Call Check(Graphics3D.PbrDrawCount3D() = 1)
+Call Check(Graphics3D.SimpleDrawCount3D() = 1)
+Call Check(Graphics3D.PbrTriangleCount3D() = 2)
+Call Check(Graphics3D.ClearObjectMaterial3D(ModelPart1))
+
+FrameReady = Graphics3D.Begin3D(Camera, 2, 4, 12)
+
+If FrameReady Then
+    FrameReady = Graphics3D.DrawObject3D(ModelPart1)
+End If
+
+Call Graphics3D.End3D()
+Call Check(FrameReady)
+Call Check(Graphics3D.PbrDrawCount3D() = 1)
+Call Check(Graphics3D.SimpleDrawCount3D() = 0)
+Call Check(Graphics3D.PbrTriangleCount3D() = 2)
+Call Graphics3D.DestroyMaterial3D(OverrideMaterial)
+Call Check(OverrideMaterial.Handle = 0)
+
+Call Graphics3D.DestroyObjectInstance3D(ModelPart0)
+Call Graphics3D.DestroyObjectInstance3D(ModelPart1)
+Call Graphics3D.DestroyModel3D(Model)
+Call Check(Model.Handle = 0)
+Call Check(Graphics3D.LiveModelCount3D() = 0)
+Call Check(Graphics3D.LiveMeshCount3D() = 0)
+Call Check(Graphics3D.LiveTextureCount3D() = 0)
+Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+
+For Cycle = 1 To 10
+
+    Model = Graphics3D.LoadModel3D("Assets\PbrLab.sm3d")
+    ModelPart0 = Graphics3D.CreateModelPart3D(Model, 0)
+    FrameReady = Graphics3D.Begin3D(Camera, 2, 4, 12)
+
+    If FrameReady Then
+        FrameReady = Graphics3D.DrawObject3D(ModelPart0)
+    End If
+
+    Call Graphics3D.End3D()
+    Call Check(FrameReady)
+    Call Graphics3D.DestroyObjectInstance3D(ModelPart0)
+    Call Graphics3D.DestroyModel3D(Model)
+    Call Check(Graphics3D.LiveModelCount3D() = 0)
+    Call Check(Graphics3D.LiveMeshCount3D() = 0)
+    Call Check(Graphics3D.LiveObjectCount3D() = 0)
+    Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+    Call Check(Graphics3D.LiveTextureCount3D() = 0)
+End For
+
+For Index = 0 To 124
+
+    FillTextures[Index] = Graphics3D.LoadTexture3DEx(
+        "Assets\Textures\Pbr-base-color.png",
+        Graphics3D.TEXTURE_USAGE_COLOR,
+        Graphics3D.TEXTURE_FILTER_LINEAR,
+        Graphics3D.TEXTURE_WRAP_CLAMP,
+        1
+    )
+End For
+
+Call Check(Graphics3D.LiveTextureCount3D() = 125)
+
+FailedModel = Graphics3D.LoadModel3D("Assets\PbrLab.sm3d")
+
+Call Check(FailedModel.Handle = 0)
+Call Check(Graphics3D.LiveModelCount3D() = 0)
+Call Check(Graphics3D.LiveMeshCount3D() = 0)
+Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+Call Check(Graphics3D.LiveTextureCount3D() = 125)
+
+For Index = 0 To 124
+    Call Graphics3D.DestroyTexture3D(FillTextures[Index])
+End For
+
+For Index = 0 To 126
+
+    FillMaterials[Index] = Graphics3D.CreatePbrMaterial3D(
+        EmptyTexture,
+        EmptyTexture,
+        EmptyTexture,
+        EmptyTexture
+    )
+End For
+
+Call Check(Graphics3D.LiveMaterialCount3D() = 127)
+
+FailedModel = Graphics3D.LoadModel3D("Assets\PbrLab.sm3d")
+
+Call Check(FailedModel.Handle = 0)
+Call Check(Graphics3D.LiveModelCount3D() = 0)
+Call Check(Graphics3D.LiveMeshCount3D() = 0)
+Call Check(Graphics3D.LiveTextureCount3D() = 0)
+Call Check(Graphics3D.LiveMaterialCount3D() = 127)
+
+For Index = 0 To 126
+    Call Graphics3D.DestroyMaterial3D(FillMaterials[Index])
+End For
+
+For Index = 0 To 126
+    FillObjects[Index] = Graphics3D.CreateCube3D(10)
+End For
+
+Call Check(Graphics3D.LiveMeshCount3D() = 127)
+
+FailedModel = Graphics3D.LoadModel3D("Assets\PbrLab.sm3d")
+
+Call Check(FailedModel.Handle = 0)
+Call Check(Graphics3D.LiveModelCount3D() = 0)
+Call Check(Graphics3D.LiveMeshCount3D() = 127)
+Call Check(Graphics3D.LiveTextureCount3D() = 0)
+Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+
+For Index = 0 To 126
+    Call Graphics3D.DestroyObject3D(FillObjects[Index])
+End For
+
+Call Check(Graphics3D.LiveModelCount3D() = 0)
+Call Check(Graphics3D.LiveMeshCount3D() = 0)
+Call Check(Graphics3D.LiveObjectCount3D() = 0)
+Call Check(Graphics3D.LiveTextureCount3D() = 0)
+Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+
+Call Graphics3D.ResetRenderer3D()
+
+If Failures = 0 Then
+    Print "Renderer3D PBR tests passed"
+Else
+    Print "Renderer3D PBR tests failed: "; Failures
+End If
+
+Sub Check(Condition As Boolean)
+
+    If Not Condition Then
+        Failures = Failures + 1
+    End If
+
+End Sub

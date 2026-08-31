@@ -16,6 +16,7 @@ void smile_image_resource_release(SmileImageResource* image);
 long long smile_image_resource_width(const SmileImageResource* image);
 long long smile_image_resource_height(const SmileImageResource* image);
 const unsigned char* smile_image_resource_pixels(const SmileImageResource* image);
+const unsigned char* smile_image_resource_straight_pixels(const SmileImageResource* image);
 unsigned int smile_image_resource_stride(const SmileImageResource* image);
 void* smile_image_resource_d2d_bitmap(SmileImageResource* image, void* device_context);
 void smile_image_resource_release_backend_resources(void);

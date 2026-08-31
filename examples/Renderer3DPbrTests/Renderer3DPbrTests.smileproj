@@ -2,8 +2,8 @@
   <PropertyGroup>
     <ProjectKind>Game</ProjectKind>
     <StartupFile>Program.smile</StartupFile>
-    <OutputName>Renderer3DModelTests</OutputName>
-    <ApplicationId>smile.tests.renderer3d-models</ApplicationId>
+    <OutputName>Renderer3DPbrTests</OutputName>
+    <ApplicationId>smile.tests.renderer3d-pbr</ApplicationId>
   </PropertyGroup>
   <ItemGroup>
     <SmileSource Include="Program.smile" StartupOnly="true" />

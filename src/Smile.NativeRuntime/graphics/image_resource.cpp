@@ -13,6 +13,7 @@ struct SmileImageResource
     UINT height;
     UINT stride;
     unsigned char* pixels;
+    unsigned char* straight_pixels;
     ID2D1Bitmap1* d2d_bitmap;
     ID2D1DeviceContext* d2d_owner;
     SmileImageResource* next;
@@ -45,6 +46,7 @@ static void smile_image_destroy(SmileImageResource* image)
     smile_image_release_com(image->d2d_bitmap);
     image->d2d_owner = 0;
     if (image->pixels != 0) HeapFree(GetProcessHeap(), 0, image->pixels);
+    if (image->straight_pixels != 0) HeapFree(GetProcessHeap(), 0, image->straight_pixels);
     if (image->path != 0) HeapFree(GetProcessHeap(), 0, image->path);
     HeapFree(GetProcessHeap(), 0, image);
 }
@@ -73,7 +75,7 @@ static SmileImageResource* smile_image_decode(const WCHAR* path)
     stride = width * 4;
     bytes = stride * height;
     if (SUCCEEDED(result)) result = factory->CreateFormatConverter(&converter);
-    if (SUCCEEDED(result)) result = converter->Initialize(frame, GUID_WICPixelFormat32bppPBGRA,
+    if (SUCCEEDED(result)) result = converter->Initialize(frame, GUID_WICPixelFormat32bppBGRA,
         WICBitmapDitherTypeNone, 0, 0.0, WICBitmapPaletteTypeCustom);
     if (SUCCEEDED(result))
     {
@@ -83,10 +85,23 @@ static SmileImageResource* smile_image_decode(const WCHAR* path)
     if (SUCCEEDED(result))
     {
         image->pixels = static_cast<unsigned char*>(HeapAlloc(GetProcessHeap(), 0, bytes));
+        image->straight_pixels = static_cast<unsigned char*>(HeapAlloc(GetProcessHeap(), 0, bytes));
         image->path = smile_image_copy_path(path);
-        if (image->pixels == 0 || image->path == 0) result = E_OUTOFMEMORY;
+        if (image->pixels == 0 || image->straight_pixels == 0 || image->path == 0)
+            result = E_OUTOFMEMORY;
     }
-    if (SUCCEEDED(result)) result = converter->CopyPixels(0, stride, bytes, image->pixels);
+    if (SUCCEEDED(result)) result = converter->CopyPixels(0, stride, bytes, image->straight_pixels);
+    if (SUCCEEDED(result))
+    {
+        for (UINT offset = 0; offset < bytes; offset += 4)
+        {
+            unsigned int alpha = image->straight_pixels[offset + 3];
+            image->pixels[offset] = (unsigned char)((image->straight_pixels[offset] * alpha + 127U) / 255U);
+            image->pixels[offset + 1] = (unsigned char)((image->straight_pixels[offset + 1] * alpha + 127U) / 255U);
+            image->pixels[offset + 2] = (unsigned char)((image->straight_pixels[offset + 2] * alpha + 127U) / 255U);
+            image->pixels[offset + 3] = (unsigned char)alpha;
+        }
+    }
     if (SUCCEEDED(result))
     {
         image->references = 1;
@@ -97,6 +112,7 @@ static SmileImageResource* smile_image_decode(const WCHAR* path)
     else if (image != 0)
     {
         if (image->pixels != 0) HeapFree(GetProcessHeap(), 0, image->pixels);
+        if (image->straight_pixels != 0) HeapFree(GetProcessHeap(), 0, image->straight_pixels);
         if (image->path != 0) HeapFree(GetProcessHeap(), 0, image->path);
         HeapFree(GetProcessHeap(), 0, image);
         image = 0;
@@ -181,6 +197,10 @@ extern "C" void smile_image_resource_release(SmileImageResource* image)
 extern "C" long long smile_image_resource_width(const SmileImageResource* image) { return image == 0 ? 0 : image->width; }
 extern "C" long long smile_image_resource_height(const SmileImageResource* image) { return image == 0 ? 0 : image->height; }
 extern "C" const unsigned char* smile_image_resource_pixels(const SmileImageResource* image) { return image == 0 ? 0 : image->pixels; }
+extern "C" const unsigned char* smile_image_resource_straight_pixels(const SmileImageResource* image)
+{
+    return image == 0 ? 0 : image->straight_pixels;
+}
 extern "C" unsigned int smile_image_resource_stride(const SmileImageResource* image) { return image == 0 ? 0 : image->stride; }
 
 extern "C" void* smile_image_resource_d2d_bitmap(SmileImageResource* image, void* context_value)

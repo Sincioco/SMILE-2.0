@@ -15,6 +15,8 @@ Public Const DEFAULT_LINE_BUDGET = 2500
 Public Const MAX_WORLD_COORDINATE = 1000000
 Public Const TEXTURE_FILTER_NEAREST = 0
 Public Const TEXTURE_FILTER_LINEAR = 1
+Public Const TEXTURE_FILTER_MIP_LINEAR = 2
+Public Const TEXTURE_FILTER_ANISOTROPIC = 3
 Public Const TEXTURE_WRAP_CLAMP = 0
 Public Const TEXTURE_WRAP_REPEAT = 1
 Public Const MATERIAL_ALPHA_OPAQUE = 0
@@ -104,13 +106,22 @@ Public Type Texture3D
     Height As Number
     FilterMode As Number
     WrapMode As Number
+    Usage As Number
+    RequestedAnisotropy As Number
+    EffectiveAnisotropy As Number
+    MipLevels As Number
 End Type
 
 ''' A reusable texture, tint, opacity, lighting, and alpha-mode binding.
 Public Type Material3D
     Handle As Number
+    Kind As Number
     TextureHandle As Number
+    NormalTextureHandle As Number
+    OrmTextureHandle As Number
+    EmissiveTextureHandle As Number
     AlphaMode As Number
+    DoubleSided As Boolean
     ColorRed As Number
     ColorGreen As Number
     ColorBlue As Number
@@ -118,6 +129,10 @@ Public Type Material3D
     Unlit As Boolean
     EmissivePercent As Number
     CutoutPercent As Number
+    MetallicPercent As Number
+    RoughnessPercent As Number
+    NormalStrengthPercent As Number
+    OcclusionStrengthPercent As Number
 End Type
 
 ''' A validated deterministic model asset whose meshes are shared by part instances.
@@ -129,6 +144,9 @@ Public Type Model3D
     VertexCount As Number
     IndexCount As Number
     TextureReferenceCount As Number
+    PbrReady As Boolean
+    OwnedMaterialCount As Number
+    OwnedTextureCount As Number
 End Type
 
 ''' A committed hierarchy of bind-pose bone pivots.

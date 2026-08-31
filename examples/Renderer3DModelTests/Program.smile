@@ -9,13 +9,6 @@ Dim Camera As Core.Camera3D
 Dim Humanoid As Core.Model3D
 Dim Dragon As Core.Model3D
 Dim BoundaryMetadata As Core.Model3D
-Dim BoundaryMetadata2 As Core.Model3D
-Dim BoundaryMetadata3 As Core.Model3D
-Dim BoundaryMetadata4 As Core.Model3D
-Dim BoundaryMetadata5 As Core.Model3D
-Dim BoundaryMetadata6 As Core.Model3D
-Dim BoundaryMetadata7 As Core.Model3D
-Dim BoundaryCapacityFailure As Core.Model3D
 Dim BadMagic As Core.Model3D
 Dim BadVersion As Core.Model3D
 Dim BadV2Header As Core.Model3D
@@ -54,46 +47,24 @@ Game Window "Renderer3D Model Tests" Size 480 By 270
 Call Graphics3D.ResetRenderer3D()
 
 BoundaryMetadata = Graphics3D.LoadModel3D("Assets\BoundaryMetadataV2.sm3d")
-BoundaryMetadata2 = Graphics3D.LoadModel3D("Assets\BoundaryMetadataV2.sm3d")
-BoundaryMetadata3 = Graphics3D.LoadModel3D("Assets\BoundaryMetadataV2.sm3d")
-BoundaryMetadata4 = Graphics3D.LoadModel3D("Assets\BoundaryMetadataV2.sm3d")
-BoundaryMetadata5 = Graphics3D.LoadModel3D("Assets\BoundaryMetadataV2.sm3d")
-BoundaryMetadata6 = Graphics3D.LoadModel3D("Assets\BoundaryMetadataV2.sm3d")
-BoundaryMetadata7 = Graphics3D.LoadModel3D("Assets\BoundaryMetadataV2.sm3d")
+
+If (BoundaryMetadata.Handle <> 0 Or
+    Graphics3D.LiveModelCount3D() <> 0 Or
+    Graphics3D.LiveMeshCount3D() <> 0 Or
+    Graphics3D.LiveTextureCount3D() <> 0 Or
+    Graphics3D.LiveMaterialCount3D() <> 0) Then
+    Failures = Failures + 1
+End If
+
 M0Triangle = Graphics3D.LoadModel3D("Assets\M0TriangleV2.sm3d")
 
-If (BoundaryMetadata.Handle = 0 Or
-    BoundaryMetadata.FormatVersion <> 2 Or
-    BoundaryMetadata.PartCount <> 16 Or
-    BoundaryMetadata.MaterialCount <> 64 Or
-    BoundaryMetadata.TextureReferenceCount <> 128 Or
-    BoundaryMetadata2.Handle = 0 Or
-    BoundaryMetadata3.Handle = 0 Or
-    BoundaryMetadata4.Handle = 0 Or
-    BoundaryMetadata5.Handle = 0 Or
-    BoundaryMetadata6.Handle = 0 Or
-    BoundaryMetadata7.Handle = 0 Or
-    M0Triangle.Handle = 0 Or
-    Graphics3D.LiveModelCount3D() <> 8 Or
-    Graphics3D.LiveMeshCount3D() <> 113) Then
+If (M0Triangle.Handle = 0 Or
+    M0Triangle.FormatVersion <> 2 Or
+    Graphics3D.LiveModelCount3D() <> 1 Or
+    Graphics3D.LiveMeshCount3D() <> 1) Then
     Failures = Failures + 1
 End If
 
-BoundaryCapacityFailure = Graphics3D.LoadModel3D("Assets\BoundaryMetadataV2.sm3d")
-
-If (BoundaryCapacityFailure.Handle <> 0 Or
-    Graphics3D.LiveModelCount3D() <> 8 Or
-    Graphics3D.LiveMeshCount3D() <> 113) Then
-    Failures = Failures + 1
-End If
-
-Call Graphics3D.DestroyModel3D(BoundaryMetadata)
-Call Graphics3D.DestroyModel3D(BoundaryMetadata2)
-Call Graphics3D.DestroyModel3D(BoundaryMetadata3)
-Call Graphics3D.DestroyModel3D(BoundaryMetadata4)
-Call Graphics3D.DestroyModel3D(BoundaryMetadata5)
-Call Graphics3D.DestroyModel3D(BoundaryMetadata6)
-Call Graphics3D.DestroyModel3D(BoundaryMetadata7)
 Call Graphics3D.DestroyModel3D(M0Triangle)
 
 If Graphics3D.LiveModelCount3D() <> 0 Or Graphics3D.LiveMeshCount3D() <> 0 Then

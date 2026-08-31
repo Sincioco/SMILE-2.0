@@ -85,6 +85,23 @@ Private Const COMMAND_MAX_ANIMATOR_COUNT = 77
 Private Const COMMAND_DRAW_CALL_COUNT = 78
 Private Const COMMAND_SUBMITTED_TRIANGLE_COUNT = 79
 Private Const COMMAND_MODEL_STATIC_VALUE = 80
+Private Const COMMAND_CREATE_PBR_MATERIAL = 81
+Private Const COMMAND_SET_PBR_FACTORS = 82
+Private Const COMMAND_SET_PBR_EMISSIVE = 83
+Private Const COMMAND_SET_PBR_TEXTURES = 84
+Private Const COMMAND_RESET_LIGHTS = 85
+Private Const COMMAND_SET_AMBIENT_LIGHT = 86
+Private Const COMMAND_SET_DIRECTIONAL_LIGHT = 87
+Private Const COMMAND_SET_LOCAL_LIGHT = 88
+Private Const COMMAND_SET_SPOT_CONE = 89
+Private Const COMMAND_PBR_TEXTURE_VALUE = 90
+Private Const COMMAND_PBR_MATERIAL_VALUE = 91
+Private Const COMMAND_LIGHT_VALUE = 92
+Private Const COMMAND_PBR_DRAW_COUNT = 93
+Private Const COMMAND_SIMPLE_DRAW_COUNT = 94
+Private Const COMMAND_PBR_TRIANGLE_COUNT = 95
+Private Const COMMAND_PBR_SHADER_AVAILABLE = 96
+Private Const COMMAND_MODEL_PBR_VALUE = 97
 
 Private Const MODEL_QUERY_FORMAT_VERSION = 1
 Private Const MODEL_QUERY_VERTEX_COUNT = 2
@@ -99,6 +116,7 @@ Private Const MODEL_QUERY_PART_NAME_HASH = 10
 Private Const MODEL_QUERY_NAME_HASH = 11
 
 Private Const IMAGE_COMMAND_CREATE_TEXTURE = 1
+Private Const IMAGE_COMMAND_CREATE_PBR_TEXTURE = 2
 Private Const TEXT_COMMAND_LOAD_MODEL = 1
 
 Public Const PRIMITIVE_CUBE = 1
@@ -109,8 +127,14 @@ Public Const PRIMITIVE_CYLINDER = 5
 Public Const PRIMITIVE_TORUS = 6
 Public Const TEXTURE_FILTER_NEAREST = 0
 Public Const TEXTURE_FILTER_LINEAR = 1
+Public Const TEXTURE_FILTER_MIP_LINEAR = 2
+Public Const TEXTURE_FILTER_ANISOTROPIC = 3
 Public Const TEXTURE_WRAP_CLAMP = 0
 Public Const TEXTURE_WRAP_REPEAT = 1
+Public Const TEXTURE_USAGE_COLOR = 1
+Public Const TEXTURE_USAGE_DATA = 2
+Public Const MATERIAL_KIND_SIMPLE = 0
+Public Const MATERIAL_KIND_PBR = 1
 Public Const MATERIAL_ALPHA_OPAQUE = 0
 Public Const MATERIAL_ALPHA_CUTOUT = 1
 Public Const MATERIAL_ALPHA_BLEND = 2
@@ -146,6 +170,35 @@ Public Const MODEL_BOUNDS_MINIMUM_Z = 2
 Public Const MODEL_BOUNDS_MAXIMUM_X = 3
 Public Const MODEL_BOUNDS_MAXIMUM_Y = 4
 Public Const MODEL_BOUNDS_MAXIMUM_Z = 5
+Public Const LIGHT_DISABLED = 0
+Public Const LIGHT_POINT = 1
+Public Const LIGHT_SPOT = 2
+Public Const LIGHT_QUERY_ACTIVE_COUNT = 1
+Public Const LIGHT_QUERY_AMBIENT = 2
+Public Const LIGHT_QUERY_DIRECTIONAL = 3
+Public Const LIGHT_QUERY_LOCAL = 4
+Public Const PBR_TEXTURE_USAGE = 1
+Public Const PBR_TEXTURE_FILTER = 2
+Public Const PBR_TEXTURE_WRAP = 3
+Public Const PBR_TEXTURE_REQUESTED_ANISOTROPY = 4
+Public Const PBR_TEXTURE_EFFECTIVE_ANISOTROPY = 5
+Public Const PBR_TEXTURE_MIP_LEVELS = 6
+Public Const PBR_MATERIAL_KIND = 1
+Public Const PBR_MATERIAL_BASE_TEXTURE = 2
+Public Const PBR_MATERIAL_NORMAL_TEXTURE = 3
+Public Const PBR_MATERIAL_ORM_TEXTURE = 4
+Public Const PBR_MATERIAL_EMISSIVE_TEXTURE = 5
+Public Const PBR_MATERIAL_ALPHA_MODE = 6
+Public Const PBR_MATERIAL_DOUBLE_SIDED = 7
+Public Const PBR_MATERIAL_METALLIC = 8
+Public Const PBR_MATERIAL_ROUGHNESS = 9
+Public Const PBR_MATERIAL_NORMAL_STRENGTH = 10
+Public Const PBR_MATERIAL_OCCLUSION_STRENGTH = 11
+Public Const PBR_MATERIAL_EMISSIVE_RED = 12
+Public Const PBR_MATERIAL_EMISSIVE_GREEN = 13
+Public Const PBR_MATERIAL_EMISSIVE_BLUE = 14
+Public Const PBR_MATERIAL_ALPHA_CUTOFF = 15
+Public Const PBR_MATERIAL_MODEL_OWNED = 16
 
 Private Function Dispatch(
     Command As Number,
@@ -406,6 +459,9 @@ Public Function LoadModel3D(Path As Text) As Core.Model3D
         Result.VertexCount = Dispatch(COMMAND_MODEL_STATIC_VALUE, Result.Handle, MODEL_QUERY_VERTEX_COUNT, 0, 0, 0, 0, 0, 0, 0, 0)
         Result.IndexCount = Dispatch(COMMAND_MODEL_STATIC_VALUE, Result.Handle, MODEL_QUERY_INDEX_COUNT, 0, 0, 0, 0, 0, 0, 0, 0)
         Result.TextureReferenceCount = Dispatch(COMMAND_MODEL_STATIC_VALUE, Result.Handle, MODEL_QUERY_TEXTURE_COUNT, 0, 0, 0, 0, 0, 0, 0, 0)
+        Result.PbrReady = Dispatch(COMMAND_MODEL_PBR_VALUE, Result.Handle, 1, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+        Result.OwnedMaterialCount = Dispatch(COMMAND_MODEL_PBR_VALUE, Result.Handle, 2, 0, 0, 0, 0, 0, 0, 0, 0)
+        Result.OwnedTextureCount = Dispatch(COMMAND_MODEL_PBR_VALUE, Result.Handle, 3, 0, 0, 0, 0, 0, 0, 0, 0)
 
     End If
 
@@ -539,6 +595,9 @@ Public Sub DestroyModel3D(ByRef Model As Core.Model3D)
         Model.VertexCount = 0
         Model.IndexCount = 0
         Model.TextureReferenceCount = 0
+        Model.PbrReady = False
+        Model.OwnedMaterialCount = 0
+        Model.OwnedTextureCount = 0
 
     End If
 
@@ -623,6 +682,56 @@ Public Function SubmittedTriangleCount3D() As Number
     Dim Result As Number
 
     Result = Dispatch(COMMAND_SUBMITTED_TRIANGLE_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Returns PBR draw submissions in the current or most recently ended 3D frame.
+Public Function PbrDrawCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_PBR_DRAW_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Returns simple-material draw submissions in the current or most recently ended 3D frame.
+Public Function SimpleDrawCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_SIMPLE_DRAW_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Returns indexed triangles submitted through the PBR shader.
+Public Function PbrTriangleCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_PBR_TRIANGLE_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Reports whether the optional PBR shader compiled on the current graphics device.
+Public Function PbrShaderAvailable3D() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_PBR_SHADER_AVAILABLE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+''' Reports whether one imported model part has an automatically assigned PBR material.
+Public Function ModelPartUsesPbr3D(Model As Core.Model3D, PartIndex As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_MODEL_PBR_VALUE, Model.Handle, 4, PartIndex, 0, 0, 0, 0, 0, 0, 0) <> 0
     Return Result
 
 End Function
@@ -1038,6 +1147,54 @@ Public Function LoadTexture3D(
         Result.Height = Dispatch(COMMAND_TEXTURE_HEIGHT, Result.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
         Result.FilterMode = FilterMode
         Result.WrapMode = WrapMode
+        Result.Usage = 0
+        Result.RequestedAnisotropy = 1
+        Result.EffectiveAnisotropy = 1
+        Result.MipLevels = 1
+
+    End If
+
+    Return Result
+
+End Function
+
+''' Loads a PBR texture with explicit color/data, mip, wrap, and anisotropy semantics.
+Public Function LoadTexture3DEx(
+    Path As Text,
+    Usage As Number,
+    FilterMode As Number,
+    WrapMode As Number,
+    Optional Anisotropy As Number = 8
+) As Core.Texture3D
+
+    Dim Result As Core.Texture3D
+    Dim SourceImage As Image
+
+    Load Image SourceImage From Path
+
+    Result.Handle = Renderer3DImage(
+        IMAGE_COMMAND_CREATE_PBR_TEXTURE,
+        SourceImage,
+        Usage,
+        FilterMode,
+        WrapMode,
+        Anisotropy,
+        0,
+        0,
+        0,
+        0
+    )
+
+    If Result.Handle <> 0 Then
+
+        Result.Width = Dispatch(COMMAND_TEXTURE_WIDTH, Result.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        Result.Height = Dispatch(COMMAND_TEXTURE_HEIGHT, Result.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        Result.FilterMode = Dispatch(COMMAND_PBR_TEXTURE_VALUE, Result.Handle, PBR_TEXTURE_FILTER, 0, 0, 0, 0, 0, 0, 0, 0)
+        Result.WrapMode = Dispatch(COMMAND_PBR_TEXTURE_VALUE, Result.Handle, PBR_TEXTURE_WRAP, 0, 0, 0, 0, 0, 0, 0, 0)
+        Result.Usage = Dispatch(COMMAND_PBR_TEXTURE_VALUE, Result.Handle, PBR_TEXTURE_USAGE, 0, 0, 0, 0, 0, 0, 0, 0)
+        Result.RequestedAnisotropy = Dispatch(COMMAND_PBR_TEXTURE_VALUE, Result.Handle, PBR_TEXTURE_REQUESTED_ANISOTROPY, 0, 0, 0, 0, 0, 0, 0, 0)
+        Result.EffectiveAnisotropy = Dispatch(COMMAND_PBR_TEXTURE_VALUE, Result.Handle, PBR_TEXTURE_EFFECTIVE_ANISOTROPY, 0, 0, 0, 0, 0, 0, 0, 0)
+        Result.MipLevels = Dispatch(COMMAND_PBR_TEXTURE_VALUE, Result.Handle, PBR_TEXTURE_MIP_LEVELS, 0, 0, 0, 0, 0, 0, 0, 0)
 
     End If
 
@@ -1056,6 +1213,12 @@ Public Sub DestroyTexture3D(ByRef Texture As Core.Texture3D)
         Texture.Handle = 0
         Texture.Width = 0
         Texture.Height = 0
+        Texture.FilterMode = 0
+        Texture.WrapMode = 0
+        Texture.Usage = 0
+        Texture.RequestedAnisotropy = 0
+        Texture.EffectiveAnisotropy = 0
+        Texture.MipLevels = 0
 
     End If
 
@@ -1099,6 +1262,7 @@ Public Function CreateMaterial3D(
     If Result.Handle <> 0 Then
 
         Result.TextureHandle = Texture.Handle
+        Result.Kind = MATERIAL_KIND_SIMPLE
         Result.AlphaMode = AlphaMode
         Result.ColorRed = RedValue
         Result.ColorGreen = GreenValue
@@ -1110,6 +1274,217 @@ Public Function CreateMaterial3D(
 
     End If
 
+    Return Result
+
+End Function
+
+''' Creates a PBR material with four optional maps and explicit alpha/culling state.
+Public Function CreatePbrMaterial3D(
+    BaseTexture As Core.Texture3D,
+    NormalTexture As Core.Texture3D,
+    OrmTexture As Core.Texture3D,
+    EmissiveTexture As Core.Texture3D,
+    Optional AlphaMode As Number = MATERIAL_ALPHA_OPAQUE,
+    Optional DoubleSided As Boolean = False
+) As Core.Material3D
+
+    Dim DoubleSidedValue As Number
+    Dim Result As Core.Material3D
+
+    If DoubleSided Then
+        DoubleSidedValue = 1
+    Else
+        DoubleSidedValue = 0
+    End If
+
+    Result.Handle = Dispatch(
+        COMMAND_CREATE_PBR_MATERIAL,
+        BaseTexture.Handle,
+        NormalTexture.Handle,
+        OrmTexture.Handle,
+        EmissiveTexture.Handle,
+        AlphaMode,
+        DoubleSidedValue,
+        0,
+        0,
+        0,
+        0
+    )
+
+    If Result.Handle <> 0 Then
+
+        Result.Kind = MATERIAL_KIND_PBR
+        Result.TextureHandle = BaseTexture.Handle
+        Result.NormalTextureHandle = NormalTexture.Handle
+        Result.OrmTextureHandle = OrmTexture.Handle
+        Result.EmissiveTextureHandle = EmissiveTexture.Handle
+        Result.AlphaMode = AlphaMode
+        Result.DoubleSided = DoubleSided
+        Result.ColorRed = 255
+        Result.ColorGreen = 255
+        Result.ColorBlue = 255
+        Result.OpacityPercent = 100
+        Result.CutoutPercent = 50
+        Result.RoughnessPercent = 100
+        Result.NormalStrengthPercent = 100
+        Result.OcclusionStrengthPercent = 100
+
+    End If
+
+    Return Result
+
+End Function
+
+''' Sets base color, opacity, metallic, roughness, normal, occlusion, and alpha-cutoff factors.
+Public Function SetPbrMaterialFactors3D(
+    ByRef Material As Core.Material3D,
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number,
+    OpacityPercent As Number,
+    MetallicPercent As Number,
+    RoughnessPercent As Number,
+    NormalStrengthPercent As Number,
+    OcclusionStrengthPercent As Number,
+    Optional CutoutPercent As Number = 50
+) As Boolean
+
+    Dim BlueFactor As Number
+    Dim GreenFactor As Number
+    Dim RedFactor As Number
+    Dim Result As Boolean
+
+    RedFactor = (RedValue * 1000 + 127) / 255
+    GreenFactor = (GreenValue * 1000 + 127) / 255
+    BlueFactor = (BlueValue * 1000 + 127) / 255
+    Result = Dispatch(
+        COMMAND_SET_PBR_FACTORS,
+        Material.Handle,
+        RedFactor,
+        GreenFactor,
+        BlueFactor,
+        OpacityPercent * 10,
+        MetallicPercent * 10,
+        RoughnessPercent * 10,
+        NormalStrengthPercent * 10,
+        OcclusionStrengthPercent * 10,
+        CutoutPercent * 10
+    ) <> 0
+
+    If Result Then
+
+        Material.ColorRed = RedValue
+        Material.ColorGreen = GreenValue
+        Material.ColorBlue = BlueValue
+        Material.OpacityPercent = OpacityPercent
+        Material.MetallicPercent = MetallicPercent
+        Material.RoughnessPercent = RoughnessPercent
+        Material.NormalStrengthPercent = NormalStrengthPercent
+        Material.OcclusionStrengthPercent = OcclusionStrengthPercent
+        Material.CutoutPercent = CutoutPercent
+
+    End If
+
+    Return Result
+
+End Function
+
+''' Sets linear emissive intensity as independent red, green, and blue percentages.
+Public Function SetPbrMaterialEmissive3D(
+    ByRef Material As Core.Material3D,
+    RedPercent As Number,
+    GreenPercent As Number,
+    BluePercent As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_PBR_EMISSIVE,
+        Material.Handle,
+        RedPercent * 10,
+        GreenPercent * 10,
+        BluePercent * 10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+        Material.EmissivePercent = Max(RedPercent, Max(GreenPercent, BluePercent))
+    End If
+
+    Return Result
+
+End Function
+
+''' Rebinds all four PBR maps and alpha/culling state without recreating the material.
+Public Function SetPbrMaterialTextures3D(
+    ByRef Material As Core.Material3D,
+    BaseTexture As Core.Texture3D,
+    NormalTexture As Core.Texture3D,
+    OrmTexture As Core.Texture3D,
+    EmissiveTexture As Core.Texture3D,
+    AlphaMode As Number,
+    DoubleSided As Boolean
+) As Boolean
+
+    Dim DoubleSidedValue As Number
+    Dim Result As Boolean
+
+    If DoubleSided Then
+        DoubleSidedValue = 1
+    Else
+        DoubleSidedValue = 0
+    End If
+
+    Result = Dispatch(
+        COMMAND_SET_PBR_TEXTURES,
+        Material.Handle,
+        BaseTexture.Handle,
+        NormalTexture.Handle,
+        OrmTexture.Handle,
+        EmissiveTexture.Handle,
+        AlphaMode,
+        DoubleSidedValue,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+
+        Material.TextureHandle = BaseTexture.Handle
+        Material.NormalTextureHandle = NormalTexture.Handle
+        Material.OrmTextureHandle = OrmTexture.Handle
+        Material.EmissiveTextureHandle = EmissiveTexture.Handle
+        Material.AlphaMode = AlphaMode
+        Material.DoubleSided = DoubleSided
+
+    End If
+
+    Return Result
+
+End Function
+
+''' Returns the material kind or another thousandths-scaled PBR material property.
+Public Function PbrMaterialValue3D(Material As Core.Material3D, Property As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_PBR_MATERIAL_VALUE, Material.Handle, Property, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function MaterialKind3D(Material As Core.Material3D) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_PBR_MATERIAL_VALUE, Material.Handle, PBR_MATERIAL_KIND, 0, 0, 0, 0, 0, 0, 0, 0)
     Return Result
 
 End Function
@@ -1182,11 +1557,208 @@ Public Sub DestroyMaterial3D(ByRef Material As Core.Material3D)
     Destroyed = Dispatch(COMMAND_DESTROY, Material.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
 
     If Destroyed Then
+
         Material.Handle = 0
+        Material.Kind = 0
         Material.TextureHandle = 0
+        Material.NormalTextureHandle = 0
+        Material.OrmTextureHandle = 0
+        Material.EmissiveTextureHandle = 0
+
     End If
 
 End Sub
+
+''' Restores the default ambient and directional lights and disables every local slot.
+Public Sub ResetLights3D()
+
+    Call Execute(COMMAND_RESET_LIGHTS, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+End Sub
+
+Public Function SetAmbientLight3D(
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number,
+    IntensityPercent As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_AMBIENT_LIGHT,
+        RedValue,
+        GreenValue,
+        BlueValue,
+        IntensityPercent * 10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+    Return Result
+
+End Function
+
+Public Function SetDirectionalLight3D(
+    DirectionX As Number,
+    DirectionY As Number,
+    DirectionZ As Number,
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number,
+    IntensityPercent As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_DIRECTIONAL_LIGHT,
+        DirectionX,
+        DirectionY,
+        DirectionZ,
+        RedValue,
+        GreenValue,
+        BlueValue,
+        IntensityPercent * 10,
+        0,
+        0,
+        0
+    ) <> 0
+    Return Result
+
+End Function
+
+Public Function SetPointLight3D(
+    Slot As Number,
+    X As Number,
+    Y As Number,
+    Z As Number,
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number,
+    IntensityPercent As Number,
+    Range As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_LOCAL_LIGHT,
+        Slot,
+        LIGHT_POINT,
+        X,
+        Y,
+        Z,
+        RedValue,
+        GreenValue,
+        BlueValue,
+        IntensityPercent * 10,
+        Range
+    ) <> 0
+    Return Result
+
+End Function
+
+''' Configures one spot-light position and range; call SetSpotLightCone3D for its direction and cone.
+Public Function SetSpotLight3D(
+    Slot As Number,
+    X As Number,
+    Y As Number,
+    Z As Number,
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number,
+    IntensityPercent As Number,
+    Range As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_LOCAL_LIGHT,
+        Slot,
+        LIGHT_SPOT,
+        X,
+        Y,
+        Z,
+        RedValue,
+        GreenValue,
+        BlueValue,
+        IntensityPercent * 10,
+        Range
+    ) <> 0
+    Return Result
+
+End Function
+
+Public Function SetSpotLightCone3D(
+    Slot As Number,
+    DirectionX As Number,
+    DirectionY As Number,
+    DirectionZ As Number,
+    InnerDegrees As Number,
+    OuterDegrees As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_SPOT_CONE,
+        Slot,
+        DirectionX,
+        DirectionY,
+        DirectionZ,
+        InnerDegrees,
+        OuterDegrees,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+    Return Result
+
+End Function
+
+Public Function DisableLight3D(Slot As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_SET_LOCAL_LIGHT, Slot, LIGHT_DISABLED, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Sub ClearAdditionalLights3D()
+
+    Dim Slot As Number
+
+    For Slot = 0 To 3
+        Call Execute(COMMAND_SET_LOCAL_LIGHT, Slot, LIGHT_DISABLED, 0, 0, 0, 0, 0, 0, 0, 0)
+    End For
+
+End Sub
+
+Public Function ActiveLightCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_LIGHT_VALUE, LIGHT_QUERY_ACTIVE_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Returns a deterministic light property; intensities and normalized directions use thousandths.
+Public Function LightValue3D(Query As Number, Index As Number, Property As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_LIGHT_VALUE, Query, Index, Property, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
 
 Public Sub ResetRenderer3D()
 

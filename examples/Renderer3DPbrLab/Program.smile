@@ -1,0 +1,336 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Interaction As Interaction
+
+Dim BaseCamera As Core.Camera3D
+Dim Camera As Core.Camera3D
+Dim CameraControls As Core.CameraControl3D
+Dim BaseTexture As Core.Texture3D
+Dim NormalTexture As Core.Texture3D
+Dim OrmTexture As Core.Texture3D
+Dim EmissiveTexture As Core.Texture3D
+Dim EmptyTexture As Core.Texture3D
+Dim RoughDielectric As Core.Material3D
+Dim SmoothDielectric As Core.Material3D
+Dim RoughMetal As Core.Material3D
+Dim SmoothMetal As Core.Material3D
+Dim NormalMaterial As Core.Material3D
+Dim EmissiveMaterial As Core.Material3D
+Dim ImportedModel As Core.Model3D
+Dim RoughDielectricObject As Core.Object3D
+Dim SmoothDielectricObject As Core.Object3D
+Dim RoughMetalObject As Core.Object3D
+Dim SmoothMetalObject As Core.Object3D
+Dim NormalObject As Core.Object3D
+Dim EmissiveObject As Core.Object3D
+Dim ImportedMaskObject As Core.Object3D
+Dim ImportedMetalObject As Core.Object3D
+Dim SimpleObject As Core.Object3D
+Dim Running As Boolean
+Dim DiagnosticsVisible As Boolean
+Dim PointLightEnabled As Boolean
+Dim NormalMapEnabled As Boolean
+Dim FrameReady As Boolean
+Dim Key As Number
+Dim Angle As Number
+Dim PreviousTime As Number
+Dim CurrentTime As Number
+Dim FrameMilliseconds As Number
+
+Game Window "Renderer3D PBR Lab" Size 960 By 540
+
+DiagnosticsVisible = True
+PointLightEnabled = True
+NormalMapEnabled = True
+
+Call Graphics3D.ResetRenderer3D()
+Call LoadPbrLab()
+
+Running = True
+PreviousTime = Timer()
+
+Do
+    Get Key Key
+
+    If Key = KEY_ESCAPE Then
+        Running = False
+    Else If Key = KEY_A Then
+        PointLightEnabled = Not PointLightEnabled
+
+        Call ConfigurePointLight()
+    Else If Key = KEY_S Then
+        NormalMapEnabled = Not NormalMapEnabled
+
+        Call ConfigureNormalMaterial()
+    Else If Key = KEY_D Then
+        DiagnosticsVisible = Not DiagnosticsVisible
+    Else If Key >= KEY_1 And Key <= KEY_4 Then
+        Call MovePointLight(Key - KEY_1)
+    End If
+
+    FrameReady = Interaction.UpdateCameraControlsFromPointer(CameraControls, True, True, True)
+    FrameReady = Interaction.AdvanceCameraControls(CameraControls, 1)
+
+    Camera = Interaction.ApplyCameraControls(BaseCamera, CameraControls)
+    Angle = (Angle + 1) Mod 360
+
+    Call Graphics3D.SetObjectRotation(ImportedMaskObject, 0, Angle, 0)
+    Call Graphics3D.SetObjectRotation(ImportedMetalObject, 0, 0, 0)
+    Call Graphics3D.SetObjectRotation(EmissiveObject, 68, Angle, 0)
+
+    FrameReady = Graphics3D.Begin3D(Camera, 2, 5, 14)
+
+    If FrameReady Then
+
+        FrameReady = Graphics3D.DrawObject3D(RoughDielectricObject)
+        FrameReady = Graphics3D.DrawObject3D(SmoothDielectricObject)
+        FrameReady = Graphics3D.DrawObject3D(RoughMetalObject)
+        FrameReady = Graphics3D.DrawObject3D(SmoothMetalObject)
+        FrameReady = Graphics3D.DrawObject3D(NormalObject)
+        FrameReady = Graphics3D.DrawObject3D(EmissiveObject)
+        FrameReady = Graphics3D.DrawObject3D(ImportedMaskObject)
+        FrameReady = Graphics3D.DrawObject3D(ImportedMetalObject)
+        FrameReady = Graphics3D.DrawObject3D(SimpleObject)
+
+        Call Graphics3D.End3D()
+
+    End If
+
+    Call DrawPbrDiagnostics()
+
+    Show Screen
+
+    CurrentTime = Timer()
+    FrameMilliseconds = Max(0, CurrentTime - PreviousTime)
+    PreviousTime = CurrentTime
+    Running = Running And Not Game_Closed()
+
+Loop Until Not Running
+
+Call DestroyPbrLab()
+
+Sub LoadPbrLab()
+
+    BaseCamera = Graphics3D.DefaultCamera()
+    BaseCamera.Position.Y = 230
+    BaseCamera.Position.Z = -1050
+    BaseCamera.Target.Y = 20
+
+    Call Interaction.ResetCameraControls(CameraControls)
+
+    BaseTexture = Graphics3D.LoadTexture3DEx(
+        "Assets\Textures\Pbr-base-color.png",
+        Graphics3D.TEXTURE_USAGE_COLOR,
+        Graphics3D.TEXTURE_FILTER_ANISOTROPIC,
+        Graphics3D.TEXTURE_WRAP_REPEAT,
+        8
+    )
+    NormalTexture = Graphics3D.LoadTexture3DEx(
+        "Assets\Textures\Pbr-normal.png",
+        Graphics3D.TEXTURE_USAGE_DATA,
+        Graphics3D.TEXTURE_FILTER_ANISOTROPIC,
+        Graphics3D.TEXTURE_WRAP_REPEAT,
+        8
+    )
+    OrmTexture = Graphics3D.LoadTexture3DEx(
+        "Assets\Textures\Pbr-orm.png",
+        Graphics3D.TEXTURE_USAGE_DATA,
+        Graphics3D.TEXTURE_FILTER_MIP_LINEAR,
+        Graphics3D.TEXTURE_WRAP_REPEAT,
+        1
+    )
+    EmissiveTexture = Graphics3D.LoadTexture3DEx(
+        "Assets\Textures\Pbr-emissive.png",
+        Graphics3D.TEXTURE_USAGE_COLOR,
+        Graphics3D.TEXTURE_FILTER_MIP_LINEAR,
+        Graphics3D.TEXTURE_WRAP_REPEAT,
+        1
+    )
+    RoughDielectric = Graphics3D.CreatePbrMaterial3D(
+        EmptyTexture,
+        EmptyTexture,
+        EmptyTexture,
+        EmptyTexture
+    )
+    SmoothDielectric = Graphics3D.CreatePbrMaterial3D(
+        EmptyTexture,
+        EmptyTexture,
+        EmptyTexture,
+        EmptyTexture
+    )
+    RoughMetal = Graphics3D.CreatePbrMaterial3D(
+        EmptyTexture,
+        EmptyTexture,
+        EmptyTexture,
+        EmptyTexture
+    )
+    SmoothMetal = Graphics3D.CreatePbrMaterial3D(
+        EmptyTexture,
+        EmptyTexture,
+        EmptyTexture,
+        EmptyTexture
+    )
+    NormalMaterial = Graphics3D.CreatePbrMaterial3D(
+        BaseTexture,
+        NormalTexture,
+        OrmTexture,
+        EmptyTexture
+    )
+    EmissiveMaterial = Graphics3D.CreatePbrMaterial3D(
+        EmptyTexture,
+        EmptyTexture,
+        EmptyTexture,
+        EmissiveTexture
+    )
+
+    FrameReady = Graphics3D.SetPbrMaterialFactors3D(RoughDielectric, 205, 92, 72, 100, 0, 85, 100, 100)
+    FrameReady = Graphics3D.SetPbrMaterialFactors3D(SmoothDielectric, 72, 155, 230, 100, 0, 8, 100, 100)
+    FrameReady = Graphics3D.SetPbrMaterialFactors3D(RoughMetal, 210, 164, 70, 100, 100, 82, 100, 100)
+    FrameReady = Graphics3D.SetPbrMaterialFactors3D(SmoothMetal, 194, 215, 255, 100, 100, 7, 100, 100)
+
+    Call ConfigureNormalMaterial()
+
+    FrameReady = Graphics3D.SetPbrMaterialFactors3D(EmissiveMaterial, 16, 28, 38, 100, 0, 55, 100, 100)
+    FrameReady = Graphics3D.SetPbrMaterialEmissive3D(EmissiveMaterial, 20, 170, 240)
+
+    RoughDielectricObject = Graphics3D.CreateSphere3D(72)
+    SmoothDielectricObject = Graphics3D.CreateSphere3D(72)
+    RoughMetalObject = Graphics3D.CreateSphere3D(72)
+    SmoothMetalObject = Graphics3D.CreateSphere3D(72)
+    NormalObject = Graphics3D.CreateCube3D(130)
+    EmissiveObject = Graphics3D.CreateTorus3D(68, 24)
+    SimpleObject = Graphics3D.CreateCube3D(118)
+    ImportedModel = Graphics3D.LoadModel3D("Assets\PbrLab.sm3d")
+    ImportedMaskObject = Graphics3D.CreateModelPart3D(ImportedModel, 0)
+    ImportedMetalObject = Graphics3D.CreateModelPart3D(ImportedModel, 1)
+
+    Call Graphics3D.SetObjectPosition(RoughDielectricObject, -300, 75, 110)
+    Call Graphics3D.SetObjectPosition(SmoothDielectricObject, -100, 75, 110)
+    Call Graphics3D.SetObjectPosition(RoughMetalObject, 100, 75, 110)
+    Call Graphics3D.SetObjectPosition(SmoothMetalObject, 300, 75, 110)
+    Call Graphics3D.SetObjectPosition(NormalObject, -250, -110, 90)
+    Call Graphics3D.SetObjectPosition(EmissiveObject, -60, -110, 90)
+    Call Graphics3D.SetObjectPosition(ImportedMaskObject, 125, -105, 90)
+    Call Graphics3D.SetObjectPosition(ImportedMetalObject, -410, -105, 90)
+    Call Graphics3D.SetObjectPosition(SimpleObject, 0, 235, 175)
+    Call Graphics3D.SetObjectScale(ImportedMaskObject, 6500, 6500, 6500)
+    Call Graphics3D.SetObjectScale(ImportedMetalObject, 6500, 6500, 6500)
+    Call Graphics3D.SetObjectColor(SimpleObject, 110, 220, 255)
+
+    FrameReady = Graphics3D.SetObjectMaterial3D(RoughDielectricObject, RoughDielectric)
+    FrameReady = Graphics3D.SetObjectMaterial3D(SmoothDielectricObject, SmoothDielectric)
+    FrameReady = Graphics3D.SetObjectMaterial3D(RoughMetalObject, RoughMetal)
+    FrameReady = Graphics3D.SetObjectMaterial3D(SmoothMetalObject, SmoothMetal)
+    FrameReady = Graphics3D.SetObjectMaterial3D(NormalObject, NormalMaterial)
+    FrameReady = Graphics3D.SetObjectMaterial3D(EmissiveObject, EmissiveMaterial)
+
+    Call Graphics3D.ResetLights3D()
+
+    FrameReady = Graphics3D.SetAmbientLight3D(34, 42, 60, 30)
+    FrameReady = Graphics3D.SetDirectionalLight3D(-40, -70, 25, 255, 238, 214, 125)
+
+    Call ConfigurePointLight()
+
+    FrameReady = Graphics3D.SetSpotLight3D(1, -360, 300, -100, 96, 156, 255, 120, 900)
+    FrameReady = Graphics3D.SetSpotLightCone3D(1, 45, -35, 25, 20, 36)
+
+End Sub
+
+Sub ConfigureNormalMaterial()
+
+    Dim Strength As Number
+
+    If NormalMapEnabled Then
+        Strength = 100
+    Else
+        Strength = 0
+    End If
+
+    FrameReady = Graphics3D.SetPbrMaterialFactors3D(NormalMaterial, 255, 255, 255, 100, 20, 50, Strength, 100)
+
+End Sub
+
+Sub ConfigurePointLight()
+
+    If PointLightEnabled Then
+        FrameReady = Graphics3D.SetPointLight3D(0, 180, 160, -20, 255, 90, 24, 140, 700)
+    Else
+        FrameReady = Graphics3D.DisableLight3D(0)
+    End If
+
+End Sub
+
+Sub MovePointLight(MaterialIndex As Number)
+
+    Dim X As Number
+
+    X = -300 + MaterialIndex * 200
+
+    FrameReady = Graphics3D.SetPointLight3D(0, X, 170, -20, 255, 110, 32, 150, 700)
+
+    PointLightEnabled = True
+
+End Sub
+
+Sub DrawPbrDiagnostics()
+
+    Fill Rectangle 0, 0, 960, 58, Rgb(3, 8, 20)
+    Draw Text "PBR LAB: ROUGH/SMOOTH DIELECTRIC + METAL" At 18, 10 Size 21 Color CYAN
+    Draw Text "1-4 Light  A Toggle  S Normal  D Diagnostics  Drag/Wheel/Middle Orbit" At 18, 36 Size 13 Color LIGHT_GRAY
+
+    If DiagnosticsVisible Then
+
+        Fill Rectangle 730, 72, 218, 242, Rgb(4, 10, 24)
+        Draw Text "PBR / Simple" At 744, 84 Size 15 Color WHITE
+        Draw Number Graphics3D.PbrDrawCount3D() At 850, 84 Size 15 Color CYAN
+        Draw Number Graphics3D.SimpleDrawCount3D() At 900, 84 Size 15 Color LIGHT_GREEN
+        Draw Text "Draws" At 744, 110 Size 14 Color LIGHT_GRAY
+        Draw Number Graphics3D.DrawCallCount3D() At 850, 110 Size 14 Color WHITE
+        Draw Text "Triangles" At 744, 134 Size 14 Color LIGHT_GRAY
+        Draw Number Graphics3D.SubmittedTriangleCount3D() At 850, 134 Size 14 Color WHITE
+        Draw Text "Lights" At 744, 158 Size 14 Color LIGHT_GRAY
+        Draw Number Graphics3D.ActiveLightCount3D() At 850, 158 Size 14 Color WHITE
+        Draw Text "Models / Meshes" At 744, 182 Size 14 Color LIGHT_GRAY
+        Draw Number Graphics3D.LiveModelCount3D() At 870, 182 Size 14 Color WHITE
+        Draw Number Graphics3D.LiveMeshCount3D() At 910, 182 Size 14 Color WHITE
+        Draw Text "Objects" At 744, 206 Size 14 Color LIGHT_GRAY
+        Draw Number Graphics3D.LiveObjectCount3D() At 850, 206 Size 14 Color WHITE
+        Draw Text "Textures / Materials" At 744, 230 Size 14 Color LIGHT_GRAY
+        Draw Number Graphics3D.LiveTextureCount3D() At 890, 230 Size 14 Color WHITE
+        Draw Number Graphics3D.LiveMaterialCount3D() At 925, 230 Size 14 Color WHITE
+        Draw Text "Anisotropy" At 744, 254 Size 14 Color LIGHT_GRAY
+        Draw Number BaseTexture.EffectiveAnisotropy At 850, 254 Size 14 Color WHITE
+        Draw Text "Frame Ms" At 744, 278 Size 14 Color LIGHT_GRAY
+        Draw Number FrameMilliseconds At 850, 278 Size 14 Color WHITE
+
+    End If
+
+End Sub
+
+Sub DestroyPbrLab()
+
+    Call Graphics3D.DestroyObject3D(RoughDielectricObject)
+    Call Graphics3D.DestroyObject3D(SmoothDielectricObject)
+    Call Graphics3D.DestroyObject3D(RoughMetalObject)
+    Call Graphics3D.DestroyObject3D(SmoothMetalObject)
+    Call Graphics3D.DestroyObject3D(NormalObject)
+    Call Graphics3D.DestroyObject3D(EmissiveObject)
+    Call Graphics3D.DestroyObject3D(SimpleObject)
+    Call Graphics3D.DestroyObjectInstance3D(ImportedMaskObject)
+    Call Graphics3D.DestroyObjectInstance3D(ImportedMetalObject)
+    Call Graphics3D.DestroyModel3D(ImportedModel)
+    Call Graphics3D.DestroyMaterial3D(RoughDielectric)
+    Call Graphics3D.DestroyMaterial3D(SmoothDielectric)
+    Call Graphics3D.DestroyMaterial3D(RoughMetal)
+    Call Graphics3D.DestroyMaterial3D(SmoothMetal)
+    Call Graphics3D.DestroyMaterial3D(NormalMaterial)
+    Call Graphics3D.DestroyMaterial3D(EmissiveMaterial)
+    Call Graphics3D.DestroyTexture3D(BaseTexture)
+    Call Graphics3D.DestroyTexture3D(NormalTexture)
+    Call Graphics3D.DestroyTexture3D(OrmTexture)
+    Call Graphics3D.DestroyTexture3D(EmissiveTexture)
+    Call Graphics3D.ResetRenderer3D()
+
+End Sub

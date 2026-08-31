@@ -19,6 +19,7 @@ The compiler has narrow game-window-only numeric, image-owning, and text-path Re
 - immutable position/normal/UV/joint/weight vertex and index buffers with generated or explicit normals;
 - model, look-at view, and perspective matrices;
 - a small built-in HLSL shader pair compiled with `d3dcompiler.lib`;
+- a separately compiled PBR-lite HLSL pipeline with tangent input, four texture channels, bounded lights, blend/depth policy, and single/double-sided raster states;
 - an output-size D24S8 depth texture recreated after device/size changes;
 - indexed triangle lists with depth testing;
 - 128 mesh, 512 object, 128 texture, and 128 material slots with typed generation-checked handles;
@@ -28,7 +29,7 @@ The compiler has narrow game-window-only numeric, image-owning, and text-path Re
 
 ## Web backend
 
-The generated four-file Web package remains exactly `index.html`, `smile-runtime.js`, `game.js`, and `smile.css`. The runtime lazily creates one offscreen WebGL2 canvas, compiles built-in GLSL, uploads the same indexed vertices, enables `DEPTH_TEST`, and draws triangle lists. `End3D` composites that canvas into the existing Canvas 2D back buffer; subsequent SMILE 2D commands therefore remain painter-order overlays.
+The generated four-file Web package remains exactly `index.html`, `smile-runtime.js`, `game.js`, and `smile.css`. The runtime lazily creates one offscreen WebGL2 canvas, compiles the simple and optional PBR-lite GLSL programs once, uploads the same indexed vertices, enables `DEPTH_TEST`, and draws triangle lists. PBR drawing reuses fixed matrices/light arrays, creates no typed arrays in the draw path, and restores explicit blend/depth/cull/program state before a following simple draw. `End3D` composites that canvas into the existing Canvas 2D back buffer; subsequent SMILE 2D commands therefore remain painter-order overlays.
 
 The Web renderer enforces the same live resource limits, rejects deleted handles, regenerates its backing dimensions with the logical canvas, and recomputes perspective aspect from the current backing width and height. WebGL2 absence returns unavailable without changing Console programs or Renderer2D behavior.
 
@@ -38,10 +39,10 @@ Cube, plane, pyramid, sphere, cylinder, and torus geometry is generated inside e
 
 Geometry should be created outside the frame loop. An owning `Object3D` destroys both its object and mesh; shared-mesh instances destroy only the object slot. Neon Cycles preallocates bounded trail objects once, updates their transforms/visibility, and performs no resource allocation per simulation step or round.
 
-The public diagnostics expose live counts, fixed capacities, handle validity, and reference counts. A resource cannot be destroyed while a live dependent refers to it: objects retain meshes and materials, and materials retain textures. An owning object must therefore outlive its shared instances. `ResetRenderer3D` ends any active 3D pass, destroys dependents before dependencies, invalidates every handle, releases backend resources, and leaves the normal Renderer2D frame path available. Native object handles reserve nine slot bits so every entry in the 512-object pool remains reachable while retaining generation-based stale-handle rejection; smaller resource pools keep the original eight-bit layout. Web handles are never reused and deleted handles remain invalid.
+The public diagnostics expose live counts, fixed capacities, handle validity, reference counts, PBR/simple draw counts, PBR triangles, bounded light state, effective sampler state, and imported ownership counts. A resource cannot be destroyed while a live dependent refers to it: objects retain meshes and materials, materials retain textures, and an SM3D v2 model atomically owns its part meshes/imported materials/imported textures. An owning object must therefore outlive its shared instances, and model-part objects must be destroyed before their model. `ResetRenderer3D` ends any active 3D pass, destroys dependents before dependencies, invalidates every handle, releases backend resources, and leaves the normal Renderer2D frame path available. Native object handles reserve nine slot bits so every entry in the 512-object pool remains reachable while retaining generation-based stale-handle rejection; smaller resource pools keep the original eight-bit layout. Web handles are never reused and deleted handles remain invalid.
 
 Texture and material details are documented in [Renderer3D textures and materials](renderer3d-materials.md).
 
 ## Deliberate limits
 
-This milestone does not add runtime glTF import, a scene graph, rigid-body physics, shadows, particles, student shaders, networking, or a GDI 3D rasterizer. glTF is converted offline to the bounded SM3D runtime format. Skeletal animation is an explicit bounded resource layer rather than a general scene graph. Logical gameplay/collision geometry remains application-owned and independent from render objects.
+This milestone does not add runtime glTF import, a scene graph, rigid-body physics, shadows, HDR, tone mapping, bloom, IBL, particles, student shaders, networking, or a GDI 3D rasterizer. glTF is converted offline to the bounded SM3D runtime format. Skeletal animation is an explicit bounded resource layer rather than a general scene graph. Logical gameplay/collision geometry remains application-owned and independent from render objects.
