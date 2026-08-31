@@ -139,9 +139,9 @@ Call Check(Graphics3D.UpdateAnimator3D(FirstAnimator, 300))
 
 RootDelta = Graphics3D.TakeAnimatorRootDelta3D(FirstAnimator)
 
-Call Check(RootDelta.X = 200)
+Call Check(RootDelta.X = 0)
 Call Check(RootDelta.Y = 0)
-Call Check(RootDelta.Z = 0)
+Call Check(RootDelta.Z = 200)
 Call Check(RootDelta.Yaw = 0)
 Call Check(Graphics3D.PlayModelAnimatorNamed3D(FirstAnimator, "RootMove", Graphics3D.ANIMATION_LOOP, 100))
 Call Check(Graphics3D.UpdateAnimator3D(FirstAnimator, 600000))

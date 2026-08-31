@@ -19,6 +19,10 @@ $labWebOutput = Join-Path $repositoryRoot 'artifacts\web\Character3DLab'
 $fixtureGenerator = Join-Path $repositoryRoot 'scripts\generate-renderer3d-animation-v2-fixtures.ps1'
 $characterSourcePath = Join-Path $repositoryRoot 'libraries\Smile.Simple3D\Character3D.smile'
 $sceneSourcePath = Join-Path $repositoryRoot 'libraries\Smile.Simple3D\Scene3D.smile'
+$graphicsSourcePath = Join-Path $repositoryRoot 'libraries\Smile.Simple3D\Graphics3D.smile'
+$nativeHeaderPath = Join-Path $repositoryRoot 'src\Smile.NativeRuntime\graphics\graphics3d.h'
+$nativeSourcePath = Join-Path $repositoryRoot 'src\Smile.NativeRuntime\graphics\graphics3d_directx.cpp'
+$webSourcePath = Join-Path $repositoryRoot 'src\Smile.Compiler\WebOutputWriter.cs'
 $libraryProjectPath = Join-Path $repositoryRoot 'libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj'
 
 if (-not (Test-Path -LiteralPath $compiler) -or -not (Test-Path -LiteralPath $assetTool)) {
@@ -66,6 +70,10 @@ try {
 
     $characterSource = Get-Content -LiteralPath $characterSourcePath -Raw
     $sceneSource = Get-Content -LiteralPath $sceneSourcePath -Raw
+    $graphicsSource = Get-Content -LiteralPath $graphicsSourcePath -Raw
+    $nativeHeader = Get-Content -LiteralPath $nativeHeaderPath -Raw
+    $nativeSource = Get-Content -LiteralPath $nativeSourcePath -Raw
+    $webSource = Get-Content -LiteralPath $webSourcePath -Raw
     $libraryProject = Get-Content -LiteralPath $libraryProjectPath -Raw
 
     if ($characterSource -notmatch 'CHARACTER3D_MAX_ASSETS = 16' -or
@@ -76,8 +84,28 @@ try {
     }
     if ($sceneSource -notmatch 'Public Const QUALITY_AUTO = 0' -or
         $sceneSource -notmatch 'Public Function AssetProfileKey\(\)' -or
-        $sceneSource -notmatch 'Public Function EndScene\(\)') {
+        $sceneSource -notmatch 'Public Function EndScene\(\)' -or
+        $sceneSource -notmatch 'Public Function RefreshCapabilities\(\)' -or
+        $sceneSource -notmatch 'Public Function Synchronize\(\)' -or
+        $sceneSource -notmatch 'SCENE_ERROR_FRAME_MISMATCH = 7') {
         throw 'Scene3D quality, cache-profile, or balanced-frame API changed.'
+    }
+    if ($characterSource -notmatch 'Public Function RetryPendingReleases\(\)' -or
+        $characterSource -notmatch 'Public Function PartObjectHandle\(' -or
+        $characterSource -notmatch 'Public Function WorldBounds\(' -or
+        $characterSource -notmatch 'Private Function ApplyTransformTransaction\(' -or
+        $characterSource -notmatch 'AssetVariants\[16\]' -or
+        $characterSource -match 'AssetPolicies\[16\]') {
+        throw 'Character3D hardening ownership, transform, bounds, or cache identity changed.'
+    }
+    if ($graphicsSource -notmatch 'COMMAND_RENDERER_STATE = 112' -or
+        $graphicsSource -notmatch 'Public Function ResourceEpoch3D\(\)' -or
+        $graphicsSource -notmatch 'Public Function FrameActive3D\(\)' -or
+        $nativeHeader -notmatch 'SMILE_3D_RENDERER_STATE = 112' -or
+        $nativeSource -notmatch 'smile_resource_epoch3d' -or
+        $webSource -notmatch 'renderer3DResourceEpoch' -or
+        $webSource -notmatch 'case 112:') {
+        throw 'Renderer3D command 112 epoch/frame-state parity changed.'
     }
     if ($libraryProject.IndexOf('Scene3D.smile', [System.StringComparison]::Ordinal) -gt
         $libraryProject.IndexOf('Character3D.smile', [System.StringComparison]::Ordinal)) {

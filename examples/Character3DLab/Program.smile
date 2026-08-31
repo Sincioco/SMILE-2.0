@@ -11,6 +11,7 @@ Dim Camera As Core.Camera3D
 Dim CameraControls As Core.CameraControl3D
 Dim Hero As Character3D.Actor
 Dim Partner As Character3D.Actor
+Dim HeroBounds As Character3D.Bounds3D
 Dim SocketMarker As Core.Object3D
 Dim Ground As Core.Object3D
 Dim Socket As Core.Vector3
@@ -26,6 +27,8 @@ Dim Key As Number
 Dim PreviousTime As Number
 Dim CurrentTime As Number
 Dim FrameMilliseconds As Number
+Dim ResetCount As Number
+Dim ActorDiagnostic As Number
 
 Game Window "SMILE Character3D Lab" Size 960 By 540
 
@@ -69,7 +72,7 @@ Do
 
         Call ApplyRootMotionMode()
     Else If Key = KEY_S Then
-        SocketVisible = Not SocketVisible
+        Call TamperHeroPart()
     Else If Key = KEY_A Then
         LightingIndex = (LightingIndex + 1) Mod 5
 
@@ -80,6 +83,12 @@ Do
         Call SelectQuality()
     Else If Key = KEY_DOWN Then
         Call ReloadActors()
+    Else If Key = KEY_LEFT Then
+        FrameReady = Character3D.Rotate(Hero, 0, Character3D.RotationY(Hero) - 45, 0)
+    Else If Key = KEY_RIGHT Then
+        FrameReady = Character3D.Rotate(Hero, 0, Character3D.RotationY(Hero) + 45, 0)
+    Else If Key = KEY_ENTER Then
+        Call RecoverFromRendererReset()
     Else If Key = KEY_D Then
         DiagnosticsVisible = Not DiagnosticsVisible
     End If
@@ -89,12 +98,17 @@ Do
     PreviousTime = CurrentTime
 
     FrameReady = Character3D.Update(Hero, FrameMilliseconds)
+    ActorDiagnostic = Character3D.ActorLastError(Hero)
     FrameReady = Character3D.Update(Partner, FrameMilliseconds) And FrameReady
     FrameReady = Interaction.UpdateCameraControlsFromPointer(CameraControls, True, True, True)
     FrameReady = Interaction.AdvanceCameraControls(CameraControls, 1)
 
     Camera = Interaction.ApplyCameraControls(BaseCamera, CameraControls)
     Socket = Character3D.SocketPosition(Hero, "HandTip")
+
+    If Character3D.IsValid(Hero) Then
+        HeroBounds = Character3D.WorldBounds(Hero, 1)
+    End If
 
     Call Graphics3D.SetObjectPosition(SocketMarker, Socket.X, Socket.Y, Socket.Z)
 
@@ -127,20 +141,52 @@ Call DestroyLab()
 Sub LoadLab()
 
     BaseCamera = Graphics3D.DefaultCamera()
-    BaseCamera.Position.Y = 180
-    BaseCamera.Position.Z = -720
-    BaseCamera.Target.Y = 120
+    BaseCamera.Position.Y = 30
+    BaseCamera.Position.Z = -120
+    BaseCamera.Target.Y = 12
+    BaseCamera.Target.Z = 20
 
     Call Interaction.ResetCameraControls(CameraControls)
 
-    Ground = Graphics3D.CreatePlane3D(760, 470)
-    SocketMarker = Graphics3D.CreateSphere3D(12)
+    Ground = Graphics3D.CreatePlane3D(120, 90)
+    SocketMarker = Graphics3D.CreateSphere3D(2)
 
-    Call Graphics3D.SetObjectPosition(Ground, 0, -5, 120)
+    Call Graphics3D.SetObjectPosition(Ground, 0, -1, 20)
     Call Graphics3D.SetObjectColor(Ground, 22, 34, 58)
     Call Graphics3D.SetObjectColor(SocketMarker, 255, 226, 72)
 
     Call ReloadActors()
+
+End Sub
+
+Sub RecoverFromRendererReset()
+
+    Call Graphics3D.ResetRenderer3D()
+
+    FrameReady = Character3D.Update(Hero, 0)
+
+    Call Scene3D.ResetState()
+
+    Ground = Graphics3D.CreatePlane3D(120, 90)
+    SocketMarker = Graphics3D.CreateSphere3D(2)
+
+    Call Graphics3D.SetObjectPosition(Ground, 0, -1, 20)
+    Call Graphics3D.SetObjectColor(Ground, 22, 34, 58)
+    Call Graphics3D.SetObjectColor(SocketMarker, 255, 226, 72)
+    Call ReloadActors()
+    Call SelectLighting()
+
+    ResetCount = ResetCount + 1
+
+End Sub
+
+Sub TamperHeroPart()
+
+    Dim BorrowedPart As Core.Object3D
+
+    BorrowedPart.Handle = Character3D.PartObjectHandle(Hero, 0)
+
+    Call Graphics3D.DestroyObjectInstance3D(BorrowedPart)
 
 End Sub
 
@@ -152,10 +198,10 @@ Sub ReloadActors()
     Hero = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
     Partner = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
 
-    FrameReady = Character3D.Place(Hero, -140, 0, 80)
-    FrameReady = Character3D.Place(Partner, 140, 0, 80)
-    FrameReady = Character3D.SetScale(Hero, 20000)
-    FrameReady = Character3D.SetScale(Partner, 20000)
+    FrameReady = Character3D.Place(Hero, -25, 0, 20)
+    FrameReady = Character3D.Place(Partner, 25, 0, 20)
+    FrameReady = Character3D.SetScale(Hero, 1000)
+    FrameReady = Character3D.SetScale(Partner, 1000)
     FrameReady = Character3D.Rotate(Hero, 0, 10, 0)
     FrameReady = Character3D.Rotate(Partner, 0, -10, 0)
     FrameReady = Character3D.PlayAnimation(Hero, "Bend", True)
@@ -290,10 +336,20 @@ Sub DrawLabOverlay()
 
     Fill Rectangle 0, 0, 960, 68, Rgb(3, 8, 22)
     Draw Text "SMILE CHARACTER3D LAB" At 18, 10 Size 22 Color CYAN
-    Draw Text "1-4/Tab Clip  Space Fade  W Root  S Socket  A Light  Up Quality  Down Reload  D Details" At 18, 40 Size 13 Color LIGHT_GRAY
-    Fill Rectangle 16, 80, 280, 70, Rgb(5, 12, 30)
+    Draw Text "1-4/Tab Clip  W Root  Left/Right Yaw  Enter Reset  S Tamper  Down Reload" At 18, 40 Size 13 Color LIGHT_GRAY
+    Fill Rectangle 16, 80, 350, 138, Rgb(5, 12, 30)
     Draw Text "SELECTED CLIP" At 30, 92 Size 13 Color LIGHT_GRAY
     Draw Text SelectedClipName() At 30, 116 Size 19 Color WHITE
+    Draw Text "Yaw / Epoch / Resets" At 30, 146 Size 13 Color LIGHT_GRAY
+    Draw Number Character3D.RotationY(Hero) At 190, 146 Size 13 Color WHITE
+    Draw Number Graphics3D.ResourceEpoch3D() At 242, 146 Size 13 Color CYAN
+    Draw Number ResetCount At 310, 146 Size 13 Color GREEN
+    Draw Text "World Center X/Z" At 30, 170 Size 13 Color LIGHT_GRAY
+    Draw Number HeroBounds.Center.X / 1000 At 190, 170 Size 13 Color YELLOW
+    Draw Number HeroBounds.Center.Z / 1000 At 252, 170 Size 13 Color YELLOW
+    Draw Text "Radius / Actor Error" At 30, 194 Size 13 Color LIGHT_GRAY
+    Draw Number HeroBounds.Radius / 1000 At 190, 194 Size 13 Color WHITE
+    Draw Number ActorDiagnostic At 298, 194 Size 13 Color ORANGE
     Draw Text "LEFT: HIGH-LEVEL ACTOR" At 196, 468 Size 14 Color CYAN
     Draw Text "RIGHT: SHARED MODEL" At 520, 468 Size 14 Color ORANGE
 

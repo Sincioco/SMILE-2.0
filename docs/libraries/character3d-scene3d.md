@@ -28,7 +28,7 @@ Updated = Character3D.SetScale(Hero, 20000)
 Updated = Character3D.PlayAnimation(Hero, "Idle", True)
 ```
 
-The first load creates one cached model, one animator, and one object per model part. A second actor loaded from the exact same path, effective profile, and fallback policy shares the model but owns independent playback and part objects. Destroying the last actor immediately releases the cache entry and all model-owned resources.
+The first load creates one cached model, one animator, and one object per model part. A second actor loaded from the exact same path, asset profile, and actual PBR/simple variant shares the model but owns independent playback and part objects. Request policy controls admission, not identity. Destroying the last actor immediately releases the cache entry unless an external dependent refuses model cleanup; `RetryPendingReleases` completes that bounded pending release later.
 
 Use exact clip names:
 
@@ -81,7 +81,7 @@ Dim Hand As Core.Vector3
 Hand = Character3D.SocketPosition(Hero, "HandTip")
 ```
 
-Root motion is ignored by default. Apply mode retains subunit motion in thousandths and moves every actor part after each update:
+Root motion is ignored by default. Apply mode retains subunit motion in thousandths, rotates model-local translation by the actor's starting yaw, applies translation, then applies root yaw to every actor part:
 
 ```smile
 Updated = Character3D.SetRootMotion(Hero, Character3D.ROOT_MOTION_APPLY)
@@ -102,8 +102,8 @@ Print Character3D.LastFallback()
 
 ## Cleanup and advanced interop
 
-Call `Character3D.Destroy` for individual actors or `Character3D.Shutdown` at scene exit. `Shutdown` is idempotent. A direct `Graphics3D.ResetRenderer3D` invalidates every high-level actor/cache entry; the next Character3D operation reports `CHARACTER_ERROR_RENDERER_RESET` instead of double-destroying stale resources.
+Call `Character3D.Destroy` for individual actors or `Character3D.Shutdown` at scene exit. `Shutdown` is idempotent. A direct `Graphics3D.ResetRenderer3D` advances the renderer epoch and invalidates every high-level actor/cache entry; the next Character3D operation reports `CHARACTER_ERROR_RENDERER_RESET` instead of double-destroying stale resources. Same-epoch tampering quarantines only the affected actor or shared asset and preserves unrelated actors.
 
-Battle systems can read `PrimaryObjectHandle`, `AnimatorHandle`, and `ModelHandle`. Character3D does not import Battle3D and never applies damage, VFX, shadows, HDR, bloom, or game-specific policy.
+Battle systems can read `PrimaryObjectHandle`, indexed `PartObjectHandle`, `AnimatorHandle`, and `ModelHandle`. These are borrowed read-only values: do not destroy them or mutate Character3D-owned transforms. Character3D does not import Battle3D and never applies damage, VFX, shadows, HDR, bloom, or game-specific policy.
 
 See `examples\Character3DLab` for the native/Web sample and `scripts\test-character3d.ps1` for deterministic parity and lifecycle coverage.

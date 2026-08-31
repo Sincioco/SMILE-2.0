@@ -11,18 +11,37 @@ Dim Second As Character3D.Actor
 Dim Third As Character3D.Actor
 Dim Broken As Character3D.Actor
 Dim Stale As Character3D.Actor
+Dim PolicyActor As Character3D.Actor
+Dim PolicyActor2 As Character3D.Actor
+Dim TamperedActor As Character3D.Actor
+Dim SurvivorActor As Character3D.Actor
+Dim PendingActor As Character3D.Actor
 Dim CapacityActors[32] As Character3D.Actor
 Dim Blockers[511] As Core.Object3D
 Dim FillAnimators[128] As Core.Animator3D
 Dim Skeleton As Core.Skeleton3D
 Dim Socket As Core.Vector3
 Dim Delta As Core.RootMotionDelta3D
+Dim Bounds As Character3D.Bounds3D
+Dim Bounds2 As Character3D.Bounds3D
+Dim Center As Core.Vector3
+Dim BorrowedObject As Core.Object3D
+Dim BorrowedModel As Core.Model3D
+Dim BorrowedAnimator As Core.Animator3D
 Dim PbrAvailable As Boolean
 Dim FrameReady As Boolean
 Dim Ready As Boolean
 Dim PositionBefore As Number
 Dim UploadsBefore As Number
 Dim ProfileKey As Number
+Dim EpochBefore As Number
+Dim EpochAfter As Number
+Dim TamperedPartCount As Number
+Dim SurvivorPartCount As Number
+Dim TamperedAnimatorHandle As Number
+Dim SurvivorAnimatorHandle As Number
+Dim TamperedPartHandles[16] As Number
+Dim SurvivorPartHandles[16] As Number
 Dim Index As Number
 Dim Failures As Number
 Dim CheckIndex As Number
@@ -30,6 +49,18 @@ Dim CheckIndex As Number
 Game Window "Character3D Tests" Size 640 By 360
 
 Call Graphics3D.ResetRenderer3D()
+Call Character3D.Shutdown()
+
+EpochBefore = Graphics3D.ResourceEpoch3D()
+
+Call Check(EpochBefore > 0)
+Call Check(Not Graphics3D.FrameActive3D())
+Call Graphics3D.ResetRenderer3D()
+
+EpochAfter = Graphics3D.ResourceEpoch3D()
+
+Call Check(EpochAfter > 0)
+Call Check(EpochAfter <> EpochBefore)
 Call Character3D.Shutdown()
 
 Call Check(Scene3D.SetQuality(Scene3D.QUALITY_LOW))
@@ -40,7 +71,7 @@ Call Check(Scene3D.RequestedAnisotropy() = 1)
 
 ProfileKey = Scene3D.AssetProfileKey()
 
-Call Check(ProfileKey = 11101)
+Call Check(ProfileKey = 1101)
 Call Check(Scene3D.UseLighting("CharacterStudio"))
 Call Check(Scene3D.ApplyLighting())
 Call Check(Scene3D.CurrentLightingMatches("CharacterStudio"))
@@ -74,6 +105,27 @@ Call Check(Scene3D.EndScene())
 Call Check(Not Scene3D.IsOpen())
 Call Check(Not Scene3D.EndScene())
 
+Call Scene3D.ClearError()
+
+FrameReady = Graphics3D.Begin3D(Camera, 5, 7, 14)
+
+Call Check(FrameReady)
+Call Check(Graphics3D.FrameActive3D())
+Call Check(Not Scene3D.Begin(Camera, 5, 7, 14))
+Call Check(Scene3D.LastError() = Scene3D.SCENE_ERROR_FRAME_MISMATCH)
+Call Graphics3D.End3D()
+
+Call Scene3D.ResetState()
+
+FrameReady = Scene3D.Begin(Camera, 5, 7, 14)
+
+Call Check(FrameReady)
+Call Graphics3D.End3D()
+Call Check(Not Scene3D.EndScene())
+Call Check(Scene3D.LastError() = Scene3D.SCENE_ERROR_FRAME_MISMATCH)
+
+Call Scene3D.ResetState()
+
 Fill Rectangle 0, 0, 640, 360, Rgb(5, 7, 14)
 Draw Text "SCENE3D + RENDERER2D" At 180, 164 Size 18 Color WHITE
 Show Screen
@@ -100,12 +152,89 @@ Call Check(Character3D.Height(First) = 2)
 Call Check(Character3D.ActorUsesPbr(First) = PbrAvailable)
 Call Check(Character3D.ActorUsesFallback(First) <> PbrAvailable)
 
+PolicyActor = Character3D.LoadWithPolicy(
+    "Assets\AnimationArticulated.sm3d",
+    Character3D.CHARACTER_LOAD_REQUIRE_PBR
+)
+PolicyActor2 = Character3D.LoadWithPolicy(
+    "Assets\AnimationArticulated.sm3d",
+    Character3D.CHARACTER_LOAD_ALLOW_SIMPLE_FALLBACK
+)
+
+If PbrAvailable Then
+
+    Call Check(Character3D.IsValid(PolicyActor))
+    Call Check(Character3D.IsValid(PolicyActor2))
+    Call Check(Character3D.ModelHandle(PolicyActor) = Character3D.ModelHandle(First))
+    Call Check(Character3D.ModelHandle(PolicyActor2) = Character3D.ModelHandle(First))
+    Call Check(Character3D.AssetReferenceCount(First) = 4)
+
+Else
+
+    Call Check(PolicyActor.Handle = 0)
+    Call Check(Character3D.IsValid(PolicyActor2))
+    Call Check(Character3D.ModelHandle(PolicyActor2) = Character3D.ModelHandle(First))
+    Call Check(Character3D.AssetReferenceCount(First) = 3)
+
+End If
+
+Call Check(Character3D.CachedAssetCount() = 1)
+Call Character3D.Destroy(PolicyActor)
+Call Character3D.Destroy(PolicyActor2)
+Call Check(Character3D.AssetReferenceCount(First) = 2)
+Call Check(Scene3D.UseLighting("Daylight"))
+
+PolicyActor2 = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
+
+Call Check(Character3D.IsValid(PolicyActor2))
+Call Check(Character3D.CachedAssetCount() = 1)
+Call Check(Character3D.ModelHandle(PolicyActor2) = Character3D.ModelHandle(First))
+Call Character3D.Destroy(PolicyActor2)
+Call Check(Scene3D.UseLighting("CharacterStudio"))
+
 Call Check(Character3D.Place(First, -1, 0, 0))
 Call Check(Character3D.Rotate(First, 0, 20, 0))
 Call Check(Character3D.SetScale(First, 120))
 Call Check(Character3D.SetVisible(First, True))
 Call Check(Character3D.LookAt(First, 100, 0, 0))
 Call Check(Character3D.RotationY(First) >= 89 And Character3D.RotationY(First) <= 91)
+Call Check(Not Character3D.Place(First, 1000001, 0, 0))
+Call Check(Character3D.PositionX(First) = -1)
+Call Check(Not Character3D.Rotate(First, 1000001, 0, 0))
+Call Check(Not Character3D.SetScale(First, 1001))
+Call Check(Character3D.SetScale(First, 200))
+Call Check(Character3D.Place(First, 10, 20, 30))
+Call Check(Character3D.Rotate(First, 0, 0, 0))
+
+Bounds = Character3D.LocalBounds(First)
+Bounds2 = Character3D.WorldBounds(First)
+Center = Character3D.WorldCenter(First)
+
+Call Check(Bounds.Valid)
+Call Check(Bounds2.Valid)
+Call Check(Character3D.WorldHeight(First) = Character3D.Height(First) * 2)
+Call Check(Center.X >= 9 And Center.X <= 13)
+Call Check(Center.Y >= 20 And Center.Y <= 24)
+Call Check(Center.Z >= 29 And Center.Z <= 31)
+Call Check(Character3D.WorldRadius(First) > 0)
+
+Bounds = Character3D.WorldBounds(First, 3)
+
+Call Check(Bounds.Valid)
+Call Check(Bounds.AnimationMargin = 3000)
+Call Check(Character3D.WorldHeight(First, 3) = Character3D.WorldHeight(First) + 6)
+
+Bounds = Character3D.WorldBounds(First)
+
+Call Check(Character3D.Rotate(First, 0, 90, 0))
+
+Bounds2 = Character3D.WorldBounds(First)
+
+Call Check(Bounds.Size.X = Bounds2.Size.Z)
+Call Check(Bounds.Size.Z = Bounds2.Size.X)
+Call Check(Character3D.SetScale(First, 120))
+Call Check(Character3D.Place(First, -1, 0, 0))
+Call Check(Character3D.Rotate(First, 0, 0, 0))
 Call Check(Character3D.CurrentClipNameMatches(First, "Idle"))
 Call Check(Not Character3D.PlayMode(First, "Missing", Graphics3D.ANIMATION_LOOP, 100))
 Call Check(Character3D.LastError() = Character3D.CHARACTER_ERROR_CLIP_NOT_FOUND)
@@ -141,14 +270,40 @@ End For
 
 Delta = Character3D.LastRootDelta(First)
 
-Call Check(Delta.X <> 0)
-Call Check(Character3D.PositionX(First) = 1)
+Call Check(Delta.Z <> 0)
+Call Check(Character3D.PositionZ(First) = 1)
 
-PositionBefore = Character3D.PositionX(First)
+PositionBefore = Character3D.PositionZ(First)
 
 Call Check(Character3D.SetRootMotion(First, Character3D.ROOT_MOTION_IGNORE))
 Call Check(Character3D.Update(First, 600))
-Call Check(Character3D.PositionX(First) = PositionBefore)
+Call Check(Character3D.PositionZ(First) = PositionBefore)
+
+Call Check(Character3D.Place(First, 0, 0, 0))
+Call Check(Character3D.Rotate(First, 0, 90, 0))
+Call Check(Character3D.PlayMode(First, "RootMove", Graphics3D.ANIMATION_LOOP, 100))
+Call Check(Character3D.SetRootMotion(First, Character3D.ROOT_MOTION_APPLY))
+Call Check(Character3D.Update(First, 1200))
+Call Check(Character3D.PositionX(First) = 1)
+Call Check(Character3D.PositionZ(First) = 0)
+Call Check(Character3D.Place(First, 0, 0, 0))
+Call Check(Character3D.Rotate(First, 0, 180, 0))
+Call Check(Character3D.PlayMode(First, "RootMove", Graphics3D.ANIMATION_LOOP, 100))
+Call Check(Character3D.Update(First, 1200))
+Call Check(Character3D.PositionX(First) = 0)
+Call Check(Character3D.PositionZ(First) = -1)
+Call Check(Character3D.Place(First, 0, 0, 0))
+Call Check(Character3D.Rotate(First, 0, 270, 0))
+Call Check(Character3D.PlayMode(First, "RootMove", Graphics3D.ANIMATION_LOOP, 100))
+Call Check(Character3D.Update(First, 1200))
+Call Check(Character3D.PositionX(First) = -1)
+Call Check(Character3D.PositionZ(First) = 0)
+Call Check(Character3D.Place(First, 0, 0, 0))
+Call Check(Character3D.Rotate(First, 0, 0, 0))
+Call Check(Character3D.PlayMode(First, "WalkLike", Graphics3D.ANIMATION_LOOP, 100))
+Call Check(Character3D.Update(First, 1017))
+Call Check(Character3D.PositionX(First) = 1)
+Call Check(Character3D.SetRootMotion(First, Character3D.ROOT_MOTION_IGNORE))
 Call Check(Character3D.PlayMode(First, "RootMove", Graphics3D.ANIMATION_LOOP, 100))
 Call Check(Character3D.Update(First, 600000))
 Call Check(Character3D.PendingEventCount(First) = 32)
@@ -297,6 +452,83 @@ For Index = 0 To 127
 End For
 
 Call Graphics3D.DestroySkeleton3D(Skeleton)
+
+TamperedActor = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
+SurvivorActor = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
+Stale = TamperedActor
+BorrowedObject.Handle = Character3D.PartObjectHandle(TamperedActor, 1)
+
+Call Graphics3D.DestroyObjectInstance3D(BorrowedObject)
+Call Check(Not Character3D.Place(TamperedActor, 10, 0, 0))
+Call Check(Character3D.ActorLastError(Stale) = Character3D.CHARACTER_ERROR_INVALID_PART)
+Call Check(Character3D.IsValid(SurvivorActor))
+Call Check(Character3D.ActorLastError(SurvivorActor) = Character3D.CHARACTER_ERROR_NONE)
+Call Check(Character3D.AssetReferenceCount(SurvivorActor) = 1)
+Call Character3D.Destroy(SurvivorActor)
+Call Check(Character3D.CachedAssetCount() = 0)
+
+PendingActor = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
+BorrowedModel.Handle = Character3D.ModelHandle(PendingActor)
+BorrowedObject = Graphics3D.CreateModelPart3D(BorrowedModel, 0)
+
+Call Check(BorrowedObject.Handle <> 0)
+Call Character3D.Destroy(PendingActor)
+Call Check(Character3D.PendingReleaseAssetCount() = 1)
+Call Check(Character3D.CachedAssetCount() = 1)
+Call Check(Character3D.LastError() = Character3D.CHARACTER_ERROR_PENDING_RELEASE)
+
+Broken = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
+
+Call Check(Broken.Handle = 0)
+Call Check(Character3D.LastError() = Character3D.CHARACTER_ERROR_PENDING_RELEASE)
+Call Check(Character3D.CachedAssetCount() = 1)
+Call Graphics3D.DestroyObjectInstance3D(BorrowedObject)
+Call Check(Character3D.RetryPendingReleases())
+Call Check(Character3D.PendingReleaseAssetCount() = 0)
+Call Check(Character3D.CachedAssetCount() = 0)
+
+TamperedActor = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
+SurvivorActor = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
+Stale = TamperedActor
+BorrowedModel.Handle = Character3D.ModelHandle(TamperedActor)
+TamperedPartCount = Character3D.PartCount(TamperedActor)
+SurvivorPartCount = Character3D.PartCount(SurvivorActor)
+TamperedAnimatorHandle = Character3D.AnimatorHandle(TamperedActor)
+SurvivorAnimatorHandle = Character3D.AnimatorHandle(SurvivorActor)
+
+For Index = 0 To TamperedPartCount - 1
+    TamperedPartHandles[Index] = Character3D.PartObjectHandle(TamperedActor, Index)
+End For
+
+For Index = 0 To SurvivorPartCount - 1
+    SurvivorPartHandles[Index] = Character3D.PartObjectHandle(SurvivorActor, Index)
+End For
+
+For Index = 0 To TamperedPartCount - 1
+    BorrowedObject.Handle = TamperedPartHandles[Index]
+
+    Call Graphics3D.DestroyObjectInstance3D(BorrowedObject)
+End For
+
+For Index = 0 To SurvivorPartCount - 1
+    BorrowedObject.Handle = SurvivorPartHandles[Index]
+
+    Call Graphics3D.DestroyObjectInstance3D(BorrowedObject)
+End For
+
+BorrowedAnimator.Handle = TamperedAnimatorHandle
+
+Call Graphics3D.DestroyAnimator3D(BorrowedAnimator)
+
+BorrowedAnimator.Handle = SurvivorAnimatorHandle
+
+Call Graphics3D.DestroyAnimator3D(BorrowedAnimator)
+Call Graphics3D.DestroyModel3D(BorrowedModel)
+Call Check(Not Character3D.IsValid(TamperedActor))
+Call Check(Character3D.ActorLastError(Stale) = Character3D.CHARACTER_ERROR_TAMPERED_RESOURCE)
+Call Check(Not Character3D.IsValid(SurvivorActor))
+Call Check(Character3D.LiveActorCount() = 0)
+Call Check(Character3D.CachedAssetCount() = 0)
 
 First = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
 Stale = First

@@ -61,7 +61,7 @@ This policy is identical for DirectX and GDI and affects only the SMILE process.
 ## Prerequisites
 
 - Windows x64.
-- .NET SDK 10.0.302 (selected by `global.json`).
+- .NET SDK 10.0.400 (selected by `global.json`).
 - Visual Studio 2026 with **Desktop development with C++** and **Visual Studio extension development** installed.
 - Node.js 20 or newer for Web regression tests.
 

@@ -34,6 +34,8 @@ Availability and lifecycle:
 - `RendererAvailable()`
 - `LastError()`
 - `ResetRenderer3D()`
+- `ResourceEpoch3D()` returns the nonzero logical resource epoch; each successful explicit reset advances it once, while device/context recreation does not
+- `FrameActive3D()` reports the renderer's actual logical frame state
 - `LiveMeshCount3D()` and `LiveObjectCount3D()`
 - `MaximumMeshCount3D()` and `MaximumObjectCount3D()`
 - `LiveModelCount3D()`, `LiveAnimatorCount3D()`, and their fixed maximum-count queries
@@ -45,6 +47,8 @@ Availability and lifecycle:
 - `MeshReferenceCount3D(Mesh)`
 - `DestroyObject3D(ByRef Object)` for an object and its owned mesh
 - `DestroyObjectInstance3D(ByRef Object)` for an instance using a shared mesh
+- `TryDestroyObjectInstance3D`, `TryDestroyAnimator3D`, `TryDestroyModel3D`, and `TryDestroyMaterial3D` preserve public records when dependency-aware destruction is refused
+- `SetObjectPositionChecked3D`, `SetObjectRotationChecked3D`, `SetObjectScaleChecked3D`, and `SetObjectVisibleChecked3D` update mirrored records only after renderer acceptance
 
 Camera and frame:
 
@@ -52,6 +56,7 @@ Camera and frame:
 - `Begin3D(Camera, Red, Green, Blue)`
 - `DrawObject3D(Object)`
 - `End3D()`
+- `End3DChecked()`
 
 Primitive objects:
 
@@ -157,41 +162,42 @@ Games decide whether a press started on valid world geometry and pass that decis
 
 ## `Smile.Simple3D.Scene3D`
 
-Quality profiles affect only newly loaded assets. `QUALITY_LOW` uses linear filtering and anisotropy 1, `QUALITY_MEDIUM` uses mip-linear filtering and anisotropy 4, and `QUALITY_HIGH` uses anisotropic filtering requested at 8. `QUALITY_AUTO` selects High when PBR is available and Low with `SCENE_FALLBACK_PBR_UNAVAILABLE` otherwise. Existing actors are never silently rebuilt when quality changes.
+Quality profiles affect only newly loaded assets. `QUALITY_LOW` uses linear filtering and anisotropy 1, `QUALITY_MEDIUM` uses mip-linear filtering and anisotropy 4, and `QUALITY_HIGH` uses anisotropic filtering requested at 8. `QUALITY_AUTO` selects High when PBR is available and Low with `SCENE_FALLBACK_PBR_UNAVAILABLE` otherwise. Existing actors are never silently rebuilt when quality changes. Lighting-only changes do not affect the asset-profile key.
 
-- `SetQuality`, `RequestedQuality`, `EffectiveQuality`, and `LastFallback`.
+- `SetQuality`, `RequestedQuality`, `EffectiveQuality`, `RefreshCapabilities`, `PbrAvailable`, `LastFallback`, and `FallbackFlags`.
 - `TextureFilter`, `TextureWrap`, `RequestedAnisotropy`, `PbrPreferred`, `SimpleFallbackAllowed`, and `AssetProfileKey` are deterministic read-only asset-policy helpers.
 - `UseLighting`, `CurrentLightingMatches`, and `ApplyLighting` select exact built-in names: `CharacterStudio`, `Daylight`, `Dungeon`, `Moonlight`, or `EmberObservatory`.
 - `UseCustomLighting` preserves advanced lights configured directly through `Graphics3D`.
 - `Begin`, `EndScene`, and `IsOpen` reject nested/unmatched frames and leave Renderer2D available after the 3D pass.
+- `Synchronize`, `ResetState`, and `Shutdown` reconcile Scene3D ownership with the Renderer3D epoch and actual frame state without ending a frame Scene3D does not own.
 - `LastError`, `LastRendererError`, and `ClearError` expose stable high-level and low-level failure information.
 
 ## `Smile.Simple3D.Character3D`
 
-`Actor` contains only a generation-safe `Handle`. The module owns fixed pools of 16 exact path/profile/policy cache entries, 32 actors, and at most 16 model parts per actor. A cache entry exists only while at least one actor references it; two same-key actors share one model and own separate animator/part instances.
+`Actor` contains only a generation-safe `Handle`. The module owns fixed pools of 16 exact path/profile/actual-variant cache entries, 32 actors, and at most 16 model parts per actor. Request policy is admission only: equivalent Auto, Require PBR, and Allow simple fallback requests share the same prepared PBR asset, while permitted Auto/Allow requests share the same simple variant when PBR is unavailable. A cache entry normally exists only while an actor references it; a dependency-refused final release remains uniquely pending until retried.
 
 Loading and lifecycle:
 
 - `LoadActor(Path)` and `LoadWithPolicy(Path, Policy)`.
 - `CHARACTER_LOAD_AUTO`, `CHARACTER_LOAD_REQUIRE_PBR`, and `CHARACTER_LOAD_ALLOW_SIMPLE_FALLBACK`.
-- `Destroy(ByRef Actor)` and idempotent `Shutdown()`.
+- `Destroy(ByRef Actor)`, `RetryPendingReleases()`, and idempotent `Shutdown()`.
 - PBR content errors remain errors. Simple fallback is allowed only for unavailable PBR capability according to policy; it does not hide a missing declared texture when PBR validation is available.
 
 Transforms and animation:
 
-- `Place`, `Rotate`, `SetScale`, `SetVisible`, and yaw-only `LookAt` update every model part.
+- `Place`, `Rotate`, `SetScale`, `SetVisible`, and yaw-only `LookAt` update every model part transactionally. Positions are bounded to -1,000,000 through 1,000,000, rotation input to the same safe integer range and normalized to 0-359 degrees, and uniform scale to 1-1,000 percent.
 - `PlayAnimation`, `PlayMode`, `CrossFade`, `StopAnimation`, `Update`, `IsPlaying`, `AnimationComplete`, and `CurrentClipNameMatches` use exact case-sensitive clip names.
-- `SetRootMotion` accepts `ROOT_MOTION_IGNORE` or `ROOT_MOTION_APPLY`. Apply mode drains the combined low-level delta once per update and retains position/yaw subunits in thousandths.
+- `SetRootMotion` accepts `ROOT_MOTION_IGNORE` or `ROOT_MOTION_APPLY`. Apply mode drains the combined low-level model-space delta once per update, rotates translation into world space using the actor's pre-update yaw, then applies root yaw. Position/yaw subunits remain in thousandths.
 - `LastRootDelta`, `PositionX`, `PositionY`, `PositionZ`, and `RotationY` expose deterministic actor motion diagnostics.
 
 Events, sockets, drawing, and diagnostics:
 
 - `TakeEvent`, `PendingEventCount`, `EventOverflowed`, `DroppedEventCount`, and `ClearEvents` preserve the bounded chronological animator FIFO.
 - `HasSocket`, `SocketPosition`, and `SocketValueThousandths` use the primary bound part for world-space socket evaluation.
-- `Draw`, `IsValid`, `PartCount`, `BoundsValueThousandths`, and `Height`.
-- `PrimaryObjectHandle`, `AnimatorHandle`, and `ModelHandle` are the advanced Battle3D interop seam; Character3D does not depend on Battle3D.
-- `LiveActorCount`, `MaximumActorCount`, `CachedAssetCount`, `AssetReferenceCount`, `ActorUsesPbr`, `ActorUsesFallback`, and `AnimationResidentBytes`.
-- `LastError`, `LastRendererError`, `LastFallback`, and `ClearError`.
+- `Draw`, `IsValid`, `PartCount`, local `BoundsValueThousandths`/`Height`, and explicit `LocalBounds`, `WorldBounds`, `WorldBoundsValueThousandths`, `WorldHeight`, `WorldCenter`, and `WorldRadius`. `WorldBounds` transforms all eight static AABB corners and accepts an optional positive animation margin; it is conservative static geometry, not exact skinned bounds.
+- `PrimaryObjectHandle`, indexed `PartObjectHandle`, `AnimatorHandle`, and `ModelHandle` are borrowed read-only advanced Battle3D interop values. Callers must not destroy them or mutate Character3D-owned transforms. Character3D does not depend on Battle3D.
+- `LiveActorCount`, `MaximumActorCount`, `CachedAssetCount`, `PendingReleaseAssetCount`, `AssetReferenceCount`, `ActorAssetState`, `ActorAssetVariant`, `ActorAssetProfileKey`, `ActorUsesPbr`, `ActorUsesFallback`, `AnimationResidentBytes`, and `CachedAnimationResidentBytes`.
+- `LastError`, `LastRendererError`, `LastCleanupRendererError`, `LastFallback`, actor-specific error/renderer/fallback queries, and `ClearError`.
 
 `Load`, `Play`, `Stop`, and `End` are reserved SMILE keywords and cannot currently be routine identifiers. M4 therefore uses the explicit source-level names `LoadActor`, `PlayAnimation`, `StopAnimation`, and `EndScene` without changing the language grammar.
 

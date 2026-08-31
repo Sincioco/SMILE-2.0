@@ -239,6 +239,7 @@ internal static class WebOutputWriter
             let renderer3DLastError = 0;
             let renderer3DNextHandle = 1;
             let renderer3DFrameActive = false;
+            let renderer3DResourceEpoch = 1;
             let renderer3DDrawCallCount = 0;
             let renderer3DSubmittedTriangleCount = 0;
             let renderer3DPbrDrawCount = 0;
@@ -1906,7 +1907,8 @@ internal static class WebOutputWriter
                 renderer3DPbrTriangleCount=0;if(renderer3DGl&&renderer3DPbrProgram)renderer3DGl.deleteProgram(renderer3DPbrProgram.handle);
                 renderer3DPbrProgram=null;renderer3DPbrAttempted=false;renderer3DPbrState=0;renderer3DPbrFailure=0;
                 renderer3DPbrAttemptCount=0;if(renderer3DGl&&renderer3DModelPaletteTexture)renderer3DGl.deleteTexture(renderer3DModelPaletteTexture);
-                renderer3DModelPaletteTexture=null;renderer3DModelPaletteCachedAnimator=0;renderer3DModelPaletteCachedRevision=0;renderer3DModelPaletteUploadCount=0;return 1;}
+                renderer3DModelPaletteTexture=null;renderer3DModelPaletteCachedAnimator=0;renderer3DModelPaletteCachedRevision=0;renderer3DModelPaletteUploadCount=0;
+                renderer3DResourceEpoch+=1;if(renderer3DResourceEpoch>2147483647)renderer3DResourceEpoch=1;return 1;}
 
             function renderer3D(command,a,b,c,d,e,f,g,h,i,j) {
                 [command,a,b,c,d,e,f,g,h,i,j]=[command,a,b,c,d,e,f,g,h,i,j].map(safe);
@@ -2022,6 +2024,7 @@ internal static class WebOutputWriter
                     case 109:return renderer3DModelPaletteUploadCount;
                     case 110:return renderer3DAnimatorProductionValue(renderer3DAnimators.get(a),b);
                     case 111:animator=renderer3DAnimators.get(a);if(!animator||!animator.production){renderer3DLastError=48;return 0;}renderer3DClearModelEvents(animator);return 1;
+                    case 112:if(a===1)return renderer3DResourceEpoch;if(a===2)return renderer3DFrameActive?1:0;renderer3DLastError=5;return 0;
                     default:renderer3DLastError=1;return 0;
                 }
             }

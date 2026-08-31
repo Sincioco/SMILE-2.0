@@ -44,7 +44,7 @@ Draw Text "Renderer2D HUD" At 20, 20 Size 20 Color WHITE
 Show Screen
 ```
 
-`Graphics3D.RendererAvailable()` is `True` for Windows DirectX and WebGL2. It is `False` on the GDI fallback. Handles are bounded and validated; create geometry outside the frame loop, share meshes with `CreateObjectFromMesh3D`, destroy shared instances with `DestroyObjectInstance3D`, destroy owning objects with `DestroyObject3D`, and call `ResetRenderer3D` during final cleanup.
+`Graphics3D.RendererAvailable()` is `True` for Windows DirectX and WebGL2. It is `False` on the GDI fallback. `ResourceEpoch3D` and `FrameActive3D` let high-level modules reconcile logical resets and frame ownership. Handles are bounded and validated; create geometry outside the frame loop, share meshes with `CreateObjectFromMesh3D`, destroy shared instances with `DestroyObjectInstance3D`, destroy owning objects with `DestroyObject3D`, and call `ResetRenderer3D` during final cleanup.
 
 `Core.CameraControl3D` plus `Interaction.UpdateCameraControlsFromPointer` provides the shared primary-drag pan, middle-drag orbit, wheel zoom, lost-release recovery, and slow return behavior used by Dragonfall. Games retain control over which screen/world regions may start a gesture.
 
@@ -80,3 +80,5 @@ Show Screen
 ```
 
 The keyword-shaped handoff names `Load`, `Play`, `Stop`, and `End` are reserved by the current SMILE grammar. The repository-conforming M4 names are `LoadActor`, `PlayAnimation`, `StopAnimation`, and `EndScene`.
+
+Character3D transform changes are transactional across every model part. World position is bounded to +/-1,000,000, rotation input is bounded and normalized to 0-359 degrees, and scale is 1-1,000 percent. Advanced part/model/animator handles are borrowed read-only values; destroying them deliberately is treated as external tampering and quarantines only the affected actor or asset.

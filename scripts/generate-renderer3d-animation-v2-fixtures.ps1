@@ -290,7 +290,8 @@ function New-ArticulatedActorGlb([switch]$MissingTexture) {
         $walkYaw = Add-Floats ([single[]]@(0, 0, 0, 1, 0, 0.25881904, 0, 0.9659258)) 'VEC4' 2
         $attackElbow = Add-Floats ([single[]]@(0, 0, 0, 1, 0, 0, -0.8660254, 0.5)) 'VEC4' 2
         $attackWrist = Add-Floats ([single[]]@(0, 0, 0, 1, 0, 0, 0.5, 0.8660254)) 'VEC4' 2
-        $rootTranslation = Add-Floats ([single[]]@(0, 0, 0, 0.8, 0, 0)) 'VEC3' 2
+        # glTF +Z is reflected once by the converter; authored -Z becomes SMILE model-forward +Z.
+        $rootTranslation = Add-Floats ([single[]]@(0, 0, 0, 0, 0, -0.8)) 'VEC3' 2
         $writer.Flush()
         $binary = $stream.ToArray()
         $nodeNames = @('Root', 'Hips', 'Spine', 'Shoulder', 'UpperArm', 'Elbow', 'Wrist', 'Hand')
@@ -469,7 +470,7 @@ $articulatedDescriptorObject = [ordered]@{
                 [ordered]@{ timeMs = 600; name = 'Step'; value = 42 },
                 [ordered]@{ timeMs = 900; name = 'Step'; value = 43 }
             )
-            rootMotion = [ordered]@{ node = 'Root'; translation = @('X'); removeFromPose = $true }
+            rootMotion = [ordered]@{ node = 'Root'; translation = @('Z'); removeFromPose = $true }
         }
     }
     sockets = [ordered]@{

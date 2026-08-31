@@ -116,6 +116,7 @@ Private Const COMMAND_MODEL_ANIMATION_AVAILABLE = 108
 Private Const COMMAND_MODEL_PALETTE_UPLOAD_COUNT = 109
 Private Const COMMAND_ANIMATOR_PRODUCTION_VALUE = 110
 Private Const COMMAND_CLEAR_ANIMATOR_EVENTS = 111
+Private Const COMMAND_RENDERER_STATE = 112
 
 Private Const ANIMATOR_QUERY_DESTINATION_CLIP = 1
 Private Const ANIMATOR_QUERY_TIME_REMAINDER = 2
@@ -175,6 +176,8 @@ Public Const MATERIAL_ALPHA_ADDITIVE = 3
 Public Const PBR_PIPELINE_NOT_ATTEMPTED = 0
 Public Const PBR_PIPELINE_AVAILABLE = 1
 Public Const PBR_PIPELINE_UNAVAILABLE = 2
+Public Const RENDERER_STATE_RESOURCE_EPOCH = 1
+Public Const RENDERER_STATE_FRAME_ACTIVE = 2
 Public Const MODEL_MATERIAL_BASE_COLOR_RED = 1
 Public Const MODEL_MATERIAL_BASE_COLOR_GREEN = 2
 Public Const MODEL_MATERIAL_BASE_COLOR_BLUE = 3
@@ -332,6 +335,52 @@ Public Function LastError() As Number
     Dim Result As Number
 
     Result = Dispatch(COMMAND_LAST_ERROR, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Returns the nonzero logical Renderer3D resource epoch.
+Public Function ResourceEpoch3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(
+        COMMAND_RENDERER_STATE,
+        RENDERER_STATE_RESOURCE_EPOCH,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    )
+
+    Return Result
+
+End Function
+
+''' Reports the renderer's actual logical frame state without changing it.
+Public Function FrameActive3D() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_RENDERER_STATE,
+        RENDERER_STATE_FRAME_ACTIVE,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
     Return Result
 
 End Function
@@ -875,9 +924,14 @@ Public Function CreateModelPart3D(Model As Core.Model3D, PartIndex As Number) As
 
 End Function
 
-Public Sub DestroyModel3D(ByRef Model As Core.Model3D)
+''' Attempts model destruction and preserves the public record when a live dependent refuses it.
+Public Function TryDestroyModel3D(ByRef Model As Core.Model3D) As Boolean
 
     Dim Destroyed As Boolean
+
+    If Model.Handle = 0 Then
+        Return True
+    End If
 
     Destroyed = Dispatch(COMMAND_DESTROY, Model.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
 
@@ -905,6 +959,16 @@ Public Sub DestroyModel3D(ByRef Model As Core.Model3D)
         Model.AnimatorMutableBytes = 0
 
     End If
+
+    Return Destroyed
+
+End Function
+
+Public Sub DestroyModel3D(ByRef Model As Core.Model3D)
+
+    Dim Destroyed As Boolean
+
+    Destroyed = TryDestroyModel3D(Model)
 
 End Sub
 
@@ -1920,9 +1984,14 @@ Public Function StopAnimator3D(ByRef Animator As Core.Animator3D) As Boolean
 
 End Function
 
-Public Sub DestroyAnimator3D(ByRef Animator As Core.Animator3D)
+''' Attempts animator destruction and preserves the public record when it is still bound.
+Public Function TryDestroyAnimator3D(ByRef Animator As Core.Animator3D) As Boolean
 
     Dim Destroyed As Boolean
+
+    If Animator.Handle = 0 Then
+        Return True
+    End If
 
     Destroyed = Dispatch(COMMAND_DESTROY, Animator.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
 
@@ -1940,6 +2009,16 @@ Public Sub DestroyAnimator3D(ByRef Animator As Core.Animator3D)
         Animator.ModelAnimator = False
 
     End If
+
+    Return Destroyed
+
+End Function
+
+Public Sub DestroyAnimator3D(ByRef Animator As Core.Animator3D)
+
+    Dim Destroyed As Boolean
+
+    Destroyed = TryDestroyAnimator3D(Animator)
 
 End Sub
 
@@ -2376,9 +2455,14 @@ Public Function SetMaterial3D(
 
 End Function
 
-Public Sub DestroyMaterial3D(ByRef Material As Core.Material3D)
+''' Attempts material destruction and preserves the public record when a live object refuses it.
+Public Function TryDestroyMaterial3D(ByRef Material As Core.Material3D) As Boolean
 
     Dim Destroyed As Boolean
+
+    If Material.Handle = 0 Then
+        Return True
+    End If
 
     Destroyed = Dispatch(COMMAND_DESTROY, Material.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
 
@@ -2392,6 +2476,16 @@ Public Sub DestroyMaterial3D(ByRef Material As Core.Material3D)
         Material.EmissiveTextureHandle = 0
 
     End If
+
+    Return Destroyed
+
+End Function
+
+Public Sub DestroyMaterial3D(ByRef Material As Core.Material3D)
+
+    Dim Destroyed As Boolean
+
+    Destroyed = TryDestroyMaterial3D(Material)
 
 End Sub
 
@@ -2557,13 +2651,30 @@ Public Function DisableLight3D(Slot As Number) As Boolean
 
 End Function
 
-Public Sub ClearAdditionalLights3D()
+Public Function ClearAdditionalLights3DChecked() As Boolean
 
     Dim Slot As Number
+    Dim Result As Boolean
+
+    Result = True
 
     For Slot = 0 To 3
-        Call Execute(COMMAND_SET_LOCAL_LIGHT, Slot, LIGHT_DISABLED, 0, 0, 0, 0, 0, 0, 0, 0)
+
+        If Dispatch(COMMAND_SET_LOCAL_LIGHT, Slot, LIGHT_DISABLED, 0, 0, 0, 0, 0, 0, 0, 0) = 0 Then
+            Result = False
+        End If
+
     End For
+
+    Return Result
+
+End Function
+
+Public Sub ClearAdditionalLights3D()
+
+    Dim Cleared As Boolean
+
+    Cleared = ClearAdditionalLights3DChecked()
 
 End Sub
 
@@ -2906,8 +3017,25 @@ End Sub
 ''' Destroys an object instance while preserving a mesh shared by other objects.
 Public Sub DestroyObjectInstance3D(ByRef Object As Core.Object3D)
 
-    If Object.Handle <> 0 Then
-        Call Execute(COMMAND_DESTROY, Object.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Dim Destroyed As Boolean
+
+    Destroyed = TryDestroyObjectInstance3D(Object)
+
+End Sub
+
+''' Attempts shared-instance destruction and preserves its record on refusal.
+Public Function TryDestroyObjectInstance3D(ByRef Object As Core.Object3D) As Boolean
+
+    Dim Destroyed As Boolean
+
+    If Object.Handle = 0 Then
+        Return True
+    End If
+
+    Destroyed = Dispatch(COMMAND_DESTROY, Object.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+
+    If Not Destroyed Then
+        Return False
     End If
 
     Object.Handle = 0
@@ -2916,7 +3044,9 @@ Public Sub DestroyObjectInstance3D(ByRef Object As Core.Object3D)
     Object.AnimatorHandle = 0
     Object.Visible = False
 
-End Sub
+    Return True
+
+End Function
 
 Public Function SetObjectMaterial3D(ByRef Object As Core.Object3D, Material As Core.Material3D) As Boolean
 
@@ -2976,13 +3106,35 @@ End Function
 
 Public Sub SetObjectPosition(ByRef Object As Core.Object3D, X As Number, Y As Number, Z As Number)
 
-    Object.Position.X = X
-    Object.Position.Y = Y
-    Object.Position.Z = Z
+    Dim Applied As Boolean
 
-    Call Execute(COMMAND_SET_POSITION, Object.Handle, X, Y, Z, 0, 0, 0, 0, 0, 0)
+    Applied = SetObjectPositionChecked3D(Object, X, Y, Z)
 
 End Sub
+
+''' Applies position and updates the mirrored record only after renderer acceptance.
+Public Function SetObjectPositionChecked3D(
+    ByRef Object As Core.Object3D,
+    X As Number,
+    Y As Number,
+    Z As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_SET_POSITION, Object.Handle, X, Y, Z, 0, 0, 0, 0, 0, 0) <> 0
+
+    If Result Then
+
+        Object.Position.X = X
+        Object.Position.Y = Y
+        Object.Position.Z = Z
+
+    End If
+
+    Return Result
+
+End Function
 
 Public Sub MoveObject(ByRef Object As Core.Object3D, DX As Number, DY As Number, DZ As Number)
 
@@ -2992,13 +3144,47 @@ End Sub
 
 Public Sub SetObjectRotation(ByRef Object As Core.Object3D, XDegrees As Number, YDegrees As Number, ZDegrees As Number)
 
-    Object.Rotation.X = XDegrees
-    Object.Rotation.Y = YDegrees
-    Object.Rotation.Z = ZDegrees
+    Dim Applied As Boolean
 
-    Call Execute(COMMAND_SET_ROTATION, Object.Handle, XDegrees, YDegrees, ZDegrees, 0, 0, 0, 0, 0, 0)
+    Applied = SetObjectRotationChecked3D(Object, XDegrees, YDegrees, ZDegrees)
 
 End Sub
+
+''' Applies rotation and updates the mirrored record only after renderer acceptance.
+Public Function SetObjectRotationChecked3D(
+    ByRef Object As Core.Object3D,
+    XDegrees As Number,
+    YDegrees As Number,
+    ZDegrees As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_ROTATION,
+        Object.Handle,
+        XDegrees,
+        YDegrees,
+        ZDegrees,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+
+        Object.Rotation.X = XDegrees
+        Object.Rotation.Y = YDegrees
+        Object.Rotation.Z = ZDegrees
+
+    End If
+
+    Return Result
+
+End Function
 
 Public Sub RotateObject(ByRef Object As Core.Object3D, DXDegrees As Number, DYDegrees As Number, DZDegrees As Number)
 
@@ -3008,13 +3194,47 @@ End Sub
 
 Public Sub SetObjectScale(ByRef Object As Core.Object3D, XPercent As Number, YPercent As Number, ZPercent As Number)
 
-    Object.ScaleX = XPercent
-    Object.ScaleY = YPercent
-    Object.ScaleZ = ZPercent
+    Dim Applied As Boolean
 
-    Call Execute(COMMAND_SET_SCALE, Object.Handle, XPercent, YPercent, ZPercent, 0, 0, 0, 0, 0, 0)
+    Applied = SetObjectScaleChecked3D(Object, XPercent, YPercent, ZPercent)
 
 End Sub
+
+''' Applies scale and updates the mirrored record only after renderer acceptance.
+Public Function SetObjectScaleChecked3D(
+    ByRef Object As Core.Object3D,
+    XPercent As Number,
+    YPercent As Number,
+    ZPercent As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_SCALE,
+        Object.Handle,
+        XPercent,
+        YPercent,
+        ZPercent,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+
+        Object.ScaleX = XPercent
+        Object.ScaleY = YPercent
+        Object.ScaleZ = ZPercent
+
+    End If
+
+    Return Result
+
+End Function
 
 Public Sub SetObjectColor(ByRef Object As Core.Object3D, RedValue As Number, GreenValue As Number, BlueValue As Number)
 
@@ -3036,16 +3256,30 @@ End Sub
 
 Public Sub SetObjectVisible(ByRef Object As Core.Object3D, Visible As Boolean)
 
-    Object.Visible = Visible
+    Dim Applied As Boolean
 
-    If Visible Then
-        Call Execute(COMMAND_SET_VISIBLE, Object.Handle, 1, 0, 0, 0, 0, 0, 0, 0, 0)
-    Else
-
-        Call Execute(COMMAND_SET_VISIBLE, Object.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-    End If
+    Applied = SetObjectVisibleChecked3D(Object, Visible)
 
 End Sub
+
+''' Applies visibility and updates the mirrored record only after renderer acceptance.
+Public Function SetObjectVisibleChecked3D(ByRef Object As Core.Object3D, Visible As Boolean) As Boolean
+
+    Dim Result As Boolean
+
+    If Visible Then
+        Result = Dispatch(COMMAND_SET_VISIBLE, Object.Handle, 1, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Else
+        Result = Dispatch(COMMAND_SET_VISIBLE, Object.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    End If
+
+    If Result Then
+        Object.Visible = Visible
+    End If
+
+    Return Result
+
+End Function
 
 Public Function Begin3D(
     Camera As Core.Camera3D,
@@ -3088,8 +3322,20 @@ End Function
 
 Public Sub End3D()
 
-    Call Execute(COMMAND_END, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Dim Ended As Boolean
+
+    Ended = End3DChecked()
 
 End Sub
+
+Public Function End3DChecked() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_END, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+
+    Return Result
+
+End Function
 
 End Module

@@ -22,6 +22,19 @@ Public Const ROOT_MOTION_APPLY = 1
 Public Const CHARACTER_FALLBACK_NONE = 0
 Public Const CHARACTER_FALLBACK_SIMPLE = 1
 
+Public Const CHARACTER_VARIANT_NONE = 0
+Public Const CHARACTER_VARIANT_PBR = 1
+Public Const CHARACTER_VARIANT_SIMPLE = 2
+
+Public Const CHARACTER_ASSET_EMPTY = 0
+Public Const CHARACTER_ASSET_ACTIVE = 1
+Public Const CHARACTER_ASSET_UNUSED_RELEASABLE = 2
+Public Const CHARACTER_ASSET_PENDING_RELEASE = 3
+
+Public Const CHARACTER_MAX_WORLD_POSITION = 1000000
+Public Const CHARACTER_MAX_ROTATION_INPUT = 1000000
+Public Const CHARACTER_MAX_SCALE_PERCENT = 1000
+
 Public Const CHARACTER_ERROR_NONE = 0
 Public Const CHARACTER_ERROR_INVALID_ACTOR = 1
 Public Const CHARACTER_ERROR_CAPACITY = 2
@@ -34,6 +47,11 @@ Public Const CHARACTER_ERROR_CLIP_NOT_FOUND = 8
 Public Const CHARACTER_ERROR_SOCKET_NOT_FOUND = 9
 Public Const CHARACTER_ERROR_RENDERER_RESET = 10
 Public Const CHARACTER_ERROR_INVALID_ARGUMENT = 11
+Public Const CHARACTER_ERROR_TAMPERED_RESOURCE = 12
+Public Const CHARACTER_ERROR_PARTIAL_TRANSFORM = 13
+Public Const CHARACTER_ERROR_PENDING_RELEASE = 14
+Public Const CHARACTER_ERROR_INVALID_PART = 15
+Public Const CHARACTER_ERROR_BOUNDS = 16
 
 Private Const HANDLE_FACTOR = 100
 Private Const MAX_GENERATION = 90000000
@@ -41,6 +59,17 @@ Private Const MAX_GENERATION = 90000000
 ''' A generation-safe character identity. All ownership remains inside Character3D.
 Public Type Actor
     Handle As Number
+End Type
+
+''' Static local/world AABB values use thousandths for deterministic subunit precision.
+Public Type Bounds3D
+    Minimum As Core.Vector3
+    Maximum As Core.Vector3
+    Center As Core.Vector3
+    Size As Core.Vector3
+    Radius As Number
+    AnimationMargin As Number
+    Valid As Boolean
 End Type
 
 Private Dim ActorUsed[32] As Boolean
@@ -59,20 +88,26 @@ Private Dim ActorScalePercent[32] As Number
 Private Dim ActorVisible[32] As Boolean
 Private Dim ActorRootMode[32] As Number
 Private Dim ActorLastRootDelta[32] As Core.RootMotionDelta3D
+Private Dim ActorErrorValues[32] As Number
+Private Dim ActorRendererErrorValues[32] As Number
+Private Dim ActorFallbackValues[32] As Number
 
 Private Dim AssetUsed[16] As Boolean
 Private Dim AssetPaths[16] As Text
 Private Dim AssetProfileKeys[16] As Number
-Private Dim AssetPolicies[16] As Number
+Private Dim AssetVariants[16] As Number
 Private Dim AssetReferences[16] As Number
 Private Dim AssetModels[16] As Core.Model3D
 Private Dim AssetFallbackMaterials[16] As Core.Material3D
 Private Dim AssetUsesPbr[16] As Boolean
 Private Dim AssetUsesFallback[16] As Boolean
+Private Dim AssetPendingRelease[16] As Boolean
 
 Private Dim ErrorValue As Number
 Private Dim RendererErrorValue As Number
 Private Dim FallbackValue As Number
+Private Dim CleanupRendererErrorValue As Number
+Private Dim RendererEpoch As Number
 
 Private Function RoundedThousandths(Value As Number) As Number
 
@@ -117,6 +152,67 @@ Private Function RawActorSlot(Value As Actor) As Number
     Return Result
 
 End Function
+
+Private Function RawDiagnosticSlot(Value As Actor) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Result As Number
+    Dim Slot As Number
+    Dim Generation As Number
+
+    If Value.Handle <= 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Slot = (Value.Handle Mod HANDLE_FACTOR) - 1
+    Generation = Value.Handle / HANDLE_FACTOR
+
+    If (Slot < 0 Or
+        Slot >= CHARACTER3D_MAX_ACTORS Or
+        ActorGeneration[Slot] <> Generation) Then
+        Result = -1
+    Else
+        Result = Slot
+    End If
+
+    Return Result
+
+End Function
+
+Private Sub SetActorFailure(Slot As Number, ErrorCode As Number, RendererError As Number)
+
+    ErrorValue = ErrorCode
+    RendererErrorValue = RendererError
+
+    If Slot >= 0 And Slot < CHARACTER3D_MAX_ACTORS Then
+        ActorErrorValues[Slot] = ErrorCode
+        ActorRendererErrorValues[Slot] = RendererError
+    End If
+
+End Sub
+
+Private Sub ClearActorError(Slot As Number)
+
+    ErrorValue = CHARACTER_ERROR_NONE
+    RendererErrorValue = 0
+
+    If Slot >= 0 And Slot < CHARACTER3D_MAX_ACTORS Then
+        ActorErrorValues[Slot] = CHARACTER_ERROR_NONE
+        ActorRendererErrorValues[Slot] = 0
+    End If
+
+End Sub
+
+Private Sub RecordCleanupFailure(RendererError As Number)
+
+    If CleanupRendererErrorValue = 0 Then
+        CleanupRendererErrorValue = RendererError
+    End If
+
+End Sub
 
 Private Function RendererResourcesValid(Slot As Number) As Boolean
 
@@ -181,12 +277,13 @@ Private Sub ClearAssetStorage(Slot As Number)
     AssetUsed[Slot] = False
     AssetPaths[Slot] = ""
     AssetProfileKeys[Slot] = 0
-    AssetPolicies[Slot] = 0
+    AssetVariants[Slot] = CHARACTER_VARIANT_NONE
     AssetReferences[Slot] = 0
     AssetModels[Slot] = EmptyModel
     AssetFallbackMaterials[Slot] = EmptyMaterial
     AssetUsesPbr[Slot] = False
     AssetUsesFallback[Slot] = False
+    AssetPendingRelease[Slot] = False
 
 End Sub
 
@@ -205,14 +302,40 @@ Private Sub InvalidateAfterRendererReset()
     ErrorValue = CHARACTER_ERROR_RENDERER_RESET
     RendererErrorValue = Graphics3D.LastError()
     FallbackValue = CHARACTER_FALLBACK_NONE
+    RendererEpoch = Graphics3D.ResourceEpoch3D()
 
 End Sub
+
+Private Function SynchronizeRendererEpoch() As Boolean
+
+    Dim CurrentEpoch As Number
+
+    CurrentEpoch = Graphics3D.ResourceEpoch3D()
+
+    If RendererEpoch = 0 Then
+        RendererEpoch = CurrentEpoch
+
+        Return True
+    End If
+
+    If CurrentEpoch <> RendererEpoch Then
+        Call InvalidateAfterRendererReset()
+
+        Return False
+    End If
+
+    Return True
+
+End Function
 
 Private Function ActorSlot(Value As Actor) As Number
 
     Dim ReturnValue As Number
 
     Dim Slot As Number
+    Dim AssetSlot As Number
+    Dim PartIndex As Number
+    Dim PrimaryRendererError As Number
 
     Slot = RawActorSlot(Value)
 
@@ -225,9 +348,71 @@ Private Function ActorSlot(Value As Actor) As Number
 
     End If
 
+    If Not SynchronizeRendererEpoch() Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    AssetSlot = ActorAssetSlot[Slot]
+
+    If (AssetSlot < 0 Or
+        AssetSlot >= CHARACTER3D_MAX_ASSETS Or
+        Not AssetUsed[AssetSlot]) Then
+
+        Call SetActorFailure(Slot, CHARACTER_ERROR_TAMPERED_RESOURCE, Graphics3D.LastError())
+
+        ReturnValue = -1
+
+        Return ReturnValue
+
+    End If
+
+    If Not Graphics3D.ModelHandleValid3D(AssetModels[AssetSlot].Handle) Then
+
+        PrimaryRendererError = Graphics3D.LastError()
+
+        Call QuarantineAsset(AssetSlot, PrimaryRendererError)
+
+        ReturnValue = -1
+
+        Return ReturnValue
+
+    End If
+
+    If Not Graphics3D.AnimatorHandleValid3D(ActorAnimators[Slot].Handle) Then
+
+        PrimaryRendererError = Graphics3D.LastError()
+
+        Call QuarantineActor(Slot, CHARACTER_ERROR_TAMPERED_RESOURCE, PrimaryRendererError, True)
+
+        ReturnValue = -1
+
+        Return ReturnValue
+
+    End If
+
+    For PartIndex = 0 To ActorPartCounts[Slot] - 1
+
+        If Not Graphics3D.ObjectHandleValid3D(ActorParts[Slot, PartIndex].Handle) Then
+
+            PrimaryRendererError = Graphics3D.LastError()
+
+            Call QuarantineActor(Slot, CHARACTER_ERROR_INVALID_PART, PrimaryRendererError, True)
+
+            ReturnValue = -1
+
+            Return ReturnValue
+
+        End If
+
+    End For
+
     If Not RendererResourcesValid(Slot) Then
 
-        Call InvalidateAfterRendererReset()
+        PrimaryRendererError = Graphics3D.LastError()
+
+        Call QuarantineActor(Slot, CHARACTER_ERROR_TAMPERED_RESOURCE, PrimaryRendererError, True)
 
         ReturnValue = -1
 
@@ -279,7 +464,99 @@ Private Function FindFreeAssetSlot() As Number
 
 End Function
 
-Private Function FindAsset(Path As Text, ProfileKey As Number, Policy As Number) As Number
+Private Sub QuarantineActor(
+    Slot As Number,
+    ErrorCode As Number,
+    PrimaryRendererError As Number,
+    ReleaseUnusedAsset As Boolean
+)
+
+    Dim AssetSlot As Number
+    Dim PartIndex As Number
+    Dim Destroyed As Boolean
+
+    AssetSlot = ActorAssetSlot[Slot]
+
+    For PartIndex = 0 To ActorPartCounts[Slot] - 1
+
+        If Graphics3D.ObjectHandleValid3D(ActorParts[Slot, PartIndex].Handle) Then
+
+            Destroyed = Graphics3D.TryDestroyObjectInstance3D(ActorParts[Slot, PartIndex])
+
+            If Not Destroyed Then
+                Call RecordCleanupFailure(Graphics3D.LastError())
+            End If
+
+        End If
+
+    End For
+
+    If Graphics3D.AnimatorHandleValid3D(ActorAnimators[Slot].Handle) Then
+
+        Destroyed = Graphics3D.TryDestroyAnimator3D(ActorAnimators[Slot])
+
+        If Not Destroyed Then
+            Call RecordCleanupFailure(Graphics3D.LastError())
+        End If
+
+    End If
+
+    Call ClearActorStorage(Slot)
+
+    If (AssetSlot >= 0 And
+        AssetSlot < CHARACTER3D_MAX_ASSETS And
+        AssetUsed[AssetSlot]) Then
+
+        AssetReferences[AssetSlot] = Max(0, AssetReferences[AssetSlot] - 1)
+
+        If ReleaseUnusedAsset Then
+            Call ReleaseAssetIfUnused(AssetSlot)
+        End If
+
+    End If
+
+    Call SetActorFailure(Slot, ErrorCode, PrimaryRendererError)
+
+End Sub
+
+Private Sub QuarantineAsset(Slot As Number, PrimaryRendererError As Number)
+
+    Dim ActorIndex As Number
+    Dim Destroyed As Boolean
+
+    For ActorIndex = 0 To CHARACTER3D_MAX_ACTORS - 1
+
+        If ActorUsed[ActorIndex] And ActorAssetSlot[ActorIndex] = Slot Then
+            Call QuarantineActor(
+                ActorIndex,
+                CHARACTER_ERROR_TAMPERED_RESOURCE,
+                PrimaryRendererError,
+                False
+            )
+        End If
+
+    End For
+
+    If (AssetFallbackMaterials[Slot].Handle <> 0 And
+        Graphics3D.MaterialHandleValid3D(AssetFallbackMaterials[Slot].Handle)) Then
+
+        Destroyed = Graphics3D.TryDestroyMaterial3D(AssetFallbackMaterials[Slot])
+
+        If Not Destroyed Then
+            Call RecordCleanupFailure(Graphics3D.LastError())
+        End If
+
+    End If
+
+    Call ClearAssetStorage(Slot)
+
+    ErrorValue = CHARACTER_ERROR_TAMPERED_RESOURCE
+    RendererErrorValue = PrimaryRendererError
+    FallbackValue = CHARACTER_FALLBACK_NONE
+
+End Sub
+
+Private Function FindAsset(Path As Text, ProfileKey As Number, Variant As Number) As Number
 
     Dim ReturnValue As Number
 
@@ -290,11 +567,20 @@ Private Function FindAsset(Path As Text, ProfileKey As Number, Policy As Number)
         If (AssetUsed[Slot] And
             AssetPaths[Slot] = Path And
             AssetProfileKeys[Slot] = ProfileKey And
-            AssetPolicies[Slot] = Policy) Then
+            AssetVariants[Slot] = Variant) Then
+
+            If AssetPendingRelease[Slot] Then
+
+                ErrorValue = CHARACTER_ERROR_PENDING_RELEASE
+                ReturnValue = -2
+
+                Return ReturnValue
+
+            End If
 
             If Not Graphics3D.ModelHandleValid3D(AssetModels[Slot].Handle) Then
 
-                Call InvalidateAfterRendererReset()
+                Call QuarantineAsset(Slot, Graphics3D.LastError())
 
                 ReturnValue = -1
 
@@ -316,6 +602,8 @@ End Function
 
 Private Sub ReleaseAssetIfUnused(Slot As Number)
 
+    Dim Released As Boolean
+
     If (Slot < 0 Or
         Slot >= CHARACTER3D_MAX_ASSETS Or
         Not AssetUsed[Slot] Or
@@ -323,21 +611,67 @@ Private Sub ReleaseAssetIfUnused(Slot As Number)
         Return
     End If
 
-    If (AssetFallbackMaterials[Slot].Handle <> 0 And
-        Graphics3D.MaterialHandleValid3D(AssetFallbackMaterials[Slot].Handle)) Then
-        Call Graphics3D.DestroyMaterial3D(AssetFallbackMaterials[Slot])
+    AssetPendingRelease[Slot] = False
+
+    If AssetFallbackMaterials[Slot].Handle <> 0 Then
+
+        If Graphics3D.MaterialHandleValid3D(AssetFallbackMaterials[Slot].Handle) Then
+
+            Released = Graphics3D.TryDestroyMaterial3D(AssetFallbackMaterials[Slot])
+
+            If Not Released Then
+                AssetPendingRelease[Slot] = True
+
+                Call RecordCleanupFailure(Graphics3D.LastError())
+            End If
+
+        Else
+            AssetFallbackMaterials[Slot].Handle = 0
+
+        End If
+
     End If
 
-    If (AssetModels[Slot].Handle <> 0 And
-        Graphics3D.ModelHandleValid3D(AssetModels[Slot].Handle)) Then
-        Call Graphics3D.DestroyModel3D(AssetModels[Slot])
+    If AssetModels[Slot].Handle <> 0 Then
+
+        If Graphics3D.ModelHandleValid3D(AssetModels[Slot].Handle) Then
+
+            Released = Graphics3D.TryDestroyModel3D(AssetModels[Slot])
+
+            If Not Released Then
+                AssetPendingRelease[Slot] = True
+
+                Call RecordCleanupFailure(Graphics3D.LastError())
+            End If
+
+        Else
+            AssetModels[Slot].Handle = 0
+
+        End If
+
     End If
 
-    Call ClearAssetStorage(Slot)
+    If (AssetFallbackMaterials[Slot].Handle = 0 And
+        AssetModels[Slot].Handle = 0) Then
+
+        Call ClearAssetStorage(Slot)
+
+    Else
+
+        AssetPendingRelease[Slot] = True
+        ErrorValue = CHARACTER_ERROR_PENDING_RELEASE
+        RendererErrorValue = CleanupRendererErrorValue
+
+    End If
 
 End Sub
 
-Private Function CreateAsset(Path As Text, ProfileKey As Number, Policy As Number) As Number
+Private Function CreateAsset(
+    Path As Text,
+    ProfileKey As Number,
+    Variant As Number,
+    CapabilityError As Number
+) As Number
 
     Dim ReturnValue As Number
 
@@ -346,10 +680,9 @@ Private Function CreateAsset(Path As Text, ProfileKey As Number, Policy As Numbe
     Dim Model As Core.Model3D
     Dim EmptyTexture As Core.Texture3D
     Dim FallbackMaterial As Core.Material3D
-    Dim PbrAvailable As Boolean
     Dim PbrReady As Boolean
-    Dim FallbackAllowed As Boolean
-    Dim CapabilityError As Number
+    Dim Destroyed As Boolean
+    Dim PrimaryRendererError As Number
 
     Slot = FindFreeAssetSlot()
 
@@ -387,10 +720,15 @@ Private Function CreateAsset(Path As Text, ProfileKey As Number, Policy As Numbe
         Model.BoneCount <= 0 Or
         Model.ClipCount <= 0) Then
 
-        Call Graphics3D.DestroyModel3D(Model)
+        PrimaryRendererError = Graphics3D.LastError()
+        Destroyed = Graphics3D.TryDestroyModel3D(Model)
+
+        If Not Destroyed Then
+            Call RecordCleanupFailure(Graphics3D.LastError())
+        End If
 
         ErrorValue = CHARACTER_ERROR_ANIMATION_UNAVAILABLE
-        RendererErrorValue = Graphics3D.LastError()
+        RendererErrorValue = PrimaryRendererError
 
         ReturnValue = -1
 
@@ -398,10 +736,7 @@ Private Function CreateAsset(Path As Text, ProfileKey As Number, Policy As Numbe
 
     End If
 
-    PbrAvailable = Graphics3D.PbrShaderAvailable3D()
-    CapabilityError = Graphics3D.LastError()
-
-    If PbrAvailable Then
+    If Variant = CHARACTER_VARIANT_PBR Then
 
         PbrReady = Graphics3D.PrepareModelPbr3D(
             Model,
@@ -412,10 +747,15 @@ Private Function CreateAsset(Path As Text, ProfileKey As Number, Policy As Numbe
 
         If Not PbrReady Then
 
-            Call Graphics3D.DestroyModel3D(Model)
+            PrimaryRendererError = Graphics3D.LastError()
+            Destroyed = Graphics3D.TryDestroyModel3D(Model)
+
+            If Not Destroyed Then
+                Call RecordCleanupFailure(Graphics3D.LastError())
+            End If
 
             ErrorValue = CHARACTER_ERROR_PBR_PREPARATION
-            RendererErrorValue = Graphics3D.LastError()
+            RendererErrorValue = PrimaryRendererError
 
             ReturnValue = -1
 
@@ -424,34 +764,19 @@ Private Function CreateAsset(Path As Text, ProfileKey As Number, Policy As Numbe
         End If
 
     Else
-
-        FallbackAllowed = Policy = CHARACTER_LOAD_ALLOW_SIMPLE_FALLBACK
-
-        If Policy = CHARACTER_LOAD_AUTO Then
-            FallbackAllowed = Scene3D.SimpleFallbackAllowed()
-        End If
-
-        If Not FallbackAllowed Then
-
-            Call Graphics3D.DestroyModel3D(Model)
-
-            ErrorValue = CHARACTER_ERROR_PBR_PREPARATION
-            RendererErrorValue = CapabilityError
-
-            ReturnValue = -1
-
-            Return ReturnValue
-
-        End If
-
         FallbackMaterial = Graphics3D.DefaultMaterial3D(EmptyTexture)
 
         If FallbackMaterial.Handle = 0 Then
 
-            Call Graphics3D.DestroyModel3D(Model)
+            PrimaryRendererError = Graphics3D.LastError()
+            Destroyed = Graphics3D.TryDestroyModel3D(Model)
+
+            If Not Destroyed Then
+                Call RecordCleanupFailure(Graphics3D.LastError())
+            End If
 
             ErrorValue = CHARACTER_ERROR_PBR_PREPARATION
-            RendererErrorValue = Graphics3D.LastError()
+            RendererErrorValue = PrimaryRendererError
 
             ReturnValue = -1
 
@@ -464,12 +789,13 @@ Private Function CreateAsset(Path As Text, ProfileKey As Number, Policy As Numbe
     AssetUsed[Slot] = True
     AssetPaths[Slot] = Path
     AssetProfileKeys[Slot] = ProfileKey
-    AssetPolicies[Slot] = Policy
+    AssetVariants[Slot] = Variant
     AssetReferences[Slot] = 0
     AssetModels[Slot] = Model
     AssetFallbackMaterials[Slot] = FallbackMaterial
     AssetUsesPbr[Slot] = PbrReady
     AssetUsesFallback[Slot] = Not PbrReady
+    AssetPendingRelease[Slot] = False
 
     If AssetUsesFallback[Slot] Then
         FallbackValue = CHARACTER_FALLBACK_SIMPLE
@@ -489,19 +815,32 @@ Private Sub DestroyActorSlot(Slot As Number)
 
     Dim AssetSlot As Number
     Dim PartIndex As Number
+    Dim Destroyed As Boolean
 
     AssetSlot = ActorAssetSlot[Slot]
 
     For PartIndex = 0 To ActorPartCounts[Slot] - 1
 
         If Graphics3D.ObjectHandleValid3D(ActorParts[Slot, PartIndex].Handle) Then
-            Call Graphics3D.DestroyObjectInstance3D(ActorParts[Slot, PartIndex])
+
+            Destroyed = Graphics3D.TryDestroyObjectInstance3D(ActorParts[Slot, PartIndex])
+
+            If Not Destroyed Then
+                Call RecordCleanupFailure(Graphics3D.LastError())
+            End If
+
         End If
 
     End For
 
     If Graphics3D.AnimatorHandleValid3D(ActorAnimators[Slot].Handle) Then
-        Call Graphics3D.DestroyAnimator3D(ActorAnimators[Slot])
+
+        Destroyed = Graphics3D.TryDestroyAnimator3D(ActorAnimators[Slot])
+
+        If Not Destroyed Then
+            Call RecordCleanupFailure(Graphics3D.LastError())
+        End If
+
     End If
 
     Call ClearActorStorage(Slot)
@@ -516,7 +855,17 @@ Private Sub DestroyActorSlot(Slot As Number)
 
 End Sub
 
-Private Function ApplyTransforms(Slot As Number) As Boolean
+Private Function ApplyTransformSnapshot(
+    Slot As Number,
+    PositionX1000 As Number,
+    PositionY1000 As Number,
+    PositionZ1000 As Number,
+    RotationX1000 As Number,
+    RotationY1000 As Number,
+    RotationZ1000 As Number,
+    ScalePercent As Number,
+    Visible As Boolean
+) As Boolean
 
     Dim PartIndex As Number
     Dim X As Number
@@ -526,31 +875,117 @@ Private Function ApplyTransforms(Slot As Number) As Boolean
     Dim RotationY As Number
     Dim RotationZ As Number
 
-    If Not RendererResourcesValid(Slot) Then
-        Call InvalidateAfterRendererReset()
-
-        Return False
-    End If
-
-    X = RoundedThousandths(ActorPositionX1000[Slot])
-    Y = RoundedThousandths(ActorPositionY1000[Slot])
-    Z = RoundedThousandths(ActorPositionZ1000[Slot])
-    RotationX = RoundedThousandths(ActorRotationX1000[Slot])
-    RotationY = RoundedThousandths(ActorRotationY1000[Slot])
-    RotationZ = RoundedThousandths(ActorRotationZ1000[Slot])
+    X = RoundedThousandths(PositionX1000)
+    Y = RoundedThousandths(PositionY1000)
+    Z = RoundedThousandths(PositionZ1000)
+    RotationX = RoundedThousandths(RotationX1000)
+    RotationY = RoundedThousandths(RotationY1000)
+    RotationZ = RoundedThousandths(RotationZ1000)
 
     For PartIndex = 0 To ActorPartCounts[Slot] - 1
 
-        Call Graphics3D.SetObjectPosition(ActorParts[Slot, PartIndex], X, Y, Z)
-        Call Graphics3D.SetObjectRotation(ActorParts[Slot, PartIndex], RotationX, RotationY, RotationZ)
-        Call Graphics3D.SetObjectScale(
+        If Not Graphics3D.SetObjectPositionChecked3D(ActorParts[Slot, PartIndex], X, Y, Z) Then
+            Return False
+        End If
+
+        If Not Graphics3D.SetObjectRotationChecked3D(
             ActorParts[Slot, PartIndex],
-            ActorScalePercent[Slot],
-            ActorScalePercent[Slot],
-            ActorScalePercent[Slot]
-        )
-        Call Graphics3D.SetObjectVisible(ActorParts[Slot, PartIndex], ActorVisible[Slot])
+            RotationX,
+            RotationY,
+            RotationZ
+        ) Then
+            Return False
+        End If
+
+        If Not Graphics3D.SetObjectScaleChecked3D(
+            ActorParts[Slot, PartIndex],
+            ScalePercent,
+            ScalePercent,
+            ScalePercent
+        ) Then
+            Return False
+        End If
+
+        If Not Graphics3D.SetObjectVisibleChecked3D(ActorParts[Slot, PartIndex], Visible) Then
+            Return False
+        End If
+
     End For
+
+    Return True
+
+End Function
+
+Private Function ApplyTransformTransaction(
+    Slot As Number,
+    PositionX1000 As Number,
+    PositionY1000 As Number,
+    PositionZ1000 As Number,
+    RotationX1000 As Number,
+    RotationY1000 As Number,
+    RotationZ1000 As Number,
+    ScalePercent As Number,
+    Visible As Boolean
+) As Boolean
+
+    Dim Applied As Boolean
+    Dim Restored As Boolean
+    Dim PrimaryRendererError As Number
+
+    Applied = ApplyTransformSnapshot(
+        Slot,
+        PositionX1000,
+        PositionY1000,
+        PositionZ1000,
+        RotationX1000,
+        RotationY1000,
+        RotationZ1000,
+        ScalePercent,
+        Visible
+    )
+
+    If Not Applied Then
+
+        PrimaryRendererError = Graphics3D.LastError()
+        Restored = ApplyTransformSnapshot(
+            Slot,
+            ActorPositionX1000[Slot],
+            ActorPositionY1000[Slot],
+            ActorPositionZ1000[Slot],
+            ActorRotationX1000[Slot],
+            ActorRotationY1000[Slot],
+            ActorRotationZ1000[Slot],
+            ActorScalePercent[Slot],
+            ActorVisible[Slot]
+        )
+
+        If Not Restored Then
+            Call RecordCleanupFailure(Graphics3D.LastError())
+            Call QuarantineActor(
+                Slot,
+                CHARACTER_ERROR_PARTIAL_TRANSFORM,
+                PrimaryRendererError,
+                True
+            )
+        Else
+
+            Call SetActorFailure(Slot, CHARACTER_ERROR_PARTIAL_TRANSFORM, PrimaryRendererError)
+        End If
+
+        Return False
+
+    End If
+
+    ActorPositionX1000[Slot] = PositionX1000
+    ActorPositionY1000[Slot] = PositionY1000
+    ActorPositionZ1000[Slot] = PositionZ1000
+    ActorRotationX1000[Slot] = RotationX1000
+    ActorRotationY1000[Slot] = RotationY1000
+    ActorRotationZ1000[Slot] = RotationZ1000
+    ActorScalePercent[Slot] = ScalePercent
+    ActorVisible[Slot] = Visible
+
+    Call ClearActorError(Slot)
 
     Return True
 
@@ -580,8 +1015,18 @@ Public Function LoadWithPolicy(Path As Text, Policy As Number) As Actor
     Dim Animator As Core.Animator3D
     Dim Parts[16] As Core.Object3D
     Dim Prepared As Boolean
+    Dim PbrAvailable As Boolean
+    Dim FallbackAllowed As Boolean
+    Dim Variant As Number
+    Dim CapabilityError As Number
+    Dim PrimaryRendererError As Number
+    Dim Destroyed As Boolean
 
     Call ClearError()
+
+    If Not SynchronizeRendererEpoch() Then
+        Return Result
+    End If
 
     If (Path = "" Or
         Policy < CHARACTER_LOAD_AUTO Or
@@ -602,15 +1047,44 @@ Public Function LoadWithPolicy(Path As Text, Policy As Number) As Actor
         Return Result
     End If
 
-    ProfileKey = Scene3D.AssetProfileKey()
-    AssetSlot = FindAsset(Path, ProfileKey, Policy)
+    Prepared = Scene3D.RefreshCapabilities()
+    PbrAvailable = Scene3D.PbrAvailable()
+    CapabilityError = Graphics3D.LastError()
 
-    If AssetSlot < 0 And ErrorValue = CHARACTER_ERROR_RENDERER_RESET Then
+    If PbrAvailable Then
+
+        Variant = CHARACTER_VARIANT_PBR
+
+    Else
+
+        FallbackAllowed = Policy = CHARACTER_LOAD_ALLOW_SIMPLE_FALLBACK
+
+        If Policy = CHARACTER_LOAD_AUTO Then
+            FallbackAllowed = Scene3D.SimpleFallbackAllowed()
+        End If
+
+        If Not FallbackAllowed Then
+
+            ErrorValue = CHARACTER_ERROR_PBR_PREPARATION
+            RendererErrorValue = CapabilityError
+
+            Return Result
+
+        End If
+
+        Variant = CHARACTER_VARIANT_SIMPLE
+
+    End If
+
+    ProfileKey = Scene3D.AssetProfileKey()
+    AssetSlot = FindAsset(Path, ProfileKey, Variant)
+
+    If AssetSlot = -2 Or ErrorValue = CHARACTER_ERROR_RENDERER_RESET Then
         Return Result
     End If
 
     If AssetSlot < 0 Then
-        AssetSlot = CreateAsset(Path, ProfileKey, Policy)
+        AssetSlot = CreateAsset(Path, ProfileKey, Variant, CapabilityError)
     Else If AssetUsesFallback[AssetSlot] Then
         FallbackValue = CHARACTER_FALLBACK_SIMPLE
     End If
@@ -675,14 +1149,26 @@ Public Function LoadWithPolicy(Path As Text, Policy As Number) As Actor
 
     If Not Prepared Then
 
+        PrimaryRendererError = Graphics3D.LastError()
+
         For PartIndex = 0 To CreatedPartCount - 1
-            Call Graphics3D.DestroyObjectInstance3D(Parts[PartIndex])
+
+            Destroyed = Graphics3D.TryDestroyObjectInstance3D(Parts[PartIndex])
+
+            If Not Destroyed Then
+                Call RecordCleanupFailure(Graphics3D.LastError())
+            End If
+
         End For
 
-        Call Graphics3D.DestroyAnimator3D(Animator)
+        Destroyed = Graphics3D.TryDestroyAnimator3D(Animator)
+
+        If Not Destroyed Then
+            Call RecordCleanupFailure(Graphics3D.LastError())
+        End If
 
         ErrorValue = CHARACTER_ERROR_PART_CREATE
-        RendererErrorValue = Graphics3D.LastError()
+        RendererErrorValue = PrimaryRendererError
 
         Call ReleaseAssetIfUnused(AssetSlot)
 
@@ -703,6 +1189,9 @@ Public Function LoadWithPolicy(Path As Text, Policy As Number) As Actor
     ActorScalePercent[Slot] = 100
     ActorVisible[Slot] = True
     ActorRootMode[Slot] = ROOT_MOTION_IGNORE
+    ActorErrorValues[Slot] = CHARACTER_ERROR_NONE
+    ActorRendererErrorValues[Slot] = 0
+    ActorFallbackValues[Slot] = FallbackValue
 
     For PartIndex = 0 To Model.PartCount - 1
         ActorParts[Slot, PartIndex] = Parts[PartIndex]
@@ -722,11 +1211,13 @@ Public Function LoadWithPolicy(Path As Text, Policy As Number) As Actor
 
         If Not Prepared Then
 
+            PrimaryRendererError = Graphics3D.LastError()
+
             Call DestroyActorSlot(Slot)
 
             Result.Handle = 0
             ErrorValue = CHARACTER_ERROR_CLIP_NOT_FOUND
-            RendererErrorValue = Graphics3D.LastError()
+            RendererErrorValue = PrimaryRendererError
 
             Return Result
 
@@ -755,8 +1246,12 @@ Public Sub Destroy(ByRef Value As Actor)
     Call DestroyActorSlot(Slot)
 
     Value.Handle = 0
-    ErrorValue = CHARACTER_ERROR_NONE
-    RendererErrorValue = 0
+
+    If ErrorValue <> CHARACTER_ERROR_PENDING_RELEASE Then
+        ErrorValue = CHARACTER_ERROR_NONE
+        RendererErrorValue = 0
+    End If
+
     FallbackValue = CHARACTER_FALLBACK_NONE
 
 End Sub
@@ -766,15 +1261,9 @@ Public Sub Shutdown()
 
     Dim Slot As Number
 
-    For Slot = 0 To CHARACTER3D_MAX_ACTORS - 1
-
-        If ActorUsed[Slot] And Not RendererResourcesValid(Slot) Then
-            Call InvalidateAfterRendererReset()
-
-            Return
-        End If
-
-    End For
+    If Not SynchronizeRendererEpoch() Then
+        Return
+    End If
 
     For Slot = 0 To CHARACTER3D_MAX_ACTORS - 1
 
@@ -788,8 +1277,15 @@ Public Sub Shutdown()
         Call ReleaseAssetIfUnused(Slot)
     End For
 
-    ErrorValue = CHARACTER_ERROR_NONE
-    RendererErrorValue = 0
+    If PendingReleaseAssetCount() > 0 Then
+        ErrorValue = CHARACTER_ERROR_PENDING_RELEASE
+        RendererErrorValue = CleanupRendererErrorValue
+    Else
+
+        ErrorValue = CHARACTER_ERROR_NONE
+        RendererErrorValue = 0
+    End If
+
     FallbackValue = CHARACTER_FALLBACK_NONE
 
 End Sub
@@ -806,11 +1302,28 @@ Public Function Place(ByRef Value As Actor, X As Number, Y As Number, Z As Numbe
         Return False
     End If
 
-    ActorPositionX1000[Slot] = X * 1000
-    ActorPositionY1000[Slot] = Y * 1000
-    ActorPositionZ1000[Slot] = Z * 1000
+    If (X < -CHARACTER_MAX_WORLD_POSITION Or
+        X > CHARACTER_MAX_WORLD_POSITION Or
+        Y < -CHARACTER_MAX_WORLD_POSITION Or
+        Y > CHARACTER_MAX_WORLD_POSITION Or
+        Z < -CHARACTER_MAX_WORLD_POSITION Or
+        Z > CHARACTER_MAX_WORLD_POSITION) Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, 0)
 
-    ReturnValue = ApplyTransforms(Slot)
+        Return False
+    End If
+
+    ReturnValue = ApplyTransformTransaction(
+        Slot,
+        X * 1000,
+        Y * 1000,
+        Z * 1000,
+        ActorRotationX1000[Slot],
+        ActorRotationY1000[Slot],
+        ActorRotationZ1000[Slot],
+        ActorScalePercent[Slot],
+        ActorVisible[Slot]
+    )
 
     Return ReturnValue
 
@@ -828,11 +1341,28 @@ Public Function Rotate(ByRef Value As Actor, X As Number, Y As Number, Z As Numb
         Return False
     End If
 
-    ActorRotationX1000[Slot] = X * 1000
-    ActorRotationY1000[Slot] = Y * 1000
-    ActorRotationZ1000[Slot] = Z * 1000
+    If (X < -CHARACTER_MAX_ROTATION_INPUT Or
+        X > CHARACTER_MAX_ROTATION_INPUT Or
+        Y < -CHARACTER_MAX_ROTATION_INPUT Or
+        Y > CHARACTER_MAX_ROTATION_INPUT Or
+        Z < -CHARACTER_MAX_ROTATION_INPUT Or
+        Z > CHARACTER_MAX_ROTATION_INPUT) Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, 0)
 
-    ReturnValue = ApplyTransforms(Slot)
+        Return False
+    End If
+
+    ReturnValue = ApplyTransformTransaction(
+        Slot,
+        ActorPositionX1000[Slot],
+        ActorPositionY1000[Slot],
+        ActorPositionZ1000[Slot],
+        Fixed.WrapDegrees(X) * 1000,
+        Fixed.WrapDegrees(Y) * 1000,
+        Fixed.WrapDegrees(Z) * 1000,
+        ActorScalePercent[Slot],
+        ActorVisible[Slot]
+    )
 
     Return ReturnValue
 
@@ -850,14 +1380,23 @@ Public Function SetScale(ByRef Value As Actor, Percent As Number) As Boolean
         Return False
     End If
 
-    If Percent <= 0 Then
-        ErrorValue = CHARACTER_ERROR_INVALID_ARGUMENT
+    If Percent < 1 Or Percent > CHARACTER_MAX_SCALE_PERCENT Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, 0)
+
         Return False
     End If
 
-    ActorScalePercent[Slot] = Percent
-
-    ReturnValue = ApplyTransforms(Slot)
+    ReturnValue = ApplyTransformTransaction(
+        Slot,
+        ActorPositionX1000[Slot],
+        ActorPositionY1000[Slot],
+        ActorPositionZ1000[Slot],
+        ActorRotationX1000[Slot],
+        ActorRotationY1000[Slot],
+        ActorRotationZ1000[Slot],
+        Percent,
+        ActorVisible[Slot]
+    )
 
     Return ReturnValue
 
@@ -875,9 +1414,17 @@ Public Function SetVisible(ByRef Value As Actor, Visible As Boolean) As Boolean
         Return False
     End If
 
-    ActorVisible[Slot] = Visible
-
-    ReturnValue = ApplyTransforms(Slot)
+    ReturnValue = ApplyTransformTransaction(
+        Slot,
+        ActorPositionX1000[Slot],
+        ActorPositionY1000[Slot],
+        ActorPositionZ1000[Slot],
+        ActorRotationX1000[Slot],
+        ActorRotationY1000[Slot],
+        ActorRotationZ1000[Slot],
+        ActorScalePercent[Slot],
+        Visible
+    )
 
     Return ReturnValue
 
@@ -902,11 +1449,23 @@ Public Function LookAt(ByRef Value As Actor, X As Number, Y As Number, Z As Numb
         Return False
     End If
 
+    If (X < -CHARACTER_MAX_WORLD_POSITION Or
+        X > CHARACTER_MAX_WORLD_POSITION Or
+        Y < -CHARACTER_MAX_WORLD_POSITION Or
+        Y > CHARACTER_MAX_WORLD_POSITION Or
+        Z < -CHARACTER_MAX_WORLD_POSITION Or
+        Z > CHARACTER_MAX_WORLD_POSITION) Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, 0)
+
+        Return False
+    End If
+
     DeltaX = X - RoundedThousandths(ActorPositionX1000[Slot])
     DeltaZ = Z - RoundedThousandths(ActorPositionZ1000[Slot])
 
     If DeltaX = 0 And DeltaZ = 0 Then
-        ErrorValue = CHARACTER_ERROR_INVALID_ARGUMENT
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, 0)
+
         Return False
     End If
 
@@ -923,9 +1482,17 @@ Public Function LookAt(ByRef Value As Actor, X As Number, Y As Number, Z As Numb
 
     End For
 
-    ActorRotationY1000[Slot] = BestAngle * 1000
-
-    ReturnValue = ApplyTransforms(Slot)
+    ReturnValue = ApplyTransformTransaction(
+        Slot,
+        ActorPositionX1000[Slot],
+        ActorPositionY1000[Slot],
+        ActorPositionZ1000[Slot],
+        ActorRotationX1000[Slot],
+        Fixed.WrapDegrees(BestAngle) * 1000,
+        ActorRotationZ1000[Slot],
+        ActorScalePercent[Slot],
+        ActorVisible[Slot]
+    )
 
     Return ReturnValue
 
@@ -968,18 +1535,18 @@ Public Function PlayMode(
     AssetSlot = ActorAssetSlot[Slot]
 
     If Graphics3D.ModelClipIndex3D(AssetModels[AssetSlot], ClipName) < 0 Then
-        ErrorValue = CHARACTER_ERROR_CLIP_NOT_FOUND
+        Call SetActorFailure(Slot, CHARACTER_ERROR_CLIP_NOT_FOUND, Graphics3D.LastError())
+
         Return False
     End If
 
     Result = Graphics3D.PlayModelAnimatorNamed3D(ActorAnimators[Slot], ClipName, Mode, SpeedPercent)
 
     If Not Result Then
-        ErrorValue = CHARACTER_ERROR_CLIP_NOT_FOUND
-        RendererErrorValue = Graphics3D.LastError()
+        Call SetActorFailure(Slot, CHARACTER_ERROR_CLIP_NOT_FOUND, Graphics3D.LastError())
     Else
-        ErrorValue = CHARACTER_ERROR_NONE
-        RendererErrorValue = 0
+
+        Call ClearActorError(Slot)
     End If
 
     Return Result
@@ -1006,7 +1573,8 @@ Public Function CrossFade(
     AssetSlot = ActorAssetSlot[Slot]
 
     If Graphics3D.ModelClipIndex3D(AssetModels[AssetSlot], ClipName) < 0 Then
-        ErrorValue = CHARACTER_ERROR_CLIP_NOT_FOUND
+        Call SetActorFailure(Slot, CHARACTER_ERROR_CLIP_NOT_FOUND, Graphics3D.LastError())
+
         Return False
     End If
 
@@ -1018,11 +1586,10 @@ Public Function CrossFade(
     )
 
     If Not Result Then
-        ErrorValue = CHARACTER_ERROR_CLIP_NOT_FOUND
-        RendererErrorValue = Graphics3D.LastError()
+        Call SetActorFailure(Slot, CHARACTER_ERROR_CLIP_NOT_FOUND, Graphics3D.LastError())
     Else
-        ErrorValue = CHARACTER_ERROR_NONE
-        RendererErrorValue = 0
+
+        Call ClearActorError(Slot)
     End If
 
     Return Result
@@ -1043,7 +1610,10 @@ Public Function StopAnimation(ByRef Value As Actor) As Boolean
     Result = Graphics3D.StopAnimator3D(ActorAnimators[Slot])
 
     If Not Result Then
-        RendererErrorValue = Graphics3D.LastError()
+        Call SetActorFailure(Slot, CHARACTER_ERROR_TAMPERED_RESOURCE, Graphics3D.LastError())
+    Else
+
+        Call ClearActorError(Slot)
     End If
 
     Return Result
@@ -1056,6 +1626,15 @@ Public Function Update(ByRef Value As Actor, ElapsedMilliseconds As Number) As B
     Dim Slot As Number
     Dim Result As Boolean
     Dim Delta As Core.RootMotionDelta3D
+    Dim Sine As Number
+    Dim Cosine As Number
+    Dim WorldX As Number
+    Dim WorldZ As Number
+    Dim CandidateX As Number
+    Dim CandidateY As Number
+    Dim CandidateZ As Number
+    Dim CandidateYaw As Number
+    Dim YawDegrees As Number
 
     Slot = ActorSlot(Value)
 
@@ -1063,10 +1642,21 @@ Public Function Update(ByRef Value As Actor, ElapsedMilliseconds As Number) As B
         Return False
     End If
 
+    If ElapsedMilliseconds < 0 Or ElapsedMilliseconds > 2147483647 Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, 0)
+
+        Return False
+    End If
+
     Result = Graphics3D.UpdateAnimator3D(ActorAnimators[Slot], ElapsedMilliseconds)
 
     If Not Result Then
-        RendererErrorValue = Graphics3D.LastError()
+        Call SetActorFailure(
+            Slot,
+            CHARACTER_ERROR_TAMPERED_RESOURCE,
+            Graphics3D.LastError()
+        )
+
         Return False
     End If
 
@@ -1074,12 +1664,46 @@ Public Function Update(ByRef Value As Actor, ElapsedMilliseconds As Number) As B
 
         Delta = Graphics3D.TakeAnimatorRootDelta3D(ActorAnimators[Slot])
         ActorLastRootDelta[Slot] = Delta
-        ActorPositionX1000[Slot] = ActorPositionX1000[Slot] + Delta.X
-        ActorPositionY1000[Slot] = ActorPositionY1000[Slot] + Delta.Y
-        ActorPositionZ1000[Slot] = ActorPositionZ1000[Slot] + Delta.Z
-        ActorRotationY1000[Slot] = ActorRotationY1000[Slot] + Delta.Yaw
+        YawDegrees = RoundedThousandths(ActorRotationY1000[Slot])
+        Sine = Fixed.SinFixed(YawDegrees)
+        Cosine = Fixed.CosFixed(YawDegrees)
+        WorldX = (Delta.X * Cosine + Delta.Z * Sine) / Core.FIXED_ONE
+        WorldZ = (-Delta.X * Sine + Delta.Z * Cosine) / Core.FIXED_ONE
+        CandidateX = ActorPositionX1000[Slot] + WorldX
+        CandidateY = ActorPositionY1000[Slot] + Delta.Y
+        CandidateZ = ActorPositionZ1000[Slot] + WorldZ
+        CandidateYaw = (ActorRotationY1000[Slot] + Delta.Yaw) Mod 360000
 
-        Result = ApplyTransforms(Slot)
+        If CandidateYaw < 0 Then
+            CandidateYaw = CandidateYaw + 360000
+        End If
+
+        If (CandidateX < -CHARACTER_MAX_WORLD_POSITION * 1000 Or
+            CandidateX > CHARACTER_MAX_WORLD_POSITION * 1000 Or
+            CandidateY < -CHARACTER_MAX_WORLD_POSITION * 1000 Or
+            CandidateY > CHARACTER_MAX_WORLD_POSITION * 1000 Or
+            CandidateZ < -CHARACTER_MAX_WORLD_POSITION * 1000 Or
+            CandidateZ > CHARACTER_MAX_WORLD_POSITION * 1000) Then
+            Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, 0)
+
+            Return False
+        End If
+
+        Result = ApplyTransformTransaction(
+            Slot,
+            CandidateX,
+            CandidateY,
+            CandidateZ,
+            ActorRotationX1000[Slot],
+            CandidateYaw,
+            ActorRotationZ1000[Slot],
+            ActorScalePercent[Slot],
+            ActorVisible[Slot]
+        )
+
+    Else
+
+        Call ClearActorError(Slot)
 
     End If
 
@@ -1158,7 +1782,8 @@ Public Function SetRootMotion(ByRef Value As Actor, Mode As Number) As Boolean
     End If
 
     If Mode <> ROOT_MOTION_IGNORE And Mode <> ROOT_MOTION_APPLY Then
-        ErrorValue = CHARACTER_ERROR_INVALID_ARGUMENT
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, 0)
+
         Return False
     End If
 
@@ -1177,8 +1802,13 @@ Public Function SetRootMotion(ByRef Value As Actor, Mode As Number) As Boolean
         ActorLastRootDelta[Slot] = EmptyDelta
 
     Else
-        RendererErrorValue = Graphics3D.LastError()
 
+        Call SetActorFailure(Slot, CHARACTER_ERROR_TAMPERED_RESOURCE, Graphics3D.LastError())
+
+    End If
+
+    If Result Then
+        Call ClearActorError(Slot)
     End If
 
     Return Result
@@ -1322,7 +1952,8 @@ Public Function SocketPosition(Value As Actor, Name As Text) As Core.Vector3
     SocketIndex = Graphics3D.ModelSocketIndex3D(AssetModels[AssetSlot], Name)
 
     If SocketIndex < 0 Then
-        ErrorValue = CHARACTER_ERROR_SOCKET_NOT_FOUND
+        Call SetActorFailure(Slot, CHARACTER_ERROR_SOCKET_NOT_FOUND, Graphics3D.LastError())
+
         Return Result
     End If
 
@@ -1366,7 +1997,8 @@ Public Function SocketValueThousandths(Value As Actor, Name As Text, Property As
     SocketIndex = Graphics3D.ModelSocketIndex3D(AssetModels[AssetSlot], Name)
 
     If SocketIndex < 0 Then
-        ErrorValue = CHARACTER_ERROR_SOCKET_NOT_FOUND
+        Call SetActorFailure(Slot, CHARACTER_ERROR_SOCKET_NOT_FOUND, Graphics3D.LastError())
+
         Return 0
     End If
 
@@ -1405,7 +2037,10 @@ Public Function Draw(Value As Actor) As Boolean
     End For
 
     If Not Result Then
-        RendererErrorValue = Graphics3D.LastError()
+        Call SetActorFailure(Slot, CHARACTER_ERROR_TAMPERED_RESOURCE, Graphics3D.LastError())
+    Else
+
+        Call ClearActorError(Slot)
     End If
 
     Return Result
@@ -1416,15 +2051,9 @@ Public Function IsValid(Value As Actor) As Boolean
 
     Dim Slot As Number
 
-    Slot = RawActorSlot(Value)
+    Slot = ActorSlot(Value)
 
     If Slot < 0 Then
-        Return False
-    End If
-
-    If Not RendererResourcesValid(Slot) Then
-        Call InvalidateAfterRendererReset()
-
         Return False
     End If
 
@@ -1473,6 +2102,30 @@ Public Function PrimaryObjectHandle(Value As Actor) As Number
     End If
 
     ReturnValue = ActorParts[Slot, 0].Handle
+
+    Return ReturnValue
+
+End Function
+
+''' Returns one borrowed read-only part handle for advanced interop.
+Public Function PartObjectHandle(Value As Actor, PartIndex As Number) As Number
+
+    Dim ReturnValue As Number
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    If PartIndex < 0 Or PartIndex >= ActorPartCounts[Slot] Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_PART, 0)
+
+        Return 0
+    End If
+
+    ReturnValue = ActorParts[Slot, PartIndex].Handle
 
     Return ReturnValue
 
@@ -1554,6 +2207,60 @@ Public Function CachedAssetCount() As Number
 
 End Function
 
+Public Function PendingReleaseAssetCount() As Number
+
+    Dim Slot As Number
+    Dim Result As Number
+
+    For Slot = 0 To CHARACTER3D_MAX_ASSETS - 1
+
+        If AssetUsed[Slot] And AssetPendingRelease[Slot] Then
+            Result = Result + 1
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+''' Retries cache entries whose last release was refused by an external dependent.
+Public Function RetryPendingReleases() As Boolean
+
+    Dim Slot As Number
+
+    If Not SynchronizeRendererEpoch() Then
+        Return False
+    End If
+
+    CleanupRendererErrorValue = 0
+
+    For Slot = 0 To CHARACTER3D_MAX_ASSETS - 1
+
+        If (AssetUsed[Slot] And
+            AssetPendingRelease[Slot] And
+            AssetReferences[Slot] = 0) Then
+            Call ReleaseAssetIfUnused(Slot)
+        End If
+
+    End For
+
+    If PendingReleaseAssetCount() > 0 Then
+
+        ErrorValue = CHARACTER_ERROR_PENDING_RELEASE
+        RendererErrorValue = CleanupRendererErrorValue
+
+        Return False
+
+    End If
+
+    ErrorValue = CHARACTER_ERROR_NONE
+    RendererErrorValue = 0
+
+    Return True
+
+End Function
+
 Public Function AssetReferenceCount(Value As Actor) As Number
 
     Dim ReturnValue As Number
@@ -1569,6 +2276,84 @@ Public Function AssetReferenceCount(Value As Actor) As Number
     ReturnValue = AssetReferences[ActorAssetSlot[Slot]]
 
     Return ReturnValue
+
+End Function
+
+Public Function ActorAssetState(Value As Actor) As Number
+
+    Dim Slot As Number
+    Dim AssetSlot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return CHARACTER_ASSET_EMPTY
+    End If
+
+    AssetSlot = ActorAssetSlot[Slot]
+
+    If AssetPendingRelease[AssetSlot] Then
+        Return CHARACTER_ASSET_PENDING_RELEASE
+    End If
+
+    If AssetReferences[AssetSlot] = 0 Then
+        Return CHARACTER_ASSET_UNUSED_RELEASABLE
+    End If
+
+    Return CHARACTER_ASSET_ACTIVE
+
+End Function
+
+Public Function ActorAssetVariant(Value As Actor) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return CHARACTER_VARIANT_NONE
+    End If
+
+    ReturnValue = AssetVariants[ActorAssetSlot[Slot]]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ActorAssetProfileKey(Value As Actor) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = AssetProfileKeys[ActorAssetSlot[Slot]]
+
+    Return ReturnValue
+
+End Function
+
+Public Function CachedAnimationResidentBytes() As Number
+
+    Dim Slot As Number
+    Dim Result As Number
+
+    For Slot = 0 To CHARACTER3D_MAX_ASSETS - 1
+
+        If AssetUsed[Slot] Then
+            Result = Result + AssetModels[Slot].AnimationResidentBytes
+        End If
+
+    End For
+
+    Return Result
 
 End Function
 
@@ -1716,6 +2501,290 @@ Public Function BoundsValueThousandths(Value As Actor, Component As Number) As N
 
 End Function
 
+Private Function BoundsRadiusThousandths(Bounds As Bounds3D) As Number
+
+    Dim HalfX As Number
+    Dim HalfY As Number
+    Dim HalfZ As Number
+    Dim Largest As Number
+    Dim NormalX As Number
+    Dim NormalY As Number
+    Dim NormalZ As Number
+    Dim Sum As Number
+    Dim Low As Number
+    Dim High As Number
+    Dim Middle As Number
+    Dim Root As Number
+    Dim Result As Number
+
+    HalfX = Bounds.Size.X / 2
+    HalfY = Bounds.Size.Y / 2
+    HalfZ = Bounds.Size.Z / 2
+    Largest = Max(HalfX, Max(HalfY, HalfZ))
+
+    If Largest <= 0 Then
+        Return 0
+    End If
+
+    NormalX = HalfX * 1000 / Largest
+    NormalY = HalfY * 1000 / Largest
+    NormalZ = HalfZ * 1000 / Largest
+    Sum = NormalX * NormalX + NormalY * NormalY + NormalZ * NormalZ
+    Low = 0
+    High = 2000
+
+    Do
+
+        Middle = (Low + High) / 2
+
+        If Middle * Middle <= Sum Then
+            Root = Middle
+            Low = Middle + 1
+        Else
+            High = Middle - 1
+        End If
+
+    Loop Until Low > High
+
+    Result = Root * Largest / 1000
+
+    Return Result
+
+End Function
+
+''' Returns the immutable model-space static AABB in thousandths.
+Public Function LocalBounds(Value As Actor) As Bounds3D
+
+    Dim Result As Bounds3D
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return Result
+    End If
+
+    Result.Minimum.X = BoundsValueThousandths(Value, Graphics3D.MODEL_BOUNDS_MINIMUM_X)
+    Result.Minimum.Y = BoundsValueThousandths(Value, Graphics3D.MODEL_BOUNDS_MINIMUM_Y)
+    Result.Minimum.Z = BoundsValueThousandths(Value, Graphics3D.MODEL_BOUNDS_MINIMUM_Z)
+    Result.Maximum.X = BoundsValueThousandths(Value, Graphics3D.MODEL_BOUNDS_MAXIMUM_X)
+    Result.Maximum.Y = BoundsValueThousandths(Value, Graphics3D.MODEL_BOUNDS_MAXIMUM_Y)
+    Result.Maximum.Z = BoundsValueThousandths(Value, Graphics3D.MODEL_BOUNDS_MAXIMUM_Z)
+    Result.Center.X = (Result.Minimum.X + Result.Maximum.X) / 2
+    Result.Center.Y = (Result.Minimum.Y + Result.Maximum.Y) / 2
+    Result.Center.Z = (Result.Minimum.Z + Result.Maximum.Z) / 2
+    Result.Size.X = Result.Maximum.X - Result.Minimum.X
+    Result.Size.Y = Result.Maximum.Y - Result.Minimum.Y
+    Result.Size.Z = Result.Maximum.Z - Result.Minimum.Z
+    Result.Radius = BoundsRadiusThousandths(Result)
+    Result.Valid = True
+
+    Return Result
+
+End Function
+
+''' Transforms all eight local AABB corners and applies an optional positive world-unit margin.
+Public Function WorldBounds(
+    Value As Actor,
+    Optional AnimationMargin As Number = 0
+) As Bounds3D
+
+    Dim Result As Bounds3D
+    Dim LocalValue As Bounds3D
+    Dim Point As Core.Vector3
+    Dim Rotation As Core.Rotation3D
+    Dim Slot As Number
+    Dim Corner As Number
+    Dim Margin1000 As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return Result
+    End If
+
+    If AnimationMargin < 0 Or AnimationMargin > CHARACTER_MAX_WORLD_POSITION Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_BOUNDS, 0)
+
+        Return Result
+    End If
+
+    LocalValue = LocalBounds(Value)
+
+    If Not LocalValue.Valid Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_BOUNDS, Graphics3D.LastError())
+
+        Return Result
+    End If
+
+    Rotation.X = RoundedThousandths(ActorRotationX1000[Slot])
+    Rotation.Y = RoundedThousandths(ActorRotationY1000[Slot])
+    Rotation.Z = RoundedThousandths(ActorRotationZ1000[Slot])
+
+    For Corner = 0 To 7
+
+        If Corner Mod 2 = 0 Then
+            Point.X = LocalValue.Minimum.X
+        Else
+            Point.X = LocalValue.Maximum.X
+        End If
+
+        If (Corner / 2) Mod 2 = 0 Then
+            Point.Y = LocalValue.Minimum.Y
+        Else
+            Point.Y = LocalValue.Maximum.Y
+        End If
+
+        If (Corner / 4) Mod 2 = 0 Then
+            Point.Z = LocalValue.Minimum.Z
+        Else
+            Point.Z = LocalValue.Maximum.Z
+        End If
+
+        Point.X = Point.X * ActorScalePercent[Slot] / 100
+        Point.Y = Point.Y * ActorScalePercent[Slot] / 100
+        Point.Z = Point.Z * ActorScalePercent[Slot] / 100
+        Point = Fixed.Rotate(Point, Rotation)
+        Point.X = Point.X + ActorPositionX1000[Slot]
+        Point.Y = Point.Y + ActorPositionY1000[Slot]
+        Point.Z = Point.Z + ActorPositionZ1000[Slot]
+
+        If Corner = 0 Then
+
+            Result.Minimum = Point
+            Result.Maximum = Point
+
+        Else
+
+            Result.Minimum.X = Min(Result.Minimum.X, Point.X)
+            Result.Minimum.Y = Min(Result.Minimum.Y, Point.Y)
+            Result.Minimum.Z = Min(Result.Minimum.Z, Point.Z)
+            Result.Maximum.X = Max(Result.Maximum.X, Point.X)
+            Result.Maximum.Y = Max(Result.Maximum.Y, Point.Y)
+            Result.Maximum.Z = Max(Result.Maximum.Z, Point.Z)
+
+        End If
+
+    End For
+
+    Margin1000 = AnimationMargin * 1000
+    Result.Minimum.X = Result.Minimum.X - Margin1000
+    Result.Minimum.Y = Result.Minimum.Y - Margin1000
+    Result.Minimum.Z = Result.Minimum.Z - Margin1000
+    Result.Maximum.X = Result.Maximum.X + Margin1000
+    Result.Maximum.Y = Result.Maximum.Y + Margin1000
+    Result.Maximum.Z = Result.Maximum.Z + Margin1000
+    Result.Center.X = (Result.Minimum.X + Result.Maximum.X) / 2
+    Result.Center.Y = (Result.Minimum.Y + Result.Maximum.Y) / 2
+    Result.Center.Z = (Result.Minimum.Z + Result.Maximum.Z) / 2
+    Result.Size.X = Result.Maximum.X - Result.Minimum.X
+    Result.Size.Y = Result.Maximum.Y - Result.Minimum.Y
+    Result.Size.Z = Result.Maximum.Z - Result.Minimum.Z
+    Result.Radius = BoundsRadiusThousandths(Result)
+    Result.AnimationMargin = Margin1000
+    Result.Valid = True
+
+    Call ClearActorError(Slot)
+
+    Return Result
+
+End Function
+
+Public Function WorldBoundsValueThousandths(
+    Value As Actor,
+    Component As Number,
+    Optional AnimationMargin As Number = 0
+) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Bounds As Bounds3D
+
+    Bounds = WorldBounds(Value, AnimationMargin)
+
+    If Not Bounds.Valid Then
+        Return 0
+    End If
+
+    If Component = Graphics3D.MODEL_BOUNDS_MINIMUM_X Then
+        ReturnValue = Bounds.Minimum.X
+
+        Return ReturnValue
+    Else If Component = Graphics3D.MODEL_BOUNDS_MINIMUM_Y Then
+        ReturnValue = Bounds.Minimum.Y
+
+        Return ReturnValue
+    Else If Component = Graphics3D.MODEL_BOUNDS_MINIMUM_Z Then
+        ReturnValue = Bounds.Minimum.Z
+
+        Return ReturnValue
+    Else If Component = Graphics3D.MODEL_BOUNDS_MAXIMUM_X Then
+        ReturnValue = Bounds.Maximum.X
+
+        Return ReturnValue
+    Else If Component = Graphics3D.MODEL_BOUNDS_MAXIMUM_Y Then
+        ReturnValue = Bounds.Maximum.Y
+
+        Return ReturnValue
+    Else If Component = Graphics3D.MODEL_BOUNDS_MAXIMUM_Z Then
+        ReturnValue = Bounds.Maximum.Z
+
+        Return ReturnValue
+    End If
+
+    Return 0
+
+End Function
+
+Public Function WorldHeight(Value As Actor, Optional AnimationMargin As Number = 0) As Number
+
+    Dim Bounds As Bounds3D
+    Dim Result As Number
+
+    Bounds = WorldBounds(Value, AnimationMargin)
+
+    If Bounds.Valid Then
+        Result = RoundedThousandths(Bounds.Size.Y)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function WorldCenter(Value As Actor, Optional AnimationMargin As Number = 0) As Core.Vector3
+
+    Dim Bounds As Bounds3D
+    Dim Result As Core.Vector3
+
+    Bounds = WorldBounds(Value, AnimationMargin)
+
+    If Bounds.Valid Then
+
+        Result.X = RoundedThousandths(Bounds.Center.X)
+        Result.Y = RoundedThousandths(Bounds.Center.Y)
+        Result.Z = RoundedThousandths(Bounds.Center.Z)
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function WorldRadius(Value As Actor, Optional AnimationMargin As Number = 0) As Number
+
+    Dim Bounds As Bounds3D
+    Dim Result As Number
+
+    Bounds = WorldBounds(Value, AnimationMargin)
+
+    If Bounds.Valid Then
+        Result = RoundedThousandths(Bounds.Radius)
+    End If
+
+    Return Result
+
+End Function
+
 Public Function Height(Value As Actor) As Number
 
     Dim Minimum As Number
@@ -1736,9 +2805,51 @@ Public Function LastError() As Number
 
 End Function
 
+Public Function ActorLastError(Value As Actor) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = RawDiagnosticSlot(Value)
+
+    If Slot < 0 Then
+        Return CHARACTER_ERROR_INVALID_ACTOR
+    End If
+
+    ReturnValue = ActorErrorValues[Slot]
+
+    Return ReturnValue
+
+End Function
+
 Public Function LastRendererError() As Number
 
     Return RendererErrorValue
+
+End Function
+
+Public Function ActorLastRendererError(Value As Actor) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = RawDiagnosticSlot(Value)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ActorRendererErrorValues[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function LastCleanupRendererError() As Number
+
+    Return CleanupRendererErrorValue
 
 End Function
 
@@ -1748,11 +2859,44 @@ Public Function LastFallback() As Number
 
 End Function
 
+Public Function ActorFallback(Value As Actor) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = RawDiagnosticSlot(Value)
+
+    If Slot < 0 Then
+        Return CHARACTER_FALLBACK_NONE
+    End If
+
+    ReturnValue = ActorFallbackValues[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ActorFallbackFlags(Value As Actor) As Number
+
+    Dim Result As Number
+
+    Result = Scene3D.FallbackFlags()
+
+    If ActorFallback(Value) = CHARACTER_FALLBACK_SIMPLE Then
+        Result = Result + Scene3D.SCENE_FALLBACK_FLAG_SIMPLE_CHARACTER
+    End If
+
+    Return Result
+
+End Function
+
 Public Sub ClearError()
 
     ErrorValue = CHARACTER_ERROR_NONE
     RendererErrorValue = 0
     FallbackValue = CHARACTER_FALLBACK_NONE
+    CleanupRendererErrorValue = 0
 
 End Sub
 

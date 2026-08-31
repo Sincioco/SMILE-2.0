@@ -33,12 +33,12 @@ if ($null -eq $dotnet) {
 }
 else {
     $sdkVersion = (& $dotnet.Source --version 2>$null | Select-Object -First 1).Trim()
-    if ($LASTEXITCODE -eq 0 -and $sdkVersion -eq "10.0.302") {
+    if ($LASTEXITCODE -eq 0 -and $sdkVersion -eq "10.0.400") {
         Pass ".NET SDK $sdkVersion"
     }
     else {
-        Fail ".NET SDK 10.0.302 is required; resolved '$sdkVersion'." `
-            "Install SDK 10.0.302 and rerun from this repository so global.json can select it."
+        Fail ".NET SDK 10.0.400 is required; resolved '$sdkVersion'." `
+            "Install SDK 10.0.400 and rerun from this repository so global.json can select it."
     }
 
     $targetingPacks = Join-Path (Split-Path $dotnet.Source -Parent) "packs\Microsoft.NETCore.App.Ref"

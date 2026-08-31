@@ -380,6 +380,7 @@ static int smile_target_height3d;
 static UINT smile_sample_count3d = 1;
 static UINT smile_sample_quality3d;
 static int smile_frame_active3d;
+static long long smile_resource_epoch3d = 1;
 static int smile_last_error3d;
 static long long smile_draw_call_count3d;
 static long long smile_submitted_triangle_count3d;
@@ -4595,6 +4596,9 @@ static void smile_3d_reset(void)
     smile_pbr_triangle_count3d = 0;
     smile_model_palette_upload_count3d = 0;
     smile_3d_reset_lights();
+    smile_resource_epoch3d++;
+    if (smile_resource_epoch3d <= 0 || smile_resource_epoch3d > 2147483647)
+        smile_resource_epoch3d = 1;
 }
 
 extern "C" long long smile_renderer3d_command(long long command,
@@ -4944,6 +4948,11 @@ extern "C" long long smile_renderer3d_command(long long command,
             { smile_last_error3d = 48; return 0; }
             smile_3d_clear_model_events(animator);
             return 1;
+        case SMILE_3D_RENDERER_STATE:
+            if (a == 1) return smile_resource_epoch3d;
+            if (a == 2) return smile_frame_active3d ? 1 : 0;
+            smile_last_error3d = 5;
+            return 0;
         default: smile_last_error3d = 1; return 0;
     }
 }
