@@ -1,0 +1,17 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>DragonfallVisualAdapterLab.smile</StartupFile>
+    <OutputName>DragonfallVisualAdapterLab</OutputName>
+    <ApplicationId>smile.examples.dragonfall.visual-adapter-lab</ApplicationId>
+    <GraphicsBackend>DirectX</GraphicsBackend>
+    <VSync>true</VSync>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="DragonfallVisualAdapterLab.smile" StartupOnly="true" />
+    <SmileSource Include="DragonfallVisualActor.smile" />
+    <Asset Include="TechnicalAssets\Generation2\AnimationArticulated.sm3d" />
+    <Asset Include="TechnicalAssets\Generation2\VfxAtlas.png" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

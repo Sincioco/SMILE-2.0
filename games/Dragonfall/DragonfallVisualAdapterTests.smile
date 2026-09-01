@@ -1,0 +1,291 @@
+Option Explicit
+
+Import Dragonfall.VisualActor As VisualActor
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Effects3D As Effects3D
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Scene3D As Scene3D
+
+Dim Camera As Core.Camera3D
+Dim Atlas As Core.Texture3D
+Dim AlphaMaterial As Core.Material3D
+Dim AdditiveMaterial As Core.Material3D
+Dim RibbonMaterial As Core.Material3D
+Dim ClassicObject As Core.Object3D
+Dim OwnedFallback As Core.Object3D
+Dim MissingFallback As Core.Object3D
+Dim MissingTextureFallback As Core.Object3D
+Dim Classic As VisualActor.Actor
+Dim Generation2 As VisualActor.Actor
+Dim AutoFallback As VisualActor.Actor
+Dim TextureFallback As VisualActor.Actor
+Dim Broken As VisualActor.Actor
+Dim Restarted As VisualActor.Actor
+Dim Options As VisualActor.CreateOptions
+Dim Bounds As Character3D.Bounds3D
+Dim Socket As Core.Vector3
+Dim Effect As Effects3D.Effect
+Dim FrameReady As Boolean
+Dim RestartIndex As Number
+Dim Failures As Number
+Dim CheckIndex As Number
+
+Game Window "Dragonfall M7A Visual Adapter Tests" Size 640 By 360
+
+Call Graphics3D.ResetRenderer3D()
+Call VisualActor.Shutdown()
+Call Character3D.Shutdown()
+
+Call Check(VisualActor.RELEASE_MODE = VisualActor.MODE_CLASSIC)
+Call Check(VisualActor.LiveActorCount() = 0)
+
+Camera = Graphics3D.DefaultCamera()
+Camera.Position.Y = 80
+Camera.Position.Z = -280
+Camera.Target.Y = 30
+Camera.Target.Z = 30
+Atlas = Graphics3D.LoadTexture3D(
+    "TechnicalAssets\Generation2\VfxAtlas.png",
+    Graphics3D.TEXTURE_FILTER_LINEAR,
+    Graphics3D.TEXTURE_WRAP_CLAMP
+)
+AlphaMaterial = Graphics3D.CreateMaterial3D(
+    Atlas,
+    Graphics3D.MATERIAL_ALPHA_BLEND,
+    255,
+    255,
+    255,
+    100,
+    True,
+    80,
+    0
+)
+AdditiveMaterial = Graphics3D.CreateMaterial3D(
+    Atlas,
+    Graphics3D.MATERIAL_ALPHA_ADDITIVE,
+    255,
+    255,
+    255,
+    100,
+    True,
+    160,
+    0
+)
+RibbonMaterial = Graphics3D.CreateMaterial3D(
+    Atlas,
+    Graphics3D.MATERIAL_ALPHA_ADDITIVE,
+    255,
+    236,
+    128,
+    100,
+    True,
+    190,
+    0
+)
+
+Call Check(Atlas.Handle <> 0)
+Call Check(AlphaMaterial.Handle <> 0)
+Call Check(AdditiveMaterial.Handle <> 0)
+Call Check(RibbonMaterial.Handle <> 0)
+Call Check(Effects3D.Initialize(
+    AlphaMaterial,
+    AdditiveMaterial,
+    RibbonMaterial,
+    Scene3D.QUALITY_LOW
+))
+Call Check(Effects3D.DefineStandardPresets())
+
+ClassicObject = Graphics3D.CreateCube3D(40)
+Options = ClassicOptions(ClassicObject, False)
+Classic = VisualActor.Create(Options)
+
+Call Check(VisualActor.IsValid(Classic))
+Call Check(VisualActor.Kind(Classic) = VisualActor.KIND_CLASSIC)
+Call Check(VisualActor.EffectiveMode(Classic) = VisualActor.MODE_CLASSIC)
+Call Check(VisualActor.Fallback(Classic) = VisualActor.FALLBACK_NONE)
+Call Check(VisualActor.Place(Classic, -60, 20, 30))
+Call Check(VisualActor.Rotate(Classic, 0, 25, 0))
+Call Check(VisualActor.SetScale(Classic, 125))
+Call Check(VisualActor.SetVisible(Classic, True))
+Call Check(VisualActor.SetShadows(Classic, True, True))
+Call Check(VisualActor.PlayState(Classic, VisualActor.STATE_ATTACK))
+
+Bounds = VisualActor.WorldBounds(Classic)
+
+Call Check(Bounds.Valid)
+Call Check(Bounds.Size.X = 50)
+Call Check(Bounds.Size.Y = 50)
+Call Check(VisualActor.PrimaryInteropHandle(Classic) = ClassicObject.Handle)
+
+OwnedFallback = Graphics3D.CreateCube3D(30)
+Options = CharacterOptions(VisualActor.MODE_AUTO, OwnedFallback, True)
+Generation2 = VisualActor.Create(Options)
+
+Call Check(VisualActor.IsValid(Generation2))
+Call Check(VisualActor.Kind(Generation2) = VisualActor.KIND_CHARACTER)
+Call Check(VisualActor.EffectiveMode(Generation2) = VisualActor.MODE_GENERATION_2)
+Call Check(VisualActor.Fallback(Generation2) = VisualActor.FALLBACK_NONE)
+Call Check(Not Graphics3D.ObjectHandleValid3D(OwnedFallback.Handle))
+Call Check(VisualActor.Place(Generation2, 45, 0, 30))
+Call Check(VisualActor.SetScale(Generation2, 900))
+Call Check(VisualActor.Rotate(Generation2, 0, -25, 0))
+Call Check(VisualActor.SetVisible(Generation2, True))
+Call Check(VisualActor.SetShadows(Generation2, True, True))
+Call Check(VisualActor.PlayState(Generation2, VisualActor.STATE_READY, 0))
+Call Check(VisualActor.UsedTechnicalClipFallback(Generation2))
+Call Check(VisualActor.Update(Generation2, 30))
+Call Check(VisualActor.SocketName(Generation2, VisualActor.ANCHOR_SWORD_TIP) = "HandTip")
+
+Socket = VisualActor.SocketPosition(Generation2, VisualActor.ANCHOR_SWORD_TIP)
+
+Call Check(Socket.X <> 0 Or Socket.Y <> 0 Or Socket.Z <> 0)
+Call Check(VisualActor.PlayState(Generation2, VisualActor.STATE_ATTACK, 0))
+Call Check(VisualActor.Update(Generation2, 520))
+
+Effect = VisualActor.SpawnEventEffect(Generation2, "Impact", 20260901)
+
+Call Check(Effects3D.IsActive(Effect))
+Call Check(Effects3D.Update(20))
+Call Check(Effects3D.Commit())
+Call Check(Scene3D.SetQuality(Scene3D.QUALITY_LOW))
+Call Check(Scene3D.UseLighting("EmberObservatory"))
+
+FrameReady = Scene3D.Begin(Camera, 3, 6, 14)
+
+If FrameReady Then
+
+    FrameReady = VisualActor.Draw(Classic)
+    FrameReady = VisualActor.Draw(Generation2) And FrameReady
+    FrameReady = Effects3D.Draw() And FrameReady
+    FrameReady = Scene3D.EndScene() And FrameReady
+
+End If
+
+Call Check(FrameReady)
+Call Check(Graphics3D.DrawCallCount3D() >= 3)
+Call Check(Graphics3D.SubmittedTriangleCount3D() > 0)
+
+MissingFallback = Graphics3D.CreateCube3D(24)
+Options = CharacterOptions(VisualActor.MODE_AUTO, MissingFallback, True)
+Options.CharacterPath = "TechnicalAssets\Generation2\Missing.sm3d"
+AutoFallback = VisualActor.Create(Options)
+
+Call Check(VisualActor.IsValid(AutoFallback))
+Call Check(VisualActor.Kind(AutoFallback) = VisualActor.KIND_CLASSIC)
+Call Check(VisualActor.Fallback(AutoFallback) = VisualActor.FALLBACK_CLASSIC)
+Call Check(VisualActor.PrimaryCharacterError(AutoFallback) = Character3D.CHARACTER_ERROR_MODEL_LOAD)
+Call Check(VisualActor.LastFallback() = VisualActor.FALLBACK_CLASSIC)
+Call Check(VisualActor.SetVisible(AutoFallback, True))
+
+Options = CharacterOptions(VisualActor.MODE_GENERATION_2, ClassicObject, False)
+Options.CharacterPath = "TechnicalAssets\Generation2\Missing.sm3d"
+Broken = VisualActor.Create(Options)
+
+Call Check(Not VisualActor.IsValid(Broken))
+Call Check(VisualActor.LastError() = VisualActor.ADAPTER_ERROR_CHARACTER_CREATE)
+Call Check(VisualActor.LastPrimaryCharacterError() = Character3D.CHARACTER_ERROR_MODEL_LOAD)
+Call Check(Graphics3D.ObjectHandleValid3D(ClassicObject.Handle))
+
+MissingTextureFallback = Graphics3D.CreateCube3D(28)
+Options = CharacterOptions(VisualActor.MODE_AUTO, MissingTextureFallback, True)
+Options.CharacterPath = "TechnicalAssets\Generation2\AnimationArticulatedMissingTexture.sm3d"
+Options.CharacterLoadPolicy = Character3D.CHARACTER_LOAD_REQUIRE_PBR
+TextureFallback = VisualActor.Create(Options)
+
+Call Check(VisualActor.IsValid(TextureFallback))
+Call Check(VisualActor.Kind(TextureFallback) = VisualActor.KIND_CLASSIC)
+Call Check(VisualActor.PrimaryCharacterError(TextureFallback) = Character3D.CHARACTER_ERROR_PBR_PREPARATION)
+
+For RestartIndex = 1 To 100
+
+    Options = CharacterOptions(VisualActor.MODE_AUTO, ClassicObject, False)
+    Restarted = VisualActor.Create(Options)
+
+    Call Check(VisualActor.IsValid(Restarted))
+    Call Check(VisualActor.Kind(Restarted) = VisualActor.KIND_CHARACTER)
+    Call Check(VisualActor.Update(Restarted, 10))
+    Call VisualActor.Destroy(Restarted)
+    Call Check(Not VisualActor.IsValid(Restarted))
+End For
+
+Call Check(VisualActor.LiveActorCount() = 4)
+Call Check(Character3D.LiveActorCount() = 1)
+
+Call Effects3D.Shutdown()
+Call VisualActor.Destroy(TextureFallback)
+Call VisualActor.Destroy(AutoFallback)
+Call VisualActor.Destroy(Generation2)
+Call VisualActor.Destroy(Classic)
+Call Graphics3D.DestroyObject3D(ClassicObject)
+Call Character3D.Shutdown()
+Call Graphics3D.DestroyMaterial3D(AlphaMaterial)
+Call Graphics3D.DestroyMaterial3D(AdditiveMaterial)
+Call Graphics3D.DestroyMaterial3D(RibbonMaterial)
+Call Graphics3D.DestroyTexture3D(Atlas)
+Call VisualActor.Shutdown()
+
+Call Check(VisualActor.LiveActorCount() = 0)
+Call Check(Character3D.LiveActorCount() = 0)
+Call Check(Character3D.CachedAssetCount() = 0)
+Call Check(Graphics3D.LiveModelCount3D() = 0)
+Call Check(Graphics3D.LiveAnimatorCount3D() = 0)
+Call Check(Graphics3D.LiveObjectCount3D() = 0)
+Call Check(Graphics3D.LiveMeshCount3D() = 0)
+Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+Call Check(Graphics3D.LiveTextureCount3D() = 0)
+
+If Failures = 0 Then
+    Print "Dragonfall M7A visual adapter tests passed."
+Else
+    Print "Dragonfall M7A visual adapter tests failed: "; Failures
+End If
+
+Sub Check(Condition As Boolean)
+
+    CheckIndex = CheckIndex + 1
+
+    If Not Condition Then
+        Failures = Failures + 1
+
+        Print "Failed check "; CheckIndex
+    End If
+
+End Sub
+
+Function ClassicOptions(ObjectValue As Core.Object3D, OwnsObject As Boolean) As VisualActor.CreateOptions
+
+    Dim Result As VisualActor.CreateOptions
+
+    Result.Mode = VisualActor.MODE_CLASSIC
+    Result.ClassicObject = ObjectValue
+    Result.OwnsClassic = OwnsObject
+    Result.ClassicWidth = 40
+    Result.ClassicHeight = 40
+    Result.ClassicDepth = 40
+
+    Return Result
+
+End Function
+
+Function CharacterOptions(
+    Mode As Number,
+    ObjectValue As Core.Object3D,
+    OwnsObject As Boolean
+) As VisualActor.CreateOptions
+
+    Dim Result As VisualActor.CreateOptions
+
+    Result.Mode = Mode
+    Result.CharacterPath = "TechnicalAssets\Generation2\AnimationArticulated.sm3d"
+    Result.CharacterLoadPolicy = Character3D.CHARACTER_LOAD_ALLOW_SIMPLE_FALLBACK
+    Result.TechnicalFixture = True
+    Result.ClassicObject = ObjectValue
+    Result.OwnsClassic = OwnsObject
+    Result.ClassicWidth = 30
+    Result.ClassicHeight = 30
+    Result.ClassicDepth = 30
+
+    Return Result
+
+End Function

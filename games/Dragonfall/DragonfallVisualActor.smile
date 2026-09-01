@@ -1,0 +1,1070 @@
+''' Dragonfall-local seam for Classic rigid and Character3D visual actors.
+Module Dragonfall.VisualActor
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Effects3D As Effects3D
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Public Const MAX_VISUAL_ACTORS = 16
+
+Public Const MODE_AUTO = 0
+Public Const MODE_CLASSIC = 1
+Public Const MODE_GENERATION_2 = 2
+Public Const RELEASE_MODE = MODE_CLASSIC
+
+Public Const KIND_NONE = 0
+Public Const KIND_CLASSIC = 1
+Public Const KIND_CHARACTER = 2
+
+Public Const FALLBACK_NONE = 0
+Public Const FALLBACK_CLASSIC = 1
+
+Public Const STATE_READY = 1
+Public Const STATE_APPROACH = 2
+Public Const STATE_ATTACK = 3
+Public Const STATE_SPECIAL = 4
+Public Const STATE_DEFEND = 5
+Public Const STATE_BLOCK_IMPACT = 6
+Public Const STATE_HIT = 7
+Public Const STATE_KO = 8
+Public Const STATE_VICTORY = 9
+
+Public Const ANCHOR_ROOT = 1
+Public Const ANCHOR_SWORD_BASE = 2
+Public Const ANCHOR_SWORD_TIP = 3
+Public Const ANCHOR_SHIELD_CENTER = 4
+Public Const ANCHOR_CHEST = 5
+Public Const ANCHOR_HEAD = 6
+
+Public Const ADAPTER_ERROR_NONE = 0
+Public Const ADAPTER_ERROR_INVALID_MODE = 1
+Public Const ADAPTER_ERROR_CAPACITY = 2
+Public Const ADAPTER_ERROR_CLASSIC_INVALID = 3
+Public Const ADAPTER_ERROR_CHARACTER_CREATE = 4
+Public Const ADAPTER_ERROR_INVALID_ACTOR = 5
+Public Const ADAPTER_ERROR_OPERATION = 6
+Public Const ADAPTER_ERROR_STATE = 7
+Public Const ADAPTER_ERROR_EVENT = 8
+
+Private Const HANDLE_FACTOR = 100
+Private Const MAX_GENERATION = 90000000
+
+''' A generation-safe Dragonfall visual identity.
+Public Type Actor
+    Handle As Number
+End Type
+
+''' Creation transfers ClassicObject ownership only when OwnsClassic is true.
+Public Type CreateOptions
+    Mode As Number
+    CharacterPath As Text
+    CharacterLoadPolicy As Number
+    TechnicalFixture As Boolean
+    ClassicObject As Core.Object3D
+    OwnsClassic As Boolean
+    ClassicWidth As Number
+    ClassicHeight As Number
+    ClassicDepth As Number
+End Type
+
+''' A mapped presentation event. Preset zero means no particle effect is requested.
+Public Type PresentationEvent
+    Available As Boolean
+    Name As Text
+    PresetId As Number
+    Anchor As Number
+    SocketName As Text
+End Type
+
+Private Dim Used[MAX_VISUAL_ACTORS] As Boolean
+Private Dim Generations[MAX_VISUAL_ACTORS] As Number
+Private Dim Kinds[MAX_VISUAL_ACTORS] As Number
+Private Dim RequestedModes[MAX_VISUAL_ACTORS] As Number
+Private Dim EffectiveModes[MAX_VISUAL_ACTORS] As Number
+Private Dim Fallbacks[MAX_VISUAL_ACTORS] As Number
+Private Dim PrimaryErrors[MAX_VISUAL_ACTORS] As Number
+Private Dim TechnicalFixtures[MAX_VISUAL_ACTORS] As Boolean
+Private Dim TechnicalClipFallbacks[MAX_VISUAL_ACTORS] As Boolean
+Private Dim OwnsClassicObjects[MAX_VISUAL_ACTORS] As Boolean
+Private Dim ClassicObjects[MAX_VISUAL_ACTORS] As Core.Object3D
+Private Dim CharacterActors[MAX_VISUAL_ACTORS] As Character3D.Actor
+Private Dim ClassicWidths[MAX_VISUAL_ACTORS] As Number
+Private Dim ClassicHeights[MAX_VISUAL_ACTORS] As Number
+Private Dim ClassicDepths[MAX_VISUAL_ACTORS] As Number
+Private Dim CurrentStates[MAX_VISUAL_ACTORS] As Number
+Private Dim ErrorValue As Number
+Private Dim PrimaryCharacterErrorValue As Number
+Private Dim FallbackValue As Number
+
+Private Function ValidMode(Mode As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Mode = MODE_AUTO Or Mode = MODE_CLASSIC Or Mode = MODE_GENERATION_2
+
+    Return Result
+
+End Function
+
+Private Function FindFreeSlot() As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    For Slot = 0 To MAX_VISUAL_ACTORS - 1
+
+        If Not Used[Slot] Then
+            Return Slot
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function NextGeneration(Slot As Number) As Number
+
+    Dim Result As Number
+
+    Result = Generations[Slot] + 1
+
+    If Result > MAX_GENERATION Then
+        Result = 1
+    End If
+
+    Return Result
+
+End Function
+
+Private Function ActorSlot(Value As Actor) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Generation As Number
+    Dim Slot As Number
+
+    If Value.Handle <= 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Slot = Value.Handle Mod HANDLE_FACTOR - 1
+    Generation = Value.Handle / HANDLE_FACTOR
+
+    If (Slot < 0 Or
+        Slot >= MAX_VISUAL_ACTORS Or
+        Not Used[Slot] Or
+        Generations[Slot] <> Generation) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function ClassicAvailable(Value As Core.Object3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Graphics3D.ObjectHandleValid3D(Value.Handle)
+
+    Return Result
+
+End Function
+
+Private Sub DestroyUnusedClassic(ByRef Options As CreateOptions)
+
+    If Options.OwnsClassic And ClassicAvailable(Options.ClassicObject) Then
+        Call Graphics3D.DestroyObject3D(Options.ClassicObject)
+    End If
+
+End Sub
+
+Private Function PublishClassic(
+    Slot As Number,
+    ByRef Options As CreateOptions,
+    PrimaryError As Number,
+    FallbackReason As Number
+) As Actor
+
+    Dim Result As Actor
+
+    Generations[Slot] = NextGeneration(Slot)
+    Used[Slot] = True
+    Kinds[Slot] = KIND_CLASSIC
+    RequestedModes[Slot] = Options.Mode
+    EffectiveModes[Slot] = MODE_CLASSIC
+    Fallbacks[Slot] = FallbackReason
+    PrimaryErrors[Slot] = PrimaryError
+    TechnicalFixtures[Slot] = False
+    TechnicalClipFallbacks[Slot] = False
+    OwnsClassicObjects[Slot] = Options.OwnsClassic
+    ClassicObjects[Slot] = Options.ClassicObject
+    ClassicWidths[Slot] = Max(1, Options.ClassicWidth)
+    ClassicHeights[Slot] = Max(1, Options.ClassicHeight)
+    ClassicDepths[Slot] = Max(1, Options.ClassicDepth)
+    CurrentStates[Slot] = STATE_READY
+    Result.Handle = Generations[Slot] * HANDLE_FACTOR + Slot + 1
+
+    Return Result
+
+End Function
+
+Private Function PublishCharacter(
+    Slot As Number,
+    ByRef Options As CreateOptions,
+    Candidate As Character3D.Actor
+) As Actor
+
+    Dim Result As Actor
+
+    Call DestroyUnusedClassic(Options)
+
+    Generations[Slot] = NextGeneration(Slot)
+    Used[Slot] = True
+    Kinds[Slot] = KIND_CHARACTER
+    RequestedModes[Slot] = Options.Mode
+    EffectiveModes[Slot] = MODE_GENERATION_2
+    Fallbacks[Slot] = FALLBACK_NONE
+    PrimaryErrors[Slot] = Character3D.CHARACTER_ERROR_NONE
+    TechnicalFixtures[Slot] = Options.TechnicalFixture
+    TechnicalClipFallbacks[Slot] = False
+    OwnsClassicObjects[Slot] = False
+    CharacterActors[Slot] = Candidate
+    CurrentStates[Slot] = STATE_READY
+    Result.Handle = Generations[Slot] * HANDLE_FACTOR + Slot + 1
+
+    Return Result
+
+End Function
+
+''' Creates one Classic or Character3D visual without publishing partial state.
+Public Function Create(ByRef Options As CreateOptions) As Actor
+
+    Dim Candidate As Character3D.Actor
+    Dim PrimaryError As Number
+    Dim Result As Actor
+    Dim Slot As Number
+
+    ErrorValue = ADAPTER_ERROR_NONE
+    PrimaryCharacterErrorValue = Character3D.CHARACTER_ERROR_NONE
+    FallbackValue = FALLBACK_NONE
+
+    If Not ValidMode(Options.Mode) Then
+        ErrorValue = ADAPTER_ERROR_INVALID_MODE
+
+        Return Result
+    End If
+
+    Slot = FindFreeSlot()
+
+    If Slot < 0 Then
+        ErrorValue = ADAPTER_ERROR_CAPACITY
+
+        Return Result
+    End If
+
+    If Options.Mode = MODE_CLASSIC Then
+
+        If Not ClassicAvailable(Options.ClassicObject) Then
+            ErrorValue = ADAPTER_ERROR_CLASSIC_INVALID
+
+            Return Result
+        End If
+
+        Result = PublishClassic(Slot, Options, Character3D.CHARACTER_ERROR_NONE, FALLBACK_NONE)
+
+        Return Result
+
+    End If
+
+    Candidate = Character3D.LoadWithPolicy(Options.CharacterPath, Options.CharacterLoadPolicy)
+
+    If Candidate.Handle <> 0 Then
+
+        If Not Character3D.SetRootMotion(Candidate, Character3D.ROOT_MOTION_IGNORE) Then
+
+            PrimaryError = Character3D.LastError()
+
+            Call Character3D.Destroy(Candidate)
+
+            ErrorValue = ADAPTER_ERROR_CHARACTER_CREATE
+            PrimaryCharacterErrorValue = PrimaryError
+
+            Return Result
+
+        End If
+
+        Result = PublishCharacter(Slot, Options, Candidate)
+
+        Return Result
+
+    End If
+
+    PrimaryError = Character3D.LastError()
+    PrimaryCharacterErrorValue = PrimaryError
+
+    If Options.Mode = MODE_AUTO And ClassicAvailable(Options.ClassicObject) Then
+
+        FallbackValue = FALLBACK_CLASSIC
+        Result = PublishClassic(Slot, Options, PrimaryError, FALLBACK_CLASSIC)
+
+        Return Result
+
+    End If
+
+    ErrorValue = ADAPTER_ERROR_CHARACTER_CREATE
+
+    Return Result
+
+End Function
+
+''' Destroys owned resources. Borrowed Classic objects remain caller-owned.
+Public Sub Destroy(ByRef Value As Actor)
+
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Value.Handle = 0
+        Return
+    End If
+
+    If Kinds[Slot] = KIND_CHARACTER Then
+        Call Character3D.Destroy(CharacterActors[Slot])
+    Else If Kinds[Slot] = KIND_CLASSIC And OwnsClassicObjects[Slot] Then
+        Call Graphics3D.DestroyObject3D(ClassicObjects[Slot])
+    End If
+
+    Used[Slot] = False
+    Kinds[Slot] = KIND_NONE
+    RequestedModes[Slot] = MODE_AUTO
+    EffectiveModes[Slot] = MODE_AUTO
+    Fallbacks[Slot] = FALLBACK_NONE
+    PrimaryErrors[Slot] = Character3D.CHARACTER_ERROR_NONE
+    TechnicalFixtures[Slot] = False
+    TechnicalClipFallbacks[Slot] = False
+    OwnsClassicObjects[Slot] = False
+    ClassicObjects[Slot].Handle = 0
+    CharacterActors[Slot].Handle = 0
+    CurrentStates[Slot] = 0
+    Value.Handle = 0
+
+End Sub
+
+Public Sub Shutdown()
+
+    Dim Slot As Number
+    Dim Value As Actor
+
+    For Slot = 0 To MAX_VISUAL_ACTORS - 1
+
+        If Used[Slot] Then
+            Value.Handle = Generations[Slot] * HANDLE_FACTOR + Slot + 1
+
+            Call Destroy(Value)
+        End If
+
+    End For
+
+End Sub
+
+Public Function Place(ByRef Value As Actor, X As Number, Y As Number, Z As Number) As Boolean
+
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        ErrorValue = ADAPTER_ERROR_INVALID_ACTOR
+
+        Return False
+    End If
+
+    If Kinds[Slot] = KIND_CHARACTER Then
+        Result = Character3D.Place(CharacterActors[Slot], X, Y, Z)
+    Else
+        Result = Graphics3D.SetObjectPositionChecked3D(ClassicObjects[Slot], X, Y, Z)
+    End If
+
+    If Not Result Then
+        ErrorValue = ADAPTER_ERROR_OPERATION
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Rotate(ByRef Value As Actor, X As Number, Y As Number, Z As Number) As Boolean
+
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        ErrorValue = ADAPTER_ERROR_INVALID_ACTOR
+
+        Return False
+    End If
+
+    If Kinds[Slot] = KIND_CHARACTER Then
+        Result = Character3D.Rotate(CharacterActors[Slot], X, Y, Z)
+    Else
+        Result = Graphics3D.SetObjectRotationChecked3D(ClassicObjects[Slot], X, Y, Z)
+    End If
+
+    If Not Result Then
+        ErrorValue = ADAPTER_ERROR_OPERATION
+    End If
+
+    Return Result
+
+End Function
+
+Public Function SetScale(ByRef Value As Actor, Percent As Number) As Boolean
+
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        ErrorValue = ADAPTER_ERROR_INVALID_ACTOR
+
+        Return False
+    End If
+
+    If Kinds[Slot] = KIND_CHARACTER Then
+        Result = Character3D.SetScale(CharacterActors[Slot], Percent)
+    Else
+        Result = Graphics3D.SetObjectScaleChecked3D(ClassicObjects[Slot], Percent, Percent, Percent)
+    End If
+
+    If Not Result Then
+        ErrorValue = ADAPTER_ERROR_OPERATION
+    End If
+
+    Return Result
+
+End Function
+
+Public Function SetVisible(ByRef Value As Actor, Visible As Boolean) As Boolean
+
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        ErrorValue = ADAPTER_ERROR_INVALID_ACTOR
+
+        Return False
+    End If
+
+    If Kinds[Slot] = KIND_CHARACTER Then
+        Result = Character3D.SetVisible(CharacterActors[Slot], Visible)
+    Else
+        Result = Graphics3D.SetObjectVisibleChecked3D(ClassicObjects[Slot], Visible)
+    End If
+
+    If Not Result Then
+        ErrorValue = ADAPTER_ERROR_OPERATION
+    End If
+
+    Return Result
+
+End Function
+
+Public Function SetShadows(
+    ByRef Value As Actor,
+    CastsShadow As Boolean,
+    ReceivesShadow As Boolean
+) As Boolean
+
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        ErrorValue = ADAPTER_ERROR_INVALID_ACTOR
+
+        Return False
+    End If
+
+    If Kinds[Slot] = KIND_CHARACTER Then
+        Result = Character3D.SetShadows(CharacterActors[Slot], CastsShadow, ReceivesShadow)
+    Else
+        Result = Graphics3D.SetObjectShadowsChecked3D(
+            ClassicObjects[Slot],
+            CastsShadow,
+            ReceivesShadow
+        )
+    End If
+
+    If Not Result Then
+        ErrorValue = ADAPTER_ERROR_OPERATION
+    End If
+
+    Return Result
+
+End Function
+
+Private Function ProductionClip(State As Number) As Text
+
+    Dim Result As Text
+
+    If State = STATE_READY Then
+        Result = "Ready"
+    Else If State = STATE_APPROACH Then
+        Result = "Run"
+    Else If State = STATE_ATTACK Then
+        Result = "SwordAttack"
+    Else If State = STATE_SPECIAL Then
+        Result = "ShieldBash"
+    Else If State = STATE_DEFEND Then
+        Result = "Defend"
+    Else If State = STATE_BLOCK_IMPACT Then
+        Result = "BlockImpact"
+    Else If State = STATE_HIT Then
+        Result = "Hit"
+    Else If State = STATE_KO Then
+        Result = "KO"
+    Else If State = STATE_VICTORY Then
+        Result = "Victory"
+    End If
+
+    Return Result
+
+End Function
+
+Private Function FixtureClip(State As Number) As Text
+
+    Dim Result As Text
+
+    If State = STATE_READY Or State = STATE_VICTORY Then
+        Result = "Idle"
+    Else If State = STATE_APPROACH Then
+        Result = "WalkLike"
+    Else If State = STATE_ATTACK Then
+        Result = "AttackLike"
+    Else
+        Result = "Bend"
+    End If
+
+    Return Result
+
+End Function
+
+''' Maps Dragonfall presentation state to a clip without affecting battle timing.
+Public Function PlayState(
+    ByRef Value As Actor,
+    State As Number,
+    Optional FadeMilliseconds As Number = 100
+) As Boolean
+
+    Dim ClipName As Text
+    Dim Looping As Boolean
+    Dim Mode As Number
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        ErrorValue = ADAPTER_ERROR_INVALID_ACTOR
+
+        Return False
+    End If
+
+    ClipName = ProductionClip(State)
+
+    If ClipName = "" Then
+        ErrorValue = ADAPTER_ERROR_STATE
+
+        Return False
+    End If
+
+    CurrentStates[Slot] = State
+
+    If Kinds[Slot] = KIND_CLASSIC Then
+        Return True
+    End If
+
+    Looping = State = STATE_READY Or State = STATE_APPROACH Or State = STATE_DEFEND
+    Mode = Graphics3D.ANIMATION_ONCE
+
+    If Looping Then
+        Mode = Graphics3D.ANIMATION_LOOP
+    End If
+
+    If FadeMilliseconds > 0 Then
+        Result = Character3D.CrossFade(CharacterActors[Slot], ClipName, FadeMilliseconds, Mode)
+    Else
+        Result = Character3D.PlayMode(CharacterActors[Slot], ClipName, Mode, 100)
+    End If
+
+    TechnicalClipFallbacks[Slot] = False
+
+    If Not Result And TechnicalFixtures[Slot] Then
+
+        ClipName = FixtureClip(State)
+
+        If FadeMilliseconds > 0 Then
+            Result = Character3D.CrossFade(CharacterActors[Slot], ClipName, FadeMilliseconds, Mode)
+        Else
+            Result = Character3D.PlayMode(CharacterActors[Slot], ClipName, Mode, 100)
+        End If
+
+        TechnicalClipFallbacks[Slot] = Result
+
+    End If
+
+    If Not Result Then
+        ErrorValue = ADAPTER_ERROR_OPERATION
+        PrimaryCharacterErrorValue = Character3D.LastError()
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Update(ByRef Value As Actor, ElapsedMilliseconds As Number) As Boolean
+
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        ErrorValue = ADAPTER_ERROR_INVALID_ACTOR
+
+        Return False
+    End If
+
+    Result = True
+
+    If Kinds[Slot] = KIND_CHARACTER Then
+        Result = Character3D.Update(CharacterActors[Slot], ElapsedMilliseconds)
+    End If
+
+    If Not Result Then
+        ErrorValue = ADAPTER_ERROR_OPERATION
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Draw(Value As Actor) As Boolean
+
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        ErrorValue = ADAPTER_ERROR_INVALID_ACTOR
+
+        Return False
+    End If
+
+    If Kinds[Slot] = KIND_CHARACTER Then
+        Result = Character3D.Draw(CharacterActors[Slot])
+    Else
+        Result = Graphics3D.DrawObject3D(ClassicObjects[Slot])
+    End If
+
+    If Not Result Then
+        ErrorValue = ADAPTER_ERROR_OPERATION
+    End If
+
+    Return Result
+
+End Function
+
+Private Function ProductionSocket(Anchor As Number) As Text
+
+    Dim Result As Text
+
+    If Anchor = ANCHOR_SWORD_BASE Then
+        Result = "SwordBase"
+    Else If Anchor = ANCHOR_SWORD_TIP Then
+        Result = "SwordTip"
+    Else If Anchor = ANCHOR_SHIELD_CENTER Then
+        Result = "ShieldCenter"
+    Else If Anchor = ANCHOR_CHEST Then
+        Result = "Chest"
+    Else If Anchor = ANCHOR_HEAD Then
+        Result = "Head"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function SocketName(Value As Actor, Anchor As Number) As Text
+
+    Dim Result As Text
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Or Kinds[Slot] <> KIND_CHARACTER Then
+        Return Result
+    End If
+
+    Result = ProductionSocket(Anchor)
+
+    If Result <> "" And Character3D.HasSocket(CharacterActors[Slot], Result) Then
+        Return Result
+    End If
+
+    If TechnicalFixtures[Slot] And Anchor <> ANCHOR_ROOT Then
+        Result = "HandTip"
+    Else
+        Result = ""
+    End If
+
+    Return Result
+
+End Function
+
+Public Function SocketPosition(Value As Actor, Anchor As Number) As Core.Vector3
+
+    Dim Bounds As Character3D.Bounds3D
+    Dim Result As Core.Vector3
+    Dim Slot As Number
+    Dim Socket As Text
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return Result
+    End If
+
+    If Kinds[Slot] = KIND_CHARACTER Then
+
+        Socket = SocketName(Value, Anchor)
+
+        If Socket <> "" Then
+            Result = Character3D.SocketPosition(CharacterActors[Slot], Socket)
+        End If
+
+        Return Result
+
+    End If
+
+    Bounds = WorldBounds(Value)
+    Result = Bounds.Center
+
+    If Anchor = ANCHOR_HEAD Then
+        Result.Y = Bounds.Maximum.Y
+    Else If Anchor = ANCHOR_CHEST Then
+        Result.Y = Bounds.Center.Y + Bounds.Size.Y / 4
+    Else If Anchor = ANCHOR_SWORD_BASE Or Anchor = ANCHOR_SHIELD_CENTER Then
+        Result.X = Bounds.Maximum.X
+    Else If Anchor = ANCHOR_SWORD_TIP Then
+        Result.X = Bounds.Maximum.X + Bounds.Size.X / 2
+    End If
+
+    Return Result
+
+End Function
+
+Public Function TakeEvent(ByRef Value As Actor, EventName As Text) As PresentationEvent
+
+    Dim Result As PresentationEvent
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Or Kinds[Slot] <> KIND_CHARACTER Then
+        Return Result
+    End If
+
+    If Not Character3D.TakeEvent(CharacterActors[Slot], EventName) Then
+        Return Result
+    End If
+
+    Result.Available = True
+    Result.Name = EventName
+
+    If EventName = "SwordImpact" Or EventName = "Impact" Then
+        Result.PresetId = Effects3D.PRESET_HOLY_SWORD_STRIKE
+        Result.Anchor = ANCHOR_SWORD_TIP
+    Else If EventName = "ShieldImpact" Then
+        Result.PresetId = Effects3D.PRESET_SHIELD_IMPACT
+        Result.Anchor = ANCHOR_SHIELD_CENTER
+    Else If EventName = "SwordTrailOn" Or EventName = "AttackStart" Then
+        Result.Anchor = ANCHOR_SWORD_BASE
+    Else If EventName = "Footstep" Then
+        Result.Anchor = ANCHOR_ROOT
+    End If
+
+    Result.SocketName = SocketName(Value, Result.Anchor)
+
+    Return Result
+
+End Function
+
+''' Consumes a named animation event and maps supported impacts into Effects3D.
+Public Function SpawnEventEffect(
+    ByRef Value As Actor,
+    EventName As Text,
+    Seed As Number
+) As Effects3D.Effect
+
+    Dim EventValue As PresentationEvent
+    Dim Result As Effects3D.Effect
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        ErrorValue = ADAPTER_ERROR_INVALID_ACTOR
+
+        Return Result
+    End If
+
+    EventValue = TakeEvent(Value, EventName)
+
+    If (Not EventValue.Available Or
+        EventValue.PresetId = 0 Or
+        EventValue.SocketName = "") Then
+        ErrorValue = ADAPTER_ERROR_EVENT
+
+        Return Result
+    End If
+
+    Result = Effects3D.SpawnAtSocket(
+        EventValue.PresetId,
+        CharacterActors[Slot],
+        EventValue.SocketName,
+        Seed
+    )
+
+    If Not Effects3D.IsActive(Result) Then
+        ErrorValue = ADAPTER_ERROR_EVENT
+    End If
+
+    Return Result
+
+End Function
+
+Public Function WorldBounds(Value As Actor) As Character3D.Bounds3D
+
+    Dim Depth As Number
+    Dim Height As Number
+    Dim Result As Character3D.Bounds3D
+    Dim ScaleX As Number
+    Dim ScaleY As Number
+    Dim ScaleZ As Number
+    Dim Slot As Number
+    Dim Width As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return Result
+    End If
+
+    If Kinds[Slot] = KIND_CHARACTER Then
+        Result = Character3D.WorldBounds(CharacterActors[Slot])
+
+        Return Result
+    End If
+
+    ScaleX = ClassicObjects[Slot].ScaleX
+    ScaleY = ClassicObjects[Slot].ScaleY
+    ScaleZ = ClassicObjects[Slot].ScaleZ
+    Width = ClassicWidths[Slot] * ScaleX / 100
+    Height = ClassicHeights[Slot] * ScaleY / 100
+    Depth = ClassicDepths[Slot] * ScaleZ / 100
+    Result.Center = ClassicObjects[Slot].Position
+    Result.Size.X = Width
+    Result.Size.Y = Height
+    Result.Size.Z = Depth
+    Result.Minimum.X = Result.Center.X - Width / 2
+    Result.Minimum.Y = Result.Center.Y - Height / 2
+    Result.Minimum.Z = Result.Center.Z - Depth / 2
+    Result.Maximum.X = Result.Center.X + Width / 2
+    Result.Maximum.Y = Result.Center.Y + Height / 2
+    Result.Maximum.Z = Result.Center.Z + Depth / 2
+    Result.Radius = Max(Width, Max(Height, Depth)) / 2
+    Result.Valid = True
+
+    Return Result
+
+End Function
+
+Public Function PrimaryInteropHandle(Value As Actor) As Number
+
+    Dim Result As Number
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    If Kinds[Slot] = KIND_CHARACTER Then
+        Result = Character3D.PrimaryObjectHandle(CharacterActors[Slot])
+    Else
+        Result = ClassicObjects[Slot].Handle
+    End If
+
+    Return Result
+
+End Function
+
+Public Function IsValid(Value As Actor) As Boolean
+
+    Dim Result As Boolean
+
+    Result = ActorSlot(Value) >= 0
+
+    Return Result
+
+End Function
+
+Public Function Kind(Value As Actor) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return KIND_NONE
+    End If
+
+    ReturnValue = Kinds[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function EffectiveMode(Value As Actor) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return MODE_AUTO
+    End If
+
+    ReturnValue = EffectiveModes[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Fallback(Value As Actor) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return FALLBACK_NONE
+    End If
+
+    ReturnValue = Fallbacks[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function PrimaryCharacterError(Value As Actor) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return Character3D.CHARACTER_ERROR_NONE
+    End If
+
+    ReturnValue = PrimaryErrors[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function UsedTechnicalClipFallback(Value As Actor) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    ReturnValue = TechnicalClipFallbacks[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function LiveActorCount() As Number
+
+    Dim CountValue As Number
+    Dim Slot As Number
+
+    For Slot = 0 To MAX_VISUAL_ACTORS - 1
+
+        If Used[Slot] Then
+            CountValue = CountValue + 1
+        End If
+
+    End For
+
+    Return CountValue
+
+End Function
+
+Public Function LastError() As Number
+
+    Return ErrorValue
+
+End Function
+
+Public Function LastPrimaryCharacterError() As Number
+
+    Return PrimaryCharacterErrorValue
+
+End Function
+
+Public Function LastFallback() As Number
+
+    Return FallbackValue
+
+End Function
+
+End Module

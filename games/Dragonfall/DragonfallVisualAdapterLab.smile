@@ -1,0 +1,238 @@
+Option Explicit
+
+Import Dragonfall.VisualActor As VisualActor
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Effects3D As Effects3D
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Scene3D As Scene3D
+
+Dim Camera As Core.Camera3D
+Dim Floor As Core.Object3D
+Dim ClassicObject As Core.Object3D
+Dim ClassicMaterial As Core.Material3D
+Dim Atlas As Core.Texture3D
+Dim AlphaMaterial As Core.Material3D
+Dim AdditiveMaterial As Core.Material3D
+Dim RibbonMaterial As Core.Material3D
+Dim Classic As VisualActor.Actor
+Dim Generation2 As VisualActor.Actor
+Dim Options As VisualActor.CreateOptions
+Dim Effect As Effects3D.Effect
+Dim Running As Boolean
+Dim Ready As Boolean
+Dim PreviousTime As Number
+Dim CurrentTime As Number
+Dim FrameMilliseconds As Number
+Dim AttackTimer As Number
+Dim ImpactPending As Boolean
+Dim Key As Number
+
+Game Window "Dragonfall M7A Visual Adapter Lab" Size 960 By 540
+
+Call Graphics3D.ResetRenderer3D()
+Call LoadLab()
+
+Running = Ready
+PreviousTime = Timer()
+
+Do
+
+    Get Key Key
+
+    If Key = KEY_ESCAPE Then
+        Running = False
+    Else If Key = KEY_SPACE Then
+        Call TriggerAttack()
+    End If
+
+    CurrentTime = Timer()
+    FrameMilliseconds = Min(40, Max(0, CurrentTime - PreviousTime))
+    PreviousTime = CurrentTime
+    AttackTimer = AttackTimer + FrameMilliseconds
+
+    If AttackTimer >= 1800 Then
+        Call TriggerAttack()
+    End If
+
+    Ready = VisualActor.Update(Generation2, FrameMilliseconds)
+
+    If ImpactPending And AttackTimer >= 520 Then
+        Effect = VisualActor.SpawnEventEffect(Generation2, "Impact", 20260901 + AttackTimer)
+        ImpactPending = False
+    End If
+
+    Ready = Effects3D.Update(FrameMilliseconds) And Ready
+    Ready = Effects3D.Commit() And Ready
+    Camera.Position.X = Effects3D.CameraShakeX()
+    Camera.Position.Y = 92 + Effects3D.CameraShakeY()
+    Camera.Position.Z = -315 + Effects3D.CameraShakeZ()
+    Camera.Target.X = 0
+    Camera.Target.Y = 34
+    Camera.Target.Z = 42
+    Ready = Scene3D.Begin(Camera, 3, 6, 16) And Ready
+
+    If Ready Then
+
+        Ready = Graphics3D.DrawObject3D(Floor)
+        Ready = VisualActor.Draw(Classic) And Ready
+        Ready = VisualActor.Draw(Generation2) And Ready
+        Ready = Effects3D.Draw() And Ready
+        Ready = Scene3D.EndScene() And Ready
+
+    End If
+
+    Call DrawOverlay()
+
+    Show Screen
+
+    Running = Running And Ready And Not Game_Closed()
+
+Loop Until Not Running
+
+Call DestroyLab()
+
+Sub LoadLab()
+
+    Camera = Graphics3D.DefaultCamera()
+    Floor = Graphics3D.CreatePlane3D(420, 250)
+    ClassicObject = Graphics3D.CreateCube3D(42)
+    Atlas = Graphics3D.LoadTexture3D(
+        "TechnicalAssets\Generation2\VfxAtlas.png",
+        Graphics3D.TEXTURE_FILTER_LINEAR,
+        Graphics3D.TEXTURE_WRAP_CLAMP
+    )
+    ClassicMaterial = Graphics3D.CreateMaterial3D(
+        Atlas,
+        Graphics3D.MATERIAL_ALPHA_OPAQUE,
+        238,
+        185,
+        66,
+        100,
+        False,
+        20,
+        0
+    )
+    AlphaMaterial = Graphics3D.CreateMaterial3D(
+        Atlas,
+        Graphics3D.MATERIAL_ALPHA_BLEND,
+        255,
+        255,
+        255,
+        100,
+        True,
+        80,
+        0
+    )
+    AdditiveMaterial = Graphics3D.CreateMaterial3D(
+        Atlas,
+        Graphics3D.MATERIAL_ALPHA_ADDITIVE,
+        255,
+        255,
+        255,
+        100,
+        True,
+        160,
+        0
+    )
+    RibbonMaterial = Graphics3D.CreateMaterial3D(
+        Atlas,
+        Graphics3D.MATERIAL_ALPHA_ADDITIVE,
+        255,
+        236,
+        128,
+        100,
+        True,
+        190,
+        0
+    )
+
+    Call Graphics3D.SetObjectPosition(Floor, 0, -4, 45)
+
+    Ready = Graphics3D.SetObjectMaterial3D(ClassicObject, ClassicMaterial)
+    Ready = Effects3D.Initialize(
+        AlphaMaterial,
+        AdditiveMaterial,
+        RibbonMaterial,
+        Scene3D.QUALITY_HIGH
+    ) And Ready
+    Ready = Effects3D.DefineStandardPresets() And Ready
+    Ready = Scene3D.SetQuality(Scene3D.QUALITY_HIGH) And Ready
+    Ready = Scene3D.UseLighting("EmberObservatory") And Ready
+
+    Options.Mode = VisualActor.MODE_CLASSIC
+    Options.ClassicObject = ClassicObject
+    Options.OwnsClassic = False
+    Options.ClassicWidth = 42
+    Options.ClassicHeight = 42
+    Options.ClassicDepth = 42
+    Classic = VisualActor.Create(Options)
+    Ready = VisualActor.IsValid(Classic) And Ready
+    Ready = VisualActor.Place(Classic, -72, 20, 45) And Ready
+    Ready = VisualActor.Rotate(Classic, 0, 20, 0) And Ready
+    Ready = VisualActor.SetShadows(Classic, True, True) And Ready
+
+    Options.Mode = VisualActor.MODE_GENERATION_2
+    Options.CharacterPath = "TechnicalAssets\Generation2\AnimationArticulated.sm3d"
+    Options.CharacterLoadPolicy = Character3D.CHARACTER_LOAD_ALLOW_SIMPLE_FALLBACK
+    Options.TechnicalFixture = True
+    Options.ClassicObject.Handle = 0
+    Options.OwnsClassic = False
+    Generation2 = VisualActor.Create(Options)
+    Ready = VisualActor.IsValid(Generation2) And Ready
+    Ready = VisualActor.Place(Generation2, 58, 0, 45) And Ready
+    Ready = VisualActor.SetScale(Generation2, 1000) And Ready
+    Ready = VisualActor.Rotate(Generation2, 0, -20, 0) And Ready
+    Ready = VisualActor.SetShadows(Generation2, True, True) And Ready
+
+    Call TriggerAttack()
+
+End Sub
+
+Sub TriggerAttack()
+
+    AttackTimer = 0
+    ImpactPending = True
+    Ready = VisualActor.PlayState(Generation2, VisualActor.STATE_ATTACK, 120)
+
+End Sub
+
+Sub DrawOverlay()
+
+    Fill Rectangle 0, 0, 960, 78, Rgb(3, 7, 18)
+    Draw Text "DRAGONFALL M7A  •  MIXED VISUAL ADAPTER" At 20, 12 Size 22 Color CYAN
+    Draw Text "Technical integration proof — Classic remains the release path" At 20, 45 Size 14 Color LIGHT_GRAY
+    Draw Text "CLASSIC RIGID PROXY" At 116, 438 Size 16 Color YELLOW
+    Draw Text "CHARACTER3D ARTICULATED FIXTURE" At 492, 438 Size 16 Color LIGHT_BLUE
+    Draw Text "Space: Replay Attack   Esc: Exit" At 20, 510 Size 13 Color WHITE
+    Fill Rectangle 704, 92, 236, 170, Rgb(4, 9, 24)
+    Draw Text "LIVE SEAM" At 722, 108 Size 16 Color WHITE
+    Draw Text "Release Mode" At 722, 140 Size 13 Color LIGHT_GRAY
+    Draw Number VisualActor.RELEASE_MODE At 894, 140 Size 13 Color YELLOW
+    Draw Text "Visual Actors" At 722, 166 Size 13 Color LIGHT_GRAY
+    Draw Number VisualActor.LiveActorCount() At 894, 166 Size 13 Color GREEN
+    Draw Text "Character Actors" At 722, 192 Size 13 Color LIGHT_GRAY
+    Draw Number Character3D.LiveActorCount() At 894, 192 Size 13 Color CYAN
+    Draw Text "Draws / Triangles" At 722, 218 Size 13 Color LIGHT_GRAY
+    Draw Number Graphics3D.DrawCallCount3D() At 860, 218 Size 13 Color WHITE
+    Draw Number Graphics3D.SubmittedTriangleCount3D() At 906, 218 Size 13 Color WHITE
+    Draw Text "Fixture only — not production Arin" At 722, 244 Size 12 Color ORANGE
+
+End Sub
+
+Sub DestroyLab()
+
+    Call Effects3D.Shutdown()
+    Call VisualActor.Destroy(Generation2)
+    Call VisualActor.Destroy(Classic)
+    Call Character3D.Shutdown()
+    Call Graphics3D.DestroyObject3D(ClassicObject)
+    Call Graphics3D.DestroyObject3D(Floor)
+    Call Graphics3D.DestroyMaterial3D(ClassicMaterial)
+    Call Graphics3D.DestroyMaterial3D(AlphaMaterial)
+    Call Graphics3D.DestroyMaterial3D(AdditiveMaterial)
+    Call Graphics3D.DestroyMaterial3D(RibbonMaterial)
+    Call Graphics3D.DestroyTexture3D(Atlas)
+    Call Graphics3D.ResetRenderer3D()
+
+End Sub
