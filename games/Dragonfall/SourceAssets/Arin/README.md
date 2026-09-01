@@ -1,6 +1,8 @@
-# Arin / Paladin Prototype Source Asset
+# Arin Prototype Source Asset
 
-This folder preserves the original user-supplied GLB and the deterministic repository-owned preparation inputs for the first loadable Arin / Paladin prototype.
+This folder preserves the original user-supplied GLB and the deterministic repository-owned preparation inputs for the first loadable Arin prototype. Arin is the character's official name; Paladin is his party role.
+
+Canonical asset identity is `sin-star-i.character-1.paladin`. `dragonfall.arin-prototype` is an explicit temporary engine-integration alias, not a second character identity. See `paladin-prototype-asset.json` for the bounded prototype/release state and `paladin-reference-images.json` for non-runtime art-direction references.
 
 ## Intake record
 

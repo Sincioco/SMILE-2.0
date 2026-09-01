@@ -80,6 +80,7 @@ public enum SyntaxKind
     PointerDeltaXKeyword,
     PointerDeltaYKeyword,
     PointerWheelDeltaKeyword,
+    PointerWheelRemainderKeyword,
     PointerInsideKeyword,
     PointerHeldKeyword,
     PointerPressedKeyword,
@@ -174,6 +175,7 @@ public enum SyntaxKind
     KeyAKeyword,
     KeySKeyword,
     KeyDKeyword,
+    KeyOKeyword,
     KeyUpKeyword,
     KeyDownKeyword,
     KeyLeftKeyword,
@@ -291,6 +293,7 @@ public static class SyntaxFacts
         ["Pointer_Delta_X"] = SyntaxKind.PointerDeltaXKeyword,
         ["Pointer_Delta_Y"] = SyntaxKind.PointerDeltaYKeyword,
         ["Pointer_Wheel_Delta"] = SyntaxKind.PointerWheelDeltaKeyword,
+        ["Pointer_Wheel_Remainder"] = SyntaxKind.PointerWheelRemainderKeyword,
         ["Pointer_Inside"] = SyntaxKind.PointerInsideKeyword,
         ["Pointer_Held"] = SyntaxKind.PointerHeldKeyword,
         ["Pointer_Pressed"] = SyntaxKind.PointerPressedKeyword,
@@ -385,6 +388,7 @@ public static class SyntaxFacts
         ["KEY_A"] = SyntaxKind.KeyAKeyword,
         ["KEY_S"] = SyntaxKind.KeySKeyword,
         ["KEY_D"] = SyntaxKind.KeyDKeyword,
+        ["KEY_O"] = SyntaxKind.KeyOKeyword,
         ["KEY_UP"] = SyntaxKind.KeyUpKeyword,
         ["KEY_DOWN"] = SyntaxKind.KeyDownKeyword,
         ["KEY_LEFT"] = SyntaxKind.KeyLeftKeyword,
@@ -448,7 +452,8 @@ public static class SyntaxFacts
         {
             SyntaxKind.TimerKeyword or SyntaxKind.GameClosedKeyword or SyntaxKind.PointerXKeyword or
                 SyntaxKind.PointerYKeyword or SyntaxKind.PointerDeltaXKeyword or SyntaxKind.PointerDeltaYKeyword or
-                SyntaxKind.PointerWheelDeltaKeyword or SyntaxKind.PointerInsideKeyword => NoParameters,
+                SyntaxKind.PointerWheelDeltaKeyword or SyntaxKind.PointerWheelRemainderKeyword or
+                SyntaxKind.PointerInsideKeyword => NoParameters,
             SyntaxKind.AbsKeyword => ValueParameter,
             SyntaxKind.KeyHeldKeyword => KeyParameter,
             SyntaxKind.PointerHeldKeyword or SyntaxKind.PointerPressedKeyword or SyntaxKind.PointerReleasedKeyword =>
@@ -545,6 +550,7 @@ public static class SyntaxFacts
             SyntaxKind.KeyAKeyword => 2,
             SyntaxKind.KeySKeyword => 3,
             SyntaxKind.KeyDKeyword => 4,
+            SyntaxKind.KeyOKeyword => 27,
             SyntaxKind.KeyUpKeyword => 10,
             SyntaxKind.KeyDownKeyword => 11,
             SyntaxKind.KeyLeftKeyword => 12,

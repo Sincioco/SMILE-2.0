@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "preparationVersion": 2,
+  "assetId": "sin-star-i.character-1.paladin",
+  "characterName": "Arin",
+  "partyRole": "Paladin",
+  "source": {
+    "path": "sin-star-i-character-1-paladin-tripo-v01.original.glb",
+    "sha256": "0B75E3664FC2743637C9E75E86A55EBDFB8D4A4E3740AC06E593ADE1588013F6",
+    "bytes": 1479468
+  },
+  "descriptor": {
+    "path": "ArinPrototype.sm3d.json",
+    "sha256": "6971E13A17D2741E29E4774F3CAD3E52D221AD6491C36A83D4454AFDA1813306"
+  },
+  "tool": {
+    "path": "artifacts/assettool/smileasset.exe",
+    "fileVersion": "1.0.0.0",
+    "sha256": "7E14B18F29B92026D9294CEA5BF8E70E9903DEF968F12EB6DF524E4522E244A1"
+  },
+  "prepared": {
+    "gltfSha256": "125EF4C92C4FF91E99D989C5EEB7C5EE7EA61D384B6721B5A14104BFDC3B4067",
+    "binarySha256": "BC84950418D6949E89E48D586C88C7DC408E4172A3B743BBE66C911A9577E893",
+    "modelSha256": "859C96D0F763DE96130DBE82C6A526D2886986FFAD50FCE8D644FA55064A3121"
+  },
+  "textures": [
+    {
+      "semantic": "normal",
+      "imageIndex": 0,
+      "width": 1024,
+      "height": 1024,
+      "sha256": "942A193949BEF7B067B0113553A7788604AA01E3716B963354E1905765FC472E",
+      "output": "Textures/Arin-normal.png"
+    },
+    {
+      "semantic": "base-color",
+      "imageIndex": 1,
+      "width": 1024,
+      "height": 1024,
+      "sha256": "CAEAF1BAFF6C7F0B465A75F0808A0DF2EC8998C9562A9341E41209E978B89254",
+      "output": "Textures/Arin-base-color.png"
+    },
+    {
+      "semantic": "orm",
+      "imageIndex": 2,
+      "width": 1024,
+      "height": 1024,
+      "sha256": "DC9AEE72FCCD2512154D44887F8B29749AD17A5FB65D7432703731D6944B65DD",
+      "output": "Textures/Arin-orm.png"
+    }
+  ],
+  "ormPolicy": "Set occlusion red to 255; preserve roughness green, metallic blue, and alpha.",
+  "sourceOcclusionBinding": "Absent; published red channel is neutral white.",
+  "sourceQualityNotice": "PNG publication changes the container; it cannot restore precision lost to source JPEG compression."
+}

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "assetId": "sin-star-i.character-1.paladin",
+  "characterName": "Arin",
+  "partyRole": "Paladin",
+  "purpose": "art-direction-reference",
+  "runtimeAsset": false,
+  "inputToTripo": null,
+  "finalApprovedDesign": false,
+  "knownDifferenceFromPrototypeGlb": "The current GLB is a technical prototype whose silhouette, materials, textures, rig, clips, and sockets are not production-approved.",
+  "images": [
+    {
+      "path": "../../../SinStarI/Assets/Characters/Sin Star - Character 1 - Paladin - Back.png",
+      "sha256": "10C515EFF59EF82E85BD5A8351BC8530EAAE9B09A2454C2B8137AB13108A30DB",
+      "view": "back"
+    },
+    {
+      "path": "../../../SinStarI/Assets/Characters/Sin Star - Character 1 - Paladin - Front.png",
+      "sha256": "460B8B05F29783F98DE0326FD6DABAB04EA2F6225B435378EF18815EE0B572A5",
+      "view": "front"
+    },
+    {
+      "path": "../../../SinStarI/Assets/Characters/Sin Star - Character 1 - Paladin - Left.png",
+      "sha256": "4A56DB183CD9C8C43DCA5FD7AFE614CF993313DF42D02812FC38ECC9C8AD81F4",
+      "view": "left"
+    },
+    {
+      "path": "../../../SinStarI/Assets/Characters/Sin Star - Character 1 - Paladin - Right.png",
+      "sha256": "AF63AAC745720FB273FE62DEFB4FD080A25B97C156DCE173EC6EB24194A5EF86",
+      "view": "right"
+    }
+  ]
+}

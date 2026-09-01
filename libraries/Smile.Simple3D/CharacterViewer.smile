@@ -1,0 +1,224 @@
+''' Reusable character-viewer profile, automatic framing, and smooth zoom helpers.
+Module Smile.Simple3D.CharacterViewer
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Core As Core
+
+Private Const MIN_SCALE_PERCENT = 1
+Private Const MAX_SCALE_PERCENT = 10000
+Private Const MIN_VIEW_HEIGHT = 20
+Private Const MAX_VIEW_HEIGHT = 1000
+Private Const MIN_MARGIN_PERCENT = 0
+Private Const MAX_MARGIN_PERCENT = 100
+Private Const MIN_ZOOM_RATE = 1000
+Private Const MAX_ZOOM_RATE = 360000
+
+''' Bounded, data-driven inputs for one inspectable character asset.
+Public Type Profile
+    Version As Number
+    AssetId As Text
+    DisplayName As Text
+    PartyRole As Text
+    PrototypeAlias As Text
+    AssetPath As Text
+    DesiredWorldHeight As Number
+    MarginPercent As Number
+    AnimationMargin As Number
+    DefaultPlaybackSpeed As Number
+    MinimumPlaybackSpeed As Number
+    MaximumPlaybackSpeed As Number
+End Type
+
+''' Deterministic placement and camera values derived from local model bounds.
+Public Type Framing
+    ScalePercent As Number
+    PositionX As Number
+    PositionY As Number
+    PositionZ As Number
+    TargetY As Number
+    CameraY As Number
+    CameraZ As Number
+    FloorWidth As Number
+    FloorDepth As Number
+    PanXLimit As Number
+    PanYLimit As Number
+    ShadowWidth As Number
+    ShadowDepth As Number
+    ShadowNear As Number
+    ShadowFar As Number
+    Valid As Boolean
+End Type
+
+''' Fixed-thousandths zoom state whose advance is elapsed-time based.
+Public Type ZoomState
+    Current1000 As Number
+    Target1000 As Number
+    RatePerSecond1000 As Number
+    AdvanceRemainder As Number
+    Minimum1000 As Number
+    Maximum1000 As Number
+End Type
+
+''' Validates the bounded fields required by every character-viewer profile.
+Public Function ValidateProfile(Value As Profile) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Value.Version = 1 And
+        Value.AssetId <> "" And
+        Value.DisplayName <> "" And
+        Value.AssetPath <> "" And
+        Value.DesiredWorldHeight >= MIN_VIEW_HEIGHT And
+        Value.DesiredWorldHeight <= MAX_VIEW_HEIGHT And
+        Value.MarginPercent >= MIN_MARGIN_PERCENT And
+        Value.MarginPercent <= MAX_MARGIN_PERCENT And
+        Value.AnimationMargin >= 0 And
+        Value.AnimationMargin <= MAX_VIEW_HEIGHT And
+        Value.MinimumPlaybackSpeed >= 25 And
+        Value.MaximumPlaybackSpeed <= 200 And
+        Value.MinimumPlaybackSpeed <= Value.DefaultPlaybackSpeed And
+        Value.DefaultPlaybackSpeed <= Value.MaximumPlaybackSpeed)
+
+    Return Result
+
+End Function
+
+''' Derives a grounded, centered character and bounded studio camera from local bounds.
+Public Function AutoFit(Value As Profile, Bounds As Character3D.Bounds3D) As Framing
+
+    Dim Result As Framing
+    Dim ScaledMinimumY1000 As Number
+    Dim ScaledCenterX1000 As Number
+    Dim ScaledCenterZ1000 As Number
+    Dim FittedHeight As Number
+    Dim PaddedHeight As Number
+
+    If Not ValidateProfile(Value) Or Not Bounds.Valid Or Bounds.Size.Y <= 0 Then
+        Return Result
+    End If
+
+    Result.ScalePercent = Value.DesiredWorldHeight * 100000 / Bounds.Size.Y
+    Result.ScalePercent = Min(MAX_SCALE_PERCENT, Max(MIN_SCALE_PERCENT, Result.ScalePercent))
+    ScaledMinimumY1000 = Bounds.Minimum.Y * Result.ScalePercent / 100
+    ScaledCenterX1000 = Bounds.Center.X * Result.ScalePercent / 100
+    ScaledCenterZ1000 = Bounds.Center.Z * Result.ScalePercent / 100
+    FittedHeight = Bounds.Size.Y * Result.ScalePercent / 100000
+    PaddedHeight = FittedHeight * (100 + Value.MarginPercent) / 100
+    Result.PositionX = 0 - ScaledCenterX1000 / 1000
+    Result.PositionY = 0 - ScaledMinimumY1000 / 1000
+    Result.PositionZ = 0 - ScaledCenterZ1000 / 1000
+    Result.TargetY = FittedHeight / 2
+    Result.CameraY = Result.TargetY
+    Result.CameraZ = 0 - PaddedHeight * 3 / 2
+    Result.FloorWidth = Max(200, PaddedHeight * 2)
+    Result.FloorDepth = Max(160, PaddedHeight * 3 / 2)
+    Result.PanXLimit = Max(40, PaddedHeight / 2)
+    Result.PanYLimit = Max(30, PaddedHeight / 3)
+    Result.ShadowWidth = Max(200, PaddedHeight * 2)
+    Result.ShadowDepth = Max(160, PaddedHeight * 3 / 2)
+    Result.ShadowNear = 1
+    Result.ShadowFar = Max(400, PaddedHeight * 3)
+    Result.Valid = True
+
+    Return Result
+
+End Function
+
+Public Sub InitializeZoom(
+    ByRef Value As ZoomState,
+    CurrentDegrees As Number,
+    MinimumDegrees As Number,
+    MaximumDegrees As Number,
+    RatePerSecond1000 As Number
+)
+
+    Value.Minimum1000 = MinimumDegrees * 1000
+    Value.Maximum1000 = MaximumDegrees * 1000
+    Value.Current1000 = Min(Value.Maximum1000, Max(Value.Minimum1000, CurrentDegrees * 1000))
+    Value.Target1000 = Value.Current1000
+    Value.RatePerSecond1000 = Min(MAX_ZOOM_RATE, Max(MIN_ZOOM_RATE, RatePerSecond1000))
+    Value.AdvanceRemainder = 0
+
+End Sub
+
+Public Sub AdjustZoomTarget(ByRef Value As ZoomState, WheelDelta As Number, DegreesPerStep As Number)
+
+    Dim NextTarget1000 As Number
+
+    NextTarget1000 = Value.Target1000 - WheelDelta * DegreesPerStep * 1000
+    Value.Target1000 = Min(Value.Maximum1000, Max(Value.Minimum1000, NextTarget1000))
+
+End Sub
+
+''' Advances smooth zoom by elapsed milliseconds while preserving fractional work.
+Public Function AdvanceZoom(ByRef Value As ZoomState, ElapsedMilliseconds As Number) As Boolean
+
+    Dim Advance1000 As Number
+    Dim Distance1000 As Number
+    Dim Total As Number
+
+    If ElapsedMilliseconds < 0 Or ElapsedMilliseconds > 1000 Then
+        Return False
+    End If
+
+    Total = Value.RatePerSecond1000 * ElapsedMilliseconds + Value.AdvanceRemainder
+    Advance1000 = Total / 1000
+    Value.AdvanceRemainder = Total - Advance1000 * 1000
+
+    If Value.Current1000 < Value.Target1000 Then
+        Distance1000 = Value.Target1000 - Value.Current1000
+        Value.Current1000 = Value.Current1000 + Min(Distance1000, Advance1000)
+    Else If Value.Current1000 > Value.Target1000 Then
+        Distance1000 = Value.Current1000 - Value.Target1000
+        Value.Current1000 = Value.Current1000 - Min(Distance1000, Advance1000)
+    End If
+
+    Return True
+
+End Function
+
+Public Function ZoomDegrees(Value As ZoomState) As Number
+
+    Dim Result As Number
+
+    Result = Value.Current1000 / 1000
+
+    Return Result
+
+End Function
+
+Public Function ZoomTargetDegrees(Value As ZoomState) As Number
+
+    Dim Result As Number
+
+    Result = Value.Target1000 / 1000
+
+    Return Result
+
+End Function
+
+''' Scales pointer motion without dropping sub-unit movement between frames.
+Public Function RetainedPointerDelta(
+    ByRef Remainder As Number,
+    Delta As Number,
+    Divisor As Number
+) As Number
+
+    Dim Result As Number
+    Dim Total As Number
+
+    If Divisor <= 0 Then
+        Return 0
+    End If
+
+    Total = Remainder + Delta
+    Result = Total / Divisor
+    Remainder = Total - Result * Divisor
+
+    Return Result
+
+End Function
+
+End Module

@@ -9,10 +9,12 @@
   </PropertyGroup>
   <ItemGroup>
     <SmileSource Include="Character3DViewer.smile" StartupOnly="true" />
+    <SmileSource Include="Character3DViewerProfile.smile" />
     <Asset Include="Assets\Generation2\Arin\ArinPrototype.sm3d" />
     <Asset Include="Assets\Generation2\Arin\Textures\Arin-base-color.png" />
     <Asset Include="Assets\Generation2\Arin\Textures\Arin-normal.png" />
     <Asset Include="Assets\Generation2\Arin\Textures\Arin-orm.png" />
+    <Asset Include="TechnicalAssets\Generation2\AnimationArticulated.sm3d" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
   </ItemGroup>
 </SmileProject>

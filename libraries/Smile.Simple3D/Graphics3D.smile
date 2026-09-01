@@ -126,6 +126,15 @@ Private Const COMMAND_SUBMISSION_GROUP = 118
 Private Const COMMAND_PARTICLE_BATCH = 119
 Private Const COMMAND_RIBBON_BATCH = 120
 Private Const COMMAND_M6_VALUE = 121
+Private Const COMMAND_MATERIAL_INSPECTION = 122
+
+Public Const MATERIAL_INSPECTION_LIT = 0
+Public Const MATERIAL_INSPECTION_BASE_COLOR = 1
+Public Const MATERIAL_INSPECTION_NORMAL = 2
+Public Const MATERIAL_INSPECTION_ROUGHNESS = 3
+Public Const MATERIAL_INSPECTION_METALLIC = 4
+Public Const MATERIAL_INSPECTION_OCCLUSION = 5
+Public Const MATERIAL_INSPECTION_EMISSIVE = 6
 
 Private Const ANIMATOR_QUERY_DESTINATION_CLIP = 1
 Private Const ANIMATOR_QUERY_TIME_REMAINDER = 2
@@ -1191,6 +1200,26 @@ Public Function SubmittedTriangleCount3D() As Number
     Dim Result As Number
 
     Result = Dispatch(COMMAND_SUBMITTED_TRIANGLE_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Selects the PBR output channel shown by subsequent 3D frames.
+Public Function SetMaterialInspection3D(Mode As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_MATERIAL_INSPECTION, Mode, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+''' Returns the selected PBR material inspection mode.
+Public Function MaterialInspection3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MATERIAL_INSPECTION, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
     Return Result
 
 End Function

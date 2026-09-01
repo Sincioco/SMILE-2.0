@@ -1,0 +1,179 @@
+''' Repository-owned profiles for the generic Character 3D Viewer.
+Module Dragonfall.Character3DViewerProfile
+
+Option Explicit
+
+Import Smile.Simple3D.CharacterViewer As CharacterViewer
+
+Public Const PROFILE_ARIN = 0
+Public Const PROFILE_TECHNICAL_ARTICULATED = 1
+
+Public Function ProfileCount() As Number
+
+    Return 2
+
+End Function
+
+Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
+
+    Dim Result As CharacterViewer.Profile
+
+    Result.Version = 1
+    Result.MinimumPlaybackSpeed = 25
+    Result.MaximumPlaybackSpeed = 200
+    Result.DefaultPlaybackSpeed = 100
+    Result.MarginPercent = 18
+    Result.AnimationMargin = 2
+
+    If Index = PROFILE_ARIN Then
+
+        Result.AssetId = "sin-star-i.character-1.paladin"
+        Result.DisplayName = "Arin"
+        Result.PartyRole = "Paladin"
+        Result.PrototypeAlias = "dragonfall.arin-prototype"
+        Result.AssetPath = "Assets\Generation2\Arin\ArinPrototype.sm3d"
+        Result.DesiredWorldHeight = 100
+
+    Else If Index = PROFILE_TECHNICAL_ARTICULATED Then
+
+        Result.AssetId = "smile.technical.animation-articulated"
+        Result.DisplayName = "Articulated Fixture"
+        Result.PartyRole = ""
+        Result.PrototypeAlias = ""
+        Result.AssetPath = "TechnicalAssets\Generation2\AnimationArticulated.sm3d"
+        Result.DesiredWorldHeight = 180
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ClipCount(ProfileIndex As Number) As Number
+
+    Dim Result As Number
+
+    If ProfileIndex = PROFILE_ARIN Then
+        Result = 3
+    Else If ProfileIndex = PROFILE_TECHNICAL_ARTICULATED Then
+        Result = 5
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
+
+    Dim Result As Text
+
+    If ProfileIndex = PROFILE_ARIN Then
+
+        If ClipIndex = 0 Then
+            Result = "preset:biped:idle"
+        Else If ClipIndex = 1 Then
+            Result = "preset:biped:walk"
+        Else If ClipIndex = 2 Then
+            Result = "preset:biped:run"
+        End If
+
+    Else If ProfileIndex = PROFILE_TECHNICAL_ARTICULATED Then
+
+        If ClipIndex = 0 Then
+            Result = "Idle"
+        Else If ClipIndex = 1 Then
+            Result = "Bend"
+        Else If ClipIndex = 2 Then
+            Result = "WalkLike"
+        Else If ClipIndex = 3 Then
+            Result = "AttackLike"
+        Else If ClipIndex = 4 Then
+            Result = "RootMove"
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ClipLabel(ProfileIndex As Number, ClipIndex As Number) As Text
+
+    Dim Result As Text
+
+    If ProfileIndex = PROFILE_ARIN Then
+
+        If ClipIndex = 0 Then
+            Result = "Idle"
+        Else If ClipIndex = 1 Then
+            Result = "Walk"
+        Else If ClipIndex = 2 Then
+            Result = "Run"
+        End If
+
+    Else
+        Result = ClipName(ProfileIndex, ClipIndex)
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ClipLoops(ProfileIndex As Number, ClipIndex As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = True
+
+    If ProfileIndex = PROFILE_TECHNICAL_ARTICULATED Then
+        Result = ClipIndex <> 1 And ClipIndex <> 3
+    End If
+
+    Return Result
+
+End Function
+
+Public Function SocketCount(ProfileIndex As Number) As Number
+
+    Dim Result As Number
+
+    If ProfileIndex = PROFILE_ARIN Then
+        Result = 6
+    Else If ProfileIndex = PROFILE_TECHNICAL_ARTICULATED Then
+        Result = 1
+    End If
+
+    Return Result
+
+End Function
+
+Public Function SocketName(ProfileIndex As Number, SocketIndex As Number) As Text
+
+    Dim Result As Text
+
+    If ProfileIndex = PROFILE_ARIN Then
+
+        If SocketIndex = 0 Then
+            Result = "Root"
+        Else If SocketIndex = 1 Then
+            Result = "Head"
+        Else If SocketIndex = 2 Then
+            Result = "Chest"
+        Else If SocketIndex = 3 Then
+            Result = "SwordBase"
+        Else If SocketIndex = 4 Then
+            Result = "SwordTip"
+        Else If SocketIndex = 5 Then
+            Result = "ShieldCenter"
+        End If
+
+    Else If ProfileIndex = PROFILE_TECHNICAL_ARTICULATED And SocketIndex = 0 Then
+        Result = "Grip"
+    End If
+
+    Return Result
+
+End Function
+
+End Module

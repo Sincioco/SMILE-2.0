@@ -60,6 +60,9 @@ If PbrAvailable Then
     End For
 
     Call Check(VisualActor.UsedPrototypeClipFallback(Actor))
+    Call Check(VisualActor.RequestedClip(Actor) = "Victory")
+    Call Check(VisualActor.ActualClip(Actor) = "preset:biped:idle")
+    Call Check(Not VisualActor.CurrentProductionClipReady(Actor))
     Call Check(VisualActor.SocketName(Actor, VisualActor.ANCHOR_SWORD_BASE) = "SwordBase")
     Call Check(VisualActor.SocketName(Actor, VisualActor.ANCHOR_SWORD_TIP) = "SwordTip")
     Call Check(VisualActor.SocketName(Actor, VisualActor.ANCHOR_SHIELD_CENTER) = "ShieldCenter")
@@ -71,6 +74,9 @@ If PbrAvailable Then
     Call Check(Bounds.Valid)
     Call Check(Bounds.Size.Y > 9)
     Call Check(VisualActor.PlayState(Actor, VisualActor.STATE_APPROACH, 0))
+    Call Check(VisualActor.RequestedClip(Actor) = "Run")
+    Call Check(VisualActor.ActualClip(Actor) = "preset:biped:run")
+    Call Check(VisualActor.UsedPrototypeClipFallback(Actor))
     Call Check(VisualActor.Update(Actor, 300))
 
     EventValue = VisualActor.TakeEvent(Actor, "FootstepLeft")

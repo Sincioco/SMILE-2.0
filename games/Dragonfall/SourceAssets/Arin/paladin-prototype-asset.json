@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "assetId": "sin-star-i.character-1.paladin",
+  "characterName": "Arin",
+  "partyRole": "Paladin",
+  "sourceGame": "Sin Star I",
+  "characterNumber": 1,
+  "sourceFile": "sin-star-i-character-1-paladin-tripo-v01.original.glb",
+  "sourceSha256": "0B75E3664FC2743637C9E75E86A55EBDFB8D4A4E3740AC06E593ADE1588013F6",
+  "generator": "Tripo",
+  "prototypeAliases": [
+    {
+      "aliasId": "dragonfall.arin-prototype",
+      "game": "Dragonfall",
+      "characterName": "Arin",
+      "purpose": "temporary-engine-integration",
+      "visualReuse": "technical-prototype",
+      "productionReady": false,
+      "releaseEnabled": false
+    }
+  ],
+  "states": {
+    "referenceOnly": false,
+    "prototypeLoadable": true,
+    "technicalIntegration": true,
+    "productionAssetAccepted": false,
+    "releaseEnabled": false
+  },
+  "productionReady": false,
+  "releaseEnabled": false,
+  "releaseVisualMode": "Classic",
+  "provenance": {
+    "projectOrExportId": null,
+    "exportDateTime": null,
+    "accountOrLicenseTier": null,
+    "termsOrLicenseSnapshot": null,
+    "creatorOrOperator": null,
+    "referenceImagesUsed": null,
+    "aiGenerationDisclosure": "Generated with Tripo; project-specific disclosure record is not yet available.",
+    "rightToModify": null,
+    "rightToDistributeRuntimeOutput": null,
+    "rightToDistributeRawSource": null
+  },
+  "textureQuality": [
+    {
+      "semantic": "base-color",
+      "sourceMime": "image/jpeg",
+      "sourceDimensions": "1024x1024",
+      "runtimeFormat": "PNG",
+      "sourceEncoding": "lossy",
+      "colorData": "sRGB color",
+      "productionAccepted": false,
+      "note": "Acceptable for prototype inspection only."
+    },
+    {
+      "semantic": "normal",
+      "sourceMime": "image/jpeg",
+      "sourceDimensions": "1024x1024",
+      "runtimeFormat": "PNG",
+      "sourceEncoding": "lossy",
+      "colorData": "linear normal data",
+      "productionAccepted": false,
+      "note": "JPEG compression artifacts remain after PNG publication."
+    },
+    {
+      "semantic": "metallic-roughness",
+      "sourceMime": "image/jpeg",
+      "sourceDimensions": "1024x1024",
+      "runtimeFormat": "PNG",
+      "sourceEncoding": "lossy",
+      "colorData": "linear packed data; red published as neutral occlusion",
+      "productionAccepted": false,
+      "note": "The source material does not author an occlusion binding."
+    }
+  ],
+  "sockets": [
+    { "name": "Root", "status": "descriptor-alias", "authored": false, "hasOrientation": true, "positionOnlyOffset": false, "equipmentValidated": false },
+    { "name": "Head", "status": "inferred-from-bone", "authored": false, "hasOrientation": true, "positionOnlyOffset": false, "equipmentValidated": false },
+    { "name": "Chest", "status": "inferred-from-bone", "authored": false, "hasOrientation": true, "positionOnlyOffset": false, "equipmentValidated": false },
+    { "name": "SwordBase", "status": "inferred-from-bone", "authored": false, "hasOrientation": true, "positionOnlyOffset": false, "equipmentValidated": false },
+    { "name": "SwordTip", "status": "inferred-from-bone", "authored": false, "hasOrientation": true, "positionOnlyOffset": true, "equipmentValidated": false },
+    { "name": "ShieldCenter", "status": "inferred-from-bone", "authored": false, "hasOrientation": true, "positionOnlyOffset": false, "equipmentValidated": false }
+  ],
+  "equipmentStructure": {
+    "runtimeParts": 1,
+    "fusedSkinnedMesh": true,
+    "independentlySwappableSword": false,
+    "independentlySwappableShield": false,
+    "productionRequirement": "Future production equipment must be authored as separate attachable objects."
+  },
+  "productionClipMatrix": {
+    "Idle": "available-as-preset:biped:idle",
+    "Ready": "missing",
+    "Approach": "available-through-preset:biped:run-alias",
+    "SwordAttack": "missing",
+    "ShieldBash": "missing",
+    "Defend": "missing",
+    "BlockImpact": "missing",
+    "Hit": "missing",
+    "KO": "missing",
+    "Victory": "missing"
+  },
+  "releaseGate": {
+    "canonicalIdentityAccepted": true,
+    "completeProvenance": false,
+    "acceptedVisualDesign": false,
+    "losslessProductionTextures": false,
+    "deformationReview": false,
+    "requiredCombatClips": false,
+    "authoredValidatedSockets": false,
+    "nativeWebAcceptance": false,
+    "fallbackTest": true,
+    "mobileScreenshots": false,
+    "userApproval": false
+  },
+  "referenceIndex": "paladin-reference-images.json"
+}

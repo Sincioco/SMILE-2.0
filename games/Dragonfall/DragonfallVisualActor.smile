@@ -98,6 +98,8 @@ Private Dim ClassicWidths[MAX_VISUAL_ACTORS] As Number
 Private Dim ClassicHeights[MAX_VISUAL_ACTORS] As Number
 Private Dim ClassicDepths[MAX_VISUAL_ACTORS] As Number
 Private Dim CurrentStates[MAX_VISUAL_ACTORS] As Number
+Private Dim RequestedClipNames[MAX_VISUAL_ACTORS] As Text
+Private Dim ActualClipNames[MAX_VISUAL_ACTORS] As Text
 Private Dim ErrorValue As Number
 Private Dim PrimaryCharacterErrorValue As Number
 Private Dim FallbackValue As Number
@@ -219,6 +221,8 @@ Private Function PublishClassic(
     ClassicHeights[Slot] = Max(1, Options.ClassicHeight)
     ClassicDepths[Slot] = Max(1, Options.ClassicDepth)
     CurrentStates[Slot] = STATE_READY
+    RequestedClipNames[Slot] = ""
+    ActualClipNames[Slot] = "Classic rigid visual"
     Result.Handle = Generations[Slot] * HANDLE_FACTOR + Slot + 1
 
     Return Result
@@ -249,6 +253,8 @@ Private Function PublishCharacter(
     OwnsClassicObjects[Slot] = False
     CharacterActors[Slot] = Candidate
     CurrentStates[Slot] = STATE_READY
+    RequestedClipNames[Slot] = ""
+    ActualClipNames[Slot] = ""
     Result.Handle = Generations[Slot] * HANDLE_FACTOR + Slot + 1
 
     Return Result
@@ -368,6 +374,8 @@ Public Sub Destroy(ByRef Value As Actor)
     ClassicObjects[Slot].Handle = 0
     CharacterActors[Slot].Handle = 0
     CurrentStates[Slot] = 0
+    RequestedClipNames[Slot] = ""
+    ActualClipNames[Slot] = ""
     Value.Handle = 0
 
 End Sub
@@ -622,8 +630,12 @@ Public Function PlayState(
     End If
 
     CurrentStates[Slot] = State
+    RequestedClipNames[Slot] = ClipName
+    ActualClipNames[Slot] = ""
 
     If Kinds[Slot] = KIND_CLASSIC Then
+        ActualClipNames[Slot] = "Classic rigid visual"
+
         Return True
     End If
 
@@ -674,6 +686,8 @@ Public Function PlayState(
     If Not Result Then
         ErrorValue = ADAPTER_ERROR_OPERATION
         PrimaryCharacterErrorValue = Character3D.LastError()
+    Else
+        ActualClipNames[Slot] = ClipName
     End If
 
     Return Result
@@ -1087,6 +1101,64 @@ Public Function UsedPrototypeClipFallback(Value As Actor) As Boolean
     ReturnValue = PrototypeClipFallbacks[Slot]
 
     Return ReturnValue
+
+End Function
+
+''' Reports the production clip requested for the actor's current presentation state.
+Public Function RequestedClip(Value As Actor) As Text
+
+    Dim Result As Text
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return ""
+    End If
+
+    Result = RequestedClipNames[Slot]
+
+    Return Result
+
+End Function
+
+''' Reports the exact clip or Classic visual actually used after fallback resolution.
+Public Function ActualClip(Value As Actor) As Text
+
+    Dim Result As Text
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return ""
+    End If
+
+    Result = ActualClipNames[Slot]
+
+    Return Result
+
+End Function
+
+''' True only when a Character3D actor plays the requested production clip without fallback.
+Public Function CurrentProductionClipReady(Value As Actor) As Boolean
+
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    Result = (Kinds[Slot] = KIND_CHARACTER And
+        RequestedClipNames[Slot] <> "" And
+        ActualClipNames[Slot] = RequestedClipNames[Slot] And
+        Not TechnicalClipFallbacks[Slot] And
+        Not PrototypeClipFallbacks[Slot])
+
+    Return Result
 
 End Function
 

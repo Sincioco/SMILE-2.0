@@ -150,6 +150,7 @@ Run("Existing key constants retain their values", () =>
     Equal(20L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.Key3Keyword));
     Equal(21L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyTabKeyword));
     Equal(22L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.Key4Keyword));
+    Equal(27L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyOKeyword));
 });
 Run("Left and Right prefer identifiers only in assignment-target context", () =>
 {
@@ -197,7 +198,7 @@ Run("Pointer input built-ins and constants are shared and game-window scoped", (
     Equal(1L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.PointerPrimaryKeyword));
     Equal(2L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.PointerSecondaryKeyword));
     Equal(3L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.PointerMiddleKeyword));
-    var analysis = Analyze("Game Window \"Pointer\"\nDim X As Number\nDim Active As Boolean\nX = Pointer_X() + Pointer_Y() + Pointer_Delta_X() + Pointer_Delta_Y() + Pointer_Wheel_Delta()\nActive = Pointer_Inside() Or Pointer_Held(POINTER_PRIMARY) Or Pointer_Pressed(POINTER_SECONDARY) Or Pointer_Released(POINTER_MIDDLE)\n");
+    var analysis = Analyze("Game Window \"Pointer\"\nDim X As Number\nDim Active As Boolean\nX = Pointer_X() + Pointer_Y() + Pointer_Delta_X() + Pointer_Delta_Y() + Pointer_Wheel_Delta() + Pointer_Wheel_Remainder()\nActive = Pointer_Inside() Or Pointer_Held(POINTER_PRIMARY) Or Pointer_Pressed(POINTER_SECONDARY) Or Pointer_Released(POINTER_MIDDLE)\n");
     if (analysis.HasErrors)
         throw new InvalidOperationException(string.Join(" | ", analysis.Diagnostics.Select(diagnostic => diagnostic.Code + ": " + diagnostic.Message)));
     Equal(true, Analyze("Print Pointer_X()\n").HasErrors);

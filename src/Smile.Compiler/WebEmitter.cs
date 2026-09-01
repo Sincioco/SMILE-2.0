@@ -903,6 +903,7 @@ internal sealed class WebEmitter
             SyntaxKind.PointerDeltaXKeyword => "smile.pointerDeltaX()",
             SyntaxKind.PointerDeltaYKeyword => "smile.pointerDeltaY()",
             SyntaxKind.PointerWheelDeltaKeyword => "smile.pointerWheelDelta()",
+            SyntaxKind.PointerWheelRemainderKeyword => "smile.pointerWheelRemainder()",
             SyntaxKind.PointerInsideKeyword => "smile.isTrue(smile.pointerInside())",
             SyntaxKind.PointerHeldKeyword => $"smile.isTrue(smile.pointerHeld({arguments}))",
             SyntaxKind.PointerPressedKeyword => $"smile.isTrue(smile.pointerPressed({arguments}))",

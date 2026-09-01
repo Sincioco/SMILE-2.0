@@ -4,6 +4,7 @@
 #include "graphics_directx.h"
 #include "graphics_gdi.h"
 #include "audio_focus_state.h"
+#include "pointer_state.h"
 
 typedef struct MockState
 {
@@ -206,6 +207,7 @@ int main(void)
     char error[768];
     SmileGraphicsBackendDiagnostics diagnostics;
     SmileAudioFocusState audio_focus;
+    SmilePointerState pointer_state;
 
     reset_mocks();
     error[0] = 0;
@@ -372,12 +374,64 @@ int main(void)
         smile_audio_effective_volume(1, 150) == 1.0,
         "Music volume clamps safely to zero through one hundred percent");
 
+    smile_pointer_state_reset(&pointer_state);
+    check(pointer_state.x == 0 && pointer_state.wheel_remainder == 0 &&
+        pointer_state.held_buttons == 0, "Pointer reset clears persistent and transient state");
+    smile_pointer_state_position(&pointer_state, 10, 20, 1);
+    check(pointer_state.delta_x == 0 && pointer_state.delta_y == 0 && pointer_state.inside,
+        "First pointer position establishes an origin without synthetic movement");
+    smile_pointer_state_position(&pointer_state, 14, 25, 1);
+    smile_pointer_state_position(&pointer_state, 20, 22, 1);
+    check(pointer_state.delta_x == 10 && pointer_state.delta_y == 2,
+        "Multiple pointer messages accumulate exact motion");
+    check(smile_pointer_state_press(&pointer_state, 1) &&
+        pointer_state.held_buttons == 1 && pointer_state.pressed_buttons == 1,
+        "Pointer press latches held and pressed state");
+    check(!smile_pointer_state_press(&pointer_state, 1) && pointer_state.pressed_buttons == 1,
+        "Repeated pointer press is idempotent");
+    check(smile_pointer_state_release(&pointer_state, 1) &&
+        pointer_state.held_buttons == 0 && pointer_state.pressed_buttons == 1 &&
+        pointer_state.released_buttons == 1,
+        "Press and release in one pump preserve both transitions");
+    smile_pointer_state_begin_frame(&pointer_state);
+    check(pointer_state.delta_x == 0 && pointer_state.delta_y == 0 &&
+        pointer_state.pressed_buttons == 0 && pointer_state.released_buttons == 0 &&
+        pointer_state.x == 20 && pointer_state.y == 22,
+        "Frame rollover clears only transient pointer state");
+    smile_pointer_state_wheel(&pointer_state, 30, 120);
+    check(pointer_state.wheel_delta == 0 && pointer_state.wheel_remainder == 30,
+        "Partial positive wheel input remains pending");
+    smile_pointer_state_begin_frame(&pointer_state);
+    check(pointer_state.wheel_delta == 0 && pointer_state.wheel_remainder == 30,
+        "Frame rollover preserves partial wheel input");
+    smile_pointer_state_wheel(&pointer_state, 90, 120);
+    check(pointer_state.wheel_delta == 1 && pointer_state.wheel_remainder == 0,
+        "Positive partial wheel messages combine into one step");
+    smile_pointer_state_begin_frame(&pointer_state);
+    smile_pointer_state_wheel(&pointer_state, -45, 120);
+    check(pointer_state.wheel_delta == 0 && pointer_state.wheel_remainder == -45,
+        "Partial negative wheel input remains pending");
+    smile_pointer_state_wheel(&pointer_state, -75, 120);
+    check(pointer_state.wheel_delta == -1 && pointer_state.wheel_remainder == 0,
+        "Negative partial wheel messages combine with signed truncation");
+    smile_pointer_state_begin_frame(&pointer_state);
+    smile_pointer_state_wheel(&pointer_state, 240, 120);
+    check(pointer_state.wheel_delta == 2 && pointer_state.wheel_remainder == 0,
+        "Multiple wheel steps in one message remain visible");
+    check(smile_pointer_state_press(&pointer_state, 2) &&
+        smile_pointer_state_press(&pointer_state, 3),
+        "Secondary and middle buttons may be held together");
+    smile_pointer_state_cancel(&pointer_state);
+    check(pointer_state.held_buttons == 0 && pointer_state.released_buttons == 6 &&
+        !pointer_state.inside && !pointer_state.position_valid,
+        "Capture or focus loss releases every held pointer and invalidates position");
+
     reset_mocks();
     if (failures != 0)
     {
         fprintf(stderr, "%d native graphics selection test(s) failed.\n", failures);
         return 1;
     }
-    printf("39 native graphics and audio-focus checks passed.\n");
+    printf("54 native graphics, pointer-input, and audio-focus checks passed.\n");
     return 0;
 }

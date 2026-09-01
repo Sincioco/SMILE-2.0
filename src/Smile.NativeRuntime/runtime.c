@@ -12,6 +12,7 @@
 #include "graphics/graphics3d.h"
 #include "graphics/image_resource.h"
 #include "graphics/graphics_diagnostics.h"
+#include "input/pointer_state.h"
 #include "timing/frame_clock_win32.h"
 #include "audio/asset_path.h"
 #include "audio/audio_focus.h"
@@ -23,6 +24,7 @@
 #define SMILE_KEY_A 2
 #define SMILE_KEY_S 3
 #define SMILE_KEY_D 4
+#define SMILE_KEY_O 27
 #define SMILE_KEY_UP 10
 #define SMILE_KEY_DOWN 11
 #define SMILE_KEY_LEFT 12
@@ -45,16 +47,7 @@ static unsigned char smile_held[256];
 static long long smile_key_queue[64];
 static int smile_key_head;
 static int smile_key_tail;
-static long long smile_pointer_x_value;
-static long long smile_pointer_y_value;
-static long long smile_pointer_delta_x_value;
-static long long smile_pointer_delta_y_value;
-static long long smile_pointer_wheel_delta_value;
-static unsigned int smile_pointer_held_buttons;
-static unsigned int smile_pointer_pressed_buttons;
-static unsigned int smile_pointer_released_buttons;
-static int smile_pointer_inside_value;
-static int smile_pointer_position_valid;
+static SmilePointerState smile_pointer;
 static int smile_fullscreen;
 static DWORD smile_windowed_style;
 static DWORD smile_windowed_ex_style;
@@ -79,19 +72,13 @@ void smile_print_newline(void);
 int smile_resolve_asset_path_utf8(const char* path, long long length, WCHAR* resolved_path, int capacity);
 void smile_play_sound_channel(const char* path, long long length, long long channel);
 
-static unsigned int smile_pointer_button_mask(long long button)
-{
-    if (button < 1 || button > 3)
-        return 0;
-    return 1U << (unsigned int)(button - 1);
-}
-
 static void smile_pointer_position(LPARAM lparam)
 {
     RECT client;
     SmileGraphicsViewport viewport;
-    long long previous_x = smile_pointer_x_value;
-    long long previous_y = smile_pointer_y_value;
+    long long logical_x;
+    long long logical_y;
+    int inside;
     int physical_x = GET_X_LPARAM(lparam);
     int physical_y = GET_Y_LPARAM(lparam);
     if (smile_window == 0 || !GetClientRect(smile_window, &client))
@@ -100,60 +87,35 @@ static void smile_pointer_position(LPARAM lparam)
         client.right - client.left, client.bottom - client.top, &viewport);
     if (viewport.scale <= 0.0)
         return;
-    smile_pointer_x_value = smile_graphics_round_pixel(((double)physical_x - viewport.x) / viewport.scale);
-    smile_pointer_y_value = smile_graphics_round_pixel(((double)physical_y - viewport.y) / viewport.scale);
-    smile_pointer_inside_value = physical_x >= viewport.x && physical_y >= viewport.y &&
+    logical_x = smile_graphics_round_pixel(((double)physical_x - viewport.x) / viewport.scale);
+    logical_y = smile_graphics_round_pixel(((double)physical_y - viewport.y) / viewport.scale);
+    inside = physical_x >= viewport.x && physical_y >= viewport.y &&
         physical_x < viewport.x + viewport.width && physical_y < viewport.y + viewport.height;
-    if (smile_pointer_position_valid)
-    {
-        smile_pointer_delta_x_value += smile_pointer_x_value - previous_x;
-        smile_pointer_delta_y_value += smile_pointer_y_value - previous_y;
-    }
-    smile_pointer_position_valid = 1;
+    smile_pointer_state_position(&smile_pointer, logical_x, logical_y, inside);
 }
 
 static void smile_pointer_press(long long button)
 {
-    unsigned int mask = smile_pointer_button_mask(button);
-    if (mask == 0 || (smile_pointer_held_buttons & mask) != 0)
-        return;
-    smile_pointer_held_buttons |= mask;
-    smile_pointer_pressed_buttons |= mask;
-    if (smile_window != 0)
+    if (smile_pointer_state_press(&smile_pointer, button) && smile_window != 0)
         SetCapture(smile_window);
 }
 
 static void smile_pointer_release(long long button)
 {
-    unsigned int mask = smile_pointer_button_mask(button);
-    if (mask == 0 || (smile_pointer_held_buttons & mask) == 0)
+    if (!smile_pointer_state_release(&smile_pointer, button))
         return;
-    smile_pointer_held_buttons &= ~mask;
-    smile_pointer_released_buttons |= mask;
-    if (smile_pointer_held_buttons == 0 && GetCapture() == smile_window)
+    if (smile_pointer.held_buttons == 0 && GetCapture() == smile_window)
         ReleaseCapture();
 }
 
 static void smile_pointer_cancel(void)
 {
-    smile_pointer_released_buttons |= smile_pointer_held_buttons;
-    smile_pointer_held_buttons = 0;
-    smile_pointer_inside_value = 0;
-    smile_pointer_position_valid = 0;
+    smile_pointer_state_cancel(&smile_pointer);
 }
 
 static void smile_pointer_reset(void)
 {
-    smile_pointer_x_value = 0;
-    smile_pointer_y_value = 0;
-    smile_pointer_delta_x_value = 0;
-    smile_pointer_delta_y_value = 0;
-    smile_pointer_wheel_delta_value = 0;
-    smile_pointer_held_buttons = 0;
-    smile_pointer_pressed_buttons = 0;
-    smile_pointer_released_buttons = 0;
-    smile_pointer_inside_value = 0;
-    smile_pointer_position_valid = 0;
+    smile_pointer_state_reset(&smile_pointer);
 }
 
 static void smile_zero_memory(void* memory, SIZE_T length)
@@ -898,6 +860,7 @@ static long long smile_map_key(WCHAR character, WORD virtual_key)
     if (character == L'a' || character == L'A' || virtual_key == 'A') return SMILE_KEY_A;
     if (character == L's' || character == L'S' || virtual_key == 'S') return SMILE_KEY_S;
     if (character == L'd' || character == L'D' || virtual_key == 'D') return SMILE_KEY_D;
+    if (character == L'o' || character == L'O' || virtual_key == 'O') return SMILE_KEY_O;
     if (virtual_key == VK_UP) return SMILE_KEY_UP;
     if (virtual_key == VK_DOWN) return SMILE_KEY_DOWN;
     if (virtual_key == VK_LEFT) return SMILE_KEY_LEFT;
@@ -921,6 +884,7 @@ static int smile_key_virtual(long long key)
         case SMILE_KEY_A: return 'A';
         case SMILE_KEY_S: return 'S';
         case SMILE_KEY_D: return 'D';
+        case SMILE_KEY_O: return 'O';
         case SMILE_KEY_UP: return VK_UP;
         case SMILE_KEY_DOWN: return VK_DOWN;
         case SMILE_KEY_LEFT: return VK_LEFT;
@@ -997,6 +961,7 @@ long long smile_get_key(void)
         if ((GetAsyncKeyState('A') & 0x8000) != 0) return SMILE_KEY_A;
         if ((GetAsyncKeyState('S') & 0x8000) != 0) return SMILE_KEY_S;
         if ((GetAsyncKeyState('D') & 0x8000) != 0) return SMILE_KEY_D;
+        if ((GetAsyncKeyState('O') & 0x8000) != 0) return SMILE_KEY_O;
         return SMILE_KEY_NONE;
     }
 }
@@ -1008,29 +973,30 @@ long long smile_key_held(long long key)
     return virtual_key > 0 && virtual_key < 256 && smile_held[virtual_key] != 0;
 }
 
-long long smile_pointer_x(void) { smile_pump_messages(); return smile_pointer_x_value; }
-long long smile_pointer_y(void) { smile_pump_messages(); return smile_pointer_y_value; }
-long long smile_pointer_delta_x(void) { smile_pump_messages(); return smile_pointer_delta_x_value; }
-long long smile_pointer_delta_y(void) { smile_pump_messages(); return smile_pointer_delta_y_value; }
-long long smile_pointer_wheel_delta(void) { smile_pump_messages(); return smile_pointer_wheel_delta_value; }
-long long smile_pointer_inside(void) { smile_pump_messages(); return smile_pointer_inside_value != 0; }
+long long smile_pointer_x(void) { smile_pump_messages(); return smile_pointer.x; }
+long long smile_pointer_y(void) { smile_pump_messages(); return smile_pointer.y; }
+long long smile_pointer_delta_x(void) { smile_pump_messages(); return smile_pointer.delta_x; }
+long long smile_pointer_delta_y(void) { smile_pump_messages(); return smile_pointer.delta_y; }
+long long smile_pointer_wheel_delta(void) { smile_pump_messages(); return smile_pointer.wheel_delta; }
+long long smile_pointer_wheel_remainder(void) { smile_pump_messages(); return smile_pointer.wheel_remainder; }
+long long smile_pointer_inside(void) { smile_pump_messages(); return smile_pointer.inside != 0; }
 long long smile_pointer_held(long long button)
 {
-    unsigned int mask = smile_pointer_button_mask(button);
+    unsigned int mask = button >= 1 && button <= 3 ? 1U << (unsigned int)(button - 1) : 0;
     smile_pump_messages();
-    return mask != 0 && (smile_pointer_held_buttons & mask) != 0;
+    return mask != 0 && (smile_pointer.held_buttons & mask) != 0;
 }
 long long smile_pointer_pressed(long long button)
 {
-    unsigned int mask = smile_pointer_button_mask(button);
+    unsigned int mask = button >= 1 && button <= 3 ? 1U << (unsigned int)(button - 1) : 0;
     smile_pump_messages();
-    return mask != 0 && (smile_pointer_pressed_buttons & mask) != 0;
+    return mask != 0 && (smile_pointer.pressed_buttons & mask) != 0;
 }
 long long smile_pointer_released(long long button)
 {
-    unsigned int mask = smile_pointer_button_mask(button);
+    unsigned int mask = button >= 1 && button <= 3 ? 1U << (unsigned int)(button - 1) : 0;
     smile_pump_messages();
-    return mask != 0 && (smile_pointer_released_buttons & mask) != 0;
+    return mask != 0 && (smile_pointer.released_buttons & mask) != 0;
 }
 
 void smile_clear_screen(void)
@@ -1206,7 +1172,7 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
             return 0;
         }
         case WM_MOUSELEAVE:
-            smile_pointer_inside_value = 0;
+            smile_pointer.inside = 0;
             return 0;
         case WM_LBUTTONDOWN:
             smile_pointer_position(lparam);
@@ -1239,7 +1205,7 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
             point.y = GET_Y_LPARAM(lparam);
             ScreenToClient(window, &point);
             smile_pointer_position(MAKELPARAM(point.x, point.y));
-            smile_pointer_wheel_delta_value += GET_WHEEL_DELTA_WPARAM(wparam) / WHEEL_DELTA;
+            smile_pointer_state_wheel(&smile_pointer, GET_WHEEL_DELTA_WPARAM(wparam), WHEEL_DELTA);
             return 0;
         }
         case WM_CANCELMODE:
@@ -1369,11 +1335,7 @@ void smile_show_screen(void)
 
     /* Finish the input frame before collecting messages for the next one.
        Clearing after the pump discarded mouse events received during present. */
-    smile_pointer_delta_x_value = 0;
-    smile_pointer_delta_y_value = 0;
-    smile_pointer_wheel_delta_value = 0;
-    smile_pointer_pressed_buttons = 0;
-    smile_pointer_released_buttons = 0;
+    smile_pointer_state_begin_frame(&smile_pointer);
     smile_pump_messages();
     if (smile_window == 0)
         return;

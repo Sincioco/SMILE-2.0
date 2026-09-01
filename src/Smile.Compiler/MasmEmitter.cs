@@ -227,6 +227,7 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_pointer_delta_x:PROC");
         Line("EXTERN smile_pointer_delta_y:PROC");
         Line("EXTERN smile_pointer_wheel_delta:PROC");
+        Line("EXTERN smile_pointer_wheel_remainder:PROC");
         Line("EXTERN smile_pointer_inside:PROC");
         Line("EXTERN smile_pointer_held:PROC");
         Line("EXTERN smile_pointer_pressed:PROC");
@@ -1672,6 +1673,7 @@ internal sealed class MasmEmitter
             case SyntaxKind.PointerDeltaXKeyword:
             case SyntaxKind.PointerDeltaYKeyword:
             case SyntaxKind.PointerWheelDeltaKeyword:
+            case SyntaxKind.PointerWheelRemainderKeyword:
             case SyntaxKind.PointerInsideKeyword:
                 CallAligned(call.Identifier.Kind switch
                 {
@@ -1680,6 +1682,7 @@ internal sealed class MasmEmitter
                     SyntaxKind.PointerDeltaXKeyword => "smile_pointer_delta_x",
                     SyntaxKind.PointerDeltaYKeyword => "smile_pointer_delta_y",
                     SyntaxKind.PointerWheelDeltaKeyword => "smile_pointer_wheel_delta",
+                    SyntaxKind.PointerWheelRemainderKeyword => "smile_pointer_wheel_remainder",
                     _ => "smile_pointer_inside"
                 });
                 break;

@@ -245,6 +245,7 @@ internal static class WebOutputWriter
             let renderer3DPbrDrawCount = 0;
             let renderer3DSimpleDrawCount = 0;
             let renderer3DPbrTriangleCount = 0;
+            let renderer3DMaterialInspection = 0;
             let renderer3DModelPaletteTexture = null;
             let renderer3DModelPaletteCachedAnimator = 0;
             let renderer3DModelPaletteCachedRevision = 0;
@@ -573,6 +574,7 @@ internal static class WebOutputWriter
             function pointerDeltaX() { return pointerDeltaXValue; }
             function pointerDeltaY() { return pointerDeltaYValue; }
             function pointerWheelDelta() { return pointerWheelDeltaValue; }
+            function pointerWheelRemainder() { return 0; }
             function pointerInside() { return pointerInsideValue ? 1 : 0; }
             function pointerHeld(button) { const mask = pointerButtonMask(button); return mask !== 0 && (pointerHeldButtons & mask) !== 0 ? 1 : 0; }
             function pointerPressed(button) { const mask = pointerButtonMask(button); return mask !== 0 && (pointerPressedButtons & mask) !== 0 ? 1 : 0; }
@@ -1195,6 +1197,7 @@ internal static class WebOutputWriter
                             uniform vec4 shadowSettings;
                             uniform vec2 shadowSelection;
                             uniform float hdrOutput;
+                            uniform float materialInspection;
                             out vec4 outputColor;
                             const float PI=3.14159265359;
                             vec3 fresnelSchlick(vec3 f0,float value){return f0+(vec3(1.0)-f0)*pow(1.0-value,5.0);}
@@ -1203,7 +1206,7 @@ internal static class WebOutputWriter
                             vec3 shade(vec3 n,vec3 v,vec3 l,vec3 radiance,vec3 base,float metal,float rough){vec3 halfDirection=normalize(v+l);float nl=max(dot(n,l),0.0);float nv=max(dot(n,v),0.0);float vh=max(dot(v,halfDirection),0.0);float nh=max(dot(n,halfDirection),0.0);vec3 f0=mix(vec3(.04),base,metal);vec3 fresnel=fresnelSchlick(f0,vh);float geometry=geometryOne(nv,rough)*geometryOne(nl,rough);vec3 specular=distribution(nh,rough)*geometry*fresnel/max(4.0*nv*nl,.0001);vec3 diffuse=(vec3(1.0)-fresnel)*(1.0-metal);return (diffuse*base/PI+specular)*radiance*nl;}
                             float shadowValue(vec3 n,vec3 l){if(shadowSettings.x<.5||shadowPosition.w<=0.0)return 1.0;vec3 projected=shadowPosition.xyz/shadowPosition.w;vec2 uv=projected.xy*.5+.5;float depth=projected.z*.5+.5;if(any(lessThan(uv,vec2(0.0)))||any(greaterThan(uv,vec2(1.0)))||depth<0.0||depth>1.0)return 1.0;float bias=shadowSettings.y+shadowSettings.z*(1.0-max(dot(n,l),0.0));float sum=0.0;for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++)sum+=texture(shadowMap,vec3(uv+vec2(x,y)*shadowSettings.w,depth-bias));return sum/9.0;}
                             vec3 applyLdrOutputTransfer(vec3 color){vec3 low=color*12.92;vec3 high=1.055*pow(max(color,vec3(0.0)),vec3(1.0/2.4))-.055;return mix(low,high,step(vec3(.0031308),color));}
-                            void main(){vec4 sampled=textureFlags.x>.5?texture(baseTexture,surfaceUv):vec4(1.0);vec4 base=baseFactor*objectColor*sampled;if(emissiveAlpha.w>=0.0&&base.a<emissiveAlpha.w)discard;vec3 n=normalize(surfaceNormal);if(!gl_FrontFacing)n=-n;vec3 t=normalize(surfaceTangent.xyz-n*dot(n,surfaceTangent.xyz));vec3 bitangent=normalize(cross(n,t)*surfaceTangent.w);if(textureFlags.y>.5){vec3 mapped=texture(normalTexture,surfaceUv).xyz*2.0-1.0;mapped.xy*=surfaceFactors.z;n=normalize(t*mapped.x+bitangent*mapped.y+n*mapped.z);}vec3 orm=textureFlags.z>.5?texture(ormTexture,surfaceUv).rgb:vec3(1.0);float occlusion=mix(1.0,orm.r,surfaceFactors.w);float rough=clamp(surfaceFactors.y*orm.g,.045,1.0);float metal=clamp(surfaceFactors.x*orm.b,0.0,1.0);vec3 viewDirection=normalize(cameraPosition-worldPosition);vec3 color=ambientLight.rgb*ambientLight.a*base.rgb*occlusion;if(directionalDirection.w>.5){vec3 lightDirection=normalize(directionalDirection.xyz);float factor=shadowSelection.x<1.5?shadowValue(n,lightDirection):1.0;color+=shade(n,viewDirection,lightDirection,directionalColor.rgb*directionalColor.a*factor,base.rgb,metal,rough);}for(int light=0;light<4;light++){float type=localPositionType[light].w;if(type>.5){vec3 delta=localPositionType[light].xyz-worldPosition;float distanceToLight=length(delta);float range=max(localDirectionRange[light].w,.0001);if(distanceToLight<range){vec3 lightDirection=delta/max(distanceToLight,.0001);float ratio=distanceToLight/range;float attenuation=pow(clamp(1.0-ratio*ratio,0.0,1.0),2.0)/(1.0+2.0*ratio*ratio);if(type>1.5){float spot=dot(-lightDirection,normalize(localDirectionRange[light].xyz));attenuation*=smoothstep(localCone[light].y,localCone[light].x,spot);}float factor=shadowSelection.x>1.5&&abs(shadowSelection.y-float(light))<.5?shadowValue(n,lightDirection):1.0;color+=shade(n,viewDirection,lightDirection,localColorIntensity[light].rgb*localColorIntensity[light].a*attenuation*factor,base.rgb,metal,rough);}}}vec3 emissive=emissiveAlpha.rgb*(textureFlags.w>.5?texture(emissiveTexture,surfaceUv).rgb:vec3(1.0));vec3 finalColor=max(color+emissive,vec3(0.0));outputColor=vec4(hdrOutput>.5?finalColor:clamp(applyLdrOutputTransfer(finalColor),0.0,1.0),base.a);}`);
+                            void main(){vec4 sampled=textureFlags.x>.5?texture(baseTexture,surfaceUv):vec4(1.0);vec4 base=baseFactor*objectColor*sampled;if(emissiveAlpha.w>=0.0&&base.a<emissiveAlpha.w)discard;vec3 n=normalize(surfaceNormal);if(!gl_FrontFacing)n=-n;vec3 t=normalize(surfaceTangent.xyz-n*dot(n,surfaceTangent.xyz));vec3 bitangent=normalize(cross(n,t)*surfaceTangent.w);if(textureFlags.y>.5){vec3 mapped=texture(normalTexture,surfaceUv).xyz*2.0-1.0;mapped.xy*=surfaceFactors.z;n=normalize(t*mapped.x+bitangent*mapped.y+n*mapped.z);}vec3 orm=textureFlags.z>.5?texture(ormTexture,surfaceUv).rgb:vec3(1.0);float occlusion=mix(1.0,orm.r,surfaceFactors.w);float rough=clamp(surfaceFactors.y*orm.g,.045,1.0);float metal=clamp(surfaceFactors.x*orm.b,0.0,1.0);vec3 viewDirection=normalize(cameraPosition-worldPosition);vec3 color=ambientLight.rgb*ambientLight.a*base.rgb*occlusion;if(directionalDirection.w>.5){vec3 lightDirection=normalize(directionalDirection.xyz);float factor=shadowSelection.x<1.5?shadowValue(n,lightDirection):1.0;color+=shade(n,viewDirection,lightDirection,directionalColor.rgb*directionalColor.a*factor,base.rgb,metal,rough);}for(int light=0;light<4;light++){float type=localPositionType[light].w;if(type>.5){vec3 delta=localPositionType[light].xyz-worldPosition;float distanceToLight=length(delta);float range=max(localDirectionRange[light].w,.0001);if(distanceToLight<range){vec3 lightDirection=delta/max(distanceToLight,.0001);float ratio=distanceToLight/range;float attenuation=pow(clamp(1.0-ratio*ratio,0.0,1.0),2.0)/(1.0+2.0*ratio*ratio);if(type>1.5){float spot=dot(-lightDirection,normalize(localDirectionRange[light].xyz));attenuation*=smoothstep(localCone[light].y,localCone[light].x,spot);}float factor=shadowSelection.x>1.5&&abs(shadowSelection.y-float(light))<.5?shadowValue(n,lightDirection):1.0;color+=shade(n,viewDirection,lightDirection,localColorIntensity[light].rgb*localColorIntensity[light].a*attenuation*factor,base.rgb,metal,rough);}}}vec3 emissive=emissiveAlpha.rgb*(textureFlags.w>.5?texture(emissiveTexture,surfaceUv).rgb:vec3(1.0));vec3 finalColor=max(color+emissive,vec3(0.0));if(materialInspection>.5){if(materialInspection<1.5)finalColor=base.rgb;else if(materialInspection<2.5)finalColor=n*.5+.5;else if(materialInspection<3.5)finalColor=vec3(rough);else if(materialInspection<4.5)finalColor=vec3(metal);else if(materialInspection<5.5)finalColor=vec3(occlusion);else finalColor=emissive;}outputColor=vec4(hdrOutput>.5?finalColor:clamp(applyLdrOutputTransfer(finalColor),0.0,1.0),base.a);}`);
                         pbrHandle = gl.createProgram();
                         gl.attachShader(pbrHandle, pbrVertex);
                         gl.attachShader(pbrHandle, pbrFragment);
@@ -1216,7 +1219,7 @@ internal static class WebOutputWriter
                             "ambientLight","directionalDirection","directionalColor","localPositionType[0]",
                             "localDirectionRange[0]","localColorIntensity[0]","localCone[0]","baseTexture",
                             "normalTexture","ormTexture","emissiveTexture","shadowMvp","shadowMap",
-                            "shadowSettings","shadowSelection","hdrOutput"])
+                            "shadowSettings","shadowSelection","hdrOutput","materialInspection"])
                             renderer3DPbrProgram[name] = gl.getUniformLocation(pbrHandle, name);
                         renderer3DPbrState = 1;
                         renderer3DPbrFailure = 0;
@@ -2257,7 +2260,7 @@ internal static class WebOutputWriter
                 gl.uniform1i(renderer3DPbrProgram.ormTexture,2);gl.uniform1i(renderer3DPbrProgram.emissiveTexture,3);
                 if(renderer3DShadowEffective){gl.activeTexture(gl.TEXTURE5);gl.bindTexture(gl.TEXTURE_2D,renderer3DShadowTexture);}gl.uniform1i(renderer3DPbrProgram.shadowMap,5);
                 if(typeof gl.uniform4f==="function")gl.uniform4f(renderer3DPbrProgram.shadowSettings,renderer3DShadowEffective&&object.receivesShadow?1:0,renderer3DShadowSettings[0],renderer3DShadowSettings[1],renderer3DShadowResolution>0?1/renderer3DShadowResolution:0);
-                if(typeof gl.uniform2f==="function")gl.uniform2f(renderer3DPbrProgram.shadowSelection,renderer3DShadowCaster,renderer3DShadowSlot);gl.uniform1f(renderer3DPbrProgram.hdrOutput,renderer3DHdrEffective?1:0);
+                if(typeof gl.uniform2f==="function")gl.uniform2f(renderer3DPbrProgram.shadowSelection,renderer3DShadowCaster,renderer3DShadowSlot);gl.uniform1f(renderer3DPbrProgram.hdrOutput,renderer3DHdrEffective?1:0);gl.uniform1f(renderer3DPbrProgram.materialInspection,renderer3DMaterialInspection);
                 gl.drawElements(gl.TRIANGLES,mesh.indexCount,gl.UNSIGNED_INT,0);renderer3DDrawCallCount+=1;
                 renderer3DSubmittedTriangleCount+=mesh.indexCount/3;renderer3DPbrDrawCount+=1;renderer3DPbrTriangleCount+=mesh.indexCount/3;return 1;}
             function renderer3DSrgbToLinear(value){return value<=.04045?value/12.92:Math.pow((value+.055)/1.055,2.4);}
@@ -2333,7 +2336,7 @@ internal static class WebOutputWriter
             function renderer3DReset(){renderer3DReleaseSubmissions(0,renderer3DSubmissionCount);renderer3DSubmissionCount=renderer3DPaletteSnapshotCount=0;renderer3DSubmissionGroupActive=false;renderer3DSubmissionGroupToken=0;renderer3DFrameActive=false;renderer3DObjects.clear();renderer3DAnimators.clear();for(const model of [...renderer3DModels.keys()])renderer3DDeleteModel(model);
                 renderer3DClips.clear();renderer3DSkeletons.clear();for(const handle of [...renderer3DParticleBatches.keys()])renderer3DDeleteParticleBatch(handle);for(const handle of [...renderer3DRibbonBatches.keys()])renderer3DDeleteRibbonBatch(handle);for(const mesh of renderer3DMeshes.values())renderer3DDeleteGpu(mesh);
                 for(const texture of renderer3DTextures.values()){renderer3DDeleteTextureGpu(texture);imageRelease(texture.image);}renderer3DMeshes.clear();
-                renderer3DModels.clear();renderer3DMaterials.clear();renderer3DTextures.clear();renderer3DResetLights();renderer3DLastError=0;
+                renderer3DModels.clear();renderer3DMaterials.clear();renderer3DTextures.clear();renderer3DResetLights();renderer3DMaterialInspection=0;renderer3DLastError=0;
                 renderer3DDrawCallCount=0;renderer3DSubmittedTriangleCount=0;renderer3DPbrDrawCount=0;renderer3DSimpleDrawCount=0;
                 renderer3DPbrTriangleCount=0;if(renderer3DGl&&renderer3DPbrProgram)renderer3DGl.deleteProgram(renderer3DPbrProgram.handle);if(renderer3DGl&&renderer3DVfxProgram){renderer3DGl.deleteProgram(renderer3DVfxProgram.particle.handle);renderer3DGl.deleteProgram(renderer3DVfxProgram.ribbon.handle);}if(renderer3DGl&&renderer3DParticleQuadBuffer)renderer3DGl.deleteBuffer(renderer3DParticleQuadBuffer);if(renderer3DGl&&renderer3DParticleQuadIndexBuffer)renderer3DGl.deleteBuffer(renderer3DParticleQuadIndexBuffer);renderer3DVfxProgram=null;renderer3DParticleQuadBuffer=renderer3DParticleQuadIndexBuffer=null;
                 renderer3DPbrProgram=null;renderer3DPbrAttempted=false;renderer3DPbrState=0;renderer3DPbrFailure=0;
@@ -2482,6 +2485,7 @@ internal static class WebOutputWriter
                     case 119:return renderer3DParticleBatchCommand(a,b,c,d,e,f,g,h,i);
                     case 120:return renderer3DRibbonBatchCommand(a,b,c,d,e,f,g,h,i,j);
                     case 121:return renderer3DM6Value(a,b);
+                    case 122:if(a===-1)return renderer3DMaterialInspection;if(renderer3DFrameActive||a<0||a>6){renderer3DLastError=5;return 0;}renderer3DMaterialInspection=a;return 1;
                     default:renderer3DLastError=1;return 0;
                 }
             }
@@ -2930,6 +2934,7 @@ internal static class WebOutputWriter
                     case "KeyA": return 2;
                     case "KeyS": return 3;
                     case "KeyD": return 4;
+                    case "KeyO": return 27;
                     case "ArrowUp": return 10;
                     case "ArrowDown": return 11;
                     case "ArrowLeft": return 12;
@@ -2948,7 +2953,7 @@ internal static class WebOutputWriter
 
             function controlledKey(event) {
                 return event.code.startsWith("Arrow") || event.code === "Space" || event.code === "Enter" ||
-                    event.code === "Escape" || event.code === "Tab" || /^Key[WASD]$/.test(event.code);
+                    event.code === "Escape" || event.code === "Tab" || /^Key[WASDO]$/.test(event.code);
             }
 
             async function toggleFullScreen() {
@@ -3353,7 +3358,8 @@ internal static class WebOutputWriter
                 imageRelease, imageAssign, imageMoveAssign, imageLoaded, imageWidth, imageHeight, drawImage,
                 pushClip, popClip, textWidth, textHeight, textLength, textCodeAt, textSlice, showScreen,
                 print, clearScreen, wait, getKey, keyHeld, pointerX, pointerY, pointerDeltaX, pointerDeltaY,
-                pointerWheelDelta, pointerInside, pointerHeld, pointerPressed, pointerReleased, playSound, stopSound,
+                pointerWheelDelta, pointerWheelRemainder, pointerInside, pointerHeld, pointerPressed, pointerReleased,
+                playSound, stopSound,
                 playMusic, pauseMusic, resumeMusic, stopMusic, setMusicVolume, loadTextFile,
                 loadInt, saveInt, loadData, saveData, renderer3D, renderer3DImage, renderer3DText,
                 gameClosed, endProgram, mediaShutdown, mediaDiagnostics, run

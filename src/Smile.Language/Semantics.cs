@@ -4134,7 +4134,8 @@ internal sealed class SemanticAnalyzer
         var expected = SyntaxFacts.GetBuiltInFunctionParameters(identifier.Kind).Count;
         if (identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword or
             SyntaxKind.PointerXKeyword or SyntaxKind.PointerYKeyword or SyntaxKind.PointerDeltaXKeyword or
-            SyntaxKind.PointerDeltaYKeyword or SyntaxKind.PointerWheelDeltaKeyword or SyntaxKind.PointerInsideKeyword or
+            SyntaxKind.PointerDeltaYKeyword or SyntaxKind.PointerWheelDeltaKeyword or
+            SyntaxKind.PointerWheelRemainderKeyword or SyntaxKind.PointerInsideKeyword or
             SyntaxKind.PointerHeldKeyword or SyntaxKind.PointerPressedKeyword or SyntaxKind.PointerReleasedKeyword)
             RequireGameWindow(identifier.Span, $"Built-in '{identifier.Text}'");
         if (identifier.Kind is SyntaxKind.Renderer3DKeyword or SyntaxKind.Renderer3DImageKeyword or

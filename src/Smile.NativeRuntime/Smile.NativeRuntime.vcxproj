@@ -71,6 +71,7 @@
     <ClCompile Include="graphics\graphics_gdi.c" />
     <ClCompile Include="graphics\graphics_gdi_image.cpp" />
     <ClCompile Include="graphics\image_resource.cpp" />
+    <ClCompile Include="input\pointer_state.c" />
     <ClCompile Include="runtime.c" />
     <ClCompile Include="audio\audio_focus_state.c" />
     <ClCompile Include="audio\music_mediaplayer.cpp">
@@ -94,6 +95,7 @@
     <ClInclude Include="graphics\graphics_gdi.h" />
     <ClInclude Include="graphics\graphics_gdi_image.h" />
     <ClInclude Include="graphics\image_resource.h" />
+    <ClInclude Include="input\pointer_state.h" />
     <ClInclude Include="timing\frame_clock_win32.h" />
     <ClInclude Include="audio\asset_path.h" />
     <ClInclude Include="audio\audio_focus.h" />

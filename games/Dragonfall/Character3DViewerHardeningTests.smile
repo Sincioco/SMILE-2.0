@@ -1,0 +1,133 @@
+Option Explicit
+
+Import Dragonfall.Character3DViewerProfile As ViewerProfiles
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.CharacterViewer As CharacterViewer
+
+Dim Alternating As CharacterViewer.ZoomState
+Dim Bounds As Character3D.Bounds3D
+Dim Frame As CharacterViewer.Framing
+Dim Profile As CharacterViewer.Profile
+Dim Remainder As Number
+Dim Step30 As CharacterViewer.ZoomState
+Dim Step60 As CharacterViewer.ZoomState
+Dim Step120 As CharacterViewer.ZoomState
+Dim Step240 As CharacterViewer.ZoomState
+Dim Failures As Number
+Dim Index As Number
+
+Game Window "Character 3D Viewer Hardening Tests" Size 320 By 240
+
+Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_ARIN)
+
+Call Check(CharacterViewer.ValidateProfile(Profile))
+Call Check(Profile.AssetId = "sin-star-i.character-1.paladin")
+Call Check(Profile.DisplayName = "Arin")
+Call Check(Profile.PartyRole = "Paladin")
+Call Check(Profile.PrototypeAlias = "dragonfall.arin-prototype")
+Call Check(Profile.DefaultPlaybackSpeed = 100)
+Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ARIN, 0) = "preset:biped:idle")
+Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ARIN, 1) = "preset:biped:walk")
+Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ARIN, 2) = "preset:biped:run")
+
+Bounds.Valid = True
+Bounds.Minimum.Y = 0
+Bounds.Center.Y = 500
+Bounds.Size.X = 500
+Bounds.Size.Y = 1000
+Bounds.Size.Z = 300
+Frame = CharacterViewer.AutoFit(Profile, Bounds)
+
+Call Check(Frame.Valid)
+Call Check(Frame.ScalePercent = 10000)
+Call Check(Frame.TargetY > 0)
+Call Check(Frame.CameraZ < 0)
+Call Check(Frame.FloorWidth >= 200)
+Call Check(Frame.PanXLimit >= 40)
+Call Check(Frame.ShadowFar >= 400)
+
+Bounds.Size.Y = 20000000
+Frame = CharacterViewer.AutoFit(Profile, Bounds)
+
+Call Check(Frame.Valid)
+Call Check(Frame.ScalePercent = 1)
+
+Bounds.Size.Y = 0
+Frame = CharacterViewer.AutoFit(Profile, Bounds)
+
+Call Check(Not Frame.Valid)
+
+Call InitializeZoomTest(Step30)
+Call InitializeZoomTest(Step60)
+Call InitializeZoomTest(Step120)
+Call InitializeZoomTest(Step240)
+Call InitializeZoomTest(Alternating)
+
+For Index = 1 To 29
+    Call Check(CharacterViewer.AdvanceZoom(Step30, 33))
+End For
+
+Call Check(CharacterViewer.AdvanceZoom(Step30, 43))
+
+For Index = 1 To 59
+    Call Check(CharacterViewer.AdvanceZoom(Step60, 16))
+End For
+
+Call Check(CharacterViewer.AdvanceZoom(Step60, 56))
+
+For Index = 1 To 119
+    Call Check(CharacterViewer.AdvanceZoom(Step120, 8))
+End For
+
+Call Check(CharacterViewer.AdvanceZoom(Step120, 48))
+
+For Index = 1 To 239
+    Call Check(CharacterViewer.AdvanceZoom(Step240, 4))
+End For
+
+Call Check(CharacterViewer.AdvanceZoom(Step240, 44))
+
+For Index = 1 To 20
+    Call Check(CharacterViewer.AdvanceZoom(Alternating, 17))
+    Call Check(CharacterViewer.AdvanceZoom(Alternating, 33))
+End For
+
+Call Check(Step30.Current1000 = 24000)
+Call Check(Step30.Current1000 = Step60.Current1000)
+Call Check(Step30.Current1000 = Step120.Current1000)
+Call Check(Step30.Current1000 = Step240.Current1000)
+Call Check(Step30.Current1000 = Alternating.Current1000)
+Call Check(CharacterViewer.AdvanceZoom(Step30, -1) = False)
+Call Check(CharacterViewer.AdvanceZoom(Step30, 1001) = False)
+
+Call Check(CharacterViewer.RetainedPointerDelta(Remainder, 1, 3) = 0)
+Call Check(Remainder = 1)
+Call Check(CharacterViewer.RetainedPointerDelta(Remainder, 1, 3) = 0)
+Call Check(Remainder = 2)
+Call Check(CharacterViewer.RetainedPointerDelta(Remainder, 1, 3) = 1)
+Call Check(Remainder = 0)
+Call Check(CharacterViewer.RetainedPointerDelta(Remainder, -2, 3) = 0)
+Call Check(Remainder = -2)
+Call Check(CharacterViewer.RetainedPointerDelta(Remainder, -1, 3) = -1)
+Call Check(Remainder = 0)
+
+If Failures = 0 Then
+    Print "Character 3D Viewer hardening tests passed."
+Else
+    Print "Character 3D Viewer hardening tests failed: "; Failures
+End If
+
+Sub InitializeZoomTest(ByRef Value As CharacterViewer.ZoomState)
+
+    Call CharacterViewer.InitializeZoom(Value, 0, -24, 36, 24000)
+    Call CharacterViewer.AdjustZoomTarget(Value, -1, 36)
+
+End Sub
+
+Sub Check(Condition As Boolean)
+
+    If Not Condition Then
+        Failures = Failures + 1
+    End If
+
+End Sub

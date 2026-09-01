@@ -110,6 +110,9 @@ Call Check(VisualActor.SetScale(Classic, 125))
 Call Check(VisualActor.SetVisible(Classic, True))
 Call Check(VisualActor.SetShadows(Classic, True, True))
 Call Check(VisualActor.PlayState(Classic, VisualActor.STATE_ATTACK))
+Call Check(VisualActor.RequestedClip(Classic) = "SwordAttack")
+Call Check(VisualActor.ActualClip(Classic) = "Classic rigid visual")
+Call Check(Not VisualActor.CurrentProductionClipReady(Classic))
 
 Bounds = VisualActor.WorldBounds(Classic)
 
@@ -134,6 +137,9 @@ Call Check(VisualActor.SetVisible(Generation2, True))
 Call Check(VisualActor.SetShadows(Generation2, True, True))
 Call Check(VisualActor.PlayState(Generation2, VisualActor.STATE_READY, 0))
 Call Check(VisualActor.UsedTechnicalClipFallback(Generation2))
+Call Check(VisualActor.RequestedClip(Generation2) = "Ready")
+Call Check(VisualActor.ActualClip(Generation2) = "Idle")
+Call Check(Not VisualActor.CurrentProductionClipReady(Generation2))
 Call Check(VisualActor.Update(Generation2, 30))
 Call Check(VisualActor.SocketName(Generation2, VisualActor.ANCHOR_SWORD_TIP) = "HandTip")
 
@@ -141,6 +147,8 @@ Socket = VisualActor.SocketPosition(Generation2, VisualActor.ANCHOR_SWORD_TIP)
 
 Call Check(Socket.X <> 0 Or Socket.Y <> 0 Or Socket.Z <> 0)
 Call Check(VisualActor.PlayState(Generation2, VisualActor.STATE_ATTACK, 0))
+Call Check(VisualActor.RequestedClip(Generation2) = "SwordAttack")
+Call Check(VisualActor.ActualClip(Generation2) = "AttackLike")
 Call Check(VisualActor.Update(Generation2, 520))
 
 Effect = VisualActor.SpawnEventEffect(Generation2, "Impact", 20260901)

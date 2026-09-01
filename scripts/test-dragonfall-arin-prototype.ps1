@@ -24,6 +24,7 @@ $viewerSource = Join-Path $testRoot 'Character3DViewer.smile'
 $viewerProjectSource = Join-Path $testRoot 'Character3DViewer.smileproj'
 $assetToolSource = Join-Path $repositoryRoot 'src\Smile.AssetTool\Sm3dV2.cs'
 $nativeRuntimeSource = Join-Path $repositoryRoot 'src\Smile.NativeRuntime\runtime.c'
+$pointerStateSource = Join-Path $repositoryRoot 'src\Smile.NativeRuntime\input\pointer_state.c'
 
 if (-not (Test-Path -LiteralPath $compiler)) {
     throw 'Build SMILE before running the Dragonfall M7B Arin prototype gate.'
@@ -79,7 +80,7 @@ try {
 
     $nativeRuntimeText = Get-Content -LiteralPath $nativeRuntimeSource -Raw
     $showScreenIndex = $nativeRuntimeText.IndexOf('void smile_show_screen(void)', [System.StringComparison]::Ordinal)
-    $pointerRolloverIndex = $nativeRuntimeText.IndexOf('smile_pointer_delta_x_value = 0;', $showScreenIndex, [System.StringComparison]::Ordinal)
+    $pointerRolloverIndex = $nativeRuntimeText.IndexOf('smile_pointer_state_begin_frame(&smile_pointer);', $showScreenIndex, [System.StringComparison]::Ordinal)
     $messagePumpIndex = $nativeRuntimeText.IndexOf('smile_pump_messages();', $showScreenIndex, [System.StringComparison]::Ordinal)
     if ($showScreenIndex -lt 0 -or $pointerRolloverIndex -lt 0 -or
         $messagePumpIndex -lt 0 -or $pointerRolloverIndex -gt $messagePumpIndex) {
@@ -88,14 +89,24 @@ try {
 
     $viewerText = Get-Content -LiteralPath $viewerSource -Raw
     $viewerProjectText = Get-Content -LiteralPath $viewerProjectSource -Raw
+    $pointerStateText = Get-Content -LiteralPath $pointerStateSource -Raw
+    Assert-Contains $pointerStateText 'state->wheel_remainder / units_per_step' `
+        'Native precision-wheel accumulator'
     foreach ($contract in @(
         'Import Smile.Simple3D.Character3D As Character3D',
+        'Import Smile.Simple3D.CharacterViewer As CharacterViewer',
         'Import Smile.Simple3D.Interaction As Interaction',
         'Character3D.LoadWithPolicy(',
         'Interaction.UpdateOrbitControls(',
         'Interaction.UpdatePanZoomControls(',
         'Interaction.ApplyCameraControls(',
-        'Function ScalePointerDelta(',
+        'CharacterViewer.AutoFit(',
+        'CharacterViewer.RetainedPointerDelta(',
+        'CharacterViewer.AdvanceZoom(',
+        'PressedKey = KEY_O',
+        'Sub AdvanceAutoOrbit()',
+        'Sub CreateSocketGizmos()',
+        'Graphics3D.SetMaterialInspection3D(',
         'Sub ClampCameraControls()',
         'Sub AdvanceSmoothZoom()',
         'Sub DrawViewerOverlay()')) {
@@ -105,7 +116,8 @@ try {
         'ArinPrototype.sm3d',
         'Arin-base-color.png',
         'Arin-normal.png',
-        'Arin-orm.png')) {
+        'Arin-orm.png',
+        'AnimationArticulated.sm3d')) {
         Assert-Contains $viewerProjectText $asset 'Character 3D Viewer project'
     }
 

@@ -560,6 +560,7 @@ static int smile_last_error3d;
 static long long smile_draw_call_count3d;
 static long long smile_submitted_triangle_count3d;
 static long long smile_pbr_draw_count3d;
+static int smile_material_inspection3d;
 static long long smile_simple_draw_count3d;
 static long long smile_pbr_triangle_count3d;
 static int smile_pbr_shader_available3d;
@@ -3825,7 +3826,9 @@ static int smile_3d_create_pipeline(void)
         "if(type>1.5){float spot=dot(-L,normalize(localDirectionRange[light].xyz));attenuation*=smoothstep(localCone[light].y,localCone[light].x,spot);}"
         "float sf=shadow.y>1.5&&abs(shadow.z-light)<.5?ShadowValue(sp,N,L):1;color+=Shade(N,V,L,localColorIntensity[light].rgb*localColorIntensity[light].w*attenuation*sf,base.rgb,metal,rough);}}}"
         "float3 emissive=emissiveAlpha.rgb*(textureFlags.w>.5?emissiveTexture.Sample(emissiveSampler,uv).rgb:float3(1,1,1));"
-        "float3 finalColor=max(color+emissive,0);return output.x>.5?float4(finalColor,base.a):float4(saturate(ApplyLdrOutputTransfer(finalColor)),base.a);}";
+        "float3 finalColor=max(color+emissive,0);if(output.w>.5){if(output.w<1.5)finalColor=base.rgb;else if(output.w<2.5)finalColor=N*.5+.5;"
+        "else if(output.w<3.5)finalColor=rough.xxx;else if(output.w<4.5)finalColor=metal.xxx;else if(output.w<5.5)finalColor=ao.xxx;else finalColor=emissive;}"
+        "return output.x>.5?float4(finalColor,base.a):float4(saturate(ApplyLdrOutputTransfer(finalColor)),base.a);}";
     static const char* shadow_vertex_source =
         "cbuffer S:register(b0){row_major float4x4 mvp;float4 alpha;float4 animation;row_major float4x4 bones[32];}"
         "cbuffer B:register(b1){row_major float4x4 modelBones[128];}"
@@ -5914,6 +5917,7 @@ static int smile_3d_draw_pbr(const SmileSubmission3D* submission)
     constants.output[0] = smile_hdr_effective3d ? 1.0f : 0.0f;
     constants.output[1] = smile_shadow_bias3d;
     constants.output[2] = smile_shadow_normal_bias3d;
+    constants.output[3] = (float)smile_material_inspection3d;
     memcpy(constants.object_color, object->color, sizeof(constants.object_color));
     memcpy(constants.base_factor, material->color, sizeof(constants.base_factor));
     constants.surface_factors[0] = material->metallic;
@@ -6891,6 +6895,7 @@ static void smile_3d_reset(void)
 {
     int index;
     smile_3d_end();
+    smile_material_inspection3d = 0;
     for (index = 0; index < SMILE_3D_MAX_OBJECTS; ++index)
         if (smile_objects3d[index].active)
         {
@@ -7489,6 +7494,12 @@ extern "C" long long smile_renderer3d_command(long long command,
             return smile_3d_ribbon_batch_command(a, b, c, d, e, f, g, h, i, j);
         case SMILE_3D_M6_VALUE:
             return smile_3d_m6_value(a, b);
+        case SMILE_3D_MATERIAL_INSPECTION:
+            if (a == -1) return smile_material_inspection3d;
+            if (smile_frame_active3d || a < 0 || a > 6)
+            { smile_last_error3d = 5; return 0; }
+            smile_material_inspection3d = (int)a;
+            return 1;
         default: smile_last_error3d = 1; return 0;
     }
 }
