@@ -23,6 +23,7 @@ $runtimeAsset = Join-Path $testRoot 'Assets\Generation2\Arin\ArinPrototype.sm3d'
 $viewerSource = Join-Path $testRoot 'Character3DViewer.smile'
 $viewerProjectSource = Join-Path $testRoot 'Character3DViewer.smileproj'
 $assetToolSource = Join-Path $repositoryRoot 'src\Smile.AssetTool\Sm3dV2.cs'
+$nativeRuntimeSource = Join-Path $repositoryRoot 'src\Smile.NativeRuntime\runtime.c'
 
 if (-not (Test-Path -LiteralPath $compiler)) {
     throw 'Build SMILE before running the Dragonfall M7B Arin prototype gate.'
@@ -76,6 +77,15 @@ try {
     Assert-Contains $assetToolText 'private const int MaximumAccessors = 1024;' 'SM3D v2 converter'
     Assert-Contains $assetToolText 'MergeCompatibleParts(parts)' 'SM3D v2 converter'
 
+    $nativeRuntimeText = Get-Content -LiteralPath $nativeRuntimeSource -Raw
+    $showScreenIndex = $nativeRuntimeText.IndexOf('void smile_show_screen(void)', [System.StringComparison]::Ordinal)
+    $pointerRolloverIndex = $nativeRuntimeText.IndexOf('smile_pointer_delta_x_value = 0;', $showScreenIndex, [System.StringComparison]::Ordinal)
+    $messagePumpIndex = $nativeRuntimeText.IndexOf('smile_pump_messages();', $showScreenIndex, [System.StringComparison]::Ordinal)
+    if ($showScreenIndex -lt 0 -or $pointerRolloverIndex -lt 0 -or
+        $messagePumpIndex -lt 0 -or $pointerRolloverIndex -gt $messagePumpIndex) {
+        throw 'Native Show Screen must roll transient pointer state before pumping next-frame messages.'
+    }
+
     $viewerText = Get-Content -LiteralPath $viewerSource -Raw
     $viewerProjectText = Get-Content -LiteralPath $viewerProjectSource -Raw
     foreach ($contract in @(
@@ -85,6 +95,9 @@ try {
         'Interaction.UpdateOrbitControls(',
         'Interaction.UpdatePanZoomControls(',
         'Interaction.ApplyCameraControls(',
+        'Function ScalePointerDelta(',
+        'Sub ClampCameraControls()',
+        'Sub AdvanceSmoothZoom()',
         'Sub DrawViewerOverlay()')) {
         Assert-Contains $viewerText $contract 'Character 3D Viewer'
     }

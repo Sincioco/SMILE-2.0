@@ -130,6 +130,31 @@ Capabilities:
 - touch-friendly on-screen controls and reset;
 - native Direct3D 11 and WebGL2 builds with four published assets.
 
+### Desktop input hardening follow-up
+
+Native desktop testing exposed a shared frame-boundary defect after M7B: `smile_show_screen` pumped queued Windows pointer messages and then cleared pressed, released, movement, and wheel state. A fast-running program could therefore lose an entire click, drag, or wheel event before the next SMILE input statement observed it. The native runtime now clears the completed frame's transient pointer state before pumping messages for the next frame, preserving new input for the following program iteration.
+
+Initial input-delivery testing then exposed visible camera quantization: the meter-scale Arin model was only about 12 integer world units tall at the previous Character3D maximum scale. Camera orbit and pan therefore moved in large visible whole-unit steps. Character3D now permits a bounded 1-10,000 percent uniform scale. The viewer uses 10,000 percent and proportionally scales its camera, target, floor, point-light positions/ranges, pan limits, and vertical-orbit limit by 10 while retaining the same on-screen composition and reported character height. No geometry, animation, texture, renderer command, or resource-count limit changed.
+
+Horizontal pointer orbit now applies one yaw degree per logical mouse pixel instead of passing through the shared three-degree nudge scale. Vertical orbit applies one high-precision world unit per logical pixel. Pan retains partial motion and applies one high-precision world unit per three logical pixels, bounded to `PanX` +/-100 and `PanY` +/-60. Keyboard and on-screen controls use proportionally scaled steps.
+
+Wheel and on-screen zoom now modify a bounded target of -24 through +36 degrees relative to the 55-degree authored FOV. The live camera advances toward that target by one degree per presented frame, replacing each four-degree wheel-step snap with a short deterministic transition.
+
+The rebuilt native executable was tested through real Windows input delivery while visible on screen. The initial input-delivery proof produced these exact diagnostics before the final 10x precision scale was applied:
+
+| Input | Before | After | Result |
+| --- | --- | --- | --- |
+| Right Arrow, then `A` | Yaw 0; Pan X 0 | Yaw 15; Pan X -2 | PASS |
+| 80-pixel primary horizontal drag in Orbit mode | Yaw 0 | Yaw 78 | PASS |
+| 40-pixel primary vertical drag in Orbit mode | Pitch 0 | Pitch 4 | PASS |
+| 40-pixel primary horizontal drag in Pan mode | Pan X 0 | Pan X -4; actor remained visible | PASS |
+| Two wheel-up steps | FOV 55 | FOV 47 | PASS |
+| Rendered Reset button click | Pitch 4 | Yaw/Pitch/Pan 0; FOV 55 | PASS |
+
+After the final precision-scale rebuild, the user manually tested both rotation and panning in the visible native viewer and confirmed that it was smoother. The viewer was launched without Computer Use for this final check, so mouse and keyboard control remained entirely with the user.
+
+The user also manually tested the target-based zoom rebuild and confirmed that both zoom-in and zoom-out were smoother. The root `AGENTS.md` now makes adequate integer-world precision, retained partial pointer motion, bounded scene-relative motion, eased zoom targets, and slow/moderate manual camera checks permanent defaults for future SMILE games and programs.
+
 The verified Web screenshot is `docs\implementation\screenshots\m7b-arin-prototype\character-3d-viewer-web.png`, SHA-256 `A009EFC9FC8EDD1E4A3C8827AAF3FBBBFF73BA63E290FB39A552300927DB7C24`. Its live panel shows the real Arin prototype, PBR lighting, Idle, a 15-degree horizontal / 2-unit vertical orbit, two draw calls, and 9,976 submitted triangles (character plus floor). Browser console warnings/errors: none.
 
 ## Current resource limits and ownership
@@ -175,11 +200,14 @@ Native DirectX and Web dispatch remain unchanged. M7B changes only offline Asset
 | M7B Web normal and forced failure | PASS; exact console parity in both modes. |
 | M7B Lab native/Web builds | PASS; four assets published; both Web JavaScript files pass `node --check`. |
 | Character 3D Viewer native/Web builds | PASS; four assets published; both Web JavaScript files pass `node --check`. |
+| Character 3D Viewer native desktop input | PASS; keyboard orbit/pan, primary horizontal/vertical drag, pan-mode drag, mouse wheel, and rendered Reset button all changed the live diagnostics as expected. |
+| Character 3D Viewer final smoothness | PASS; user manually confirmed the 10x precision-scale native build was smoother during rotation and panning. |
+| Character 3D Viewer smooth zoom | PASS; user manually confirmed target-based zoom-in and zoom-out were smoother. |
 | Retained M7A gate | PASS; exact native/Web adapter, mixed draw, state/clip, anchor/socket, effect, bounds, fallback, 100-restart checks. |
 | Retained Dragonfall gate | PASS; `Dragonfall native/Web mechanics, lifecycle, demo, and no-demo validation passed.` |
 | Combined M7B gate | PASS; `Dragonfall M7B Arin source preservation, deterministic conversion, 1,024-table boundary, compatible-part coalescing, animation hardening, native/Web PBR/fallback, Character 3D Viewer, M7A adapter, crowd-demo, and no-demo tests passed.` |
 | `cmd /c scripts\build.cmd` | PASS; compiler, AssetTool, native runtime/tests, managed solution, and VSIX artifacts built; only the established NU1503 native-project restore warning appeared. |
-| Formatter integration and repository check | PASS; 13 formatter integration tests and 340 tracked SMILE files. |
+| Formatter integration and repository check | PASS; 13 formatter integration tests and 343 tracked SMILE files. |
 | Retained model/PBR/animation/Character3D/Battle3D gates | PASS; native/Web exact parity, PBR normal/fallback/hardening, animation-v2, Character3D/Scene3D, and Battle3D. |
 | Retained Simple3D gates | PASS; Simple3D/Space Wars and true-Simple3D/Neon Cycles native/Web focused validation. |
 | Managed suite inside smoke | PASS; 288 language, compiler, project, completion, and timing tests; expected synthetic diagnostics observed. |
@@ -222,4 +250,4 @@ Read-only browser interaction, screenshots, JavaScript console inspection, `node
 
 ## VSIX
 
-M7B changes AssetTool, Dragonfall-local source/projects/assets, tests, screenshots, and documentation. AssetTool is not a VSIX payload. No compiler, template, language-service, or VSIX payload changed, so the installed SMILE extension does not require a redundant reinstall for this milestone.
+The original M7B milestone did not change a VSIX payload. This desktop-input follow-up changes the native runtime library consumed by the bundled compiler, so `scripts\install-vsix.cmd` rebuilt and installed `artifacts\vsix\Smile.VisualStudio.vsix`. Installed-state verification passed for VSIX 2.0.56 and assembly 2.0.56.0; the installed `Smile.VisualStudio.dll` SHA-256 is `1ECA2B144F04229934989030C3A3A52847F762F86644818B2125BB9702C74391`.

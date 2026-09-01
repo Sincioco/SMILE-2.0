@@ -14,6 +14,12 @@ Const CLIP_WALK = "preset:biped:walk"
 Const CLIP_RUN = "preset:biped:run"
 Const DRAG_ORBIT = 0
 Const DRAG_PAN = 1
+Const PAN_POINTER_DIVISOR = 3
+Const PAN_X_LIMIT = 100
+Const PAN_Y_LIMIT = 60
+Const ORBIT_PITCH_LIMIT = 60
+Const ZOOM_IN_LIMIT = -24
+Const ZOOM_OUT_LIMIT = 36
 
 Dim BaseCamera As Core.Camera3D
 Dim Camera As Core.Camera3D
@@ -31,6 +37,9 @@ Dim Key As Number
 Dim CurrentTime As Number
 Dim PreviousTime As Number
 Dim FrameMilliseconds As Number
+Dim PanPointerRemainderX As Number
+Dim PanPointerRemainderY As Number
+Dim ZoomTarget As Number
 
 Game Window "SMILE Character 3D Viewer" Size 960 By 540
 
@@ -54,6 +63,9 @@ Do
     FrameMilliseconds = Min(40, Max(0, CurrentTime - PreviousTime))
     PreviousTime = CurrentTime
     Ready = Character3D.Update(Character, FrameMilliseconds) And Ready
+
+    Call AdvanceSmoothZoom()
+
     Camera = Interaction.ApplyCameraControls(BaseCamera, CameraControls)
 
     If Character3D.IsValid(Character) Then
@@ -84,14 +96,14 @@ Sub LoadViewer()
 
     BaseCamera = Graphics3D.DefaultCamera()
     BaseCamera.Position.X = 0
-    BaseCamera.Position.Y = 6
-    BaseCamera.Position.Z = -12
+    BaseCamera.Position.Y = 60
+    BaseCamera.Position.Z = -120
     BaseCamera.Target.X = 0
-    BaseCamera.Target.Y = 6
-    BaseCamera.Target.Z = 5
-    Floor = Graphics3D.CreatePlane3D(42, 25)
+    BaseCamera.Target.Y = 60
+    BaseCamera.Target.Z = 50
+    Floor = Graphics3D.CreatePlane3D(420, 250)
 
-    Call Graphics3D.SetObjectPosition(Floor, 0, 0, 5)
+    Call Graphics3D.SetObjectPosition(Floor, 0, 0, 50)
     Call Graphics3D.SetObjectColor(Floor, 28, 35, 54)
     Call Interaction.ResetCameraControls(CameraControls)
 
@@ -104,8 +116,8 @@ Sub LoadViewer()
         Character3D.CHARACTER_LOAD_REQUIRE_PBR
     )
     Ready = Character3D.IsValid(Character) And Ready
-    Ready = Character3D.Place(Character, 0, 0, 5) And Ready
-    Ready = Character3D.SetScale(Character, 1000) And Ready
+    Ready = Character3D.Place(Character, 0, 0, 50) And Ready
+    Ready = Character3D.SetScale(Character, 10000) And Ready
     Ready = Character3D.Rotate(Character, 0, 0, 0) And Ready
     Ready = Character3D.SetShadows(Character, True, True) And Ready
     SelectedClip = 0
@@ -123,17 +135,17 @@ Sub HandleKeyboard(PressedKey As Number)
     Else If PressedKey = KEY_RIGHT Then
         Call NudgeOrbit(5, 0)
     Else If PressedKey = KEY_UP Then
-        Call NudgeOrbit(0, -1)
+        Call NudgeOrbit(0, -5)
     Else If PressedKey = KEY_DOWN Then
-        Call NudgeOrbit(0, 1)
+        Call NudgeOrbit(0, 5)
     Else If PressedKey = KEY_A Then
-        Call NudgePan(2, 0)
+        Call NudgePan(5, 0)
     Else If PressedKey = KEY_D Then
-        Call NudgePan(-2, 0)
+        Call NudgePan(-5, 0)
     Else If PressedKey = KEY_W Then
-        Call NudgePan(0, -2)
+        Call NudgePan(0, -5)
     Else If PressedKey = KEY_S Then
-        Call NudgePan(0, 2)
+        Call NudgePan(0, 5)
     Else If PressedKey >= KEY_1 And PressedKey <= KEY_3 Then
         SelectedClip = PressedKey - KEY_1
 
@@ -185,17 +197,17 @@ Function HandleInterfacePointer() As Boolean
     Else If PointerInRectangle(88, 482, 70, 36) Then
         Call NudgeOrbit(5, 0)
     Else If PointerInRectangle(164, 482, 70, 36) Then
-        Call NudgeOrbit(0, -1)
+        Call NudgeOrbit(0, -5)
     Else If PointerInRectangle(240, 482, 70, 36) Then
-        Call NudgeOrbit(0, 1)
+        Call NudgeOrbit(0, 5)
     Else If PointerInRectangle(316, 482, 70, 36) Then
-        Call NudgePan(2, 0)
+        Call NudgePan(5, 0)
     Else If PointerInRectangle(392, 482, 70, 36) Then
-        Call NudgePan(-2, 0)
+        Call NudgePan(-5, 0)
     Else If PointerInRectangle(468, 482, 70, 36) Then
-        Call NudgePan(0, -2)
+        Call NudgePan(0, -5)
     Else If PointerInRectangle(544, 482, 70, 36) Then
-        Call NudgePan(0, 2)
+        Call NudgePan(0, 5)
     Else If PointerInRectangle(620, 482, 70, 36) Then
         Call NudgeZoom(1)
     Else If PointerInRectangle(696, 482, 70, 36) Then
@@ -221,6 +233,12 @@ Sub UpdateCameraPointer(Blocked As Boolean)
     Dim PanHeld As Boolean
     Dim PanReleased As Boolean
     Dim WheelDelta As Number
+    Dim PointerDeltaX As Number
+    Dim PointerDeltaY As Number
+    Dim OrbitDeltaX As Number
+    Dim OrbitDeltaY As Number
+    Dim PanDeltaX As Number
+    Dim PanDeltaY As Number
 
     PrimaryOrbit = DragMode = DRAG_ORBIT
     PrimaryPan = DragMode = DRAG_PAN
@@ -236,9 +254,38 @@ Sub UpdateCameraPointer(Blocked As Boolean)
         Pointer_Held(POINTER_SECONDARY))
     PanReleased = ((PrimaryPan And Pointer_Released(POINTER_PRIMARY)) Or
         Pointer_Released(POINTER_SECONDARY))
+    PointerDeltaX = Pointer_Delta_X()
+    PointerDeltaY = Pointer_Delta_Y()
+
+    If OrbitHeld Then
+        OrbitDeltaX = PointerDeltaX
+        OrbitDeltaY = PointerDeltaY
+    End If
+
+    If PanPressed Then
+        PanPointerRemainderX = 0
+        PanPointerRemainderY = 0
+    End If
+
+    If PanHeld Then
+        PanDeltaX = ScalePointerDelta(
+            PanPointerRemainderX,
+            PointerDeltaX,
+            PAN_POINTER_DIVISOR
+        )
+        PanDeltaY = ScalePointerDelta(
+            PanPointerRemainderY,
+            PointerDeltaY,
+            PAN_POINTER_DIVISOR
+        )
+    End If
 
     If Not Blocked Then
         WheelDelta = Pointer_Wheel_Delta()
+    End If
+
+    If WheelDelta <> 0 Then
+        Call AdjustZoomTarget(WheelDelta)
     End If
 
     Ready = Interaction.UpdateOrbitControls(
@@ -246,18 +293,61 @@ Sub UpdateCameraPointer(Blocked As Boolean)
         OrbitPressed,
         OrbitHeld,
         OrbitReleased,
-        Pointer_Delta_X() / 3,
-        Pointer_Delta_Y() / 4
+        0,
+        0
     ) And Ready
     Ready = Interaction.UpdatePanZoomControls(
         CameraControls,
         PanPressed,
         PanHeld,
         PanReleased,
-        Pointer_Delta_X() / 4,
-        Pointer_Delta_Y() / 4,
-        WheelDelta
+        0,
+        0,
+        0
     ) And Ready
+
+    If OrbitHeld Then
+        CameraControls.OrbitYaw = CameraControls.OrbitYaw + OrbitDeltaX
+        CameraControls.OrbitPitch = CameraControls.OrbitPitch + OrbitDeltaY
+    End If
+
+    If PanHeld Then
+        CameraControls.PanX = CameraControls.PanX - PanDeltaX
+        CameraControls.PanY = CameraControls.PanY + PanDeltaY
+    End If
+
+    Call ClampCameraControls()
+
+    If PanReleased Then
+        PanPointerRemainderX = 0
+        PanPointerRemainderY = 0
+    End If
+
+End Sub
+
+Function ScalePointerDelta(
+    ByRef Remainder As Number,
+    Delta As Number,
+    Divisor As Number
+) As Number
+
+    Dim Total As Number
+    Dim Result As Number
+
+    Total = Remainder + Delta
+    Result = Total / Divisor
+    Remainder = Total - Result * Divisor
+
+    Return Result
+
+End Function
+
+Sub ClampCameraControls()
+
+    CameraControls.PanX = Min(PAN_X_LIMIT, Max(0 - PAN_X_LIMIT, CameraControls.PanX))
+    CameraControls.PanY = Min(PAN_Y_LIMIT, Max(0 - PAN_Y_LIMIT, CameraControls.PanY))
+    CameraControls.OrbitPitch = Min(ORBIT_PITCH_LIMIT,
+        Max(0 - ORBIT_PITCH_LIMIT, CameraControls.OrbitPitch))
 
 End Sub
 
@@ -271,6 +361,8 @@ Sub NudgeOrbit(DeltaX As Number, DeltaY As Number)
         DeltaX,
         DeltaY
     ) And Ready
+
+    Call ClampCameraControls()
 
 End Sub
 
@@ -286,25 +378,40 @@ Sub NudgePan(DeltaX As Number, DeltaY As Number)
         0
     ) And Ready
 
+    Call ClampCameraControls()
+
 End Sub
 
 Sub NudgeZoom(WheelDelta As Number)
 
-    Ready = Interaction.UpdatePanZoomControls(
-        CameraControls,
-        False,
-        False,
-        False,
-        0,
-        0,
-        WheelDelta
-    ) And Ready
+    Call AdjustZoomTarget(WheelDelta)
+
+End Sub
+
+Sub AdjustZoomTarget(WheelDelta As Number)
+
+    ZoomTarget = Min(ZOOM_OUT_LIMIT,
+        Max(ZOOM_IN_LIMIT, ZoomTarget - WheelDelta * 4))
+
+End Sub
+
+Sub AdvanceSmoothZoom()
+
+    If CameraControls.Zoom < ZoomTarget Then
+        CameraControls.Zoom = CameraControls.Zoom + 1
+    Else If CameraControls.Zoom > ZoomTarget Then
+        CameraControls.Zoom = CameraControls.Zoom - 1
+    End If
 
 End Sub
 
 Sub ResetView()
 
     Call Interaction.ResetCameraControls(CameraControls)
+
+    PanPointerRemainderX = 0
+    PanPointerRemainderY = 0
+    ZoomTarget = 0
 
 End Sub
 
@@ -333,8 +440,8 @@ Sub ApplyLighting()
         Ready = Graphics3D.ClearAdditionalLights3DChecked() And Ready
         Ready = Graphics3D.SetAmbientLight3D(255, 255, 255, 68) And Ready
         Ready = Graphics3D.SetDirectionalLight3D(-35, -80, 25, 255, 248, 235, 220) And Ready
-        Ready = Graphics3D.SetPointLight3D(0, -8, 12, -3, 170, 205, 255, 260, 36) And Ready
-        Ready = Graphics3D.SetPointLight3D(1, 8, 8, 0, 255, 205, 145, 180, 30) And Ready
+        Ready = Graphics3D.SetPointLight3D(0, -80, 120, -30, 170, 205, 255, 260, 360) And Ready
+        Ready = Graphics3D.SetPointLight3D(1, 80, 80, 0, 255, 205, 145, 180, 300) And Ready
 
         Call Scene3D.UseCustomLighting()
 
@@ -472,7 +579,7 @@ Sub DrawViewerOverlay()
     Draw Number CameraControls.PanY At 894, 250 Size 12 Color WHITE
     Draw Text "FOV / Height" At 732, 274 Size 12 Color LIGHT_GRAY
     Draw Number Camera.FovDegrees At 842, 274 Size 12 Color WHITE
-    Draw Number CharacterBounds.Size.Y / 1000 At 894, 274 Size 12 Color WHITE
+    Draw Number CharacterBounds.Size.Y / 10000 At 894, 274 Size 12 Color WHITE
     Draw Text "Draws / Triangles" At 732, 298 Size 12 Color LIGHT_GRAY
     Draw Number Graphics3D.DrawCallCount3D() At 856, 298 Size 12 Color WHITE
     Draw Number Graphics3D.SubmittedTriangleCount3D() At 896, 298 Size 12 Color WHITE

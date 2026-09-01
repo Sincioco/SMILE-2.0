@@ -1366,15 +1366,18 @@ void smile_show_screen(void)
 {
     int diagnostics_ready;
     smile_frame_clock_begin_present(&smile_frame_clock);
-    smile_pump_messages();
-    if (smile_window == 0)
-        return;
-    smile_graphics_present();
+
+    /* Finish the input frame before collecting messages for the next one.
+       Clearing after the pump discarded mouse events received during present. */
     smile_pointer_delta_x_value = 0;
     smile_pointer_delta_y_value = 0;
     smile_pointer_wheel_delta_value = 0;
     smile_pointer_pressed_buttons = 0;
     smile_pointer_released_buttons = 0;
+    smile_pump_messages();
+    if (smile_window == 0)
+        return;
+    smile_graphics_present();
     diagnostics_ready = smile_frame_clock_end_present(&smile_frame_clock);
     if (diagnostics_ready && smile_graphics_diagnostics_enabled())
     {

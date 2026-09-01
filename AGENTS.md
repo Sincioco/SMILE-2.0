@@ -25,6 +25,15 @@ SMILE must evolve incrementally from the current SMILE 2.0 compiler and runtime 
 - Keep `Smile.Simple3D` a bounded source-level educational layer projected through the permanent 2D renderer. Do not turn it into a game-specific runtime helper or treat it as the future hardware `Renderer3D` API.
 - Keep logical-canvas pointer input generic and cross-target. Mouse, pen, touch, virtual controls, cameras, orbit behavior, and game actions must remain distinct source-level concerns.
 
+### Permanent smooth 3D camera interaction rule
+
+- Future SMILE games, viewers, examples, templates, and programs with pan, zoom, orbit, or rotation controls must make those controls smooth by default on native and Web targets.
+- Use an integer-world scale large enough that camera and target movement does not visibly quantize around the subject. Meter-scale imported assets may use Character3D scale up to 10,000 percent when needed for camera precision.
+- Preserve partial pointer motion across frames instead of truncating small deltas. Bound pan and vertical orbit to useful scene-relative ranges.
+- Apply wheel, button, key, or gesture zoom to a bounded target and ease the live camera toward it instead of snapping an entire input step in one frame.
+- Keep input sensitivity proportional to the scene and subject. Do not copy constants from a differently scaled scene without recalibration.
+- Validate every new or substantively changed camera interaction with one slow and one moderate horizontal/vertical drag, pan, zoom-in, zoom-out, reset, and the documented keyboard controls on the applicable native and Web targets.
+
 ## KISS and velocity
 
 Use KISS: Keep It Simple, Stupid.

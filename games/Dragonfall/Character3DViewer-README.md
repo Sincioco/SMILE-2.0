@@ -13,4 +13,6 @@ Controls:
 - `1`, `2`, and `3`: Idle, Walk, and Run animations.
 - `Space`: cycle inspection lighting. `Enter`: reset the view. `Esc`: exit.
 
+Desktop mouse motion is accumulated so slow drags are not lost between frames. The sample runs at 10x its original integer-world scale for smooth camera orbit and pan, while the on-screen dimensions remain unchanged. Horizontal orbit remains responsive, and vertical orbit and pan are scaled and bounded so an ordinary drag cannot immediately throw the character out of view. Wheel and button zoom update a bounded target FOV; the displayed camera eases toward it one degree per frame instead of snapping by a whole wheel step.
+
 The viewer intentionally consumes SM3D rather than loading GLB at runtime. To inspect another character, convert and publish its model and textures, then change `CHARACTER_ASSET`, the clip constants, and the project `Asset` items. The viewer camera, interaction, lighting, animation selection, diagnostics, and cleanup remain character-neutral.

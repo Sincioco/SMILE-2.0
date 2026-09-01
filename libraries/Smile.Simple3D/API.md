@@ -200,7 +200,8 @@ Loading and lifecycle:
 
 Transforms and animation:
 
-- `Place`, `Rotate`, `SetScale`, `SetVisible`, and yaw-only `LookAt` update every model part transactionally. Positions are bounded to -1,000,000 through 1,000,000, rotation input to the same safe integer range and normalized to 0-359 degrees, and uniform scale to 1-1,000 percent.
+- `Place`, `Rotate`, `SetScale`, `SetVisible`, and yaw-only `LookAt` update every model part transactionally. Positions are bounded to -1,000,000 through 1,000,000, rotation input to the same safe integer range and normalized to 0-359 degrees, and uniform scale to 1-10,000 percent. The upper range supports meter-scale imported characters in higher-precision integer-world inspection scenes.
+- Camera-driven programs should preserve partial pointer deltas, use a scene scale large enough to avoid visible integer-coordinate quantization, and ease bounded zoom targets over multiple frames. Pan, zoom, orbit, and rotation should not snap by a complete input step in one frame.
 - `SetShadows(ByRef Actor, CastsShadow, ReceivesShadow)`, `CastsShadow`, and `ReceivesShadow` update or inspect every part transactionally. Partial renderer refusal restores all accepted parts or quarantines the actor if rollback cannot be proven.
 - `PlayAnimation`, `PlayMode`, `CrossFade`, `StopAnimation`, `Update`, `IsPlaying`, `AnimationComplete`, and `CurrentClipNameMatches` use exact case-sensitive clip names.
 - `SetRootMotion` accepts `ROOT_MOTION_IGNORE` or `ROOT_MOTION_APPLY`. Apply mode drains the combined low-level model-space delta once per update, rotates translation into world space using the actor's pre-update yaw, then applies root yaw. Position/yaw subunits remain in thousandths.
