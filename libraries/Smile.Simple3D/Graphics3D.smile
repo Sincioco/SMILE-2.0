@@ -122,6 +122,7 @@ Private Const COMMAND_CONFIGURE_SHADOW = 114
 Private Const COMMAND_SET_SHADOW_AREA = 115
 Private Const COMMAND_SET_OBJECT_SHADOWS = 116
 Private Const COMMAND_M5_VALUE = 117
+Private Const COMMAND_SUBMISSION_GROUP = 118
 
 Private Const ANIMATOR_QUERY_DESTINATION_CLIP = 1
 Private Const ANIMATOR_QUERY_TIME_REMAINDER = 2
@@ -235,6 +236,29 @@ Public Const M5_QUERY_SCENE_BYTES = 36
 Public Const M5_QUERY_BLOOM_BYTES = 37
 Public Const M5_QUERY_OBJECT_CASTS_SHADOW = 40
 Public Const M5_QUERY_OBJECT_RECEIVES_SHADOW = 41
+Public Const M5_QUERY_PHYSICAL_SUBMISSIONS = 42
+Public Const M5_QUERY_PROVISIONAL_SUBMISSIONS = 43
+Public Const M5_QUERY_RESERVED_SUBMISSIONS = 44
+Public Const M5_QUERY_PALETTE_SNAPSHOTS = 45
+Public Const M5_QUERY_IN_FLIGHT_MESHES = 46
+Public Const M5_QUERY_IN_FLIGHT_TEXTURES = 47
+Public Const M5_QUERY_SNAPSHOT_BYTES = 48
+Public Const M5_QUERY_PALETTE_CAPACITY = 49
+Public Const M5_QUERY_GROUP_ACTIVE = 50
+Public Const M5_QUERY_GROUP_LOGICAL_SUBMISSIONS = 51
+Public Const M5_QUERY_SNAPSHOT_SOURCE = 60
+Public Const M5_QUERY_SNAPSHOT_MESH = 61
+Public Const M5_QUERY_SNAPSHOT_POSITION_X = 62
+Public Const M5_QUERY_SNAPSHOT_COLOR_RED = 63
+Public Const M5_QUERY_SNAPSHOT_OPACITY = 64
+Public Const M5_QUERY_SNAPSHOT_MATERIAL_KIND = 65
+Public Const M5_QUERY_SNAPSHOT_DOUBLE_SIDED = 66
+Public Const M5_QUERY_SNAPSHOT_PALETTE = 67
+Public Const M5_QUERY_SNAPSHOT_POSE_REVISION = 68
+Public Const M5_QUERY_SNAPSHOT_CASTS_SHADOW = 69
+Public Const SUBMISSION_GROUP_BEGIN = 1
+Public Const SUBMISSION_GROUP_COMMIT = 2
+Public Const SUBMISSION_GROUP_ROLLBACK = 3
 Public Const MODEL_MATERIAL_BASE_COLOR_RED = 1
 Public Const MODEL_MATERIAL_BASE_COLOR_GREEN = 2
 Public Const MODEL_MATERIAL_BASE_COLOR_BLUE = 3
@@ -3542,6 +3566,75 @@ Public Function DrawObject3D(Object As Core.Object3D) As Boolean
     Dim Result As Boolean
 
     Result = Dispatch(COMMAND_DRAW, Object.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+''' Reserves an exact, nonnested draw-submission group and returns its generation-safe token.
+Public Function BeginSubmissionGroup3D(Capacity As Number) As Number
+
+    Dim SubmissionToken As Number
+
+    SubmissionToken = Dispatch(
+        COMMAND_SUBMISSION_GROUP,
+        SUBMISSION_GROUP_BEGIN,
+        Capacity,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    )
+
+    Return SubmissionToken
+
+End Function
+
+''' Atomically publishes the current draw-submission group.
+Public Function CommitSubmissionGroup3D(SubmissionToken As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SUBMISSION_GROUP,
+        SUBMISSION_GROUP_COMMIT,
+        SubmissionToken,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    Return Result
+
+End Function
+
+''' Discards the current draw-submission group and releases its retained resources.
+Public Function RollbackSubmissionGroup3D(SubmissionToken As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SUBMISSION_GROUP,
+        SUBMISSION_GROUP_ROLLBACK,
+        SubmissionToken,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
     Return Result
 
 End Function

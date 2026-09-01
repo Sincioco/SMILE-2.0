@@ -47,22 +47,33 @@ Do
     Get Key Key
 
     If Key = KEY_ESCAPE Then
+
         Running = False
+
     Else If Key = KEY_UP Then
+
         QualityIndex = (QualityIndex + 1) Mod 4
 
         Call ApplyQuality()
+
     Else If Key = KEY_S Then
+
         ShadowsEnabled = Not ShadowsEnabled
         FrameReady = Scene3D.SetShadows(ShadowsEnabled)
+
     Else If Key = KEY_A Then
+
         HdrEnabled = Not HdrEnabled
         FrameReady = Scene3D.SetHdr(HdrEnabled)
         FrameReady = Scene3D.SetPostProcessing(HdrEnabled) And FrameReady
+
     Else If Key = KEY_W Then
+
         BloomEnabled = Not BloomEnabled
         FrameReady = Scene3D.SetBloom(BloomEnabled, 90, 1100)
+
     Else If Key = KEY_RIGHT Then
+
         ExposurePercent = ExposurePercent + 25
 
         If ExposurePercent > 175 Then
@@ -70,14 +81,21 @@ Do
         End If
 
         FrameReady = Scene3D.SetExposure(ExposurePercent)
+
     Else If Key = KEY_SPACE Then
+
         AttackSelected = Not AttackSelected
 
         Call CrossFadeHero()
+
     Else If Key = KEY_D Then
+
         DiagnosticsVisible = Not DiagnosticsVisible
+
     Else If Key = KEY_ENTER Then
+
         Call RestoreShowcase()
+
     End If
 
     CurrentTime = Timer()

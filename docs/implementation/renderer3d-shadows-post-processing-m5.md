@@ -1,5 +1,7 @@
 # Renderer3D Shadows and Post-Processing — M5
 
+> Historical M5 delivery record. The current queue ownership, destruction behavior, diagnostics, command range, and next-free numeric ID are superseded by `renderer3d-shadow-post-hardening-m5-1.md`.
+
 ## Status and reconciliation
 
 M5 is complete on `main`. Work began from `4a6cb87b3eaf1666193469a40c15b1bb74d3b9fc`, which exactly matched `origin/main` and contains the completed M4.1 prerequisite. The branch was zero commits ahead and behind. The only pre-existing worktree item was the user-owned untracked `docs/plans/` tree; it was neither edited nor staged. No reset, clean, destructive restore, rebase, amend, force-push, or history rewrite was used.

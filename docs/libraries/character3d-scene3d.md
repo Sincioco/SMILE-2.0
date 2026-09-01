@@ -61,7 +61,7 @@ Draw Text "HP 100" At 20, 20 Size 20 Color WHITE
 Show Screen
 ```
 
-`Scene3D.Begin` rejects nesting and reapplies the selected preset unless `UseCustomLighting` was chosen. `EndScene` rejects an unmatched end and restores ordinary Renderer2D composition.
+`Scene3D.Begin` rejects nesting and reapplies the selected preset unless `UseCustomLighting` was chosen. `Character3D.Draw` validates and stages all actor parts in one Renderer3D submission group; it commits the complete actor or rolls every part back while preserving the first renderer error as `CHARACTER_ERROR_DRAW_SUBMISSION`. `EndScene` rejects an unmatched end and restores ordinary Renderer2D composition.
 
 ## Events, sockets, and root motion
 
@@ -118,4 +118,4 @@ Call `Character3D.Destroy` for individual actors or `Character3D.Shutdown` at sc
 
 Battle systems can read `PrimaryObjectHandle`, indexed `PartObjectHandle`, `AnimatorHandle`, and `ModelHandle`. These are borrowed read-only values: do not destroy them or mutate Character3D-owned transforms. Character3D does not import Battle3D and never applies damage, VFX, HDR, bloom, or game-specific policy; its only M5 addition is generic all-part cast/receive shadow state.
 
-See `examples\Character3DLab` for actor ownership, `examples\Renderer3DPostProcessingLab` for the native/Web M5 visual sample, `scripts\test-character3d.ps1` for deterministic actor coverage, and `scripts\test-renderer3d-post-processing.ps1` for queue/shadow/HDR/bloom/fallback parity.
+See `examples\Character3DLab` for actor ownership, `examples\Renderer3DPostProcessingLab` for the native/Web M5 visual sample, `scripts\test-character3d.ps1` for deterministic actor coverage, and `scripts\test-renderer3d-post-processing-hardening.ps1` for M5.1 snapshot/group/ownership/shadow/target/color parity.

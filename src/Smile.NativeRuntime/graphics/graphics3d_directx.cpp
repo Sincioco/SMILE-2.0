@@ -36,6 +36,12 @@
 #define SMILE_3D_MAX_PENDING_MODEL_EVENTS 32
 #define SMILE_3D_MAX_LOCAL_LIGHTS 4
 #define SMILE_3D_MAX_FRAME_SUBMISSIONS 512
+#define SMILE_3D_MAX_FRAME_PALETTES 512
+#define SMILE_3D_SUBMISSION_OBJECT 1
+#define SMILE_3D_SUBMISSION_PARTICLE_BATCH 2
+#define SMILE_3D_SUBMISSION_RIBBON_BATCH 3
+#define SMILE_3D_SUBMISSION_SNAPSHOT_BYTES 512
+#define SMILE_3D_PALETTE_SNAPSHOT_BYTES 8208
 #define SMILE_3D_M5_FALLBACK_SHADOW_RESOLUTION_REDUCED 1
 #define SMILE_3D_M5_FALLBACK_SHADOW_DISABLED 2
 #define SMILE_3D_M5_FALLBACK_HDR_UNAVAILABLE 4
@@ -84,6 +90,7 @@ struct SmileMesh3D
     unsigned int* indices;
     ID3D11Buffer* vertex_buffer;
     ID3D11Buffer* index_buffer;
+    unsigned int in_flight;
 };
 
 struct SmileObject3D
@@ -118,6 +125,7 @@ struct SmileTexture3D
     ID3D11Texture2D* texture;
     ID3D11ShaderResourceView* view;
     ID3D11SamplerState* sampler;
+    unsigned int in_flight;
 };
 
 struct SmileMaterial3D
@@ -307,6 +315,33 @@ struct SmileAnimator3D
     SmileMatrix3D bones[SMILE_3D_MAX_MODEL_ANIMATION_BONES];
 };
 
+struct SmilePaletteSnapshot3D
+{
+    long long animator_handle;
+    unsigned int pose_revision;
+    unsigned char mode;
+    unsigned char bone_count;
+    SmileMatrix3D bones[SMILE_3D_MAX_MODEL_ANIMATION_BONES];
+};
+
+struct SmileSubmission3D
+{
+    unsigned char kind;
+    unsigned char visible;
+    unsigned char casts_shadow;
+    unsigned char receives_shadow;
+    unsigned char has_material;
+    unsigned char animation_mode;
+    unsigned char alpha_mode;
+    unsigned char double_sided;
+    long long source_handle;
+    long long mesh_handle;
+    long long texture_handles[4];
+    int palette_index;
+    SmileObject3D object;
+    SmileMaterial3D material;
+};
+
 struct SmileConstants3D
 {
     SmileMatrix3D model;
@@ -317,6 +352,7 @@ struct SmileConstants3D
     SmileMatrix3D shadow_mvp;
     float shadow[4];
     float output[4];
+    float shadow_light[4];
     SmileMatrix3D bones[SMILE_3D_MAX_BONES];
 };
 
@@ -405,6 +441,7 @@ static ID3D11DepthStencilView* smile_shadow_depth_view3d;
 static ID3D11ShaderResourceView* smile_shadow_shader_view3d;
 static ID3D11SamplerState* smile_shadow_sampler3d;
 static ID3D11RasterizerState* smile_shadow_raster_state3d;
+static ID3D11RasterizerState* smile_shadow_double_raster_state3d;
 static ID3D11VertexShader* smile_post_vertex_shader3d;
 static ID3D11PixelShader* smile_post_pixel_shader3d;
 static ID3D11Buffer* smile_post_constant_buffer3d;
@@ -458,9 +495,20 @@ static SmileDirectionalLight3D smile_directional_light3d = {
 };
 static SmileLocalLight3D smile_local_lights3d[SMILE_3D_MAX_LOCAL_LIGHTS];
 static unsigned int smile_max_anisotropy3d = 16;
-static long long smile_frame_submissions3d[SMILE_3D_MAX_FRAME_SUBMISSIONS];
+static SmileSubmission3D smile_frame_submissions3d[SMILE_3D_MAX_FRAME_SUBMISSIONS];
+static SmilePaletteSnapshot3D smile_frame_palettes3d[SMILE_3D_MAX_FRAME_PALETTES];
 static unsigned int smile_frame_submission_count3d;
+static unsigned int smile_frame_palette_count3d;
+static unsigned int smile_submission_group_start3d;
+static unsigned int smile_submission_group_palette_start3d;
+static unsigned int smile_submission_group_reserved3d;
+static unsigned int smile_submission_group_physical3d;
+static unsigned int smile_submission_group_logical3d;
+static int smile_submission_group_active3d;
+static long long smile_submission_group_token3d;
+static long long smile_submission_group_serial3d;
 static long long smile_logical_submission_count3d;
+static long long smile_physical_submission_count3d;
 static long long smile_rejected_submission_count3d;
 static long long smile_shadow_draw_count3d;
 static long long smile_shadow_triangle_count3d;
@@ -500,6 +548,37 @@ static long long smile_m5_target_bytes3d;
 static long long smile_shadow_bytes3d;
 static long long smile_scene_bytes3d;
 static long long smile_bloom_bytes3d;
+
+struct SmileM5TargetState3D
+{
+    ID3D11Texture2D* color_texture;
+    ID3D11RenderTargetView* color_view;
+    ID3D11Texture2D* depth_texture;
+    ID3D11DepthStencilView* depth_view;
+    ID3D11Texture2D* resolve_texture;
+    ID3D11ShaderResourceView* scene_view;
+    ID3D11Texture2D* bloom_texture_a;
+    ID3D11RenderTargetView* bloom_view_a;
+    ID3D11ShaderResourceView* bloom_shader_a;
+    ID3D11Texture2D* bloom_texture_b;
+    ID3D11RenderTargetView* bloom_view_b;
+    ID3D11ShaderResourceView* bloom_shader_b;
+    int target_width;
+    int target_height;
+    int m5_width;
+    int m5_height;
+    int bloom_width;
+    int bloom_height;
+    UINT sample_count;
+    UINT sample_quality;
+    int post_effective;
+    int hdr_effective;
+    int bloom_effective;
+    int tone_effective;
+    long long target_bytes;
+    long long scene_bytes;
+    long long bloom_bytes;
+};
 static float smile_shadow_center3d[3] = { 0.0f, 100.0f, 0.0f };
 static float smile_shadow_width3d = 1200.0f;
 static float smile_shadow_height3d = 900.0f;
@@ -518,7 +597,6 @@ static int smile_3d_clear_model_pbr(SmileModel3D* model);
 static int smile_3d_create_pipeline(void);
 static int smile_3d_prepare_model_pbr(long long model_handle,
     long long filter, long long wrap, long long anisotropy);
-static void smile_3d_release_m5_targets(void);
 static int smile_3d_prepare_m5_resources(void);
 static int smile_3d_draw_immediate(long long handle);
 static int smile_3d_render_shadow_pass(void);
@@ -765,7 +843,9 @@ static int smile_3d_mesh_reference_count(long long mesh_handle)
 {
     int count = 0;
     int index;
-    if (smile_3d_mesh(mesh_handle) == 0) return 0;
+    SmileMesh3D* mesh = smile_3d_mesh(mesh_handle);
+    if (mesh == 0) return 0;
+    count = (int)mesh->in_flight;
     for (index = 0; index < SMILE_3D_MAX_OBJECTS; ++index)
         if (smile_objects3d[index].active && smile_objects3d[index].mesh_handle == mesh_handle) count++;
     return count;
@@ -775,7 +855,9 @@ static int smile_3d_texture_reference_count(long long texture_handle)
 {
     int count = 0;
     int index;
-    if (smile_3d_texture(texture_handle) == 0) return 0;
+    SmileTexture3D* texture = smile_3d_texture(texture_handle);
+    if (texture == 0) return 0;
+    count = (int)texture->in_flight;
     for (index = 0; index < SMILE_3D_MAX_MATERIALS; ++index)
     {
         if (!smile_materials3d[index].active) continue;
@@ -885,6 +967,7 @@ static void smile_3d_delete_mesh(SmileMesh3D* mesh)
     mesh->committed = 0;
     mesh->explicit_normals = 0;
     mesh->max_joint = 0;
+    mesh->in_flight = 0;
     mesh->generation++;
     if (mesh->generation == 0) mesh->generation = 1;
 }
@@ -1069,6 +1152,7 @@ static void smile_3d_delete_texture(SmileTexture3D* texture)
     smile_image_resource_release(texture->image);
     texture->image = 0;
     texture->active = 0;
+    texture->in_flight = 0;
     texture->generation++;
     if (texture->generation == 0) texture->generation = 1;
 }
@@ -1107,6 +1191,7 @@ static long long smile_3d_create_texture(SmileImageResource* image, int filter, 
     texture = &smile_textures3d[slot];
     if (texture->generation == 0) texture->generation = 1;
     texture->active = 1;
+    texture->in_flight = 0;
     texture->filter = (unsigned char)filter;
     texture->wrap = (unsigned char)wrap;
     texture->pbr = 0;
@@ -1331,6 +1416,11 @@ static long long smile_3d_create_pbr_material(long long base_texture,
 static int smile_3d_clear_model_pbr(SmileModel3D* model)
 {
     if (model == 0) return 0;
+    for (int index = 0; index < model->owned_texture_count; ++index)
+    {
+        SmileTexture3D* texture = smile_3d_texture(model->owned_texture_handles[index]);
+        if (texture != 0 && texture->in_flight != 0) return 0;
+    }
     for (int index = 0; index < model->prepared_material_count; ++index)
         if (smile_3d_material_reference_count(model->prepared_material_handles[index]) != 0)
             return 0;
@@ -1579,6 +1669,7 @@ static long long smile_3d_create_mesh(unsigned int vertex_count, unsigned int in
     mesh->committed = 0;
     mesh->explicit_normals = 0;
     mesh->max_joint = 0;
+    mesh->in_flight = 0;
     for (unsigned int index = 0; index < vertex_count; ++index)
     {
         mesh->vertices[index].weights[0] = 1.0f;
@@ -3156,6 +3247,8 @@ static void smile_3d_update_animation_pose(SmileAnimator3D* animator)
     }
     for (int bone = skeleton->bone_count; bone < SMILE_3D_MAX_BONES; ++bone)
         animator->bones[bone] = smile_3d_identity();
+    animator->pose_revision++;
+    if (animator->pose_revision == 0) animator->pose_revision = 1;
 }
 
 static int smile_3d_update_animator(SmileAnimator3D* animator, unsigned int delta_ms)
@@ -3239,23 +3332,23 @@ static HRESULT smile_3d_compile(ID3D11Device* device, const char* source, const 
 static int smile_3d_create_pipeline(void)
 {
     static const char* vertex_source =
-        "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;row_major float4x4 bones[32];}"
+        "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 shadowLight;row_major float4x4 bones[32];}"
         "cbuffer B:register(b1){row_major float4x4 modelBones[128];}"
         "struct I{float3 p:POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;float4 j:BLENDINDICES;float4 w:BLENDWEIGHT;};"
-        "struct O{float4 p:SV_POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;float4 sp:TEXCOORD2;};"
+        "struct O{float4 p:SV_POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;float3 world:TEXCOORD1;float4 sp:TEXCOORD2;};"
         "O main(I i){O o;float4 p=float4(i.p,1);float3 n=i.n;if(animation.x>.5){float4x4 s;"
         "if(animation.x>1.5)s=modelBones[(uint)i.j.x]*i.w.x+modelBones[(uint)i.j.y]*i.w.y+modelBones[(uint)i.j.z]*i.w.z+modelBones[(uint)i.j.w]*i.w.w;"
         "else s=bones[(uint)i.j.x]*i.w.x+bones[(uint)i.j.y]*i.w.y+bones[(uint)i.j.z]*i.w.z+bones[(uint)i.j.w]*i.w.w;"
-        "p=mul(p,s);n=mul(float4(n,0),s).xyz;}o.p=mul(p,mvp);o.n=normalize(mul(float4(n,0),model).xyz);o.uv=i.uv;o.sp=mul(p,shadowMvp);return o;}";
+        "p=mul(p,s);n=mul(float4(n,0),s).xyz;}float4 world=mul(p,model);o.p=mul(p,mvp);o.n=normalize(mul(float4(n,0),model).xyz);o.uv=i.uv;o.world=world.xyz;o.sp=mul(p,shadowMvp);return o;}";
     static const char* pixel_source =
-        "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;row_major float4x4 bones[32];}"
+        "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 shadowLight;row_major float4x4 bones[32];}"
         "Texture2D baseTexture:register(t0);SamplerState baseSampler:register(s0);Texture2D shadowMap:register(t5);SamplerComparisonState shadowSampler:register(s5);"
-        "float ShadowValue(float4 p,float3 n){if(shadow.x<.5||p.w<=0)return 1;float3 q=p.xyz/p.w;float2 uv=float2(q.x*.5+.5,-q.y*.5+.5);if(any(uv<0)||any(uv>1)||q.z<0||q.z>1)return 1;float bias=output.y+output.z*(1-saturate(dot(normalize(n),normalize(float3(-.35,.8,-.45)))));float sum=0;[unroll]for(int y=-1;y<=1;++y)[unroll]for(int x=-1;x<=1;++x)sum+=shadowMap.SampleCmpLevelZero(shadowSampler,uv+float2(x,y)*shadow.z,q.z-bias);return sum/9;}"
+        "float ShadowValue(float4 p,float3 world,float3 n){if(shadow.x<.5||p.w<=0)return 1;float3 q=p.xyz/p.w;float2 uv=float2(q.x*.5+.5,-q.y*.5+.5);if(any(uv<0)||any(uv>1)||q.z<0||q.z>1)return 1;float3 L=shadowLight.w>1.5?normalize(shadowLight.xyz-world):normalize(shadowLight.xyz);float bias=output.y+output.z*(1-saturate(dot(normalize(n),L)));float sum=0;[unroll]for(int y=-1;y<=1;++y)[unroll]for(int x=-1;x<=1;++x)sum+=shadowMap.SampleCmpLevelZero(shadowSampler,uv+float2(x,y)*shadow.z,q.z-bias);return sum/9;}"
         "float3 ToLinear(float3 c){return lerp(c/12.92,pow((c+.055)/1.055,2.4),step(.04045,c));}"
-        "float4 main(float4 p:SV_POSITION,float3 n:NORMAL,float2 uv:TEXCOORD0,float4 sp:TEXCOORD2):SV_TARGET{"
+        "float4 main(float4 p:SV_POSITION,float3 n:NORMAL,float2 uv:TEXCOORD0,float3 world:TEXCOORD1,float4 sp:TEXCOORD2):SV_TARGET{"
         "float4 base=tint;if(material.x>.5){float4 sample=baseTexture.Sample(baseSampler,uv);"
         "if(sample.a>.0001)sample.rgb/=sample.a;base*=sample;}if(material.w>=0&&base.a<material.w)discard;"
-        "float l=.28+.72*max(0,dot(normalize(n),normalize(float3(-.35,.8,-.45))))*ShadowValue(sp,n);"
+        "float l=.28+.72*max(0,dot(normalize(n),normalize(float3(-.35,.8,-.45))))*ShadowValue(sp,world,n);"
         "float light=material.y>.5?1:l+material.z;float3 color=base.rgb*light;return output.x>.5?float4(max(ToLinear(color),0),base.a):float4(color,base.a);}";
     static const char* pbr_vertex_source =
         "cbuffer P:register(b0){row_major float4x4 model;row_major float4x4 mvp;row_major float4x4 normalMatrix;"
@@ -4343,6 +4436,19 @@ static int smile_3d_update_shadow_matrix(void)
                 smile_directional_light3d.direction[component] * smile_shadow_far3d * 0.5f;
         }
         view = smile_3d_look_at(eye, target);
+        if (smile_shadow_resolution3d > 0)
+        {
+            float light_x = target[0] * view.m[0] + target[1] * view.m[4] +
+                target[2] * view.m[8] + view.m[12];
+            float light_y = target[0] * view.m[1] + target[1] * view.m[5] +
+                target[2] * view.m[9] + view.m[13];
+            float texel_x = smile_shadow_width3d / (float)smile_shadow_resolution3d;
+            float texel_y = smile_shadow_height3d / (float)smile_shadow_resolution3d;
+            float snapped_x = roundf(light_x / texel_x) * texel_x;
+            float snapped_y = roundf(light_y / texel_y) * texel_y;
+            view.m[12] += snapped_x - light_x;
+            view.m[13] += snapped_y - light_y;
+        }
         projection = smile_3d_orthographic(smile_shadow_width3d, smile_shadow_height3d,
             smile_shadow_near3d, smile_shadow_far3d);
     }
@@ -4368,26 +4474,10 @@ static int smile_3d_update_shadow_matrix(void)
     return 1;
 }
 
-static void smile_3d_release_m5_targets(void)
-{
-    smile_3d_release(smile_scene_shader_view3d);
-    smile_3d_release(smile_scene_resolve_texture3d);
-    smile_3d_release(smile_bloom_shader_a3d);
-    smile_3d_release(smile_bloom_view_a3d);
-    smile_3d_release(smile_bloom_texture_a3d);
-    smile_3d_release(smile_bloom_shader_b3d);
-    smile_3d_release(smile_bloom_view_b3d);
-    smile_3d_release(smile_bloom_texture_b3d);
-    smile_bloom_width3d = smile_bloom_height3d = 0;
-    smile_m5_target_width3d = smile_m5_target_height3d = 0;
-    smile_m5_target_bytes3d = smile_scene_bytes3d = smile_bloom_bytes3d = 0;
-    smile_post_effective3d = smile_hdr_effective3d = smile_bloom_effective3d = 0;
-    smile_tone_mapping_effective3d = 0;
-}
-
 static void smile_3d_release_shadow_target(void)
 {
     smile_3d_release(smile_shadow_raster_state3d);
+    smile_3d_release(smile_shadow_double_raster_state3d);
     smile_3d_release(smile_shadow_shader_view3d);
     smile_3d_release(smile_shadow_depth_view3d);
     smile_3d_release(smile_shadow_texture3d);
@@ -4406,16 +4496,35 @@ static int smile_3d_create_shadow_target(void)
     static const int choices[2] = { 2048, 1024 };
     WCHAR forced[2];
     HRESULT result = E_FAIL;
+    ID3D11Texture2D* previous_texture;
+    ID3D11DepthStencilView* previous_depth;
+    ID3D11ShaderResourceView* previous_view;
+    ID3D11RasterizerState* previous_raster;
+    ID3D11RasterizerState* previous_double_raster;
+    int previous_resolution;
+    int previous_effective;
+    long long previous_bytes;
     if (!smile_shadow_requested3d) { smile_3d_release_shadow_target(); return 1; }
     if (device == 0 || smile_shadow_vertex_shader3d == 0 ||
         smile_shadow_pixel_shader3d == 0 ||
         GetEnvironmentVariableW(L"SMILE_TEST_RENDERER3D_FORCE_SHADOW_FAILURE", forced, 2) != 0)
     {
-        smile_3d_release_shadow_target();
-        smile_m5_fallback_flags3d |= SMILE_3D_M5_FALLBACK_SHADOW_DISABLED;
+        if (smile_shadow_texture3d == 0)
+            smile_m5_fallback_flags3d |= SMILE_3D_M5_FALLBACK_SHADOW_DISABLED;
         return 1;
     }
-    smile_3d_release_shadow_target();
+    previous_texture = smile_shadow_texture3d;
+    previous_depth = smile_shadow_depth_view3d;
+    previous_view = smile_shadow_shader_view3d;
+    previous_raster = smile_shadow_raster_state3d;
+    previous_double_raster = smile_shadow_double_raster_state3d;
+    previous_resolution = smile_shadow_resolution3d;
+    previous_effective = smile_shadow_effective3d;
+    previous_bytes = smile_shadow_bytes3d;
+    smile_shadow_texture3d = 0; smile_shadow_depth_view3d = 0;
+    smile_shadow_shader_view3d = 0; smile_shadow_raster_state3d = 0;
+    smile_shadow_double_raster_state3d = 0; smile_shadow_resolution3d = 0;
+    smile_shadow_effective3d = 0; smile_shadow_bytes3d = 0;
     for (int option = 0; option < 2; ++option)
     {
         int resolution = choices[option];
@@ -4444,6 +4553,9 @@ static int smile_3d_create_shadow_target(void)
         raster.DepthBiasClamp = 0.02f;
         if (SUCCEEDED(result))
             result = device->CreateRasterizerState(&raster, &smile_shadow_raster_state3d);
+        raster.CullMode = D3D11_CULL_NONE;
+        if (SUCCEEDED(result))
+            result = device->CreateRasterizerState(&raster, &smile_shadow_double_raster_state3d);
         if (SUCCEEDED(result))
         {
             smile_shadow_resolution3d = resolution;
@@ -4452,11 +4564,25 @@ static int smile_3d_create_shadow_target(void)
             if (resolution < smile_shadow_requested_resolution3d)
                 smile_m5_fallback_flags3d |=
                     SMILE_3D_M5_FALLBACK_SHADOW_RESOLUTION_REDUCED;
+            smile_3d_release(previous_double_raster);
+            smile_3d_release(previous_raster);
+            smile_3d_release(previous_view);
+            smile_3d_release(previous_depth);
+            smile_3d_release(previous_texture);
             return 1;
         }
         smile_3d_release_shadow_target();
     }
-    smile_m5_fallback_flags3d |= SMILE_3D_M5_FALLBACK_SHADOW_DISABLED;
+    smile_shadow_texture3d = previous_texture;
+    smile_shadow_depth_view3d = previous_depth;
+    smile_shadow_shader_view3d = previous_view;
+    smile_shadow_raster_state3d = previous_raster;
+    smile_shadow_double_raster_state3d = previous_double_raster;
+    smile_shadow_resolution3d = previous_resolution;
+    smile_shadow_effective3d = previous_effective;
+    smile_shadow_bytes3d = previous_bytes;
+    if (previous_texture == 0)
+        smile_m5_fallback_flags3d |= SMILE_3D_M5_FALLBACK_SHADOW_DISABLED;
     return 1;
 }
 
@@ -4479,6 +4605,83 @@ static int smile_3d_create_bloom_target(ID3D11Device* device, int width, int hei
     return SUCCEEDED(result);
 }
 
+static SmileM5TargetState3D smile_3d_take_target_state(void)
+{
+    SmileM5TargetState3D state = {};
+    state.color_texture = smile_color_texture3d;
+    state.color_view = smile_color_view3d;
+    state.depth_texture = smile_depth_texture3d;
+    state.depth_view = smile_depth_view3d;
+    state.resolve_texture = smile_scene_resolve_texture3d;
+    state.scene_view = smile_scene_shader_view3d;
+    state.bloom_texture_a = smile_bloom_texture_a3d;
+    state.bloom_view_a = smile_bloom_view_a3d;
+    state.bloom_shader_a = smile_bloom_shader_a3d;
+    state.bloom_texture_b = smile_bloom_texture_b3d;
+    state.bloom_view_b = smile_bloom_view_b3d;
+    state.bloom_shader_b = smile_bloom_shader_b3d;
+    state.target_width = smile_target_width3d;
+    state.target_height = smile_target_height3d;
+    state.m5_width = smile_m5_target_width3d;
+    state.m5_height = smile_m5_target_height3d;
+    state.bloom_width = smile_bloom_width3d;
+    state.bloom_height = smile_bloom_height3d;
+    state.sample_count = smile_sample_count3d;
+    state.sample_quality = smile_sample_quality3d;
+    state.post_effective = smile_post_effective3d;
+    state.hdr_effective = smile_hdr_effective3d;
+    state.bloom_effective = smile_bloom_effective3d;
+    state.tone_effective = smile_tone_mapping_effective3d;
+    state.target_bytes = smile_m5_target_bytes3d;
+    state.scene_bytes = smile_scene_bytes3d;
+    state.bloom_bytes = smile_bloom_bytes3d;
+    return state;
+}
+
+static void smile_3d_clear_target_state(void)
+{
+    smile_color_texture3d = 0; smile_color_view3d = 0;
+    smile_depth_texture3d = 0; smile_depth_view3d = 0;
+    smile_scene_resolve_texture3d = 0; smile_scene_shader_view3d = 0;
+    smile_bloom_texture_a3d = 0; smile_bloom_view_a3d = 0; smile_bloom_shader_a3d = 0;
+    smile_bloom_texture_b3d = 0; smile_bloom_view_b3d = 0; smile_bloom_shader_b3d = 0;
+    smile_target_width3d = smile_target_height3d = 0;
+    smile_m5_target_width3d = smile_m5_target_height3d = 0;
+    smile_bloom_width3d = smile_bloom_height3d = 0;
+    smile_sample_count3d = 1; smile_sample_quality3d = 0;
+    smile_post_effective3d = smile_hdr_effective3d = smile_bloom_effective3d = 0;
+    smile_tone_mapping_effective3d = 0;
+    smile_m5_target_bytes3d = smile_scene_bytes3d = smile_bloom_bytes3d = 0;
+}
+
+static void smile_3d_restore_target_state(const SmileM5TargetState3D& state)
+{
+    smile_color_texture3d = state.color_texture; smile_color_view3d = state.color_view;
+    smile_depth_texture3d = state.depth_texture; smile_depth_view3d = state.depth_view;
+    smile_scene_resolve_texture3d = state.resolve_texture; smile_scene_shader_view3d = state.scene_view;
+    smile_bloom_texture_a3d = state.bloom_texture_a; smile_bloom_view_a3d = state.bloom_view_a;
+    smile_bloom_shader_a3d = state.bloom_shader_a; smile_bloom_texture_b3d = state.bloom_texture_b;
+    smile_bloom_view_b3d = state.bloom_view_b; smile_bloom_shader_b3d = state.bloom_shader_b;
+    smile_target_width3d = state.target_width; smile_target_height3d = state.target_height;
+    smile_m5_target_width3d = state.m5_width; smile_m5_target_height3d = state.m5_height;
+    smile_bloom_width3d = state.bloom_width; smile_bloom_height3d = state.bloom_height;
+    smile_sample_count3d = state.sample_count; smile_sample_quality3d = state.sample_quality;
+    smile_post_effective3d = state.post_effective; smile_hdr_effective3d = state.hdr_effective;
+    smile_bloom_effective3d = state.bloom_effective; smile_tone_mapping_effective3d = state.tone_effective;
+    smile_m5_target_bytes3d = state.target_bytes; smile_scene_bytes3d = state.scene_bytes;
+    smile_bloom_bytes3d = state.bloom_bytes;
+}
+
+static void smile_3d_release_target_state(SmileM5TargetState3D& state)
+{
+    smile_3d_release(state.scene_view); smile_3d_release(state.resolve_texture);
+    smile_3d_release(state.bloom_shader_a); smile_3d_release(state.bloom_view_a);
+    smile_3d_release(state.bloom_texture_a); smile_3d_release(state.bloom_shader_b);
+    smile_3d_release(state.bloom_view_b); smile_3d_release(state.bloom_texture_b);
+    smile_3d_release(state.color_view); smile_3d_release(state.color_texture);
+    smile_3d_release(state.depth_view); smile_3d_release(state.depth_texture);
+}
+
 static int smile_3d_create_targets(void)
 {
     ID3D11Device* device = (ID3D11Device*)smile_graphics_directx_device();
@@ -4489,14 +4692,13 @@ static int smile_3d_create_targets(void)
     HRESULT result = E_FAIL;
     UINT candidate;
     WCHAR forced_hdr[2];
+    SmileM5TargetState3D previous;
     if (device == 0 || width <= 0 || height <= 0) return 0;
     if (smile_depth_view3d != 0 && width == smile_target_width3d &&
         height == smile_target_height3d &&
         smile_m5_applied_revision3d == smile_m5_configuration_revision3d) return 1;
-    smile_3d_release(smile_color_view3d); smile_3d_release(smile_color_texture3d);
-    smile_3d_release(smile_depth_view3d); smile_3d_release(smile_depth_texture3d);
-    smile_3d_release_m5_targets();
-    smile_sample_count3d = 1; smile_sample_quality3d = 0;
+    previous = smile_3d_take_target_state();
+    smile_3d_clear_target_state();
     smile_m5_fallback_flags3d &=
         SMILE_3D_M5_FALLBACK_SHADOW_RESOLUTION_REDUCED |
         SMILE_3D_M5_FALLBACK_SHADOW_DISABLED;
@@ -4678,7 +4880,22 @@ static int smile_3d_create_targets(void)
             smile_3d_release(smile_depth_texture3d);
         }
     }
-    if (FAILED(result)) { smile_last_error3d = 11; return 0; }
+    if (FAILED(result))
+    {
+        SmileM5TargetState3D failed = smile_3d_take_target_state();
+        smile_3d_clear_target_state();
+        smile_3d_release_target_state(failed);
+        if (previous.depth_view != 0 && previous.target_width == width &&
+            previous.target_height == height)
+        {
+            smile_3d_restore_target_state(previous);
+            smile_m5_applied_revision3d = smile_m5_configuration_revision3d;
+            return 1;
+        }
+        smile_3d_release_target_state(previous);
+        smile_last_error3d = 11;
+        return 0;
+    }
     smile_target_width3d = smile_m5_target_width3d = width;
     smile_target_height3d = smile_m5_target_height3d = height;
     smile_scene_bytes3d = (long long)width * height *
@@ -4693,11 +4910,13 @@ static int smile_3d_create_targets(void)
     smile_m5_resource_generation3d++;
     if (smile_m5_resource_generation3d <= 0 || smile_m5_resource_generation3d > 2147483647)
         smile_m5_resource_generation3d = 1;
+    smile_3d_release_target_state(previous);
     return 1;
 }
 
 static int smile_3d_prepare_m5_resources(void)
 {
+    smile_m5_fallback_flags3d = 0;
     if (smile_shadow_applied_revision3d != smile_m5_configuration_revision3d)
     {
         if (!smile_3d_create_shadow_target()) return 0;
@@ -4708,7 +4927,18 @@ static int smile_3d_prepare_m5_resources(void)
         smile_3d_update_shadow_matrix();
     if (smile_shadow_requested3d && !smile_shadow_effective3d)
         smile_m5_fallback_flags3d |= SMILE_3D_M5_FALLBACK_SHADOW_DISABLED;
+    else if (smile_shadow_effective3d &&
+        smile_shadow_resolution3d < smile_shadow_requested_resolution3d)
+        smile_m5_fallback_flags3d |= SMILE_3D_M5_FALLBACK_SHADOW_RESOLUTION_REDUCED;
     if (!smile_3d_create_targets()) return 0;
+    if (smile_post_requested3d && smile_hdr_requested3d && !smile_hdr_effective3d)
+        smile_m5_fallback_flags3d |= SMILE_3D_M5_FALLBACK_HDR_UNAVAILABLE |
+            SMILE_3D_M5_FALLBACK_TONE_MAPPING_DISABLED |
+            SMILE_3D_M5_FALLBACK_DIRECT_LDR;
+    if (smile_bloom_requested3d && !smile_bloom_effective3d)
+        smile_m5_fallback_flags3d |= SMILE_3D_M5_FALLBACK_BLOOM_DISABLED;
+    if (smile_requested_sample_count3d > (int)smile_sample_count3d)
+        smile_m5_fallback_flags3d |= SMILE_3D_M5_FALLBACK_MSAA_REDUCED;
     smile_multipass_active3d = smile_shadow_effective3d || smile_hdr_effective3d;
     smile_m5_target_bytes3d = smile_shadow_bytes3d + smile_scene_bytes3d + smile_bloom_bytes3d;
     return 1;
@@ -4806,21 +5036,159 @@ static int smile_3d_model_owns_mesh(const SmileModel3D* model, const SmileMesh3D
     return 0;
 }
 
-static int smile_3d_upload_model_palette(ID3D11DeviceContext* context,
-    long long animator_handle, SmileAnimator3D* animator, int shadow_pass)
+static int smile_3d_palette_snapshot(long long animator_handle, SmileAnimator3D* animator)
 {
-    if (animator == 0 || !animator->model_animation) return 1;
-    if (context == 0 || smile_model_palette_buffer3d == 0) { smile_last_error3d = 48; return 0; }
-    if (smile_model_palette_cached_animator3d != animator_handle ||
-        smile_model_palette_cached_revision3d != animator->pose_revision)
+    unsigned char mode;
+    unsigned int bone_count;
+    if (animator == 0) return -1;
+    mode = animator->model_animation ? 2 : 1;
+    bone_count = animator->model_animation ? SMILE_3D_MAX_MODEL_ANIMATION_BONES : SMILE_3D_MAX_BONES;
+    for (unsigned int index = 0; index < smile_frame_palette_count3d; ++index)
+        if (smile_frame_palettes3d[index].animator_handle == animator_handle &&
+            smile_frame_palettes3d[index].pose_revision == animator->pose_revision &&
+            smile_frame_palettes3d[index].mode == mode)
+            return (int)index;
+    if (smile_frame_palette_count3d >= SMILE_3D_MAX_FRAME_PALETTES)
     {
-        context->UpdateSubresource(smile_model_palette_buffer3d, 0, 0, animator->bones, 0, 0);
-        smile_model_palette_cached_animator3d = animator_handle;
-        smile_model_palette_cached_revision3d = animator->pose_revision;
+        smile_last_error3d = 51;
+        return -2;
+    }
+    SmilePaletteSnapshot3D* snapshot = &smile_frame_palettes3d[smile_frame_palette_count3d];
+    snapshot->animator_handle = animator_handle;
+    snapshot->pose_revision = animator->pose_revision;
+    snapshot->mode = mode;
+    snapshot->bone_count = (unsigned char)bone_count;
+    memcpy(snapshot->bones, animator->bones, sizeof(SmileMatrix3D) * bone_count);
+    return (int)smile_frame_palette_count3d++;
+}
+
+static int smile_3d_upload_palette_snapshot(ID3D11DeviceContext* context,
+    const SmileSubmission3D* submission, int shadow_pass)
+{
+    if (submission->palette_index < 0) return 1;
+    const SmilePaletteSnapshot3D* snapshot = &smile_frame_palettes3d[submission->palette_index];
+    if (snapshot->mode != 2) return 1;
+    if (context == 0 || smile_model_palette_buffer3d == 0)
+    {
+        smile_last_error3d = 48;
+        return 0;
+    }
+    if (smile_model_palette_cached_animator3d != snapshot->animator_handle ||
+        smile_model_palette_cached_revision3d != snapshot->pose_revision)
+    {
+        context->UpdateSubresource(smile_model_palette_buffer3d, 0, 0, snapshot->bones, 0, 0);
+        smile_model_palette_cached_animator3d = snapshot->animator_handle;
+        smile_model_palette_cached_revision3d = snapshot->pose_revision;
         if (shadow_pass) smile_shadow_palette_upload_count3d++;
         else smile_model_palette_upload_count3d++;
     }
     context->VSSetConstantBuffers(1, 1, &smile_model_palette_buffer3d);
+    return 1;
+}
+
+static int smile_3d_submission_has_texture(const SmileSubmission3D* submission,
+    long long texture_handle, int before)
+{
+    for (int semantic = 0; semantic < before; ++semantic)
+        if (submission->texture_handles[semantic] == texture_handle) return 1;
+    return 0;
+}
+
+static void smile_3d_release_submission(SmileSubmission3D* submission)
+{
+    SmileMesh3D* mesh = smile_3d_mesh(submission->mesh_handle);
+    if (mesh != 0 && mesh->in_flight > 0) mesh->in_flight--;
+    for (int semantic = 0; semantic < 4; ++semantic)
+    {
+        long long handle = submission->texture_handles[semantic];
+        if (handle == 0 || smile_3d_submission_has_texture(submission, handle, semantic)) continue;
+        SmileTexture3D* texture = smile_3d_texture(handle);
+        if (texture != 0 && texture->in_flight > 0) texture->in_flight--;
+    }
+    ZeroMemory(submission, sizeof(*submission));
+}
+
+static void smile_3d_release_submissions(unsigned int first, unsigned int last)
+{
+    while (last > first) smile_3d_release_submission(&smile_frame_submissions3d[--last]);
+}
+
+static int smile_3d_capture_submission(long long handle, SmileSubmission3D* submission)
+{
+    SmileObject3D* object = smile_3d_object(handle);
+    SmileMesh3D* mesh;
+    SmileMaterial3D* material = 0;
+    SmileAnimator3D* animator = 0;
+    int palette_index = -1;
+    if (!smile_frame_active3d || object == 0) { smile_last_error3d = 14; return 0; }
+    if (!object->visible) return 2;
+    mesh = smile_3d_mesh(object->mesh_handle);
+    if (mesh == 0 || !smile_3d_upload(mesh)) return 0;
+    if (object->material_handle != 0)
+    {
+        material = smile_3d_material(object->material_handle);
+        if (material == 0) { smile_last_error3d = 5; return 0; }
+        for (int semantic = 0; semantic < 4; ++semantic)
+        {
+            long long texture_handle = material->texture_handles[semantic];
+            if (texture_handle == 0) continue;
+            SmileTexture3D* texture = smile_3d_texture(texture_handle);
+            if (texture == 0 || !smile_3d_upload_texture(texture)) return 0;
+        }
+    }
+    if (object->animator_handle != 0)
+    {
+        animator = smile_3d_animator(object->animator_handle);
+        if (animator != 0 && animator->model_animation)
+        {
+            SmileModel3D* model = smile_3d_model_resource(animator->model_handle);
+            if (model == 0 || !smile_3d_model_owns_mesh(model, mesh) ||
+                mesh->max_joint >= model->animation_bone_count)
+            { smile_last_error3d = 36; return 0; }
+        }
+        else
+        {
+            SmileSkeleton3D* skeleton = animator == 0 ? 0 : smile_3d_skeleton(animator->skeleton_handle);
+            if (animator == 0 || skeleton == 0 || mesh->max_joint >= skeleton->bone_count)
+            { smile_last_error3d = 36; return 0; }
+            if (material != 0 && material->mode == 1)
+            {
+                SmileAnimationClip3D* clip = smile_3d_clip(animator->clip_handle);
+                if (clip != 0 && !clip->pbr_scale_safe)
+                { smile_last_error3d = 45; return 0; }
+            }
+        }
+        palette_index = smile_3d_palette_snapshot(object->animator_handle, animator);
+        if (palette_index == -2) return 0;
+    }
+    ZeroMemory(submission, sizeof(*submission));
+    submission->kind = SMILE_3D_SUBMISSION_OBJECT;
+    submission->visible = 1;
+    submission->casts_shadow = object->casts_shadow;
+    submission->receives_shadow = object->receives_shadow;
+    submission->source_handle = handle;
+    submission->mesh_handle = object->mesh_handle;
+    submission->palette_index = palette_index;
+    submission->object = *object;
+    submission->animation_mode = animator == 0 ? 0 : (animator->model_animation ? 2 : 1);
+    if (material != 0)
+    {
+        submission->has_material = 1;
+        submission->material = *material;
+        submission->alpha_mode = material->alpha_mode;
+        submission->double_sided = material->double_sided;
+        memcpy(submission->texture_handles, material->texture_handles,
+            sizeof(submission->texture_handles));
+    }
+    else submission->alpha_mode = object->color[3] < 0.999f ? 2 : 0;
+    mesh->in_flight++;
+    for (int semantic = 0; semantic < 4; ++semantic)
+    {
+        long long texture_handle = submission->texture_handles[semantic];
+        if (texture_handle == 0 || smile_3d_submission_has_texture(submission, texture_handle, semantic)) continue;
+        SmileTexture3D* texture = smile_3d_texture(texture_handle);
+        if (texture != 0) texture->in_flight++;
+    }
     return 1;
 }
 
@@ -4869,8 +5237,16 @@ static int smile_3d_begin(long long red, long long green, long long blue)
     smile_pbr_draw_count3d = 0;
     smile_simple_draw_count3d = 0;
     smile_pbr_triangle_count3d = 0;
+    smile_3d_release_submissions(0, smile_frame_submission_count3d);
     smile_frame_submission_count3d = 0;
+    smile_frame_palette_count3d = 0;
+    smile_submission_group_active3d = 0;
+    smile_submission_group_token3d = 0;
+    smile_submission_group_reserved3d = 0;
+    smile_submission_group_physical3d = 0;
+    smile_submission_group_logical3d = 0;
     smile_logical_submission_count3d = 0;
+    smile_physical_submission_count3d = 0;
     smile_rejected_submission_count3d = 0;
     smile_shadow_draw_count3d = 0;
     smile_shadow_triangle_count3d = 0;
@@ -4881,12 +5257,14 @@ static int smile_3d_begin(long long red, long long green, long long blue)
     return 1;
 }
 
-static int smile_3d_draw_pbr(SmileObject3D* object, SmileMesh3D* mesh, SmileMaterial3D* material)
+static int smile_3d_draw_pbr(const SmileSubmission3D* submission)
 {
+    const SmileObject3D* object = &submission->object;
+    SmileMesh3D* mesh = smile_3d_mesh(submission->mesh_handle);
+    const SmileMaterial3D* material = &submission->material;
     SmileTexture3D* textures[4] = {};
     ID3D11ShaderResourceView* views[4] = {};
     ID3D11SamplerState* samplers[4] = {};
-    SmileAnimator3D* animator = 0;
     ID3D11DeviceContext* context = (ID3D11DeviceContext*)smile_graphics_directx_context();
     SmilePbrConstants3D constants = {};
     SmileMatrix3D view, projection;
@@ -4898,31 +5276,12 @@ static int smile_3d_draw_pbr(SmileObject3D* object, SmileMesh3D* mesh, SmileMate
         smile_last_error3d = 44;
         return 0;
     }
+    if (mesh == 0) { smile_last_error3d = 5; return 0; }
     constants.model = smile_3d_model(object);
     if (smile_3d_linear_determinant(constants.model) <= 0.0000001f)
     {
         smile_last_error3d = 46;
         return 0;
-    }
-    if (object->animator_handle != 0)
-    {
-        animator = smile_3d_animator(object->animator_handle);
-        if (animator != 0 && animator->model_animation)
-        {
-            SmileModel3D* model = smile_3d_model_resource(animator->model_handle);
-            if (model == 0 || !smile_3d_model_owns_mesh(model, mesh) ||
-                mesh->max_joint >= model->animation_bone_count)
-            { smile_last_error3d = 36; return 0; }
-        }
-        else
-        {
-            SmileSkeleton3D* skeleton = animator == 0 ? 0 : smile_3d_skeleton(animator->skeleton_handle);
-            if (animator == 0 || skeleton == 0 || mesh->max_joint >= skeleton->bone_count)
-            { smile_last_error3d = 36; return 0; }
-            SmileAnimationClip3D* clip = smile_3d_clip(animator->clip_handle);
-            if (clip != 0 && !clip->pbr_scale_safe)
-            { smile_last_error3d = 45; return 0; }
-        }
     }
     for (int semantic = 0; semantic < 4; ++semantic)
     {
@@ -4939,7 +5298,7 @@ static int smile_3d_draw_pbr(SmileObject3D* object, SmileMesh3D* mesh, SmileMate
     projection = smile_3d_projection(aspect > 0.0f ? aspect : 1.0f);
     constants.mvp = smile_3d_multiply(smile_3d_multiply(constants.model, view), projection);
     constants.shadow_mvp = smile_3d_multiply(constants.model, smile_shadow_view_projection3d);
-    constants.shadow[0] = smile_shadow_effective3d && object->receives_shadow ? 1.0f : 0.0f;
+    constants.shadow[0] = smile_shadow_effective3d && submission->receives_shadow ? 1.0f : 0.0f;
     constants.shadow[1] = (float)smile_shadow_caster3d;
     constants.shadow[2] = (float)smile_shadow_slot3d;
     constants.shadow[3] = smile_shadow_resolution3d > 0
@@ -4980,9 +5339,10 @@ static int smile_3d_draw_pbr(SmileObject3D* object, SmileMesh3D* mesh, SmileMate
         constants.local_cone[light][0] = smile_local_lights3d[light].inner_cosine;
         constants.local_cone[light][1] = smile_local_lights3d[light].outer_cosine;
     }
-    constants.animation[0] = animator == 0 ? 0.0f : (animator->model_animation ? 2.0f : 1.0f);
+    constants.animation[0] = (float)submission->animation_mode;
     for (int bone = 0; bone < SMILE_3D_MAX_BONES; ++bone)
-        constants.bones[bone] = animator == 0 ? smile_3d_identity() : animator->bones[bone];
+        constants.bones[bone] = submission->palette_index < 0
+            ? smile_3d_identity() : smile_frame_palettes3d[submission->palette_index].bones[bone];
     context->UpdateSubresource(smile_pbr_constant_buffer3d, 0, 0, &constants, 0, 0);
     context->OMSetBlendState(material->alpha_mode == 2 ? smile_blend_state3d : 0, 0, 0xffffffff);
     context->OMSetDepthStencilState(material->alpha_mode == 2 ? smile_depth_read_state3d : smile_depth_state3d, 0);
@@ -4994,7 +5354,7 @@ static int smile_3d_draw_pbr(SmileObject3D* object, SmileMesh3D* mesh, SmileMate
     context->PSSetShader(smile_pbr_pixel_shader3d, 0, 0);
     context->VSSetConstantBuffers(0, 1, &smile_pbr_constant_buffer3d);
     context->PSSetConstantBuffers(0, 1, &smile_pbr_constant_buffer3d);
-    if (!smile_3d_upload_model_palette(context, object->animator_handle, animator, 0)) return 0;
+    if (!smile_3d_upload_palette_snapshot(context, submission, 0)) return 0;
     context->PSSetShaderResources(0, 4, views);
     context->PSSetSamplers(0, 4, samplers);
     context->PSSetShaderResources(5, 1, &smile_shadow_shader_view3d);
@@ -5007,13 +5367,12 @@ static int smile_3d_draw_pbr(SmileObject3D* object, SmileMesh3D* mesh, SmileMate
     return 1;
 }
 
-static int smile_3d_draw_immediate(long long handle)
+static int smile_3d_draw_submission(const SmileSubmission3D* submission)
 {
-    SmileObject3D* object = smile_3d_object(handle);
-    SmileMesh3D* mesh;
-    SmileMaterial3D* material = 0;
+    const SmileObject3D* object = &submission->object;
+    SmileMesh3D* mesh = smile_3d_mesh(submission->mesh_handle);
+    const SmileMaterial3D* material = submission->has_material ? &submission->material : 0;
     SmileTexture3D* texture = 0;
-    SmileAnimator3D* animator = 0;
     ID3D11DeviceContext* context = (ID3D11DeviceContext*)smile_graphics_directx_context();
     ID3D11ShaderResourceView* texture_view = 0;
     ID3D11SamplerState* texture_sampler = 0;
@@ -5022,15 +5381,12 @@ static int smile_3d_draw_immediate(long long handle)
     UINT stride = sizeof(SmileVertex3D), offset = 0;
     float aspect;
     int alpha_mode;
-    if (!smile_frame_active3d || object == 0) { smile_last_error3d = 14; return 0; }
-    if (!object->visible) return 1;
-    mesh = smile_3d_mesh(object->mesh_handle);
+    if (!smile_frame_active3d || submission->kind != SMILE_3D_SUBMISSION_OBJECT)
+    { smile_last_error3d = 14; return 0; }
     if (mesh == 0 || !smile_3d_upload(mesh)) return 0;
-    if (object->material_handle != 0)
+    if (material != 0)
     {
-        material = smile_3d_material(object->material_handle);
-        if (material == 0) { smile_last_error3d = 5; return 0; }
-        if (material->mode == 1) return smile_3d_draw_pbr(object, mesh, material);
+        if (material->mode == 1) return smile_3d_draw_pbr(submission);
         if (material->texture_handles[0] != 0)
         {
             texture = smile_3d_texture(material->texture_handles[0]);
@@ -5039,30 +5395,13 @@ static int smile_3d_draw_immediate(long long handle)
             texture_sampler = texture->sampler;
         }
     }
-    if (object->animator_handle != 0)
-    {
-        animator = smile_3d_animator(object->animator_handle);
-        if (animator != 0 && animator->model_animation)
-        {
-            SmileModel3D* model = smile_3d_model_resource(animator->model_handle);
-            if (model == 0 || !smile_3d_model_owns_mesh(model, mesh) ||
-                mesh->max_joint >= model->animation_bone_count)
-            { smile_last_error3d = 36; return 0; }
-        }
-        else
-        {
-            SmileSkeleton3D* skeleton = animator == 0 ? 0 : smile_3d_skeleton(animator->skeleton_handle);
-            if (animator == 0 || skeleton == 0 || mesh->max_joint >= skeleton->bone_count)
-            { smile_last_error3d = 36; return 0; }
-        }
-    }
     constants.model = smile_3d_model(object);
     view = smile_3d_view();
     aspect = (float)smile_graphics_directx_viewport_width() / (float)smile_graphics_directx_viewport_height();
     projection = smile_3d_projection(aspect > 0.0f ? aspect : 1.0f);
     constants.mvp = smile_3d_multiply(smile_3d_multiply(constants.model, view), projection);
     constants.shadow_mvp = smile_3d_multiply(constants.model, smile_shadow_view_projection3d);
-    constants.shadow[0] = smile_shadow_effective3d && object->receives_shadow ? 1.0f : 0.0f;
+    constants.shadow[0] = smile_shadow_effective3d && submission->receives_shadow ? 1.0f : 0.0f;
     constants.shadow[1] = (float)smile_shadow_caster3d;
     constants.shadow[2] = (float)smile_shadow_slot3d;
     constants.shadow[3] = smile_shadow_resolution3d > 0
@@ -5070,6 +5409,18 @@ static int smile_3d_draw_immediate(long long handle)
     constants.output[0] = smile_hdr_effective3d ? 1.0f : 0.0f;
     constants.output[1] = smile_shadow_bias3d;
     constants.output[2] = smile_shadow_normal_bias3d;
+    if (smile_shadow_caster3d == 2)
+    {
+        memcpy(constants.shadow_light, smile_local_lights3d[smile_shadow_slot3d].position,
+            sizeof(smile_local_lights3d[smile_shadow_slot3d].position));
+        constants.shadow_light[3] = 2.0f;
+    }
+    else
+    {
+        memcpy(constants.shadow_light, smile_directional_light3d.direction,
+            sizeof(smile_directional_light3d.direction));
+        constants.shadow_light[3] = 1.0f;
+    }
     constants.color[0] = object->color[0] * (material == 0 ? 1.0f : material->color[0]);
     constants.color[1] = object->color[1] * (material == 0 ? 1.0f : material->color[1]);
     constants.color[2] = object->color[2] * (material == 0 ? 1.0f : material->color[2]);
@@ -5078,9 +5429,10 @@ static int smile_3d_draw_immediate(long long handle)
     constants.material[1] = material == 0 ? 0.0f : (float)material->unlit;
     constants.material[2] = material == 0 ? 0.0f : material->emissive;
     constants.material[3] = material != 0 && material->alpha_mode == 1 ? material->cutoff : -1.0f;
-    constants.animation[0] = animator == 0 ? 0.0f : (animator->model_animation ? 2.0f : 1.0f);
+    constants.animation[0] = (float)submission->animation_mode;
     for (int bone = 0; bone < SMILE_3D_MAX_BONES; ++bone)
-        constants.bones[bone] = animator == 0 ? smile_3d_identity() : animator->bones[bone];
+        constants.bones[bone] = submission->palette_index < 0
+            ? smile_3d_identity() : smile_frame_palettes3d[submission->palette_index].bones[bone];
     alpha_mode = material == 0 ? (constants.color[3] < 0.999f ? 2 : 0) : material->alpha_mode;
     context->UpdateSubresource(smile_constant_buffer3d, 0, 0, &constants, 0, 0);
     context->RSSetState(smile_raster_state3d);
@@ -5089,7 +5441,7 @@ static int smile_3d_draw_immediate(long long handle)
     context->PSSetShader(smile_pixel_shader3d, 0, 0);
     context->VSSetConstantBuffers(0, 1, &smile_constant_buffer3d);
     context->PSSetConstantBuffers(0, 1, &smile_constant_buffer3d);
-    if (!smile_3d_upload_model_palette(context, object->animator_handle, animator, 0)) return 0;
+    if (!smile_3d_upload_palette_snapshot(context, submission, 0)) return 0;
     context->OMSetBlendState(
         alpha_mode == 3 ? smile_additive_blend_state3d : (alpha_mode == 2 ? smile_blend_state3d : 0),
         0,
@@ -5115,26 +5467,62 @@ static int smile_3d_draw_immediate(long long handle)
 static int smile_3d_draw(long long handle)
 {
     SmileObject3D* object = smile_3d_object(handle);
+    SmileSubmission3D* submission;
+    int captured;
     int result;
     if (!smile_frame_active3d || object == 0)
     {
         smile_last_error3d = 14;
         return 0;
     }
-    if (smile_multipass_active3d)
+    if (smile_multipass_active3d || smile_submission_group_active3d)
     {
-        if (smile_frame_submission_count3d >= SMILE_3D_MAX_FRAME_SUBMISSIONS)
+        if (!object->visible)
+        {
+            if (smile_submission_group_active3d) smile_submission_group_logical3d++;
+            else smile_logical_submission_count3d++;
+            return 1;
+        }
+        if (smile_frame_submission_count3d >= SMILE_3D_MAX_FRAME_SUBMISSIONS ||
+            (smile_submission_group_active3d &&
+                smile_submission_group_physical3d >= smile_submission_group_reserved3d))
         {
             smile_rejected_submission_count3d++;
             smile_last_error3d = 51;
             return 0;
         }
-        smile_frame_submissions3d[smile_frame_submission_count3d++] = handle;
-        smile_logical_submission_count3d++;
+        submission = &smile_frame_submissions3d[smile_frame_submission_count3d];
+        captured = smile_3d_capture_submission(handle, submission);
+        if (!captured) return 0;
+        if (captured == 1)
+        {
+            smile_frame_submission_count3d++;
+            if (smile_submission_group_active3d) smile_submission_group_physical3d++;
+        }
+        if (smile_submission_group_active3d) smile_submission_group_logical3d++;
+        else
+        {
+            smile_logical_submission_count3d++;
+            if (captured == 1) smile_physical_submission_count3d++;
+        }
         return 1;
     }
-    result = smile_3d_draw_immediate(handle);
-    if (result) smile_logical_submission_count3d++;
+    unsigned int palette_start = smile_frame_palette_count3d;
+    submission = &smile_frame_submissions3d[0];
+    captured = smile_3d_capture_submission(handle, submission);
+    if (!captured)
+    {
+        smile_frame_palette_count3d = palette_start;
+        return 0;
+    }
+    result = captured == 2 ? 1 : smile_3d_draw_submission(submission);
+    if (captured == 1) smile_3d_release_submission(submission);
+    smile_frame_palette_count3d = palette_start;
+    if (result)
+    {
+        smile_logical_submission_count3d++;
+        if (captured == 1) smile_physical_submission_count3d++;
+    }
     return result;
 }
 
@@ -5151,7 +5539,6 @@ static int smile_3d_render_shadow_pass(void)
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
     context->RSSetViewports(1, &viewport);
-    context->RSSetState(smile_shadow_raster_state3d);
     context->OMSetDepthStencilState(smile_depth_state3d, 0);
     context->OMSetBlendState(0, 0, 0xffffffff);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -5164,26 +5551,23 @@ static int smile_3d_render_shadow_pass(void)
     smile_model_palette_cached_revision3d = 0;
     for (unsigned int submission = 0; submission < smile_frame_submission_count3d; ++submission)
     {
-        long long handle = smile_frame_submissions3d[submission];
-        SmileObject3D* object = smile_3d_object(handle);
+        const SmileSubmission3D* entry = &smile_frame_submissions3d[submission];
+        const SmileObject3D* object = &entry->object;
         SmileMesh3D* mesh;
-        SmileMaterial3D* material;
+        const SmileMaterial3D* material;
         SmileTexture3D* texture = 0;
-        SmileAnimator3D* animator;
         ID3D11ShaderResourceView* texture_view = 0;
         ID3D11SamplerState* texture_sampler = 0;
         SmileShadowConstants3D constants = {};
         SmileMatrix3D model;
         UINT stride = sizeof(SmileVertex3D), offset = 0;
         int alpha_mode;
-        if (object == 0) { smile_last_error3d = 14; return 0; }
-        if (!object->visible || !object->casts_shadow) continue;
-        mesh = smile_3d_mesh(object->mesh_handle);
+        if (entry->kind != SMILE_3D_SUBMISSION_OBJECT) continue;
+        if (!entry->visible || !entry->casts_shadow) continue;
+        mesh = smile_3d_mesh(entry->mesh_handle);
         if (mesh == 0 || !smile_3d_upload(mesh)) return 0;
-        material = object->material_handle == 0 ? 0 : smile_3d_material(object->material_handle);
-        if (object->material_handle != 0 && material == 0) return 0;
-        alpha_mode = material == 0
-            ? (object->color[3] < 0.999f ? 2 : 0) : material->alpha_mode;
+        material = entry->has_material ? &entry->material : 0;
+        alpha_mode = entry->alpha_mode;
         if (alpha_mode == 2 || alpha_mode == 3) continue;
         if (material != 0 && material->texture_handles[0] != 0)
         {
@@ -5192,10 +5576,6 @@ static int smile_3d_render_shadow_pass(void)
             texture_view = texture->view;
             texture_sampler = texture->sampler;
         }
-        animator = object->animator_handle == 0
-            ? 0 : smile_3d_animator(object->animator_handle);
-        if (object->animator_handle != 0 && animator == 0)
-        { smile_last_error3d = 36; return 0; }
         model = smile_3d_model(object);
         if (smile_3d_linear_determinant(model) <= 0.0000001f)
         { smile_last_error3d = 46; return 0; }
@@ -5203,12 +5583,14 @@ static int smile_3d_render_shadow_pass(void)
         constants.alpha[0] = texture == 0 ? 0.0f : 1.0f;
         constants.alpha[1] = alpha_mode == 1 && material != 0 ? material->cutoff : -1.0f;
         constants.alpha[2] = object->color[3] * (material == 0 ? 1.0f : material->color[3]);
-        constants.animation[0] = animator == 0
-            ? 0.0f : (animator->model_animation ? 2.0f : 1.0f);
+        constants.animation[0] = (float)entry->animation_mode;
         for (int bone = 0; bone < SMILE_3D_MAX_BONES; ++bone)
-            constants.bones[bone] = animator == 0 ? smile_3d_identity() : animator->bones[bone];
+            constants.bones[bone] = entry->palette_index < 0
+                ? smile_3d_identity() : smile_frame_palettes3d[entry->palette_index].bones[bone];
         context->UpdateSubresource(smile_shadow_constant_buffer3d, 0, 0, &constants, 0, 0);
-        if (!smile_3d_upload_model_palette(context, object->animator_handle, animator, 1)) return 0;
+        if (!smile_3d_upload_palette_snapshot(context, entry, 1)) return 0;
+        context->RSSetState(entry->double_sided
+            ? smile_shadow_double_raster_state3d : smile_shadow_raster_state3d);
         context->IASetVertexBuffers(0, 1, &mesh->vertex_buffer, &stride, &offset);
         context->IASetIndexBuffer(mesh->index_buffer, DXGI_FORMAT_R32_UINT, 0);
         context->PSSetShaderResources(0, 1, &texture_view);
@@ -5306,19 +5688,90 @@ static int smile_3d_run_post_processing(void)
     return 1;
 }
 
+static long long smile_3d_submission_group(long long operation, long long value)
+{
+    if (!smile_frame_active3d) { smile_last_error3d = 52; return 0; }
+    if (operation == 1)
+    {
+        if (smile_submission_group_active3d || value < 0 ||
+            value > SMILE_3D_MAX_FRAME_SUBMISSIONS - smile_frame_submission_count3d ||
+            value > SMILE_3D_MAX_FRAME_PALETTES - smile_frame_palette_count3d)
+        { smile_last_error3d = 52; return 0; }
+        smile_submission_group_active3d = 1;
+        smile_submission_group_start3d = smile_frame_submission_count3d;
+        smile_submission_group_palette_start3d = smile_frame_palette_count3d;
+        smile_submission_group_reserved3d = (unsigned int)value;
+        smile_submission_group_physical3d = 0;
+        smile_submission_group_logical3d = 0;
+        smile_submission_group_serial3d++;
+        if (smile_submission_group_serial3d <= 0 ||
+            smile_submission_group_serial3d > 2147483647)
+            smile_submission_group_serial3d = 1;
+        smile_submission_group_token3d = smile_submission_group_serial3d;
+        return smile_submission_group_token3d;
+    }
+    if (!smile_submission_group_active3d || value != smile_submission_group_token3d)
+    { smile_last_error3d = 52; return 0; }
+    if (operation == 3)
+    {
+        smile_3d_release_submissions(smile_submission_group_start3d,
+            smile_frame_submission_count3d);
+        smile_frame_submission_count3d = smile_submission_group_start3d;
+        smile_frame_palette_count3d = smile_submission_group_palette_start3d;
+        smile_submission_group_active3d = 0;
+        smile_submission_group_token3d = 0;
+        smile_submission_group_reserved3d = 0;
+        smile_submission_group_physical3d = 0;
+        smile_submission_group_logical3d = 0;
+        return 1;
+    }
+    if (operation == 2)
+    {
+        int success = 1;
+        if (!smile_multipass_active3d)
+            for (unsigned int index = smile_submission_group_start3d;
+                index < smile_frame_submission_count3d; ++index)
+                if (!smile_3d_draw_submission(&smile_frame_submissions3d[index]))
+                { success = 0; break; }
+        if (success)
+        {
+            smile_logical_submission_count3d += smile_submission_group_logical3d;
+            smile_physical_submission_count3d += smile_submission_group_physical3d;
+        }
+        if (!smile_multipass_active3d || !success)
+        {
+            smile_3d_release_submissions(smile_submission_group_start3d,
+                smile_frame_submission_count3d);
+            smile_frame_submission_count3d = smile_submission_group_start3d;
+            smile_frame_palette_count3d = smile_submission_group_palette_start3d;
+        }
+        smile_submission_group_active3d = 0;
+        smile_submission_group_token3d = 0;
+        smile_submission_group_reserved3d = 0;
+        smile_submission_group_physical3d = 0;
+        smile_submission_group_logical3d = 0;
+        return success;
+    }
+    smile_last_error3d = 52;
+    return 0;
+}
+
 static int smile_3d_end(void)
 {
     int success = 1;
     if (!smile_frame_active3d) return 1;
     ID3D11DeviceContext* context = (ID3D11DeviceContext*)smile_graphics_directx_context();
-    if (smile_multipass_active3d && context != 0)
+    if (smile_submission_group_active3d)
+    {
+        smile_3d_submission_group(3, smile_submission_group_token3d);
+        smile_last_error3d = 52;
+        success = 0;
+    }
+    if (success && smile_multipass_active3d && context != 0)
     {
         ID3D11RenderTargetView* target;
         D3D11_VIEWPORT viewport = {};
-        for (unsigned int submission = 0; submission < smile_frame_submission_count3d; ++submission)
-            if (smile_3d_object(smile_frame_submissions3d[submission]) == 0)
-            { smile_last_error3d = 14; success = 0; break; }
-        if (success) success = smile_3d_render_shadow_pass();
+        success = smile_3d_render_shadow_pass();
         target = smile_color_view3d != 0
             ? smile_color_view3d
             : (ID3D11RenderTargetView*)smile_graphics_directx_render_target();
@@ -5334,7 +5787,7 @@ static int smile_3d_end(void)
         if (success)
             for (unsigned int submission = 0;
                 submission < smile_frame_submission_count3d; ++submission)
-                if (!smile_3d_draw_immediate(smile_frame_submissions3d[submission]))
+                if (!smile_3d_draw_submission(&smile_frame_submissions3d[submission]))
                 { success = 0; break; }
     }
     if (context != 0)
@@ -5359,9 +5812,31 @@ static int smile_3d_end(void)
                 destination->Release();
             }
         }
+        ID3D11Buffer* empty_buffers[2] = {};
+        ID3D11SamplerState* empty_samplers[6] = {};
+        UINT empty_strides[2] = {};
+        UINT empty_offsets[2] = {};
+        context->VSSetShader(0, 0, 0);
+        context->PSSetShader(0, 0, 0);
+        context->IASetInputLayout(0);
+        context->IASetVertexBuffers(0, 2, empty_buffers, empty_strides, empty_offsets);
+        context->IASetIndexBuffer(0, DXGI_FORMAT_UNKNOWN, 0);
+        context->VSSetConstantBuffers(0, 2, empty_buffers);
+        context->PSSetConstantBuffers(0, 2, empty_buffers);
+        context->PSSetSamplers(0, 6, empty_samplers);
+        context->OMSetBlendState(0, 0, 0xffffffff);
+        context->OMSetDepthStencilState(0, 0);
+        context->RSSetState(0);
     }
     smile_frame_active3d = 0;
+    smile_3d_release_submissions(0, smile_frame_submission_count3d);
     smile_frame_submission_count3d = 0;
+    smile_frame_palette_count3d = 0;
+    smile_submission_group_active3d = 0;
+    smile_submission_group_token3d = 0;
+    smile_submission_group_reserved3d = 0;
+    smile_submission_group_physical3d = 0;
+    smile_submission_group_logical3d = 0;
     smile_graphics_directx_resume_2d();
     return success;
 }
@@ -5369,6 +5844,11 @@ static int smile_3d_end(void)
 extern "C" void smile_graphics3d_on_device_lost(void)
 {
     int index;
+    smile_3d_release_submissions(0, smile_frame_submission_count3d);
+    smile_frame_submission_count3d = 0;
+    smile_frame_palette_count3d = 0;
+    smile_submission_group_active3d = 0;
+    smile_submission_group_token3d = 0;
     smile_frame_active3d = 0;
     for (index = 0; index < SMILE_3D_MAX_MESHES; ++index)
     {
@@ -5477,11 +5957,16 @@ extern "C" long long smile_renderer3d_command(long long command,
         case SMILE_3D_CREATE_MESH: return smile_3d_create_mesh((unsigned int)a, (unsigned int)b);
         case SMILE_3D_SET_VERTEX:
             mesh = smile_3d_mesh(a); if (mesh == 0 || b < 0 || b >= mesh->vertex_count) { smile_last_error3d = 5; return 0; }
+            if (mesh->in_flight != 0) { smile_last_error3d = 53; return 0; }
             smile_3d_vertex(mesh, (unsigned int)b, (float)c, (float)d, (float)e); mesh->committed = 0; return 1;
         case SMILE_3D_SET_TRIANGLE:
             mesh = smile_3d_mesh(a); if (mesh == 0 || b < 0 || b * 3 + 2 >= mesh->index_count || c < 0 || d < 0 || e < 0) { smile_last_error3d = 5; return 0; }
+            if (mesh->in_flight != 0) { smile_last_error3d = 53; return 0; }
             smile_3d_triangle(mesh, (unsigned int)b, (unsigned int)c, (unsigned int)d, (unsigned int)e); mesh->committed = 0; return 1;
-        case SMILE_3D_COMMIT_MESH: return smile_3d_commit_mesh(smile_3d_mesh(a));
+        case SMILE_3D_COMMIT_MESH:
+            mesh = smile_3d_mesh(a);
+            if (mesh != 0 && mesh->in_flight != 0) { smile_last_error3d = 53; return 0; }
+            return smile_3d_commit_mesh(mesh);
         case SMILE_3D_CREATE_PRIMITIVE: return smile_3d_create_primitive((int)a, (float)b, (float)c, (int)d, (int)e);
         case SMILE_3D_CREATE_OBJECT: return smile_3d_create_object(a);
         case SMILE_3D_DESTROY:
@@ -5574,6 +6059,7 @@ extern "C" long long smile_renderer3d_command(long long command,
         case SMILE_3D_SET_MESH_UV:
             mesh = smile_3d_mesh(a);
             if (mesh == 0 || b < 0 || b >= mesh->vertex_count) { smile_last_error3d = 5; return 0; }
+            if (mesh->in_flight != 0) { smile_last_error3d = 53; return 0; }
             smile_3d_uv(mesh, (unsigned int)b, (float)c / 1000.0f, (float)d / 1000.0f);
             mesh->committed = 0; return 1;
         case SMILE_3D_LIVE_TEXTURE_COUNT: return smile_3d_live_texture_count();
@@ -5599,6 +6085,7 @@ extern "C" long long smile_renderer3d_command(long long command,
                 smile_last_error3d = 5;
                 return 0;
             }
+            if (mesh->in_flight != 0) { smile_last_error3d = 53; return 0; }
             smile_3d_normal(mesh, (unsigned int)b, (float)c / 1000.0f,
                 (float)d / 1000.0f, (float)e / 1000.0f);
             mesh->committed = 0;
@@ -5633,6 +6120,7 @@ extern "C" long long smile_renderer3d_command(long long command,
             return model->material_slots[b];
         case SMILE_3D_SET_MESH_SKIN:
             mesh = smile_3d_mesh(a);
+            if (mesh != 0 && mesh->in_flight != 0) { smile_last_error3d = 53; return 0; }
             return b < 0 ? 0 : smile_3d_skin(mesh, (unsigned int)b, c, d, e, f, g, h, i, j);
         case SMILE_3D_CREATE_SKELETON: return smile_3d_create_skeleton((int)a);
         case SMILE_3D_SET_SKELETON_BONE:
@@ -5927,6 +6415,47 @@ extern "C" long long smile_renderer3d_command(long long command,
             if (a == 35) return smile_shadow_bytes3d;
             if (a == 36) return smile_scene_bytes3d;
             if (a == 37) return smile_bloom_bytes3d;
+            if (a == 42) return smile_physical_submission_count3d;
+            if (a == 43) return smile_submission_group_physical3d;
+            if (a == 44) return smile_submission_group_reserved3d;
+            if (a == 45) return smile_frame_palette_count3d;
+            if (a == 46)
+            {
+                long long count = 0;
+                for (int index = 0; index < SMILE_3D_MAX_MESHES; ++index)
+                    count += smile_meshes3d[index].in_flight;
+                return count;
+            }
+            if (a == 47)
+            {
+                long long count = 0;
+                for (int index = 0; index < SMILE_3D_MAX_TEXTURES; ++index)
+                    count += smile_textures3d[index].in_flight;
+                return count;
+            }
+            if (a == 48) return
+                (long long)smile_frame_submission_count3d * SMILE_3D_SUBMISSION_SNAPSHOT_BYTES +
+                (long long)smile_frame_palette_count3d * SMILE_3D_PALETTE_SNAPSHOT_BYTES;
+            if (a == 49) return SMILE_3D_MAX_FRAME_PALETTES;
+            if (a == 50) return smile_submission_group_active3d;
+            if (a == 51) return smile_submission_group_logical3d;
+            if (a >= 60 && a <= 69)
+            {
+                if (b < 0 || b >= smile_frame_submission_count3d)
+                { smile_last_error3d = 50; return 0; }
+                const SmileSubmission3D* submission = &smile_frame_submissions3d[b];
+                if (a == 60) return submission->source_handle;
+                if (a == 61) return submission->mesh_handle;
+                if (a == 62) return (long long)llroundf(submission->object.position[0] * 1000.0f);
+                if (a == 63) return (long long)llroundf(submission->object.color[0] * 1000.0f);
+                if (a == 64) return (long long)llroundf(submission->object.color[3] * 1000.0f);
+                if (a == 65) return submission->has_material ? submission->material.mode : -1;
+                if (a == 66) return submission->double_sided;
+                if (a == 67) return submission->palette_index + 1;
+                if (a == 68) return submission->palette_index < 0 ? 0 :
+                    smile_frame_palettes3d[submission->palette_index].pose_revision;
+                if (a == 69) return submission->casts_shadow;
+            }
             if (a == 40 || a == 41)
             {
                 object = smile_3d_object(b);
@@ -5935,6 +6464,8 @@ extern "C" long long smile_renderer3d_command(long long command,
             }
             smile_last_error3d = 50;
             return 0;
+        case SMILE_3D_SUBMISSION_GROUP:
+            return smile_3d_submission_group(a, b);
         default: smile_last_error3d = 1; return 0;
     }
 }

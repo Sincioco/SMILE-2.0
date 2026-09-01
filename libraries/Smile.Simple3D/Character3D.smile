@@ -53,6 +53,7 @@ Public Const CHARACTER_ERROR_PENDING_RELEASE = 14
 Public Const CHARACTER_ERROR_INVALID_PART = 15
 Public Const CHARACTER_ERROR_BOUNDS = 16
 Public Const CHARACTER_ERROR_PARTIAL_SHADOW = 17
+Public Const CHARACTER_ERROR_DRAW_SUBMISSION = 18
 
 Private Const HANDLE_FACTOR = 100
 Private Const MAX_GENERATION = 90000000
@@ -2152,6 +2153,8 @@ Public Function Draw(Value As Actor) As Boolean
 
     Dim Slot As Number
     Dim PartIndex As Number
+    Dim DrawRendererError As Number
+    Dim SubmissionToken As Number
     Dim Result As Boolean
 
     Slot = ActorSlot(Value)
@@ -2160,21 +2163,36 @@ Public Function Draw(Value As Actor) As Boolean
         Return False
     End If
 
-    Result = True
+    SubmissionToken = Graphics3D.BeginSubmissionGroup3D(ActorPartCounts[Slot])
+
+    If SubmissionToken = 0 Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_DRAW_SUBMISSION, Graphics3D.LastError())
+
+        Return False
+    End If
 
     For PartIndex = 0 To ActorPartCounts[Slot] - 1
 
         If Not Graphics3D.DrawObject3D(ActorParts[Slot, PartIndex]) Then
-            Result = False
+
+            DrawRendererError = Graphics3D.LastError()
+            Result = Graphics3D.RollbackSubmissionGroup3D(SubmissionToken)
+
+            Call SetActorFailure(Slot, CHARACTER_ERROR_DRAW_SUBMISSION, DrawRendererError)
+
+            Return False
+
         End If
 
     End For
 
-    If Not Result Then
-        Call SetActorFailure(Slot, CHARACTER_ERROR_TAMPERED_RESOURCE, Graphics3D.LastError())
+    Result = Graphics3D.CommitSubmissionGroup3D(SubmissionToken)
+
+    If Result Then
+        Call ClearActorError(Slot)
     Else
 
-        Call ClearActorError(Slot)
+        Call SetActorFailure(Slot, CHARACTER_ERROR_DRAW_SUBMISSION, Graphics3D.LastError())
     End If
 
     Return Result

@@ -31,19 +31,28 @@ If Failures = 0 Then
 
 Else
     Print "Renderer3D M5 tests failed: "; Failures
+
 End If
 
 Sub RunM5Tests()
 
     Dim Camera As Core.Camera3D
     Dim Cube As Core.Object3D
+    Dim DirectModel As Core.Model3D
+    Dim DirectPart As Core.Object3D
     Dim Ended As Boolean
     Dim ExpectedSubmissions As Number
+    Dim FirstCubeSubmission As Number
+    Dim FirstTargetGeneration As Number
     Dim Flags As Number
     Dim Ground As Core.Object3D
     Dim Hero As Character3D.Actor
     Dim Index As Number
+    Dim NestedToken As Number
+    Dim SecondCubeSubmission As Number
+    Dim SecondTargetGeneration As Number
     Dim Submitted As Boolean
+    Dim SubmissionToken As Number
     Dim Temporary As Core.Object3D
 
     Call Graphics3D.ResetRenderer3D()
@@ -76,14 +85,95 @@ Sub RunM5Tests()
     Call Check(Graphics3D.SetDirectionalLight3D(-3, -7, 4, 255, 242, 224, 125))
     Call Check(Graphics3D.Begin3D(Camera, 3, 6, 16))
     Call Check(Graphics3D.DrawObject3D(Ground))
-    Call Check(Character3D.Draw(Hero))
-    Call Check(Graphics3D.DrawObject3D(Cube))
-    Call Check(Graphics3D.DrawObject3D(Cube))
-    Call Check(Graphics3D.End3DChecked())
 
+    Submitted = Character3D.Draw(Hero)
+
+    Call Check(Submitted)
+    Call Check(Character3D.Update(Hero, 17))
+    Call Check(Character3D.Draw(Hero))
+    Call Check(Graphics3D.SetObjectPositionChecked3D(Cube, 10, 0, 0))
+
+    Call Graphics3D.SetObjectColor(Cube, 255, 32, 16)
+
+    Call Check(Graphics3D.DrawObject3D(Cube))
+    Call Check(Graphics3D.SetObjectPositionChecked3D(Cube, 20, 0, 0))
+
+    Call Graphics3D.SetObjectColor(Cube, 0, 64, 255)
+
+    Call Check(Graphics3D.DrawObject3D(Cube))
+    Call Check(Graphics3D.SetObjectPositionChecked3D(Cube, 30, 0, 0))
+    Call Check(Graphics3D.SetObjectVisibleChecked3D(Cube, False))
+
+    ExpectedSubmissions = Character3D.PartCount(Hero) * 2 + 3
+    FirstCubeSubmission = Character3D.PartCount(Hero) * 2 + 1
+    SecondCubeSubmission = FirstCubeSubmission + 1
+
+    Call Check(Graphics3D.M5Value3D(
+        Graphics3D.M5_QUERY_PHYSICAL_SUBMISSIONS,
+        0
+    ) = ExpectedSubmissions)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_PALETTE_SNAPSHOTS, 0) > 0)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_IN_FLIGHT_MESHES, 0) > 0)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SNAPSHOT_BYTES, 0) > 0)
+    Call Check(Graphics3D.M5Value3D(
+        Graphics3D.M5_QUERY_SNAPSHOT_SOURCE,
+        FirstCubeSubmission
+    ) = Cube.Handle)
+    Call Check(Graphics3D.M5Value3D(
+        Graphics3D.M5_QUERY_SNAPSHOT_POSITION_X,
+        FirstCubeSubmission
+    ) = 10000)
+    Call Check(Graphics3D.M5Value3D(
+        Graphics3D.M5_QUERY_SNAPSHOT_POSITION_X,
+        SecondCubeSubmission
+    ) = 20000)
+    Call Check(Graphics3D.M5Value3D(
+        Graphics3D.M5_QUERY_SNAPSHOT_COLOR_RED,
+        FirstCubeSubmission
+    ) = 1000)
+    Call Check(Graphics3D.M5Value3D(
+        Graphics3D.M5_QUERY_SNAPSHOT_COLOR_RED,
+        SecondCubeSubmission
+    ) = 0)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SNAPSHOT_PALETTE, 1) > 0)
+    Call Check(Graphics3D.M5Value3D(
+        Graphics3D.M5_QUERY_SNAPSHOT_POSE_REVISION,
+        1
+    ) <> Graphics3D.M5Value3D(
+        Graphics3D.M5_QUERY_SNAPSHOT_POSE_REVISION,
+        Character3D.PartCount(Hero) + 1
+    ))
+
+    If Character3D.PartCount(Hero) > 1 Then
+        Call Check(Graphics3D.M5Value3D(
+            Graphics3D.M5_QUERY_SNAPSHOT_PALETTE,
+            1
+        ) = Graphics3D.M5Value3D(
+            Graphics3D.M5_QUERY_SNAPSHOT_PALETTE,
+            2
+        ))
+        Call Check(Graphics3D.M5Value3D(
+            Graphics3D.M5_QUERY_SNAPSHOT_PALETTE,
+            Character3D.PartCount(Hero) + 1
+        ) = Graphics3D.M5Value3D(
+            Graphics3D.M5_QUERY_SNAPSHOT_PALETTE,
+            Character3D.PartCount(Hero) + 2
+        ))
+    End If
+
+    Call Check(Not Graphics3D.CommitMesh3D(Cube.MeshHandle))
+    Call Check(Graphics3D.LastError() = 53)
+    Call Check(Graphics3D.End3DChecked())
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_PALETTE_SNAPSHOTS, 0) = 0)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_IN_FLIGHT_MESHES, 0) = 0)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_IN_FLIGHT_TEXTURES, 0) = 0)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SNAPSHOT_BYTES, 0) = 0)
+    Call Check(Graphics3D.CommitMesh3D(Cube.MeshHandle))
+    Call Check(Graphics3D.SetObjectVisibleChecked3D(Cube, True))
+
+    FirstTargetGeneration = Graphics3D.M5Value3D(Graphics3D.M5_QUERY_RESOURCE_GENERATION, 0)
     HdrWasEffective = Graphics3D.M5Value3D(Graphics3D.M5_QUERY_HDR_EFFECTIVE, 0) = 1
     ShadowWasEffective = Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_EFFECTIVE, 0) = 1
-    ExpectedSubmissions = Character3D.PartCount(Hero) + 3
     Flags = Graphics3D.M5Value3D(Graphics3D.M5_QUERY_FALLBACK_FLAGS, 0)
 
     Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_LOGICAL_SUBMISSIONS, 0) = ExpectedSubmissions)
@@ -94,25 +184,33 @@ Sub RunM5Tests()
         Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SAMPLE_COUNT, 0) = 4)
 
     If ShadowWasEffective Then
+
         Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_DRAWS, 0) = ExpectedSubmissions)
         Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_TRIANGLES, 0) > 0)
         Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_PALETTE_UPLOADS, 0) > 0)
         Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_RESOLUTION, 0) = 2048)
+
     Else
+
         Call Check(FlagPresent(Flags, Graphics3D.M5_FALLBACK_SHADOW_DISABLED))
+
     End If
 
     If HdrWasEffective Then
+
         Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SCENE_FORMAT, 0) = Graphics3D.SCENE_FORMAT_RGBA16_FLOAT)
         Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_BLOOM_EFFECTIVE, 0) = 1)
         Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_BLOOM_CYCLES, 0) = 2)
         Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_POST_DRAWS, 0) = 6)
         Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_TARGET_BYTES, 0) > 0)
+
     Else
+
         Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SCENE_FORMAT, 0) = Graphics3D.SCENE_FORMAT_DIRECT_LDR)
         Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_POST_DRAWS, 0) = 0)
         Call Check(FlagPresent(Flags, Graphics3D.M5_FALLBACK_HDR_UNAVAILABLE))
         Call Check(FlagPresent(Flags, Graphics3D.M5_FALLBACK_DIRECT_LDR))
+
     End If
 
     If ShadowWasEffective Then
@@ -140,6 +238,25 @@ Sub RunM5Tests()
         Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_REJECTED_SUBMISSIONS, 0) = 1)
         Call Check(Graphics3D.End3DChecked())
 
+        SecondTargetGeneration = Graphics3D.M5Value3D(Graphics3D.M5_QUERY_RESOURCE_GENERATION, 0)
+
+        Call Check(SecondTargetGeneration > FirstTargetGeneration)
+        Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_RESOLUTION, 0) = 1024)
+        Call Check(Graphics3D.ConfigureShadows3D(
+            True,
+            Graphics3D.SHADOW_CASTER_DIRECTIONAL,
+            0,
+            2048,
+            500,
+            600
+        ))
+        Call Check(Graphics3D.Begin3D(Camera, 0, 0, 0))
+        Call Check(Graphics3D.DrawObject3D(Cube))
+        Call Check(Graphics3D.End3DChecked())
+        Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_RESOURCE_GENERATION, 0) >
+            SecondTargetGeneration)
+        Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_RESOLUTION, 0) = 2048)
+
         Temporary = Graphics3D.CreateCube3D(8)
 
         Call Check(Graphics3D.Begin3D(Camera, 0, 0, 0))
@@ -148,8 +265,7 @@ Sub RunM5Tests()
 
         Ended = Graphics3D.End3DChecked()
 
-        Call Check(Not Ended)
-        Call Check(Graphics3D.LastError() = 14)
+        Call Check(Ended)
 
     End If
 
@@ -170,6 +286,83 @@ Sub RunM5Tests()
     Call Check(Graphics3D.DrawCallCount3D() = 1)
     Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_DRAWS, 0) = 0)
     Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_POST_DRAWS, 0) = 0)
+
+    Call Check(Graphics3D.Begin3D(Camera, 0, 0, 0))
+
+    SubmissionToken = Graphics3D.BeginSubmissionGroup3D(2)
+
+    Call Check(SubmissionToken > 0)
+
+    NestedToken = Graphics3D.BeginSubmissionGroup3D(1)
+
+    Call Check(NestedToken = 0)
+    Call Check(Graphics3D.LastError() = 52)
+    Call Check(Graphics3D.DrawObject3D(Cube))
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_PROVISIONAL_SUBMISSIONS, 0) = 1)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_RESERVED_SUBMISSIONS, 0) = 2)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_GROUP_ACTIVE, 0) = 1)
+    Call Check(Not Graphics3D.CommitSubmissionGroup3D(SubmissionToken + 1))
+    Call Check(Graphics3D.LastError() = 52)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_GROUP_ACTIVE, 0) = 1)
+    Call Check(Graphics3D.RollbackSubmissionGroup3D(SubmissionToken))
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_PROVISIONAL_SUBMISSIONS, 0) = 0)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_RESERVED_SUBMISSIONS, 0) = 0)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_IN_FLIGHT_MESHES, 0) = 0)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SNAPSHOT_BYTES, 0) = 0)
+    Call Check(Graphics3D.End3DChecked())
+    Call Check(Graphics3D.DrawCallCount3D() = 0)
+
+    Call Check(Graphics3D.Begin3D(Camera, 0, 0, 0))
+
+    SubmissionToken = Graphics3D.BeginSubmissionGroup3D(2)
+
+    Call Check(SubmissionToken > 0)
+    Call Check(Graphics3D.DrawObject3D(Cube))
+    Call Check(Graphics3D.CommitSubmissionGroup3D(SubmissionToken))
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_GROUP_ACTIVE, 0) = 0)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_PHYSICAL_SUBMISSIONS, 0) = 1)
+    Call Check(Graphics3D.End3DChecked())
+    Call Check(Graphics3D.DrawCallCount3D() = 1)
+
+    Call Check(Graphics3D.Begin3D(Camera, 0, 0, 0))
+
+    SubmissionToken = Graphics3D.BeginSubmissionGroup3D(1)
+
+    Call Check(SubmissionToken > 0)
+    Call Check(Graphics3D.DrawObject3D(Cube))
+    Call Check(Not Graphics3D.End3DChecked())
+    Call Check(Graphics3D.LastError() = 52)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_GROUP_ACTIVE, 0) = 0)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_IN_FLIGHT_MESHES, 0) = 0)
+
+    Call Check(Graphics3D.Begin3D(Camera, 0, 0, 0))
+    Call Check(Graphics3D.End3DChecked())
+
+    DirectModel = Graphics3D.LoadModel3D("Assets\AnimationArticulated.sm3d")
+
+    Call Check(DirectModel.Handle <> 0)
+
+    DirectPart = Graphics3D.CreateModelPart3D(DirectModel, 0)
+
+    Call Check(DirectPart.Handle <> 0)
+    Call Check(Graphics3D.ConfigureShadows3D(
+        True,
+        Graphics3D.SHADOW_CASTER_DIRECTIONAL,
+        0,
+        1024,
+        500,
+        600
+    ))
+    Call Check(Graphics3D.ConfigurePostProcessing3D(True, True, False, 100, 1200, 80, 4, 0, 1))
+    Call Check(Graphics3D.Begin3D(Camera, 0, 0, 0))
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_MULTIPASS_ACTIVE, 0) = 1)
+    Call Check(Graphics3D.DrawObject3D(DirectPart))
+
+    Call Graphics3D.DestroyObjectInstance3D(DirectPart)
+
+    Call Check(Not Graphics3D.TryDestroyModel3D(DirectModel))
+    Call Check(Graphics3D.End3DChecked())
+    Call Check(Graphics3D.TryDestroyModel3D(DirectModel))
 
     Call Character3D.Shutdown()
     Call Graphics3D.DestroyObject3D(Ground)

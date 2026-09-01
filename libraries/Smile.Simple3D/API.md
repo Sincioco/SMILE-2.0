@@ -55,6 +55,8 @@ Camera and frame:
 - `DefaultCamera()`
 - `Begin3D(Camera, Red, Green, Blue)`
 - `DrawObject3D(Object)`
+- `BeginSubmissionGroup3D(Capacity)` returns a frame-serial token for one bounded nonnested atomic group
+- `CommitSubmissionGroup3D(Token)` publishes that group; `RollbackSubmissionGroup3D(Token)` releases it
 - `End3D()`
 - `End3DChecked()`
 
@@ -142,8 +144,9 @@ M5 shadows and post-processing:
 - `ConfigurePostProcessing3D` selects direct LDR or HDR/post rendering, bloom, exposure `25`-`400` percent, threshold `500`-`8000` thousandths, intensity `0`-`400` percent, half/quarter downsampling, zero to two blur cycles, and requested samples `1`, `2`, or `4`.
 - `ConfigureShadows3D` selects no caster, the directional light, or one spot slot; resolutions are exactly `1024` or `2048`, constant bias is `0`-`1000` millionths, and normal bias is `0`-`1000` hundred-thousandths.
 - `SetDirectionalShadowArea3D` configures the directional center, width, height, near, and far bounds. `SetObjectShadowsChecked3D` transactionally updates the mirrored cast/receive flags; `SetObjectShadows3D` is the compatibility subroutine wrapper.
-- `M5Value3D` exposes logical/rejected submissions, shadow/HDR/bloom requested and effective state, scene format, effective samples, pass counters, target dimensions/bytes, caster/bias state, and per-object cast/receive state through the public `M5_QUERY_*` constants.
-- A frame accepts at most 512 logical submissions. Duplicate object submissions remain distinct draws in caller order. An overflow is rejected with Renderer3D error 51, and a queued object destroyed before `End3D` fails the frame with error 14.
+- `M5Value3D` exposes logical/physical/rejected submissions, provisional/reserved group entries, palette snapshots, in-flight mesh/texture references, snapshot bytes, shadow/HDR/bloom requested and effective state, scene format, effective samples, pass counters, target dimensions/bytes, caster/bias state, per-object cast/receive state, and read-only captured-submission probes through the public `M5_QUERY_*` constants.
+- A frame accepts at most 512 physical snapshots and 512 palette snapshots. Each accepted draw captures its transform, color/opacity, visibility/shadow flags, material factors/textures/alpha/culling state, mesh, and animator pose revision. Duplicate submissions of one object therefore remain independent even when the source object, material, or animator changes or is destroyed before `End3D`.
+- Submission groups reserve conservatively, reject nesting and stale tokens with Renderer3D error 52, and publish only on commit. An open group at `End3DChecked` is rolled back, releases its references, and fails the end with error 52. Queue/palette overflow remains error 51. Mesh mutation or recommit while a snapshot is in flight is refused with error 53.
 - `M5_FALLBACK_*` is an independent bit field: shadow resolution `1`, shadow disabled `2`, HDR unavailable `4`, MSAA reduced `8`, bloom resolution reduced `16`, bloom disabled `32`, tone mapping disabled `64`, and direct LDR `128`.
 
 Transforms and appearance:
@@ -218,7 +221,7 @@ Events, sockets, drawing, and diagnostics:
 
 Windows direct LDR uses D3D11 indexed triangle lists and a resize-aware D24S8 target. M5 HDR uses `R16G16B16A16_FLOAT`, hardware-selected 4x/2x/1x MSAA plus resolve, an optional D32 shadow map, ACES-fitted tone mapping, and bounded bloom before the existing Direct2D HUD pass. Web checks `EXT_color_buffer_float` and framebuffer completeness before using `RGBA16F`; it stays single-sample and records an MSAA fallback. Both backends finish all 3D post work before ordinary Renderer2D drawing and preserve the exact direct-LDR path when M5 is disabled or unavailable.
 
-Both backends bound live data to 128 meshes, 512 objects, 64 models, 128 textures, 128 materials, 64 legacy skeletons, 128 legacy clips, and 128 total animators, and reject stale or deleted handles. Each frame additionally has 512 fixed submission slots, one shadow target, one HDR scene target, and at most two bloom targets. Mesh destruction is rejected while a live object still references that mesh. Meshes support at most 65,535 vertices and 196,608 indices. One SM3D v2 model may contain up to 16 part meshes, 64 imported materials, 128 metadata texture references, 256 animation nodes, 128 production bones, 64 imported clips, 64 events per clip, and 64 sockets; its complete file remains at most 16 MiB, and its deduplicated owned textures/materials must fit the global pools.
+Both backends bound live data to 128 meshes, 512 objects, 64 models, 128 textures, 128 materials, 64 legacy skeletons, 128 legacy clips, and 128 total animators, and reject stale or deleted handles. Each frame additionally has 512 fixed tagged submission snapshots, 512 fixed palette snapshots, one shadow target, one HDR scene target, and at most two bloom targets. Accepted snapshots retain mesh and distinct texture in-flight references; destruction or mutation that would invalidate those resources is refused until commit rollback or frame end releases them. Meshes support at most 65,535 vertices and 196,608 indices. One SM3D v2 model may contain up to 16 part meshes, 64 imported materials, 128 metadata texture references, 256 animation nodes, 128 production bones, 64 imported clips, 64 events per clip, and 64 sockets; its complete file remains at most 16 MiB, and its deduplicated owned textures/materials must fit the global pools.
 
 The supported PBR production transform profile uses positive, nonsingular object scale. A singular or mirrored PBR object draw is rejected before submission with error 46, leaving draw/triangle counters unchanged; the simple path retains its existing behavior. Two-key clips may use nonuniform bone scale on simple materials. A PBR draw using a clip with any nonuniform scale key is rejected with error 45; uniform animation scale remains supported.
 

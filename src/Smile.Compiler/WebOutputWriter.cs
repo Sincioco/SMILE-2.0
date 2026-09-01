@@ -297,6 +297,16 @@ internal static class WebOutputWriter
             let renderer3DPostDrawCount = 0;
             let renderer3DResolveCount = 0;
             let renderer3DSubmissionCount = 0;
+            let renderer3DPaletteSnapshotCount = 0;
+            let renderer3DPhysicalSubmissionCount = 0;
+            let renderer3DSubmissionGroupActive = false;
+            let renderer3DSubmissionGroupStart = 0;
+            let renderer3DSubmissionGroupPaletteStart = 0;
+            let renderer3DSubmissionGroupReserved = 0;
+            let renderer3DSubmissionGroupPhysical = 0;
+            let renderer3DSubmissionGroupLogical = 0;
+            let renderer3DSubmissionGroupToken = 0;
+            let renderer3DSubmissionGroupSerial = 0;
             let renderer3DTargetBytes = 0;
             let renderer3DShadowBytes = 0;
             let renderer3DSceneBytes = 0;
@@ -322,6 +332,11 @@ internal static class WebOutputWriter
             const renderer3DMaterialScratch = new Float32Array(4);
             const renderer3DNormalScratch = new Float32Array(9);
             const renderer3DSubmissions = new Float64Array(512);
+            const renderer3DSubmissionObjects = [];
+            const renderer3DPaletteSnapshots = [];
+            const renderer3DSubmissionObject = 1;
+            const renderer3DSubmissionParticleBatch = 2;
+            const renderer3DSubmissionRibbonBatch = 3;
             const renderer3DShadowCenter = new Float32Array([0, 100, 0]);
             const renderer3DShadowArea = new Float32Array([1200, 900, 1, 2400]);
             const renderer3DShadowSettings = new Float32Array([.0015, .006, 0, 0]);
@@ -341,6 +356,20 @@ internal static class WebOutputWriter
             for (let bone = 0; bone < 32; bone += 1)
                 renderer3DStaticBones[bone * 16] = renderer3DStaticBones[bone * 16 + 5] =
                     renderer3DStaticBones[bone * 16 + 10] = renderer3DStaticBones[bone * 16 + 15] = 1;
+            for (let submission = 0; submission < 512; submission += 1) {
+                renderer3DSubmissionObjects.push({
+                    kind:renderer3DSubmissionObject,snapshot:true,source:0,mesh:0,material:0,
+                    animator:0,paletteIndex:-1,
+                    position:new Float32Array(3),rotation:new Float32Array(3),scale:new Float32Array(3),
+                    color:new Float32Array(4),visible:false,castsShadow:false,receivesShadow:false,
+                    hasMaterial:false,snapshotMaterial:{kind:0,texture:0,textures:new Float64Array(4),alphaMode:0,
+                        color:new Float32Array(4),unlit:false,emissive:0,cutoff:.5,doubleSided:false,
+                        baseColor:new Float32Array(4),surface:new Float32Array(4),
+                        emissiveAlpha:new Float32Array(4),textureFlags:new Float32Array(4)}
+                });
+                renderer3DPaletteSnapshots.push({animatorHandle:0,revision:0,production:false,
+                    palette:new Float32Array(128*16)});
+            }
             const renderer3DCamera = {
                 position: [0, 300, -800], target: [0, 0, 0], fov: 55, near: 1, far: 10000
             };
@@ -861,7 +890,10 @@ internal static class WebOutputWriter
                         renderer3DPostEffective = false;
                         renderer3DMultipassActive = false;
                         renderer3DM5AppliedRevision = 0;
-                        renderer3DSubmissionCount = 0;
+                        renderer3DReleaseSubmissions(0, renderer3DSubmissionCount);
+                        renderer3DSubmissionCount = renderer3DPaletteSnapshotCount = 0;
+                        renderer3DSubmissionGroupActive = false;
+                        renderer3DSubmissionGroupToken = 0;
                         renderer3DAnisotropyAttempted = false;
                         for (const mesh of renderer3DMeshes.values()) {
                             mesh.vertexBuffer = null;
@@ -897,7 +929,10 @@ internal static class WebOutputWriter
                         renderer3DPostEffective = false;
                         renderer3DMultipassActive = false;
                         renderer3DM5AppliedRevision = 0;
-                        renderer3DSubmissionCount = 0;
+                        renderer3DReleaseSubmissions(0, renderer3DSubmissionCount);
+                        renderer3DSubmissionCount = renderer3DPaletteSnapshotCount = 0;
+                        renderer3DSubmissionGroupActive = false;
+                        renderer3DSubmissionGroupToken = 0;
                         renderer3DAnisotropyAttempted = false;
                     });
                 }
@@ -935,13 +970,15 @@ internal static class WebOutputWriter
                         uniform highp sampler2D modelPalette;
                         uniform float modelSkinning;
                         out vec3 surfaceNormal;
+                        out vec3 worldPosition;
                         out vec2 surfaceUv;
                         out vec4 shadowPosition;
                         mat4 modelBone(int index){return mat4(texelFetch(modelPalette,ivec2(0,index),0),texelFetch(modelPalette,ivec2(1,index),0),texelFetch(modelPalette,ivec2(2,index),0),texelFetch(modelPalette,ivec2(3,index),0));}
-                        void main(){vec4 localPosition=vec4(position,1.0);vec3 localNormal=normal;if(skinning>.5){mat4 skin=modelSkinning>.5?modelBone(int(joints.x))*weights.x+modelBone(int(joints.y))*weights.y+modelBone(int(joints.z))*weights.z+modelBone(int(joints.w))*weights.w:bones[int(joints.x)]*weights.x+bones[int(joints.y)]*weights.y+bones[int(joints.z)]*weights.z+bones[int(joints.w)]*weights.w;localPosition=skin*localPosition;localNormal=mat3(skin)*localNormal;}gl_Position=mvp*localPosition;shadowPosition=shadowMvp*localPosition;surfaceNormal=normalize(mat3(model)*localNormal);surfaceUv=textureUv;}`);
+                        void main(){vec4 localPosition=vec4(position,1.0);vec3 localNormal=normal;if(skinning>.5){mat4 skin=modelSkinning>.5?modelBone(int(joints.x))*weights.x+modelBone(int(joints.y))*weights.y+modelBone(int(joints.z))*weights.z+modelBone(int(joints.w))*weights.w:bones[int(joints.x)]*weights.x+bones[int(joints.y)]*weights.y+bones[int(joints.z)]*weights.z+bones[int(joints.w)]*weights.w;localPosition=skin*localPosition;localNormal=mat3(skin)*localNormal;}vec4 world=model*localPosition;gl_Position=mvp*localPosition;worldPosition=world.xyz;shadowPosition=shadowMvp*localPosition;surfaceNormal=normalize(mat3(model)*localNormal);surfaceUv=textureUv;}`);
                     const fragment = renderer3DCompile(gl, gl.FRAGMENT_SHADER, `#version 300 es
                         precision highp float;
                         in vec3 surfaceNormal;
+                        in vec3 worldPosition;
                         in vec2 surfaceUv;
                         in vec4 shadowPosition;
                         uniform vec4 tint;
@@ -949,11 +986,12 @@ internal static class WebOutputWriter
                         uniform sampler2D baseTexture;
                         uniform highp sampler2DShadow shadowMap;
                         uniform vec4 shadowSettings;
+                        uniform vec4 shadowLight;
                         uniform float hdrOutput;
                         out vec4 outputColor;
                         vec3 toLinear(vec3 color){return mix(color/12.92,pow((color+.055)/1.055,vec3(2.4)),step(vec3(.04045),color));}
                         float shadowValue(vec3 n,vec3 l){if(shadowSettings.x<.5||shadowPosition.w<=0.0)return 1.0;vec3 projected=shadowPosition.xyz/shadowPosition.w;vec2 uv=projected.xy*.5+.5;float depth=projected.z*.5+.5;if(any(lessThan(uv,vec2(0.0)))||any(greaterThan(uv,vec2(1.0)))||depth<0.0||depth>1.0)return 1.0;float bias=shadowSettings.y+shadowSettings.z*(1.0-max(dot(n,l),0.0));float sum=0.0;for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++)sum+=texture(shadowMap,vec3(uv+vec2(x,y)*shadowSettings.w,depth-bias));return sum/9.0;}
-                        void main(){vec4 base=tint;if(material.x>.5)base*=texture(baseTexture,surfaceUv);if(material.w>=0.0&&base.a<material.w)discard;vec3 n=normalize(surfaceNormal),l=normalize(vec3(-.35,.8,-.45));float lit=.28+.72*max(0.0,dot(n,l))*shadowValue(n,l);float light=material.y>.5?1.0:lit+material.z;vec3 color=base.rgb*light;outputColor=vec4(hdrOutput>.5?max(toLinear(color),vec3(0.0)):color,base.a);}`);
+                        void main(){vec4 base=tint;if(material.x>.5)base*=texture(baseTexture,surfaceUv);if(material.w>=0.0&&base.a<material.w)discard;vec3 n=normalize(surfaceNormal),l=normalize(vec3(-.35,.8,-.45));vec3 shadowL=shadowLight.w>1.5?normalize(shadowLight.xyz-worldPosition):normalize(shadowLight.xyz);float lit=.28+.72*max(0.0,dot(n,l))*shadowValue(n,shadowL);float light=material.y>.5?1.0:lit+material.z;vec3 color=base.rgb*light;outputColor=vec4(hdrOutput>.5?max(toLinear(color),vec3(0.0)):color,base.a);}`);
                     const program = gl.createProgram();
                     gl.attachShader(program, vertex); gl.attachShader(program, fragment); gl.linkProgram(program);
                     gl.deleteShader(vertex); gl.deleteShader(fragment);
@@ -969,6 +1007,7 @@ internal static class WebOutputWriter
                         baseTexture: gl.getUniformLocation(program, "baseTexture"),
                         shadowMap: gl.getUniformLocation(program, "shadowMap"),
                         shadowSettings: gl.getUniformLocation(program, "shadowSettings"),
+                        shadowLight: gl.getUniformLocation(program, "shadowLight"),
                         hdrOutput: gl.getUniformLocation(program, "hdrOutput"),
                         bones: gl.getUniformLocation(program, "bones[0]"),
                         skinning: gl.getUniformLocation(program, "skinning"),
@@ -1155,7 +1194,7 @@ internal static class WebOutputWriter
                 renderer3DMeshes.set(handle, {
                     vertexCount, indexCount, vertices,
                     indices: new Uint32Array(indexCount), committed: false, explicitNormals: false,
-                    maxJoint: 0, vertexBuffer: null, indexBuffer: null
+                    maxJoint: 0, vertexBuffer: null, indexBuffer: null, inFlight: 0
                 });
                 return handle;
             }
@@ -1187,7 +1226,7 @@ internal static class WebOutputWriter
             function renderer3DMeshReferenceCount(handle) {
                 handle = safe(handle);
                 if (!renderer3DMeshes.has(handle)) return 0;
-                let count = 0;
+                let count = renderer3DMeshes.get(handle).inFlight;
                 for (const object of renderer3DObjects.values()) if (object.mesh === handle) count += 1;
                 return count;
             }
@@ -1195,7 +1234,7 @@ internal static class WebOutputWriter
             function renderer3DTextureReferenceCount(handle) {
                 handle = safe(handle);
                 if (!renderer3DTextures.has(handle)) return 0;
-                let count = 0;
+                let count = renderer3DTextures.get(handle).inFlight;
                 for (const material of renderer3DMaterials.values()) {
                     if (material.kind === 0 && material.texture === handle) count += 1;
                     else if (material.kind === 1 && material.textures.includes(handle)) count += 1;
@@ -1214,6 +1253,7 @@ internal static class WebOutputWriter
             function renderer3DSetVertex(mesh, index, x, y, z) {
                 index = safe(index);
                 if (index < 0 || index >= mesh.vertexCount) { renderer3DLastError = 5; return false; }
+                if (mesh.inFlight) { renderer3DLastError = 53; return false; }
                 const offset = index * 20;
                 mesh.vertices[offset] = safe(x); mesh.vertices[offset + 1] = safe(y); mesh.vertices[offset + 2] = safe(z);
                 mesh.committed = false;
@@ -1223,6 +1263,7 @@ internal static class WebOutputWriter
             function renderer3DSetUv(mesh, index, u, v) {
                 index = safe(index);
                 if (index < 0 || index >= mesh.vertexCount) { renderer3DLastError = 5; return false; }
+                if (mesh.inFlight) { renderer3DLastError = 53; return false; }
                 const offset = index * 20;
                 mesh.vertices[offset + 6] = safe(u) / 1000;
                 mesh.vertices[offset + 7] = safe(v) / 1000;
@@ -1233,6 +1274,7 @@ internal static class WebOutputWriter
             function renderer3DSetNormal(mesh, index, x, y, z) {
                 index = safe(index);
                 if (index < 0 || index >= mesh.vertexCount) { renderer3DLastError = 5; return false; }
+                if (mesh.inFlight) { renderer3DLastError = 53; return false; }
                 const offset = index * 20;
                 mesh.vertices[offset + 3] = safe(x) / 1000;
                 mesh.vertices[offset + 4] = safe(y) / 1000;
@@ -1245,6 +1287,7 @@ internal static class WebOutputWriter
             function renderer3DSetSkin(mesh,index,j0,j1,j2,j3,w0,w1,w2,w3){
                 [index,j0,j1,j2,j3,w0,w1,w2,w3]=[index,j0,j1,j2,j3,w0,w1,w2,w3].map(safe);
                 const joints=[j0,j1,j2,j3],weights=[w0,w1,w2,w3];
+                if(mesh.inFlight){renderer3DLastError=53;return false;}
                 if(index<0||index>=mesh.vertexCount||weights.reduce((a,b)=>a+b,0)!==1000||
                     joints.some(value=>value<0||value>=32)||weights.some(value=>value<0||value>1000)){
                     renderer3DLastError=34;return false;
@@ -1270,7 +1313,7 @@ internal static class WebOutputWriter
                 const handle = renderer3DHandle();
                 renderer3DTextures.set(handle, {
                     image, filter, effectiveFilter: filter, wrap, pbr: false, usage: 0, requestedAnisotropy: 1,
-                    effectiveAnisotropy: 1, mipLevels: 1, gpu: null
+                    effectiveAnisotropy: 1, mipLevels: 1, gpu: null, inFlight: 0
                 });
                 return handle;
             }
@@ -1289,7 +1332,7 @@ internal static class WebOutputWriter
                 renderer3DTextures.set(handle,{image,filter,effectiveFilter:filter===3&&renderer3DMaximumAnisotropy===1?2:filter,
                     wrap,pbr:true,usage,requestedAnisotropy:anisotropy,
                     effectiveAnisotropy:filter===3?Math.min(anisotropy,renderer3DMaximumAnisotropy):1,
-                    mipLevels,gpu:null});
+                    mipLevels,gpu:null,inFlight:0});
                 return handle;
             }
 
@@ -1429,6 +1472,7 @@ internal static class WebOutputWriter
                 if (triangle < 0 || offset + 2 >= mesh.indexCount || a < 0 || b < 0 || c < 0) {
                     renderer3DLastError = 5; return false;
                 }
+                if (mesh.inFlight) { renderer3DLastError = 53; return false; }
                 mesh.indices[offset] = a; mesh.indices[offset + 1] = b; mesh.indices[offset + 2] = c;
                 mesh.committed = false;
                 return true;
@@ -1442,6 +1486,7 @@ internal static class WebOutputWriter
             }
 
             function renderer3DCommit(mesh) {
+                if (mesh.inFlight) { renderer3DLastError = 53; return false; }
                 if (!mesh.explicitNormals)
                     mesh.vertices.forEach((_, index) => { if (index % 20 >= 3 && index % 20 < 6) mesh.vertices[index] = 0; });
                 for (let offset = 0; offset < mesh.indexCount; offset += 3) {
@@ -1821,6 +1866,7 @@ internal static class WebOutputWriter
                 if(renderer3DModelAnimatorReferences(handle)!==0)return false;
                 for(const mesh of model.parts)if(renderer3DMeshReferenceCount(mesh)!==0)return false;
                 for(const material of model.pbrMaterials||[])if(renderer3DMaterialReferenceCount(material)!==0)return false;
+                for(const textureHandle of model.pbrTextures||[]){const texture=renderer3DTextures.get(textureHandle);if(texture&&texture.inFlight)return false;}
                 for(const material of model.pbrMaterials||[])renderer3DMaterials.delete(material);
                 for(const textureHandle of model.pbrTextures||[]){const texture=renderer3DTextures.get(textureHandle);
                     if(texture){renderer3DDeleteTextureGpu(texture);imageRelease(texture.image);}renderer3DTextures.delete(textureHandle);}
@@ -1832,9 +1878,9 @@ internal static class WebOutputWriter
             function renderer3DCommitSkeleton(skeleton){for(let bone=0;bone<skeleton.boneCount;bone+=1){const parent=skeleton.parents[bone];if(parent< -1||parent>=bone){renderer3DLastError=30;return false;}const global=[...skeleton.bind[bone]];if(parent>=0)for(let axis=0;axis<3;axis+=1)global[axis]-=skeleton.inverse[parent][axis];skeleton.inverse[bone]=global.map(value=>-value);}skeleton.committed=true;return true;}
             function renderer3DCreateClip(skeletonHandle,duration){duration=safe(duration);const skeleton=renderer3DSkeletons.get(skeletonHandle);if(!skeleton||!skeleton.committed||duration<1||duration>600000||renderer3DClips.size>=128){renderer3DLastError=31;return 0;}const handle=renderer3DHandle();renderer3DClips.set(handle,{skeleton:skeletonHandle,duration,translation:new Array(skeleton.boneCount).fill(null),rotation:new Array(skeleton.boneCount).fill(null),scale:new Array(skeleton.boneCount).fill(null),events:[],pbrScaleSafe:true});return handle;}
             function renderer3DUpdateClipScaleSafety(clip){clip.pbrScaleSafe=true;for(const track of clip.scale){if(track&&(Math.abs(track[0][0]-track[0][1])>.0001||Math.abs(track[0][0]-track[0][2])>.0001||Math.abs(track[1][0]-track[1][1])>.0001||Math.abs(track[1][0]-track[1][2])>.0001)){clip.pbrScaleSafe=false;break;}}}
-            function renderer3DCreateAnimator(skeletonHandle){const skeleton=renderer3DSkeletons.get(skeletonHandle);if(!skeleton||!skeleton.committed||renderer3DAnimators.size>=128){renderer3DLastError=33;return 0;}const handle=renderer3DHandle();renderer3DAnimators.set(handle,{skeleton:skeletonHandle,clip:0,loop:false,complete:false,time:0,previous:0,speed:100,pending:0,bones:Array.from({length:32},()=>renderer3DIdentity()),palette:new Float32Array(32*16)});renderer3DUpdatePose(renderer3DAnimators.get(handle));return handle;}
+            function renderer3DCreateAnimator(skeletonHandle){const skeleton=renderer3DSkeletons.get(skeletonHandle);if(!skeleton||!skeleton.committed||renderer3DAnimators.size>=128){renderer3DLastError=33;return 0;}const handle=renderer3DHandle();renderer3DAnimators.set(handle,{skeleton:skeletonHandle,clip:0,loop:false,complete:false,time:0,previous:0,speed:100,pending:0,production:false,revision:0,bones:Array.from({length:32},()=>renderer3DIdentity()),palette:new Float32Array(32*16)});renderer3DUpdatePose(renderer3DAnimators.get(handle));return handle;}
             function renderer3DPose(tx,ty,tz,qx,qy,qz,qw,sx,sy,sz){let length=Math.hypot(qx,qy,qz,qw);if(length<.000001){qx=qy=qz=0;qw=1;}else{qx/=length;qy/=length;qz/=length;qw/=length;}const result=renderer3DIdentity();result[0]=(1-2*qy*qy-2*qz*qz)*sx;result[1]=(2*qx*qy+2*qw*qz)*sx;result[2]=(2*qx*qz-2*qw*qy)*sx;result[4]=(2*qx*qy-2*qw*qz)*sy;result[5]=(1-2*qx*qx-2*qz*qz)*sy;result[6]=(2*qy*qz+2*qw*qx)*sy;result[8]=(2*qx*qz+2*qw*qy)*sz;result[9]=(2*qy*qz-2*qw*qx)*sz;result[10]=(1-2*qx*qx-2*qy*qy)*sz;result[12]=tx;result[13]=ty;result[14]=tz;return result;}
-            function renderer3DUpdatePose(animator){const skeleton=renderer3DSkeletons.get(animator.skeleton),clip=renderer3DClips.get(animator.clip),amount=clip?animator.time/clip.duration:0,global=[];if(!skeleton)return;const lerp=(a,b)=>a+(b-a)*amount;for(let bone=0;bone<skeleton.boneCount;bone+=1){let [tx,ty,tz]=skeleton.bind[bone],qx=0,qy=0,qz=0,qw=1,sx=1,sy=1,sz=1;const translation=clip&&clip.translation[bone],rotation=clip&&clip.rotation[bone],scale=clip&&clip.scale[bone];if(translation){tx=lerp(translation[0][0],translation[1][0]);ty=lerp(translation[0][1],translation[1][1]);tz=lerp(translation[0][2],translation[1][2]);}if(rotation){const dot=rotation[0].reduce((sum,value,index)=>sum+value*rotation[1][index],0),direction=dot<0?-1:1;qx=lerp(rotation[0][0],rotation[1][0]*direction);qy=lerp(rotation[0][1],rotation[1][1]*direction);qz=lerp(rotation[0][2],rotation[1][2]*direction);qw=lerp(rotation[0][3],rotation[1][3]*direction);}if(scale){sx=lerp(scale[0][0],scale[1][0]);sy=lerp(scale[0][1],scale[1][1]);sz=lerp(scale[0][2],scale[1][2]);}const local=renderer3DPose(tx,ty,tz,qx,qy,qz,qw,sx,sy,sz),parent=skeleton.parents[bone];global[bone]=parent<0?local:renderer3DMultiply(global[parent],local);const inverse=renderer3DIdentity();inverse[12]=skeleton.inverse[bone][0];inverse[13]=skeleton.inverse[bone][1];inverse[14]=skeleton.inverse[bone][2];animator.bones[bone]=renderer3DMultiply(global[bone],inverse);animator.palette.set(animator.bones[bone],bone*16);}for(let bone=skeleton.boneCount;bone<32;bone+=1){animator.bones[bone]=renderer3DIdentity();animator.palette.set(animator.bones[bone],bone*16);}}
+            function renderer3DUpdatePose(animator){const skeleton=renderer3DSkeletons.get(animator.skeleton),clip=renderer3DClips.get(animator.clip),amount=clip?animator.time/clip.duration:0,global=[];if(!skeleton)return;const lerp=(a,b)=>a+(b-a)*amount;for(let bone=0;bone<skeleton.boneCount;bone+=1){let [tx,ty,tz]=skeleton.bind[bone],qx=0,qy=0,qz=0,qw=1,sx=1,sy=1,sz=1;const translation=clip&&clip.translation[bone],rotation=clip&&clip.rotation[bone],scale=clip&&clip.scale[bone];if(translation){tx=lerp(translation[0][0],translation[1][0]);ty=lerp(translation[0][1],translation[1][1]);tz=lerp(translation[0][2],translation[1][2]);}if(rotation){const dot=rotation[0].reduce((sum,value,index)=>sum+value*rotation[1][index],0),direction=dot<0?-1:1;qx=lerp(rotation[0][0],rotation[1][0]*direction);qy=lerp(rotation[0][1],rotation[1][1]*direction);qz=lerp(rotation[0][2],rotation[1][2]*direction);qw=lerp(rotation[0][3],rotation[1][3]*direction);}if(scale){sx=lerp(scale[0][0],scale[1][0]);sy=lerp(scale[0][1],scale[1][1]);sz=lerp(scale[0][2],scale[1][2]);}const local=renderer3DPose(tx,ty,tz,qx,qy,qz,qw,sx,sy,sz),parent=skeleton.parents[bone];global[bone]=parent<0?local:renderer3DMultiply(global[parent],local);const inverse=renderer3DIdentity();inverse[12]=skeleton.inverse[bone][0];inverse[13]=skeleton.inverse[bone][1];inverse[14]=skeleton.inverse[bone][2];animator.bones[bone]=renderer3DMultiply(global[bone],inverse);animator.palette.set(animator.bones[bone],bone*16);}for(let bone=skeleton.boneCount;bone<32;bone+=1){animator.bones[bone]=renderer3DIdentity();animator.palette.set(animator.bones[bone],bone*16);}animator.revision=(animator.revision+1)>>>0;if(animator.revision===0)animator.revision=1;}
             function renderer3DUpdateAnimator(animator,delta){delta=safe(delta);if(!animator||delta<0||delta>600000){renderer3DLastError=35;return false;}const clip=renderer3DClips.get(animator.clip);if(!clip){renderer3DUpdatePose(animator);return true;}animator.previous=animator.time;const advance=Math.trunc(delta*animator.speed/100),total=animator.time+advance,wrapped=animator.loop&&total>=clip.duration;if(animator.loop){animator.time=total%clip.duration;animator.complete=false;}else{animator.time=Math.min(total,clip.duration);animator.complete=total>=clip.duration;}for(const event of clip.events)if((!wrapped&&event.time>animator.previous&&event.time<=animator.time)||(wrapped&&(event.time>animator.previous||event.time<=animator.time))||(animator.loop&&advance>=clip.duration))animator.pending=event.id;renderer3DUpdatePose(animator);return true;}
             function renderer3DSkeletonReferences(handle){let count=0;for(const clip of renderer3DClips.values())if(clip.skeleton===handle)count+=1;for(const animator of renderer3DAnimators.values())if(animator.skeleton===handle)count+=1;return count;}
             function renderer3DClipReferences(handle){let count=0;for(const animator of renderer3DAnimators.values())if(animator.clip===handle)count+=1;return count;}
@@ -1967,7 +2013,7 @@ internal static class WebOutputWriter
             function renderer3DUpdateShadowMatrix(){let eyeX,eyeY,eyeZ,targetX,targetY,targetZ,near,far;if(renderer3DShadowCaster===1){if(renderer3DDirectionalDirection[3]<.5)return false;
                     targetX=renderer3DShadowCenter[0];targetY=renderer3DShadowCenter[1];targetZ=renderer3DShadowCenter[2];far=renderer3DShadowArea[3];near=renderer3DShadowArea[2];
                     eyeX=targetX+renderer3DDirectionalDirection[0]*far*.5;eyeY=targetY+renderer3DDirectionalDirection[1]*far*.5;eyeZ=targetZ+renderer3DDirectionalDirection[2]*far*.5;
-                    renderer3DLookAtInto(renderer3DShadowViewScratch,eyeX,eyeY,eyeZ,targetX,targetY,targetZ);renderer3DShadowProjectionScratch.fill(0);
+                    renderer3DLookAtInto(renderer3DShadowViewScratch,eyeX,eyeY,eyeZ,targetX,targetY,targetZ);if(renderer3DShadowResolution>0){const lightX=targetX*renderer3DShadowViewScratch[0]+targetY*renderer3DShadowViewScratch[4]+targetZ*renderer3DShadowViewScratch[8]+renderer3DShadowViewScratch[12],lightY=targetX*renderer3DShadowViewScratch[1]+targetY*renderer3DShadowViewScratch[5]+targetZ*renderer3DShadowViewScratch[9]+renderer3DShadowViewScratch[13],texelX=renderer3DShadowArea[0]/renderer3DShadowResolution,texelY=renderer3DShadowArea[1]/renderer3DShadowResolution;renderer3DShadowViewScratch[12]+=Math.round(lightX/texelX)*texelX-lightX;renderer3DShadowViewScratch[13]+=Math.round(lightY/texelY)*texelY-lightY;}renderer3DShadowProjectionScratch.fill(0);
                     renderer3DShadowProjectionScratch[0]=2/renderer3DShadowArea[0];renderer3DShadowProjectionScratch[5]=2/renderer3DShadowArea[1];renderer3DShadowProjectionScratch[10]=2/(far-near);
                     renderer3DShadowProjectionScratch[14]=-(far+near)/(far-near);renderer3DShadowProjectionScratch[15]=1;
                 }else if(renderer3DShadowCaster===2){const offset=renderer3DShadowSlot*4;if(renderer3DLocalPositionType[offset+3]!==2||renderer3DLocalDirectionRange[offset+3]<=0)return false;
@@ -1975,20 +2021,22 @@ internal static class WebOutputWriter
                     renderer3DLookAtInto(renderer3DShadowViewScratch,eyeX,eyeY,eyeZ,targetX,targetY,targetZ);const f=1/Math.tan(Math.acos(Math.max(-1,Math.min(1,renderer3DLocalCone[offset+1])))),range=renderer3DLocalDirectionRange[offset+3];
                     renderer3DShadowProjectionScratch.fill(0);renderer3DShadowProjectionScratch[0]=f;renderer3DShadowProjectionScratch[5]=f;renderer3DShadowProjectionScratch[10]=(range+1)/(range-1);renderer3DShadowProjectionScratch[11]=1;renderer3DShadowProjectionScratch[14]=-2*range/(range-1);
                 }else return false;renderer3DMultiplyInto(renderer3DShadowMatrixScratch,renderer3DShadowProjectionScratch,renderer3DShadowViewScratch);return true;}
-            function renderer3DDeleteM5Targets(){const gl=renderer3DGl;if(gl){if(renderer3DShadowFramebuffer)gl.deleteFramebuffer(renderer3DShadowFramebuffer);if(renderer3DShadowTexture)gl.deleteTexture(renderer3DShadowTexture);
-                    if(renderer3DSceneFramebuffer)gl.deleteFramebuffer(renderer3DSceneFramebuffer);if(renderer3DSceneTexture)gl.deleteTexture(renderer3DSceneTexture);if(renderer3DSceneDepth)gl.deleteRenderbuffer(renderer3DSceneDepth);
-                    if(renderer3DBloomFramebufferA)gl.deleteFramebuffer(renderer3DBloomFramebufferA);if(renderer3DBloomTextureA)gl.deleteTexture(renderer3DBloomTextureA);if(renderer3DBloomFramebufferB)gl.deleteFramebuffer(renderer3DBloomFramebufferB);if(renderer3DBloomTextureB)gl.deleteTexture(renderer3DBloomTextureB);}
+            function renderer3DCaptureM5Bundle(){return{shadowFramebuffer:renderer3DShadowFramebuffer,shadowTexture:renderer3DShadowTexture,sceneFramebuffer:renderer3DSceneFramebuffer,sceneTexture:renderer3DSceneTexture,sceneDepth:renderer3DSceneDepth,bloomFramebufferA:renderer3DBloomFramebufferA,bloomTextureA:renderer3DBloomTextureA,bloomFramebufferB:renderer3DBloomFramebufferB,bloomTextureB:renderer3DBloomTextureB,shadowEffective:renderer3DShadowEffective,hdrEffective:renderer3DHdrEffective,bloomEffective:renderer3DBloomEffective,postEffective:renderer3DPostEffective,toneEffective:renderer3DToneMappingEffective,multipass:renderer3DMultipassActive,shadowResolution:renderer3DShadowResolution,bloomWidth:renderer3DBloomWidth,bloomHeight:renderer3DBloomHeight,width:renderer3DM5Width,height:renderer3DM5Height,targetBytes:renderer3DTargetBytes,shadowBytes:renderer3DShadowBytes,sceneBytes:renderer3DSceneBytes,bloomBytes:renderer3DBloomBytes,samples:renderer3DEffectiveSamples};}
+            function renderer3DClearM5Bundle(){
                 renderer3DShadowFramebuffer=renderer3DShadowTexture=renderer3DSceneFramebuffer=renderer3DSceneTexture=renderer3DSceneDepth=null;
                 renderer3DBloomFramebufferA=renderer3DBloomTextureA=renderer3DBloomFramebufferB=renderer3DBloomTextureB=null;
                 renderer3DShadowEffective=renderer3DHdrEffective=renderer3DBloomEffective=renderer3DPostEffective=renderer3DToneMappingEffective=false;renderer3DMultipassActive=false;
                 renderer3DShadowResolution=renderer3DBloomWidth=renderer3DBloomHeight=renderer3DM5Width=renderer3DM5Height=0;renderer3DTargetBytes=renderer3DShadowBytes=renderer3DSceneBytes=renderer3DBloomBytes=0;renderer3DEffectiveSamples=1;}
+            function renderer3DApplyM5Bundle(bundle){renderer3DShadowFramebuffer=bundle.shadowFramebuffer;renderer3DShadowTexture=bundle.shadowTexture;renderer3DSceneFramebuffer=bundle.sceneFramebuffer;renderer3DSceneTexture=bundle.sceneTexture;renderer3DSceneDepth=bundle.sceneDepth;renderer3DBloomFramebufferA=bundle.bloomFramebufferA;renderer3DBloomTextureA=bundle.bloomTextureA;renderer3DBloomFramebufferB=bundle.bloomFramebufferB;renderer3DBloomTextureB=bundle.bloomTextureB;renderer3DShadowEffective=bundle.shadowEffective;renderer3DHdrEffective=bundle.hdrEffective;renderer3DBloomEffective=bundle.bloomEffective;renderer3DPostEffective=bundle.postEffective;renderer3DToneMappingEffective=bundle.toneEffective;renderer3DMultipassActive=bundle.multipass;renderer3DShadowResolution=bundle.shadowResolution;renderer3DBloomWidth=bundle.bloomWidth;renderer3DBloomHeight=bundle.bloomHeight;renderer3DM5Width=bundle.width;renderer3DM5Height=bundle.height;renderer3DTargetBytes=bundle.targetBytes;renderer3DShadowBytes=bundle.shadowBytes;renderer3DSceneBytes=bundle.sceneBytes;renderer3DBloomBytes=bundle.bloomBytes;renderer3DEffectiveSamples=bundle.samples;}
+            function renderer3DDeleteM5Bundle(bundle){const gl=renderer3DGl;if(!gl||!bundle)return;if(bundle.shadowFramebuffer)gl.deleteFramebuffer(bundle.shadowFramebuffer);if(bundle.shadowTexture)gl.deleteTexture(bundle.shadowTexture);if(bundle.sceneFramebuffer)gl.deleteFramebuffer(bundle.sceneFramebuffer);if(bundle.sceneTexture)gl.deleteTexture(bundle.sceneTexture);if(bundle.sceneDepth)gl.deleteRenderbuffer(bundle.sceneDepth);if(bundle.bloomFramebufferA)gl.deleteFramebuffer(bundle.bloomFramebufferA);if(bundle.bloomTextureA)gl.deleteTexture(bundle.bloomTextureA);if(bundle.bloomFramebufferB)gl.deleteFramebuffer(bundle.bloomFramebufferB);if(bundle.bloomTextureB)gl.deleteTexture(bundle.bloomTextureB);}
+            function renderer3DDeleteM5Targets(){const bundle=renderer3DCaptureM5Bundle();renderer3DClearM5Bundle();renderer3DDeleteM5Bundle(bundle);}
             function renderer3DCreateColorTarget(width,height){const gl=renderer3DGl,texture=gl.createTexture(),framebuffer=gl.createFramebuffer();if(!texture||!framebuffer)return null;
                 gl.bindTexture(gl.TEXTURE_2D,texture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
                 gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA16F,width,height,0,gl.RGBA,gl.HALF_FLOAT,null);gl.bindFramebuffer(gl.FRAMEBUFFER,framebuffer);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,texture,0);
                 if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE){gl.deleteFramebuffer(framebuffer);gl.deleteTexture(texture);return null;}return {texture,framebuffer};}
             function renderer3DPrepareM5Resources(){const gl=renderer3DGl;if(renderer3DM5AppliedRevision===renderer3DM5ConfigurationRevision&&renderer3DM5Width===backingWidth&&renderer3DM5Height===backingHeight){
                     renderer3DShadowEffective=renderer3DShadowRequested&&!!renderer3DShadowTexture&&renderer3DUpdateShadowMatrix();if(renderer3DShadowRequested&&!renderer3DShadowEffective)renderer3DFallbackFlags|=2;renderer3DMultipassActive=renderer3DShadowEffective||renderer3DHdrEffective;return true;}
-                renderer3DDeleteM5Targets();renderer3DFallbackFlags=0;
+                const previous=renderer3DCaptureM5Bundle();renderer3DClearM5Bundle();renderer3DFallbackFlags=0;
                 if(renderer3DShadowRequested&&renderer3DShadowProgram&&!globalThis.SMILE_TEST_RENDERER3D_FORCE_SHADOW_FAILURE){const maximum=gl.getParameter(gl.MAX_TEXTURE_SIZE)||0,choices=renderer3DShadowRequestedResolution===2048?[2048,1024]:[1024];
                     for(const resolution of choices){if(resolution>maximum)continue;const texture=gl.createTexture(),framebuffer=gl.createFramebuffer();if(!texture||!framebuffer)continue;
                         gl.bindTexture(gl.TEXTURE_2D,texture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_COMPARE_MODE,gl.COMPARE_REF_TO_TEXTURE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_COMPARE_FUNC,gl.LEQUAL);
@@ -2003,7 +2051,7 @@ internal static class WebOutputWriter
                     if(first&&second){renderer3DBloomTextureA=first.texture;renderer3DBloomFramebufferA=first.framebuffer;renderer3DBloomTextureB=second.texture;renderer3DBloomFramebufferB=second.framebuffer;renderer3DBloomEffective=true;}else{if(first){gl.deleteFramebuffer(first.framebuffer);gl.deleteTexture(first.texture);}if(second){gl.deleteFramebuffer(second.framebuffer);gl.deleteTexture(second.texture);}renderer3DBloomWidth=renderer3DBloomHeight=0;renderer3DFallbackFlags|=32;}}
                 if(!renderer3DHdrEffective){if(renderer3DPostRequested)renderer3DFallbackFlags|=4|64|128;if(renderer3DBloomRequested)renderer3DFallbackFlags|=32;}
                 renderer3DM5Width=backingWidth;renderer3DM5Height=backingHeight;renderer3DSceneBytes=backingWidth*backingHeight*(renderer3DHdrEffective?12:4);renderer3DBloomBytes=renderer3DBloomEffective?renderer3DBloomWidth*renderer3DBloomHeight*16:0;renderer3DTargetBytes=renderer3DShadowBytes+renderer3DSceneBytes+renderer3DBloomBytes;
-                renderer3DMultipassActive=renderer3DShadowEffective||renderer3DHdrEffective;renderer3DM5AppliedRevision=renderer3DM5ConfigurationRevision;renderer3DM5ResourceGeneration+=1;if(renderer3DM5ResourceGeneration>2147483647)renderer3DM5ResourceGeneration=1;if(typeof gl.bindFramebuffer==="function")gl.bindFramebuffer(gl.FRAMEBUFFER,null);return true;}
+                renderer3DMultipassActive=renderer3DShadowEffective||renderer3DHdrEffective;let installed=true;if(previous.width===backingWidth&&previous.height===backingHeight&&((renderer3DShadowRequested&&previous.shadowEffective&&!renderer3DShadowEffective)||(renderer3DHdrRequested&&renderer3DPostRequested&&previous.hdrEffective&&!renderer3DHdrEffective))){const failed=renderer3DCaptureM5Bundle();renderer3DClearM5Bundle();renderer3DDeleteM5Bundle(failed);renderer3DApplyM5Bundle(previous);renderer3DFallbackFlags=0;if(renderer3DShadowRequested&&!renderer3DShadowEffective)renderer3DFallbackFlags|=2;if(renderer3DPostRequested&&renderer3DHdrRequested&&!renderer3DHdrEffective)renderer3DFallbackFlags|=4|64|128;if(renderer3DBloomRequested&&!renderer3DBloomEffective)renderer3DFallbackFlags|=32;if(renderer3DRequestedSamples>renderer3DEffectiveSamples)renderer3DFallbackFlags|=8;installed=false;}else renderer3DDeleteM5Bundle(previous);renderer3DM5AppliedRevision=renderer3DM5ConfigurationRevision;if(installed){renderer3DM5ResourceGeneration+=1;if(renderer3DM5ResourceGeneration>2147483647)renderer3DM5ResourceGeneration=1;}if(typeof gl.bindFramebuffer==="function")gl.bindFramebuffer(gl.FRAMEBUFFER,null);return true;}
             function renderer3DNormalInto(output,matrix){const a=matrix[0],b=matrix[4],c=matrix[8],d=matrix[1],e=matrix[5],f=matrix[9],g=matrix[2],h=matrix[6],i=matrix[10];
                 const determinant=a*(e*i-f*h)-b*(d*i-f*g)+c*(d*h-e*g);if(determinant<=1e-8)return null;const inverse=1/determinant;
                 output[0]=(e*i-f*h)*inverse;output[1]=(c*h-b*i)*inverse;output[2]=(b*f-c*e)*inverse;
@@ -2028,7 +2076,6 @@ internal static class WebOutputWriter
                 gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
                 gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
                 if(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL!==undefined)gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL,gl.NONE);
-                gl.getError();
                 const internal=texture.pbr?(texture.usage===1?gl.SRGB8_ALPHA8:gl.RGBA8):gl.RGBA;
                 gl.texImage2D(gl.TEXTURE_2D,0,internal,gl.RGBA,gl.UNSIGNED_BYTE,texture.image.entry.resource);
                 const address=texture.wrap===0?gl.CLAMP_TO_EDGE:gl.REPEAT;
@@ -2036,9 +2083,7 @@ internal static class WebOutputWriter
                 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,texture.filter===0?gl.NEAREST:
                     texture.filter===1?gl.LINEAR:gl.LINEAR_MIPMAP_LINEAR);
                 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,address);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,address);
-                if(texture.pbr&&texture.filter>=2){gl.generateMipmap(gl.TEXTURE_2D);if(gl.getError()!==gl.NO_ERROR){
-                    texture.mipLevels=1;texture.effectiveFilter=1;texture.effectiveAnisotropy=1;
-                    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);}}
+                if(texture.pbr&&texture.filter>=2)gl.generateMipmap(gl.TEXTURE_2D);
                 if(texture.pbr&&texture.filter===3&&renderer3DAnisotropy){gl.texParameterf(gl.TEXTURE_2D,
                     renderer3DAnisotropy.TEXTURE_MAX_ANISOTROPY_EXT,texture.effectiveAnisotropy);}
                 return true;
@@ -2055,7 +2100,14 @@ internal static class WebOutputWriter
             function renderer3DBindModelPalette(handle,animator,program,shadowPass){const gl=renderer3DGl;if(!animator||!animator.production){gl.uniform1f(program.modelSkinning,0);return true;}
                 if(!renderer3DModelPaletteTexture){renderer3DModelPaletteTexture=gl.createTexture();if(!renderer3DModelPaletteTexture){renderer3DLastError=48;return false;}gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,renderer3DModelPaletteTexture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA32F,4,128,0,gl.RGBA,gl.FLOAT,null);}
                 gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,renderer3DModelPaletteTexture);if(renderer3DModelPaletteCachedAnimator!==handle||renderer3DModelPaletteCachedRevision!==animator.revision){gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,4,128,gl.RGBA,gl.FLOAT,animator.palette);renderer3DModelPaletteCachedAnimator=handle;renderer3DModelPaletteCachedRevision=animator.revision;if(shadowPass)renderer3DShadowPaletteUploadCount+=1;else renderer3DModelPaletteUploadCount+=1;}
-                gl.uniform1i(program.modelPalette,4);gl.uniform1f(program.modelSkinning,1);return gl.getError()===gl.NO_ERROR;}
+                gl.uniform1i(program.modelPalette,4);gl.uniform1f(program.modelSkinning,1);return true;}
+
+            function renderer3DPaletteSnapshot(handle,animator){if(!animator)return-1;for(let index=0;index<renderer3DPaletteSnapshotCount;index+=1){const snapshot=renderer3DPaletteSnapshots[index];if(snapshot.animatorHandle===handle&&snapshot.revision===animator.revision&&snapshot.production===!!animator.production)return index;}if(renderer3DPaletteSnapshotCount>=renderer3DPaletteSnapshots.length){renderer3DLastError=51;return-2;}const snapshot=renderer3DPaletteSnapshots[renderer3DPaletteSnapshotCount];snapshot.animatorHandle=handle;snapshot.revision=animator.revision;snapshot.production=!!animator.production;snapshot.palette.set(animator.palette);return renderer3DPaletteSnapshotCount++;}
+            function renderer3DSubmissionHasTexture(object,handle,before){for(let channel=0;channel<before;channel+=1)if(object.snapshotMaterial.textures[channel]===handle)return true;return false;}
+            function renderer3DReleaseSubmission(index){const object=renderer3DSubmissionObjects[index],mesh=renderer3DMeshes.get(object.mesh);if(mesh&&mesh.inFlight>0)mesh.inFlight-=1;for(let channel=0;channel<4;channel+=1){const handle=object.snapshotMaterial.textures[channel];if(!handle||renderer3DSubmissionHasTexture(object,handle,channel))continue;const texture=renderer3DTextures.get(handle);if(texture&&texture.inFlight>0)texture.inFlight-=1;}object.mesh=object.source=object.animator=0;object.hasMaterial=false;object.paletteIndex=-1;renderer3DSubmissions[index]=0;}
+            function renderer3DReleaseSubmissions(first,last){while(last>first)renderer3DReleaseSubmission(--last);}
+            function renderer3DCaptureSubmission(handle,index){const source=renderer3DRequireObject(handle);if(!renderer3DFrameActive||!source){renderer3DLastError=14;return 0;}if(!source.visible)return 2;const mesh=renderer3DRequireMesh(source.mesh);if(!mesh||!renderer3DUpload(mesh))return 0;const material=source.material?renderer3DRequireMaterial(source.material):null,animator=source.animator?renderer3DAnimators.get(source.animator):null,skeleton=animator&&!animator.production?renderer3DSkeletons.get(animator.skeleton):null;if(source.animator&&(!animator||(animator.production?!renderer3DModelOwnsMesh(animator.model,source.mesh):(!skeleton||mesh.maxJoint>=skeleton.boneCount)))){renderer3DLastError=36;return 0;}if(material&&material.kind===1&&animator&&!animator.production){const clip=animator.clip?renderer3DClips.get(animator.clip):null;if(clip&&!clip.pbrScaleSafe){renderer3DLastError=45;return 0;}}const paletteStart=renderer3DPaletteSnapshotCount,object=renderer3DSubmissionObjects[index],snapshot=object.snapshotMaterial;object.source=handle;object.mesh=source.mesh;object.animator=source.animator;object.position.set(source.position);object.rotation.set(source.rotation);object.scale.set(source.scale);object.color.set(source.color);object.visible=true;object.castsShadow=source.castsShadow;object.receivesShadow=source.receivesShadow;object.hasMaterial=!!material;object.paletteIndex=renderer3DPaletteSnapshot(source.animator,animator);if(object.paletteIndex===-2)return 0;snapshot.textures.fill(0);snapshot.texture=0;snapshot.kind=material?material.kind:0;snapshot.alphaMode=material?material.alphaMode:(source.color[3]<.999?2:0);snapshot.doubleSided=!!(material&&material.doubleSided);if(material){if(material.kind===1){snapshot.textures.set(material.textures);snapshot.baseColor.set(material.baseColor);snapshot.surface.set(material.surface);snapshot.emissiveAlpha.set(material.emissiveAlpha);snapshot.textureFlags.set(material.textureFlags);snapshot.cutoff=material.cutoff;}else{snapshot.texture=material.texture;snapshot.textures[0]=material.texture;snapshot.color.set(material.color);snapshot.unlit=material.unlit;snapshot.emissive=material.emissive;snapshot.cutoff=material.cutoff;}for(let channel=0;channel<4;channel+=1){const textureHandle=snapshot.textures[channel];if(!textureHandle)continue;const texture=renderer3DRequireTexture(textureHandle);if(!texture||!renderer3DUploadTexture(texture)){renderer3DPaletteSnapshotCount=paletteStart;return 0;}}}mesh.inFlight+=1;for(let channel=0;channel<4;channel+=1){const textureHandle=snapshot.textures[channel];if(!textureHandle||renderer3DSubmissionHasTexture(object,textureHandle,channel))continue;renderer3DTextures.get(textureHandle).inFlight+=1;}renderer3DSubmissions[index]=handle;return 1;}
+
             function renderer3DDrawPbr(object,mesh,material,animator){if(!renderer3DPbrProgram){renderer3DLastError=44;return 0;}
                 const clip=animator&&animator.clip?renderer3DClips.get(animator.clip):null;
                 if(clip&&!clip.pbrScaleSafe){renderer3DLastError=45;return 0;}
@@ -2097,11 +2149,11 @@ internal static class WebOutputWriter
                 if(renderer3DHdrEffective)gl.bindFramebuffer(gl.FRAMEBUFFER,renderer3DSceneFramebuffer);gl.viewport(0,0,backingWidth,backingHeight);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.depthMask(true);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);
                 gl.clearColor(renderer3DHdrEffective?renderer3DSrgbToLinear(renderer3DClearScratch[0]):renderer3DClearScratch[0],renderer3DHdrEffective?renderer3DSrgbToLinear(renderer3DClearScratch[1]):renderer3DClearScratch[1],renderer3DHdrEffective?renderer3DSrgbToLinear(renderer3DClearScratch[2]):renderer3DClearScratch[2],1);gl.clearDepth(1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
                 gl.useProgram(renderer3DProgram.handle);renderer3DDrawCallCount=0;renderer3DSubmittedTriangleCount=0;renderer3DPbrDrawCount=0;renderer3DSimpleDrawCount=0;renderer3DPbrTriangleCount=0;
-                renderer3DLogicalSubmissionCount=0;renderer3DRejectedSubmissionCount=0;renderer3DSubmissionCount=0;renderer3DShadowDrawCount=0;renderer3DShadowTriangleCount=0;renderer3DShadowPaletteUploadCount=0;renderer3DPostDrawCount=0;renderer3DResolveCount=0;renderer3DFrameActive=true;return 1;}
-            function renderer3DDrawImmediate(handle){const object=renderer3DRequireObject(handle);if(!renderer3DFrameActive||!object){renderer3DLastError=14;return 0;}
+                renderer3DReleaseSubmissions(0,renderer3DSubmissionCount);renderer3DLogicalSubmissionCount=renderer3DPhysicalSubmissionCount=0;renderer3DRejectedSubmissionCount=0;renderer3DSubmissionCount=renderer3DPaletteSnapshotCount=0;renderer3DSubmissionGroupActive=false;renderer3DSubmissionGroupToken=0;renderer3DSubmissionGroupReserved=renderer3DSubmissionGroupPhysical=renderer3DSubmissionGroupLogical=0;renderer3DShadowDrawCount=0;renderer3DShadowTriangleCount=0;renderer3DShadowPaletteUploadCount=0;renderer3DPostDrawCount=0;renderer3DResolveCount=0;renderer3DFrameActive=true;return 1;}
+            function renderer3DDrawImmediate(handle,snapshot=null){const object=snapshot||renderer3DRequireObject(handle);if(!renderer3DFrameActive||!object||(object.snapshot&&object.kind!==renderer3DSubmissionObject)){renderer3DLastError=14;return 0;}
                 if(!object.visible)return 1;const mesh=renderer3DRequireMesh(object.mesh);if(!mesh||!renderer3DUpload(mesh))return 0;
-                const material=object.material?renderer3DRequireMaterial(object.material):null,animator=object.animator?renderer3DAnimators.get(object.animator):null,
-                    skeleton=animator&&!animator.production?renderer3DSkeletons.get(animator.skeleton):null;if(object.animator&&(!animator||(animator.production?!renderer3DModelOwnsMesh(animator.model,object.mesh):(!skeleton||mesh.maxJoint>=skeleton.boneCount)))){
+                const material=object.snapshot?(object.hasMaterial?object.snapshotMaterial:null):(object.material?renderer3DRequireMaterial(object.material):null),animator=object.snapshot?(object.paletteIndex>=0?renderer3DPaletteSnapshots[object.paletteIndex]:null):(object.animator?renderer3DAnimators.get(object.animator):null),
+                    skeleton=animator&&!animator.production&&!object.snapshot?renderer3DSkeletons.get(animator.skeleton):null;if(!object.snapshot&&object.animator&&(!animator||(animator.production?!renderer3DModelOwnsMesh(animator.model,object.mesh):(!skeleton||mesh.maxJoint>=skeleton.boneCount)))){
                     renderer3DLastError=36;return 0;}if(material&&material.kind===1)return renderer3DDrawPbr(object,mesh,material,animator);
                 const texture=material&&material.texture?renderer3DRequireTexture(material.texture):null;if(texture&&!renderer3DUploadTexture(texture))return 0;
                 const gl=renderer3DGl,model=renderer3DModelInto(renderer3DModelScratch,object),view=renderer3DViewInto(renderer3DViewScratch),
@@ -2120,33 +2172,33 @@ internal static class WebOutputWriter
                 gl.uniform4fv(renderer3DProgram.tint,tint);gl.uniform4fv(renderer3DProgram.material,materialValues);
                 if(renderer3DShadowEffective){gl.activeTexture(gl.TEXTURE5);gl.bindTexture(gl.TEXTURE_2D,renderer3DShadowTexture);}gl.uniform1i(renderer3DProgram.shadowMap,5);
                 if(typeof gl.uniform4f==="function")gl.uniform4f(renderer3DProgram.shadowSettings,renderer3DShadowEffective&&object.receivesShadow?1:0,renderer3DShadowSettings[0],renderer3DShadowSettings[1],renderer3DShadowResolution>0?1/renderer3DShadowResolution:0);gl.uniform1f(renderer3DProgram.hdrOutput,renderer3DHdrEffective?1:0);
+                if(typeof gl.uniform4f==="function"){const offset=renderer3DShadowSlot*4;if(renderer3DShadowCaster===2)gl.uniform4f(renderer3DProgram.shadowLight,renderer3DLocalPositionType[offset],renderer3DLocalPositionType[offset+1],renderer3DLocalPositionType[offset+2],2);else gl.uniform4f(renderer3DProgram.shadowLight,renderer3DDirectionalDirection[0],renderer3DDirectionalDirection[1],renderer3DDirectionalDirection[2],1);}
                 gl.drawElements(gl.TRIANGLES,mesh.indexCount,gl.UNSIGNED_INT,0);renderer3DDrawCallCount+=1;renderer3DSubmittedTriangleCount+=mesh.indexCount/3;
                 renderer3DSimpleDrawCount+=1;return 1;}
-            function renderer3DDraw(handle){const object=renderer3DRequireObject(handle);if(!renderer3DFrameActive||!object){renderer3DLastError=14;return 0;}if(renderer3DMultipassActive){if(renderer3DSubmissionCount>=renderer3DSubmissions.length){renderer3DRejectedSubmissionCount+=1;renderer3DLastError=51;return 0;}
-                    renderer3DSubmissions[renderer3DSubmissionCount++]=handle;renderer3DLogicalSubmissionCount+=1;return 1;}const result=renderer3DDrawImmediate(handle);if(result)renderer3DLogicalSubmissionCount+=1;return result;}
+            function renderer3DDraw(handle){const object=renderer3DRequireObject(handle);if(!renderer3DFrameActive||!object){renderer3DLastError=14;return 0;}if(renderer3DMultipassActive||renderer3DSubmissionGroupActive){if(!object.visible){if(renderer3DSubmissionGroupActive)renderer3DSubmissionGroupLogical+=1;else renderer3DLogicalSubmissionCount+=1;return 1;}if(renderer3DSubmissionCount>=renderer3DSubmissions.length||(renderer3DSubmissionGroupActive&&renderer3DSubmissionGroupPhysical>=renderer3DSubmissionGroupReserved)){renderer3DRejectedSubmissionCount+=1;renderer3DLastError=51;return 0;}const captured=renderer3DCaptureSubmission(handle,renderer3DSubmissionCount);if(!captured)return 0;if(captured===1){renderer3DSubmissionCount+=1;if(renderer3DSubmissionGroupActive)renderer3DSubmissionGroupPhysical+=1;}if(renderer3DSubmissionGroupActive)renderer3DSubmissionGroupLogical+=1;else{renderer3DLogicalSubmissionCount+=1;if(captured===1)renderer3DPhysicalSubmissionCount+=1;}return 1;}const paletteStart=renderer3DPaletteSnapshotCount,captured=renderer3DCaptureSubmission(handle,0);if(!captured){renderer3DPaletteSnapshotCount=paletteStart;return 0;}const result=captured===2?1:renderer3DDrawImmediate(0,renderer3DSubmissionObjects[0]);if(captured===1)renderer3DReleaseSubmission(0);renderer3DPaletteSnapshotCount=paletteStart;if(result){renderer3DLogicalSubmissionCount+=1;if(captured===1)renderer3DPhysicalSubmissionCount+=1;}return result;}
             function renderer3DRenderShadowPass(){if(!renderer3DShadowEffective)return 1;const gl=renderer3DGl;gl.activeTexture(gl.TEXTURE5);gl.bindTexture(gl.TEXTURE_2D,null);gl.bindFramebuffer(gl.FRAMEBUFFER,renderer3DShadowFramebuffer);gl.viewport(0,0,renderer3DShadowResolution,renderer3DShadowResolution);gl.colorMask(false,false,false,false);gl.clearDepth(1);gl.clear(gl.DEPTH_BUFFER_BIT);
-                gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.depthMask(true);gl.disable(gl.BLEND);gl.enable(gl.CULL_FACE);gl.cullFace(gl.BACK);gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,Math.max(1,renderer3DShadowSettings[0]*100000));gl.useProgram(renderer3DShadowProgram.handle);
+                gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.depthMask(true);gl.disable(gl.BLEND);gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,Math.max(1,renderer3DShadowSettings[0]*100000));gl.useProgram(renderer3DShadowProgram.handle);
                 renderer3DModelPaletteCachedAnimator=0;renderer3DModelPaletteCachedRevision=0;
-                for(let submission=0;submission<renderer3DSubmissionCount;submission+=1){const object=renderer3DObjects.get(renderer3DSubmissions[submission]);if(!object){renderer3DLastError=14;return 0;}if(!object.visible||!object.castsShadow)continue;
-                    const mesh=renderer3DRequireMesh(object.mesh);if(!mesh||!renderer3DUpload(mesh))return 0;const material=object.material?renderer3DRequireMaterial(object.material):null;if(object.material&&!material)return 0;
+                for(let submission=0;submission<renderer3DSubmissionCount;submission+=1){const object=renderer3DSubmissionObjects[submission];if(object.kind!==renderer3DSubmissionObject||!object.visible||!object.castsShadow)continue;
+                    const mesh=renderer3DRequireMesh(object.mesh);if(!mesh||!renderer3DUpload(mesh))return 0;const material=object.hasMaterial?object.snapshotMaterial:null;
                     const alphaMode=material?material.alphaMode:(object.color[3]<.999?2:0);if(alphaMode===2||alphaMode===3)continue;const textureHandle=material?(material.kind===1?material.textures[0]:material.texture):0,texture=textureHandle?renderer3DRequireTexture(textureHandle):null;if(texture&&!renderer3DUploadTexture(texture))return 0;
-                    const animator=object.animator?renderer3DAnimators.get(object.animator):null,skeleton=animator&&!animator.production?renderer3DSkeletons.get(animator.skeleton):null;if(object.animator&&(!animator||(animator.production?!renderer3DModelOwnsMesh(animator.model,object.mesh):(!skeleton||mesh.maxJoint>=skeleton.boneCount)))){renderer3DLastError=36;return 0;}
+                    const animator=object.paletteIndex>=0?renderer3DPaletteSnapshots[object.paletteIndex]:null;
                     const model=renderer3DModelInto(renderer3DModelScratch,object);if(!renderer3DNormalInto(renderer3DNormalScratch,model)){renderer3DLastError=46;return 0;}renderer3DMultiplyInto(renderer3DMvpScratch,renderer3DShadowMatrixScratch,model);
                     gl.uniformMatrix4fv(renderer3DShadowProgram.mvp,false,renderer3DMvpScratch);gl.uniformMatrix4fv(renderer3DShadowProgram["bones[0]"],false,animator&&!animator.production?animator.palette:renderer3DStaticBones);gl.uniform1f(renderer3DShadowProgram.skinning,animator?1:0);if(!renderer3DBindModelPalette(object.animator,animator,renderer3DShadowProgram,true))return 0;
                     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture?texture.gpu:null);gl.uniform1i(renderer3DShadowProgram.baseTexture,0);const baseAlpha=object.color[3]*(material?(material.kind===1?material.baseColor[3]:material.color[3]):1);gl.uniform3f(renderer3DShadowProgram.alphaSettings,texture?1:0,alphaMode===1&&material?material.cutoff:-1,baseAlpha);
-                    renderer3DBindMesh(mesh,false);gl.drawElements(gl.TRIANGLES,mesh.indexCount,gl.UNSIGNED_INT,0);renderer3DShadowDrawCount+=1;renderer3DShadowTriangleCount+=mesh.indexCount/3;}
+                    if(material&&material.doubleSided)gl.disable(gl.CULL_FACE);else{gl.enable(gl.CULL_FACE);gl.cullFace(gl.BACK);}renderer3DBindMesh(mesh,false);gl.drawElements(gl.TRIANGLES,mesh.indexCount,gl.UNSIGNED_INT,0);renderer3DShadowDrawCount+=1;renderer3DShadowTriangleCount+=mesh.indexCount/3;}
                 renderer3DModelPaletteCachedAnimator=0;renderer3DModelPaletteCachedRevision=0;gl.disable(gl.POLYGON_OFFSET_FILL);gl.colorMask(true,true,true,true);gl.bindFramebuffer(gl.FRAMEBUFFER,null);return 1;}
             function renderer3DPostPass(target,width,height,sceneTexture,bloomTexture,mode,x,y,w,secondX,secondY){const gl=renderer3DGl;gl.bindFramebuffer(gl.FRAMEBUFFER,target);gl.viewport(0,0,width,height);gl.disable(gl.DEPTH_TEST);gl.depthMask(false);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);gl.useProgram(renderer3DPostProgram.handle);
                 gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,sceneTexture);gl.uniform1i(renderer3DPostProgram.sceneTexture,0);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,bloomTexture||sceneTexture);gl.uniform1i(renderer3DPostProgram.bloomTexture,1);gl.uniform4f(renderer3DPostProgram.first,mode,x,y,w);gl.uniform4f(renderer3DPostProgram.second,secondX,secondY,0,0);gl.drawArrays(gl.TRIANGLES,0,3);renderer3DPostDrawCount+=1;}
             function renderer3DRunPostProcessing(){if(!renderer3DHdrEffective)return 1;const gl=renderer3DGl;if(renderer3DBloomEffective){renderer3DPostPass(renderer3DBloomFramebufferA,renderer3DBloomWidth,renderer3DBloomHeight,renderer3DSceneTexture,null,0,0,0,renderer3DBloomThreshold/1000,0,0);
                     for(let cycle=0;cycle<renderer3DBloomCycles;cycle+=1){renderer3DPostPass(renderer3DBloomFramebufferB,renderer3DBloomWidth,renderer3DBloomHeight,renderer3DBloomTextureA,null,1,1/renderer3DBloomWidth,1/renderer3DBloomHeight,0,0,0);renderer3DPostPass(renderer3DBloomFramebufferA,renderer3DBloomWidth,renderer3DBloomHeight,renderer3DBloomTextureB,null,2,1/renderer3DBloomWidth,1/renderer3DBloomHeight,0,0,0);}}
-                renderer3DPostPass(null,backingWidth,backingHeight,renderer3DSceneTexture,renderer3DBloomEffective?renderer3DBloomTextureA:null,3,0,0,0,renderer3DBloomEffective?renderer3DBloomIntensity/100:0,renderer3DExposure/100);gl.bindFramebuffer(gl.FRAMEBUFFER,null);return gl.getError()===gl.NO_ERROR?1:0;}
-            function renderer3DEnd(){if(!renderer3DFrameActive)return 1;const gl=renderer3DGl;let success=1;if(renderer3DMultipassActive){for(let submission=0;submission<renderer3DSubmissionCount;submission+=1)if(!renderer3DObjects.has(renderer3DSubmissions[submission])){renderer3DLastError=14;success=0;break;}
-                    if(success)success=renderer3DRenderShadowPass();gl.bindFramebuffer(gl.FRAMEBUFFER,renderer3DHdrEffective?renderer3DSceneFramebuffer:null);gl.viewport(0,0,backingWidth,backingHeight);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.depthMask(true);
-                    if(success)for(let submission=0;submission<renderer3DSubmissionCount;submission+=1)if(!renderer3DDrawImmediate(renderer3DSubmissions[submission])){success=0;break;}}
-                if(success&&renderer3DHdrEffective)success=renderer3DRunPostProcessing();if(typeof gl.bindFramebuffer==="function")gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.depthMask(true);const textureUnitCount=renderer3DMultipassActive?6:5;for(let unit=0;unit<textureUnitCount;unit+=1){gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,null);}renderer3DFrameActive=false;renderer3DSubmissionCount=0;
+                renderer3DPostPass(null,backingWidth,backingHeight,renderer3DSceneTexture,renderer3DBloomEffective?renderer3DBloomTextureA:null,3,0,0,0,renderer3DBloomEffective?renderer3DBloomIntensity/100:0,renderer3DExposure/100);gl.bindFramebuffer(gl.FRAMEBUFFER,null);return 1;}
+            function renderer3DSubmissionGroup(operation,value){if(!renderer3DFrameActive){renderer3DLastError=52;return 0;}if(operation===1){if(renderer3DSubmissionGroupActive||value<0||value>renderer3DSubmissions.length-renderer3DSubmissionCount||value>renderer3DPaletteSnapshots.length-renderer3DPaletteSnapshotCount){renderer3DLastError=52;return 0;}renderer3DSubmissionGroupActive=true;renderer3DSubmissionGroupStart=renderer3DSubmissionCount;renderer3DSubmissionGroupPaletteStart=renderer3DPaletteSnapshotCount;renderer3DSubmissionGroupReserved=value;renderer3DSubmissionGroupPhysical=renderer3DSubmissionGroupLogical=0;renderer3DSubmissionGroupSerial+=1;if(renderer3DSubmissionGroupSerial>2147483647)renderer3DSubmissionGroupSerial=1;renderer3DSubmissionGroupToken=renderer3DSubmissionGroupSerial;return renderer3DSubmissionGroupToken;}if(!renderer3DSubmissionGroupActive||value!==renderer3DSubmissionGroupToken){renderer3DLastError=52;return 0;}if(operation===3){renderer3DReleaseSubmissions(renderer3DSubmissionGroupStart,renderer3DSubmissionCount);renderer3DSubmissionCount=renderer3DSubmissionGroupStart;renderer3DPaletteSnapshotCount=renderer3DSubmissionGroupPaletteStart;renderer3DSubmissionGroupActive=false;renderer3DSubmissionGroupToken=0;renderer3DSubmissionGroupReserved=renderer3DSubmissionGroupPhysical=renderer3DSubmissionGroupLogical=0;return 1;}if(operation===2){let success=1;if(!renderer3DMultipassActive)for(let index=renderer3DSubmissionGroupStart;index<renderer3DSubmissionCount;index+=1)if(!renderer3DDrawImmediate(0,renderer3DSubmissionObjects[index])){success=0;break;}if(success){renderer3DLogicalSubmissionCount+=renderer3DSubmissionGroupLogical;renderer3DPhysicalSubmissionCount+=renderer3DSubmissionGroupPhysical;}if(!renderer3DMultipassActive||!success){renderer3DReleaseSubmissions(renderer3DSubmissionGroupStart,renderer3DSubmissionCount);renderer3DSubmissionCount=renderer3DSubmissionGroupStart;renderer3DPaletteSnapshotCount=renderer3DSubmissionGroupPaletteStart;}renderer3DSubmissionGroupActive=false;renderer3DSubmissionGroupToken=0;renderer3DSubmissionGroupReserved=renderer3DSubmissionGroupPhysical=renderer3DSubmissionGroupLogical=0;return success;}renderer3DLastError=52;return 0;}
+            function renderer3DEnd(){if(!renderer3DFrameActive)return 1;const gl=renderer3DGl;let success=1;if(renderer3DSubmissionGroupActive){renderer3DSubmissionGroup(3,renderer3DSubmissionGroupToken);renderer3DLastError=52;success=0;}if(success&&renderer3DMultipassActive){success=renderer3DRenderShadowPass();gl.bindFramebuffer(gl.FRAMEBUFFER,renderer3DHdrEffective?renderer3DSceneFramebuffer:null);gl.viewport(0,0,backingWidth,backingHeight);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.depthMask(true);
+                    if(success)for(let submission=0;submission<renderer3DSubmissionCount;submission+=1)if(!renderer3DDrawImmediate(0,renderer3DSubmissionObjects[submission])){success=0;break;}}
+                if(success&&renderer3DHdrEffective)success=renderer3DRunPostProcessing();if(typeof gl.bindFramebuffer==="function")gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.depthMask(true);for(let unit=0;unit<6;unit+=1){gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,null);}gl.useProgram(null);gl.bindBuffer(gl.ARRAY_BUFFER,null);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,null);for(let attribute=0;attribute<6;attribute+=1)gl.disableVertexAttribArray(attribute);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);gl.disable(gl.POLYGON_OFFSET_FILL);renderer3DFrameActive=false;renderer3DReleaseSubmissions(0,renderer3DSubmissionCount);renderer3DSubmissionCount=renderer3DPaletteSnapshotCount=0;renderer3DSubmissionGroupActive=false;renderer3DSubmissionGroupToken=0;renderer3DSubmissionGroupReserved=renderer3DSubmissionGroupPhysical=renderer3DSubmissionGroupLogical=0;
                 back.drawImage(renderer3DCanvas,0,0,logicalWidth,logicalHeight);return success?1:0;}
-            function renderer3DReset(){renderer3DFrameActive=false;renderer3DObjects.clear();renderer3DAnimators.clear();for(const model of [...renderer3DModels.keys()])renderer3DDeleteModel(model);
+            function renderer3DReset(){renderer3DReleaseSubmissions(0,renderer3DSubmissionCount);renderer3DSubmissionCount=renderer3DPaletteSnapshotCount=0;renderer3DSubmissionGroupActive=false;renderer3DSubmissionGroupToken=0;renderer3DFrameActive=false;renderer3DObjects.clear();renderer3DAnimators.clear();for(const model of [...renderer3DModels.keys()])renderer3DDeleteModel(model);
                 renderer3DClips.clear();renderer3DSkeletons.clear();for(const mesh of renderer3DMeshes.values())renderer3DDeleteGpu(mesh);
                 for(const texture of renderer3DTextures.values()){renderer3DDeleteTextureGpu(texture);imageRelease(texture.image);}renderer3DMeshes.clear();
                 renderer3DModels.clear();renderer3DMaterials.clear();renderer3DTextures.clear();renderer3DResetLights();renderer3DLastError=0;
@@ -2156,7 +2208,7 @@ internal static class WebOutputWriter
                 renderer3DPbrAttemptCount=0;if(renderer3DGl&&renderer3DModelPaletteTexture)renderer3DGl.deleteTexture(renderer3DModelPaletteTexture);
                 renderer3DModelPaletteTexture=null;renderer3DModelPaletteCachedAnimator=0;renderer3DModelPaletteCachedRevision=0;renderer3DModelPaletteUploadCount=0;renderer3DDeleteM5Targets();
                 if(renderer3DGl&&renderer3DShadowProgram)renderer3DGl.deleteProgram(renderer3DShadowProgram.handle);if(renderer3DGl&&renderer3DPostProgram)renderer3DGl.deleteProgram(renderer3DPostProgram.handle);renderer3DShadowProgram=renderer3DPostProgram=null;
-                renderer3DPostRequested=renderer3DHdrRequested=renderer3DBloomRequested=renderer3DShadowRequested=false;renderer3DFallbackFlags=0;renderer3DSubmissionCount=renderer3DLogicalSubmissionCount=renderer3DRejectedSubmissionCount=0;
+                renderer3DPostRequested=renderer3DHdrRequested=renderer3DBloomRequested=renderer3DShadowRequested=false;renderer3DFallbackFlags=0;renderer3DSubmissionCount=renderer3DLogicalSubmissionCount=renderer3DPhysicalSubmissionCount=renderer3DRejectedSubmissionCount=0;renderer3DSubmissionGroupReserved=renderer3DSubmissionGroupPhysical=renderer3DSubmissionGroupLogical=0;
                 renderer3DShadowDrawCount=renderer3DShadowTriangleCount=renderer3DShadowPaletteUploadCount=renderer3DPostDrawCount=renderer3DResolveCount=0;renderer3DM5AppliedRevision=0;renderer3DM5ConfigurationRevision+=1;if(renderer3DM5ConfigurationRevision>2147483647)renderer3DM5ConfigurationRevision=1;
                 renderer3DResourceEpoch+=1;if(renderer3DResourceEpoch>2147483647)renderer3DResourceEpoch=1;return 1;}
 
@@ -2291,7 +2343,10 @@ internal static class WebOutputWriter
                         if(a===17)return renderer3DBloomRequested?1:0;if(a===18)return renderer3DBloomEffective?1:0;if(a===19)return renderer3DBloomWidth;if(a===20)return renderer3DBloomHeight;if(a===21)return renderer3DBloomEffective?renderer3DBloomCycles:0;if(a===22)return renderer3DPostDrawCount;
                         if(a===23)return renderer3DToneMappingEffective?1:0;if(a===24)return renderer3DExposure;if(a===25)return renderer3DFallbackFlags;if(a===26)return renderer3DM5ResourceGeneration;if(a===27)return renderer3DTargetBytes;if(a===28)return renderer3DShadowCaster;if(a===29)return renderer3DShadowSlot;
                         if(a===30)return Math.round(renderer3DShadowSettings[0]*1000000);if(a===31)return Math.round(renderer3DShadowSettings[1]*100000);if(a===32)return renderer3DPostRequested?1:0;if(a===33)return renderer3DPostEffective?1:0;if(a===34)return renderer3DRejectedSubmissionCount;if(a===35)return renderer3DShadowBytes;if(a===36)return renderer3DSceneBytes;if(a===37)return renderer3DBloomBytes;
+                        if(a===42)return renderer3DPhysicalSubmissionCount;if(a===43)return renderer3DSubmissionGroupPhysical;if(a===44)return renderer3DSubmissionGroupReserved;if(a===45)return renderer3DPaletteSnapshotCount;if(a===46){let count=0;for(const mesh of renderer3DMeshes.values())count+=mesh.inFlight;return count;}if(a===47){let count=0;for(const texture of renderer3DTextures.values())count+=texture.inFlight;return count;}if(a===48)return renderer3DSubmissionCount*512+renderer3DPaletteSnapshotCount*8208;if(a===49)return renderer3DPaletteSnapshots.length;if(a===50)return renderer3DSubmissionGroupActive?1:0;if(a===51)return renderer3DSubmissionGroupLogical;
+                        if(a>=60&&a<=69){if(b<0||b>=renderer3DSubmissionCount){renderer3DLastError=50;return 0;}const submission=renderer3DSubmissionObjects[b];if(a===60)return submission.source;if(a===61)return submission.mesh;if(a===62)return Math.round(submission.position[0]*1000);if(a===63)return Math.round(submission.color[0]*1000);if(a===64)return Math.round(submission.color[3]*1000);if(a===65)return submission.hasMaterial?submission.snapshotMaterial.kind:-1;if(a===66)return submission.snapshotMaterial.doubleSided?1:0;if(a===67)return submission.paletteIndex+1;if(a===68)return submission.paletteIndex<0?0:renderer3DPaletteSnapshots[submission.paletteIndex].revision;if(a===69)return submission.castsShadow?1:0;}
                         if(a===40||a===41){object=renderer3DObjects.get(b);if(!object){renderer3DLastError=50;return 0;}return a===40?(object.castsShadow?1:0):(object.receivesShadow?1:0);}renderer3DLastError=50;return 0;
+                    case 118:return renderer3DSubmissionGroup(a,b);
                     default:renderer3DLastError=1;return 0;
                 }
             }

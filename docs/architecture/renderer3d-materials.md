@@ -44,6 +44,8 @@ Direct LDR preserves the pre-M5 simple and PBR output exactly. When HDR is effec
 
 Opaque and masked materials may cast/receive the selected directional or spot shadow. Masked shadow depth uses the same texture alpha, factor opacity, and cutoff as the main material. Alpha-blended materials do not cast. PBR and simple receivers share the fixed 3x3 PCF sample and the bounded constant/normal bias profile. Double-sided materials remain double-sided in the shadow pass.
 
+Every queued M5.1 draw snapshots the complete simple/PBR material, including all factors, texture handles, alpha mode/cutoff, and double-sided state. Main and shadow passes consume that same snapshot, so changing or destroying the source material after an accepted draw cannot alter that draw. The selected directional vector or selected spot position is used for normal-bias evaluation. Directional light-space translation is snapped to shadow texels on native and Web to keep sub-texel movement stable.
+
 ## Lighting
 
 The bounded light set contains one ambient term, one directional light, and four fixed local slots. A local slot is disabled, point, or spot. Point/spot attenuation is range-bounded; spot lights add normalized direction and inner/outer cone cosines. `ResetLights3D` restores white ambient at 25%, the existing white directional light at 100%, and disables local slots. There is no allocation during lighting updates or drawing.
@@ -63,7 +65,7 @@ model -> part meshes
 
 A prepared texture identity is the exact retained path plus color/data usage, filter, wrap, requested/effective anisotropy, and mip policy. The reference-to-resource map remains separate from the unique-owned-texture list, so repeated references neither consume duplicate pool slots nor cause double destruction. Applications should prepare before creating parts: an existing part retains its current default, while a new part receives the imported PBR material.
 
-`CreateModelPart3D` automatically binds the part's imported material. An explicit `SetObjectMaterial3D` override is borrowed; `ClearObjectMaterial3D` restores the imported default. Model-owned material handles are not exposed and cannot be destroyed directly. A live part blocks model destruction; successful destruction releases imported materials, textures/images, and meshes in dependency order. Reset uses the same order.
+`CreateModelPart3D` automatically binds the part's imported material. An explicit `SetObjectMaterial3D` override is borrowed; `ClearObjectMaterial3D` restores the imported default. Model-owned material handles are not exposed and cannot be destroyed directly. A live part or queued snapshot that retains a model-owned mesh/texture blocks model destruction; successful destruction releases imported materials, textures/images, and meshes in dependency order. Reset uses the same order.
 
 ## Limits and diagnostics
 
