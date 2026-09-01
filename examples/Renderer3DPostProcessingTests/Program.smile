@@ -1,0 +1,199 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Character3D As Character3D
+
+Dim Failures As Number
+Dim Checks As Number
+Dim HdrWasEffective As Boolean
+Dim ShadowWasEffective As Boolean
+
+Game Window "Renderer3D M5 Tests" Size 320 By 240
+
+Do
+
+    Call RunM5Tests()
+
+Loop Until True
+
+If Failures = 0 Then
+
+    If HdrWasEffective And ShadowWasEffective Then
+        Print "Renderer3D M5 tests passed"
+    Else If Not HdrWasEffective And ShadowWasEffective Then
+        Print "Renderer3D M5 HDR fallback tests passed"
+    Else If HdrWasEffective And Not ShadowWasEffective Then
+        Print "Renderer3D M5 shadow fallback tests passed"
+    Else
+        Print "Renderer3D M5 tests failed: independent features unavailable"
+    End If
+
+Else
+    Print "Renderer3D M5 tests failed: "; Failures
+End If
+
+Sub RunM5Tests()
+
+    Dim Camera As Core.Camera3D
+    Dim Cube As Core.Object3D
+    Dim Ended As Boolean
+    Dim ExpectedSubmissions As Number
+    Dim Flags As Number
+    Dim Ground As Core.Object3D
+    Dim Hero As Character3D.Actor
+    Dim Index As Number
+    Dim Submitted As Boolean
+    Dim Temporary As Core.Object3D
+
+    Call Graphics3D.ResetRenderer3D()
+
+    Camera = Graphics3D.DefaultCamera()
+    Ground = Graphics3D.CreatePlane3D(160, 120)
+    Cube = Graphics3D.CreateCube3D(24)
+    Hero = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
+
+    Call Check(Ground.Handle <> 0)
+    Call Check(Cube.Handle <> 0)
+    Call Check(Character3D.IsValid(Hero))
+    Call Check(Character3D.SetScale(Hero, 1000))
+    Call Check(Character3D.SetShadows(Hero, True, True))
+    Call Check(Character3D.CastsShadow(Hero))
+    Call Check(Character3D.ReceivesShadow(Hero))
+    Call Check(Graphics3D.SetObjectShadowsChecked3D(Cube, True, True))
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_OBJECT_CASTS_SHADOW, Cube.Handle) = 1)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_OBJECT_RECEIVES_SHADOW, Cube.Handle) = 1)
+    Call Check(Graphics3D.SetDirectionalShadowArea3D(0, 50, 0, 500, 400, 1, 1000))
+    Call Check(Graphics3D.ConfigureShadows3D(
+        True,
+        Graphics3D.SHADOW_CASTER_DIRECTIONAL,
+        0,
+        2048,
+        500,
+        600
+    ))
+    Call Check(Graphics3D.ConfigurePostProcessing3D(True, True, True, 125, 1100, 90, 2, 2, 4))
+    Call Check(Graphics3D.SetDirectionalLight3D(-3, -7, 4, 255, 242, 224, 125))
+    Call Check(Graphics3D.Begin3D(Camera, 3, 6, 16))
+    Call Check(Graphics3D.DrawObject3D(Ground))
+    Call Check(Character3D.Draw(Hero))
+    Call Check(Graphics3D.DrawObject3D(Cube))
+    Call Check(Graphics3D.DrawObject3D(Cube))
+    Call Check(Graphics3D.End3DChecked())
+
+    HdrWasEffective = Graphics3D.M5Value3D(Graphics3D.M5_QUERY_HDR_EFFECTIVE, 0) = 1
+    ShadowWasEffective = Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_EFFECTIVE, 0) = 1
+    ExpectedSubmissions = Character3D.PartCount(Hero) + 3
+    Flags = Graphics3D.M5Value3D(Graphics3D.M5_QUERY_FALLBACK_FLAGS, 0)
+
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_LOGICAL_SUBMISSIONS, 0) = ExpectedSubmissions)
+    Call Check(Graphics3D.DrawCallCount3D() = ExpectedSubmissions)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SUBMISSION_CAPACITY, 0) = 512)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SAMPLE_COUNT, 0) = 1 Or
+        Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SAMPLE_COUNT, 0) = 2 Or
+        Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SAMPLE_COUNT, 0) = 4)
+
+    If ShadowWasEffective Then
+        Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_DRAWS, 0) = ExpectedSubmissions)
+        Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_TRIANGLES, 0) > 0)
+        Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_PALETTE_UPLOADS, 0) > 0)
+        Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_RESOLUTION, 0) = 2048)
+    Else
+        Call Check(FlagPresent(Flags, Graphics3D.M5_FALLBACK_SHADOW_DISABLED))
+    End If
+
+    If HdrWasEffective Then
+        Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SCENE_FORMAT, 0) = Graphics3D.SCENE_FORMAT_RGBA16_FLOAT)
+        Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_BLOOM_EFFECTIVE, 0) = 1)
+        Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_BLOOM_CYCLES, 0) = 2)
+        Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_POST_DRAWS, 0) = 6)
+        Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_TARGET_BYTES, 0) > 0)
+    Else
+        Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SCENE_FORMAT, 0) = Graphics3D.SCENE_FORMAT_DIRECT_LDR)
+        Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_POST_DRAWS, 0) = 0)
+        Call Check(FlagPresent(Flags, Graphics3D.M5_FALLBACK_HDR_UNAVAILABLE))
+        Call Check(FlagPresent(Flags, Graphics3D.M5_FALLBACK_DIRECT_LDR))
+    End If
+
+    If ShadowWasEffective Then
+
+        Call Check(Graphics3D.ConfigurePostProcessing3D(False, False, False, 100, 1200, 80, 4, 0, 1))
+        Call Check(Graphics3D.ConfigureShadows3D(
+            True,
+            Graphics3D.SHADOW_CASTER_DIRECTIONAL,
+            0,
+            1024,
+            500,
+            600
+        ))
+        Call Check(Graphics3D.Begin3D(Camera, 0, 0, 0))
+
+        Submitted = True
+
+        For Index = 0 To 511
+            Submitted = Graphics3D.DrawObject3D(Cube) And Submitted
+        End For
+
+        Call Check(Submitted)
+        Call Check(Not Graphics3D.DrawObject3D(Cube))
+        Call Check(Graphics3D.LastError() = 51)
+        Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_REJECTED_SUBMISSIONS, 0) = 1)
+        Call Check(Graphics3D.End3DChecked())
+
+        Temporary = Graphics3D.CreateCube3D(8)
+
+        Call Check(Graphics3D.Begin3D(Camera, 0, 0, 0))
+        Call Check(Graphics3D.DrawObject3D(Temporary))
+        Call Graphics3D.DestroyObject3D(Temporary)
+
+        Ended = Graphics3D.End3DChecked()
+
+        Call Check(Not Ended)
+        Call Check(Graphics3D.LastError() = 14)
+
+    End If
+
+    Call Check(Graphics3D.ConfigureShadows3D(
+        False,
+        Graphics3D.SHADOW_CASTER_DIRECTIONAL,
+        0,
+        1024,
+        500,
+        600
+    ))
+    Call Check(Graphics3D.ConfigurePostProcessing3D(False, False, False, 100, 1200, 80, 4, 0, 1))
+    Call Check(Graphics3D.Begin3D(Camera, 0, 0, 0))
+    Call Check(Graphics3D.DrawObject3D(Cube))
+    Call Check(Graphics3D.End3DChecked())
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_MULTIPASS_ACTIVE, 0) = 0)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_LOGICAL_SUBMISSIONS, 0) = 1)
+    Call Check(Graphics3D.DrawCallCount3D() = 1)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_DRAWS, 0) = 0)
+    Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_POST_DRAWS, 0) = 0)
+
+    Call Character3D.Shutdown()
+    Call Graphics3D.DestroyObject3D(Ground)
+    Call Graphics3D.DestroyObject3D(Cube)
+    Call Graphics3D.ResetRenderer3D()
+
+End Sub
+
+Function FlagPresent(Flags As Number, Flag As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Flags Mod (Flag * 2) >= Flag
+
+    Return Result
+
+End Function
+
+Sub Check(Condition As Boolean)
+
+    Checks = Checks + 1
+
+    If Not Condition Then
+        Failures = Failures + 1
+    End If
+
+End Sub

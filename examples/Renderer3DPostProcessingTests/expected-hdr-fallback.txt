@@ -1,0 +1,1 @@
+Renderer3D M5 HDR fallback tests passed

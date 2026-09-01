@@ -1,0 +1,14 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>Renderer3DPostProcessingLab</OutputName>
+    <ApplicationId>smile.examples.renderer3d-post-processing-lab</ApplicationId>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <Asset Include="Assets\*.sm3d" />
+    <Asset Include="Assets\Textures\*.png" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

@@ -88,9 +88,19 @@ Updated = Character3D.SetRootMotion(Hero, Character3D.ROOT_MOTION_APPLY)
 Updated = Character3D.PlayAnimation(Hero, "RootMove", True)
 ```
 
-## Quality and fallback
+## Quality, shadows, and post-processing
 
-Low, Medium, High, and Auto only control capabilities that exist in M4: PBR preparation, texture filtering/anisotropy, local-light count, and permission for capability-only simple fallback. Changing quality affects new/reloaded actors; it never silently mutates a live asset.
+The asset policy remains stable after loading, while the M5 render profile can change whenever the scene is closed. Low uses direct LDR with no shadow or bloom. Medium requests HDR tone mapping, a 1024 shadow, quarter-resolution one-cycle bloom, and 2x samples. High requests HDR tone mapping, a 2048 shadow, half-resolution two-cycle bloom, and 4x samples. Auto selects High when PBR is available and Low otherwise.
+
+```smile
+Updated = Character3D.SetShadows(Hero, True, True)
+Updated = Scene3D.SetShadows(True)
+Updated = Scene3D.SetShadowCaster(Graphics3D.SHADOW_CASTER_DIRECTIONAL, 0)
+Updated = Scene3D.SetExposure(125)
+Updated = Scene3D.SetBloom(True, 80, 1000)
+```
+
+Shadow changes are transactional across every actor part. Scene settings are rejected during an open frame so targets and passes never change halfway through a submission. Renderer3D accepts exactly one directional or selected spot caster, and alpha-blended objects do not enter the shadow pass.
 
 `LoadActor` may use one neutral simple material only when PBR capability is unavailable and current policy permits it. A malformed model, absent animation, or a missing declared texture when PBR validation is available remains a visible load failure. Inspect both layers:
 
@@ -100,10 +110,12 @@ Print Character3D.LastRendererError()
 Print Character3D.LastFallback()
 ```
 
+`Scene3D.ShadowsEffective`, `HdrEffective`, `BloomEffective`, `PostProcessingEffective`, `EffectiveSampleCount`, `SceneFormat`, and `FallbackFlags` expose the actual renderer result. Web normally reports the independent MSAA-reduced flag because its validated HDR target is single-sample. An HDR allocation failure preserves the direct-LDR path; a bloom failure preserves HDR/tone mapping; and a shadow failure does not disable post-processing.
+
 ## Cleanup and advanced interop
 
 Call `Character3D.Destroy` for individual actors or `Character3D.Shutdown` at scene exit. `Shutdown` is idempotent. A direct `Graphics3D.ResetRenderer3D` advances the renderer epoch and invalidates every high-level actor/cache entry; the next Character3D operation reports `CHARACTER_ERROR_RENDERER_RESET` instead of double-destroying stale resources. Same-epoch tampering quarantines only the affected actor or shared asset and preserves unrelated actors.
 
-Battle systems can read `PrimaryObjectHandle`, indexed `PartObjectHandle`, `AnimatorHandle`, and `ModelHandle`. These are borrowed read-only values: do not destroy them or mutate Character3D-owned transforms. Character3D does not import Battle3D and never applies damage, VFX, shadows, HDR, bloom, or game-specific policy.
+Battle systems can read `PrimaryObjectHandle`, indexed `PartObjectHandle`, `AnimatorHandle`, and `ModelHandle`. These are borrowed read-only values: do not destroy them or mutate Character3D-owned transforms. Character3D does not import Battle3D and never applies damage, VFX, HDR, bloom, or game-specific policy; its only M5 addition is generic all-part cast/receive shadow state.
 
-See `examples\Character3DLab` for the native/Web sample and `scripts\test-character3d.ps1` for deterministic parity and lifecycle coverage.
+See `examples\Character3DLab` for actor ownership, `examples\Renderer3DPostProcessingLab` for the native/Web M5 visual sample, `scripts\test-character3d.ps1` for deterministic actor coverage, and `scripts\test-renderer3d-post-processing.ps1` for queue/shadow/HDR/bloom/fallback parity.

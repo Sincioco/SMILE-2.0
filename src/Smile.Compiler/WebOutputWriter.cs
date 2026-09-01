@@ -249,6 +249,58 @@ internal static class WebOutputWriter
             let renderer3DModelPaletteCachedAnimator = 0;
             let renderer3DModelPaletteCachedRevision = 0;
             let renderer3DModelPaletteUploadCount = 0;
+            let renderer3DShadowProgram = null;
+            let renderer3DPostProgram = null;
+            let renderer3DShadowTexture = null;
+            let renderer3DShadowFramebuffer = null;
+            let renderer3DSceneTexture = null;
+            let renderer3DSceneFramebuffer = null;
+            let renderer3DSceneDepth = null;
+            let renderer3DBloomTextureA = null;
+            let renderer3DBloomFramebufferA = null;
+            let renderer3DBloomTextureB = null;
+            let renderer3DBloomFramebufferB = null;
+            let renderer3DPostRequested = false;
+            let renderer3DHdrRequested = false;
+            let renderer3DBloomRequested = false;
+            let renderer3DShadowRequested = false;
+            let renderer3DPostEffective = false;
+            let renderer3DHdrEffective = false;
+            let renderer3DBloomEffective = false;
+            let renderer3DShadowEffective = false;
+            let renderer3DToneMappingEffective = false;
+            let renderer3DMultipassActive = false;
+            let renderer3DShadowCaster = 1;
+            let renderer3DShadowSlot = 0;
+            let renderer3DShadowRequestedResolution = 2048;
+            let renderer3DShadowResolution = 0;
+            let renderer3DExposure = 100;
+            let renderer3DBloomThreshold = 1200;
+            let renderer3DBloomIntensity = 80;
+            let renderer3DBloomDownsample = 2;
+            let renderer3DBloomCycles = 2;
+            let renderer3DRequestedSamples = 4;
+            let renderer3DEffectiveSamples = 1;
+            let renderer3DBloomWidth = 0;
+            let renderer3DBloomHeight = 0;
+            let renderer3DFallbackFlags = 0;
+            let renderer3DM5ResourceGeneration = 1;
+            let renderer3DM5ConfigurationRevision = 1;
+            let renderer3DM5AppliedRevision = 0;
+            let renderer3DM5Width = 0;
+            let renderer3DM5Height = 0;
+            let renderer3DLogicalSubmissionCount = 0;
+            let renderer3DRejectedSubmissionCount = 0;
+            let renderer3DShadowDrawCount = 0;
+            let renderer3DShadowTriangleCount = 0;
+            let renderer3DShadowPaletteUploadCount = 0;
+            let renderer3DPostDrawCount = 0;
+            let renderer3DResolveCount = 0;
+            let renderer3DSubmissionCount = 0;
+            let renderer3DTargetBytes = 0;
+            let renderer3DShadowBytes = 0;
+            let renderer3DSceneBytes = 0;
+            let renderer3DBloomBytes = 0;
             const renderer3DMeshes = new Map();
             const renderer3DObjects = new Map();
             const renderer3DTextures = new Map();
@@ -269,6 +321,16 @@ internal static class WebOutputWriter
             const renderer3DTintScratch = new Float32Array(4);
             const renderer3DMaterialScratch = new Float32Array(4);
             const renderer3DNormalScratch = new Float32Array(9);
+            const renderer3DSubmissions = new Float64Array(512);
+            const renderer3DShadowCenter = new Float32Array([0, 100, 0]);
+            const renderer3DShadowArea = new Float32Array([1200, 900, 1, 2400]);
+            const renderer3DShadowSettings = new Float32Array([.0015, .006, 0, 0]);
+            const renderer3DShadowMatrixScratch = new Float32Array(16);
+            const renderer3DShadowViewScratch = new Float32Array(16);
+            const renderer3DShadowProjectionScratch = new Float32Array(16);
+            const renderer3DPostFirstScratch = new Float32Array(4);
+            const renderer3DPostSecondScratch = new Float32Array(4);
+            const renderer3DClearScratch = new Float32Array(4);
             const renderer3DAmbient = new Float32Array([1, 1, 1, .25]);
             const renderer3DDirectionalDirection = new Float32Array([-.35, .8, -.45, 1]);
             const renderer3DDirectionalColor = new Float32Array([1, 1, 1, 1]);
@@ -782,6 +844,24 @@ internal static class WebOutputWriter
                         renderer3DModelPaletteTexture = null;
                         renderer3DModelPaletteCachedAnimator = 0;
                         renderer3DModelPaletteCachedRevision = 0;
+                        renderer3DShadowProgram = null;
+                        renderer3DPostProgram = null;
+                        renderer3DShadowTexture = null;
+                        renderer3DShadowFramebuffer = null;
+                        renderer3DSceneTexture = null;
+                        renderer3DSceneFramebuffer = null;
+                        renderer3DSceneDepth = null;
+                        renderer3DBloomTextureA = null;
+                        renderer3DBloomFramebufferA = null;
+                        renderer3DBloomTextureB = null;
+                        renderer3DBloomFramebufferB = null;
+                        renderer3DShadowEffective = false;
+                        renderer3DHdrEffective = false;
+                        renderer3DBloomEffective = false;
+                        renderer3DPostEffective = false;
+                        renderer3DMultipassActive = false;
+                        renderer3DM5AppliedRevision = 0;
+                        renderer3DSubmissionCount = 0;
                         renderer3DAnisotropyAttempted = false;
                         for (const mesh of renderer3DMeshes.values()) {
                             mesh.vertexBuffer = null;
@@ -800,6 +880,24 @@ internal static class WebOutputWriter
                         renderer3DModelPaletteTexture = null;
                         renderer3DModelPaletteCachedAnimator = 0;
                         renderer3DModelPaletteCachedRevision = 0;
+                        renderer3DShadowProgram = null;
+                        renderer3DPostProgram = null;
+                        renderer3DShadowTexture = null;
+                        renderer3DShadowFramebuffer = null;
+                        renderer3DSceneTexture = null;
+                        renderer3DSceneFramebuffer = null;
+                        renderer3DSceneDepth = null;
+                        renderer3DBloomTextureA = null;
+                        renderer3DBloomFramebufferA = null;
+                        renderer3DBloomTextureB = null;
+                        renderer3DBloomFramebufferB = null;
+                        renderer3DShadowEffective = false;
+                        renderer3DHdrEffective = false;
+                        renderer3DBloomEffective = false;
+                        renderer3DPostEffective = false;
+                        renderer3DMultipassActive = false;
+                        renderer3DM5AppliedRevision = 0;
+                        renderer3DSubmissionCount = 0;
                         renderer3DAnisotropyAttempted = false;
                     });
                 }
@@ -831,23 +929,31 @@ internal static class WebOutputWriter
                         layout(location=4) in vec4 weights;
                         uniform mat4 model;
                         uniform mat4 mvp;
+                        uniform mat4 shadowMvp;
                         uniform mat4 bones[32];
                         uniform float skinning;
                         uniform highp sampler2D modelPalette;
                         uniform float modelSkinning;
                         out vec3 surfaceNormal;
                         out vec2 surfaceUv;
+                        out vec4 shadowPosition;
                         mat4 modelBone(int index){return mat4(texelFetch(modelPalette,ivec2(0,index),0),texelFetch(modelPalette,ivec2(1,index),0),texelFetch(modelPalette,ivec2(2,index),0),texelFetch(modelPalette,ivec2(3,index),0));}
-                        void main(){vec4 localPosition=vec4(position,1.0);vec3 localNormal=normal;if(skinning>.5){mat4 skin=modelSkinning>.5?modelBone(int(joints.x))*weights.x+modelBone(int(joints.y))*weights.y+modelBone(int(joints.z))*weights.z+modelBone(int(joints.w))*weights.w:bones[int(joints.x)]*weights.x+bones[int(joints.y)]*weights.y+bones[int(joints.z)]*weights.z+bones[int(joints.w)]*weights.w;localPosition=skin*localPosition;localNormal=mat3(skin)*localNormal;}gl_Position=mvp*localPosition;surfaceNormal=normalize(mat3(model)*localNormal);surfaceUv=textureUv;}`);
+                        void main(){vec4 localPosition=vec4(position,1.0);vec3 localNormal=normal;if(skinning>.5){mat4 skin=modelSkinning>.5?modelBone(int(joints.x))*weights.x+modelBone(int(joints.y))*weights.y+modelBone(int(joints.z))*weights.z+modelBone(int(joints.w))*weights.w:bones[int(joints.x)]*weights.x+bones[int(joints.y)]*weights.y+bones[int(joints.z)]*weights.z+bones[int(joints.w)]*weights.w;localPosition=skin*localPosition;localNormal=mat3(skin)*localNormal;}gl_Position=mvp*localPosition;shadowPosition=shadowMvp*localPosition;surfaceNormal=normalize(mat3(model)*localNormal);surfaceUv=textureUv;}`);
                     const fragment = renderer3DCompile(gl, gl.FRAGMENT_SHADER, `#version 300 es
                         precision highp float;
                         in vec3 surfaceNormal;
                         in vec2 surfaceUv;
+                        in vec4 shadowPosition;
                         uniform vec4 tint;
                         uniform vec4 material;
                         uniform sampler2D baseTexture;
+                        uniform highp sampler2DShadow shadowMap;
+                        uniform vec4 shadowSettings;
+                        uniform float hdrOutput;
                         out vec4 outputColor;
-                        void main(){vec4 base=tint;if(material.x>.5)base*=texture(baseTexture,surfaceUv);if(material.w>=0.0&&base.a<material.w)discard;float lit=.28+.72*max(0.0,dot(normalize(surfaceNormal),normalize(vec3(-.35,.8,-.45))));float light=material.y>.5?1.0:lit+material.z;outputColor=vec4(base.rgb*light,base.a);}`);
+                        vec3 toLinear(vec3 color){return mix(color/12.92,pow((color+.055)/1.055,vec3(2.4)),step(vec3(.04045),color));}
+                        float shadowValue(vec3 n,vec3 l){if(shadowSettings.x<.5||shadowPosition.w<=0.0)return 1.0;vec3 projected=shadowPosition.xyz/shadowPosition.w;vec2 uv=projected.xy*.5+.5;float depth=projected.z*.5+.5;if(any(lessThan(uv,vec2(0.0)))||any(greaterThan(uv,vec2(1.0)))||depth<0.0||depth>1.0)return 1.0;float bias=shadowSettings.y+shadowSettings.z*(1.0-max(dot(n,l),0.0));float sum=0.0;for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++)sum+=texture(shadowMap,vec3(uv+vec2(x,y)*shadowSettings.w,depth-bias));return sum/9.0;}
+                        void main(){vec4 base=tint;if(material.x>.5)base*=texture(baseTexture,surfaceUv);if(material.w>=0.0&&base.a<material.w)discard;vec3 n=normalize(surfaceNormal),l=normalize(vec3(-.35,.8,-.45));float lit=.28+.72*max(0.0,dot(n,l))*shadowValue(n,l);float light=material.y>.5?1.0:lit+material.z;vec3 color=base.rgb*light;outputColor=vec4(hdrOutput>.5?max(toLinear(color),vec3(0.0)):color,base.a);}`);
                     const program = gl.createProgram();
                     gl.attachShader(program, vertex); gl.attachShader(program, fragment); gl.linkProgram(program);
                     gl.deleteShader(vertex); gl.deleteShader(fragment);
@@ -857,9 +963,13 @@ internal static class WebOutputWriter
                         handle: program,
                         model: gl.getUniformLocation(program, "model"),
                         mvp: gl.getUniformLocation(program, "mvp"),
+                        shadowMvp: gl.getUniformLocation(program, "shadowMvp"),
                         tint: gl.getUniformLocation(program, "tint"),
                         material: gl.getUniformLocation(program, "material"),
                         baseTexture: gl.getUniformLocation(program, "baseTexture"),
+                        shadowMap: gl.getUniformLocation(program, "shadowMap"),
+                        shadowSettings: gl.getUniformLocation(program, "shadowSettings"),
+                        hdrOutput: gl.getUniformLocation(program, "hdrOutput"),
                         bones: gl.getUniformLocation(program, "bones[0]"),
                         skinning: gl.getUniformLocation(program, "skinning"),
                         modelPalette: gl.getUniformLocation(program, "modelPalette"),
@@ -894,6 +1004,7 @@ internal static class WebOutputWriter
                             uniform mat4 model;
                             uniform mat4 mvp;
                             uniform mat3 normalMatrix;
+                            uniform mat4 shadowMvp;
                             uniform mat4 bones[32];
                             uniform float skinning;
                             uniform highp sampler2D modelPalette;
@@ -902,14 +1013,16 @@ internal static class WebOutputWriter
                             out vec3 surfaceNormal;
                             out vec4 surfaceTangent;
                             out vec2 surfaceUv;
+                            out vec4 shadowPosition;
                             mat4 modelBone(int index){return mat4(texelFetch(modelPalette,ivec2(0,index),0),texelFetch(modelPalette,ivec2(1,index),0),texelFetch(modelPalette,ivec2(2,index),0),texelFetch(modelPalette,ivec2(3,index),0));}
-                            void main(){vec4 localPosition=vec4(position,1.0);vec3 localNormal=normal;vec4 localTangent=tangent;if(skinning>.5){mat4 skin=modelSkinning>.5?modelBone(int(joints.x))*weights.x+modelBone(int(joints.y))*weights.y+modelBone(int(joints.z))*weights.z+modelBone(int(joints.w))*weights.w:bones[int(joints.x)]*weights.x+bones[int(joints.y)]*weights.y+bones[int(joints.z)]*weights.z+bones[int(joints.w)]*weights.w;localPosition=skin*localPosition;localNormal=mat3(skin)*localNormal;localTangent.xyz=mat3(skin)*localTangent.xyz;}vec4 world=model*localPosition;vec3 n=normalize(normalMatrix*localNormal);vec3 t=mat3(model)*localTangent.xyz;t=normalize(t-n*dot(n,t));gl_Position=mvp*localPosition;worldPosition=world.xyz;surfaceNormal=n;surfaceTangent=vec4(t,localTangent.w);surfaceUv=textureUv;}`);
+                            void main(){vec4 localPosition=vec4(position,1.0);vec3 localNormal=normal;vec4 localTangent=tangent;if(skinning>.5){mat4 skin=modelSkinning>.5?modelBone(int(joints.x))*weights.x+modelBone(int(joints.y))*weights.y+modelBone(int(joints.z))*weights.z+modelBone(int(joints.w))*weights.w:bones[int(joints.x)]*weights.x+bones[int(joints.y)]*weights.y+bones[int(joints.z)]*weights.z+bones[int(joints.w)]*weights.w;localPosition=skin*localPosition;localNormal=mat3(skin)*localNormal;localTangent.xyz=mat3(skin)*localTangent.xyz;}vec4 world=model*localPosition;vec3 n=normalize(normalMatrix*localNormal);vec3 t=mat3(model)*localTangent.xyz;t=normalize(t-n*dot(n,t));gl_Position=mvp*localPosition;worldPosition=world.xyz;surfaceNormal=n;surfaceTangent=vec4(t,localTangent.w);surfaceUv=textureUv;shadowPosition=shadowMvp*localPosition;}`);
                         pbrFragment = renderer3DCompile(gl, gl.FRAGMENT_SHADER, `#version 300 es
                             precision highp float;
                             in vec3 worldPosition;
                             in vec3 surfaceNormal;
                             in vec4 surfaceTangent;
                             in vec2 surfaceUv;
+                            in vec4 shadowPosition;
                             uniform vec4 objectColor;
                             uniform vec4 baseFactor;
                             uniform vec4 surfaceFactors;
@@ -927,14 +1040,19 @@ internal static class WebOutputWriter
                             uniform sampler2D normalTexture;
                             uniform sampler2D ormTexture;
                             uniform sampler2D emissiveTexture;
+                            uniform highp sampler2DShadow shadowMap;
+                            uniform vec4 shadowSettings;
+                            uniform vec2 shadowSelection;
+                            uniform float hdrOutput;
                             out vec4 outputColor;
                             const float PI=3.14159265359;
                             vec3 fresnelSchlick(vec3 f0,float value){return f0+(vec3(1.0)-f0)*pow(1.0-value,5.0);}
                             float distribution(float nh,float rough){float a=rough*rough;float a2=a*a;float q=nh*nh*(a2-1.0)+1.0;return a2/max(PI*q*q,.0001);}
                             float geometryOne(float nv,float rough){float k=(rough+1.0)*(rough+1.0)/8.0;return nv/max(nv*(1.0-k)+k,.0001);}
                             vec3 shade(vec3 n,vec3 v,vec3 l,vec3 radiance,vec3 base,float metal,float rough){vec3 halfDirection=normalize(v+l);float nl=max(dot(n,l),0.0);float nv=max(dot(n,v),0.0);float vh=max(dot(v,halfDirection),0.0);float nh=max(dot(n,halfDirection),0.0);vec3 f0=mix(vec3(.04),base,metal);vec3 fresnel=fresnelSchlick(f0,vh);float geometry=geometryOne(nv,rough)*geometryOne(nl,rough);vec3 specular=distribution(nh,rough)*geometry*fresnel/max(4.0*nv*nl,.0001);vec3 diffuse=(vec3(1.0)-fresnel)*(1.0-metal);return (diffuse*base/PI+specular)*radiance*nl;}
+                            float shadowValue(vec3 n,vec3 l){if(shadowSettings.x<.5||shadowPosition.w<=0.0)return 1.0;vec3 projected=shadowPosition.xyz/shadowPosition.w;vec2 uv=projected.xy*.5+.5;float depth=projected.z*.5+.5;if(any(lessThan(uv,vec2(0.0)))||any(greaterThan(uv,vec2(1.0)))||depth<0.0||depth>1.0)return 1.0;float bias=shadowSettings.y+shadowSettings.z*(1.0-max(dot(n,l),0.0));float sum=0.0;for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++)sum+=texture(shadowMap,vec3(uv+vec2(x,y)*shadowSettings.w,depth-bias));return sum/9.0;}
                             vec3 applyLdrOutputTransfer(vec3 color){vec3 low=color*12.92;vec3 high=1.055*pow(max(color,vec3(0.0)),vec3(1.0/2.4))-.055;return mix(low,high,step(vec3(.0031308),color));}
-                            void main(){vec4 sampled=textureFlags.x>.5?texture(baseTexture,surfaceUv):vec4(1.0);vec4 base=baseFactor*objectColor*sampled;if(emissiveAlpha.w>=0.0&&base.a<emissiveAlpha.w)discard;vec3 n=normalize(surfaceNormal);if(!gl_FrontFacing)n=-n;vec3 t=normalize(surfaceTangent.xyz-n*dot(n,surfaceTangent.xyz));vec3 bitangent=normalize(cross(n,t)*surfaceTangent.w);if(textureFlags.y>.5){vec3 mapped=texture(normalTexture,surfaceUv).xyz*2.0-1.0;mapped.xy*=surfaceFactors.z;n=normalize(t*mapped.x+bitangent*mapped.y+n*mapped.z);}vec3 orm=textureFlags.z>.5?texture(ormTexture,surfaceUv).rgb:vec3(1.0);float occlusion=mix(1.0,orm.r,surfaceFactors.w);float rough=clamp(surfaceFactors.y*orm.g,.045,1.0);float metal=clamp(surfaceFactors.x*orm.b,0.0,1.0);vec3 viewDirection=normalize(cameraPosition-worldPosition);vec3 color=ambientLight.rgb*ambientLight.a*base.rgb*occlusion;if(directionalDirection.w>.5)color+=shade(n,viewDirection,normalize(directionalDirection.xyz),directionalColor.rgb*directionalColor.a,base.rgb,metal,rough);for(int light=0;light<4;light++){float type=localPositionType[light].w;if(type>.5){vec3 delta=localPositionType[light].xyz-worldPosition;float distanceToLight=length(delta);float range=max(localDirectionRange[light].w,.0001);if(distanceToLight<range){vec3 lightDirection=delta/max(distanceToLight,.0001);float ratio=distanceToLight/range;float attenuation=pow(clamp(1.0-ratio*ratio,0.0,1.0),2.0)/(1.0+2.0*ratio*ratio);if(type>1.5){float spot=dot(-lightDirection,normalize(localDirectionRange[light].xyz));attenuation*=smoothstep(localCone[light].y,localCone[light].x,spot);}color+=shade(n,viewDirection,lightDirection,localColorIntensity[light].rgb*localColorIntensity[light].a*attenuation,base.rgb,metal,rough);}}}vec3 emissive=emissiveAlpha.rgb*(textureFlags.w>.5?texture(emissiveTexture,surfaceUv).rgb:vec3(1.0));outputColor=vec4(clamp(applyLdrOutputTransfer(max(color+emissive,vec3(0.0))),0.0,1.0),base.a);}`);
+                            void main(){vec4 sampled=textureFlags.x>.5?texture(baseTexture,surfaceUv):vec4(1.0);vec4 base=baseFactor*objectColor*sampled;if(emissiveAlpha.w>=0.0&&base.a<emissiveAlpha.w)discard;vec3 n=normalize(surfaceNormal);if(!gl_FrontFacing)n=-n;vec3 t=normalize(surfaceTangent.xyz-n*dot(n,surfaceTangent.xyz));vec3 bitangent=normalize(cross(n,t)*surfaceTangent.w);if(textureFlags.y>.5){vec3 mapped=texture(normalTexture,surfaceUv).xyz*2.0-1.0;mapped.xy*=surfaceFactors.z;n=normalize(t*mapped.x+bitangent*mapped.y+n*mapped.z);}vec3 orm=textureFlags.z>.5?texture(ormTexture,surfaceUv).rgb:vec3(1.0);float occlusion=mix(1.0,orm.r,surfaceFactors.w);float rough=clamp(surfaceFactors.y*orm.g,.045,1.0);float metal=clamp(surfaceFactors.x*orm.b,0.0,1.0);vec3 viewDirection=normalize(cameraPosition-worldPosition);vec3 color=ambientLight.rgb*ambientLight.a*base.rgb*occlusion;if(directionalDirection.w>.5){vec3 lightDirection=normalize(directionalDirection.xyz);float factor=shadowSelection.x<1.5?shadowValue(n,lightDirection):1.0;color+=shade(n,viewDirection,lightDirection,directionalColor.rgb*directionalColor.a*factor,base.rgb,metal,rough);}for(int light=0;light<4;light++){float type=localPositionType[light].w;if(type>.5){vec3 delta=localPositionType[light].xyz-worldPosition;float distanceToLight=length(delta);float range=max(localDirectionRange[light].w,.0001);if(distanceToLight<range){vec3 lightDirection=delta/max(distanceToLight,.0001);float ratio=distanceToLight/range;float attenuation=pow(clamp(1.0-ratio*ratio,0.0,1.0),2.0)/(1.0+2.0*ratio*ratio);if(type>1.5){float spot=dot(-lightDirection,normalize(localDirectionRange[light].xyz));attenuation*=smoothstep(localCone[light].y,localCone[light].x,spot);}float factor=shadowSelection.x>1.5&&abs(shadowSelection.y-float(light))<.5?shadowValue(n,lightDirection):1.0;color+=shade(n,viewDirection,lightDirection,localColorIntensity[light].rgb*localColorIntensity[light].a*attenuation*factor,base.rgb,metal,rough);}}}vec3 emissive=emissiveAlpha.rgb*(textureFlags.w>.5?texture(emissiveTexture,surfaceUv).rgb:vec3(1.0));vec3 finalColor=max(color+emissive,vec3(0.0));outputColor=vec4(hdrOutput>.5?finalColor:clamp(applyLdrOutputTransfer(finalColor),0.0,1.0),base.a);}`);
                         pbrHandle = gl.createProgram();
                         gl.attachShader(pbrHandle, pbrVertex);
                         gl.attachShader(pbrHandle, pbrFragment);
@@ -946,7 +1064,8 @@ internal static class WebOutputWriter
                             "baseFactor","surfaceFactors","emissiveAlpha","textureFlags","cameraPosition",
                             "ambientLight","directionalDirection","directionalColor","localPositionType[0]",
                             "localDirectionRange[0]","localColorIntensity[0]","localCone[0]","baseTexture",
-                            "normalTexture","ormTexture","emissiveTexture"])
+                            "normalTexture","ormTexture","emissiveTexture","shadowMvp","shadowMap",
+                            "shadowSettings","shadowSelection","hdrOutput"])
                             renderer3DPbrProgram[name] = gl.getUniformLocation(pbrHandle, name);
                         renderer3DPbrState = 1;
                         renderer3DPbrFailure = 0;
@@ -960,6 +1079,58 @@ internal static class WebOutputWriter
                         if (pbrVertex) gl.deleteShader(pbrVertex);
                         if (pbrFragment) gl.deleteShader(pbrFragment);
                     }
+                }
+                if (renderer3DShadowRequested && !renderer3DShadowProgram) {
+                    let vertex = null, fragment = null, handle = null;
+                    try {
+                        vertex = renderer3DCompile(gl, gl.VERTEX_SHADER, `#version 300 es
+                            precision highp float;
+                            layout(location=0) in vec3 position;
+                            layout(location=2) in vec2 textureUv;
+                            layout(location=3) in vec4 joints;
+                            layout(location=4) in vec4 weights;
+                            uniform mat4 mvp;
+                            uniform mat4 bones[32];
+                            uniform float skinning;
+                            uniform highp sampler2D modelPalette;
+                            uniform float modelSkinning;
+                            out vec2 surfaceUv;
+                            mat4 modelBone(int index){return mat4(texelFetch(modelPalette,ivec2(0,index),0),texelFetch(modelPalette,ivec2(1,index),0),texelFetch(modelPalette,ivec2(2,index),0),texelFetch(modelPalette,ivec2(3,index),0));}
+                            void main(){vec4 localPosition=vec4(position,1.0);if(skinning>.5){mat4 skin=modelSkinning>.5?modelBone(int(joints.x))*weights.x+modelBone(int(joints.y))*weights.y+modelBone(int(joints.z))*weights.z+modelBone(int(joints.w))*weights.w:bones[int(joints.x)]*weights.x+bones[int(joints.y)]*weights.y+bones[int(joints.z)]*weights.z+bones[int(joints.w)]*weights.w;localPosition=skin*localPosition;}gl_Position=mvp*localPosition;surfaceUv=textureUv;}`);
+                        fragment = renderer3DCompile(gl, gl.FRAGMENT_SHADER, `#version 300 es
+                            precision highp float;
+                            in vec2 surfaceUv;
+                            uniform sampler2D baseTexture;
+                            uniform vec3 alphaSettings;
+                            out vec4 outputColor;
+                            void main(){float alpha=alphaSettings.z;if(alphaSettings.x>.5)alpha*=texture(baseTexture,surfaceUv).a;if(alphaSettings.y>=0.0&&alpha<alphaSettings.y)discard;outputColor=vec4(0.0);}`);
+                        handle = gl.createProgram();gl.attachShader(handle,vertex);gl.attachShader(handle,fragment);gl.linkProgram(handle);
+                        if (!gl.getProgramParameter(handle,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(handle)||"shadow link error");
+                        renderer3DShadowProgram={handle};
+                        for(const name of ["mvp","bones[0]","skinning","modelPalette","modelSkinning","baseTexture","alphaSettings"])
+                            renderer3DShadowProgram[name]=gl.getUniformLocation(handle,name);
+                    } catch (_) {
+                        if(handle)gl.deleteProgram(handle);renderer3DShadowProgram=null;renderer3DFallbackFlags|=2;
+                    } finally {if(vertex)gl.deleteShader(vertex);if(fragment)gl.deleteShader(fragment);}
+                }
+                if (renderer3DPostRequested && !renderer3DPostProgram) {
+                    let vertex = null, fragment = null, handle = null;
+                    try {
+                        vertex = renderer3DCompile(gl, gl.VERTEX_SHADER, `#version 300 es
+                            precision highp float;out vec2 surfaceUv;void main(){vec2 p=gl_VertexID==0?vec2(-1.0,-1.0):(gl_VertexID==1?vec2(3.0,-1.0):vec2(-1.0,3.0));gl_Position=vec4(p,0.0,1.0);surfaceUv=p*.5+.5;}`);
+                        fragment = renderer3DCompile(gl, gl.FRAGMENT_SHADER, `#version 300 es
+                            precision highp float;in vec2 surfaceUv;uniform sampler2D sceneTexture;uniform sampler2D bloomTexture;uniform vec4 first;uniform vec4 second;out vec4 outputColor;
+                            vec3 sampleBlur(vec2 axis){vec3 c=texture(sceneTexture,surfaceUv).rgb*.4;c+=(texture(sceneTexture,surfaceUv+axis).rgb+texture(sceneTexture,surfaceUv-axis).rgb)*.24;c+=(texture(sceneTexture,surfaceUv+axis*2.0).rgb+texture(sceneTexture,surfaceUv-axis*2.0).rgb)*.06;return c;}
+                            vec3 tone(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.0,1.0);}vec3 encode(vec3 c){return mix(c*12.92,1.055*pow(max(c,vec3(0.0)),vec3(1.0/2.4))-.055,step(vec3(.0031308),c));}
+                            void main(){if(first.x<.5){vec3 c=texture(sceneTexture,surfaceUv).rgb;float bright=max(c.r,max(c.g,c.b));outputColor=vec4(bright>=first.w?c:vec3(0.0),1.0);return;}if(first.x<1.5){outputColor=vec4(sampleBlur(vec2(first.y,0.0)),1.0);return;}if(first.x<2.5){outputColor=vec4(sampleBlur(vec2(0.0,first.z)),1.0);return;}vec3 scene=texture(sceneTexture,surfaceUv).rgb;vec3 bloom=texture(bloomTexture,surfaceUv).rgb*second.x;outputColor=vec4(encode(tone(max((scene+bloom)*second.y,vec3(0.0)))),1.0);}`);
+                        handle=gl.createProgram();gl.attachShader(handle,vertex);gl.attachShader(handle,fragment);gl.linkProgram(handle);
+                        if(!gl.getProgramParameter(handle,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(handle)||"post link error");
+                        renderer3DPostProgram={handle};for(const name of ["sceneTexture","bloomTexture","first","second"])
+                            renderer3DPostProgram[name]=gl.getUniformLocation(handle,name);
+                    } catch (error) {
+                        console.warn("Renderer3D post-processing shader unavailable:", error);
+                        if(handle)gl.deleteProgram(handle);renderer3DPostProgram=null;renderer3DFallbackFlags|=4|32|64|128;
+                    } finally {if(vertex)gl.deleteShader(vertex);if(fragment)gl.deleteShader(fragment);}
                 }
                 gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS); gl.disable(gl.CULL_FACE);
                 gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -1789,6 +1960,50 @@ internal static class WebOutputWriter
             function renderer3DModelInto(output,object){const sx=object.scale[0],sy=object.scale[1],sz=object.scale[2],rx=object.rotation[0]*Math.PI/180,ry=object.rotation[1]*Math.PI/180,rz=object.rotation[2]*Math.PI/180,s=renderer3DIdentityInto(renderer3DMatrixScratchA),x=renderer3DIdentityInto(renderer3DMatrixScratchB),y=renderer3DIdentityInto(renderer3DMatrixScratchC),z=renderer3DIdentityInto(renderer3DMatrixScratchD);s[0]=sx;s[5]=sy;s[10]=sz;x[5]=Math.cos(rx);x[6]=-Math.sin(rx);x[9]=Math.sin(rx);x[10]=Math.cos(rx);y[0]=Math.cos(ry);y[2]=Math.sin(ry);y[8]=-Math.sin(ry);y[10]=Math.cos(ry);z[0]=Math.cos(rz);z[1]=-Math.sin(rz);z[4]=Math.sin(rz);z[5]=Math.cos(rz);renderer3DMultiplyInto(output,x,s);renderer3DMultiplyInto(s,y,output);renderer3DMultiplyInto(output,z,s);output[12]=object.position[0];output[13]=object.position[1];output[14]=object.position[2];output[15]=1;return output;}
             function renderer3DViewInto(output){const eye=renderer3DCamera.position,target=renderer3DCamera.target;let zx=target[0]-eye[0],zy=target[1]-eye[1],zz=target[2]-eye[2],length=Math.hypot(zx,zy,zz)||1;zx/=length;zy/=length;zz/=length;let xx=zz,xz=-zx;length=Math.hypot(xx,xz)||1;xx/=length;xz/=length;const yx=zy*xz,yz=-zy*xx,yy=zz*xx-zx*xz;output[0]=xx;output[1]=yx;output[2]=zx;output[3]=0;output[4]=0;output[5]=yy;output[6]=zy;output[7]=0;output[8]=xz;output[9]=yz;output[10]=zz;output[11]=0;output[12]=-(xx*eye[0]+xz*eye[2]);output[13]=-(yx*eye[0]+yy*eye[1]+yz*eye[2]);output[14]=-(zx*eye[0]+zy*eye[1]+zz*eye[2]);output[15]=1;return output;}
             function renderer3DProjectionInto(output,aspect){const f=1/Math.tan(renderer3DCamera.fov*Math.PI/360),near=renderer3DCamera.near,far=renderer3DCamera.far;output.fill(0);output[0]=f/aspect;output[5]=f;output[10]=(far+near)/(far-near);output[11]=1;output[14]=-2*far*near/(far-near);return output;}
+            function renderer3DLookAtInto(output,eyeX,eyeY,eyeZ,targetX,targetY,targetZ){let zx=targetX-eyeX,zy=targetY-eyeY,zz=targetZ-eyeZ,length=Math.hypot(zx,zy,zz)||1;zx/=length;zy/=length;zz/=length;
+                let xx=zz,xz=-zx;length=Math.hypot(xx,xz);if(length<.000001){xx=1;xz=0;}else{xx/=length;xz/=length;}const yx=zy*xz,yz=-zy*xx,yy=zz*xx-zx*xz;
+                output[0]=xx;output[1]=yx;output[2]=zx;output[3]=0;output[4]=0;output[5]=yy;output[6]=zy;output[7]=0;output[8]=xz;output[9]=yz;output[10]=zz;output[11]=0;
+                output[12]=-(xx*eyeX+xz*eyeZ);output[13]=-(yx*eyeX+yy*eyeY+yz*eyeZ);output[14]=-(zx*eyeX+zy*eyeY+zz*eyeZ);output[15]=1;return output;}
+            function renderer3DUpdateShadowMatrix(){let eyeX,eyeY,eyeZ,targetX,targetY,targetZ,near,far;if(renderer3DShadowCaster===1){if(renderer3DDirectionalDirection[3]<.5)return false;
+                    targetX=renderer3DShadowCenter[0];targetY=renderer3DShadowCenter[1];targetZ=renderer3DShadowCenter[2];far=renderer3DShadowArea[3];near=renderer3DShadowArea[2];
+                    eyeX=targetX+renderer3DDirectionalDirection[0]*far*.5;eyeY=targetY+renderer3DDirectionalDirection[1]*far*.5;eyeZ=targetZ+renderer3DDirectionalDirection[2]*far*.5;
+                    renderer3DLookAtInto(renderer3DShadowViewScratch,eyeX,eyeY,eyeZ,targetX,targetY,targetZ);renderer3DShadowProjectionScratch.fill(0);
+                    renderer3DShadowProjectionScratch[0]=2/renderer3DShadowArea[0];renderer3DShadowProjectionScratch[5]=2/renderer3DShadowArea[1];renderer3DShadowProjectionScratch[10]=2/(far-near);
+                    renderer3DShadowProjectionScratch[14]=-(far+near)/(far-near);renderer3DShadowProjectionScratch[15]=1;
+                }else if(renderer3DShadowCaster===2){const offset=renderer3DShadowSlot*4;if(renderer3DLocalPositionType[offset+3]!==2||renderer3DLocalDirectionRange[offset+3]<=0)return false;
+                    eyeX=renderer3DLocalPositionType[offset];eyeY=renderer3DLocalPositionType[offset+1];eyeZ=renderer3DLocalPositionType[offset+2];targetX=eyeX+renderer3DLocalDirectionRange[offset];targetY=eyeY+renderer3DLocalDirectionRange[offset+1];targetZ=eyeZ+renderer3DLocalDirectionRange[offset+2];
+                    renderer3DLookAtInto(renderer3DShadowViewScratch,eyeX,eyeY,eyeZ,targetX,targetY,targetZ);const f=1/Math.tan(Math.acos(Math.max(-1,Math.min(1,renderer3DLocalCone[offset+1])))),range=renderer3DLocalDirectionRange[offset+3];
+                    renderer3DShadowProjectionScratch.fill(0);renderer3DShadowProjectionScratch[0]=f;renderer3DShadowProjectionScratch[5]=f;renderer3DShadowProjectionScratch[10]=(range+1)/(range-1);renderer3DShadowProjectionScratch[11]=1;renderer3DShadowProjectionScratch[14]=-2*range/(range-1);
+                }else return false;renderer3DMultiplyInto(renderer3DShadowMatrixScratch,renderer3DShadowProjectionScratch,renderer3DShadowViewScratch);return true;}
+            function renderer3DDeleteM5Targets(){const gl=renderer3DGl;if(gl){if(renderer3DShadowFramebuffer)gl.deleteFramebuffer(renderer3DShadowFramebuffer);if(renderer3DShadowTexture)gl.deleteTexture(renderer3DShadowTexture);
+                    if(renderer3DSceneFramebuffer)gl.deleteFramebuffer(renderer3DSceneFramebuffer);if(renderer3DSceneTexture)gl.deleteTexture(renderer3DSceneTexture);if(renderer3DSceneDepth)gl.deleteRenderbuffer(renderer3DSceneDepth);
+                    if(renderer3DBloomFramebufferA)gl.deleteFramebuffer(renderer3DBloomFramebufferA);if(renderer3DBloomTextureA)gl.deleteTexture(renderer3DBloomTextureA);if(renderer3DBloomFramebufferB)gl.deleteFramebuffer(renderer3DBloomFramebufferB);if(renderer3DBloomTextureB)gl.deleteTexture(renderer3DBloomTextureB);}
+                renderer3DShadowFramebuffer=renderer3DShadowTexture=renderer3DSceneFramebuffer=renderer3DSceneTexture=renderer3DSceneDepth=null;
+                renderer3DBloomFramebufferA=renderer3DBloomTextureA=renderer3DBloomFramebufferB=renderer3DBloomTextureB=null;
+                renderer3DShadowEffective=renderer3DHdrEffective=renderer3DBloomEffective=renderer3DPostEffective=renderer3DToneMappingEffective=false;renderer3DMultipassActive=false;
+                renderer3DShadowResolution=renderer3DBloomWidth=renderer3DBloomHeight=renderer3DM5Width=renderer3DM5Height=0;renderer3DTargetBytes=renderer3DShadowBytes=renderer3DSceneBytes=renderer3DBloomBytes=0;renderer3DEffectiveSamples=1;}
+            function renderer3DCreateColorTarget(width,height){const gl=renderer3DGl,texture=gl.createTexture(),framebuffer=gl.createFramebuffer();if(!texture||!framebuffer)return null;
+                gl.bindTexture(gl.TEXTURE_2D,texture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+                gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA16F,width,height,0,gl.RGBA,gl.HALF_FLOAT,null);gl.bindFramebuffer(gl.FRAMEBUFFER,framebuffer);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,texture,0);
+                if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE){gl.deleteFramebuffer(framebuffer);gl.deleteTexture(texture);return null;}return {texture,framebuffer};}
+            function renderer3DPrepareM5Resources(){const gl=renderer3DGl;if(renderer3DM5AppliedRevision===renderer3DM5ConfigurationRevision&&renderer3DM5Width===backingWidth&&renderer3DM5Height===backingHeight){
+                    renderer3DShadowEffective=renderer3DShadowRequested&&!!renderer3DShadowTexture&&renderer3DUpdateShadowMatrix();if(renderer3DShadowRequested&&!renderer3DShadowEffective)renderer3DFallbackFlags|=2;renderer3DMultipassActive=renderer3DShadowEffective||renderer3DHdrEffective;return true;}
+                renderer3DDeleteM5Targets();renderer3DFallbackFlags=0;
+                if(renderer3DShadowRequested&&renderer3DShadowProgram&&!globalThis.SMILE_TEST_RENDERER3D_FORCE_SHADOW_FAILURE){const maximum=gl.getParameter(gl.MAX_TEXTURE_SIZE)||0,choices=renderer3DShadowRequestedResolution===2048?[2048,1024]:[1024];
+                    for(const resolution of choices){if(resolution>maximum)continue;const texture=gl.createTexture(),framebuffer=gl.createFramebuffer();if(!texture||!framebuffer)continue;
+                        gl.bindTexture(gl.TEXTURE_2D,texture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_COMPARE_MODE,gl.COMPARE_REF_TO_TEXTURE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_COMPARE_FUNC,gl.LEQUAL);
+                        gl.texImage2D(gl.TEXTURE_2D,0,gl.DEPTH_COMPONENT24,resolution,resolution,0,gl.DEPTH_COMPONENT,gl.UNSIGNED_INT,null);gl.bindFramebuffer(gl.FRAMEBUFFER,framebuffer);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,texture,0);gl.drawBuffers([gl.NONE]);gl.readBuffer(gl.NONE);
+                        if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE){renderer3DShadowTexture=texture;renderer3DShadowFramebuffer=framebuffer;renderer3DShadowResolution=resolution;renderer3DShadowBytes=resolution*resolution*4;renderer3DShadowEffective=renderer3DUpdateShadowMatrix();if(resolution<renderer3DShadowRequestedResolution)renderer3DFallbackFlags|=1;break;}
+                        gl.deleteFramebuffer(framebuffer);gl.deleteTexture(texture);}}
+                if(renderer3DShadowRequested&&!renderer3DShadowEffective)renderer3DFallbackFlags|=2;
+                if(renderer3DPostRequested&&renderer3DHdrRequested&&renderer3DPostProgram&&!globalThis.SMILE_TEST_RENDERER3D_FORCE_HDR_FAILURE&&gl.getExtension("EXT_color_buffer_float")){
+                    const scene=renderer3DCreateColorTarget(backingWidth,backingHeight);if(scene){renderer3DSceneTexture=scene.texture;renderer3DSceneFramebuffer=scene.framebuffer;renderer3DSceneDepth=gl.createRenderbuffer();gl.bindRenderbuffer(gl.RENDERBUFFER,renderer3DSceneDepth);gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT24,backingWidth,backingHeight);gl.bindFramebuffer(gl.FRAMEBUFFER,renderer3DSceneFramebuffer);gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,renderer3DSceneDepth);
+                        if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE){renderer3DHdrEffective=renderer3DPostEffective=renderer3DToneMappingEffective=true;renderer3DEffectiveSamples=1;if(renderer3DRequestedSamples>1)renderer3DFallbackFlags|=8;}else{gl.deleteRenderbuffer(renderer3DSceneDepth);gl.deleteFramebuffer(renderer3DSceneFramebuffer);gl.deleteTexture(renderer3DSceneTexture);renderer3DSceneDepth=renderer3DSceneFramebuffer=renderer3DSceneTexture=null;}}}
+                if(renderer3DHdrEffective&&renderer3DBloomRequested){renderer3DBloomWidth=Math.max(1,Math.floor(backingWidth/renderer3DBloomDownsample));renderer3DBloomHeight=Math.max(1,Math.floor(backingHeight/renderer3DBloomDownsample));const first=renderer3DCreateColorTarget(renderer3DBloomWidth,renderer3DBloomHeight),second=renderer3DCreateColorTarget(renderer3DBloomWidth,renderer3DBloomHeight);
+                    if(first&&second){renderer3DBloomTextureA=first.texture;renderer3DBloomFramebufferA=first.framebuffer;renderer3DBloomTextureB=second.texture;renderer3DBloomFramebufferB=second.framebuffer;renderer3DBloomEffective=true;}else{if(first){gl.deleteFramebuffer(first.framebuffer);gl.deleteTexture(first.texture);}if(second){gl.deleteFramebuffer(second.framebuffer);gl.deleteTexture(second.texture);}renderer3DBloomWidth=renderer3DBloomHeight=0;renderer3DFallbackFlags|=32;}}
+                if(!renderer3DHdrEffective){if(renderer3DPostRequested)renderer3DFallbackFlags|=4|64|128;if(renderer3DBloomRequested)renderer3DFallbackFlags|=32;}
+                renderer3DM5Width=backingWidth;renderer3DM5Height=backingHeight;renderer3DSceneBytes=backingWidth*backingHeight*(renderer3DHdrEffective?12:4);renderer3DBloomBytes=renderer3DBloomEffective?renderer3DBloomWidth*renderer3DBloomHeight*16:0;renderer3DTargetBytes=renderer3DShadowBytes+renderer3DSceneBytes+renderer3DBloomBytes;
+                renderer3DMultipassActive=renderer3DShadowEffective||renderer3DHdrEffective;renderer3DM5AppliedRevision=renderer3DM5ConfigurationRevision;renderer3DM5ResourceGeneration+=1;if(renderer3DM5ResourceGeneration>2147483647)renderer3DM5ResourceGeneration=1;if(typeof gl.bindFramebuffer==="function")gl.bindFramebuffer(gl.FRAMEBUFFER,null);return true;}
             function renderer3DNormalInto(output,matrix){const a=matrix[0],b=matrix[4],c=matrix[8],d=matrix[1],e=matrix[5],f=matrix[9],g=matrix[2],h=matrix[6],i=matrix[10];
                 const determinant=a*(e*i-f*h)-b*(d*i-f*g)+c*(d*h-e*g);if(determinant<=1e-8)return null;const inverse=1/determinant;
                 output[0]=(e*i-f*h)*inverse;output[1]=(c*h-b*i)*inverse;output[2]=(b*f-c*e)*inverse;
@@ -1837,9 +2052,9 @@ internal static class WebOutputWriter
                 gl.enableVertexAttribArray(4);gl.vertexAttribPointer(4,4,gl.FLOAT,false,80,48);
                 if(pbr){gl.enableVertexAttribArray(5);gl.vertexAttribPointer(5,4,gl.FLOAT,false,80,64);}else gl.disableVertexAttribArray(5);
                 gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,mesh.indexBuffer);}
-            function renderer3DBindModelPalette(handle,animator,program){const gl=renderer3DGl;if(!animator||!animator.production){gl.uniform1f(program.modelSkinning,0);return true;}
+            function renderer3DBindModelPalette(handle,animator,program,shadowPass){const gl=renderer3DGl;if(!animator||!animator.production){gl.uniform1f(program.modelSkinning,0);return true;}
                 if(!renderer3DModelPaletteTexture){renderer3DModelPaletteTexture=gl.createTexture();if(!renderer3DModelPaletteTexture){renderer3DLastError=48;return false;}gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,renderer3DModelPaletteTexture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA32F,4,128,0,gl.RGBA,gl.FLOAT,null);}
-                gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,renderer3DModelPaletteTexture);if(renderer3DModelPaletteCachedAnimator!==handle||renderer3DModelPaletteCachedRevision!==animator.revision){gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,4,128,gl.RGBA,gl.FLOAT,animator.palette);renderer3DModelPaletteCachedAnimator=handle;renderer3DModelPaletteCachedRevision=animator.revision;renderer3DModelPaletteUploadCount+=1;}
+                gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,renderer3DModelPaletteTexture);if(renderer3DModelPaletteCachedAnimator!==handle||renderer3DModelPaletteCachedRevision!==animator.revision){gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,4,128,gl.RGBA,gl.FLOAT,animator.palette);renderer3DModelPaletteCachedAnimator=handle;renderer3DModelPaletteCachedRevision=animator.revision;if(shadowPass)renderer3DShadowPaletteUploadCount+=1;else renderer3DModelPaletteUploadCount+=1;}
                 gl.uniform1i(program.modelPalette,4);gl.uniform1f(program.modelSkinning,1);return gl.getError()===gl.NO_ERROR;}
             function renderer3DDrawPbr(object,mesh,material,animator){if(!renderer3DPbrProgram){renderer3DLastError=44;return 0;}
                 const clip=animator&&animator.clip?renderer3DClips.get(animator.clip):null;
@@ -1848,15 +2063,17 @@ internal static class WebOutputWriter
                     projection=renderer3DProjectionInto(renderer3DProjectionScratch,backingWidth/backingHeight);
                 if(!renderer3DNormalInto(renderer3DNormalScratch,model)){renderer3DLastError=46;return 0;}
                 renderer3DMultiplyInto(renderer3DMatrixScratchA,view,model);renderer3DMultiplyInto(renderer3DMvpScratch,projection,renderer3DMatrixScratchA);
+                renderer3DMultiplyInto(renderer3DMatrixScratchB,renderer3DShadowMatrixScratch,model);
                 for(let channel=0;channel<4;channel+=1){const texture=material.textures[channel]?renderer3DRequireTexture(material.textures[channel]):null;
                     if(texture&&!renderer3DUploadTexture(texture))return 0;gl.activeTexture(gl.TEXTURE0+channel);gl.bindTexture(gl.TEXTURE_2D,texture?texture.gpu:null);}
                 if(material.alphaMode===2){gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);}
                 else{gl.disable(gl.BLEND);gl.depthMask(true);}if(material.doubleSided)gl.disable(gl.CULL_FACE);else{gl.enable(gl.CULL_FACE);gl.cullFace(gl.BACK);}
                 gl.useProgram(renderer3DPbrProgram.handle);renderer3DBindMesh(mesh,true);
                 gl.uniformMatrix4fv(renderer3DPbrProgram.model,false,model);gl.uniformMatrix4fv(renderer3DPbrProgram.mvp,false,renderer3DMvpScratch);
+                gl.uniformMatrix4fv(renderer3DPbrProgram.shadowMvp,false,renderer3DMatrixScratchB);
                 gl.uniformMatrix3fv(renderer3DPbrProgram.normalMatrix,false,renderer3DNormalScratch);
                 gl.uniformMatrix4fv(renderer3DPbrProgram["bones[0]"],false,animator&&!animator.production?animator.palette:renderer3DStaticBones);
-                gl.uniform1f(renderer3DPbrProgram.skinning,animator?1:0);if(!renderer3DBindModelPalette(object.animator,animator,renderer3DPbrProgram))return 0;gl.uniform4fv(renderer3DPbrProgram.objectColor,object.color);
+                gl.uniform1f(renderer3DPbrProgram.skinning,animator?1:0);if(!renderer3DBindModelPalette(object.animator,animator,renderer3DPbrProgram,false))return 0;gl.uniform4fv(renderer3DPbrProgram.objectColor,object.color);
                 gl.uniform4fv(renderer3DPbrProgram.baseFactor,material.baseColor);gl.uniform4fv(renderer3DPbrProgram.surfaceFactors,material.surface);
                 gl.uniform4fv(renderer3DPbrProgram.emissiveAlpha,material.emissiveAlpha);gl.uniform4fv(renderer3DPbrProgram.textureFlags,material.textureFlags);
                 gl.uniform3fv(renderer3DPbrProgram.cameraPosition,renderer3DCamera.position);gl.uniform4fv(renderer3DPbrProgram.ambientLight,renderer3DAmbient);
@@ -1868,15 +2085,20 @@ internal static class WebOutputWriter
                 gl.uniform4fv(renderer3DPbrProgram["localCone[0]"],renderer3DLocalCone);
                 gl.uniform1i(renderer3DPbrProgram.baseTexture,0);gl.uniform1i(renderer3DPbrProgram.normalTexture,1);
                 gl.uniform1i(renderer3DPbrProgram.ormTexture,2);gl.uniform1i(renderer3DPbrProgram.emissiveTexture,3);
+                if(renderer3DShadowEffective){gl.activeTexture(gl.TEXTURE5);gl.bindTexture(gl.TEXTURE_2D,renderer3DShadowTexture);}gl.uniform1i(renderer3DPbrProgram.shadowMap,5);
+                if(typeof gl.uniform4f==="function")gl.uniform4f(renderer3DPbrProgram.shadowSettings,renderer3DShadowEffective&&object.receivesShadow?1:0,renderer3DShadowSettings[0],renderer3DShadowSettings[1],renderer3DShadowResolution>0?1/renderer3DShadowResolution:0);
+                if(typeof gl.uniform2f==="function")gl.uniform2f(renderer3DPbrProgram.shadowSelection,renderer3DShadowCaster,renderer3DShadowSlot);gl.uniform1f(renderer3DPbrProgram.hdrOutput,renderer3DHdrEffective?1:0);
                 gl.drawElements(gl.TRIANGLES,mesh.indexCount,gl.UNSIGNED_INT,0);renderer3DDrawCallCount+=1;
                 renderer3DSubmittedTriangleCount+=mesh.indexCount/3;renderer3DPbrDrawCount+=1;renderer3DPbrTriangleCount+=mesh.indexCount/3;return 1;}
-            function renderer3DBegin(red,green,blue){if(renderer3DFrameActive)return 1;if(!renderer3DInitialize())return 0;const gl=renderer3DGl;
-                if(renderer3DCanvas.width!==backingWidth||renderer3DCanvas.height!==backingHeight){renderer3DCanvas.width=backingWidth;renderer3DCanvas.height=backingHeight;}
-                gl.viewport(0,0,backingWidth,backingHeight);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.depthMask(true);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);
-                gl.clearColor((safe(red)&255)/255,(safe(green)&255)/255,(safe(blue)&255)/255,1);gl.clearDepth(1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-                gl.useProgram(renderer3DProgram.handle);renderer3DDrawCallCount=0;renderer3DSubmittedTriangleCount=0;renderer3DPbrDrawCount=0;
-                renderer3DSimpleDrawCount=0;renderer3DPbrTriangleCount=0;renderer3DFrameActive=true;return 1;}
-            function renderer3DDraw(handle){const object=renderer3DRequireObject(handle);if(!renderer3DFrameActive||!object){renderer3DLastError=14;return 0;}
+            function renderer3DSrgbToLinear(value){return value<=.04045?value/12.92:Math.pow((value+.055)/1.055,2.4);}
+            function renderer3DBegin(red,green,blue){if(renderer3DFrameActive)return 1;if(renderer3DCanvas.width!==backingWidth||renderer3DCanvas.height!==backingHeight){renderer3DCanvas.width=backingWidth;renderer3DCanvas.height=backingHeight;}
+                if(!renderer3DInitialize()||!renderer3DPrepareM5Resources())return 0;const gl=renderer3DGl;
+                renderer3DClearScratch[0]=(safe(red)&255)/255;renderer3DClearScratch[1]=(safe(green)&255)/255;renderer3DClearScratch[2]=(safe(blue)&255)/255;renderer3DClearScratch[3]=1;
+                if(renderer3DHdrEffective)gl.bindFramebuffer(gl.FRAMEBUFFER,renderer3DSceneFramebuffer);gl.viewport(0,0,backingWidth,backingHeight);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.depthMask(true);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);
+                gl.clearColor(renderer3DHdrEffective?renderer3DSrgbToLinear(renderer3DClearScratch[0]):renderer3DClearScratch[0],renderer3DHdrEffective?renderer3DSrgbToLinear(renderer3DClearScratch[1]):renderer3DClearScratch[1],renderer3DHdrEffective?renderer3DSrgbToLinear(renderer3DClearScratch[2]):renderer3DClearScratch[2],1);gl.clearDepth(1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+                gl.useProgram(renderer3DProgram.handle);renderer3DDrawCallCount=0;renderer3DSubmittedTriangleCount=0;renderer3DPbrDrawCount=0;renderer3DSimpleDrawCount=0;renderer3DPbrTriangleCount=0;
+                renderer3DLogicalSubmissionCount=0;renderer3DRejectedSubmissionCount=0;renderer3DSubmissionCount=0;renderer3DShadowDrawCount=0;renderer3DShadowTriangleCount=0;renderer3DShadowPaletteUploadCount=0;renderer3DPostDrawCount=0;renderer3DResolveCount=0;renderer3DFrameActive=true;return 1;}
+            function renderer3DDrawImmediate(handle){const object=renderer3DRequireObject(handle);if(!renderer3DFrameActive||!object){renderer3DLastError=14;return 0;}
                 if(!object.visible)return 1;const mesh=renderer3DRequireMesh(object.mesh);if(!mesh||!renderer3DUpload(mesh))return 0;
                 const material=object.material?renderer3DRequireMaterial(object.material):null,animator=object.animator?renderer3DAnimators.get(object.animator):null,
                     skeleton=animator&&!animator.production?renderer3DSkeletons.get(animator.skeleton):null;if(object.animator&&(!animator||(animator.production?!renderer3DModelOwnsMesh(animator.model,object.mesh):(!skeleton||mesh.maxJoint>=skeleton.boneCount)))){
@@ -1885,6 +2107,7 @@ internal static class WebOutputWriter
                 const gl=renderer3DGl,model=renderer3DModelInto(renderer3DModelScratch,object),view=renderer3DViewInto(renderer3DViewScratch),
                     projection=renderer3DProjectionInto(renderer3DProjectionScratch,backingWidth/backingHeight),tint=renderer3DTintScratch,materialValues=renderer3DMaterialScratch;
                 renderer3DMultiplyInto(renderer3DMatrixScratchA,view,model);renderer3DMultiplyInto(renderer3DMvpScratch,projection,renderer3DMatrixScratchA);
+                renderer3DMultiplyInto(renderer3DMatrixScratchB,renderer3DShadowMatrixScratch,model);
                 for(let index=0;index<4;index+=1)tint[index]=object.color[index]*(material?material.color[index]:1);
                 materialValues[0]=texture?1:0;materialValues[1]=material&&material.unlit?1:0;materialValues[2]=material?material.emissive:0;
                 materialValues[3]=material&&material.alphaMode===1?material.cutoff:-1;const alphaMode=material?material.alphaMode:(tint[3]<.999?2:0);
@@ -1892,13 +2115,37 @@ internal static class WebOutputWriter
                 else{gl.disable(gl.BLEND);gl.depthMask(true);}gl.useProgram(renderer3DProgram.handle);renderer3DBindMesh(mesh,false);gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_2D,texture?texture.gpu:null);gl.uniform1i(renderer3DProgram.baseTexture,0);
                 gl.uniformMatrix4fv(renderer3DProgram.model,false,model);gl.uniformMatrix4fv(renderer3DProgram.mvp,false,renderer3DMvpScratch);
-                gl.uniformMatrix4fv(renderer3DProgram.bones,false,animator&&!animator.production?animator.palette:renderer3DStaticBones);gl.uniform1f(renderer3DProgram.skinning,animator?1:0);if(!renderer3DBindModelPalette(object.animator,animator,renderer3DProgram))return 0;
+                gl.uniformMatrix4fv(renderer3DProgram.shadowMvp,false,renderer3DMatrixScratchB);
+                gl.uniformMatrix4fv(renderer3DProgram.bones,false,animator&&!animator.production?animator.palette:renderer3DStaticBones);gl.uniform1f(renderer3DProgram.skinning,animator?1:0);if(!renderer3DBindModelPalette(object.animator,animator,renderer3DProgram,false))return 0;
                 gl.uniform4fv(renderer3DProgram.tint,tint);gl.uniform4fv(renderer3DProgram.material,materialValues);
+                if(renderer3DShadowEffective){gl.activeTexture(gl.TEXTURE5);gl.bindTexture(gl.TEXTURE_2D,renderer3DShadowTexture);}gl.uniform1i(renderer3DProgram.shadowMap,5);
+                if(typeof gl.uniform4f==="function")gl.uniform4f(renderer3DProgram.shadowSettings,renderer3DShadowEffective&&object.receivesShadow?1:0,renderer3DShadowSettings[0],renderer3DShadowSettings[1],renderer3DShadowResolution>0?1/renderer3DShadowResolution:0);gl.uniform1f(renderer3DProgram.hdrOutput,renderer3DHdrEffective?1:0);
                 gl.drawElements(gl.TRIANGLES,mesh.indexCount,gl.UNSIGNED_INT,0);renderer3DDrawCallCount+=1;renderer3DSubmittedTriangleCount+=mesh.indexCount/3;
                 renderer3DSimpleDrawCount+=1;return 1;}
-            function renderer3DEnd(){if(!renderer3DFrameActive)return 1;const gl=renderer3DGl;gl.depthMask(true);for(let unit=0;unit<5;unit+=1){
-                    gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,null);}renderer3DFrameActive=false;
-                back.drawImage(renderer3DCanvas,0,0,logicalWidth,logicalHeight);return 1;}
+            function renderer3DDraw(handle){const object=renderer3DRequireObject(handle);if(!renderer3DFrameActive||!object){renderer3DLastError=14;return 0;}if(renderer3DMultipassActive){if(renderer3DSubmissionCount>=renderer3DSubmissions.length){renderer3DRejectedSubmissionCount+=1;renderer3DLastError=51;return 0;}
+                    renderer3DSubmissions[renderer3DSubmissionCount++]=handle;renderer3DLogicalSubmissionCount+=1;return 1;}const result=renderer3DDrawImmediate(handle);if(result)renderer3DLogicalSubmissionCount+=1;return result;}
+            function renderer3DRenderShadowPass(){if(!renderer3DShadowEffective)return 1;const gl=renderer3DGl;gl.activeTexture(gl.TEXTURE5);gl.bindTexture(gl.TEXTURE_2D,null);gl.bindFramebuffer(gl.FRAMEBUFFER,renderer3DShadowFramebuffer);gl.viewport(0,0,renderer3DShadowResolution,renderer3DShadowResolution);gl.colorMask(false,false,false,false);gl.clearDepth(1);gl.clear(gl.DEPTH_BUFFER_BIT);
+                gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.depthMask(true);gl.disable(gl.BLEND);gl.enable(gl.CULL_FACE);gl.cullFace(gl.BACK);gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,Math.max(1,renderer3DShadowSettings[0]*100000));gl.useProgram(renderer3DShadowProgram.handle);
+                renderer3DModelPaletteCachedAnimator=0;renderer3DModelPaletteCachedRevision=0;
+                for(let submission=0;submission<renderer3DSubmissionCount;submission+=1){const object=renderer3DObjects.get(renderer3DSubmissions[submission]);if(!object){renderer3DLastError=14;return 0;}if(!object.visible||!object.castsShadow)continue;
+                    const mesh=renderer3DRequireMesh(object.mesh);if(!mesh||!renderer3DUpload(mesh))return 0;const material=object.material?renderer3DRequireMaterial(object.material):null;if(object.material&&!material)return 0;
+                    const alphaMode=material?material.alphaMode:(object.color[3]<.999?2:0);if(alphaMode===2||alphaMode===3)continue;const textureHandle=material?(material.kind===1?material.textures[0]:material.texture):0,texture=textureHandle?renderer3DRequireTexture(textureHandle):null;if(texture&&!renderer3DUploadTexture(texture))return 0;
+                    const animator=object.animator?renderer3DAnimators.get(object.animator):null,skeleton=animator&&!animator.production?renderer3DSkeletons.get(animator.skeleton):null;if(object.animator&&(!animator||(animator.production?!renderer3DModelOwnsMesh(animator.model,object.mesh):(!skeleton||mesh.maxJoint>=skeleton.boneCount)))){renderer3DLastError=36;return 0;}
+                    const model=renderer3DModelInto(renderer3DModelScratch,object);if(!renderer3DNormalInto(renderer3DNormalScratch,model)){renderer3DLastError=46;return 0;}renderer3DMultiplyInto(renderer3DMvpScratch,renderer3DShadowMatrixScratch,model);
+                    gl.uniformMatrix4fv(renderer3DShadowProgram.mvp,false,renderer3DMvpScratch);gl.uniformMatrix4fv(renderer3DShadowProgram["bones[0]"],false,animator&&!animator.production?animator.palette:renderer3DStaticBones);gl.uniform1f(renderer3DShadowProgram.skinning,animator?1:0);if(!renderer3DBindModelPalette(object.animator,animator,renderer3DShadowProgram,true))return 0;
+                    gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture?texture.gpu:null);gl.uniform1i(renderer3DShadowProgram.baseTexture,0);const baseAlpha=object.color[3]*(material?(material.kind===1?material.baseColor[3]:material.color[3]):1);gl.uniform3f(renderer3DShadowProgram.alphaSettings,texture?1:0,alphaMode===1&&material?material.cutoff:-1,baseAlpha);
+                    renderer3DBindMesh(mesh,false);gl.drawElements(gl.TRIANGLES,mesh.indexCount,gl.UNSIGNED_INT,0);renderer3DShadowDrawCount+=1;renderer3DShadowTriangleCount+=mesh.indexCount/3;}
+                renderer3DModelPaletteCachedAnimator=0;renderer3DModelPaletteCachedRevision=0;gl.disable(gl.POLYGON_OFFSET_FILL);gl.colorMask(true,true,true,true);gl.bindFramebuffer(gl.FRAMEBUFFER,null);return 1;}
+            function renderer3DPostPass(target,width,height,sceneTexture,bloomTexture,mode,x,y,w,secondX,secondY){const gl=renderer3DGl;gl.bindFramebuffer(gl.FRAMEBUFFER,target);gl.viewport(0,0,width,height);gl.disable(gl.DEPTH_TEST);gl.depthMask(false);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);gl.useProgram(renderer3DPostProgram.handle);
+                gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,sceneTexture);gl.uniform1i(renderer3DPostProgram.sceneTexture,0);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,bloomTexture||sceneTexture);gl.uniform1i(renderer3DPostProgram.bloomTexture,1);gl.uniform4f(renderer3DPostProgram.first,mode,x,y,w);gl.uniform4f(renderer3DPostProgram.second,secondX,secondY,0,0);gl.drawArrays(gl.TRIANGLES,0,3);renderer3DPostDrawCount+=1;}
+            function renderer3DRunPostProcessing(){if(!renderer3DHdrEffective)return 1;const gl=renderer3DGl;if(renderer3DBloomEffective){renderer3DPostPass(renderer3DBloomFramebufferA,renderer3DBloomWidth,renderer3DBloomHeight,renderer3DSceneTexture,null,0,0,0,renderer3DBloomThreshold/1000,0,0);
+                    for(let cycle=0;cycle<renderer3DBloomCycles;cycle+=1){renderer3DPostPass(renderer3DBloomFramebufferB,renderer3DBloomWidth,renderer3DBloomHeight,renderer3DBloomTextureA,null,1,1/renderer3DBloomWidth,1/renderer3DBloomHeight,0,0,0);renderer3DPostPass(renderer3DBloomFramebufferA,renderer3DBloomWidth,renderer3DBloomHeight,renderer3DBloomTextureB,null,2,1/renderer3DBloomWidth,1/renderer3DBloomHeight,0,0,0);}}
+                renderer3DPostPass(null,backingWidth,backingHeight,renderer3DSceneTexture,renderer3DBloomEffective?renderer3DBloomTextureA:null,3,0,0,0,renderer3DBloomEffective?renderer3DBloomIntensity/100:0,renderer3DExposure/100);gl.bindFramebuffer(gl.FRAMEBUFFER,null);return gl.getError()===gl.NO_ERROR?1:0;}
+            function renderer3DEnd(){if(!renderer3DFrameActive)return 1;const gl=renderer3DGl;let success=1;if(renderer3DMultipassActive){for(let submission=0;submission<renderer3DSubmissionCount;submission+=1)if(!renderer3DObjects.has(renderer3DSubmissions[submission])){renderer3DLastError=14;success=0;break;}
+                    if(success)success=renderer3DRenderShadowPass();gl.bindFramebuffer(gl.FRAMEBUFFER,renderer3DHdrEffective?renderer3DSceneFramebuffer:null);gl.viewport(0,0,backingWidth,backingHeight);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.depthMask(true);
+                    if(success)for(let submission=0;submission<renderer3DSubmissionCount;submission+=1)if(!renderer3DDrawImmediate(renderer3DSubmissions[submission])){success=0;break;}}
+                if(success&&renderer3DHdrEffective)success=renderer3DRunPostProcessing();if(typeof gl.bindFramebuffer==="function")gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.depthMask(true);const textureUnitCount=renderer3DMultipassActive?6:5;for(let unit=0;unit<textureUnitCount;unit+=1){gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,null);}renderer3DFrameActive=false;renderer3DSubmissionCount=0;
+                back.drawImage(renderer3DCanvas,0,0,logicalWidth,logicalHeight);return success?1:0;}
             function renderer3DReset(){renderer3DFrameActive=false;renderer3DObjects.clear();renderer3DAnimators.clear();for(const model of [...renderer3DModels.keys()])renderer3DDeleteModel(model);
                 renderer3DClips.clear();renderer3DSkeletons.clear();for(const mesh of renderer3DMeshes.values())renderer3DDeleteGpu(mesh);
                 for(const texture of renderer3DTextures.values()){renderer3DDeleteTextureGpu(texture);imageRelease(texture.image);}renderer3DMeshes.clear();
@@ -1907,7 +2154,10 @@ internal static class WebOutputWriter
                 renderer3DPbrTriangleCount=0;if(renderer3DGl&&renderer3DPbrProgram)renderer3DGl.deleteProgram(renderer3DPbrProgram.handle);
                 renderer3DPbrProgram=null;renderer3DPbrAttempted=false;renderer3DPbrState=0;renderer3DPbrFailure=0;
                 renderer3DPbrAttemptCount=0;if(renderer3DGl&&renderer3DModelPaletteTexture)renderer3DGl.deleteTexture(renderer3DModelPaletteTexture);
-                renderer3DModelPaletteTexture=null;renderer3DModelPaletteCachedAnimator=0;renderer3DModelPaletteCachedRevision=0;renderer3DModelPaletteUploadCount=0;
+                renderer3DModelPaletteTexture=null;renderer3DModelPaletteCachedAnimator=0;renderer3DModelPaletteCachedRevision=0;renderer3DModelPaletteUploadCount=0;renderer3DDeleteM5Targets();
+                if(renderer3DGl&&renderer3DShadowProgram)renderer3DGl.deleteProgram(renderer3DShadowProgram.handle);if(renderer3DGl&&renderer3DPostProgram)renderer3DGl.deleteProgram(renderer3DPostProgram.handle);renderer3DShadowProgram=renderer3DPostProgram=null;
+                renderer3DPostRequested=renderer3DHdrRequested=renderer3DBloomRequested=renderer3DShadowRequested=false;renderer3DFallbackFlags=0;renderer3DSubmissionCount=renderer3DLogicalSubmissionCount=renderer3DRejectedSubmissionCount=0;
+                renderer3DShadowDrawCount=renderer3DShadowTriangleCount=renderer3DShadowPaletteUploadCount=renderer3DPostDrawCount=renderer3DResolveCount=0;renderer3DM5AppliedRevision=0;renderer3DM5ConfigurationRevision+=1;if(renderer3DM5ConfigurationRevision>2147483647)renderer3DM5ConfigurationRevision=1;
                 renderer3DResourceEpoch+=1;if(renderer3DResourceEpoch>2147483647)renderer3DResourceEpoch=1;return 1;}
 
             function renderer3D(command,a,b,c,d,e,f,g,h,i,j) {
@@ -1921,7 +2171,7 @@ internal static class WebOutputWriter
                     case 5:mesh=renderer3DRequireMesh(a);return mesh&&renderer3DSetTriangle(mesh,b,c,d,e)?1:0;
                     case 6:mesh=renderer3DRequireMesh(a);return mesh&&renderer3DCommit(mesh)?1:0;
                     case 7:return renderer3DPrimitive(a,b,c,d,e);
-                    case 8:if(!renderer3DRequireMesh(a)||renderer3DObjects.size>=512){renderer3DLastError=9;return 0;}const handle=renderer3DHandle();renderer3DObjects.set(handle,{mesh:a,material:0,defaultMaterial:0,animator:0,position:[0,0,0],rotation:[0,0,0],scale:[1,1,1],color:[1,1,1,1],visible:true});return handle;
+                    case 8:if(!renderer3DRequireMesh(a)||renderer3DObjects.size>=512){renderer3DLastError=9;return 0;}const handle=renderer3DHandle();renderer3DObjects.set(handle,{mesh:a,material:0,defaultMaterial:0,animator:0,position:[0,0,0],rotation:[0,0,0],scale:[1,1,1],color:[1,1,1,1],visible:true,castsShadow:true,receivesShadow:true});return handle;
                     case 9:if(renderer3DObjects.delete(a))return 1;if(renderer3DModels.has(a)){if(!renderer3DDeleteModel(a)){renderer3DLastError=27;return 0;}return 1;}if(renderer3DAnimators.has(a)){if(renderer3DAnimatorReferences(a)!==0){renderer3DLastError=37;return 0;}renderer3DAnimators.delete(a);return 1;}if(renderer3DClips.has(a)){if(renderer3DClipReferences(a)!==0){renderer3DLastError=37;return 0;}renderer3DClips.delete(a);return 1;}if(renderer3DSkeletons.has(a)){if(renderer3DSkeletonReferences(a)!==0){renderer3DLastError=37;return 0;}renderer3DSkeletons.delete(a);return 1;}mesh=renderer3DMeshes.get(a);if(mesh){if(renderer3DMeshReferenceCount(a)!==0){renderer3DLastError=16;return 0;}renderer3DDeleteGpu(mesh);renderer3DMeshes.delete(a);return 1;}material=renderer3DMaterials.get(a);if(material){if(material.ownerModel||renderer3DMaterialReferenceCount(a)!==0){renderer3DLastError=22;return 0;}renderer3DMaterials.delete(a);return 1;}texture=renderer3DTextures.get(a);if(texture){if(renderer3DTextureReferenceCount(a)!==0){renderer3DLastError=23;return 0;}renderer3DDeleteTextureGpu(texture);imageRelease(texture.image);renderer3DTextures.delete(a);return 1;}renderer3DLastError=5;return 0;
                     case 10:renderer3DCamera.position=[a,b,c];renderer3DCamera.target=[d,e,f];renderer3DCamera.fov=g;renderer3DCamera.near=h;renderer3DCamera.far=i;if(g<10||g>160||h<=0||i<=h){renderer3DLastError=15;return 0;}return 1;
                     case 11:case 12:case 13:object=renderer3DRequireObject(a);if(!object)return 0;if(command===11)object.position=[b,c,d];else if(command===12)object.rotation=[b,c,d];else object.scale=[b/100,c/100,d/100];return 1;
@@ -1960,7 +2210,7 @@ internal static class WebOutputWriter
                     case 46:return renderer3DModels.has(a)?1:0;
                     case 47:model=renderer3DModels.get(a);return model?model.parts.length:0;
                     case 48:model=renderer3DModels.get(a);return model?model.materialCount:0;
-                    case 49:model=renderer3DModels.get(a);if(!model||b<0||b>=model.parts.length||renderer3DObjects.size>=512){renderer3DLastError=9;return 0;}const partHandle=renderer3DHandle(),materialSlot=model.materials[b],defaultMaterial=model.pbrReady?model.pbrMaterials[materialSlot]:0;renderer3DObjects.set(partHandle,{mesh:model.parts[b],material:defaultMaterial,defaultMaterial,animator:0,position:[0,0,0],rotation:[0,0,0],scale:[1,1,1],color:[1,1,1,1],visible:true});return partHandle;
+                    case 49:model=renderer3DModels.get(a);if(!model||b<0||b>=model.parts.length||renderer3DObjects.size>=512){renderer3DLastError=9;return 0;}const partHandle=renderer3DHandle(),materialSlot=model.materials[b],defaultMaterial=model.pbrReady?model.pbrMaterials[materialSlot]:0;renderer3DObjects.set(partHandle,{mesh:model.parts[b],material:defaultMaterial,defaultMaterial,animator:0,position:[0,0,0],rotation:[0,0,0],scale:[1,1,1],color:[1,1,1,1],visible:true,castsShadow:true,receivesShadow:true});return partHandle;
                     case 50:model=renderer3DModels.get(a);if(!model||b<0||b>=model.parts.length){renderer3DLastError=5;return -1;}return model.materials[b];
                     case 51:mesh=renderer3DRequireMesh(a);return mesh&&renderer3DSetSkin(mesh,b,c,d,e,f,g,h,i,j)?1:0;
                     case 52:return renderer3DCreateSkeleton(a);
@@ -2025,6 +2275,23 @@ internal static class WebOutputWriter
                     case 110:return renderer3DAnimatorProductionValue(renderer3DAnimators.get(a),b);
                     case 111:animator=renderer3DAnimators.get(a);if(!animator||!animator.production){renderer3DLastError=48;return 0;}renderer3DClearModelEvents(animator);return 1;
                     case 112:if(a===1)return renderer3DResourceEpoch;if(a===2)return renderer3DFrameActive?1:0;renderer3DLastError=5;return 0;
+                    case 113:if(renderer3DFrameActive||a<0||a>1||b<0||b>1||c<0||c>1||d<25||d>400||e<500||e>8000||f<0||f>400||(g!==2&&g!==4)||h<0||h>2||(i!==1&&i!==2&&i!==4)){renderer3DLastError=50;return 0;}
+                        if(renderer3DPostRequested===(a!==0)&&renderer3DHdrRequested===(b!==0)&&renderer3DBloomRequested===(c!==0)&&renderer3DExposure===d&&renderer3DBloomThreshold===e&&renderer3DBloomIntensity===f&&renderer3DBloomDownsample===g&&renderer3DBloomCycles===h&&renderer3DRequestedSamples===i)return 1;
+                        renderer3DPostRequested=a!==0;renderer3DHdrRequested=b!==0;renderer3DBloomRequested=c!==0;renderer3DExposure=d;renderer3DBloomThreshold=e;renderer3DBloomIntensity=f;renderer3DBloomDownsample=g;renderer3DBloomCycles=h;renderer3DRequestedSamples=i;renderer3DM5ConfigurationRevision+=1;if(renderer3DM5ConfigurationRevision>2147483647)renderer3DM5ConfigurationRevision=1;return 1;
+                    case 114:if(renderer3DFrameActive||a<0||a>1||b<0||b>2||c<0||c>=4||(d!==1024&&d!==2048)||e<0||e>1000||f<0||f>1000||(a!==0&&b===0)){renderer3DLastError=50;return 0;}
+                        if(renderer3DShadowRequested===(a!==0)&&renderer3DShadowCaster===b&&renderer3DShadowSlot===c&&renderer3DShadowRequestedResolution===d&&Math.round(renderer3DShadowSettings[0]*1000000)===e&&Math.round(renderer3DShadowSettings[1]*100000)===f)return 1;
+                        renderer3DShadowRequested=a!==0;renderer3DShadowCaster=b;renderer3DShadowSlot=c;renderer3DShadowRequestedResolution=d;renderer3DShadowSettings[0]=e/1000000;renderer3DShadowSettings[1]=f/100000;renderer3DM5ConfigurationRevision+=1;if(renderer3DM5ConfigurationRevision>2147483647)renderer3DM5ConfigurationRevision=1;return 1;
+                    case 115:if(renderer3DFrameActive||a< -1000000||a>1000000||b< -1000000||b>1000000||c< -1000000||c>1000000||d<=0||d>2000000||e<=0||e>2000000||f<=0||g<=f||g>2000000){renderer3DLastError=50;return 0;}
+                        if(renderer3DShadowCenter[0]===a&&renderer3DShadowCenter[1]===b&&renderer3DShadowCenter[2]===c&&renderer3DShadowArea[0]===d&&renderer3DShadowArea[1]===e&&renderer3DShadowArea[2]===f&&renderer3DShadowArea[3]===g)return 1;
+                        renderer3DShadowCenter.set([a,b,c]);renderer3DShadowArea.set([d,e,f,g]);renderer3DM5ConfigurationRevision+=1;if(renderer3DM5ConfigurationRevision>2147483647)renderer3DM5ConfigurationRevision=1;return 1;
+                    case 116:object=renderer3DObjects.get(a);if(!object||b<0||b>1||c<0||c>1){renderer3DLastError=50;return 0;}object.castsShadow=b!==0;object.receivesShadow=c!==0;return 1;
+                    case 117:if(a===1)return renderer3DLogicalSubmissionCount;if(a===2)return renderer3DSubmissions.length;if(a===3)return renderer3DMultipassActive?1:0;if(a===4)return renderer3DShadowRequested?1:0;
+                        if(a===5)return renderer3DShadowEffective?1:0;if(a===6)return renderer3DShadowResolution;if(a===7)return renderer3DShadowDrawCount;if(a===8)return renderer3DShadowTriangleCount;if(a===9)return renderer3DShadowPaletteUploadCount;
+                        if(a===10)return renderer3DHdrRequested?1:0;if(a===11)return renderer3DHdrEffective?1:0;if(a===12)return renderer3DHdrEffective?1:0;if(a===13)return renderer3DEffectiveSamples;if(a===14)return renderer3DM5Width;if(a===15)return renderer3DM5Height;if(a===16)return renderer3DResolveCount;
+                        if(a===17)return renderer3DBloomRequested?1:0;if(a===18)return renderer3DBloomEffective?1:0;if(a===19)return renderer3DBloomWidth;if(a===20)return renderer3DBloomHeight;if(a===21)return renderer3DBloomEffective?renderer3DBloomCycles:0;if(a===22)return renderer3DPostDrawCount;
+                        if(a===23)return renderer3DToneMappingEffective?1:0;if(a===24)return renderer3DExposure;if(a===25)return renderer3DFallbackFlags;if(a===26)return renderer3DM5ResourceGeneration;if(a===27)return renderer3DTargetBytes;if(a===28)return renderer3DShadowCaster;if(a===29)return renderer3DShadowSlot;
+                        if(a===30)return Math.round(renderer3DShadowSettings[0]*1000000);if(a===31)return Math.round(renderer3DShadowSettings[1]*100000);if(a===32)return renderer3DPostRequested?1:0;if(a===33)return renderer3DPostEffective?1:0;if(a===34)return renderer3DRejectedSubmissionCount;if(a===35)return renderer3DShadowBytes;if(a===36)return renderer3DSceneBytes;if(a===37)return renderer3DBloomBytes;
+                        if(a===40||a===41){object=renderer3DObjects.get(b);if(!object){renderer3DLastError=50;return 0;}return a===40?(object.castsShadow?1:0):(object.receivesShadow?1:0);}renderer3DLastError=50;return 0;
                     default:renderer3DLastError=1;return 0;
                 }
             }

@@ -97,6 +97,8 @@ Public Type Object3D
     ColorBlue As Number
     AlphaPercent As Number
     Visible As Boolean
+    CastsShadow As Boolean
+    ReceivesShadow As Boolean
 End Type
 
 ''' A generation-safe GPU texture sourced from a declared PNG Image asset.

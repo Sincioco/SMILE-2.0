@@ -38,6 +38,12 @@ Blend submission order is caller order. Draw opaque and masked objects first, th
 
 PBR and simple materials use separate built-in shader pipelines but share objects, meshes, camera, depth, animation palettes, and frame lifecycle. Imported M3 animation uses the same four joint/weight influences in both pipelines: Direct3D reads the 128-matrix b1 palette and WebGL2 fetches the shared RGBA32F 4-by-128 palette texture. Palette uploads are cached by animator/revision. PBR shader creation has a cached not-attempted/available/unavailable state and is attempted at most once per graphics-device/context generation. A PBR compile failure sets stable Renderer3D error 44 and leaves the simple pipeline available without per-frame retries. Reset or device/context restoration starts a new generation; retained image/material/model metadata lazily recreates GPU objects.
 
+## M5 linear color and shadow contract
+
+Direct LDR preserves the pre-M5 simple and PBR output exactly. When HDR is effective, both pipelines write unclamped linear color to the float scene target. The final pass applies exposure, the fitted ACES equation `clamp((x * (2.51x + 0.03)) / (x * (2.43x + 0.59) + 0.14), 0, 1)`, and one sRGB encode. Renderer2D is drawn afterward and is never tone mapped or bloomed.
+
+Opaque and masked materials may cast/receive the selected directional or spot shadow. Masked shadow depth uses the same texture alpha, factor opacity, and cutoff as the main material. Alpha-blended materials do not cast. PBR and simple receivers share the fixed 3x3 PCF sample and the bounded constant/normal bias profile. Double-sided materials remain double-sided in the shadow pass.
+
 ## Lighting
 
 The bounded light set contains one ambient term, one directional light, and four fixed local slots. A local slot is disabled, point, or spot. Point/spot attenuation is range-bounded; spot lights add normalized direction and inner/outer cone cosines. `ResetLights3D` restores white ambient at 25%, the existing white directional light at 100%, and disables local slots. There is no allocation during lighting updates or drawing.

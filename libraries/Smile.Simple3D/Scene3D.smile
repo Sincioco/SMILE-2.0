@@ -15,11 +15,26 @@ Public Const SCENE_FALLBACK_NONE = 0
 Public Const SCENE_FALLBACK_PBR_UNAVAILABLE = 1
 Public Const SCENE_FALLBACK_ANISOTROPY_REDUCED = 2
 Public Const SCENE_FALLBACK_LOW_PROFILE = 3
+Public Const SCENE_FALLBACK_RENDER_FEATURE = 4
 
 Public Const SCENE_FALLBACK_FLAG_PBR_UNAVAILABLE = 1
 Public Const SCENE_FALLBACK_FLAG_ANISOTROPY_REDUCED = 2
 Public Const SCENE_FALLBACK_FLAG_LOW_ASSET_PROFILE = 4
 Public Const SCENE_FALLBACK_FLAG_SIMPLE_CHARACTER = 8
+Public Const SCENE_FALLBACK_FLAG_SHADOW_RESOLUTION_REDUCED = 16
+Public Const SCENE_FALLBACK_FLAG_SHADOW_DISABLED = 32
+Public Const SCENE_FALLBACK_FLAG_HDR_UNAVAILABLE = 64
+Public Const SCENE_FALLBACK_FLAG_MSAA_REDUCED = 128
+Public Const SCENE_FALLBACK_FLAG_BLOOM_RESOLUTION_REDUCED = 256
+Public Const SCENE_FALLBACK_FLAG_BLOOM_DISABLED = 512
+Public Const SCENE_FALLBACK_FLAG_TONE_MAPPING_DISABLED = 1024
+Public Const SCENE_FALLBACK_FLAG_DIRECT_LDR = 2048
+
+Public Const FEATURE_SHADOWS = 1
+Public Const FEATURE_HDR = 2
+Public Const FEATURE_BLOOM = 3
+Public Const FEATURE_POST_PROCESSING = 4
+Public Const FEATURE_PBR = 5
 
 Public Const SCENE_ERROR_NONE = 0
 Public Const SCENE_ERROR_INVALID_QUALITY = 1
@@ -29,6 +44,8 @@ Public Const SCENE_ERROR_NOT_OPEN = 4
 Public Const SCENE_ERROR_LIGHTING = 5
 Public Const SCENE_ERROR_BEGIN = 6
 Public Const SCENE_ERROR_FRAME_MISMATCH = 7
+Public Const SCENE_ERROR_RENDER_PROFILE = 8
+Public Const SCENE_ERROR_INVALID_RENDER_SETTING = 9
 
 Private Dim RequestedProfile As Number
 Private Dim EffectiveProfile As Number
@@ -42,6 +59,30 @@ Private Dim FrameOpen As Boolean
 Private Dim Initialized As Boolean
 Private Dim PbrCapability As Boolean
 Private Dim CapabilityEpoch As Number
+Private Dim ShadowOverride As Boolean
+Private Dim ShadowEnabledValue As Boolean
+Private Dim ShadowCasterOverride As Boolean
+Private Dim ShadowCasterValue As Number
+Private Dim ShadowSlotValue As Number
+Private Dim ShadowAreaOverride As Boolean
+Private Dim ShadowCenterX As Number
+Private Dim ShadowCenterY As Number
+Private Dim ShadowCenterZ As Number
+Private Dim ShadowWidth As Number
+Private Dim ShadowHeight As Number
+Private Dim ShadowNearDepth As Number
+Private Dim ShadowFarDepth As Number
+Private Dim ShadowConstantBias As Number
+Private Dim ShadowNormalBias As Number
+Private Dim HdrOverride As Boolean
+Private Dim HdrEnabledValue As Boolean
+Private Dim BloomOverride As Boolean
+Private Dim BloomEnabledValue As Boolean
+Private Dim BloomIntensityValue As Number
+Private Dim BloomThresholdValue As Number
+Private Dim PostOverride As Boolean
+Private Dim PostEnabledValue As Boolean
+Private Dim ExposurePercentValue As Number
 
 Private Sub RefreshCapabilitiesInternal()
 
@@ -80,9 +121,269 @@ Private Sub EnsureInitialized()
 
     RequestedProfile = QUALITY_AUTO
     LightingName = "CharacterStudio"
+    ShadowOverride = False
+    ShadowEnabledValue = False
+    ShadowCasterOverride = False
+    ShadowCasterValue = Graphics3D.SHADOW_CASTER_DIRECTIONAL
+    ShadowSlotValue = 0
+    ShadowAreaOverride = False
+    ShadowCenterX = 0
+    ShadowCenterY = 100
+    ShadowCenterZ = 0
+    ShadowWidth = 650
+    ShadowHeight = 500
+    ShadowNearDepth = 1
+    ShadowFarDepth = 1200
+    ShadowConstantBias = 500
+    ShadowNormalBias = 600
+    HdrOverride = False
+    HdrEnabledValue = False
+    BloomOverride = False
+    BloomEnabledValue = False
+    BloomIntensityValue = 80
+    BloomThresholdValue = 1200
+    PostOverride = False
+    PostEnabledValue = False
+    ExposurePercentValue = 100
     Initialized = True
 
     Call RefreshCapabilitiesInternal()
+
+End Sub
+
+Private Function ProfileShadowsRequested() As Boolean
+
+    Dim Result As Boolean
+
+    Result = EffectiveProfile >= QUALITY_MEDIUM
+
+    If ShadowOverride Then
+        Result = ShadowEnabledValue
+    End If
+
+    Return Result
+
+End Function
+
+Private Function ProfileHdrRequested() As Boolean
+
+    Dim Result As Boolean
+
+    Result = EffectiveProfile >= QUALITY_MEDIUM
+
+    If HdrOverride Then
+        Result = HdrEnabledValue
+    End If
+
+    Return Result
+
+End Function
+
+Private Function ProfileBloomRequested() As Boolean
+
+    Dim Result As Boolean
+
+    Result = EffectiveProfile >= QUALITY_MEDIUM
+
+    If BloomOverride Then
+        Result = BloomEnabledValue
+    End If
+
+    Return Result
+
+End Function
+
+Private Function ProfilePostRequested() As Boolean
+
+    Dim Result As Boolean
+
+    Result = EffectiveProfile >= QUALITY_MEDIUM
+
+    If PostOverride Then
+        Result = PostEnabledValue
+    End If
+
+    Return Result
+
+End Function
+
+Private Sub ApplyPresetShadowArea()
+
+    If ShadowAreaOverride Then
+        Return
+    End If
+
+    ShadowCenterX = 0
+    ShadowCenterY = 100
+    ShadowCenterZ = 0
+    ShadowNearDepth = 1
+
+    If LightingName = "Daylight" Then
+
+        ShadowWidth = 1600
+        ShadowHeight = 1200
+        ShadowFarDepth = 2600
+
+    Else If LightingName = "Dungeon" Then
+
+        ShadowWidth = 900
+        ShadowHeight = 700
+        ShadowFarDepth = 1600
+
+    Else If LightingName = "Moonlight" Then
+
+        ShadowWidth = 1200
+        ShadowHeight = 900
+        ShadowFarDepth = 2200
+
+    Else If LightingName = "EmberObservatory" Then
+
+        ShadowWidth = 1100
+        ShadowHeight = 800
+        ShadowFarDepth = 1800
+
+    Else
+        ShadowWidth = 650
+        ShadowHeight = 500
+        ShadowFarDepth = 1200
+
+    End If
+
+End Sub
+
+Private Function ApplyRenderProfile() As Boolean
+
+    Dim BlurCycles As Number
+    Dim BloomRequested As Boolean
+    Dim Downsample As Number
+    Dim HdrRequested As Boolean
+    Dim MaximumSamples As Number
+    Dim PostRequested As Boolean
+    Dim Resolution As Number
+    Dim Result As Boolean
+    Dim ShadowsRequested As Boolean
+
+    ShadowsRequested = ProfileShadowsRequested()
+    HdrRequested = ProfileHdrRequested()
+    BloomRequested = ProfileBloomRequested()
+    PostRequested = ProfilePostRequested()
+    Resolution = 1024
+    Downsample = 4
+    BlurCycles = 0
+    MaximumSamples = 1
+
+    If EffectiveProfile = QUALITY_MEDIUM Then
+
+        BlurCycles = 1
+        MaximumSamples = 2
+
+    Else If EffectiveProfile = QUALITY_HIGH Then
+
+        Resolution = 2048
+        Downsample = 2
+        BlurCycles = 2
+        MaximumSamples = 4
+
+    End If
+
+    Call ApplyPresetShadowArea()
+
+    Result = Graphics3D.SetDirectionalShadowArea3D(
+        ShadowCenterX,
+        ShadowCenterY,
+        ShadowCenterZ,
+        ShadowWidth,
+        ShadowHeight,
+        ShadowNearDepth,
+        ShadowFarDepth
+    )
+
+    If Result Then
+        Result = Graphics3D.ConfigureShadows3D(
+            ShadowsRequested,
+            ShadowCasterValue,
+            ShadowSlotValue,
+            Resolution,
+            ShadowConstantBias,
+            ShadowNormalBias
+        )
+    End If
+
+    If Result Then
+        Result = Graphics3D.ConfigurePostProcessing3D(
+            PostRequested,
+            HdrRequested,
+            BloomRequested,
+            ExposurePercentValue,
+            BloomThresholdValue,
+            BloomIntensityValue,
+            Downsample,
+            BlurCycles,
+            MaximumSamples
+        )
+    End If
+
+    If Not Result Then
+        ErrorValue = SCENE_ERROR_RENDER_PROFILE
+        RendererErrorValue = Graphics3D.LastError()
+    End If
+
+    Return Result
+
+End Function
+
+Private Function RendererFallbackHas(Flags As Number, Flag As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Flags Mod (Flag * 2) >= Flag
+
+    Return Result
+
+End Function
+
+Private Sub RefreshRenderDiagnostics()
+
+    Dim RendererFlags As Number
+
+    RendererFlags = Graphics3D.M5Value3D(Graphics3D.M5_QUERY_FALLBACK_FLAGS, 0)
+    FallbackFlagsValue = FallbackFlagsValue Mod 16
+
+    If RendererFallbackHas(RendererFlags, Graphics3D.M5_FALLBACK_SHADOW_RESOLUTION_REDUCED) Then
+        FallbackFlagsValue = FallbackFlagsValue + SCENE_FALLBACK_FLAG_SHADOW_RESOLUTION_REDUCED
+    End If
+
+    If RendererFallbackHas(RendererFlags, Graphics3D.M5_FALLBACK_SHADOW_DISABLED) Then
+        FallbackFlagsValue = FallbackFlagsValue + SCENE_FALLBACK_FLAG_SHADOW_DISABLED
+    End If
+
+    If RendererFallbackHas(RendererFlags, Graphics3D.M5_FALLBACK_HDR_UNAVAILABLE) Then
+        FallbackFlagsValue = FallbackFlagsValue + SCENE_FALLBACK_FLAG_HDR_UNAVAILABLE
+    End If
+
+    If RendererFallbackHas(RendererFlags, Graphics3D.M5_FALLBACK_MSAA_REDUCED) Then
+        FallbackFlagsValue = FallbackFlagsValue + SCENE_FALLBACK_FLAG_MSAA_REDUCED
+    End If
+
+    If RendererFallbackHas(RendererFlags, Graphics3D.M5_FALLBACK_BLOOM_REDUCED) Then
+        FallbackFlagsValue = FallbackFlagsValue + SCENE_FALLBACK_FLAG_BLOOM_RESOLUTION_REDUCED
+    End If
+
+    If RendererFallbackHas(RendererFlags, Graphics3D.M5_FALLBACK_BLOOM_DISABLED) Then
+        FallbackFlagsValue = FallbackFlagsValue + SCENE_FALLBACK_FLAG_BLOOM_DISABLED
+    End If
+
+    If RendererFallbackHas(RendererFlags, Graphics3D.M5_FALLBACK_TONE_MAPPING_DISABLED) Then
+        FallbackFlagsValue = FallbackFlagsValue + SCENE_FALLBACK_FLAG_TONE_MAPPING_DISABLED
+    End If
+
+    If RendererFallbackHas(RendererFlags, Graphics3D.M5_FALLBACK_DIRECT_LDR) Then
+        FallbackFlagsValue = FallbackFlagsValue + SCENE_FALLBACK_FLAG_DIRECT_LDR
+    End If
+
+    If RendererFlags <> 0 And FallbackReason = SCENE_FALLBACK_NONE Then
+        FallbackReason = SCENE_FALLBACK_RENDER_FEATURE
+    End If
 
 End Sub
 
@@ -459,6 +760,361 @@ Public Function FallbackFlags() As Number
 
 End Function
 
+Private Function RenderSettingWritable() As Boolean
+
+    Call EnsureInitialized()
+
+    If Not Synchronize() Then
+        Return False
+    End If
+
+    If FrameOpen Or Graphics3D.FrameActive3D() Then
+        ErrorValue = SCENE_ERROR_ALREADY_OPEN
+        Return False
+    End If
+
+    Return True
+
+End Function
+
+Public Function SetShadows(Enabled As Boolean) As Boolean
+
+    If Not RenderSettingWritable() Then
+        Return False
+    End If
+
+    ShadowOverride = True
+    ShadowEnabledValue = Enabled
+    ErrorValue = SCENE_ERROR_NONE
+    RendererErrorValue = 0
+
+    Return True
+
+End Function
+
+Public Function ShadowsRequested() As Boolean
+
+    Dim Result As Boolean
+
+    Call EnsureInitialized()
+
+    Result = ProfileShadowsRequested()
+
+    Return Result
+
+End Function
+
+Public Function ShadowsEffective() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_EFFECTIVE, 0) <> 0
+
+    Return Result
+
+End Function
+
+Public Function SetShadowCaster(CasterType As Number, SpotSlot As Number) As Boolean
+
+    If Not RenderSettingWritable() Then
+        Return False
+    End If
+
+    If ((CasterType <> Graphics3D.SHADOW_CASTER_DIRECTIONAL And
+        CasterType <> Graphics3D.SHADOW_CASTER_SPOT) Or
+        SpotSlot < 0 Or
+        SpotSlot > 3) Then
+        ErrorValue = SCENE_ERROR_INVALID_RENDER_SETTING
+
+        Return False
+    End If
+
+    ShadowCasterOverride = True
+    ShadowCasterValue = CasterType
+    ShadowSlotValue = SpotSlot
+    ErrorValue = SCENE_ERROR_NONE
+    RendererErrorValue = 0
+
+    Return True
+
+End Function
+
+Public Function SetShadowArea(
+    CenterX As Number,
+    CenterY As Number,
+    CenterZ As Number,
+    Width As Number,
+    Height As Number,
+    NearDepth As Number,
+    FarDepth As Number
+) As Boolean
+
+    If Not RenderSettingWritable() Then
+        Return False
+    End If
+
+    If (CenterX < -1000000 Or
+        CenterX > 1000000 Or
+        CenterY < -1000000 Or
+        CenterY > 1000000 Or
+        CenterZ < -1000000 Or
+        CenterZ > 1000000 Or
+        Width <= 0 Or
+        Width > 2000000 Or
+        Height <= 0 Or
+        Height > 2000000 Or
+        NearDepth <= 0 Or
+        FarDepth <= NearDepth Or
+        FarDepth > 2000000) Then
+        ErrorValue = SCENE_ERROR_INVALID_RENDER_SETTING
+
+        Return False
+    End If
+
+    ShadowAreaOverride = True
+    ShadowCenterX = CenterX
+    ShadowCenterY = CenterY
+    ShadowCenterZ = CenterZ
+    ShadowWidth = Width
+    ShadowHeight = Height
+    ShadowNearDepth = NearDepth
+    ShadowFarDepth = FarDepth
+    ErrorValue = SCENE_ERROR_NONE
+    RendererErrorValue = 0
+
+    Return True
+
+End Function
+
+Public Function SetShadowBias(ConstantBias As Number, NormalBias As Number) As Boolean
+
+    If Not RenderSettingWritable() Then
+        Return False
+    End If
+
+    If (ConstantBias < 0 Or
+        ConstantBias > 1000 Or
+        NormalBias < 0 Or
+        NormalBias > 1000) Then
+        ErrorValue = SCENE_ERROR_INVALID_RENDER_SETTING
+
+        Return False
+    End If
+
+    ShadowConstantBias = ConstantBias
+    ShadowNormalBias = NormalBias
+    ErrorValue = SCENE_ERROR_NONE
+    RendererErrorValue = 0
+
+    Return True
+
+End Function
+
+Public Function ShadowResolution() As Number
+
+    Dim Result As Number
+
+    Result = Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_RESOLUTION, 0)
+
+    Return Result
+
+End Function
+
+Public Function SetHdr(Enabled As Boolean) As Boolean
+
+    If Not RenderSettingWritable() Then
+        Return False
+    End If
+
+    HdrOverride = True
+    HdrEnabledValue = Enabled
+    ErrorValue = SCENE_ERROR_NONE
+    RendererErrorValue = 0
+
+    Return True
+
+End Function
+
+Public Function HdrRequested() As Boolean
+
+    Dim Result As Boolean
+
+    Call EnsureInitialized()
+
+    Result = ProfileHdrRequested()
+
+    Return Result
+
+End Function
+
+Public Function HdrEffective() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Graphics3D.M5Value3D(Graphics3D.M5_QUERY_HDR_EFFECTIVE, 0) <> 0
+
+    Return Result
+
+End Function
+
+Public Function SetExposure(Percent As Number) As Boolean
+
+    If Not RenderSettingWritable() Then
+        Return False
+    End If
+
+    If Percent < 25 Or Percent > 400 Then
+        ErrorValue = SCENE_ERROR_INVALID_RENDER_SETTING
+        Return False
+    End If
+
+    ExposurePercentValue = Percent
+    ErrorValue = SCENE_ERROR_NONE
+    RendererErrorValue = 0
+
+    Return True
+
+End Function
+
+Public Function Exposure() As Number
+
+    Call EnsureInitialized()
+
+    Return ExposurePercentValue
+
+End Function
+
+Public Function SetBloom(
+    Enabled As Boolean,
+    IntensityPercent As Number,
+    ThresholdThousandths As Number
+) As Boolean
+
+    If Not RenderSettingWritable() Then
+        Return False
+    End If
+
+    If (IntensityPercent < 0 Or
+        IntensityPercent > 400 Or
+        ThresholdThousandths < 500 Or
+        ThresholdThousandths > 8000) Then
+        ErrorValue = SCENE_ERROR_INVALID_RENDER_SETTING
+
+        Return False
+    End If
+
+    BloomOverride = True
+    BloomEnabledValue = Enabled
+    BloomIntensityValue = IntensityPercent
+    BloomThresholdValue = ThresholdThousandths
+    ErrorValue = SCENE_ERROR_NONE
+    RendererErrorValue = 0
+
+    Return True
+
+End Function
+
+Public Function BloomRequested() As Boolean
+
+    Dim Result As Boolean
+
+    Call EnsureInitialized()
+
+    Result = ProfileBloomRequested()
+
+    Return Result
+
+End Function
+
+Public Function BloomEffective() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Graphics3D.M5Value3D(Graphics3D.M5_QUERY_BLOOM_EFFECTIVE, 0) <> 0
+
+    Return Result
+
+End Function
+
+Public Function SetPostProcessing(Enabled As Boolean) As Boolean
+
+    If Not RenderSettingWritable() Then
+        Return False
+    End If
+
+    PostOverride = True
+    PostEnabledValue = Enabled
+    ErrorValue = SCENE_ERROR_NONE
+    RendererErrorValue = 0
+
+    Return True
+
+End Function
+
+Public Function PostProcessingEffective() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Graphics3D.M5Value3D(Graphics3D.M5_QUERY_POST_EFFECTIVE, 0) <> 0
+
+    Return Result
+
+End Function
+
+Public Function EffectiveSampleCount() As Number
+
+    Dim Result As Number
+
+    Result = Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SAMPLE_COUNT, 0)
+
+    Return Result
+
+End Function
+
+Public Function SceneFormat() As Number
+
+    Dim Result As Number
+
+    Result = Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SCENE_FORMAT, 0)
+
+    Return Result
+
+End Function
+
+Public Function FeatureAvailable(Feature As Number) As Boolean
+
+    Dim Result As Boolean
+
+    If Feature = FEATURE_SHADOWS Then
+        Result = ShadowsEffective()
+    Else If Feature = FEATURE_HDR Then
+        Result = HdrEffective()
+    Else If Feature = FEATURE_BLOOM Then
+        Result = BloomEffective()
+    Else If Feature = FEATURE_POST_PROCESSING Then
+        Result = PostProcessingEffective()
+    Else If Feature = FEATURE_PBR Then
+        Result = PbrAvailable()
+    End If
+
+    Return Result
+
+End Function
+
+Public Function RefreshRenderCapabilities() As Boolean
+
+    Dim Result As Boolean
+
+    Result = RefreshCapabilities()
+
+    If Result Then
+        Call RefreshRenderDiagnostics()
+    End If
+
+    Return Result
+
+End Function
+
 Public Function PbrAvailable() As Boolean
 
     Call EnsureInitialized()
@@ -539,6 +1195,48 @@ Public Function AssetProfileKey() As Number
     Result = TextureFilter() * 1000
     Result = Result + TextureWrap() * 100
     Result = Result + RequestedAnisotropy()
+
+    Return Result
+
+End Function
+
+''' Stable identity for render settings that do not duplicate prepared character assets.
+Public Function RenderProfileKey() As Number
+
+    Dim Result As Number
+
+    Call EnsureInitialized()
+
+    Result = EffectiveProfile
+    Result = Result * 2
+
+    If ProfileShadowsRequested() Then
+        Result = Result + 1
+    End If
+
+    Result = Result * 3 + ShadowCasterValue
+    Result = Result * 4 + ShadowSlotValue
+    Result = Result * 2
+
+    If ProfileHdrRequested() Then
+        Result = Result + 1
+    End If
+
+    Result = Result * 2
+
+    If ProfileBloomRequested() Then
+        Result = Result + 1
+    End If
+
+    Result = Result * 2
+
+    If ProfilePostRequested() Then
+        Result = Result + 1
+    End If
+
+    Result = Result * 376 + ExposurePercentValue - 25
+    Result = Result * 401 + BloomIntensityValue
+    Result = Result * 7501 + BloomThresholdValue - 500
 
     Return Result
 
@@ -660,6 +1358,10 @@ Public Function Begin(
         Return False
     End If
 
+    If Not ApplyRenderProfile() Then
+        Return False
+    End If
+
     Result = Graphics3D.Begin3D(Camera, ClearRed, ClearGreen, ClearBlue)
 
     If Not Result Then
@@ -679,6 +1381,8 @@ Public Function Begin(
         Return False
 
     End If
+
+    Call RefreshRenderDiagnostics()
 
     FrameOpen = True
     ErrorValue = SCENE_ERROR_NONE

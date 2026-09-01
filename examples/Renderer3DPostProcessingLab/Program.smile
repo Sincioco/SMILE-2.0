@@ -1,0 +1,311 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Interaction As Interaction
+Import Smile.Simple3D.Scene3D As Scene3D
+Import Smile.Simple3D.Character3D As Character3D
+
+Dim BaseCamera As Core.Camera3D
+Dim Camera As Core.Camera3D
+Dim CameraControls As Core.CameraControl3D
+Dim Hero As Character3D.Actor
+Dim Ground As Core.Object3D
+Dim EmissiveRing As Core.Object3D
+Dim SimpleCube As Core.Object3D
+Dim MaskModel As Core.Model3D
+Dim MaskObject As Core.Object3D
+Dim GroundMaterial As Core.Material3D
+Dim EmissiveMaterial As Core.Material3D
+Dim Running As Boolean
+Dim FrameReady As Boolean
+Dim DiagnosticsVisible As Boolean
+Dim ShadowsEnabled As Boolean
+Dim HdrEnabled As Boolean
+Dim BloomEnabled As Boolean
+Dim AttackSelected As Boolean
+Dim QualityIndex As Number
+Dim ExposurePercent As Number
+Dim Key As Number
+Dim Angle As Number
+Dim PreviousTime As Number
+Dim CurrentTime As Number
+Dim FrameMilliseconds As Number
+
+Game Window "Renderer3D Post-Processing Lab" Size 960 By 540
+
+Call Graphics3D.ResetRenderer3D()
+Call LoadLab()
+Call RestoreShowcase()
+
+Running = True
+DiagnosticsVisible = True
+PreviousTime = Timer()
+
+Do
+
+    Get Key Key
+
+    If Key = KEY_ESCAPE Then
+        Running = False
+    Else If Key = KEY_UP Then
+        QualityIndex = (QualityIndex + 1) Mod 4
+
+        Call ApplyQuality()
+    Else If Key = KEY_S Then
+        ShadowsEnabled = Not ShadowsEnabled
+        FrameReady = Scene3D.SetShadows(ShadowsEnabled)
+    Else If Key = KEY_A Then
+        HdrEnabled = Not HdrEnabled
+        FrameReady = Scene3D.SetHdr(HdrEnabled)
+        FrameReady = Scene3D.SetPostProcessing(HdrEnabled) And FrameReady
+    Else If Key = KEY_W Then
+        BloomEnabled = Not BloomEnabled
+        FrameReady = Scene3D.SetBloom(BloomEnabled, 90, 1100)
+    Else If Key = KEY_RIGHT Then
+        ExposurePercent = ExposurePercent + 25
+
+        If ExposurePercent > 175 Then
+            ExposurePercent = 100
+        End If
+
+        FrameReady = Scene3D.SetExposure(ExposurePercent)
+    Else If Key = KEY_SPACE Then
+        AttackSelected = Not AttackSelected
+
+        Call CrossFadeHero()
+    Else If Key = KEY_D Then
+        DiagnosticsVisible = Not DiagnosticsVisible
+    Else If Key = KEY_ENTER Then
+        Call RestoreShowcase()
+    End If
+
+    CurrentTime = Timer()
+    FrameMilliseconds = Min(50, Max(0, CurrentTime - PreviousTime))
+    PreviousTime = CurrentTime
+
+    FrameReady = Character3D.Update(Hero, FrameMilliseconds)
+    FrameReady = Interaction.UpdateCameraControlsFromPointer(CameraControls, True, True, True)
+    FrameReady = Interaction.AdvanceCameraControls(CameraControls, 1) And FrameReady
+    Camera = Interaction.ApplyCameraControls(BaseCamera, CameraControls)
+    Angle = (Angle + 1) Mod 360
+
+    Call Graphics3D.SetObjectRotation(EmissiveRing, 72, Angle, 0)
+    Call Graphics3D.SetObjectRotation(MaskObject, 0, 0 - Angle, 0)
+
+    FrameReady = Scene3D.Begin(Camera, 3, 6, 16)
+
+    If FrameReady Then
+
+        FrameReady = Graphics3D.DrawObject3D(Ground)
+        FrameReady = Character3D.Draw(Hero) And FrameReady
+        FrameReady = Graphics3D.DrawObject3D(EmissiveRing) And FrameReady
+        FrameReady = Graphics3D.DrawObject3D(MaskObject) And FrameReady
+        FrameReady = Graphics3D.DrawObject3D(SimpleCube) And FrameReady
+        FrameReady = Scene3D.EndScene() And FrameReady
+
+    End If
+
+    Call DrawOverlay()
+
+    Show Screen
+
+    Running = Running And Not Game_Closed()
+
+Loop Until Not Running
+
+Call DestroyLab()
+
+Sub LoadLab()
+
+    Dim EmptyTexture As Core.Texture3D
+
+    BaseCamera = Graphics3D.DefaultCamera()
+    BaseCamera.Position.Y = 95
+    BaseCamera.Position.Z = -310
+    BaseCamera.Target.Y = 32
+    BaseCamera.Target.Z = 45
+
+    Call Interaction.ResetCameraControls(CameraControls)
+
+    Ground = Graphics3D.CreatePlane3D(330, 240)
+    EmissiveRing = Graphics3D.CreateTorus3D(30, 10)
+    SimpleCube = Graphics3D.CreateCube3D(42)
+    GroundMaterial = Graphics3D.CreatePbrMaterial3D(
+        EmptyTexture,
+        EmptyTexture,
+        EmptyTexture,
+        EmptyTexture
+    )
+    EmissiveMaterial = Graphics3D.CreatePbrMaterial3D(
+        EmptyTexture,
+        EmptyTexture,
+        EmptyTexture,
+        EmptyTexture
+    )
+
+    FrameReady = Graphics3D.SetPbrMaterialFactors3D(
+        GroundMaterial,
+        52,
+        66,
+        92,
+        100,
+        15,
+        72,
+        100,
+        100
+    )
+    FrameReady = Graphics3D.SetPbrMaterialFactors3D(
+        EmissiveMaterial,
+        8,
+        24,
+        34,
+        100,
+        5,
+        38,
+        100,
+        100
+    ) And FrameReady
+    FrameReady = Graphics3D.SetPbrMaterialEmissive3D(
+        EmissiveMaterial,
+        20,
+        240,
+        360
+    ) And FrameReady
+    FrameReady = Graphics3D.SetObjectMaterial3D(Ground, GroundMaterial) And FrameReady
+    FrameReady = Graphics3D.SetObjectMaterial3D(EmissiveRing, EmissiveMaterial) And FrameReady
+
+    Call Graphics3D.SetObjectPosition(Ground, 0, -2, 55)
+    Call Graphics3D.SetObjectPosition(EmissiveRing, -82, 36, 38)
+    Call Graphics3D.SetObjectPosition(SimpleCube, 82, 20, 46)
+    Call Graphics3D.SetObjectColor(SimpleCube, 112, 212, 255)
+
+    MaskModel = Graphics3D.LoadModel3D("Assets\PbrLab.sm3d")
+    FrameReady = Graphics3D.PrepareModelPbr3D(
+        MaskModel,
+        Graphics3D.TEXTURE_FILTER_MIP_LINEAR,
+        Graphics3D.TEXTURE_WRAP_REPEAT,
+        1
+    ) And FrameReady
+    MaskObject = Graphics3D.CreateModelPart3D(MaskModel, 0)
+
+    Call Graphics3D.SetObjectPosition(MaskObject, 96, 2, 76)
+    Call Graphics3D.SetObjectScale(MaskObject, 2600, 2600, 2600)
+
+    Hero = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
+    FrameReady = Character3D.Place(Hero, 0, 0, 48) And FrameReady
+    FrameReady = Character3D.SetScale(Hero, 1000) And FrameReady
+    FrameReady = Character3D.PlayAnimation(Hero, "Bend", True) And FrameReady
+    FrameReady = Character3D.SetShadows(Hero, True, True) And FrameReady
+
+End Sub
+
+Sub RestoreShowcase()
+
+    QualityIndex = 2
+    ShadowsEnabled = True
+    HdrEnabled = True
+    BloomEnabled = True
+    ExposurePercent = 125
+
+    FrameReady = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
+    FrameReady = Scene3D.UseLighting("CharacterStudio") And FrameReady
+    FrameReady = Scene3D.SetShadows(True) And FrameReady
+    FrameReady = Scene3D.SetHdr(True) And FrameReady
+    FrameReady = Scene3D.SetPostProcessing(True) And FrameReady
+    FrameReady = Scene3D.SetBloom(True, 90, 1100) And FrameReady
+    FrameReady = Scene3D.SetExposure(ExposurePercent) And FrameReady
+    FrameReady = Scene3D.SetShadowBias(500, 600) And FrameReady
+
+End Sub
+
+Sub ApplyQuality()
+
+    If QualityIndex = 0 Then
+        FrameReady = Scene3D.SetQuality(Scene3D.QUALITY_LOW)
+    Else If QualityIndex = 1 Then
+        FrameReady = Scene3D.SetQuality(Scene3D.QUALITY_MEDIUM)
+    Else If QualityIndex = 2 Then
+        FrameReady = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
+    Else
+        FrameReady = Scene3D.SetQuality(Scene3D.QUALITY_AUTO)
+    End If
+
+End Sub
+
+Sub CrossFadeHero()
+
+    If AttackSelected Then
+        FrameReady = Character3D.CrossFade(Hero, "AttackLike", 220, Graphics3D.ANIMATION_HOLD)
+    Else
+        FrameReady = Character3D.CrossFade(Hero, "Bend", 220, Graphics3D.ANIMATION_LOOP)
+    End If
+
+End Sub
+
+Sub DrawOverlay()
+
+    Fill Rectangle 0, 0, 960, 72, Rgb(3, 8, 20)
+    Draw Text "SMILE RENDERER3D POST LAB" At 18, 10 Size 22 Color CYAN
+    Draw Text "Up Quality  S Shadows  A HDR/Post  W Bloom  Right Exposure  Space Animate  Enter Reset" At 18, 42 Size 13 Color LIGHT_GRAY
+    Fill Rectangle 700, 88, 244, 414, Rgb(4, 10, 26)
+    Draw Text "M5 LIVE DIAGNOSTICS" At 716, 102 Size 16 Color WHITE
+
+    If DiagnosticsVisible Then
+
+        Draw Text "Profile Req / Eff" At 716, 136 Size 13 Color LIGHT_GRAY
+        Draw Number Scene3D.RequestedQuality() At 866, 136 Size 13 Color WHITE
+        Draw Number Scene3D.EffectiveQuality() At 908, 136 Size 13 Color GREEN
+        Draw Text "HDR / Format" At 716, 162 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.M5Value3D(Graphics3D.M5_QUERY_HDR_EFFECTIVE, 0) At 866, 162 Size 13 Color CYAN
+        Draw Number Scene3D.SceneFormat() At 908, 162 Size 13 Color CYAN
+        Draw Text "MSAA Samples" At 716, 188 Size 13 Color LIGHT_GRAY
+        Draw Number Scene3D.EffectiveSampleCount() At 908, 188 Size 13 Color WHITE
+        Draw Text "Shadow / Size" At 716, 214 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_EFFECTIVE, 0) At 866, 214 Size 13 Color YELLOW
+        Draw Number Scene3D.ShadowResolution() At 900, 214 Size 13 Color YELLOW
+        Draw Text "Shadow Draw / Tri" At 716, 240 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_DRAWS, 0) At 866, 240 Size 13 Color WHITE
+        Draw Number Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_TRIANGLES, 0) At 908, 240 Size 13 Color WHITE
+        Draw Text "Bloom W / H" At 716, 266 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.M5Value3D(Graphics3D.M5_QUERY_BLOOM_WIDTH, 0) At 854, 266 Size 13 Color ORANGE
+        Draw Number Graphics3D.M5Value3D(Graphics3D.M5_QUERY_BLOOM_HEIGHT, 0) At 908, 266 Size 13 Color ORANGE
+        Draw Text "Bloom Cycles" At 716, 292 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.M5Value3D(Graphics3D.M5_QUERY_BLOOM_CYCLES, 0) At 908, 292 Size 13 Color ORANGE
+        Draw Text "Exposure" At 716, 318 Size 13 Color LIGHT_GRAY
+        Draw Number Scene3D.Exposure() At 908, 318 Size 13 Color WHITE
+        Draw Text "Main / Post Draws" At 716, 344 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.DrawCallCount3D() At 866, 344 Size 13 Color WHITE
+        Draw Number Graphics3D.M5Value3D(Graphics3D.M5_QUERY_POST_DRAWS, 0) At 908, 344 Size 13 Color WHITE
+        Draw Text "Logical Submits" At 716, 370 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.M5Value3D(Graphics3D.M5_QUERY_LOGICAL_SUBMISSIONS, 0) At 908, 370 Size 13 Color WHITE
+        Draw Text "Fallback Flags" At 716, 396 Size 13 Color LIGHT_GRAY
+        Draw Number Scene3D.FallbackFlags() At 908, 396 Size 13 Color YELLOW
+        Draw Text "Actor Parts / Objects" At 716, 422 Size 13 Color LIGHT_GRAY
+        Draw Number Character3D.PartCount(Hero) At 866, 422 Size 13 Color WHITE
+        Draw Number Graphics3D.LiveObjectCount3D() At 908, 422 Size 13 Color WHITE
+        Draw Text "Frame Ms" At 716, 448 Size 13 Color LIGHT_GRAY
+        Draw Number FrameMilliseconds At 908, 448 Size 13 Color GREEN
+        Draw Text "2D HUD: POST-EXEMPT" At 716, 476 Size 13 Color WHITE
+
+    End If
+
+    Draw Text "ANIMATED SHADOW" At 248, 474 Size 14 Color CYAN
+    Draw Text "HDR EMISSIVE" At 38, 420 Size 14 Color ORANGE
+    Draw Text "MASK / SIMPLE" At 490, 420 Size 14 Color LIGHT_BLUE
+
+End Sub
+
+Sub DestroyLab()
+
+    Call Character3D.Shutdown()
+    Call Graphics3D.DestroyObject3D(Ground)
+    Call Graphics3D.DestroyObject3D(EmissiveRing)
+    Call Graphics3D.DestroyObject3D(SimpleCube)
+    Call Graphics3D.DestroyObjectInstance3D(MaskObject)
+    Call Graphics3D.DestroyModel3D(MaskModel)
+    Call Graphics3D.DestroyMaterial3D(GroundMaterial)
+    Call Graphics3D.DestroyMaterial3D(EmissiveMaterial)
+    Call Graphics3D.ResetRenderer3D()
+
+End Sub

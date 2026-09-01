@@ -117,6 +117,11 @@ Private Const COMMAND_MODEL_PALETTE_UPLOAD_COUNT = 109
 Private Const COMMAND_ANIMATOR_PRODUCTION_VALUE = 110
 Private Const COMMAND_CLEAR_ANIMATOR_EVENTS = 111
 Private Const COMMAND_RENDERER_STATE = 112
+Private Const COMMAND_CONFIGURE_POST = 113
+Private Const COMMAND_CONFIGURE_SHADOW = 114
+Private Const COMMAND_SET_SHADOW_AREA = 115
+Private Const COMMAND_SET_OBJECT_SHADOWS = 116
+Private Const COMMAND_M5_VALUE = 117
 
 Private Const ANIMATOR_QUERY_DESTINATION_CLIP = 1
 Private Const ANIMATOR_QUERY_TIME_REMAINDER = 2
@@ -178,6 +183,58 @@ Public Const PBR_PIPELINE_AVAILABLE = 1
 Public Const PBR_PIPELINE_UNAVAILABLE = 2
 Public Const RENDERER_STATE_RESOURCE_EPOCH = 1
 Public Const RENDERER_STATE_FRAME_ACTIVE = 2
+Public Const SHADOW_CASTER_NONE = 0
+Public Const SHADOW_CASTER_DIRECTIONAL = 1
+Public Const SHADOW_CASTER_SPOT = 2
+Public Const SCENE_FORMAT_DIRECT_LDR = 0
+Public Const SCENE_FORMAT_RGBA16_FLOAT = 1
+Public Const M5_FALLBACK_SHADOW_RESOLUTION_REDUCED = 1
+Public Const M5_FALLBACK_SHADOW_DISABLED = 2
+Public Const M5_FALLBACK_HDR_UNAVAILABLE = 4
+Public Const M5_FALLBACK_MSAA_REDUCED = 8
+Public Const M5_FALLBACK_BLOOM_REDUCED = 16
+Public Const M5_FALLBACK_BLOOM_DISABLED = 32
+Public Const M5_FALLBACK_TONE_MAPPING_DISABLED = 64
+Public Const M5_FALLBACK_DIRECT_LDR = 128
+Public Const M5_QUERY_LOGICAL_SUBMISSIONS = 1
+Public Const M5_QUERY_SUBMISSION_CAPACITY = 2
+Public Const M5_QUERY_MULTIPASS_ACTIVE = 3
+Public Const M5_QUERY_SHADOW_REQUESTED = 4
+Public Const M5_QUERY_SHADOW_EFFECTIVE = 5
+Public Const M5_QUERY_SHADOW_RESOLUTION = 6
+Public Const M5_QUERY_SHADOW_DRAWS = 7
+Public Const M5_QUERY_SHADOW_TRIANGLES = 8
+Public Const M5_QUERY_SHADOW_PALETTE_UPLOADS = 9
+Public Const M5_QUERY_HDR_REQUESTED = 10
+Public Const M5_QUERY_HDR_EFFECTIVE = 11
+Public Const M5_QUERY_SCENE_FORMAT = 12
+Public Const M5_QUERY_SAMPLE_COUNT = 13
+Public Const M5_QUERY_SCENE_WIDTH = 14
+Public Const M5_QUERY_SCENE_HEIGHT = 15
+Public Const M5_QUERY_RESOLVE_COUNT = 16
+Public Const M5_QUERY_BLOOM_REQUESTED = 17
+Public Const M5_QUERY_BLOOM_EFFECTIVE = 18
+Public Const M5_QUERY_BLOOM_WIDTH = 19
+Public Const M5_QUERY_BLOOM_HEIGHT = 20
+Public Const M5_QUERY_BLOOM_CYCLES = 21
+Public Const M5_QUERY_POST_DRAWS = 22
+Public Const M5_QUERY_TONE_MAPPING = 23
+Public Const M5_QUERY_EXPOSURE = 24
+Public Const M5_QUERY_FALLBACK_FLAGS = 25
+Public Const M5_QUERY_RESOURCE_GENERATION = 26
+Public Const M5_QUERY_TARGET_BYTES = 27
+Public Const M5_QUERY_SHADOW_CASTER = 28
+Public Const M5_QUERY_SHADOW_SLOT = 29
+Public Const M5_QUERY_SHADOW_BIAS = 30
+Public Const M5_QUERY_SHADOW_NORMAL_BIAS = 31
+Public Const M5_QUERY_POST_REQUESTED = 32
+Public Const M5_QUERY_POST_EFFECTIVE = 33
+Public Const M5_QUERY_REJECTED_SUBMISSIONS = 34
+Public Const M5_QUERY_SHADOW_BYTES = 35
+Public Const M5_QUERY_SCENE_BYTES = 36
+Public Const M5_QUERY_BLOOM_BYTES = 37
+Public Const M5_QUERY_OBJECT_CASTS_SHADOW = 40
+Public Const M5_QUERY_OBJECT_RECEIVES_SHADOW = 41
 Public Const MODEL_MATERIAL_BASE_COLOR_RED = 1
 Public Const MODEL_MATERIAL_BASE_COLOR_GREEN = 2
 Public Const MODEL_MATERIAL_BASE_COLOR_BLUE = 3
@@ -285,6 +342,20 @@ Private Function Dispatch(
         NinthValue,
         TenthValue
     )
+    Return Result
+
+End Function
+
+Private Function BooleanNumber(Value As Boolean) As Number
+
+    Dim Result As Number
+
+    Result = 0
+
+    If Value Then
+        Result = 1
+    End If
+
     Return Result
 
 End Function
@@ -917,6 +988,8 @@ Public Function CreateModelPart3D(Model As Core.Model3D, PartIndex As Number) As
         Result.ColorBlue = 255
         Result.AlphaPercent = 100
         Result.Visible = True
+        Result.CastsShadow = True
+        Result.ReceivesShadow = True
 
     End If
 
@@ -2697,6 +2770,155 @@ Public Function LightValue3D(Query As Number, Index As Number, Property As Numbe
 
 End Function
 
+''' Configures the bounded HDR, tone-mapping, bloom, and scene-MSAA request for future frames.
+Public Function ConfigurePostProcessing3D(
+    PostEnabled As Boolean,
+    HdrEnabled As Boolean,
+    BloomEnabled As Boolean,
+    ExposurePercent As Number,
+    ThresholdThousandths As Number,
+    IntensityPercent As Number,
+    Downsample As Number,
+    BlurCycles As Number,
+    MaximumSamples As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_CONFIGURE_POST,
+        BooleanNumber(PostEnabled),
+        BooleanNumber(HdrEnabled),
+        BooleanNumber(BloomEnabled),
+        ExposurePercent,
+        ThresholdThousandths,
+        IntensityPercent,
+        Downsample,
+        BlurCycles,
+        MaximumSamples,
+        0
+    ) <> 0
+
+    Return Result
+
+End Function
+
+''' Configures the single bounded shadow map and selected directional or spot caster.
+Public Function ConfigureShadows3D(
+    Enabled As Boolean,
+    CasterType As Number,
+    SpotSlot As Number,
+    Resolution As Number,
+    ConstantBias As Number,
+    NormalBias As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_CONFIGURE_SHADOW,
+        BooleanNumber(Enabled),
+        CasterType,
+        SpotSlot,
+        Resolution,
+        ConstantBias,
+        NormalBias,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    Return Result
+
+End Function
+
+''' Sets the explicit bounded orthographic area used by a directional shadow caster.
+Public Function SetDirectionalShadowArea3D(
+    CenterX As Number,
+    CenterY As Number,
+    CenterZ As Number,
+    Width As Number,
+    Height As Number,
+    NearDepth As Number,
+    FarDepth As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_SHADOW_AREA,
+        CenterX,
+        CenterY,
+        CenterZ,
+        Width,
+        Height,
+        NearDepth,
+        FarDepth,
+        0,
+        0,
+        0
+    ) <> 0
+
+    Return Result
+
+End Function
+
+''' Applies per-object shadow participation and updates its public mirror transactionally.
+Public Function SetObjectShadowsChecked3D(
+    ByRef Object As Core.Object3D,
+    CastsShadow As Boolean,
+    ReceivesShadow As Boolean
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_OBJECT_SHADOWS,
+        Object.Handle,
+        BooleanNumber(CastsShadow),
+        BooleanNumber(ReceivesShadow),
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+        Object.CastsShadow = CastsShadow
+        Object.ReceivesShadow = ReceivesShadow
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub SetObjectShadows3D(
+    ByRef Object As Core.Object3D,
+    CastsShadow As Boolean,
+    ReceivesShadow As Boolean
+)
+
+    Dim Applied As Boolean
+
+    Applied = SetObjectShadowsChecked3D(Object, CastsShadow, ReceivesShadow)
+
+End Sub
+
+''' Reads one M5 renderer diagnostic. Index is normally zero or an object handle.
+Public Function M5Value3D(Property As Number, Index As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_M5_VALUE, Property, Index, 0, 0, 0, 0, 0, 0, 0, 0)
+
+    Return Result
+
+End Function
+
 Public Sub ResetRenderer3D()
 
     Call Execute(COMMAND_RESET, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
@@ -2751,6 +2973,8 @@ Private Function CreatePrimitiveObject(
     Result.ColorBlue = 255
     Result.AlphaPercent = 100
     Result.Visible = True
+    Result.CastsShadow = True
+    Result.ReceivesShadow = True
     Return Result
 
 End Function
@@ -2971,6 +3195,8 @@ Public Function CreateObjectFromMesh3D(MeshHandle As Number) As Core.Object3D
         Result.ColorBlue = 255
         Result.AlphaPercent = 100
         Result.Visible = True
+        Result.CastsShadow = True
+        Result.ReceivesShadow = True
 
     End If
 

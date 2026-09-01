@@ -10,7 +10,7 @@ function fail(message) {
 }
 
 const args = process.argv.slice(2);
-if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--expected-runtime-error <text>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio|--phase5-ui|--phase5-hardening|--phase5-submenus|--phase5-submenu-viewport|--mobile-controls|--renderer3d|--force-renderer3d-pbr-failure|--neon-cycles-input]");
+if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--expected-runtime-error <text>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio|--phase5-ui|--phase5-hardening|--phase5-submenus|--phase5-submenu-viewport|--mobile-controls|--renderer3d|--force-renderer3d-pbr-failure|--force-renderer3d-hdr-failure|--force-renderer3d-shadow-failure|--neon-cycles-input]");
 
 const webDirectory = path.resolve(args.shift());
 let expectedPath = null;
@@ -30,6 +30,8 @@ let verifyPhase5SubmenuViewport = false;
 let verifyMobileControls = false;
 let verifyRenderer3D = false;
 let forceRenderer3DPbrFailure = false;
+let forceRenderer3DHdrFailure = false;
+let forceRenderer3DShadowFailure = false;
 let verifyNeonCyclesInput = false;
 while (args.length !== 0) {
     const option = args.shift();
@@ -47,6 +49,8 @@ while (args.length !== 0) {
     if (option === "--mobile-controls") { verifyMobileControls = true; continue; }
     if (option === "--renderer3d") { verifyRenderer3D = true; continue; }
     if (option === "--force-renderer3d-pbr-failure") { forceRenderer3DPbrFailure = true; continue; }
+    if (option === "--force-renderer3d-hdr-failure") { forceRenderer3DHdrFailure = true; continue; }
+    if (option === "--force-renderer3d-shadow-failure") { forceRenderer3DShadowFailure = true; continue; }
     if (option === "--neon-cycles-input") { verifyNeonCyclesInput = true; continue; }
     const value = args.shift();
     if (value === undefined) fail(`missing value for ${option}`);
@@ -529,6 +533,11 @@ function contextWebGL2() {
         BLEND: 0x0be2, ONE: 1, SRC_ALPHA: 0x0302, ONE_MINUS_SRC_ALPHA: 0x0303,
         TEXTURE_2D: 0x0de1, TEXTURE0: 0x84c0, RGBA: 0x1908, RGBA8: 0x8058,
         SRGB8_ALPHA8: 0x8c43, UNSIGNED_BYTE: 0x1401, BACK: 0x0405, NONE: 0,
+        FRAMEBUFFER: 0x8d40, RENDERBUFFER: 0x8d41, FRAMEBUFFER_COMPLETE: 0x8cd5,
+        COLOR_ATTACHMENT0: 0x8ce0, DEPTH_ATTACHMENT: 0x8d00, DEPTH_COMPONENT24: 0x81a6,
+        DEPTH_COMPONENT: 0x1902, RGBA16F: 0x881a, HALF_FLOAT: 0x140b, MAX_TEXTURE_SIZE: 0x0d33,
+        TEXTURE_COMPARE_MODE: 0x884c, COMPARE_REF_TO_TEXTURE: 0x884e,
+        TEXTURE_COMPARE_FUNC: 0x884d, LEQUAL: 0x0203, POLYGON_OFFSET_FILL: 0x8037,
         TEXTURE_MIN_FILTER: 0x2801, TEXTURE_MAG_FILTER: 0x2800,
         TEXTURE_WRAP_S: 0x2802, TEXTURE_WRAP_T: 0x2803,
         NEAREST: 0x2600, LINEAR: 0x2601, LINEAR_MIPMAP_LINEAR: 0x2703,
@@ -548,12 +557,18 @@ function contextWebGL2() {
         generateMipmap: noop, getError: () => 0,
         getExtension: name => name.includes("texture_filter_anisotropic")
             ? { MAX_TEXTURE_MAX_ANISOTROPY_EXT: 0x84ff, TEXTURE_MAX_ANISOTROPY_EXT: 0x84fe }
-            : null,
-        getParameter: value => value === 0x84ff ? 8 : 0,
+            : (name === "EXT_color_buffer_float" ? {} : null),
+        getParameter: value => value === 0x84ff ? 8 : (value === 0x0d33 ? 4096 : 0),
         viewport: noop, clearColor: noop, clearDepth: noop, clear: noop, useProgram: noop,
+        createFramebuffer: () => ({}), bindFramebuffer: noop, framebufferTexture2D: noop,
+        drawBuffers: noop, readBuffer: noop, checkFramebufferStatus: () => 0x8cd5,
+        deleteFramebuffer: noop, createRenderbuffer: () => ({}), bindRenderbuffer: noop,
+        renderbufferStorage: noop, framebufferRenderbuffer: noop, deleteRenderbuffer: noop,
+        colorMask: noop, polygonOffset: noop,
         enableVertexAttribArray: noop, disableVertexAttribArray: noop, vertexAttribPointer: noop,
         uniformMatrix4fv: noop, uniformMatrix3fv: noop, uniform4fv: noop, uniform3fv: noop,
-        uniform1i: noop, uniform1f: noop, drawElements: () => { renderer3DDrawCalls += 1; }
+        uniform4f: noop, uniform3f: noop, uniform2f: noop, uniform1i: noop, uniform1f: noop,
+        drawElements: () => { renderer3DDrawCalls += 1; }, drawArrays: () => { renderer3DDrawCalls += 1; }
     };
 }
 
@@ -789,6 +804,8 @@ if (verifyPhase4Audio) {
 }
 host.window = host;
 if (forceRenderer3DPbrFailure) host.SMILE_TEST_RENDERER3D_FORCE_PBR_FAILURE = true;
+if (forceRenderer3DHdrFailure) host.SMILE_TEST_RENDERER3D_FORCE_HDR_FAILURE = true;
+if (forceRenderer3DShadowFailure) host.SMILE_TEST_RENDERER3D_FORCE_SHADOW_FAILURE = true;
 
 const context = vm.createContext(host);
 try {

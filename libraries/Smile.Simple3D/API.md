@@ -137,6 +137,15 @@ PBR lighting:
 - `SetSpotLightCone3D` supplies a nonzero direction plus inner/outer degrees from `1` through `89` with inner no greater than outer.
 - `DisableLight3D`, `ClearAdditionalLights3D`, `ActiveLightCount3D`, and `LightValue3D` provide bounded lifecycle and deterministic diagnostics. Normalized direction and intensity queries use thousandths.
 
+M5 shadows and post-processing:
+
+- `ConfigurePostProcessing3D` selects direct LDR or HDR/post rendering, bloom, exposure `25`-`400` percent, threshold `500`-`8000` thousandths, intensity `0`-`400` percent, half/quarter downsampling, zero to two blur cycles, and requested samples `1`, `2`, or `4`.
+- `ConfigureShadows3D` selects no caster, the directional light, or one spot slot; resolutions are exactly `1024` or `2048`, constant bias is `0`-`1000` millionths, and normal bias is `0`-`1000` hundred-thousandths.
+- `SetDirectionalShadowArea3D` configures the directional center, width, height, near, and far bounds. `SetObjectShadowsChecked3D` transactionally updates the mirrored cast/receive flags; `SetObjectShadows3D` is the compatibility subroutine wrapper.
+- `M5Value3D` exposes logical/rejected submissions, shadow/HDR/bloom requested and effective state, scene format, effective samples, pass counters, target dimensions/bytes, caster/bias state, and per-object cast/receive state through the public `M5_QUERY_*` constants.
+- A frame accepts at most 512 logical submissions. Duplicate object submissions remain distinct draws in caller order. An overflow is rejected with Renderer3D error 51, and a queued object destroyed before `End3D` fails the frame with error 14.
+- `M5_FALLBACK_*` is an independent bit field: shadow resolution `1`, shadow disabled `2`, HDR unavailable `4`, MSAA reduced `8`, bloom resolution reduced `16`, bloom disabled `32`, tone mapping disabled `64`, and direct LDR `128`.
+
 Transforms and appearance:
 
 - `SetObjectPosition` and `MoveObject`
@@ -162,10 +171,13 @@ Games decide whether a press started on valid world geometry and pass that decis
 
 ## `Smile.Simple3D.Scene3D`
 
-Quality profiles affect only newly loaded assets. `QUALITY_LOW` uses linear filtering and anisotropy 1, `QUALITY_MEDIUM` uses mip-linear filtering and anisotropy 4, and `QUALITY_HIGH` uses anisotropic filtering requested at 8. `QUALITY_AUTO` selects High when PBR is available and Low with `SCENE_FALLBACK_PBR_UNAVAILABLE` otherwise. Existing actors are never silently rebuilt when quality changes. Lighting-only changes do not affect the asset-profile key.
+Quality profiles keep asset and render policy separate. `QUALITY_LOW` uses linear filtering/anisotropy 1 and direct LDR with no shadow or bloom. `QUALITY_MEDIUM` uses mip-linear/anisotropy 4, HDR tone mapping, a 1024 shadow, quarter-resolution one-cycle bloom, and requests 2x samples. `QUALITY_HIGH` uses anisotropic filtering requested at 8, HDR tone mapping, a 2048 shadow, half-resolution two-cycle bloom, and requests 4x samples. `QUALITY_AUTO` selects High when PBR is available and Low with `SCENE_FALLBACK_PBR_UNAVAILABLE` otherwise. Existing actors are never silently rebuilt when render settings change; `AssetProfileKey` and `RenderProfileKey` make that distinction explicit.
 
 - `SetQuality`, `RequestedQuality`, `EffectiveQuality`, `RefreshCapabilities`, `PbrAvailable`, `LastFallback`, and `FallbackFlags`.
-- `TextureFilter`, `TextureWrap`, `RequestedAnisotropy`, `PbrPreferred`, `SimpleFallbackAllowed`, and `AssetProfileKey` are deterministic read-only asset-policy helpers.
+- `TextureFilter`, `TextureWrap`, `RequestedAnisotropy`, `PbrPreferred`, `SimpleFallbackAllowed`, `AssetProfileKey`, and `RenderProfileKey` are deterministic read-only policy helpers.
+- `SetShadows`, `SetShadowCaster`, `SetShadowArea`, `SetShadowBias`, `ShadowsRequested`, `ShadowsEffective`, and `ShadowResolution` control the one-caster shadow profile while the scene is closed.
+- `SetHdr`, `SetExposure`, `SetBloom`, `SetPostProcessing`, their requested/effective queries, `EffectiveSampleCount`, and `SceneFormat` control or inspect post-processing while preserving the direct-LDR fallback.
+- `FeatureAvailable` and `RefreshRenderCapabilities` expose actual renderer results. `FallbackFlags` maps every independent Renderer3D fallback to the public `SCENE_FALLBACK_FLAG_*` bits.
 - `UseLighting`, `CurrentLightingMatches`, and `ApplyLighting` select exact built-in names: `CharacterStudio`, `Daylight`, `Dungeon`, `Moonlight`, or `EmberObservatory`.
 - `UseCustomLighting` preserves advanced lights configured directly through `Graphics3D`.
 - `Begin`, `EndScene`, and `IsOpen` reject nested/unmatched frames and leave Renderer2D available after the 3D pass.
@@ -186,6 +198,7 @@ Loading and lifecycle:
 Transforms and animation:
 
 - `Place`, `Rotate`, `SetScale`, `SetVisible`, and yaw-only `LookAt` update every model part transactionally. Positions are bounded to -1,000,000 through 1,000,000, rotation input to the same safe integer range and normalized to 0-359 degrees, and uniform scale to 1-1,000 percent.
+- `SetShadows(ByRef Actor, CastsShadow, ReceivesShadow)`, `CastsShadow`, and `ReceivesShadow` update or inspect every part transactionally. Partial renderer refusal restores all accepted parts or quarantines the actor if rollback cannot be proven.
 - `PlayAnimation`, `PlayMode`, `CrossFade`, `StopAnimation`, `Update`, `IsPlaying`, `AnimationComplete`, and `CurrentClipNameMatches` use exact case-sensitive clip names.
 - `SetRootMotion` accepts `ROOT_MOTION_IGNORE` or `ROOT_MOTION_APPLY`. Apply mode drains the combined low-level model-space delta once per update, rotates translation into world space using the actor's pre-update yaw, then applies root yaw. Position/yaw subunits remain in thousandths.
 - `LastRootDelta`, `PositionX`, `PositionY`, `PositionZ`, and `RotationY` expose deterministic actor motion diagnostics.
@@ -203,9 +216,9 @@ Events, sockets, drawing, and diagnostics:
 
 ## Renderer contract
 
-Windows uses D3D11 indexed triangle lists, generated normals, model/view/perspective matrices, a resize-aware D24S8 depth buffer, and hardware-selected 4x/2x/1x multisample anti-aliasing before the existing Direct2D HUD pass. Web uses an antialiased offscreen WebGL2 canvas with the same indexed mesh and depth contract, then composites it into the Canvas 2D back buffer before ordinary 2D drawing.
+Windows direct LDR uses D3D11 indexed triangle lists and a resize-aware D24S8 target. M5 HDR uses `R16G16B16A16_FLOAT`, hardware-selected 4x/2x/1x MSAA plus resolve, an optional D32 shadow map, ACES-fitted tone mapping, and bounded bloom before the existing Direct2D HUD pass. Web checks `EXT_color_buffer_float` and framebuffer completeness before using `RGBA16F`; it stays single-sample and records an MSAA fallback. Both backends finish all 3D post work before ordinary Renderer2D drawing and preserve the exact direct-LDR path when M5 is disabled or unavailable.
 
-Both backends bound live data to 128 meshes, 512 objects, 64 models, 128 textures, 128 materials, 64 legacy skeletons, 128 legacy clips, and 128 total animators, and reject stale or deleted handles. Mesh destruction is rejected while a live object still references that mesh. Meshes support at most 65,535 vertices and 196,608 indices. One SM3D v2 model may contain up to 16 part meshes, 64 imported materials, 128 metadata texture references, 256 animation nodes, 128 production bones, 64 imported clips, 64 events per clip, and 64 sockets; its complete file remains at most 16 MiB, and its deduplicated owned textures/materials must fit the global pools.
+Both backends bound live data to 128 meshes, 512 objects, 64 models, 128 textures, 128 materials, 64 legacy skeletons, 128 legacy clips, and 128 total animators, and reject stale or deleted handles. Each frame additionally has 512 fixed submission slots, one shadow target, one HDR scene target, and at most two bloom targets. Mesh destruction is rejected while a live object still references that mesh. Meshes support at most 65,535 vertices and 196,608 indices. One SM3D v2 model may contain up to 16 part meshes, 64 imported materials, 128 metadata texture references, 256 animation nodes, 128 production bones, 64 imported clips, 64 events per clip, and 64 sockets; its complete file remains at most 16 MiB, and its deduplicated owned textures/materials must fit the global pools.
 
 The supported PBR production transform profile uses positive, nonsingular object scale. A singular or mirrored PBR object draw is rejected before submission with error 46, leaving draw/triangle counters unchanged; the simple path retains its existing behavior. Two-key clips may use nonuniform bone scale on simple materials. A PBR draw using a clip with any nonuniform scale key is rejected with error 45; uniform animation scale remains supported.
 

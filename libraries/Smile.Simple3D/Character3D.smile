@@ -52,6 +52,7 @@ Public Const CHARACTER_ERROR_PARTIAL_TRANSFORM = 13
 Public Const CHARACTER_ERROR_PENDING_RELEASE = 14
 Public Const CHARACTER_ERROR_INVALID_PART = 15
 Public Const CHARACTER_ERROR_BOUNDS = 16
+Public Const CHARACTER_ERROR_PARTIAL_SHADOW = 17
 
 Private Const HANDLE_FACTOR = 100
 Private Const MAX_GENERATION = 90000000
@@ -86,6 +87,8 @@ Private Dim ActorRotationY1000[32] As Number
 Private Dim ActorRotationZ1000[32] As Number
 Private Dim ActorScalePercent[32] As Number
 Private Dim ActorVisible[32] As Boolean
+Private Dim ActorCastsShadow[32] As Boolean
+Private Dim ActorReceivesShadow[32] As Boolean
 Private Dim ActorRootMode[32] As Number
 Private Dim ActorLastRootDelta[32] As Core.RootMotionDelta3D
 Private Dim ActorErrorValues[32] As Number
@@ -264,6 +267,8 @@ Private Sub ClearActorStorage(Slot As Number)
     ActorRotationZ1000[Slot] = 0
     ActorScalePercent[Slot] = 0
     ActorVisible[Slot] = False
+    ActorCastsShadow[Slot] = False
+    ActorReceivesShadow[Slot] = False
     ActorRootMode[Slot] = ROOT_MOTION_IGNORE
     ActorLastRootDelta[Slot] = EmptyDelta
 
@@ -991,6 +996,77 @@ Private Function ApplyTransformTransaction(
 
 End Function
 
+Private Function ApplyShadowSnapshot(
+    Slot As Number,
+    CastsShadow As Boolean,
+    ReceivesShadow As Boolean
+) As Boolean
+
+    Dim PartIndex As Number
+
+    For PartIndex = 0 To ActorPartCounts[Slot] - 1
+
+        If Not Graphics3D.SetObjectShadowsChecked3D(
+            ActorParts[Slot, PartIndex],
+            CastsShadow,
+            ReceivesShadow
+        ) Then
+            Return False
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Private Function ApplyShadowTransaction(
+    Slot As Number,
+    CastsShadow As Boolean,
+    ReceivesShadow As Boolean
+) As Boolean
+
+    Dim Applied As Boolean
+    Dim PrimaryRendererError As Number
+    Dim Restored As Boolean
+
+    Applied = ApplyShadowSnapshot(Slot, CastsShadow, ReceivesShadow)
+
+    If Not Applied Then
+
+        PrimaryRendererError = Graphics3D.LastError()
+        Restored = ApplyShadowSnapshot(
+            Slot,
+            ActorCastsShadow[Slot],
+            ActorReceivesShadow[Slot]
+        )
+
+        If Not Restored Then
+            Call RecordCleanupFailure(Graphics3D.LastError())
+            Call QuarantineActor(
+                Slot,
+                CHARACTER_ERROR_PARTIAL_SHADOW,
+                PrimaryRendererError,
+                True
+            )
+        Else
+
+            Call SetActorFailure(Slot, CHARACTER_ERROR_PARTIAL_SHADOW, PrimaryRendererError)
+        End If
+
+        Return False
+
+    End If
+
+    ActorCastsShadow[Slot] = CastsShadow
+    ActorReceivesShadow[Slot] = ReceivesShadow
+
+    Call ClearActorError(Slot)
+
+    Return True
+
+End Function
+
 ''' Loads or shares one animated model using the current Scene3D asset profile.
 Public Function LoadActor(Path As Text) As Actor
 
@@ -1188,6 +1264,8 @@ Public Function LoadWithPolicy(Path As Text, Policy As Number) As Actor
     ActorAnimators[Slot] = Animator
     ActorScalePercent[Slot] = 100
     ActorVisible[Slot] = True
+    ActorCastsShadow[Slot] = True
+    ActorReceivesShadow[Slot] = True
     ActorRootMode[Slot] = ROOT_MOTION_IGNORE
     ActorErrorValues[Slot] = CHARACTER_ERROR_NONE
     ActorRendererErrorValues[Slot] = 0
@@ -1427,6 +1505,62 @@ Public Function SetVisible(ByRef Value As Actor, Visible As Boolean) As Boolean
     )
 
     Return ReturnValue
+
+End Function
+
+''' Applies cast/receive shadow participation to every owned actor part transactionally.
+Public Function SetShadows(
+    ByRef Value As Actor,
+    CastsShadow As Boolean,
+    ReceivesShadow As Boolean
+) As Boolean
+
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    Result = ApplyShadowTransaction(Slot, CastsShadow, ReceivesShadow)
+
+    Return Result
+
+End Function
+
+Public Function CastsShadow(Value As Actor) As Boolean
+
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    Result = ActorCastsShadow[Slot]
+
+    Return Result
+
+End Function
+
+Public Function ReceivesShadow(Value As Actor) As Boolean
+
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    Result = ActorReceivesShadow[Slot]
+
+    Return Result
 
 End Function
 

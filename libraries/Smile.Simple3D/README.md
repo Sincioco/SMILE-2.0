@@ -4,8 +4,8 @@
 
 - `Graphics3D` and `Math3D` use the true indexed-triangle `Renderer3D` on Windows DirectX and WebGL2.
 - `Character3D` shares animated SM3D character assets while giving each actor independent playback, transforms, events, sockets, and root motion.
-- `Scene3D` supplies deterministic quality profiles, named lights, and balanced begin/end ownership over `Graphics3D`.
-- Windows Renderer3D automatically prefers 4x MSAA and safely falls back to 2x or 1x; WebGL2 requests browser-provided anti-aliasing.
+- `Scene3D` supplies deterministic asset/render quality profiles, named lights, one selected shadow caster, HDR tone mapping, bloom, and balanced begin/end ownership over `Graphics3D`.
+- Windows HDR Renderer3D prefers 4x MSAA and safely falls back to 2x or 1x; WebGL2 validates float-color targets and uses its documented single-sample fallback.
 - `Renderer`, `Primitives`, `Mesh`, and `Interaction` preserve the original bounded wireframe lessons over Renderer2D, including GDI support.
 
 Reference the source library from a game project:
@@ -82,3 +82,5 @@ Show Screen
 The keyword-shaped handoff names `Load`, `Play`, `Stop`, and `End` are reserved by the current SMILE grammar. The repository-conforming M4 names are `LoadActor`, `PlayAnimation`, `StopAnimation`, and `EndScene`.
 
 Character3D transform changes are transactional across every model part. World position is bounded to +/-1,000,000, rotation input is bounded and normalized to 0-359 degrees, and scale is 1-1,000 percent. Advanced part/model/animator handles are borrowed read-only values; destroying them deliberately is treated as external tampering and quarantines only the affected actor or asset.
+
+Low quality keeps the exact direct-LDR renderer and disables M5 shadow/bloom work. Medium enables a 1024 shadow, HDR tone mapping, and quarter-resolution bloom. High enables a 2048 shadow and half-resolution two-cycle bloom. `Scene3D.FallbackFlags()` reports independent effective downgrades, while `Character3D.SetShadows` applies cast/receive policy to every actor part transactionally. See [Renderer3DPostProcessingLab](../../examples/Renderer3DPostProcessingLab/README.md) for the native/Web controls and live M5 diagnostics.
