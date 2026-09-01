@@ -1,0 +1,18 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Character3DViewer.smile</StartupFile>
+    <OutputName>Character3DViewer</OutputName>
+    <ApplicationId>smile.tools.character3d-viewer</ApplicationId>
+    <GraphicsBackend>DirectX</GraphicsBackend>
+    <VSync>true</VSync>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Character3DViewer.smile" StartupOnly="true" />
+    <Asset Include="Assets\Generation2\Arin\ArinPrototype.sm3d" />
+    <Asset Include="Assets\Generation2\Arin\Textures\Arin-base-color.png" />
+    <Asset Include="Assets\Generation2\Arin\Textures\Arin-normal.png" />
+    <Asset Include="Assets\Generation2\Arin\Textures\Arin-orm.png" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

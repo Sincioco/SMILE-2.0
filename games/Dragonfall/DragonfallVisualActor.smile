@@ -63,6 +63,7 @@ Public Type CreateOptions
     CharacterPath As Text
     CharacterLoadPolicy As Number
     TechnicalFixture As Boolean
+    PrototypeAsset As Boolean
     ClassicObject As Core.Object3D
     OwnsClassic As Boolean
     ClassicWidth As Number
@@ -88,6 +89,8 @@ Private Dim Fallbacks[MAX_VISUAL_ACTORS] As Number
 Private Dim PrimaryErrors[MAX_VISUAL_ACTORS] As Number
 Private Dim TechnicalFixtures[MAX_VISUAL_ACTORS] As Boolean
 Private Dim TechnicalClipFallbacks[MAX_VISUAL_ACTORS] As Boolean
+Private Dim PrototypeAssets[MAX_VISUAL_ACTORS] As Boolean
+Private Dim PrototypeClipFallbacks[MAX_VISUAL_ACTORS] As Boolean
 Private Dim OwnsClassicObjects[MAX_VISUAL_ACTORS] As Boolean
 Private Dim ClassicObjects[MAX_VISUAL_ACTORS] As Core.Object3D
 Private Dim CharacterActors[MAX_VISUAL_ACTORS] As Character3D.Actor
@@ -208,6 +211,8 @@ Private Function PublishClassic(
     PrimaryErrors[Slot] = PrimaryError
     TechnicalFixtures[Slot] = False
     TechnicalClipFallbacks[Slot] = False
+    PrototypeAssets[Slot] = False
+    PrototypeClipFallbacks[Slot] = False
     OwnsClassicObjects[Slot] = Options.OwnsClassic
     ClassicObjects[Slot] = Options.ClassicObject
     ClassicWidths[Slot] = Max(1, Options.ClassicWidth)
@@ -239,6 +244,8 @@ Private Function PublishCharacter(
     PrimaryErrors[Slot] = Character3D.CHARACTER_ERROR_NONE
     TechnicalFixtures[Slot] = Options.TechnicalFixture
     TechnicalClipFallbacks[Slot] = False
+    PrototypeAssets[Slot] = Options.PrototypeAsset
+    PrototypeClipFallbacks[Slot] = False
     OwnsClassicObjects[Slot] = False
     CharacterActors[Slot] = Candidate
     CurrentStates[Slot] = STATE_READY
@@ -355,6 +362,8 @@ Public Sub Destroy(ByRef Value As Actor)
     PrimaryErrors[Slot] = Character3D.CHARACTER_ERROR_NONE
     TechnicalFixtures[Slot] = False
     TechnicalClipFallbacks[Slot] = False
+    PrototypeAssets[Slot] = False
+    PrototypeClipFallbacks[Slot] = False
     OwnsClassicObjects[Slot] = False
     ClassicObjects[Slot].Handle = 0
     CharacterActors[Slot].Handle = 0
@@ -569,6 +578,20 @@ Private Function FixtureClip(State As Number) As Text
 
 End Function
 
+Private Function PrototypeClip(State As Number) As Text
+
+    Dim Result As Text
+
+    If State = STATE_APPROACH Then
+        Result = "preset:biped:run"
+    Else
+        Result = "preset:biped:idle"
+    End If
+
+    Return Result
+
+End Function
+
 ''' Maps Dragonfall presentation state to a clip without affecting battle timing.
 Public Function PlayState(
     ByRef Value As Actor,
@@ -618,6 +641,7 @@ Public Function PlayState(
     End If
 
     TechnicalClipFallbacks[Slot] = False
+    PrototypeClipFallbacks[Slot] = False
 
     If Not Result And TechnicalFixtures[Slot] Then
 
@@ -630,6 +654,20 @@ Public Function PlayState(
         End If
 
         TechnicalClipFallbacks[Slot] = Result
+
+    End If
+
+    If Not Result And PrototypeAssets[Slot] Then
+
+        ClipName = PrototypeClip(State)
+
+        If FadeMilliseconds > 0 Then
+            Result = Character3D.CrossFade(CharacterActors[Slot], ClipName, FadeMilliseconds, Mode)
+        Else
+            Result = Character3D.PlayMode(CharacterActors[Slot], ClipName, Mode, 100)
+        End If
+
+        PrototypeClipFallbacks[Slot] = Result
 
     End If
 
@@ -811,7 +849,9 @@ Public Function TakeEvent(ByRef Value As Actor, EventName As Text) As Presentati
         Result.Anchor = ANCHOR_SHIELD_CENTER
     Else If EventName = "SwordTrailOn" Or EventName = "AttackStart" Then
         Result.Anchor = ANCHOR_SWORD_BASE
-    Else If EventName = "Footstep" Then
+    Else If (EventName = "Footstep" Or
+        EventName = "FootstepLeft" Or
+        EventName = "FootstepRight") Then
         Result.Anchor = ANCHOR_ROOT
     End If
 
@@ -1027,6 +1067,24 @@ Public Function UsedTechnicalClipFallback(Value As Actor) As Boolean
     End If
 
     ReturnValue = TechnicalClipFallbacks[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function UsedPrototypeClipFallback(Value As Actor) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    ReturnValue = PrototypeClipFallbacks[Slot]
 
     Return ReturnValue
 

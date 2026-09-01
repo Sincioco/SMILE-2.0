@@ -1,0 +1,143 @@
+Option Explicit
+
+Import Dragonfall.VisualActor As VisualActor
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Scene3D As Scene3D
+
+Dim Actor As VisualActor.Actor
+Dim Camera As Core.Camera3D
+Dim ClassicFallback As Core.Object3D
+Dim Floor As Core.Object3D
+Dim Options As VisualActor.CreateOptions
+Dim Ready As Boolean
+Dim Running As Boolean
+Dim Walking As Boolean
+Dim CurrentTime As Number
+Dim PreviousTime As Number
+Dim FrameMilliseconds As Number
+Dim Key As Number
+
+Game Window "Dragonfall M7B Arin Prototype Lab" Size 960 By 540
+
+Call Graphics3D.ResetRenderer3D()
+Call LoadPrototype()
+
+Running = Ready
+PreviousTime = Timer()
+
+Do
+
+    Get Key Key
+
+    If Key = KEY_ESCAPE Then
+
+        Running = False
+
+    Else If Key = KEY_SPACE Then
+
+        Walking = Not Walking
+
+        If Walking Then
+            Ready = VisualActor.PlayState(Actor, VisualActor.STATE_APPROACH, 180)
+        Else
+            Ready = VisualActor.PlayState(Actor, VisualActor.STATE_READY, 180)
+        End If
+
+    End If
+
+    CurrentTime = Timer()
+    FrameMilliseconds = Min(40, Max(0, CurrentTime - PreviousTime))
+    PreviousTime = CurrentTime
+    Ready = VisualActor.Update(Actor, FrameMilliseconds) And Ready
+    Camera.Position.X = 0
+    Camera.Position.Y = 6
+    Camera.Position.Z = -12
+    Camera.Target.X = 0
+    Camera.Target.Y = 6
+    Camera.Target.Z = 5
+    Ready = Scene3D.Begin(Camera, 3, 6, 16) And Ready
+
+    If Ready Then
+
+        Ready = Graphics3D.DrawObject3D(Floor)
+        Ready = VisualActor.Draw(Actor) And Ready
+        Ready = Scene3D.EndScene() And Ready
+
+    End If
+
+    Call DrawOverlay()
+
+    Show Screen
+
+    Running = Running And Ready And Not Game_Closed()
+
+Loop Until Not Running
+
+Call DestroyPrototype()
+
+Sub LoadPrototype()
+
+    Camera = Graphics3D.DefaultCamera()
+    Floor = Graphics3D.CreatePlane3D(42, 25)
+    ClassicFallback = Graphics3D.CreateCube3D(80)
+
+    Call Graphics3D.SetObjectPosition(Floor, 0, 0, 5)
+    Call Graphics3D.SetObjectColor(Floor, 24, 31, 48)
+    Call Graphics3D.SetObjectColor(ClassicFallback, 232, 190, 68)
+
+    Ready = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
+    Ready = Scene3D.UseLighting("CharacterStudio") And Ready
+    Options.Mode = VisualActor.MODE_AUTO
+    Options.CharacterPath = "Assets\Generation2\Arin\ArinPrototype.sm3d"
+    Options.CharacterLoadPolicy = Character3D.CHARACTER_LOAD_REQUIRE_PBR
+    Options.PrototypeAsset = True
+    Options.ClassicObject = ClassicFallback
+    Options.OwnsClassic = False
+    Options.ClassicWidth = 80
+    Options.ClassicHeight = 140
+    Options.ClassicDepth = 80
+    Actor = VisualActor.Create(Options)
+    Ready = VisualActor.IsValid(Actor) And Ready
+    Ready = VisualActor.Place(Actor, 0, 0, 5) And Ready
+    Ready = VisualActor.SetScale(Actor, 1000) And Ready
+    Ready = VisualActor.Rotate(Actor, 0, 0, 0) And Ready
+    Ready = VisualActor.SetShadows(Actor, True, True) And Ready
+    Ready = VisualActor.PlayState(Actor, VisualActor.STATE_READY, 0) And Ready
+
+End Sub
+
+Sub DrawOverlay()
+
+    Fill Rectangle 0, 0, 960, 78, Rgb(3, 7, 18)
+    Draw Text "DRAGONFALL M7B  •  ARIN PROTOTYPE" At 20, 12 Size 22 Color CYAN
+    Draw Text "Approved low-end baseline • Skinned PBR • Original GLB preserved" At 20, 45 Size 14 Color LIGHT_GRAY
+    Draw Text "Space: Toggle Idle / Run   Esc: Exit" At 20, 510 Size 13 Color WHITE
+    Fill Rectangle 704, 92, 236, 194, Rgb(4, 9, 24)
+    Draw Text "LIVE CHARACTER" At 722, 108 Size 16 Color WHITE
+    Draw Text "Visual Kind" At 722, 140 Size 13 Color LIGHT_GRAY
+    Draw Number VisualActor.Kind(Actor) At 894, 140 Size 13 Color CYAN
+    Draw Text "Character Actors" At 722, 166 Size 13 Color LIGHT_GRAY
+    Draw Number Character3D.LiveActorCount() At 894, 166 Size 13 Color GREEN
+    Draw Text "Source Triangles" At 722, 192 Size 13 Color LIGHT_GRAY
+    Draw Number 9974 At 894, 192 Size 13 Color WHITE
+    Draw Text "Draws / Triangles" At 722, 218 Size 13 Color LIGHT_GRAY
+    Draw Number Graphics3D.DrawCallCount3D() At 860, 218 Size 13 Color WHITE
+    Draw Number Graphics3D.SubmittedTriangleCount3D() At 906, 218 Size 13 Color WHITE
+    Draw Text "Textures" At 722, 244 Size 13 Color LIGHT_GRAY
+    Draw Text "3 x 1K PBR" At 842, 244 Size 13 Color YELLOW
+    Draw Text "Prototype clips: Idle • Walk • Run" At 722, 270 Size 11 Color ORANGE
+
+End Sub
+
+Sub DestroyPrototype()
+
+    Call VisualActor.Destroy(Actor)
+    Call Character3D.Shutdown()
+    Call Graphics3D.DestroyObject3D(ClassicFallback)
+    Call Graphics3D.DestroyObject3D(Floor)
+    Call VisualActor.Shutdown()
+    Call Graphics3D.ResetRenderer3D()
+
+End Sub

@@ -1,0 +1,17 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>DragonfallArinPrototypeTests.smile</StartupFile>
+    <OutputName>DragonfallArinPrototypeTests</OutputName>
+    <ApplicationId>smile.tests.dragonfall.arin-prototype</ApplicationId>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="DragonfallArinPrototypeTests.smile" StartupOnly="true" />
+    <SmileSource Include="DragonfallVisualActor.smile" />
+    <Asset Include="Assets\Generation2\Arin\ArinPrototype.sm3d" />
+    <Asset Include="Assets\Generation2\Arin\Textures\Arin-base-color.png" />
+    <Asset Include="Assets\Generation2\Arin\Textures\Arin-normal.png" />
+    <Asset Include="Assets\Generation2\Arin\Textures\Arin-orm.png" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

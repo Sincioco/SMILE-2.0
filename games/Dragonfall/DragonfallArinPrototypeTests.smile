@@ -1,0 +1,135 @@
+Option Explicit
+
+Import Dragonfall.VisualActor As VisualActor
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Scene3D As Scene3D
+
+Dim Actor As VisualActor.Actor
+Dim Camera As Core.Camera3D
+Dim ClassicFallback As Core.Object3D
+Dim EventValue As VisualActor.PresentationEvent
+Dim Floor As Core.Object3D
+Dim Options As VisualActor.CreateOptions
+Dim Bounds As Character3D.Bounds3D
+Dim PbrAvailable As Boolean
+Dim Ready As Boolean
+Dim Failures As Number
+Dim CheckIndex As Number
+Dim State As Number
+
+Game Window "Dragonfall M7B Arin Prototype Tests" Size 320 By 240
+
+Call Graphics3D.ResetRenderer3D()
+
+Ready = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
+Ready = Scene3D.UseLighting("EmberObservatory") And Ready
+PbrAvailable = Scene3D.PbrAvailable()
+Camera = Graphics3D.DefaultCamera()
+Floor = Graphics3D.CreatePlane3D(420, 250)
+ClassicFallback = Graphics3D.CreateCube3D(80)
+
+Call Graphics3D.SetObjectPosition(Floor, 0, -2, 45)
+
+Options.Mode = VisualActor.MODE_AUTO
+Options.CharacterPath = "Assets\Generation2\Arin\ArinPrototype.sm3d"
+Options.CharacterLoadPolicy = Character3D.CHARACTER_LOAD_REQUIRE_PBR
+Options.PrototypeAsset = True
+Options.ClassicObject = ClassicFallback
+Options.OwnsClassic = False
+Options.ClassicWidth = 80
+Options.ClassicHeight = 140
+Options.ClassicDepth = 80
+Actor = VisualActor.Create(Options)
+
+Call Check(Ready)
+Call Check(VisualActor.IsValid(Actor))
+
+If PbrAvailable Then
+
+    Call Check(VisualActor.Kind(Actor) = VisualActor.KIND_CHARACTER)
+    Call Check(Character3D.LiveActorCount() = 1)
+    Call Check(VisualActor.Place(Actor, 0, 0, 45))
+    Call Check(VisualActor.SetScale(Actor, 1000))
+    Call Check(VisualActor.Rotate(Actor, 0, 180, 0))
+    Call Check(VisualActor.SetShadows(Actor, True, True))
+
+    For State = VisualActor.STATE_READY To VisualActor.STATE_VICTORY
+        Call Check(VisualActor.PlayState(Actor, State, 0))
+    End For
+
+    Call Check(VisualActor.UsedPrototypeClipFallback(Actor))
+    Call Check(VisualActor.SocketName(Actor, VisualActor.ANCHOR_SWORD_BASE) = "SwordBase")
+    Call Check(VisualActor.SocketName(Actor, VisualActor.ANCHOR_SWORD_TIP) = "SwordTip")
+    Call Check(VisualActor.SocketName(Actor, VisualActor.ANCHOR_SHIELD_CENTER) = "ShieldCenter")
+    Call Check(VisualActor.SocketName(Actor, VisualActor.ANCHOR_CHEST) = "Chest")
+    Call Check(VisualActor.SocketName(Actor, VisualActor.ANCHOR_HEAD) = "Head")
+
+    Bounds = VisualActor.WorldBounds(Actor)
+
+    Call Check(Bounds.Valid)
+    Call Check(Bounds.Size.Y > 9)
+    Call Check(VisualActor.PlayState(Actor, VisualActor.STATE_APPROACH, 0))
+    Call Check(VisualActor.Update(Actor, 300))
+
+    EventValue = VisualActor.TakeEvent(Actor, "FootstepLeft")
+
+    Call Check(EventValue.Available)
+    Call Check(EventValue.Anchor = VisualActor.ANCHOR_ROOT)
+
+Else
+
+    Call Check(VisualActor.Kind(Actor) = VisualActor.KIND_CLASSIC)
+    Call Check(VisualActor.Fallback(Actor) = VisualActor.FALLBACK_CLASSIC)
+    Call Check(VisualActor.PrimaryCharacterError(Actor) = Character3D.CHARACTER_ERROR_PBR_PREPARATION)
+
+End If
+
+Ready = Scene3D.Begin(Camera, 3, 6, 16)
+
+If Ready Then
+
+    Ready = Graphics3D.DrawObject3D(Floor)
+    Ready = VisualActor.Draw(Actor) And Ready
+    Ready = Scene3D.EndScene() And Ready
+
+End If
+
+Call Check(Ready)
+Call Check(Graphics3D.DrawCallCount3D() >= 2)
+Call Check(Graphics3D.SubmittedTriangleCount3D() >= 12)
+
+Call VisualActor.Destroy(Actor)
+Call Character3D.Shutdown()
+Call Graphics3D.DestroyObject3D(ClassicFallback)
+Call Graphics3D.DestroyObject3D(Floor)
+Call VisualActor.Shutdown()
+
+Call Check(VisualActor.LiveActorCount() = 0)
+Call Check(Character3D.LiveActorCount() = 0)
+Call Check(Character3D.CachedAssetCount() = 0)
+Call Check(Graphics3D.LiveModelCount3D() = 0)
+Call Check(Graphics3D.LiveAnimatorCount3D() = 0)
+Call Check(Graphics3D.LiveObjectCount3D() = 0)
+Call Check(Graphics3D.LiveMeshCount3D() = 0)
+Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+Call Check(Graphics3D.LiveTextureCount3D() = 0)
+
+If Failures = 0 Then
+    Print "Dragonfall M7B Arin prototype tests passed."
+Else
+    Print "Dragonfall M7B Arin prototype tests failed: "; Failures
+End If
+
+Sub Check(Condition As Boolean)
+
+    CheckIndex = CheckIndex + 1
+
+    If Not Condition Then
+        Failures = Failures + 1
+
+        Print "Failed check "; CheckIndex
+    End If
+
+End Sub

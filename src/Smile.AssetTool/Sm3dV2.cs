@@ -14,8 +14,8 @@ internal static partial class Sm3dV2
     private const int MaximumBufferBytes = 32 * 1024 * 1024;
     private const int MaximumAggregateBufferBytes = 64 * 1024 * 1024;
     private const int MaximumBuffers = 16;
-    private const int MaximumBufferViews = 512;
-    private const int MaximumAccessors = 512;
+    private const int MaximumBufferViews = 1024;
+    private const int MaximumAccessors = 1024;
     private const int MaximumScenes = 16;
     private const int MaximumNodes = 4096;
     private const int MaximumMeshes = 256;
@@ -336,6 +336,7 @@ internal static partial class Sm3dV2
 
         foreach (var nodeIndex in activeNodes.EnumerateArray()) TraverseNode(nodeIndex.GetInt32(), Matrix4x4.Identity);
 
+        if (parts.Count > MaximumParts) parts = MergeCompatibleParts(parts);
         Require(parts.Count is >= 1 and <= MaximumParts, $"SMA1131: models require 1 to {MaximumParts} parts.");
         Require(parts.Sum(part => part.Vertices.Length / 12) <= MaximumVertices,
             $"SMA1132: models support at most {MaximumVertices} total vertices.");
@@ -488,7 +489,6 @@ internal static partial class Sm3dV2
                 material = checked((uint)implicitMaterial);
             }
             Require(material < materials.Count, "SMA1129: material reference is outside the material table.");
-            Require(parts.Count < MaximumParts, $"SMA1131: models require 1 to {MaximumParts} parts.");
             Require(parts.Sum(part => part.Vertices.Length / 12) <= MaximumVertices - vertexCount,
                 $"SMA1132: models support at most {MaximumVertices} total vertices.");
             Require(parts.Sum(part => part.Indices.Length) <= MaximumIndices - indices.Length,
@@ -508,6 +508,71 @@ internal static partial class Sm3dV2
             });
             primitiveIndex++;
         }
+    }
+
+    private static List<Part> MergeCompatibleParts(IReadOnlyList<Part> source)
+    {
+        var result = new List<Part>();
+        foreach (var part in source)
+        {
+            var partVertices = part.Vertices.Length / 12;
+            var destination = result.FindIndex(candidate =>
+                candidate.Material == part.Material && candidate.Skin == part.Skin &&
+                candidate.Vertices.Length / 12 <= MaximumVerticesPerPart - partVertices &&
+                candidate.Indices.Length <= MaximumIndicesPerPart - part.Indices.Length);
+            if (destination < 0)
+            {
+                result.Add(part);
+                continue;
+            }
+
+            result[destination] = MergeParts(result[destination], part);
+        }
+        return result;
+    }
+
+    private static Part MergeParts(Part first, Part second)
+    {
+        var firstVertexCount = first.Vertices.Length / 12;
+        var vertices = new float[first.Vertices.Length + second.Vertices.Length];
+        first.Vertices.CopyTo(vertices, 0);
+        second.Vertices.CopyTo(vertices, first.Vertices.Length);
+
+        var indices = new uint[first.Indices.Length + second.Indices.Length];
+        first.Indices.CopyTo(indices, 0);
+        for (var index = 0; index < second.Indices.Length; index++)
+            indices[first.Indices.Length + index] = checked(second.Indices[index] + (uint)firstVertexCount);
+
+        ushort[]? joints = null;
+        ushort[]? weights = null;
+        if (first.Skin >= 0)
+        {
+            Require(first.Joints != null && second.Joints != null && first.Weights != null && second.Weights != null,
+                "SMA1302: merged skinned parts require complete joint and weight data.");
+            var firstJoints = first.Joints!;
+            var secondJoints = second.Joints!;
+            var firstWeights = first.Weights!;
+            var secondWeights = second.Weights!;
+            joints = new ushort[firstJoints.Length + secondJoints.Length];
+            weights = new ushort[firstWeights.Length + secondWeights.Length];
+            firstJoints.CopyTo(joints, 0);
+            secondJoints.CopyTo(joints, firstJoints.Length);
+            firstWeights.CopyTo(weights, 0);
+            secondWeights.CopyTo(weights, firstWeights.Length);
+        }
+
+        return new Part
+        {
+            Name = first.Name.EndsWith(" [Merged]", StringComparison.Ordinal) ? first.Name : first.Name + " [Merged]",
+            Vertices = vertices,
+            Indices = indices,
+            Material = first.Material,
+            Minimum = Vector3.Min(first.Minimum, second.Minimum),
+            Maximum = Vector3.Max(first.Maximum, second.Maximum),
+            Skin = first.Skin,
+            Joints = joints,
+            Weights = weights
+        };
     }
 
     private static bool ValidateProfile(JsonElement root)

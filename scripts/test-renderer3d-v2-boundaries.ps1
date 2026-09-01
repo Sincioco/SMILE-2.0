@@ -14,6 +14,14 @@ function Invoke-ExpectedFailure([string]$Description, [string[]]$Arguments) {
     if ($LASTEXITCODE -eq 0) { throw "smileasset accepted $Description." }
 }
 
+function Invoke-ExpectedDiagnostic([string]$Description, [string]$Expected, [string[]]$Arguments) {
+    $output = (& $assetTool @Arguments 2>&1) -join "`n"
+    if ($LASTEXITCODE -eq 0) { throw "smileasset accepted $Description." }
+    if (-not $output.Contains($Expected, [System.StringComparison]::Ordinal)) {
+        throw "smileasset returned the wrong diagnostic for $Description.`n$output"
+    }
+}
+
 [System.IO.Directory]::CreateDirectory($temporaryRoot) | Out-Null
 $binaryPath = Join-Path $temporaryRoot 'BoundaryGeometry.bin'
 $binaryStream = [System.IO.File]::Create($binaryPath)
@@ -143,6 +151,32 @@ Invoke-ExpectedFailure '196,611 indices in one part' @(
 $m0 = Get-Content -LiteralPath (Join-Path $testSource 'M0Triangle.gltf') -Raw | ConvertFrom-Json
 $primitive = $m0.meshes[0].primitives[0]
 $m0.meshes[0].primitives = @(for ($index = 0; $index -lt 17; $index++) { $primitive })
+$compatiblePartsPath = Join-Path $temporaryRoot 'CompatibleParts.gltf'
+[System.IO.File]::WriteAllText(
+    $compatiblePartsPath,
+    ($m0 | ConvertTo-Json -Depth 20 -Compress),
+    [System.Text.UTF8Encoding]::new($false)
+)
+& $assetTool model $compatiblePartsPath --format-version 2 -o (Join-Path $temporaryRoot 'CompatibleParts.sm3d')
+if ($LASTEXITCODE -ne 0) { throw 'Compatible source-part coalescing failed.' }
+$compatibleInspection = (& $assetTool inspect (Join-Path $temporaryRoot 'CompatibleParts.sm3d')) -join "`n"
+if ($LASTEXITCODE -ne 0 -or $compatibleInspection -notmatch 'Parts: 1') {
+    throw 'Compatible source parts did not coalesce to one bounded runtime part.'
+}
+
+$m0 = Get-Content -LiteralPath (Join-Path $testSource 'M0Triangle.gltf') -Raw | ConvertFrom-Json
+$primitive = $m0.meshes[0].primitives[0]
+$m0.materials = @(for ($index = 0; $index -lt 17; $index++) {
+    [ordered]@{ name = "Part Material $index" }
+})
+$m0.meshes[0].primitives = @(for ($index = 0; $index -lt 17; $index++) {
+    [ordered]@{
+        attributes = $primitive.attributes
+        indices = $primitive.indices
+        material = $index
+        mode = 4
+    }
+})
 $partOverflowPath = Join-Path $temporaryRoot 'PartOverflow.gltf'
 [System.IO.File]::WriteAllText(
     $partOverflowPath,
@@ -181,6 +215,48 @@ $textureOverflowPath = Join-Path $temporaryRoot 'TextureOverflow.gltf'
 )
 Invoke-ExpectedFailure '129 texture references' @(
     'model', $textureOverflowPath, '--format-version', '2', '-o', (Join-Path $temporaryRoot 'invalid.sm3d')
+)
+
+$tableBoundary = Get-Content -LiteralPath (Join-Path $testSource 'M0Triangle.gltf') -Raw | ConvertFrom-Json
+$baseView = $tableBoundary.bufferViews[0]
+$baseAccessor = $tableBoundary.accessors[0]
+$tableBoundary.bufferViews = @($tableBoundary.bufferViews) + @(
+    for ($index = $tableBoundary.bufferViews.Count; $index -lt 1024; $index++) { $baseView }
+)
+$tableBoundary.accessors = @($tableBoundary.accessors) + @(
+    for ($index = $tableBoundary.accessors.Count; $index -lt 1024; $index++) { $baseAccessor }
+)
+$tableBoundaryPath = Join-Path $temporaryRoot 'TableBoundary.gltf'
+[System.IO.File]::WriteAllText(
+    $tableBoundaryPath,
+    ($tableBoundary | ConvertTo-Json -Depth 20 -Compress),
+    [System.Text.UTF8Encoding]::new($false)
+)
+& $assetTool model $tableBoundaryPath --format-version 2 -o (Join-Path $temporaryRoot 'TableBoundary.sm3d')
+if ($LASTEXITCODE -ne 0) { throw 'Exact 1,024 bufferView/accessor conversion failed.' }
+
+$bufferViewOverflow = Get-Content -LiteralPath $tableBoundaryPath -Raw | ConvertFrom-Json
+$bufferViewOverflow.bufferViews = @($bufferViewOverflow.bufferViews) + @($baseView)
+$bufferViewOverflowPath = Join-Path $temporaryRoot 'BufferViewOverflow.gltf'
+[System.IO.File]::WriteAllText(
+    $bufferViewOverflowPath,
+    ($bufferViewOverflow | ConvertTo-Json -Depth 20 -Compress),
+    [System.Text.UTF8Encoding]::new($false)
+)
+Invoke-ExpectedDiagnostic '1,025 bufferViews' 'SMA1140: bufferViews must be an array of at most 1024 entries.' @(
+    'model', $bufferViewOverflowPath, '--format-version', '2', '-o', (Join-Path $temporaryRoot 'invalid.sm3d')
+)
+
+$accessorOverflow = Get-Content -LiteralPath $tableBoundaryPath -Raw | ConvertFrom-Json
+$accessorOverflow.accessors = @($accessorOverflow.accessors) + @($baseAccessor)
+$accessorOverflowPath = Join-Path $temporaryRoot 'AccessorOverflow.gltf'
+[System.IO.File]::WriteAllText(
+    $accessorOverflowPath,
+    ($accessorOverflow | ConvertTo-Json -Depth 20 -Compress),
+    [System.Text.UTF8Encoding]::new($false)
+)
+Invoke-ExpectedDiagnostic '1,025 accessors' 'SMA1116: glTF requires 1 to 1024 accessors.' @(
+    'model', $accessorOverflowPath, '--format-version', '2', '-o', (Join-Path $temporaryRoot 'invalid.sm3d')
 )
 
 $oversizedPath = Join-Path $temporaryRoot 'Oversized.sm3d'

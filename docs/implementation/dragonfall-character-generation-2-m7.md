@@ -1,5 +1,7 @@
 # Dragonfall Character Generation 2 — M7 Asset Gate
 
+> Supersession note (2026-09-01): this report remains the historical record of the original missing-asset gate. Sin subsequently supplied and explicitly approved an optimized Tripo GLB as the early Arin prototype. `dragonfall-visual-adapter-m7a.md` records the adapter seam and `dragonfall-arin-prototype-m7b.md` records the loadable prototype and Character 3D Viewer. The prototype does not retroactively satisfy the final-production provenance, combat-clip, deformation-bone-target, or authored-socket gates described below.
+
 Milestone: M7 Dragonfall one-character vertical slice
 
 Status: **Blocked—missing** at the production-character asset gate on 2026-09-01 (Asia/Taipei).

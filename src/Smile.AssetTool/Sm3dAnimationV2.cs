@@ -585,8 +585,7 @@ internal static partial class Sm3dV2
     {
         Require(MathF.Abs(value.LengthSquared() - 1) <= BasisTolerance,
             $"SMA1414: {name} must be normalized.");
-        var canonical = CanonicalQuaternion(value, $"SMA1415: {name} is invalid.");
-        Require(value == canonical, $"SMA1416: {name} sign is not canonical.");
+        Require(CanonicalQuaternionSign(value), $"SMA1416: {name} sign is not canonical.");
         return value;
     }
 
@@ -1018,7 +1017,6 @@ internal static partial class Sm3dV2
                             sampled[sample * 4 + 2] = value.Z;
                             sampled[sample * 4 + 3] = value.W;
                         }
-                        StabilizeQuaternionSigns(sampled);
                         rotation = ElideConstant(sampled, 4);
                     }
                     else
@@ -1258,19 +1256,6 @@ internal static partial class Sm3dV2
         return constant ? values.AsSpan(0, components).ToArray() : values;
     }
 
-    private static void StabilizeQuaternionSigns(float[] values)
-    {
-        for (var sample = 1; sample < values.Length / 4; sample++)
-        {
-            var offset = sample * 4;
-            var previous = offset - 4;
-            var dot = values[offset] * values[previous] + values[offset + 1] * values[previous + 1] +
-                values[offset + 2] * values[previous + 2] + values[offset + 3] * values[previous + 3];
-            if (dot >= 0) continue;
-            for (var component = 0; component < 4; component++) values[offset + component] = -values[offset + component];
-        }
-    }
-
     private static List<AnimationSocket> ReadSockets(Descriptor descriptor, IReadOnlyList<AnimationNode> nodes)
     {
         var result = new List<AnimationSocket>();
@@ -1333,11 +1318,14 @@ internal static partial class Sm3dV2
         Require(float.IsFinite(value.X) && float.IsFinite(value.Y) && float.IsFinite(value.Z) &&
             float.IsFinite(value.W) && value.LengthSquared() > 1e-12f, error);
         value = Quaternion.Normalize(value);
-        if (value.W < 0 || (value.W == 0 && (value.Z < 0 || (value.Z == 0 &&
-            (value.Y < 0 || (value.Y == 0 && value.X < 0))))))
+        if (!CanonicalQuaternionSign(value))
             value = new Quaternion(-value.X, -value.Y, -value.Z, -value.W);
         return value;
     }
+
+    private static bool CanonicalQuaternionSign(Quaternion value) =>
+        value.W > 0 || (value.W == 0 && (value.Z > 0 || (value.Z == 0 &&
+            (value.Y > 0 || (value.Y == 0 && value.X >= 0)))));
 
     private static Quaternion ReadQuaternion(float[] values, int index) => new(values[index * 4],
         values[index * 4 + 1], values[index * 4 + 2], values[index * 4 + 3]);
