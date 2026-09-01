@@ -14,6 +14,7 @@ Public Const MAX_EMITTERS_PER_EFFECT = 8
 Public Const MAX_ACTIVE_EFFECTS = 64
 Public Const MAX_PARTICLES = 2048
 Public Const MAX_IMPULSES = 32
+Public Const MAX_TRANSIENT_REQUESTS = 32
 Public Const FIXED_STEP_MILLISECONDS = 10
 Public Const MAX_UPDATE_MILLISECONDS = 250
 Public Const MAX_CATCH_UP_STEPS = 25
@@ -107,6 +108,7 @@ Public Type AudioCueRequest3D
 End Type
 
 Private Dim Initialized As Boolean
+Private Dim RequestedQualityValue As Number
 Private Dim QualityValue As Number
 Private Dim ParticleCapacityValue As Number
 Private Dim AlphaBatch As Core.ParticleBatch3D
@@ -124,18 +126,22 @@ Private Dim ClampedUpdateCountValue As Number
 Private Dim LastCommittedAlphaCount As Number
 Private Dim LastCommittedAdditiveCount As Number
 Private Dim LastCommittedRibbonPoints As Number
-Private Dim LightRequestPending As Boolean
-Private Dim LightRequestX As Number
-Private Dim LightRequestY As Number
-Private Dim LightRequestZ As Number
-Private Dim LightRequestRed As Number
-Private Dim LightRequestGreen As Number
-Private Dim LightRequestBlue As Number
-Private Dim LightRequestIntensity As Number
-Private Dim LightRequestRadius As Number
-Private Dim AudioRequestPending As Boolean
-Private Dim AudioRequestCue As Number
-Private Dim AudioRequestSeed As Number
+Private Dim DroppedImpulseRequestCountValue As Number
+Private Dim AttachmentLossCountValue As Number
+Private Dim LightRequestHead As Number
+Private Dim LightRequestCount As Number
+Private Dim LightRequestX[32] As Number
+Private Dim LightRequestY[32] As Number
+Private Dim LightRequestZ[32] As Number
+Private Dim LightRequestRed[32] As Number
+Private Dim LightRequestGreen[32] As Number
+Private Dim LightRequestBlue[32] As Number
+Private Dim LightRequestIntensity[32] As Number
+Private Dim LightRequestRadius[32] As Number
+Private Dim AudioRequestHead As Number
+Private Dim AudioRequestCount As Number
+Private Dim AudioRequestCue[32] As Number
+Private Dim AudioRequestSeed[32] As Number
 
 Private Dim PresetCount As Number
 Private Dim PresetIds[64] As Number
@@ -372,8 +378,12 @@ Private Sub ClearState()
     LastCommittedAlphaCount = 0
     LastCommittedAdditiveCount = 0
     LastCommittedRibbonPoints = 0
-    LightRequestPending = False
-    AudioRequestPending = False
+    DroppedImpulseRequestCountValue = 0
+    AttachmentLossCountValue = 0
+    LightRequestHead = 0
+    LightRequestCount = 0
+    AudioRequestHead = 0
+    AudioRequestCount = 0
 
 End Sub
 
@@ -385,10 +395,22 @@ Public Function Initialize(
     Optional Quality As Number = Scene3D.QUALITY_AUTO
 ) As Boolean
 
+    Dim CandidateAdditiveBatch As Core.ParticleBatch3D
+    Dim CandidateAlphaBatch As Core.ParticleBatch3D
+    Dim CandidateParticleCapacity As Number
+    Dim CandidateRibbonBatch As Core.RibbonBatch3D
+    Dim RequestedQuality As Number
     Dim Result As Boolean
 
-    If Initialized Then
-        Call Shutdown()
+    RequestedQuality = Quality
+
+    If Graphics3D.FrameActive3D() Then
+
+        ErrorValue = EFFECTS_ERROR_RENDERER_RESOURCE
+        RendererErrorValue = 14
+
+        Return False
+
     End If
 
     If Quality = Scene3D.QUALITY_AUTO Then
@@ -396,11 +418,11 @@ Public Function Initialize(
     End If
 
     If Quality = Scene3D.QUALITY_LOW Then
-        ParticleCapacityValue = QUALITY_PARTICLES_LOW
+        CandidateParticleCapacity = QUALITY_PARTICLES_LOW
     Else If Quality = Scene3D.QUALITY_MEDIUM Then
-        ParticleCapacityValue = QUALITY_PARTICLES_MEDIUM
+        CandidateParticleCapacity = QUALITY_PARTICLES_MEDIUM
     Else If Quality = Scene3D.QUALITY_HIGH Then
-        ParticleCapacityValue = QUALITY_PARTICLES_HIGH
+        CandidateParticleCapacity = QUALITY_PARTICLES_HIGH
     Else
 
         ErrorValue = EFFECTS_ERROR_INVALID_QUALITY
@@ -408,32 +430,49 @@ Public Function Initialize(
         Return False
     End If
 
-    Call ClearState()
+    If Initialized Then
 
-    AlphaBatch = Graphics3D.CreateParticleBatch3D(
-        ParticleCapacityValue,
+        If (Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_RESOURCE_IN_FLIGHT, AlphaBatch.Handle) > 0 Or
+            Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_RESOURCE_IN_FLIGHT, AdditiveBatch.Handle) > 0 Or
+            Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_RESOURCE_IN_FLIGHT, RibbonBatch.Handle) > 0) Then
+
+            ErrorValue = EFFECTS_ERROR_RENDERER_RESOURCE
+            RendererErrorValue = 56
+
+            Return False
+
+        End If
+
+    End If
+
+    CandidateAlphaBatch = Graphics3D.CreateParticleBatch3D(
+        CandidateParticleCapacity,
         AlphaMaterial,
         Graphics3D.VFX_BILLBOARD_CAMERA,
         4,
         4
     )
-    AdditiveBatch = Graphics3D.CreateParticleBatch3D(
-        ParticleCapacityValue,
+    CandidateAdditiveBatch = Graphics3D.CreateParticleBatch3D(
+        CandidateParticleCapacity,
         AdditiveMaterial,
         Graphics3D.VFX_BILLBOARD_CAMERA,
         4,
         4
     )
-    RibbonBatch = Graphics3D.CreateRibbonBatch3D(256, RibbonMaterial)
-    Result = AlphaBatch.Handle <> 0 And AdditiveBatch.Handle <> 0 And RibbonBatch.Handle <> 0
+    CandidateRibbonBatch = Graphics3D.CreateRibbonBatch3D(256, RibbonMaterial)
+    Result = (
+        CandidateAlphaBatch.Handle <> 0 And
+        CandidateAdditiveBatch.Handle <> 0 And
+        CandidateRibbonBatch.Handle <> 0
+    )
 
     If Not Result Then
 
         RendererErrorValue = Graphics3D.LastError()
 
-        Call Graphics3D.DestroyParticleBatch3D(AlphaBatch)
-        Call Graphics3D.DestroyParticleBatch3D(AdditiveBatch)
-        Call Graphics3D.DestroyRibbonBatch3D(RibbonBatch)
+        Call Graphics3D.DestroyParticleBatch3D(CandidateAlphaBatch)
+        Call Graphics3D.DestroyParticleBatch3D(CandidateAdditiveBatch)
+        Call Graphics3D.DestroyRibbonBatch3D(CandidateRibbonBatch)
 
         ErrorValue = EFFECTS_ERROR_RENDERER_RESOURCE
 
@@ -441,7 +480,23 @@ Public Function Initialize(
 
     End If
 
+    If Initialized Then
+
+        Call Graphics3D.DestroyParticleBatch3D(AlphaBatch)
+        Call Graphics3D.DestroyParticleBatch3D(AdditiveBatch)
+        Call Graphics3D.DestroyRibbonBatch3D(RibbonBatch)
+
+    End If
+
+    AlphaBatch = CandidateAlphaBatch
+    AdditiveBatch = CandidateAdditiveBatch
+    RibbonBatch = CandidateRibbonBatch
+
+    Call ClearState()
+
+    RequestedQualityValue = RequestedQuality
     QualityValue = Quality
+    ParticleCapacityValue = CandidateParticleCapacity
     RendererEpochValue = Graphics3D.ResourceEpoch3D()
     Initialized = True
     ErrorValue = EFFECTS_ERROR_NONE
@@ -455,18 +510,49 @@ Public Sub Shutdown()
 
     If Initialized Then
 
-        Call Graphics3D.DestroyParticleBatch3D(AlphaBatch)
-        Call Graphics3D.DestroyParticleBatch3D(AdditiveBatch)
-        Call Graphics3D.DestroyRibbonBatch3D(RibbonBatch)
+        If ((Graphics3D.ParticleBatchHandleValid3D(AlphaBatch) And
+            Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_RESOURCE_IN_FLIGHT, AlphaBatch.Handle) > 0) Or
+            (Graphics3D.ParticleBatchHandleValid3D(AdditiveBatch) And
+            Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_RESOURCE_IN_FLIGHT, AdditiveBatch.Handle) > 0) Or
+            (Graphics3D.RibbonBatchHandleValid3D(RibbonBatch) And
+            Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_RESOURCE_IN_FLIGHT, RibbonBatch.Handle) > 0)) Then
+
+            ErrorValue = EFFECTS_ERROR_RENDERER_RESOURCE
+            RendererErrorValue = 56
+
+            Return
+
+        End If
+
+        If Graphics3D.ParticleBatchHandleValid3D(AlphaBatch) Then
+            Call Graphics3D.DestroyParticleBatch3D(AlphaBatch)
+        Else
+            AlphaBatch.Handle = 0
+        End If
+
+        If Graphics3D.ParticleBatchHandleValid3D(AdditiveBatch) Then
+            Call Graphics3D.DestroyParticleBatch3D(AdditiveBatch)
+        Else
+            AdditiveBatch.Handle = 0
+        End If
+
+        If Graphics3D.RibbonBatchHandleValid3D(RibbonBatch) Then
+            Call Graphics3D.DestroyRibbonBatch3D(RibbonBatch)
+        Else
+            RibbonBatch.Handle = 0
+        End If
 
     End If
 
     Call ClearState()
 
     Initialized = False
+    RequestedQualityValue = 0
     QualityValue = 0
     ParticleCapacityValue = 0
     RendererEpochValue = 0
+    ErrorValue = EFFECTS_ERROR_NONE
+    RendererErrorValue = 0
 
 End Sub
 
@@ -788,12 +874,29 @@ Public Function DefineStandardPresets() As Boolean
 
 End Function
 
-Private Sub QueueImpulse(Amplitude As Number, Duration As Number, Seed As Number)
+Private Function FreeImpulseCount() As Number
+
+    Dim CountValue As Number
+    Dim Slot As Number
+
+    For Slot = 0 To MAX_IMPULSES - 1
+
+        If Not ImpulseActive[Slot] Then
+            CountValue = CountValue + 1
+        End If
+
+    End For
+
+    Return CountValue
+
+End Function
+
+Private Function QueueImpulse(Amplitude As Number, Duration As Number, Seed As Number) As Boolean
 
     Dim Slot As Number
 
     If Amplitude <= 0 Or Duration <= 0 Then
-        Return
+        Return True
     End If
 
     For Slot = 0 To MAX_IMPULSES - 1
@@ -806,11 +909,48 @@ Private Sub QueueImpulse(Amplitude As Number, Duration As Number, Seed As Number
             ImpulseAmplitude[Slot] = Amplitude
             ImpulseSeed[Slot] = Seed Mod 65536
 
-            Return
+            Return True
 
         End If
 
     End For
+
+    DroppedImpulseRequestCountValue = DroppedImpulseRequestCountValue + 1
+
+    Return False
+
+End Function
+
+Private Sub QueueTransientLight(
+    X As Number,
+    Y As Number,
+    Z As Number,
+    Preset As Number
+)
+
+    Dim Slot As Number
+
+    Slot = (LightRequestHead + LightRequestCount) Mod MAX_TRANSIENT_REQUESTS
+    LightRequestX[Slot] = X
+    LightRequestY[Slot] = Y
+    LightRequestZ[Slot] = Z
+    LightRequestRed[Slot] = PresetStartRed[Preset]
+    LightRequestGreen[Slot] = PresetStartGreen[Preset]
+    LightRequestBlue[Slot] = PresetStartBlue[Preset]
+    LightRequestIntensity[Slot] = Max(25, PresetFlashPercents[Preset])
+    LightRequestRadius[Slot] = Max(40, PresetStartSize[Preset] * 5)
+    LightRequestCount = LightRequestCount + 1
+
+End Sub
+
+Private Sub QueueAudio(PresetId As Number, Seed As Number)
+
+    Dim Slot As Number
+
+    Slot = (AudioRequestHead + AudioRequestCount) Mod MAX_TRANSIENT_REQUESTS
+    AudioRequestCue[Slot] = PresetId
+    AudioRequestSeed[Slot] = Seed
+    AudioRequestCount = AudioRequestCount + 1
 
 End Sub
 
@@ -859,8 +999,10 @@ Public Function Spawn(PresetId As Number, X As Number, Y As Number, Z As Number,
     Dim EmitterPreset As Number
     Dim Result As Effect
     Dim EffectSlot As Number
+    Dim ImpulseQueued As Boolean
     Dim ParticleSlot As Number
     Dim Preset As Number
+    Dim RequiredImpulses As Number
     Dim RequiredParticles As Number
     Dim SpawnIndex As Number
 
@@ -884,7 +1026,15 @@ Public Function Spawn(PresetId As Number, X As Number, Y As Number, Z As Number,
         RequiredParticles = RequiredParticles + EffectiveEmitterParticleCount(EmitterPreset)
     End For
 
-    If EffectSlot < 0 Or FreeParticleCount() < RequiredParticles Then
+    If PresetShakeAmplitudes[Preset] > 0 Then
+        RequiredImpulses = 1
+    End If
+
+    If (EffectSlot < 0 Or
+        FreeParticleCount() < RequiredParticles Or
+        FreeImpulseCount() < RequiredImpulses Or
+        LightRequestCount >= MAX_TRANSIENT_REQUESTS Or
+        AudioRequestCount >= MAX_TRANSIENT_REQUESTS) Then
 
         DroppedEffectCountValue = DroppedEffectCountValue + 1
         DroppedParticleCountValue = DroppedParticleCountValue + RequiredParticles
@@ -920,20 +1070,14 @@ Public Function Spawn(PresetId As Number, X As Number, Y As Number, Z As Number,
         End For
     End For
 
-    Call QueueImpulse(PresetShakeAmplitudes[Preset], Min(500, PresetLifetimes[Preset]), Seed)
+    ImpulseQueued = QueueImpulse(
+        PresetShakeAmplitudes[Preset],
+        Min(500, PresetLifetimes[Preset]),
+        Seed
+    )
 
-    LightRequestPending = True
-    LightRequestX = X
-    LightRequestY = Y
-    LightRequestZ = Z
-    LightRequestRed = PresetStartRed[Preset]
-    LightRequestGreen = PresetStartGreen[Preset]
-    LightRequestBlue = PresetStartBlue[Preset]
-    LightRequestIntensity = Max(25, PresetFlashPercents[Preset])
-    LightRequestRadius = Max(40, PresetStartSize[Preset] * 5)
-    AudioRequestPending = True
-    AudioRequestCue = PresetId
-    AudioRequestSeed = Seed
+    Call QueueTransientLight(X, Y, Z, Preset)
+    Call QueueAudio(PresetId, Seed)
 
     Result.Slot = EffectSlot + 1
     Result.Generation = EffectGenerations[EffectSlot]
@@ -972,6 +1116,7 @@ Public Function MoveToSocket(ByRef Value As Effect, Actor As Character3D.Actor, 
 
     Dim Position As Core.Vector3
     Dim Slot As Number
+    Dim Stopped As Boolean
 
     Slot = EffectIndex(Value)
 
@@ -982,9 +1127,13 @@ Public Function MoveToSocket(ByRef Value As Effect, Actor As Character3D.Actor, 
     End If
 
     If Not Character3D.HasSocket(Actor, SocketName) Then
+
+        Stopped = StopEffect(Value)
+        AttachmentLossCountValue = AttachmentLossCountValue + 1
         ErrorValue = EFFECTS_ERROR_INVALID_EFFECT
 
         Return False
+
     End If
 
     Position = Character3D.SocketPosition(Actor, SocketName)
@@ -1596,19 +1745,22 @@ End Function
 Public Function TakeTransientLight() As TransientLightRequest3D
 
     Dim Result As TransientLightRequest3D
+    Dim Slot As Number
 
-    If LightRequestPending Then
+    If LightRequestCount > 0 Then
 
+        Slot = LightRequestHead
         Result.Available = True
-        Result.X = LightRequestX
-        Result.Y = LightRequestY
-        Result.Z = LightRequestZ
-        Result.RedValue = LightRequestRed
-        Result.GreenValue = LightRequestGreen
-        Result.BlueValue = LightRequestBlue
-        Result.IntensityPercent = LightRequestIntensity
-        Result.Radius = LightRequestRadius
-        LightRequestPending = False
+        Result.X = LightRequestX[Slot]
+        Result.Y = LightRequestY[Slot]
+        Result.Z = LightRequestZ[Slot]
+        Result.RedValue = LightRequestRed[Slot]
+        Result.GreenValue = LightRequestGreen[Slot]
+        Result.BlueValue = LightRequestBlue[Slot]
+        Result.IntensityPercent = LightRequestIntensity[Slot]
+        Result.Radius = LightRequestRadius[Slot]
+        LightRequestHead = (LightRequestHead + 1) Mod MAX_TRANSIENT_REQUESTS
+        LightRequestCount = LightRequestCount - 1
 
     End If
 
@@ -1620,13 +1772,16 @@ End Function
 Public Function TakeAudioCue() As AudioCueRequest3D
 
     Dim Result As AudioCueRequest3D
+    Dim Slot As Number
 
-    If AudioRequestPending Then
+    If AudioRequestCount > 0 Then
 
+        Slot = AudioRequestHead
         Result.Available = True
-        Result.CueId = AudioRequestCue
-        Result.Seed = AudioRequestSeed
-        AudioRequestPending = False
+        Result.CueId = AudioRequestCue[Slot]
+        Result.Seed = AudioRequestSeed[Slot]
+        AudioRequestHead = (AudioRequestHead + 1) Mod MAX_TRANSIENT_REQUESTS
+        AudioRequestCount = AudioRequestCount - 1
 
     End If
 
@@ -1693,6 +1848,18 @@ Public Function Quality() As Number
 
 End Function
 
+Public Function RequestedQuality() As Number
+
+    Return RequestedQualityValue
+
+End Function
+
+Public Function IsInitialized() As Boolean
+
+    Return Initialized
+
+End Function
+
 Public Function EmitterCount(PresetId As Number) As Number
 
     Dim ReturnValue As Number
@@ -1744,6 +1911,47 @@ End Function
 Public Function DroppedSimulationMilliseconds() As Number
 
     Return DroppedSimulationMillisecondsValue
+
+End Function
+
+Public Function ActiveImpulseCount() As Number
+
+    Dim CountValue As Number
+    Dim Slot As Number
+
+    For Slot = 0 To MAX_IMPULSES - 1
+
+        If ImpulseActive[Slot] Then
+            CountValue = CountValue + 1
+        End If
+
+    End For
+
+    Return CountValue
+
+End Function
+
+Public Function PendingTransientLightCount() As Number
+
+    Return LightRequestCount
+
+End Function
+
+Public Function PendingAudioCueCount() As Number
+
+    Return AudioRequestCount
+
+End Function
+
+Public Function DroppedImpulseRequests() As Number
+
+    Return DroppedImpulseRequestCountValue
+
+End Function
+
+Public Function AttachmentLosses() As Number
+
+    Return AttachmentLossCountValue
 
 End Function
 

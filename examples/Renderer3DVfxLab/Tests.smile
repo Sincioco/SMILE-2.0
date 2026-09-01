@@ -1,6 +1,7 @@
 Option Explicit
 
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.Effects3D As Effects3D
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Scene3D As Scene3D
@@ -97,6 +98,14 @@ Sub RunTests()
 
     Call Check(Graphics3D.CommitParticleBatch3D(Particle, 1024))
     Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_RESOURCE_REVISION, Particle.Handle) = 1)
+    Call Check(Graphics3D.VfxValue3D(
+        Graphics3D.VFX_QUERY_RESOURCE_UPLOADED_REVISION,
+        Particle.Handle
+    ) = 1)
+    Call Check(Graphics3D.VfxValue3D(
+        Graphics3D.VFX_QUERY_RESOURCE_STATE,
+        Particle.Handle
+    ) = Graphics3D.VFX_RESOURCE_STATE_COMMITTED)
     Call Check(Not Graphics3D.CommitParticleBatch3D(Particle, 1025))
     Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_RESOURCE_REVISION, Particle.Handle) = 1)
 
@@ -133,8 +142,20 @@ Sub RunTests()
     Call Check(SubmissionToken <> 0)
     Call Check(Graphics3D.DrawParticleBatch3D(Particle))
     Call Check(Graphics3D.DrawRibbonBatch3D(Ribbon))
-    Call Check(Not Graphics3D.SetParticle3D(Particle, 0, 0, 0, 0, 4, 0, 0))
+    Call Check(Graphics3D.VfxValue3D(
+        Graphics3D.VFX_QUERY_RESOURCE_STATE,
+        Particle.Handle
+    ) = Graphics3D.VFX_RESOURCE_STATE_IN_FLIGHT)
+    Call Check(Graphics3D.SetParticle3D(Particle, 0, 200, 0, 0, 4, 0, 0))
+    Call Check(Graphics3D.SetParticleColor3D(Particle, 0, 0, 255, 0, 100))
+    Call Check(Graphics3D.SetRibbonPoint3D(Ribbon, 0, 200, 0, 50, 200, 8, 50, 0))
+    Call Check(Graphics3D.VfxValue3D(
+        Graphics3D.VFX_QUERY_RESOURCE_STAGING_REVISION,
+        Particle.Handle
+    ) > 2048)
+    Call Check(Not Graphics3D.CommitParticleBatch3D(Particle, 1024))
     Call Check(Graphics3D.LastError() = 56)
+    Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_RESOURCE_REVISION, Particle.Handle) = 1)
     Call Check(Not Graphics3D.TryDestroyParticleBatch3D(Particle))
     Call Check(Graphics3D.CommitSubmissionGroup3D(SubmissionToken))
     Call Check(Graphics3D.End3DChecked())
@@ -144,7 +165,17 @@ Sub RunTests()
     Call Check(Graphics3D.RibbonTriangleCount3D() = 6)
     Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_IN_FLIGHT_BATCHES) = 0)
     Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_DRAWS, 0) = 0)
-    Call Check(Graphics3D.SetParticle3D(Particle, 0, 0, 0, 0, 4, 0, 0))
+    Call Check(Graphics3D.CommitParticleBatch3D(Particle, 1024))
+    Call Check(Graphics3D.CommitRibbonBatch3D(Ribbon, 4))
+    Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_RESOURCE_REVISION, Particle.Handle) = 2)
+    Call Check(Graphics3D.VfxValue3D(
+        Graphics3D.VFX_QUERY_RESOURCE_COMMITTED_BYTES,
+        Particle.Handle
+    ) = 49152)
+    Call Check(Graphics3D.VfxValue3D(
+        Graphics3D.VFX_QUERY_RESOURCE_PENDING_DESTRUCTION,
+        Particle.Handle
+    ) = 0)
 
     Call RunEffectsTests(AlphaMaterial, AdditiveMaterial)
 
@@ -170,12 +201,18 @@ End Sub
 Sub RunEffectsTests(AlphaMaterial As Core.Material3D, AdditiveMaterial As Core.Material3D)
 
     Dim AudioRequest As Effects3D.AudioCueRequest3D
+    Dim Camera As Core.Camera3D
     Dim Effect As Effects3D.Effect
     Dim FirstRotation As Number
     Dim FirstVelocityX As Number
+    Dim InvalidActor As Character3D.Actor
+    Dim InvalidMaterial As Core.Material3D
     Dim Index As Number
+    Dim PartitionBaseline As Number
+    Dim ParticleBlocker As Core.ParticleBatch3D
     Dim Rejected As Effects3D.Effect
     Dim RibbonMaterial As Core.Material3D
+    Dim RibbonBlockers[14] As Core.RibbonBatch3D
     Dim LightRequest As Effects3D.TransientLightRequest3D
     Dim SecondRotation As Number
     Dim SecondVelocityX As Number
@@ -191,6 +228,88 @@ Sub RunEffectsTests(AlphaMaterial As Core.Material3D, AdditiveMaterial As Core.M
     ))
     Call Check(Effects3D.DefineStandardPresets())
     Call Check(Effects3D.EmitterCount(Effects3D.PRESET_FIRE_BURST) = 2)
+
+    Camera = Graphics3D.DefaultCamera()
+
+    Call Check(Graphics3D.Begin3D(Camera, 0, 0, 0))
+    Call Check(Not Effects3D.Initialize(
+        AlphaMaterial,
+        AdditiveMaterial,
+        RibbonMaterial,
+        Scene3D.QUALITY_LOW
+    ))
+    Call Check(Graphics3D.End3DChecked())
+    Call Check(Effects3D.IsInitialized())
+    Call Check(Effects3D.Quality() = Scene3D.QUALITY_HIGH)
+    Call Check(Not Effects3D.Initialize(
+        AlphaMaterial,
+        AdditiveMaterial,
+        RibbonMaterial,
+        Scene3D.QUALITY_HIGH
+    ))
+    Call Check(Effects3D.IsInitialized())
+    Call Check(Effects3D.Quality() = Scene3D.QUALITY_HIGH)
+    Call Check(Graphics3D.LiveParticleBatchCount3D() = 3)
+    Call Check(Graphics3D.LiveRibbonBatchCount3D() = 2)
+
+    ParticleBlocker = Graphics3D.CreateParticleBatch3D(2048, AlphaMaterial)
+
+    Call Check(Graphics3D.ParticleBatchHandleValid3D(ParticleBlocker))
+    Call Check(Not Effects3D.Initialize(
+        AlphaMaterial,
+        AdditiveMaterial,
+        RibbonMaterial,
+        Scene3D.QUALITY_HIGH
+    ))
+    Call Check(Effects3D.IsInitialized())
+    Call Check(Effects3D.Quality() = Scene3D.QUALITY_HIGH)
+    Call Check(Graphics3D.TryDestroyParticleBatch3D(ParticleBlocker))
+    Call Check(Not Effects3D.Initialize(
+        InvalidMaterial,
+        InvalidMaterial,
+        InvalidMaterial,
+        Scene3D.QUALITY_HIGH
+    ))
+    Call Check(Effects3D.IsInitialized())
+    Call Check(Effects3D.Quality() = Scene3D.QUALITY_HIGH)
+    Call Check(Effects3D.EmitterCount(Effects3D.PRESET_FIRE_BURST) = 2)
+    Call Check(Effects3D.Initialize(
+        AlphaMaterial,
+        AdditiveMaterial,
+        RibbonMaterial,
+        Scene3D.QUALITY_LOW
+    ))
+    Call Check(Effects3D.Quality() = Scene3D.QUALITY_LOW)
+
+    For Index = 0 To 13
+        RibbonBlockers[Index] = Graphics3D.CreateRibbonBatch3D(2, RibbonMaterial)
+
+        Call Check(Graphics3D.RibbonBatchHandleValid3D(RibbonBlockers[Index]))
+    End For
+
+    Call Check(Not Effects3D.Initialize(
+        AlphaMaterial,
+        AdditiveMaterial,
+        RibbonMaterial,
+        Scene3D.QUALITY_HIGH
+    ))
+    Call Check(Effects3D.IsInitialized())
+    Call Check(Effects3D.Quality() = Scene3D.QUALITY_LOW)
+    Call Check(Graphics3D.LiveParticleBatchCount3D() = 3)
+    Call Check(Graphics3D.LiveRibbonBatchCount3D() = 16)
+
+    For Index = 0 To 13
+        Call Check(Graphics3D.TryDestroyRibbonBatch3D(RibbonBlockers[Index]))
+    End For
+
+    Call Check(Effects3D.Initialize(
+        AlphaMaterial,
+        AdditiveMaterial,
+        RibbonMaterial,
+        Scene3D.QUALITY_HIGH
+    ))
+    Call Check(Effects3D.Quality() = Scene3D.QUALITY_HIGH)
+    Call Check(Effects3D.DefineStandardPresets())
 
     TimedPreset.Id = 50
     TimedPreset.Name = "Timed Emitter Test"
@@ -223,7 +342,12 @@ Sub RunEffectsTests(AlphaMaterial As Core.Material3D, AdditiveMaterial As Core.M
     Call Check(Effects3D.DefinePreset(TimedPreset))
 
     Effect = Effects3D.Spawn(TimedPreset.Id, 0, 20, 50, 77)
+    LightRequest = Effects3D.TakeTransientLight()
+    AudioRequest = Effects3D.TakeAudioCue()
 
+    Call Check(LightRequest.Available)
+    Call Check(AudioRequest.Available)
+    Call Check(AudioRequest.CueId = TimedPreset.Id)
     Call Check(Effects3D.ReservedParticleCount() = 4)
     Call Check(Effects3D.ActiveParticleCount() = 0)
     Call Check(Effects3D.Update(20))
@@ -241,6 +365,8 @@ Sub RunEffectsTests(AlphaMaterial As Core.Material3D, AdditiveMaterial As Core.M
     Call Check(LightRequest.RedValue = 255)
     Call Check(AudioRequest.Available)
     Call Check(AudioRequest.CueId = Effects3D.PRESET_FIRE_BURST)
+    Call Check(Effects3D.PendingTransientLightCount() = 0)
+    Call Check(Effects3D.PendingAudioCueCount() = 0)
     Call Check(Effects3D.Update(100))
 
     FirstVelocityX = Effects3D.ParticleValue(0, Effects3D.PARTICLE_VALUE_VELOCITY_X)
@@ -299,6 +425,8 @@ Sub RunEffectsTests(AlphaMaterial As Core.Material3D, AdditiveMaterial As Core.M
     Call Check(Effects3D.DroppedEffects() = 1)
     Call Check(Effects3D.ActiveParticleCount() = 2048)
     Call Check(Effects3D.ReservedParticleCount() = 2048)
+    Call Check(Effects3D.PendingTransientLightCount() = 10)
+    Call Check(Effects3D.PendingAudioCueCount() = 10)
     Call Check(Effects3D.Commit())
     Call Effects3D.Shutdown()
     Call Check(Graphics3D.LiveParticleBatchCount3D() = 1)
@@ -311,10 +439,156 @@ Sub RunEffectsTests(AlphaMaterial As Core.Material3D, AdditiveMaterial As Core.M
         Scene3D.QUALITY_LOW
     ))
     Call Check(Effects3D.ParticleCapacity() = 256)
+
+    TimedPreset.Id = 51
+    TimedPreset.Name = "Atomic Request Test"
+    TimedPreset.ParticleCount = 1
+    TimedPreset.DelayMilliseconds = 0
+    TimedPreset.SpawnIntervalMilliseconds = 0
+    TimedPreset.LifetimeMilliseconds = 1000
+    TimedPreset.ShakeAmplitude = 1
+
+    Call Check(Effects3D.DefinePreset(TimedPreset))
+
+    Effect = Effects3D.Spawn(TimedPreset.Id, 0, 20, 50, 900)
+
+    Call Check(Effects3D.IsActive(Effect))
+    Call Check(Not Effects3D.MoveToSocket(Effect, InvalidActor, "Missing"))
+    Call Check(Not Effects3D.IsActive(Effect))
+    Call Check(Effects3D.AttachmentLosses() = 1)
     Call Effects3D.Shutdown()
+    Call Check(Effects3D.Initialize(
+        AlphaMaterial,
+        AdditiveMaterial,
+        RibbonMaterial,
+        Scene3D.QUALITY_LOW
+    ))
+    Call Check(Effects3D.DefinePreset(TimedPreset))
+
+    For Index = 1 To Effects3D.MAX_IMPULSES
+        Effect = Effects3D.Spawn(TimedPreset.Id, Index, 20, 50, Index)
+
+        Call Check(Effects3D.IsActive(Effect))
+    End For
+
+    Call Check(Effects3D.ActiveEffectCount() = Effects3D.MAX_IMPULSES)
+    Call Check(Effects3D.ReservedParticleCount() = Effects3D.MAX_IMPULSES)
+    Call Check(Effects3D.ActiveImpulseCount() = Effects3D.MAX_IMPULSES)
+    Call Check(Effects3D.PendingTransientLightCount() = Effects3D.MAX_TRANSIENT_REQUESTS)
+    Call Check(Effects3D.PendingAudioCueCount() = Effects3D.MAX_TRANSIENT_REQUESTS)
+
+    Rejected = Effects3D.Spawn(TimedPreset.Id, 0, 20, 50, 1000)
+
+    Call Check(Not Effects3D.IsActive(Rejected))
+    Call Check(Effects3D.ActiveEffectCount() = Effects3D.MAX_IMPULSES)
+    Call Check(Effects3D.ReservedParticleCount() = Effects3D.MAX_IMPULSES)
+    Call Check(Effects3D.DroppedImpulseRequests() = 0)
+    Call Effects3D.Shutdown()
+
+    For Index = 1 To 10
+
+        Call Check(Effects3D.Initialize(
+            AlphaMaterial,
+            AdditiveMaterial,
+            RibbonMaterial,
+            Scene3D.QUALITY_LOW
+        ))
+        Call Check(Effects3D.RequestedQuality() = Scene3D.QUALITY_LOW)
+        Call Effects3D.Shutdown()
+        Call Check(Not Effects3D.IsInitialized())
+    End For
+
+    PartitionBaseline = PartitionStateHash(1, AlphaMaterial, AdditiveMaterial, RibbonMaterial)
+
+    For Index = 2 To 5
+        Call Check(PartitionStateHash(Index, AlphaMaterial, AdditiveMaterial, RibbonMaterial) = PartitionBaseline)
+    End For
+
     Call Effects3D.Shutdown()
 
 End Sub
+
+Function PartitionStateHash(
+    Variant As Number,
+    AlphaMaterial As Core.Material3D,
+    AdditiveMaterial As Core.Material3D,
+    RibbonMaterial As Core.Material3D
+) As Number
+
+    Dim Effect As Effects3D.Effect
+    Dim HashValue As Number
+    Dim Index As Number
+    Dim Particle As Number
+    Dim Updates As Number
+    Dim UpdateMilliseconds As Number
+
+    Call Check(Effects3D.Initialize(
+        AlphaMaterial,
+        AdditiveMaterial,
+        RibbonMaterial,
+        Scene3D.QUALITY_LOW
+    ))
+    Call Check(Effects3D.DefineStandardPresets())
+
+    Effect = Effects3D.Spawn(Effects3D.PRESET_FIRE_BURST, 0, 20, 50, 20260901)
+
+    If Variant = 1 Then
+        Updates = 100
+        UpdateMilliseconds = 1
+    Else If Variant = 2 Then
+        Updates = 10
+        UpdateMilliseconds = 10
+    Else If Variant = 3 Then
+        Updates = 5
+        UpdateMilliseconds = 20
+    Else If Variant = 4 Then
+        Updates = 2
+        UpdateMilliseconds = 50
+    Else
+        Updates = 1
+        UpdateMilliseconds = 100
+    End If
+
+    For Index = 1 To Updates
+        Call Check(Effects3D.Update(UpdateMilliseconds))
+    End For
+
+    HashValue = Effects3D.FixedSteps()
+    HashValue = (HashValue * 31 + Effects3D.ActiveEffectCount()) Mod 2147483647
+    HashValue = (HashValue * 31 + Effects3D.ActiveImpulseCount()) Mod 2147483647
+    HashValue = (HashValue * 31 + Effects3D.PendingTransientLightCount()) Mod 2147483647
+    HashValue = (HashValue * 31 + Effects3D.PendingAudioCueCount()) Mod 2147483647
+
+    For Particle = 0 To Effects3D.ParticleCapacity() - 1
+
+        If Effects3D.ParticleValue(Particle, Effects3D.PARTICLE_VALUE_ACTIVE) <> 0 Then
+
+            HashValue = (
+                HashValue * 31 +
+                Effects3D.ParticleValue(Particle, Effects3D.PARTICLE_VALUE_POSITION_X)
+            ) Mod 2147483647
+            HashValue = (
+                HashValue * 31 +
+                Effects3D.ParticleValue(Particle, Effects3D.PARTICLE_VALUE_POSITION_Y)
+            ) Mod 2147483647
+            HashValue = (
+                HashValue * 31 +
+                Effects3D.ParticleValue(Particle, Effects3D.PARTICLE_VALUE_AGE)
+            ) Mod 2147483647
+            HashValue = (
+                HashValue * 31 +
+                Effects3D.ParticleValue(Particle, Effects3D.PARTICLE_VALUE_ROTATION)
+            ) Mod 2147483647
+
+        End If
+
+    End For
+
+    Call Effects3D.Shutdown()
+
+    Return HashValue
+
+End Function
 
 Sub Check(Condition As Boolean)
 
@@ -322,6 +596,8 @@ Sub Check(Condition As Boolean)
 
     If Not Condition Then
         Failures = Failures + 1
+
+        Print "Failed check "; Checks
     End If
 
 End Sub
