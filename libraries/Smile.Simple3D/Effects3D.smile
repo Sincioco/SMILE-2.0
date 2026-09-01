@@ -1,0 +1,1780 @@
+''' Deterministic bounded particle, ribbon, flash, and camera-impulse effects.
+Module Smile.Simple3D.Effects3D
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.FixedMath As FixedMath
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Scene3D As Scene3D
+
+Public Const MAX_PRESETS = 64
+Public Const MAX_EMITTERS_PER_EFFECT = 8
+Public Const MAX_ACTIVE_EFFECTS = 64
+Public Const MAX_PARTICLES = 2048
+Public Const MAX_IMPULSES = 32
+Public Const FIXED_STEP_MILLISECONDS = 10
+Public Const MAX_UPDATE_MILLISECONDS = 250
+Public Const MAX_CATCH_UP_STEPS = 25
+Public Const QUALITY_PARTICLES_LOW = 256
+Public Const QUALITY_PARTICLES_MEDIUM = 1024
+Public Const QUALITY_PARTICLES_HIGH = 2048
+Public Const PRESET_HOLY_SWORD_STRIKE = 1
+Public Const PRESET_SHIELD_IMPACT = 2
+Public Const PRESET_FIRE_BURST = 3
+Public Const PRESET_FROST_BURST = 4
+Public Const PRESET_HEAL_SPIRAL = 5
+Public Const PRESET_DRAGON_FIRE_BREATH = 6
+Public Const EFFECTS_ERROR_NONE = 0
+Public Const EFFECTS_ERROR_NOT_INITIALIZED = 1
+Public Const EFFECTS_ERROR_INVALID_QUALITY = 2
+Public Const EFFECTS_ERROR_RENDERER_RESOURCE = 3
+Public Const EFFECTS_ERROR_INVALID_PRESET = 4
+Public Const EFFECTS_ERROR_CAPACITY = 5
+Public Const EFFECTS_ERROR_INVALID_EFFECT = 6
+Public Const EFFECTS_ERROR_DRAW = 7
+Public Const EFFECTS_ERROR_RENDERER_RESET = 8
+Public Const PARTICLE_VALUE_ACTIVE = 1
+Public Const PARTICLE_VALUE_POSITION_X = 2
+Public Const PARTICLE_VALUE_POSITION_Y = 3
+Public Const PARTICLE_VALUE_POSITION_Z = 4
+Public Const PARTICLE_VALUE_VELOCITY_X = 5
+Public Const PARTICLE_VALUE_VELOCITY_Y = 6
+Public Const PARTICLE_VALUE_VELOCITY_Z = 7
+Public Const PARTICLE_VALUE_AGE = 8
+Public Const PARTICLE_VALUE_LIFETIME = 9
+Public Const PARTICLE_VALUE_ROTATION = 10
+Public Const PARTICLE_VALUE_ATLAS_FIRST = 11
+Public Const PARTICLE_VALUE_ATLAS_COUNT = 12
+
+Public Type Effect
+    Slot As Number
+    Generation As Number
+End Type
+
+Public Type EffectPreset
+    Id As Number
+    Name As Text
+    ParticleCount As Number
+    DelayMilliseconds As Number
+    SpawnIntervalMilliseconds As Number
+    LifetimeMilliseconds As Number
+    Speed As Number
+    Spread As Number
+    Gravity As Number
+    DragPercent As Number
+    StartRed As Number
+    StartGreen As Number
+    StartBlue As Number
+    EndRed As Number
+    EndGreen As Number
+    EndBlue As Number
+    StartOpacity As Number
+    EndOpacity As Number
+    StartSize As Number
+    EndSize As Number
+    BlendMode As Number
+    BillboardMode As Number
+    AtlasFirstFrame As Number
+    AtlasFrameCount As Number
+    RotationSpeed As Number
+    FlashPercent As Number
+    ShakeAmplitude As Number
+    RibbonPointCount As Number
+    RibbonWidth As Number
+    QualityLowPercent As Number
+    QualityMediumPercent As Number
+    QualityHighPercent As Number
+End Type
+
+Public Type TransientLightRequest3D
+    Available As Boolean
+    X As Number
+    Y As Number
+    Z As Number
+    RedValue As Number
+    GreenValue As Number
+    BlueValue As Number
+    IntensityPercent As Number
+    Radius As Number
+End Type
+
+Public Type AudioCueRequest3D
+    Available As Boolean
+    CueId As Number
+    Seed As Number
+End Type
+
+Private Dim Initialized As Boolean
+Private Dim QualityValue As Number
+Private Dim ParticleCapacityValue As Number
+Private Dim AlphaBatch As Core.ParticleBatch3D
+Private Dim AdditiveBatch As Core.ParticleBatch3D
+Private Dim RibbonBatch As Core.RibbonBatch3D
+Private Dim ErrorValue As Number
+Private Dim RendererErrorValue As Number
+Private Dim RendererEpochValue As Number
+Private Dim AccumulatorMilliseconds As Number
+Private Dim TotalFixedSteps As Number
+Private Dim DroppedSimulationMillisecondsValue As Number
+Private Dim DroppedParticleCountValue As Number
+Private Dim DroppedEffectCountValue As Number
+Private Dim ClampedUpdateCountValue As Number
+Private Dim LastCommittedAlphaCount As Number
+Private Dim LastCommittedAdditiveCount As Number
+Private Dim LastCommittedRibbonPoints As Number
+Private Dim LightRequestPending As Boolean
+Private Dim LightRequestX As Number
+Private Dim LightRequestY As Number
+Private Dim LightRequestZ As Number
+Private Dim LightRequestRed As Number
+Private Dim LightRequestGreen As Number
+Private Dim LightRequestBlue As Number
+Private Dim LightRequestIntensity As Number
+Private Dim LightRequestRadius As Number
+Private Dim AudioRequestPending As Boolean
+Private Dim AudioRequestCue As Number
+Private Dim AudioRequestSeed As Number
+
+Private Dim PresetCount As Number
+Private Dim PresetIds[64] As Number
+Private Dim PresetNames[64] As Text
+Private Dim PresetParticleCounts[64] As Number
+Private Dim PresetDelays[64] As Number
+Private Dim PresetSpawnIntervals[64] As Number
+Private Dim PresetLifetimes[64] As Number
+Private Dim PresetSpeeds[64] As Number
+Private Dim PresetSpreads[64] As Number
+Private Dim PresetGravity[64] As Number
+Private Dim PresetDragPercent[64] As Number
+Private Dim PresetStartRed[64] As Number
+Private Dim PresetStartGreen[64] As Number
+Private Dim PresetStartBlue[64] As Number
+Private Dim PresetEndRed[64] As Number
+Private Dim PresetEndGreen[64] As Number
+Private Dim PresetEndBlue[64] As Number
+Private Dim PresetStartOpacity[64] As Number
+Private Dim PresetEndOpacity[64] As Number
+Private Dim PresetStartSize[64] As Number
+Private Dim PresetEndSize[64] As Number
+Private Dim PresetBlendModes[64] As Number
+Private Dim PresetBillboardModes[64] As Number
+Private Dim PresetAtlasFirstFrames[64] As Number
+Private Dim PresetAtlasFrameCounts[64] As Number
+Private Dim PresetRotationSpeeds[64] As Number
+Private Dim PresetFlashPercents[64] As Number
+Private Dim PresetShakeAmplitudes[64] As Number
+Private Dim PresetRibbonPointCounts[64] As Number
+Private Dim PresetRibbonWidths[64] As Number
+Private Dim PresetEmitterCounts[64] As Number
+Private Dim PresetEmitterPresets[64, 8] As Number
+Private Dim PresetQualityLowPercent[64] As Number
+Private Dim PresetQualityMediumPercent[64] As Number
+Private Dim PresetQualityHighPercent[64] As Number
+
+Private Dim EffectActive[64] As Boolean
+Private Dim EffectGenerations[64] As Number
+Private Dim EffectPresets[64] As Number
+Private Dim EffectOriginsX[64] As Number
+Private Dim EffectOriginsY[64] As Number
+Private Dim EffectOriginsZ[64] As Number
+Private Dim EffectAges[64] As Number
+Private Dim EffectParticleCounts[64] As Number
+
+Private Dim ParticleActive[2048] As Boolean
+Private Dim ParticleOwners[2048] As Number
+Private Dim ParticleX[2048] As Number
+Private Dim ParticleY[2048] As Number
+Private Dim ParticleZ[2048] As Number
+Private Dim ParticleVelocityX[2048] As Number
+Private Dim ParticleVelocityY[2048] As Number
+Private Dim ParticleVelocityZ[2048] As Number
+Private Dim ParticleGravity[2048] As Number
+Private Dim ParticleDragPercent[2048] As Number
+Private Dim ParticleAge[2048] As Number
+Private Dim ParticleLifetime[2048] As Number
+Private Dim ParticleStartRed[2048] As Number
+Private Dim ParticleStartGreen[2048] As Number
+Private Dim ParticleStartBlue[2048] As Number
+Private Dim ParticleEndRed[2048] As Number
+Private Dim ParticleEndGreen[2048] As Number
+Private Dim ParticleEndBlue[2048] As Number
+Private Dim ParticleStartOpacity[2048] As Number
+Private Dim ParticleEndOpacity[2048] As Number
+Private Dim ParticleStartSize[2048] As Number
+Private Dim ParticleEndSize[2048] As Number
+Private Dim ParticleBlendMode[2048] As Number
+Private Dim ParticleAtlasFirst[2048] As Number
+Private Dim ParticleAtlasCount[2048] As Number
+Private Dim ParticleRotation[2048] As Number
+Private Dim ParticleRotationSpeed[2048] As Number
+
+Private Dim ImpulseActive[32] As Boolean
+Private Dim ImpulseAge[32] As Number
+Private Dim ImpulseDuration[32] As Number
+Private Dim ImpulseAmplitude[32] As Number
+Private Dim ImpulseSeed[32] As Number
+
+Private Function IsColor(Value As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value >= 0 And Value <= 255
+
+    Return Result
+
+End Function
+
+Private Function PresetIndex(PresetId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    For Index = 0 To PresetCount - 1
+
+        If PresetIds[Index] = PresetId Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function EffectIndex(Value As Effect) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = Value.Slot - 1
+
+    If (Slot < 0 Or
+        Slot >= MAX_ACTIVE_EFFECTS Or
+        Not EffectActive[Slot] Or
+        EffectGenerations[Slot] <> Value.Generation) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Return Slot
+
+End Function
+
+Private Function FreeEffectSlot() As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    For Slot = 0 To MAX_ACTIVE_EFFECTS - 1
+
+        If Not EffectActive[Slot] Then
+            Return Slot
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function FreeParticleSlot() As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    For Slot = 0 To ParticleCapacityValue - 1
+
+        If Not ParticleActive[Slot] Then
+            Return Slot
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function FreeParticleCount() As Number
+
+    Dim CountValue As Number
+    Dim Slot As Number
+
+    For Slot = 0 To ParticleCapacityValue - 1
+
+        If Not ParticleActive[Slot] Then
+            CountValue = CountValue + 1
+        End If
+
+    End For
+
+    Return CountValue
+
+End Function
+
+Private Function NextRandom(ByRef Seed As Number) As Number
+
+    Seed = (Seed * 25173 + 13849) Mod 65536
+
+    If Seed < 0 Then
+        Seed = Seed + 65536
+    End If
+
+    Return Seed
+
+End Function
+
+Private Function RandomSpread(ByRef Seed As Number, Spread As Number) As Number
+
+    Dim Result As Number
+
+    Result = NextRandom(Seed) Mod (Spread * 2 + 1) - Spread
+
+    Return Result
+
+End Function
+
+Private Sub ClearState()
+
+    Dim Slot As Number
+
+    For Slot = 0 To MAX_ACTIVE_EFFECTS - 1
+        EffectActive[Slot] = False
+    End For
+
+    For Slot = 0 To MAX_PARTICLES - 1
+        ParticleActive[Slot] = False
+    End For
+
+    For Slot = 0 To MAX_IMPULSES - 1
+        ImpulseActive[Slot] = False
+    End For
+
+    PresetCount = 0
+    AccumulatorMilliseconds = 0
+    TotalFixedSteps = 0
+    DroppedSimulationMillisecondsValue = 0
+    DroppedParticleCountValue = 0
+    DroppedEffectCountValue = 0
+    ClampedUpdateCountValue = 0
+    LastCommittedAlphaCount = 0
+    LastCommittedAdditiveCount = 0
+    LastCommittedRibbonPoints = 0
+    LightRequestPending = False
+    AudioRequestPending = False
+
+End Sub
+
+''' Creates shared bounded renderer batches for the selected scene-quality profile.
+Public Function Initialize(
+    AlphaMaterial As Core.Material3D,
+    AdditiveMaterial As Core.Material3D,
+    RibbonMaterial As Core.Material3D,
+    Optional Quality As Number = Scene3D.QUALITY_AUTO
+) As Boolean
+
+    Dim Result As Boolean
+
+    If Initialized Then
+        Call Shutdown()
+    End If
+
+    If Quality = Scene3D.QUALITY_AUTO Then
+        Quality = Scene3D.EffectiveQuality()
+    End If
+
+    If Quality = Scene3D.QUALITY_LOW Then
+        ParticleCapacityValue = QUALITY_PARTICLES_LOW
+    Else If Quality = Scene3D.QUALITY_MEDIUM Then
+        ParticleCapacityValue = QUALITY_PARTICLES_MEDIUM
+    Else If Quality = Scene3D.QUALITY_HIGH Then
+        ParticleCapacityValue = QUALITY_PARTICLES_HIGH
+    Else
+
+        ErrorValue = EFFECTS_ERROR_INVALID_QUALITY
+
+        Return False
+    End If
+
+    Call ClearState()
+
+    AlphaBatch = Graphics3D.CreateParticleBatch3D(
+        ParticleCapacityValue,
+        AlphaMaterial,
+        Graphics3D.VFX_BILLBOARD_CAMERA,
+        4,
+        4
+    )
+    AdditiveBatch = Graphics3D.CreateParticleBatch3D(
+        ParticleCapacityValue,
+        AdditiveMaterial,
+        Graphics3D.VFX_BILLBOARD_CAMERA,
+        4,
+        4
+    )
+    RibbonBatch = Graphics3D.CreateRibbonBatch3D(256, RibbonMaterial)
+    Result = AlphaBatch.Handle <> 0 And AdditiveBatch.Handle <> 0 And RibbonBatch.Handle <> 0
+
+    If Not Result Then
+
+        RendererErrorValue = Graphics3D.LastError()
+
+        Call Graphics3D.DestroyParticleBatch3D(AlphaBatch)
+        Call Graphics3D.DestroyParticleBatch3D(AdditiveBatch)
+        Call Graphics3D.DestroyRibbonBatch3D(RibbonBatch)
+
+        ErrorValue = EFFECTS_ERROR_RENDERER_RESOURCE
+
+        Return False
+
+    End If
+
+    QualityValue = Quality
+    RendererEpochValue = Graphics3D.ResourceEpoch3D()
+    Initialized = True
+    ErrorValue = EFFECTS_ERROR_NONE
+    RendererErrorValue = 0
+
+    Return True
+
+End Function
+
+Public Sub Shutdown()
+
+    If Initialized Then
+
+        Call Graphics3D.DestroyParticleBatch3D(AlphaBatch)
+        Call Graphics3D.DestroyParticleBatch3D(AdditiveBatch)
+        Call Graphics3D.DestroyRibbonBatch3D(RibbonBatch)
+
+    End If
+
+    Call ClearState()
+
+    Initialized = False
+    QualityValue = 0
+    ParticleCapacityValue = 0
+    RendererEpochValue = 0
+
+End Sub
+
+Public Function DefinePreset(ByRef Preset As EffectPreset) As Boolean
+
+    Dim Index As Number
+
+    Index = PresetIndex(Preset.Id)
+
+    If Preset.StartOpacity = 0 And Preset.EndOpacity = 0 Then
+        Preset.StartOpacity = 100
+    End If
+
+    If (Preset.QualityLowPercent = 0 And
+        Preset.QualityMediumPercent = 0 And
+        Preset.QualityHighPercent = 0) Then
+
+        Preset.QualityLowPercent = 100
+        Preset.QualityMediumPercent = 100
+        Preset.QualityHighPercent = 100
+
+    End If
+
+    If (Not Initialized Or
+        Preset.Id <= 0 Or
+        Preset.Name = "" Or
+        Preset.ParticleCount < 0 Or
+        Preset.ParticleCount > ParticleCapacityValue Or
+        Preset.DelayMilliseconds < 0 Or
+        Preset.DelayMilliseconds > 60000 Or
+        Preset.SpawnIntervalMilliseconds < 0 Or
+        Preset.SpawnIntervalMilliseconds > 60000 Or
+        Preset.LifetimeMilliseconds <= 0 Or
+        Preset.LifetimeMilliseconds > 60000 Or
+        Preset.Speed < 0 Or
+        Preset.Spread < 0 Or
+        Preset.DragPercent < 0 Or
+        Preset.DragPercent > 100 Or
+        Not IsColor(Preset.StartRed) Or
+        Not IsColor(Preset.StartGreen) Or
+        Not IsColor(Preset.StartBlue) Or
+        Not IsColor(Preset.EndRed) Or
+        Not IsColor(Preset.EndGreen) Or
+        Not IsColor(Preset.EndBlue) Or
+        Preset.StartOpacity < 0 Or
+        Preset.StartOpacity > 100 Or
+        Preset.EndOpacity < 0 Or
+        Preset.EndOpacity > 100 Or
+        Preset.StartSize <= 0 Or
+        Preset.EndSize <= 0 Or
+        (Preset.BlendMode <> Graphics3D.MATERIAL_ALPHA_BLEND And
+            Preset.BlendMode <> Graphics3D.MATERIAL_ALPHA_ADDITIVE) Or
+        Preset.BillboardMode < Graphics3D.VFX_BILLBOARD_CAMERA Or
+        Preset.BillboardMode > Graphics3D.VFX_BILLBOARD_VERTICAL Or
+        Preset.AtlasFirstFrame < 0 Or
+        Preset.AtlasFirstFrame > 15 Or
+        Preset.AtlasFrameCount < 1 Or
+        Preset.AtlasFirstFrame + Preset.AtlasFrameCount > 16 Or
+        Preset.FlashPercent < 0 Or
+        Preset.FlashPercent > 100 Or
+        Preset.ShakeAmplitude < 0 Or
+        Preset.RibbonPointCount < 0 Or
+        Preset.RibbonPointCount > 256 Or
+        Preset.RibbonWidth < 0 Or
+        Preset.QualityLowPercent < 1 Or
+        Preset.QualityLowPercent > 100 Or
+        Preset.QualityMediumPercent < 1 Or
+        Preset.QualityMediumPercent > 100 Or
+        Preset.QualityHighPercent < 1 Or
+        Preset.QualityHighPercent > 100) Then
+        ErrorValue = EFFECTS_ERROR_INVALID_PRESET
+
+        Return False
+    End If
+
+    If Index < 0 Then
+
+        If PresetCount >= MAX_PRESETS Then
+            ErrorValue = EFFECTS_ERROR_CAPACITY
+
+            Return False
+        End If
+
+        Index = PresetCount
+        PresetCount = PresetCount + 1
+
+    End If
+
+    PresetIds[Index] = Preset.Id
+    PresetNames[Index] = Preset.Name
+    PresetParticleCounts[Index] = Preset.ParticleCount
+    PresetDelays[Index] = Preset.DelayMilliseconds
+    PresetSpawnIntervals[Index] = Preset.SpawnIntervalMilliseconds
+    PresetLifetimes[Index] = Preset.LifetimeMilliseconds
+    PresetSpeeds[Index] = Preset.Speed
+    PresetSpreads[Index] = Preset.Spread
+    PresetGravity[Index] = Preset.Gravity
+    PresetDragPercent[Index] = Preset.DragPercent
+    PresetStartRed[Index] = Preset.StartRed
+    PresetStartGreen[Index] = Preset.StartGreen
+    PresetStartBlue[Index] = Preset.StartBlue
+    PresetEndRed[Index] = Preset.EndRed
+    PresetEndGreen[Index] = Preset.EndGreen
+    PresetEndBlue[Index] = Preset.EndBlue
+    PresetStartOpacity[Index] = Preset.StartOpacity
+    PresetEndOpacity[Index] = Preset.EndOpacity
+    PresetStartSize[Index] = Preset.StartSize
+    PresetEndSize[Index] = Preset.EndSize
+    PresetBlendModes[Index] = Preset.BlendMode
+    PresetBillboardModes[Index] = Preset.BillboardMode
+    PresetAtlasFirstFrames[Index] = Preset.AtlasFirstFrame
+    PresetAtlasFrameCounts[Index] = Preset.AtlasFrameCount
+    PresetRotationSpeeds[Index] = Preset.RotationSpeed
+    PresetFlashPercents[Index] = Preset.FlashPercent
+    PresetShakeAmplitudes[Index] = Preset.ShakeAmplitude
+    PresetRibbonPointCounts[Index] = Preset.RibbonPointCount
+    PresetRibbonWidths[Index] = Preset.RibbonWidth
+    PresetEmitterCounts[Index] = 1
+    PresetEmitterPresets[Index, 0] = Index
+    PresetQualityLowPercent[Index] = Preset.QualityLowPercent
+    PresetQualityMediumPercent[Index] = Preset.QualityMediumPercent
+    PresetQualityHighPercent[Index] = Preset.QualityHighPercent
+    ErrorValue = EFFECTS_ERROR_NONE
+
+    Return True
+
+End Function
+
+Private Function EffectiveEmitterParticleCount(Preset As Number) As Number
+
+    Dim Percent As Number
+    Dim Result As Number
+
+    If QualityValue = Scene3D.QUALITY_LOW Then
+        Percent = PresetQualityLowPercent[Preset]
+    Else If QualityValue = Scene3D.QUALITY_MEDIUM Then
+        Percent = PresetQualityMediumPercent[Preset]
+    Else
+        Percent = PresetQualityHighPercent[Preset]
+    End If
+
+    Result = PresetParticleCounts[Preset] * Percent / 100
+
+    If PresetParticleCounts[Preset] > 0 Then
+        Result = Max(1, Result)
+    End If
+
+    Return Result
+
+End Function
+
+''' Adds one previously defined emitter preset to an effect composition.
+Public Function AddEmitterLayer(PresetId As Number, EmitterPresetId As Number) As Boolean
+
+    Dim EmitterIndex As Number
+    Dim Index As Number
+    Dim Layer As Number
+    Dim RequiredParticles As Number
+
+    Index = PresetIndex(PresetId)
+    EmitterIndex = PresetIndex(EmitterPresetId)
+
+    If (Index < 0 Or
+        EmitterIndex < 0 Or
+        PresetEmitterCounts[Index] >= MAX_EMITTERS_PER_EFFECT) Then
+        ErrorValue = EFFECTS_ERROR_INVALID_PRESET
+
+        Return False
+    End If
+
+    For Layer = 0 To PresetEmitterCounts[Index] - 1
+        RequiredParticles = (
+            RequiredParticles +
+            PresetParticleCounts[PresetEmitterPresets[Index, Layer]]
+        )
+    End For
+
+    RequiredParticles = RequiredParticles + PresetParticleCounts[EmitterIndex]
+
+    If RequiredParticles > ParticleCapacityValue Then
+        ErrorValue = EFFECTS_ERROR_CAPACITY
+
+        Return False
+    End If
+
+    PresetEmitterPresets[Index, PresetEmitterCounts[Index]] = EmitterIndex
+    PresetEmitterCounts[Index] = PresetEmitterCounts[Index] + 1
+    ErrorValue = EFFECTS_ERROR_NONE
+
+    Return True
+
+End Function
+
+Private Function DefineStandardPreset(
+    Id As Number,
+    Name As Text,
+    ParticleCount As Number,
+    Lifetime As Number,
+    Speed As Number,
+    Spread As Number,
+    Gravity As Number,
+    StartRed As Number,
+    StartGreen As Number,
+    StartBlue As Number,
+    EndRed As Number,
+    EndGreen As Number,
+    EndBlue As Number,
+    StartSize As Number,
+    EndSize As Number,
+    BlendMode As Number,
+    FirstFrame As Number,
+    FrameCount As Number,
+    Flash As Number,
+    Shake As Number,
+    RibbonPoints As Number,
+    RibbonWidth As Number
+) As Boolean
+
+    Dim Preset As EffectPreset
+    Dim Result As Boolean
+
+    Preset.Id = Id
+    Preset.Name = Name
+    Preset.ParticleCount = Min(ParticleCount, ParticleCapacityValue)
+    Preset.DelayMilliseconds = 0
+    Preset.SpawnIntervalMilliseconds = 0
+    Preset.LifetimeMilliseconds = Lifetime
+    Preset.Speed = Speed
+    Preset.Spread = Spread
+    Preset.Gravity = Gravity
+    Preset.DragPercent = 0
+    Preset.StartRed = StartRed
+    Preset.StartGreen = StartGreen
+    Preset.StartBlue = StartBlue
+    Preset.EndRed = EndRed
+    Preset.EndGreen = EndGreen
+    Preset.EndBlue = EndBlue
+    Preset.StartOpacity = 100
+    Preset.EndOpacity = 0
+    Preset.StartSize = StartSize
+    Preset.EndSize = EndSize
+    Preset.BlendMode = BlendMode
+    Preset.BillboardMode = Graphics3D.VFX_BILLBOARD_CAMERA
+    Preset.AtlasFirstFrame = FirstFrame
+    Preset.AtlasFrameCount = FrameCount
+    Preset.RotationSpeed = 180
+    Preset.FlashPercent = Flash
+    Preset.ShakeAmplitude = Shake
+    Preset.RibbonPointCount = RibbonPoints
+    Preset.RibbonWidth = RibbonWidth
+    Preset.QualityLowPercent = 50
+    Preset.QualityMediumPercent = 75
+    Preset.QualityHighPercent = 100
+    Result = DefinePreset(Preset)
+
+    Return Result
+
+End Function
+
+''' Defines the six repository-standard cinematic combat effect presets.
+Public Function DefineStandardPresets() As Boolean
+
+    Dim Smoke As EffectPreset
+    Dim Result As Boolean
+
+    Result = DefineStandardPreset(PRESET_HOLY_SWORD_STRIKE, "Holy Sword Strike", 128, 850, 240, 150, -180, 255, 246, 190, 255, 150, 32, 34, 5, Graphics3D.MATERIAL_ALPHA_ADDITIVE, 0, 4, 55, 16, 18, 30)
+
+    If Result Then
+        Result = DefineStandardPreset(PRESET_SHIELD_IMPACT, "Shield Impact", 72, 620, 180, 110, -260, 126, 214, 255, 28, 72, 255, 28, 4, Graphics3D.MATERIAL_ALPHA_ADDITIVE, 4, 4, 34, 12, 0, 0)
+    End If
+
+    If Result Then
+        Result = DefineStandardPreset(PRESET_FIRE_BURST, "Fire Burst", 180, 1100, 260, 170, -90, 255, 204, 48, 255, 28, 4, 42, 8, Graphics3D.MATERIAL_ALPHA_ADDITIVE, 8, 4, 62, 15, 0, 0)
+    End If
+
+    If Result Then
+        Result = DefineStandardPreset(PRESET_FROST_BURST, "Frost Burst", 160, 1250, 210, 190, -60, 220, 250, 255, 44, 128, 255, 32, 6, Graphics3D.MATERIAL_ALPHA_BLEND, 12, 4, 42, 10, 0, 0)
+    End If
+
+    If Result Then
+        Result = DefineStandardPreset(PRESET_HEAL_SPIRAL, "Heal Spiral", 120, 1450, 150, 85, 20, 124, 255, 174, 250, 255, 220, 24, 8, Graphics3D.MATERIAL_ALPHA_BLEND, 0, 4, 24, 4, 0, 0)
+    End If
+
+    If Result Then
+        Result = DefineStandardPreset(PRESET_DRAGON_FIRE_BREATH, "Dragon Fire Breath", 256, 1650, 330, 210, -70, 255, 238, 92, 255, 42, 3, 54, 10, Graphics3D.MATERIAL_ALPHA_ADDITIVE, 8, 4, 72, 24, 0, 0)
+    End If
+
+    If Result And ParticleCapacityValue >= 244 Then
+
+        Smoke.Id = 101
+        Smoke.Name = "Fire Burst Smoke Layer"
+        Smoke.ParticleCount = 64
+        Smoke.LifetimeMilliseconds = 1350
+        Smoke.Speed = 105
+        Smoke.Spread = 130
+        Smoke.Gravity = 18
+        Smoke.StartRed = 180
+        Smoke.StartGreen = 205
+        Smoke.StartBlue = 230
+        Smoke.EndRed = 35
+        Smoke.EndGreen = 48
+        Smoke.EndBlue = 70
+        Smoke.StartSize = 36
+        Smoke.EndSize = 52
+        Smoke.BlendMode = Graphics3D.MATERIAL_ALPHA_BLEND
+        Smoke.BillboardMode = Graphics3D.VFX_BILLBOARD_CAMERA
+        Smoke.AtlasFirstFrame = 12
+        Smoke.AtlasFrameCount = 4
+        Smoke.RotationSpeed = 36
+        Result = DefinePreset(Smoke)
+
+        If Result Then
+            Result = AddEmitterLayer(PRESET_FIRE_BURST, Smoke.Id)
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
+Private Sub QueueImpulse(Amplitude As Number, Duration As Number, Seed As Number)
+
+    Dim Slot As Number
+
+    If Amplitude <= 0 Or Duration <= 0 Then
+        Return
+    End If
+
+    For Slot = 0 To MAX_IMPULSES - 1
+
+        If Not ImpulseActive[Slot] Then
+
+            ImpulseActive[Slot] = True
+            ImpulseAge[Slot] = 0
+            ImpulseDuration[Slot] = Duration
+            ImpulseAmplitude[Slot] = Amplitude
+            ImpulseSeed[Slot] = Seed Mod 65536
+
+            Return
+
+        End If
+
+    End For
+
+End Sub
+
+Private Sub InitializeParticle(
+    Slot As Number,
+    EffectSlot As Number,
+    Preset As Number,
+    SpawnIndex As Number,
+    ByRef Seed As Number
+)
+
+    ParticleActive[Slot] = True
+    ParticleOwners[Slot] = EffectSlot
+    ParticleX[Slot] = EffectOriginsX[EffectSlot] * 1000
+    ParticleY[Slot] = EffectOriginsY[EffectSlot] * 1000
+    ParticleZ[Slot] = EffectOriginsZ[EffectSlot] * 1000
+    ParticleVelocityX[Slot] = RandomSpread(Seed, PresetSpreads[Preset]) * 1000
+    ParticleVelocityY[Slot] = (PresetSpeeds[Preset] + RandomSpread(Seed, PresetSpreads[Preset])) * 1000
+    ParticleVelocityZ[Slot] = RandomSpread(Seed, PresetSpreads[Preset]) * 1000
+    ParticleGravity[Slot] = PresetGravity[Preset] * 1000
+    ParticleDragPercent[Slot] = PresetDragPercent[Preset]
+    ParticleAge[Slot] = 0 - PresetDelays[Preset] - SpawnIndex * PresetSpawnIntervals[Preset]
+    ParticleLifetime[Slot] = PresetLifetimes[Preset]
+    ParticleStartRed[Slot] = PresetStartRed[Preset]
+    ParticleStartGreen[Slot] = PresetStartGreen[Preset]
+    ParticleStartBlue[Slot] = PresetStartBlue[Preset]
+    ParticleEndRed[Slot] = PresetEndRed[Preset]
+    ParticleEndGreen[Slot] = PresetEndGreen[Preset]
+    ParticleEndBlue[Slot] = PresetEndBlue[Preset]
+    ParticleStartOpacity[Slot] = PresetStartOpacity[Preset]
+    ParticleEndOpacity[Slot] = PresetEndOpacity[Preset]
+    ParticleStartSize[Slot] = PresetStartSize[Preset]
+    ParticleEndSize[Slot] = PresetEndSize[Preset]
+    ParticleBlendMode[Slot] = PresetBlendModes[Preset]
+    ParticleAtlasFirst[Slot] = PresetAtlasFirstFrames[Preset]
+    ParticleAtlasCount[Slot] = PresetAtlasFrameCounts[Preset]
+    ParticleRotation[Slot] = NextRandom(Seed) Mod 360
+    ParticleRotationSpeed[Slot] = PresetRotationSpeeds[Preset]
+
+End Sub
+
+''' Atomically spawns one deterministic effect instance at a world-space origin.
+Public Function Spawn(PresetId As Number, X As Number, Y As Number, Z As Number, Seed As Number) As Effect
+
+    Dim Emitter As Number
+    Dim EmitterPreset As Number
+    Dim Result As Effect
+    Dim EffectSlot As Number
+    Dim ParticleSlot As Number
+    Dim Preset As Number
+    Dim RequiredParticles As Number
+    Dim SpawnIndex As Number
+
+    If Not Initialized Then
+        ErrorValue = EFFECTS_ERROR_NOT_INITIALIZED
+
+        Return Result
+    End If
+
+    Preset = PresetIndex(PresetId)
+    EffectSlot = FreeEffectSlot()
+
+    If Preset < 0 Then
+        ErrorValue = EFFECTS_ERROR_INVALID_PRESET
+
+        Return Result
+    End If
+
+    For Emitter = 0 To PresetEmitterCounts[Preset] - 1
+        EmitterPreset = PresetEmitterPresets[Preset, Emitter]
+        RequiredParticles = RequiredParticles + EffectiveEmitterParticleCount(EmitterPreset)
+    End For
+
+    If EffectSlot < 0 Or FreeParticleCount() < RequiredParticles Then
+
+        DroppedEffectCountValue = DroppedEffectCountValue + 1
+        DroppedParticleCountValue = DroppedParticleCountValue + RequiredParticles
+        ErrorValue = EFFECTS_ERROR_CAPACITY
+
+        Return Result
+
+    End If
+
+    EffectGenerations[EffectSlot] = EffectGenerations[EffectSlot] + 1
+
+    If EffectGenerations[EffectSlot] <= 0 Or EffectGenerations[EffectSlot] > 2147483647 Then
+        EffectGenerations[EffectSlot] = 1
+    End If
+
+    EffectActive[EffectSlot] = True
+    EffectPresets[EffectSlot] = Preset
+    EffectOriginsX[EffectSlot] = X
+    EffectOriginsY[EffectSlot] = Y
+    EffectOriginsZ[EffectSlot] = Z
+    EffectAges[EffectSlot] = 0
+    EffectParticleCounts[EffectSlot] = RequiredParticles
+    Seed = Seed Mod 65536
+
+    For Emitter = 0 To PresetEmitterCounts[Preset] - 1
+
+        EmitterPreset = PresetEmitterPresets[Preset, Emitter]
+
+        For SpawnIndex = 0 To EffectiveEmitterParticleCount(EmitterPreset) - 1
+            ParticleSlot = FreeParticleSlot()
+
+            Call InitializeParticle(ParticleSlot, EffectSlot, EmitterPreset, SpawnIndex, Seed)
+        End For
+    End For
+
+    Call QueueImpulse(PresetShakeAmplitudes[Preset], Min(500, PresetLifetimes[Preset]), Seed)
+
+    LightRequestPending = True
+    LightRequestX = X
+    LightRequestY = Y
+    LightRequestZ = Z
+    LightRequestRed = PresetStartRed[Preset]
+    LightRequestGreen = PresetStartGreen[Preset]
+    LightRequestBlue = PresetStartBlue[Preset]
+    LightRequestIntensity = Max(25, PresetFlashPercents[Preset])
+    LightRequestRadius = Max(40, PresetStartSize[Preset] * 5)
+    AudioRequestPending = True
+    AudioRequestCue = PresetId
+    AudioRequestSeed = Seed
+
+    Result.Slot = EffectSlot + 1
+    Result.Generation = EffectGenerations[EffectSlot]
+    ErrorValue = EFFECTS_ERROR_NONE
+
+    Return Result
+
+End Function
+
+''' Spawns a standard effect at a Character3D socket evaluated in world space.
+Public Function SpawnAtSocket(
+    PresetId As Number,
+    Actor As Character3D.Actor,
+    SocketName As Text,
+    Seed As Number
+) As Effect
+
+    Dim Position As Core.Vector3
+    Dim Result As Effect
+
+    If Not Character3D.HasSocket(Actor, SocketName) Then
+        ErrorValue = EFFECTS_ERROR_INVALID_EFFECT
+
+        Return Result
+    End If
+
+    Position = Character3D.SocketPosition(Actor, SocketName)
+    Result = Spawn(PresetId, Position.X, Position.Y, Position.Z, Seed)
+
+    Return Result
+
+End Function
+
+''' Moves the retained origin used by ribbons and other attached effect phases.
+Public Function MoveToSocket(ByRef Value As Effect, Actor As Character3D.Actor, SocketName As Text) As Boolean
+
+    Dim Position As Core.Vector3
+    Dim Slot As Number
+
+    Slot = EffectIndex(Value)
+
+    If Slot < 0 Then
+        ErrorValue = EFFECTS_ERROR_INVALID_EFFECT
+
+        Return False
+    End If
+
+    If Not Character3D.HasSocket(Actor, SocketName) Then
+        ErrorValue = EFFECTS_ERROR_INVALID_EFFECT
+
+        Return False
+    End If
+
+    Position = Character3D.SocketPosition(Actor, SocketName)
+    EffectOriginsX[Slot] = Position.X
+    EffectOriginsY[Slot] = Position.Y
+    EffectOriginsZ[Slot] = Position.Z
+
+    Return True
+
+End Function
+
+''' Stops one generation-safe effect and releases every particle it owns.
+Public Function StopEffect(ByRef Value As Effect) As Boolean
+
+    Dim ParticleSlot As Number
+    Dim Slot As Number
+
+    Slot = EffectIndex(Value)
+
+    If Slot < 0 Then
+        ErrorValue = EFFECTS_ERROR_INVALID_EFFECT
+
+        Return False
+    End If
+
+    For ParticleSlot = 0 To ParticleCapacityValue - 1
+
+        If ParticleActive[ParticleSlot] And ParticleOwners[ParticleSlot] = Slot Then
+            ParticleActive[ParticleSlot] = False
+        End If
+
+    End For
+
+    EffectParticleCounts[Slot] = 0
+    EffectActive[Slot] = False
+    Value.Slot = 0
+    Value.Generation = 0
+    ErrorValue = EFFECTS_ERROR_NONE
+
+    Return True
+
+End Function
+
+Private Function RendererResourcesAvailable() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Initialized And RendererEpochValue = Graphics3D.ResourceEpoch3D()
+
+    If Result Then
+
+        Result = Graphics3D.ParticleBatchHandleValid3D(AlphaBatch)
+        Result = Graphics3D.ParticleBatchHandleValid3D(AdditiveBatch) And Result
+        Result = Graphics3D.RibbonBatchHandleValid3D(RibbonBatch) And Result
+
+    End If
+
+    If Not Result Then
+        ErrorValue = EFFECTS_ERROR_RENDERER_RESET
+    End If
+
+    Return Result
+
+End Function
+
+Private Sub UpdateFixedStep()
+
+    Dim EffectSlot As Number
+    Dim ParticleSlot As Number
+    Dim ImpulseSlot As Number
+
+    For ParticleSlot = 0 To ParticleCapacityValue - 1
+
+        If ParticleActive[ParticleSlot] Then
+
+            ParticleAge[ParticleSlot] = ParticleAge[ParticleSlot] + FIXED_STEP_MILLISECONDS
+
+            If ParticleAge[ParticleSlot] >= ParticleLifetime[ParticleSlot] Then
+
+                ParticleActive[ParticleSlot] = False
+                EffectSlot = ParticleOwners[ParticleSlot]
+                EffectParticleCounts[EffectSlot] = Max(0, EffectParticleCounts[EffectSlot] - 1)
+
+            Else If ParticleAge[ParticleSlot] >= 0 Then
+
+                ParticleVelocityY[ParticleSlot] = ParticleVelocityY[ParticleSlot] + ParticleGravity[ParticleSlot] * FIXED_STEP_MILLISECONDS / 1000
+                ParticleVelocityX[ParticleSlot] = ParticleVelocityX[ParticleSlot] * (100 - ParticleDragPercent[ParticleSlot]) / 100
+                ParticleVelocityY[ParticleSlot] = ParticleVelocityY[ParticleSlot] * (100 - ParticleDragPercent[ParticleSlot]) / 100
+                ParticleVelocityZ[ParticleSlot] = ParticleVelocityZ[ParticleSlot] * (100 - ParticleDragPercent[ParticleSlot]) / 100
+                ParticleX[ParticleSlot] = ParticleX[ParticleSlot] + ParticleVelocityX[ParticleSlot] * FIXED_STEP_MILLISECONDS / 1000
+                ParticleY[ParticleSlot] = ParticleY[ParticleSlot] + ParticleVelocityY[ParticleSlot] * FIXED_STEP_MILLISECONDS / 1000
+                ParticleZ[ParticleSlot] = ParticleZ[ParticleSlot] + ParticleVelocityZ[ParticleSlot] * FIXED_STEP_MILLISECONDS / 1000
+
+            End If
+
+        End If
+
+    End For
+
+    For EffectSlot = 0 To MAX_ACTIVE_EFFECTS - 1
+
+        If EffectActive[EffectSlot] Then
+
+            EffectAges[EffectSlot] = EffectAges[EffectSlot] + FIXED_STEP_MILLISECONDS
+
+            If (EffectParticleCounts[EffectSlot] = 0 And
+                EffectAges[EffectSlot] >= PresetLifetimes[EffectPresets[EffectSlot]]) Then
+                EffectActive[EffectSlot] = False
+            End If
+
+        End If
+
+    End For
+
+    For ImpulseSlot = 0 To MAX_IMPULSES - 1
+
+        If ImpulseActive[ImpulseSlot] Then
+
+            ImpulseAge[ImpulseSlot] = ImpulseAge[ImpulseSlot] + FIXED_STEP_MILLISECONDS
+
+            If ImpulseAge[ImpulseSlot] >= ImpulseDuration[ImpulseSlot] Then
+                ImpulseActive[ImpulseSlot] = False
+            End If
+
+        End If
+
+    End For
+
+    TotalFixedSteps = TotalFixedSteps + 1
+
+End Sub
+
+''' Advances simulation in deterministic 10-ms steps with a bounded 250-ms catch-up window.
+Public Function Update(ElapsedMilliseconds As Number) As Boolean
+
+    Dim AcceptedMilliseconds As Number
+    Dim Steps As Number
+
+    If Not Initialized Or ElapsedMilliseconds < 0 Then
+        ErrorValue = EFFECTS_ERROR_NOT_INITIALIZED
+
+        Return False
+    End If
+
+    If Not RendererResourcesAvailable() Then
+        Return False
+    End If
+
+    AcceptedMilliseconds = ElapsedMilliseconds
+
+    If ElapsedMilliseconds > MAX_UPDATE_MILLISECONDS Then
+
+        ElapsedMilliseconds = MAX_UPDATE_MILLISECONDS
+        ClampedUpdateCountValue = ClampedUpdateCountValue + 1
+        DroppedSimulationMillisecondsValue = (
+            DroppedSimulationMillisecondsValue +
+            AcceptedMilliseconds - MAX_UPDATE_MILLISECONDS
+        )
+
+    End If
+
+    AccumulatorMilliseconds = AccumulatorMilliseconds + ElapsedMilliseconds
+
+    Do
+
+        If AccumulatorMilliseconds < FIXED_STEP_MILLISECONDS Or Steps >= MAX_CATCH_UP_STEPS Then
+            Exit Do
+        End If
+
+        Call UpdateFixedStep()
+
+        AccumulatorMilliseconds = AccumulatorMilliseconds - FIXED_STEP_MILLISECONDS
+        Steps = Steps + 1
+
+    Loop
+
+    Return True
+
+End Function
+
+Private Function Interpolate(StartValue As Number, EndValue As Number, Age As Number, Lifetime As Number) As Number
+
+    Dim Result As Number
+
+    Result = StartValue + (EndValue - StartValue) * Age / Lifetime
+
+    Return Result
+
+End Function
+
+Private Function CommitParticles() As Boolean
+
+    Dim AdditiveCount As Number
+    Dim AlphaCount As Number
+    Dim BlueValue As Number
+    Dim Frame As Number
+    Dim GreenValue As Number
+    Dim Opacity As Number
+    Dim ParticleSlot As Number
+    Dim RedValue As Number
+    Dim Result As Boolean
+    Dim Rotation As Number
+    Dim Size As Number
+
+    Result = True
+
+    For ParticleSlot = 0 To ParticleCapacityValue - 1
+
+        If ParticleActive[ParticleSlot] And ParticleAge[ParticleSlot] >= 0 Then
+
+            RedValue = Interpolate(ParticleStartRed[ParticleSlot], ParticleEndRed[ParticleSlot], ParticleAge[ParticleSlot], ParticleLifetime[ParticleSlot])
+            GreenValue = Interpolate(ParticleStartGreen[ParticleSlot], ParticleEndGreen[ParticleSlot], ParticleAge[ParticleSlot], ParticleLifetime[ParticleSlot])
+            BlueValue = Interpolate(ParticleStartBlue[ParticleSlot], ParticleEndBlue[ParticleSlot], ParticleAge[ParticleSlot], ParticleLifetime[ParticleSlot])
+            Size = Interpolate(ParticleStartSize[ParticleSlot], ParticleEndSize[ParticleSlot], ParticleAge[ParticleSlot], ParticleLifetime[ParticleSlot])
+            Opacity = Interpolate(
+                ParticleStartOpacity[ParticleSlot],
+                ParticleEndOpacity[ParticleSlot],
+                ParticleAge[ParticleSlot],
+                ParticleLifetime[ParticleSlot]
+            )
+            Rotation = ParticleRotation[ParticleSlot] + ParticleRotationSpeed[ParticleSlot] * ParticleAge[ParticleSlot] / 1000
+            Frame = ParticleAtlasFirst[ParticleSlot] + ParticleAge[ParticleSlot] * ParticleAtlasCount[ParticleSlot] / ParticleLifetime[ParticleSlot]
+            Frame = Min(ParticleAtlasFirst[ParticleSlot] + ParticleAtlasCount[ParticleSlot] - 1, Frame)
+
+            If ParticleBlendMode[ParticleSlot] = Graphics3D.MATERIAL_ALPHA_ADDITIVE Then
+
+                Result = Graphics3D.SetParticle3D(AdditiveBatch, AdditiveCount, ParticleX[ParticleSlot] / 1000, ParticleY[ParticleSlot] / 1000, ParticleZ[ParticleSlot] / 1000, Size, Rotation, Frame)
+
+                If Result Then
+                    Result = Graphics3D.SetParticleColor3D(AdditiveBatch, AdditiveCount, RedValue, GreenValue, BlueValue, Opacity)
+                End If
+
+                AdditiveCount = AdditiveCount + 1
+
+            Else
+
+                Result = Graphics3D.SetParticle3D(AlphaBatch, AlphaCount, ParticleX[ParticleSlot] / 1000, ParticleY[ParticleSlot] / 1000, ParticleZ[ParticleSlot] / 1000, Size, Rotation, Frame)
+
+                If Result Then
+                    Result = Graphics3D.SetParticleColor3D(AlphaBatch, AlphaCount, RedValue, GreenValue, BlueValue, Opacity)
+                End If
+
+                AlphaCount = AlphaCount + 1
+
+            End If
+
+            If Not Result Then
+                Return False
+            End If
+
+        End If
+
+    End For
+
+    Result = Graphics3D.CommitParticleBatch3D(AlphaBatch, AlphaCount)
+
+    If Result Then
+        Result = Graphics3D.CommitParticleBatch3D(AdditiveBatch, AdditiveCount)
+    End If
+
+    LastCommittedAlphaCount = AlphaCount
+    LastCommittedAdditiveCount = AdditiveCount
+
+    Return Result
+
+End Function
+
+Private Function CommitRibbon() As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Age As Number
+    Dim Angle As Number
+    Dim CenterX As Number
+    Dim CenterY As Number
+    Dim CenterZ As Number
+    Dim EffectSlot As Number
+    Dim Fade As Number
+    Dim Point As Number
+    Dim PointCount As Number
+    Dim Preset As Number
+    Dim Result As Boolean
+    Dim Width As Number
+
+    EffectSlot = MAX_ACTIVE_EFFECTS - 1
+
+    Do
+
+        If EffectActive[EffectSlot] And PresetRibbonPointCounts[EffectPresets[EffectSlot]] >= 2 Then
+
+            Preset = EffectPresets[EffectSlot]
+            PointCount = PresetRibbonPointCounts[Preset]
+            Width = PresetRibbonWidths[Preset]
+            Age = EffectAges[EffectSlot]
+            Fade = Max(0, 100 - Age * 100 / PresetLifetimes[Preset])
+
+            For Point = 0 To PointCount - 1
+
+                Angle = -55 + Point * 110 / (PointCount - 1)
+                CenterX = EffectOriginsX[EffectSlot] + FixedMath.CosFixed(Angle) * 170 / Core.FIXED_ONE
+                CenterY = EffectOriginsY[EffectSlot] + FixedMath.SinFixed(Angle) * 150 / Core.FIXED_ONE
+                CenterZ = EffectOriginsZ[EffectSlot] + Point * 3
+                Result = Graphics3D.SetRibbonPoint3D(RibbonBatch, Point, CenterX, CenterY - Width / 2, CenterZ, CenterX, CenterY + Width / 2, CenterZ, Point * 1000 / (PointCount - 1))
+
+                If Result Then
+                    Result = Graphics3D.SetRibbonPointColor3D(RibbonBatch, Point, 255, 238, 150, Fade)
+                End If
+
+                If Not Result Then
+                    Return False
+                End If
+
+            End For
+
+            LastCommittedRibbonPoints = PointCount
+
+            ReturnValue = Graphics3D.CommitRibbonBatch3D(RibbonBatch, PointCount)
+
+            Return ReturnValue
+
+        End If
+
+        EffectSlot = EffectSlot - 1
+
+    Loop Until EffectSlot < 0
+
+    LastCommittedRibbonPoints = 0
+    Result = Graphics3D.CommitRibbonBatch3D(RibbonBatch, 0)
+
+    Return Result
+
+End Function
+
+''' Converts the current simulation snapshot into one alpha batch, one additive batch, and one ribbon upload.
+Public Function Commit() As Boolean
+
+    Dim Result As Boolean
+
+    If Not Initialized Then
+        ErrorValue = EFFECTS_ERROR_NOT_INITIALIZED
+
+        Return False
+    End If
+
+    If Not RendererResourcesAvailable() Then
+        Return False
+    End If
+
+    Result = CommitParticles()
+
+    If Result Then
+        Result = CommitRibbon()
+    End If
+
+    If Not Result Then
+        RendererErrorValue = Graphics3D.LastError()
+        ErrorValue = EFFECTS_ERROR_RENDERER_RESOURCE
+    Else
+
+        ErrorValue = EFFECTS_ERROR_NONE
+        RendererErrorValue = 0
+    End If
+
+    Return Result
+
+End Function
+
+''' Atomically submits all three batches to the current Renderer3D frame.
+Public Function Draw() As Boolean
+
+    Dim Result As Boolean
+    Dim SubmissionToken As Number
+
+    If Not Initialized Then
+        ErrorValue = EFFECTS_ERROR_NOT_INITIALIZED
+
+        Return False
+    End If
+
+    If Not RendererResourcesAvailable() Then
+        Return False
+    End If
+
+    SubmissionToken = Graphics3D.BeginSubmissionGroup3D(3)
+
+    If SubmissionToken = 0 Then
+
+        RendererErrorValue = Graphics3D.LastError()
+        ErrorValue = EFFECTS_ERROR_DRAW
+
+        Return False
+
+    End If
+
+    Result = Graphics3D.DrawParticleBatch3D(AlphaBatch)
+
+    If Result Then
+        Result = Graphics3D.DrawParticleBatch3D(AdditiveBatch)
+    End If
+
+    If Result Then
+        Result = Graphics3D.DrawRibbonBatch3D(RibbonBatch)
+    End If
+
+    If Result Then
+
+        Result = Graphics3D.CommitSubmissionGroup3D(SubmissionToken)
+
+    Else
+
+        RendererErrorValue = Graphics3D.LastError()
+        Result = Graphics3D.RollbackSubmissionGroup3D(SubmissionToken)
+        ErrorValue = EFFECTS_ERROR_DRAW
+
+        Return False
+
+    End If
+
+    If Not Result Then
+
+        RendererErrorValue = Graphics3D.LastError()
+        ErrorValue = EFFECTS_ERROR_DRAW
+
+        Return False
+
+    End If
+
+    ErrorValue = EFFECTS_ERROR_NONE
+
+    Return True
+
+End Function
+
+Public Function IsActive(Value As Effect) As Boolean
+
+    Dim Result As Boolean
+
+    Result = EffectIndex(Value) >= 0
+
+    Return Result
+
+End Function
+
+Public Function ActiveEffectCount() As Number
+
+    Dim CountValue As Number
+    Dim Slot As Number
+
+    For Slot = 0 To MAX_ACTIVE_EFFECTS - 1
+
+        If EffectActive[Slot] Then
+            CountValue = CountValue + 1
+        End If
+
+    End For
+
+    Return CountValue
+
+End Function
+
+Public Function ActiveParticleCount() As Number
+
+    Dim CountValue As Number
+    Dim Slot As Number
+
+    For Slot = 0 To ParticleCapacityValue - 1
+
+        If ParticleActive[Slot] And ParticleAge[Slot] >= 0 Then
+            CountValue = CountValue + 1
+        End If
+
+    End For
+
+    Return CountValue
+
+End Function
+
+''' Returns the fixed reservation count; M6 reserves one slot per live particle.
+Public Function ReservedParticleCount() As Number
+
+    Dim CountValue As Number
+    Dim Slot As Number
+
+    For Slot = 0 To ParticleCapacityValue - 1
+
+        If ParticleActive[Slot] Then
+            CountValue = CountValue + 1
+        End If
+
+    End For
+
+    Return CountValue
+
+End Function
+
+''' Exposes exact integer simulation state for deterministic native/Web tests.
+Public Function ParticleValue(Index As Number, Property As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Index < 0 Or Index >= ParticleCapacityValue Then
+        Return 0
+    End If
+
+    If Property = PARTICLE_VALUE_ACTIVE Then
+
+        If ParticleActive[Index] Then
+            Return 1
+        End If
+
+        Return 0
+
+    Else If Property = PARTICLE_VALUE_POSITION_X Then
+
+        ReturnValue = ParticleX[Index]
+
+        Return ReturnValue
+
+    Else If Property = PARTICLE_VALUE_POSITION_Y Then
+
+        ReturnValue = ParticleY[Index]
+
+        Return ReturnValue
+
+    Else If Property = PARTICLE_VALUE_POSITION_Z Then
+
+        ReturnValue = ParticleZ[Index]
+
+        Return ReturnValue
+
+    Else If Property = PARTICLE_VALUE_VELOCITY_X Then
+
+        ReturnValue = ParticleVelocityX[Index]
+
+        Return ReturnValue
+
+    Else If Property = PARTICLE_VALUE_VELOCITY_Y Then
+
+        ReturnValue = ParticleVelocityY[Index]
+
+        Return ReturnValue
+
+    Else If Property = PARTICLE_VALUE_VELOCITY_Z Then
+
+        ReturnValue = ParticleVelocityZ[Index]
+
+        Return ReturnValue
+
+    Else If Property = PARTICLE_VALUE_AGE Then
+
+        ReturnValue = ParticleAge[Index]
+
+        Return ReturnValue
+
+    Else If Property = PARTICLE_VALUE_LIFETIME Then
+
+        ReturnValue = ParticleLifetime[Index]
+
+        Return ReturnValue
+
+    Else If Property = PARTICLE_VALUE_ROTATION Then
+
+        ReturnValue = ParticleRotation[Index]
+
+        Return ReturnValue
+
+    Else If Property = PARTICLE_VALUE_ATLAS_FIRST Then
+
+        ReturnValue = ParticleAtlasFirst[Index]
+
+        Return ReturnValue
+
+    Else If Property = PARTICLE_VALUE_ATLAS_COUNT Then
+
+        ReturnValue = ParticleAtlasCount[Index]
+
+        Return ReturnValue
+
+    End If
+
+    Return 0
+
+End Function
+
+Public Function FlashOpacity() As Number
+
+    Dim EffectSlot As Number
+    Dim Opacity As Number
+    Dim Preset As Number
+    Dim Value As Number
+
+    For EffectSlot = 0 To MAX_ACTIVE_EFFECTS - 1
+
+        If EffectActive[EffectSlot] Then
+
+            Preset = EffectPresets[EffectSlot]
+            Value = PresetFlashPercents[Preset] * Max(0, 250 - EffectAges[EffectSlot]) / 250
+            Opacity = Max(Opacity, Value)
+
+        End If
+
+    End For
+
+    Return Opacity
+
+End Function
+
+''' Takes the newest bounded transient-light request; Scene3D remains the light owner.
+Public Function TakeTransientLight() As TransientLightRequest3D
+
+    Dim Result As TransientLightRequest3D
+
+    If LightRequestPending Then
+
+        Result.Available = True
+        Result.X = LightRequestX
+        Result.Y = LightRequestY
+        Result.Z = LightRequestZ
+        Result.RedValue = LightRequestRed
+        Result.GreenValue = LightRequestGreen
+        Result.BlueValue = LightRequestBlue
+        Result.IntensityPercent = LightRequestIntensity
+        Result.Radius = LightRequestRadius
+        LightRequestPending = False
+
+    End If
+
+    Return Result
+
+End Function
+
+''' Takes the newest bounded numeric cue request; the caller remains the audio owner.
+Public Function TakeAudioCue() As AudioCueRequest3D
+
+    Dim Result As AudioCueRequest3D
+
+    If AudioRequestPending Then
+
+        Result.Available = True
+        Result.CueId = AudioRequestCue
+        Result.Seed = AudioRequestSeed
+        AudioRequestPending = False
+
+    End If
+
+    Return Result
+
+End Function
+
+Private Function ShakeAxis(Axis As Number) As Number
+
+    Dim ImpulseSlot As Number
+    Dim Phase As Number
+    Dim Result As Number
+    Dim Strength As Number
+
+    For ImpulseSlot = 0 To MAX_IMPULSES - 1
+
+        If ImpulseActive[ImpulseSlot] Then
+
+            Phase = ImpulseAge[ImpulseSlot] / FIXED_STEP_MILLISECONDS + ImpulseSeed[ImpulseSlot] + Axis * 37
+            Strength = ImpulseAmplitude[ImpulseSlot] * (ImpulseDuration[ImpulseSlot] - ImpulseAge[ImpulseSlot]) / ImpulseDuration[ImpulseSlot]
+            Result = Result + Strength * FixedMath.SinFixed(Phase * 47) / Core.FIXED_ONE
+
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Public Function CameraShakeX() As Number
+
+    Dim Result As Number
+
+    Result = ShakeAxis(1)
+
+    Return Result
+
+End Function
+
+Public Function CameraShakeY() As Number
+
+    Dim Result As Number
+
+    Result = ShakeAxis(2)
+
+    Return Result
+
+End Function
+
+Public Function CameraShakeZ() As Number
+
+    Dim Result As Number
+
+    Result = ShakeAxis(3)
+
+    Return Result
+
+End Function
+
+Public Function Quality() As Number
+
+    Return QualityValue
+
+End Function
+
+Public Function EmitterCount(PresetId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    Index = PresetIndex(PresetId)
+
+    If Index < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = PresetEmitterCounts[Index]
+
+    Return ReturnValue
+
+End Function
+
+Public Function ParticleCapacity() As Number
+
+    Return ParticleCapacityValue
+
+End Function
+
+Public Function FixedSteps() As Number
+
+    Return TotalFixedSteps
+
+End Function
+
+Public Function DroppedParticles() As Number
+
+    Return DroppedParticleCountValue
+
+End Function
+
+Public Function DroppedEffects() As Number
+
+    Return DroppedEffectCountValue
+
+End Function
+
+Public Function ClampedUpdates() As Number
+
+    Return ClampedUpdateCountValue
+
+End Function
+
+Public Function DroppedSimulationMilliseconds() As Number
+
+    Return DroppedSimulationMillisecondsValue
+
+End Function
+
+Public Function CommittedAlphaParticles() As Number
+
+    Return LastCommittedAlphaCount
+
+End Function
+
+Public Function CommittedAdditiveParticles() As Number
+
+    Return LastCommittedAdditiveCount
+
+End Function
+
+Public Function CommittedRibbonPoints() As Number
+
+    Return LastCommittedRibbonPoints
+
+End Function
+
+Public Function LastError() As Number
+
+    Return ErrorValue
+
+End Function
+
+Public Function LastRendererError() As Number
+
+    Return RendererErrorValue
+
+End Function
+
+End Module

@@ -188,6 +188,23 @@ Public Type Animator3D
     ModelAnimator As Boolean
 End Type
 
+''' A generation-safe bounded Renderer3D particle batch.
+Public Type ParticleBatch3D
+    Handle As Number
+    Capacity As Number
+    ParticleCount As Number
+    BillboardMode As Number
+    AtlasColumns As Number
+    AtlasRows As Number
+End Type
+
+''' A generation-safe bounded Renderer3D ribbon batch.
+Public Type RibbonBatch3D
+    Handle As Number
+    Capacity As Number
+    PointCount As Number
+End Type
+
 ''' One atomically drained model-animation root-motion delta in thousandths.
 Public Type RootMotionDelta3D
     X As Number

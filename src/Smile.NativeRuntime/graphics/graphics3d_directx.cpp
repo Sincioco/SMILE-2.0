@@ -37,6 +37,12 @@
 #define SMILE_3D_MAX_LOCAL_LIGHTS 4
 #define SMILE_3D_MAX_FRAME_SUBMISSIONS 512
 #define SMILE_3D_MAX_FRAME_PALETTES 512
+#define SMILE_3D_MAX_PARTICLE_BATCHES 16
+#define SMILE_3D_MAX_PARTICLES_PER_BATCH 4096
+#define SMILE_3D_MAX_STAGED_PARTICLES 8192
+#define SMILE_3D_MAX_RIBBON_BATCHES 16
+#define SMILE_3D_MAX_RIBBON_POINTS_PER_BATCH 1024
+#define SMILE_3D_MAX_STAGED_RIBBON_POINTS 2048
 #define SMILE_3D_SUBMISSION_OBJECT 1
 #define SMILE_3D_SUBMISSION_PARTICLE_BATCH 2
 #define SMILE_3D_SUBMISSION_RIBBON_BATCH 3
@@ -58,6 +64,8 @@
 #define SMILE_3D_SKELETON_HANDLE 0x60000000LL
 #define SMILE_3D_CLIP_HANDLE 0x70000000LL
 #define SMILE_3D_ANIMATOR_HANDLE 0x80000000LL
+#define SMILE_3D_PARTICLE_BATCH_HANDLE 0x90000000LL
+#define SMILE_3D_RIBBON_BATCH_HANDLE 0xA0000000LL
 #define SMILE_3D_HANDLE_KIND 0xF0000000LL
 #define SMILE_3D_PI 3.14159265358979323846f
 #define SMILE_3D_PBR_PIPELINE_NOT_ATTEMPTED 0
@@ -337,9 +345,73 @@ struct SmileSubmission3D
     long long source_handle;
     long long mesh_handle;
     long long texture_handles[4];
+    unsigned int resource_revision;
     int palette_index;
     SmileObject3D object;
     SmileMaterial3D material;
+};
+
+struct SmileParticleInstance3D
+{
+    float position_size[4];
+    float color[4];
+    float rotation_uv[4];
+};
+
+struct SmileParticleBatch3D
+{
+    unsigned short generation;
+    unsigned char active;
+    unsigned char billboard_mode;
+    unsigned short atlas_columns;
+    unsigned short atlas_rows;
+    unsigned int capacity;
+    unsigned int count;
+    unsigned int revision;
+    unsigned int uploaded_revision;
+    unsigned int in_flight;
+    long long material_handle;
+    SmileParticleInstance3D* instances;
+    ID3D11Buffer* instance_buffer;
+};
+
+struct SmileRibbonPoint3D
+{
+    float left[3];
+    float right[3];
+    float color[4];
+    float u;
+};
+
+struct SmileRibbonVertex3D
+{
+    float position[3];
+    float uv[2];
+    float color[4];
+};
+
+struct SmileRibbonBatch3D
+{
+    unsigned short generation;
+    unsigned char active;
+    unsigned int capacity;
+    unsigned int count;
+    unsigned int revision;
+    unsigned int uploaded_revision;
+    unsigned int in_flight;
+    long long material_handle;
+    SmileRibbonPoint3D* points;
+    SmileRibbonVertex3D* vertices;
+    ID3D11Buffer* vertex_buffer;
+};
+
+struct SmileVfxConstants3D
+{
+    SmileMatrix3D view_projection;
+    float camera_right[4];
+    float camera_up[4];
+    float atlas_output[4];
+    float material[4];
 };
 
 struct SmileConstants3D
@@ -423,6 +495,8 @@ static SmileModel3D smile_models3d[SMILE_3D_MAX_MODELS];
 static SmileSkeleton3D smile_skeletons3d[SMILE_3D_MAX_SKELETONS];
 static SmileAnimationClip3D smile_clips3d[SMILE_3D_MAX_CLIPS];
 static SmileAnimator3D smile_animators3d[SMILE_3D_MAX_ANIMATORS];
+static SmileParticleBatch3D smile_particle_batches3d[SMILE_3D_MAX_PARTICLE_BATCHES];
+static SmileRibbonBatch3D smile_ribbon_batches3d[SMILE_3D_MAX_RIBBON_BATCHES];
 static ID3D11VertexShader* smile_vertex_shader3d;
 static ID3D11PixelShader* smile_pixel_shader3d;
 static ID3D11InputLayout* smile_input_layout3d;
@@ -446,6 +520,14 @@ static ID3D11VertexShader* smile_post_vertex_shader3d;
 static ID3D11PixelShader* smile_post_pixel_shader3d;
 static ID3D11Buffer* smile_post_constant_buffer3d;
 static ID3D11SamplerState* smile_post_sampler3d;
+static ID3D11VertexShader* smile_particle_vertex_shader3d;
+static ID3D11VertexShader* smile_ribbon_vertex_shader3d;
+static ID3D11PixelShader* smile_vfx_pixel_shader3d;
+static ID3D11InputLayout* smile_particle_input_layout3d;
+static ID3D11InputLayout* smile_ribbon_input_layout3d;
+static ID3D11Buffer* smile_vfx_constant_buffer3d;
+static ID3D11Buffer* smile_particle_quad_vertex_buffer3d;
+static ID3D11Buffer* smile_particle_quad_index_buffer3d;
 static ID3D11Texture2D* smile_scene_resolve_texture3d;
 static ID3D11ShaderResourceView* smile_scene_shader_view3d;
 static ID3D11Texture2D* smile_bloom_texture_a3d;
@@ -548,6 +630,18 @@ static long long smile_m5_target_bytes3d;
 static long long smile_shadow_bytes3d;
 static long long smile_scene_bytes3d;
 static long long smile_bloom_bytes3d;
+static unsigned int smile_staged_particle_capacity3d;
+static unsigned int smile_staged_ribbon_capacity3d;
+static long long smile_vfx_draw_count3d;
+static long long smile_vfx_triangle_count3d;
+static long long smile_vfx_upload_count3d;
+static long long smile_vfx_rejected_operation_count3d;
+static long long smile_vfx_particle_draw_count3d;
+static long long smile_vfx_ribbon_draw_count3d;
+static long long smile_vfx_particle_triangle_count3d;
+static long long smile_vfx_ribbon_triangle_count3d;
+static long long smile_vfx_particle_submission_count3d;
+static long long smile_vfx_ribbon_submission_count3d;
 
 struct SmileM5TargetState3D
 {
@@ -734,6 +828,32 @@ static SmileAnimator3D* smile_3d_animator(long long handle)
     return &smile_animators3d[slot];
 }
 
+static SmileParticleBatch3D* smile_3d_particle_batch(long long handle)
+{
+    int slot;
+    unsigned short generation;
+    if ((handle & SMILE_3D_HANDLE_KIND) != SMILE_3D_PARTICLE_BATCH_HANDLE) return 0;
+    slot = (int)(handle & 255LL) - 1;
+    generation = (unsigned short)((handle >> 8) & 65535LL);
+    if (slot < 0 || slot >= SMILE_3D_MAX_PARTICLE_BATCHES ||
+        !smile_particle_batches3d[slot].active ||
+        smile_particle_batches3d[slot].generation != generation) return 0;
+    return &smile_particle_batches3d[slot];
+}
+
+static SmileRibbonBatch3D* smile_3d_ribbon_batch(long long handle)
+{
+    int slot;
+    unsigned short generation;
+    if ((handle & SMILE_3D_HANDLE_KIND) != SMILE_3D_RIBBON_BATCH_HANDLE) return 0;
+    slot = (int)(handle & 255LL) - 1;
+    generation = (unsigned short)((handle >> 8) & 65535LL);
+    if (slot < 0 || slot >= SMILE_3D_MAX_RIBBON_BATCHES ||
+        !smile_ribbon_batches3d[slot].active ||
+        smile_ribbon_batches3d[slot].generation != generation) return 0;
+    return &smile_ribbon_batches3d[slot];
+}
+
 static int smile_3d_live_mesh_count(void)
 {
     int count = 0;
@@ -829,6 +949,22 @@ static int smile_3d_animator_reference_count(long long handle)
     return count;
 }
 
+static int smile_3d_live_particle_batch_count(void)
+{
+    int count = 0;
+    for (int index = 0; index < SMILE_3D_MAX_PARTICLE_BATCHES; ++index)
+        if (smile_particle_batches3d[index].active) count++;
+    return count;
+}
+
+static int smile_3d_live_ribbon_batch_count(void)
+{
+    int count = 0;
+    for (int index = 0; index < SMILE_3D_MAX_RIBBON_BATCHES; ++index)
+        if (smile_ribbon_batches3d[index].active) count++;
+    return count;
+}
+
 static int smile_3d_model_animator_reference_count(const SmileModel3D* model)
 {
     int count = 0;
@@ -878,6 +1014,12 @@ static int smile_3d_material_reference_count(long long material_handle)
     if (smile_3d_material(material_handle) == 0) return 0;
     for (index = 0; index < SMILE_3D_MAX_OBJECTS; ++index)
         if (smile_objects3d[index].active && smile_objects3d[index].material_handle == material_handle) count++;
+    for (index = 0; index < SMILE_3D_MAX_PARTICLE_BATCHES; ++index)
+        if (smile_particle_batches3d[index].active &&
+            smile_particle_batches3d[index].material_handle == material_handle) count++;
+    for (index = 0; index < SMILE_3D_MAX_RIBBON_BATCHES; ++index)
+        if (smile_ribbon_batches3d[index].active &&
+            smile_ribbon_batches3d[index].material_handle == material_handle) count++;
     return count;
 }
 
@@ -1165,6 +1307,235 @@ static void smile_3d_delete_material(SmileMaterial3D* material)
     material->mode = 0;
     material->generation++;
     if (material->generation == 0) material->generation = 1;
+}
+
+static void smile_3d_delete_particle_batch(SmileParticleBatch3D* batch)
+{
+    void* instances = batch->instances;
+    smile_3d_release(batch->instance_buffer);
+    smile_3d_free(instances);
+    smile_staged_particle_capacity3d -= batch->capacity;
+    batch->instances = 0;
+    batch->active = 0;
+    batch->capacity = 0;
+    batch->count = 0;
+    batch->revision = 0;
+    batch->uploaded_revision = 0;
+    batch->in_flight = 0;
+    batch->material_handle = 0;
+    batch->generation++;
+    if (batch->generation == 0) batch->generation = 1;
+}
+
+static void smile_3d_delete_ribbon_batch(SmileRibbonBatch3D* batch)
+{
+    void* points = batch->points;
+    void* vertices = batch->vertices;
+    smile_3d_release(batch->vertex_buffer);
+    smile_3d_free(points);
+    smile_3d_free(vertices);
+    smile_staged_ribbon_capacity3d -= batch->capacity;
+    batch->points = 0;
+    batch->vertices = 0;
+    batch->active = 0;
+    batch->capacity = 0;
+    batch->count = 0;
+    batch->revision = 0;
+    batch->uploaded_revision = 0;
+    batch->in_flight = 0;
+    batch->material_handle = 0;
+    batch->generation++;
+    if (batch->generation == 0) batch->generation = 1;
+}
+
+static long long smile_3d_create_particle_batch(unsigned int capacity,
+    long long material_handle, int billboard_mode, int atlas_columns, int atlas_rows)
+{
+    int slot;
+    SmileMaterial3D* material = smile_3d_material(material_handle);
+    if (capacity == 0 || capacity > SMILE_3D_MAX_PARTICLES_PER_BATCH ||
+        capacity > SMILE_3D_MAX_STAGED_PARTICLES - smile_staged_particle_capacity3d ||
+        material == 0 || material->mode != 0 ||
+        (material->alpha_mode != 2 && material->alpha_mode != 3) ||
+        billboard_mode < 1 || billboard_mode > 2 ||
+        atlas_columns < 1 || atlas_columns > 16 || atlas_rows < 1 || atlas_rows > 16)
+    {
+        smile_last_error3d = 54;
+        smile_vfx_rejected_operation_count3d++;
+        return 0;
+    }
+    for (slot = 0; slot < SMILE_3D_MAX_PARTICLE_BATCHES; ++slot)
+        if (!smile_particle_batches3d[slot].active) break;
+    if (slot == SMILE_3D_MAX_PARTICLE_BATCHES)
+    {
+        smile_last_error3d = 55;
+        smile_vfx_rejected_operation_count3d++;
+        return 0;
+    }
+    SmileParticleInstance3D* instances = (SmileParticleInstance3D*)smile_3d_allocate(
+        sizeof(SmileParticleInstance3D) * capacity);
+    if (instances == 0)
+    {
+        smile_last_error3d = 55;
+        smile_vfx_rejected_operation_count3d++;
+        return 0;
+    }
+    SmileParticleBatch3D* batch = &smile_particle_batches3d[slot];
+    unsigned short generation = batch->generation == 0 ? 1 : batch->generation;
+    ZeroMemory(batch, sizeof(*batch));
+    ZeroMemory(instances, sizeof(SmileParticleInstance3D) * capacity);
+    batch->generation = generation;
+    batch->active = 1;
+    batch->billboard_mode = (unsigned char)billboard_mode;
+    batch->atlas_columns = (unsigned short)atlas_columns;
+    batch->atlas_rows = (unsigned short)atlas_rows;
+    batch->capacity = capacity;
+    batch->material_handle = material_handle;
+    batch->instances = instances;
+    smile_staged_particle_capacity3d += capacity;
+    return smile_3d_handle(SMILE_3D_PARTICLE_BATCH_HANDLE, slot, batch->generation);
+}
+
+static long long smile_3d_create_ribbon_batch(unsigned int capacity, long long material_handle)
+{
+    int slot;
+    SmileMaterial3D* material = smile_3d_material(material_handle);
+    if (capacity < 2 || capacity > SMILE_3D_MAX_RIBBON_POINTS_PER_BATCH ||
+        capacity > SMILE_3D_MAX_STAGED_RIBBON_POINTS - smile_staged_ribbon_capacity3d ||
+        material == 0 || material->mode != 0 ||
+        (material->alpha_mode != 2 && material->alpha_mode != 3))
+    {
+        smile_last_error3d = 54;
+        smile_vfx_rejected_operation_count3d++;
+        return 0;
+    }
+    for (slot = 0; slot < SMILE_3D_MAX_RIBBON_BATCHES; ++slot)
+        if (!smile_ribbon_batches3d[slot].active) break;
+    if (slot == SMILE_3D_MAX_RIBBON_BATCHES)
+    {
+        smile_last_error3d = 55;
+        smile_vfx_rejected_operation_count3d++;
+        return 0;
+    }
+    SmileRibbonPoint3D* points = (SmileRibbonPoint3D*)smile_3d_allocate(
+        sizeof(SmileRibbonPoint3D) * capacity);
+    SmileRibbonVertex3D* vertices = (SmileRibbonVertex3D*)smile_3d_allocate(
+        sizeof(SmileRibbonVertex3D) * capacity * 2);
+    if (points == 0 || vertices == 0)
+    {
+        void* points_allocation = points;
+        void* vertices_allocation = vertices;
+        smile_3d_free(points_allocation);
+        smile_3d_free(vertices_allocation);
+        smile_last_error3d = 55;
+        smile_vfx_rejected_operation_count3d++;
+        return 0;
+    }
+    SmileRibbonBatch3D* batch = &smile_ribbon_batches3d[slot];
+    unsigned short generation = batch->generation == 0 ? 1 : batch->generation;
+    ZeroMemory(batch, sizeof(*batch));
+    ZeroMemory(points, sizeof(SmileRibbonPoint3D) * capacity);
+    ZeroMemory(vertices, sizeof(SmileRibbonVertex3D) * capacity * 2);
+    batch->generation = generation;
+    batch->active = 1;
+    batch->capacity = capacity;
+    batch->material_handle = material_handle;
+    batch->points = points;
+    batch->vertices = vertices;
+    smile_staged_ribbon_capacity3d += capacity;
+    return smile_3d_handle(SMILE_3D_RIBBON_BATCH_HANDLE, slot, batch->generation);
+}
+
+static int smile_3d_upload_particle_batch(SmileParticleBatch3D* batch)
+{
+    ID3D11Device* device = (ID3D11Device*)smile_graphics_directx_device();
+    ID3D11DeviceContext* context = (ID3D11DeviceContext*)smile_graphics_directx_context();
+    if (batch == 0 || device == 0 || context == 0 || !smile_3d_create_pipeline())
+    { smile_last_error3d = 57; return 0; }
+    if (batch->instance_buffer == 0)
+    {
+        D3D11_BUFFER_DESC description = {};
+        description.ByteWidth = sizeof(SmileParticleInstance3D) * batch->capacity;
+        description.Usage = D3D11_USAGE_DYNAMIC;
+        description.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+        description.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        if (FAILED(device->CreateBuffer(&description, 0, &batch->instance_buffer)))
+        { smile_last_error3d = 57; return 0; }
+    }
+    if (batch->uploaded_revision == batch->revision) return 1;
+    D3D11_MAPPED_SUBRESOURCE mapped = {};
+    if (FAILED(context->Map(batch->instance_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+    { smile_last_error3d = 57; return 0; }
+    if (batch->count != 0)
+        memcpy(mapped.pData, batch->instances, sizeof(SmileParticleInstance3D) * batch->count);
+    context->Unmap(batch->instance_buffer, 0);
+    batch->uploaded_revision = batch->revision;
+    smile_vfx_upload_count3d++;
+    return 1;
+}
+
+static int smile_3d_upload_ribbon_batch(SmileRibbonBatch3D* batch)
+{
+    ID3D11Device* device = (ID3D11Device*)smile_graphics_directx_device();
+    ID3D11DeviceContext* context = (ID3D11DeviceContext*)smile_graphics_directx_context();
+    if (batch == 0 || device == 0 || context == 0 || !smile_3d_create_pipeline())
+    { smile_last_error3d = 57; return 0; }
+    if (batch->vertex_buffer == 0)
+    {
+        D3D11_BUFFER_DESC description = {};
+        description.ByteWidth = sizeof(SmileRibbonVertex3D) * batch->capacity * 2;
+        description.Usage = D3D11_USAGE_DYNAMIC;
+        description.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+        description.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        if (FAILED(device->CreateBuffer(&description, 0, &batch->vertex_buffer)))
+        { smile_last_error3d = 57; return 0; }
+    }
+    if (batch->uploaded_revision == batch->revision) return 1;
+    D3D11_MAPPED_SUBRESOURCE mapped = {};
+    if (FAILED(context->Map(batch->vertex_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+    { smile_last_error3d = 57; return 0; }
+    if (batch->count != 0)
+        memcpy(mapped.pData, batch->vertices, sizeof(SmileRibbonVertex3D) * batch->count * 2);
+    context->Unmap(batch->vertex_buffer, 0);
+    batch->uploaded_revision = batch->revision;
+    smile_vfx_upload_count3d++;
+    return 1;
+}
+
+static int smile_3d_commit_particle_batch(SmileParticleBatch3D* batch, unsigned int count)
+{
+    if (batch == 0 || count > batch->capacity)
+    { smile_last_error3d = 54; smile_vfx_rejected_operation_count3d++; return 0; }
+    if (batch->in_flight != 0)
+    { smile_last_error3d = 56; smile_vfx_rejected_operation_count3d++; return 0; }
+    batch->count = count;
+    batch->revision++;
+    if (batch->revision == 0) batch->revision = 1;
+    return smile_3d_upload_particle_batch(batch);
+}
+
+static int smile_3d_commit_ribbon_batch(SmileRibbonBatch3D* batch, unsigned int count)
+{
+    if (batch == 0 || count > batch->capacity)
+    { smile_last_error3d = 54; smile_vfx_rejected_operation_count3d++; return 0; }
+    if (batch->in_flight != 0)
+    { smile_last_error3d = 56; smile_vfx_rejected_operation_count3d++; return 0; }
+    for (unsigned int point = 0; point < count; ++point)
+    {
+        for (int side = 0; side < 2; ++side)
+        {
+            SmileRibbonVertex3D* vertex = &batch->vertices[point * 2 + side];
+            const float* position = side == 0 ? batch->points[point].left : batch->points[point].right;
+            memcpy(vertex->position, position, sizeof(vertex->position));
+            vertex->uv[0] = batch->points[point].u;
+            vertex->uv[1] = side == 0 ? 0.0f : 1.0f;
+            memcpy(vertex->color, batch->points[point].color, sizeof(vertex->color));
+        }
+    }
+    batch->count = count;
+    batch->revision++;
+    if (batch->revision == 0) batch->revision = 1;
+    return smile_3d_upload_ribbon_batch(batch);
 }
 
 static long long smile_3d_create_texture(SmileImageResource* image, int filter, int wrap)
@@ -3419,6 +3790,20 @@ static int smile_3d_create_pipeline(void)
         "float3 Tone(float3 x){return saturate((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14));}"
         "float3 Encode(float3 c){float3 low=c*12.92;float3 high=1.055*pow(max(c,0),1.0/2.4)-.055;return lerp(low,high,step(.0031308,c));}"
         "float4 main(float4 p:SV_POSITION,float2 uv:TEXCOORD0):SV_TARGET{if(first.x<.5){float3 c=sceneTexture.Sample(postSampler,uv).rgb;float bright=max(c.r,max(c.g,c.b));return float4(bright>=first.w?c:0,1);}if(first.x<1.5)return float4(SampleBlur(uv,float2(first.y,0)),1);if(first.x<2.5)return float4(SampleBlur(uv,float2(0,first.z)),1);float3 scene=sceneTexture.Sample(postSampler,uv).rgb;float3 bloom=bloomTexture.Sample(postSampler,uv).rgb*second.x;return float4(Encode(Tone(max((scene+bloom)*second.y,0))),1);}";
+    static const char* particle_vertex_source =
+        "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;}"
+        "struct I{float2 corner:POSITION;float2 uv:TEXCOORD0;float4 positionSize:TEXCOORD1;float4 color:COLOR0;float4 rotationUv:TEXCOORD2;};"
+        "struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;};"
+        "O main(I i){O o;float c=cos(i.rotationUv.x),s=sin(i.rotationUv.x);float2 q=float2(i.corner.x*c-i.corner.y*s,i.corner.x*s+i.corner.y*c)*i.positionSize.w;float3 world=i.positionSize.xyz+cameraRight.xyz*q.x+cameraUp.xyz*q.y;o.p=mul(float4(world,1),vp);o.uv=i.rotationUv.yz+i.uv*atlasOutput.xy;o.color=i.color;return o;}";
+    static const char* ribbon_vertex_source =
+        "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;}"
+        "struct I{float3 p:POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;};struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;};"
+        "O main(I i){O o;o.p=mul(float4(i.p,1),vp);o.uv=i.uv;o.color=i.color;return o;}";
+    static const char* vfx_pixel_source =
+        "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;}"
+        "Texture2D effectTexture:register(t0);SamplerState effectSampler:register(s0);"
+        "float3 ToLinear(float3 c){return lerp(c/12.92,pow((c+.055)/1.055,2.4),step(.04045,c));}"
+        "float4 main(float4 p:SV_POSITION,float2 uv:TEXCOORD0,float4 color:COLOR0):SV_TARGET{float4 sampled=atlasOutput.w>.5?effectTexture.Sample(effectSampler,uv):float4(1,1,1,1);if(sampled.a>.0001)sampled.rgb/=sampled.a;float4 base=color*material*sampled;float3 rgb=atlasOutput.z>.5?ToLinear(saturate(base.rgb))*max(cameraRight.w,1):saturate(base.rgb*max(cameraRight.w,1));return float4(rgb,base.a);}";
     ID3D11Device* device = (ID3D11Device*)smile_graphics_directx_device();
     ID3DBlob* vs = 0;
     ID3DBlob* ps = 0;
@@ -3428,8 +3813,13 @@ static int smile_3d_create_pipeline(void)
     ID3DBlob* shadow_ps = 0;
     ID3DBlob* post_vs = 0;
     ID3DBlob* post_ps = 0;
+    ID3DBlob* particle_vs = 0;
+    ID3DBlob* ribbon_vs = 0;
+    ID3DBlob* vfx_ps = 0;
     D3D11_INPUT_ELEMENT_DESC elements[5] = {};
     D3D11_INPUT_ELEMENT_DESC pbr_elements[6] = {};
+    D3D11_INPUT_ELEMENT_DESC particle_elements[5] = {};
+    D3D11_INPUT_ELEMENT_DESC ribbon_elements[3] = {};
     D3D11_BUFFER_DESC buffer = {};
     D3D11_DEPTH_STENCIL_DESC depth = {};
     D3D11_DEPTH_STENCIL_DESC depth_read = {};
@@ -3489,8 +3879,96 @@ static int smile_3d_create_pipeline(void)
         blend.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
         if (SUCCEEDED(result))
             result = device->CreateBlendState(&blend, &smile_additive_blend_state3d);
+        if (SUCCEEDED(result)) result = smile_3d_compile(
+            device, particle_vertex_source, "main", "vs_4_0", &particle_vs);
+        if (SUCCEEDED(result)) result = smile_3d_compile(
+            device, ribbon_vertex_source, "main", "vs_4_0", &ribbon_vs);
+        if (SUCCEEDED(result)) result = smile_3d_compile(
+            device, vfx_pixel_source, "main", "ps_4_0", &vfx_ps);
+        if (SUCCEEDED(result)) result = device->CreateVertexShader(
+            particle_vs->GetBufferPointer(), particle_vs->GetBufferSize(), 0,
+            &smile_particle_vertex_shader3d);
+        if (SUCCEEDED(result)) result = device->CreateVertexShader(
+            ribbon_vs->GetBufferPointer(), ribbon_vs->GetBufferSize(), 0,
+            &smile_ribbon_vertex_shader3d);
+        if (SUCCEEDED(result)) result = device->CreatePixelShader(
+            vfx_ps->GetBufferPointer(), vfx_ps->GetBufferSize(), 0,
+            &smile_vfx_pixel_shader3d);
+        particle_elements[0].SemanticName = "POSITION";
+        particle_elements[0].Format = DXGI_FORMAT_R32G32_FLOAT;
+        particle_elements[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+        particle_elements[1].SemanticName = "TEXCOORD";
+        particle_elements[1].SemanticIndex = 0;
+        particle_elements[1].Format = DXGI_FORMAT_R32G32_FLOAT;
+        particle_elements[1].AlignedByteOffset = 8;
+        particle_elements[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+        particle_elements[2].SemanticName = "TEXCOORD";
+        particle_elements[2].SemanticIndex = 1;
+        particle_elements[2].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+        particle_elements[2].InputSlot = 1;
+        particle_elements[2].InputSlotClass = D3D11_INPUT_PER_INSTANCE_DATA;
+        particle_elements[2].InstanceDataStepRate = 1;
+        particle_elements[3].SemanticName = "COLOR";
+        particle_elements[3].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+        particle_elements[3].InputSlot = 1;
+        particle_elements[3].AlignedByteOffset = 16;
+        particle_elements[3].InputSlotClass = D3D11_INPUT_PER_INSTANCE_DATA;
+        particle_elements[3].InstanceDataStepRate = 1;
+        particle_elements[4].SemanticName = "TEXCOORD";
+        particle_elements[4].SemanticIndex = 2;
+        particle_elements[4].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+        particle_elements[4].InputSlot = 1;
+        particle_elements[4].AlignedByteOffset = 32;
+        particle_elements[4].InputSlotClass = D3D11_INPUT_PER_INSTANCE_DATA;
+        particle_elements[4].InstanceDataStepRate = 1;
+        if (SUCCEEDED(result)) result = device->CreateInputLayout(
+            particle_elements, 5, particle_vs->GetBufferPointer(), particle_vs->GetBufferSize(),
+            &smile_particle_input_layout3d);
+        ribbon_elements[0].SemanticName = "POSITION";
+        ribbon_elements[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+        ribbon_elements[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+        ribbon_elements[1].SemanticName = "TEXCOORD";
+        ribbon_elements[1].Format = DXGI_FORMAT_R32G32_FLOAT;
+        ribbon_elements[1].AlignedByteOffset = 12;
+        ribbon_elements[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+        ribbon_elements[2].SemanticName = "COLOR";
+        ribbon_elements[2].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+        ribbon_elements[2].AlignedByteOffset = 20;
+        ribbon_elements[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+        if (SUCCEEDED(result)) result = device->CreateInputLayout(
+            ribbon_elements, 3, ribbon_vs->GetBufferPointer(), ribbon_vs->GetBufferSize(),
+            &smile_ribbon_input_layout3d);
+        buffer.ByteWidth = sizeof(SmileVfxConstants3D);
+        buffer.Usage = D3D11_USAGE_DEFAULT;
+        buffer.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        if (SUCCEEDED(result)) result = device->CreateBuffer(&buffer, 0,
+            &smile_vfx_constant_buffer3d);
+        if (SUCCEEDED(result))
+        {
+            static const float quad_vertices[16] = {
+                -0.5f, -0.5f, 0.0f, 1.0f,
+                -0.5f,  0.5f, 0.0f, 0.0f,
+                 0.5f,  0.5f, 1.0f, 0.0f,
+                 0.5f, -0.5f, 1.0f, 1.0f
+            };
+            static const unsigned short quad_indices[6] = { 0, 1, 2, 0, 2, 3 };
+            D3D11_SUBRESOURCE_DATA initial = {};
+            buffer.ByteWidth = sizeof(quad_vertices);
+            buffer.Usage = D3D11_USAGE_IMMUTABLE;
+            buffer.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+            initial.pSysMem = quad_vertices;
+            result = device->CreateBuffer(&buffer, &initial, &smile_particle_quad_vertex_buffer3d);
+            buffer.ByteWidth = sizeof(quad_indices);
+            buffer.BindFlags = D3D11_BIND_INDEX_BUFFER;
+            initial.pSysMem = quad_indices;
+            if (SUCCEEDED(result)) result = device->CreateBuffer(
+                &buffer, &initial, &smile_particle_quad_index_buffer3d);
+        }
         smile_3d_release(vs);
         smile_3d_release(ps);
+        smile_3d_release(particle_vs);
+        smile_3d_release(ribbon_vs);
+        smile_3d_release(vfx_ps);
         if (FAILED(result))
         {
             smile_last_error3d = 10;
@@ -5096,8 +5574,21 @@ static int smile_3d_submission_has_texture(const SmileSubmission3D* submission,
 
 static void smile_3d_release_submission(SmileSubmission3D* submission)
 {
-    SmileMesh3D* mesh = smile_3d_mesh(submission->mesh_handle);
-    if (mesh != 0 && mesh->in_flight > 0) mesh->in_flight--;
+    if (submission->kind == SMILE_3D_SUBMISSION_OBJECT)
+    {
+        SmileMesh3D* mesh = smile_3d_mesh(submission->mesh_handle);
+        if (mesh != 0 && mesh->in_flight > 0) mesh->in_flight--;
+    }
+    else if (submission->kind == SMILE_3D_SUBMISSION_PARTICLE_BATCH)
+    {
+        SmileParticleBatch3D* batch = smile_3d_particle_batch(submission->source_handle);
+        if (batch != 0 && batch->in_flight > 0) batch->in_flight--;
+    }
+    else if (submission->kind == SMILE_3D_SUBMISSION_RIBBON_BATCH)
+    {
+        SmileRibbonBatch3D* batch = smile_3d_ribbon_batch(submission->source_handle);
+        if (batch != 0 && batch->in_flight > 0) batch->in_flight--;
+    }
     for (int semantic = 0; semantic < 4; ++semantic)
     {
         long long handle = submission->texture_handles[semantic];
@@ -5192,6 +5683,61 @@ static int smile_3d_capture_submission(long long handle, SmileSubmission3D* subm
     return 1;
 }
 
+static int smile_3d_capture_vfx_submission(unsigned char kind, long long handle,
+    SmileSubmission3D* submission)
+{
+    SmileMaterial3D* material;
+    SmileTexture3D* texture = 0;
+    long long material_handle;
+    unsigned int revision;
+    unsigned int count;
+    if (!smile_frame_active3d) { smile_last_error3d = 14; return 0; }
+    if (kind == SMILE_3D_SUBMISSION_PARTICLE_BATCH)
+    {
+        SmileParticleBatch3D* batch = smile_3d_particle_batch(handle);
+        if (batch == 0) { smile_last_error3d = 54; return 0; }
+        if (!smile_3d_upload_particle_batch(batch)) return 0;
+        material_handle = batch->material_handle;
+        revision = batch->revision;
+        count = batch->count;
+    }
+    else
+    {
+        SmileRibbonBatch3D* batch = smile_3d_ribbon_batch(handle);
+        if (batch == 0) { smile_last_error3d = 54; return 0; }
+        if (!smile_3d_upload_ribbon_batch(batch)) return 0;
+        material_handle = batch->material_handle;
+        revision = batch->revision;
+        count = batch->count;
+    }
+    if (count == 0) return 2;
+    material = smile_3d_material(material_handle);
+    if (material == 0 || material->mode != 0 ||
+        (material->alpha_mode != 2 && material->alpha_mode != 3))
+    { smile_last_error3d = 54; return 0; }
+    if (material->texture_handles[0] != 0)
+    {
+        texture = smile_3d_texture(material->texture_handles[0]);
+        if (texture == 0 || !smile_3d_upload_texture(texture)) return 0;
+    }
+    ZeroMemory(submission, sizeof(*submission));
+    submission->kind = kind;
+    submission->visible = 1;
+    submission->source_handle = handle;
+    submission->resource_revision = revision;
+    submission->has_material = 1;
+    submission->material = *material;
+    submission->alpha_mode = material->alpha_mode;
+    submission->texture_handles[0] = material->texture_handles[0];
+    submission->palette_index = -1;
+    if (kind == SMILE_3D_SUBMISSION_PARTICLE_BATCH)
+        smile_3d_particle_batch(handle)->in_flight++;
+    else
+        smile_3d_ribbon_batch(handle)->in_flight++;
+    if (texture != 0) texture->in_flight++;
+    return 1;
+}
+
 static int smile_3d_begin(long long red, long long green, long long blue)
 {
     ID3D11DeviceContext* context;
@@ -5253,6 +5799,14 @@ static int smile_3d_begin(long long red, long long green, long long blue)
     smile_shadow_palette_upload_count3d = 0;
     smile_post_draw_count3d = 0;
     smile_resolve_count3d = 0;
+    smile_vfx_draw_count3d = 0;
+    smile_vfx_triangle_count3d = 0;
+    smile_vfx_particle_draw_count3d = 0;
+    smile_vfx_ribbon_draw_count3d = 0;
+    smile_vfx_particle_triangle_count3d = 0;
+    smile_vfx_ribbon_triangle_count3d = 0;
+    smile_vfx_particle_submission_count3d = 0;
+    smile_vfx_ribbon_submission_count3d = 0;
     smile_frame_active3d = 1;
     return 1;
 }
@@ -5367,6 +5921,116 @@ static int smile_3d_draw_pbr(const SmileSubmission3D* submission)
     return 1;
 }
 
+static int smile_3d_draw_vfx_submission(const SmileSubmission3D* submission)
+{
+    ID3D11DeviceContext* context = (ID3D11DeviceContext*)smile_graphics_directx_context();
+    const SmileMaterial3D* material = &submission->material;
+    SmileTexture3D* texture = 0;
+    ID3D11ShaderResourceView* texture_view = 0;
+    ID3D11SamplerState* texture_sampler = 0;
+    SmileVfxConstants3D constants = {};
+    SmileMatrix3D view;
+    SmileMatrix3D projection;
+    float aspect;
+    if (context == 0 || smile_particle_vertex_shader3d == 0 ||
+        smile_ribbon_vertex_shader3d == 0 || smile_vfx_pixel_shader3d == 0)
+    { smile_last_error3d = 57; return 0; }
+    if (material->texture_handles[0] != 0)
+    {
+        texture = smile_3d_texture(material->texture_handles[0]);
+        if (texture == 0 || !smile_3d_upload_texture(texture)) return 0;
+        texture_view = texture->view;
+        texture_sampler = texture->sampler;
+    }
+    view = smile_3d_view();
+    aspect = (float)smile_graphics_directx_viewport_width() /
+        (float)smile_graphics_directx_viewport_height();
+    projection = smile_3d_projection(aspect > 0.0f ? aspect : 1.0f);
+    constants.view_projection = smile_3d_multiply(view, projection);
+    constants.camera_right[0] = view.m[0];
+    constants.camera_right[1] = view.m[4];
+    constants.camera_right[2] = view.m[8];
+    constants.camera_right[3] = material->emissive;
+    constants.camera_up[0] = view.m[1];
+    constants.camera_up[1] = view.m[5];
+    constants.camera_up[2] = view.m[9];
+    constants.camera_up[3] = material->cutoff;
+    constants.atlas_output[2] = smile_hdr_effective3d ? 1.0f : 0.0f;
+    constants.atlas_output[3] = texture == 0 ? 0.0f : 1.0f;
+    memcpy(constants.material, material->color, sizeof(constants.material));
+    context->OMSetBlendState(material->alpha_mode == 3
+        ? smile_additive_blend_state3d : smile_blend_state3d, 0, 0xffffffff);
+    context->OMSetDepthStencilState(smile_depth_read_state3d, 0);
+    context->RSSetState(smile_raster_state3d);
+    context->PSSetShader(smile_vfx_pixel_shader3d, 0, 0);
+    context->VSSetConstantBuffers(0, 1, &smile_vfx_constant_buffer3d);
+    context->PSSetConstantBuffers(0, 1, &smile_vfx_constant_buffer3d);
+    context->PSSetShaderResources(0, 1, &texture_view);
+    context->PSSetSamplers(0, 1, &texture_sampler);
+    if (submission->kind == SMILE_3D_SUBMISSION_PARTICLE_BATCH)
+    {
+        SmileParticleBatch3D* batch = smile_3d_particle_batch(submission->source_handle);
+        ID3D11Buffer* buffers[2];
+        UINT strides[2] = { sizeof(float) * 4, sizeof(SmileParticleInstance3D) };
+        UINT offsets[2] = {};
+        if (batch == 0 || batch->revision != submission->resource_revision ||
+            !smile_3d_upload_particle_batch(batch))
+        { smile_last_error3d = 56; return 0; }
+        if (batch->billboard_mode == 2)
+        {
+            constants.camera_right[1] = 0.0f;
+            smile_3d_normalize(&constants.camera_right[0], &constants.camera_right[1],
+                &constants.camera_right[2]);
+            constants.camera_up[0] = 0.0f;
+            constants.camera_up[1] = 1.0f;
+            constants.camera_up[2] = 0.0f;
+        }
+        constants.atlas_output[0] = 1.0f / (float)batch->atlas_columns;
+        constants.atlas_output[1] = 1.0f / (float)batch->atlas_rows;
+        context->UpdateSubresource(smile_vfx_constant_buffer3d, 0, 0, &constants, 0, 0);
+        buffers[0] = smile_particle_quad_vertex_buffer3d;
+        buffers[1] = batch->instance_buffer;
+        context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        context->IASetInputLayout(smile_particle_input_layout3d);
+        context->IASetVertexBuffers(0, 2, buffers, strides, offsets);
+        context->IASetIndexBuffer(smile_particle_quad_index_buffer3d,
+            DXGI_FORMAT_R16_UINT, 0);
+        context->VSSetShader(smile_particle_vertex_shader3d, 0, 0);
+        context->DrawIndexedInstanced(6, batch->count, 0, 0, 0);
+        smile_vfx_particle_draw_count3d++;
+        smile_vfx_particle_triangle_count3d += (long long)batch->count * 2;
+        smile_vfx_triangle_count3d += (long long)batch->count * 2;
+        smile_submitted_triangle_count3d += (long long)batch->count * 2;
+    }
+    else if (submission->kind == SMILE_3D_SUBMISSION_RIBBON_BATCH)
+    {
+        SmileRibbonBatch3D* batch = smile_3d_ribbon_batch(submission->source_handle);
+        UINT stride = sizeof(SmileRibbonVertex3D), offset = 0;
+        if (batch == 0 || batch->revision != submission->resource_revision ||
+            !smile_3d_upload_ribbon_batch(batch))
+        { smile_last_error3d = 56; return 0; }
+        constants.atlas_output[0] = 1.0f;
+        constants.atlas_output[1] = 1.0f;
+        context->UpdateSubresource(smile_vfx_constant_buffer3d, 0, 0, &constants, 0, 0);
+        context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+        context->IASetInputLayout(smile_ribbon_input_layout3d);
+        context->IASetVertexBuffers(0, 1, &batch->vertex_buffer, &stride, &offset);
+        context->IASetIndexBuffer(0, DXGI_FORMAT_UNKNOWN, 0);
+        context->VSSetShader(smile_ribbon_vertex_shader3d, 0, 0);
+        context->Draw(batch->count * 2, 0);
+        smile_vfx_ribbon_draw_count3d++;
+        smile_vfx_ribbon_triangle_count3d += batch->count < 2 ? 0 : (long long)batch->count * 2 - 2;
+        smile_vfx_triangle_count3d += batch->count < 2 ? 0 : (long long)batch->count * 2 - 2;
+        smile_submitted_triangle_count3d += batch->count < 2 ? 0 :
+            (long long)batch->count * 2 - 2;
+    }
+    else
+    { smile_last_error3d = 54; return 0; }
+    smile_draw_call_count3d++;
+    smile_vfx_draw_count3d++;
+    return 1;
+}
+
 static int smile_3d_draw_submission(const SmileSubmission3D* submission)
 {
     const SmileObject3D* object = &submission->object;
@@ -5381,8 +6045,10 @@ static int smile_3d_draw_submission(const SmileSubmission3D* submission)
     UINT stride = sizeof(SmileVertex3D), offset = 0;
     float aspect;
     int alpha_mode;
-    if (!smile_frame_active3d || submission->kind != SMILE_3D_SUBMISSION_OBJECT)
+    if (!smile_frame_active3d)
     { smile_last_error3d = 14; return 0; }
+    if (submission->kind != SMILE_3D_SUBMISSION_OBJECT)
+        return smile_3d_draw_vfx_submission(submission);
     if (mesh == 0 || !smile_3d_upload(mesh)) return 0;
     if (material != 0)
     {
@@ -5522,6 +6188,59 @@ static int smile_3d_draw(long long handle)
     {
         smile_logical_submission_count3d++;
         if (captured == 1) smile_physical_submission_count3d++;
+    }
+    return result;
+}
+
+static int smile_3d_draw_vfx_batch(unsigned char kind, long long handle)
+{
+    SmileSubmission3D* submission;
+    int captured;
+    int result;
+    if (!smile_frame_active3d)
+    { smile_last_error3d = 14; return 0; }
+    if (smile_multipass_active3d || smile_submission_group_active3d)
+    {
+        if (smile_frame_submission_count3d >= SMILE_3D_MAX_FRAME_SUBMISSIONS ||
+            (smile_submission_group_active3d &&
+                smile_submission_group_physical3d >= smile_submission_group_reserved3d))
+        {
+            smile_rejected_submission_count3d++;
+            smile_vfx_rejected_operation_count3d++;
+            smile_last_error3d = 51;
+            return 0;
+        }
+        submission = &smile_frame_submissions3d[smile_frame_submission_count3d];
+        captured = smile_3d_capture_vfx_submission(kind, handle, submission);
+        if (!captured) return 0;
+        if (captured == 1)
+        {
+            smile_frame_submission_count3d++;
+            if (smile_submission_group_active3d) smile_submission_group_physical3d++;
+        }
+        if (smile_submission_group_active3d) smile_submission_group_logical3d++;
+        else
+        {
+            smile_logical_submission_count3d++;
+            if (captured == 1) smile_physical_submission_count3d++;
+        }
+        if (kind == SMILE_3D_SUBMISSION_PARTICLE_BATCH)
+            smile_vfx_particle_submission_count3d++;
+        else smile_vfx_ribbon_submission_count3d++;
+        return 1;
+    }
+    submission = &smile_frame_submissions3d[0];
+    captured = smile_3d_capture_vfx_submission(kind, handle, submission);
+    if (!captured) return 0;
+    result = captured == 2 ? 1 : smile_3d_draw_submission(submission);
+    if (captured == 1) smile_3d_release_submission(submission);
+    if (result)
+    {
+        smile_logical_submission_count3d++;
+        if (captured == 1) smile_physical_submission_count3d++;
+        if (kind == SMILE_3D_SUBMISSION_PARTICLE_BATCH)
+            smile_vfx_particle_submission_count3d++;
+        else smile_vfx_ribbon_submission_count3d++;
     }
     return result;
 }
@@ -5861,6 +6580,24 @@ extern "C" void smile_graphics3d_on_device_lost(void)
         smile_3d_release(smile_textures3d[index].texture);
         smile_3d_release(smile_textures3d[index].sampler);
     }
+    for (index = 0; index < SMILE_3D_MAX_PARTICLE_BATCHES; ++index)
+    {
+        smile_3d_release(smile_particle_batches3d[index].instance_buffer);
+        smile_particle_batches3d[index].uploaded_revision = 0;
+    }
+    for (index = 0; index < SMILE_3D_MAX_RIBBON_BATCHES; ++index)
+    {
+        smile_3d_release(smile_ribbon_batches3d[index].vertex_buffer);
+        smile_ribbon_batches3d[index].uploaded_revision = 0;
+    }
+    smile_3d_release(smile_particle_quad_index_buffer3d);
+    smile_3d_release(smile_particle_quad_vertex_buffer3d);
+    smile_3d_release(smile_vfx_constant_buffer3d);
+    smile_3d_release(smile_ribbon_input_layout3d);
+    smile_3d_release(smile_particle_input_layout3d);
+    smile_3d_release(smile_vfx_pixel_shader3d);
+    smile_3d_release(smile_ribbon_vertex_shader3d);
+    smile_3d_release(smile_particle_vertex_shader3d);
     smile_3d_release(smile_color_view3d); smile_3d_release(smile_color_texture3d);
     smile_3d_release(smile_depth_view3d); smile_3d_release(smile_depth_texture3d);
     smile_3d_release(smile_additive_blend_state3d); smile_3d_release(smile_blend_state3d);
@@ -5885,6 +6622,205 @@ extern "C" void smile_graphics3d_on_device_lost(void)
     smile_pbr_pipeline_attempt_count3d = 0;
 }
 
+static long long smile_3d_particle_batch_command(long long operation,
+    long long b, long long c, long long d, long long e, long long f,
+    long long g, long long h, long long i)
+{
+    SmileParticleBatch3D* batch;
+    if (operation == 1)
+        return smile_3d_create_particle_batch((unsigned int)b, c, (int)d, (int)e, (int)f);
+    batch = smile_3d_particle_batch(b);
+    if (operation == 7) return batch != 0 ? 1 : 0;
+    if (batch == 0)
+    { smile_last_error3d = 54; smile_vfx_rejected_operation_count3d++; return 0; }
+    if (operation == 2)
+    {
+        if (batch->in_flight != 0)
+        { smile_last_error3d = 56; smile_vfx_rejected_operation_count3d++; return 0; }
+        if (c < 0 || c >= batch->capacity || d < -1000000 || d > 1000000 ||
+            e < -1000000 || e > 1000000 || f < -1000000 || f > 1000000 ||
+            g <= 0 || g > 1000000 || h < -1000000 || h > 1000000 ||
+            i < 0 || i >= (long long)batch->atlas_columns * batch->atlas_rows)
+        { smile_last_error3d = 54; smile_vfx_rejected_operation_count3d++; return 0; }
+        SmileParticleInstance3D* instance = &batch->instances[c];
+        instance->position_size[0] = (float)d;
+        instance->position_size[1] = (float)e;
+        instance->position_size[2] = (float)f;
+        instance->position_size[3] = (float)g;
+        instance->rotation_uv[0] = smile_3d_degrees(h);
+        instance->rotation_uv[1] = (float)(i % batch->atlas_columns) /
+            (float)batch->atlas_columns;
+        instance->rotation_uv[2] = (float)(i / batch->atlas_columns) /
+            (float)batch->atlas_rows;
+        return 1;
+    }
+    if (operation == 3)
+    {
+        if (batch->in_flight != 0)
+        { smile_last_error3d = 56; smile_vfx_rejected_operation_count3d++; return 0; }
+        if (c < 0 || c >= batch->capacity || d < 0 || d > 255 ||
+            e < 0 || e > 255 || f < 0 || f > 255 || g < 0 || g > 100)
+        { smile_last_error3d = 54; smile_vfx_rejected_operation_count3d++; return 0; }
+        SmileParticleInstance3D* instance = &batch->instances[c];
+        instance->color[0] = (float)d / 255.0f;
+        instance->color[1] = (float)e / 255.0f;
+        instance->color[2] = (float)f / 255.0f;
+        instance->color[3] = (float)g / 100.0f;
+        return 1;
+    }
+    if (operation == 4) return c < 0 ? 0 :
+        smile_3d_commit_particle_batch(batch, (unsigned int)c);
+    if (operation == 5) return smile_3d_draw_vfx_batch(
+        SMILE_3D_SUBMISSION_PARTICLE_BATCH, b);
+    if (operation == 6)
+    {
+        if (batch->in_flight != 0)
+        { smile_last_error3d = 56; smile_vfx_rejected_operation_count3d++; return 0; }
+        smile_3d_delete_particle_batch(batch);
+        return 1;
+    }
+    smile_last_error3d = 54;
+    smile_vfx_rejected_operation_count3d++;
+    return 0;
+}
+
+static long long smile_3d_ribbon_batch_command(long long operation,
+    long long b, long long c, long long d, long long e, long long f,
+    long long g, long long h, long long i, long long j)
+{
+    SmileRibbonBatch3D* batch;
+    if (operation == 1) return smile_3d_create_ribbon_batch((unsigned int)b, c);
+    batch = smile_3d_ribbon_batch(b);
+    if (operation == 7) return batch != 0 ? 1 : 0;
+    if (batch == 0)
+    { smile_last_error3d = 54; smile_vfx_rejected_operation_count3d++; return 0; }
+    if (operation == 2)
+    {
+        if (batch->in_flight != 0)
+        { smile_last_error3d = 56; smile_vfx_rejected_operation_count3d++; return 0; }
+        if (c < 0 || c >= batch->capacity || d < -1000000 || d > 1000000 ||
+            e < -1000000 || e > 1000000 || f < -1000000 || f > 1000000 ||
+            g < -1000000 || g > 1000000 || h < -1000000 || h > 1000000 ||
+            i < -1000000 || i > 1000000 || j < 0 || j > 1000)
+        { smile_last_error3d = 54; smile_vfx_rejected_operation_count3d++; return 0; }
+        SmileRibbonPoint3D* point = &batch->points[c];
+        point->left[0] = (float)d; point->left[1] = (float)e; point->left[2] = (float)f;
+        point->right[0] = (float)g; point->right[1] = (float)h; point->right[2] = (float)i;
+        point->u = (float)j / 1000.0f;
+        return 1;
+    }
+    if (operation == 3)
+    {
+        if (batch->in_flight != 0)
+        { smile_last_error3d = 56; smile_vfx_rejected_operation_count3d++; return 0; }
+        if (c < 0 || c >= batch->capacity || d < 0 || d > 255 ||
+            e < 0 || e > 255 || f < 0 || f > 255 || g < 0 || g > 100)
+        { smile_last_error3d = 54; smile_vfx_rejected_operation_count3d++; return 0; }
+        SmileRibbonPoint3D* point = &batch->points[c];
+        point->color[0] = (float)d / 255.0f;
+        point->color[1] = (float)e / 255.0f;
+        point->color[2] = (float)f / 255.0f;
+        point->color[3] = (float)g / 100.0f;
+        return 1;
+    }
+    if (operation == 4) return c < 0 ? 0 :
+        smile_3d_commit_ribbon_batch(batch, (unsigned int)c);
+    if (operation == 5) return smile_3d_draw_vfx_batch(
+        SMILE_3D_SUBMISSION_RIBBON_BATCH, b);
+    if (operation == 6)
+    {
+        if (batch->in_flight != 0)
+        { smile_last_error3d = 56; smile_vfx_rejected_operation_count3d++; return 0; }
+        smile_3d_delete_ribbon_batch(batch);
+        return 1;
+    }
+    smile_last_error3d = 54;
+    smile_vfx_rejected_operation_count3d++;
+    return 0;
+}
+
+static long long smile_3d_m6_value(long long query, long long handle)
+{
+    if (query == 1) return smile_3d_live_particle_batch_count();
+    if (query == 2) return SMILE_3D_MAX_PARTICLE_BATCHES;
+    if (query == 3) return smile_3d_live_ribbon_batch_count();
+    if (query == 4) return SMILE_3D_MAX_RIBBON_BATCHES;
+    if (query == 5) return smile_staged_particle_capacity3d;
+    if (query == 6) return SMILE_3D_MAX_STAGED_PARTICLES;
+    if (query == 7) return smile_staged_ribbon_capacity3d;
+    if (query == 8) return SMILE_3D_MAX_STAGED_RIBBON_POINTS;
+    if (query == 9)
+    {
+        long long count = 0;
+        for (int index = 0; index < SMILE_3D_MAX_PARTICLE_BATCHES; ++index)
+            if (smile_particle_batches3d[index].active) count += smile_particle_batches3d[index].count;
+        return count;
+    }
+    if (query == 10)
+    {
+        long long count = 0;
+        for (int index = 0; index < SMILE_3D_MAX_RIBBON_BATCHES; ++index)
+            if (smile_ribbon_batches3d[index].active) count += smile_ribbon_batches3d[index].count;
+        return count;
+    }
+    if (query == 11) return smile_vfx_draw_count3d;
+    if (query == 12) return smile_vfx_triangle_count3d;
+    if (query == 13) return smile_vfx_upload_count3d;
+    if (query == 14) return
+        (long long)smile_staged_particle_capacity3d * sizeof(SmileParticleInstance3D) +
+        (long long)smile_staged_ribbon_capacity3d *
+            (sizeof(SmileRibbonPoint3D) + sizeof(SmileRibbonVertex3D) * 2);
+    if (query == 15) return
+        (long long)smile_staged_particle_capacity3d * sizeof(SmileParticleInstance3D) +
+        (long long)smile_staged_ribbon_capacity3d * sizeof(SmileRibbonVertex3D) * 2 +
+        sizeof(float) * 16 + sizeof(unsigned short) * 6;
+    if (query == 16) return smile_vfx_rejected_operation_count3d;
+    if (query == 17) return smile_vfx_particle_draw_count3d;
+    if (query == 18) return smile_vfx_ribbon_draw_count3d;
+    if (query == 19)
+    {
+        long long count = 0;
+        for (int index = 0; index < SMILE_3D_MAX_PARTICLE_BATCHES; ++index)
+            if (smile_particle_batches3d[index].active && smile_particle_batches3d[index].in_flight) count++;
+        for (int index = 0; index < SMILE_3D_MAX_RIBBON_BATCHES; ++index)
+            if (smile_ribbon_batches3d[index].active && smile_ribbon_batches3d[index].in_flight) count++;
+        return count;
+    }
+    if (query == 20) return smile_vfx_particle_submission_count3d;
+    if (query == 21) return smile_vfx_ribbon_submission_count3d;
+    if (query == 22) return smile_vfx_particle_triangle_count3d;
+    if (query == 23) return smile_vfx_ribbon_triangle_count3d;
+    if (query >= 30 && query <= 36)
+    {
+        SmileParticleBatch3D* particle = smile_3d_particle_batch(handle);
+        SmileRibbonBatch3D* ribbon = smile_3d_ribbon_batch(handle);
+        if (particle != 0)
+        {
+            if (query == 30) return particle->capacity;
+            if (query == 31) return particle->count;
+            if (query == 32) return particle->revision;
+            if (query == 33 || query == 34)
+                return (long long)particle->capacity * sizeof(SmileParticleInstance3D);
+            if (query == 35) return particle->in_flight;
+            if (query == 36) return particle->material_handle;
+        }
+        if (ribbon != 0)
+        {
+            if (query == 30) return ribbon->capacity;
+            if (query == 31) return ribbon->count;
+            if (query == 32) return ribbon->revision;
+            if (query == 33) return (long long)ribbon->capacity *
+                (sizeof(SmileRibbonPoint3D) + sizeof(SmileRibbonVertex3D) * 2);
+            if (query == 34) return (long long)ribbon->capacity *
+                sizeof(SmileRibbonVertex3D) * 2;
+            if (query == 35) return ribbon->in_flight;
+            if (query == 36) return ribbon->material_handle;
+        }
+    }
+    smile_last_error3d = 54;
+    return 0;
+}
+
 static void smile_3d_reset(void)
 {
     int index;
@@ -5897,6 +6833,12 @@ static void smile_3d_reset(void)
         }
     for (index = 0; index < SMILE_3D_MAX_ANIMATORS; ++index)
         if (smile_animators3d[index].active) smile_3d_delete_animator(&smile_animators3d[index]);
+    for (index = 0; index < SMILE_3D_MAX_PARTICLE_BATCHES; ++index)
+        if (smile_particle_batches3d[index].active)
+            smile_3d_delete_particle_batch(&smile_particle_batches3d[index]);
+    for (index = 0; index < SMILE_3D_MAX_RIBBON_BATCHES; ++index)
+        if (smile_ribbon_batches3d[index].active)
+            smile_3d_delete_ribbon_batch(&smile_ribbon_batches3d[index]);
     for (index = 0; index < SMILE_3D_MAX_MODELS; ++index)
         if (smile_models3d[index].active) smile_3d_delete_model(&smile_models3d[index]);
     for (index = 0; index < SMILE_3D_MAX_CLIPS; ++index)
@@ -5925,6 +6867,16 @@ static void smile_3d_reset(void)
     smile_shadow_palette_upload_count3d = 0;
     smile_post_draw_count3d = 0;
     smile_resolve_count3d = 0;
+    smile_vfx_draw_count3d = 0;
+    smile_vfx_triangle_count3d = 0;
+    smile_vfx_upload_count3d = 0;
+    smile_vfx_rejected_operation_count3d = 0;
+    smile_vfx_particle_draw_count3d = 0;
+    smile_vfx_ribbon_draw_count3d = 0;
+    smile_vfx_particle_triangle_count3d = 0;
+    smile_vfx_ribbon_triangle_count3d = 0;
+    smile_vfx_particle_submission_count3d = 0;
+    smile_vfx_ribbon_submission_count3d = 0;
     smile_post_requested3d = 0;
     smile_hdr_requested3d = 0;
     smile_bloom_requested3d = 0;
@@ -5949,7 +6901,6 @@ extern "C" long long smile_renderer3d_command(long long command,
     SmileSkeleton3D* skeleton;
     SmileAnimationClip3D* clip;
     SmileAnimator3D* animator;
-    (void)j;
     switch (command)
     {
         case SMILE_3D_AVAILABLE: return smile_graphics_directx_device() != 0 ? 1 : 0;
@@ -6466,6 +7417,12 @@ extern "C" long long smile_renderer3d_command(long long command,
             return 0;
         case SMILE_3D_SUBMISSION_GROUP:
             return smile_3d_submission_group(a, b);
+        case SMILE_3D_PARTICLE_BATCH:
+            return smile_3d_particle_batch_command(a, b, c, d, e, f, g, h, i);
+        case SMILE_3D_RIBBON_BATCH:
+            return smile_3d_ribbon_batch_command(a, b, c, d, e, f, g, h, i, j);
+        case SMILE_3D_M6_VALUE:
+            return smile_3d_m6_value(a, b);
         default: smile_last_error3d = 1; return 0;
     }
 }

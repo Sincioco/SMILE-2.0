@@ -123,6 +123,9 @@ Private Const COMMAND_SET_SHADOW_AREA = 115
 Private Const COMMAND_SET_OBJECT_SHADOWS = 116
 Private Const COMMAND_M5_VALUE = 117
 Private Const COMMAND_SUBMISSION_GROUP = 118
+Private Const COMMAND_PARTICLE_BATCH = 119
+Private Const COMMAND_RIBBON_BATCH = 120
+Private Const COMMAND_M6_VALUE = 121
 
 Private Const ANIMATOR_QUERY_DESTINATION_CLIP = 1
 Private Const ANIMATOR_QUERY_TIME_REMAINDER = 2
@@ -259,6 +262,38 @@ Public Const M5_QUERY_SNAPSHOT_CASTS_SHADOW = 69
 Public Const SUBMISSION_GROUP_BEGIN = 1
 Public Const SUBMISSION_GROUP_COMMIT = 2
 Public Const SUBMISSION_GROUP_ROLLBACK = 3
+Public Const VFX_BILLBOARD_CAMERA = 1
+Public Const VFX_BILLBOARD_VERTICAL = 2
+Public Const VFX_QUERY_LIVE_PARTICLE_BATCHES = 1
+Public Const VFX_QUERY_MAX_PARTICLE_BATCHES = 2
+Public Const VFX_QUERY_LIVE_RIBBON_BATCHES = 3
+Public Const VFX_QUERY_MAX_RIBBON_BATCHES = 4
+Public Const VFX_QUERY_STAGED_PARTICLE_CAPACITY = 5
+Public Const VFX_QUERY_MAX_STAGED_PARTICLES = 6
+Public Const VFX_QUERY_STAGED_RIBBON_CAPACITY = 7
+Public Const VFX_QUERY_MAX_STAGED_RIBBON_POINTS = 8
+Public Const VFX_QUERY_ACTIVE_PARTICLES = 9
+Public Const VFX_QUERY_ACTIVE_RIBBON_POINTS = 10
+Public Const VFX_QUERY_DRAW_CALLS = 11
+Public Const VFX_QUERY_TRIANGLES = 12
+Public Const VFX_QUERY_UPLOADS = 13
+Public Const VFX_QUERY_CPU_BYTES = 14
+Public Const VFX_QUERY_GPU_BYTES = 15
+Public Const VFX_QUERY_REJECTED_OPERATIONS = 16
+Public Const VFX_QUERY_PARTICLE_DRAWS = 17
+Public Const VFX_QUERY_RIBBON_DRAWS = 18
+Public Const VFX_QUERY_IN_FLIGHT_BATCHES = 19
+Public Const VFX_QUERY_PARTICLE_SUBMISSIONS = 20
+Public Const VFX_QUERY_RIBBON_SUBMISSIONS = 21
+Public Const VFX_QUERY_PARTICLE_TRIANGLES = 22
+Public Const VFX_QUERY_RIBBON_TRIANGLES = 23
+Public Const VFX_QUERY_RESOURCE_CAPACITY = 30
+Public Const VFX_QUERY_RESOURCE_COUNT = 31
+Public Const VFX_QUERY_RESOURCE_REVISION = 32
+Public Const VFX_QUERY_RESOURCE_CPU_BYTES = 33
+Public Const VFX_QUERY_RESOURCE_GPU_BYTES = 34
+Public Const VFX_QUERY_RESOURCE_IN_FLIGHT = 35
+Public Const VFX_QUERY_RESOURCE_MATERIAL = 36
 Public Const MODEL_MATERIAL_BASE_COLOR_RED = 1
 Public Const MODEL_MATERIAL_BASE_COLOR_GREEN = 2
 Public Const MODEL_MATERIAL_BASE_COLOR_BLUE = 3
@@ -2500,6 +2535,67 @@ Public Function DefaultMaterial3D(Texture As Core.Texture3D) As Core.Material3D
 
 End Function
 
+''' Creates an unlit alpha/additive material for particle and ribbon batches.
+Public Function CreateEffectMaterial3D(
+    Texture As Core.Texture3D,
+    BlendMode As Number,
+    Optional EmissivePercent As Number = 100
+) As Core.Material3D
+
+    Dim Result As Core.Material3D
+
+    Result = CreateMaterial3D(
+        Texture,
+        BlendMode,
+        255,
+        255,
+        255,
+        100,
+        True,
+        EmissivePercent,
+        0
+    )
+
+    Return Result
+
+End Function
+
+''' Updates a shared effect material without introducing a second material pool.
+Public Function SetEffectMaterial3D(
+    ByRef Material As Core.Material3D,
+    BlendMode As Number,
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number,
+    OpacityPercent As Number,
+    EmissivePercent As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = SetMaterial3D(
+        Material,
+        BlendMode,
+        RedValue,
+        GreenValue,
+        BlueValue,
+        OpacityPercent,
+        True,
+        EmissivePercent,
+        0
+    )
+
+    Return Result
+
+End Function
+
+''' Destroys an effect material through the existing generation-safe material path.
+Public Sub DestroyEffectMaterial3D(ByRef Material As Core.Material3D)
+
+    Call DestroyMaterial3D(Material)
+
+End Sub
+
 Public Function SetMaterial3D(
     ByRef Material As Core.Material3D,
     AlphaMode As Number,
@@ -3557,6 +3653,517 @@ Public Function Begin3D(
     End If
 
     Result = Dispatch(COMMAND_BEGIN, RedValue, GreenValue, BlueValue, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+''' Creates a bounded instanced particle batch backed by an existing alpha or additive material.
+Public Function CreateParticleBatch3D(
+    Capacity As Number,
+    Material As Core.Material3D,
+    Optional BillboardMode As Number = VFX_BILLBOARD_CAMERA,
+    Optional AtlasColumns As Number = 1,
+    Optional AtlasRows As Number = 1
+) As Core.ParticleBatch3D
+
+    Dim Result As Core.ParticleBatch3D
+
+    Result.Handle = Dispatch(
+        COMMAND_PARTICLE_BATCH,
+        1,
+        Capacity,
+        Material.Handle,
+        BillboardMode,
+        AtlasColumns,
+        AtlasRows,
+        0,
+        0,
+        0,
+        0
+    )
+
+    If Result.Handle <> 0 Then
+
+        Result.Capacity = Capacity
+        Result.BillboardMode = BillboardMode
+        Result.AtlasColumns = AtlasColumns
+        Result.AtlasRows = AtlasRows
+
+    End If
+
+    Return Result
+
+End Function
+
+''' Stages one particle transform and zero-based atlas frame without uploading.
+Public Function SetParticle3D(
+    Batch As Core.ParticleBatch3D,
+    Index As Number,
+    X As Number,
+    Y As Number,
+    Z As Number,
+    Size As Number,
+    RotationDegrees As Number,
+    Optional AtlasFrame As Number = 0
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_PARTICLE_BATCH,
+        2,
+        Batch.Handle,
+        Index,
+        X,
+        Y,
+        Z,
+        Size,
+        RotationDegrees,
+        AtlasFrame,
+        0
+    ) <> 0
+
+    Return Result
+
+End Function
+
+''' Stages one particle color and opacity without uploading.
+Public Function SetParticleColor3D(
+    Batch As Core.ParticleBatch3D,
+    Index As Number,
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number,
+    OpacityPercent As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_PARTICLE_BATCH,
+        3,
+        Batch.Handle,
+        Index,
+        RedValue,
+        GreenValue,
+        BlueValue,
+        OpacityPercent,
+        0,
+        0,
+        0
+    ) <> 0
+
+    Return Result
+
+End Function
+
+''' Publishes the staged particle prefix with exactly one dynamic-buffer upload.
+Public Function CommitParticleBatch3D(ByRef Batch As Core.ParticleBatch3D, ParticleCount As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_PARTICLE_BATCH,
+        4,
+        Batch.Handle,
+        ParticleCount,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+        Batch.ParticleCount = ParticleCount
+    End If
+
+    Return Result
+
+End Function
+
+Public Function DrawParticleBatch3D(Batch As Core.ParticleBatch3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_PARTICLE_BATCH,
+        5,
+        Batch.Handle,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    Return Result
+
+End Function
+
+Public Function ParticleBatchHandleValid3D(Batch As Core.ParticleBatch3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_PARTICLE_BATCH,
+        7,
+        Batch.Handle,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    Return Result
+
+End Function
+
+Public Function TryDestroyParticleBatch3D(ByRef Batch As Core.ParticleBatch3D) As Boolean
+
+    Dim Result As Boolean
+
+    If Batch.Handle = 0 Then
+        Return True
+    End If
+
+    Result = Dispatch(
+        COMMAND_PARTICLE_BATCH,
+        6,
+        Batch.Handle,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+
+        Batch.Handle = 0
+        Batch.Capacity = 0
+        Batch.ParticleCount = 0
+        Batch.BillboardMode = 0
+        Batch.AtlasColumns = 0
+        Batch.AtlasRows = 0
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub DestroyParticleBatch3D(ByRef Batch As Core.ParticleBatch3D)
+
+    Dim Destroyed As Boolean
+
+    Destroyed = TryDestroyParticleBatch3D(Batch)
+
+End Sub
+
+''' Creates a bounded camera-independent ribbon strip using an existing effect material.
+Public Function CreateRibbonBatch3D(Capacity As Number, Material As Core.Material3D) As Core.RibbonBatch3D
+
+    Dim Result As Core.RibbonBatch3D
+
+    Result.Handle = Dispatch(
+        COMMAND_RIBBON_BATCH,
+        1,
+        Capacity,
+        Material.Handle,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    )
+
+    If Result.Handle <> 0 Then
+        Result.Capacity = Capacity
+    End If
+
+    Return Result
+
+End Function
+
+''' Stages the left and right edge of one ribbon point and a thousandths-scaled U coordinate.
+Public Function SetRibbonPoint3D(
+    Batch As Core.RibbonBatch3D,
+    Index As Number,
+    LeftX As Number,
+    LeftY As Number,
+    LeftZ As Number,
+    RightX As Number,
+    RightY As Number,
+    RightZ As Number,
+    TextureUThousandths As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_RIBBON_BATCH,
+        2,
+        Batch.Handle,
+        Index,
+        LeftX,
+        LeftY,
+        LeftZ,
+        RightX,
+        RightY,
+        RightZ,
+        TextureUThousandths
+    ) <> 0
+
+    Return Result
+
+End Function
+
+''' Stages one ribbon-point color and opacity.
+Public Function SetRibbonPointColor3D(
+    Batch As Core.RibbonBatch3D,
+    Index As Number,
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number,
+    OpacityPercent As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_RIBBON_BATCH,
+        3,
+        Batch.Handle,
+        Index,
+        RedValue,
+        GreenValue,
+        BlueValue,
+        OpacityPercent,
+        0,
+        0,
+        0
+    ) <> 0
+
+    Return Result
+
+End Function
+
+Public Function CommitRibbonBatch3D(ByRef Batch As Core.RibbonBatch3D, PointCount As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_RIBBON_BATCH,
+        4,
+        Batch.Handle,
+        PointCount,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+        Batch.PointCount = PointCount
+    End If
+
+    Return Result
+
+End Function
+
+Public Function DrawRibbonBatch3D(Batch As Core.RibbonBatch3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_RIBBON_BATCH,
+        5,
+        Batch.Handle,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    Return Result
+
+End Function
+
+Public Function RibbonBatchHandleValid3D(Batch As Core.RibbonBatch3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_RIBBON_BATCH,
+        7,
+        Batch.Handle,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    Return Result
+
+End Function
+
+Public Function TryDestroyRibbonBatch3D(ByRef Batch As Core.RibbonBatch3D) As Boolean
+
+    Dim Result As Boolean
+
+    If Batch.Handle = 0 Then
+        Return True
+    End If
+
+    Result = Dispatch(
+        COMMAND_RIBBON_BATCH,
+        6,
+        Batch.Handle,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+
+        Batch.Handle = 0
+        Batch.Capacity = 0
+        Batch.PointCount = 0
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub DestroyRibbonBatch3D(ByRef Batch As Core.RibbonBatch3D)
+
+    Dim Destroyed As Boolean
+
+    Destroyed = TryDestroyRibbonBatch3D(Batch)
+
+End Sub
+
+''' Reads global or generation-safe per-resource M6 diagnostics.
+Public Function VfxValue3D(Query As Number, Optional ResourceHandle As Number = 0) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(
+        COMMAND_M6_VALUE,
+        Query,
+        ResourceHandle,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    )
+
+    Return Result
+
+End Function
+
+Public Function LiveParticleBatchCount3D() As Number
+
+    Dim Result As Number
+
+    Result = VfxValue3D(VFX_QUERY_LIVE_PARTICLE_BATCHES)
+
+    Return Result
+
+End Function
+
+Public Function LiveRibbonBatchCount3D() As Number
+
+    Dim Result As Number
+
+    Result = VfxValue3D(VFX_QUERY_LIVE_RIBBON_BATCHES)
+
+    Return Result
+
+End Function
+
+Public Function ParticleDrawCount3D() As Number
+
+    Dim Result As Number
+
+    Result = VfxValue3D(VFX_QUERY_PARTICLE_DRAWS)
+
+    Return Result
+
+End Function
+
+Public Function RibbonDrawCount3D() As Number
+
+    Dim Result As Number
+
+    Result = VfxValue3D(VFX_QUERY_RIBBON_DRAWS)
+
+    Return Result
+
+End Function
+
+Public Function ParticleTriangleCount3D() As Number
+
+    Dim Result As Number
+
+    Result = VfxValue3D(VFX_QUERY_PARTICLE_TRIANGLES)
+
+    Return Result
+
+End Function
+
+Public Function RibbonTriangleCount3D() As Number
+
+    Dim Result As Number
+
+    Result = VfxValue3D(VFX_QUERY_RIBBON_TRIANGLES)
+
+    Return Result
+
+End Function
+
+Public Function BatchUploadCount3D() As Number
+
+    Dim Result As Number
+
+    Result = VfxValue3D(VFX_QUERY_UPLOADS)
+
     Return Result
 
 End Function

@@ -1,0 +1,400 @@
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Effects3D As Effects3D
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Scene3D As Scene3D
+
+Const PRESET_STRESS_BURST = 40
+
+Dim Camera As Core.Camera3D
+Dim Hero As Character3D.Actor
+Dim Arena As Core.Object3D
+Dim Atlas As Core.Texture3D
+Dim AlphaMaterial As Core.Material3D
+Dim AdditiveMaterial As Core.Material3D
+Dim RibbonMaterial As Core.Material3D
+Dim VerticalBatch As Core.ParticleBatch3D
+Dim Effect As Effects3D.Effect
+Dim SocketEffect As Effects3D.Effect
+Dim FrameReady As Boolean
+Dim Running As Boolean
+Dim DiagnosticsVisible As Boolean
+Dim HdrEnabled As Boolean
+Dim BloomEnabled As Boolean
+Dim StressMode As Boolean
+Dim SelectedPreset As Number
+Dim PreviousTime As Number
+Dim CurrentTime As Number
+Dim FrameMilliseconds As Number
+Dim AutomaticTimer As Number
+Dim SeedValue As Number
+Dim Key As Number
+
+Game Window "Renderer3D VFX Generation 2 Lab" Size 960 By 540
+
+Call Graphics3D.ResetRenderer3D()
+Call LoadLab()
+Call RestoreShowcase()
+
+Running = True
+DiagnosticsVisible = True
+PreviousTime = Timer()
+SelectedPreset = Effects3D.PRESET_HOLY_SWORD_STRIKE
+SeedValue = 20260901
+
+Call TriggerSelected()
+
+Do
+
+    Get Key Key
+
+    If Key = KEY_ESCAPE Then
+        Running = False
+    Else If Key >= KEY_1 And Key <= KEY_4 Then
+        SelectedPreset = Key - KEY_1 + 1
+
+        Call TriggerSelected()
+    Else If Key = KEY_SPACE Then
+        Call TriggerSelected()
+    Else If Key = KEY_RIGHT Then
+        SelectedPreset = SelectedPreset Mod 6 + 1
+    Else If Key = KEY_LEFT Then
+        SelectedPreset = (SelectedPreset + 4) Mod 6 + 1
+    Else If Key = KEY_A Then
+        HdrEnabled = Not HdrEnabled
+
+        Call ApplyPostMode()
+    Else If Key = KEY_W Then
+        BloomEnabled = Not BloomEnabled
+        FrameReady = Scene3D.SetBloom(BloomEnabled, 90, 1100)
+    Else If Key = KEY_D Then
+        DiagnosticsVisible = Not DiagnosticsVisible
+    Else If Key = KEY_S Then
+        StressMode = Not StressMode
+
+        Call TriggerStress()
+    Else If Key = KEY_ENTER Then
+        Call ResetVfx()
+    End If
+
+    CurrentTime = Timer()
+    FrameMilliseconds = Min(50, Max(0, CurrentTime - PreviousTime))
+    PreviousTime = CurrentTime
+    AutomaticTimer = AutomaticTimer + FrameMilliseconds
+
+    If AutomaticTimer >= 520 Then
+
+        AutomaticTimer = 0
+        SelectedPreset = SelectedPreset Mod 6 + 1
+
+        Call TriggerSelected()
+
+    End If
+
+    FrameReady = Character3D.Update(Hero, FrameMilliseconds)
+
+    If Effects3D.IsActive(SocketEffect) Then
+        FrameReady = Effects3D.MoveToSocket(SocketEffect, Hero, "HandTip") And FrameReady
+    End If
+
+    FrameReady = Effects3D.Update(FrameMilliseconds) And FrameReady
+    FrameReady = Effects3D.Commit() And FrameReady
+    Camera.Position.X = Effects3D.CameraShakeX()
+    Camera.Position.Y = 100 + Effects3D.CameraShakeY()
+    Camera.Position.Z = -330 + Effects3D.CameraShakeZ()
+    Camera.Target.X = 0
+    Camera.Target.Y = 42
+    Camera.Target.Z = 48
+    FrameReady = Scene3D.Begin(Camera, 2, 5, 14) And FrameReady
+
+    If FrameReady Then
+
+        FrameReady = Graphics3D.DrawObject3D(Arena)
+        FrameReady = Character3D.Draw(Hero) And FrameReady
+        FrameReady = Effects3D.Draw() And FrameReady
+        FrameReady = Graphics3D.DrawParticleBatch3D(VerticalBatch) And FrameReady
+        FrameReady = Scene3D.EndScene() And FrameReady
+
+    End If
+
+    Call DrawOverlay()
+
+    Show Screen
+
+    Running = Running And Not Game_Closed()
+
+Loop Until Not Running
+
+Call DestroyLab()
+
+Sub LoadLab()
+
+    Camera = Graphics3D.DefaultCamera()
+    Arena = Graphics3D.CreatePlane3D(430, 280)
+
+    Call Graphics3D.SetObjectPosition(Arena, 0, -3, 60)
+
+    Atlas = Graphics3D.LoadTexture3D(
+        "Assets\VfxAtlas.png",
+        Graphics3D.TEXTURE_FILTER_LINEAR,
+        Graphics3D.TEXTURE_WRAP_CLAMP
+    )
+    AlphaMaterial = Graphics3D.CreateMaterial3D(
+        Atlas,
+        Graphics3D.MATERIAL_ALPHA_BLEND,
+        255,
+        255,
+        255,
+        100,
+        True,
+        80,
+        0
+    )
+    AdditiveMaterial = Graphics3D.CreateMaterial3D(
+        Atlas,
+        Graphics3D.MATERIAL_ALPHA_ADDITIVE,
+        255,
+        255,
+        255,
+        100,
+        True,
+        160,
+        0
+    )
+    RibbonMaterial = Graphics3D.CreateMaterial3D(
+        Atlas,
+        Graphics3D.MATERIAL_ALPHA_ADDITIVE,
+        255,
+        236,
+        128,
+        100,
+        True,
+        190,
+        0
+    )
+    FrameReady = Effects3D.Initialize(
+        AlphaMaterial,
+        AdditiveMaterial,
+        RibbonMaterial,
+        Scene3D.QUALITY_HIGH
+    )
+    FrameReady = Effects3D.DefineStandardPresets() And FrameReady
+
+    Call DefineStressPreset()
+
+    Hero = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
+    FrameReady = Character3D.Place(Hero, 0, 0, 56) And FrameReady
+    FrameReady = Character3D.SetScale(Hero, 1100) And FrameReady
+    FrameReady = Character3D.PlayAnimation(Hero, "AttackLike", True) And FrameReady
+    FrameReady = Character3D.SetShadows(Hero, True, True) And FrameReady
+    VerticalBatch = Graphics3D.CreateParticleBatch3D(
+        24,
+        AlphaMaterial,
+        Graphics3D.VFX_BILLBOARD_VERTICAL,
+        4,
+        4
+    )
+
+    Call PrepareVerticalWisps()
+
+End Sub
+
+Sub DefineStressPreset()
+
+    Dim Preset As Effects3D.EffectPreset
+
+    Preset.Id = PRESET_STRESS_BURST
+    Preset.Name = "1,024 Particle Stress Burst"
+    Preset.ParticleCount = 1024
+    Preset.LifetimeMilliseconds = 1800
+    Preset.Speed = 180
+    Preset.Spread = 240
+    Preset.Gravity = -90
+    Preset.StartRed = 255
+    Preset.StartGreen = 232
+    Preset.StartBlue = 116
+    Preset.EndRed = 30
+    Preset.EndGreen = 120
+    Preset.EndBlue = 255
+    Preset.StartSize = 24
+    Preset.EndSize = 3
+    Preset.BlendMode = Graphics3D.MATERIAL_ALPHA_ADDITIVE
+    Preset.BillboardMode = Graphics3D.VFX_BILLBOARD_CAMERA
+    Preset.AtlasFirstFrame = 0
+    Preset.AtlasFrameCount = 16
+    Preset.RotationSpeed = 220
+    Preset.FlashPercent = 42
+    Preset.ShakeAmplitude = 8
+    Preset.RibbonPointCount = 0
+    Preset.RibbonWidth = 0
+    FrameReady = Effects3D.DefinePreset(Preset) And FrameReady
+
+End Sub
+
+Sub PrepareVerticalWisps()
+
+    Dim Index As Number
+
+    For Index = 0 To 23
+
+        FrameReady = Graphics3D.SetParticle3D(
+            VerticalBatch,
+            Index,
+            -150 + Index * 13,
+            18 + Index Mod 4 * 13,
+            105,
+            20 + Index Mod 3 * 4,
+            Index * 17,
+            12 + Index Mod 4
+        ) And FrameReady
+        FrameReady = Graphics3D.SetParticleColor3D(
+            VerticalBatch,
+            Index,
+            120,
+            224,
+            255,
+            62
+        ) And FrameReady
+    End For
+
+    FrameReady = Graphics3D.CommitParticleBatch3D(VerticalBatch, 24) And FrameReady
+
+End Sub
+
+Sub RestoreShowcase()
+
+    HdrEnabled = True
+    BloomEnabled = True
+    StressMode = False
+    FrameReady = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
+    FrameReady = Scene3D.SetShadows(True) And FrameReady
+    FrameReady = Scene3D.UseLighting("CharacterStudio") And FrameReady
+    FrameReady = Scene3D.SetExposure(125) And FrameReady
+
+    Call ApplyPostMode()
+
+End Sub
+
+Sub ApplyPostMode()
+
+    FrameReady = Scene3D.SetHdr(HdrEnabled)
+    FrameReady = Scene3D.SetPostProcessing(HdrEnabled) And FrameReady
+    FrameReady = Scene3D.SetBloom(HdrEnabled And BloomEnabled, 90, 1100) And FrameReady
+
+End Sub
+
+Sub TriggerSelected()
+
+    Dim X As Number
+
+    X = (SelectedPreset - 3) * 42
+    SeedValue = SeedValue + 97
+
+    If SelectedPreset = Effects3D.PRESET_HOLY_SWORD_STRIKE Then
+        SocketEffect = Effects3D.SpawnAtSocket(SelectedPreset, Hero, "HandTip", SeedValue)
+        Effect = SocketEffect
+    Else
+        Effect = Effects3D.Spawn(SelectedPreset, X, 34, 68, SeedValue)
+    End If
+
+End Sub
+
+Sub TriggerStress()
+
+    If StressMode Then
+        SeedValue = SeedValue + 409
+        Effect = Effects3D.Spawn(PRESET_STRESS_BURST, 0, 36, 70, SeedValue)
+    Else
+
+        Call TriggerSelected()
+    End If
+
+End Sub
+
+Sub ResetVfx()
+
+    Call Effects3D.Shutdown()
+
+    FrameReady = Effects3D.Initialize(
+        AlphaMaterial,
+        AdditiveMaterial,
+        RibbonMaterial,
+        Scene3D.QUALITY_HIGH
+    )
+    FrameReady = Effects3D.DefineStandardPresets() And FrameReady
+
+    Call DefineStressPreset()
+    Call TriggerSelected()
+
+End Sub
+
+Sub DrawOverlay()
+
+    Fill Rectangle 0, 0, 960, 72, Rgb(3, 7, 18)
+    Draw Text "SMILE RENDERER3D VFX GENERATION 2" At 18, 10 Size 22 Color CYAN
+    Draw Text "1-4 Effect  Left/Right Select  Space Trigger  S Stress  A HDR/LDR  W Bloom  Enter Reset" At 18, 42 Size 13 Color LIGHT_GRAY
+    Fill Rectangle 696, 84, 250, 430, Rgb(4, 9, 24)
+    Draw Text "M6 LIVE DIAGNOSTICS" At 712, 98 Size 16 Color WHITE
+
+    If DiagnosticsVisible Then
+
+        Draw Text "Quality / Capacity" At 712, 132 Size 13 Color LIGHT_GRAY
+        Draw Number Effects3D.Quality() At 868, 132 Size 13 Color GREEN
+        Draw Number Effects3D.ParticleCapacity() At 908, 132 Size 13 Color GREEN
+        Draw Text "Active Effects / Particles" At 712, 158 Size 13 Color LIGHT_GRAY
+        Draw Number Effects3D.ActiveEffectCount() At 868, 158 Size 13 Color WHITE
+        Draw Number Effects3D.ActiveParticleCount() At 908, 158 Size 13 Color WHITE
+        Draw Text "Alpha / Add / Ribbon" At 712, 184 Size 13 Color LIGHT_GRAY
+        Draw Number Effects3D.CommittedAlphaParticles() At 842, 184 Size 13 Color CYAN
+        Draw Number Effects3D.CommittedAdditiveParticles() At 884, 184 Size 13 Color ORANGE
+        Draw Number Effects3D.CommittedRibbonPoints() At 926, 184 Size 13 Color YELLOW
+        Draw Text "Particle / Ribbon Batches" At 712, 210 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_LIVE_PARTICLE_BATCHES) At 884, 210 Size 13 Color WHITE
+        Draw Number Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_LIVE_RIBBON_BATCHES) At 926, 210 Size 13 Color WHITE
+        Draw Text "VFX Draws / Triangles" At 712, 236 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_DRAW_CALLS) At 884, 236 Size 13 Color WHITE
+        Draw Number Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_TRIANGLES) At 926, 236 Size 13 Color WHITE
+        Draw Text "Logical / Physical" At 712, 262 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.M5Value3D(Graphics3D.M5_QUERY_LOGICAL_SUBMISSIONS, 0) At 884, 262 Size 13 Color WHITE
+        Draw Number Graphics3D.M5Value3D(Graphics3D.M5_QUERY_PHYSICAL_SUBMISSIONS, 0) At 926, 262 Size 13 Color WHITE
+        Draw Text "Uploads / CPU KiB" At 712, 288 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_UPLOADS) At 884, 288 Size 13 Color WHITE
+        Draw Number Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_CPU_BYTES) / 1024 At 926, 288 Size 13 Color WHITE
+        Draw Text "GPU / Target KiB" At 712, 314 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_GPU_BYTES) / 1024 At 884, 314 Size 13 Color WHITE
+        Draw Number Graphics3D.M5Value3D(Graphics3D.M5_QUERY_TARGET_BYTES, 0) / 1024 At 926, 314 Size 13 Color WHITE
+        Draw Text "HDR / Bloom / Format" At 712, 340 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.M5Value3D(Graphics3D.M5_QUERY_HDR_EFFECTIVE, 0) At 842, 340 Size 13 Color CYAN
+        Draw Number Graphics3D.M5Value3D(Graphics3D.M5_QUERY_BLOOM_EFFECTIVE, 0) At 884, 340 Size 13 Color ORANGE
+        Draw Number Scene3D.SceneFormat() At 926, 340 Size 13 Color CYAN
+        Draw Text "Objects / Frame Ms" At 712, 366 Size 13 Color LIGHT_GRAY
+        Draw Number Graphics3D.LiveObjectCount3D() At 884, 366 Size 13 Color WHITE
+        Draw Number FrameMilliseconds At 926, 366 Size 13 Color GREEN
+        Draw Text "Dropped P / Effects" At 712, 392 Size 13 Color LIGHT_GRAY
+        Draw Number Effects3D.DroppedParticles() At 884, 392 Size 13 Color YELLOW
+        Draw Number Effects3D.DroppedEffects() At 926, 392 Size 13 Color YELLOW
+        Draw Text "Fixed Steps / Clamps" At 712, 418 Size 13 Color LIGHT_GRAY
+        Draw Number Effects3D.FixedSteps() At 884, 418 Size 13 Color WHITE
+        Draw Number Effects3D.ClampedUpdates() At 926, 418 Size 13 Color WHITE
+        Draw Text "2D HUD: POST-EXEMPT" At 712, 450 Size 13 Color WHITE
+        Draw Text "VFX: DEPTH READ / NO WRITE" At 712, 476 Size 13 Color LIGHT_BLUE
+
+    End If
+
+End Sub
+
+Sub DestroyLab()
+
+    Call Effects3D.Shutdown()
+    Call Graphics3D.DestroyParticleBatch3D(VerticalBatch)
+    Call Character3D.Shutdown()
+    Call Graphics3D.DestroyObject3D(Arena)
+    Call Graphics3D.DestroyMaterial3D(AlphaMaterial)
+    Call Graphics3D.DestroyMaterial3D(AdditiveMaterial)
+    Call Graphics3D.DestroyMaterial3D(RibbonMaterial)
+    Call Graphics3D.DestroyTexture3D(Atlas)
+    Call Graphics3D.ResetRenderer3D()
+
+End Sub

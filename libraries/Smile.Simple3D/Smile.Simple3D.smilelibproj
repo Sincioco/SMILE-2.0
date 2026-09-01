@@ -16,5 +16,6 @@
     <SmileSource Include="Graphics3D.smile" />
     <SmileSource Include="Scene3D.smile" />
     <SmileSource Include="Character3D.smile" />
+    <SmileSource Include="Effects3D.smile" />
   </ItemGroup>
 </SmileProject>

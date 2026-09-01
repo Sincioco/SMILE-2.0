@@ -251,6 +251,9 @@ internal static class WebOutputWriter
             let renderer3DModelPaletteUploadCount = 0;
             let renderer3DShadowProgram = null;
             let renderer3DPostProgram = null;
+            let renderer3DVfxProgram = null;
+            let renderer3DParticleQuadBuffer = null;
+            let renderer3DParticleQuadIndexBuffer = null;
             let renderer3DShadowTexture = null;
             let renderer3DShadowFramebuffer = null;
             let renderer3DSceneTexture = null;
@@ -296,6 +299,18 @@ internal static class WebOutputWriter
             let renderer3DShadowPaletteUploadCount = 0;
             let renderer3DPostDrawCount = 0;
             let renderer3DResolveCount = 0;
+            let renderer3DVfxDrawCount = 0;
+            let renderer3DVfxTriangleCount = 0;
+            let renderer3DVfxUploadCount = 0;
+            let renderer3DVfxRejectedOperationCount = 0;
+            let renderer3DVfxParticleDrawCount = 0;
+            let renderer3DVfxRibbonDrawCount = 0;
+            let renderer3DVfxParticleTriangleCount = 0;
+            let renderer3DVfxRibbonTriangleCount = 0;
+            let renderer3DVfxParticleSubmissionCount = 0;
+            let renderer3DVfxRibbonSubmissionCount = 0;
+            let renderer3DStagedParticleCapacity = 0;
+            let renderer3DStagedRibbonCapacity = 0;
             let renderer3DSubmissionCount = 0;
             let renderer3DPaletteSnapshotCount = 0;
             let renderer3DPhysicalSubmissionCount = 0;
@@ -319,6 +334,8 @@ internal static class WebOutputWriter
             const renderer3DSkeletons = new Map();
             const renderer3DClips = new Map();
             const renderer3DAnimators = new Map();
+            const renderer3DParticleBatches = new Map();
+            const renderer3DRibbonBatches = new Map();
             const renderer3DStaticBones = new Float32Array(32 * 16);
             const renderer3DModelScratch = new Float32Array(16);
             const renderer3DViewScratch = new Float32Array(16);
@@ -358,7 +375,7 @@ internal static class WebOutputWriter
                     renderer3DStaticBones[bone * 16 + 10] = renderer3DStaticBones[bone * 16 + 15] = 1;
             for (let submission = 0; submission < 512; submission += 1) {
                 renderer3DSubmissionObjects.push({
-                    kind:renderer3DSubmissionObject,snapshot:true,source:0,mesh:0,material:0,
+                    kind:renderer3DSubmissionObject,snapshot:true,source:0,mesh:0,material:0,resourceRevision:0,
                     animator:0,paletteIndex:-1,
                     position:new Float32Array(3),rotation:new Float32Array(3),scale:new Float32Array(3),
                     color:new Float32Array(4),visible:false,castsShadow:false,receivesShadow:false,
@@ -875,6 +892,9 @@ internal static class WebOutputWriter
                         renderer3DModelPaletteCachedRevision = 0;
                         renderer3DShadowProgram = null;
                         renderer3DPostProgram = null;
+                        renderer3DVfxProgram = null;
+                        renderer3DParticleQuadBuffer = null;
+                        renderer3DParticleQuadIndexBuffer = null;
                         renderer3DShadowTexture = null;
                         renderer3DShadowFramebuffer = null;
                         renderer3DSceneTexture = null;
@@ -900,6 +920,14 @@ internal static class WebOutputWriter
                             mesh.indexBuffer = null;
                         }
                         for (const texture of renderer3DTextures.values()) texture.gpu = null;
+                        for (const batch of renderer3DParticleBatches.values()) {
+                            batch.gpu = null;
+                            batch.uploadedRevision = 0;
+                        }
+                        for (const batch of renderer3DRibbonBatches.values()) {
+                            batch.gpu = null;
+                            batch.uploadedRevision = 0;
+                        }
                     });
                     renderer3DCanvas.addEventListener("webglcontextrestored", () => {
                         renderer3DGl = null;
@@ -914,6 +942,9 @@ internal static class WebOutputWriter
                         renderer3DModelPaletteCachedRevision = 0;
                         renderer3DShadowProgram = null;
                         renderer3DPostProgram = null;
+                        renderer3DVfxProgram = null;
+                        renderer3DParticleQuadBuffer = null;
+                        renderer3DParticleQuadIndexBuffer = null;
                         renderer3DShadowTexture = null;
                         renderer3DShadowFramebuffer = null;
                         renderer3DSceneTexture = null;
@@ -934,6 +965,14 @@ internal static class WebOutputWriter
                         renderer3DSubmissionGroupActive = false;
                         renderer3DSubmissionGroupToken = 0;
                         renderer3DAnisotropyAttempted = false;
+                        for (const batch of renderer3DParticleBatches.values()) {
+                            batch.gpu = null;
+                            batch.uploadedRevision = 0;
+                        }
+                        for (const batch of renderer3DRibbonBatches.values()) {
+                            batch.gpu = null;
+                            batch.uploadedRevision = 0;
+                        }
                     });
                 }
                 return context;
@@ -1014,6 +1053,79 @@ internal static class WebOutputWriter
                         modelPalette: gl.getUniformLocation(program, "modelPalette"),
                         modelSkinning: gl.getUniformLocation(program, "modelSkinning")
                     };
+                }
+                if (!renderer3DVfxProgram) {
+                    let particleVertex = null, ribbonVertex = null, fragment = null;
+                    let particleHandle = null, ribbonHandle = null;
+                    try {
+                        particleVertex = renderer3DCompile(gl, gl.VERTEX_SHADER, `#version 300 es
+                            precision highp float;
+                            layout(location=0) in vec2 corner;
+                            layout(location=1) in vec2 textureUv;
+                            layout(location=2) in vec4 positionSize;
+                            layout(location=3) in vec4 instanceColor;
+                            layout(location=4) in vec4 rotationUv;
+                            uniform mat4 viewProjection;
+                            uniform vec3 cameraRight;
+                            uniform vec3 cameraUp;
+                            uniform vec2 atlasScale;
+                            out vec2 surfaceUv;
+                            out vec4 surfaceColor;
+                            void main(){float c=cos(rotationUv.x),s=sin(rotationUv.x);vec2 q=vec2(corner.x*c-corner.y*s,corner.x*s+corner.y*c)*positionSize.w;vec3 world=positionSize.xyz+cameraRight*q.x+cameraUp*q.y;gl_Position=viewProjection*vec4(world,1.0);surfaceUv=rotationUv.yz+textureUv*atlasScale;surfaceColor=instanceColor;}`);
+                        ribbonVertex = renderer3DCompile(gl, gl.VERTEX_SHADER, `#version 300 es
+                            precision highp float;
+                            layout(location=0) in vec3 position;
+                            layout(location=1) in vec2 textureUv;
+                            layout(location=2) in vec4 vertexColor;
+                            uniform mat4 viewProjection;
+                            out vec2 surfaceUv;
+                            out vec4 surfaceColor;
+                            void main(){gl_Position=viewProjection*vec4(position,1.0);surfaceUv=textureUv;surfaceColor=vertexColor;}`);
+                        fragment = renderer3DCompile(gl, gl.FRAGMENT_SHADER, `#version 300 es
+                            precision highp float;
+                            in vec2 surfaceUv;
+                            in vec4 surfaceColor;
+                            uniform sampler2D effectTexture;
+                            uniform vec4 materialColor;
+                            uniform float textureEnabled;
+                            uniform float emissive;
+                            uniform float hdrOutput;
+                            out vec4 outputColor;
+                            vec3 toLinear(vec3 color){return mix(color/12.92,pow((color+.055)/1.055,vec3(2.4)),step(vec3(.04045),color));}
+                            void main(){vec4 sampled=textureEnabled>.5?texture(effectTexture,surfaceUv):vec4(1.0);vec4 base=surfaceColor*materialColor*sampled;vec3 color=hdrOutput>.5?toLinear(clamp(base.rgb,0.0,1.0))*max(emissive,1.0):clamp(base.rgb*max(emissive,1.0),0.0,1.0);outputColor=vec4(color,base.a);}`);
+                        particleHandle = gl.createProgram();
+                        gl.attachShader(particleHandle, particleVertex);gl.attachShader(particleHandle, fragment);gl.linkProgram(particleHandle);
+                        if (!gl.getProgramParameter(particleHandle, gl.LINK_STATUS))
+                            throw new Error(gl.getProgramInfoLog(particleHandle) || "particle VFX link error");
+                        ribbonHandle = gl.createProgram();
+                        gl.attachShader(ribbonHandle, ribbonVertex);gl.attachShader(ribbonHandle, fragment);gl.linkProgram(ribbonHandle);
+                        if (!gl.getProgramParameter(ribbonHandle, gl.LINK_STATUS))
+                            throw new Error(gl.getProgramInfoLog(ribbonHandle) || "ribbon VFX link error");
+                        const describe = handle => {
+                            const result = {handle};
+                            for (const name of ["viewProjection","cameraRight","cameraUp","atlasScale","effectTexture","materialColor","textureEnabled","emissive","hdrOutput"])
+                                result[name] = gl.getUniformLocation(handle, name);
+                            return result;
+                        };
+                        renderer3DVfxProgram = {particle:describe(particleHandle),ribbon:describe(ribbonHandle)};
+                        renderer3DParticleQuadBuffer = gl.createBuffer();
+                        gl.bindBuffer(gl.ARRAY_BUFFER, renderer3DParticleQuadBuffer);
+                        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+                            -.5,-.5,0,1, -.5,.5,0,0, .5,.5,1,0, .5,-.5,1,1
+                        ]), gl.STATIC_DRAW);
+                        renderer3DParticleQuadIndexBuffer = gl.createBuffer();
+                        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, renderer3DParticleQuadIndexBuffer);
+                        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0,1,2,0,2,3]), gl.STATIC_DRAW);
+                    } catch (_) {
+                        if (particleHandle) gl.deleteProgram(particleHandle);
+                        if (ribbonHandle) gl.deleteProgram(ribbonHandle);
+                        renderer3DVfxProgram = null;
+                        renderer3DLastError = 57;
+                    } finally {
+                        if (particleVertex) gl.deleteShader(particleVertex);
+                        if (ribbonVertex) gl.deleteShader(ribbonVertex);
+                        if (fragment) gl.deleteShader(fragment);
+                    }
                 }
                 if (!renderer3DAnisotropyAttempted) {
                     renderer3DAnisotropyAttempted = true;
@@ -1247,6 +1359,8 @@ internal static class WebOutputWriter
                 if (!renderer3DMaterials.has(handle)) return 0;
                 let count = 0;
                 for (const object of renderer3DObjects.values()) if (object.material === handle) count += 1;
+                for (const batch of renderer3DParticleBatches.values()) if (batch.material === handle) count += 1;
+                for (const batch of renderer3DRibbonBatches.values()) if (batch.material === handle) count += 1;
                 return count;
             }
 
@@ -2104,7 +2218,7 @@ internal static class WebOutputWriter
 
             function renderer3DPaletteSnapshot(handle,animator){if(!animator)return-1;for(let index=0;index<renderer3DPaletteSnapshotCount;index+=1){const snapshot=renderer3DPaletteSnapshots[index];if(snapshot.animatorHandle===handle&&snapshot.revision===animator.revision&&snapshot.production===!!animator.production)return index;}if(renderer3DPaletteSnapshotCount>=renderer3DPaletteSnapshots.length){renderer3DLastError=51;return-2;}const snapshot=renderer3DPaletteSnapshots[renderer3DPaletteSnapshotCount];snapshot.animatorHandle=handle;snapshot.revision=animator.revision;snapshot.production=!!animator.production;snapshot.palette.set(animator.palette);return renderer3DPaletteSnapshotCount++;}
             function renderer3DSubmissionHasTexture(object,handle,before){for(let channel=0;channel<before;channel+=1)if(object.snapshotMaterial.textures[channel]===handle)return true;return false;}
-            function renderer3DReleaseSubmission(index){const object=renderer3DSubmissionObjects[index],mesh=renderer3DMeshes.get(object.mesh);if(mesh&&mesh.inFlight>0)mesh.inFlight-=1;for(let channel=0;channel<4;channel+=1){const handle=object.snapshotMaterial.textures[channel];if(!handle||renderer3DSubmissionHasTexture(object,handle,channel))continue;const texture=renderer3DTextures.get(handle);if(texture&&texture.inFlight>0)texture.inFlight-=1;}object.mesh=object.source=object.animator=0;object.hasMaterial=false;object.paletteIndex=-1;renderer3DSubmissions[index]=0;}
+            function renderer3DReleaseSubmission(index){const object=renderer3DSubmissionObjects[index];if(object.kind===renderer3DSubmissionObject){const mesh=renderer3DMeshes.get(object.mesh);if(mesh&&mesh.inFlight>0)mesh.inFlight-=1;}else if(object.kind===renderer3DSubmissionParticleBatch){const batch=renderer3DParticleBatches.get(object.source);if(batch&&batch.inFlight>0)batch.inFlight-=1;}else if(object.kind===renderer3DSubmissionRibbonBatch){const batch=renderer3DRibbonBatches.get(object.source);if(batch&&batch.inFlight>0)batch.inFlight-=1;}for(let channel=0;channel<4;channel+=1){const handle=object.snapshotMaterial.textures[channel];if(!handle||renderer3DSubmissionHasTexture(object,handle,channel))continue;const texture=renderer3DTextures.get(handle);if(texture&&texture.inFlight>0)texture.inFlight-=1;}object.kind=renderer3DSubmissionObject;object.mesh=object.source=object.animator=0;object.resourceRevision=0;object.hasMaterial=false;object.paletteIndex=-1;renderer3DSubmissions[index]=0;}
             function renderer3DReleaseSubmissions(first,last){while(last>first)renderer3DReleaseSubmission(--last);}
             function renderer3DCaptureSubmission(handle,index){const source=renderer3DRequireObject(handle);if(!renderer3DFrameActive||!source){renderer3DLastError=14;return 0;}if(!source.visible)return 2;const mesh=renderer3DRequireMesh(source.mesh);if(!mesh||!renderer3DUpload(mesh))return 0;const material=source.material?renderer3DRequireMaterial(source.material):null,animator=source.animator?renderer3DAnimators.get(source.animator):null,skeleton=animator&&!animator.production?renderer3DSkeletons.get(animator.skeleton):null;if(source.animator&&(!animator||(animator.production?!renderer3DModelOwnsMesh(animator.model,source.mesh):(!skeleton||mesh.maxJoint>=skeleton.boneCount)))){renderer3DLastError=36;return 0;}if(material&&material.kind===1&&animator&&!animator.production){const clip=animator.clip?renderer3DClips.get(animator.clip):null;if(clip&&!clip.pbrScaleSafe){renderer3DLastError=45;return 0;}}const paletteStart=renderer3DPaletteSnapshotCount,object=renderer3DSubmissionObjects[index],snapshot=object.snapshotMaterial;object.source=handle;object.mesh=source.mesh;object.animator=source.animator;object.position.set(source.position);object.rotation.set(source.rotation);object.scale.set(source.scale);object.color.set(source.color);object.visible=true;object.castsShadow=source.castsShadow;object.receivesShadow=source.receivesShadow;object.hasMaterial=!!material;object.paletteIndex=renderer3DPaletteSnapshot(source.animator,animator);if(object.paletteIndex===-2)return 0;snapshot.textures.fill(0);snapshot.texture=0;snapshot.kind=material?material.kind:0;snapshot.alphaMode=material?material.alphaMode:(source.color[3]<.999?2:0);snapshot.doubleSided=!!(material&&material.doubleSided);if(material){if(material.kind===1){snapshot.textures.set(material.textures);snapshot.baseColor.set(material.baseColor);snapshot.surface.set(material.surface);snapshot.emissiveAlpha.set(material.emissiveAlpha);snapshot.textureFlags.set(material.textureFlags);snapshot.cutoff=material.cutoff;}else{snapshot.texture=material.texture;snapshot.textures[0]=material.texture;snapshot.color.set(material.color);snapshot.unlit=material.unlit;snapshot.emissive=material.emissive;snapshot.cutoff=material.cutoff;}for(let channel=0;channel<4;channel+=1){const textureHandle=snapshot.textures[channel];if(!textureHandle)continue;const texture=renderer3DRequireTexture(textureHandle);if(!texture||!renderer3DUploadTexture(texture)){renderer3DPaletteSnapshotCount=paletteStart;return 0;}}}mesh.inFlight+=1;for(let channel=0;channel<4;channel+=1){const textureHandle=snapshot.textures[channel];if(!textureHandle||renderer3DSubmissionHasTexture(object,textureHandle,channel))continue;renderer3DTextures.get(textureHandle).inFlight+=1;}renderer3DSubmissions[index]=handle;return 1;}
 
@@ -2142,6 +2256,8 @@ internal static class WebOutputWriter
                 if(typeof gl.uniform2f==="function")gl.uniform2f(renderer3DPbrProgram.shadowSelection,renderer3DShadowCaster,renderer3DShadowSlot);gl.uniform1f(renderer3DPbrProgram.hdrOutput,renderer3DHdrEffective?1:0);
                 gl.drawElements(gl.TRIANGLES,mesh.indexCount,gl.UNSIGNED_INT,0);renderer3DDrawCallCount+=1;
                 renderer3DSubmittedTriangleCount+=mesh.indexCount/3;renderer3DPbrDrawCount+=1;renderer3DPbrTriangleCount+=mesh.indexCount/3;return 1;}
+            function renderer3DCreateParticleBatch(capacity,materialHandle,billboard,columns,rows){const material=renderer3DMaterials.get(materialHandle);if(capacity<1||capacity>4096||capacity>8192-renderer3DStagedParticleCapacity||renderer3DParticleBatches.size>=16||!material||material.kind!==0||(material.alphaMode!==2&&material.alphaMode!==3)||billboard<1||billboard>2||columns<1||columns>16||rows<1||rows>16||!renderer3DInitialize()||!renderer3DVfxProgram){renderer3DLastError=54;renderer3DVfxRejectedOperationCount+=1;return 0;}const gl=renderer3DGl,handle=renderer3DHandle(),instances=new Float32Array(capacity*12),gpu=gl.createBuffer();if(!gpu){renderer3DLastError=55;renderer3DVfxRejectedOperationCount+=1;return 0;}gl.bindBuffer(gl.ARRAY_BUFFER,gpu);gl.bufferData(gl.ARRAY_BUFFER,instances.byteLength,gl.DYNAMIC_DRAW);renderer3DParticleBatches.set(handle,{capacity,material:materialHandle,billboard,columns,rows,count:0,revision:0,uploadedRevision:0,inFlight:0,instances,gpu});renderer3DStagedParticleCapacity+=capacity;return handle;}
+            function renderer3DCreateRibbonBatch(capacity,materialHandle){const material=renderer3DMaterials.get(materialHandle);if(capacity<2||capacity>1024||capacity>2048-renderer3DStagedRibbonCapacity||renderer3DRibbonBatches.size>=16||!material||material.kind!==0||(material.alphaMode!==2&&material.alphaMode!==3)||!renderer3DInitialize()||!renderer3DVfxProgram){renderer3DLastError=54;renderer3DVfxRejectedOperationCount+=1;return 0;}const gl=renderer3DGl,handle=renderer3DHandle(),points=new Float32Array(capacity*11),vertices=new Float32Array(capacity*18),gpu=gl.createBuffer();if(!gpu){renderer3DLastError=55;renderer3DVfxRejectedOperationCount+=1;return 0;}gl.bindBuffer(gl.ARRAY_BUFFER,gpu);gl.bufferData(gl.ARRAY_BUFFER,vertices.byteLength,gl.DYNAMIC_DRAW);renderer3DRibbonBatches.set(handle,{capacity,material:materialHandle,count:0,revision:0,uploadedRevision:0,inFlight:0,points,vertices,gpu});renderer3DStagedRibbonCapacity+=capacity;return handle;}
             function renderer3DSrgbToLinear(value){return value<=.04045?value/12.92:Math.pow((value+.055)/1.055,2.4);}
             function renderer3DBegin(red,green,blue){if(renderer3DFrameActive)return 1;if(renderer3DCanvas.width!==backingWidth||renderer3DCanvas.height!==backingHeight){renderer3DCanvas.width=backingWidth;renderer3DCanvas.height=backingHeight;}
                 if(!renderer3DInitialize()||!renderer3DPrepareM5Resources())return 0;const gl=renderer3DGl;
@@ -2149,8 +2265,22 @@ internal static class WebOutputWriter
                 if(renderer3DHdrEffective)gl.bindFramebuffer(gl.FRAMEBUFFER,renderer3DSceneFramebuffer);gl.viewport(0,0,backingWidth,backingHeight);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.depthMask(true);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);
                 gl.clearColor(renderer3DHdrEffective?renderer3DSrgbToLinear(renderer3DClearScratch[0]):renderer3DClearScratch[0],renderer3DHdrEffective?renderer3DSrgbToLinear(renderer3DClearScratch[1]):renderer3DClearScratch[1],renderer3DHdrEffective?renderer3DSrgbToLinear(renderer3DClearScratch[2]):renderer3DClearScratch[2],1);gl.clearDepth(1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
                 gl.useProgram(renderer3DProgram.handle);renderer3DDrawCallCount=0;renderer3DSubmittedTriangleCount=0;renderer3DPbrDrawCount=0;renderer3DSimpleDrawCount=0;renderer3DPbrTriangleCount=0;
-                renderer3DReleaseSubmissions(0,renderer3DSubmissionCount);renderer3DLogicalSubmissionCount=renderer3DPhysicalSubmissionCount=0;renderer3DRejectedSubmissionCount=0;renderer3DSubmissionCount=renderer3DPaletteSnapshotCount=0;renderer3DSubmissionGroupActive=false;renderer3DSubmissionGroupToken=0;renderer3DSubmissionGroupReserved=renderer3DSubmissionGroupPhysical=renderer3DSubmissionGroupLogical=0;renderer3DShadowDrawCount=0;renderer3DShadowTriangleCount=0;renderer3DShadowPaletteUploadCount=0;renderer3DPostDrawCount=0;renderer3DResolveCount=0;renderer3DFrameActive=true;return 1;}
-            function renderer3DDrawImmediate(handle,snapshot=null){const object=snapshot||renderer3DRequireObject(handle);if(!renderer3DFrameActive||!object||(object.snapshot&&object.kind!==renderer3DSubmissionObject)){renderer3DLastError=14;return 0;}
+                renderer3DReleaseSubmissions(0,renderer3DSubmissionCount);renderer3DLogicalSubmissionCount=renderer3DPhysicalSubmissionCount=0;renderer3DRejectedSubmissionCount=0;renderer3DSubmissionCount=renderer3DPaletteSnapshotCount=0;renderer3DSubmissionGroupActive=false;renderer3DSubmissionGroupToken=0;renderer3DSubmissionGroupReserved=renderer3DSubmissionGroupPhysical=renderer3DSubmissionGroupLogical=0;renderer3DShadowDrawCount=0;renderer3DShadowTriangleCount=0;renderer3DShadowPaletteUploadCount=0;renderer3DPostDrawCount=0;renderer3DResolveCount=0;renderer3DVfxDrawCount=renderer3DVfxTriangleCount=renderer3DVfxParticleDrawCount=renderer3DVfxRibbonDrawCount=renderer3DVfxParticleTriangleCount=renderer3DVfxRibbonTriangleCount=renderer3DVfxParticleSubmissionCount=renderer3DVfxRibbonSubmissionCount=0;renderer3DFrameActive=true;return 1;}
+            function renderer3DSetParticle(batch,index,x,y,z,size,rotation,frame){if(!batch||batch.inFlight||index<0||index>=batch.capacity||x< -1000000||x>1000000||y< -1000000||y>1000000||z< -1000000||z>1000000||size<=0||size>1000000||rotation< -1000000||rotation>1000000||frame<0||frame>=batch.columns*batch.rows){renderer3DLastError=batch&&batch.inFlight?56:54;renderer3DVfxRejectedOperationCount+=1;return 0;}const offset=index*12;batch.instances[offset]=x;batch.instances[offset+1]=y;batch.instances[offset+2]=z;batch.instances[offset+3]=size;batch.instances[offset+8]=rotation*Math.PI/180;batch.instances[offset+9]=(frame%batch.columns)/batch.columns;batch.instances[offset+10]=Math.floor(frame/batch.columns)/batch.rows;return 1;}
+            function renderer3DSetParticleColor(batch,index,red,green,blue,opacity){if(!batch||batch.inFlight||index<0||index>=batch.capacity||red<0||red>255||green<0||green>255||blue<0||blue>255||opacity<0||opacity>100){renderer3DLastError=batch&&batch.inFlight?56:54;renderer3DVfxRejectedOperationCount+=1;return 0;}const offset=index*12+4;batch.instances[offset]=red/255;batch.instances[offset+1]=green/255;batch.instances[offset+2]=blue/255;batch.instances[offset+3]=opacity/100;return 1;}
+            function renderer3DCommitParticleBatch(batch,count){if(!batch||batch.inFlight||count<0||count>batch.capacity){renderer3DLastError=batch&&batch.inFlight?56:54;renderer3DVfxRejectedOperationCount+=1;return 0;}const gl=renderer3DGl;if(!gl||!batch.gpu){renderer3DLastError=57;return 0;}batch.count=count;batch.revision+=1;if(batch.revision>2147483647)batch.revision=1;gl.bindBuffer(gl.ARRAY_BUFFER,batch.gpu);gl.bufferSubData(gl.ARRAY_BUFFER,0,batch.instances,0,count*12);batch.uploadedRevision=batch.revision;renderer3DVfxUploadCount+=1;return 1;}
+            function renderer3DSetRibbonPoint(batch,index,lx,ly,lz,rx,ry,rz,u){if(!batch||batch.inFlight||index<0||index>=batch.capacity||lx< -1000000||lx>1000000||ly< -1000000||ly>1000000||lz< -1000000||lz>1000000||rx< -1000000||rx>1000000||ry< -1000000||ry>1000000||rz< -1000000||rz>1000000||u<0||u>1000){renderer3DLastError=batch&&batch.inFlight?56:54;renderer3DVfxRejectedOperationCount+=1;return 0;}const offset=index*11;batch.points[offset]=lx;batch.points[offset+1]=ly;batch.points[offset+2]=lz;batch.points[offset+3]=rx;batch.points[offset+4]=ry;batch.points[offset+5]=rz;batch.points[offset+10]=u/1000;return 1;}
+            function renderer3DSetRibbonColor(batch,index,red,green,blue,opacity){if(!batch||batch.inFlight||index<0||index>=batch.capacity||red<0||red>255||green<0||green>255||blue<0||blue>255||opacity<0||opacity>100){renderer3DLastError=batch&&batch.inFlight?56:54;renderer3DVfxRejectedOperationCount+=1;return 0;}const offset=index*11+6;batch.points[offset]=red/255;batch.points[offset+1]=green/255;batch.points[offset+2]=blue/255;batch.points[offset+3]=opacity/100;return 1;}
+            function renderer3DCommitRibbonBatch(batch,count){if(!batch||batch.inFlight||count<0||count>batch.capacity){renderer3DLastError=batch&&batch.inFlight?56:54;renderer3DVfxRejectedOperationCount+=1;return 0;}for(let point=0;point<count;point+=1){const source=point*11;for(let side=0;side<2;side+=1){const target=(point*2+side)*9,position=source+(side?3:0);batch.vertices[target]=batch.points[position];batch.vertices[target+1]=batch.points[position+1];batch.vertices[target+2]=batch.points[position+2];batch.vertices[target+3]=batch.points[source+10];batch.vertices[target+4]=side;batch.vertices[target+5]=batch.points[source+6];batch.vertices[target+6]=batch.points[source+7];batch.vertices[target+7]=batch.points[source+8];batch.vertices[target+8]=batch.points[source+9];}}const gl=renderer3DGl;if(!gl||!batch.gpu){renderer3DLastError=57;return 0;}batch.count=count;batch.revision+=1;if(batch.revision>2147483647)batch.revision=1;gl.bindBuffer(gl.ARRAY_BUFFER,batch.gpu);gl.bufferSubData(gl.ARRAY_BUFFER,0,batch.vertices,0,count*18);batch.uploadedRevision=batch.revision;renderer3DVfxUploadCount+=1;return 1;}
+            function renderer3DDeleteParticleBatch(handle){const batch=renderer3DParticleBatches.get(handle);if(!batch)return 0;if(batch.inFlight){renderer3DLastError=56;renderer3DVfxRejectedOperationCount+=1;return 0;}if(renderer3DGl&&batch.gpu)renderer3DGl.deleteBuffer(batch.gpu);renderer3DStagedParticleCapacity-=batch.capacity;renderer3DParticleBatches.delete(handle);return 1;}
+            function renderer3DDeleteRibbonBatch(handle){const batch=renderer3DRibbonBatches.get(handle);if(!batch)return 0;if(batch.inFlight){renderer3DLastError=56;renderer3DVfxRejectedOperationCount+=1;return 0;}if(renderer3DGl&&batch.gpu)renderer3DGl.deleteBuffer(batch.gpu);renderer3DStagedRibbonCapacity-=batch.capacity;renderer3DRibbonBatches.delete(handle);return 1;}
+            function renderer3DCaptureVfxSubmission(kind,handle,index){if(!renderer3DFrameActive){renderer3DLastError=14;return 0;}const batch=kind===renderer3DSubmissionParticleBatch?renderer3DParticleBatches.get(handle):renderer3DRibbonBatches.get(handle);if(!batch){renderer3DLastError=54;return 0;}if(batch.count===0)return 2;if(!batch.gpu||batch.uploadedRevision!==batch.revision){renderer3DLastError=57;return 0;}const material=renderer3DMaterials.get(batch.material);if(!material||material.kind!==0||(material.alphaMode!==2&&material.alphaMode!==3)){renderer3DLastError=54;return 0;}const texture=material.texture?renderer3DRequireTexture(material.texture):null;if(texture&&!renderer3DUploadTexture(texture))return 0;const object=renderer3DSubmissionObjects[index],snapshot=object.snapshotMaterial;object.kind=kind;object.source=handle;object.mesh=object.animator=0;object.resourceRevision=batch.revision;object.visible=true;object.castsShadow=object.receivesShadow=false;object.hasMaterial=true;object.paletteIndex=-1;snapshot.textures.fill(0);snapshot.texture=material.texture;snapshot.textures[0]=material.texture;snapshot.kind=0;snapshot.alphaMode=material.alphaMode;snapshot.color.set(material.color);snapshot.unlit=material.unlit;snapshot.emissive=material.emissive;snapshot.cutoff=material.cutoff;snapshot.doubleSided=false;batch.inFlight+=1;if(texture)texture.inFlight+=1;renderer3DSubmissions[index]=handle;return 1;}
+            function renderer3DDrawVfxImmediate(object){const gl=renderer3DGl,particle=object.kind===renderer3DSubmissionParticleBatch,batch=particle?renderer3DParticleBatches.get(object.source):renderer3DRibbonBatches.get(object.source),program=particle?renderer3DVfxProgram.particle:renderer3DVfxProgram.ribbon,material=object.snapshotMaterial;if(!batch||batch.revision!==object.resourceRevision||!batch.gpu||!program){renderer3DLastError=56;return 0;}const texture=material.texture?renderer3DRequireTexture(material.texture):null;if(texture&&!renderer3DUploadTexture(texture))return 0;renderer3DViewInto(renderer3DViewScratch);renderer3DProjectionInto(renderer3DProjectionScratch,backingWidth/backingHeight);renderer3DMultiplyInto(renderer3DMvpScratch,renderer3DProjectionScratch,renderer3DViewScratch);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LESS);gl.depthMask(false);gl.disable(gl.CULL_FACE);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,material.alphaMode===3?gl.ONE:gl.ONE_MINUS_SRC_ALPHA);gl.useProgram(program.handle);gl.uniformMatrix4fv(program.viewProjection,false,renderer3DMvpScratch);gl.uniform4fv(program.materialColor,material.color);gl.uniform1f(program.textureEnabled,texture?1:0);gl.uniform1f(program.emissive,material.emissive);gl.uniform1f(program.hdrOutput,renderer3DHdrEffective?1:0);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture?texture.gpu:null);gl.uniform1i(program.effectTexture,0);if(particle){let rightX=renderer3DViewScratch[0],rightY=renderer3DViewScratch[4],rightZ=renderer3DViewScratch[8],upX=renderer3DViewScratch[1],upY=renderer3DViewScratch[5],upZ=renderer3DViewScratch[9];if(batch.billboard===2){const length=Math.hypot(rightX,rightZ)||1;rightX/=length;rightY=0;rightZ/=length;upX=0;upY=1;upZ=0;}gl.uniform3f(program.cameraRight,rightX,rightY,rightZ);gl.uniform3f(program.cameraUp,upX,upY,upZ);gl.uniform2f(program.atlasScale,1/batch.columns,1/batch.rows);gl.bindBuffer(gl.ARRAY_BUFFER,renderer3DParticleQuadBuffer);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,16,0);gl.vertexAttribDivisor(0,0);gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,2,gl.FLOAT,false,16,8);gl.vertexAttribDivisor(1,0);gl.bindBuffer(gl.ARRAY_BUFFER,batch.gpu);for(let attribute=2;attribute<=4;attribute+=1){gl.enableVertexAttribArray(attribute);gl.vertexAttribPointer(attribute,4,gl.FLOAT,false,48,(attribute-2)*16);gl.vertexAttribDivisor(attribute,1);}gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,renderer3DParticleQuadIndexBuffer);gl.drawElementsInstanced(gl.TRIANGLES,6,gl.UNSIGNED_SHORT,0,batch.count);for(let attribute=2;attribute<=4;attribute+=1)gl.vertexAttribDivisor(attribute,0);renderer3DVfxParticleDrawCount+=1;renderer3DVfxParticleTriangleCount+=batch.count*2;renderer3DVfxTriangleCount+=batch.count*2;renderer3DSubmittedTriangleCount+=batch.count*2;}else{gl.bindBuffer(gl.ARRAY_BUFFER,batch.gpu);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,36,0);gl.vertexAttribDivisor(0,0);gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,2,gl.FLOAT,false,36,12);gl.vertexAttribDivisor(1,0);gl.enableVertexAttribArray(2);gl.vertexAttribPointer(2,4,gl.FLOAT,false,36,20);gl.vertexAttribDivisor(2,0);gl.disableVertexAttribArray(3);gl.disableVertexAttribArray(4);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,null);gl.drawArrays(gl.TRIANGLE_STRIP,0,batch.count*2);const triangles=batch.count<2?0:batch.count*2-2;renderer3DVfxRibbonDrawCount+=1;renderer3DVfxRibbonTriangleCount+=triangles;renderer3DVfxTriangleCount+=triangles;renderer3DSubmittedTriangleCount+=triangles;}renderer3DDrawCallCount+=1;renderer3DVfxDrawCount+=1;return 1;}
+            function renderer3DDrawVfxBatch(kind,handle){if(!renderer3DFrameActive){renderer3DLastError=14;return 0;}if(renderer3DMultipassActive||renderer3DSubmissionGroupActive){if(renderer3DSubmissionCount>=renderer3DSubmissions.length||(renderer3DSubmissionGroupActive&&renderer3DSubmissionGroupPhysical>=renderer3DSubmissionGroupReserved)){renderer3DRejectedSubmissionCount+=1;renderer3DVfxRejectedOperationCount+=1;renderer3DLastError=51;return 0;}const captured=renderer3DCaptureVfxSubmission(kind,handle,renderer3DSubmissionCount);if(!captured)return 0;if(captured===1){renderer3DSubmissionCount+=1;if(renderer3DSubmissionGroupActive)renderer3DSubmissionGroupPhysical+=1;}if(renderer3DSubmissionGroupActive)renderer3DSubmissionGroupLogical+=1;else{renderer3DLogicalSubmissionCount+=1;if(captured===1)renderer3DPhysicalSubmissionCount+=1;}if(kind===renderer3DSubmissionParticleBatch)renderer3DVfxParticleSubmissionCount+=1;else renderer3DVfxRibbonSubmissionCount+=1;return 1;}const captured=renderer3DCaptureVfxSubmission(kind,handle,0);if(!captured)return 0;const result=captured===2?1:renderer3DDrawVfxImmediate(renderer3DSubmissionObjects[0]);if(captured===1)renderer3DReleaseSubmission(0);if(result){renderer3DLogicalSubmissionCount+=1;if(captured===1)renderer3DPhysicalSubmissionCount+=1;if(kind===renderer3DSubmissionParticleBatch)renderer3DVfxParticleSubmissionCount+=1;else renderer3DVfxRibbonSubmissionCount+=1;}return result;}
+            function renderer3DParticleBatchCommand(operation,b,c,d,e,f,g,h,i){if(operation===1)return renderer3DCreateParticleBatch(b,c,d,e,f);const batch=renderer3DParticleBatches.get(b);if(operation===7)return batch?1:0;if(!batch){renderer3DLastError=54;renderer3DVfxRejectedOperationCount+=1;return 0;}if(operation===2)return renderer3DSetParticle(batch,c,d,e,f,g,h,i);if(operation===3)return renderer3DSetParticleColor(batch,c,d,e,f,g);if(operation===4)return renderer3DCommitParticleBatch(batch,c);if(operation===5)return renderer3DDrawVfxBatch(renderer3DSubmissionParticleBatch,b);if(operation===6)return renderer3DDeleteParticleBatch(b);renderer3DLastError=54;renderer3DVfxRejectedOperationCount+=1;return 0;}
+            function renderer3DRibbonBatchCommand(operation,b,c,d,e,f,g,h,i,j){if(operation===1)return renderer3DCreateRibbonBatch(b,c);const batch=renderer3DRibbonBatches.get(b);if(operation===7)return batch?1:0;if(!batch){renderer3DLastError=54;renderer3DVfxRejectedOperationCount+=1;return 0;}if(operation===2)return renderer3DSetRibbonPoint(batch,c,d,e,f,g,h,i,j);if(operation===3)return renderer3DSetRibbonColor(batch,c,d,e,f,g);if(operation===4)return renderer3DCommitRibbonBatch(batch,c);if(operation===5)return renderer3DDrawVfxBatch(renderer3DSubmissionRibbonBatch,b);if(operation===6)return renderer3DDeleteRibbonBatch(b);renderer3DLastError=54;renderer3DVfxRejectedOperationCount+=1;return 0;}
+            function renderer3DM6Value(query,handle){if(query===1)return renderer3DParticleBatches.size;if(query===2)return 16;if(query===3)return renderer3DRibbonBatches.size;if(query===4)return 16;if(query===5)return renderer3DStagedParticleCapacity;if(query===6)return 8192;if(query===7)return renderer3DStagedRibbonCapacity;if(query===8)return 2048;if(query===9){let count=0;for(const batch of renderer3DParticleBatches.values())count+=batch.count;return count;}if(query===10){let count=0;for(const batch of renderer3DRibbonBatches.values())count+=batch.count;return count;}if(query===11)return renderer3DVfxDrawCount;if(query===12)return renderer3DVfxTriangleCount;if(query===13)return renderer3DVfxUploadCount;if(query===14)return renderer3DStagedParticleCapacity*48+renderer3DStagedRibbonCapacity*(44+72);if(query===15)return renderer3DStagedParticleCapacity*48+renderer3DStagedRibbonCapacity*72+76;if(query===16)return renderer3DVfxRejectedOperationCount;if(query===17)return renderer3DVfxParticleDrawCount;if(query===18)return renderer3DVfxRibbonDrawCount;if(query===19){let count=0;for(const batch of renderer3DParticleBatches.values())if(batch.inFlight)count+=1;for(const batch of renderer3DRibbonBatches.values())if(batch.inFlight)count+=1;return count;}if(query===20)return renderer3DVfxParticleSubmissionCount;if(query===21)return renderer3DVfxRibbonSubmissionCount;if(query===22)return renderer3DVfxParticleTriangleCount;if(query===23)return renderer3DVfxRibbonTriangleCount;const particle=renderer3DParticleBatches.get(handle),ribbon=renderer3DRibbonBatches.get(handle),batch=particle||ribbon;if(query>=30&&query<=36&&batch){if(query===30)return batch.capacity;if(query===31)return batch.count;if(query===32)return batch.revision;if(query===33)return particle?batch.capacity*48:batch.capacity*116;if(query===34)return particle?batch.capacity*48:batch.capacity*72;if(query===35)return batch.inFlight;if(query===36)return batch.material;}renderer3DLastError=54;return 0;}
+            function renderer3DDrawImmediate(handle,snapshot=null){const object=snapshot||renderer3DRequireObject(handle);if(!renderer3DFrameActive||!object){renderer3DLastError=14;return 0;}if(object.snapshot&&object.kind!==renderer3DSubmissionObject)return renderer3DDrawVfxImmediate(object);
                 if(!object.visible)return 1;const mesh=renderer3DRequireMesh(object.mesh);if(!mesh||!renderer3DUpload(mesh))return 0;
                 const material=object.snapshot?(object.hasMaterial?object.snapshotMaterial:null):(object.material?renderer3DRequireMaterial(object.material):null),animator=object.snapshot?(object.paletteIndex>=0?renderer3DPaletteSnapshots[object.paletteIndex]:null):(object.animator?renderer3DAnimators.get(object.animator):null),
                     skeleton=animator&&!animator.production&&!object.snapshot?renderer3DSkeletons.get(animator.skeleton):null;if(!object.snapshot&&object.animator&&(!animator||(animator.production?!renderer3DModelOwnsMesh(animator.model,object.mesh):(!skeleton||mesh.maxJoint>=skeleton.boneCount)))){
@@ -2199,17 +2329,17 @@ internal static class WebOutputWriter
                 if(success&&renderer3DHdrEffective)success=renderer3DRunPostProcessing();if(typeof gl.bindFramebuffer==="function")gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.depthMask(true);for(let unit=0;unit<6;unit+=1){gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,null);}gl.useProgram(null);gl.bindBuffer(gl.ARRAY_BUFFER,null);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,null);for(let attribute=0;attribute<6;attribute+=1)gl.disableVertexAttribArray(attribute);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);gl.disable(gl.POLYGON_OFFSET_FILL);renderer3DFrameActive=false;renderer3DReleaseSubmissions(0,renderer3DSubmissionCount);renderer3DSubmissionCount=renderer3DPaletteSnapshotCount=0;renderer3DSubmissionGroupActive=false;renderer3DSubmissionGroupToken=0;renderer3DSubmissionGroupReserved=renderer3DSubmissionGroupPhysical=renderer3DSubmissionGroupLogical=0;
                 back.drawImage(renderer3DCanvas,0,0,logicalWidth,logicalHeight);return success?1:0;}
             function renderer3DReset(){renderer3DReleaseSubmissions(0,renderer3DSubmissionCount);renderer3DSubmissionCount=renderer3DPaletteSnapshotCount=0;renderer3DSubmissionGroupActive=false;renderer3DSubmissionGroupToken=0;renderer3DFrameActive=false;renderer3DObjects.clear();renderer3DAnimators.clear();for(const model of [...renderer3DModels.keys()])renderer3DDeleteModel(model);
-                renderer3DClips.clear();renderer3DSkeletons.clear();for(const mesh of renderer3DMeshes.values())renderer3DDeleteGpu(mesh);
+                renderer3DClips.clear();renderer3DSkeletons.clear();for(const handle of [...renderer3DParticleBatches.keys()])renderer3DDeleteParticleBatch(handle);for(const handle of [...renderer3DRibbonBatches.keys()])renderer3DDeleteRibbonBatch(handle);for(const mesh of renderer3DMeshes.values())renderer3DDeleteGpu(mesh);
                 for(const texture of renderer3DTextures.values()){renderer3DDeleteTextureGpu(texture);imageRelease(texture.image);}renderer3DMeshes.clear();
                 renderer3DModels.clear();renderer3DMaterials.clear();renderer3DTextures.clear();renderer3DResetLights();renderer3DLastError=0;
                 renderer3DDrawCallCount=0;renderer3DSubmittedTriangleCount=0;renderer3DPbrDrawCount=0;renderer3DSimpleDrawCount=0;
-                renderer3DPbrTriangleCount=0;if(renderer3DGl&&renderer3DPbrProgram)renderer3DGl.deleteProgram(renderer3DPbrProgram.handle);
+                renderer3DPbrTriangleCount=0;if(renderer3DGl&&renderer3DPbrProgram)renderer3DGl.deleteProgram(renderer3DPbrProgram.handle);if(renderer3DGl&&renderer3DVfxProgram){renderer3DGl.deleteProgram(renderer3DVfxProgram.particle.handle);renderer3DGl.deleteProgram(renderer3DVfxProgram.ribbon.handle);}if(renderer3DGl&&renderer3DParticleQuadBuffer)renderer3DGl.deleteBuffer(renderer3DParticleQuadBuffer);if(renderer3DGl&&renderer3DParticleQuadIndexBuffer)renderer3DGl.deleteBuffer(renderer3DParticleQuadIndexBuffer);renderer3DVfxProgram=null;renderer3DParticleQuadBuffer=renderer3DParticleQuadIndexBuffer=null;
                 renderer3DPbrProgram=null;renderer3DPbrAttempted=false;renderer3DPbrState=0;renderer3DPbrFailure=0;
                 renderer3DPbrAttemptCount=0;if(renderer3DGl&&renderer3DModelPaletteTexture)renderer3DGl.deleteTexture(renderer3DModelPaletteTexture);
                 renderer3DModelPaletteTexture=null;renderer3DModelPaletteCachedAnimator=0;renderer3DModelPaletteCachedRevision=0;renderer3DModelPaletteUploadCount=0;renderer3DDeleteM5Targets();
                 if(renderer3DGl&&renderer3DShadowProgram)renderer3DGl.deleteProgram(renderer3DShadowProgram.handle);if(renderer3DGl&&renderer3DPostProgram)renderer3DGl.deleteProgram(renderer3DPostProgram.handle);renderer3DShadowProgram=renderer3DPostProgram=null;
                 renderer3DPostRequested=renderer3DHdrRequested=renderer3DBloomRequested=renderer3DShadowRequested=false;renderer3DFallbackFlags=0;renderer3DSubmissionCount=renderer3DLogicalSubmissionCount=renderer3DPhysicalSubmissionCount=renderer3DRejectedSubmissionCount=0;renderer3DSubmissionGroupReserved=renderer3DSubmissionGroupPhysical=renderer3DSubmissionGroupLogical=0;
-                renderer3DShadowDrawCount=renderer3DShadowTriangleCount=renderer3DShadowPaletteUploadCount=renderer3DPostDrawCount=renderer3DResolveCount=0;renderer3DM5AppliedRevision=0;renderer3DM5ConfigurationRevision+=1;if(renderer3DM5ConfigurationRevision>2147483647)renderer3DM5ConfigurationRevision=1;
+                renderer3DShadowDrawCount=renderer3DShadowTriangleCount=renderer3DShadowPaletteUploadCount=renderer3DPostDrawCount=renderer3DResolveCount=0;renderer3DVfxDrawCount=renderer3DVfxTriangleCount=renderer3DVfxUploadCount=renderer3DVfxRejectedOperationCount=renderer3DVfxParticleDrawCount=renderer3DVfxRibbonDrawCount=renderer3DVfxParticleTriangleCount=renderer3DVfxRibbonTriangleCount=renderer3DVfxParticleSubmissionCount=renderer3DVfxRibbonSubmissionCount=0;renderer3DStagedParticleCapacity=renderer3DStagedRibbonCapacity=0;renderer3DM5AppliedRevision=0;renderer3DM5ConfigurationRevision+=1;if(renderer3DM5ConfigurationRevision>2147483647)renderer3DM5ConfigurationRevision=1;
                 renderer3DResourceEpoch+=1;if(renderer3DResourceEpoch>2147483647)renderer3DResourceEpoch=1;return 1;}
 
             function renderer3D(command,a,b,c,d,e,f,g,h,i,j) {
@@ -2347,6 +2477,9 @@ internal static class WebOutputWriter
                         if(a>=60&&a<=69){if(b<0||b>=renderer3DSubmissionCount){renderer3DLastError=50;return 0;}const submission=renderer3DSubmissionObjects[b];if(a===60)return submission.source;if(a===61)return submission.mesh;if(a===62)return Math.round(submission.position[0]*1000);if(a===63)return Math.round(submission.color[0]*1000);if(a===64)return Math.round(submission.color[3]*1000);if(a===65)return submission.hasMaterial?submission.snapshotMaterial.kind:-1;if(a===66)return submission.snapshotMaterial.doubleSided?1:0;if(a===67)return submission.paletteIndex+1;if(a===68)return submission.paletteIndex<0?0:renderer3DPaletteSnapshots[submission.paletteIndex].revision;if(a===69)return submission.castsShadow?1:0;}
                         if(a===40||a===41){object=renderer3DObjects.get(b);if(!object){renderer3DLastError=50;return 0;}return a===40?(object.castsShadow?1:0):(object.receivesShadow?1:0);}renderer3DLastError=50;return 0;
                     case 118:return renderer3DSubmissionGroup(a,b);
+                    case 119:return renderer3DParticleBatchCommand(a,b,c,d,e,f,g,h,i);
+                    case 120:return renderer3DRibbonBatchCommand(a,b,c,d,e,f,g,h,i,j);
+                    case 121:return renderer3DM6Value(a,b);
                     default:renderer3DLastError=1;return 0;
                 }
             }

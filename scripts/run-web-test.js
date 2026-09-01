@@ -528,8 +528,9 @@ function contextWebGL2() {
     return {
         VERTEX_SHADER: 0x8b31, FRAGMENT_SHADER: 0x8b30, COMPILE_STATUS: 0x8b81, LINK_STATUS: 0x8b82,
         DEPTH_TEST: 0x0b71, LESS: 0x0201, CULL_FACE: 0x0b44, ARRAY_BUFFER: 0x8892,
-        ELEMENT_ARRAY_BUFFER: 0x8893, STATIC_DRAW: 0x88e4, COLOR_BUFFER_BIT: 0x4000,
-        DEPTH_BUFFER_BIT: 0x0100, TRIANGLES: 0x0004, UNSIGNED_INT: 0x1405, FLOAT: 0x1406,
+        ELEMENT_ARRAY_BUFFER: 0x8893, STATIC_DRAW: 0x88e4, DYNAMIC_DRAW: 0x88e8,
+        COLOR_BUFFER_BIT: 0x4000, DEPTH_BUFFER_BIT: 0x0100, TRIANGLES: 0x0004,
+        TRIANGLE_STRIP: 0x0005, UNSIGNED_INT: 0x1405, UNSIGNED_SHORT: 0x1403, FLOAT: 0x1406,
         BLEND: 0x0be2, ONE: 1, SRC_ALPHA: 0x0302, ONE_MINUS_SRC_ALPHA: 0x0303,
         TEXTURE_2D: 0x0de1, TEXTURE0: 0x84c0, RGBA: 0x1908, RGBA8: 0x8058,
         SRGB8_ALPHA8: 0x8c43, UNSIGNED_BYTE: 0x1401, BACK: 0x0405, NONE: 0,
@@ -551,7 +552,8 @@ function contextWebGL2() {
         enable: value => { if (value === 0x0b71) renderer3DDepthEnables += 1; },
         depthFunc: noop, depthMask: noop, disable: noop, blendFunc: noop, cullFace: noop,
         createBuffer: () => ({}), bindBuffer: noop,
-        bufferData: () => { renderer3DBufferUploads += 1; }, deleteBuffer: noop,
+        bufferData: () => { renderer3DBufferUploads += 1; },
+        bufferSubData: () => { renderer3DBufferUploads += 1; }, deleteBuffer: noop,
         createTexture: () => ({}), bindTexture: noop, deleteTexture: noop, activeTexture: noop,
         pixelStorei: noop, texImage2D: noop, texSubImage2D: noop, texParameteri: noop, texParameterf: noop,
         generateMipmap: noop, getError: () => 0,
@@ -566,9 +568,12 @@ function contextWebGL2() {
         renderbufferStorage: noop, framebufferRenderbuffer: noop, deleteRenderbuffer: noop,
         colorMask: noop, polygonOffset: noop,
         enableVertexAttribArray: noop, disableVertexAttribArray: noop, vertexAttribPointer: noop,
+        vertexAttribDivisor: noop,
         uniformMatrix4fv: noop, uniformMatrix3fv: noop, uniform4fv: noop, uniform3fv: noop,
         uniform4f: noop, uniform3f: noop, uniform2f: noop, uniform1i: noop, uniform1f: noop,
-        drawElements: () => { renderer3DDrawCalls += 1; }, drawArrays: () => { renderer3DDrawCalls += 1; }
+        drawElements: () => { renderer3DDrawCalls += 1; },
+        drawElementsInstanced: () => { renderer3DDrawCalls += 1; },
+        drawArrays: () => { renderer3DDrawCalls += 1; }
     };
 }
 
