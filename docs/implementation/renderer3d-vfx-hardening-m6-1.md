@@ -200,6 +200,10 @@ The compiler/Web runtime is a VSIX payload, so the version was advanced to 2.0.5
 
 M6.1 itself is green. M7 may be evaluated only after this milestone is committed, pushed, and remote-verified. M7's separate production-character asset gate remains authoritative; M6.1 makes no claim that the required licensed GLB/descriptor/PBR texture package exists.
 
+## PNG evidence follow-up
+
+The later sequential execution instructions required committed PNG evidence under `docs/implementation/screenshots/m6-1-vfx-hardening/`. A separate, non-rewriting documentation follow-up preserves the original M6.1 commit and adds native, Web, 1,024-particle stress, sword-ribbon, HDR/bloom, and direct-LDR PNGs plus `screenshot-index.md`. The direct-LDR image was captured from the pushed Web build with HDR/bloom/format diagnostics at zero and an empty warning/error console log. Exact dimensions, sizes, hashes, and Dragonfall significance are recorded in the screenshot index.
+
 ## Command ledger
 
 The substantive commands used for reconciliation, implementation, validation, evidence, installation, and Git verification were:
