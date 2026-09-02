@@ -127,6 +127,7 @@ Private Const COMMAND_PARTICLE_BATCH = 119
 Private Const COMMAND_RIBBON_BATCH = 120
 Private Const COMMAND_M6_VALUE = 121
 Private Const COMMAND_MATERIAL_INSPECTION = 122
+Private Const COMMAND_SET_CAMERA_UP = 123
 
 Public Const MATERIAL_INSPECTION_LIT = 0
 Public Const MATERIAL_INSPECTION_BASE_COLOR = 1
@@ -3088,6 +3089,7 @@ Public Function DefaultCamera() As Core.Camera3D
 
     Camera.Position.Y = 300
     Camera.Position.Z = -800
+    Camera.UpDirection.Y = 1
     Camera.FovDegrees = 55
     Camera.NearPlane = 1
     Camera.FarPlane = 10000
@@ -3672,6 +3674,19 @@ Public Function Begin3D(
 ) As Boolean
 
     Dim Result As Boolean
+    Dim UpX As Number
+    Dim UpY As Number
+    Dim UpZ As Number
+
+    UpX = Camera.UpDirection.X
+    UpY = Camera.UpDirection.Y
+    UpZ = Camera.UpDirection.Z
+
+    If (UpX = 0 And
+        UpY = 0 And
+        UpZ = 0) Then
+        UpY = 1
+    End If
 
     If Dispatch(
         COMMAND_SET_CAMERA,
@@ -3686,6 +3701,10 @@ Public Function Begin3D(
         Camera.FarPlane,
         0
     ) = 0 Then
+        Return False
+    End If
+
+    If Dispatch(COMMAND_SET_CAMERA_UP, UpX, UpY, UpZ, 0, 0, 0, 0, 0, 0, 0) = 0 Then
         Return False
     End If
 

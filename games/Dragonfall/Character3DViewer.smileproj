@@ -4,12 +4,24 @@
     <StartupFile>Character3DViewer.smile</StartupFile>
     <OutputName>Character3DViewer</OutputName>
     <ApplicationId>smile.tools.character3d-viewer</ApplicationId>
+    <RememberWindowPlacement>true</RememberWindowPlacement>
+    <ResponsiveWindow>true</ResponsiveWindow>
     <GraphicsBackend>DirectX</GraphicsBackend>
     <VSync>true</VSync>
   </PropertyGroup>
   <ItemGroup>
     <SmileSource Include="Character3DViewer.smile" StartupOnly="true" />
     <SmileSource Include="Character3DViewerProfile.smile" />
+    <Asset Include="Assets\Generation2\ArinV54\ArinV54.sm3d" />
+    <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m0-base-color-ccd55f34588c.png" />
+    <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m0-normal-8dd49de64c69.png" />
+    <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m0-orm-49c70f0d00f7.png" />
+    <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m1-base-color-2cf18664e756.png" />
+    <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m1-normal-7c739452638b.png" />
+    <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m1-orm-0e21c722f772.png" />
+    <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m2-base-color-e57234f21964.png" />
+    <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m2-normal-e5eead8ec5d6.png" />
+    <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m2-orm-73d6d44faf5d.png" />
     <Asset Include="Assets\Generation2\Arin\ArinPrototype.sm3d" />
     <Asset Include="Assets\Generation2\Arin\Textures\Arin-base-color.png" />
     <Asset Include="Assets\Generation2\Arin\Textures\Arin-normal.png" />

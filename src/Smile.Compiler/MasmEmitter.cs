@@ -91,6 +91,8 @@ internal sealed class MasmEmitter
     private readonly bool _emitDebugInformation;
     private readonly byte[] _appIdentityBytes;
     private readonly byte[] _assetManifestBytes;
+    private readonly bool _rememberWindowPlacement;
+    private readonly bool _responsiveWindow;
     private readonly StringBuilder _builder = new();
     private readonly Dictionary<VariableSymbol, string> _symbolLabels = new();
     private readonly Dictionary<RoutineSymbol, string> _routineLabels = new();
@@ -144,7 +146,8 @@ internal sealed class MasmEmitter
 
     public MasmEmitter(SmileAnalysisResult analysis, SmileGraphicsBackend graphicsBackend,
         bool vSync, bool emitDebugInformation, string? appIdentity = null,
-        IReadOnlyList<string>? assetPaths = null)
+        IReadOnlyList<string>? assetPaths = null, bool rememberWindowPlacement = false,
+        bool responsiveWindow = false)
     {
         _analysis = analysis;
         _graphicsBackend = graphicsBackend;
@@ -152,6 +155,8 @@ internal sealed class MasmEmitter
         _emitDebugInformation = emitDebugInformation;
         _appIdentityBytes = Encoding.UTF8.GetBytes(string.IsNullOrWhiteSpace(appIdentity) ? "Program" : appIdentity);
         _assetManifestBytes = Encoding.UTF8.GetBytes(string.Join("\n", assetPaths ?? Array.Empty<string>()));
+        _rememberWindowPlacement = rememberWindowPlacement;
+        _responsiveWindow = responsiveWindow;
     }
 
     public bool UsesMusic => _usesMusic;
@@ -234,6 +239,10 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_pointer_released:PROC");
         Line("EXTERN smile_game_open:PROC");
         Line("EXTERN smile_graphics_configure:PROC");
+        Line("EXTERN smile_window_width:PROC");
+        Line("EXTERN smile_window_height:PROC");
+        if (_rememberWindowPlacement) Line("EXTERN smile_window_persistence_configure:PROC");
+        if (_responsiveWindow) Line("EXTERN smile_window_responsive_configure:PROC");
         Line("EXTERN smile_game_clear:PROC");
         Line("EXTERN smile_fill_rectangle:PROC");
         Line("EXTERN smile_fill_rectangle_opacity:PROC");
@@ -317,6 +326,16 @@ internal sealed class MasmEmitter
         Line($"    mov rcx, {(int)_graphicsBackend}");
         Line($"    mov rdx, {(_vSync ? 1 : 0)}");
         CallAligned("smile_graphics_configure");
+        if (_rememberWindowPlacement)
+        {
+            Line("    mov rcx, 1");
+            CallAligned("smile_window_persistence_configure");
+        }
+        if (_responsiveWindow)
+        {
+            Line("    mov rcx, 1");
+            CallAligned("smile_window_responsive_configure");
+        }
         _currentSource = _analysis.BoundSyntaxTree.Source;
         EmitStatements(_analysis.BoundSyntaxTree.Root.Statements);
         CallAligned("smile_cleanup_staged_arguments");
@@ -1662,6 +1681,12 @@ internal sealed class MasmEmitter
                 break;
             case SyntaxKind.GameClosedKeyword:
                 CallAligned("smile_game_closed");
+                break;
+            case SyntaxKind.WindowWidthKeyword:
+                CallAligned("smile_window_width");
+                break;
+            case SyntaxKind.WindowHeightKeyword:
+                CallAligned("smile_window_height");
                 break;
             case SyntaxKind.KeyHeldKeyword:
                 EmitExpression(call.Arguments[0].Expression);

@@ -376,9 +376,11 @@ internal static partial class Sm3dV2
             var eventCount = checked((int)Read32(bytes, offset + 28));
             var flags = Read32(bytes, offset + 32);
             var root = Read32(bytes, offset + 36);
+            var minimumSamples = checked((int)Math.Floor(duration / 1000d * rate) + 1);
+            var maximumSamples = checked((int)Math.Ceiling(duration / 1000d * rate) + 1);
             Require(duration is >= 1 and <= MaximumAnimationDurationMilliseconds &&
                 rate is >= 15 and <= MaximumAnimationSampleRate && samples >= 2 &&
-                samples == checked((int)Math.Ceiling(duration / 1000d * rate) + 1) &&
+                samples >= minimumSamples && samples <= maximumSamples &&
                 firstTrack >= 0 && trackCount >= 0 && firstTrack <= trackChunk.Count &&
                 trackCount <= trackChunk.Count - firstTrack && firstEvent >= 0 &&
                 eventCount is >= 0 and <= MaximumAnimationEventsPerClip && firstEvent <= eventChunk.Count &&

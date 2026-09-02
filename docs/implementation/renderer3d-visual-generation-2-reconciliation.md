@@ -128,6 +128,8 @@ Arguments not named in the table are ignored and must be zero in the public faca
 | 78 | `DRAW_CALL_COUNT` | none | successful visible draw submissions in the current/most recently ended frame |
 | 79 | `SUBMITTED_TRIANGLE_COUNT` | none | sum of `mesh.indexCount / 3` for those submissions |
 
+Post-M0 evolution reserves numeric command 123 as `SET_CAMERA_UP` (`a-c=up XYZ`, nonzero, success result). `Graphics3D.Begin3D` sends it after the source-compatible command 10 camera payload. Native Direct3D and WebGL2 use that explicit up direction to avoid the fixed-world-up pole singularity during continuous 360-degree vertical orbit. Commands 80-122 were added by later milestones and are documented by their milestone implementation notes and mirrored constants.
+
 Commands 78 and 79 are the only M0 ABI additions. Both counters reset to zero on a successful new `BEGIN` and on `RESET`, remain queryable after `END`, and do not count invisible or failed draws. The next unassigned numeric command is 80.
 
 ### Image and text ABIs

@@ -203,6 +203,27 @@ Run("Pointer input built-ins and constants are shared and game-window scoped", (
         throw new InvalidOperationException(string.Join(" | ", analysis.Diagnostics.Select(diagnostic => diagnostic.Code + ": " + diagnostic.Message)));
     Equal(true, Analyze("Print Pointer_X()\n").HasErrors);
 });
+Run("Character viewer letter shortcuts are shared named input constants", () =>
+{
+    Equal(SyntaxKind.KeyFKeyword, SyntaxFacts.GetKeywordKind("key_f"));
+    Equal(SyntaxKind.KeyGKeyword, SyntaxFacts.GetKeywordKind("KEY_G"));
+    Equal(28L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyFKeyword));
+    Equal(29L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyGKeyword));
+});
+Run("Window dimensions are shared live game-window built-ins", () =>
+{
+    Equal(SyntaxKind.WindowWidthKeyword, SyntaxFacts.GetKeywordKind("window_width"));
+    Equal(SyntaxKind.WindowHeightKeyword, SyntaxFacts.GetKeywordKind("Window_Height"));
+    var analysis = Analyze("Game Window \"Responsive\"\nDim Area As Number\nArea = Window_Width() * Window_Height()\n");
+    Equal(false, analysis.HasErrors);
+    Equal(true, Analyze("Print Window_Width()\n").HasErrors);
+    var native = new MasmEmitter(analysis, SmileGraphicsBackend.DirectX, true, false).Emit();
+    Equal(true, native.Contains("call smile_window_width", StringComparison.Ordinal));
+    Equal(true, native.Contains("call smile_window_height", StringComparison.Ordinal));
+    var web = new WebEmitter(analysis).Emit();
+    Equal(true, web.Contains("smile.windowWidth()", StringComparison.Ordinal));
+    Equal(true, web.Contains("smile.windowHeight()", StringComparison.Ordinal));
+});
 Run("Renderer3D is a bounded game-window bridge on both targets", () =>
 {
     Equal(SyntaxKind.Renderer3DKeyword, SyntaxFacts.GetKeywordKind("renderer3d"));
@@ -4978,6 +4999,78 @@ Run("ApplicationId validates optional project identity and preserves OutputName 
     ThrowsProjectDiagnostic(() => ProjectSources("<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind>" +
         "<LibraryName>Example</LibraryName><Version>1.0.0</Version><ApplicationId>smile.library</ApplicationId>" +
         "</PropertyGroup><ItemGroup><SmileSource Include=\"Module.smile\" /></ItemGroup></SmileProject>"), "SML3802");
+});
+
+Run("RememberWindowPlacement is an opt-in stable-identity Game project policy", () =>
+{
+    var remembered = ProjectSources("<SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind>" +
+        "<StartupFile>Program.smile</StartupFile><OutputName>Viewer</OutputName>" +
+        "<ApplicationId>smile.tests.viewer</ApplicationId>" +
+        "<RememberWindowPlacement>true</RememberWindowPlacement></PropertyGroup>" +
+        "<ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /></ItemGroup></SmileProject>");
+    Equal(true, remembered.RememberWindowPlacement);
+
+    var normal = ProjectSources("<SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind>" +
+        "<StartupFile>Program.smile</StartupFile><OutputName>Normal</OutputName></PropertyGroup>" +
+        "<ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /></ItemGroup></SmileProject>");
+    Equal(false, normal.RememberWindowPlacement);
+
+    ThrowsProjectDiagnostic(() => ProjectSources("<SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind>" +
+        "<ApplicationId>smile.tests.viewer</ApplicationId>" +
+        "<RememberWindowPlacement>true</RememberWindowPlacement></PropertyGroup><PropertyGroup>" +
+        "<RememberWindowPlacement>false</RememberWindowPlacement></PropertyGroup><ItemGroup>" +
+        "<SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /></ItemGroup></SmileProject>"), "SML3804");
+    ThrowsProjectDiagnostic(() => ProjectSources("<SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind>" +
+        "<ApplicationId>smile.tests.viewer</ApplicationId>" +
+        "<RememberWindowPlacement>sometimes</RememberWindowPlacement></PropertyGroup><ItemGroup>" +
+        "<SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /></ItemGroup></SmileProject>"), "SML3805");
+    ThrowsProjectDiagnostic(() => ProjectSources("<SmileProject><PropertyGroup><ProjectKind>Console</ProjectKind>" +
+        "<ApplicationId>smile.tests.console</ApplicationId>" +
+        "<RememberWindowPlacement>true</RememberWindowPlacement></PropertyGroup><ItemGroup>" +
+        "<SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /></ItemGroup></SmileProject>"), "SML3806");
+    ThrowsProjectDiagnostic(() => ProjectSources("<SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind>" +
+        "<RememberWindowPlacement>true</RememberWindowPlacement></PropertyGroup><ItemGroup>" +
+        "<SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /></ItemGroup></SmileProject>"), "SML3807");
+
+    var analysis = Analyze("Game Window \"Remembered\" Size 320 By 180\n");
+    var rememberedAssembly = new MasmEmitter(analysis, SmileGraphicsBackend.DirectX, true, false,
+        rememberWindowPlacement: true).Emit();
+    var normalAssembly = new MasmEmitter(analysis, SmileGraphicsBackend.DirectX, true, false).Emit();
+    Equal(true, rememberedAssembly.Contains("EXTERN smile_window_persistence_configure:PROC", StringComparison.Ordinal));
+    Equal(true, rememberedAssembly.Contains("call smile_window_persistence_configure", StringComparison.Ordinal));
+    Equal(false, normalAssembly.Contains("smile_window_persistence_configure", StringComparison.Ordinal));
+});
+
+Run("ResponsiveWindow is an opt-in Game project policy", () =>
+{
+    var responsive = ProjectSources("<SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind>" +
+        "<StartupFile>Program.smile</StartupFile><OutputName>Viewer</OutputName>" +
+        "<ResponsiveWindow>true</ResponsiveWindow></PropertyGroup>" +
+        "<ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /></ItemGroup></SmileProject>");
+    Equal(true, responsive.ResponsiveWindow);
+
+    var normal = ProjectSources("<SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind>" +
+        "<StartupFile>Program.smile</StartupFile><OutputName>Normal</OutputName></PropertyGroup>" +
+        "<ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /></ItemGroup></SmileProject>");
+    Equal(false, normal.ResponsiveWindow);
+
+    ThrowsProjectDiagnostic(() => ProjectSources("<SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind>" +
+        "<ResponsiveWindow>true</ResponsiveWindow></PropertyGroup><PropertyGroup>" +
+        "<ResponsiveWindow>false</ResponsiveWindow></PropertyGroup><ItemGroup>" +
+        "<SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /></ItemGroup></SmileProject>"), "SML3808");
+    ThrowsProjectDiagnostic(() => ProjectSources("<SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind>" +
+        "<ResponsiveWindow>sometimes</ResponsiveWindow></PropertyGroup><ItemGroup>" +
+        "<SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /></ItemGroup></SmileProject>"), "SML3809");
+    ThrowsProjectDiagnostic(() => ProjectSources("<SmileProject><PropertyGroup><ProjectKind>Console</ProjectKind>" +
+        "<ResponsiveWindow>true</ResponsiveWindow></PropertyGroup><ItemGroup>" +
+        "<SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /></ItemGroup></SmileProject>"), "SML3810");
+
+    var analysis = Analyze("Game Window \"Responsive\" Size 320 By 180\n");
+    var responsiveAssembly = new MasmEmitter(analysis, SmileGraphicsBackend.DirectX, true, false,
+        responsiveWindow: true).Emit();
+    var normalAssembly = new MasmEmitter(analysis, SmileGraphicsBackend.DirectX, true, false).Emit();
+    Equal(true, responsiveAssembly.Contains("call smile_window_responsive_configure", StringComparison.Ordinal));
+    Equal(false, normalAssembly.Contains("smile_window_responsive_configure", StringComparison.Ordinal));
 });
 
 Run("ApplicationId CLI parses and rejects conflicting project overrides", () =>

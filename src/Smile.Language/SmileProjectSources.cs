@@ -82,6 +82,7 @@ public sealed class SmileProjectSourceSet
 {
     private SmileProjectSourceSet(string projectPath, SmileProjectKind projectKind, string startupFile,
         string libraryName, string version, string outputName, string? applicationId,
+        bool rememberWindowPlacement, bool responsiveWindow,
         IReadOnlyList<SmileProjectSourceItem> items, IReadOnlyList<SmileProjectSourceItem> compilationSources,
         IReadOnlyList<SmileProjectReferenceItem> references, SmileProjectAssetManifest assetManifest,
         SmileProjectModel3DAssetSet model3DAssets)
@@ -94,6 +95,8 @@ public sealed class SmileProjectSourceSet
         Version = version;
         OutputName = outputName;
         ApplicationId = applicationId;
+        RememberWindowPlacement = rememberWindowPlacement;
+        ResponsiveWindow = responsiveWindow;
         Items = items;
         CompilationSources = compilationSources;
         StartupSource = projectKind == SmileProjectKind.Library ? null : compilationSources[0];
@@ -112,6 +115,8 @@ public sealed class SmileProjectSourceSet
     public string OutputName { get; }
     public string? ApplicationId { get; }
     public string EffectiveApplicationId => ApplicationId ?? OutputName;
+    public bool RememberWindowPlacement { get; }
+    public bool ResponsiveWindow { get; }
     public bool IsLibrary => ProjectKind == SmileProjectKind.Library;
     public SmileProjectSourceItem? StartupSource { get; }
     public IReadOnlyList<SmileProjectSourceItem> Items { get; }
@@ -206,6 +211,64 @@ public sealed class SmileProjectSourceSet
                 fullProjectPath, line, column);
         }
 
+        var placementElements = propertyGroups.SelectMany(group =>
+            group.Elements().Where(element => element.Name.LocalName == "RememberWindowPlacement")).ToArray();
+        if (placementElements.Length > 1)
+        {
+            var duplicate = placementElements[1];
+            var duplicateLocation = (IXmlLineInfo)duplicate;
+            throw new SmileProjectDiagnosticException("SML3804",
+                "RememberWindowPlacement may be declared only once in a SMILE project.", fullProjectPath,
+                duplicateLocation.HasLineInfo() ? duplicateLocation.LineNumber : 1,
+                duplicateLocation.HasLineInfo() ? duplicateLocation.LinePosition : 1);
+        }
+
+        var rememberWindowPlacement = false;
+        if (placementElements.Length == 1)
+        {
+            var placementElement = placementElements[0];
+            var location = (IXmlLineInfo)placementElement;
+            var line = location.HasLineInfo() ? location.LineNumber : 1;
+            var column = location.HasLineInfo() ? location.LinePosition : 1;
+            if (!bool.TryParse(placementElement.Value.Trim(), out rememberWindowPlacement))
+                throw new SmileProjectDiagnosticException("SML3805",
+                    "RememberWindowPlacement must be true or false.", fullProjectPath, line, column);
+            if (rememberWindowPlacement && projectKind != SmileProjectKind.Game)
+                throw new SmileProjectDiagnosticException("SML3806",
+                    "RememberWindowPlacement is available only to Game projects.", fullProjectPath, line, column);
+            if (rememberWindowPlacement && applicationId == null)
+                throw new SmileProjectDiagnosticException("SML3807",
+                    "RememberWindowPlacement requires an explicit stable ApplicationId.",
+                    fullProjectPath, line, column);
+        }
+
+        var responsiveElements = propertyGroups.SelectMany(group =>
+            group.Elements().Where(element => element.Name.LocalName == "ResponsiveWindow")).ToArray();
+        if (responsiveElements.Length > 1)
+        {
+            var duplicate = responsiveElements[1];
+            var duplicateLocation = (IXmlLineInfo)duplicate;
+            throw new SmileProjectDiagnosticException("SML3808",
+                "ResponsiveWindow may be declared only once in a SMILE project.", fullProjectPath,
+                duplicateLocation.HasLineInfo() ? duplicateLocation.LineNumber : 1,
+                duplicateLocation.HasLineInfo() ? duplicateLocation.LinePosition : 1);
+        }
+
+        var responsiveWindow = false;
+        if (responsiveElements.Length == 1)
+        {
+            var responsiveElement = responsiveElements[0];
+            var location = (IXmlLineInfo)responsiveElement;
+            var line = location.HasLineInfo() ? location.LineNumber : 1;
+            var column = location.HasLineInfo() ? location.LinePosition : 1;
+            if (!bool.TryParse(responsiveElement.Value.Trim(), out responsiveWindow))
+                throw new SmileProjectDiagnosticException("SML3809",
+                    "ResponsiveWindow must be true or false.", fullProjectPath, line, column);
+            if (responsiveWindow && projectKind != SmileProjectKind.Game)
+                throw new SmileProjectDiagnosticException("SML3810",
+                    "ResponsiveWindow is available only to Game projects.", fullProjectPath, line, column);
+        }
+
         var startupFile = properties?.Elements().FirstOrDefault(element => element.Name.LocalName == "StartupFile")?.Value.Trim();
         if (projectKind != SmileProjectKind.Library && string.IsNullOrWhiteSpace(startupFile))
             startupFile = "Program.smile";
@@ -285,7 +348,8 @@ public sealed class SmileProjectSourceSet
         var assetManifest = SmileProjectAssetResolver.Resolve(fullProjectPath, projectKind, root);
         var model3DAssets = SmileProjectModel3DAssetResolver.Resolve(fullProjectPath, projectKind, root);
         return new SmileProjectSourceSet(fullProjectPath, projectKind, startupFile ?? string.Empty,
-            libraryName, version, outputName!, applicationId, items, compilationSources, references, assetManifest,
+            libraryName, version, outputName!, applicationId, rememberWindowPlacement, responsiveWindow,
+            items, compilationSources, references, assetManifest,
             model3DAssets);
     }
 

@@ -389,7 +389,7 @@ internal static class WebOutputWriter
                     palette:new Float32Array(128*16)});
             }
             const renderer3DCamera = {
-                position: [0, 300, -800], target: [0, 0, 0], fov: 55, near: 1, far: 10000
+                position: [0, 300, -800], target: [0, 0, 0], up: [0, 1, 0], fov: 55, near: 1, far: 10000
             };
 
             function readVirtualControlsMode() {
@@ -570,6 +570,8 @@ internal static class WebOutputWriter
             }
 
             function pointerX() { return pointerXValue; }
+            function windowWidth() { return logicalWidth; }
+            function windowHeight() { return logicalHeight; }
             function pointerY() { return pointerYValue; }
             function pointerDeltaX() { return pointerDeltaXValue; }
             function pointerDeltaY() { return pointerDeltaYValue; }
@@ -1803,8 +1805,9 @@ internal static class WebOutputWriter
                 if(rootBones!==1)return null;
                 const clips=[],clipNames=new Set();
                 for(let index=0;index<values[3].count;index+=1){const offset=values[3].offset+index*40,name=stringAt(u32(offset)),duration=u32(offset+4),rate=u32(offset+8),samples=u32(offset+12),
-                    firstTrack=u32(offset+16),trackCount=u32(offset+20),firstEvent=u32(offset+24),eventCount=u32(offset+28),flags=u32(offset+32),root=u32(offset+36);
-                    if(name===null||clipNames.has(name)||duration<1||duration>120000||rate<15||rate>60||samples!==Math.ceil(duration/1000*rate)+1||
+                    firstTrack=u32(offset+16),trackCount=u32(offset+20),firstEvent=u32(offset+24),eventCount=u32(offset+28),flags=u32(offset+32),root=u32(offset+36),
+                    minimumSamples=Math.floor(duration/1000*rate)+1,maximumSamples=Math.ceil(duration/1000*rate)+1;
+                    if(name===null||clipNames.has(name)||duration<1||duration>120000||rate<15||rate>60||samples<minimumSamples||samples>maximumSamples||
                         firstTrack>values[4].count||trackCount>values[4].count-firstTrack||firstEvent>values[6].count||eventCount>64||eventCount>values[6].count-firstEvent||
                         flags>1||(root!==0xffffffff&&root>=values[8].count))return null;
                     clipNames.add(name);clips.push({name,duration,rate,samples,firstTrack,trackCount,firstEvent,eventCount,loop:flags!==0,root:root===0xffffffff?-1:root});}
@@ -2121,7 +2124,7 @@ internal static class WebOutputWriter
             function renderer3DIdentityInto(output){output.fill(0);output[0]=output[5]=output[10]=output[15]=1;return output;}
             function renderer3DMultiplyInto(output,left,right){for(let column=0;column<4;column+=1)for(let row=0;row<4;row+=1){let value=0;for(let index=0;index<4;index+=1)value+=left[index*4+row]*right[column*4+index];output[column*4+row]=value;}return output;}
             function renderer3DModelInto(output,object){const sx=object.scale[0],sy=object.scale[1],sz=object.scale[2],rx=object.rotation[0]*Math.PI/180,ry=object.rotation[1]*Math.PI/180,rz=object.rotation[2]*Math.PI/180,s=renderer3DIdentityInto(renderer3DMatrixScratchA),x=renderer3DIdentityInto(renderer3DMatrixScratchB),y=renderer3DIdentityInto(renderer3DMatrixScratchC),z=renderer3DIdentityInto(renderer3DMatrixScratchD);s[0]=sx;s[5]=sy;s[10]=sz;x[5]=Math.cos(rx);x[6]=-Math.sin(rx);x[9]=Math.sin(rx);x[10]=Math.cos(rx);y[0]=Math.cos(ry);y[2]=Math.sin(ry);y[8]=-Math.sin(ry);y[10]=Math.cos(ry);z[0]=Math.cos(rz);z[1]=-Math.sin(rz);z[4]=Math.sin(rz);z[5]=Math.cos(rz);renderer3DMultiplyInto(output,x,s);renderer3DMultiplyInto(s,y,output);renderer3DMultiplyInto(output,z,s);output[12]=object.position[0];output[13]=object.position[1];output[14]=object.position[2];output[15]=1;return output;}
-            function renderer3DViewInto(output){const eye=renderer3DCamera.position,target=renderer3DCamera.target;let zx=target[0]-eye[0],zy=target[1]-eye[1],zz=target[2]-eye[2],length=Math.hypot(zx,zy,zz)||1;zx/=length;zy/=length;zz/=length;let xx=zz,xz=-zx;length=Math.hypot(xx,xz)||1;xx/=length;xz/=length;const yx=zy*xz,yz=-zy*xx,yy=zz*xx-zx*xz;output[0]=xx;output[1]=yx;output[2]=zx;output[3]=0;output[4]=0;output[5]=yy;output[6]=zy;output[7]=0;output[8]=xz;output[9]=yz;output[10]=zz;output[11]=0;output[12]=-(xx*eye[0]+xz*eye[2]);output[13]=-(yx*eye[0]+yy*eye[1]+yz*eye[2]);output[14]=-(zx*eye[0]+zy*eye[1]+zz*eye[2]);output[15]=1;return output;}
+            function renderer3DViewInto(output){const eye=renderer3DCamera.position,target=renderer3DCamera.target,up=renderer3DCamera.up;let zx=target[0]-eye[0],zy=target[1]-eye[1],zz=target[2]-eye[2],length=Math.hypot(zx,zy,zz)||1;zx/=length;zy/=length;zz/=length;let xx=up[1]*zz-up[2]*zy,xy=up[2]*zx-up[0]*zz,xz=up[0]*zy-up[1]*zx;length=Math.hypot(xx,xy,xz);if(length<.0001){const fallback=Math.abs(zy)>.99?[1,0,0]:[0,1,0];xx=fallback[1]*zz-fallback[2]*zy;xy=fallback[2]*zx-fallback[0]*zz;xz=fallback[0]*zy-fallback[1]*zx;length=Math.hypot(xx,xy,xz)||1;}xx/=length;xy/=length;xz/=length;const yx=zy*xz-zz*xy,yy=zz*xx-zx*xz,yz=zx*xy-zy*xx;output[0]=xx;output[1]=yx;output[2]=zx;output[3]=0;output[4]=xy;output[5]=yy;output[6]=zy;output[7]=0;output[8]=xz;output[9]=yz;output[10]=zz;output[11]=0;output[12]=-(xx*eye[0]+xy*eye[1]+xz*eye[2]);output[13]=-(yx*eye[0]+yy*eye[1]+yz*eye[2]);output[14]=-(zx*eye[0]+zy*eye[1]+zz*eye[2]);output[15]=1;return output;}
             function renderer3DProjectionInto(output,aspect){const f=1/Math.tan(renderer3DCamera.fov*Math.PI/360),near=renderer3DCamera.near,far=renderer3DCamera.far;output.fill(0);output[0]=f/aspect;output[5]=f;output[10]=(far+near)/(far-near);output[11]=1;output[14]=-2*far*near/(far-near);return output;}
             function renderer3DLookAtInto(output,eyeX,eyeY,eyeZ,targetX,targetY,targetZ){let zx=targetX-eyeX,zy=targetY-eyeY,zz=targetZ-eyeZ,length=Math.hypot(zx,zy,zz)||1;zx/=length;zy/=length;zz/=length;
                 let xx=zz,xz=-zx;length=Math.hypot(xx,xz);if(length<.000001){xx=1;xz=0;}else{xx/=length;xz/=length;}const yx=zy*xz,yz=-zy*xx,yy=zz*xx-zx*xz;
@@ -2178,7 +2181,7 @@ internal static class WebOutputWriter
             function renderer3DCross(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
             function renderer3DDot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
             function renderer3DModel(object){const [sx,sy,sz]=object.scale,[rx,ry,rz]=object.rotation.map(value=>value*Math.PI/180);let s=renderer3DIdentity(),x=renderer3DIdentity(),y=renderer3DIdentity(),z=renderer3DIdentity(),t=renderer3DIdentity();s[0]=sx;s[5]=sy;s[10]=sz;x[5]=Math.cos(rx);x[6]=-Math.sin(rx);x[9]=Math.sin(rx);x[10]=Math.cos(rx);y[0]=Math.cos(ry);y[2]=Math.sin(ry);y[8]=-Math.sin(ry);y[10]=Math.cos(ry);z[0]=Math.cos(rz);z[1]=-Math.sin(rz);z[4]=Math.sin(rz);z[5]=Math.cos(rz);t[12]=object.position[0];t[13]=object.position[1];t[14]=object.position[2];return renderer3DMultiply(t,renderer3DMultiply(z,renderer3DMultiply(y,renderer3DMultiply(x,s))));}
-            function renderer3DView(){const eye=renderer3DCamera.position,target=renderer3DCamera.target,z=renderer3DNormalize([target[0]-eye[0],target[1]-eye[1],target[2]-eye[2]]),x=renderer3DNormalize(renderer3DCross([0,1,0],z)),y=renderer3DCross(z,x);return[x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-renderer3DDot(x,eye),-renderer3DDot(y,eye),-renderer3DDot(z,eye),1];}
+            function renderer3DView(){const eye=renderer3DCamera.position,target=renderer3DCamera.target,z=renderer3DNormalize([target[0]-eye[0],target[1]-eye[1],target[2]-eye[2]]);let x=renderer3DCross(renderer3DCamera.up,z);if(Math.hypot(x[0],x[1],x[2])<.0001)x=renderer3DCross(Math.abs(z[1])>.99?[1,0,0]:[0,1,0],z);x=renderer3DNormalize(x);const y=renderer3DCross(z,x);return[x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-renderer3DDot(x,eye),-renderer3DDot(y,eye),-renderer3DDot(z,eye),1];}
             function renderer3DProjection(aspect){const f=1/Math.tan(renderer3DCamera.fov*Math.PI/360),near=renderer3DCamera.near,far=renderer3DCamera.far;return[f/aspect,0,0,0,0,f,0,0,0,0,(far+near)/(far-near),1,0,0,-2*far*near/(far-near),0];}
 
             function renderer3DUpload(mesh) {
@@ -2336,7 +2339,7 @@ internal static class WebOutputWriter
             function renderer3DReset(){renderer3DReleaseSubmissions(0,renderer3DSubmissionCount);renderer3DSubmissionCount=renderer3DPaletteSnapshotCount=0;renderer3DSubmissionGroupActive=false;renderer3DSubmissionGroupToken=0;renderer3DFrameActive=false;renderer3DObjects.clear();renderer3DAnimators.clear();for(const model of [...renderer3DModels.keys()])renderer3DDeleteModel(model);
                 renderer3DClips.clear();renderer3DSkeletons.clear();for(const handle of [...renderer3DParticleBatches.keys()])renderer3DDeleteParticleBatch(handle);for(const handle of [...renderer3DRibbonBatches.keys()])renderer3DDeleteRibbonBatch(handle);for(const mesh of renderer3DMeshes.values())renderer3DDeleteGpu(mesh);
                 for(const texture of renderer3DTextures.values()){renderer3DDeleteTextureGpu(texture);imageRelease(texture.image);}renderer3DMeshes.clear();
-                renderer3DModels.clear();renderer3DMaterials.clear();renderer3DTextures.clear();renderer3DResetLights();renderer3DMaterialInspection=0;renderer3DLastError=0;
+                renderer3DModels.clear();renderer3DMaterials.clear();renderer3DTextures.clear();renderer3DCamera.up=[0,1,0];renderer3DResetLights();renderer3DMaterialInspection=0;renderer3DLastError=0;
                 renderer3DDrawCallCount=0;renderer3DSubmittedTriangleCount=0;renderer3DPbrDrawCount=0;renderer3DSimpleDrawCount=0;
                 renderer3DPbrTriangleCount=0;if(renderer3DGl&&renderer3DPbrProgram)renderer3DGl.deleteProgram(renderer3DPbrProgram.handle);if(renderer3DGl&&renderer3DVfxProgram){renderer3DGl.deleteProgram(renderer3DVfxProgram.particle.handle);renderer3DGl.deleteProgram(renderer3DVfxProgram.ribbon.handle);}if(renderer3DGl&&renderer3DParticleQuadBuffer)renderer3DGl.deleteBuffer(renderer3DParticleQuadBuffer);if(renderer3DGl&&renderer3DParticleQuadIndexBuffer)renderer3DGl.deleteBuffer(renderer3DParticleQuadIndexBuffer);renderer3DVfxProgram=null;renderer3DParticleQuadBuffer=renderer3DParticleQuadIndexBuffer=null;
                 renderer3DPbrProgram=null;renderer3DPbrAttempted=false;renderer3DPbrState=0;renderer3DPbrFailure=0;
@@ -2361,6 +2364,7 @@ internal static class WebOutputWriter
                     case 8:if(!renderer3DRequireMesh(a)||renderer3DObjects.size>=512){renderer3DLastError=9;return 0;}const handle=renderer3DHandle();renderer3DObjects.set(handle,{mesh:a,material:0,defaultMaterial:0,animator:0,position:[0,0,0],rotation:[0,0,0],scale:[1,1,1],color:[1,1,1,1],visible:true,castsShadow:true,receivesShadow:true});return handle;
                     case 9:if(renderer3DObjects.delete(a))return 1;if(renderer3DModels.has(a)){if(!renderer3DDeleteModel(a)){renderer3DLastError=27;return 0;}return 1;}if(renderer3DAnimators.has(a)){if(renderer3DAnimatorReferences(a)!==0){renderer3DLastError=37;return 0;}renderer3DAnimators.delete(a);return 1;}if(renderer3DClips.has(a)){if(renderer3DClipReferences(a)!==0){renderer3DLastError=37;return 0;}renderer3DClips.delete(a);return 1;}if(renderer3DSkeletons.has(a)){if(renderer3DSkeletonReferences(a)!==0){renderer3DLastError=37;return 0;}renderer3DSkeletons.delete(a);return 1;}mesh=renderer3DMeshes.get(a);if(mesh){if(renderer3DMeshReferenceCount(a)!==0){renderer3DLastError=16;return 0;}renderer3DDeleteGpu(mesh);renderer3DMeshes.delete(a);return 1;}material=renderer3DMaterials.get(a);if(material){if(material.ownerModel||renderer3DMaterialReferenceCount(a)!==0){renderer3DLastError=22;return 0;}renderer3DMaterials.delete(a);return 1;}texture=renderer3DTextures.get(a);if(texture){if(renderer3DTextureReferenceCount(a)!==0){renderer3DLastError=23;return 0;}renderer3DDeleteTextureGpu(texture);imageRelease(texture.image);renderer3DTextures.delete(a);return 1;}renderer3DLastError=5;return 0;
                     case 10:renderer3DCamera.position=[a,b,c];renderer3DCamera.target=[d,e,f];renderer3DCamera.fov=g;renderer3DCamera.near=h;renderer3DCamera.far=i;if(g<10||g>160||h<=0||i<=h){renderer3DLastError=15;return 0;}return 1;
+                    case 123:if(a===0&&b===0&&c===0){renderer3DLastError=15;return 0;}renderer3DCamera.up=[a,b,c];return 1;
                     case 11:case 12:case 13:object=renderer3DRequireObject(a);if(!object)return 0;if(command===11)object.position=[b,c,d];else if(command===12)object.rotation=[b,c,d];else object.scale=[b/100,c/100,d/100];return 1;
                     case 14:object=renderer3DRequireObject(a);if(!object)return 0;object.color=[(b&255)/255,(c&255)/255,(d&255)/255,Math.max(0,Math.min(100,e))/100];return 1;
                     case 15:object=renderer3DRequireObject(a);if(!object)return 0;object.visible=b!==0;return 1;
@@ -2935,6 +2939,8 @@ internal static class WebOutputWriter
                     case "KeyS": return 3;
                     case "KeyD": return 4;
                     case "KeyO": return 27;
+                    case "KeyF": return 28;
+                    case "KeyG": return 29;
                     case "ArrowUp": return 10;
                     case "ArrowDown": return 11;
                     case "ArrowLeft": return 12;
@@ -3357,7 +3363,7 @@ internal static class WebOutputWriter
                 fillQuadrilateral, drawQuadrilateral, drawLine, drawText, drawNumber, loadImage, imageRetain,
                 imageRelease, imageAssign, imageMoveAssign, imageLoaded, imageWidth, imageHeight, drawImage,
                 pushClip, popClip, textWidth, textHeight, textLength, textCodeAt, textSlice, showScreen,
-                print, clearScreen, wait, getKey, keyHeld, pointerX, pointerY, pointerDeltaX, pointerDeltaY,
+                print, clearScreen, wait, getKey, keyHeld, windowWidth, windowHeight, pointerX, pointerY, pointerDeltaX, pointerDeltaY,
                 pointerWheelDelta, pointerWheelRemainder, pointerInside, pointerHeld, pointerPressed, pointerReleased,
                 playSound, stopSound,
                 playMusic, pauseMusic, resumeMusic, stopMusic, setMusicVolume, loadTextFile,

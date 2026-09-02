@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "sampleRate": 30,
+  "clips": {
+    "Idle": { "loop": true },
+    "Walk": { "loop": true },
+    "Run": { "loop": true },
+    "Ready": { "loop": true },
+    "SwordAttack": { "loop": false },
+    "ShieldBashCandidate": { "loop": false },
+    "Defend": { "loop": true },
+    "BlockImpact": { "loop": false },
+    "Hit": { "loop": false },
+    "KO": { "loop": false },
+    "Victory": { "loop": false }
+  },
+  "sockets": {
+    "Root": { "node": "Root" },
+    "Head": { "node": "Head" },
+    "Chest": { "node": "Spine02" },
+    "SwordBase": { "node": "ArinSword" },
+    "SwordTip": { "node": "ArinSword", "translation": [0.0, 0.75, 0.0] },
+    "ShieldCenter": { "node": "ArinShield" }
+  }
+}

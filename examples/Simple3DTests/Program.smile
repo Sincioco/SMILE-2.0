@@ -295,6 +295,7 @@ End If
 Call Interaction.ResetCameraControls(CameraControls)
 
 Camera.FovDegrees = 55
+Camera.UpDirection.Y = 1
 
 If (Not Interaction.UpdatePanZoomControls(CameraControls, True, True, False, 10, -5, 2) Or
     Not Interaction.UpdateOrbitControls(CameraControls, True, True, False, 12, -6) Or
@@ -329,6 +330,36 @@ ControlAccepted = Interaction.UpdateOrbitControls(CameraControls, True, True, Fa
 ControlAccepted = Interaction.UpdateOrbitControls(CameraControls, False, False, False, 0, 0)
 
 If CameraControls.Orbiting Then
+    Failures = Failures + 1
+End If
+
+Call Interaction.ResetCameraControls(CameraControls)
+
+ControlAccepted = Interaction.UpdateOrbitControls(CameraControls, True, True, False, 0, 200)
+
+If CameraControls.OrbitPitch <> 400 Then
+    Failures = Failures + 1
+End If
+
+ControlAccepted = Interaction.UpdateOrbitControls(CameraControls, False, False, True, 0, 0)
+
+If CameraControls.OrbitPitch <> 40 Then
+    Failures = Failures + 1
+End If
+
+Call Interaction.ResetCameraControls(CameraControls)
+
+CameraControls.OrbitPitch = 180
+ControlledCamera = Interaction.ApplyCameraControls(Camera, CameraControls)
+
+If ControlledCamera.UpDirection.Y <> -1 Then
+    Failures = Failures + 1
+End If
+
+CameraControls.OrbitPitch = 360
+ControlledCamera = Interaction.ApplyCameraControls(Camera, CameraControls)
+
+If ControlledCamera.UpDirection.Y <> 1 Then
     Failures = Failures + 1
 End If
 

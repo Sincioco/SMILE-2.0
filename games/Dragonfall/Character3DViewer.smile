@@ -10,10 +10,16 @@ Import Smile.Simple3D.Interaction As Interaction
 Import Smile.Simple3D.Scene3D As Scene3D
 Import Dragonfall.Character3DViewerProfile As ViewerProfiles
 
-Const DRAG_ORBIT = 0
-Const DRAG_PAN = 1
+Const ANIMATION_CYCLE_MILLISECONDS = 5000
+Const IDLE_RESET_MILLISECONDS = 10000
+Const ANIMATION_BUTTON_Y = 356
+Const ANIMATION_BUTTON_WIDTH = 110
+Const ANIMATION_BUTTON_HEIGHT = 24
+Const ANIMATION_BUTTON_COLUMN_GAP = 8
+Const ANIMATION_BUTTON_ROW_GAP = 4
+Const ORBIT_POINTER_DIVISOR = 1
 Const PAN_POINTER_DIVISOR = 3
-Const ORBIT_PITCH_LIMIT = 60
+Const DEFAULT_ZOOM_DEGREES = -16
 Const ZOOM_IN_LIMIT = -24
 Const ZOOM_OUT_LIMIT = 36
 
@@ -27,6 +33,11 @@ Dim ActiveProfile As CharacterViewer.Profile
 Dim ViewerFrame As CharacterViewer.Framing
 Dim SmoothZoom As CharacterViewer.ZoomState
 Dim Floor As Core.Object3D
+Dim FloorVisible As Boolean
+Dim GridLines[64] As Core.Object3D
+Dim GridLineCount As Number
+Dim GridMaterial As Core.Material3D
+Dim GridVisible As Boolean
 Dim SocketGizmos[24] As Core.Object3D
 Dim SocketGizmoCount As Number
 Dim SocketGizmosVisible As Boolean
@@ -37,7 +48,6 @@ Dim FirstViewerError As Number
 Dim FirstRendererError As Number
 Dim ViewerEpoch As Number
 Dim InterfacePointerBlocked As Boolean
-Dim DragMode As Number
 Dim SelectedClip As Number
 Dim LightingIndex As Number
 Dim ProfileIndex As Number
@@ -47,12 +57,20 @@ Dim Key As Number
 Dim CurrentTime As Number
 Dim PreviousTime As Number
 Dim FrameMilliseconds As Number
+Dim FrameRateElapsed As Number
+Dim FrameRateFrames As Number
+Dim CurrentFramesPerSecond As Number
 Dim PanPointerRemainderX As Number
 Dim PanPointerRemainderY As Number
+Dim OrbitPointerRemainderX As Number
+Dim OrbitPointerRemainderY As Number
 Dim AutoOrbit As Boolean
 Dim AutoOrbitYaw1000 As Number
+Dim AnimationCycleElapsed As Number
+Dim IdleResetElapsed As Number
+Dim IdleResetPending As Boolean
 
-Game Window "SMILE Character 3D Viewer" Size 960 By 540
+Game Window "SMILE 2.0 - Character 3D Viewer" Size 1600 By 640
 
 Call Graphics3D.ResetRenderer3D()
 Call LoadViewer()
@@ -74,7 +92,11 @@ Do
     FrameMilliseconds = Min(40, Max(0, CurrentTime - PreviousTime))
     PreviousTime = CurrentTime
 
+    Call AdvanceFrameRate()
+
     If Not ViewerError Then
+
+        Call AdvanceAnimationSequence()
 
         Ready = Character3D.Update(Character, FrameMilliseconds) And Ready
 
@@ -83,6 +105,7 @@ Do
         End If
 
         Call AdvanceSmoothZoom()
+        Call AdvanceIdleReset()
         Call AdvanceAutoOrbit()
 
         Camera = Interaction.ApplyCameraControls(BaseCamera, CameraControls)
@@ -95,7 +118,14 @@ Do
 
         If Ready Then
 
-            Ready = Graphics3D.DrawObject3D(Floor)
+            If FloorVisible Then
+                Ready = Graphics3D.DrawObject3D(Floor)
+            End If
+
+            If GridVisible Then
+                Ready = DrawStudioGrid() And Ready
+            End If
+
             Ready = Character3D.Draw(Character) And Ready
 
             If SocketGizmosVisible Then
@@ -143,10 +173,22 @@ Sub LoadViewer()
     BaseCamera.Target.Z = 0
     Floor = Graphics3D.CreatePlane3D(ViewerFrame.FloorWidth, ViewerFrame.FloorDepth)
 
-    Call Graphics3D.SetObjectPosition(Floor, 0, 0, 0)
+    Call Graphics3D.SetObjectPosition(Floor, 0, -1, 0)
     Call Graphics3D.SetObjectColor(Floor, 28, 35, 54)
+
+    Call CreateStudioGrid()
+
+    FloorVisible = True
+    GridVisible = True
+
     Call Interaction.ResetCameraControls(CameraControls)
-    Call CharacterViewer.InitializeZoom(SmoothZoom, 0, ZOOM_IN_LIMIT, ZOOM_OUT_LIMIT, 48000)
+    Call CharacterViewer.InitializeZoom(
+        SmoothZoom,
+        DEFAULT_ZOOM_DEGREES,
+        ZOOM_IN_LIMIT,
+        ZOOM_OUT_LIMIT,
+        96000
+    )
 
     Ready = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
     Ready = Scene3D.SetShadowArea(
@@ -174,17 +216,98 @@ Sub LoadViewer()
 
     Call CreateSocketGizmos()
 
-    SelectedClip = 0
     PlaybackSpeed = ActiveProfile.DefaultPlaybackSpeed
     MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT
     Ready = Graphics3D.SetMaterialInspection3D(MaterialInspection) And Ready
 
-    Call PlaySelectedClip()
+    Call RestartPresentation()
 
     ViewerEpoch = Graphics3D.ResourceEpoch3D()
 
     If Not Ready Then
         Call RecordViewerError()
+    End If
+
+End Sub
+
+Sub CreateStudioGrid()
+
+    Dim EmptyTexture As Core.Texture3D
+    Dim HorizontalHalfCount As Number
+    Dim VerticalHalfCount As Number
+    Dim Index As Number
+    Dim Position As Number
+
+    GridLineCount = 0
+    GridMaterial = Graphics3D.CreateMaterial3D(
+        EmptyTexture,
+        Graphics3D.MATERIAL_ALPHA_ADDITIVE,
+        24,
+        150,
+        255,
+        70,
+        True,
+        100,
+        50
+    )
+    Ready = GridMaterial.Handle <> 0 And Ready
+    HorizontalHalfCount = Min(15, ViewerFrame.FloorDepth / 40)
+    VerticalHalfCount = Min(15, ViewerFrame.FloorWidth / 40)
+
+    For Index = 0 To HorizontalHalfCount * 2
+
+        Position = (Index - HorizontalHalfCount) * 20
+        GridLines[GridLineCount] = Graphics3D.CreatePlane3D(ViewerFrame.FloorWidth, 1)
+        Ready = GridLines[GridLineCount].Handle <> 0 And Ready
+
+        Call Graphics3D.SetObjectPosition(GridLines[GridLineCount], 0, 0, Position)
+
+        Ready = Graphics3D.SetObjectMaterial3D(GridLines[GridLineCount], GridMaterial) And Ready
+        Ready = Graphics3D.SetObjectShadowsChecked3D(GridLines[GridLineCount], False, False) And Ready
+        GridLineCount = GridLineCount + 1
+    End For
+
+    For Index = 0 To VerticalHalfCount * 2
+
+        Position = (Index - VerticalHalfCount) * 20
+        GridLines[GridLineCount] = Graphics3D.CreatePlane3D(1, ViewerFrame.FloorDepth)
+        Ready = GridLines[GridLineCount].Handle <> 0 And Ready
+
+        Call Graphics3D.SetObjectPosition(GridLines[GridLineCount], Position, 0, 0)
+
+        Ready = Graphics3D.SetObjectMaterial3D(GridLines[GridLineCount], GridMaterial) And Ready
+        Ready = Graphics3D.SetObjectShadowsChecked3D(GridLines[GridLineCount], False, False) And Ready
+        GridLineCount = GridLineCount + 1
+    End For
+
+End Sub
+
+Function DrawStudioGrid() As Boolean
+
+    Dim Index As Number
+    Dim Result As Boolean
+
+    Result = True
+
+    For Index = 0 To GridLineCount - 1
+        Result = Graphics3D.DrawObject3D(GridLines[Index]) And Result
+    End For
+
+    Return Result
+
+End Function
+
+Sub AdvanceFrameRate()
+
+    FrameRateElapsed = FrameRateElapsed + FrameMilliseconds
+    FrameRateFrames = FrameRateFrames + 1
+
+    If FrameRateElapsed >= 500 Then
+
+        CurrentFramesPerSecond = FrameRateFrames * 1000 / FrameRateElapsed
+        FrameRateElapsed = 0
+        FrameRateFrames = 0
+
     End If
 
 End Sub
@@ -229,21 +352,15 @@ Sub HandleKeyboard(PressedKey As Number)
 
     Else If PressedKey = KEY_1 And ViewerProfiles.ClipCount(ProfileIndex) > 0 Then
 
-        SelectedClip = 0
-
-        Call PlaySelectedClip()
+        Call SelectClip(0)
 
     Else If PressedKey = KEY_2 And ViewerProfiles.ClipCount(ProfileIndex) > 1 Then
 
-        SelectedClip = 1
-
-        Call PlaySelectedClip()
+        Call SelectClip(1)
 
     Else If PressedKey = KEY_3 And ViewerProfiles.ClipCount(ProfileIndex) > 2 Then
 
-        SelectedClip = 2
-
-        Call PlaySelectedClip()
+        Call SelectClip(2)
 
     Else If PressedKey = KEY_SPACE Then
 
@@ -255,21 +372,37 @@ Sub HandleKeyboard(PressedKey As Number)
             Call RetryViewer()
         Else
 
-            Call ResetView()
+            Call RestartPresentation()
         End If
-
-    Else If PressedKey = KEY_TAB Then
-
-        Call ToggleDragMode()
 
     Else If PressedKey = KEY_O Then
 
         Call ToggleAutoOrbit()
 
+    Else If PressedKey = KEY_F Then
+
+        Call ToggleFloorAndGrid()
+
+    Else If PressedKey = KEY_G Then
+
+        GridVisible = Not GridVisible
+
     Else If PressedKey = KEY_4 Then
 
         Call CycleProfile()
 
+    End If
+
+End Sub
+
+Sub ToggleFloorAndGrid()
+
+    If FloorVisible Or GridVisible Then
+        FloorVisible = False
+        GridVisible = False
+    Else
+        FloorVisible = True
+        GridVisible = True
     End If
 
 End Sub
@@ -346,6 +479,28 @@ Sub ToggleAutoOrbit()
     AutoOrbit = Not AutoOrbit
     AutoOrbitYaw1000 = CameraControls.OrbitYaw * 1000
 
+    If AutoOrbit Then
+        IdleResetElapsed = 0
+        IdleResetPending = False
+    Else
+
+        Call RecordCameraInteraction()
+    End If
+
+End Sub
+
+Sub AdvanceIdleReset()
+
+    If IdleResetPending Then
+
+        IdleResetElapsed = IdleResetElapsed + FrameMilliseconds
+
+        If IdleResetElapsed >= IDLE_RESET_MILLISECONDS Then
+            Call RestartPresentation()
+        End If
+
+    End If
+
 End Sub
 
 Sub AdvanceAutoOrbit()
@@ -357,118 +512,87 @@ Sub AdvanceAutoOrbit()
 
 End Sub
 
+Sub AdvanceAnimationSequence()
+
+    AnimationCycleElapsed = AnimationCycleElapsed + FrameMilliseconds
+
+    If AnimationCycleElapsed >= ANIMATION_CYCLE_MILLISECONDS Then
+
+        SelectedClip = (SelectedClip + 1) Mod ViewerProfiles.ClipCount(ProfileIndex)
+        AnimationCycleElapsed = 0
+
+        Call PlaySelectedClip()
+
+    End If
+
+End Sub
+
 Function HandleInterfacePointer() As Boolean
 
     Dim Blocked As Boolean
+    Dim ClipCount As Number
+    Dim Index As Number
+    Dim Column As Number
+    Dim Row As Number
+    Dim PanelLeft As Number
+
+    PanelLeft = StatusPanelX()
 
     If Not Pointer_Inside() Then
         Return False
     End If
 
-    Blocked = (Pointer_Y() < 72 Or
-        Pointer_Y() >= 458 Or
-        (Pointer_X() >= 716 And Pointer_Y() >= 82 And Pointer_Y() < 430))
-
-    If Not Pointer_Pressed(POINTER_PRIMARY) Then
-        Return Blocked
-    End If
-
-    If PointerInRectangle(510, 18, 62, 34) Then
-
-        SelectedClip = 0
-
-        Call PlaySelectedClip()
-
-    Else If PointerInRectangle(578, 18, 62, 34) Then
-
-        SelectedClip = 1
-
-        Call PlaySelectedClip()
-
-    Else If PointerInRectangle(646, 18, 62, 34) Then
-
-        SelectedClip = 2
-
-        Call PlaySelectedClip()
-
-    Else If PointerInRectangle(714, 18, 82, 34) Then
-
-        Call CycleLighting()
-
-    Else If PointerInRectangle(802, 18, 70, 34) Then
-
-        Call ToggleDragMode()
-
-    Else If PointerInRectangle(878, 18, 66, 34) Then
-
-        Call CycleProfile()
-
-    Else If PointerInRectangle(868, 214, 30, 24) Then
-
-        Call AdjustPlaybackSpeed(-25)
-
-    Else If PointerInRectangle(904, 214, 30, 24) Then
-
-        Call AdjustPlaybackSpeed(25)
-
-    Else If PointerInRectangle(732, 374, 92, 30) Then
-
-        SocketGizmosVisible = Not SocketGizmosVisible
-
-    Else If PointerInRectangle(12, 482, 70, 36) Then
-
-        Call NudgeOrbit(-5, 0)
-
-    Else If PointerInRectangle(88, 482, 70, 36) Then
-
-        Call NudgeOrbit(5, 0)
-
-    Else If PointerInRectangle(164, 482, 70, 36) Then
-
-        Call NudgeOrbit(0, -5)
-
-    Else If PointerInRectangle(240, 482, 70, 36) Then
-
-        Call NudgeOrbit(0, 5)
-
-    Else If PointerInRectangle(316, 482, 70, 36) Then
-
-        Call NudgePan(5, 0)
-
-    Else If PointerInRectangle(392, 482, 70, 36) Then
-
-        Call NudgePan(-5, 0)
-
-    Else If PointerInRectangle(468, 482, 70, 36) Then
-
-        Call NudgePan(0, -5)
-
-    Else If PointerInRectangle(544, 482, 70, 36) Then
-
-        Call NudgePan(0, 5)
-
-    Else If PointerInRectangle(620, 482, 70, 36) Then
-
-        Call NudgeZoom(1)
-
-    Else If PointerInRectangle(696, 482, 70, 36) Then
-
-        Call NudgeZoom(-1)
-
-    Else If PointerInRectangle(772, 482, 82, 36) Then
-
-        Call CycleMaterialInspection()
-
-    Else If PointerInRectangle(860, 482, 84, 36) Then
+    If Pointer_Pressed(POINTER_SECONDARY) Then
 
         If ViewerError Then
             Call RetryViewer()
         Else
 
-            Call ResetView()
+            Call RestartPresentation()
         End If
 
+        Return True
+
     End If
+
+    Blocked = (Pointer_Y() < 72 Or
+        (Pointer_X() >= PanelLeft And Pointer_Y() >= 82))
+
+    If Not Pointer_Pressed(POINTER_PRIMARY) Then
+        Return Blocked
+    End If
+
+    If PointerInRectangle(PanelLeft, 18, 56, 34) Then
+        Call CycleLighting()
+    Else If PointerInRectangle(PanelLeft + 62, 18, 64, 34) Then
+        Call CycleMaterialInspection()
+    Else If PointerInRectangle(PanelLeft + 132, 18, 58, 34) Then
+        SocketGizmosVisible = Not SocketGizmosVisible
+    Else If PointerInRectangle(PanelLeft + 196, 18, 56, 34) Then
+        Call CycleProfile()
+    Else If PointerInRectangle(PanelLeft + 172, 204, 30, 24) Then
+        Call AdjustPlaybackSpeed(-25)
+    Else If PointerInRectangle(PanelLeft + 208, 204, 30, 24) Then
+        Call AdjustPlaybackSpeed(25)
+    End If
+
+    ClipCount = ViewerProfiles.ClipCount(ProfileIndex)
+
+    For Index = 0 To ClipCount - 1
+
+        Column = Index Mod 2
+        Row = Index / 2
+
+        If PointerInRectangle(
+            AnimationButtonX() + Column * (ANIMATION_BUTTON_WIDTH + ANIMATION_BUTTON_COLUMN_GAP),
+            ANIMATION_BUTTON_Y + Row * (ANIMATION_BUTTON_HEIGHT + ANIMATION_BUTTON_ROW_GAP),
+            ANIMATION_BUTTON_WIDTH,
+            ANIMATION_BUTTON_HEIGHT
+        ) Then
+            Call SelectClip(Index)
+        End If
+
+    End For
 
     Return Blocked
 
@@ -476,8 +600,6 @@ End Function
 
 Sub UpdateCameraPointer(Blocked As Boolean)
 
-    Dim PrimaryOrbit As Boolean
-    Dim PrimaryPan As Boolean
     Dim OrbitPressed As Boolean
     Dim OrbitHeld As Boolean
     Dim OrbitReleased As Boolean
@@ -492,26 +614,31 @@ Sub UpdateCameraPointer(Blocked As Boolean)
     Dim PanDeltaX As Number
     Dim PanDeltaY As Number
 
-    PrimaryOrbit = DragMode = DRAG_ORBIT
-    PrimaryPan = DragMode = DRAG_PAN
-    OrbitPressed = ((PrimaryOrbit And Not Blocked And Pointer_Pressed(POINTER_PRIMARY)) Or
-        Pointer_Pressed(POINTER_MIDDLE))
-    OrbitHeld = ((PrimaryOrbit And Pointer_Held(POINTER_PRIMARY)) Or
-        Pointer_Held(POINTER_MIDDLE))
-    OrbitReleased = ((PrimaryOrbit And Pointer_Released(POINTER_PRIMARY)) Or
-        Pointer_Released(POINTER_MIDDLE))
-    PanPressed = ((PrimaryPan And Not Blocked And Pointer_Pressed(POINTER_PRIMARY)) Or
-        Pointer_Pressed(POINTER_SECONDARY))
-    PanHeld = ((PrimaryPan And Pointer_Held(POINTER_PRIMARY)) Or
-        Pointer_Held(POINTER_SECONDARY))
-    PanReleased = ((PrimaryPan And Pointer_Released(POINTER_PRIMARY)) Or
-        Pointer_Released(POINTER_SECONDARY))
+    OrbitPressed = Not Blocked And Pointer_Pressed(POINTER_MIDDLE)
+    OrbitHeld = Pointer_Held(POINTER_MIDDLE)
+    OrbitReleased = Pointer_Released(POINTER_MIDDLE)
+    PanPressed = Not Blocked And Pointer_Pressed(POINTER_PRIMARY)
+    PanHeld = Pointer_Held(POINTER_PRIMARY)
+    PanReleased = Pointer_Released(POINTER_PRIMARY)
     PointerDeltaX = Pointer_Delta_X()
     PointerDeltaY = Pointer_Delta_Y()
 
+    If OrbitPressed Then
+        OrbitPointerRemainderX = 0
+        OrbitPointerRemainderY = 0
+    End If
+
     If OrbitHeld Then
-        OrbitDeltaX = PointerDeltaX
-        OrbitDeltaY = PointerDeltaY
+        OrbitDeltaX = CharacterViewer.RetainedPointerDelta(
+            OrbitPointerRemainderX,
+            PointerDeltaX,
+            ORBIT_POINTER_DIVISOR
+        )
+        OrbitDeltaY = CharacterViewer.RetainedPointerDelta(
+            OrbitPointerRemainderY,
+            PointerDeltaY,
+            ORBIT_POINTER_DIVISOR
+        )
     End If
 
     If PanPressed Then
@@ -560,15 +687,20 @@ Sub UpdateCameraPointer(Blocked As Boolean)
 
     If OrbitHeld Then
 
-        AutoOrbit = False
+        Call RecordCameraInteraction()
+
         CameraControls.OrbitYaw = CameraControls.OrbitYaw + OrbitDeltaX
         CameraControls.OrbitPitch = CameraControls.OrbitPitch + OrbitDeltaY
 
     End If
 
     If PanHeld Then
+
+        Call RecordCameraInteraction()
+
         CameraControls.PanX = CameraControls.PanX - PanDeltaX
         CameraControls.PanY = CameraControls.PanY + PanDeltaY
+
     End If
 
     Call ClampCameraControls()
@@ -576,6 +708,11 @@ Sub UpdateCameraPointer(Blocked As Boolean)
     If PanReleased Then
         PanPointerRemainderX = 0
         PanPointerRemainderY = 0
+    End If
+
+    If OrbitReleased Then
+        OrbitPointerRemainderX = 0
+        OrbitPointerRemainderY = 0
     End If
 
 End Sub
@@ -702,14 +839,13 @@ Sub ClampCameraControls()
         Max(0 - ViewerFrame.PanXLimit, CameraControls.PanX))
     CameraControls.PanY = Min(ViewerFrame.PanYLimit,
         Max(0 - ViewerFrame.PanYLimit, CameraControls.PanY))
-    CameraControls.OrbitPitch = Min(ORBIT_PITCH_LIMIT,
-        Max(0 - ORBIT_PITCH_LIMIT, CameraControls.OrbitPitch))
 
 End Sub
 
 Sub NudgeOrbit(DeltaX As Number, DeltaY As Number)
 
-    AutoOrbit = False
+    Call RecordCameraInteraction()
+
     Ready = Interaction.UpdateOrbitControls(
         CameraControls,
         True,
@@ -724,6 +860,8 @@ Sub NudgeOrbit(DeltaX As Number, DeltaY As Number)
 End Sub
 
 Sub NudgePan(DeltaX As Number, DeltaY As Number)
+
+    Call RecordCameraInteraction()
 
     Ready = Interaction.UpdatePanZoomControls(
         CameraControls,
@@ -747,7 +885,9 @@ End Sub
 
 Sub AdjustZoomTarget(WheelDelta As Number)
 
-    Call CharacterViewer.AdjustZoomTarget(SmoothZoom, WheelDelta, 4)
+    Call RecordZoomInteraction()
+
+    Call CharacterViewer.AdjustZoomTarget(SmoothZoom, WheelDelta, 8)
 
 End Sub
 
@@ -758,26 +898,55 @@ Sub AdvanceSmoothZoom()
 
 End Sub
 
-Sub ResetView()
+Sub RestartPresentation()
 
     Call Interaction.ResetCameraControls(CameraControls)
 
-    AutoOrbit = False
-    AutoOrbitYaw1000 = 0
+    CameraControls.OrbitYaw = ViewerProfiles.InitialOrbitYaw(ProfileIndex)
+    AutoOrbit = True
+    AutoOrbitYaw1000 = CameraControls.OrbitYaw * 1000
+    IdleResetElapsed = 0
+    IdleResetPending = False
+    AnimationCycleElapsed = 0
+    SelectedClip = 0
     PanPointerRemainderX = 0
     PanPointerRemainderY = 0
+    OrbitPointerRemainderX = 0
+    OrbitPointerRemainderY = 0
 
-    Call CharacterViewer.InitializeZoom(SmoothZoom, 0, ZOOM_IN_LIMIT, ZOOM_OUT_LIMIT, 48000)
+    Call CharacterViewer.InitializeZoom(
+        SmoothZoom,
+        DEFAULT_ZOOM_DEGREES,
+        ZOOM_IN_LIMIT,
+        ZOOM_OUT_LIMIT,
+        96000
+    )
+    Call PlaySelectedClip()
 
 End Sub
 
-Sub ToggleDragMode()
+Sub RecordCameraInteraction()
 
-    If DragMode = DRAG_ORBIT Then
-        DragMode = DRAG_PAN
-    Else
-        DragMode = DRAG_ORBIT
+    AutoOrbit = False
+    IdleResetElapsed = 0
+    IdleResetPending = True
+
+End Sub
+
+Sub RecordZoomInteraction()
+
+    If IdleResetPending Then
+        IdleResetElapsed = 0
     End If
+
+End Sub
+
+Sub SelectClip(Index As Number)
+
+    SelectedClip = Index
+    AnimationCycleElapsed = 0
+
+    Call PlaySelectedClip()
 
 End Sub
 
@@ -879,20 +1048,6 @@ Function LightingLabel() As Text
 
 End Function
 
-Function DragModeLabel() As Text
-
-    Dim Result As Text
-
-    If DragMode = DRAG_ORBIT Then
-        Result = "Orbit"
-    Else
-        Result = "Pan"
-    End If
-
-    Return Result
-
-End Function
-
 Function PointerInRectangle(X As Number, Y As Number, Width As Number, Height As Number) As Boolean
 
     Dim ReturnValue As Boolean
@@ -906,92 +1061,145 @@ Function PointerInRectangle(X As Number, Y As Number, Width As Number, Height As
 
 End Function
 
+Function StatusPanelX() As Number
+
+    Dim Result As Number
+
+    Result = Max(492, Window_Width() - 268)
+
+    Return Result
+
+End Function
+
+Function AnimationButtonX() As Number
+
+    Dim Result As Number
+
+    Result = StatusPanelX() + 12
+
+    Return Result
+
+End Function
+
 Sub DrawViewerOverlay()
 
+    Dim PanelLeft As Number
+    Dim PanelText As Number
     Dim Subtitle As Text
 
+    PanelLeft = StatusPanelX()
+    PanelText = PanelLeft + 16
     Subtitle = ActiveProfile.DisplayName + "  •  Party role: " + PartyRoleLabel() + "  •  Renderer3D PBR"
 
-    Fill Rectangle 0, 0, 960, 70, Rgb(3, 7, 18)
-    Draw Text "SMILE CHARACTER 3D VIEWER" At 18, 10 Size 22 Color CYAN
+    Draw Text "SMILE 2.0 - CHARACTER 3D VIEWER" At 18, 10 Size 22 Color CYAN
     Draw Text Subtitle At 18, 42 Size 13 Color LIGHT_GRAY
 
-    Call DrawButton(510, 18, 62, 34, ViewerProfiles.ClipLabel(ProfileIndex, 0), SelectedClip = 0)
-    Call DrawButton(578, 18, 62, 34, ViewerProfiles.ClipLabel(ProfileIndex, 1), SelectedClip = 1)
-    Call DrawButton(646, 18, 62, 34, ViewerProfiles.ClipLabel(ProfileIndex, 2), SelectedClip = 2)
-    Call DrawButton(714, 18, 82, 34, "LIGHT", False)
-    Call DrawButton(802, 18, 70, 34, "DRAG", False)
-    Call DrawButton(878, 18, 66, 34, "PROFILE", False)
+    Call DrawButton(PanelLeft, 18, 56, 34, "LIGHT", False)
+    Call DrawButton(PanelLeft + 62, 18, 64, 34, "CHANNEL", False)
+    Call DrawButton(PanelLeft + 132, 18, 58, 34, "SOCKET", SocketGizmosVisible)
+    Call DrawButton(PanelLeft + 196, 18, 56, 34, "PROFILE", False)
 
-    Fill Rectangle 716, 82, 228, 342, Rgb(4, 9, 24)
-    Draw Text "CHARACTER STATUS" At 732, 98 Size 16 Color WHITE
-    Draw Text "Name" At 732, 130 Size 12 Color LIGHT_GRAY
-    Draw Text ActiveProfile.DisplayName At 822, 130 Size 12 Color CYAN
-    Draw Text "Party Role" At 732, 154 Size 12 Color LIGHT_GRAY
-    Draw Text PartyRoleLabel() At 822, 154 Size 12 Color CYAN
-    Draw Text "Animation" At 732, 178 Size 12 Color LIGHT_GRAY
-    Draw Text SelectedClipLabel() At 822, 178 Size 12 Color GREEN
-    Draw Text "Production Gate" At 732, 202 Size 12 Color LIGHT_GRAY
-    Draw Text ProductionClipStatusLabel() At 842, 202 Size 11 Color YELLOW
-    Draw Text "Speed" At 732, 222 Size 12 Color LIGHT_GRAY
-    Draw Number PlaybackSpeed At 822, 222 Size 12 Color WHITE
+    Fill Rectangle PanelLeft, 82, 252, Max(446, Window_Height() - 94), Rgb(4, 9, 24) Opacity 80
+    Draw Text "CHARACTER STATUS" At PanelText, 96 Size 16 Color WHITE
+    Draw Text "Name" At PanelText, 124 Size 12 Color LIGHT_GRAY
+    Draw Text ActiveProfile.DisplayName At PanelLeft + 116, 124 Size 12 Color CYAN
+    Draw Text "Party Role" At PanelText, 146 Size 12 Color LIGHT_GRAY
+    Draw Text PartyRoleLabel() At PanelLeft + 116, 146 Size 12 Color CYAN
+    Draw Text "Animation" At PanelText, 168 Size 12 Color LIGHT_GRAY
+    Draw Text SelectedClipLabel() At PanelLeft + 116, 168 Size 12 Color GREEN
+    Draw Text "Production" At PanelText, 190 Size 12 Color LIGHT_GRAY
+    Draw Text ProductionClipStatusLabel() At PanelLeft + 116, 190 Size 11 Color YELLOW
+    Draw Text "Speed" At PanelText, 216 Size 12 Color LIGHT_GRAY
+    Draw Number PlaybackSpeed At PanelLeft + 116, 216 Size 12 Color WHITE
 
-    Call DrawButton(868, 214, 30, 24, "-", False)
-    Call DrawButton(904, 214, 30, 24, "+", False)
+    Call DrawButton(PanelLeft + 172, 204, 30, 24, "-", False)
+    Call DrawButton(PanelLeft + 208, 204, 30, 24, "+", False)
 
-    Draw Text "Material" At 732, 250 Size 12 Color LIGHT_GRAY
-    Draw Text MaterialInspectionLabel() At 822, 250 Size 12 Color YELLOW
-    Draw Text "Drag" At 732, 274 Size 12 Color LIGHT_GRAY
-    Draw Text DragModeLabel() At 822, 274 Size 12 Color WHITE
-    Draw Text "Zoom / Target" At 732, 298 Size 12 Color LIGHT_GRAY
-    Draw Number CharacterViewer.ZoomDegrees(SmoothZoom) At 842, 298 Size 12 Color WHITE
-    Draw Number CharacterViewer.ZoomTargetDegrees(SmoothZoom) At 894, 298 Size 12 Color WHITE
-    Draw Text "Draws / Triangles" At 732, 322 Size 12 Color LIGHT_GRAY
-    Draw Number Graphics3D.DrawCallCount3D() At 856, 322 Size 12 Color WHITE
-    Draw Number Graphics3D.SubmittedTriangleCount3D() At 896, 322 Size 12 Color WHITE
-    Draw Text "Auto Orbit (O)" At 732, 346 Size 12 Color LIGHT_GRAY
-    Draw Text AutoOrbitLabel() At 842, 346 Size 12 Color CYAN
+    Draw Text "Material" At PanelText, 240 Size 12 Color LIGHT_GRAY
+    Draw Text MaterialInspectionLabel() At PanelLeft + 116, 240 Size 12 Color YELLOW
+    Draw Text "Draws / Triangles" At PanelText, 262 Size 12 Color LIGHT_GRAY
+    Draw Number Graphics3D.DrawCallCount3D() At PanelLeft + 148, 262 Size 12 Color WHITE
+    Draw Number Graphics3D.SubmittedTriangleCount3D() At PanelLeft + 192, 262 Size 12 Color WHITE
+    Draw Text "Auto / Next" At PanelText, 284 Size 12 Color LIGHT_GRAY
+    Draw Text AutoOrbitLabel() At PanelLeft + 116, 284 Size 12 Color CYAN
+    Draw Number AnimationSecondsRemaining() At PanelLeft + 172, 284 Size 12 Color WHITE
+    Draw Text "seconds" At PanelLeft + 192, 284 Size 11 Color LIGHT_GRAY
+    Draw Text "Zoom / FPS" At PanelText, 306 Size 12 Color LIGHT_GRAY
+    Draw Number CharacterViewer.ZoomDegrees(SmoothZoom) At PanelLeft + 116, 306 Size 12 Color CYAN
+    Draw Text "deg" At PanelLeft + 146, 306 Size 11 Color LIGHT_GRAY
+    Draw Number CurrentFramesPerSecond At PanelLeft + 190, 306 Size 12 Color GREEN
+    Draw Text "fps" At PanelLeft + 216, 306 Size 11 Color LIGHT_GRAY
+    Draw Text "ANIMATIONS (5 SECOND CYCLE)" At PanelText, 334 Size 13 Color WHITE
 
-    Call DrawButton(732, 374, 92, 30, "SOCKETS", SocketGizmosVisible)
+    Call DrawAnimationButtons()
 
-    Draw Text SocketStatusLabel() At 836, 384 Size 11 Color LIGHT_GRAY
-    Fill Rectangle 0, 458, 960, 82, Rgb(3, 7, 18)
-    Draw Text "Drag character to orbit  •  Switch DRAG for pan  •  Wheel or buttons zoom  •  Middle orbit  •  Right pan" At 14, 462 Size 11 Color LIGHT_GRAY
-
-    Call DrawButton(12, 482, 70, 36, "ORBIT <", False)
-    Call DrawButton(88, 482, 70, 36, "ORBIT >", False)
-    Call DrawButton(164, 482, 70, 36, "ORBIT ^", False)
-    Call DrawButton(240, 482, 70, 36, "ORBIT V", False)
-    Call DrawButton(316, 482, 70, 36, "PAN <", False)
-    Call DrawButton(392, 482, 70, 36, "PAN >", False)
-    Call DrawButton(468, 482, 70, 36, "PAN ^", False)
-    Call DrawButton(544, 482, 70, 36, "PAN V", False)
-    Call DrawButton(620, 482, 70, 36, "ZOOM +", False)
-    Call DrawButton(696, 482, 70, 36, "ZOOM -", False)
-    Call DrawButton(772, 482, 82, 36, "CHANNEL", False)
-    Call DrawButton(860, 482, 84, 36, "RESET", False)
+    Draw Text "LMB pan  •  MMB orbit  •  Wheel zoom  •  RMB reset  •  F floor  •  G grid" At 16, Window_Height() - 22 Size 11 Color LIGHT_GRAY
 
     If ViewerError Then
 
-        Fill Rectangle 120, 142, 580, 190, Rgb(56, 8, 18)
+        Fill Rectangle 120, 142, 580, 190, Rgb(56, 8, 18) Opacity 80
         Draw Text "CHARACTER VIEWER RECOVERY" At 148, 166 Size 22 Color WHITE
         Draw Text "The 3D renderer or character resource became unavailable." At 148, 204 Size 14 Color LIGHT_GRAY
         Draw Text "Viewer error" At 148, 238 Size 13 Color LIGHT_GRAY
         Draw Number FirstViewerError At 270, 238 Size 13 Color YELLOW
         Draw Text "Renderer error" At 348, 238 Size 13 Color LIGHT_GRAY
         Draw Number FirstRendererError At 486, 238 Size 13 Color YELLOW
-        Draw Text "Press Enter or Reset to reload the profile safely." At 148, 280 Size 14 Color CYAN
+        Draw Text "Press Enter or right-click to reload the profile safely." At 148, 280 Size 14 Color CYAN
 
     End If
 
 End Sub
+
+Sub DrawAnimationButtons()
+
+    Dim ClipCount As Number
+    Dim Index As Number
+    Dim Column As Number
+    Dim Row As Number
+    Dim ButtonX As Number
+    Dim ButtonY As Number
+
+    ClipCount = ViewerProfiles.ClipCount(ProfileIndex)
+
+    For Index = 0 To ClipCount - 1
+
+        Column = Index Mod 2
+        Row = Index / 2
+        ButtonX = AnimationButtonX() + Column * (ANIMATION_BUTTON_WIDTH + ANIMATION_BUTTON_COLUMN_GAP)
+        ButtonY = ANIMATION_BUTTON_Y + Row * (ANIMATION_BUTTON_HEIGHT + ANIMATION_BUTTON_ROW_GAP)
+
+        Call DrawButton(
+            ButtonX,
+            ButtonY,
+            ANIMATION_BUTTON_WIDTH,
+            ANIMATION_BUTTON_HEIGHT,
+            ViewerProfiles.ClipLabel(ProfileIndex, Index),
+            SelectedClip = Index
+        )
+    End For
+
+End Sub
+
+Function AnimationSecondsRemaining() As Number
+
+    Dim RemainingMilliseconds As Number
+    Dim Result As Number
+
+    RemainingMilliseconds = Max(0, ANIMATION_CYCLE_MILLISECONDS - AnimationCycleElapsed)
+    Result = (RemainingMilliseconds + 999) / 1000
+
+    Return Result
+
+End Function
 
 Function ProductionClipStatusLabel() As Text
 
     Dim Result As Text
 
     If ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
-        Result = "7 clips missing"
+        Result = "11-clip candidate"
+    Else If ProfileIndex = ViewerProfiles.PROFILE_ARIN_ORIGINAL Then
+        Result = "Original 3 clips"
     Else
         Result = "Technical fixture"
     End If
@@ -1076,9 +1284,9 @@ Sub DrawButton(
 )
 
     If Selected Then
-        Fill Rectangle X, Y, Width, Height, Rgb(16, 102, 136)
+        Fill Rectangle X, Y, Width, Height, Rgb(16, 102, 136) Opacity 80
     Else
-        Fill Rectangle X, Y, Width, Height, Rgb(18, 35, 58)
+        Fill Rectangle X, Y, Width, Height, Rgb(18, 35, 58) Opacity 80
     End If
 
     Draw Text Label At X + 7, Y + 11 Size 11 Color WHITE
@@ -1100,6 +1308,14 @@ Sub DestroyViewerResources()
 
     Call Character3D.Destroy(Character)
     Call Graphics3D.DestroyObject3D(Floor)
+
+    For Index = 0 To GridLineCount - 1
+        Call Graphics3D.DestroyObject3D(GridLines[Index])
+    End For
+
+    GridLineCount = 0
+
+    Call Graphics3D.DestroyMaterial3D(GridMaterial)
 
     For Index = 0 To SocketGizmoCount - 1
         Call Graphics3D.DestroyObject3D(SocketGizmos[Index])

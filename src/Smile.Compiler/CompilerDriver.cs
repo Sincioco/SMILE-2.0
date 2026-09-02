@@ -142,7 +142,9 @@ internal sealed class CompilerDriver
                 var stagedOutputPath = Path.Combine(stagingDirectory, Path.GetFileName(outputPath));
                 var emitter = new MasmEmitter(analysis, options.GraphicsBackend, options.VSync,
                     options.EmitDebugInformation, appIdentity,
-                    buildAssets?.AssetPaths);
+                    buildAssets?.AssetPaths,
+                    rememberWindowPlacement: input.Project?.RememberWindowPlacement == true,
+                    responsiveWindow: input.Project?.ResponsiveWindow == true);
                 File.WriteAllText(assemblyPath, emitter.Emit());
                 _testHooks?.AfterAssemblyEmission?.Invoke(intermediates);
                 if (options.EmitDebugInformation)

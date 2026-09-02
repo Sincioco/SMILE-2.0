@@ -27,6 +27,7 @@ int smile_graphics_initialize(void* native_window, long long logical_width,
     long long logical_height, SmileGraphicsBackendKind requested_backend,
     int vsync_enabled, char* error, int error_capacity);
 void smile_graphics_resize(int physical_width, int physical_height);
+void smile_graphics_set_logical_size(long long logical_width, long long logical_height);
 void smile_graphics_begin_frame(void);
 void smile_graphics_clear(long long color);
 void smile_graphics_fill_rectangle(long long x, long long y, long long width, long long height, long long color);

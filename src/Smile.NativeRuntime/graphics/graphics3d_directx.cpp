@@ -572,6 +572,7 @@ static long long smile_model_palette_cached_animator3d;
 static unsigned int smile_model_palette_cached_revision3d;
 static float smile_camera_position3d[3] = { 0.0f, 300.0f, -800.0f };
 static float smile_camera_target3d[3] = { 0.0f, 0.0f, 0.0f };
+static float smile_camera_up3d[3] = { 0.0f, 1.0f, 0.0f };
 static float smile_camera_fov3d = 55.0f;
 static float smile_camera_near3d = 1.0f;
 static float smile_camera_far3d = 10000.0f;
@@ -2703,9 +2704,11 @@ static int smile_3d_model_v2_animation(const unsigned char* bytes,
         unsigned int events = smile_3d_read_u32(record + 28);
         unsigned int flags = smile_3d_read_u32(record + 32);
         unsigned int root = smile_3d_read_u32(record + 36);
+        unsigned int minimum_samples = duration * rate / 1000U + 1U;
+        unsigned int maximum_samples = (duration * rate + 999U) / 1000U + 1U;
         if (smile_3d_model_v2_string(bytes, strings, smile_3d_read_u32(record), 0) == 0 ||
             duration == 0 || duration > 120000 || rate < 15 || rate > 60 ||
-            samples != ((duration * rate + 999U) / 1000U + 1U) ||
+            samples < minimum_samples || samples > maximum_samples ||
             first_track > output[4].count || tracks > output[4].count - first_track ||
             first_event > output[6].count || events > 64 || events > output[6].count - first_event ||
             flags > 1 || (root != 0xFFFFFFFFU && root >= output[8].count)) return -1;
@@ -3718,9 +3721,19 @@ static SmileMatrix3D smile_3d_view(void)
     float zy = smile_camera_target3d[1] - smile_camera_position3d[1];
     float zz = smile_camera_target3d[2] - smile_camera_position3d[2];
     float xx, xy, xz, yx, yy, yz;
+    float right_length;
     SmileMatrix3D result = smile_3d_identity();
     smile_3d_normalize(&zx, &zy, &zz);
-    smile_3d_cross(0, 1, 0, zx, zy, zz, &xx, &xy, &xz);
+    smile_3d_cross(smile_camera_up3d[0], smile_camera_up3d[1], smile_camera_up3d[2],
+        zx, zy, zz, &xx, &xy, &xz);
+    right_length = sqrtf(xx * xx + xy * xy + xz * xz);
+    if (right_length < 0.0001f)
+    {
+        if (fabsf(zy) > 0.99f)
+            smile_3d_cross(1, 0, 0, zx, zy, zz, &xx, &xy, &xz);
+        else
+            smile_3d_cross(0, 1, 0, zx, zy, zz, &xx, &xy, &xz);
+    }
     smile_3d_normalize(&xx, &xy, &xz);
     smile_3d_cross(zx, zy, zz, xx, xy, xz, &yx, &yy, &yz);
     result.m[0] = xx; result.m[1] = yx; result.m[2] = zx;
@@ -6954,6 +6967,9 @@ static void smile_3d_reset(void)
     smile_shadow_requested3d = 0;
     smile_m5_fallback_flags3d = 0;
     smile_m5_configuration_revision3d++;
+    smile_camera_up3d[0] = 0.0f;
+    smile_camera_up3d[1] = 1.0f;
+    smile_camera_up3d[2] = 0.0f;
     smile_3d_reset_lights();
     smile_resource_epoch3d++;
     if (smile_resource_epoch3d <= 0 || smile_resource_epoch3d > 2147483647)
@@ -7042,6 +7058,10 @@ extern "C" long long smile_renderer3d_command(long long command,
             smile_camera_target3d[0] = (float)d; smile_camera_target3d[1] = (float)e; smile_camera_target3d[2] = (float)f;
             smile_camera_fov3d = (float)g; smile_camera_near3d = (float)h; smile_camera_far3d = (float)i;
             if (smile_camera_fov3d < 10 || smile_camera_fov3d > 160 || smile_camera_near3d <= 0 || smile_camera_far3d <= smile_camera_near3d) { smile_last_error3d = 15; return 0; }
+            return 1;
+        case SMILE_3D_SET_CAMERA_UP:
+            if (a == 0 && b == 0 && c == 0) { smile_last_error3d = 15; return 0; }
+            smile_camera_up3d[0] = (float)a; smile_camera_up3d[1] = (float)b; smile_camera_up3d[2] = (float)c;
             return 1;
         case SMILE_3D_SET_POSITION:
         case SMILE_3D_SET_ROTATION:

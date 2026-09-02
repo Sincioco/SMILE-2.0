@@ -234,14 +234,16 @@ That command writes `index.html`, `smile-runtime.js`, `game.js`, and `smile.css`
 
 Game projects use a backend-neutral drawing API. `Auto` is the default: it tries the DirectX 11, Direct2D, and DirectWrite backend first and falls back to the physical-resolution GDI backend when DirectX initialization is unavailable. Both backends preserve the program's logical canvas, render shapes and text at the current output resolution, keep one uniform scale, and handle resizing, per-monitor DPI changes, and Alt+Enter automatically.
 
-The game project template includes these optional `.smileproj` settings:
+Game projects can use these optional `.smileproj` settings:
 
 ```xml
 <GraphicsBackend>Auto</GraphicsBackend>
 <VSync>true</VSync>
+<ResponsiveWindow>false</ResponsiveWindow>
+<RememberWindowPlacement>false</RememberWindowPlacement>
 ```
 
-`GraphicsBackend` accepts `Auto`, `DirectX`, or `GDI`; `VSync` accepts `true` or `false`. Missing values default to `Auto` and `true`. The command-line compiler can override a project or loose-file build with `--graphics auto|directx|gdi` and `--vsync true|false`:
+`GraphicsBackend` accepts `Auto`, `DirectX`, or `GDI`; `VSync` accepts `true` or `false`. Missing values default to `Auto` and `true`. `ResponsiveWindow=true` is a native Game-project opt-in that updates the logical canvas to the current client dimensions; `Window_Width()` and `Window_Height()` expose those live dimensions on native and Web targets. `RememberWindowPlacement=true` is a native Game-project opt-in that restores the last normal x, y, width, and height and requires an explicit stable `ApplicationId`. Both window policies default to `false`, so existing games retain their fixed logical canvas and normal Windows placement. The command-line compiler can override a project or loose-file build with `--graphics auto|directx|gdi` and `--vsync true|false`:
 
 ```text
 artifacts\compiler\smilec.exe examples\GraphicsTextSample.smile -o artifacts\games\Text-GDI.exe --graphics gdi

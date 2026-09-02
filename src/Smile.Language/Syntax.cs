@@ -74,6 +74,8 @@ public enum SyntaxKind
     MinKeyword,
     MaxKeyword,
     GameClosedKeyword,
+    WindowWidthKeyword,
+    WindowHeightKeyword,
     KeyHeldKeyword,
     PointerXKeyword,
     PointerYKeyword,
@@ -176,6 +178,8 @@ public enum SyntaxKind
     KeySKeyword,
     KeyDKeyword,
     KeyOKeyword,
+    KeyFKeyword,
+    KeyGKeyword,
     KeyUpKeyword,
     KeyDownKeyword,
     KeyLeftKeyword,
@@ -287,6 +291,8 @@ public static class SyntaxFacts
         ["Min"] = SyntaxKind.MinKeyword,
         ["Max"] = SyntaxKind.MaxKeyword,
         ["Game_Closed"] = SyntaxKind.GameClosedKeyword,
+        ["Window_Width"] = SyntaxKind.WindowWidthKeyword,
+        ["Window_Height"] = SyntaxKind.WindowHeightKeyword,
         ["Key_Held"] = SyntaxKind.KeyHeldKeyword,
         ["Pointer_X"] = SyntaxKind.PointerXKeyword,
         ["Pointer_Y"] = SyntaxKind.PointerYKeyword,
@@ -389,6 +395,8 @@ public static class SyntaxFacts
         ["KEY_S"] = SyntaxKind.KeySKeyword,
         ["KEY_D"] = SyntaxKind.KeyDKeyword,
         ["KEY_O"] = SyntaxKind.KeyOKeyword,
+        ["KEY_F"] = SyntaxKind.KeyFKeyword,
+        ["KEY_G"] = SyntaxKind.KeyGKeyword,
         ["KEY_UP"] = SyntaxKind.KeyUpKeyword,
         ["KEY_DOWN"] = SyntaxKind.KeyDownKeyword,
         ["KEY_LEFT"] = SyntaxKind.KeyLeftKeyword,
@@ -450,7 +458,8 @@ public static class SyntaxFacts
     {
         return kind switch
         {
-            SyntaxKind.TimerKeyword or SyntaxKind.GameClosedKeyword or SyntaxKind.PointerXKeyword or
+            SyntaxKind.TimerKeyword or SyntaxKind.GameClosedKeyword or SyntaxKind.WindowWidthKeyword or
+                SyntaxKind.WindowHeightKeyword or SyntaxKind.PointerXKeyword or
                 SyntaxKind.PointerYKeyword or SyntaxKind.PointerDeltaXKeyword or SyntaxKind.PointerDeltaYKeyword or
                 SyntaxKind.PointerWheelDeltaKeyword or SyntaxKind.PointerWheelRemainderKeyword or
                 SyntaxKind.PointerInsideKeyword => NoParameters,
@@ -551,6 +560,8 @@ public static class SyntaxFacts
             SyntaxKind.KeySKeyword => 3,
             SyntaxKind.KeyDKeyword => 4,
             SyntaxKind.KeyOKeyword => 27,
+            SyntaxKind.KeyFKeyword => 28,
+            SyntaxKind.KeyGKeyword => 29,
             SyntaxKind.KeyUpKeyword => 10,
             SyntaxKind.KeyDownKeyword => 11,
             SyntaxKind.KeyLeftKeyword => 12,

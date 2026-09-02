@@ -4132,7 +4132,8 @@ internal sealed class SemanticAnalyzer
             return SmileType.Error;
         }
         var expected = SyntaxFacts.GetBuiltInFunctionParameters(identifier.Kind).Count;
-        if (identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.KeyHeldKeyword or
+        if (identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.WindowWidthKeyword or
+            SyntaxKind.WindowHeightKeyword or SyntaxKind.KeyHeldKeyword or
             SyntaxKind.PointerXKeyword or SyntaxKind.PointerYKeyword or SyntaxKind.PointerDeltaXKeyword or
             SyntaxKind.PointerDeltaYKeyword or SyntaxKind.PointerWheelDeltaKeyword or
             SyntaxKind.PointerWheelRemainderKeyword or SyntaxKind.PointerInsideKeyword or

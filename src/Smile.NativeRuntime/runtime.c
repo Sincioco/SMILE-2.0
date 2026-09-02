@@ -25,6 +25,8 @@
 #define SMILE_KEY_S 3
 #define SMILE_KEY_D 4
 #define SMILE_KEY_O 27
+#define SMILE_KEY_F 28
+#define SMILE_KEY_G 29
 #define SMILE_KEY_UP 10
 #define SMILE_KEY_DOWN 11
 #define SMILE_KEY_LEFT 12
@@ -56,6 +58,8 @@ static const WCHAR smile_window_class[] = L"SMILE20GameWindow";
 static SmileFrameClock smile_frame_clock;
 static SmileGraphicsBackendKind smile_requested_graphics_backend = SMILE_GRAPHICS_BACKEND_AUTO;
 static int smile_vsync_enabled = 1;
+static int smile_remember_window_placement;
+static int smile_responsive_window;
 static SmileAudioFocusState smile_audio_focus = { 1, 1, 0, 1 };
 static SmileMusicActivationCallback smile_music_activation_callback;
 static char* smile_app_identity;
@@ -66,11 +70,113 @@ static long long smile_asset_manifest_length;
 static void smile_pump_messages(void);
 static void smile_toggle_fullscreen(void);
 static void smile_update_game_audio_active(void);
+static int smile_storage_data_path(const char* key, long long key_length, WCHAR* path, int capacity);
+static uint32_t smile_data_u32(const unsigned char* value);
+static void smile_data_put_u32(unsigned char* value, uint32_t number);
 void smile_print_text(const char* text, long long length);
 void smile_print_number(long long value);
 void smile_print_newline(void);
 int smile_resolve_asset_path_utf8(const char* path, long long length, WCHAR* resolved_path, int capacity);
 void smile_play_sound_channel(const char* path, long long length, long long channel);
+
+static int smile_window_load_placement(RECT* rectangle)
+{
+    static const char placement_key[] = "__smile_internal_window_placement_v1";
+    WCHAR path[2048];
+    unsigned char record[24];
+    HANDLE file;
+    LARGE_INTEGER size;
+    DWORD read;
+    int32_t x;
+    int32_t y;
+    int32_t width;
+    int32_t height;
+    int64_t right;
+    int64_t bottom;
+    if (!smile_remember_window_placement || rectangle == 0 ||
+        !smile_storage_data_path(placement_key, sizeof(placement_key) - 1,
+            path, (int)(sizeof(path) / sizeof(path[0]))))
+        return 0;
+    file = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL, 0);
+    if (file == INVALID_HANDLE_VALUE)
+        return 0;
+    if (!GetFileSizeEx(file, &size) || size.QuadPart != (LONGLONG)sizeof(record) ||
+        !ReadFile(file, record, (DWORD)sizeof(record), &read, 0) || read != sizeof(record))
+    {
+        CloseHandle(file);
+        return 0;
+    }
+    CloseHandle(file);
+    if (record[0] != 'S' || record[1] != 'M' || record[2] != 'W' || record[3] != 'P' ||
+        smile_data_u32(record + 4) != 1)
+        return 0;
+    x = (int32_t)smile_data_u32(record + 8);
+    y = (int32_t)smile_data_u32(record + 12);
+    width = (int32_t)smile_data_u32(record + 16);
+    height = (int32_t)smile_data_u32(record + 20);
+    right = (int64_t)x + width;
+    bottom = (int64_t)y + height;
+    if (width < 160 || height < 120 || width > 32768 || height > 32768 ||
+        right < LONG_MIN || right > LONG_MAX || bottom < LONG_MIN || bottom > LONG_MAX)
+        return 0;
+    rectangle->left = x;
+    rectangle->top = y;
+    rectangle->right = (LONG)right;
+    rectangle->bottom = (LONG)bottom;
+    return MonitorFromRect(rectangle, MONITOR_DEFAULTTONULL) != 0;
+}
+
+static void smile_window_save_placement(void)
+{
+    static const char placement_key[] = "__smile_internal_window_placement_v1";
+    WCHAR path[2048];
+    WCHAR temporary[2048];
+    WINDOWPLACEMENT placement = { sizeof(WINDOWPLACEMENT) };
+    RECT rectangle;
+    unsigned char record[24];
+    HANDLE file = INVALID_HANDLE_VALUE;
+    DWORD written;
+    int path_length;
+    if (!smile_remember_window_placement || smile_window == 0 ||
+        !smile_storage_data_path(placement_key, sizeof(placement_key) - 1,
+            path, (int)(sizeof(path) / sizeof(path[0]))))
+        return;
+    if (smile_fullscreen && smile_windowed_placement.length == sizeof(WINDOWPLACEMENT))
+        rectangle = smile_windowed_placement.rcNormalPosition;
+    else if (GetWindowPlacement(smile_window, &placement) &&
+        placement.showCmd != SW_SHOWNORMAL)
+        rectangle = placement.rcNormalPosition;
+    else if (!GetWindowRect(smile_window, &rectangle))
+        return;
+    if (rectangle.right - rectangle.left < 160 || rectangle.bottom - rectangle.top < 120)
+        return;
+    path_length = lstrlenW(path);
+    if (path_length + 4 >= (int)(sizeof(temporary) / sizeof(temporary[0])))
+        return;
+    lstrcpyW(temporary, path);
+    lstrcatW(temporary, L".tmp");
+    record[0] = 'S'; record[1] = 'M'; record[2] = 'W'; record[3] = 'P';
+    smile_data_put_u32(record + 4, 1);
+    smile_data_put_u32(record + 8, (uint32_t)(int32_t)rectangle.left);
+    smile_data_put_u32(record + 12, (uint32_t)(int32_t)rectangle.top);
+    smile_data_put_u32(record + 16, (uint32_t)(rectangle.right - rectangle.left));
+    smile_data_put_u32(record + 20, (uint32_t)(rectangle.bottom - rectangle.top));
+    file = CreateFileW(temporary, GENERIC_WRITE, 0, 0, CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL, 0);
+    if (file == INVALID_HANDLE_VALUE)
+        return;
+    if (!WriteFile(file, record, (DWORD)sizeof(record), &written, 0) ||
+        written != sizeof(record) || !FlushFileBuffers(file))
+    {
+        CloseHandle(file);
+        DeleteFileW(temporary);
+        return;
+    }
+    CloseHandle(file);
+    if (!MoveFileExW(temporary, path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+        DeleteFileW(temporary);
+}
 
 static void smile_pointer_position(LPARAM lparam)
 {
@@ -861,6 +967,8 @@ static long long smile_map_key(WCHAR character, WORD virtual_key)
     if (character == L's' || character == L'S' || virtual_key == 'S') return SMILE_KEY_S;
     if (character == L'd' || character == L'D' || virtual_key == 'D') return SMILE_KEY_D;
     if (character == L'o' || character == L'O' || virtual_key == 'O') return SMILE_KEY_O;
+    if (character == L'f' || character == L'F' || virtual_key == 'F') return SMILE_KEY_F;
+    if (character == L'g' || character == L'G' || virtual_key == 'G') return SMILE_KEY_G;
     if (virtual_key == VK_UP) return SMILE_KEY_UP;
     if (virtual_key == VK_DOWN) return SMILE_KEY_DOWN;
     if (virtual_key == VK_LEFT) return SMILE_KEY_LEFT;
@@ -885,6 +993,8 @@ static int smile_key_virtual(long long key)
         case SMILE_KEY_S: return 'S';
         case SMILE_KEY_D: return 'D';
         case SMILE_KEY_O: return 'O';
+        case SMILE_KEY_F: return 'F';
+        case SMILE_KEY_G: return 'G';
         case SMILE_KEY_UP: return VK_UP;
         case SMILE_KEY_DOWN: return VK_DOWN;
         case SMILE_KEY_LEFT: return VK_LEFT;
@@ -962,6 +1072,8 @@ long long smile_get_key(void)
         if ((GetAsyncKeyState('S') & 0x8000) != 0) return SMILE_KEY_S;
         if ((GetAsyncKeyState('D') & 0x8000) != 0) return SMILE_KEY_D;
         if ((GetAsyncKeyState('O') & 0x8000) != 0) return SMILE_KEY_O;
+        if ((GetAsyncKeyState('F') & 0x8000) != 0) return SMILE_KEY_F;
+        if ((GetAsyncKeyState('G') & 0x8000) != 0) return SMILE_KEY_G;
         return SMILE_KEY_NONE;
     }
 }
@@ -969,33 +1081,29 @@ long long smile_get_key(void)
 long long smile_key_held(long long key)
 {
     int virtual_key = smile_key_virtual(key);
-    smile_pump_messages();
     return virtual_key > 0 && virtual_key < 256 && smile_held[virtual_key] != 0;
 }
 
-long long smile_pointer_x(void) { smile_pump_messages(); return smile_pointer.x; }
-long long smile_pointer_y(void) { smile_pump_messages(); return smile_pointer.y; }
-long long smile_pointer_delta_x(void) { smile_pump_messages(); return smile_pointer.delta_x; }
-long long smile_pointer_delta_y(void) { smile_pump_messages(); return smile_pointer.delta_y; }
-long long smile_pointer_wheel_delta(void) { smile_pump_messages(); return smile_pointer.wheel_delta; }
-long long smile_pointer_wheel_remainder(void) { smile_pump_messages(); return smile_pointer.wheel_remainder; }
-long long smile_pointer_inside(void) { smile_pump_messages(); return smile_pointer.inside != 0; }
+long long smile_pointer_x(void) { return smile_pointer.x; }
+long long smile_pointer_y(void) { return smile_pointer.y; }
+long long smile_pointer_delta_x(void) { return smile_pointer.delta_x; }
+long long smile_pointer_delta_y(void) { return smile_pointer.delta_y; }
+long long smile_pointer_wheel_delta(void) { return smile_pointer.wheel_delta; }
+long long smile_pointer_wheel_remainder(void) { return smile_pointer.wheel_remainder; }
+long long smile_pointer_inside(void) { return smile_pointer.inside != 0; }
 long long smile_pointer_held(long long button)
 {
     unsigned int mask = button >= 1 && button <= 3 ? 1U << (unsigned int)(button - 1) : 0;
-    smile_pump_messages();
     return mask != 0 && (smile_pointer.held_buttons & mask) != 0;
 }
 long long smile_pointer_pressed(long long button)
 {
     unsigned int mask = button >= 1 && button <= 3 ? 1U << (unsigned int)(button - 1) : 0;
-    smile_pump_messages();
     return mask != 0 && (smile_pointer.pressed_buttons & mask) != 0;
 }
 long long smile_pointer_released(long long button)
 {
     unsigned int mask = button >= 1 && button <= 3 ? 1U << (unsigned int)(button - 1) : 0;
-    smile_pump_messages();
     return mask != 0 && (smile_pointer.released_buttons & mask) != 0;
 }
 
@@ -1115,6 +1223,13 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
         case WM_SIZE:
             smile_audio_focus.minimized = wparam == SIZE_MINIMIZED;
             smile_update_game_audio_active();
+            if (smile_responsive_window && wparam != SIZE_MINIMIZED &&
+                LOWORD(lparam) > 0 && HIWORD(lparam) > 0)
+            {
+                smile_logical_width = LOWORD(lparam);
+                smile_logical_height = HIWORD(lparam);
+                smile_graphics_set_logical_size(smile_logical_width, smile_logical_height);
+            }
             smile_graphics_resize(LOWORD(lparam), HIWORD(lparam));
             InvalidateRect(window, 0, FALSE);
             return 0;
@@ -1209,14 +1324,18 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
             return 0;
         }
         case WM_CANCELMODE:
-        case WM_CAPTURECHANGED:
             smile_pointer_cancel();
+            return 0;
+        case WM_CAPTURECHANGED:
+            if (smile_pointer.held_buttons != 0)
+                smile_pointer_cancel();
             return 0;
         case WM_KILLFOCUS:
             smile_zero_memory(smile_held, sizeof(smile_held));
             smile_pointer_cancel();
             return 0;
         case WM_CLOSE:
+            smile_window_save_placement();
             DestroyWindow(window);
             return 0;
         case WM_DESTROY:
@@ -1245,6 +1364,18 @@ void smile_graphics_configure(long long backend, long long vsync)
     smile_vsync_enabled = vsync != 0;
 }
 
+void smile_window_persistence_configure(long long remember_placement)
+{
+    if (smile_window == 0)
+        smile_remember_window_placement = remember_placement != 0;
+}
+
+void smile_window_responsive_configure(long long responsive)
+{
+    if (smile_window == 0)
+        smile_responsive_window = responsive != 0;
+}
+
 void smile_game_open(const char* title, long long title_length, long long width, long long height)
 {
     WNDCLASSEXW window_class;
@@ -1255,6 +1386,10 @@ void smile_game_open(const char* title, long long title_length, long long width,
     WCHAR* wide_title;
     char graphics_error[768];
     UINT dpi;
+    int window_x = CW_USEDEFAULT;
+    int window_y = CW_USEDEFAULT;
+    int window_width;
+    int window_height;
     if (smile_window != 0)
         return;
     if (width <= 0) width = 960;
@@ -1289,8 +1424,17 @@ void smile_game_open(const char* title, long long title_length, long long width,
     rectangle.right = smile_integer(width);
     rectangle.bottom = smile_integer(height);
     AdjustWindowRectExForDpi(&rectangle, style, FALSE, 0, dpi);
+    window_width = rectangle.right - rectangle.left;
+    window_height = rectangle.bottom - rectangle.top;
+    if (smile_window_load_placement(&rectangle))
+    {
+        window_x = rectangle.left;
+        window_y = rectangle.top;
+        window_width = rectangle.right - rectangle.left;
+        window_height = rectangle.bottom - rectangle.top;
+    }
     smile_window = CreateWindowExW(0, smile_window_class, wide_title != 0 ? wide_title : L"SMILE 2.0",
-        style, CW_USEDEFAULT, CW_USEDEFAULT, rectangle.right - rectangle.left, rectangle.bottom - rectangle.top,
+        style, window_x, window_y, window_width, window_height,
         0, 0, instance, 0);
     if (wide_title != 0)
         HeapFree(GetProcessHeap(), 0, wide_title);
@@ -1299,7 +1443,14 @@ void smile_game_open(const char* title, long long title_length, long long width,
         smile_closed = 1;
         return;
     }
-    if (!smile_graphics_initialize(smile_window, width, height, requested_backend, smile_vsync_enabled,
+    if (smile_responsive_window && GetClientRect(smile_window, &rectangle) &&
+        rectangle.right > rectangle.left && rectangle.bottom > rectangle.top)
+    {
+        smile_logical_width = rectangle.right - rectangle.left;
+        smile_logical_height = rectangle.bottom - rectangle.top;
+    }
+    if (!smile_graphics_initialize(smile_window, smile_logical_width, smile_logical_height,
+        requested_backend, smile_vsync_enabled,
         graphics_error, (int)sizeof(graphics_error)))
     {
         if (graphics_error[0] != 0)
@@ -1381,6 +1532,16 @@ long long smile_game_closed(void)
 {
     smile_pump_messages();
     return smile_closed;
+}
+
+long long smile_window_width(void)
+{
+    return smile_logical_width;
+}
+
+long long smile_window_height(void)
+{
+    return smile_logical_height;
 }
 
 static void smile_toggle_fullscreen(void)
@@ -2124,6 +2285,7 @@ fail:
 
 void smile_media_shutdown(void)
 {
+    smile_window_save_placement();
     smile_sfx_shutdown();
     smile_image_resource_shutdown();
     if (smile_app_identity != 0) HeapFree(GetProcessHeap(), 0, smile_app_identity);

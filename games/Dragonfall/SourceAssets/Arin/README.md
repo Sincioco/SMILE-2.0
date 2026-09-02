@@ -42,3 +42,22 @@ From the repository root:
 ```
 
 The first command updates the prepared and runtime outputs. `-Check` regenerates into `artifacts\temp`, compares hashes with the repository copies, and leaves tracked files untouched.
+
+## Integrated v5.4 viewer candidate
+
+`arin-integrated-candidate-v5.4.blend` is the permanent editable Blender source for the user-reviewed sword-and-shield candidate. `scripts\export-arin-v5-4-viewer.py` deterministically exports `arin-integrated-candidate-v5.4.glb` for the Character Viewer and future cooker tests.
+
+The exporter uses a reusable Blender-to-SM3D preparation contract:
+
+- rigid sword, shield, and sword-grip glove geometry is converted to one-bone skinned equipment bound to the correct hand;
+- one explicit `SMILE_Root` is inserted above the original skeleton root;
+- armature-object animation is baked into that root in source-world times reference-inverse order;
+- non-pose armature-object channels and channels identical to bind transforms are removed;
+- accessors and buffer views are compacted deterministically and checked against the 1,024-entry converter limit;
+- a second export must match the first byte-for-byte.
+
+The resulting candidate has 7,376 vertices, 10,296 triangles, four parts, four materials, 42 bones, 46 nodes, 11 clips, and six descriptor sockets. The cooked model lives under `Assets\Generation2\ArinV54`. Its current GLB SHA-256 is `CAA8F8AD5A814E7763B895AA846E6BC528CD3728DA5C06E45FDE93A3B1DD66A6`.
+
+The static bind AABB extends approximately 0.104 model units below the animated Idle sole plane. The viewer profile records a `-10` fitted-world-unit ground offset so the boots meet the studio floor without changing authored animation motion.
+
+The integrated candidate is still a prototype. It does not supply a complete provenance/license package, 2K lossless production textures, authored combat events, or the complete production socket set, so it must not enable Dragonfall production release mode.

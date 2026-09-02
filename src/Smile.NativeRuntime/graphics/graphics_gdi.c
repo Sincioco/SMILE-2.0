@@ -343,6 +343,16 @@ static void smile_gdi_resize(SmileGraphicsBackend* backend, int physical_width, 
     smile_gdi_create_back_buffer(state, physical_width, physical_height);
 }
 
+static void smile_gdi_set_logical_size(SmileGraphicsBackend* backend,
+    long long logical_width, long long logical_height)
+{
+    SmileGdiState* state = (SmileGdiState*)backend->state;
+    state->logical_width = logical_width;
+    state->logical_height = logical_height;
+    smile_graphics_calculate_viewport(logical_width, logical_height,
+        state->physical_width, state->physical_height, &state->viewport);
+}
+
 static void smile_gdi_begin_frame(SmileGraphicsBackend* backend)
 {
     smile_gdi_ensure_client_buffer((SmileGdiState*)backend->state);
@@ -823,6 +833,7 @@ static const SmileGraphicsBackendVTable smile_gdi_operations =
 {
     smile_gdi_initialize,
     smile_gdi_resize,
+    smile_gdi_set_logical_size,
     smile_gdi_begin_frame,
     smile_gdi_clear,
     smile_gdi_fill_rectangle,

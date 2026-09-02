@@ -4,12 +4,21 @@
     <StartupFile>Character3DViewer.smile</StartupFile>
     <OutputName>Character3DViewerCooked</OutputName>
     <ApplicationId>smile.tools.character3d-viewer-cooked</ApplicationId>
+    <RememberWindowPlacement>true</RememberWindowPlacement>
+    <ResponsiveWindow>true</ResponsiveWindow>
     <GraphicsBackend>DirectX</GraphicsBackend>
     <VSync>true</VSync>
   </PropertyGroup>
   <ItemGroup>
     <SmileSource Include="Character3DViewer.smile" StartupOnly="true" />
     <SmileSource Include="Character3DViewerProfile.smile" />
+    <Model3DAsset Include="SourceAssets\Arin\arin-integrated-candidate-v5.4.glb"
+                  Descriptor="SourceAssets\Arin\ArinV54.sm3d.json"
+                  LogicalPath="Assets\Generation2\ArinV54\ArinV54.sm3d"
+                  TextureOutputDirectory="Assets\Generation2\ArinV54\Textures"
+                  Profile="Character"
+                  Identity="sin-star-i.character-1.paladin.v5-4"
+                  ProductionState="Prototype" />
     <Model3DAsset Include="SourceAssets\Arin\sin-star-i-character-1-paladin-tripo-v01.original.glb"
                   Descriptor="SourceAssets\Arin\ArinPrototype.sm3d.json"
                   LogicalPath="Assets\Generation2\Arin\ArinPrototype.sm3d"

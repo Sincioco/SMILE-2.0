@@ -637,6 +637,16 @@ static void smile_directx_resize(SmileGraphicsBackend* backend, int physical_wid
     smile_directx_set_output_size(state, physical_width, physical_height);
 }
 
+static void smile_directx_set_logical_size(SmileGraphicsBackend* backend,
+    long long logical_width, long long logical_height)
+{
+    SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
+    state->logical_width = logical_width;
+    state->logical_height = logical_height;
+    smile_graphics_calculate_viewport(logical_width, logical_height,
+        state->physical_width, state->physical_height, &state->viewport);
+}
+
 static void smile_directx_begin_frame(SmileGraphicsBackend* backend)
 {
     SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
@@ -1179,6 +1189,7 @@ static const SmileGraphicsBackendVTable smile_directx_operations =
 {
     smile_directx_initialize,
     smile_directx_resize,
+    smile_directx_set_logical_size,
     smile_directx_begin_frame,
     smile_directx_clear,
     smile_directx_fill_rectangle,

@@ -155,12 +155,14 @@ static void mock_context(SmileGraphicsBackend* backend, void* context)
 { (void)backend; (void)context; }
 static void mock_flag(SmileGraphicsBackend* backend, int value)
 { (void)backend; (void)value; }
+static void mock_logical_size(SmileGraphicsBackend* backend, long long width, long long height)
+{ (void)backend; (void)width; (void)height; }
 static void mock_dpi(SmileGraphicsBackend* backend, unsigned int value)
 { (void)backend; (void)value; }
 
 static const SmileGraphicsBackendVTable mock_operations =
 {
-    mock_initialize, mock_resize, mock_begin, mock_clear,
+    mock_initialize, mock_resize, mock_logical_size, mock_begin, mock_clear,
     mock_rectangle, mock_rectangle_opacity, mock_rectangle, mock_rounded, mock_rounded,
     mock_circle, mock_circle, mock_arc, mock_fill_quadrilateral, mock_draw_quadrilateral,
     mock_line, mock_text, mock_number, mock_image, mock_push_clip, mock_pop_clip,

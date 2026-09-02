@@ -1,0 +1,73 @@
+{
+  "version": 2,
+  "milestone": "M7C-B",
+  "status": "viewer-candidate-accepted-production-gate-closed",
+  "evaluatedOn": "2026-09-02",
+  "canonicalIdentity": "sin-star-i.character-1.paladin",
+  "viewerCandidateAlias": "dragonfall.arin-v5-4",
+  "selectedCandidate": {
+    "blendPath": "games/Dragonfall/SourceAssets/Arin/arin-integrated-candidate-v5.4.blend",
+    "blendSha256": "CD58B33AC94E7B3CFEEDB9A85B2603B49DB4935FE8D2590DE5B50BE371C4A35C",
+    "glbPath": "games/Dragonfall/SourceAssets/Arin/arin-integrated-candidate-v5.4.glb",
+    "glbSha256": "CAA8F8AD5A814E7763B895AA846E6BC528CD3728DA5C06E45FDE93A3B1DD66A6",
+    "sm3dPath": "games/Dragonfall/Assets/Generation2/ArinV54/ArinV54.sm3d",
+    "sm3dSha256": "98BDB192AF42F62745E52717A718E44F27331D00DBEE03BE7944C18B1398A4A2",
+    "productionState": "Prototype",
+    "vertices": 7376,
+    "triangles": 10296,
+    "parts": 4,
+    "materials": 4,
+    "bones": 42,
+    "nodes": 46,
+    "clips": 11,
+    "sockets": 6,
+    "groundOffset": -10
+  },
+  "actualClips": [
+    "Idle",
+    "Walk",
+    "Run",
+    "Ready",
+    "SwordAttack",
+    "ShieldBashCandidate",
+    "Defend",
+    "BlockImpact",
+    "Hit",
+    "KO",
+    "Victory"
+  ],
+  "actualSockets": [
+    "Root",
+    "Head",
+    "Chest",
+    "SwordBase",
+    "SwordTip",
+    "ShieldCenter"
+  ],
+  "gate": {
+    "identity": "pass",
+    "geometry": "pass-for-viewer-candidate",
+    "skeletonAndEquipment": "pass-for-viewer-candidate-production-review-pending",
+    "animations": "pending-shield-bash-and-final-visual-acceptance",
+    "productionTextures": "fail",
+    "combatEvents": "fail",
+    "productionSockets": "fail",
+    "nativeViewer": "pass-for-prototype",
+    "webViewer": "pending-visual-acceptance",
+    "provenanceAndRights": "fail",
+    "releaseEnabled": false,
+    "releaseVisualMode": "Classic"
+  },
+  "blockingGaps": [
+    "complete-provenance-and-rights-evidence",
+    "2k-lossless-production-textures",
+    "accepted-shield-bash-and-final-deformation-review",
+    "combat-and-footstep-events",
+    "hand-right-hand-left-and-complete-production-sockets",
+    "native-web-production-evidence",
+    "explicit-final-production-approval"
+  ],
+  "prototypePreserved": true,
+  "m8Unblocked": false,
+  "report": "docs/implementation/paladin-production-readiness-m7c-b.md"
+}

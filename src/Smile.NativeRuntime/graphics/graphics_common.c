@@ -219,6 +219,17 @@ void smile_graphics_resize(int physical_width, int physical_height)
     smile_frame_started = 0;
 }
 
+void smile_graphics_set_logical_size(long long logical_width, long long logical_height)
+{
+    if (logical_width <= 0 || logical_height <= 0)
+        return;
+    if (smile_frame_started) smile_graphics_unapply_clips();
+    if (smile_graphics_available())
+        smile_active_backend.operations->set_logical_size(&smile_active_backend,
+            logical_width, logical_height);
+    smile_frame_started = 0;
+}
+
 void smile_graphics_begin_frame(void)
 {
     smile_graphics_ensure_frame();

@@ -39,6 +39,8 @@ typedef struct SmileGraphicsBackendVTable
         long long logical_width, long long logical_height, int vsync_enabled,
         char* error, int error_capacity);
     void (*resize)(SmileGraphicsBackend* backend, int physical_width, int physical_height);
+    void (*set_logical_size)(SmileGraphicsBackend* backend, long long logical_width,
+        long long logical_height);
     void (*begin_frame)(SmileGraphicsBackend* backend);
     void (*clear)(SmileGraphicsBackend* backend, long long color);
     void (*fill_rectangle)(SmileGraphicsBackend* backend, long long x, long long y,

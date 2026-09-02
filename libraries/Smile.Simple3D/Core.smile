@@ -68,6 +68,7 @@ End Type
 Public Type Camera3D
     Position As Vector3
     Target As Vector3
+    UpDirection As Vector3
     Rotation As Rotation3D
     Projection As Number
     NearPlane As Number

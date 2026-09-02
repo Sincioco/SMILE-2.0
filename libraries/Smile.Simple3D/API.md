@@ -8,7 +8,7 @@ True-3D types:
 
 - `Vector3`: `X`, `Y`, and `Z`.
 - `Matrix4`: `M11` through `M44`, scaled by `FIXED_ONE`.
-- `Camera3D`: position, target, projection fields, near/far planes, FOV, and the legacy wireframe viewport fields.
+- `Camera3D`: position, target, explicit up direction, projection fields, near/far planes, FOV, and the legacy wireframe viewport fields. `Graphics3D.DefaultCamera()` supplies world-up; `Interaction.ApplyCameraControls` rotates position and up together for continuous 360-degree vertical orbit.
 - `CameraControl3D`: composable pan, wheel-zoom, middle-drag orbit, and return-spring state.
 - `Object3D`: validated object/mesh handles plus mirrored position, rotation, scale, color, opacity, and visibility values.
 - `Texture3D`: dimensions, usage, requested filter/wrap/anisotropy, effective anisotropy, and mip count.
@@ -171,6 +171,14 @@ The standard 3D camera-control contract is renderer-independent and deterministi
 - `CameraControlsDragging` and `CameraControlsActive`
 
 Games decide whether a press started on valid world geometry and pass that decision through `AllowPanStart` or `AllowOrbitStart`. Once accepted, the gesture retains capture until release; a missing Web-canvas release is recovered when the button is no longer held. Pan, zoom, and orbit remain mutually composable.
+
+Yaw and pitch remain unbounded while an orbit gesture is held, then normalize on release. `ApplyCameraControls` rotates the complete camera offset around X and Y, so middle-drag orbit supports full horizontal and vertical revolutions instead of treating pitch as a linear height offset. Native and Web look-at paths select a pole-safe alternate up vector near vertical views.
+
+## `Smile.Simple3D.CharacterViewer`
+
+`Profile` supplies the bounded, data-driven inputs for a reusable character inspector. `AutoFit` derives scale, centering, camera, an enlarged inspection floor, pan, and shadow framing from immutable model bounds. `GroundOffset` is an optional bounded fitted-world correction for assets whose static bind AABB does not share the animated sole plane; it should be measured per asset and must not be used to erase authored root motion.
+
+`ZoomState`, `InitializeZoom`, `AdjustZoomTarget`, and `AdvanceZoom` provide frame-rate-independent bounded zoom easing. `RetainedPointerDelta` preserves fractional pointer movement so slow pan and orbit gestures remain smooth at integer-world scale.
 
 ## `Smile.Simple3D.Scene3D`
 

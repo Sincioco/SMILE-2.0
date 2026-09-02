@@ -24,6 +24,8 @@ $nativeRuntimePath = Join-Path $repositoryRoot 'src\Smile.NativeRuntime\runtime.
 $webRuntimePath = Join-Path $repositoryRoot 'src\Smile.Compiler\WebOutputWriter.cs'
 $syntaxPath = Join-Path $repositoryRoot 'src\Smile.Language\Syntax.cs'
 $graphicsHeaderPath = Join-Path $repositoryRoot 'src\Smile.NativeRuntime\graphics\graphics3d.h'
+$graphicsFacadePath = Join-Path $repositoryRoot 'libraries\Smile.Simple3D\Graphics3D.smile'
+$interactionPath = Join-Path $repositoryRoot 'libraries\Smile.Simple3D\Interaction.smile'
 $temporaryPreparation = Join-Path $repositoryRoot `
     'artifacts\temp\dragonfall-arin-prototype-preparation'
 
@@ -75,16 +77,45 @@ try {
         'Import Smile.Simple3D.CharacterViewer As CharacterViewer',
         'CharacterViewer.AutoFit(',
         'CharacterViewer.AdvanceZoom(',
+        'CharacterViewer.AdjustZoomTarget(SmoothZoom, WheelDelta, 8)',
+        'Const DEFAULT_ZOOM_DEGREES = -16',
+        'DEFAULT_ZOOM_DEGREES,',
         'CharacterViewer.RetainedPointerDelta(',
+        'Const ORBIT_POINTER_DIVISOR = 1',
         'PressedKey = KEY_O',
+        'Const IDLE_RESET_MILLISECONDS = 10000',
+        'Call AdvanceIdleReset()',
+        'Call RestartPresentation()',
         'Sub AdvanceAutoOrbit()',
         'Call CreateSocketGizmos()',
         'Graphics3D.SetMaterialInspection3D(',
-        'Result = "7 clips missing"')) {
+        'Result = "11-clip candidate"',
+        'Game Window "SMILE 2.0 - Character 3D Viewer" Size 1600 By 640',
+        'Window_Width()',
+        'Window_Height()',
+        'Draw Text "Zoom / FPS"',
+        'Call CreateStudioGrid()',
+        'PressedKey = KEY_F',
+        'PressedKey = KEY_G',
+        'Sub ToggleFloorAndGrid()',
+        'Opacity 80',
+        'Call AdvanceFrameRate()',
+        'LMB pan  •  MMB orbit  •  Wheel zoom  •  RMB reset')) {
         Assert-Contains $viewerSource $contract 'Character 3D Viewer'
     }
+    Assert-True ($viewerSource.IndexOf(
+        'Fill Rectangle 0, 0, 1600, 70',
+        [System.StringComparison]::Ordinal) -lt 0) `
+        'The hidden top panel background returned.'
+    Assert-Contains (Get-Content -LiteralPath (Join-Path $repositoryRoot `
+        'games\Dragonfall\Character3DViewer.smileproj') -Raw) `
+        '<ResponsiveWindow>true</ResponsiveWindow>' 'Character 3D Viewer project'
+    Assert-Contains $profileSource `
+        'Result.AssetId = "sin-star-i.character-1.paladin.v5-4"' 'Viewer profile'
     Assert-Contains $profileSource 'Result.DisplayName = "Arin"' 'Viewer profile'
     Assert-Contains $profileSource 'Result.PartyRole = "Paladin"' 'Viewer profile'
+    Assert-Contains $profileSource 'Result.GroundOffset = -10' 'Viewer profile'
+    Assert-Contains $profileSource 'Result = 11' 'Viewer profile'
     Assert-Contains $profileSource 'AnimationArticulated.sm3d' 'Viewer fixture profile'
     foreach ($contract in @(
         'RequestedClipNames[Slot] = ClipName',
@@ -112,12 +143,26 @@ try {
     $webRuntime = Get-Content -LiteralPath $webRuntimePath -Raw
     $syntax = Get-Content -LiteralPath $syntaxPath -Raw
     $graphicsHeader = Get-Content -LiteralPath $graphicsHeaderPath -Raw
+    $graphicsFacade = Get-Content -LiteralPath $graphicsFacadePath -Raw
+    $interaction = Get-Content -LiteralPath $interactionPath -Raw
     Assert-Contains $pointerSource 'wheel_remainder / units_per_step' 'Native pointer accumulator'
     Assert-Contains $nativeRuntime 'return SMILE_KEY_O;' 'Native O-key mapping'
+    Assert-Contains $nativeRuntime 'case WM_CAPTURECHANGED:' 'Native pointer capture handling'
+    Assert-Contains $nativeRuntime 'if (smile_pointer.held_buttons != 0)' `
+        'Normal native pointer release preservation'
+    Assert-Contains $nativeRuntime 'long long smile_pointer_pressed(long long button)' `
+        'Stable native pointer snapshot'
     Assert-Contains $webRuntime 'case "KeyO": return 27;' 'Web O-key mapping'
     Assert-Contains $syntax '["KEY_O"] = SyntaxKind.KeyOKeyword' 'Language O-key syntax'
     Assert-Contains $graphicsHeader 'SMILE_3D_MATERIAL_INSPECTION = 122' `
         'Renderer3D command ABI'
+    Assert-Contains $graphicsHeader 'SMILE_3D_SET_CAMERA_UP = 123' `
+        'Renderer3D camera-up command ABI'
+    Assert-Contains $graphicsFacade 'Private Const COMMAND_SET_CAMERA_UP = 123' `
+        'Simple3D camera-up command ABI'
+    Assert-Contains $graphicsFacade 'Camera.UpDirection.Y = 1' 'Simple3D default camera up direction'
+    Assert-Contains $interaction 'Result.UpDirection = CameraUp' 'Continuous vertical camera orbit'
+    Assert-Contains $webRuntime 'renderer3DCamera.up' 'Web camera up direction'
 
     & 'scripts\prepare-dragonfall-arin-prototype.ps1' -Check
 

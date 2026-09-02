@@ -15,6 +15,8 @@ $nativeLog = Join-Path $repositoryRoot 'artifacts\temp\Renderer3DAnimationV2Hard
 $webOutput = Join-Path $repositoryRoot 'artifacts\web\Renderer3DAnimationV2HardeningTests'
 $fixtureGenerator = Join-Path $repositoryRoot 'scripts\generate-renderer3d-animation-v2-fixtures.ps1'
 $runtimeSource = Join-Path $repositoryRoot 'src\Smile.Compiler\WebOutputWriter.cs'
+$nativeRuntimeSource = Join-Path $repositoryRoot 'src\Smile.NativeRuntime\graphics\graphics3d_directx.cpp'
+$assetToolAnimationSource = Join-Path $repositoryRoot 'src\Smile.AssetTool\Sm3dAnimationV2.cs'
 
 if (-not (Test-Path -LiteralPath $compiler) -or -not (Test-Path -LiteralPath $assetTool)) {
     throw 'Build SMILE before running the Renderer3D animation-v2 hardening gate.'
@@ -26,7 +28,17 @@ try {
     & $assetTool inspect (Join-Path $testRoot 'Assets\AnimationArticulated.sm3d') | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'The articulated animation fixture failed inspection.' }
 
+    $assetToolAnimation = Get-Content -LiteralPath $assetToolAnimationSource -Raw
+    if ($assetToolAnimation -notmatch 'samples >= minimumSamples && samples <= maximumSamples') {
+        throw 'SM3D clip validation lost millisecond-quantized sample-count tolerance.'
+    }
+
     $webSource = Get-Content -LiteralPath $runtimeSource -Raw
+    $nativeSource = Get-Content -LiteralPath $nativeRuntimeSource -Raw
+    if ($webSource -notmatch 'samples<minimumSamples\|\|samples>maximumSamples' -or
+        $nativeSource -notmatch 'samples < minimum_samples \|\| samples > maximum_samples') {
+        throw 'Native/Web SM3D loading lost millisecond-quantized sample-count parity.'
+    }
     $updateStart = $webSource.IndexOf('function renderer3DUpdateModelAnimator', [System.StringComparison]::Ordinal)
     $updateEnd = $webSource.IndexOf('function renderer3DTakeModelEvent', $updateStart, [System.StringComparison]::Ordinal)
     if ($updateStart -lt 0 -or $updateEnd -le $updateStart) {

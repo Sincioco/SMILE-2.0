@@ -897,6 +897,8 @@ internal sealed class WebEmitter
             SyntaxKind.MaxKeyword => $"smile.max({arguments})",
             SyntaxKind.RgbKeyword => $"smile.rgb({arguments})",
             SyntaxKind.GameClosedKeyword => "smile.isTrue(smile.gameClosed())",
+            SyntaxKind.WindowWidthKeyword => "smile.windowWidth()",
+            SyntaxKind.WindowHeightKeyword => "smile.windowHeight()",
             SyntaxKind.KeyHeldKeyword => $"smile.isTrue(smile.keyHeld({arguments}))",
             SyntaxKind.PointerXKeyword => "smile.pointerX()",
             SyntaxKind.PointerYKeyword => "smile.pointerY()",

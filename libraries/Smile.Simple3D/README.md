@@ -46,7 +46,7 @@ Show Screen
 
 `Graphics3D.RendererAvailable()` is `True` for Windows DirectX and WebGL2. It is `False` on the GDI fallback. `ResourceEpoch3D` and `FrameActive3D` let high-level modules reconcile logical resets and frame ownership. Handles are bounded and validated; create geometry outside the frame loop, share meshes with `CreateObjectFromMesh3D`, destroy shared instances with `DestroyObjectInstance3D`, destroy owning objects with `DestroyObject3D`, and call `ResetRenderer3D` during final cleanup.
 
-`Core.CameraControl3D` plus `Interaction.UpdateCameraControlsFromPointer` provides the shared primary-drag pan, middle-drag orbit, wheel zoom, lost-release recovery, and slow return behavior used by Dragonfall. Games retain control over which screen/world regions may start a gesture.
+`Core.CameraControl3D` plus `Interaction.UpdateCameraControlsFromPointer` provides the shared primary-drag pan, continuous 360-degree middle-drag orbit, wheel zoom, lost-release recovery, and slow return behavior used by Dragonfall. The camera's explicit up direction travels through native Direct3D and WebGL2 so vertical orbit remains stable across both poles. Games retain control over which screen/world regions may start a gesture.
 
 See [API.md](API.md), the [true Simple3D conformance sample](../../examples/Simple3DConformance/Program.smile), and [Neon Cycles](../../games/NeonCycles/README.md).
 

@@ -12,6 +12,8 @@ Private Const MIN_VIEW_HEIGHT = 20
 Private Const MAX_VIEW_HEIGHT = 1000
 Private Const MIN_MARGIN_PERCENT = 0
 Private Const MAX_MARGIN_PERCENT = 100
+Private Const MIN_GROUND_OFFSET = -100
+Private Const MAX_GROUND_OFFSET = 100
 Private Const MIN_ZOOM_RATE = 1000
 Private Const MAX_ZOOM_RATE = 360000
 
@@ -24,6 +26,7 @@ Public Type Profile
     PrototypeAlias As Text
     AssetPath As Text
     DesiredWorldHeight As Number
+    GroundOffset As Number
     MarginPercent As Number
     AnimationMargin As Number
     DefaultPlaybackSpeed As Number
@@ -72,6 +75,8 @@ Public Function ValidateProfile(Value As Profile) As Boolean
         Value.AssetPath <> "" And
         Value.DesiredWorldHeight >= MIN_VIEW_HEIGHT And
         Value.DesiredWorldHeight <= MAX_VIEW_HEIGHT And
+        Value.GroundOffset >= MIN_GROUND_OFFSET And
+        Value.GroundOffset <= MAX_GROUND_OFFSET And
         Value.MarginPercent >= MIN_MARGIN_PERCENT And
         Value.MarginPercent <= MAX_MARGIN_PERCENT And
         Value.AnimationMargin >= 0 And
@@ -109,13 +114,13 @@ Public Function AutoFit(Value As Profile, Bounds As Character3D.Bounds3D) As Fra
     FittedHeight = Bounds.Size.Y * Result.ScalePercent / 100000
     PaddedHeight = FittedHeight * (100 + Value.MarginPercent) / 100
     Result.PositionX = 0 - ScaledCenterX1000 / 1000
-    Result.PositionY = 0 - ScaledMinimumY1000 / 1000
+    Result.PositionY = 0 - ScaledMinimumY1000 / 1000 + Value.GroundOffset
     Result.PositionZ = 0 - ScaledCenterZ1000 / 1000
     Result.TargetY = FittedHeight / 2
     Result.CameraY = Result.TargetY
     Result.CameraZ = 0 - PaddedHeight * 3 / 2
-    Result.FloorWidth = Max(200, PaddedHeight * 2)
-    Result.FloorDepth = Max(160, PaddedHeight * 3 / 2)
+    Result.FloorWidth = Max(400, PaddedHeight * 4)
+    Result.FloorDepth = Max(320, PaddedHeight * 3)
     Result.PanXLimit = Max(40, PaddedHeight / 2)
     Result.PanYLimit = Max(30, PaddedHeight / 3)
     Result.ShadowWidth = Max(200, PaddedHeight * 2)
