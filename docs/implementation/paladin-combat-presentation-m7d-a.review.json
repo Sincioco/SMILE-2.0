@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "milestone": "M7D-A",
+  "reviewedOn": "2026-09-03",
+  "assetId": "sin-star-i.character-1.paladin",
+  "displayName": "Arin",
+  "partyRole": "Paladin",
+  "candidateVersion": "v5.4",
+  "integrationAlias": "dragonfall.arin-v5-4",
+  "productionState": "Candidate",
+  "releaseEnabled": false,
+  "classicFallbackEnabled": true,
+  "sourceGlbSha256": "D080754339ABD4F3F4CFBCAF4F26146631BDEEE30DD2EAA284682EF896B16CA3",
+  "cookedSm3dSha256": "B8E1C98A5F3162DF61BEC978688890B7FE35ABE7645C5877FB9A247CCE490394",
+  "geometry": {
+    "parts": 4,
+    "vertices": 7375,
+    "indices": 30888,
+    "triangles": 10296,
+    "materials": 4,
+    "textures": 9,
+    "bones": 42,
+    "nodes": 46,
+    "animationBytes": 383304,
+    "staticBytes": 480416,
+    "totalBytes": 863720
+  },
+  "clips": [
+    { "index": 0, "name": "Idle", "durationMs": 2567, "sampleRate": 30, "samples": 78, "loop": true, "decision": "accepted-for-candidate-presentation", "deformation": "native-and-web-technical-pass" },
+    { "index": 1, "name": "Walk", "durationMs": 1133, "sampleRate": 30, "samples": 35, "loop": true, "decision": "accepted-for-candidate-presentation", "deformation": "m7c-b1-viewer-pass; no-m7d-frame-specific-png" },
+    { "index": 2, "name": "Run", "durationMs": 733, "sampleRate": 30, "samples": 23, "loop": true, "decision": "accepted-for-candidate-presentation", "deformation": "native-technical-pass; authored-forward-motion-uses-approach-wide-camera" },
+    { "index": 3, "name": "Ready", "durationMs": 600, "sampleRate": 30, "samples": 19, "loop": true, "decision": "accepted-for-candidate-presentation", "deformation": "native-and-web-technical-pass" },
+    { "index": 4, "name": "SwordAttack", "durationMs": 1533, "sampleRate": 30, "samples": 47, "loop": false, "decision": "accepted-for-candidate-combat-presentation", "deformation": "native-and-web-technical-pass" },
+    { "index": 5, "name": "ShieldBashCandidate", "durationMs": 1033, "sampleRate": 30, "samples": 32, "loop": false, "decision": "retain-candidate-revise-before-production", "deformation": "technical-candidate-not-production-approved" },
+    { "index": 6, "name": "Defend", "durationMs": 1433, "sampleRate": 30, "samples": 44, "loop": true, "decision": "accepted-for-candidate-presentation", "deformation": "native-technical-pass" },
+    { "index": 7, "name": "BlockImpact", "durationMs": 800, "sampleRate": 30, "samples": 25, "loop": false, "decision": "accepted-for-candidate-presentation", "deformation": "native-technical-pass" },
+    { "index": 8, "name": "Hit", "durationMs": 1000, "sampleRate": 30, "samples": 31, "loop": false, "decision": "accepted-for-candidate-presentation", "deformation": "m7c-b1-viewer-pass; no-m7d-frame-specific-png" },
+    { "index": 9, "name": "KO", "durationMs": 2333, "sampleRate": 30, "samples": 71, "loop": false, "decision": "accepted-for-candidate-presentation", "deformation": "native-final-pose-grounded-technical-pass" },
+    { "index": 10, "name": "Victory", "durationMs": 8567, "sampleRate": 30, "samples": 258, "loop": false, "decision": "accepted-for-candidate-presentation", "deformation": "native-technical-pass" }
+  ],
+  "events": [
+    { "index": 1, "clipIndex": 1, "clip": "Walk", "timeMs": 200, "name": "FootstepLeft", "value": 2001, "authority": "presentation-only" },
+    { "index": 2, "clipIndex": 1, "clip": "Walk", "timeMs": 766, "name": "FootstepRight", "value": 2002, "authority": "presentation-only" },
+    { "index": 3, "clipIndex": 2, "clip": "Run", "timeMs": 117, "name": "FootstepLeft", "value": 2001, "authority": "presentation-only" },
+    { "index": 4, "clipIndex": 2, "clip": "Run", "timeMs": 483, "name": "FootstepRight", "value": 2002, "authority": "presentation-only" },
+    { "index": 5, "clipIndex": 4, "clip": "SwordAttack", "timeMs": 300, "name": "SwordTrailOn", "value": 1001, "authority": "presentation-only" },
+    { "index": 6, "clipIndex": 4, "clip": "SwordAttack", "timeMs": 633, "name": "SwordImpact", "value": 1002, "authority": "presentation-only" },
+    { "index": 7, "clipIndex": 4, "clip": "SwordAttack", "timeMs": 967, "name": "SwordTrailOff", "value": 1003, "authority": "presentation-only" },
+    { "index": 8, "clipIndex": 5, "clip": "ShieldBashCandidate", "timeMs": 500, "name": "ShieldImpact", "value": 1101, "authority": "presentation-only" }
+  ],
+  "sockets": [
+    { "index": 0, "name": "Chest", "descriptorNode": "Spine02", "purpose": "torso-camera-and-effects" },
+    { "index": 1, "name": "FootLeft", "descriptorNode": "L_Foot", "purpose": "left-foot-contact" },
+    { "index": 2, "name": "FootRight", "descriptorNode": "R_Foot", "purpose": "right-foot-contact" },
+    { "index": 3, "name": "HandLeft", "descriptorNode": "L_Hand", "purpose": "left-hand-attachment" },
+    { "index": 4, "name": "HandRight", "descriptorNode": "R_Hand", "purpose": "right-hand-attachment" },
+    { "index": 5, "name": "Head", "descriptorNode": "Head", "purpose": "head-camera-and-effects" },
+    { "index": 6, "name": "Root", "descriptorNode": "Root", "purpose": "character-root" },
+    { "index": 7, "name": "ShieldCenter", "descriptorNode": "L_Hand", "translation": [-0.02, 0.013, -0.013], "purpose": "shield-impact" },
+    { "index": 8, "name": "SwordBase", "descriptorNode": "R_Hand", "translation": [0.006, 0.039, -0.015], "purpose": "weapon-base" },
+    { "index": 9, "name": "SwordTip", "descriptorNode": "R_Hand", "translation": [-0.2, -0.24, 0.43], "purpose": "ribbon-and-impact" }
+  ],
+  "descriptorComparison": {
+    "requiredClips": 11,
+    "actualClips": 11,
+    "requiredEvents": 8,
+    "actualEvents": 8,
+    "requiredSockets": 10,
+    "actualSockets": 10,
+    "exactNames": true,
+    "result": "technical-contract-complete"
+  },
+  "authority": {
+    "animationEventsAuthorizeDamage": false,
+    "vfxAuthorizeDamage": false,
+    "cameraAuthorizesDamage": false,
+    "audioAuthorizesDamage": false,
+    "combatLabContainsBattleMechanics": false
+  },
+  "productionBlockers": [
+    "complete-provenance-and-rights-evidence",
+    "2k-lossless-production-textures",
+    "shield-bash-production-acceptance-or-revision",
+    "final-native-web-deformation-acceptance",
+    "explicit-user-production-approval"
+  ]
+}

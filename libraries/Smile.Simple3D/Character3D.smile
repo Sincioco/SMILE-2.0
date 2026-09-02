@@ -1881,6 +1881,46 @@ Public Function AnimationComplete(Value As Actor) As Boolean
 
 End Function
 
+Public Function AnimationTime(Value As Actor) As Number
+
+    Dim Result As Number
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot >= 0 Then
+        Result = Graphics3D.AnimatorTime3D(ActorAnimators[Slot])
+    End If
+
+    Return Result
+
+End Function
+
+''' Seeks the active clip without firing events crossed by the seek.
+Public Function SetAnimationTime(ByRef Value As Actor, TimeMilliseconds As Number) As Boolean
+
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    Result = Graphics3D.SetModelAnimatorTime3D(ActorAnimators[Slot], TimeMilliseconds)
+
+    If Result Then
+        Call ClearActorError(Slot)
+    Else
+
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, Graphics3D.LastError())
+    End If
+
+    Return Result
+
+End Function
+
 Public Function CurrentClipNameMatches(Value As Actor, Name As Text) As Boolean
 
     Dim Slot As Number
@@ -2351,6 +2391,96 @@ Public Function ClipCount(Value As Actor) As Number
 
 End Function
 
+Public Function ClipName(Value As Actor, ClipIndex As Number) As Text
+
+    Dim Result As Text
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot >= 0 Then
+        Result = Graphics3D.ModelClipName3D(AssetModels[ActorAssetSlot[Slot]], ClipIndex)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ClipDuration(Value As Actor, ClipIndex As Number) As Number
+
+    Dim Result As Number
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot >= 0 Then
+        Result = Graphics3D.ModelClipDuration3D(AssetModels[ActorAssetSlot[Slot]], ClipIndex)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ClipSampleRate(Value As Actor, ClipIndex As Number) As Number
+
+    Dim Result As Number
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot >= 0 Then
+        Result = Graphics3D.ModelClipSampleRate3D(AssetModels[ActorAssetSlot[Slot]], ClipIndex)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ClipSampleCount(Value As Actor, ClipIndex As Number) As Number
+
+    Dim Result As Number
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot >= 0 Then
+        Result = Graphics3D.ModelClipSampleCount3D(AssetModels[ActorAssetSlot[Slot]], ClipIndex)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ClipLoopRecommended(Value As Actor, ClipIndex As Number) As Boolean
+
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot >= 0 Then
+        Result = Graphics3D.ModelClipLoopRecommended3D(AssetModels[ActorAssetSlot[Slot]], ClipIndex)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ClipEventCount(Value As Actor, ClipIndex As Number) As Number
+
+    Dim Result As Number
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot >= 0 Then
+        Result = Graphics3D.ModelClipEventCount3D(AssetModels[ActorAssetSlot[Slot]], ClipIndex)
+    End If
+
+    Return Result
+
+End Function
+
 Public Function SocketCount(Value As Actor) As Number
 
     Dim Slot As Number
@@ -2360,6 +2490,112 @@ Public Function SocketCount(Value As Actor) As Number
 
     If Slot >= 0 Then
         Result = AssetModels[ActorAssetSlot[Slot]].SocketCount
+    End If
+
+    Return Result
+
+End Function
+
+Public Function SocketName(Value As Actor, SocketIndex As Number) As Text
+
+    Dim Result As Text
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot >= 0 Then
+        Result = Graphics3D.ModelSocketName3D(AssetModels[ActorAssetSlot[Slot]], SocketIndex)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function SocketNodeIndex(Value As Actor, SocketIndex As Number) As Number
+
+    Dim Result As Number
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot >= 0 Then
+        Result = Graphics3D.ModelSocketNodeIndex3D(AssetModels[ActorAssetSlot[Slot]], SocketIndex)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function EventCount(Value As Actor) As Number
+
+    Dim Result As Number
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot >= 0 Then
+        Result = Graphics3D.ModelAnimationEventCount3D(AssetModels[ActorAssetSlot[Slot]])
+    End If
+
+    Return Result
+
+End Function
+
+''' Event indexes are one-based so zero remains the no-event sentinel.
+Public Function EventName(Value As Actor, EventIndex As Number) As Text
+
+    Dim Result As Text
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot >= 0 Then
+        Result = Graphics3D.ModelAnimationEventName3D(AssetModels[ActorAssetSlot[Slot]], EventIndex)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function EventClipIndex(Value As Actor, EventIndex As Number) As Number
+
+    Dim Result As Number
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot >= 0 Then
+        Result = Graphics3D.ModelAnimationEventClipIndex3D(AssetModels[ActorAssetSlot[Slot]], EventIndex)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function EventTime(Value As Actor, EventIndex As Number) As Number
+
+    Dim Result As Number
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot >= 0 Then
+        Result = Graphics3D.ModelAnimationEventTime3D(AssetModels[ActorAssetSlot[Slot]], EventIndex)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function EventValue(Value As Actor, EventIndex As Number) As Number
+
+    Dim Result As Number
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot >= 0 Then
+        Result = Graphics3D.ModelAnimationEventValue3D(AssetModels[ActorAssetSlot[Slot]], EventIndex)
     End If
 
     Return Result

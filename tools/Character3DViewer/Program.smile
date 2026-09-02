@@ -27,6 +27,8 @@ Const ZOOM_OUT_LIMIT = 36
 Const MAX_RAW_FRAME_MILLISECONDS = 60000
 Const MAX_ANIMATION_ELAPSED = 250
 Const MAX_CAMERA_ELAPSED = 250
+Const TIMELINE_LEFT = 18
+Const TIMELINE_HEIGHT = 18
 
 Dim BaseCamera As Core.Camera3D
 Dim Camera As Core.Camera3D
@@ -62,6 +64,7 @@ Dim LightingIndex As Number
 Dim ProfileIndex As Number
 Dim PlaybackSpeed As Number
 Dim MaterialInspection As Number
+Dim SelectedTimelineEvent As Number
 Dim Key As Number
 Dim CurrentTime As Number
 Dim PreviousTime As Number
@@ -88,6 +91,8 @@ Dim AutoOrbitYaw1000 As Number
 Dim AnimationCycleElapsed As Number
 Dim IdleResetElapsed As Number
 Dim IdleResetPending As Boolean
+Dim PlaybackPaused As Boolean
+Dim AnimationUpdateElapsed As Number
 
 Game Window "SMILE 2.0 - Character 3D Viewer" Size 1600 By 640
 
@@ -132,7 +137,13 @@ Do
 
         Call AdvanceAnimationSequence()
 
-        Ready = Character3D.Update(Character, AnimationElapsed) And Ready
+        If PlaybackPaused Then
+            AnimationUpdateElapsed = 0
+        Else
+            AnimationUpdateElapsed = AnimationElapsed
+        End If
+
+        Ready = Character3D.Update(Character, AnimationUpdateElapsed) And Ready
 
         If SocketGizmosVisible Then
             Call UpdateSocketGizmos()
@@ -523,21 +534,21 @@ Sub HandleKeyboard(PressedKey As Number)
 
         Call NudgePan(0, 5)
 
-    Else If PressedKey = KEY_1 And ViewerProfiles.ClipCount(ProfileIndex) > 0 Then
+    Else If PressedKey = KEY_1 And Character3D.ClipCount(Character) > 0 Then
 
         Call SelectClip(0)
 
-    Else If PressedKey = KEY_2 And ViewerProfiles.ClipCount(ProfileIndex) > 1 Then
+    Else If PressedKey = KEY_2 And Character3D.ClipCount(Character) > 1 Then
 
         Call SelectClip(1)
 
-    Else If PressedKey = KEY_3 And ViewerProfiles.ClipCount(ProfileIndex) > 2 Then
+    Else If PressedKey = KEY_3 And Character3D.ClipCount(Character) > 2 Then
 
         Call SelectClip(2)
 
     Else If PressedKey = KEY_SPACE Then
 
-        Call CycleLighting()
+        Call TogglePlaybackPause()
 
     Else If PressedKey = KEY_ENTER Then
 
@@ -566,7 +577,7 @@ Sub HandleKeyboard(PressedKey As Number)
 
     Else If PressedKey = KEY_TAB Then
 
-        Call SelectClip((SelectedClip + 1) Mod ViewerProfiles.ClipCount(ProfileIndex))
+        Call SelectClip((SelectedClip + 1) Mod Character3D.ClipCount(Character))
 
     Else If PressedKey = KEY_R Then
 
@@ -702,7 +713,11 @@ Sub AdvanceAnimationSequence()
     Dim Transitions As Number
     Dim ClipCount As Number
 
-    ClipCount = ViewerProfiles.ClipCount(ProfileIndex)
+    If PlaybackPaused Then
+        Return
+    End If
+
+    ClipCount = Character3D.ClipCount(Character)
     Transitions = CharacterViewer.AdvanceCycle(
         AnimationCycleElapsed,
         PresentationElapsed,
@@ -751,13 +766,43 @@ Function HandleInterfacePointer() As Boolean
     End If
 
     Blocked = (Pointer_Y() < 72 Or
+        Pointer_Y() >= Window_Height() - 100 Or
         (Pointer_X() >= PanelLeft And Pointer_Y() >= 82))
 
     If Not Pointer_Pressed(POINTER_PRIMARY) Then
         Return Blocked
     End If
 
-    If PointerInRectangle(PanelLeft, 18, 56, 34) Then
+    If PointerInRectangle(TIMELINE_LEFT, Window_Height() - 96, 58, 24) Then
+
+        Call TogglePlaybackPause()
+
+    Else If PointerInRectangle(TIMELINE_LEFT + 64, Window_Height() - 96, 54, 24) Then
+
+        Call StepAnimationFrame(-1)
+
+    Else If PointerInRectangle(TIMELINE_LEFT + 124, Window_Height() - 96, 54, 24) Then
+
+        Call StepAnimationFrame(1)
+
+    Else If PointerInRectangle(TIMELINE_LEFT + 184, Window_Height() - 96, 72, 24) Then
+
+        Call SeekAuthoredEvent(-1)
+
+    Else If PointerInRectangle(TIMELINE_LEFT + 262, Window_Height() - 96, 72, 24) Then
+
+        Call SeekAuthoredEvent(1)
+
+    Else If PointerInRectangle(
+        TIMELINE_LEFT,
+        Window_Height() - 64,
+        TimelineWidth(),
+        TIMELINE_HEIGHT
+    ) Then
+
+        Call SeekFromPointer()
+
+    Else If PointerInRectangle(PanelLeft, 18, 56, 34) Then
 
         Call CycleLighting()
 
@@ -808,7 +853,7 @@ Function HandleInterfacePointer() As Boolean
 
     End If
 
-    ClipCount = ViewerProfiles.ClipCount(ProfileIndex)
+    ClipCount = Character3D.ClipCount(Character)
 
     For Index = 0 To ClipCount - 1
 
@@ -1046,8 +1091,8 @@ Sub UpdateSocketGizmos()
     Dim Axis As Number
     Dim SocketCount As Number
 
-    SocketCount = ViewerProfiles.SocketCount(ProfileIndex)
-    Name = ViewerProfiles.SocketName(ProfileIndex, SelectedSocket)
+    SocketCount = Character3D.SocketCount(Character)
+    Name = Character3D.SocketName(Character, SelectedSocket)
     PositionX1000 = Character3D.SocketValueThousandths(
         Character,
         Name,
@@ -1095,7 +1140,7 @@ Sub UpdateSocketGizmos()
 
         For SocketIndex = 0 To SocketCount - 1
 
-            Name = ViewerProfiles.SocketName(ProfileIndex, SocketIndex)
+            Name = Character3D.SocketName(Character, SocketIndex)
             PositionX1000 = Character3D.SocketValueThousandths(
                 Character,
                 Name,
@@ -1173,14 +1218,14 @@ Sub SelectPreviousSocket()
 
     Dim SocketCount As Number
 
-    SocketCount = ViewerProfiles.SocketCount(ProfileIndex)
+    SocketCount = Character3D.SocketCount(Character)
     SelectedSocket = (SelectedSocket + SocketCount - 1) Mod SocketCount
 
 End Sub
 
 Sub SelectNextSocket()
 
-    SelectedSocket = (SelectedSocket + 1) Mod ViewerProfiles.SocketCount(ProfileIndex)
+    SelectedSocket = (SelectedSocket + 1) Mod Character3D.SocketCount(Character)
 
 End Sub
 
@@ -1293,6 +1338,7 @@ Sub RestartPresentation()
     IdleResetPending = False
     AnimationCycleElapsed = 0
     SelectedClip = 0
+    PlaybackPaused = False
 
     Call PlaySelectedClip()
 
@@ -1356,8 +1402,108 @@ Sub SelectClip(Index As Number)
 
     SelectedClip = Index
     AnimationCycleElapsed = 0
+    PlaybackPaused = False
 
     Call PlaySelectedClip()
+
+End Sub
+
+Sub TogglePlaybackPause()
+
+    PlaybackPaused = Not PlaybackPaused
+
+    If PlaybackPaused Then
+        AutoOrbit = False
+    End If
+
+End Sub
+
+Sub StepAnimationFrame(Direction As Number)
+
+    Dim SampleRate As Number
+    Dim StepMilliseconds As Number
+    Dim TargetTime As Number
+
+    SampleRate = Character3D.ClipSampleRate(Character, SelectedClip)
+    StepMilliseconds = Max(1, 1000 / Max(1, SampleRate))
+    TargetTime = Character3D.AnimationTime(Character) + Direction * StepMilliseconds
+    TargetTime = Max(0, Min(Character3D.ClipDuration(Character, SelectedClip), TargetTime))
+    PlaybackPaused = True
+    Ready = Character3D.SetAnimationTime(Character, TargetTime) And Ready
+
+End Sub
+
+Sub SeekAuthoredEvent(Direction As Number)
+
+    Dim CandidateIndex As Number
+    Dim CandidateTime As Number
+    Dim CurrentAnimationTime As Number
+    Dim Duration As Number
+    Dim EventIndex As Number
+    Dim EventTime As Number
+
+    CurrentAnimationTime = Character3D.AnimationTime(Character)
+    Duration = Character3D.ClipDuration(Character, SelectedClip)
+
+    If Direction < 0 Then
+        CandidateTime = -1
+    Else
+        CandidateTime = Duration + 1
+    End If
+
+    CandidateIndex = 0
+
+    For EventIndex = 1 To Character3D.EventCount(Character)
+
+        If Character3D.EventClipIndex(Character, EventIndex) = SelectedClip Then
+
+            EventTime = Character3D.EventTime(Character, EventIndex)
+
+            If Direction < 0 And EventTime < CurrentAnimationTime Then
+
+                If EventTime > CandidateTime Then
+                    CandidateTime = EventTime
+                    CandidateIndex = EventIndex
+                End If
+
+            Else If Direction > 0 And EventTime > CurrentAnimationTime Then
+
+                If EventTime < CandidateTime Then
+                    CandidateTime = EventTime
+                    CandidateIndex = EventIndex
+                End If
+
+            End If
+
+        End If
+
+    End For
+
+    If CandidateTime < 0 Then
+        CandidateTime = 0
+        CandidateIndex = 0
+    Else If CandidateTime > Duration Then
+        CandidateTime = Duration
+        CandidateIndex = 0
+    End If
+
+    SelectedTimelineEvent = CandidateIndex
+    PlaybackPaused = True
+    Ready = Character3D.SetAnimationTime(Character, CandidateTime) And Ready
+
+End Sub
+
+Sub SeekFromPointer()
+
+    Dim Duration As Number
+    Dim TargetTime As Number
+
+    Duration = Character3D.ClipDuration(Character, SelectedClip)
+    TargetTime = (Pointer_X() - TIMELINE_LEFT) * Duration / Max(1, TimelineWidth())
+    TargetTime = Max(0, Min(Duration, TargetTime))
+    SelectedTimelineEvent = NearestClipEvent(TargetTime)
+    PlaybackPaused = True
+    Ready = Character3D.SetAnimationTime(Character, TargetTime) And Ready
 
 End Sub
 
@@ -1398,6 +1544,7 @@ End Sub
 
 Sub PlaySelectedClip()
 
+    SelectedTimelineEvent = FirstClipEvent()
     Ready = Character3D.PlayMode(
         Character,
         SelectedClipName(),
@@ -1407,11 +1554,59 @@ Sub PlaySelectedClip()
 
 End Sub
 
+Function FirstClipEvent() As Number
+
+    Dim EventIndex As Number
+    Dim Result As Number
+
+    Result = 0
+
+    For EventIndex = 1 To Character3D.EventCount(Character)
+
+        If Character3D.EventClipIndex(Character, EventIndex) = SelectedClip And Result = 0 Then
+            Result = EventIndex
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Function NearestClipEvent(TimeValue As Number) As Number
+
+    Dim BestDistance As Number
+    Dim Distance As Number
+    Dim EventIndex As Number
+    Dim Result As Number
+
+    BestDistance = 2147483647
+    Result = 0
+
+    For EventIndex = 1 To Character3D.EventCount(Character)
+
+        If Character3D.EventClipIndex(Character, EventIndex) = SelectedClip Then
+
+            Distance = Abs(Character3D.EventTime(Character, EventIndex) - TimeValue)
+
+            If Distance < BestDistance Then
+                BestDistance = Distance
+                Result = EventIndex
+            End If
+
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
 Function SelectedClipName() As Text
 
     Dim Result As Text
 
-    Result = ViewerProfiles.ClipName(ProfileIndex, SelectedClip)
+    Result = Character3D.ClipName(Character, SelectedClip)
 
     Return Result
 
@@ -1421,7 +1616,7 @@ Function SelectedClipLabel() As Text
 
     Dim Result As Text
 
-    Result = ViewerProfiles.ClipLabel(ProfileIndex, SelectedClip)
+    Result = Character3D.ClipName(Character, SelectedClip)
 
     Return Result
 
@@ -1431,7 +1626,7 @@ Function SelectedClipMode() As Number
 
     Dim Result As Number
 
-    If ViewerProfiles.ClipLoops(ProfileIndex, SelectedClip) Then
+    If Character3D.ClipLoopRecommended(Character, SelectedClip) Then
         Result = Graphics3D.ANIMATION_LOOP
     Else
         Result = Graphics3D.ANIMATION_ONCE
@@ -1559,12 +1754,28 @@ Sub DrawViewerOverlay()
 
     Call DrawAnimationButtons()
 
+    If Window_Height() >= 620 Then
+
+        Draw Text "Clip ms / Rate / Samples / Events" At PanelText, 472 Size 11 Color LIGHT_GRAY
+        Draw Number Character3D.ClipDuration(Character, SelectedClip) At PanelText, 492 Size 11 Color WHITE
+        Draw Number Character3D.ClipSampleRate(Character, SelectedClip) At PanelText + 58, 492 Size 11 Color CYAN
+        Draw Number Character3D.ClipSampleCount(Character, SelectedClip) At PanelText + 104, 492 Size 11 Color WHITE
+        Draw Number Character3D.ClipEventCount(Character, SelectedClip) At PanelText + 166, 492 Size 11 Color YELLOW
+        Draw Text "Model clips / sockets / events" At PanelText, 514 Size 11 Color LIGHT_GRAY
+        Draw Number Character3D.ClipCount(Character) At PanelText, 534 Size 11 Color WHITE
+        Draw Number Character3D.SocketCount(Character) At PanelText + 58, 534 Size 11 Color CYAN
+        Draw Number Character3D.EventCount(Character) At PanelText + 116, 534 Size 11 Color YELLOW
+
+    End If
+
     Call DrawButton(PanelLeft + 12, Window_Height() - 64, 52, 24, "VIEW", False)
     Call DrawButton(PanelLeft + 68, Window_Height() - 64, 74, 24, "PRESENT", False)
     Call DrawButton(PanelLeft + 146, Window_Height() - 64, 40, 24, "ALL", False)
     Call DrawButton(PanelLeft + 190, Window_Height() - 64, 50, 24, "FIT", FitLocked)
 
-    Draw Text "LMB pan  •  MMB orbit  •  Wheel zoom  •  RMB reset presentation  •  Enter reset all" At 16, Window_Height() - 22 Size 11 Color LIGHT_GRAY
+    Call DrawTimeline()
+
+    Draw Text "LMB pan  •  MMB orbit  •  Wheel zoom  •  RMB reset  •  Space pause" At 16, Window_Height() - 22 Size 11 Color LIGHT_GRAY
 
     If ViewerError Then
 
@@ -1580,6 +1791,84 @@ Sub DrawViewerOverlay()
     End If
 
 End Sub
+
+Function TimelineWidth() As Number
+
+    Dim Result As Number
+
+    Result = Max(120, StatusPanelX() - TIMELINE_LEFT - 20)
+    Return Result
+
+End Function
+
+Sub DrawTimeline()
+
+    Dim Duration As Number
+    Dim EventIndex As Number
+    Dim EventTime As Number
+    Dim MarkerX As Number
+    Dim ProgressWidth As Number
+    Dim TimelineY As Number
+    Dim Width As Number
+
+    Duration = Max(1, Character3D.ClipDuration(Character, SelectedClip))
+    TimelineY = Window_Height() - 64
+    Width = TimelineWidth()
+    ProgressWidth = Character3D.AnimationTime(Character) * Width / Duration
+
+    Call DrawButton(TIMELINE_LEFT, Window_Height() - 96, 58, 24, PlaybackStatusLabel(), PlaybackPaused)
+    Call DrawButton(TIMELINE_LEFT + 64, Window_Height() - 96, 54, 24, "-FRAME", False)
+    Call DrawButton(TIMELINE_LEFT + 124, Window_Height() - 96, 54, 24, "+FRAME", False)
+    Call DrawButton(TIMELINE_LEFT + 184, Window_Height() - 96, 72, 24, "< EVENT", False)
+    Call DrawButton(TIMELINE_LEFT + 262, Window_Height() - 96, 72, 24, "EVENT >", False)
+
+    Draw Text SelectedClipName() At TIMELINE_LEFT + 344, Window_Height() - 88 Size 11 Color CYAN
+
+    If SelectedTimelineEvent > 0 Then
+
+        Draw Text Character3D.EventName(Character, SelectedTimelineEvent) At TIMELINE_LEFT + 450, Window_Height() - 88 Size 11 Color YELLOW
+        Draw Number Character3D.EventTime(Character, SelectedTimelineEvent) At TIMELINE_LEFT + 548, Window_Height() - 88 Size 11 Color WHITE
+        Draw Number Character3D.EventValue(Character, SelectedTimelineEvent) At TIMELINE_LEFT + 604, Window_Height() - 88 Size 11 Color CYAN
+
+    Else
+        Draw Text "No authored event" At TIMELINE_LEFT + 450, Window_Height() - 88 Size 11 Color LIGHT_GRAY
+
+    End If
+
+    Fill Rectangle TIMELINE_LEFT, TimelineY, Width, TIMELINE_HEIGHT, Rgb(18, 35, 58) Opacity 88
+    Fill Rectangle TIMELINE_LEFT, TimelineY, ProgressWidth, TIMELINE_HEIGHT, Rgb(16, 102, 136) Opacity 90
+
+    For EventIndex = 1 To Character3D.EventCount(Character)
+
+        If Character3D.EventClipIndex(Character, EventIndex) = SelectedClip Then
+
+            EventTime = Character3D.EventTime(Character, EventIndex)
+            MarkerX = TIMELINE_LEFT + EventTime * Width / Duration
+
+            Fill Rectangle MarkerX, TimelineY - 3, 2, TIMELINE_HEIGHT + 6, YELLOW Opacity 100
+
+        End If
+
+    End For
+
+    Draw Number Character3D.AnimationTime(Character) At TIMELINE_LEFT + 6, TimelineY + 3 Size 10 Color WHITE
+    Draw Number Duration At TIMELINE_LEFT + Width - 48, TimelineY + 3 Size 10 Color WHITE
+
+End Sub
+
+Function PlaybackStatusLabel() As Text
+
+    Dim Result As Text
+
+    If PlaybackPaused Then
+        Result = "PLAY"
+    Else
+        Result = "PAUSE"
+    End If
+
+    Return Result
+
+End Function
 
 Function ViewerLayoutTooSmall() As Boolean
 
@@ -1600,7 +1889,7 @@ Sub DrawAnimationButtons()
     Dim ButtonX As Number
     Dim ButtonY As Number
 
-    ClipCount = ViewerProfiles.ClipCount(ProfileIndex)
+    ClipCount = Character3D.ClipCount(Character)
 
     For Index = 0 To ClipCount - 1
 
@@ -1614,7 +1903,7 @@ Sub DrawAnimationButtons()
             ButtonY,
             ANIMATION_BUTTON_WIDTH,
             ANIMATION_BUTTON_HEIGHT,
-            ViewerProfiles.ClipLabel(ProfileIndex, Index),
+            Character3D.ClipName(Character, Index),
             SelectedClip = Index
         )
     End For
@@ -1656,7 +1945,7 @@ Function SocketStatusLabel() As Text
     If SocketGizmosVisible And ShowAllSocketOrigins Then
         Result = "All origins"
     Else If SocketGizmosVisible Then
-        Result = ViewerProfiles.SocketName(ProfileIndex, SelectedSocket)
+        Result = Character3D.SocketName(Character, SelectedSocket)
     Else
         Result = "Hidden"
     End If

@@ -98,6 +98,7 @@ public enum SyntaxKind
     Renderer3DKeyword,
     Renderer3DImageKeyword,
     Renderer3DTextKeyword,
+    Renderer3DTextValueKeyword,
     GameKeyword,
     WindowKeyword,
     SizeKeyword,
@@ -247,6 +248,10 @@ public static class SyntaxFacts
     {
         "command", "text", "a", "b", "c", "d", "e", "f", "g", "h"
     };
+    private static readonly IReadOnlyList<string> Renderer3DTextValueParameters = new[]
+    {
+        "command", "a", "b", "c", "d", "e", "f", "g", "h", "i"
+    };
 
     private static readonly Dictionary<string, SyntaxKind> Keywords = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -316,6 +321,7 @@ public static class SyntaxFacts
         ["Renderer3D"] = SyntaxKind.Renderer3DKeyword,
         ["Renderer3DImage"] = SyntaxKind.Renderer3DImageKeyword,
         ["Renderer3DText"] = SyntaxKind.Renderer3DTextKeyword,
+        ["Renderer3DTextValue"] = SyntaxKind.Renderer3DTextValueKeyword,
         ["Game"] = SyntaxKind.GameKeyword,
         ["Window"] = SyntaxKind.WindowKeyword,
         ["Size"] = SyntaxKind.SizeKeyword,
@@ -454,7 +460,7 @@ public static class SyntaxFacts
         kind >= SyntaxKind.NoneKeyword && kind <= SyntaxKind.DataBlockMaxBytesKeyword || kind == SyntaxKind.DownKeyword;
 
     public static bool IsBuiltInFunction(SyntaxKind kind) =>
-        kind >= SyntaxKind.TimerKeyword && kind <= SyntaxKind.Renderer3DTextKeyword;
+        kind >= SyntaxKind.TimerKeyword && kind <= SyntaxKind.Renderer3DTextValueKeyword;
 
     public static IReadOnlyList<string> GetBuiltInFunctionParameters(SyntaxKind kind)
     {
@@ -477,6 +483,7 @@ public static class SyntaxFacts
             SyntaxKind.Renderer3DKeyword => Renderer3DParameters,
             SyntaxKind.Renderer3DImageKeyword => Renderer3DImageParameters,
             SyntaxKind.Renderer3DTextKeyword => Renderer3DTextParameters,
+            SyntaxKind.Renderer3DTextValueKeyword => Renderer3DTextValueParameters,
             SyntaxKind.MinKeyword or SyntaxKind.MaxKeyword => TwoValueParameters,
             SyntaxKind.RgbKeyword => ColorParameters,
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Not a built-in SMILE function.")

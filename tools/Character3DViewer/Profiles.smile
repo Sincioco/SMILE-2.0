@@ -36,7 +36,7 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.ProductionStatus = "Candidate"
         Result.AssetPath = "Assets\Generation2\ArinV54\ArinV54.sm3d"
         Result.ExpectedClipCount = 11
-        Result.ExpectedSocketCount = 6
+        Result.ExpectedSocketCount = 10
         Result.DesiredWorldHeight = 100
         ''' The armature bind AABB extends 0.104 model units below the animated
         ''' Idle soles, which equals ten fitted viewer units for this asset.
@@ -217,7 +217,9 @@ Public Function SocketCount(ProfileIndex As Number) As Number
 
     Dim Result As Number
 
-    If ProfileIndex = PROFILE_ARIN Or ProfileIndex = PROFILE_ARIN_ORIGINAL Then
+    If ProfileIndex = PROFILE_ARIN Then
+        Result = 10
+    Else If ProfileIndex = PROFILE_ARIN_ORIGINAL Then
         Result = 6
     Else If ProfileIndex = PROFILE_TECHNICAL_ARTICULATED Then
         Result = 1
@@ -245,6 +247,14 @@ Public Function SocketName(ProfileIndex As Number, SocketIndex As Number) As Tex
             Result = "SwordTip"
         Else If SocketIndex = 5 Then
             Result = "ShieldCenter"
+        Else If ProfileIndex = PROFILE_ARIN And SocketIndex = 6 Then
+            Result = "HandRight"
+        Else If ProfileIndex = PROFILE_ARIN And SocketIndex = 7 Then
+            Result = "HandLeft"
+        Else If ProfileIndex = PROFILE_ARIN And SocketIndex = 8 Then
+            Result = "FootLeft"
+        Else If ProfileIndex = PROFILE_ARIN And SocketIndex = 9 Then
+            Result = "FootRight"
         End If
 
     Else If ProfileIndex = PROFILE_TECHNICAL_ARTICULATED And SocketIndex = 0 Then

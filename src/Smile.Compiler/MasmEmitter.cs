@@ -260,6 +260,7 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_renderer3d_command:PROC");
         Line("EXTERN smile_renderer3d_image_command:PROC");
         Line("EXTERN smile_renderer3d_text_command:PROC");
+        Line("EXTERN smile_renderer3d_text_value:PROC");
         Line("EXTERN smile_clip_push:PROC");
         Line("EXTERN smile_clip_pop:PROC");
         Line("EXTERN smile_text_width_value:PROC");
@@ -1768,6 +1769,7 @@ internal sealed class MasmEmitter
             case SyntaxKind.Renderer3DKeyword:
             case SyntaxKind.Renderer3DImageKeyword:
             case SyntaxKind.Renderer3DTextKeyword:
+            case SyntaxKind.Renderer3DTextValueKeyword:
                 foreach (var argument in call.Arguments)
                 {
                     EmitExpression(argument.Expression);
@@ -1777,7 +1779,8 @@ internal sealed class MasmEmitter
                 {
                     SyntaxKind.Renderer3DKeyword => "smile_renderer3d_command",
                     SyntaxKind.Renderer3DImageKeyword => "smile_renderer3d_image_command",
-                    _ => "smile_renderer3d_text_command"
+                    SyntaxKind.Renderer3DTextKeyword => "smile_renderer3d_text_command",
+                    _ => "smile_renderer3d_text_value"
                 }, call.Arguments.Count);
                 break;
             default:

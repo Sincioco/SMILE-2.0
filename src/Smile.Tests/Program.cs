@@ -231,9 +231,11 @@ Run("Renderer3D is a bounded game-window bridge on both targets", () =>
     Equal(SyntaxKind.Renderer3DKeyword, SyntaxFacts.GetKeywordKind("renderer3d"));
     Equal(SyntaxKind.Renderer3DImageKeyword, SyntaxFacts.GetKeywordKind("renderer3dimage"));
     Equal(SyntaxKind.Renderer3DTextKeyword, SyntaxFacts.GetKeywordKind("renderer3dtext"));
+    Equal(SyntaxKind.Renderer3DTextValueKeyword, SyntaxFacts.GetKeywordKind("renderer3dtextvalue"));
     Equal(11, SyntaxFacts.GetBuiltInFunctionParameters(SyntaxKind.Renderer3DKeyword).Count);
     Equal(10, SyntaxFacts.GetBuiltInFunctionParameters(SyntaxKind.Renderer3DImageKeyword).Count);
     Equal(10, SyntaxFacts.GetBuiltInFunctionParameters(SyntaxKind.Renderer3DTextKeyword).Count);
+    Equal(10, SyntaxFacts.GetBuiltInFunctionParameters(SyntaxKind.Renderer3DTextValueKeyword).Count);
     const string source = "Game Window \"Renderer3D\"\nDim Result As Number\nResult = Renderer3D(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)\n";
     var analysis = Analyze(source);
     Equal(false, analysis.HasErrors);
@@ -246,6 +248,14 @@ Run("Renderer3D is a bounded game-window bridge on both targets", () =>
     Equal(true, HasDiagnostic(Analyze("Game Window \"Renderer3D\"\nPrint Renderer3D(True, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)\n"), "SML3003"));
     Equal(true, HasDiagnostic(Analyze("Game Window \"Renderer3D\"\nPrint Renderer3DImage(1, 0, 0, 0, 0, 0, 0, 0, 0, 0)\n"), "SML3501"));
     Equal(true, HasDiagnostic(Analyze("Game Window \"Renderer3D\"\nPrint Renderer3DText(1, 0, 0, 0, 0, 0, 0, 0, 0, 0)\n"), "SML3003"));
+    const string textValueSource = "Game Window \"Renderer3D\"\nDim Name As Text\nName = Renderer3DTextValue(10, 1, 0, 0, 0, 0, 0, 0, 0, 0)\n";
+    var textValue = Analyze(textValueSource);
+    Equal(false, textValue.HasErrors);
+    Equal(true, new MasmEmitter(textValue, SmileGraphicsBackend.DirectX, true, false).Emit()
+        .Contains("call smile_renderer3d_text_value", StringComparison.Ordinal));
+    Equal(true, new WebEmitter(textValue).Emit()
+        .Contains("smile.renderer3DTextValue(10, 1, 0, 0, 0, 0, 0, 0, 0, 0)", StringComparison.Ordinal));
+    Equal(true, HasDiagnostic(Analyze("Game Window \"Renderer3D\"\nPrint Renderer3DTextValue(10, True, 0, 0, 0, 0, 0, 0, 0, 0)\n"), "SML3003"));
 });
 Run("Existing graphics statements remain valid", () => Equal(false,
     Analyze("Game Window \"Existing\"\nFill Rectangle 1, 2, 3, 4, RED\nDraw Circle 10, 10, 4, WHITE\nDraw Line 0, 0, 20, 20, BLUE\n").HasErrors));
@@ -5456,10 +5466,10 @@ Run("VSIX templates render localized identity metadata within the aligned header
     var border = gameTemplate.Split('\n')[0].TrimEnd('\r');
     var rendered = gameTemplate.Replace("$smileuser$", "Sin".PadRight(69), StringComparison.Ordinal)
         .Replace("$smiledate$", "August 15, 2026".PadRight(69), StringComparison.Ordinal)
-        .Replace("$smileversion$", "2.0.57", StringComparison.Ordinal);
+        .Replace("$smileversion$", "2.0.58", StringComparison.Ordinal);
     var header = rendered.Split('\n').Take(9).Select(line => line.TrimEnd('\r')).ToArray();
     Equal("' Programmed By: " + "Sin".PadRight(69) + "Version: 0.0.1", header[3]);
-    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.57", header[4]);
+    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.58", header[4]);
     Equal(header[3].IndexOf("Version:", StringComparison.Ordinal) + "Version".Length,
         header[4].IndexOf("SMILE:", StringComparison.Ordinal) + "SMILE".Length);
     Equal(true, header.All(line => line.Length <= border.Length));
@@ -5472,14 +5482,14 @@ Run("VSIX templates render localized identity metadata within the aligned header
     foreach (var manifest in new[] { gameManifest, consoleManifest })
     {
         Equal(true, manifest.Contains("SmileProjectTemplateWizard", StringComparison.Ordinal));
-        Equal(true, manifest.Contains("Version=2.0.57.0", StringComparison.Ordinal));
+        Equal(true, manifest.Contains("Version=2.0.58.0", StringComparison.Ordinal));
     }
     foreach (var applicationProject in new[] { gameProject, consoleProject })
         Equal(true, applicationProject.Contains("<ApplicationId>$smileapplicationid$</ApplicationId>", StringComparison.Ordinal));
     Equal(false, libraryProject.Contains("ApplicationId", StringComparison.Ordinal));
     Equal(true, wizard.Contains("\"smile.app.a\" + Guid.NewGuid().ToString(\"N\")", StringComparison.Ordinal));
     Equal(true, wizard.Contains("ToString(\"D\", CultureInfo.CurrentCulture)", StringComparison.Ordinal));
-    Equal(true, project.Contains("<Version>2.0.57</Version>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<Version>2.0.58</Version>", StringComparison.Ordinal));
     Equal(true, vsixManifest.Contains("Type=\"Microsoft.VisualStudio.Assembly\"", StringComparison.Ordinal));
 });
 

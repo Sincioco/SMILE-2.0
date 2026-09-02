@@ -36,3 +36,14 @@ The project publishes its accepted PNG, MP3, and `.smilemap` content through the
 existing recursive asset rules. `CONTENT_PIPELINES.md` records the reusable town
 and character authoring workflows; visual asset revision remains a separate,
 reviewed art task.
+
+## Paladin Combat Presentation Lab
+
+`PaladinCombatLab.smileproj` is a separate technical presentation program for the
+candidate Arin v5.4 character. It automatically cooks the repository-owned GLB
+and descriptor, enumerates the model's exact clips, events, and sockets, and
+exercises Ready, Run, Sword Attack, Shield Bash, Defend, Block Impact, Hit, KO,
+and Victory without implementing battle authority. Authored events align VFX,
+transient light, hit-stop, and caller-owned audio cues; they never authorize
+damage. The candidate remains separate from Sin Star I release content until the
+production texture, provenance, visual-acceptance, and explicit user gates pass.

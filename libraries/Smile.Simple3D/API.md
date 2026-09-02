@@ -99,13 +99,15 @@ Prepare a model before creating its part objects. Objects created before prepara
 Imported SM3D v2 animation:
 
 - `ModelHasAnimation3D`, `ModelBoneCount3D`, `ModelClipCount3D`, `ModelSocketCount3D`, `ModelAnimationBytes3D`, `ModelAnimationNodeCount3D`, and `ModelAnimationEventCount3D` expose immutable model metadata.
-- `ModelClipDuration3D` and `ModelClipSampleRate3D` inspect one zero-based clip.
+- `ModelClipName3D`, `ModelClipDuration3D`, `ModelClipSampleRate3D`, `ModelClipSampleCount3D`, `ModelClipLoopRecommended3D`, and `ModelClipEventCount3D` inspect one zero-based clip. Names are returned as exact bounded UTF-8 text rather than hashes.
+- `ModelSocketName3D` and `ModelSocketNodeIndex3D` enumerate one zero-based socket. `ModelAnimationEventName3D`, `ModelAnimationEventClipIndex3D`, `ModelAnimationEventTime3D`, and `ModelAnimationEventValue3D` enumerate one one-based event; zero remains the no-event sentinel.
 - `ModelClipIndex3D` and `ModelSocketIndex3D` perform exact case-sensitive name lookup. `ModelEventNameMatches3D` compares the exact event name; hashes are not identity.
 - `ModelAnimationEventValue3D` accepts a one-based event index returned by an animator; zero remains “no event.”
 - `CreateModelAnimator3D(Model)` creates independent playback state. `SetObjectAnimator3D` binds it to a compatible model part; `ClearObjectAnimator3D` releases that object dependency.
 - `PlayModelAnimator3D`/`PlayModelAnimatorNamed3D` select zero-based/exact-named clips, `ANIMATION_LOOP`, `ANIMATION_ONCE`, or `ANIMATION_HOLD`, and speed `1`–`1000` percent.
 - `CrossFadeModelAnimator3D`/`CrossFadeModelAnimatorNamed3D` provide one base-layer fade. `AnimatorClipIndex3D` and `AnimatorFadePercent3D` expose its state.
 - `AnimatorPendingEventCount3D`, `TakeAnimatorEvent3D`, and `TakeAnimatorEventNamed3D` consume the bounded chronological FIFO. The queue holds 32 entries and reports error 49 when a multi-wrap update has more events.
+- `SetModelAnimatorTime3D` seeks the active clip to an exact in-range millisecond. A successful seek cancels a fade, clears pending/overflow/dropped events and root delta, evaluates the pose immediately, and does not synthesize events. Invalid or inactive seeks fail without changing animator state.
 - `SetAnimatorRootMotion3D` selects `ROOT_MOTION_NONE` or `ROOT_MOTION_EXTRACT`. `TakeAnimatorRootDelta3D` returns one atomic XYZ/yaw result; translation and degrees are scaled by 1000.
 - `AnimatorSocketValue3D` queries animated model space. `AnimatorSocketWorldValue3D` additionally applies the bound object's position, rotation, and scale. Position and 3-by-3 orientation properties use thousandths.
 - `ModelAnimationAvailable3D` reports whether the production 128-bone palette transport is available. `ModelPaletteUploadCount3D` exposes cached native/Web uploads.
@@ -180,6 +182,10 @@ Yaw and pitch remain unbounded while an orbit gesture is held, then normalize on
 
 `ZoomState`, `InitializeZoom`, `AdjustZoomTarget`, and `AdvanceZoom` provide frame-rate-independent bounded zoom easing. `RetainedPointerDelta` preserves fractional pointer movement so slow pan and orbit gestures remain smooth at integer-world scale.
 
+## `Smile.Simple3D.Effects3D`
+
+`EffectPreset` defines bounded deterministic particle, ribbon, flash, shake, light, audio, and composite-emitter presentation data. `RibbonPointCount`, `RibbonWidth`, and `RibbonRadius` control a zero-particle ribbon independently: radius `0` preserves the legacy 170-world-unit curve, while an explicit value from `1` through `100,000` calibrates the curve to the scene or subject scale. Effects may follow a `Character3D` socket through `SpawnAtSocket` and `MoveToSocket`; caller-owned light and audio requests remain presentation-only and never authorize gameplay damage.
+
 ## `Smile.Simple3D.Scene3D`
 
 Quality profiles keep asset and render policy separate. `QUALITY_LOW` uses linear filtering/anisotropy 1 and direct LDR with no shadow or bloom. `QUALITY_MEDIUM` uses mip-linear/anisotropy 4, HDR tone mapping, a 1024 shadow, quarter-resolution one-cycle bloom, and requests 2x samples. `QUALITY_HIGH` uses anisotropic filtering requested at 8, HDR tone mapping, a 2048 shadow, half-resolution two-cycle bloom, and requests 4x samples. `QUALITY_AUTO` selects High when PBR is available and Low with `SCENE_FALLBACK_PBR_UNAVAILABLE` otherwise. Existing actors are never silently rebuilt when render settings change; `AssetProfileKey` and `RenderProfileKey` make that distinction explicit.
@@ -211,14 +217,15 @@ Transforms and animation:
 - `Place`, `Rotate`, `SetScale`, `SetVisible`, and yaw-only `LookAt` update every model part transactionally. Positions are bounded to -1,000,000 through 1,000,000, rotation input to the same safe integer range and normalized to 0-359 degrees, and uniform scale to 1-25,000 percent. The upper range supports meter-scale imported characters in higher-precision integer-world scenes and established worlds whose procedural actors are larger than 100 units.
 - Camera-driven programs should preserve partial pointer deltas, use a scene scale large enough to avoid visible integer-coordinate quantization, and ease bounded zoom targets over multiple frames. Pan, zoom, orbit, and rotation should not snap by a complete input step in one frame.
 - `SetShadows(ByRef Actor, CastsShadow, ReceivesShadow)`, `CastsShadow`, and `ReceivesShadow` update or inspect every part transactionally. Partial renderer refusal restores all accepted parts or quarantines the actor if rollback cannot be proven.
-- `PlayAnimation`, `PlayMode`, `CrossFade`, `StopAnimation`, `Update`, `IsPlaying`, `AnimationComplete`, and `CurrentClipNameMatches` use exact case-sensitive clip names.
+- `PlayAnimation`, `PlayMode`, `CrossFade`, `StopAnimation`, `Update`, `IsPlaying`, `AnimationComplete`, and `CurrentClipNameMatches` use exact case-sensitive clip names. `AnimationTime` reports the live millisecond and `SetAnimationTime` provides the same deterministic, event-suppressing seek contract as `SetModelAnimatorTime3D`.
 - `SetRootMotion` accepts `ROOT_MOTION_IGNORE` or `ROOT_MOTION_APPLY`. Apply mode drains the combined low-level model-space delta once per update, rotates translation into world space using the actor's pre-update yaw, then applies root yaw. Position/yaw subunits remain in thousandths.
 - `LastRootDelta`, `PositionX`, `PositionY`, `PositionZ`, and `RotationY` expose deterministic actor motion diagnostics.
 
 Events, sockets, drawing, and diagnostics:
 
 - `TakeEvent`, `PendingEventCount`, `EventOverflowed`, `DroppedEventCount`, and `ClearEvents` preserve the bounded chronological animator FIFO.
-- `HasSocket`, `SocketPosition`, and `SocketValueThousandths` use the primary bound part for world-space socket evaluation.
+- `ClipName`, `ClipDuration`, `ClipSampleRate`, `ClipSampleCount`, `ClipLoopRecommended`, and `ClipEventCount` enumerate immutable clip metadata from the actor-owned model. `EventCount`, `EventName`, `EventClipIndex`, `EventTime`, and `EventValue` enumerate one-based authored events.
+- `HasSocket`, `SocketName`, `SocketNodeIndex`, `SocketPosition`, and `SocketValueThousandths` enumerate sockets and use the primary bound part for world-space socket evaluation.
 - `Draw`, `IsValid`, `PartCount`, local `BoundsValueThousandths`/`Height`, and explicit `LocalBounds`, `WorldBounds`, `WorldBoundsValueThousandths`, `WorldHeight`, `WorldCenter`, and `WorldRadius`. `WorldBounds` transforms all eight static AABB corners and accepts an optional positive animation margin; it is conservative static geometry, not exact skinned bounds.
 - `PrimaryObjectHandle`, indexed `PartObjectHandle`, `AnimatorHandle`, and `ModelHandle` are borrowed read-only advanced Battle3D interop values. Callers must not destroy them or mutate Character3D-owned transforms. Character3D does not depend on Battle3D.
 - `LiveActorCount`, `MaximumActorCount`, `CachedAssetCount`, `PendingReleaseAssetCount`, `AssetReferenceCount`, `ActorAssetState`, `ActorAssetVariant`, `ActorAssetProfileKey`, `ActorUsesPbr`, `ActorUsesFallback`, `AnimationResidentBytes`, and `CachedAnimationResidentBytes`.

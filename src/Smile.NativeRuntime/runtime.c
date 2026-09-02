@@ -1911,6 +1911,22 @@ long long smile_renderer3d_text_command(long long command, void* owned_text,
     return result;
 }
 
+void* smile_renderer3d_text_value(long long command,
+    long long a, long long b, long long c, long long d,
+    long long e, long long f, long long g, long long h, long long i)
+{
+    char bytes[1025];
+    long long length;
+    SmileText* result;
+    (void)c; (void)d; (void)e; (void)f; (void)g; (void)h; (void)i;
+    length = smile_renderer3d_model_text_value(command, a, b, bytes, sizeof(bytes));
+    if (length <= 0)
+        return 0;
+    result = smile_text_allocate(length);
+    smile_copy_bytes(result->bytes, bytes, (SIZE_T)length);
+    return result;
+}
+
 long long smile_image_width_value(void* owned_image)
 {
     long long value = smile_image_resource_width((SmileImageResource*)owned_image);

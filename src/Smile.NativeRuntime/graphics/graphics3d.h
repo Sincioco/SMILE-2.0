@@ -131,7 +131,8 @@ enum SmileRenderer3DCommand
     SMILE_3D_RIBBON_BATCH = 120,
     SMILE_3D_M6_VALUE = 121,
     SMILE_3D_MATERIAL_INSPECTION = 122,
-    SMILE_3D_SET_CAMERA_UP = 123
+    SMILE_3D_SET_CAMERA_UP = 123,
+    SMILE_3D_SET_MODEL_ANIMATOR_TIME = 124
 };
 
 enum SmileRenderer3DImageCommand
@@ -150,7 +151,10 @@ enum SmileRenderer3DTextCommand
     SMILE_3D_TEXT_MODEL_EVENT_NAME_MATCHES = 6,
     SMILE_3D_TEXT_PLAY_MODEL_ANIMATOR = 7,
     SMILE_3D_TEXT_CROSSFADE_MODEL_ANIMATOR = 8,
-    SMILE_3D_TEXT_TAKE_MODEL_ANIMATOR_EVENT = 9
+    SMILE_3D_TEXT_TAKE_MODEL_ANIMATOR_EVENT = 9,
+    SMILE_3D_TEXT_MODEL_CLIP_NAME = 10,
+    SMILE_3D_TEXT_MODEL_SOCKET_NAME = 11,
+    SMILE_3D_TEXT_MODEL_EVENT_NAME = 12
 };
 
 enum SmilePrimitive3D
@@ -172,6 +176,8 @@ long long smile_renderer3d_image_command(long long command, void* image,
 long long smile_renderer3d_text_command(long long command, void* text,
     long long a, long long b, long long c, long long d,
     long long e, long long f, long long g, long long h);
+long long smile_renderer3d_model_text_value(long long command,
+    long long model_handle, long long index, char* output, long long capacity);
 long long smile_renderer3d_load_model_path(const wchar_t* path);
 long long smile_renderer3d_load_model_geometry_path(const wchar_t* path);
 long long smile_renderer3d_prepare_model_pbr(long long model_handle,

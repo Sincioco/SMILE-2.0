@@ -2098,7 +2098,9 @@ internal static class WebOutputWriter
             function renderer3DTakeModelEvent(animator,name=null){if(!animator||!animator.production)return 0;const model=renderer3DModels.get(animator.model);for(let ordinal=0;ordinal<animator.eventCount;ordinal+=1){const queue=(animator.eventHead+ordinal)%32,index=animator.eventQueue[queue];if(name!==null&&model.animation.events[index].name!==name)continue;
                     for(let move=ordinal;move+1<animator.eventCount;move+=1)animator.eventQueue[(animator.eventHead+move)%32]=animator.eventQueue[(animator.eventHead+move+1)%32];animator.eventCount-=1;return index+1;}return 0;}
             function renderer3DModelAnimationValue(model,property,index){if(!model){renderer3DLastError=5;return 0;}const animation=model.animation;if(property===1)return animation?1:0;if(property===2)return animation?animation.bones.length:0;if(property===3)return animation?animation.clips.length:0;if(property===4)return animation?animation.sockets.length:0;if(property===5)return animation?animation.bytes:0;if(!animation)return 0;
-                if(property===6||property===7){if(index<0||index>=animation.clips.length){renderer3DLastError=48;return 0;}return property===6?animation.clips[index].duration:animation.clips[index].rate;}if(property===8)return animation.events.length;if(property===9)return animation.nodes.length;if(property===10){if(index<=0||index>animation.events.length){renderer3DLastError=48;return 0;}return animation.events[index-1].value;}if(property===11)return animation.fileBytes;if(property===12)return animation.residentBytes;if(property===13)return animation.animatorBytes;renderer3DLastError=48;return 0;}
+                if(property===6||property===7){if(index<0||index>=animation.clips.length){renderer3DLastError=48;return 0;}return property===6?animation.clips[index].duration:animation.clips[index].rate;}if(property===8)return animation.events.length;if(property===9)return animation.nodes.length;if(property===10){if(index<=0||index>animation.events.length){renderer3DLastError=48;return 0;}return animation.events[index-1].value;}if(property===11)return animation.fileBytes;if(property===12)return animation.residentBytes;if(property===13)return animation.animatorBytes;
+                if(property>=14&&property<=16){if(index<0||index>=animation.clips.length){renderer3DLastError=48;return 0;}const clip=animation.clips[index];if(property===14)return clip.samples;if(property===15)return clip.loop?1:0;return clip.eventCount;}if(property===17||property===18){if(index<=0||index>animation.events.length){renderer3DLastError=48;return 0;}const event=animation.events[index-1];return property===17?event.clip:event.time;}if(property===19){if(index<0||index>=animation.sockets.length){renderer3DLastError=48;return 0;}return animation.sockets[index].node;}renderer3DLastError=48;return 0;}
+            function renderer3DSetModelAnimatorTime(animator,time){const model=animator&&animator.production?renderer3DModels.get(animator.model):null,clip=model&&animator.clipIndex>=0?model.animation.clips[animator.clipIndex]:null;if(!model||!clip||time<0||time>clip.duration){renderer3DLastError=48;return false;}animator.destinationClip=-1;animator.destinationMode=0;animator.destinationTime=animator.destinationTimeRemainder=0;animator.destinationComplete=false;animator.fadeElapsed=animator.fadeDuration=0;animator.time=animator.previous=time;animator.timeRemainder=0;animator.complete=animator.mode!==1&&time===clip.duration;renderer3DClearModelEvents(animator);animator.rootDelta.fill(0);renderer3DUpdateModelPose(animator);return true;}
             function renderer3DAnimatorProductionValue(animator,property){if(!animator||!animator.production){renderer3DLastError=48;return 0;}if(property===1)return animator.destinationClip;if(property===2)return animator.timeRemainder;if(property===3)return animator.destinationTimeRemainder;if(property===4)return animator.destinationTime;if(property===5)return animator.eventOverflowed?1:0;if(property===6)return animator.droppedEventCount;if(property===7)return animator.mode;if(property===8)return animator.destinationMode;if(property===9)return animator.revision;if(property===10)return animator.mutableBytes;renderer3DLastError=48;return 0;}
             function renderer3DModelSocketValue(animator,index,property,objectHandle=0){const model=animator&&animator.production?renderer3DModels.get(animator.model):null;if(!model||index<0||index>=model.animation.sockets.length){renderer3DLastError=48;return 0;}const socket=model.animation.sockets[index],first=animator.socketScratch,second=animator.socketScratch;
                 renderer3DPoseIntoAt(first,0,socket.translation[0],socket.translation[1],socket.translation[2],socket.rotation[0],socket.rotation[1],socket.rotation[2],socket.rotation[3],socket.scale[0],socket.scale[1],socket.scale[2]);renderer3DMultiplyAt(second,16,animator.globals,socket.node*16,first,0);let offset=16;
@@ -2524,6 +2526,7 @@ internal static class WebOutputWriter
                     case 120:return renderer3DRibbonBatchCommand(a,b,c,d,e,f,g,h,i,j);
                     case 121:return renderer3DM6Value(a,b);
                     case 122:if(a===-1)return renderer3DMaterialInspection;if(renderer3DFrameActive||a<0||a>6){renderer3DLastError=5;return 0;}renderer3DMaterialInspection=a;return 1;
+                    case 124:animator=renderer3DAnimators.get(a);return renderer3DSetModelAnimatorTime(animator,b)?1:0;
                     default:renderer3DLastError=1;return 0;
                 }
             }
@@ -2548,6 +2551,16 @@ internal static class WebOutputWriter
                 if(command===8){const animator=renderer3DAnimators.get(a),model=animator&&animator.production?renderer3DModels.get(animator.model):null,index=model&&model.animation?model.animation.clips.findIndex(clip=>clip.name===name):-1;return renderer3DCrossFadeModelAnimator(animator,index,b,c)?1:0;}
                 if(command===9)return renderer3DTakeModelEvent(renderer3DAnimators.get(a),name);
                 renderer3DLastError=1;return 0;
+            }
+
+            function renderer3DTextValue(command,a,b,c,d,e,f,g,h,i) {
+                [command,a,b,c,d,e,f,g,h,i]=[command,a,b,c,d,e,f,g,h,i].map(safe);
+                const model=renderer3DModels.get(a),animation=model&&model.animation;
+                if(!animation){renderer3DLastError=48;return "";}
+                if(command===10&&b>=0&&b<animation.clips.length)return animation.clips[b].name;
+                if(command===11&&b>=0&&b<animation.sockets.length)return animation.sockets[b].name;
+                if(command===12&&b>0&&b<=animation.events.length)return animation.events[b-1].name;
+                renderer3DLastError=command>=10&&command<=12?48:1;return "";
             }
 
             function clear(fillColor) {
@@ -3402,7 +3415,7 @@ internal static class WebOutputWriter
                 pointerWheelDelta, pointerWheelRemainder, pointerInside, pointerHeld, pointerPressed, pointerReleased,
                 playSound, stopSound,
                 playMusic, pauseMusic, resumeMusic, stopMusic, setMusicVolume, loadTextFile,
-                loadInt, saveInt, loadData, saveData, renderer3D, renderer3DImage, renderer3DText,
+                loadInt, saveInt, loadData, saveData, renderer3D, renderer3DImage, renderer3DText, renderer3DTextValue,
                 gameClosed, endProgram, mediaShutdown, mediaDiagnostics, run
             };
         })();

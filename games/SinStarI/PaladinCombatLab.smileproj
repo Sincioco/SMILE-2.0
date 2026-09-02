@@ -1,0 +1,24 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>PaladinCombatLab.smile</StartupFile>
+    <OutputName>PaladinCombatLab</OutputName>
+    <ApplicationId>smile.sinstari.paladin-combat-lab</ApplicationId>
+    <ResponsiveWindow>true</ResponsiveWindow>
+    <RememberWindowPlacement>true</RememberWindowPlacement>
+    <GraphicsBackend>DirectX</GraphicsBackend>
+    <VSync>true</VSync>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="PaladinCombatLab.smile" StartupOnly="true" />
+    <Model3DAsset Include="SourceAssets\Characters\Paladin\CombatLab\arin-integrated-candidate-v5.4.glb"
+                  Descriptor="SourceAssets\Characters\Paladin\CombatLab\ArinV54.sm3d.json"
+                  LogicalPath="Assets\CombatLab\ArinV54.sm3d"
+                  TextureOutputDirectory="Assets\CombatLab\ArinV54Textures"
+                  Profile="Character"
+                  Identity="sin-star-i.character-1.paladin"
+                  ProductionState="Prototype" />
+    <Asset Include="Assets\CombatLab\VfxAtlas.png" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

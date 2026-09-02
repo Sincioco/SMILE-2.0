@@ -1,0 +1,1373 @@
+''' Sin Star I Paladin combat-presentation vertical slice for native and Web.
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Effects3D As Effects3D
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Scene3D As Scene3D
+
+Const STATE_IDLE = 0
+Const STATE_READY = 1
+Const STATE_RUN = 2
+Const STATE_SWORD_ATTACK = 3
+Const STATE_SHIELD_BASH = 4
+Const STATE_DEFEND = 5
+Const STATE_BLOCK_IMPACT = 6
+Const STATE_HIT = 7
+Const STATE_KO = 8
+Const STATE_VICTORY = 9
+Const STATE_COUNT = 10
+Const MAX_FRAME_MILLISECONDS = 50
+Const PRESET_PALADIN_SWORD_RIBBON = 20
+Const PRESET_PALADIN_SWORD_IMPACT = 21
+Const PRESET_PALADIN_SWORD_SPARKS = 22
+Const PRESET_PALADIN_SHIELD_IMPACT = 23
+Const TARGET_X = -58
+Const TARGET_Y = 30
+Const TARGET_Z = 72
+
+Dim Arin As Character3D.Actor
+Dim Arena As Core.Object3D
+Dim TargetDummy As Core.Object3D
+Dim Camera As Core.Camera3D
+Dim DrawCamera As Core.Camera3D
+Dim Bounds As Character3D.Bounds3D
+Dim Atlas As Core.Texture3D
+Dim AlphaMaterial As Core.Material3D
+Dim AdditiveMaterial As Core.Material3D
+Dim RibbonMaterial As Core.Material3D
+Dim SocketMarkers As Core.ParticleBatch3D
+Dim SwordTrail As Effects3D.Effect
+Dim ImpactEffect As Effects3D.Effect
+Dim Ready As Boolean
+Dim Running As Boolean
+Dim Paused As Boolean
+Dim VfxEnabled As Boolean
+Dim HdrEnabled As Boolean
+Dim SocketsVisible As Boolean
+Dim CameraFollow As Boolean
+Dim SelectedState As Number
+Dim CurrentState As Number
+Dim SelectedSocket As Number
+Dim SelectedTimelineEvent As Number
+Dim PlaybackSpeed As Number
+Dim MaterialInspection As Number
+Dim ActionSerial As Number
+Dim AuthorizedImpactPending As Boolean
+Dim ImpactConsumed As Boolean
+Dim TrailStarted As Boolean
+Dim TrailStopped As Boolean
+Dim EventFallbackUsed As Boolean
+Dim LastEvent As Text
+Dim CameraPreset As Text
+Dim PreviousTime As Number
+Dim CurrentTime As Number
+Dim FrameMilliseconds As Number
+Dim AnimationMilliseconds As Number
+Dim HitStopRemaining As Number
+Dim TransientLightRemaining As Number
+Dim LastAudioCue As Number
+Dim FirstError As Number
+Dim CameraGoalX As Number
+Dim CameraGoalY As Number
+Dim CameraGoalZ As Number
+Dim CameraTargetX As Number
+Dim CameraTargetY As Number
+Dim CameraTargetZ As Number
+Dim Key As Number
+
+Game Window "Sin Star I - Paladin Combat Presentation Lab" Size 1280 By 720
+
+Call Graphics3D.ResetRenderer3D()
+Call LoadLab()
+
+SelectedState = STATE_READY
+
+Call StartSelectedState()
+
+Running = True
+PreviousTime = Timer()
+
+Do
+
+    Get Key Key
+
+    Call HandleKeyboard(Key)
+
+    Call HandlePointer()
+
+    CurrentTime = Timer()
+    FrameMilliseconds = Min(MAX_FRAME_MILLISECONDS, Max(0, CurrentTime - PreviousTime))
+    PreviousTime = CurrentTime
+
+    If Paused Or HitStopRemaining > 0 Then
+        AnimationMilliseconds = 0
+    Else
+        AnimationMilliseconds = FrameMilliseconds
+    End If
+
+    If HitStopRemaining > 0 Then
+        HitStopRemaining = Max(0, HitStopRemaining - FrameMilliseconds)
+    End If
+
+    Ready = Character3D.Update(Arin, AnimationMilliseconds) And Ready
+
+    Call DrainAnimationEvents()
+    Call UpdateActionController()
+
+    If Effects3D.IsActive(SwordTrail) Then
+        Ready = Effects3D.MoveToSocket(SwordTrail, Arin, "SwordTip") And Ready
+    End If
+
+    Ready = Effects3D.Update(AnimationMilliseconds) And Ready
+    Ready = Effects3D.Commit() And Ready
+
+    If SocketsVisible Then
+        Call UpdateSocketMarkers()
+    End If
+
+    Call ConsumePresentationRequests()
+    Call SetCameraPreset(CurrentState)
+    Call AdvanceCamera(FrameMilliseconds)
+
+    DrawCamera = Camera
+    DrawCamera.Position.X = DrawCamera.Position.X + Effects3D.CameraShakeX()
+    DrawCamera.Position.Y = DrawCamera.Position.Y + Effects3D.CameraShakeY()
+    DrawCamera.Position.Z = DrawCamera.Position.Z + Effects3D.CameraShakeZ()
+    Ready = Scene3D.Begin(DrawCamera, 3, 7, 18) And Ready
+
+    If Ready Then
+
+        Ready = Graphics3D.DrawObject3D(Arena)
+        Ready = Graphics3D.DrawObject3D(TargetDummy) And Ready
+        Ready = Character3D.Draw(Arin) And Ready
+        Ready = Effects3D.Draw() And Ready
+
+        If SocketsVisible Then
+            Ready = Graphics3D.DrawParticleBatch3D(SocketMarkers) And Ready
+        End If
+
+        Ready = Scene3D.EndScene() And Ready
+
+    End If
+
+    Call DrawOverlay()
+
+    Show Screen
+
+    If Not Ready And FirstError = 0 Then
+        FirstError = Max(Graphics3D.LastError(), Max(Character3D.LastRendererError(), Scene3D.LastRendererError()))
+    End If
+
+    Running = Running And Not Game_Closed()
+
+Loop Until Not Running
+
+Call DestroyLab()
+
+Sub LoadLab()
+
+    Camera = Graphics3D.DefaultCamera()
+    Arena = Graphics3D.CreatePlane3D(560, 420)
+    TargetDummy = Graphics3D.CreateCube3D(30)
+
+    Call Graphics3D.SetObjectPosition(Arena, 0, -1, -10)
+    Call Graphics3D.SetObjectColor(Arena, 18, 30, 54)
+    Call Graphics3D.SetObjectPosition(TargetDummy, TARGET_X, 15, TARGET_Z)
+    Call Graphics3D.SetObjectColor(TargetDummy, 100, 150, 210)
+
+    Ready = Graphics3D.SetObjectShadowsChecked3D(Arena, False, True)
+    Ready = Graphics3D.SetObjectShadowsChecked3D(TargetDummy, True, True) And Ready
+    Arin = Character3D.LoadWithPolicy(
+        "Assets\CombatLab\ArinV54.sm3d",
+        Character3D.CHARACTER_LOAD_REQUIRE_PBR
+    )
+    Ready = Character3D.IsValid(Arin) And Ready
+    Ready = Character3D.SetScale(Arin, 10000) And Ready
+    Ready = Character3D.Place(Arin, 0, 10, 42) And Ready
+    Ready = Character3D.Rotate(Arin, 0, 0, 0) And Ready
+    Ready = Character3D.SetRootMotion(Arin, Character3D.ROOT_MOTION_IGNORE) And Ready
+    Ready = Character3D.SetShadows(Arin, True, True) And Ready
+    Bounds = Character3D.WorldBounds(Arin, 4)
+    Atlas = Graphics3D.LoadTexture3D(
+        "Assets\CombatLab\VfxAtlas.png",
+        Graphics3D.TEXTURE_FILTER_LINEAR,
+        Graphics3D.TEXTURE_WRAP_CLAMP
+    )
+    AlphaMaterial = Graphics3D.CreateMaterial3D(
+        Atlas,
+        Graphics3D.MATERIAL_ALPHA_BLEND,
+        255,
+        255,
+        255,
+        100,
+        True,
+        80,
+        0
+    )
+    AdditiveMaterial = Graphics3D.CreateMaterial3D(
+        Atlas,
+        Graphics3D.MATERIAL_ALPHA_ADDITIVE,
+        255,
+        255,
+        255,
+        100,
+        True,
+        160,
+        0
+    )
+    RibbonMaterial = Graphics3D.CreateMaterial3D(
+        Atlas,
+        Graphics3D.MATERIAL_ALPHA_ADDITIVE,
+        255,
+        236,
+        160,
+        100,
+        True,
+        190,
+        0
+    )
+    Ready = Scene3D.SetQuality(Scene3D.QUALITY_HIGH) And Ready
+    Ready = Effects3D.Initialize(
+        AlphaMaterial,
+        AdditiveMaterial,
+        RibbonMaterial,
+        Scene3D.QUALITY_HIGH
+    ) And Ready
+    Ready = Effects3D.DefineStandardPresets() And Ready
+    Ready = DefineCombatPresets() And Ready
+    SocketMarkers = Graphics3D.CreateParticleBatch3D(
+        64,
+        AdditiveMaterial,
+        Graphics3D.VFX_BILLBOARD_CAMERA,
+        1,
+        1
+    )
+    Ready = SocketMarkers.Handle <> 0 And Ready
+
+    Ready = Graphics3D.ClearAdditionalLights3DChecked() And Ready
+    Ready = Graphics3D.SetAmbientLight3D(210, 225, 255, 48) And Ready
+    Ready = Graphics3D.SetDirectionalLight3D(-35, -80, 25, 255, 245, 225, 220) And Ready
+    Ready = Graphics3D.SetPointLight3D(1, 120, 110, -70, 80, 170, 255, 160, 330) And Ready
+
+    Call Scene3D.UseCustomLighting()
+
+    HdrEnabled = True
+    VfxEnabled = True
+    CameraFollow = True
+    PlaybackSpeed = 100
+    MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT
+    SelectedSocket = Character3D.SocketCount(Arin) - 1
+    Ready = Graphics3D.SetMaterialInspection3D(MaterialInspection) And Ready
+
+    Call ApplyPostProfile()
+    Call SetCameraPreset(STATE_READY)
+
+    Camera.Position.X = CameraGoalX
+    Camera.Position.Y = CameraGoalY
+    Camera.Position.Z = CameraGoalZ
+    Camera.Target.X = CameraTargetX
+    Camera.Target.Y = CameraTargetY
+    Camera.Target.Z = CameraTargetZ
+
+End Sub
+
+Function DefineCombatPresets() As Boolean
+
+    Dim Preset As Effects3D.EffectPreset
+    Dim Result As Boolean
+
+    Preset.Id = PRESET_PALADIN_SWORD_RIBBON
+    Preset.Name = "Paladin Sword Ribbon"
+    Preset.ParticleCount = 0
+    Preset.LifetimeMilliseconds = 1200
+    Preset.StartRed = 160
+    Preset.StartGreen = 230
+    Preset.StartBlue = 255
+    Preset.EndRed = 40
+    Preset.EndGreen = 110
+    Preset.EndBlue = 255
+    Preset.StartOpacity = 88
+    Preset.EndOpacity = 0
+    Preset.StartSize = 1
+    Preset.EndSize = 1
+    Preset.BlendMode = Graphics3D.MATERIAL_ALPHA_ADDITIVE
+    Preset.BillboardMode = Graphics3D.VFX_BILLBOARD_CAMERA
+    Preset.AtlasFrameCount = 1
+    Preset.RibbonPointCount = 24
+    Preset.RibbonWidth = 7
+    Preset.RibbonRadius = 18
+    Preset.QualityLowPercent = 100
+    Preset.QualityMediumPercent = 100
+    Preset.QualityHighPercent = 100
+    Result = Effects3D.DefinePreset(Preset)
+
+    Preset.Id = PRESET_PALADIN_SWORD_IMPACT
+    Preset.Name = "Paladin Sword Impact Core"
+    Preset.ParticleCount = 36
+    Preset.LifetimeMilliseconds = 420
+    Preset.Speed = 100
+    Preset.Spread = 90
+    Preset.Gravity = -40
+    Preset.StartRed = 255
+    Preset.StartGreen = 244
+    Preset.StartBlue = 190
+    Preset.EndRed = 80
+    Preset.EndGreen = 150
+    Preset.EndBlue = 255
+    Preset.StartOpacity = 96
+    Preset.EndOpacity = 0
+    Preset.StartSize = 12
+    Preset.EndSize = 2
+    Preset.BlendMode = Graphics3D.MATERIAL_ALPHA_ADDITIVE
+    Preset.BillboardMode = Graphics3D.VFX_BILLBOARD_CAMERA
+    Preset.AtlasFirstFrame = 0
+    Preset.AtlasFrameCount = 4
+    Preset.RotationSpeed = 180
+    Preset.FlashPercent = 24
+    Preset.ShakeAmplitude = 5
+    Preset.RibbonPointCount = 0
+    Preset.RibbonWidth = 0
+    Preset.QualityLowPercent = 50
+    Preset.QualityMediumPercent = 75
+    Preset.QualityHighPercent = 100
+    Result = Effects3D.DefinePreset(Preset) And Result
+
+    Preset.Id = PRESET_PALADIN_SWORD_SPARKS
+    Preset.Name = "Paladin Sword Impact Sparks"
+    Preset.ParticleCount = 24
+    Preset.LifetimeMilliseconds = 560
+    Preset.Speed = 170
+    Preset.Spread = 110
+    Preset.Gravity = -180
+    Preset.StartRed = 150
+    Preset.StartGreen = 225
+    Preset.StartBlue = 255
+    Preset.EndRed = 20
+    Preset.EndGreen = 90
+    Preset.EndBlue = 255
+    Preset.StartOpacity = 92
+    Preset.EndOpacity = 0
+    Preset.StartSize = 5
+    Preset.EndSize = 1
+    Preset.BlendMode = Graphics3D.MATERIAL_ALPHA_ADDITIVE
+    Preset.BillboardMode = Graphics3D.VFX_BILLBOARD_CAMERA
+    Preset.AtlasFirstFrame = 4
+    Preset.AtlasFrameCount = 4
+    Preset.RotationSpeed = 220
+    Preset.FlashPercent = 0
+    Preset.ShakeAmplitude = 0
+    Preset.QualityLowPercent = 50
+    Preset.QualityMediumPercent = 75
+    Preset.QualityHighPercent = 100
+    Result = Effects3D.DefinePreset(Preset) And Result
+    Result = Effects3D.AddEmitterLayer(
+        PRESET_PALADIN_SWORD_IMPACT,
+        PRESET_PALADIN_SWORD_SPARKS
+    ) And Result
+
+    Preset.Id = PRESET_PALADIN_SHIELD_IMPACT
+    Preset.Name = "Paladin Shield Impact"
+    Preset.ParticleCount = 40
+    Preset.LifetimeMilliseconds = 460
+    Preset.Speed = 90
+    Preset.Spread = 80
+    Preset.Gravity = -120
+    Preset.StartRed = 130
+    Preset.StartGreen = 225
+    Preset.StartBlue = 255
+    Preset.EndRed = 30
+    Preset.EndGreen = 80
+    Preset.EndBlue = 255
+    Preset.StartOpacity = 94
+    Preset.EndOpacity = 0
+    Preset.StartSize = 10
+    Preset.EndSize = 2
+    Preset.BlendMode = Graphics3D.MATERIAL_ALPHA_ADDITIVE
+    Preset.BillboardMode = Graphics3D.VFX_BILLBOARD_CAMERA
+    Preset.AtlasFirstFrame = 4
+    Preset.AtlasFrameCount = 4
+    Preset.RotationSpeed = 160
+    Preset.FlashPercent = 18
+    Preset.ShakeAmplitude = 4
+    Preset.QualityLowPercent = 50
+    Preset.QualityMediumPercent = 75
+    Preset.QualityHighPercent = 100
+    Result = Effects3D.DefinePreset(Preset) And Result
+
+    Return Result
+
+End Function
+
+Sub HandleKeyboard(PressedKey As Number)
+
+    If PressedKey = KEY_ESCAPE Then
+
+        Running = False
+
+    Else If PressedKey = KEY_LEFT Then
+
+        SelectedState = (SelectedState + STATE_COUNT - 1) Mod STATE_COUNT
+
+    Else If PressedKey = KEY_RIGHT Or PressedKey = KEY_TAB Then
+
+        SelectedState = (SelectedState + 1) Mod STATE_COUNT
+
+    Else If PressedKey = KEY_UP And SocketsVisible Then
+
+        SelectedSocket = (SelectedSocket + Character3D.SocketCount(Arin) - 1) Mod Character3D.SocketCount(Arin)
+
+    Else If PressedKey = KEY_DOWN And SocketsVisible Then
+
+        SelectedSocket = (SelectedSocket + 1) Mod Character3D.SocketCount(Arin)
+
+    Else If PressedKey = KEY_UP Then
+
+        Call SeekTimelineEvent(-1)
+
+    Else If PressedKey = KEY_DOWN Then
+
+        Call SeekTimelineEvent(1)
+
+    Else If PressedKey = KEY_SPACE Then
+
+        Call StartSelectedState()
+
+    Else If PressedKey = KEY_O Then
+
+        Paused = Not Paused
+
+    Else If PressedKey = KEY_R Then
+
+        Call StartSelectedState()
+
+    Else If PressedKey = KEY_F Then
+
+        VfxEnabled = Not VfxEnabled
+
+    Else If PressedKey = KEY_G Then
+
+        SocketsVisible = Not SocketsVisible
+
+    Else If PressedKey = KEY_A Then
+
+        HdrEnabled = Not HdrEnabled
+
+        Call ApplyPostProfile()
+
+    Else If PressedKey = KEY_D Then
+
+        CameraFollow = Not CameraFollow
+
+    Else If PressedKey = KEY_W Then
+
+        MaterialInspection = (MaterialInspection + 1) Mod 7
+        Ready = Graphics3D.SetMaterialInspection3D(MaterialInspection) And Ready
+
+    Else If PressedKey = KEY_S Then
+
+        PlaybackSpeed = PlaybackSpeed + 25
+
+        If PlaybackSpeed > 200 Then
+            PlaybackSpeed = 50
+        End If
+
+        Call StartSelectedState()
+
+    Else If PressedKey = KEY_ENTER Then
+
+        Call ResetLab()
+
+    Else If PressedKey = KEY_1 Then
+
+        SelectedState = STATE_IDLE
+
+        Call StartSelectedState()
+
+    Else If PressedKey = KEY_2 Then
+
+        SelectedState = STATE_READY
+
+        Call StartSelectedState()
+
+    Else If PressedKey = KEY_3 Then
+
+        SelectedState = STATE_RUN
+
+        Call StartSelectedState()
+
+    Else If PressedKey = KEY_4 Then
+
+        SelectedState = STATE_SWORD_ATTACK
+
+        Call StartSelectedState()
+
+    End If
+
+End Sub
+
+Sub HandlePointer()
+
+    Dim Index As Number
+
+    If Not Pointer_Inside() Or Not Pointer_Pressed(POINTER_PRIMARY) Then
+        Return
+    End If
+
+    For Index = 0 To STATE_COUNT - 1
+
+        If PointerInRectangle(StateButtonX(Index), StateButtonY(Index), 112, 25) Then
+            SelectedState = Index
+
+            Call StartSelectedState()
+        End If
+
+    End For
+
+    If PointerInRectangle(18, 112, 80, 28) Then
+        Call StartSelectedState()
+    Else If PointerInRectangle(104, 112, 80, 28) Then
+        Paused = Not Paused
+    Else If PointerInRectangle(190, 112, 80, 28) Then
+        Call ResetLab()
+    Else If PointerInRectangle(276, 112, 80, 28) Then
+        Call SeekTimelineEvent(1)
+    Else If PointerInRectangle(18, 154, LabTimelineWidth(), 18) Then
+        Call SeekFromTimelinePointer()
+    End If
+
+End Sub
+
+Sub StartSelectedState()
+
+    Dim Mode As Number
+
+    ActionSerial = ActionSerial + 1
+    CurrentState = SelectedState
+    AuthorizedImpactPending = CurrentState = STATE_SWORD_ATTACK Or CurrentState = STATE_SHIELD_BASH
+    ImpactConsumed = False
+    TrailStarted = False
+    TrailStopped = False
+    EventFallbackUsed = False
+    LastEvent = "State start"
+    SelectedTimelineEvent = FirstCurrentClipEvent()
+    HitStopRemaining = 0
+    Paused = False
+
+    If Effects3D.IsActive(SwordTrail) Then
+        Ready = Effects3D.StopEffect(SwordTrail) And Ready
+    End If
+
+    If StateLoops(CurrentState) Then
+        Mode = Graphics3D.ANIMATION_LOOP
+    Else If CurrentState = STATE_KO Or CurrentState = STATE_VICTORY Then
+        Mode = Graphics3D.ANIMATION_HOLD
+    Else
+        Mode = Graphics3D.ANIMATION_ONCE
+    End If
+
+    Ready = Character3D.PlayMode(Arin, StateClip(CurrentState), Mode, PlaybackSpeed) And Ready
+
+    Call SetCameraPreset(CurrentState)
+
+End Sub
+
+Sub DrainAnimationEvents()
+
+    If Character3D.TakeEvent(Arin, "SwordTrailOn") Then
+
+        LastEvent = "SwordTrailOn"
+        TrailStarted = True
+
+        If VfxEnabled Then
+            SwordTrail = Effects3D.SpawnAtSocket(
+                PRESET_PALADIN_SWORD_RIBBON,
+                Arin,
+                "SwordTip",
+                ActionSerial * 101 + 1
+            )
+        End If
+
+    End If
+
+    If Character3D.TakeEvent(Arin, "SwordImpact") Then
+        LastEvent = "SwordImpact"
+
+        Call TriggerImpact(False, "SwordTip", PRESET_PALADIN_SWORD_IMPACT)
+    End If
+
+    If Character3D.TakeEvent(Arin, "SwordTrailOff") Then
+
+        LastEvent = "SwordTrailOff"
+        TrailStopped = True
+
+        If Effects3D.IsActive(SwordTrail) Then
+            Ready = Effects3D.StopEffect(SwordTrail) And Ready
+        End If
+
+    End If
+
+    If Character3D.TakeEvent(Arin, "ShieldImpact") Then
+        LastEvent = "ShieldImpact"
+
+        Call TriggerImpact(False, "ShieldCenter", PRESET_PALADIN_SHIELD_IMPACT)
+    End If
+
+    If Character3D.TakeEvent(Arin, "FootstepLeft") Then
+        LastEvent = "FootstepLeft"
+        LastAudioCue = 2001
+    End If
+
+    If Character3D.TakeEvent(Arin, "FootstepRight") Then
+        LastEvent = "FootstepRight"
+        LastAudioCue = 2002
+    End If
+
+End Sub
+
+Sub TriggerImpact(Fallback As Boolean, SocketName As Text, Preset As Number)
+
+    If ImpactConsumed Then
+        Return
+    End If
+
+    ImpactConsumed = True
+    AuthorizedImpactPending = False
+    EventFallbackUsed = Fallback
+    HitStopRemaining = 60
+
+    If Fallback Then
+        LastEvent = "event-fallback-used"
+    End If
+
+    If VfxEnabled Then
+
+        If SocketName = "SwordTip" Then
+            ImpactEffect = Effects3D.Spawn(
+                Preset,
+                TARGET_X,
+                TARGET_Y,
+                TARGET_Z,
+                ActionSerial * 101 + 2
+            )
+        Else
+            ImpactEffect = Effects3D.SpawnAtSocket(
+                Preset,
+                Arin,
+                SocketName,
+                ActionSerial * 101 + 2
+            )
+        End If
+
+    End If
+
+End Sub
+
+Sub UpdateActionController()
+
+    Dim TimeValue As Number
+
+    TimeValue = Character3D.AnimationTime(Arin)
+
+    If (CurrentState = STATE_SWORD_ATTACK And
+        AuthorizedImpactPending And
+        TimeValue >= 833) Then
+        Call TriggerImpact(True, "SwordTip", PRESET_PALADIN_SWORD_IMPACT)
+    Else If (CurrentState = STATE_SHIELD_BASH And
+        AuthorizedImpactPending And
+        TimeValue >= 700) Then
+        Call TriggerImpact(True, "ShieldCenter", PRESET_PALADIN_SHIELD_IMPACT)
+    End If
+
+    If (Character3D.AnimationComplete(Arin) And
+        CurrentState <> STATE_KO And
+        CurrentState <> STATE_VICTORY And
+        Not StateLoops(CurrentState)) Then
+        SelectedState = STATE_READY
+
+        Call StartSelectedState()
+    End If
+
+End Sub
+
+Sub ConsumePresentationRequests()
+
+    Dim AudioRequest As Effects3D.AudioCueRequest3D
+    Dim LightRequest As Effects3D.TransientLightRequest3D
+
+    LightRequest = Effects3D.TakeTransientLight()
+
+    If LightRequest.Available Then
+
+        TransientLightRemaining = 250
+        Ready = Graphics3D.SetPointLight3D(
+            0,
+            LightRequest.X,
+            LightRequest.Y,
+            LightRequest.Z,
+            LightRequest.RedValue,
+            LightRequest.GreenValue,
+            LightRequest.BlueValue,
+            LightRequest.IntensityPercent,
+            LightRequest.Radius
+        ) And Ready
+
+    Else If TransientLightRemaining > 0 Then
+
+        TransientLightRemaining = Max(0, TransientLightRemaining - FrameMilliseconds)
+
+        If TransientLightRemaining = 0 Then
+            Ready = Graphics3D.SetPointLight3D(0, 0, 0, 0, 255, 255, 255, 0, 1) And Ready
+        End If
+
+    End If
+
+    AudioRequest = Effects3D.TakeAudioCue()
+
+    If AudioRequest.Available Then
+        LastAudioCue = AudioRequest.CueId
+    End If
+
+End Sub
+
+Sub SetCameraPreset(StateValue As Number)
+
+    Dim Focus As Core.Vector3
+
+    Focus = Character3D.SocketPosition(Arin, "Chest")
+    CameraTargetX = Focus.X
+    CameraTargetY = Focus.Y
+    CameraTargetZ = Focus.Z
+    CameraGoalX = CameraTargetX + 70
+    CameraGoalY = CameraTargetY + 60
+    CameraGoalZ = CameraTargetZ - 187
+    CameraPreset = "Standard"
+
+    If StateValue = STATE_RUN Then
+
+        CameraGoalX = CameraTargetX + 80
+        CameraGoalY = CameraTargetY + 75
+        CameraGoalZ = CameraTargetZ - 300
+        CameraPreset = "Approach wide"
+
+    Else If StateValue = STATE_SWORD_ATTACK Then
+
+        CameraGoalX = CameraTargetX + 75
+        CameraGoalY = CameraTargetY + 55
+        CameraGoalZ = CameraTargetZ - 172
+        CameraPreset = "Sword three-quarter"
+
+    Else If (StateValue = STATE_SHIELD_BASH Or
+        StateValue = STATE_DEFEND Or
+        StateValue = STATE_BLOCK_IMPACT) Then
+
+        Focus = Character3D.SocketPosition(Arin, "ShieldCenter")
+        CameraTargetX = Focus.X
+        CameraTargetY = Focus.Y
+        CameraTargetZ = Focus.Z
+        CameraGoalX = CameraTargetX - 75
+        CameraGoalY = CameraTargetY + 60
+        CameraGoalZ = CameraTargetZ - 172
+        CameraPreset = "Shield close-up"
+
+    Else If StateValue = STATE_HIT Or StateValue = STATE_KO Then
+
+        CameraGoalX = CameraTargetX + 75
+        CameraGoalY = CameraTargetY + 65
+        CameraGoalZ = CameraTargetZ - 192
+        CameraPreset = "Hit / KO"
+
+    Else If StateValue = STATE_VICTORY Then
+
+        CameraGoalX = CameraTargetX
+        CameraGoalY = CameraTargetY + 75
+        CameraGoalZ = CameraTargetZ - 207
+        CameraPreset = "Victory"
+
+    End If
+
+End Sub
+
+Sub AdvanceCamera(ElapsedMilliseconds As Number)
+
+    Dim Amount As Number
+
+    If Not CameraFollow Then
+        Return
+    End If
+
+    Amount = Min(100, Max(1, ElapsedMilliseconds) * 100 / 240)
+    Camera.Position.X = Camera.Position.X + (CameraGoalX - Camera.Position.X) * Amount / 100
+    Camera.Position.Y = Camera.Position.Y + (CameraGoalY - Camera.Position.Y) * Amount / 100
+    Camera.Position.Z = Camera.Position.Z + (CameraGoalZ - Camera.Position.Z) * Amount / 100
+    Camera.Target.X = Camera.Target.X + (CameraTargetX - Camera.Target.X) * Amount / 100
+    Camera.Target.Y = Camera.Target.Y + (CameraTargetY - Camera.Target.Y) * Amount / 100
+    Camera.Target.Z = Camera.Target.Z + (CameraTargetZ - Camera.Target.Z) * Amount / 100
+
+End Sub
+
+Sub ApplyPostProfile()
+
+    Ready = Scene3D.SetHdr(HdrEnabled) And Ready
+    Ready = Scene3D.SetBloom(HdrEnabled, 90, 1100) And Ready
+    Ready = Scene3D.SetPostProcessing(HdrEnabled) And Ready
+
+End Sub
+
+Sub ResetLab()
+
+    SelectedState = STATE_READY
+    PlaybackSpeed = 100
+    HdrEnabled = True
+    VfxEnabled = True
+    CameraFollow = True
+    SocketsVisible = False
+    SelectedSocket = Character3D.SocketCount(Arin) - 1
+    MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT
+
+    Call ApplyPostProfile()
+
+    Ready = Graphics3D.SetMaterialInspection3D(MaterialInspection) And Ready
+
+    Call StartSelectedState()
+
+End Sub
+
+Sub UpdateSocketMarkers()
+
+    Dim Index As Number
+    Dim Position As Core.Vector3
+
+    For Index = 0 To Character3D.SocketCount(Arin) - 1
+
+        Position = Character3D.SocketPosition(Arin, Character3D.SocketName(Arin, Index))
+        Ready = Graphics3D.SetParticle3D(
+            SocketMarkers,
+            Index,
+            Position.X,
+            Position.Y,
+            Position.Z,
+            4,
+            0
+        ) And Ready
+
+        If Index = SelectedSocket Then
+            Ready = Graphics3D.SetParticleColor3D(SocketMarkers, Index, 255, 230, 80, 100) And Ready
+        Else
+            Ready = Graphics3D.SetParticleColor3D(SocketMarkers, Index, 70, 210, 255, 78) And Ready
+        End If
+
+    End For
+
+    Ready = Graphics3D.CommitParticleBatch3D(
+        SocketMarkers,
+        Character3D.SocketCount(Arin)
+    ) And Ready
+
+End Sub
+
+Sub SeekTimelineEvent(Direction As Number)
+
+    Dim CandidateIndex As Number
+    Dim CandidateTime As Number
+    Dim CurrentAnimationTime As Number
+    Dim Duration As Number
+    Dim EventIndex As Number
+    Dim EventTime As Number
+
+    CurrentAnimationTime = Character3D.AnimationTime(Arin)
+    Duration = Character3D.ClipDuration(Arin, CurrentStateClipIndex())
+    CandidateIndex = 0
+
+    If Direction < 0 Then
+        CandidateTime = -1
+    Else
+        CandidateTime = Duration + 1
+    End If
+
+    For EventIndex = 1 To Character3D.EventCount(Arin)
+
+        If Character3D.EventClipIndex(Arin, EventIndex) = CurrentStateClipIndex() Then
+
+            EventTime = Character3D.EventTime(Arin, EventIndex)
+
+            If Direction < 0 And EventTime < CurrentAnimationTime Then
+
+                If EventTime > CandidateTime Then
+                    CandidateTime = EventTime
+                    CandidateIndex = EventIndex
+                End If
+
+            Else If Direction > 0 And EventTime > CurrentAnimationTime Then
+
+                If EventTime < CandidateTime Then
+                    CandidateTime = EventTime
+                    CandidateIndex = EventIndex
+                End If
+
+            End If
+
+        End If
+
+    End For
+
+    If CandidateIndex > 0 Then
+
+        SelectedTimelineEvent = CandidateIndex
+        Paused = True
+        Ready = Character3D.SetAnimationTime(Arin, CandidateTime) And Ready
+
+    End If
+
+End Sub
+
+Sub SeekFromTimelinePointer()
+
+    Dim Duration As Number
+    Dim TargetTime As Number
+
+    Duration = Character3D.ClipDuration(Arin, CurrentStateClipIndex())
+    TargetTime = (Pointer_X() - 18) * Duration / Max(1, LabTimelineWidth())
+    TargetTime = Max(0, Min(Duration, TargetTime))
+    SelectedTimelineEvent = NearestCurrentClipEvent(TargetTime)
+    Paused = True
+    Ready = Character3D.SetAnimationTime(Arin, TargetTime) And Ready
+
+End Sub
+
+Function FirstCurrentClipEvent() As Number
+
+    Dim EventIndex As Number
+    Dim Result As Number
+
+    Result = 0
+
+    For EventIndex = 1 To Character3D.EventCount(Arin)
+
+        If (Character3D.EventClipIndex(Arin, EventIndex) = CurrentStateClipIndex() And
+            Result = 0) Then
+            Result = EventIndex
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Function NearestCurrentClipEvent(TimeValue As Number) As Number
+
+    Dim BestDistance As Number
+    Dim Distance As Number
+    Dim EventIndex As Number
+    Dim Result As Number
+
+    BestDistance = 2147483647
+    Result = 0
+
+    For EventIndex = 1 To Character3D.EventCount(Arin)
+
+        If Character3D.EventClipIndex(Arin, EventIndex) = CurrentStateClipIndex() Then
+
+            Distance = Abs(Character3D.EventTime(Arin, EventIndex) - TimeValue)
+
+            If Distance < BestDistance Then
+                BestDistance = Distance
+                Result = EventIndex
+            End If
+
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Function StateClip(StateValue As Number) As Text
+
+    Dim Result As Text
+
+    If StateValue = STATE_IDLE Then
+        Result = "Idle"
+    Else If StateValue = STATE_READY Then
+        Result = "Ready"
+    Else If StateValue = STATE_RUN Then
+        Result = "Run"
+    Else If StateValue = STATE_SWORD_ATTACK Then
+        Result = "SwordAttack"
+    Else If StateValue = STATE_SHIELD_BASH Then
+        Result = "ShieldBashCandidate"
+    Else If StateValue = STATE_DEFEND Then
+        Result = "Defend"
+    Else If StateValue = STATE_BLOCK_IMPACT Then
+        Result = "BlockImpact"
+    Else If StateValue = STATE_HIT Then
+        Result = "Hit"
+    Else If StateValue = STATE_KO Then
+        Result = "KO"
+    Else
+        Result = "Victory"
+    End If
+
+    Return Result
+
+End Function
+
+Function StateLabel(StateValue As Number) As Text
+
+    Dim Result As Text
+
+    Result = StateClip(StateValue)
+
+    If StateValue = STATE_RUN Then
+        Result = "Approach / Run"
+    Else If StateValue = STATE_SWORD_ATTACK Then
+        Result = "Sword Attack"
+    Else If StateValue = STATE_SHIELD_BASH Then
+        Result = "Shield Bash"
+    Else If StateValue = STATE_BLOCK_IMPACT Then
+        Result = "Block Impact"
+    End If
+
+    Return Result
+
+End Function
+
+Function StateLoops(StateValue As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = StateValue = STATE_IDLE Or StateValue = STATE_READY Or StateValue = STATE_RUN Or StateValue = STATE_DEFEND
+
+    Return Result
+
+End Function
+
+Function StateButtonX(Index As Number) As Number
+
+    Dim Result As Number
+
+    Result = 18 + (Index Mod 5) * 118
+    Return Result
+
+End Function
+
+Function StateButtonY(Index As Number) As Number
+
+    Dim Result As Number
+
+    Result = Window_Height() - 82 + (Index / 5) * 29
+    Return Result
+
+End Function
+
+Sub DrawOverlay()
+
+    Dim Index As Number
+    Dim PanelX As Number
+    Dim PanelWidth As Number
+    Dim SocketPosition As Core.Vector3
+    Dim TimelineWidth As Number
+
+    PanelWidth = Min(420, Max(330, Window_Width() / 3))
+    PanelX = Window_Width() - PanelWidth - 14
+    SocketPosition = SelectedSocketPosition()
+    TimelineWidth = LabTimelineWidth()
+
+    Fill Rectangle 14, 12, PanelX - 28, 88, Rgb(4, 9, 24) Opacity 78
+    Draw Text "SIN STAR I // PALADIN COMBAT PRESENTATION LAB" At 28, 24 Size 19 Color CYAN
+    Draw Text "sin-star-i.character-1.paladin  •  v5.4  •  Candidate" At 28, 52 Size 12 Color LIGHT_GRAY
+    Draw Text "Presentation events align VFX; they never authorize damage." At 28, 74 Size 11 Color YELLOW
+
+    Call DrawButton(18, 112, 80, 28, "PLAY", False)
+    Call DrawButton(104, 112, 80, 28, PauseLabel(), Paused)
+    Call DrawButton(190, 112, 80, 28, "RESET", False)
+    Call DrawButton(276, 112, 80, 28, "EVENT >", False)
+
+    Fill Rectangle PanelX, 12, PanelWidth, Window_Height() - 26, Rgb(4, 9, 24) Opacity 82
+    Draw Text "PRESENTATION CONTRACT" At PanelX + 16, 26 Size 16 Color WHITE
+    Draw Text "Selected" At PanelX + 16, 58 Size 11 Color LIGHT_GRAY
+    Draw Text StateLabel(SelectedState) At PanelX + 126, 58 Size 11 Color CYAN
+    Draw Text "Current clip" At PanelX + 16, 80 Size 11 Color LIGHT_GRAY
+    Draw Text StateClip(CurrentState) At PanelX + 126, 80 Size 11 Color GREEN
+    Draw Text "Time / Duration" At PanelX + 16, 102 Size 11 Color LIGHT_GRAY
+    Draw Number Character3D.AnimationTime(Arin) At PanelX + 126, 102 Size 11 Color WHITE
+    Draw Number Character3D.ClipDuration(Arin, CurrentStateClipIndex()) At PanelX + 202, 102 Size 11 Color WHITE
+    Draw Text "Speed / Mode" At PanelX + 16, 124 Size 11 Color LIGHT_GRAY
+    Draw Number PlaybackSpeed At PanelX + 126, 124 Size 11 Color WHITE
+    Draw Text PlaybackModeLabel() At PanelX + 174, 124 Size 11 Color CYAN
+    Draw Text "Last event" At PanelX + 16, 146 Size 11 Color LIGHT_GRAY
+    Draw Text LastEvent At PanelX + 126, 146 Size 11 Color YELLOW
+    Draw Text "Impact pending" At PanelX + 16, 168 Size 11 Color LIGHT_GRAY
+    Draw Text BooleanLabel(AuthorizedImpactPending) At PanelX + 126, 168 Size 11 Color WHITE
+    Draw Text "Fallback used" At PanelX + 16, 190 Size 11 Color LIGHT_GRAY
+    Draw Text BooleanLabel(EventFallbackUsed) At PanelX + 126, 190 Size 11 Color WHITE
+    Draw Text "Camera" At PanelX + 16, 212 Size 11 Color LIGHT_GRAY
+    Draw Text CameraPreset At PanelX + 126, 212 Size 11 Color CYAN
+    Draw Text "HDR / VFX" At PanelX + 16, 234 Size 11 Color LIGHT_GRAY
+    Draw Text BooleanLabel(HdrEnabled) At PanelX + 126, 234 Size 11 Color WHITE
+    Draw Text BooleanLabel(VfxEnabled) At PanelX + 176, 234 Size 11 Color WHITE
+    Draw Text MaterialInspectionLabel() At PanelX + 228, 234 Size 11 Color YELLOW
+    Draw Text "Particles / Ribbon" At PanelX + 16, 256 Size 11 Color LIGHT_GRAY
+    Draw Number Effects3D.ActiveParticleCount() At PanelX + 146, 256 Size 11 Color WHITE
+    Draw Number Effects3D.CommittedRibbonPoints() At PanelX + 216, 256 Size 11 Color WHITE
+    Draw Text "Draws / Triangles" At PanelX + 16, 278 Size 11 Color LIGHT_GRAY
+    Draw Number Graphics3D.DrawCallCount3D() At PanelX + 146, 278 Size 11 Color WHITE
+    Draw Number Graphics3D.SubmittedTriangleCount3D() At PanelX + 216, 278 Size 11 Color WHITE
+    Draw Text "Sockets / Events" At PanelX + 16, 300 Size 11 Color LIGHT_GRAY
+    Draw Number Character3D.SocketCount(Arin) At PanelX + 146, 300 Size 11 Color CYAN
+    Draw Number Character3D.EventCount(Arin) At PanelX + 216, 300 Size 11 Color YELLOW
+    Draw Text "Audio cue / Hit-stop" At PanelX + 16, 322 Size 11 Color LIGHT_GRAY
+    Draw Number LastAudioCue At PanelX + 146, 322 Size 11 Color WHITE
+    Draw Number HitStopRemaining At PanelX + 216, 322 Size 11 Color WHITE
+    Draw Text "Scene fallback / Error" At PanelX + 16, 344 Size 11 Color LIGHT_GRAY
+    Draw Number Scene3D.FallbackFlags() At PanelX + 166, 344 Size 11 Color WHITE
+    Draw Number FirstError At PanelX + 236, 344 Size 11 Color YELLOW
+    Draw Text "Shield Bash remains a technical candidate." At PanelX + 16, 378 Size 11 Color YELLOW
+    Draw Text "Socket" At PanelX + 16, 404 Size 11 Color LIGHT_GRAY
+    Draw Text SelectedSocketLabel() At PanelX + 126, 404 Size 11 Color CYAN
+    Draw Text "Position" At PanelX + 16, 426 Size 11 Color LIGHT_GRAY
+    Draw Number SocketPosition.X At PanelX + 126, 426 Size 10 Color WHITE
+    Draw Number SocketPosition.Y At PanelX + 186, 426 Size 10 Color WHITE
+    Draw Number SocketPosition.Z At PanelX + 246, 426 Size 10 Color WHITE
+    Draw Text "Node / Axis X" At PanelX + 16, 448 Size 11 Color LIGHT_GRAY
+    Draw Number Character3D.SocketNodeIndex(Arin, SelectedSocket) At PanelX + 126, 448 Size 10 Color WHITE
+    Draw Number Character3D.SocketValueThousandths(
+        Arin,
+        SelectedSocketLabel(),
+        Graphics3D.ANIMATOR_SOCKET_MATRIX_M11
+    ) At PanelX + 186, 448 Size 10 Color WHITE
+
+    Fill Rectangle 18, 154, TimelineWidth, 18, Rgb(18, 35, 58) Opacity 88
+    Fill Rectangle 18, 154, TimelineProgressWidth(TimelineWidth), 18, Rgb(16, 102, 136) Opacity 92
+
+    For Index = 1 To Character3D.EventCount(Arin)
+
+        If Character3D.EventClipIndex(Arin, Index) = CurrentStateClipIndex() Then
+            Fill Rectangle 18 + Character3D.EventTime(Arin, Index) * TimelineWidth / Max(1, Character3D.ClipDuration(Arin, CurrentStateClipIndex())), 151, 2, 24, YELLOW Opacity 100
+        End If
+
+    End For
+
+    Draw Number Character3D.AnimationTime(Arin) At 24, 157 Size 10 Color WHITE
+    Draw Text LastEvent At 18, 180 Size 11 Color YELLOW
+
+    If SelectedTimelineEvent > 0 Then
+
+        Draw Text Character3D.EventName(Arin, SelectedTimelineEvent) At 18, 202 Size 11 Color CYAN
+        Draw Number Character3D.EventTime(Arin, SelectedTimelineEvent) At 128, 202 Size 11 Color WHITE
+        Draw Number Character3D.EventValue(Arin, SelectedTimelineEvent) At 190, 202 Size 11 Color YELLOW
+
+    End If
+
+    For Index = 0 To STATE_COUNT - 1
+
+        Call DrawButton(
+            StateButtonX(Index),
+            StateButtonY(Index),
+            112,
+            25,
+            StateLabel(Index),
+            SelectedState = Index
+        )
+    End For
+
+    If Effects3D.FlashOpacity() > 0 Then
+        Fill Rectangle 0, 0, Window_Width(), Window_Height(), Rgb(220, 242, 255) Opacity Effects3D.FlashOpacity()
+    End If
+
+End Sub
+
+Function LabTimelineWidth() As Number
+
+    Dim PanelWidth As Number
+    Dim Result As Number
+
+    PanelWidth = Min(420, Max(330, Window_Width() / 3))
+    Result = Max(240, Window_Width() - PanelWidth - 52)
+
+    Return Result
+
+End Function
+
+Function SelectedSocketLabel() As Text
+
+    Dim Result As Text
+
+    Result = "Hidden"
+
+    If Character3D.SocketCount(Arin) > 0 Then
+        Result = Character3D.SocketName(Arin, SelectedSocket)
+    End If
+
+    Return Result
+
+End Function
+
+Function SelectedSocketPosition() As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    If Character3D.SocketCount(Arin) > 0 Then
+        Result = Character3D.SocketPosition(Arin, SelectedSocketLabel())
+    End If
+
+    Return Result
+
+End Function
+
+Function MaterialInspectionLabel() As Text
+
+    Dim Result As Text
+
+    If MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT Then
+        Result = "Lit"
+    Else If MaterialInspection = Graphics3D.MATERIAL_INSPECTION_BASE_COLOR Then
+        Result = "Base Color"
+    Else If MaterialInspection = Graphics3D.MATERIAL_INSPECTION_NORMAL Then
+        Result = "Normal"
+    Else If MaterialInspection = Graphics3D.MATERIAL_INSPECTION_ROUGHNESS Then
+        Result = "Roughness"
+    Else If MaterialInspection = Graphics3D.MATERIAL_INSPECTION_METALLIC Then
+        Result = "Metallic"
+    Else If MaterialInspection = Graphics3D.MATERIAL_INSPECTION_OCCLUSION Then
+        Result = "Occlusion"
+    Else
+        Result = "Emissive"
+    End If
+
+    Return Result
+
+End Function
+
+Function CurrentStateClipIndex() As Number
+
+    Dim Result As Number
+
+    Result = Character3D.ClipCount(Arin)
+    Result = Max(0, Min(Result - 1, Graphics3D.ModelClipIndex3D(ModelValue(), StateClip(CurrentState))))
+
+    Return Result
+
+End Function
+
+Function ModelValue() As Core.Model3D
+
+    Dim Result As Core.Model3D
+
+    Result.Handle = Character3D.ModelHandle(Arin)
+    Return Result
+
+End Function
+
+Function TimelineProgressWidth(Width As Number) As Number
+
+    Dim Duration As Number
+    Dim Result As Number
+
+    Duration = Max(1, Character3D.ClipDuration(Arin, CurrentStateClipIndex()))
+    Result = Character3D.AnimationTime(Arin) * Width / Duration
+
+    Return Result
+
+End Function
+
+Function PlaybackModeLabel() As Text
+
+    Dim Result As Text
+
+    If StateLoops(CurrentState) Then
+        Result = "Loop"
+    Else If CurrentState = STATE_KO Or CurrentState = STATE_VICTORY Then
+        Result = "Hold"
+    Else
+        Result = "Once"
+    End If
+
+    Return Result
+
+End Function
+
+Function PauseLabel() As Text
+
+    Dim Result As Text
+
+    If Paused Then
+        Result = "RESUME"
+    Else
+        Result = "PAUSE"
+    End If
+
+    Return Result
+
+End Function
+
+Function BooleanLabel(Value As Boolean) As Text
+
+    Dim Result As Text
+
+    If Value Then
+        Result = "Yes"
+    Else
+        Result = "No"
+    End If
+
+    Return Result
+
+End Function
+
+Function PointerInRectangle(X As Number, Y As Number, Width As Number, Height As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Pointer_X() >= X And
+        Pointer_X() < X + Width And
+        Pointer_Y() >= Y And
+        Pointer_Y() < Y + Height)
+
+    Return Result
+
+End Function
+
+Sub DrawButton(
+    X As Number,
+    Y As Number,
+    Width As Number,
+    Height As Number,
+    Label As Text,
+    Selected As Boolean
+)
+
+    If Selected Then
+        Fill Rectangle X, Y, Width, Height, Rgb(16, 102, 136) Opacity 86
+    Else
+        Fill Rectangle X, Y, Width, Height, Rgb(18, 35, 58) Opacity 82
+    End If
+
+    Draw Text Label At X + 7, Y + 7 Size 10 Color WHITE
+
+End Sub
+
+Sub DestroyLab()
+
+    If Effects3D.IsActive(SwordTrail) Then
+        Ready = Effects3D.StopEffect(SwordTrail) And Ready
+    End If
+
+    Call Graphics3D.DestroyParticleBatch3D(SocketMarkers)
+    Call Effects3D.Shutdown()
+    Call Graphics3D.DestroyObject3D(TargetDummy)
+    Call Graphics3D.DestroyObject3D(Arena)
+    Call Character3D.Destroy(Arin)
+    Call Graphics3D.DestroyMaterial3D(RibbonMaterial)
+    Call Graphics3D.DestroyMaterial3D(AdditiveMaterial)
+    Call Graphics3D.DestroyMaterial3D(AlphaMaterial)
+    Call Graphics3D.DestroyTexture3D(Atlas)
+    Call Character3D.Shutdown()
+    Call Scene3D.Shutdown()
+    Call Graphics3D.ResetRenderer3D()
+
+End Sub

@@ -4140,7 +4140,7 @@ internal sealed class SemanticAnalyzer
             SyntaxKind.PointerHeldKeyword or SyntaxKind.PointerPressedKeyword or SyntaxKind.PointerReleasedKeyword)
             RequireGameWindow(identifier.Span, $"Built-in '{identifier.Text}'");
         if (identifier.Kind is SyntaxKind.Renderer3DKeyword or SyntaxKind.Renderer3DImageKeyword or
-            SyntaxKind.Renderer3DTextKeyword)
+            SyntaxKind.Renderer3DTextKeyword or SyntaxKind.Renderer3DTextValueKeyword)
             RequireGameWindow(identifier.Span, $"Built-in '{identifier.Text}'");
         if (arguments.Count != expected)
             Report("SML3016", identifier.Span, $"Built-in '{identifier.Text}' expects {expected} argument(s), found {arguments.Count}.");
@@ -4175,6 +4175,13 @@ internal sealed class SemanticAnalyzer
                 RequireType(arguments[index], SmileType.Number, "SML3003",
                     $"Built-in '{identifier.Text}' requires Number arguments after Text.");
             return SmileType.Number;
+        }
+        if (identifier.Kind == SyntaxKind.Renderer3DTextValueKeyword)
+        {
+            foreach (var argument in arguments)
+                RequireType(argument, SmileType.Number, "SML3003",
+                    $"Built-in '{identifier.Text}' requires Number arguments.");
+            return SmileType.Text;
         }
         if (identifier.Kind is SyntaxKind.TextWidthKeyword or SyntaxKind.TextHeightKeyword)
         {

@@ -128,6 +128,7 @@ Private Const COMMAND_RIBBON_BATCH = 120
 Private Const COMMAND_M6_VALUE = 121
 Private Const COMMAND_MATERIAL_INSPECTION = 122
 Private Const COMMAND_SET_CAMERA_UP = 123
+Private Const COMMAND_SET_MODEL_ANIMATOR_TIME = 124
 
 Public Const MATERIAL_INSPECTION_LIT = 0
 Public Const MATERIAL_INSPECTION_BASE_COLOR = 1
@@ -171,6 +172,9 @@ Private Const TEXT_COMMAND_MODEL_EVENT_NAME_MATCHES = 6
 Private Const TEXT_COMMAND_PLAY_MODEL_ANIMATOR = 7
 Private Const TEXT_COMMAND_CROSSFADE_MODEL_ANIMATOR = 8
 Private Const TEXT_COMMAND_TAKE_MODEL_ANIMATOR_EVENT = 9
+Private Const TEXT_COMMAND_MODEL_CLIP_NAME = 10
+Private Const TEXT_COMMAND_MODEL_SOCKET_NAME = 11
+Private Const TEXT_COMMAND_MODEL_EVENT_NAME = 12
 
 Public Const PRIMITIVE_CUBE = 1
 Public Const PRIMITIVE_PLANE = 2
@@ -952,6 +956,33 @@ Public Function ModelClipSampleRate3D(Model As Core.Model3D, ClipIndex As Number
 
 End Function
 
+Public Function ModelClipSampleCount3D(Model As Core.Model3D, ClipIndex As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 14, ClipIndex, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function ModelClipLoopRecommended3D(Model As Core.Model3D, ClipIndex As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 15, ClipIndex, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+Public Function ModelClipEventCount3D(Model As Core.Model3D, ClipIndex As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 16, ClipIndex, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
 Public Function ModelAnimationEventCount3D(Model As Core.Model3D) As Number
 
     Dim Result As Number
@@ -976,6 +1007,96 @@ Public Function ModelAnimationEventValue3D(Model As Core.Model3D, EventIndex As 
     Dim Result As Number
 
     Result = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 10, EventIndex, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Returns a zero-based clip index for a one-based event index.
+Public Function ModelAnimationEventClipIndex3D(Model As Core.Model3D, EventIndex As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 17, EventIndex, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Returns event time in milliseconds for a one-based event index.
+Public Function ModelAnimationEventTime3D(Model As Core.Model3D, EventIndex As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 18, EventIndex, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function ModelSocketNodeIndex3D(Model As Core.Model3D, SocketIndex As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_MODEL_ANIMATION_VALUE, Model.Handle, 19, SocketIndex, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+Public Function ModelClipName3D(Model As Core.Model3D, ClipIndex As Number) As Text
+
+    Dim Result As Text
+
+    Result = Renderer3DTextValue(
+        TEXT_COMMAND_MODEL_CLIP_NAME,
+        Model.Handle,
+        ClipIndex,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    )
+    Return Result
+
+End Function
+
+Public Function ModelSocketName3D(Model As Core.Model3D, SocketIndex As Number) As Text
+
+    Dim Result As Text
+
+    Result = Renderer3DTextValue(
+        TEXT_COMMAND_MODEL_SOCKET_NAME,
+        Model.Handle,
+        SocketIndex,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    )
+    Return Result
+
+End Function
+
+''' Event indexes are one-based so zero remains the no-event sentinel.
+Public Function ModelAnimationEventName3D(Model As Core.Model3D, EventIndex As Number) As Text
+
+    Dim Result As Text
+
+    Result = Renderer3DTextValue(
+        TEXT_COMMAND_MODEL_EVENT_NAME,
+        Model.Handle,
+        EventIndex,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    )
     Return Result
 
 End Function
@@ -1820,6 +1941,31 @@ Public Function AnimatorTime3D(Animator As Core.Animator3D) As Number
     Dim Result As Number
 
     Result = Dispatch(COMMAND_ANIMATOR_TIME, Animator.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Seeks without emitting crossed events; cancels fades and clears pending root/event deltas.
+Public Function SetModelAnimatorTime3D(
+    ByRef Animator As Core.Animator3D,
+    TimeMilliseconds As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_MODEL_ANIMATOR_TIME,
+        Animator.Handle,
+        TimeMilliseconds,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
     Return Result
 
 End Function

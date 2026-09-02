@@ -923,6 +923,7 @@ internal sealed class WebEmitter
             SyntaxKind.Renderer3DKeyword => $"smile.renderer3D({arguments})",
             SyntaxKind.Renderer3DImageKeyword => $"smile.renderer3DImage({arguments})",
             SyntaxKind.Renderer3DTextKeyword => $"await smile.renderer3DText({arguments})",
+            SyntaxKind.Renderer3DTextValueKeyword => $"smile.renderer3DTextValue({arguments})",
             _ => RoutineCall(call, call.Identifier)
         };
     }

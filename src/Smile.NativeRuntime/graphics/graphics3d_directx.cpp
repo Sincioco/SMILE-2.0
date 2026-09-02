@@ -4915,8 +4915,56 @@ static long long smile_3d_model_animation_value(SmileModel3D* model,
     if (property == 11) return model->animation_file_bytes;
     if (property == 12) return model->animation_resident_bytes;
     if (property == 13) return sizeof(SmileAnimator3D);
+    if (property >= 14 && property <= 16)
+    {
+        if (index < 0 || index >= model->animation_clip_count) { smile_last_error3d = 48; return 0; }
+        const unsigned char* clip = smile_3d_model_animation_record(model, 3, (unsigned int)index);
+        if (property == 14) return smile_3d_read_u32(clip + 12);
+        if (property == 15) return smile_3d_read_u32(clip + 32) != 0;
+        return smile_3d_read_u32(clip + 28);
+    }
+    if (property == 17 || property == 18)
+    {
+        if (index <= 0 || index > model->animation_event_count) { smile_last_error3d = 48; return 0; }
+        const unsigned char* event = smile_3d_model_animation_record(model, 6,
+            (unsigned int)index - 1);
+        return property == 17 ? smile_3d_read_u32(event) : smile_3d_read_u32(event + 4);
+    }
+    if (property == 19)
+    {
+        if (index < 0 || index >= model->animation_socket_count) { smile_last_error3d = 48; return 0; }
+        return smile_3d_read_u32(smile_3d_model_animation_record(model, 7,
+            (unsigned int)index) + 4);
+    }
     smile_last_error3d = 48;
     return 0;
+}
+
+static int smile_3d_set_model_animator_time(SmileAnimator3D* animator, long long time_ms)
+{
+    SmileModel3D* model = animator == 0 ? 0 : smile_3d_model_resource(animator->model_handle);
+    if (animator == 0 || !animator->model_animation || model == 0 || animator->clip_index < 0 ||
+        animator->clip_index >= model->animation_clip_count || time_ms < 0)
+    { smile_last_error3d = 48; return 0; }
+    const unsigned char* clip = smile_3d_model_animation_record(model, 3,
+        (unsigned int)animator->clip_index);
+    unsigned int duration = smile_3d_read_u32(clip + 4);
+    if ((unsigned long long)time_ms > duration) { smile_last_error3d = 48; return 0; }
+    animator->destination_clip = -1;
+    animator->destination_mode = 0;
+    animator->destination_time_ms = 0;
+    animator->destination_time_remainder = 0;
+    animator->destination_complete = 0;
+    animator->fade_elapsed_ms = 0;
+    animator->fade_duration_ms = 0;
+    animator->time_ms = (unsigned int)time_ms;
+    animator->previous_time_ms = (unsigned int)time_ms;
+    animator->time_remainder = 0;
+    animator->complete = animator->playback_mode != 1 && (unsigned int)time_ms == duration;
+    smile_3d_clear_model_events(animator);
+    ZeroMemory(animator->root_delta, sizeof(animator->root_delta));
+    smile_3d_update_model_pose(animator);
+    return 1;
 }
 
 static long long smile_3d_animator_production_value(SmileAnimator3D* animator,
@@ -7489,6 +7537,8 @@ extern "C" long long smile_renderer3d_command(long long command,
             { smile_last_error3d = 48; return 0; }
             smile_3d_clear_model_events(animator);
             return 1;
+        case SMILE_3D_SET_MODEL_ANIMATOR_TIME:
+            return smile_3d_set_model_animator_time(smile_3d_animator(a), b);
         case SMILE_3D_RENDERER_STATE:
             if (a == 1) return smile_resource_epoch3d;
             if (a == 2) return smile_frame_active3d ? 1 : 0;
@@ -7738,4 +7788,40 @@ extern "C" long long smile_renderer3d_model_text_operation(long long command,
         return smile_3d_take_model_event(smile_3d_animator(a), name);
     smile_last_error3d = 1;
     return 0;
+}
+
+extern "C" long long smile_renderer3d_model_text_value(long long command,
+    long long model_handle, long long index, char* output, long long capacity)
+{
+    SmileModel3D* model = smile_3d_model_resource(model_handle);
+    const char* value = 0;
+    if (model == 0 || !model->has_animation || output == 0 || capacity <= 0)
+    { smile_last_error3d = 48; return -1; }
+    if (command == SMILE_3D_TEXT_MODEL_CLIP_NAME)
+    {
+        if (index < 0 || index >= model->animation_clip_count)
+        { smile_last_error3d = 48; return -1; }
+        value = model->strings + smile_3d_read_u32(
+            smile_3d_model_animation_record(model, 3, (unsigned int)index));
+    }
+    else if (command == SMILE_3D_TEXT_MODEL_SOCKET_NAME)
+    {
+        if (index < 0 || index >= model->animation_socket_count)
+        { smile_last_error3d = 48; return -1; }
+        value = model->strings + smile_3d_read_u32(
+            smile_3d_model_animation_record(model, 7, (unsigned int)index));
+    }
+    else if (command == SMILE_3D_TEXT_MODEL_EVENT_NAME)
+    {
+        if (index <= 0 || index > model->animation_event_count)
+        { smile_last_error3d = 48; return -1; }
+        value = model->strings + smile_3d_read_u32(
+            smile_3d_model_animation_record(model, 6, (unsigned int)index - 1) + 8);
+    }
+    else
+    { smile_last_error3d = 1; return -1; }
+    size_t length = strlen(value);
+    if (length >= (size_t)capacity) { smile_last_error3d = 48; return -1; }
+    memcpy(output, value, length + 1);
+    return (long long)length;
 }

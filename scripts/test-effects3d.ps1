@@ -34,6 +34,8 @@ try {
         'Private Dim ImpulseActive[32] As Boolean',
         'Private Dim PresetEmitterPresets[64, 8] As Number',
         'Public Function AddEmitterLayer(',
+        'RibbonRadius As Number',
+        'Private Dim PresetRibbonRadii[64] As Number',
         'Public Function EmitterCount(',
         'Public Function SpawnAtSocket(',
         'Public Function MoveToSocket(',

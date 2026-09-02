@@ -84,6 +84,7 @@ Public Type EffectPreset
     ShakeAmplitude As Number
     RibbonPointCount As Number
     RibbonWidth As Number
+    RibbonRadius As Number
     QualityLowPercent As Number
     QualityMediumPercent As Number
     QualityHighPercent As Number
@@ -173,6 +174,7 @@ Private Dim PresetFlashPercents[64] As Number
 Private Dim PresetShakeAmplitudes[64] As Number
 Private Dim PresetRibbonPointCounts[64] As Number
 Private Dim PresetRibbonWidths[64] As Number
+Private Dim PresetRibbonRadii[64] As Number
 Private Dim PresetEmitterCounts[64] As Number
 Private Dim PresetEmitterPresets[64, 8] As Number
 Private Dim PresetQualityLowPercent[64] As Number
@@ -576,6 +578,10 @@ Public Function DefinePreset(ByRef Preset As EffectPreset) As Boolean
 
     End If
 
+    If Preset.RibbonPointCount > 0 And Preset.RibbonRadius = 0 Then
+        Preset.RibbonRadius = 170
+    End If
+
     If (Not Initialized Or
         Preset.Id <= 0 Or
         Preset.Name = "" Or
@@ -617,6 +623,8 @@ Public Function DefinePreset(ByRef Preset As EffectPreset) As Boolean
         Preset.RibbonPointCount < 0 Or
         Preset.RibbonPointCount > 256 Or
         Preset.RibbonWidth < 0 Or
+        Preset.RibbonRadius < 0 Or
+        Preset.RibbonRadius > 100000 Or
         Preset.QualityLowPercent < 1 Or
         Preset.QualityLowPercent > 100 Or
         Preset.QualityMediumPercent < 1 Or
@@ -670,6 +678,7 @@ Public Function DefinePreset(ByRef Preset As EffectPreset) As Boolean
     PresetShakeAmplitudes[Index] = Preset.ShakeAmplitude
     PresetRibbonPointCounts[Index] = Preset.RibbonPointCount
     PresetRibbonWidths[Index] = Preset.RibbonWidth
+    PresetRibbonRadii[Index] = Preset.RibbonRadius
     PresetEmitterCounts[Index] = 1
     PresetEmitterPresets[Index, 0] = Index
     PresetQualityLowPercent[Index] = Preset.QualityLowPercent
@@ -1415,6 +1424,7 @@ Private Function CommitRibbon() As Boolean
     Dim Point As Number
     Dim PointCount As Number
     Dim Preset As Number
+    Dim Radius As Number
     Dim Result As Boolean
     Dim Width As Number
 
@@ -1427,15 +1437,16 @@ Private Function CommitRibbon() As Boolean
             Preset = EffectPresets[EffectSlot]
             PointCount = PresetRibbonPointCounts[Preset]
             Width = PresetRibbonWidths[Preset]
+            Radius = PresetRibbonRadii[Preset]
             Age = EffectAges[EffectSlot]
             Fade = Max(0, 100 - Age * 100 / PresetLifetimes[Preset])
 
             For Point = 0 To PointCount - 1
 
                 Angle = -55 + Point * 110 / (PointCount - 1)
-                CenterX = EffectOriginsX[EffectSlot] + FixedMath.CosFixed(Angle) * 170 / Core.FIXED_ONE
-                CenterY = EffectOriginsY[EffectSlot] + FixedMath.SinFixed(Angle) * 150 / Core.FIXED_ONE
-                CenterZ = EffectOriginsZ[EffectSlot] + Point * 3
+                CenterX = EffectOriginsX[EffectSlot] + FixedMath.CosFixed(Angle) * Radius / Core.FIXED_ONE
+                CenterY = EffectOriginsY[EffectSlot] + FixedMath.SinFixed(Angle) * Radius * 15 / (Core.FIXED_ONE * 17)
+                CenterZ = EffectOriginsZ[EffectSlot] + Point * Max(1, Radius * 3 / 170)
                 Result = Graphics3D.SetRibbonPoint3D(RibbonBatch, Point, CenterX, CenterY - Width / 2, CenterZ, CenterX, CenterY + Width / 2, CenterZ, Point * 1000 / (PointCount - 1))
 
                 If Result Then

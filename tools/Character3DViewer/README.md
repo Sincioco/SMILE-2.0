@@ -14,11 +14,13 @@ Controls:
 - `1`, `2`, and `3` select the first three animations.
 - `O` toggles auto-orbit. Turning it off starts the ten-second idle-reset timer.
 - `F` hides or shows the floor and grid together. `G` hides or shows only the grid.
-- `Space` cycles inspection lighting. `Enter` resets the presentation. `Esc` exits.
+- `Space` pauses or resumes animation playback. `Enter` resets the presentation. `Esc` exits.
 - `PROFILE` or `4` switches profiles.
 - `SOCKET` shows socket origins and RGB local-axis endpoints.
 - `CHANNEL` cycles lit, base-color, normal, roughness, metallic, occlusion, and emissive inspection.
 - `-` and `+` change playback speed from 25% through 200%; authored speed is 100%.
+
+The bottom timeline is model-driven. It displays the exact current clip name, duration, sample rate/count, loop recommendation, authored event markers, selected event name/time/payload, and current animation time. Click the timeline to seek without firing skipped events. `-FRAME` and `+FRAME` step by one authored sample, while `EVENT <` and `EVENT >` seek to the previous or next event and pause for inspection. Seeking cancels an in-progress fade and clears queued event/root-motion state so native and Web inspection remain deterministic.
 
 Desktop mouse motion is accumulated so slow drags are not lost between frames, and partial Windows wheel units are retained until they form a complete step. Each repository-owned profile supplies identity, asset, animation, desired view height, and an optional bounded ground offset. The reusable viewer helper derives actor scale, camera, target, floor, pan limits, lighting area, and shadow area from model bounds. A ground offset compensates only for a measured difference between a static bind AABB and the animated sole plane; it does not rewrite animation root motion.
 
