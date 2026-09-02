@@ -1,17 +1,17 @@
 <SmileProject Version="1.0">
   <PropertyGroup>
     <ProjectKind>Game</ProjectKind>
-    <StartupFile>Character3DViewer.smile</StartupFile>
-    <OutputName>Character3DViewer</OutputName>
-    <ApplicationId>smile.tools.character3d-viewer</ApplicationId>
+    <StartupFile>..\..\tools\Character3DViewer\Program.smile</StartupFile>
+    <OutputName>Character3DViewerPrecooked</OutputName>
+    <ApplicationId>smile.tools.character3d-viewer-precooked</ApplicationId>
     <RememberWindowPlacement>true</RememberWindowPlacement>
     <ResponsiveWindow>true</ResponsiveWindow>
     <GraphicsBackend>DirectX</GraphicsBackend>
     <VSync>true</VSync>
   </PropertyGroup>
   <ItemGroup>
-    <SmileSource Include="Character3DViewer.smile" StartupOnly="true" />
-    <SmileSource Include="Character3DViewerProfile.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\Program.smile" StartupOnly="true" />
+    <SmileSource Include="..\..\tools\Character3DViewer\Profiles.smile" />
     <Asset Include="Assets\Generation2\ArinV54\ArinV54.sm3d" />
     <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m0-base-color-ccd55f34588c.png" />
     <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m0-normal-8dd49de64c69.png" />

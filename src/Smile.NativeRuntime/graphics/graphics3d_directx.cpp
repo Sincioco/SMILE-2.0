@@ -576,6 +576,14 @@ static float smile_camera_up3d[3] = { 0.0f, 1.0f, 0.0f };
 static float smile_camera_fov3d = 55.0f;
 static float smile_camera_near3d = 1.0f;
 static float smile_camera_far3d = 10000.0f;
+static float smile_pending_camera_position3d[3];
+static float smile_pending_camera_target3d[3];
+static float smile_pending_camera_up3d[3];
+static float smile_pending_camera_fov3d;
+static float smile_pending_camera_near3d;
+static float smile_pending_camera_far3d;
+static int smile_pending_camera_has_projection3d;
+static int smile_pending_camera_has_up3d;
 static float smile_ambient_color3d[3] = { 1.0f, 1.0f, 1.0f };
 static float smile_ambient_intensity3d = 0.25f;
 static SmileDirectionalLight3D smile_directional_light3d = {
@@ -648,6 +656,15 @@ static long long smile_vfx_particle_triangle_count3d;
 static long long smile_vfx_ribbon_triangle_count3d;
 static long long smile_vfx_particle_submission_count3d;
 static long long smile_vfx_ribbon_submission_count3d;
+
+#define SMILE_3D_CAMERA_WORLD_BOUND 1000000LL
+#define SMILE_3D_CAMERA_ERROR_INVALID_POSITION_TARGET 58
+#define SMILE_3D_CAMERA_ERROR_ZERO_VIEW_DIRECTION 59
+#define SMILE_3D_CAMERA_ERROR_INVALID_PROJECTION 60
+#define SMILE_3D_CAMERA_ERROR_INVALID_UP 61
+#define SMILE_3D_CAMERA_ERROR_PARALLEL_UP 62
+#define SMILE_3D_CAMERA_ERROR_PENDING_INCOMPLETE 63
+#define SMILE_3D_CAMERA_ERROR_FRAME_ACTIVE 64
 
 struct SmileM5TargetState3D
 {
@@ -3715,25 +3732,89 @@ static int smile_3d_update_animator(SmileAnimator3D* animator, unsigned int delt
     return 1;
 }
 
+static void smile_3d_clear_pending_camera(void)
+{
+    smile_pending_camera_has_projection3d = 0;
+    smile_pending_camera_has_up3d = 0;
+}
+
+static int smile_3d_camera_world_value(long long value)
+{
+    return value >= -SMILE_3D_CAMERA_WORLD_BOUND && value <= SMILE_3D_CAMERA_WORLD_BOUND;
+}
+
+static int smile_3d_validate_pending_camera(void)
+{
+    double forward_x;
+    double forward_y;
+    double forward_z;
+    double right_x;
+    double right_y;
+    double right_z;
+    double forward_length_squared;
+    double up_length_squared;
+    double right_length_squared;
+    if (!smile_pending_camera_has_projection3d || !smile_pending_camera_has_up3d)
+    {
+        smile_last_error3d = SMILE_3D_CAMERA_ERROR_PENDING_INCOMPLETE;
+        return 0;
+    }
+    forward_x = (double)smile_pending_camera_target3d[0] - smile_pending_camera_position3d[0];
+    forward_y = (double)smile_pending_camera_target3d[1] - smile_pending_camera_position3d[1];
+    forward_z = (double)smile_pending_camera_target3d[2] - smile_pending_camera_position3d[2];
+    forward_length_squared = forward_x * forward_x + forward_y * forward_y + forward_z * forward_z;
+    if (forward_length_squared <= 0.0)
+    {
+        smile_last_error3d = SMILE_3D_CAMERA_ERROR_ZERO_VIEW_DIRECTION;
+        return 0;
+    }
+    up_length_squared =
+        (double)smile_pending_camera_up3d[0] * smile_pending_camera_up3d[0] +
+        (double)smile_pending_camera_up3d[1] * smile_pending_camera_up3d[1] +
+        (double)smile_pending_camera_up3d[2] * smile_pending_camera_up3d[2];
+    if (up_length_squared <= 0.0)
+    {
+        smile_last_error3d = SMILE_3D_CAMERA_ERROR_INVALID_UP;
+        return 0;
+    }
+    right_x = (double)smile_pending_camera_up3d[1] * forward_z -
+        (double)smile_pending_camera_up3d[2] * forward_y;
+    right_y = (double)smile_pending_camera_up3d[2] * forward_x -
+        (double)smile_pending_camera_up3d[0] * forward_z;
+    right_z = (double)smile_pending_camera_up3d[0] * forward_y -
+        (double)smile_pending_camera_up3d[1] * forward_x;
+    right_length_squared = right_x * right_x + right_y * right_y + right_z * right_z;
+    if (right_length_squared <= forward_length_squared * up_length_squared * 0.00000001)
+    {
+        smile_last_error3d = SMILE_3D_CAMERA_ERROR_PARALLEL_UP;
+        return 0;
+    }
+    return 1;
+}
+
+static void smile_3d_promote_pending_camera(void)
+{
+    memcpy(smile_camera_position3d, smile_pending_camera_position3d,
+        sizeof(smile_camera_position3d));
+    memcpy(smile_camera_target3d, smile_pending_camera_target3d,
+        sizeof(smile_camera_target3d));
+    memcpy(smile_camera_up3d, smile_pending_camera_up3d, sizeof(smile_camera_up3d));
+    smile_camera_fov3d = smile_pending_camera_fov3d;
+    smile_camera_near3d = smile_pending_camera_near3d;
+    smile_camera_far3d = smile_pending_camera_far3d;
+    smile_3d_clear_pending_camera();
+}
+
 static SmileMatrix3D smile_3d_view(void)
 {
     float zx = smile_camera_target3d[0] - smile_camera_position3d[0];
     float zy = smile_camera_target3d[1] - smile_camera_position3d[1];
     float zz = smile_camera_target3d[2] - smile_camera_position3d[2];
     float xx, xy, xz, yx, yy, yz;
-    float right_length;
     SmileMatrix3D result = smile_3d_identity();
     smile_3d_normalize(&zx, &zy, &zz);
     smile_3d_cross(smile_camera_up3d[0], smile_camera_up3d[1], smile_camera_up3d[2],
         zx, zy, zz, &xx, &xy, &xz);
-    right_length = sqrtf(xx * xx + xy * xy + xz * xz);
-    if (right_length < 0.0001f)
-    {
-        if (fabsf(zy) > 0.99f)
-            smile_3d_cross(1, 0, 0, zx, zy, zz, &xx, &xy, &xz);
-        else
-            smile_3d_cross(0, 1, 0, zx, zy, zz, &xx, &xy, &xz);
-    }
     smile_3d_normalize(&xx, &xy, &xz);
     smile_3d_cross(zx, zy, zz, xx, xy, xz, &yx, &yy, &yz);
     result.m[0] = xx; result.m[1] = yx; result.m[2] = zx;
@@ -5814,13 +5895,30 @@ static int smile_3d_begin(long long red, long long green, long long blue)
     ID3D11RenderTargetView* target;
     D3D11_VIEWPORT viewport = {};
     float clear[4];
-    if (smile_frame_active3d) return 1;
+    int use_pending_camera;
+    if (smile_frame_active3d)
+    {
+        smile_3d_clear_pending_camera();
+        smile_last_error3d = SMILE_3D_CAMERA_ERROR_FRAME_ACTIVE;
+        return 0;
+    }
+    use_pending_camera = smile_pending_camera_has_projection3d ||
+        smile_pending_camera_has_up3d;
+    if (use_pending_camera && !smile_3d_validate_pending_camera())
+    {
+        smile_3d_clear_pending_camera();
+        return 0;
+    }
     smile_graphics_begin_frame();
     if (!smile_graphics_directx_suspend_2d() || !smile_3d_create_pipeline() ||
         !smile_3d_prepare_m5_resources())
     {
-        smile_graphics_directx_resume_2d(); smile_last_error3d = 13; return 0;
+        smile_graphics_directx_resume_2d();
+        smile_3d_clear_pending_camera();
+        smile_last_error3d = 13;
+        return 0;
     }
+    if (use_pending_camera) smile_3d_promote_pending_camera();
     context = (ID3D11DeviceContext*)smile_graphics_directx_context();
     target = smile_color_view3d != 0
         ? smile_color_view3d
@@ -6967,9 +7065,19 @@ static void smile_3d_reset(void)
     smile_shadow_requested3d = 0;
     smile_m5_fallback_flags3d = 0;
     smile_m5_configuration_revision3d++;
+    smile_camera_position3d[0] = 0.0f;
+    smile_camera_position3d[1] = 300.0f;
+    smile_camera_position3d[2] = -800.0f;
+    smile_camera_target3d[0] = 0.0f;
+    smile_camera_target3d[1] = 0.0f;
+    smile_camera_target3d[2] = 0.0f;
     smile_camera_up3d[0] = 0.0f;
     smile_camera_up3d[1] = 1.0f;
     smile_camera_up3d[2] = 0.0f;
+    smile_camera_fov3d = 55.0f;
+    smile_camera_near3d = 1.0f;
+    smile_camera_far3d = 10000.0f;
+    smile_3d_clear_pending_camera();
     smile_3d_reset_lights();
     smile_resource_epoch3d++;
     if (smile_resource_epoch3d <= 0 || smile_resource_epoch3d > 2147483647)
@@ -7054,14 +7162,61 @@ extern "C" long long smile_renderer3d_command(long long command,
             }
             smile_last_error3d = 5; return 0;
         case SMILE_3D_SET_CAMERA:
-            smile_camera_position3d[0] = (float)a; smile_camera_position3d[1] = (float)b; smile_camera_position3d[2] = (float)c;
-            smile_camera_target3d[0] = (float)d; smile_camera_target3d[1] = (float)e; smile_camera_target3d[2] = (float)f;
-            smile_camera_fov3d = (float)g; smile_camera_near3d = (float)h; smile_camera_far3d = (float)i;
-            if (smile_camera_fov3d < 10 || smile_camera_fov3d > 160 || smile_camera_near3d <= 0 || smile_camera_far3d <= smile_camera_near3d) { smile_last_error3d = 15; return 0; }
+            if (smile_frame_active3d)
+            {
+                smile_3d_clear_pending_camera();
+                smile_last_error3d = SMILE_3D_CAMERA_ERROR_FRAME_ACTIVE;
+                return 0;
+            }
+            if (!smile_3d_camera_world_value(a) || !smile_3d_camera_world_value(b) ||
+                !smile_3d_camera_world_value(c) || !smile_3d_camera_world_value(d) ||
+                !smile_3d_camera_world_value(e) || !smile_3d_camera_world_value(f))
+            {
+                smile_3d_clear_pending_camera();
+                smile_last_error3d = SMILE_3D_CAMERA_ERROR_INVALID_POSITION_TARGET;
+                return 0;
+            }
+            if (a == d && b == e && c == f)
+            {
+                smile_3d_clear_pending_camera();
+                smile_last_error3d = SMILE_3D_CAMERA_ERROR_ZERO_VIEW_DIRECTION;
+                return 0;
+            }
+            if (g < 10 || g > 160 || h <= 0 || i <= h || i > 2000000)
+            {
+                smile_3d_clear_pending_camera();
+                smile_last_error3d = SMILE_3D_CAMERA_ERROR_INVALID_PROJECTION;
+                return 0;
+            }
+            smile_pending_camera_position3d[0] = (float)a;
+            smile_pending_camera_position3d[1] = (float)b;
+            smile_pending_camera_position3d[2] = (float)c;
+            smile_pending_camera_target3d[0] = (float)d;
+            smile_pending_camera_target3d[1] = (float)e;
+            smile_pending_camera_target3d[2] = (float)f;
+            smile_pending_camera_fov3d = (float)g;
+            smile_pending_camera_near3d = (float)h;
+            smile_pending_camera_far3d = (float)i;
+            smile_pending_camera_has_projection3d = 1;
             return 1;
         case SMILE_3D_SET_CAMERA_UP:
-            if (a == 0 && b == 0 && c == 0) { smile_last_error3d = 15; return 0; }
-            smile_camera_up3d[0] = (float)a; smile_camera_up3d[1] = (float)b; smile_camera_up3d[2] = (float)c;
+            if (smile_frame_active3d)
+            {
+                smile_3d_clear_pending_camera();
+                smile_last_error3d = SMILE_3D_CAMERA_ERROR_FRAME_ACTIVE;
+                return 0;
+            }
+            if (!smile_3d_camera_world_value(a) || !smile_3d_camera_world_value(b) ||
+                !smile_3d_camera_world_value(c) || (a == 0 && b == 0 && c == 0))
+            {
+                smile_3d_clear_pending_camera();
+                smile_last_error3d = SMILE_3D_CAMERA_ERROR_INVALID_UP;
+                return 0;
+            }
+            smile_pending_camera_up3d[0] = (float)a;
+            smile_pending_camera_up3d[1] = (float)b;
+            smile_pending_camera_up3d[2] = (float)c;
+            smile_pending_camera_has_up3d = 1;
             return 1;
         case SMILE_3D_SET_POSITION:
         case SMILE_3D_SET_ROTATION:

@@ -1,0 +1,119 @@
+''' Renderer3D camera-basis and pending-state transaction checks.
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Dim Camera As Core.Camera3D
+Dim Passed As Boolean
+Dim CommandResult As Number
+Dim FailureStep As Number
+Dim RendererAvailable As Boolean
+
+Game Window "Renderer3D Camera Hardening Tests" Size 320 By 200
+
+Call Graphics3D.ResetRenderer3D()
+
+Passed = True
+CommandResult = Renderer3D(123, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0)
+Passed = CommandResult = 1 And Passed
+CommandResult = Renderer3D(16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+Passed = CommandResult = 0 And Passed
+Passed = Graphics3D.LastError() = 63 And Passed
+
+Call Graphics3D.ResetRenderer3D()
+
+CommandResult = Renderer3D(10, 0, 300, -800, 0, 0, 0, 55, 1, 10000, 0)
+Passed = CommandResult = 1 And Passed
+CommandResult = Renderer3D(123, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+Passed = CommandResult = 0 And Passed
+Passed = Graphics3D.LastError() = 61 And Passed
+CommandResult = Renderer3D(123, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0)
+Passed = CommandResult = 1 And Passed
+CommandResult = Renderer3D(16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+Passed = CommandResult = 0 And Passed
+Passed = Graphics3D.LastError() = 63 And Passed
+
+If Not Passed Then
+    FailureStep = 1
+End If
+
+Call Graphics3D.ResetRenderer3D()
+
+Camera = Graphics3D.DefaultCamera()
+Camera.UpDirection.X = Camera.Target.X - Camera.Position.X
+Camera.UpDirection.Y = Camera.Target.Y - Camera.Position.Y
+Camera.UpDirection.Z = Camera.Target.Z - Camera.Position.Z
+Passed = Not Graphics3D.Begin3D(Camera, 0, 0, 0) And Passed
+Passed = Graphics3D.LastError() = 62 And Passed
+
+If Not Passed And FailureStep = 0 Then
+    FailureStep = 2
+End If
+
+RendererAvailable = Renderer3D(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+
+If RendererAvailable Then
+
+    Camera = Graphics3D.DefaultCamera()
+    Passed = Graphics3D.Begin3D(Camera, 0, 0, 0) And Passed
+    Passed = Not Graphics3D.Begin3D(Camera, 0, 0, 0) And Passed
+    Passed = Graphics3D.LastError() = 64 And Passed
+
+    Call Graphics3D.End3D()
+
+    CommandResult = Renderer3D(16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Passed = CommandResult = 1 And Passed
+
+    Call Graphics3D.End3D()
+
+End If
+
+Call Graphics3D.ResetRenderer3D()
+
+If Not Passed And FailureStep = 0 Then
+    FailureStep = 3
+End If
+
+If RendererAvailable Then
+
+    Camera = Graphics3D.DefaultCamera()
+    Camera.Position.X = 0
+    Camera.Position.Y = 800
+    Camera.Position.Z = 0
+    Camera.Target.X = 0
+    Camera.Target.Y = 0
+    Camera.Target.Z = 0
+    Camera.UpDirection.X = 0
+    Camera.UpDirection.Y = 0
+    Camera.UpDirection.Z = 0
+    Passed = Graphics3D.Begin3D(Camera, 0, 0, 0) And Passed
+
+    Call Graphics3D.End3D()
+
+End If
+
+If Not Passed And FailureStep = 0 Then
+    FailureStep = 4
+End If
+
+Call Graphics3D.ResetRenderer3D()
+
+Camera = Graphics3D.DefaultCamera()
+Camera.Position = Camera.Target
+Passed = Not Graphics3D.Begin3D(Camera, 0, 0, 0) And Passed
+Passed = Graphics3D.LastError() = 59 And Passed
+
+If Not Passed And FailureStep = 0 Then
+    FailureStep = 5
+End If
+
+If Passed Then
+    Print "Renderer3D camera hardening tests: PASS"
+Else
+    Print "Renderer3D camera hardening tests: FAIL"
+    Print FailureStep
+End If
+
+Call Graphics3D.ResetRenderer3D()

@@ -743,7 +743,7 @@ const host = {
                     [22, "Escape"], [23, "Escape"], [24, "Escape"], [25, "ArrowRight"],
                     [26, "Digit2"], [27, "Digit3"], [28, "Digit1"], [29, "Enter"],
                     [30, "Space"], [31, "Enter"], [32, "KeyQ"], [33, "KeyE"],
-                    [34, "KeyR"], [35, "KeyT"], [36, "KeyY"], [37, "KeyI"], [38, "KeyO"]
+                    [34, "KeyU"], [35, "KeyT"], [36, "KeyY"], [37, "KeyI"], [38, "KeyP"]
                 ]) : new Map([
                     [2, "ArrowDown"], [3, "ArrowDown"], [4, "ArrowDown"], [5, "ArrowDown"],
                     [6, "ArrowDown"], [7, "ArrowDown"], [8, "ArrowUp"], [9, "Digit2"],
@@ -1041,8 +1041,8 @@ const started = Date.now();
         const expectedKeys = ["ArrowRight", "Enter", "Space", "ArrowDown", "ArrowDown", "ArrowDown", "ArrowDown",
             "ArrowDown", "ArrowDown", "ArrowDown", "KeyD", "KeyD", "KeyW", "KeyX", "ArrowRight", "KeyA",
             "Enter", "KeyS", "Space", "ArrowLeft", "Escape", "Escape", "Escape", "ArrowRight", "Digit2",
-            "Digit3", "Digit1", "Enter", "Space", "Enter", "KeyQ", "KeyE", "KeyR", "KeyT", "KeyY",
-            "KeyI", "KeyO"];
+            "Digit3", "Digit1", "Enter", "Space", "Enter", "KeyQ", "KeyE", "KeyU", "KeyT", "KeyY",
+            "KeyI", "KeyP"];
         if (phase5Keys.join("|") !== expectedKeys.join("|"))
             fail(`Phase 5.2.2 scripted key sequence differed: ${phase5Keys.join(", ")}`);
 

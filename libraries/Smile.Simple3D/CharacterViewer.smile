@@ -5,6 +5,7 @@ Option Explicit
 
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.FixedMath As Math3D
 
 Private Const MIN_SCALE_PERCENT = 1
 Private Const MAX_SCALE_PERCENT = 10000
@@ -21,10 +22,14 @@ Private Const MAX_ZOOM_RATE = 360000
 Public Type Profile
     Version As Number
     AssetId As Text
+    CandidateVersion As Text
     DisplayName As Text
     PartyRole As Text
     PrototypeAlias As Text
+    ProductionStatus As Text
     AssetPath As Text
+    ExpectedClipCount As Number
+    ExpectedSocketCount As Number
     DesiredWorldHeight As Number
     GroundOffset As Number
     MarginPercent As Number
@@ -51,6 +56,8 @@ Public Type Framing
     ShadowDepth As Number
     ShadowNear As Number
     ShadowFar As Number
+    FittedWidth As Number
+    FittedHeight As Number
     Valid As Boolean
 End Type
 
@@ -64,6 +71,100 @@ Public Type ZoomState
     Maximum1000 As Number
 End Type
 
+''' Separated wall, animation, camera, and presentation time for inspection tools.
+Public Type ClockState
+    RawFrameMilliseconds As Number
+    AnimationElapsed As Number
+    CameraElapsed As Number
+    PresentationElapsed As Number
+    DroppedAnimationMilliseconds As Number
+    DroppedCameraMilliseconds As Number
+    LongPauseCount As Number
+End Type
+
+Public Function AdvanceClock(
+    ByRef Value As ClockState,
+    RawElapsed As Number,
+    Optional AnimationCap As Number = 250,
+    Optional CameraCap As Number = 250,
+    Optional RawCap As Number = 60000
+) As Boolean
+
+    Dim AnimationDrop As Number
+    Dim CameraDrop As Number
+
+    If (RawElapsed < 0 Or
+        AnimationCap <= 0 Or
+        CameraCap <= 0 Or
+        RawCap <= 0 Or
+        AnimationCap > RawCap Or
+        CameraCap > RawCap) Then
+        Return False
+    End If
+
+    If RawElapsed > RawCap Then
+        RawElapsed = RawCap
+        Value.LongPauseCount = Value.LongPauseCount + 1
+    End If
+
+    Value.RawFrameMilliseconds = RawElapsed
+    Value.AnimationElapsed = Min(AnimationCap, RawElapsed)
+    Value.CameraElapsed = Min(CameraCap, RawElapsed)
+    Value.PresentationElapsed = RawElapsed
+    AnimationDrop = RawElapsed - Value.AnimationElapsed
+    CameraDrop = RawElapsed - Value.CameraElapsed
+    Value.DroppedAnimationMilliseconds = Value.DroppedAnimationMilliseconds + AnimationDrop
+    Value.DroppedCameraMilliseconds = Value.DroppedCameraMilliseconds + CameraDrop
+
+    Return True
+
+End Function
+
+''' Advances a bounded periodic index while retaining exact overshoot.
+Public Function AdvanceCycle(
+    ByRef Elapsed As Number,
+    Delta As Number,
+    Period As Number,
+    ItemCount As Number
+) As Number
+
+    Dim Result As Number
+
+    If (Delta < 0 Or
+        Delta > 60000 Or
+        Period <= 0 Or
+        ItemCount <= 0 Or
+        ItemCount > 64) Then
+        Return 0
+    End If
+
+    Elapsed = Elapsed + Delta
+    Result = Elapsed / Period
+    Elapsed = Elapsed Mod Period
+    Result = Result Mod ItemCount
+
+    Return Result
+
+End Function
+
+Public Function AdvanceOrbitYaw1000(
+    ByRef Yaw1000 As Number,
+    ElapsedMilliseconds As Number,
+    DegreesPerSecond As Number
+) As Boolean
+
+    If (ElapsedMilliseconds < 0 Or
+        ElapsedMilliseconds > 60000 Or
+        Abs(DegreesPerSecond) > 3600) Then
+        Return False
+    End If
+
+    Yaw1000 = (Yaw1000 + ElapsedMilliseconds * DegreesPerSecond) Mod 360000
+
+    Return True
+
+End Function
+
 ''' Validates the bounded fields required by every character-viewer profile.
 Public Function ValidateProfile(Value As Profile) As Boolean
 
@@ -71,8 +172,14 @@ Public Function ValidateProfile(Value As Profile) As Boolean
 
     Result = (Value.Version = 1 And
         Value.AssetId <> "" And
+        Value.CandidateVersion <> "" And
         Value.DisplayName <> "" And
+        Value.ProductionStatus <> "" And
         Value.AssetPath <> "" And
+        Value.ExpectedClipCount >= 0 And
+        Value.ExpectedClipCount <= 64 And
+        Value.ExpectedSocketCount >= 0 And
+        Value.ExpectedSocketCount <= 64 And
         Value.DesiredWorldHeight >= MIN_VIEW_HEIGHT And
         Value.DesiredWorldHeight <= MAX_VIEW_HEIGHT And
         Value.GroundOffset >= MIN_GROUND_OFFSET And
@@ -91,14 +198,29 @@ Public Function ValidateProfile(Value As Profile) As Boolean
 End Function
 
 ''' Derives a grounded, centered character and bounded studio camera from local bounds.
-Public Function AutoFit(Value As Profile, Bounds As Character3D.Bounds3D) As Framing
+Public Function AutoFit(
+    Value As Profile,
+    Bounds As Character3D.Bounds3D,
+    Optional ViewportWidth As Number = 0,
+    Optional ViewportHeight As Number = 0,
+    Optional FovDegrees As Number = 55
+) As Framing
 
     Dim Result As Framing
     Dim ScaledMinimumY1000 As Number
     Dim ScaledCenterX1000 As Number
     Dim ScaledCenterZ1000 As Number
     Dim FittedHeight As Number
+    Dim FittedWidth As Number
     Dim PaddedHeight As Number
+    Dim PaddedWidth As Number
+    Dim HalfFov As Number
+    Dim Sine As Number
+    Dim Cosine As Number
+    Dim Aspect1000 As Number
+    Dim VerticalDistance As Number
+    Dim HorizontalDistance As Number
+    Dim CameraDistance As Number
 
     If (Not ValidateProfile(Value) Or
         Not Bounds.Valid Or
@@ -112,13 +234,29 @@ Public Function AutoFit(Value As Profile, Bounds As Character3D.Bounds3D) As Fra
     ScaledCenterX1000 = Bounds.Center.X * Result.ScalePercent / 100
     ScaledCenterZ1000 = Bounds.Center.Z * Result.ScalePercent / 100
     FittedHeight = Bounds.Size.Y * Result.ScalePercent / 100000
+    FittedWidth = Max(Bounds.Size.X, Bounds.Size.Z) * Result.ScalePercent / 100000
     PaddedHeight = FittedHeight * (100 + Value.MarginPercent) / 100
+    PaddedWidth = FittedWidth * (100 + Value.MarginPercent) / 100
     Result.PositionX = 0 - ScaledCenterX1000 / 1000
     Result.PositionY = 0 - ScaledMinimumY1000 / 1000 + Value.GroundOffset
     Result.PositionZ = 0 - ScaledCenterZ1000 / 1000
     Result.TargetY = FittedHeight / 2
     Result.CameraY = Result.TargetY
-    Result.CameraZ = 0 - PaddedHeight * 3 / 2
+    CameraDistance = PaddedHeight * 3 / 2
+
+    If ViewportWidth > 0 And ViewportHeight > 0 Then
+
+        HalfFov = Min(80, Max(5, FovDegrees / 2))
+        Sine = Max(1, Abs(Math3D.SinFixed(HalfFov)))
+        Cosine = Max(1, Abs(Math3D.CosFixed(HalfFov)))
+        Aspect1000 = Max(1, ViewportWidth * 1000 / ViewportHeight)
+        VerticalDistance = PaddedHeight * Cosine / (2 * Sine)
+        HorizontalDistance = PaddedWidth * Cosine * 1000 / (2 * Sine * Aspect1000)
+        CameraDistance = Max(CameraDistance, Max(VerticalDistance, HorizontalDistance))
+
+    End If
+
+    Result.CameraZ = 0 - CameraDistance
     Result.FloorWidth = Max(400, PaddedHeight * 4)
     Result.FloorDepth = Max(320, PaddedHeight * 3)
     Result.PanXLimit = Max(40, PaddedHeight / 2)
@@ -127,6 +265,8 @@ Public Function AutoFit(Value As Profile, Bounds As Character3D.Bounds3D) As Fra
     Result.ShadowDepth = Max(160, PaddedHeight * 3 / 2)
     Result.ShadowNear = 1
     Result.ShadowFar = Max(400, PaddedHeight * 3)
+    Result.FittedWidth = FittedWidth
+    Result.FittedHeight = FittedHeight
     Result.Valid = True
 
     Return Result

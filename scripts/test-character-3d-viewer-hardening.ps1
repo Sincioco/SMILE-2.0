@@ -15,8 +15,8 @@ $identityPath = Join-Path $repositoryRoot `
     'games\Dragonfall\SourceAssets\Arin\paladin-prototype-asset.json'
 $referencePath = Join-Path $repositoryRoot `
     'games\Dragonfall\SourceAssets\Arin\paladin-reference-images.json'
-$viewerSourcePath = Join-Path $repositoryRoot 'games\Dragonfall\Character3DViewer.smile'
-$profileSourcePath = Join-Path $repositoryRoot 'games\Dragonfall\Character3DViewerProfile.smile'
+$viewerSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Program.smile'
+$profileSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Profiles.smile'
 $adapterSourcePath = Join-Path $repositoryRoot 'games\Dragonfall\DragonfallVisualActor.smile'
 $preparationPath = Join-Path $repositoryRoot 'scripts\prepare-dragonfall-arin-prototype.ps1'
 $pointerSourcePath = Join-Path $repositoryRoot 'src\Smile.NativeRuntime\input\pointer_state.c'
@@ -111,7 +111,8 @@ try {
         'games\Dragonfall\Character3DViewer.smileproj') -Raw) `
         '<ResponsiveWindow>true</ResponsiveWindow>' 'Character 3D Viewer project'
     Assert-Contains $profileSource `
-        'Result.AssetId = "sin-star-i.character-1.paladin.v5-4"' 'Viewer profile'
+        'Result.AssetId = "sin-star-i.character-1.paladin"' 'Viewer profile'
+    Assert-Contains $profileSource 'Result.CandidateVersion = "v5.4"' 'Viewer profile'
     Assert-Contains $profileSource 'Result.DisplayName = "Arin"' 'Viewer profile'
     Assert-Contains $profileSource 'Result.PartyRole = "Paladin"' 'Viewer profile'
     Assert-Contains $profileSource 'Result.GroundOffset = -10' 'Viewer profile'

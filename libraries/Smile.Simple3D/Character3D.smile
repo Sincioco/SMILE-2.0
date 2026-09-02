@@ -2070,6 +2070,23 @@ Public Function HasSocket(Value As Actor, Name As Text) As Boolean
 
 End Function
 
+Public Function HasClip(Value As Actor, Name As Text) As Boolean
+
+    Dim Slot As Number
+    Dim AssetSlot As Number
+    Dim Result As Boolean
+
+    Slot = ActorSlot(Value)
+
+    If Slot >= 0 Then
+        AssetSlot = ActorAssetSlot[Slot]
+        Result = Graphics3D.ModelClipIndex3D(AssetModels[AssetSlot], Name) >= 0
+    End If
+
+    Return Result
+
+End Function
+
 Public Function SocketPosition(Value As Actor, Name As Text) As Core.Vector3
 
     Dim Result As Core.Vector3
@@ -2316,6 +2333,36 @@ Public Function ModelHandle(Value As Actor) As Number
     ReturnValue = AssetModels[ActorAssetSlot[Slot]].Handle
 
     Return ReturnValue
+
+End Function
+
+Public Function ClipCount(Value As Actor) As Number
+
+    Dim Slot As Number
+    Dim Result As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot >= 0 Then
+        Result = AssetModels[ActorAssetSlot[Slot]].ClipCount
+    End If
+
+    Return Result
+
+End Function
+
+Public Function SocketCount(Value As Actor) As Number
+
+    Dim Slot As Number
+    Dim Result As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot >= 0 Then
+        Result = AssetModels[ActorAssetSlot[Slot]].SocketCount
+    End If
+
+    Return Result
 
 End Function
 

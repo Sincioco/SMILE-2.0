@@ -75,7 +75,9 @@ internal sealed class CompilerDriver
                     }
 
                     WebOutputWriter.Write(webStagingDirectory, new WebEmitter(analysis, appIdentity,
-                        buildAssets?.AssetPaths), _testHooks?.AfterWebStagedFile);
+                        buildAssets?.AssetPaths,
+                        responsiveWindow: input.Project?.ResponsiveWindow == true),
+                        _testHooks?.AfterWebStagedFile);
                     var currentPaths = new List<string>(WebOutputWriter.ManagedFileNames);
                     if (input.Project != null)
                     {

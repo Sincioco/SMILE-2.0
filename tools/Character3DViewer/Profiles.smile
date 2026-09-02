@@ -1,5 +1,5 @@
 ''' Repository-owned profiles for the generic Character 3D Viewer.
-Module Dragonfall.Character3DViewerProfile
+Module Smile.Tools.Character3DViewerProfiles
 
 Option Explicit
 
@@ -28,11 +28,15 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
 
     If Index = PROFILE_ARIN Then
 
-        Result.AssetId = "sin-star-i.character-1.paladin.v5-4"
+        Result.AssetId = "sin-star-i.character-1.paladin"
+        Result.CandidateVersion = "v5.4"
         Result.DisplayName = "Arin"
         Result.PartyRole = "Paladin"
         Result.PrototypeAlias = "dragonfall.arin-v5-4"
+        Result.ProductionStatus = "Candidate"
         Result.AssetPath = "Assets\Generation2\ArinV54\ArinV54.sm3d"
+        Result.ExpectedClipCount = 11
+        Result.ExpectedSocketCount = 6
         Result.DesiredWorldHeight = 100
         ''' The armature bind AABB extends 0.104 model units below the animated
         ''' Idle soles, which equals ten fitted viewer units for this asset.
@@ -41,19 +45,27 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
     Else If Index = PROFILE_ARIN_ORIGINAL Then
 
         Result.AssetId = "sin-star-i.character-1.paladin"
+        Result.CandidateVersion = "prototype-original"
         Result.DisplayName = "Arin (Original)"
         Result.PartyRole = "Paladin"
         Result.PrototypeAlias = "dragonfall.arin-prototype"
+        Result.ProductionStatus = "Prototype"
         Result.AssetPath = "Assets\Generation2\Arin\ArinPrototype.sm3d"
+        Result.ExpectedClipCount = 3
+        Result.ExpectedSocketCount = 6
         Result.DesiredWorldHeight = 100
 
     Else If Index = PROFILE_TECHNICAL_ARTICULATED Then
 
         Result.AssetId = "smile.technical.animation-articulated"
+        Result.CandidateVersion = "fixture-v1"
         Result.DisplayName = "Articulated Fixture"
         Result.PartyRole = ""
         Result.PrototypeAlias = ""
+        Result.ProductionStatus = "Technical"
         Result.AssetPath = "TechnicalAssets\Generation2\AnimationArticulated.sm3d"
+        Result.ExpectedClipCount = 5
+        Result.ExpectedSocketCount = 1
         Result.DesiredWorldHeight = 180
 
     End If

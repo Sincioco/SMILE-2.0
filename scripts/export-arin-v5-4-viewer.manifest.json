@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "assetId": "sin-star-i.character-1.paladin",
+  "candidateVersion": "v5.4",
+  "prototypeAlias": "dragonfall.arin-v5-4",
+  "armature": "ArinRig",
+  "body": "ArinBody",
+  "attachments": {
+    "ArinSword": "R_Hand",
+    "ArinSwordGripGlove": "R_Hand",
+    "ArinShield": "L_Hand"
+  },
+  "actions": [
+    "Idle",
+    "Walk",
+    "Run",
+    "Ready",
+    "SwordAttack",
+    "ShieldBashCandidate",
+    "Defend",
+    "BlockImpact",
+    "Hit",
+    "KO",
+    "Victory"
+  ],
+  "referenceAction": "Idle",
+  "referenceFrame": 1.0,
+  "referenceTransformPolicy": "source-world-times-reference-inverse",
+  "sampleRate": 30,
+  "expectedBlenderVersion": "5.2.1",
+  "allowedAttachmentModifiers": [
+    "ARMATURE"
+  ],
+  "allowedGlbExtensions": []
+}

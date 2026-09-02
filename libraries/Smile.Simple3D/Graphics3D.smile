@@ -3677,6 +3677,9 @@ Public Function Begin3D(
     Dim UpX As Number
     Dim UpY As Number
     Dim UpZ As Number
+    Dim ForwardX As Number
+    Dim ForwardY As Number
+    Dim ForwardZ As Number
 
     UpX = Camera.UpDirection.X
     UpY = Camera.UpDirection.Y
@@ -3685,7 +3688,18 @@ Public Function Begin3D(
     If (UpX = 0 And
         UpY = 0 And
         UpZ = 0) Then
-        UpY = 1
+
+        ForwardX = Camera.Target.X - Camera.Position.X
+        ForwardY = Camera.Target.Y - Camera.Position.Y
+        ForwardZ = Camera.Target.Z - Camera.Position.Z
+
+        If (Abs(ForwardX) <= Max(1, Abs(ForwardY) / 10000) And
+            Abs(ForwardZ) <= Max(1, Abs(ForwardY) / 10000)) Then
+            UpX = 1
+        Else
+            UpY = 1
+        End If
+
     End If
 
     If Dispatch(

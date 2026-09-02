@@ -6,20 +6,41 @@ import os
 import sys
 import json
 import struct
+import hashlib
+import math
+import uuid
 from math import ceil, floor
 
 import bpy
 from mathutils import Matrix
 
 
-ARMATURE_NAME = "ArinRig"
-BODY_NAME = "ArinBody"
+MANIFEST_PATH = os.path.splitext(__file__)[0] + ".manifest.json"
 SMILE_ROOT_BONE = "SMILE_Root"
-RIGID_ATTACHMENTS = {
-    "ArinSword": "R_Hand",
-    "ArinSwordGripGlove": "R_Hand",
-    "ArinShield": "L_Hand",
-}
+
+
+def load_manifest() -> dict:
+    with open(MANIFEST_PATH, "r", encoding="utf-8") as stream:
+        value = json.load(stream)
+    required = {
+        "version", "assetId", "candidateVersion", "prototypeAlias", "armature",
+        "body", "attachments", "actions", "referenceAction", "referenceFrame",
+        "referenceTransformPolicy", "sampleRate", "expectedBlenderVersion",
+        "allowedAttachmentModifiers", "allowedGlbExtensions",
+    }
+    if set(value) != required or value["version"] != 1:
+        raise RuntimeError("The Arin export manifest schema is not the supported exact version 1 shape.")
+    if value["assetId"] != "sin-star-i.character-1.paladin" or value["candidateVersion"] != "v5.4":
+        raise RuntimeError("The export manifest does not identify the approved Arin v5.4 candidate.")
+    if len(value["actions"]) != len(set(value["actions"])) or not value["actions"]:
+        raise RuntimeError("The export action allowlist must be non-empty and unique.")
+    if value["referenceAction"] not in value["actions"] or value["sampleRate"] not in (24, 30, 60):
+        raise RuntimeError("The manifest reference action or sample rate is invalid.")
+    if bpy.app.version_string.split()[0] != value["expectedBlenderVersion"]:
+        raise RuntimeError(
+            f"Expected Blender {value['expectedBlenderVersion']}; running {bpy.app.version_string}."
+        )
+    return value
 
 
 def output_path() -> str:
@@ -31,6 +52,14 @@ def output_path() -> str:
         raise RuntimeError("Expected exactly one destination GLB path after --.")
 
     return os.path.abspath(arguments[0])
+
+
+def sha256_file(path: str) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest().upper()
 
 
 def require_object(name: str, object_type: str) -> bpy.types.Object:
@@ -46,9 +75,16 @@ def convert_rigid_attachment(
     armature: bpy.types.Object,
     bone_name: str,
     original_world: Matrix,
+    allowed_modifiers: set[str],
 ) -> None:
     if armature.data.bones.get(bone_name) is None:
         raise RuntimeError(f"Required attachment bone is missing: {bone_name}")
+
+    unexpected = sorted({modifier.type for modifier in value.modifiers} - allowed_modifiers)
+    if unexpected:
+        raise RuntimeError(
+            f"Attachment {value.name} has unsupported visible modifiers: {', '.join(unexpected)}"
+        )
 
     value.data = value.data.copy()
     value.data.transform(armature.matrix_world.inverted() @ original_world)
@@ -71,23 +107,51 @@ def convert_rigid_attachment(
 
 def sample_armature_motion(
     armature: bpy.types.Object,
-) -> dict[str, list[tuple[int, Matrix]]]:
+    action_names: list[str],
+    sample_rate: int,
+) -> dict[str, list[tuple[float, Matrix]]]:
     if armature.animation_data is None:
         raise RuntimeError("ArinRig has no animation data.")
 
     for track in armature.animation_data.nla_tracks:
         track.mute = True
 
-    result: dict[str, list[tuple[int, Matrix]]] = {}
-    for action in sorted(bpy.data.actions, key=lambda value: value.name):
+    source_fps = bpy.context.scene.render.fps / bpy.context.scene.render.fps_base
+    if not math.isfinite(source_fps) or source_fps <= 0:
+        raise RuntimeError("The Blender scene FPS is invalid.")
+    actions = []
+    for name in action_names:
+        action = bpy.data.actions.get(name)
+        if action is None:
+            raise RuntimeError(f"Required manifest action is missing: {name}")
+        actions.append(action)
+
+    result: dict[str, list[tuple[float, Matrix]]] = {}
+    for action in actions:
         armature.animation_data.action = action
-        first_frame = ceil(action.frame_range[0])
-        last_frame = floor(action.frame_range[1])
-        samples: list[tuple[int, Matrix]] = []
-        for frame in range(first_frame, last_frame + 1):
-            bpy.context.scene.frame_set(frame)
+        first_frame = float(action.frame_range[0])
+        last_frame = float(action.frame_range[1])
+        if (
+            not math.isfinite(first_frame)
+            or not math.isfinite(last_frame)
+            or last_frame < first_frame
+            or last_frame - first_frame > source_fps * 600
+        ):
+            raise RuntimeError(f"Action {action.name} has an unsupported time range.")
+        step = source_fps / sample_rate
+        sample_count = max(1, int(math.floor((last_frame - first_frame) / step)) + 1)
+        sample_frames = [first_frame + index * step for index in range(sample_count)]
+        if not math.isclose(sample_frames[-1], last_frame, abs_tol=1e-7):
+            sample_frames.append(last_frame)
+        samples: list[tuple[float, Matrix]] = []
+        for frame in sample_frames:
+            whole = math.floor(frame)
+            bpy.context.scene.frame_set(whole, subframe=frame - whole)
             bpy.context.view_layer.update()
-            samples.append((frame, armature.matrix_world.copy()))
+            matrix = armature.matrix_world.copy()
+            if not all(math.isfinite(value) for row in matrix for value in row):
+                raise RuntimeError(f"Action {action.name} produced a non-finite transform at {frame}.")
+            samples.append((frame, matrix))
         result[action.name] = samples
 
     armature.animation_data.action = None
@@ -95,6 +159,10 @@ def sample_armature_motion(
 
 
 def add_smile_root_bone(armature: bpy.types.Object) -> None:
+    if armature.data.bones.get(SMILE_ROOT_BONE) is not None:
+        raise RuntimeError(
+            "The clean export source already contains SMILE_Root; refusing a second root insertion."
+        )
     bpy.context.view_layer.objects.active = armature
     armature.select_set(True)
     bpy.ops.object.mode_set(mode="EDIT")
@@ -112,8 +180,9 @@ def add_smile_root_bone(armature: bpy.types.Object) -> None:
     bpy.ops.object.mode_set(mode="OBJECT")
 
 
-def remove_armature_object_curves() -> None:
-    for action in bpy.data.actions:
+def remove_armature_object_curves(action_names: list[str]) -> None:
+    for action_name in action_names:
+        action = bpy.data.actions[action_name]
         for layer in action.layers:
             for strip in layer.strips:
                 for channel_bag in strip.channelbags:
@@ -140,7 +209,8 @@ def bake_armature_motion_to_root(
         action = bpy.data.actions[action_name]
         armature.animation_data.action = action
         for frame, source_world in action_samples:
-            bpy.context.scene.frame_set(frame)
+            whole = math.floor(frame)
+            bpy.context.scene.frame_set(whole, subframe=frame - whole)
             bpy.context.view_layer.update()
             delta = source_world @ reference_inverse
             smile_root.matrix = delta @ smile_root.bone.matrix_local
@@ -298,22 +368,94 @@ def compact_glb_tables(document: dict) -> None:
     ]
 
 
-def optimize_glb_animation_tables(path: str) -> None:
+def validate_glb_document(document: dict, binary: bytes, allowed_extensions: set[str]) -> None:
+    extensions = set(document.get("extensionsUsed", [])) | set(document.get("extensionsRequired", []))
+    unexpected = sorted(extensions - allowed_extensions)
+    if unexpected:
+        raise RuntimeError(f"Unexpected GLB extensions: {', '.join(unexpected)}")
+    views = document.get("bufferViews", [])
+    accessors = document.get("accessors", [])
+    for index, view in enumerate(views):
+        if view.get("buffer", 0) != 0:
+            raise RuntimeError(f"bufferView {index} references an unsupported buffer.")
+        offset = view.get("byteOffset", 0)
+        length = view.get("byteLength", 0)
+        if offset < 0 or length < 0 or offset + length > len(binary):
+            raise RuntimeError(f"bufferView {index} escapes the GLB binary chunk.")
+    for index, accessor in enumerate(accessors):
+        view_index = accessor.get("bufferView")
+        if view_index is not None and (view_index < 0 or view_index >= len(views)):
+            raise RuntimeError(f"accessor {index} references an invalid bufferView.")
+        if accessor.get("count", 0) < 0:
+            raise RuntimeError(f"accessor {index} has an invalid count.")
+
+
+def externalize_glb_images(document: dict, binary: bytes, destination: str) -> list[str]:
+    image_paths: list[str] = []
+    base_name = os.path.splitext(os.path.basename(destination))[0]
+    destination_directory = os.path.dirname(destination)
+    extensions = {"image/jpeg": ".jpg", "image/png": ".png"}
+    for index, image in enumerate(document.get("images", [])):
+        view_index = image.get("bufferView")
+        mime_type = image.get("mimeType")
+        if view_index is None or mime_type not in extensions:
+            raise RuntimeError(
+                f"Image {index} is not a supported embedded JPEG or PNG source."
+            )
+        view = document["bufferViews"][view_index]
+        offset = view.get("byteOffset", 0)
+        length = view.get("byteLength", 0)
+        image_bytes = binary[offset : offset + length]
+        file_name = f"{base_name}.texture-{index:02d}{extensions[mime_type]}"
+        image_path = os.path.join(destination_directory, file_name)
+        temporary_image_path = image_path + f".tmp-{uuid.uuid4().hex}"
+        with open(temporary_image_path, "wb") as stream:
+            stream.write(image_bytes)
+        os.replace(temporary_image_path, image_path)
+        image.pop("bufferView")
+        image["uri"] = file_name
+        image_paths.append(image_path)
+    return image_paths
+
+
+def optimize_glb_animation_tables(
+    path: str,
+    destination: str,
+    action_names: list[str],
+    allowed_extensions: set[str],
+) -> list[str]:
     with open(path, "rb") as stream:
         source = stream.read()
-    magic, version, _ = struct.unpack_from("<4sII", source, 0)
-    if magic != b"glTF" or version != 2:
+    if len(source) < 28:
+        raise RuntimeError("Generated GLB is truncated.")
+    magic, version, declared_length = struct.unpack_from("<4sII", source, 0)
+    if magic != b"glTF" or version != 2 or declared_length != len(source):
         raise RuntimeError("Expected a Blender glTF 2.0 binary export.")
     json_length, json_type = struct.unpack_from("<II", source, 12)
     if json_type != 0x4E4F534A:
         raise RuntimeError("GLB JSON chunk is missing.")
     json_start = 20
     json_end = json_start + json_length
+    if json_end + 8 > len(source):
+        raise RuntimeError("GLB JSON chunk escapes the file.")
     document = json.loads(source[json_start:json_end].decode("utf-8").rstrip(" \0"))
     binary_length, binary_type = struct.unpack_from("<II", source, json_end)
     if binary_type != 0x004E4942:
         raise RuntimeError("GLB binary chunk is missing.")
-    binary = source[json_end + 8 : json_end + 8 + binary_length]
+    binary_end = json_end + 8 + binary_length
+    if binary_end > len(source) or binary_end != len(source):
+        raise RuntimeError("GLB binary chunk length does not match the file.")
+    binary = source[json_end + 8 : binary_end]
+    validate_glb_document(document, binary, allowed_extensions)
+    image_paths = externalize_glb_images(document, binary, destination)
+
+    animations_by_name = {
+        animation.get("name", ""): animation for animation in document.get("animations", [])
+    }
+    missing = [name for name in action_names if name not in animations_by_name]
+    if missing:
+        raise RuntimeError(f"Exported GLB is missing manifest actions: {', '.join(missing)}")
+    document["animations"] = [animations_by_name[name] for name in action_names]
 
     removed_channels = 0
     for animation in document.get("animations", []):
@@ -334,6 +476,8 @@ def optimize_glb_animation_tables(path: str) -> None:
         animation["samplers"] = [
             animation["samplers"][index] for index in used_samplers
         ]
+        if not animation["channels"] or not animation["samplers"]:
+            raise RuntimeError(f"Animation {animation.get('name', '<unnamed>')} became empty.")
 
     compact_glb_tables(document)
     if len(document["bufferViews"]) > 1024 or len(document["accessors"]) > 1024:
@@ -361,68 +505,140 @@ def optimize_glb_animation_tables(path: str) -> None:
         f"retained {len(document['bufferViews'])} bufferViews and "
         f"{len(document['accessors'])} accessors."
     )
+    return image_paths
 
 
 def main() -> None:
+    manifest = load_manifest()
     destination = output_path()
-    armature = require_object(ARMATURE_NAME, "ARMATURE")
-    body = require_object(BODY_NAME, "MESH")
+    temporary_destination = destination + f".tmp-{uuid.uuid4().hex}.glb"
+    armature = require_object(manifest["armature"], "ARMATURE")
+    body = require_object(manifest["body"], "MESH")
     attachments = {
-        name: require_object(name, "MESH") for name in RIGID_ATTACHMENTS
+        name: require_object(name, "MESH") for name in manifest["attachments"]
     }
+    scene = bpy.context.scene
+    active_object = bpy.context.view_layer.objects.active
+    active_name = active_object.name if active_object else None
+    original_mode = active_object.mode if active_object else "OBJECT"
+    selected_names = {value.name for value in bpy.context.selected_objects}
+    original_frame = scene.frame_current + scene.frame_subframe
+    original_pose_position = armature.data.pose_position
+    original_action = armature.animation_data.action if armature.animation_data else None
+    original_nla_mutes = [] if armature.animation_data is None else [
+        (track, track.mute) for track in armature.animation_data.nla_tracks
+    ]
+    try:
+        if bpy.context.object is not None and bpy.context.object.mode != "OBJECT":
+            bpy.ops.object.mode_set(mode="OBJECT")
 
-    if bpy.context.object is not None and bpy.context.object.mode != "OBJECT":
-        bpy.ops.object.mode_set(mode="OBJECT")
+        motion_samples = sample_armature_motion(
+            armature,
+            manifest["actions"],
+            manifest["sampleRate"],
+        )
+        reference_action = bpy.data.actions[manifest["referenceAction"]]
+        armature.animation_data.action = reference_action
+        reference_frame = float(manifest["referenceFrame"])
+        reference_whole = math.floor(reference_frame)
+        scene.frame_set(reference_whole, subframe=reference_frame - reference_whole)
+        bpy.context.view_layer.update()
+        reference_transform = armature.matrix_world.copy()
+        if abs(reference_transform.determinant()) < 1e-8:
+            raise RuntimeError("The manifest reference armature transform is singular.")
+        armature.matrix_world = reference_transform
 
-    motion_samples = sample_armature_motion(armature)
-    idle_samples = motion_samples.get("Idle")
-    if not idle_samples:
-        raise RuntimeError("Idle animation has no sampled armature motion.")
-    reference_transform = idle_samples[0][1]
-    armature.matrix_world = reference_transform
+        armature.data.pose_position = "REST"
+        scene.frame_set(0)
+        bpy.context.view_layer.update()
 
-    armature.data.pose_position = "REST"
-    bpy.context.scene.frame_set(0)
-    bpy.context.view_layer.update()
+        original_world = {name: value.matrix_world.copy() for name, value in attachments.items()}
+        allowed_modifiers = set(manifest["allowedAttachmentModifiers"])
+        for name, bone_name in manifest["attachments"].items():
+            convert_rigid_attachment(
+                attachments[name], armature, bone_name, original_world[name], allowed_modifiers
+            )
 
-    original_world = {name: value.matrix_world.copy() for name, value in attachments.items()}
-    for name, bone_name in RIGID_ATTACHMENTS.items():
-        convert_rigid_attachment(attachments[name], armature, bone_name, original_world[name])
+        add_smile_root_bone(armature)
+        remove_armature_object_curves(manifest["actions"])
+        armature.data.pose_position = "POSE"
+        bake_armature_motion_to_root(armature, motion_samples, reference_transform)
+        bpy.context.view_layer.update()
+        bpy.ops.object.select_all(action="DESELECT")
+        for value in [armature, body, *attachments.values()]:
+            value.hide_set(False)
+            value.select_set(True)
+        bpy.context.view_layer.objects.active = armature
 
-    add_smile_root_bone(armature)
-    remove_armature_object_curves()
-    armature.data.pose_position = "POSE"
-    bake_armature_motion_to_root(armature, motion_samples, reference_transform)
-    bpy.context.view_layer.update()
-    bpy.ops.object.select_all(action="DESELECT")
-    for value in [armature, body, *attachments.values()]:
-        value.hide_set(False)
-        value.select_set(True)
-    bpy.context.view_layer.objects.active = armature
+        os.makedirs(os.path.dirname(destination), exist_ok=True)
+        status = bpy.ops.export_scene.gltf(
+            filepath=temporary_destination,
+            export_format="GLB",
+            use_selection=True,
+            export_materials="EXPORT",
+            export_animations=True,
+            export_animation_mode="ACTIONS",
+            export_merge_animation="ACTION",
+            export_anim_single_armature=True,
+            export_anim_scene_split_object=True,
+            export_armature_object_remove=True,
+            export_reset_pose_bones=False,
+            export_rest_position_armature=True,
+            export_optimize_animation_keep_anim_armature=False,
+            export_extra_animations=False,
+            export_skins=True,
+        )
+        if "FINISHED" not in status:
+            raise RuntimeError(f"Blender GLB export failed: {sorted(status)}")
 
-    os.makedirs(os.path.dirname(destination), exist_ok=True)
-    status = bpy.ops.export_scene.gltf(
-        filepath=destination,
-        export_format="GLB",
-        use_selection=True,
-        export_materials="EXPORT",
-        export_animations=True,
-        export_animation_mode="ACTIONS",
-        export_merge_animation="ACTION",
-        export_anim_single_armature=True,
-        export_anim_scene_split_object=True,
-        export_armature_object_remove=True,
-        export_reset_pose_bones=False,
-        export_rest_position_armature=True,
-        export_optimize_animation_keep_anim_armature=False,
-        export_extra_animations=False,
-        export_skins=True,
-    )
-    if "FINISHED" not in status:
-        raise RuntimeError(f"Blender GLB export failed: {sorted(status)}")
-
-    optimize_glb_animation_tables(destination)
-    print(f"Exported {destination}")
+        image_paths = optimize_glb_animation_tables(
+            temporary_destination,
+            destination,
+            manifest["actions"],
+            set(manifest["allowedGlbExtensions"]),
+        )
+        os.replace(temporary_destination, destination)
+        metadata = {
+            "version": 1,
+            "assetId": manifest["assetId"],
+            "candidateVersion": manifest["candidateVersion"],
+            "blenderVersion": bpy.app.version_string,
+            "gltfExporter": "Blender io_scene_gltf2",
+            "scriptSha256": sha256_file(__file__),
+            "manifestSha256": sha256_file(MANIFEST_PATH),
+            "sourceBlendSha256": sha256_file(bpy.data.filepath),
+            "outputGlbSha256": sha256_file(destination),
+            "textureFiles": [
+                {
+                    "name": os.path.basename(image_path),
+                    "sha256": sha256_file(image_path),
+                }
+                for image_path in image_paths
+            ],
+        }
+        with open(destination + ".export.json", "w", encoding="utf-8", newline="\n") as stream:
+            json.dump(metadata, stream, indent=2)
+            stream.write("\n")
+        print(f"Exported {destination}")
+        print(json.dumps(metadata, sort_keys=True))
+    finally:
+        if os.path.exists(temporary_destination):
+            os.remove(temporary_destination)
+        if armature.animation_data is not None:
+            armature.animation_data.action = original_action
+            for track, muted in original_nla_mutes:
+                track.mute = muted
+        armature.data.pose_position = original_pose_position
+        frame_whole = math.floor(original_frame)
+        scene.frame_set(frame_whole, subframe=original_frame - frame_whole)
+        bpy.ops.object.select_all(action="DESELECT")
+        for name in selected_names:
+            value = bpy.data.objects.get(name)
+            if value is not None:
+                value.select_set(True)
+        bpy.context.view_layer.objects.active = bpy.data.objects.get(active_name) if active_name else None
+        if original_mode != "OBJECT" and bpy.context.view_layer.objects.active is not None:
+            bpy.ops.object.mode_set(mode=original_mode)
 
 
 if __name__ == "__main__":

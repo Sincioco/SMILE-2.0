@@ -1,6 +1,6 @@
 Option Explicit
 
-Import Dragonfall.Character3DViewerProfile As ViewerProfiles
+Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 
@@ -10,18 +10,23 @@ Dim Frame As CharacterViewer.Framing
 Dim Profile As CharacterViewer.Profile
 Dim Remainder As Number
 Dim Step30 As CharacterViewer.ZoomState
+Dim Step10 As CharacterViewer.ZoomState
 Dim Step60 As CharacterViewer.ZoomState
 Dim Step120 As CharacterViewer.ZoomState
 Dim Step240 As CharacterViewer.ZoomState
 Dim Failures As Number
 Dim Index As Number
+Dim Clock As CharacterViewer.ClockState
+Dim CycleElapsed As Number
+Dim OrbitYaw1000 As Number
 
 Game Window "Character 3D Viewer Hardening Tests" Size 320 By 240
 
 Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_ARIN)
 
 Call Check(CharacterViewer.ValidateProfile(Profile))
-Call Check(Profile.AssetId = "sin-star-i.character-1.paladin.v5-4")
+Call Check(Profile.AssetId = "sin-star-i.character-1.paladin")
+Call Check(Profile.CandidateVersion = "v5.4")
 Call Check(Profile.DisplayName = "Arin")
 Call Check(Profile.PartyRole = "Paladin")
 Call Check(Profile.PrototypeAlias = "dragonfall.arin-v5-4")
@@ -62,10 +67,15 @@ Frame = CharacterViewer.AutoFit(Profile, Bounds)
 Call Check(Not Frame.Valid)
 
 Call InitializeZoomTest(Step30)
+Call InitializeZoomTest(Step10)
 Call InitializeZoomTest(Step60)
 Call InitializeZoomTest(Step120)
 Call InitializeZoomTest(Step240)
 Call InitializeZoomTest(Alternating)
+
+For Index = 1 To 10
+    Call Check(CharacterViewer.AdvanceZoom(Step10, 100))
+End For
 
 For Index = 1 To 29
     Call Check(CharacterViewer.AdvanceZoom(Step30, 33))
@@ -97,12 +107,39 @@ For Index = 1 To 20
 End For
 
 Call Check(Step30.Current1000 = 24000)
+Call Check(Step30.Current1000 = Step10.Current1000)
 Call Check(Step30.Current1000 = Step60.Current1000)
 Call Check(Step30.Current1000 = Step120.Current1000)
 Call Check(Step30.Current1000 = Step240.Current1000)
 Call Check(Step30.Current1000 = Alternating.Current1000)
 Call Check(CharacterViewer.AdvanceZoom(Step30, -1) = False)
 Call Check(CharacterViewer.AdvanceZoom(Step30, 1001) = False)
+
+Call Check(CharacterViewer.AdvanceClock(Clock, 100))
+Call Check(Clock.RawFrameMilliseconds = 100)
+Call Check(Clock.AnimationElapsed = 100)
+Call Check(Clock.CameraElapsed = 100)
+Call Check(Clock.PresentationElapsed = 100)
+Call Check(CharacterViewer.AdvanceClock(Clock, 100000))
+Call Check(Clock.RawFrameMilliseconds = 60000)
+Call Check(Clock.AnimationElapsed = 250)
+Call Check(Clock.CameraElapsed = 250)
+Call Check(Clock.DroppedAnimationMilliseconds = 59750)
+Call Check(Clock.LongPauseCount = 1)
+Call Check(Not CharacterViewer.AdvanceClock(Clock, -1))
+
+CycleElapsed = 4900
+
+Call Check(CharacterViewer.AdvanceCycle(CycleElapsed, 250, 5000, 11) = 1)
+Call Check(CycleElapsed = 150)
+Call Check(CharacterViewer.AdvanceCycle(CycleElapsed, 14900, 5000, 11) = 3)
+Call Check(CycleElapsed = 50)
+
+For Index = 1 To 1440
+    Call Check(CharacterViewer.AdvanceOrbitYaw1000(OrbitYaw1000, 60000, 30))
+End For
+
+Call Check(OrbitYaw1000 = 0)
 
 Call Check(CharacterViewer.RetainedPointerDelta(Remainder, 1, 3) = 0)
 Call Check(Remainder = 1)

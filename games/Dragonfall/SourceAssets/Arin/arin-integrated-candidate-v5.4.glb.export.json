@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "assetId": "sin-star-i.character-1.paladin",
+  "candidateVersion": "v5.4",
+  "blenderVersion": "5.2.1 LTS",
+  "gltfExporter": "Blender io_scene_gltf2",
+  "scriptSha256": "D6F074E7A2D0B48BE5FF1E50FADB427D57BE46DA3E3839FBE53C90F930BAB29E",
+  "manifestSha256": "B4E41352134E948BBBC6126DE7AADEABAAE17DA08E26764A33A984AF15C4ECE1",
+  "sourceBlendSha256": "CD58B33AC94E7B3CFEEDB9A85B2603B49DB4935FE8D2590DE5B50BE371C4A35C",
+  "outputGlbSha256": "D080754339ABD4F3F4CFBCAF4F26146631BDEEE30DD2EAA284682EF896B16CA3",
+  "textureFiles": [
+    {
+      "name": "arin-integrated-candidate-v5.4.texture-00.jpg",
+      "sha256": "8DD49DE64C691DC5D286D9745F5BA1EB1C8FB3EAD186194D1D2E02BEB8FFA944"
+    },
+    {
+      "name": "arin-integrated-candidate-v5.4.texture-01.jpg",
+      "sha256": "CCD55F34588C8959E1F135C8F22BAEE87EA34C875A0DDE1CA85CC071316B67F4"
+    },
+    {
+      "name": "arin-integrated-candidate-v5.4.texture-02.jpg",
+      "sha256": "49C70F0D00F7A13C56BE2B2EC1954052F587664E3FCFD5437074FB744C377EA5"
+    },
+    {
+      "name": "arin-integrated-candidate-v5.4.texture-03.jpg",
+      "sha256": "7C739452638B14EC10DC81A28049B8ECB355AB075302F35F2E7CD8907B4B6CD3"
+    },
+    {
+      "name": "arin-integrated-candidate-v5.4.texture-04.jpg",
+      "sha256": "2CF18664E756727DB2C86D4D361A7BB1E6878AF4C8A1D3B445B1708EE438FDBC"
+    },
+    {
+      "name": "arin-integrated-candidate-v5.4.texture-05.jpg",
+      "sha256": "0E21C722F77209733F1B54274332C2693E4D9594B37AD206DAEF269E79E596D4"
+    },
+    {
+      "name": "arin-integrated-candidate-v5.4.texture-06.jpg",
+      "sha256": "E5EEAD8EC5D6A5A76691BD44D4233A605AD5550BEDFD2EEB3F05D21165E9106C"
+    },
+    {
+      "name": "arin-integrated-candidate-v5.4.texture-07.jpg",
+      "sha256": "E57234F219640FB4521A4BE6F4F3FF5E8ABEE4434E05C50A4BC00B6C7933143F"
+    },
+    {
+      "name": "arin-integrated-candidate-v5.4.texture-08.jpg",
+      "sha256": "73D6D44FAF5D31B1AFF9540E87F21C60EDC16AF37B32A42649CF4D285B2EB59D"
+    }
+  ]
+}

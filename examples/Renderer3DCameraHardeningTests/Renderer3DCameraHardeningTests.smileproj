@@ -1,0 +1,14 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>Renderer3DCameraHardeningTests</OutputName>
+    <ApplicationId>smile.tests.renderer3d-camera-hardening</ApplicationId>
+    <GraphicsBackend>DirectX</GraphicsBackend>
+    <VSync>false</VSync>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

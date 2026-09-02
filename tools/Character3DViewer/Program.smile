@@ -8,20 +8,25 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Interaction As Interaction
 Import Smile.Simple3D.Scene3D As Scene3D
-Import Dragonfall.Character3DViewerProfile As ViewerProfiles
+Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 
 Const ANIMATION_CYCLE_MILLISECONDS = 5000
 Const IDLE_RESET_MILLISECONDS = 10000
-Const ANIMATION_BUTTON_Y = 356
+Const ANIMATION_BUTTON_Y = 330
 Const ANIMATION_BUTTON_WIDTH = 110
-Const ANIMATION_BUTTON_HEIGHT = 24
+Const ANIMATION_BUTTON_HEIGHT = 18
 Const ANIMATION_BUTTON_COLUMN_GAP = 8
 Const ANIMATION_BUTTON_ROW_GAP = 4
+Const MINIMUM_VIEWER_WIDTH = 800
+Const MINIMUM_VIEWER_HEIGHT = 540
 Const ORBIT_POINTER_DIVISOR = 1
 Const PAN_POINTER_DIVISOR = 3
 Const DEFAULT_ZOOM_DEGREES = -16
 Const ZOOM_IN_LIMIT = -24
 Const ZOOM_OUT_LIMIT = 36
+Const MAX_RAW_FRAME_MILLISECONDS = 60000
+Const MAX_ANIMATION_ELAPSED = 250
+Const MAX_CAMERA_ELAPSED = 250
 
 Dim BaseCamera As Core.Camera3D
 Dim Camera As Core.Camera3D
@@ -34,13 +39,17 @@ Dim ViewerFrame As CharacterViewer.Framing
 Dim SmoothZoom As CharacterViewer.ZoomState
 Dim Floor As Core.Object3D
 Dim FloorVisible As Boolean
-Dim GridLines[64] As Core.Object3D
+Dim Grid As Core.Object3D
 Dim GridLineCount As Number
 Dim GridMaterial As Core.Material3D
 Dim GridVisible As Boolean
-Dim SocketGizmos[24] As Core.Object3D
+Dim SocketGizmos[4] As Core.Object3D
 Dim SocketGizmoCount As Number
 Dim SocketGizmosVisible As Boolean
+Dim SocketMarkers As Core.ParticleBatch3D
+Dim SocketMarkerMaterial As Core.Material3D
+Dim SelectedSocket As Number
+Dim ShowAllSocketOrigins As Boolean
 Dim Ready As Boolean
 Dim Running As Boolean
 Dim ViewerError As Boolean
@@ -56,7 +65,17 @@ Dim MaterialInspection As Number
 Dim Key As Number
 Dim CurrentTime As Number
 Dim PreviousTime As Number
-Dim FrameMilliseconds As Number
+Dim RawFrameMilliseconds As Number
+Dim AnimationElapsed As Number
+Dim CameraElapsed As Number
+Dim PresentationElapsed As Number
+Dim DroppedAnimationMilliseconds As Number
+Dim DroppedCameraMilliseconds As Number
+Dim LongPauseCount As Number
+Dim ViewerClock As CharacterViewer.ClockState
+Dim FitLocked As Boolean
+Dim LastFitWidth As Number
+Dim LastFitHeight As Number
 Dim FrameRateElapsed As Number
 Dim FrameRateFrames As Number
 Dim CurrentFramesPerSecond As Number
@@ -89,8 +108,23 @@ Do
     Call UpdateCameraPointer(InterfacePointerBlocked)
 
     CurrentTime = Timer()
-    FrameMilliseconds = Min(40, Max(0, CurrentTime - PreviousTime))
+    RawFrameMilliseconds = Max(0, CurrentTime - PreviousTime)
     PreviousTime = CurrentTime
+
+    Ready = CharacterViewer.AdvanceClock(
+        ViewerClock,
+        RawFrameMilliseconds,
+        MAX_ANIMATION_ELAPSED,
+        MAX_CAMERA_ELAPSED,
+        MAX_RAW_FRAME_MILLISECONDS
+    ) And Ready
+    RawFrameMilliseconds = ViewerClock.RawFrameMilliseconds
+    AnimationElapsed = ViewerClock.AnimationElapsed
+    CameraElapsed = ViewerClock.CameraElapsed
+    PresentationElapsed = ViewerClock.PresentationElapsed
+    DroppedAnimationMilliseconds = ViewerClock.DroppedAnimationMilliseconds
+    DroppedCameraMilliseconds = ViewerClock.DroppedCameraMilliseconds
+    LongPauseCount = ViewerClock.LongPauseCount
 
     Call AdvanceFrameRate()
 
@@ -98,7 +132,7 @@ Do
 
         Call AdvanceAnimationSequence()
 
-        Ready = Character3D.Update(Character, FrameMilliseconds) And Ready
+        Ready = Character3D.Update(Character, AnimationElapsed) And Ready
 
         If SocketGizmosVisible Then
             Call UpdateSocketGizmos()
@@ -107,6 +141,8 @@ Do
         Call AdvanceSmoothZoom()
         Call AdvanceIdleReset()
         Call AdvanceAutoOrbit()
+
+        Call UpdateResponsiveFit()
 
         Camera = Interaction.ApplyCameraControls(BaseCamera, CameraControls)
 
@@ -161,10 +197,17 @@ Sub LoadViewer()
         Character3D.CHARACTER_LOAD_REQUIRE_PBR
     )
     Ready = Character3D.IsValid(Character) And Ready
+    Ready = ValidateLoadedProfile() And Ready
     LocalCharacterBounds = Character3D.LocalBounds(Character)
-    ViewerFrame = CharacterViewer.AutoFit(ActiveProfile, LocalCharacterBounds)
-    Ready = ViewerFrame.Valid And Ready
     BaseCamera = Graphics3D.DefaultCamera()
+    ViewerFrame = CharacterViewer.AutoFit(
+        ActiveProfile,
+        LocalCharacterBounds,
+        Max(1, Window_Width() - 284),
+        Max(1, Window_Height()),
+        BaseCamera.FovDegrees
+    )
+    Ready = ViewerFrame.Valid And Ready
     BaseCamera.Position.X = 0
     BaseCamera.Position.Y = ViewerFrame.CameraY
     BaseCamera.Position.Z = ViewerFrame.CameraZ
@@ -180,6 +223,9 @@ Sub LoadViewer()
 
     FloorVisible = True
     GridVisible = True
+    FitLocked = True
+    LastFitWidth = Window_Width()
+    LastFitHeight = Window_Height()
 
     Call Interaction.ResetCameraControls(CameraControls)
     Call CharacterViewer.InitializeZoom(
@@ -230,6 +276,33 @@ Sub LoadViewer()
 
 End Sub
 
+Function ValidateLoadedProfile() As Boolean
+
+    Dim Result As Boolean
+    Dim Index As Number
+
+    Result = Character3D.IsValid(Character)
+    Result = Character3D.ClipCount(Character) = ActiveProfile.ExpectedClipCount And Result
+    Result = Character3D.SocketCount(Character) = ActiveProfile.ExpectedSocketCount And Result
+
+    For Index = 0 To ViewerProfiles.ClipCount(ProfileIndex) - 1
+        Result = Character3D.HasClip(
+            Character,
+            ViewerProfiles.ClipName(ProfileIndex, Index)
+        ) And Result
+    End For
+
+    For Index = 0 To ViewerProfiles.SocketCount(ProfileIndex) - 1
+        Result = Character3D.HasSocket(
+            Character,
+            ViewerProfiles.SocketName(ProfileIndex, Index)
+        ) And Result
+    End For
+
+    Return Result
+
+End Function
+
 Sub CreateStudioGrid()
 
     Dim EmptyTexture As Core.Texture3D
@@ -237,8 +310,18 @@ Sub CreateStudioGrid()
     Dim VerticalHalfCount As Number
     Dim Index As Number
     Dim Position As Number
+    Dim MeshHandle As Number
+    Dim LineIndex As Number
+    Dim VertexIndex As Number
+    Dim TriangleIndex As Number
+    Dim Width As Number
+    Dim Depth As Number
+    Dim GridReady As Boolean
 
-    GridLineCount = 0
+    GridReady = True
+    HorizontalHalfCount = Min(15, ViewerFrame.FloorDepth / 40)
+    VerticalHalfCount = Min(15, ViewerFrame.FloorWidth / 40)
+    GridLineCount = (HorizontalHalfCount * 2 + 1) + (VerticalHalfCount * 2 + 1)
     GridMaterial = Graphics3D.CreateMaterial3D(
         EmptyTexture,
         Graphics3D.MATERIAL_ALPHA_ADDITIVE,
@@ -250,56 +333,138 @@ Sub CreateStudioGrid()
         100,
         50
     )
-    Ready = GridMaterial.Handle <> 0 And Ready
-    HorizontalHalfCount = Min(15, ViewerFrame.FloorDepth / 40)
-    VerticalHalfCount = Min(15, ViewerFrame.FloorWidth / 40)
+    GridReady = GridMaterial.Handle <> 0 And GridReady
+
+    If GridMaterial.Handle = 0 Then
+        Ready = False
+        Return
+    End If
+
+    MeshHandle = Graphics3D.CreateMesh3D(GridLineCount * 4, GridLineCount * 6)
+    Grid.MeshHandle = MeshHandle
+
+    If MeshHandle = 0 Then
+
+        Ready = False
+
+        Call DestroyStudioGrid()
+
+        Return
+
+    End If
+
+    Width = ViewerFrame.FloorWidth / 2
+    Depth = ViewerFrame.FloorDepth / 2
+    LineIndex = 0
 
     For Index = 0 To HorizontalHalfCount * 2
 
         Position = (Index - HorizontalHalfCount) * 20
-        GridLines[GridLineCount] = Graphics3D.CreatePlane3D(ViewerFrame.FloorWidth, 1)
-        Ready = GridLines[GridLineCount].Handle <> 0 And Ready
-
-        Call Graphics3D.SetObjectPosition(GridLines[GridLineCount], 0, 0, Position)
-
-        Ready = Graphics3D.SetObjectMaterial3D(GridLines[GridLineCount], GridMaterial) And Ready
-        Ready = Graphics3D.SetObjectShadowsChecked3D(GridLines[GridLineCount], False, False) And Ready
-        GridLineCount = GridLineCount + 1
+        VertexIndex = LineIndex * 4
+        TriangleIndex = LineIndex * 2
+        GridReady = SetGridQuad(MeshHandle, VertexIndex, TriangleIndex,
+            0 - Width, Position, Width, Position + 1) And GridReady
+        LineIndex = LineIndex + 1
     End For
 
     For Index = 0 To VerticalHalfCount * 2
 
         Position = (Index - VerticalHalfCount) * 20
-        GridLines[GridLineCount] = Graphics3D.CreatePlane3D(1, ViewerFrame.FloorDepth)
-        Ready = GridLines[GridLineCount].Handle <> 0 And Ready
-
-        Call Graphics3D.SetObjectPosition(GridLines[GridLineCount], Position, 0, 0)
-
-        Ready = Graphics3D.SetObjectMaterial3D(GridLines[GridLineCount], GridMaterial) And Ready
-        Ready = Graphics3D.SetObjectShadowsChecked3D(GridLines[GridLineCount], False, False) And Ready
-        GridLineCount = GridLineCount + 1
+        VertexIndex = LineIndex * 4
+        TriangleIndex = LineIndex * 2
+        GridReady = SetGridQuad(MeshHandle, VertexIndex, TriangleIndex,
+            Position, 0 - Depth, Position + 1, Depth) And GridReady
+        LineIndex = LineIndex + 1
     End For
+
+    GridReady = Graphics3D.CommitMesh3D(MeshHandle) And GridReady
+
+    If Not GridReady Then
+
+        Ready = False
+
+        Call DestroyStudioGrid()
+
+        Return
+
+    End If
+
+    Grid = Graphics3D.CreateObjectFromMesh3D(MeshHandle)
+    GridReady = Grid.Handle <> 0 And GridReady
+
+    If Grid.Handle = 0 Then
+        Call DestroyStudioGrid()
+
+        Return
+    End If
+
+    GridReady = Graphics3D.SetObjectMaterial3D(Grid, GridMaterial) And GridReady
+    GridReady = Graphics3D.SetObjectShadowsChecked3D(Grid, False, False) And GridReady
+
+    If Not GridReady Then
+        Ready = False
+
+        Call DestroyStudioGrid()
+    End If
 
 End Sub
 
-Function DrawStudioGrid() As Boolean
+Function SetGridQuad(
+    MeshHandle As Number,
+    VertexIndex As Number,
+    TriangleIndex As Number,
+    MinimumX As Number,
+    MinimumZ As Number,
+    MaximumX As Number,
+    MaximumZ As Number
+) As Boolean
 
-    Dim Index As Number
     Dim Result As Boolean
 
-    Result = True
-
-    For Index = 0 To GridLineCount - 1
-        Result = Graphics3D.DrawObject3D(GridLines[Index]) And Result
-    End For
+    Result = Graphics3D.SetMeshVertex3D(MeshHandle, VertexIndex, MinimumX, 0, MinimumZ)
+    Result = Graphics3D.SetMeshVertex3D(MeshHandle, VertexIndex + 1, MaximumX, 0, MinimumZ) And Result
+    Result = Graphics3D.SetMeshVertex3D(MeshHandle, VertexIndex + 2, MaximumX, 0, MaximumZ) And Result
+    Result = Graphics3D.SetMeshVertex3D(MeshHandle, VertexIndex + 3, MinimumX, 0, MaximumZ) And Result
+    Result = Graphics3D.SetMeshTriangle3D(
+        MeshHandle,
+        TriangleIndex,
+        VertexIndex,
+        VertexIndex + 1,
+        VertexIndex + 2
+    ) And Result
+    Result = Graphics3D.SetMeshTriangle3D(
+        MeshHandle,
+        TriangleIndex + 1,
+        VertexIndex,
+        VertexIndex + 2,
+        VertexIndex + 3
+    ) And Result
 
     Return Result
 
 End Function
 
+Function DrawStudioGrid() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Graphics3D.DrawObject3D(Grid)
+    Return Result
+
+End Function
+
+Sub DestroyStudioGrid()
+
+    Call Graphics3D.DestroyObject3D(Grid)
+    Call Graphics3D.DestroyMaterial3D(GridMaterial)
+
+    GridLineCount = 0
+
+End Sub
+
 Sub AdvanceFrameRate()
 
-    FrameRateElapsed = FrameRateElapsed + FrameMilliseconds
+    FrameRateElapsed = FrameRateElapsed + RawFrameMilliseconds
     FrameRateFrames = FrameRateFrames + 1
 
     If FrameRateElapsed >= 500 Then
@@ -317,6 +482,14 @@ Sub HandleKeyboard(PressedKey As Number)
     If PressedKey = KEY_ESCAPE Then
 
         Running = False
+
+    Else If PressedKey = KEY_LEFT And SocketGizmosVisible Then
+
+        Call SelectPreviousSocket()
+
+    Else If PressedKey = KEY_RIGHT And SocketGizmosVisible Then
+
+        Call SelectNextSocket()
 
     Else If PressedKey = KEY_LEFT Then
 
@@ -372,7 +545,7 @@ Sub HandleKeyboard(PressedKey As Number)
             Call RetryViewer()
         Else
 
-            Call RestartPresentation()
+            Call ResetAll()
         End If
 
     Else If PressedKey = KEY_O Then
@@ -390,6 +563,14 @@ Sub HandleKeyboard(PressedKey As Number)
     Else If PressedKey = KEY_4 Then
 
         Call CycleProfile()
+
+    Else If PressedKey = KEY_TAB Then
+
+        Call SelectClip((SelectedClip + 1) Mod ViewerProfiles.ClipCount(ProfileIndex))
+
+    Else If PressedKey = KEY_R Then
+
+        Call PlaySelectedClip()
 
     End If
 
@@ -493,7 +674,7 @@ Sub AdvanceIdleReset()
 
     If IdleResetPending Then
 
-        IdleResetElapsed = IdleResetElapsed + FrameMilliseconds
+        IdleResetElapsed = IdleResetElapsed + PresentationElapsed
 
         If IdleResetElapsed >= IDLE_RESET_MILLISECONDS Then
             Call RestartPresentation()
@@ -506,7 +687,11 @@ End Sub
 Sub AdvanceAutoOrbit()
 
     If AutoOrbit Then
-        AutoOrbitYaw1000 = AutoOrbitYaw1000 + FrameMilliseconds * 30
+        Ready = CharacterViewer.AdvanceOrbitYaw1000(
+            AutoOrbitYaw1000,
+            CameraElapsed,
+            30
+        ) And Ready
         CameraControls.OrbitYaw = AutoOrbitYaw1000 / 1000
     End If
 
@@ -514,15 +699,21 @@ End Sub
 
 Sub AdvanceAnimationSequence()
 
-    AnimationCycleElapsed = AnimationCycleElapsed + FrameMilliseconds
+    Dim Transitions As Number
+    Dim ClipCount As Number
 
-    If AnimationCycleElapsed >= ANIMATION_CYCLE_MILLISECONDS Then
+    ClipCount = ViewerProfiles.ClipCount(ProfileIndex)
+    Transitions = CharacterViewer.AdvanceCycle(
+        AnimationCycleElapsed,
+        PresentationElapsed,
+        ANIMATION_CYCLE_MILLISECONDS,
+        ClipCount
+    )
 
-        SelectedClip = (SelectedClip + 1) Mod ViewerProfiles.ClipCount(ProfileIndex)
-        AnimationCycleElapsed = 0
+    If Transitions > 0 Then
+        SelectedClip = (SelectedClip + Transitions) Mod ClipCount
 
         Call PlaySelectedClip()
-
     End If
 
 End Sub
@@ -555,6 +746,10 @@ Function HandleInterfacePointer() As Boolean
 
     End If
 
+    If ViewerLayoutTooSmall() Then
+        Return True
+    End If
+
     Blocked = (Pointer_Y() < 72 Or
         (Pointer_X() >= PanelLeft And Pointer_Y() >= 82))
 
@@ -563,17 +758,54 @@ Function HandleInterfacePointer() As Boolean
     End If
 
     If PointerInRectangle(PanelLeft, 18, 56, 34) Then
+
         Call CycleLighting()
+
     Else If PointerInRectangle(PanelLeft + 62, 18, 64, 34) Then
+
         Call CycleMaterialInspection()
+
     Else If PointerInRectangle(PanelLeft + 132, 18, 58, 34) Then
-        SocketGizmosVisible = Not SocketGizmosVisible
+
+        Call CycleSocketDisplay()
+
     Else If PointerInRectangle(PanelLeft + 196, 18, 56, 34) Then
+
         Call CycleProfile()
+
     Else If PointerInRectangle(PanelLeft + 172, 204, 30, 24) Then
+
         Call AdjustPlaybackSpeed(-25)
+
     Else If PointerInRectangle(PanelLeft + 208, 204, 30, 24) Then
+
         Call AdjustPlaybackSpeed(25)
+
+    Else If PointerInRectangle(PanelLeft + 12, Window_Height() - 64, 52, 24) Then
+
+        Call ResetView()
+
+    Else If PointerInRectangle(PanelLeft + 68, Window_Height() - 64, 74, 24) Then
+
+        Call RestartPresentation()
+
+    Else If PointerInRectangle(PanelLeft + 146, Window_Height() - 64, 40, 24) Then
+
+        Call ResetAll()
+
+    Else If PointerInRectangle(PanelLeft + 190, Window_Height() - 64, 50, 24) Then
+
+        FitLocked = Not FitLocked
+
+        If FitLocked Then
+
+            LastFitWidth = -1
+            LastFitHeight = -1
+
+            Call UpdateResponsiveFit()
+
+        End If
+
     End If
 
     ClipCount = ViewerProfiles.ClipCount(ProfileIndex)
@@ -719,21 +951,53 @@ End Sub
 
 Sub CreateSocketGizmos()
 
+    Dim EmptyTexture As Core.Texture3D
     Dim Index As Number
-    Dim Axis As Number
+    Dim GizmosReady As Boolean
 
-    SocketGizmoCount = ViewerProfiles.SocketCount(ProfileIndex) * 4
+    GizmosReady = True
+    SocketGizmoCount = 4
+    SelectedSocket = 0
+    ShowAllSocketOrigins = False
+    SocketMarkerMaterial = Graphics3D.CreateMaterial3D(
+        EmptyTexture,
+        Graphics3D.MATERIAL_ALPHA_ADDITIVE,
+        120,
+        220,
+        255,
+        75,
+        True,
+        100,
+        50
+    )
+    GizmosReady = SocketMarkerMaterial.Handle <> 0 And GizmosReady
+
+    If SocketMarkerMaterial.Handle <> 0 Then
+        SocketMarkers = Graphics3D.CreateParticleBatch3D(
+            64,
+            SocketMarkerMaterial,
+            Graphics3D.VFX_BILLBOARD_CAMERA,
+            1,
+            1
+        )
+        GizmosReady = SocketMarkers.Handle <> 0 And GizmosReady
+    End If
 
     For Index = 0 To SocketGizmoCount - 1
 
         SocketGizmos[Index] = Graphics3D.CreateCube3D(3)
-        Axis = Index Mod 4
+        GizmosReady = SocketGizmos[Index].Handle <> 0 And GizmosReady
+        GizmosReady = Graphics3D.SetObjectShadowsChecked3D(
+            SocketGizmos[Index],
+            False,
+            False
+        ) And GizmosReady
 
-        If Axis = 0 Then
+        If Index = 0 Then
             Call Graphics3D.SetObjectColor(SocketGizmos[Index], 255, 255, 255)
-        Else If Axis = 1 Then
+        Else If Index = 1 Then
             Call Graphics3D.SetObjectColor(SocketGizmos[Index], 255, 60, 60)
-        Else If Axis = 2 Then
+        Else If Index = 2 Then
             Call Graphics3D.SetObjectColor(SocketGizmos[Index], 70, 255, 90)
         Else
 
@@ -742,12 +1006,34 @@ Sub CreateSocketGizmos()
 
     End For
 
+    If Not GizmosReady Then
+        Ready = False
+
+        Call DestroySocketGizmos()
+    End If
+
+End Sub
+
+Sub DestroySocketGizmos()
+
+    Dim Index As Number
+
+    Call Graphics3D.DestroyParticleBatch3D(SocketMarkers)
+    Call Graphics3D.DestroyMaterial3D(SocketMarkerMaterial)
+
+    For Index = 0 To SocketGizmoCount - 1
+        Call Graphics3D.DestroyObject3D(SocketGizmos[Index])
+    End For
+
+    SocketGizmoCount = 0
+    SocketGizmosVisible = False
+    ShowAllSocketOrigins = False
+
 End Sub
 
 Sub UpdateSocketGizmos()
 
     Dim SocketIndex As Number
-    Dim GizmoIndex As Number
     Dim Name As Text
     Dim PositionX1000 As Number
     Dim PositionY1000 As Number
@@ -758,54 +1044,95 @@ Sub UpdateSocketGizmos()
     Dim AxisLength As Number
     Dim MatrixProperty As Number
     Dim Axis As Number
+    Dim SocketCount As Number
 
-    For SocketIndex = 0 To ViewerProfiles.SocketCount(ProfileIndex) - 1
+    SocketCount = ViewerProfiles.SocketCount(ProfileIndex)
+    Name = ViewerProfiles.SocketName(ProfileIndex, SelectedSocket)
+    PositionX1000 = Character3D.SocketValueThousandths(
+        Character,
+        Name,
+        Graphics3D.ANIMATOR_SOCKET_POSITION_X
+    )
+    PositionY1000 = Character3D.SocketValueThousandths(
+        Character,
+        Name,
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Y
+    )
+    PositionZ1000 = Character3D.SocketValueThousandths(
+        Character,
+        Name,
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Z
+    )
 
-        Name = ViewerProfiles.SocketName(ProfileIndex, SocketIndex)
-        PositionX1000 = Character3D.SocketValueThousandths(
-            Character,
-            Name,
-            Graphics3D.ANIMATOR_SOCKET_POSITION_X
+    For Axis = 0 To 3
+
+        AxisX1000 = 0
+        AxisY1000 = 0
+        AxisZ1000 = 0
+
+        If Axis > 0 Then
+
+            MatrixProperty = Graphics3D.ANIMATOR_SOCKET_MATRIX_M11 + (Axis - 1) * 3
+            AxisX1000 = Character3D.SocketValueThousandths(Character, Name, MatrixProperty)
+            AxisY1000 = Character3D.SocketValueThousandths(Character, Name, MatrixProperty + 1)
+            AxisZ1000 = Character3D.SocketValueThousandths(Character, Name, MatrixProperty + 2)
+            AxisLength = Max(1, Max(Abs(AxisX1000), Max(Abs(AxisY1000), Abs(AxisZ1000))))
+            AxisX1000 = AxisX1000 * 8000 / AxisLength
+            AxisY1000 = AxisY1000 * 8000 / AxisLength
+            AxisZ1000 = AxisZ1000 * 8000 / AxisLength
+
+        End If
+
+        Call Graphics3D.SetObjectPosition(
+            SocketGizmos[Axis],
+            (PositionX1000 + AxisX1000) / 1000,
+            (PositionY1000 + AxisY1000) / 1000,
+            (PositionZ1000 + AxisZ1000) / 1000
         )
-        PositionY1000 = Character3D.SocketValueThousandths(
-            Character,
-            Name,
-            Graphics3D.ANIMATOR_SOCKET_POSITION_Y
-        )
-        PositionZ1000 = Character3D.SocketValueThousandths(
-            Character,
-            Name,
-            Graphics3D.ANIMATOR_SOCKET_POSITION_Z
-        )
-
-        For Axis = 0 To 3
-
-            GizmoIndex = SocketIndex * 4 + Axis
-            AxisX1000 = 0
-            AxisY1000 = 0
-            AxisZ1000 = 0
-
-            If Axis > 0 Then
-
-                MatrixProperty = Graphics3D.ANIMATOR_SOCKET_MATRIX_M11 + (Axis - 1) * 3
-                AxisX1000 = Character3D.SocketValueThousandths(Character, Name, MatrixProperty)
-                AxisY1000 = Character3D.SocketValueThousandths(Character, Name, MatrixProperty + 1)
-                AxisZ1000 = Character3D.SocketValueThousandths(Character, Name, MatrixProperty + 2)
-                AxisLength = Max(1, Max(Abs(AxisX1000), Max(Abs(AxisY1000), Abs(AxisZ1000))))
-                AxisX1000 = AxisX1000 * 8000 / AxisLength
-                AxisY1000 = AxisY1000 * 8000 / AxisLength
-                AxisZ1000 = AxisZ1000 * 8000 / AxisLength
-
-            End If
-
-            Call Graphics3D.SetObjectPosition(
-                SocketGizmos[GizmoIndex],
-                (PositionX1000 + AxisX1000) / 1000,
-                (PositionY1000 + AxisY1000) / 1000,
-                (PositionZ1000 + AxisZ1000) / 1000
-            )
-        End For
     End For
+
+    If ShowAllSocketOrigins Then
+
+        For SocketIndex = 0 To SocketCount - 1
+
+            Name = ViewerProfiles.SocketName(ProfileIndex, SocketIndex)
+            PositionX1000 = Character3D.SocketValueThousandths(
+                Character,
+                Name,
+                Graphics3D.ANIMATOR_SOCKET_POSITION_X
+            )
+            PositionY1000 = Character3D.SocketValueThousandths(
+                Character,
+                Name,
+                Graphics3D.ANIMATOR_SOCKET_POSITION_Y
+            )
+            PositionZ1000 = Character3D.SocketValueThousandths(
+                Character,
+                Name,
+                Graphics3D.ANIMATOR_SOCKET_POSITION_Z
+            )
+            Ready = Graphics3D.SetParticle3D(
+                SocketMarkers,
+                SocketIndex,
+                PositionX1000 / 1000,
+                PositionY1000 / 1000,
+                PositionZ1000 / 1000,
+                4,
+                0
+            ) And Ready
+            Ready = Graphics3D.SetParticleColor3D(
+                SocketMarkers,
+                SocketIndex,
+                120,
+                220,
+                255,
+                75
+            ) And Ready
+        End For
+
+        Ready = Graphics3D.CommitParticleBatch3D(SocketMarkers, SocketCount) And Ready
+
+    End If
 
 End Sub
 
@@ -820,9 +1147,42 @@ Function DrawSocketGizmos() As Boolean
         Result = Graphics3D.DrawObject3D(SocketGizmos[Index]) And Result
     End For
 
+    If ShowAllSocketOrigins Then
+        Result = Graphics3D.DrawParticleBatch3D(SocketMarkers) And Result
+    End If
+
     Return Result
 
 End Function
+
+Sub CycleSocketDisplay()
+
+    If Not SocketGizmosVisible Then
+        SocketGizmosVisible = True
+        ShowAllSocketOrigins = False
+    Else If Not ShowAllSocketOrigins Then
+        ShowAllSocketOrigins = True
+    Else
+        SocketGizmosVisible = False
+        ShowAllSocketOrigins = False
+    End If
+
+End Sub
+
+Sub SelectPreviousSocket()
+
+    Dim SocketCount As Number
+
+    SocketCount = ViewerProfiles.SocketCount(ProfileIndex)
+    SelectedSocket = (SelectedSocket + SocketCount - 1) Mod SocketCount
+
+End Sub
+
+Sub SelectNextSocket()
+
+    SelectedSocket = (SelectedSocket + 1) Mod ViewerProfiles.SocketCount(ProfileIndex)
+
+End Sub
 
 Sub AdjustPlaybackSpeed(Amount As Number)
 
@@ -893,22 +1253,56 @@ End Sub
 
 Sub AdvanceSmoothZoom()
 
-    Ready = CharacterViewer.AdvanceZoom(SmoothZoom, FrameMilliseconds) And Ready
+    Ready = CharacterViewer.AdvanceZoom(SmoothZoom, CameraElapsed) And Ready
     CameraControls.Zoom = CharacterViewer.ZoomDegrees(SmoothZoom)
+
+End Sub
+
+Sub UpdateResponsiveFit()
+
+    If Not FitLocked Then
+        Return
+    End If
+
+    If Window_Width() = LastFitWidth And Window_Height() = LastFitHeight Then
+        Return
+    End If
+
+    LastFitWidth = Window_Width()
+    LastFitHeight = Window_Height()
+    ViewerFrame = CharacterViewer.AutoFit(
+        ActiveProfile,
+        LocalCharacterBounds,
+        Max(1, Window_Width() - 284),
+        Max(1, Window_Height()),
+        BaseCamera.FovDegrees + CharacterViewer.ZoomDegrees(SmoothZoom)
+    )
+    BaseCamera.Position.Y = ViewerFrame.CameraY
+    BaseCamera.Position.Z = ViewerFrame.CameraZ
+    BaseCamera.Target.Y = ViewerFrame.TargetY
 
 End Sub
 
 Sub RestartPresentation()
 
-    Call Interaction.ResetCameraControls(CameraControls)
+    Call ResetView()
 
-    CameraControls.OrbitYaw = ViewerProfiles.InitialOrbitYaw(ProfileIndex)
     AutoOrbit = True
     AutoOrbitYaw1000 = CameraControls.OrbitYaw * 1000
     IdleResetElapsed = 0
     IdleResetPending = False
     AnimationCycleElapsed = 0
     SelectedClip = 0
+
+    Call PlaySelectedClip()
+
+End Sub
+
+Sub ResetView()
+
+    Call Interaction.ResetCameraControls(CameraControls)
+
+    CameraControls.OrbitYaw = ViewerProfiles.InitialOrbitYaw(ProfileIndex)
     PanPointerRemainderX = 0
     PanPointerRemainderY = 0
     OrbitPointerRemainderX = 0
@@ -921,7 +1315,24 @@ Sub RestartPresentation()
         ZOOM_OUT_LIMIT,
         96000
     )
-    Call PlaySelectedClip()
+
+End Sub
+
+Sub ResetAll()
+
+    PlaybackSpeed = ActiveProfile.DefaultPlaybackSpeed
+    LightingIndex = 0
+    MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT
+    SocketGizmosVisible = False
+    ShowAllSocketOrigins = False
+    FloorVisible = True
+    GridVisible = True
+
+    Call ApplyLighting()
+
+    Ready = Graphics3D.SetMaterialInspection3D(MaterialInspection) And Ready
+
+    Call RestartPresentation()
 
 End Sub
 
@@ -1089,7 +1500,22 @@ Sub DrawViewerOverlay()
 
     PanelLeft = StatusPanelX()
     PanelText = PanelLeft + 16
-    Subtitle = ActiveProfile.DisplayName + "  •  Party role: " + PartyRoleLabel() + "  •  Renderer3D PBR"
+
+    If ViewerLayoutTooSmall() Then
+
+        Fill Rectangle 0, 0, Window_Width(), Window_Height(), Rgb(4, 9, 24) Opacity 92
+        Draw Text "CHARACTER VIEWER NEEDS MORE ROOM" At 28, 40 Size 22 Color YELLOW
+        Draw Text "Resize to at least 800 by 540 logical units." At 28, 78 Size 15 Color WHITE
+        Draw Text "Right-click still resets the presentation." At 28, 108 Size 13 Color LIGHT_GRAY
+        Return
+
+    End If
+
+    If Window_Width() < 1100 Then
+        Subtitle = ActiveProfile.DisplayName + "  •  " + PartyRoleLabel() + "  •  PBR"
+    Else
+        Subtitle = ActiveProfile.DisplayName + "  •  Party role: " + PartyRoleLabel() + "  •  Renderer3D PBR"
+    End If
 
     Draw Text "SMILE 2.0 - CHARACTER 3D VIEWER" At 18, 10 Size 22 Color CYAN
     Draw Text Subtitle At 18, 42 Size 13 Color LIGHT_GRAY
@@ -1107,8 +1533,8 @@ Sub DrawViewerOverlay()
     Draw Text PartyRoleLabel() At PanelLeft + 116, 146 Size 12 Color CYAN
     Draw Text "Animation" At PanelText, 168 Size 12 Color LIGHT_GRAY
     Draw Text SelectedClipLabel() At PanelLeft + 116, 168 Size 12 Color GREEN
-    Draw Text "Production" At PanelText, 190 Size 12 Color LIGHT_GRAY
-    Draw Text ProductionClipStatusLabel() At PanelLeft + 116, 190 Size 11 Color YELLOW
+    Draw Text "Candidate" At PanelText, 190 Size 12 Color LIGHT_GRAY
+    Draw Text ActiveProfile.CandidateVersion At PanelLeft + 116, 190 Size 11 Color YELLOW
     Draw Text "Speed" At PanelText, 216 Size 12 Color LIGHT_GRAY
     Draw Number PlaybackSpeed At PanelLeft + 116, 216 Size 12 Color WHITE
 
@@ -1133,7 +1559,12 @@ Sub DrawViewerOverlay()
 
     Call DrawAnimationButtons()
 
-    Draw Text "LMB pan  •  MMB orbit  •  Wheel zoom  •  RMB reset  •  F floor  •  G grid" At 16, Window_Height() - 22 Size 11 Color LIGHT_GRAY
+    Call DrawButton(PanelLeft + 12, Window_Height() - 64, 52, 24, "VIEW", False)
+    Call DrawButton(PanelLeft + 68, Window_Height() - 64, 74, 24, "PRESENT", False)
+    Call DrawButton(PanelLeft + 146, Window_Height() - 64, 40, 24, "ALL", False)
+    Call DrawButton(PanelLeft + 190, Window_Height() - 64, 50, 24, "FIT", FitLocked)
+
+    Draw Text "LMB pan  •  MMB orbit  •  Wheel zoom  •  RMB reset presentation  •  Enter reset all" At 16, Window_Height() - 22 Size 11 Color LIGHT_GRAY
 
     If ViewerError Then
 
@@ -1149,6 +1580,16 @@ Sub DrawViewerOverlay()
     End If
 
 End Sub
+
+Function ViewerLayoutTooSmall() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Window_Width() < MINIMUM_VIEWER_WIDTH Or Window_Height() < MINIMUM_VIEWER_HEIGHT
+
+    Return Result
+
+End Function
 
 Sub DrawAnimationButtons()
 
@@ -1212,8 +1653,10 @@ Function SocketStatusLabel() As Text
 
     Dim Result As Text
 
-    If SocketGizmosVisible Then
-        Result = "Prototype aliases"
+    If SocketGizmosVisible And ShowAllSocketOrigins Then
+        Result = "All origins"
+    Else If SocketGizmosVisible Then
+        Result = ViewerProfiles.SocketName(ProfileIndex, SelectedSocket)
     Else
         Result = "Hidden"
     End If
@@ -1304,23 +1747,10 @@ End Sub
 
 Sub DestroyViewerResources()
 
-    Dim Index As Number
-
     Call Character3D.Destroy(Character)
     Call Graphics3D.DestroyObject3D(Floor)
 
-    For Index = 0 To GridLineCount - 1
-        Call Graphics3D.DestroyObject3D(GridLines[Index])
-    End For
-
-    GridLineCount = 0
-
-    Call Graphics3D.DestroyMaterial3D(GridMaterial)
-
-    For Index = 0 To SocketGizmoCount - 1
-        Call Graphics3D.DestroyObject3D(SocketGizmos[Index])
-    End For
-
-    SocketGizmoCount = 0
+    Call DestroyStudioGrid()
+    Call DestroySocketGizmos()
 
 End Sub

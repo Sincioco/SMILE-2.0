@@ -61,6 +61,7 @@ static SmileGraphicsBackendKind smile_requested_graphics_backend = SMILE_GRAPHIC
 static int smile_vsync_enabled = 1;
 static int smile_remember_window_placement;
 static int smile_responsive_window;
+static int smile_dpi_change_in_progress;
 static SmileAudioFocusState smile_audio_focus = { 1, 1, 0, 1 };
 static SmileMusicActivationCallback smile_music_activation_callback;
 static char* smile_app_identity;
@@ -80,7 +81,41 @@ void smile_print_newline(void);
 int smile_resolve_asset_path_utf8(const char* path, long long length, WCHAR* resolved_path, int capacity);
 void smile_play_sound_channel(const char* path, long long length, long long channel);
 
-static int smile_window_load_placement(RECT* rectangle)
+static uint32_t smile_window_placement_checksum(const unsigned char* record, SIZE_T length)
+{
+    uint32_t checksum = 2166136261u;
+    SIZE_T index;
+    for (index = 12; index < length; ++index)
+    {
+        checksum ^= record[index];
+        checksum *= 16777619u;
+    }
+    return checksum;
+}
+
+static UINT smile_monitor_dpi(HMONITOR monitor)
+{
+    typedef HRESULT (WINAPI *SmileGetDpiForMonitor)(HMONITOR, int, UINT*, UINT*);
+    HMODULE library;
+    SmileGetDpiForMonitor function;
+    UINT x = 0;
+    UINT y = 0;
+    library = LoadLibraryW(L"Shcore.dll");
+    if (library != 0)
+    {
+        function = (SmileGetDpiForMonitor)GetProcAddress(library, "GetDpiForMonitor");
+        if (function != 0 && SUCCEEDED(function(monitor, 0, &x, &y)) && x != 0)
+        {
+            FreeLibrary(library);
+            return x;
+        }
+        FreeLibrary(library);
+    }
+    x = GetDpiForSystem();
+    return x == 0 ? 96 : x;
+}
+
+static int smile_window_load_placement_v1(RECT* rectangle)
 {
     static const char placement_key[] = "__smile_internal_window_placement_v1";
     WCHAR path[2048];
@@ -128,17 +163,118 @@ static int smile_window_load_placement(RECT* rectangle)
     return MonitorFromRect(rectangle, MONITOR_DEFAULTTONULL) != 0;
 }
 
+static int smile_window_load_placement(
+    RECT* rectangle,
+    long long* logical_width,
+    long long* logical_height,
+    int* show_command)
+{
+    static const char placement_key[] = "__smile_internal_window_placement_v2";
+    WCHAR path[2048];
+    unsigned char record[64];
+    HANDLE file;
+    LARGE_INTEGER size;
+    DWORD read;
+    RECT saved_work;
+    RECT client;
+    RECT work;
+    MONITORINFO monitor_info = { sizeof(MONITORINFO) };
+    HMONITOR monitor;
+    UINT dpi;
+    LONG outer_width;
+    LONG outer_height;
+    LONG x;
+    LONG y;
+    int32_t offset_x;
+    int32_t offset_y;
+    uint32_t width;
+    uint32_t height;
+    DWORD style = WS_OVERLAPPEDWINDOW;
+    if (!smile_remember_window_placement || rectangle == 0 || logical_width == 0 ||
+        logical_height == 0 || show_command == 0 ||
+        !smile_storage_data_path(placement_key, sizeof(placement_key) - 1,
+            path, (int)(sizeof(path) / sizeof(path[0]))))
+        return 0;
+    file = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL, 0);
+    if (file == INVALID_HANDLE_VALUE)
+        return smile_window_load_placement_v1(rectangle);
+    if (!GetFileSizeEx(file, &size) || size.QuadPart != (LONGLONG)sizeof(record) ||
+        !ReadFile(file, record, (DWORD)sizeof(record), &read, 0) || read != sizeof(record))
+    {
+        CloseHandle(file);
+        return smile_window_load_placement_v1(rectangle);
+    }
+    CloseHandle(file);
+    if (record[0] != 'S' || record[1] != 'M' || record[2] != 'W' || record[3] != 'P' ||
+        smile_data_u32(record + 4) != 2 ||
+        smile_data_u32(record + 8) != smile_window_placement_checksum(record, sizeof(record)))
+        return smile_window_load_placement_v1(rectangle);
+    width = smile_data_u32(record + 16);
+    height = smile_data_u32(record + 20);
+    if (width < 160 || height < 120 || width > 32768 || height > 32768)
+        return smile_window_load_placement_v1(rectangle);
+    saved_work.left = (LONG)(int32_t)smile_data_u32(record + 32);
+    saved_work.top = (LONG)(int32_t)smile_data_u32(record + 36);
+    saved_work.right = (LONG)(int32_t)smile_data_u32(record + 40);
+    saved_work.bottom = (LONG)(int32_t)smile_data_u32(record + 44);
+    monitor = MonitorFromRect(&saved_work, MONITOR_DEFAULTTONULL);
+    if (monitor == 0)
+        monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTOPRIMARY);
+    if (monitor == 0 || !GetMonitorInfoW(monitor, &monitor_info))
+        return smile_window_load_placement_v1(rectangle);
+    work = monitor_info.rcWork;
+    dpi = smile_monitor_dpi(monitor);
+    client.left = 0;
+    client.top = 0;
+    client.right = MulDiv((int)width, (int)dpi, 96);
+    client.bottom = MulDiv((int)height, (int)dpi, 96);
+    if (!AdjustWindowRectExForDpi(&client, style, FALSE, 0, dpi))
+        return smile_window_load_placement_v1(rectangle);
+    outer_width = client.right - client.left;
+    outer_height = client.bottom - client.top;
+    if (outer_width > work.right - work.left)
+        outer_width = work.right - work.left;
+    if (outer_height > work.bottom - work.top)
+        outer_height = work.bottom - work.top;
+    offset_x = (int32_t)smile_data_u32(record + 24);
+    offset_y = (int32_t)smile_data_u32(record + 28);
+    x = work.left + MulDiv(offset_x, (int)dpi, 96);
+    y = work.top + MulDiv(offset_y, (int)dpi, 96);
+    if (x < work.left) x = work.left;
+    if (y < work.top) y = work.top;
+    if (x + outer_width > work.right) x = work.right - outer_width;
+    if (y + outer_height > work.bottom) y = work.bottom - outer_height;
+    rectangle->left = x;
+    rectangle->top = y;
+    rectangle->right = x + outer_width;
+    rectangle->bottom = y + outer_height;
+    *logical_width = width;
+    *logical_height = height;
+    *show_command = smile_data_u32(record + 48) == SW_SHOWMAXIMIZED
+        ? SW_SHOWMAXIMIZED : SW_SHOWNORMAL;
+    return 1;
+}
+
 static void smile_window_save_placement(void)
 {
-    static const char placement_key[] = "__smile_internal_window_placement_v1";
+    static const char placement_key[] = "__smile_internal_window_placement_v2";
     WCHAR path[2048];
     WCHAR temporary[2048];
     WINDOWPLACEMENT placement = { sizeof(WINDOWPLACEMENT) };
     RECT rectangle;
-    unsigned char record[24];
+    unsigned char record[64];
     HANDLE file = INVALID_HANDLE_VALUE;
     DWORD written;
     int path_length;
+    RECT client;
+    RECT nonclient = { 0, 0, 0, 0 };
+    MONITORINFO monitor_info = { sizeof(MONITORINFO) };
+    HMONITOR monitor;
+    UINT dpi;
+    DWORD style;
+    LONG client_width;
+    LONG client_height;
     if (!smile_remember_window_placement || smile_window == 0 ||
         !smile_storage_data_path(placement_key, sizeof(placement_key) - 1,
             path, (int)(sizeof(path) / sizeof(path[0]))))
@@ -150,19 +286,47 @@ static void smile_window_save_placement(void)
         rectangle = placement.rcNormalPosition;
     else if (!GetWindowRect(smile_window, &rectangle))
         return;
-    if (rectangle.right - rectangle.left < 160 || rectangle.bottom - rectangle.top < 120)
+    monitor = MonitorFromRect(&rectangle, MONITOR_DEFAULTTONEAREST);
+    if (monitor == 0 || !GetMonitorInfoW(monitor, &monitor_info))
+        return;
+    dpi = smile_window != 0 ? GetDpiForWindow(smile_window) : smile_monitor_dpi(monitor);
+    if (dpi == 0) dpi = 96;
+    style = smile_fullscreen ? smile_windowed_style : (DWORD)GetWindowLongPtrW(smile_window, GWL_STYLE);
+    if (!AdjustWindowRectExForDpi(&nonclient, style, FALSE, 0, dpi))
+        return;
+    client_width = (rectangle.right - rectangle.left) - (nonclient.right - nonclient.left);
+    client_height = (rectangle.bottom - rectangle.top) - (nonclient.bottom - nonclient.top);
+    if (client_width < 1 || client_height < 1)
+    {
+        if (!GetClientRect(smile_window, &client))
+            return;
+        client_width = client.right - client.left;
+        client_height = client.bottom - client.top;
+    }
+    if (client_width < 160 || client_height < 120)
         return;
     path_length = lstrlenW(path);
     if (path_length + 4 >= (int)(sizeof(temporary) / sizeof(temporary[0])))
         return;
     lstrcpyW(temporary, path);
     lstrcatW(temporary, L".tmp");
+    ZeroMemory(record, sizeof(record));
     record[0] = 'S'; record[1] = 'M'; record[2] = 'W'; record[3] = 'P';
-    smile_data_put_u32(record + 4, 1);
-    smile_data_put_u32(record + 8, (uint32_t)(int32_t)rectangle.left);
-    smile_data_put_u32(record + 12, (uint32_t)(int32_t)rectangle.top);
-    smile_data_put_u32(record + 16, (uint32_t)(rectangle.right - rectangle.left));
-    smile_data_put_u32(record + 20, (uint32_t)(rectangle.bottom - rectangle.top));
+    smile_data_put_u32(record + 4, 2);
+    smile_data_put_u32(record + 12, dpi);
+    smile_data_put_u32(record + 16, (uint32_t)MulDiv(client_width, 96, (int)dpi));
+    smile_data_put_u32(record + 20, (uint32_t)MulDiv(client_height, 96, (int)dpi));
+    smile_data_put_u32(record + 24, (uint32_t)(int32_t)MulDiv(
+        rectangle.left - monitor_info.rcWork.left, 96, (int)dpi));
+    smile_data_put_u32(record + 28, (uint32_t)(int32_t)MulDiv(
+        rectangle.top - monitor_info.rcWork.top, 96, (int)dpi));
+    smile_data_put_u32(record + 32, (uint32_t)(int32_t)monitor_info.rcWork.left);
+    smile_data_put_u32(record + 36, (uint32_t)(int32_t)monitor_info.rcWork.top);
+    smile_data_put_u32(record + 40, (uint32_t)(int32_t)monitor_info.rcWork.right);
+    smile_data_put_u32(record + 44, (uint32_t)(int32_t)monitor_info.rcWork.bottom);
+    smile_data_put_u32(record + 48, placement.showCmd == SW_SHOWMAXIMIZED
+        ? SW_SHOWMAXIMIZED : SW_SHOWNORMAL);
+    smile_data_put_u32(record + 8, smile_window_placement_checksum(record, sizeof(record)));
     file = CreateFileW(temporary, GENERIC_WRITE, 0, 0, CREATE_ALWAYS,
         FILE_ATTRIBUTE_NORMAL, 0);
     if (file == INVALID_HANDLE_VALUE)
@@ -1227,11 +1391,15 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
         case WM_SIZE:
             smile_audio_focus.minimized = wparam == SIZE_MINIMIZED;
             smile_update_game_audio_active();
+            if (smile_dpi_change_in_progress)
+                return 0;
             if (smile_responsive_window && wparam != SIZE_MINIMIZED &&
                 LOWORD(lparam) > 0 && HIWORD(lparam) > 0)
             {
-                smile_logical_width = LOWORD(lparam);
-                smile_logical_height = HIWORD(lparam);
+                UINT dpi = GetDpiForWindow(window);
+                if (dpi == 0) dpi = 96;
+                smile_logical_width = MulDiv(LOWORD(lparam), 96, (int)dpi);
+                smile_logical_height = MulDiv(HIWORD(lparam), 96, (int)dpi);
                 smile_graphics_set_logical_size(smile_logical_width, smile_logical_height);
             }
             smile_graphics_resize(LOWORD(lparam), HIWORD(lparam));
@@ -1248,10 +1416,27 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
         case WM_DPICHANGED:
         {
             RECT* suggested = (RECT*)lparam;
+            RECT client;
+            UINT dpi = HIWORD(wparam);
+            smile_dpi_change_in_progress = 1;
             SetWindowPos(window, 0, suggested->left, suggested->top,
                 suggested->right - suggested->left, suggested->bottom - suggested->top,
                 SWP_NOACTIVATE | SWP_NOZORDER);
-            smile_graphics_on_dpi_changed(HIWORD(wparam));
+            smile_graphics_on_dpi_changed(dpi);
+            if (GetClientRect(window, &client))
+            {
+                int width = client.right - client.left;
+                int height = client.bottom - client.top;
+                if (smile_responsive_window && width > 0 && height > 0)
+                {
+                    smile_logical_width = MulDiv(width, 96, (int)dpi);
+                    smile_logical_height = MulDiv(height, 96, (int)dpi);
+                    smile_graphics_set_logical_size(smile_logical_width, smile_logical_height);
+                }
+                smile_graphics_resize(width, height);
+            }
+            smile_dpi_change_in_progress = 0;
+            InvalidateRect(window, 0, FALSE);
             return 0;
         }
         case WM_SYSKEYDOWN:
@@ -1394,6 +1579,7 @@ void smile_game_open(const char* title, long long title_length, long long width,
     int window_y = CW_USEDEFAULT;
     int window_width;
     int window_height;
+    int show_command = SW_SHOW;
     if (smile_window != 0)
         return;
     if (width <= 0) width = 960;
@@ -1425,12 +1611,13 @@ void smile_game_open(const char* title, long long title_length, long long width,
     dpi = GetDpiForSystem();
     rectangle.left = 0;
     rectangle.top = 0;
-    rectangle.right = smile_integer(width);
-    rectangle.bottom = smile_integer(height);
+    rectangle.right = MulDiv(smile_integer(width), (int)dpi, 96);
+    rectangle.bottom = MulDiv(smile_integer(height), (int)dpi, 96);
     AdjustWindowRectExForDpi(&rectangle, style, FALSE, 0, dpi);
     window_width = rectangle.right - rectangle.left;
     window_height = rectangle.bottom - rectangle.top;
-    if (smile_window_load_placement(&rectangle))
+    if (smile_window_load_placement(&rectangle, &smile_logical_width,
+        &smile_logical_height, &show_command))
     {
         window_x = rectangle.left;
         window_y = rectangle.top;
@@ -1450,8 +1637,10 @@ void smile_game_open(const char* title, long long title_length, long long width,
     if (smile_responsive_window && GetClientRect(smile_window, &rectangle) &&
         rectangle.right > rectangle.left && rectangle.bottom > rectangle.top)
     {
-        smile_logical_width = rectangle.right - rectangle.left;
-        smile_logical_height = rectangle.bottom - rectangle.top;
+        dpi = GetDpiForWindow(smile_window);
+        if (dpi == 0) dpi = 96;
+        smile_logical_width = MulDiv(rectangle.right - rectangle.left, 96, (int)dpi);
+        smile_logical_height = MulDiv(rectangle.bottom - rectangle.top, 96, (int)dpi);
     }
     if (!smile_graphics_initialize(smile_window, smile_logical_width, smile_logical_height,
         requested_backend, smile_vsync_enabled,
@@ -1463,7 +1652,7 @@ void smile_game_open(const char* title, long long title_length, long long width,
         smile_closed = 1;
         return;
     }
-    ShowWindow(smile_window, SW_SHOW);
+    ShowWindow(smile_window, show_command);
     UpdateWindow(smile_window);
 }
 

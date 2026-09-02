@@ -45,7 +45,7 @@ The first command updates the prepared and runtime outputs. `-Check` regenerates
 
 ## Integrated v5.4 viewer candidate
 
-`arin-integrated-candidate-v5.4.blend` is the permanent editable Blender source for the user-reviewed sword-and-shield candidate. `scripts\export-arin-v5-4-viewer.py` deterministically exports `arin-integrated-candidate-v5.4.glb` for the Character Viewer and future cooker tests.
+`games\SinStarI\SourceAssets\Characters\Paladin\arin-integrated-candidate-v5.4.blend` is the permanent editable Blender source for the user-reviewed sword-and-shield candidate. `scripts\export-arin-v5-4-viewer.ps1` invokes the deterministic Blender exporter and atomically publishes `arin-integrated-candidate-v5.4.glb` plus its external source textures for the Character Viewer and future cooker tests.
 
 The exporter uses a reusable Blender-to-SM3D preparation contract:
 
@@ -56,7 +56,7 @@ The exporter uses a reusable Blender-to-SM3D preparation contract:
 - accessors and buffer views are compacted deterministically and checked against the 1,024-entry converter limit;
 - a second export must match the first byte-for-byte.
 
-The resulting candidate has 7,376 vertices, 10,296 triangles, four parts, four materials, 42 bones, 46 nodes, 11 clips, and six descriptor sockets. The cooked model lives under `Assets\Generation2\ArinV54`. Its current GLB SHA-256 is `CAA8F8AD5A814E7763B895AA846E6BC528CD3728DA5C06E45FDE93A3B1DD66A6`.
+The resulting candidate has 7,376 vertices, 10,296 triangles, four parts, four materials, 42 bones, 46 nodes, 11 clips, and six descriptor sockets. The cooked model lives under `Assets\Generation2\ArinV54`. The current GLB SHA-256 is `D080754339ABD4F3F4CFBCAF4F26146631BDEEE30DD2EAA284682EF896B16CA3`; the published SM3D SHA-256 is `508063F78C08B97DBD44ED19DC3A0D8C1DAAEF1A093D8F19E5A6929456993023`.
 
 The static bind AABB extends approximately 0.104 model units below the animated Idle sole plane. The viewer profile records a `-10` fitted-world-unit ground offset so the boots meet the studio floor without changing authored animation motion.
 
