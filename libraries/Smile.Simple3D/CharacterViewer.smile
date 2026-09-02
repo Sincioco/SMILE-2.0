@@ -95,7 +95,9 @@ Public Function AutoFit(Value As Profile, Bounds As Character3D.Bounds3D) As Fra
     Dim FittedHeight As Number
     Dim PaddedHeight As Number
 
-    If Not ValidateProfile(Value) Or Not Bounds.Valid Or Bounds.Size.Y <= 0 Then
+    If (Not ValidateProfile(Value) Or
+        Not Bounds.Valid Or
+        Bounds.Size.Y <= 0) Then
         Return Result
     End If
 

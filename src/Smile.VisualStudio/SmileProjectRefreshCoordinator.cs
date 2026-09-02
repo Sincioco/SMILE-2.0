@@ -261,6 +261,10 @@ internal sealed class SmileProjectRefreshCoordinator : IDisposable
         var assetRoots = _project.SourceSet.AssetManifest.Includes.Where(include => include.IsValid)
             .Select(include => new AssetWatchRoot(Path.GetFullPath(include.SearchRootFullPath),
                 include.WatchSubdirectories)).ToList();
+        assetRoots.AddRange(_project.SourceSet.Model3DAssets.Items.SelectMany(item =>
+                new[] { item.FullPath, item.DescriptorPath }.Where(path => path != null))
+            .Select(path => new AssetWatchRoot(Path.GetDirectoryName(Path.GetFullPath(path!))!,
+                includeSubdirectories: false)));
         var assetRequests = assetRoots.Select(root =>
         {
             var directory = Directory.Exists(root.Path) ? root.Path : FindExistingDirectoryForDirectory(root.Path);

@@ -52,6 +52,8 @@ internal sealed class CompilerDriver
                 return 0;
             }
 
+            var buildAssets = input.Project == null ? null : Model3DAssetBuildPipeline.Prepare(input.Project);
+
             if (options.Target == SmileCompilationTarget.Web)
             {
                 var outputDirectory = Path.GetFullPath(options.OutputDirectory!);
@@ -73,14 +75,14 @@ internal sealed class CompilerDriver
                     }
 
                     WebOutputWriter.Write(webStagingDirectory, new WebEmitter(analysis, appIdentity,
-                        input.Project?.AssetPaths), _testHooks?.AfterWebStagedFile);
+                        buildAssets?.AssetPaths), _testHooks?.AfterWebStagedFile);
                     var currentPaths = new List<string>(WebOutputWriter.ManagedFileNames);
                     if (input.Project != null)
                     {
-                        publication = SmileProjectAssetPublisher.Publish(input.Project.AssetManifest,
+                        publication = SmileProjectAssetPublisher.Publish(buildAssets!.Manifest,
                             webStagingDirectory, appIdentity, "web", null, false,
                             _testHooks?.AssetPublicationHook);
-                        currentPaths.AddRange(input.Project.AssetPaths);
+                        currentPaths.AddRange(buildAssets.AssetPaths);
                         currentPaths.Add(Path.GetFileName(publication.ManifestPath));
                     }
                     TransactionalOutputPublisher.PublishDirectory(webStagingDirectory, outputDirectory,
@@ -140,7 +142,7 @@ internal sealed class CompilerDriver
                 var stagedOutputPath = Path.Combine(stagingDirectory, Path.GetFileName(outputPath));
                 var emitter = new MasmEmitter(analysis, options.GraphicsBackend, options.VSync,
                     options.EmitDebugInformation, appIdentity,
-                    input.Project?.AssetPaths);
+                    buildAssets?.AssetPaths);
                 File.WriteAllText(assemblyPath, emitter.Emit());
                 _testHooks?.AfterAssemblyEmission?.Invoke(intermediates);
                 if (options.EmitDebugInformation)
@@ -196,10 +198,10 @@ internal sealed class CompilerDriver
                     previousPaths.AddRange(previousAssets.AssetPaths);
                     previousPaths.Add(previousAssets.ManifestName);
                     previousPaths.AddRange(previousAssets.LegacyManifestNames);
-                    nativePublication = SmileProjectAssetPublisher.Publish(input.Project.AssetManifest,
+                    nativePublication = SmileProjectAssetPublisher.Publish(buildAssets!.Manifest,
                         stagingDirectory, appIdentity, "windows-x64", Path.GetFileNameWithoutExtension(outputPath),
                         explicitIdentity, _testHooks?.AssetPublicationHook);
-                    currentPaths.AddRange(input.Project.AssetPaths);
+                    currentPaths.AddRange(buildAssets.AssetPaths);
                     currentPaths.Add(Path.GetFileName(nativePublication.ManifestPath));
                 }
 

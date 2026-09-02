@@ -724,6 +724,47 @@ Run("Game hierarchy projection includes startup alternate support and assets exa
             string.Equals(item.FullPath, source.FullPath, StringComparison.OrdinalIgnoreCase)));
     Equal(projection.Count, projection.Select(item => item.Key).Distinct(StringComparer.OrdinalIgnoreCase).Count());
 });
+Run("Model3DAsset project metadata is strict and projects as a distinct hierarchy item", () =>
+{
+    var projectPath = Path.GetFullPath("games/Dragonfall/Character3DViewerCooked.smileproj");
+    var sourceSet = SmileProjectSourceSet.Load(projectPath);
+    sourceSet.ValidateAssetsForBuild();
+    var model = sourceSet.Model3DAssets.Items.Single();
+    Equal("SourceAssets/Arin/sin-star-i-character-1-paladin-tripo-v01.original.glb", model.Include);
+    Equal("Assets/Generation2/Arin/ArinPrototype.sm3d", model.LogicalPath);
+    Equal("Assets/Generation2/Arin/Textures", model.TextureOutputDirectory);
+    Equal(SmileModel3DAssetProfile.Character, model.Profile);
+    Equal(SmileModel3DProductionState.Prototype, model.ProductionState);
+    Equal("sin-star-i.character-1.paladin", model.Identity);
+    var projected = SmileProjectHierarchyProjection.Create(sourceSet, "Game")
+        .Single(item => item.Kind == SmileProjectHierarchyItemKind.Model3DAsset);
+    Equal(true, projected.Caption.Contains("Character Model3DAsset", StringComparison.Ordinal));
+    Equal(model.FullPath, projected.FullPath);
+});
+Run("Invalid Model3DAsset profile sample rate and logical path report stable SML37xx diagnostics", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileModel3DProjectTests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        File.WriteAllText(Path.Combine(directory, "Program.smile"), "End Program\n");
+        File.WriteAllBytes(Path.Combine(directory, "Model.glb"), new byte[] { 1 });
+        string Project(string attributes) =>
+            $"<SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind><StartupFile>Program.smile</StartupFile></PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" StartupOnly=\"true\" /><Model3DAsset Include=\"Model.glb\" {attributes} /></ItemGroup></SmileProject>";
+        var projectPath = Path.Combine(directory, "Model.smileproj");
+
+        File.WriteAllText(projectPath, Project("LogicalPath=\"Assets/Model.sm3d\" Profile=\"Animated\""));
+        Equal("SML3705", SmileProjectSourceSet.Load(projectPath).Model3DAssets.Diagnostics.Single().Code);
+        File.WriteAllText(projectPath, Project("LogicalPath=\"Assets/Model.sm3d\" Profile=\"Character\" SampleRate=\"61\""));
+        Equal("SML3709", SmileProjectSourceSet.Load(projectPath).Model3DAssets.Diagnostics.Single().Code);
+        File.WriteAllText(projectPath, Project("LogicalPath=\"../Model.sm3d\" Profile=\"Static\""));
+        Equal("SML3704", SmileProjectSourceSet.Load(projectPath).Model3DAssets.Diagnostics.Single().Code);
+    }
+    finally
+    {
+        Directory.Delete(directory, true);
+    }
+});
 Run("Phase 4.2 asset globs resolve exactly deduplicate overlaps and project only resolved files", () =>
 {
     var projectPath = Path.GetFullPath("examples/Phase4AssetPublication/Phase4AssetPublication.smileproj");
@@ -5315,10 +5356,10 @@ Run("VSIX templates render localized identity metadata within the aligned header
     var border = gameTemplate.Split('\n')[0].TrimEnd('\r');
     var rendered = gameTemplate.Replace("$smileuser$", "Sin".PadRight(69), StringComparison.Ordinal)
         .Replace("$smiledate$", "August 15, 2026".PadRight(69), StringComparison.Ordinal)
-        .Replace("$smileversion$", "2.0.56", StringComparison.Ordinal);
+        .Replace("$smileversion$", "2.0.57", StringComparison.Ordinal);
     var header = rendered.Split('\n').Take(9).Select(line => line.TrimEnd('\r')).ToArray();
     Equal("' Programmed By: " + "Sin".PadRight(69) + "Version: 0.0.1", header[3]);
-    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.56", header[4]);
+    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.57", header[4]);
     Equal(header[3].IndexOf("Version:", StringComparison.Ordinal) + "Version".Length,
         header[4].IndexOf("SMILE:", StringComparison.Ordinal) + "SMILE".Length);
     Equal(true, header.All(line => line.Length <= border.Length));
@@ -5331,14 +5372,14 @@ Run("VSIX templates render localized identity metadata within the aligned header
     foreach (var manifest in new[] { gameManifest, consoleManifest })
     {
         Equal(true, manifest.Contains("SmileProjectTemplateWizard", StringComparison.Ordinal));
-        Equal(true, manifest.Contains("Version=2.0.56.0", StringComparison.Ordinal));
+        Equal(true, manifest.Contains("Version=2.0.57.0", StringComparison.Ordinal));
     }
     foreach (var applicationProject in new[] { gameProject, consoleProject })
         Equal(true, applicationProject.Contains("<ApplicationId>$smileapplicationid$</ApplicationId>", StringComparison.Ordinal));
     Equal(false, libraryProject.Contains("ApplicationId", StringComparison.Ordinal));
     Equal(true, wizard.Contains("\"smile.app.a\" + Guid.NewGuid().ToString(\"N\")", StringComparison.Ordinal));
     Equal(true, wizard.Contains("ToString(\"D\", CultureInfo.CurrentCulture)", StringComparison.Ordinal));
-    Equal(true, project.Contains("<Version>2.0.56</Version>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<Version>2.0.57</Version>", StringComparison.Ordinal));
     Equal(true, vsixManifest.Contains("Type=\"Microsoft.VisualStudio.Assembly\"", StringComparison.Ordinal));
 });
 

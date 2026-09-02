@@ -10,6 +10,7 @@ public enum SmileProjectHierarchyItemKind
     Source,
     Folder,
     Asset,
+    Model3DAsset,
     References,
     Reference
 }
@@ -103,6 +104,12 @@ public static class SmileProjectHierarchyProjection
             if (separator >= 0)
                 AddFolderAndParents(folders, asset.LogicalPath.Substring(0, separator));
         }
+        foreach (var model in sourceSet.Model3DAssets.Items)
+        {
+            var separator = model.Include.LastIndexOf('/');
+            if (separator >= 0)
+                AddFolderAndParents(folders, model.Include.Substring(0, separator));
+        }
         AddAssetLevel(result, sourceSet, sourcePaths, folders, parentLogicalPath: null, parentFullPath: null);
 
         return result;
@@ -149,6 +156,15 @@ public static class SmileProjectHierarchyProjection
             if (!sourcePaths.Contains(asset.FullPath))
                 result.Add(new SmileProjectHierarchyItem(Path.GetFileName(asset.FullPath), asset.FullPath,
                     parentFullPath, SmileProjectHierarchyItemKind.Asset));
+        }
+
+        foreach (var model in sourceSet.Model3DAssets.Items.Where(item =>
+                 string.Equals(ParentLogicalPath(item.Include), parentLogicalPath ?? string.Empty,
+                     StringComparison.OrdinalIgnoreCase)).OrderBy(item => item.Include, StringComparer.Ordinal))
+        {
+            result.Add(new SmileProjectHierarchyItem(
+                $"{Path.GetFileName(model.FullPath)} ({model.Profile} Model3DAsset)", model.FullPath,
+                parentFullPath, SmileProjectHierarchyItemKind.Model3DAsset));
         }
     }
 

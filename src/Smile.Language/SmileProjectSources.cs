@@ -83,7 +83,8 @@ public sealed class SmileProjectSourceSet
     private SmileProjectSourceSet(string projectPath, SmileProjectKind projectKind, string startupFile,
         string libraryName, string version, string outputName, string? applicationId,
         IReadOnlyList<SmileProjectSourceItem> items, IReadOnlyList<SmileProjectSourceItem> compilationSources,
-        IReadOnlyList<SmileProjectReferenceItem> references, SmileProjectAssetManifest assetManifest)
+        IReadOnlyList<SmileProjectReferenceItem> references, SmileProjectAssetManifest assetManifest,
+        SmileProjectModel3DAssetSet model3DAssets)
     {
         ProjectPath = projectPath;
         ProjectDirectory = Path.GetDirectoryName(projectPath) ?? Environment.CurrentDirectory;
@@ -99,6 +100,7 @@ public sealed class SmileProjectSourceSet
         SupportSources = projectKind == SmileProjectKind.Library ? compilationSources : compilationSources.Skip(1).ToArray();
         References = references;
         AssetManifest = assetManifest;
+        Model3DAssets = model3DAssets;
     }
 
     public string ProjectPath { get; }
@@ -118,6 +120,7 @@ public sealed class SmileProjectSourceSet
     public IReadOnlyList<SmileProjectReferenceItem> References { get; }
     public SmileProjectAssetManifest AssetManifest { get; }
     public IReadOnlyList<string> AssetPaths => AssetManifest.AssetPaths;
+    public SmileProjectModel3DAssetSet Model3DAssets { get; }
 
     public IReadOnlyList<SmileProjectSourceItem> GetCompilationSourcesFor(string filePath)
     {
@@ -280,8 +283,10 @@ public sealed class SmileProjectSourceSet
         }
 
         var assetManifest = SmileProjectAssetResolver.Resolve(fullProjectPath, projectKind, root);
+        var model3DAssets = SmileProjectModel3DAssetResolver.Resolve(fullProjectPath, projectKind, root);
         return new SmileProjectSourceSet(fullProjectPath, projectKind, startupFile ?? string.Empty,
-            libraryName, version, outputName!, applicationId, items, compilationSources, references, assetManifest);
+            libraryName, version, outputName!, applicationId, items, compilationSources, references, assetManifest,
+            model3DAssets);
     }
 
     public void ValidateFiles()
@@ -296,7 +301,11 @@ public sealed class SmileProjectSourceSet
         }
     }
 
-    public void ValidateAssetsForBuild() => AssetManifest.ValidateForBuild();
+    public void ValidateAssetsForBuild()
+    {
+        AssetManifest.ValidateForBuild();
+        Model3DAssets.ValidateForBuild();
+    }
 
     public void ValidateReferences()
     {

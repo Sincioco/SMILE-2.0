@@ -34,6 +34,12 @@ if errorlevel 1 exit /b %errorlevel%
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-renderer3d-post-processing.ps1"
 if errorlevel 1 exit /b %errorlevel%
 
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-model3d-asset-cooking.ps1"
+if errorlevel 1 exit /b %errorlevel%
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-model3d-cooking-screenshot-evidence.ps1"
+if errorlevel 1 exit /b %errorlevel%
+
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-lightweight-oop-hardening.ps1"
 if errorlevel 1 exit /b %errorlevel%
 

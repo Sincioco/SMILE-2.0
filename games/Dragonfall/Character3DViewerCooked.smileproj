@@ -1,0 +1,23 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Character3DViewer.smile</StartupFile>
+    <OutputName>Character3DViewerCooked</OutputName>
+    <ApplicationId>smile.tools.character3d-viewer-cooked</ApplicationId>
+    <GraphicsBackend>DirectX</GraphicsBackend>
+    <VSync>true</VSync>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Character3DViewer.smile" StartupOnly="true" />
+    <SmileSource Include="Character3DViewerProfile.smile" />
+    <Model3DAsset Include="SourceAssets\Arin\sin-star-i-character-1-paladin-tripo-v01.original.glb"
+                  Descriptor="SourceAssets\Arin\ArinPrototype.sm3d.json"
+                  LogicalPath="Assets\Generation2\Arin\ArinPrototype.sm3d"
+                  TextureOutputDirectory="Assets\Generation2\Arin\Textures"
+                  Profile="Character"
+                  Identity="sin-star-i.character-1.paladin"
+                  ProductionState="Prototype" />
+    <Asset Include="TechnicalAssets\Generation2\AnimationArticulated.sm3d" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

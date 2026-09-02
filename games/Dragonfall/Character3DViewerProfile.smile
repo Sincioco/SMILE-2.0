@@ -169,7 +169,9 @@ Public Function SocketName(ProfileIndex As Number, SocketIndex As Number) As Tex
         End If
 
     Else If ProfileIndex = PROFILE_TECHNICAL_ARTICULATED And SocketIndex = 0 Then
+
         Result = "Grip"
+
     End If
 
     Return Result

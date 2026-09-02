@@ -1,0 +1,16 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Console</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>Model3DAssetCooking</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <Model3DAsset Include="Source\M0Triangle.gltf"
+                  LogicalPath="Assets\Models\M0Triangle.sm3d"
+                  TextureOutputDirectory="Assets\Models\Textures"
+                  Profile="Static"
+                  Identity="smile.fixture.m0-triangle"
+                  ProductionState="Prototype" />
+  </ItemGroup>
+</SmileProject>

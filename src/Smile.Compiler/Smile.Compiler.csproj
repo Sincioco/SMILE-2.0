@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\Smile.AssetTool\Smile.AssetTool.csproj" />
     <ProjectReference Include="..\Smile.Language\Smile.Language.csproj" />
   </ItemGroup>
 
