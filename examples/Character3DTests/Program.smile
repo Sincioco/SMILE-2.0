@@ -17,7 +17,7 @@ Dim TamperedActor As Character3D.Actor
 Dim SurvivorActor As Character3D.Actor
 Dim PendingActor As Character3D.Actor
 Dim CapacityActors[32] As Character3D.Actor
-Dim Blockers[511] As Core.Object3D
+Dim Blockers[1023] As Core.Object3D
 Dim FillAnimators[128] As Core.Animator3D
 Dim Skeleton As Core.Skeleton3D
 Dim Socket As Core.Vector3
@@ -201,8 +201,8 @@ Call Check(Character3D.RotationY(First) >= 89 And Character3D.RotationY(First) <
 Call Check(Not Character3D.Place(First, 1000001, 0, 0))
 Call Check(Character3D.PositionX(First) = -1)
 Call Check(Not Character3D.Rotate(First, 1000001, 0, 0))
-Call Check(Character3D.SetScale(First, 10000))
-Call Check(Not Character3D.SetScale(First, 10001))
+Call Check(Character3D.SetScale(First, 25000))
+Call Check(Not Character3D.SetScale(First, 25001))
 Call Check(Character3D.SetScale(First, 200))
 Call Check(Character3D.Place(First, 10, 20, 30))
 Call Check(Character3D.Rotate(First, 0, 0, 0))
@@ -409,11 +409,11 @@ Call Check(Graphics3D.LiveAnimatorCount3D() = 0)
 
 Blockers[0] = Graphics3D.CreateCube3D(1)
 
-For Index = 1 To 510
+For Index = 1 To 1022
     Blockers[Index] = Graphics3D.CreateObjectFromMesh3D(Blockers[0].MeshHandle)
 End For
 
-Call Check(Graphics3D.LiveObjectCount3D() = 511)
+Call Check(Graphics3D.LiveObjectCount3D() = 1023)
 
 Broken = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
 
@@ -422,9 +422,9 @@ Call Check(Character3D.LastError() = Character3D.CHARACTER_ERROR_CAPACITY)
 Call Check(Character3D.LiveActorCount() = 0)
 Call Check(Character3D.CachedAssetCount() = 0)
 Call Check(Graphics3D.LiveModelCount3D() = 0)
-Call Check(Graphics3D.LiveObjectCount3D() = 511)
+Call Check(Graphics3D.LiveObjectCount3D() = 1023)
 
-For Index = 1 To 510
+For Index = 1 To 1022
     Call Graphics3D.DestroyObjectInstance3D(Blockers[Index])
 End For
 

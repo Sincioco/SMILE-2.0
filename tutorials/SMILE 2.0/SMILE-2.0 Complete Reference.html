@@ -890,6 +890,10 @@ Pointer_Released(Button)</code></pre></div>
 <span class="keyword">KEY_A</span>
 <span class="keyword">KEY_S</span>
 <span class="keyword">KEY_D</span>
+<span class="keyword">KEY_O</span>
+<span class="keyword">KEY_F</span>
+<span class="keyword">KEY_G</span>
+<span class="keyword">KEY_R</span>
 <span class="keyword">KEY_UP</span>
 <span class="keyword">KEY_DOWN</span>
 <span class="keyword">KEY_LEFT</span>
@@ -1831,7 +1835,7 @@ Graphics3D.SetObjectColor(Object, Red, Green, Blue)
 Graphics3D.SetObjectOpacity(Object, Opacity)
 Graphics3D.SetObjectVisible(Object, Visible)</code></pre></div>
     <p>Custom indexed meshes use <code>CreateMesh3D</code>, <code>SetMeshVertex3D</code>, <code>SetMeshTriangle3D</code>, <code>CommitMesh3D</code>, and <code>CreateObjectFromMesh3D</code>. Create geometry outside the frame loop. Owning objects use <code>DestroyObject3D</code>; shared-mesh instances use <code>DestroyObjectInstance3D</code>.</p>
-    <ul><li>Live limits are 128 meshes and 512 objects, with generation-checked typed handles.</li><li>A mesh supports at most 65,535 vertices and 196,608 indices.</li><li>Public positions/sizes are integer world units, rotations are integer degrees, scales/opacity are percentages, and matrices use fixed point.</li><li>Textures, materials, deterministic <code>.sm3d</code> models, and bounded skeletal animation are now public; physics, shadows, and student shaders remain application or future-library concerns.</li><li>The compiler's numeric <code>Renderer3D(command, ...)</code> bridge is an internal library/runtime boundary; application code should use <code>Graphics3D</code>.</li></ul>
+    <ul><li>Live limits are 128 meshes and 1,024 objects, with generation-checked typed handles.</li><li>A mesh supports at most 65,535 vertices and 196,608 indices.</li><li>Public positions/sizes are integer world units, rotations are integer degrees, scales/opacity are percentages, and matrices use fixed point.</li><li>Textures, materials, deterministic <code>.sm3d</code> models, and bounded skeletal animation are now public; physics, shadows, and student shaders remain application or future-library concerns.</li><li>The compiler's numeric <code>Renderer3D(command, ...)</code> bridge is an internal library/runtime boundary; application code should use <code>Graphics3D</code>.</li></ul>
     <a class="back-top" href="#top">Back to contents</a>
   </section>
 

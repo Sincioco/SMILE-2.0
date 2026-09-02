@@ -28,7 +28,7 @@ SMILE must evolve incrementally from the current SMILE 2.0 compiler and runtime 
 ### Permanent smooth 3D camera interaction rule
 
 - Future SMILE games, viewers, examples, templates, and programs with pan, zoom, orbit, or rotation controls must make those controls smooth by default on native and Web targets.
-- Use an integer-world scale large enough that camera and target movement does not visibly quantize around the subject. Meter-scale imported assets may use Character3D scale up to 10,000 percent when needed for camera precision.
+- Use an integer-world scale large enough that camera and target movement does not visibly quantize around the subject. Meter-scale imported assets may use Character3D scale up to 25,000 percent when needed for camera precision or to match established world-scale actors.
 - Preserve partial pointer motion across frames instead of truncating small deltas. Bound pan and vertical orbit to useful scene-relative ranges.
 - Apply wheel, button, key, or gesture zoom to a bounded target and ease the live camera toward it instead of snapping an entire input step in one frame.
 - Keep input sensitivity proportional to the scene and subject. Do not copy constants from a differently scaled scene without recalibration.
@@ -278,3 +278,9 @@ Do not use vague messages such as `chore: update files`, `fix: changes`, or `fea
 ## Final report
 
 Report commit hashes, files changed, syntax added, generated executables, VSIX path, validation results, and remaining manual checks.
+
+## Permanent chat image delivery rule
+
+- Never print, paste, serialize, or otherwise expose base64 image data or `data:` image URLs in the chat on desktop or mobile.
+- Screenshots and other images must use only the normal rendered inline-image output supported by the Codex app.
+- If normal rendered inline delivery is unavailable, report the image file path or the delivery limitation instead of emitting encoded image text.

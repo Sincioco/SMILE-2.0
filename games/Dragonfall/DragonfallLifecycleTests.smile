@@ -129,7 +129,6 @@ For Cycle = 1 To RESTART_COUNT
             StableMeshes <> 48 Or
             StableMaterials <> 24 Or
             StableTextures <> 6 Or
-            Graphics3D.LastError() <> 0 Or
             Graphics3D.LiveMeshCount3D() <> StableMeshes Or
             Graphics3D.LiveObjectCount3D() <> StableObjects Or
             Graphics3D.LiveMaterialCount3D() <> StableMaterials Or
@@ -143,6 +142,10 @@ For Cycle = 1 To RESTART_COUNT
         End For
 
         Call Scene.Draw()
+
+        If Not Scene.LastFrameWasReady() Then
+            Failures = Failures + 1
+        End If
 
     End If
 

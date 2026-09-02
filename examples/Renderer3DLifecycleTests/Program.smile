@@ -4,7 +4,7 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 
 Const EXPECTED_MAX_MESHES = 128
-Const EXPECTED_MAX_OBJECTS = 512
+Const EXPECTED_MAX_OBJECTS = 1024
 Const FRAME_CYCLES = 2000
 Const RESTART_CYCLES = 100
 
@@ -127,7 +127,7 @@ If (OverflowObject.Handle <> 0 Or
     Failures = Failures + 1
 End If
 
-''' The 512-entry native pool needs nine slot bits. Exercise the highest slot
+''' The 1,024-entry native pool needs ten slot bits. Exercise the highest slot
 ''' through normal handle validation and destruction so capacity-only tests
 ''' cannot hide an unreachable upper half.
 

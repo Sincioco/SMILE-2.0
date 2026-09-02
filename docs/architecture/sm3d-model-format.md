@@ -67,7 +67,7 @@ All integers and IEEE-754 floats are little-endian. Offsets are relative to the 
 
 The header is followed by one 24-byte record per part: first vertex, vertex count, first index, index count, material slot, and a reserved zero. Vertices follow as eight float32 values: position XYZ, normal XYZ, and UV. Indices follow as local uint32 part indices.
 
-Runtime bounds are 16 MiB, 16 parts, 65,535 vertices and 196,608 indices per part, 64 material slots, 64 live models, 128 total live meshes, and 512 live objects. Counts, arithmetic, finite floats, local index ranges, material references, magic, version, reserved values, exact size, and checksum are validated before any mesh is allocated.
+Runtime bounds are 16 MiB, 16 parts, 65,535 vertices and 196,608 indices per part, 64 material slots, 64 live models, 128 total live meshes, and 1,024 live objects. Counts, arithmetic, finite floats, local index ranges, material references, magic, version, reserved values, exact size, and checksum are validated before any mesh is allocated.
 
 ## Binary format 2
 
@@ -144,7 +144,7 @@ The optional strict JSON descriptor is selected with `--descriptor`. Descriptor 
 
 ### Hard limits
 
-V2 retains the 16 MiB file, 16-part, 65,535-vertex-per-part, 196,608-index-per-part, and 64-material ceilings. It adds totals of 131,072 vertices and 393,216 indices plus at most 128 external texture references. Production animation adds 256 retained nodes, 128 bones, 64 clips, 64 events per clip, 64 sockets, 15-60 Hz sampling, and 120,000 ms per clip without increasing the file ceiling. Runtime pool limits remain 64 models, 128 meshes, 512 objects, 128 textures, 128 materials, 64 legacy skeletons, 128 legacy clips, and 128 animators shared by legacy and model-owned animation instances. The loader validates the entire file and preflights model/mesh/texture/material/animator capacity before allocation; any later path, image, shader, or allocation failure releases every resource created by that load and leaves prior live counts unchanged.
+V2 retains the 16 MiB file, 16-part, 65,535-vertex-per-part, 196,608-index-per-part, and 64-material ceilings. It adds totals of 131,072 vertices and 393,216 indices plus at most 128 external texture references. Production animation adds 256 retained nodes, 128 bones, 64 clips, 64 events per clip, 64 sockets, 15-60 Hz sampling, and 120,000 ms per clip without increasing the file ceiling. Runtime pool limits are 64 models, 128 meshes, 1,024 objects, 128 textures, 128 materials, 64 legacy skeletons, 128 legacy clips, and 128 animators shared by legacy and model-owned animation instances. The loader validates the entire file and preflights model/mesh/texture/material/animator capacity before allocation; any later path, image, shader, or allocation failure releases every resource created by that load and leaves prior live counts unchanged.
 
 ### Texture paths and tangents
 

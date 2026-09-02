@@ -136,6 +136,8 @@ Native desktop testing exposed a shared frame-boundary defect after M7B: `smile_
 
 Initial input-delivery testing then exposed visible camera quantization: the meter-scale Arin model was only about 12 integer world units tall at the previous Character3D maximum scale. Camera orbit and pan therefore moved in large visible whole-unit steps. Character3D now permits a bounded 1-10,000 percent uniform scale. The viewer uses 10,000 percent and proportionally scales its camera, target, floor, point-light positions/ranges, pan limits, and vertical-orbit limit by 10 while retaining the same on-screen composition and reported character height. No geometry, animation, texture, renderer command, or resource-count limit changed.
 
+Dragonfall2 integration later raised Character3D's reusable ceiling to 25,000 percent so the same meter-scale asset can match Dragonfall's roughly 200-unit procedural battle actors. The Character 3D Viewer retains its own 10,000 percent fit cap and existing composition.
+
 Horizontal pointer orbit now applies one yaw degree per logical mouse pixel instead of passing through the shared three-degree nudge scale. Vertical orbit applies one high-precision world unit per logical pixel. Pan retains partial motion and applies one high-precision world unit per three logical pixels, bounded to `PanX` +/-100 and `PanY` +/-60. Keyboard and on-screen controls use proportionally scaled steps.
 
 Wheel and on-screen zoom now modify a bounded target of -24 through +36 degrees relative to the 55-degree authored FOV. The live camera advances toward that target by one degree per presented frame, replacing each four-degree wheel-step snap with a short deterministic transition.

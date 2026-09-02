@@ -27,6 +27,7 @@
 #define SMILE_KEY_O 27
 #define SMILE_KEY_F 28
 #define SMILE_KEY_G 29
+#define SMILE_KEY_R 30
 #define SMILE_KEY_UP 10
 #define SMILE_KEY_DOWN 11
 #define SMILE_KEY_LEFT 12
@@ -969,6 +970,7 @@ static long long smile_map_key(WCHAR character, WORD virtual_key)
     if (character == L'o' || character == L'O' || virtual_key == 'O') return SMILE_KEY_O;
     if (character == L'f' || character == L'F' || virtual_key == 'F') return SMILE_KEY_F;
     if (character == L'g' || character == L'G' || virtual_key == 'G') return SMILE_KEY_G;
+    if (character == L'r' || character == L'R' || virtual_key == 'R') return SMILE_KEY_R;
     if (virtual_key == VK_UP) return SMILE_KEY_UP;
     if (virtual_key == VK_DOWN) return SMILE_KEY_DOWN;
     if (virtual_key == VK_LEFT) return SMILE_KEY_LEFT;
@@ -995,6 +997,7 @@ static int smile_key_virtual(long long key)
         case SMILE_KEY_O: return 'O';
         case SMILE_KEY_F: return 'F';
         case SMILE_KEY_G: return 'G';
+        case SMILE_KEY_R: return 'R';
         case SMILE_KEY_UP: return VK_UP;
         case SMILE_KEY_DOWN: return VK_DOWN;
         case SMILE_KEY_LEFT: return VK_LEFT;
@@ -1074,6 +1077,7 @@ long long smile_get_key(void)
         if ((GetAsyncKeyState('O') & 0x8000) != 0) return SMILE_KEY_O;
         if ((GetAsyncKeyState('F') & 0x8000) != 0) return SMILE_KEY_F;
         if ((GetAsyncKeyState('G') & 0x8000) != 0) return SMILE_KEY_G;
+        if ((GetAsyncKeyState('R') & 0x8000) != 0) return SMILE_KEY_R;
         return SMILE_KEY_NONE;
     }
 }

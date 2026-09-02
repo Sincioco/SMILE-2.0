@@ -4,12 +4,16 @@ Module Dragonfall.Scene
 Option Explicit
 
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Effects3D As Effects3D
 Import Smile.Simple3D.FixedMath As Math3D
 Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Scene3D As Scene3D
 Import Smile.Battle3D.Articulation As Articulation
 Import Smile.Battle3D.Camera As BattleCamera
 Import Smile.Battle3D.Effects As BattleEffects
 Import Dragonfall.Battle As Battle
+Import Dragonfall.VisualActor As VisualActor
 
 Public Const SHOT_WIDE = 1
 Public Const SHOT_PARTY = 2
@@ -71,6 +75,8 @@ Private Const ARIN_FORMATION_Z = -330
 Private Const MIRA_FORMATION_Z = -90
 Private Const TOR_FORMATION_Z = 150
 Private Const LYRA_FORMATION_Z = 390
+Private Const GENERATION_2_ARIN_HEIGHT = 246
+Private Const GENERATION_2_ARIN_GROUND = -15
 
 Private Dim State As Number
 Private Dim Ready As Boolean
@@ -143,6 +149,37 @@ Private Dim CameraInputAccepted As Boolean
 Private Dim LastFramedEnemyCount As Number
 Private Dim LastBossFramed As Boolean
 Private Dim CurrentActionShot As Number
+Private Dim Dragonfall2Mode As Boolean
+Private Dim Generation2Arin As VisualActor.Actor
+Private Dim Generation2ArinOffsetX As Number
+Private Dim Generation2ArinGroundY As Number
+Private Dim Generation2ArinOffsetZ As Number
+Private Dim Generation2ArinState As Number
+Private Dim Generation2ArinVisible As Boolean
+Private Dim LastGeneration2ArinDrawn As Boolean
+Private Dim LastFrameReady As Boolean
+Private Dim EnhancedVfxReady As Boolean
+Private Dim EnhancedVfxTexture As Core.Texture3D
+Private Dim EnhancedVfxAlphaMaterial As Core.Material3D
+Private Dim EnhancedVfxAdditiveMaterial As Core.Material3D
+Private Dim EnhancedVfxRibbonMaterial As Core.Material3D
+Private Dim LastBossResourceExpected As Number
+Private Dim LastBossResourceActual As Number
+Private Dim LastBossResourceError As Number
+Private Dim LastBossResourceHeadroom As Number
+Private Dim LastBossInvalidPart As Number
+Private Dim LastBossCreated As Boolean
+Private Dim LastCinderlingsCreated As Boolean
+
+''' Enables Dragonfall2's Generation-2 Arin and batched cinematic effects.
+''' The original Dragonfall project leaves this disabled.
+Public Sub ConfigureDragonfall2(Enabled As Boolean)
+
+    If Not Ready Then
+        Dragonfall2Mode = Enabled
+    End If
+
+End Sub
 
 Private Function Material(
     RedValue As Number,
@@ -223,6 +260,31 @@ Private Function AdditiveTexturedMaterial(
         True,
         100,
         20
+    )
+
+    Return ReturnValue
+
+End Function
+
+Private Function AlphaTexturedMaterial(
+    Texture As Core.Texture3D,
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number
+) As Core.Material3D
+
+    Dim ReturnValue As Core.Material3D
+
+    ReturnValue = Graphics3D.CreateMaterial3D(
+        Texture,
+        Graphics3D.MATERIAL_ALPHA_BLEND,
+        RedValue,
+        GreenValue,
+        BlueValue,
+        100,
+        True,
+        35,
+        55
     )
 
     Return ReturnValue
@@ -2274,10 +2336,120 @@ Private Function InitialResourcesReady() As Boolean
         Graphics3D.LiveMeshCount3D() = INITIAL_MESH_COUNT And
         Graphics3D.LiveMaterialCount3D() = MATERIAL_COUNT And
         Graphics3D.LiveTextureCount3D() = TEXTURE_COUNT And
-        Graphics3D.MaximumObjectCount3D() - Graphics3D.LiveObjectCount3D() >= MINIMUM_OBJECT_HEADROOM And
-        Graphics3D.LastError() = 0)
+        Graphics3D.MaximumObjectCount3D() - Graphics3D.LiveObjectCount3D() >= MINIMUM_OBJECT_HEADROOM)
+
+    ''' Renderer3D diagnostics are sticky until a renderer reset. Scene
+    ''' readiness therefore validates current handles, exact ownership counts,
+    ''' available headroom, and the first submitted frame instead of rejecting
+    ''' a later encounter because an earlier cleanup or optional probe left a
+    ''' historical diagnostic.
 
     Return ResourcesReady
+
+End Function
+
+Private Function InitializeGeneration2Arin() As Boolean
+
+    Dim Bounds As Character3D.Bounds3D
+    Dim Options As VisualActor.CreateOptions
+    Dim ScalePercent As Number
+
+    Options.Mode = VisualActor.MODE_GENERATION_2
+    Options.CharacterPath = "Assets\Generation2\ArinV54\ArinV54.sm3d"
+    Options.CharacterLoadPolicy = Character3D.CHARACTER_LOAD_REQUIRE_PBR
+    Options.PrototypeAsset = True
+    Generation2Arin = VisualActor.Create(Options)
+
+    If Not VisualActor.IsValid(Generation2Arin) Then
+        Return False
+    End If
+
+    Bounds = VisualActor.WorldBounds(Generation2Arin)
+
+    If Not Bounds.Valid Or Bounds.Size.Y <= 0 Then
+        Return False
+    End If
+
+    ScalePercent = GENERATION_2_ARIN_HEIGHT * 100000 / Bounds.Size.Y
+    ScalePercent = Min(Character3D.CHARACTER_MAX_SCALE_PERCENT, Max(1, ScalePercent))
+
+    If Not VisualActor.SetScale(Generation2Arin, ScalePercent) Then
+        Return False
+    End If
+
+    Bounds = VisualActor.WorldBounds(Generation2Arin)
+
+    If Not Bounds.Valid Then
+        Return False
+    End If
+
+    Generation2ArinOffsetX = -ThousandthsToWorldUnits(Bounds.Center.X)
+    Generation2ArinGroundY = (
+        GENERATION_2_ARIN_GROUND - ThousandthsToWorldUnits(Bounds.Minimum.Y)
+    )
+    Generation2ArinOffsetZ = -ThousandthsToWorldUnits(Bounds.Center.Z)
+
+    If (Not VisualActor.Place(
+            Generation2Arin,
+            ARIN_FORMATION_X + Generation2ArinOffsetX,
+            Generation2ArinGroundY,
+            ARIN_FORMATION_Z + Generation2ArinOffsetZ
+        ) Or
+        Not VisualActor.Rotate(Generation2Arin, 0, -90, 0) Or
+        Not VisualActor.SetShadows(Generation2Arin, True, True) Or
+        Not VisualActor.SetVisible(Generation2Arin, True) Or
+        Not VisualActor.PlayState(Generation2Arin, VisualActor.STATE_READY, 0) Or
+        VisualActor.PartCount(Generation2Arin) <= 0) Then
+        Return False
+    End If
+
+    Generation2ArinState = VisualActor.STATE_READY
+    Generation2ArinVisible = True
+    Return True
+
+End Function
+
+Private Function ThousandthsToWorldUnits(Value As Number) As Number
+
+    Dim Result As Number
+
+    If Value >= 0 Then
+        Result = (Value + 500) / 1000
+    Else
+        Result = (Value - 500) / 1000
+    End If
+
+    Return Result
+
+End Function
+
+Private Function InitializeEnhancedVfx() As Boolean
+
+    EnhancedVfxTexture = Graphics3D.LoadTexture3D(
+        "TechnicalAssets\Generation2\VfxAtlas.png",
+        Graphics3D.TEXTURE_FILTER_LINEAR,
+        Graphics3D.TEXTURE_WRAP_CLAMP
+    )
+    EnhancedVfxAlphaMaterial = AlphaTexturedMaterial(EnhancedVfxTexture, 255, 255, 255)
+    EnhancedVfxAdditiveMaterial = AdditiveTexturedMaterial(EnhancedVfxTexture, 255, 255, 255)
+    EnhancedVfxRibbonMaterial = AdditiveTexturedMaterial(EnhancedVfxTexture, 255, 244, 190)
+
+    If (EnhancedVfxTexture.Handle = 0 Or
+        EnhancedVfxAlphaMaterial.Handle = 0 Or
+        EnhancedVfxAdditiveMaterial.Handle = 0 Or
+        EnhancedVfxRibbonMaterial.Handle = 0 Or
+        Not Effects3D.Initialize(
+            EnhancedVfxAlphaMaterial,
+            EnhancedVfxAdditiveMaterial,
+            EnhancedVfxRibbonMaterial,
+            Scene3D.QUALITY_MEDIUM
+        ) Or
+        Not Effects3D.DefineStandardPresets()) Then
+        Return False
+    End If
+
+    EnhancedVfxReady = True
+    Return True
 
 End Function
 
@@ -2286,16 +2458,37 @@ Private Function DragonResourcesReady() As Boolean
     Dim Index As Number
     Dim ResourcesReady As Boolean
 
+    LastBossCreated = DragonCreated
+    LastCinderlingsCreated = CinderlingsCreated
+    LastBossInvalidPart = -1
     ResourcesReady = DragonCreated And Not CinderlingsCreated
 
     For Index = 0 To DRAGON_OBJECT_COUNT - 1
+
         ResourcesReady = ResourcesReady And DragonParts[Index].Handle <> 0
+
+        If DragonParts[Index].Handle = 0 And LastBossInvalidPart < 0 Then
+            LastBossInvalidPart = Index
+        End If
+
     End For
 
+    LastBossResourceExpected = BOSS_OBJECT_COUNT + VisualActor.PartCount(Generation2Arin)
+    LastBossResourceActual = Graphics3D.LiveObjectCount3D()
+    LastBossResourceError = Graphics3D.LastError()
+    LastBossResourceHeadroom = Graphics3D.MaximumObjectCount3D() - LastBossResourceActual
     ResourcesReady = (ResourcesReady And
-        Graphics3D.LiveObjectCount3D() = BOSS_OBJECT_COUNT And
-        Graphics3D.MaximumObjectCount3D() - Graphics3D.LiveObjectCount3D() >= MINIMUM_OBJECT_HEADROOM And
-        Graphics3D.LastError() = 0)
+        LastBossResourceActual = LastBossResourceExpected And
+        LastBossResourceHeadroom >= MINIMUM_OBJECT_HEADROOM)
+
+    ''' Generation 2 animation and VFX adapters may probe an unavailable clip or
+    ''' optional renderer path and then complete through their documented fallback.
+    ''' Exact handles, ownership counts, and headroom prove the boss transition;
+    ''' an unrelated earlier LastError must not tear down a valid scene.
+
+    If Not Dragonfall2Mode Then
+        ResourcesReady = ResourcesReady And LastBossResourceError = 0
+    End If
 
     Return ResourcesReady
 
@@ -2520,6 +2713,18 @@ Public Function Initialize(StateHandle As Number) As Boolean
         Return False
     End If
 
+    If Dragonfall2Mode Then
+
+        If Not InitializeGeneration2Arin() Or Not InitializeEnhancedVfx() Then
+            Call Shutdown()
+
+            Return False
+        End If
+
+        Call HideClassicArin()
+
+    End If
+
     Call DefinePresentation()
 
     LastVisual = -1
@@ -2553,6 +2758,8 @@ End Function
 
 Private Sub ParticipantAnchor(Participant As Number, ByRef X As Number, ByRef Y As Number, ByRef Z As Number)
 
+    Dim ActorBounds As Character3D.Bounds3D
+
     X = 0
     Y = 80
     Z = 30
@@ -2562,6 +2769,20 @@ Private Sub ParticipantAnchor(Participant As Number, ByRef X As Number, ByRef Y 
         X = ARIN_FORMATION_X + LastArinOffset
         Y = 72
         Z = ARIN_FORMATION_Z + LastArinOffsetZ
+
+        If Dragonfall2Mode And VisualActor.IsValid(Generation2Arin) Then
+
+            ActorBounds = VisualActor.WorldBounds(Generation2Arin)
+
+            If ActorBounds.Valid Then
+
+                X = ThousandthsToWorldUnits(ActorBounds.Center.X)
+                Y = ThousandthsToWorldUnits(ActorBounds.Center.Y)
+                Z = ThousandthsToWorldUnits(ActorBounds.Center.Z)
+
+            End If
+
+        End If
 
     Else If Participant = Battle.PARTICIPANT_MIRA Then
 
@@ -2631,6 +2852,27 @@ End Sub
 
 Private Function ParticipantFramingRadius(Participant As Number) As Number
 
+    Dim ActorBounds As Character3D.Bounds3D
+    Dim LargestSize As Number
+    Dim Result As Number
+
+    If (Participant = Battle.PARTICIPANT_ARIN And
+        Dragonfall2Mode And
+        VisualActor.IsValid(Generation2Arin)) Then
+
+        ActorBounds = VisualActor.WorldBounds(Generation2Arin)
+
+        If ActorBounds.Valid Then
+
+            LargestSize = Max(ActorBounds.Size.X, Max(ActorBounds.Size.Y, ActorBounds.Size.Z))
+            Result = Max(78, ThousandthsToWorldUnits(LargestSize) / 2 + 12)
+
+            Return Result
+
+        End If
+
+    End If
+
     If Participant = Battle.PARTICIPANT_ASHWING Then
         Return 600
     End If
@@ -2647,6 +2889,16 @@ Private Function ParticipantFramingRadius(Participant As Number) As Number
     End If
 
     Return 78
+
+End Function
+
+Private Function SubjectLowerFramingMargin(BaseMargin As Number, Radius As Number) As Number
+
+    Dim Result As Number
+
+    Result = BaseMargin * 78 / Max(78, Radius)
+    Result = Max(16, Result)
+    Return Result
 
 End Function
 
@@ -2752,6 +3004,7 @@ Private Sub DefineActionFocusShot(Shot As Number, Actor As Number, Target As Num
     Dim ViewY As Number
     Dim ViewZ As Number
     Dim FocusFov As Number
+    Dim LowerMargin As Number
     Dim Padding As Number
     Dim Bounds As BattleCamera.FramingBounds3D
 
@@ -2780,7 +3033,8 @@ Private Sub DefineActionFocusShot(Shot As Number, Actor As Number, Target As Num
     ''' Reserve vertical framing below the fighters for the persistent battle
     ''' HUD. This shifts both silhouettes into the unobstructed playfield while
     ''' preserving their complete feet-to-head bounds during the impact cut.
-    Bounds.MinY = Bounds.MinY - 140
+    LowerMargin = SubjectLowerFramingMargin(140, Max(ActorRadius, TargetRadius))
+    Bounds.MinY = Bounds.MinY - LowerMargin
 
     ViewX = -18
     ViewY = 14
@@ -2845,6 +3099,7 @@ Private Sub DefineActorAnticipationShot(Shot As Number, Actor As Number)
     Dim ViewY As Number
     Dim ViewZ As Number
     Dim AnticipationFov As Number
+    Dim LowerMargin As Number
     Dim Padding As Number
     Dim Bounds As BattleCamera.FramingBounds3D
 
@@ -2877,7 +3132,8 @@ Private Sub DefineActorAnticipationShot(Shot As Number, Actor As Number)
         ViewZ = 22
         AnticipationFov = 42
         Padding = 0
-        Bounds.MinY = Y - Radius - 60
+        LowerMargin = SubjectLowerFramingMargin(60, Radius)
+        Bounds.MinY = Y - Radius - LowerMargin
 
     End If
 
@@ -2934,6 +3190,73 @@ Private Function VisualHitsWholeParty(Visual As Number) As Boolean
     Return ReturnValue
 
 End Function
+
+Private Sub SpawnEnhancedAt(
+    PresetId As Number,
+    X As Number,
+    Y As Number,
+    Z As Number,
+    Seed As Number
+)
+
+    Dim AudioRequest As Effects3D.AudioCueRequest3D
+    Dim EffectValue As Effects3D.Effect
+    Dim LightRequest As Effects3D.TransientLightRequest3D
+
+    If Not EnhancedVfxReady Then
+        Return
+    End If
+
+    EffectValue = Effects3D.Spawn(PresetId, X, Y, Z, Seed)
+
+    If Effects3D.IsActive(EffectValue) Then
+        LightRequest = Effects3D.TakeTransientLight()
+        AudioRequest = Effects3D.TakeAudioCue()
+    End If
+
+End Sub
+
+Private Sub TriggerEnhancedImpact(Visual As Number, X As Number, Y As Number, Z As Number)
+
+    Dim PresetId As Number
+    Dim SocketPosition As Core.Vector3
+
+    If Not EnhancedVfxReady Then
+        Return
+    End If
+
+    If Visual = Battle.VISUAL_ARIN_ATTACK Or Visual = Battle.VISUAL_ARIN_EMBER Then
+
+        PresetId = Effects3D.PRESET_HOLY_SWORD_STRIKE
+        SocketPosition = VisualActor.SocketPosition(
+            Generation2Arin,
+            VisualActor.ANCHOR_SWORD_TIP
+        )
+        X = SocketPosition.X
+        Y = SocketPosition.Y
+        Z = SocketPosition.Z
+
+    Else If Visual = Battle.VISUAL_MIRA_FLAME Then
+
+        PresetId = Effects3D.PRESET_FIRE_BURST
+
+    Else If Visual = Battle.VISUAL_MIRA_FROST Then
+
+        PresetId = Effects3D.PRESET_FROST_BURST
+
+    Else If Visual = Battle.VISUAL_DRAGON_BREATH Or Visual = Battle.VISUAL_DRAGON_CATASTROPHE Then
+
+        PresetId = Effects3D.PRESET_DRAGON_FIRE_BREATH
+
+    Else
+
+        PresetId = Effects3D.PRESET_SHIELD_IMPACT
+
+    End If
+
+    Call SpawnEnhancedAt(PresetId, X, Y, Z, GlobalStep + Visual * 2027)
+
+End Sub
 
 Private Sub TriggerImpactCue(Visual As Number)
 
@@ -3005,6 +3328,8 @@ Private Sub TriggerImpactCue(Visual As Number)
     If EffectId > 0 Then
         OperationAccepted = BattleEffects.Spawn(State, EffectId, X, Y, Z, GlobalStep + Visual * 1613)
     End If
+
+    Call TriggerEnhancedImpact(Visual, X, Y, Z)
 
     OperationAccepted = BattleCamera.StartShake(State, Shake, 18, GlobalStep + Visual * 313)
 
@@ -4182,6 +4507,112 @@ Private Sub UpdateBurningEffects()
 
 End Sub
 
+Private Sub HideClassicArin()
+
+    Dim Index As Number
+
+    If Not Dragonfall2Mode Then
+        Return
+    End If
+
+    For Index = 0 To HERO_PART_COUNT - 1
+        Call Graphics3D.SetObjectVisible(PartyParts[Index], False)
+    End For
+
+    For Index = 0 To HERO_FACE_PART_COUNT - 1
+        Call Graphics3D.SetObjectVisible(PartyFaceParts[Index], False)
+    End For
+
+End Sub
+
+Private Function DesiredGeneration2ArinState(Visual As Number, StepValue As Number) As Number
+
+    Dim Result As Number
+
+    Result = VisualActor.STATE_READY
+
+    If Battle.Health(Battle.PARTICIPANT_ARIN) <= 0 Or Visual = Battle.VISUAL_DEFEAT Then
+
+        Result = VisualActor.STATE_KO
+
+    Else If Visual = Battle.VISUAL_VICTORY Then
+
+        Result = VisualActor.STATE_VICTORY
+
+    Else If Battle.VisualActor() = Battle.PARTICIPANT_ARIN Then
+
+        If Visual = Battle.VISUAL_ARIN_ATTACK Then
+            Result = VisualActor.STATE_ATTACK
+        Else If Visual = Battle.VISUAL_ARIN_EMBER Then
+            Result = VisualActor.STATE_SPECIAL
+        Else If Visual = Battle.VISUAL_DEFEND Then
+            Result = VisualActor.STATE_DEFEND
+        End If
+
+    Else If ((Battle.VisualTarget() = Battle.PARTICIPANT_ARIN Or
+        VisualHitsWholeParty(Visual)) And
+        VisualHasImpact(Visual) And
+        StepValue >= 28 And
+        StepValue <= 38) Then
+
+        Result = VisualActor.STATE_BLOCK_IMPACT
+
+    End If
+
+    Return Result
+
+End Function
+
+Private Sub UpdateGeneration2Arin(
+    X As Number,
+    Z As Number,
+    Visual As Number,
+    StepValue As Number
+)
+
+    Dim DesiredState As Number
+    Dim Visible As Boolean
+
+    If Not Dragonfall2Mode Or Not VisualActor.IsValid(Generation2Arin) Then
+        Return
+    End If
+
+    DesiredState = DesiredGeneration2ArinState(Visual, StepValue)
+
+    If DesiredState <> Generation2ArinState Then
+        OperationAccepted = VisualActor.PlayState(Generation2Arin, DesiredState, 80)
+        Generation2ArinState = DesiredState
+    End If
+
+    Visible = True
+
+    If (StepValue >= 1 And
+        StepValue < 20 And
+        Battle.VisualActor() >= Battle.PARTICIPANT_ARIN And
+        Battle.VisualActor() <= Battle.PARTICIPANT_MIRA And
+        Visual <> Battle.VISUAL_VICTORY And
+        Visual <> Battle.VISUAL_DEFEAT) Then
+        Visible = Battle.VisualActor() = Battle.PARTICIPANT_ARIN
+    End If
+
+    OperationAccepted = VisualActor.Place(
+        Generation2Arin,
+        X + Generation2ArinOffsetX,
+        Generation2ArinGroundY,
+        Z + Generation2ArinOffsetZ
+    )
+    OperationAccepted = VisualActor.SetVisible(Generation2Arin, Visible)
+
+    If OperationAccepted Then
+        Generation2ArinVisible = Visible
+    End If
+
+    OperationAccepted = VisualActor.Update(Generation2Arin, 17)
+
+    Call HideClassicArin()
+
+End Sub
+
 Private Sub UpdateActors()
 
     Dim Visual As Number
@@ -4309,6 +4740,14 @@ Private Sub UpdateActors()
                 GlobalStep + 19091
             )
 
+            Call SpawnEnhancedAt(
+                Effects3D.PRESET_FIRE_BURST,
+                DRAGON_ROOT_X - 70,
+                DRAGON_GROUND_Y + 8,
+                DRAGON_ROOT_Z,
+                GlobalStep + 23993
+            )
+
         End If
 
     Else If Visual = Battle.VISUAL_VICTORY Then
@@ -4389,6 +4828,7 @@ Private Sub UpdateActors()
 
     Call UpdateEnemyVisibility()
     Call UpdatePartyCinematicVisibility(Visual, StepValue)
+    Call UpdateGeneration2Arin(ArinX, ArinZ, Visual, StepValue)
 
     LastArinOffset = ArinX - ARIN_FORMATION_X
     LastTorOffset = TorX - TOR_FORMATION_X
@@ -4512,6 +4952,11 @@ Public Sub Update(StateHandle As Number, StepValue As Number)
     Call UpdateBurningEffects()
     Call UpdateParticles()
 
+    If EnhancedVfxReady Then
+        OperationAccepted = Effects3D.Update(17)
+        OperationAccepted = Effects3D.Commit()
+    End If
+
 End Sub
 
 Public Sub Draw()
@@ -4520,9 +4965,12 @@ Public Sub Draw()
     Dim FrameReady As Boolean
 
     If Not Ready Then
+        LastFrameReady = False
         Return
     End If
 
+    LastGeneration2ArinDrawn = False
+    LastFrameReady = False
     FrameReady = Graphics3D.Begin3D(Camera, 3, 2, 10)
 
     If Not FrameReady Then
@@ -4540,6 +4988,11 @@ Public Sub Draw()
     For Index = 0 To PARTY_FACE_OBJECT_COUNT - 1
         FrameReady = Graphics3D.DrawObject3D(PartyFaceParts[Index])
     End For
+
+    If Dragonfall2Mode And VisualActor.IsValid(Generation2Arin) Then
+        LastGeneration2ArinDrawn = VisualActor.Draw(Generation2Arin)
+        FrameReady = LastGeneration2ArinDrawn And FrameReady
+    End If
 
     If CinderlingsCreated Then
 
@@ -4571,7 +5024,13 @@ Public Sub Draw()
         FrameReady = Graphics3D.DrawObject3D(ImpactObjects[Index])
     End For
 
+    If EnhancedVfxReady Then
+        FrameReady = Effects3D.Draw() And FrameReady
+    End If
+
     Call Graphics3D.End3D()
+
+    LastFrameReady = FrameReady
 
 End Sub
 
@@ -4582,6 +5041,116 @@ Public Function IsReady() As Boolean
     ReturnValue = Ready
 
     Return ReturnValue
+
+End Function
+
+Public Function UsesGeneration2Arin() As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = (Dragonfall2Mode And
+        VisualActor.IsValid(Generation2Arin) And
+        VisualActor.Kind(Generation2Arin) = VisualActor.KIND_CHARACTER)
+
+    Return ReturnValue
+
+End Function
+
+Public Function EnhancedVfxIsReady() As Boolean
+
+    Return EnhancedVfxReady
+
+End Function
+
+Public Function Generation2ArinIsVisible() As Boolean
+
+    Return Generation2ArinVisible
+
+End Function
+
+Public Function Generation2ArinWasDrawn() As Boolean
+
+    Return LastGeneration2ArinDrawn
+
+End Function
+
+Public Function Generation2ArinRequestedClip() As Text
+
+    Dim ReturnValue As Text
+
+    ReturnValue = VisualActor.RequestedClip(Generation2Arin)
+
+    Return ReturnValue
+
+End Function
+
+Public Function Generation2ArinActualClip() As Text
+
+    Dim ReturnValue As Text
+
+    ReturnValue = VisualActor.ActualClip(Generation2Arin)
+
+    Return ReturnValue
+
+End Function
+
+Public Function LastFrameWasReady() As Boolean
+
+    Return LastFrameReady
+
+End Function
+
+Public Function Generation2ArinBounds() As Character3D.Bounds3D
+
+    Dim Result As Character3D.Bounds3D
+
+    If VisualActor.IsValid(Generation2Arin) Then
+        Result = VisualActor.WorldBounds(Generation2Arin)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function BossResourceExpected() As Number
+
+    Return LastBossResourceExpected
+
+End Function
+
+Public Function BossResourceActual() As Number
+
+    Return LastBossResourceActual
+
+End Function
+
+Public Function BossResourceError() As Number
+
+    Return LastBossResourceError
+
+End Function
+
+Public Function BossResourceHeadroom() As Number
+
+    Return LastBossResourceHeadroom
+
+End Function
+
+Public Function BossInvalidPart() As Number
+
+    Return LastBossInvalidPart
+
+End Function
+
+Public Function BossCreatedAtAudit() As Boolean
+
+    Return LastBossCreated
+
+End Function
+
+Public Function CinderlingsCreatedAtBossAudit() As Boolean
+
+    Return LastCinderlingsCreated
 
 End Function
 
@@ -4608,6 +5177,10 @@ Public Function ActiveParticleCount() As Number
     End If
 
     ReturnValue = BattleEffects.ActiveCount(State)
+
+    If EnhancedVfxReady Then
+        ReturnValue = ReturnValue + Effects3D.ActiveParticleCount()
+    End If
 
     Return ReturnValue
 
@@ -4639,6 +5212,23 @@ Public Sub Shutdown()
 
     Dim Index As Number
 
+    If EnhancedVfxReady Then
+        Call Effects3D.Shutdown()
+    End If
+
+    Call VisualActor.Destroy(Generation2Arin)
+    Call VisualActor.Shutdown()
+    Call Character3D.Shutdown()
+
+    EnhancedVfxReady = False
+    Generation2ArinOffsetX = 0
+    Generation2ArinState = 0
+    Generation2ArinGroundY = 0
+    Generation2ArinOffsetZ = 0
+    Generation2ArinVisible = False
+    LastGeneration2ArinDrawn = False
+    LastFrameReady = False
+
     For Index = 0 To PARTICLE_OBJECT_COUNT - 1
         Call Graphics3D.DestroyObjectInstance3D(ParticleObjects[Index])
     End For
@@ -4669,6 +5259,9 @@ Public Sub Shutdown()
     End For
 
     Call Graphics3D.DestroyMaterial3D(ParticleMaterial)
+    Call Graphics3D.DestroyMaterial3D(EnhancedVfxRibbonMaterial)
+    Call Graphics3D.DestroyMaterial3D(EnhancedVfxAdditiveMaterial)
+    Call Graphics3D.DestroyMaterial3D(EnhancedVfxAlphaMaterial)
     Call Graphics3D.DestroyMaterial3D(DragonUnderbellyMaterial)
     Call Graphics3D.DestroyMaterial3D(DragonWingMaterial)
     Call Graphics3D.DestroyMaterial3D(DragonGlowMaterial)
@@ -4698,6 +5291,7 @@ Public Sub Shutdown()
     Call Graphics3D.DestroyTexture3D(DragonWingTexture)
     Call Graphics3D.DestroyTexture3D(DragonScaleTexture)
     Call Graphics3D.DestroyTexture3D(CosmicTexture)
+    Call Graphics3D.DestroyTexture3D(EnhancedVfxTexture)
 
     Ready = False
     State = 0

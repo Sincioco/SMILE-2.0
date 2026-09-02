@@ -69,7 +69,7 @@ A prepared texture identity is the exact retained path plus color/data usage, fi
 
 ## Limits and diagnostics
 
-The global live limits remain 128 meshes, 512 objects, 64 models, 128 textures, 128 materials, 64 legacy skeletons, 128 legacy clips, and 128 total animators. SM3D v2 remains limited to 16 parts, 64 materials, and 128 metadata texture references; only the deduplicated owned texture count consumes the global texture pool. An animated model additionally owns at most 256 nodes, 128 bones, 64 clips, 64 events per clip, and 64 sockets inside the unchanged 16 MiB file ceiling.
+The global live limits are 128 meshes, 1,024 objects, 64 models, 128 textures, 128 materials, 64 legacy skeletons, 128 legacy clips, and 128 total animators. SM3D v2 remains limited to 16 parts, 64 materials, and 128 metadata texture references; only the deduplicated owned texture count consumes the global texture pool. An animated model additionally owns at most 256 nodes, 128 bones, 64 clips, 64 events per clip, and 64 sockets inside the unchanged 16 MiB file ceiling.
 
 Numeric commands 90–97 expose PBR texture/material/light/model state, PBR/simple draw counts, PBR triangle counts, and cached pipeline/model preparation diagnostics. M3 appends numeric 98–109 and text 4–9 for model-owned animation; it does not renumber the PBR ABI or allocate an image command. A successful `Begin3D` resets frame counters. These diagnostics are for tests and student-visible lab output; they do not expose model-owned handles or alter ownership.
 

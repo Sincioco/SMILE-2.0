@@ -545,7 +545,7 @@ Private Function ProductionClip(State As Number) As Text
     Dim Result As Text
 
     If State = STATE_READY Then
-        Result = "Ready"
+        Result = "Idle"
     Else If State = STATE_APPROACH Then
         Result = "Run"
     Else If State = STATE_ATTACK Then
@@ -671,6 +671,24 @@ Public Function PlayState(
 
     If Not Result And PrototypeAssets[Slot] Then
 
+        If State = STATE_SPECIAL Then
+
+            ClipName = "ShieldBashCandidate"
+
+            If FadeMilliseconds > 0 Then
+                Result = Character3D.CrossFade(CharacterActors[Slot], ClipName, FadeMilliseconds, Mode)
+            Else
+                Result = Character3D.PlayMode(CharacterActors[Slot], ClipName, Mode, 100)
+            End If
+
+            PrototypeClipFallbacks[Slot] = Result
+
+        End If
+
+    End If
+
+    If Not Result And PrototypeAssets[Slot] Then
+
         ClipName = PrototypeClip(State)
 
         If FadeMilliseconds > 0 Then
@@ -742,6 +760,27 @@ Public Function Draw(Value As Actor) As Boolean
 
     If Not Result Then
         ErrorValue = ADAPTER_ERROR_OPERATION
+    End If
+
+    Return Result
+
+End Function
+
+Public Function PartCount(Value As Actor) As Number
+
+    Dim Result As Number
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    If Kinds[Slot] = KIND_CHARACTER Then
+        Result = Character3D.PartCount(CharacterActors[Slot])
+    Else
+        Result = 1
     End If
 
     Return Result

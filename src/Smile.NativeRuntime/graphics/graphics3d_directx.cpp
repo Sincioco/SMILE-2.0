@@ -13,7 +13,7 @@
 #include "image_resource.h"
 
 #define SMILE_3D_MAX_MESHES 128
-#define SMILE_3D_MAX_OBJECTS 512
+#define SMILE_3D_MAX_OBJECTS 1024
 #define SMILE_3D_MAX_TEXTURES 128
 #define SMILE_3D_MAX_MATERIALS 128
 #define SMILE_3D_MAX_MODELS 64
@@ -732,10 +732,10 @@ static long long smile_3d_handle(long long kind, int slot, unsigned short genera
 
 static long long smile_3d_object_handle(int slot, unsigned short generation)
 {
-    /* Objects own a 512-entry pool, so their generation-safe handle reserves
-       nine low bits for the zero-based slot. Other resource pools remain at 128 or fewer and
+    /* Objects own a 1,024-entry pool, so their generation-safe handle reserves
+       ten low bits for the zero-based slot. Other resource pools remain at 128 or fewer and
        retain their existing eight-bit layout. */
-    return SMILE_3D_OBJECT_HANDLE | ((long long)generation << 9) | (long long)slot;
+    return SMILE_3D_OBJECT_HANDLE | ((long long)generation << 10) | (long long)slot;
 }
 
 static SmileMesh3D* smile_3d_mesh(long long handle)
@@ -755,8 +755,8 @@ static SmileObject3D* smile_3d_object(long long handle)
     int slot;
     unsigned short generation;
     if ((handle & SMILE_3D_HANDLE_KIND) != SMILE_3D_OBJECT_HANDLE) return 0;
-    slot = (int)(handle & 511LL);
-    generation = (unsigned short)((handle >> 9) & 65535LL);
+    slot = (int)(handle & 1023LL);
+    generation = (unsigned short)((handle >> 10) & 65535LL);
     if (slot < 0 || slot >= SMILE_3D_MAX_OBJECTS || !smile_objects3d[slot].active ||
         smile_objects3d[slot].generation != generation) return 0;
     return &smile_objects3d[slot];

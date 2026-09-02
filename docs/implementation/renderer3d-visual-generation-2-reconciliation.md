@@ -143,12 +143,12 @@ The next unassigned image command is 2. The next unassigned text command is 2. T
 
 ## Current resource limits and ownership
 
-Native uses kind-tagged, 16-bit-generation handles. All pools except objects use an 8-bit low slot encoding; the 512-object pool uses nine low slot bits. Web uses monotonically increasing safe-integer handles and Maps; reset does not rewind the handle sequence, so stale handles are not reused. Both backends validate resource presence and apply the same logical ownership rules.
+Native uses kind-tagged, 16-bit-generation handles. All pools except objects use an 8-bit low slot encoding; the current 1,024-object pool uses ten low slot bits. Web uses monotonically increasing safe-integer handles and Maps; reset does not rewind the handle sequence, so stale handles are not reused. Both backends validate resource presence and apply the same logical ownership rules.
 
 | Resource | Current hard limits | Current ownership and destruction rule |
 |---|---|---|
 | Mesh | 128 live; 1-65,535 vertices; 1-196,608 indices; indices divisible by 3 | Renderer owns CPU/GPU buffers. Ordinary objects refer to caller-owned meshes. A loaded model owns one mesh per part. Mesh/model destruction refuses while a part/object reference is live. |
-| Object | 512 live | Object refers to one mesh and optionally one material and animator; it owns none of them. Destroy the object/instance first. |
+| Object | 1,024 live | Object refers to one mesh and optionally one material and animator; it owns none of them. Destroy the object/instance first. |
 | Texture | 128 live; decoded width/height each 1-8,192; nearest/linear and clamp/repeat only | Texture owns/retains the decoded image and lazy GPU texture/view/sampler. Materials refer to it. Destruction refuses while a material refers to it. |
 | Material | 128 live; one optional texture; alpha modes 0-3; opacity/cutout 0-100; emissive 0-400 percent | Material refers to a texture. Objects refer to the material. Destruction refuses while an object refers to it. |
 | Model (SM3D v1) | 64 live; 16 MiB file; 1-16 parts; 1-64 material slots; each part observes mesh limits | Model owns its part meshes and material-slot numbers, not `Material3D` resources. Complete validation precedes mesh allocation; load rolls back partial meshes. Destroy part objects before the model. |
@@ -265,6 +265,7 @@ The compiler is a VSIX payload, so M0 rebuilt and installed `artifacts\vsix\Smil
 | GLB fixture exists | No GLB existed; M0 now owns a deterministic static fixture and generator. |
 | Draw/triangle metrics may exist | They did not; M0 adds only the two reusable counters. |
 | Suggested Generation 2 maxima are current limits | They remain proposals. M1 must define v2 limits/layout after reconciling them with the current v1 16 MiB/16-part/64-material and live pool limits. |
+| Later Dragonfall2 integration needs both the complete procedural encounter and an imported hero | The native and Web object pool is now 1,024 with ten object-slot bits; the 512 frame-submission and palette-snapshot limits remain unchanged. Character3D now permits a bounded 25,000 percent uniform scale for meter-scale battle actors. |
 
 The exact M1 scope remains: offline GLB container parsing, deterministic tangents, SM3D v2 static core chunks, PBR material metadata/paths, native/Web v2 validation/loading, inspect output, and v1 compatibility. M1 must not add skeletal clips, PBR shading, new animation playback, or VFX.
 

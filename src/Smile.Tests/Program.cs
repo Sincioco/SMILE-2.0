@@ -203,12 +203,14 @@ Run("Pointer input built-ins and constants are shared and game-window scoped", (
         throw new InvalidOperationException(string.Join(" | ", analysis.Diagnostics.Select(diagnostic => diagnostic.Code + ": " + diagnostic.Message)));
     Equal(true, Analyze("Print Pointer_X()\n").HasErrors);
 });
-Run("Character viewer letter shortcuts are shared named input constants", () =>
+Run("Viewer and game letter shortcuts are shared named input constants", () =>
 {
     Equal(SyntaxKind.KeyFKeyword, SyntaxFacts.GetKeywordKind("key_f"));
     Equal(SyntaxKind.KeyGKeyword, SyntaxFacts.GetKeywordKind("KEY_G"));
+    Equal(SyntaxKind.KeyRKeyword, SyntaxFacts.GetKeywordKind("Key_R"));
     Equal(28L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyFKeyword));
     Equal(29L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyGKeyword));
+    Equal(30L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyRKeyword));
 });
 Run("Window dimensions are shared live game-window built-ins", () =>
 {
@@ -617,7 +619,7 @@ Run("Web output writer creates deterministic static files", () =>
         Equal(true, runtime.Contains("r[col*4+row]+=a[k*4+row]*b[col*4+k]", StringComparison.Ordinal));
         Equal(true, runtime.Contains("(far+near)/(far-near),1", StringComparison.Ordinal));
         Equal(true, runtime.Contains("renderer3DMeshes.size >= 128", StringComparison.Ordinal));
-        Equal(true, runtime.Contains("renderer3DObjects.size>=512", StringComparison.Ordinal));
+        Equal(true, runtime.Contains("renderer3DObjects.size>=1024", StringComparison.Ordinal));
         Equal(true, runtime.Contains("back.drawImage(renderer3DCanvas", StringComparison.Ordinal));
         Equal(false, runtime.Contains("userAgent", StringComparison.Ordinal));
     }
@@ -750,7 +752,11 @@ Run("Model3DAsset project metadata is strict and projects as a distinct hierarch
     var projectPath = Path.GetFullPath("games/Dragonfall/Character3DViewerCooked.smileproj");
     var sourceSet = SmileProjectSourceSet.Load(projectPath);
     sourceSet.ValidateAssetsForBuild();
-    var model = sourceSet.Model3DAssets.Items.Single();
+    Equal(2, sourceSet.Model3DAssets.Items.Count);
+    var model = sourceSet.Model3DAssets.Items.Single(item =>
+        item.Include.Equals(
+            "SourceAssets/Arin/sin-star-i-character-1-paladin-tripo-v01.original.glb",
+            StringComparison.Ordinal));
     Equal("SourceAssets/Arin/sin-star-i-character-1-paladin-tripo-v01.original.glb", model.Include);
     Equal("Assets/Generation2/Arin/ArinPrototype.sm3d", model.LogicalPath);
     Equal("Assets/Generation2/Arin/Textures", model.TextureOutputDirectory);
@@ -758,7 +764,8 @@ Run("Model3DAsset project metadata is strict and projects as a distinct hierarch
     Equal(SmileModel3DProductionState.Prototype, model.ProductionState);
     Equal("sin-star-i.character-1.paladin", model.Identity);
     var projected = SmileProjectHierarchyProjection.Create(sourceSet, "Game")
-        .Single(item => item.Kind == SmileProjectHierarchyItemKind.Model3DAsset);
+        .Single(item => item.Kind == SmileProjectHierarchyItemKind.Model3DAsset &&
+            string.Equals(item.FullPath, model.FullPath, StringComparison.OrdinalIgnoreCase));
     Equal(true, projected.Caption.Contains("Character Model3DAsset", StringComparison.Ordinal));
     Equal(model.FullPath, projected.FullPath);
 });

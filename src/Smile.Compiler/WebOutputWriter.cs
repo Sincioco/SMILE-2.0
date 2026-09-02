@@ -2361,7 +2361,7 @@ internal static class WebOutputWriter
                     case 5:mesh=renderer3DRequireMesh(a);return mesh&&renderer3DSetTriangle(mesh,b,c,d,e)?1:0;
                     case 6:mesh=renderer3DRequireMesh(a);return mesh&&renderer3DCommit(mesh)?1:0;
                     case 7:return renderer3DPrimitive(a,b,c,d,e);
-                    case 8:if(!renderer3DRequireMesh(a)||renderer3DObjects.size>=512){renderer3DLastError=9;return 0;}const handle=renderer3DHandle();renderer3DObjects.set(handle,{mesh:a,material:0,defaultMaterial:0,animator:0,position:[0,0,0],rotation:[0,0,0],scale:[1,1,1],color:[1,1,1,1],visible:true,castsShadow:true,receivesShadow:true});return handle;
+                    case 8:if(!renderer3DRequireMesh(a)||renderer3DObjects.size>=1024){renderer3DLastError=9;return 0;}const handle=renderer3DHandle();renderer3DObjects.set(handle,{mesh:a,material:0,defaultMaterial:0,animator:0,position:[0,0,0],rotation:[0,0,0],scale:[1,1,1],color:[1,1,1,1],visible:true,castsShadow:true,receivesShadow:true});return handle;
                     case 9:if(renderer3DObjects.delete(a))return 1;if(renderer3DModels.has(a)){if(!renderer3DDeleteModel(a)){renderer3DLastError=27;return 0;}return 1;}if(renderer3DAnimators.has(a)){if(renderer3DAnimatorReferences(a)!==0){renderer3DLastError=37;return 0;}renderer3DAnimators.delete(a);return 1;}if(renderer3DClips.has(a)){if(renderer3DClipReferences(a)!==0){renderer3DLastError=37;return 0;}renderer3DClips.delete(a);return 1;}if(renderer3DSkeletons.has(a)){if(renderer3DSkeletonReferences(a)!==0){renderer3DLastError=37;return 0;}renderer3DSkeletons.delete(a);return 1;}mesh=renderer3DMeshes.get(a);if(mesh){if(renderer3DMeshReferenceCount(a)!==0){renderer3DLastError=16;return 0;}renderer3DDeleteGpu(mesh);renderer3DMeshes.delete(a);return 1;}material=renderer3DMaterials.get(a);if(material){if(material.ownerModel||renderer3DMaterialReferenceCount(a)!==0){renderer3DLastError=22;return 0;}renderer3DMaterials.delete(a);return 1;}texture=renderer3DTextures.get(a);if(texture){if(renderer3DTextureReferenceCount(a)!==0){renderer3DLastError=23;return 0;}renderer3DDeleteTextureGpu(texture);imageRelease(texture.image);renderer3DTextures.delete(a);return 1;}renderer3DLastError=5;return 0;
                     case 10:renderer3DCamera.position=[a,b,c];renderer3DCamera.target=[d,e,f];renderer3DCamera.fov=g;renderer3DCamera.near=h;renderer3DCamera.far=i;if(g<10||g>160||h<=0||i<=h){renderer3DLastError=15;return 0;}return 1;
                     case 123:if(a===0&&b===0&&c===0){renderer3DLastError=15;return 0;}renderer3DCamera.up=[a,b,c];return 1;
@@ -2377,7 +2377,7 @@ internal static class WebOutputWriter
                     case 22:return renderer3DMeshes.size;
                     case 23:return renderer3DObjects.size;
                     case 24:return 128;
-                    case 25:return 512;
+                    case 25:return 1024;
                     case 26:return renderer3DMeshes.has(a)?1:0;
                     case 27:return renderer3DObjects.has(a)?1:0;
                     case 28:return renderer3DMeshReferenceCount(a);
@@ -2401,7 +2401,7 @@ internal static class WebOutputWriter
                     case 46:return renderer3DModels.has(a)?1:0;
                     case 47:model=renderer3DModels.get(a);return model?model.parts.length:0;
                     case 48:model=renderer3DModels.get(a);return model?model.materialCount:0;
-                    case 49:model=renderer3DModels.get(a);if(!model||b<0||b>=model.parts.length||renderer3DObjects.size>=512){renderer3DLastError=9;return 0;}const partHandle=renderer3DHandle(),materialSlot=model.materials[b],defaultMaterial=model.pbrReady?model.pbrMaterials[materialSlot]:0;renderer3DObjects.set(partHandle,{mesh:model.parts[b],material:defaultMaterial,defaultMaterial,animator:0,position:[0,0,0],rotation:[0,0,0],scale:[1,1,1],color:[1,1,1,1],visible:true,castsShadow:true,receivesShadow:true});return partHandle;
+                    case 49:model=renderer3DModels.get(a);if(!model||b<0||b>=model.parts.length||renderer3DObjects.size>=1024){renderer3DLastError=9;return 0;}const partHandle=renderer3DHandle(),materialSlot=model.materials[b],defaultMaterial=model.pbrReady?model.pbrMaterials[materialSlot]:0;renderer3DObjects.set(partHandle,{mesh:model.parts[b],material:defaultMaterial,defaultMaterial,animator:0,position:[0,0,0],rotation:[0,0,0],scale:[1,1,1],color:[1,1,1,1],visible:true,castsShadow:true,receivesShadow:true});return partHandle;
                     case 50:model=renderer3DModels.get(a);if(!model||b<0||b>=model.parts.length){renderer3DLastError=5;return -1;}return model.materials[b];
                     case 51:mesh=renderer3DRequireMesh(a);return mesh&&renderer3DSetSkin(mesh,b,c,d,e,f,g,h,i,j)?1:0;
                     case 52:return renderer3DCreateSkeleton(a);
@@ -2941,6 +2941,7 @@ internal static class WebOutputWriter
                     case "KeyO": return 27;
                     case "KeyF": return 28;
                     case "KeyG": return 29;
+                    case "KeyR": return 30;
                     case "ArrowUp": return 10;
                     case "ArrowDown": return 11;
                     case "ArrowLeft": return 12;
@@ -2959,7 +2960,7 @@ internal static class WebOutputWriter
 
             function controlledKey(event) {
                 return event.code.startsWith("Arrow") || event.code === "Space" || event.code === "Enter" ||
-                    event.code === "Escape" || event.code === "Tab" || /^Key[WASDO]$/.test(event.code);
+                    event.code === "Escape" || event.code === "Tab" || /^Key[WASDOFGR]$/.test(event.code);
             }
 
             async function toggleFullScreen() {
