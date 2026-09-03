@@ -146,7 +146,7 @@ try {
         'Call DestroyEpicGlow()',
         '"GLOW", EpicGlowVisible',
         'Graphics3D.SetMaterialInspection3D(',
-        'Result = "11-clip candidate"',
+        'Result = "7-clip validated candidate"',
         'Game Window "SMILE 2.0 - Character 3D Viewer" Size 1600 By 640',
         'Ready = Window_Title(ViewerTitle()) And Ready',
         'Window_Width()',
@@ -170,15 +170,15 @@ try {
         '<ResponsiveWindow>true</ResponsiveWindow>' 'Character 3D Viewer project'
     Assert-Contains $profileSource `
         'Result.AssetId = "sin-star-i.character-1.paladin"' 'Viewer profile'
-    Assert-Contains $profileSource 'Result.CandidateVersion = "v5.6"' 'Viewer profile'
+    Assert-Contains $profileSource 'Result.CandidateVersion = "v5.7"' 'Viewer profile'
     Assert-Contains $profileSource 'Result.DisplayName = "Arin"' 'Viewer profile'
     Assert-Contains $profileSource 'Result.PartyRole = "Paladin"' 'Viewer profile'
-    Assert-Contains $profileSource 'Result.GroundOffset = -10' 'Viewer profile'
+    Assert-Contains $profileSource 'Result.DesiredWorldHeight = 100' 'Viewer profile'
     Assert-Contains $profileSource `
         'Public Function EpicGlowAvailable(ProfileIndex As Number) As Boolean' 'Viewer profile'
     Assert-Contains $profileSource `
         'Public Function EpicGlowVisibleByDefault(ProfileIndex As Number) As Boolean' 'Viewer profile'
-    Assert-Contains $profileSource 'Result = 11' 'Viewer profile'
+    Assert-Contains $profileSource 'Result = 7' 'Viewer profile'
     Assert-Contains $profileSource 'AnimationArticulated.sm3d' 'Viewer fixture profile'
     foreach ($contract in @(
         'RequestedClipNames[Slot] = ClipName',

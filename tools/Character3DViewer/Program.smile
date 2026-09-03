@@ -38,8 +38,8 @@ Const SWORD_TRAIL_START_MILLISECONDS = 300
 Const SWORD_TRAIL_END_MILLISECONDS = 967
 Const SHIELD_TRAIL_START_MILLISECONDS = 350
 Const SHIELD_TRAIL_END_MILLISECONDS = 650
-Const ARIN_SHIELD_PART_INDEX = 3
-Const ARIN_SWORD_PART_INDEX = 2
+Const ARIN_SHIELD_PART_INDEX = 0
+Const ARIN_SWORD_PART_INDEX = 1
 Const EQUIPMENT_GLOW_SCALE_DIVISOR = 60
 Const SWORD_TRAIL_PARTICLE_SIZE = 3
 Const SHIELD_TRAIL_PARTICLE_SIZE = 5
@@ -1032,9 +1032,11 @@ Sub UpdateCameraPointer(Blocked As Boolean)
     Dim OrbitPressed As Boolean
     Dim OrbitHeld As Boolean
     Dim OrbitReleased As Boolean
+    Dim OrbitActive As Boolean
     Dim PanPressed As Boolean
     Dim PanHeld As Boolean
     Dim PanReleased As Boolean
+    Dim PanActive As Boolean
     Dim WheelDelta As Number
     Dim PointerDeltaX As Number
     Dim PointerDeltaY As Number
@@ -1043,12 +1045,20 @@ Sub UpdateCameraPointer(Blocked As Boolean)
     Dim PanDeltaX As Number
     Dim PanDeltaY As Number
 
-    OrbitPressed = Not Blocked And Pointer_Pressed(POINTER_MIDDLE)
+    OrbitPressed = (Not Blocked And
+        (Pointer_Pressed(POINTER_MIDDLE) Or
+        (Pointer_Held(POINTER_MIDDLE) And Not CameraControls.Orbiting)))
     OrbitHeld = Pointer_Held(POINTER_MIDDLE)
     OrbitReleased = Pointer_Released(POINTER_MIDDLE)
-    PanPressed = Not Blocked And Pointer_Pressed(POINTER_PRIMARY)
+    OrbitActive = (OrbitPressed Or
+        (CameraControls.Orbiting And (OrbitHeld Or OrbitReleased)))
+    PanPressed = (Not Blocked And
+        (Pointer_Pressed(POINTER_PRIMARY) Or
+        (Pointer_Held(POINTER_PRIMARY) And Not CameraControls.Panning)))
     PanHeld = Pointer_Held(POINTER_PRIMARY)
     PanReleased = Pointer_Released(POINTER_PRIMARY)
+    PanActive = (PanPressed Or
+        (CameraControls.Panning And (PanHeld Or PanReleased)))
     PointerDeltaX = Pointer_Delta_X()
     PointerDeltaY = Pointer_Delta_Y()
 
@@ -1061,7 +1071,7 @@ Sub UpdateCameraPointer(Blocked As Boolean)
         OrbitPointerRemainderY = 0
     End If
 
-    If OrbitHeld Then
+    If OrbitActive Then
         OrbitDeltaX = CharacterViewer.RetainedPointerDelta(
             OrbitPointerRemainderX,
             PointerDeltaX,
@@ -1079,7 +1089,7 @@ Sub UpdateCameraPointer(Blocked As Boolean)
         PanPointerRemainderY = 0
     End If
 
-    If PanHeld Then
+    If PanActive Then
         PanDeltaX = CharacterViewer.RetainedPointerDelta(
             PanPointerRemainderX,
             PointerDeltaX,
@@ -1119,7 +1129,7 @@ Sub UpdateCameraPointer(Blocked As Boolean)
         0
     ) And Ready
 
-    If OrbitHeld Then
+    If OrbitActive Then
 
         Call RecordCameraInteraction()
 
@@ -1128,7 +1138,7 @@ Sub UpdateCameraPointer(Blocked As Boolean)
 
     End If
 
-    If PanHeld Then
+    If PanActive Then
 
         Call RecordCameraInteraction()
 
@@ -1579,7 +1589,7 @@ Sub UpdateEpicGlowTrailState(SwordTip As Core.Vector3, ShieldCenter As Core.Vect
     NextSwordTrailActive = (SelectedClipName() = "SwordAttack" And
         AnimationTime >= SWORD_TRAIL_START_MILLISECONDS And
         AnimationTime <= SWORD_TRAIL_END_MILLISECONDS)
-    NextShieldTrailActive = (SelectedClipName() = "ShieldBashCandidate" And
+    NextShieldTrailActive = (SelectedClipName() = "BlockImpact" And
         AnimationTime >= SHIELD_TRAIL_START_MILLISECONDS And
         AnimationTime <= SHIELD_TRAIL_END_MILLISECONDS)
 
@@ -2473,7 +2483,7 @@ Function ProductionClipStatusLabel() As Text
     Dim Result As Text
 
     If ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
-        Result = "11-clip candidate"
+        Result = "7-clip validated candidate"
     Else If ProfileIndex = ViewerProfiles.PROFILE_ARIN_ORIGINAL Then
         Result = "Original 3 clips"
     Else

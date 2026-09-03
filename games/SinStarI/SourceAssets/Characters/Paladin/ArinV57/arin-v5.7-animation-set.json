@@ -1,0 +1,46 @@
+{
+  "shieldArmStabilization": {
+    "sourceAction": "Defend",
+    "sourceFrame": 22,
+    "bones": [
+      "mixamorig:LeftShoulder",
+      "mixamorig:LeftArm",
+      "mixamorig:LeftForeArm",
+      "mixamorig:LeftHand"
+    ]
+  },
+  "animations": [
+    {
+      "name": "Idle",
+      "file": "arin-v5.7-mixamo-sword-and-shield-calm-idle-without-skin.fbx"
+    },
+    {
+      "name": "Walk",
+      "file": "arin-v5.7-mixamo-walk-without-skin.fbx"
+    },
+    {
+      "name": "Run",
+      "file": "arin-v5.7-mixamo-run-without-skin.fbx",
+      "stabilizeShieldArm": true
+    },
+    {
+      "name": "Defend",
+      "file": "arin-v5.7-mixamo-defend-without-skin.fbx"
+    },
+    {
+      "name": "SwordAttack",
+      "file": "arin-v5.7-mixamo-sword-and-shield-hilt-melee-without-skin.fbx",
+      "stabilizeShieldArm": true
+    },
+    {
+      "name": "BlockImpact",
+      "file": "arin-v5.7-mixamo-block-impact-without-skin.fbx",
+      "stabilizeShieldArm": true
+    },
+    {
+      "name": "Hit",
+      "file": "arin-v5.7-mixamo-hit-without-skin.fbx",
+      "stabilizeShieldArm": true
+    }
+  ]
+}

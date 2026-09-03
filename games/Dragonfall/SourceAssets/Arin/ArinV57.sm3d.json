@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "sampleRate": 30,
+  "clips": {
+    "Idle": { "loop": true },
+    "Walk": { "loop": true },
+    "Run": { "loop": true },
+    "Defend": { "loop": true },
+    "SwordAttack": { "loop": false },
+    "BlockImpact": { "loop": false },
+    "Hit": { "loop": false }
+  },
+  "sockets": {
+    "Root": { "node": "mixamorig:Hips" },
+    "Head": { "node": "mixamorig:Head" },
+    "Chest": { "node": "mixamorig:Spine2" },
+    "SwordBase": {
+      "node": "mixamorig:RightHand",
+      "translation": [-0.01804384, -0.01913124, 0.02651112]
+    },
+    "SwordTip": {
+      "node": "mixamorig:RightHand",
+      "translation": [-0.05871365, 0.54503998, -0.12869539]
+    },
+    "ShieldCenter": {
+      "node": "mixamorig:LeftHand",
+      "translation": [-0.01979548, 0.05179765, -0.01853369]
+    },
+    "HandRight": { "node": "mixamorig:RightHand" },
+    "HandLeft": { "node": "mixamorig:LeftHand" },
+    "FootLeft": { "node": "mixamorig:LeftFoot" },
+    "FootRight": { "node": "mixamorig:RightFoot" }
+  }
+}
