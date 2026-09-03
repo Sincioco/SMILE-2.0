@@ -131,6 +131,7 @@ Private Const COMMAND_SET_CAMERA_UP = 123
 Private Const COMMAND_SET_MODEL_ANIMATOR_TIME = 124
 Private Const COMMAND_SOFT_DEPTH = 125
 Private Const COMMAND_DISTORTION = 126
+Private Const COMMAND_GPU_PARTICLE_SYSTEM = 127
 
 Public Const MATERIAL_INSPECTION_LIT = 0
 Public Const MATERIAL_INSPECTION_BASE_COLOR = 1
@@ -376,6 +377,57 @@ Public Const DISTORTION_QUERY_RESOURCE_GENERATION = 12
 Public Const DISTORTION_QUERY_MATERIAL_MODE = 13
 Public Const DISTORTION_QUERY_MATERIAL_STRENGTH = 14
 Public Const DISTORTION_QUERY_QUALITY = 15
+Public Const GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC = 1
+Public Const GPU_PARTICLE_SIMULATION_GPU_FAST = 2
+Public Const GPU_PARTICLE_SIMULATION_AUTO = 3
+Public Const GPU_PARTICLE_BACKEND_OFF = 0
+Public Const GPU_PARTICLE_BACKEND_D3D11_COMPUTE = 1
+Public Const GPU_PARTICLE_BACKEND_WEBGL2_TRANSFORM_FEEDBACK = 2
+Public Const GPU_PARTICLE_FALLBACK_NONE = 0
+Public Const GPU_PARTICLE_FALLBACK_BACKEND_UNAVAILABLE = 1
+Public Const GPU_PARTICLE_STATE_SCHEMA_VERSION = 1
+Public Const GPU_PARTICLE_STATE_STRIDE_BYTES = 80
+Public Const GPU_PARTICLE_QUERY_LIVE_SYSTEMS = 1
+Public Const GPU_PARTICLE_QUERY_MAX_SYSTEMS = 2
+Public Const GPU_PARTICLE_QUERY_MAX_CAPACITY = 3
+Public Const GPU_PARTICLE_QUERY_STATE_SCHEMA = 4
+Public Const GPU_PARTICLE_QUERY_STATE_STRIDE = 5
+Public Const GPU_PARTICLE_QUERY_BACKEND = 6
+Public Const GPU_PARTICLE_QUERY_FALLBACK_REASON = 7
+Public Const GPU_PARTICLE_QUERY_TOTAL_CAPACITY = 8
+Public Const GPU_PARTICLE_QUERY_TOTAL_ACTIVE = 9
+Public Const GPU_PARTICLE_QUERY_SPAWNS_ACCEPTED = 10
+Public Const GPU_PARTICLE_QUERY_SPAWNS_REJECTED = 11
+Public Const GPU_PARTICLE_QUERY_SIMULATION_STEPS = 12
+Public Const GPU_PARTICLE_QUERY_DROPPED_TIME = 13
+Public Const GPU_PARTICLE_QUERY_DISPATCHES = 14
+Public Const GPU_PARTICLE_QUERY_RENDER_DRAWS = 15
+Public Const GPU_PARTICLE_QUERY_CPU_UPLOAD_BYTES = 16
+Public Const GPU_PARTICLE_QUERY_GPU_STATE_BYTES = 17
+Public Const GPU_PARTICLE_QUERY_RESTARTS = 18
+Public Const GPU_PARTICLE_QUERY_READBACKS = 19
+Public Const GPU_PARTICLE_QUERY_MAX_SPAWNS_PER_ADVANCE = 20
+Public Const GPU_PARTICLE_QUERY_RESOURCE_CAPACITY = 30
+Public Const GPU_PARTICLE_QUERY_RESOURCE_ACTIVE = 31
+Public Const GPU_PARTICLE_QUERY_RESOURCE_PENDING = 32
+Public Const GPU_PARTICLE_QUERY_RESOURCE_FIXED_STEP = 33
+Public Const GPU_PARTICLE_QUERY_RESOURCE_ACCUMULATOR = 34
+Public Const GPU_PARTICLE_QUERY_RESOURCE_READ_GENERATION = 35
+Public Const GPU_PARTICLE_QUERY_RESOURCE_WRITE_GENERATION = 36
+Public Const GPU_PARTICLE_QUERY_RESOURCE_REQUESTED_SIMULATION = 37
+Public Const GPU_PARTICLE_QUERY_RESOURCE_EFFECTIVE_SIMULATION = 38
+Public Const GPU_PARTICLE_QUERY_RESOURCE_IN_FLIGHT = 39
+Public Const GPU_PARTICLE_QUERY_RESOURCE_MATERIAL = 40
+Public Const GPU_PARTICLE_QUERY_SLOT_POSITION_X = 41
+Public Const GPU_PARTICLE_QUERY_SLOT_AGE = 42
+Public Const GPU_PARTICLE_QUERY_SLOT_LIFETIME = 43
+Public Const GPU_PARTICLE_QUERY_SLOT_SERIAL = 44
+Public Const GPU_PARTICLE_QUERY_SLOT_ACTIVE = 45
+Public Const GPU_PARTICLE_QUERY_RESOURCE_CPU_BYTES = 46
+Public Const GPU_PARTICLE_QUERY_RESOURCE_GPU_BYTES = 47
+Public Const GPU_PARTICLE_QUERY_RESOURCE_STEPS = 48
+Public Const GPU_PARTICLE_QUERY_RESOURCE_UPLOAD_BYTES = 49
+Public Const GPU_PARTICLE_QUERY_RESOURCE_QUEUE_ENTRIES = 50
 Public Const MODEL_MATERIAL_BASE_COLOR_RED = 1
 Public Const MODEL_MATERIAL_BASE_COLOR_GREEN = 2
 Public Const MODEL_MATERIAL_BASE_COLOR_BLUE = 3
@@ -3000,6 +3052,324 @@ Public Function DistortionValue3D(
         Query,
         MaterialHandle,
         0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    )
+
+    Return Result
+
+End Function
+
+''' Creates a bounded fixed-slot particle system with a CPU reference fallback.
+Public Function CreateGpuParticleSystem3D(
+    Capacity As Number,
+    Material As Core.Material3D,
+    Optional SimulationMode As Number = GPU_PARTICLE_SIMULATION_AUTO,
+    Optional FixedStepMilliseconds As Number = 10
+) As Core.GpuParticleSystem3D
+
+    Dim Result As Core.GpuParticleSystem3D
+
+    Result.Handle = Dispatch(
+        COMMAND_GPU_PARTICLE_SYSTEM,
+        1,
+        Capacity,
+        Material.Handle,
+        SimulationMode,
+        FixedStepMilliseconds,
+        0,
+        0,
+        0,
+        0,
+        0
+    )
+
+    If Result.Handle <> 0 Then
+
+        Result.Capacity = Capacity
+        Result.RequestedSimulation = SimulationMode
+        Result.EffectiveSimulation = GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC
+        Result.FixedStepMilliseconds = FixedStepMilliseconds
+
+    End If
+
+    Return Result
+
+End Function
+
+''' Stages the position and velocity for one fixed particle slot.
+Public Function SetGpuParticleSpawnKinematics3D(
+    System As Core.GpuParticleSystem3D,
+    Slot As Number,
+    X As Number,
+    Y As Number,
+    Z As Number,
+    VelocityX As Number,
+    VelocityY As Number,
+    VelocityZ As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_GPU_PARTICLE_SYSTEM,
+        2,
+        System.Handle,
+        Slot,
+        X,
+        Y,
+        Z,
+        VelocityX,
+        VelocityY,
+        VelocityZ,
+        0
+    ) <> 0
+
+    Return Result
+
+End Function
+
+''' Stages lifetime, size, rotation, and thermal values for one fixed particle slot.
+Public Function SetGpuParticleSpawnVisual3D(
+    System As Core.GpuParticleSystem3D,
+    Slot As Number,
+    LifetimeMilliseconds As Number,
+    StartSize As Number,
+    EndSize As Number,
+    RotationDegrees As Number,
+    AngularVelocity As Number,
+    Temperature As Number,
+    Density As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_GPU_PARTICLE_SYSTEM,
+        3,
+        System.Handle,
+        Slot,
+        LifetimeMilliseconds,
+        StartSize,
+        EndSize,
+        RotationDegrees,
+        AngularVelocity,
+        Temperature,
+        Density
+    ) <> 0
+
+    Return Result
+
+End Function
+
+''' Atomically reserves a staged slot and queues its bounded spawn command.
+Public Function CommitGpuParticleSpawn3D(
+    ByRef System As Core.GpuParticleSystem3D,
+    Slot As Number,
+    SpawnSerial As Number,
+    Seed As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_GPU_PARTICLE_SYSTEM,
+        4,
+        System.Handle,
+        Slot,
+        SpawnSerial,
+        Seed,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+        System.ActiveCount = System.ActiveCount + 1
+    End If
+
+    Return Result
+
+End Function
+
+''' Advances the CPU reference scheduler through bounded fixed simulation steps.
+Public Function AdvanceGpuParticleSystem3D(
+    ByRef System As Core.GpuParticleSystem3D,
+    ElapsedMilliseconds As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_GPU_PARTICLE_SYSTEM,
+        5,
+        System.Handle,
+        ElapsedMilliseconds,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+        System.ActiveCount = GpuParticleValue3D(
+            GPU_PARTICLE_QUERY_RESOURCE_ACTIVE,
+            System.Handle
+        )
+    End If
+
+    Return Result
+
+End Function
+
+Public Function KillGpuParticleSlot3D(
+    ByRef System As Core.GpuParticleSystem3D,
+    Slot As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_GPU_PARTICLE_SYSTEM,
+        6,
+        System.Handle,
+        Slot,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+        System.ActiveCount = GpuParticleValue3D(
+            GPU_PARTICLE_QUERY_RESOURCE_ACTIVE,
+            System.Handle
+        )
+    End If
+
+    Return Result
+
+End Function
+
+''' Queues the system for the current frame; M7E-C deliberately renders no visual output.
+Public Function DrawGpuParticleSystem3D(System As Core.GpuParticleSystem3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_GPU_PARTICLE_SYSTEM,
+        7,
+        System.Handle,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    Return Result
+
+End Function
+
+Public Function GpuParticleSystemHandleValid3D(System As Core.GpuParticleSystem3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_GPU_PARTICLE_SYSTEM,
+        8,
+        System.Handle,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    Return Result
+
+End Function
+
+Public Function TryDestroyGpuParticleSystem3D(
+    ByRef System As Core.GpuParticleSystem3D
+) As Boolean
+
+    Dim Result As Boolean
+
+    If System.Handle = 0 Then
+        Return True
+    End If
+
+    Result = Dispatch(
+        COMMAND_GPU_PARTICLE_SYSTEM,
+        9,
+        System.Handle,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+
+        System.Handle = 0
+        System.Capacity = 0
+        System.ActiveCount = 0
+        System.RequestedSimulation = 0
+        System.EffectiveSimulation = 0
+        System.FixedStepMilliseconds = 0
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub DestroyGpuParticleSystem3D(ByRef System As Core.GpuParticleSystem3D)
+
+    Dim Destroyed As Boolean
+
+    Destroyed = TryDestroyGpuParticleSystem3D(System)
+
+End Sub
+
+''' Reads global, resource, or fixed-slot GPU-particle diagnostics.
+Public Function GpuParticleValue3D(
+    Query As Number,
+    Optional SystemHandle As Number = 0,
+    Optional Slot As Number = 0
+) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(
+        COMMAND_GPU_PARTICLE_SYSTEM,
+        10,
+        Query,
+        SystemHandle,
+        Slot,
         0,
         0,
         0,

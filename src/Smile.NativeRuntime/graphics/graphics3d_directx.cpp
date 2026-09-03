@@ -43,6 +43,17 @@
 #define SMILE_3D_MAX_RIBBON_BATCHES 16
 #define SMILE_3D_MAX_RIBBON_POINTS_PER_BATCH 1024
 #define SMILE_3D_MAX_STAGED_RIBBON_POINTS 2048
+#define SMILE_3D_MAX_GPU_PARTICLE_SYSTEMS 8
+#define SMILE_3D_MAX_GPU_PARTICLES_PER_SYSTEM 8192
+#define SMILE_3D_MAX_GPU_PARTICLE_CAPACITY 32768
+#define SMILE_3D_MAX_GPU_SPAWN_COMMANDS 512
+#define SMILE_3D_GPU_PARTICLE_STATE_SCHEMA 1
+#define SMILE_3D_GPU_PARTICLE_BACKEND_OFF 0
+#define SMILE_3D_GPU_PARTICLE_FALLBACK_NONE 0
+#define SMILE_3D_GPU_PARTICLE_FALLBACK_BACKEND_UNAVAILABLE 1
+#define SMILE_3D_GPU_PARTICLE_SIMULATION_CPU 1
+#define SMILE_3D_GPU_PARTICLE_SIMULATION_FAST 2
+#define SMILE_3D_GPU_PARTICLE_SIMULATION_AUTO 3
 #define SMILE_3D_SUBMISSION_OBJECT 1
 #define SMILE_3D_SUBMISSION_PARTICLE_BATCH 2
 #define SMILE_3D_SUBMISSION_RIBBON_BATCH 3
@@ -66,6 +77,7 @@
 #define SMILE_3D_ANIMATOR_HANDLE 0x80000000LL
 #define SMILE_3D_PARTICLE_BATCH_HANDLE 0x90000000LL
 #define SMILE_3D_RIBBON_BATCH_HANDLE 0xA0000000LL
+#define SMILE_3D_GPU_PARTICLE_SYSTEM_HANDLE 0xB0000000LL
 #define SMILE_3D_HANDLE_KIND 0xF0000000LL
 #define SMILE_3D_PI 3.14159265358979323846f
 #define SMILE_3D_PBR_PIPELINE_NOT_ATTEMPTED 0
@@ -439,6 +451,51 @@ struct SmileRibbonBatch3D
     ID3D11Buffer* vertex_buffer;
 };
 
+struct SmileGpuParticleState3D
+{
+    float position_age[4];
+    float velocity_lifetime[4];
+    float size_rotation_angular[4];
+    float thermal_density_noise[4];
+    unsigned int seed_flags_gradient_frame[4];
+};
+
+static_assert(sizeof(SmileGpuParticleState3D) == 80,
+    "Generation 3 particle state must remain an explicit 80-byte schema");
+
+struct SmileGpuParticleSpawnCommand3D
+{
+    unsigned int slot;
+    unsigned int serial;
+    SmileGpuParticleState3D state;
+};
+
+struct SmileGpuParticleSystem3D
+{
+    unsigned short generation;
+    unsigned char active;
+    unsigned char requested_simulation;
+    unsigned char effective_simulation;
+    unsigned char read_index;
+    unsigned short fixed_step_ms;
+    unsigned int capacity;
+    unsigned int active_count;
+    unsigned int pending_count;
+    unsigned int accumulator_ms;
+    unsigned int read_generation;
+    unsigned int write_generation;
+    unsigned int in_flight;
+    unsigned int simulation_steps;
+    unsigned int queue_entries;
+    long long material_handle;
+    long long upload_bytes;
+    SmileGpuParticleState3D* states[2];
+    SmileGpuParticleState3D* staged_states;
+    SmileGpuParticleSpawnCommand3D* spawn_commands;
+    unsigned int* slot_serials;
+    unsigned char* slot_active;
+};
+
 struct SmileVfxConstants3D
 {
     SmileMatrix3D view_projection;
@@ -539,6 +596,8 @@ static SmileAnimationClip3D smile_clips3d[SMILE_3D_MAX_CLIPS];
 static SmileAnimator3D smile_animators3d[SMILE_3D_MAX_ANIMATORS];
 static SmileParticleBatch3D smile_particle_batches3d[SMILE_3D_MAX_PARTICLE_BATCHES];
 static SmileRibbonBatch3D smile_ribbon_batches3d[SMILE_3D_MAX_RIBBON_BATCHES];
+static SmileGpuParticleSystem3D
+    smile_gpu_particle_systems3d[SMILE_3D_MAX_GPU_PARTICLE_SYSTEMS];
 static ID3D11VertexShader* smile_vertex_shader3d;
 static ID3D11PixelShader* smile_pixel_shader3d;
 static ID3D11InputLayout* smile_input_layout3d;
@@ -732,6 +791,15 @@ static long long smile_distortion_emitter_count3d;
 static int smile_distortion_maximum_strength3d;
 static int smile_distortion_resource_generation3d = 1;
 static int smile_rendering_distortion_vectors3d;
+static long long smile_gpu_particle_frame_handles3d[SMILE_3D_MAX_GPU_PARTICLE_SYSTEMS];
+static unsigned int smile_gpu_particle_frame_count3d;
+static unsigned int smile_gpu_particle_total_capacity3d;
+static long long smile_gpu_particle_spawns_accepted3d;
+static long long smile_gpu_particle_spawns_rejected3d;
+static long long smile_gpu_particle_simulation_steps3d;
+static long long smile_gpu_particle_dropped_time3d;
+static long long smile_gpu_particle_cpu_upload_bytes3d;
+static long long smile_gpu_particle_queue_entries3d;
 
 #define SMILE_3D_CAMERA_WORLD_BOUND 1000000LL
 #define SMILE_3D_CAMERA_ERROR_INVALID_POSITION_TARGET 58
@@ -742,6 +810,9 @@ static int smile_rendering_distortion_vectors3d;
 #define SMILE_3D_CAMERA_ERROR_PENDING_INCOMPLETE 63
 #define SMILE_3D_CAMERA_ERROR_FRAME_ACTIVE 64
 #define SMILE_3D_DISTORTION_ERROR_INVALID 66
+#define SMILE_3D_GPU_PARTICLE_ERROR_INVALID 67
+#define SMILE_3D_GPU_PARTICLE_ERROR_CAPACITY 68
+#define SMILE_3D_GPU_PARTICLE_ERROR_IN_FLIGHT 69
 
 struct SmileM5TargetState3D
 {
@@ -807,6 +878,7 @@ static SmileMatrix3D smile_3d_identity(void);
 static unsigned int smile_3d_model_v2_string_hash(const SmileModel3D* model, unsigned int offset);
 static void smile_3d_delete_texture(SmileTexture3D* texture);
 static void smile_3d_delete_material(SmileMaterial3D* material);
+static void smile_3d_release_gpu_particle_frame_systems(void);
 static int smile_3d_clear_model_pbr(SmileModel3D* model);
 static int smile_3d_create_pipeline(void);
 static int smile_3d_prepare_model_pbr(long long model_handle,
@@ -972,6 +1044,19 @@ static SmileRibbonBatch3D* smile_3d_ribbon_batch(long long handle)
         !smile_ribbon_batches3d[slot].active ||
         smile_ribbon_batches3d[slot].generation != generation) return 0;
     return &smile_ribbon_batches3d[slot];
+}
+
+static SmileGpuParticleSystem3D* smile_3d_gpu_particle_system(long long handle)
+{
+    int slot;
+    unsigned short generation;
+    if ((handle & SMILE_3D_HANDLE_KIND) != SMILE_3D_GPU_PARTICLE_SYSTEM_HANDLE) return 0;
+    slot = (int)(handle & 255LL) - 1;
+    generation = (unsigned short)((handle >> 8) & 65535LL);
+    if (slot < 0 || slot >= SMILE_3D_MAX_GPU_PARTICLE_SYSTEMS ||
+        !smile_gpu_particle_systems3d[slot].active ||
+        smile_gpu_particle_systems3d[slot].generation != generation) return 0;
+    return &smile_gpu_particle_systems3d[slot];
 }
 
 static int smile_3d_live_mesh_count(void)
@@ -1140,6 +1225,9 @@ static int smile_3d_material_reference_count(long long material_handle)
     for (index = 0; index < SMILE_3D_MAX_RIBBON_BATCHES; ++index)
         if (smile_ribbon_batches3d[index].active &&
             smile_ribbon_batches3d[index].material_handle == material_handle) count++;
+    for (index = 0; index < SMILE_3D_MAX_GPU_PARTICLE_SYSTEMS; ++index)
+        if (smile_gpu_particle_systems3d[index].active &&
+            smile_gpu_particle_systems3d[index].material_handle == material_handle) count++;
     return count;
 }
 
@@ -1474,6 +1562,37 @@ static void smile_3d_delete_ribbon_batch(SmileRibbonBatch3D* batch)
     if (batch->generation == 0) batch->generation = 1;
 }
 
+static void smile_3d_delete_gpu_particle_system(SmileGpuParticleSystem3D* system)
+{
+    void* state_a = system->states[0];
+    void* state_b = system->states[1];
+    void* staged = system->staged_states;
+    void* commands = system->spawn_commands;
+    void* serials = system->slot_serials;
+    void* active = system->slot_active;
+    if (smile_gpu_particle_total_capacity3d >= system->capacity)
+        smile_gpu_particle_total_capacity3d -= system->capacity;
+    else smile_gpu_particle_total_capacity3d = 0;
+    smile_3d_free(state_a);
+    smile_3d_free(state_b);
+    smile_3d_free(staged);
+    smile_3d_free(commands);
+    smile_3d_free(serials);
+    smile_3d_free(active);
+    system->states[0] = system->states[1] = 0;
+    system->staged_states = 0;
+    system->spawn_commands = 0;
+    system->slot_serials = 0;
+    system->slot_active = 0;
+    system->active = 0;
+    system->capacity = 0;
+    system->active_count = 0;
+    system->pending_count = 0;
+    system->in_flight = 0;
+    system->generation++;
+    if (system->generation == 0) system->generation = 1;
+}
+
 static long long smile_3d_create_particle_batch(unsigned int capacity,
     long long material_handle, int billboard_mode, int atlas_columns, int atlas_rows)
 {
@@ -1584,6 +1703,297 @@ static long long smile_3d_create_ribbon_batch(unsigned int capacity, long long m
     batch->vertices = vertices;
     smile_staged_ribbon_capacity3d += capacity;
     return smile_3d_handle(SMILE_3D_RIBBON_BATCH_HANDLE, slot, batch->generation);
+}
+
+static long long smile_3d_create_gpu_particle_system(unsigned int capacity,
+    long long material_handle, int requested_simulation, int fixed_step_ms)
+{
+    int slot;
+    SmileMaterial3D* material = smile_3d_material(material_handle);
+    SmileGpuParticleState3D* state_a;
+    SmileGpuParticleState3D* state_b;
+    SmileGpuParticleState3D* staged;
+    SmileGpuParticleSpawnCommand3D* commands;
+    unsigned int* serials;
+    unsigned char* active;
+    if (capacity == 0 || capacity > SMILE_3D_MAX_GPU_PARTICLES_PER_SYSTEM ||
+        capacity > SMILE_3D_MAX_GPU_PARTICLE_CAPACITY - smile_gpu_particle_total_capacity3d ||
+        requested_simulation < SMILE_3D_GPU_PARTICLE_SIMULATION_CPU ||
+        requested_simulation > SMILE_3D_GPU_PARTICLE_SIMULATION_AUTO ||
+        fixed_step_ms < 5 || fixed_step_ms > 50 || material == 0 || material->mode != 0 ||
+        (material->alpha_mode != 2 && material->alpha_mode != 3))
+    {
+        smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_INVALID;
+        return 0;
+    }
+    for (slot = 0; slot < SMILE_3D_MAX_GPU_PARTICLE_SYSTEMS; ++slot)
+        if (!smile_gpu_particle_systems3d[slot].active) break;
+    if (slot == SMILE_3D_MAX_GPU_PARTICLE_SYSTEMS)
+    {
+        smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_CAPACITY;
+        return 0;
+    }
+    state_a = (SmileGpuParticleState3D*)smile_3d_allocate(
+        sizeof(SmileGpuParticleState3D) * capacity);
+    state_b = (SmileGpuParticleState3D*)smile_3d_allocate(
+        sizeof(SmileGpuParticleState3D) * capacity);
+    staged = (SmileGpuParticleState3D*)smile_3d_allocate(
+        sizeof(SmileGpuParticleState3D) * capacity);
+    commands = (SmileGpuParticleSpawnCommand3D*)smile_3d_allocate(
+        sizeof(SmileGpuParticleSpawnCommand3D) * SMILE_3D_MAX_GPU_SPAWN_COMMANDS);
+    serials = (unsigned int*)smile_3d_allocate(sizeof(unsigned int) * capacity);
+    active = (unsigned char*)smile_3d_allocate(sizeof(unsigned char) * capacity);
+    if (state_a == 0 || state_b == 0 || staged == 0 || commands == 0 ||
+        serials == 0 || active == 0)
+    {
+        void* state_a_allocation = state_a;
+        void* state_b_allocation = state_b;
+        void* staged_allocation = staged;
+        void* commands_allocation = commands;
+        void* serials_allocation = serials;
+        void* active_allocation = active;
+        smile_3d_free(state_a_allocation);
+        smile_3d_free(state_b_allocation);
+        smile_3d_free(staged_allocation);
+        smile_3d_free(commands_allocation);
+        smile_3d_free(serials_allocation);
+        smile_3d_free(active_allocation);
+        smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_CAPACITY;
+        return 0;
+    }
+    ZeroMemory(state_a, sizeof(SmileGpuParticleState3D) * capacity);
+    ZeroMemory(state_b, sizeof(SmileGpuParticleState3D) * capacity);
+    ZeroMemory(staged, sizeof(SmileGpuParticleState3D) * capacity);
+    ZeroMemory(commands,
+        sizeof(SmileGpuParticleSpawnCommand3D) * SMILE_3D_MAX_GPU_SPAWN_COMMANDS);
+    ZeroMemory(serials, sizeof(unsigned int) * capacity);
+    ZeroMemory(active, sizeof(unsigned char) * capacity);
+    {
+        SmileGpuParticleSystem3D* system = &smile_gpu_particle_systems3d[slot];
+        unsigned short generation = system->generation == 0 ? 1 : system->generation;
+        ZeroMemory(system, sizeof(*system));
+        system->generation = generation;
+        system->active = 1;
+        system->requested_simulation = (unsigned char)requested_simulation;
+        system->effective_simulation = SMILE_3D_GPU_PARTICLE_SIMULATION_CPU;
+        system->fixed_step_ms = (unsigned short)fixed_step_ms;
+        system->capacity = capacity;
+        system->read_generation = 1;
+        system->write_generation = 2;
+        system->material_handle = material_handle;
+        system->states[0] = state_a;
+        system->states[1] = state_b;
+        system->staged_states = staged;
+        system->spawn_commands = commands;
+        system->slot_serials = serials;
+        system->slot_active = active;
+        smile_gpu_particle_total_capacity3d += capacity;
+        return smile_3d_handle(
+            SMILE_3D_GPU_PARTICLE_SYSTEM_HANDLE, slot, system->generation);
+    }
+}
+
+static int smile_3d_stage_gpu_particle_kinematics(SmileGpuParticleSystem3D* system,
+    long long slot, long long x, long long y, long long z,
+    long long velocity_x, long long velocity_y, long long velocity_z)
+{
+    SmileGpuParticleState3D* state;
+    if (slot < 0 || slot >= system->capacity ||
+        x < -1000000 || x > 1000000 || y < -1000000 || y > 1000000 ||
+        z < -1000000 || z > 1000000 ||
+        velocity_x < -1000000 || velocity_x > 1000000 ||
+        velocity_y < -1000000 || velocity_y > 1000000 ||
+        velocity_z < -1000000 || velocity_z > 1000000)
+    {
+        smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_INVALID;
+        return 0;
+    }
+    if (system->in_flight != 0)
+    {
+        smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_IN_FLIGHT;
+        return 0;
+    }
+    state = &system->staged_states[slot];
+    state->position_age[0] = (float)x;
+    state->position_age[1] = (float)y;
+    state->position_age[2] = (float)z;
+    state->velocity_lifetime[0] = (float)velocity_x;
+    state->velocity_lifetime[1] = (float)velocity_y;
+    state->velocity_lifetime[2] = (float)velocity_z;
+    return 1;
+}
+
+static int smile_3d_stage_gpu_particle_visual(SmileGpuParticleSystem3D* system,
+    long long slot, long long lifetime, long long start_size, long long end_size,
+    long long rotation, long long angular_velocity, long long temperature,
+    long long density)
+{
+    SmileGpuParticleState3D* state;
+    if (slot < 0 || slot >= system->capacity || lifetime < 1 || lifetime > 600000 ||
+        start_size < 1 || start_size > 1000000 || end_size < 1 || end_size > 1000000 ||
+        rotation < -1000000 || rotation > 1000000 ||
+        angular_velocity < -1000000 || angular_velocity > 1000000 ||
+        temperature < 0 || temperature > 1000 || density < 0 || density > 1000)
+    {
+        smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_INVALID;
+        return 0;
+    }
+    if (system->in_flight != 0)
+    {
+        smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_IN_FLIGHT;
+        return 0;
+    }
+    state = &system->staged_states[slot];
+    state->velocity_lifetime[3] = (float)lifetime;
+    state->size_rotation_angular[0] = (float)start_size;
+    state->size_rotation_angular[1] = (float)end_size;
+    state->size_rotation_angular[2] = (float)rotation;
+    state->size_rotation_angular[3] = (float)angular_velocity;
+    state->thermal_density_noise[0] = (float)temperature / 1000.0f;
+    state->thermal_density_noise[1] = (float)density / 1000.0f;
+    return 1;
+}
+
+static int smile_3d_commit_gpu_particle_spawn(SmileGpuParticleSystem3D* system,
+    long long slot, long long serial, long long seed)
+{
+    SmileGpuParticleSpawnCommand3D* command;
+    if (slot < 0 || slot >= system->capacity || serial <= 0 || serial > 2147483647 ||
+        seed < 0 || seed > 2147483647 || system->pending_count >= SMILE_3D_MAX_GPU_SPAWN_COMMANDS ||
+        system->slot_active[slot] || (unsigned int)serial <= system->slot_serials[slot])
+    {
+        smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_CAPACITY;
+        smile_gpu_particle_spawns_rejected3d++;
+        return 0;
+    }
+    if (system->in_flight != 0 || system->staged_states[slot].velocity_lifetime[3] <= 0.0f ||
+        system->staged_states[slot].size_rotation_angular[0] <= 0.0f)
+    {
+        smile_last_error3d = system->in_flight != 0
+            ? SMILE_3D_GPU_PARTICLE_ERROR_IN_FLIGHT : SMILE_3D_GPU_PARTICLE_ERROR_INVALID;
+        smile_gpu_particle_spawns_rejected3d++;
+        return 0;
+    }
+    command = &system->spawn_commands[system->pending_count++];
+    command->slot = (unsigned int)slot;
+    command->serial = (unsigned int)serial;
+    command->state = system->staged_states[slot];
+    command->state.position_age[3] = 0.0f;
+    command->state.seed_flags_gradient_frame[0] = (unsigned int)seed;
+    command->state.seed_flags_gradient_frame[1] = 1;
+    system->slot_serials[slot] = (unsigned int)serial;
+    system->slot_active[slot] = 1;
+    system->active_count++;
+    smile_gpu_particle_spawns_accepted3d++;
+    return 1;
+}
+
+static void smile_3d_apply_gpu_particle_spawns(SmileGpuParticleSystem3D* system)
+{
+    SmileGpuParticleState3D* source = system->states[system->read_index];
+    for (unsigned int index = 0; index < system->pending_count; ++index)
+    {
+        const SmileGpuParticleSpawnCommand3D* command = &system->spawn_commands[index];
+        if (command->slot >= system->capacity ||
+            !system->slot_active[command->slot] ||
+            system->slot_serials[command->slot] != command->serial) continue;
+        source[command->slot] = command->state;
+    }
+    if (system->pending_count != 0)
+    {
+        long long bytes = (long long)system->pending_count *
+            sizeof(SmileGpuParticleSpawnCommand3D);
+        system->upload_bytes += bytes;
+        smile_gpu_particle_cpu_upload_bytes3d += bytes;
+    }
+    system->pending_count = 0;
+}
+
+static void smile_3d_step_gpu_particle_system(SmileGpuParticleSystem3D* system)
+{
+    SmileGpuParticleState3D* source;
+    SmileGpuParticleState3D* destination;
+    float seconds = (float)system->fixed_step_ms / 1000.0f;
+    smile_3d_apply_gpu_particle_spawns(system);
+    source = system->states[system->read_index];
+    destination = system->states[1 - system->read_index];
+    for (unsigned int slot = 0; slot < system->capacity; ++slot)
+    {
+        destination[slot] = source[slot];
+        if (!system->slot_active[slot])
+        {
+            destination[slot].seed_flags_gradient_frame[1] = 0;
+            continue;
+        }
+        destination[slot].position_age[0] += source[slot].velocity_lifetime[0] * seconds;
+        destination[slot].position_age[1] += source[slot].velocity_lifetime[1] * seconds;
+        destination[slot].position_age[2] += source[slot].velocity_lifetime[2] * seconds;
+        destination[slot].position_age[3] += (float)system->fixed_step_ms;
+        destination[slot].size_rotation_angular[2] +=
+            source[slot].size_rotation_angular[3] * seconds;
+        if (destination[slot].position_age[3] >=
+            destination[slot].velocity_lifetime[3])
+        {
+            system->slot_active[slot] = 0;
+            destination[slot].seed_flags_gradient_frame[1] = 0;
+            if (system->active_count != 0) system->active_count--;
+        }
+    }
+    system->read_index = (unsigned char)(1 - system->read_index);
+    system->read_generation = system->write_generation;
+    system->write_generation++;
+    if (system->write_generation == 0) system->write_generation = 1;
+    system->simulation_steps++;
+    smile_gpu_particle_simulation_steps3d++;
+}
+
+static int smile_3d_advance_gpu_particle_system(SmileGpuParticleSystem3D* system,
+    long long elapsed_ms)
+{
+    unsigned int accepted;
+    if (elapsed_ms < 0 || elapsed_ms > 1000)
+    {
+        smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_INVALID;
+        return 0;
+    }
+    if (system->in_flight != 0)
+    {
+        smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_IN_FLIGHT;
+        return 0;
+    }
+    accepted = elapsed_ms > 250 ? 250U : (unsigned int)elapsed_ms;
+    if ((unsigned int)elapsed_ms > accepted)
+        smile_gpu_particle_dropped_time3d += (unsigned int)elapsed_ms - accepted;
+    system->accumulator_ms += accepted;
+    while (system->accumulator_ms >= system->fixed_step_ms)
+    {
+        smile_3d_step_gpu_particle_system(system);
+        system->accumulator_ms -= system->fixed_step_ms;
+    }
+    return 1;
+}
+
+static int smile_3d_kill_gpu_particle_slot(SmileGpuParticleSystem3D* system,
+    long long slot)
+{
+    if (slot < 0 || slot >= system->capacity)
+    {
+        smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_INVALID;
+        return 0;
+    }
+    if (system->in_flight != 0)
+    {
+        smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_IN_FLIGHT;
+        return 0;
+    }
+    if (system->slot_active[slot])
+    {
+        system->slot_active[slot] = 0;
+        if (system->active_count != 0) system->active_count--;
+    }
+    system->states[0][slot].seed_flags_gradient_frame[1] = 0;
+    system->states[1][slot].seed_flags_gradient_frame[1] = 0;
+    return 1;
 }
 
 static int smile_3d_upload_particle_data(SmileParticleBatch3D* batch,
@@ -6580,6 +6990,7 @@ static int smile_3d_begin(long long red, long long green, long long blue)
     smile_simple_draw_count3d = 0;
     smile_pbr_triangle_count3d = 0;
     smile_3d_release_submissions(0, smile_frame_submission_count3d);
+    smile_3d_release_gpu_particle_frame_systems();
     smile_frame_submission_count3d = 0;
     smile_frame_palette_count3d = 0;
     smile_submission_group_active3d = 0;
@@ -7534,6 +7945,7 @@ static int smile_3d_end(void)
     }
     smile_frame_active3d = 0;
     smile_3d_release_submissions(0, smile_frame_submission_count3d);
+    smile_3d_release_gpu_particle_frame_systems();
     smile_frame_submission_count3d = 0;
     smile_frame_palette_count3d = 0;
     smile_submission_group_active3d = 0;
@@ -7550,6 +7962,7 @@ extern "C" void smile_graphics3d_on_device_lost(void)
     int index;
     SmileM5TargetState3D targets;
     smile_3d_release_submissions(0, smile_frame_submission_count3d);
+    smile_3d_release_gpu_particle_frame_systems();
     smile_frame_submission_count3d = 0;
     smile_frame_palette_count3d = 0;
     smile_submission_group_active3d = 0;
@@ -7844,6 +8257,163 @@ static long long smile_3d_m6_value(long long query, long long handle)
     return 0;
 }
 
+static void smile_3d_release_gpu_particle_frame_systems(void)
+{
+    while (smile_gpu_particle_frame_count3d != 0)
+    {
+        SmileGpuParticleSystem3D* system = smile_3d_gpu_particle_system(
+            smile_gpu_particle_frame_handles3d[--smile_gpu_particle_frame_count3d]);
+        if (system != 0 && system->in_flight != 0) system->in_flight--;
+        smile_gpu_particle_frame_handles3d[smile_gpu_particle_frame_count3d] = 0;
+    }
+}
+
+static int smile_3d_queue_gpu_particle_system(long long handle,
+    SmileGpuParticleSystem3D* system)
+{
+    if (!smile_frame_active3d)
+    {
+        smile_last_error3d = 14;
+        return 0;
+    }
+    if (system->active_count == 0) return 2;
+    if (smile_submission_group_active3d ||
+        smile_gpu_particle_frame_count3d >= SMILE_3D_MAX_GPU_PARTICLE_SYSTEMS)
+    {
+        smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_CAPACITY;
+        return 0;
+    }
+    for (unsigned int index = 0; index < smile_gpu_particle_frame_count3d; ++index)
+        if (smile_gpu_particle_frame_handles3d[index] == handle) return 2;
+    smile_gpu_particle_frame_handles3d[smile_gpu_particle_frame_count3d++] = handle;
+    system->in_flight++;
+    system->queue_entries++;
+    smile_gpu_particle_queue_entries3d++;
+    smile_logical_submission_count3d++;
+    return 1;
+}
+
+static long long smile_3d_gpu_particle_value(long long query,
+    long long handle, long long slot)
+{
+    if (query == 1)
+    {
+        long long count = 0;
+        for (int index = 0; index < SMILE_3D_MAX_GPU_PARTICLE_SYSTEMS; ++index)
+            if (smile_gpu_particle_systems3d[index].active) count++;
+        return count;
+    }
+    if (query == 2) return SMILE_3D_MAX_GPU_PARTICLE_SYSTEMS;
+    if (query == 3) return SMILE_3D_MAX_GPU_PARTICLES_PER_SYSTEM;
+    if (query == 4) return SMILE_3D_GPU_PARTICLE_STATE_SCHEMA;
+    if (query == 5) return sizeof(SmileGpuParticleState3D);
+    if (query == 6) return SMILE_3D_GPU_PARTICLE_BACKEND_OFF;
+    if (query == 7) return SMILE_3D_GPU_PARTICLE_FALLBACK_BACKEND_UNAVAILABLE;
+    if (query == 8) return smile_gpu_particle_total_capacity3d;
+    if (query == 9)
+    {
+        long long count = 0;
+        for (int index = 0; index < SMILE_3D_MAX_GPU_PARTICLE_SYSTEMS; ++index)
+            if (smile_gpu_particle_systems3d[index].active)
+                count += smile_gpu_particle_systems3d[index].active_count;
+        return count;
+    }
+    if (query == 10) return smile_gpu_particle_spawns_accepted3d;
+    if (query == 11) return smile_gpu_particle_spawns_rejected3d;
+    if (query == 12) return smile_gpu_particle_simulation_steps3d;
+    if (query == 13) return smile_gpu_particle_dropped_time3d;
+    if (query == 14) return 0;
+    if (query == 15) return 0;
+    if (query == 16) return smile_gpu_particle_cpu_upload_bytes3d;
+    if (query == 17) return 0;
+    if (query == 18) return 0;
+    if (query == 19) return 0;
+    if (query == 20) return SMILE_3D_MAX_GPU_SPAWN_COMMANDS;
+    if (query >= 30 && query <= 50)
+    {
+        SmileGpuParticleSystem3D* system = smile_3d_gpu_particle_system(handle);
+        if (system == 0)
+        {
+            smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_INVALID;
+            return 0;
+        }
+        if (query == 30) return system->capacity;
+        if (query == 31) return system->active_count;
+        if (query == 32) return system->pending_count;
+        if (query == 33) return system->fixed_step_ms;
+        if (query == 34) return system->accumulator_ms;
+        if (query == 35) return system->read_generation;
+        if (query == 36) return system->write_generation;
+        if (query == 37) return system->requested_simulation;
+        if (query == 38) return system->effective_simulation;
+        if (query == 39) return system->in_flight;
+        if (query == 40) return system->material_handle;
+        if (query == 46) return
+            (long long)system->capacity *
+                (sizeof(SmileGpuParticleState3D) * 3 + sizeof(unsigned int) +
+                    sizeof(unsigned char)) +
+            sizeof(SmileGpuParticleSpawnCommand3D) * SMILE_3D_MAX_GPU_SPAWN_COMMANDS;
+        if (query == 47) return 0;
+        if (query == 48) return system->simulation_steps;
+        if (query == 49) return system->upload_bytes;
+        if (query == 50) return system->queue_entries;
+        if (slot < 0 || slot >= system->capacity)
+        {
+            smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_INVALID;
+            return 0;
+        }
+        {
+            const SmileGpuParticleState3D* state =
+                &system->states[system->read_index][slot];
+            if (query == 41) return (long long)llroundf(state->position_age[0]);
+            if (query == 42) return (long long)llroundf(state->position_age[3]);
+            if (query == 43) return (long long)llroundf(state->velocity_lifetime[3]);
+            if (query == 44) return system->slot_serials[slot];
+            if (query == 45) return system->slot_active[slot] ? 1 : 0;
+        }
+    }
+    smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_INVALID;
+    return 0;
+}
+
+static long long smile_3d_gpu_particle_system_command(long long operation,
+    long long b, long long c, long long d, long long e, long long f,
+    long long g, long long h, long long i, long long j)
+{
+    SmileGpuParticleSystem3D* system;
+    if (operation == 1)
+        return smile_3d_create_gpu_particle_system(
+            (unsigned int)b, c, (int)d, (int)e);
+    if (operation == 10) return smile_3d_gpu_particle_value(b, c, d);
+    system = smile_3d_gpu_particle_system(b);
+    if (operation == 8) return system != 0 ? 1 : 0;
+    if (system == 0)
+    {
+        smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_INVALID;
+        return 0;
+    }
+    if (operation == 2)
+        return smile_3d_stage_gpu_particle_kinematics(system, c, d, e, f, g, h, i);
+    if (operation == 3)
+        return smile_3d_stage_gpu_particle_visual(system, c, d, e, f, g, h, i, j);
+    if (operation == 4) return smile_3d_commit_gpu_particle_spawn(system, c, d, e);
+    if (operation == 5) return smile_3d_advance_gpu_particle_system(system, c);
+    if (operation == 6) return smile_3d_kill_gpu_particle_slot(system, c);
+    if (operation == 7) return smile_3d_queue_gpu_particle_system(b, system);
+    if (operation == 9)
+    {
+        if (system->in_flight != 0)
+        {
+            smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_IN_FLIGHT;
+            return 0;
+        }
+        smile_3d_delete_gpu_particle_system(system);
+        return 1;
+    }
+    smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_INVALID;
+    return 0;
+}
+
 static void smile_3d_reset(void)
 {
     int index;
@@ -7863,6 +8433,9 @@ static void smile_3d_reset(void)
     for (index = 0; index < SMILE_3D_MAX_RIBBON_BATCHES; ++index)
         if (smile_ribbon_batches3d[index].active)
             smile_3d_delete_ribbon_batch(&smile_ribbon_batches3d[index]);
+    for (index = 0; index < SMILE_3D_MAX_GPU_PARTICLE_SYSTEMS; ++index)
+        if (smile_gpu_particle_systems3d[index].active)
+            smile_3d_delete_gpu_particle_system(&smile_gpu_particle_systems3d[index]);
     for (index = 0; index < SMILE_3D_MAX_MODELS; ++index)
         if (smile_models3d[index].active) smile_3d_delete_model(&smile_models3d[index]);
     for (index = 0; index < SMILE_3D_MAX_CLIPS; ++index)
@@ -7901,6 +8474,13 @@ static void smile_3d_reset(void)
     smile_vfx_ribbon_triangle_count3d = 0;
     smile_vfx_particle_submission_count3d = 0;
     smile_vfx_ribbon_submission_count3d = 0;
+    smile_gpu_particle_total_capacity3d = 0;
+    smile_gpu_particle_spawns_accepted3d = 0;
+    smile_gpu_particle_spawns_rejected3d = 0;
+    smile_gpu_particle_simulation_steps3d = 0;
+    smile_gpu_particle_dropped_time3d = 0;
+    smile_gpu_particle_cpu_upload_bytes3d = 0;
+    smile_gpu_particle_queue_entries3d = 0;
     smile_post_requested3d = 0;
     smile_hdr_requested3d = 0;
     smile_bloom_requested3d = 0;
@@ -8542,6 +9122,8 @@ extern "C" long long smile_renderer3d_command(long long command,
             return smile_3d_soft_depth_command(a, b, c, d);
         case SMILE_3D_DISTORTION:
             return smile_3d_distortion_command(a, b, c, d, e, f, g);
+        case SMILE_3D_GPU_PARTICLE_SYSTEM:
+            return smile_3d_gpu_particle_system_command(a, b, c, d, e, f, g, h, i, j);
         default: smile_last_error3d = 1; return 0;
     }
 }

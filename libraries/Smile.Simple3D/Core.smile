@@ -207,6 +207,16 @@ Public Type ParticleBatch3D
     AtlasRows As Number
 End Type
 
+''' A generation-safe fixed-slot Generation 3 particle simulation resource.
+Public Type GpuParticleSystem3D
+    Handle As Number
+    Capacity As Number
+    ActiveCount As Number
+    RequestedSimulation As Number
+    EffectiveSimulation As Number
+    FixedStepMilliseconds As Number
+End Type
+
 ''' A generation-safe bounded Renderer3D ribbon batch.
 Public Type RibbonBatch3D
     Handle As Number

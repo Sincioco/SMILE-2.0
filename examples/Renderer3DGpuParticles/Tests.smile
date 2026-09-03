@@ -1,0 +1,289 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Dim Checks As Number
+Dim Failures As Number
+
+Game Window "Renderer3D M7E-C GPU Particle Common Tests" Size 320 By 240
+
+Do
+
+    Call RunTests()
+
+Loop Until True
+
+If Failures = 0 Then
+    Print "Renderer3D M7E-C GPU particle common tests passed"
+Else
+    Print "Renderer3D M7E-C GPU particle common tests failed: "; Failures
+End If
+
+Sub RunTests()
+
+    Dim Camera As Core.Camera3D
+    Dim AllAccepted As Boolean
+    Dim BigSystem As Core.GpuParticleSystem3D
+    Dim EmptyTexture As Core.Texture3D
+    Dim Material As Core.Material3D
+    Dim Oversized As Core.GpuParticleSystem3D
+    Dim Particle As Core.ParticleBatch3D
+    Dim System As Core.GpuParticleSystem3D
+    Dim System2 As Core.GpuParticleSystem3D
+    Dim System3 As Core.GpuParticleSystem3D
+    Dim System4 As Core.GpuParticleSystem3D
+    Dim System5 As Core.GpuParticleSystem3D
+    Dim System6 As Core.GpuParticleSystem3D
+    Dim System7 As Core.GpuParticleSystem3D
+    Dim System8 As Core.GpuParticleSystem3D
+    Dim System9 As Core.GpuParticleSystem3D
+    Dim OldSystem As Core.GpuParticleSystem3D
+    Dim Slot As Number
+
+    Call Graphics3D.ResetRenderer3D()
+
+    Camera = Graphics3D.DefaultCamera()
+    Material = Graphics3D.CreateEffectMaterial3D(
+        EmptyTexture,
+        Graphics3D.MATERIAL_ALPHA_BLEND,
+        150
+    )
+    Oversized = Graphics3D.CreateGpuParticleSystem3D(8193, Material)
+    System = Graphics3D.CreateGpuParticleSystem3D(
+        4,
+        Material,
+        Graphics3D.GPU_PARTICLE_SIMULATION_AUTO,
+        10
+    )
+
+    Call Check(Material.Handle <> 0)
+    Call Check(Oversized.Handle = 0)
+    Call Check(System.Handle <> 0)
+    Call Check(Graphics3D.GpuParticleSystemHandleValid3D(System))
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_LIVE_SYSTEMS) = 1)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_MAX_SYSTEMS) = 8)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_MAX_CAPACITY) = 8192)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_STATE_SCHEMA) = 1)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_STATE_STRIDE) = 80)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_BACKEND) =
+        Graphics3D.GPU_PARTICLE_BACKEND_OFF)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_FALLBACK_REASON) =
+        Graphics3D.GPU_PARTICLE_FALLBACK_BACKEND_UNAVAILABLE)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_REQUESTED_SIMULATION,
+        System.Handle
+    ) = Graphics3D.GPU_PARTICLE_SIMULATION_AUTO)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_EFFECTIVE_SIMULATION,
+        System.Handle
+    ) = Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_CPU_BYTES,
+        System.Handle
+    ) = 46036)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_GPU_BYTES,
+        System.Handle
+    ) = 0)
+
+    System2 = Graphics3D.CreateGpuParticleSystem3D(1, Material)
+    System3 = Graphics3D.CreateGpuParticleSystem3D(1, Material)
+    System4 = Graphics3D.CreateGpuParticleSystem3D(1, Material)
+    System5 = Graphics3D.CreateGpuParticleSystem3D(1, Material)
+    System6 = Graphics3D.CreateGpuParticleSystem3D(1, Material)
+    System7 = Graphics3D.CreateGpuParticleSystem3D(1, Material)
+    System8 = Graphics3D.CreateGpuParticleSystem3D(1, Material)
+    System9 = Graphics3D.CreateGpuParticleSystem3D(1, Material)
+
+    Call Check(System2.Handle <> 0)
+    Call Check(System3.Handle <> 0)
+    Call Check(System4.Handle <> 0)
+    Call Check(System5.Handle <> 0)
+    Call Check(System6.Handle <> 0)
+    Call Check(System7.Handle <> 0)
+    Call Check(System8.Handle <> 0)
+    Call Check(System9.Handle = 0)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_LIVE_SYSTEMS) = 8)
+
+    Call Check(Graphics3D.SetGpuParticleSpawnKinematics3D(System, 0, 0, 0, 0, 100, 0, 0))
+    Call Check(Graphics3D.SetGpuParticleSpawnVisual3D(System, 0, 30, 10, 20, 0, 90, 900, 800))
+    Call Check(Graphics3D.CommitGpuParticleSpawn3D(System, 0, 1, 123))
+    Call Check(Not Graphics3D.CommitGpuParticleSpawn3D(System, 0, 1, 123))
+    Call Check(System.ActiveCount = 1)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_PENDING,
+        System.Handle
+    ) = 1)
+    Call Check(Graphics3D.AdvanceGpuParticleSystem3D(System, 5))
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_STEPS,
+        System.Handle
+    ) = 0)
+    Call Check(Graphics3D.AdvanceGpuParticleSystem3D(System, 5))
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_SLOT_POSITION_X,
+        System.Handle,
+        0
+    ) = 1)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_SLOT_AGE,
+        System.Handle,
+        0
+    ) = 10)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_READ_GENERATION,
+        System.Handle
+    ) = 2)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_WRITE_GENERATION,
+        System.Handle
+    ) = 3)
+    Call Check(Graphics3D.AdvanceGpuParticleSystem3D(System, 20))
+    Call Check(System.ActiveCount = 0)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_SLOT_ACTIVE,
+        System.Handle,
+        0
+    ) = 0)
+
+    Call Check(Graphics3D.CommitGpuParticleSpawn3D(System, 0, 2, 456))
+    Call Check(Graphics3D.AdvanceGpuParticleSystem3D(System, 10))
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_SLOT_SERIAL,
+        System.Handle,
+        0
+    ) = 2)
+    Call Check(Graphics3D.KillGpuParticleSlot3D(System, 0))
+    Call Check(System.ActiveCount = 0)
+    Call Check(Not Graphics3D.CommitGpuParticleSpawn3D(System, 0, 2, 456))
+
+    Call Check(Graphics3D.SetGpuParticleSpawnVisual3D(
+        System,
+        0,
+        1000,
+        10,
+        20,
+        0,
+        90,
+        900,
+        800
+    ))
+    Call Check(Graphics3D.CommitGpuParticleSpawn3D(System, 0, 3, 789))
+    Call Check(Graphics3D.AdvanceGpuParticleSystem3D(System, 1000))
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_DROPPED_TIME) = 750)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_STEPS,
+        System.Handle
+    ) = 29)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_SPAWNS_ACCEPTED) = 3)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_SPAWNS_REJECTED) = 2)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_CPU_UPLOAD_BYTES) = 264)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_READBACKS) = 0)
+
+    Call Check(Graphics3D.Begin3D(Camera, 4, 8, 12))
+    Call Check(Graphics3D.DrawGpuParticleSystem3D(System))
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_IN_FLIGHT,
+        System.Handle
+    ) = 1)
+
+    OldSystem = System
+
+    Call Check(Not Graphics3D.TryDestroyGpuParticleSystem3D(System))
+    Call Check(Graphics3D.End3DChecked())
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_IN_FLIGHT,
+        System.Handle
+    ) = 0)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_DISPATCHES) = 0)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_RENDER_DRAWS) = 0)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_QUEUE_ENTRIES,
+        System.Handle
+    ) = 1)
+    Call Check(Graphics3D.TryDestroyGpuParticleSystem3D(System))
+    Call Check(Not Graphics3D.GpuParticleSystemHandleValid3D(OldSystem))
+
+    Particle = Graphics3D.CreateParticleBatch3D(1, Material)
+
+    Call Check(Particle.Handle <> 0)
+    Call Check(Graphics3D.SetParticle3D(Particle, 0, 0, 0, 0, 50, 0, 0))
+    Call Check(Graphics3D.SetParticleColor3D(Particle, 0, 255, 128, 32, 100))
+    Call Check(Graphics3D.CommitParticleBatch3D(Particle, 1))
+    Call Check(Graphics3D.Begin3D(Camera, 4, 8, 12))
+    Call Check(Graphics3D.DrawParticleBatch3D(Particle))
+    Call Check(Graphics3D.End3DChecked())
+    Call Check(Graphics3D.TryDestroyParticleBatch3D(Particle))
+    Call Check(Graphics3D.GpuParticleSystemHandleValid3D(System2))
+
+    Call Graphics3D.ResetRenderer3D()
+
+    Call Check(Not Graphics3D.GpuParticleSystemHandleValid3D(System2))
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_LIVE_SYSTEMS) = 0)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_TOTAL_CAPACITY) = 0)
+
+    Material = Graphics3D.CreateEffectMaterial3D(
+        EmptyTexture,
+        Graphics3D.MATERIAL_ALPHA_BLEND,
+        150
+    )
+    BigSystem = Graphics3D.CreateGpuParticleSystem3D(513, Material)
+    AllAccepted = BigSystem.Handle <> 0
+
+    For Slot = 0 To 511
+        If Not Graphics3D.SetGpuParticleSpawnVisual3D(
+            BigSystem,
+            Slot,
+            1000,
+            10,
+            20,
+            0,
+            0,
+            800,
+            700
+        ) Then
+            AllAccepted = False
+        End If
+
+        If Not Graphics3D.CommitGpuParticleSpawn3D(BigSystem, Slot, Slot + 1, Slot) Then
+            AllAccepted = False
+        End If
+    End For
+
+    Call Check(AllAccepted)
+    Call Check(Graphics3D.SetGpuParticleSpawnVisual3D(
+        BigSystem,
+        512,
+        1000,
+        10,
+        20,
+        0,
+        0,
+        800,
+        700
+    ))
+    Call Check(Not Graphics3D.CommitGpuParticleSpawn3D(BigSystem, 512, 513, 512))
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_PENDING,
+        BigSystem.Handle
+    ) = 512)
+    Call Check(Graphics3D.AdvanceGpuParticleSystem3D(BigSystem, 10))
+    Call Check(BigSystem.ActiveCount = 512)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_CPU_UPLOAD_BYTES) =
+        45056)
+
+    Call Graphics3D.ResetRenderer3D()
+
+End Sub
+
+Sub Check(Condition As Boolean)
+
+    Checks = Checks + 1
+
+    If Not Condition Then
+        Print "GPU particle common check failed: "; Checks
+        Failures = Failures + 1
+    End If
+
+End Sub
