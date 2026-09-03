@@ -1,0 +1,11 @@
+{
+  "meshObjects": 64,
+  "output": "RedDragonV1.0.static.glb",
+  "outputBytes": 1994584,
+  "outputFaces": 9912,
+  "outputTriangles": 9912,
+  "outputVertices": 15174,
+  "removedDegenerateFaces": 4,
+  "source": "RedDragonV1.0.original.glb",
+  "sourceFaces": 9916
+}

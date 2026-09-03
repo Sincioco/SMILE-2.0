@@ -26,6 +26,12 @@
                   Profile="Character"
                   Identity="sin-star-i.character-1.paladin"
                   ProductionState="Prototype" />
+    <Model3DAsset Include="SourceAssets\RedDragon\RedDragonV1.0.static.glb"
+                  LogicalPath="Assets\Generation2\RedDragon\RedDragon.sm3d"
+                  TextureOutputDirectory="Assets\Generation2\RedDragon\Textures"
+                  Profile="Static"
+                  Identity="sin-star-i.boss.red-dragon"
+                  ProductionState="Prototype" />
     <Asset Include="TechnicalAssets\Generation2\AnimationArticulated.sm3d" />
     <Asset Include="TechnicalAssets\Generation2\VfxAtlas.png" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />

@@ -43,6 +43,16 @@ Const ARIN_SWORD_PART_INDEX = 1
 Const EQUIPMENT_GLOW_SCALE_DIVISOR = 60
 Const SWORD_TRAIL_PARTICLE_SIZE = 3
 Const SHIELD_TRAIL_PARTICLE_SIZE = 5
+Const DRAGON_ASSET_PATH = "Assets\Generation2\RedDragon\RedDragon.sm3d"
+Const DRAGON_SCALE_PERCENT = 50000
+Const DRAGON_POSITION_X = -120
+Const DRAGON_POSITION_Z = 208
+Const DRAGON_ROTATION_Y = 150
+Const ARIN_ARENA_ROTATION_Y = 60
+Const ARENA_INITIAL_ORBIT_YAW = -60
+Const ARENA_DEFAULT_ZOOM_DEGREES = 20
+Const ARENA_FLOOR_WIDTH = 1000
+Const ARENA_FLOOR_DEPTH = 1000
 
 Dim BaseCamera As Core.Camera3D
 Dim Camera As Core.Camera3D
@@ -125,6 +135,10 @@ Dim ScenePaused As Boolean
 Dim PauseIdleElapsed As Number
 Dim AnimationUpdateElapsed As Number
 Dim BackgroundIndex As Number
+Dim DragonModel As Core.Model3D
+Dim Dragon As Core.Object3D
+Dim DragonAvailable As Boolean
+Dim DragonVisible As Boolean
 
 Game Window "SMILE 2.0 - Character 3D Viewer" Size 1600 By 640
 
@@ -215,6 +229,10 @@ Do
                 Ready = DrawStudioGrid() And Ready
             End If
 
+            If DragonVisible Then
+                Ready = DrawDragon() And Ready
+            End If
+
             If EpicGlowVisible Then
                 Ready = DrawEquipmentGlow() And Ready
             End If
@@ -252,6 +270,8 @@ Call DestroyViewer()
 Sub LoadViewer()
 
     ActiveProfile = ViewerProfiles.ProfileAt(ProfileIndex)
+    DragonAvailable = ProfileIndex = ViewerProfiles.PROFILE_ARIN
+    DragonVisible = DragonAvailable
     Ready = CharacterViewer.ValidateProfile(ActiveProfile)
     Ready = Window_Title(ViewerTitle()) And Ready
     Character = Character3D.LoadWithPolicy(
@@ -276,7 +296,7 @@ Sub LoadViewer()
     BaseCamera.Target.X = 0
     BaseCamera.Target.Y = ViewerFrame.TargetY
     BaseCamera.Target.Z = 0
-    Floor = Graphics3D.CreatePlane3D(ViewerFrame.FloorWidth, ViewerFrame.FloorDepth)
+    Floor = Graphics3D.CreatePlane3D(ViewerFloorWidth(), ViewerFloorDepth())
 
     Call Graphics3D.SetObjectPosition(Floor, 0, -1, 0)
     Call Graphics3D.SetObjectColor(Floor, 28, 35, 54)
@@ -292,22 +312,35 @@ Sub LoadViewer()
     Call Interaction.ResetCameraControls(CameraControls)
     Call CharacterViewer.InitializeZoom(
         SmoothZoom,
-        DEFAULT_ZOOM_DEGREES,
+        DefaultZoomDegrees(),
         ZOOM_IN_LIMIT,
         ZOOM_OUT_LIMIT,
         96000
     )
 
     Ready = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
-    Ready = Scene3D.SetShadowArea(
-        0,
-        ViewerFrame.TargetY,
-        0,
-        ViewerFrame.ShadowWidth,
-        ViewerFrame.ShadowDepth,
-        ViewerFrame.ShadowNear,
-        ViewerFrame.ShadowFar
-    ) And Ready
+
+    If DragonAvailable Then
+        Ready = Scene3D.SetShadowArea(
+            DRAGON_POSITION_X / 2,
+            ViewerFrame.TargetY,
+            DRAGON_POSITION_Z / 2,
+            ARENA_FLOOR_WIDTH,
+            ARENA_FLOOR_DEPTH,
+            ViewerFrame.ShadowNear,
+            ARENA_FLOOR_DEPTH
+        ) And Ready
+    Else
+        Ready = Scene3D.SetShadowArea(
+            0,
+            ViewerFrame.TargetY,
+            0,
+            ViewerFrame.ShadowWidth,
+            ViewerFrame.ShadowDepth,
+            ViewerFrame.ShadowNear,
+            ViewerFrame.ShadowFar
+        ) And Ready
+    End If
 
     Call ApplyLighting()
 
@@ -318,10 +351,13 @@ Sub LoadViewer()
         ViewerFrame.PositionY,
         ViewerFrame.PositionZ
     ) And Ready
-    Ready = Character3D.Rotate(Character, 0, 0, 0) And Ready
+
+    Call ApplyArenaFacing()
+
     Ready = Character3D.SetShadows(Character, True, True) And Ready
     SocketGizmosVisible = False
 
+    Call CreateDragon()
     Call CreateSocketGizmos()
     Call CreateEpicGlow()
 
@@ -366,6 +402,142 @@ Function ValidateLoadedProfile() As Boolean
 
 End Function
 
+Function ViewerFloorWidth() As Number
+
+    Dim Result As Number
+
+    Result = ViewerFrame.FloorWidth
+
+    If DragonAvailable Then
+        Result = Max(Result, ARENA_FLOOR_WIDTH)
+    End If
+
+    Return Result
+
+End Function
+
+Function ViewerFloorDepth() As Number
+
+    Dim Result As Number
+
+    Result = ViewerFrame.FloorDepth
+
+    If DragonAvailable Then
+        Result = Max(Result, ARENA_FLOOR_DEPTH)
+    End If
+
+    Return Result
+
+End Function
+
+Function InitialViewerOrbitYaw() As Number
+
+    Dim Result As Number
+
+    If DragonVisible Then
+        Result = ARENA_INITIAL_ORBIT_YAW
+    Else
+        Result = ViewerProfiles.InitialOrbitYaw(ProfileIndex)
+    End If
+
+    Return Result
+
+End Function
+
+Function DefaultZoomDegrees() As Number
+
+    Dim Result As Number
+
+    If DragonVisible Then
+        Result = ARENA_DEFAULT_ZOOM_DEGREES
+    Else
+        Result = DEFAULT_ZOOM_DEGREES
+    End If
+
+    Return Result
+
+End Function
+
+Sub ApplyArenaFacing()
+
+    If DragonVisible Then
+        Ready = Character3D.Rotate(Character, 0, ARIN_ARENA_ROTATION_Y, 0) And Ready
+    Else
+        Ready = Character3D.Rotate(Character, 0, 0, 0) And Ready
+    End If
+
+End Sub
+
+Sub CreateDragon()
+
+    Dim DragonReady As Boolean
+
+    If Not DragonAvailable Then
+        Return
+    End If
+
+    DragonModel = Graphics3D.LoadModel3D(DRAGON_ASSET_PATH)
+    DragonReady = DragonModel.Handle <> 0
+    DragonReady = DragonModel.PartCount = 1 And DragonReady
+
+    If DragonReady Then
+        Dragon = Graphics3D.CreateModelPart3D(DragonModel, 0)
+        DragonReady = Dragon.Handle <> 0
+    End If
+
+    If DragonReady Then
+
+        DragonReady = Graphics3D.SetObjectScaleChecked3D(
+            Dragon,
+            DRAGON_SCALE_PERCENT,
+            DRAGON_SCALE_PERCENT,
+            DRAGON_SCALE_PERCENT
+        ) And DragonReady
+        DragonReady = Graphics3D.SetObjectPositionChecked3D(
+            Dragon,
+            DRAGON_POSITION_X,
+            0,
+            DRAGON_POSITION_Z
+        ) And DragonReady
+        DragonReady = Graphics3D.SetObjectRotationChecked3D(
+            Dragon,
+            0,
+            DRAGON_ROTATION_Y,
+            0
+        ) And DragonReady
+        DragonReady = Graphics3D.SetObjectShadowsChecked3D(Dragon, True, True) And DragonReady
+
+    End If
+
+    If Not DragonReady Then
+        Ready = False
+
+        Call DestroyDragon()
+    End If
+
+End Sub
+
+Function DrawDragon() As Boolean
+
+    Dim Result As Boolean
+
+    Result = DragonAvailable And Dragon.Handle <> 0
+
+    If Result Then
+        Result = Graphics3D.DrawObject3D(Dragon)
+    End If
+
+    Return Result
+
+End Function
+
+Sub DestroyDragon()
+
+    Call Graphics3D.DestroyObject3D(Dragon)
+    Call Graphics3D.DestroyModel3D(DragonModel)
+
+End Sub
+
 Sub CreateStudioGrid()
 
     Dim EmptyTexture As Core.Texture3D
@@ -382,8 +554,8 @@ Sub CreateStudioGrid()
     Dim GridReady As Boolean
 
     GridReady = True
-    HorizontalHalfCount = Min(15, ViewerFrame.FloorDepth / 40)
-    VerticalHalfCount = Min(15, ViewerFrame.FloorWidth / 40)
+    HorizontalHalfCount = Min(24, ViewerFloorDepth() / 40)
+    VerticalHalfCount = Min(24, ViewerFloorWidth() / 40)
     GridLineCount = (HorizontalHalfCount * 2 + 1) + (VerticalHalfCount * 2 + 1)
     GridMaterial = Graphics3D.CreateMaterial3D(
         EmptyTexture,
@@ -416,8 +588,8 @@ Sub CreateStudioGrid()
 
     End If
 
-    Width = ViewerFrame.FloorWidth / 2
-    Depth = ViewerFrame.FloorDepth / 2
+    Width = ViewerFloorWidth() / 2
+    Depth = ViewerFloorDepth() / 2
     LineIndex = 0
 
     For Index = 0 To HorizontalHalfCount * 2
@@ -695,6 +867,19 @@ Sub CycleBackground()
 
 End Sub
 
+Sub ToggleDragon()
+
+    If DragonAvailable Then
+
+        DragonVisible = Not DragonVisible
+
+        Call ApplyArenaFacing()
+        Call ResetView()
+
+    End If
+
+End Sub
+
 Function BeginViewerScene() As Boolean
 
     Dim Result As Boolean
@@ -965,6 +1150,10 @@ Function HandleInterfacePointer() As Boolean
     Else If PointerInRectangle(PanelLeft + 216, 18, 36, 34) Then
 
         Call ToggleEpicGlow()
+
+    Else If PointerInRectangle(PanelLeft, 56, 148, 22) Then
+
+        Call ToggleDragon()
 
     Else If PointerInRectangle(PanelLeft + 152, 56, 100, 22) Then
 
@@ -1865,7 +2054,7 @@ Sub ResetView()
 
     Call Interaction.ResetCameraControls(CameraControls)
 
-    CameraControls.OrbitYaw = ViewerProfiles.InitialOrbitYaw(ProfileIndex)
+    CameraControls.OrbitYaw = InitialViewerOrbitYaw()
     PanPointerRemainderX = 0
     PanPointerRemainderY = 0
     OrbitPointerRemainderX = 0
@@ -1873,7 +2062,7 @@ Sub ResetView()
 
     Call CharacterViewer.InitializeZoom(
         SmoothZoom,
-        DEFAULT_ZOOM_DEGREES,
+        DefaultZoomDegrees(),
         ZOOM_IN_LIMIT,
         ZOOM_OUT_LIMIT,
         96000
@@ -1891,8 +2080,10 @@ Sub ResetAll()
     FloorVisible = True
     GridVisible = True
     EpicGlowVisible = ViewerProfiles.EpicGlowVisibleByDefault(ProfileIndex) And EpicGlowAvailable
+    DragonVisible = DragonAvailable
 
     Call ApplyLighting()
+    Call ApplyArenaFacing()
 
     Ready = Graphics3D.SetMaterialInspection3D(MaterialInspection) And Ready
 
@@ -2244,6 +2435,7 @@ Sub DrawViewerOverlay()
     Call DrawButton(PanelLeft + 108, 18, 50, 34, "SOCKET", SocketGizmosVisible)
     Call DrawButton(PanelLeft + 162, 18, 50, 34, "PROFILE", False)
     Call DrawButton(PanelLeft + 216, 18, 36, 34, "GLOW", EpicGlowVisible)
+    Call DrawButton(PanelLeft, 56, 148, 22, DragonLabel(), DragonVisible)
     Call DrawButton(PanelLeft + 152, 56, 100, 22, BackgroundLabel(), BackgroundIndex > 0)
 
     Fill Rectangle PanelLeft, 82, 252, Max(446, Window_Height() - 94), Rgb(4, 9, 24) Opacity 80
@@ -2301,7 +2493,7 @@ Sub DrawViewerOverlay()
 
     Call DrawTimeline()
 
-    Draw Text "LMB pan  •  MMB orbit  •  Wheel zoom  •  RMB reset  •  Space/P pause  •  GLOW aura" At 16, Window_Height() - 22 Size 11 Color LIGHT_GRAY
+    Draw Text "LMB pan  •  MMB orbit  •  Wheel zoom  •  RMB reset  •  Space/P pause  •  DRAGON show/hide" At 16, Window_Height() - 22 Size 11 Color LIGHT_GRAY
 
     If ScenePaused Then
         Draw Text "SCENE PAUSED — INSPECTION ACTIVE — AUTO-RESUME AFTER 10 IDLE SECONDS" At 18, 68 Size 14 Color YELLOW
@@ -2396,6 +2588,22 @@ Function BackgroundLabel() As Text
         Result = "BG PURPLE"
     Else
         Result = "BG BLACK"
+    End If
+
+    Return Result
+
+End Function
+
+Function DragonLabel() As Text
+
+    Dim Result As Text
+
+    If Not DragonAvailable Then
+        Result = "DRAGON UNAVAILABLE"
+    Else If DragonVisible Then
+        Result = "DRAGON VISIBLE"
+    Else
+        Result = "DRAGON HIDDEN"
     End If
 
     Return Result
@@ -2613,6 +2821,7 @@ End Sub
 
 Sub DestroyViewerResources()
 
+    Call DestroyDragon()
     Call Character3D.Destroy(Character)
     Call Graphics3D.DestroyObject3D(Floor)
 

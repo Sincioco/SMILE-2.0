@@ -17,6 +17,14 @@ $referencePath = Join-Path $repositoryRoot `
     'games\Dragonfall\SourceAssets\Arin\paladin-reference-images.json'
 $viewerSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Program.smile'
 $profileSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Profiles.smile'
+$cookedProjectPath = Join-Path $repositoryRoot `
+    'games\Dragonfall\Character3DViewerCooked.smileproj'
+$dragonSourcePath = Join-Path $repositoryRoot `
+    'games\Dragonfall\SourceAssets\RedDragon\RedDragonV1.0.original.glb'
+$dragonPreparedPath = Join-Path $repositoryRoot `
+    'games\Dragonfall\SourceAssets\RedDragon\RedDragonV1.0.static.glb'
+$dragonReportPath = Join-Path $repositoryRoot `
+    'games\Dragonfall\SourceAssets\RedDragon\RedDragonV1.0.static.json'
 $adapterSourcePath = Join-Path $repositoryRoot 'games\Dragonfall\DragonfallVisualActor.smile'
 $preparationPath = Join-Path $repositoryRoot 'scripts\prepare-dragonfall-arin-prototype.ps1'
 $pointerSourcePath = Join-Path $repositoryRoot 'src\Smile.NativeRuntime\input\pointer_state.c'
@@ -79,7 +87,7 @@ try {
         'CharacterViewer.AdvanceZoom(',
         'CharacterViewer.AdjustZoomTarget(SmoothZoom, WheelDelta, 8)',
         'Const DEFAULT_ZOOM_DEGREES = -16',
-        'DEFAULT_ZOOM_DEGREES,',
+        'DefaultZoomDegrees(),',
         'CharacterViewer.RetainedPointerDelta(',
         'Const ORBIT_POINTER_DIVISOR = 1',
         'PressedKey = KEY_O',
@@ -117,6 +125,24 @@ try {
         'Text_Width(Label, LabelSize)',
         'Text_Height(Label, LabelSize)',
         'Call DrawButton(PanelLeft + 152, 56, 100, 22, BackgroundLabel(), BackgroundIndex > 0)',
+        'Const DRAGON_ASSET_PATH = "Assets\Generation2\RedDragon\RedDragon.sm3d"',
+        'Const DRAGON_SCALE_PERCENT = 50000',
+        'Const DRAGON_POSITION_X = -120',
+        'Const DRAGON_POSITION_Z = 208',
+        'Const DRAGON_ROTATION_Y = 150',
+        'Const ARIN_ARENA_ROTATION_Y = 60',
+        'Const ARENA_INITIAL_ORBIT_YAW = -60',
+        'Const ARENA_DEFAULT_ZOOM_DEGREES = 20',
+        'Const ARENA_FLOOR_WIDTH = 1000',
+        'Const ARENA_FLOOR_DEPTH = 1000',
+        'DragonModel = Graphics3D.LoadModel3D(DRAGON_ASSET_PATH)',
+        'Dragon = Graphics3D.CreateModelPart3D(DragonModel, 0)',
+        'Ready = DrawDragon() And Ready',
+        'Sub ToggleDragon()',
+        'Call DrawButton(PanelLeft, 56, 148, 22, DragonLabel(), DragonVisible)',
+        'Result = "DRAGON VISIBLE"',
+        'Result = "DRAGON HIDDEN"',
+        'Call DestroyDragon()',
         'Result = "BG BLACK"',
         'Result = "BG GREEN"',
         'Result = "BG PURPLE"',
@@ -168,6 +194,24 @@ try {
     Assert-Contains (Get-Content -LiteralPath (Join-Path $repositoryRoot `
         'games\Dragonfall\Character3DViewer.smileproj') -Raw) `
         '<ResponsiveWindow>true</ResponsiveWindow>' 'Character 3D Viewer project'
+    $cookedProjectSource = Get-Content -LiteralPath $cookedProjectPath -Raw
+    Assert-Contains $cookedProjectSource `
+        'SourceAssets\RedDragon\RedDragonV1.0.static.glb' 'Cooked Character 3D Viewer project'
+    Assert-Contains $cookedProjectSource `
+        'LogicalPath="Assets\Generation2\RedDragon\RedDragon.sm3d"' `
+        'Cooked Character 3D Viewer project'
+    Assert-Contains $cookedProjectSource 'Profile="Static"' `
+        'Cooked Character 3D Viewer project'
+    Assert-True ((Get-FileHash -LiteralPath $dragonSourcePath -Algorithm SHA256).Hash -ceq `
+        '4A90AC7BCD5E0BEA9D0747CBB3E4B3B9379E1DCE2303DBA7797F6D0E72996D88') `
+        'The preserved Red Dragon GLB differs from the user-supplied source.'
+    Assert-True (Test-Path -LiteralPath $dragonPreparedPath -PathType Leaf) `
+        'The prepared Red Dragon static GLB is missing.'
+    $dragonReport = Get-Content -LiteralPath $dragonReportPath -Raw | ConvertFrom-Json
+    Assert-True ($dragonReport.meshObjects -eq 64 -and `
+        $dragonReport.removedDegenerateFaces -eq 4 -and `
+        $dragonReport.outputTriangles -eq 9912) `
+        'The prepared Red Dragon geometry contract changed.'
     Assert-Contains $profileSource `
         'Result.AssetId = "sin-star-i.character-1.paladin"' 'Viewer profile'
     Assert-Contains $profileSource 'Result.CandidateVersion = "v5.7"' 'Viewer profile'
