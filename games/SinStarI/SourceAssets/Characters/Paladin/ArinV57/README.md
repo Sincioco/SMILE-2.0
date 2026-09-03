@@ -28,3 +28,7 @@ These files provide a substantially better v5.7 source baseline, but the two sta
 The equipped pose has a convincing modeled right-hand grip. The original `Sword` mesh, however, contains erroneous skin weights to unrelated right toe and thigh bones in addition to the right hand. Do not animate that sword with its current weights. Attach or rigidly weight the sword to `R_Hand` before using it in the viewer. Treat the shield and straps similarly on the left hand.
 
 For the first animation checkpoint, animate the cleaned derivative while preserving this exact v5.7 skeleton and hand geometry. A separate source T-pose is not required: a temporary neutral A-pose or T-pose can be created in Blender for Mixamo retargeting, or a Tripo animation exported for this exact skeleton can be used directly. Do not directly apply v5.5 animation tracks to the v5.7 rest pose.
+
+## Retirement Condition
+
+Arin v5.4, v5.5, and v5.6 are retained only as unsuccessful diagnostic history. After v5.7 passes animation deformation, right-arm and wrist continuity, sword-grip, equipment attachment, and Character Viewer checks, the earlier model sources, cooked assets, textures, and candidate-specific build records are superseded and may be safely deleted in a dedicated cleanup commit.
