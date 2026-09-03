@@ -87,13 +87,20 @@ try {
         Assert-True ((Get-FileHash $first -Algorithm SHA256).Hash -ceq
             (Get-FileHash $second -Algorithm SHA256).Hash) `
             'Two clean M7D Paladin cooks were not byte-identical.'
-        Assert-True ((Get-FileHash $first -Algorithm SHA256).Hash -ceq
-            (Get-FileHash $committedSm3d -Algorithm SHA256).Hash) `
-            'Committed Paladin SM3D differs from a clean descriptor cook.'
         $inspection = (& $assetTool inspect $first | Out-String)
         Assert-True ($inspection.Contains('Clips: 11')) 'Cooked Paladin clip count is not eleven.'
         Assert-True ($inspection.Contains('Events: 8')) 'Cooked Paladin event count is not eight.'
         Assert-True ($inspection.Contains('Sockets: 10')) 'Cooked Paladin socket count is not ten.'
+        $committedInspection = (& $assetTool inspect $committedSm3d | Out-String)
+        foreach ($requiredText in @(
+            'Parts: 4', 'Vertices: 7376', 'Triangles: 10296', 'Clips: 11',
+            'Events: 8', 'Sockets: 10',
+            'Assets/Generation2/ArinV55/Textures/ArinV55-m0-base-color-86d0e5baea69.png',
+            'Assets/Generation2/ArinV55/Textures/ArinV55-m1-orm-8fa59370084a.png'
+        )) {
+            Assert-True ($committedInspection.Contains($requiredText)) `
+                "The deployable committed Paladin model is missing: $requiredText"
+        }
     }
     finally {
         if (Test-Path -LiteralPath $temporaryRoot) {

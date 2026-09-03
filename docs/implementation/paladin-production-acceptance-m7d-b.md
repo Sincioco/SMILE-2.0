@@ -63,25 +63,30 @@ frame count and SHA-256 in the build manifest.
 
 ### Export, hand correction, and cooked contract
 
-The first v5.5 visual export exposed two issues that metadata-only validation could
-not catch: the T-pose's open right hand faced backward in several weapon clips, and
-applying the sword's local-X correction to the dedicated grip reversed the hand in
-other clips. The final candidate therefore omits body part `tripo_part_3`, retains
-the dedicated 534-vertex closed grip glove from the accepted v5.x integration,
-applies the 180-degree local-X correction only to the sword, and preserves the
-reviewed identity hand-space basis for the glove and shield. Corrections are
-declarative and validated in
-`scripts/export-arin-v5-5-viewer.manifest.json`; the shared exporter retains its
-version-1 behavior for v5.4.
+The first v5.5 visual export exposed issues that metadata-only validation could not
+catch: the T-pose's open right hand faced backward in several weapon clips, and the
+dedicated grip had to replace it. Subsequent live Viewer review found that Blender's
+`export_rest_position_armature` option also changed the rigid sword and grip bind
+transform during GLB export. This was why the Blender renders looked correct while
+the Viewer could show the sword behind the hand or reverse the apparent grip.
+
+The final candidate omits body part `tripo_part_3`, retains the dedicated
+534-vertex closed grip glove from the accepted v5.x integration, and preserves the
+authored identity hand-space basis for sword, glove, and shield. The v5.5 manifest
+now disables rest-position armature export explicitly; version-1 manifests retain
+their prior default so v5.4 remains deterministic. The repository-owned
+`scripts/validate-arin-attachment-roundtrip.py` re-imports the GLB and compares the
+sword and glove against the Blender source at the first, middle, and last frame of
+all 11 actions. Its 66 samples pass with a maximum vertex delta of `0.00000098`.
 
 The result is not a per-animation prop offset. Sword and glove are rigidly weighted
-to `R_Hand`, remain paired for every clip, use the reviewed v5.x hand-space basis,
-and use the normal skeleton animation path. The shield remains rigidly weighted to
-`L_Hand`. The clean export is
+to `R_Hand`, remain paired for every clip, preserve their authored Blender
+positions, and use the normal skeleton animation path. The shield remains rigidly
+weighted to `L_Hand`. The clean export is
 `games/Dragonfall/SourceAssets/Arin/arin-integrated-candidate-v5.5.glb`, SHA-256
-`A6D2A7E4316FC8BF1F0E82AF1A4EF6F3139C5523D451C3E80465128149488E21`.
+`93FC8012D3771693C21C91B212D4BFC0FDD4D8C48472FA9FA83F0DBB8A393AE1`.
 The committed cook is SHA-256
-`37BB9F1540E8B87F577988A019B7FDFA56AF5A2A082B58999CAB2887200F6261`.
+`8A46F36A88F756E07BDF044C599BEA63C3B29081479DA8587DEFBD00B7103D48`.
 
 | Cooked property | v5.5 value |
 |---|---:|
@@ -89,8 +94,8 @@ The committed cook is SHA-256
 | Materials / texture references | 2 / 6 |
 | Bones / nodes | 42 / 46 |
 | Clips / events / sockets | 11 / 8 / 10 |
-| Animation / static / total bytes | 403,532 / 480,100 / 883,632 |
-| GLB bufferViews / accessors | 279 / 279 |
+| Animation / static / total bytes | 403,484 / 480,252 / 883,736 |
+| GLB bufferViews / accessors | 272 / 272 |
 
 Both materials use 2K JPEG base-color, normal, and ORM sources. Arin body maps use
 textures 01, 00, and 02 respectively; equipment maps use 04, 03, and 05. The

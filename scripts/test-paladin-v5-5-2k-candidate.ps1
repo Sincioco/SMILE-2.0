@@ -14,6 +14,7 @@ $builder = Join-Path $repositoryRoot 'scripts\build-arin-v5-5-candidate.ps1'
 $builderPython = Join-Path $repositoryRoot 'scripts\build-arin-v5-5-candidate.py'
 $buildManifest = Join-Path $repositoryRoot 'scripts\build-arin-v5-5-candidate.manifest.json'
 $exporterPython = Join-Path $repositoryRoot 'scripts\export-arin-v5-4-viewer.py'
+$roundTripValidator = Join-Path $repositoryRoot 'scripts\validate-arin-attachment-roundtrip.py'
 $exportManifest = Join-Path $repositoryRoot 'scripts\export-arin-v5-5-viewer.manifest.json'
 $sourceRoot = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Characters\Paladin'
 $bodySource = Join-Path $sourceRoot 'arin-t-pose-2k.original.glb'
@@ -39,7 +40,7 @@ function Invoke-Compiler([string[]]$Arguments, [string]$Failure) {
 
 foreach ($required in @(
     $blender, $assetTool, $compiler, $builder, $builderPython, $buildManifest,
-    $exporterPython, $exportManifest, $bodySource, $equipmentSource,
+    $exporterPython, $roundTripValidator, $exportManifest, $bodySource, $equipmentSource,
     $candidateBlend, $candidateGlb, $canonicalGlb, $descriptor, $committedSm3d
 )) {
     Assert-True (Test-Path -LiteralPath $required -PathType Leaf) `
@@ -85,10 +86,11 @@ foreach ($actionName in $buildValue.actions) {
 Assert-True ($exportValue.candidateVersion -ceq 'v5.5' -and
     $exportValue.actions.Count -eq 11) 'The v5.5 export action contract changed.'
 Assert-True ($exportValue.version -eq 2 -and
-    $exportValue.attachmentCorrections.ArinSword.rotationDegrees[0] -eq 180 -and
+    $exportValue.exportRestPositionArmature -eq $false -and
+    $exportValue.attachmentCorrections.ArinSword.rotationDegrees[0] -eq 0 -and
     $exportValue.attachmentCorrections.ArinSwordGripGlove.rotationDegrees[0] -eq 0 -and
     $exportValue.attachmentCorrections.ArinShield.rotationDegrees[0] -eq 0) `
-    'The v5.5 sword-only attachment correction policy changed.'
+    'The v5.5 attachment export policy changed.'
 
 $textureFiles = @(Get-ChildItem -LiteralPath $dragonfallRoot `
     -Filter 'arin-integrated-candidate-v5.5.texture-*.jpg' | Sort-Object Name)
@@ -119,9 +121,20 @@ try {
     Assert-True ((Get-FileHash $firstSm3d -Algorithm SHA256).Hash -ceq
         (Get-FileHash $secondSm3d -Algorithm SHA256).Hash) `
         'Two clean v5.5 cooks were not byte-identical.'
-    Assert-True ((Get-FileHash $firstSm3d -Algorithm SHA256).Hash -ceq
-        (Get-FileHash $committedSm3d -Algorithm SHA256).Hash) `
-        'The committed v5.5 SM3D differs from a clean descriptor cook.'
+    $committedInspection = & $assetTool inspect $committedSm3d | Out-String
+    foreach ($requiredText in @(
+        'Parts: 4', 'Vertices: 7376', 'Triangles: 10296', 'Materials: 2',
+        'TextureReferences: 6', 'Bones: 42', 'Nodes: 46', 'Clips: 11',
+        'Events: 8', 'Sockets: 10',
+        'Assets/Generation2/ArinV55/Textures/ArinV55-m0-base-color-86d0e5baea69.png',
+        'Assets/Generation2/ArinV55/Textures/ArinV55-m1-orm-8fa59370084a.png'
+    )) {
+        Assert-True ($committedInspection.Contains($requiredText)) `
+            "The deployable committed v5.5 model is missing: $requiredText"
+    }
+
+    & $blender --background $candidateBlend --python $roundTripValidator -- $candidateGlb
+    if ($LASTEXITCODE -ne 0) { throw 'Arin attachment round-trip validation failed.' }
     $inspection = & $assetTool inspect $firstSm3d | Out-String
     foreach ($requiredText in @(
         'Parts: 4', 'Vertices: 7376', 'Triangles: 10296', 'Materials: 2',

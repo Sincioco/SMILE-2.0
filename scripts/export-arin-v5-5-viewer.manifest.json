@@ -11,7 +11,7 @@
     "ArinSwordGripGlove": "R_Hand"
   },
   "attachmentCorrections": {
-    "ArinSword": { "rotationDegrees": [180, 0, 0] },
+    "ArinSword": { "rotationDegrees": [0, 0, 0] },
     "ArinShield": { "rotationDegrees": [0, 0, 0] },
     "ArinSwordGripGlove": { "rotationDegrees": [0, 0, 0] }
   },
@@ -31,6 +31,7 @@
   "referenceAction": "Idle",
   "referenceFrame": 1.0,
   "referenceTransformPolicy": "source-world-times-reference-inverse",
+  "exportRestPositionArmature": false,
   "sampleRate": 30,
   "expectedBlenderVersion": "5.2.1",
   "allowedAttachmentModifiers": [

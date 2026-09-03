@@ -30,7 +30,9 @@ def load_manifest(path: str) -> dict:
         "allowedAttachmentModifiers", "allowedGlbExtensions",
     }
     version = value.get("version")
-    expected = required if version == 1 else required | {"attachmentCorrections"}
+    expected = required if version == 1 else required | {
+        "attachmentCorrections", "exportRestPositionArmature"
+    }
     if version not in (1, 2) or set(value) != expected:
         raise RuntimeError("The Arin export manifest schema is not a supported exact shape.")
     if value["assetId"] != "sin-star-i.character-1.paladin":
@@ -42,6 +44,8 @@ def load_manifest(path: str) -> dict:
     if value["referenceAction"] not in value["actions"] or value["sampleRate"] not in (24, 30, 60):
         raise RuntimeError("The manifest reference action or sample rate is invalid.")
     if version == 2:
+        if not isinstance(value["exportRestPositionArmature"], bool):
+            raise RuntimeError("The armature rest-position export policy must be Boolean.")
         if set(value["attachmentCorrections"]) != set(value["attachments"]):
             raise RuntimeError("Every attachment must have exactly one export correction.")
         for correction in value["attachmentCorrections"].values():
@@ -615,7 +619,9 @@ def main() -> None:
             export_anim_scene_split_object=True,
             export_armature_object_remove=True,
             export_reset_pose_bones=False,
-            export_rest_position_armature=True,
+            export_rest_position_armature=manifest.get(
+                "exportRestPositionArmature", True
+            ),
             export_optimize_animation_keep_anim_armature=False,
             export_extra_animations=False,
             export_skins=True,
