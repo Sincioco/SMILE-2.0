@@ -102,6 +102,26 @@ Public Function InitialOrbitYaw(ProfileIndex As Number) As Number
 
 End Function
 
+Public Function EpicGlowAvailable(ProfileIndex As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = ProfileIndex = PROFILE_ARIN
+
+    Return Result
+
+End Function
+
+Public Function EpicGlowVisibleByDefault(ProfileIndex As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = ProfileIndex = PROFILE_ARIN
+
+    Return Result
+
+End Function
+
 Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
 
     Dim Result As Text

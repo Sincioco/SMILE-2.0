@@ -2,7 +2,7 @@
 
 The SMILE Character 3D Viewer is a reusable tool for inspecting converted SM3D characters on the native or Web Renderer3D backend. Arin is the default character; Paladin is his party role. The original three-clip Arin model and the articulated technical fixture remain selectable with `PROFILE` or `4`. Compatibility project wrappers remain under `games\Dragonfall` because project asset publication currently confines source assets to the owning project tree; the viewer source and profiles live here under `tools`.
 
-The viewer starts in a hands-free presentation at the authored `-16 deg` zoom: it auto-orbits and selects the next available animation every five seconds. Every available animation has a button in the right-side panel. Right-click performs a complete presentation reset: it recenters and refits the camera at `-16 deg`, returns to Idle, restarts the five-second animation sequence, and resumes auto-orbit. Manual camera input stops auto-orbit; ten seconds without further camera input performs the same one-shot reset.
+The viewer starts in a hands-free presentation at the authored `-16 deg` zoom: it auto-orbits and selects the next available animation every five seconds. Every available animation has a button in the right-side panel. Arin v5.5 also starts with an optional presentation-only equipment glow: an icy additive aura follows the animated sword sockets and a warm halo follows the shield socket. `GLOW` toggles both without changing Arin's source textures, materials, or candidate asset. Right-click performs a complete presentation reset: it recenters and refits the camera at `-16 deg`, returns to Idle, restarts the five-second animation sequence, and resumes auto-orbit. Manual camera input stops auto-orbit; ten seconds without further camera input performs the same one-shot reset.
 
 Controls:
 
@@ -16,6 +16,7 @@ Controls:
 - `F` hides or shows the floor and grid together. `G` hides or shows only the grid.
 - `Space` pauses or resumes animation playback. `Enter` resets the presentation. `Esc` exits.
 - `PROFILE` or `4` switches profiles.
+- `GLOW` hides or shows the current profile's equipment aura. Arin v5.5 enables it by default; profiles without the required weapon sockets leave the toggle unavailable.
 - `SOCKET` shows socket origins and RGB local-axis endpoints.
 - `CHANNEL` cycles lit, base-color, normal, roughness, metallic, occlusion, and emissive inspection.
 - `-` and `+` change playback speed from 25% through 200%; authored speed is 100%.

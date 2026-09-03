@@ -5,8 +5,10 @@ Option Explicit
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.FixedMath As FixedMath
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Interaction As Interaction
+Import Smile.Simple3D.Math3D As Math3D
 Import Smile.Simple3D.Scene3D As Scene3D
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 
@@ -29,6 +31,12 @@ Const MAX_ANIMATION_ELAPSED = 250
 Const MAX_CAMERA_ELAPSED = 250
 Const TIMELINE_LEFT = 18
 Const TIMELINE_HEIGHT = 18
+Const SHIELD_GLOW_POINT_COUNT = 17
+Const SHIELD_GLOW_INNER_RADIUS_X = 7
+Const SHIELD_GLOW_INNER_RADIUS_Y = 13
+Const SHIELD_GLOW_OUTER_RADIUS_X = 8
+Const SHIELD_GLOW_OUTER_RADIUS_Y = 14
+Const SWORD_GLOW_HALF_WIDTH = 1
 
 Dim BaseCamera As Core.Camera3D
 Dim Camera As Core.Camera3D
@@ -52,6 +60,11 @@ Dim SocketMarkers As Core.ParticleBatch3D
 Dim SocketMarkerMaterial As Core.Material3D
 Dim SelectedSocket As Number
 Dim ShowAllSocketOrigins As Boolean
+Dim EpicGlowAvailable As Boolean
+Dim EpicGlowVisible As Boolean
+Dim EpicGlowMaterial As Core.Material3D
+Dim SwordGlow As Core.RibbonBatch3D
+Dim ShieldGlow As Core.RibbonBatch3D
 Dim Ready As Boolean
 Dim Running As Boolean
 Dim ViewerError As Boolean
@@ -157,6 +170,10 @@ Do
 
         Camera = Interaction.ApplyCameraControls(BaseCamera, CameraControls)
 
+        If EpicGlowVisible Then
+            Ready = UpdateEpicGlow() And Ready
+        End If
+
         If Character3D.IsValid(Character) Then
             CharacterBounds = Character3D.WorldBounds(Character, ActiveProfile.AnimationMargin)
         End If
@@ -174,6 +191,10 @@ Do
             End If
 
             Ready = Character3D.Draw(Character) And Ready
+
+            If EpicGlowVisible Then
+                Ready = DrawEpicGlow() And Ready
+            End If
 
             If SocketGizmosVisible Then
                 Ready = DrawSocketGizmos() And Ready
@@ -272,6 +293,7 @@ Sub LoadViewer()
     SocketGizmosVisible = False
 
     Call CreateSocketGizmos()
+    Call CreateEpicGlow()
 
     PlaybackSpeed = ActiveProfile.DefaultPlaybackSpeed
     MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT
@@ -599,6 +621,14 @@ Sub ToggleFloorAndGrid()
 
 End Sub
 
+Sub ToggleEpicGlow()
+
+    If EpicGlowAvailable Then
+        EpicGlowVisible = Not EpicGlowVisible
+    End If
+
+End Sub
+
 Sub RecordViewerError()
 
     ViewerError = True
@@ -802,21 +832,25 @@ Function HandleInterfacePointer() As Boolean
 
         Call SeekFromPointer()
 
-    Else If PointerInRectangle(PanelLeft, 18, 56, 34) Then
+    Else If PointerInRectangle(PanelLeft, 18, 44, 34) Then
 
         Call CycleLighting()
 
-    Else If PointerInRectangle(PanelLeft + 62, 18, 64, 34) Then
+    Else If PointerInRectangle(PanelLeft + 48, 18, 56, 34) Then
 
         Call CycleMaterialInspection()
 
-    Else If PointerInRectangle(PanelLeft + 132, 18, 58, 34) Then
+    Else If PointerInRectangle(PanelLeft + 108, 18, 50, 34) Then
 
         Call CycleSocketDisplay()
 
-    Else If PointerInRectangle(PanelLeft + 196, 18, 56, 34) Then
+    Else If PointerInRectangle(PanelLeft + 162, 18, 50, 34) Then
 
         Call CycleProfile()
+
+    Else If PointerInRectangle(PanelLeft + 216, 18, 36, 34) Then
+
+        Call ToggleEpicGlow()
 
     Else If PointerInRectangle(PanelLeft + 172, 204, 30, 24) Then
 
@@ -1200,6 +1234,232 @@ Function DrawSocketGizmos() As Boolean
 
 End Function
 
+Sub CreateEpicGlow()
+
+    Dim EmptyTexture As Core.Texture3D
+    Dim GlowReady As Boolean
+
+    EpicGlowAvailable = ViewerProfiles.EpicGlowAvailable(ProfileIndex)
+    EpicGlowAvailable = Character3D.HasSocket(Character, "SwordBase") And EpicGlowAvailable
+    EpicGlowAvailable = Character3D.HasSocket(Character, "SwordTip") And EpicGlowAvailable
+    EpicGlowAvailable = Character3D.HasSocket(Character, "ShieldCenter") And EpicGlowAvailable
+    EpicGlowVisible = ViewerProfiles.EpicGlowVisibleByDefault(ProfileIndex) And EpicGlowAvailable
+
+    If Not EpicGlowAvailable Then
+        Return
+    End If
+
+    EpicGlowMaterial = Graphics3D.CreateEffectMaterial3D(
+        EmptyTexture,
+        Graphics3D.MATERIAL_ALPHA_ADDITIVE,
+        140
+    )
+    GlowReady = EpicGlowMaterial.Handle <> 0
+
+    If GlowReady Then
+        SwordGlow = Graphics3D.CreateRibbonBatch3D(2, EpicGlowMaterial)
+        GlowReady = SwordGlow.Handle <> 0
+    End If
+
+    If GlowReady Then
+        ShieldGlow = Graphics3D.CreateRibbonBatch3D(
+            SHIELD_GLOW_POINT_COUNT,
+            EpicGlowMaterial
+        )
+        GlowReady = ShieldGlow.Handle <> 0
+    End If
+
+    If Not GlowReady Then
+        Call DestroyEpicGlow()
+    End If
+
+End Sub
+
+Sub DestroyEpicGlow()
+
+    Call Graphics3D.DestroyRibbonBatch3D(SwordGlow)
+    Call Graphics3D.DestroyRibbonBatch3D(ShieldGlow)
+    Call Graphics3D.DestroyEffectMaterial3D(EpicGlowMaterial)
+
+    EpicGlowAvailable = False
+    EpicGlowVisible = False
+
+End Sub
+
+Function UpdateEpicGlow() As Boolean
+
+    Dim SwordBase As Core.Vector3
+    Dim SwordTip As Core.Vector3
+    Dim ShieldCenter As Core.Vector3
+    Dim Forward As Core.Vector3
+    Dim ScreenRight As Core.Vector3
+    Dim ShieldRight As Core.Vector3
+    Dim ShieldUp As Core.Vector3
+    Dim SwordDirection As Core.Vector3
+    Dim SwordWidth As Core.Vector3
+    Dim FrontX As Number
+    Dim FrontY As Number
+    Dim FrontZ As Number
+    Dim SwordWidthX As Number
+    Dim SwordWidthY As Number
+    Dim SwordWidthZ As Number
+    Dim Angle As Number
+    Dim Cosine As Number
+    Dim Sine As Number
+    Dim InnerX As Number
+    Dim InnerY As Number
+    Dim InnerZ As Number
+    Dim OuterX As Number
+    Dim OuterY As Number
+    Dim OuterZ As Number
+    Dim Index As Number
+    Dim Result As Boolean
+
+    SwordBase = Character3D.SocketPosition(Character, "SwordBase")
+    SwordTip = Character3D.SocketPosition(Character, "SwordTip")
+    ShieldCenter = Character3D.SocketPosition(Character, "ShieldCenter")
+    Forward = Math3D.Normalize(Math3D.Subtract(Camera.Target, Camera.Position))
+    ScreenRight = Math3D.Normalize(Math3D.Cross(Forward, Camera.UpDirection))
+    ShieldRight = SocketAxis("ShieldCenter", Graphics3D.ANIMATOR_SOCKET_MATRIX_M11)
+    ShieldUp = SocketAxis("ShieldCenter", Graphics3D.ANIMATOR_SOCKET_MATRIX_M21)
+    SwordDirection = Math3D.Subtract(SwordTip, SwordBase)
+    SwordWidth = Math3D.Normalize(Math3D.Cross(SwordDirection, Forward))
+
+    If (SwordWidth.X = 0 And
+        SwordWidth.Y = 0 And
+        SwordWidth.Z = 0) Then
+        SwordWidth = ScreenRight
+    End If
+
+    FrontX = 0 - Forward.X / Core.FIXED_ONE
+    FrontY = 0 - Forward.Y / Core.FIXED_ONE
+    FrontZ = 0 - Forward.Z / Core.FIXED_ONE
+    SwordWidthX = SwordWidth.X * SWORD_GLOW_HALF_WIDTH / Core.FIXED_ONE
+    SwordWidthY = SwordWidth.Y * SWORD_GLOW_HALF_WIDTH / Core.FIXED_ONE
+    SwordWidthZ = SwordWidth.Z * SWORD_GLOW_HALF_WIDTH / Core.FIXED_ONE
+    Result = Graphics3D.SetRibbonPoint3D(
+        SwordGlow,
+        0,
+        SwordBase.X + FrontX - SwordWidthX,
+        SwordBase.Y + FrontY - SwordWidthY,
+        SwordBase.Z + FrontZ - SwordWidthZ,
+        SwordBase.X + FrontX + SwordWidthX,
+        SwordBase.Y + FrontY + SwordWidthY,
+        SwordBase.Z + FrontZ + SwordWidthZ,
+        0
+    )
+    Result = Graphics3D.SetRibbonPointColor3D(
+        SwordGlow,
+        0,
+        80,
+        185,
+        255,
+        30
+    ) And Result
+    Result = Graphics3D.SetRibbonPoint3D(
+        SwordGlow,
+        1,
+        SwordTip.X + FrontX - SwordWidthX,
+        SwordTip.Y + FrontY - SwordWidthY,
+        SwordTip.Z + FrontZ - SwordWidthZ,
+        SwordTip.X + FrontX + SwordWidthX,
+        SwordTip.Y + FrontY + SwordWidthY,
+        SwordTip.Z + FrontZ + SwordWidthZ,
+        1000
+    ) And Result
+    Result = Graphics3D.SetRibbonPointColor3D(
+        SwordGlow,
+        1,
+        205,
+        245,
+        255,
+        50
+    ) And Result
+    Result = Graphics3D.CommitRibbonBatch3D(SwordGlow, 2) And Result
+
+    For Index = 0 To SHIELD_GLOW_POINT_COUNT - 1
+
+        Angle = Index * 360 / (SHIELD_GLOW_POINT_COUNT - 1)
+        Cosine = FixedMath.CosFixed(Angle)
+        Sine = FixedMath.SinFixed(Angle)
+        InnerX = ShieldCenter.X + FrontX * 2 + (
+            ShieldRight.X * Cosine * SHIELD_GLOW_INNER_RADIUS_X +
+            ShieldUp.X * Sine * SHIELD_GLOW_INNER_RADIUS_Y
+        ) / (Core.FIXED_ONE * Core.FIXED_ONE)
+        InnerY = ShieldCenter.Y + FrontY * 2 + (
+            ShieldRight.Y * Cosine * SHIELD_GLOW_INNER_RADIUS_X +
+            ShieldUp.Y * Sine * SHIELD_GLOW_INNER_RADIUS_Y
+        ) / (Core.FIXED_ONE * Core.FIXED_ONE)
+        InnerZ = ShieldCenter.Z + FrontZ * 2 + (
+            ShieldRight.Z * Cosine * SHIELD_GLOW_INNER_RADIUS_X +
+            ShieldUp.Z * Sine * SHIELD_GLOW_INNER_RADIUS_Y
+        ) / (Core.FIXED_ONE * Core.FIXED_ONE)
+        OuterX = ShieldCenter.X + FrontX * 2 + (
+            ShieldRight.X * Cosine * SHIELD_GLOW_OUTER_RADIUS_X +
+            ShieldUp.X * Sine * SHIELD_GLOW_OUTER_RADIUS_Y
+        ) / (Core.FIXED_ONE * Core.FIXED_ONE)
+        OuterY = ShieldCenter.Y + FrontY * 2 + (
+            ShieldRight.Y * Cosine * SHIELD_GLOW_OUTER_RADIUS_X +
+            ShieldUp.Y * Sine * SHIELD_GLOW_OUTER_RADIUS_Y
+        ) / (Core.FIXED_ONE * Core.FIXED_ONE)
+        OuterZ = ShieldCenter.Z + FrontZ * 2 + (
+            ShieldRight.Z * Cosine * SHIELD_GLOW_OUTER_RADIUS_X +
+            ShieldUp.Z * Sine * SHIELD_GLOW_OUTER_RADIUS_Y
+        ) / (Core.FIXED_ONE * Core.FIXED_ONE)
+        Result = Graphics3D.SetRibbonPoint3D(
+            ShieldGlow,
+            Index,
+            InnerX,
+            InnerY,
+            InnerZ,
+            OuterX,
+            OuterY,
+            OuterZ,
+            Index * 1000 / (SHIELD_GLOW_POINT_COUNT - 1)
+        ) And Result
+        Result = Graphics3D.SetRibbonPointColor3D(
+            ShieldGlow,
+            Index,
+            255,
+            214,
+            112,
+            18
+        ) And Result
+    End For
+
+    Result = Graphics3D.CommitRibbonBatch3D(
+        ShieldGlow,
+        SHIELD_GLOW_POINT_COUNT
+    ) And Result
+
+    Return Result
+
+End Function
+
+Function SocketAxis(SocketName As Text, MatrixProperty As Number) As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    Result.X = Character3D.SocketValueThousandths(Character, SocketName, MatrixProperty)
+    Result.Y = Character3D.SocketValueThousandths(Character, SocketName, MatrixProperty + 1)
+    Result.Z = Character3D.SocketValueThousandths(Character, SocketName, MatrixProperty + 2)
+    Result = Math3D.Normalize(Result)
+
+    Return Result
+
+End Function
+
+Function DrawEpicGlow() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Graphics3D.DrawRibbonBatch3D(SwordGlow)
+    Result = Graphics3D.DrawRibbonBatch3D(ShieldGlow) And Result
+
+    Return Result
+
+End Function
+
 Sub CycleSocketDisplay()
 
     If Not SocketGizmosVisible Then
@@ -1373,6 +1633,7 @@ Sub ResetAll()
     ShowAllSocketOrigins = False
     FloorVisible = True
     GridVisible = True
+    EpicGlowVisible = ViewerProfiles.EpicGlowVisibleByDefault(ProfileIndex) And EpicGlowAvailable
 
     Call ApplyLighting()
 
@@ -1715,10 +1976,11 @@ Sub DrawViewerOverlay()
     Draw Text "SMILE 2.0 - CHARACTER 3D VIEWER" At 18, 10 Size 22 Color CYAN
     Draw Text Subtitle At 18, 42 Size 13 Color LIGHT_GRAY
 
-    Call DrawButton(PanelLeft, 18, 56, 34, "LIGHT", False)
-    Call DrawButton(PanelLeft + 62, 18, 64, 34, "CHANNEL", False)
-    Call DrawButton(PanelLeft + 132, 18, 58, 34, "SOCKET", SocketGizmosVisible)
-    Call DrawButton(PanelLeft + 196, 18, 56, 34, "PROFILE", False)
+    Call DrawButton(PanelLeft, 18, 44, 34, "LIGHT", False)
+    Call DrawButton(PanelLeft + 48, 18, 56, 34, "CHANNEL", False)
+    Call DrawButton(PanelLeft + 108, 18, 50, 34, "SOCKET", SocketGizmosVisible)
+    Call DrawButton(PanelLeft + 162, 18, 50, 34, "PROFILE", False)
+    Call DrawButton(PanelLeft + 216, 18, 36, 34, "GLOW", EpicGlowVisible)
 
     Fill Rectangle PanelLeft, 82, 252, Max(446, Window_Height() - 94), Rgb(4, 9, 24) Opacity 80
     Draw Text "CHARACTER STATUS" At PanelText, 96 Size 16 Color WHITE
@@ -1775,7 +2037,7 @@ Sub DrawViewerOverlay()
 
     Call DrawTimeline()
 
-    Draw Text "LMB pan  •  MMB orbit  •  Wheel zoom  •  RMB reset  •  Space pause" At 16, Window_Height() - 22 Size 11 Color LIGHT_GRAY
+    Draw Text "LMB pan  •  MMB orbit  •  Wheel zoom  •  RMB reset  •  GLOW equipment aura" At 16, Window_Height() - 22 Size 11 Color LIGHT_GRAY
 
     If ViewerError Then
 
@@ -2041,5 +2303,6 @@ Sub DestroyViewerResources()
 
     Call DestroyStudioGrid()
     Call DestroySocketGizmos()
+    Call DestroyEpicGlow()
 
 End Sub

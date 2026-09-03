@@ -88,6 +88,19 @@ try {
         'Call RestartPresentation()',
         'Sub AdvanceAutoOrbit()',
         'Call CreateSocketGizmos()',
+        'Call CreateEpicGlow()',
+        'Ready = UpdateEpicGlow() And Ready',
+        'Ready = DrawEpicGlow() And Ready',
+        'Call ToggleEpicGlow()',
+        'Graphics3D.CreateEffectMaterial3D(',
+        'Graphics3D.CreateRibbonBatch3D(2, EpicGlowMaterial)',
+        'ShieldRight = SocketAxis("ShieldCenter", Graphics3D.ANIMATOR_SOCKET_MATRIX_M11)',
+        'ShieldUp = SocketAxis("ShieldCenter", Graphics3D.ANIMATOR_SOCKET_MATRIX_M21)',
+        'Character3D.SocketPosition(Character, "SwordBase")',
+        'Character3D.SocketPosition(Character, "SwordTip")',
+        'Character3D.SocketPosition(Character, "ShieldCenter")',
+        'Call DestroyEpicGlow()',
+        '"GLOW", EpicGlowVisible',
         'Graphics3D.SetMaterialInspection3D(',
         'Result = "11-clip candidate"',
         'Game Window "SMILE 2.0 - Character 3D Viewer" Size 1600 By 640',
@@ -116,6 +129,10 @@ try {
     Assert-Contains $profileSource 'Result.DisplayName = "Arin"' 'Viewer profile'
     Assert-Contains $profileSource 'Result.PartyRole = "Paladin"' 'Viewer profile'
     Assert-Contains $profileSource 'Result.GroundOffset = -10' 'Viewer profile'
+    Assert-Contains $profileSource `
+        'Public Function EpicGlowAvailable(ProfileIndex As Number) As Boolean' 'Viewer profile'
+    Assert-Contains $profileSource `
+        'Public Function EpicGlowVisibleByDefault(ProfileIndex As Number) As Boolean' 'Viewer profile'
     Assert-Contains $profileSource 'Result = 11' 'Viewer profile'
     Assert-Contains $profileSource 'AnimationArticulated.sm3d' 'Viewer fixture profile'
     foreach ($contract in @(
