@@ -1702,6 +1702,7 @@ Function UpdateEquipmentGlow(
 ) As Boolean
 
     Dim OutlineScale As Number
+    Dim RotationY As Number
     Dim ScaleDelta As Number
     Dim PositionX As Number
     Dim PositionY As Number
@@ -1716,7 +1717,13 @@ Function UpdateEquipmentGlow(
     PositionX = ViewerFrame.PositionX - PositionX
     PositionY = ViewerFrame.PositionY - PositionY
     PositionZ = ViewerFrame.PositionZ - PositionZ
+
+    If DragonVisible Then
+        RotationY = ARIN_ARENA_ROTATION_Y
+    End If
+
     Result = Graphics3D.SetObjectPositionChecked3D(GlowObject, PositionX, PositionY, PositionZ)
+    Result = Graphics3D.SetObjectRotationChecked3D(GlowObject, 0, RotationY, 0) And Result
     Result = Graphics3D.SetObjectScaleChecked3D(
         GlowObject,
         OutlineScale,

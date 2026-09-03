@@ -153,6 +153,7 @@ try {
         'ShieldGlow = Graphics3D.CreateModelPart3D(CharacterModel, ARIN_SHIELD_PART_INDEX)',
         'Graphics3D.SetObjectAnimator3D(SwordGlow, CharacterAnimator)',
         'Graphics3D.SetObjectAnimator3D(ShieldGlow, CharacterAnimator)',
+        'Graphics3D.SetObjectRotationChecked3D(GlowObject, 0, RotationY, 0)',
         'Graphics3D.DrawObject3D(SwordGlow)',
         'Graphics3D.DrawObject3D(ShieldGlow)',
         'Const EQUIPMENT_GLOW_SCALE_DIVISOR = 60',
