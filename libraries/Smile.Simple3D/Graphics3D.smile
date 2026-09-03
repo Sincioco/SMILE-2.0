@@ -130,6 +130,7 @@ Private Const COMMAND_MATERIAL_INSPECTION = 122
 Private Const COMMAND_SET_CAMERA_UP = 123
 Private Const COMMAND_SET_MODEL_ANIMATOR_TIME = 124
 Private Const COMMAND_SOFT_DEPTH = 125
+Private Const COMMAND_DISTORTION = 126
 
 Public Const MATERIAL_INSPECTION_LIT = 0
 Public Const MATERIAL_INSPECTION_BASE_COLOR = 1
@@ -344,6 +345,37 @@ Public Const SOFT_DEPTH_QUERY_FALLBACK_REASON = 11
 Public Const SOFT_DEPTH_QUERY_RESOURCE_GENERATION = 12
 Public Const SOFT_DEPTH_QUERY_MATERIAL_MODE = 13
 Public Const SOFT_DEPTH_QUERY_MATERIAL_DISTANCE = 14
+Public Const VFX_SHADING_STANDARD = 0
+Public Const VFX_SHADING_DISTORTION = 1
+Public Const DISTORTION_REQUEST_OFF = 0
+Public Const DISTORTION_REQUEST_AUTOMATIC = 1
+Public Const DISTORTION_QUALITY_AUTO = 0
+Public Const DISTORTION_QUALITY_LOW = 1
+Public Const DISTORTION_QUALITY_MEDIUM = 2
+Public Const DISTORTION_QUALITY_HIGH = 3
+Public Const DISTORTION_FORMAT_OFF = 0
+Public Const DISTORTION_FORMAT_RGBA8_PACKED = 1
+Public Const DISTORTION_FORMAT_RGBA16_FLOAT = 2
+Public Const DISTORTION_FALLBACK_NONE = 0
+Public Const DISTORTION_FALLBACK_DISABLED = 1
+Public Const DISTORTION_FALLBACK_SHADER = 2
+Public Const DISTORTION_FALLBACK_TARGET = 3
+Public Const DISTORTION_FALLBACK_QUALITY = 4
+Public Const DISTORTION_QUERY_REQUESTED = 1
+Public Const DISTORTION_QUERY_EFFECTIVE = 2
+Public Const DISTORTION_QUERY_WIDTH = 3
+Public Const DISTORTION_QUERY_HEIGHT = 4
+Public Const DISTORTION_QUERY_FORMAT = 5
+Public Const DISTORTION_QUERY_BYTES = 6
+Public Const DISTORTION_QUERY_EMITTERS = 7
+Public Const DISTORTION_QUERY_VECTOR_DRAWS = 8
+Public Const DISTORTION_QUERY_COMPOSITE_DRAWS = 9
+Public Const DISTORTION_QUERY_MAXIMUM_STRENGTH = 10
+Public Const DISTORTION_QUERY_FALLBACK_REASON = 11
+Public Const DISTORTION_QUERY_RESOURCE_GENERATION = 12
+Public Const DISTORTION_QUERY_MATERIAL_MODE = 13
+Public Const DISTORTION_QUERY_MATERIAL_STRENGTH = 14
+Public Const DISTORTION_QUERY_QUALITY = 15
 Public Const MODEL_MATERIAL_BASE_COLOR_RED = 1
 Public Const MODEL_MATERIAL_BASE_COLOR_GREEN = 2
 Public Const MODEL_MATERIAL_BASE_COLOR_BLUE = 3
@@ -2882,6 +2914,104 @@ Public Function SoftDepthValue3D(
 
 End Function
 
+''' Enables or disables the transactional heat-distortion targets outside an active frame.
+Public Function ConfigureDistortion3D(
+    RequestedMode As Number,
+    Optional Quality As Number = DISTORTION_QUALITY_AUTO
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_DISTORTION,
+        1,
+        RequestedMode,
+        Quality,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    Return Result
+
+End Function
+
+''' Makes an effect material write bounded heat-distortion vectors rather than visible color.
+Public Function SetEffectMaterialDistortion3D(
+    ByRef Material As Core.Material3D,
+    Strength As Number,
+    Optional NoiseScale As Number = 100,
+    Optional NoiseSpeed As Number = 0,
+    Optional FlowX As Number = 0,
+    Optional FlowY As Number = 100
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_DISTORTION,
+        2,
+        Material.Handle,
+        Strength,
+        NoiseScale,
+        NoiseSpeed,
+        FlowX,
+        FlowY,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+
+        If Strength = 0 Then
+            Material.VfxShadingMode = VFX_SHADING_STANDARD
+        Else
+            Material.VfxShadingMode = VFX_SHADING_DISTORTION
+        End If
+
+        Material.DistortionStrength = Strength
+        Material.DistortionNoiseScale = NoiseScale
+        Material.DistortionNoiseSpeed = NoiseSpeed
+        Material.DistortionFlowX = FlowX
+        Material.DistortionFlowY = FlowY
+
+    End If
+
+    Return Result
+
+End Function
+
+''' Reads heat-distortion target, pass, fallback, quality, or material diagnostics.
+Public Function DistortionValue3D(
+    Query As Number,
+    Optional MaterialHandle As Number = 0
+) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(
+        COMMAND_DISTORTION,
+        3,
+        Query,
+        MaterialHandle,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    )
+
+    Return Result
+
+End Function
+
 ''' Destroys an effect material through the existing generation-safe material path.
 Public Sub DestroyEffectMaterial3D(ByRef Material As Core.Material3D)
 
@@ -2962,6 +3092,12 @@ Public Function TryDestroyMaterial3D(ByRef Material As Core.Material3D) As Boole
         Material.EmissiveTextureHandle = 0
         Material.SoftDepthMode = SOFT_DEPTH_MATERIAL_OFF
         Material.SoftDepthDistance = 0
+        Material.VfxShadingMode = VFX_SHADING_STANDARD
+        Material.DistortionStrength = 0
+        Material.DistortionNoiseScale = 0
+        Material.DistortionNoiseSpeed = 0
+        Material.DistortionFlowX = 0
+        Material.DistortionFlowY = 0
 
     End If
 

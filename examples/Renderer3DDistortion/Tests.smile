@@ -1,0 +1,144 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Dim Checks As Number
+Dim Failures As Number
+
+Game Window "Renderer3D M7E-B Distortion Tests" Size 320 By 240
+
+Do
+
+    Call RunTests()
+
+Loop Until True
+
+If Failures = 0 Then
+    Print "Renderer3D M7E-B distortion tests passed"
+Else
+    Print "Renderer3D M7E-B distortion tests failed: "; Failures
+End If
+
+Sub RunTests()
+
+    Dim Camera As Core.Camera3D
+    Dim EmptyTexture As Core.Texture3D
+    Dim Material As Core.Material3D
+    Dim Particle As Core.ParticleBatch3D
+    Dim Pillar As Core.Object3D
+
+    Call Graphics3D.ResetRenderer3D()
+
+    Camera = Graphics3D.DefaultCamera()
+    Pillar = Graphics3D.CreateCube3D(120)
+    Material = Graphics3D.CreateEffectMaterial3D(
+        EmptyTexture,
+        Graphics3D.MATERIAL_ALPHA_BLEND,
+        150
+    )
+    Particle = Graphics3D.CreateParticleBatch3D(1, Material)
+
+    Call Check(Pillar.Handle <> 0)
+    Call Check(Material.Handle <> 0)
+    Call Check(Particle.Handle <> 0)
+    Call Check(Graphics3D.ConfigureSoftDepth3D(Graphics3D.SOFT_DEPTH_REQUEST_AUTOMATIC))
+    Call Check(Graphics3D.SetEffectMaterialSoftDepth3D(
+        Material,
+        Graphics3D.SOFT_DEPTH_MATERIAL_AUTOMATIC
+    ))
+    Call Check(Graphics3D.ConfigureDistortion3D(
+        Graphics3D.DISTORTION_REQUEST_AUTOMATIC,
+        Graphics3D.DISTORTION_QUALITY_HIGH
+    ))
+    Call Check(Graphics3D.SetEffectMaterialDistortion3D(Material, 60, 125, 25, 0, 100))
+    Call Check(Not Graphics3D.SetEffectMaterialDistortion3D(Material, 50, 100, 0, 0, 0))
+    Call Check(Graphics3D.SetParticle3D(Particle, 0, 0, 0, 50, 90, 0))
+    Call Check(Graphics3D.SetParticleColor3D(Particle, 0, 255, 128, 32, 85))
+    Call Check(Graphics3D.CommitParticleBatch3D(Particle, 1))
+    Call Check(Graphics3D.ConfigurePostProcessing3D(True, True, True, 100, 1200, 80, 2, 2, 4))
+    Call Check(Graphics3D.Begin3D(Camera, 4, 8, 12))
+    Call Check(Graphics3D.DrawObject3D(Pillar))
+    Call Check(Graphics3D.DrawParticleBatch3D(Particle))
+    Call Check(Graphics3D.End3DChecked())
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_REQUESTED) = 1)
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_EFFECTIVE) > 0)
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_WIDTH) * 2 =
+        Graphics3D.SoftDepthValue3D(Graphics3D.SOFT_DEPTH_QUERY_WIDTH))
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_HEIGHT) * 2 =
+        Graphics3D.SoftDepthValue3D(Graphics3D.SOFT_DEPTH_QUERY_HEIGHT))
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_BYTES) > 0)
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_EMITTERS) = 1)
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_VECTOR_DRAWS) = 1)
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_COMPOSITE_DRAWS) = 1)
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_MAXIMUM_STRENGTH) = 60)
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_FALLBACK_REASON) = 0)
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_QUALITY) = 3)
+    Call Check(Graphics3D.DistortionValue3D(
+        Graphics3D.DISTORTION_QUERY_MATERIAL_MODE,
+        Material.Handle
+    ) = Graphics3D.VFX_SHADING_DISTORTION)
+    Call Check(Graphics3D.DistortionValue3D(
+        Graphics3D.DISTORTION_QUERY_MATERIAL_STRENGTH,
+        Material.Handle
+    ) = 60)
+
+    Call Check(Graphics3D.ConfigurePostProcessing3D(False, False, False, 100, 1200, 80, 2, 2, 1))
+    Call Check(Graphics3D.ConfigureDistortion3D(
+        Graphics3D.DISTORTION_REQUEST_AUTOMATIC,
+        Graphics3D.DISTORTION_QUALITY_MEDIUM
+    ))
+    Call Check(Graphics3D.Begin3D(Camera, 4, 8, 12))
+    Call Check(Graphics3D.DrawObject3D(Pillar))
+    Call Check(Graphics3D.DrawParticleBatch3D(Particle))
+    Call Check(Graphics3D.End3DChecked())
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_EFFECTIVE) > 0)
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_WIDTH) * 4 =
+        Graphics3D.SoftDepthValue3D(Graphics3D.SOFT_DEPTH_QUERY_WIDTH))
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_HEIGHT) * 4 =
+        Graphics3D.SoftDepthValue3D(Graphics3D.SOFT_DEPTH_QUERY_HEIGHT))
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_COMPOSITE_DRAWS) = 1)
+
+    Call Check(Graphics3D.CommitParticleBatch3D(Particle, 0))
+    Call Check(Graphics3D.Begin3D(Camera, 4, 8, 12))
+    Call Check(Graphics3D.DrawObject3D(Pillar))
+    Call Check(Graphics3D.DrawParticleBatch3D(Particle))
+    Call Check(Graphics3D.End3DChecked())
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_EMITTERS) = 0)
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_VECTOR_DRAWS) = 0)
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_COMPOSITE_DRAWS) = 0)
+
+    Call Check(Graphics3D.CommitParticleBatch3D(Particle, 1))
+    Call Check(Graphics3D.ConfigureDistortion3D(
+        Graphics3D.DISTORTION_REQUEST_AUTOMATIC,
+        Graphics3D.DISTORTION_QUALITY_LOW
+    ))
+    Call Check(Graphics3D.Begin3D(Camera, 4, 8, 12))
+    Call Check(Graphics3D.DrawParticleBatch3D(Particle))
+    Call Check(Graphics3D.End3DChecked())
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_EFFECTIVE) = 0)
+    Call Check(Graphics3D.DistortionValue3D(
+        Graphics3D.DISTORTION_QUERY_FALLBACK_REASON
+    ) = Graphics3D.DISTORTION_FALLBACK_QUALITY)
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_VECTOR_DRAWS) = 0)
+    Call Check(Graphics3D.DistortionValue3D(Graphics3D.DISTORTION_QUERY_COMPOSITE_DRAWS) = 0)
+
+    Call Check(Graphics3D.TryDestroyParticleBatch3D(Particle))
+    Call Graphics3D.DestroyEffectMaterial3D(Material)
+
+    Call Graphics3D.DestroyObject3D(Pillar)
+
+    Call Graphics3D.ResetRenderer3D()
+
+End Sub
+
+Sub Check(Condition As Boolean)
+
+    Checks = Checks + 1
+
+    If Not Condition Then
+        Print "Distortion check failed: "; Checks
+        Failures = Failures + 1
+    End If
+
+End Sub

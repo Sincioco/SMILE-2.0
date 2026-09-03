@@ -10,7 +10,7 @@ function fail(message) {
 }
 
 const args = process.argv.slice(2);
-if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--expected-runtime-error <text>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio|--phase5-ui|--phase5-hardening|--phase5-submenus|--phase5-submenu-viewport|--mobile-controls|--renderer3d|--force-renderer3d-pbr-failure|--force-renderer3d-hdr-failure|--force-renderer3d-shadow-failure|--force-renderer3d-soft-depth-failure|--neon-cycles-input]");
+if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--expected-runtime-error <text>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio|--phase5-ui|--phase5-hardening|--phase5-submenus|--phase5-submenu-viewport|--mobile-controls|--renderer3d|--force-renderer3d-pbr-failure|--force-renderer3d-hdr-failure|--force-renderer3d-shadow-failure|--force-renderer3d-soft-depth-failure|--force-renderer3d-distortion-failure|--neon-cycles-input]");
 
 const webDirectory = path.resolve(args.shift());
 let expectedPath = null;
@@ -33,6 +33,7 @@ let forceRenderer3DPbrFailure = false;
 let forceRenderer3DHdrFailure = false;
 let forceRenderer3DShadowFailure = false;
 let forceRenderer3DSoftDepthFailure = false;
+let forceRenderer3DDistortionFailure = false;
 let verifyNeonCyclesInput = false;
 while (args.length !== 0) {
     const option = args.shift();
@@ -53,6 +54,7 @@ while (args.length !== 0) {
     if (option === "--force-renderer3d-hdr-failure") { forceRenderer3DHdrFailure = true; continue; }
     if (option === "--force-renderer3d-shadow-failure") { forceRenderer3DShadowFailure = true; continue; }
     if (option === "--force-renderer3d-soft-depth-failure") { forceRenderer3DSoftDepthFailure = true; continue; }
+    if (option === "--force-renderer3d-distortion-failure") { forceRenderer3DDistortionFailure = true; continue; }
     if (option === "--neon-cycles-input") { verifyNeonCyclesInput = true; continue; }
     const value = args.shift();
     if (value === undefined) fail(`missing value for ${option}`);
@@ -814,6 +816,7 @@ if (forceRenderer3DPbrFailure) host.SMILE_TEST_RENDERER3D_FORCE_PBR_FAILURE = tr
 if (forceRenderer3DHdrFailure) host.SMILE_TEST_RENDERER3D_FORCE_HDR_FAILURE = true;
 if (forceRenderer3DShadowFailure) host.SMILE_TEST_RENDERER3D_FORCE_SHADOW_FAILURE = true;
 if (forceRenderer3DSoftDepthFailure) host.SMILE_TEST_RENDERER3D_FORCE_SOFT_DEPTH_FAILURE = true;
+if (forceRenderer3DDistortionFailure) host.SMILE_TEST_RENDERER3D_FORCE_DISTORTION_FAILURE = true;
 
 const context = vm.createContext(host);
 try {

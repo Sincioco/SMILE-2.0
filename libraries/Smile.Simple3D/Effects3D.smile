@@ -452,10 +452,10 @@ Private Sub SynchronizeCapabilityState()
         EffectiveSoftDepthValue = Graphics3D.SoftDepthValue3D(
             Graphics3D.SOFT_DEPTH_QUERY_EFFECTIVE
         )
-        CapabilityFallbackFlagsValue = (
-            FALLBACK_DISTORTION_UNAVAILABLE +
-            FALLBACK_THERMAL_SHADING_UNAVAILABLE
+        EffectiveDistortionValue = Graphics3D.DistortionValue3D(
+            Graphics3D.DISTORTION_QUERY_EFFECTIVE
         )
+        CapabilityFallbackFlagsValue = FALLBACK_THERMAL_SHADING_UNAVAILABLE
 
         If RequestedSimulationValue <> SIMULATION_CPU_DETERMINISTIC Then
             CapabilityFallbackFlagsValue = (
@@ -468,6 +468,13 @@ Private Sub SynchronizeCapabilityState()
             CapabilityFallbackFlagsValue = (
                 CapabilityFallbackFlagsValue +
                 FALLBACK_SOFT_DEPTH_UNAVAILABLE
+            )
+        End If
+
+        If EffectiveDistortionValue = DISTORTION_OFF Then
+            CapabilityFallbackFlagsValue = (
+                CapabilityFallbackFlagsValue +
+                FALLBACK_DISTORTION_UNAVAILABLE
             )
         End If
 
@@ -598,6 +605,13 @@ Public Function Initialize(
             RibbonMaterial,
             Graphics3D.SOFT_DEPTH_MATERIAL_EXPLICIT,
             12
+        )
+    End If
+
+    If Result Then
+        Result = Graphics3D.ConfigureDistortion3D(
+            Graphics3D.DISTORTION_REQUEST_AUTOMATIC,
+            Quality
         )
     End If
 
@@ -2204,7 +2218,13 @@ End Function
 
 Public Function DistortionSupported() As Boolean
 
-    Return False
+    Dim Result As Boolean
+
+    Call SynchronizeCapabilityState()
+
+    Result = EffectiveDistortionValue <> DISTORTION_OFF
+
+    Return Result
 
 End Function
 

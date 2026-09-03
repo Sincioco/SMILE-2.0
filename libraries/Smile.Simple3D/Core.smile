@@ -138,6 +138,12 @@ Public Type Material3D
     OcclusionStrengthPercent As Number
     SoftDepthMode As Number
     SoftDepthDistance As Number
+    VfxShadingMode As Number
+    DistortionStrength As Number
+    DistortionNoiseScale As Number
+    DistortionNoiseSpeed As Number
+    DistortionFlowX As Number
+    DistortionFlowY As Number
 End Type
 
 ''' A validated deterministic model asset whose meshes are shared by part instances.

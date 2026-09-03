@@ -117,6 +117,11 @@ Sub RunTests()
     Call Check(Effects3D.RequestedSimulation() = Effects3D.SIMULATION_CPU_DETERMINISTIC)
     Call Check(Effects3D.EffectiveSimulation() = Effects3D.SIMULATION_CPU_DETERMINISTIC)
     Call Check(Effects3D.CapabilityFallbackFlags() = 14)
+    Call Check(Graphics3D.Begin3D(Camera, 1, 2, 8))
+    Call Check(Graphics3D.End3DChecked())
+    Call Check(Effects3D.SoftDepthSupported())
+    Call Check(Effects3D.DistortionSupported())
+    Call Check(Effects3D.CapabilityFallbackFlags() = 8)
 
     Call Graphics3D.ResetRenderer3D()
 

@@ -90,7 +90,12 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'M7E-0 Web lab runtime syntax check failed.' }
 
     $indexText = Get-Content -LiteralPath $evidenceIndex -Raw
-    Add-Type -AssemblyName System.Drawing.Common
+    try {
+        Add-Type -AssemblyName System.Drawing.Common
+    }
+    catch {
+        Add-Type -AssemblyName System.Drawing
+    }
     foreach ($name in @(
         '01-energy-blade-idle-native.png',
         '02-energy-blade-swing-native.png',
