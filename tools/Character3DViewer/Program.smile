@@ -31,8 +31,12 @@ Const MAX_CAMERA_ELAPSED = 250
 Const TIMELINE_LEFT = 18
 Const TIMELINE_HEIGHT = 18
 Const SWORD_GLOW_POINT_COUNT = 4
-Const EQUIPMENT_TRAIL_POINT_COUNT = 8
+Const EQUIPMENT_TRAIL_POINT_COUNT = 5
 Const EQUIPMENT_TRAIL_SAMPLE_MILLISECONDS = 24
+Const SWORD_TRAIL_START_MILLISECONDS = 300
+Const SWORD_TRAIL_END_MILLISECONDS = 967
+Const SHIELD_TRAIL_START_MILLISECONDS = 350
+Const SHIELD_TRAIL_END_MILLISECONDS = 650
 Const ARIN_SHIELD_PART_INDEX = 1
 Const SHIELD_GLOW_SCALE_DIVISOR = 100
 Const SWORD_BLADE_START_OFFSET = 7
@@ -74,6 +78,9 @@ Dim ShieldTrail As Core.RibbonBatch3D
 Dim SwordTrailPoints[EQUIPMENT_TRAIL_POINT_COUNT] As Core.Vector3
 Dim ShieldTrailPoints[EQUIPMENT_TRAIL_POINT_COUNT] As Core.Vector3
 Dim EquipmentTrailElapsed As Number
+Dim EquipmentTrailAnimationTime As Number
+Dim SwordTrailActive As Boolean
+Dim ShieldTrailActive As Boolean
 Dim Ready As Boolean
 Dim Running As Boolean
 Dim ViewerError As Boolean
@@ -1378,6 +1385,7 @@ Function UpdateEpicGlow() As Boolean
     SwordBladeBase.Y = SwordBase.Y + SwordAlong.Y * SWORD_BLADE_START_OFFSET / Core.FIXED_ONE
     SwordBladeBase.Z = SwordBase.Z + SwordAlong.Z * SWORD_BLADE_START_OFFSET / Core.FIXED_ONE
 
+    Call UpdateEpicGlowTrailState(SwordTip, ShieldCenter)
     Call AdvanceEpicGlowTrails(SwordTip, ShieldCenter)
 
     FrontX = 0 - Forward.X / Core.FIXED_ONE
@@ -1525,10 +1533,21 @@ Sub ResetEpicGlowTrails()
 
     Dim SwordTip As Core.Vector3
     Dim ShieldCenter As Core.Vector3
-    Dim Index As Number
 
     SwordTip = Character3D.SocketPosition(Character, "SwordTip")
     ShieldCenter = Character3D.SocketPosition(Character, "ShieldCenter")
+
+    Call SeedEpicGlowTrails(SwordTip, ShieldCenter)
+
+    EquipmentTrailAnimationTime = Character3D.AnimationTime(Character)
+    SwordTrailActive = False
+    ShieldTrailActive = False
+
+End Sub
+
+Sub SeedEpicGlowTrails(SwordTip As Core.Vector3, ShieldCenter As Core.Vector3)
+
+    Dim Index As Number
 
     For Index = 0 To EQUIPMENT_TRAIL_POINT_COUNT - 1
         SwordTrailPoints[Index] = SwordTip
@@ -1539,9 +1558,39 @@ Sub ResetEpicGlowTrails()
 
 End Sub
 
+Sub UpdateEpicGlowTrailState(SwordTip As Core.Vector3, ShieldCenter As Core.Vector3)
+
+    Dim AnimationTime As Number
+    Dim NextSwordTrailActive As Boolean
+    Dim NextShieldTrailActive As Boolean
+
+    AnimationTime = Character3D.AnimationTime(Character)
+    NextSwordTrailActive = (SelectedClipName() = "SwordAttack" And
+        AnimationTime >= SWORD_TRAIL_START_MILLISECONDS And
+        AnimationTime <= SWORD_TRAIL_END_MILLISECONDS)
+    NextShieldTrailActive = (SelectedClipName() = "ShieldBashCandidate" And
+        AnimationTime >= SHIELD_TRAIL_START_MILLISECONDS And
+        AnimationTime <= SHIELD_TRAIL_END_MILLISECONDS)
+
+    If ((NextSwordTrailActive And Not SwordTrailActive) Or
+        (NextShieldTrailActive And Not ShieldTrailActive) Or
+        AnimationTime < EquipmentTrailAnimationTime) Then
+        Call SeedEpicGlowTrails(SwordTip, ShieldCenter)
+    End If
+
+    SwordTrailActive = NextSwordTrailActive
+    ShieldTrailActive = NextShieldTrailActive
+    EquipmentTrailAnimationTime = AnimationTime
+
+End Sub
+
 Sub AdvanceEpicGlowTrails(SwordTip As Core.Vector3, ShieldCenter As Core.Vector3)
 
     Dim Index As Number
+
+    If Not SwordTrailActive And Not ShieldTrailActive Then
+        Return
+    End If
 
     EquipmentTrailElapsed = EquipmentTrailElapsed + AnimationUpdateElapsed
 
@@ -1633,7 +1682,7 @@ Function UpdateEpicGlowTrailBatches(
         ) And Result
     End For
 
-    If SelectedClipName() = "SwordAttack" Then
+    If SwordTrailActive Then
         Result = Graphics3D.CommitRibbonBatch3D(
             SwordTrail,
             EQUIPMENT_TRAIL_POINT_COUNT
@@ -1642,7 +1691,7 @@ Function UpdateEpicGlowTrailBatches(
         Result = Graphics3D.CommitRibbonBatch3D(SwordTrail, 0) And Result
     End If
 
-    If SelectedClipName() = "ShieldBashCandidate" Then
+    If ShieldTrailActive Then
         Result = Graphics3D.CommitRibbonBatch3D(
             ShieldTrail,
             EQUIPMENT_TRAIL_POINT_COUNT
