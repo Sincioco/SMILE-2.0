@@ -5,7 +5,6 @@ Option Explicit
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Simple3D.Core As Core
-Import Smile.Simple3D.FixedMath As FixedMath
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Interaction As Interaction
 Import Smile.Simple3D.Math3D As Math3D
@@ -31,12 +30,17 @@ Const MAX_ANIMATION_ELAPSED = 250
 Const MAX_CAMERA_ELAPSED = 250
 Const TIMELINE_LEFT = 18
 Const TIMELINE_HEIGHT = 18
-Const SHIELD_GLOW_POINT_COUNT = 17
-Const SHIELD_GLOW_INNER_RADIUS_X = 7
-Const SHIELD_GLOW_INNER_RADIUS_Y = 13
-Const SHIELD_GLOW_OUTER_RADIUS_X = 8
-Const SHIELD_GLOW_OUTER_RADIUS_Y = 14
-Const SWORD_GLOW_HALF_WIDTH = 1
+Const SWORD_GLOW_POINT_COUNT = 4
+Const EQUIPMENT_TRAIL_POINT_COUNT = 8
+Const EQUIPMENT_TRAIL_SAMPLE_MILLISECONDS = 24
+Const ARIN_SHIELD_PART_INDEX = 1
+Const SHIELD_GLOW_SCALE_DIVISOR = 100
+Const SWORD_BLADE_START_OFFSET = 7
+Const SWORD_GLOW_INNER_HALF_WIDTH = 3
+Const SWORD_GLOW_OUTER_HALF_WIDTH = 4
+Const SWORD_GLOW_TIP_EXTENSION = 1
+Const SWORD_TRAIL_HALF_WIDTH = 1
+Const SHIELD_TRAIL_HALF_WIDTH = 3
 
 Dim BaseCamera As Core.Camera3D
 Dim Camera As Core.Camera3D
@@ -64,7 +68,12 @@ Dim EpicGlowAvailable As Boolean
 Dim EpicGlowVisible As Boolean
 Dim EpicGlowMaterial As Core.Material3D
 Dim SwordGlow As Core.RibbonBatch3D
-Dim ShieldGlow As Core.RibbonBatch3D
+Dim ShieldGlow As Core.Object3D
+Dim SwordTrail As Core.RibbonBatch3D
+Dim ShieldTrail As Core.RibbonBatch3D
+Dim SwordTrailPoints[EQUIPMENT_TRAIL_POINT_COUNT] As Core.Vector3
+Dim ShieldTrailPoints[EQUIPMENT_TRAIL_POINT_COUNT] As Core.Vector3
+Dim EquipmentTrailElapsed As Number
 Dim Ready As Boolean
 Dim Running As Boolean
 Dim ViewerError As Boolean
@@ -188,6 +197,10 @@ Do
 
             If GridVisible Then
                 Ready = DrawStudioGrid() And Ready
+            End If
+
+            If EpicGlowVisible Then
+                Ready = DrawShieldGlow() And Ready
             End If
 
             Ready = Character3D.Draw(Character) And Ready
@@ -624,7 +637,13 @@ End Sub
 Sub ToggleEpicGlow()
 
     If EpicGlowAvailable Then
+
         EpicGlowVisible = Not EpicGlowVisible
+
+        If EpicGlowVisible Then
+            Call ResetEpicGlowTrails()
+        End If
+
     End If
 
 End Sub
@@ -1237,6 +1256,8 @@ End Function
 Sub CreateEpicGlow()
 
     Dim EmptyTexture As Core.Texture3D
+    Dim CharacterModel As Core.Model3D
+    Dim CharacterAnimator As Core.Animator3D
     Dim GlowReady As Boolean
 
     EpicGlowAvailable = ViewerProfiles.EpicGlowAvailable(ProfileIndex)
@@ -1252,25 +1273,59 @@ Sub CreateEpicGlow()
     EpicGlowMaterial = Graphics3D.CreateEffectMaterial3D(
         EmptyTexture,
         Graphics3D.MATERIAL_ALPHA_ADDITIVE,
-        140
+        220
     )
     GlowReady = EpicGlowMaterial.Handle <> 0
 
     If GlowReady Then
-        SwordGlow = Graphics3D.CreateRibbonBatch3D(2, EpicGlowMaterial)
+        SwordGlow = Graphics3D.CreateRibbonBatch3D(
+            SWORD_GLOW_POINT_COUNT,
+            EpicGlowMaterial
+        )
         GlowReady = SwordGlow.Handle <> 0
     End If
 
     If GlowReady Then
-        ShieldGlow = Graphics3D.CreateRibbonBatch3D(
-            SHIELD_GLOW_POINT_COUNT,
+
+        CharacterModel.Handle = Character3D.ModelHandle(Character)
+        CharacterAnimator.Handle = Character3D.AnimatorHandle(Character)
+        ShieldGlow = Graphics3D.CreateModelPart3D(CharacterModel, ARIN_SHIELD_PART_INDEX)
+        GlowReady = ShieldGlow.Handle <> 0
+
+    End If
+
+    If GlowReady Then
+
+        GlowReady = Graphics3D.SetObjectMaterial3D(ShieldGlow, EpicGlowMaterial)
+        GlowReady = Graphics3D.SetObjectAnimator3D(ShieldGlow, CharacterAnimator) And GlowReady
+
+        Call Graphics3D.SetObjectColor(ShieldGlow, 255, 196, 64)
+        Call Graphics3D.SetObjectOpacity(ShieldGlow, 80)
+        Call Graphics3D.SetObjectShadows3D(ShieldGlow, False, False)
+
+    End If
+
+    If GlowReady Then
+        SwordTrail = Graphics3D.CreateRibbonBatch3D(
+            EQUIPMENT_TRAIL_POINT_COUNT,
             EpicGlowMaterial
         )
-        GlowReady = ShieldGlow.Handle <> 0
+        GlowReady = SwordTrail.Handle <> 0
+    End If
+
+    If GlowReady Then
+        ShieldTrail = Graphics3D.CreateRibbonBatch3D(
+            EQUIPMENT_TRAIL_POINT_COUNT,
+            EpicGlowMaterial
+        )
+        GlowReady = ShieldTrail.Handle <> 0
     End If
 
     If Not GlowReady Then
         Call DestroyEpicGlow()
+    Else
+
+        Call ResetEpicGlowTrails()
     End If
 
 End Sub
@@ -1278,7 +1333,9 @@ End Sub
 Sub DestroyEpicGlow()
 
     Call Graphics3D.DestroyRibbonBatch3D(SwordGlow)
-    Call Graphics3D.DestroyRibbonBatch3D(ShieldGlow)
+    Call Graphics3D.DestroyRibbonBatch3D(SwordTrail)
+    Call Graphics3D.DestroyRibbonBatch3D(ShieldTrail)
+    Call Graphics3D.DestroyObject3D(ShieldGlow)
     Call Graphics3D.DestroyEffectMaterial3D(EpicGlowMaterial)
 
     EpicGlowAvailable = False
@@ -1289,148 +1346,310 @@ End Sub
 Function UpdateEpicGlow() As Boolean
 
     Dim SwordBase As Core.Vector3
+    Dim SwordBladeBase As Core.Vector3
     Dim SwordTip As Core.Vector3
     Dim ShieldCenter As Core.Vector3
     Dim Forward As Core.Vector3
-    Dim ScreenRight As Core.Vector3
-    Dim ShieldRight As Core.Vector3
     Dim ShieldUp As Core.Vector3
-    Dim SwordDirection As Core.Vector3
+    Dim SwordAlong As Core.Vector3
     Dim SwordWidth As Core.Vector3
     Dim FrontX As Number
     Dim FrontY As Number
     Dim FrontZ As Number
-    Dim SwordWidthX As Number
-    Dim SwordWidthY As Number
-    Dim SwordWidthZ As Number
-    Dim Angle As Number
-    Dim Cosine As Number
-    Dim Sine As Number
-    Dim InnerX As Number
-    Dim InnerY As Number
-    Dim InnerZ As Number
-    Dim OuterX As Number
-    Dim OuterY As Number
-    Dim OuterZ As Number
-    Dim Index As Number
+    Dim SwordAlongX As Number
+    Dim SwordAlongY As Number
+    Dim SwordAlongZ As Number
+    Dim SwordInnerX As Number
+    Dim SwordInnerY As Number
+    Dim SwordInnerZ As Number
+    Dim SwordOuterX As Number
+    Dim SwordOuterY As Number
+    Dim SwordOuterZ As Number
     Dim Result As Boolean
 
     SwordBase = Character3D.SocketPosition(Character, "SwordBase")
     SwordTip = Character3D.SocketPosition(Character, "SwordTip")
     ShieldCenter = Character3D.SocketPosition(Character, "ShieldCenter")
     Forward = Math3D.Normalize(Math3D.Subtract(Camera.Target, Camera.Position))
-    ScreenRight = Math3D.Normalize(Math3D.Cross(Forward, Camera.UpDirection))
-    ShieldRight = SocketAxis("ShieldCenter", Graphics3D.ANIMATOR_SOCKET_MATRIX_M11)
     ShieldUp = SocketAxis("ShieldCenter", Graphics3D.ANIMATOR_SOCKET_MATRIX_M21)
-    SwordDirection = Math3D.Subtract(SwordTip, SwordBase)
-    SwordWidth = Math3D.Normalize(Math3D.Cross(SwordDirection, Forward))
+    SwordAlong = Math3D.Normalize(Math3D.Subtract(SwordTip, SwordBase))
+    SwordWidth = Math3D.Normalize(Math3D.Cross(SwordAlong, Forward))
+    SwordBladeBase.X = SwordBase.X + SwordAlong.X * SWORD_BLADE_START_OFFSET / Core.FIXED_ONE
+    SwordBladeBase.Y = SwordBase.Y + SwordAlong.Y * SWORD_BLADE_START_OFFSET / Core.FIXED_ONE
+    SwordBladeBase.Z = SwordBase.Z + SwordAlong.Z * SWORD_BLADE_START_OFFSET / Core.FIXED_ONE
 
-    If (SwordWidth.X = 0 And
-        SwordWidth.Y = 0 And
-        SwordWidth.Z = 0) Then
-        SwordWidth = ScreenRight
-    End If
+    Call AdvanceEpicGlowTrails(SwordTip, ShieldCenter)
 
     FrontX = 0 - Forward.X / Core.FIXED_ONE
     FrontY = 0 - Forward.Y / Core.FIXED_ONE
     FrontZ = 0 - Forward.Z / Core.FIXED_ONE
-    SwordWidthX = SwordWidth.X * SWORD_GLOW_HALF_WIDTH / Core.FIXED_ONE
-    SwordWidthY = SwordWidth.Y * SWORD_GLOW_HALF_WIDTH / Core.FIXED_ONE
-    SwordWidthZ = SwordWidth.Z * SWORD_GLOW_HALF_WIDTH / Core.FIXED_ONE
+    SwordAlongX = SwordAlong.X * SWORD_GLOW_TIP_EXTENSION / Core.FIXED_ONE
+    SwordAlongY = SwordAlong.Y * SWORD_GLOW_TIP_EXTENSION / Core.FIXED_ONE
+    SwordAlongZ = SwordAlong.Z * SWORD_GLOW_TIP_EXTENSION / Core.FIXED_ONE
+    SwordInnerX = SwordWidth.X * SWORD_GLOW_INNER_HALF_WIDTH / Core.FIXED_ONE
+    SwordInnerY = SwordWidth.Y * SWORD_GLOW_INNER_HALF_WIDTH / Core.FIXED_ONE
+    SwordInnerZ = SwordWidth.Z * SWORD_GLOW_INNER_HALF_WIDTH / Core.FIXED_ONE
+    SwordOuterX = SwordWidth.X * SWORD_GLOW_OUTER_HALF_WIDTH / Core.FIXED_ONE
+    SwordOuterY = SwordWidth.Y * SWORD_GLOW_OUTER_HALF_WIDTH / Core.FIXED_ONE
+    SwordOuterZ = SwordWidth.Z * SWORD_GLOW_OUTER_HALF_WIDTH / Core.FIXED_ONE
     Result = Graphics3D.SetRibbonPoint3D(
         SwordGlow,
         0,
-        SwordBase.X + FrontX - SwordWidthX,
-        SwordBase.Y + FrontY - SwordWidthY,
-        SwordBase.Z + FrontZ - SwordWidthZ,
-        SwordBase.X + FrontX + SwordWidthX,
-        SwordBase.Y + FrontY + SwordWidthY,
-        SwordBase.Z + FrontZ + SwordWidthZ,
+        SwordBladeBase.X + FrontX + SwordInnerX,
+        SwordBladeBase.Y + FrontY + SwordInnerY,
+        SwordBladeBase.Z + FrontZ + SwordInnerZ,
+        SwordBladeBase.X + FrontX + SwordOuterX - SwordAlongX,
+        SwordBladeBase.Y + FrontY + SwordOuterY - SwordAlongY,
+        SwordBladeBase.Z + FrontZ + SwordOuterZ - SwordAlongZ,
         0
     )
     Result = Graphics3D.SetRibbonPointColor3D(
         SwordGlow,
         0,
-        80,
-        185,
+        64,
+        192,
         255,
-        30
+        85
     ) And Result
     Result = Graphics3D.SetRibbonPoint3D(
         SwordGlow,
         1,
-        SwordTip.X + FrontX - SwordWidthX,
-        SwordTip.Y + FrontY - SwordWidthY,
-        SwordTip.Z + FrontZ - SwordWidthZ,
-        SwordTip.X + FrontX + SwordWidthX,
-        SwordTip.Y + FrontY + SwordWidthY,
-        SwordTip.Z + FrontZ + SwordWidthZ,
-        1000
+        SwordTip.X + FrontX,
+        SwordTip.Y + FrontY,
+        SwordTip.Z + FrontZ,
+        SwordTip.X + FrontX + SwordAlongX,
+        SwordTip.Y + FrontY + SwordAlongY,
+        SwordTip.Z + FrontZ + SwordAlongZ,
+        333
     ) And Result
     Result = Graphics3D.SetRibbonPointColor3D(
         SwordGlow,
         1,
-        205,
+        220,
         245,
         255,
-        50
+        100
     ) And Result
-    Result = Graphics3D.CommitRibbonBatch3D(SwordGlow, 2) And Result
+    Result = Graphics3D.SetRibbonPoint3D(
+        SwordGlow,
+        2,
+        SwordBladeBase.X + FrontX - SwordInnerX,
+        SwordBladeBase.Y + FrontY - SwordInnerY,
+        SwordBladeBase.Z + FrontZ - SwordInnerZ,
+        SwordBladeBase.X + FrontX - SwordOuterX - SwordAlongX,
+        SwordBladeBase.Y + FrontY - SwordOuterY - SwordAlongY,
+        SwordBladeBase.Z + FrontZ - SwordOuterZ - SwordAlongZ,
+        666
+    ) And Result
+    Result = Graphics3D.SetRibbonPointColor3D(
+        SwordGlow,
+        2,
+        64,
+        192,
+        255,
+        85
+    ) And Result
+    Result = Graphics3D.SetRibbonPoint3D(
+        SwordGlow,
+        3,
+        SwordBladeBase.X + FrontX + SwordInnerX,
+        SwordBladeBase.Y + FrontY + SwordInnerY,
+        SwordBladeBase.Z + FrontZ + SwordInnerZ,
+        SwordBladeBase.X + FrontX + SwordOuterX - SwordAlongX,
+        SwordBladeBase.Y + FrontY + SwordOuterY - SwordAlongY,
+        SwordBladeBase.Z + FrontZ + SwordOuterZ - SwordAlongZ,
+        1000
+    ) And Result
+    Result = Graphics3D.SetRibbonPointColor3D(
+        SwordGlow,
+        3,
+        64,
+        192,
+        255,
+        85
+    ) And Result
+    Result = Graphics3D.CommitRibbonBatch3D(
+        SwordGlow,
+        SWORD_GLOW_POINT_COUNT
+    ) And Result
 
-    For Index = 0 To SHIELD_GLOW_POINT_COUNT - 1
+    Result = UpdateShieldGlow(ShieldCenter) And Result
+    Result = UpdateEpicGlowTrailBatches(SwordWidth, ShieldUp, Forward) And Result
 
-        Angle = Index * 360 / (SHIELD_GLOW_POINT_COUNT - 1)
-        Cosine = FixedMath.CosFixed(Angle)
-        Sine = FixedMath.SinFixed(Angle)
-        InnerX = ShieldCenter.X + FrontX * 2 + (
-            ShieldRight.X * Cosine * SHIELD_GLOW_INNER_RADIUS_X +
-            ShieldUp.X * Sine * SHIELD_GLOW_INNER_RADIUS_Y
-        ) / (Core.FIXED_ONE * Core.FIXED_ONE)
-        InnerY = ShieldCenter.Y + FrontY * 2 + (
-            ShieldRight.Y * Cosine * SHIELD_GLOW_INNER_RADIUS_X +
-            ShieldUp.Y * Sine * SHIELD_GLOW_INNER_RADIUS_Y
-        ) / (Core.FIXED_ONE * Core.FIXED_ONE)
-        InnerZ = ShieldCenter.Z + FrontZ * 2 + (
-            ShieldRight.Z * Cosine * SHIELD_GLOW_INNER_RADIUS_X +
-            ShieldUp.Z * Sine * SHIELD_GLOW_INNER_RADIUS_Y
-        ) / (Core.FIXED_ONE * Core.FIXED_ONE)
-        OuterX = ShieldCenter.X + FrontX * 2 + (
-            ShieldRight.X * Cosine * SHIELD_GLOW_OUTER_RADIUS_X +
-            ShieldUp.X * Sine * SHIELD_GLOW_OUTER_RADIUS_Y
-        ) / (Core.FIXED_ONE * Core.FIXED_ONE)
-        OuterY = ShieldCenter.Y + FrontY * 2 + (
-            ShieldRight.Y * Cosine * SHIELD_GLOW_OUTER_RADIUS_X +
-            ShieldUp.Y * Sine * SHIELD_GLOW_OUTER_RADIUS_Y
-        ) / (Core.FIXED_ONE * Core.FIXED_ONE)
-        OuterZ = ShieldCenter.Z + FrontZ * 2 + (
-            ShieldRight.Z * Cosine * SHIELD_GLOW_OUTER_RADIUS_X +
-            ShieldUp.Z * Sine * SHIELD_GLOW_OUTER_RADIUS_Y
-        ) / (Core.FIXED_ONE * Core.FIXED_ONE)
+    Return Result
+
+End Function
+
+Function UpdateShieldGlow(ShieldCenter As Core.Vector3) As Boolean
+
+    Dim OutlineScale As Number
+    Dim ScaleDelta As Number
+    Dim PositionX As Number
+    Dim PositionY As Number
+    Dim PositionZ As Number
+    Dim Result As Boolean
+
+    ScaleDelta = Max(1, ViewerFrame.ScalePercent / SHIELD_GLOW_SCALE_DIVISOR)
+    OutlineScale = ViewerFrame.ScalePercent + ScaleDelta
+    PositionX = (ShieldCenter.X - ViewerFrame.PositionX) * ScaleDelta / ViewerFrame.ScalePercent
+    PositionY = (ShieldCenter.Y - ViewerFrame.PositionY) * ScaleDelta / ViewerFrame.ScalePercent
+    PositionZ = (ShieldCenter.Z - ViewerFrame.PositionZ) * ScaleDelta / ViewerFrame.ScalePercent
+    PositionX = ViewerFrame.PositionX - PositionX
+    PositionY = ViewerFrame.PositionY - PositionY
+    PositionZ = ViewerFrame.PositionZ - PositionZ
+    Result = Graphics3D.SetObjectPositionChecked3D(ShieldGlow, PositionX, PositionY, PositionZ)
+    Result = Graphics3D.SetObjectScaleChecked3D(
+        ShieldGlow,
+        OutlineScale,
+        OutlineScale,
+        OutlineScale
+    ) And Result
+
+    Return Result
+
+End Function
+
+Function DrawShieldGlow() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Graphics3D.DrawObject3D(ShieldGlow)
+    Result = Graphics3D.DrawRibbonBatch3D(SwordTrail) And Result
+    Result = Graphics3D.DrawRibbonBatch3D(ShieldTrail) And Result
+
+    Return Result
+
+End Function
+
+Sub ResetEpicGlowTrails()
+
+    Dim SwordTip As Core.Vector3
+    Dim ShieldCenter As Core.Vector3
+    Dim Index As Number
+
+    SwordTip = Character3D.SocketPosition(Character, "SwordTip")
+    ShieldCenter = Character3D.SocketPosition(Character, "ShieldCenter")
+
+    For Index = 0 To EQUIPMENT_TRAIL_POINT_COUNT - 1
+        SwordTrailPoints[Index] = SwordTip
+        ShieldTrailPoints[Index] = ShieldCenter
+    End For
+
+    EquipmentTrailElapsed = 0
+
+End Sub
+
+Sub AdvanceEpicGlowTrails(SwordTip As Core.Vector3, ShieldCenter As Core.Vector3)
+
+    Dim Index As Number
+
+    EquipmentTrailElapsed = EquipmentTrailElapsed + AnimationUpdateElapsed
+
+    If EquipmentTrailElapsed < EQUIPMENT_TRAIL_SAMPLE_MILLISECONDS Then
+        Return
+    End If
+
+    For Index = 0 To EQUIPMENT_TRAIL_POINT_COUNT - 2
+        SwordTrailPoints[Index] = SwordTrailPoints[Index + 1]
+        ShieldTrailPoints[Index] = ShieldTrailPoints[Index + 1]
+    End For
+
+    SwordTrailPoints[EQUIPMENT_TRAIL_POINT_COUNT - 1] = SwordTip
+    ShieldTrailPoints[EQUIPMENT_TRAIL_POINT_COUNT - 1] = ShieldCenter
+    EquipmentTrailElapsed = EquipmentTrailElapsed Mod EQUIPMENT_TRAIL_SAMPLE_MILLISECONDS
+
+End Sub
+
+Function UpdateEpicGlowTrailBatches(
+    SwordWidth As Core.Vector3,
+    ShieldUp As Core.Vector3,
+    Forward As Core.Vector3
+) As Boolean
+
+    Dim FrontX As Number
+    Dim FrontY As Number
+    Dim FrontZ As Number
+    Dim SwordWidthX As Number
+    Dim SwordWidthY As Number
+    Dim SwordWidthZ As Number
+    Dim ShieldWidthX As Number
+    Dim ShieldWidthY As Number
+    Dim ShieldWidthZ As Number
+    Dim Opacity As Number
+    Dim Index As Number
+    Dim Result As Boolean
+
+    FrontX = 0 - Forward.X / Core.FIXED_ONE
+    FrontY = 0 - Forward.Y / Core.FIXED_ONE
+    FrontZ = 0 - Forward.Z / Core.FIXED_ONE
+    SwordWidthX = SwordWidth.X * SWORD_TRAIL_HALF_WIDTH / Core.FIXED_ONE
+    SwordWidthY = SwordWidth.Y * SWORD_TRAIL_HALF_WIDTH / Core.FIXED_ONE
+    SwordWidthZ = SwordWidth.Z * SWORD_TRAIL_HALF_WIDTH / Core.FIXED_ONE
+    ShieldWidthX = ShieldUp.X * SHIELD_TRAIL_HALF_WIDTH / Core.FIXED_ONE
+    ShieldWidthY = ShieldUp.Y * SHIELD_TRAIL_HALF_WIDTH / Core.FIXED_ONE
+    ShieldWidthZ = ShieldUp.Z * SHIELD_TRAIL_HALF_WIDTH / Core.FIXED_ONE
+    Result = True
+
+    For Index = 0 To EQUIPMENT_TRAIL_POINT_COUNT - 1
+
+        Opacity = Index * 7
         Result = Graphics3D.SetRibbonPoint3D(
-            ShieldGlow,
+            SwordTrail,
             Index,
-            InnerX,
-            InnerY,
-            InnerZ,
-            OuterX,
-            OuterY,
-            OuterZ,
-            Index * 1000 / (SHIELD_GLOW_POINT_COUNT - 1)
+            SwordTrailPoints[Index].X + FrontX - SwordWidthX,
+            SwordTrailPoints[Index].Y + FrontY - SwordWidthY,
+            SwordTrailPoints[Index].Z + FrontZ - SwordWidthZ,
+            SwordTrailPoints[Index].X + FrontX + SwordWidthX,
+            SwordTrailPoints[Index].Y + FrontY + SwordWidthY,
+            SwordTrailPoints[Index].Z + FrontZ + SwordWidthZ,
+            Index * 1000 / (EQUIPMENT_TRAIL_POINT_COUNT - 1)
         ) And Result
         Result = Graphics3D.SetRibbonPointColor3D(
-            ShieldGlow,
+            SwordTrail,
+            Index,
+            72,
+            196,
+            255,
+            Opacity
+        ) And Result
+        Result = Graphics3D.SetRibbonPoint3D(
+            ShieldTrail,
+            Index,
+            ShieldTrailPoints[Index].X + FrontX - ShieldWidthX,
+            ShieldTrailPoints[Index].Y + FrontY - ShieldWidthY,
+            ShieldTrailPoints[Index].Z + FrontZ - ShieldWidthZ,
+            ShieldTrailPoints[Index].X + FrontX + ShieldWidthX,
+            ShieldTrailPoints[Index].Y + FrontY + ShieldWidthY,
+            ShieldTrailPoints[Index].Z + FrontZ + ShieldWidthZ,
+            Index * 1000 / (EQUIPMENT_TRAIL_POINT_COUNT - 1)
+        ) And Result
+        Result = Graphics3D.SetRibbonPointColor3D(
+            ShieldTrail,
             Index,
             255,
-            214,
-            112,
-            18
+            196,
+            64,
+            Opacity * 3 / 4
         ) And Result
     End For
 
-    Result = Graphics3D.CommitRibbonBatch3D(
-        ShieldGlow,
-        SHIELD_GLOW_POINT_COUNT
-    ) And Result
+    If SelectedClipName() = "SwordAttack" Then
+        Result = Graphics3D.CommitRibbonBatch3D(
+            SwordTrail,
+            EQUIPMENT_TRAIL_POINT_COUNT
+        ) And Result
+    Else
+        Result = Graphics3D.CommitRibbonBatch3D(SwordTrail, 0) And Result
+    End If
+
+    If SelectedClipName() = "ShieldBashCandidate" Then
+        Result = Graphics3D.CommitRibbonBatch3D(
+            ShieldTrail,
+            EQUIPMENT_TRAIL_POINT_COUNT
+        ) And Result
+    Else
+        Result = Graphics3D.CommitRibbonBatch3D(ShieldTrail, 0) And Result
+    End If
 
     Return Result
 
@@ -1454,7 +1673,6 @@ Function DrawEpicGlow() As Boolean
     Dim Result As Boolean
 
     Result = Graphics3D.DrawRibbonBatch3D(SwordGlow)
-    Result = Graphics3D.DrawRibbonBatch3D(ShieldGlow) And Result
 
     Return Result
 
@@ -1812,6 +2030,10 @@ Sub PlaySelectedClip()
         SelectedClipMode(),
         PlaybackSpeed
     ) And Ready
+
+    If EpicGlowAvailable Then
+        Call ResetEpicGlowTrails()
+    End If
 
 End Sub
 
