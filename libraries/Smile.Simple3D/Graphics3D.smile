@@ -129,6 +129,7 @@ Private Const COMMAND_M6_VALUE = 121
 Private Const COMMAND_MATERIAL_INSPECTION = 122
 Private Const COMMAND_SET_CAMERA_UP = 123
 Private Const COMMAND_SET_MODEL_ANIMATOR_TIME = 124
+Private Const COMMAND_SOFT_DEPTH = 125
 
 Public Const MATERIAL_INSPECTION_LIT = 0
 Public Const MATERIAL_INSPECTION_BASE_COLOR = 1
@@ -316,6 +317,33 @@ Public Const VFX_QUERY_RESOURCE_COMMITTED_BYTES = 41
 Public Const VFX_RESOURCE_STATE_EMPTY = 1
 Public Const VFX_RESOURCE_STATE_COMMITTED = 3
 Public Const VFX_RESOURCE_STATE_IN_FLIGHT = 7
+Public Const SOFT_DEPTH_REQUEST_OFF = 0
+Public Const SOFT_DEPTH_REQUEST_AUTOMATIC = 1
+Public Const SOFT_DEPTH_MATERIAL_OFF = 0
+Public Const SOFT_DEPTH_MATERIAL_AUTOMATIC = 1
+Public Const SOFT_DEPTH_MATERIAL_EXPLICIT = 2
+Public Const SOFT_DEPTH_FORMAT_OFF = 0
+Public Const SOFT_DEPTH_FORMAT_RGBA8_PACKED = 1
+Public Const SOFT_DEPTH_FORMAT_FLOAT16 = 2
+Public Const SOFT_DEPTH_FORMAT_FLOAT32 = 3
+Public Const SOFT_DEPTH_FALLBACK_NONE = 0
+Public Const SOFT_DEPTH_FALLBACK_DISABLED = 1
+Public Const SOFT_DEPTH_FALLBACK_SHADER = 2
+Public Const SOFT_DEPTH_FALLBACK_TARGET = 3
+Public Const SOFT_DEPTH_QUERY_REQUESTED = 1
+Public Const SOFT_DEPTH_QUERY_EFFECTIVE = 2
+Public Const SOFT_DEPTH_QUERY_WIDTH = 3
+Public Const SOFT_DEPTH_QUERY_HEIGHT = 4
+Public Const SOFT_DEPTH_QUERY_FORMAT = 5
+Public Const SOFT_DEPTH_QUERY_BYTES = 6
+Public Const SOFT_DEPTH_QUERY_COPY_DRAWS = 7
+Public Const SOFT_DEPTH_QUERY_COPY_FAILURES = 8
+Public Const SOFT_DEPTH_QUERY_VFX_DRAWS = 9
+Public Const SOFT_DEPTH_QUERY_MATERIALS = 10
+Public Const SOFT_DEPTH_QUERY_FALLBACK_REASON = 11
+Public Const SOFT_DEPTH_QUERY_RESOURCE_GENERATION = 12
+Public Const SOFT_DEPTH_QUERY_MATERIAL_MODE = 13
+Public Const SOFT_DEPTH_QUERY_MATERIAL_DISTANCE = 14
 Public Const MODEL_MATERIAL_BASE_COLOR_RED = 1
 Public Const MODEL_MATERIAL_BASE_COLOR_GREEN = 2
 Public Const MODEL_MATERIAL_BASE_COLOR_BLUE = 3
@@ -2773,6 +2801,87 @@ Public Function SetEffectMaterial3D(
 
 End Function
 
+''' Enables or disables the capability-tested scene-depth snapshot outside an active frame.
+Public Function ConfigureSoftDepth3D(RequestedMode As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SOFT_DEPTH,
+        1,
+        RequestedMode,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    Return Result
+
+End Function
+
+''' Selects off, automatic, or an explicit world-space fade distance for an effect material.
+Public Function SetEffectMaterialSoftDepth3D(
+    ByRef Material As Core.Material3D,
+    Mode As Number,
+    Optional Distance As Number = 0
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SOFT_DEPTH,
+        2,
+        Material.Handle,
+        Mode,
+        Distance,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+        Material.SoftDepthMode = Mode
+        Material.SoftDepthDistance = Distance
+    End If
+
+    Return Result
+
+End Function
+
+''' Reads soft-depth target, pass, fallback, or material diagnostics.
+Public Function SoftDepthValue3D(
+    Query As Number,
+    Optional MaterialHandle As Number = 0
+) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(
+        COMMAND_SOFT_DEPTH,
+        3,
+        Query,
+        MaterialHandle,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    )
+
+    Return Result
+
+End Function
+
 ''' Destroys an effect material through the existing generation-safe material path.
 Public Sub DestroyEffectMaterial3D(ByRef Material As Core.Material3D)
 
@@ -2851,6 +2960,8 @@ Public Function TryDestroyMaterial3D(ByRef Material As Core.Material3D) As Boole
         Material.NormalTextureHandle = 0
         Material.OrmTextureHandle = 0
         Material.EmissiveTextureHandle = 0
+        Material.SoftDepthMode = SOFT_DEPTH_MATERIAL_OFF
+        Material.SoftDepthDistance = 0
 
     End If
 

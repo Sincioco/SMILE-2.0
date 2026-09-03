@@ -1,0 +1,1 @@
+Renderer3D M7E-A soft-particle tests passed

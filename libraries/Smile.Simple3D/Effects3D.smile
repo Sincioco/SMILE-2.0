@@ -447,6 +447,32 @@ Private Sub SynchronizeCapabilityState()
 
     End If
 
+    If Initialized Then
+
+        EffectiveSoftDepthValue = Graphics3D.SoftDepthValue3D(
+            Graphics3D.SOFT_DEPTH_QUERY_EFFECTIVE
+        )
+        CapabilityFallbackFlagsValue = (
+            FALLBACK_DISTORTION_UNAVAILABLE +
+            FALLBACK_THERMAL_SHADING_UNAVAILABLE
+        )
+
+        If RequestedSimulationValue <> SIMULATION_CPU_DETERMINISTIC Then
+            CapabilityFallbackFlagsValue = (
+                CapabilityFallbackFlagsValue +
+                FALLBACK_GPU_SIMULATION_UNAVAILABLE
+            )
+        End If
+
+        If EffectiveSoftDepthValue = SOFT_DEPTH_OFF Then
+            CapabilityFallbackFlagsValue = (
+                CapabilityFallbackFlagsValue +
+                FALLBACK_SOFT_DEPTH_UNAVAILABLE
+            )
+        End If
+
+    End If
+
 End Sub
 
 ''' Selects the Generation 3 simulation policy while M7E-0 keeps GPU simulation unavailable.
@@ -546,6 +572,33 @@ Public Function Initialize(
 
         End If
 
+    End If
+
+    Result = Graphics3D.ConfigureSoftDepth3D(
+        Graphics3D.SOFT_DEPTH_REQUEST_AUTOMATIC
+    )
+
+    If Result Then
+        Result = Graphics3D.SetEffectMaterialSoftDepth3D(
+            AlphaMaterial,
+            Graphics3D.SOFT_DEPTH_MATERIAL_AUTOMATIC
+        )
+    End If
+
+    If Result Then
+        Result = Graphics3D.SetEffectMaterialSoftDepth3D(
+            AdditiveMaterial,
+            Graphics3D.SOFT_DEPTH_MATERIAL_EXPLICIT,
+            8
+        )
+    End If
+
+    If Result Then
+        Result = Graphics3D.SetEffectMaterialSoftDepth3D(
+            RibbonMaterial,
+            Graphics3D.SOFT_DEPTH_MATERIAL_EXPLICIT,
+            12
+        )
     End If
 
     CandidateAlphaBatch = Graphics3D.CreateParticleBatch3D(
@@ -2131,7 +2184,13 @@ End Function
 
 Public Function SoftDepthSupported() As Boolean
 
-    Return False
+    Dim Result As Boolean
+
+    Call SynchronizeCapabilityState()
+
+    Result = EffectiveSoftDepthValue <> SOFT_DEPTH_OFF
+
+    Return Result
 
 End Function
 

@@ -136,6 +136,8 @@ Public Type Material3D
     RoughnessPercent As Number
     NormalStrengthPercent As Number
     OcclusionStrengthPercent As Number
+    SoftDepthMode As Number
+    SoftDepthDistance As Number
 End Type
 
 ''' A validated deterministic model asset whose meshes are shared by part instances.
